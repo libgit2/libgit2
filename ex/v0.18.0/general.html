@@ -522,9 +522,9 @@ values for the name and email should be found in the <code>user.name</code> and
 example file to see how to access config values.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_signature_new-66" class="fnlink" href="../../#v0.18.0/group/signature/git_signature_new">git_signature_new</a></span><span class="p">((</span><span class="n">git_signature</span> <span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">author</span><span class="p">,</span>
+        <div class='highlight'><pre>  <span class="n">git_signature_new</span><span class="p">((</span><span class="n">git_signature</span> <span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">author</span><span class="p">,</span>
       <span class="s">&quot;Scott Chacon&quot;</span><span class="p">,</span> <span class="s">&quot;schacon@gmail.com&quot;</span><span class="p">,</span> <span class="mi">123456789</span><span class="p">,</span> <span class="mi">60</span><span class="p">);</span>
-  <span class="n"><a name="git_signature_new-67" class="fnlink" href="../../#v0.18.0/group/signature/git_signature_new">git_signature_new</a></span><span class="p">((</span><span class="n">git_signature</span> <span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">cmtter</span><span class="p">,</span>
+  <span class="n">git_signature_new</span><span class="p">((</span><span class="n">git_signature</span> <span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">cmtter</span><span class="p">,</span>
       <span class="s">&quot;Scott A Chacon&quot;</span><span class="p">,</span> <span class="s">&quot;scott@github.com&quot;</span><span class="p">,</span> <span class="mi">987654321</span><span class="p">,</span> <span class="mi">90</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -539,7 +539,7 @@ but you can also use</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-41" class="fnlink" href="../../#v0.18.0/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree_id</span><span class="p">,</span> <span class="s">&quot;f60079018b664e4e79329a7ef9559c8d9e0378d1&quot;</span><span class="p">);</span>
-  <span class="n"><a name="git_tree_lookup-74" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_id</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_lookup-72" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_id</span><span class="p">);</span>
   <span class="n"><a name="git_oid_fromstr-42" class="fnlink" href="../../#v0.18.0/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent_id</span><span class="p">,</span> <span class="s">&quot;5b5b025afb0b4c913b4c338a42934a3863bf3644&quot;</span><span class="p">);</span>
   <span class="n"><a name="git_commit_lookup-6" class="fnlink" href="../../#v0.18.0/group/commit/git_commit_lookup">git_commit_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">parent_id</span><span class="p">);</span></pre></div>
       </td>
@@ -616,7 +616,7 @@ the same way that we would a commit (or any other object).</p>
       <td class=code>
         <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-43" class="fnlink" href="../../#v0.18.0/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;b25fa35b38051e4ae45d4222e795f9df2e43f1d1&quot;</span><span class="p">);</span>
 
-  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_tag_lookup-69" class="fnlink" href="../../#v0.18.0/group/tag/git_tag_lookup">git_tag_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tag</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span>
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_tag_lookup-67" class="fnlink" href="../../#v0.18.0/group/tag/git_tag_lookup">git_tag_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tag</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span>
   <span class="n">check_error</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s">&quot;looking up tag&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -631,10 +631,10 @@ the target object (usually &#39;commit&#39;), the name (&#39;v1.0&#39;), the tag
 git_signature - name, email, timestamp), and the tag message.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_tag_target-70" class="fnlink" href="../../#v0.18.0/group/tag/git_tag_target">git_tag_target</a></span><span class="p">((</span><span class="n">git_object</span> <span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">commit</span><span class="p">,</span> <span class="n">tag</span><span class="p">);</span>
-  <span class="n">tname</span> <span class="o">=</span> <span class="n"><a name="git_tag_name-72" class="fnlink" href="../../#v0.18.0/group/tag/git_tag_name">git_tag_name</a></span><span class="p">(</span><span class="n">tag</span><span class="p">);</span>		<span class="c1">// &quot;test&quot;</span>
-  <span class="n">ttype</span> <span class="o">=</span> <span class="n"><a name="git_tag_target_type-71" class="fnlink" href="../../#v0.18.0/group/tag/git_tag_target_type">git_tag_target_type</a></span><span class="p">(</span><span class="n">tag</span><span class="p">);</span>	<span class="c1">// GIT_OBJ_COMMIT (otype enum)</span>
-  <span class="n">tmessage</span> <span class="o">=</span> <span class="n"><a name="git_tag_message-73" class="fnlink" href="../../#v0.18.0/group/tag/git_tag_message">git_tag_message</a></span><span class="p">(</span><span class="n">tag</span><span class="p">);</span>	<span class="c1">// &quot;tag message\n&quot;</span>
+        <div class='highlight'><pre>  <span class="n"><a name="git_tag_target-68" class="fnlink" href="../../#v0.18.0/group/tag/git_tag_target">git_tag_target</a></span><span class="p">((</span><span class="n">git_object</span> <span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">commit</span><span class="p">,</span> <span class="n">tag</span><span class="p">);</span>
+  <span class="n">tname</span> <span class="o">=</span> <span class="n"><a name="git_tag_name-70" class="fnlink" href="../../#v0.18.0/group/tag/git_tag_name">git_tag_name</a></span><span class="p">(</span><span class="n">tag</span><span class="p">);</span>		<span class="c1">// &quot;test&quot;</span>
+  <span class="n">ttype</span> <span class="o">=</span> <span class="n"><a name="git_tag_target_type-69" class="fnlink" href="../../#v0.18.0/group/tag/git_tag_target_type">git_tag_target_type</a></span><span class="p">(</span><span class="n">tag</span><span class="p">);</span>	<span class="c1">// GIT_OBJ_COMMIT (otype enum)</span>
+  <span class="n">tmessage</span> <span class="o">=</span> <span class="n"><a name="git_tag_message-71" class="fnlink" href="../../#v0.18.0/group/tag/git_tag_message">git_tag_message</a></span><span class="p">(</span><span class="n">tag</span><span class="p">);</span>	<span class="c1">// &quot;tag message\n&quot;</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Tag Message: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">tmessage</span><span class="p">);</span>
 
   <span class="n"><a name="git_commit_free-10" class="fnlink" href="../../#v0.18.0/group/commit/git_commit_free">git_commit_free</a></span><span class="p">(</span><span class="n">commit</span><span class="p">);</span></pre></div>
@@ -677,7 +677,7 @@ tree entries.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-44" class="fnlink" href="../../#v0.18.0/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;2a741c18ac5ff082a7caaec6e74db3075a1906b5&quot;</span><span class="p">);</span>
-  <span class="n"><a name="git_tree_lookup-75" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span></pre></div>
+  <span class="n"><a name="git_tree_lookup-73" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-44'>
@@ -689,11 +689,11 @@ tree entries.</p>
 if you want to.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="kt">size_t</span> <span class="n">cnt</span> <span class="o">=</span> <span class="n"><a name="git_tree_entrycount-76" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_entrycount">git_tree_entrycount</a></span><span class="p">(</span><span class="n">tree</span><span class="p">);</span> <span class="c1">// 3</span>
+        <div class='highlight'><pre>  <span class="kt">size_t</span> <span class="n">cnt</span> <span class="o">=</span> <span class="n"><a name="git_tree_entrycount-74" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_entrycount">git_tree_entrycount</a></span><span class="p">(</span><span class="n">tree</span><span class="p">);</span> <span class="c1">// 3</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;tree entries: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">cnt</span><span class="p">);</span>
 
-  <span class="n">entry</span> <span class="o">=</span> <span class="n"><a name="git_tree_entry_byindex-78" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_entry_byindex">git_tree_entry_byindex</a></span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
-  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Entry name: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_tree_entry_name-79" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_entry_name">git_tree_entry_name</a></span><span class="p">(</span><span class="n">entry</span><span class="p">));</span> <span class="c1">// &quot;hello.c&quot;</span></pre></div>
+  <span class="n">entry</span> <span class="o">=</span> <span class="n"><a name="git_tree_entry_byindex-76" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_entry_byindex">git_tree_entry_byindex</a></span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Entry name: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_tree_entry_name-77" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_entry_name">git_tree_entry_name</a></span><span class="p">(</span><span class="n">entry</span><span class="p">));</span> <span class="c1">// &quot;hello.c&quot;</span></pre></div>
       </td>
     </tr>
     <tr id='section-45'>
@@ -705,8 +705,8 @@ if you want to.</p>
 entry you&#39;re looking for.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">entry</span> <span class="o">=</span> <span class="n"><a name="git_tree_entry_byname-77" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_entry_byname">git_tree_entry_byname</a></span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="s">&quot;README&quot;</span><span class="p">);</span>
-  <span class="n"><a name="git_tree_entry_name-80" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_entry_name">git_tree_entry_name</a></span><span class="p">(</span><span class="n">entry</span><span class="p">);</span> <span class="c1">// &quot;hello.c&quot;</span></pre></div>
+        <div class='highlight'><pre>  <span class="n">entry</span> <span class="o">=</span> <span class="n"><a name="git_tree_entry_byname-75" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_entry_byname">git_tree_entry_byname</a></span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="s">&quot;README&quot;</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_entry_name-78" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_entry_name">git_tree_entry_name</a></span><span class="p">(</span><span class="n">entry</span><span class="p">);</span> <span class="c1">// &quot;hello.c&quot;</span></pre></div>
       </td>
     </tr>
     <tr id='section-46'>
@@ -719,7 +719,7 @@ entry you&#39;re looking for.</p>
 get the mode if you want.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_tree_entry_to_object-81" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_entry_to_object">git_tree_entry_to_object</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">objt</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">entry</span><span class="p">);</span> <span class="c1">// blob</span></pre></div>
+        <div class='highlight'><pre>  <span class="n"><a name="git_tree_entry_to_object-79" class="fnlink" href="../../#v0.18.0/group/tree/git_tree_entry_to_object">git_tree_entry_to_object</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">objt</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">entry</span><span class="p">);</span> <span class="c1">// blob</span></pre></div>
       </td>
     </tr>
     <tr id='section-47'>
@@ -1006,7 +1006,7 @@ one at a time and resolve them to the SHA, then print both values out.</p>
     <span class="p">}</span>
   <span class="p">}</span>
 
-  <span class="n"><a name="git_strarray_free-68" class="fnlink" href="../../#v0.18.0/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">ref_list</span><span class="p">);</span></pre></div>
+  <span class="n"><a name="git_strarray_free-66" class="fnlink" href="../../#v0.18.0/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">ref_list</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-Config_Files'>
