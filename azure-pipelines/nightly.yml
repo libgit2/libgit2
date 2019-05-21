@@ -12,7 +12,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON
        LEAK_CHECK=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -54,7 +54,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
-       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS -DDEPRECATE_HARD=ON
+       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON
        LEAK_CHECK=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -71,7 +71,7 @@ jobs:
         TMPDIR: $(Agent.TempDirectory)
         PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
         LEAK_CHECK: leaks
-        CMAKE_OPTIONS: -G Ninja -DDEPRECATE_HARD=ON
+        CMAKE_OPTIONS: -G Ninja -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON
         RUN_INVASIVE_TESTS: true
         SKIP_SSH_TESTS: true
 
