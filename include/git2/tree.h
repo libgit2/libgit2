@@ -267,7 +267,7 @@ GIT_EXTERN(void) git_treebuilder_clear(git_treebuilder *bld);
  * @param bld a previously loaded treebuilder.
  * @return the number of entries in the treebuilder
  */
-GIT_EXTERN(unsigned int) git_treebuilder_entrycount(git_treebuilder *bld);
+GIT_EXTERN(size_t) git_treebuilder_entrycount(git_treebuilder *bld);
 
 /**
  * Free a tree builder
