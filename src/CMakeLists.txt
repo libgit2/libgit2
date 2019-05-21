@@ -48,23 +48,6 @@ IF (ENABLE_TRACE STREQUAL "ON")
 ENDIF()
 ADD_FEATURE_INFO(tracing GIT_TRACE "tracing support")
 
-# Use `regcomp_l` if available
-CHECK_SYMBOL_EXISTS(regcomp_l "regex.h;xlocale.h" HAVE_REGCOMP_L)
-IF (HAVE_REGCOMP_L)
-	SET(GIT_USE_REGCOMP_L 1)
-ENDIF ()
-
-# Otherwise, we either want to use system's `regcomp` or our
-# bundled regcomp code, if system doesn't provide `regcomp`.
-IF(NOT HAVE_REGCOMP_L)
-	CHECK_FUNCTION_EXISTS(regcomp HAVE_REGCOMP)
-	IF(NOT HAVE_REGCOMP)
-		ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/regex" "${libgit2_BINARY_DIR}/deps/regex")
-		LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/regex")
-		LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:regex>)
-	ENDIF()
-ENDIF()
-
 CHECK_FUNCTION_EXISTS(futimens HAVE_FUTIMENS)
 IF (HAVE_FUTIMENS)
 	SET(GIT_USE_FUTIMENS 1)
@@ -304,6 +287,56 @@ ELSEIF (SHA1_BACKEND STREQUAL "mbedTLS")
 	LIST(APPEND LIBGIT2_PC_LIBS ${MBEDTLS_LIBRARIES})
 ELSE()
 	MESSAGE(FATAL_ERROR "Asked for unknown SHA1 backend ${SHA1_BACKEND}")
+ENDIF()
+
+# Specify regular expression implementation
+FIND_PACKAGE(PCRE)
+
+IF(REGEX_BACKEND STREQUAL "")
+	CHECK_SYMBOL_EXISTS(regcomp_l "regex.h;xlocale.h" HAVE_REGCOMP_L)
+
+	IF(HAVE_REGCOMP_L)
+		SET(REGEX_BACKEND "regcomp_l")
+	ELSEIF(PCRE_FOUND)
+		SET(REGEX_BACKEND "pcre")
+	ELSE()
+		SET(REGEX_BACKEND "builtin")
+	ENDIF()
+ENDIF()
+
+IF(REGEX_BACKEND STREQUAL "regcomp_l")
+	ADD_FEATURE_INFO(regex ON "using system regcomp_l")
+	SET(GIT_REGEX_REGCOMP_L 1)
+ELSEIF(REGEX_BACKEND STREQUAL "pcre2")
+	FIND_PACKAGE(PCRE2)
+
+	IF(NOT PCRE2_FOUND)
+		MESSAGE(FATAL_ERROR "PCRE2 support was requested but not found")
+	ENDIF()
+
+	ADD_FEATURE_INFO(regex ON "using system PCRE2")
+	SET(GIT_REGEX_PCRE2 1)
+
+	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${PCRE2_INCLUDE_DIRS})
+	LIST(APPEND LIBGIT2_LIBS ${PCRE2_LIBRARIES})
+ELSEIF(REGEX_BACKEND STREQUAL "pcre")
+	ADD_FEATURE_INFO(regex ON "using system PCRE")
+	SET(GIT_REGEX_PCRE 1)
+
+	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${PCRE_INCLUDE_DIRS})
+	LIST(APPEND LIBGIT2_LIBS ${PCRE_LIBRARIES})
+ELSEIF(REGEX_BACKEND STREQUAL "regcomp")
+	ADD_FEATURE_INFO(regex ON "using system regcomp")
+	SET(GIT_REGEX_REGCOMP 1)
+ELSEIF(REGEX_BACKEND STREQUAL "builtin")
+	ADD_FEATURE_INFO(regex ON "using bundled PCRE")
+	SET(GIT_REGEX_BUILTIN 1)
+
+	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/pcre" "${libgit2_BINARY_DIR}/deps/pcre")
+	LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/pcre")
+	LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:pcre>)
+ELSE()
+	MESSAGE(FATAL_ERROR "The REGEX_BACKEND option provided is not supported")
 ENDIF()
 
 # Optional external dependency: http-parser

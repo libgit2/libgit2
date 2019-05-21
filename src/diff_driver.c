@@ -9,6 +9,7 @@
 
 #include "git2/attr.h"
 
+#include "common.h"
 #include "diff.h"
 #include "strmap.h"
 #include "map.h"
@@ -24,7 +25,7 @@ typedef enum {
 } git_diff_driver_t;
 
 typedef struct {
-	regex_t re;
+	p_regex_t re;
 	int flags;
 } git_diff_driver_pattern;
 
@@ -38,7 +39,7 @@ struct git_diff_driver {
 	uint32_t binary_flags;
 	uint32_t other_flags;
 	git_array_t(git_diff_driver_pattern) fn_patterns;
-	regex_t  word_pattern;
+	p_regex_t  word_pattern;
 	char name[GIT_FLEX_ARRAY];
 };
 
@@ -129,7 +130,7 @@ static int diff_driver_add_patterns(
 
 static int diff_driver_xfuncname(const git_config_entry *entry, void *payload)
 {
-	return diff_driver_add_patterns(payload, entry->value, REG_EXTENDED);
+	return diff_driver_add_patterns(payload, entry->value, P_REG_EXTENDED);
 }
 
 static int diff_driver_funcname(const git_config_entry *entry, void *payload)
@@ -204,12 +205,12 @@ static int git_diff_driver_builtin(
 
 	if (ddef->fns &&
 		(error = diff_driver_add_patterns(
-			drv, ddef->fns, ddef->flags | REG_EXTENDED)) < 0)
+			drv, ddef->fns, ddef->flags | P_REG_EXTENDED)) < 0)
 		goto done;
 
 	if (ddef->words &&
 		(error = p_regcomp(
-			&drv->word_pattern, ddef->words, ddef->flags | REG_EXTENDED)))
+			&drv->word_pattern, ddef->words, ddef->flags | P_REG_EXTENDED)))
 	{
 		error = git_error_set_regex(&drv->word_pattern, error);
 		goto done;
@@ -280,7 +281,9 @@ static int git_diff_driver_load(
 	/* TODO: warn if diff.<name>.command or diff.<name>.textconv are set */
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
-	git_buf_put(&name, "xfuncname", strlen("xfuncname"));
+	if ((error = git_buf_PUTS(&name, "xfuncname")) < 0)
+		goto done;
+
 	if ((error = git_config_get_multivar_foreach(
 			cfg, name.ptr, NULL, diff_driver_xfuncname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
@@ -289,7 +292,9 @@ static int git_diff_driver_load(
 	}
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
-	git_buf_put(&name, "funcname", strlen("funcname"));
+	if ((error = git_buf_PUTS(&name, "funcname")) < 0)
+		goto done;
+
 	if ((error = git_config_get_multivar_foreach(
 			cfg, name.ptr, NULL, diff_driver_funcname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
@@ -304,12 +309,14 @@ static int git_diff_driver_load(
 	}
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
-	git_buf_put(&name, "wordregex", strlen("wordregex"));
+	if ((error = git_buf_PUTS(&name, "wordregex")) < 0)
+		goto done;
+
 	if ((error = git_config__lookup_entry(&ce, cfg, name.ptr, false)) < 0)
 		goto done;
 	if (!ce || !ce->value)
 		/* no diff.<driver>.wordregex, so just continue */;
-	else if (!(error = p_regcomp(&drv->word_pattern, ce->value, REG_EXTENDED)))
+	else if (!(error = p_regcomp(&drv->word_pattern, ce->value, P_REG_EXTENDED)))
 		found_driver = true;
 	else {
 		/* TODO: warn about bad regex instead of failure */
@@ -393,10 +400,10 @@ void git_diff_driver_free(git_diff_driver *driver)
 		return;
 
 	for (i = 0; i < git_array_size(driver->fn_patterns); ++i)
-		regfree(& git_array_get(driver->fn_patterns, i)->re);
+		p_regfree(& git_array_get(driver->fn_patterns, i)->re);
 	git_array_clear(driver->fn_patterns);
 
-	regfree(&driver->word_pattern);
+	p_regfree(&driver->word_pattern);
 
 	git__free(driver);
 }
@@ -444,12 +451,12 @@ static int diff_context_line__pattern_match(
 	git_diff_driver *driver, git_buf *line)
 {
 	size_t i, maxi = git_array_size(driver->fn_patterns);
-	regmatch_t pmatch[2];
+	p_regmatch_t pmatch[2];
 
 	for (i = 0; i < maxi; ++i) {
 		git_diff_driver_pattern *pat = git_array_get(driver->fn_patterns, i);
 
-		if (!regexec(&pat->re, line->ptr, 2, pmatch, 0)) {
+		if (!p_regexec(&pat->re, line->ptr, 2, pmatch, 0)) {
 			if (pat->flags & REG_NEGATE)
 				return false;
 

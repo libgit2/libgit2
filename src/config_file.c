@@ -21,7 +21,6 @@
 
 #include <ctype.h>
 #include <sys/types.h>
-#include <regex.h>
 
 /* Max depth for [include] directives */
 #define MAX_INCLUDE_DEPTH 10
@@ -62,7 +61,7 @@ typedef struct {
 } diskfile_parse_state;
 
 static int config_read(git_config_entries *entries, const git_repository *repo, git_config_file *file, git_config_level_t level, int depth);
-static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const regex_t *preg, const char *value);
+static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const p_regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
 
 static int config_snapshot(git_config_backend **out, git_config_backend *in);
@@ -329,7 +328,7 @@ static int config_set_multivar(
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	char *key;
-	regex_t preg;
+	p_regex_t preg;
 	int result;
 
 	assert(regexp);
@@ -337,7 +336,7 @@ static int config_set_multivar(
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	result = p_regcomp(&preg, regexp, REG_EXTENDED);
+	result = p_regcomp(&preg, regexp, P_REG_EXTENDED);
 	if (result != 0) {
 		git_error_set_regex(&preg, result);
 		result = -1;
@@ -352,7 +351,7 @@ static int config_set_multivar(
 
 out:
 	git__free(key);
-	regfree(&preg);
+	p_regfree(&preg);
 
 	return result;
 }
@@ -395,7 +394,7 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	git_config_entries *entries = NULL;
 	git_config_entry *entry = NULL;
-	regex_t preg = { 0 };
+	p_regex_t preg = { 0 };
 	char *key = NULL;
 	int result;
 
@@ -413,7 +412,7 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 		goto out;
 	}
 
-	if ((result = p_regcomp(&preg, regexp, REG_EXTENDED)) != 0) {
+	if ((result = p_regcomp(&preg, regexp, P_REG_EXTENDED)) != 0) {
 		git_error_set_regex(&preg, result);
 		result = -1;
 		goto out;
@@ -428,7 +427,7 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 out:
 	git_config_entries_free(entries);
 	git__free(key);
-	regfree(&preg);
+	p_regfree(&preg);
 	return result;
 }
 
@@ -954,7 +953,7 @@ struct write_data {
 	const char *section;
 	const char *orig_name;
 	const char *name;
-	const regex_t *preg;
+	const p_regex_t *preg;
 	const char *value;
 };
 
@@ -1059,7 +1058,7 @@ static int write_on_variable(
 
 	/* If we have a regex to match the value, see if it matches */
 	if (has_matched && write_data->preg != NULL)
-		has_matched = (regexec(write_data->preg, var_value, 0, NULL, 0) == 0);
+		has_matched = (p_regexec(write_data->preg, var_value, 0, NULL, 0) == 0);
 
 	/* If this isn't the name/value we're looking for, simply dump the
 	 * existing data back out and continue on.
@@ -1120,7 +1119,7 @@ static int write_on_eof(
 /*
  * This is pretty much the parsing, except we write out anything we don't have
  */
-static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const regex_t *preg, const char* value)
+static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const p_regex_t *preg, const char* value)
 {
 	int result;
 	char *orig_section, *section, *orig_name, *name, *ldot;

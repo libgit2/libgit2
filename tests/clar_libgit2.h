@@ -3,8 +3,8 @@
 
 #include "clar.h"
 #include <git2.h>
-#include <posix.h>
 #include "common.h"
+#include "posix.h"
 
 /**
  * Replace for `clar_must_pass` that passes the last library error as the

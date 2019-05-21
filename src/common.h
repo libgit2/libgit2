@@ -47,6 +47,7 @@
 # include <ws2tcpip.h>
 # include "win32/msvc-compat.h"
 # include "win32/mingw-compat.h"
+# include "win32/w32_common.h"
 # include "win32/win32-compat.h"
 # include "win32/error.h"
 # include "win32/version.h"
@@ -76,6 +77,7 @@
 
 #include "git2/types.h"
 #include "git2/errors.h"
+#include "errors.h"
 #include "thread-utils.h"
 #include "integer.h"
 
@@ -85,7 +87,8 @@
  */
 #include "git2/deprecated.h"
 
-#include <regex.h>
+#include "posix.h"
+#include "posix_regex.h"
 
 #define DEFAULT_BUFSIZE 65536
 #define FILEIO_BUFSIZE DEFAULT_BUFSIZE
@@ -107,80 +110,6 @@
  */
 #define GIT_ERROR_CHECK_ERROR(code) \
 	do { int _err = (code); if (_err) return _err; } while (0)
-
-/**
- * Set the error message for this thread, formatting as needed.
- */
-
-void git_error_set(int error_class, const char *string, ...) GIT_FORMAT_PRINTF(2, 3);
-
-/**
- * Set the error message for a regex failure, using the internal regex
- * error code lookup and return a libgit error code.
- */
-int git_error_set_regex(const regex_t *regex, int error_code);
-
-/**
- * Set error message for user callback if needed.
- *
- * If the error code in non-zero and no error message is set, this
- * sets a generic error message.
- *
- * @return This always returns the `error_code` parameter.
- */
-GIT_INLINE(int) git_error_set_after_callback_function(
-	int error_code, const char *action)
-{
-	if (error_code) {
-		const git_error *e = git_error_last();
-		if (!e || !e->message)
-			git_error_set(e ? e->klass : GIT_ERROR_CALLBACK,
-				"%s callback returned %d", action, error_code);
-	}
-	return error_code;
-}
-
-#ifdef GIT_WIN32
-#define git_error_set_after_callback(code) \
-	git_error_set_after_callback_function((code), __FUNCTION__)
-#else
-#define git_error_set_after_callback(code) \
-	git_error_set_after_callback_function((code), __func__)
-#endif
-
-/**
- * Gets the system error code for this thread.
- */
-int git_error_system_last(void);
-
-/**
- * Sets the system error code for this thread.
- */
-void git_error_system_set(int code);
-
-/**
- * Structure to preserve libgit2 error state
- */
-typedef struct {
-	int error_code;
-	unsigned int oom : 1;
-	git_error error_msg;
-} git_error_state;
-
-/**
- * Capture current error state to restore later, returning error code.
- * If `error_code` is zero, this does not clear the current error state.
- * You must either restore this error state, or free it.
- */
-extern int git_error_state_capture(git_error_state *state, int error_code);
-
-/**
- * Restore error state to a previous value, returning saved error code.
- */
-extern int git_error_state_restore(git_error_state *state);
-
-/** Free an error state. */
-extern void git_error_state_free(git_error_state *state);
 
 /**
  * Check a versioned structure for validity

@@ -29,7 +29,7 @@ typedef struct {
 #define PATTERNS(NAME, FN_PATS, WORD_PAT) \
 	{ NAME, FN_PATS, WORD_PAT WORD_DEFAULT, 0 }
 #define IPATTERN(NAME, FN_PATS, WORD_PAT) \
-	{ NAME, FN_PATS, WORD_PAT WORD_DEFAULT, REG_ICASE }
+	{ NAME, FN_PATS, WORD_PAT WORD_DEFAULT, P_REG_ICASE }
 
 /*
  * The table of diff driver patterns
