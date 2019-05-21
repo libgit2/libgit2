@@ -501,7 +501,7 @@ static int local_counting(int stage, unsigned int current, unsigned int total, v
 	if (git_buf_oom(&progress_info))
 		return -1;
 
-	error = t->progress_cb(git_buf_cstr(&progress_info), git_buf_len(&progress_info), t->message_cb_payload);
+	error = t->progress_cb(git_buf_cstr(&progress_info), (int)git_buf_len(&progress_info), t->message_cb_payload);
 	git_buf_dispose(&progress_info);
 
 	return error;
@@ -588,7 +588,7 @@ static int local_download_pack(
 		goto cleanup;
 
 	if (t->progress_cb &&
-	    (error = t->progress_cb(git_buf_cstr(&progress_info), git_buf_len(&progress_info), t->message_cb_payload)) < 0)
+	    (error = t->progress_cb(git_buf_cstr(&progress_info), (int)git_buf_len(&progress_info), t->message_cb_payload)) < 0)
 		goto cleanup;
 
 	/* Walk the objects, building a packfile */
@@ -602,7 +602,7 @@ static int local_download_pack(
 		goto cleanup;
 
 	if (t->progress_cb &&
-	    (error = t->progress_cb(git_buf_cstr(&progress_info), git_buf_len(&progress_info), t->message_cb_payload)) < 0)
+	    (error = t->progress_cb(git_buf_cstr(&progress_info), (int)git_buf_len(&progress_info), t->message_cb_payload)) < 0)
 		goto cleanup;
 
 	if ((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) != 0)
