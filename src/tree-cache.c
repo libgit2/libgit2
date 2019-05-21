@@ -120,12 +120,19 @@ static int read_tree_internal(git_tree_cache **out,
 
 	/* Parse children: */
 	if (tree->children_count > 0) {
-		unsigned int i;
+		size_t i;
+		uint32_t bufsize;
 
-		tree->children = git_pool_malloc(pool, tree->children_count * sizeof(git_tree_cache *));
+		if (tree->children_count > UINT32_MAX / sizeof(git_tree_cache *)) {
+			git_error_set_oom();
+			return -1;
+		}
+
+		bufsize = (uint32_t)(tree->children_count * sizeof(git_tree_cache *));
+		tree->children = git_pool_malloc(pool, bufsize);
 		GIT_ERROR_CHECK_ALLOC(tree->children);
 
-		memset(tree->children, 0x0, tree->children_count * sizeof(git_tree_cache *));
+		memset(tree->children, 0x0, bufsize);
 
 		for (i = 0; i < tree->children_count; ++i) {
 			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, pool) < 0)
@@ -182,8 +189,13 @@ static int read_tree_recursive(git_tree_cache *cache, const git_tree *tree, git_
 			ntrees++;
 	}
 
+	if (ntrees > UINT32_MAX / sizeof(git_tree_cache *)) {
+		git_error_set_oom();
+		return -1;
+	}
+
 	cache->children_count = ntrees;
-	cache->children = git_pool_mallocz(pool, ntrees * sizeof(git_tree_cache *));
+	cache->children = git_pool_mallocz(pool, (uint32_t)(ntrees * sizeof(git_tree_cache *)));
 	GIT_ERROR_CHECK_ALLOC(cache->children);
 
 	j = 0;
@@ -232,11 +244,19 @@ int git_tree_cache_read_tree(git_tree_cache **out, const git_tree *tree, git_poo
 
 int git_tree_cache_new(git_tree_cache **out, const char *name, git_pool *pool)
 {
-	size_t name_len;
+	size_t name_len, alloc_size;
 	git_tree_cache *tree;
 
 	name_len = strlen(name);
-	tree = git_pool_malloc(pool, sizeof(git_tree_cache) + name_len + 1);
+
+	GIT_ERROR_CHECK_ALLOC_ADD3(&alloc_size, sizeof(git_tree_cache), name_len, 1);
+
+	if (alloc_size > UINT32_MAX) {
+		git_error_set_oom();
+		return -1;
+	}
+
+	tree = git_pool_malloc(pool, (uint32_t)alloc_size);
 	GIT_ERROR_CHECK_ALLOC(tree);
 
 	memset(tree, 0x0, sizeof(git_tree_cache));
