@@ -670,21 +670,44 @@ int git_remote_set_pushurl(git_repository *repo, const char *remote, const char*
 	return set_url(repo, remote, CONFIG_PUSHURL_FMT, url);
 }
 
-const char* git_remote__urlfordirection(git_remote *remote, int direction)
+static int resolve_url(git_buf *resolved_url, const char *url, int direction, const git_remote_callbacks *callbacks)
 {
-	assert(remote);
+	int status;
 
+	if (callbacks && callbacks->resolve_url) {
+		git_buf_clear(resolved_url);
+		status = callbacks->resolve_url(resolved_url, url, direction, callbacks->payload);
+		if (status != GIT_PASSTHROUGH) {
+			git_error_set_after_callback_function(status, "git_resolve_url_cb");
+			git_buf_sanitize(resolved_url);
+			return status;
+		}
+	}
+
+	return git_buf_sets(resolved_url, url);
+}
+
+int git_remote__urlfordirection(git_buf *url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks)
+{
+	const char *url = NULL;
+
+	assert(remote);
 	assert(direction == GIT_DIRECTION_FETCH || direction == GIT_DIRECTION_PUSH);
 
 	if (direction == GIT_DIRECTION_FETCH) {
-		return remote->url;
+		url = remote->url;
+	} else if (direction == GIT_DIRECTION_PUSH) {
+		url = remote->pushurl ? remote->pushurl : remote->url;
 	}
 
-	if (direction == GIT_DIRECTION_PUSH) {
-		return remote->pushurl ? remote->pushurl : remote->url;
+	if (!url) {
+		git_error_set(GIT_ERROR_INVALID,
+			"malformed remote '%s' - missing %s URL",
+			remote->name ? remote->name : "(anonymous)",
+			direction == GIT_DIRECTION_FETCH ? "fetch" : "push");
+		return GIT_EINVALID;
 	}
-
-	return NULL;
+	return resolve_url(url_out, url, direction, callbacks);
 }
 
 int set_transport_callbacks(git_transport *t, const git_remote_callbacks *cbs)
@@ -707,7 +730,7 @@ static int set_transport_custom_headers(git_transport *t, const git_strarray *cu
 int git_remote__connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_remote_connection_opts *conn)
 {
 	git_transport *t;
-	const char *url;
+	git_buf url = GIT_BUF_INIT;
 	int flags = GIT_TRANSPORTFLAGS_NONE;
 	int error;
 	void *payload = NULL;
@@ -728,39 +751,38 @@ int git_remote__connect(git_remote *remote, git_direction direction, const git_r
 
 	t = remote->transport;
 
-	url = git_remote__urlfordirection(remote, direction);
-	if (url == NULL) {
-		git_error_set(GIT_ERROR_INVALID,
-			"Malformed remote '%s' - missing %s URL",
-			remote->name ? remote->name : "(anonymous)",
-			direction == GIT_DIRECTION_FETCH ? "fetch" : "push");
-		return -1;
-	}
+	if ((error = git_remote__urlfordirection(&url, remote, direction, callbacks)) < 0)
+		goto on_error;
 
 	/* If we don't have a transport object yet, and the caller specified a
 	 * custom transport factory, use that */
 	if (!t && transport &&
 		(error = transport(&t, remote, payload)) < 0)
-		return error;
+		goto on_error;
 
 	/* If we still don't have a transport, then use the global
 	 * transport registrations which map URI schemes to transport factories */
-	if (!t && (error = git_transport_new(&t, remote, url)) < 0)
-		return error;
+	if (!t && (error = git_transport_new(&t, remote, url.ptr)) < 0)
+		goto on_error;
 
 	if ((error = set_transport_custom_headers(t, conn->custom_headers)) != 0)
 		goto on_error;
 
 	if ((error = set_transport_callbacks(t, callbacks)) < 0 ||
-	    (error = t->connect(t, url, credentials, payload, conn->proxy, direction, flags)) != 0)
+	    (error = t->connect(t, url.ptr, credentials, payload, conn->proxy, direction, flags)) != 0)
 		goto on_error;
 
 	remote->transport = t;
 
+	git_buf_dispose(&url);
+
 	return 0;
 
 on_error:
-	t->free(t);
+	if (t)
+		t->free(t);
+
+	git_buf_dispose(&url);
 
 	if (t == remote->transport)
 		remote->transport = NULL;
