@@ -37,14 +37,17 @@ void gitno_buffer_setup_callback(
 static int recv_stream(gitno_buffer *buf)
 {
 	git_stream *io = (git_stream *) buf->cb_data;
-	int ret;
+	size_t readlen = buf->len - buf->offset;
+	ssize_t ret;
 
-	ret = git_stream_read(io, buf->data + buf->offset, buf->len - buf->offset);
+	readlen = min(readlen, INT_MAX);
+
+	ret = git_stream_read(io, buf->data + buf->offset, (int)readlen);
 	if (ret < 0)
 		return -1;
 
 	buf->offset += ret;
-	return ret;
+	return (int)ret;
 }
 
 void gitno_buffer_setup_fromstream(git_stream *st, gitno_buffer *buf, char *data, size_t len)
