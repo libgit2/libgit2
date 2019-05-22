@@ -21,6 +21,7 @@ CHECK_TYPE_SIZE("long long"             LONG_LONG)
 CHECK_TYPE_SIZE("unsigned long long"    UNSIGNED_LONG_LONG)
 
 DISABLE_WARNINGS(unused-function)
+DISABLE_WARNINGS(implicit-fallthrough)
 
 # User-configurable options
 
