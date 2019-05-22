@@ -228,7 +228,6 @@ static int refspec_transform(
 	git_buf *out, const char *from, const char *to, const char *name)
 {
 	const char *from_star, *to_star;
-	const char *name_slash, *from_slash;
 	size_t replacement_len, star_offset;
 
 	git_buf_sanitize(out);
@@ -251,17 +250,11 @@ static int refspec_transform(
 	/* the first half is copied over */
 	git_buf_put(out, to, to_star - to);
 
-	/* then we copy over the replacement, from the star's offset to the next slash in 'name' */
-	name_slash = strchr(name + star_offset, '/');
-	if (!name_slash)
-		name_slash = strrchr(name, '\0');
-
-	/* if there is no slash after the star in 'from', we want to copy everything over */
-	from_slash = strchr(from + star_offset, '/');
-	if (!from_slash)
-		name_slash = strrchr(name, '\0');
-
-	replacement_len = (name_slash - name) - star_offset;
+	/*
+	 * Copy over the name, but exclude the trailing part in "from" starting
+	 * after the glob
+	 */
+	replacement_len = strlen(name + star_offset) - strlen(from_star + 1);
 	git_buf_put(out, name + star_offset, replacement_len);
 
 	return git_buf_puts(out, to_star + 1);

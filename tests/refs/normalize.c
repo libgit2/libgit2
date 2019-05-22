@@ -352,12 +352,12 @@ void test_refs_normalize__buffer_has_to_be_big_enough_to_hold_the_normalized_ver
 
 void test_refs_normalize__refspec_pattern(void)
 {
-	ensure_refname_invalid(
-		GIT_REFERENCE_FORMAT_REFSPEC_PATTERN, "heads/*foo/bar");
-	ensure_refname_invalid(
-		GIT_REFERENCE_FORMAT_REFSPEC_PATTERN, "heads/foo*/bar");
-	ensure_refname_invalid(
-		GIT_REFERENCE_FORMAT_REFSPEC_PATTERN, "heads/f*o/bar");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_REFSPEC_PATTERN, "heads/*foo/bar", "heads/*foo/bar");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_REFSPEC_PATTERN, "heads/foo*/bar", "heads/foo*/bar");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_REFSPEC_PATTERN, "heads/f*o/bar", "heads/f*o/bar");
 
 	ensure_refname_invalid(
 		GIT_REFERENCE_FORMAT_REFSPEC_PATTERN, "foo");
