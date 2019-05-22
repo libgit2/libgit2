@@ -17,8 +17,15 @@ const char *git_config_escaped = "\n\t\b\"\\";
 static void set_parse_error(git_config_parser *reader, int col, const char *error_str)
 {
 	const char *file = reader->file ? reader->file->path : "in-memory";
-	git_error_set(GIT_ERROR_CONFIG, "failed to parse config file: %s (in %s:%"PRIuZ", column %d)",
-		error_str, file, reader->ctx.line_num, col);
+
+	if (col)
+		git_error_set(GIT_ERROR_CONFIG,
+		              "failed to parse config file: %s (in %s:%"PRIuZ", column %d)",
+		              error_str, file, reader->ctx.line_num, col);
+	else
+		git_error_set(GIT_ERROR_CONFIG,
+		              "failed to parse config file: %s (in %s:%"PRIuZ")",
+		              error_str, file, reader->ctx.line_num);
 }
 
 
@@ -59,31 +66,30 @@ static int strip_comments(char *line, int in_quotes)
 }
 
 
-static int parse_section_header_ext(git_config_parser *reader, const char *line, const char *base_name, char **section_name)
+static int parse_subsection_header(git_config_parser *reader, const char *line, size_t pos, const char *base_name, char **section_name)
 {
 	int c, rpos;
-	char *first_quote, *last_quote;
+	const char *first_quote, *last_quote;
 	const char *line_start = line;
 	git_buf buf = GIT_BUF_INIT;
 	size_t quoted_len, alloc_len, base_name_len = strlen(base_name);
 
-	/*
-	 * base_name is what came before the space. We should be at the
-	 * first quotation mark, except for now, line isn't being kept in
-	 * sync so we only really use it to calculate the length.
-	 */
+	/* Skip any additional whitespace before our section name */
+	while (git__isspace(line[pos]))
+		pos++;
 
-	first_quote = strchr(line, '"');
-	if (first_quote == NULL) {
-		set_parse_error(reader, 0, "Missing quotation marks in section header");
+	/* We should be at the first quotation mark. */
+	if (line[pos] != '"') {
+		set_parse_error(reader, 0, "missing quotation marks in section header");
 		goto end_error;
 	}
 
+	first_quote = &line[pos];
 	last_quote = strrchr(line, '"');
 	quoted_len = last_quote - first_quote;
 
 	if (quoted_len == 0) {
-		set_parse_error(reader, 0, "Missing closing quotation mark in section header");
+		set_parse_error(reader, 0, "missing closing quotation mark in section header");
 		goto end_error;
 	}
 
@@ -107,7 +113,7 @@ static int parse_section_header_ext(git_config_parser *reader, const char *line,
 
 		switch (c) {
 		case 0:
-			set_parse_error(reader, 0, "Unexpected end-of-line in section header");
+			set_parse_error(reader, 0, "unexpected end-of-line in section header");
 			goto end_error;
 
 		case '"':
@@ -117,7 +123,7 @@ static int parse_section_header_ext(git_config_parser *reader, const char *line,
 			c = line[++rpos];
 
 			if (c == 0) {
-				set_parse_error(reader, rpos, "Unexpected end-of-line in section header");
+				set_parse_error(reader, rpos, "unexpected end-of-line in section header");
 				goto end_error;
 			}
 
@@ -134,7 +140,7 @@ end_parse:
 		goto end_error;
 
 	if (line[rpos] != '"' || line[rpos + 1] != ']') {
-		set_parse_error(reader, rpos, "Unexpected text after closing quotes");
+		set_parse_error(reader, rpos, "unexpected text after closing quotes");
 		git_buf_dispose(&buf);
 		return -1;
 	}
@@ -165,7 +171,7 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 	name_end = strrchr(line, ']');
 	if (name_end == NULL) {
 		git__free(line);
-		set_parse_error(reader, 0, "Missing ']' in section header");
+		set_parse_error(reader, 0, "missing ']' in section header");
 		return -1;
 	}
 
@@ -185,14 +191,14 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 	do {
 		if (git__isspace(c)){
 			name[name_length] = '\0';
-			result = parse_section_header_ext(reader, line, name, section_out);
+			result = parse_subsection_header(reader, line, pos, name, section_out);
 			git__free(line);
 			git__free(name);
 			return result;
 		}
 
 		if (!config_keychar(c) && c != '.') {
-			set_parse_error(reader, pos, "Unexpected character in header");
+			set_parse_error(reader, pos, "unexpected character in header");
 			goto fail_parse;
 		}
 
@@ -201,7 +207,7 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 	} while ((c = line[pos++]) != ']');
 
 	if (line[pos - 1] != ']') {
-		set_parse_error(reader, pos, "Unexpected end of file");
+		set_parse_error(reader, pos, "unexpected end of file");
 		goto fail_parse;
 	}
 
@@ -386,7 +392,7 @@ static int parse_name(
 		name_end++;
 
 	if (line == name_end) {
-		set_parse_error(reader, 0, "Invalid configuration key");
+		set_parse_error(reader, 0, "invalid configuration key");
 		return -1;
 	}
 
@@ -398,7 +404,7 @@ static int parse_name(
 	if (*value_start == '=') {
 		*value = value_start + 1;
 	} else if (*value_start) {
-		set_parse_error(reader, 0, "Invalid configuration key");
+		set_parse_error(reader, 0, "invalid configuration key");
 		return -1;
 	}
 
