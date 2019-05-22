@@ -66,7 +66,7 @@ static int strip_comments(char *line, int in_quotes)
 }
 
 
-static int parse_section_header_ext(git_config_parser *reader, const char *line, size_t pos, const char *base_name, char **section_name)
+static int parse_subsection_header(git_config_parser *reader, const char *line, size_t pos, const char *base_name, char **section_name)
 {
 	int c, rpos;
 	const char *first_quote, *last_quote;
@@ -191,7 +191,7 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 	do {
 		if (git__isspace(c)){
 			name[name_length] = '\0';
-			result = parse_section_header_ext(reader, line, pos, name, section_out);
+			result = parse_subsection_header(reader, line, pos, name, section_out);
 			git__free(line);
 			git__free(name);
 			return result;
