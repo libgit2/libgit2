@@ -2216,7 +2216,7 @@ int git_repository_foreach_head(git_repository *repo,
 {
 	git_strarray worktrees = GIT_VECTOR_INIT;
 	git_buf path = GIT_BUF_INIT;
-	int error;
+	int error = 0;
 	size_t i;
 
 
