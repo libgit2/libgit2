@@ -157,7 +157,7 @@ int p_rename(const char *from, const char *to)
 
 int p_fallocate(int fd, off_t offset, off_t len)
 {
-#ifdef __APPLE__
+#if defined (__APPLE__) || (defined (__NetBSD__) && __NetBSD_Version__ < 700000000)
 	fstore_t prealloc;
 	struct stat st;
 	size_t newsize;
