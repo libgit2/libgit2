@@ -134,9 +134,8 @@ static void cache_evict_entries(git_cache *cache)
 
 		evict_count--;
 		evicted_memory += evict->size;
-		git_cached_obj_decref(evict);
-
 		git_oidmap_delete(cache->map, key);
+		git_cached_obj_decref(evict);
 	}
 
 	cache->used_memory -= evicted_memory;
