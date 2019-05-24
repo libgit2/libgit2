@@ -302,5 +302,7 @@ void test_core_posix__fallocate(void)
 	cl_must_pass(p_lseek(fd, 42, SEEK_SET));
 	cl_must_pass(p_fallocate(fd, 0, 200));
 	cl_assert_equal_i(42, p_lseek(fd, 0, SEEK_CUR));
+	cl_must_pass(p_fallocate(fd, 190, 128));
+	cl_assert_equal_i(42, p_lseek(fd, 0, SEEK_CUR));
 	p_close(fd);
 }

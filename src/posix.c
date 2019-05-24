@@ -157,14 +157,30 @@ int p_rename(const char *from, const char *to)
 
 int p_fallocate(int fd, off_t offset, off_t len)
 {
-#if defined (__APPLE__) || (defined (__NetBSD__) && __NetBSD_Version__ < 700000000)
+	int error = 0, cur;
+	char buf[BUFSIZ];
+	off_t pos = 0;
+
+#if defined(GIT_USE_FALLOCATE_POSIX)
+	if ((error = posix_fallocate(fd, offset, len)) < 0)
+		if (errno == ENOTSUP)
+			goto fallback;
+#elif defined(GIT_USE_FALLOCATE_SOLARIS)
+	struct flock64 fl;
+
+	fl.l_whence = SEEK_SET;
+	fl.l_start = offset;
+	fl.l_len = len;
+
+	if ((error = fcntl(fd, F_ALLOCSP64, &fl)) < 0)
+		goto fallback;
+#elif defined(GIT_USE_FALLOCATE_BSD)
 	fstore_t prealloc;
 	struct stat st;
 	size_t newsize;
-	int error;
 
 	if ((error = p_fstat(fd, &st)) < 0)
-		return error;
+		return -1;
 
 	if (git__add_sizet_overflow(&newsize, offset, len)) {
 		errno = EINVAL;
@@ -182,15 +198,45 @@ int p_fallocate(int fd, off_t offset, off_t len)
 
 	/*
 	 * fcntl will often error when the file already exists; ignore
-	 * this error since ftruncate will also resize the file (although
+	 * this error since our fallback will also resize the file (although
 	 * likely slower).
 	 */
-	fcntl(fd, F_PREALLOCATE, &prealloc);
-
-	return ftruncate(fd, (offset + len));
+	if ((error = fcntl(fd, F_PREALLOCATE, &prealloc)) < 0)
+		goto fallback;
+#elif defined(GIT_USE_FALLOCATE)
+	do {
+		error = fallocate(fd, 0, offset, len);
+	} while (error < 0 && errno == EINTR);
+	if (error < 0 && errno == ENOTSUP)
+		goto fallback;
 #else
-	return posix_fallocate(fd, offset, len);
+	goto fallback;
 #endif
+
+fallback:
+	/* save offset, seek, write zeroes, restore */
+	if ((error = p_lseek(fd, 0, SEEK_CUR)) < 0)
+		return -1;
+
+	cur = error;
+
+	memset(&buf, '\0', sizeof(buf));
+
+	if ((error = p_lseek(fd, offset, SEEK_SET)) < 0)
+		goto cleanup;
+
+	while (pos < len) {
+		size_t wlen = MIN(len - pos, (off_t)sizeof(buf));
+		if ((error = p_write(fd, buf, wlen)) < 0)
+			goto cleanup;
+		pos += wlen;
+	}
+
+cleanup:
+	if ((error = p_lseek(fd, cur, SEEK_SET)) < 0)
+		return error;
+
+	return error;
 }
 
 #endif /* GIT_WIN32 */

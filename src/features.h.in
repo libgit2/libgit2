@@ -15,6 +15,10 @@
 #cmakedefine GIT_USE_STAT_MTIMESPEC 1
 #cmakedefine GIT_USE_STAT_MTIME_NSEC 1
 #cmakedefine GIT_USE_FUTIMENS 1
+#cmakedefine GIT_USE_FALLOCATE 1
+#cmakedefine GIT_USE_FALLOCATE_BSD 1
+#cmakedefine GIT_USE_FALLOCATE_POSIX 1
+#cmakedefine GIT_USE_FALLOCATE_SOLARIS 1
 
 #cmakedefine GIT_REGEX_REGCOMP_L
 #cmakedefine GIT_REGEX_REGCOMP

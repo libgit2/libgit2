@@ -53,6 +53,27 @@ IF (HAVE_FUTIMENS)
 	SET(GIT_USE_FUTIMENS 1)
 ENDIF ()
 
+CHECK_SYMBOL_EXISTS(posix_fallocate fcntl.h HAVE_POSIX_FALLOCATE)
+CHECK_SYMBOL_EXISTS(fallocate fcntl.h HAVE_FALLOCATE)
+CHECK_C_SOURCE_COMPILES(
+	"#include <fcntl.h>
+	int main(void) { return F_PREALLOCATE; }"
+	HAVE_F_PREALLOCATE)
+CHECK_C_SOURCE_COMPILES(
+	"#include <fcntl.h>
+	int main(void) { return F_ALLOCSP64; }"
+	HAVE_F_ALLOCSP64)
+IF(HAVE_F_PREALLOCATE)
+	# APPLE OR FREEBSD OR NETBSD
+	SET(GIT_USE_FALLOCATE_BSD 1)
+ELSEIF(HAVE_F_ALLOCSP64)
+	SET(GIT_USE_FALLOCATE_SOLARIS 1)
+ELSEIF(HAVE_FALLOCATE)
+	SET(GIT_USE_FALLOCATE 1)
+ELSEIF (HAVE_POSIX_FALLOCATE)
+	SET(GIT_USE_FALLOCATE_POSIX 1)
+ENDIF ()
+
 CHECK_PROTOTYPE_DEFINITION(qsort_r
 	"void qsort_r(void *base, size_t nmemb, size_t size, void *thunk, int (*compar)(void *, const void *, const void *))"
 	"" "stdlib.h" HAVE_QSORT_R_BSD)
