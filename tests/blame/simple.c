@@ -203,6 +203,14 @@ void test_blame_simple__trivial_libgit2(void)
 	check_blame_hunk_index(g_repo, g_blame, 49, 60, 1, 0, "d12299fe", "src/git.h");
 }
 
+/* This was leading to segfaults on some systems during cache eviction. */
+void test_blame_simple__trivial_libgit2_under_cache_pressure(void)
+{
+	ssize_t old_max_storage = git_cache__max_storage;
+	git_cache__max_storage = 1024 * 1024;
+	test_blame_simple__trivial_libgit2();
+	git_cache__max_storage = old_max_storage;
+}
 
 /*
  * $ git blame -n b.txt -L 8
