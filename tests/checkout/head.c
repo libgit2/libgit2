@@ -264,3 +264,36 @@ void test_checkout_head__obeys_filemode_false(void)
 	git_object_free(branch);
 	git_object_free(target);
 }
+
+void test_checkout_head__do_remove_untracked_paths(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_index *index;
+	char *paths[] = {"tracked/untracked", "tracked/ignored"};
+
+	cl_git_pass(p_mkdir("testrepo/tracked", 0755));
+	cl_git_pass(p_mkdir("testrepo/tracked/subdir", 0755));
+	cl_git_mkfile("testrepo/tracked/tracked", "tracked\n");
+	cl_git_mkfile("testrepo/tracked/untracked", "untracked\n");
+	cl_git_mkfile("testrepo/tracked/ignored", "ignored\n");
+	cl_git_rewritefile("testrepo/.gitignore", "tracked/ignored");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_add_bypath(index, ".gitignore"));
+	cl_git_pass(git_index_add_bypath(index, "tracked/tracked"));
+	cl_git_pass(git_index_write(index));
+	git_index_free(index);
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE |
+		GIT_CHECKOUT_REMOVE_UNTRACKED |
+		GIT_CHECKOUT_REMOVE_IGNORED;
+	opts.paths.strings = paths;
+	opts.paths.count = ARRAY_SIZE(paths);
+
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	cl_assert(git_path_isfile("testrepo/tracked/tracked"));
+	cl_assert(!git_path_isfile("testrepo/tracked/untracked"));
+	cl_assert(!git_path_isfile("testrepo/tracked/ignored"));
+}
+

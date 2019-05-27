@@ -2550,6 +2550,7 @@ int git_checkout_iterator(
 		workdir_opts = GIT_ITERATOR_OPTIONS_INIT;
 	checkout_data data = {0};
 	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	int needs_expand;
 	uint32_t *actions = NULL;
 	size_t *counts = NULL;
 
@@ -2574,10 +2575,14 @@ int git_checkout_iterator(
 		diff_opts.pathspec = data.opts.paths;
 
 	/* set up iterators */
-
 	workdir_opts.flags = git_iterator_ignore_case(target) ?
 		GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE;
-	workdir_opts.flags |= GIT_ITERATOR_DONT_AUTOEXPAND;
+	needs_expand = (data.opts.checkout_strategy & (
+		GIT_CHECKOUT_REMOVE_UNTRACKED |
+		GIT_CHECKOUT_REMOVE_IGNORED
+	));
+	if (!needs_expand)
+		workdir_opts.flags |= GIT_ITERATOR_DONT_AUTOEXPAND;
 	workdir_opts.start = data.pfx;
 	workdir_opts.end = data.pfx;
 
