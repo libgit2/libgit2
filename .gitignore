@@ -33,3 +33,4 @@ tags
 mkmf.log
 *.profdata
 *.profraw
+.vscode/
