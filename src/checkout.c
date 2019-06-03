@@ -373,8 +373,13 @@ static int checkout_action_wd_only(
 	if (!git_pathspec__match(
 			pathspec, wd->path,
 			(data->strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH) != 0,
-			git_iterator_ignore_case(workdir), NULL, NULL))
-		return git_iterator_advance(wditem, workdir);
+			git_iterator_ignore_case(workdir), NULL, NULL)) {
+		if (wd->mode != GIT_FILEMODE_TREE) {
+			return git_iterator_advance(wditem, workdir);
+		} else {
+			return git_iterator_advance_into(wditem, workdir);
+		}
+	}
 
 	/* check if item is tracked in the index but not in the checkout diff */
 	if (data->index != NULL) {
