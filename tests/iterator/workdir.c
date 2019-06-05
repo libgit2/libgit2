@@ -100,7 +100,7 @@ static void workdir_iterator_test(
 
 void test_iterator_workdir__0(void)
 {
-	workdir_iterator_test("attr", NULL, NULL, 23, 5, NULL, "ign");
+	workdir_iterator_test("attr", NULL, NULL, 24, 5, NULL, "ign");
 }
 
 static const char *status_paths[] = {

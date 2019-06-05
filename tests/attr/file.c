@@ -181,15 +181,10 @@ void test_attr_file__assign_variants(void)
 	git_attr_file__free(file);
 }
 
-void test_attr_file__check_attr_examples(void)
+static void assert_examples(git_attr_file *file)
 {
-	git_attr_file *file;
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
-
-	cl_git_pass(git_attr_file__load_standalone(&file, cl_fixture("attr/attr3")));
-	cl_assert_equal_s(cl_fixture("attr/attr3"), file->entry->path);
-	cl_assert(file->rules.length == 3);
 
 	rule = get_rule(0);
 	cl_assert_equal_s("*.java", rule->match.pattern);
@@ -219,6 +214,30 @@ void test_attr_file__check_attr_examples(void)
 	assign = get_assign(rule, 0);
 	cl_assert_equal_s("caveat", assign->name);
 	cl_assert_equal_s("unspecified", assign->value);
+}
+
+void test_attr_file__check_attr_examples(void)
+{
+	git_attr_file *file;
+
+	cl_git_pass(git_attr_file__load_standalone(&file, cl_fixture("attr/attr3")));
+	cl_assert_equal_s(cl_fixture("attr/attr3"), file->entry->path);
+	cl_assert(file->rules.length == 3);
+
+	assert_examples(file);
+
+	git_attr_file__free(file);
+}
+
+void test_attr_file__whitespace(void)
+{
+	git_attr_file *file;
+
+	cl_git_pass(git_attr_file__load_standalone(&file, cl_fixture("attr/attr4")));
+	cl_assert_equal_s(cl_fixture("attr/attr4"), file->entry->path);
+	cl_assert(file->rules.length == 3);
+
+	assert_examples(file);
 
 	git_attr_file__free(file);
 }
