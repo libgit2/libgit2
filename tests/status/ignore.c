@@ -413,6 +413,30 @@ void test_status_ignore__leading_slash_ignores(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
+void test_status_ignore__multiple_leading_slash(void)
+{
+	static const char *test_files[] = {
+		"empty_standard_repo/a.test",
+		"empty_standard_repo/b.test",
+		"empty_standard_repo/c.test",
+		"empty_standard_repo/d.test",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/.gitignore",
+		"a.test\n"
+		"/b.test\n"
+		"//c.test\n"
+		"///d.test\n");
+
+	assert_is_ignored("a.test");
+	assert_is_ignored("b.test");
+	refute_is_ignored("c.test");
+	refute_is_ignored("d.test");
+}
+
 void test_status_ignore__contained_dir_with_matching_name(void)
 {
 	static const char *test_files[] = {

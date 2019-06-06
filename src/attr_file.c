@@ -622,7 +622,8 @@ int git_attr_fnmatch__parse(
 		if (*scan == '/') {
 			spec->flags = spec->flags | GIT_ATTR_FNMATCH_FULLPATH;
 			slash_count++;
-			if (pattern == scan)
+
+			if (slash_count == 1 && pattern == scan)
 				pattern++;
 		}
 		/* remember if we see an unescaped wildcard in pattern */
