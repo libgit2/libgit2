@@ -72,6 +72,11 @@ void test_core_structinit__compare(void)
 	clar__skip();
 #endif
 
+	/* apply */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_apply_options, GIT_APPLY_OPTIONS_VERSION, \
+		GIT_APPLY_OPTIONS_INIT, git_apply_options_init);
+
 	/* blame */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_blame_options, GIT_BLAME_OPTIONS_VERSION, \

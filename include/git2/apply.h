@@ -57,7 +57,7 @@ typedef int GIT_CALLBACK(git_apply_hunk_cb)(
  * Apply options structure
  *
  * Initialize with `GIT_APPLY_OPTIONS_INIT`. Alternatively, you can
- * use `git_apply_init_options`.
+ * use `git_apply_options_init`.
  *
  * @see git_apply_to_tree, git_apply
  */
@@ -71,6 +71,8 @@ typedef struct {
 
 #define GIT_APPLY_OPTIONS_VERSION 1
 #define GIT_APPLY_OPTIONS_INIT {GIT_APPLY_OPTIONS_VERSION}
+
+GIT_EXTERN(int) git_apply_options_init(git_apply_options *opts, unsigned int version);
 
 /**
  * Apply a `git_diff` to a `git_tree`, and return the resulting image
