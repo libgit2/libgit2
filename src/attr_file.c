@@ -560,6 +560,21 @@ void git_attr_path__free(git_attr_path *info)
  */
 
 /*
+ * Determine the length of trailing spaces. Escaped spaces do not count as
+ * trailing whitespace.
+ */
+static size_t trailing_space_length(const char *p, size_t len)
+{
+	size_t n;
+	for (n = len; n; n--) {
+		if ((p[n-1] != ' ' && p[n-1] != '\t') ||
+		    (n > 1 && p[n-2] == '\\'))
+			break;
+	}
+	return len - n;
+}
+
+/*
  * This will return 0 if the spec was filled out,
  * GIT_ENOTFOUND if the fnmatch does not require matching, or
  * another error code there was an actual problem.
@@ -647,9 +662,10 @@ int git_attr_fnmatch__parse(
 			return GIT_ENOTFOUND;
 
 	/* Remove trailing spaces. */
-	while (pattern[spec->length - 1] == ' ' || pattern[spec->length - 1] == '\t')
-		if (--spec->length == 0)
-			return GIT_ENOTFOUND;
+	spec->length -= trailing_space_length(pattern, spec->length);
+
+	if (spec->length == 0)
+		return GIT_ENOTFOUND;
 
 	if (pattern[spec->length - 1] == '/') {
 		spec->length--;

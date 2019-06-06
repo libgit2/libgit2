@@ -61,6 +61,52 @@ void test_attr_ignore__ignore_space(void)
 	assert_is_ignored(true, "NewFolder/NewFolder/File.txt");
 }
 
+void test_attr_ignore__intermittent_space(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "foo bar\n");
+
+	assert_is_ignored(false, "foo");
+	assert_is_ignored(false, "bar");
+	assert_is_ignored(true, "foo bar");
+}
+
+void test_attr_ignore__trailing_space(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"foo \n"
+		"bar  \n"
+	);
+
+	assert_is_ignored(true, "foo");
+	assert_is_ignored(false, "foo ");
+	assert_is_ignored(true, "bar");
+	assert_is_ignored(false, "bar ");
+	assert_is_ignored(false, "bar  ");
+}
+
+void test_attr_ignore__escaped_trailing_spaces(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"foo\\ \n"
+		"bar\\ \\ \n"
+		"baz \\ \n"
+		"qux\\  \n"
+	);
+
+	assert_is_ignored(false, "foo");
+	assert_is_ignored(true, "foo ");
+	assert_is_ignored(false, "bar");
+	assert_is_ignored(false, "bar ");
+	assert_is_ignored(true, "bar  ");
+	assert_is_ignored(true, "baz  ");
+	assert_is_ignored(false, "baz ");
+	assert_is_ignored(true, "qux ");
+	assert_is_ignored(false, "qux");
+	assert_is_ignored(false, "qux  ");
+}
+
 void test_attr_ignore__ignore_dir(void)
 {
 	cl_git_rewritefile("attr/.gitignore", "dir/\n");
