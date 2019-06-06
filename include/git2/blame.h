@@ -53,7 +53,7 @@ typedef enum {
  * Blame options structure
  *
  * Initialize with `GIT_BLAME_OPTIONS_INIT`. Alternatively, you can
- * use `git_blame_init_options`.
+ * use `git_blame_options_init`.
  *
  */
 typedef struct git_blame_options {
@@ -100,7 +100,7 @@ typedef struct git_blame_options {
  * @param version The struct version; pass `GIT_BLAME_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_blame_init_options(
+GIT_EXTERN(int) git_blame_options_init(
 	git_blame_options *opts,
 	unsigned int version);
 

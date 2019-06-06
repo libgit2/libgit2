@@ -268,7 +268,7 @@ static int rebase_alloc(git_rebase **out, const git_rebase_options *rebase_opts)
 	if (rebase_opts)
 		memcpy(&rebase->options, rebase_opts, sizeof(git_rebase_options));
 	else
-		git_rebase_init_options(&rebase->options, GIT_REBASE_OPTIONS_VERSION);
+		git_rebase_options_init(&rebase->options, GIT_REBASE_OPTIONS_VERSION);
 
 	if (rebase_opts && rebase_opts->rewrite_notes_ref) {
 		rebase->options.rewrite_notes_ref = git__strdup(rebase_opts->rewrite_notes_ref);
@@ -493,11 +493,16 @@ static int rebase_setupfiles(git_rebase *rebase)
 	return rebase_setupfiles_merge(rebase);
 }
 
-int git_rebase_init_options(git_rebase_options *opts, unsigned int version)
+int git_rebase_options_init(git_rebase_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_rebase_options, GIT_REBASE_OPTIONS_INIT);
 	return 0;
+}
+
+int git_rebase_init_options(git_rebase_options *opts, unsigned int version)
+{
+	return git_rebase_options_init(opts, version);
 }
 
 static int rebase_ensure_not_in_progress(git_repository *repo)

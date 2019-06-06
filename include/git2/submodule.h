@@ -122,7 +122,7 @@ typedef int GIT_CALLBACK(git_submodule_cb)(
  * Submodule update options structure
  *
  * Initialize with `GIT_SUBMODULE_UPDATE_OPTIONS_INIT`. Alternatively, you can
- * use `git_submodule_update_init_options`.
+ * use `git_submodule_update_options_init`.
  *
  */
 typedef struct git_submodule_update_options {
@@ -168,7 +168,7 @@ typedef struct git_submodule_update_options {
  * @param version The struct version; pass `GIT_SUBMODULE_UPDATE_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_submodule_update_init_options(
+GIT_EXTERN(int) git_submodule_update_options_init(
 	git_submodule_update_options *opts, unsigned int version);
 
 /**

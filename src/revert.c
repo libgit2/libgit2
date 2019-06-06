@@ -224,9 +224,14 @@ done:
 	return error;
 }
 
-int git_revert_init_options(git_revert_options *opts, unsigned int version)
+int git_revert_options_init(git_revert_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_revert_options, GIT_REVERT_OPTIONS_INIT);
 	return 0;
+}
+
+int git_revert_init_options(git_revert_options *opts, unsigned int version)
+{
+	return git_revert_options_init(opts, version);
 }

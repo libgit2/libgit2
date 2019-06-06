@@ -280,7 +280,7 @@ int git_status_list_new(
 	if ((error = git_repository__ensure_not_bare(repo, "status")) < 0 ||
 		(error = git_repository_index(&index, repo)) < 0)
 		return error;
-	
+
 	if (opts != NULL && opts->baseline != NULL) {
 		head = opts->baseline;
 	} else {
@@ -540,11 +540,16 @@ int git_status_should_ignore(
 	return git_ignore_path_is_ignored(ignored, repo, path);
 }
 
-int git_status_init_options(git_status_options *opts, unsigned int version)
+int git_status_options_init(git_status_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_status_options, GIT_STATUS_OPTIONS_INIT);
 	return 0;
+}
+
+int git_status_init_options(git_status_options *opts, unsigned int version)
+{
+	return git_status_options_init(opts, version);
 }
 
 int git_status_list_get_perfdata(

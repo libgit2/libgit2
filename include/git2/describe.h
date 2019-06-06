@@ -37,7 +37,7 @@ typedef enum {
  * Describe options structure
  *
  * Initialize with `GIT_DESCRIBE_OPTIONS_INIT`. Alternatively, you can
- * use `git_describe_init_options`.
+ * use `git_describe_options_init`.
  *
  */
 typedef struct git_describe_options {
@@ -79,13 +79,13 @@ typedef struct git_describe_options {
  * @param version The struct version; pass `GIT_DESCRIBE_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_describe_init_options(git_describe_options *opts, unsigned int version);
+GIT_EXTERN(int) git_describe_options_init(git_describe_options *opts, unsigned int version);
 
 /**
  * Describe format options structure
  *
  * Initialize with `GIT_DESCRIBE_FORMAT_OPTIONS_INIT`. Alternatively, you can
- * use `git_describe_format_init_options`.
+ * use `git_describe_format_options_init`.
  *
  */
 typedef struct {
@@ -126,7 +126,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_DESCRIBE_FORMAT_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_describe_init_format_options(git_describe_format_options *opts, unsigned int version);
+GIT_EXTERN(int) git_describe_format_options_init(git_describe_format_options *opts, unsigned int version);
 
 /**
  * A struct that stores the result of a describe operation.

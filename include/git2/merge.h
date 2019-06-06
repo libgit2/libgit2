@@ -57,7 +57,7 @@ typedef struct {
  *        `GIT_MERGE_FILE_INPUT_VERSION` here.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_merge_file_init_input(
+GIT_EXTERN(int) git_merge_file_input_init(
 	git_merge_file_input *opts,
 	unsigned int version);
 
@@ -212,9 +212,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_MERGE_FILE_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_merge_file_init_options(
-	git_merge_file_options *opts,
-	unsigned int version);
+GIT_EXTERN(int) git_merge_file_options_init(git_merge_file_options *opts, unsigned int version);
 
 /**
  * Information about file-level merging
@@ -310,9 +308,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_MERGE_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_merge_init_options(
-	git_merge_options *opts,
-	unsigned int version);
+GIT_EXTERN(int) git_merge_options_init(git_merge_options *opts, unsigned int version);
 
 /**
  * The results of `git_merge_analysis` indicate the merge opportunities.

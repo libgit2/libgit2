@@ -2870,13 +2870,19 @@ int git_repository_is_shallow(git_repository *repo)
 	return st.st_size == 0 ? 0 : 1;
 }
 
-int git_repository_init_init_options(
+int git_repository_init_options_init(
 	git_repository_init_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_repository_init_options,
 		GIT_REPOSITORY_INIT_OPTIONS_INIT);
 	return 0;
+}
+
+int git_repository_init_init_options(
+	git_repository_init_options *opts, unsigned int version)
+{
+	return git_repository_init_options_init(opts, version);
 }
 
 int git_repository_ident(const char **name, const char **email, const git_repository *repo)

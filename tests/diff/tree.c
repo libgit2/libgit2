@@ -9,7 +9,7 @@ static diff_expects expect;
 
 void test_diff_tree__initialize(void)
 {
-	cl_git_pass(git_diff_init_options(&opts, GIT_DIFF_OPTIONS_VERSION));
+	cl_git_pass(git_diff_options_init(&opts, GIT_DIFF_OPTIONS_VERSION));
 
 	memset(&expect, 0, sizeof(expect));
 
@@ -472,7 +472,7 @@ void test_diff_tree__diff_configs(void)
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, NULL));
 
-	cl_git_pass(git_diff_foreach(diff, 
+	cl_git_pass(git_diff_foreach(diff,
 		diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expect));
 
 	cl_assert_equal_i(2, expect.files);

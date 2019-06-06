@@ -63,7 +63,7 @@ static void do_describe_single(git_repository *repo, describe_options *opts, con
 	git_object *commit;
 	git_describe_result *describe_result;
 	git_buf buf = { 0 };
-	
+
 	if (rev) {
 		check_lg2(git_revparse_single(&commit, repo, rev),
 			"Failed to lookup rev", rev);
@@ -148,8 +148,8 @@ static void describe_options_init(describe_options *opts)
 
 	opts->commits = NULL;
 	opts->commit_count = 0;
-	git_describe_init_options(&opts->describe_options, GIT_DESCRIBE_OPTIONS_VERSION);
-	git_describe_init_format_options(&opts->format_options, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION);
+	git_describe_options_init(&opts->describe_options, GIT_DESCRIBE_OPTIONS_VERSION);
+	git_describe_format_options_init(&opts->format_options, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION);
 }
 
 int lg2_describe(git_repository *repo, int argc, char **argv)

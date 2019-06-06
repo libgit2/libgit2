@@ -323,7 +323,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_REPOSITORY_INIT_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_repository_init_init_options(
+GIT_EXTERN(int) git_repository_init_options_init(
 	git_repository_init_options *opts,
 	unsigned int version);
 

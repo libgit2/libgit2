@@ -455,11 +455,16 @@ int git_clone(
 	return error;
 }
 
-int git_clone_init_options(git_clone_options *opts, unsigned int version)
+int git_clone_options_init(git_clone_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_clone_options, GIT_CLONE_OPTIONS_INIT);
 	return 0;
+}
+
+int git_clone_init_options(git_clone_options *opts, unsigned int version)
+{
+	return git_clone_options_init(opts, version);
 }
 
 static bool can_link(const char *src, const char *dst, int link)

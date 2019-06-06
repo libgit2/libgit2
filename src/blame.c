@@ -524,9 +524,14 @@ int git_blame_buffer(
 	return 0;
 }
 
-int git_blame_init_options(git_blame_options *opts, unsigned int version)
+int git_blame_options_init(git_blame_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_blame_options, GIT_BLAME_OPTIONS_INIT);
 	return 0;
+}
+
+int git_blame_init_options(git_blame_options *opts, unsigned int version)
+{
+	return git_blame_options_init(opts, version);
 }

@@ -256,7 +256,7 @@ typedef void GIT_CALLBACK(git_checkout_perfdata_cb)(
  * Checkout options structure
  *
  * Initialize with `GIT_CHECKOUT_OPTIONS_INIT`. Alternatively, you can
- * use `git_checkout_init_options`.
+ * use `git_checkout_options_init`.
  *
  */
 typedef struct git_checkout_options {
@@ -318,7 +318,7 @@ typedef struct git_checkout_options {
  * @param version The struct version; pass `GIT_CHECKOUT_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_checkout_init_options(
+GIT_EXTERN(int) git_checkout_options_init(
 	git_checkout_options *opts,
 	unsigned int version);
 

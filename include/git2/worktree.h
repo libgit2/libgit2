@@ -78,7 +78,7 @@ GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
  * Worktree add options structure
  *
  * Initialize with `GIT_WORKTREE_ADD_OPTIONS_INIT`. Alternatively, you can
- * use `git_worktree_add_init_options`.
+ * use `git_worktree_add_options_init`.
  *
  */
 typedef struct git_worktree_add_options {
@@ -101,7 +101,7 @@ typedef struct git_worktree_add_options {
  * @param version The struct version; pass `GIT_WORKTREE_ADD_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_worktree_add_init_options(git_worktree_add_options *opts,
+GIT_EXTERN(int) git_worktree_add_options_init(git_worktree_add_options *opts,
 	unsigned int version);
 
 /**
@@ -174,7 +174,7 @@ GIT_EXTERN(const char *) git_worktree_name(const git_worktree *wt);
  *  is valid for the lifetime of the git_worktree.
  */
 GIT_EXTERN(const char *) git_worktree_path(const git_worktree *wt);
- 
+
 /**
  * Flags which can be passed to git_worktree_prune to alter its
  * behavior.
@@ -192,7 +192,7 @@ typedef enum {
  * Worktree prune options structure
  *
  * Initialize with `GIT_WORKTREE_PRUNE_OPTIONS_INIT`. Alternatively, you can
- * use `git_worktree_prune_init_options`.
+ * use `git_worktree_prune_options_init`.
  *
  */
 typedef struct git_worktree_prune_options {
@@ -214,7 +214,7 @@ typedef struct git_worktree_prune_options {
  * @param version The struct version; pass `GIT_WORKTREE_PRUNE_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_worktree_prune_init_options(
+GIT_EXTERN(int) git_worktree_prune_options_init(
 	git_worktree_prune_options *opts,
 	unsigned int version);
 

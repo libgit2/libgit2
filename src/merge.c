@@ -3322,24 +3322,40 @@ done:
 	return error;
 }
 
-int git_merge_init_options(git_merge_options *opts, unsigned int version)
+int git_merge_options_init(git_merge_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_merge_options, GIT_MERGE_OPTIONS_INIT);
 	return 0;
 }
 
-int git_merge_file_init_input(git_merge_file_input *input, unsigned int version)
+int git_merge_init_options(git_merge_options *opts, unsigned int version)
+{
+	return git_merge_options_init(opts, version);
+}
+
+int git_merge_file_input_init(git_merge_file_input *input, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		input, version, git_merge_file_input, GIT_MERGE_FILE_INPUT_INIT);
 	return 0;
 }
 
-int git_merge_file_init_options(
+int git_merge_file_init_input(git_merge_file_input *input, unsigned int version)
+{
+	return git_merge_file_input_init(input, version);
+}
+
+int git_merge_file_options_init(
 	git_merge_file_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_merge_file_options, GIT_MERGE_FILE_OPTIONS_INIT);
 	return 0;
+}
+
+int git_merge_file_init_options(
+	git_merge_file_options *opts, unsigned int version)
+{
+	return git_merge_file_options_init(opts, version);
 }

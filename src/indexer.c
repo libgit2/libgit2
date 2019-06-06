@@ -116,11 +116,16 @@ static int objects_cmp(const void *a, const void *b)
 	return git_oid__cmp(&entrya->oid, &entryb->oid);
 }
 
-int git_indexer_init_options(git_indexer_options *opts, unsigned int version)
+int git_indexer_options_init(git_indexer_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_indexer_options, GIT_INDEXER_OPTIONS_INIT);
 	return 0;
+}
+
+int git_indexer_init_options(git_indexer_options *opts, unsigned int version)
+{
+	return git_indexer_options_init(opts, version);
 }
 
 int git_indexer_new(

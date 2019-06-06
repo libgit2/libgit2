@@ -8,13 +8,29 @@
 #define INCLUDE_git_deprecated_h__
 
 #include "common.h"
+#include "blame.h"
 #include "buffer.h"
+#include "checkout.h"
+#include "cherrypick.h"
+#include "clone.h"
+#include "describe.h"
+#include "diff.h"
 #include "errors.h"
 #include "index.h"
+#include "indexer.h"
+#include "merge.h"
 #include "object.h"
+#include "proxy.h"
 #include "refs.h"
+#include "rebase.h"
 #include "remote.h"
 #include "trace.h"
+#include "repository.h"
+#include "revert.h"
+#include "stash.h"
+#include "status.h"
+#include "submodule.h"
+#include "worktree.h"
 
 /*
  * Users can avoid deprecated functions by defining `GIT_DEPRECATE_HARD`.
@@ -313,6 +329,45 @@ typedef git_push_transfer_progress_cb git_push_transfer_progress;
 
  /** The type of a remote completion event */
 #define git_remote_completion_type git_remote_completion_t
+
+/**@}*/
+
+/** @name Deprecated Options Initialization Functions
+ *
+ * These functions are retained for backward compatibility.  The newer
+ * versions of these functions should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility functions at
+ * this time.
+ */
+/**@{*/
+
+GIT_EXTERN(int) git_blame_init_options(git_blame_options *opts, unsigned int version);
+GIT_EXTERN(int) git_checkout_init_options(git_checkout_options *opts, unsigned int version);
+GIT_EXTERN(int) git_cherrypick_init_options(git_cherrypick_options *opts, unsigned int version);
+GIT_EXTERN(int) git_clone_init_options(git_clone_options *opts, unsigned int version);
+GIT_EXTERN(int) git_describe_init_options(git_describe_options *opts, unsigned int version);
+GIT_EXTERN(int) git_describe_init_format_options(git_describe_format_options *opts, unsigned int version);
+GIT_EXTERN(int) git_diff_init_options(git_diff_options *opts, unsigned int version);
+GIT_EXTERN(int) git_diff_find_init_options(git_diff_find_options *opts, unsigned int version);
+GIT_EXTERN(int) git_diff_format_email_init_options(git_diff_format_email_options *opts, unsigned int version);
+GIT_EXTERN(int) git_diff_patchid_init_options(git_diff_patchid_options *opts, unsigned int version);
+GIT_EXTERN(int) git_fetch_init_options(git_fetch_options *opts, unsigned int version);
+GIT_EXTERN(int) git_indexer_init_options(git_indexer_options *opts, unsigned int version);
+GIT_EXTERN(int) git_merge_init_options(git_merge_options *opts, unsigned int version);
+GIT_EXTERN(int) git_merge_file_init_input(git_merge_file_input *input, unsigned int version);
+GIT_EXTERN(int) git_merge_file_init_options(git_merge_file_options *opts, unsigned int version);
+GIT_EXTERN(int) git_proxy_init_options(git_proxy_options *opts, unsigned int version);
+GIT_EXTERN(int) git_push_init_options(git_push_options *opts, unsigned int version);
+GIT_EXTERN(int) git_rebase_init_options(git_rebase_options *opts, unsigned int version);
+GIT_EXTERN(int) git_remote_create_init_options(git_remote_create_options *opts, unsigned int version);
+GIT_EXTERN(int) git_repository_init_init_options(git_repository_init_options *opts, unsigned int version);
+GIT_EXTERN(int) git_revert_init_options(git_revert_options *opts, unsigned int version);
+GIT_EXTERN(int) git_stash_apply_init_options(git_stash_apply_options *opts, unsigned int version);
+GIT_EXTERN(int) git_status_init_options(git_status_options *opts, unsigned int version);
+GIT_EXTERN(int) git_submodule_update_init_options(git_submodule_update_options *opts, unsigned int version);
+GIT_EXTERN(int) git_worktree_add_init_options(git_worktree_add_options *opts, unsigned int version);
+GIT_EXTERN(int) git_worktree_prune_init_options(git_worktree_prune_options *opts, unsigned int version);
 
 /**@}*/
 
