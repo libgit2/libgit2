@@ -560,13 +560,15 @@ void git_attr_path__free(git_attr_path *info)
  */
 
 /*
- * Determine the length of trailing spaces.
+ * Determine the length of trailing spaces. Escaped spaces do not count as
+ * trailing whitespace.
  */
 static size_t trailing_space_length(const char *p, size_t len)
 {
 	size_t n;
 	for (n = len; n; n--) {
-		if (p[n-1] != ' ' && p[n-1] != '\t')
+		if ((p[n-1] != ' ' && p[n-1] != '\t') ||
+		    (n > 1 && p[n-2] == '\\'))
 			break;
 	}
 	return len - n;
