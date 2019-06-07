@@ -459,3 +459,65 @@ void test_ignore_path__negative_directory_rules_only_match_directories(void)
 	assert_is_ignored(false, "src/A.keep");
 	assert_is_ignored(false, ".gitignore");
 }
+
+void test_ignore_path__escaped_character(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "\\c\n");
+	assert_is_ignored(true, "c");
+	assert_is_ignored(false, "\\c");
+}
+
+void test_ignore_path__escaped_newline(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"\\\nnewline\n"
+	);
+
+	assert_is_ignored(true, "\nnewline");
+}
+
+void test_ignore_path__escaped_glob(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "\\*\n");
+	assert_is_ignored(true, "*");
+	assert_is_ignored(false, "foo");
+}
+
+void test_ignore_path__escaped_comments(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"#foo\n"
+		"\\#bar\n"
+		"\\##baz\n"
+		"\\#\\\\#qux\n"
+	);
+
+	assert_is_ignored(false, "#foo");
+	assert_is_ignored(true, "#bar");
+	assert_is_ignored(false, "\\#bar");
+	assert_is_ignored(true, "##baz");
+	assert_is_ignored(false, "\\##baz");
+	assert_is_ignored(true, "#\\#qux");
+	assert_is_ignored(false, "##qux");
+	assert_is_ignored(false, "\\##qux");
+}
+
+void test_ignore_path__escaped_slash(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"\\\\\n"
+		"\\\\preceding\n"
+		"inter\\\\mittent\n"
+		"trailing\\\\\n"
+	);
+
+#ifndef GIT_WIN32
+	assert_is_ignored(true, "\\");
+	assert_is_ignored(true, "\\preceding");
+#endif
+	assert_is_ignored(true, "inter\\mittent");
+	assert_is_ignored(true, "trailing\\");
+}

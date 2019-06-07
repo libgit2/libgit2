@@ -574,6 +574,34 @@ static size_t trailing_space_length(const char *p, size_t len)
 	return len - n;
 }
 
+static size_t unescape_spaces(char *str)
+{
+	char *scan, *pos = str;
+	bool escaped = false;
+
+	if (!str)
+		return 0;
+
+	for (scan = str; *scan; scan++) {
+		if (!escaped && *scan == '\\') {
+			escaped = true;
+			continue;
+		}
+
+		/* Only insert the escape character for escaped non-spaces */
+		if (escaped && !git__isspace(*scan))
+			*pos++ = '\\';
+
+		*pos++ = *scan;
+		escaped = false;
+	}
+
+	if (pos != scan)
+		*pos = '\0';
+
+	return (pos - str);
+}
+
 /*
  * This will return 0 if the spec was filled out,
  * GIT_ENOTFOUND if the fnmatch does not require matching, or
@@ -701,8 +729,8 @@ int git_attr_fnmatch__parse(
 		*base = git__next_line(pattern);
 		return -1;
 	} else {
-		/* strip '\' that might have be used for internal whitespace */
-		spec->length = git__unescape(spec->pattern);
+		/* strip '\' that might have been used for internal whitespace */
+		spec->length = unescape_spaces(spec->pattern);
 		/* TODO: convert remaining '\' into '/' for POSIX ??? */
 	}
 
