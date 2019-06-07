@@ -743,7 +743,6 @@ int git_attr_fnmatch__parse(
 	} else {
 		/* strip '\' that might have been used for internal whitespace */
 		spec->length = unescape_spaces(spec->pattern);
-		/* TODO: convert remaining '\' into '/' for POSIX ??? */
 	}
 
 	return 0;
