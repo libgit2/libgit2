@@ -3,15 +3,15 @@
 #include "git2/attr.h"
 #include "ignore.h"
 #include "attr.h"
-#include "status_helpers.h"
+#include "status/status_helpers.h"
 
 static git_repository *g_repo = NULL;
 
-void test_status_ignore__initialize(void)
+void test_ignore_status__initialize(void)
 {
 }
 
-void test_status_ignore__cleanup(void)
+void test_ignore_status__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
 }
@@ -33,7 +33,7 @@ static void assert_ignored_(
 #define refute_is_ignored(filepath) \
 	assert_ignored_(false, filepath, __FILE__, __LINE__)
 
-void test_status_ignore__0(void)
+void test_ignore_status__0(void)
 {
 	struct {
 		const char *path;
@@ -75,7 +75,7 @@ void test_status_ignore__0(void)
 }
 
 
-void test_status_ignore__1(void)
+void test_ignore_status__1(void)
 {
 	g_repo = cl_git_sandbox_init("attr");
 
@@ -90,7 +90,7 @@ void test_status_ignore__1(void)
 	refute_is_ignored("sub/dir/");
 }
 
-void test_status_ignore__empty_repo_with_gitignore_rewrite(void)
+void test_ignore_status__empty_repo_with_gitignore_rewrite(void)
 {
 	status_entry_single st;
 
@@ -134,7 +134,7 @@ void test_status_ignore__empty_repo_with_gitignore_rewrite(void)
 	assert_is_ignored("look-ma.txt");
 }
 
-void test_status_ignore__ignore_pattern_contains_space(void)
+void test_ignore_status__ignore_pattern_contains_space(void)
 {
 	unsigned int flags;
 	const mode_t mode = 0777;
@@ -155,7 +155,7 @@ void test_status_ignore__ignore_pattern_contains_space(void)
 	cl_assert(flags == GIT_STATUS_WT_NEW);
 }
 
-void test_status_ignore__ignore_pattern_ignorecase(void)
+void test_ignore_status__ignore_pattern_ignorecase(void)
 {
 	unsigned int flags;
 	bool ignore_case;
@@ -174,7 +174,7 @@ void test_status_ignore__ignore_pattern_ignorecase(void)
 	cl_assert(flags == ignore_case ? GIT_STATUS_IGNORED : GIT_STATUS_WT_NEW);
 }
 
-void test_status_ignore__subdirectories(void)
+void test_ignore_status__subdirectories(void)
 {
 	status_entry_single st;
 
@@ -250,7 +250,7 @@ static const char *test_files_1[] = {
 	NULL
 };
 
-void test_status_ignore__subdirectories_recursion(void)
+void test_ignore_status__subdirectories_recursion(void)
 {
 	/* Let's try again with recursing into ignored dirs turned on */
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
@@ -319,7 +319,7 @@ void test_status_ignore__subdirectories_recursion(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
-void test_status_ignore__subdirectories_not_at_root(void)
+void test_ignore_status__subdirectories_not_at_root(void)
 {
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	status_entry_counts counts;
@@ -360,7 +360,7 @@ void test_status_ignore__subdirectories_not_at_root(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
-void test_status_ignore__leading_slash_ignores(void)
+void test_ignore_status__leading_slash_ignores(void)
 {
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	status_entry_counts counts;
@@ -413,7 +413,7 @@ void test_status_ignore__leading_slash_ignores(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
-void test_status_ignore__multiple_leading_slash(void)
+void test_ignore_status__multiple_leading_slash(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/a.test",
@@ -437,7 +437,7 @@ void test_status_ignore__multiple_leading_slash(void)
 	refute_is_ignored("d.test");
 }
 
-void test_status_ignore__contained_dir_with_matching_name(void)
+void test_ignore_status__contained_dir_with_matching_name(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/subdir_match/aaa/subdir_match/file",
@@ -477,7 +477,7 @@ void test_status_ignore__contained_dir_with_matching_name(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
-void test_status_ignore__trailing_slash_star(void)
+void test_ignore_status__trailing_slash_star(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/file",
@@ -495,7 +495,7 @@ void test_status_ignore__trailing_slash_star(void)
 	assert_is_ignored("subdir/file");
 }
 
-void test_status_ignore__adding_internal_ignores(void)
+void test_ignore_status__adding_internal_ignores(void)
 {
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
@@ -529,7 +529,7 @@ void test_status_ignore__adding_internal_ignores(void)
 	assert_is_ignored("two.bar");
 }
 
-void test_status_ignore__add_internal_as_first_thing(void)
+void test_ignore_status__add_internal_as_first_thing(void)
 {
 	const char *add_me = "\n#################\n## Eclipse\n#################\n\n*.pydevproject\n.project\n.metadata\nbin/\ntmp/\n*.tmp\n\n";
 
@@ -541,7 +541,7 @@ void test_status_ignore__add_internal_as_first_thing(void)
 	refute_is_ignored("two.bar");
 }
 
-void test_status_ignore__internal_ignores_inside_deep_paths(void)
+void test_ignore_status__internal_ignores_inside_deep_paths(void)
 {
 	const char *add_me = "Debug\nthis/is/deep\npatterned*/dir\n";
 
@@ -571,7 +571,7 @@ void test_status_ignore__internal_ignores_inside_deep_paths(void)
 	refute_is_ignored("xthis/is/deep");
 }
 
-void test_status_ignore__automatically_ignore_bad_files(void)
+void test_ignore_status__automatically_ignore_bad_files(void)
 {
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
@@ -595,7 +595,7 @@ void test_status_ignore__automatically_ignore_bad_files(void)
 	refute_is_ignored("path/whatever.c");
 }
 
-void test_status_ignore__filenames_with_special_prefixes_do_not_interfere_with_status_retrieval(void)
+void test_ignore_status__filenames_with_special_prefixes_do_not_interfere_with_status_retrieval(void)
 {
 	status_entry_single st;
 	char *test_cases[] = {
@@ -629,7 +629,7 @@ void test_status_ignore__filenames_with_special_prefixes_do_not_interfere_with_s
 	}
 }
 
-void test_status_ignore__issue_1766_negated_ignores(void)
+void test_ignore_status__issue_1766_negated_ignores(void)
 {
 	unsigned int status;
 
@@ -714,7 +714,7 @@ static void add_one_to_index(const char *file)
 }
 
 /* Some further broken scenarios that have been reported */
-void test_status_ignore__more_breakage(void)
+void test_ignore_status__more_breakage(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/d1/pfx-d2/d3/d4/d5/tracked",
@@ -770,7 +770,7 @@ void test_status_ignore__more_breakage(void)
 	refute_is_ignored("d1/pfx-d2/d3/d4/untracked");
 }
 
-void test_status_ignore__negative_ignores_inside_ignores(void)
+void test_ignore_status__negative_ignores_inside_ignores(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/top/mid/btm/tracked",
@@ -822,7 +822,7 @@ void test_status_ignore__negative_ignores_inside_ignores(void)
 	refute_is_ignored("foo/bar");
 }
 
-void test_status_ignore__negative_ignores_in_slash_star(void)
+void test_ignore_status__negative_ignores_in_slash_star(void)
 {
 	git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
 	git_status_list *list;
@@ -860,7 +860,7 @@ void test_status_ignore__negative_ignores_in_slash_star(void)
 	cl_assert(found_what_about);
 }
 
-void test_status_ignore__negative_ignores_without_trailing_slash_inside_ignores(void)
+void test_ignore_status__negative_ignores_without_trailing_slash_inside_ignores(void)
 {
 	git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
 	git_status_list *list;
@@ -916,7 +916,7 @@ void test_status_ignore__negative_ignores_without_trailing_slash_inside_ignores(
 	cl_assert(found_parent_child2_file);
 }
 
-void test_status_ignore__negative_directory_ignores(void)
+void test_ignore_status__negative_directory_ignores(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/parent/child1/bar.txt",
@@ -969,7 +969,7 @@ void test_status_ignore__negative_directory_ignores(void)
 	assert_is_ignored("padded_parent/child8/bar.txt");
 }
 
-void test_status_ignore__unignore_entry_in_ignored_dir(void)
+void test_ignore_status__unignore_entry_in_ignored_dir(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/bar.txt",
@@ -991,7 +991,7 @@ void test_status_ignore__unignore_entry_in_ignored_dir(void)
 	assert_is_ignored("nested/parent/child/bar.txt");
 }
 
-void test_status_ignore__do_not_unignore_basename_prefix(void)
+void test_ignore_status__do_not_unignore_basename_prefix(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/foo_bar.txt",
@@ -1007,7 +1007,7 @@ void test_status_ignore__do_not_unignore_basename_prefix(void)
 	assert_is_ignored("foo_bar.txt");
 }
 
-void test_status_ignore__filename_with_cr(void)
+void test_ignore_status__filename_with_cr(void)
 {
 	int ignored;
 
@@ -1040,7 +1040,7 @@ void test_status_ignore__filename_with_cr(void)
 	cl_assert_equal_i(1, ignored);
 }
 
-void test_status_ignore__subdir_doesnt_match_above(void)
+void test_ignore_status__subdir_doesnt_match_above(void)
 {
 	int ignored, icase = 0, error;
 	git_config *cfg;
@@ -1073,7 +1073,7 @@ void test_status_ignore__subdir_doesnt_match_above(void)
 	cl_assert_equal_i(icase, ignored);
 }
 
-void test_status_ignore__negate_exact_previous(void)
+void test_ignore_status__negate_exact_previous(void)
 {
 	int ignored;
 
@@ -1085,7 +1085,7 @@ void test_status_ignore__negate_exact_previous(void)
 	cl_assert_equal_i(1, ignored);
 }
 
-void test_status_ignore__negate_starstar(void)
+void test_ignore_status__negate_starstar(void)
 {
     int ignored;
 
@@ -1102,7 +1102,7 @@ void test_status_ignore__negate_starstar(void)
     cl_assert_equal_i(0, ignored);
 }
 
-void test_status_ignore__ignore_all_toplevel_dirs_include_files(void)
+void test_ignore_status__ignore_all_toplevel_dirs_include_files(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/README.md",
@@ -1127,7 +1127,7 @@ void test_status_ignore__ignore_all_toplevel_dirs_include_files(void)
 	refute_is_ignored("src/foo/foo.c");
 }
 
-void test_status_ignore__subdir_ignore_all_toplevel_dirs_include_files(void)
+void test_ignore_status__subdir_ignore_all_toplevel_dirs_include_files(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/project/README.md",
@@ -1152,7 +1152,7 @@ void test_status_ignore__subdir_ignore_all_toplevel_dirs_include_files(void)
 	refute_is_ignored("project/README.md");
 }
 
-void test_status_ignore__subdir_ignore_everything_except_certain_files(void)
+void test_ignore_status__subdir_ignore_everything_except_certain_files(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/project/README.md",
@@ -1180,7 +1180,7 @@ void test_status_ignore__subdir_ignore_everything_except_certain_files(void)
 	refute_is_ignored("project/src/foo/foo.c");
 }
 
-void test_status_ignore__deeper(void)
+void test_ignore_status__deeper(void)
 {
 	const char *test_files[] = {
 		"empty_standard_repo/foo.data",
@@ -1202,7 +1202,7 @@ void test_status_ignore__deeper(void)
 	refute_is_ignored("dont_ignore/bar.data");
 }
 
-void test_status_ignore__unignored_dir_with_ignored_contents(void)
+void test_ignore_status__unignored_dir_with_ignored_contents(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/dir/a.test",
@@ -1220,7 +1220,7 @@ void test_status_ignore__unignored_dir_with_ignored_contents(void)
 	assert_is_ignored("dir/subdir/a.test");
 }
 
-void test_status_ignore__unignored_subdirs(void)
+void test_ignore_status__unignored_subdirs(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/dir/a.test",
@@ -1238,7 +1238,7 @@ void test_status_ignore__unignored_subdirs(void)
 	refute_is_ignored("dir/subdir/a.test");
 }
 
-void test_status_ignore__skips_bom(void)
+void test_ignore_status__skips_bom(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/a.test",
@@ -1261,7 +1261,7 @@ void test_status_ignore__skips_bom(void)
 	refute_is_ignored("bar.txt");
 }
 
-void test_status_ignore__leading_spaces_are_significant(void)
+void test_ignore_status__leading_spaces_are_significant(void)
 {
 	static const char *test_files[] = {
 		"empty_standard_repo/a.test",
