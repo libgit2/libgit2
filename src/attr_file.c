@@ -587,6 +587,7 @@ int git_attr_fnmatch__parse(
 {
 	const char *pattern, *scan;
 	int slash_count, allow_space;
+	bool escaped;
 
 	assert(spec && base && *base);
 
@@ -623,28 +624,29 @@ int git_attr_fnmatch__parse(
 	}
 
 	slash_count = 0;
+	escaped = false;
+	/* Scan until a non-escaped whitespace. */
 	for (scan = pattern; *scan != '\0'; ++scan) {
-		/*
-		 * Scan until a non-escaped whitespace: find a whitespace, then look
-		 * one char backward to ensure that it's not prefixed by a `\`.
-		 * Only look backward if we're not at the first position (`pattern`).
-		 */
-		if (git__isspace(*scan) && scan > pattern && *(scan - 1) != '\\') {
-			if (!allow_space || (*scan != ' ' && *scan != '\t' && *scan != '\r'))
-				break;
-		}
+		char c = *scan;
 
-		if (*scan == '/') {
+		if (c == '\\' && !escaped) {
+			escaped = true;
+			continue;
+		} else if (git__isspace(c) && !escaped) {
+			if (!allow_space || (c != ' ' && c != '\t' && c != '\r'))
+				break;
+		} else if (c == '/') {
 			spec->flags = spec->flags | GIT_ATTR_FNMATCH_FULLPATH;
 			slash_count++;
 
 			if (slash_count == 1 && pattern == scan)
 				pattern++;
-		}
-		/* remember if we see an unescaped wildcard in pattern */
-		else if (git__iswildcard(*scan) &&
-			(scan == pattern || (*(scan - 1) != '\\')))
+		} else if (git__iswildcard(c) && !escaped) {
+			/* remember if we see an unescaped wildcard in pattern */
 			spec->flags = spec->flags | GIT_ATTR_FNMATCH_HASWILD;
+		}
+
+		escaped = false;
 	}
 
 	*base = scan;
