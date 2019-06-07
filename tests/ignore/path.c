@@ -521,3 +521,20 @@ void test_ignore_path__escaped_slash(void)
 	assert_is_ignored(true, "inter\\mittent");
 	assert_is_ignored(true, "trailing\\");
 }
+
+void test_ignore_path__escaped_space(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"foo\\\\ \n"
+		"bar\\\\\\ \n");
+	assert_is_ignored(true, "foo\\");
+	assert_is_ignored(false, "foo\\ ");
+	assert_is_ignored(false, "foo\\\\ ");
+	assert_is_ignored(false, "foo\\\\");
+	assert_is_ignored(true, "bar\\ ");
+	assert_is_ignored(false, "bar\\\\");
+	assert_is_ignored(false, "bar\\\\ ");
+	assert_is_ignored(false, "bar\\\\\\");
+	assert_is_ignored(false, "bar\\\\\\ ");
+}

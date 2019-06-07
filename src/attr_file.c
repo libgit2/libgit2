@@ -565,10 +565,22 @@ void git_attr_path__free(git_attr_path *info)
  */
 static size_t trailing_space_length(const char *p, size_t len)
 {
-	size_t n;
+	size_t n, i;
 	for (n = len; n; n--) {
-		if ((p[n-1] != ' ' && p[n-1] != '\t') ||
-		    (n > 1 && p[n-2] == '\\'))
+		if (p[n-1] != ' ' && p[n-1] != '\t')
+			break;
+
+		/*
+		 * Count escape-characters before space. In case where it's an
+		 * even number of escape characters, then the escape char itself
+		 * is escaped and the whitespace is an unescaped whitespace.
+		 * Otherwise, the last escape char is not escaped and the
+		 * whitespace in an escaped whitespace.
+		 */
+		i = n;
+		while (i > 1 && p[i-2] == '\\')
+			i--;
+		if ((n - i) % 2)
 			break;
 	}
 	return len - n;
