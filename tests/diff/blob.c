@@ -315,7 +315,7 @@ void test_diff_blob__can_compare_against_null_blobs_with_patch(void)
 	cl_assert_equal_i(GIT_DELTA_DELETED, delta->status);
 	cl_assert_equal_oid(git_blob_id(d), &delta->old_file.id);
 	cl_assert_equal_sz(git_blob_rawsize(d), delta->old_file.size);
-	cl_assert(git_oid_iszero(&delta->new_file.id));
+	cl_assert(git_oid_is_zero(&delta->new_file.id));
 	cl_assert_equal_sz(0, delta->new_file.size);
 
 	cl_assert_equal_i(1, (int)git_patch_num_hunks(p));
@@ -338,7 +338,7 @@ void test_diff_blob__can_compare_against_null_blobs_with_patch(void)
 	delta = git_patch_get_delta(p);
 	cl_assert(delta != NULL);
 	cl_assert_equal_i(GIT_DELTA_ADDED, delta->status);
-	cl_assert(git_oid_iszero(&delta->old_file.id));
+	cl_assert(git_oid_is_zero(&delta->old_file.id));
 	cl_assert_equal_sz(0, delta->old_file.size);
 	cl_assert_equal_oid(git_blob_id(d), &delta->new_file.id);
 	cl_assert_equal_sz(git_blob_rawsize(d), delta->new_file.size);
@@ -445,9 +445,9 @@ void test_diff_blob__can_compare_identical_blobs_with_patch(void)
 	cl_assert(delta != NULL);
 	cl_assert_equal_i(GIT_DELTA_UNMODIFIED, delta->status);
 	cl_assert_equal_sz(0, delta->old_file.size);
-	cl_assert(git_oid_iszero(&delta->old_file.id));
+	cl_assert(git_oid_is_zero(&delta->old_file.id));
 	cl_assert_equal_sz(0, delta->new_file.size);
-	cl_assert(git_oid_iszero(&delta->new_file.id));
+	cl_assert(git_oid_is_zero(&delta->new_file.id));
 
 	cl_assert_equal_i(0, (int)git_patch_num_hunks(p));
 	git_patch_free(p);
@@ -520,19 +520,19 @@ void test_diff_blob__can_compare_a_binary_blob_and_a_text_blob(void)
  * +++ b/a0f7217
  * @@ -1,6 +1,6 @@
  *  Here is some stuff at the start
- * 
+ *
  * -This should go in one hunk
  * +This should go in one hunk (first)
- * 
+ *
  *  Some additional lines
- * 
+ *
  * @@ -8,7 +8,7 @@ Down here below the other lines
- * 
+ *
  *  With even more at the end
- * 
+ *
  * -Followed by a second hunk of stuff
  * +Followed by a second hunk of stuff (second)
- * 
+ *
  *  That happens down here
  */
 void test_diff_blob__comparing_two_text_blobs_honors_interhunkcontext(void)

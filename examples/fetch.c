@@ -21,7 +21,7 @@ static int update_cb(const char *refname, const git_oid *a, const git_oid *b, vo
 	git_oid_fmt(b_str, b);
 	b_str[GIT_OID_HEXSZ] = '\0';
 
-	if (git_oid_iszero(a)) {
+	if (git_oid_is_zero(a)) {
 		printf("[new]     %.20s %s\n", b_str, refname);
 	} else {
 		git_oid_fmt(a_str, a);

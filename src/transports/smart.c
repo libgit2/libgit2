@@ -286,7 +286,7 @@ static int git_smart__connect(
 	if ((error = git_smart__detect_caps(first, &t->caps, &symrefs)) == 0) {
 		/* If the only ref in the list is capabilities^{} with OID_ZERO, remove it */
 		if (1 == t->refs.length && !strcmp(first->head.name, "capabilities^{}") &&
-			git_oid_iszero(&first->head.oid)) {
+			git_oid_is_zero(&first->head.oid)) {
 			git_vector_clear(&t->refs);
 			git_pkt_free((git_pkt *)first);
 		}

@@ -309,7 +309,7 @@ static int local_push_update_remote_ref(
 	if (lref[0] != '\0') {
 		/* Create or update a ref */
 		error = git_reference_create(NULL, remote_repo, rref, loid,
-					     !git_oid_iszero(roid), NULL);
+					     !git_oid_is_zero(roid), NULL);
 	} else {
 		/* Delete a ref */
 		if ((error = git_reference_lookup(&remote_ref, remote_repo, rref)) < 0) {

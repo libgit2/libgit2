@@ -204,7 +204,7 @@ static int normalize_options(
 	memcpy(out, in, sizeof(git_blame_options));
 
 	/* No newest_commit => HEAD */
-	if (git_oid_iszero(&out->newest_commit)) {
+	if (git_oid_is_zero(&out->newest_commit)) {
 		if (git_reference_name_to_id(&out->newest_commit, repo, "HEAD") < 0) {
 			return -1;
 		}
@@ -408,7 +408,7 @@ on_error:
 
 static bool hunk_is_bufferblame(git_blame_hunk *hunk)
 {
-	return git_oid_iszero(&hunk->final_commit_id);
+	return git_oid_is_zero(&hunk->final_commit_id);
 }
 
 static int buffer_hunk_cb(

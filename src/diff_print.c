@@ -325,10 +325,10 @@ static int diff_delta_format_with_paths(
 	const char *oldpath,
 	const char *newpath)
 {
-	if (git_oid_iszero(&delta->old_file.id))
+	if (git_oid_is_zero(&delta->old_file.id))
 		oldpath = "/dev/null";
 
-	if (git_oid_iszero(&delta->new_file.id))
+	if (git_oid_is_zero(&delta->new_file.id))
 		newpath = "/dev/null";
 
 	return git_buf_printf(out, template, oldpath, newpath);
@@ -381,8 +381,8 @@ done:
 
 static bool delta_is_unchanged(const git_diff_delta *delta)
 {
-	if (git_oid_iszero(&delta->old_file.id) &&
-		git_oid_iszero(&delta->new_file.id))
+	if (git_oid_is_zero(&delta->old_file.id) &&
+		git_oid_is_zero(&delta->new_file.id))
 		return true;
 
 	if (delta->old_file.mode == GIT_FILEMODE_COMMIT ||

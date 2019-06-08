@@ -963,7 +963,7 @@ static int update_refs_from_report(
 
 	/* Remove any refs which we updated to have a zero OID. */
 	git_vector_rforeach(refs, i, ref) {
-		if (git_oid_iszero(&ref->head.oid)) {
+		if (git_oid_is_zero(&ref->head.oid)) {
 			git_vector_remove(refs, i);
 			git_pkt_free((git_pkt *)ref);
 		}
