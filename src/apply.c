@@ -532,7 +532,7 @@ static int apply_one(
 	if (delta->status != GIT_DELTA_DELETED) {
 		if ((error = git_apply__patch(&post_contents, &filename, &mode,
 				pre_contents.ptr, pre_contents.size, patch, opts)) < 0 ||
-			(error = git_blob_create_frombuffer(&post_id, repo,
+			(error = git_blob_create_from_buffer(&post_id, repo,
 				post_contents.ptr, post_contents.size)) < 0)
 			goto done;
 

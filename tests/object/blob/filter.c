@@ -59,7 +59,7 @@ void test_object_blob_filter__initialize(void)
 		if (g_crlf_raw_len[i] < 0)
 			g_crlf_raw_len[i] = strlen(g_crlf_raw[i]);
 
-		cl_git_pass(git_blob_create_frombuffer(
+		cl_git_pass(git_blob_create_from_buffer(
 			&g_crlf_oids[i], g_repo, g_crlf_raw[i], (size_t)g_crlf_raw_len[i]));
 	}
 }

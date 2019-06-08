@@ -70,7 +70,7 @@ int git_blob__parse(void *_blob, git_odb_object *odb_obj)
 	return 0;
 }
 
-int git_blob_create_frombuffer(
+int git_blob_create_from_buffer(
 	git_oid *id, git_repository *repo, const void *buffer, size_t len)
 {
 	int error;
@@ -263,13 +263,13 @@ done:
 	return error;
 }
 
-int git_blob_create_fromworkdir(
+int git_blob_create_from_workdir(
 	git_oid *id, git_repository *repo, const char *path)
 {
 	return git_blob__create_from_paths(id, NULL, repo, NULL, path, 0, true);
 }
 
-int git_blob_create_fromdisk(
+int git_blob_create_from_disk(
 	git_oid *id, git_repository *repo, const char *path)
 {
 	int error;
@@ -325,7 +325,7 @@ static int blob_writestream_write(git_writestream *_stream, const char *buffer, 
 	return git_filebuf_write(&stream->fbuf, buffer, len);
 }
 
-int git_blob_create_fromstream(git_writestream **out, git_repository *repo, const char *hintpath)
+int git_blob_create_from_stream(git_writestream **out, git_repository *repo, const char *hintpath)
 {
 	int error;
 	git_buf path = GIT_BUF_INIT;
@@ -364,7 +364,7 @@ cleanup:
 	return error;
 }
 
-int git_blob_create_fromstream_commit(git_oid *out, git_writestream *_stream)
+int git_blob_create_from_stream_commit(git_oid *out, git_writestream *_stream)
 {
 	int error;
 	blob_writestream *stream = (blob_writestream *) _stream;
@@ -426,4 +426,37 @@ int git_blob_filtered_content(
 	}
 
 	return error;
+}
+
+/* Deprecated functions */
+
+int git_blob_create_frombuffer(
+	git_oid *id, git_repository *repo, const void *buffer, size_t len)
+{
+	return git_blob_create_from_buffer(id, repo, buffer, len);
+}
+
+int git_blob_create_fromworkdir(git_oid *id, git_repository *repo, const char *relative_path)
+{
+	return git_blob_create_from_workdir(id, repo, relative_path);
+}
+
+int git_blob_create_fromdisk(git_oid *id, git_repository *repo, const char *path)
+{
+	return git_blob_create_from_disk(id, repo, path);
+}
+
+int git_blob_create_fromstream(
+    git_writestream **out,
+    git_repository *repo,
+    const char *hintpath)
+{
+	return  git_blob_create_from_stream(out, repo, hintpath);
+}
+
+int git_blob_create_fromstream_commit(
+	git_oid *out,
+	git_writestream *stream)
+{
+	return git_blob_create_from_stream_commit(out, stream);
 }

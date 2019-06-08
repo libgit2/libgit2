@@ -136,7 +136,7 @@ GIT_EXTERN(int) git_blob_filtered_content(
  *	relative to the repository's working dir
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_blob_create_fromworkdir(git_oid *id, git_repository *repo, const char *relative_path);
+GIT_EXTERN(int) git_blob_create_from_workdir(git_oid *id, git_repository *repo, const char *relative_path);
 
 /**
  * Read a file from the filesystem and write its content
@@ -148,7 +148,7 @@ GIT_EXTERN(int) git_blob_create_fromworkdir(git_oid *id, git_repository *repo, c
  * @param path file from which the blob will be created
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_blob_create_fromdisk(git_oid *id, git_repository *repo, const char *path);
+GIT_EXTERN(int) git_blob_create_from_disk(git_oid *id, git_repository *repo, const char *path);
 
 /**
  * Create a stream to write a new blob into the object db
@@ -156,12 +156,12 @@ GIT_EXTERN(int) git_blob_create_fromdisk(git_oid *id, git_repository *repo, cons
  * This function may need to buffer the data on disk and will in
  * general not be the right choice if you know the size of the data
  * to write. If you have data in memory, use
- * `git_blob_create_frombuffer()`. If you do not, but know the size of
+ * `git_blob_create_from_buffer()`. If you do not, but know the size of
  * the contents (and don't want/need to perform filtering), use
  * `git_odb_open_wstream()`.
  *
  * Don't close this stream yourself but pass it to
- * `git_blob_create_fromstream_commit()` to commit the write to the
+ * `git_blob_create_from_stream_commit()` to commit the write to the
  * object db and get the object id.
  *
  * If the `hintpath` parameter is filled, it will be used to determine
@@ -175,7 +175,7 @@ GIT_EXTERN(int) git_blob_create_fromdisk(git_oid *id, git_repository *repo, cons
  *        to apply onto the content of the blob to be created.
  * @return 0 or error code
  */
-GIT_EXTERN(int) git_blob_create_fromstream(
+GIT_EXTERN(int) git_blob_create_from_stream(
 	git_writestream **out,
 	git_repository *repo,
 	const char *hintpath);
@@ -189,7 +189,7 @@ GIT_EXTERN(int) git_blob_create_fromstream(
  * @param stream the stream to close
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_blob_create_fromstream_commit(
+GIT_EXTERN(int) git_blob_create_from_stream_commit(
 	git_oid *out,
 	git_writestream *stream);
 
@@ -202,7 +202,7 @@ GIT_EXTERN(int) git_blob_create_fromstream_commit(
  * @param len length of the data
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_blob_create_frombuffer(
+GIT_EXTERN(int) git_blob_create_from_buffer(
 	git_oid *id, git_repository *repo, const void *buffer, size_t len);
 
 /**

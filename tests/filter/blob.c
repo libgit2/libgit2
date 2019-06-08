@@ -87,14 +87,14 @@ void test_filter_blob__ident(void)
 	git_buf buf = { 0 };
 
 	cl_git_mkfile("crlf/test.ident", "Some text\n$Id$\nGoes there\n");
-	cl_git_pass(git_blob_create_fromworkdir(&id, g_repo, "test.ident"));
+	cl_git_pass(git_blob_create_from_workdir(&id, g_repo, "test.ident"));
 	cl_git_pass(git_blob_lookup(&blob, g_repo, &id));
 	cl_assert_equal_s(
 		"Some text\n$Id$\nGoes there\n", git_blob_rawcontent(blob));
 	git_blob_free(blob);
 
 	cl_git_mkfile("crlf/test.ident", "Some text\n$Id: Any old just you want$\nGoes there\n");
-	cl_git_pass(git_blob_create_fromworkdir(&id, g_repo, "test.ident"));
+	cl_git_pass(git_blob_create_from_workdir(&id, g_repo, "test.ident"));
 	cl_git_pass(git_blob_lookup(&blob, g_repo, &id));
 	cl_assert_equal_s(
 		"Some text\n$Id$\nGoes there\n", git_blob_rawcontent(blob));

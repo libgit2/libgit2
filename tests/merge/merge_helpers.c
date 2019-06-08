@@ -352,7 +352,7 @@ int merge_test_workdir(git_repository *repo, const struct merge_index_entry expe
 		return 0;
 
 	for (i = 0; i < expected_len; i++) {
-		git_blob_create_fromworkdir(&actual_oid, repo, expected[i].path);
+		git_blob_create_from_workdir(&actual_oid, repo, expected[i].path);
 		git_oid_fromstr(&expected_oid, expected[i].oid_str);
 
 		if (git_oid_cmp(&actual_oid, &expected_oid) != 0)

@@ -1477,7 +1477,7 @@ int git_index_add_frombuffer(
 	if (index_entry_dup(&entry, index, source_entry) < 0)
 		return -1;
 
-	error = git_blob_create_frombuffer(&id, INDEX_OWNER(index), buffer, len);
+	error = git_blob_create_from_buffer(&id, INDEX_OWNER(index), buffer, len);
 	if (error < 0) {
 		index_entry_free(entry);
 		return error;

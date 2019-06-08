@@ -45,6 +45,30 @@
  */
 GIT_BEGIN_DECL
 
+/** @name Deprecated Blob Functions
+ *
+ * These functions are retained for backward compatibility.  The newer
+ * versions of these functions should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+GIT_EXTERN(int) git_blob_create_fromworkdir(git_oid *id, git_repository *repo, const char *relative_path);
+GIT_EXTERN(int) git_blob_create_fromdisk(git_oid *id, git_repository *repo, const char *path);
+GIT_EXTERN(int) git_blob_create_fromstream(
+	git_writestream **out,
+	git_repository *repo,
+	const char *hintpath);
+GIT_EXTERN(int) git_blob_create_fromstream_commit(
+	git_oid *out,
+	git_writestream *stream);
+GIT_EXTERN(int) git_blob_create_frombuffer(
+	git_oid *id, git_repository *repo, const void *buffer, size_t len);
+
+/**@}*/
+
 /** @name Deprecated Buffer Functions
  *
  * These functions and enumeration values are retained for backward
