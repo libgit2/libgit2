@@ -246,6 +246,21 @@ GIT_EXTERN(void) giterr_set_oom(void);
 
 /**@}*/
 
+/** @name Deprecated Credential Callback Types
+ *
+ * These types are retained for backward compatibility.  The newer
+ * versions of these values should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+typedef git_cred_sign_cb git_cred_sign_callback;
+typedef git_cred_ssh_interactive_cb git_cred_ssh_interactive_callback;
+
+/**@}*/
+
 /** @name Deprecated Transfer Progress Types
  *
  * These types are retained for backward compatibility.  The newer
