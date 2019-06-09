@@ -29,17 +29,15 @@ int main(int argc, char **argv)
 	int args_len = 0;
 	int error = 0;
 
-	if (cli_global_init() < 0) {
-		fprintf(stderr, "error: failed to initialize libgit2\n");
-		exit(1);
-	}
+	if (cli_global_init() < 0)
+		cli_die("error: failed to initialize libgit2");
 
 	cli_opt_parser_init(&optparser, common_opts, argv + 1, argc - 1);
 
 	/* Parse the top-level (common) options and command information */
 	while (cli_opt_parser_next(&opt, &optparser)) {
 		if (!opt.spec) {
-			cli_opt_status_fprint(stderr, &opt);
+			cli_opt_usage_fprint(stderr, PROGRAM_NAME, NULL, common_opts);
 			error = 129;
 			goto done;
 		}
