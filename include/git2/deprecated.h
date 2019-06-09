@@ -191,10 +191,11 @@ GIT_EXTERN(void) giterr_set_oom(void);
 
 /**@}*/
 
-/** @name Deprecated Index Constants
+/** @name Deprecated Index Functions and Constants
  *
- * These enumeration values are retained for backward compatibility.
- * The newer versions of these values should be preferred in all new code.
+ * These functions and enumeration values are retained for backward
+ * compatibility.  The newer versions of these values should be
+ * preferred in all new code.
  *
  * There is no plan to remove these backward compatibility values at
  * this time.
@@ -233,6 +234,11 @@ GIT_EXTERN(void) giterr_set_oom(void);
 #define GIT_INDEXCAP_NO_FILEMODE       GIT_INDEX_CAPABILITY_NO_FILEMODE
 #define GIT_INDEXCAP_NO_SYMLINKS       GIT_INDEX_CAPABILITY_NO_SYMLINKS
 #define GIT_INDEXCAP_FROM_OWNER        GIT_INDEX_CAPABILITY_FROM_OWNER
+
+GIT_EXTERN(int) git_index_add_frombuffer(
+	git_index *index,
+	const git_index_entry *entry,
+	const void *buffer, size_t len);
 
 /**@}*/
 

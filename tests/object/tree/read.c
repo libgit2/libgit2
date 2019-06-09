@@ -98,7 +98,7 @@ void test_object_tree_read__largefile(void)
 	ie.path = BIGFILE;
 
 	cl_git_pass(git_repository_index(&index, g_repo));
-	cl_git_pass(git_index_add_frombuffer(index, &ie, buf, BIGFILE_SIZE));
+	cl_git_pass(git_index_add_from_buffer(index, &ie, buf, BIGFILE_SIZE));
 	cl_repo_commit_from_index(&oid, g_repo, NULL, 0, BIGFILE);
 
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &oid));

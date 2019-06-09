@@ -1454,7 +1454,7 @@ GIT_INLINE(bool) valid_filemode(const int filemode)
 	return (is_file_or_link(filemode) || filemode == GIT_FILEMODE_COMMIT);
 }
 
-int git_index_add_frombuffer(
+int git_index_add_from_buffer(
     git_index *index, const git_index_entry *source_entry,
     const void *buffer, size_t len)
 {
@@ -3708,4 +3708,13 @@ void git_indexwriter_cleanup(git_indexwriter *writer)
 
 	git_index_free(writer->index);
 	writer->index = NULL;
+}
+
+/* Deprecated functions */
+
+int git_index_add_frombuffer(
+    git_index *index, const git_index_entry *source_entry,
+    const void *buffer, size_t len)
+{
+	return git_index_add_from_buffer(index, source_entry, buffer, len);
 }
