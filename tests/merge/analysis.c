@@ -114,7 +114,7 @@ void testimpl_merge_analysis__unborn(void)
 	git_merge_preference_t merge_pref;
 	git_buf master = GIT_BUF_INIT;
 
-	git_buf_joinpath(&master, git_repository_path(repo), "refs/heads/master");
+	cl_git_pass(git_buf_joinpath(&master, git_repository_path(repo), "refs/heads/master"));
 	p_unlink(git_buf_cstr(&master));
 
 	analysis_from_branch(&merge_analysis, &merge_pref, NULL, NOFASTFORWARD_BRANCH);
@@ -129,13 +129,15 @@ void testimpl_merge_analysis__fastforward_with_config_noff(void)
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
 
-	git_repository_config(&config, repo);
-	git_config_set_string(config, "merge.ff", "false");
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_string(config, "merge.ff", "false"));
 
 	analysis_from_branch(&merge_analysis, &merge_pref, NULL, FASTFORWARD_BRANCH);
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL|GIT_MERGE_ANALYSIS_FASTFORWARD, merge_analysis);
 
 	cl_assert_equal_i(GIT_MERGE_PREFERENCE_NO_FASTFORWARD, (merge_pref & GIT_MERGE_PREFERENCE_NO_FASTFORWARD));
+
+	git_config_free(config);
 }
 
 void testimpl_merge_analysis__no_fastforward_with_config_ffonly(void)
@@ -144,13 +146,15 @@ void testimpl_merge_analysis__no_fastforward_with_config_ffonly(void)
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
 
-	git_repository_config(&config, repo);
-	git_config_set_string(config, "merge.ff", "only");
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_string(config, "merge.ff", "only"));
 
 	analysis_from_branch(&merge_analysis, &merge_pref, NULL, NOFASTFORWARD_BRANCH);
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL, merge_analysis);
 
 	cl_assert_equal_i(GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY, (merge_pref & GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY));
+
+	git_config_free(config);
 }
 
 void testimpl_merge_analysis__between_uptodate_refs(void)
