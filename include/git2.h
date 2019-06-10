@@ -30,6 +30,7 @@
 #include "git2/filter.h"
 #include "git2/global.h"
 #include "git2/graph.h"
+#include "git2/hook.h"
 #include "git2/ignore.h"
 #include "git2/index.h"
 #include "git2/indexer.h"
