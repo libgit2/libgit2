@@ -93,7 +93,7 @@ static int check_hook_path(const git_buf *hook_path)
 
 	/* Skip missing hooks */
 	err = p_stat(git_buf_cstr(hook_path), &hook_stat);
-	if (err == ENOENT) {
+	if (err && errno == ENOENT) {
 		git_error_set(GIT_ERROR_HOOK, "hook %s wasn't found", git_buf_cstr(hook_path));
 		return GIT_ENOTFOUND;
 	} else if (err) {
@@ -142,4 +142,101 @@ int git_hook_foreach(
 	}
 
 	return 0;
+}
+
+int git_hook_register_callback(git_repository *repo,
+	git_hook_execution_cb executor,
+	git_hook_destructor_cb destructor,
+	void *payload)
+{
+	assert(repo && executor);
+
+	/* Unset our payload-memory-management if needed */
+	if (repo->hook_payload_free != NULL) {
+		repo->hook_payload_free(repo->hook_payload);
+		repo->hook_payload_free = NULL;
+	}
+
+	repo->hook_executor = executor;
+	repo->hook_payload = payload;
+	repo->hook_payload_free = destructor;
+
+	return 0;
+}
+
+static int hook_execute_va(git_buf *io, git_repository *repo, const char *name, va_list args)
+{
+	int err = 0;
+	char *arg;
+	git_vector arg_vector = GIT_VECTOR_INIT;
+	git_hook_env env;
+	git_buf hook_path = GIT_BUF_INIT;
+
+	assert(repo && name);
+
+	memset(&env, '\0', sizeof(env));
+
+	err = build_hook_path(&hook_path, repo, name);
+	if (err != 0)
+		goto cleanup;
+
+	err = check_hook_path(&hook_path);
+	if (err == GIT_ENOTFOUND) {
+		/* Ignore missing hook */
+		git_error_clear();
+		err = 0;
+		goto cleanup;
+	} else if (err) {
+		/* Report problem */
+		goto cleanup;
+	}
+
+	while ((arg = va_arg(args, char *))) {
+		if (arg == NULL)
+			break;
+
+		if (git_vector_insert(&arg_vector, arg) != 0) {
+			git_error_set_oom();
+			return -1;
+		}
+	}
+
+	env.path = hook_path.ptr;
+	env.io = io;
+	env.args.strings = (char **)git_vector_detach(&env.args.count, NULL, &arg_vector);
+
+	err = repo->hook_executor(&env, repo->hook_payload);
+	if (err < 0 && !git_error_last()) {
+		git_error_set(GIT_ERROR_HOOK, "hook \"%s\" reported failure", name);
+		goto cleanup;
+	}
+
+cleanup:
+	git__free(env.args.strings);
+	git_buf_dispose(&hook_path);
+	return err;
+}
+
+int git_hook_execute(git_repository *repo, const char *hook_name, ...)
+{
+	int err = 0;
+	va_list hook_args;
+
+	va_start(hook_args, hook_name);
+	err = hook_execute_va(NULL, repo, hook_name, hook_args);
+	va_end(hook_args);
+
+	return err;
+}
+
+int git_hook_execute_io(git_buf *io, git_repository *repo, const char *hook_name, ...)
+{
+	int err = 0;
+	va_list hook_args;
+
+	va_start(hook_args, hook_name);
+	err = hook_execute_va(io, repo, hook_name, hook_args);
+	va_end(hook_args);
+
+	return err;
 }

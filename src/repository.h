@@ -15,6 +15,7 @@
 #include "git2/repository.h"
 #include "git2/object.h"
 #include "git2/config.h"
+#include "git2/hook.h"
 
 #include "array.h"
 #include "cache.h"
@@ -155,6 +156,11 @@ struct git_repository {
 	git_atomic attr_session_key;
 
 	git_configmap_value configmap_cache[GIT_CONFIGMAP_CACHE_MAX];
+
+	git_hook_execution_cb hook_executor;
+	void *hook_payload;
+	git_hook_destructor_cb hook_payload_free;
+
 	git_strmap *submodule_cache;
 };
 

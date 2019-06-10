@@ -31,6 +31,33 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_hook_dir(git_buf *out_dir, git_repository *repo);
 
+/**
+ * Trigger the execution of the named hook.
+ *
+ * @see `git_hook_execute_io`
+ */
+GIT_EXTERN(int) git_hook_execute(
+	git_repository *repo,
+	const char *hook_name,
+	...);
+
+/**
+ * Trigger the execution of the named hook.
+ *
+ * Caveats: you MUST pass a NULL sentinel to signal that there are no more
+ * arguments.
+ *
+ * @param io An in/out pointer to a git_buf. Will be passed as-is to the executor.
+ * @param repo The repository.
+ * @param hook_name The name of the hook.
+ * @return 0 on success, an error code otherwise.
+ */
+GIT_EXTERN(int) git_hook_execute_io(
+	git_buf *io,
+	git_repository *repo,
+	const char *hook_name,
+	...);
+
 /** @} */
 GIT_END_DECL
 

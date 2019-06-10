@@ -45,6 +45,66 @@ GIT_EXTERN(int) git_hook_foreach(
 	git_hook_foreach_cb callback,
 	void *payload);
 
+/**
+ * A hook environment.
+ *
+ * This structure will be provided by the library when a hook needs to
+ * be executed. You do not need to free it.
+ */
+typedef struct {
+	/** The absolute path to the hook executable. */
+	char *path;
+
+	/** The argument list for the hook. */
+	git_strarray args;
+
+	/**
+	 * On entering the hook executor, it will contain data that must be provided
+	 * to the hook (i.e its stdin)
+	 * On exiting the hook, you can set it to the hook output for
+	 * FIXME: what for actually ?
+	 */
+	git_buf *io;
+} git_hook_env;
+
+/**
+ * The destructor for a registered execution callback.
+ *
+ * @see git_hook_register_callback
+ */
+typedef void GIT_CALLBACK(git_hook_destructor_cb)(void *payload);
+
+/**
+ * The hook execution callback.
+ *
+ * @see git_hook_register_callback
+ */
+typedef int GIT_CALLBACK(git_hook_execution_cb)(git_hook_env *env, void *payload);
+
+/**
+ * Register an execution callback for the repository.
+ *
+ * As executing scripts is out of the scope of `libgit2`, this allows clients to
+ * register a callback that will be called when a hook would be normally
+ * executed. A `git_hook_env` structure describing what is expected of the
+ * client will be provided.
+ *
+ * Note that this is intentionally *not meant* to replace `libgit2`'s callbacks.
+ * This is just for compatibility with core Git, so that hooks can keep working.
+ * As such, only one can be used at the same time.
+ *
+ * @param repo The repository
+ * @param executor The hook execution callback.
+ * @param destructor A payload cleanup callback.
+ * @param payload A user-provided pointer that will be passed to the callback.
+ * @return 0 on success, an error code otherwise.
+ */
+GIT_EXTERN(int) git_hook_register_callback(
+	git_repository *repo,
+	git_hook_execution_cb executor,
+	git_hook_destructor_cb destructor,
+	void *payload);
+
 /* @} */
 GIT_END_DECL
 #endif
