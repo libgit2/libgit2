@@ -14,6 +14,7 @@
 #include "object.h"
 #include "refs.h"
 #include "remote.h"
+#include "trace.h"
 
 /*
  * Users can avoid deprecated functions by defining `GIT_DEPRECATE_HARD`.
@@ -243,6 +244,35 @@ GIT_EXTERN(void) giterr_set_oom(void);
 #define GIT_REF_FORMAT_ALLOW_ONELEVEL GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL
 #define GIT_REF_FORMAT_REFSPEC_PATTERN GIT_REFERENCE_FORMAT_REFSPEC_PATTERN
 #define GIT_REF_FORMAT_REFSPEC_SHORTHAND GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND
+
+/**@}*/
+
+/** @name Deprecated Credential Callback Types
+ *
+ * These types are retained for backward compatibility.  The newer
+ * versions of these values should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+typedef git_cred_sign_cb git_cred_sign_callback;
+typedef git_cred_ssh_interactive_cb git_cred_ssh_interactive_callback;
+
+/**@}*/
+
+/** @name Deprecated Trace Callback Types
+ *
+ * These types are retained for backward compatibility.  The newer
+ * versions of these values should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+typedef git_trace_cb git_trace_callback;
 
 /**@}*/
 

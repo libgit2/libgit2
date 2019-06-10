@@ -16,7 +16,7 @@
 
 struct git_trace_data {
 	git_trace_level_t level;
-	git_trace_callback callback;
+	git_trace_cb callback;
 };
 
 extern struct git_trace_data git_trace__data;
@@ -25,7 +25,7 @@ GIT_INLINE(void) git_trace__write_fmt(
 	git_trace_level_t level,
 	const char *fmt, ...)
 {
-	git_trace_callback callback = git_trace__data.callback;
+	git_trace_cb callback = git_trace__data.callback;
 	git_buf message = GIT_BUF_INIT;
 	va_list ap;
 

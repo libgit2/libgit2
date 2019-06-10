@@ -17,7 +17,7 @@ struct git_trace_data git_trace__data = {0};
 
 #endif
 
-int git_trace_set(git_trace_level_t level, git_trace_callback callback)
+int git_trace_set(git_trace_level_t level, git_trace_cb callback)
 {
 #ifdef GIT_TRACE
 	assert(level == 0 || callback != NULL);
