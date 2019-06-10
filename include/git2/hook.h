@@ -105,6 +105,36 @@ GIT_EXTERN(int) git_hook_register_callback(
 	git_hook_destructor_cb destructor,
 	void *payload);
 
+/**
+ * Call the pre-commit hook, if available.
+ */
+GIT_EXTERN(int) git_hook_call_pre_commit(git_repository *repo);
+
+/* modes for git_hook_call_prepare_commit_message */
+#define GIT_HOOK_PREPARE_COMMIT_MSG_MESSAGE "message"
+#define GIT_HOOK_PREPARE_COMMIT_MSG_TEMPLATE "template"
+#define GIT_HOOK_PREPARE_COMMIT_MSG_MERGE "merge"
+#define GIT_HOOK_PREPARE_COMMIT_MSG_SQUASH "squash"
+#define GIT_HOOK_PREPARE_COMMIT_MSG_COMMIT "commit"
+
+/**
+ * Call the prepare-commit-msg hook, with a plain text message.
+ */
+GIT_EXTERN(int) git_hook_call_prepare_commit_message(git_repository *repo, const char *mode, ...);
+
+/**
+ * Call the commit-msg hook, with the given commit message.
+ */
+GIT_EXTERN(int) git_hook_call_commit_msg(git_repository *repo, const char *message);
+
+/**
+ * Call the post-commit hook.
+ */
+GIT_EXTERN(int) git_hook_call_post_commit(git_repository *repo);
+
+/**
+ * Call the pre-rebase hook.
+ */
 GIT_EXTERN(int) git_hook_call_pre_rebase(
 	git_repository *repo,
 	const git_annotated_commit *upstream,
