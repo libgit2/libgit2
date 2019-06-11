@@ -24,8 +24,8 @@ class Module(object):
         def render(self):
             out = "\n".join("extern %s;" % cb['declaration'] for cb in self.module.callbacks) + "\n"
 
-            if self.module.initialize:
-                out += "extern %s;\n" % self.module.initialize['declaration']
+            for initializer in self.module.initializers:
+                out += "extern %s;\n" % initializer['declaration']
 
             if self.module.cleanup:
                 out += "extern %s;\n" % self.module.cleanup['declaration']
@@ -41,7 +41,19 @@ class Module(object):
 
     class InfoTemplate(Template):
         def render(self):
-            return Template(
+            templates = []
+
+            initializers = self.module.initializers
+            if len(initializers) == 0:
+                initializers = [ None ]
+
+            for initializer in initializers:
+                name = self.module.clean_name()
+                if initializer and initializer['short_name'].startswith('initialize_'):
+                    variant = initializer['short_name'][len('initialize_'):]
+                    name += " (%s)" % variant.replace('_', ' ')
+
+                template = Template(
             r"""
     {
         "${clean_name}",
@@ -49,14 +61,17 @@ class Module(object):
     ${cleanup},
         ${cb_ptr}, ${cb_count}, ${enabled}
     }"""
-            ).substitute(
-                clean_name = self.module.clean_name(),
-                initialize = self._render_callback(self.module.initialize),
-                cleanup = self._render_callback(self.module.cleanup),
-                cb_ptr = "_clar_cb_%s" % self.module.name,
-                cb_count = len(self.module.callbacks),
-                enabled = int(self.module.enabled)
-            )
+                ).substitute(
+                    clean_name = name,
+                    initialize = self._render_callback(initializer),
+                    cleanup = self._render_callback(self.module.cleanup),
+                    cb_ptr = "_clar_cb_%s" % self.module.name,
+                    cb_count = len(self.module.callbacks),
+                    enabled = int(self.module.enabled)
+                )
+                templates.append(template)
+
+            return ','.join(templates)
 
     def __init__(self, name):
         self.name = name
@@ -86,7 +101,7 @@ class Module(object):
         regex = re.compile(TEST_FUNC_REGEX % self.name, re.MULTILINE)
 
         self.callbacks = []
-        self.initialize = None
+        self.initializers = []
         self.cleanup = None
 
         for (declaration, symbol, short_name) in regex.findall(contents):
@@ -96,8 +111,8 @@ class Module(object):
                 "symbol" : symbol
             }
 
-            if short_name == 'initialize':
-                self.initialize = data
+            if short_name.startswith('initialize'):
+                self.initializers.append(data)
             elif short_name == 'cleanup':
                 self.cleanup = data
             else:
