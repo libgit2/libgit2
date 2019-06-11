@@ -61,6 +61,18 @@ void test_network_urlparse__implied_root_custom_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
+void test_network_urlparse__implied_root_empty_port(void)
+{
+	cl_git_pass(git_net_url_parse(&conndata, "http://example.com:"));
+	cl_assert_equal_s(conndata.scheme, "http");
+	cl_assert_equal_s(conndata.host, "example.com");
+	cl_assert_equal_s(conndata.port, "80");
+	cl_assert_equal_s(conndata.path, "/");
+	cl_assert_equal_p(conndata.username, NULL);
+	cl_assert_equal_p(conndata.password, NULL);
+	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+}
+
 void test_network_urlparse__encoded_password(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
@@ -113,6 +125,18 @@ void test_network_urlparse__port(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
+}
+
+void test_network_urlparse__empty_port(void)
+{
+	cl_git_pass(git_net_url_parse(&conndata, "http://example.com:/resource"));
+	cl_assert_equal_s(conndata.scheme, "http");
+	cl_assert_equal_s(conndata.host, "example.com");
+	cl_assert_equal_s(conndata.port, "80");
+	cl_assert_equal_s(conndata.path, "/resource");
+	cl_assert_equal_p(conndata.username, NULL);
+	cl_assert_equal_p(conndata.password, NULL);
+	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
 void test_network_urlparse__user_port(void)
