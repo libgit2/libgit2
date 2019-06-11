@@ -1,3 +1,20 @@
+v0.28 + 1
+---------
+
+### Breaking CMake configuration changes
+
+* The CMake option to use a system http-parser library, instead of the
+  bundled dependency, has changed.  This is due to a deficiency in
+  http-parser that we have fixed in our implementation.  The bundled
+  library is now the default, but if you wish to force the use of the
+  system http-parser implementation despite incompatibilities, you can
+  specify `-DUSE_HTTP_PARSER=system` to CMake.
+
+### Changes or improvements
+
+* libgit2 can now correctly cope with URLs where the host contains a colon
+  but a port is not specified.  (eg `http://example.com:/repo.git`).
+
 v0.28
 -----
 
