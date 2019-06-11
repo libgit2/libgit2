@@ -62,4 +62,4 @@ ADD_TEST(invasive  "${libgit2_BINARY_DIR}/libgit2_clar" -v -score::ftruncate -sf
 ADD_TEST(online    "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline)
 ADD_TEST(gitdaemon "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::push)
 ADD_TEST(ssh       "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::push -sonline::clone::ssh_cert -sonline::clone::ssh_with_paths)
-ADD_TEST(proxy     "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::clone::proxy_credentials_in_url -sonline::clone::proxy_credentials_request)
+ADD_TEST(proxy     "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::clone::proxy)

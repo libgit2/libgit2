@@ -13,7 +13,6 @@
 static int basic_next_token(
 	git_buf *out,
 	git_http_auth_context *ctx,
-	const char *header_name,
 	git_cred *c)
 {
 	git_cred_userpass_plaintext *cred;
@@ -32,9 +31,8 @@ static int basic_next_token(
 	git_buf_printf(&raw, "%s:%s", cred->username, cred->password);
 
 	if (git_buf_oom(&raw) ||
-		git_buf_printf(out, "%s: Basic ", header_name) < 0 ||
-		git_buf_encode_base64(out, git_buf_cstr(&raw), raw.size) < 0 ||
-		git_buf_puts(out, "\r\n") < 0)
+		git_buf_puts(out, "Basic ") < 0 ||
+		git_buf_encode_base64(out, git_buf_cstr(&raw), raw.size) < 0)
 		goto on_error;
 
 	error = 0;
@@ -50,24 +48,26 @@ on_error:
 static git_http_auth_context basic_context = {
 	GIT_AUTHTYPE_BASIC,
 	GIT_CREDTYPE_USERPASS_PLAINTEXT,
+	0,
 	NULL,
 	basic_next_token,
+	NULL,
 	NULL
 };
 
 int git_http_auth_basic(
-	git_http_auth_context **out, const gitno_connection_data *connection_data)
+	git_http_auth_context **out, const git_net_url *url)
 {
-	GIT_UNUSED(connection_data);
+	GIT_UNUSED(url);
 
 	*out = &basic_context;
 	return 0;
 }
 
 int git_http_auth_dummy(
-	git_http_auth_context **out, const gitno_connection_data *connection_data)
+	git_http_auth_context **out, const git_net_url *url)
 {
-	GIT_UNUSED(connection_data);
+	GIT_UNUSED(url);
 
 	*out = NULL;
 	return 0;

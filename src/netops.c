@@ -119,192 +119,79 @@ int gitno__match_host(const char *pattern, const char *host)
 	return -1;
 }
 
-static const char *default_port_http = "80";
-static const char *default_port_https = "443";
-
-const char *gitno__default_port(
-	gitno_connection_data *data)
-{
-	return data->use_ssl ? default_port_https : default_port_http;
-}
-
-static const char *prefix_http = "http://";
-static const char *prefix_https = "https://";
-
-int gitno_connection_data_from_url(
-		gitno_connection_data *data,
-		const char *url,
+int gitno_connection_data_handle_redirect(
+		git_net_url *url,
+		const char *redirect_str,
 		const char *service_suffix)
 {
-	int error = -1;
-	const char *default_port = NULL, *path_search_start = NULL;
-	char *original_host = NULL;
-
-	/* service_suffix is optional */
-	assert(data && url);
-
-	/* Save these for comparison later */
-	original_host = data->host;
-	data->host = NULL;
-	gitno_connection_data_free_ptrs(data);
-
-	if (!git__prefixcmp(url, prefix_http)) {
-		path_search_start = url + strlen(prefix_http);
-		default_port = default_port_http;
-
-		if (data->use_ssl) {
-			git_error_set(GIT_ERROR_NET, "redirect from HTTPS to HTTP is not allowed");
-			goto cleanup;
-		}
-	} else if (!git__prefixcmp(url, prefix_https)) {
-		path_search_start = url + strlen(prefix_https);
-		default_port = default_port_https;
-		data->use_ssl = true;
-	} else if (url[0] == '/')
-		default_port = gitno__default_port(data);
-
-	if (!default_port) {
-		git_error_set(GIT_ERROR_NET, "unrecognized URL prefix");
-		goto cleanup;
-	}
-
-	error = gitno_extract_url_parts(
-		&data->host, &data->port, &data->path, &data->user, &data->pass,
-		url, default_port);
-
-	if (url[0] == '/') {
-		/* Relative redirect; reuse original host name and port */
-		path_search_start = url;
-		git__free(data->host);
-		data->host = original_host;
-		original_host = NULL;
-	}
-
-	if (!error) {
-		const char *path = strchr(path_search_start, '/');
-		size_t pathlen = strlen(path);
-		size_t suffixlen = service_suffix ? strlen(service_suffix) : 0;
-
-		if (suffixlen &&
-		    !memcmp(path + pathlen - suffixlen, service_suffix, suffixlen)) {
-			git__free(data->path);
-			data->path = git__strndup(path, pathlen - suffixlen);
-		} else {
-			git__free(data->path);
-			data->path = git__strdup(path);
-		}
-
-		/* Check for errors in the resulting data */
-		if (original_host && url[0] != '/' && strcmp(original_host, data->host)) {
-			git_error_set(GIT_ERROR_NET, "cross host redirect not allowed");
-			error = -1;
-		}
-	}
-
-cleanup:
-	if (original_host) git__free(original_host);
-	return error;
-}
-
-void gitno_connection_data_free_ptrs(gitno_connection_data *d)
-{
-	git__free(d->host); d->host = NULL;
-	git__free(d->port); d->port = NULL;
-	git__free(d->path); d->path = NULL;
-	git__free(d->user); d->user = NULL;
-	git__free(d->pass); d->pass = NULL;
-}
-
-int gitno_extract_url_parts(
-	char **host_out,
-	char **port_out,
-	char **path_out,
-	char **username_out,
-	char **password_out,
-	const char *url,
-	const char *default_port)
-{
-	struct http_parser_url u = {0};
-	bool has_host, has_port, has_path, has_userinfo;
-	git_buf host = GIT_BUF_INIT,
-		port = GIT_BUF_INIT,
-		path = GIT_BUF_INIT,
-		username = GIT_BUF_INIT,
-		password = GIT_BUF_INIT;
+	git_net_url tmp = GIT_NET_URL_INIT;
 	int error = 0;
 
-	if (http_parser_parse_url(url, strlen(url), false, &u)) {
-		git_error_set(GIT_ERROR_NET, "malformed URL '%s'", url);
-		error = GIT_EINVALIDSPEC;
-		goto done;
-	}
+	assert(url && redirect_str);
 
-	has_host = !!(u.field_set & (1 << UF_HOST));
-	has_port = !!(u.field_set & (1 << UF_PORT));
-	has_path = !!(u.field_set & (1 << UF_PATH));
-	has_userinfo = !!(u.field_set & (1 << UF_USERINFO));
+	if (redirect_str[0] == '/') {
+		git__free(url->path);
 
-	if (has_host) {
-		const char *url_host = url + u.field_data[UF_HOST].off;
-		size_t url_host_len = u.field_data[UF_HOST].len;
-		git_buf_decode_percent(&host, url_host, url_host_len);
-	}
-
-	if (has_port) {
-		const char *url_port = url + u.field_data[UF_PORT].off;
-		size_t url_port_len = u.field_data[UF_PORT].len;
-		git_buf_put(&port, url_port, url_port_len);
+		if ((url->path = git__strdup(redirect_str)) == NULL) {
+			error = -1;
+			goto done;
+		}
 	} else {
-		git_buf_puts(&port, default_port);
+		git_net_url *original = url;
+
+		if ((error = git_net_url_parse(&tmp, redirect_str)) < 0)
+			goto done;
+
+		/* Validate that this is a legal redirection */
+
+		if (original->scheme &&
+		    strcmp(original->scheme, tmp.scheme) != 0 &&
+			strcmp(tmp.scheme, "https") != 0) {
+			git_error_set(GIT_ERROR_NET, "cannot redirect from '%s' to '%s'",
+				original->scheme, tmp.scheme);
+
+			error = -1;
+			goto done;
+		}
+
+		if (original->host &&
+		    git__strcasecmp(original->host, tmp.host) != 0) {
+			git_error_set(GIT_ERROR_NET, "cannot redirect from '%s' to '%s'",
+				original->host, tmp.host);
+
+			error = -1;
+			goto done;
+		}
+
+		git_net_url_swap(url, &tmp);
 	}
 
-	if (has_path && path_out) {
-		const char *url_path = url + u.field_data[UF_PATH].off;
-		size_t url_path_len = u.field_data[UF_PATH].len;
-		git_buf_decode_percent(&path, url_path, url_path_len);
-	} else if (path_out) {
-		git_error_set(GIT_ERROR_NET, "invalid url, missing path");
-		error = GIT_EINVALIDSPEC;
-		goto done;
-	}
+	/* Remove the service suffix if it was given to us */
+	if (service_suffix) {
+		const char *service_query = strchr(service_suffix, '?');
+		size_t suffix_len = service_query ?
+			(size_t)(service_query - service_suffix) : strlen(service_suffix);
+		size_t path_len = strlen(url->path);
 
-	if (has_userinfo) {
-		const char *url_userinfo = url + u.field_data[UF_USERINFO].off;
-		size_t url_userinfo_len = u.field_data[UF_USERINFO].len;
-		const char *colon = memchr(url_userinfo, ':', url_userinfo_len);
+		if (suffix_len && path_len >= suffix_len) {
+			size_t suffix_offset = path_len - suffix_len;
 
-		if (colon) {
-			const char *url_username = url_userinfo;
-			size_t url_username_len = colon - url_userinfo;
-			const char *url_password = colon + 1;
-			size_t url_password_len = url_userinfo_len - (url_username_len + 1);
+			if (git__strncmp(url->path + suffix_offset, service_suffix, suffix_len) == 0 &&
+			    (!service_query || git__strcmp(url->query, service_query + 1) == 0)) {
+				/* Ensure we leave a minimum of '/' as the path */
+				if (suffix_offset == 0)
+					suffix_offset++;
 
-			git_buf_decode_percent(&username, url_username, url_username_len);
-			git_buf_decode_percent(&password, url_password, url_password_len);
-		} else {
-			git_buf_decode_percent(&username, url_userinfo, url_userinfo_len);
+				url->path[suffix_offset] = '\0';
+
+				git__free(url->query);
+				url->query = NULL;
+			}
 		}
 	}
 
-	if (git_buf_oom(&host) ||
-		git_buf_oom(&port) ||
-		git_buf_oom(&path) ||
-		git_buf_oom(&username) ||
-		git_buf_oom(&password))
-		return -1;
-
-	*host_out = git_buf_detach(&host);
-	*port_out = git_buf_detach(&port);
-	if (path_out)
-		*path_out = git_buf_detach(&path);
-	*username_out = git_buf_detach(&username);
-	*password_out = git_buf_detach(&password);
-
 done:
-	git_buf_dispose(&host);
-	git_buf_dispose(&port);
-	git_buf_dispose(&path);
-	git_buf_dispose(&username);
-	git_buf_dispose(&password);
+	git_net_url_dispose(&tmp);
 	return error;
 }
+

@@ -192,8 +192,9 @@ static int _git_uploadpack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	char *host=NULL, *port=NULL, *path=NULL, *user=NULL, *pass=NULL;
+	git_net_url urldata = GIT_NET_URL_INIT;
 	const char *stream_url = url;
+	const char *host, *port;
 	git_proto_stream *s;
 	int error;
 
@@ -202,17 +203,15 @@ static int _git_uploadpack_ls(
 	if (!git__prefixcmp(url, prefix_git))
 		stream_url += strlen(prefix_git);
 
-	if ((error = gitno_extract_url_parts(&host, &port, &path, &user, &pass, url, GIT_DEFAULT_PORT)) < 0)
+	if ((error = git_net_url_parse(&urldata, url)) < 0)
 		return error;
+
+	host = urldata.host;
+	port = urldata.port ? urldata.port : GIT_DEFAULT_PORT;
 
 	error = git_proto_stream_alloc(t, stream_url, cmd_uploadpack, host, port, stream);
 
-	git__free(host);
-	git__free(port);
-	git__free(path);
-	git__free(user);
-	git__free(pass);
-
+	git_net_url_dispose(&urldata);
 
 	if (error < 0) {
 		git_proto_stream_free(*stream);
@@ -251,7 +250,7 @@ static int _git_receivepack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	char *host=NULL, *port=NULL, *path=NULL, *user=NULL, *pass=NULL;
+	git_net_url urldata = GIT_NET_URL_INIT;
 	const char *stream_url = url;
 	git_proto_stream *s;
 	int error;
@@ -260,16 +259,12 @@ static int _git_receivepack_ls(
 	if (!git__prefixcmp(url, prefix_git))
 		stream_url += strlen(prefix_git);
 
-	if ((error = gitno_extract_url_parts(&host, &port, &path, &user, &pass, url, GIT_DEFAULT_PORT)) < 0)
+	if ((error = git_net_url_parse(&urldata, url)) < 0)
 		return error;
 
-	error = git_proto_stream_alloc(t, stream_url, cmd_receivepack, host, port, stream);
+	error = git_proto_stream_alloc(t, stream_url, cmd_receivepack, urldata.host, urldata.port, stream);
 
-	git__free(host);
-	git__free(port);
-	git__free(path);
-	git__free(user);
-	git__free(pass);
+	git_net_url_dispose(&urldata);
 
 	if (error < 0) {
 		git_proto_stream_free(*stream);

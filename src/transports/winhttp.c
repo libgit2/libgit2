@@ -101,23 +101,43 @@ typedef struct {
 } winhttp_stream;
 
 typedef struct {
+	git_net_url url;
+	git_cred *cred;
+	int auth_mechanisms;
+	bool url_cred_presented;
+} winhttp_server;
+
+typedef struct {
 	git_smart_subtransport parent;
 	transport_smart *owner;
-	gitno_connection_data connection_data;
-	gitno_connection_data proxy_connection_data;
-	git_cred *cred;
-	git_cred *url_cred;
-	git_cred *proxy_cred;
-	int auth_mechanisms;
+
+	winhttp_server server;
+	winhttp_server proxy;
+
 	HINTERNET session;
 	HINTERNET connection;
 } winhttp_subtransport;
 
-static int _apply_userpass_credential(HINTERNET request, DWORD target, DWORD scheme, git_cred *cred)
+static int apply_userpass_credentials(HINTERNET request, DWORD target, int mechanisms, git_cred *cred)
 {
 	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
-	wchar_t *user, *pass;
+	wchar_t *user = NULL, *pass = NULL;
 	int user_len = 0, pass_len = 0, error = 0;
+	DWORD native_scheme;
+
+	if (mechanisms & GIT_WINHTTP_AUTH_NEGOTIATE) {
+		native_scheme = WINHTTP_AUTH_SCHEME_NEGOTIATE;
+	} else if (mechanisms & GIT_WINHTTP_AUTH_NTLM) {
+		native_scheme = WINHTTP_AUTH_SCHEME_NTLM;
+	} else if (mechanisms & GIT_WINHTTP_AUTH_DIGEST) {
+		native_scheme = WINHTTP_AUTH_SCHEME_DIGEST;
+	} else if (mechanisms & GIT_WINHTTP_AUTH_BASIC) {
+		native_scheme = WINHTTP_AUTH_SCHEME_BASIC;
+	} else {
+		git_error_set(GIT_ERROR_NET, "invalid authentication scheme");
+		error = -1;
+		goto done;
+	}
 
 	if ((error = user_len = git__utf8_to_16_alloc(&user, c->username)) < 0)
 		goto done;
@@ -125,7 +145,7 @@ static int _apply_userpass_credential(HINTERNET request, DWORD target, DWORD sch
 	if ((error = pass_len = git__utf8_to_16_alloc(&pass, c->password)) < 0)
 		goto done;
 
-	if (!WinHttpSetCredentials(request, target, scheme, user, pass, NULL)) {
+	if (!WinHttpSetCredentials(request, target, native_scheme, user, pass, NULL)) {
 		git_error_set(GIT_ERROR_OS, "failed to set credentials");
 		error = -1;
 	}
@@ -143,77 +163,58 @@ done:
 	return error;
 }
 
-static int apply_userpass_credential_proxy(HINTERNET request, git_cred *cred, int mechanisms)
+static int apply_default_credentials(HINTERNET request, DWORD target, int mechanisms)
 {
-	if (GIT_WINHTTP_AUTH_DIGEST & mechanisms) {
-		return _apply_userpass_credential(request, WINHTTP_AUTH_TARGET_PROXY,
-			WINHTTP_AUTH_SCHEME_DIGEST, cred);
-	}
+	DWORD autologon_level = WINHTTP_AUTOLOGON_SECURITY_LEVEL_LOW;
+	DWORD native_scheme = 0;
 
-	return _apply_userpass_credential(request, WINHTTP_AUTH_TARGET_PROXY,
-		WINHTTP_AUTH_SCHEME_BASIC, cred);
-}
-
-static int apply_userpass_credential(HINTERNET request, int mechanisms, git_cred *cred)
-{
-	DWORD native_scheme;
-
-	if ((mechanisms & GIT_WINHTTP_AUTH_NTLM) ||
-		(mechanisms & GIT_WINHTTP_AUTH_NEGOTIATE)) {
+	if ((mechanisms & GIT_WINHTTP_AUTH_NEGOTIATE) != 0) {
+		native_scheme = WINHTTP_AUTH_SCHEME_NEGOTIATE;
+	} else if ((mechanisms & GIT_WINHTTP_AUTH_NTLM) != 0) {
 		native_scheme = WINHTTP_AUTH_SCHEME_NTLM;
-	} else if (mechanisms & GIT_WINHTTP_AUTH_BASIC) {
-		native_scheme = WINHTTP_AUTH_SCHEME_BASIC;
 	} else {
 		git_error_set(GIT_ERROR_NET, "invalid authentication scheme");
 		return -1;
 	}
 
-	return _apply_userpass_credential(request, WINHTTP_AUTH_TARGET_SERVER,
-		native_scheme, cred);
-}
-
-static int apply_default_credentials(HINTERNET request, int mechanisms)
-{
-	/* Either the caller explicitly requested that default credentials be passed,
-	 * or our fallback credential callback was invoked and checked that the target
-	 * URI was in the appropriate Internet Explorer security zone. By setting this
-	 * flag, we guarantee that the credentials are delivered by WinHTTP. The default
-	 * is "medium" which applies to the intranet and sounds like it would correspond
-	 * to Internet Explorer security zones, but in fact does not. */
-	DWORD data = WINHTTP_AUTOLOGON_SECURITY_LEVEL_LOW;
-	DWORD native_scheme = 0;
-
-	if ((mechanisms & GIT_WINHTTP_AUTH_NTLM) != 0)
-		native_scheme = WINHTTP_AUTH_SCHEME_NTLM;
-
-	if ((mechanisms & GIT_WINHTTP_AUTH_NEGOTIATE) != 0)
-		native_scheme = WINHTTP_AUTH_SCHEME_NEGOTIATE;
-
-	if (!native_scheme) {
-		git_error_set(GIT_ERROR_NET, "invalid authentication scheme");
+	/*
+	 * Autologon policy must be "low" to use default creds.
+	 * This is safe as the user has explicitly requested it.
+	 */
+	if (!WinHttpSetOption(request, WINHTTP_OPTION_AUTOLOGON_POLICY, &autologon_level, sizeof(DWORD))) {
+		git_error_set(GIT_ERROR_OS, "could not configure logon policy");
 		return -1;
 	}
 
-	if (!WinHttpSetOption(request, WINHTTP_OPTION_AUTOLOGON_POLICY, &data, sizeof(DWORD)))
+	if (!WinHttpSetCredentials(request, target, native_scheme, NULL, NULL, NULL)) {
+		git_error_set(GIT_ERROR_OS, "could not configure credentials");
 		return -1;
-
-	if (!WinHttpSetCredentials(request, WINHTTP_AUTH_TARGET_SERVER, native_scheme, NULL, NULL, NULL))
-		return -1;
+	}
 
 	return 0;
 }
 
-static int fallback_cred_acquire_cb(
+static int acquire_url_cred(
+	git_cred **cred,
+	unsigned int allowed_types,
+	const char *username,
+	const char *password)
+{
+	if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT)
+		return git_cred_userpass_plaintext_new(cred, username, password);
+
+	if ((allowed_types & GIT_CREDTYPE_DEFAULT) && *username == '\0' && *password == '\0')
+		return git_cred_default_new(cred);
+
+	return 1;
+}
+
+static int acquire_fallback_cred(
 	git_cred **cred,
 	const char *url,
-	const char *username_from_url,
-	unsigned int allowed_types,
-	void *payload)
+	unsigned int allowed_types)
 {
 	int error = 1;
-
-	GIT_UNUSED(username_from_url);
-	GIT_UNUSED(payload);
 
 	/* If the target URI supports integrated Windows authentication
 	 * as an authentication mechanism */
@@ -253,9 +254,9 @@ static int fallback_cred_acquire_cb(
 				pISM->lpVtbl->Release(pISM);
 			}
 
-            if (SUCCEEDED(hCoInitResult))
-                /* Only unitialize if the call to CoInitializeEx was successful. */
-                CoUninitialize();
+			/* Only unitialize if the call to CoInitializeEx was successful. */
+			if (SUCCEEDED(hCoInitResult))
+				CoUninitialize();
 		}
 
 		git__free(wide_url);
@@ -280,7 +281,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 		return GIT_ECERTIFICATE;
 	}
 
-	if (t->owner->certificate_check_cb == NULL || !t->connection_data.use_ssl)
+	if (t->owner->certificate_check_cb == NULL || git__strcmp(t->server.url.scheme, "https") != 0)
 		return 0;
 
 	if (!WinHttpQueryOption(s->request, WINHTTP_OPTION_SERVER_CERT_CONTEXT, &cert_ctx, &cert_ctx_size)) {
@@ -292,7 +293,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 	cert.parent.cert_type = GIT_CERT_X509;
 	cert.data = cert_ctx->pbCertEncoded;
 	cert.len = cert_ctx->cbCertEncoded;
-	error = t->owner->certificate_check_cb((git_cert *) &cert, valid, t->connection_data.host, t->owner->message_cb_payload);
+	error = t->owner->certificate_check_cb((git_cert *) &cert, valid, t->server.url.host, t->owner->message_cb_payload);
 	CertFreeCertificateContext(cert_ctx);
 
 	if (error == GIT_PASSTHROUGH)
@@ -329,8 +330,23 @@ static void winhttp_stream_close(winhttp_stream *s)
 	s->sent_request = 0;
 }
 
-#define SCHEME_HTTP  "http://"
-#define SCHEME_HTTPS "https://"
+static int apply_credentials(
+	HINTERNET request,
+	git_net_url *url,
+	int target,
+	git_cred *creds,
+	int mechanisms)
+{
+	int error = 0;
+
+	/* If we have creds, just apply them */
+	if (creds && creds->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT)
+		error = apply_userpass_credentials(request, target, mechanisms, creds);
+	else if (creds && creds->credtype == GIT_CREDTYPE_DEFAULT)
+		error = apply_default_credentials(request, target, mechanisms);
+
+	return error;
+}
 
 static int winhttp_stream_connect(winhttp_stream *s)
 {
@@ -344,11 +360,13 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	unsigned long disable_redirects = WINHTTP_DISABLE_REDIRECTS;
 	int default_timeout = TIMEOUT_INFINITE;
 	int default_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+	DWORD autologon_policy = WINHTTP_AUTOLOGON_SECURITY_LEVEL_HIGH;
+
 	size_t i;
 	const git_proxy_options *proxy_opts;
 
 	/* Prepare URL */
-	git_buf_printf(&buf, "%s%s", t->connection_data.path, s->service_url);
+	git_buf_printf(&buf, "%s%s", t->server.url.path, s->service_url);
 
 	if (git_buf_oom(&buf))
 		return -1;
@@ -367,12 +385,16 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			NULL,
 			WINHTTP_NO_REFERER,
 			types,
-			t->connection_data.use_ssl ? WINHTTP_FLAG_SECURE : 0);
+			git__strcmp(t->server.url.scheme, "https") == 0 ? WINHTTP_FLAG_SECURE : 0);
 
 	if (!s->request) {
 		git_error_set(GIT_ERROR_OS, "failed to open request");
 		goto on_error;
 	}
+
+	/* Never attempt default credentials; we'll provide them explicitly. */
+	if (!WinHttpSetOption(s->request, WINHTTP_OPTION_AUTOLOGON_POLICY, &autologon_policy, sizeof(DWORD)))
+		return -1;
 
 	if (!WinHttpSetTimeouts(s->request, default_timeout, default_connect_timeout, default_timeout, default_timeout)) {
 		git_error_set(GIT_ERROR_OS, "failed to set timeouts for WinHTTP");
@@ -382,7 +404,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	proxy_opts = &t->owner->proxy;
 	if (proxy_opts->type == GIT_PROXY_AUTO) {
 		/* Set proxy if necessary */
-		if (git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &proxy_url) < 0)
+		if (git_remote__get_http_proxy(t->owner->owner, (strcmp(t->server.url.scheme, "https") == 0), &proxy_url) < 0)
 			goto on_error;
 	}
 	else if (proxy_opts->type == GIT_PROXY_SPECIFIED) {
@@ -395,38 +417,24 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		WINHTTP_PROXY_INFO proxy_info;
 		wchar_t *proxy_wide;
 
-		if (!git__prefixcmp(proxy_url, SCHEME_HTTP)) {
-			t->proxy_connection_data.use_ssl = false;
-		} else if (!git__prefixcmp(proxy_url, SCHEME_HTTPS)) {
-			t->proxy_connection_data.use_ssl = true;
-		} else {
-			git_error_set(GIT_ERROR_NET, "invalid URL: '%s'", proxy_url);
-			return -1;
-		}
+		git_net_url_dispose(&t->proxy.url);
 
-		gitno_connection_data_free_ptrs(&t->proxy_connection_data);
-
-		if ((error = gitno_extract_url_parts(&t->proxy_connection_data.host, &t->proxy_connection_data.port, NULL,
-				&t->proxy_connection_data.user, &t->proxy_connection_data.pass, proxy_url, NULL)) < 0)
+		if ((error = git_net_url_parse(&t->proxy.url, proxy_url)) < 0)
 			goto on_error;
 
-		if (t->proxy_connection_data.user && t->proxy_connection_data.pass) {
-			if (t->proxy_cred) {
-				t->proxy_cred->free(t->proxy_cred);
-			}
-
-			if ((error = git_cred_userpass_plaintext_new(&t->proxy_cred, t->proxy_connection_data.user, t->proxy_connection_data.pass)) < 0)
-				goto on_error;
+		if (strcmp(t->proxy.url.scheme, "http") != 0 && strcmp(t->proxy.url.scheme, "https") != 0) {
+			git_error_set(GIT_ERROR_NET, "invalid URL: '%s'", proxy_url);
+			error = -1;
+			goto on_error;
 		}
 
-		if (t->proxy_connection_data.use_ssl)
-			git_buf_PUTS(&processed_url, SCHEME_HTTPS);
-		else
-			git_buf_PUTS(&processed_url, SCHEME_HTTP);
+		git_buf_puts(&processed_url, t->proxy.url.scheme);
+		git_buf_PUTS(&processed_url, "://");
 
-		git_buf_puts(&processed_url, t->proxy_connection_data.host);
-		if (t->proxy_connection_data.port)
-			git_buf_printf(&processed_url, ":%s", t->proxy_connection_data.port);
+		git_buf_puts(&processed_url, t->proxy.url.host);
+
+		if (!git_net_url_is_default_port(&t->proxy.url))
+			git_buf_printf(&processed_url, ":%s", t->proxy.url.port);
 
 		if (git_buf_oom(&processed_url)) {
 			error = -1;
@@ -454,13 +462,8 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 		git__free(proxy_wide);
 
-		if (t->proxy_cred) {
-			if (t->proxy_cred->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT) {
-				if ((error = apply_userpass_credential_proxy(s->request, t->proxy_cred, t->auth_mechanisms)) < 0)
-					goto on_error;
-			}
-		}
-
+		if ((error = apply_credentials(s->request, &t->proxy.url, WINHTTP_AUTH_TARGET_PROXY, t->proxy.cred, t->proxy.auth_mechanisms)) < 0)
+			goto on_error;
 	}
 
 	/* Disable WinHTTP redirects so we can handle them manually. Why, you ask?
@@ -471,6 +474,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		&disable_redirects,
 		sizeof(disable_redirects))) {
 			git_error_set(GIT_ERROR_OS, "failed to disable redirects");
+			error = -1;
 			goto on_error;
 	}
 
@@ -543,32 +547,15 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	}
 
 	/* If requested, disable certificate validation */
-	if (t->connection_data.use_ssl) {
+	if (strcmp(t->server.url.scheme, "https") == 0) {
 		int flags;
 
 		if (t->owner->parent.read_flags(&t->owner->parent, &flags) < 0)
 			goto on_error;
 	}
 
-	/* If we have a credential on the subtransport, apply it to the request */
-	if (t->cred &&
-		t->cred->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT &&
-		apply_userpass_credential(s->request, t->auth_mechanisms, t->cred) < 0)
+	if ((error = apply_credentials(s->request, &t->server.url, WINHTTP_AUTH_TARGET_SERVER, t->server.cred, t->server.auth_mechanisms)) < 0)
 		goto on_error;
-	else if (t->cred &&
-		t->cred->credtype == GIT_CREDTYPE_DEFAULT &&
-		apply_default_credentials(s->request, t->auth_mechanisms) < 0)
-		goto on_error;
-
-	/* If no other credentials have been applied and the URL has username and
-	 * password, use those */
-	if (!t->cred && t->connection_data.user && t->connection_data.pass) {
-		if (!t->url_cred &&
-			git_cred_userpass_plaintext_new(&t->url_cred, t->connection_data.user, t->connection_data.pass) < 0)
-			goto on_error;
-		if (apply_userpass_credential(s->request, GIT_WINHTTP_AUTH_BASIC, t->url_cred) < 0)
-			goto on_error;
-	}
 
 	/* We've done everything up to calling WinHttpSendRequest. */
 
@@ -584,9 +571,9 @@ on_error:
 }
 
 static int parse_unauthorized_response(
-	HINTERNET request,
 	int *allowed_types,
-	int *allowed_mechanisms)
+	int *allowed_mechanisms,
+	HINTERNET request)
 {
 	DWORD supported, first, target;
 
@@ -741,12 +728,12 @@ static int winhttp_connect(
 	t->connection = NULL;
 
 	/* Prepare port */
-	if (git__strntol32(&port, t->connection_data.port,
-			   strlen(t->connection_data.port), NULL, 10) < 0)
+	if (git__strntol32(&port, t->server.url.port,
+			   strlen(t->server.url.port), NULL, 10) < 0)
 		return -1;
 
 	/* Prepare host */
-	if (git__utf8_to_16_alloc(&wide_host, t->connection_data.host) < 0) {
+	if (git__utf8_to_16_alloc(&wide_host, t->server.url.host) < 0) {
 		git_error_set(GIT_ERROR_OS, "unable to convert host to wide characters");
 		return -1;
 	}
@@ -887,6 +874,59 @@ static int send_request(winhttp_stream *s, size_t len, int ignore_length)
 	if ((error = do_send_request(s, len, ignore_length)) < 0)
 		git_error_set(GIT_ERROR_OS, "failed to send request with unchecked certificate");
 
+	return error;
+}
+
+static int acquire_credentials(
+	HINTERNET request,
+	winhttp_server *server,
+	const char *url_str,
+	git_cred_acquire_cb cred_cb,
+	void *cred_cb_payload)
+{
+	int allowed_types;
+	int error = 1;
+
+	if (parse_unauthorized_response(&allowed_types, &server->auth_mechanisms, request) < 0)
+		return -1;
+
+	if (allowed_types) {
+		git_cred_free(server->cred);
+		server->cred = NULL;
+
+		/* Start with URL-specified credentials, if there were any. */
+		if (!server->url_cred_presented && server->url.username && server->url.password) {
+			error = acquire_url_cred(&server->cred, allowed_types, server->url.username, server->url.password);
+			server->url_cred_presented = 1;
+
+			if (error < 0)
+				return error;
+		}
+
+		/* Next use the user-defined callback, if there is one. */
+		if (error > 0 && cred_cb) {
+			error = cred_cb(&server->cred, url_str, server->url.username, allowed_types, cred_cb_payload);
+
+			/* Treat GIT_PASSTHROUGH as though git_cred_acquire_cb isn't set */
+			if (error == GIT_PASSTHROUGH)
+				error = 1;
+			else if (error < 0)
+				return error;
+		}
+
+		/* Finally, invoke the fallback default credential lookup. */
+		if (error > 0) {
+			error = acquire_fallback_cred(&server->cred, url_str, allowed_types);
+
+			if (error < 0)
+				return error;
+		}
+	}
+
+	/*
+	 * No error occurred but we could not find appropriate credentials.
+	 * This behaves like a pass-through.
+	 */
 	return error;
 }
 
@@ -1062,7 +1102,7 @@ replay:
 
 			if (!git__prefixcmp_icase(location8, prefix_https)) {
 				/* Upgrade to secure connection; disconnect and start over */
-				if (gitno_connection_data_from_url(&t->connection_data, location8, s->service_url) < 0) {
+				if (gitno_connection_data_handle_redirect(&t->server.url, location8, s->service_url) < 0) {
 					git__free(location8);
 					return -1;
 				}
@@ -1077,67 +1117,34 @@ replay:
 			goto replay;
 		}
 
-		/* Handle proxy authentication failures */
-		if (status_code == HTTP_STATUS_PROXY_AUTH_REQ) {
-			int allowed_types;
-
-			if (parse_unauthorized_response(s->request, &allowed_types, &t->auth_mechanisms) < 0)
-				return -1;
-
-			/* TODO: extract the username from the url, no payload? */
-			if (t->owner->proxy.credentials) {
-				int cred_error = 1;
-				cred_error = t->owner->proxy.credentials(&t->proxy_cred, t->owner->proxy.url, NULL, allowed_types, t->owner->proxy.payload);
-
-				if (cred_error < 0)
-					return cred_error;
-			}
-
-			winhttp_stream_close(s);
-			goto replay;
-		}
-
 		/* Handle authentication failures */
-		if (HTTP_STATUS_DENIED == status_code && get_verb == s->verb) {
-			int allowed_types;
+		if (status_code == HTTP_STATUS_DENIED) {
+			int error = acquire_credentials(s->request,
+				&t->server,
+				t->owner->url,
+				t->owner->cred_acquire_cb,
+				t->owner->cred_acquire_payload);
 
-			if (parse_unauthorized_response(s->request, &allowed_types, &t->auth_mechanisms) < 0)
-				return -1;
+			if (error < 0) {
+				return error;
+			} else if (!error) {
+				assert(t->server.cred);
+				winhttp_stream_close(s);
+				goto replay;
+			}
+		} else if (status_code == HTTP_STATUS_PROXY_AUTH_REQ) {
+			int error = acquire_credentials(s->request,
+				&t->proxy,
+				t->owner->proxy.url,
+				t->owner->proxy.credentials,
+				t->owner->proxy.payload);
 
-			if (allowed_types) {
-				int cred_error = 1;
-
-				git_cred_free(t->cred);
-				t->cred = NULL;
-				/* Start with the user-supplied credential callback, if present */
-				if (t->owner->cred_acquire_cb) {
-					cred_error = t->owner->cred_acquire_cb(&t->cred, t->owner->url,
-						t->connection_data.user, allowed_types,	t->owner->cred_acquire_payload);
-
-					/* Treat GIT_PASSTHROUGH as though git_cred_acquire_cb isn't set */
-					if (cred_error == GIT_PASSTHROUGH)
-						cred_error = 1;
-					else if (cred_error < 0)
-						return cred_error;
-				}
-
-				/* Invoke the fallback credentials acquisition callback if necessary */
-				if (cred_error > 0) {
-					cred_error = fallback_cred_acquire_cb(&t->cred, t->owner->url,
-						t->connection_data.user, allowed_types, NULL);
-
-					if (cred_error < 0)
-						return cred_error;
-				}
-
-				if (!cred_error) {
-					assert(t->cred);
-
-					winhttp_stream_close(s);
-
-					/* Successfully acquired a credential */
-					goto replay;
-				}
+			if (error < 0) {
+				return error;
+			} else if (!error) {
+				assert(t->proxy.cred);
+				winhttp_stream_close(s);
+				goto replay;
 			}
 		}
 
@@ -1496,7 +1503,7 @@ static int winhttp_action(
 	int ret = -1;
 
 	if (!t->connection)
-		if ((ret = gitno_connection_data_from_url(&t->connection_data, url, NULL)) < 0 ||
+		if ((ret = git_net_url_parse(&t->server.url, url)) < 0 ||
 			 (ret = winhttp_connect(t)) < 0)
 			return ret;
 
@@ -1538,24 +1545,17 @@ static int winhttp_close(git_smart_subtransport *subtransport)
 {
 	winhttp_subtransport *t = (winhttp_subtransport *)subtransport;
 
-	gitno_connection_data_free_ptrs(&t->connection_data);
-	memset(&t->connection_data, 0x0, sizeof(gitno_connection_data));
-	gitno_connection_data_free_ptrs(&t->proxy_connection_data);
-	memset(&t->proxy_connection_data, 0x0, sizeof(gitno_connection_data));
+	git_net_url_dispose(&t->server.url);
+	git_net_url_dispose(&t->proxy.url);
 
-	if (t->cred) {
-		t->cred->free(t->cred);
-		t->cred = NULL;
+	if (t->server.cred) {
+		t->server.cred->free(t->server.cred);
+		t->server.cred = NULL;
 	}
 
-	if (t->proxy_cred) {
-		t->proxy_cred->free(t->proxy_cred);
-		t->proxy_cred = NULL;
-	}
-
-	if (t->url_cred) {
-		t->url_cred->free(t->url_cred);
-		t->url_cred = NULL;
+	if (t->proxy.cred) {
+		t->proxy.cred->free(t->proxy.cred);
+		t->proxy.cred = NULL;
 	}
 
 	return winhttp_close_connection(t);

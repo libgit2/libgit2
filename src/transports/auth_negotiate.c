@@ -73,7 +73,6 @@ static int negotiate_set_challenge(
 static int negotiate_next_token(
 	git_buf *buf,
 	git_http_auth_context *c,
-	const char *header_name,
 	git_cred *cred)
 {
 	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
@@ -156,9 +155,8 @@ static int negotiate_next_token(
 		goto done;
 	}
 
-	git_buf_printf(buf, "%s: Negotiate ", header_name);
+	git_buf_puts(buf, "Negotiate ");
 	git_buf_encode_base64(buf, output_token.value, output_token.length);
-	git_buf_puts(buf, "\r\n");
 
 	if (git_buf_oom(buf))
 		error = -1;
@@ -168,6 +166,15 @@ done:
 	gss_release_buffer(&status_minor, (gss_buffer_t) &output_token);
 	git_buf_dispose(&input_buf);
 	return error;
+}
+
+static int negotiate_is_complete(git_http_auth_context *c)
+{
+	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
+
+	assert(ctx);
+
+	return (ctx->complete == 1);
 }
 
 static void negotiate_context_free(git_http_auth_context *c)
@@ -194,7 +201,7 @@ static void negotiate_context_free(git_http_auth_context *c)
 
 static int negotiate_init_context(
 	http_auth_negotiate_context *ctx,
-	const gitno_connection_data *connection_data)
+	const git_net_url *url)
 {
 	OM_uint32 status_major, status_minor;
 	gss_OID item, *oid;
@@ -235,7 +242,7 @@ static int negotiate_init_context(
 	}
 
 	git_buf_puts(&ctx->target, "HTTP@");
-	git_buf_puts(&ctx->target, connection_data->host);
+	git_buf_puts(&ctx->target, url->host);
 
 	if (git_buf_oom(&ctx->target))
 		return -1;
@@ -248,7 +255,7 @@ static int negotiate_init_context(
 
 int git_http_auth_negotiate(
 	git_http_auth_context **out,
-	const gitno_connection_data *connection_data)
+	const git_net_url *url)
 {
 	http_auth_negotiate_context *ctx;
 
@@ -257,15 +264,17 @@ int git_http_auth_negotiate(
 	ctx = git__calloc(1, sizeof(http_auth_negotiate_context));
 	GIT_ERROR_CHECK_ALLOC(ctx);
 
-	if (negotiate_init_context(ctx, connection_data) < 0) {
+	if (negotiate_init_context(ctx, url) < 0) {
 		git__free(ctx);
 		return -1;
 	}
 
 	ctx->parent.type = GIT_AUTHTYPE_NEGOTIATE;
 	ctx->parent.credtypes = GIT_CREDTYPE_DEFAULT;
+	ctx->parent.connection_affinity = 1;
 	ctx->parent.set_challenge = negotiate_set_challenge;
 	ctx->parent.next_token = negotiate_next_token;
+	ctx->parent.is_complete = negotiate_is_complete;
 	ctx->parent.free = negotiate_context_free;
 
 	*out = (git_http_auth_context *)ctx;

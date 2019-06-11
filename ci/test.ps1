@@ -38,18 +38,25 @@ Write-Host "## Configuring test environment"
 Write-Host "##############################################################################"
 
 if (-not $Env:SKIP_PROXY_TESTS) {
+	Invoke-WebRequest -Method GET -Uri https://github.com/ethomson/poxyproxy/releases/download/v0.7.0/poxyproxy-0.7.0.jar -OutFile poxyproxy.jar
+
 	Write-Host ""
-	Write-Host "Starting HTTP proxy..."
-	Invoke-WebRequest -Method GET -Uri https://github.com/ethomson/poxyproxy/releases/download/v0.4.0/poxyproxy-0.4.0.jar -OutFile poxyproxy.jar
-	javaw -jar poxyproxy.jar -d --port 8080 --credentials foo:bar --quiet
+	Write-Host "Starting HTTP proxy (Basic)..."
+	javaw -jar poxyproxy.jar --port 8080 --credentials foo:bar --auth-type basic --quiet
+
+	Write-Host ""
+	Write-Host "Starting HTTP proxy (NTLM)..."
+	javaw -jar poxyproxy.jar --port 8090 --credentials foo:bar --auth-type ntlm --quiet
 }
 
-Write-Host ""
-Write-Host "##############################################################################"
-Write-Host "## Running (offline) tests"
-Write-Host "##############################################################################"
+if (-not $Env:SKIP_OFFLINE_TESTS) {
+	Write-Host ""
+	Write-Host "##############################################################################"
+	Write-Host "## Running (offline) tests"
+	Write-Host "##############################################################################"
 
-run_test offline
+	run_test offline
+}
 
 if ($Env:RUN_INVASIVE_TESTS) {
 	Write-Host ""
@@ -76,14 +83,24 @@ if (-not $Env:SKIP_ONLINE_TESTS) {
 }
 
 if (-not $Env:SKIP_PROXY_TESTS) {
+	# Test HTTP Basic authentication
 	Write-Host ""
-	Write-Host "Running proxy tests"
+	Write-Host "Running proxy tests (Basic authentication)"
 	Write-Host ""
 
 	$Env:GITTEST_REMOTE_PROXY_HOST="localhost:8080"
 	$Env:GITTEST_REMOTE_PROXY_USER="foo"
 	$Env:GITTEST_REMOTE_PROXY_PASS="bar"
+	run_test proxy
 
+	# Test NTLM authentication
+	Write-Host ""
+	Write-Host "Running proxy tests (NTLM authentication)"
+	Write-Host ""
+
+	$Env:GITTEST_REMOTE_PROXY_HOST="localhost:8090"
+	$Env:GITTEST_REMOTE_PROXY_USER="foo"
+	$Env:GITTEST_REMOTE_PROXY_PASS="bar"
 	run_test proxy
 
 	$Env:GITTEST_REMOTE_PROXY_HOST=$null

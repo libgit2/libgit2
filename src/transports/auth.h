@@ -16,6 +16,7 @@
 typedef enum {
 	GIT_AUTHTYPE_BASIC = 1,
 	GIT_AUTHTYPE_NEGOTIATE = 2,
+	GIT_AUTHTYPE_NTLM = 4,
 } git_http_authtype_t;
 
 typedef struct git_http_auth_context git_http_auth_context;
@@ -27,11 +28,17 @@ struct git_http_auth_context {
 	/** Supported credentials */
 	git_credtype_t credtypes;
 
+	/** Connection affinity or request affinity */
+	unsigned connection_affinity : 1;
+
 	/** Sets the challenge on the authentication context */
 	int (*set_challenge)(git_http_auth_context *ctx, const char *challenge);
 
 	/** Gets the next authentication token from the context */
-	int (*next_token)(git_buf *out, git_http_auth_context *ctx, const char *header_name, git_cred *cred);
+	int (*next_token)(git_buf *out, git_http_auth_context *ctx, git_cred *cred);
+
+	/** Examines if all tokens have been presented. */
+	int (*is_complete)(git_http_auth_context *ctx);
 
 	/** Frees the authentication context */
 	void (*free)(git_http_auth_context *ctx);
@@ -50,15 +57,15 @@ typedef struct {
 	/** Function to initialize an authentication context */
 	int (*init_context)(
 		git_http_auth_context **out,
-		const gitno_connection_data *connection_data);
+		const git_net_url *url);
 } git_http_auth_scheme;
 
 int git_http_auth_dummy(
 	git_http_auth_context **out,
-	const gitno_connection_data *connection_data);
+	const git_net_url *url);
 
 int git_http_auth_basic(
 	git_http_auth_context **out,
-	const gitno_connection_data *connection_data);
+	const git_net_url *url);
 
 #endif

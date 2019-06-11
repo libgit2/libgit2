@@ -16,7 +16,7 @@
 
 extern int git_http_auth_negotiate(
 	git_http_auth_context **out,
-	const gitno_connection_data *connection_data);
+	const git_net_url *url);
 
 #else
 
