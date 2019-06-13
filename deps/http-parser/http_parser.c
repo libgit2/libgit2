@@ -2047,7 +2047,6 @@ http_parse_host(const char * buf, struct http_parser_url *u, int found_at) {
     case s_http_host_start:
     case s_http_host_v6_start:
     case s_http_host_v6:
-    case s_http_host_port_start:
     case s_http_userinfo:
     case s_http_userinfo_start:
       return 1;
