@@ -10,6 +10,13 @@ v0.28 + 1
   system http-parser implementation despite incompatibilities, you can
   specify `-DUSE_HTTP_PARSER=system` to CMake.
 
+* The interactions between `USE_HTTPS` and `SHA1_BACKEND` have been
+  streamlined. The detection was moved to a new `USE_SHA1`, modeled after
+  `USE_HTTPS`, which takes the values "CollisionDetection/Backend/Generic", to
+  better match how the "hashing backend" is selected, the default (ON) being
+  "CollisionDetection". If you were using `SHA1_BACKEND` previously, you'll
+  need to check the value you've used, or switch to the autodetection.
+
 ### Changes or improvements
 
 * libgit2 can now correctly cope with URLs where the host contains a colon
