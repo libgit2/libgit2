@@ -8,6 +8,7 @@
 #include "tag.h"
 
 #include "commit.h"
+#include "fnmatch.h"
 #include "signature.h"
 #include "message.h"
 #include "git2/object.h"

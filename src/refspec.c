@@ -10,7 +10,7 @@
 #include "git2/errors.h"
 
 #include "util.h"
-#include "posix.h"
+#include "fnmatch.h"
 #include "refs.h"
 #include "vector.h"
 

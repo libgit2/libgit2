@@ -14,12 +14,13 @@
 
 #include "commit.h"
 #include "commit_list.h"
+#include "fnmatch.h"
 #include "oidmap.h"
 #include "refs.h"
+#include "repository.h"
 #include "revwalk.h"
 #include "tag.h"
 #include "vector.h"
-#include "repository.h"
 
 /* Ported from https://github.com/git/git/blob/89dde7882f71f846ccd0359756d27bebc31108de/builtin/describe.c */
 

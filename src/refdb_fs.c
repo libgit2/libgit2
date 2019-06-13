@@ -18,6 +18,7 @@
 #include "iterator.h"
 #include "sortedcache.h"
 #include "signature.h"
+#include "fnmatch.h"
 
 #include <git2/tag.h>
 #include <git2/object.h>

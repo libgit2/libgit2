@@ -18,6 +18,7 @@
 #include "array.h"
 #include "config_parse.h"
 #include "config_entries.h"
+#include "fnmatch.h"
 
 #include <ctype.h>
 #include <sys/types.h>

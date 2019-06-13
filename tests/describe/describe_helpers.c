@@ -1,5 +1,7 @@
 #include "describe_helpers.h"
 
+#include "fnmatch.h"
+
 void assert_describe(
 	const char *expected_output,
 	const char *revparse_spec,

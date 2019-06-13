@@ -16,6 +16,7 @@
 #include "repository.h"
 #include "ignore.h"
 #include "index.h"
+#include "fnmatch.h"
 
 #include "git2/diff.h"
 #include "diff.h"
