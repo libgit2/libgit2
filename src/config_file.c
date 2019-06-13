@@ -701,7 +701,7 @@ static int do_match_gitdir(
 	const char *condition,
 	bool case_insensitive)
 {
-	git_buf pattern = GIT_BUF_INIT;
+	git_buf pattern = GIT_BUF_INIT, gitdir = GIT_BUF_INIT;
 	int error, fnmatch_flags;
 
 	if (condition[0] == '.' && git_path_is_dirsep(condition[1])) {
@@ -722,17 +722,24 @@ static int do_match_gitdir(
 		goto out;
 	}
 
+	if ((error = git_repository_item_path(&gitdir, repo, GIT_REPOSITORY_ITEM_GITDIR)) < 0)
+		goto out;
+
+	if (git_path_is_dirsep(gitdir.ptr[gitdir.size - 1]))
+		git_buf_truncate(&gitdir, gitdir.size - 1);
+
 	fnmatch_flags = FNM_PATHNAME|FNM_LEADING_DIR;
 	if (case_insensitive)
 		fnmatch_flags |= FNM_IGNORECASE;
 
-	if ((error = p_fnmatch(pattern.ptr, git_repository_path(repo), fnmatch_flags)) < 0)
+	if ((error = p_fnmatch(pattern.ptr, gitdir.ptr, fnmatch_flags)) < 0)
 		goto out;
 
 	*matches = (error == 0);
 
 out:
 	git_buf_dispose(&pattern);
+	git_buf_dispose(&gitdir);
 	return error;
 }
 
