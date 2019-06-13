@@ -14,13 +14,13 @@
 
 #include "commit.h"
 #include "commit_list.h"
-#include "fnmatch.h"
 #include "oidmap.h"
 #include "refs.h"
 #include "repository.h"
 #include "revwalk.h"
 #include "tag.h"
 #include "vector.h"
+#include "wildmatch.h"
 
 /* Ported from https://github.com/git/git/blob/89dde7882f71f846ccd0359756d27bebc31108de/builtin/describe.c */
 
@@ -215,7 +215,7 @@ static int get_name(const char *refname, void *payload)
 		return 0;
 
 	/* Accept only tags that match the pattern, if given */
-	if (data->opts->pattern && (!is_tag || p_fnmatch(data->opts->pattern,
+	if (data->opts->pattern && (!is_tag || wildmatch(data->opts->pattern,
 		refname + strlen(GIT_REFS_TAGS_DIR), 0)))
 				return 0;
 

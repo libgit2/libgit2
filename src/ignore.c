@@ -12,7 +12,7 @@
 #include "attrcache.h"
 #include "path.h"
 #include "config.h"
-#include "fnmatch.h"
+#include "wildmatch.h"
 
 #define GIT_IGNORE_INTERNAL		"[internal]exclude"
 
@@ -101,7 +101,7 @@ static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
  */
 static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match)
 {
-	int error = 0, fnflags;
+	int error = 0, wildmatch_flags;
 	size_t i;
 	git_attr_fnmatch *rule;
 	char *path;
@@ -109,9 +109,9 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 
 	*out = 0;
 
-	fnflags = FNM_PATHNAME;
+	wildmatch_flags = WM_PATHNAME;
 	if (match->flags & GIT_ATTR_FNMATCH_ICASE)
-		fnflags |= FNM_IGNORECASE;
+		wildmatch_flags |= WM_CASEFOLD;
 
 	/* path of the file relative to the workdir, so we match the rules in subdirs */
 	if (match->containing_dir) {
@@ -141,13 +141,13 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 		if (git_buf_oom(&buf))
 			goto out;
 
-		if ((error = p_fnmatch(git_buf_cstr(&buf), path, fnflags)) < 0) {
+		if ((error = wildmatch(git_buf_cstr(&buf), path, wildmatch_flags)) < 0) {
 			git_error_set(GIT_ERROR_INVALID, "error matching pattern");
 			goto out;
 		}
 
 		/* if we found a match, we want to keep this rule */
-		if (error != FNM_NOMATCH) {
+		if (error != WM_NOMATCH) {
 			*out = 1;
 			error = 0;
 			goto out;

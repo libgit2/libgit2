@@ -9,10 +9,10 @@
 
 #include "git2/errors.h"
 
-#include "util.h"
-#include "fnmatch.h"
 #include "refs.h"
+#include "util.h"
 #include "vector.h"
+#include "wildmatch.h"
 
 int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 {
@@ -213,7 +213,7 @@ int git_refspec_src_matches(const git_refspec *refspec, const char *refname)
 	if (refspec == NULL || refspec->src == NULL)
 		return false;
 
-	return (p_fnmatch(refspec->src, refname, 0) == 0);
+	return (wildmatch(refspec->src, refname, 0) == 0);
 }
 
 int git_refspec_dst_matches(const git_refspec *refspec, const char *refname)
@@ -221,7 +221,7 @@ int git_refspec_dst_matches(const git_refspec *refspec, const char *refname)
 	if (refspec == NULL || refspec->dst == NULL)
 		return false;
 
-	return (p_fnmatch(refspec->dst, refname, 0) == 0);
+	return (wildmatch(refspec->dst, refname, 0) == 0);
 }
 
 static int refspec_transform(

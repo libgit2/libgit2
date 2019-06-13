@@ -16,7 +16,7 @@
 #include "repository.h"
 #include "ignore.h"
 #include "index.h"
-#include "fnmatch.h"
+#include "wildmatch.h"
 
 #include "git2/diff.h"
 #include "diff.h"
@@ -457,7 +457,7 @@ struct status_file_info {
 	char *expected;
 	unsigned int count;
 	unsigned int status;
-	int fnm_flags;
+	int wildmatch_flags;
 	int ambiguous;
 };
 
@@ -469,11 +469,11 @@ static int get_one_status(const char *path, unsigned int status, void *data)
 	sfi->count++;
 	sfi->status = status;
 
-	strcomp = (sfi->fnm_flags & FNM_CASEFOLD) ? git__strcasecmp : git__strcmp;
+	strcomp = (sfi->wildmatch_flags & WM_CASEFOLD) ? git__strcasecmp : git__strcmp;
 
 	if (sfi->count > 1 ||
 		(strcomp(sfi->expected, path) != 0 &&
-		 p_fnmatch(sfi->expected, path, sfi->fnm_flags) != 0))
+		 wildmatch(sfi->expected, path, sfi->wildmatch_flags) != 0))
 	{
 		sfi->ambiguous = true;
 		return GIT_EAMBIGUOUS; /* git_error_set will be done by caller */
@@ -500,7 +500,7 @@ int git_status_file(
 	if ((sfi.expected = git__strdup(path)) == NULL)
 		return -1;
 	if (index->ignore_case)
-		sfi.fnm_flags = FNM_CASEFOLD;
+		sfi.wildmatch_flags = WM_CASEFOLD;
 
 	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
