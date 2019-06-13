@@ -698,41 +698,41 @@ static int do_match_gitdir(
 	int *matches,
 	const git_repository *repo,
 	const char *cfg_file,
-	const char *value,
+	const char *condition,
 	bool case_insensitive)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_buf pattern = GIT_BUF_INIT;
 	int error, fnmatch_flags;
 
-	if (value[0] == '.' && git_path_is_dirsep(value[1])) {
-		git_path_dirname_r(&path, cfg_file);
-		git_buf_joinpath(&path, path.ptr, value + 2);
-	} else if (value[0] == '~' && git_path_is_dirsep(value[1]))
-		git_sysdir_expand_global_file(&path, value + 1);
-	else if (!git_path_is_absolute(value))
-		git_buf_joinpath(&path, "**", value);
+	if (condition[0] == '.' && git_path_is_dirsep(condition[1])) {
+		git_path_dirname_r(&pattern, cfg_file);
+		git_buf_joinpath(&pattern, pattern.ptr, condition + 2);
+	} else if (condition[0] == '~' && git_path_is_dirsep(condition[1]))
+		git_sysdir_expand_global_file(&pattern, condition + 1);
+	else if (!git_path_is_absolute(condition))
+		git_buf_joinpath(&pattern, "**", condition);
 	else
-		git_buf_sets(&path, value);
+		git_buf_sets(&pattern, condition);
 
-	if (git_buf_oom(&path)) {
+	if (git_path_is_dirsep(condition[strlen(condition) - 1]))
+		git_buf_puts(&pattern, "**");
+
+	if (git_buf_oom(&pattern)) {
 		error = -1;
 		goto out;
 	}
-
-	if (git_path_is_dirsep(value[strlen(value) - 1]))
-		git_buf_puts(&path, "**");
 
 	fnmatch_flags = FNM_PATHNAME|FNM_LEADING_DIR;
 	if (case_insensitive)
 		fnmatch_flags |= FNM_IGNORECASE;
 
-	if ((error = p_fnmatch(path.ptr, git_repository_path(repo), fnmatch_flags)) < 0)
+	if ((error = p_fnmatch(pattern.ptr, git_repository_path(repo), fnmatch_flags)) < 0)
 		goto out;
 
 	*matches = (error == 0);
 
 out:
-	git_buf_dispose(&path);
+	git_buf_dispose(&pattern);
 	return error;
 }
 
