@@ -18,7 +18,7 @@
 #include "array.h"
 #include "config_parse.h"
 #include "config_entries.h"
-#include "fnmatch.h"
+#include "wildmatch.h"
 
 #include <ctype.h>
 #include <sys/types.h>
@@ -702,7 +702,7 @@ static int do_match_gitdir(
 	bool case_insensitive)
 {
 	git_buf pattern = GIT_BUF_INIT, gitdir = GIT_BUF_INIT;
-	int error, fnmatch_flags;
+	int error;
 
 	if (condition[0] == '.' && git_path_is_dirsep(condition[1])) {
 		git_path_dirname_r(&pattern, cfg_file);
@@ -728,15 +728,8 @@ static int do_match_gitdir(
 	if (git_path_is_dirsep(gitdir.ptr[gitdir.size - 1]))
 		git_buf_truncate(&gitdir, gitdir.size - 1);
 
-	fnmatch_flags = FNM_PATHNAME|FNM_LEADING_DIR;
-	if (case_insensitive)
-		fnmatch_flags |= FNM_IGNORECASE;
-
-	if ((error = p_fnmatch(pattern.ptr, gitdir.ptr, fnmatch_flags)) < 0)
-		goto out;
-
-	*matches = (error == 0);
-
+	*matches = wildmatch(pattern.ptr, gitdir.ptr,
+			     WM_PATHNAME | (case_insensitive ? WM_CASEFOLD : 0)) == WM_MATCH;
 out:
 	git_buf_dispose(&pattern);
 	git_buf_dispose(&gitdir);

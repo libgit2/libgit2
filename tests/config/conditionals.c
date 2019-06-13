@@ -68,6 +68,7 @@ void test_config_conditionals__gitdir(void)
 	assert_condition_includes("gitdir", "empty_stand*/", true);
 	assert_condition_includes("gitdir", "empty_stand*/.git", true);
 	assert_condition_includes("gitdir", "empty_stand*/.git/", false);
+	assert_condition_includes("gitdir", "empty_standard_repo", false);
 	assert_condition_includes("gitdir", "empty_standard_repo/", true);
 	assert_condition_includes("gitdir", "empty_standard_repo/.git", true);
 	assert_condition_includes("gitdir", "empty_standard_repo/.git/", false);
@@ -79,8 +80,10 @@ void test_config_conditionals__gitdir(void)
 	assert_condition_includes("gitdir", "~/empty_standard_repo", false);
 
 	assert_condition_includes("gitdir", sandbox_path(&path, "/"), true);
+	assert_condition_includes("gitdir", sandbox_path(&path, "/*"), false);
 	assert_condition_includes("gitdir", sandbox_path(&path, "/**"), true);
 
+	assert_condition_includes("gitdir", sandbox_path(&path, "empty_standard_repo"), false);
 	assert_condition_includes("gitdir", sandbox_path(&path, "empty_standard_repo/"), true);
 	assert_condition_includes("gitdir", sandbox_path(&path, "empty_standard_repo/"), true);
 	assert_condition_includes("gitdir", sandbox_path(&path, "Empty_Standard_Repo"), false);
