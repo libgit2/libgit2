@@ -343,6 +343,16 @@ void test_path_core__join_unrooted(void)
 	test_join_unrooted("c:/foo", 2, "c:/foo", "c:/asdf");
 	test_join_unrooted("c:/foo/bar", 2, "c:/foo/bar", "c:/asdf");
 
+#ifdef GIT_WIN32
+	/* Paths starting with '\\' are absolute */
+	test_join_unrooted("\\bar", 0, "\\bar", "c:/foo/");
+	test_join_unrooted("\\\\network\\bar", 9, "\\\\network\\bar", "c:/foo/");
+#else
+	/* Paths starting with '\\' are not absolute on non-Windows systems */
+	test_join_unrooted("/foo/\\bar", 4, "\\bar", "/foo");
+	test_join_unrooted("c:/foo/\\bar", 7, "\\bar", "c:/foo/");
+#endif
+
 	/* Base is returned when it's provided and is the prefix */
 	test_join_unrooted("c:/foo/bar/foobar", 6, "c:/foo/bar/foobar", "c:/foo");
 	test_join_unrooted("c:/foo/bar/foobar", 10, "c:/foo/bar/foobar", "c:/foo/bar");

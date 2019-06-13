@@ -5,12 +5,12 @@
 
 static git_repository *g_repo = NULL;
 
-void test_attr_ignore__initialize(void)
+void test_ignore_path__initialize(void)
 {
 	g_repo = cl_git_sandbox_init("attr");
 }
 
-void test_attr_ignore__cleanup(void)
+void test_ignore_path__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
 	g_repo = NULL;
@@ -31,7 +31,7 @@ static void assert_is_ignored_(
 #define assert_is_ignored(expected, filepath) \
 	assert_is_ignored_(expected, filepath, __FILE__, __LINE__)
 
-void test_attr_ignore__honor_temporary_rules(void)
+void test_ignore_path__honor_temporary_rules(void)
 {
 	cl_git_rewritefile("attr/.gitignore", "/NewFolder\n/NewFolder/NewFolder");
 
@@ -41,7 +41,7 @@ void test_attr_ignore__honor_temporary_rules(void)
 	assert_is_ignored(true, "NewFolder/NewFolder/File.txt");
 }
 
-void test_attr_ignore__allow_root(void)
+void test_ignore_path__allow_root(void)
 {
 	cl_git_rewritefile("attr/.gitignore", "/");
 
@@ -51,7 +51,7 @@ void test_attr_ignore__allow_root(void)
 	assert_is_ignored(false, "NewFolder/NewFolder/File.txt");
 }
 
-void test_attr_ignore__ignore_space(void)
+void test_ignore_path__ignore_space(void)
 {
 	cl_git_rewritefile("attr/.gitignore", "/\n\n/NewFolder \n/NewFolder/NewFolder");
 
@@ -61,7 +61,7 @@ void test_attr_ignore__ignore_space(void)
 	assert_is_ignored(true, "NewFolder/NewFolder/File.txt");
 }
 
-void test_attr_ignore__intermittent_space(void)
+void test_ignore_path__intermittent_space(void)
 {
 	cl_git_rewritefile("attr/.gitignore", "foo bar\n");
 
@@ -70,7 +70,7 @@ void test_attr_ignore__intermittent_space(void)
 	assert_is_ignored(true, "foo bar");
 }
 
-void test_attr_ignore__trailing_space(void)
+void test_ignore_path__trailing_space(void)
 {
 	cl_git_rewritefile(
 		"attr/.gitignore",
@@ -85,7 +85,7 @@ void test_attr_ignore__trailing_space(void)
 	assert_is_ignored(false, "bar  ");
 }
 
-void test_attr_ignore__escaped_trailing_spaces(void)
+void test_ignore_path__escaped_trailing_spaces(void)
 {
 	cl_git_rewritefile(
 		"attr/.gitignore",
@@ -107,7 +107,7 @@ void test_attr_ignore__escaped_trailing_spaces(void)
 	assert_is_ignored(false, "qux  ");
 }
 
-void test_attr_ignore__ignore_dir(void)
+void test_ignore_path__ignore_dir(void)
 {
 	cl_git_rewritefile("attr/.gitignore", "dir/\n");
 
@@ -115,7 +115,7 @@ void test_attr_ignore__ignore_dir(void)
 	assert_is_ignored(true, "dir/file");
 }
 
-void test_attr_ignore__ignore_dir_with_trailing_space(void)
+void test_ignore_path__ignore_dir_with_trailing_space(void)
 {
 	cl_git_rewritefile("attr/.gitignore", "dir/ \n");
 
@@ -123,7 +123,7 @@ void test_attr_ignore__ignore_dir_with_trailing_space(void)
 	assert_is_ignored(true, "dir/file");
 }
 
-void test_attr_ignore__ignore_root(void)
+void test_ignore_path__ignore_root(void)
 {
 	cl_git_rewritefile("attr/.gitignore", "/\n\n/NewFolder\n/NewFolder/NewFolder");
 
@@ -133,7 +133,7 @@ void test_attr_ignore__ignore_root(void)
 	assert_is_ignored(true, "NewFolder/NewFolder/File.txt");
 }
 
-void test_attr_ignore__full_paths(void)
+void test_ignore_path__full_paths(void)
 {
 	cl_git_rewritefile("attr/.gitignore", "Folder/*/Contained");
 
@@ -153,7 +153,7 @@ void test_attr_ignore__full_paths(void)
 	assert_is_ignored(false, "Folder/Middle/More/More/Contained/Not/Happy/Child");
 }
 
-void test_attr_ignore__more_starstar_cases(void)
+void test_ignore_path__more_starstar_cases(void)
 {
 	cl_must_pass(p_unlink("attr/.gitignore"));
 	cl_git_mkfile(
@@ -171,7 +171,7 @@ void test_attr_ignore__more_starstar_cases(void)
 	assert_is_ignored(false, "sub/sub2/aaa.html");
 }
 
-void test_attr_ignore__leading_stars(void)
+void test_ignore_path__leading_stars(void)
 {
 	cl_git_rewritefile(
 		"attr/.gitignore",
@@ -204,7 +204,7 @@ void test_attr_ignore__leading_stars(void)
 	assert_is_ignored(false, "dir1/kid2/file");
 }
 
-void test_attr_ignore__globs_and_path_delimiters(void)
+void test_ignore_path__globs_and_path_delimiters(void)
 {
 	cl_git_rewritefile("attr/.gitignore", "foo/bar/**");
 	assert_is_ignored(true, "foo/bar/baz");
@@ -230,7 +230,7 @@ void test_attr_ignore__globs_and_path_delimiters(void)
 	assert_is_ignored(false, "_test/foo/bar/code/file");
 }
 
-void test_attr_ignore__skip_gitignore_directory(void)
+void test_ignore_path__skip_gitignore_directory(void)
 {
 	cl_git_rewritefile("attr/.git/info/exclude", "/NewFolder\n/NewFolder/NewFolder");
 	p_unlink("attr/.gitignore");
@@ -244,7 +244,7 @@ void test_attr_ignore__skip_gitignore_directory(void)
 	assert_is_ignored(true, "NewFolder/NewFolder/File.txt");
 }
 
-void test_attr_ignore__subdirectory_gitignore(void)
+void test_ignore_path__subdirectory_gitignore(void)
 {
 	p_unlink("attr/.gitignore");
 	cl_assert(!git_path_exists("attr/.gitignore"));
@@ -262,7 +262,7 @@ void test_attr_ignore__subdirectory_gitignore(void)
 	assert_is_ignored(false, "dir/file3");
 }
 
-void test_attr_ignore__expand_tilde_to_homedir(void)
+void test_ignore_path__expand_tilde_to_homedir(void)
 {
 	git_config *cfg;
 
@@ -292,7 +292,7 @@ void test_attr_ignore__expand_tilde_to_homedir(void)
 
 /* Ensure that the .gitignore in the subdirectory only affects
  * items in the subdirectory. */
-void test_attr_ignore__gitignore_in_subdir(void)
+void test_ignore_path__gitignore_in_subdir(void)
 {
 	cl_git_rmfile("attr/.gitignore");
 
@@ -320,7 +320,7 @@ void test_attr_ignore__gitignore_in_subdir(void)
 }
 
 /* Ensure that files do not match folder cases */
-void test_attr_ignore__dont_ignore_files_for_folder(void)
+void test_ignore_path__dont_ignore_files_for_folder(void)
 {
 	cl_git_rmfile("attr/.gitignore");
 
@@ -351,7 +351,7 @@ void test_attr_ignore__dont_ignore_files_for_folder(void)
 		assert_is_ignored(false, "dir/TeSt");
 }
 
-void test_attr_ignore__symlink_to_outside(void)
+void test_ignore_path__symlink_to_outside(void)
 {
 #ifdef GIT_WIN32
 	cl_skip();
@@ -364,7 +364,7 @@ void test_attr_ignore__symlink_to_outside(void)
 	assert_is_ignored(true, "lala/../symlink");
 }
 
-void test_attr_ignore__test(void)
+void test_ignore_path__test(void)
 {
 	cl_git_rewritefile("attr/.gitignore",
 		"/*/\n"
@@ -376,7 +376,7 @@ void test_attr_ignore__test(void)
 	assert_is_ignored(true, "bin/foo");
 }
 
-void test_attr_ignore__unignore_dir_succeeds(void)
+void test_ignore_path__unignore_dir_succeeds(void)
 {
 	cl_git_rewritefile("attr/.gitignore",
 		"*.c\n"
@@ -385,7 +385,7 @@ void test_attr_ignore__unignore_dir_succeeds(void)
 	assert_is_ignored(true, "src/foo/foo.c");
 }
 
-void test_attr_ignore__case_insensitive_unignores_previous_rule(void)
+void test_ignore_path__case_insensitive_unignores_previous_rule(void)
 {
 	git_config *cfg;
 
@@ -402,7 +402,7 @@ void test_attr_ignore__case_insensitive_unignores_previous_rule(void)
 	assert_is_ignored(false, "case/file");
 }
 
-void test_attr_ignore__case_sensitive_unignore_does_nothing(void)
+void test_ignore_path__case_sensitive_unignore_does_nothing(void)
 {
 	git_config *cfg;
 
@@ -419,7 +419,7 @@ void test_attr_ignore__case_sensitive_unignore_does_nothing(void)
 	assert_is_ignored(true, "case/file");
 }
 
-void test_attr_ignore__ignored_subdirfiles_with_subdir_rule(void)
+void test_ignore_path__ignored_subdirfiles_with_subdir_rule(void)
 {
 	cl_git_rewritefile(
 		"attr/.gitignore",
@@ -431,7 +431,7 @@ void test_attr_ignore__ignored_subdirfiles_with_subdir_rule(void)
 	assert_is_ignored(true, "dir/sub1/sub2");
 }
 
-void test_attr_ignore__ignored_subdirfiles_with_negations(void)
+void test_ignore_path__ignored_subdirfiles_with_negations(void)
 {
 	cl_git_rewritefile(
 		"attr/.gitignore",
@@ -443,7 +443,7 @@ void test_attr_ignore__ignored_subdirfiles_with_negations(void)
 	assert_is_ignored(true, "dir/sub1/c.test");
 }
 
-void test_attr_ignore__negative_directory_rules_only_match_directories(void)
+void test_ignore_path__negative_directory_rules_only_match_directories(void)
 {
 	cl_git_rewritefile(
 		"attr/.gitignore",
@@ -458,4 +458,83 @@ void test_attr_ignore__negative_directory_rules_only_match_directories(void)
 	assert_is_ignored(false, "src/");
 	assert_is_ignored(false, "src/A.keep");
 	assert_is_ignored(false, ".gitignore");
+}
+
+void test_ignore_path__escaped_character(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "\\c\n");
+	assert_is_ignored(true, "c");
+	assert_is_ignored(false, "\\c");
+}
+
+void test_ignore_path__escaped_newline(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"\\\nnewline\n"
+	);
+
+	assert_is_ignored(true, "\nnewline");
+}
+
+void test_ignore_path__escaped_glob(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "\\*\n");
+	assert_is_ignored(true, "*");
+	assert_is_ignored(false, "foo");
+}
+
+void test_ignore_path__escaped_comments(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"#foo\n"
+		"\\#bar\n"
+		"\\##baz\n"
+		"\\#\\\\#qux\n"
+	);
+
+	assert_is_ignored(false, "#foo");
+	assert_is_ignored(true, "#bar");
+	assert_is_ignored(false, "\\#bar");
+	assert_is_ignored(true, "##baz");
+	assert_is_ignored(false, "\\##baz");
+	assert_is_ignored(true, "#\\#qux");
+	assert_is_ignored(false, "##qux");
+	assert_is_ignored(false, "\\##qux");
+}
+
+void test_ignore_path__escaped_slash(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"\\\\\n"
+		"\\\\preceding\n"
+		"inter\\\\mittent\n"
+		"trailing\\\\\n"
+	);
+
+#ifndef GIT_WIN32
+	assert_is_ignored(true, "\\");
+	assert_is_ignored(true, "\\preceding");
+#endif
+	assert_is_ignored(true, "inter\\mittent");
+	assert_is_ignored(true, "trailing\\");
+}
+
+void test_ignore_path__escaped_space(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"foo\\\\ \n"
+		"bar\\\\\\ \n");
+	assert_is_ignored(true, "foo\\");
+	assert_is_ignored(false, "foo\\ ");
+	assert_is_ignored(false, "foo\\\\ ");
+	assert_is_ignored(false, "foo\\\\");
+	assert_is_ignored(true, "bar\\ ");
+	assert_is_ignored(false, "bar\\\\");
+	assert_is_ignored(false, "bar\\\\ ");
+	assert_is_ignored(false, "bar\\\\\\");
+	assert_is_ignored(false, "bar\\\\\\ ");
 }

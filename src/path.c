@@ -276,9 +276,12 @@ int git_path_root(const char *path)
 		while (path[offset] && path[offset] != '/' && path[offset] != '\\')
 			offset++;
 	}
+
+	if (path[offset] == '\\')
+		return offset;
 #endif
 
-	if (path[offset] == '/' || path[offset] == '\\')
+	if (path[offset] == '/')
 		return offset;
 
 	return -1;	/* Not a real error - signals that path is not rooted */

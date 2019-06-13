@@ -565,13 +565,53 @@ void git_attr_path__free(git_attr_path *info)
  */
 static size_t trailing_space_length(const char *p, size_t len)
 {
-	size_t n;
+	size_t n, i;
 	for (n = len; n; n--) {
-		if ((p[n-1] != ' ' && p[n-1] != '\t') ||
-		    (n > 1 && p[n-2] == '\\'))
+		if (p[n-1] != ' ' && p[n-1] != '\t')
+			break;
+
+		/*
+		 * Count escape-characters before space. In case where it's an
+		 * even number of escape characters, then the escape char itself
+		 * is escaped and the whitespace is an unescaped whitespace.
+		 * Otherwise, the last escape char is not escaped and the
+		 * whitespace in an escaped whitespace.
+		 */
+		i = n;
+		while (i > 1 && p[i-2] == '\\')
+			i--;
+		if ((n - i) % 2)
 			break;
 	}
 	return len - n;
+}
+
+static size_t unescape_spaces(char *str)
+{
+	char *scan, *pos = str;
+	bool escaped = false;
+
+	if (!str)
+		return 0;
+
+	for (scan = str; *scan; scan++) {
+		if (!escaped && *scan == '\\') {
+			escaped = true;
+			continue;
+		}
+
+		/* Only insert the escape character for escaped non-spaces */
+		if (escaped && !git__isspace(*scan))
+			*pos++ = '\\';
+
+		*pos++ = *scan;
+		escaped = false;
+	}
+
+	if (pos != scan)
+		*pos = '\0';
+
+	return (pos - str);
 }
 
 /*
@@ -587,6 +627,7 @@ int git_attr_fnmatch__parse(
 {
 	const char *pattern, *scan;
 	int slash_count, allow_space;
+	bool escaped;
 
 	assert(spec && base && *base);
 
@@ -623,28 +664,29 @@ int git_attr_fnmatch__parse(
 	}
 
 	slash_count = 0;
+	escaped = false;
+	/* Scan until a non-escaped whitespace. */
 	for (scan = pattern; *scan != '\0'; ++scan) {
-		/*
-		 * Scan until a non-escaped whitespace: find a whitespace, then look
-		 * one char backward to ensure that it's not prefixed by a `\`.
-		 * Only look backward if we're not at the first position (`pattern`).
-		 */
-		if (git__isspace(*scan) && scan > pattern && *(scan - 1) != '\\') {
-			if (!allow_space || (*scan != ' ' && *scan != '\t' && *scan != '\r'))
-				break;
-		}
+		char c = *scan;
 
-		if (*scan == '/') {
+		if (c == '\\' && !escaped) {
+			escaped = true;
+			continue;
+		} else if (git__isspace(c) && !escaped) {
+			if (!allow_space || (c != ' ' && c != '\t' && c != '\r'))
+				break;
+		} else if (c == '/') {
 			spec->flags = spec->flags | GIT_ATTR_FNMATCH_FULLPATH;
 			slash_count++;
 
 			if (slash_count == 1 && pattern == scan)
 				pattern++;
-		}
-		/* remember if we see an unescaped wildcard in pattern */
-		else if (git__iswildcard(*scan) &&
-			(scan == pattern || (*(scan - 1) != '\\')))
+		} else if (git__iswildcard(c) && !escaped) {
+			/* remember if we see an unescaped wildcard in pattern */
 			spec->flags = spec->flags | GIT_ATTR_FNMATCH_HASWILD;
+		}
+
+		escaped = false;
 	}
 
 	*base = scan;
@@ -699,9 +741,8 @@ int git_attr_fnmatch__parse(
 		*base = git__next_line(pattern);
 		return -1;
 	} else {
-		/* strip '\' that might have be used for internal whitespace */
-		spec->length = git__unescape(spec->pattern);
-		/* TODO: convert remaining '\' into '/' for POSIX ??? */
+		/* strip '\' that might have been used for internal whitespace */
+		spec->length = unescape_spaces(spec->pattern);
 	}
 
 	return 0;
