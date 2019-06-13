@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "oidarray.h"
+#include "indexer.h"
 
 /**
  * @file git2/odb.h

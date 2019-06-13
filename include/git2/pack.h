@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "oid.h"
+#include "indexer.h"
 
 /**
  * @file git2/pack.h
