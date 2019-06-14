@@ -13,8 +13,7 @@ You probably want to make changes to both files.
 #include "refs.h"
 #include "posix.h"
 
-static git_repository *repo;
-static git_index *repo_index;
+#define TEST_REPO_PATH "merge-resolve"
 
 #define UPTODATE_BRANCH         "master"
 #define PREVIOUS_BRANCH         "previous"
@@ -25,18 +24,27 @@ static git_index *repo_index;
 #define NOFASTFORWARD_BRANCH    "branch"
 #define NOFASTFORWARD_ID        "7cb63eed597130ba4abb87b3e544b85021905520"
 
+static git_repository *sandbox;
+static git_repository *repo;
 
-/* Fixture setup and teardown */
-void testimpl_merge_analysis__initialize(git_repository *t_repo, git_index *t_repo_index)
+void test_merge_analysis__initialize_with_bare_repository(void)
 {
-	repo = t_repo;
-	repo_index = t_repo_index;
+	sandbox = cl_git_sandbox_init(TEST_REPO_PATH);
+	cl_git_pass(git_repository_open_ext(&repo, git_repository_path(sandbox),
+					    GIT_REPOSITORY_OPEN_BARE, NULL));
 }
 
-void testimpl_merge_analysis__cleanup(void)
+void test_merge_analysis__initialize_with_nonbare_repository(void)
 {
-	repo_index = NULL;
-	repo = NULL;
+	sandbox = cl_git_sandbox_init(TEST_REPO_PATH);
+	cl_git_pass(git_repository_open_ext(&repo, git_repository_workdir(sandbox),
+					    0, NULL));
+}
+
+void test_merge_analysis__cleanup(void)
+{
+	git_repository_free(repo);
+	cl_git_sandbox_cleanup();
 }
 
 static void analysis_from_branch(
@@ -72,7 +80,7 @@ static void analysis_from_branch(
 	git_reference_free(their_ref);
 }
 
-void testimpl_merge_analysis__fastforward(void)
+void test_merge_analysis__fastforward(void)
 {
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
@@ -81,7 +89,7 @@ void testimpl_merge_analysis__fastforward(void)
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL|GIT_MERGE_ANALYSIS_FASTFORWARD, merge_analysis);
 }
 
-void testimpl_merge_analysis__no_fastforward(void)
+void test_merge_analysis__no_fastforward(void)
 {
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
@@ -90,7 +98,7 @@ void testimpl_merge_analysis__no_fastforward(void)
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL, merge_analysis);
 }
 
-void testimpl_merge_analysis__uptodate(void)
+void test_merge_analysis__uptodate(void)
 {
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
@@ -99,7 +107,7 @@ void testimpl_merge_analysis__uptodate(void)
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_UP_TO_DATE, merge_analysis);
 }
 
-void testimpl_merge_analysis__uptodate_merging_prev_commit(void)
+void test_merge_analysis__uptodate_merging_prev_commit(void)
 {
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
@@ -108,14 +116,14 @@ void testimpl_merge_analysis__uptodate_merging_prev_commit(void)
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_UP_TO_DATE, merge_analysis);
 }
 
-void testimpl_merge_analysis__unborn(void)
+void test_merge_analysis__unborn(void)
 {
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
 	git_buf master = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_joinpath(&master, git_repository_path(repo), "refs/heads/master"));
-	p_unlink(git_buf_cstr(&master));
+	cl_must_pass(p_unlink(git_buf_cstr(&master)));
 
 	analysis_from_branch(&merge_analysis, &merge_pref, NULL, NOFASTFORWARD_BRANCH);
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_FASTFORWARD|GIT_MERGE_ANALYSIS_UNBORN, merge_analysis);
@@ -123,7 +131,7 @@ void testimpl_merge_analysis__unborn(void)
 	git_buf_dispose(&master);
 }
 
-void testimpl_merge_analysis__fastforward_with_config_noff(void)
+void test_merge_analysis__fastforward_with_config_noff(void)
 {
 	git_config *config;
 	git_merge_analysis_t merge_analysis;
@@ -140,7 +148,7 @@ void testimpl_merge_analysis__fastforward_with_config_noff(void)
 	git_config_free(config);
 }
 
-void testimpl_merge_analysis__no_fastforward_with_config_ffonly(void)
+void test_merge_analysis__no_fastforward_with_config_ffonly(void)
 {
 	git_config *config;
 	git_merge_analysis_t merge_analysis;
@@ -157,7 +165,7 @@ void testimpl_merge_analysis__no_fastforward_with_config_ffonly(void)
 	git_config_free(config);
 }
 
-void testimpl_merge_analysis__between_uptodate_refs(void)
+void test_merge_analysis__between_uptodate_refs(void)
 {
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
@@ -166,7 +174,7 @@ void testimpl_merge_analysis__between_uptodate_refs(void)
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_UP_TO_DATE, merge_analysis);
 }
 
-void testimpl_merge_analysis__between_noff_refs(void)
+void test_merge_analysis__between_noff_refs(void)
 {
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
