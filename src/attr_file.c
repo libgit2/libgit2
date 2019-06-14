@@ -15,7 +15,7 @@
 #include "git2/tree.h"
 #include "blob.h"
 #include "index.h"
-#include "fnmatch.h"
+#include "wildmatch.h"
 #include <ctype.h>
 
 static void attr_file_free(git_attr_file *file)
@@ -402,18 +402,13 @@ bool git_attr_fnmatch__match(
 	}
 
 	if (match->flags & GIT_ATTR_FNMATCH_ICASE)
-		flags |= FNM_CASEFOLD;
-	if (match->flags & GIT_ATTR_FNMATCH_LEADINGDIR)
-		flags |= FNM_LEADING_DIR;
+		flags |= WM_CASEFOLD;
 
 	if (match->flags & GIT_ATTR_FNMATCH_FULLPATH) {
 		filename = relpath;
-		flags |= FNM_PATHNAME;
+		flags |= WM_PATHNAME;
 	} else {
 		filename = path->basename;
-
-		if (path->is_dir)
-			flags |= FNM_LEADING_DIR;
 	}
 
 	if ((match->flags & GIT_ATTR_FNMATCH_DIRECTORY) && !path->is_dir) {
@@ -428,8 +423,6 @@ bool git_attr_fnmatch__match(
 			path->basename == relpath)
 			return false;
 
-		flags |= FNM_LEADING_DIR;
-
 		/* fail match if this is a file with same name as ignored folder */
 		samename = (match->flags & GIT_ATTR_FNMATCH_ICASE) ?
 			!strcasecmp(match->pattern, relpath) :
@@ -438,10 +431,10 @@ bool git_attr_fnmatch__match(
 		if (samename)
 			return false;
 
-		return (p_fnmatch(match->pattern, relpath, flags) != FNM_NOMATCH);
+		return (wildmatch(match->pattern, relpath, flags) == WM_MATCH);
 	}
 
-	return (p_fnmatch(match->pattern, filename, flags) != FNM_NOMATCH);
+	return (wildmatch(match->pattern, filename, flags) == WM_MATCH);
 }
 
 bool git_attr_rule__match(
@@ -659,8 +652,6 @@ int git_attr_fnmatch__parse(
 
 	if (*pattern == '!' && (spec->flags & GIT_ATTR_FNMATCH_ALLOWNEG) != 0) {
 		spec->flags = spec->flags | GIT_ATTR_FNMATCH_NEGATIVE;
-		if ((spec->flags & GIT_ATTR_FNMATCH_NOLEADINGDIR) == 0)
-			spec->flags |= GIT_ATTR_FNMATCH_LEADINGDIR;
 		pattern++;
 	}
 
@@ -715,14 +706,6 @@ int git_attr_fnmatch__parse(
 		spec->flags = spec->flags | GIT_ATTR_FNMATCH_DIRECTORY;
 		if (--slash_count <= 0)
 			spec->flags = spec->flags & ~GIT_ATTR_FNMATCH_FULLPATH;
-	}
-	if ((spec->flags & GIT_ATTR_FNMATCH_NOLEADINGDIR) == 0 &&
-		spec->length >= 2 &&
-		pattern[spec->length - 1] == '*' &&
-		pattern[spec->length - 2] == '/') {
-		spec->length -= 2;
-		spec->flags = spec->flags | GIT_ATTR_FNMATCH_LEADINGDIR;
-		/* leave FULLPATH match on, however */
 	}
 
 	if (context) {

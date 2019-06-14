@@ -193,9 +193,7 @@ static int parse_ignore_file(
 		}
 
 		match->flags =
-		    GIT_ATTR_FNMATCH_ALLOWSPACE |
-		    GIT_ATTR_FNMATCH_ALLOWNEG |
-		    GIT_ATTR_FNMATCH_NOLEADINGDIR;
+		    GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
 
 		if (!(error = git_attr_fnmatch__parse(
 			match, &attrs->pool, context, &scan)))
