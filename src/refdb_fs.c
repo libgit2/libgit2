@@ -1439,7 +1439,7 @@ static int refdb_fs_backend__delete_tail(
 {
 	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
 	int error = 0, cmp = 0;
-	bool loose_deleted = 0;
+	bool packed_deleted = 0;
 
 	error = cmp_old_ref(&cmp, _backend, ref_name, old_id, old_target);
 	if (error < 0)
@@ -1451,26 +1451,40 @@ static int refdb_fs_backend__delete_tail(
 		goto cleanup;
 	}
 
-	/* If a loose reference exists, remove it from the filesystem */
-	if ((error = loose_delete(backend, ref_name)) < 0 && error != GIT_ENOTFOUND)
-		goto cleanup;
-
-	if (error == GIT_ENOTFOUND)
-		error = 0;
-	else if (error == 0)
-		loose_deleted = 1;
-
+	/*
+	 * To ensure that an external observer will see either the current ref value
+	 * (because the loose ref still exists), or a missing ref (after the packed-file is
+	 * unlocked, there will be nothing left), we must ensure things happen in the
+	 * following order:
+	 *
+	 * - the packed-ref file is locked and loaded, as well as a loose one, if it exists
+	 * - we optimistically delete a packed ref, keeping track of whether it existed
+	 * - we delete the loose ref, note that we have its .lock
+	 * - the loose ref is "unlocked", then the packed-ref file is rewritten and unlocked
+	 * - we should prune the path components if a loose ref was deleted
+	 *
+	 * Note that, because our packed backend doesn't expose its filesystem lock,
+	 * we might not be able to guarantee that this is what actually happens (ie.
+	 * as our current code never write packed-refs.lock, nothing stops observers
+	 * from grabbing a "stale" value from there).
+	 */
 	if ((error = packed_delete(backend, ref_name)) < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
 
+	if (error == 0)
+		packed_deleted = 1;
+
+	if ((error = loose_delete(backend, ref_name)) < 0 && error != GIT_ENOTFOUND)
+		goto cleanup;
+
 	if (error == GIT_ENOTFOUND) {
-		error = loose_deleted ? 0 : ref_error_notfound(ref_name);
+		error = packed_deleted ? 0 : ref_error_notfound(ref_name);
 		goto cleanup;
 	}
 
 cleanup:
 	git_filebuf_cleanup(file);
-	if (loose_deleted)
+	if (error == 0)
 		refdb_fs_backend__prune_refs(backend, ref_name, "");
 	return error;
 }
