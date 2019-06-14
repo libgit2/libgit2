@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "hash_generic.h"
+#include "generic.h"
 
 #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 

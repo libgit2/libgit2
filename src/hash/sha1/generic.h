@@ -5,15 +5,15 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_hash_common_crypto_h__
-#define INCLUDE_hash_hash_common_crypto_h__
+#ifndef INCLUDE_hash_sha1_generic_h__
+#define INCLUDE_hash_sha1_generic_h__
 
 #include "hash.h"
 
-#include <CommonCrypto/CommonDigest.h>
-
 struct git_hash_ctx {
-	CC_SHA1_CTX c;
+	unsigned long long size;
+	unsigned int H[5];
+	unsigned int W[16];
 };
 
 #endif

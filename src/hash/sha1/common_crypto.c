@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "hash_common_crypto.h"
+#include "common_crypto.h"
 
 #define CC_LONG_MAX ((CC_LONG)-1)
 

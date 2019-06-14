@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "hash_win32.h"
+#include "win32.h"
 
 #include "global.h"
 

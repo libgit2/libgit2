@@ -4,6 +4,7 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
 #ifndef INCLUDE_hash_h__
 #define INCLUDE_hash_h__
 
@@ -18,19 +19,7 @@ typedef struct {
 	size_t len;
 } git_buf_vec;
 
-#if defined(GIT_SHA1_COLLISIONDETECT)
-# include "hash/hash_collisiondetect.h"
-#elif defined(GIT_SHA1_COMMON_CRYPTO)
-# include "hash/hash_common_crypto.h"
-#elif defined(GIT_SHA1_OPENSSL)
-# include "hash/hash_openssl.h"
-#elif defined(GIT_SHA1_WIN32)
-# include "hash/hash_win32.h"
-#elif defined(GIT_SHA1_MBEDTLS)
-# include "hash/hash_mbedtls.h"
-#else
-# include "hash/hash_generic.h"
-#endif
+#include "hash/sha1.h"
 
 int git_hash_global_init(void);
 
