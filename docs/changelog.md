@@ -24,7 +24,7 @@ v0.28 + 1
 
 ### API additions
 
-* `git_commit_create_on_ex()` takes on the role which
+* `git_commit_create_on()` takes on the role which
   `git_commit_create()` had when provided a reference name to
   update. `git_commit_create_on_head()` always updates the current
   branch.
