@@ -13,8 +13,10 @@
 
 typedef struct git_hash_ctx git_hash_ctx;
 
-int git_hash_ctx_init(git_hash_ctx *ctx);
-void git_hash_ctx_cleanup(git_hash_ctx *ctx);
+typedef struct {
+	void *data;
+	size_t len;
+} git_buf_vec;
 
 #if defined(GIT_SHA1_COLLISIONDETECT)
 # include "hash/hash_collisiondetect.h"
@@ -30,10 +32,10 @@ void git_hash_ctx_cleanup(git_hash_ctx *ctx);
 # include "hash/hash_generic.h"
 #endif
 
-typedef struct {
-	void *data;
-	size_t len;
-} git_buf_vec;
+int git_hash_global_init(void);
+
+int git_hash_ctx_init(git_hash_ctx *ctx);
+void git_hash_ctx_cleanup(git_hash_ctx *ctx);
 
 int git_hash_init(git_hash_ctx *c);
 int git_hash_update(git_hash_ctx *c, const void *data, size_t len);

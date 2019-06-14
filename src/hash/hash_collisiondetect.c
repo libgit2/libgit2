@@ -5,9 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
-#include "hash.h"
-#include "hash/hash_mbedtls.h"
+#include "hash_collisiondetect.h"
 
 int git_hash_global_init(void)
 {
@@ -21,28 +19,30 @@ int git_hash_ctx_init(git_hash_ctx *ctx)
 
 void git_hash_ctx_cleanup(git_hash_ctx *ctx)
 {
-    assert(ctx);
-    mbedtls_sha1_free(&ctx->c);
+	GIT_UNUSED(ctx);
 }
 
 int git_hash_init(git_hash_ctx *ctx)
 {
-    assert(ctx);
-    mbedtls_sha1_init(&ctx->c);
-    mbedtls_sha1_starts(&ctx->c);
-    return 0;
+	assert(ctx);
+	SHA1DCInit(&ctx->c);
+	return 0;
 }
 
 int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 {
-    assert(ctx);
-    mbedtls_sha1_update(&ctx->c, data, len);
-    return 0;
+	assert(ctx);
+	SHA1DCUpdate(&ctx->c, data, len);
+	return 0;
 }
 
 int git_hash_final(git_oid *out, git_hash_ctx *ctx)
 {
-    assert(ctx);
-    mbedtls_sha1_finish(&ctx->c, out->id);
-    return 0;
+	assert(ctx);
+	if (SHA1DCFinal(out->id, &ctx->c)) {
+		git_error_set(GIT_ERROR_SHA1, "SHA1 collision attack detected");
+		return -1;
+	}
+
+	return 0;
 }

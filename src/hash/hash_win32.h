@@ -36,17 +36,6 @@ struct hash_cryptoapi_prov {
  * would not exist when building in pre-Windows 2008 environments.
  */
 
-#define GIT_HASH_CNG_DLL_NAME           "bcrypt.dll"
-
-/* BCRYPT_SHA1_ALGORITHM */
-#define GIT_HASH_CNG_HASH_TYPE          L"SHA1"
-
-/* BCRYPT_OBJECT_LENGTH */
-#define GIT_HASH_CNG_HASH_OBJECT_LEN    L"ObjectLength"
-
-/* BCRYPT_HASH_REUSEABLE_FLAGS */
-#define GIT_HASH_CNG_HASH_REUSABLE      0x00000020
-
 /* Function declarations for CNG */
 typedef NTSTATUS (WINAPI *hash_win32_cng_open_algorithm_provider_fn)(
 	HANDLE /* BCRYPT_ALG_HANDLE */ *phAlgorithm,
@@ -137,7 +126,5 @@ struct git_hash_ctx {
 		struct hash_cng_ctx cng;
 	} ctx;
 };
-
-extern int git_hash_global_init(void);
 
 #endif

@@ -7,8 +7,6 @@
 
 #include "hash_generic.h"
 
-#include "hash.h"
-
 #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 
 /*
@@ -221,6 +219,21 @@ static void hash__block(git_hash_ctx *ctx, const unsigned int *data)
 	ctx->H[4] += E;
 }
 
+int git_hash_global_init(void)
+{
+	return 0;
+}
+
+int git_hash_ctx_init(git_hash_ctx *ctx)
+{
+	return git_hash_init(ctx);
+}
+
+void git_hash_ctx_cleanup(git_hash_ctx *ctx)
+{
+	GIT_UNUSED(ctx);
+}
+
 int git_hash_init(git_hash_ctx *ctx)
 {
 	ctx->size = 0;
@@ -285,4 +298,3 @@ int git_hash_final(git_oid *out, git_hash_ctx *ctx)
 
 	return 0;
 }
-

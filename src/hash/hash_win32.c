@@ -8,10 +8,20 @@
 #include "hash_win32.h"
 
 #include "global.h"
-#include "hash.h"
 
 #include <wincrypt.h>
 #include <strsafe.h>
+
+#define GIT_HASH_CNG_DLL_NAME           "bcrypt.dll"
+
+/* BCRYPT_SHA1_ALGORITHM */
+#define GIT_HASH_CNG_HASH_TYPE          L"SHA1"
+
+/* BCRYPT_OBJECT_LENGTH */
+#define GIT_HASH_CNG_HASH_OBJECT_LEN    L"ObjectLength"
+
+/* BCRYPT_HASH_REUSEABLE_FLAGS */
+#define GIT_HASH_CNG_HASH_REUSABLE      0x00000020
 
 static struct git_hash_prov hash_prov = {0};
 
@@ -101,7 +111,7 @@ GIT_INLINE(void) hash_cryptoapi_prov_shutdown(void)
 	hash_prov.type = INVALID;
 }
 
-static void git_hash_global_shutdown(void)
+static void sha1_shutdown(void)
 {
 	if (hash_prov.type == CNG)
 		hash_cng_prov_shutdown();
@@ -119,7 +129,7 @@ int git_hash_global_init(void)
 	if ((error = hash_cng_prov_init()) < 0)
 		error = hash_cryptoapi_prov_init();
 
-	git__on_shutdown(git_hash_global_shutdown);
+	git__on_shutdown(sha1_shutdown);
 
 	return error;
 }
