@@ -56,7 +56,7 @@ typedef enum {
  * Remote creation options structure
  *
  * Initialize with `GIT_REMOTE_CREATE_OPTIONS_INIT`. Alternatively, you can
- * use `git_remote_create_init_options`.
+ * use `git_remote_create_options_init`.
  *
  */
 typedef struct git_remote_create_options {
@@ -94,7 +94,7 @@ typedef struct git_remote_create_options {
  * @param version The struct version; pass `GIT_REMOTE_CREATE_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_remote_create_init_options(
+GIT_EXTERN(int) git_remote_create_options_init(
 		git_remote_create_options *opts,
 		unsigned int version);
 
@@ -700,7 +700,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_FETCH_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_fetch_init_options(
+GIT_EXTERN(int) git_fetch_options_init(
 	git_fetch_options *opts,
 	unsigned int version);
 
@@ -750,7 +750,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_PUSH_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_push_init_options(
+GIT_EXTERN(int) git_push_options_init(
 	git_push_options *opts,
 	unsigned int version);
 

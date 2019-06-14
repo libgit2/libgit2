@@ -221,10 +221,16 @@ done:
 	return error;
 }
 
-int git_cherrypick_init_options(
+int git_cherrypick_options_init(
 	git_cherrypick_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_cherrypick_options, GIT_CHERRYPICK_OPTIONS_INIT);
 	return 0;
+}
+
+int git_cherrypick_init_options(
+	git_cherrypick_options *opts, unsigned int version)
+{
+	return git_cherrypick_options_init(opts, version);
 }

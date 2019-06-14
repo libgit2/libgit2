@@ -9,17 +9,22 @@
 
 #include "git2/proxy.h"
 
-int git_proxy_init_options(git_proxy_options *opts, unsigned int version)
+int git_proxy_options_init(git_proxy_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_proxy_options, GIT_PROXY_OPTIONS_INIT);
 	return 0;
 }
 
+int git_proxy_init_options(git_proxy_options *opts, unsigned int version)
+{
+	return git_proxy_options_init(opts, version);
+}
+
 int git_proxy_options_dup(git_proxy_options *tgt, const git_proxy_options *src)
 {
 	if (!src) {
-		git_proxy_init_options(tgt, GIT_PROXY_OPTIONS_VERSION);
+		git_proxy_options_init(tgt, GIT_PROXY_OPTIONS_VERSION);
 		return 0;
 	}
 

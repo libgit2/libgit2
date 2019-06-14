@@ -119,7 +119,7 @@ typedef enum {
 
 	/** Include unreadable files in the diff */
 	GIT_DIFF_INCLUDE_UNREADABLE = (1u << 16),
-	
+
 	/** Include unreadable files in the diff */
 	GIT_DIFF_INCLUDE_UNREADABLE_AS_UNTRACKED = (1u << 17),
 
@@ -451,7 +451,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_DIFF_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_diff_init_options(
+GIT_EXTERN(int) git_diff_options_init(
 	git_diff_options *opts,
 	unsigned int version);
 
@@ -784,7 +784,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_DIFF_FIND_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_diff_find_init_options(
+GIT_EXTERN(int) git_diff_find_options_init(
 	git_diff_find_options *opts,
 	unsigned int version);
 
@@ -1448,7 +1448,7 @@ GIT_EXTERN(int) git_diff_commit_as_email(
  * @param version The struct version; pass `GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_diff_format_email_init_options(
+GIT_EXTERN(int) git_diff_format_email_options_init(
 	git_diff_format_email_options *opts,
 	unsigned int version);
 
@@ -1456,7 +1456,7 @@ GIT_EXTERN(int) git_diff_format_email_init_options(
  * Patch ID options structure
  *
  * Initialize with `GIT_PATCHID_OPTIONS_INIT`. Alternatively, you can
- * use `git_patchid_init_options`.
+ * use `git_diff_patchid_options_init`.
  *
  */
 typedef struct git_diff_patchid_options {
@@ -1476,7 +1476,7 @@ typedef struct git_diff_patchid_options {
  * @param version The struct version; pass `GIT_DIFF_PATCHID_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_diff_patchid_init_options(
+GIT_EXTERN(int) git_diff_patchid_options_init(
 	git_diff_patchid_options *opts,
 	unsigned int version);
 

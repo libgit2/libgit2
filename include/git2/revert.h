@@ -46,7 +46,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_REVERT_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_revert_init_options(
+GIT_EXTERN(int) git_revert_options_init(
 	git_revert_options *opts,
 	unsigned int version);
 

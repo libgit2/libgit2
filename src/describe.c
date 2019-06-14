@@ -759,7 +759,7 @@ static int normalize_format_options(
 	const git_describe_format_options *src)
 {
 	if (!src) {
-		git_describe_init_format_options(dst, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION);
+		git_describe_format_options_init(dst, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION);
 		return 0;
 	}
 
@@ -868,16 +868,26 @@ void git_describe_result_free(git_describe_result *result)
 	git__free(result);
 }
 
-int git_describe_init_options(git_describe_options *opts, unsigned int version)
+int git_describe_options_init(git_describe_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_describe_options, GIT_DESCRIBE_OPTIONS_INIT);
 	return 0;
 }
 
-int git_describe_init_format_options(git_describe_format_options *opts, unsigned int version)
+int git_describe_init_options(git_describe_options *opts, unsigned int version)
+{
+	return git_describe_options_init(opts, version);
+}
+
+int git_describe_format_options_init(git_describe_format_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_describe_format_options, GIT_DESCRIBE_FORMAT_OPTIONS_INIT);
 	return 0;
+}
+
+int git_describe_init_format_options(git_describe_format_options *opts, unsigned int version)
+{
+	return git_describe_format_options_init(opts, version);
 }

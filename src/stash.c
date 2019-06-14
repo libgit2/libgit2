@@ -794,11 +794,16 @@ static void normalize_apply_options(
 		opts->checkout_options.their_label = "Stashed changes";
 }
 
-int git_stash_apply_init_options(git_stash_apply_options *opts, unsigned int version)
+int git_stash_apply_options_init(git_stash_apply_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_stash_apply_options, GIT_STASH_APPLY_OPTIONS_INIT);
 	return 0;
+}
+
+int git_stash_apply_init_options(git_stash_apply_options *opts, unsigned int version)
+{
+	return git_stash_apply_options_init(opts, version);
 }
 
 #define NOTIFY_PROGRESS(opts, progress_type)				\

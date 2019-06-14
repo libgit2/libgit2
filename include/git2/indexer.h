@@ -79,7 +79,7 @@ typedef struct git_indexer_options {
  * @param version Version of struct; pass `GIT_INDEXER_OPTIONS_VERSION`
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_indexer_init_options(
+GIT_EXTERN(int) git_indexer_options_init(
 	git_indexer_options *opts,
 	unsigned int version);
 

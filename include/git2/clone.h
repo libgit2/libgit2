@@ -97,7 +97,7 @@ typedef int GIT_CALLBACK(git_repository_create_cb)(
  * Clone options structure
  *
  * Initialize with `GIT_CLONE_OPTIONS_INIT`. Alternatively, you can
- * use `git_clone_init_options`.
+ * use `git_clone_options_init`.
  *
  */
 typedef struct git_clone_options {
@@ -178,7 +178,7 @@ typedef struct git_clone_options {
  * @param version The struct version; pass `GIT_CLONE_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_clone_init_options(
+GIT_EXTERN(int) git_clone_options_init(
 	git_clone_options *opts,
 	unsigned int version);
 

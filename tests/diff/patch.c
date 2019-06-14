@@ -692,7 +692,7 @@ void test_diff_patch__can_strip_bad_utf8(void)
 	git_patch *patch;
 	git_buf buf = GIT_BUF_INIT;
 
-	cl_git_pass(git_diff_init_options(&opts, GIT_DIFF_OPTIONS_VERSION));
+	cl_git_pass(git_diff_options_init(&opts, GIT_DIFF_OPTIONS_VERSION));
 
 	cl_git_pass(git_patch_from_buffers(&patch, a, strlen(a), NULL, b, strlen(b), NULL, &opts));
 	cl_git_pass(git_patch_to_buf(&buf, patch));

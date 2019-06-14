@@ -46,7 +46,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_CHERRYPICK_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_cherrypick_init_options(
+GIT_EXTERN(int) git_cherrypick_options_init(
 	git_cherrypick_options *opts,
 	unsigned int version);
 

@@ -757,7 +757,7 @@ static int load_proxy_config(http_subtransport *t)
 		git__free(t->proxy_url);
 		t->proxy_url = NULL;
 
-		git_proxy_init_options(&t->proxy_opts, GIT_PROXY_OPTIONS_VERSION);
+		git_proxy_options_init(&t->proxy_opts, GIT_PROXY_OPTIONS_VERSION);
 
 		if ((error = git_remote__get_http_proxy(t->owner->owner,
 			!strcmp(t->server.url.scheme, "https"), &t->proxy_url)) < 0)

@@ -89,7 +89,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_PROXY_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_proxy_init_options(git_proxy_options *opts, unsigned int version);
+GIT_EXTERN(int) git_proxy_options_init(git_proxy_options *opts, unsigned int version);
 
 GIT_END_DECL
 

@@ -200,7 +200,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_STATUS_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_status_init_options(
+GIT_EXTERN(int) git_status_options_init(
 	git_status_options *opts,
 	unsigned int version);
 

@@ -156,7 +156,7 @@ typedef struct {
  * @param version The struct version; pass `GIT_REBASE_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_rebase_init_options(
+GIT_EXTERN(int) git_rebase_options_init(
 	git_rebase_options *opts,
 	unsigned int version);
 

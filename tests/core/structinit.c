@@ -72,30 +72,35 @@ void test_core_structinit__compare(void)
 	clar__skip();
 #endif
 
+	/* apply */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_apply_options, GIT_APPLY_OPTIONS_VERSION, \
+		GIT_APPLY_OPTIONS_INIT, git_apply_options_init);
+
 	/* blame */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_blame_options, GIT_BLAME_OPTIONS_VERSION, \
-		GIT_BLAME_OPTIONS_INIT, git_blame_init_options);
+		GIT_BLAME_OPTIONS_INIT, git_blame_options_init);
 
 	/* checkout */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_checkout_options, GIT_CHECKOUT_OPTIONS_VERSION, \
-		GIT_CHECKOUT_OPTIONS_INIT, git_checkout_init_options);
+		GIT_CHECKOUT_OPTIONS_INIT, git_checkout_options_init);
 
 	/* clone */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_clone_options, GIT_CLONE_OPTIONS_VERSION, \
-		GIT_CLONE_OPTIONS_INIT, git_clone_init_options);
+		GIT_CLONE_OPTIONS_INIT, git_clone_options_init);
 
 	/* diff */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_diff_options, GIT_DIFF_OPTIONS_VERSION, \
-		GIT_DIFF_OPTIONS_INIT, git_diff_init_options);
+		GIT_DIFF_OPTIONS_INIT, git_diff_options_init);
 
 	/* diff_find */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_diff_find_options, GIT_DIFF_FIND_OPTIONS_VERSION, \
-		GIT_DIFF_FIND_OPTIONS_INIT, git_diff_find_init_options);
+		GIT_DIFF_FIND_OPTIONS_INIT, git_diff_find_options_init);
 
 	/* filter */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
@@ -105,22 +110,22 @@ void test_core_structinit__compare(void)
 	/* merge_file_input */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_merge_file_input, GIT_MERGE_FILE_INPUT_VERSION, \
-		GIT_MERGE_FILE_INPUT_INIT, git_merge_file_init_input);
+		GIT_MERGE_FILE_INPUT_INIT, git_merge_file_input_init);
 
 	/* merge_file */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_merge_file_options, GIT_MERGE_FILE_OPTIONS_VERSION, \
-		GIT_MERGE_FILE_OPTIONS_INIT, git_merge_file_init_options);
+		GIT_MERGE_FILE_OPTIONS_INIT, git_merge_file_options_init);
 
 	/* merge_tree */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_merge_options, GIT_MERGE_OPTIONS_VERSION, \
-		GIT_MERGE_OPTIONS_INIT, git_merge_init_options);
+		GIT_MERGE_OPTIONS_INIT, git_merge_options_init);
 
 	/* push */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_push_options, GIT_PUSH_OPTIONS_VERSION, \
-		GIT_PUSH_OPTIONS_INIT, git_push_init_options);
+		GIT_PUSH_OPTIONS_INIT, git_push_options_init);
 
 	/* remote */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
@@ -130,22 +135,22 @@ void test_core_structinit__compare(void)
 	/* repository_init */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_repository_init_options, GIT_REPOSITORY_INIT_OPTIONS_VERSION, \
-		GIT_REPOSITORY_INIT_OPTIONS_INIT, git_repository_init_init_options);
+		GIT_REPOSITORY_INIT_OPTIONS_INIT, git_repository_init_options_init);
 
 	/* revert */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_revert_options, GIT_REVERT_OPTIONS_VERSION, \
-		GIT_REVERT_OPTIONS_INIT, git_revert_init_options);
+		GIT_REVERT_OPTIONS_INIT, git_revert_options_init);
 
 	/* stash apply */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_stash_apply_options, GIT_STASH_APPLY_OPTIONS_VERSION, \
-		GIT_STASH_APPLY_OPTIONS_INIT, git_stash_apply_init_options);
+		GIT_STASH_APPLY_OPTIONS_INIT, git_stash_apply_options_init);
 
 	/* status */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_status_options, GIT_STATUS_OPTIONS_VERSION, \
-		GIT_STATUS_OPTIONS_INIT, git_status_init_options);
+		GIT_STATUS_OPTIONS_INIT, git_status_options_init);
 
 	/* transport */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
@@ -170,14 +175,14 @@ void test_core_structinit__compare(void)
 	/* submodule update */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_submodule_update_options, GIT_SUBMODULE_UPDATE_OPTIONS_VERSION, \
-		GIT_SUBMODULE_UPDATE_OPTIONS_INIT, git_submodule_update_init_options);
+		GIT_SUBMODULE_UPDATE_OPTIONS_INIT, git_submodule_update_options_init);
 
 	/* submodule update */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_proxy_options, GIT_PROXY_OPTIONS_VERSION, \
-		GIT_PROXY_OPTIONS_INIT, git_proxy_init_options);
+		GIT_PROXY_OPTIONS_INIT, git_proxy_options_init);
 
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_diff_patchid_options, GIT_DIFF_PATCHID_OPTIONS_VERSION, \
-		GIT_DIFF_PATCHID_OPTIONS_INIT, git_diff_patchid_init_options);
+		GIT_DIFF_PATCHID_OPTIONS_INIT, git_diff_patchid_options_init);
 }

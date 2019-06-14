@@ -2791,9 +2791,14 @@ int git_checkout_head(
 	return git_checkout_tree(repo, NULL, opts);
 }
 
-int git_checkout_init_options(git_checkout_options *opts, unsigned int version)
+int git_checkout_options_init(git_checkout_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_checkout_options, GIT_CHECKOUT_OPTIONS_INIT);
 	return 0;
+}
+
+int git_checkout_init_options(git_checkout_options *opts, unsigned int version)
+{
+	return git_checkout_options_init(opts, version);
 }
