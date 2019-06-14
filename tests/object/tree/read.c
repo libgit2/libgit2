@@ -79,46 +79,36 @@ void test_object_tree_read__two(void)
 
 void test_object_tree_read__largefile(void)
 {
-	git_reference *ref;
+	const git_tree_entry *entry;
+	git_index_entry ie;
 	git_commit *commit;
+	git_object *object;
+	git_index *index;
 	git_tree *tree;
 	git_oid oid;
-	const git_tree_entry *entry;
-	git_object *object;
-	git_buf file = GIT_BUF_INIT;
-	int fd;
-	git_index *idx;
+	char *buf;
 
 	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE"))
 		cl_skip();
 
-	cl_git_pass(git_reference_lookup(&ref, g_repo, "refs/heads/master"));
-	cl_git_pass(git_repository_index(&idx, g_repo));
+	cl_assert(buf = git__calloc(1, BIGFILE_SIZE));
 
-	cl_git_pass(git_buf_puts(&file, git_repository_workdir(g_repo)));
-	cl_git_pass(git_buf_joinpath(&file, file.ptr, BIGFILE));
+	memset(&ie, 0, sizeof(ie));
+	ie.mode = GIT_FILEMODE_BLOB;
+	ie.path = BIGFILE;
 
-	fd = p_open(git_buf_cstr(&file), O_CREAT|O_RDWR, 0644);
-	cl_assert_(fd >= 0, "invalid file descriptor");
-
-	cl_must_pass(p_fallocate(fd, 0, BIGFILE_SIZE));
-	cl_must_pass(p_close(fd));
-
-	cl_git_pass(git_index_add_bypath(idx, BIGFILE));
-	cl_repo_commit_from_index(&oid, g_repo, NULL, 0, "bigfile");
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_add_frombuffer(index, &ie, buf, BIGFILE_SIZE));
+	cl_repo_commit_from_index(&oid, g_repo, NULL, 0, BIGFILE);
 
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &oid));
 	cl_git_pass(git_commit_tree(&tree, commit));
-
-	entry = git_tree_entry_byname(tree, BIGFILE);
-	cl_assert_(entry, "entry was NULL");
-
+	cl_assert(entry = git_tree_entry_byname(tree, BIGFILE));
 	cl_git_pass(git_tree_entry_to_object(&object, g_repo, entry));
 
-	git_buf_dispose(&file);
 	git_object_free(object);
 	git_tree_free(tree);
-	git_index_free(idx);
+	git_index_free(index);
 	git_commit_free(commit);
-	git_reference_free(ref);
+	git__free(buf);
 }
