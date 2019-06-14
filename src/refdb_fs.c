@@ -1353,10 +1353,10 @@ on_error:
         return error;
 }
 
-static void refdb_fs_backend__try_delete_empty_ref_hierarchie(
+static void refdb_fs_backend__prune_refs(
 	refdb_fs_backend *backend,
 	const char *ref_name,
-	bool reflog)
+	const char *prefix)
 {
 	git_buf relative_path = GIT_BUF_INIT;
 	git_buf base_path = GIT_BUF_INIT;
@@ -1374,8 +1374,8 @@ static void refdb_fs_backend__try_delete_empty_ref_hierarchie(
 
 		git_buf_truncate(&relative_path, commonlen);
 
-		if (reflog) {
-			if (git_buf_join3(&base_path, '/', backend->commonpath, GIT_REFLOG_DIR, git_buf_cstr(&relative_path)) < 0)
+		if (prefix) {
+			if (git_buf_join3(&base_path, '/', backend->commonpath, prefix, git_buf_cstr(&relative_path)) < 0)
 				goto cleanup;
 		} else {
 			if (git_buf_joinpath(&base_path, backend->commonpath, git_buf_cstr(&relative_path)) < 0)
@@ -1471,7 +1471,7 @@ static int refdb_fs_backend__delete_tail(
 cleanup:
 	git_filebuf_cleanup(file);
 	if (loose_deleted)
-		refdb_fs_backend__try_delete_empty_ref_hierarchie(backend, ref_name, false);
+		refdb_fs_backend__prune_refs(backend, ref_name, "");
 	return error;
 }
 
@@ -2101,7 +2101,7 @@ static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name
 	if ((error = p_unlink(path.ptr)) < 0)
 		goto out;
 
-	refdb_fs_backend__try_delete_empty_ref_hierarchie(backend, name, true);
+	refdb_fs_backend__prune_refs(backend, name, GIT_REFLOG_DIR);
 
 out:
 	git_buf_dispose(&path);
