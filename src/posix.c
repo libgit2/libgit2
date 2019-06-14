@@ -155,44 +155,6 @@ int p_rename(const char *from, const char *to)
 	return -1;
 }
 
-int p_fallocate(int fd, off_t offset, off_t len)
-{
-#if defined (__APPLE__) || (defined (__NetBSD__) && __NetBSD_Version__ < 700000000)
-	fstore_t prealloc;
-	struct stat st;
-	size_t newsize;
-	int error;
-
-	if ((error = p_fstat(fd, &st)) < 0)
-		return error;
-
-	if (git__add_sizet_overflow(&newsize, offset, len)) {
-		errno = EINVAL;
-		return -1;
-	}
-
-	if (newsize < (unsigned long long)st.st_size)
-		return 0;
-
-	memset(&prealloc, 0, sizeof(prealloc));
-	prealloc.fst_flags  = F_ALLOCATEALL;
-	prealloc.fst_posmode = F_PEOFPOSMODE;
-	prealloc.fst_offset = offset;
-	prealloc.fst_length = len;
-
-	/*
-	 * fcntl will often error when the file already exists; ignore
-	 * this error since ftruncate will also resize the file (although
-	 * likely slower).
-	 */
-	fcntl(fd, F_PREALLOCATE, &prealloc);
-
-	return ftruncate(fd, (offset + len));
-#else
-	return posix_fallocate(fd, offset, len);
-#endif
-}
-
 #endif /* GIT_WIN32 */
 
 ssize_t p_read(git_file fd, void *buf, size_t cnt)
