@@ -52,11 +52,9 @@ OPTION(TAGS				"Generate tags"						OFF)
 OPTION(PROFILE				"Generate profiling information"			OFF)
 OPTION(ENABLE_TRACE			"Enables tracing support"				OFF)
 OPTION(LIBGIT2_FILENAME			"Name of the produced binary"				OFF)
-
-   SET(SHA1_BACKEND 			"CollisionDetection"			       CACHE STRING
-       "Backend to use for SHA1. One of Generic, OpenSSL, Win32, CommonCrypto, mbedTLS, CollisionDetection.")
 OPTION(USE_SSH				"Link with libssh2 to enable SSH support"		 ON)
 OPTION(USE_HTTPS			"Enable HTTPS support. Can be set to a specific backend" ON)
+OPTION(USE_SHA1				"Enable SHA1. Can be set to CollisionDetection(ON)/HTTPS/Generic" ON)
 OPTION(USE_GSSAPI			"Link with libgssapi for SPNEGO auth"			OFF)
 OPTION(USE_STANDALONE_FUZZERS		"Enable standalone fuzzers (compatible with gcc)"	OFF)
 OPTION(VALGRIND				"Configure build for valgrind"				OFF)
