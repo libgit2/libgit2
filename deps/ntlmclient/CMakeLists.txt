@@ -2,6 +2,8 @@ FILE(GLOB SRC_NTLMCLIENT "ntlm.c" "unicode_builtin.c" "util.c")
 
 ADD_DEFINITIONS(-DNTLM_STATIC=1)
 
+DISABLE_WARNINGS(implicit-fallthrough)
+
 IF (HTTPS_BACKEND STREQUAL "SecureTransport")
 	ADD_DEFINITIONS(-DCRYPT_COMMONCRYPTO)
 	SET(SRC_NTLMCLIENT_CRYPTO "crypt_commoncrypto.c")
