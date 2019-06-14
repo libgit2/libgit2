@@ -55,6 +55,7 @@ extern int lg2_remote(git_repository *repo, int argc, char **argv);
 extern int lg2_rev_list(git_repository *repo, int argc, char **argv);
 extern int lg2_rev_parse(git_repository *repo, int argc, char **argv);
 extern int lg2_show_index(git_repository *repo, int argc, char **argv);
+extern int lg2_stash(git_repository *repo, int argc, char **argv);
 extern int lg2_status(git_repository *repo, int argc, char **argv);
 extern int lg2_tag(git_repository *repo, int argc, char **argv);
 
