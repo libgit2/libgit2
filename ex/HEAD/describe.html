@@ -142,7 +142,7 @@ all of the use cases.</p>
   <span class="n">git_object</span> <span class="o">*</span><span class="n">commit</span><span class="p">;</span>
   <span class="n">git_describe_result</span> <span class="o">*</span><span class="n">describe_result</span><span class="p">;</span>
   <span class="n">git_buf</span> <span class="n">buf</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">0</span> <span class="p">};</span>
-  
+
   <span class="k">if</span> <span class="p">(</span><span class="n">rev</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-6" class="fnlink" href="../../#HEAD/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">rev</span><span class="p">),</span>
       <span class="s">&quot;Failed to lookup rev&quot;</span><span class="p">,</span> <span class="n">rev</span><span class="p">);</span>
@@ -244,8 +244,8 @@ all of the use cases.</p>
 
   <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commit_count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-  <span class="n"><a name="git_describe_init_options-1" class="fnlink" href="../../#HEAD/group/describe/git_describe_init_options">git_describe_init_options</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">describe_options</span><span class="p">,</span> <span class="n">GIT_DESCRIBE_OPTIONS_VERSION</span><span class="p">);</span>
-  <span class="n"><a name="git_describe_init_format_options-2" class="fnlink" href="../../#HEAD/group/describe/git_describe_init_format_options">git_describe_init_format_options</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">format_options</span><span class="p">,</span> <span class="n">GIT_DESCRIBE_FORMAT_OPTIONS_VERSION</span><span class="p">);</span>
+  <span class="n"><a name="git_describe_options_init-1" class="fnlink" href="../../#HEAD/group/describe/git_describe_options_init">git_describe_options_init</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">describe_options</span><span class="p">,</span> <span class="n">GIT_DESCRIBE_OPTIONS_VERSION</span><span class="p">);</span>
+  <span class="n"><a name="git_describe_format_options_init-2" class="fnlink" href="../../#HEAD/group/describe/git_describe_format_options_init">git_describe_format_options_init</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">format_options</span><span class="p">,</span> <span class="n">GIT_DESCRIBE_FORMAT_OPTIONS_VERSION</span><span class="p">);</span>
 <span class="p">}</span>
 
 <span class="kt">int</span> <span class="nf">lg2_describe</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
