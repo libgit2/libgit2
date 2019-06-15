@@ -445,7 +445,7 @@ static int filter_list_check_attributes(
 
 	for (i = 0; !error && i < fdef->nattrs; ++i) {
 		const char *want = fdef->attrs[fdef->nattrs + i];
-		git_attr_t want_type, found_type;
+		git_attr_value_t want_type, found_type;
 
 		if (!want)
 			continue;
@@ -455,7 +455,7 @@ static int filter_list_check_attributes(
 
 		if (want_type != found_type)
 			error = GIT_ENOTFOUND;
-		else if (want_type == GIT_ATTR_VALUE_T &&
+		else if (want_type == GIT_ATTR_VALUE_STRING &&
 				strcmp(want, strs[i]) &&
 				strcmp(want, "*"))
 			error = GIT_ENOTFOUND;

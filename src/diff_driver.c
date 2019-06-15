@@ -371,11 +371,11 @@ int git_diff_driver_lookup(
 			attrsession, 0, path, 1, attrs)) < 0)
 		/* return error below */;
 
-	else if (GIT_ATTR_UNSPECIFIED(values[0]))
+	else if (GIT_ATTR_IS_UNSPECIFIED(values[0]))
 		/* just use the auto value */;
-	else if (GIT_ATTR_FALSE(values[0]))
+	else if (GIT_ATTR_IS_FALSE(values[0]))
 		*out = &global_drivers[DIFF_DRIVER_BINARY];
-	else if (GIT_ATTR_TRUE(values[0]))
+	else if (GIT_ATTR_IS_TRUE(values[0]))
 		*out = &global_drivers[DIFF_DRIVER_TEXT];
 
 	/* otherwise look for driver information in config and build driver */

@@ -44,11 +44,11 @@ struct crlf_filter {
 
 static git_crlf_t check_crlf(const char *value)
 {
-	if (GIT_ATTR_TRUE(value))
+	if (GIT_ATTR_IS_TRUE(value))
 		return GIT_CRLF_TEXT;
-	else if (GIT_ATTR_FALSE(value))
+	else if (GIT_ATTR_IS_FALSE(value))
 		return GIT_CRLF_BINARY;
-	else if (GIT_ATTR_UNSPECIFIED(value))
+	else if (GIT_ATTR_IS_UNSPECIFIED(value))
 		;
 	else if (strcmp(value, "input") == 0)
 		return GIT_CRLF_TEXT_INPUT;
@@ -60,7 +60,7 @@ static git_crlf_t check_crlf(const char *value)
 
 static git_cvar_value check_eol(const char *value)
 {
-	if (GIT_ATTR_UNSPECIFIED(value))
+	if (GIT_ATTR_IS_UNSPECIFIED(value))
 		;
 	else if (strcmp(value, "lf") == 0)
 		return GIT_EOL_LF;

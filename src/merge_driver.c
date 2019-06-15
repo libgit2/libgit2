@@ -371,17 +371,17 @@ static int merge_driver_name_for_path(
 		return error;
 
 	/* set: use the built-in 3-way merge driver ("text") */
-	if (GIT_ATTR_TRUE(value))
+	if (GIT_ATTR_IS_TRUE(value))
 		*out = merge_driver_name__text;
 
 	/* unset: do not merge ("binary") */
-	else if (GIT_ATTR_FALSE(value))
+	else if (GIT_ATTR_IS_FALSE(value))
 		*out = merge_driver_name__binary;
 
-	else if (GIT_ATTR_UNSPECIFIED(value) && default_driver)
+	else if (GIT_ATTR_IS_UNSPECIFIED(value) && default_driver)
 		*out = default_driver;
 
-	else if (GIT_ATTR_UNSPECIFIED(value))
+	else if (GIT_ATTR_IS_UNSPECIFIED(value))
 		*out = merge_driver_name__text;
 
 	else
