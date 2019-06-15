@@ -16,6 +16,7 @@
 #include "index.h"
 #include "bitvec.h"
 #include "diff.h"
+#include "wildmatch.h"
 
 /* what is the common non-wildcard prefix for all items in the pathspec */
 char *git_pathspec_prefix(const git_strarray *pathspec)
@@ -84,8 +85,7 @@ int git_pathspec__vinit(
 		if (!match)
 			return -1;
 
-		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE |
-			GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_NOLEADINGDIR;
+		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
 
 		ret = git_attr_fnmatch__parse(match, strpool, NULL, &pattern);
 		if (ret == GIT_ENOTFOUND) {
@@ -110,7 +110,7 @@ void git_pathspec__vfree(git_vector *vspec)
 }
 
 struct pathspec_match_context {
-	int fnmatch_flags;
+	int wildmatch_flags;
 	int (*strcomp)(const char *, const char *);
 	int (*strncomp)(const char *, const char *, size_t);
 };
@@ -121,11 +121,11 @@ static void pathspec_match_context_init(
 	bool casefold)
 {
 	if (disable_fnmatch)
-		ctxt->fnmatch_flags = -1;
+		ctxt->wildmatch_flags = -1;
 	else if (casefold)
-		ctxt->fnmatch_flags = FNM_CASEFOLD;
+		ctxt->wildmatch_flags = WM_CASEFOLD;
 	else
-		ctxt->fnmatch_flags = 0;
+		ctxt->wildmatch_flags = 0;
 
 	if (casefold) {
 		ctxt->strcomp  = git__strcasecmp;
@@ -141,16 +141,16 @@ static int pathspec_match_one(
 	struct pathspec_match_context *ctxt,
 	const char *path)
 {
-	int result = (match->flags & GIT_ATTR_FNMATCH_MATCH_ALL) ? 0 : FNM_NOMATCH;
+	int result = (match->flags & GIT_ATTR_FNMATCH_MATCH_ALL) ? 0 : WM_NOMATCH;
 
-	if (result == FNM_NOMATCH)
-		result = ctxt->strcomp(match->pattern, path) ? FNM_NOMATCH : 0;
+	if (result == WM_NOMATCH)
+		result = ctxt->strcomp(match->pattern, path) ? WM_NOMATCH : 0;
 
-	if (ctxt->fnmatch_flags >= 0 && result == FNM_NOMATCH)
-		result = p_fnmatch(match->pattern, path, ctxt->fnmatch_flags);
+	if (ctxt->wildmatch_flags >= 0 && result == WM_NOMATCH)
+		result = wildmatch(match->pattern, path, ctxt->wildmatch_flags);
 
 	/* if we didn't match, look for exact dirname prefix match */
-	if (result == FNM_NOMATCH &&
+	if (result == WM_NOMATCH &&
 		(match->flags & GIT_ATTR_FNMATCH_HASWILD) == 0 &&
 		ctxt->strncomp(path, match->pattern, match->length) == 0 &&
 		path[match->length] == '/')
@@ -159,7 +159,7 @@ static int pathspec_match_one(
 	/* if we didn't match and this is a negative match, check for exact
 	 * match of filename with leading '!'
 	 */
-	if (result == FNM_NOMATCH &&
+	if (result == WM_NOMATCH &&
 		(match->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0 &&
 		*path == '!' &&
 		ctxt->strncomp(path + 1, match->pattern, match->length) == 0 &&

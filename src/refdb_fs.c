@@ -18,6 +18,7 @@
 #include "iterator.h"
 #include "sortedcache.h"
 #include "signature.h"
+#include "wildmatch.h"
 
 #include <git2/tag.h>
 #include <git2/object.h>
@@ -571,7 +572,7 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 		ref_name = git_buf_cstr(&path);
 
 		if (git__suffixcmp(ref_name, ".lock") == 0 ||
-			(iter->glob && p_fnmatch(iter->glob, ref_name, 0) != 0))
+			(iter->glob && wildmatch(iter->glob, ref_name, 0) != 0))
 			continue;
 
 		ref_dup = git_pool_strdup(&iter->pool, ref_name);
@@ -617,7 +618,7 @@ static int refdb_fs_backend__iterator_next(
 
 		if (ref->flags & PACKREF_SHADOWED)
 			continue;
-		if (iter->glob && p_fnmatch(iter->glob, ref->name, 0) != 0)
+		if (iter->glob && wildmatch(iter->glob, ref->name, 0) != 0)
 			continue;
 
 		*out = git_reference__alloc(ref->name, &ref->oid, &ref->peel);
@@ -660,7 +661,7 @@ static int refdb_fs_backend__iterator_next_name(
 
 		if (ref->flags & PACKREF_SHADOWED)
 			continue;
-		if (iter->glob && p_fnmatch(iter->glob, ref->name, 0) != 0)
+		if (iter->glob && wildmatch(iter->glob, ref->name, 0) != 0)
 			continue;
 
 		*out = ref->name;

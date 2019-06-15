@@ -11,7 +11,6 @@
 
 #include <fcntl.h>
 #include <time.h>
-#include "fnmatch.h"
 
 /* stat: file mode type testing macros */
 #ifndef S_IFGITLINK

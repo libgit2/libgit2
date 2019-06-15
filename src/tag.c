@@ -10,6 +10,7 @@
 #include "commit.h"
 #include "signature.h"
 #include "message.h"
+#include "wildmatch.h"
 #include "git2/object.h"
 #include "git2/repository.h"
 #include "git2/signature.h"
@@ -475,7 +476,7 @@ static int tag_list_cb(const char *tag_name, git_oid *oid, void *data)
 	GIT_UNUSED(oid);
 
 	if (!*filter->pattern ||
-		p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
+	    wildmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
 	{
 		char *matched = git__strdup(tag_name + GIT_REFS_TAGS_DIR_LEN);
 		GIT_ERROR_CHECK_ALLOC(matched);
