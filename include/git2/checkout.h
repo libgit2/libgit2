@@ -225,6 +225,7 @@ typedef enum {
 	GIT_CHECKOUT_NOTIFY_ALL       = 0x0FFFFu
 } git_checkout_notify_t;
 
+/** Checkout performance-reporting structure */
 typedef struct {
 	size_t mkdir_calls;
 	size_t stat_calls;

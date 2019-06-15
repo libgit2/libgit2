@@ -143,6 +143,7 @@ typedef enum {
 	GIT_INDEX_ADD_CHECK_PATHSPEC = (1u << 2),
 } git_index_add_option_t;
 
+/** Git index stage states */
 typedef enum {
 	/**
 	 * Match any index stage.

@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "oid.h"
+#include "indexer.h"
 
 /**
  * @file git2/pack.h
@@ -178,6 +179,16 @@ GIT_EXTERN(int) git_packbuilder_write(
 */
 GIT_EXTERN(const git_oid *) git_packbuilder_hash(git_packbuilder *pb);
 
+/**
+ * Callback used to iterate over packed objects
+ *
+ * @see git_packbuilder_foreach
+ *
+ * @param buf A pointer to the object's data
+ * @param size The size of the underlying object
+ * @param payload Payload passed to git_packbuilder_foreach
+ * @return non-zero to terminate the iteration
+ */
 typedef int GIT_CALLBACK(git_packbuilder_foreach_cb)(void *buf, size_t size, void *payload);
 
 /**

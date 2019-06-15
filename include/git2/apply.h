@@ -91,6 +91,7 @@ GIT_EXTERN(int) git_apply_to_tree(
 	git_diff *diff,
 	const git_apply_options *options);
 
+/** Possible application locations for git_apply */
 typedef enum {
 	/**
 	 * Apply the patch to the workdir, leaving the index untouched.

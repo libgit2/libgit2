@@ -599,6 +599,7 @@ GIT_EXTERN(int) git_remote_init_callbacks(
 	git_remote_callbacks *opts,
 	unsigned int version);
 
+/** Acceptable prune settings when fetching */
 typedef enum {
 	/**
 	 * Use the setting from the configuration

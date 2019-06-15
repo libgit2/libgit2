@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "types.h"
+#include "indexer.h"
 
 /**
  * @file git2/backend.h

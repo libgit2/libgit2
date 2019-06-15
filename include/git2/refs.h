@@ -422,7 +422,26 @@ GIT_EXTERN(int) git_reference_remove(git_repository *repo, const char *name);
  */
 GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo);
 
+/**
+ * Callback used to iterate over references
+ *
+ * @see git_reference_foreach
+ *
+ * @param reference The reference object
+ * @param payload Payload passed to git_reference_foreach
+ * @return non-zero to terminate the iteration
+ */
 typedef int GIT_CALLBACK(git_reference_foreach_cb)(git_reference *reference, void *payload);
+
+/**
+ * Callback used to iterate over reference names
+ *
+ * @see git_reference_foreach_name
+ *
+ * @param name The reference name
+ * @param payload Payload passed to git_reference_foreach_name
+ * @return non-zero to terminate the iteration
+ */
 typedef int GIT_CALLBACK(git_reference_foreach_name_cb)(const char *name, void *payload);
 
 /**
