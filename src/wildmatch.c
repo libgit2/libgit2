@@ -250,7 +250,7 @@ static int dowild(const uchar *p, const uchar *text, unsigned int flags)
 					for (s = p += 2; (p_ch = *p) && p_ch != ']'; p++) {} /*SHARED ITERATOR*/
 					if (!p_ch)
 						return WM_ABORT_ALL;
-					i = p - s - 1;
+					i = (int)(p - s - 1);
 					if (i < 0 || p[-1] != ':') {
 						/* Didn't find ":]", so treat like a normal set. */
 						p = s - 2;
