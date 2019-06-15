@@ -314,11 +314,19 @@ ELSE()
 	ENDIF()
 	FILE(GLOB SRC_OS unix/*.c unix/*.h)
 ENDIF()
+
 FILE(GLOB SRC_GIT2 *.c *.h
 	allocators/*.c allocators/*.h
 	streams/*.c streams/*.h
 	transports/*.c transports/*.h
 	xdiff/*.c xdiff/*.h)
+
+# the xdiff dependency is not (yet) warning-free, disable warnings as
+# errors for the xdiff sources until we've sorted them out
+IF(MSVC)
+	SET_SOURCE_FILES_PROPERTIES(xdiff/xdiffi.c PROPERTIES COMPILE_FLAGS -WX-)
+	SET_SOURCE_FILES_PROPERTIES(xdiff/xutils.c PROPERTIES COMPILE_FLAGS -WX-)
+ENDIF()
 
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
