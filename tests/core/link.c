@@ -54,7 +54,7 @@ static void do_symlink(const char *old, const char *new, int is_dir)
 	create_symlink_func pCreateSymbolicLink;
 
 	cl_assert(module = GetModuleHandle("kernel32"));
-	cl_assert(pCreateSymbolicLink = (create_symlink_func)GetProcAddress(module, "CreateSymbolicLinkA"));
+	cl_assert(pCreateSymbolicLink = (create_symlink_func)(void *)GetProcAddress(module, "CreateSymbolicLinkA"));
 
 	cl_win32_pass(pCreateSymbolicLink(new, old, is_dir));
 #endif
@@ -70,7 +70,7 @@ static void do_hardlink(const char *old, const char *new)
 	create_hardlink_func pCreateHardLink;
 
 	cl_assert(module = GetModuleHandle("kernel32"));
-	cl_assert(pCreateHardLink = (create_hardlink_func)GetProcAddress(module, "CreateHardLinkA"));
+	cl_assert(pCreateHardLink = (create_hardlink_func)(void *)GetProcAddress(module, "CreateHardLinkA"));
 
 	cl_win32_pass(pCreateHardLink(new, old, 0));
 #endif
