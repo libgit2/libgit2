@@ -15,6 +15,8 @@ functionality into your application."""
     options = {"shared": [True, False]}
     default_options = "shared=False"
 
+    requires = "OpenSSL/1.1.1@conan/stable"
+
     generators = "cmake"
     # exports_sources = "CMakeLists.txt", "src/*", "include/*", "cmake/*", "deps/*", \
     #     "tests/*", "libgit2.pc.in", "libgit2_clar.supp", "fuzzers/*"
@@ -30,17 +32,25 @@ functionality into your application."""
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_folder=".")
+        args = []
+
+        if self.settings.os == "Windows":
+            if self.options.shared == True:
+                args.append("STATIC_CRT=OFF")  # default is ON
+            if self.settings.build_type == "Debug":
+                args.append("MSVC_CRTDBG=ON")  # default is OFF
+
+        cmake.configure(args=args, source_folder=".")
         cmake.build()
         self.run("bin/libgit2_clar")
 
     def package(self):
-        self.copy("*.h", dst="include", src="src")
-        self.copy("*.lib", dst="lib", keep_path=False)
-        self.copy("*.dll", dst="bin", keep_path=False)
-        self.copy("*.dylib*", dst="lib", keep_path=False)
-        self.copy("*.so", dst="lib", keep_path=False)
-        self.copy("*.a", dst="lib", keep_path=False)
+        self.copy("*.h",        dst="include",  src="include")
+        self.copy("*.lib",      dst="lib",      keep_path=False)
+        self.copy("*.dll",      dst="bin",      keep_path=False)
+        self.copy("*.dylib*",   dst="lib",      keep_path=False)
+        self.copy("*.so",       dst="lib",      keep_path=False)
+        self.copy("*.a",        dst="lib",      keep_path=False)
 
     def package_info(self):
-        self.cpp_info.libs = ["libgit2"]
+        self.cpp_info.libs = ["git2", "pthread", "rt"]
