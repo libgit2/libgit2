@@ -339,6 +339,8 @@ static int apply_credentials(
 {
 	int error = 0;
 
+	GIT_UNUSED(url);
+
 	/* If we have creds, just apply them */
 	if (creds && creds->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT)
 		error = apply_userpass_credentials(request, target, mechanisms, creds);
@@ -685,6 +687,10 @@ static void CALLBACK winhttp_status(
 	DWORD info_len)
 {
 	DWORD status;
+
+	GIT_UNUSED(connection);
+	GIT_UNUSED(ctx);
+	GIT_UNUSED(info_len);
 
 	if (code != WINHTTP_CALLBACK_STATUS_SECURE_FAILURE)
 		return;
