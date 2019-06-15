@@ -197,7 +197,7 @@ GIT_EXTERN(int) git_object_typeisloose(git_object_t type);
  * @param type object type to get its size
  * @return size in bytes of the object
  */
-GIT_EXTERN(size_t) git_object__size(git_object_t type);
+GIT_EXTERN(size_t) git_object_size(git_object_t type);
 
 /**
  * Recursively peel an object until an object of the specified type is met.
