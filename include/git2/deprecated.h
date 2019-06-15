@@ -291,6 +291,12 @@ GIT_EXTERN(int) git_index_add_frombuffer(
 #define GIT_REF_FORMAT_REFSPEC_PATTERN GIT_REFERENCE_FORMAT_REFSPEC_PATTERN
 #define GIT_REF_FORMAT_REFSPEC_SHORTHAND GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND
 
+GIT_EXTERN(int) git_tag_create_frombuffer(
+	git_oid *oid,
+	git_repository *repo,
+	const char *buffer,
+	int force);
+
 /**@}*/
 
 /** @name Deprecated Credential Callback Types

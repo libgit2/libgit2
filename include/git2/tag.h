@@ -217,7 +217,7 @@ GIT_EXTERN(int) git_tag_annotation_create(
  * @param force Overwrite existing tags
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_tag_create_frombuffer(
+GIT_EXTERN(int) git_tag_create_from_buffer(
 	git_oid *oid,
 	git_repository *repo,
 	const char *buffer,
