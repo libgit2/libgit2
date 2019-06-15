@@ -75,6 +75,52 @@ GIT_EXTERN(int) git_commit_create_from_callback(
 	git_commit_parent_callback parent_cb,
 	void *parent_payload);
 
+typedef struct git_commit_descriptor {
+	unsigned int version;
+
+	const git_oid *tree; /**< The commit's underlying tree */
+
+	/**
+	 * The commit's author.
+	 *
+	 * Set to NULL to resolve using the repository's configuration.
+	 */
+	const git_signature *author;
+
+	/**
+	 * The commit's committer.
+	 *
+	 * Set to NULL to default to the author, if provided, or resolve using
+	 * the repository.
+	 */
+	const git_signature *committer;
+
+	/**
+	 * The commit's message.
+	 *
+	 * Mandatory.
+	 */
+	const char *message;
+
+	/**
+	 * The commit's message encoding
+	 *
+	 * NULL will default to UTF-8.
+	 */
+	const char *message_encoding;
+
+	/**
+	 * The commit's parents
+	 */
+	git_oidarray parents;
+} git_commit_descriptor;
+
+#define GIT_COMMIT_DESCRIPTOR_VERSION 1
+#define GIT_COMMIT_DESCRIPTOR_INIT { GIT_COMMIT_DESCRIPTOR_VERSION }
+
+GIT_EXTERN(int) git_commit_desc_write_buffer(git_buf *buffer,
+	const git_commit_descriptor *desc);
+
 /** @} */
 GIT_END_DECL
 #endif
