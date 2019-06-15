@@ -121,6 +121,34 @@ typedef struct git_commit_descriptor {
 GIT_EXTERN(int) git_commit_desc_write_buffer(git_buf *buffer,
 	const git_commit_descriptor *desc);
 
+typedef enum {
+	GIT_COMMIT_BUILDER_VALIDATE = 1,
+} git_commit_builder_flags;
+
+typedef struct git_commit_desc_options {
+	unsigned int version;
+
+	uint32_t flags;
+
+	git_commit_parent_callback parent_cb;
+	void *parent_payload;
+
+	/**
+	 * The name of a reference on which to make the commit.
+	 *
+	 * NULL means that the commit will be left dangling.
+	 */
+	const char *update_ref;
+} git_commit_desc_options;
+
+#define GIT_COMMIT_DESC_OPTIONS_VERSION 1
+#define GIT_COMMIT_DESC_OPTIONS_INIT { GIT_COMMIT_DESC_OPTIONS_VERSION }
+
+GIT_EXTERN(int) git_commit_desc_write_object(git_oid *oid,
+	git_repository *repository,
+	const git_commit_descriptor *desc,
+	const git_commit_desc_options *opts);
+
 /** @} */
 GIT_END_DECL
 #endif
