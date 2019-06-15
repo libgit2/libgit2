@@ -239,10 +239,18 @@ ELSE ()
 	ENABLE_WARNINGS(shift-count-overflow)
 	ENABLE_WARNINGS(unused-const-variable)
 	ENABLE_WARNINGS(unused-function)
-	ENABLE_WARNINGS(format)
-	ENABLE_WARNINGS(format-security)
 	ENABLE_WARNINGS(int-conversion)
-	DISABLE_WARNINGS(documentation-deprecated-sync)
+
+	# MinGW uses gcc, which expects POSIX formatting for printf, but
+	# uses the Windows C library, which uses its own format specifiers.
+	# Disable format specifier warnings.
+	IF(MINGW)
+		DISABLE_WARNINGS(format)
+		DISABLE_WARNINGS(format-security)
+	ELSE()
+		ENABLE_WARNINGS(format)
+		ENABLE_WARNINGS(format-security)
+	ENDIF()
 
 	IF (PROFILE)
 		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")
