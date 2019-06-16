@@ -159,7 +159,7 @@ nail down the end points.</p>
 <code>commitish:path/to/file.txt</code> format to find it.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_oid_iszero-21" class="fnlink" href="../../#HEAD/group/oid/git_oid_iszero">git_oid_iszero</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">))</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_oid_is_zero-21" class="fnlink" href="../../#HEAD/group/oid/git_oid_is_zero">git_oid_is_zero</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">))</span>
     <span class="n">strcpy</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="s">&quot;HEAD&quot;</span><span class="p">);</span>
   <span class="k">else</span>
     <span class="n"><a name="git_oid_tostr-16" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">);</span>
@@ -196,7 +196,7 @@ nail down the end points.</p>
     <span class="k">if</span> <span class="p">(</span><span class="n">hunk</span><span class="p">)</span> <span class="p">{</span>
       <span class="kt">char</span> <span class="n">sig</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
       <span class="n">break_on_null_hunk</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-      
+
       <span class="n"><a name="git_oid_tostr-17" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_commit_id</span><span class="p">);</span>
       <span class="n">snprintf</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="s">&quot;%s &lt;%s&gt;&quot;</span><span class="p">,</span> <span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_signature</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">,</span> <span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_signature</span><span class="o">-&gt;</span><span class="n">email</span><span class="p">);</span>
 
