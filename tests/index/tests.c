@@ -310,7 +310,7 @@ void test_index_tests__add_frombuffer(void)
 	memset(&entry, 0x0, sizeof(git_index_entry));
 	entry.mode = GIT_FILEMODE_BLOB;
 	entry.path = "test.txt";
-	cl_git_pass(git_index_add_frombuffer(index, &entry,
+	cl_git_pass(git_index_add_from_buffer(index, &entry,
 		content, strlen(content)));
 
 	/* Wow... it worked! */
@@ -352,7 +352,7 @@ void test_index_tests__dirty_and_clean(void)
 	/* Index is dirty after adding an entry */
 	entry.mode = GIT_FILEMODE_BLOB;
 	entry.path = "test.txt";
-	cl_git_pass(git_index_add_frombuffer(index, &entry, "Hi.\n", 4));
+	cl_git_pass(git_index_add_from_buffer(index, &entry, "Hi.\n", 4));
 	cl_assert(git_index_entrycount(index) == 1);
 	cl_assert(git_index_is_dirty(index));
 
@@ -374,7 +374,7 @@ void test_index_tests__dirty_and_clean(void)
 	cl_assert(!git_index_is_dirty(index));
 
 	/* Index is dirty when we do an unforced read with dirty content */
-	cl_git_pass(git_index_add_frombuffer(index, &entry, "Hi.\n", 4));
+	cl_git_pass(git_index_add_from_buffer(index, &entry, "Hi.\n", 4));
 	cl_assert(git_index_entrycount(index) == 1);
 	cl_assert(git_index_is_dirty(index));
 
@@ -402,7 +402,7 @@ void test_index_tests__dirty_fails_optionally(void)
 	/* Index is dirty after adding an entry */
 	entry.mode = GIT_FILEMODE_BLOB;
 	entry.path = "test.txt";
-	cl_git_pass(git_index_add_frombuffer(index, &entry, "Hi.\n", 4));
+	cl_git_pass(git_index_add_from_buffer(index, &entry, "Hi.\n", 4));
 	cl_assert(git_index_is_dirty(index));
 
 	cl_git_pass(git_checkout_head(repo, NULL));
@@ -410,7 +410,7 @@ void test_index_tests__dirty_fails_optionally(void)
 	/* Index is dirty (again) after adding an entry */
 	entry.mode = GIT_FILEMODE_BLOB;
 	entry.path = "test.txt";
-	cl_git_pass(git_index_add_frombuffer(index, &entry, "Hi.\n", 4));
+	cl_git_pass(git_index_add_from_buffer(index, &entry, "Hi.\n", 4));
 	cl_assert(git_index_is_dirty(index));
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY, 1));
@@ -455,7 +455,7 @@ void test_index_tests__add_frombuffer_reset_entry(void)
 	memset(&entry, 0x0, sizeof(git_index_entry));
 	entry.mode = GIT_FILEMODE_BLOB;
 	entry.path = "test.txt";
-	cl_git_pass(git_index_add_frombuffer(index, &entry,
+	cl_git_pass(git_index_add_from_buffer(index, &entry,
 		content, strlen(content)));
 
 	/* Wow... it worked! */

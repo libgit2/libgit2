@@ -164,7 +164,7 @@ static void add_entry_and_check_mode_(
 	git_index_entry new_entry;
 
 	/* If old_filename exists, we copy that to the new file, and test
-	 * git_index_add(), otherwise create a new entry testing git_index_add_frombuffer
+	 * git_index_add(), otherwise create a new entry testing git_index_add_from_buffer
 	 */
 	if (from_file)
 	{
@@ -189,7 +189,7 @@ static void add_entry_and_check_mode_(
 	else
 	{
 		const char *content = "hey there\n";
-		clar__assert(!git_index_add_frombuffer(index, &new_entry, content, strlen(content)),
+		clar__assert(!git_index_add_from_buffer(index, &new_entry, content, strlen(content)),
 			file, line, "Cannot add index entry from buffer", NULL, 1);
 	}
 
@@ -207,7 +207,7 @@ void test_index_filemodes__explicit(void)
 	git_index *index;
 
 	/* These tests should run and work everywhere, as the filemode is
-	 * given explicitly to git_index_add or git_index_add_frombuffer
+	 * given explicitly to git_index_add or git_index_add_from_buffer
 	 */
 	cl_repo_set_bool(g_repo, "core.filemode", false);
 
@@ -271,7 +271,7 @@ void test_index_filemodes__frombuffer_requires_files(void)
 	new_entry.path = "dummy-file.txt";
 	new_entry.mode = GIT_FILEMODE_BLOB;
 
-	cl_git_pass(git_index_add_frombuffer(index,
+	cl_git_pass(git_index_add_from_buffer(index,
 		&new_entry, content, strlen(content)));
 
 	cl_assert((ret_entry = git_index_get_bypath(index, "dummy-file.txt", 0)));
@@ -282,7 +282,7 @@ void test_index_filemodes__frombuffer_requires_files(void)
 	new_entry.path = "dummy-file.txt";
 	new_entry.mode = GIT_FILEMODE_BLOB_EXECUTABLE;
 
-	cl_git_pass(git_index_add_frombuffer(index,
+	cl_git_pass(git_index_add_from_buffer(index,
 		&new_entry, content, strlen(content)));
 
 	cl_assert((ret_entry = git_index_get_bypath(index, "dummy-file.txt", 0)));
@@ -293,7 +293,7 @@ void test_index_filemodes__frombuffer_requires_files(void)
 	new_entry.path = "dummy-link.txt";
 	new_entry.mode = GIT_FILEMODE_LINK;
 
-	cl_git_pass(git_index_add_frombuffer(index,
+	cl_git_pass(git_index_add_from_buffer(index,
 		&new_entry, content, strlen(content)));
 
 	cl_assert((ret_entry = git_index_get_bypath(index, "dummy-link.txt", 0)));
@@ -304,7 +304,7 @@ void test_index_filemodes__frombuffer_requires_files(void)
 	new_entry.path = "invalid_mode.txt";
 	new_entry.mode = GIT_FILEMODE_TREE;
 
-	cl_git_fail(git_index_add_frombuffer(index,
+	cl_git_fail(git_index_add_from_buffer(index,
 		&new_entry, content, strlen(content)));
 	cl_assert_equal_p(NULL, git_index_get_bypath(index, "invalid_mode.txt", 0));
 
@@ -312,7 +312,7 @@ void test_index_filemodes__frombuffer_requires_files(void)
 	new_entry.path = "invalid_mode.txt";
 	new_entry.mode = GIT_FILEMODE_COMMIT;
 
-	cl_git_fail(git_index_add_frombuffer(index,
+	cl_git_fail(git_index_add_from_buffer(index,
 		&new_entry, content, strlen(content)));
 	cl_assert_equal_p(NULL, git_index_get_bypath(index, "invalid_mode.txt", 0));
 

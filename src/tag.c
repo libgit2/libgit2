@@ -328,7 +328,7 @@ int git_tag_create_lightweight(
 	return git_tag_create__internal(oid, repo, tag_name, target, NULL, NULL, allow_ref_overwrite, 0);
 }
 
-int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *buffer, int allow_ref_overwrite)
+int git_tag_create_from_buffer(git_oid *oid, git_repository *repo, const char *buffer, int allow_ref_overwrite)
 {
 	git_tag tag;
 	int error;
@@ -520,4 +520,11 @@ int git_tag_list(git_strarray *tag_names, git_repository *repo)
 int git_tag_peel(git_object **tag_target, const git_tag *tag)
 {
 	return git_object_peel(tag_target, (const git_object *)tag, GIT_OBJECT_ANY);
+}
+
+/* Deprecated Functions */
+
+int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *buffer, int allow_ref_overwrite)
+{
+	return git_tag_create_from_buffer(oid, repo, buffer, allow_ref_overwrite);
 }

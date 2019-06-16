@@ -207,7 +207,7 @@ GIT_EXTERN(int) git_oid_strcmp(const git_oid *id, const char *str);
  *
  * @return 1 if all zeros, 0 otherwise.
  */
-GIT_EXTERN(int) git_oid_iszero(const git_oid *id);
+GIT_EXTERN(int) git_oid_is_zero(const git_oid *id);
 
 /**
  * OID Shortener object

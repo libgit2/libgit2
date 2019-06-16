@@ -479,7 +479,7 @@ static int check_entry(git_repository *repo, const char *filename, const git_oid
 	if (!valid_entry_name(repo, filename))
 		return tree_error("failed to insert entry: invalid name for a tree entry", filename);
 
-	if (git_oid_iszero(id))
+	if (git_oid_is_zero(id))
 		return tree_error("failed to insert entry: invalid null OID", filename);
 
 	if (filemode != GIT_FILEMODE_COMMIT &&

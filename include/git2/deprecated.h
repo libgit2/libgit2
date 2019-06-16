@@ -45,6 +45,30 @@
  */
 GIT_BEGIN_DECL
 
+/** @name Deprecated Blob Functions
+ *
+ * These functions are retained for backward compatibility.  The newer
+ * versions of these functions should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+GIT_EXTERN(int) git_blob_create_fromworkdir(git_oid *id, git_repository *repo, const char *relative_path);
+GIT_EXTERN(int) git_blob_create_fromdisk(git_oid *id, git_repository *repo, const char *path);
+GIT_EXTERN(int) git_blob_create_fromstream(
+	git_writestream **out,
+	git_repository *repo,
+	const char *hintpath);
+GIT_EXTERN(int) git_blob_create_fromstream_commit(
+	git_oid *out,
+	git_writestream *stream);
+GIT_EXTERN(int) git_blob_create_frombuffer(
+	git_oid *id, git_repository *repo, const void *buffer, size_t len);
+
+/**@}*/
+
 /** @name Deprecated Buffer Functions
  *
  * These functions and enumeration values are retained for backward
@@ -167,10 +191,11 @@ GIT_EXTERN(void) giterr_set_oom(void);
 
 /**@}*/
 
-/** @name Deprecated Index Constants
+/** @name Deprecated Index Functions and Constants
  *
- * These enumeration values are retained for backward compatibility.
- * The newer versions of these values should be preferred in all new code.
+ * These functions and enumeration values are retained for backward
+ * compatibility.  The newer versions of these values should be
+ * preferred in all new code.
  *
  * There is no plan to remove these backward compatibility values at
  * this time.
@@ -209,6 +234,11 @@ GIT_EXTERN(void) giterr_set_oom(void);
 #define GIT_INDEXCAP_NO_FILEMODE       GIT_INDEX_CAPABILITY_NO_FILEMODE
 #define GIT_INDEXCAP_NO_SYMLINKS       GIT_INDEX_CAPABILITY_NO_SYMLINKS
 #define GIT_INDEXCAP_FROM_OWNER        GIT_INDEX_CAPABILITY_FROM_OWNER
+
+GIT_EXTERN(int) git_index_add_frombuffer(
+	git_index *index,
+	const git_index_entry *entry,
+	const void *buffer, size_t len);
 
 /**@}*/
 
@@ -263,6 +293,12 @@ GIT_EXTERN(size_t) git_object__size(git_object_t type);
 #define GIT_REF_FORMAT_REFSPEC_PATTERN GIT_REFERENCE_FORMAT_REFSPEC_PATTERN
 #define GIT_REF_FORMAT_REFSPEC_SHORTHAND GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND
 
+GIT_EXTERN(int) git_tag_create_frombuffer(
+	git_oid *oid,
+	git_repository *repo,
+	const char *buffer,
+	int force);
+
 /**@}*/
 
 /** @name Deprecated Credential Callback Types
@@ -273,7 +309,6 @@ GIT_EXTERN(size_t) git_object__size(git_object_t type);
  * There is no plan to remove these backward compatibility values at
  * this time.
  */
-/**@{*/
 
 typedef git_cred_sign_cb git_cred_sign_callback;
 typedef git_cred_ssh_interactive_cb git_cred_ssh_interactive_callback;
@@ -291,6 +326,20 @@ typedef git_cred_ssh_interactive_cb git_cred_ssh_interactive_callback;
 /**@{*/
 
 typedef git_trace_cb git_trace_callback;
+
+/**@}*/
+
+/** @name Deprecated Object ID Types
+ *
+ * These types are retained for backward compatibility.  The newer
+ * versions of these values should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+GIT_EXTERN(int) git_oid_iszero(const git_oid *id);
 
 /**@}*/
 

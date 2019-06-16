@@ -23,7 +23,7 @@ static void add_blob_and_filter(
 	git_buf out = { 0 };
 
 	cl_git_mkfile("crlf/identtest", data);
-	cl_git_pass(git_blob_create_fromworkdir(&id, g_repo, "identtest"));
+	cl_git_pass(git_blob_create_from_workdir(&id, g_repo, "identtest"));
 	cl_git_pass(git_blob_lookup(&blob, g_repo, &id));
 
 	cl_git_pass(git_filter_list_apply_to_blob(&out, fl, blob));

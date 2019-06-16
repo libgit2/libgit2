@@ -72,7 +72,7 @@ int lg2_blame(git_repository *repo, int argc, char *argv[])
 	 * Get the raw data inside the blob for output. We use the
 	 * `commitish:path/to/file.txt` format to find it.
 	 */
-	if (git_oid_iszero(&blameopts.newest_commit))
+	if (git_oid_is_zero(&blameopts.newest_commit))
 		strcpy(spec, "HEAD");
 	else
 		git_oid_tostr(spec, sizeof(spec), &blameopts.newest_commit);
@@ -101,7 +101,7 @@ int lg2_blame(git_repository *repo, int argc, char *argv[])
 		if (hunk) {
 			char sig[128] = {0};
 			break_on_null_hunk = 1;
-			
+
 			git_oid_tostr(oid, 10, &hunk->final_commit_id);
 			snprintf(sig, 30, "%s <%s>", hunk->final_signature->name, hunk->final_signature->email);
 

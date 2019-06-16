@@ -33,7 +33,7 @@ void test_object_blob_write__can_create_a_blob_in_a_standard_repo_from_a_file_lo
 {
 	repo = cl_git_sandbox_init(WORKDIR);
 
-	assert_blob_creation(WORKDIR "/test.txt", "test.txt", &git_blob_create_fromworkdir);
+	assert_blob_creation(WORKDIR "/test.txt", "test.txt", &git_blob_create_from_workdir);
 }
 
 void test_object_blob_write__can_create_a_blob_in_a_standard_repo_from_a_absolute_filepath_pointing_outside_of_the_working_directory(void)
@@ -46,7 +46,7 @@ void test_object_blob_write__can_create_a_blob_in_a_standard_repo_from_a_absolut
 	cl_must_pass(git_path_prettify_dir(&full_path, ELSEWHERE, NULL));
 	cl_must_pass(git_buf_puts(&full_path, "test.txt"));
 
-	assert_blob_creation(ELSEWHERE "/test.txt", git_buf_cstr(&full_path), &git_blob_create_fromdisk);
+	assert_blob_creation(ELSEWHERE "/test.txt", git_buf_cstr(&full_path), &git_blob_create_from_disk);
 
 	git_buf_dispose(&full_path);
 	cl_must_pass(git_futils_rmdir_r(ELSEWHERE, NULL, GIT_RMDIR_REMOVE_FILES));
@@ -62,7 +62,7 @@ void test_object_blob_write__can_create_a_blob_in_a_bare_repo_from_a_absolute_fi
 	cl_must_pass(git_path_prettify_dir(&full_path, ELSEWHERE, NULL));
 	cl_must_pass(git_buf_puts(&full_path, "test.txt"));
 
-	assert_blob_creation(ELSEWHERE "/test.txt", git_buf_cstr(&full_path), &git_blob_create_fromdisk);
+	assert_blob_creation(ELSEWHERE "/test.txt", git_buf_cstr(&full_path), &git_blob_create_from_disk);
 
 	git_buf_dispose(&full_path);
 	cl_must_pass(git_futils_rmdir_r(ELSEWHERE, NULL, GIT_RMDIR_REMOVE_FILES));

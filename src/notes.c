@@ -288,7 +288,7 @@ static int note_write(
 
 	/* TODO: should we apply filters? */
 	/* create note object */
-	if ((error = git_blob_create_frombuffer(&oid, repo, note, strlen(note))) < 0)
+	if ((error = git_blob_create_from_buffer(&oid, repo, note, strlen(note))) < 0)
 		goto cleanup;
 
 	if ((error = manipulate_note_in_tree_r(

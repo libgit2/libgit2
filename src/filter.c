@@ -385,7 +385,7 @@ uint16_t git_filter_source_filemode(const git_filter_source *src)
 
 const git_oid *git_filter_source_id(const git_filter_source *src)
 {
-	return git_oid_iszero(&src->oid) ? NULL : &src->oid;
+	return git_oid_is_zero(&src->oid) ? NULL : &src->oid;
 }
 
 git_filter_mode_t git_filter_source_mode(const git_filter_source *src)

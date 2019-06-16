@@ -572,7 +572,7 @@ GIT_EXTERN(int) git_index_add_bypath(git_index *index, const char *path);
  * @param len length of the data
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_add_frombuffer(
+GIT_EXTERN(int) git_index_add_from_buffer(
 	git_index *index,
 	const git_index_entry *entry,
 	const void *buffer, size_t len);

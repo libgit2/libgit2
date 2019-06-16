@@ -1454,7 +1454,7 @@ GIT_INLINE(bool) valid_filemode(const int filemode)
 	return (is_file_or_link(filemode) || filemode == GIT_FILEMODE_COMMIT);
 }
 
-int git_index_add_frombuffer(
+int git_index_add_from_buffer(
     git_index *index, const git_index_entry *source_entry,
     const void *buffer, size_t len)
 {
@@ -1477,7 +1477,7 @@ int git_index_add_frombuffer(
 	if (index_entry_dup(&entry, index, source_entry) < 0)
 		return -1;
 
-	error = git_blob_create_frombuffer(&id, INDEX_OWNER(index), buffer, len);
+	error = git_blob_create_from_buffer(&id, INDEX_OWNER(index), buffer, len);
 	if (error < 0) {
 		index_entry_free(entry);
 		return error;
@@ -3708,4 +3708,13 @@ void git_indexwriter_cleanup(git_indexwriter *writer)
 
 	git_index_free(writer->index);
 	writer->index = NULL;
+}
+
+/* Deprecated functions */
+
+int git_index_add_frombuffer(
+    git_index *index, const git_index_entry *source_entry,
+    const void *buffer, size_t len)
+{
+	return git_index_add_from_buffer(index, source_entry, buffer, len);
 }

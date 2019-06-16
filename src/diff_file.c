@@ -232,7 +232,7 @@ static int diff_file_content_load_blob(
 	int error = 0;
 	git_odb_object *odb_obj = NULL;
 
-	if (git_oid_iszero(&fc->file->id))
+	if (git_oid_is_zero(&fc->file->id))
 		return 0;
 
 	if (fc->file->mode == GIT_FILEMODE_COMMIT)

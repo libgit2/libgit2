@@ -560,13 +560,13 @@ static int similarity_measure(
 
 	/* if exact match is requested, force calculation of missing OIDs now */
 	if (exact_match) {
-		if (git_oid_iszero(&a_file->id) &&
+		if (git_oid_is_zero(&a_file->id) &&
 			diff->old_src == GIT_ITERATOR_TYPE_WORKDIR &&
 			!git_diff__oid_for_file(&a_file->id,
 				diff, a_file->path, a_file->mode, a_file->size))
 			a_file->flags |= GIT_DIFF_FLAG_VALID_ID;
 
-		if (git_oid_iszero(&b_file->id) &&
+		if (git_oid_is_zero(&b_file->id) &&
 			diff->new_src == GIT_ITERATOR_TYPE_WORKDIR &&
 			!git_diff__oid_for_file(&b_file->id,
 				diff, b_file->path, b_file->mode, b_file->size))

@@ -47,7 +47,7 @@ void test_odb_freshen__loose_blob(void)
 	set_time_wayback(&before, LOOSE_BLOB_FN);
 
 	/* make sure we freshen a blob */
-	cl_git_pass(git_blob_create_frombuffer(&id, repo, LOOSE_STR, CONST_STRLEN(LOOSE_STR)));
+	cl_git_pass(git_blob_create_from_buffer(&id, repo, LOOSE_STR, CONST_STRLEN(LOOSE_STR)));
 	cl_assert_equal_oid(&expected_id, &id);
 	cl_must_pass(p_lstat("testrepo.git/objects/" LOOSE_BLOB_FN, &after));
 
@@ -66,13 +66,13 @@ void test_odb_freshen__readonly_object(void)
 
 	cl_git_pass(git_oid_fromstr(&expected_id, UNIQUE_BLOB_ID));
 
-	cl_git_pass(git_blob_create_frombuffer(&id, repo, UNIQUE_STR, CONST_STRLEN(UNIQUE_STR)));
+	cl_git_pass(git_blob_create_from_buffer(&id, repo, UNIQUE_STR, CONST_STRLEN(UNIQUE_STR)));
 	cl_assert_equal_oid(&expected_id, &id);
 
 	set_time_wayback(&before, UNIQUE_BLOB_FN);
 	cl_assert((before.st_mode & S_IWUSR) == 0);
 
-	cl_git_pass(git_blob_create_frombuffer(&id, repo, UNIQUE_STR, CONST_STRLEN(UNIQUE_STR)));
+	cl_git_pass(git_blob_create_from_buffer(&id, repo, UNIQUE_STR, CONST_STRLEN(UNIQUE_STR)));
 	cl_assert_equal_oid(&expected_id, &id);
 	cl_must_pass(p_lstat("testrepo.git/objects/" UNIQUE_BLOB_FN, &after));
 

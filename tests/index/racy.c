@@ -193,7 +193,7 @@ static void setup_uptodate_files(void)
 	/* Put 'C' into the index */
 	new_entry.path = "C";
 	new_entry.mode = GIT_FILEMODE_BLOB;
-	cl_git_pass(git_index_add_frombuffer(index, &new_entry, "hello!\n", 7));
+	cl_git_pass(git_index_add_from_buffer(index, &new_entry, "hello!\n", 7));
 
 	git_index_free(index);
 	git_buf_dispose(&path);

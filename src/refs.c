@@ -386,7 +386,7 @@ const git_oid *git_reference_target_peel(const git_reference *ref)
 {
 	assert(ref);
 
-	if (ref->type != GIT_REFERENCE_DIRECT || git_oid_iszero(&ref->peel))
+	if (ref->type != GIT_REFERENCE_DIRECT || git_oid_is_zero(&ref->peel))
 		return NULL;
 
 	return &ref->peel;
@@ -1380,7 +1380,7 @@ int git_reference_peel(
 	 * to a commit. So we only want to use the peeled value
 	 * if it is not zero and the target is not a tag.
 	 */
-	if (target_type != GIT_OBJECT_TAG && !git_oid_iszero(&resolved->peel)) {
+	if (target_type != GIT_OBJECT_TAG && !git_oid_is_zero(&resolved->peel)) {
 		error = git_object_lookup(&target,
 			git_reference_owner(ref), &resolved->peel, GIT_OBJECT_ANY);
 	} else {
