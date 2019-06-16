@@ -19,18 +19,18 @@ const char *git_attr__true  = "[internal]__TRUE__";
 const char *git_attr__false = "[internal]__FALSE__";
 const char *git_attr__unset = "[internal]__UNSET__";
 
-git_attr_t git_attr_value(const char *attr)
+git_attr_value_t git_attr_value(const char *attr)
 {
 	if (attr == NULL || attr == git_attr__unset)
-		return GIT_ATTR_UNSPECIFIED_T;
+		return GIT_ATTR_VALUE_UNSPECIFIED;
 
 	if (attr == git_attr__true)
-		return GIT_ATTR_TRUE_T;
+		return GIT_ATTR_VALUE_TRUE;
 
 	if (attr == git_attr__false)
-		return GIT_ATTR_FALSE_T;
+		return GIT_ATTR_VALUE_FALSE;
 
-	return GIT_ATTR_VALUE_T;
+	return GIT_ATTR_VALUE_STRING;
 }
 
 static int collect_attr_files(

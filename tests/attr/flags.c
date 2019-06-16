@@ -15,7 +15,7 @@ void test_attr_flags__bare(void)
 
 	cl_git_pass(git_attr_get(
 		&value, repo, GIT_ATTR_CHECK_NO_SYSTEM, "README.md", "diff"));
-	cl_assert(GIT_ATTR_UNSPECIFIED(value));
+	cl_assert(GIT_ATTR_IS_UNSPECIFIED(value));
 }
 
 void test_attr_flags__index_vs_workdir(void)
@@ -29,7 +29,7 @@ void test_attr_flags__index_vs_workdir(void)
 	cl_git_pass(git_attr_get(
 		&value, repo, GIT_ATTR_CHECK_NO_SYSTEM | GIT_ATTR_CHECK_FILE_THEN_INDEX,
 		"README.md", "bar"));
-	cl_assert(GIT_ATTR_FALSE(value));
+	cl_assert(GIT_ATTR_IS_FALSE(value));
 
 	cl_git_pass(git_attr_get(
 		&value, repo, GIT_ATTR_CHECK_NO_SYSTEM | GIT_ATTR_CHECK_FILE_THEN_INDEX,
@@ -39,13 +39,13 @@ void test_attr_flags__index_vs_workdir(void)
 	cl_git_pass(git_attr_get(
 		&value, repo, GIT_ATTR_CHECK_NO_SYSTEM | GIT_ATTR_CHECK_FILE_THEN_INDEX,
 		"README.txt", "foo"));
-	cl_assert(GIT_ATTR_FALSE(value));
+	cl_assert(GIT_ATTR_IS_FALSE(value));
 
 	/* index then wd */
 	cl_git_pass(git_attr_get(
 		&value, repo, GIT_ATTR_CHECK_NO_SYSTEM | GIT_ATTR_CHECK_INDEX_THEN_FILE,
 		"README.md", "bar"));
-	cl_assert(GIT_ATTR_TRUE(value));
+	cl_assert(GIT_ATTR_IS_TRUE(value));
 
 	cl_git_pass(git_attr_get(
 		&value, repo, GIT_ATTR_CHECK_NO_SYSTEM | GIT_ATTR_CHECK_INDEX_THEN_FILE,
@@ -55,7 +55,7 @@ void test_attr_flags__index_vs_workdir(void)
 	cl_git_pass(git_attr_get(
 		&value, repo, GIT_ATTR_CHECK_NO_SYSTEM | GIT_ATTR_CHECK_INDEX_THEN_FILE,
 		"README.txt", "foo"));
-	cl_assert(GIT_ATTR_TRUE(value));
+	cl_assert(GIT_ATTR_IS_TRUE(value));
 }
 
 void test_attr_flags__subdir(void)
@@ -77,7 +77,7 @@ void test_attr_flags__subdir(void)
 	cl_git_pass(git_attr_get(
 		&value, repo, GIT_ATTR_CHECK_NO_SYSTEM | GIT_ATTR_CHECK_FILE_THEN_INDEX,
 		"sub/sub/README.txt", "again"));
-	cl_assert(GIT_ATTR_TRUE(value));
+	cl_assert(GIT_ATTR_IS_TRUE(value));
 
 	cl_git_pass(git_attr_get(
 		&value, repo, GIT_ATTR_CHECK_NO_SYSTEM | GIT_ATTR_CHECK_FILE_THEN_INDEX,
@@ -98,7 +98,7 @@ void test_attr_flags__subdir(void)
 	cl_git_pass(git_attr_get(
 		&value, repo, GIT_ATTR_CHECK_NO_SYSTEM | GIT_ATTR_CHECK_INDEX_THEN_FILE,
 		"sub/sub/README.txt", "again"));
-	cl_assert(GIT_ATTR_TRUE(value));
+	cl_assert(GIT_ATTR_IS_TRUE(value));
 
 	cl_git_pass(git_attr_get(
 		&value, repo, GIT_ATTR_CHECK_NO_SYSTEM | GIT_ATTR_CHECK_INDEX_THEN_FILE,

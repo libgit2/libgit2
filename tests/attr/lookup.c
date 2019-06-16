@@ -19,7 +19,7 @@ void test_attr_lookup__simple(void)
 	cl_assert(!path.is_dir);
 
 	cl_git_pass(git_attr_file__lookup_one(file,&path,"binary",&value));
-	cl_assert(GIT_ATTR_TRUE(value));
+	cl_assert(GIT_ATTR_IS_TRUE(value));
 
 	cl_git_pass(git_attr_file__lookup_one(file,&path,"missing",&value));
 	cl_assert(!value);

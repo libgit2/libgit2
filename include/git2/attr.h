@@ -30,7 +30,7 @@ GIT_BEGIN_DECL
  * Then for file `xyz.c` looking up attribute "foo" gives a value for
  * which `GIT_ATTR_TRUE(value)` is true.
  */
-#define GIT_ATTR_TRUE(attr)	(git_attr_value(attr) == GIT_ATTR_TRUE_T)
+#define GIT_ATTR_IS_TRUE(attr)	(git_attr_value(attr) == GIT_ATTR_VALUE_TRUE)
 
 /**
  * GIT_ATTR_FALSE checks if an attribute is set off.  In core git
@@ -44,7 +44,7 @@ GIT_BEGIN_DECL
  * Then for file `zyx.h` looking up attribute "foo" gives a value for
  * which `GIT_ATTR_FALSE(value)` is true.
  */
-#define GIT_ATTR_FALSE(attr) (git_attr_value(attr) == GIT_ATTR_FALSE_T)
+#define GIT_ATTR_IS_FALSE(attr) (git_attr_value(attr) == GIT_ATTR_VALUE_FALSE)
 
 /**
  * GIT_ATTR_UNSPECIFIED checks if an attribute is unspecified.  This
@@ -62,7 +62,7 @@ GIT_BEGIN_DECL
  * file `onefile.rb` or looking up "bar" on any file will all give
  * `GIT_ATTR_UNSPECIFIED(value)` of true.
  */
-#define GIT_ATTR_UNSPECIFIED(attr) (git_attr_value(attr) == GIT_ATTR_UNSPECIFIED_T)
+#define GIT_ATTR_IS_UNSPECIFIED(attr) (git_attr_value(attr) == GIT_ATTR_VALUE_UNSPECIFIED)
 
 /**
  * GIT_ATTR_HAS_VALUE checks if an attribute is set to a value (as
@@ -74,17 +74,17 @@ GIT_BEGIN_DECL
  * Given this, looking up "eol" for `onefile.txt` will give back the
  * string "lf" and `GIT_ATTR_SET_TO_VALUE(attr)` will return true.
  */
-#define GIT_ATTR_HAS_VALUE(attr) (git_attr_value(attr) == GIT_ATTR_VALUE_T)
+#define GIT_ATTR_HAS_VALUE(attr) (git_attr_value(attr) == GIT_ATTR_VALUE_STRING)
 
 /**
  * Possible states for an attribute
  */
 typedef enum {
-	GIT_ATTR_UNSPECIFIED_T = 0, /**< The attribute has been left unspecified */
-	GIT_ATTR_TRUE_T,  /**< The attribute has been set */
-	GIT_ATTR_FALSE_T, /**< The attribute has been unset */
-	GIT_ATTR_VALUE_T, /**< This attribute has a value */
-} git_attr_t;
+	GIT_ATTR_VALUE_UNSPECIFIED = 0, /**< The attribute has been left unspecified */
+	GIT_ATTR_VALUE_TRUE,   /**< The attribute has been set */
+	GIT_ATTR_VALUE_FALSE,  /**< The attribute has been unset */
+	GIT_ATTR_VALUE_STRING, /**< This attribute has a value */
+} git_attr_value_t;
 
 /**
  * Return the value type for a given attribute.
@@ -99,7 +99,7 @@ typedef enum {
  * @param attr The attribute
  * @return the value type for the attribute
  */
-GIT_EXTERN(git_attr_t) git_attr_value(const char *attr);
+GIT_EXTERN(git_attr_value_t) git_attr_value(const char *attr);
 
 /**
  * Check attribute flags: Reading values from index and working directory.
