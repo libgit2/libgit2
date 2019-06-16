@@ -235,6 +235,8 @@ GIT_EXTERN(void) giterr_set_oom(void);
 #define GIT_OBJ_OFS_DELTA GIT_OBJECT_OFS_DELTA
 #define GIT_OBJ_REF_DELTA GIT_OBJECT_REF_DELTA
 
+GIT_EXTERN(size_t) git_object__size(git_object_t type);
+
 /**@}*/
 
 /** @name Deprecated Reference Constants
