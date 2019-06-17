@@ -66,7 +66,11 @@ OPTION(DEPRECATE_HARD			"Do not include deprecated functions in the library"	OFF
    SET(REGEX_BACKEND			"" CACHE STRING "Regular expression implementation. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
 
 IF (UNIX)
-	OPTION(USE_NTLMCLIENT		"Enable NTLM support on Unix."				ON )
+	IF (NOT USE_HTTPS)
+	    OPTION(USE_NTLMCLIENT		"Enable NTLM support on Unix."				OFF )
+	ELSE()
+	    OPTION(USE_NTLMCLIENT		"Enable NTLM support on Unix."				ON )
+	ENDIF()
 ENDIF()
 
 IF (UNIX AND NOT APPLE)
