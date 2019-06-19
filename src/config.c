@@ -1111,8 +1111,15 @@ int git_config_find_system(git_buf *path)
 
 int git_config_find_programdata(git_buf *path)
 {
+	int ret;
+
 	git_buf_sanitize(path);
-	return git_sysdir_find_programdata_file(path, GIT_CONFIG_FILENAME_PROGRAMDATA);
+	ret = git_sysdir_find_programdata_file(path,
+					       GIT_CONFIG_FILENAME_PROGRAMDATA);
+	if (ret != GIT_OK)
+		return ret;
+
+	return git_path_validate_system_file_ownership(path->ptr);
 }
 
 int git_config__global_location(git_buf *buf)
