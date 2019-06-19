@@ -647,4 +647,16 @@ extern bool git_path_isvalid(
  */
 int git_path_normalize_slashes(git_buf *out, const char *path);
 
+/**
+ * Validate a system file's ownership
+ *
+ * Verify that the file in question is owned by an administrator or system
+ * account, or at least by the current user.
+ *
+ * This function returns 0 if successful. If the file is not owned by any of
+ * these, or any other if there have been problems determining the file
+ * ownership, it returns -1.
+ */
+int git_path_validate_system_file_ownership(const char *path);
+
 #endif
