@@ -495,7 +495,8 @@ typedef int GIT_CALLBACK(git_url_resolve_cb)(git_buf *url_resolved, const char *
  * about the progress of the network operations.
  */
 struct git_remote_callbacks {
-	unsigned int version;
+	unsigned int version; /**< The version */
+
 	/**
 	 * Textual progress from the remote. Text send over the
 	 * progress side-band will be passed to this function (this is

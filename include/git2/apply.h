@@ -62,10 +62,15 @@ typedef int GIT_CALLBACK(git_apply_hunk_cb)(
  * @see git_apply_to_tree, git_apply
  */
 typedef struct {
-	unsigned int version;
+	unsigned int version; /**< The version */
 
+	/** When applying a patch, callback that will be made per delta (file). */
 	git_apply_delta_cb delta_cb;
+
+	/** When applying a patch, callback that will be made per hunk. */
 	git_apply_hunk_cb hunk_cb;
+
+	/** Payload passed to both delta_cb & hunk_cb. */
 	void *payload;
 } git_apply_options;
 
