@@ -49,11 +49,6 @@ struct git_remote_head {
 	char *symref_target;
 };
 
-/**
- * Callback for listing the remote heads
- */
-typedef int GIT_CALLBACK(git_headlist_cb)(git_remote_head *rhead, void *payload);
-
 /** @} */
 GIT_END_DECL
 #endif
