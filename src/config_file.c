@@ -55,7 +55,7 @@ typedef struct {
 
 typedef struct {
 	const git_repository *repo;
-	const char *file_path;
+	git_config_file *file;
 	git_config_entries *entries;
 	git_config_level_t level;
 	unsigned int depth;
@@ -677,8 +677,7 @@ static char *escape_value(const char *ptr)
 	return git_buf_detach(&buf);
 }
 
-static int parse_include(git_config_parser *reader,
-	diskfile_parse_state *parse_data, const char *file)
+static int parse_include(diskfile_parse_state *parse_data, const char *file)
 {
 	git_config_file *include;
 	git_buf path = GIT_BUF_INIT;
@@ -688,7 +687,7 @@ static int parse_include(git_config_parser *reader,
 	if (!file)
 		return 0;
 
-	if ((result = git_path_dirname_r(&path, reader->file->path)) < 0)
+	if ((result = git_path_dirname_r(&path, parse_data->file->path)) < 0)
 		return result;
 
 	dir = git_buf_detach(&path);
@@ -698,7 +697,7 @@ static int parse_include(git_config_parser *reader,
 	if (result < 0)
 		return result;
 
-	include = git_array_alloc(reader->file->includes);
+	include = git_array_alloc(parse_data->file->includes);
 	GIT_ERROR_CHECK_ALLOC(include);
 	memset(include, 0, sizeof(*include));
 	git_array_init(include->includes);
@@ -783,8 +782,7 @@ static const struct {
 	{ "gitdir/i:", conditional_match_gitdir_i }
 };
 
-static int parse_conditional_include(git_config_parser *reader,
-	diskfile_parse_state *parse_data, const char *section, const char *file)
+static int parse_conditional_include(diskfile_parse_state *parse_data, const char *section, const char *file)
 {
 	char *condition;
 	size_t i;
@@ -802,12 +800,12 @@ static int parse_conditional_include(git_config_parser *reader,
 
 		if ((error = conditions[i].matches(&matches,
 						   parse_data->repo,
-						   parse_data->file_path,
+						   parse_data->file->path,
 						   condition + strlen(conditions[i].prefix))) < 0)
 			break;
 
 		if (matches)
-			error = parse_include(reader, parse_data, file);
+			error = parse_include(parse_data, file);
 
 		break;
 	}
@@ -831,6 +829,7 @@ static int read_on_variable(
 	const char *c;
 	int result = 0;
 
+	GIT_UNUSED(reader);
 	GIT_UNUSED(line);
 	GIT_UNUSED(line_len);
 
@@ -863,11 +862,10 @@ static int read_on_variable(
 
 	/* Add or append the new config option */
 	if (!git__strcmp(entry->name, "include.path"))
-		result = parse_include(reader, parse_data, entry->value);
+		result = parse_include(parse_data, entry->value);
 	else if (!git__prefixcmp(entry->name, "includeif.") &&
 	         !git__suffixcmp(entry->name, ".path"))
-		result = parse_conditional_include(reader, parse_data,
-						   entry->name, entry->value);
+		result = parse_conditional_include(parse_data, entry->name, entry->value);
 
 	return result;
 }
@@ -901,7 +899,7 @@ static int config_read_buffer(
 	}
 
 	parse_data.repo = repo;
-	parse_data.file_path = file->path;
+	parse_data.file = file;
 	parse_data.entries = entries;
 	parse_data.level = level;
 	parse_data.depth = depth;
