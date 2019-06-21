@@ -495,7 +495,9 @@ int git_futils_mkdir(
 		 * equal to length of the root path).  The path may be less than the
 		 * root path length on Windows, where `C:` == `C:/`.
 		 */
-		if ((len == 1 && parent_path.ptr[0] == '.') || len <= root_len) {
+		if ((len == 1 && parent_path.ptr[0] == '.') ||
+		    (len == 1 && parent_path.ptr[0] == '/') ||
+		    len <= root_len) {
 			relative = make_path.ptr;
 			break;
 		}

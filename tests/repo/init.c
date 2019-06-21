@@ -878,14 +878,55 @@ void test_repo_init__at_filesystem_root(void)
 	git_repository_free(repo);
 }
 
-void test_repo_init__nonexistent_paths(void)
+void test_repo_init__nonexisting_directory(void)
 {
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 	git_repository *repo;
 
+	/*
+	 * If creating a repo with non-existing parent directories, then libgit2
+	 * will by default create the complete directory hierarchy if using
+	 * `git_repository_init`. Thus, let's use the extended version and not
+	 * set the `GIT_REPOSITORY_INIT_MKPATH` flag.
+	 */
+	cl_git_fail(git_repository_init_ext(&repo, "nonexisting/path", &opts));
+}
+
+void test_repo_init__nonexisting_root(void)
+{
 #ifdef GIT_WIN32
+	git_repository *repo;
+
+	/*
+	 * This really only depends on the nonexistence of the Q: drive. We
+	 * cannot implement the equivalent test on Unix systems, as there is
+	 * fundamentally no path that is disconnected from the root directory.
+	 */
 	cl_git_fail(git_repository_init(&repo, "Q:/non/existent/path", 0));
 	cl_git_fail(git_repository_init(&repo, "Q:\\non\\existent\\path", 0));
 #else
-	cl_git_fail(git_repository_init(&repo, "/non/existent/path", 0));
+	clar__skip();
+#endif
+}
+
+void test_repo_init__unwriteable_directory(void)
+{
+#ifndef GIT_WIN32
+	git_repository *repo;
+
+	if (geteuid() == 0)
+		clar__skip();
+
+	/*
+	 * Create a non-writeable directory so that we cannot create directories
+	 * inside of it. The root user has CAP_DAC_OVERRIDE, so he doesn't care
+	 * for the directory permissions and thus we need to skip the test if
+	 * run as root user.
+	 */
+	cl_must_pass(p_mkdir("unwriteable", 0444));
+	cl_git_fail(git_repository_init(&repo, "unwriteable/repo", 0));
+	cl_must_pass(p_rmdir("unwriteable"));
+#else
+	clar__skip();
 #endif
 }
