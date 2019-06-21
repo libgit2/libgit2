@@ -44,7 +44,7 @@ typedef struct {
 	git_filebuf locked_buf;
 	git_buf locked_content;
 
-	struct config_file file;
+	git_config_file file;
 } diskfile_backend;
 
 typedef struct {
@@ -95,9 +95,9 @@ static git_config_entries *diskfile_entries_take(diskfile_header *h)
 	return entries;
 }
 
-static void config_file_clear(struct config_file *file)
+static void config_file_clear(git_config_file *file)
 {
-	struct config_file *include;
+	git_config_file *include;
 	uint32_t i;
 
 	if (file == NULL)
@@ -133,7 +133,7 @@ static int config_open(git_config_backend *cfg, git_config_level_t level, const 
 	return res;
 }
 
-static int config_is_modified(int *modified, struct config_file *file)
+static int config_is_modified(int *modified, git_config_file *file)
 {
 	git_config_file *include;
 	git_buf buf = GIT_BUF_INIT;
@@ -659,7 +659,7 @@ static char *escape_value(const char *ptr)
 static int parse_include(git_config_parser *reader,
 	diskfile_parse_state *parse_data, const char *file)
 {
-	struct config_file *include;
+	git_config_file *include;
 	git_buf path = GIT_BUF_INIT;
 	char *dir;
 	int result;
