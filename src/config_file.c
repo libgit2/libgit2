@@ -143,6 +143,9 @@ static int config_is_modified(int *modified, git_config_file *file)
 
 	*modified = 0;
 
+	if (!git_futils_filestamp_check(&file->stamp, file->path))
+		goto check_includes;
+
 	if ((error = git_futils_readbuffer(&buf, file->path)) < 0)
 		goto out;
 
@@ -154,6 +157,7 @@ static int config_is_modified(int *modified, git_config_file *file)
 		goto out;
 	}
 
+check_includes:
 	git_array_foreach(file->includes, i, include) {
 		if ((error = config_is_modified(modified, include)) < 0 || *modified)
 			goto out;
@@ -861,6 +865,7 @@ static int config_read(
 	diskfile_parse_state parse_data;
 	git_config_parser reader;
 	git_buf contents = GIT_BUF_INIT;
+	struct stat st;
 	int error;
 
 	if (depth >= MAX_INCLUDE_DEPTH) {
@@ -868,11 +873,17 @@ static int config_read(
 		return -1;
 	}
 
+	if (p_stat(file->path, &st) < 0) {
+		error = git_path_set_error(errno, file->path, "stat");
+		goto out;
+	}
+
 	if ((error = git_futils_readbuffer(&contents, file->path)) < 0)
 		goto out;
 
 	git_parse_ctx_init(&reader.ctx, contents.ptr, contents.size);
 
+	git_futils_filestamp_set_from_stat(&file->stamp, &st);
 	if ((error = git_hash_buf(&file->checksum, contents.ptr, contents.size)) < 0)
 		goto out;
 
