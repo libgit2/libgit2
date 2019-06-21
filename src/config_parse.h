@@ -34,7 +34,7 @@ typedef int (*git_config_parser_section_cb)(
 	const char *current_section,
 	const char *line,
 	size_t line_len,
-	void *data);
+	void *payload);
 
 typedef int (*git_config_parser_variable_cb)(
 	git_config_parser *parser,
@@ -43,18 +43,18 @@ typedef int (*git_config_parser_variable_cb)(
 	const char *var_value,
 	const char *line,
 	size_t line_len,
-	void *data);
+	void *payload);
 
 typedef int (*git_config_parser_comment_cb)(
 	git_config_parser *parser,
 	const char *line,
 	size_t line_len,
-	void *data);
+	void *payload);
 
 typedef int (*git_config_parser_eof_cb)(
 	git_config_parser *parser,
 	const char *current_section,
-	void *data);
+	void *payload);
 
 int git_config_parse(
 	git_config_parser *parser,
@@ -62,6 +62,6 @@ int git_config_parse(
 	git_config_parser_variable_cb on_variable,
 	git_config_parser_comment_cb on_comment,
 	git_config_parser_eof_cb on_eof,
-	void *data);
+	void *payload);
 
 #endif
