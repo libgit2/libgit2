@@ -320,20 +320,26 @@ int git_odb__hashlink(git_oid *out, const char *path)
 
 int git_odb_hashfile(git_oid *out, const char *path, git_object_t type)
 {
-	git_object_size_t size;
-	int result, fd = git_futils_open_ro(path);
-	if (fd < 0)
+	uint64_t size;
+	int fd, error = 0;
+
+	if ((fd = git_futils_open_ro(path)) < 0)
 		return fd;
 
-	if ((size = git_futils_filesize(fd)) < 0 || !git__is_sizet(size)) {
+	if ((error = git_futils_filesize(&size, fd)) < 0)
+		goto done;
+
+	if (!git__is_sizet(size)) {
 		git_error_set(GIT_ERROR_OS, "file size overflow for 32-bit systems");
-		p_close(fd);
-		return -1;
+		error = -1;
+		goto done;
 	}
 
-	result = git_odb__hashfd(out, fd, (size_t)size, type);
+	error = git_odb__hashfd(out, fd, (size_t)size, type);
+
+done:
 	p_close(fd);
-	return result;
+	return error;
 }
 
 int git_odb_hash(git_oid *id, const void *data, size_t len, git_object_t type)
