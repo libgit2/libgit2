@@ -53,7 +53,7 @@ struct git_odb_backend {
 		git_odb_backend *, const git_oid *, const void *, size_t, git_object_t);
 
 	int GIT_CALLBACK(writestream)(
-		git_odb_stream **, git_odb_backend *, git_off_t, git_object_t);
+		git_odb_stream **, git_odb_backend *, git_object_size_t, git_object_t);
 
 	int GIT_CALLBACK(readstream)(
 		git_odb_stream **, size_t *, git_object_t *,
