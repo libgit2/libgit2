@@ -29,8 +29,32 @@ function run_test {
 	$TestCommand = (ctest -N -V -R "^$TestName$") -join "`n" -replace "(?ms).*\n^[0-9]*: Test command: ","" -replace "\n.*",""
 	$TestCommand += " -r${BuildDir}\results_${TestName}.xml"
 
-	Invoke-Expression $TestCommand
-	if ($LastExitCode -ne 0) { $global:Success = $false }
+	if ($Env:GITTEST_FLAKY_RETRY -gt 0) {
+		$AttemptsRemain = $Env:GITTEST_FLAKY_RETRY
+	} else {
+		$AttemptsRemain = 1
+	}
+
+	$Failed = 0
+	while ($AttemptsRemain -ne 0) {
+		if ($Failed -eq 1) {
+			Write-Host ""
+			Write-Host "Re-running flaky $TestName tests..."
+			Write-Host ""
+		}
+
+		Invoke-Expression $TestCommand
+		if ($LastExitCode -eq 0) {
+			$Failed = 0
+			break
+		} else {
+			$Failed = 1
+		}
+
+		$AttemptsRemain = $AttemptsRemain - 1
+	}
+
+	if ($Failed -eq 1) { $global:Success = $false }
 }
 
 Write-Host "##############################################################################"
@@ -72,7 +96,9 @@ if (-not $Env:SKIP_ONLINE_TESTS) {
 	Write-Host "## Running (online) tests"
 	Write-Host "##############################################################################"
 
+	$Env:GITTEST_FLAKY_RETRY=5
 	run_test online
+	$Env:GITTEST_FLAKY_RETRY=0
 }
 
 if (-not $Env:SKIP_PROXY_TESTS) {
