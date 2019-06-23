@@ -11,11 +11,11 @@
 
 #include "git2/types.h"
 
-/** A map with `git_off_t`s as key. */
+/** A map with `off64_t`s as key. */
 typedef struct kh_off_s git_offmap;
 
 /**
- * Allocate a new `git_off_t` map.
+ * Allocate a new `off64_t` map.
  *
  * @param out Pointer to the map that shall be allocated.
  * @return 0 on success, an error code if allocation has failed.
@@ -59,7 +59,7 @@ size_t git_offmap_size(git_offmap *map);
  * @param key key to search for
  * @return value associated with the given key or NULL if the key was not found
  */
-void *git_offmap_get(git_offmap *map, const git_off_t key);
+void *git_offmap_get(git_offmap *map, const off64_t key);
 
 /**
  * Set the entry for key to value.
@@ -74,7 +74,7 @@ void *git_offmap_get(git_offmap *map, const git_off_t key);
  * @return zero if the key was successfully set, a negative error
  *         code otherwise
  */
-int git_offmap_set(git_offmap *map, const git_off_t key, void *value);
+int git_offmap_set(git_offmap *map, const off64_t key, void *value);
 
 /**
  * Delete an entry from the map.
@@ -88,7 +88,7 @@ int git_offmap_set(git_offmap *map, const git_off_t key, void *value);
  *         such key was found, a negative code in case of an
  *         error
  */
-int git_offmap_delete(git_offmap *map, const git_off_t key);
+int git_offmap_delete(git_offmap *map, const off64_t key);
 
 /**
  * Check whether a key exists in the given map.
@@ -97,7 +97,7 @@ int git_offmap_delete(git_offmap *map, const git_off_t key);
  * @param key key to search for
  * @return 0 if the key has not been found, 1 otherwise
  */
-int git_offmap_exists(git_offmap *map, const git_off_t key);
+int git_offmap_exists(git_offmap *map, const off64_t key);
 
 /**
  * Iterate over entries of the map.
@@ -118,7 +118,7 @@ int git_offmap_exists(git_offmap *map, const git_off_t key);
  *        GIT_ITEROVER if no entries are left. A negative error
  *        code otherwise.
  */
-int git_offmap_iterate(void **value, git_offmap *map, size_t *iter, git_off_t *key);
+int git_offmap_iterate(void **value, git_offmap *map, size_t *iter, off64_t *key);
 
 #define git_offmap_foreach(h, kvar, vvar, code) { size_t __i = 0;		\
 	while (git_offmap_iterate((void **) &(vvar), h, &__i, &(kvar)) == 0) {	\
