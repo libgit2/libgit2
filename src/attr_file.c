@@ -120,7 +120,7 @@ int git_attr_file__load(
 	int bom_offset;
 	git_bom_t bom;
 	git_oid id;
-	git_off_t blobsize;
+	git_object_size_t blobsize;
 
 	*out = NULL;
 

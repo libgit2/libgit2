@@ -764,7 +764,7 @@ int git_filter_list_apply_to_file(
 
 static int buf_from_blob(git_buf *out, git_blob *blob)
 {
-	git_off_t rawsize = git_blob_rawsize(blob);
+	git_object_size_t rawsize = git_blob_rawsize(blob);
 
 	if (!git__is_sizet(rawsize)) {
 		git_error_set(GIT_ERROR_OS, "blob is too large to filter");

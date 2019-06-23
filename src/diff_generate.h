@@ -88,7 +88,7 @@ extern int git_diff__oid_for_file(
 	git_diff *diff,
 	const char *path,
 	uint16_t mode,
-	git_off_t size);
+	git_object_size_t size);
 
 extern int git_diff__oid_for_entry(
 	git_oid *out,
@@ -120,7 +120,7 @@ GIT_INLINE(int) git_diff_file__resolve_zero_size(
 	git_odb_free(odb);
 
 	if (!error)
-		file->size = (git_off_t)len;
+		file->size = (git_object_size_t)len;
 
 	return error;
 }

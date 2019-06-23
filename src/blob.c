@@ -25,18 +25,18 @@ const void *git_blob_rawcontent(const git_blob *blob)
 		return git_odb_object_data(blob->data.odb);
 }
 
-git_off_t git_blob_rawsize(const git_blob *blob)
+git_object_size_t git_blob_rawsize(const git_blob *blob)
 {
 	assert(blob);
 	if (blob->raw)
 		return blob->data.raw.size;
 	else
-		return (git_off_t)git_odb_object_size(blob->data.odb);
+		return (git_object_size_t)git_odb_object_size(blob->data.odb);
 }
 
 int git_blob__getbuf(git_buf *buffer, git_blob *blob)
 {
-	git_off_t size = git_blob_rawsize(blob);
+	git_object_size_t size = git_blob_rawsize(blob);
 
 	GIT_ERROR_CHECK_BLOBSIZE(size);
 	return git_buf_set(buffer, git_blob_rawcontent(blob), (size_t)size);
@@ -91,13 +91,13 @@ int git_blob_create_from_buffer(
 }
 
 static int write_file_stream(
-	git_oid *id, git_odb *odb, const char *path, git_off_t file_size)
+	git_oid *id, git_odb *odb, const char *path, git_object_size_t file_size)
 {
 	int fd, error;
 	char buffer[FILEIO_BUFSIZE];
 	git_odb_stream *stream = NULL;
 	ssize_t read_len = -1;
-	git_off_t written = 0;
+	git_object_size_t written = 0;
 
 	if ((error = git_odb_open_wstream(
 			&stream, odb, file_size, GIT_OBJECT_BLOB)) < 0)
@@ -129,7 +129,7 @@ static int write_file_stream(
 
 static int write_file_filtered(
 	git_oid *id,
-	git_off_t *size,
+	git_object_size_t *size,
 	git_odb *odb,
 	const char *full_path,
 	git_filter_list *fl)
@@ -184,7 +184,7 @@ int git_blob__create_from_paths(
 	int error;
 	struct stat st;
 	git_odb *odb = NULL;
-	git_off_t size;
+	git_object_size_t size;
 	mode_t mode;
 	git_buf path = GIT_BUF_INIT;
 
@@ -389,7 +389,7 @@ cleanup:
 int git_blob_is_binary(const git_blob *blob)
 {
 	git_buf content = GIT_BUF_INIT;
-	git_off_t size;
+	git_object_size_t size;
 
 	assert(blob);
 

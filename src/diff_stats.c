@@ -55,7 +55,7 @@ int git_diff_file_stats__full_to_buf(
 {
 	const char *old_path = NULL, *new_path = NULL;
 	size_t padding;
-	git_off_t old_size, new_size;
+	git_object_size_t old_size, new_size;
 
 	old_path = delta->old_file.path;
 	new_path = delta->new_file.path;

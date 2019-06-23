@@ -32,7 +32,7 @@ static int tree_reader_read(
 	tree_reader *reader = (tree_reader *)_reader;
 	git_tree_entry *tree_entry = NULL;
 	git_blob *blob = NULL;
-	git_off_t blobsize;
+	git_object_size_t blobsize;
 	int error;
 
 	if ((error = git_tree_entry_bypath(&tree_entry, reader->tree, filename)) < 0 ||

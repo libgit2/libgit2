@@ -21,7 +21,7 @@ struct git_blob {
 		git_odb_object *odb;
 		struct {
 			const char *data;
-			git_off_t size;
+			git_object_size_t size;
 		} raw;
 	} data;
 	unsigned int raw:1;

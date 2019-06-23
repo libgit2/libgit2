@@ -94,7 +94,7 @@ GIT_EXTERN(const void *) git_blob_rawcontent(const git_blob *blob);
  * @param blob pointer to the blob
  * @return size on bytes
  */
-GIT_EXTERN(git_off_t) git_blob_rawsize(const git_blob *blob);
+GIT_EXTERN(git_object_size_t) git_blob_rawsize(const git_blob *blob);
 
 /**
  * Flags to control the functionality of `git_blob_filter`.
