@@ -48,6 +48,34 @@ void test_filter_blob__all_crlf(void)
 	git_blob_free(blob);
 }
 
+void test_filter_blob__from_lf(void)
+{
+	git_blob *blob;
+	git_buf buf = { 0 };
+
+	cl_git_pass(git_revparse_single(
+		(git_object **)&blob, g_repo, "799770d")); /* all-lf */
+
+	cl_assert_equal_s(ALL_LF_TEXT_RAW, git_blob_rawcontent(blob));
+
+	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.bin", 1));
+
+	cl_assert_equal_s(ALL_LF_TEXT_RAW, buf.ptr);
+
+	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.crlf", 1));
+
+	/* in this case, raw content has crlf in it already */
+	cl_assert_equal_s(ALL_LF_TEXT_AS_CRLF, buf.ptr);
+
+	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.lf", 1));
+
+	/* we never convert CRLF -> LF on platforms that have LF */
+	cl_assert_equal_s(ALL_LF_TEXT_AS_LF, buf.ptr);
+
+	git_buf_dispose(&buf);
+	git_blob_free(blob);
+}
+
 void test_filter_blob__sanitizes(void)
 {
 	git_blob *blob;
