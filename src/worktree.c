@@ -238,21 +238,21 @@ int git_worktree_validate(const git_worktree *wt)
 
 	if (!is_worktree_dir(wt->gitdir_path)) {
 		git_error_set(GIT_ERROR_WORKTREE,
-			"Worktree gitdir ('%s') is not valid",
+			"worktree gitdir ('%s') is not valid",
 			wt->gitlink_path);
 		return GIT_ERROR;
 	}
 
 	if (wt->parent_path && !git_path_exists(wt->parent_path)) {
 		git_error_set(GIT_ERROR_WORKTREE,
-			"Worktree parent directory ('%s') does not exist ",
+			"worktree parent directory ('%s') does not exist ",
 			wt->parent_path);
 		return GIT_ERROR;
 	}
 
 	if (!git_path_exists(wt->commondir_path)) {
 		git_error_set(GIT_ERROR_WORKTREE,
-			"Worktree common directory ('%s') does not exist ",
+			"worktree common directory ('%s') does not exist ",
 			wt->commondir_path);
 		return GIT_ERROR;
 	}
@@ -517,7 +517,7 @@ int git_worktree_is_prunable(git_worktree *wt,
 	{
 		if (!reason.size)
 			git_buf_attach_notowned(&reason, "no reason given", 15);
-		git_error_set(GIT_ERROR_WORKTREE, "Not pruning locked working tree: '%s'", reason.ptr);
+		git_error_set(GIT_ERROR_WORKTREE, "not pruning locked working tree: '%s'", reason.ptr);
 		git_buf_dispose(&reason);
 
 		return 0;
@@ -526,7 +526,7 @@ int git_worktree_is_prunable(git_worktree *wt,
 	if ((popts.flags & GIT_WORKTREE_PRUNE_VALID) == 0 &&
 		git_worktree_validate(wt) == 0)
 	{
-		git_error_set(GIT_ERROR_WORKTREE, "Not pruning valid working tree");
+		git_error_set(GIT_ERROR_WORKTREE, "not pruning valid working tree");
 		return 0;
 	}
 
@@ -558,7 +558,7 @@ int git_worktree_prune(git_worktree *wt,
 		goto out;
 	if (!git_path_exists(path.ptr))
 	{
-		git_error_set(GIT_ERROR_WORKTREE, "Worktree gitdir '%s' does not exist", path.ptr);
+		git_error_set(GIT_ERROR_WORKTREE, "worktree gitdir '%s' does not exist", path.ptr);
 		err = -1;
 		goto out;
 	}
@@ -578,7 +578,7 @@ int git_worktree_prune(git_worktree *wt,
 	git_buf_attach(&path, wtpath, 0);
 	if (!git_path_exists(path.ptr))
 	{
-		git_error_set(GIT_ERROR_WORKTREE, "Working tree '%s' does not exist", path.ptr);
+		git_error_set(GIT_ERROR_WORKTREE, "working tree '%s' does not exist", path.ptr);
 		err = -1;
 		goto out;
 	}

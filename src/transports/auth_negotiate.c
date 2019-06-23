@@ -144,7 +144,7 @@ static int negotiate_next_token(
 		&output_token,
 		NULL,
 		NULL))) {
-		negotiate_err_set(status_major, status_minor, "Negotiate failure");
+		negotiate_err_set(status_major, status_minor, "negotiate failure");
 		error = -1;
 		goto done;
 	}
