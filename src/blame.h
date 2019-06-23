@@ -84,7 +84,7 @@ struct git_blame {
 	git_blame__entry *ent;
 	int num_lines;
 	const char *final_buf;
-	git_off_t final_buf_size;
+	size_t final_buf_size;
 };
 
 git_blame *git_blame__alloc(
