@@ -210,7 +210,7 @@ on_error:
  * We now take a "git_off_t" rather than "long" because
  * files may be longer than 2Gb.
  */
-int p_ftruncate(int fd, git_off_t size)
+int p_ftruncate(int fd, off64_t size)
 {
 	if (size < 0) {
 		errno = EINVAL;

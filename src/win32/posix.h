@@ -47,7 +47,7 @@ extern int p_chdir(const char* path);
 extern int p_chmod(const char* path, mode_t mode);
 extern int p_rmdir(const char* path);
 extern int p_access(const char* path, mode_t mode);
-extern int p_ftruncate(int fd, git_off_t size);
+extern int p_ftruncate(int fd, off64_t size);
 
 /* p_lstat is almost but not quite POSIX correct.  Specifically, the use of
  * ENOTDIR is wrong, in that it does not mean precisely that a non-directory

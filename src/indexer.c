@@ -47,8 +47,8 @@ struct git_indexer {
 	struct git_pack_header hdr;
 	struct git_pack_file *pack;
 	unsigned int mode;
-	git_off_t off;
-	git_off_t entry_start;
+	off64_t off;
+	off64_t entry_start;
 	git_object_t entry_type;
 	git_buf entry_data;
 	git_packfile_stream stream;
@@ -75,7 +75,7 @@ struct git_indexer {
 };
 
 struct delta_info {
-	git_off_t delta_off;
+	off64_t delta_off;
 };
 
 const git_oid *git_indexer_hash(const git_indexer *idx)
@@ -220,7 +220,7 @@ static int store_delta(git_indexer *idx)
 	return 0;
 }
 
-static int hash_header(git_hash_ctx *ctx, git_off_t len, git_object_t type)
+static int hash_header(git_hash_ctx *ctx, off64_t len, git_object_t type)
 {
 	char buffer[64];
 	size_t hdrlen;
@@ -265,7 +265,7 @@ static int advance_delta_offset(git_indexer *idx, git_object_t type)
 	if (type == GIT_OBJECT_REF_DELTA) {
 		idx->off += GIT_OID_RAWSZ;
 	} else {
-		git_off_t base_off = get_delta_base(idx->pack, &w, &idx->off, type, idx->entry_start);
+		off64_t base_off = get_delta_base(idx->pack, &w, &idx->off, type, idx->entry_start);
 		git_mwindow_close(&w);
 		if (base_off < 0)
 			return (int)base_off;
@@ -291,7 +291,7 @@ static int read_object_stream(git_indexer *idx, git_packfile_stream *stream)
 	return 0;
 }
 
-static int crc_object(uint32_t *crc_out, git_mwindow_file *mwf, git_off_t start, git_off_t size)
+static int crc_object(uint32_t *crc_out, git_mwindow_file *mwf, off64_t start, off64_t size)
 {
 	void *ptr;
 	uint32_t crc;
@@ -414,9 +414,9 @@ static int store_object(git_indexer *idx)
 	int i, error;
 	git_oid oid;
 	struct entry *entry;
-	git_off_t entry_size;
+	off64_t entry_size;
 	struct git_pack_entry *pentry;
-	git_off_t entry_start = idx->entry_start;
+	off64_t entry_start = idx->entry_start;
 
 	entry = git__calloc(1, sizeof(*entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
@@ -485,7 +485,7 @@ GIT_INLINE(bool) has_entry(git_indexer *idx, git_oid *id)
 	return git_oidmap_exists(idx->pack->idx_cache, id);
 }
 
-static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_entry *pentry, git_off_t entry_start)
+static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_entry *pentry, off64_t entry_start)
 {
 	int i;
 
@@ -515,7 +515,7 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 	return 0;
 }
 
-static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_start)
+static int hash_and_save(git_indexer *idx, git_rawobj *obj, off64_t entry_start)
 {
 	git_oid oid;
 	size_t entry_size;
@@ -596,12 +596,12 @@ static void hash_partially(git_indexer *idx, const uint8_t *data, size_t size)
 	idx->inbuf_len += size - to_expell;
 }
 
-static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t size)
+static int write_at(git_indexer *idx, const void *data, off64_t offset, size_t size)
 {
 	git_file fd = idx->pack->mwf.fd;
 	size_t mmap_alignment;
 	size_t page_offset;
-	git_off_t page_start;
+	off64_t page_start;
 	unsigned char *map_data;
 	git_map map;
 	int error;
@@ -627,11 +627,11 @@ static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t
 
 static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 {
-	git_off_t new_size;
+	off64_t new_size;
 	size_t mmap_alignment;
 	size_t page_offset;
-	git_off_t page_start;
-	git_off_t current_size = idx->pack->mwf.size;
+	off64_t page_start;
+	off64_t current_size = idx->pack->mwf.size;
 	int fd = idx->pack->mwf.fd;
 	int error;
 
@@ -661,7 +661,7 @@ static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 static int read_stream_object(git_indexer *idx, git_indexer_progress *stats)
 {
 	git_packfile_stream *stream = &idx->stream;
-	git_off_t entry_start = idx->off;
+	off64_t entry_start = idx->off;
 	size_t entry_size;
 	git_object_t type;
 	git_mwindow *w = NULL;
@@ -865,7 +865,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	git_oid foo = {{0}};
 	unsigned char hdr[64];
 	git_buf buf = GIT_BUF_INIT;
-	git_off_t entry_start;
+	off64_t entry_start;
 	const void *data;
 	size_t len, hdr_len;
 	int error;
@@ -939,7 +939,7 @@ static int fix_thin_pack(git_indexer *idx, git_indexer_progress *stats)
 	size_t size;
 	git_object_t type;
 	git_mwindow *w = NULL;
-	git_off_t curpos = 0;
+	off64_t curpos = 0;
 	unsigned char *base_info;
 	unsigned int left = 0;
 	git_oid base;
@@ -1054,7 +1054,7 @@ static int update_header_and_rehash(git_indexer *idx, git_indexer_progress *stat
 {
 	void *ptr;
 	size_t chunk = 1024*1024;
-	git_off_t hashed = 0;
+	off64_t hashed = 0;
 	git_mwindow *w = NULL;
 	git_mwindow_file *mwf;
 	unsigned int left;

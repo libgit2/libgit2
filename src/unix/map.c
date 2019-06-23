@@ -32,7 +32,7 @@ int git__mmap_alignment(size_t *alignment)
   return git__page_size(alignment);
 }
 
-int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
+int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, off64_t offset)
 {
 	int mprot = PROT_READ;
 	int mflag = 0;

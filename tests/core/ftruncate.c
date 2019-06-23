@@ -27,7 +27,7 @@ void test_core_ftruncate__cleanup(void)
 	p_unlink(filename);
 }
 
-static void _extend(git_off_t i64len)
+static void _extend(off64_t i64len)
 {
 	struct stat st;
 	int error;

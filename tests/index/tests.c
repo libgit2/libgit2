@@ -13,7 +13,7 @@ static const size_t index_entry_count_2 = 1437;
 struct test_entry {
    size_t index;
    char path[128];
-   git_off_t file_size;
+   off64_t file_size;
    git_time_t mtime;
 };
 
