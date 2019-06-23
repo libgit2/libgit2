@@ -89,7 +89,7 @@ int git_odb__format_object_header(
 	size_t *written,
 	char *hdr,
 	size_t hdr_size,
-	git_off_t obj_len,
+	git_object_size_t obj_len,
 	git_object_t obj_type)
 {
 	const char *type_str = git_object_type2string(obj_type);
@@ -320,7 +320,7 @@ int git_odb__hashlink(git_oid *out, const char *path)
 
 int git_odb_hashfile(git_oid *out, const char *path, git_object_t type)
 {
-	git_off_t size;
+	git_object_size_t size;
 	int result, fd = git_futils_open_ro(path);
 	if (fd < 0)
 		return fd;
@@ -385,7 +385,7 @@ static void fake_wstream__free(git_odb_stream *_stream)
 	git__free(stream);
 }
 
-static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend, git_off_t size, git_object_t type)
+static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend, git_object_size_t size, git_object_t type)
 {
 	fake_wstream *stream;
 	size_t blobsize;
@@ -1319,7 +1319,7 @@ int git_odb_write(
 	return error;
 }
 
-static int hash_header(git_hash_ctx *ctx, git_off_t size, git_object_t type)
+static int hash_header(git_hash_ctx *ctx, git_object_size_t size, git_object_t type)
 {
 	char header[64];
 	size_t hdrlen;
@@ -1333,7 +1333,7 @@ static int hash_header(git_hash_ctx *ctx, git_off_t size, git_object_t type)
 }
 
 int git_odb_open_wstream(
-	git_odb_stream **stream, git_odb *db, git_off_t size, git_object_t type)
+	git_odb_stream **stream, git_odb *db, git_object_size_t size, git_object_t type)
 {
 	size_t i, writes = 0;
 	int error = GIT_ERROR;

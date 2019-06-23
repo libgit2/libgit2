@@ -87,8 +87,8 @@ struct git_odb_stream {
 	unsigned int mode;
 	void *hash_ctx;
 
-	git_off_t declared_size;
-	git_off_t received_bytes;
+	git_object_size_t declared_size;
+	git_object_size_t received_bytes;
 
 	/**
 	 * Write at most `len` bytes into `buffer` and advance the stream.
