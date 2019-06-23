@@ -290,7 +290,7 @@ extern mode_t git_futils_canonical_mode(mode_t raw_mode);
 extern int git_futils_mmap_ro(
 	git_map *out,
 	git_file fd,
-	git_off_t begin,
+	off64_t begin,
 	size_t len);
 
 /**

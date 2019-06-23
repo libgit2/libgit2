@@ -235,7 +235,7 @@ int git__mmap_alignment(size_t *alignment)
 }
 
 
-int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
+int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, off64_t offset)
 {
 	GIT_MMAP_VALIDATE(out, len, prot, flags);
 
