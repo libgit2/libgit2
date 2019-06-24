@@ -138,7 +138,7 @@ static ssize_t socket_write(git_stream *stream, const char *data, size_t len, in
 	errno = 0;
 
 	if ((written = p_send(st->s, data, len, flags)) < 0) {
-		net_set_error("Error sending data");
+		net_set_error("error sending data");
 		return -1;
 	}
 
@@ -151,7 +151,7 @@ static ssize_t socket_read(git_stream *stream, void *data, size_t len)
 	git_socket_stream *st = (git_socket_stream *) stream;
 
 	if ((ret = p_recv(st->s, data, len, 0)) < 0)
-		net_set_error("Error receiving socket data");
+		net_set_error("error receiving socket data");
 
 	return ret;
 }
