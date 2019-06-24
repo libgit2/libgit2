@@ -252,6 +252,10 @@ ELSE ()
 		ENABLE_WARNINGS(format-security)
 	ENDIF()
 
+	IF("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+		DISABLE_WARNINGS(documentation-deprecated-sync)
+	ENDIF()
+
 	IF (PROFILE)
 		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")
 		SET(CMAKE_EXE_LINKER_FLAGS "-pg ${CMAKE_EXE_LINKER_FLAGS}")
