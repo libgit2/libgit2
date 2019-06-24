@@ -91,7 +91,7 @@ jobs:
   displayName: 'Windows (amd64; MinGW)'
   pool: Hosted
   steps:
-  - powershell: . '$(Build.SourcesDirectory)\azure-pipelines\setup-mingw.ps1'
+  - bash: . '$(Build.SourcesDirectory)\azure-pipelines\setup-mingw.sh'
     displayName: Setup
     env:
       TEMP: $(Agent.TempDirectory)
@@ -106,7 +106,7 @@ jobs:
   displayName: 'Windows (x86; MinGW)'
   pool: Hosted
   steps:
-  - powershell: . '$(Build.SourcesDirectory)\azure-pipelines\setup-mingw.ps1'
+  - bash: . '$(Build.SourcesDirectory)\azure-pipelines\setup-mingw.sh'
     displayName: Setup
     workingDirectory: '$(Build.BinariesDirectory)'
     env:
