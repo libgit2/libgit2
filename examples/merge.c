@@ -57,7 +57,7 @@ static void opts_add_refish(merge_options *opts, const char *refish)
 	assert(opts != NULL);
 
 	sz = ++opts->heads_count * sizeof(opts->heads[0]);
-	opts->heads = xrealloc(opts->heads, sz);
+	opts->heads = (const char **)xrealloc(opts->heads, sz);
 	opts->heads[opts->heads_count - 1] = refish;
 }
 
@@ -354,7 +354,7 @@ int lg2_merge(git_repository *repo, int argc, char **argv)
 	}
 
 cleanup:
-	free(opts.heads);
+	free((char **)opts.heads);
 	free(opts.annotated);
 
 	return 0;
