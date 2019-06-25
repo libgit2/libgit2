@@ -282,7 +282,7 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 	itemlen = sc->item_path_offset + keylen + 1;
 	itemlen = (itemlen + 7) & ~7;
 
-	if ((item = git_pool_mallocz(&sc->pool, (uint32_t)itemlen)) == NULL) {
+	if ((item = git_pool_mallocz(&sc->pool, itemlen)) == NULL) {
 		/* don't use GIT_ERROR_CHECK_ALLOC b/c of lock */
 		error = -1;
 		goto done;

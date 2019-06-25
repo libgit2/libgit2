@@ -604,7 +604,14 @@ int git_smart__download_pack(
 			} else if (pkt->type == GIT_PKT_PROGRESS) {
 				if (t->progress_cb) {
 					git_pkt_progress *p = (git_pkt_progress *) pkt;
-					error = t->progress_cb(p->data, p->len, t->message_cb_payload);
+
+					if (p->len > INT_MAX) {
+						git_error_set(GIT_ERROR_NET, "oversized progress message");
+						error = GIT_ERROR;
+						goto done;
+					}
+
+					error = t->progress_cb(p->data, (int)p->len, t->message_cb_payload);
 				}
 			} else if (pkt->type == GIT_PKT_DATA) {
 				git_pkt_data *p = (git_pkt_data *) pkt;
@@ -839,7 +846,14 @@ static int parse_report(transport_smart *transport, git_push *push)
 			case GIT_PKT_PROGRESS:
 				if (transport->progress_cb) {
 					git_pkt_progress *p = (git_pkt_progress *) pkt;
-					error = transport->progress_cb(p->data, p->len, transport->message_cb_payload);
+
+					if (p->len > INT_MAX) {
+						git_error_set(GIT_ERROR_NET, "oversized progress message");
+						error = GIT_ERROR;
+						goto done;
+					}
+
+					error = transport->progress_cb(p->data, (int)p->len, transport->message_cb_payload);
 				}
 				break;
 			default:

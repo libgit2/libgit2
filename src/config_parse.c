@@ -88,6 +88,11 @@ static int parse_subsection_header(git_config_parser *reader, const char *line, 
 	last_quote = strrchr(line, '"');
 	quoted_len = last_quote - first_quote;
 
+	if ((last_quote - line) > INT_MAX) {
+		set_parse_error(reader, 0, "invalid section header, line too long");
+		goto end_error;
+	}
+
 	if (quoted_len == 0) {
 		set_parse_error(reader, 0, "missing closing quotation mark in section header");
 		goto end_error;
@@ -146,7 +151,7 @@ end_parse:
 	}
 
 	*section_name = git_buf_detach(&buf);
-	return &line[rpos + 2] - line_start; /* rpos is at the closing quote */
+	return (int)(&line[rpos + 2] - line_start); /* rpos is at the closing quote */
 
 end_error:
 	git_buf_dispose(&buf);

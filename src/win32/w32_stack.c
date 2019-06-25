@@ -13,11 +13,6 @@
 #include "win32/posix.h"
 #include "hash.h"
 
-/**
- * This is supposedly defined in WinBase.h (from Windows.h) but there were linker issues.
- */
-USHORT WINAPI RtlCaptureStackBackTrace(ULONG, ULONG, PVOID*, PULONG);
-
 static bool   g_win32_stack_initialized = false;
 static HANDLE g_win32_stack_process = INVALID_HANDLE_VALUE;
 static git_win32__stack__aux_cb_alloc  g_aux_cb_alloc  = NULL;

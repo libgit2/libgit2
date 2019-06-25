@@ -120,12 +120,14 @@ static int read_tree_internal(git_tree_cache **out,
 
 	/* Parse children: */
 	if (tree->children_count > 0) {
-		unsigned int i;
+		size_t i, bufsize;
 
-		tree->children = git_pool_malloc(pool, tree->children_count * sizeof(git_tree_cache *));
+		GIT_ERROR_CHECK_ALLOC_MULTIPLY(&bufsize, tree->children_count, sizeof(git_tree_cache*));
+
+		tree->children = git_pool_malloc(pool, bufsize);
 		GIT_ERROR_CHECK_ALLOC(tree->children);
 
-		memset(tree->children, 0x0, tree->children_count * sizeof(git_tree_cache *));
+		memset(tree->children, 0x0, bufsize);
 
 		for (i = 0; i < tree->children_count; ++i) {
 			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, pool) < 0)
@@ -160,7 +162,7 @@ int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer
 static int read_tree_recursive(git_tree_cache *cache, const git_tree *tree, git_pool *pool)
 {
 	git_repository *repo;
-	size_t i, j, nentries, ntrees;
+	size_t i, j, nentries, ntrees, alloc_size;
 	int error;
 
 	repo = git_tree_owner(tree);
@@ -182,8 +184,10 @@ static int read_tree_recursive(git_tree_cache *cache, const git_tree *tree, git_
 			ntrees++;
 	}
 
+	GIT_ERROR_CHECK_ALLOC_MULTIPLY(&alloc_size, ntrees, sizeof(git_tree_cache *));
+
 	cache->children_count = ntrees;
-	cache->children = git_pool_mallocz(pool, ntrees * sizeof(git_tree_cache *));
+	cache->children = git_pool_mallocz(pool, alloc_size);
 	GIT_ERROR_CHECK_ALLOC(cache->children);
 
 	j = 0;
@@ -232,11 +236,14 @@ int git_tree_cache_read_tree(git_tree_cache **out, const git_tree *tree, git_poo
 
 int git_tree_cache_new(git_tree_cache **out, const char *name, git_pool *pool)
 {
-	size_t name_len;
+	size_t name_len, alloc_size;
 	git_tree_cache *tree;
 
 	name_len = strlen(name);
-	tree = git_pool_malloc(pool, sizeof(git_tree_cache) + name_len + 1);
+
+	GIT_ERROR_CHECK_ALLOC_ADD3(&alloc_size, sizeof(git_tree_cache), name_len, 1);
+
+	tree = git_pool_malloc(pool, alloc_size);
 	GIT_ERROR_CHECK_ALLOC(tree);
 
 	memset(tree, 0x0, sizeof(git_tree_cache));

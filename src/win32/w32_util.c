@@ -93,3 +93,34 @@ int git_win32__hidden(bool *out, const char *path)
 	*out = (attrs & FILE_ATTRIBUTE_HIDDEN) ? true : false;
 	return 0;
 }
+
+int git_win32__file_attribute_to_stat(
+	struct stat *st,
+	const WIN32_FILE_ATTRIBUTE_DATA *attrdata,
+	const wchar_t *path)
+{
+	git_win32__stat_init(st,
+		attrdata->dwFileAttributes,
+		attrdata->nFileSizeHigh,
+		attrdata->nFileSizeLow,
+		attrdata->ftCreationTime,
+		attrdata->ftLastAccessTime,
+		attrdata->ftLastWriteTime);
+
+	if (attrdata->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT && path) {
+		git_win32_path target;
+
+		if (git_win32_path_readlink_w(target, path) >= 0) {
+			st->st_mode = (st->st_mode & ~S_IFMT) | S_IFLNK;
+
+			/* st_size gets the UTF-8 length of the target name, in bytes,
+			 * not counting the NULL terminator */
+			if ((st->st_size = git__utf16_to_8(NULL, 0, target)) < 0) {
+				git_error_set(GIT_ERROR_OS, "could not convert reparse point name for '%ls'", path);
+				return -1;
+			}
+		}
+	}
+
+	return 0;
+}

@@ -192,7 +192,7 @@ int git__strntol32(int32_t *result, const char *nptr, size_t nptr_len, const cha
 
 	tmp_int = tmp_long & 0xFFFFFFFF;
 	if (tmp_int != tmp_long) {
-		int len = tmp_endptr - nptr;
+		int len = (int)(tmp_endptr - nptr);
 		git_error_set(GIT_ERROR_INVALID, "failed to convert: '%.*s' is too large", len, nptr);
 		return -1;
 	}
@@ -802,23 +802,23 @@ static const int8_t utf8proc_utf8class[256] = {
 	4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-int git__utf8_charlen(const uint8_t *str, int str_len)
+int git__utf8_charlen(const uint8_t *str, size_t str_len)
 {
-	int length, i;
+	size_t length, i;
 
 	length = utf8proc_utf8class[str[0]];
 	if (!length)
 		return -1;
 
-	if (str_len >= 0 && length > str_len)
-		return -str_len;
+	if (str_len > 0 && length > str_len)
+		return -1;
 
 	for (i = 1; i < length; i++) {
 		if ((str[i] & 0xC0) != 0x80)
-			return -i;
+			return -1;
 	}
 
-	return length;
+	return (int)length;
 }
 
 int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst)

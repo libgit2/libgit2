@@ -73,7 +73,7 @@ static git_commit_list_node **alloc_parents(
 		return (git_commit_list_node **)((char *)commit + sizeof(git_commit_list_node));
 
 	return (git_commit_list_node **)git_pool_malloc(
-		&walk->commit_pool, (uint32_t)(n_parents * sizeof(git_commit_list_node *)));
+		&walk->commit_pool, (n_parents * sizeof(git_commit_list_node *)));
 }
 
 

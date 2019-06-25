@@ -34,7 +34,7 @@ int git_worktree_list(git_strarray *wts, git_repository *repo)
 	git_vector worktrees = GIT_VECTOR_INIT;
 	git_buf path = GIT_BUF_INIT;
 	char *worktree;
-	unsigned i, len;
+	size_t i, len;
 	int error;
 
 	assert(wts && repo);

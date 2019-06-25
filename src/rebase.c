@@ -298,7 +298,8 @@ int git_rebase_open(
 	git_rebase *rebase;
 	git_buf path = GIT_BUF_INIT, orig_head_name = GIT_BUF_INIT,
 		orig_head_id = GIT_BUF_INIT, onto_id = GIT_BUF_INIT;
-	int state_path_len, error;
+	size_t state_path_len;
+	int error;
 
 	assert(repo);
 

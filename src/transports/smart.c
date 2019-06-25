@@ -73,7 +73,7 @@ static int git_smart__set_callbacks(
 	return 0;
 }
 
-static int http_header_name_length(const char *http_header)
+static size_t http_header_name_length(const char *http_header)
 {
 	const char *colon = strchr(http_header, ':');
 	if (!colon)
@@ -84,7 +84,7 @@ static int http_header_name_length(const char *http_header)
 static bool is_malformed_http_header(const char *http_header)
 {
 	const char *c;
-	int name_len;
+	size_t name_len;
 
 	/* Disallow \r and \n */
 	c = strchr(http_header, '\r');
@@ -114,7 +114,7 @@ static char *forbidden_custom_headers[] = {
 static bool is_forbidden_custom_header(const char *custom_header)
 {
 	unsigned long i;
-	int name_len = http_header_name_length(custom_header);
+	size_t name_len = http_header_name_length(custom_header);
 
 	/* Disallow headers that we set */
 	for (i = 0; i < ARRAY_SIZE(forbidden_custom_headers); i++)

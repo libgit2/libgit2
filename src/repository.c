@@ -878,7 +878,8 @@ int git_repository_open_from_worktree(git_repository **repo_out, git_worktree *w
 {
 	git_buf path = GIT_BUF_INIT;
 	git_repository *repo = NULL;
-	int len, err;
+	size_t len;
+	int err;
 
 	assert(repo_out && wt);
 

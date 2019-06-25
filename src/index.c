@@ -1474,6 +1474,11 @@ int git_index_add_from_buffer(
 		return -1;
 	}
 
+	if (len > UINT32_MAX) {
+		git_error_set(GIT_ERROR_INDEX, "buffer is too large");
+		return -1;
+	}
+
 	if (index_entry_dup(&entry, index, source_entry) < 0)
 		return -1;
 
@@ -1484,7 +1489,7 @@ int git_index_add_from_buffer(
 	}
 
 	git_oid_cpy(&entry->id, &id);
-	entry->file_size = len;
+	entry->file_size = (uint32_t)len;
 
 	if ((error = index_insert(index, &entry, 1, true, true, true)) < 0)
 		return error;

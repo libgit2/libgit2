@@ -35,10 +35,10 @@ static void fetchhead_test_clone(void)
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 }
 
-static int count_references(void)
+static size_t count_references(void)
 {
 	git_strarray array;
-	int refs;
+	size_t refs;
 
 	cl_git_pass(git_reference_list(&array, g_repo));
 	refs = array.count;
@@ -118,7 +118,7 @@ void test_online_fetchhead__no_merges(void)
 void test_online_fetchhead__explicit_dst_refspec_creates_branch(void)
 {
 	git_reference *ref;
-	int refs;
+	size_t refs;
 
 	fetchhead_test_clone();
 	refs = count_references();
@@ -133,7 +133,7 @@ void test_online_fetchhead__explicit_dst_refspec_creates_branch(void)
 void test_online_fetchhead__empty_dst_refspec_creates_no_branch(void)
 {
 	git_reference *ref;
-	int refs;
+	size_t refs;
 
 	fetchhead_test_clone();
 	refs = count_references();
@@ -146,7 +146,7 @@ void test_online_fetchhead__empty_dst_refspec_creates_no_branch(void)
 
 void test_online_fetchhead__colon_only_dst_refspec_creates_no_branch(void)
 {
-	int refs;
+	size_t refs;
 
 	fetchhead_test_clone();
 	refs = count_references();

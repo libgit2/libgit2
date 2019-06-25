@@ -408,7 +408,8 @@ done:
 static int read_header_loose(git_rawobj *out, git_buf *loc)
 {
 	unsigned char obj[1024];
-	int fd, obj_len, error;
+	ssize_t obj_len;
+	int fd, error;
 
 	assert(out && loc);
 
@@ -417,9 +418,13 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 
 	out->data = NULL;
 
-	if ((error = fd = git_futils_open_ro(loc->ptr)) < 0 ||
-		(error = obj_len = p_read(fd, obj, sizeof(obj))) < 0)
+	if ((error = fd = git_futils_open_ro(loc->ptr)) < 0)
 		goto done;
+
+	if ((obj_len = p_read(fd, obj, sizeof(obj))) < 0) {
+		error = (int)obj_len;
+		goto done;
+	}
 
 	if (!is_zlib_compressed_data(obj, (size_t)obj_len))
 		error = read_header_loose_packlike(out, obj, (size_t)obj_len);
@@ -871,6 +876,8 @@ static int loose_backend__readstream_read(
 	size_t start_remain = stream->start_len - stream->start_read;
 	int total = 0, error;
 
+	buffer_len = min(buffer_len, INT_MAX);
+
 	/*
 	 * if we read more than just the header in the initial read, play
 	 * that back for the caller.
@@ -882,20 +889,20 @@ static int loose_backend__readstream_read(
 		buffer += chunk;
 		stream->start_read += chunk;
 
-		total += chunk;
+		total += (int)chunk;
 		buffer_len -= chunk;
 	}
 
 	if (buffer_len) {
-		size_t chunk = min(buffer_len, INT_MAX);
+		size_t chunk = buffer_len;
 
 		if ((error = git_zstream_get_output(buffer, &chunk, &stream->zstream)) < 0)
 			return error;
 
-		total += chunk;
+		total += (int)chunk;
 	}
 
-	return total;
+	return (int)total;
 }
 
 static void loose_backend__readstream_free(git_odb_stream *_stream)
