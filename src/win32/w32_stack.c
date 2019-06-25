@@ -91,10 +91,10 @@ int git_win32__stack_format(
 	} s;
 
 	IMAGEHLP_LINE64 line;
-	int buf_used = 0;
+	size_t buf_used = 0;
 	unsigned int k;
 	char detail[MY_MAX_FILENAME * 2]; /* filename plus space for function name and formatting */
-	int detail_len;
+	size_t detail_len;
 
 	if (!g_win32_stack_initialized) {
 		git_error_set(GIT_ERROR_INVALID, "git_win32_stack not initialized.");

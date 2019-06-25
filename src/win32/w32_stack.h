@@ -38,7 +38,7 @@ typedef void (*git_win32__stack__aux_cb_alloc)(unsigned int *aux_id);
  * @param aux_msg A buffer where a formatted message should be written.
  * @param aux_msg_len The size of the buffer.
  */
-typedef void (*git_win32__stack__aux_cb_lookup)(unsigned int aux_id, char *aux_msg, unsigned int aux_msg_len);
+typedef void (*git_win32__stack__aux_cb_lookup)(unsigned int aux_id, char *aux_msg, size_t aux_msg_len);
 
 /**
  * Register an "aux" data provider to augment our C stacktrace data.
