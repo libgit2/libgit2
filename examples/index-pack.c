@@ -11,7 +11,7 @@
 # define read _read
 # define close _close
 
-#define ssize_t unsigned int
+#define ssize_t int
 #else
 # include <unistd.h>
 #endif
