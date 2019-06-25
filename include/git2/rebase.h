@@ -13,6 +13,7 @@
 #include "annotated_commit.h"
 #include "merge.h"
 #include "checkout.h"
+#include "commit.h"
 
 /**
  * @file git2/rebase.h
