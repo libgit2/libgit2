@@ -39,7 +39,7 @@ GIT_EXTERN(int) git_repository_new(git_repository **out);
  * There's no need to call this function directly unless you're
  * trying to aggressively cleanup the repo before its
  * deallocation. `git_repository_free` already performs this operation
- * before deallocation the repo.
+ * before deallocating the repo.
  */
 GIT_EXTERN(void) git_repository__cleanup(git_repository *repo);
 

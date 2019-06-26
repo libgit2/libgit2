@@ -548,6 +548,7 @@ int git_odb__add_default_backends(
 #else
 	if (p_stat(objects_dir, &st) < 0) {
 		if (as_alternates)
+			/* this should warn */
 			return 0;
 
 		git_error_set(GIT_ERROR_ODB, "failed to load object database in '%s'", objects_dir);
