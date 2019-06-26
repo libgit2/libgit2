@@ -25,6 +25,10 @@ GIT_BEGIN_DECL
  * Note that this is only useful if you wish to associate the repository
  * with a non-filesystem-backed object database and config store.
  *
+ * Caveats: since this repository has no physical location, some systems
+ * can fail to function properly: locations under $GIT_DIR, $GIT_COMMON_DIR,
+ * or $GIT_INFO_DIR are impacted.
+ *
  * @param out The blank repository
  * @return 0 on success, or an error code
  */
