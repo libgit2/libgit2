@@ -335,8 +335,10 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 
 	if ((error = git_repository_item_path(&path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
 	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
-				       path.ptr, GIT_ATTR_FILE_INREPO)) < 0)
-		goto out;
+				       path.ptr, GIT_ATTR_FILE_INREPO)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			goto out;
+	}
 
 	if ((workdir = git_repository_workdir(repo)) != NULL &&
 	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
@@ -510,15 +512,12 @@ static int collect_attr_files(
 	 * - $GIT_PREFIX/etc/gitattributes
 	 */
 
-	error = git_repository_item_path(&attrfile, repo, GIT_REPOSITORY_ITEM_INFO);
-	if (error < 0)
-		goto cleanup;
-
-	error = push_attr_file(
-		repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
-		attrfile.ptr, GIT_ATTR_FILE_INREPO);
-	if (error < 0)
-		goto cleanup;
+	if ((error = git_repository_item_path(&attrfile, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
+	    (error = push_attr_file(repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
+				    attrfile.ptr, GIT_ATTR_FILE_INREPO)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			goto cleanup;
+	}
 
 	info.repo = repo;
 	info.attr_session = attr_session;
