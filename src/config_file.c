@@ -200,9 +200,27 @@ out:
 	return error;
 }
 
+static int config_refresh_from_buffer(git_config_backend *cfg, const char *buf, size_t buflen)
+{
+	diskfile_backend *b = GIT_CONTAINER_OF(cfg, diskfile_backend, header.parent);
+	git_config_entries *entries = NULL;
+	int error;
+
+	if ((error = git_config_entries_new(&entries)) < 0 ||
+	    (error = config_read_buffer(entries, b->header.repo, &b->file,
+					b->header.level, 0, buf, buflen)) < 0 ||
+	    (error = config_set_entries(cfg, entries)) < 0)
+		goto out;
+
+	entries = NULL;
+out:
+	git_config_entries_free(entries);
+	return error;
+}
+
 static int config_refresh(git_config_backend *cfg)
 {
-	diskfile_backend *b = (diskfile_backend *)cfg;
+	diskfile_backend *b = GIT_CONTAINER_OF(cfg, diskfile_backend, header.parent);
 	git_config_entries *entries = NULL;
 	int error, modified;
 
@@ -1230,7 +1248,7 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 		if ((result = git_filebuf_commit(&file)) < 0)
 			goto done;
 
-		if ((result = config_refresh(&cfg->header.parent)) < 0)
+		if ((result = config_refresh_from_buffer(&cfg->header.parent, buf.ptr, buf.size)) < 0)
 			goto done;
 	}
 
