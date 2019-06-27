@@ -220,6 +220,7 @@ static int create_merge_commit(git_repository *repo, git_index *index, merge_opt
 	check_lg2(git_repository_head(&head_ref, repo), "failed to get repo HEAD", NULL);
 	if (resolve_refish(&merge_commit, repo, opts->heads[0])) {
 		fprintf(stderr, "failed to resolve refish %s", opts->heads[0]);
+		free(parents);
 		return -1;
 	}
 

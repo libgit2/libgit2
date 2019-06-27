@@ -244,5 +244,5 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 	}
 
 	if (!o->dir)
-		usage("must specify directory to init", NULL);
+		usage("must specify directory to init", "");
 }
