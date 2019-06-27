@@ -62,6 +62,7 @@ typedef struct {
 } diskfile_parse_state;
 
 static int config_read(git_config_entries *entries, const git_repository *repo, git_config_file *file, git_config_level_t level, int depth);
+static int config_read_buffer(git_config_entries *entries, const git_repository *repo, git_config_file *file, git_config_level_t level, int depth, const char *buf, size_t buflen);
 static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const p_regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
 
@@ -845,6 +846,46 @@ static int read_on_variable(
 	return result;
 }
 
+static int config_read_buffer(
+	git_config_entries *entries,
+	const git_repository *repo,
+	git_config_file *file,
+	git_config_level_t level,
+	int depth,
+	const char *buf,
+	size_t buflen)
+{
+	diskfile_parse_state parse_data;
+	git_config_parser reader;
+	int error;
+
+	if (depth >= MAX_INCLUDE_DEPTH) {
+		git_error_set(GIT_ERROR_CONFIG, "maximum config include depth reached");
+		return -1;
+	}
+
+	/* Initialize the reading position */
+	reader.file = file;
+	git_parse_ctx_init(&reader.ctx, buf, buflen);
+
+	/* If the file is empty, there's nothing for us to do */
+	if (!reader.ctx.content || *reader.ctx.content == '\0') {
+		error = 0;
+		goto out;
+	}
+
+	parse_data.repo = repo;
+	parse_data.file_path = file->path;
+	parse_data.entries = entries;
+	parse_data.level = level;
+	parse_data.depth = depth;
+
+	error = git_config_parse(&reader, NULL, read_on_variable, NULL, NULL, &parse_data);
+
+out:
+	return error;
+}
+
 static int config_read(
 	git_config_entries *entries,
 	const git_repository *repo,
@@ -852,16 +893,9 @@ static int config_read(
 	git_config_level_t level,
 	int depth)
 {
-	diskfile_parse_state parse_data;
-	git_config_parser reader;
 	git_buf contents = GIT_BUF_INIT;
 	struct stat st;
 	int error;
-
-	if (depth >= MAX_INCLUDE_DEPTH) {
-		git_error_set(GIT_ERROR_CONFIG, "maximum config include depth reached");
-		return -1;
-	}
 
 	if (p_stat(file->path, &st) < 0) {
 		error = git_path_set_error(errno, file->path, "stat");
@@ -871,27 +905,13 @@ static int config_read(
 	if ((error = git_futils_readbuffer(&contents, file->path)) < 0)
 		goto out;
 
-	git_parse_ctx_init(&reader.ctx, contents.ptr, contents.size);
-
 	git_futils_filestamp_set_from_stat(&file->stamp, &st);
 	if ((error = git_hash_buf(&file->checksum, contents.ptr, contents.size)) < 0)
 		goto out;
 
-	/* Initialize the reading position */
-	reader.file = file;
-	git_parse_ctx_init(&reader.ctx, contents.ptr, contents.size);
-
-	/* If the file is empty, there's nothing for us to do */
-	if (!reader.ctx.content || *reader.ctx.content == '\0')
+	if ((error = config_read_buffer(entries, repo, file, level, depth,
+					contents.ptr, contents.size)) < 0)
 		goto out;
-
-	parse_data.repo = repo;
-	parse_data.file_path = file->path;
-	parse_data.entries = entries;
-	parse_data.level = level;
-	parse_data.depth = depth;
-
-	error = git_config_parse(&reader, NULL, read_on_variable, NULL, NULL, &parse_data);
 
 out:
 	git_buf_dispose(&contents);
