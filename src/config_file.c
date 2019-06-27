@@ -284,8 +284,6 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	if ((error = config_write(b, name, key, NULL, esc_value)) < 0)
 		goto out;
 
-	error = config_refresh(cfg);
-
 out:
 	git_config_entries_free(entries);
 	git__free(esc_value);
@@ -352,8 +350,6 @@ static int config_set_multivar(
 	if ((result = config_write(b, name, key, &preg, value)) < 0)
 		goto out;
 
-	result = config_refresh(cfg);
-
 out:
 	git__free(key);
 	p_regfree(&preg);
@@ -383,9 +379,6 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	}
 
 	if ((error = config_write(b, name, entry->name, NULL, NULL)) < 0)
-		goto out;
-
-	if ((error =  config_refresh(cfg)) < 0)
 		goto out;
 
 out:
@@ -424,9 +417,6 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	}
 
 	if ((result = config_write(b, name, key, &preg, NULL)) < 0)
-		goto out;
-
-	if ((result = config_refresh(cfg)) < 0)
 		goto out;
 
 out:
@@ -1208,7 +1198,12 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 		git_buf_attach(&cfg->locked_content, git_buf_detach(&buf), len);
 	} else {
 		git_filebuf_write(&file, git_buf_cstr(&buf), git_buf_len(&buf));
-		result = git_filebuf_commit(&file);
+
+		if ((result = git_filebuf_commit(&file)) < 0)
+			goto done;
+
+		if ((result = config_refresh(&cfg->header.parent)) < 0)
+			goto done;
 	}
 
 done:
