@@ -163,27 +163,36 @@ typedef enum {
 /**
  * Options to control how `git_status_foreach_ext()` will issue callbacks.
  *
- * This structure is set so that zeroing it out will give you relatively
- * sane defaults.
+ * Initialize with `GIT_STATUS_OPTIONS_INIT`. Alternatively, you can
+ * use `git_status_options_init`.
  *
- * The `show` value is one of the `git_status_show_t` constants that
- * control which files to scan and in what order.
- *
- * The `flags` value is an OR'ed combination of the `git_status_opt_t`
- * values above.
- *
- * The `pathspec` is an array of path patterns to match (using
- * fnmatch-style matching), or just an array of paths to match exactly if
- * `GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH` is specified in the flags.
- *
- * The `baseline` is the tree to be used for comparison to the working directory
- * and index; defaults to HEAD.
  */
 typedef struct {
-	unsigned int      version;
+	unsigned int      version; /**< The version */
+
+	/**
+	 * The `show` value is one of the `git_status_show_t` constants that
+	 * control which files to scan and in what order.
+	 */
 	git_status_show_t show;
+
+	/**
+	 * The `flags` value is an OR'ed combination of the `git_status_opt_t`
+	 * values above.
+	 */
 	unsigned int      flags;
+
+	/**
+	 * The `pathspec` is an array of path patterns to match (using
+	 * fnmatch-style matching), or just an array of paths to match exactly if
+	 * `GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH` is specified in the flags.
+	 */
 	git_strarray      pathspec;
+
+	/**
+	 * The `baseline` is the tree to be used for comparison to the working directory
+	 * and index; defaults to HEAD.
+	 */
 	git_tree          *baseline;
 } git_status_options;
 
