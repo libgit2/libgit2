@@ -624,7 +624,7 @@ static void revwalking(git_repository *repo)
 static void index_walking(git_repository *repo)
 {
 	git_index *index;
-	unsigned int i, ecount;
+	size_t i, ecount;
 
 	printf("\n*Index Walking*\n");
 
