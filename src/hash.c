@@ -42,6 +42,7 @@ int git_hash_init(git_hash_ctx *ctx)
 			return git_hash_sha1_init(&ctx->sha1);
 		default:
 			assert(0);
+			return -1;
 	}
 }
 
@@ -52,6 +53,7 @@ int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 			return git_hash_sha1_update(&ctx->sha1, data, len);
 		default:
 			assert(0);
+			return -1;
 	}
 }
 
@@ -62,6 +64,7 @@ int git_hash_final(git_oid *out, git_hash_ctx *ctx)
 			return git_hash_sha1_final(out, &ctx->sha1);
 		default:
 			assert(0);
+			return -1;
 	}
 }
 
