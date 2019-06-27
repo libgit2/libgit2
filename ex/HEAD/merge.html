@@ -288,6 +288,7 @@
   <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_head-32" class="fnlink" href="../../#HEAD/group/repository/git_repository_head">git_repository_head</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">head_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;failed to get repo HEAD&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">resolve_refish</span><span class="p">(</span><span class="o">&amp;</span><span class="n">merge_commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">heads</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="p">{</span>
     <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to resolve refish %s&quot;</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">heads</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+    <span class="n">free</span><span class="p">(</span><span class="n">parents</span><span class="p">);</span>
     <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
   <span class="p">}</span>
 
