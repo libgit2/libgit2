@@ -110,8 +110,8 @@ jobs:
   - template: powershell.yml
     parameters:
       environmentVariables:
+        BUILD_PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
         CMAKE_OPTIONS: -G"MinGW Makefiles" -DDEPRECATE_HARD=ON
-        PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
         RUN_INVASIVE_TESTS: true
 
 - job: windows_mingw_x86
@@ -128,8 +128,8 @@ jobs:
   - template: powershell.yml
     parameters:
       environmentVariables:
+        BUILD_PATH: $(Agent.TempDirectory)\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
         CMAKE_OPTIONS: -G"MinGW Makefiles" -DDEPRECATE_HARD=ON
-        PATH: $(Agent.TempDirectory)\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
         RUN_INVASIVE_TESTS: true
 
 - job: linux_x86_bionic_gcc_openssl
