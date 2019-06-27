@@ -15,6 +15,7 @@ struct {
 	{ "cat-file",     lg2_cat_file,     1 },
 	{ "checkout",     lg2_checkout,     1 },
 	{ "clone",        lg2_clone,        0 },
+	{ "config",       lg2_config,       1 },
 	{ "describe",     lg2_describe,     1 },
 	{ "diff",         lg2_diff,         1 },
 	{ "fetch",        lg2_fetch,        1 },
