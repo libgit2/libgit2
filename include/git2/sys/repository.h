@@ -25,6 +25,10 @@ GIT_BEGIN_DECL
  * Note that this is only useful if you wish to associate the repository
  * with a non-filesystem-backed object database and config store.
  *
+ * Caveats: since this repository has no physical location, some systems
+ * can fail to function properly: locations under $GIT_DIR, $GIT_COMMON_DIR,
+ * or $GIT_INFO_DIR are impacted.
+ *
  * @param out The blank repository
  * @return 0 on success, or an error code
  */
@@ -39,7 +43,7 @@ GIT_EXTERN(int) git_repository_new(git_repository **out);
  * There's no need to call this function directly unless you're
  * trying to aggressively cleanup the repo before its
  * deallocation. `git_repository_free` already performs this operation
- * before deallocation the repo.
+ * before deallocating the repo.
  */
 GIT_EXTERN(void) git_repository__cleanup(git_repository *repo);
 

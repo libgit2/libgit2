@@ -71,6 +71,7 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj);
  * Format the object header such as it would appear in the on-disk object
  */
 int git_odb__format_object_header(size_t *out_len, char *hdr, size_t hdr_size, git_off_t obj_len, git_object_t obj_type);
+
 /*
  * Hash an open file descriptor.
  * This is a performance call when the contents of a fd need to be hashed,
@@ -95,7 +96,7 @@ int git_odb__hashfd_filtered(
  * symlink, then the raw contents of the symlink will be hashed. Otherwise,
  * this will fallback to `git_odb__hashfd`.
  *
- * The hash type for this call is always `GIT_OBJIECT_BLOB` because
+ * The hash type for this call is always `GIT_OBJECT_BLOB` because
  * symlinks may only point to blobs.
  */
 int git_odb__hashlink(git_oid *out, const char *path);

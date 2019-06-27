@@ -42,23 +42,24 @@ bool git_repository__fsync_gitdir = false;
 
 static const struct {
     git_repository_item_t parent;
+	git_repository_item_t fallback;
     const char *name;
     bool directory;
 } items[] = {
-	{ GIT_REPOSITORY_ITEM_GITDIR, NULL, true },
-	{ GIT_REPOSITORY_ITEM_WORKDIR, NULL, true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, NULL, true },
-	{ GIT_REPOSITORY_ITEM_GITDIR, "index", false },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, "objects", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, "refs", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, "packed-refs", false },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, "remotes", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, "config", false },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, "info", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, "hooks", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, "logs", true },
-	{ GIT_REPOSITORY_ITEM_GITDIR, "modules", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, "worktrees", true }
+	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM__LAST, NULL, true },
+	{ GIT_REPOSITORY_ITEM_WORKDIR, GIT_REPOSITORY_ITEM__LAST, NULL, true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM__LAST, NULL, true },
+	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM__LAST, "index", false },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "objects", true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "refs", true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "packed-refs", false },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "remotes", true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "config", false },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "info", true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "hooks", true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "logs", true },
+	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM__LAST, "modules", true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "worktrees", true }
 };
 
 static int check_repositoryformatversion(git_config *config);
@@ -2308,11 +2309,11 @@ int git_repository_is_empty(git_repository *repo)
 	return is_empty;
 }
 
-int git_repository_item_path(git_buf *out, const git_repository *repo, git_repository_item_t item)
+static const char *resolved_parent_path(const git_repository *repo, git_repository_item_t item, git_repository_item_t fallback)
 {
 	const char *parent;
 
-	switch (items[item].parent) {
+	switch (item) {
 		case GIT_REPOSITORY_ITEM_GITDIR:
 			parent = git_repository_path(repo);
 			break;
@@ -2324,9 +2325,17 @@ int git_repository_item_path(git_buf *out, const git_repository *repo, git_repos
 			break;
 		default:
 			git_error_set(GIT_ERROR_INVALID, "invalid item directory");
-			return -1;
+			return NULL;
 	}
+	if (!parent && fallback != GIT_REPOSITORY_ITEM__LAST)
+		return resolved_parent_path(repo, fallback, GIT_REPOSITORY_ITEM__LAST);
 
+	return parent;
+}
+
+int git_repository_item_path(git_buf *out, const git_repository *repo, git_repository_item_t item)
+{
+	const char *parent = resolved_parent_path(repo, items[item].parent, items[item].fallback);
 	if (parent == NULL) {
 		git_error_set(GIT_ERROR_INVALID, "path cannot exist in repository");
 		return GIT_ENOTFOUND;
