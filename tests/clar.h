@@ -141,7 +141,7 @@ void clar__skip(void);
 
 void clar__fail(
 	const char *file,
-	int line,
+	size_t line,
 	const char *error,
 	const char *description,
 	int should_abort);
@@ -149,14 +149,14 @@ void clar__fail(
 void clar__assert(
 	int condition,
 	const char *file,
-	int line,
+	size_t line,
 	const char *error,
 	const char *description,
 	int should_abort);
 
 void clar__assert_equal(
 	const char *file,
-	int line,
+	size_t line,
 	const char *err,
 	int should_abort,
 	const char *fmt,

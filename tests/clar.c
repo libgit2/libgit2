@@ -96,7 +96,7 @@ fixture_path(const char *base, const char *fixture_name);
 
 struct clar_error {
 	const char *file;
-	int line_number;
+	size_t line_number;
 	const char *error_msg;
 	char *description;
 
@@ -589,7 +589,7 @@ void clar__skip(void)
 
 void clar__fail(
 	const char *file,
-	int line,
+	size_t line,
 	const char *error_msg,
 	const char *description,
 	int should_abort)
@@ -621,7 +621,7 @@ void clar__fail(
 void clar__assert(
 	int condition,
 	const char *file,
-	int line,
+	size_t line,
 	const char *error_msg,
 	const char *description,
 	int should_abort)
@@ -634,7 +634,7 @@ void clar__assert(
 
 void clar__assert_equal(
 	const char *file,
-	int line,
+	size_t line,
 	const char *err,
 	int should_abort,
 	const char *fmt,

@@ -20,7 +20,7 @@ static void clar_print_error(int num, const struct clar_report *report, const st
 {
 	printf("  %d) Failure:\n", num);
 
-	printf("%s::%s [%s:%d]\n",
+	printf("%s::%s [%s:%"PRIuZ"]\n",
 		report->suite,
 		report->test,
 		error->file,
