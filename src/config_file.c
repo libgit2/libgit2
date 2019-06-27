@@ -170,16 +170,41 @@ out:
 	return error;
 }
 
-static int config_refresh(git_config_backend *cfg)
+static int config_set_entries(git_config_backend *cfg, git_config_entries *entries)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	git_config_entries *entries = NULL, *tmp;
+	git_config_entries *old = NULL;
 	git_config_file *include;
-	int error, modified;
-	uint32_t i;
+	int error;
+	size_t i;
 
 	if (b->header.parent.readonly)
 		return config_error_readonly();
+
+	git_array_foreach(b->file.includes, i, include)
+		config_file_clear(include);
+	git_array_clear(b->file.includes);
+
+	if ((error = git_mutex_lock(&b->header.values_mutex)) < 0) {
+		git_error_set(GIT_ERROR_OS, "failed to lock config backend");
+		goto out;
+	}
+
+	old = b->header.entries;
+	b->header.entries = entries;
+
+	git_mutex_unlock(&b->header.values_mutex);
+
+out:
+	git_config_entries_free(old);
+	return error;
+}
+
+static int config_refresh(git_config_backend *cfg)
+{
+	diskfile_backend *b = (diskfile_backend *)cfg;
+	git_config_entries *entries = NULL;
+	int error, modified;
 
 	error = config_is_modified(&modified, &b->file);
 	if (error < 0 && error != GIT_ENOTFOUND)
@@ -188,29 +213,12 @@ static int config_refresh(git_config_backend *cfg)
 	if (!modified)
 		return 0;
 
-	if ((error = git_config_entries_new(&entries)) < 0)
+	if ((error = git_config_entries_new(&entries)) < 0 ||
+	    (error = config_read(entries, b->header.repo, &b->file, b->header.level, 0)) < 0 ||
+	    (error = config_set_entries(cfg, entries)) < 0)
 		goto out;
 
-	/* Reparse the current configuration */
-	git_array_foreach(b->file.includes, i, include) {
-		config_file_clear(include);
-	}
-	git_array_clear(b->file.includes);
-
-	if ((error = config_read(entries, b->header.repo, &b->file, b->header.level, 0)) < 0)
-		goto out;
-
-	if ((error = git_mutex_lock(&b->header.values_mutex)) < 0) {
-		git_error_set(GIT_ERROR_OS, "failed to lock config backend");
-		goto out;
-	}
-
-	tmp = b->header.entries;
-	b->header.entries = entries;
-	entries = tmp;
-
-	git_mutex_unlock(&b->header.values_mutex);
-
+	entries = NULL;
 out:
 	git_config_entries_free(entries);
 
