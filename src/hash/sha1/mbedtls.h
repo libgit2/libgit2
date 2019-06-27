@@ -5,20 +5,15 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_mbedtld_h__
-#define INCLUDE_hash_mbedtld_h__
+#ifndef INCLUDE_hash_sha1_mbedtls_h__
+#define INCLUDE_hash_sha1_mbedtls_h__
+
+#include "hash/sha1.h"
 
 #include <mbedtls/sha1.h>
 
-struct git_hash_ctx {
+struct git_hash_sha1_ctx {
     mbedtls_sha1_context c;
 };
 
-#define git_hash_ctx_init(ctx) git_hash_init(ctx)
-
-GIT_INLINE(int) git_hash_global_init(void)
-{
-	return 0;
-}
-
-#endif /* INCLUDE_hash_mbedtld_h__ */
+#endif /* INCLUDE_hash_sha1_mbedtls_h__ */

@@ -5,26 +5,24 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_hash_openssl_h__
-#define INCLUDE_hash_hash_openssl_h__
+#include "openssl.h"
 
-#include "hash.h"
-
-#include <openssl/sha.h>
-
-struct git_hash_ctx {
-	SHA_CTX c;
-};
-
-#define git_hash_ctx_init(ctx) git_hash_init(ctx)
-#define git_hash_ctx_cleanup(ctx)
-
-GIT_INLINE(int) git_hash_global_init(void)
+int git_hash_sha1_global_init(void)
 {
 	return 0;
 }
 
-GIT_INLINE(int) git_hash_init(git_hash_ctx *ctx)
+int git_hash_sha1_ctx_init(git_hash_sha1_ctx *ctx)
+{
+	return git_hash_sha1_init(ctx);
+}
+
+void git_hash_sha1_ctx_cleanup(git_hash_sha1_ctx *ctx)
+{
+	GIT_UNUSED(ctx);
+}
+
+int git_hash_sha1_init(git_hash_sha1_ctx *ctx)
 {
 	assert(ctx);
 
@@ -36,7 +34,7 @@ GIT_INLINE(int) git_hash_init(git_hash_ctx *ctx)
 	return 0;
 }
 
-GIT_INLINE(int) git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
+int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 {
 	assert(ctx);
 
@@ -48,7 +46,7 @@ GIT_INLINE(int) git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 	return 0;
 }
 
-GIT_INLINE(int) git_hash_final(git_oid *out, git_hash_ctx *ctx)
+int git_hash_sha1_final(git_oid *out, git_hash_sha1_ctx *ctx)
 {
 	assert(ctx);
 
@@ -59,5 +57,3 @@ GIT_INLINE(int) git_hash_final(git_oid *out, git_hash_ctx *ctx)
 
 	return 0;
 }
-
-#endif

@@ -5,25 +5,15 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_hash_generic_h__
-#define INCLUDE_hash_hash_generic_h__
+#ifndef INCLUDE_hash_sha1_generic_h__
+#define INCLUDE_hash_sha1_generic_h__
 
-#include "common.h"
+#include "hash/sha1.h"
 
-#include "hash.h"
-
-struct git_hash_ctx {
+struct git_hash_sha1_ctx {
 	unsigned long long size;
 	unsigned int H[5];
 	unsigned int W[16];
 };
-
-#define git_hash_ctx_init(ctx) git_hash_init(ctx)
-#define git_hash_ctx_cleanup(ctx)
-
-GIT_INLINE(int) git_hash_global_init(void)
-{
-	return 0;
-}
 
 #endif

@@ -5,9 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "hash_generic.h"
-
-#include "hash.h"
+#include "generic.h"
 
 #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 
@@ -113,7 +111,7 @@
 #define T_40_59(t, A, B, C, D, E) SHA_ROUND(t, SHA_MIX, ((B&C)+(D&(B^C))) , 0x8f1bbcdc, A, B, C, D, E )
 #define T_60_79(t, A, B, C, D, E) SHA_ROUND(t, SHA_MIX, (B^C^D) , 0xca62c1d6, A, B, C, D, E )
 
-static void hash__block(git_hash_ctx *ctx, const unsigned int *data)
+static void hash__block(git_hash_sha1_ctx *ctx, const unsigned int *data)
 {
 	unsigned int A,B,C,D,E;
 	unsigned int array[16];
@@ -221,7 +219,22 @@ static void hash__block(git_hash_ctx *ctx, const unsigned int *data)
 	ctx->H[4] += E;
 }
 
-int git_hash_init(git_hash_ctx *ctx)
+int git_hash_sha1_global_init(void)
+{
+	return 0;
+}
+
+int git_hash_sha1_ctx_init(git_hash_sha1_ctx *ctx)
+{
+	return git_hash_sha1_init(ctx);
+}
+
+void git_hash_sha1_ctx_cleanup(git_hash_sha1_ctx *ctx)
+{
+	GIT_UNUSED(ctx);
+}
+
+int git_hash_sha1_init(git_hash_sha1_ctx *ctx)
 {
 	ctx->size = 0;
 
@@ -235,7 +248,7 @@ int git_hash_init(git_hash_ctx *ctx)
 	return 0;
 }
 
-int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
+int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 {
 	unsigned int lenW = ctx->size & 63;
 
@@ -265,7 +278,7 @@ int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 	return 0;
 }
 
-int git_hash_final(git_oid *out, git_hash_ctx *ctx)
+int git_hash_sha1_final(git_oid *out, git_hash_sha1_ctx *ctx)
 {
 	static const unsigned char pad[64] = { 0x80 };
 	unsigned int padlen[2];
@@ -276,8 +289,8 @@ int git_hash_final(git_oid *out, git_hash_ctx *ctx)
 	padlen[1] = htonl((uint32_t)(ctx->size << 3));
 
 	i = ctx->size & 63;
-	git_hash_update(ctx, pad, 1+ (63 & (55 - i)));
-	git_hash_update(ctx, padlen, 8);
+	git_hash_sha1_update(ctx, pad, 1+ (63 & (55 - i)));
+	git_hash_sha1_update(ctx, padlen, 8);
 
 	/* Output hash */
 	for (i = 0; i < 5; i++)
@@ -285,4 +298,3 @@ int git_hash_final(git_oid *out, git_hash_ctx *ctx)
 
 	return 0;
 }
-

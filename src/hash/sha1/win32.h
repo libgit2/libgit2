@@ -5,12 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_hash_win32_h__
-#define INCLUDE_hash_hash_win32_h__
+#ifndef INCLUDE_hash_sha1_win32_h__
+#define INCLUDE_hash_sha1_win32_h__
 
-#include "common.h"
-
-#include "hash.h"
+#include "hash/sha1.h"
 
 #include <wincrypt.h>
 #include <strsafe.h>
@@ -35,17 +33,6 @@ struct hash_cryptoapi_prov {
  * must therefore be dynamically loaded, and we must inline constants that
  * would not exist when building in pre-Windows 2008 environments.
  */
-
-#define GIT_HASH_CNG_DLL_NAME           "bcrypt.dll"
-
-/* BCRYPT_SHA1_ALGORITHM */
-#define GIT_HASH_CNG_HASH_TYPE          L"SHA1"
-
-/* BCRYPT_OBJECT_LENGTH */
-#define GIT_HASH_CNG_HASH_OBJECT_LEN    L"ObjectLength"
-
-/* BCRYPT_HASH_REUSEABLE_FLAGS */
-#define GIT_HASH_CNG_HASH_REUSABLE      0x00000020
 
 /* Function declarations for CNG */
 typedef NTSTATUS (WINAPI *hash_win32_cng_open_algorithm_provider_fn)(
@@ -106,14 +93,14 @@ struct hash_cng_prov {
 	DWORD hash_object_size;
 };
 
-struct git_hash_prov {
+typedef struct {
 	enum hash_win32_prov_type type;
 
 	union {
 		struct hash_cryptoapi_prov cryptoapi;
 		struct hash_cng_prov cng;
 	} prov;
-};
+} git_hash_prov;
 
 /* Hash contexts */
 
@@ -128,7 +115,7 @@ struct hash_cng_ctx {
 	PBYTE hash_object;
 };
 
-struct git_hash_ctx {
+struct git_hash_sha1_ctx {
 	enum hash_win32_prov_type type;
 	git_hash_prov *prov;
 
@@ -137,7 +124,5 @@ struct git_hash_ctx {
 		struct hash_cng_ctx cng;
 	} ctx;
 };
-
-extern int git_hash_global_init(void);
 
 #endif
