@@ -9,7 +9,9 @@ set -e
 
 SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( pwd ) )}
 BUILD_DIR=$(pwd)
+BUILD_PATH=${BUILD_PATH:=$PATH}
 CC=${CC:-cc}
+CMAKE=$(which cmake)
 
 indent() { sed "s/^/    /"; }
 
@@ -31,7 +33,7 @@ echo "Kernel version:"
 uname -a 2>&1 | indent
 
 echo "CMake version:"
-cmake --version 2>&1 | indent
+env PATH="$BUILD_PATH" "$CMAKE" --version 2>&1 | indent
 echo "Compiler version:"
 $CC --version 2>&1 | indent
 echo ""
@@ -41,11 +43,11 @@ echo "## Configuring build environment"
 echo "##############################################################################"
 
 echo cmake ${SOURCE_DIR} -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON ${CMAKE_OPTIONS}
-cmake ${SOURCE_DIR} -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON ${CMAKE_OPTIONS}
+env PATH="$BUILD_PATH" "$CMAKE" ${SOURCE_DIR} -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON ${CMAKE_OPTIONS}
 
 echo ""
 echo "##############################################################################"
 echo "## Building libgit2"
 echo "##############################################################################"
 
-cmake --build .
+env PATH="$BUILD_PATH" "$CMAKE" --build .

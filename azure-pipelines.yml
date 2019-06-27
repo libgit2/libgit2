@@ -99,8 +99,8 @@ jobs:
   - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
+        BUILD_PATH: $(Agent.TempDirectory)\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
         CMAKE_OPTIONS: -G"MinGW Makefiles" -DDEPRECATE_HARD=ON
-        PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
 
 - job: windows_mingw_x86
   displayName: 'Windows (x86; MinGW)'
@@ -115,8 +115,8 @@ jobs:
   - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
+        BUILD_PATH: $(Agent.TempDirectory)\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
         CMAKE_OPTIONS: -G"MinGW Makefiles" -DDEPRECATE_HARD=ON
-        PATH: $(Agent.TempDirectory)\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
 
 - job: documentation
   displayName: 'Generate Documentation'
