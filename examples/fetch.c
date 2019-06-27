@@ -43,10 +43,10 @@ static int transfer_progress_cb(const git_indexer_progress *stats, void *payload
 	(void)payload;
 
 	if (stats->received_objects == stats->total_objects) {
-		printf("Resolving deltas %d/%d\r",
+		printf("Resolving deltas %u/%u\r",
 		       stats->indexed_deltas, stats->total_deltas);
 	} else if (stats->total_objects > 0) {
-		printf("Received %d/%d objects (%d) in %" PRIuZ " bytes\r",
+		printf("Received %u/%u objects (%u) in %" PRIuZ " bytes\r",
 		       stats->received_objects, stats->total_objects,
 		       stats->indexed_objects, stats->received_bytes);
 	}
@@ -92,10 +92,10 @@ int lg2_fetch(git_repository *repo, int argc, char **argv)
 	 */
 	stats = git_remote_stats(remote);
 	if (stats->local_objects > 0) {
-		printf("\rReceived %d/%d objects in %" PRIuZ " bytes (used %d local objects)\n",
+		printf("\rReceived %u/%u objects in %" PRIuZ " bytes (used %u local objects)\n",
 		       stats->indexed_objects, stats->total_objects, stats->received_bytes, stats->local_objects);
 	} else{
-		printf("\rReceived %d/%d objects in %" PRIuZ "bytes\n",
+		printf("\rReceived %u/%u objects in %" PRIuZ "bytes\n",
 			stats->indexed_objects, stats->total_objects, stats->received_bytes);
 	}
 

@@ -23,11 +23,11 @@ static void print_progress(const progress_data *pd)
 
 	if (pd->fetch_progress.total_objects &&
 		pd->fetch_progress.received_objects == pd->fetch_progress.total_objects) {
-		printf("Resolving deltas %d/%d\r",
+		printf("Resolving deltas %u/%u\r",
 		       pd->fetch_progress.indexed_deltas,
 		       pd->fetch_progress.total_deltas);
 	} else {
-		printf("net %3d%% (%4"PRIuZ" kb, %5d/%5d)  /  idx %3d%% (%5d/%5d)  /  chk %3d%% (%4" PRIuZ "/%4" PRIuZ ") %s\n",
+		printf("net %3d%% (%4" PRIuZ " kb, %5u/%5u)  /  idx %3d%% (%5u/%5u)  /  chk %3d%% (%4" PRIuZ "/%4" PRIuZ")%s\n",
 		   network_percent, kbytes,
 		   pd->fetch_progress.received_objects, pd->fetch_progress.total_objects,
 		   index_percent, pd->fetch_progress.indexed_objects, pd->fetch_progress.total_objects,
