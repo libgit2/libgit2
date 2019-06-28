@@ -76,7 +76,7 @@ int git_win32__stack_compare(
 }
 
 int git_win32__stack_format(
-	char *pbuf, int buf_len,
+	char *pbuf, size_t buf_len,
 	const git_win32__stack__raw_data *pdata,
 	const char *prefix, const char *suffix)
 {
@@ -171,7 +171,7 @@ int git_win32__stack_format(
 }
 
 int git_win32__stack(
-	char * pbuf, int buf_len,
+	char * pbuf, size_t buf_len,
 	int skip,
 	const char *prefix, const char *suffix)
 {
