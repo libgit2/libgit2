@@ -191,6 +191,12 @@ int git_win32__find_system_dirs(git_str *out, const wchar_t *subdir)
 			&buf, HKEY_CURRENT_USER, REG_MSYSGIT_INSTALL_LOCAL, subdir) && buf.size)
 		git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
+#ifdef GIT_ARCH_64
+	if (!win32_find_git_in_registry(
+			&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL_LOCAL, subdir) && buf.size)
+		git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
+#endif
+
 	if (!win32_find_git_in_registry(
 			&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL, subdir) && buf.size)
 		git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
