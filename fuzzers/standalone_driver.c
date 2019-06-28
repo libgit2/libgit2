@@ -24,7 +24,7 @@ static int run_one_file(const char *filename)
 	int error = 0;
 
 	if (git_futils_readbuffer(&buf, filename) < 0) {
-		fprintf(stderr, "Failed to read %s: %m\n", filename);
+		fprintf(stderr, "Failed to read %s: %s\n", filename, git_error_last()->message);
 		error = -1;
 		goto exit;
 	}
@@ -57,7 +57,8 @@ int main(int argc, char **argv)
 	LLVMFuzzerInitialize(&argc, &argv);
 
 	if (git_path_dirload(&corpus_files, argv[1], 0, 0x0) < 0) {
-		fprintf(stderr, "Failed to scan corpus directory: %m\n");
+		fprintf(stderr, "Failed to scan corpus directory '%s': %s\n",
+			argv[1], git_error_last()->message);
 		error = -1;
 		goto exit;
 	}
