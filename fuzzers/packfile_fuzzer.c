@@ -15,8 +15,7 @@
 
 #include "git2.h"
 #include "git2/sys/mempack.h"
-
-#define UNUSED(x) (void)(x)
+#include "common.h"
 
 static git_odb *odb = NULL;
 static git_odb_backend *mempack = NULL;
@@ -27,8 +26,9 @@ static const unsigned int base_obj_len = 2;
 
 int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
-	UNUSED(argc);
-	UNUSED(argv);
+	GIT_UNUSED(argc);
+	GIT_UNUSED(argv);
+
 	if (git_libgit2_init() < 0) {
 		fprintf(stderr, "Failed to initialize libgit2\n");
 		abort();
@@ -59,7 +59,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	bool append_hash = false;
 	git_oid id;
 	char hash[GIT_OID_HEXSZ + 1] = {0};
-	char path[PATH_MAX];
+	char path[GIT_PATH_MAX];
 
 	if (size == 0)
 		return 0;
@@ -111,9 +111,9 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	git_oid_fmt(hash, git_indexer_hash(indexer));
 	printf("Generated packfile %s\n", hash);
 	snprintf(path, sizeof(path), "pack-%s.idx", hash);
-	unlink(path);
+	p_unlink(path);
 	snprintf(path, sizeof(path), "pack-%s.pack", hash);
-	unlink(path);
+	p_unlink(path);
 
 cleanup:
 	git_mempack_reset(mempack);
