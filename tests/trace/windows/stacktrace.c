@@ -132,7 +132,7 @@ static void aux_cb_alloc__1(unsigned int *aux_id)
 	*aux_id = aux_counter++;
 }
 
-static void aux_cb_lookup__1(unsigned int aux_id, char *aux_msg, unsigned int aux_msg_len)
+static void aux_cb_lookup__1(unsigned int aux_id, char *aux_msg, size_t aux_msg_len)
 {
 	p_snprintf(aux_msg, aux_msg_len, "\tQQ%08x\n", aux_id);
 }
