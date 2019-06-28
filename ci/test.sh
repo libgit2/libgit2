@@ -256,9 +256,7 @@ if [ -z "$SKIP_FUZZERS" ]; then
 	echo "## Running fuzzers"
 	echo "##############################################################################"
 
-	for fuzzer in fuzzers/*_fuzzer; do
-		"${fuzzer}" "${SOURCE_DIR}/fuzzers/corpora/$(basename "${fuzzer%_fuzzer}")" || failure
-	done
+	ctest -V -R 'fuzzer'
 fi
 
 cleanup
