@@ -7,11 +7,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <unistd.h>
 
 #include "git2.h"
 #include "git2/sys/transport.h"

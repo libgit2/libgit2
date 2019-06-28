@@ -5,11 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include <assert.h>
-#include <dirent.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
 
 #include "git2.h"
 #include "fileops.h"

@@ -7,11 +7,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <limits.h>
-#include <unistd.h>
 
 #include "git2.h"
 #include "git2/sys/mempack.h"
