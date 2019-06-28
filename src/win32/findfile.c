@@ -91,7 +91,7 @@ static int win32_find_git_in_path(git_buf *buf, const wchar_t *gitexe, const wch
 			continue;
 		wcscpy(&root.path[root.len], gitexe);
 
-		if (_waccess(root.path, F_OK) == 0 && root.len > 5) {
+		if (_waccess(root.path, F_OK) == 0 && root.len > 5 && (root.len - 4 + wcslen(subdir) < MAX_PATH)) {
 			/* replace "bin\\" or "cmd\\" with subdir */
 			wcscpy(&root.path[root.len - 4], subdir);
 
