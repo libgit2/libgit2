@@ -1421,7 +1421,8 @@ static bool are_symlinks_supported(const char *wd_path)
 	git_buf xdg_buf = GIT_BUF_INIT;
 	git_buf system_buf = GIT_BUF_INIT;
 	git_buf programdata_buf = GIT_BUF_INIT;
-	git_buf path = GIT_BUF_INIT;
+	git_buf filepath = GIT_BUF_INIT;
+	git_buf linkpath = GIT_BUF_INIT;
 	int fd;
 	struct stat st;
 	int symlinks = 0;
@@ -1450,23 +1451,29 @@ static bool are_symlinks_supported(const char *wd_path)
 		goto done;
 #endif
 
-	if ((fd = git_futils_mktmp(&path, wd_path, 0666)) < 0 ||
+	if ((fd = git_futils_mktmp(&filepath, wd_path, 0666)) < 0 ||
 	    p_close(fd) < 0 ||
-	    p_unlink(path.ptr) < 0 ||
-	    p_symlink("testing", path.ptr) < 0 ||
-	    p_lstat(path.ptr, &st) < 0)
+	    (fd = git_futils_mktmp(&linkpath, wd_path, 0666)) < 0 ||
+	    p_close(fd) < 0 ||
+	    p_unlink(linkpath.ptr) < 0 ||
+	    p_symlink(filepath.ptr, linkpath.ptr) < 0 ||
+	    p_lstat(linkpath.ptr, &st) < 0)
 		goto done;
 
 	symlinks = (S_ISLNK(st.st_mode) != 0);
 
-	(void)p_unlink(path.ptr);
-
 done:
+	if (filepath.size)
+		(void)p_unlink(filepath.ptr);
+	if (linkpath.size)
+		(void)p_unlink(linkpath.ptr);
+
 	git_buf_dispose(&global_buf);
 	git_buf_dispose(&xdg_buf);
 	git_buf_dispose(&system_buf);
 	git_buf_dispose(&programdata_buf);
-	git_buf_dispose(&path);
+	git_buf_dispose(&filepath);
+	git_buf_dispose(&linkpath);
 	git_config_free(config);
 	return symlinks != 0;
 }
