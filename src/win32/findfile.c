@@ -91,9 +91,17 @@ static int win32_find_git_in_path(git_buf *buf, const wchar_t *gitexe, const wch
 			continue;
 		wcscpy(&root.path[root.len], gitexe);
 
-		if (_waccess(root.path, F_OK) == 0 && root.len > 5 && (root.len - 4 + wcslen(subdir) < MAX_PATH)) {
-			/* replace "bin\\" or "cmd\\" with subdir */
-			wcscpy(&root.path[root.len - 4], subdir);
+		if (!_waccess(root.path, F_OK)) {
+			/* replace "bin\\" or "cmd\\" of a Git for Windows installation with subdir OR append path */
+			if (root.len > 5 && wcscmp(root.path - 4, L"cmd\\") || wcscmp(root.path - 4, L"bin\\")) {
+				if (root.len - 4 + wcslen(subdir) >= MAX_PATH)
+					continue;
+				wcscpy(&root.path[root.len - 4], subdir);
+			} else {
+				if (root.len + wcslen(subdir) >= MAX_PATH)
+					continue;
+				wcscat(root.path, subdir);
+			}
 
 			win32_path_to_8(buf, root.path);
 			return 0;
