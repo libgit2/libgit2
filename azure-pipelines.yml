@@ -16,8 +16,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON
-       LEAK_CHECK=valgrind
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: linux_amd64_trusty_gcc_mbedtls
   displayName: 'Linux (amd64; Trusty; GCC; mbedTLS)'
@@ -29,8 +28,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
-       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON
-       LEAK_CHECK=valgrind
+       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: linux_amd64_trusty_clang_openssl
   displayName: 'Linux (amd64; Trusty; Clang; OpenSSL)'
@@ -42,8 +40,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON
-       LEAK_CHECK=valgrind
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: linux_amd64_trusty_clang_mbedtls
   displayName: 'Linux (amd64; Trusty; Clang; mbedTLS)'
@@ -55,8 +52,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
-       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON
-       LEAK_CHECK=valgrind
+       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: macos
   displayName: 'macOS'
@@ -70,8 +66,7 @@ jobs:
       environmentVariables:
         TMPDIR: $(Agent.TempDirectory)
         PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
-        LEAK_CHECK: leaks
-        CMAKE_OPTIONS: -G Ninja -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON
+        CMAKE_OPTIONS: -G Ninja -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks
         SKIP_SSH_TESTS: true
 
 - job: windows_vs_amd64
