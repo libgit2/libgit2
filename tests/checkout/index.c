@@ -181,7 +181,7 @@ void test_checkout_index__honor_coresymlinks_default_true(void)
 
 	cl_must_pass(p_mkdir("symlink", 0777));
 
-	if (!filesystem_supports_symlinks("symlink/test"))
+	if (!git_path_supports_symlinks("symlink/test"))
 		cl_skip();
 
 #ifdef GIT_WIN32
@@ -214,7 +214,7 @@ void test_checkout_index__honor_coresymlinks_default_false(void)
 	 * supports symlinks.  Bail entirely on POSIX platforms that
 	 * do support symlinks.
 	 */
-	if (filesystem_supports_symlinks("symlink/test"))
+	if (git_path_supports_symlinks("symlink/test"))
 		cl_skip();
 #endif
 
@@ -226,7 +226,7 @@ void test_checkout_index__coresymlinks_set_to_true_fails_when_unsupported(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	if (filesystem_supports_symlinks("testrepo/test")) {
+	if (git_path_supports_symlinks("testrepo/test")) {
 		cl_skip();
 	}
 
@@ -242,7 +242,7 @@ void test_checkout_index__honor_coresymlinks_setting_set_to_true(void)
 	char link_data[GIT_PATH_MAX];
 	size_t link_size = GIT_PATH_MAX;
 
-	if (!filesystem_supports_symlinks("testrepo/test")) {
+	if (!git_path_supports_symlinks("testrepo/test")) {
 		cl_skip();
 	}
 
