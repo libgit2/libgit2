@@ -12,6 +12,7 @@
 #include <locale.h>
 
 #include "clar_libgit2.h"
+#include "futils.h"
 #include "posix.h"
 #include "userdiff.h"
 
@@ -262,4 +263,25 @@ void test_core_posix__p_regcomp_compile_userdiff_regexps(void)
 		p_regfree(&preg);
 		cl_assert(!error);
 	}
+}
+
+void test_core_posix__unlink_removes_symlink(void)
+{
+	if (!git_path_supports_symlinks(clar_sandbox_path()))
+		clar__skip();
+
+	cl_git_mkfile("file", "Dummy file.");
+	cl_git_pass(git_futils_mkdir("dir", 0777, 0));
+
+	cl_must_pass(p_symlink("file", "file-symlink"));
+	cl_must_pass(p_symlink("dir", "dir-symlink"));
+
+	cl_must_pass(p_unlink("file-symlink"));
+	cl_must_pass(p_unlink("dir-symlink"));
+
+	cl_assert(git_path_exists("file"));
+	cl_assert(git_path_exists("dir"));
+
+	cl_must_pass(p_unlink("file"));
+	cl_must_pass(p_rmdir("dir"));
 }
