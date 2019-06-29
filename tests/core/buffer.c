@@ -2,7 +2,7 @@
 #include "buffer.h"
 #include "buf_text.h"
 #include "git2/sys/hashsig.h"
-#include "fileops.h"
+#include "futils.h"
 
 #define TESTSTR "Have you seen that? Have you seeeen that??"
 const char *test_string = TESTSTR;

@@ -4,7 +4,7 @@
 #include "git2/sys/commit.h"
 #include "../submodule/submodule_helpers.h"
 #include "remote.h"
-#include "fileops.h"
+#include "futils.h"
 #include "repository.h"
 
 #define LIVE_REPO_URL "git://github.com/libgit2/TestGitRepository"

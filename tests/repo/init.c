@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "fileops.h"
+#include "futils.h"
 #include "repository.h"
 #include "config.h"
 #include "path.h"

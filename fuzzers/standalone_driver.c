@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #include "git2.h"
-#include "fileops.h"
+#include "futils.h"
 #include "path.h"
 
 extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);

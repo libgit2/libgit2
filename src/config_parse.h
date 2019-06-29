@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "array.h"
-#include "fileops.h"
+#include "futils.h"
 #include "oid.h"
 #include "parse.h"
 

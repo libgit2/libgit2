@@ -8,7 +8,7 @@
 #include "status.h"
 
 #include "git2.h"
-#include "fileops.h"
+#include "futils.h"
 #include "hash.h"
 #include "vector.h"
 #include "tree.h"

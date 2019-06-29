@@ -16,7 +16,7 @@
 #include "commit.h"
 #include "tag.h"
 #include "blob.h"
-#include "fileops.h"
+#include "futils.h"
 #include "sysdir.h"
 #include "filebuf.h"
 #include "index.h"

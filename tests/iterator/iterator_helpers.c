@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "iterator.h"
 #include "repository.h"
-#include "fileops.h"
+#include "futils.h"
 #include "iterator_helpers.h"
 #include <stdarg.h>
 

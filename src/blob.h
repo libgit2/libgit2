@@ -12,7 +12,7 @@
 #include "git2/blob.h"
 #include "repository.h"
 #include "odb.h"
-#include "fileops.h"
+#include "futils.h"
 
 struct git_blob {
 	git_object object;

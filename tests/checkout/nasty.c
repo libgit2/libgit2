@@ -4,7 +4,7 @@
 #include "git2/checkout.h"
 #include "repository.h"
 #include "buffer.h"
-#include "fileops.h"
+#include "futils.h"
 
 static const char *repo_name = "nasty";
 static git_repository *repo;

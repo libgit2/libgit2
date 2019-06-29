@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "fileops.h"
+#include "futils.h"
 #include "refs.h"
 #include "tree.h"
 #include "merge_helpers.h"

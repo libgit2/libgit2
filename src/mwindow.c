@@ -8,7 +8,7 @@
 #include "mwindow.h"
 
 #include "vector.h"
-#include "fileops.h"
+#include "futils.h"
 #include "map.h"
 #include "global.h"
 #include "strmap.h"

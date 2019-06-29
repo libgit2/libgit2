@@ -7,7 +7,7 @@
 
 #include "reader.h"
 
-#include "fileops.h"
+#include "futils.h"
 #include "blob.h"
 
 #include "git2/tree.h"

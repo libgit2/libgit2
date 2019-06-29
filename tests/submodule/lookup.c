@@ -2,7 +2,7 @@
 #include "submodule_helpers.h"
 #include "git2/sys/repository.h"
 #include "repository.h"
-#include "fileops.h"
+#include "futils.h"
 
 static git_repository *g_repo = NULL;
 

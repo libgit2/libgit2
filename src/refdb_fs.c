@@ -10,7 +10,7 @@
 #include "refs.h"
 #include "hash.h"
 #include "repository.h"
-#include "fileops.h"
+#include "futils.h"
 #include "filebuf.h"
 #include "pack.h"
 #include "reflog.h"

@@ -14,7 +14,7 @@
 #include "diff.h"
 #include "diff_generate.h"
 #include "path.h"
-#include "fileops.h"
+#include "futils.h"
 #include "config.h"
 
 git_diff_delta *git_diff__delta_dup(

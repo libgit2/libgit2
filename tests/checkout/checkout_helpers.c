@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "checkout_helpers.h"
 #include "refs.h"
-#include "fileops.h"
+#include "futils.h"
 #include "index.h"
 
 void assert_on_branch(git_repository *repo, const char *branch)

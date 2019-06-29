@@ -15,7 +15,7 @@
 #include "diff_xdiff.h"
 #include "delta.h"
 #include "zstream.h"
-#include "fileops.h"
+#include "futils.h"
 
 static void diff_output_init(
 	git_patch_generated_output *, const git_diff_options *, git_diff_file_cb,

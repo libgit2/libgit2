@@ -11,7 +11,7 @@
 
 #include "git2/submodule.h"
 #include "git2/repository.h"
-#include "fileops.h"
+#include "futils.h"
 
 /* Notes:
  *

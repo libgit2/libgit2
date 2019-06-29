@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 
-#include "fileops.h"
+#include "futils.h"
 #include "repo/repo_helpers.h"
 
 #define CLEAR_FOR_CORE_FILEMODE(M) ((M) &= ~0177)

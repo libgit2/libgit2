@@ -11,7 +11,7 @@
 #include "git2/oid.h"
 
 #include "buffer.h"
-#include "fileops.h"
+#include "futils.h"
 #include "filebuf.h"
 #include "refs.h"
 #include "repository.h"

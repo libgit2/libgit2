@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#include "fileops.h"
+#include "futils.h"
 #include "hash.h"
 #include <zlib.h>
 

@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "fileops.h"
+#include "futils.h"
 #include "status_helpers.h"
 #include "../submodule/submodule_helpers.h"
 

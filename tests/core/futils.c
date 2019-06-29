@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "fileops.h"
+#include "futils.h"
 
 /* Fixture setup and teardown */
 void test_core_futils__initialize(void)

@@ -6,7 +6,7 @@
 #include "merge_helpers.h"
 #include "conflict_data.h"
 #include "refs.h"
-#include "fileops.h"
+#include "futils.h"
 #include "diff_xdiff.h"
 
 #define TEST_REPO_PATH "merge-resolve"

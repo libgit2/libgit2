@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "../status/status_helpers.h"
 #include "posix.h"
-#include "fileops.h"
+#include "futils.h"
 
 static git_repository *g_repo = NULL;
 #define TEST_DIR "addall"

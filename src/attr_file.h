@@ -14,7 +14,7 @@
 #include "vector.h"
 #include "pool.h"
 #include "buffer.h"
-#include "fileops.h"
+#include "futils.h"
 
 #define GIT_ATTR_FILE			".gitattributes"
 #define GIT_ATTR_FILE_INREPO	"attributes"

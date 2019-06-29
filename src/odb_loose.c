@@ -10,7 +10,7 @@
 #include <zlib.h>
 #include "git2/object.h"
 #include "git2/sys/odb_backend.h"
-#include "fileops.h"
+#include "futils.h"
 #include "hash.h"
 #include "odb.h"
 #include "delta.h"

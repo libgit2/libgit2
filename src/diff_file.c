@@ -12,7 +12,7 @@
 #include "diff.h"
 #include "diff_generate.h"
 #include "odb.h"
-#include "fileops.h"
+#include "futils.h"
 #include "filter.h"
 
 #define DIFF_MAX_FILESIZE 0x20000000

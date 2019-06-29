@@ -19,7 +19,7 @@
 #include "git2/tree.h"
 
 #include "remote.h"
-#include "fileops.h"
+#include "futils.h"
 #include "refs.h"
 #include "path.h"
 #include "repository.h"

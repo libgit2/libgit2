@@ -8,7 +8,7 @@
 #include "common.h"
 
 #include "../posix.h"
-#include "../fileops.h"
+#include "../futils.h"
 #include "path.h"
 #include "path_w32.h"
 #include "utf-conv.h"

@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
-#include "fileops.h"
+#include "futils.h"
 
 #ifdef GIT_WIN32
 # define ROOT_PREFIX "C:"

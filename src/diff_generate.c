@@ -9,7 +9,7 @@
 
 #include "diff.h"
 #include "patch_generate.h"
-#include "fileops.h"
+#include "futils.h"
 #include "config.h"
 #include "attr_file.h"
 #include "filter.h"

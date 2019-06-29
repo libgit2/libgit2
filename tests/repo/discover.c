@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 
 #include "odb.h"
-#include "fileops.h"
+#include "futils.h"
 #include "repository.h"
 
 #define TEMP_REPO_FOLDER "temprepo/"

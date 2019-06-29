@@ -3,7 +3,7 @@
 #include "git2/clone.h"
 #include "git2/cred_helpers.h"
 #include "remote.h"
-#include "fileops.h"
+#include "futils.h"
 #include "refs.h"
 
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"

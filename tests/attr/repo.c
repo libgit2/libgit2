@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "fileops.h"
+#include "futils.h"
 #include "git2/attr.h"
 #include "attr.h"
 #include "sysdir.h"

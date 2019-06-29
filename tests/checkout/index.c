@@ -2,7 +2,7 @@
 #include "checkout_helpers.h"
 
 #include "git2/checkout.h"
-#include "fileops.h"
+#include "futils.h"
 #include "repository.h"
 #include "remote.h"
 #include "repo/repo_helpers.h"

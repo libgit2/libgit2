@@ -4,7 +4,7 @@
 #include "git2/checkout.h"
 #include "repository.h"
 #include "buffer.h"
-#include "fileops.h"
+#include "futils.h"
 
 static git_repository *g_repo;
 static git_checkout_options g_opts;

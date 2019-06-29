@@ -9,7 +9,7 @@
 
 #include "repository.h"
 #include "posix.h"
-#include "fileops.h"
+#include "futils.h"
 #include "index.h"
 #include "diff_xdiff.h"
 #include "merge.h"

@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "checkout_helpers.h"
 #include "../filter/crlf.h"
-#include "fileops.h"
+#include "futils.h"
 
 #include "git2/checkout.h"
 #include "repository.h"
