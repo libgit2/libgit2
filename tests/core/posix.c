@@ -122,7 +122,7 @@ void test_core_posix__utimes(void)
 	cl_git_mkfile("foo", "Dummy file.");
 	cl_must_pass(p_utimes("foo", times));
 
-	p_stat("foo", &st);
+	cl_must_pass(p_stat("foo", &st));
 	cl_assert_equal_i(1234567890, st.st_atime);
 	cl_assert_equal_i(1234567890, st.st_mtime);
 
@@ -135,9 +135,9 @@ void test_core_posix__utimes(void)
 
 	cl_must_pass(fd = p_open("foo", O_RDWR));
 	cl_must_pass(p_futimes(fd, times));
-	p_close(fd);
+	cl_must_pass(p_close(fd));
 
-	p_stat("foo", &st);
+	cl_must_pass(p_stat("foo", &st));
 	cl_assert_equal_i(1414141414, st.st_atime);
 	cl_assert_equal_i(1414141414, st.st_mtime);
 
@@ -148,11 +148,11 @@ void test_core_posix__utimes(void)
 	cl_must_pass(p_utimes("foo", NULL));
 
 	curtime = time(NULL);
-	p_stat("foo", &st);
+	cl_must_pass(p_stat("foo", &st));
 	cl_assert((st.st_atime - curtime) < 5);
 	cl_assert((st.st_mtime - curtime) < 5);
 
-	p_unlink("foo");
+	cl_must_pass(p_unlink("foo"));
 }
 
 static void try_set_locale(int category)
