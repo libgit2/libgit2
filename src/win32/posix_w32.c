@@ -251,8 +251,24 @@ int p_link(const char *old, const char *new)
 
 GIT_INLINE(int) unlink_once(const wchar_t *path)
 {
+	DWORD error;
+
 	if (DeleteFileW(path))
 		return 0;
+
+	if ((error = GetLastError()) == ERROR_ACCESS_DENIED) {
+		WIN32_FILE_ATTRIBUTE_DATA fdata;
+		if (!GetFileAttributesExW(path, GetFileExInfoStandard, &fdata) ||
+		    !(fdata.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) ||
+		    !(fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+			goto out;
+
+		if (RemoveDirectoryW(path))
+			return 0;
+	}
+
+out:
+	SetLastError(error);
 
 	if (last_error_retryable())
 		return GIT_RETRY;
