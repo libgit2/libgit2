@@ -2015,7 +2015,13 @@ http_parse_host(const char * buf, struct http_parser_url *u, int found_at) {
         break;
 
       case s_http_host_v6:
+#ifdef WIN32
+      case s_http_host_v6_start:
+      case s_http_host_v6_end:
+        if ((s != s_http_host_v6) && (s != s_http_host_v6_start) && (s != s_http_host_v6_end)) {
+#else
         if (s != s_http_host_v6) {
+#endif
           u->field_data[UF_HOST].off = (uint16_t)(p - buf);
         }
         u->field_data[UF_HOST].len++;
