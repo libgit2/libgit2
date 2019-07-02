@@ -673,6 +673,6 @@ void test_network_urlparse__user_pass_port_ipv6(void)
 
 void test_network_urlparse__fails_ipv6(void)
 {
-	/* Invalid chracter inside address */
+	/* Invalid character inside address */
 	cl_git_fail_with(GIT_EINVALIDSPEC, git_net_url_parse(&conndata, "http://[fe8o::dcad:beff:fe00:0001]/resource"));
 }
