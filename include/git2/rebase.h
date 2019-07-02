@@ -134,7 +134,7 @@ typedef enum {
 #define GIT_REBASE_OPTIONS_VERSION 1
 #define GIT_REBASE_OPTIONS_INIT \
 	{ GIT_REBASE_OPTIONS_VERSION, 0, 0, NULL, GIT_MERGE_OPTIONS_INIT, \
-	  GIT_CHECKOUT_OPTIONS_INIT, 0, NULL }
+	  GIT_CHECKOUT_OPTIONS_INIT, NULL, NULL }
 
 /** Indicates that a rebase operation is not (yet) in progress. */
 #define GIT_REBASE_NO_OPERATION SIZE_MAX

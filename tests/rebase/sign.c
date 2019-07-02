@@ -48,7 +48,6 @@ void test_rebase_sign__passthrough_signing_cb(void)
 	git_oid commit_id, expected_id;
 	git_rebase_options rebase_opts = GIT_REBASE_OPTIONS_INIT;
 	git_commit *commit;
-	int error;
 	const char *expected_commit_raw_header = "tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
 parent f87d14a4a236582a0278a916340a793714256864\n\
 author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
@@ -73,8 +72,7 @@ committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n";
 	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
 	cl_assert_equal_s(expected_commit_raw_header, git_commit_raw_header(commit));
 
-	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
-	cl_assert_equal_i(GIT_ITEROVER, error);
+	cl_git_fail_with(GIT_ITEROVER, git_rebase_next(&rebase_operation, rebase));
 
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
@@ -126,7 +124,6 @@ void test_rebase_sign__gpg_with_no_field(void)
 	git_oid commit_id, expected_id;
 	git_rebase_options rebase_opts = GIT_REBASE_OPTIONS_INIT;
 	git_commit *commit;
-	int error;
 	const char *expected_commit_raw_header = "tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
 parent f87d14a4a236582a0278a916340a793714256864\n\
 author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
@@ -167,8 +164,7 @@ gpgsig -----BEGIN PGP SIGNATURE-----\n\
 	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
 	cl_assert_equal_s(expected_commit_raw_header, git_commit_raw_header(commit));
 
-	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
-	cl_assert_equal_i(GIT_ITEROVER, error);
+	cl_git_fail_with(GIT_ITEROVER, git_rebase_next(&rebase_operation, rebase));
 
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
@@ -211,7 +207,6 @@ void test_rebase_sign__custom_signature_field(void)
 	git_oid commit_id, expected_id;
 	git_rebase_options rebase_opts = GIT_REBASE_OPTIONS_INIT;
 	git_commit *commit;
-	int error;
 	const char *expected_commit_raw_header = "tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
 parent f87d14a4a236582a0278a916340a793714256864\n\
 author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
@@ -237,8 +232,7 @@ magicsig magic word: pretty please\n";
 	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
 	cl_assert_equal_s(expected_commit_raw_header, git_commit_raw_header(commit));
 
-	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
-	cl_assert_equal_i(GIT_ITEROVER, error);
+	cl_git_fail_with(GIT_ITEROVER, git_rebase_next(&rebase_operation, rebase));
 
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
