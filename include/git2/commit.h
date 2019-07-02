@@ -480,7 +480,8 @@ GIT_EXTERN(int) git_commit_create_buffer(
  *
  * @param out the resulting commit id
  * @param commit_content the content of the unsigned commit object
- * @param signature the signature to add to the commit
+ * @param signature the signature to add to the commit. Leave `NULL`
+ * to create a commit without adding a signature field.
  * @param signature_field which header field should contain this
  * signature. Leave `NULL` for the default of "gpgsig"
  * @return 0 or an error code
