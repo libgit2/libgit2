@@ -947,7 +947,8 @@ static int rebase_commit__create(
 	git_oid tree_id, commit_id;
 	git_buf commit_content = GIT_BUF_INIT, commit_signature = GIT_BUF_INIT,
 		signature_field = GIT_BUF_INIT;
-	const char *signature_field_as_string = NULL;
+	const char *signature_field_string = NULL,
+		*commit_signature_string = NULL;
 	int error;
 
 	operation = git_array_get(rebase->operations, rebase->current);
@@ -978,42 +979,37 @@ static int rebase_commit__create(
 		message = git_commit_message(current_commit);
 	}
 
-	/* this error will be cleared by the signing process, but should be set
-	 * to signal the unsigned commit create process if we are not going to sign */
-	error = GIT_PASSTHROUGH;
+	if ((error = git_commit_create_buffer(&commit_content, rebase->repo, author, committer,
+			message_encoding, message, tree, 1, (const git_commit **)&parent_commit)) < 0)
+		goto done;
+
 	if (rebase->options.signing_cb) {
-		if ((error = git_commit_create_buffer(&commit_content, rebase->repo, author, committer,
-				message_encoding, message, tree, 1, (const git_commit **)&parent_commit)) < 0)
-			goto done;
-
 		git_error_clear();
-    error = git_error_set_after_callback_function(rebase->options.signing_cb(
-      &commit_signature, &signature_field, git_buf_cstr(&commit_content),
-      rebase->options.payload), "commit signing_cb failed");
-    if (error == GIT_PASSTHROUGH)
-      git_error_clear();
-    else if (error < 0)
-      goto done;
-
-		if (error != GIT_PASSTHROUGH) {
-			if (git_buf_is_allocated(&signature_field)) {
-				assert(git_buf_contains_nul(&signature_field));
-				signature_field_as_string = git_buf_cstr(&signature_field);
-			}
-
-			assert(git_buf_is_allocated(&commit_signature));
-			assert(git_buf_contains_nul(&commit_signature));
-			if ((error = git_commit_create_with_signature(&commit_id, rebase->repo,
-					git_buf_cstr(&commit_content), git_buf_cstr(&commit_signature),
-					signature_field_as_string)))
-				goto done;
-		}
+		error = git_error_set_after_callback_function(rebase->options.signing_cb(
+			&commit_signature, &signature_field, git_buf_cstr(&commit_content),
+			rebase->options.payload), "commit signing_cb failed");
+		if (error == GIT_PASSTHROUGH) {
+			git_buf_dispose(&commit_signature);
+			git_buf_dispose(&signature_field);
+			git_error_clear();
+			error = GIT_OK;
+		} else if (error < 0)
+			goto done;
 	}
 
-	/* if we skipped signing, create the commit normally */
-	if (error == GIT_PASSTHROUGH &&
-		(error = git_commit_create(&commit_id, rebase->repo, NULL, author, committer,
-			message_encoding, message, tree, 1, (const git_commit **)&parent_commit)) < 0)
+	if (git_buf_is_allocated(&commit_signature)) {
+		assert(git_buf_contains_nul(&commit_signature));
+		commit_signature_string = git_buf_cstr(&commit_signature);
+	}
+
+	if (git_buf_is_allocated(&signature_field)) {
+		assert(git_buf_contains_nul(&signature_field));
+		signature_field_string = git_buf_cstr(&signature_field);
+	}
+
+	if ((error = git_commit_create_with_signature(&commit_id, rebase->repo,
+			git_buf_cstr(&commit_content), commit_signature_string,
+			signature_field_string)))
 		goto done;
 
 	if ((error = git_commit_lookup(&commit, rebase->repo, &commit_id)) < 0)
