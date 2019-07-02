@@ -987,13 +987,13 @@ static int rebase_commit__create(
 			goto done;
 
 		git_error_clear();
-		if ((error = rebase->options.signing_cb(&commit_signature, &signature_field,
-				git_buf_cstr(&commit_content), rebase->options.payload)) < 0 &&
-				error != GIT_PASSTHROUGH) {
-			if (git_error_last() == NULL)
-				git_error_set(GIT_ERROR_CALLBACK, "commit signing_cb failed");
-			goto done;
-		}
+    error = git_error_set_after_callback_function(rebase->options.signing_cb(
+      &commit_signature, &signature_field, git_buf_cstr(&commit_content),
+      rebase->options.payload), "commit signing_cb failed");
+    if (error == GIT_PASSTHROUGH)
+      git_error_clear();
+    else if (error < 0)
+      goto done;
 
 		if (error != GIT_PASSTHROUGH) {
 			if (git_buf_is_allocated(&signature_field)) {
