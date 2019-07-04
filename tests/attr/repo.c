@@ -2,6 +2,7 @@
 #include "fileops.h"
 #include "git2/attr.h"
 #include "attr.h"
+#include "sysdir.h"
 
 #include "attr_expect.h"
 #include "git2/sys/repository.h"
@@ -17,6 +18,7 @@ void test_attr_repo__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
 	g_repo = NULL;
+	cl_sandbox_set_search_path_defaults();
 }
 
 static struct attr_expected get_one_test_cases[] = {
@@ -375,4 +377,47 @@ void test_attr_repo__bare_repo_with_index(void)
 	cl_assert_equal_s("foobar", values[1]);
 	cl_assert(GIT_ATTR_IS_FALSE(values[2]));
 	cl_assert(GIT_ATTR_IS_UNSPECIFIED(values[3]));
+}
+
+void test_attr_repo__sysdir(void)
+{
+	git_buf sysdir = GIT_BUF_INIT;
+	const char *value;
+
+	cl_git_pass(p_mkdir("system", 0777));
+	cl_git_rewritefile("system/gitattributes", "file merge=foo");
+	cl_git_pass(git_buf_joinpath(&sysdir, clar_sandbox_path(), "system"));
+	cl_git_pass(git_sysdir_set(GIT_SYSDIR_SYSTEM, sysdir.ptr));
+	g_repo = cl_git_sandbox_reopen();
+
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file", "merge"));
+	cl_assert_equal_s(value, "foo");
+
+	cl_git_pass(p_unlink("system/gitattributes"));
+	cl_git_pass(p_rmdir("system"));
+	git_buf_dispose(&sysdir);
+}
+
+void test_attr_repo__sysdir_with_session(void)
+{
+	const char *values[2], *attrs[2] = { "foo", "bar" };
+	git_buf sysdir = GIT_BUF_INIT;
+	git_attr_session session;
+
+	cl_git_pass(p_mkdir("system", 0777));
+	cl_git_rewritefile("system/gitattributes", "file foo=1 bar=2");
+	cl_git_pass(git_buf_joinpath(&sysdir, clar_sandbox_path(), "system"));
+	cl_git_pass(git_sysdir_set(GIT_SYSDIR_SYSTEM, sysdir.ptr));
+	g_repo = cl_git_sandbox_reopen();
+
+	cl_git_pass(git_attr_session__init(&session, g_repo));
+	cl_git_pass(git_attr_get_many_with_session(values, g_repo, &session, 0, "file", ARRAY_SIZE(attrs), attrs));
+
+	cl_assert_equal_s(values[0], "1");
+	cl_assert_equal_s(values[1], "2");
+
+	cl_git_pass(p_unlink("system/gitattributes"));
+	cl_git_pass(p_rmdir("system"));
+	git_buf_dispose(&sysdir);
+	git_attr_session__free(&session);
 }
