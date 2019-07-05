@@ -424,21 +424,27 @@ void git_attr_cache_flush(git_repository *repo)
 int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 {
 	git_attr_cache *cache = git_repository_attr_cache(repo);
-	git_strmap *macros = cache->macros;
-	int error;
+	git_attr_rule *preexisting;
+	bool locked = false;
+	int error = 0;
 
 	/* TODO: generate warning log if (macro->assigns.length == 0) */
 	if (macro->assigns.length == 0)
-		return 0;
+		goto out;
 
-	if (attr_cache_lock(cache) < 0) {
-		git_error_set(GIT_ERROR_OS, "unable to get attr cache lock");
-		error = -1;
-	} else {
-		error = git_strmap_set(macros, macro->match.pattern, macro);
-		git_mutex_unlock(&cache->lock);
-	}
+	if ((error = attr_cache_lock(cache)) < 0)
+		goto out;
+	locked = true;
 
+	if ((preexisting = git_strmap_get(cache->macros, macro->match.pattern)) != NULL)
+	    git_attr_rule__free(preexisting);
+
+	if ((error = git_strmap_set(cache->macros, macro->match.pattern, macro)) < 0)
+	    goto out;
+
+out:
+	if (locked)
+		attr_cache_unlock(cache);
 	return error;
 }
 
