@@ -108,3 +108,23 @@ void test_patch_parse__files_with_whitespaces_succeeds(void)
 	cl_git_pass(git_patch_from_buffer(&patch, PATCH_NAME_WHITESPACE, strlen(PATCH_NAME_WHITESPACE), NULL));
 	git_patch_free(patch);
 }
+
+void test_patch_parse__lifetime_of_patch_does_not_depend_on_buffer(void)
+{
+	git_buf diff = GIT_BUF_INIT, rendered = GIT_BUF_INIT;
+	git_patch *patch;
+
+	cl_git_pass(git_buf_sets(&diff, PATCH_ORIGINAL_TO_CHANGE_MIDDLE));
+	cl_git_pass(git_patch_from_buffer(&patch, diff.ptr, diff.size, NULL));
+	git_buf_dispose(&diff);
+
+	cl_git_pass(git_patch_to_buf(&rendered, patch));
+	cl_assert_equal_s(PATCH_ORIGINAL_TO_CHANGE_MIDDLE, rendered.ptr);
+	git_buf_dispose(&rendered);
+
+	cl_git_pass(git_patch_to_buf(&rendered, patch));
+	cl_assert_equal_s(PATCH_ORIGINAL_TO_CHANGE_MIDDLE, rendered.ptr);
+	git_buf_dispose(&rendered);
+
+	git_patch_free(patch);
+}
