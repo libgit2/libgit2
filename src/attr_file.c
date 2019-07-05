@@ -251,14 +251,13 @@ static bool parse_optimized_patterns(
 int git_attr_file__parse_buffer(
 	git_repository *repo, git_attr_file *attrs, const char *data)
 {
-	int error = 0;
 	const char *scan = data, *context = NULL;
 	git_attr_rule *rule = NULL;
+	int error = 0;
 
-	/* if subdir file path, convert context for file paths */
-	if (attrs->entry &&
-		git_path_root(attrs->entry->path) < 0 &&
-		!git__suffixcmp(attrs->entry->path, "/" GIT_ATTR_FILE))
+	/* If subdir file path, convert context for file paths */
+	if (attrs->entry && git_path_root(attrs->entry->path) < 0 &&
+	    !git__suffixcmp(attrs->entry->path, "/" GIT_ATTR_FILE))
 		context = attrs->entry->path;
 
 	if (git_mutex_lock(&attrs->lock) < 0) {
@@ -267,38 +266,36 @@ int git_attr_file__parse_buffer(
 	}
 
 	while (!error && *scan) {
-		/* allocate rule if needed */
-		if (!rule && !(rule = git__calloc(1, sizeof(*rule)))) {
-			error = -1;
-			break;
-		}
+		/* Allocate rule if needed, otherwise re-use previous rule */
+		if (!rule) {
+			rule = git__calloc(1, sizeof(*rule));
+			GIT_ERROR_CHECK_ALLOC(rule);
+		} else
+			git_attr_rule__clear(rule);
 
-		rule->match.flags =
-			GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_ALLOWMACRO;
+		rule->match.flags = GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_ALLOWMACRO;
 
-		/* parse the next "pattern attr attr attr" line */
-		if (!(error = git_attr_fnmatch__parse(
-				&rule->match, &attrs->pool, context, &scan)) &&
-			!(error = git_attr_assignment__parse(
-				repo, &attrs->pool, &rule->assigns, &scan)))
+		/* Parse the next "pattern attr attr attr" line */
+		if ((error = git_attr_fnmatch__parse(&rule->match, &attrs->pool, context, &scan)) < 0 ||
+		    (error = git_attr_assignment__parse(repo, &attrs->pool, &rule->assigns, &scan)) < 0)
 		{
-			if (rule->match.flags & GIT_ATTR_FNMATCH_MACRO)
-				/* TODO: warning if macro found in file below repo root */
-				error = git_attr_cache__insert_macro(repo, rule);
-			else
-				error = git_vector_insert(&attrs->rules, rule);
+			if (error != GIT_ENOTFOUND)
+				goto out;
+			error = 0;
+			continue;
 		}
 
-		/* if the rule wasn't a pattern, on to the next */
-		if (error < 0) {
-			git_attr_rule__clear(rule); /* reset rule contents */
-			if (error == GIT_ENOTFOUND)
-				error = 0;
-		} else {
-			rule = NULL; /* vector now "owns" the rule */
-		}
+		if (rule->match.flags & GIT_ATTR_FNMATCH_MACRO) {
+			/* TODO: warning if macro found in file below repo root */
+			if ((error = git_attr_cache__insert_macro(repo, rule)) < 0)
+				goto out;
+		} else if ((error = git_vector_insert(&attrs->rules, rule)) < 0)
+			goto out;
+
+		rule = NULL;
 	}
 
+out:
 	git_mutex_unlock(&attrs->lock);
 	git_attr_rule__free(rule);
 
