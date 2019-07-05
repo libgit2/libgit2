@@ -12,10 +12,25 @@
  * <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <git2.h>
+#include <fcntl.h>
+
+#ifdef _WIN32
+# include <io.h>
+# include <Windows.h>
+# define open _open
+# define read _read
+# define close _close
+# define ssize_t int
+# define sleep(a) Sleep(a * 1000)
+#else
+# include <unistd.h>
+#endif
 
 #ifndef PRIuZ
 /* Define the printf format specifer to use for size_t output */
