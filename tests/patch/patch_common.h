@@ -681,6 +681,16 @@
 	"+added line with no nl\n" \
 	"\\ No newline at end of file\n"
 
+#define PATCH_APPEND_NO_NL_IN_OLD_FILE \
+	"diff --git a/file.txt b/file.txt\n" \
+	"index 9432026..83759c0 100644\n" \
+	"--- a/file.txt\n" \
+	"+++ b/file.txt\n" \
+	"@@ -1,1 +1,1 @@\n" \
+	"-foo\n" \
+	"\\ No newline at end of file\n" \
+	"+foo\n"
+
 #define PATCH_NAME_WHITESPACE \
 	"diff --git a/file with spaces.txt b/file with spaces.txt\n" \
 	"index 9432026..83759c0 100644\n" \

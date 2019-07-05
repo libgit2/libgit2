@@ -578,6 +578,16 @@ static int parse_hunk_body(
 			old_lineno = -1;
 			break;
 
+		case '\\':
+			/*
+			 * If there are no oldlines left, then this is probably
+			 * the "\ No newline at end of file" marker. Do not
+			 * verify its format, as it may be localized.
+			 */
+			if (!oldlines)
+				continue;
+			/* fall through */
+
 		default:
 			error = git_parse_err("invalid patch hunk at line %"PRIuZ, ctx->parse_ctx.line_num);
 			goto done;
@@ -606,7 +616,8 @@ static int parse_hunk_body(
 		goto done;
 	}
 
-	/* Handle "\ No newline at end of file".  Only expect the leading
+	/*
+	 * Handle "\ No newline at end of file".  Only expect the leading
 	 * backslash, though, because the rest of the string could be
 	 * localized.  Because `diff` optimizes for the case where you
 	 * want to apply the patch by hand.
