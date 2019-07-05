@@ -351,3 +351,55 @@ void test_attr_repo__sysdir_with_session(void)
 	git_buf_dispose(&sysdir);
 	git_attr_session__free(&session);
 }
+
+void test_attr_repo__rewrite(void)
+{
+	const char *value;
+
+	cl_git_rewritefile("attr/.gitattributes", "file.txt foo=first\n");
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file.txt", "foo"));
+	cl_assert_equal_s(value, "first");
+
+	cl_git_rewritefile("attr/.gitattributes", "file.txt foo=second\n");
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file.txt", "foo"));
+	cl_assert_equal_s(value, "second");
+
+	cl_git_rewritefile("attr/.gitattributes", "file.txt other=value\n");
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file.txt", "foo"));
+	cl_assert_equal_p(value, NULL);
+}
+
+void test_attr_repo__rewrite_sysdir(void)
+{
+	git_buf sysdir = GIT_BUF_INIT;
+	const char *value;
+
+	cl_git_pass(p_mkdir("system", 0777));
+	cl_git_pass(git_buf_joinpath(&sysdir, clar_sandbox_path(), "system"));
+	cl_git_pass(git_sysdir_set(GIT_SYSDIR_SYSTEM, sysdir.ptr));
+	g_repo = cl_git_sandbox_reopen();
+
+	cl_git_rewritefile("system/gitattributes", "file foo=first");
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file", "foo"));
+	cl_assert_equal_s(value, "first");
+
+	cl_git_rewritefile("system/gitattributes", "file foo=second");
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file", "foo"));
+	cl_assert_equal_s(value, "second");
+
+	git_buf_dispose(&sysdir);
+}
+
+void test_attr_repo__unlink(void)
+{
+	const char *value;
+
+	cl_git_rewritefile("attr/.gitattributes", "file.txt foo=value1\n");
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file.txt", "foo"));
+	cl_assert_equal_s(value, "value1");
+
+	cl_git_pass(p_unlink("attr/.gitattributes"));
+
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file.txt", "foo"));
+	cl_assert_equal_p(value, NULL);
+}

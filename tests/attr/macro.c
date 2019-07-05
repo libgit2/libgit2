@@ -89,3 +89,36 @@ void test_attr_macro__bad_macros(void)
 	cl_assert_equal_s("hahaha", values[4]);
 	cl_assert(GIT_ATTR_IS_TRUE(values[5]));
 }
+
+void test_attr_macro__macros_in_root_wd_apply(void)
+{
+	const char *value;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_pass(p_mkdir("empty_standard_repo/dir", 0777));
+	cl_git_rewritefile("empty_standard_repo/.gitattributes", "[attr]customattr key=value\n");
+	cl_git_rewritefile("empty_standard_repo/dir/.gitattributes", "file customattr\n");
+
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "dir/file", "key"));
+	cl_assert_equal_s(value, "value");
+}
+
+void test_attr_macro__changing_macro_in_root_wd_updates_attributes(void)
+{
+	const char *value;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_rewritefile("empty_standard_repo/.gitattributes",
+			   "[attr]customattr key=first\n"
+			   "file customattr\n");
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file", "key"));
+	cl_assert_equal_s(value, "first");
+
+	cl_git_rewritefile("empty_standard_repo/.gitattributes",
+			   "[attr]customattr key=second\n"
+			   "file customattr\n");
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file", "key"));
+	cl_assert_equal_s(value, "second");
+}
