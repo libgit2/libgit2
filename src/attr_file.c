@@ -345,33 +345,28 @@ int git_attr_file__lookup_one(
 
 int git_attr_file__load_standalone(git_attr_file **out, const char *path)
 {
-	int error;
-	git_attr_file *file;
 	git_buf content = GIT_BUF_INIT;
+	git_attr_file *file = NULL;
+	int error;
 
-	error = git_attr_file__new(&file, NULL, GIT_ATTR_FILE__FROM_FILE);
-	if (error < 0)
-		return error;
+	if ((error = git_futils_readbuffer(&content, path)) < 0)
+		goto out;
 
-	error = git_attr_cache__alloc_file_entry(
-		&file->entry, NULL, path, &file->pool);
-	if (error < 0) {
-		git_attr_file__free(file);
-		return error;
-	}
-	/* because the cache entry is allocated from the file's own pool, we
+	/*
+	 * Because the cache entry is allocated from the file's own pool, we
 	 * don't have to free it - freeing file+pool will free cache entry, too.
 	 */
 
-	if (!(error = git_futils_readbuffer(&content, path))) {
-		error = git_attr_file__parse_buffer(NULL, file, content.ptr);
-		git_buf_dispose(&content);
-	}
+	if ((error = git_attr_file__new(&file, NULL, GIT_ATTR_FILE__FROM_FILE)) < 0 ||
+	    (error = git_attr_file__parse_buffer(NULL, file, content.ptr)) < 0 ||
+	    (error = git_attr_cache__alloc_file_entry(&file->entry, NULL, path, &file->pool)) < 0)
+		goto out;
 
+	*out = file;
+out:
 	if (error < 0)
 		git_attr_file__free(file);
-	else
-		*out = file;
+	git_buf_dispose(&content);
 
 	return error;
 }
