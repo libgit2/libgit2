@@ -919,6 +919,7 @@ int git_attr_session__init(git_attr_session *session, git_repository *repo)
 {
 	assert(repo);
 
+	memset(session, 0, sizeof(*session));
 	session->key = git_atomic_inc(&repo->attr_session_key);
 
 	return 0;

@@ -333,6 +333,7 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 				       NULL, git_repository_attr_cache(repo)->cfg_attr_file)) < 0)
 		goto out;
 
+	git_buf_clear(&path); /* git_repository_item_path expects an empty buffer, because it uses git_buf_set */
 	if ((error = git_repository_item_path(&path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
 	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
 				       path.ptr, GIT_ATTR_FILE_INREPO)) < 0) {
