@@ -428,9 +428,18 @@ int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 	bool locked = false;
 	int error = 0;
 
-	/* TODO: generate warning log if (macro->assigns.length == 0) */
-	if (macro->assigns.length == 0)
+	/*
+	 * Callers assume that if we return success, that the
+	 * macro will have been adopted by the attributes cache.
+	 * Thus, we have to free the macro here if it's not being
+	 * added to the cache.
+	 *
+	 * TODO: generate warning log if (macro->assigns.length == 0)
+	 */
+	if (macro->assigns.length == 0) {
+		git_attr_rule__free(macro);
 		goto out;
+	}
 
 	if ((error = attr_cache_lock(cache)) < 0)
 		goto out;
