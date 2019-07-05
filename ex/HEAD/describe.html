@@ -133,7 +133,7 @@ all of the use cases.</p>
   <span class="n">assert</span><span class="p">(</span><span class="n">opts</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="n">sz</span> <span class="o">=</span> <span class="o">++</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commit_count</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
-  <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span> <span class="o">=</span> <span class="n">xrealloc</span><span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">,</span> <span class="n">sz</span><span class="p">);</span>
+  <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span> <span class="o">=</span> <span class="n">xrealloc</span><span class="p">((</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">,</span> <span class="n">sz</span><span class="p">);</span>
   <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">[</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commit_count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">commit</span><span class="p">;</span>
 <span class="p">}</span>
 
