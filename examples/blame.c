@@ -33,7 +33,7 @@ static void parse_opts(struct opts *o, int argc, char *argv[]);
 int lg2_blame(git_repository *repo, int argc, char *argv[])
 {
 	int line, break_on_null_hunk;
-	size_t i, rawsize;
+	git_off_t i, rawsize;
 	char spec[1024] = {0};
 	struct opts o = {0};
 	const char *rawdata;
@@ -91,7 +91,7 @@ int lg2_blame(git_repository *repo, int argc, char *argv[])
 	i = 0;
 	break_on_null_hunk = 0;
 	while (i < rawsize) {
-		const char *eol = memchr(rawdata + i, '\n', rawsize - i);
+		const char *eol = memchr(rawdata + i, '\n', (size_t)(rawsize - i));
 		char oid[10] = {0};
 		const git_blame_hunk *hunk = git_blame_get_hunk_byline(blame, line);
 

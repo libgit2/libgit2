@@ -54,7 +54,7 @@ static void opts_add_commit(describe_options *opts, const char *commit)
 	assert(opts != NULL);
 
 	sz = ++opts->commit_count * sizeof(opts->commits[0]);
-	opts->commits = xrealloc(opts->commits, sz);
+	opts->commits = xrealloc((void *) opts->commits, sz);
 	opts->commits[opts->commit_count - 1] = commit;
 }
 
