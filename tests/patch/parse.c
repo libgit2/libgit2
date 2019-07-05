@@ -102,6 +102,20 @@ void test_patch_parse__invalid_patches_fails(void)
 		strlen(PATCH_CORRUPT_MISSING_HUNK_HEADER), NULL));
 }
 
+void test_patch_parse__no_newline_at_end_of_new_file(void)
+{
+	git_patch *patch;
+	cl_git_pass(git_patch_from_buffer(&patch, PATCH_APPEND_NO_NL, strlen(PATCH_APPEND_NO_NL), NULL));
+	git_patch_free(patch);
+}
+
+void test_patch_parse__no_newline_at_end_of_old_file(void)
+{
+	git_patch *patch;
+	cl_git_pass(git_patch_from_buffer(&patch, PATCH_APPEND_NO_NL_IN_OLD_FILE, strlen(PATCH_APPEND_NO_NL_IN_OLD_FILE), NULL));
+	git_patch_free(patch);
+}
+
 void test_patch_parse__files_with_whitespaces_succeeds(void)
 {
 	git_patch *patch;
