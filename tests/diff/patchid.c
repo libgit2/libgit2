@@ -22,7 +22,7 @@ void test_diff_patchid__simple_commit(void)
 
 void test_diff_patchid__filename_with_spaces(void)
 {
-	verify_patch_id(PATCH_APPEND_NO_NL, "f0ba05413beaef743b630e796153839462ee477a");
+	verify_patch_id(PATCH_APPEND_NO_NL, "cc0d67fc516f3378baa8a72b248da6e26c5dbf4a");
 }
 
 void test_diff_patchid__multiple_hunks(void)

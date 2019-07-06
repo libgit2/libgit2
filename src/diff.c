@@ -474,17 +474,20 @@ static int line_cb(
 	GIT_UNUSED(hunk);
 
 	switch (line->origin) {
-	    case GIT_DIFF_LINE_ADDITION:
-		git_buf_putc(&buf, '+');
-		break;
-	    case GIT_DIFF_LINE_DELETION:
-		git_buf_putc(&buf, '-');
-		break;
-	    case GIT_DIFF_LINE_CONTEXT:
-		break;
-	    default:
-		git_error_set(GIT_ERROR_PATCH, "invalid line origin for patch");
-		return -1;
+		case GIT_DIFF_LINE_ADDITION:
+			git_buf_putc(&buf, '+');
+			break;
+		case GIT_DIFF_LINE_DELETION:
+			git_buf_putc(&buf, '-');
+			break;
+		case GIT_DIFF_LINE_CONTEXT:
+		case GIT_DIFF_LINE_CONTEXT_EOFNL:
+		case GIT_DIFF_LINE_ADD_EOFNL:
+		case GIT_DIFF_LINE_DEL_EOFNL:
+			break;
+		default:
+			git_error_set(GIT_ERROR_PATCH, "invalid line origin for patch");
+			return -1;
 	}
 
 	git_buf_put(&buf, line->content, line->content_len);

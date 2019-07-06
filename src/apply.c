@@ -199,11 +199,22 @@ static int apply_hunk(
 
 	for (i = 0; i < hunk->line_count; i++) {
 		size_t linenum = hunk->line_start + i;
+		git_diff_line *next;
 		git_diff_line *line = git_array_get(patch->lines, linenum);
 
 		if (!line) {
 			error = apply_err("preimage does not contain line %"PRIuZ, linenum);
 			goto done;
+		}
+
+		/* lookahead for eofnl */
+		if (i < hunk->line_count - 1) {
+			next = git_array_get(patch->lines, linenum + 1);
+			if (next->origin == GIT_DIFF_LINE_CONTEXT_EOFNL ||
+					next->origin == GIT_DIFF_LINE_DEL_EOFNL ||
+					next->origin == GIT_DIFF_LINE_ADD_EOFNL) {
+				line->content_len -= 1;
+			}
 		}
 
 		if (line->origin == GIT_DIFF_LINE_CONTEXT ||
