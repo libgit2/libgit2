@@ -1893,11 +1893,18 @@ static int checkout_create_the_new(
 				return error;
 		}
 
-		if (actions[i] & CHECKOUT_ACTION__UPDATE_BLOB) {
-			error = checkout_blob(data, &delta->new_file);
-			if (error < 0)
+		if (actions[i] & CHECKOUT_ACTION__UPDATE_BLOB && !S_ISLNK(delta->new_file.mode)) {
+			if ((error = checkout_blob(data, &delta->new_file)) < 0)
 				return error;
+			data->completed_steps++;
+			report_progress(data, delta->new_file.path);
+		}
+	}
 
+	git_vector_foreach(&data->diff->deltas, i, delta) {
+		if (actions[i] & CHECKOUT_ACTION__UPDATE_BLOB && S_ISLNK(delta->new_file.mode)) {
+			if ((error = checkout_blob(data, &delta->new_file)) < 0)
+				return error;
 			data->completed_steps++;
 			report_progress(data, delta->new_file.path);
 		}
