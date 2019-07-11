@@ -220,6 +220,12 @@ void cl_fake_home_cleanup(void *);
 void cl_sandbox_set_search_path_defaults(void);
 
 #ifdef GIT_WIN32
+# define cl_msleep(x) Sleep(x)
+#else
+# define cl_msleep(x) usleep(1000 * (x))
+#endif
+
+#ifdef GIT_WIN32
 bool cl_sandbox_supports_8dot3(void);
 #endif
 

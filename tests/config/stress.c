@@ -123,6 +123,7 @@ void test_config_stress__quick_write(void)
 	for (i = 0; i < 10; i++) {
 		int32_t val;
 		cl_git_pass(git_config_set_int32(config_w, key, i));
+		cl_msleep(1);
 		cl_git_pass(git_config_get_int32(&val, config_r, key));
 		cl_assert_equal_i(i, val);
 	}
