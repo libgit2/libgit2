@@ -889,7 +889,7 @@ static int config_read_buffer(
 	}
 
 	/* Initialize the reading position */
-	reader.file = file;
+	reader.path = file->path;
 	git_parse_ctx_init(&reader.ctx, buf, buflen);
 
 	/* If the file is empty, there's nothing for us to do */
@@ -1175,7 +1175,7 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 	struct write_data write_data;
 
 	memset(&reader, 0, sizeof(reader));
-	reader.file = &cfg->file;
+	reader.path = cfg->file.path;
 
 	if (cfg->locked) {
 		result = git_buf_puts(&contents, git_buf_cstr(&cfg->locked_content) == NULL ? "" : git_buf_cstr(&cfg->locked_content));

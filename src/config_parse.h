@@ -25,7 +25,7 @@ typedef struct config_file {
 } git_config_file;
 
 typedef struct {
-	git_config_file *file;
+	const char *path;
 	git_parse_ctx ctx;
 } git_config_parser;
 

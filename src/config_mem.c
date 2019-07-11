@@ -87,7 +87,7 @@ static int config_memory_open(git_config_backend *backend, git_config_level_t le
 		return 0;
 
 	git_parse_ctx_init(&reader.ctx, memory_backend->cfg.ptr, memory_backend->cfg.size);
-	reader.file = NULL;
+	reader.path = "in-memory";
 	parse_data.entries = memory_backend->entries;
 	parse_data.level = level;
 
