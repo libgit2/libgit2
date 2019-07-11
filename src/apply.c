@@ -199,7 +199,7 @@ static int apply_hunk(
 
 	for (i = 0; i < hunk->line_count; i++) {
 		size_t linenum = hunk->line_start + i;
-		git_diff_line *line = git_array_get(patch->lines, linenum);
+		git_diff_line *line = git_array_get(patch->lines, linenum), *prev;
 
 		if (!line) {
 			error = apply_err("preimage does not contain line %"PRIuZ, linenum);
@@ -207,6 +207,13 @@ static int apply_hunk(
 		}
 
 		switch (line->origin) {
+			case GIT_DIFF_LINE_CONTEXT_EOFNL:
+			case GIT_DIFF_LINE_DEL_EOFNL:
+			case GIT_DIFF_LINE_ADD_EOFNL:
+				prev = i ? git_array_get(patch->lines, i - 1) : NULL;
+				if (prev && prev->content[prev->content_len - 1] == '\n')
+					prev->content_len -= 1;
+				break;
 			case GIT_DIFF_LINE_CONTEXT:
 				if ((error = git_vector_insert(&preimage.lines, line)) < 0 ||
 				    (error = git_vector_insert(&postimage.lines, line)) < 0)
