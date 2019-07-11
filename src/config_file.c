@@ -26,6 +26,13 @@
 /* Max depth for [include] directives */
 #define MAX_INCLUDE_DEPTH 10
 
+typedef struct diskfile {
+	git_futils_filestamp stamp;
+	git_oid checksum;
+	char *path;
+	git_array_t(struct diskfile) includes;
+} diskfile;
+
 typedef struct {
 	git_config_backend parent;
 	/* mutex to coordinate accessing the values */
@@ -44,7 +51,7 @@ typedef struct {
 	git_filebuf locked_buf;
 	git_buf locked_content;
 
-	git_config_file file;
+	diskfile file;
 } diskfile_backend;
 
 typedef struct {
@@ -55,14 +62,14 @@ typedef struct {
 
 typedef struct {
 	const git_repository *repo;
-	git_config_file *file;
+	diskfile *file;
 	git_config_entries *entries;
 	git_config_level_t level;
 	unsigned int depth;
 } diskfile_parse_state;
 
-static int config_read(git_config_entries *entries, const git_repository *repo, git_config_file *file, git_config_level_t level, int depth);
-static int config_read_buffer(git_config_entries *entries, const git_repository *repo, git_config_file *file, git_config_level_t level, int depth, const char *buf, size_t buflen);
+static int config_read(git_config_entries *entries, const git_repository *repo, diskfile *file, git_config_level_t level, int depth);
+static int config_read_buffer(git_config_entries *entries, const git_repository *repo, diskfile *file, git_config_level_t level, int depth, const char *buf, size_t buflen);
 static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const p_regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
 
@@ -96,9 +103,9 @@ static git_config_entries *diskfile_entries_take(diskfile_header *h)
 	return entries;
 }
 
-static void config_file_clear(git_config_file *file)
+static void config_file_clear(diskfile *file)
 {
-	git_config_file *include;
+	diskfile *include;
 	uint32_t i;
 
 	if (file == NULL)
@@ -134,9 +141,9 @@ static int config_open(git_config_backend *cfg, git_config_level_t level, const 
 	return res;
 }
 
-static int config_is_modified(int *modified, git_config_file *file)
+static int config_is_modified(int *modified, diskfile *file)
 {
-	git_config_file *include;
+	diskfile *include;
 	git_buf buf = GIT_BUF_INIT;
 	git_oid hash;
 	uint32_t i;
@@ -174,9 +181,9 @@ static int config_set_entries(git_config_backend *cfg, git_config_entries *entri
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	git_config_entries *old = NULL;
-	git_config_file *include;
+	diskfile *include;
 	int error;
-	size_t i;
+	uint32_t i;
 
 	if (b->header.parent.readonly)
 		return config_error_readonly();
@@ -679,7 +686,7 @@ static char *escape_value(const char *ptr)
 
 static int parse_include(diskfile_parse_state *parse_data, const char *file)
 {
-	git_config_file *include;
+	diskfile *include;
 	git_buf path = GIT_BUF_INIT;
 	char *dir;
 	int result;
@@ -873,7 +880,7 @@ static int read_on_variable(
 static int config_read_buffer(
 	git_config_entries *entries,
 	const git_repository *repo,
-	git_config_file *file,
+	diskfile *file,
 	git_config_level_t level,
 	int depth,
 	const char *buf,
@@ -913,7 +920,7 @@ out:
 static int config_read(
 	git_config_entries *entries,
 	const git_repository *repo,
-	git_config_file *file,
+	diskfile *file,
 	git_config_level_t level,
 	int depth)
 {

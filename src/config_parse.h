@@ -17,13 +17,6 @@
 extern const char *git_config_escapes;
 extern const char *git_config_escaped;
 
-typedef struct config_file {
-	git_futils_filestamp stamp;
-	git_oid checksum;
-	char *path;
-	git_array_t(struct config_file) includes;
-} git_config_file;
-
 typedef struct {
 	const char *path;
 	git_parse_ctx ctx;
