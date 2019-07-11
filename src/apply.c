@@ -206,16 +206,20 @@ static int apply_hunk(
 			goto done;
 		}
 
-		if (line->origin == GIT_DIFF_LINE_CONTEXT ||
-			line->origin == GIT_DIFF_LINE_DELETION) {
-			if ((error = git_vector_insert(&preimage.lines, line)) < 0)
-				goto done;
-		}
-
-		if (line->origin == GIT_DIFF_LINE_CONTEXT ||
-			line->origin == GIT_DIFF_LINE_ADDITION) {
-			if ((error = git_vector_insert(&postimage.lines, line)) < 0)
-				goto done;
+		switch (line->origin) {
+			case GIT_DIFF_LINE_CONTEXT:
+				if ((error = git_vector_insert(&preimage.lines, line)) < 0 ||
+				    (error = git_vector_insert(&postimage.lines, line)) < 0)
+					goto done;
+				break;
+			case GIT_DIFF_LINE_DELETION:
+				if ((error = git_vector_insert(&preimage.lines, line)) < 0)
+					goto done;
+				break;
+			case GIT_DIFF_LINE_ADDITION:
+				if ((error = git_vector_insert(&postimage.lines, line)) < 0)
+					goto done;
+				break;
 		}
 	}
 
