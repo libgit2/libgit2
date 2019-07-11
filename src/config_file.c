@@ -1176,9 +1176,9 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 {
 	char *orig_section = NULL, *section = NULL, *orig_name, *name, *ldot;
 	git_buf buf = GIT_BUF_INIT, contents = GIT_BUF_INIT;
+	git_config_parser parser = GIT_CONFIG_PARSER_INIT;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	struct write_data write_data;
-	git_config_parser reader;
 	int error;
 
 	memset(&write_data, 0, sizeof(write_data));
@@ -1196,8 +1196,8 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 	if (error < 0 && error != GIT_ENOTFOUND)
 		goto done;
 
-	reader.path = cfg->file.path;
-	git_parse_ctx_init(&reader.ctx, contents.ptr, contents.size);
+	if ((git_config_parser_init(&parser, cfg->file.path, contents.ptr, contents.size)) < 0)
+		goto done;
 
 	ldot = strrchr(key, '.');
 	name = ldot + 1;
@@ -1217,7 +1217,7 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 	write_data.preg = preg;
 	write_data.value = value;
 
-	if ((error = git_config_parse(&reader, write_on_section, write_on_variable,
+	if ((error = git_config_parse(&parser, write_on_section, write_on_variable,
 				      write_on_comment, write_on_eof, &write_data)) < 0)
 		goto done;
 
@@ -1243,7 +1243,7 @@ done:
 	git_buf_dispose(&buf);
 	git_buf_dispose(&contents);
 	git_filebuf_cleanup(&file);
-	git_parse_ctx_clear(&reader.ctx);
+	git_config_parser_dispose(&parser);
 
 	return error;
 }

@@ -23,6 +23,8 @@ typedef struct {
 	size_t line_num;
 } git_parse_ctx;
 
+#define GIT_PARSE_CTX_INIT { 0 }
+
 int git_parse_ctx_init(git_parse_ctx *ctx, const char *content, size_t content_len);
 void git_parse_ctx_clear(git_parse_ctx *ctx);
 

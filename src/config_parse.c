@@ -474,6 +474,17 @@ out:
 	return error;
 }
 
+int git_config_parser_init(git_config_parser *out, const char *path, const char *data, size_t datalen)
+{
+	out->path = path;
+	return git_parse_ctx_init(&out->ctx, data, datalen);
+}
+
+void git_config_parser_dispose(git_config_parser *parser)
+{
+	git_parse_ctx_clear(&parser->ctx);
+}
+
 int git_config_parse(
 	git_config_parser *parser,
 	git_config_parser_section_cb on_section,

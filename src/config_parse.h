@@ -22,6 +22,8 @@ typedef struct {
 	git_parse_ctx ctx;
 } git_config_parser;
 
+#define GIT_CONFIG_PARSER_INIT { NULL, GIT_PARSE_CTX_INIT }
+
 typedef int (*git_config_parser_section_cb)(
 	git_config_parser *parser,
 	const char *current_section,
@@ -48,6 +50,9 @@ typedef int (*git_config_parser_eof_cb)(
 	git_config_parser *parser,
 	const char *current_section,
 	void *payload);
+
+int git_config_parser_init(git_config_parser *out, const char *path, const char *data, size_t datalen);
+void git_config_parser_dispose(git_config_parser *parser);
 
 int git_config_parse(
 	git_config_parser *parser,
