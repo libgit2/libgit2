@@ -16,16 +16,14 @@ const char *git_config_escaped = "\n\t\b\"\\";
 
 static void set_parse_error(git_config_parser *reader, int col, const char *error_str)
 {
-	const char *file = reader->file ? reader->file->path : "in-memory";
-
 	if (col)
 		git_error_set(GIT_ERROR_CONFIG,
 		              "failed to parse config file: %s (in %s:%"PRIuZ", column %d)",
-		              error_str, file, reader->ctx.line_num, col);
+		              error_str, reader->path, reader->ctx.line_num, col);
 	else
 		git_error_set(GIT_ERROR_CONFIG,
 		              "failed to parse config file: %s (in %s:%"PRIuZ")",
-		              error_str, file, reader->ctx.line_num);
+		              error_str, reader->path, reader->ctx.line_num);
 }
 
 
@@ -476,13 +474,24 @@ out:
 	return error;
 }
 
+int git_config_parser_init(git_config_parser *out, const char *path, const char *data, size_t datalen)
+{
+	out->path = path;
+	return git_parse_ctx_init(&out->ctx, data, datalen);
+}
+
+void git_config_parser_dispose(git_config_parser *parser)
+{
+	git_parse_ctx_clear(&parser->ctx);
+}
+
 int git_config_parse(
 	git_config_parser *parser,
 	git_config_parser_section_cb on_section,
 	git_config_parser_variable_cb on_variable,
 	git_config_parser_comment_cb on_comment,
 	git_config_parser_eof_cb on_eof,
-	void *data)
+	void *payload)
 {
 	git_parse_ctx *ctx;
 	char *current_section = NULL, *var_name = NULL, *var_value = NULL;
@@ -522,7 +531,7 @@ int git_config_parse(
 			git_parse_advance_chars(ctx, result);
 
 			if (on_section)
-				result = on_section(parser, current_section, line_start, line_len, data);
+				result = on_section(parser, current_section, line_start, line_len, payload);
 			/*
 			 * After we've parsed the section header we may not be
 			 * done with the line. If there's still data in there,
@@ -542,13 +551,13 @@ int git_config_parse(
 		case ';':
 		case '#':
 			if (on_comment) {
-				result = on_comment(parser, line_start, line_len, data);
+				result = on_comment(parser, line_start, line_len, payload);
 			}
 			break;
 
 		default: /* assume variable declaration */
 			if ((result = parse_variable(parser, &var_name, &var_value)) == 0 && on_variable) {
-				result = on_variable(parser, current_section, var_name, var_value, line_start, line_len, data);
+				result = on_variable(parser, current_section, var_name, var_value, line_start, line_len, payload);
 				git__free(var_name);
 				git__free(var_value);
 			}
@@ -561,7 +570,7 @@ int git_config_parse(
 	}
 
 	if (on_eof)
-		result = on_eof(parser, current_section, data);
+		result = on_eof(parser, current_section, payload);
 
 out:
 	git__free(current_section);
