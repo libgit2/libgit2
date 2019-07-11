@@ -27,6 +27,18 @@ static void ensure_patch_validity(git_patch *patch)
 	cl_assert_equal_i(0, delta->new_file.size);
 }
 
+static void ensure_identical_patch_inout(const char *content) {
+	git_buf buf = GIT_BUF_INIT;
+	git_patch *patch;
+
+	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
+	cl_git_pass(git_patch_to_buf(&buf, patch));
+	cl_assert_equal_strn(git_buf_cstr(&buf), content, strlen(content));
+
+	git_patch_free(patch);
+	git_buf_dispose(&buf);
+}
+
 void test_patch_parse__original_to_change_middle(void)
 {
 	git_patch *patch;
@@ -104,21 +116,15 @@ void test_patch_parse__invalid_patches_fails(void)
 
 void test_patch_parse__no_newline_at_end_of_new_file(void)
 {
-	git_patch *patch;
-	cl_git_pass(git_patch_from_buffer(&patch, PATCH_APPEND_NO_NL, strlen(PATCH_APPEND_NO_NL), NULL));
-	git_patch_free(patch);
+	ensure_identical_patch_inout(PATCH_APPEND_NO_NL);
 }
 
 void test_patch_parse__no_newline_at_end_of_old_file(void)
 {
-	git_patch *patch;
-	cl_git_pass(git_patch_from_buffer(&patch, PATCH_APPEND_NO_NL_IN_OLD_FILE, strlen(PATCH_APPEND_NO_NL_IN_OLD_FILE), NULL));
-	git_patch_free(patch);
+	ensure_identical_patch_inout(PATCH_APPEND_NO_NL_IN_OLD_FILE);
 }
 
 void test_patch_parse__files_with_whitespaces_succeeds(void)
 {
-	git_patch *patch;
-	cl_git_pass(git_patch_from_buffer(&patch, PATCH_NAME_WHITESPACE, strlen(PATCH_NAME_WHITESPACE), NULL));
-	git_patch_free(patch);
+	ensure_identical_patch_inout(PATCH_NAME_WHITESPACE);
 }
