@@ -285,3 +285,27 @@ void test_core_posix__unlink_removes_symlink(void)
 	cl_must_pass(p_unlink("file"));
 	cl_must_pass(p_rmdir("dir"));
 }
+
+void test_core_posix__symlink_resolves_to_correct_type(void)
+{
+	git_buf contents = GIT_BUF_INIT;
+
+	if (!git_path_supports_symlinks(clar_sandbox_path()))
+		clar__skip();
+
+	cl_must_pass(git_futils_mkdir("dir", 0777, 0));
+	cl_must_pass(git_futils_mkdir("file", 0777, 0));
+	cl_git_mkfile("dir/file", "symlink target");
+
+	cl_git_pass(p_symlink("file", "dir/link"));
+
+	cl_git_pass(git_futils_readbuffer(&contents, "dir/file"));
+	cl_assert_equal_s(contents.ptr, "symlink target");
+
+	cl_must_pass(p_unlink("dir/link"));
+	cl_must_pass(p_unlink("dir/file"));
+	cl_must_pass(p_rmdir("dir"));
+	cl_must_pass(p_rmdir("file"));
+
+	git_buf_dispose(&contents);
+}
