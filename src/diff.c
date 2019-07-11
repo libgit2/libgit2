@@ -443,7 +443,7 @@ out:
 	return error;
 }
 
-static int line_cb(
+static int patchid_line_cb(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk,
 	const git_diff_line *line,
@@ -465,6 +465,14 @@ static int line_cb(
 		break;
 	    case GIT_DIFF_LINE_CONTEXT:
 		break;
+	    case GIT_DIFF_LINE_CONTEXT_EOFNL:
+	    case GIT_DIFF_LINE_ADD_EOFNL:
+	    case GIT_DIFF_LINE_DEL_EOFNL:
+		/*
+		 * Ignore EOF without newlines for patch IDs as whitespace is
+		 * not supposed to be significant.
+		 */
+		return 0;
 	    default:
 		git_error_set(GIT_ERROR_PATCH, "invalid line origin for patch");
 		return -1;
@@ -501,7 +509,7 @@ int git_diff_patchid(git_oid *out, git_diff *diff, git_diff_patchid_options *opt
 	if ((error = git_hash_ctx_init(&args.ctx)) < 0)
 		goto out;
 
-	if ((error = git_diff_foreach(diff, file_cb, NULL, NULL, line_cb, &args)) < 0)
+	if ((error = git_diff_foreach(diff, file_cb, NULL, NULL, patchid_line_cb, &args)) < 0)
 		goto out;
 
 	if ((error = (flush_hunk(&args.result, &args.ctx))) < 0)
