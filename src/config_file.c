@@ -1174,37 +1174,30 @@ static int write_on_eof(
  */
 static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const p_regex_t *preg, const char* value)
 {
-	int result;
-	char *orig_section, *section, *orig_name, *name, *ldot;
-	git_filebuf file = GIT_FILEBUF_INIT;
+	char *orig_section = NULL, *section = NULL, *orig_name, *name, *ldot;
 	git_buf buf = GIT_BUF_INIT, contents = GIT_BUF_INIT;
-	git_config_parser reader;
+	git_filebuf file = GIT_FILEBUF_INIT;
 	struct write_data write_data;
+	git_config_parser reader;
+	int error;
 
-	memset(&reader, 0, sizeof(reader));
-	reader.path = cfg->file.path;
+	memset(&write_data, 0, sizeof(write_data));
 
 	if (cfg->locked) {
-		result = git_buf_puts(&contents, git_buf_cstr(&cfg->locked_content) == NULL ? "" : git_buf_cstr(&cfg->locked_content));
+		error = git_buf_puts(&contents, git_buf_cstr(&cfg->locked_content) == NULL ? "" : git_buf_cstr(&cfg->locked_content));
 	} else {
-		/* Lock the file */
-		if ((result = git_filebuf_open(
-			     &file, cfg->file.path, GIT_FILEBUF_HASH_CONTENTS, GIT_CONFIG_FILE_MODE)) < 0) {
-			git_buf_dispose(&contents);
-			return result;
-		}
+		if ((error = git_filebuf_open(&file, cfg->file.path, GIT_FILEBUF_HASH_CONTENTS,
+					      GIT_CONFIG_FILE_MODE)) < 0)
+			goto done;
 
 		/* We need to read in our own config file */
-		result = git_futils_readbuffer(&contents, cfg->file.path);
+		error = git_futils_readbuffer(&contents, cfg->file.path);
 	}
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto done;
 
-	/* Initialise the reading position */
-	if (result == 0 || result == GIT_ENOTFOUND) {
-		git_parse_ctx_init(&reader.ctx, contents.ptr, contents.size);
-	} else {
-		git_filebuf_cleanup(&file);
-		return -1; /* OS error when reading the file */
-	}
+	reader.path = cfg->file.path;
+	git_parse_ctx_init(&reader.ctx, contents.ptr, contents.size);
 
 	ldot = strrchr(key, '.');
 	name = ldot + 1;
@@ -1217,30 +1210,16 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 	GIT_ERROR_CHECK_ALLOC(orig_section);
 
 	write_data.buf = &buf;
-	git_buf_init(&write_data.buffered_comment, 0);
 	write_data.orig_section = orig_section;
 	write_data.section = section;
-	write_data.in_section = 0;
-	write_data.preg_replaced = 0;
 	write_data.orig_name = orig_name;
 	write_data.name = name;
 	write_data.preg = preg;
 	write_data.value = value;
 
-	result = git_config_parse(&reader,
-		write_on_section,
-		write_on_variable,
-		write_on_comment,
-		write_on_eof,
-		&write_data);
-	git__free(section);
-	git__free(orig_section);
-	git_buf_dispose(&write_data.buffered_comment);
-
-	if (result < 0) {
-		git_filebuf_cleanup(&file);
+	if ((error = git_config_parse(&reader, write_on_section, write_on_variable,
+				      write_on_comment, write_on_eof, &write_data)) < 0)
 		goto done;
-	}
 
 	if (cfg->locked) {
 		size_t len = buf.asize;
@@ -1250,16 +1229,21 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 	} else {
 		git_filebuf_write(&file, git_buf_cstr(&buf), git_buf_len(&buf));
 
-		if ((result = git_filebuf_commit(&file)) < 0)
+		if ((error = git_filebuf_commit(&file)) < 0)
 			goto done;
 
-		if ((result = config_refresh_from_buffer(&cfg->header.parent, buf.ptr, buf.size)) < 0)
+		if ((error = config_refresh_from_buffer(&cfg->header.parent, buf.ptr, buf.size)) < 0)
 			goto done;
 	}
 
 done:
+	git__free(section);
+	git__free(orig_section);
+	git_buf_dispose(&write_data.buffered_comment);
 	git_buf_dispose(&buf);
 	git_buf_dispose(&contents);
+	git_filebuf_cleanup(&file);
 	git_parse_ctx_clear(&reader.ctx);
-	return result;
+
+	return error;
 }
