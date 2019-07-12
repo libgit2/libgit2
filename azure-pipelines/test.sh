@@ -16,9 +16,9 @@ SUCCESS=1
 cleanup() {
 	echo "Cleaning up..."
 
-	if [ ! -z "$GITDAEMON_DIR" -a -f "${GITDAEMON_DIR}/pid" ]; then
+	if [ ! -z "$GITDAEMON_PID" ]; then
 		echo "Stopping git daemon..."
-		kill $(cat "${GITDAEMON_DIR}/pid")
+		kill $GITDAEMON_PID
 	fi
 
 	if [ ! -z "$SSHD_DIR" -a -f "${SSHD_DIR}/pid" ]; then
@@ -73,7 +73,8 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	echo "Starting git daemon..."
 	GITDAEMON_DIR=`mktemp -d ${TMPDIR}/gitdaemon.XXXXXXXX`
 	git init --bare "${GITDAEMON_DIR}/test.git"
-	git daemon --listen=localhost --export-all --enable=receive-pack --pid-file="${GITDAEMON_DIR}/pid" --base-path="${GITDAEMON_DIR}" "${GITDAEMON_DIR}" 2>/dev/null &
+	git daemon --listen=localhost --export-all --enable=receive-pack --base-path="${GITDAEMON_DIR}" "${GITDAEMON_DIR}" 2>/dev/null &
+	GITDAEMON_PID=$!
 fi
 
 if [ -z "$SKIP_PROXY_TESTS" ]; then
