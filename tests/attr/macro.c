@@ -125,6 +125,22 @@ void test_attr_macro__changing_macro_in_root_wd_updates_attributes(void)
 	cl_assert_equal_s(value, "second");
 }
 
+void test_attr_macro__macros_in_subdir_do_not_apply(void)
+{
+	const char *value;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_pass(p_mkdir("empty_standard_repo/dir", 0777));
+	cl_git_rewritefile("empty_standard_repo/dir/.gitattributes",
+			   "[attr]customattr key=value\n"
+			   "file customattr\n");
+
+	/* This should _not_ pass, as macros in subdirectories shall be ignored */
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "dir/file", "key"));
+	cl_assert_equal_p(value, NULL);
+}
+
 void test_attr_macro__adding_macro_succeeds(void)
 {
 	const char *value;

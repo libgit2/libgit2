@@ -105,7 +105,8 @@ int git_attr_file__load(
 	git_attr_session *attr_session,
 	git_attr_file_entry *entry,
 	git_attr_file_source source,
-	git_attr_file_parser parser)
+	git_attr_file_parser parser,
+	bool allow_macros)
 {
 	int error = 0;
 	git_blob *blob = NULL;
@@ -177,7 +178,7 @@ int git_attr_file__load(
 	if (attr_session)
 		file->session_key = attr_session->key;
 
-	if (parser && (error = parser(repo, file, content_str)) < 0) {
+	if (parser && (error = parser(repo, file, content_str, allow_macros)) < 0) {
 		git_attr_file__free(file);
 		goto cleanup;
 	}
@@ -249,7 +250,7 @@ static bool parse_optimized_patterns(
 	const char *pattern);
 
 int git_attr_file__parse_buffer(
-	git_repository *repo, git_attr_file *attrs, const char *data)
+	git_repository *repo, git_attr_file *attrs, const char *data, bool allow_macros)
 {
 	const char *scan = data, *context = NULL;
 	git_attr_rule *rule = NULL;
@@ -287,6 +288,8 @@ int git_attr_file__parse_buffer(
 
 		if (rule->match.flags & GIT_ATTR_FNMATCH_MACRO) {
 			/* TODO: warning if macro found in file below repo root */
+			if (!allow_macros)
+				continue;
 			if ((error = git_attr_cache__insert_macro(repo, rule)) < 0)
 				goto out;
 		} else if ((error = git_vector_insert(&attrs->rules, rule)) < 0)
@@ -355,7 +358,7 @@ int git_attr_file__load_standalone(git_attr_file **out, const char *path)
 	 */
 
 	if ((error = git_attr_file__new(&file, NULL, GIT_ATTR_FILE__FROM_FILE)) < 0 ||
-	    (error = git_attr_file__parse_buffer(NULL, file, content.ptr)) < 0 ||
+	    (error = git_attr_file__parse_buffer(NULL, file, content.ptr, true)) < 0 ||
 	    (error = git_attr_cache__alloc_file_entry(&file->entry, NULL, path, &file->pool)) < 0)
 		goto out;
 

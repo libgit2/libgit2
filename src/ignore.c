@@ -163,12 +163,14 @@ out:
 }
 
 static int parse_ignore_file(
-	git_repository *repo, git_attr_file *attrs, const char *data)
+	git_repository *repo, git_attr_file *attrs, const char *data, bool allow_macros)
 {
 	int error = 0;
 	int ignore_case = false;
 	const char *scan = data, *context = NULL;
 	git_attr_fnmatch *match = NULL;
+
+	GIT_UNUSED(allow_macros);
 
 	if (git_repository__cvar(&ignore_case, repo, GIT_CVAR_IGNORECASE) < 0)
 		git_error_clear();
@@ -244,9 +246,8 @@ static int push_ignore_file(
 	int error = 0;
 	git_attr_file *file = NULL;
 
-	error = git_attr_cache__get(
-		&file, ignores->repo, NULL, GIT_ATTR_FILE__FROM_FILE,
-		base, filename, parse_ignore_file);
+	error = git_attr_cache__get(&file, ignores->repo, NULL, GIT_ATTR_FILE__FROM_FILE,
+				    base, filename, parse_ignore_file, false);
 	if (error < 0)
 		return error;
 
@@ -272,12 +273,12 @@ static int get_internal_ignores(git_attr_file **out, git_repository *repo)
 	if ((error = git_attr_cache__init(repo)) < 0)
 		return error;
 
-	error = git_attr_cache__get(
-		out, repo, NULL, GIT_ATTR_FILE__IN_MEMORY, NULL, GIT_IGNORE_INTERNAL, NULL);
+	error = git_attr_cache__get(out, repo, NULL, GIT_ATTR_FILE__IN_MEMORY, NULL,
+				    GIT_IGNORE_INTERNAL, NULL, false);
 
 	/* if internal rules list is empty, insert default rules */
 	if (!error && !(*out)->rules.length)
-		error = parse_ignore_file(repo, *out, GIT_IGNORE_DEFAULT_RULES);
+		error = parse_ignore_file(repo, *out, GIT_IGNORE_DEFAULT_RULES, false);
 
 	return error;
 }
@@ -487,7 +488,7 @@ int git_ignore_add_rule(git_repository *repo, const char *rules)
 	if ((error = get_internal_ignores(&ign_internal, repo)) < 0)
 		return error;
 
-	error = parse_ignore_file(repo, ign_internal, rules);
+	error = parse_ignore_file(repo, ign_internal, rules, false);
 	git_attr_file__free(ign_internal);
 
 	return error;
@@ -503,7 +504,7 @@ int git_ignore_clear_internal_rules(git_repository *repo)
 
 	if (!(error = git_attr_file__clear_rules(ign_internal, true)))
 		error = parse_ignore_file(
-			repo, ign_internal, GIT_IGNORE_DEFAULT_RULES);
+				repo, ign_internal, GIT_IGNORE_DEFAULT_RULES, false);
 
 	git_attr_file__free(ign_internal);
 	return error;

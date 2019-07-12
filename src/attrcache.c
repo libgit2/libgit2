@@ -208,7 +208,8 @@ int git_attr_cache__get(
 	git_attr_file_source source,
 	const char *base,
 	const char *filename,
-	git_attr_file_parser parser)
+	git_attr_file_parser parser,
+	bool allow_macros)
 {
 	int error = 0;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
@@ -221,7 +222,7 @@ int git_attr_cache__get(
 
 	/* load file if we don't have one or if existing one is out of date */
 	if (!file || (error = git_attr_file__out_of_date(repo, attr_session, file)) > 0)
-		error = git_attr_file__load(&updated, repo, attr_session, entry, source, parser);
+		error = git_attr_file__load(&updated, repo, attr_session, entry, source, parser, allow_macros);
 
 	/* if we loaded the file, insert into and/or update cache */
 	if (updated) {

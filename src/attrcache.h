@@ -34,7 +34,8 @@ extern int git_attr_cache__get(
 	git_attr_file_source source,
 	const char *base,
 	const char *filename,
-	git_attr_file_parser parser);
+	git_attr_file_parser parser,
+	bool allow_macros);
 
 extern bool git_attr_cache__is_cached(
 	git_repository *repo,

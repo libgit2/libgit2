@@ -252,15 +252,16 @@ static int preload_attr_file(
 	git_attr_session *attr_session,
 	git_attr_file_source source,
 	const char *base,
-	const char *file)
+	const char *file,
+	bool allow_macros)
 {
 	int error;
 	git_attr_file *preload = NULL;
 
 	if (!file)
 		return 0;
-	if (!(error = git_attr_cache__get(
-			&preload, repo, attr_session, source, base, file, git_attr_file__parse_buffer)))
+	if (!(error = git_attr_cache__get(&preload, repo, attr_session, source, base, file,
+					  git_attr_file__parse_buffer, allow_macros)))
 		git_attr_file__free(preload);
 
 	return error;
@@ -324,31 +325,31 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 
 	if ((error = system_attr_file(&path, attr_session)) < 0 ||
 	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
-				       NULL, path.ptr)) < 0) {
+				       NULL, path.ptr, true)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto out;
 	}
 
 	if ((error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
-				       NULL, git_repository_attr_cache(repo)->cfg_attr_file)) < 0)
+				       NULL, git_repository_attr_cache(repo)->cfg_attr_file, true)) < 0)
 		goto out;
 
 	git_buf_clear(&path); /* git_repository_item_path expects an empty buffer, because it uses git_buf_set */
 	if ((error = git_repository_item_path(&path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
 	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
-				       path.ptr, GIT_ATTR_FILE_INREPO)) < 0) {
+				       path.ptr, GIT_ATTR_FILE_INREPO, true)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto out;
 	}
 
 	if ((workdir = git_repository_workdir(repo)) != NULL &&
 	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
-				       workdir, GIT_ATTR_FILE)) < 0)
+				       workdir, GIT_ATTR_FILE, true)) < 0)
 			goto out;
 
 	if ((error = git_repository_index__weakptr(&idx, repo)) < 0 ||
 	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_INDEX,
-				       NULL, GIT_ATTR_FILE)) < 0)
+				       NULL, GIT_ATTR_FILE, true)) < 0)
 			goto out;
 
 	if (attr_session)
@@ -436,13 +437,14 @@ static int push_attr_file(
 	git_vector *list,
 	git_attr_file_source source,
 	const char *base,
-	const char *filename)
+	const char *filename,
+	bool allow_macros)
 {
 	int error = 0;
 	git_attr_file *file = NULL;
 
 	error = git_attr_cache__get(&file, repo, attr_session,
-		source, base, filename, git_attr_file__parse_buffer);
+		source, base, filename, git_attr_file__parse_buffer, allow_macros);
 
 	if (error < 0)
 		return error;
@@ -457,16 +459,18 @@ static int push_attr_file(
 
 static int push_one_attr(void *ref, const char *path)
 {
-	int error = 0, n_src, i;
 	attr_walk_up_info *info = (attr_walk_up_info *)ref;
 	git_attr_file_source src[2];
+	int error = 0, n_src, i;
+	bool allow_macros;
 
 	n_src = attr_decide_sources(
 		info->flags, info->workdir != NULL, info->index != NULL, src);
+	allow_macros = info->workdir ? !strcmp(info->workdir, path) : false;
 
 	for (i = 0; !error && i < n_src; ++i)
-		error = push_attr_file(info->repo, info->attr_session,
-			info->files, src[i], path, GIT_ATTR_FILE);
+		error = push_attr_file(info->repo, info->attr_session, info->files,
+				       src[i], path, GIT_ATTR_FILE, allow_macros);
 
 	return error;
 }
@@ -515,7 +519,7 @@ static int collect_attr_files(
 
 	if ((error = git_repository_item_path(&attrfile, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
 	    (error = push_attr_file(repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
-				    attrfile.ptr, GIT_ATTR_FILE_INREPO)) < 0) {
+				    attrfile.ptr, GIT_ATTR_FILE_INREPO, true)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto cleanup;
 	}
@@ -537,9 +541,8 @@ static int collect_attr_files(
 		goto cleanup;
 
 	if (git_repository_attr_cache(repo)->cfg_attr_file != NULL) {
-		error = push_attr_file(
-			repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
-			NULL, git_repository_attr_cache(repo)->cfg_attr_file);
+		error = push_attr_file(repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
+				       NULL, git_repository_attr_cache(repo)->cfg_attr_file, true);
 		if (error < 0)
 			goto cleanup;
 	}
@@ -548,9 +551,8 @@ static int collect_attr_files(
 		error = system_attr_file(&dir, attr_session);
 
 		if (!error)
-			error = push_attr_file(
-				repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
-				NULL, dir.ptr);
+			error = push_attr_file(repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
+					       NULL, dir.ptr, true);
 		else if (error == GIT_ENOTFOUND)
 			error = 0;
 	}
