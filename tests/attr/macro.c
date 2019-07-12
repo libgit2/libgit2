@@ -6,6 +6,8 @@
  */
 
 #include "clar_libgit2.h"
+
+#include "git2/sys/repository.h"
 #include "attr.h"
 
 static git_repository *g_repo = NULL;
@@ -121,4 +123,57 @@ void test_attr_macro__changing_macro_in_root_wd_updates_attributes(void)
 			   "file customattr\n");
 	cl_git_pass(git_attr_get(&value, g_repo, 0, "file", "key"));
 	cl_assert_equal_s(value, "second");
+}
+
+void test_attr_macro__adding_macro_succeeds(void)
+{
+	const char *value;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_pass(git_attr_add_macro(g_repo, "macro", "key=value"));
+	cl_git_rewritefile("empty_standard_repo/.gitattributes", "file.txt macro\n");
+
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file.txt", "key"));
+	cl_assert_equal_s(value, "value");
+}
+
+void test_attr_macro__adding_boolean_macros_succeeds(void)
+{
+	const char *value;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_pass(git_attr_add_macro(g_repo, "macro-pos", "positive"));
+	cl_git_pass(git_attr_add_macro(g_repo, "macro-neg", "-negative"));
+	cl_git_rewritefile("empty_standard_repo/.gitattributes", "file.txt macro-pos macro-neg\n");
+
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file.txt", "positive"));
+	cl_assert(GIT_ATTR_IS_TRUE(value));
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file.txt", "negative"));
+	cl_assert(GIT_ATTR_IS_FALSE(value));
+}
+
+void test_attr_macro__redefining_macro_succeeds(void)
+{
+	const char *value;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_pass(git_attr_add_macro(g_repo, "macro", "key=value1"));
+	cl_git_pass(git_attr_add_macro(g_repo, "macro", "key=value2"));
+	cl_git_rewritefile("empty_standard_repo/.gitattributes", "file.txt macro");
+
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file.txt", "key"));
+	cl_assert_equal_s(value, "value2");
+}
+
+void test_attr_macro__recursive_macro_resolves(void)
+{
+	const char *value;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_pass(git_attr_add_macro(g_repo, "expandme", "key=value"));
+	cl_git_pass(git_attr_add_macro(g_repo, "macro", "expandme"));
+	cl_git_rewritefile("empty_standard_repo/.gitattributes", "file.txt macro");
+
+	cl_git_pass(git_attr_get(&value, g_repo, 0, "file.txt", "key"));
+	cl_assert_equal_s(value, "value");
 }
