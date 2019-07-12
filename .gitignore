@@ -33,3 +33,5 @@ tags
 mkmf.log
 *.profdata
 *.profraw
+CMakeSettings.json
+.vs
