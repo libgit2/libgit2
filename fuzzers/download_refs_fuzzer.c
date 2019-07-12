@@ -7,14 +7,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <unistd.h>
 
 #include "git2.h"
 #include "git2/sys/transport.h"
+#include "fileops.h"
 
 #define UNUSED(x) (void)(x)
 
@@ -166,10 +165,23 @@ void fuzzer_git_abort(const char *op)
 
 int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
-	char tmp[] = "/tmp/git2.XXXXXX";
+#if defined(_WIN32)
+	char tmpdir[MAX_PATH], path[MAX_PATH];
 
-	UNUSED(argc);
-	UNUSED(argv);
+	if (GetTempPath((DWORD)sizeof(tmpdir), tmpdir) == 0)
+		abort();
+
+	if (GetTempFileName(tmpdir, "lg2", 1, path) == 0)
+		abort();
+
+	if (git_futils_mkdir(path, 0700, 0) < 0)
+		abort();
+#else
+	char path[] = "/tmp/git2.XXXXXX";
+
+	if (mkdtemp(path) != path)
+		abort();
+#endif
 
 	if (git_libgit2_init() < 0)
 		abort();
@@ -177,10 +189,10 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 	if (git_libgit2_opts(GIT_OPT_SET_PACK_MAX_OBJECTS, 10000000) < 0)
 		abort();
 
-	if (mkdtemp(tmp) != tmp)
-		abort();
+	UNUSED(argc);
+	UNUSED(argv);
 
-	if (git_repository_init(&repo, tmp, 1) < 0)
+	if (git_repository_init(&repo, path, 1) < 0)
 		fuzzer_git_abort("git_repository_init");
 
 	return 0;

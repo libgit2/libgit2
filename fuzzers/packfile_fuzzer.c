@@ -7,16 +7,12 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <limits.h>
-#include <unistd.h>
 
 #include "git2.h"
 #include "git2/sys/mempack.h"
-
-#define UNUSED(x) (void)(x)
+#include "common.h"
+#include "buffer.h"
 
 static git_odb *odb = NULL;
 static git_odb_backend *mempack = NULL;
@@ -27,8 +23,9 @@ static const unsigned int base_obj_len = 2;
 
 int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
-	UNUSED(argc);
-	UNUSED(argv);
+	GIT_UNUSED(argc);
+	GIT_UNUSED(argv);
+
 	if (git_libgit2_init() < 0) {
 		fprintf(stderr, "Failed to initialize libgit2\n");
 		abort();
@@ -54,12 +51,11 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
-	git_indexer *indexer = NULL;
 	git_indexer_progress stats = {0, 0};
+	git_indexer *indexer = NULL;
+	git_buf path = GIT_BUF_INIT;
+	git_oid oid;
 	bool append_hash = false;
-	git_oid id;
-	char hash[GIT_OID_HEXSZ + 1] = {0};
-	char path[PATH_MAX];
 
 	if (size == 0)
 		return 0;
@@ -70,7 +66,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	}
 	git_mempack_reset(mempack);
 
-	if (git_odb_write(&id, odb, base_obj, base_obj_len, GIT_OBJECT_BLOB) < 0) {
+	if (git_odb_write(&oid, odb, base_obj, base_obj_len, GIT_OBJECT_BLOB) < 0) {
 		fprintf(stderr, "Failed to add an object to the odb\n");
 		abort();
 	}
@@ -92,7 +88,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	if (git_indexer_append(indexer, data, size, &stats) < 0)
 		goto cleanup;
 	if (append_hash) {
-		git_oid oid;
 		if (git_odb_hash(&oid, data, size, GIT_OBJECT_BLOB) < 0) {
 			fprintf(stderr, "Failed to compute the SHA1 hash\n");
 			abort();
@@ -104,19 +99,19 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	if (git_indexer_commit(indexer, &stats) < 0)
 		goto cleanup;
 
-	/*
-	 * We made it! We managed to produce a valid packfile.
-	 * Let's clean it up.
-	 */
-	git_oid_fmt(hash, git_indexer_hash(indexer));
-	printf("Generated packfile %s\n", hash);
-	snprintf(path, sizeof(path), "pack-%s.idx", hash);
-	unlink(path);
-	snprintf(path, sizeof(path), "pack-%s.pack", hash);
-	unlink(path);
+	if (git_buf_printf(&path, "pack-%s.idx", git_oid_tostr_s(git_indexer_hash(indexer))) < 0)
+		goto cleanup;
+	p_unlink(git_buf_cstr(&path));
+
+	git_buf_clear(&path);
+
+	if (git_buf_printf(&path, "pack-%s.pack", git_oid_tostr_s(git_indexer_hash(indexer))) < 0)
+		goto cleanup;
+	p_unlink(git_buf_cstr(&path));
 
 cleanup:
 	git_mempack_reset(mempack);
 	git_indexer_free(indexer);
+	git_buf_dispose(&path);
 	return 0;
 }

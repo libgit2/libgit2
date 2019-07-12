@@ -7,14 +7,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include <git2.h>
+#include "git2.h"
 #include "config_backend.h"
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <limits.h>
-#include <errno.h>
 
 #define UNUSED(x) (void)(x)
 
