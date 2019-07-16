@@ -210,7 +210,7 @@ class TestSuite(object):
                     module.modified = True
 
     def suite_count(self):
-        return len(self.modules)
+        return sum(len(module.initializers) for module in self.modules.values())
 
     def callback_count(self):
         return sum(len(module.callbacks) for module in self.modules.values())
