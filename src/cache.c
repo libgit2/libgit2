@@ -115,8 +115,11 @@ void git_cache_dispose(git_cache *cache)
 /* Called with lock */
 static void cache_evict_entries(git_cache *cache)
 {
-	size_t evict_count = 8, i;
+	size_t evict_count = git_cache_size(cache) / 2048, i;
 	ssize_t evicted_memory = 0;
+
+	if (evict_count < 8)
+		evict_count = 8;
 
 	/* do not infinite loop if there's not enough entries to evict  */
 	if (evict_count > git_cache_size(cache)) {
