@@ -249,7 +249,7 @@ static int pack_entry_find_inner(
 			continue;
 
 		if (git_pack_entry_find(e, p, oid, GIT_OID_HEXSZ) == 0) {
-			backend->last_found = p;
+			__atomic_store(&backend->last_found, &p, __ATOMIC_RELEASE);
 			return 0;
 		}
 	}
@@ -259,10 +259,10 @@ static int pack_entry_find_inner(
 
 static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backend, const git_oid *oid)
 {
-	struct git_pack_file *last_found = backend->last_found;
+	struct git_pack_file *last_found;
+	__atomic_load(&backend->last_found, &last_found, __ATOMIC_ACQUIRE);;
 
-	if (backend->last_found &&
-		git_pack_entry_find(e, backend->last_found, oid, GIT_OID_HEXSZ) == 0)
+	if (last_found && git_pack_entry_find(e, last_found, oid, GIT_OID_HEXSZ) == 0)
 		return 0;
 
 	if (!pack_entry_find_inner(e, backend, oid, last_found))
@@ -282,7 +282,8 @@ static int pack_entry_find_prefix(
 	size_t i;
 	git_oid found_full_oid = {{0}};
 	bool found = false;
-	struct git_pack_file *last_found = backend->last_found;
+	struct git_pack_file *last_found;
+	__atomic_load(&backend->last_found, &last_found, __ATOMIC_ACQUIRE);;
 
 	if (last_found) {
 		error = git_pack_entry_find(e, last_found, short_oid, len);
@@ -309,7 +310,7 @@ static int pack_entry_find_prefix(
 				return git_odb__error_ambiguous("found multiple pack entries");
 			git_oid_cpy(&found_full_oid, &e->sha1);
 			found = true;
-			backend->last_found = p;
+			__atomic_store(&backend->last_found, &p, __ATOMIC_RELEASE);
 		}
 	}
 

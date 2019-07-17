@@ -136,6 +136,8 @@ struct reuc_entry_internal {
 };
 
 bool git_index__enforce_unsaved_safety = false;
+bool git_index__disable_checksum_verification = false;
+bool git_index__disable_filepath_validation = false;
 
 /* local declarations */
 static int read_extension(size_t *read_len, git_index *index, const char *buffer, size_t buffer_size);
@@ -682,6 +684,10 @@ int git_index_read(git_index *index, int force)
 	return error;
 }
 
+int git_index_is_case_sensitive(const git_index *index) {
+	return !index->ignore_case;
+}
+
 int git_index_read_safely(git_index *index)
 {
 	if (git_index__enforce_unsaved_safety && index->dirty) {
@@ -899,30 +905,17 @@ static void index_entry_adjust_namemask(
 		entry->flags |= GIT_INDEX_ENTRY_NAMEMASK;
 }
 
-/* When `from_workdir` is true, we will validate the paths to avoid placing
- * paths that are invalid for the working directory on the current filesystem
- * (eg, on Windows, we will disallow `GIT~1`, `AUX`, `COM1`, etc).  This
- * function will *always* prevent `.git` and directory traversal `../` from
- * being added to the index.
- */
 static int index_entry_create(
 	git_index_entry **out,
 	git_repository *repo,
 	const char *path,
 	struct stat *st,
-	bool from_workdir)
+	unsigned int path_valid_flags)
 {
 	size_t pathlen = strlen(path), alloclen;
 	struct entry_internal *entry;
-	unsigned int path_valid_flags = GIT_PATH_REJECT_INDEX_DEFAULTS;
 	uint16_t mode = 0;
 
-	/* always reject placing `.git` in the index and directory traversal.
-	 * when requested, disallow platform-specific filenames and upgrade to
-	 * the platform-specific `.git` tests (eg, `git~1`, etc).
-	 */
-	if (from_workdir)
-		path_valid_flags |= GIT_PATH_REJECT_WORKDIR_DEFAULTS;
 	if (st)
 		mode = st->st_mode;
 
@@ -979,7 +972,8 @@ static int index_entry_init(
 	if (error < 0)
 		return error;
 
-	if (index_entry_create(&entry, INDEX_OWNER(index), rel_path, &st, true) < 0)
+	if (index_entry_create(&entry, INDEX_OWNER(index), rel_path, &st,
+	    GIT_PATH_REJECT_INDEX_DEFAULTS | GIT_PATH_REJECT_WORKDIR_DEFAULTS) < 0)
 		return -1;
 
 	/* write the blob to disk and get the oid and stat info */
@@ -1065,7 +1059,8 @@ static int index_entry_dup(
 	git_index *index,
 	const git_index_entry *src)
 {
-	if (index_entry_create(out, INDEX_OWNER(index), src->path, NULL, false) < 0)
+	if (index_entry_create(
+	    out, INDEX_OWNER(index), src->path, NULL, GIT_PATH_REJECT_INDEX_DEFAULTS) < 0)
 		return -1;
 
 	index_entry_cpy(*out, src);
@@ -1087,7 +1082,8 @@ static int index_entry_dup_nocache(
 	git_index *index,
 	const git_index_entry *src)
 {
-	if (index_entry_create(out, INDEX_OWNER(index), src->path, NULL, false) < 0)
+	if (index_entry_create(
+	    out, INDEX_OWNER(index), src->path, NULL, GIT_PATH_REJECT_INDEX_DEFAULTS) < 0)
 		return -1;
 
 	index_entry_cpy_nocache(*out, src);
@@ -1520,7 +1516,8 @@ static int add_repo_as_submodule(git_index_entry **out, git_index *index, const 
 		return -1;
 	}
 
-	if (index_entry_create(&entry, INDEX_OWNER(index), path, &st, true) < 0)
+	if (index_entry_create(&entry, INDEX_OWNER(index), path, &st,
+	    GIT_PATH_REJECT_INDEX_DEFAULTS | GIT_PATH_REJECT_WORKDIR_DEFAULTS) < 0)
 		return -1;
 
 	git_index_entry__init_from_stat(entry, &st, !index->distrust_filemode);
@@ -1978,7 +1975,7 @@ int git_index_has_conflicts(const git_index *index)
 	return 0;
 }
 
-int git_index_iterator_new(
+int git_index_iterator_new_testonly(
 	git_index_iterator **iterator_out,
 	git_index *index)
 {
@@ -2014,12 +2011,12 @@ int git_index_iterator_next(
 	return 0;
 }
 
-void git_index_iterator_free(git_index_iterator *it)
+void git_index_iterator_free_testonly(git_index_iterator *it)
 {
 	if (it == NULL)
 		return;
 
-	git_index_snapshot_release(&it->snap, it->index);
+	git_index_snapshot_release(it->index);
 	git__free(it);
 }
 
@@ -2506,10 +2503,12 @@ static int read_entry(
 	if (INDEX_FOOTER_SIZE + entry_size > buffer_size)
 		return -1;
 
-	if (index_entry_dup(out, index, &entry) < 0) {
+	if (index_entry_create(out, INDEX_OWNER(index), entry.path, NULL,
+	    git_index__disable_filepath_validation ? GIT_PATH_REJECT_NOTHING : GIT_PATH_REJECT_INDEX_DEFAULTS) < 0) {
 		git__free(tmp_path);
 		return -1;
 	}
+	index_entry_cpy(*out, &entry);
 
 	git__free(tmp_path);
 	*out_size = entry_size;
@@ -2598,9 +2597,11 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	if (buffer_size < INDEX_HEADER_SIZE + INDEX_FOOTER_SIZE)
 		return index_error_invalid("insufficient buffer space");
 
-	/* Precalculate the SHA1 of the files's contents -- we'll match it to
-	 * the provided SHA1 in the footer */
-	git_hash_buf(&checksum_calculated, buffer, buffer_size - INDEX_FOOTER_SIZE);
+	if (!git_index__disable_checksum_verification) {
+		/* Precalculate the SHA1 of the files's contents -- we'll match it to
+		 * the provided SHA1 in the footer */
+		git_hash_buf(&checksum_calculated, buffer, buffer_size - INDEX_FOOTER_SIZE);
+	}
 
 	/* Parse header */
 	if ((error = read_header(&header, buffer)) < 0)
@@ -2675,13 +2676,14 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	/* 160-bit SHA-1 over the content of the index file before this checksum. */
 	git_oid_fromraw(&checksum_expected, (const unsigned char *)buffer);
 
-	if (git_oid__cmp(&checksum_calculated, &checksum_expected) != 0) {
-		error = index_error_invalid(
-			"calculated checksum does not match expected");
-		goto done;
+	if (!git_index__disable_checksum_verification) {
+		if (git_oid__cmp(&checksum_calculated, &checksum_expected) != 0) {
+			error = index_error_invalid("calculated checksum does not match expected");
+			goto done;
+		}
 	}
 
-	git_oid_cpy(&index->checksum, &checksum_calculated);
+	git_oid_cpy(&index->checksum, &checksum_expected);
 
 #undef seek_forward
 
@@ -3077,7 +3079,8 @@ static int read_tree_cb(
 	if (git_buf_joinpath(&path, root, tentry->filename) < 0)
 		return -1;
 
-	if (index_entry_create(&entry, INDEX_OWNER(data->index), path.ptr, NULL, false) < 0)
+	if (index_entry_create(
+	    &entry, INDEX_OWNER(data->index), path.ptr, NULL, GIT_PATH_REJECT_INDEX_DEFAULTS) < 0)
 		return -1;
 
 	entry->mode = tentry->attr;
@@ -3595,25 +3598,18 @@ int git_index_update_all(
 
 int git_index_snapshot_new(git_vector *snap, git_index *index)
 {
-	int error;
-
 	GIT_REFCOUNT_INC(index);
 
 	git_atomic_inc(&index->readers);
 	git_vector_sort(&index->entries);
 
-	error = git_vector_dup(snap, &index->entries, index->entries._cmp);
+	*snap = index->entries;
 
-	if (error < 0)
-		git_index_snapshot_release(snap, index);
-
-	return error;
+	return 0;
 }
 
-void git_index_snapshot_release(git_vector *snap, git_index *index)
+void git_index_snapshot_release(git_index *index)
 {
-	git_vector_free(snap);
-
 	git_atomic_dec(&index->readers);
 
 	git_index_free(index);

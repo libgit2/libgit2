@@ -160,7 +160,9 @@ struct git_repository {
 
 GIT_INLINE(git_attr_cache *) git_repository_attr_cache(git_repository *repo)
 {
-	return repo->attrcache;
+	git_attr_cache *cache;
+	__atomic_load(&repo->attrcache, &cache, __ATOMIC_ACQUIRE);
+	return cache;
 }
 
 int git_repository_head_tree(git_tree **tree, git_repository *repo);

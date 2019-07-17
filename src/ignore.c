@@ -265,6 +265,12 @@ static int push_one_ignore(void *payload, const char *path)
 	return push_ignore_file(ign, &ign->ign_path, path, GIT_IGNORE_FILE);
 }
 
+static int parse_ignore_default_rules(
+	git_repository *repo, git_attr_file *attrs, const char *data) {
+	(void)data;
+	return parse_ignore_file(repo, attrs, GIT_IGNORE_DEFAULT_RULES);
+}
+
 static int get_internal_ignores(git_attr_file **out, git_repository *repo)
 {
 	int error;
@@ -272,12 +278,10 @@ static int get_internal_ignores(git_attr_file **out, git_repository *repo)
 	if ((error = git_attr_cache__init(repo)) < 0)
 		return error;
 
-	error = git_attr_cache__get(
-		out, repo, NULL, GIT_ATTR_FILE__IN_MEMORY, NULL, GIT_IGNORE_INTERNAL, NULL);
-
 	/* if internal rules list is empty, insert default rules */
-	if (!error && !(*out)->rules.length)
-		error = parse_ignore_file(repo, *out, GIT_IGNORE_DEFAULT_RULES);
+	error = git_attr_cache__get(
+		out, repo, NULL, GIT_ATTR_FILE__IN_MEMORY, NULL,
+		GIT_IGNORE_INTERNAL, parse_ignore_default_rules);
 
 	return error;
 }

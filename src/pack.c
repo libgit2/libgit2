@@ -132,10 +132,14 @@ static void free_lowest_entry(git_pack_cache *cache)
 	git_pack_cache_entry *entry;
 
 	git_offmap_foreach(cache->entries, offset, entry, {
-		if (entry && entry->refcount.val == 0) {
-			cache->memory_used -= entry->raw.len;
-			git_offmap_delete(cache->entries, offset);
-			free_cache_object(entry);
+		if (entry) {
+			int refcount;
+			__atomic_load(&entry->refcount.val, &refcount, __ATOMIC_ACQUIRE);
+			if (refcount == 0) {
+				cache->memory_used -= entry->raw.len;
+				git_offmap_delete(cache->entries, offset);
+				free_cache_object(entry);
+			}
 		}
 	});
 }
@@ -197,6 +201,12 @@ static void pack_index_free(struct git_pack_file *p)
 		git_futils_mmap_free(&p->index_map);
 		p->index_map.data = NULL;
 	}
+}
+
+static int load_acquire(int *p) {
+	int res;
+	__atomic_load(p, &res, __ATOMIC_ACQUIRE);
+	return res;
 }
 
 static int pack_index_check(const char *path, struct git_pack_file *p)
@@ -301,7 +311,7 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 	}
 
 	p->num_objects = nr;
-	p->index_version = version;
+	__atomic_store(&p->index_version, &version, __ATOMIC_RELEASE);
 	return 0;
 }
 
@@ -311,7 +321,7 @@ static int pack_index_open(struct git_pack_file *p)
 	size_t name_len;
 	git_buf idx_name;
 
-	if (p->index_version > -1)
+	if (load_acquire(&p->index_version) > -1)
 		return 0;
 
 	name_len = strlen(p->pack_name);
@@ -332,7 +342,7 @@ static int pack_index_open(struct git_pack_file *p)
 		return error;
 	}
 
-	if (p->index_version == -1)
+	if (load_acquire(&p->index_version) == -1)
 		error = pack_index_check(idx_name.ptr, p);
 
 	git_buf_dispose(&idx_name);
@@ -1015,12 +1025,13 @@ void git_packfile_free(struct git_pack_file *p)
 
 static int packfile_open(struct git_pack_file *p)
 {
+	int fd = -1;
 	struct stat st;
 	struct git_pack_header hdr;
 	git_oid sha1;
 	unsigned char *idx_sha1;
 
-	if (p->index_version == -1 && pack_index_open(p) < 0)
+	if (load_acquire(&p->index_version) == -1 && pack_index_open(p) < 0)
 		return git_odb__error_notfound("failed to open packfile", NULL, 0);
 
 	/* if mwf opened by another thread, return now */
@@ -1033,11 +1044,11 @@ static int packfile_open(struct git_pack_file *p)
 	}
 
 	/* TODO: open with noatime */
-	p->mwf.fd = git_futils_open_ro(p->pack_name);
-	if (p->mwf.fd < 0)
+	fd = git_futils_open_ro(p->pack_name);
+	if (fd < 0)
 		goto cleanup;
 
-	if (p_fstat(p->mwf.fd, &st) < 0 ||
+	if (p_fstat(fd, &st) < 0 ||
 		git_mwindow_file_register(&p->mwf) < 0)
 		goto cleanup;
 
@@ -1053,7 +1064,7 @@ static int packfile_open(struct git_pack_file *p)
 	/* We leave these file descriptors open with sliding mmap;
 	 * there is no point keeping them open across exec(), though.
 	 */
-	fd_flag = fcntl(p->mwf.fd, F_GETFD, 0);
+	fd_flag = fcntl(fd, F_GETFD, 0);
 	if (fd_flag < 0)
 		goto cleanup;
 
@@ -1063,15 +1074,15 @@ static int packfile_open(struct git_pack_file *p)
 #endif
 
 	/* Verify we recognize this pack file format. */
-	if (p_read(p->mwf.fd, &hdr, sizeof(hdr)) < 0 ||
+	if (p_read(fd, &hdr, sizeof(hdr)) < 0 ||
 		hdr.hdr_signature != htonl(PACK_SIGNATURE) ||
 		!pack_version_ok(hdr.hdr_version))
 		goto cleanup;
 
 	/* Verify the pack matches its index. */
 	if (p->num_objects != ntohl(hdr.hdr_entries) ||
-		p_lseek(p->mwf.fd, p->mwf.size - GIT_OID_RAWSZ, SEEK_SET) == -1 ||
-		p_read(p->mwf.fd, sha1.id, GIT_OID_RAWSZ) < 0)
+		p_lseek(fd, p->mwf.size - GIT_OID_RAWSZ, SEEK_SET) == -1 ||
+		p_read(fd, sha1.id, GIT_OID_RAWSZ) < 0)
 		goto cleanup;
 
 	idx_sha1 = ((unsigned char *)p->index_map.data) + p->index_map.len - 40;
@@ -1079,16 +1090,15 @@ static int packfile_open(struct git_pack_file *p)
 	if (git_oid__cmp(&sha1, (git_oid *)idx_sha1) != 0)
 		goto cleanup;
 
+	__atomic_store(&p->mwf.fd, &fd, __ATOMIC_RELEASE);
 	git_mutex_unlock(&p->lock);
 	return 0;
 
 cleanup:
 	git_error_set(GIT_ERROR_OS, "invalid packfile '%s'", p->pack_name);
 
-	if (p->mwf.fd >= 0)
-		p_close(p->mwf.fd);
-	p->mwf.fd = -1;
-
+	if (fd >= 0)
+		p_close(fd);
 	git_mutex_unlock(&p->lock);
 
 	return -1;
@@ -1285,7 +1295,7 @@ static int pack_entry_find_offset(
 
 	*offset_out = 0;
 
-	if (p->index_version == -1) {
+	if (load_acquire(&p->index_version) == -1) {
 		int error;
 
 		if ((error = pack_index_open(p)) < 0)
@@ -1378,6 +1388,7 @@ int git_pack_entry_find(
 	git_off_t offset;
 	git_oid found_oid;
 	int error;
+	int fd;
 
 	assert(p);
 
@@ -1395,7 +1406,8 @@ int git_pack_entry_find(
 	/* we found a unique entry in the index;
 	 * make sure the packfile backing the index
 	 * still exists on disk */
-	if (p->mwf.fd == -1 && (error = packfile_open(p)) < 0)
+	__atomic_load(&p->mwf.fd, &fd, __ATOMIC_ACQUIRE);
+	if (fd == -1 && (error = packfile_open(p)) < 0)
 		return error;
 
 	e->offset = offset;

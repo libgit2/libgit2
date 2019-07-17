@@ -350,6 +350,9 @@ typedef struct {
 extern int git_futils_filestamp_check(
 	git_futils_filestamp *stamp, const char *path);
 
+extern int git_futils_filestamp_check_readonly(
+	const git_futils_filestamp *stamp, const char *path);
+
 /**
  * Set or reset file stamp data
  *

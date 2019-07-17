@@ -272,6 +272,14 @@ int git_libgit2_opts(int key, ...)
 		git_index__enforce_unsaved_safety = (va_arg(ap, int) != 0);
 		break;
 
+	case GIT_OPT_DISABLE_INDEX_CHECKSUM_VERIFICATION:
+		git_index__disable_checksum_verification = (va_arg(ap, int) != 0);
+		break;
+
+	case GIT_OPT_DISABLE_INDEX_FILEPATH_VALIDATION:
+		git_index__disable_filepath_validation = (va_arg(ap, int) != 0);
+		break;
+
 	case GIT_OPT_SET_PACK_MAX_OBJECTS:
 		git_indexer__max_objects = va_arg(ap, size_t);
 		break;
