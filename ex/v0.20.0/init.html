@@ -117,7 +117,7 @@ That is demonstrated in the &quot;create<em>initial</em>commit&quot; helper func
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">opts</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GIT_REPOSITORY_INIT_SHARED_UMASK</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span> <span class="p">};</span>
 
-  <span class="n"><a name="git_threads_init-10" class="fnlink" href="../../#v0.20.0/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
+  <span class="n"><a name="git_threads_init-12" class="fnlink" href="../../#v0.20.0/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
 
   <span class="n">parse_opts</span><span class="p">(</span><span class="o">&amp;</span><span class="n">o</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
 
@@ -221,7 +221,7 @@ people like to have that empty base commit in their repo.</p>
   <span class="p">}</span>
 
   <span class="n"><a name="git_repository_free-4" class="fnlink" href="../../#v0.20.0/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
-  <span class="n"><a name="git_threads_shutdown-11" class="fnlink" href="../../#v0.20.0/group/threads/git_threads_shutdown">git_threads_shutdown</a></span><span class="p">();</span>
+  <span class="n"><a name="git_threads_shutdown-13" class="fnlink" href="../../#v0.20.0/group/threads/git_threads_shutdown">git_threads_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
@@ -253,7 +253,7 @@ that.</p>
         <p>First use the config to initialize a commit signature for the user.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n">git_signature_default</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sig</span><span class="p">,</span> <span class="n">repo</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_signature_default-10" class="fnlink" href="../../#v0.20.0/group/signature/git_signature_default">git_signature_default</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">sig</span><span class="p">,</span> <span class="n">repo</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Unable to create a commit signature.&quot;</span><span class="p">,</span>
           <span class="s">&quot;Perhaps &#39;user.name&#39; and &#39;user.email&#39; are not set&quot;</span><span class="p">);</span>
 
@@ -278,7 +278,7 @@ leave it empty for now.</p>
 
   <span class="n"><a name="git_index_free-2" class="fnlink" href="../../#v0.20.0/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
 
-  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_tree_lookup-12" class="fnlink" href="../../#v0.20.0/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_id</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_tree_lookup-14" class="fnlink" href="../../#v0.20.0/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_id</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Could not look up initial tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -308,8 +308,8 @@ but here this is the first commit so there will be no parent.</p>
         <p>Clean up so we don&#39;t leak memory.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_tree_free-13" class="fnlink" href="../../#v0.20.0/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">tree</span><span class="p">);</span>
-  <span class="n">git_signature_free</span><span class="p">(</span><span class="n">sig</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n"><a name="git_tree_free-15" class="fnlink" href="../../#v0.20.0/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">tree</span><span class="p">);</span>
+  <span class="n"><a name="git_signature_free-11" class="fnlink" href="../../#v0.20.0/group/signature/git_signature_free">git_signature_free</a></span><span class="p">(</span><span class="n">sig</span><span class="p">);</span>
 <span class="p">}</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">usage</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">error</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
