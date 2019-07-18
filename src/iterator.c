@@ -145,7 +145,7 @@ static int iterator_init_common(
 		(iter->flags & GIT_ITERATOR_PRECOMPOSE_UNICODE) == 0 &&
 		(iter->flags & GIT_ITERATOR_DONT_PRECOMPOSE_UNICODE) == 0) {
 
-		if (git_repository__cvar(&precompose, repo, GIT_CVAR_PRECOMPOSE) < 0)
+		if (git_repository__configmap_lookup(&precompose, repo, GIT_CONFIGMAP_PRECOMPOSE) < 0)
 			git_error_clear();
 		else if (precompose)
 			iter->flags |= GIT_ITERATOR_PRECOMPOSE_UNICODE;

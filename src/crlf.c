@@ -58,7 +58,7 @@ static git_crlf_t check_crlf(const char *value)
 	return GIT_CRLF_UNDEFINED;
 }
 
-static git_cvar_value check_eol(const char *value)
+static git_configmap_value check_eol(const char *value)
 {
 	if (GIT_ATTR_IS_UNSPECIFIED(value))
 		;
@@ -127,7 +127,7 @@ static int text_eol_is_crlf(struct crlf_attrs *ca)
 	return 0;
 }
 
-static git_cvar_value output_eol(struct crlf_attrs *ca)
+static git_configmap_value output_eol(struct crlf_attrs *ca)
 {
 	switch (ca->crlf_action) {
 	case GIT_CRLF_BINARY:
@@ -293,12 +293,12 @@ static int convert_attrs(
 
 	memset(ca, 0, sizeof(struct crlf_attrs));
 
-	if ((error = git_repository__cvar(&ca->auto_crlf,
-		 git_filter_source_repo(src), GIT_CVAR_AUTO_CRLF)) < 0 ||
-		(error = git_repository__cvar(&ca->safe_crlf,
-		 git_filter_source_repo(src), GIT_CVAR_SAFE_CRLF)) < 0 ||
-		(error = git_repository__cvar(&ca->core_eol,
-		 git_filter_source_repo(src), GIT_CVAR_EOL)) < 0)
+	if ((error = git_repository__configmap_lookup(&ca->auto_crlf,
+		 git_filter_source_repo(src), GIT_CONFIGMAP_AUTO_CRLF)) < 0 ||
+		(error = git_repository__configmap_lookup(&ca->safe_crlf,
+		 git_filter_source_repo(src), GIT_CONFIGMAP_SAFE_CRLF)) < 0 ||
+		(error = git_repository__configmap_lookup(&ca->core_eol,
+		 git_filter_source_repo(src), GIT_CONFIGMAP_EOL)) < 0)
 		return error;
 
 	/* downgrade FAIL to WARN if ALLOW_UNSAFE option is used */

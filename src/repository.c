@@ -122,7 +122,7 @@ static void set_config(git_repository *repo, git_config *config)
 		git_config_free(config);
 	}
 
-	git_repository__cvar_cache_clear(repo);
+	git_repository__configmap_lookup_cache_clear(repo);
 }
 
 static void set_index(git_repository *repo, git_index *index)
@@ -239,8 +239,8 @@ static git_repository *repository_alloc(void)
 	if (!repo->reserved_names.ptr)
 		goto on_error;
 
-	/* set all the entries in the cvar cache to `unset` */
-	git_repository__cvar_cache_clear(repo);
+	/* set all the entries in the configmap cache to `unset` */
+	git_repository__configmap_lookup_cache_clear(repo);
 
 	return repo;
 
@@ -1287,8 +1287,8 @@ bool git_repository__reserved_names(
 			int (*prefixcmp)(const char *, const char *);
 			int error, ignorecase;
 
-			error = git_repository__cvar(
-				&ignorecase, repo, GIT_CVAR_IGNORECASE);
+			error = git_repository__configmap_lookup(
+				&ignorecase, repo, GIT_CONFIGMAP_IGNORECASE);
 			prefixcmp = (error || ignorecase) ? git__prefixcmp_icase :
 				git__prefixcmp;
 
@@ -1660,7 +1660,7 @@ int git_repository_reinit_filesystem(git_repository *repo, int recurse)
 	git_config_free(config);
 	git_buf_dispose(&path);
 
-	git_repository__cvar_cache_clear(repo);
+	git_repository__configmap_lookup_cache_clear(repo);
 
 	if (!repo->is_bare && recurse)
 		(void)git_submodule_foreach(repo, repo_reinit_submodule_fs, NULL);

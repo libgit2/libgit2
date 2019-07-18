@@ -188,7 +188,7 @@ static int reference_normalize_for_repo(
 	int precompose;
 	unsigned int flags = GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL;
 
-	if (!git_repository__cvar(&precompose, repo, GIT_CVAR_PRECOMPOSE) &&
+	if (!git_repository__configmap_lookup(&precompose, repo, GIT_CONFIGMAP_PRECOMPOSE) &&
 		precompose)
 		flags |= GIT_REFERENCE_FORMAT__PRECOMPOSE_UNICODE;
 

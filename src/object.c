@@ -496,7 +496,7 @@ int git_object_short_id(git_buf *out, const git_object *obj)
 	git_buf_sanitize(out);
 	repo = git_object_owner(obj);
 
-	if ((error = git_repository__cvar(&len, repo, GIT_CVAR_ABBREV)) < 0)
+	if ((error = git_repository__configmap_lookup(&len, repo, GIT_CONFIGMAP_ABBREV)) < 0)
 		return error;
 
 	if ((error = git_repository_odb(&odb, repo)) < 0)

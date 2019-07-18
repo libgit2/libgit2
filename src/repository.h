@@ -37,34 +37,34 @@ extern bool git_repository__fsync_gitdir;
 
 /** Cvar cache identifiers */
 typedef enum {
-	GIT_CVAR_AUTO_CRLF = 0, /* core.autocrlf */
-	GIT_CVAR_EOL,           /* core.eol */
-	GIT_CVAR_SYMLINKS,      /* core.symlinks */
-	GIT_CVAR_IGNORECASE,    /* core.ignorecase */
-	GIT_CVAR_FILEMODE,      /* core.filemode */
-	GIT_CVAR_IGNORESTAT,    /* core.ignorestat */
-	GIT_CVAR_TRUSTCTIME,    /* core.trustctime */
-	GIT_CVAR_ABBREV,        /* core.abbrev */
-	GIT_CVAR_PRECOMPOSE,    /* core.precomposeunicode */
-	GIT_CVAR_SAFE_CRLF,		/* core.safecrlf */
-	GIT_CVAR_LOGALLREFUPDATES, /* core.logallrefupdates */
-	GIT_CVAR_PROTECTHFS,    /* core.protectHFS */
-	GIT_CVAR_PROTECTNTFS,   /* core.protectNTFS */
-	GIT_CVAR_FSYNCOBJECTFILES, /* core.fsyncObjectFiles */
-	GIT_CVAR_CACHE_MAX
-} git_cvar_cached;
+	GIT_CONFIGMAP_AUTO_CRLF = 0,    /* core.autocrlf */
+	GIT_CONFIGMAP_EOL,              /* core.eol */
+	GIT_CONFIGMAP_SYMLINKS,         /* core.symlinks */
+	GIT_CONFIGMAP_IGNORECASE,       /* core.ignorecase */
+	GIT_CONFIGMAP_FILEMODE,         /* core.filemode */
+	GIT_CONFIGMAP_IGNORESTAT,       /* core.ignorestat */
+	GIT_CONFIGMAP_TRUSTCTIME,       /* core.trustctime */
+	GIT_CONFIGMAP_ABBREV,           /* core.abbrev */
+	GIT_CONFIGMAP_PRECOMPOSE,       /* core.precomposeunicode */
+	GIT_CONFIGMAP_SAFE_CRLF,		/* core.safecrlf */
+	GIT_CONFIGMAP_LOGALLREFUPDATES, /* core.logallrefupdates */
+	GIT_CONFIGMAP_PROTECTHFS,       /* core.protectHFS */
+	GIT_CONFIGMAP_PROTECTNTFS,      /* core.protectNTFS */
+	GIT_CONFIGMAP_FSYNCOBJECTFILES, /* core.fsyncObjectFiles */
+	GIT_CONFIGMAP_CACHE_MAX
+} git_configmap_item;
 
 /**
- * CVAR value enumerations
+ * Configuration map value enumerations
  *
- * These are the values that are actually stored in the cvar cache, instead
- * of their string equivalents. These values are internal and symbolic;
- * make sure that none of them is set to `-1`, since that is the unique
- * identifier for "not cached"
+ * These are the values that are actually stored in the configmap cache,
+ * instead of their string equivalents. These values are internal and
+ * symbolic; make sure that none of them is set to `-1`, since that is
+ * the unique identifier for "not cached"
  */
 typedef enum {
 	/* The value hasn't been loaded from the cache yet */
-	GIT_CVAR_NOT_CACHED = -1,
+	GIT_CONFIGMAP_NOT_CACHED = -1,
 
 	/* core.safecrlf: false, 'fail', 'warn' */
 	GIT_SAFE_CRLF_FALSE = 0,
@@ -89,34 +89,34 @@ typedef enum {
 	GIT_EOL_DEFAULT = GIT_EOL_NATIVE,
 
 	/* core.symlinks: bool */
-	GIT_SYMLINKS_DEFAULT = GIT_CVAR_TRUE,
+	GIT_SYMLINKS_DEFAULT = GIT_CONFIGMAP_TRUE,
 	/* core.ignorecase */
-	GIT_IGNORECASE_DEFAULT = GIT_CVAR_FALSE,
+	GIT_IGNORECASE_DEFAULT = GIT_CONFIGMAP_FALSE,
 	/* core.filemode */
-	GIT_FILEMODE_DEFAULT = GIT_CVAR_TRUE,
+	GIT_FILEMODE_DEFAULT = GIT_CONFIGMAP_TRUE,
 	/* core.ignorestat */
-	GIT_IGNORESTAT_DEFAULT = GIT_CVAR_FALSE,
+	GIT_IGNORESTAT_DEFAULT = GIT_CONFIGMAP_FALSE,
 	/* core.trustctime */
-	GIT_TRUSTCTIME_DEFAULT = GIT_CVAR_TRUE,
+	GIT_TRUSTCTIME_DEFAULT = GIT_CONFIGMAP_TRUE,
 	/* core.abbrev */
 	GIT_ABBREV_DEFAULT = 7,
 	/* core.precomposeunicode */
-	GIT_PRECOMPOSE_DEFAULT = GIT_CVAR_FALSE,
+	GIT_PRECOMPOSE_DEFAULT = GIT_CONFIGMAP_FALSE,
 	/* core.safecrlf */
-	GIT_SAFE_CRLF_DEFAULT = GIT_CVAR_FALSE,
+	GIT_SAFE_CRLF_DEFAULT = GIT_CONFIGMAP_FALSE,
 	/* core.logallrefupdates */
-	GIT_LOGALLREFUPDATES_FALSE = GIT_CVAR_FALSE,
-	GIT_LOGALLREFUPDATES_TRUE = GIT_CVAR_TRUE,
+	GIT_LOGALLREFUPDATES_FALSE = GIT_CONFIGMAP_FALSE,
+	GIT_LOGALLREFUPDATES_TRUE = GIT_CONFIGMAP_TRUE,
 	GIT_LOGALLREFUPDATES_UNSET = 2,
 	GIT_LOGALLREFUPDATES_ALWAYS = 3,
 	GIT_LOGALLREFUPDATES_DEFAULT = GIT_LOGALLREFUPDATES_UNSET,
 	/* core.protectHFS */
-	GIT_PROTECTHFS_DEFAULT = GIT_CVAR_FALSE,
+	GIT_PROTECTHFS_DEFAULT = GIT_CONFIGMAP_FALSE,
 	/* core.protectNTFS */
-	GIT_PROTECTNTFS_DEFAULT = GIT_CVAR_FALSE,
+	GIT_PROTECTNTFS_DEFAULT = GIT_CONFIGMAP_FALSE,
 	/* core.fsyncObjectFiles */
-	GIT_FSYNCOBJECTFILES_DEFAULT = GIT_CVAR_FALSE,
-} git_cvar_value;
+	GIT_FSYNCOBJECTFILES_DEFAULT = GIT_CONFIGMAP_FALSE,
+} git_configmap_value;
 
 /* internal repository init flags */
 enum {
@@ -154,7 +154,7 @@ struct git_repository {
 
 	git_atomic attr_session_key;
 
-	git_cvar_value cvar_cache[GIT_CVAR_CACHE_MAX];
+	git_configmap_value configmap_cache[GIT_CONFIGMAP_CACHE_MAX];
 	git_strmap *submodule_cache;
 };
 
@@ -208,13 +208,13 @@ int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo);
 int git_repository_index__weakptr(git_index **out, git_repository *repo);
 
 /*
- * CVAR cache
+ * Configuration map cache
  *
  * Efficient access to the most used config variables of a repository.
  * The cache is cleared every time the config backend is replaced.
  */
-int git_repository__cvar(int *out, git_repository *repo, git_cvar_cached cvar);
-void git_repository__cvar_cache_clear(git_repository *repo);
+int git_repository__configmap_lookup(int *out, git_repository *repo, git_configmap_item item);
+void git_repository__configmap_lookup_cache_clear(git_repository *repo);
 
 GIT_INLINE(int) git_repository__ensure_not_bare(
 	git_repository *repo,

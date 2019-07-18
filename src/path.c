@@ -1832,12 +1832,12 @@ GIT_INLINE(unsigned int) dotgit_flags(
 #endif
 
 	if (repo && !protectHFS)
-		error = git_repository__cvar(&protectHFS, repo, GIT_CVAR_PROTECTHFS);
+		error = git_repository__configmap_lookup(&protectHFS, repo, GIT_CONFIGMAP_PROTECTHFS);
 	if (!error && protectHFS)
 		flags |= GIT_PATH_REJECT_DOT_GIT_HFS;
 
 	if (repo && !protectNTFS)
-		error = git_repository__cvar(&protectNTFS, repo, GIT_CVAR_PROTECTNTFS);
+		error = git_repository__configmap_lookup(&protectNTFS, repo, GIT_CONFIGMAP_PROTECTNTFS);
 	if (!error && protectNTFS)
 		flags |= GIT_PATH_REJECT_DOT_GIT_NTFS;
 

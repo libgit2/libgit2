@@ -96,7 +96,7 @@ static int symlink_or_fake(git_repository *repo, const char *a, const char *b)
 {
 	int symlinks;
 
-	cl_git_pass(git_repository__cvar(&symlinks, repo, GIT_CVAR_SYMLINKS));
+	cl_git_pass(git_repository__configmap_lookup(&symlinks, repo, GIT_CONFIGMAP_SYMLINKS));
 
 	if (symlinks)
 		return p_symlink(a, b);

@@ -1104,7 +1104,7 @@ static int should_write_reflog(int *write, git_repository *repo, const char *nam
 {
 	int error, logall;
 
-	error = git_repository__cvar(&logall, repo, GIT_CVAR_LOGALLREFUPDATES);
+	error = git_repository__configmap_lookup(&logall, repo, GIT_CONFIGMAP_LOGALLREFUPDATES);
 	if (error < 0)
 		return error;
 
@@ -2114,15 +2114,15 @@ int git_refdb_backend_fs(
 
 	git_buf_dispose(&gitpath);
 
-	if (!git_repository__cvar(&t, backend->repo, GIT_CVAR_IGNORECASE) && t) {
+	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_IGNORECASE) && t) {
 		backend->iterator_flags |= GIT_ITERATOR_IGNORE_CASE;
 		backend->direach_flags  |= GIT_PATH_DIR_IGNORE_CASE;
 	}
-	if (!git_repository__cvar(&t, backend->repo, GIT_CVAR_PRECOMPOSE) && t) {
+	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_PRECOMPOSE) && t) {
 		backend->iterator_flags |= GIT_ITERATOR_PRECOMPOSE_UNICODE;
 		backend->direach_flags  |= GIT_PATH_DIR_PRECOMPOSE_UNICODE;
 	}
-	if ((!git_repository__cvar(&t, backend->repo, GIT_CVAR_FSYNCOBJECTFILES) && t) ||
+	if ((!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_FSYNCOBJECTFILES) && t) ||
 		git_repository__fsync_gitdir)
 		backend->fsync = 1;
 	backend->iterator_flags |= GIT_ITERATOR_DESCEND_SYMLINKS;

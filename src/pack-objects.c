@@ -1397,7 +1397,7 @@ int git_packbuilder_write(
 		&indexer, path, mode, pb->odb, &opts) < 0)
 		return -1;
 
-	if (!git_repository__cvar(&t, pb->repo, GIT_CVAR_FSYNCOBJECTFILES) && t)
+	if (!git_repository__configmap_lookup(&t, pb->repo, GIT_CONFIGMAP_FSYNCOBJECTFILES) && t)
 		git_indexer__set_fsync(indexer, 1);
 
 	ctx.indexer = indexer;
