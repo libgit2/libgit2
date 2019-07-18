@@ -105,7 +105,8 @@ int git_attr_file__load(
 	git_attr_session *attr_session,
 	git_attr_file_entry *entry,
 	git_attr_file_source source,
-	git_attr_file_parser parser)
+	git_attr_file_parser parser,
+	bool allow_macros)
 {
 	int error = 0;
 	git_blob *blob = NULL;
@@ -177,7 +178,7 @@ int git_attr_file__load(
 	if (attr_session)
 		file->session_key = attr_session->key;
 
-	if (parser && (error = parser(repo, file, content_str)) < 0) {
+	if (parser && (error = parser(repo, file, content_str, allow_macros)) < 0) {
 		git_attr_file__free(file);
 		goto cleanup;
 	}
@@ -249,16 +250,15 @@ static bool parse_optimized_patterns(
 	const char *pattern);
 
 int git_attr_file__parse_buffer(
-	git_repository *repo, git_attr_file *attrs, const char *data)
+	git_repository *repo, git_attr_file *attrs, const char *data, bool allow_macros)
 {
-	int error = 0;
 	const char *scan = data, *context = NULL;
 	git_attr_rule *rule = NULL;
+	int error = 0;
 
-	/* if subdir file path, convert context for file paths */
-	if (attrs->entry &&
-		git_path_root(attrs->entry->path) < 0 &&
-		!git__suffixcmp(attrs->entry->path, "/" GIT_ATTR_FILE))
+	/* If subdir file path, convert context for file paths */
+	if (attrs->entry && git_path_root(attrs->entry->path) < 0 &&
+	    !git__suffixcmp(attrs->entry->path, "/" GIT_ATTR_FILE))
 		context = attrs->entry->path;
 
 	if (git_mutex_lock(&attrs->lock) < 0) {
@@ -267,38 +267,38 @@ int git_attr_file__parse_buffer(
 	}
 
 	while (!error && *scan) {
-		/* allocate rule if needed */
-		if (!rule && !(rule = git__calloc(1, sizeof(*rule)))) {
-			error = -1;
-			break;
-		}
+		/* Allocate rule if needed, otherwise re-use previous rule */
+		if (!rule) {
+			rule = git__calloc(1, sizeof(*rule));
+			GIT_ERROR_CHECK_ALLOC(rule);
+		} else
+			git_attr_rule__clear(rule);
 
-		rule->match.flags =
-			GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_ALLOWMACRO;
+		rule->match.flags = GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_ALLOWMACRO;
 
-		/* parse the next "pattern attr attr attr" line */
-		if (!(error = git_attr_fnmatch__parse(
-				&rule->match, &attrs->pool, context, &scan)) &&
-			!(error = git_attr_assignment__parse(
-				repo, &attrs->pool, &rule->assigns, &scan)))
+		/* Parse the next "pattern attr attr attr" line */
+		if ((error = git_attr_fnmatch__parse(&rule->match, &attrs->pool, context, &scan)) < 0 ||
+		    (error = git_attr_assignment__parse(repo, &attrs->pool, &rule->assigns, &scan)) < 0)
 		{
-			if (rule->match.flags & GIT_ATTR_FNMATCH_MACRO)
-				/* TODO: warning if macro found in file below repo root */
-				error = git_attr_cache__insert_macro(repo, rule);
-			else
-				error = git_vector_insert(&attrs->rules, rule);
+			if (error != GIT_ENOTFOUND)
+				goto out;
+			error = 0;
+			continue;
 		}
 
-		/* if the rule wasn't a pattern, on to the next */
-		if (error < 0) {
-			git_attr_rule__clear(rule); /* reset rule contents */
-			if (error == GIT_ENOTFOUND)
-				error = 0;
-		} else {
-			rule = NULL; /* vector now "owns" the rule */
-		}
+		if (rule->match.flags & GIT_ATTR_FNMATCH_MACRO) {
+			/* TODO: warning if macro found in file below repo root */
+			if (!allow_macros)
+				continue;
+			if ((error = git_attr_cache__insert_macro(repo, rule)) < 0)
+				goto out;
+		} else if ((error = git_vector_insert(&attrs->rules, rule)) < 0)
+			goto out;
+
+		rule = NULL;
 	}
 
+out:
 	git_mutex_unlock(&attrs->lock);
 	git_attr_rule__free(rule);
 
@@ -345,33 +345,28 @@ int git_attr_file__lookup_one(
 
 int git_attr_file__load_standalone(git_attr_file **out, const char *path)
 {
-	int error;
-	git_attr_file *file;
 	git_buf content = GIT_BUF_INIT;
+	git_attr_file *file = NULL;
+	int error;
 
-	error = git_attr_file__new(&file, NULL, GIT_ATTR_FILE__FROM_FILE);
-	if (error < 0)
-		return error;
+	if ((error = git_futils_readbuffer(&content, path)) < 0)
+		goto out;
 
-	error = git_attr_cache__alloc_file_entry(
-		&file->entry, NULL, path, &file->pool);
-	if (error < 0) {
-		git_attr_file__free(file);
-		return error;
-	}
-	/* because the cache entry is allocated from the file's own pool, we
+	/*
+	 * Because the cache entry is allocated from the file's own pool, we
 	 * don't have to free it - freeing file+pool will free cache entry, too.
 	 */
 
-	if (!(error = git_futils_readbuffer(&content, path))) {
-		error = git_attr_file__parse_buffer(NULL, file, content.ptr);
-		git_buf_dispose(&content);
-	}
+	if ((error = git_attr_file__new(&file, NULL, GIT_ATTR_FILE__FROM_FILE)) < 0 ||
+	    (error = git_attr_file__parse_buffer(NULL, file, content.ptr, true)) < 0 ||
+	    (error = git_attr_cache__alloc_file_entry(&file->entry, NULL, path, &file->pool)) < 0)
+		goto out;
 
+	*out = file;
+out:
 	if (error < 0)
 		git_attr_file__free(file);
-	else
-		*out = file;
+	git_buf_dispose(&content);
 
 	return error;
 }
