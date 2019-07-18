@@ -560,3 +560,18 @@ void test_ignore_path__escaped_space(void)
 	assert_is_ignored(false, "bar\\\\\\");
 	assert_is_ignored(false, "bar\\\\\\ ");
 }
+
+void test_ignore_path__invalid_pattern(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "[");
+	assert_is_ignored(false, "[f");
+	assert_is_ignored(false, "f");
+}
+
+void test_ignore_path__negative_prefix_rule(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "ff*\n!f\n");
+	assert_is_ignored(true, "fff");
+	assert_is_ignored(true, "ff");
+	assert_is_ignored(false, "f");
+}

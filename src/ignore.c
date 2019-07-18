@@ -141,13 +141,8 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 		if (git_buf_oom(&buf))
 			goto out;
 
-		if ((error = wildmatch(git_buf_cstr(&buf), path, wildmatch_flags)) < 0) {
-			git_error_set(GIT_ERROR_INVALID, "error matching pattern");
-			goto out;
-		}
-
 		/* if we found a match, we want to keep this rule */
-		if (error != WM_NOMATCH) {
+		if ((wildmatch(git_buf_cstr(&buf), path, wildmatch_flags)) == WM_MATCH) {
 			*out = 1;
 			error = 0;
 			goto out;
