@@ -23,7 +23,7 @@
 /* BCRYPT_HASH_REUSEABLE_FLAGS */
 #define GIT_HASH_CNG_HASH_REUSABLE      0x00000020
 
-static struct git_hash_prov hash_prov = {0};
+static git_hash_prov hash_prov = {0};
 
 /* Hash initialization */
 
