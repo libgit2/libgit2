@@ -92,7 +92,7 @@ jobs:
   - template: powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013" -DDEPRECATE_HARD=ON
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013" -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS
         RUN_INVASIVE_TESTS: true
 
 - job: windows_mingw_amd64
