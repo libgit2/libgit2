@@ -78,7 +78,7 @@ jobs:
   displayName: 'Windows (amd64; Visual Studio)'
   pool: Hosted
   steps:
-  - template: azure-pipelines/powershell.yml
+  - template: azure-pipelines/bash.yml
     parameters:
       environmentVariables:
         CMAKE_GENERATOR: Visual Studio 12 2013 Win64
@@ -88,7 +88,7 @@ jobs:
   displayName: 'Windows (x86; Visual Studio)'
   pool: Hosted
   steps:
-  - template: azure-pipelines/powershell.yml
+  - template: azure-pipelines/bash.yml
     parameters:
       environmentVariables:
         CMAKE_GENERATOR: Visual Studio 12 2013
@@ -103,7 +103,7 @@ jobs:
     env:
       TEMP: $(Agent.TempDirectory)
       ARCH: amd64
-  - template: azure-pipelines/powershell.yml
+  - template: azure-pipelines/bash.yml
     parameters:
       environmentVariables:
         BUILD_PATH: $(Agent.TempDirectory)\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
@@ -120,7 +120,7 @@ jobs:
     env:
       TEMP: $(Agent.TempDirectory)
       ARCH: x86
-  - template: azure-pipelines/powershell.yml
+  - template: azure-pipelines/bash.yml
     parameters:
       environmentVariables:
         BUILD_PATH: $(Agent.TempDirectory)\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
