@@ -666,7 +666,7 @@ int git_odb__set_caps(git_odb *odb, int caps)
 			return -1;
 		}
 
-		if (!git_repository__cvar(&val, repo, GIT_CVAR_FSYNCOBJECTFILES))
+		if (!git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_FSYNCOBJECTFILES))
 			odb->do_fsync = !!val;
 	}
 

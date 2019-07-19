@@ -412,7 +412,7 @@ static int commit_worktree(
 		goto cleanup;
 
 	if ((error = git_index_new(&i_index)) < 0 ||
-		(error = git_repository__cvar(&ignorecase, repo, GIT_CVAR_IGNORECASE)) < 0)
+		(error = git_repository__configmap_lookup(&ignorecase, repo, GIT_CONFIGMAP_IGNORECASE)) < 0)
 		goto cleanup;
 
 	git_index__set_ignore_case(i_index, ignorecase);

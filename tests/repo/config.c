@@ -104,9 +104,9 @@ void test_repo_config__read_with_no_configs_at_all(void)
 	cl_assert(!git_path_isfile("empty_standard_repo/.git/config"));
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
-	git_repository__cvar_cache_clear(repo);
+	git_repository__configmap_lookup_cache_clear(repo);
 	val = -1;
-	cl_git_pass(git_repository__cvar(&val, repo, GIT_CVAR_ABBREV));
+	cl_git_pass(git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_ABBREV));
 	cl_assert_equal_i(GIT_ABBREV_DEFAULT, val);
 	git_repository_free(repo);
 
@@ -121,9 +121,9 @@ void test_repo_config__read_with_no_configs_at_all(void)
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, path.ptr));
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
-	git_repository__cvar_cache_clear(repo);
+	git_repository__configmap_lookup_cache_clear(repo);
 	val = -1;
-	cl_git_pass(git_repository__cvar(&val, repo, GIT_CVAR_ABBREV));
+	cl_git_pass(git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_ABBREV));
 	cl_assert_equal_i(10, val);
 	git_repository_free(repo);
 
@@ -136,9 +136,9 @@ void test_repo_config__read_with_no_configs_at_all(void)
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, path.ptr));
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
-	git_repository__cvar_cache_clear(repo);
+	git_repository__configmap_lookup_cache_clear(repo);
 	val = -1;
-	cl_git_pass(git_repository__cvar(&val, repo, GIT_CVAR_ABBREV));
+	cl_git_pass(git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_ABBREV));
 	cl_assert_equal_i(20, val);
 	git_repository_free(repo);
 
@@ -151,9 +151,9 @@ void test_repo_config__read_with_no_configs_at_all(void)
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
-	git_repository__cvar_cache_clear(repo);
+	git_repository__configmap_lookup_cache_clear(repo);
 	val = -1;
-	cl_git_pass(git_repository__cvar(&val, repo, GIT_CVAR_ABBREV));
+	cl_git_pass(git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_ABBREV));
 	cl_assert_equal_i(30, val);
 	git_repository_free(repo);
 
@@ -162,18 +162,18 @@ void test_repo_config__read_with_no_configs_at_all(void)
 	cl_git_rewritefile("empty_standard_repo/.git/config", "[core]\n\tabbrev = 40\n");
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
-	git_repository__cvar_cache_clear(repo);
+	git_repository__configmap_lookup_cache_clear(repo);
 	val = -1;
-	cl_git_pass(git_repository__cvar(&val, repo, GIT_CVAR_ABBREV));
+	cl_git_pass(git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_ABBREV));
 	cl_assert_equal_i(40, val);
 	git_repository_free(repo);
 
 	/* with all configs but delete the files ? */
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
-	git_repository__cvar_cache_clear(repo);
+	git_repository__configmap_lookup_cache_clear(repo);
 	val = -1;
-	cl_git_pass(git_repository__cvar(&val, repo, GIT_CVAR_ABBREV));
+	cl_git_pass(git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_ABBREV));
 	cl_assert_equal_i(40, val);
 
 	cl_must_pass(p_unlink("empty_standard_repo/.git/config"));
@@ -188,9 +188,9 @@ void test_repo_config__read_with_no_configs_at_all(void)
 	cl_must_pass(p_unlink("alternate/3/.gitconfig"));
 	cl_assert(!git_path_isfile("alternate/3/.gitconfig"));
 
-	git_repository__cvar_cache_clear(repo);
+	git_repository__configmap_lookup_cache_clear(repo);
 	val = -1;
-	cl_git_pass(git_repository__cvar(&val, repo, GIT_CVAR_ABBREV));
+	cl_git_pass(git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_ABBREV));
 	cl_assert_equal_i(40, val);
 	git_repository_free(repo);
 
@@ -200,9 +200,9 @@ void test_repo_config__read_with_no_configs_at_all(void)
 	cl_assert(!git_path_isfile("alternate/3/.gitconfig"));
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
-	git_repository__cvar_cache_clear(repo);
+	git_repository__configmap_lookup_cache_clear(repo);
 	val = -1;
-	cl_git_pass(git_repository__cvar(&val, repo, GIT_CVAR_ABBREV));
+	cl_git_pass(git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_ABBREV));
 	cl_assert_equal_i(7, val);
 	git_repository_free(repo);
 

@@ -661,7 +661,7 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	error = backend->set(backend, name, value);
 
 	if (!error && GIT_REFCOUNT_OWNER(cfg) != NULL)
-		git_repository__cvar_cache_clear(GIT_REFCOUNT_OWNER(cfg));
+		git_repository__configmap_lookup_cache_clear(GIT_REFCOUNT_OWNER(cfg));
 
 	return error;
 }
@@ -777,7 +777,7 @@ int git_config_get_mapped(
 	int *out,
 	const git_config *cfg,
 	const char *name,
-	const git_cvar_map *maps,
+	const git_configmap *maps,
 	size_t map_n)
 {
 	git_config_entry *entry;
@@ -1223,7 +1223,7 @@ int git_config_unlock(git_config *cfg, int commit)
 
 int git_config_lookup_map_value(
 	int *out,
-	const git_cvar_map *maps,
+	const git_configmap *maps,
 	size_t map_n,
 	const char *value)
 {
@@ -1233,27 +1233,27 @@ int git_config_lookup_map_value(
 		goto fail_parse;
 
 	for (i = 0; i < map_n; ++i) {
-		const git_cvar_map *m = maps + i;
+		const git_configmap *m = maps + i;
 
-		switch (m->cvar_type) {
-		case GIT_CVAR_FALSE:
-		case GIT_CVAR_TRUE: {
+		switch (m->type) {
+		case GIT_CONFIGMAP_FALSE:
+		case GIT_CONFIGMAP_TRUE: {
 			int bool_val;
 
 			if (git__parse_bool(&bool_val, value) == 0 &&
-				bool_val == (int)m->cvar_type) {
+				bool_val == (int)m->type) {
 				*out = m->map_value;
 				return 0;
 			}
 			break;
 		}
 
-		case GIT_CVAR_INT32:
+		case GIT_CONFIGMAP_INT32:
 			if (git_config_parse_int32(out, value) == 0)
 				return 0;
 			break;
 
-		case GIT_CVAR_STRING:
+		case GIT_CONFIGMAP_STRING:
 			if (strcasecmp(value, m->str_match) == 0) {
 				*out = m->map_value;
 				return 0;
@@ -1267,18 +1267,18 @@ fail_parse:
 	return -1;
 }
 
-int git_config_lookup_map_enum(git_cvar_t *type_out, const char **str_out,
-			       const git_cvar_map *maps, size_t map_n, int enum_val)
+int git_config_lookup_map_enum(git_configmap_t *type_out, const char **str_out,
+			       const git_configmap *maps, size_t map_n, int enum_val)
 {
 	size_t i;
 
 	for (i = 0; i < map_n; i++) {
-		const git_cvar_map *m = &maps[i];
+		const git_configmap *m = &maps[i];
 
 		if (m->map_value != enum_val)
 			continue;
 
-		*type_out = m->cvar_type;
+		*type_out = m->type;
 		*str_out = m->str_match;
 		return 0;
 	}

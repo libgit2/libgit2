@@ -172,7 +172,7 @@ static int parse_ignore_file(
 
 	GIT_UNUSED(allow_macros);
 
-	if (git_repository__cvar(&ignore_case, repo, GIT_CVAR_IGNORECASE) < 0)
+	if (git_repository__configmap_lookup(&ignore_case, repo, GIT_CONFIGMAP_IGNORECASE) < 0)
 		git_error_clear();
 
 	/* if subdir file path, convert context for file paths */
@@ -298,8 +298,8 @@ int git_ignore__for_path(
 	ignores->repo = repo;
 
 	/* Read the ignore_case flag */
-	if ((error = git_repository__cvar(
-			&ignores->ignore_case, repo, GIT_CVAR_IGNORECASE)) < 0)
+	if ((error = git_repository__configmap_lookup(
+			&ignores->ignore_case, repo, GIT_CONFIGMAP_IGNORECASE)) < 0)
 		goto cleanup;
 
 	if ((error = git_attr_cache__init(repo)) < 0)

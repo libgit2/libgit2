@@ -7,6 +7,7 @@
 #ifndef INCLUDE_git_deprecated_h__
 #define INCLUDE_git_deprecated_h__
 
+#include "config.h"
 #include "common.h"
 #include "blame.h"
 #include "buffer.h"
@@ -113,6 +114,19 @@ GIT_EXTERN(int) git_blob_create_frombuffer(
  * @see git_buf_dispose
  */
 GIT_EXTERN(void) git_buf_free(git_buf *buffer);
+
+/**@}*/
+
+/** @name Deprecated Config Functions and Constants
+ */
+/**@{*/
+
+#define GIT_CVAR_FALSE  GIT_CONFIGMAP_FALSE
+#define GIT_CVAR_TRUE   GIT_CONFIGMAP_TRUE
+#define GIT_CVAR_INT32  GIT_CONFIGMAP_INT32
+#define GIT_CVAR_STRING GIT_CONFIGMAP_STRING
+
+typedef git_configmap git_cvar_map;
 
 /**@}*/
 

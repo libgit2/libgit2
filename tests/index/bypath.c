@@ -338,7 +338,7 @@ void test_index_bypath__add_honors_symlink(void)
 	git_index_entry new_entry;
 	int symlinks;
 
-	cl_git_pass(git_repository__cvar(&symlinks, g_repo, GIT_CVAR_SYMLINKS));
+	cl_git_pass(git_repository__configmap_lookup(&symlinks, g_repo, GIT_CONFIGMAP_SYMLINKS));
 
 	if (symlinks)
 		cl_skip();

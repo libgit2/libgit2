@@ -2112,7 +2112,7 @@ void test_diff_workdir__symlink_changed_on_non_symlink_platform(void)
 
 	g_repo = cl_git_sandbox_init("unsymlinked.git");
 
-	cl_git_pass(git_repository__cvar(&symlinks, g_repo, GIT_CVAR_SYMLINKS));
+	cl_git_pass(git_repository__configmap_lookup(&symlinks, g_repo, GIT_CONFIGMAP_SYMLINKS));
 
 	if (symlinks)
 		cl_skip();

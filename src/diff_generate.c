@@ -472,17 +472,17 @@ static int diff_generated_apply_options(
 	if ((val = git_repository_config_snapshot(&cfg, repo)) < 0)
 		return val;
 
-	if (!git_config__cvar(&val, cfg, GIT_CVAR_SYMLINKS) && val)
+	if (!git_config__configmap_lookup(&val, cfg, GIT_CONFIGMAP_SYMLINKS) && val)
 		diff->diffcaps |= GIT_DIFFCAPS_HAS_SYMLINKS;
 
-	if (!git_config__cvar(&val, cfg, GIT_CVAR_IGNORESTAT) && val)
+	if (!git_config__configmap_lookup(&val, cfg, GIT_CONFIGMAP_IGNORESTAT) && val)
 		diff->diffcaps |= GIT_DIFFCAPS_IGNORE_STAT;
 
 	if ((diff->base.opts.flags & GIT_DIFF_IGNORE_FILEMODE) == 0 &&
-		!git_config__cvar(&val, cfg, GIT_CVAR_FILEMODE) && val)
+		!git_config__configmap_lookup(&val, cfg, GIT_CONFIGMAP_FILEMODE) && val)
 		diff->diffcaps |= GIT_DIFFCAPS_TRUST_MODE_BITS;
 
-	if (!git_config__cvar(&val, cfg, GIT_CVAR_TRUSTCTIME) && val)
+	if (!git_config__configmap_lookup(&val, cfg, GIT_CONFIGMAP_TRUSTCTIME) && val)
 		diff->diffcaps |= GIT_DIFFCAPS_TRUST_CTIME;
 
 	/* Don't set GIT_DIFFCAPS_USE_DEV - compile time option in core git */

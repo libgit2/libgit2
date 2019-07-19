@@ -1391,7 +1391,7 @@ static bool should_remove_existing(checkout_data *data)
 {
 	int ignorecase;
 
-	if (git_repository__cvar(&ignorecase, data->repo, GIT_CVAR_IGNORECASE) < 0) {
+	if (git_repository__configmap_lookup(&ignorecase, data->repo, GIT_CONFIGMAP_IGNORECASE) < 0) {
 		ignorecase = 0;
 	}
 
@@ -2463,12 +2463,12 @@ static int checkout_data_init(
 
 	data->pfx = git_pathspec_prefix(&data->opts.paths);
 
-	if ((error = git_repository__cvar(
-			 &data->can_symlink, repo, GIT_CVAR_SYMLINKS)) < 0)
+	if ((error = git_repository__configmap_lookup(
+			 &data->can_symlink, repo, GIT_CONFIGMAP_SYMLINKS)) < 0)
 		goto cleanup;
 
-	if ((error = git_repository__cvar(
-			 &data->respect_filemode, repo, GIT_CVAR_FILEMODE)) < 0)
+	if ((error = git_repository__configmap_lookup(
+			 &data->respect_filemode, repo, GIT_CONFIGMAP_FILEMODE)) < 0)
 		goto cleanup;
 
 	if (!data->opts.baseline && !data->opts.baseline_index) {

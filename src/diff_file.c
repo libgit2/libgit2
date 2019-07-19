@@ -290,8 +290,8 @@ static int diff_file_content_load_workdir_symlink(
 	ssize_t alloc_len, read_len;
 	int symlink_supported, error;
 
-	if ((error = git_repository__cvar(
-		&symlink_supported, fc->repo, GIT_CVAR_SYMLINKS)) < 0)
+	if ((error = git_repository__configmap_lookup(
+		&symlink_supported, fc->repo, GIT_CONFIGMAP_SYMLINKS)) < 0)
 		return -1;
 
 	if (!symlink_supported)

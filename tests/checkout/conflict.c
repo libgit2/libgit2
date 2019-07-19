@@ -192,7 +192,7 @@ static void ensure_workdir_link(
 {
 	int symlinks;
 
-	cl_git_pass(git_repository__cvar(&symlinks, repo, GIT_CVAR_SYMLINKS));
+	cl_git_pass(git_repository__configmap_lookup(&symlinks, repo, GIT_CONFIGMAP_SYMLINKS));
 
 	if (!symlinks) {
 		ensure_workdir_contents(path, target);

@@ -570,11 +570,11 @@ int git_index_set_caps(git_index *index, int caps)
 			return create_index_error(
 				-1, "cannot access repository to set index caps");
 
-		if (!git_repository__cvar(&val, repo, GIT_CVAR_IGNORECASE))
+		if (!git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_IGNORECASE))
 			index->ignore_case = (val != 0);
-		if (!git_repository__cvar(&val, repo, GIT_CVAR_FILEMODE))
+		if (!git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_FILEMODE))
 			index->distrust_filemode = (val == 0);
-		if (!git_repository__cvar(&val, repo, GIT_CVAR_SYMLINKS))
+		if (!git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_SYMLINKS))
 			index->no_symlinks = (val == 0);
 	}
 	else {
