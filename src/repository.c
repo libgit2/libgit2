@@ -2056,53 +2056,48 @@ int git_repository_init_ext(
 	const char *given_repo,
 	git_repository_init_options *opts)
 {
-	int error;
-	git_buf repo_path = GIT_BUF_INIT, wd_path = GIT_BUF_INIT,
-		common_path = GIT_BUF_INIT;
+	git_buf repo_path = GIT_BUF_INIT, wd_path = GIT_BUF_INIT, common_path = GIT_BUF_INIT;
 	const char *wd;
+	int error;
 
 	assert(out && given_repo && opts);
 
 	GIT_ERROR_CHECK_VERSION(opts, GIT_REPOSITORY_INIT_OPTIONS_VERSION, "git_repository_init_options");
 
-	error = repo_init_directories(&repo_path, &wd_path, given_repo, opts);
-	if (error < 0)
-		goto cleanup;
+	if ((error = repo_init_directories(&repo_path, &wd_path, given_repo, opts)) < 0)
+		goto out;
 
 	wd = (opts->flags & GIT_REPOSITORY_INIT_BARE) ? NULL : git_buf_cstr(&wd_path);
-	if (valid_repository_path(&repo_path, &common_path)) {
 
+	if (valid_repository_path(&repo_path, &common_path)) {
 		if ((opts->flags & GIT_REPOSITORY_INIT_NO_REINIT) != 0) {
 			git_error_set(GIT_ERROR_REPOSITORY,
 				"attempt to reinitialize '%s'", given_repo);
 			error = GIT_EEXISTS;
-			goto cleanup;
+			goto out;
 		}
 
 		opts->flags |= GIT_REPOSITORY_INIT__IS_REINIT;
 
-		error = repo_init_config(
-			repo_path.ptr, wd, opts->flags, opts->mode);
+		if ((error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode)) < 0)
+			goto out;
 
 		/* TODO: reinitialize the templates */
+	} else {
+		if ((error = repo_init_structure(repo_path.ptr, wd, opts)) < 0 ||
+		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode)) < 0 ||
+		    (error = git_repository_create_head(repo_path.ptr, opts->initial_head)) < 0)
+			goto out;
 	}
-	else {
-		if (!(error = repo_init_structure(
-				repo_path.ptr, wd, opts)) &&
-			!(error = repo_init_config(
-				repo_path.ptr, wd, opts->flags, opts->mode)))
-			error = git_repository_create_head(
-				repo_path.ptr, opts->initial_head);
-	}
-	if (error < 0)
-		goto cleanup;
 
-	error = git_repository_open(out, repo_path.ptr);
+	if ((error = git_repository_open(out, repo_path.ptr)) < 0)
+		goto out;
 
-	if (!error && opts->origin_url)
-		error = repo_init_create_origin(*out, opts->origin_url);
+	if (opts->origin_url &&
+	    (error = repo_init_create_origin(*out, opts->origin_url)) < 0)
+		goto out;
 
-cleanup:
+out:
 	git_buf_dispose(&common_path);
 	git_buf_dispose(&repo_path);
 	git_buf_dispose(&wd_path);
