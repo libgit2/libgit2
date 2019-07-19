@@ -1360,10 +1360,11 @@ int git_repository_create_head(const char *git_dir, const char *ref_name)
 	git_buf ref_path = GIT_BUF_INIT;
 	git_filebuf ref = GIT_FILEBUF_INIT;
 	const char *fmt;
+	int error;
 
-	if (git_buf_joinpath(&ref_path, git_dir, GIT_HEAD_FILE) < 0 ||
-		git_filebuf_open(&ref, ref_path.ptr, 0, GIT_REFS_FILE_MODE) < 0)
-		goto fail;
+	if ((error = git_buf_joinpath(&ref_path, git_dir, GIT_HEAD_FILE)) < 0 ||
+	    (error = git_filebuf_open(&ref, ref_path.ptr, 0, GIT_REFS_FILE_MODE)) < 0)
+		goto out;
 
 	if (!ref_name)
 		ref_name = GIT_BRANCH_MASTER;
@@ -1373,17 +1374,14 @@ int git_repository_create_head(const char *git_dir, const char *ref_name)
 	else
 		fmt = "ref: " GIT_REFS_HEADS_DIR "%s\n";
 
-	if (git_filebuf_printf(&ref, fmt, ref_name) < 0 ||
-		git_filebuf_commit(&ref) < 0)
-		goto fail;
+	if ((error = git_filebuf_printf(&ref, fmt, ref_name)) < 0 ||
+	    (error = git_filebuf_commit(&ref)) < 0)
+		goto out;
 
-	git_buf_dispose(&ref_path);
-	return 0;
-
-fail:
+out:
 	git_buf_dispose(&ref_path);
 	git_filebuf_cleanup(&ref);
-	return -1;
+	return error;
 }
 
 static bool is_chmod_supported(const char *file_path)
