@@ -101,35 +101,29 @@ static void assert_mode_seems_okay(
 
 static const char *template_sandbox(const char *name)
 {
-	git_buf hooks_path = GIT_BUF_INIT, link_path = GIT_BUF_INIT,
-		dotfile_path = GIT_BUF_INIT;
-	const char *path = cl_fixture(name);
+	git_buf path = GIT_BUF_INIT;
 
 	cl_fixture_sandbox(name);
 
-	/* create a symlink from link.sample to update.sample if the filesystem
+	/*
+	 * Create a symlink from link.sample to update.sample if the filesystem
 	 * supports it.
 	 */
-
-	cl_git_pass(git_buf_joinpath(&hooks_path, name, "hooks"));
-	cl_git_pass(git_buf_joinpath(&link_path, hooks_path.ptr, "link.sample"));
-
+	cl_git_pass(git_buf_join3(&path, '/', name, "hooks", "link.sample"));
 #ifdef GIT_WIN32
-	cl_git_mkfile(link_path.ptr, "#!/bin/sh\necho hello, world\n");
+	cl_git_mkfile(path.ptr, "#!/bin/sh\necho hello, world\n");
 #else
-	cl_must_pass(symlink("update.sample", link_path.ptr));
+	cl_must_pass(p_symlink("update.sample", path.ptr));
 #endif
 
-	/* create a file starting with a dot */
-	cl_git_pass(git_buf_joinpath(&dotfile_path, hooks_path.ptr, ".dotfile"));
-	cl_git_mkfile(dotfile_path.ptr, "something\n");
-	git_buf_dispose(&dotfile_path);
+	git_buf_clear(&path);
 
-	git_buf_dispose(&dotfile_path);
-	git_buf_dispose(&link_path);
-	git_buf_dispose(&hooks_path);
+	/* Create a file starting with a dot */
+	cl_git_pass(git_buf_join3(&path, '/', name, "hooks", ".dotfile"));
+	cl_git_mkfile(path.ptr, "something\n");
 
-	return path;
+	git_buf_dispose(&path);
+	return cl_fixture(name);
 }
 
 static void configure_templatedir(const char *template_path)
@@ -139,19 +133,16 @@ static void configure_templatedir(const char *template_path)
 
 static void validate_templates(git_repository *repo, const char *template_path)
 {
-	git_buf template_description = GIT_BUF_INIT;
-	git_buf repo_description = GIT_BUF_INIT;
-	git_buf expected = GIT_BUF_INIT;
-	git_buf actual = GIT_BUF_INIT;
+	git_buf path = GIT_BUF_INIT, expected = GIT_BUF_INIT, actual = GIT_BUF_INIT;
 	int filemode;
 
-	cl_git_pass(git_buf_joinpath(&template_description, template_path,
-		"description"));
-	cl_git_pass(git_buf_joinpath(&repo_description, git_repository_path(repo),
-		"description"));
+	cl_git_pass(git_buf_joinpath(&path, template_path, "description"));
+	cl_git_pass(git_futils_readbuffer(&expected, path.ptr));
 
-	cl_git_pass(git_futils_readbuffer(&expected, template_description.ptr));
-	cl_git_pass(git_futils_readbuffer(&actual, repo_description.ptr));
+	git_buf_clear(&path);
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_path(repo), "description"));
+	cl_git_pass(git_futils_readbuffer(&actual, path.ptr));
 
 	cl_assert_equal_s(expected.ptr, actual.ptr);
 
@@ -160,19 +151,16 @@ static void validate_templates(git_repository *repo, const char *template_path)
 	assert_hooks_match(
 		template_path, git_repository_path(repo),
 		"hooks/update.sample", filemode);
-
 	assert_hooks_match(
 		template_path, git_repository_path(repo),
 		"hooks/link.sample", filemode);
-
 	assert_hooks_match(
 		template_path, git_repository_path(repo),
 		"hooks/.dotfile", filemode);
 
 	git_buf_dispose(&expected);
 	git_buf_dispose(&actual);
-	git_buf_dispose(&repo_description);
-	git_buf_dispose(&template_description);
+	git_buf_dispose(&path);
 }
 
 void test_repo_template__external_templates_specified_in_options(void)
