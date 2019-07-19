@@ -9,6 +9,9 @@ static git_repository *_repo = NULL;
 static mode_t g_umask = 0;
 static git_buf _global_path = GIT_BUF_INIT;
 
+static const char *fixture_repo;
+static const char *fixture_templates;
+
 void test_repo_template__initialize(void)
 {
 	_repo = NULL;
@@ -27,14 +30,19 @@ void test_repo_template__cleanup(void)
 	git_buf_dispose(&_global_path);
 
 	cl_fixture_cleanup("tmp_global_path");
-}
 
-static void cleanup_repository(void *path)
-{
+	if (fixture_repo) {
+		cl_fixture_cleanup(fixture_repo);
+		fixture_repo = NULL;
+	}
+
+	if (fixture_templates) {
+		cl_fixture_cleanup(fixture_templates);
+		fixture_templates = NULL;
+	}
+
 	git_repository_free(_repo);
 	_repo = NULL;
-
-	cl_fixture_cleanup((const char *)path);
 }
 
 static void assert_hooks_match(
@@ -99,11 +107,21 @@ static void assert_mode_seems_okay(
 		GIT_MODE_TYPE(expect_mode), GIT_MODE_TYPE(st.st_mode), "%07o");
 }
 
-static const char *template_sandbox(const char *name)
+static void setup_repo(const char *name, git_repository_init_options *opts)
+{
+	cl_git_pass(git_repository_init_ext(&_repo, name, opts));
+	fixture_repo = name;
+}
+
+static void setup_templates(const char *name, bool setup_globally)
 {
 	git_buf path = GIT_BUF_INIT;
 
-	cl_fixture_sandbox(name);
+	cl_fixture_sandbox("template");
+	if (strcmp(name, "template"))
+		cl_must_pass(p_rename("template", name));
+
+	fixture_templates = name;
 
 	/*
 	 * Create a symlink from link.sample to update.sample if the filesystem
@@ -122,13 +140,14 @@ static const char *template_sandbox(const char *name)
 	cl_git_pass(git_buf_join3(&path, '/', name, "hooks", ".dotfile"));
 	cl_git_mkfile(path.ptr, "something\n");
 
-	git_buf_dispose(&path);
-	return cl_fixture(name);
-}
+	git_buf_clear(&path);
 
-static void configure_templatedir(const char *template_path)
-{
-	create_tmp_global_config("tmp_global_path", "init.templatedir", template_path);
+	if (setup_globally) {
+		cl_git_pass(git_buf_joinpath(&path, clar_sandbox_path(), name));
+		create_tmp_global_config("tmp_global_path", "init.templatedir", path.ptr);
+	}
+
+	git_buf_dispose(&path);
 }
 
 static void validate_templates(git_repository *repo, const char *template_path)
@@ -167,93 +186,55 @@ void test_repo_template__external_templates_specified_in_options(void)
 {
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
-	cl_set_cleanup(&cleanup_repository, "templated.git");
-	template_sandbox("template");
-
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE |
 		GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
 	opts.template_path = "template";
 
-	cl_git_pass(git_repository_init_ext(&_repo, "templated.git", &opts));
-
-	cl_assert(git_repository_is_bare(_repo));
-
-	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/templated.git/"));
+	setup_templates("template", false);
+	setup_repo("templated.git", &opts);
 
 	validate_templates(_repo, "template");
-	cl_fixture_cleanup("template");
 }
 
 void test_repo_template__external_templates_specified_in_config(void)
 {
-	git_buf template_path = GIT_BUF_INIT;
-
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
-
-	cl_set_cleanup(&cleanup_repository, "templated.git");
-	template_sandbox("template");
-
-	cl_git_pass(git_buf_joinpath(&template_path, clar_sandbox_path(),
-		"template"));
-
-	configure_templatedir(template_path.ptr);
 
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE |
 		GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
 
-	cl_git_pass(git_repository_init_ext(&_repo, "templated.git", &opts));
+	setup_templates("template", true);
+	setup_repo("templated.git", &opts);
 
 	validate_templates(_repo, "template");
-	cl_fixture_cleanup("template");
-
-	git_buf_dispose(&template_path);
 }
 
 void test_repo_template__external_templates_with_leading_dot(void)
 {
-	git_buf template_path = GIT_BUF_INIT;
-
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
-
-	cl_set_cleanup(&cleanup_repository, "templated.git");
-	template_sandbox("template");
-
-	cl_must_pass(p_rename("template", ".template_with_leading_dot"));
-
-	cl_git_pass(git_buf_joinpath(&template_path, clar_sandbox_path(),
-		".template_with_leading_dot"));
-
-	configure_templatedir(template_path.ptr);
 
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE |
 		GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
 
-	cl_git_pass(git_repository_init_ext(&_repo, "templated.git", &opts));
+	setup_templates(".template_with_leading_dot", true);
+	setup_repo("templated.git", &opts);
 
 	validate_templates(_repo, ".template_with_leading_dot");
-	cl_fixture_cleanup(".template_with_leading_dot");
-
-	git_buf_dispose(&template_path);
 }
 
 void test_repo_template__extended_with_template_and_shared_mode(void)
 {
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
-	int filemode = true;
-	const char *repo_path = NULL;
-
-	cl_set_cleanup(&cleanup_repository, "init_shared_from_tpl");
-	template_sandbox("template");
+	const char *repo_path;
+	int filemode;
 
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH |
 		GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
 	opts.template_path = "template";
 	opts.mode = GIT_REPOSITORY_INIT_SHARED_GROUP;
 
-	cl_git_pass(git_repository_init_ext(&_repo, "init_shared_from_tpl", &opts));
-
-	cl_assert(!git_repository_is_bare(_repo));
-	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/init_shared_from_tpl/.git/"));
+	setup_templates("template", false);
+	setup_repo("init_shared_from_tpl", &opts);
 
 	filemode = cl_repo_get_bool(_repo, "core.filemode");
 
@@ -266,17 +247,14 @@ void test_repo_template__extended_with_template_and_shared_mode(void)
 		GIT_FILEMODE_BLOB, false, filemode);
 
 	validate_templates(_repo, "template");
-
-	cl_fixture_cleanup("template");
 }
 
 void test_repo_template__empty_template_path(void)
 {
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
 	opts.template_path = "";
 
-	cl_git_pass(git_futils_mkdir("foo", 0755, 0));
-	cl_git_pass(git_repository_init_ext(&_repo, "foo", &opts));
-
-	cleanup_repository("foo");
+	setup_repo("foo", &opts);
 }
