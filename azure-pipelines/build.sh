@@ -10,7 +10,6 @@ set -e
 SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( pwd ) )}
 BUILD_DIR=$(pwd)
 BUILD_PATH=${BUILD_PATH:=$PATH}
-CC=${CC:-cc}
 CMAKE=$(which cmake)
 
 indent() { sed "s/^/    /"; }
@@ -34,8 +33,11 @@ uname -a 2>&1 | indent
 
 echo "CMake version:"
 env PATH="$BUILD_PATH" "$CMAKE" --version 2>&1 | indent
-echo "Compiler version:"
-$CC --version 2>&1 | indent
+
+if test -n "$CC"; then
+	echo "Compiler version:"
+	"$CC" --version 2>&1 | indent
+fi
 echo ""
 
 echo "##############################################################################"
