@@ -249,6 +249,41 @@ void test_repo_template__extended_with_template_and_shared_mode(void)
 	validate_templates(_repo, "template");
 }
 
+void test_repo_template__templated_head_is_used(void)
+{
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+	git_buf head = GIT_BUF_INIT;
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
+
+	setup_templates("template", true);
+	cl_git_mkfile("template/HEAD", "foobar\n");
+	setup_repo("repo", &opts);
+
+	cl_git_pass(git_futils_readbuffer(&head, "repo/.git/HEAD"));
+	cl_assert_equal_s("foobar\n", head.ptr);
+
+	git_buf_dispose(&head);
+}
+
+void test_repo_template__initial_head_option_overrides_template_head(void)
+{
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+	git_buf head = GIT_BUF_INIT;
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
+	opts.initial_head = "manual";
+
+	setup_templates("template", true);
+	cl_git_mkfile("template/HEAD", "foobar\n");
+	setup_repo("repo", &opts);
+
+	cl_git_pass(git_futils_readbuffer(&head, "repo/.git/HEAD"));
+	cl_assert_equal_s("ref: refs/heads/manual\n", head.ptr);
+
+	git_buf_dispose(&head);
+}
+
 void test_repo_template__empty_template_path(void)
 {
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;

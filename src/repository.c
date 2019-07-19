@@ -2056,7 +2056,8 @@ int git_repository_init_ext(
 	const char *given_repo,
 	git_repository_init_options *opts)
 {
-	git_buf repo_path = GIT_BUF_INIT, wd_path = GIT_BUF_INIT, common_path = GIT_BUF_INIT;
+	git_buf repo_path = GIT_BUF_INIT, wd_path = GIT_BUF_INIT,
+		common_path = GIT_BUF_INIT, head_path = GIT_BUF_INIT;
 	const char *wd;
 	int error;
 
@@ -2086,6 +2087,15 @@ int git_repository_init_ext(
 	} else {
 		if ((error = repo_init_structure(repo_path.ptr, wd, opts)) < 0 ||
 		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode)) < 0 ||
+		    (error = git_buf_joinpath(&head_path, repo_path.ptr, GIT_HEAD_FILE)) < 0)
+			goto out;
+
+		/*
+		 * Only set the new HEAD if the file does not exist already via
+		 * a template or if the caller has explicitly supplied an
+		 * initial HEAD value.
+		 */
+		if ((!git_path_exists(head_path.ptr) || opts->initial_head) &&
 		    (error = git_repository_create_head(repo_path.ptr, opts->initial_head)) < 0)
 			goto out;
 	}
@@ -2098,6 +2108,7 @@ int git_repository_init_ext(
 		goto out;
 
 out:
+	git_buf_dispose(&head_path);
 	git_buf_dispose(&common_path);
 	git_buf_dispose(&repo_path);
 	git_buf_dispose(&wd_path);
