@@ -16,6 +16,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
+       CMAKE_GENERATOR=Unix Makefiles
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: linux_amd64_trusty_gcc_mbedtls
@@ -28,6 +29,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
+       CMAKE_GENERATOR=Unix Makefiles
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: linux_amd64_trusty_clang_openssl
@@ -40,6 +42,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
+       CMAKE_GENERATOR=Unix Makefiles
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: linux_amd64_trusty_clang_mbedtls
@@ -52,6 +55,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
+       CMAKE_GENERATOR=Unix Makefiles
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: macos
@@ -66,7 +70,8 @@ jobs:
       environmentVariables:
         TMPDIR: $(Agent.TempDirectory)
         PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
-        CMAKE_OPTIONS: -G Ninja -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks
+        CMAKE_GENERATOR: Ninja
+        CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks
         SKIP_SSH_TESTS: true
 
 - job: windows_vs_amd64
@@ -76,7 +81,8 @@ jobs:
   - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64" -DDEPRECATE_HARD=ON
+        CMAKE_GENERATOR: Visual Studio 12 2013 Win64
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON
 
 - job: windows_vs_x86
   displayName: 'Windows (x86; Visual Studio)'
@@ -85,7 +91,8 @@ jobs:
   - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013" -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS
+        CMAKE_GENERATOR: Visual Studio 12 2013
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS
 
 - job: windows_mingw_amd64
   displayName: 'Windows (amd64; MinGW)'
@@ -100,7 +107,8 @@ jobs:
     parameters:
       environmentVariables:
         BUILD_PATH: $(Agent.TempDirectory)\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
-        CMAKE_OPTIONS: -G"MinGW Makefiles" -DDEPRECATE_HARD=ON
+        CMAKE_GENERATOR: MinGW Makefiles
+        CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
 
 - job: windows_mingw_x86
   displayName: 'Windows (x86; MinGW)'
@@ -116,7 +124,8 @@ jobs:
     parameters:
       environmentVariables:
         BUILD_PATH: $(Agent.TempDirectory)\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
-        CMAKE_OPTIONS: -G"MinGW Makefiles" -DDEPRECATE_HARD=ON
+        CMAKE_GENERATOR: MinGW Makefiles
+        CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
 
 - job: documentation
   displayName: 'Generate Documentation'

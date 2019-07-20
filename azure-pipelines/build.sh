@@ -42,8 +42,8 @@ echo "##########################################################################
 echo "## Configuring build environment"
 echo "##############################################################################"
 
-echo cmake ${SOURCE_DIR} -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON ${CMAKE_OPTIONS}
-env PATH="$BUILD_PATH" "$CMAKE" ${SOURCE_DIR} -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON ${CMAKE_OPTIONS}
+echo cmake ${SOURCE_DIR} -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON -G \"${CMAKE_GENERATOR}\" ${CMAKE_OPTIONS}
+env PATH="$BUILD_PATH" "$CMAKE" ${SOURCE_DIR} -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON -G "${CMAKE_GENERATOR}" ${CMAKE_OPTIONS}
 
 echo ""
 echo "##############################################################################"

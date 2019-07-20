@@ -18,7 +18,7 @@ Write-Host "####################################################################
 Write-Host "## Configuring build environment"
 Write-Host "##############################################################################"
 
-Invoke-Expression "cmake ${SourceDirectory} -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON -DENABLE_WERROR=ON ${Env:CMAKE_OPTIONS}"
+Invoke-Expression "cmake ${SourceDirectory} -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON -DENABLE_WERROR=ON -G '${Env:CMAKE_GENERATOR}' ${Env:CMAKE_OPTIONS}"
 if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
 
 Write-Host ""
