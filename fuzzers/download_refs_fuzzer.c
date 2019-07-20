@@ -13,7 +13,7 @@
 
 #include "git2.h"
 #include "git2/sys/transport.h"
-#include "fileops.h"
+#include "futils.h"
 
 #define UNUSED(x) (void)(x)
 
