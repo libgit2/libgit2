@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "util.h"
-#include "fileops.h"
+#include "futils.h"
 #include "vector.h"
 #include "thread-utils.h"
 #include "pool.h"

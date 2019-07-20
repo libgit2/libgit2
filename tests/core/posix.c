@@ -12,6 +12,7 @@
 #include <locale.h>
 
 #include "clar_libgit2.h"
+#include "futils.h"
 #include "posix.h"
 #include "userdiff.h"
 
@@ -122,7 +123,7 @@ void test_core_posix__utimes(void)
 	cl_git_mkfile("foo", "Dummy file.");
 	cl_must_pass(p_utimes("foo", times));
 
-	p_stat("foo", &st);
+	cl_must_pass(p_stat("foo", &st));
 	cl_assert_equal_i(1234567890, st.st_atime);
 	cl_assert_equal_i(1234567890, st.st_mtime);
 
@@ -135,9 +136,9 @@ void test_core_posix__utimes(void)
 
 	cl_must_pass(fd = p_open("foo", O_RDWR));
 	cl_must_pass(p_futimes(fd, times));
-	p_close(fd);
+	cl_must_pass(p_close(fd));
 
-	p_stat("foo", &st);
+	cl_must_pass(p_stat("foo", &st));
 	cl_assert_equal_i(1414141414, st.st_atime);
 	cl_assert_equal_i(1414141414, st.st_mtime);
 
@@ -148,11 +149,11 @@ void test_core_posix__utimes(void)
 	cl_must_pass(p_utimes("foo", NULL));
 
 	curtime = time(NULL);
-	p_stat("foo", &st);
+	cl_must_pass(p_stat("foo", &st));
 	cl_assert((st.st_atime - curtime) < 5);
 	cl_assert((st.st_mtime - curtime) < 5);
 
-	p_unlink("foo");
+	cl_must_pass(p_unlink("foo"));
 }
 
 static void try_set_locale(int category)
@@ -262,4 +263,49 @@ void test_core_posix__p_regcomp_compile_userdiff_regexps(void)
 		p_regfree(&preg);
 		cl_assert(!error);
 	}
+}
+
+void test_core_posix__unlink_removes_symlink(void)
+{
+	if (!git_path_supports_symlinks(clar_sandbox_path()))
+		clar__skip();
+
+	cl_git_mkfile("file", "Dummy file.");
+	cl_git_pass(git_futils_mkdir("dir", 0777, 0));
+
+	cl_must_pass(p_symlink("file", "file-symlink"));
+	cl_must_pass(p_symlink("dir", "dir-symlink"));
+
+	cl_must_pass(p_unlink("file-symlink"));
+	cl_must_pass(p_unlink("dir-symlink"));
+
+	cl_assert(git_path_exists("file"));
+	cl_assert(git_path_exists("dir"));
+
+	cl_must_pass(p_unlink("file"));
+	cl_must_pass(p_rmdir("dir"));
+}
+
+void test_core_posix__symlink_resolves_to_correct_type(void)
+{
+	git_buf contents = GIT_BUF_INIT;
+
+	if (!git_path_supports_symlinks(clar_sandbox_path()))
+		clar__skip();
+
+	cl_must_pass(git_futils_mkdir("dir", 0777, 0));
+	cl_must_pass(git_futils_mkdir("file", 0777, 0));
+	cl_git_mkfile("dir/file", "symlink target");
+
+	cl_git_pass(p_symlink("file", "dir/link"));
+
+	cl_git_pass(git_futils_readbuffer(&contents, "dir/file"));
+	cl_assert_equal_s(contents.ptr, "symlink target");
+
+	cl_must_pass(p_unlink("dir/link"));
+	cl_must_pass(p_unlink("dir/file"));
+	cl_must_pass(p_rmdir("dir"));
+	cl_must_pass(p_rmdir("file"));
+
+	git_buf_dispose(&contents);
 }

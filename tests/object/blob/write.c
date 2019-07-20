@@ -2,7 +2,7 @@
 #include "buffer.h"
 #include "posix.h"
 #include "path.h"
-#include "fileops.h"
+#include "futils.h"
 
 static git_repository *repo;
 

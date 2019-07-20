@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "iterator.h"
 #include "repository.h"
-#include "fileops.h"
+#include "futils.h"
 #include "tree.h"
 #include "../submodule/submodule_helpers.h"
 #include "../diff/diff_helpers.h"

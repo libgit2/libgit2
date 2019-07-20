@@ -2,7 +2,7 @@
 #include "refs.h"
 #include "repo/repo_helpers.h"
 #include "path.h"
-#include "fileops.h"
+#include "futils.h"
 
 static git_repository *g_repo;
 

@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "sysdir.h"
-#include "fileops.h"
+#include "futils.h"
 #include <ctype.h>
 
 static git_buf path = GIT_BUF_INIT;

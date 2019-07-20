@@ -2,7 +2,7 @@
 #include "clar_libgit2.h"
 
 #include "buffer.h"
-#include "fileops.h"
+#include "futils.h"
 #include "git2/revert.h"
 
 #include "../merge/merge_helpers.h"

@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "git2/sys/repository.h"
 
-#include "fileops.h"
+#include "futils.h"
 #include "ignore.h"
 #include "status_helpers.h"
 #include "posix.h"

@@ -5,7 +5,7 @@
 #include "buffer.h"
 #include "path.h"
 #include "posix.h"
-#include "fileops.h"
+#include "futils.h"
 
 static int file_url(git_buf *buf, const char *host, const char *path)
 {

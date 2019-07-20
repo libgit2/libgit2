@@ -8,7 +8,7 @@
 #include "filter.h"
 
 #include "common.h"
-#include "fileops.h"
+#include "futils.h"
 #include "hash.h"
 #include "repository.h"
 #include "global.h"

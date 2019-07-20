@@ -7,7 +7,7 @@
 
 #include "filebuf.h"
 
-#include "fileops.h"
+#include "futils.h"
 
 static const size_t WRITE_BUFFER_SIZE = (4096 * 2);
 

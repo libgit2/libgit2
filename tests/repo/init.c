@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "fileops.h"
+#include "futils.h"
 #include "repository.h"
 #include "config.h"
 #include "path.h"
@@ -253,7 +253,7 @@ void test_repo_init__symlinks_win32_enabled_by_global_config(void)
 	git_config *config, *repo_config;
 	int val;
 
-	if (!filesystem_supports_symlinks("link"))
+	if (!git_path_supports_symlinks("link"))
 		cl_skip();
 
 	create_tmp_global_config("tmp_global_config", "core.symlinks", "true");
@@ -296,7 +296,7 @@ void test_repo_init__symlinks_posix_detected(void)
 	cl_skip();
 #else
 	assert_config_entry_on_init(
-	    "core.symlinks", filesystem_supports_symlinks("link") ? GIT_ENOTFOUND : false);
+	    "core.symlinks", git_path_supports_symlinks("link") ? GIT_ENOTFOUND : false);
 #endif
 }
 

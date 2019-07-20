@@ -8,7 +8,7 @@
 #include "common.h"
 
 #include "../posix.h"
-#include "../fileops.h"
+#include "../futils.h"
 #include "path.h"
 #include "path_w32.h"
 #include "utf-conv.h"
@@ -251,8 +251,24 @@ int p_link(const char *old, const char *new)
 
 GIT_INLINE(int) unlink_once(const wchar_t *path)
 {
+	DWORD error;
+
 	if (DeleteFileW(path))
 		return 0;
+
+	if ((error = GetLastError()) == ERROR_ACCESS_DENIED) {
+		WIN32_FILE_ATTRIBUTE_DATA fdata;
+		if (!GetFileAttributesExW(path, GetFileExInfoStandard, &fdata) ||
+		    !(fdata.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) ||
+		    !(fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+			goto out;
+
+		if (RemoveDirectoryW(path))
+			return 0;
+	}
+
+out:
+	SetLastError(error);
 
 	if (last_error_retryable())
 		return GIT_RETRY;
@@ -398,18 +414,37 @@ int p_readlink(const char *path, char *buf, size_t bufsiz)
 	return (int)bufsiz;
 }
 
+static bool target_is_dir(const char *target, const char *path)
+{
+	git_buf resolved = GIT_BUF_INIT;
+	git_win32_path resolved_w;
+	bool isdir = true;
+
+	if (git_path_is_absolute(target))
+		git_win32_path_from_utf8(resolved_w, target);
+	else if (git_path_dirname_r(&resolved, path) < 0 ||
+		 git_path_apply_relative(&resolved, target) < 0 ||
+		 git_win32_path_from_utf8(resolved_w, resolved.ptr) < 0)
+		goto out;
+
+	isdir = GetFileAttributesW(resolved_w) & FILE_ATTRIBUTE_DIRECTORY;
+
+out:
+	git_buf_dispose(&resolved);
+	return isdir;
+}
+
 int p_symlink(const char *target, const char *path)
 {
 	git_win32_path target_w, path_w;
 	DWORD dwFlags;
 
 	if (git_win32_path_from_utf8(path_w, path) < 0 ||
-		git__utf8_to_16(target_w, MAX_PATH, target) < 0)
+	    git__utf8_to_16(target_w, MAX_PATH, target) < 0)
 		return -1;
 
 	dwFlags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
-
-	if (GetFileAttributesW(target_w) & FILE_ATTRIBUTE_DIRECTORY)
+	if (target_is_dir(target, path))
 		dwFlags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
 
 	if (!CreateSymbolicLinkW(path_w, target_w, dwFlags))

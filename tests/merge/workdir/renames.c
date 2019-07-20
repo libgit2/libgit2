@@ -4,7 +4,7 @@
 #include "buffer.h"
 #include "merge.h"
 #include "../merge_helpers.h"
-#include "fileops.h"
+#include "futils.h"
 #include "refs.h"
 
 static git_repository *repo;

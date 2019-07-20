@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "git2/repository.h"
 #include "git2/sys/index.h"
-#include "fileops.h"
+#include "futils.h"
 #include "repository.h"
 
 static git_repository *g_repo;

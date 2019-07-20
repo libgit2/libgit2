@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "fileops.h"
+#include "futils.h"
 
 #include "global.h"
 #include "strmap.h"

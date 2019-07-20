@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "fileops.h"
+#include "futils.h"
 
 static const char *empty_tmp_dir = "test_gitfo_rmdir_recurs_test";
 

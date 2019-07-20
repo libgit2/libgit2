@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 
-#include "fileops.h"
+#include "futils.h"
 #include "fetchhead.h"
 #include "../fetchhead/fetchhead_data.h"
 #include "git2/clone.h"

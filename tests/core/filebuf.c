@@ -157,9 +157,8 @@ void test_core_filebuf__symlink_follow(void)
 	git_filebuf file = GIT_FILEBUF_INIT;
 	const char *dir = "linkdir", *source = "linkdir/link";
 
-#ifdef GIT_WIN32
-	cl_skip();
-#endif
+	if (!git_path_supports_symlinks(clar_sandbox_path()))
+		cl_skip();
 
 	cl_git_pass(p_mkdir(dir, 0777));
 	cl_git_pass(p_symlink("target", source));
@@ -192,9 +191,8 @@ void test_core_filebuf__symlink_follow_absolute_paths(void)
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_buf source = GIT_BUF_INIT, target = GIT_BUF_INIT;
 
-#ifdef GIT_WIN32
-	cl_skip();
-#endif
+	if (!git_path_supports_symlinks(clar_sandbox_path()))
+		cl_skip();
 
 	cl_git_pass(git_buf_joinpath(&source, clar_sandbox_path(), "linkdir/link"));
 	cl_git_pass(git_buf_joinpath(&target, clar_sandbox_path(), "linkdir/target"));
@@ -221,9 +219,8 @@ void test_core_filebuf__symlink_depth(void)
 	git_filebuf file = GIT_FILEBUF_INIT;
 	const char *dir = "linkdir", *source = "linkdir/link";
 
-#ifdef GIT_WIN32
-	cl_skip();
-#endif
+	if (!git_path_supports_symlinks(clar_sandbox_path()))
+		cl_skip();
 
 	cl_git_pass(p_mkdir(dir, 0777));
 	/* Endless loop */

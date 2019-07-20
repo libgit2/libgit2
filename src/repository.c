@@ -16,7 +16,7 @@
 #include "commit.h"
 #include "tag.h"
 #include "blob.h"
-#include "fileops.h"
+#include "futils.h"
 #include "sysdir.h"
 #include "filebuf.h"
 #include "index.h"
@@ -1419,9 +1419,6 @@ static bool are_symlinks_supported(const char *wd_path)
 	git_buf xdg_buf = GIT_BUF_INIT;
 	git_buf system_buf = GIT_BUF_INIT;
 	git_buf programdata_buf = GIT_BUF_INIT;
-	git_buf path = GIT_BUF_INIT;
-	int fd;
-	struct stat st;
 	int symlinks = 0;
 
 	/*
@@ -1448,23 +1445,14 @@ static bool are_symlinks_supported(const char *wd_path)
 		goto done;
 #endif
 
-	if ((fd = git_futils_mktmp(&path, wd_path, 0666)) < 0 ||
-	    p_close(fd) < 0 ||
-	    p_unlink(path.ptr) < 0 ||
-	    p_symlink("testing", path.ptr) < 0 ||
-	    p_lstat(path.ptr, &st) < 0)
+	if (!(symlinks = git_path_supports_symlinks(wd_path)))
 		goto done;
-
-	symlinks = (S_ISLNK(st.st_mode) != 0);
-
-	(void)p_unlink(path.ptr);
 
 done:
 	git_buf_dispose(&global_buf);
 	git_buf_dispose(&xdg_buf);
 	git_buf_dispose(&system_buf);
 	git_buf_dispose(&programdata_buf);
-	git_buf_dispose(&path);
 	git_config_free(config);
 	return symlinks != 0;
 }

@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#include "fileops.h"
+#include "futils.h"
 #include "filebuf.h"
 #include "vector.h"
 #include "idxmap.h"

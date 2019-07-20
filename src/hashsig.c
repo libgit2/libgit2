@@ -8,7 +8,7 @@
 #include "common.h"
 
 #include "git2/sys/hashsig.h"
-#include "fileops.h"
+#include "futils.h"
 #include "util.h"
 
 typedef uint32_t hashsig_t;

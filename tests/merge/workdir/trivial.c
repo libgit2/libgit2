@@ -5,7 +5,7 @@
 #include "merge.h"
 #include "../merge_helpers.h"
 #include "refs.h"
-#include "fileops.h"
+#include "futils.h"
 
 static git_repository *repo;
 static git_index *repo_index;

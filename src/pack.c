@@ -11,7 +11,7 @@
 #include "delta.h"
 #include "sha1_lookup.h"
 #include "mwindow.h"
-#include "fileops.h"
+#include "futils.h"
 #include "oid.h"
 
 #include <zlib.h>

@@ -3,7 +3,7 @@
 #include "git2/merge.h"
 #include "buffer.h"
 #include "merge.h"
-#include "fileops.h"
+#include "futils.h"
 #include "../merge_helpers.h"
 #include "../conflict_data.h"
 

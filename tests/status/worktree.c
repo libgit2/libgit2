@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "fileops.h"
+#include "futils.h"
 #include "ignore.h"
 #include "status_data.h"
 #include "posix.h"

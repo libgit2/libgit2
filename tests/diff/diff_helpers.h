@@ -1,4 +1,4 @@
-#include "fileops.h"
+#include "futils.h"
 #include "git2/diff.h"
 
 extern git_tree *resolve_commit_oid_to_tree(

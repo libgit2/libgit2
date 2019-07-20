@@ -3,7 +3,7 @@
 #include "git2/clone.h"
 #include "clone.h"
 #include "buffer.h"
-#include "fileops.h"
+#include "futils.h"
 
 static git_buf path = GIT_BUF_INIT;
 

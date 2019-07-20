@@ -10,7 +10,7 @@
 #include "commit.h"
 #include "git2/repository.h"
 #include "git2/object.h"
-#include "fileops.h"
+#include "futils.h"
 #include "tree-cache.h"
 #include "index.h"
 

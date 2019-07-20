@@ -3,7 +3,7 @@
 #include "git2/checkout.h"
 #include "path.h"
 #include "posix.h"
-#include "fileops.h"
+#include "futils.h"
 
 static git_repository *g_repo = NULL;
 

@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 
-#include "fileops.h"
+#include "futils.h"
 #include "git2/reflog.h"
 #include "reflog.h"
 #include "refs.h"

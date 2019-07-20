@@ -10,7 +10,7 @@
 #include "diff.h"
 #include "diff_file.h"
 #include "patch_generate.h"
-#include "fileops.h"
+#include "futils.h"
 #include "zstream.h"
 #include "blob.h"
 #include "delta.h"

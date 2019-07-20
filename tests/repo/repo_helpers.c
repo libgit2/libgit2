@@ -21,21 +21,6 @@ void delete_head(git_repository* repo)
 	git_buf_dispose(&head_path);
 }
 
-int filesystem_supports_symlinks(const char *path)
-{
-	struct stat st;
-	bool support = 0;
-
-	if (p_symlink("target", path) == 0) {
-		if (p_lstat(path, &st) == 0 && S_ISLNK(st.st_mode))
-			support = 1;
-
-		p_unlink(path);
-	}
-
-	return support;
-}
-
 void create_tmp_global_config(const char *dirname, const char *key, const char *val)
 {
 	git_buf path = GIT_BUF_INIT;

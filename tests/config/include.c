@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
-#include "fileops.h"
+#include "futils.h"
 
 static git_config *cfg;
 static git_buf buf;
