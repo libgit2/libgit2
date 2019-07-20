@@ -588,8 +588,8 @@ static int parse_hunk_body(
 
 		memset(line, 0x0, sizeof(git_diff_line));
 
-		line->content = ctx->parse_ctx.line + prefix;
 		line->content_len = ctx->parse_ctx.line_len - prefix;
+		line->content = git__strndup(ctx->parse_ctx.line + prefix, line->content_len);
 		line->content_offset = ctx->parse_ctx.content_len - ctx->parse_ctx.remain_len;
 		line->origin = origin;
 		line->num_lines = 1;
@@ -1038,6 +1038,8 @@ int git_patch_parsed_from_diff(git_patch **out, git_diff *d, size_t idx)
 static void patch_parsed__free(git_patch *p)
 {
 	git_patch_parsed *patch = (git_patch_parsed *)p;
+	git_diff_line *line;
+	size_t i;
 
 	if (!patch)
 		return;
@@ -1047,6 +1049,8 @@ static void patch_parsed__free(git_patch *p)
 	git__free((char *)patch->base.binary.old_file.data);
 	git__free((char *)patch->base.binary.new_file.data);
 	git_array_clear(patch->base.hunks);
+	git_array_foreach(patch->base.lines, i, line)
+		git__free((char *) line->content);
 	git_array_clear(patch->base.lines);
 	git__free(patch->base.delta);
 
