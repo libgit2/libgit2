@@ -653,7 +653,7 @@ static int parse_hunk_body(
 
 		memset(line, 0x0, sizeof(git_diff_line));
 
-		line->content = ctx->parse_ctx.line;
+		line->content = git__strdup(ctx->parse_ctx.line);
 		line->content_len = ctx->parse_ctx.line_len;
 		line->content_offset = ctx->parse_ctx.content_len - ctx->parse_ctx.remain_len;
 		line->origin = eof_for_origin(last_origin);
