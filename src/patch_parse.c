@@ -524,6 +524,14 @@ fail:
 	return -1;
 }
 
+static int eof_for_origin(int origin) {
+	if (origin == GIT_DIFF_LINE_ADDITION)
+		return GIT_DIFF_LINE_ADD_EOFNL;
+	if (origin == GIT_DIFF_LINE_DELETION)
+		return GIT_DIFF_LINE_DEL_EOFNL;
+	return GIT_DIFF_LINE_CONTEXT_EOFNL;
+}
+
 static int parse_hunk_body(
 	git_patch_parsed *patch,
 	git_patch_hunk *hunk,
@@ -534,6 +542,7 @@ static int parse_hunk_body(
 
 	int oldlines = hunk->hunk.old_lines;
 	int newlines = hunk->hunk.new_lines;
+	int last_origin = 0;
 
 	for (;
 		ctx->parse_ctx.remain_len > 1 &&
@@ -578,6 +587,21 @@ static int parse_hunk_body(
 			old_lineno = -1;
 			break;
 
+		case '\\':
+			/*
+			 * If there are no oldlines left, then this is probably
+			 * the "\ No newline at end of file" marker. Do not
+			 * verify its format, as it may be localized.
+			 */
+			if (!oldlines) {
+				prefix = 0;
+				origin = eof_for_origin(last_origin);
+				old_lineno = -1;
+				new_lineno = -1;
+				break;
+			}
+			/* fall through */
+
 		default:
 			error = git_parse_err("invalid patch hunk at line %"PRIuZ, ctx->parse_ctx.line_num);
 			goto done;
@@ -597,6 +621,8 @@ static int parse_hunk_body(
 		line->new_lineno = new_lineno;
 
 		hunk->line_count++;
+
+		last_origin = origin;
 	}
 
 	if (oldlines || newlines) {
@@ -606,7 +632,8 @@ static int parse_hunk_body(
 		goto done;
 	}
 
-	/* Handle "\ No newline at end of file".  Only expect the leading
+	/*
+	 * Handle "\ No newline at end of file". Only expect the leading
 	 * backslash, though, because the rest of the string could be
 	 * localized.  Because `diff` optimizes for the case where you
 	 * want to apply the patch by hand.
@@ -617,11 +644,24 @@ static int parse_hunk_body(
 		line = git_array_get(patch->base.lines, git_array_size(patch->base.lines) - 1);
 
 		if (line->content_len < 1) {
-			error = git_parse_err("cannot trim trailing newline of empty line");
+			error = git_parse_err("last line has no trailing newline");
 			goto done;
 		}
 
-		line->content_len--;
+		line = git_array_alloc(patch->base.lines);
+		GIT_ERROR_CHECK_ALLOC(line);
+
+		memset(line, 0x0, sizeof(git_diff_line));
+
+		line->content = ctx->parse_ctx.line;
+		line->content_len = ctx->parse_ctx.line_len;
+		line->content_offset = ctx->parse_ctx.content_len - ctx->parse_ctx.remain_len;
+		line->origin = eof_for_origin(last_origin);
+		line->num_lines = 1;
+		line->old_lineno = -1;
+		line->new_lineno = -1;
+
+		hunk->line_count++;
 
 		git_parse_advance_line(&ctx->parse_ctx);
 	}

@@ -836,7 +836,7 @@ static int patch_generated_line_cb(
 {
 	git_patch_generated  *patch = payload;
 	git_patch_hunk *hunk;
-	git_diff_line   *line;
+	git_diff_line *line;
 
 	GIT_UNUSED(delta);
 	GIT_UNUSED(hunk_);
