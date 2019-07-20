@@ -1360,10 +1360,11 @@ int git_repository_create_head(const char *git_dir, const char *ref_name)
 	git_buf ref_path = GIT_BUF_INIT;
 	git_filebuf ref = GIT_FILEBUF_INIT;
 	const char *fmt;
+	int error;
 
-	if (git_buf_joinpath(&ref_path, git_dir, GIT_HEAD_FILE) < 0 ||
-		git_filebuf_open(&ref, ref_path.ptr, 0, GIT_REFS_FILE_MODE) < 0)
-		goto fail;
+	if ((error = git_buf_joinpath(&ref_path, git_dir, GIT_HEAD_FILE)) < 0 ||
+	    (error = git_filebuf_open(&ref, ref_path.ptr, 0, GIT_REFS_FILE_MODE)) < 0)
+		goto out;
 
 	if (!ref_name)
 		ref_name = GIT_BRANCH_MASTER;
@@ -1373,17 +1374,14 @@ int git_repository_create_head(const char *git_dir, const char *ref_name)
 	else
 		fmt = "ref: " GIT_REFS_HEADS_DIR "%s\n";
 
-	if (git_filebuf_printf(&ref, fmt, ref_name) < 0 ||
-		git_filebuf_commit(&ref) < 0)
-		goto fail;
+	if ((error = git_filebuf_printf(&ref, fmt, ref_name)) < 0 ||
+	    (error = git_filebuf_commit(&ref)) < 0)
+		goto out;
 
-	git_buf_dispose(&ref_path);
-	return 0;
-
-fail:
+out:
 	git_buf_dispose(&ref_path);
 	git_filebuf_cleanup(&ref);
-	return -1;
+	return error;
 }
 
 static bool is_chmod_supported(const char *file_path)
@@ -2058,53 +2056,59 @@ int git_repository_init_ext(
 	const char *given_repo,
 	git_repository_init_options *opts)
 {
-	int error;
 	git_buf repo_path = GIT_BUF_INIT, wd_path = GIT_BUF_INIT,
-		common_path = GIT_BUF_INIT;
+		common_path = GIT_BUF_INIT, head_path = GIT_BUF_INIT;
 	const char *wd;
+	int error;
 
 	assert(out && given_repo && opts);
 
 	GIT_ERROR_CHECK_VERSION(opts, GIT_REPOSITORY_INIT_OPTIONS_VERSION, "git_repository_init_options");
 
-	error = repo_init_directories(&repo_path, &wd_path, given_repo, opts);
-	if (error < 0)
-		goto cleanup;
+	if ((error = repo_init_directories(&repo_path, &wd_path, given_repo, opts)) < 0)
+		goto out;
 
 	wd = (opts->flags & GIT_REPOSITORY_INIT_BARE) ? NULL : git_buf_cstr(&wd_path);
-	if (valid_repository_path(&repo_path, &common_path)) {
 
+	if (valid_repository_path(&repo_path, &common_path)) {
 		if ((opts->flags & GIT_REPOSITORY_INIT_NO_REINIT) != 0) {
 			git_error_set(GIT_ERROR_REPOSITORY,
 				"attempt to reinitialize '%s'", given_repo);
 			error = GIT_EEXISTS;
-			goto cleanup;
+			goto out;
 		}
 
 		opts->flags |= GIT_REPOSITORY_INIT__IS_REINIT;
 
-		error = repo_init_config(
-			repo_path.ptr, wd, opts->flags, opts->mode);
+		if ((error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode)) < 0)
+			goto out;
 
 		/* TODO: reinitialize the templates */
+	} else {
+		if ((error = repo_init_structure(repo_path.ptr, wd, opts)) < 0 ||
+		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode)) < 0 ||
+		    (error = git_buf_joinpath(&head_path, repo_path.ptr, GIT_HEAD_FILE)) < 0)
+			goto out;
+
+		/*
+		 * Only set the new HEAD if the file does not exist already via
+		 * a template or if the caller has explicitly supplied an
+		 * initial HEAD value.
+		 */
+		if ((!git_path_exists(head_path.ptr) || opts->initial_head) &&
+		    (error = git_repository_create_head(repo_path.ptr, opts->initial_head)) < 0)
+			goto out;
 	}
-	else {
-		if (!(error = repo_init_structure(
-				repo_path.ptr, wd, opts)) &&
-			!(error = repo_init_config(
-				repo_path.ptr, wd, opts->flags, opts->mode)))
-			error = git_repository_create_head(
-				repo_path.ptr, opts->initial_head);
-	}
-	if (error < 0)
-		goto cleanup;
 
-	error = git_repository_open(out, repo_path.ptr);
+	if ((error = git_repository_open(out, repo_path.ptr)) < 0)
+		goto out;
 
-	if (!error && opts->origin_url)
-		error = repo_init_create_origin(*out, opts->origin_url);
+	if (opts->origin_url &&
+	    (error = repo_init_create_origin(*out, opts->origin_url)) < 0)
+		goto out;
 
-cleanup:
+out:
+	git_buf_dispose(&head_path);
 	git_buf_dispose(&common_path);
 	git_buf_dispose(&repo_path);
 	git_buf_dispose(&wd_path);
