@@ -207,6 +207,9 @@ int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf)
 	int error, fd;
 	struct stat st;
 
+	if ((error = git_futils_filestamp_check_readonly(&sc->stamp, sc->path)) <= 0)
+		return error;
+
 	if ((error = git_sortedcache_wlock(sc)) < 0)
 		return error;
 

@@ -170,7 +170,7 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 }
 
 int git_futils_readbuffer_updated(
-	git_buf *out, const char *path, git_oid *checksum, int *updated)
+	git_buf *out, const char *path, git_oid *checksum, int *updated, bool quiet)
 {
 	int error;
 	git_file fd;
@@ -184,7 +184,7 @@ int git_futils_readbuffer_updated(
 		*updated = 0;
 
 	if (p_stat(path, &st) < 0)
-		return git_path_set_error(errno, path, "stat");
+    return errno == ENOENT && quiet ? GIT_ENOTFOUND : git_path_set_error(errno, path, "stat");
 
 
 	if (S_ISDIR(st.st_mode)) {
@@ -241,7 +241,7 @@ int git_futils_readbuffer_updated(
 
 int git_futils_readbuffer(git_buf *buf, const char *path)
 {
-	return git_futils_readbuffer_updated(buf, path, NULL, NULL);
+	return git_futils_readbuffer_updated(buf, path, NULL, NULL, false);
 }
 
 int git_futils_writebuffer(
@@ -1115,6 +1115,29 @@ int git_futils_filestamp_check(
 #endif
 	stamp->size  = (git_off_t)st.st_size;
 	stamp->ino   = (unsigned int)st.st_ino;
+
+	return 1;
+}
+
+int git_futils_filestamp_check_readonly(
+	const git_futils_filestamp *stamp, const char *path)
+{
+	struct stat st;
+
+	/* if the stamp is NULL, then always reload */
+	if (stamp == NULL)
+		return 1;
+
+	if (p_stat(path, &st) < 0)
+		return GIT_ENOTFOUND;
+
+	if (stamp->mtime.tv_sec == st.st_mtime &&
+#if defined(GIT_USE_NSEC)
+		stamp->mtime.tv_nsec == st.st_mtime_nsec &&
+#endif
+		stamp->size  == (git_off_t)st.st_size   &&
+		stamp->ino   == (unsigned int)st.st_ino)
+		return 0;
 
 	return 1;
 }

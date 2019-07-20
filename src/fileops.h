@@ -22,8 +22,9 @@
  * Read whole files into an in-memory buffer for processing
  */
 extern int git_futils_readbuffer(git_buf *obj, const char *path);
+/* if quiet is true, doesn't set error when returning GIT_ENOTFOUND */
 extern int git_futils_readbuffer_updated(
-	git_buf *obj, const char *path, git_oid *checksum, int *updated);
+	git_buf *obj, const char *path, git_oid *checksum, int *updated, bool quiet);
 extern int git_futils_readbuffer_fd(git_buf *obj, git_file fd, size_t len);
 
 /* Additional constants for `git_futils_writebuffer`'s `open_flags`.  We
@@ -349,6 +350,9 @@ typedef struct {
  */
 extern int git_futils_filestamp_check(
 	git_futils_filestamp *stamp, const char *path);
+
+extern int git_futils_filestamp_check_readonly(
+	const git_futils_filestamp *stamp, const char *path);
 
 /**
  * Set or reset file stamp data

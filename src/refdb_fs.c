@@ -220,13 +220,14 @@ corrupted:
 	return -1;
 }
 
+/* Doesn't set error if returning GIT_ENOTFOUND. It's expensive and callers don't care. */
 static int loose_readbuffer(git_buf *buf, const char *base, const char *path)
 {
 	int error;
 
 	/* build full path to file */
 	if ((error = git_buf_joinpath(buf, base, path)) < 0 ||
-		(error = git_futils_readbuffer(buf, buf->ptr)) < 0)
+		(error = git_futils_readbuffer_updated(buf, buf->ptr, NULL, NULL, true)) < 0)
 		git_buf_dispose(buf);
 
 	return error;

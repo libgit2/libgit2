@@ -15,7 +15,10 @@
 #include "win32/w32_util.h"
 #include "win32/version.h"
 #else
+#include <fcntl.h>
 #include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #endif
 #include <stdio.h>
 #include <ctype.h>
@@ -1413,6 +1416,8 @@ int git_path_diriter_next(git_path_diriter *diriter)
 	if (git_buf_oom(&diriter->path))
 		return -1;
 
+	diriter->d_type = de->d_type;
+
 	return error;
 }
 
@@ -1444,9 +1449,14 @@ int git_path_diriter_fullpath(
 
 int git_path_diriter_stat(struct stat *out, git_path_diriter *diriter)
 {
+	const char *fname;
+
 	assert(out && diriter);
 
-	return git_path_lstat(diriter->path.ptr, out);
+	fname = diriter->path.ptr + diriter->parent_len;
+	if (*fname == '/') ++fname;
+
+	return fstatat(dirfd(diriter->dir), fname, out, AT_SYMLINK_NOFOLLOW);
 }
 
 void git_path_diriter_free(git_path_diriter *diriter)
