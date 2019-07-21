@@ -43,6 +43,9 @@ typedef enum {
 
 	/** Don't error for `safecrlf` violations, allow them to continue. */
 	GIT_FILTER_ALLOW_UNSAFE = (1u << 0),
+
+	/** Don't load `/etc/gitattributes` (or the system equivalent) */
+	GIT_FILTER_NO_SYSTEM_ATTRIBUTES = (1u << 1),
 } git_filter_flag_t;
 
 /**
