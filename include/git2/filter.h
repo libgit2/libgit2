@@ -46,6 +46,9 @@ typedef enum {
 
 	/** Don't load `/etc/gitattributes` (or the system equivalent) */
 	GIT_FILTER_NO_SYSTEM_ATTRIBUTES = (1u << 1),
+
+	/** Load attributes from `.gitattributes` in the root of HEAD */
+	GIT_FILTER_ATTRIBUTES_FROM_HEAD = (1u << 2),
 } git_filter_flag_t;
 
 /**

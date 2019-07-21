@@ -438,6 +438,9 @@ static int filter_list_check_attributes(
 	if ((src->flags & GIT_FILTER_NO_SYSTEM_ATTRIBUTES) != 0)
 		flags |= GIT_ATTR_CHECK_NO_SYSTEM;
 
+	if ((src->flags & GIT_FILTER_ATTRIBUTES_FROM_HEAD) != 0)
+		flags |= GIT_ATTR_CHECK_INCLUDE_HEAD;
+
 	error = git_attr_get_many_with_session(
 		strs, repo, attr_session, flags, src->path, fdef->nattrs, fdef->attrs);
 
