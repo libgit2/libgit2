@@ -208,7 +208,7 @@ void test_filter_custom__order_dependency(void)
 		& git_index_get_bypath(index, "hero.1.rev-ident", 0)->id));
 	cl_assert_equal_s(
 		"\n!nuf evaH\n$dI$\ntset a si sihT", git_blob_rawcontent(blob));
-	cl_git_pass(git_blob_filtered_content(&buf, blob, "hero.1.rev-ident", 0));
+	cl_git_pass(git_blob_filter(&buf, blob, "hero.1.rev-ident", NULL));
 	/* no expansion because id was reversed at checkin and now at ident
 	 * time, reverse is not applied yet */
 	cl_assert_equal_s(
@@ -219,7 +219,7 @@ void test_filter_custom__order_dependency(void)
 		& git_index_get_bypath(index, "hero.2.rev-ident", 0)->id));
 	cl_assert_equal_s(
 		"\n!yzarC\n$Id$\ntset rehtonA", git_blob_rawcontent(blob));
-	cl_git_pass(git_blob_filtered_content(&buf, blob, "hero.2.rev-ident", 0));
+	cl_git_pass(git_blob_filter(&buf, blob, "hero.2.rev-ident", NULL));
 	/* expansion because reverse was applied at checkin and at ident time,
 	 * reverse is not applied yet */
 	cl_assert_equal_s(
