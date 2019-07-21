@@ -108,6 +108,12 @@ typedef enum {
 	 * system-wide `gitattributes` in `/etc` (or system equivalent).
 	 */
 	GIT_BLOB_FILTER_NO_SYSTEM_ATTRIBUTES = (1 << 1),
+
+	/**
+	 * When set, filters will be loaded from a `.gitattributes` file
+	 * in the HEAD commit.
+	 */
+	GIT_BLOB_FILTER_ATTTRIBUTES_FROM_HEAD = (1 << 2),
 } git_blob_filter_flag_t;
 
 /**
