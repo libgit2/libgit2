@@ -97,6 +97,27 @@ GIT_EXTERN(const void *) git_blob_rawcontent(const git_blob *blob);
 GIT_EXTERN(git_off_t) git_blob_rawsize(const git_blob *blob);
 
 /**
+ * Flags to control the functionality of `git_blob_filter`.
+ */
+typedef enum {
+	/** When set, filters will not be applied to binary files. */
+	GIT_BLOB_FILTER_CHECK_FOR_BINARY = (1 << 0),
+} git_blob_filter_flag_t;
+
+/**
+ * The options used when applying filter options to a file.
+ */
+typedef struct {
+	int version;
+
+	/** Flags to control the filtering process */
+	git_blob_filter_flag_t flags;
+} git_blob_filter_options;
+
+#define GIT_BLOB_FILTER_OPTIONS_VERSION 1
+#define GIT_BLOB_FILTER_OPTIONS_INIT {GIT_BLOB_FILTER_OPTIONS_VERSION, GIT_BLOB_FILTER_CHECK_FOR_BINARY}
+
+/**
  * Get a buffer with the filtered content of a blob.
  *
  * This applies filters as if the blob was being checked out to the
@@ -112,6 +133,24 @@ GIT_EXTERN(git_off_t) git_blob_rawsize(const git_blob *blob);
  * that case, be careful to *not* free the blob until done with the
  * buffer or copy it into memory you own.
  *
+ * @param out The git_buf to be filled in
+ * @param blob Pointer to the blob
+ * @param as_path Path used for file attribute lookups, etc.
+ * @param opts Options to use for filtering the blob
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_blob_filter(
+	git_buf *out,
+	git_blob *blob,
+	const char *as_path,
+	git_blob_filter_options *opts);
+
+/**
+ * Get a buffer with the filtered content of a blob.  This is
+ * equivalent to calling `git_blob_filter`, with the only possible
+ * option being the binary check.
+ *
+ * @see git_blob_filter
  * @param out The git_buf to be filled in
  * @param blob Pointer to the blob
  * @param as_path Path used for file attribute lookups, etc.
