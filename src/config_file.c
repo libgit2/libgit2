@@ -231,8 +231,10 @@ static int config_refresh(git_config_backend *cfg)
 	git_config_entries *entries = NULL;
 	int error, modified;
 
-	error = config_is_modified(&modified, &b->file);
-	if (error < 0 && error != GIT_ENOTFOUND)
+	if (cfg->readonly)
+		return 0;
+
+	if ((error = config_is_modified(&modified, &b->file)) < 0 && error != GIT_ENOTFOUND)
 		goto out;
 
 	if (!modified)
