@@ -102,6 +102,12 @@ GIT_EXTERN(git_off_t) git_blob_rawsize(const git_blob *blob);
 typedef enum {
 	/** When set, filters will not be applied to binary files. */
 	GIT_BLOB_FILTER_CHECK_FOR_BINARY = (1 << 0),
+
+	/**
+	 * When set, filters will not load configuration from the
+	 * system-wide `gitattributes` in `/etc` (or system equivalent).
+	 */
+	GIT_BLOB_FILTER_NO_SYSTEM_ATTRIBUTES = (1 << 1),
 } git_blob_filter_flag_t;
 
 /**

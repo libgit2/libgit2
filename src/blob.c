@@ -425,6 +425,9 @@ int git_blob_filter(
 	    git_blob_is_binary(blob))
 		return 0;
 
+	if ((opts.flags & GIT_BLOB_FILTER_NO_SYSTEM_ATTRIBUTES) != 0)
+		flags |= GIT_FILTER_NO_SYSTEM_ATTRIBUTES;
+
 	if (!(error = git_filter_list_load(
 			&fl, git_blob_owner(blob), blob, path,
 			GIT_FILTER_TO_WORKTREE, flags))) {
