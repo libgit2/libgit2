@@ -40,6 +40,8 @@ typedef enum {
  */
 typedef enum {
 	GIT_FILTER_DEFAULT = 0u,
+
+	/** Don't error for `safecrlf` violations, allow them to continue. */
 	GIT_FILTER_ALLOW_UNSAFE = (1u << 0),
 } git_filter_flag_t;
 
