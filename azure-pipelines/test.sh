@@ -13,15 +13,12 @@ USER=${USER:-$(whoami)}
 
 SUCCESS=1
 
-VALGRIND="valgrind --leak-check=full --show-reachable=yes --error-exitcode=125 --num-callers=50 --suppressions=\"$SOURCE_DIR/libgit2_clar.supp\""
-LEAKS="MallocStackLogging=1 MallocScribble=1 MallocLogFile=/dev/null CLAR_AT_EXIT=\"leaks -quiet \$PPID\""
-
 cleanup() {
 	echo "Cleaning up..."
 
-	if [ ! -z "$GITDAEMON_DIR" -a -f "${GITDAEMON_DIR}/pid" ]; then
+	if [ ! -z "$GITDAEMON_PID" ]; then
 		echo "Stopping git daemon..."
-		kill $(cat "${GITDAEMON_DIR}/pid")
+		kill $GITDAEMON_PID
 	fi
 
 	if [ ! -z "$SSHD_DIR" -a -f "${SSHD_DIR}/pid" ]; then
@@ -32,29 +29,7 @@ cleanup() {
 	echo "Done."
 }
 
-# Ask ctest what it would run if we were to invoke it directly.  This lets
-# us manage the test configuration in a single place (tests/CMakeLists.txt)
-# instead of running clar here as well.  But it allows us to wrap our test
-# harness with a leak checker like valgrind.  Append the option to write
-# JUnit-style XML files.
 run_test() {
-	TEST_CMD=$(ctest -N -V -R "^${1}$" | sed -n 's/^[0-9]*: Test command: //p')
-
-	if [ -z "$TEST_CMD" ]; then
-		echo "Could not find tests: $1"
-		exit 1
-	fi
-
-	TEST_CMD="${TEST_CMD} -r${BUILD_DIR}/results_${1}.xml"
-
-	if [ "$LEAK_CHECK" = "valgrind" ]; then
-		RUNNER="$VALGRIND $TEST_CMD"
-	elif [ "$LEAK_CHECK" = "leaks" ]; then
-		RUNNER="$LEAKS $TEST_CMD"
-	else
-		RUNNER="$TEST_CMD"
-	fi
-
 	if [[ "$GITTEST_FLAKY_RETRY" > 0 ]]; then
 		ATTEMPTS_REMAIN=$GITTEST_FLAKY_RETRY
 	else
@@ -70,7 +45,8 @@ run_test() {
 		fi
 
 		RETURN_CODE=0
-		eval $RUNNER || RETURN_CODE=$? && true
+
+		CLAR_SUMMARY="${BUILD_DIR}/results_${1}.xml" ctest -V -R "^${1}$" || RETURN_CODE=$? && true
 
 		if [ "$RETURN_CODE" -eq 0 ]; then
 			break
@@ -97,7 +73,8 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	echo "Starting git daemon..."
 	GITDAEMON_DIR=`mktemp -d ${TMPDIR}/gitdaemon.XXXXXXXX`
 	git init --bare "${GITDAEMON_DIR}/test.git"
-	git daemon --listen=localhost --export-all --enable=receive-pack --pid-file="${GITDAEMON_DIR}/pid" --base-path="${GITDAEMON_DIR}" "${GITDAEMON_DIR}" 2>/dev/null &
+	git daemon --listen=localhost --export-all --enable=receive-pack --base-path="${GITDAEMON_DIR}" "${GITDAEMON_DIR}" 2>/dev/null &
+	GITDAEMON_PID=$!
 fi
 
 if [ -z "$SKIP_PROXY_TESTS" ]; then
@@ -256,9 +233,7 @@ if [ -z "$SKIP_FUZZERS" ]; then
 	echo "## Running fuzzers"
 	echo "##############################################################################"
 
-	for fuzzer in fuzzers/*_fuzzer; do
-		"${fuzzer}" "${SOURCE_DIR}/fuzzers/corpora/$(basename "${fuzzer%_fuzzer}")" || failure
-	done
+	ctest -V -R 'fuzzer'
 fi
 
 cleanup

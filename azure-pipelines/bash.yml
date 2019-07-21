@@ -1,10 +1,10 @@
 # These are the steps used for building on machines with bash.
 steps:
-- bash: . '$(Build.SourcesDirectory)/ci/build.sh'
+- bash: . '$(Build.SourcesDirectory)/azure-pipelines/build.sh'
   displayName: Build
   workingDirectory: '$(Build.BinariesDirectory)'
   env: ${{ parameters.environmentVariables }}
-- bash: . '$(Build.SourcesDirectory)/ci/test.sh'
+- bash: . '$(Build.SourcesDirectory)/azure-pipelines/test.sh'
   displayName: Test
   workingDirectory: '$(Build.BinariesDirectory)'
   env: ${{ parameters.environmentVariables }}

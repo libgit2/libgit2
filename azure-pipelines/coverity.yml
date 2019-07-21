@@ -18,7 +18,7 @@ jobs:
       envVars: |
        COVERITY_TOKEN=$(COVERITY_TOKEN)
       workDir: '/build'
-      containerCommand: '/src/ci/coverity-build.sh'
+      containerCommand: '/src/azure-pipelines/coverity-build.sh'
       detached: false
   - task: Docker@0
     displayName: Publish
@@ -31,6 +31,6 @@ jobs:
       envVars: |
        COVERITY_TOKEN=$(COVERITY_TOKEN)
       workDir: '/build'
-      containerCommand: '/src/ci/coverity-publish.sh'
+      containerCommand: '/src/azure-pipelines/coverity-publish.sh'
       detached: false
     continueOnError: true
