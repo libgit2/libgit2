@@ -270,13 +270,12 @@ static int config_iterator_new(
 	struct git_config_backend *backend)
 {
 	diskfile_header *bh = GIT_CONTAINER_OF(backend, diskfile_header, parent);
-	git_config_entries *entries;
+	git_config_entries *entries = NULL;
 	int error;
 
-	if ((error = git_config_entries_dup(&entries, bh->entries)) < 0)
-		return error;
-
-	if ((error = git_config_entries_iterator_new(iter, entries)) < 0)
+	if ((error = config_refresh(backend)) < 0 ||
+	    (error = git_config_entries_dup(&entries, bh->entries)) < 0 ||
+	    (error = git_config_entries_iterator_new(iter, entries)) < 0)
 		goto out;
 
 out:
