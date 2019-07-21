@@ -80,6 +80,29 @@ void test_filter_bare__from_lf(void)
 	git_blob_free(blob);
 }
 
+void test_filter_bare__nested_attributes(void)
+{
+	git_blob *blob;
+	git_buf buf = { 0 };
+
+	cl_git_pass(git_revparse_single(
+		(git_object **)&blob, g_repo, "799770d")); /* all-lf */
+
+	cl_assert_equal_s(ALL_LF_TEXT_RAW, git_blob_rawcontent(blob));
+
+	cl_git_pass(git_blob_filter(&buf, blob, "raw/file.bin", &filter_opts));
+	cl_assert_equal_s(ALL_LF_TEXT_RAW, buf.ptr);
+
+	cl_git_pass(git_blob_filter(&buf, blob, "raw/file.crlf", &filter_opts));
+	cl_assert_equal_s(ALL_LF_TEXT_RAW, buf.ptr);
+
+	cl_git_pass(git_blob_filter(&buf, blob, "raw/file.lf", &filter_opts));
+	cl_assert_equal_s(ALL_LF_TEXT_RAW, buf.ptr);
+
+	git_buf_dispose(&buf);
+	git_blob_free(blob);
+}
+
 void test_filter_bare__sanitizes(void)
 {
 	git_blob *blob;
