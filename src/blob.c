@@ -437,22 +437,6 @@ int git_blob_filter(
 	return error;
 }
 
-int git_blob_filtered_content(
-	git_buf *out,
-	git_blob *blob,
-	const char *path,
-	int check_for_binary_data)
-{
-	git_blob_filter_options opts = GIT_BLOB_FILTER_OPTIONS_INIT;
-
-	if (check_for_binary_data)
-		opts.flags |= GIT_BLOB_FILTER_CHECK_FOR_BINARY;
-	else
-		opts.flags &= ~GIT_BLOB_FILTER_CHECK_FOR_BINARY;
-
-	return git_blob_filter(out, blob, path, &opts);
-}
-
 /* Deprecated functions */
 
 int git_blob_create_frombuffer(
@@ -484,4 +468,20 @@ int git_blob_create_fromstream_commit(
 	git_writestream *stream)
 {
 	return git_blob_create_from_stream_commit(out, stream);
+}
+
+int git_blob_filtered_content(
+	git_buf *out,
+	git_blob *blob,
+	const char *path,
+	int check_for_binary_data)
+{
+	git_blob_filter_options opts = GIT_BLOB_FILTER_OPTIONS_INIT;
+
+	if (check_for_binary_data)
+		opts.flags |= GIT_BLOB_FILTER_CHECK_FOR_BINARY;
+	else
+		opts.flags &= ~GIT_BLOB_FILTER_CHECK_FOR_BINARY;
+
+	return git_blob_filter(out, blob, path, &opts);
 }

@@ -146,25 +146,6 @@ GIT_EXTERN(int) git_blob_filter(
 	git_blob_filter_options *opts);
 
 /**
- * Get a buffer with the filtered content of a blob.  This is
- * equivalent to calling `git_blob_filter`, with the only possible
- * option being the binary check.
- *
- * @see git_blob_filter
- * @param out The git_buf to be filled in
- * @param blob Pointer to the blob
- * @param as_path Path used for file attribute lookups, etc.
- * @param check_for_binary_data Should this test if blob content contains
- *        NUL bytes / looks like binary data before applying filters?
- * @return 0 on success or an error code
- */
-GIT_EXTERN(int) git_blob_filtered_content(
-	git_buf *out,
-	git_blob *blob,
-	const char *as_path,
-	int check_for_binary_data);
-
-/**
  * Read a file from the working folder of a repository
  * and write it to the Object Database as a loose blob
  *
