@@ -40,8 +40,9 @@ typedef enum {
 	GIT_ATTR_FILE__IN_MEMORY   = 0,
 	GIT_ATTR_FILE__FROM_FILE   = 1,
 	GIT_ATTR_FILE__FROM_INDEX  = 2,
+	GIT_ATTR_FILE__FROM_HEAD   = 3,
 
-	GIT_ATTR_FILE_NUM_SOURCES  = 3
+	GIT_ATTR_FILE_NUM_SOURCES  = 4
 } git_attr_file_source;
 
 extern const char *git_attr__true;
