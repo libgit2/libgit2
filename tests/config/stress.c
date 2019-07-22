@@ -131,3 +131,48 @@ void test_config_stress__quick_write(void)
 	git_config_free(config_r);
 	git_config_free(config_w);
 }
+
+static int foreach_cb(const git_config_entry *entry, void *payload)
+{
+	if (!strcmp(entry->name, "key.value")) {
+		*(char **)payload = git__strdup(entry->value);
+		return 0;
+	}
+	return -1;
+}
+
+void test_config_stress__foreach_refreshes(void)
+{
+	git_config *config_w, *config_r;
+	char *value = NULL;
+
+	cl_git_pass(git_config_open_ondisk(&config_w, "./cfg"));
+	cl_git_pass(git_config_open_ondisk(&config_r, "./cfg"));
+
+	cl_git_pass(git_config_set_string(config_w, "key.value", "1"));
+	cl_git_pass(git_config_foreach_match(config_r, "key.value", foreach_cb, &value));
+
+	cl_assert_equal_s(value, "1");
+
+	git_config_free(config_r);
+	git_config_free(config_w);
+	git__free(value);
+}
+
+void test_config_stress__foreach_refreshes_snapshot(void)
+{
+	git_config *config, *snapshot;
+	char *value = NULL;
+
+	cl_git_pass(git_config_open_ondisk(&config, "./cfg"));
+
+	cl_git_pass(git_config_set_string(config, "key.value", "1"));
+	cl_git_pass(git_config_snapshot(&snapshot, config));
+	cl_git_pass(git_config_foreach_match(snapshot, "key.value", foreach_cb, &value));
+
+	cl_assert_equal_s(value, "1");
+
+	git_config_free(snapshot);
+	git_config_free(config);
+	git__free(value);
+}

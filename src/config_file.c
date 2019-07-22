@@ -121,8 +121,8 @@ static void config_file_clear(diskfile *file)
 
 static int config_open(git_config_backend *cfg, git_config_level_t level, const git_repository *repo)
 {
+	diskfile_backend *b = GIT_CONTAINER_OF(cfg, diskfile_backend, header.parent);
 	int res;
-	diskfile_backend *b = (diskfile_backend *)cfg;
 
 	b->header.level = level;
 	b->header.repo = repo;
@@ -179,7 +179,7 @@ out:
 
 static int config_set_entries(git_config_backend *cfg, git_config_entries *entries)
 {
-	diskfile_backend *b = (diskfile_backend *)cfg;
+	diskfile_backend *b = GIT_CONTAINER_OF(cfg, diskfile_backend, header.parent);
 	git_config_entries *old = NULL;
 	diskfile *include;
 	int error;
@@ -231,8 +231,10 @@ static int config_refresh(git_config_backend *cfg)
 	git_config_entries *entries = NULL;
 	int error, modified;
 
-	error = config_is_modified(&modified, &b->file);
-	if (error < 0 && error != GIT_ENOTFOUND)
+	if (cfg->readonly)
+		return 0;
+
+	if ((error = config_is_modified(&modified, &b->file)) < 0 && error != GIT_ENOTFOUND)
 		goto out;
 
 	if (!modified)
@@ -252,7 +254,7 @@ out:
 
 static void backend_free(git_config_backend *_backend)
 {
-	diskfile_backend *backend = (diskfile_backend *)_backend;
+	diskfile_backend *backend = GIT_CONTAINER_OF(_backend, diskfile_backend, header.parent);
 
 	if (backend == NULL)
 		return;
@@ -268,13 +270,12 @@ static int config_iterator_new(
 	struct git_config_backend *backend)
 {
 	diskfile_header *bh = GIT_CONTAINER_OF(backend, diskfile_header, parent);
-	git_config_entries *entries;
+	git_config_entries *entries = NULL;
 	int error;
 
-	if ((error = git_config_entries_dup(&entries, bh->entries)) < 0)
-		return error;
-
-	if ((error = git_config_entries_iterator_new(iter, entries)) < 0)
+	if ((error = config_refresh(backend)) < 0 ||
+	    (error = git_config_entries_dup(&entries, bh->entries)) < 0 ||
+	    (error = git_config_entries_iterator_new(iter, entries)) < 0)
 		goto out;
 
 out:
@@ -285,7 +286,7 @@ out:
 
 static int config_set(git_config_backend *cfg, const char *name, const char *value)
 {
-	diskfile_backend *b = (diskfile_backend *)cfg;
+	diskfile_backend *b = GIT_CONTAINER_OF(cfg, diskfile_backend, header.parent);
 	git_config_entries *entries;
 	git_config_entry *existing;
 	char *key, *esc_value = NULL;
@@ -337,7 +338,7 @@ static void free_diskfile_entry(git_config_entry *entry)
  */
 static int config_get(git_config_backend *cfg, const char *key, git_config_entry **out)
 {
-	diskfile_header *h = (diskfile_header *)cfg;
+	diskfile_header *h = GIT_CONTAINER_OF(cfg, diskfile_header, parent);
 	git_config_entries *entries = NULL;
 	git_config_entry *entry;
 	int error = 0;
@@ -363,7 +364,7 @@ static int config_get(git_config_backend *cfg, const char *key, git_config_entry
 static int config_set_multivar(
 	git_config_backend *cfg, const char *name, const char *regexp, const char *value)
 {
-	diskfile_backend *b = (diskfile_backend *)cfg;
+	diskfile_backend *b = GIT_CONTAINER_OF(cfg, diskfile_backend, header.parent);
 	char *key;
 	p_regex_t preg;
 	int result;
@@ -393,7 +394,7 @@ out:
 
 static int config_delete(git_config_backend *cfg, const char *name)
 {
-	diskfile_backend *b = (diskfile_backend *)cfg;
+	diskfile_backend *b = GIT_CONTAINER_OF(cfg, diskfile_backend, header.parent);
 	git_config_entries *entries = NULL;
 	git_config_entry *entry;
 	char *key = NULL;
@@ -423,7 +424,7 @@ out:
 
 static int config_delete_multivar(git_config_backend *cfg, const char *name, const char *regexp)
 {
-	diskfile_backend *b = (diskfile_backend *)cfg;
+	diskfile_backend *b = GIT_CONTAINER_OF(cfg, diskfile_backend, header.parent);
 	git_config_entries *entries = NULL;
 	git_config_entry *entry = NULL;
 	p_regex_t preg = { 0 };
@@ -462,7 +463,7 @@ out:
 
 static int config_lock(git_config_backend *_cfg)
 {
-	diskfile_backend *cfg = (diskfile_backend *) _cfg;
+	diskfile_backend *cfg = GIT_CONTAINER_OF(_cfg, diskfile_backend, header.parent);
 	int error;
 
 	if ((error = git_filebuf_open(&cfg->locked_buf, cfg->file.path, 0, GIT_CONFIG_FILE_MODE)) < 0)
@@ -481,7 +482,7 @@ static int config_lock(git_config_backend *_cfg)
 
 static int config_unlock(git_config_backend *_cfg, int success)
 {
-	diskfile_backend *cfg = (diskfile_backend *) _cfg;
+	diskfile_backend *cfg = GIT_CONTAINER_OF(_cfg, diskfile_backend, header.parent);
 	int error = 0;
 
 	if (success) {
@@ -581,7 +582,7 @@ static int config_unlock_readonly(git_config_backend *_cfg, int success)
 
 static void backend_readonly_free(git_config_backend *_backend)
 {
-	diskfile_backend *backend = (diskfile_backend *)_backend;
+	diskfile_backend *backend = GIT_CONTAINER_OF(_backend, diskfile_backend, header.parent);
 
 	if (backend == NULL)
 		return;
@@ -593,7 +594,7 @@ static void backend_readonly_free(git_config_backend *_backend)
 
 static int config_readonly_open(git_config_backend *cfg, git_config_level_t level, const git_repository *repo)
 {
-	diskfile_readonly_backend *b = (diskfile_readonly_backend *) cfg;
+	diskfile_readonly_backend *b = GIT_CONTAINER_OF(cfg, diskfile_readonly_backend, header.parent);
 	diskfile_backend *src = b->snapshot_from;
 	diskfile_header *src_header = &src->header;
 	git_config_entries *entries;
@@ -623,7 +624,7 @@ static int config_snapshot(git_config_backend **out, git_config_backend *in)
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
 	git_mutex_init(&backend->header.values_mutex);
 
-	backend->snapshot_from = (diskfile_backend *) in;
+	backend->snapshot_from = GIT_CONTAINER_OF(in, diskfile_backend, header.parent);
 
 	backend->header.parent.readonly = 1;
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
@@ -638,7 +639,7 @@ static int config_snapshot(git_config_backend **out, git_config_backend *in)
 	backend->header.parent.unlock = config_unlock_readonly;
 	backend->header.parent.free = backend_readonly_free;
 
-	*out = (git_config_backend *)backend;
+	*out = &backend->header.parent;
 
 	return 0;
 }
