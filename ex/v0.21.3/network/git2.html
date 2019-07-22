@@ -98,7 +98,7 @@ as a starting point for a git-like tool</p>
 repository and pass it to the function.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n">git_repository_open</span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.git&quot;</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_repository_open-3" class="fnlink" href="../../#v0.21.3/group/repository/git_repository_open">git_repository_open</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.git&quot;</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span></pre></div>
       </td>
@@ -121,7 +121,7 @@ repository and pass it to the function.</p>
   <span class="p">}</span>
 
   <span class="k">if</span><span class="p">(</span><span class="n">repo</span><span class="p">)</span>
-    <span class="n">git_repository_free</span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+    <span class="n"><a name="git_repository_free-4" class="fnlink" href="../../#v0.21.3/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="o">!!</span><span class="n">error</span><span class="p">;</span>
 <span class="p">}</span>
@@ -135,7 +135,7 @@ repository and pass it to the function.</p>
     <span class="n">exit</span><span class="p">(</span><span class="n">EXIT_FAILURE</span><span class="p">);</span>
   <span class="p">}</span>
 
-  <span class="n"><a name="git_threads_init-3" class="fnlink" href="../../#v0.21.3/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
+  <span class="n"><a name="git_threads_init-5" class="fnlink" href="../../#v0.21.3/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">commands</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">name</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">commands</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">name</span><span class="p">))</span>

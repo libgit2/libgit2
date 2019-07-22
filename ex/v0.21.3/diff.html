@@ -156,11 +156,11 @@ how to do renaming detection and patch formatting.</p>
     <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GIT_DIFF_FORMAT_PATCH</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="s">&quot;.&quot;</span>
   <span class="p">};</span>
 
-  <span class="n"><a name="git_threads_init-13" class="fnlink" href="../../#v0.21.3/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
+  <span class="n"><a name="git_threads_init-15" class="fnlink" href="../../#v0.21.3/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
 
   <span class="n">parse_opts</span><span class="p">(</span><span class="o">&amp;</span><span class="n">o</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n">git_repository_open_ext</span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">dir</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-13" class="fnlink" href="../../#v0.21.3/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">dir</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
     <span class="s">&quot;Could not open repository&quot;</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">dir</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -266,11 +266,11 @@ are not supported in this example</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n"><a name="git_diff_free-2" class="fnlink" href="../../#v0.21.3/group/diff/git_diff_free">git_diff_free</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
-  <span class="n"><a name="git_tree_free-15" class="fnlink" href="../../#v0.21.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t1</span><span class="p">);</span>
-  <span class="n"><a name="git_tree_free-16" class="fnlink" href="../../#v0.21.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t2</span><span class="p">);</span>
-  <span class="n">git_repository_free</span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_free-17" class="fnlink" href="../../#v0.21.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t1</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_free-18" class="fnlink" href="../../#v0.21.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t2</span><span class="p">);</span>
+  <span class="n"><a name="git_repository_free-14" class="fnlink" href="../../#v0.21.3/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
 
-  <span class="n"><a name="git_threads_shutdown-14" class="fnlink" href="../../#v0.21.3/group/threads/git_threads_shutdown">git_threads_shutdown</a></span><span class="p">();</span>
+  <span class="n"><a name="git_threads_shutdown-16" class="fnlink" href="../../#v0.21.3/group/threads/git_threads_shutdown">git_threads_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
