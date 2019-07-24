@@ -57,7 +57,7 @@ typedef struct {
 typedef struct {
 	diskfile_header header;
 
-	diskfile_backend *snapshot_from;
+	git_config_backend *source;
 } diskfile_readonly_backend;
 
 typedef struct {
@@ -595,26 +595,39 @@ static void backend_readonly_free(git_config_backend *_backend)
 static int config_readonly_open(git_config_backend *cfg, git_config_level_t level, const git_repository *repo)
 {
 	diskfile_readonly_backend *b = GIT_CONTAINER_OF(cfg, diskfile_readonly_backend, header.parent);
-	diskfile_backend *src = b->snapshot_from;
-	diskfile_header *src_header = &src->header;
-	git_config_entries *entries;
+	git_config_entries *entries = NULL;
+	git_config_iterator *it = NULL;
+	git_config_entry *entry;
 	int error;
-
-	if (!src_header->parent.readonly && (error = config_refresh(&src_header->parent)) < 0)
-		return error;
 
 	/* We're just copying data, don't care about the level or repo*/
 	GIT_UNUSED(level);
 	GIT_UNUSED(repo);
 
-	if ((entries = diskfile_entries_take(src_header)) == NULL)
-		return -1;
+	if ((error = git_config_entries_new(&entries)) < 0 ||
+	    (error = b->source->iterator(&it, b->source)) < 0)
+		goto out;
+
+	while ((error = git_config_next(&entry, it)) == 0)
+		if ((error = git_config_entries_dup_entry(entries, entry)) < 0)
+			goto out;
+
+	if (error < 0) {
+		if (error != GIT_ITEROVER)
+			goto out;
+		error = 0;
+	}
+
 	b->header.entries = entries;
 
-	return 0;
+out:
+	git_config_iterator_free(it);
+	if (error)
+		git_config_entries_free(entries);
+	return error;
 }
 
-static int config_snapshot(git_config_backend **out, git_config_backend *in)
+static int config_snapshot(git_config_backend **out, git_config_backend *source)
 {
 	diskfile_readonly_backend *backend;
 
@@ -624,7 +637,7 @@ static int config_snapshot(git_config_backend **out, git_config_backend *in)
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
 	git_mutex_init(&backend->header.values_mutex);
 
-	backend->snapshot_from = GIT_CONTAINER_OF(in, diskfile_backend, header.parent);
+	backend->source = source;
 
 	backend->header.parent.readonly = 1;
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
