@@ -284,6 +284,25 @@ out:
 	return error;
 }
 
+static int config_iterator_new_readonly(
+	git_config_iterator **iter,
+	struct git_config_backend *backend)
+{
+	diskfile_header *bh = GIT_CONTAINER_OF(backend, diskfile_header, parent);
+	git_config_entries *entries = NULL;
+	int error;
+
+	if ((error = git_config_entries_dup(&entries, bh->entries)) < 0 ||
+	    (error = git_config_entries_iterator_new(iter, entries)) < 0)
+		goto out;
+
+out:
+	/* Let iterator delete duplicated entries when it's done */
+	git_config_entries_free(entries);
+	return error;
+}
+
+
 static int config_set(git_config_backend *cfg, const char *name, const char *value)
 {
 	diskfile_backend *b = GIT_CONTAINER_OF(cfg, diskfile_backend, header.parent);
@@ -345,6 +364,28 @@ static int config_get(git_config_backend *cfg, const char *key, git_config_entry
 
 	if (!h->parent.readonly && ((error = config_refresh(cfg)) < 0))
 		return error;
+
+	if ((entries = diskfile_entries_take(h)) == NULL)
+		return -1;
+
+	if ((error = (git_config_entries_get(&entry, entries, key))) < 0) {
+		git_config_entries_free(entries);
+		return error;
+	}
+
+	entry->free = free_diskfile_entry;
+	entry->payload = entries;
+	*out = entry;
+
+	return 0;
+}
+
+static int config_get_readonly(git_config_backend *cfg, const char *key, git_config_entry **out)
+{
+	diskfile_header *h = GIT_CONTAINER_OF(cfg, diskfile_header, parent);
+	git_config_entries *entries = NULL;
+	git_config_entry *entry;
+	int error = 0;
 
 	if ((entries = diskfile_entries_take(h)) == NULL)
 		return -1;
@@ -642,12 +683,12 @@ static int config_snapshot(git_config_backend **out, git_config_backend *source)
 	backend->header.parent.readonly = 1;
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
 	backend->header.parent.open = config_readonly_open;
-	backend->header.parent.get = config_get;
+	backend->header.parent.get = config_get_readonly;
 	backend->header.parent.set = config_set_readonly;
 	backend->header.parent.set_multivar = config_set_multivar_readonly;
 	backend->header.parent.del = config_delete_readonly;
 	backend->header.parent.del_multivar = config_delete_multivar_readonly;
-	backend->header.parent.iterator = config_iterator_new;
+	backend->header.parent.iterator = config_iterator_new_readonly;
 	backend->header.parent.lock = config_lock_readonly;
 	backend->header.parent.unlock = config_unlock_readonly;
 	backend->header.parent.free = backend_readonly_free;
