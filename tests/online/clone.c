@@ -863,3 +863,8 @@ void test_online_clone__proxy_cred_callback_after_failed_url_creds(void)
 
 	git_buf_dispose(&url);
 }
+
+void test_online_clone__url_whitespace(void)
+{
+	cl_git_pass(git_clone(&g_repo, "https://dev.azure.com/ianhattendorf/With%20Space/_git/With%20Space", "./foo", &g_options));
+}
