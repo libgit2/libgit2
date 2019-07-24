@@ -195,7 +195,7 @@ int lg2_checkout(git_repository *repo, int argc, char **argv)
 		fprintf(stderr, "unhandled\n");
 		err = -1;
 		goto cleanup;
-	} else if (strcmp("--", args.argv[args.pos])) {
+	} else if (!strcmp("--", args.argv[args.pos])) {
 		/**
 		 * Try to checkout the given path
 		 */
