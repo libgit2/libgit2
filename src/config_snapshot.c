@@ -14,7 +14,7 @@ typedef struct {
 	git_mutex values_mutex;
 	git_config_entries *entries;
 	git_config_backend *source;
-} diskfile_readonly_backend;
+} config_snapshot_backend;
 
 static int config_error_readonly(void)
 {
@@ -26,7 +26,7 @@ static int config_iterator_new_readonly(
 	git_config_iterator **iter,
 	struct git_config_backend *backend)
 {
-	diskfile_readonly_backend *b = GIT_CONTAINER_OF(backend, diskfile_readonly_backend, parent);
+	config_snapshot_backend *b = GIT_CONTAINER_OF(backend, config_snapshot_backend, parent);
 	git_config_entries *entries = NULL;
 	int error;
 
@@ -49,7 +49,7 @@ static void free_diskfile_entry(git_config_entry *entry)
 
 static int config_get_readonly(git_config_backend *cfg, const char *key, git_config_entry **out)
 {
-	diskfile_readonly_backend *b = GIT_CONTAINER_OF(cfg, diskfile_readonly_backend, parent);
+	config_snapshot_backend *b = GIT_CONTAINER_OF(cfg, config_snapshot_backend, parent);
 	git_config_entries *entries = NULL;
 	git_config_entry *entry;
 	int error = 0;
@@ -129,7 +129,7 @@ static int config_unlock_readonly(git_config_backend *_cfg, int success)
 
 static void backend_readonly_free(git_config_backend *_backend)
 {
-	diskfile_readonly_backend *backend = GIT_CONTAINER_OF(_backend, diskfile_readonly_backend, parent);
+	config_snapshot_backend *backend = GIT_CONTAINER_OF(_backend, config_snapshot_backend, parent);
 
 	if (backend == NULL)
 		return;
@@ -141,7 +141,7 @@ static void backend_readonly_free(git_config_backend *_backend)
 
 static int config_readonly_open(git_config_backend *cfg, git_config_level_t level, const git_repository *repo)
 {
-	diskfile_readonly_backend *b = GIT_CONTAINER_OF(cfg, diskfile_readonly_backend, parent);
+	config_snapshot_backend *b = GIT_CONTAINER_OF(cfg, config_snapshot_backend, parent);
 	git_config_entries *entries = NULL;
 	git_config_iterator *it = NULL;
 	git_config_entry *entry;
@@ -176,9 +176,9 @@ out:
 
 int git_config_backend_snapshot(git_config_backend **out, git_config_backend *source)
 {
-	diskfile_readonly_backend *backend;
+	config_snapshot_backend *backend;
 
-	backend = git__calloc(1, sizeof(diskfile_readonly_backend));
+	backend = git__calloc(1, sizeof(config_snapshot_backend));
 	GIT_ERROR_CHECK_ALLOC(backend);
 
 	backend->parent.version = GIT_CONFIG_BACKEND_VERSION;
