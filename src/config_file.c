@@ -625,7 +625,7 @@ static int config_unlock_readonly(git_config_backend *_cfg, int success)
 
 static void backend_readonly_free(git_config_backend *_backend)
 {
-	diskfile_backend *backend = GIT_CONTAINER_OF(_backend, diskfile_backend, parent);
+	diskfile_readonly_backend *backend = GIT_CONTAINER_OF(_backend, diskfile_readonly_backend, parent);
 
 	if (backend == NULL)
 		return;
