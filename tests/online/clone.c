@@ -864,7 +864,23 @@ void test_online_clone__proxy_cred_callback_after_failed_url_creds(void)
 	git_buf_dispose(&url);
 }
 
-void test_online_clone__url_whitespace(void)
+void test_online_clone__path_whitespace(void)
 {
 	cl_git_pass(git_clone(&g_repo, "https://dev.azure.com/ianhattendorf/With%20Space/_git/With%20Space", "./foo", &g_options));
+	cl_assert(git_path_exists("./foo/README.md"));
+}
+
+void test_online_clone__path_whitespace_ssh(void)
+{
+#ifndef GIT_SSH
+	clar__skip();
+#endif
+
+	if (!_remote_ssh_privkey)
+		clar__skip();
+
+	g_options.fetch_opts.callbacks.credentials = cred_cb;
+	g_options.fetch_opts.callbacks.certificate_check = NULL;
+	cl_git_pass(git_clone(&g_repo, "ssh://git@ssh.dev.azure.com/v3/ianhattendorf/With%20Space/With%20Space", "./foo", &g_options));
+	cl_assert(git_path_exists("./foo/README.md"));
 }
