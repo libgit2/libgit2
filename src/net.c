@@ -94,7 +94,7 @@ int git_net_url_parse(git_net_url *url, const char *given)
 	if (has_path) {
 		const char *url_path = given + u.field_data[UF_PATH].off;
 		size_t url_path_len = u.field_data[UF_PATH].len;
-		git_buf_decode_percent(&path, url_path, url_path_len);
+		git_buf_put(&path, url_path, url_path_len);
 	} else {
 		git_buf_puts(&path, "/");
 	}
