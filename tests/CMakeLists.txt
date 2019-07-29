@@ -14,6 +14,11 @@ ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 # Ensure that we do not use deprecated functions internally
 ADD_DEFINITIONS(-DGIT_DEPRECATE_HARD)
 
+# Ensure that MinGW provides the correct header files.
+IF (WIN32 AND NOT CYGWIN)
+	ADD_DEFINITIONS(-DWIN32 -D_WIN32_WINNT=0x0600)
+ENDIF()
+
 INCLUDE_DIRECTORIES(${CLAR_PATH} ${libgit2_BINARY_DIR}/src)
 FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/*/*.h)
 SET(SRC_CLAR "main.c" "clar_libgit2.c" "clar_libgit2_trace.c" "clar_libgit2_timer.c" "clar.c")
