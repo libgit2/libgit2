@@ -186,20 +186,6 @@ GIT_EXTERN(git_object_t) git_object_string2type(const char *str);
 GIT_EXTERN(int) git_object_typeisloose(git_object_t type);
 
 /**
- * Get the size in bytes for the structure which
- * acts as an in-memory representation of any given
- * object type.
- *
- * For all the core types, this would the equivalent
- * of calling `sizeof(git_commit)` if the core types
- * were not opaque on the external API.
- *
- * @param type object type to get its size
- * @return size in bytes of the object
- */
-GIT_EXTERN(size_t) git_object_size(git_object_t type);
-
-/**
  * Recursively peel an object until an object of the specified type is met.
  *
  * If the query cannot be satisfied due to the object model,
