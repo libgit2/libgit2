@@ -21,6 +21,7 @@
 bool git_object__strict_input_validation = true;
 
 extern int git_odb_hash(git_oid *out, const void *data, size_t len, git_object_t type);
+size_t git_object__size(git_object_t type);
 
 typedef struct {
 	const char	*str;	/* type name string */
@@ -75,7 +76,7 @@ int git_object__from_raw(
 		return GIT_ENOTFOUND;
 	}
 
-	if ((object_size = git_object_size(type)) == 0) {
+	if ((object_size = git_object__size(type)) == 0) {
 		git_error_set(GIT_ERROR_INVALID, "the requested type is invalid");
 		return GIT_ENOTFOUND;
 	}
@@ -123,7 +124,7 @@ int git_object__from_odb_object(
 		return GIT_ENOTFOUND;
 	}
 
-	if ((object_size = git_object_size(odb_obj->cached.type)) == 0) {
+	if ((object_size = git_object__size(odb_obj->cached.type)) == 0) {
 		git_error_set(GIT_ERROR_INVALID, "the requested type is invalid");
 		return GIT_ENOTFOUND;
 	}
@@ -316,7 +317,7 @@ int git_object_typeisloose(git_object_t type)
 	return (git_objects_table[type].size > 0) ? 1 : 0;
 }
 
-size_t git_object_size(git_object_t type)
+size_t git_object__size(git_object_t type)
 {
 	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(git_objects_table))
 		return 0;
@@ -548,11 +549,4 @@ bool git_object__is_valid(
 	}
 
 	return true;
-}
-
-/* Deprecated functions */
-
-size_t git_object__size(git_object_t type)
-{
-	return git_object_size(type);
 }
