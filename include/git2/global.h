@@ -38,6 +38,28 @@ GIT_EXTERN(int) git_libgit2_init(void);
  */
 GIT_EXTERN(int) git_libgit2_shutdown(void);
 
+#if defined(GIT_WIN32) && defined(_INC_WINDOWS)
+
+/**
+ * Signal DllMain() was called to libgit2
+ *
+ * In static builds, we cannot export our own DllMain() symbol, as you might
+ * want to use your own DllMain() function. In this case, this function must
+ * be used to pass through the parameters obtained from DllMain().
+ *
+ * For this prototype to be visible, you must make sure to include windows.h
+ * before git2.h
+ *
+ * @param hInstDll Windows DLL handle 
+ * @param fdwReason Reason for call, see Microsoft API documentation for DllMain()
+ * @param lpvReserved See Microsoft API documentation for DllMain()
+ *
+ * @return Return code from DllMain(), see Microsoft API documentation
+ */
+
+GIT_EXTERN(BOOL) git_libgit2_dllmain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved);
+#endif
+
 /** @} */
 GIT_END_DECL
 #endif

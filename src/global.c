@@ -242,23 +242,6 @@ void git__free_tls_data(void)
 	TlsSetValue(_tls_index, NULL);
 }
 
-BOOL WINAPI DllMain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
-{
-	GIT_UNUSED(hInstDll);
-	GIT_UNUSED(lpvReserved);
-
-	/* This is how Windows lets us know our thread is being shut down */
-	if (fdwReason == DLL_THREAD_DETACH) {
-		git__free_tls_data();
-	}
-
-	/*
-	 * Windows pays attention to this during library loading. We don't do anything
-	 * so we trivially succeed.
-	 */
-	return TRUE;
-}
-
 #elif defined(GIT_THREADS) && defined(_POSIX_THREADS)
 
 static pthread_key_t _tls_key;
@@ -387,3 +370,48 @@ git_global_st *git__global_state(void)
 }
 
 #endif /* GIT_THREADS */
+
+#ifdef GIT_WIN32 
+BOOL git__dllmain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
+{
+	GIT_UNUSED(hInstDll);
+	GIT_UNUSED(lpvReserved);
+
+#ifdef GIT_THREADS
+	/* This is how Windows lets us know our thread is being shut down */
+	if (fdwReason == DLL_THREAD_DETACH) {
+		git__free_tls_data();
+	}
+#else
+	GIT_UNUSED(fdwReason);
+#endif /* GIT_THREADS */
+
+	/*
+	 * Windows pays attention to this during library loading. We don't do anything
+	 * so we trivially succeed.
+	 */
+	return TRUE;
+}
+
+#ifdef GIT_STATIC
+BOOL git_libgit2_dllmain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
+{
+	return git__dllmain(hInstDll, fdwReason, lpvReserved);
+}
+#else
+BOOL git_libgit2_dllmain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
+{
+	GIT_UNUSED(hInstDll);
+	GIT_UNUSED(fdwReason);
+	GIT_UNUSED(lpvReserved);
+
+	return TRUE;
+}
+
+BOOL WINAPI DllMain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
+{
+	return git__dllmain(hInstDll, fdwReason, lpvReserved);
+}
+#endif
+
+#endif /* GIT_WIN32 */
