@@ -15,6 +15,7 @@ void test_refs_iterator__cleanup(void)
 }
 
 static const char *refnames[] = {
+	"refs/blobs/annotated_tag_to_blob",
 	"refs/heads/br2",
 	"refs/heads/cannot-fetch",
 	"refs/heads/chomped",
@@ -40,6 +41,7 @@ static const char *refnames[] = {
 };
 
 static const char *refnames_with_symlink[] = {
+	"refs/blobs/annotated_tag_to_blob",
 	"refs/heads/br2",
 	"refs/heads/cannot-fetch",
 	"refs/heads/chomped",
@@ -99,7 +101,7 @@ void test_refs_iterator__list(void)
 	git_vector output;
 	git_reference *ref;
 
-	cl_git_pass(git_vector_init(&output, 32, &refcmp_cb));
+	cl_git_pass(git_vector_init(&output, 33, &refcmp_cb));
 	cl_git_pass(git_reference_iterator_new(&iter, repo));
 
 	while (1) {
@@ -143,7 +145,7 @@ static int refs_foreach_cb(git_reference *reference, void *payload)
 void test_refs_iterator__foreach(void)
 {
 	git_vector output;
-	cl_git_pass(git_vector_init(&output, 32, &refcmp_cb));
+	cl_git_pass(git_vector_init(&output, 33, &refcmp_cb));
 	cl_git_pass(git_reference_foreach(repo, refs_foreach_cb, &output));
 	assert_all_refnames_match(refnames, &output);
 }

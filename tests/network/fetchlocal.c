@@ -419,7 +419,7 @@ void test_network_fetchlocal__multi_remotes(void)
 	cl_git_pass(git_remote_fetch(test, NULL, &options, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
-	cl_assert_equal_i(32, (int)refnames.count);
+	cl_assert_equal_i(33, (int)refnames.count);
 	git_strarray_free(&refnames);
 
 	cl_git_pass(git_remote_set_url(repo, "test_with_pushurl", cl_git_fixture_url("testrepo.git")));
@@ -427,7 +427,7 @@ void test_network_fetchlocal__multi_remotes(void)
 	cl_git_pass(git_remote_fetch(test2, NULL, &options, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
-	cl_assert_equal_i(44, (int)refnames.count);
+	cl_assert_equal_i(45, (int)refnames.count);
 
 	git_strarray_free(&refnames);
 	git_remote_free(test);

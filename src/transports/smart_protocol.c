@@ -270,50 +270,6 @@ static int store_common(transport_smart *t)
 	return 0;
 }
 
-static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
-{
-	git_revwalk *walk = NULL;
-	git_strarray refs;
-	unsigned int i;
-	git_reference *ref = NULL;
-	int error;
-
-	if ((error = git_reference_list(&refs, repo)) < 0)
-		return error;
-
-	if ((error = git_revwalk_new(&walk, repo)) < 0)
-		return error;
-
-	git_revwalk_sorting(walk, GIT_SORT_TIME);
-
-	for (i = 0; i < refs.count; ++i) {
-		git_reference_free(ref);
-		ref = NULL;
-
-		/* No tags */
-		if (!git__prefixcmp(refs.strings[i], GIT_REFS_TAGS_DIR))
-			continue;
-
-		if ((error = git_reference_lookup(&ref, repo, refs.strings[i])) < 0)
-			goto on_error;
-
-		if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC)
-			continue;
-
-		if ((error = git_revwalk_push(walk, git_reference_target(ref))) < 0)
-			goto on_error;
-	}
-
-	*out = walk;
-
-on_error:
-	if (error)
-		git_revwalk_free(walk);
-	git_reference_free(ref);
-	git_strarray_free(&refs);
-	return error;
-}
-
 static int wait_while_ack(gitno_buffer *buf)
 {
 	int error;
@@ -358,7 +314,10 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 		return error;
 
-	if ((error = fetch_setup_walk(&walk, repo)) < 0)
+	if ((error = git_revwalk_new(&walk, repo)) < 0)
+		goto on_error;
+
+	if ((error = git_revwalk_push_glob(walk, "refs/*")) < 0)
 		goto on_error;
 
 	/*
