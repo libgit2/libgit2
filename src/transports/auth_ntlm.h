@@ -8,8 +8,10 @@
 #ifndef INCLUDE_transports_auth_ntlm_h__
 #define INCLUDE_transports_auth_ntlm_h__
 
-#include "git2.h"
+#include "common.h"
 #include "auth.h"
+
+#include "git2.h"
 
 #ifdef GIT_NTLM
 

@@ -372,7 +372,7 @@ git_global_st *git__global_state(void)
 #endif /* GIT_THREADS */
 
 #ifdef GIT_WIN32 
-BOOL git__dllmain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
+static BOOL git__dllmain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
 {
 	GIT_UNUSED(hInstDll);
 	GIT_UNUSED(lpvReserved);

@@ -5,12 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "auth_ntlm.h"
+#include "buffer.h"
 
 #include "git2.h"
-#include "buffer.h"
-#include "auth.h"
-#include "auth_ntlm.h"
 
 #ifdef GIT_NTLM
 
