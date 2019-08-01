@@ -74,3 +74,29 @@ void test_config_snapshot__multivar(void)
 
 	cl_git_pass(p_unlink("config"));
 }
+
+void test_config_snapshot__includes(void)
+{
+	int i;
+
+	cl_git_mkfile("including", "[include]\npath = included");
+	cl_git_mkfile("included", "[section]\nkey = 1\n");
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "including"));
+	cl_git_pass(git_config_snapshot(&snapshot, cfg));
+
+	cl_git_pass(git_config_get_int32(&i, snapshot, "section.key"));
+	cl_assert_equal_i(i, 1);
+
+	/* Rewrite "included" config */
+	cl_git_mkfile("included", "[section]\nkey = 11\n");
+
+	/* Assert that the live config changed, but snapshot remained the same */
+	cl_git_pass(git_config_get_int32(&i, cfg, "section.key"));
+	cl_assert_equal_i(i, 11);
+	cl_git_pass(git_config_get_int32(&i, snapshot, "section.key"));
+	cl_assert_equal_i(i, 1);
+
+	cl_git_pass(p_unlink("including"));
+	cl_git_pass(p_unlink("included"));
+}
