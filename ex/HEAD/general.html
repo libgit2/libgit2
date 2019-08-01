@@ -100,7 +100,7 @@ Git Internals that you will need to know to work with Git at this level,
 check out <a href="https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain">Chapter 10</a> of the Pro Git book.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre></pre></div>
+        <div class='highlight'><pre><span class="cp">#include &quot;common.h&quot;</span></pre></div>
       </td>
     </tr>
     <tr id='section-Includes'>
@@ -115,9 +115,7 @@ that you need.  It should be the only thing you need to include in order
 to compile properly and get all the libgit2 API.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cp">#include &lt;git2.h&gt;</span>
-<span class="cp">#include &lt;stdio.h&gt;</span>
-<span class="cp">#include &lt;string.h&gt;</span>
+        <div class='highlight'><pre><span class="cp">#include &quot;git2.h&quot;</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">oid_parsing</span><span class="p">(</span><span class="n">git_oid</span> <span class="o">*</span><span class="n">out</span><span class="p">);</span>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">object_database</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">git_oid</span> <span class="o">*</span><span class="n">oid</span><span class="p">);</span>
