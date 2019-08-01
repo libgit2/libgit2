@@ -1,14 +1,16 @@
 ; Check http://editorconfig.org/ for more informations
-; Top-most EditorConfig file
 root = true
 
-; tab indentation
 [*]
 indent_style = tab
+tab_width = 8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-; 4-column space indentation
+[*.yml]
+indent_style = space
+indent_size = 2
+
 [*.md]
 indent_style = space
 indent_size = 4
