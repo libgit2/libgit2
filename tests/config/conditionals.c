@@ -22,11 +22,11 @@ void test_config_conditionals__cleanup(void)
 
 static void assert_condition_includes(const char *keyword, const char *path, bool expected)
 {
-	git_config *cfg;
 	git_buf buf = GIT_BUF_INIT;
+	git_config *cfg;
 
-	git_buf_printf(&buf, "[includeIf \"%s:%s\"]\n", keyword, path);
-	git_buf_puts(&buf, "path = other\n");
+	cl_git_pass(git_buf_printf(&buf, "[includeIf \"%s:%s\"]\n", keyword, path));
+	cl_git_pass(git_buf_puts(&buf, "path = other\n"));
 
 	cl_git_mkfile("empty_standard_repo/.git/config", buf.ptr);
 	cl_git_mkfile("empty_standard_repo/.git/other", "[foo]\nbar=baz\n");
