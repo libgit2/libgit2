@@ -82,15 +82,25 @@ static int git_sysdir_guess_global_dirs(git_buf *out)
 #else
 	int error;
 	uid_t uid, euid;
+	const char *sandbox_id;
 
 	uid = getuid();
 	euid = geteuid();
 
+	/**
+	 * If APP_SANDBOX_CONTAINER_ID is set, we are running in a
+	 * sandboxed environment on macOS.
+	 */
+	sandbox_id = getenv("APP_SANDBOX_CONTAINER_ID");
+
 	/*
 	 * In case we are running setuid, use the configuration
 	 * of the effective user.
+	 *
+	 * If we are running in a sandboxed environment on macOS,
+	 * we have to get the HOME dir from the password entry file.
 	 */
-	if (uid == euid)
+	if (!sandbox_id && uid == euid)
 	    error = git__getenv(out, "HOME");
 	else
 	    error = get_passwd_home(out, euid);
