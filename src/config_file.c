@@ -651,12 +651,64 @@ static int conditional_match_gitdir_i(
 	return do_match_gitdir(matches, repo, cfg_file, value, true);
 }
 
+static int conditional_match_onbranch(
+	int *matches,
+	const git_repository *repo,
+	const char *cfg_file,
+	const char *condition)
+{
+	git_buf reference = GIT_BUF_INIT, buf = GIT_BUF_INIT;
+	int error;
+
+	GIT_UNUSED(cfg_file);
+
+	/*
+	 * NOTE: you cannot use `git_repository_head` here. Looking up the
+	 * HEAD reference will create the ODB, which causes us to read the
+	 * repo's config for keys like core.precomposeUnicode. As we're
+	 * just parsing the config right now, though, this would result in
+	 * an endless recursion.
+	 */
+
+	if ((error = git_buf_joinpath(&buf, git_repository_path(repo), GIT_HEAD_FILE)) < 0 ||
+	    (error = git_futils_readbuffer(&reference, buf.ptr)) < 0)
+		goto out;
+	git_buf_rtrim(&reference);
+
+	if (git__strncmp(reference.ptr, GIT_SYMREF, strlen(GIT_SYMREF)))
+		goto out;
+	git_buf_consume(&reference, reference.ptr + strlen(GIT_SYMREF));
+
+	if (git__strncmp(reference.ptr, GIT_REFS_HEADS_DIR, strlen(GIT_REFS_HEADS_DIR)))
+		goto out;
+	git_buf_consume(&reference, reference.ptr + strlen(GIT_REFS_HEADS_DIR));
+
+	/*
+	 * If the condition ends with a '/', then we should treat it as if
+	 * it had '**' appended.
+	 */
+	if ((error = git_buf_sets(&buf, condition)) < 0)
+		goto out;
+	if (git_path_is_dirsep(condition[strlen(condition) - 1]) &&
+	    (error = git_buf_puts(&buf, "**")) < 0)
+		goto out;
+
+	*matches = wildmatch(buf.ptr, reference.ptr, WM_PATHNAME) == WM_MATCH;
+out:
+	git_buf_dispose(&reference);
+	git_buf_dispose(&buf);
+
+	return error;
+
+}
+
 static const struct {
 	const char *prefix;
 	int (*matches)(int *matches, const git_repository *repo, const char *cfg, const char *value);
 } conditions[] = {
 	{ "gitdir:", conditional_match_gitdir },
-	{ "gitdir/i:", conditional_match_gitdir_i }
+	{ "gitdir/i:", conditional_match_gitdir_i },
+	{ "onbranch:", conditional_match_onbranch }
 };
 
 static int parse_conditional_include(config_file_parse_data *parse_data, const char *section, const char *file)

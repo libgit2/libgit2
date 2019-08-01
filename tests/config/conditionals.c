@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
 #include "futils.h"
+#include "repository.h"
 
 #ifdef GIT_WIN32
 # define ROOT_PREFIX "C:"
@@ -105,4 +106,43 @@ void test_config_conditionals__gitdir_i(void)
 void test_config_conditionals__invalid_conditional_fails(void)
 {
 	assert_condition_includes("foobar", ".git", false);
+}
+
+static void set_head(git_repository *repo, const char *name)
+{
+	cl_git_pass(git_repository_create_head(git_repository_path(repo), name));
+}
+
+void test_config_conditionals__onbranch(void)
+{
+	assert_condition_includes("onbranch", "master", true);
+	assert_condition_includes("onbranch", "m*", true);
+	assert_condition_includes("onbranch", "*", true);
+	assert_condition_includes("onbranch", "master/", false);
+	assert_condition_includes("onbranch", "foo", false);
+
+	set_head(_repo, "foo");
+	assert_condition_includes("onbranch", "master", false);
+	assert_condition_includes("onbranch", "foo", true);
+	assert_condition_includes("onbranch", "f*o", true);
+
+	set_head(_repo, "dir/ref");
+	assert_condition_includes("onbranch", "dir/ref", true);
+	assert_condition_includes("onbranch", "dir/", true);
+	assert_condition_includes("onbranch", "dir/*", true);
+	assert_condition_includes("onbranch", "dir/**", true);
+	assert_condition_includes("onbranch", "**", true);
+	assert_condition_includes("onbranch", "dir", false);
+	assert_condition_includes("onbranch", "dir*", false);
+
+	set_head(_repo, "dir/subdir/ref");
+	assert_condition_includes("onbranch", "dir/subdir/", true);
+	assert_condition_includes("onbranch", "dir/subdir/*", true);
+	assert_condition_includes("onbranch", "dir/subdir/ref", true);
+	assert_condition_includes("onbranch", "dir/", true);
+	assert_condition_includes("onbranch", "dir/**", true);
+	assert_condition_includes("onbranch", "**", true);
+	assert_condition_includes("onbranch", "dir", false);
+	assert_condition_includes("onbranch", "dir*", false);
+	assert_condition_includes("onbranch", "dir/*", false);
 }
