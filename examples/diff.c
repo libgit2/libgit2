@@ -52,6 +52,7 @@ struct opts {
 	git_diff_options diffopts;
 	git_diff_find_options findopts;
 	int color;
+	int no_index;
 	int cache;
 	int output;
 	git_diff_format_t format;
@@ -66,14 +67,16 @@ static void parse_opts(struct opts *o, int argc, char *argv[]);
 static int color_printer(
 	const git_diff_delta*, const git_diff_hunk*, const git_diff_line*, void*);
 static void diff_print_stats(git_diff *diff, struct opts *o);
+static void compute_diff_no_index(git_diff **diff, struct opts *o);
 
 int lg2_diff(git_repository *repo, int argc, char *argv[])
 {
 	git_tree *t1 = NULL, *t2 = NULL;
 	git_diff *diff;
+
 	struct opts o = {
 		GIT_DIFF_OPTIONS_INIT, GIT_DIFF_FIND_OPTIONS_INIT,
-		-1, 0, 0, GIT_DIFF_FORMAT_PATCH, NULL, NULL, "."
+		-1, -1, 0, 0, GIT_DIFF_FORMAT_PATCH, NULL, NULL, "."
 	};
 
 	parse_opts(&o, argc, argv);
@@ -86,49 +89,54 @@ int lg2_diff(git_repository *repo, int argc, char *argv[])
 	 *  * &lt;sha1&gt;
 	 *  * --cached
 	 *  * --nocache (don't use index data in diff at all)
+	 *  * --no-index &lt;file1&gt; &lt;file2&gt;
 	 *  * nothing
 	 *
 	 * Currently ranged arguments like &lt;sha1&gt;..&lt;sha2&gt; and &lt;sha1&gt;...&lt;sha2&gt;
 	 * are not supported in this example
 	 */
 
-	if (o.treeish1)
-		treeish_to_tree(&t1, repo, o.treeish1);
-	if (o.treeish2)
-		treeish_to_tree(&t2, repo, o.treeish2);
+	if (o.no_index >= 0) {
+		compute_diff_no_index(&diff, &o);
+	} else {
+		if (o.treeish1)
+			treeish_to_tree(&t1, repo, o.treeish1);
+		if (o.treeish2)
+			treeish_to_tree(&t2, repo, o.treeish2);
 
-	if (t1 && t2)
-		check_lg2(
-			git_diff_tree_to_tree(&diff, repo, t1, t2, &o.diffopts),
-			"diff trees", NULL);
-	else if (o.cache != CACHE_NORMAL) {
-		if (!t1)
-			treeish_to_tree(&t1, repo, "HEAD");
-
-		if (o.cache == CACHE_NONE)
+		if (t1 && t2)
 			check_lg2(
-				git_diff_tree_to_workdir(&diff, repo, t1, &o.diffopts),
+				git_diff_tree_to_tree(&diff, repo, t1, t2, &o.diffopts),
+				"diff trees", NULL);
+		else if (o.cache != CACHE_NORMAL) {
+			if (!t1)
+				treeish_to_tree(&t1, repo, "HEAD");
+
+			if (o.cache == CACHE_NONE)
+				check_lg2(
+					git_diff_tree_to_workdir(&diff, repo, t1, &o.diffopts),
+					"diff tree to working directory", NULL);
+			else
+				check_lg2(
+					git_diff_tree_to_index(&diff, repo, t1, NULL, &o.diffopts),
+					"diff tree to index", NULL);
+		}
+		else if (t1)
+			check_lg2(
+				git_diff_tree_to_workdir_with_index(&diff, repo, t1, &o.diffopts),
 				"diff tree to working directory", NULL);
 		else
 			check_lg2(
-				git_diff_tree_to_index(&diff, repo, t1, NULL, &o.diffopts),
-				"diff tree to index", NULL);
+				git_diff_index_to_workdir(&diff, repo, NULL, &o.diffopts),
+				"diff index to working directory", NULL);
+
+		/** Apply rename and copy detection if requested. */
+
+		if ((o.findopts.flags & GIT_DIFF_FIND_ALL) != 0)
+			check_lg2(
+				git_diff_find_similar(diff, &o.findopts),
+				"finding renames and copies", NULL);
 	}
-	else if (t1)
-		check_lg2(
-			git_diff_tree_to_workdir_with_index(&diff, repo, t1, &o.diffopts),
-			"diff tree to working directory", NULL);
-	else
-		check_lg2(
-			git_diff_index_to_workdir(&diff, repo, NULL, &o.diffopts),
-			"diff index to working directory", NULL);
-
-	/** Apply rename and copy detection if requested. */
-
-	if ((o.findopts.flags & GIT_DIFF_FIND_ALL) != 0)
-		check_lg2(
-			git_diff_find_similar(diff, &o.findopts),
-			"finding renames and copies", NULL);
 
 	/** Generate simple output using libgit2 display helper. */
 
@@ -156,6 +164,38 @@ int lg2_diff(git_repository *repo, int argc, char *argv[])
 	git_tree_free(t2);
 
 	return 0;
+}
+
+static void compute_diff_no_index(git_diff **diff, struct opts *o) {
+	git_patch *patch = NULL;
+	char *file1_str = NULL;
+	char *file2_str = NULL;
+	git_buf buf = {0};
+
+	if (!o->treeish1 || !o->treeish2) {
+		usage("two files should be provided as arguments", NULL);
+	}
+	file1_str = read_file(o->treeish1);
+	if (file1_str == NULL) {
+		usage("file cannot be read", o->treeish1);
+	}
+	file2_str = read_file(o->treeish2);
+	if (file2_str == NULL) {
+		usage("file cannot be read", o->treeish2);
+	}
+	check_lg2(
+		git_patch_from_buffers(&patch, file1_str, strlen(file1_str), o->treeish1, file2_str, strlen(file2_str), o->treeish2, &o->diffopts),
+		"patch buffers", NULL);
+	check_lg2(
+		git_patch_to_buf(&buf, patch),
+		"patch to buf", NULL);
+	check_lg2(
+		git_diff_from_buffer(diff, buf.ptr, buf.size),
+		"diff from patch", NULL);
+	git_patch_free(patch);
+	git_buf_dispose(&buf);
+	free(file1_str);
+	free(file2_str);
 }
 
 static void usage(const char *message, const char *arg)
@@ -223,9 +263,10 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 			o->output |= OUTPUT_DIFF;
 			o->format = GIT_DIFF_FORMAT_PATCH;
 		}
-		else if (!strcmp(a, "--cached"))
+		else if (!strcmp(a, "--cached")) {
 			o->cache = CACHE_ONLY;
-		else if (!strcmp(a, "--nocache"))
+			if (o->no_index >= 0) usage("--cached and --no-index are incompatible", NULL);
+		} else if (!strcmp(a, "--nocache"))
 			o->cache = CACHE_NONE;
 		else if (!strcmp(a, "--name-only") || !strcmp(a, "--format=name"))
 			o->format = GIT_DIFF_FORMAT_NAME_ONLY;
@@ -238,7 +279,10 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 			o->format = GIT_DIFF_FORMAT_RAW;
 			o->diffopts.id_abbrev = 40;
 		}
-		else if (!strcmp(a, "--color"))
+		else if (!strcmp(a, "--no-index")) {
+			o->no_index = 0;
+			if (o->cache == CACHE_ONLY) usage("--cached and --no-index are incompatible", NULL);
+		} else if (!strcmp(a, "--color"))
 			o->color = 0;
 		else if (!strcmp(a, "--no-color"))
 			o->color = -1;

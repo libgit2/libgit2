@@ -1,5 +1,4 @@
 #include <git2.h>
-#include <stdio.h>
 #include "common.h"
 
 static int show_ref(git_reference *ref, void *data)

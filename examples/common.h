@@ -12,10 +12,25 @@
  * <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <git2.h>
+#include <fcntl.h>
+
+#ifdef _WIN32
+# include <io.h>
+# include <Windows.h>
+# define open _open
+# define read _read
+# define close _close
+# define ssize_t int
+# define sleep(a) Sleep(a * 1000)
+#else
+# include <unistd.h>
+#endif
 
 #ifndef PRIuZ
 /* Define the printf format specifer to use for size_t output */
@@ -65,6 +80,14 @@ extern int lg2_tag(git_repository *repo, int argc, char **argv);
 extern void check_lg2(int error, const char *message, const char *extra);
 
 /**
+ * Read a file into a buffer
+ *
+ * @param path The path to the file that shall be read
+ * @return NUL-terminated buffer if the file was successfully read, NULL-pointer otherwise
+ */
+extern char *read_file(const char *path);
+
+/**
  * Exit the program, printing error to stderr
  */
 extern void fatal(const char *message, const char *extra);
@@ -90,7 +113,7 @@ struct args_info {
 /**
  * Check current `args` entry against `opt` string.  If it matches
  * exactly, take the next arg as a string; if it matches as a prefix with
- * an equal sign, take the remainder as a string; if value not supplied, 
+ * an equal sign, take the remainder as a string; if value not supplied,
  * default value `def` will be given. otherwise return 0.
  */
 extern int optional_str_arg(
