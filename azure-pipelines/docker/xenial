@@ -1,8 +1,22 @@
 ARG BASE
 FROM $BASE
-ARG CACHEBUST=1
-RUN apt-get update
-RUN apt-get -y install pkgconf clang git cmake curl libssl-dev libcurl3 libcurl3-gnutls libcurl4-gnutls-dev valgrind openssh-client openssh-server openjdk-8-jre
+RUN apt-get update && \
+    apt-get install -y \
+        clang \
+        cmake \
+        curl \
+        git \
+        libcurl3 \
+        libcurl3-gnutls \
+        libcurl4-gnutls-dev \
+        libssl-dev \
+        openjdk-8-jre \
+        openssh-client \
+        openssh-server \
+        pkgconf \
+        valgrind \
+        && \
+    rm -rf /var/lib/apt/lists/*
 RUN mkdir /var/run/sshd
 
 RUN cd /tmp && \

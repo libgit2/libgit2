@@ -1,9 +1,23 @@
 ARG BASE
 FROM $BASE
-ARG CACHEBUST=1
-RUN apt-get update
-RUN apt-get -y install pkgconf clang git cmake curl libssl-dev libcurl4 libcurl4-openssl-dev libssh2-1-dev libz-dev valgrind openssh-client openssh-server
-RUN if [ "$ARCH" != "armhf" -a "$ARCH" != "arm64" ]; then apt-get -y install openjdk-11-jre-headless; fi
+RUN apt-get update && \
+    apt-get install -y \
+        clang \
+        cmake \
+        curl \
+        git \
+        libcurl4 \
+        libcurl4-openssl-dev \
+        libssh2-1-dev \
+        libssl-dev \
+        libz-dev \
+        openjdk-11-jre-headless \
+        openssh-client \
+        openssh-server \
+        pkgconf \
+        valgrind \
+        && \
+    rm -rf /var/lib/apt/lists/*
 RUN mkdir /var/run/sshd
 
 RUN cd /tmp && \
