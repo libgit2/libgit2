@@ -1,19 +1,23 @@
 ARG BASE
 FROM $BASE
 RUN apt-get update && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends \
         clang \
         cmake \
         curl \
+        gcc \
         git \
-        libcurl3 \
-        libcurl3-gnutls \
         libcurl4-gnutls-dev \
+        libpcre3-dev \
+        libssh2-1-dev \
         libssl-dev \
-        openjdk-8-jre \
-        openssh-client \
+        libz-dev \
+        make \
+        openjdk-8-jre-headless \
         openssh-server \
+        openssl \
         pkgconf \
+        python \
         valgrind \
         && \
     rm -rf /var/lib/apt/lists/*
