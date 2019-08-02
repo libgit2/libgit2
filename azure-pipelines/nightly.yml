@@ -2,64 +2,64 @@ resources:
 - repo: self
 
 jobs:
-- job: linux_amd64_trusty_gcc_openssl
-  displayName: 'Linux (amd64; Trusty; GCC; OpenSSL)'
+- job: linux_amd64_xenial_gcc_openssl
+  displayName: 'Linux (amd64; Xenial; GCC; OpenSSL)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
   - template: docker.yml
     parameters:
       docker:
-        image: trusty
-        base: ubuntu:trusty
+        image: xenial
+        base: ubuntu:xenial
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Unix Makefiles
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
        RUN_INVASIVE_TESTS=true
 
-- job: linux_amd64_trusty_gcc_mbedtls
-  displayName: 'Linux (amd64; Trusty; GCC; mbedTLS)'
+- job: linux_amd64_xenial_gcc_mbedtls
+  displayName: 'Linux (amd64; Xenial; GCC; mbedTLS)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
   - template: docker.yml
     parameters:
       docker:
-        image: trusty
-        base: ubuntu:trusty
+        image: xenial
+        base: ubuntu:xenial
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Unix Makefiles
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
        RUN_INVASIVE_TESTS=true
 
-- job: linux_amd64_trusty_clang_openssl
-  displayName: 'Linux (amd64; Trusty; Clang; OpenSSL)'
+- job: linux_amd64_xenial_clang_openssl
+  displayName: 'Linux (amd64; Xenial; Clang; OpenSSL)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
   - template: docker.yml
     parameters:
       docker:
-        image: trusty
-        base: ubuntu:trusty
+        image: xenial
+        base: ubuntu:xenial
       environmentVariables: |
        CC=clang
        CMAKE_GENERATOR=Unix Makefiles
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
        RUN_INVASIVE_TESTS=true
 
-- job: linux_amd64_trusty_clang_mbedtls
-  displayName: 'Linux (amd64; Trusty; Clang; mbedTLS)'
+- job: linux_amd64_xenial_clang_mbedtls
+  displayName: 'Linux (amd64; Xenial; Clang; mbedTLS)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
   - template: docker.yml
     parameters:
       docker:
-        image: trusty
-        base: ubuntu:trusty
+        image: xenial
+        base: ubuntu:xenial
       environmentVariables: |
        CC=clang
        CMAKE_GENERATOR=Unix Makefiles
