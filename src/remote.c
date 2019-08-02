@@ -136,35 +136,6 @@ cleanup:
 	return 0;
 }
 
-#if 0
-/* We could export this as a helper */
-static int get_check_cert(int *out, git_repository *repo)
-{
-	git_config *cfg;
-	const char *val;
-	int error = 0;
-
-	assert(out && repo);
-
-	/* By default, we *DO* want to verify the certificate. */
-	*out = 1;
-
-	/* Go through the possible sources for SSL verification settings, from
-	 * most specific to least specific. */
-
-	/* GIT_SSL_NO_VERIFY environment variable */
-	if ((val = p_getenv("GIT_SSL_NO_VERIFY")) != NULL)
-		return git_config_parse_bool(out, val);
-
-	/* http.sslVerify config setting */
-	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
-		return error;
-
-	*out = git_config__get_bool_force(cfg, "http.sslverify", 1);
-	return 0;
-}
-#endif
-
 static int canonicalize_url(git_buf *out, const char *in)
 {
 	if (in == NULL || strlen(in) == 0) {
