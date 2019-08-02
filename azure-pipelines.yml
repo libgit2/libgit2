@@ -13,7 +13,9 @@ jobs:
   steps:
   - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-amd64:latest'
+      docker:
+        image: trusty
+        base: ubuntu:trusty
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Unix Makefiles
@@ -26,7 +28,9 @@ jobs:
   steps:
   - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-amd64:latest'
+      docker:
+        image: trusty
+        base: ubuntu:trusty
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Unix Makefiles
@@ -39,7 +43,9 @@ jobs:
   steps:
   - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-amd64:latest'
+      docker:
+        image: trusty
+        base: ubuntu:trusty
       environmentVariables: |
        CC=clang
        CMAKE_GENERATOR=Unix Makefiles
@@ -52,7 +58,9 @@ jobs:
   steps:
   - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-amd64:latest'
+      docker:
+        image: trusty
+        base: ubuntu:trusty
       environmentVariables: |
        CC=clang
        CMAKE_GENERATOR=Unix Makefiles
@@ -136,6 +144,10 @@ jobs:
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
+  - script: |
+      cd $(Build.SourcesDirectory)/azure-pipelines/docker
+      docker build -t libgit2/docurium --build-arg BASE=ubuntu:trusty -f docurium .
+    displayName: 'Build Docker image'
   - script: |
       git config user.name 'Documentation Generation'
       git config user.email 'libgit2@users.noreply.github.com'

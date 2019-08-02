@@ -9,7 +9,9 @@ jobs:
   steps:
   - template: docker.yml
     parameters:
-      imageName: 'libgit2/trusty-amd64:latest'
+      docker:
+        image: trusty
+        base: ubuntu:trusty
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Unix Makefiles
@@ -23,7 +25,9 @@ jobs:
   steps:
   - template: docker.yml
     parameters:
-      imageName: 'libgit2/trusty-amd64:latest'
+      docker:
+        image: trusty
+        base: ubuntu:trusty
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Unix Makefiles
@@ -37,7 +41,9 @@ jobs:
   steps:
   - template: docker.yml
     parameters:
-      imageName: 'libgit2/trusty-amd64:latest'
+      docker:
+        image: trusty
+        base: ubuntu:trusty
       environmentVariables: |
        CC=clang
        CMAKE_GENERATOR=Unix Makefiles
@@ -51,7 +57,9 @@ jobs:
   steps:
   - template: docker.yml
     parameters:
-      imageName: 'libgit2/trusty-amd64:latest'
+      docker:
+        image: trusty
+        base: ubuntu:trusty
       environmentVariables: |
        CC=clang
        CMAKE_GENERATOR=Unix Makefiles
@@ -144,7 +152,9 @@ jobs:
   - template: docker.yml
     parameters:
       qemu: 'true'
-      imageName: 'libgit2/bionic-x86:latest'
+      docker:
+        image: bionic
+        base: multiarch/ubuntu-core:x86-bionic
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Unix Makefiles
@@ -159,7 +169,9 @@ jobs:
   - template: docker.yml
     parameters:
       qemu: 'true'
-      imageName: 'libgit2/bionic-x86:latest'
+      docker:
+        image: bionic
+        base: multiarch/ubuntu-core:x86-bionic
       environmentVariables: |
        CC=clang
        CMAKE_GENERATOR=Unix Makefiles
@@ -174,7 +186,9 @@ jobs:
   - template: docker.yml
     parameters:
       qemu: 'true'
-      imageName: 'libgit2/bionic-arm32:latest'
+      docker:
+        image: bionic
+        base: multiarch/ubuntu-core:armhf-bionic
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Unix Makefiles
@@ -190,7 +204,9 @@ jobs:
   - template: docker.yml
     parameters:
       qemu: 'true'
-      imageName: 'libgit2/bionic-arm64:latest'
+      docker:
+        image: bionic
+        base: multiarch/ubuntu-core:arm64-bionic
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Unix Makefiles
