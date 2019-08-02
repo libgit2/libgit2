@@ -91,7 +91,7 @@ IF(HTTPS_BACKEND)
 					ENDIF()
 				ENDFOREACH()
 			ELSE()
-				MESSAGE("Unable to find OpenSSL executable. Please provide default certificate location via CERT_LOCATION")
+				MESSAGE(FATAL_ERROR "Unable to find OpenSSL executable. Please provide default certificate location via CERT_LOCATION")
 			ENDIF()
 		ENDIF()
 
