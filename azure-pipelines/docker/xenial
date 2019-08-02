@@ -1,6 +1,8 @@
 ARG BASE
 FROM $BASE
-RUN apt-get update && \
+RUN echo 'deb http://ppa.launchpad.net/hola-launchpad/valgrind/ubuntu xenial main' >/etc/apt/sources.list.d/valgrind.list && \
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8A0303A7544D59A08EBD1D621BCFD9273D292CF6 && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         clang \
         cmake \
