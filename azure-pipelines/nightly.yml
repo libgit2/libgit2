@@ -14,7 +14,7 @@ jobs:
         base: ubuntu:xenial
       environmentVariables: |
        CC=gcc
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -30,7 +30,7 @@ jobs:
         base: ubuntu:xenial
       environmentVariables: |
        CC=gcc
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -46,7 +46,7 @@ jobs:
         base: ubuntu:xenial
       environmentVariables: |
        CC=clang
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -62,7 +62,7 @@ jobs:
         base: ubuntu:xenial
       environmentVariables: |
        CC=clang
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -157,7 +157,7 @@ jobs:
         base: multiarch/ubuntu-core:x86-bionic
       environmentVariables: |
        CC=gcc
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -174,7 +174,7 @@ jobs:
         base: multiarch/ubuntu-core:x86-bionic
       environmentVariables: |
        CC=clang
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -191,7 +191,7 @@ jobs:
         base: multiarch/ubuntu-core:armhf-bionic
       environmentVariables: |
        CC=gcc
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON
        RUN_INVASIVE_TESTS=true
        SKIP_PROXY_TESTS=true
@@ -209,7 +209,7 @@ jobs:
         base: multiarch/ubuntu-core:arm64-bionic
       environmentVariables: |
        CC=gcc
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON
        RUN_INVASIVE_TESTS=true
        SKIP_PROXY_TESTS=true

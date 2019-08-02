@@ -14,7 +14,7 @@ RUN echo 'deb http://ppa.launchpad.net/hola-launchpad/valgrind/ubuntu xenial mai
         libssh2-1-dev \
         libssl-dev \
         libz-dev \
-        make \
+        ninja-build \
         openjdk-8-jre-headless \
         openssh-server \
         openssl \
@@ -31,9 +31,8 @@ RUN cd /tmp && \
     rm -f mbedtls-2.16.2-apache.tgz && \
     cd mbedtls-2.16.2 && \
     scripts/config.pl set MBEDTLS_MD4_C 1 && \
-    CFLAGS=-fPIC cmake -DENABLE_PROGRAMS=OFF -DENABLE_TESTING=OFF -DUSE_SHARED_MBEDTLS_LIBRARY=OFF -DUSE_STATIC_MBEDTLS_LIBRARY=ON . && \
-    cmake --build . && \
-    make install && \
+    CFLAGS=-fPIC cmake -G Ninja -DENABLE_PROGRAMS=OFF -DENABLE_TESTING=OFF -DUSE_SHARED_MBEDTLS_LIBRARY=OFF -DUSE_STATIC_MBEDTLS_LIBRARY=ON . && \
+    ninja install && \
     cd .. && \
     rm -rf mbedtls-2.16.2
 

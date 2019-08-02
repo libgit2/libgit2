@@ -18,7 +18,7 @@ jobs:
         base: ubuntu:xenial
       environmentVariables: |
        CC=gcc
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: linux_amd64_xenial_gcc_mbedtls
@@ -33,7 +33,7 @@ jobs:
         base: ubuntu:xenial
       environmentVariables: |
        CC=gcc
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: linux_amd64_xenial_clang_openssl
@@ -48,7 +48,7 @@ jobs:
         base: ubuntu:xenial
       environmentVariables: |
        CC=clang
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: linux_amd64_xenial_clang_mbedtls
@@ -63,7 +63,7 @@ jobs:
         base: ubuntu:xenial
       environmentVariables: |
        CC=clang
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: macos
