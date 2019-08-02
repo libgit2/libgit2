@@ -16,3 +16,13 @@ RUN cd /tmp && \
     make install && \
     cd .. && \
     rm -rf mbedtls-2.16.2
+
+RUN cd /tmp && \
+    curl -LO https://www.libssh2.org/download/libssh2-1.8.2.tar.gz && \
+    tar -xf libssh2-1.8.2.tar.gz && \
+    rm -f libssh2-1.8.2.tar.gz && \
+    cd libssh2-1.8.2 && \
+    CFLAGS=-fPIC cmake -G Ninja -DCRYPTO_BACKEND=Libgcrypt . && \
+    ninja install && \
+    cd .. && \
+    rm -rf libssh2-1.8.2
