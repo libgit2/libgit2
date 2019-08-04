@@ -22,6 +22,16 @@ v0.28 + 1
 * libgit2 can now correctly cope with URLs where the host contains a colon
   but a port is not specified.  (eg `http://example.com:/repo.git`).
 
+* A carefully constructed commit object with a very large number
+  of parents may lead to potential out-of-bounds writes or
+  potential denial of service.
+
+* The ProgramData configuration file is always read for compatibility
+  with Git for Windows and Portable Git installations.  The ProgramData
+  location is not necessarily writable only by administrators, so we
+  now ensure that the configuration file is owned by the administrator
+  or the current user.
+
 v0.28
 -----
 
