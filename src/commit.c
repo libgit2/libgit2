@@ -80,8 +80,8 @@ on_error:
 }
 
 static int validate_tree_and_parents(git_array_oid_t *parents, git_repository *repo, const git_oid *tree,
-						 git_commit_parent_callback parent_cb, void *parent_payload,
-						 const git_oid *current_id, bool validate)
+	git_commit_parent_callback parent_cb, void *parent_payload,
+	const git_oid *current_id, bool validate)
 {
 	size_t i;
 	int error;
@@ -152,8 +152,8 @@ static int git_commit__create_internal(
 		goto cleanup;
 
 	error = git_commit__create_buffer_internal(&buf, author, committer,
-							 message_encoding, message, tree,
-							 &parents);
+		message_encoding, message, tree,
+		&parents);
 
 	if (error < 0)
 		goto cleanup;
@@ -582,7 +582,7 @@ const char *git_commit_body(git_commit *commit)
 				break;
 
 		if (*msg)
-					commit->body = git__strndup(msg, end - msg + 1);
+			commit->body = git__strndup(msg, end - msg + 1);
 	}
 
 	return commit->body;
