@@ -267,6 +267,9 @@ static char *extract_trailer_block(const char *message, size_t* len)
 	size_t trailer_len = trailer_end - trailer_start;
 
 	char *buffer = git__malloc(trailer_len + 1);
+	if (buffer == NULL)
+		return NULL;
+
 	memcpy(buffer, message + trailer_start, trailer_len);
 	buffer[trailer_len] = 0;
 
@@ -302,6 +305,8 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 
 	size_t trailer_len;
 	char *trailer = extract_trailer_block(message, &trailer_len);
+	if (trailer == NULL)
+		return -1;
 
 	for (ptr = trailer;;) {
 		switch (state) {
