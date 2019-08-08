@@ -326,6 +326,7 @@ static int add_expected_oid(git_indexer *idx, const git_oid *oid)
 	    !git_oidmap_exists(idx->pack->idx_cache, oid) &&
 	    !git_oidmap_exists(idx->expected_oids, oid)) {
 		    git_oid *dup = git__malloc(sizeof(*oid));
+		    GIT_ERROR_CHECK_ALLOC(dup);
 		    git_oid_cpy(dup, oid);
 		    return git_oidmap_set(idx->expected_oids, dup, dup);
 	}
