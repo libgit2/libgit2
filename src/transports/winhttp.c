@@ -1011,6 +1011,7 @@ replay:
 			}
 
 			buffer = git__malloc(CACHED_POST_BODY_BUF_SIZE);
+			GIT_ERROR_CHECK_ALLOC(buffer);
 
 			while (len > 0) {
 				DWORD bytes_written;
@@ -1392,8 +1393,10 @@ static int winhttp_stream_write_chunked(
 		/* Append as much to the buffer as we can */
 		int count = (int)min(CACHED_POST_BODY_BUF_SIZE - s->chunk_buffer_len, len);
 
-		if (!s->chunk_buffer)
+		if (!s->chunk_buffer) {
 			s->chunk_buffer = git__malloc(CACHED_POST_BODY_BUF_SIZE);
+			GIT_ERROR_CHECK_ALLOC(s->chunk_buffer);
+		}
 
 		memcpy(s->chunk_buffer + s->chunk_buffer_len, buffer, count);
 		s->chunk_buffer_len += count;

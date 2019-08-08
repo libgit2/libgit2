@@ -1337,8 +1337,10 @@ static int http_stream_write_chunked(
 		/* Append as much to the buffer as we can */
 		int count = min(CHUNK_SIZE - s->chunk_buffer_len, len);
 
-		if (!s->chunk_buffer)
+		if (!s->chunk_buffer) {
 			s->chunk_buffer = git__malloc(CHUNK_SIZE);
+			GIT_ERROR_CHECK_ALLOC(s->chunk_buffer);
+		}
 
 		memcpy(s->chunk_buffer + s->chunk_buffer_len, buffer, count);
 		s->chunk_buffer_len += count;
