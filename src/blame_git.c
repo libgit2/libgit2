@@ -219,7 +219,7 @@ static void dup_entry(git_blame__entry *dst, git_blame__entry *src)
  * split_overlap() divided an existing blame e into up to three parts in split.
  * Adjust the linked list of blames in the scoreboard to reflect the split.
  */
-static void split_blame(git_blame *blame, git_blame__entry *split, git_blame__entry *e)
+static int split_blame(git_blame *blame, git_blame__entry *split, git_blame__entry *e)
 {
 	git_blame__entry *new_entry;
 
@@ -229,11 +229,13 @@ static void split_blame(git_blame *blame, git_blame__entry *split, git_blame__en
 
 		/* The last part -- me */
 		new_entry = git__malloc(sizeof(*new_entry));
+		GIT_ERROR_CHECK_ALLOC(new_entry);
 		memcpy(new_entry, &(split[2]), sizeof(git_blame__entry));
 		add_blame_entry(blame, new_entry);
 
 		/* ... and the middle part -- parent */
 		new_entry = git__malloc(sizeof(*new_entry));
+		GIT_ERROR_CHECK_ALLOC(new_entry);
 		memcpy(new_entry, &(split[1]), sizeof(git_blame__entry));
 		add_blame_entry(blame, new_entry);
 	} else if (!split[0].suspect && !split[2].suspect) {
@@ -246,15 +248,19 @@ static void split_blame(git_blame *blame, git_blame__entry *split, git_blame__en
 		/* me and then parent */
 		dup_entry(e, &split[0]);
 		new_entry = git__malloc(sizeof(*new_entry));
+		GIT_ERROR_CHECK_ALLOC(new_entry);
 		memcpy(new_entry, &(split[1]), sizeof(git_blame__entry));
 		add_blame_entry(blame, new_entry);
 	} else {
 		/* parent and then me */
 		dup_entry(e, &split[1]);
 		new_entry = git__malloc(sizeof(*new_entry));
+		GIT_ERROR_CHECK_ALLOC(new_entry);
 		memcpy(new_entry, &(split[2]), sizeof(git_blame__entry));
 		add_blame_entry(blame, new_entry);
 	}
+
+	return 0;
 }
 
 /*
@@ -272,7 +278,7 @@ static void decref_split(git_blame__entry *split)
  * Helper for blame_chunk(). blame_entry e is known to overlap with the patch
  * hunk; split it and pass blame to the parent.
  */
-static void blame_overlap(
+static int blame_overlap(
 		git_blame *blame,
 		git_blame__entry *e,
 		size_t tlno,
@@ -284,8 +290,11 @@ static void blame_overlap(
 
 	split_overlap(split, e, tlno, plno, same, parent);
 	if (split[1].suspect)
-		split_blame(blame, split, e);
+		if (split_blame(blame, split, e) < 0)
+			return -1;
 	decref_split(split);
+
+	return 0;
 }
 
 /*
@@ -293,7 +302,7 @@ static void blame_overlap(
  * e and its parent. Find and split the overlap, and pass blame to the
  * overlapping part to the parent.
  */
-static void blame_chunk(
+static int blame_chunk(
 		git_blame *blame,
 		size_t tlno,
 		size_t plno,
@@ -309,9 +318,12 @@ static void blame_chunk(
 		if (same <= e->s_lno)
 			continue;
 		if (tlno < e->s_lno + e->num_lines) {
-			blame_overlap(blame, e, tlno, plno, same, parent);
+			if (blame_overlap(blame, e, tlno, plno, same, parent) < 0)
+				return -1;
 		}
 	}
+
+	return 0;
 }
 
 static int my_emit(
@@ -321,7 +333,8 @@ static int my_emit(
 {
 	blame_chunk_cb_data *d = (blame_chunk_cb_data *)cb_data;
 
-	blame_chunk(d->blame, d->tlno, d->plno, start_b, d->target, d->parent);
+	if (blame_chunk(d->blame, d->tlno, d->plno, start_b, d->target, d->parent) < 0)
+		return -1;
 	d->plno = start_a + count_a;
 	d->tlno = start_b + count_b;
 
@@ -400,7 +413,8 @@ static int pass_blame_to_parent(
 		return -1;
 
 	/* The reset (i.e. anything after tlno) are the same as the parent */
-	blame_chunk(blame, d.tlno, d.plno, last_in_target, target, parent);
+	if (blame_chunk(blame, d.tlno, d.plno, last_in_target, target, parent) < 0)
+		return -1;
 
 	return 0;
 }
