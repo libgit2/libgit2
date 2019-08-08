@@ -719,6 +719,32 @@ static int GIT_STDLIB_CALL git__qsort_r_glue_cmp(
 }
 #endif
 
+static void swap(uint8_t *a, uint8_t *b, size_t elsize)
+{
+	char tmp[256];
+
+	while (elsize) {
+		size_t n = elsize < sizeof(tmp) ? elsize : sizeof(tmp);
+		memcpy(tmp, a + elsize - n, n);
+		memcpy(a + elsize - n, b + elsize - n, n);
+		memcpy(b + elsize - n, tmp, n);
+		elsize -= n;
+	}
+}
+
+static void insertsort(
+	void *els, size_t nel, size_t elsize,
+	git__sort_r_cmp cmp, void *payload)
+{
+	uint8_t *base = els;
+	uint8_t *end = base + nel * elsize;
+	uint8_t *i, *j;
+
+	for (i = base + elsize; i < end; i += elsize)
+		for (j = i; j > base && cmp(j, j - elsize, payload) < 0; j -= elsize)
+			swap(j, j - elsize, elsize);
+}
+
 void git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload)
 {
@@ -731,31 +757,8 @@ void git__qsort_r(
 	git__qsort_r_glue glue = { cmp, payload };
 	qsort_s(els, nel, elsize, git__qsort_r_glue_cmp, &glue);
 #else
-	git__insertsort_r(els, nel, elsize, NULL, cmp, payload);
+	insertsort(els, nel, elsize, cmp, payload);
 #endif
-}
-
-void git__insertsort_r(
-	void *els, size_t nel, size_t elsize, void *swapel,
-	git__sort_r_cmp cmp, void *payload)
-{
-	uint8_t *base = els;
-	uint8_t *end = base + nel * elsize;
-	uint8_t *i, *j;
-	bool freeswap = !swapel;
-
-	if (freeswap)
-		swapel = git__malloc(elsize);
-
-	for (i = base + elsize; i < end; i += elsize)
-		for (j = i; j > base && cmp(j, j - elsize, payload) < 0; j -= elsize) {
-			memcpy(swapel, j, elsize);
-			memcpy(j, j - elsize, elsize);
-			memcpy(j - elsize, swapel, elsize);
-		}
-
-	if (freeswap)
-		git__free(swapel);
 }
 
 /*

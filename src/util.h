@@ -137,10 +137,6 @@ extern void git__tsort_r(
 extern void git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload);
 
-extern void git__insertsort_r(
-	void *els, size_t nel, size_t elsize, void *swapel,
-	git__sort_r_cmp cmp, void *payload);
-
 /**
  * @param position If non-NULL, this will be set to the position where the
  * 		element is or would be inserted if not found.
