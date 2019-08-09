@@ -142,6 +142,7 @@ typedef struct {
 	git_proxy_options proxy;
 	int direction;
 	int flags;
+	int keepalive;
 	git_transport_message_cb progress_cb;
 	git_transport_message_cb error_cb;
 	git_transport_certificate_check_cb certificate_check_cb;
