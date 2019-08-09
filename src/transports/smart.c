@@ -38,6 +38,12 @@ static int git_smart__recv_cb(gitno_buffer *buf)
 	return (int)(buf->offset - old_len);
 }
 
+static int git_smart__poll_cb(gitno_buffer *buf, int timeout)
+{
+	transport_smart *t = (transport_smart *) buf->cb_data;
+	return t->current_stream->poll(t->current_stream, timeout);
+}
+
 GIT_INLINE(int) git_smart__reset_stream(transport_smart *t, bool close_subtransport)
 {
 	if (t->current_stream) {
@@ -249,7 +255,7 @@ static int git_smart__connect(
 	/* Save off the current stream (i.e. socket) that we are working with */
 	t->current_stream = stream;
 
-	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
+	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, git_smart__poll_cb, t);
 
 	/* 2 flushes for RPC; 1 for stateful */
 	if ((error = git_smart__store_refs(t, t->rpc ? 2 : 1)) < 0)
@@ -354,7 +360,7 @@ int git_smart__negotiation_step(git_transport *transport, void *data, size_t len
 	if ((error = stream->write(stream, (const char *)data, len)) < 0)
 		return error;
 
-	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
+	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, git_smart__poll_cb, t);
 
 	return 0;
 }
@@ -380,7 +386,7 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 	/* Save off the current stream (i.e. socket) that we are working with */
 	t->current_stream = *stream;
 
-	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
+	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, git_smart__poll_cb, t);
 
 	return 0;
 }

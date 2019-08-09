@@ -195,6 +195,14 @@ static int ssh_stream_write(
 	return 0;
 }
 
+static int ssh_stream_poll(
+	git_smart_subtransport_stream *stream,
+	int timeout)
+{
+	ssh_stream *s = GIT_CONTAINER_OF(stream, ssh_stream, parent);
+	return git_stream_poll(s->io, timeout);
+}
+
 static void ssh_stream_free(git_smart_subtransport_stream *stream)
 {
 	ssh_stream *s = GIT_CONTAINER_OF(stream, ssh_stream, parent);
@@ -244,6 +252,7 @@ static int ssh_stream_alloc(
 	s->parent.subtransport = &t->parent;
 	s->parent.read = ssh_stream_read;
 	s->parent.write = ssh_stream_write;
+	s->parent.poll = ssh_stream_poll;
 	s->parent.free = ssh_stream_free;
 
 	s->cmd = cmd;
