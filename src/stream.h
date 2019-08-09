@@ -55,6 +55,13 @@ GIT_INLINE(ssize_t) git_stream_write(git_stream *st, const char *data, size_t le
 	return st->write(st, data, len, flags);
 }
 
+GIT_INLINE(int) git_stream_poll(git_stream *st, int timeout)
+{
+	if (!st->poll)
+		return 1;
+	return st->poll(st, timeout);
+}
+
 GIT_INLINE(int) git_stream__write_full(git_stream *st, const char *data, size_t len, int flags)
 {
 	size_t total_written = 0;

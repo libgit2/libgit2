@@ -332,6 +332,12 @@ static ssize_t mbedtls_stream_read(git_stream *stream, void *data, size_t len)
 	return ret;
 }
 
+static int mbedtls_stream_poll(git_stream *stream, int timeout)
+{
+	mbedtls_stream *st = GIT_CONTAINER_OF(stream, mbedtls_stream, parent);
+	return git_stream_poll(st->io, timeout);
+}
+
 static int mbedtls_stream_close(git_stream *stream)
 {
 	mbedtls_stream *st = (mbedtls_stream *) stream;
@@ -394,6 +400,7 @@ static int mbedtls_stream_wrap(
 	st->parent.set_proxy = mbedtls_set_proxy;
 	st->parent.read = mbedtls_stream_read;
 	st->parent.write = mbedtls_stream_write;
+	st->parent.poll = mbedtls_stream_poll;
 	st->parent.close = mbedtls_stream_close;
 	st->parent.free = mbedtls_stream_free;
 

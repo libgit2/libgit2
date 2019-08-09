@@ -655,6 +655,26 @@ static ssize_t openssl_write(git_stream *stream, const char *data, size_t data_l
 	return ret;
 }
 
+#include <poll.h>
+
+static int openssl_poll(git_stream *stream, int timeout)
+{
+	openssl_stream *st = GIT_CONTAINER_OF(stream, openssl_stream, parent);
+	struct pollfd fds[1];
+	int error, fd;
+
+	if ((fd = SSL_get_fd(st->ssl)) < 0)
+		return ssl_set_error(st->ssl, fd);
+
+	fds[0].fd = fd;
+	fds[0].events = POLLIN;
+
+	if ((error = poll(fds, 1, timeout)) < 0)
+		return error;
+
+	return error;
+}
+
 static ssize_t openssl_read(git_stream *stream, void *data, size_t len)
 {
 	openssl_stream *st = (openssl_stream *) stream;
@@ -726,6 +746,7 @@ static int openssl_stream_wrap(
 	st->parent.set_proxy = openssl_set_proxy;
 	st->parent.read = openssl_read;
 	st->parent.write = openssl_write;
+	st->parent.poll = openssl_poll;
 	st->parent.close = openssl_close;
 	st->parent.free = openssl_free;
 

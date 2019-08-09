@@ -36,6 +36,7 @@ typedef struct git_stream {
 	int GIT_CALLBACK(set_proxy)(struct git_stream *, const git_proxy_options *proxy_opts);
 	ssize_t GIT_CALLBACK(read)(struct git_stream *, void *, size_t);
 	ssize_t GIT_CALLBACK(write)(struct git_stream *, const char *, size_t, int);
+	int GIT_CALLBACK(poll)(struct git_stream *, int);
 	int GIT_CALLBACK(close)(struct git_stream *);
 	void GIT_CALLBACK(free)(struct git_stream *);
 } git_stream;

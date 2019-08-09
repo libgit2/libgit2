@@ -156,6 +156,23 @@ static ssize_t socket_read(git_stream *stream, void *data, size_t len)
 	return ret;
 }
 
+#include <poll.h>
+
+static int socket_poll(git_stream *stream, int timeout)
+{
+	git_socket_stream *st = GIT_CONTAINER_OF(stream, git_socket_stream, parent);
+	struct pollfd fds[1];
+	int error;
+
+	fds[0].fd = st->s;
+	fds[0].events = POLLIN;
+
+	if ((error = poll(fds, 1, timeout)) < 0)
+		return error;
+
+	return error;
+}
+
 static int socket_close(git_stream *stream)
 {
 	git_socket_stream *st = (git_socket_stream *) stream;
@@ -200,6 +217,7 @@ static int default_socket_stream_new(
 	st->parent.connect = socket_connect;
 	st->parent.write = socket_write;
 	st->parent.read = socket_read;
+	st->parent.poll = socket_poll;
 	st->parent.close = socket_close;
 	st->parent.free = socket_free;
 	st->s = INVALID_SOCKET;
