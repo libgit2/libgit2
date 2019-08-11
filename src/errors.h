@@ -14,8 +14,8 @@
 /*
  * Set the error message for this thread, formatting as needed.
  */
-
-void git_error_set(int error_class, const char *string, ...) GIT_FORMAT_PRINTF(2, 3);
+void git_error_set(int error_class, const char *fmt, ...) GIT_FORMAT_PRINTF(2, 3);
+void git_error_vset(int error_class, const char *fmt, va_list ap);
 
 /**
  * Set the error message for a regex failure, using the internal regex

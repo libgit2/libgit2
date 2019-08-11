@@ -24,9 +24,6 @@
 #include "reader.h"
 #include "index.h"
 
-#define apply_err(...) \
-	( git_error_set(GIT_ERROR_PATCH, __VA_ARGS__), GIT_EAPPLYFAIL )
-
 typedef struct {
 	/* The lines that we allocate ourself are allocated out of the pool.
 	 * (Lines may have been allocated out of the diff.)
@@ -34,6 +31,18 @@ typedef struct {
 	git_pool pool;
 	git_vector lines;
 } patch_image;
+
+static int apply_err(const char *fmt, ...) GIT_FORMAT_PRINTF(1, 2);
+static int apply_err(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	git_error_vset(GIT_ERROR_PATCH, fmt, ap);
+	va_end(ap);
+
+	return GIT_EAPPLYFAIL;
+}
 
 static void patch_line_init(
 	git_diff_line *out,

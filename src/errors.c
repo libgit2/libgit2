@@ -49,9 +49,17 @@ void git_error_set_oom(void)
 	GIT_GLOBAL->last_error = &g_git_oom_error;
 }
 
-void git_error_set(int error_class, const char *string, ...)
+void git_error_set(int error_class, const char *fmt, ...)
 {
-	va_list arglist;
+	va_list ap;
+
+	va_start(ap, fmt);
+	git_error_vset(error_class, fmt, ap);
+	va_end(ap);
+}
+
+void git_error_vset(int error_class, const char *fmt, va_list ap)
+{
 #ifdef GIT_WIN32
 	DWORD win32_error_code = (error_class == GIT_ERROR_OS) ? GetLastError() : 0;
 #endif
@@ -59,11 +67,8 @@ void git_error_set(int error_class, const char *string, ...)
 	git_buf *buf = &GIT_GLOBAL->error_buf;
 
 	git_buf_clear(buf);
-	if (string) {
-		va_start(arglist, string);
-		git_buf_vprintf(buf, string, arglist);
-		va_end(arglist);
-
+	if (fmt) {
+		git_buf_vprintf(buf, fmt, ap);
 		if (error_class == GIT_ERROR_OS)
 			git_buf_PUTS(buf, ": ");
 	}
