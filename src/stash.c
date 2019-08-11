@@ -398,27 +398,22 @@ static int commit_worktree(
 	git_commit *b_commit,
 	git_commit *u_commit)
 {
-	int error = 0;
-	git_tree *w_tree = NULL, *i_tree = NULL;
-	git_index *i_index = NULL;
-	const git_commit *parents[] = {	NULL, NULL,	NULL };
-	int ignorecase;
+	const git_commit *parents[] = {	NULL, NULL, NULL };
+	git_index *i_index = NULL, *r_index = NULL;
+	git_tree *w_tree = NULL;
+	int error = 0, ignorecase;
 
 	parents[0] = b_commit;
 	parents[1] = i_commit;
 	parents[2] = u_commit;
 
-	if ((error = git_commit_tree(&i_tree, i_commit)) < 0)
-		goto cleanup;
-
-	if ((error = git_index_new(&i_index)) < 0 ||
-		(error = git_repository__configmap_lookup(&ignorecase, repo, GIT_CONFIGMAP_IGNORECASE)) < 0)
+	if ((error = git_repository_index(&r_index, repo) < 0) ||
+	    (error = git_index_new(&i_index)) < 0 ||
+	    (error = git_index__fill(i_index, &r_index->entries) < 0) ||
+	    (error = git_repository__configmap_lookup(&ignorecase, repo, GIT_CONFIGMAP_IGNORECASE)) < 0)
 		goto cleanup;
 
 	git_index__set_ignore_case(i_index, ignorecase);
-
-	if ((error = git_index_read_tree(i_index, i_tree)) < 0)
-		goto cleanup;
 
 	if ((error = build_workdir_tree(&w_tree, repo, i_index, b_commit)) < 0)
 		goto cleanup;
@@ -436,9 +431,9 @@ static int commit_worktree(
 		parents);
 
 cleanup:
-	git_tree_free(i_tree);
 	git_tree_free(w_tree);
 	git_index_free(i_index);
+	git_index_free(r_index);
 	return error;
 }
 

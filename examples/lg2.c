@@ -31,6 +31,7 @@ struct {
 	{ "rev-list",     lg2_rev_list,     1 },
 	{ "rev-parse",    lg2_rev_parse,    1 },
 	{ "show-index",   lg2_show_index,   0 },
+	{ "stash",        lg2_stash,        1 },
 	{ "status",       lg2_status,       1 },
 	{ "tag",          lg2_tag,          1 },
 };
