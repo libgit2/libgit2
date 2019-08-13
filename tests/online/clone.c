@@ -869,3 +869,18 @@ void test_online_clone__path_whitespace(void)
 	cl_git_pass(git_clone(&g_repo, "https://libgit2@dev.azure.com/libgit2/test/_git/spaces%20in%20the%20name", "./foo", &g_options));
 	cl_assert(git_path_exists("./foo/master.txt"));
 }
+
+void test_online_clone__path_whitespace_ssh(void)
+{
+#ifndef GIT_SSH
+	clar__skip();
+#endif
+
+	if (!_remote_ssh_privkey)
+		clar__skip();
+
+	g_options.fetch_opts.callbacks.credentials = cred_cb;
+	g_options.fetch_opts.callbacks.certificate_check = NULL;
+	cl_git_pass(git_clone(&g_repo, "ssh://git@ssh.dev.azure.com/v3/libgit2/test/spaces%20in%20the%20name", "./foo", &g_options));
+	cl_assert(git_path_exists("./foo/master.txt"));
+}
