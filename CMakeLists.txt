@@ -263,6 +263,11 @@ ELSE ()
 	ENDIF ()
 ENDIF()
 
+# Ensure that MinGW provides the correct header files.
+IF (WIN32 AND NOT CYGWIN)
+	ADD_DEFINITIONS(-DWIN32 -D_WIN32_WINNT=0x0600)
+ENDIF()
+
 IF( NOT CMAKE_CONFIGURATION_TYPES )
 	# Build Debug by default
 	IF (NOT CMAKE_BUILD_TYPE)

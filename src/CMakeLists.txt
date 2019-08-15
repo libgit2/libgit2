@@ -299,8 +299,6 @@ FILE(GLOB SRC_H
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
-	ADD_DEFINITIONS(-DWIN32 -D_WIN32_WINNT=0x0600)
-
 	IF(MSVC)
 		SET(WIN_RC "win32/git2.rc")
 	ENDIF()
