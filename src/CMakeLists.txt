@@ -3,6 +3,8 @@ IF(DEBUG_POOL)
 ENDIF()
 ADD_FEATURE_INFO(debugpool GIT_DEBUG_POOL "debug pool allocator")
 
+INCLUDE(PkgBuildConfig)
+
 # This variable will contain the libraries we need to put into
 # libgit2.pc's Requires.private. That is, what we're linking to or
 # what someone who's statically linking us needs to link to.
@@ -24,23 +26,6 @@ SET(LIBGIT2_LIBS "")
 SET(BIN_INSTALL_DIR bin CACHE PATH "Where to install binaries to.")
 SET(LIB_INSTALL_DIR lib CACHE PATH "Where to install libraries to.")
 SET(INCLUDE_INSTALL_DIR include CACHE PATH "Where to install headers to.")
-
-# Set a couple variables to be substituted inside the .pc file.
-# We can't just use LIB_INSTALL_DIR in the .pc file, as passing them as absolue
-# or relative paths is both valid and supported by cmake.
-SET (PKGCONFIG_PREFIX ${CMAKE_INSTALL_PREFIX})
-
-IF(IS_ABSOLUTE ${LIB_INSTALL_DIR})
-  SET (PKGCONFIG_LIBDIR ${LIB_INSTALL_DIR})
-ELSE(IS_ABSOLUTE ${LIB_INSTALL_DIR})
-  SET (PKGCONFIG_LIBDIR "\${prefix}/${LIB_INSTALL_DIR}")
-ENDIF (IS_ABSOLUTE ${LIB_INSTALL_DIR})
-
-IF(IS_ABSOLUTE ${INCLUDE_INSTALL_DIR})
-  SET (PKGCONFIG_INCLUDEDIR ${INCLUDE_INSTALL_DIR})
-ELSE(IS_ABSOLUTE ${INCLUDE_INSTALL_DIR})
-  SET (PKGCONFIG_INCLUDEDIR "\${prefix}/${INCLUDE_INSTALL_DIR}")
-ENDIF(IS_ABSOLUTE ${INCLUDE_INSTALL_DIR})
 
 # Enable tracing
 IF (ENABLE_TRACE STREQUAL "ON")
@@ -397,10 +382,13 @@ IF (SONAME)
 	ENDIF()
 ENDIF()
 
-LIST(REMOVE_DUPLICATES LIBGIT2_PC_REQUIRES)
-STRING(REPLACE ";" " " LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES}")
-STRING(REPLACE ";" " " LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS}")
-CONFIGURE_FILE(${libgit2_SOURCE_DIR}/libgit2.pc.in ${libgit2_BINARY_DIR}/libgit2.pc @ONLY)
+PKG_BUILD_CONFIG(NAME libgit2
+	VERSION ${LIBGIT2_VERSION_STRING}
+	DESCRIPTION "The git library, take 2"
+	LIBS_SELF git2
+	PRIVATE_LIBS ${LIBGIT2_PC_LIBS}
+	REQUIRES ${LIBGIT2_PC_REQUIRES}
+)
 
 IF (MSVC_IDE)
    # Precompiled headers
@@ -414,6 +402,5 @@ INSTALL(TARGETS git2
 	LIBRARY DESTINATION ${LIB_INSTALL_DIR}
 	ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
 )
-INSTALL(FILES ${libgit2_BINARY_DIR}/libgit2.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig )
 INSTALL(DIRECTORY ${libgit2_SOURCE_DIR}/include/git2 DESTINATION ${INCLUDE_INSTALL_DIR} )
 INSTALL(FILES ${libgit2_SOURCE_DIR}/include/git2.h DESTINATION ${INCLUDE_INSTALL_DIR} )
