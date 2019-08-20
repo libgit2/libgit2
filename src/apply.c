@@ -210,7 +210,7 @@ static int apply_hunk(
 			case GIT_DIFF_LINE_CONTEXT_EOFNL:
 			case GIT_DIFF_LINE_DEL_EOFNL:
 			case GIT_DIFF_LINE_ADD_EOFNL:
-				prev = i ? git_array_get(patch->lines, i - 1) : NULL;
+				prev = i ? git_array_get(patch->lines, linenum - 1) : NULL;
 				if (prev && prev->content[prev->content_len - 1] == '\n')
 					prev->content_len -= 1;
 				break;
