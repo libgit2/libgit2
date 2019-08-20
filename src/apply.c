@@ -642,9 +642,12 @@ int git_apply_to_tree(
 	for (i = 0; i < git_diff_num_deltas(diff); i++) {
 		delta = git_diff_get_delta(diff, i);
 
-		if ((error = git_index_remove(postimage,
-				delta->old_file.path, 0)) < 0)
-			goto done;
+		if (delta->status == GIT_DELTA_DELETED ||
+			delta->status == GIT_DELTA_RENAMED) {
+			if ((error = git_index_remove(postimage,
+					delta->old_file.path, 0)) < 0)
+				goto done;
+		}
 	}
 
 	if ((error = apply_deltas(repo, pre_reader, NULL, post_reader, postimage, diff, &opts)) < 0)
