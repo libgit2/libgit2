@@ -430,6 +430,7 @@ static int init_auth(http_server *server)
 	git_http_auth_scheme *s, *scheme = NULL;
 	char *c, *challenge = NULL;
 	size_t i;
+	int error;
 
 	git_vector_foreach(&server->auth_challenges, i, c) {
 		s = scheme_for_challenge(c);
@@ -446,12 +447,14 @@ static int init_auth(http_server *server)
 		return -1;
 	}
 
-	if (scheme->init_context(&server->auth_context, &server->url) < 0)
-		return -1;
+	if ((error = scheme->init_context(&server->auth_context, &server->url)) == GIT_PASSTHROUGH)
+		return 0;
+	else if (error < 0)
+		return error;
 
 	if (server->auth_context->set_challenge &&
-		server->auth_context->set_challenge(server->auth_context, challenge) < 0)
-		return -1;
+		(error = server->auth_context->set_challenge(server->auth_context, challenge)) < 0)
+		return error;
 
 	return 0;
 }
