@@ -83,7 +83,9 @@ int git_revwalk__push_commit(git_revwalk *walk, const git_oid *oid, const git_re
 
 	commit->uninteresting = opts->uninteresting;
 	list = walk->user_input;
-	if (git_commit_list_insert(commit, &list) == NULL) {
+	if ((opts->insert_by_date &&
+	    git_commit_list_insert_by_date(commit, &list) == NULL) ||
+	    git_commit_list_insert(commit, &list) == NULL) {
 		git_error_set_oom();
 		return -1;
 	}

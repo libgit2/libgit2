@@ -17,6 +17,7 @@
 #include "pack-objects.h"
 #include "remote.h"
 #include "util.h"
+#include "revwalk.h"
 
 #define NETWORK_XFER_THRESHOLD (100*1024)
 /* The minimal interval between progress updates (in seconds). */
@@ -303,6 +304,7 @@ static int wait_while_ack(gitno_buffer *buf)
 int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, const git_remote_head * const *wants, size_t count)
 {
 	transport_smart *t = (transport_smart *)transport;
+	git_revwalk__push_options opts = GIT_REVWALK__PUSH_OPTIONS_INIT;
 	gitno_buffer *buf = &t->buffer;
 	git_buf data = GIT_BUF_INIT;
 	git_revwalk *walk = NULL;
@@ -317,7 +319,8 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	if ((error = git_revwalk_new(&walk, repo)) < 0)
 		goto on_error;
 
-	if ((error = git_revwalk_push_glob(walk, "refs/*")) < 0)
+	opts.insert_by_date = 1;
+	if ((error = git_revwalk__push_glob(walk, "refs/*", &opts)) < 0)
 		goto on_error;
 
 	/*

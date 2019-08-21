@@ -53,6 +53,7 @@ git_commit_list_node *git_revwalk__commit_lookup(git_revwalk *walk, const git_oi
 typedef struct {
 	int uninteresting;
 	int from_glob;
+	int insert_by_date;
 } git_revwalk__push_options;
 
 #define GIT_REVWALK__PUSH_OPTIONS_INIT { 0 }
