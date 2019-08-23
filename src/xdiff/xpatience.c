@@ -217,6 +217,9 @@ static struct entry *find_longest_common_sequence(struct hashmap *map)
 	 */
 	int anchor_i = -1;
 
+	if (!sequence)
+		return NULL;
+
 	for (entry = map->first; entry; entry = entry->next) {
 		if (!entry->line2 || entry->line2 == NON_UNIQUE)
 			continue;
