@@ -14,7 +14,7 @@
 #include "win32/w32_buffer.h"
 #include "win32/w32_util.h"
 #include "win32/version.h"
-#include <AclAPI.h>
+#include <aclapi.h>
 #else
 #include <dirent.h>
 #endif
