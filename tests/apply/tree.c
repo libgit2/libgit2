@@ -87,8 +87,8 @@ void test_apply_tree__adds_file(void)
 	cl_git_pass(git_apply_to_tree(&index, repo, a_tree, diff, NULL));
 	merge_test_index(index, expected, 7);
 
+	git_index_free(index);
 	git_diff_free(diff);
 	git_tree_free(a_tree);
 	git_commit_free(a_commit);
 }
-
