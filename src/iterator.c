@@ -563,8 +563,11 @@ static int tree_iterator_frame_init(
 		goto done;
 
 	git_array_foreach(dup->entries, i, tree_entry) {
-		new_entry = git_pool_malloc(&iter->entry_pool, 1);
-		GIT_ERROR_CHECK_ALLOC(new_entry);
+		if ((new_entry = git_pool_malloc(&iter->entry_pool, 1)) == NULL) {
+			git_error_set_oom();
+			error = -1;
+			goto done;
+		}
 
 		new_entry->tree_entry = tree_entry;
 		new_entry->parent_path = new_frame->path.ptr;
