@@ -30,19 +30,47 @@ void test_filter_blob__all_crlf(void)
 
 	cl_assert_equal_s(ALL_CRLF_TEXT_RAW, git_blob_rawcontent(blob));
 
-	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.bin", 1));
+	cl_git_pass(git_blob_filter(&buf, blob, "file.bin", NULL));
 
 	cl_assert_equal_s(ALL_CRLF_TEXT_RAW, buf.ptr);
 
-	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.crlf", 1));
+	cl_git_pass(git_blob_filter(&buf, blob, "file.crlf", NULL));
 
 	/* in this case, raw content has crlf in it already */
 	cl_assert_equal_s(ALL_CRLF_TEXT_AS_CRLF, buf.ptr);
 
-	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.lf", 1));
+	cl_git_pass(git_blob_filter(&buf, blob, "file.lf", NULL));
 
 	/* we never convert CRLF -> LF on platforms that have LF */
 	cl_assert_equal_s(ALL_CRLF_TEXT_AS_CRLF, buf.ptr);
+
+	git_buf_dispose(&buf);
+	git_blob_free(blob);
+}
+
+void test_filter_blob__from_lf(void)
+{
+	git_blob *blob;
+	git_buf buf = { 0 };
+
+	cl_git_pass(git_revparse_single(
+		(git_object **)&blob, g_repo, "799770d")); /* all-lf */
+
+	cl_assert_equal_s(ALL_LF_TEXT_RAW, git_blob_rawcontent(blob));
+
+	cl_git_pass(git_blob_filter(&buf, blob, "file.bin", NULL));
+
+	cl_assert_equal_s(ALL_LF_TEXT_RAW, buf.ptr);
+
+	cl_git_pass(git_blob_filter(&buf, blob, "file.crlf", NULL));
+
+	/* in this case, raw content has crlf in it already */
+	cl_assert_equal_s(ALL_LF_TEXT_AS_CRLF, buf.ptr);
+
+	cl_git_pass(git_blob_filter(&buf, blob, "file.lf", NULL));
+
+	/* we never convert CRLF -> LF on platforms that have LF */
+	cl_assert_equal_s(ALL_LF_TEXT_AS_LF, buf.ptr);
 
 	git_buf_dispose(&buf);
 	git_blob_free(blob);
@@ -60,19 +88,19 @@ void test_filter_blob__sanitizes(void)
 	cl_assert_equal_s("", git_blob_rawcontent(blob));
 
 	memset(&buf, 0, sizeof(git_buf));
-	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.bin", 1));
+	cl_git_pass(git_blob_filter(&buf, blob, "file.bin", NULL));
 	cl_assert_equal_sz(0, buf.size);
 	cl_assert_equal_s("", buf.ptr);
 	git_buf_dispose(&buf);
 
 	memset(&buf, 0, sizeof(git_buf));
-	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.crlf", 1));
+	cl_git_pass(git_blob_filter(&buf, blob, "file.crlf", NULL));
 	cl_assert_equal_sz(0, buf.size);
 	cl_assert_equal_s("", buf.ptr);
 	git_buf_dispose(&buf);
 
 	memset(&buf, 0, sizeof(git_buf));
-	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.lf", 1));
+	cl_git_pass(git_blob_filter(&buf, blob, "file.lf", NULL));
 	cl_assert_equal_sz(0, buf.size);
 	cl_assert_equal_s("", buf.ptr);
 	git_buf_dispose(&buf);
@@ -99,15 +127,15 @@ void test_filter_blob__ident(void)
 	cl_assert_equal_s(
 		"Some text\n$Id$\nGoes there\n", git_blob_rawcontent(blob));
 
-	cl_git_pass(git_blob_filtered_content(&buf, blob, "filter.bin", 1));
+	cl_git_pass(git_blob_filter(&buf, blob, "filter.bin", NULL));
 	cl_assert_equal_s(
 		"Some text\n$Id$\nGoes there\n", buf.ptr);
 
-	cl_git_pass(git_blob_filtered_content(&buf, blob, "filter.identcrlf", 1));
+	cl_git_pass(git_blob_filter(&buf, blob, "filter.identcrlf", NULL));
 	cl_assert_equal_s(
 		"Some text\r\n$Id: 3164f585d548ac68027d22b104f2d8100b2b6845 $\r\nGoes there\r\n", buf.ptr);
 
-	cl_git_pass(git_blob_filtered_content(&buf, blob, "filter.identlf", 1));
+	cl_git_pass(git_blob_filter(&buf, blob, "filter.identlf", NULL));
 	cl_assert_equal_s(
 		"Some text\n$Id: 3164f585d548ac68027d22b104f2d8100b2b6845 $\nGoes there\n", buf.ptr);
 

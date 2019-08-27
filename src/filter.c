@@ -428,13 +428,21 @@ static int filter_list_check_attributes(
 	git_filter_def *fdef,
 	const git_filter_source *src)
 {
-	int error;
-	size_t i;
 	const char **strs = git__calloc(fdef->nattrs, sizeof(const char *));
+	uint32_t flags = 0;
+	size_t i;
+	int error;
+
 	GIT_ERROR_CHECK_ALLOC(strs);
 
+	if ((src->flags & GIT_FILTER_NO_SYSTEM_ATTRIBUTES) != 0)
+		flags |= GIT_ATTR_CHECK_NO_SYSTEM;
+
+	if ((src->flags & GIT_FILTER_ATTRIBUTES_FROM_HEAD) != 0)
+		flags |= GIT_ATTR_CHECK_INCLUDE_HEAD;
+
 	error = git_attr_get_many_with_session(
-		strs, repo, attr_session, 0, src->path, fdef->nattrs, fdef->attrs);
+		strs, repo, attr_session, flags, src->path, fdef->nattrs, fdef->attrs);
 
 	/* if no values were found but no matches are needed, it's okay! */
 	if (error == GIT_ENOTFOUND && !fdef->nmatches) {

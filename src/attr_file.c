@@ -109,6 +109,8 @@ int git_attr_file__load(
 	bool allow_macros)
 {
 	int error = 0;
+	git_tree *tree = NULL;
+	git_tree_entry *tree_entry = NULL;
 	git_blob *blob = NULL;
 	git_buf content = GIT_BUF_INIT;
 	const char *content_str;
@@ -117,6 +119,8 @@ int git_attr_file__load(
 	bool nonexistent = false;
 	int bom_offset;
 	git_bom_t bom;
+	git_oid id;
+	git_off_t blobsize;
 
 	*out = NULL;
 
@@ -125,9 +129,6 @@ int git_attr_file__load(
 		/* in-memory attribute file doesn't need data */
 		break;
 	case GIT_ATTR_FILE__FROM_INDEX: {
-		git_oid id;
-		git_off_t blobsize;
-
 		if ((error = attr_file_oid_from_index(&id, repo, entry->path)) < 0 ||
 			(error = git_blob_lookup(&blob, repo, &id)) < 0)
 			return error;
@@ -154,6 +155,25 @@ int git_attr_file__load(
 
 		if (fd >= 0)
 			p_close(fd);
+
+		break;
+	}
+	case GIT_ATTR_FILE__FROM_HEAD: {
+		if ((error = git_repository_head_tree(&tree, repo)) < 0 ||
+		    (error = git_tree_entry_bypath(&tree_entry, tree, entry->path)) < 0 ||
+		    (error = git_blob_lookup(&blob, repo, git_tree_entry_id(tree_entry))) < 0)
+			goto cleanup;
+
+		/*
+		 * Do not assume that data straight from the ODB is NULL-terminated;
+		 * copy the contents of a file to a buffer to work on.
+		 */
+		blobsize = git_blob_rawsize(blob);
+
+		GIT_ERROR_CHECK_BLOBSIZE(blobsize);
+		if ((error = git_buf_put(&content,
+			git_blob_rawcontent(blob), (size_t)blobsize)) < 0)
+			goto cleanup;
 
 		break;
 	}
@@ -188,6 +208,8 @@ int git_attr_file__load(
 		file->nonexistent = 1;
 	else if (source == GIT_ATTR_FILE__FROM_INDEX)
 		git_oid_cpy(&file->cache_data.oid, git_blob_id(blob));
+	else if (source == GIT_ATTR_FILE__FROM_HEAD)
+		git_oid_cpy(&file->cache_data.oid, git_tree_id(tree));
 	else if (source == GIT_ATTR_FILE__FROM_FILE)
 		git_futils_filestamp_set_from_stat(&file->cache_data.stamp, &st);
 	/* else always cacheable */
@@ -196,6 +218,8 @@ int git_attr_file__load(
 
 cleanup:
 	git_blob_free(blob);
+	git_tree_entry_free(tree_entry);
+	git_tree_free(tree);
 	git_buf_dispose(&content);
 
 	return error;
@@ -234,6 +258,19 @@ int git_attr_file__out_of_date(
 			return error;
 
 		return (git_oid__cmp(&file->cache_data.oid, &id) != 0);
+	}
+
+	case GIT_ATTR_FILE__FROM_HEAD: {
+		git_tree *tree;
+		int error;
+
+		if ((error = git_repository_head_tree(&tree, repo)) < 0)
+			return error;
+
+		error = git_oid__cmp(&file->cache_data.oid, git_tree_id(tree));
+
+		git_tree_free(tree);
+		return error;
 	}
 
 	default:

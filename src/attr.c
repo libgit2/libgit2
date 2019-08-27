@@ -305,7 +305,10 @@ static int system_attr_file(
 	return 0;
 }
 
-static int attr_setup(git_repository *repo, git_attr_session *attr_session)
+static int attr_setup(
+	git_repository *repo,
+	git_attr_session *attr_session,
+	uint32_t flags)
 {
 	git_buf path = GIT_BUF_INIT;
 	git_index *idx = NULL;
@@ -351,6 +354,11 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_INDEX,
 				       NULL, GIT_ATTR_FILE, true)) < 0)
 			goto out;
+
+	if ((flags & GIT_ATTR_CHECK_INCLUDE_HEAD) != 0 &&
+	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_HEAD,
+				       NULL, GIT_ATTR_FILE, true)) < 0)
+		goto out;
 
 	if (attr_session)
 		attr_session->init_setup = 1;
@@ -428,6 +436,9 @@ static int attr_decide_sources(
 		break;
 	}
 
+	if ((flags & GIT_ATTR_CHECK_INCLUDE_HEAD) != 0)
+		srcs[count++] = GIT_ATTR_FILE__FROM_HEAD;
+
 	return count;
 }
 
@@ -460,7 +471,7 @@ static int push_attr_file(
 static int push_one_attr(void *ref, const char *path)
 {
 	attr_walk_up_info *info = (attr_walk_up_info *)ref;
-	git_attr_file_source src[2];
+	git_attr_file_source src[GIT_ATTR_FILE_NUM_SOURCES];
 	int error = 0, n_src, i;
 	bool allow_macros;
 
@@ -499,7 +510,7 @@ static int collect_attr_files(
 	const char *workdir = git_repository_workdir(repo);
 	attr_walk_up_info info = { NULL };
 
-	if ((error = attr_setup(repo, attr_session)) < 0)
+	if ((error = attr_setup(repo, attr_session, flags)) < 0)
 		return error;
 
 	/* Resolve path in a non-bare repo */
