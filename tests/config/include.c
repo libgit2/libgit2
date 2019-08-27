@@ -202,3 +202,33 @@ void test_config_include__included_variables_cannot_be_modified(void)
 	cl_git_pass(p_unlink("top-level"));
 	cl_git_pass(p_unlink("included"));
 }
+
+void test_config_include__variables_in_included_override_including(void)
+{
+	int i;
+
+	cl_git_mkfile("top-level", "[foo]\nbar = 1\n[include]\npath = included");
+	cl_git_mkfile("included", "[foo]\nbar = 2");
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "top-level"));
+	cl_git_pass(git_config_get_int32(&i, cfg, "foo.bar"));
+	cl_assert_equal_i(i, 2);
+
+	cl_git_pass(p_unlink("top-level"));
+	cl_git_pass(p_unlink("included"));
+}
+
+void test_config_include__variables_in_including_override_included(void)
+{
+	int i;
+
+	cl_git_mkfile("top-level", "[include]\npath = included\n[foo]\nbar = 1");
+	cl_git_mkfile("included", "[foo]\nbar = 2");
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "top-level"));
+	cl_git_pass(git_config_get_int32(&i, cfg, "foo.bar"));
+	cl_assert_equal_i(i, 1);
+
+	cl_git_pass(p_unlink("top-level"));
+	cl_git_pass(p_unlink("included"));
+}

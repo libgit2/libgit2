@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
 #include "futils.h"
+#include "repository.h"
 
 #ifdef GIT_WIN32
 # define ROOT_PREFIX "C:"
@@ -22,11 +23,11 @@ void test_config_conditionals__cleanup(void)
 
 static void assert_condition_includes(const char *keyword, const char *path, bool expected)
 {
-	git_config *cfg;
 	git_buf buf = GIT_BUF_INIT;
+	git_config *cfg;
 
-	git_buf_printf(&buf, "[includeIf \"%s:%s\"]\n", keyword, path);
-	git_buf_puts(&buf, "path = other\n");
+	cl_git_pass(git_buf_printf(&buf, "[includeIf \"%s:%s\"]\n", keyword, path));
+	cl_git_pass(git_buf_puts(&buf, "path = other\n"));
 
 	cl_git_mkfile("empty_standard_repo/.git/config", buf.ptr);
 	cl_git_mkfile("empty_standard_repo/.git/other", "[foo]\nbar=baz\n");
@@ -105,4 +106,43 @@ void test_config_conditionals__gitdir_i(void)
 void test_config_conditionals__invalid_conditional_fails(void)
 {
 	assert_condition_includes("foobar", ".git", false);
+}
+
+static void set_head(git_repository *repo, const char *name)
+{
+	cl_git_pass(git_repository_create_head(git_repository_path(repo), name));
+}
+
+void test_config_conditionals__onbranch(void)
+{
+	assert_condition_includes("onbranch", "master", true);
+	assert_condition_includes("onbranch", "m*", true);
+	assert_condition_includes("onbranch", "*", true);
+	assert_condition_includes("onbranch", "master/", false);
+	assert_condition_includes("onbranch", "foo", false);
+
+	set_head(_repo, "foo");
+	assert_condition_includes("onbranch", "master", false);
+	assert_condition_includes("onbranch", "foo", true);
+	assert_condition_includes("onbranch", "f*o", true);
+
+	set_head(_repo, "dir/ref");
+	assert_condition_includes("onbranch", "dir/ref", true);
+	assert_condition_includes("onbranch", "dir/", true);
+	assert_condition_includes("onbranch", "dir/*", true);
+	assert_condition_includes("onbranch", "dir/**", true);
+	assert_condition_includes("onbranch", "**", true);
+	assert_condition_includes("onbranch", "dir", false);
+	assert_condition_includes("onbranch", "dir*", false);
+
+	set_head(_repo, "dir/subdir/ref");
+	assert_condition_includes("onbranch", "dir/subdir/", true);
+	assert_condition_includes("onbranch", "dir/subdir/*", true);
+	assert_condition_includes("onbranch", "dir/subdir/ref", true);
+	assert_condition_includes("onbranch", "dir/", true);
+	assert_condition_includes("onbranch", "dir/**", true);
+	assert_condition_includes("onbranch", "**", true);
+	assert_condition_includes("onbranch", "dir", false);
+	assert_condition_includes("onbranch", "dir*", false);
+	assert_condition_includes("onbranch", "dir/*", false);
 }
