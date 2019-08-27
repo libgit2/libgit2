@@ -1277,6 +1277,7 @@ static int diff_prepare_iterator_opts(char **prefix, git_iterator_options *a, in
 		b->pathlist.count = opts->pathspec.count;
 	} else if (opts) {
 		*prefix = git_pathspec_prefix(&opts->pathspec);
+		GIT_ERROR_CHECK_ALLOC(prefix);
 	}
 
 	a->flags = aflags;
