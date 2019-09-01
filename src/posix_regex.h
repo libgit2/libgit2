@@ -37,8 +37,21 @@
 
 #else
 
+/*
+ * PCRE2's header defines just the basic names but that means that we'll link
+ * against libc's version while using PCRE2's struct definitions, leading to
+ * crashes. To work around this, package maintainers have added prefixes to the
+ * exported functions so we can link against them.
+ *
+ * But the definitions in the header are still of the basic names so we need to
+ * tell the compiler/linker to replace these names when linking.
+ */
 # if defined(GIT_REGEX_PCRE2)
 #  include <pcre2posix.h>
+#  pragma redefine_extname regerror PCRE2regerror
+#  pragma redefine_extname regexec PCRE2regexec
+#  pragma redefine_extname regfree PCRE2regfree
+#  pragma redefine_extname regcomp PCRE2regcomp
 # elif defined(GIT_REGEX_PCRE)
 #  include <pcreposix.h>
 # else
