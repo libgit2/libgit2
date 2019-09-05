@@ -559,17 +559,11 @@ int git_status_list_get_perfdata(
 	assert(out);
 	GIT_ERROR_CHECK_VERSION(out, GIT_DIFF_PERFDATA_VERSION, "git_diff_perfdata");
 
-	out->stat_calls = 0;
-	out->oid_calculations = 0;
-
-	if (status->head2idx) {
-		out->stat_calls += status->head2idx->perf.stat_calls;
-		out->oid_calculations += status->head2idx->perf.oid_calculations;
-	}
-	if (status->idx2wd) {
-		out->stat_calls += status->idx2wd->perf.stat_calls;
-		out->oid_calculations += status->idx2wd->perf.oid_calculations;
-	}
+	git_perfdata_init(out);
+	if (status->head2idx)
+		git_perfdata_merge(out, &status->head2idx->perf);
+	if (status->idx2wd)
+		git_perfdata_merge(out, &status->idx2wd->perf);
 
 	return 0;
 }

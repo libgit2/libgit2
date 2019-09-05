@@ -33,6 +33,7 @@ typedef struct {
 	size_t dir_root; /* offset in dir to repo root */
 	int ignore_case;
 	int depth;
+	git_perfdata perf;
 } git_ignores;
 
 extern int git_ignore__for_path(

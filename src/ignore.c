@@ -247,6 +247,7 @@ static int push_ignore_file(
 		return error;
 
 	if (file != NULL) {
+		ignores->perf.ignore_files_parsed++;
 		if ((error = git_vector_insert(which_list, file)) < 0)
 			git_attr_file__free(file);
 	}
@@ -290,6 +291,7 @@ int git_ignore__for_path(
 	assert(repo && ignores && path);
 
 	memset(ignores, 0, sizeof(*ignores));
+	ignores->perf.version = GIT_PERFDATA_VERSION;
 	ignores->repo = repo;
 
 	/* Read the ignore_case flag */

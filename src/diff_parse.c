@@ -44,6 +44,7 @@ static git_diff_parsed *diff_parsed_alloc(void)
 	diff->base.entrycomp = git_diff__entry_cmp;
 	diff->base.patch_fn = git_patch_parsed_from_diff;
 	diff->base.free_fn = diff_parsed_free;
+	git_perfdata_init(&diff->base.perf);
 
 	if (git_diff_options_init(&diff->base.opts, GIT_DIFF_OPTIONS_VERSION) < 0) {
 		git__free(diff);

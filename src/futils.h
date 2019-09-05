@@ -96,18 +96,11 @@ typedef enum {
 	GIT_MKDIR_REMOVE_SYMLINKS = 256,
 } git_futils_mkdir_flags;
 
-struct git_futils_mkdir_perfdata
-{
-	size_t stat_calls;
-	size_t mkdir_calls;
-	size_t chmod_calls;
-};
-
 struct git_futils_mkdir_options
 {
 	git_strmap *dir_map;
 	git_pool *pool;
-	struct git_futils_mkdir_perfdata perfdata;
+	git_perfdata perfdata;
 };
 
 /**

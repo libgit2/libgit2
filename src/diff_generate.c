@@ -420,6 +420,7 @@ static git_diff_generated *diff_generated_alloc(
 	diff->base.new_src = new_iter->type;
 	diff->base.patch_fn = git_patch_generated_from_diff;
 	diff->base.free_fn = diff_generated_free;
+	git_perfdata_init(&diff->base.perf);
 	git_attr_session__init(&diff->base.attrsession, repo);
 	memcpy(&diff->base.opts, &dflt, sizeof(git_diff_options));
 
@@ -989,8 +990,19 @@ static int handle_unmatched_new_item(
 	if (git_index_entry_is_conflict(nitem))
 		delta_type = GIT_DELTA_CONFLICTED;
 
-	/* update delta_type if this item is ignored */
-	else if (git_iterator_current_is_ignored(info->new_iter))
+	/*
+	 * update delta_type if this item is ignored
+	 *
+	 * We can skip the ignore check if:
+	 * - we're not interested in ignored things
+	 * - the other iterator has no changes for this item's prefix
+	 * 	 ie. 'foo/bar.c' vs 'foo/' in a clean repository.
+	 */
+	else if ((!contains_oitem ||
+		  DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_IGNORED |
+						   GIT_DIFF_RECURSE_IGNORED_DIRS |
+						   GIT_DIFF_ENABLE_FAST_UNTRACKED_DIRS)) &&
+		 git_iterator_current_is_ignored(info->new_iter))
 		delta_type = GIT_DELTA_IGNORED;
 
 	if (nitem->mode == GIT_FILEMODE_TREE) {
@@ -1250,8 +1262,7 @@ int git_diff__from_iterators(
 			error = handle_matched_item(diff, &info);
 	}
 
-	diff->base.perf.stat_calls +=
-		old_iter->stat_calls + new_iter->stat_calls;
+	git_iterator_get_perfdata(&diff->base.perf, new_iter);
 
 cleanup:
 	if (!error)
@@ -1281,8 +1292,11 @@ cleanup:
 		b_opts.pathlist.strings = opts->pathspec.strings; \
 		b_opts.pathlist.count = opts->pathspec.count; \
 	} \
-	if (!error && !(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
+	if (!error && !(error = MAKE_FIRST) && !(error = MAKE_SECOND)) { \
 		error = git_diff__from_iterators(&diff, repo, a, b, opts); \
+		git_iterator_get_perfdata(&diff->perf, a); \
+		git_iterator_get_perfdata(&diff->perf, b); \
+	} \
 	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
 } while (0)
 
@@ -1375,6 +1389,7 @@ int git_diff_index_to_workdir(
 {
 	git_diff *diff = NULL;
 	int error = 0;
+	unsigned int dflags = GIT_ITERATOR_DONT_AUTOEXPAND;
 
 	assert(out && repo);
 
@@ -1383,12 +1398,21 @@ int git_diff_index_to_workdir(
 	if (!index && (error = diff_load_index(&index, repo)) < 0)
 		return error;
 
+	/* checking ignore rules is expensive, so we turn it on only if it
+	 * can make a difference */
+	if (opts && (opts->flags & (GIT_DIFF_INCLUDE_IGNORED |
+				    GIT_DIFF_INCLUDE_UNTRACKED |
+				    GIT_DIFF_RECURSE_UNTRACKED_DIRS |
+				    GIT_DIFF_RECURSE_IGNORED_DIRS |
+				    GIT_DIFF_ENABLE_FAST_UNTRACKED_DIRS)) == 0)
+		dflags |= GIT_ITERATOR_SKIP_IGNORES;
+
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_index(&a, repo, index, &a_opts),
 		GIT_ITERATOR_INCLUDE_CONFLICTS,
 
 		git_iterator_for_workdir(&b, repo, index, NULL, &b_opts),
-		GIT_ITERATOR_DONT_AUTOEXPAND
+		dflags
 	);
 
 	if (!error && (diff->opts.flags & GIT_DIFF_UPDATE_INDEX) != 0 &&

@@ -416,4 +416,21 @@ extern int git__getenv(git_buf *out, const char *name);
 
 #include "alloc.h"
 
+GIT_INLINE(void) git_perfdata_init(git_perfdata *data)
+{
+	assert(data);
+	memset(data, '\0', sizeof(*data));
+	data->version = GIT_PERFDATA_VERSION;
+}
+
+GIT_INLINE(void) git_perfdata_merge(git_perfdata *data, const git_perfdata *other)
+{
+	assert(data && other);
+	data->mkdir_calls += other->mkdir_calls;
+	data->stat_calls += other->stat_calls;
+	data->chmod_calls += other->chmod_calls;
+	data->oid_calculations += other->oid_calculations;
+	data->ignore_files_parsed += other->ignore_files_parsed;
+}
+
 #endif

@@ -1420,9 +1420,7 @@ static int checkout_mkdir(
 	error = git_futils_mkdir_relative(
 		path, base, mode, flags, &mkdir_opts);
 
-	data->perfdata.mkdir_calls += mkdir_opts.perfdata.mkdir_calls;
-	data->perfdata.stat_calls += mkdir_opts.perfdata.stat_calls;
-	data->perfdata.chmod_calls += mkdir_opts.perfdata.chmod_calls;
+	git_perfdata_merge(&data->perfdata, &mkdir_opts.perfdata);
 
 	return error;
 }
