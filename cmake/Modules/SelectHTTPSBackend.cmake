@@ -10,7 +10,6 @@ ENDIF()
 
 # Auto-select TLS backend
 IF (USE_HTTPS STREQUAL ON)
-	message(ON)
 	IF (SECURITY_FOUND)
 		IF (SECURITY_HAS_SSLCREATECONTEXT)
 			SET(HTTPS_BACKEND "SecureTransport")
@@ -29,7 +28,6 @@ IF (USE_HTTPS STREQUAL ON)
 			"Please pass the backend name explicitly (-DUSE_HTTPS=backend)")
 	ENDIF()
 ELSEIF(USE_HTTPS)
-	message(expl)
 	# HTTPS backend was explicitly set
 	SET(HTTPS_BACKEND ${USE_HTTPS})
 ELSE()
