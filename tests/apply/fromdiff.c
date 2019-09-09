@@ -131,6 +131,17 @@ void test_apply_fromdiff__lastline(void)
 		PATCH_ORIGINAL_TO_CHANGE_LASTLINE, NULL));
 }
 
+void test_apply_fromdiff__change_middle_and_lastline_nocontext(void)
+{
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	diff_opts.context_lines = 0;
+
+	cl_git_pass(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_CHANGE_MIDDLE_AND_LASTLINE, "file.txt",
+		PATCH_ORIGINAL_TO_CHANGE_MIDDLE_AND_LASTLINE_NOCONTEXT, &diff_opts));
+}
+
 void test_apply_fromdiff__prepend(void)
 {
 	cl_git_pass(apply_buf(
