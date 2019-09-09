@@ -543,8 +543,6 @@ static int tree_iterator_frame_init(
 	new_frame = git_array_alloc(iter->frames);
 	GIT_ERROR_CHECK_ALLOC(new_frame);
 
-	memset(new_frame, 0, sizeof(tree_iterator_frame));
-
 	if ((error = git_tree_dup(&dup, tree)) < 0)
 		goto done;
 
@@ -552,19 +550,22 @@ static int tree_iterator_frame_init(
 	new_frame->tree = dup;
 
 	if (frame_entry &&
-		(error = tree_iterator_compute_path(&new_frame->path, frame_entry)) < 0)
+	    (error = tree_iterator_compute_path(&new_frame->path, frame_entry)) < 0)
 		goto done;
 
 	cmp = iterator__ignore_case(&iter->base) ?
 		tree_iterator_entry_sort_icase : NULL;
 
-	if ((error = git_vector_init(
-		&new_frame->entries, dup->entries.size, cmp)) < 0)
+	if ((error = git_vector_init(&new_frame->entries,
+				     dup->entries.size, cmp)) < 0)
 		goto done;
 
 	git_array_foreach(dup->entries, i, tree_entry) {
-		new_entry = git_pool_malloc(&iter->entry_pool, 1);
-		GIT_ERROR_CHECK_ALLOC(new_entry);
+		if ((new_entry = git_pool_malloc(&iter->entry_pool, 1)) == NULL) {
+			git_error_set_oom();
+			error = -1;
+			goto done;
+		}
 
 		new_entry->tree_entry = tree_entry;
 		new_entry->parent_path = new_frame->path.ptr;
