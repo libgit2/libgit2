@@ -15,6 +15,7 @@
 #include "git2/blame.h"
 #include "git2/branch.h"
 #include "git2/buffer.h"
+#include "git2/cert.h"
 #include "git2/checkout.h"
 #include "git2/cherrypick.h"
 #include "git2/clone.h"
