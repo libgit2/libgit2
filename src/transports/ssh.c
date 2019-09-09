@@ -17,8 +17,10 @@
 #include "net.h"
 #include "netops.h"
 #include "smart.h"
-#include "cred.h"
 #include "streams/socket.h"
+
+#include "git2/cred.h"
+#include "git2/sys/cred.h"
 
 #ifdef GIT_SSH
 
@@ -629,7 +631,7 @@ post_extract:
 		if ((error = request_creds(&cred, t, urldata.username, auth_methods)) < 0)
 			goto done;
 
-		if (strcmp(urldata.username, git_cred__username(cred))) {
+		if (strcmp(urldata.username, git_cred_get_username(cred))) {
 			git_error_set(GIT_ERROR_SSH, "username does not match previous request");
 			error = -1;
 			goto done;

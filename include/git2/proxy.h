@@ -8,7 +8,7 @@
 #define INCLUDE_git_proxy_h__
 
 #include "common.h"
-#include "transport.h"
+#include "cred.h"
 
 GIT_BEGIN_DECL
 

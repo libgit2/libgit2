@@ -16,6 +16,7 @@
 #include "netops.h"
 #include "global.h"
 #include "remote.h"
+#include "git2/sys/cred.h"
 #include "smart.h"
 #include "auth.h"
 #include "http.h"

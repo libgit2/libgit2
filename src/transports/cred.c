@@ -5,10 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "cred.h"
+#include "common.h"
 
-#include "git2.h"
-#include "smart.h"
+#include "git2/cred.h"
+#include "git2/sys/cred.h"
 #include "git2/cred_helpers.h"
 
 static int git_cred_ssh_key_type_new(
@@ -27,7 +27,7 @@ int git_cred_has_username(git_cred *cred)
 	return 1;
 }
 
-const char *git_cred__username(git_cred *cred)
+const char *git_cred_get_username(git_cred *cred)
 {
 	switch (cred->credtype) {
 	case GIT_CREDTYPE_USERNAME:

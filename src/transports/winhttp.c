@@ -19,6 +19,7 @@
 #include "repository.h"
 #include "global.h"
 #include "http.h"
+#include "git2/sys/cred.h"
 
 #include <wincrypt.h>
 #include <winhttp.h>

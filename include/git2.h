@@ -21,6 +21,7 @@
 #include "git2/commit.h"
 #include "git2/common.h"
 #include "git2/config.h"
+#include "git2/cred.h"
 #include "git2/deprecated.h"
 #include "git2/describe.h"
 #include "git2/diff.h"
