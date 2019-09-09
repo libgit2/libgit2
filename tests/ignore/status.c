@@ -1290,3 +1290,47 @@ void test_ignore_status__leading_spaces_are_significant(void)
 	assert_is_ignored(" # not a comment");
 	assert_is_ignored("d.test");
 }
+
+void test_ignore_status__override_nested_wildcard_unignore(void)
+{
+	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
+	git_status_list *statuslist;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	const git_status_entry *status;
+
+	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/dir", 0777));
+	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/dir/subdir", 0777));
+	cl_git_mkfile("empty_standard_repo/.gitignore", "a.test\n");
+	cl_git_mkfile("empty_standard_repo/dir/.gitignore", "!*.test\n");
+	cl_git_mkfile("empty_standard_repo/dir/subdir/.gitignore", "a.test\n");
+	cl_git_mkfile("empty_standard_repo/dir/a.test", "pong");
+	cl_git_mkfile("empty_standard_repo/dir/subdir/a.test", "pong");
+
+	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED | GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+
+	cl_git_pass(git_status_list_new(&statuslist, repo, &opts));
+	cl_assert_equal_sz(4, git_status_list_entrycount(statuslist));
+
+	status = git_status_byindex(statuslist, 0);
+	cl_assert(status != NULL);
+	cl_assert_equal_s(".gitignore", status->index_to_workdir->old_file.path);
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, status->status);
+
+	status = git_status_byindex(statuslist, 1);
+	cl_assert(status != NULL);
+	cl_assert_equal_s("dir/.gitignore", status->index_to_workdir->old_file.path);
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, status->status);
+
+	status = git_status_byindex(statuslist, 2);
+	cl_assert(status != NULL);
+	cl_assert_equal_s("dir/a.test", status->index_to_workdir->old_file.path);
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, status->status);
+
+	status = git_status_byindex(statuslist, 3);
+	cl_assert(status != NULL);
+	cl_assert_equal_s("dir/subdir/.gitignore", status->index_to_workdir->old_file.path);
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, status->status);
+
+	git_status_list_free(statuslist);
+}
