@@ -129,17 +129,22 @@ typedef struct {
 	size_t *bytes_read;
 } parser_context;
 
-static git_http_auth_scheme *scheme_for_challenge(const char *challenge)
+static git_http_auth_scheme *scheme_for_challenge(
+	const char *challenge,
+	git_cred *cred)
 {
 	git_http_auth_scheme *scheme = NULL;
 	size_t i;
 
 	for (i = 0; i < ARRAY_SIZE(auth_schemes); i++) {
 		const char *scheme_name = auth_schemes[i].name;
+		const git_credtype_t scheme_types = auth_schemes[i].credtypes;
 		size_t scheme_len;
 
 		scheme_len = strlen(scheme_name);
-		if (strncasecmp(challenge, scheme_name, scheme_len) == 0 &&
+
+		if ((!cred || (cred->credtype & scheme_types)) &&
+		    strncasecmp(challenge, scheme_name, scheme_len) == 0 &&
 		    (challenge[scheme_len] == '\0' || challenge[scheme_len] == ' ')) {
 			scheme = &auth_schemes[i];
 			break;
@@ -256,7 +261,7 @@ static int set_authentication_types(http_server *server)
 	size_t i;
 
 	git_vector_foreach(&server->auth_challenges, i, challenge) {
-		if ((scheme = scheme_for_challenge(challenge)) != NULL) {
+		if ((scheme = scheme_for_challenge(challenge, NULL)) != NULL) {
 			server->authtypes |= scheme->type;
 			server->credtypes |= scheme->credtypes;
 		}
@@ -430,9 +435,10 @@ static int init_auth(http_server *server)
 	git_http_auth_scheme *s, *scheme = NULL;
 	char *c, *challenge = NULL;
 	size_t i;
+	int error;
 
 	git_vector_foreach(&server->auth_challenges, i, c) {
-		s = scheme_for_challenge(c);
+		s = scheme_for_challenge(c, server->cred);
 
 		if (s && !!(s->credtypes & server->credtypes)) {
 			scheme = s;
@@ -446,12 +452,14 @@ static int init_auth(http_server *server)
 		return -1;
 	}
 
-	if (scheme->init_context(&server->auth_context, &server->url) < 0)
-		return -1;
+	if ((error = scheme->init_context(&server->auth_context, &server->url)) == GIT_PASSTHROUGH)
+		return 0;
+	else if (error < 0)
+		return error;
 
 	if (server->auth_context->set_challenge &&
-		server->auth_context->set_challenge(server->auth_context, challenge) < 0)
-		return -1;
+		(error = server->auth_context->set_challenge(server->auth_context, challenge)) < 0)
+		return error;
 
 	return 0;
 }

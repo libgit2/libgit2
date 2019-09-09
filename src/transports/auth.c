@@ -70,6 +70,6 @@ int git_http_auth_dummy(
 	GIT_UNUSED(url);
 
 	*out = NULL;
-	return 0;
+	return GIT_PASSTHROUGH;
 }
 
