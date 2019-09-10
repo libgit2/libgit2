@@ -812,8 +812,13 @@ int git_repository_open_ext(
 	error = find_repo(
 		&gitdir, &workdir, &gitlink, &commondir, start_path, flags, ceiling_dirs);
 
-	if (error < 0 || !repo_ptr)
+	if (error < 0 || !repo_ptr) {
+		git_buf_dispose(&gitdir);
+		git_buf_dispose(&workdir);
+		git_buf_dispose(&gitlink);
+		git_buf_dispose(&commondir);
 		return error;
+	}
 
 	repo = repository_alloc();
 	GIT_ERROR_CHECK_ALLOC(repo);
