@@ -800,7 +800,7 @@ int git_repository_open_ext(
 	unsigned is_worktree;
 	git_buf gitdir = GIT_BUF_INIT, workdir = GIT_BUF_INIT,
 		gitlink = GIT_BUF_INIT, commondir = GIT_BUF_INIT;
-	git_repository *repo;
+	git_repository *repo = NULL;
 	git_config *config = NULL;
 
 	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV)
@@ -813,7 +813,7 @@ int git_repository_open_ext(
 		&gitdir, &workdir, &gitlink, &commondir, start_path, flags, ceiling_dirs);
 
 	if (error < 0 || !repo_ptr)
-		return error;
+		goto cleanup;
 
 	repo = repository_alloc();
 	GIT_ERROR_CHECK_ALLOC(repo);
@@ -859,11 +859,14 @@ int git_repository_open_ext(
 cleanup:
 	git_buf_dispose(&gitdir);
 	git_buf_dispose(&workdir);
+	git_buf_dispose(&gitlink);
+	git_buf_dispose(&commondir);
 	git_config_free(config);
 
 	if (error < 0)
 		git_repository_free(repo);
-	else
+
+	if (repo_ptr)
 		*repo_ptr = repo;
 
 	return error;
