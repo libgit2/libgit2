@@ -22,6 +22,17 @@
  */
 GIT_BEGIN_DECL
 
+/**
+ * Callback for messages recieved by the transport.
+ *
+ * Return a negative value to cancel the network operation.
+ *
+ * @param str The message from the transport
+ * @param len The length of the message
+ * @param payload Payload provided by the caller
+ */
+typedef int GIT_CALLBACK(git_transport_message_cb)(const char *str, int len, void *payload);
+
 /** Signature of a function which creates a transport */
 typedef int GIT_CALLBACK(git_transport_cb)(git_transport **out, git_remote *owner, void *param);
 

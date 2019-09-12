@@ -245,17 +245,6 @@ typedef struct git_remote_head git_remote_head;
 typedef struct git_remote_callbacks git_remote_callbacks;
 
 /**
- * Type for messages delivered by the transport.  Return a negative value
- * to cancel the network operation.
- *
- * @param str The message from the transport
- * @param len The length of the message
- * @param payload Payload provided by the caller
- */
-typedef int GIT_CALLBACK(git_transport_message_cb)(const char *str, int len, void *payload);
-
-
-/**
  * Parent type for `git_cert_hostkey` and `git_cert_x509`.
  */
 typedef struct git_cert git_cert;
