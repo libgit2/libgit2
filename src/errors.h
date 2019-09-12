@@ -8,7 +8,6 @@
 #ifndef INCLUDE_errors_h__
 #define INCLUDE_errors_h__
 
-#include "posix_regex.h"
 #include "common.h"
 
 /*
@@ -16,12 +15,6 @@
  */
 void git_error_set(int error_class, const char *fmt, ...) GIT_FORMAT_PRINTF(2, 3);
 void git_error_vset(int error_class, const char *fmt, va_list ap);
-
-/**
- * Set the error message for a regex failure, using the internal regex
- * error code lookup and return a libgit error code.
- */
-int git_error_set_regex(const p_regex_t *regex, int error_code);
 
 /**
  * Set error message for user callback if needed.
