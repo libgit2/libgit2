@@ -12,6 +12,7 @@
 #include "buffer.h"
 #include "tree.h"
 #include "refdb.h"
+#include "regexp.h"
 
 #include "git2.h"
 
@@ -42,7 +43,7 @@ static int maybe_abbrev(git_object** out, git_repository *repo, const char *spec
 	return maybe_sha_or_abbrev(out, repo, spec, speclen);
 }
 
-static int build_regex(p_regex_t *regex, const char *pattern)
+static int build_regex(git_regexp *regex, const char *pattern)
 {
 	int error;
 
@@ -51,13 +52,11 @@ static int build_regex(p_regex_t *regex, const char *pattern)
 		return GIT_EINVALIDSPEC;
 	}
 
-	error = p_regcomp(regex, pattern, P_REG_EXTENDED);
+	error = git_regexp_compile(regex, pattern, 0);
 	if (!error)
 		return 0;
 
-	error = git_error_set_regex(regex, error);
-
-	p_regfree(regex);
+	git_regexp_dispose(regex);
 
 	return error;
 }
@@ -66,7 +65,7 @@ static int maybe_describe(git_object**out, git_repository *repo, const char *spe
 {
 	const char *substr;
 	int error;
-	p_regex_t regex;
+	git_regexp regex;
 
 	substr = strstr(spec, "-g");
 
@@ -76,8 +75,8 @@ static int maybe_describe(git_object**out, git_repository *repo, const char *spe
 	if (build_regex(&regex, ".+-[0-9]+-g[0-9a-fA-F]+") < 0)
 		return -1;
 
-	error = p_regexec(&regex, spec, 0, NULL, 0);
-	p_regfree(&regex);
+	error = git_regexp_match(&regex, spec);
+	git_regexp_dispose(&regex);
 
 	if (error)
 		return GIT_ENOTFOUND;
@@ -143,12 +142,11 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 {
 	git_reference *ref = NULL;
 	git_reflog *reflog = NULL;
-	p_regex_t preg;
+	git_regexp preg;
 	int error = -1;
 	size_t i, numentries, cur;
 	const git_reflog_entry *entry;
 	const char *msg;
-	p_regmatch_t regexmatches[2];
 	git_buf buf = GIT_BUF_INIT;
 
 	cur = position;
@@ -168,12 +166,14 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 	numentries  = git_reflog_entrycount(reflog);
 
 	for (i = 0; i < numentries; i++) {
+		git_regmatch regexmatches[2];
+
 		entry = git_reflog_entry_byindex(reflog, i);
 		msg = git_reflog_entry_message(entry);
 		if (!msg)
 			continue;
 
-		if (p_regexec(&preg, msg, 2, regexmatches, 0))
+		if (git_regexp_search(&preg, msg, 2, regexmatches) < 0)
 			continue;
 
 		cur--;
@@ -181,7 +181,8 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 		if (cur > 0)
 			continue;
 
-		git_buf_put(&buf, msg+regexmatches[1].rm_so, regexmatches[1].rm_eo - regexmatches[1].rm_so);
+		if ((git_buf_put(&buf, msg+regexmatches[1].start, regexmatches[1].end - regexmatches[1].start)) < 0)
+			goto cleanup;
 
 		if ((error = git_reference_dwim(base_ref, repo, git_buf_cstr(&buf))) == 0)
 			goto cleanup;
@@ -199,7 +200,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 cleanup:
 	git_reference_free(ref);
 	git_buf_dispose(&buf);
-	p_regfree(&preg);
+	git_regexp_dispose(&preg);
 	git_reflog_free(reflog);
 	return error;
 }
@@ -448,7 +449,7 @@ cleanup:
 	return error;
 }
 
-static int walk_and_search(git_object **out, git_revwalk *walk, p_regex_t *regex)
+static int walk_and_search(git_object **out, git_revwalk *walk, git_regexp *regex)
 {
 	int error;
 	git_oid oid;
@@ -460,7 +461,7 @@ static int walk_and_search(git_object **out, git_revwalk *walk, p_regex_t *regex
 		if ((error < 0) && (error != GIT_ENOTFOUND))
 			return -1;
 
-		if (!p_regexec(regex, git_commit_message((git_commit*)obj), 0, NULL, 0)) {
+		if (!git_regexp_match(regex, git_commit_message((git_commit*)obj))) {
 			*out = obj;
 			return 0;
 		}
@@ -476,7 +477,7 @@ static int walk_and_search(git_object **out, git_revwalk *walk, p_regex_t *regex
 
 static int handle_grep_syntax(git_object **out, git_repository *repo, const git_oid *spec_oid, const char *pattern)
 {
-	p_regex_t preg;
+	git_regexp preg;
 	git_revwalk *walk = NULL;
 	int error;
 
@@ -497,7 +498,7 @@ static int handle_grep_syntax(git_object **out, git_repository *repo, const git_
 	error = walk_and_search(out, walk, &preg);
 
 cleanup:
-	p_regfree(&preg);
+	git_regexp_dispose(&preg);
 	git_revwalk_free(walk);
 
 	return error;
