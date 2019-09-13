@@ -6,56 +6,64 @@ trigger:
 - maint/*
 
 jobs:
-- job: linux_amd64_trusty_gcc_openssl
-  displayName: 'Linux (amd64; Trusty; GCC; OpenSSL)'
+- job: linux_amd64_xenial_gcc_openssl
+  displayName: 'Linux (amd64; Xenial; GCC; OpenSSL)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
   - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-amd64:latest'
+      docker:
+        image: xenial
+        base: ubuntu:xenial
       environmentVariables: |
        CC=gcc
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
-- job: linux_amd64_trusty_gcc_mbedtls
-  displayName: 'Linux (amd64; Trusty; GCC; mbedTLS)'
+- job: linux_amd64_xenial_gcc_mbedtls
+  displayName: 'Linux (amd64; Xenial; GCC; mbedTLS)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
   - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-amd64:latest'
+      docker:
+        image: xenial
+        base: ubuntu:xenial
       environmentVariables: |
        CC=gcc
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
-- job: linux_amd64_trusty_clang_openssl
-  displayName: 'Linux (amd64; Trusty; Clang; OpenSSL)'
+- job: linux_amd64_xenial_clang_openssl
+  displayName: 'Linux (amd64; Xenial; Clang; OpenSSL)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
   - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-amd64:latest'
+      docker:
+        image: xenial
+        base: ubuntu:xenial
       environmentVariables: |
        CC=clang
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
-- job: linux_amd64_trusty_clang_mbedtls
-  displayName: 'Linux (amd64; Trusty; Clang; mbedTLS)'
+- job: linux_amd64_xenial_clang_mbedtls
+  displayName: 'Linux (amd64; Xenial; Clang; mbedTLS)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
   - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-amd64:latest'
+      docker:
+        image: xenial
+        base: ubuntu:xenial
       environmentVariables: |
        CC=clang
-       CMAKE_GENERATOR=Unix Makefiles
+       CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
 
 - job: macos
@@ -136,6 +144,10 @@ jobs:
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
+  - script: |
+      cd $(Build.SourcesDirectory)/azure-pipelines/docker
+      docker build -t libgit2/docurium --build-arg BASE=ubuntu:trusty -f docurium .
+    displayName: 'Build Docker image'
   - script: |
       git config user.name 'Documentation Generation'
       git config user.email 'libgit2@users.noreply.github.com'

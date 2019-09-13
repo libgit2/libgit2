@@ -11,7 +11,9 @@ jobs:
     displayName: Build
     inputs:
       action: 'Run an image'
-      imageName: 'libgit2/trusty-openssl:latest'
+      docker:
+        image: xenial
+        base: xenial
       volumes: |
        $(Build.SourcesDirectory):/src
        $(Build.BinariesDirectory):/build

@@ -5,7 +5,7 @@
 IF(USE_SHA1 STREQUAL ON OR USE_SHA1 STREQUAL "CollisionDetection")
 	SET(SHA1_BACKEND "CollisionDetection")
 ELSEIF(USE_SHA1 STREQUAL "HTTPS")
-	message("Checking HTTPS backend… ${HTTPS_BACKEND}")
+	message(STATUS "Checking HTTPS backend… ${HTTPS_BACKEND}")
 	IF(HTTPS_BACKEND STREQUAL "SecureTransport")
 		SET(SHA1_BACKEND "CommonCrypto")
 	ELSEIF(HTTPS_BACKEND STREQUAL "WinHTTP")
