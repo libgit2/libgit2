@@ -50,4 +50,24 @@ struct git_revwalk {
 
 git_commit_list_node *git_revwalk__commit_lookup(git_revwalk *walk, const git_oid *oid);
 
+typedef struct {
+	int uninteresting;
+	int from_glob;
+	int insert_by_date;
+} git_revwalk__push_options;
+
+#define GIT_REVWALK__PUSH_OPTIONS_INIT { 0 }
+
+int git_revwalk__push_commit(git_revwalk *walk,
+	const git_oid *oid,
+	const git_revwalk__push_options *opts);
+
+int git_revwalk__push_ref(git_revwalk *walk,
+	const char *refname,
+	const git_revwalk__push_options *opts);
+
+int git_revwalk__push_glob(git_revwalk *walk,
+	const char *glob,
+	const git_revwalk__push_options *given_opts);
+
 #endif
