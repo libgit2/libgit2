@@ -79,11 +79,11 @@ More detailed build guidance is available below.
 Getting Help
 ============
 
-**Join us on Slack**
+**Chat with us**
 
-Visit [slack.libgit2.org](http://slack.libgit2.org/) to sign up, then join
-us in `#libgit2`.  If you prefer IRC, you can also point your client to our
-slack channel once you've registered.
+- via IRC: join [#libgit2](https://webchat.freenode.net/#libgit2) on Freenode
+- via Slack: visit [slack.libgit2.org](http://slack.libgit2.org/) to sign up,
+  then join us in `#libgit2`
 
 **Getting Help**
 
