@@ -206,9 +206,8 @@ void test_checkout_nasty__dot_git_dot(void)
  */
 void test_checkout_nasty__git_tilde1(void)
 {
-#ifdef GIT_WIN32
 	test_checkout_fails("refs/heads/git_tilde1", ".git/foobar");
-#endif
+	test_checkout_fails("refs/heads/git_tilde1", "git~1/foobar");
 }
 
 /* A tree that contains an entry "git~2", when we have forced the short
