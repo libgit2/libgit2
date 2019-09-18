@@ -1609,8 +1609,12 @@ GIT_INLINE(bool) verify_dotgit_ntfs(git_repository *repo, const char *path, size
 	if (!start)
 		return true;
 
-	/* Reject paths like ".git\" */
-	if (path[start] == '\\')
+	/*
+	 * Reject paths that start with Windows-style directory separators
+	 * (".git\") or NTFS alternate streams (".git:") and could be used
+	 * to write to the ".git" directory on Windows platforms.
+	 */
+	if (path[start] == '\\' || path[start] == ':')
 		return false;
 
 	/* Reject paths like '.git ' or '.git.' */
