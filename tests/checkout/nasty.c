@@ -273,6 +273,16 @@ void test_checkout_nasty__dot_git_colon_stuff(void)
 #endif
 }
 
+/* A tree that contains an entry ".git::$INDEX_ALLOCATION" because NTFS
+ * will interpret that as a synonym to ".git", even when mounted via SMB
+ * on macOS.
+ */
+void test_checkout_nasty__dotgit_alternate_data_stream(void)
+{
+	test_checkout_fails("refs/heads/dotgit_alternate_data_stream", ".git/dummy-file");
+	test_checkout_fails("refs/heads/dotgit_alternate_data_stream", ".git::$INDEX_ALLOCATION/dummy-file");
+}
+
 /* Trees that contains entries with a tree ".git" that contain
  * byte sequences:
  * { 0xe2, 0x80, 0x8c }
