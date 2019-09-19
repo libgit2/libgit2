@@ -8,7 +8,9 @@
 #define INCLUDE_git_proxy_h__
 
 #include "common.h"
-#include "transport.h"
+
+#include "cert.h"
+#include "cred.h"
 
 GIT_BEGIN_DECL
 
@@ -67,7 +69,7 @@ typedef struct {
 	 * connection to proceed. Returns 0 to allow the connection
 	 * or a negative value to indicate an error.
 	 */
-        git_transport_certificate_check_cb certificate_check;
+	git_transport_certificate_check_cb certificate_check;
 
 	/**
 	 * Payload to be provided to the credentials and certificate

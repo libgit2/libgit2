@@ -10,6 +10,7 @@
 #include "buffer.h"
 #include "auth.h"
 #include "auth_ntlm.h"
+#include "git2/sys/cred.h"
 
 #ifdef GIT_NTLM
 

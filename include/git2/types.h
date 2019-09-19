@@ -245,67 +245,9 @@ typedef struct git_remote_head git_remote_head;
 typedef struct git_remote_callbacks git_remote_callbacks;
 
 /**
- * Type for messages delivered by the transport.  Return a negative value
- * to cancel the network operation.
- *
- * @param str The message from the transport
- * @param len The length of the message
- * @param payload Payload provided by the caller
- */
-typedef int GIT_CALLBACK(git_transport_message_cb)(const char *str, int len, void *payload);
-
-
-/**
- * Type of host certificate structure that is passed to the check callback
- */
-typedef enum git_cert_t {
-	/**
-	 * No information about the certificate is available. This may
-	 * happen when using curl.
-	 */
-	GIT_CERT_NONE,
-        /**
-         * The `data` argument to the callback will be a pointer to
-         * the DER-encoded data.
-         */
-	GIT_CERT_X509,
-        /**
-         * The `data` argument to the callback will be a pointer to a
-         * `git_cert_hostkey` structure.
-         */
-	GIT_CERT_HOSTKEY_LIBSSH2,
-	/**
-	 * The `data` argument to the callback will be a pointer to a
-	 * `git_strarray` with `name:content` strings containing
-	 * information about the certificate. This is used when using
-	 * curl.
-	 */
-	GIT_CERT_STRARRAY,
-} git_cert_t;
-
-/**
  * Parent type for `git_cert_hostkey` and `git_cert_x509`.
  */
-typedef struct {
-	/**
-	 * Type of certificate. A `GIT_CERT_` value.
-	 */
-	git_cert_t cert_type;
-} git_cert;
-
-/**
- * Callback for the user's custom certificate checks.
- *
- * @param cert The host certificate
- * @param valid Whether the libgit2 checks (OpenSSL or WinHTTP) think
- * this certificate is valid
- * @param host Hostname of the host libgit2 connected to
- * @param payload Payload provided by the caller
- * @return 0 to proceed with the connection, < 0 to fail the connection
- *         or > 0 to indicate that the callback refused to act and that
- *         the existing validity determination should be honored
- */
-typedef int GIT_CALLBACK(git_transport_certificate_check_cb)(git_cert *cert, int valid, const char *host, void *payload);
+typedef struct git_cert git_cert;
 
 /**
  * Opaque structure representing a submodule.

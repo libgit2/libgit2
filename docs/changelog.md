@@ -1,6 +1,14 @@
 v0.28 + 1
 ---------
 
+### Breaking API changes
+
+* The "private" implementation details of the `git_cred` structure have been
+  moved to a dedicated `git2/sys/cred.h` header, to clarify that the underlying
+  structures are only provided for custom transport implementers.
+  The breaking change is that the `username` member of the underlying struct
+  is now hidden, and a new `git_cred_get_username` function has been provided.
+
 ### Breaking CMake configuration changes
 
 * The CMake option to use a system http-parser library, instead of the
