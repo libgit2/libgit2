@@ -58,13 +58,16 @@ int git_buf_try_grow(
 		new_ptr = NULL;
 	} else {
 		new_size = buf->asize;
+		/*
+		 * Grow the allocated buffer by 1.5 to allow
+		 * re-use of memory holes resulting from the
+		 * realloc. If this is still too small, then just
+		 * use the target size.
+		 */
+		if ((new_size = (new_size << 1) - (new_size >> 1)) < target_size)
+			new_size = target_size;
 		new_ptr = buf->ptr;
 	}
-
-	/* grow the buffer size by 1.5, until it's big enough
-	 * to fit our target size */
-	while (new_size < target_size)
-		new_size = (new_size << 1) - (new_size >> 1);
 
 	/* round allocation up to multiple of 8 */
 	new_size = (new_size + 7) & ~7;
