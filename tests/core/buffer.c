@@ -231,9 +231,9 @@ check_buf_append(
 	git_buf_puts(&tgt, data_b);
 	cl_assert(git_buf_oom(&tgt) == 0);
 	cl_assert_equal_s(expected_data, git_buf_cstr(&tgt));
-	cl_assert(tgt.size == expected_size);
+	cl_assert_equal_i(tgt.size, expected_size);
 	if (expected_asize > 0)
-		cl_assert(tgt.asize == expected_asize);
+		cl_assert_equal_i(tgt.asize, expected_asize);
 
 	git_buf_dispose(&tgt);
 }
@@ -308,7 +308,7 @@ void test_core_buffer__5(void)
 					 REP16("x") REP16("o"), 32, 40);
 
 	check_buf_append(test_4096, "", test_4096, 4096, 4104);
-	check_buf_append(test_4096, test_4096, test_8192, 8192, 9240);
+	check_buf_append(test_4096, test_4096, test_8192, 8192, 8200);
 
 	/* check sequences of appends */
 	check_buf_append_abc("a", "b", "c",
@@ -1203,4 +1203,20 @@ void test_core_buffer__dont_grow_borrowed(void)
 	cl_assert_equal_i(strlen(somestring) + 1, buf.size);
 
 	cl_git_fail_with(GIT_EINVALID, git_buf_grow(&buf, 1024));
+}
+
+void test_core_buffer__dont_hit_infinite_loop_when_resizing(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_puts(&buf, "foobar"));
+	/*
+	 * We do not care whether this succeeds or fails, which
+	 * would depend on platform-specific allocation
+	 * semantics. We only want to know that the function
+	 * actually returns.
+	 */
+	(void)git_buf_try_grow(&buf, SIZE_MAX, true);
+
+	git_buf_dispose(&buf);
 }
