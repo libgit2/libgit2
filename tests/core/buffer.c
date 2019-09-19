@@ -1220,3 +1220,23 @@ void test_core_buffer__dont_hit_infinite_loop_when_resizing(void)
 
 	git_buf_dispose(&buf);
 }
+
+void test_core_buffer__avoid_printing_into_oom_buffer(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	/* Emulate OOM situation with a previous allocation */
+	buf.asize = 8;
+	buf.ptr = git_buf__oom;
+
+	/*
+	 * Print the same string again. As the buffer still has
+	 * an `asize` of 8 due to the previous print,
+	 * `ENSURE_SIZE` would not try to reallocate the array at
+	 * all. As it didn't explicitly check for `git_buf__oom`
+	 * in earlier versions, this would've resulted in it
+	 * returning successfully and thus `git_buf_puts` would
+	 * just print into the `git_buf__oom` array.
+	 */
+	cl_git_fail(git_buf_puts(&buf, "foobar"));
+}
