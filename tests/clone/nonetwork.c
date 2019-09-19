@@ -7,8 +7,6 @@
 #include "futils.h"
 #include "repository.h"
 
-#define LIVE_REPO_URL "git://github.com/libgit2/TestGitRepository"
-
 static git_clone_options g_options;
 static git_repository *g_repo;
 static git_reference* g_ref;
