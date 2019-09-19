@@ -6,13 +6,17 @@
 #include "futils.h"
 #include "refs.h"
 
-#define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
-#define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
+#define GH_REPO_URL "http://github.com/libgit2/TestGitRepository"
+#define GH_REPO_SSH_URL "ssh://github.com/libgit2/TestGitRepository"
+#define GH_REPO_SSH_USER_URL "ssh://git@github.com/libgit2/TestGitRepository"
+#define GH_REPO_EMPTY_URL "http://github.com/libgit2/TestEmptyRepository"
+#define GH_REPO_NONEXISTENT_URL "http://github.com/libgit2/non-existent"
 #define BB_REPO_URL "https://libgit3@bitbucket.org/libgit2/testgitrepository.git"
 #define BB_REPO_URL_WITH_PASS "https://libgit3:libgit3@bitbucket.org/libgit2/testgitrepository.git"
 #define BB_REPO_URL_WITH_WRONG_PASS "https://libgit3:wrong@bitbucket.org/libgit2/testgitrepository.git"
+#define AZURE_REPO_SPACES_URL "https://libgit2@dev.azure.com/libgit2/test/_git/spaces%20in%20the%20name"
 
-#define SSH_REPO_URL "ssh://github.com/libgit2/TestGitRepository"
+#define CLONE_PATH "./foo"
 
 static git_repository *g_repo;
 static git_clone_options g_options;
@@ -49,17 +53,12 @@ static int ssl_cert(git_cert *cert, int valid, const char *host, void *payload)
 
 void test_online_clone__initialize(void)
 {
-	git_checkout_options dummy_opts = GIT_CHECKOUT_OPTIONS_INIT;
-	git_fetch_options dummy_fetch = GIT_FETCH_OPTIONS_INIT;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+
+	memcpy(&g_options, &opts, sizeof(g_options));
+	g_options.fetch_opts.callbacks.certificate_check = ssl_cert;
 
 	g_repo = NULL;
-
-	memset(&g_options, 0, sizeof(git_clone_options));
-	g_options.version = GIT_CLONE_OPTIONS_VERSION;
-	g_options.checkout_opts = dummy_opts;
-	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
-	g_options.fetch_opts = dummy_fetch;
-	g_options.fetch_opts.callbacks.certificate_check = ssl_cert;
 
 	_remote_url = cl_getenv("GITTEST_REMOTE_URL");
 	_remote_user = cl_getenv("GITTEST_REMOTE_USER");
@@ -80,11 +79,9 @@ void test_online_clone__initialize(void)
 
 void test_online_clone__cleanup(void)
 {
-	if (g_repo) {
-		git_repository_free(g_repo);
-		g_repo = NULL;
-	}
-	cl_fixture_cleanup("./foo");
+	git_repository_free(g_repo);
+	g_repo = NULL;
+	cl_fixture_cleanup(CLONE_PATH);
 
 	git__free(_remote_url);
 	git__free(_remote_user);
@@ -113,7 +110,7 @@ void test_online_clone__network_full(void)
 {
 	git_remote *origin;
 
-	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options));
 	cl_assert(!git_repository_is_bare(g_repo));
 	cl_git_pass(git_remote_lookup(&origin, g_repo, "origin"));
 
@@ -128,7 +125,7 @@ void test_online_clone__network_bare(void)
 
 	g_options.bare = true;
 
-	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options));
 	cl_assert(git_repository_is_bare(g_repo));
 	cl_git_pass(git_remote_lookup(&origin, g_repo, "origin"));
 
@@ -139,7 +136,7 @@ void test_online_clone__empty_repository(void)
 {
 	git_reference *head;
 
-	cl_git_pass(git_clone(&g_repo, LIVE_EMPTYREPO_URL, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, GH_REPO_EMPTY_URL, CLONE_PATH, &g_options));
 
 	cl_assert_equal_i(true, git_repository_is_empty(g_repo));
 	cl_assert_equal_i(true, git_repository_head_unborn(g_repo));
@@ -179,7 +176,7 @@ void test_online_clone__can_checkout_a_cloned_repo(void)
 	g_options.fetch_opts.callbacks.transfer_progress = &fetch_progress;
 	g_options.fetch_opts.callbacks.payload = &fetch_progress_cb_was_called;
 
-	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options));
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&path)));
@@ -213,17 +210,15 @@ static int remote_mirror_cb(git_remote **out, git_repository *repo,
 void test_online_clone__clone_mirror(void)
 {
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
-	git_reference *head;
-
 	bool fetch_progress_cb_was_called = false;
+	git_reference *head;
 
 	opts.fetch_opts.callbacks.transfer_progress = &fetch_progress;
 	opts.fetch_opts.callbacks.payload = &fetch_progress_cb_was_called;
-
 	opts.bare = true;
 	opts.remote_cb = remote_mirror_cb;
 
-	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo.git", &opts));
+	cl_git_pass(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &opts));
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
@@ -232,10 +227,6 @@ void test_online_clone__clone_mirror(void)
 	cl_assert_equal_i(true, fetch_progress_cb_was_called);
 
 	git_reference_free(head);
-	git_repository_free(g_repo);
-	g_repo = NULL;
-
-	cl_fixture_cleanup("./foo.git");
 }
 
 static int update_tips(const char *refname, const git_oid *a, const git_oid *b, void *payload)
@@ -253,7 +244,7 @@ void test_online_clone__custom_remote_callbacks(void)
 	g_options.fetch_opts.callbacks.update_tips = update_tips;
 	g_options.fetch_opts.callbacks.payload = &callcount;
 
-	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options));
 	cl_assert(callcount > 0);
 }
 
@@ -268,20 +259,20 @@ void test_online_clone__custom_headers(void)
 	g_options.fetch_opts.custom_headers.count = 1;
 
 	g_options.fetch_opts.custom_headers.strings = &empty_header;
-	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+	cl_git_fail(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options));
 
 	g_options.fetch_opts.custom_headers.strings = &unnamed_header;
-	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+	cl_git_fail(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options));
 
 	g_options.fetch_opts.custom_headers.strings = &newlines;
-	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+	cl_git_fail(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options));
 
 	g_options.fetch_opts.custom_headers.strings = &conflict;
-	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+	cl_git_fail(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options));
 
 	/* Finally, we got it right! */
 	g_options.fetch_opts.custom_headers.strings = &ok;
-	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options));
 }
 
 static int cred_failure_cb(
@@ -298,15 +289,8 @@ static int cred_failure_cb(
 
 void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 {
-	git__free(_remote_url);
-	git__free(_remote_user);
-
-	_remote_url = git__strdup("https://github.com/libgit2/non-existent");
-	_remote_user = git__strdup("libgit2test");
-
 	g_options.fetch_opts.callbacks.credentials = cred_failure_cb;
-
-	cl_git_fail_with(-172, git_clone(&g_repo, _remote_url, "./foo", &g_options));
+	cl_git_fail_with(-172, git_clone(&g_repo, GH_REPO_NONEXISTENT_URL, CLONE_PATH, &g_options));
 }
 
 static int cred_count_calls_cb(git_cred **cred, const char *url, const char *user,
@@ -317,7 +301,7 @@ static int cred_count_calls_cb(git_cred **cred, const char *url, const char *use
 	GIT_UNUSED(url); GIT_UNUSED(user); GIT_UNUSED(allowed_types);
 
 	if (allowed_types == GIT_CREDTYPE_USERNAME)
-		return git_cred_username_new(cred, "foo");
+		return git_cred_username_new(cred, CLONE_PATH);
 
 	(*counter)++;
 
@@ -331,16 +315,10 @@ void test_online_clone__cred_callback_called_again_on_auth_failure(void)
 {
 	size_t counter = 0;
 
-	git__free(_remote_url);
-	git__free(_remote_user);
-
-	_remote_url = git__strdup("https://gitlab.com/libgit2/non-existent");
-	_remote_user = git__strdup("libgit2test");
-
 	g_options.fetch_opts.callbacks.credentials = cred_count_calls_cb;
 	g_options.fetch_opts.callbacks.payload = &counter;
 
-	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, _remote_url, "./foo", &g_options));
+	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, GH_REPO_NONEXISTENT_URL, CLONE_PATH, &g_options));
 	cl_assert_equal_i(3, counter);
 }
 
@@ -381,9 +359,7 @@ void test_online_clone__credentials(void)
 		g_options.fetch_opts.callbacks.payload = &user_pass;
 	}
 
-	cl_git_pass(git_clone(&g_repo, _remote_url, "./foo", &g_options));
-	git_repository_free(g_repo); g_repo = NULL;
-	cl_fixture_cleanup("./foo");
+	cl_git_pass(git_clone(&g_repo, _remote_url, CLONE_PATH, &g_options));
 }
 
 void test_online_clone__bitbucket_style(void)
@@ -395,9 +371,7 @@ void test_online_clone__bitbucket_style(void)
 	g_options.fetch_opts.callbacks.credentials = git_cred_userpass;
 	g_options.fetch_opts.callbacks.payload = &user_pass;
 
-	cl_git_pass(git_clone(&g_repo, BB_REPO_URL, "./foo", &g_options));
-	git_repository_free(g_repo); g_repo = NULL;
-	cl_fixture_cleanup("./foo");
+	cl_git_pass(git_clone(&g_repo, BB_REPO_URL, CLONE_PATH, &g_options));
 }
 
 void test_online_clone__bitbucket_uses_creds_in_url(void)
@@ -413,9 +387,7 @@ void test_online_clone__bitbucket_uses_creds_in_url(void)
 	 * Correct user and pass are in the URL; the (incorrect) creds in
 	 * the `git_cred_userpass_payload` should be ignored.
 	 */
-	cl_git_pass(git_clone(&g_repo, BB_REPO_URL_WITH_PASS, "./foo", &g_options));
-	git_repository_free(g_repo); g_repo = NULL;
-	cl_fixture_cleanup("./foo");
+	cl_git_pass(git_clone(&g_repo, BB_REPO_URL_WITH_PASS, CLONE_PATH, &g_options));
 }
 
 void test_online_clone__bitbucket_falls_back_to_specified_creds(void)
@@ -437,9 +409,7 @@ void test_online_clone__bitbucket_falls_back_to_specified_creds(void)
 	 * Incorrect user and pass are in the URL; the (correct) creds in
 	 * the `git_cred_userpass_payload` should be used as a fallback.
 	 */
-	cl_git_pass(git_clone(&g_repo, BB_REPO_URL_WITH_WRONG_PASS, "./foo", &g_options));
-	git_repository_free(g_repo); g_repo = NULL;
-	cl_fixture_cleanup("./foo");
+	cl_git_pass(git_clone(&g_repo, BB_REPO_URL_WITH_WRONG_PASS, CLONE_PATH, &g_options));
 }
 
 static int cancel_at_half(const git_indexer_progress *stats, void *payload)
@@ -454,9 +424,7 @@ static int cancel_at_half(const git_indexer_progress *stats, void *payload)
 void test_online_clone__can_cancel(void)
 {
 	g_options.fetch_opts.callbacks.transfer_progress = cancel_at_half;
-
-	cl_git_fail_with(
-		git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options), 4321);
+	cl_git_fail_with(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options), 4321);
 }
 
 static int cred_cb(git_cred **cred, const char *url, const char *user_from_url,
@@ -502,12 +470,10 @@ void test_online_clone__ssh_auth_methods(void)
 	g_options.fetch_opts.callbacks.certificate_check = NULL;
 
 	with_user = 0;
-	cl_git_fail_with(GIT_EUSER,
-		git_clone(&g_repo, SSH_REPO_URL, "./foo", &g_options));
+	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, GH_REPO_SSH_URL, CLONE_PATH, &g_options));
 
 	with_user = 1;
-	cl_git_fail_with(GIT_EUSER,
-		git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
+	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, GH_REPO_SSH_USER_URL, CLONE_PATH, &g_options));
 }
 
 static int custom_remote_ssh_with_paths(
@@ -554,10 +520,10 @@ void test_online_clone__ssh_with_paths(void)
 	g_options.fetch_opts.callbacks.payload = &arr;
 	g_options.fetch_opts.callbacks.certificate_check = NULL;
 
-	cl_git_fail(git_clone(&g_repo, _remote_url, "./foo", &g_options));
+	cl_git_fail(git_clone(&g_repo, _remote_url, CLONE_PATH, &g_options));
 
 	arr.strings = good_paths;
-	cl_git_pass(git_clone(&g_repo, _remote_url, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, _remote_url, CLONE_PATH, &g_options));
 }
 
 static int cred_foo_bar(git_cred **cred, const char *url, const char *username_from_url,
@@ -576,10 +542,10 @@ void test_online_clone__ssh_cannot_change_username(void)
 #endif
 	g_options.fetch_opts.callbacks.credentials = cred_foo_bar;
 
-	cl_git_fail(git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
+	cl_git_fail(git_clone(&g_repo, GH_REPO_SSH_USER_URL, CLONE_PATH, &g_options));
 }
 
-int ssh_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
+static int ssh_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
 {
 	git_cert_hostkey *key;
 	git_oid expected = {{0}}, actual = {{0}};
@@ -620,7 +586,7 @@ void test_online_clone__ssh_cert(void)
 	if (!_remote_ssh_fingerprint)
 		cl_skip();
 
-	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, _remote_url, "./foo", &g_options));
+	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, _remote_url, CLONE_PATH, &g_options));
 }
 
 static char *read_key_file(const char *path)
@@ -679,7 +645,7 @@ void test_online_clone__ssh_memory_auth(void)
 
 	g_options.fetch_opts.callbacks.credentials = ssh_memory_cred_cb;
 
-	cl_git_pass(git_clone(&g_repo, _remote_url, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, _remote_url, CLONE_PATH, &g_options));
 }
 
 static int fail_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
@@ -696,11 +662,11 @@ void test_online_clone__certificate_invalid(void)
 {
 	g_options.fetch_opts.callbacks.certificate_check = fail_certificate_check;
 
-	cl_git_fail_with(git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options),
+	cl_git_fail_with(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options),
 		GIT_ECERTIFICATE);
 
 #ifdef GIT_SSH
-	cl_git_fail_with(git_clone(&g_repo, "ssh://github.com/libgit2/TestGitRepository", "./foo", &g_options),
+	cl_git_fail_with(git_clone(&g_repo, GH_REPO_SSH_URL, CLONE_PATH, &g_options),
 		GIT_ECERTIFICATE);
 #endif
 }
@@ -719,15 +685,13 @@ static int succeed_certificate_check(git_cert *cert, int valid, const char *host
 void test_online_clone__certificate_valid(void)
 {
 	g_options.fetch_opts.callbacks.certificate_check = succeed_certificate_check;
-
-	cl_git_pass(git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options));
 }
 
 void test_online_clone__start_with_http(void)
 {
 	g_options.fetch_opts.callbacks.certificate_check = succeed_certificate_check;
-
-	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, GH_REPO_URL, CLONE_PATH, &g_options));
 }
 
 static int called_proxy_creds;
@@ -866,6 +830,6 @@ void test_online_clone__proxy_cred_callback_after_failed_url_creds(void)
 
 void test_online_clone__path_whitespace(void)
 {
-	cl_git_pass(git_clone(&g_repo, "https://libgit2@dev.azure.com/libgit2/test/_git/spaces%20in%20the%20name", "./foo", &g_options));
-	cl_assert(git_path_exists("./foo/master.txt"));
+	cl_git_pass(git_clone(&g_repo, AZURE_REPO_SPACES_URL, CLONE_PATH, &g_options));
+	cl_assert(git_path_exists(CLONE_PATH "/master.txt"));
 }
