@@ -128,9 +128,9 @@ static int negotiate_next_token(
 		input_token.length = input_buf.size;
 		input_token_ptr = &input_token;
 	} else if (ctx->gss_context != GSS_C_NO_CONTEXT) {
-		git_error_set(GIT_ERROR_NET, "could not restart authentication");
-		error = -1;
-		goto done;
+		/* If we're given a half-built security context, delete it so auth can continue. */
+		gss_delete_sec_context(&status_minor, &ctx->gss_context, GSS_C_NO_BUFFER);
+		ctx->gss_context = GSS_C_NO_CONTEXT;
 	}
 
 	mech = &negotiate_oid_spnego;
