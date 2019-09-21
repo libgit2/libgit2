@@ -233,15 +233,9 @@ IF (USE_NTLMCLIENT)
 ENDIF()
 ADD_FEATURE_INFO(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
 
-# Optional external dependency: libgssapi
-IF (USE_GSSAPI)
-	FIND_PACKAGE(GSSAPI)
-ENDIF()
-IF (GSSAPI_FOUND)
-	SET(GIT_GSSAPI 1)
-	LIST(APPEND LIBGIT2_LIBS ${GSSAPI_LIBRARIES})
-ENDIF()
-ADD_FEATURE_INFO(SPNEGO GIT_GSSAPI "SPNEGO authentication support")
+# Optional external dependency: GSSAPI
+
+INCLUDE(SelectGSSAPI)
 
 # Optional external dependency: iconv
 IF (USE_ICONV)
