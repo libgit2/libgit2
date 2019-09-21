@@ -56,6 +56,15 @@
 }
 
 {
+	ignore-libssh2-init
+	Memcheck:Leak
+	...
+	fun:gcry_control
+	fun:libssh2_init
+	...
+}
+
+{
 	ignore-libssh2-gcrypt-control-leak
 	Memcheck:Leak
 	...
@@ -101,6 +110,17 @@
 	...
 	fun:gcry_pk_sign
 	obj:*libssh2.so*
+}
+
+{
+	ignore-libssh2-gcrypt-session-handshake
+	Memcheck:Leak
+	...
+	obj:*libgcrypt.so*
+	obj:*libssh2.so*
+	obj:*libssh2.so*
+	fun:libssh2_session_handshake
+	...
 }
 
 {
