@@ -152,7 +152,7 @@ jobs:
       git config user.name 'Documentation Generation'
       git config user.email 'libgit2@users.noreply.github.com'
       git branch gh-pages origin/gh-pages
-      docker run --rm -v $(Build.SourcesDirectory):/src -w /src libgit2/docurium:latest cm doc api.docurium
+      docker run --rm -v $(Build.SourcesDirectory):/home/libgit2/source -w /home/libgit2/source libgit2/docurium:latest cm doc api.docurium
       git checkout gh-pages
       cp -R * '$(Build.BinariesDirectory)'
     displayName: 'Generate Documentation'

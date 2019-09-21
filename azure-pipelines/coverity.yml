@@ -15,12 +15,12 @@ jobs:
         image: xenial
         base: xenial
       volumes: |
-       $(Build.SourcesDirectory):/src
-       $(Build.BinariesDirectory):/build
+       $(Build.SourcesDirectory):/home/libgit2/source
+       $(Build.BinariesDirectory):/home/libgit2/build
       envVars: |
        COVERITY_TOKEN=$(COVERITY_TOKEN)
-      workDir: '/build'
-      containerCommand: '/src/azure-pipelines/coverity-build.sh'
+      workDir: '/home/libgit2/build'
+      containerCommand: '/home/libgit2/source/azure-pipelines/coverity-build.sh'
       detached: false
   - task: Docker@0
     displayName: Publish
@@ -28,11 +28,11 @@ jobs:
       action: 'Run an image'
       imageName: 'libgit2/trusty-openssl:latest'
       volumes: |
-       $(Build.SourcesDirectory):/src
-       $(Build.BinariesDirectory):/build
+       $(Build.SourcesDirectory):/home/libgit2/source
+       $(Build.BinariesDirectory):/home/libgit2/build
       envVars: |
        COVERITY_TOKEN=$(COVERITY_TOKEN)
-      workDir: '/build'
-      containerCommand: '/src/azure-pipelines/coverity-publish.sh'
+      workDir: '/home/libgit2/build'
+      containerCommand: '/home/libgit2/source/azure-pipelines/coverity-publish.sh'
       detached: false
     continueOnError: true

@@ -7,6 +7,7 @@ RUN apt-get update && \
         curl \
         gcc \
         git \
+        gosu \
         libcurl4-openssl-dev \
         libpcre3-dev \
         libssh2-1-dev \
@@ -33,3 +34,8 @@ RUN cd /tmp && \
     ninja install && \
     cd .. && \
     rm -rf mbedtls-2.16.2
+
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod a+x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
