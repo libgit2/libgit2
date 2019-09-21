@@ -86,10 +86,6 @@ IF(MSVC)
 	# This option must match the settings used in your program, in particular if you
 	# are linking statically
 	OPTION(STATIC_CRT		"Link the static CRT libraries"		 		 ON)
-
-	# If you want to embed a copy of libssh2 into libgit2, pass a
-	# path to libssh2
-	OPTION(EMBED_SSH_PATH		"Path to libssh2 to embed (Windows)"			OFF)
 ENDIF()
 
 
