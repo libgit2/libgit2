@@ -70,8 +70,11 @@ int git_buf_try_grow(
 	new_size = (new_size + 7) & ~7;
 
 	if (new_size < buf->size) {
-		if (mark_oom)
+		if (mark_oom) {
+			if (buf->ptr && buf->ptr != git_buf__initbuf)
+				git__free(buf->ptr);
 			buf->ptr = git_buf__oom;
+		}
 
 		git_error_set_oom();
 		return -1;
