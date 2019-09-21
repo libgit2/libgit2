@@ -12,6 +12,7 @@
 #include "git2.h"
 #include "buffer.h"
 #include "auth.h"
+#include "git2/sys/cred.h"
 
 #include <gssapi.h>
 #include <krb5.h>
