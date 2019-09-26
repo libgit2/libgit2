@@ -142,6 +142,26 @@ typedef enum {
 	 * $GIT_WORK_TREE or $GIT_COMMON_DIR is set.
 	 */
 	GIT_REPOSITORY_OPEN_FROM_ENV  = (1 << 4),
+
+	/**
+	 * Bypass lookup for GIT_CONFIG_FILENAME_GLOBAL
+	 */
+	GIT_REPOSITORY_OPEN_NO_GLOBAL_CONFIG = (1 << 5),
+
+	/**
+	 * Bypass lookup for GIT_CONFIG_FILENAME_SYSTEM
+	 */
+	GIT_REPOSITORY_OPEN_NO_SYSTEM_CONFIG = (1 << 6),
+
+	/**
+	 * Bypass lookup for GIT_CONFIG_FILENAME_XDG
+	 */
+	GIT_REPOSITORY_OPEN_NO_XDG_CONFIG = (1 << 7),
+
+	/**
+	 * Bypass lookup for GIT_CONFIG_FILENAME_PROGRAMDATA
+	 */
+	GIT_REPOSITORY_OPEN_NO_PROGRAMDATA_CONFIG = (1 << 8),
 } git_repository_open_flag_t;
 
 /**

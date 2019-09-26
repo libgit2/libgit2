@@ -150,6 +150,8 @@ struct git_repository {
 	unsigned is_bare:1;
 	unsigned is_worktree:1;
 
+	uint32_t open_flags;
+
 	unsigned int lru_counter;
 
 	git_atomic attr_session_key;

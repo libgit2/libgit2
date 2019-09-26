@@ -803,8 +803,13 @@ int git_repository_open_ext(
 	git_repository *repo = NULL;
 	git_config *config = NULL;
 
-	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV)
-		return _git_repository_open_ext_from_env(repo_ptr, start_path);
+	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV) {
+		error = _git_repository_open_ext_from_env(repo_ptr, start_path);
+		if (!error && repo_ptr) {
+			(*repo_ptr)->open_flags |= flags;
+		}
+		return error;
+	}
 
 	if (repo_ptr)
 		*repo_ptr = NULL;
@@ -818,6 +823,7 @@ int git_repository_open_ext(
 	repo = repository_alloc();
 	GIT_ERROR_CHECK_ALLOC(repo);
 
+	repo->open_flags = flags;
 	repo->gitdir = git_buf_detach(&gitdir);
 	GIT_ERROR_CHECK_ALLOC(repo->gitdir);
 
@@ -1016,14 +1022,25 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		git_buf programdata_buf = GIT_BUF_INIT;
 		git_config *config;
 
-		git_config_find_global(&global_buf);
-		git_config_find_xdg(&xdg_buf);
-		git_config_find_system(&system_buf);
-		git_config_find_programdata(&programdata_buf);
+		if (!(repo->open_flags & (uint32_t)GIT_REPOSITORY_OPEN_NO_GLOBAL_CONFIG)) {
+			git_config_find_global(&global_buf);
 
-		/* If there is no global file, open a backend for it anyway */
-		if (git_buf_len(&global_buf) == 0)
-			git_config__global_location(&global_buf);
+			/* If there is no global file, open a backend for it anyway */
+			if (git_buf_len(&global_buf) == 0)
+				git_config__global_location(&global_buf);
+		}
+
+		if (!(repo->open_flags & (uint32_t)GIT_REPOSITORY_OPEN_NO_XDG_CONFIG)) {
+			git_config_find_xdg(&xdg_buf);
+		}
+
+		if (!(repo->open_flags & (uint32_t)GIT_REPOSITORY_OPEN_NO_SYSTEM_CONFIG)) {
+			git_config_find_system(&system_buf);
+		}
+
+		if (!(repo->open_flags & (uint32_t)GIT_REPOSITORY_OPEN_NO_PROGRAMDATA_CONFIG)) {
+			git_config_find_programdata(&programdata_buf);
+		}
 
 		error = load_config(
 			&config, repo,
