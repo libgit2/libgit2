@@ -122,8 +122,8 @@ typedef enum {
 typedef struct {
 	int version;
 
-	/** Flags to control the filtering process */
-	git_blob_filter_flag_t flags;
+	/** Flags to control the filtering process, see `git_blob_filter_flag_t` above */
+	uint32_t flags;
 } git_blob_filter_options;
 
 #define GIT_BLOB_FILTER_OPTIONS_VERSION 1

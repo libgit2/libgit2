@@ -1378,7 +1378,8 @@ typedef enum {
 typedef struct {
 	unsigned int version;
 
-	git_diff_format_email_flags_t flags;
+	/** see `git_diff_format_email_flags_t` above */
+	uint32_t flags;
 
 	/** This patch number */
 	size_t patch_no;
@@ -1435,7 +1436,7 @@ GIT_EXTERN(int) git_diff_commit_as_email(
 	git_commit *commit,
 	size_t patch_no,
 	size_t total_patches,
-	git_diff_format_email_flags_t flags,
+	uint32_t flags,
 	const git_diff_options *diff_opts);
 
 /**

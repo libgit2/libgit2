@@ -127,7 +127,7 @@ typedef struct git_stash_apply_options {
 	unsigned int version;
 
 	/** See `git_stash_apply_flags_t`, above. */
-	git_stash_apply_flags flags;
+	uint32_t flags;
 
 	/** Options to use when writing files to the working directory. */
 	git_checkout_options checkout_options;
