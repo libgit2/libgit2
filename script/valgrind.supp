@@ -116,9 +116,6 @@
 	ignore-libssh2-gcrypt-session-handshake
 	Memcheck:Leak
 	...
-	obj:*libgcrypt.so*
-	obj:*libssh2.so*
-	obj:*libssh2.so*
 	fun:libssh2_session_handshake
 	...
 }
