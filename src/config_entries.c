@@ -180,7 +180,7 @@ int git_config_entries_append(git_config_entries *entries, git_config_entry *ent
 	return error;
 }
 
-int config_entry_get(config_entry_list **out, git_config_entries *entries, const char *key)
+static int config_entry_get(config_entry_list **out, git_config_entries *entries, const char *key)
 {
 	config_entry_list *list;
 
@@ -227,14 +227,14 @@ int git_config_entries_get_unique(git_config_entry **out, git_config_entries *en
 	return 0;
 }
 
-void config_iterator_free(git_config_iterator *iter)
+static void config_iterator_free(git_config_iterator *iter)
 {
 	config_entries_iterator *it = (config_entries_iterator *) iter;
 	git_config_entries_free(it->entries);
 	git__free(it);
 }
 
-int config_iterator_next(
+static int config_iterator_next(
 	git_config_entry **entry,
 	git_config_iterator *iter)
 {
