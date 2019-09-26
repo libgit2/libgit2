@@ -176,3 +176,23 @@ void test_config_stress__foreach_refreshes_snapshot(void)
 	git_config_free(config);
 	git__free(value);
 }
+
+void test_config_stress__huge_section_with_many_values(void)
+{
+	git_config *config;
+
+	/*
+	 * The config file is structured in such a way that is
+	 * has a section header that is approximately 500kb of
+	 * size followed by 40k entries. While the resulting
+	 * configuration file itself is roughly 650kb in size and
+	 * thus considered to be rather small, in the past we'd
+	 * balloon to more than 20GB of memory (20000x500kb)
+	 * while parsing the file. It thus was a trivial way to
+	 * cause an out-of-memory situation and thus cause denial
+	 * of service, e.g. via gitmodules.
+	 */
+	cl_git_pass(git_config_open_ondisk(&config, cl_fixture("config/config-oom")));
+
+	git_config_free(config);
+}
