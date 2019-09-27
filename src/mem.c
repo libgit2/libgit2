@@ -13,7 +13,7 @@ int git_mem_from_fd(git_mem *out, git_file fd, git_off_t begin, size_t len)
 {
 	int error;
 
-	if ((error = p_mmap(&out->map, len, GIT_PROT_READ, GIT_MAP_PRIVATE, fd, begin)) < 0)
+	if ((error = p_mmap(&out->map, len, P_MMAP_PROT_READ, P_MMAP_MAP_PRIVATE, fd, begin)) < 0)
 		return -1;
 
 	out->data = out->map.data;
@@ -27,7 +27,7 @@ int git_mem_from_fd_rw(git_mem *out, git_file fd, git_off_t begin, size_t len)
 {
 	int error;
 
-	if ((error = p_mmap(&out->map, len, GIT_PROT_WRITE, GIT_MAP_SHARED, fd, begin)) < 0)
+	if ((error = p_mmap(&out->map, len, P_MMAP_PROT_WRITE, P_MMAP_MAP_SHARED, fd, begin)) < 0)
 		return -1;
 
 	out->data = out->map.data;

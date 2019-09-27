@@ -9,7 +9,6 @@
 
 #include "vector.h"
 #include "futils.h"
-#include "map.h"
 #include "global.h"
 #include "strmap.h"
 #include "pack.h"

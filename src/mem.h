@@ -10,7 +10,6 @@
 
 #include "common.h"
 
-#include "map.h"
 #include "posix.h"
 
 typedef enum {
@@ -22,7 +21,7 @@ typedef enum {
 typedef struct {
 	void *data;
 	size_t len;
-	git_map map;
+	struct p_mmap map;
 	git_mem_type type;
 } git_mem;
 

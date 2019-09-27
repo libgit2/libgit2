@@ -14,7 +14,6 @@
 
 #include "git2/oid.h"
 
-#include "map.h"
 #include "mwindow.h"
 #include "odb.h"
 #include "offmap.h"

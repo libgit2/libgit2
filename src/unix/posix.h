@@ -11,6 +11,7 @@
 # include "git2/sys/features.h"
 #endif
 
+#include "../posix.h"
 #include <stdio.h>
 #include <dirent.h>
 #include <sys/param.h>

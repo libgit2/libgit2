@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-#include "map.h"
+#include "posix.h"
 #include <errno.h>
 
 #ifndef NO_MMAP
@@ -50,7 +50,7 @@ int git__mmap_alignment(size_t *page_size)
 	return 0;
 }
 
-int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
+int p_mmap(struct p_mmap *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
 	HANDLE fh = (HANDLE)_get_osfhandle(fd);
 	DWORD alignment = get_allocation_granularity();
@@ -61,7 +61,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	git_off_t page_start;
 	git_off_t page_offset;
 
-	GIT_MMAP_VALIDATE(out, len, prot, flags);
+	P_MMAP_VALIDATE(out, len, prot, flags);
 
 	out->data = NULL;
 	out->len = 0;
@@ -73,14 +73,14 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 		return -1;
 	}
 
-	if (prot & GIT_PROT_WRITE)
+	if (prot & P_MMAP_PROT_WRITE)
 		fmap_prot |= PAGE_READWRITE;
-	else if (prot & GIT_PROT_READ)
+	else if (prot & P_MMAP_PROT_READ)
 		fmap_prot |= PAGE_READONLY;
 
-	if (prot & GIT_PROT_WRITE)
+	if (prot & P_MMAP_PROT_WRITE)
 		view_prot |= FILE_MAP_WRITE;
-	if (prot & GIT_PROT_READ)
+	if (prot & P_MMAP_PROT_READ)
 		view_prot |= FILE_MAP_READ;
 
 	page_start = (offset / alignment) * alignment;
@@ -115,7 +115,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	return 0;
 }
 
-int p_munmap(git_map *map)
+int p_munmap(struct p_mmap *map)
 {
 	int error = 0;
 
