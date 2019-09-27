@@ -66,6 +66,18 @@ static void refdb_free_backend(git_refdb *db)
 
 int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
 {
+	GIT_ERROR_CHECK_VERSION(backend, GIT_REFDB_BACKEND_VERSION, "git_refdb_backend");
+
+	if (!backend->exists || !backend->lookup || !backend->iterator ||
+	    !backend->write || !backend->rename || !backend->del ||
+	    !backend->has_log || !backend->ensure_log || !backend->free ||
+	    !backend->reflog_read || !backend->reflog_write ||
+	    !backend->reflog_rename || !backend->reflog_delete ||
+	    (backend->lock && !backend->unlock)) {
+		git_error_set(GIT_ERROR_REFERENCE, "incomplete refdb backend implementation");
+		return GIT_EINVALID;
+	}
+
 	refdb_free_backend(db);
 	db->backend = backend;
 
