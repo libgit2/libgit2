@@ -14,7 +14,6 @@ static char *_remote_url = NULL;
 static char *_remote_user = NULL;
 static char *_remote_pass = NULL;
 
-static char *_remote_ssh_pubkey = NULL;
 static char *_remote_ssh_privkey = NULL;
 static char *_remote_ssh_passphrase = NULL;
 static char *_remote_ssh_fingerprint = NULL;
@@ -66,22 +65,18 @@ static int credentials_cb(git_cred **cred, const char *url, const char *user_fro
 	if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT && _remote_user && _remote_pass)
 		return git_cred_userpass_plaintext_new(cred, _remote_user, _remote_pass);
 
-	if (allowed_types & GIT_CREDTYPE_SSH_KEY && _remote_ssh_pubkey && _remote_ssh_privkey) {
-		return git_cred_ssh_key_new(cred, _remote_user, _remote_ssh_pubkey,
+	if (allowed_types & GIT_CREDTYPE_SSH_KEY && _remote_ssh_privkey) {
+		return git_cred_ssh_key_new(cred, _remote_user, NULL,
 					    _remote_ssh_privkey, _remote_ssh_passphrase);
 	}
 
-	if (allowed_types & GIT_CREDTYPE_SSH_MEMORY && _remote_ssh_pubkey && _remote_ssh_privkey) {
-		git_buf pubkey = GIT_BUF_INIT, privkey = GIT_BUF_INIT;
+	if (allowed_types & GIT_CREDTYPE_SSH_MEMORY && _remote_ssh_privkey) {
+		git_buf privkey = GIT_BUF_INIT;
 		int error;
 
-		cl_git_pass(git_futils_readbuffer(&pubkey, _remote_ssh_pubkey));
 		cl_git_pass(git_futils_readbuffer(&privkey, _remote_ssh_privkey));
-
-		error = git_cred_ssh_key_memory_new(cred, _remote_user, pubkey.ptr,
-				privkey.ptr, _remote_ssh_passphrase);
-
-		git_buf_dispose(&pubkey);
+		error = git_cred_ssh_key_memory_new(cred, _remote_user, NULL,
+						    privkey.ptr, _remote_ssh_passphrase);
 		git_buf_dispose(&privkey);
 
 		return error;
@@ -104,7 +99,6 @@ void test_online_clone_env__initialize(void)
 	_remote_url = cl_getenv("GITTEST_REMOTE_URL");
 	_remote_user = cl_getenv("GITTEST_REMOTE_USER");
 	_remote_pass = cl_getenv("GITTEST_REMOTE_PASS");
-	_remote_ssh_pubkey = cl_getenv("GITTEST_REMOTE_SSH_PUBKEY");
 	_remote_ssh_privkey = cl_getenv("GITTEST_REMOTE_SSH_KEY");
 	_remote_ssh_passphrase = cl_getenv("GITTEST_REMOTE_SSH_PASSPHRASE");
 	_remote_ssh_fingerprint = cl_getenv("GITTEST_REMOTE_SSH_FINGERPRINT");
@@ -119,7 +113,6 @@ void test_online_clone_env__cleanup(void)
 	git__free(_remote_url);
 	git__free(_remote_user);
 	git__free(_remote_pass);
-	git__free(_remote_ssh_pubkey);
 	git__free(_remote_ssh_privkey);
 	git__free(_remote_ssh_passphrase);
 	git__free(_remote_ssh_fingerprint);
