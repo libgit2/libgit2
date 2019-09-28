@@ -88,7 +88,6 @@
 #include "git2/deprecated.h"
 
 #include "posix.h"
-#include "posix_regex.h"
 
 #define DEFAULT_BUFSIZE 65536
 #define FILEIO_BUFSIZE DEFAULT_BUFSIZE

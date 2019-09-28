@@ -7,6 +7,8 @@
 #ifndef INCLUDE_userdiff_h__
 #define INCLUDE_userdiff_h__
 
+#include "regexp.h"
+
 /*
  * This file isolates the built in diff driver function name patterns.
  * Most of these patterns are taken from Git (with permission from the
@@ -29,7 +31,7 @@ typedef struct {
 #define PATTERNS(NAME, FN_PATS, WORD_PAT) \
 	{ NAME, FN_PATS, WORD_PAT WORD_DEFAULT, 0 }
 #define IPATTERN(NAME, FN_PATS, WORD_PAT) \
-	{ NAME, FN_PATS, WORD_PAT WORD_DEFAULT, P_REG_ICASE }
+	{ NAME, FN_PATS, WORD_PAT WORD_DEFAULT, GIT_REGEXP_ICASE }
 
 /*
  * The table of diff driver patterns

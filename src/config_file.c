@@ -18,6 +18,7 @@
 #include "config_entries.h"
 #include "config_parse.h"
 #include "filebuf.h"
+#include "regexp.h"
 #include "strmap.h"
 #include "sysdir.h"
 #include "wildmatch.h"
@@ -61,7 +62,7 @@ typedef struct {
 
 static int config_read(git_config_entries *entries, const git_repository *repo, config_file *file, git_config_level_t level, int depth);
 static int config_read_buffer(git_config_entries *entries, const git_repository *repo, config_file *file, git_config_level_t level, int depth, const char *buf, size_t buflen);
-static int config_write(config_file_backend *cfg, const char *orig_key, const char *key, const p_regex_t *preg, const char *value);
+static int config_write(config_file_backend *cfg, const char *orig_key, const char *key, const git_regexp *preg, const char *value);
 static char *escape_value(const char *ptr);
 
 /**
@@ -350,21 +351,17 @@ static int config_set_multivar(
 	git_config_backend *cfg, const char *name, const char *regexp, const char *value)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
-	char *key;
-	p_regex_t preg;
+	git_regexp preg;
 	int result;
+	char *key;
 
 	assert(regexp);
 
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	result = p_regcomp(&preg, regexp, P_REG_EXTENDED);
-	if (result != 0) {
-		git_error_set_regex(&preg, result);
-		result = -1;
+	if ((result = git_regexp_compile(&preg, regexp, 0)) < 0)
 		goto out;
-	}
 
 	/* If we do have it, set call config_write() and reload */
 	if ((result = config_write(b, name, key, &preg, value)) < 0)
@@ -372,7 +369,7 @@ static int config_set_multivar(
 
 out:
 	git__free(key);
-	p_regfree(&preg);
+	git_regexp_dispose(&preg);
 
 	return result;
 }
@@ -412,7 +409,7 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
 	git_config_entries *entries = NULL;
 	git_config_entry *entry = NULL;
-	p_regex_t preg = { 0 };
+	git_regexp preg = GIT_REGEX_INIT;
 	char *key = NULL;
 	int result;
 
@@ -430,11 +427,8 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 		goto out;
 	}
 
-	if ((result = p_regcomp(&preg, regexp, P_REG_EXTENDED)) != 0) {
-		git_error_set_regex(&preg, result);
-		result = -1;
+	if ((result = git_regexp_compile(&preg, regexp, 0)) < 0)
 		goto out;
-	}
 
 	if ((result = config_write(b, name, key, &preg, NULL)) < 0)
 		goto out;
@@ -442,7 +436,7 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 out:
 	git_config_entries_free(entries);
 	git__free(key);
-	p_regfree(&preg);
+	git_regexp_dispose(&preg);
 	return result;
 }
 
@@ -928,7 +922,7 @@ struct write_data {
 	const char *section;
 	const char *orig_name;
 	const char *name;
-	const p_regex_t *preg;
+	const git_regexp *preg;
 	const char *value;
 };
 
@@ -1033,7 +1027,7 @@ static int write_on_variable(
 
 	/* If we have a regex to match the value, see if it matches */
 	if (has_matched && write_data->preg != NULL)
-		has_matched = (p_regexec(write_data->preg, var_value, 0, NULL, 0) == 0);
+		has_matched = (git_regexp_match(write_data->preg, var_value) == 0);
 
 	/* If this isn't the name/value we're looking for, simply dump the
 	 * existing data back out and continue on.
@@ -1094,7 +1088,8 @@ static int write_on_eof(
 /*
  * This is pretty much the parsing, except we write out anything we don't have
  */
-static int config_write(config_file_backend *cfg, const char *orig_key, const char *key, const p_regex_t *preg, const char* value)
+static int config_write(config_file_backend *cfg, const char *orig_key, const char *key, const git_regexp *preg, const char* value)
+
 {
 	char *orig_section = NULL, *section = NULL, *orig_name, *name, *ldot;
 	git_buf buf = GIT_BUF_INIT, contents = GIT_BUF_INIT;
