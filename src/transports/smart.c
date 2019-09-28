@@ -553,3 +553,31 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	*out = (git_transport *) t;
 	return 0;
 }
+
+size_t git_shallowarray_count(git_shallowarray *array)
+{
+	return git_array_size(array->array);
+}
+
+const git_oid * git_shallowarray_get(git_shallowarray *array, size_t idx)
+{
+	return git_array_get(array->array, idx);
+}
+
+int git_shallowarray_add(git_shallowarray *array, git_oid *oid)
+{
+	size_t oid_index;
+	if (git_array_search(&oid_index, array->array, (git_array_compare_cb)git_oid_cmp, &oid) < 0) {
+		git_oid *tmp = git_array_alloc(array->array);
+		git_oid_cpy(tmp, oid);
+	}
+	return 0;
+}
+
+int git_shallowarray_remove(git_shallowarray *array, git_oid *oid)
+{
+	GIT_UNUSED(array);
+	GIT_UNUSED(oid);
+	/* no git_array_remove… meh */
+	return -1;
+}

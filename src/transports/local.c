@@ -268,15 +268,13 @@ static int local_ls(const git_remote_head ***out, size_t *size, git_transport *t
 static int local_negotiate_fetch(
 	git_transport *transport,
 	git_repository *repo,
-	const git_remote_head * const *refs,
-	size_t count)
+	const git_fetch_negotiation *wants)
 {
 	transport_local *t = (transport_local*)transport;
 	git_remote_head *rhead;
 	unsigned int i;
 
-	GIT_UNUSED(refs);
-	GIT_UNUSED(count);
+	GIT_UNUSED(wants);
 
 	/* Fill in the loids */
 	git_vector_foreach(&t->refs, i, rhead) {
