@@ -381,6 +381,7 @@ static int _git_ssh_authenticate_session(
 		}
 		case GIT_CREDENTIAL_SSH_INTERACTIVE: {
 			void **abstract = libssh2_session_abstract(session);
+			void *old_abstract = *abstract;
 			git_credential_ssh_interactive *c = (git_credential_ssh_interactive *)cred;
 
 			/* ideally, we should be able to set this by calling
@@ -398,6 +399,8 @@ static int _git_ssh_authenticate_session(
 
 			rc = libssh2_userauth_keyboard_interactive(
 				session, c->username, c->prompt_callback);
+
+			*abstract = old_abstract;
 			break;
 		}
 #ifdef GIT_SSH_MEMORY_CREDENTIALS
