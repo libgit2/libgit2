@@ -256,9 +256,6 @@ static git_repository *repository_alloc(void)
 	/* set all the entries in the configmap cache to `unset` */
 	git_repository__configmap_lookup_cache_clear(repo);
 
-	if (git_grafts_new(&repo->grafts) < 0)
-		goto on_error;
-
 	return repo;
 
 on_error:
@@ -581,47 +578,23 @@ out:
 
 static int load_grafts(git_repository *repo)
 {
-	git_buf graft_path = GIT_BUF_INIT;
-	git_buf contents = GIT_BUF_INIT;
-	int error, updated;
-
-	if ((error = git_repository_item_path(&graft_path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0)
-		return error;
-
-	if (git_buf_joinpath(&graft_path, graft_path.ptr, "grafts")) {
-		git_buf_dispose(&graft_path);
-		return error;
-	}
-
-	error = git_futils_readbuffer_updated(&contents, git_buf_cstr(&graft_path),
-					      &repo->graft_checksum, &updated);
-	if (error < 0 || error == GIT_ENOTFOUND || !updated) {
-		if (error == GIT_ENOTFOUND)
-			error = 0;
-		goto cleanup;
-	}
-
-	if ((error = git_grafts_parse(repo->grafts, contents.ptr, contents.size)) < 0)
-		goto cleanup;
-
-cleanup:
-	git_buf_dispose(&contents);
-	git_buf_dispose(&graft_path);
-
-	return error;
-}
-
-static int load_shallow(git_repository *repo)
-{
-	git_oidarray roots;
+	git_buf path = GIT_BUF_INIT;
 	int error;
 
-	/* Graft shallow roots */
-	if ((error = git_repository_shallow_roots(&roots, repo)) < 0)
-		return error;
+	if ((error = git_repository_item_path(&path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
+	    (error = git_buf_joinpath(&path, path.ptr, "grafts")) < 0 ||
+	    (error = git_grafts_from_file(&repo->grafts, path.ptr)) < 0)
+		goto error;
 
-	git_oidarray_free(&roots);
-	return 0;
+	git_buf_clear(&path);
+
+	if ((error = git_buf_joinpath(&path, repo->gitdir, "shallow")) < 0 ||
+	    (error = git_grafts_from_file(&repo->shallow_grafts, path.ptr)) < 0)
+		goto error;
+
+error:
+	git_buf_dispose(&path);
+	return error;
 }
 
 int git_repository_open_bare(
@@ -914,9 +887,6 @@ int git_repository_open_ext(
 		goto cleanup;
 
 	if ((error = load_grafts(repo)) < 0)
-		goto cleanup;
-
-	if ((error = load_shallow(repo)) < 0)
 		goto cleanup;
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
@@ -2956,27 +2926,14 @@ int git_repository_state_cleanup(git_repository *repo)
 int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT, contents = GIT_BUF_INIT;
-	int error, updated = 0;
+	int error;
 
 	assert(out && repo);
 
 	memset(out, 0, sizeof(*out));
 
-	if (!repo->shallow_grafts && (error = git_grafts_new(&repo->shallow_grafts)) < 0)
-		goto error;
-
-	if ((error = git_buf_joinpath(&path, repo->gitdir, "shallow")) < 0 ||
-	    (error = git_futils_readbuffer_updated(&contents, git_buf_cstr(&path),
-						   &repo->shallow_checksum, &updated)) < 0) {
-		if (error == GIT_ENOTFOUND)
-			error = 0;
-		goto error;
-	}
-
-	if (updated && (error = git_grafts_parse(repo->shallow_grafts, contents.ptr, contents.size)) < 0)
-		goto error;
-
-	if ((error = git_grafts_get_oids(out, repo->shallow_grafts)) < 0)
+	if ((error = git_grafts_refresh(repo->shallow_grafts)) < 0 ||
+	    (error = git_grafts_get_oids(out, repo->shallow_grafts)) < 0)
 		goto error;
 
 error:

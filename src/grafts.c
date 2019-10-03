@@ -7,12 +7,17 @@
 
 #include "grafts.h"
 
+#include "futils.h"
 #include "oidarray.h"
 #include "parse.h"
 
 struct git_grafts {
 	/* Map of `git_commit_graft`s */
 	git_oidmap *commits;
+
+	/* File backing the graft. NULL if it's an in-memory graft */
+	char *path;
+	git_oid path_checksum;
 };
 
 int git_grafts_new(git_grafts **out)
@@ -31,10 +36,32 @@ int git_grafts_new(git_grafts **out)
 	return 0;
 }
 
+int git_grafts_from_file(git_grafts **out, const char *path)
+{
+	git_grafts *grafts = NULL;
+	int error;
+
+	if ((error = git_grafts_new(&grafts)) < 0)
+		goto error;
+
+	grafts->path = git__strdup(path);
+	GIT_ERROR_CHECK_ALLOC(grafts->path);
+
+	if ((error = git_grafts_refresh(grafts)) < 0)
+		goto error;
+
+	*out = grafts;
+error:
+	if (error < 0)
+		git_grafts_free(grafts);
+	return error;
+}
+
 void git_grafts_free(git_grafts *grafts)
 {
 	if (!grafts)
 		return;
+	git__free(grafts->path);
 	git_grafts_clear(grafts);
 	git_oidmap_free(grafts->commits);
 	git__free(grafts);
@@ -52,6 +79,34 @@ void git_grafts_clear(git_grafts *grafts)
 	});
 
 	git_oidmap_clear(grafts->commits);
+}
+
+int git_grafts_refresh(git_grafts *grafts)
+{
+	git_buf contents = GIT_BUF_INIT;
+	int error, updated = 0;
+
+	assert(grafts);
+
+	if (!grafts->path)
+		return 0;
+
+	error = git_futils_readbuffer_updated(&contents, grafts->path,
+					      &grafts->path_checksum, &updated);
+	if (error < 0 || error == GIT_ENOTFOUND || !updated) {
+		if (error == GIT_ENOTFOUND) {
+			git_grafts_clear(grafts);
+			error = 0;
+		}
+		goto cleanup;
+	}
+
+	if ((error = git_grafts_parse(grafts, contents.ptr, contents.size)) < 0)
+		goto cleanup;
+
+cleanup:
+	git_buf_dispose(&contents);
+	return error;
 }
 
 int git_grafts_parse(git_grafts *grafts, const char *content, size_t contentlen)

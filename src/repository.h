@@ -155,10 +155,7 @@ struct git_repository {
 	unsigned int lru_counter;
 
 	git_grafts *grafts;
-	git_oid graft_checksum;
-
 	git_grafts *shallow_grafts;
-	git_oid shallow_checksum;
 
 	git_atomic attr_session_key;
 
