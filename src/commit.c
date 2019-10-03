@@ -22,7 +22,7 @@
 #include "object.h"
 #include "array.h"
 #include "oidarray.h"
-#include "graft.h"
+#include "grafts.h"
 
 void git_commit__free(void *_commit)
 {
@@ -504,7 +504,7 @@ int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, unsigned 
 		return error;
 
 	/* Perform necessary grafts */
-	if (git__graft_for_oid(&graft, repo->grafts, git_odb_object_id(odb_obj)) != GIT_ENOTFOUND) {
+	if (git_grafts_get(&graft, repo->grafts, git_odb_object_id(odb_obj)) != GIT_ENOTFOUND) {
 		size_t idx;
 		git_oid *oid;
 		git_array_clear(commit->parent_ids);

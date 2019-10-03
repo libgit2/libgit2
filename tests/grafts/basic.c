@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 
 #include "futils.h"
-#include "graft.h"
+#include "grafts.h"
 
 static git_repository *g_repo;
 
@@ -17,29 +17,28 @@ void test_grafts_basic__cleanup(void)
 
 void test_grafts_basic__graft_add(void)
 {
+	git_array_oid_t parents = GIT_ARRAY_INIT;
 	git_oid oid_src, *oid1;
 	git_commit_graft *graft;
-	git_graftmap *grafts;
-	git_array_oid_t parents = GIT_ARRAY_INIT;
+	git_grafts *grafts;
 
-	cl_git_pass(git_oidmap_new(&grafts));
+	cl_git_pass(git_grafts_new(&grafts));
 
 	cl_assert(oid1 = git_array_alloc(parents));
 	cl_git_pass(git_oid_fromstr(&oid_src, "2f3053cbff8a4ca2f0666de364ddb734a28a31a9"));
 	git_oid_cpy(oid1, &oid_src);
 
 	git_oid_fromstr(&oid_src, "f503807ffa920e407a600cfaee96b7152259acc7");
-	cl_git_pass(git__graft_register(grafts, &oid_src, parents));
+	cl_git_pass(git_grafts_add(grafts, &oid_src, parents));
 	git_array_clear(parents);
 
-	cl_assert_equal_i(1, git_oidmap_size(grafts));
-	cl_git_pass(git__graft_for_oid(&graft, grafts, &oid_src));
+	cl_assert_equal_i(1, git_grafts_size(grafts));
+	cl_git_pass(git_grafts_get(&graft, grafts, &oid_src));
 	cl_assert_equal_s("f503807ffa920e407a600cfaee96b7152259acc7", git_oid_tostr_s(&graft->oid));
 	cl_assert_equal_i(1, git_array_size(graft->parents));
 	cl_assert_equal_s("2f3053cbff8a4ca2f0666de364ddb734a28a31a9", git_oid_tostr_s(git_array_get(graft->parents, 0)));
 
-	git__graft_clear(grafts);
-	git_oidmap_free(grafts);
+	git_grafts_free(grafts);
 }
 
 void test_grafts_basic__grafted_revwalk(void)

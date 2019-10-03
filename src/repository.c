@@ -147,10 +147,7 @@ int git_repository__cleanup(git_repository *repo)
 	git_repository_submodule_cache_clear(repo);
 	git_cache_clear(&repo->objects);
 	git_attr_cache_flush(repo);
-
-	git__graft_clear(repo->grafts);
-	git_oidmap_free(repo->grafts);
-
+	git_grafts_free(repo->grafts);
 	git_array_clear(repo->shallow_oids);
 
 	set_config(repo, NULL);
@@ -259,7 +256,7 @@ static git_repository *repository_alloc(void)
 	/* set all the entries in the configmap cache to `unset` */
 	git_repository__configmap_lookup_cache_clear(repo);
 
-	if (git_oidmap_new(&repo->grafts) < 0)
+	if (git_grafts_new(&repo->grafts) < 0)
 		goto on_error;
 
 	return repo;
@@ -610,9 +607,8 @@ static int load_grafts(git_repository *repo)
 	if (error < 0)
 		goto cleanup;
 
-	if (updated) {
-		git__graft_clear(repo->grafts);
-	}
+	if (updated)
+		git_grafts_clear(repo->grafts);
 
 	dup_contents.ptr = contents.ptr;
 	git_buf_foreach_line(line_start, line_end, line_num, &dup_contents) {
@@ -638,7 +634,7 @@ static int load_grafts(git_repository *repo)
 			}
 		}
 
-		if (git__graft_register(repo->grafts, &graft_oid, parents) < 0) {
+		if (git_grafts_add(repo->grafts, &graft_oid, parents) < 0) {
 			git_error_set(GIT_ERROR_REPOSITORY, "Invalid graft at line %d", line_num);
 			error = -1;
 			goto cleanup;
@@ -668,9 +664,8 @@ static int load_shallow(git_repository *repo)
 	}
 
 	git_array_foreach(roots, i, graft_oid) {
-		if ((error = git__graft_register(repo->grafts, graft_oid, parents)) < 0) {
+		if ((error = git_grafts_add(repo->grafts, graft_oid, parents)) < 0)
 			return error;
-		}
 	}
 	return 0;
 }

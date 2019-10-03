@@ -24,7 +24,7 @@
 #include "attrcache.h"
 #include "submodule.h"
 #include "diff_driver.h"
-#include "graft.h"
+#include "grafts.h"
 #include "oidarray.h"
 
 #define DOT_GIT ".git"
@@ -154,7 +154,7 @@ struct git_repository {
 
 	unsigned int lru_counter;
 
-	git_graftmap *grafts;
+	git_grafts *grafts;
 	git_oid graft_checksum;
 
 	git_oid shallow_checksum;

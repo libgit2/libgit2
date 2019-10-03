@@ -17,13 +17,15 @@ typedef struct {
 	git_array_oid_t parents;
 } git_commit_graft;
 
-/* A special type of git_oidmap with git_commit_grafts as values */
-typedef git_oidmap git_graftmap;
+typedef struct git_grafts git_grafts;
 
-int git__graft_register(git_graftmap *grafts, const git_oid *oid, git_array_oid_t parents);
-int git__graft_unregister(git_graftmap *grafts, const git_oid *oid);
-void git__graft_clear(git_graftmap *grafts);
+int git_grafts_new(git_grafts **out);
+void git_grafts_free(git_grafts *grafts);
+void git_grafts_clear(git_grafts *grafts);
 
-int git__graft_for_oid(git_commit_graft **out, git_graftmap *grafts, const git_oid *oid);
+int git_grafts_add(git_grafts *grafts, const git_oid *oid, git_array_oid_t parents);
+int git_grafts_remove(git_grafts *grafts, const git_oid *oid);
+int git_grafts_get(git_commit_graft **out, git_grafts *grafts, const git_oid *oid);
+size_t git_grafts_size(git_grafts *grafts);
 
 #endif
