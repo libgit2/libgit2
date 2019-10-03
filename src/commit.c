@@ -504,7 +504,8 @@ int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, unsigned 
 		return error;
 
 	/* Perform necessary grafts */
-	if (git_grafts_get(&graft, repo->grafts, git_odb_object_id(odb_obj)) != GIT_ENOTFOUND) {
+	if (git_grafts_get(&graft, repo->grafts, git_odb_object_id(odb_obj)) == 0 ||
+	    git_grafts_get(&graft, repo->shallow_grafts, git_odb_object_id(odb_obj)) == 0) {
 		size_t idx;
 		git_oid *oid;
 		git_array_clear(commit->parent_ids);

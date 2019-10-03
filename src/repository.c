@@ -613,22 +613,15 @@ cleanup:
 
 static int load_shallow(git_repository *repo)
 {
-	git_array_oid_t parents = GIT_ARRAY_INIT;
 	git_oidarray roots;
 	int error;
-	size_t i;
 
 	/* Graft shallow roots */
 	if ((error = git_repository_shallow_roots(&roots, repo)) < 0)
-		goto out;
+		return error;
 
-	for (i = 0; i < roots.count; i++)
-		if ((error = git_grafts_add(repo->grafts, &roots.ids[i], parents)) < 0)
-			goto out;
-
-out:
 	git_oidarray_free(&roots);
-	return error;
+	return 0;
 }
 
 int git_repository_open_bare(
