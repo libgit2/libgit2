@@ -37,4 +37,10 @@ void git_commit__free(void *commit);
 int git_commit__parse(void *commit, git_odb_object *obj);
 int git_commit__parse_raw(void *commit, const char *data, size_t size);
 
+typedef enum {
+	GIT_COMMIT_PARSE_QUICK = (1 << 0), /**< Only parse parents and committer info */
+} git_commit__parse_flags;
+
+int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, unsigned int flags);
+
 #endif

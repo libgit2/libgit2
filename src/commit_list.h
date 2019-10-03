@@ -33,8 +33,8 @@ typedef struct git_commit_list_node {
 			 added:1,
 			 flags : FLAG_BITS;
 
-	unsigned short in_degree;
-	unsigned short out_degree;
+	uint16_t in_degree;
+	uint16_t out_degree;
 
 	struct git_commit_list_node **parents;
 } git_commit_list_node;

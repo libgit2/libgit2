@@ -21,6 +21,13 @@ GIT_INLINE(int) git__is_ssizet(size_t p)
 	return p == (size_t)r;
 }
 
+/** @return true if p fits into the range of a uint16_t */
+GIT_INLINE(int) git__is_uint16(size_t p)
+{
+	uint16_t r = (uint16_t)p;
+	return p == (size_t)r;
+}
+
 /** @return true if p fits into the range of a uint32_t */
 GIT_INLINE(int) git__is_uint32(size_t p)
 {
