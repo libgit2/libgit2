@@ -31,6 +31,7 @@
 #include "annotated_commit.h"
 #include "submodule.h"
 #include "worktree.h"
+#include "parse.h"
 
 #include "strmap.h"
 
@@ -581,14 +582,11 @@ out:
 
 static int load_grafts(git_repository *repo)
 {
+	git_array_oid_t parents = GIT_ARRAY_INIT;
 	git_buf graft_path = GIT_BUF_INIT;
 	git_buf contents = GIT_BUF_INIT;
-	git_buf dup_contents;
-	const char *line_start;
-	const char *line_end;
-	int line_num = 0;
+	git_parse_ctx parser;
 	int error, updated;
-	git_array_oid_t parents = GIT_ARRAY_INIT;
 
 	if ((error = git_repository_item_path(&graft_path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0)
 		return error;
@@ -598,54 +596,52 @@ static int load_grafts(git_repository *repo)
 		return error;
 	}
 
-	error = git_futils_readbuffer_updated(&contents, git_buf_cstr(&graft_path), &repo->graft_checksum, &updated);
-	git_buf_dispose(&graft_path);
+	error = git_futils_readbuffer_updated(&contents, git_buf_cstr(&graft_path),
+					      &repo->graft_checksum, &updated);
+	if (error < 0 || error == GIT_ENOTFOUND || !updated) {
+		if (error == GIT_ENOTFOUND)
+			error = 0;
+		goto cleanup;
+	}
 
-	if (error == GIT_ENOTFOUND || !updated)
-		return 0;
+	git_grafts_clear(repo->grafts);
 
-	if (error < 0)
+	if ((error = git_parse_ctx_init(&parser, contents.ptr, contents.size)) < 0)
 		goto cleanup;
 
-	if (updated)
-		git_grafts_clear(repo->grafts);
+	for (; parser.remain_len; git_parse_advance_line(&parser)) {
+		const char *line_start = parser.line, *line_end = parser.line + parser.line_len;
+		git_oid graft_oid;
 
-	dup_contents.ptr = contents.ptr;
-	git_buf_foreach_line(line_start, line_end, line_num, &dup_contents) {
-		git_oid graft_oid, parent_oid;
-
-		error = git_oid_fromstrn(&graft_oid, line_start, GIT_OID_HEXSZ);
-		if (error < 0) {
-			git_error_set(GIT_ERROR_REPOSITORY, "Invalid OID at line %d", line_num);
-			error = -1;
-		}
+		if (git_oid_fromstrn(&graft_oid, line_start, GIT_OID_HEXSZ) < 0)
+			goto invalid_oid;
 		line_start += GIT_OID_HEXSZ;
 
-		if (*(line_start++) == ' ') {
-			while (git_oid_fromstrn(&parent_oid, line_start, GIT_OID_HEXSZ) == 0) {
-				git_oid *id = git_array_alloc(parents);
+		while (line_start < line_end && *line_start == ' ') {
+			git_oid *id = git_array_alloc(parents);
+			GIT_ERROR_CHECK_ALLOC(id);
 
-				git_oid_cpy(id, &parent_oid);
-				line_start += GIT_OID_HEXSZ;
-				if (line_start >= line_end) {
-					break;
-				}
-				line_start += 1;
-			}
+			if (git_oid_fromstrn(id, ++line_start, GIT_OID_HEXSZ) < 0)
+				goto invalid_oid;
+			line_start += GIT_OID_HEXSZ;
 		}
 
-		if (git_grafts_add(repo->grafts, &graft_oid, parents) < 0) {
-			git_error_set(GIT_ERROR_REPOSITORY, "Invalid graft at line %d", line_num);
-			error = -1;
+		if ((error = git_grafts_add(repo->grafts, &graft_oid, parents)) < 0)
 			goto cleanup;
-		}
+
 		git_array_clear(parents);
-		line_num++;
+		continue;
+
+invalid_oid:
+		git_error_set(GIT_ERROR_REPOSITORY, "invalid OID at line %" PRIuZ, parser.line_num);
+		error = -1;
+		goto cleanup;
 	}
 
 cleanup:
 	git_array_clear(parents);
 	git_buf_dispose(&contents);
+	git_buf_dispose(&graft_path);
 
 	return error;
 }
