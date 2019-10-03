@@ -114,8 +114,14 @@ static int commit_quick_parse(
 		return error;
 	}
 
+	if (!git__is_uint16(git_array_size(commit->parent_ids))) {
+		git__free(commit);
+		git_error_set(GIT_ERROR_INVALID, "commit has more than 2^16 parents");
+		return -1;
+	}
+
 	node->time = commit->committer->when.time;
-	node->out_degree = git_array_size(commit->parent_ids);
+	node->out_degree = (uint16_t) git_array_size(commit->parent_ids);
 	node->parents = alloc_parents(walk, node, node->out_degree);
 	GIT_ERROR_CHECK_ALLOC(node->parents);
 
