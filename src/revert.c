@@ -29,7 +29,7 @@ static int write_revert_head(
 	int error = 0;
 
 	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_REVERT_HEAD_FILE)) >= 0 &&
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_REVERT_FILE_MODE)) >= 0 &&
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_REVERT_FILE_MODE)) >= 0 &&
 		(error = git_filebuf_printf(&file, "%s\n", commit_oidstr)) >= 0)
 		error = git_filebuf_commit(&file);
 
@@ -51,7 +51,7 @@ static int write_merge_msg(
 	int error = 0;
 
 	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_MERGE_MSG_FILE)) < 0 ||
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_REVERT_FILE_MODE)) < 0 ||
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_REVERT_FILE_MODE)) < 0 ||
 		(error = git_filebuf_printf(&file, "Revert \"%s\"\n\nThis reverts commit %s.\n",
 		commit_msgline, commit_oidstr)) < 0)
 		goto cleanup;
