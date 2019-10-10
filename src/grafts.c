@@ -174,6 +174,8 @@ int git_grafts_add(git_grafts *grafts, const git_oid *oid, git_array_oid_t paren
 	}
 	git_oid_cpy(&graft->oid, oid);
 
+	if ((error = git_grafts_remove(grafts, &graft->oid)) < 0 && error != GIT_ENOTFOUND)
+		goto cleanup;
 	if ((error = git_oidmap_set(grafts->commits, &graft->oid, graft)) < 0)
 		goto cleanup;
 
@@ -198,6 +200,7 @@ int git_grafts_remove(git_grafts *grafts, const git_oid *oid)
 	if ((error = git_oidmap_delete(grafts->commits, oid)) < 0)
 		return error;
 
+	git__free(graft->parents.ptr);
 	git__free(graft);
 
 	return 0;
