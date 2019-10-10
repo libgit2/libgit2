@@ -44,18 +44,14 @@ static int verify_last_error(git_filebuf *file)
 static int lock_file(git_filebuf *file, int flags, mode_t mode)
 {
 	if (git_path_exists(file->path_lock) == true) {
-		if (flags & GIT_FILEBUF_FORCE)
-			p_unlink(file->path_lock);
-		else {
-			git_error_clear(); /* actual OS error code just confuses */
-			git_error_set(GIT_ERROR_OS,
-				"failed to lock file '%s' for writing", file->path_lock);
-			return GIT_ELOCKED;
-		}
+		git_error_clear(); /* actual OS error code just confuses */
+		git_error_set(GIT_ERROR_OS,
+			"failed to lock file '%s' for writing", file->path_lock);
+		return GIT_ELOCKED;
 	}
 
 	/* create path to the file buffer is required */
-	if (flags & GIT_FILEBUF_FORCE) {
+	if (flags & GIT_FILEBUF_CREATE_LEADING_DIRS) {
 		/* XXX: Should dirmode here be configurable? Or is 0777 always fine? */
 		file->fd = git_futils_creat_locked_withpath(file->path_lock, 0777, mode);
 	} else {
