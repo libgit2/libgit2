@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "clar_libgit2_alloc.h"
 #include "buffer.h"
 #include "buf_text.h"
 #include "git2/sys/hashsig.h"
@@ -1239,4 +1240,16 @@ void test_core_buffer__avoid_printing_into_oom_buffer(void)
 	 * just print into the `git_buf__oom` array.
 	 */
 	cl_git_fail(git_buf_puts(&buf, "foobar"));
+}
+
+void test_core_buffer__allocation_failure(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_alloc_limit(10);
+
+	cl_git_pass(git_buf_puts(&buf, "foobar"));
+	cl_git_fail(git_buf_puts(&buf, "foobar"));
+
+	cl_alloc_reset();
 }
