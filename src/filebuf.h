@@ -19,7 +19,7 @@
 
 #define GIT_FILEBUF_HASH_CONTENTS		(1 << 0)
 #define GIT_FILEBUF_APPEND				(1 << 2)
-#define GIT_FILEBUF_FORCE				(1 << 3)
+#define GIT_FILEBUF_CREATE_LEADING_DIRS	(1 << 3)
 #define GIT_FILEBUF_TEMPORARY			(1 << 4)
 #define GIT_FILEBUF_DO_NOT_BUFFER		(1 << 5)
 #define GIT_FILEBUF_FSYNC				(1 << 6)

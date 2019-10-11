@@ -804,7 +804,7 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 	if (git_buf_joinpath(&ref_path, basedir, name) < 0)
 		return -1;
 
-	filebuf_flags = GIT_FILEBUF_FORCE;
+	filebuf_flags = GIT_FILEBUF_CREATE_LEADING_DIRS;
 	if (backend->fsync)
 		filebuf_flags |= GIT_FILEBUF_FSYNC;
 
