@@ -334,7 +334,13 @@ int git_transaction_commit(git_transaction *tx)
 				return error;
 		}
 
-		if (node->ref_type != GIT_REFERENCE_INVALID) {
+		if (node->ref_type == GIT_REFERENCE_INVALID) {
+			/* ref was locked but not modified */
+			if ((error = git_refdb_unlock(tx->db, node->payload, false, false, NULL, NULL, NULL)) < 0) {
+				return error;
+			}
+			node->committed = true;
+		} else {
 			if ((error = update_target(tx->db, node)) < 0)
 				return error;
 		}
