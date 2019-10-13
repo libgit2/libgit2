@@ -1654,6 +1654,9 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 	const char *ptr;
 	git_reflog_entry *entry;
 
+	int invalid_character_position;
+	unsigned long valid_character_position;
+
 #define seek_forward(_increase) do { \
 	if (_increase >= buf_size) { \
 		git_error_set(GIT_ERROR_INVALID, "ran out of data while parsing reflog"); \
@@ -1677,13 +1680,13 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < 0) {
 			// cleanup.
 			git_reflog_entry__free(entry);
-			int result = git_oid_find_invalid_charater_position_at_strn(buf, GIT_OID_HEXSZ);
-			if (result < 0) { // error occurred, so, cleanup and leave.
+			invalid_character_position = git_oid_find_invalid_charater_position_at_strn(buf, GIT_OID_HEXSZ);
+			if (invalid_character_position < 0) { // error occurred, so, cleanup and leave.
 				goto fail;
 			}
 			else { // invalid character, seek to position following invalid character and try to get oid again.
-				unsigned long position = 0 + result;
-				seek_forward(position + 1);
+				valid_character_position = 1 + invalid_character_position;
+				seek_forward(valid_character_position);
 			}
 			continue;
 		}
