@@ -1677,7 +1677,7 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < 0) {
 			// cleanup.
 			git_reflog_entry__free(entry);
-			int result = git_oid_fromstrn_invalid_charater_position(buf, GIT_OID_HEXSZ);
+			int result = git_oid_find_invalid_charater_position_at_strn(buf, GIT_OID_HEXSZ);
 			if (result < 0) { // error occurred, so, cleanup and leave.
 				goto fail;
 			}
