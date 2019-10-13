@@ -880,10 +880,10 @@ int git_repository_open_with_opts(
 		GIT_ERROR_CHECK_ALLOC(repo->commondir);
 	}
 
-	if (git_buf_len(&env.workdir_path) > 0) {
-		repo->workdir = git_buf_detach(&env.workdir_path);
-		GIT_ERROR_CHECK_ALLOC(repo->workdir)
-	}
+//	if (git_buf_len(&env.workdir_path) > 0) {
+//		repo->workdir = git_buf_detach(&env.workdir_path);
+//		GIT_ERROR_CHECK_ALLOC(repo->workdir)
+//	}
 
 	if (git_buf_len(&env.configfile_path) > 0) {
 		repo->configfile = git_buf_detach(&env.configfile_path);
