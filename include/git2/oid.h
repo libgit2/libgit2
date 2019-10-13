@@ -75,9 +75,9 @@ GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length);
 * @param length length of the input string
 * @return position of invalid character or an error code ( below zero ).
 * Usage: function() < 0 // error
-* function() + 1 // position following invalid character position.
+* function() + 1 // position following invalid character position
 */
-GIT_EXTERN(int) git_oid_find_invalid_charater_position_at_strn(const char *str, size_t length)
+GIT_EXTERN(int) git_oid_find_invalid_charater_position_at_strn(const char *str, size_t length);
 
 /**
  * Copy an already raw oid into a git_oid structure.
