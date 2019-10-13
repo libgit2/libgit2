@@ -1670,8 +1670,23 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		entry->committer = git__calloc(1, sizeof(git_signature));
 		GIT_ERROR_CHECK_ALLOC(entry->committer);
 
-		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < 0)
-			goto fail;
+		// suppose, that we have message from the last stash.
+		// and it contains invalid characters like \n or \t or \s.
+		// we could do the following.
+		// instead of fail we can restart search
+		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < 0) {
+			// cleanup.
+			git_reflog_entry__free(entry);
+			int result = git_oid_fromstrn_invalid_charater_position(buf, GIT_OID_HEXSZ);
+			if (result < 0) { // error occurred, so, cleanup and leave.
+				goto fail;
+			}
+			else { // invalid character, seek to position following invalid character and try to get oid again.
+				unsigned long position = 0 + result;
+				seek_forward(position + 1);
+			}
+			continue;
+		}
 		seek_forward(GIT_OID_HEXSZ + 1);
 
 		if (git_oid_fromstrn(&entry->oid_cur, buf, GIT_OID_HEXSZ) < 0)
