@@ -21,6 +21,27 @@ static int oid_error_invalid(const char *msg)
 	return -1;
 }
 
+int git_oid_find_invalid_charater_position_at_strn(const char *str, size_t length)
+{
+	size_t p;
+	int v;
+
+	assert(str);
+
+	if (!length)
+		return oid_error_invalid("too short");
+
+	if (length > GIT_OID_HEXSZ)
+		return oid_error_invalid("too long");
+
+	for (p = 0; p < length; p++) {
+		v = git__fromhex(str[p]);
+		if (v < 0) return p;
+	}
+
+	return 0;
+}
+
 int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 {
 	size_t p;
@@ -292,8 +313,8 @@ static trie_node *push_leaf(git_oid_shorten *os, node_index idx, int push_at, co
 
 	if (os->node_count == SHRT_MAX) {
 		os->full = 1;
-        return NULL;
-    }
+		return NULL;
+	}
 
 	node = &os->nodes[idx];
 	node->children[push_at] = -idx_leaf;

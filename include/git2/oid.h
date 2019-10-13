@@ -69,6 +69,17 @@ GIT_EXTERN(int) git_oid_fromstrp(git_oid *out, const char *str);
 GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length);
 
 /**
+* Parse N characters of a hex formatted object.
+*
+* @param str input hex string of at least size `length`
+* @param length length of the input string
+* @return position of invalid character or an error code ( below zero ).
+* Usage: function() < 0 // error
+* function() + 1 // position following invalid character position.
+*/
+GIT_EXTERN(int) git_oid_find_invalid_charater_position_at_strn(const char *str, size_t length)
+
+/**
  * Copy an already raw oid into a git_oid structure.
  *
  * @param out oid structure the result is written into.
