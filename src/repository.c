@@ -446,6 +446,22 @@ static int repo_env_init(
 	const char *start_path,
 	const git_repository_open_options *opts);
 
+static void repo_env_dump(struct repo_env *env)
+{
+	fprintf(stderr, "repo %p {\n"
+			"\tgitdir: %s\n"
+			"\tworkdir: %s\n"
+			"\tgitlink: %s\n"
+			"\tcommondir: %s\n"
+			"}\n",
+			env,
+			git_buf_cstr(&env->gitdir_path),
+			git_buf_cstr(&env->workdir_path),
+			git_buf_cstr(&env->gitlink_path),
+			git_buf_cstr(&env->commondir_path)
+		);
+}
+
 static void repo_env_dispose(struct repo_env *env)
 {
 	git_strarray_free(&env->ceiling_dirs);
@@ -855,9 +871,24 @@ int git_repository_open_with_opts(
 	if (given_opts)
 		memcpy(&opts, given_opts, sizeof(opts));
 
-	if ((error = repo_env_init(&env, start_path, &opts)) < 0 ||
-		(error = repo_env_find(&env, start_path)) < 0 ||
-		!repo_ptr)
+//	if ((error = repo_env_init(&env, start_path, &opts)) < 0 ||
+//		(error = repo_env_find(&env, start_path)) < 0 ||
+//		!repo_ptr)
+//		goto cleanup;
+
+	if ((error = repo_env_init(&env, start_path, &opts)) < 0)
+		goto cleanup;
+
+	fprintf(stderr, "init\n");
+	repo_env_dump(&env);
+
+	if ((error = repo_env_find(&env, start_path)) < 0)
+		goto cleanup;
+
+	fprintf(stderr, "find\n");
+	repo_env_dump(&env);
+
+	if (!repo_ptr)
 		goto cleanup;
 
 	/* The caller really want to open the repository, proceed */
