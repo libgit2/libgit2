@@ -441,6 +441,11 @@ static int still_interesting(git_commit_list *list, int64_t time, int slop)
 	return slop - 1;
 }
 
+static int expected_fail(git_commit *commit) {
+	//TODO: Check commit is in $GIT_DIR/.git/shallow
+	return 1;
+}
+
 static int limit_list(git_commit_list **out, git_revwalk *walk, git_commit_list *commits)
 {
 	int error, slop = SLOP;
@@ -452,8 +457,10 @@ static int limit_list(git_commit_list **out, git_revwalk *walk, git_commit_list 
 	while (list) {
 		git_commit_list_node *commit = git_commit_list_pop(&list);
 
-		if ((error = add_parents_to_list(walk, commit, &list)) < 0)
-			return error;
+		if ((error = add_parents_to_list(walk, commit, &list)) < 0) {
+			if (!expected_fail(commit))
+				return error;
+		}
 
 		if (commit->uninteresting) {
 			mark_parents_uninteresting(commit);
