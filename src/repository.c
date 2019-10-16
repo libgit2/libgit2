@@ -282,12 +282,15 @@ static int load_config_data(git_repository *repo, const git_config *config)
 	return 0;
 }
 
+static int repo_is_worktree(unsigned *out, const git_repository *repo);
+
 static int load_workdir(git_repository *repo, git_config *config, git_buf *parent_path)
 {
 	int error;
 	git_config_entry *ce;
 	git_buf worktree = GIT_BUF_INIT;
 	git_buf path = GIT_BUF_INIT;
+	unsigned int is_worktree;
 
 	if (repo->is_bare)
 		return 0;
@@ -295,6 +298,11 @@ static int load_workdir(git_repository *repo, git_config *config, git_buf *paren
 	if ((error = git_config__lookup_entry(
 			&ce, config, "core.worktree", false)) < 0)
 		return error;
+
+	if ((error = repo_is_worktree(&is_worktree, repo)) < 0)
+		goto cleanup;
+
+	repo->is_worktree = is_worktree;
 
 	if (repo->is_worktree) {
 		char *gitlink = git_worktree__read_link(repo->gitdir, GIT_GITDIR_FILE);
@@ -798,7 +806,6 @@ static int git_repository__open(
 	git_strarray *ceiling_dirs)
 {
 	int error;
-	unsigned is_worktree;
 	git_buf gitdir = GIT_BUF_INIT, workdir = GIT_BUF_INIT,
 		gitlink = GIT_BUF_INIT, commondir = GIT_BUF_INIT;
 	git_repository *repo = NULL;
@@ -828,9 +835,6 @@ static int git_repository__open(
 		GIT_ERROR_CHECK_ALLOC(repo->commondir);
 	}
 
-	if ((error = repo_is_worktree(&is_worktree, repo)) < 0)
-		goto cleanup;
-	repo->is_worktree = is_worktree;
 
 	/*
 	 * We'd like to have the config, but git doesn't particularly
