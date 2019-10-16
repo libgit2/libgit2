@@ -377,6 +377,7 @@ static const parse_header_transition transitions[] = {
 	{ "index "              , STATE_DIFF,       STATE_INDEX,      parse_header_git_index },
 	{ "index "              , STATE_END,        STATE_INDEX,      parse_header_git_index },
 
+	{ "--- "                , STATE_DIFF,       STATE_PATH,       parse_header_git_oldpath },
 	{ "--- "                , STATE_INDEX,      STATE_PATH,       parse_header_git_oldpath },
 	{ "+++ "                , STATE_PATH,       STATE_END,        parse_header_git_newpath },
 	{ "GIT binary patch"    , STATE_INDEX,      STATE_END,        NULL },

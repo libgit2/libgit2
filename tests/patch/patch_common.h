@@ -895,3 +895,13 @@
 	"+++ b/test-file\r\n" \
 	"@@ -0,0 +1 @@\r\n" \
 	"+a contents\r\n"
+
+#define PATCH_NO_EXTENDED_HEADERS \
+	"diff --git a/file b/file\n" \
+	"--- a/file\n" \
+	"+++ b/file\n" \
+	"@@ -1,3 +1,3 @@\n" \
+	" a\n" \
+	"-b\n" \
+	"+bb\n" \
+	" c\n"
