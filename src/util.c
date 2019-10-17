@@ -719,6 +719,10 @@ static int GIT_STDLIB_CALL git__qsort_r_glue_cmp(
 }
 #endif
 
+
+#if !defined(HAVE_QSORT_R_BSD) && \
+	!defined(HAVE_QSORT_R_GNU) && \
+	!defined(HAVE_QSORT_S)
 static void swap(uint8_t *a, uint8_t *b, size_t elsize)
 {
 	char tmp[256];
@@ -744,6 +748,7 @@ static void insertsort(
 		for (j = i; j > base && cmp(j, j - elsize, payload) < 0; j -= elsize)
 			swap(j, j - elsize, elsize);
 }
+#endif
 
 void git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload)

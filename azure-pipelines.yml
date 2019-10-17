@@ -79,7 +79,7 @@ jobs:
         TMPDIR: $(Agent.TempDirectory)
         PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
         CMAKE_GENERATOR: Ninja
-        CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks
+        CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
         SKIP_SSH_TESTS: true
 
 - job: windows_vs_amd64

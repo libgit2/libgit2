@@ -7,15 +7,19 @@
 
 #include "auth_negotiate.h"
 
-#ifdef GIT_GSSAPI
+#if defined(GIT_GSSAPI) || defined(GIT_GSSFRAMEWORK)
 
 #include "git2.h"
 #include "buffer.h"
 #include "auth.h"
 #include "git2/sys/cred.h"
 
+#ifdef GIT_GSSFRAMEWORK
+#import <GSS/GSS.h>
+#elif defined(GIT_GSSAPI)
 #include <gssapi.h>
 #include <krb5.h>
+#endif
 
 static gss_OID_desc negotiate_oid_spnego =
 	{ 6, (void *) "\x2b\x06\x01\x05\x05\x02" };

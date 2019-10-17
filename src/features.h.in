@@ -27,9 +27,9 @@
 
 #cmakedefine GIT_NTLM 1
 #cmakedefine GIT_GSSAPI 1
-#cmakedefine GIT_WINHTTP 1
-#cmakedefine GIT_NTLM 1
+#cmakedefine GIT_GSSFRAMEWORK 1
 
+#cmakedefine GIT_WINHTTP 1
 #cmakedefine GIT_HTTPS 1
 #cmakedefine GIT_OPENSSL 1
 #cmakedefine GIT_SECURE_TRANSPORT 1
