@@ -5,6 +5,7 @@
 #include "config/config_helpers.h"
 #include "futils.h"
 #include "repository.h"
+#include "git2/sys/commit.h"
 
 static git_repository *g_repo = NULL;
 static const char *valid_blob_id = "fa49b077972391ad58037050f2a75f74e3671e92";
@@ -182,4 +183,69 @@ void test_submodule_add__file_exists_in_index(void)
 
 	git_submodule_free(sm);
 	git_buf_dispose(&name);
+}
+
+void test_submodule_add__submodule_clone(void)
+{
+	git_oid tree_id, commit_id;
+	git_signature *sig;
+	git_submodule *sm;
+	git_index *index;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	/* Create the submodule structure, clone into it and finalize */
+	cl_git_pass(git_submodule_add_setup(&sm, g_repo, cl_fixture("testrepo.git"), "testrepo-add", true));
+	cl_git_pass(git_submodule_clone(NULL, sm, NULL));
+	cl_git_pass(git_submodule_add_finalize(sm));
+
+	/* Create the submodule commit */
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_write_tree(&tree_id, index));
+	cl_git_pass(git_signature_now(&sig, "Submoduler", "submoduler@local"));
+	cl_git_pass(git_commit_create_from_ids(&commit_id, g_repo, "HEAD", sig, sig, NULL, "A submodule\n",
+					       &tree_id, 0, NULL));
+
+	assert_submodule_exists(g_repo, "testrepo-add");
+
+	git_signature_free(sig);
+	git_submodule_free(sm);
+	git_index_free(index);
+}
+
+void test_submodule_add__submodule_clone_into_nonempty_dir_succeeds(void)
+{
+	git_submodule *sm;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_pass(p_mkdir("empty_standard_repo/sm", 0777));
+	cl_git_mkfile("empty_standard_repo/sm/foobar", "");
+
+	/* Create the submodule structure, clone into it and finalize */
+	cl_git_pass(git_submodule_add_setup(&sm, g_repo, cl_fixture("testrepo.git"), "sm", true));
+	cl_git_pass(git_submodule_clone(NULL, sm, NULL));
+	cl_git_pass(git_submodule_add_finalize(sm));
+
+	cl_assert(git_path_exists("empty_standard_repo/sm/foobar"));
+
+	assert_submodule_exists(g_repo, "sm");
+
+	git_submodule_free(sm);
+}
+
+void test_submodule_add__submodule_clone_twice_fails(void)
+{
+	git_submodule *sm;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	/* Create the submodule structure, clone into it and finalize */
+	cl_git_pass(git_submodule_add_setup(&sm, g_repo, cl_fixture("testrepo.git"), "sm", true));
+	cl_git_pass(git_submodule_clone(NULL, sm, NULL));
+	cl_git_pass(git_submodule_add_finalize(sm));
+
+	cl_git_fail(git_submodule_clone(NULL, sm, NULL));
+
+	git_submodule_free(sm);
 }
