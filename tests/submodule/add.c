@@ -212,3 +212,40 @@ void test_submodule_add__submodule_clone(void)
 	git_submodule_free(sm);
 	git_index_free(index);
 }
+
+void test_submodule_add__submodule_clone_into_nonempty_dir_succeeds(void)
+{
+	git_submodule *sm;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_pass(p_mkdir("empty_standard_repo/sm", 0777));
+	cl_git_mkfile("empty_standard_repo/sm/foobar", "");
+
+	/* Create the submodule structure, clone into it and finalize */
+	cl_git_pass(git_submodule_add_setup(&sm, g_repo, cl_fixture("testrepo.git"), "sm", true));
+	cl_git_pass(git_submodule_clone(NULL, sm, NULL));
+	cl_git_pass(git_submodule_add_finalize(sm));
+
+	cl_assert(git_path_exists("empty_standard_repo/sm/foobar"));
+
+	assert_submodule_exists(g_repo, "sm");
+
+	git_submodule_free(sm);
+}
+
+void test_submodule_add__submodule_clone_twice_fails(void)
+{
+	git_submodule *sm;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	/* Create the submodule structure, clone into it and finalize */
+	cl_git_pass(git_submodule_add_setup(&sm, g_repo, cl_fixture("testrepo.git"), "sm", true));
+	cl_git_pass(git_submodule_clone(NULL, sm, NULL));
+	cl_git_pass(git_submodule_add_finalize(sm));
+
+	cl_git_fail(git_submodule_clone(NULL, sm, NULL));
+
+	git_submodule_free(sm);
+}
