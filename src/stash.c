@@ -437,36 +437,33 @@ cleanup:
 	return error;
 }
 
-static int prepare_worktree_commit_message(
-	git_buf* msg,
-	const char *user_message)
+static int prepare_worktree_commit_message(git_buf *out, const char *user_message)
 {
 	git_buf buf = GIT_BUF_INIT;
-	int error;
+	int error = 0;
 
-	if ((error = git_buf_set(&buf, git_buf_cstr(msg), git_buf_len(msg))) < 0)
-		return error;
-
-	git_buf_clear(msg);
-
-	if (!user_message)
-		git_buf_printf(msg, "WIP on %s", git_buf_cstr(&buf));
-	else {
+	if (!user_message) {
+		git_buf_printf(&buf, "WIP on %s", git_buf_cstr(out));
+	} else {
 		const char *colon;
 
-		if ((colon = strchr(git_buf_cstr(&buf), ':')) == NULL)
+		if ((colon = strchr(git_buf_cstr(out), ':')) == NULL)
 			goto cleanup;
 
-		git_buf_puts(msg, "On ");
-		git_buf_put(msg, git_buf_cstr(&buf), colon - buf.ptr);
-		git_buf_printf(msg, ": %s\n", user_message);
+		git_buf_puts(&buf, "On ");
+		git_buf_put(&buf, git_buf_cstr(out), colon - out->ptr);
+		git_buf_printf(&buf, ": %s\n", user_message);
 	}
 
-	error = (git_buf_oom(msg) || git_buf_oom(&buf)) ? -1 : 0;
+	if (git_buf_oom(&buf)) {
+		error = -1;
+		goto cleanup;
+	}
+
+	git_buf_swap(out, &buf);
 
 cleanup:
 	git_buf_dispose(&buf);
-
 	return error;
 }
 
