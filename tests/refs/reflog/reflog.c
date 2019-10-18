@@ -87,15 +87,13 @@ void test_refs_reflog_reflog__append_then_read(void)
 	cl_git_pass(git_signature_now(&committer, "foo", "foo@bar"));
 
 	cl_git_pass(git_reflog_read(&reflog, g_repo, new_ref));
-
-	cl_git_fail(git_reflog_append(reflog, &oid, committer, "no inner\nnewline"));
 	cl_git_pass(git_reflog_append(reflog, &oid, committer, NULL));
 	cl_git_pass(git_reflog_append(reflog, &oid, committer, commit_msg "\n"));
 	cl_git_pass(git_reflog_write(reflog));
-	git_reflog_free(reflog);
 
 	assert_appends(committer, &oid);
 
+	git_reflog_free(reflog);
 	git_signature_free(committer);
 }
 

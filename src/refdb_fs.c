@@ -1856,8 +1856,15 @@ static int serialize_reflog_entry(
 	git_buf_rtrim(buf);
 
 	if (msg) {
+		size_t i;
+
 		git_buf_putc(buf, '\t');
 		git_buf_puts(buf, msg);
+
+		for (i = 0; i < buf->size - 2; i++)
+			if (buf->ptr[i] == '\n')
+				buf->ptr[i] = ' ';
+		git_buf_rtrim(buf);
 	}
 
 	git_buf_putc(buf, '\n');
