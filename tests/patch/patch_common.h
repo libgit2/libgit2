@@ -905,3 +905,10 @@
 	"-b\n" \
 	"+bb\n" \
 	" c\n"
+
+#define PATCH_MULTIPLE_OLD_PATHS \
+	"diff --git  \n" \
+	"---  \n" \
+	"+++ \n" \
+	"index 0000..7DDb\n" \
+	"--- \n"
