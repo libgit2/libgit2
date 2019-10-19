@@ -91,10 +91,14 @@ done:
 static int parse_header_path(char **out, git_patch_parse_ctx *ctx)
 {
 	git_buf path = GIT_BUF_INIT;
-	int error = parse_header_path_buf(&path, ctx, header_path_len(ctx));
+	int error;
 
+	if ((error = parse_header_path_buf(&path, ctx, header_path_len(ctx))) < 0)
+		goto out;
 	*out = git_buf_detach(&path);
 
+out:
+	git_buf_dispose(&path);
 	return error;
 }
 
@@ -103,6 +107,12 @@ static int parse_header_git_oldpath(
 {
 	git_buf old_path = GIT_BUF_INIT;
 	int error;
+
+	if (patch->old_path) {
+		error = git_parse_err("patch contains duplicate old path at line %"PRIuZ,
+				      ctx->parse_ctx.line_num);
+		goto out;
+	}
 
 	if ((error = parse_header_path_buf(&old_path, ctx, ctx->parse_ctx.line_len - 1)) <  0)
 		goto out;
@@ -120,9 +130,14 @@ static int parse_header_git_newpath(
 	git_buf new_path = GIT_BUF_INIT;
 	int error;
 
+	if (patch->new_path) {
+		error = git_parse_err("patch contains duplicate new path at line %"PRIuZ,
+				      ctx->parse_ctx.line_num);
+		goto out;
+	}
+
 	if ((error = parse_header_path_buf(&new_path, ctx, ctx->parse_ctx.line_len - 1)) <  0)
 		goto out;
-
 	patch->new_path = git_buf_detach(&new_path);
 
 out:
