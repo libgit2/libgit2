@@ -69,6 +69,10 @@ static int parse_header_path_buf(git_buf *path, git_patch_parse_ctx *ctx, size_t
 {
 	int error;
 
+	if (!path_len)
+		return git_parse_err("patch contains empty path at line %"PRIuZ,
+				     ctx->parse_ctx.line_num);
+
 	if ((error = git_buf_put(path, ctx->parse_ctx.line, path_len)) < 0)
 		goto done;
 

@@ -906,6 +906,12 @@
 	"+bb\n" \
 	" c\n"
 
+#define PATCH_BINARY_FILE_WITH_MISSING_PATHS \
+	"diff --git  \n" \
+	"--- \n" \
+	"+++ \n" \
+	"Binary files "
+
 #define PATCH_MULTIPLE_OLD_PATHS \
 	"diff --git  \n" \
 	"---  \n" \

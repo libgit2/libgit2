@@ -149,6 +149,13 @@ void test_patch_parse__lifetime_of_patch_does_not_depend_on_buffer(void)
 	git_patch_free(patch);
 }
 
+void test_patch_parse__binary_file_with_missing_paths(void)
+{
+	git_patch *patch;
+	cl_git_fail(git_patch_from_buffer(&patch, PATCH_BINARY_FILE_WITH_MISSING_PATHS,
+					  strlen(PATCH_BINARY_FILE_WITH_MISSING_PATHS), NULL));
+}
+
 void test_patch_parse__memory_leak_on_multiple_paths(void)
 {
 	git_patch *patch;
