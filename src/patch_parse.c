@@ -647,6 +647,7 @@ static int parse_hunk_body(
 
 		line->content_len = ctx->parse_ctx.line_len - prefix;
 		line->content = git__strndup(ctx->parse_ctx.line + prefix, line->content_len);
+		GIT_ERROR_CHECK_ALLOC(line->content);
 		line->content_offset = ctx->parse_ctx.content_len - ctx->parse_ctx.remain_len;
 		line->origin = origin;
 		line->num_lines = 1;
@@ -686,8 +687,9 @@ static int parse_hunk_body(
 
 		memset(line, 0x0, sizeof(git_diff_line));
 
-		line->content = git__strdup(ctx->parse_ctx.line);
 		line->content_len = ctx->parse_ctx.line_len;
+		line->content = git__strndup(ctx->parse_ctx.line, line->content_len);
+		GIT_ERROR_CHECK_ALLOC(line->content);
 		line->content_offset = ctx->parse_ctx.content_len - ctx->parse_ctx.remain_len;
 		line->origin = eof_for_origin(last_origin);
 		line->num_lines = 1;

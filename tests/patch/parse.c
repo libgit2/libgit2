@@ -161,3 +161,16 @@ void test_patch_parse__memory_leak_on_multiple_paths(void)
 	git_patch *patch;
 	cl_git_fail(git_patch_from_buffer(&patch, PATCH_MULTIPLE_OLD_PATHS, strlen(PATCH_MULTIPLE_OLD_PATHS), NULL));
 }
+
+void test_patch_parse__truncated_no_newline_at_end_of_file(void)
+{
+	size_t len = strlen(PATCH_APPEND_NO_NL) - strlen("at end of file\n");
+	const git_diff_line *line;
+	git_patch *patch;
+
+	cl_git_pass(git_patch_from_buffer(&patch, PATCH_APPEND_NO_NL, len, NULL));
+	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 4));
+	cl_assert_equal_s(line->content, "\\ No newline ");
+
+	git_patch_free(patch);
+}
