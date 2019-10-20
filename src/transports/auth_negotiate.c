@@ -160,6 +160,12 @@ static int negotiate_next_token(
 		goto done;
 	}
 
+	if (output_token.length == 0) {
+		git_error_set(GIT_ERROR_NET, "GSSAPI did not return token");
+		error = -1;
+		goto done;
+	}
+
 	git_buf_puts(buf, "Negotiate ");
 	git_buf_encode_base64(buf, output_token.value, output_token.length);
 
