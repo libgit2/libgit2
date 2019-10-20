@@ -135,7 +135,7 @@ static int negotiate_next_token(
 
 	mech = &negotiate_oid_spnego;
 
-	if (GSS_ERROR(status_major = gss_init_sec_context(
+	status_major = gss_init_sec_context(
 		&status_minor,
 		GSS_C_NO_CREDENTIAL,
 		&ctx->gss_context,
@@ -148,7 +148,9 @@ static int negotiate_next_token(
 		NULL,
 		&output_token,
 		NULL,
-		NULL))) {
+		NULL);
+
+	if (GSS_ERROR(status_major)) {
 		negotiate_err_set(status_major, status_minor, "negotiate failure");
 		error = -1;
 		goto done;
@@ -220,8 +222,9 @@ static int negotiate_init_context(
 	size_t i;
 
 	/* Query supported mechanisms looking for SPNEGO) */
-	if (GSS_ERROR(status_major =
-		gss_indicate_mechs(&status_minor, &mechanism_list))) {
+	status_major = gss_indicate_mechs(&status_minor, &mechanism_list);
+
+	if (GSS_ERROR(status_major)) {
 		negotiate_err_set(status_major, status_minor,
 			"could not query mechanisms");
 		return -1;
