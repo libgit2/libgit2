@@ -918,3 +918,11 @@
 	"+++ \n" \
 	"index 0000..7DDb\n" \
 	"--- \n"
+
+#define PATCH_INTMAX_NEW_LINES \
+	"diff --git a/file b/file\n" \
+	"--- a/file\n" \
+	"+++ b/file\n" \
+	"@@ -0 +2147483647 @@\n" \
+	"\n" \
+	"  "

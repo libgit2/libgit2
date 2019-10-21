@@ -583,11 +583,17 @@ static int parse_hunk_body(
 		!git_parse_ctx_contains_s(&ctx->parse_ctx, "@@ -");
 		git_parse_advance_line(&ctx->parse_ctx)) {
 
+		int old_lineno, new_lineno, origin, prefix = 1;
 		char c;
-		int origin;
-		int prefix = 1;
-		int old_lineno = hunk->hunk.old_start + (hunk->hunk.old_lines - oldlines);
-		int new_lineno = hunk->hunk.new_start + (hunk->hunk.new_lines - newlines);
+
+		if (git__add_int_overflow(&old_lineno, hunk->hunk.old_start, hunk->hunk.old_lines) ||
+		    git__sub_int_overflow(&old_lineno, old_lineno, oldlines) ||
+		    git__add_int_overflow(&new_lineno, hunk->hunk.new_start, hunk->hunk.new_lines) ||
+		    git__sub_int_overflow(&new_lineno, new_lineno, newlines)) {
+			error = git_parse_err("unrepresentable line count at line %"PRIuZ,
+					      ctx->parse_ctx.line_num);
+			goto done;
+		}
 
 		if (ctx->parse_ctx.line_len == 0 || ctx->parse_ctx.line[ctx->parse_ctx.line_len - 1] != '\n') {
 			error = git_parse_err("invalid patch instruction at line %"PRIuZ,

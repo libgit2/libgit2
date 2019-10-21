@@ -174,3 +174,10 @@ void test_patch_parse__truncated_no_newline_at_end_of_file(void)
 
 	git_patch_free(patch);
 }
+
+void test_patch_parse__line_number_overflow(void)
+{
+	git_patch *patch;
+	cl_git_fail(git_patch_from_buffer(&patch, PATCH_INTMAX_NEW_LINES, strlen(PATCH_INTMAX_NEW_LINES), NULL));
+	git_patch_free(patch);
+}
