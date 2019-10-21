@@ -105,7 +105,7 @@ static int negotiate_next_token(
 
 	if (GSS_ERROR(status_major)) {
 		negotiate_err_set(status_major, status_minor,
-			"Could not parse principal");
+			"could not parse principal");
 		error = -1;
 		goto done;
 	}
