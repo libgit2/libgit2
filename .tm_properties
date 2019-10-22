@@ -1,0 +1,17 @@
+# Show full path to file from project root
+windowTitle = '${TM_FILEPATH:?${TM_FILEPATH/${CWD}.//}:$TM_DISPLAYNAME}$windowTitleProject$windowTitleSCM'
+
+excludeInFolderSearch={$excludeInFolderSearch,deps,build,git-testsuite}
+excludeInFileChooser={$excludeInFileChooser,build}
+
+[source.c]
+softTabs=false
+tabWidth=8
+
+[text.html.markdown]
+softTabs=true
+tabWidth=4
+
+[source.cmake]
+softTabs=false
+tabWidth=8
