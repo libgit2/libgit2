@@ -371,7 +371,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 				} else if (pkt_type == GIT_PKT_NAK) {
 					continue;
 				} else {
-					git_error_set(GIT_ERROR_NET, "Unexpected pkt type");
+					git_error_set(GIT_ERROR_NET, "unexpected pkt type");
 					error = -1;
 					goto on_error;
 				}
@@ -439,7 +439,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			return error;
 
 		if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
-			git_error_set(GIT_ERROR_NET, "Unexpected pkt type");
+			git_error_set(GIT_ERROR_NET, "unexpected pkt type");
 			return -1;
 		}
 	} else {
@@ -460,7 +460,7 @@ static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, 
 
 	do {
 		if (t->cancelled.val) {
-			git_error_set(GIT_ERROR_NET, "The fetch was cancelled by the user");
+			git_error_set(GIT_ERROR_NET, "the fetch was cancelled by the user");
 			return GIT_EUSER;
 		}
 
@@ -831,7 +831,7 @@ static int parse_report(transport_smart *transport, git_push *push)
 			if (data_pkt_buf.size > 0) {
 				/* If there was data remaining in the pack data buffer,
 				 * then the server sent a partial pkt-line */
-				git_error_set(GIT_ERROR_NET, "Incomplete pack data pkt-line");
+				git_error_set(GIT_ERROR_NET, "incomplete pack data pkt-line");
 				error = GIT_ERROR;
 			}
 			goto done;
