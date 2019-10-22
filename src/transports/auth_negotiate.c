@@ -75,6 +75,22 @@ static int negotiate_set_challenge(
 	return 0;
 }
 
+static void negotiate_context_dispose(http_auth_negotiate_context *ctx)
+{
+	OM_uint32 status_minor;
+
+	if (ctx->gss_context != GSS_C_NO_CONTEXT) {
+		gss_delete_sec_context(
+		    &status_minor, &ctx->gss_context, GSS_C_NO_BUFFER);
+		ctx->gss_context = GSS_C_NO_CONTEXT;
+	}
+
+	git_buf_dispose(&ctx->target);
+
+	git__free(ctx->challenge);
+	ctx->challenge = NULL;
+}
+
 static int negotiate_next_token(
 	git_buf *buf,
 	git_http_auth_context *c,
@@ -128,9 +144,7 @@ static int negotiate_next_token(
 		input_token.length = input_buf.size;
 		input_token_ptr = &input_token;
 	} else if (ctx->gss_context != GSS_C_NO_CONTEXT) {
-		/* If we're given a half-built security context, delete it so auth can continue. */
-		gss_delete_sec_context(&status_minor, &ctx->gss_context, GSS_C_NO_BUFFER);
-		ctx->gss_context = GSS_C_NO_CONTEXT;
+		negotiate_context_dispose(ctx);
 	}
 
 	mech = &negotiate_oid_spnego;
@@ -158,6 +172,7 @@ static int negotiate_next_token(
 
 	/* This message merely told us auth was complete; we do not respond. */
 	if (status_major == GSS_S_COMPLETE) {
+		negotiate_context_dispose(ctx);
 		ctx->complete = 1;
 		goto done;
 	}
@@ -193,17 +208,8 @@ static int negotiate_is_complete(git_http_auth_context *c)
 static void negotiate_context_free(git_http_auth_context *c)
 {
 	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
-	OM_uint32 status_minor;
 
-	if (ctx->gss_context != GSS_C_NO_CONTEXT) {
-		gss_delete_sec_context(
-			&status_minor, &ctx->gss_context, GSS_C_NO_BUFFER);
-		ctx->gss_context = GSS_C_NO_CONTEXT;
-	}
-
-	git_buf_dispose(&ctx->target);
-
-	git__free(ctx->challenge);
+	negotiate_context_dispose(ctx);
 
 	ctx->configured = 0;
 	ctx->complete = 0;
