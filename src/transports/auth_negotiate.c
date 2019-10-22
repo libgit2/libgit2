@@ -128,11 +128,13 @@ static int negotiate_next_token(
 
 	challenge_len = ctx->challenge ? strlen(ctx->challenge) : 0;
 
-	if (challenge_len < 9) {
-		git_error_set(GIT_ERROR_NET, "no negotiate challenge sent from server");
+	if (challenge_len < 9 || memcmp(ctx->challenge, "Negotiate", 9) != 0) {
+		git_error_set(GIT_ERROR_NET, "server did not request negotiate");
 		error = -1;
 		goto done;
-	} else if (challenge_len > 9) {
+	}
+
+	if (challenge_len > 9) {
 		if (git_buf_decode_base64(&input_buf,
 				ctx->challenge + 10, challenge_len - 10) < 0) {
 			git_error_set(GIT_ERROR_NET, "invalid negotiate challenge from server");
