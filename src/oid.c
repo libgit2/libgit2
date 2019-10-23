@@ -21,6 +21,9 @@ static int oid_error_invalid(const char *msg)
 	return -1;
 }
 
+// check that we return correct type as error AND position.
+// maybe it is better to return position as -1, but we can't do it :(
+// also we need to update tests.
 int git_oid_find_invalid_charater_position_at_strn(const char *str, size_t length)
 {
 	size_t p;
