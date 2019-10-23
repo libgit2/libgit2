@@ -1649,7 +1649,154 @@ static int reflog_alloc(git_reflog **reflog, const char *name)
 	return 0;
 }
 
-static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
+// struct git_reflog_entry {
+// 	git_oid oid_old;
+// 	git_oid oid_cur;
+
+// 	git_signature *committer;
+
+// 	char *msg;
+// };
+
+typedef enum git_reflog_component {
+	git_reflog_component_init, // init entry.
+	git_reflog_component_oid_old, // length > 0 && length <= OIDSIZE (20) && is_hex(character)
+	git_reflog_component_oid_cur, // length > 0 && length <= OIDSIZE (20) && is_hex(character)
+	git_reflog_component_commiter, // length > 0 && contains(name) && contains(email) && contains(time)
+	git_reflog_component_msg, // length >= 0 && last_at_('\n')
+	git_reflog_component_finalize, // finalize. Put entry into array.
+} git_reflog_component;
+
+static int reflog_parse_new(git_reflog *log, const char *buf, size_t buf_size) {
+	const char *ptr;
+	git_reflog_entry *entry;
+
+	int invalid_character_position;
+	unsigned long valid_character_position;
+	git_reflog_component component;
+
+	int error_occurred = 0;
+
+
+#define seek_forward_new(_increase) do { \
+	if (_increase >= buf_size) { \
+		git_error_set(GIT_ERROR_INVALID, "ran out of data while parsing reflog"); \
+		goto fail; \
+	} \
+	buf += _increase; \
+	buf_size -= _increase; \
+	} while (0)
+
+	component = git_reflog_component_init;
+
+	while(buf_size > GIT_REFLOG_SIZE_MIN) {
+		switch (component) {
+			case git_reflog_component_init: {
+				entry = git__calloc(1, sizeof(git_reflog_entry));
+				GIT_ERROR_CHECK_ALLOC(entry);
+
+				entry->committer = git__calloc(1, sizeof(git_signature));
+				GIT_ERROR_CHECK_ALLOC(entry->committer);
+				component = git_reflog_component_oid_old;
+				break;
+			}
+			case git_reflog_component_oid_old: {
+				if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < 0) {
+					// error occurred.
+					// we should reset cycle.
+					// and also we don't need to change component.
+					// cleanup.
+					invalid_character_position = git_oid_find_invalid_charater_position_at_strn(buf, GIT_OID_HEXSZ);
+					if (invalid_character_position < 0) { // error occurred, so, cleanup and leave.
+						error_occurred = -1;
+					}
+					else { // invalid character, seek to position following invalid character and try to get oid again.
+						git_reflog_entry__free(entry);
+						valid_character_position = 1 + invalid_character_position;
+						seek_forward_new(valid_character_position);
+						component = git_reflog_component_init;
+					}
+				}
+				else {
+					seek_forward_new(GIT_OID_HEXSZ + 1);
+					component = git_reflog_component_oid_cur;
+				}
+				break;
+			}
+			case git_reflog_component_oid_cur: {
+				if (git_oid_fromstrn(&entry->oid_cur, buf, GIT_OID_HEXSZ) < 0) {
+					// error occurred.
+					// we should reset cycle.
+					// and also we don't need to change component.
+					error_occurred = -1;
+					// invalid_character_position = git_oid_find_invalid_charater_position_at_strn(buf, GIT_OID_HEXSZ);
+					// if (invalid_character_position < 0) { // error occurred, so, cleanup and leave.
+					// 	error_occurred = -1;
+					// }
+					// else { // invalid character, seek to position following invalid character and try to get oid again.
+					// 	valid_character_position = 1 + invalid_character_position;
+					// 	seek_forward_new(valid_character_position);
+					// }
+				}
+				else {
+					seek_forward_new(GIT_OID_HEXSZ + 1);
+					component = git_reflog_component_commiter;
+				}
+				break;
+			}
+			case git_reflog_component_commiter: {
+				ptr = buf;
+				/* Seek forward to the end of the signature. */
+				while (*buf && *buf != '\t' && *buf != '\n')
+					seek_forward_new(1);
+				if (git_signature__parse(entry->committer, &ptr, buf + 1, NULL, *buf) < 0) {
+					error_occurred = -1;
+				}
+				else {
+					component = git_reflog_component_msg;
+				}
+				break;
+			}
+			case git_reflog_component_msg: {
+				if (*buf == '\t') {
+					/* We got a message. Read everything till we reach LF. */
+					seek_forward_new(1);
+					ptr = buf;
+
+					while (*buf && *buf != '\n') seek_forward_new(1);
+
+					entry->msg = git__strndup(ptr, buf - ptr);
+					GIT_ERROR_CHECK_ALLOC(entry->msg);
+				} else
+					entry->msg = NULL;
+				while (*buf && *buf == '\n' && buf_size > 1) seek_forward_new(1);
+				component = git_reflog_component_finalize;
+				break;
+			}
+			case git_reflog_component_finalize: {
+				if (git_vector_insert(&log->entries, entry) < 0) {
+					error_occurred = -1;
+				}
+				else {
+					component = git_reflog_component_init;
+				}
+				break;
+			}
+		}
+		if (error_occurred < 0) {
+			break;
+		}
+	}
+#undef seek_forward_new
+fail:
+	if (error_occurred == 0) {
+		return 0;
+	}
+	git_reflog_entry__free(entry);
+	return -1;
+}
+
+static int reflog_parse_old(git_reflog *log, const char *buf, size_t buf_size)
 {
 	const char *ptr;
 	git_reflog_entry *entry;
@@ -1733,6 +1880,10 @@ fail:
 	git_reflog_entry__free(entry);
 
 	return -1;
+}
+
+static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size) {
+	return reflog_parse_new(log, buf, buf_size);
 }
 
 static int create_new_reflog_file(const char *filepath)
