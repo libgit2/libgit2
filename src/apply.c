@@ -845,11 +845,15 @@ int git_apply(
 	    (error = git_reader_for_index(&post_reader, repo, postimage)) < 0)
 		goto done;
 
-	if ((error = git_repository_index(&index, repo)) < 0 ||
-	    (error = git_indexwriter_init(&indexwriter, index)) < 0)
-		goto done;
+	if (!(opts.flags & GIT_APPLY_CHECK))
+		if ((error = git_repository_index(&index, repo)) < 0 ||
+		    (error = git_indexwriter_init(&indexwriter, index)) < 0)
+			goto done;
 
 	if ((error = apply_deltas(repo, pre_reader, preimage, post_reader, postimage, diff, &opts)) < 0)
+		goto done;
+
+	if ((opts.flags & GIT_APPLY_CHECK))
 		goto done;
 
 	switch (location) {

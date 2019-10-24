@@ -53,6 +53,15 @@ typedef int GIT_CALLBACK(git_apply_hunk_cb)(
 	const git_diff_hunk *hunk,
 	void *payload);
 
+/** Flags controlling the behavior of git_apply */
+typedef enum {
+	/**
+	 * Don't actually make changes, just test that the patch applies.
+	 * This is the equivalent of `git apply --check`.
+	 */
+	GIT_APPLY_CHECK = (1 << 0),
+} git_apply_flags_t;
+
 /**
  * Apply options structure
  *
@@ -72,6 +81,9 @@ typedef struct {
 
 	/** Payload passed to both delta_cb & hunk_cb. */
 	void *payload;
+
+	/** Bitmask of git_apply_flags_t */
+	unsigned int flags;
 } git_apply_options;
 
 #define GIT_APPLY_OPTIONS_VERSION 1
