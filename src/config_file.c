@@ -9,22 +9,16 @@
 
 #include "git2/config.h"
 #include "git2/sys/config.h"
-#include "git2/types.h"
 
 #include "array.h"
-#include "buf_text.h"
 #include "buffer.h"
 #include "config_backend.h"
 #include "config_entries.h"
 #include "config_parse.h"
 #include "filebuf.h"
 #include "regexp.h"
-#include "strmap.h"
 #include "sysdir.h"
 #include "wildmatch.h"
-
-#include <ctype.h>
-#include <sys/types.h>
 
 /* Max depth for [include] directives */
 #define MAX_INCLUDE_DEPTH 10
