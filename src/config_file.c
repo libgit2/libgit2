@@ -250,17 +250,19 @@ static int config_file_iterator(
 	struct git_config_backend *backend)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(backend, config_file_backend, parent);
-	git_config_entries *entries = NULL;
+	git_config_entries *dupped = NULL, *entries = NULL;
 	int error;
 
 	if ((error = config_file_refresh(backend)) < 0 ||
-	    (error = git_config_entries_dup(&entries, b->entries)) < 0 ||
-	    (error = git_config_entries_iterator_new(iter, entries)) < 0)
+	    (error = config_file_entries_take(&entries, b)) < 0 ||
+	    (error = git_config_entries_dup(&dupped, entries)) < 0 ||
+	    (error = git_config_entries_iterator_new(iter, dupped)) < 0)
 		goto out;
 
 out:
 	/* Let iterator delete duplicated entries when it's done */
 	git_config_entries_free(entries);
+	git_config_entries_free(dupped);
 	return error;
 }
 
