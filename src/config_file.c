@@ -64,21 +64,21 @@ static char *escape_value(const char *ptr);
  * refcount. This is its own function to make sure we use the mutex to
  * avoid the map pointer from changing under us.
  */
-static git_config_entries *config_file_entries_take(config_file_backend *b)
+static int config_file_entries_take(git_config_entries **out, config_file_backend *b)
 {
-	git_config_entries *entries;
+	int error;
 
-	if (git_mutex_lock(&b->values_mutex) < 0) {
-	    git_error_set(GIT_ERROR_OS, "failed to lock config backend");
-	    return NULL;
+	if ((error = git_mutex_lock(&b->values_mutex)) < 0) {
+		git_error_set(GIT_ERROR_OS, "failed to lock config backend");
+		return error;
 	}
 
-	entries = b->entries;
-	git_config_entries_incref(entries);
+	git_config_entries_incref(b->entries);
+	*out = b->entries;
 
 	git_mutex_unlock(&b->values_mutex);
 
-	return entries;
+	return 0;
 }
 
 static void config_file_clear(config_file *file)
@@ -280,8 +280,8 @@ static int config_file_set(git_config_backend *cfg, const char *name, const char
 	if ((error = git_config__normalize_name(name, &key)) < 0)
 		return error;
 
-	if ((entries = config_file_entries_take(b)) == NULL)
-		return -1;
+	if ((error = config_file_entries_take(&entries, b)) < 0)
+		return error;
 
 	/* Check whether we'd be modifying an included or multivar key */
 	if ((error = git_config_entries_get_unique(&existing, entries, key)) < 0) {
@@ -331,8 +331,8 @@ static int config_file_get(git_config_backend *cfg, const char *key, git_config_
 	if (!h->parent.readonly && ((error = config_file_refresh(cfg)) < 0))
 		return error;
 
-	if ((entries = config_file_entries_take(h)) == NULL)
-		return -1;
+	if ((error = config_file_entries_take(&entries, h)) < 0)
+		return error;
 
 	if ((error = (git_config_entries_get(&entry, entries, key))) < 0) {
 		git_config_entries_free(entries);
@@ -384,7 +384,7 @@ static int config_file_delete(git_config_backend *cfg, const char *name)
 	if ((error = git_config__normalize_name(name, &key)) < 0)
 		goto out;
 
-	if ((entries = config_file_entries_take(b)) == NULL)
+	if ((error = config_file_entries_take(&entries, b)) < 0)
 		goto out;
 
 	/* Check whether we'd be modifying an included or multivar key */
@@ -415,10 +415,8 @@ static int config_file_delete_multivar(git_config_backend *cfg, const char *name
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		goto out;
 
-	if ((entries = config_file_entries_take(b)) == NULL) {
-		result = -1;
+	if ((result = config_file_entries_take(&entries, b)) < 0)
 		goto out;
-	}
 
 	if ((result = git_config_entries_get(&entry, entries, key)) < 0) {
 		if (result == GIT_ENOTFOUND)
