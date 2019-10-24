@@ -878,7 +878,8 @@ GIT_EXTERN(int) git_repository_is_shallow(git_repository *repo);
 /**
  * Determine the shallow roots of the repository
  *
- * This oidarray is owned by the library. Do not free it.
+ * The resulting OID array needs to be free'd by calling
+ * `git_oidarray_free`.
  *
  * @param out An array of shallow oids.
  * @param repo The repository

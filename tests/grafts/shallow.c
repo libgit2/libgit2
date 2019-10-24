@@ -42,38 +42,41 @@ void test_grafts_shallow__clears_errors(void)
 
 void test_grafts_shallow__shallow_oids(void)
 {
-	git_oidarray oids, oids2;
+	git_oidarray oids;
 	g_repo = cl_git_sandbox_init("shallow.git");
 
 	cl_git_pass(git_repository_shallow_roots(&oids, g_repo));
 	cl_assert_equal_i(1, oids.count);
 	cl_assert_equal_oid(&g_shallow_oid, &oids.ids[0]);
 
-	cl_git_pass(git_repository_shallow_roots(&oids2, g_repo));
-	cl_assert_equal_p(oids.ids, oids2.ids);
+	git_oidarray_free(&oids);
 }
 
 void test_grafts_shallow__cache_clearing(void)
 {
-	git_oidarray oids, oids2;
+	git_oidarray oids;
 	git_oid tmp_oid;
 
-	git_oid_fromstr(&tmp_oid, "0000000000000000000000000000000000000000");
+	cl_git_pass(git_oid_fromstr(&tmp_oid, "0000000000000000000000000000000000000000"));
 	g_repo = cl_git_sandbox_init("shallow.git");
 
 	cl_git_pass(git_repository_shallow_roots(&oids, g_repo));
 	cl_assert_equal_i(1, oids.count);
 	cl_assert_equal_oid(&g_shallow_oid, &oids.ids[0]);
+	git_oidarray_free(&oids);
 
 	cl_git_mkfile("shallow.git/shallow",
 		"be3563ae3f795b2b4353bcce3a527ad0a4f7f644\n"
 		"0000000000000000000000000000000000000000\n"
 	);
 
-	cl_git_pass(git_repository_shallow_roots(&oids2, g_repo));
-	cl_assert_equal_i(2, oids2.count);
-	cl_assert_equal_oid(&g_shallow_oid, &oids2.ids[0]);
-	cl_assert_equal_oid(&tmp_oid, &oids2.ids[1]);
+	cl_git_pass(git_repository_shallow_roots(&oids, g_repo));
+	cl_assert_equal_i(2, oids.count);
+	cl_assert((git_oid_equal(&g_shallow_oid, &oids.ids[0]) &&
+		   git_oid_equal(&tmp_oid, &oids.ids[1])) ||
+		  (git_oid_equal(&g_shallow_oid, &oids.ids[1]) &&
+		   git_oid_equal(&tmp_oid, &oids.ids[0])));
+	git_oidarray_free(&oids);
 
 	cl_git_pass(p_unlink("shallow.git/shallow"));
 	cl_git_pass(git_repository_shallow_roots(&oids, g_repo));

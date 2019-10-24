@@ -157,8 +157,8 @@ struct git_repository {
 	git_grafts *grafts;
 	git_oid graft_checksum;
 
+	git_grafts *shallow_grafts;
 	git_oid shallow_checksum;
-	git_array_oid_t shallow_oids;
 
 	git_atomic attr_session_key;
 
@@ -262,7 +262,5 @@ extern size_t git_repository__reserved_names_posix_len;
  */
 bool git_repository__reserved_names(
 	git_buf **out, size_t *outlen, git_repository *repo, bool include_ntfs);
-
-int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo);
 
 #endif

@@ -7,6 +7,7 @@
 
 #include "grafts.h"
 
+#include "oidarray.h"
 #include "parse.h"
 
 struct git_grafts {
@@ -152,6 +153,26 @@ int git_grafts_get(git_commit_graft **out, git_grafts *grafts, const git_oid *oi
 	assert(out && grafts && oid);
 	if ((*out = git_oidmap_get(grafts->commits, oid)) == NULL)
 		return GIT_ENOTFOUND;
+	return 0;
+}
+
+int git_grafts_get_oids(git_oidarray *out, git_grafts *grafts)
+{
+	git_array_oid_t oids = GIT_ARRAY_INIT;
+	const git_oid *oid;
+	size_t i = 0;
+	int error;
+
+	assert(out && grafts);
+
+	while ((error = git_oidmap_iterate(NULL, grafts->commits, &i, &oid)) == 0) {
+		git_oid *cpy = git_array_alloc(oids);
+		GIT_ERROR_CHECK_ALLOC(cpy);
+		git_oid_cpy(cpy, oid);
+	}
+
+	git_oidarray__from_array(out, &oids);
+
 	return 0;
 }
 

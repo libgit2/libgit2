@@ -148,7 +148,7 @@ int git_repository__cleanup(git_repository *repo)
 	git_cache_clear(&repo->objects);
 	git_attr_cache_flush(repo);
 	git_grafts_free(repo->grafts);
-	git_array_clear(repo->shallow_oids);
+	git_grafts_free(repo->shallow_grafts);
 
 	set_config(repo, NULL);
 	set_index(repo, NULL);
@@ -613,22 +613,22 @@ cleanup:
 
 static int load_shallow(git_repository *repo)
 {
-	int error = 0;
-	git_array_oid_t roots = GIT_ARRAY_INIT;
 	git_array_oid_t parents = GIT_ARRAY_INIT;
+	git_oidarray roots;
+	int error;
 	size_t i;
-	git_oid *graft_oid;
 
 	/* Graft shallow roots */
-	if ((error = git_repository__shallow_roots(&roots, repo)) < 0) {
-		return error;
-	}
+	if ((error = git_repository_shallow_roots(&roots, repo)) < 0)
+		goto out;
 
-	git_array_foreach(roots, i, graft_oid) {
-		if ((error = git_grafts_add(repo->grafts, graft_oid, parents)) < 0)
-			return error;
-	}
-	return 0;
+	for (i = 0; i < roots.count; i++)
+		if ((error = git_grafts_add(repo->grafts, &roots.ids[i], parents)) < 0)
+			goto out;
+
+out:
+	git_oidarray_free(&roots);
+	return error;
 }
 
 int git_repository_open_bare(
@@ -2960,77 +2960,36 @@ int git_repository_state_cleanup(git_repository *repo)
 	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
 }
 
-int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
-{
-	git_buf path = GIT_BUF_INIT;
-	git_buf contents = GIT_BUF_INIT;
-	int error, updated, line_num = 1;
-	char *line;
-	char *buffer;
-
-    assert(out && repo);
-
-	if ((error = git_buf_joinpath(&path, repo->gitdir, "shallow")) < 0)
-		return error;
-
-	error = git_futils_readbuffer_updated(&contents, git_buf_cstr(&path), &repo->shallow_checksum, &updated);
-	git_buf_dispose(&path);
-
-	if (error < 0 && error != GIT_ENOTFOUND)
-		return error;
-
-	/* cancel out GIT_ENOTFOUND */
-	git_error_clear();
-	error = 0;
-
-	if (!updated) {
-		*out = repo->shallow_oids;
-		goto cleanup;
-	}
-
-	git_array_clear(repo->shallow_oids);
-
-	buffer = contents.ptr;
-	while ((line = git__strsep(&buffer, "\n")) != NULL) {
-		git_oid *oid = git_array_alloc(repo->shallow_oids);
-
-		error = git_oid_fromstr(oid, line);
-		if (error < 0) {
-			git_error_set(GIT_ERROR_REPOSITORY, "Invalid OID at line %d", line_num);
-			git_array_clear(repo->shallow_oids);
-			error = -1;
-			goto cleanup;
-		}
-		++line_num;
-	}
-
-	if (*buffer) {
-		git_error_set(GIT_ERROR_REPOSITORY, "No EOL at line %d", line_num);
-		git_array_clear(repo->shallow_oids);
-		error = -1;
-		goto cleanup;
-	}
-
-	*out = repo->shallow_oids;
-
-cleanup:
-	git_buf_dispose(&contents);
-
-	return error;
-}
-
 int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
 {
-	int ret;
-	git_array_oid_t array = GIT_ARRAY_INIT;
+	git_buf path = GIT_BUF_INIT, contents = GIT_BUF_INIT;
+	int error, updated = 0;
 
-	assert(out);
+	assert(out && repo);
 
-	ret = git_repository__shallow_roots(&array, repo);
+	memset(out, 0, sizeof(*out));
 
-	git_oidarray__from_array(out, &array);
+	if (!repo->shallow_grafts && (error = git_grafts_new(&repo->shallow_grafts)) < 0)
+		goto error;
 
-	return ret;
+	if ((error = git_buf_joinpath(&path, repo->gitdir, "shallow")) < 0 ||
+	    (error = git_futils_readbuffer_updated(&contents, git_buf_cstr(&path),
+						   &repo->shallow_checksum, &updated)) < 0) {
+		if (error == GIT_ENOTFOUND)
+			error = 0;
+		goto error;
+	}
+
+	if (updated && (error = git_grafts_parse(repo->shallow_grafts, contents.ptr, contents.size)) < 0)
+		goto error;
+
+	if ((error = git_grafts_get_oids(out, repo->shallow_grafts)) < 0)
+		goto error;
+
+error:
+	git_buf_dispose(&path);
+	git_buf_dispose(&contents);
+	return error;
 }
 
 int git_repository_is_shallow(git_repository *repo)
