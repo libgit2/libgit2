@@ -876,18 +876,6 @@ GIT_EXTERN(const char *) git_repository_get_namespace(git_repository *repo);
 GIT_EXTERN(int) git_repository_is_shallow(git_repository *repo);
 
 /**
- * Determine the shallow roots of the repository
- *
- * The resulting OID array needs to be free'd by calling
- * `git_oidarray_free`.
- *
- * @param out An array of shallow oids.
- * @param repo The repository
- * @return 0 on success, an error otherwise.
- */
-GIT_EXTERN(int) git_repository_shallow_roots(git_oidarray *out, git_repository *repo);
-
-/**
  * Retrieve the configured identity to use for reflogs
  *
  * The memory is owned by the repository and must not be freed by the

@@ -1,5 +1,8 @@
 #include "clar_libgit2.h"
+
 #include "futils.h"
+#include "grafts.h"
+#include "repository.h"
 
 static git_repository *g_repo;
 static git_oid g_shallow_oid;
@@ -42,61 +45,59 @@ void test_grafts_shallow__clears_errors(void)
 
 void test_grafts_shallow__shallow_oids(void)
 {
-	git_oidarray oids;
+	git_commit_graft *graft;
+	git_grafts *grafts;
+
 	g_repo = cl_git_sandbox_init("shallow.git");
 
-	cl_git_pass(git_repository_shallow_roots(&oids, g_repo));
-	cl_assert_equal_i(1, oids.count);
-	cl_assert_equal_oid(&g_shallow_oid, &oids.ids[0]);
-
-	git_oidarray_free(&oids);
+	cl_git_pass(git_repository_shallow_grafts__weakptr(&grafts, g_repo));
+	cl_assert_equal_i(1, git_grafts_size(grafts));
+	cl_git_pass(git_grafts_get(&graft, grafts, &g_shallow_oid));
 }
 
 void test_grafts_shallow__cache_clearing(void)
 {
-	git_oidarray oids;
+	git_commit_graft *graft;
+	git_grafts *grafts;
 	git_oid tmp_oid;
 
 	cl_git_pass(git_oid_fromstr(&tmp_oid, "0000000000000000000000000000000000000000"));
 	g_repo = cl_git_sandbox_init("shallow.git");
+	cl_git_pass(git_repository_shallow_grafts__weakptr(&grafts, g_repo));
 
-	cl_git_pass(git_repository_shallow_roots(&oids, g_repo));
-	cl_assert_equal_i(1, oids.count);
-	cl_assert_equal_oid(&g_shallow_oid, &oids.ids[0]);
-	git_oidarray_free(&oids);
+	cl_assert_equal_i(1, git_grafts_size(grafts));
+	cl_git_pass(git_grafts_get(&graft, grafts, &g_shallow_oid));
 
 	cl_git_mkfile("shallow.git/shallow",
 		"be3563ae3f795b2b4353bcce3a527ad0a4f7f644\n"
 		"0000000000000000000000000000000000000000\n"
 	);
 
-	cl_git_pass(git_repository_shallow_roots(&oids, g_repo));
-	cl_assert_equal_i(2, oids.count);
-	cl_assert((git_oid_equal(&g_shallow_oid, &oids.ids[0]) &&
-		   git_oid_equal(&tmp_oid, &oids.ids[1])) ||
-		  (git_oid_equal(&g_shallow_oid, &oids.ids[1]) &&
-		   git_oid_equal(&tmp_oid, &oids.ids[0])));
-	git_oidarray_free(&oids);
+	cl_git_pass(git_grafts_refresh(grafts));
+	cl_assert_equal_i(2, git_grafts_size(grafts));
+	cl_git_pass(git_grafts_get(&graft, grafts, &g_shallow_oid));
+	cl_git_pass(git_grafts_get(&graft, grafts, &tmp_oid));
 
 	cl_git_pass(p_unlink("shallow.git/shallow"));
-	cl_git_pass(git_repository_shallow_roots(&oids, g_repo));
-	cl_assert_equal_i(0, oids.count);
-	git_oidarray_free(&oids);
+	cl_git_pass(git_grafts_refresh(grafts));
+	cl_assert_equal_i(0, git_grafts_size(grafts));
 }
 
 void test_grafts_shallow__errors_on_borked(void)
 {
-	git_oidarray oids;
+	git_grafts *grafts;
 
 	g_repo = cl_git_sandbox_init("shallow.git");
 
 	cl_git_mkfile("shallow.git/shallow", "lolno");
-
-	cl_git_fail_with(-1, git_repository_shallow_roots(&oids, g_repo));
+	cl_git_pass(git_repository_shallow_grafts__weakptr(&grafts, g_repo));
+	cl_git_fail(git_grafts_refresh(grafts));
+	cl_assert_equal_i(0, git_grafts_size(grafts));
 
 	cl_git_mkfile("shallow.git/shallow", "lolno\n");
-
-	cl_git_fail_with(-1, git_repository_shallow_roots(&oids, g_repo));
+	cl_git_pass(git_repository_shallow_grafts__weakptr(&grafts, g_repo));
+	cl_git_fail(git_grafts_refresh(grafts));
+	cl_assert_equal_i(0, git_grafts_size(grafts));
 }
 
 void test_grafts_shallow__revwalk_behavior(void)

@@ -1263,6 +1263,20 @@ int git_repository_set_index(git_repository *repo, git_index *index)
 	return 0;
 }
 
+int git_repository_grafts__weakptr(git_grafts **out, git_repository *repo)
+{
+	assert(out && repo && repo->shallow_grafts);
+	*out = repo->grafts;
+	return 0;
+}
+
+int git_repository_shallow_grafts__weakptr(git_grafts **out, git_repository *repo)
+{
+	assert(out && repo && repo->shallow_grafts);
+	*out = repo->shallow_grafts;
+	return 0;
+}
+
 int git_repository_set_namespace(git_repository *repo, const char *namespace)
 {
 	git__free(repo->namespace);
@@ -2921,25 +2935,6 @@ int git_repository_state_cleanup(git_repository *repo)
 	assert(repo);
 
 	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
-}
-
-int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
-{
-	git_buf path = GIT_BUF_INIT, contents = GIT_BUF_INIT;
-	int error;
-
-	assert(out && repo);
-
-	memset(out, 0, sizeof(*out));
-
-	if ((error = git_grafts_refresh(repo->shallow_grafts)) < 0 ||
-	    (error = git_grafts_get_oids(out, repo->shallow_grafts)) < 0)
-		goto error;
-
-error:
-	git_buf_dispose(&path);
-	git_buf_dispose(&contents);
-	return error;
 }
 
 int git_repository_is_shallow(git_repository *repo)
