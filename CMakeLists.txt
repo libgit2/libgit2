@@ -220,6 +220,7 @@ ELSE ()
 	ENDIF ()
 
 	ENABLE_WARNINGS(documentation)
+	DISABLE_WARNINGS(documentation-deprecated-sync)
 	DISABLE_WARNINGS(missing-field-initializers)
 	ENABLE_WARNINGS(strict-aliasing)
 	ENABLE_WARNINGS(strict-prototypes)
@@ -238,10 +239,6 @@ ELSE ()
 	ELSE()
 		ENABLE_WARNINGS(format)
 		ENABLE_WARNINGS(format-security)
-	ENDIF()
-
-	IF("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
-		DISABLE_WARNINGS(documentation-deprecated-sync)
 	ENDIF()
 
 	IF (PROFILE)
