@@ -131,25 +131,8 @@ IF (WIN32 AND EMBED_SSH_PATH)
 	SET(GIT_SSH 1)
 ENDIF()
 
-IF (WIN32 AND WINHTTP)
-	SET(GIT_WINHTTP 1)
-
-	# Since MinGW does not come with headers or an import library for winhttp,
-	# we have to include a private header and generate our own import library
-	IF (MINGW)
-		ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/winhttp" "${libgit2_BINARY_DIR}/deps/winhttp")
-		LIST(APPEND LIBGIT2_LIBS winhttp)
-		LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/winhttp")
-	ELSE()
-		LIST(APPEND LIBGIT2_LIBS "winhttp")
-		LIST(APPEND LIBGIT2_PC_LIBS "-lwinhttp")
-	ENDIF ()
-
-	LIST(APPEND LIBGIT2_LIBS "rpcrt4" "crypt32" "ole32")
-	LIST(APPEND LIBGIT2_PC_LIBS "-lrpcrt4" "-lcrypt32" "-lole32")
-ENDIF()
-
-Include(SelectHTTPSBackend)
+LINK_DEPENDENCY(git2internal PUBLIC WinHTTP)
+LINK_DEPENDENCY(git2internal PUBLIC HttpsBackend)
 
 Include(SelectHashes)
 TARGET_SOURCES(git2internal PRIVATE ${SRC_SHA1})
