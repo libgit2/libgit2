@@ -14,8 +14,8 @@
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5.1)
 
-# Add find modules to the path
-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${libgit2_SOURCE_DIR}/cmake/Modules/")
+# Prepend our own modules to the path
+LIST(INSERT CMAKE_MODULE_PATH 0 ${libgit2_SOURCE_DIR}/cmake)
 
 INCLUDE(CheckLibraryExists)
 INCLUDE(CheckFunctionExists)
