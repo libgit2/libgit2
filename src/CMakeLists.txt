@@ -133,9 +133,7 @@ ENDIF()
 
 LINK_DEPENDENCY(git2internal PUBLIC WinHTTP)
 LINK_DEPENDENCY(git2internal PUBLIC HttpsBackend)
-
-Include(SelectHashes)
-TARGET_SOURCES(git2internal PRIVATE ${SRC_SHA1})
+LINK_DEPENDENCY(git2internal PUBLIC HashBackend)
 
 # Specify regular expression implementation
 FIND_PACKAGE(PCRE)
