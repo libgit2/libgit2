@@ -11,8 +11,9 @@
 # Install:
 # > cmake --build . --target install
 
-PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5.1)
+
+PROJECT(libgit2 C)
 
 # Prepend our own modules to the path
 LIST(INSERT CMAKE_MODULE_PATH 0 ${libgit2_SOURCE_DIR}/cmake)
