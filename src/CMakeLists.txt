@@ -129,15 +129,7 @@ LINK_DEPENDENCY(git2internal PUBLIC RegexBackend)
 LINK_DEPENDENCY(git2internal PUBLIC HttpParser)
 LINK_DEPENDENCY(git2internal PUBLIC Zlib)
 LINK_DEPENDENCY(git2internal PUBLIC SshBackend)
-
-# Optional external dependency: ntlmclient
-IF (USE_NTLMCLIENT)
-	SET(GIT_NTLM 1)
-	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/ntlmclient" "${libgit2_BINARY_DIR}/deps/ntlmclient")
-	LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/ntlmclient")
-	LIST(APPEND LIBGIT2_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
-ENDIF()
-ADD_FEATURE_INFO(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
+LINK_DEPENDENCY(git2internal PUBLIC NtlmClient)
 
 # Optional external dependency: GSSAPI
 
