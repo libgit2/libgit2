@@ -134,60 +134,7 @@ ENDIF()
 LINK_DEPENDENCY(git2internal PUBLIC WinHTTP)
 LINK_DEPENDENCY(git2internal PUBLIC HttpsBackend)
 LINK_DEPENDENCY(git2internal PUBLIC HashBackend)
-
-# Specify regular expression implementation
-FIND_PACKAGE(PCRE)
-
-IF(REGEX_BACKEND STREQUAL "")
-	CHECK_SYMBOL_EXISTS(regcomp_l "regex.h;xlocale.h" HAVE_REGCOMP_L)
-
-	IF(HAVE_REGCOMP_L)
-		SET(REGEX_BACKEND "regcomp_l")
-	ELSEIF(PCRE_FOUND)
-		SET(REGEX_BACKEND "pcre")
-	ELSE()
-		SET(REGEX_BACKEND "builtin")
-	ENDIF()
-ENDIF()
-
-IF(REGEX_BACKEND STREQUAL "regcomp_l")
-	ADD_FEATURE_INFO(regex ON "using system regcomp_l")
-	SET(GIT_REGEX_REGCOMP_L 1)
-ELSEIF(REGEX_BACKEND STREQUAL "pcre2")
-	FIND_PACKAGE(PCRE2)
-
-	IF(NOT PCRE2_FOUND)
-		MESSAGE(FATAL_ERROR "PCRE2 support was requested but not found")
-	ENDIF()
-
-	ADD_FEATURE_INFO(regex ON "using system PCRE2")
-	SET(GIT_REGEX_PCRE2 1)
-
-	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${PCRE2_INCLUDE_DIRS})
-	LIST(APPEND LIBGIT2_LIBS ${PCRE2_LIBRARIES})
-	LIST(APPEND LIBGIT2_PC_REQUIRES "libpcre2")
-ELSEIF(REGEX_BACKEND STREQUAL "pcre")
-	ADD_FEATURE_INFO(regex ON "using system PCRE")
-	SET(GIT_REGEX_PCRE 1)
-
-	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${PCRE_INCLUDE_DIRS})
-	LIST(APPEND LIBGIT2_LIBS ${PCRE_LIBRARIES})
-	LIST(APPEND LIBGIT2_PC_REQUIRES "libpcre")
-ELSEIF(REGEX_BACKEND STREQUAL "regcomp")
-	ADD_FEATURE_INFO(regex ON "using system regcomp")
-	SET(GIT_REGEX_REGCOMP 1)
-ELSEIF(REGEX_BACKEND STREQUAL "builtin")
-	ADD_FEATURE_INFO(regex ON "using bundled PCRE")
-	SET(GIT_REGEX_BUILTIN 1)
-
-	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/pcre" "${libgit2_BINARY_DIR}/deps/pcre")
-	LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/pcre")
-	LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:pcre>)
-ELSE()
-	MESSAGE(FATAL_ERROR "The REGEX_BACKEND option provided is not supported")
-ENDIF()
-
-# Optional external dependency: http-parser, otherwise builtin
+LINK_DEPENDENCY(git2internal PUBLIC RegexBackend)
 LINK_DEPENDENCY(git2internal PUBLIC HttpParser)
 
 # Optional external dependency: zlib
