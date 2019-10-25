@@ -130,10 +130,7 @@ LINK_DEPENDENCY(git2internal PUBLIC HttpParser)
 LINK_DEPENDENCY(git2internal PUBLIC Zlib)
 LINK_DEPENDENCY(git2internal PUBLIC SshBackend)
 LINK_DEPENDENCY(git2internal PUBLIC NtlmClient)
-
-# Optional external dependency: GSSAPI
-
-INCLUDE(SelectGSSAPI)
+LINK_DEPENDENCY(git2internal PUBLIC GssBackend)
 
 # Optional external dependency: iconv
 IF (USE_ICONV)
