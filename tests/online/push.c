@@ -19,6 +19,7 @@ static char *_remote_ssh_pubkey = NULL;
 static char *_remote_ssh_passphrase = NULL;
 
 static char *_remote_default = NULL;
+static char *_remote_expectcontinue = NULL;
 
 static int cred_acquire_cb(git_cred **,	const char *, const char *, unsigned int, void *);
 
@@ -366,11 +367,15 @@ void test_online_push__initialize(void)
 	_remote_ssh_pubkey = cl_getenv("GITTEST_REMOTE_SSH_PUBKEY");
 	_remote_ssh_passphrase = cl_getenv("GITTEST_REMOTE_SSH_PASSPHRASE");
 	_remote_default = cl_getenv("GITTEST_REMOTE_DEFAULT");
+	_remote_expectcontinue = cl_getenv("GITTEST_REMOTE_EXPECTCONTINUE");
 	_remote = NULL;
 
 	/* Skip the test if we're missing the remote URL */
 	if (!_remote_url)
 		cl_skip();
+
+	if (_remote_expectcontinue)
+		git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 1);
 
 	cl_git_pass(git_remote_create(&_remote, _repo, "test", _remote_url));
 
@@ -417,9 +422,12 @@ void test_online_push__cleanup(void)
 	git__free(_remote_ssh_pubkey);
 	git__free(_remote_ssh_passphrase);
 	git__free(_remote_default);
+	git__free(_remote_expectcontinue);
 
 	/* Freed by cl_git_sandbox_cleanup */
 	_repo = NULL;
+
+	git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 0);
 
 	record_callbacks_data_clear(&_record_cbs_data);
 

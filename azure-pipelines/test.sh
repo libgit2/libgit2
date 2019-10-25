@@ -225,6 +225,18 @@ if [ -z "$SKIP_NEGOTIATE_TESTS" -a -n "$GITTEST_NEGOTIATE_PASSWORD" ]; then
 	unset GITTEST_REMOTE_URL
 	unset GITTEST_REMOTE_DEFAULT
 
+	echo ""
+	echo "Running SPNEGO tests (expect/continue)"
+	echo ""
+
+	export GITTEST_REMOTE_URL="https://test.libgit2.org/kerberos/empty.git"
+	export GITTEST_REMOTE_DEFAULT="true"
+	export GITTEST_REMOTE_EXPECTCONTINUE="true"
+	run_test authenticate
+	unset GITTEST_REMOTE_URL
+	unset GITTEST_REMOTE_DEFAULT
+	unset GITTEST_REMOTE_EXPECTCONTINUE
+
 	kdestroy -A
 fi
 
