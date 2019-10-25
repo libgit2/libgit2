@@ -824,7 +824,6 @@ GIT_INLINE(int) server_setup_from_url(
 static void reset_parser(git_http_client *client)
 {
 	http_parser_init(&client->parser, HTTP_RESPONSE);
-	git_buf_clear(&client->read_buf);
 }
 
 static int setup_hosts(
@@ -869,6 +868,17 @@ GIT_INLINE(int) server_create_stream(git_http_server *server)
 	return -1;
 }
 
+GIT_INLINE(void) save_early_response(
+	git_http_client *client,
+	git_http_response *response)
+{
+	/* Buffer the response so we can return it in read_response */
+	client->state = HAS_EARLY_RESPONSE;
+
+	memcpy(&client->early_response, response, sizeof(git_http_response));
+	memset(response, 0, sizeof(git_http_response));
+}
+
 static int proxy_connect(
 	git_http_client *client,
 	git_http_request *request)
@@ -905,11 +915,7 @@ static int proxy_connect(
 	assert(client->state == DONE);
 
 	if (response.status == 407) {
-		/* Buffer the response so we can return it in read_response */
-		client->state = HAS_EARLY_RESPONSE;
-
-		memcpy(&client->early_response, &response, sizeof(response));
-		memset(&response, 0, sizeof(response));
+		save_early_response(client, &response);
 
 		error = GIT_RETRY;
 		goto done;
@@ -1194,6 +1200,7 @@ int git_http_client_send_request(
 	git_http_client *client,
 	git_http_request *request)
 {
+	git_http_response response = {0};
 	int error = -1;
 
 	assert(client && request);
@@ -1220,13 +1227,26 @@ int git_http_client_send_request(
 	    (error = client_write_request(client)) < 0)
 		goto done;
 
+	client->state = SENT_REQUEST;
+
+	if (request->expect_continue) {
+		if ((error = git_http_client_read_response(&response, client)) < 0 ||
+		    (error = git_http_client_skip_body(client)) < 0)
+			goto done;
+
+		error = 0;
+
+		if (response.status != 100) {
+			save_early_response(client, &response);
+			goto done;
+		}
+	}
+
 	if (request->content_length || request->chunked) {
 		client->state = SENDING_BODY;
 		client->request_body_len = request->content_length;
 		client->request_body_remain = request->content_length;
 		client->request_chunked = request->chunked;
-	} else {
-		client->state = SENT_REQUEST;
 	}
 
 	reset_parser(client);
@@ -1235,7 +1255,14 @@ done:
 	if (error == GIT_RETRY)
 		error = 0;
 
+	git_http_response_dispose(&response);
 	return error;
+}
+
+bool git_http_client_has_response(git_http_client *client)
+{
+	return (client->state == HAS_EARLY_RESPONSE ||
+	        client->state > SENT_REQUEST);
 }
 
 int git_http_client_send_body(

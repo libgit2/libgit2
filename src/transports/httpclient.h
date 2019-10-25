@@ -91,6 +91,17 @@ extern int git_http_client_send_request(
 	git_http_client *client,
 	git_http_request *request);
 
+/*
+ * After sending a request, there may already be a response to read --
+ * either because there was a non-continue response to an expect: continue
+ * request, or because the server pipelined a response to us before we even
+ * sent the request.  Examine the state.
+ *
+ * @param client the client to examine
+ * @return true if there's already a response to read, false otherwise
+ */
+extern bool git_http_client_has_response(git_http_client *client);
+
 /**
  * Sends the given buffer to the remote as part of the request body.  The
  * request must have specified either a content_length or the chunked flag.

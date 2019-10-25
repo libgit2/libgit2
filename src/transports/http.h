@@ -12,6 +12,8 @@
 
 #define GIT_HTTP_REPLAY_MAX 15
 
+extern bool git_http__expect_continue;
+
 GIT_INLINE(int) git_http__user_agent(git_buf *buf)
 {
 	const char *ua = git_libgit2__user_agent();

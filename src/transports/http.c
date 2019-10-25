@@ -25,6 +25,8 @@
 #include "streams/tls.h"
 #include "streams/socket.h"
 
+bool git_http__expect_continue = false;
+
 git_http_auth_scheme auth_schemes[] = {
 	{ GIT_HTTP_AUTH_NEGOTIATE, "Negotiate", GIT_CREDTYPE_DEFAULT, git_http_auth_negotiate },
 	{ GIT_HTTP_AUTH_NTLM, "NTLM", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_ntlm },
@@ -84,6 +86,7 @@ typedef struct {
 	git_cred *cred;
 	unsigned url_cred_presented : 1,
 	    authenticated : 1;
+	git_http_authtype_t prior_authtype;
 
 	git_vector auth_challenges;
 	git_http_auth_context *auth_context;
@@ -1048,8 +1051,10 @@ static void reset_auth_connection(http_server *server)
 	 */
 
 	if (server->authenticated &&
-	    server->auth_context &&
+		server->auth_context &&
 	    server->auth_context->connection_affinity) {
+		server->prior_authtype = server->auth_context->type;
+
 		free_auth_context(server);
 
 		server->url_cred_presented = 0;
