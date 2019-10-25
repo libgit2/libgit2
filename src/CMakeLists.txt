@@ -54,6 +54,20 @@ IF (MSVC_IDE)
 	SET_SOURCE_FILES_PROPERTIES(win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
 ENDIF ()
 
+# Collect sourcefiles
+FILE(GLOB LIBGIT2_SOURCES
+	"${libgit2_SOURCE_DIR}/include/git2.h"
+	"${libgit2_SOURCE_DIR}/include/git2/*.h"
+	"${libgit2_SOURCE_DIR}/include/git2/sys/*.h"
+	"${libgit2_BINARY_DIR}/include/git2/sys/features.h"
+	"${libgit2_BINARY_DIR}/include/git2/version.h"
+	*.c *.h
+	allocators/*.c allocators/*.h
+	streams/*.c streams/*.h
+	transports/*.c transports/*.h
+	xdiff/*.c xdiff/*.h)
+TARGET_SOURCES(git2internal PRIVATE ${LIBGIT2_SOURCES})
+
 # Enable tracing
 IF (ENABLE_TRACE STREQUAL "ON")
 	SET(GIT_TRACE 1)
@@ -110,7 +124,8 @@ ADD_FEATURE_INFO(threadsafe THREADSAFE "threadsafe support")
 
 
 IF (WIN32 AND EMBED_SSH_PATH)
-	FILE(GLOB SRC_SSH "${EMBED_SSH_PATH}/src/*.c")
+	FILE(GLOB LIBGIT2_SSH_SOURCES "${EMBED_SSH_PATH}/src/*.c")
+	TARGET_SOURCES(git2internal PRIVATE ${LIBGIT2_SSH_SOURCES})
 	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES "${EMBED_SSH_PATH}/include")
 	FILE(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
 	SET(GIT_SSH 1)
@@ -135,7 +150,9 @@ IF (WIN32 AND WINHTTP)
 ENDIF()
 
 Include(SelectHTTPSBackend)
+
 Include(SelectHashes)
+TARGET_SOURCES(git2internal PRIVATE ${SRC_SHA1})
 
 # Specify regular expression implementation
 FIND_PACKAGE(PCRE)
@@ -299,33 +316,23 @@ ENDIF()
 
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
-# Collect sourcefiles
-FILE(GLOB SRC_H
-	"${libgit2_SOURCE_DIR}/include/git2.h"
-	"${libgit2_SOURCE_DIR}/include/git2/*.h"
-	"${libgit2_SOURCE_DIR}/include/git2/sys/*.h")
-
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
 	IF(MSVC)
-		SET(WIN_RC "win32/git2.rc")
+		TARGET_SOURCES(git2 PRIVATE win32/git2.rc)
 	ENDIF()
 
-	FILE(GLOB SRC_OS win32/*.c win32/*.h)
+	FILE(GLOB LIBGIT2_PLATFORM_SOURCES win32/*.c win32/*.h)
+	TARGET_SOURCES(git2internal PRIVATE ${LIBGIT2_PLATFORM_SOURCES})
 ELSEIF (AMIGA)
 	ADD_DEFINITIONS(-DNO_ADDRINFO -DNO_READDIR_R -DNO_MMAP)
 ELSE()
 	IF (VALGRIND)
 		ADD_DEFINITIONS(-DNO_MMAP)
 	ENDIF()
-	FILE(GLOB SRC_OS unix/*.c unix/*.h)
+	FILE(GLOB LIBGIT2_PLATFORM_SOURCES unix/*.c unix/*.h)
+	TARGET_SOURCES(git2internal PRIVATE ${LIBGIT2_PLATFORM_SOURCES})
 ENDIF()
-
-FILE(GLOB SRC_GIT2 *.c *.h
-	allocators/*.c allocators/*.h
-	streams/*.c streams/*.h
-	transports/*.c transports/*.h
-	xdiff/*.c xdiff/*.h)
 
 # the xdiff dependency is not (yet) warning-free, disable warnings as
 # errors for the xdiff sources until we've sorted them out
@@ -348,11 +355,6 @@ ENDIF()
 CONFIGURE_FILE(features.h.in ${libgit2_BINARY_DIR}/include/git2/sys/features.h)
 CONFIGURE_FILE(version.h.in  ${libgit2_BINARY_DIR}/include/git2/version.h)
 
-SET(LIBGIT2_SOURCES ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_SSH} ${SRC_SHA1}
-		    ${libgit2_BINARY_DIR}/include/git2/sys/features.h
-		    ${libgit2_BINARY_DIR}/include/git2/version.h)
-
-TARGET_SOURCES(git2internal PRIVATE ${LIBGIT2_SOURCES})
 IDE_SPLIT_SOURCES(git2internal)
 LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:git2internal>)
 
@@ -372,7 +374,7 @@ IF(XCODE_VERSION)
 ENDIF()
 
 # Compile and link libgit2
-TARGET_SOURCES(git2 PRIVATE ${WIN_RC} ${LIBGIT2_OBJECTS})
+TARGET_SOURCES(git2 PRIVATE ${LIBGIT2_OBJECTS})
 TARGET_LINK_LIBRARIES(git2 ${LIBGIT2_LIBS})
 
 IDE_SPLIT_SOURCES(git2)
