@@ -878,6 +878,14 @@ static void format_header_field(git_buf *out, const char *field, const char *con
 	git_buf_putc(out, '\n');
 }
 
+static const git_oid *commit_parent_from_commit(size_t n, void *payload)
+{
+	const git_commit *commit = (const git_commit *) payload;
+
+	return git_array_get(commit->parent_ids, n);
+
+}
+
 int git_commit_create_with_signature(
 	git_oid *out,
 	git_repository *repo,
@@ -890,12 +898,26 @@ int git_commit_create_with_signature(
 	const char *field;
 	const char *header_end;
 	git_buf commit = GIT_BUF_INIT;
+	git_commit *parsed;
+	git_array_oid_t parents = GIT_ARRAY_INIT;
 
-	/* We start by identifying the end of the commit header */
+	/* The first step is to verify that all the tree and parents exist */
+	parsed = git__calloc(1, sizeof(git_commit));
+	GIT_ERROR_CHECK_ALLOC(parsed);
+	if ((error = commit_parse(parsed, commit_content, strlen(commit_content), 0)) < 0)
+		goto cleanup;
+
+	if ((error = validate_tree_and_parents(&parents, repo, &parsed->tree_id, commit_parent_from_commit, parsed, NULL, true)) < 0)
+		goto cleanup;
+
+	git_array_clear(parents);
+
+	/* Then we start appending by identifying the end of the commit header */
 	header_end = strstr(commit_content, "\n\n");
 	if (!header_end) {
 		git_error_set(GIT_ERROR_INVALID, "malformed commit contents");
-		return -1;
+		error = -1;
+		goto cleanup;
 	}
 
 	/* The header ends after the first LF */
@@ -919,6 +941,7 @@ int git_commit_create_with_signature(
 		goto cleanup;
 
 cleanup:
+	git_commit__free(parsed);
 	git_buf_dispose(&commit);
 	return error;
 }
