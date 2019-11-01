@@ -192,6 +192,7 @@ int git_config_backend_snapshot(git_config_backend **out, git_config_backend *so
 	backend->parent.get = config_get_readonly;
 	backend->parent.set = config_set_readonly;
 	backend->parent.set_multivar = config_set_multivar_readonly;
+	backend->parent.snapshot = git_config_backend_snapshot;
 	backend->parent.del = config_delete_readonly;
 	backend->parent.del_multivar = config_delete_multivar_readonly;
 	backend->parent.iterator = config_iterator_new_readonly;

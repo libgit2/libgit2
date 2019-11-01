@@ -100,3 +100,23 @@ void test_config_snapshot__includes(void)
 	cl_git_pass(p_unlink("including"));
 	cl_git_pass(p_unlink("included"));
 }
+
+void test_config_snapshot__snapshot(void)
+{
+	git_config *snapshot_snapshot;
+	int i;
+
+	cl_git_mkfile("configfile", "[section]\nkey = 1\n");
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "configfile"));
+	cl_git_pass(git_config_snapshot(&snapshot, cfg));
+
+	cl_git_pass(git_config_snapshot(&snapshot_snapshot, snapshot));
+
+	cl_git_pass(git_config_get_int32(&i, snapshot_snapshot, "section.key"));
+	cl_assert_equal_i(i, 1);
+
+	git_config_free(snapshot_snapshot);
+
+	cl_git_pass(p_unlink("configfile"));
+}
