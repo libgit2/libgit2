@@ -437,36 +437,33 @@ cleanup:
 	return error;
 }
 
-static int prepare_worktree_commit_message(
-	git_buf* msg,
-	const char *user_message)
+static int prepare_worktree_commit_message(git_buf *out, const char *user_message)
 {
 	git_buf buf = GIT_BUF_INIT;
-	int error;
+	int error = 0;
 
-	if ((error = git_buf_set(&buf, git_buf_cstr(msg), git_buf_len(msg))) < 0)
-		return error;
-
-	git_buf_clear(msg);
-
-	if (!user_message)
-		git_buf_printf(msg, "WIP on %s", git_buf_cstr(&buf));
-	else {
+	if (!user_message) {
+		git_buf_printf(&buf, "WIP on %s", git_buf_cstr(out));
+	} else {
 		const char *colon;
 
-		if ((colon = strchr(git_buf_cstr(&buf), ':')) == NULL)
+		if ((colon = strchr(git_buf_cstr(out), ':')) == NULL)
 			goto cleanup;
 
-		git_buf_puts(msg, "On ");
-		git_buf_put(msg, git_buf_cstr(&buf), colon - buf.ptr);
-		git_buf_printf(msg, ": %s\n", user_message);
+		git_buf_puts(&buf, "On ");
+		git_buf_put(&buf, git_buf_cstr(out), colon - out->ptr);
+		git_buf_printf(&buf, ": %s\n", user_message);
 	}
 
-	error = (git_buf_oom(msg) || git_buf_oom(&buf)) ? -1 : 0;
+	if (git_buf_oom(&buf)) {
+		error = -1;
+		goto cleanup;
+	}
+
+	git_buf_swap(out, &buf);
 
 cleanup:
 	git_buf_dispose(&buf);
-
 	return error;
 }
 
@@ -497,10 +494,7 @@ static int is_dirty_cb(const char *path, unsigned int status, void *payload)
 	return GIT_PASSTHROUGH;
 }
 
-static int ensure_there_are_changes_to_stash(
-	git_repository *repo,
-	bool include_untracked_files,
-	bool include_ignored_files)
+static int ensure_there_are_changes_to_stash(git_repository *repo, uint32_t flags)
 {
 	int error;
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
@@ -508,11 +502,11 @@ static int ensure_there_are_changes_to_stash(
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
 
-	if (include_untracked_files)
+	if (flags & GIT_STASH_INCLUDE_UNTRACKED)
 		opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED |
 			GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
 
-	if (include_ignored_files)
+	if (flags & GIT_STASH_INCLUDE_IGNORED)
 		opts.flags |= GIT_STATUS_OPT_INCLUDE_IGNORED |
 			GIT_STATUS_OPT_RECURSE_IGNORED_DIRS;
 
@@ -527,20 +521,14 @@ static int ensure_there_are_changes_to_stash(
 	return error;
 }
 
-static int reset_index_and_workdir(
-	git_repository *repo,
-	git_commit *commit,
-	bool remove_untracked,
-	bool remove_ignored)
+static int reset_index_and_workdir(git_repository *repo, git_commit *commit, uint32_t flags)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	if (remove_untracked)
+	if (flags & GIT_STASH_INCLUDE_UNTRACKED)
 		opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_UNTRACKED;
-
-	if (remove_ignored)
+	if (flags & GIT_STASH_INCLUDE_IGNORED)
 		opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_IGNORED;
 
 	return git_checkout_tree(repo, (git_object *)commit, &opts);
@@ -566,31 +554,26 @@ int git_stash_save(
 	if ((error = retrieve_base_commit_and_message(&b_commit, &msg, repo)) < 0)
 		goto cleanup;
 
-	if ((error = ensure_there_are_changes_to_stash(
-		repo,
-		(flags & GIT_STASH_INCLUDE_UNTRACKED) != 0,
-		(flags & GIT_STASH_INCLUDE_IGNORED) != 0)) < 0)
+	if ((error = ensure_there_are_changes_to_stash(repo, flags)) < 0)
 		goto cleanup;
 
 	if ((error = git_repository_index(&index, repo)) < 0)
 		goto cleanup;
 
-	if ((error = commit_index(
-			&i_commit, repo, index, stasher, git_buf_cstr(&msg), b_commit)) < 0)
+	if ((error = commit_index(&i_commit, repo, index, stasher,
+				  git_buf_cstr(&msg), b_commit)) < 0)
 		goto cleanup;
 
 	if ((flags & (GIT_STASH_INCLUDE_UNTRACKED | GIT_STASH_INCLUDE_IGNORED)) &&
-		(error = commit_untracked(
-			&u_commit, repo, stasher, git_buf_cstr(&msg),
-			i_commit, flags)) < 0)
+	    (error = commit_untracked(&u_commit, repo, stasher,
+				      git_buf_cstr(&msg), i_commit, flags)) < 0)
 		goto cleanup;
 
 	if ((error = prepare_worktree_commit_message(&msg, message)) < 0)
 		goto cleanup;
 
-	if ((error = commit_worktree(
-			out, repo, stasher, git_buf_cstr(&msg),
-			i_commit, b_commit, u_commit)) < 0)
+	if ((error = commit_worktree(out, repo, stasher, git_buf_cstr(&msg),
+				     i_commit, b_commit, u_commit)) < 0)
 		goto cleanup;
 
 	git_buf_rtrim(&msg);
@@ -598,11 +581,8 @@ int git_stash_save(
 	if ((error = update_reflog(out, repo, git_buf_cstr(&msg))) < 0)
 		goto cleanup;
 
-	if ((error = reset_index_and_workdir(
-		repo,
-		((flags & GIT_STASH_KEEP_INDEX) != 0) ? i_commit : b_commit,
-		(flags & GIT_STASH_INCLUDE_UNTRACKED) != 0,
-		(flags & GIT_STASH_INCLUDE_IGNORED) != 0)) < 0)
+	if ((error = reset_index_and_workdir(repo, (flags & GIT_STASH_KEEP_INDEX) ? i_commit : b_commit,
+					     flags)) < 0)
 		goto cleanup;
 
 cleanup:

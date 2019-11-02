@@ -101,6 +101,16 @@ int git_parse_advance_digit(int64_t *out, git_parse_ctx *ctx, int base)
 	return 0;
 }
 
+int git_parse_advance_oid(git_oid *out, git_parse_ctx *ctx)
+{
+	if (ctx->line_len < GIT_OID_HEXSZ)
+		return -1;
+	if ((git_oid_fromstrn(out, ctx->line, GIT_OID_HEXSZ)) < 0)
+		return -1;
+	git_parse_advance_chars(ctx, GIT_OID_HEXSZ);
+	return 0;
+}
+
 int git_parse_peek(char *out, git_parse_ctx *ctx, int flags)
 {
 	size_t remain = ctx->line_len;

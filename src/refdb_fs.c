@@ -13,6 +13,7 @@
 #include "futils.h"
 #include "filebuf.h"
 #include "pack.h"
+#include "parse.h"
 #include "reflog.h"
 #include "refdb.h"
 #include "iterator.h"
@@ -1651,70 +1652,57 @@ static int reflog_alloc(git_reflog **reflog, const char *name)
 
 static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 {
-	const char *ptr;
-	git_reflog_entry *entry;
+	git_parse_ctx parser = GIT_PARSE_CTX_INIT;
 
-#define seek_forward(_increase) do { \
-	if (_increase >= buf_size) { \
-		git_error_set(GIT_ERROR_INVALID, "ran out of data while parsing reflog"); \
-		goto fail; \
-	} \
-	buf += _increase; \
-	buf_size -= _increase; \
-	} while (0)
+	if ((git_parse_ctx_init(&parser, buf, buf_size)) < 0)
+		return -1;
 
-	while (buf_size > GIT_REFLOG_SIZE_MIN) {
-		entry = git__calloc(1, sizeof(git_reflog_entry));
+	for (; parser.remain_len; git_parse_advance_line(&parser)) {
+		git_reflog_entry *entry;
+		const char *sig;
+		char c;
+
+		entry = git__calloc(1, sizeof(*entry));
 		GIT_ERROR_CHECK_ALLOC(entry);
-
-		entry->committer = git__calloc(1, sizeof(git_signature));
+		entry->committer = git__calloc(1, sizeof(*entry->committer));
 		GIT_ERROR_CHECK_ALLOC(entry->committer);
 
-		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < 0)
-			goto fail;
-		seek_forward(GIT_OID_HEXSZ + 1);
+		if (git_parse_advance_oid(&entry->oid_old, &parser) < 0 ||
+		    git_parse_advance_expected(&parser, " ", 1) < 0 ||
+		    git_parse_advance_oid(&entry->oid_cur, &parser) < 0)
+			goto next;
 
-		if (git_oid_fromstrn(&entry->oid_cur, buf, GIT_OID_HEXSZ) < 0)
-			goto fail;
-		seek_forward(GIT_OID_HEXSZ + 1);
+		sig = parser.line;
+		while (git_parse_peek(&c, &parser, 0) == 0 && c != '\t' && c != '\n')
+			git_parse_advance_chars(&parser, 1);
 
-		ptr = buf;
+		if (git_signature__parse(entry->committer, &sig, parser.line, NULL, 0) < 0)
+			goto next;
 
-		/* Seek forward to the end of the signature. */
-		while (*buf && *buf != '\t' && *buf != '\n')
-			seek_forward(1);
+		if (c == '\t') {
+			size_t len;
+			git_parse_advance_chars(&parser, 1);
 
-		if (git_signature__parse(entry->committer, &ptr, buf + 1, NULL, *buf) < 0)
-			goto fail;
+			len = parser.line_len;
+			if (parser.line[len - 1] == '\n')
+				len--;
 
-		if (*buf == '\t') {
-			/* We got a message. Read everything till we reach LF. */
-			seek_forward(1);
-			ptr = buf;
-
-			while (*buf && *buf != '\n')
-				seek_forward(1);
-
-			entry->msg = git__strndup(ptr, buf - ptr);
+			entry->msg = git__strndup(parser.line, len);
 			GIT_ERROR_CHECK_ALLOC(entry->msg);
-		} else
-			entry->msg = NULL;
+		}
 
-		while (*buf && *buf == '\n' && buf_size > 1)
-			seek_forward(1);
+		if ((git_vector_insert(&log->entries, entry)) < 0) {
+			git_reflog_entry__free(entry);
+			return -1;
+		}
 
-		if (git_vector_insert(&log->entries, entry) < 0)
-			goto fail;
+		continue;
+
+next:
+		git_reflog_entry__free(entry);
 	}
 
 	return 0;
-
-#undef seek_forward
-
-fail:
-	git_reflog_entry__free(entry);
-
-	return -1;
 }
 
 static int create_new_reflog_file(const char *filepath)
@@ -1856,8 +1844,15 @@ static int serialize_reflog_entry(
 	git_buf_rtrim(buf);
 
 	if (msg) {
+		size_t i;
+
 		git_buf_putc(buf, '\t');
 		git_buf_puts(buf, msg);
+
+		for (i = 0; i < buf->size - 2; i++)
+			if (buf->ptr[i] == '\n')
+				buf->ptr[i] = ' ';
+		git_buf_rtrim(buf);
 	}
 
 	git_buf_putc(buf, '\n');
