@@ -70,4 +70,25 @@ typedef struct {
 
 int git_layout_item_path(git_buf *out, const git_repository_layout *repo, git_repository_item_t item);
 
+bool git_layout_is_valid_repository(git_buf *repository_path, git_buf *common_path);
+
+int git_layout_find_repo(
+	git_buf *gitdir_path,
+	git_buf *workdir_path,
+	git_buf *gitlink_path,
+	git_buf *commondir_path,
+	const char *start_path,
+	uint32_t flags,
+	git_strarray *ceiling_dirs);
+
+int git_layout_write_template(
+	const char *git_dir,
+	bool allow_overwrite,
+	const char *file,
+	mode_t mode,
+	bool hidden,
+	const char *content);
+
+int git_layout_write_gitlink(const char *in_dir, const char *to_repo, bool use_relative_path);
+
 #endif

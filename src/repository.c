@@ -157,51 +157,6 @@ void git_repository_free(git_repository *repo)
 	git__free(repo);
 }
 
-/*
- * Git repository open methods
- *
- * Open a repository object from its path
- */
-static bool valid_repository_path(git_buf *repository_path, git_buf *common_path)
-{
-	/* Check if we have a separate commondir (e.g. we have a
-	 * worktree) */
-	if (git_path_contains_file(repository_path, GIT_COMMONDIR_FILE)) {
-		git_buf common_link  = GIT_BUF_INIT;
-		git_buf_joinpath(&common_link, repository_path->ptr, GIT_COMMONDIR_FILE);
-
-		git_futils_readbuffer(&common_link, common_link.ptr);
-		git_buf_rtrim(&common_link);
-
-		if (git_path_is_relative(common_link.ptr)) {
-			git_buf_joinpath(common_path, repository_path->ptr, common_link.ptr);
-		} else {
-			git_buf_swap(common_path, &common_link);
-		}
-
-		git_buf_dispose(&common_link);
-	}
-	else {
-		git_buf_set(common_path, repository_path->ptr, repository_path->size);
-	}
-
-	/* Make sure the commondir path always has a trailing * slash */
-	if (git_buf_rfind(common_path, '/') != (ssize_t)common_path->size - 1)
-		git_buf_putc(common_path, '/');
-
-	/* Ensure HEAD file exists */
-	if (git_path_contains_file(repository_path, GIT_HEAD_FILE) == false)
-		return false;
-
-	/* Check files in common dir */
-	if (git_path_contains_dir(common_path, GIT_OBJECTS_DIR) == false)
-		return false;
-	if (git_path_contains_dir(common_path, GIT_REFS_DIR) == false)
-		return false;
-
-	return true;
-}
-
 static git_repository *repository_alloc(void)
 {
 	git_repository *repo = git__calloc(1, sizeof(git_repository));
@@ -322,226 +277,6 @@ cleanup:
 	return error;
 }
 
-/*
- * This function returns furthest offset into path where a ceiling dir
- * is found, so we can stop processing the path at that point.
- *
- * Note: converting this to use git_bufs instead of GIT_PATH_MAX buffers on
- * the stack could remove directories name limits, but at the cost of doing
- * repeated malloc/frees inside the loop below, so let's not do it now.
- */
-static size_t find_ceiling_dir_offset(
-	const char *path,
-	const git_strarray *ceiling_directories)
-{
-	char real_dir[GIT_PATH_MAX + 1];
-	char *dir;
-	size_t len, max_len = 0, min_len, cur;
-
-	assert(path);
-
-	min_len = (size_t)(git_path_root(path) + 1);
-
-	if (ceiling_directories->count == 0 || min_len == 0)
-		return min_len;
-
-	for (cur = 0; cur < ceiling_directories->count; cur++) {
-		dir = ceiling_directories->strings[cur];
-		len = strlen(dir);
-
-		if (len == 0 || git_path_root(dir) == -1)
-			continue;
-
-		if (p_realpath(dir, real_dir) == NULL)
-			continue;
-
-		len = strlen(real_dir);
-		if (len > 0 && real_dir[len-1] == '/')
-			dir[--len] = '\0';
-
-		if (!strncmp(path, real_dir, len) &&
-			(path[len] == '/' || !path[len]) &&
-			len > max_len)
-		{
-			max_len = len;
-		}
-	}
-
-	return (max_len <= min_len ? min_len : max_len);
-}
-
-/*
- * Read the contents of `file_path` and set `path_out` to the repo dir that
- * it points to.  Before calling, set `path_out` to the base directory that
- * should be used if the contents of `file_path` are a relative path.
- */
-static int read_gitfile(git_buf *path_out, const char *file_path)
-{
-	int     error = 0;
-	git_buf file = GIT_BUF_INIT;
-	size_t  prefix_len = strlen(GIT_FILE_CONTENT_PREFIX);
-
-	assert(path_out && file_path);
-
-	if (git_futils_readbuffer(&file, file_path) < 0)
-		return -1;
-
-	git_buf_rtrim(&file);
-	/* apparently on Windows, some people use backslashes in paths */
-	git_path_mkposix(file.ptr);
-
-	if (git_buf_len(&file) <= prefix_len ||
-		memcmp(git_buf_cstr(&file), GIT_FILE_CONTENT_PREFIX, prefix_len) != 0)
-	{
-		git_error_set(GIT_ERROR_REPOSITORY,
-			"the `.git` file at '%s' is malformed", file_path);
-		error = -1;
-	}
-	else if ((error = git_path_dirname_r(path_out, file_path)) >= 0) {
-		const char *gitlink = git_buf_cstr(&file) + prefix_len;
-		while (*gitlink && git__isspace(*gitlink)) gitlink++;
-
-		error = git_path_prettify_dir(
-			path_out, gitlink, git_buf_cstr(path_out));
-	}
-
-	git_buf_dispose(&file);
-	return error;
-}
-
-static int find_repo(
-	git_buf *gitdir_path,
-	git_buf *workdir_path,
-	git_buf *gitlink_path,
-	git_buf *commondir_path,
-	const char *start_path,
-	uint32_t flags,
-	git_strarray *ceiling_dirs)
-{
-	int error;
-	git_buf path = GIT_BUF_INIT;
-	git_buf repo_link = GIT_BUF_INIT;
-	git_buf common_link = GIT_BUF_INIT;
-	struct stat st;
-	dev_t initial_device = 0;
-	int min_iterations;
-	bool in_dot_git;
-	size_t ceiling_offset = 0;
-
-	git_buf_clear(gitdir_path);
-
-	error = git_path_prettify(&path, start_path, NULL);
-	if (error < 0)
-		return error;
-
-	/* in_dot_git toggles each loop:
-	 * /a/b/c/.git, /a/b/c, /a/b/.git, /a/b, /a/.git, /a
-	 * With GIT_REPOSITORY_OPEN_BARE or GIT_REPOSITORY_OPEN_NO_DOTGIT, we
-	 * assume we started with /a/b/c.git and don't append .git the first
-	 * time through.
-	 * min_iterations indicates the number of iterations left before going
-	 * further counts as a search. */
-	if (flags & (GIT_REPOSITORY_OPEN_BARE | GIT_REPOSITORY_OPEN_NO_DOTGIT)) {
-		in_dot_git = true;
-		min_iterations = 1;
-	} else {
-		in_dot_git = false;
-		min_iterations = 2;
-	}
-
-	for (;;) {
-		if (!(flags & GIT_REPOSITORY_OPEN_NO_DOTGIT)) {
-			if (!in_dot_git) {
-				error = git_buf_joinpath(&path, path.ptr, DOT_GIT);
-				if (error < 0)
-					break;
-			}
-			in_dot_git = !in_dot_git;
-		}
-
-		if (p_stat(path.ptr, &st) == 0) {
-			/* check that we have not crossed device boundaries */
-			if (initial_device == 0)
-				initial_device = st.st_dev;
-			else if (st.st_dev != initial_device &&
-				 !(flags & GIT_REPOSITORY_OPEN_CROSS_FS))
-				break;
-
-			if (S_ISDIR(st.st_mode)) {
-				if (valid_repository_path(&path, &common_link)) {
-					git_path_to_dir(&path);
-					git_buf_set(gitdir_path, path.ptr, path.size);
-
-					if (gitlink_path)
-						git_buf_attach(gitlink_path,
-							git_worktree__read_link(path.ptr, GIT_GITDIR_FILE), 0);
-					if (commondir_path)
-						git_buf_swap(&common_link, commondir_path);
-
-					break;
-				}
-			}
-			else if (S_ISREG(st.st_mode) && git__suffixcmp(path.ptr, "/" DOT_GIT) == 0) {
-				error = read_gitfile(&repo_link, path.ptr);
-				if (error < 0)
-					break;
-				if (valid_repository_path(&repo_link, &common_link)) {
-					git_buf_swap(gitdir_path, &repo_link);
-
-					if (gitlink_path)
-						error = git_buf_put(gitlink_path, path.ptr, path.size);
-					if (commondir_path)
-						git_buf_swap(&common_link, commondir_path);
-				}
-				break;
-			}
-		}
-
-		/* Move up one directory. If we're in_dot_git, we'll search the
-		 * parent itself next. If we're !in_dot_git, we'll search .git
-		 * in the parent directory next (added at the top of the loop). */
-		if (git_path_dirname_r(&path, path.ptr) < 0) {
-			error = -1;
-			break;
-		}
-
-		/* Once we've checked the directory (and .git if applicable),
-		 * find the ceiling for a search. */
-		if (min_iterations && (--min_iterations == 0))
-			ceiling_offset = find_ceiling_dir_offset(path.ptr, ceiling_dirs);
-
-		/* Check if we should stop searching here. */
-		if (min_iterations == 0
-		    && (path.ptr[ceiling_offset] == 0
-			|| (flags & GIT_REPOSITORY_OPEN_NO_SEARCH)))
-			break;
-	}
-
-	if (!error && workdir_path && !(flags & GIT_REPOSITORY_OPEN_BARE)) {
-		if (!git_buf_len(gitdir_path))
-			git_buf_clear(workdir_path);
-		else {
-			git_path_dirname_r(workdir_path, path.ptr);
-			git_path_to_dir(workdir_path);
-		}
-		if (git_buf_oom(workdir_path))
-			return -1;
-	}
-
-	/* If we didn't find the repository, and we don't have any other error
-	 * to report, report that. */
-	if (!git_buf_len(gitdir_path) && !error) {
-		git_error_set(GIT_ERROR_REPOSITORY,
-			"could not find repository from '%s'", start_path);
-		error = GIT_ENOTFOUND;
-	}
-
-	git_buf_dispose(&path);
-	git_buf_dispose(&repo_link);
-	git_buf_dispose(&common_link);
-	return error;
-}
-
 int git_repository_open_bare(
 	git_repository **repo_ptr,
 	const char *bare_path)
@@ -553,7 +288,7 @@ int git_repository_open_bare(
 	if ((error = git_path_prettify_dir(&path, bare_path, NULL)) < 0)
 		return error;
 
-	if (!valid_repository_path(&path, &common_path)) {
+	if (!git_layout_is_valid_repository(&path, &common_path)) {
 		git_buf_dispose(&path);
 		git_buf_dispose(&common_path);
 		git_error_set(GIT_ERROR_REPOSITORY, "path is not a repository: %s", bare_path);
@@ -789,7 +524,7 @@ static int git_repository__open(
 	if (repo_ptr)
 		*repo_ptr = NULL;
 
-	error = find_repo(
+	error = git_layout_find_repo(
 		&gitdir, &workdir, &gitlink, &commondir, start_path, flags, ceiling_dirs);
 
 	if (error < 0 || !repo_ptr)
@@ -932,7 +667,7 @@ int git_repository_discover(
 	if (git_strarray_parse_pathlist(&ceiling_dirs, ceiling_dirs_str) < 0)
 		return -1;
 
-	return find_repo(out, NULL, NULL, NULL, start_path, flags, &ceiling_dirs);
+	return git_layout_find_repo(out, NULL, NULL, NULL, start_path, flags, &ceiling_dirs);
 }
 
 static int load_config(
@@ -1655,103 +1390,6 @@ int git_repository_reinit_filesystem(git_repository *repo, int recurse)
 	return error;
 }
 
-static int repo_write_template(
-	const char *git_dir,
-	bool allow_overwrite,
-	const char *file,
-	mode_t mode,
-	bool hidden,
-	const char *content)
-{
-	git_buf path = GIT_BUF_INIT;
-	int fd, error = 0, flags;
-
-	if (git_buf_joinpath(&path, git_dir, file) < 0)
-		return -1;
-
-	if (allow_overwrite)
-		flags = O_WRONLY | O_CREAT | O_TRUNC;
-	else
-		flags = O_WRONLY | O_CREAT | O_EXCL;
-
-	fd = p_open(git_buf_cstr(&path), flags, mode);
-
-	if (fd >= 0) {
-		error = p_write(fd, content, strlen(content));
-
-		p_close(fd);
-	}
-	else if (errno != EEXIST)
-		error = fd;
-
-#ifdef GIT_WIN32
-	if (!error && hidden) {
-		if (git_win32__set_hidden(path.ptr, true) < 0)
-			error = -1;
-	}
-#else
-	GIT_UNUSED(hidden);
-#endif
-
-	git_buf_dispose(&path);
-
-	if (error)
-		git_error_set(GIT_ERROR_OS,
-			"failed to initialize repository with template '%s'", file);
-
-	return error;
-}
-
-static int repo_write_gitlink(
-	const char *in_dir, const char *to_repo, bool use_relative_path)
-{
-	int error;
-	git_buf buf = GIT_BUF_INIT;
-	git_buf path_to_repo = GIT_BUF_INIT;
-	struct stat st;
-
-	git_path_dirname_r(&buf, to_repo);
-	git_path_to_dir(&buf);
-	if (git_buf_oom(&buf))
-		return -1;
-
-	/* don't write gitlink to natural workdir */
-	if (git__suffixcmp(to_repo, "/" DOT_GIT "/") == 0 &&
-		strcmp(in_dir, buf.ptr) == 0)
-	{
-		error = GIT_PASSTHROUGH;
-		goto cleanup;
-	}
-
-	if ((error = git_buf_joinpath(&buf, in_dir, DOT_GIT)) < 0)
-		goto cleanup;
-
-	if (!p_stat(buf.ptr, &st) && !S_ISREG(st.st_mode)) {
-		git_error_set(GIT_ERROR_REPOSITORY,
-			"cannot overwrite gitlink file into path '%s'", in_dir);
-		error = GIT_EEXISTS;
-		goto cleanup;
-	}
-
-	git_buf_clear(&buf);
-
-	error = git_buf_sets(&path_to_repo, to_repo);
-
-	if (!error && use_relative_path)
-		error = git_path_make_relative(&path_to_repo, in_dir);
-
-	if (!error)
-		error = git_buf_join(&buf, ' ', GIT_FILE_CONTENT_PREFIX, path_to_repo.ptr);
-
-	if (!error)
-		error = repo_write_template(in_dir, true, DOT_GIT, 0666, true, buf.ptr);
-
-cleanup:
-	git_buf_dispose(&buf);
-	git_buf_dispose(&path_to_repo);
-	return error;
-}
-
 static mode_t pick_dir_mode(git_repository_init_options *opts)
 {
 	if (opts->mode == GIT_REPOSITORY_INIT_SHARED_UMASK)
@@ -1792,7 +1430,7 @@ static int repo_init_structure(
 	if ((opts->flags & GIT_REPOSITORY_INIT_BARE) == 0 &&
 		(opts->flags & GIT_REPOSITORY_INIT__NATURAL_WD) == 0)
 	{
-		if (repo_write_gitlink(work_dir, repo_dir, opts->flags & GIT_REPOSITORY_INIT_RELATIVE_GITLINK) < 0)
+		if (git_layout_write_gitlink(work_dir, repo_dir, opts->flags & GIT_REPOSITORY_INIT_RELATIVE_GITLINK) < 0)
 			return -1;
 	}
 
@@ -1865,7 +1503,7 @@ static int repo_init_structure(
 			if (opts->description && strcmp(tpl->path, GIT_DESC_FILE) == 0)
 				content = opts->description;
 
-			error = repo_write_template(
+			error = git_layout_write_template(
 				repo_dir, false, tpl->path, tpl->mode, false, content);
 		}
 	}
@@ -2059,7 +1697,7 @@ int git_repository_init_ext(
 
 	wd = (opts->flags & GIT_REPOSITORY_INIT_BARE) ? NULL : git_buf_cstr(&wd_path);
 
-	if (valid_repository_path(&repo_path, &common_path)) {
+	if (git_layout_is_valid_repository(&repo_path, &common_path)) {
 		if ((opts->flags & GIT_REPOSITORY_INIT_NO_REINIT) != 0) {
 			git_error_set(GIT_ERROR_REPOSITORY,
 				"attempt to reinitialize '%s'", given_repo);
@@ -2353,7 +1991,7 @@ int git_repository_set_workdir(
 		if (git_repository_config__weakptr(&config, repo) < 0)
 			return -1;
 
-		error = repo_write_gitlink(path.ptr, git_repository_path(repo), false);
+		error = git_layout_write_gitlink(path.ptr, git_repository_path(repo), false);
 
 		/* passthrough error means gitlink is unnecessary */
 		if (error == GIT_PASSTHROUGH)
