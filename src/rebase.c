@@ -90,7 +90,7 @@ static int rebase_state_type(
 	git_buf path = GIT_BUF_INIT;
 	git_rebase_type_t type = GIT_REBASE_TYPE_NONE;
 
-	if (git_buf_joinpath(&path, repo->gitdir, GIT_REBASE_APPLY_DIR) < 0)
+	if (git_repository_item_path(&path, repo, GIT_REPOSITORY_ITEM_REBASE_APPLY) < 0)
 		return -1;
 
 	if (git_path_isdir(git_buf_cstr(&path))) {
@@ -99,7 +99,7 @@ static int rebase_state_type(
 	}
 
 	git_buf_clear(&path);
-	if (git_buf_joinpath(&path, repo->gitdir, GIT_REBASE_MERGE_DIR) < 0)
+	if (git_repository_item_path(&path, repo, GIT_REPOSITORY_ITEM_REBASE_MERGE) < 0)
 		return -1;
 
 	if (git_path_isdir(git_buf_cstr(&path))) {
@@ -627,7 +627,7 @@ static int rebase_init_merge(
 
 	GIT_UNUSED(upstream);
 
-	if ((error = git_buf_joinpath(&state_path, repo->gitdir, GIT_REBASE_MERGE_DIR)) < 0)
+	if ((error = git_repository_item_path(&state_path, repo, GIT_REPOSITORY_ITEM_REBASE_MERGE)) < 0)
 		goto done;
 
 	rebase->state_path = git_buf_detach(&state_path);
