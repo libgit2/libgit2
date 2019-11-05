@@ -17,10 +17,7 @@
 #include "cache.h"
 #include "posix.h"
 #include "filter.h"
-
-#define GIT_OBJECTS_DIR "objects/"
-#define GIT_OBJECT_DIR_MODE 0777
-#define GIT_OBJECT_FILE_MODE 0444
+#include "layout.h"
 
 extern bool git_odb__strict_hash_verification;
 

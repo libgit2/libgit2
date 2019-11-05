@@ -14,44 +14,13 @@
 #include "git2/refdb.h"
 #include "strmap.h"
 #include "buffer.h"
+#include "layout.h"
 #include "oid.h"
 
 extern bool git_reference__enable_symbolic_ref_target_validation;
 
-#define GIT_REFS_DIR "refs/"
-#define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"
-#define GIT_REFS_TAGS_DIR GIT_REFS_DIR "tags/"
-#define GIT_REFS_REMOTES_DIR GIT_REFS_DIR "remotes/"
-#define GIT_REFS_NOTES_DIR GIT_REFS_DIR "notes/"
-#define GIT_REFS_DIR_MODE 0777
-#define GIT_REFS_FILE_MODE 0666
-
 #define GIT_SYMREF "ref: "
-#define GIT_PACKEDREFS_FILE "packed-refs"
 #define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled fully-peeled sorted "
-#define GIT_PACKEDREFS_FILE_MODE 0666
-
-#define GIT_HEAD_FILE "HEAD"
-#define GIT_ORIG_HEAD_FILE "ORIG_HEAD"
-#define GIT_FETCH_HEAD_FILE "FETCH_HEAD"
-#define GIT_MERGE_HEAD_FILE "MERGE_HEAD"
-#define GIT_REVERT_HEAD_FILE "REVERT_HEAD"
-#define GIT_CHERRYPICK_HEAD_FILE "CHERRY_PICK_HEAD"
-#define GIT_BISECT_LOG_FILE "BISECT_LOG"
-#define GIT_REBASE_MERGE_DIR "rebase-merge/"
-#define GIT_REBASE_MERGE_INTERACTIVE_FILE GIT_REBASE_MERGE_DIR "interactive"
-#define GIT_REBASE_APPLY_DIR "rebase-apply/"
-#define GIT_REBASE_APPLY_REBASING_FILE GIT_REBASE_APPLY_DIR "rebasing"
-#define GIT_REBASE_APPLY_APPLYING_FILE GIT_REBASE_APPLY_DIR "applying"
-#define GIT_REFS_HEADS_MASTER_FILE GIT_REFS_HEADS_DIR "master"
-
-#define GIT_SEQUENCER_DIR "sequencer/"
-#define GIT_SEQUENCER_HEAD_FILE GIT_SEQUENCER_DIR "head"
-#define GIT_SEQUENCER_OPTIONS_FILE GIT_SEQUENCER_DIR "options"
-#define GIT_SEQUENCER_TODO_FILE GIT_SEQUENCER_DIR "todo"
-
-#define GIT_STASH_FILE "stash"
-#define GIT_REFS_STASH_FILE GIT_REFS_DIR GIT_STASH_FILE
 
 #define GIT_REFERENCE_FORMAT__PRECOMPOSE_UNICODE	(1u << 16)
 #define GIT_REFERENCE_FORMAT__VALIDATION_DISABLE	(1u << 15)

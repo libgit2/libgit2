@@ -12,14 +12,13 @@
 #include "merge.h"
 #include "vector.h"
 #include "index.h"
+#include "layout.h"
 
 #include "git2/types.h"
 #include "git2/merge.h"
 #include "git2/cherrypick.h"
 #include "git2/commit.h"
 #include "git2/sys/commit.h"
-
-#define GIT_CHERRYPICK_FILE_MODE		0666
 
 static int write_cherrypick_head(
 	git_repository *repo,

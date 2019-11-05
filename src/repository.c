@@ -40,36 +40,11 @@
 
 bool git_repository__fsync_gitdir = false;
 
-static const struct {
-    git_repository_item_t parent;
-	git_repository_item_t fallback;
-    const char *name;
-    bool directory;
-} items[] = {
-	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM__LAST, NULL, true },
-	{ GIT_REPOSITORY_ITEM_WORKDIR, GIT_REPOSITORY_ITEM__LAST, NULL, true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM__LAST, NULL, true },
-	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM__LAST, "index", false },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "objects", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "refs", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "packed-refs", false },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "remotes", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "config", false },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "info", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "hooks", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "logs", true },
-	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM__LAST, "modules", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "worktrees", true }
-};
-
 static int check_repositoryformatversion(git_config *config);
 
-#define GIT_COMMONDIR_FILE "commondir"
-#define GIT_GITDIR_FILE "gitdir"
+#define GIT_BRANCH_MASTER "master"
 
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
-
-#define GIT_BRANCH_MASTER "master"
 
 #define GIT_REPO_VERSION 0
 
@@ -2327,52 +2302,13 @@ int git_repository_is_empty(git_repository *repo)
 	return is_empty;
 }
 
-static const char *resolved_parent_path(const git_repository *repo, git_repository_item_t item, git_repository_item_t fallback)
-{
-	const char *parent;
-
-	switch (item) {
-		case GIT_REPOSITORY_ITEM_GITDIR:
-			parent = git_repository_path(repo);
-			break;
-		case GIT_REPOSITORY_ITEM_WORKDIR:
-			parent = git_repository_workdir(repo);
-			break;
-		case GIT_REPOSITORY_ITEM_COMMONDIR:
-			parent = git_repository_commondir(repo);
-			break;
-		default:
-			git_error_set(GIT_ERROR_INVALID, "invalid item directory");
-			return NULL;
-	}
-	if (!parent && fallback != GIT_REPOSITORY_ITEM__LAST)
-		return resolved_parent_path(repo, fallback, GIT_REPOSITORY_ITEM__LAST);
-
-	return parent;
-}
-
 int git_repository_item_path(git_buf *out, const git_repository *repo, git_repository_item_t item)
 {
-	const char *parent = resolved_parent_path(repo, items[item].parent, items[item].fallback);
-	if (parent == NULL) {
-		git_error_set(GIT_ERROR_INVALID, "path cannot exist in repository");
-		return GIT_ENOTFOUND;
-	}
-
-	if (git_buf_sets(out, parent) < 0)
-		return -1;
-
-	if (items[item].name) {
-		if (git_buf_joinpath(out, parent, items[item].name) < 0)
-			return -1;
-	}
-
-	if (items[item].directory) {
-		if (git_path_to_dir(out) < 0)
-			return -1;
-	}
-
-	return 0;
+	git_repository_layout layout;
+	layout.gitdir = repo->gitdir;
+	layout.workdir = repo->workdir;
+	layout.commondir = repo->commondir;
+	return git_layout_item_path(out, &layout, item);
 }
 
 const char *git_repository_path(const git_repository *repo)

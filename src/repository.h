@@ -24,11 +24,7 @@
 #include "attrcache.h"
 #include "submodule.h"
 #include "diff_driver.h"
-
-#define DOT_GIT ".git"
-#define GIT_DIR DOT_GIT "/"
-#define GIT_DIR_MODE 0755
-#define GIT_BARE_DIR_MODE 0777
+#include "layout.h"
 
 /* Default DOS-compatible 8.3 "short name" for a git repository, "GIT~1" */
 #define GIT_DIR_SHORTNAME "GIT~1"

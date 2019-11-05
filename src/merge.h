@@ -18,10 +18,6 @@
 #include "git2/merge.h"
 #include "git2/sys/merge.h"
 
-#define GIT_MERGE_MSG_FILE		"MERGE_MSG"
-#define GIT_MERGE_MODE_FILE		"MERGE_MODE"
-#define GIT_MERGE_FILE_MODE		0666
-
 #define GIT_MERGE_DEFAULT_RENAME_THRESHOLD	50
 #define GIT_MERGE_DEFAULT_TARGET_LIMIT		1000
 
