@@ -186,10 +186,7 @@ static size_t find_ceiling_dir_offset(
 static int read_gitfile(git_buf *path_out, const char *file_path);
 
 int git_layout_find_repo(
-	git_buf *gitdir_path,
-	git_buf *workdir_path,
-	git_buf *gitlink_path,
-	git_buf *commondir_path,
+	git_repository_layout *layout,
 	const char *start_path,
 	uint32_t flags,
 	git_strarray *ceiling_dirs)
@@ -204,7 +201,7 @@ int git_layout_find_repo(
 	bool in_dot_git;
 	size_t ceiling_offset = 0;
 
-	git_buf_clear(gitdir_path);
+	memset(layout, 0, sizeof(*layout));
 
 	error = git_path_prettify(&gitdir, start_path, NULL);
 	if (error < 0)
@@ -245,14 +242,10 @@ int git_layout_find_repo(
 
 			if (S_ISDIR(st.st_mode) && git_layout_is_valid_repository(&gitdir, &common_link)) {
 				git_path_to_dir(&gitdir);
-				git_buf_set(gitdir_path, gitdir.ptr, gitdir.size);
 
-				if (gitlink_path)
-					git_buf_attach(gitlink_path,
-								   git_worktree__read_link(gitdir.ptr, GIT_GITDIR_FILE), 0);
-				if (commondir_path)
-					git_buf_swap(&common_link, commondir_path);
-
+				layout->gitdir = git__strndup(gitdir.ptr, git_buf_len(&gitdir));
+				layout->gitlink = git_worktree__read_link(layout->gitdir, GIT_GITDIR_FILE);
+				layout->commondir = git_buf_detach(&common_link);
 				break;
 			}
 			else if (S_ISREG(st.st_mode) && git__suffixcmp(gitdir.ptr, "/" DOT_GIT) == 0) {
@@ -261,16 +254,16 @@ int git_layout_find_repo(
 					break;
 
 				if (git_layout_is_valid_repository(&repo_link, &common_link)) {
-					git_buf_swap(gitdir_path, &repo_link);
+					git_buf_swap(&gitdir, &repo_link);
 
-					if (gitlink_path)
-						error = git_buf_put(gitlink_path, gitdir.ptr, gitdir.size);
-					if (commondir_path)
-						git_buf_swap(&common_link, commondir_path);
+					layout->gitdir = git__strndup(gitdir.ptr, git_buf_len(&gitdir));
+					layout->gitlink = git__strndup(gitdir.ptr, git_buf_len(&gitdir));
+					layout->commondir = git_buf_detach(&common_link);
 				}
 				break;
 			}
 		}
+
 
 		/* Move up one directory. If we're in_dot_git, we'll search the
 		 * parent itself next. If we're !in_dot_git, we'll search .git
@@ -292,20 +285,20 @@ int git_layout_find_repo(
 			break;
 	}
 
-	if (!error && workdir_path && !(flags & GIT_REPOSITORY_OPEN_BARE)) {
-		if (!git_buf_len(gitdir_path))
-			git_buf_clear(workdir_path);
-		else {
-			git_path_dirname_r(workdir_path, gitdir.ptr);
-			git_path_to_dir(workdir_path);
-		}
-		if (git_buf_oom(workdir_path))
+	if (!error && layout->gitdir && !(flags & GIT_REPOSITORY_OPEN_BARE)) {
+		git_buf workdir = GIT_BUF_INIT;
+		git_path_dirname_r(&workdir, gitdir.ptr);
+		git_path_to_dir(&workdir);
+
+		if (git_buf_oom(&workdir))
 			return -1;
+
+		layout->workdir = git_buf_detach(&workdir);
 	}
 
 	/* If we didn't find the repository, and we don't have any other error
 	 * to report, report that. */
-	if (!git_buf_len(gitdir_path) && !error) {
+	if (!layout->gitdir && !error) {
 		git_error_set(GIT_ERROR_REPOSITORY,
 					  "could not find repository from '%s'", start_path);
 		error = GIT_ENOTFOUND;

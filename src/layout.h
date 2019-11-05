@@ -66,6 +66,7 @@ typedef struct {
 	char *gitdir; /**< Absolute path to the .git directory */
 	char *workdir; /**< Absolute path to the working directory */
 	char *commondir; /**< Absolute path to the common repository */
+	char *gitlink; /**< */
 } git_repository_layout;
 
 int git_layout_item_path(git_buf *out, const git_repository_layout *repo, git_repository_item_t item);
@@ -73,10 +74,7 @@ int git_layout_item_path(git_buf *out, const git_repository_layout *repo, git_re
 bool git_layout_is_valid_repository(git_buf *repository_path, git_buf *common_path);
 
 int git_layout_find_repo(
-	git_buf *gitdir_path,
-	git_buf *workdir_path,
-	git_buf *gitlink_path,
-	git_buf *commondir_path,
+	git_repository_layout *layout,
 	const char *start_path,
 	uint32_t flags,
 	git_strarray *ceiling_dirs);

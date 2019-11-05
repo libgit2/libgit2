@@ -123,6 +123,11 @@ enum {
 
 /** Internal structure for repository object */
 struct git_repository {
+	git_repository_layout layout;
+
+	char *namespace;
+	char *configfile;
+
 	git_odb *_odb;
 	git_refdb *_refdb;
 	git_config *_config;
@@ -131,12 +136,6 @@ struct git_repository {
 	git_cache objects;
 	git_attr_cache *attrcache;
 	git_diff_driver_registry *diff_drivers;
-
-	char *gitlink;
-	char *gitdir;
-	char *commondir;
-	char *workdir;
-	char *namespace;
 
 	char *ident_name;
 	char *ident_email;

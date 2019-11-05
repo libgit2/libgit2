@@ -13,9 +13,9 @@ static void assert_worktree_valid(git_repository *wt, const char *parentdir, con
 {
 	cl_assert(wt->is_worktree);
 
-	cl_assert_equal_s(wt->workdir, cl_git_sandbox_path(1, wtdir, NULL));
-	cl_assert_equal_s(wt->gitlink, cl_git_sandbox_path(0, wtdir, ".git", NULL));
-	cl_assert_equal_s(wt->gitdir, cl_git_sandbox_path(1, parentdir, ".git", "worktrees", wtdir, NULL));
+	cl_assert_equal_s(wt->layout.workdir, cl_git_sandbox_path(1, wtdir, NULL));
+	cl_assert_equal_s(wt->layout.gitlink, cl_git_sandbox_path(0, wtdir, ".git", NULL));
+	cl_assert_equal_s(wt->layout.gitdir, cl_git_sandbox_path(1, parentdir, ".git", "worktrees", wtdir, NULL));
 }
 
 void test_worktree_open__initialize(void)

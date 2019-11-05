@@ -1723,8 +1723,8 @@ static int create_new_reflog_file(const char *filepath)
 GIT_INLINE(int) retrieve_reflog_path(git_buf *path, git_repository *repo, const char *name)
 {
 	if (strcmp(name, GIT_HEAD_FILE) == 0)
-		return git_buf_join3(path, '/', repo->gitdir, GIT_REFLOG_DIR, name);
-	return git_buf_join3(path, '/', repo->commondir, GIT_REFLOG_DIR, name);
+		return git_buf_join3(path, '/', repo->layout.gitdir, GIT_REFLOG_DIR, name);
+	return git_buf_join3(path, '/', repo->layout.commondir, GIT_REFLOG_DIR, name);
 }
 
 static int refdb_reflog_fs__ensure_log(git_refdb_backend *_backend, const char *name)
@@ -2031,7 +2031,7 @@ static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_
 		&normalized, new_name, GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL)) < 0)
 			return error;
 
-	if (git_buf_joinpath(&temp_path, repo->gitdir, GIT_REFLOG_DIR) < 0)
+	if (git_buf_joinpath(&temp_path, repo->layout.gitdir, GIT_REFLOG_DIR) < 0)
 		return -1;
 
 	if (git_buf_joinpath(&old_path, git_buf_cstr(&temp_path), old_name) < 0)
@@ -2131,15 +2131,15 @@ int git_refdb_backend_fs(
 
 	backend->repo = repository;
 
-	if (repository->gitdir) {
-		backend->gitpath = setup_namespace(repository, repository->gitdir);
+	if (repository->layout.gitdir) {
+		backend->gitpath = setup_namespace(repository, repository->layout.gitdir);
 
 		if (backend->gitpath == NULL)
 			goto fail;
 	}
 
-	if (repository->commondir) {
-		backend->commonpath = setup_namespace(repository, repository->commondir);
+	if (repository->layout.commondir) {
+		backend->commonpath = setup_namespace(repository, repository->layout.commondir);
 
 		if (backend->commonpath == NULL)
 			goto fail;
