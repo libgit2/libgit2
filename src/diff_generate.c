@@ -1371,7 +1371,7 @@ int git_diff_tree_to_index(
 	if ((error = diff_prepare_iterator_opts(&prefix, &a_opts, iflag, &b_opts, iflag, opts)) < 0 ||
 	    (error = git_iterator_for_tree(&a, old_tree, &a_opts)) < 0 ||
 	    (error = git_iterator_for_index(&b, repo, index, &b_opts)) < 0 ||
-	    (error = git_diff__from_iterators(&diff, repo, a, b, opts) < 0))
+	    (error = git_diff__from_iterators(&diff, repo, a, b, opts)) < 0)
 		goto out;
 
 	/* if index is in case-insensitive order, re-sort deltas to match */
