@@ -912,6 +912,18 @@
 	"+++ \n" \
 	"Binary files "
 
+#define PATCH_BINARY_FILE_WITH_WHITESPACE_PATHS \
+	"diff --git a/file b/file\n" \
+	"---  \n" \
+	"+++  \n" \
+	"Binary files "
+
+#define PATCH_BINARY_FILE_WITH_QUOTED_EMPTY_PATHS \
+	"diff --git a/file b/file\n" \
+	"--- \"\"\n" \
+	"+++ \"\"\n" \
+	"Binary files "
+
 #define PATCH_MULTIPLE_OLD_PATHS \
 	"diff --git  \n" \
 	"---  \n" \
