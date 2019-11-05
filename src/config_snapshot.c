@@ -22,7 +22,7 @@ static int config_error_readonly(void)
 	return -1;
 }
 
-static int config_iterator_new_readonly(
+static int config_snapshot_iterator(
 	git_config_iterator **iter,
 	struct git_config_backend *backend)
 {
@@ -41,13 +41,13 @@ out:
 }
 
 /* release the map containing the entry as an equivalent to freeing it */
-static void free_diskfile_entry(git_config_entry *entry)
+static void config_snapshot_entry_free(git_config_entry *entry)
 {
 	git_config_entries *entries = (git_config_entries *) entry->payload;
 	git_config_entries_free(entries);
 }
 
-static int config_get_readonly(git_config_backend *cfg, const char *key, git_config_entry **out)
+static int config_snapshot_get(git_config_backend *cfg, const char *key, git_config_entry **out)
 {
 	config_snapshot_backend *b = GIT_CONTAINER_OF(cfg, config_snapshot_backend, parent);
 	git_config_entries *entries = NULL;
@@ -68,14 +68,14 @@ static int config_get_readonly(git_config_backend *cfg, const char *key, git_con
 		return error;
 	}
 
-	entry->free = free_diskfile_entry;
+	entry->free = config_snapshot_entry_free;
 	entry->payload = entries;
 	*out = entry;
 
 	return 0;
 }
 
-static int config_set_readonly(git_config_backend *cfg, const char *name, const char *value)
+static int config_snapshot_set(git_config_backend *cfg, const char *name, const char *value)
 {
 	GIT_UNUSED(cfg);
 	GIT_UNUSED(name);
@@ -84,7 +84,7 @@ static int config_set_readonly(git_config_backend *cfg, const char *name, const 
 	return config_error_readonly();
 }
 
-static int config_set_multivar_readonly(
+static int config_snapshot_set_multivar(
 	git_config_backend *cfg, const char *name, const char *regexp, const char *value)
 {
 	GIT_UNUSED(cfg);
@@ -95,7 +95,7 @@ static int config_set_multivar_readonly(
 	return config_error_readonly();
 }
 
-static int config_delete_multivar_readonly(git_config_backend *cfg, const char *name, const char *regexp)
+static int config_snapshot_delete_multivar(git_config_backend *cfg, const char *name, const char *regexp)
 {
 	GIT_UNUSED(cfg);
 	GIT_UNUSED(name);
@@ -104,7 +104,7 @@ static int config_delete_multivar_readonly(git_config_backend *cfg, const char *
 	return config_error_readonly();
 }
 
-static int config_delete_readonly(git_config_backend *cfg, const char *name)
+static int config_snapshot_delete(git_config_backend *cfg, const char *name)
 {
 	GIT_UNUSED(cfg);
 	GIT_UNUSED(name);
@@ -112,14 +112,14 @@ static int config_delete_readonly(git_config_backend *cfg, const char *name)
 	return config_error_readonly();
 }
 
-static int config_lock_readonly(git_config_backend *_cfg)
+static int config_snapshot_lock(git_config_backend *_cfg)
 {
 	GIT_UNUSED(_cfg);
 
 	return config_error_readonly();
 }
 
-static int config_unlock_readonly(git_config_backend *_cfg, int success)
+static int config_snapshot_unlock(git_config_backend *_cfg, int success)
 {
 	GIT_UNUSED(_cfg);
 	GIT_UNUSED(success);
@@ -127,7 +127,7 @@ static int config_unlock_readonly(git_config_backend *_cfg, int success)
 	return config_error_readonly();
 }
 
-static void backend_readonly_free(git_config_backend *_backend)
+static void config_snapshot_free(git_config_backend *_backend)
 {
 	config_snapshot_backend *backend = GIT_CONTAINER_OF(_backend, config_snapshot_backend, parent);
 
@@ -139,7 +139,7 @@ static void backend_readonly_free(git_config_backend *_backend)
 	git__free(backend);
 }
 
-static int config_readonly_open(git_config_backend *cfg, git_config_level_t level, const git_repository *repo)
+static int config_snapshot_open(git_config_backend *cfg, git_config_level_t level, const git_repository *repo)
 {
 	config_snapshot_backend *b = GIT_CONTAINER_OF(cfg, config_snapshot_backend, parent);
 	git_config_entries *entries = NULL;
@@ -188,17 +188,17 @@ int git_config_backend_snapshot(git_config_backend **out, git_config_backend *so
 
 	backend->parent.readonly = 1;
 	backend->parent.version = GIT_CONFIG_BACKEND_VERSION;
-	backend->parent.open = config_readonly_open;
-	backend->parent.get = config_get_readonly;
-	backend->parent.set = config_set_readonly;
-	backend->parent.set_multivar = config_set_multivar_readonly;
+	backend->parent.open = config_snapshot_open;
+	backend->parent.get = config_snapshot_get;
+	backend->parent.set = config_snapshot_set;
+	backend->parent.set_multivar = config_snapshot_set_multivar;
 	backend->parent.snapshot = git_config_backend_snapshot;
-	backend->parent.del = config_delete_readonly;
-	backend->parent.del_multivar = config_delete_multivar_readonly;
-	backend->parent.iterator = config_iterator_new_readonly;
-	backend->parent.lock = config_lock_readonly;
-	backend->parent.unlock = config_unlock_readonly;
-	backend->parent.free = backend_readonly_free;
+	backend->parent.del = config_snapshot_delete;
+	backend->parent.del_multivar = config_snapshot_delete_multivar;
+	backend->parent.iterator = config_snapshot_iterator;
+	backend->parent.lock = config_snapshot_lock;
+	backend->parent.unlock = config_snapshot_unlock;
+	backend->parent.free = config_snapshot_free;
 
 	*out = &backend->parent;
 
