@@ -69,27 +69,24 @@ static int parse_header_path_buf(git_buf *path, git_patch_parse_ctx *ctx, size_t
 {
 	int error;
 
-	if (!path_len)
-		return git_parse_err("patch contains empty path at line %"PRIuZ,
-				     ctx->parse_ctx.line_num);
-
 	if ((error = git_buf_put(path, ctx->parse_ctx.line, path_len)) < 0)
-		goto done;
+		return error;
 
 	git_parse_advance_chars(&ctx->parse_ctx, path_len);
 
 	git_buf_rtrim(path);
 
-	if (path->size > 0 && path->ptr[0] == '"')
-		error = git_buf_unquote(path);
-
-	if (error < 0)
-		goto done;
+	if (path->size > 0 && path->ptr[0] == '"' &&
+	    (error = git_buf_unquote(path)) < 0)
+		return error;
 
 	git_path_squash_slashes(path);
 
-done:
-	return error;
+	if (!path->size)
+		return git_parse_err("patch contains empty path at line %"PRIuZ,
+				     ctx->parse_ctx.line_num);
+
+	return 0;
 }
 
 static int parse_header_path(char **out, git_patch_parse_ctx *ctx)
