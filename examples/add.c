@@ -51,9 +51,11 @@ int lg2_add(git_repository *repo, int argc, char **argv)
 	struct index_options options;
 	struct args_info args = ARGS_INFO_INIT;
 
+	/* Parse the options & arguments. */
 	parse_opts(NULL, &options, &args);
 	strarray_from_args(&array, &args);
 
+	/* Grab the repository's index. */
 	check_lg2(git_repository_index(&index, repo), "Could not open repository index", NULL);
 
 	/* Setup a callback if the requested options need it */
