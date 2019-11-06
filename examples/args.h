@@ -82,4 +82,9 @@ extern int match_bool_arg(int *out, struct args_info *args, const char *opt);
  */
 extern int match_arg_separator(struct args_info *args);
 
+/**
+ * Consume all remaining arguments in a git_strarray
+ */
+extern void strarray_from_args(git_strarray *array, struct args_info *args);
+
 #endif

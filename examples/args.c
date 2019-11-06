@@ -181,3 +181,17 @@ int match_arg_separator(struct args_info *args)
 	args->pos++;
 	return 1;
 }
+
+void strarray_from_args(git_strarray *array, struct args_info *args)
+{
+	size_t i;
+
+	array->count = args->argc - args->pos;
+	array->strings = calloc(array->count, sizeof(char *));
+	assert(array->strings != NULL);
+
+	for (i = 0; args->pos < args->argc; ++args->pos) {
+		array->strings[i++] = args->argv[args->pos];
+	}
+	args->pos = args->argc;
+}
