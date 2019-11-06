@@ -43,7 +43,7 @@ enum {
 
 #define MAX_PATHSPEC 8
 
-struct opts {
+struct status_opts {
 	git_status_options statusopt;
 	char *repodir;
 	char *pathspec[MAX_PATHSPEC];
@@ -55,7 +55,7 @@ struct opts {
 	int repeat;
 };
 
-static void parse_opts(struct opts *o, int argc, char *argv[]);
+static void parse_opts(struct status_opts *o, int argc, char *argv[]);
 static void show_branch(git_repository *repo, int format);
 static void print_long(git_status_list *status);
 static void print_short(git_repository *repo, git_status_list *status);
@@ -64,7 +64,7 @@ static int print_submod(git_submodule *sm, const char *name, void *payload);
 int lg2_status(git_repository *repo, int argc, char *argv[])
 {
 	git_status_list *status;
-	struct opts o = { GIT_STATUS_OPTIONS_INIT, "." };
+	struct status_opts o = { GIT_STATUS_OPTIONS_INIT, "." };
 
 	o.statusopt.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	o.statusopt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
@@ -435,7 +435,7 @@ static int print_submod(git_submodule *sm, const char *name, void *payload)
 /**
  * Parse options that git's status command supports.
  */
-static void parse_opts(struct opts *o, int argc, char *argv[])
+static void parse_opts(struct status_opts *o, int argc, char *argv[])
 {
 	struct args_info args = ARGS_INFO_INIT;
 

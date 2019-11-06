@@ -47,8 +47,8 @@ enum {
 	CACHE_NONE = 2
 };
 
-/** The 'opts' struct captures all the various parsed command line options. */
-struct opts {
+/** The 'diff_options' struct captures all the various parsed command line options. */
+struct diff_options {
 	git_diff_options diffopts;
 	git_diff_find_options findopts;
 	int color;
@@ -63,18 +63,17 @@ struct opts {
 
 /** These functions are implemented at the end */
 static void usage(const char *message, const char *arg);
-static void parse_opts(struct opts *o, int argc, char *argv[]);
+static void parse_opts(struct diff_options *o, int argc, char *argv[]);
 static int color_printer(
 	const git_diff_delta*, const git_diff_hunk*, const git_diff_line*, void*);
-static void diff_print_stats(git_diff *diff, struct opts *o);
-static void compute_diff_no_index(git_diff **diff, struct opts *o);
+static void diff_print_stats(git_diff *diff, struct diff_options *o);
+static void compute_diff_no_index(git_diff **diff, struct diff_options *o);
 
 int lg2_diff(git_repository *repo, int argc, char *argv[])
 {
 	git_tree *t1 = NULL, *t2 = NULL;
 	git_diff *diff;
-
-	struct opts o = {
+	struct diff_options o = {
 		GIT_DIFF_OPTIONS_INIT, GIT_DIFF_FIND_OPTIONS_INIT,
 		-1, -1, 0, 0, GIT_DIFF_FORMAT_PATCH, NULL, NULL, "."
 	};
@@ -166,7 +165,7 @@ int lg2_diff(git_repository *repo, int argc, char *argv[])
 	return 0;
 }
 
-static void compute_diff_no_index(git_diff **diff, struct opts *o) {
+static void compute_diff_no_index(git_diff **diff, struct diff_options *o) {
 	git_patch *patch = NULL;
 	char *file1_str = NULL;
 	char *file2_str = NULL;
@@ -242,10 +241,9 @@ static int color_printer(
 }
 
 /** Parse arguments as copied from git-diff. */
-static void parse_opts(struct opts *o, int argc, char *argv[])
+static void parse_opts(struct diff_options *o, int argc, char *argv[])
 {
 	struct args_info args = ARGS_INFO_INIT;
-
 
 	for (args.pos = 1; args.pos < argc; ++args.pos) {
 		const char *a = argv[args.pos];
@@ -343,7 +341,7 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 }
 
 /** Display diff output with "--stat", "--numstat", or "--shortstat" */
-static void diff_print_stats(git_diff *diff, struct opts *o)
+static void diff_print_stats(git_diff *diff, struct diff_options *o)
 {
 	git_diff_stats *stats;
 	git_buf b = GIT_BUF_INIT_CONST(NULL, 0);

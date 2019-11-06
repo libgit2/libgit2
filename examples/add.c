@@ -40,7 +40,7 @@ struct index_options {
 };
 
 /* Forward declarations for helpers */
-static void parse_opts(const char **repo_path, struct index_options *options, struct args_info *args);
+static void parse_opts(const char **repo_path, struct index_options *opts, struct args_info *args);
 int print_matched_cb(const char *path, const char *matched_pathspec, void *payload);
 
 int lg2_add(git_repository *repo, int argc, char **argv)
@@ -86,13 +86,13 @@ int lg2_add(git_repository *repo, int argc, char **argv)
  */
 int print_matched_cb(const char *path, const char *matched_pathspec, void *payload)
 {
-	struct index_options options = *(struct index_options *)(payload);
+	struct index_options *opts = (struct index_options *)(payload);
 	int ret;
 	unsigned status;
 	(void)matched_pathspec;
 
 	/* Get the file status */
-	if (git_status_file(&status, options.repo, path) < 0)
+	if (git_status_file(&status, opts->repo, path) < 0)
 		return -1;
 
 	if ((status & GIT_STATUS_WT_MODIFIED) || (status & GIT_STATUS_WT_NEW)) {
@@ -102,7 +102,7 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 		ret = 1;
 	}
 
-	if (options.dry_run)
+	if (opts->dry_run)
 		ret = 1;
 
 	return ret;
@@ -132,7 +132,7 @@ void print_usage(void)
 	exit(1);
 }
 
-static void parse_opts(const char **repo_path, struct index_options *options, struct args_info *args)
+static void parse_opts(const char **repo_path, struct index_options *opts, struct args_info *args)
 {
 	if (args->argc <= 1)
 		print_usage();
@@ -142,9 +142,9 @@ static void parse_opts(const char **repo_path, struct index_options *options, st
 
 		if (curr[0] != '-') {
 			if (!strcmp("add", curr)) {
-				options->mode = INDEX_ADD;
+				opts->mode = INDEX_ADD;
 				continue;
-			} else if (options->mode == INDEX_NONE) {
+			} else if (opts->mode == INDEX_NONE) {
 				fprintf(stderr, "missing command: %s", curr);
 				print_usage();
 				break;
@@ -152,10 +152,10 @@ static void parse_opts(const char **repo_path, struct index_options *options, st
 				/* We might be looking at a filename */
 				break;
 			}
-		} else if (match_bool_arg(&options->verbose, args, "--verbose") ||
-				   match_bool_arg(&options->dry_run, args, "--dry-run") ||
+		} else if (match_bool_arg(&opts->verbose, args, "--verbose") ||
+				   match_bool_arg(&opts->dry_run, args, "--dry-run") ||
 				   match_str_arg(repo_path, args, "--git-dir") ||
-				   (options->mode == INDEX_ADD && match_bool_arg(&options->add_update, args, "--update"))) {
+				   (opts->mode == INDEX_ADD && match_bool_arg(&opts->add_update, args, "--update"))) {
 			continue;
 		} else if (match_bool_arg(NULL, args, "--help")) {
 			print_usage();
