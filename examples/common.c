@@ -15,18 +15,10 @@
 
 #include "common.h"
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#ifdef _WIN32
-# include <io.h>
-#else
-# include <fcntl.h>
+#ifndef _WIN32
 # include <unistd.h>
 #endif
-#include <string.h>
 #include <errno.h>
-
 
 void check_lg2(int error, const char *message, const char *extra)
 {
