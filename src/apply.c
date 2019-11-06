@@ -7,8 +7,6 @@
 
 #include "apply.h"
 
-#include <assert.h>
-
 #include "git2/apply.h"
 #include "git2/patch.h"
 #include "git2/filter.h"

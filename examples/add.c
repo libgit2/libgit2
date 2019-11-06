@@ -13,7 +13,6 @@
  */
 
 #include "common.h"
-#include <assert.h>
 
 /**
  * The following example demonstrates how to add files with libgit2.

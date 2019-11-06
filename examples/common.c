@@ -12,7 +12,9 @@
  * <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-#include <assert.h>
+
+#include "common.h"
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -25,7 +27,6 @@
 #include <string.h>
 #include <errno.h>
 
-#include "common.h"
 
 void check_lg2(int error, const char *message, const char *extra)
 {

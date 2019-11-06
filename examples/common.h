@@ -14,6 +14,7 @@
 #ifndef INCLUDE_examples_common_h__
 #define INCLUDE_examples_common_h__
 
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>

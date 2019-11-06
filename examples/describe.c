@@ -13,7 +13,6 @@
  */
 
 #include "common.h"
-#include <assert.h>
 
 /**
  * The following example partially reimplements the `git describe` command
