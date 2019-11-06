@@ -170,14 +170,6 @@ static int config_memory_unlock(git_config_backend *backend, int success)
 	return config_error_readonly();
 }
 
-static int config_memory_snapshot(git_config_backend **out, git_config_backend *backend)
-{
-	GIT_UNUSED(out);
-	GIT_UNUSED(backend);
-	git_error_set(GIT_ERROR_CONFIG, "this backend does not support snapshots");
-	return -1;
-}
-
 static void config_memory_free(git_config_backend *_backend)
 {
 	config_memory_backend *backend = (config_memory_backend *)_backend;
@@ -219,7 +211,7 @@ int git_config_backend_from_string(git_config_backend **out, const char *cfg, si
 	backend->parent.iterator = config_memory_iterator;
 	backend->parent.lock = config_memory_lock;
 	backend->parent.unlock = config_memory_unlock;
-	backend->parent.snapshot = config_memory_snapshot;
+	backend->parent.snapshot = git_config_backend_snapshot;
 	backend->parent.free = config_memory_free;
 
 	*out = (git_config_backend *)backend;
