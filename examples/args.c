@@ -168,3 +168,16 @@ int match_int_arg(
 		return 0;
 	return match_int_internal(out, found, allow_negative, opt);
 }
+
+int match_arg_separator(struct args_info *args)
+{
+	if (args->opts_done)
+		return 1;
+
+	if (strcmp(args->argv[args->pos], "--") != 0)
+		return 0;
+
+	args->opts_done = 1;
+	args->pos++;
+	return 1;
+}

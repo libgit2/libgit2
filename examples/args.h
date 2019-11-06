@@ -8,6 +8,7 @@ struct args_info {
 	int    argc;
 	char **argv;
 	int    pos;
+	int    opts_done : 1; /**< Did we see a -- separator */
 };
 #define ARGS_INFO_INIT { argc, argv, 0, 0 }
 #define ARGS_CURRENT(args) args->argv[args->pos]
@@ -75,5 +76,10 @@ extern int match_int_arg(
  * and 0 will be returned.
  */
 extern int match_bool_arg(int *out, struct args_info *args, const char *opt);
+
+/**
+ * Check if we're processing past the single -- separator
+ */
+extern int match_arg_separator(struct args_info *args);
 
 #endif
