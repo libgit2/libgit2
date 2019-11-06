@@ -11,6 +11,8 @@
  * with this software. If not, see
  * <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
+#ifndef INCLUDE_examples_common_h__
+#define INCLUDE_examples_common_h__
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -196,3 +198,5 @@ extern int cred_acquire_cb(git_cred **out,
 		const char *username_from_url,
 		unsigned int allowed_types,
 		void *payload);
+
+#endif
