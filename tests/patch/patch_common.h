@@ -385,6 +385,38 @@
 	"@@ -9,0 +10 @@ below it!\n" \
 	"+insert at end\n"
 
+#define PATCH_DELETED_FILE_2_HUNKS \
+	"diff --git a/a b/a\n" \
+	"index 7f129fd..af431f2 100644\n" \
+	"--- a/a\n" \
+	"+++ b/a\n" \
+	"@@ -1 +1 @@\n" \
+	"-a contents 2\n" \
+	"+a contents\n" \
+	"diff --git a/c/d b/c/d\n" \
+	"deleted file mode 100644\n" \
+	"index 297efb8..0000000\n" \
+	"--- a/c/d\n" \
+	"+++ /dev/null\n" \
+	"@@ -1 +0,0 @@\n" \
+	"-c/d contents\n"
+
+#define PATCH_DELETED_FILE_2_HUNKS_SHUFFLED \
+	"diff --git a/c/d b/c/d\n" \
+	"deleted file mode 100644\n" \
+	"index 297efb8..0000000\n" \
+	"--- a/c/d\n" \
+	"+++ /dev/null\n" \
+	"@@ -1 +0,0 @@\n" \
+	"-c/d contents\n" \
+	"diff --git a/a b/a\n" \
+	"index 7f129fd..af431f2 100644\n" \
+	"--- a/a\n" \
+	"+++ b/a\n" \
+	"@@ -1 +1 @@\n" \
+	"-a contents 2\n" \
+	"+a contents\n"
+
 #define PATCH_SIMPLE_COMMIT \
 	"commit 15e119375018fba121cf58e02a9f17fe22df0df8\n" \
 	"Author: Edward Thomson <ethomson@edwardthomson.com>\n" \
