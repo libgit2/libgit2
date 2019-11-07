@@ -571,7 +571,7 @@ static int diff_print_patch_file(
 		(pi->flags & GIT_DIFF_FORCE_BINARY);
 	bool show_binary = !!(pi->flags & GIT_DIFF_SHOW_BINARY);
 	int id_strlen = pi->id_strlen;
-	bool print_index = true;
+	bool print_index = (pi->format != GIT_DIFF_FORMAT_PATCH_ID);
 
 	if (binary && show_binary)
 		id_strlen = delta->old_file.id_abbrev ? delta->old_file.id_abbrev :
@@ -675,6 +675,11 @@ int git_diff_print(
 		print_file = diff_print_patch_file;
 		print_binary = diff_print_patch_binary;
 		print_hunk = diff_print_patch_hunk;
+		print_line = diff_print_patch_line;
+		break;
+	case GIT_DIFF_FORMAT_PATCH_ID:
+		print_file = diff_print_patch_file;
+		print_binary = diff_print_patch_binary;
 		print_line = diff_print_patch_line;
 		break;
 	case GIT_DIFF_FORMAT_PATCH_HEADER:
