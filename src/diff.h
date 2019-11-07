@@ -57,7 +57,8 @@ extern int git_diff_delta__format_file_header(
 	const git_diff_delta *delta,
 	const char *oldpfx,
 	const char *newpfx,
-	int oid_strlen);
+	int oid_strlen,
+	bool print_index);
 
 extern int git_diff_delta__cmp(const void *a, const void *b);
 extern int git_diff_delta__casecmp(const void *a, const void *b);

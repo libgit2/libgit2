@@ -79,7 +79,7 @@ size_t git_patch_size(
 		git_buf file_header = GIT_BUF_INIT;
 
 		if (git_diff_delta__format_file_header(
-			&file_header, patch->delta, NULL, NULL, 0) < 0)
+			&file_header, patch->delta, NULL, NULL, 0, true) < 0)
 			git_error_clear();
 		else
 			out += git_buf_len(&file_header);
