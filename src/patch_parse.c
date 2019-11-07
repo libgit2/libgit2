@@ -231,9 +231,9 @@ static int parse_header_git_deletedfilemode(
 	git_patch_parsed *patch,
 	git_patch_parse_ctx *ctx)
 {
-	git__free((char *)patch->base.delta->old_file.path);
+	git__free((char *)patch->base.delta->new_file.path);
 
-	patch->base.delta->old_file.path = NULL;
+	patch->base.delta->new_file.path = NULL;
 	patch->base.delta->status = GIT_DELTA_DELETED;
 	patch->base.delta->nfiles = 1;
 
@@ -244,9 +244,9 @@ static int parse_header_git_newfilemode(
 	git_patch_parsed *patch,
 	git_patch_parse_ctx *ctx)
 {
-	git__free((char *)patch->base.delta->new_file.path);
+	git__free((char *)patch->base.delta->old_file.path);
 
-	patch->base.delta->new_file.path = NULL;
+	patch->base.delta->old_file.path = NULL;
 	patch->base.delta->status = GIT_DELTA_ADDED;
 	patch->base.delta->nfiles = 1;
 
@@ -883,6 +883,11 @@ static int parse_patch_binary_nodata(
 
 	if (!old || !new)
 		return git_parse_err("corrupt binary data without paths at line %"PRIuZ, ctx->parse_ctx.line_num);
+
+	if (patch->base.delta->status == GIT_DELTA_ADDED)
+		old = "/dev/null";
+	else if (patch->base.delta->status == GIT_DELTA_DELETED)
+		new = "/dev/null";
 
 	if (git_parse_advance_expected_str(&ctx->parse_ctx, "Binary files ") < 0 ||
 	    git_parse_advance_expected_str(&ctx->parse_ctx, old) < 0 ||
