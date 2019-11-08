@@ -9,6 +9,10 @@
 
 #include "common.h"
 
+#ifdef GIT_SSH
+# include <libssh2.h>
+#endif
+
 /**
  * @file git2/cred.h
  * @brief Git authentication & credential management
