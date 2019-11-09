@@ -100,6 +100,11 @@ IF (DEPRECATE_HARD)
 	ADD_DEFINITIONS(-DGIT_DEPRECATE_HARD)
 ENDIF()
 
+# Installation paths
+SET(BIN_INSTALL_DIR bin CACHE PATH "Where to install binaries to.")
+SET(LIB_INSTALL_DIR lib CACHE PATH "Where to install libraries to.")
+SET(INCLUDE_INSTALL_DIR include CACHE PATH "Where to install headers to.")
+
 # Platform specific compilation flags
 IF (MSVC)
 	IF (STDCALL)
