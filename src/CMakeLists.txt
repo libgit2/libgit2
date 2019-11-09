@@ -1,9 +1,5 @@
-IF(DEBUG_POOL)
-	SET(GIT_DEBUG_POOL 1)
-ENDIF()
-ADD_FEATURE_INFO(debugpool GIT_DEBUG_POOL "debug pool allocator")
-
 INCLUDE(PkgBuildConfig)
+INCLUDE(LinkDependency)
 
 # This variable will contain the libraries we need to put into
 # libgit2.pc's Requires.private. That is, what we're linking to or
@@ -68,7 +64,11 @@ FILE(GLOB LIBGIT2_SOURCES
 	xdiff/*.c xdiff/*.h)
 TARGET_SOURCES(git2internal PRIVATE ${LIBGIT2_SOURCES})
 
-# Enable tracing
+IF(DEBUG_POOL)
+	SET(GIT_DEBUG_POOL 1)
+ENDIF()
+ADD_FEATURE_INFO(debugpool GIT_DEBUG_POOL "debug pool allocator")
+
 IF (ENABLE_TRACE STREQUAL "ON")
 	SET(GIT_TRACE 1)
 ENDIF()
@@ -206,25 +206,8 @@ ELSE()
 	MESSAGE(FATAL_ERROR "The REGEX_BACKEND option provided is not supported")
 ENDIF()
 
-# Optional external dependency: http-parser
-IF(USE_HTTP_PARSER STREQUAL "system")
-	FIND_PACKAGE(HTTP_Parser)
-
-	IF (HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
-		LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${HTTP_PARSER_INCLUDE_DIRS})
-		LIST(APPEND LIBGIT2_LIBS ${HTTP_PARSER_LIBRARIES})
-		LIST(APPEND LIBGIT2_PC_LIBS "-lhttp_parser")
-		ADD_FEATURE_INFO(http-parser ON "http-parser support (system)")
-	ELSE()
-		MESSAGE(FATAL_ERROR "http-parser support was requested but not found")
-	ENDIF()
-ELSE()
-	MESSAGE(STATUS "http-parser version 2 was not found or disabled; using bundled 3rd-party sources.")
-	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/http-parser" "${libgit2_BINARY_DIR}/deps/http-parser")
-	LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/http-parser")
-	LIST(APPEND LIBGIT2_OBJECTS "$<TARGET_OBJECTS:http-parser>")
-	ADD_FEATURE_INFO(http-parser ON "http-parser support (bundled)")
-ENDIF()
+# Optional external dependency: http-parser, otherwise builtin
+LINK_DEPENDENCY(git2internal PUBLIC HttpParser)
 
 # Optional external dependency: zlib
 IF(NOT USE_BUNDLED_ZLIB)
