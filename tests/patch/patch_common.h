@@ -924,6 +924,18 @@
 	"+++ \"\"\n" \
 	"Binary files "
 
+#define PATCH_BINARY_FILE_PATH_WITH_SPACES \
+	"diff --git a b c d e f\n" \
+	"--- a b c\n" \
+	"+++ d e f\n" \
+	"Binary files a b c and d e f differ"
+
+#define PATCH_BINARY_FILE_PATH_WITHOUT_BODY_PATHS \
+	"diff --git a b c d e f\n" \
+	"--- \n" \
+	"+++ \n" \
+	"Binary files a b c and d e f differ"
+
 #define PATCH_MULTIPLE_OLD_PATHS \
 	"diff --git  \n" \
 	"---  \n" \
