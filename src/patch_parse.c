@@ -878,12 +878,18 @@ static int parse_patch_binary_nodata(
 	git_patch_parsed *patch,
 	git_patch_parse_ctx *ctx)
 {
+	const char *old = patch->old_path ? patch->old_path : patch->header_old_path;
+	const char *new = patch->new_path ? patch->new_path : patch->header_new_path;
+
+	if (!old || !new)
+		return git_parse_err("corrupt binary data without paths at line %"PRIuZ, ctx->parse_ctx.line_num);
+
 	if (git_parse_advance_expected_str(&ctx->parse_ctx, "Binary files ") < 0 ||
-		git_parse_advance_expected_str(&ctx->parse_ctx, patch->header_old_path) < 0 ||
-		git_parse_advance_expected_str(&ctx->parse_ctx, " and ") < 0 ||
-		git_parse_advance_expected_str(&ctx->parse_ctx, patch->header_new_path) < 0 ||
-		git_parse_advance_expected_str(&ctx->parse_ctx, " differ") < 0 ||
-		git_parse_advance_nl(&ctx->parse_ctx) < 0)
+	    git_parse_advance_expected_str(&ctx->parse_ctx, old) < 0 ||
+	    git_parse_advance_expected_str(&ctx->parse_ctx, " and ") < 0 ||
+	    git_parse_advance_expected_str(&ctx->parse_ctx, new) < 0 ||
+	    git_parse_advance_expected_str(&ctx->parse_ctx, " differ") < 0 ||
+	    git_parse_advance_nl(&ctx->parse_ctx) < 0)
 		return git_parse_err("corrupt git binary header at line %"PRIuZ, ctx->parse_ctx.line_num);
 
 	patch->base.binary.contains_data = 0;
