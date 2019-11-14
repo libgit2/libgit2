@@ -34,6 +34,27 @@ struct git_ssh_channel {
 
 #define git_ssh_channel_close(c) libssh2_channel_close(c->channel)
 
+#elif defined(GIT_LIBSSH)
+
+#define LIBSSH_LEGACY_0_4
+#include <libssh/libssh.h>
+
+#define GIT_SSH_ERROR_NONE SSH_OK
+
+struct git_ssh_session {
+	ssh_session session;
+};
+
+#define git_ssh_session_new() ssh_new()
+#define git_ssh_session_disconnect(s, msg) \
+	ssh_disconnect(s->session);
+
+struct git_ssh_channel {
+	ssh_channel channel;
+};
+
+#define git_ssh_channel_close(c) ssh_channel_close(c->channel)
+
 #endif
 
 typedef struct git_ssh_channel git_ssh_channel;

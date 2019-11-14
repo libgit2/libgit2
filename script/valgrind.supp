@@ -178,3 +178,12 @@
 	obj:*libcrypto.so*
 	...
 }
+
+{
+	ignore-libssh-dyload-crypto-init
+	Memcheck:Leak
+	...
+	obj:*libssh.so*
+	fun:ssh_crypto_init
+	...
+}

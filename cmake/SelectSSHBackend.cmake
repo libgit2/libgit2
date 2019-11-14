@@ -2,10 +2,13 @@
 
 # We try to find any packages our backends might use
 FIND_PKGLIBRARIES(LIBSSH2 libssh2)
+FIND_PKGLIBRARIES(LIBSSH libssh)
 
 IF (USE_SSH STREQUAL ON)
 	IF (LIBSSH2_FOUND)
 		SET(SSH_BACKEND "libssh2")
+	ELSEIF(LIBSSH_FOUND)
+		SET(SSH_BACKEND "libssh")
 	ELSE()
 		MESSAGE("Unable to autodetect a usable SSH backend."
 			"Please pass the backend name explicitly (-DUSE_SSH=backend)")
@@ -33,6 +36,15 @@ IF(SSH_BACKEND)
 		IF (HAVE_LIBSSH2_MEMORY_CREDENTIALS)
 			SET(GIT_SSH_MEMORY_CREDENTIALS 1)
 		ENDIF()
+	ELSEIF(SSH_BACKEND STREQUAL "libssh")
+		IF (NOT LIBSSH_FOUND)
+			MESSAGE(FATAL_ERROR "libssh not found. Set CMAKE_PREFIX_PATH if it is installed outside of the default search path.")
+		ENDIF()
+
+		SET(GIT_LIBSSH 1)
+		LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${LIBSSH_INCLUDE_DIRS})
+		LIST(APPEND LIBGIT2_LIBS ${LIBSSH_LIBRARIES})
+		LIST(APPEND LIBGIT2_PC_REQUIRES "libssh")
 	ELSE()
 		MESSAGE(FATAL_ERROR "Asked for backend ${SSH_BACKEND} but it wasn't found")
 	ENDIF()
