@@ -80,13 +80,13 @@ jobs:
     strategy:
       matrix:
         platform:
-        - # Xenial, GCC, OpenSSL
+        - # Xenial, GCC, OpenSSL, LibSSH2
           container:
             name: xenial
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DUSE_SSH=libssh2 -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
           os: ubuntu-latest
         - # Xenial, GCC, mbedTLS
           container:
@@ -111,6 +111,14 @@ jobs:
             CC: clang
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
             CMAKE_GENERATOR: Ninja
+          os: ubuntu-latest
+        - # Xenial, GCC, OpenSSL, LibSSH
+          container:
+            name: xenial
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DUSE_SSH=libssh -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
           os: ubuntu-latest
         - # Focal, Clang 10, mbedTLS, MemorySanitizer
           container:
