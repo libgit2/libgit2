@@ -291,6 +291,41 @@ shutdown:
 	return rc;
 }
 
+struct git_ssh__sign_payload
+{
+	git_credential_sign_cb sign_cb;
+	void *user_payload;
+};
+
+static inline LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC(git_ssh__sign_cb)
+{
+	struct git_ssh__sign_payload *payload = *abstract;
+
+	return payload->sign_cb((git_ssh_session *)session,
+							sig, sig_len,
+							data, data_len, payload->user_payload);
+}
+
+struct git_ssh__kbdint_payload
+{
+	LIBSSH2_SESSION *session;
+	git_credential_ssh_interactive_cb kbdint_cb;
+	void *user_payload;
+};
+
+static LIBSSH2_USERAUTH_KBDINT_RESPONSE_FUNC(git_ssh__kbdint_cb)
+{
+	struct git_ssh__kbdint_payload *payload = *abstract;
+
+	return payload->kbdint_cb((git_ssh_session *)payload->session,
+							  name, name_len,
+							  instruction, instruction_len,
+							  num_prompts,
+							  (git_credential_ssh_interactive_prompt *)prompts,
+							  (git_credential_ssh_interactive_response *)responses,
+							  payload->user_payload);
+}
+
 int _git_ssh_authenticate_session(git_ssh_session *s, git_credential *cred)
 {
 	int rc;
@@ -317,16 +352,21 @@ int _git_ssh_authenticate_session(git_ssh_session *s, git_credential *cred)
 			}
 			case GIT_CREDENTIAL_SSH_CUSTOM: {
 				git_credential_ssh_custom *c = (git_credential_ssh_custom *)cred;
+				struct git_ssh__sign_payload payload = { c->sign_callback, &c->payload };
 
 				rc = libssh2_userauth_publickey(
 					s->session, c->username, (const unsigned char *)c->publickey,
-					c->publickey_len, c->sign_callback, &c->payload);
+					c->publickey_len, git_ssh__sign_cb, (void **)&payload);
 				break;
 			}
 			case GIT_CREDENTIAL_SSH_INTERACTIVE: {
 				git_credential_ssh_interactive *c = (git_credential_ssh_interactive *)cred;
 				void **abstract = libssh2_session_abstract(s->session);
 				void *old_abstract = *abstract;
+				struct git_ssh__kbdint_payload payload;
+				payload.kbdint_cb = c->prompt_callback;
+				payload.session = s->session;
+				payload.user_payload = c->payload;
 
 				/* ideally, we should be able to set this by calling
 				 * libssh2_session_init_ex() instead of libssh2_session_init().
@@ -339,10 +379,10 @@ int _git_ssh_authenticate_session(git_ssh_session *s, git_credential *cred)
 				 * pointer as is done below. This is safe for now (at time of writing),
 				 * but may not be valid in future.
 				 */
-				*abstract = &c->payload;
+				*abstract = &payload;
 
 				rc = libssh2_userauth_keyboard_interactive(
-					s->session, c->username, c->prompt_callback);
+					s->session, c->username, git_ssh__kbdint_cb);
 
 				*abstract = old_abstract;
 

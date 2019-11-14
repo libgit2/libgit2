@@ -36,7 +36,6 @@ struct git_ssh_channel {
 
 #endif
 
-typedef struct git_ssh_session git_ssh_session;
 typedef struct git_ssh_channel git_ssh_channel;
 
 void git__ssh_error(git_ssh_session *s, const char *errmsg);
