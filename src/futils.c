@@ -476,6 +476,7 @@ int git_futils_mkdir(
 			break;
 		} else if (errno != ENOENT) {
 			git_error_set(GIT_ERROR_OS, "failed to stat '%s'", parent_path.ptr);
+			error = -1;
 			goto done;
 		}
 
