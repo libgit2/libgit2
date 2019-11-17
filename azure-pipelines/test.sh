@@ -10,6 +10,7 @@ SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( 
 BUILD_DIR=$(pwd)
 TMPDIR=${TMPDIR:-/tmp}
 USER=${USER:-$(whoami)}
+PASSWORD=verySecret
 
 SUCCESS=1
 
@@ -113,6 +114,9 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	ssh-keygen -t rsa -f "${SSHD_DIR}/id_rsa" -N "" -q
 	/usr/sbin/sshd -f "${SSHD_DIR}/sshd_config" -E "${SSHD_DIR}/log"
 
+	# Set up password
+	(echo $PASSWORD; echo $PASSWORD) | passwd
+
 	# Set up keys
 	mkdir "${HOME}/.ssh"
 	ssh-keygen -t rsa -f "${HOME}/.ssh/id_rsa" -N "" -q
@@ -214,15 +218,15 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 
 	export GITTEST_REMOTE_URL="ssh://localhost:2222/$SSHD_DIR/test.git"
 	export GITTEST_REMOTE_USER=$USER
+	export GITTEST_REMOTE_PASS=$PASSWORD
 	export GITTEST_REMOTE_SSH_KEY="${HOME}/.ssh/id_rsa"
-	export GITTEST_REMOTE_SSH_PUBKEY="${HOME}/.ssh/id_rsa.pub"
 	export GITTEST_REMOTE_SSH_PASSPHRASE=""
 	export GITTEST_REMOTE_SSH_FINGERPRINT="${SSH_FINGERPRINT}"
 	run_test ssh
 	unset GITTEST_REMOTE_URL
 	unset GITTEST_REMOTE_USER
+	unset GITTEST_REMOTE_PASS
 	unset GITTEST_REMOTE_SSH_KEY
-	unset GITTEST_REMOTE_SSH_PUBKEY
 	unset GITTEST_REMOTE_SSH_PASSPHRASE
 	unset GITTEST_REMOTE_SSH_FINGERPRINT
 fi

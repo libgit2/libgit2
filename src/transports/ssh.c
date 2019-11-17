@@ -607,8 +607,11 @@ post_extract:
 		urldata.username = git__strdup(((git_cred_username *) cred)->username);
 		cred->free(cred);
 		cred = NULL;
-		if (!urldata.username)
+		if (!urldata.username) {
+			git_error_set_oom();
+			error = -1;
 			goto done;
+		}
 	} else if (urldata.username && urldata.password) {
 		if ((error = git_cred_userpass_plaintext_new(&cred, urldata.username, urldata.password)) < 0)
 			goto done;

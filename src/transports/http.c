@@ -1288,7 +1288,7 @@ replay:
 		s->sent_request = 0;
 
 		if ((error = http_connect(t)) < 0)
-			return error;
+			goto done;
 
 		goto replay;
 	}
