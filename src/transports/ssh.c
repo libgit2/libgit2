@@ -566,6 +566,14 @@ post_extract:
 
 		cert.parent.cert_type = GIT_CERT_HOSTKEY_LIBSSH2;
 
+#ifdef LIBSSH2_HOSTKEY_HASH_SHA256
+		key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA256);
+		if (key != NULL) {
+			cert.type |= GIT_CERT_SSH_SHA256;
+			memcpy(&cert.hash_sha256, key, 32);
+		}
+#endif
+
 		key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
 		if (key != NULL) {
 			cert.type |= GIT_CERT_SSH_SHA1;
