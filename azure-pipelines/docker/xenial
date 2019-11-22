@@ -1,7 +1,7 @@
 ARG BASE
 FROM $BASE AS apt
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         bzip2 \
         clang \
         cmake \
@@ -9,8 +9,10 @@ RUN apt-get update && \
         gcc \
         git \
         gosu \
+        krb5-user \
         libcurl4-gnutls-dev \
         libgcrypt20-dev \
+        libkrb5-dev \
         libpcre3-dev \
         libssl-dev \
         libz-dev \
