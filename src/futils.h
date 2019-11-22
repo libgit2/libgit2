@@ -330,7 +330,7 @@ extern int git_futils_fake_symlink(const char *new, const char *old);
  */
 typedef struct {
 	struct timespec mtime;
-	git_off_t  size;
+	uint64_t size;
 	unsigned int ino;
 } git_futils_filestamp;
 
