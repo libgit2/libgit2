@@ -21,9 +21,7 @@ RUN echo 'deb http://ppa.launchpad.net/hola-launchpad/valgrind/ubuntu xenial mai
         openssl \
         pkgconf \
         python \
-        valgrind \
-        && \
-    rm -rf /var/lib/apt/lists/*
+        valgrind
 RUN mkdir /var/run/sshd
 
 RUN cd /tmp && \
