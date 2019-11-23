@@ -132,3 +132,11 @@
 	fun:exit
 	...
 }
+
+{
+	ignore-libcrypto-uninitialized-read-for-entropy
+	Memcheck:Value8
+	...
+	obj:*libcrypto.so*
+	...
+}
