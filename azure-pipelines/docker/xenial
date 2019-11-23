@@ -1,5 +1,5 @@
 ARG BASE
-FROM $BASE
+FROM $BASE AS apt
 RUN echo 'deb http://ppa.launchpad.net/hola-launchpad/valgrind/ubuntu xenial main' >/etc/apt/sources.list.d/valgrind.list && \
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8A0303A7544D59A08EBD1D621BCFD9273D292CF6 && \
     apt-get update && \
@@ -22,8 +22,8 @@ RUN echo 'deb http://ppa.launchpad.net/hola-launchpad/valgrind/ubuntu xenial mai
         pkgconf \
         python \
         valgrind
-RUN mkdir /var/run/sshd
 
+FROM apt AS mbedtls
 RUN cd /tmp && \
     curl -LO https://tls.mbed.org/download/mbedtls-2.16.2-apache.tgz && \
     tar -xf mbedtls-2.16.2-apache.tgz && \
@@ -35,6 +35,7 @@ RUN cd /tmp && \
     cd .. && \
     rm -rf mbedtls-2.16.2
 
+FROM mbedtls AS libssh2
 RUN cd /tmp && \
     curl -LO https://www.libssh2.org/download/libssh2-1.8.2.tar.gz && \
     tar -xf libssh2-1.8.2.tar.gz && \
@@ -45,7 +46,9 @@ RUN cd /tmp && \
     cd .. && \
     rm -rf libssh2-1.8.2
 
+FROM libssh2 AS configure
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod a+x /usr/local/bin/entrypoint.sh
+RUN mkdir /var/run/sshd
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
