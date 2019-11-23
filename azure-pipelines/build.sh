@@ -26,7 +26,7 @@ fi
 
 if [ -f "/etc/debian_version" ]; then
 	echo "Debian version:"
-	lsb_release -a | indent
+	(source /etc/lsb-release && echo "${DISTRIB_DESCRIPTION}") | indent
 fi
 
 echo "Kernel version:"
