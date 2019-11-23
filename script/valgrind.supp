@@ -124,6 +124,15 @@
 }
 
 {
+	ignore-libssh2-rsa-sha1-sign
+	Memcheck:Leak
+	...
+	obj:*libgcrypt.so*
+	fun:_libssh2_rsa_sha1_sign
+	...
+}
+
+{
 	ignore-libssh2-kexinit
 	Memcheck:Leak
 	...
