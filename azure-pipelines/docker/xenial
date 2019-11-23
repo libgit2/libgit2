@@ -1,9 +1,8 @@
 ARG BASE
 FROM $BASE AS apt
-RUN echo 'deb http://ppa.launchpad.net/hola-launchpad/valgrind/ubuntu xenial main' >/etc/apt/sources.list.d/valgrind.list && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8A0303A7544D59A08EBD1D621BCFD9273D292CF6 && \
-    apt-get update && \
+RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+        bzip2 \
         clang \
         cmake \
         curl \
@@ -15,6 +14,7 @@ RUN echo 'deb http://ppa.launchpad.net/hola-launchpad/valgrind/ubuntu xenial mai
         libpcre3-dev \
         libssl-dev \
         libz-dev \
+        make \
         ninja-build \
         openjdk-8-jre-headless \
         openssh-server \
@@ -46,7 +46,19 @@ RUN cd /tmp && \
     cd .. && \
     rm -rf libssh2-1.8.2
 
-FROM libssh2 AS configure
+FROM libssh2 AS valgrind
+RUN cd /tmp && \
+    curl -LO https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2 && \
+    tar -xf valgrind-3.15.0.tar.bz2 && \
+    rm -f valgrind-3.15.0.tar.bz2 && \
+    cd valgrind-3.15.0 && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf valgrind-3.15.0
+
+FROM valgrind AS configure
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod a+x /usr/local/bin/entrypoint.sh
 RUN mkdir /var/run/sshd
