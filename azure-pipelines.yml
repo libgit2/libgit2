@@ -19,7 +19,7 @@ jobs:
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Ninja
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on
 
 - job: linux_amd64_xenial_gcc_mbedtls
   displayName: 'Linux (amd64; Xenial; GCC; mbedTLS)'
@@ -34,7 +34,7 @@ jobs:
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Ninja
-       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
+       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on
 
 - job: linux_amd64_xenial_clang_openssl
   displayName: 'Linux (amd64; Xenial; Clang; OpenSSL)'
@@ -49,7 +49,7 @@ jobs:
       environmentVariables: |
        CC=clang
        CMAKE_GENERATOR=Ninja
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on
 
 - job: linux_amd64_xenial_clang_mbedtls
   displayName: 'Linux (amd64; Xenial; Clang; mbedTLS)'
@@ -64,7 +64,7 @@ jobs:
       environmentVariables: |
        CC=clang
        CMAKE_GENERATOR=Ninja
-       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind
+       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on
 
 - job: macos
   displayName: 'macOS'
