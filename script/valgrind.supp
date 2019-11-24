@@ -124,6 +124,26 @@
 }
 
 {
+	ignore-openssl-undefined-in-read
+	Memcheck:Cond
+	...
+	obj:*libssl.so*
+	...
+	fun:openssl_read
+	...
+}
+
+{
+	ignore-openssl-undefined-in-connect
+	Memcheck:Cond
+	...
+	obj:*libssl.so*
+	...
+	fun:openssl_connect
+	...
+}
+
+{
 	ignore-libssh2-rsa-sha1-sign
 	Memcheck:Leak
 	...

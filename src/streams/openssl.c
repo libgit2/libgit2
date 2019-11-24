@@ -597,6 +597,10 @@ static int openssl_connect(git_stream *stream)
 
 	st->connected = true;
 
+#ifdef VALGRIND
+	VALGRIND_MAKE_MEM_DEFINED(st->ssl, sizeof(SSL));
+#endif
+
 	return verify_server_cert(st->ssl, st->host);
 }
 
