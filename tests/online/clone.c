@@ -864,6 +864,12 @@ void test_online_clone__proxy_cred_callback_after_failed_url_creds(void)
 	git_buf_dispose(&url);
 }
 
+void test_online_clone__azurerepos(void)
+{
+	cl_git_pass(git_clone(&g_repo, "https://libgit2@dev.azure.com/libgit2/test/_git/test", "./foo", &g_options));
+	cl_assert(git_path_exists("./foo/master.txt"));
+}
+
 void test_online_clone__path_whitespace(void)
 {
 	cl_git_pass(git_clone(&g_repo, "https://libgit2@dev.azure.com/libgit2/test/_git/spaces%20in%20the%20name", "./foo", &g_options));
