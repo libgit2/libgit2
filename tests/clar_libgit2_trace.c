@@ -71,7 +71,7 @@ static struct method s_methods[] = {
 static int s_trace_loaded = 0;
 static int s_trace_level = GIT_TRACE_NONE;
 static struct method *s_trace_method = NULL;
-
+static int s_trace_tests = 0;
 
 static int set_method(const char *name)
 {
@@ -117,6 +117,7 @@ static void _load_trace_params(void)
 {
 	char *sz_level;
 	char *sz_method;
+	char *sz_tests;
 
 	s_trace_loaded = 1;
 
@@ -133,6 +134,10 @@ static void _load_trace_params(void)
 	sz_method = cl_getenv("CLAR_TRACE_METHOD");
 	if (set_method(sz_method) < 0)
 		set_method(NULL);
+
+	sz_tests = cl_getenv("CLAR_TRACE_TESTS");
+	if (sz_tests != NULL)
+		s_trace_tests = 1;
 }
 
 #define HR "================================================================"
@@ -154,6 +159,9 @@ void _cl_trace_cb__event_handler(
 	void *payload)
 {
 	GIT_UNUSED(payload);
+
+	if (!s_trace_tests)
+		return;
 
 	switch (ev) {
 	case CL_TRACE__SUITE_BEGIN:
