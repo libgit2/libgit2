@@ -10,26 +10,42 @@ struct method {
 	void (*close)(void);
 };
 
+static const char *message_prefix(git_trace_level_t level)
+{
+	switch (level) {
+	case GIT_TRACE_NONE:
+		return "[NONE]:  ";
+	case GIT_TRACE_FATAL:
+		return "[FATAL]: ";
+	case GIT_TRACE_ERROR:
+		return "[ERROR]: ";
+	case GIT_TRACE_WARN:
+		return "[WARN]:  ";
+	case GIT_TRACE_INFO:
+		return "[INFO]:  ";
+	case GIT_TRACE_DEBUG:
+		return "[DEBUG]: ";
+	case GIT_TRACE_TRACE:
+		return "[TRACE]: ";
+	default:
+		return "[?????]: ";
+	}
+}
 
 #if defined(GIT_TRACE)
 static void _git_trace_cb__printf(git_trace_level_t level, const char *msg)
 {
-	/* TODO Use level to print a per-message prefix. */
-	GIT_UNUSED(level);
-
-	printf("%s\n", msg);
+	printf("%s%s\n", message_prefix(level), msg);
 }
 
 #if defined(GIT_WIN32)
 static void _git_trace_cb__debug(git_trace_level_t level, const char *msg)
 {
-	/* TODO Use level to print a per-message prefix. */
-	GIT_UNUSED(level);
-
+	OutputDebugString(message_prefix(level));
 	OutputDebugString(msg);
 	OutputDebugString("\n");
 
-	printf("%s\n", msg);
+	printf("%s%s\n", message_prefix(level), msg);
 }
 #else
 #define _git_trace_cb__debug _git_trace_cb__printf
