@@ -1,9 +1,8 @@
 ARG BASE
-FROM $BASE
-RUN echo 'deb http://ppa.launchpad.net/hola-launchpad/valgrind/ubuntu xenial main' >/etc/apt/sources.list.d/valgrind.list && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8A0303A7544D59A08EBD1D621BCFD9273D292CF6 && \
-    apt-get update && \
+FROM $BASE AS apt
+RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+        bzip2 \
         clang \
         cmake \
         curl \
@@ -11,21 +10,20 @@ RUN echo 'deb http://ppa.launchpad.net/hola-launchpad/valgrind/ubuntu xenial mai
         git \
         gosu \
         libcurl4-gnutls-dev \
+        libgcrypt20-dev \
         libpcre3-dev \
-        libssh2-1-dev \
         libssl-dev \
         libz-dev \
+        make \
         ninja-build \
         openjdk-8-jre-headless \
         openssh-server \
         openssl \
         pkgconf \
         python \
-        valgrind \
-        && \
-    rm -rf /var/lib/apt/lists/*
-RUN mkdir /var/run/sshd
+        valgrind
 
+FROM apt AS mbedtls
 RUN cd /tmp && \
     curl -LO https://tls.mbed.org/download/mbedtls-2.16.2-apache.tgz && \
     tar -xf mbedtls-2.16.2-apache.tgz && \
@@ -37,17 +35,32 @@ RUN cd /tmp && \
     cd .. && \
     rm -rf mbedtls-2.16.2
 
+FROM mbedtls AS libssh2
 RUN cd /tmp && \
     curl -LO https://www.libssh2.org/download/libssh2-1.8.2.tar.gz && \
     tar -xf libssh2-1.8.2.tar.gz && \
     rm -f libssh2-1.8.2.tar.gz && \
     cd libssh2-1.8.2 && \
-    CFLAGS=-fPIC cmake -G Ninja -DCRYPTO_BACKEND=Libgcrypt . && \
+    CFLAGS=-fPIC cmake -G Ninja -DBUILD_SHARED_LIBS=ON -DCRYPTO_BACKEND=Libgcrypt . && \
     ninja install && \
     cd .. && \
     rm -rf libssh2-1.8.2
 
+FROM libssh2 AS valgrind
+RUN cd /tmp && \
+    curl -LO https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2 && \
+    tar -xf valgrind-3.15.0.tar.bz2 && \
+    rm -f valgrind-3.15.0.tar.bz2 && \
+    cd valgrind-3.15.0 && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf valgrind-3.15.0
+
+FROM valgrind AS configure
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod a+x /usr/local/bin/entrypoint.sh
+RUN mkdir /var/run/sshd
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

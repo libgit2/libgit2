@@ -86,6 +86,7 @@
 	...
 	fun:gcry_mpi_scan
 	obj:*libssh2.so*
+	...
 }
 
 {
@@ -116,10 +117,47 @@
 	ignore-libssh2-gcrypt-session-handshake
 	Memcheck:Leak
 	...
-	obj:*libgcrypt.so*
 	obj:*libssh2.so*
 	obj:*libssh2.so*
 	fun:libssh2_session_handshake
+	...
+}
+
+{
+	ignore-openssl-undefined-in-read
+	Memcheck:Cond
+	...
+	obj:*libssl.so*
+	...
+	fun:openssl_read
+	...
+}
+
+{
+	ignore-openssl-undefined-in-connect
+	Memcheck:Cond
+	...
+	obj:*libssl.so*
+	...
+	fun:openssl_connect
+	...
+}
+
+{
+	ignore-libssh2-rsa-sha1-sign
+	Memcheck:Leak
+	...
+	obj:*libgcrypt.so*
+	fun:_libssh2_rsa_sha1_sign
+	...
+}
+
+{
+	ignore-libssh2-kexinit
+	Memcheck:Leak
+	...
+	obj:*libssh2.so*
+	fun:kexinit
 	...
 }
 
@@ -130,5 +168,13 @@
 	fun:__libc_freeres
 	...
 	fun:exit
+	...
+}
+
+{
+	ignore-libcrypto-uninitialized-read-for-entropy
+	Memcheck:Value8
+	...
+	obj:*libcrypto.so*
 	...
 }

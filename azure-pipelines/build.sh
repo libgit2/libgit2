@@ -11,6 +11,7 @@ SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( 
 BUILD_DIR=$(pwd)
 BUILD_PATH=${BUILD_PATH:=$PATH}
 CMAKE=$(which cmake)
+CMAKE_GENERATOR=${CMAKE_GENERATOR:-Unix Makefiles}
 
 indent() { sed "s/^/    /"; }
 
@@ -25,7 +26,7 @@ fi
 
 if [ -f "/etc/debian_version" ]; then
 	echo "Debian version:"
-	lsb_release -a | indent
+	(source /etc/lsb-release && echo "${DISTRIB_DESCRIPTION}") | indent
 fi
 
 echo "Kernel version:"
