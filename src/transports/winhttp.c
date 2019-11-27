@@ -830,7 +830,7 @@ on_error:
 	return error;
 }
 
-static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
+static int do_send_request(winhttp_stream *s, size_t len, bool chunked)
 {
 	int attempts;
 	bool success;
@@ -841,7 +841,7 @@ static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
 	}
 
 	for (attempts = 0; attempts < 5; attempts++) {
-		if (ignore_length) {
+		if (chunked) {
 			success = WinHttpSendRequest(s->request,
 				WINHTTP_NO_ADDITIONAL_HEADERS, 0,
 				WINHTTP_NO_REQUEST_DATA, 0,
@@ -860,13 +860,13 @@ static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
 	return success ? 0 : -1;
 }
 
-static int send_request(winhttp_stream *s, size_t len, int ignore_length)
+static int send_request(winhttp_stream *s, size_t len, bool chunked)
 {
 	int request_failed = 0, cert_valid = 1, error = 0;
 	DWORD ignore_flags;
 
 	git_error_clear();
-	if ((error = do_send_request(s, len, ignore_length)) < 0) {
+	if ((error = do_send_request(s, len, chunked)) < 0) {
 		if (GetLastError() != ERROR_WINHTTP_SECURE_FAILURE) {
 			git_error_set(GIT_ERROR_OS, "failed to send request");
 			return -1;
@@ -895,7 +895,7 @@ static int send_request(winhttp_stream *s, size_t len, int ignore_length)
 		return -1;
 	}
 
-	if ((error = do_send_request(s, len, ignore_length)) < 0)
+	if ((error = do_send_request(s, len, chunked)) < 0)
 		git_error_set(GIT_ERROR_OS, "failed to send request with unchecked certificate");
 
 	return error;
@@ -984,7 +984,7 @@ replay:
 
 		if (!s->sent_request) {
 
-			if ((error = send_request(s, s->post_body_len, 0)) < 0)
+			if ((error = send_request(s, s->post_body_len, false)) < 0)
 				return error;
 
 			s->sent_request = 1;
@@ -1241,7 +1241,7 @@ static int winhttp_stream_write_single(
 		return -1;
 	}
 
-	if ((error = send_request(s, len, 0)) < 0)
+	if ((error = send_request(s, len, false)) < 0)
 		return error;
 
 	s->sent_request = 1;
@@ -1380,7 +1380,7 @@ static int winhttp_stream_write_chunked(
 			return -1;
 		}
 
-		if ((error = send_request(s, 0, 1)) < 0)
+		if ((error = send_request(s, 0, true)) < 0)
 			return error;
 
 		s->sent_request = 1;
