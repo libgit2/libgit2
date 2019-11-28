@@ -21,6 +21,8 @@
  */
 GIT_BEGIN_DECL
 
+#define GIT_OBJECT_SIZE_MAX UINT64_MAX
+
 /**
  * Lookup a reference to one of the objects in a repository.
  *

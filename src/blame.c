@@ -268,7 +268,7 @@ static git_blame_hunk *split_hunk_in_vector(
 static int index_blob_lines(git_blame *blame)
 {
     const char *buf = blame->final_buf;
-    git_off_t len = blame->final_buf_size;
+    size_t len = blame->final_buf_size;
     int num = 0, incomplete = 0, bol = 1;
     size_t *i;
 
@@ -335,8 +335,15 @@ static int blame_internal(git_blame *blame)
 	if ((error = load_blob(blame)) < 0 ||
 	    (error = git_blame__get_origin(&o, blame, blame->final, blame->path)) < 0)
 		goto cleanup;
+
+	if (git_blob_rawsize(blame->final_blob) > SIZE_MAX) {
+		git_error_set(GIT_ERROR_NOMEMORY, "blob is too large to blame");
+		error = -1;
+		goto cleanup;
+	}
+
 	blame->final_buf = git_blob_rawcontent(blame->final_blob);
-	blame->final_buf_size = git_blob_rawsize(blame->final_blob);
+	blame->final_buf_size = (size_t)git_blob_rawsize(blame->final_blob);
 
 	ent = git__calloc(1, sizeof(git_blame__entry));
 	GIT_ERROR_CHECK_ALLOC(ent);

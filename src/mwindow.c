@@ -167,11 +167,11 @@ void git_mwindow_free_all_locked(git_mwindow_file *mwf)
 /*
  * Check if a window 'win' contains the address 'offset'
  */
-int git_mwindow_contains(git_mwindow *win, git_off_t offset)
+int git_mwindow_contains(git_mwindow *win, off64_t offset)
 {
-	git_off_t win_off = win->offset;
+	off64_t win_off = win->offset;
 	return win_off <= offset
-		&& offset <= (git_off_t)(win_off + win->window_map.len);
+		&& offset <= (off64_t)(win_off + win->window_map.len);
 }
 
 /*
@@ -246,12 +246,12 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 static git_mwindow *new_window(
 	git_mwindow_file *mwf,
 	git_file fd,
-	git_off_t size,
-	git_off_t offset)
+	off64_t size,
+	off64_t offset)
 {
 	git_mwindow_ctl *ctl = &mem_ctl;
 	size_t walign = git_mwindow__window_size / 2;
-	git_off_t len;
+	off64_t len;
 	git_mwindow *w;
 
 	w = git__malloc(sizeof(*w));
@@ -263,8 +263,8 @@ static git_mwindow *new_window(
 	w->offset = (offset / walign) * walign;
 
 	len = size - w->offset;
-	if (len > (git_off_t)git_mwindow__window_size)
-		len = (git_off_t)git_mwindow__window_size;
+	if (len > (off64_t)git_mwindow__window_size)
+		len = (off64_t)git_mwindow__window_size;
 
 	ctl->mapped += (size_t)len;
 
@@ -311,7 +311,7 @@ static git_mwindow *new_window(
 unsigned char *git_mwindow_open(
 	git_mwindow_file *mwf,
 	git_mwindow **cursor,
-	git_off_t offset,
+	off64_t offset,
 	size_t extra,
 	unsigned int *left)
 {

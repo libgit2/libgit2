@@ -19,7 +19,7 @@ static const char *g_crlf_raw[CRLF_NUM_TEST_OBJECTS] = {
 	"\xFE\xFF\x00T\x00h\x00i\x00s\x00!"
 };
 
-static git_off_t g_crlf_raw_len[CRLF_NUM_TEST_OBJECTS] = {
+static off64_t g_crlf_raw_len[CRLF_NUM_TEST_OBJECTS] = {
 	-1, -1, -1, -1, -1, 17, -1, -1, 12
 };
 

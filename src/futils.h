@@ -255,7 +255,7 @@ extern int git_futils_truncate(const char *path, int mode);
 /**
  * Get the filesize in bytes of a file
  */
-extern git_off_t git_futils_filesize(git_file fd);
+extern int git_futils_filesize(uint64_t *out, git_file fd);
 
 #define GIT_PERMS_IS_EXEC(MODE)		(((MODE) & 0111) != 0)
 #define GIT_PERMS_CANONICAL(MODE)	(GIT_PERMS_IS_EXEC(MODE) ? 0755 : 0644)
@@ -290,7 +290,7 @@ extern mode_t git_futils_canonical_mode(mode_t raw_mode);
 extern int git_futils_mmap_ro(
 	git_map *out,
 	git_file fd,
-	git_off_t begin,
+	off64_t begin,
 	size_t len);
 
 /**
@@ -330,7 +330,7 @@ extern int git_futils_fake_symlink(const char *new, const char *old);
  */
 typedef struct {
 	struct timespec mtime;
-	git_off_t  size;
+	uint64_t size;
 	unsigned int ino;
 } git_futils_filestamp;
 

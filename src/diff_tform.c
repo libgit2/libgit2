@@ -510,7 +510,7 @@ static int similarity_sig(
 			if (file->size != git_blob_rawsize(info->blob))
 				file->size = git_blob_rawsize(info->blob);
 
-			sz = (size_t)(git__is_sizet(file->size) ? file->size : -1);
+			sz = git__is_sizet(file->size) ? (size_t)file->size : (size_t)-1;
 
 			error = opts->metric->buffer_signature(
 				&cache[info->idx], info->file,

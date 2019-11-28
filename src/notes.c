@@ -320,7 +320,7 @@ static int note_new(
 	git_blob *blob)
 {
 	git_note *note = NULL;
-	git_off_t blobsize;
+	git_object_size_t blobsize;
 
 	note = git__malloc(sizeof(git_note));
 	GIT_ERROR_CHECK_ALLOC(note);

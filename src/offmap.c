@@ -14,9 +14,9 @@
 #define kfree git__free
 #include "khash.h"
 
-__KHASH_TYPE(off, git_off_t, void *)
+__KHASH_TYPE(off, off64_t, void *)
 
-__KHASH_IMPL(off, static kh_inline, git_off_t, void *, 1, kh_int64_hash_func, kh_int64_hash_equal)
+__KHASH_IMPL(off, static kh_inline, off64_t, void *, 1, kh_int64_hash_func, kh_int64_hash_equal)
 
 
 int git_offmap_new(git_offmap **out)
@@ -42,7 +42,7 @@ size_t git_offmap_size(git_offmap *map)
 	return kh_size(map);
 }
 
-void *git_offmap_get(git_offmap *map, const git_off_t key)
+void *git_offmap_get(git_offmap *map, const off64_t key)
 {
 	size_t idx = kh_get(off, map, key);
 	if (idx == kh_end(map) || !kh_exist(map, idx))
@@ -50,7 +50,7 @@ void *git_offmap_get(git_offmap *map, const git_off_t key)
 	return kh_val(map, idx);
 }
 
-int git_offmap_set(git_offmap *map, const git_off_t key, void *value)
+int git_offmap_set(git_offmap *map, const off64_t key, void *value)
 {
 	size_t idx;
 	int rval;
@@ -67,7 +67,7 @@ int git_offmap_set(git_offmap *map, const git_off_t key, void *value)
 	return 0;
 }
 
-int git_offmap_delete(git_offmap *map, const git_off_t key)
+int git_offmap_delete(git_offmap *map, const off64_t key)
 {
 	khiter_t idx = kh_get(off, map, key);
 	if (idx == kh_end(map))
@@ -76,12 +76,12 @@ int git_offmap_delete(git_offmap *map, const git_off_t key)
 	return 0;
 }
 
-int git_offmap_exists(git_offmap *map, const git_off_t key)
+int git_offmap_exists(git_offmap *map, const off64_t key)
 {
 	return kh_get(off, map, key) != kh_end(map);
 }
 
-int git_offmap_iterate(void **value, git_offmap *map, size_t *iter, git_off_t *key)
+int git_offmap_iterate(void **value, git_offmap *map, size_t *iter, off64_t *key)
 {
 	size_t i = *iter;
 

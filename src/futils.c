@@ -112,7 +112,7 @@ int git_futils_truncate(const char *path, int mode)
 	return 0;
 }
 
-git_off_t git_futils_filesize(git_file fd)
+int git_futils_filesize(uint64_t *out, git_file fd)
 {
 	struct stat sb;
 
@@ -121,7 +121,13 @@ git_off_t git_futils_filesize(git_file fd)
 		return -1;
 	}
 
-	return sb.st_size;
+	if (sb.st_size < 0) {
+		git_error_set(GIT_ERROR_INVALID, "invalid file size");
+		return -1;
+	}
+
+	*out = sb.st_size;
+	return 0;
 }
 
 mode_t git_futils_canonical_mode(mode_t raw_mode)
@@ -301,7 +307,7 @@ int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmod
 	return 0;
 }
 
-int git_futils_mmap_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
+int git_futils_mmap_ro(git_map *out, git_file fd, off64_t begin, size_t len)
 {
 	return p_mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin);
 }
@@ -309,16 +315,14 @@ int git_futils_mmap_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
 int git_futils_mmap_ro_file(git_map *out, const char *path)
 {
 	git_file fd = git_futils_open_ro(path);
-	git_off_t len;
+	uint64_t len;
 	int result;
 
 	if (fd < 0)
 		return fd;
 
-	if ((len = git_futils_filesize(fd)) < 0) {
-		result = -1;
+	if ((result = git_futils_filesize(&len, fd)) < 0)
 		goto out;
-	}
 
 	if (!git__is_sizet(len)) {
 		git_error_set(GIT_ERROR_OS, "file `%s` too large to mmap", path);
@@ -1106,7 +1110,7 @@ int git_futils_filestamp_check(
 #if defined(GIT_USE_NSEC)
 		stamp->mtime.tv_nsec == st.st_mtime_nsec &&
 #endif
-		stamp->size  == (git_off_t)st.st_size   &&
+		stamp->size  == (uint64_t)st.st_size   &&
 		stamp->ino   == (unsigned int)st.st_ino)
 		return 0;
 
@@ -1114,7 +1118,7 @@ int git_futils_filestamp_check(
 #if defined(GIT_USE_NSEC)
 	stamp->mtime.tv_nsec = st.st_mtime_nsec;
 #endif
-	stamp->size  = (git_off_t)st.st_size;
+	stamp->size  = (uint64_t)st.st_size;
 	stamp->ino   = (unsigned int)st.st_ino;
 
 	return 1;
@@ -1142,7 +1146,7 @@ void git_futils_filestamp_set_from_stat(
 #else
 		stamp->mtime.tv_nsec = 0;
 #endif
-		stamp->size  = (git_off_t)st->st_size;
+		stamp->size  = (uint64_t)st->st_size;
 		stamp->ino   = (unsigned int)st->st_ino;
 	} else {
 		memset(stamp, 0, sizeof(*stamp));

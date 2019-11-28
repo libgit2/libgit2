@@ -78,7 +78,7 @@ static int has_cr_in_index(const git_filter_source *src)
 	const git_index_entry *entry;
 	git_blob *blob;
 	const void *blobcontent;
-	git_off_t blobsize;
+	git_object_size_t blobsize;
 	bool found_cr;
 
 	if (!path)

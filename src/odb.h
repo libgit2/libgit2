@@ -70,7 +70,7 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj);
 /*
  * Format the object header such as it would appear in the on-disk object
  */
-int git_odb__format_object_header(size_t *out_len, char *hdr, size_t hdr_size, git_off_t obj_len, git_object_t obj_type);
+int git_odb__format_object_header(size_t *out_len, char *hdr, size_t hdr_size, git_object_size_t obj_len, git_object_t obj_type);
 
 /*
  * Hash an open file descriptor.

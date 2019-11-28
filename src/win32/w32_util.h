@@ -120,7 +120,7 @@ GIT_INLINE(void) git_win32__stat_init(
 	st->st_uid = 0;
 	st->st_nlink = 1;
 	st->st_mode = mode;
-	st->st_size = ((git_off_t)nFileSizeHigh << 32) + nFileSizeLow;
+	st->st_size = ((int64_t)nFileSizeHigh << 32) + nFileSizeLow;
 	st->st_dev = _getdrive() - 1;
 	st->st_rdev = st->st_dev;
 	git_win32__filetime_to_timespec(&ftLastAccessTime, &(st->st_atim));

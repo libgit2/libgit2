@@ -20,12 +20,12 @@
 bool git_disable_pack_keep_file_checks = false;
 
 static int packfile_open(struct git_pack_file *p);
-static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n);
+static off64_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n);
 static int packfile_unpack_compressed(
 		git_rawobj *obj,
 		struct git_pack_file *p,
 		git_mwindow **w_curs,
-		git_off_t *curpos,
+		off64_t *curpos,
 		size_t size,
 		git_object_t type);
 
@@ -37,7 +37,7 @@ static int packfile_unpack_compressed(
  * GIT_OID_MINPREFIXLEN and GIT_OID_HEXSZ.
  */
 static int pack_entry_find_offset(
-		git_off_t *offset_out,
+		off64_t *offset_out,
 		git_oid *found_oid,
 		struct git_pack_file *p,
 		const git_oid *short_oid,
@@ -109,7 +109,7 @@ static int cache_init(git_pack_cache *cache)
 	return 0;
 }
 
-static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
+static git_pack_cache_entry *cache_get(git_pack_cache *cache, off64_t offset)
 {
 	git_pack_cache_entry *entry;
 
@@ -128,7 +128,7 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 /* Run with the cache lock held */
 static void free_lowest_entry(git_pack_cache *cache)
 {
-	git_off_t offset;
+	off64_t offset;
 	git_pack_cache_entry *entry;
 
 	git_offmap_foreach(cache->entries, offset, entry, {
@@ -144,7 +144,7 @@ static int cache_add(
 		git_pack_cache_entry **cached_out,
 		git_pack_cache *cache,
 		git_rawobj *base,
-		git_off_t offset)
+		off64_t offset)
 {
 	git_pack_cache_entry *entry;
 	int exists;
@@ -345,7 +345,7 @@ static int pack_index_open(struct git_pack_file *p)
 static unsigned char *pack_window_open(
 		struct git_pack_file *p,
 		git_mwindow **w_cursor,
-		git_off_t offset,
+		off64_t offset,
 		unsigned int *left)
 {
 	if (p->mwf.fd == -1 && packfile_open(p) < 0)
@@ -441,7 +441,7 @@ int git_packfile_unpack_header(
 		git_object_t *type_p,
 		git_mwindow_file *mwf,
 		git_mwindow **w_curs,
-		git_off_t *curpos)
+		off64_t *curpos)
 {
 	unsigned char *base;
 	unsigned int left;
@@ -474,13 +474,13 @@ int git_packfile_resolve_header(
 		size_t *size_p,
 		git_object_t *type_p,
 		struct git_pack_file *p,
-		git_off_t offset)
+		off64_t offset)
 {
 	git_mwindow *w_curs = NULL;
-	git_off_t curpos = offset;
+	off64_t curpos = offset;
 	size_t size;
 	git_object_t type;
-	git_off_t base_offset;
+	off64_t base_offset;
 	int error;
 
 	error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
@@ -528,13 +528,13 @@ int git_packfile_resolve_header(
  * cache, we stop calculating there.
  */
 static int pack_dependency_chain(git_dependency_chain *chain_out,
-				 git_pack_cache_entry **cached_out, git_off_t *cached_off,
+				 git_pack_cache_entry **cached_out, off64_t *cached_off,
 				 struct pack_chain_elem *small_stack, size_t *stack_sz,
-				 struct git_pack_file *p, git_off_t obj_offset)
+				 struct git_pack_file *p, off64_t obj_offset)
 {
 	git_dependency_chain chain = GIT_ARRAY_INIT;
 	git_mwindow *w_curs = NULL;
-	git_off_t curpos = obj_offset, base_offset;
+	off64_t curpos = obj_offset, base_offset;
 	int error = 0, use_heap = 0;
 	size_t size, elem_pos;
 	git_object_t type;
@@ -619,10 +619,10 @@ on_error:
 int git_packfile_unpack(
 	git_rawobj *obj,
 	struct git_pack_file *p,
-	git_off_t *obj_offset)
+	off64_t *obj_offset)
 {
 	git_mwindow *w_curs = NULL;
-	git_off_t curpos = *obj_offset;
+	off64_t curpos = *obj_offset;
 	int error, free_base = 0;
 	git_dependency_chain chain = GIT_ARRAY_INIT;
 	struct pack_chain_elem *elem = NULL, *stack;
@@ -777,7 +777,7 @@ static void use_git_free(void *opaq, void *ptr)
 	git__free(ptr);
 }
 
-int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, git_off_t curpos)
+int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, off64_t curpos)
 {
 	int st;
 
@@ -846,7 +846,7 @@ static int packfile_unpack_compressed(
 	git_rawobj *obj,
 	struct git_pack_file *p,
 	git_mwindow **w_curs,
-	git_off_t *curpos,
+	off64_t *curpos,
 	size_t size,
 	git_object_t type)
 {
@@ -909,16 +909,16 @@ static int packfile_unpack_compressed(
  * curpos is where the data starts, delta_obj_offset is the where the
  * header starts
  */
-git_off_t get_delta_base(
+off64_t get_delta_base(
 	struct git_pack_file *p,
 	git_mwindow **w_curs,
-	git_off_t *curpos,
+	off64_t *curpos,
 	git_object_t type,
-	git_off_t delta_obj_offset)
+	off64_t delta_obj_offset)
 {
 	unsigned int left = 0;
 	unsigned char *base_info;
-	git_off_t base_offset;
+	off64_t base_offset;
 	git_oid unused;
 
 	base_info = pack_window_open(p, w_curs, *curpos, &left);
@@ -1045,7 +1045,7 @@ static int packfile_open(struct git_pack_file *p)
 	if (!p->mwf.size) {
 		if (!S_ISREG(st.st_mode))
 			goto cleanup;
-		p->mwf.size = (git_off_t)st.st_size;
+		p->mwf.size = (off64_t)st.st_size;
 	} else if (p->mwf.size != st.st_size)
 		goto cleanup;
 
@@ -1182,7 +1182,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
  *
  ***********************************************************/
 
-static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n)
+static off64_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n)
 {
 	const unsigned char *index = p->index_map.data;
 	const unsigned char *end = index + p->index_map.len;
@@ -1270,7 +1270,7 @@ int git_pack_foreach_entry(
 }
 
 static int pack_entry_find_offset(
-	git_off_t *offset_out,
+	off64_t *offset_out,
 	git_oid *found_oid,
 	struct git_pack_file *p,
 	const git_oid *short_oid,
@@ -1280,7 +1280,7 @@ static int pack_entry_find_offset(
 	const unsigned char *index;
 	unsigned hi, lo, stride;
 	int pos, found = 0;
-	git_off_t offset;
+	off64_t offset;
 	const unsigned char *current = 0;
 
 	*offset_out = 0;
@@ -1375,7 +1375,7 @@ int git_pack_entry_find(
 		const git_oid *short_oid,
 		size_t len)
 {
-	git_off_t offset;
+	off64_t offset;
 	git_oid found_oid;
 	int error;
 

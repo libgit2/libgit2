@@ -491,7 +491,7 @@ done:
 
 static int parse_int(int *out, git_patch_parse_ctx *ctx)
 {
-	git_off_t num;
+	int64_t num;
 
 	if (git_parse_advance_digit(&num, &ctx->parse_ctx, 10) < 0 || !git__is_int(num))
 		return -1;
@@ -765,7 +765,7 @@ static int parse_patch_binary_side(
 {
 	git_diff_binary_t type = GIT_DIFF_BINARY_NONE;
 	git_buf base85 = GIT_BUF_INIT, decoded = GIT_BUF_INIT;
-	git_off_t len;
+	int64_t len;
 	int error = 0;
 
 	if (git_parse_ctx_contains_s(&ctx->parse_ctx, "literal ")) {

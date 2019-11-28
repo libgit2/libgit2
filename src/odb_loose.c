@@ -824,7 +824,7 @@ static int filebuf_flags(loose_backend *backend)
 	return flags;
 }
 
-static int loose_backend__writestream(git_odb_stream **stream_out, git_odb_backend *_backend, git_off_t length, git_object_t type)
+static int loose_backend__writestream(git_odb_stream **stream_out, git_odb_backend *_backend, git_object_size_t length, git_object_t type)
 {
 	loose_backend *backend;
 	loose_writestream *stream = NULL;
@@ -833,7 +833,7 @@ static int loose_backend__writestream(git_odb_stream **stream_out, git_odb_backe
 	size_t hdrlen;
 	int error;
 
-	assert(_backend && length >= 0);
+	assert(_backend);
 
 	backend = (loose_backend *)_backend;
 	*stream_out = NULL;

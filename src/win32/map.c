@@ -50,7 +50,7 @@ int git__mmap_alignment(size_t *page_size)
 	return 0;
 }
 
-int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
+int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, off64_t offset)
 {
 	HANDLE fh = (HANDLE)_get_osfhandle(fd);
 	DWORD alignment = get_allocation_granularity();
@@ -58,8 +58,8 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	DWORD view_prot = 0;
 	DWORD off_low = 0;
 	DWORD off_hi = 0;
-	git_off_t page_start;
-	git_off_t page_offset;
+	off64_t page_start;
+	off64_t page_offset;
 
 	GIT_MMAP_VALIDATE(out, len, prot, flags);
 
@@ -98,8 +98,6 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 		out->fmh = NULL;
 		return -1;
 	}
-
-	assert(sizeof(git_off_t) == 8);
 
 	off_low = (DWORD)(page_start);
 	off_hi = (DWORD)(page_start >> 32);

@@ -16,7 +16,7 @@
 typedef struct git_mwindow {
 	struct git_mwindow *next;
 	git_map window_map;
-	git_off_t offset;
+	off64_t offset;
 	size_t last_used;
 	size_t inuse_cnt;
 } git_mwindow;
@@ -24,7 +24,7 @@ typedef struct git_mwindow {
 typedef struct git_mwindow_file {
 	git_mwindow *windows;
 	int fd;
-	git_off_t size;
+	off64_t size;
 } git_mwindow_file;
 
 typedef struct git_mwindow_ctl {
@@ -37,10 +37,10 @@ typedef struct git_mwindow_ctl {
 	git_vector windowfiles;
 } git_mwindow_ctl;
 
-int git_mwindow_contains(git_mwindow *win, git_off_t offset);
+int git_mwindow_contains(git_mwindow *win, off64_t offset);
 void git_mwindow_free_all(git_mwindow_file *mwf); /* locks */
 void git_mwindow_free_all_locked(git_mwindow_file *mwf); /* run under lock */
-unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor, git_off_t offset, size_t extra, unsigned int *left);
+unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor, off64_t offset, size_t extra, unsigned int *left);
 int git_mwindow_file_register(git_mwindow_file *mwf);
 void git_mwindow_file_deregister(git_mwindow_file *mwf);
 void git_mwindow_close(git_mwindow **w_cursor);

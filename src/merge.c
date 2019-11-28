@@ -1024,7 +1024,7 @@ static int index_entry_similarity_calc(
 {
 	git_blob *blob;
 	git_diff_file diff_file = {{{0}}};
-	git_off_t blobsize;
+	git_object_size_t blobsize;
 	int error;
 
 	*out = NULL;

@@ -11,6 +11,8 @@
 
 #include "repository.h"
 
+#define GIT_OBJECT_SIZE_MAX UINT64_MAX
+
 extern bool git_object__strict_input_validation;
 
 /** Base git object for inheritance */
