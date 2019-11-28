@@ -102,27 +102,28 @@ static void show_tag(const git_tag *tag)
 		printf("\n%s\n", git_tag_message(tag));
 }
 
-enum {
+typedef enum {
 	SHOW_TYPE = 1,
 	SHOW_SIZE = 2,
 	SHOW_NONE = 3,
 	SHOW_PRETTY = 4
-};
+} catfile_mode;
 
 /* Forward declarations for option-parsing helper */
-struct opts {
+struct catfile_options {
 	const char *dir;
 	const char *rev;
-	int action;
+	catfile_mode action;
 	int verbose;
 };
-static void parse_opts(struct opts *o, int argc, char *argv[]);
+
+static void parse_opts(struct catfile_options *o, int argc, char *argv[]);
 
 
 /** Entry point for this command */
 int lg2_cat_file(git_repository *repo, int argc, char *argv[])
 {
-	struct opts o = { ".", NULL, 0, 0 };
+	struct catfile_options o = { ".", NULL, 0, 0 };
 	git_object *obj = NULL;
 	char oidstr[GIT_OID_HEXSZ + 1];
 
@@ -201,7 +202,7 @@ static void usage(const char *message, const char *arg)
 }
 
 /** Parse the command-line options taken from git */
-static void parse_opts(struct opts *o, int argc, char *argv[])
+static void parse_opts(struct catfile_options *o, int argc, char *argv[])
 {
 	struct args_info args = ARGS_INFO_INIT;
 

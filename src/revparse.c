@@ -7,8 +7,6 @@
 
 #include "common.h"
 
-#include <assert.h>
-
 #include "buffer.h"
 #include "tree.h"
 #include "refdb.h"

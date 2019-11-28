@@ -13,7 +13,6 @@
  */
 
 #include "common.h"
-#include <assert.h>
 
 /** The following example demonstrates how to do merges with libgit2.
  *
@@ -24,7 +23,7 @@
  *
  */
 
-typedef struct {
+struct merge_options {
 	const char **heads;
 	size_t heads_count;
 
@@ -32,7 +31,7 @@ typedef struct {
 	size_t annotated_count;
 
 	int no_commit : 1;
-} merge_options;
+};
 
 static void print_usage(void)
 {
@@ -40,7 +39,7 @@ static void print_usage(void)
 	exit(1);
 }
 
-static void merge_options_init(merge_options *opts)
+static void merge_options_init(struct merge_options *opts)
 {
 	memset(opts, 0, sizeof(*opts));
 
@@ -50,7 +49,7 @@ static void merge_options_init(merge_options *opts)
 	opts->annotated_count = 0;
 }
 
-static void opts_add_refish(merge_options *opts, const char *refish)
+static void opts_add_refish(struct merge_options *opts, const char *refish)
 {
 	size_t sz;
 
@@ -61,7 +60,7 @@ static void opts_add_refish(merge_options *opts, const char *refish)
 	opts->heads[opts->heads_count - 1] = refish;
 }
 
-static void parse_options(const char **repo_path, merge_options *opts, int argc, char **argv)
+static void parse_options(const char **repo_path, struct merge_options *opts, int argc, char **argv)
 {
 	struct args_info args = ARGS_INFO_INIT;
 
@@ -83,7 +82,7 @@ static void parse_options(const char **repo_path, merge_options *opts, int argc,
 	}
 }
 
-static int resolve_heads(git_repository *repo, merge_options *opts)
+static int resolve_heads(git_repository *repo, struct merge_options *opts)
 {
 	git_annotated_commit **annotated = calloc(opts->heads_count, sizeof(git_annotated_commit *));
 	size_t annotated_count = 0, i;
@@ -201,7 +200,7 @@ static void output_conflicts(git_index *index)
 	git_index_conflict_iterator_free(conflicts);
 }
 
-static int create_merge_commit(git_repository *repo, git_index *index, merge_options *opts)
+static int create_merge_commit(git_repository *repo, git_index *index, struct merge_options *opts)
 {
 	git_oid tree_oid, commit_oid;
 	git_tree *tree;
@@ -277,7 +276,7 @@ cleanup:
 
 int lg2_merge(git_repository *repo, int argc, char **argv)
 {
-	merge_options opts;
+	struct merge_options opts;
 	git_index *index;
 	git_repository_state_t state;
 	git_merge_analysis_t analysis;

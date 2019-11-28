@@ -84,8 +84,7 @@ int main(int argc, char **argv)
 			break;
 		} else if (optional_str_arg(&git_dir, &args, "--git-dir", ".git")) {
 			continue;
-		} else if (!strcmp(a, "--")) {
-			/* arg separator */
+		} else if (match_arg_separator(&args)) {
 			break;
 		}
 	}

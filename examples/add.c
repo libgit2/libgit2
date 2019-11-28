@@ -13,7 +13,6 @@
  */
 
 #include "common.h"
-#include <assert.h>
 
 /**
  * The following example demonstrates how to add files with libgit2.
@@ -27,48 +26,50 @@
  *   -u/--update: update the index instead of adding to it.
  */
 
-enum print_options {
-	SKIP = 1,
-	VERBOSE = 2,
-	UPDATE = 4,
+enum index_mode {
+	INDEX_NONE,
+	INDEX_ADD,
 };
 
-struct print_payload {
-	enum print_options options;
+struct index_options {
+	int dry_run;
+	int verbose;
 	git_repository *repo;
+	enum index_mode mode;
+	int add_update;
 };
 
 /* Forward declarations for helpers */
-static void parse_opts(int *options, int *count, int argc, char *argv[]);
-void init_array(git_strarray *array, int argc, char **argv);
+static void parse_opts(const char **repo_path, struct index_options *opts, struct args_info *args);
 int print_matched_cb(const char *path, const char *matched_pathspec, void *payload);
 
-int lg2_add(git_repository *repo, int argc, char** argv)
+int lg2_add(git_repository *repo, int argc, char **argv)
 {
 	git_index_matched_path_cb matched_cb = NULL;
 	git_index *index;
 	git_strarray array = {0};
-	int options = 0, count = 0;
-	struct print_payload payload = {0};
+	struct index_options options;
+	struct args_info args = ARGS_INFO_INIT;
 
-	parse_opts(&options, &count, argc, argv);
-	init_array(&array, argc-count, argv+count);
+	/* Parse the options & arguments. */
+	parse_opts(NULL, &options, &args);
+	strarray_from_args(&array, &args);
 
+	/* Grab the repository's index. */
 	check_lg2(git_repository_index(&index, repo), "Could not open repository index", NULL);
 
 	/* Setup a callback if the requested options need it */
-	if ((options & VERBOSE) || (options & SKIP)) {
+	if (options.verbose || options.dry_run) {
 		matched_cb = &print_matched_cb;
 	}
 
-	/* Perform the requested action with the index and files */
-	payload.options = options;
-	payload.repo = repo;
+	options.repo = repo;
 
-	if (options & UPDATE) {
-		git_index_update_all(index, &array, matched_cb, &payload);
+	/* Perform the requested action with the index and files */
+	if (options.add_update) {
+		git_index_update_all(index, &array, matched_cb, &options);
 	} else {
-		git_index_add_all(index, &array, 0, matched_cb, &payload);
+		git_index_add_all(index, &array, 0, matched_cb, &options);
 	}
 
 	/* Cleanup memory */
@@ -85,15 +86,14 @@ int lg2_add(git_repository *repo, int argc, char** argv)
  */
 int print_matched_cb(const char *path, const char *matched_pathspec, void *payload)
 {
-	struct print_payload p = *(struct print_payload*)(payload);
+	struct index_options *opts = (struct index_options *)(payload);
 	int ret;
 	unsigned status;
 	(void)matched_pathspec;
 
 	/* Get the file status */
-	if (git_status_file(&status, p.repo, path)) {
+	if (git_status_file(&status, opts->repo, path) < 0)
 		return -1;
-	}
 
 	if ((status & GIT_STATUS_WT_MODIFIED) || (status & GIT_STATUS_WT_NEW)) {
 		printf("add '%s'\n", path);
@@ -102,9 +102,8 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 		ret = 1;
 	}
 
-	if ((p.options & SKIP)) {
+	if (opts->dry_run)
 		ret = 1;
-	}
 
 	return ret;
 }
@@ -133,33 +132,39 @@ void print_usage(void)
 	exit(1);
 }
 
-static void parse_opts(int *options, int *count, int argc, char *argv[])
+static void parse_opts(const char **repo_path, struct index_options *opts, struct args_info *args)
 {
-	int i;
+	if (args->argc <= 1)
+		print_usage();
 
-	for (i = 1; i < argc; ++i) {
-		if (argv[i][0] != '-')
-			break;
-		else if (!strcmp(argv[i], "--verbose") || !strcmp(argv[i], "-v"))
-			*options |= VERBOSE;
-		else if (!strcmp(argv[i], "--dry-run") || !strcmp(argv[i], "-n"))
-			*options |= SKIP;
-		else if (!strcmp(argv[i], "--update") || !strcmp(argv[i], "-u"))
-			*options |= UPDATE;
-		else if (!strcmp(argv[i], "-h")) {
+	for (args->pos = 1; args->pos < args->argc; ++args->pos) {
+		const char *curr = args->argv[args->pos];
+
+		if (curr[0] != '-') {
+			if (!strcmp("add", curr)) {
+				opts->mode = INDEX_ADD;
+				continue;
+			} else if (opts->mode == INDEX_NONE) {
+				fprintf(stderr, "missing command: %s", curr);
+				print_usage();
+				break;
+			} else {
+				/* We might be looking at a filename */
+				break;
+			}
+		} else if (match_bool_arg(&opts->verbose, args, "--verbose") ||
+				   match_bool_arg(&opts->dry_run, args, "--dry-run") ||
+				   match_str_arg(repo_path, args, "--git-dir") ||
+				   (opts->mode == INDEX_ADD && match_bool_arg(&opts->add_update, args, "--update"))) {
+			continue;
+		} else if (match_bool_arg(NULL, args, "--help")) {
 			print_usage();
 			break;
-		} else if (!strcmp(argv[i], "--")) {
-			i++;
+		} else if (match_arg_separator(args)) {
 			break;
 		} else {
-			fprintf(stderr, "Unsupported option %s.\n", argv[i]);
+			fprintf(stderr, "Unsupported option %s.\n", curr);
 			print_usage();
 		}
 	}
-
-	if (argc <= i)
-		print_usage();
-
-	*count = i;
 }

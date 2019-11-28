@@ -7,8 +7,6 @@
 
 #include "clone.h"
 
-#include <assert.h>
-
 #include "git2/clone.h"
 #include "git2/remote.h"
 #include "git2/revparse.h"

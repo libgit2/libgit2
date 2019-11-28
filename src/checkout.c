@@ -7,8 +7,6 @@
 
 #include "checkout.h"
 
-#include <assert.h>
-
 #include "git2/repository.h"
 #include "git2/refs.h"
 #include "git2/tree.h"

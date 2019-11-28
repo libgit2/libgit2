@@ -13,7 +13,6 @@
  */
 
 #include "common.h"
-#include <assert.h>
 
 /* Define the printf format specifer to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)
@@ -66,7 +65,7 @@ static void parse_options(const char **repo_path, checkout_options *opts, struct
 		const char *curr = args->argv[args->pos];
 		int bool_arg;
 
-		if (strcmp(curr, "--") == 0) {
+		if (match_arg_separator(args)) {
 			break;
 		} else if (!strcmp(curr, "--force")) {
 			opts->force = 1;
@@ -191,11 +190,7 @@ int lg2_checkout(git_repository *repo, int argc, char **argv)
 		goto cleanup;
 	}
 
-	if (args.pos >= args.argc) {
-		fprintf(stderr, "unhandled\n");
-		err = -1;
-		goto cleanup;
-	} else if (!strcmp("--", args.argv[args.pos])) {
+	if (match_arg_separator(&args)) {
 		/**
 		 * Try to checkout the given path
 		 */

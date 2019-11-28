@@ -14,7 +14,7 @@
 
 #include "common.h"
 
-int lg2_show_index(git_repository *repo, int argc, char** argv)
+int lg2_show_index(git_repository *repo, int argc, char **argv)
 {
 	git_index *index;
 	size_t i, ecount;

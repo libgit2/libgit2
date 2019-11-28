@@ -31,19 +31,19 @@
  */
 
 /** tag_options represents the parsed command line options */
-typedef struct {
+struct tag_options {
 	const char *message;
 	const char *pattern;
 	const char *tag_name;
 	const char *target;
 	int num_lines;
 	int force;
-} tag_options;
+};
 
 /** tag_state represents the current program state for dragging around */
 typedef struct {
 	git_repository *repo;
-	tag_options *opts;
+	struct tag_options *opts;
 } tag_state;
 
 /** An action to execute based on the command line arguments */
@@ -167,7 +167,7 @@ static void action_list_tags(tag_state *state)
 
 static void action_delete_tag(tag_state *state)
 {
-	tag_options *opts = state->opts;
+	struct tag_options *opts = state->opts;
 	git_object *obj;
 	git_buf abbrev_oid = {0};
 
@@ -191,7 +191,7 @@ static void action_delete_tag(tag_state *state)
 static void action_create_lighweight_tag(tag_state *state)
 {
 	git_repository *repo = state->repo;
-	tag_options *opts = state->opts;
+	struct tag_options *opts = state->opts;
 	git_oid oid;
 	git_object *target;
 
@@ -213,7 +213,7 @@ static void action_create_lighweight_tag(tag_state *state)
 static void action_create_tag(tag_state *state)
 {
 	git_repository *repo = state->repo;
-	tag_options *opts = state->opts;
+	struct tag_options *opts = state->opts;
 	git_signature *tagger;
 	git_oid oid;
 	git_object *target;
@@ -243,7 +243,7 @@ static void print_usage(void)
 }
 
 /** Parse command line arguments and choose action to run when done */
-static void parse_options(tag_action *action, tag_options *opts, int argc, char **argv)
+static void parse_options(tag_action *action, struct tag_options *opts, int argc, char **argv)
 {
 	args_info args = ARGS_INFO_INIT;
 	*action = &action_list_tags;
@@ -281,7 +281,7 @@ static void parse_options(tag_action *action, tag_options *opts, int argc, char 
 }
 
 /** Initialize tag_options struct */
-static void tag_options_init(tag_options *opts)
+static void tag_options_init(struct tag_options *opts)
 {
 	memset(opts, 0, sizeof(*opts));
 
@@ -295,7 +295,7 @@ static void tag_options_init(tag_options *opts)
 
 int lg2_tag(git_repository *repo, int argc, char **argv)
 {
-	tag_options opts;
+	struct tag_options opts;
 	tag_action action;
 	tag_state state;
 

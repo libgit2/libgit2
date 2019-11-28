@@ -11,7 +11,10 @@
  * with this software. If not, see
  * <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
+#ifndef INCLUDE_examples_common_h__
+#define INCLUDE_examples_common_h__
 
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -48,6 +51,8 @@
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(*x))
 #define UNUSED(x) (void)(x)
+
+#include "args.h"
 
 extern int lg2_add(git_repository *repo, int argc, char **argv);
 extern int lg2_blame(git_repository *repo, int argc, char **argv);
@@ -94,77 +99,6 @@ extern char *read_file(const char *path);
 extern void fatal(const char *message, const char *extra);
 
 /**
- * Check if a string has the given prefix.  Returns 0 if not prefixed
- * or the length of the prefix if it is.
- */
-extern size_t is_prefixed(const char *str, const char *pfx);
-
-/**
- * Match an integer string, returning 1 if matched, 0 if not.
- */
-extern int is_integer(int *out, const char *str, int allow_negative);
-
-struct args_info {
-	int    argc;
-	char **argv;
-	int    pos;
-};
-#define ARGS_INFO_INIT { argc, argv, 0 }
-
-/**
- * Check current `args` entry against `opt` string.  If it matches
- * exactly, take the next arg as a string; if it matches as a prefix with
- * an equal sign, take the remainder as a string; if value not supplied,
- * default value `def` will be given. otherwise return 0.
- */
-extern int optional_str_arg(
-	const char **out, struct args_info *args, const char *opt, const char *def);
-
-/**
- * Check current `args` entry against `opt` string.  If it matches
- * exactly, take the next arg as a string; if it matches as a prefix with
- * an equal sign, take the remainder as a string; otherwise return 0.
- */
-extern int match_str_arg(
-	const char **out, struct args_info *args, const char *opt);
-
-/**
- * Check current `args` entry against `opt` string parsing as uint16.  If
- * `opt` matches exactly, take the next arg as a uint16_t value; if `opt`
- * is a prefix (equal sign optional), take the remainder of the arg as a
- * uint16_t value; otherwise return 0.
- */
-extern int match_uint16_arg(
-	uint16_t *out, struct args_info *args, const char *opt);
-
-/**
- * Check current `args` entry against `opt` string parsing as uint32.  If
- * `opt` matches exactly, take the next arg as a uint16_t value; if `opt`
- * is a prefix (equal sign optional), take the remainder of the arg as a
- * uint32_t value; otherwise return 0.
- */
-extern int match_uint32_arg(
-	uint32_t *out, struct args_info *args, const char *opt);
-
-/**
- * Check current `args` entry against `opt` string parsing as int.  If
- * `opt` matches exactly, take the next arg as an int value; if it matches
- * as a prefix (equal sign optional), take the remainder of the arg as a
- * int value; otherwise return 0.
- */
-extern int match_int_arg(
-	int *out, struct args_info *args, const char *opt, int allow_negative);
-
-/**
- * Check current `args` entry against a "bool" `opt` (ie. --[no-]progress).
- * If `opt` matches positively, out will be set to 1, or if `opt` matches
- * negatively, out will be set to 0, and in both cases 1 will be returned.
- * If neither the positive or the negative form of opt matched, out will be -1,
- * and 0 will be returned.
- */
-extern int match_bool_arg(int *out, struct args_info *args, const char *opt);
-
-/**
  * Basic output function for plain text diff output
  * Pass `FILE*` such as `stdout` or `stderr` as payload (or NULL == `stdout`)
  */
@@ -196,3 +130,5 @@ extern int cred_acquire_cb(git_cred **out,
 		const char *username_from_url,
 		unsigned int allowed_types,
 		void *payload);
+
+#endif
