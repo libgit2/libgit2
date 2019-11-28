@@ -181,6 +181,9 @@ void test_config_stress__huge_section_with_many_values(void)
 {
 	git_config *config;
 
+	if (!cl_is_env_set("GITTEST_INVASIVE_SPEED"))
+		cl_skip();
+
 	/*
 	 * The config file is structured in such a way that is
 	 * has a section header that is approximately 500kb of
