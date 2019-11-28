@@ -67,19 +67,6 @@ GIT_BEGIN_DECL
 #define GIT_ATTR_FALSE(attr) GIT_ATTR_IS_FALSE(attr)
 #define GIT_ATTR_UNSPECIFIED(attr) GIT_ATTR_IS_UNSPECIFIED(attr)
 
-/**@}*/
-
-/** @name Deprecated Attribute type
- *
- * These enumeration values are retained for backward compatibility.
- * The newer versions of these functions should be preferred in all
- * new code.
- *
- * There is no plan to remove these backward compatibility values at
- * this time.
- */
-/**@{*/
-
 typedef git_attr_value_t git_attr_t;
 
 /**@}*/
