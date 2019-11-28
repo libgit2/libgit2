@@ -129,7 +129,7 @@ from <code>git status</code></li>
   <span class="n">git_status_list</span> <span class="o">*</span><span class="n">status</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">opts</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span> <span class="n">GIT_STATUS_OPTIONS_INIT</span><span class="p">,</span> <span class="s">&quot;.&quot;</span> <span class="p">};</span>
 
-  <span class="n"><a name="git_threads_init-23" class="fnlink" href="../../#v0.20.0/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
+  <span class="n"><a name="git_threads_init-10" class="fnlink" href="../../#v0.20.0/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
 
   <span class="n">o</span><span class="p">.</span><span class="n">statusopt</span><span class="p">.</span><span class="n">show</span>  <span class="o">=</span> <span class="n">GIT_STATUS_SHOW_INDEX_AND_WORKDIR</span><span class="p">;</span>
   <span class="n">o</span><span class="p">.</span><span class="n">statusopt</span><span class="p">.</span><span class="n">flags</span> <span class="o">=</span> <span class="n">GIT_STATUS_OPT_INCLUDE_UNTRACKED</span> <span class="o">|</span>
@@ -163,18 +163,18 @@ directory if none was given).</p>
         </div>
         <p>Run status on the repository</p>
 
-<p>We use <code><a name="git_status_list_new-10" class="fnlink" href="../../#v0.20.0/group/status/git_status_list_new">git_status_list_new</a>()</code> to generate a list of status
+<p>We use <code>git_status_list_new()</code> to generate a list of status
 information which lets us iterate over it at our
 convenience and extract the data we want to show out of
 each entry.</p>
 
-<p>You can use <code><a name="git_status_foreach-8" class="fnlink" href="../../#v0.20.0/group/status/git_status_foreach">git_status_foreach</a>()</code> or
-<code><a name="git_status_foreach_ext-9" class="fnlink" href="../../#v0.20.0/group/status/git_status_foreach_ext">git_status_foreach_ext</a>()</code> if you&#39;d prefer to execute a
+<p>You can use <code>git_status_foreach()</code> or
+<code>git_status_foreach_ext()</code> if you&#39;d prefer to execute a
 callback for each entry. The latter gives you more control
 about what results are presented.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_status_list_new-11" class="fnlink" href="../../#v0.20.0/group/status/git_status_list_new">git_status_list_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">status</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">o</span><span class="p">.</span><span class="n">statusopt</span><span class="p">),</span>
+        <div class='highlight'><pre>  <span class="n">check_lg2</span><span class="p">(</span><span class="n">git_status_list_new</span><span class="p">(</span><span class="o">&amp;</span><span class="n">status</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">o</span><span class="p">.</span><span class="n">statusopt</span><span class="p">),</span>
       <span class="s">&quot;Could not get status&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">showbranch</span><span class="p">)</span>
@@ -185,9 +185,9 @@ about what results are presented.</p>
   <span class="k">else</span>
     <span class="n">print_short</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">status</span><span class="p">);</span>
 
-  <span class="n"><a name="git_status_list_free-20" class="fnlink" href="../../#v0.20.0/group/status/git_status_list_free">git_status_list_free</a></span><span class="p">(</span><span class="n">status</span><span class="p">);</span>
+  <span class="n">git_status_list_free</span><span class="p">(</span><span class="n">status</span><span class="p">);</span>
   <span class="n"><a name="git_repository_free-4" class="fnlink" href="../../#v0.20.0/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
-  <span class="n"><a name="git_threads_shutdown-24" class="fnlink" href="../../#v0.20.0/group/threads/git_threads_shutdown">git_threads_shutdown</a></span><span class="p">();</span>
+  <span class="n"><a name="git_threads_shutdown-11" class="fnlink" href="../../#v0.20.0/group/threads/git_threads_shutdown">git_threads_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
@@ -238,7 +238,7 @@ in long form, including the command-line hints.</p>
       <td class=code>
         <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">print_long</span><span class="p">(</span><span class="n">git_status_list</span> <span class="o">*</span><span class="n">status</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="kt">size_t</span> <span class="n">i</span><span class="p">,</span> <span class="n">maxi</span> <span class="o">=</span> <span class="n"><a name="git_status_list_entrycount-12" class="fnlink" href="../../#v0.20.0/group/status/git_status_list_entrycount">git_status_list_entrycount</a></span><span class="p">(</span><span class="n">status</span><span class="p">);</span>
+  <span class="kt">size_t</span> <span class="n">i</span><span class="p">,</span> <span class="n">maxi</span> <span class="o">=</span> <span class="n">git_status_list_entrycount</span><span class="p">(</span><span class="n">status</span><span class="p">);</span>
   <span class="k">const</span> <span class="n">git_status_entry</span> <span class="o">*</span><span class="n">s</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">header</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">changes_in_index</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">changed_in_workdir</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">rm_in_workdir</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
@@ -256,7 +256,7 @@ in long form, including the command-line hints.</p>
         <div class='highlight'><pre>  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">maxi</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
     <span class="kt">char</span> <span class="o">*</span><span class="n">istatus</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
 
-    <span class="n">s</span> <span class="o">=</span> <span class="n"><a name="git_status_byindex-14" class="fnlink" href="../../#v0.20.0/group/status/git_status_byindex">git_status_byindex</a></span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">git_status_byindex</span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
 
     <span class="k">if</span> <span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">status</span> <span class="o">==</span> <span class="n">GIT_STATUS_CURRENT</span><span class="p">)</span>
       <span class="k">continue</span><span class="p">;</span>
@@ -312,7 +312,7 @@ in long form, including the command-line hints.</p>
         <div class='highlight'><pre>  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">maxi</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
     <span class="kt">char</span> <span class="o">*</span><span class="n">wstatus</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
 
-    <span class="n">s</span> <span class="o">=</span> <span class="n"><a name="git_status_byindex-15" class="fnlink" href="../../#v0.20.0/group/status/git_status_byindex">git_status_byindex</a></span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span></pre></div>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">git_status_byindex</span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-9'>
@@ -383,7 +383,7 @@ no differences, in which case it will be a <code>GIT_DELTA_UNMODIFIED</code>.</p
         <div class='highlight'><pre>  <span class="n">header</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">maxi</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">s</span> <span class="o">=</span> <span class="n"><a name="git_status_byindex-16" class="fnlink" href="../../#v0.20.0/group/status/git_status_byindex">git_status_byindex</a></span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">git_status_byindex</span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
 
     <span class="k">if</span> <span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">status</span> <span class="o">==</span> <span class="n">GIT_STATUS_WT_NEW</span><span class="p">)</span> <span class="p">{</span>
 
@@ -410,7 +410,7 @@ no differences, in which case it will be a <code>GIT_DELTA_UNMODIFIED</code>.</p
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">maxi</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">s</span> <span class="o">=</span> <span class="n"><a name="git_status_byindex-17" class="fnlink" href="../../#v0.20.0/group/status/git_status_byindex">git_status_byindex</a></span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">git_status_byindex</span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
 
     <span class="k">if</span> <span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">status</span> <span class="o">==</span> <span class="n">GIT_STATUS_IGNORED</span><span class="p">)</span> <span class="p">{</span>
 
@@ -441,13 +441,13 @@ columns and shows submodule status information.</p>
       <td class=code>
         <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">print_short</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">git_status_list</span> <span class="o">*</span><span class="n">status</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="kt">size_t</span> <span class="n">i</span><span class="p">,</span> <span class="n">maxi</span> <span class="o">=</span> <span class="n"><a name="git_status_list_entrycount-13" class="fnlink" href="../../#v0.20.0/group/status/git_status_list_entrycount">git_status_list_entrycount</a></span><span class="p">(</span><span class="n">status</span><span class="p">);</span>
+  <span class="kt">size_t</span> <span class="n">i</span><span class="p">,</span> <span class="n">maxi</span> <span class="o">=</span> <span class="n">git_status_list_entrycount</span><span class="p">(</span><span class="n">status</span><span class="p">);</span>
   <span class="k">const</span> <span class="n">git_status_entry</span> <span class="o">*</span><span class="n">s</span><span class="p">;</span>
   <span class="kt">char</span> <span class="n">istatus</span><span class="p">,</span> <span class="n">wstatus</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">extra</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="o">*</span><span class="n">c</span><span class="p">;</span>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">maxi</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">s</span> <span class="o">=</span> <span class="n"><a name="git_status_byindex-18" class="fnlink" href="../../#v0.20.0/group/status/git_status_byindex">git_status_byindex</a></span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">git_status_byindex</span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
 
     <span class="k">if</span> <span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">status</span> <span class="o">==</span> <span class="n">GIT_STATUS_CURRENT</span><span class="p">)</span>
       <span class="k">continue</span><span class="p">;</span>
@@ -505,9 +505,9 @@ let&#39;s go take a look at its status.</p>
       <span class="n">git_submodule</span> <span class="o">*</span><span class="n">sm</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
       <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">smstatus</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
-      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n"><a name="git_submodule_lookup-21" class="fnlink" href="../../#v0.20.0/group/submodule/git_submodule_lookup">git_submodule_lookup</a></span><span class="p">(</span>
+      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n"><a name="git_submodule_lookup-8" class="fnlink" href="../../#v0.20.0/group/submodule/git_submodule_lookup">git_submodule_lookup</a></span><span class="p">(</span>
           <span class="o">&amp;</span><span class="n">sm</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">index_to_workdir</span><span class="o">-&gt;</span><span class="n">new_file</span><span class="p">.</span><span class="n">path</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
-        <span class="o">!</span><span class="n"><a name="git_submodule_status-22" class="fnlink" href="../../#v0.20.0/group/submodule/git_submodule_status">git_submodule_status</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">smstatus</span><span class="p">,</span> <span class="n">sm</span><span class="p">))</span>
+        <span class="o">!</span><span class="n"><a name="git_submodule_status-9" class="fnlink" href="../../#v0.20.0/group/submodule/git_submodule_status">git_submodule_status</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">smstatus</span><span class="p">,</span> <span class="n">sm</span><span class="p">))</span>
       <span class="p">{</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">smstatus</span> <span class="o">&amp;</span> <span class="n">GIT_SUBMODULE_STATUS_WD_MODIFIED</span><span class="p">)</span>
           <span class="n">extra</span> <span class="o">=</span> <span class="s">&quot; (new commits)&quot;</span><span class="p">;</span>
@@ -555,7 +555,7 @@ let&#39;s go take a look at its status.</p>
   <span class="p">}</span>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">maxi</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">s</span> <span class="o">=</span> <span class="n"><a name="git_status_byindex-19" class="fnlink" href="../../#v0.20.0/group/status/git_status_byindex">git_status_byindex</a></span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">git_status_byindex</span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
 
     <span class="k">if</span> <span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">status</span> <span class="o">==</span> <span class="n">GIT_STATUS_WT_NEW</span><span class="p">)</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;?? %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">index_to_workdir</span><span class="o">-&gt;</span><span class="n">old_file</span><span class="p">.</span><span class="n">path</span><span class="p">);</span>

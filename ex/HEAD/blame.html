@@ -102,7 +102,7 @@ simulate the output of <code>git blame</code> and a few of its command line argu
 <span class="kt">int</span> <span class="nf">lg2_blame</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
   <span class="kt">int</span> <span class="n">line</span><span class="p">,</span> <span class="n">break_on_null_hunk</span><span class="p">;</span>
-  <span class="kt">git_off_t</span> <span class="n">i</span><span class="p">,</span> <span class="n">rawsize</span><span class="p">;</span>
+  <span class="kt">git_object_size_t</span> <span class="n">i</span><span class="p">,</span> <span class="n">rawsize</span><span class="p">;</span>
   <span class="kt">char</span> <span class="n">spec</span><span class="p">[</span><span class="mi">1024</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
   <span class="k">struct</span> <span class="n">opts</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">rawdata</span><span class="p">;</span>
