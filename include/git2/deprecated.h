@@ -7,6 +7,7 @@
 #ifndef INCLUDE_git_deprecated_h__
 #define INCLUDE_git_deprecated_h__
 
+#include "attr.h"
 #include "config.h"
 #include "common.h"
 #include "blame.h"
