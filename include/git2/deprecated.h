@@ -7,6 +7,7 @@
 #ifndef INCLUDE_git_deprecated_h__
 #define INCLUDE_git_deprecated_h__
 
+#include "attr.h"
 #include "config.h"
 #include "common.h"
 #include "blame.h"
@@ -65,6 +66,8 @@ GIT_BEGIN_DECL
 #define GIT_ATTR_TRUE(attr) GIT_ATTR_IS_TRUE(attr)
 #define GIT_ATTR_FALSE(attr) GIT_ATTR_IS_FALSE(attr)
 #define GIT_ATTR_UNSPECIFIED(attr) GIT_ATTR_IS_UNSPECIFIED(attr)
+
+typedef git_attr_value_t git_attr_t;
 
 /**@}*/
 
