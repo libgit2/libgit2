@@ -173,8 +173,8 @@ static bool patch_generated_diffable(git_patch_generated *patch)
 		olen = (size_t)patch->ofile.file->size;
 		nlen = (size_t)patch->nfile.file->size;
 	} else {
-		olen = patch->ofile.map.len;
-		nlen = patch->nfile.map.len;
+		olen = patch->ofile.mem.len;
+		nlen = patch->nfile.mem.len;
 	}
 
 	/* if both sides are empty, files are identical */
@@ -323,10 +323,10 @@ done:
 static int diff_binary(git_patch_generated_output *output, git_patch_generated *patch)
 {
 	git_diff_binary binary = {0};
-	const char *old_data = patch->ofile.map.data;
-	const char *new_data = patch->nfile.map.data;
-	size_t old_len = patch->ofile.map.len,
-		new_len = patch->nfile.map.len;
+	const char *old_data = patch->ofile.mem.data;
+	const char *new_data = patch->nfile.mem.data;
+	size_t old_len = patch->ofile.mem.len,
+		new_len = patch->nfile.mem.len;
 	int error;
 
 	/* Only load contents if the user actually wants to diff
@@ -755,15 +755,15 @@ git_diff_driver *git_patch_generated_driver(git_patch_generated *patch)
 void git_patch_generated_old_data(
 	char **ptr, size_t *len, git_patch_generated *patch)
 {
-	*ptr = patch->ofile.map.data;
-	*len = patch->ofile.map.len;
+	*ptr = patch->ofile.mem.data;
+	*len = patch->ofile.mem.len;
 }
 
 void git_patch_generated_new_data(
 	char **ptr, size_t *len, git_patch_generated *patch)
 {
-	*ptr = patch->nfile.map.data;
-	*len = patch->nfile.map.len;
+	*ptr = patch->nfile.mem.data;
+	*len = patch->nfile.mem.len;
 }
 
 static int patch_generated_file_cb(

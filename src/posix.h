@@ -118,7 +118,41 @@ extern int p_rename(const char *from, const char *to);
 extern int git__page_size(size_t *page_size);
 extern int git__mmap_alignment(size_t *page_size);
 
-/* The number of times `p_fsync` has been called.  Note that this is for
+/* p_mmap() prot values */
+#define P_MMAP_PROT_NONE 0x0
+#define P_MMAP_PROT_READ 0x1
+#define P_MMAP_PROT_WRITE 0x2
+#define P_MMAP_PROT_EXEC 0x4
+
+/* p_mmap() flags values */
+#define P_MMAP_MAP_FILE	0
+#define P_MMAP_MAP_SHARED 1
+#define P_MMAP_MAP_PRIVATE 2
+#define P_MMAP_MAP_TYPE	0xf
+#define P_MMAP_MAP_FIXED	0x10
+
+#ifdef __amigaos4__
+#define MAP_FAILED 0
+#endif
+
+struct p_mmap {
+	void *data; /* data bytes			*/
+	size_t len; /* data length			*/
+#ifdef GIT_WIN32
+	HANDLE fmh; /* file mapping handle */
+#endif
+};
+
+#define P_MMAP_VALIDATE(out, len, prot, flags) do { \
+	assert(out != NULL && len > 0); \
+	assert((prot & P_MMAP_PROT_WRITE) || (prot & P_MMAP_PROT_READ)); \
+	assert((flags & P_MMAP_MAP_FIXED) == 0); } while (0)
+
+extern int p_mmap(struct p_mmap *out, size_t len, int prot, int flags, int fd, git_off_t offset);
+extern int p_munmap(struct p_mmap *map);
+
+/*
+ * The number of times `p_fsync` has been called.  Note that this is for
  * test code only; it it not necessarily thread-safe and should not be
  * relied upon in production.
  */

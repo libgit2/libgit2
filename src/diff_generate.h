@@ -26,8 +26,6 @@ enum {
 
 enum {
 	GIT_DIFF_FLAG__FREE_PATH  = (1 << 7),  /* `path` is allocated memory */
-	GIT_DIFF_FLAG__FREE_DATA  = (1 << 8),  /* internal file data is allocated */
-	GIT_DIFF_FLAG__UNMAP_DATA = (1 << 9),  /* internal file data is mmap'ed */
 	GIT_DIFF_FLAG__NO_DATA    = (1 << 10), /* file data should not be loaded */
 	GIT_DIFF_FLAG__FREE_BLOB  = (1 << 11), /* release the blob when done */
 	GIT_DIFF_FLAG__LOADED     = (1 << 12), /* file data has been loaded */

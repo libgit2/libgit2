@@ -11,7 +11,7 @@
 
 #if !defined(GIT_WIN32) && !defined(NO_MMAP)
 
-#include "map.h"
+#include "posix.h"
 #include <sys/mman.h>
 #include <unistd.h>
 #include <errno.h>
@@ -32,22 +32,22 @@ int git__mmap_alignment(size_t *alignment)
   return git__page_size(alignment);
 }
 
-int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
+int p_mmap(struct p_mmap *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
 	int mprot = PROT_READ;
 	int mflag = 0;
 
-	GIT_MMAP_VALIDATE(out, len, prot, flags);
+	P_MMAP_VALIDATE(out, len, prot, flags);
 
 	out->data = NULL;
 	out->len = 0;
 
-	if (prot & GIT_PROT_WRITE)
+	if (prot & P_MMAP_PROT_WRITE)
 		mprot |= PROT_WRITE;
 
-	if ((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED)
+	if ((flags & P_MMAP_MAP_TYPE) == P_MMAP_MAP_SHARED)
 		mflag = MAP_SHARED;
-	else if ((flags & GIT_MAP_TYPE) == GIT_MAP_PRIVATE)
+	else if ((flags & P_MMAP_MAP_TYPE) == P_MMAP_MAP_PRIVATE)
 		mflag = MAP_PRIVATE;
 	else
 		mflag = MAP_SHARED;
@@ -64,7 +64,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	return 0;
 }
 
-int p_munmap(git_map *map)
+int p_munmap(struct p_mmap *map)
 {
 	assert(map != NULL);
 	munmap(map->data, map->len);

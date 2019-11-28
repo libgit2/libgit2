@@ -9,7 +9,6 @@
 
 #include "vector.h"
 #include "futils.h"
-#include "map.h"
 #include "global.h"
 #include "strmap.h"
 #include "pack.h"
@@ -154,10 +153,10 @@ void git_mwindow_free_all_locked(git_mwindow_file *mwf)
 		git_mwindow *w = mwf->windows;
 		assert(w->inuse_cnt == 0);
 
-		ctl->mapped -= w->window_map.len;
+		ctl->mapped -= w->window_mem.len;
 		ctl->open_windows--;
 
-		git_futils_mmap_free(&w->window_map);
+		git_mem_dispose(&w->window_mem);
 
 		mwf->windows = w->next;
 		git__free(w);
@@ -171,7 +170,7 @@ int git_mwindow_contains(git_mwindow *win, git_off_t offset)
 {
 	git_off_t win_off = win->offset;
 	return win_off <= offset
-		&& offset <= (git_off_t)(win_off + win->window_map.len);
+		&& offset <= (git_off_t)(win_off + win->window_mem.len);
 }
 
 /*
@@ -228,8 +227,8 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 		return -1;
 	}
 
-	ctl->mapped -= lru_w->window_map.len;
-	git_futils_mmap_free(&lru_w->window_map);
+	ctl->mapped -= lru_w->window_mem.len;
+	git_mem_dispose(&lru_w->window_mem);
 
 	if (lru_l)
 		lru_l->next = lru_w->next;
@@ -277,7 +276,7 @@ static git_mwindow *new_window(
 	 * window.
 	 */
 
-	if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < 0) {
+	if (git_mem_from_fd(&w->window_mem, fd, w->offset, (size_t)len) < 0) {
 		/*
 		 * The first error might be down to memory fragmentation even if
 		 * we're below our soft limits, so free up what we can and try again.
@@ -286,7 +285,7 @@ static git_mwindow *new_window(
 		while (git_mwindow_close_lru(mwf) == 0)
 			/* nop */;
 
-		if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < 0) {
+		if (git_mem_from_fd(&w->window_mem, fd, w->offset, (size_t)len) < 0) {
 			git__free(w);
 			return NULL;
 		}
@@ -359,10 +358,10 @@ unsigned char *git_mwindow_open(
 	offset -= w->offset;
 
 	if (left)
-		*left = (unsigned int)(w->window_map.len - offset);
+		*left = (unsigned int)(w->window_mem.len - offset);
 
 	git_mutex_unlock(&git__mwindow_mutex);
-	return (unsigned char *) w->window_map.data + offset;
+	return (unsigned char *) w->window_mem.data + offset;
 }
 
 int git_mwindow_file_register(git_mwindow_file *mwf)

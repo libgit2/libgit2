@@ -23,6 +23,7 @@
 #include "oidmap.h"
 #include "zstream.h"
 #include "object.h"
+#include "mem.h"
 
 extern git_mutex git__mwindow_mutex;
 
@@ -86,13 +87,13 @@ const git_oid *git_indexer_hash(const git_indexer *idx)
 static int parse_header(struct git_pack_header *hdr, struct git_pack_file *pack)
 {
 	int error;
-	git_map map;
+	git_mem mem;
 
-	if ((error = p_mmap(&map, sizeof(*hdr), GIT_PROT_READ, GIT_MAP_SHARED, pack->mwf.fd, 0)) < 0)
+	if ((error = git_mem_from_fd(&mem, pack->mwf.fd, 0, sizeof(*hdr))) < 0)
 		return error;
 
-	memcpy(hdr, map.data, sizeof(*hdr));
-	p_munmap(&map);
+	memcpy(hdr, mem.data, sizeof(*hdr));
+	git_mem_dispose(&mem);
 
 	/* Verify we recognize this pack file format. */
 	if (hdr->hdr_signature != ntohl(PACK_SIGNATURE)) {
@@ -603,7 +604,7 @@ static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t
 	size_t page_offset;
 	git_off_t page_start;
 	unsigned char *map_data;
-	git_map map;
+	git_mem mem;
 	int error;
 
 	assert(data && size);
@@ -615,12 +616,12 @@ static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t
 	page_offset = offset % mmap_alignment;
 	page_start = offset - page_offset;
 
-	if ((error = p_mmap(&map, page_offset + size, GIT_PROT_WRITE, GIT_MAP_SHARED, fd, page_start)) < 0)
+	if ((error = git_mem_from_fd_rw(&mem, fd, page_start, page_offset + size)) < 0)
 		return error;
 
-	map_data = (unsigned char *)map.data;
+	map_data = (unsigned char *)mem.data;
 	memcpy(map_data + page_offset, data, size);
-	p_munmap(&map);
+	git_mem_dispose(&mem);
 
 	return 0;
 }

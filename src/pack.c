@@ -193,10 +193,7 @@ static void pack_index_free(struct git_pack_file *p)
 		git__free(p->oids);
 		p->oids = NULL;
 	}
-	if (p->index_map.data) {
-		git_futils_mmap_free(&p->index_map);
-		p->index_map.data = NULL;
-	}
+	git_mem_dispose(&p->index_mem);
 }
 
 static int pack_index_check(const char *path, struct git_pack_file *p)
@@ -227,20 +224,20 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 		return -1;
 	}
 
-	error = git_futils_mmap_ro(&p->index_map, fd, 0, idx_size);
+	error = git_mem_from_fd(&p->index_mem, fd, 0, idx_size);
 
 	p_close(fd);
 
 	if (error < 0)
 		return error;
 
-	hdr = idx_map = p->index_map.data;
+	hdr = idx_map = p->index_mem.data;
 
 	if (hdr->idx_signature == htonl(PACK_IDX_SIGNATURE)) {
 		version = ntohl(hdr->idx_version);
 
 		if (version < 2 || version > 2) {
-			git_futils_mmap_free(&p->index_map);
+			git_mem_dispose(&p->index_mem);
 			return packfile_error("unsupported index version");
 		}
 
@@ -256,7 +253,7 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 	for (i = 0; i < 256; i++) {
 		uint32_t n = ntohl(index[i]);
 		if (n < nr) {
-			git_futils_mmap_free(&p->index_map);
+			git_mem_dispose(&p->index_mem);
 			return packfile_error("index is non-monotonic");
 		}
 		nr = n;
@@ -271,7 +268,7 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 		 * - 20-byte SHA1 file checksum
 		 */
 		if (idx_size != 4*256 + nr * 24 + 20 + 20) {
-			git_futils_mmap_free(&p->index_map);
+			git_mem_dispose(&p->index_mem);
 			return packfile_error("index is corrupted");
 		}
 	} else if (version == 2) {
@@ -295,7 +292,7 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 			max_size += (nr - 1)*8;
 
 		if (idx_size < min_size || idx_size > max_size) {
-			git_futils_mmap_free(&p->index_map);
+			git_mem_dispose(&p->index_mem);
 			return packfile_error("wrong index size");
 		}
 	}
@@ -1049,19 +1046,6 @@ static int packfile_open(struct git_pack_file *p)
 	} else if (p->mwf.size != st.st_size)
 		goto cleanup;
 
-#if 0
-	/* We leave these file descriptors open with sliding mmap;
-	 * there is no point keeping them open across exec(), though.
-	 */
-	fd_flag = fcntl(p->mwf.fd, F_GETFD, 0);
-	if (fd_flag < 0)
-		goto cleanup;
-
-	fd_flag |= FD_CLOEXEC;
-	if (fcntl(p->pack_fd, F_SETFD, fd_flag) == -1)
-		goto cleanup;
-#endif
-
 	/* Verify we recognize this pack file format. */
 	if (p_read(p->mwf.fd, &hdr, sizeof(hdr)) < 0 ||
 		hdr.hdr_signature != htonl(PACK_SIGNATURE) ||
@@ -1074,7 +1058,7 @@ static int packfile_open(struct git_pack_file *p)
 		p_read(p->mwf.fd, sha1.id, GIT_OID_RAWSZ) < 0)
 		goto cleanup;
 
-	idx_sha1 = ((unsigned char *)p->index_map.data) + p->index_map.len - 40;
+	idx_sha1 = ((unsigned char *)p->index_mem.data) + p->index_mem.len - 40;
 
 	if (git_oid__cmp(&sha1, (git_oid *)idx_sha1) != 0)
 		goto cleanup;
@@ -1184,8 +1168,8 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 
 static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n)
 {
-	const unsigned char *index = p->index_map.data;
-	const unsigned char *end = index + p->index_map.len;
+	const unsigned char *index = p->index_mem.data;
+	const unsigned char *end = index + p->index_mem.len;
 	index += 4 * 256;
 	if (p->index_version == 1) {
 		return ntohl(*((uint32_t *)(index + 24 * n)));
@@ -1215,7 +1199,7 @@ int git_pack_foreach_entry(
 	git_odb_foreach_cb cb,
 	void *data)
 {
-	const unsigned char *index = p->index_map.data, *current;
+	const unsigned char *index = p->index_mem.data, *current;
 	uint32_t i;
 	int error = 0;
 
@@ -1223,9 +1207,9 @@ int git_pack_foreach_entry(
 		if ((error = pack_index_open(p)) < 0)
 			return error;
 
-		assert(p->index_map.data);
+		assert(p->index_mem.data);
 
-		index = p->index_map.data;
+		index = p->index_mem.data;
 	}
 
 	if (p->index_version > 1) {
@@ -1290,11 +1274,11 @@ static int pack_entry_find_offset(
 
 		if ((error = pack_index_open(p)) < 0)
 			return error;
-		assert(p->index_map.data);
+		assert(p->index_mem.data);
 	}
 
-	index = p->index_map.data;
-	level1_ofs = p->index_map.data;
+	index = p->index_mem.data;
+	level1_ofs = p->index_mem.data;
 
 	if (p->index_version > 1) {
 		level1_ofs += 2;

@@ -12,7 +12,6 @@
 #include "common.h"
 #include "diff.h"
 #include "strmap.h"
-#include "map.h"
 #include "buf_text.h"
 #include "config.h"
 #include "regexp.h"

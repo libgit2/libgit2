@@ -11,7 +11,7 @@
 
 #include "diff.h"
 #include "diff_driver.h"
-#include "map.h"
+#include "mem.h"
 
 /* expanded information for one side of a delta */
 typedef struct {
@@ -23,7 +23,7 @@ typedef struct {
 	git_off_t opts_max_size;
 	git_iterator_type_t src;
 	const git_blob *blob;
-	git_map map;
+	git_mem mem;
 } git_diff_file_content;
 
 extern int git_diff_file_content__init_from_diff(

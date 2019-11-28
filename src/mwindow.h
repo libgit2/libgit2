@@ -10,12 +10,12 @@
 
 #include "common.h"
 
-#include "map.h"
+#include "mem.h"
 #include "vector.h"
 
 typedef struct git_mwindow {
 	struct git_mwindow *next;
-	git_map window_map;
+	git_mem window_mem;
 	git_off_t offset;
 	size_t last_used;
 	size_t inuse_cnt;
