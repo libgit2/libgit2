@@ -1,8 +1,10 @@
-#include "clar_libgit2.h"
 #include "clar_libgit2_trace.h"
+
+#if defined(GIT_TRACE)
+
+#include "clar_libgit2.h"
 #include "clar_libgit2_timer.h"
 #include "trace.h"
-
 
 struct method {
 	const char *name;
@@ -32,7 +34,6 @@ static const char *message_prefix(git_trace_level_t level)
 	}
 }
 
-#if defined(GIT_TRACE)
 static void _git_trace_cb__printf(git_trace_level_t level, const char *msg)
 {
 	printf("%s%s\n", message_prefix(level), msg);
@@ -225,15 +226,11 @@ void _cl_trace_cb__event_handler(
 	}
 }
 
-#endif /*GIT_TRACE*/
-
 /**
  * Setup/Enable git_trace() based upon settings user's environment.
- *
  */
 void cl_global_trace_register(void)
 {
-#if defined(GIT_TRACE)
 	if (!s_trace_loaded)
 		_load_trace_params();
 
@@ -246,7 +243,6 @@ void cl_global_trace_register(void)
 
 	git_trace_set(s_trace_level, s_trace_method->git_trace_cb);
 	cl_trace_register(_cl_trace_cb__event_handler, NULL);
-#endif
 }
 
 /**
@@ -258,7 +254,6 @@ void cl_global_trace_register(void)
  */
 void cl_global_trace_disable(void)
 {
-#if defined(GIT_TRACE)
 	cl_trace_register(NULL, NULL);
 	git_trace_set(GIT_TRACE_NONE, NULL);
 	if (s_trace_method && s_trace_method->close)
@@ -268,5 +263,16 @@ void cl_global_trace_disable(void)
 	 * since we only want to hit the environment variables
 	 * once.
 	 */
-#endif
 }
+
+#else /* GIT_TRACE */
+
+void cl_global_trace_register(void)
+{
+}
+
+void cl_global_trace_disable(void)
+{
+}
+
+#endif /* GIT_TRACE*/
