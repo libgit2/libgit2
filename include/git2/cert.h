@@ -78,6 +78,8 @@ typedef enum {
 	GIT_CERT_SSH_MD5 = (1 << 0),
 	/** SHA-1 is available */
 	GIT_CERT_SSH_SHA1 = (1 << 1),
+	/** SHA-256 is available */
+	GIT_CERT_SSH_SHA256 = (1 << 2),
 } git_cert_ssh_t;
 
 /**
@@ -103,6 +105,12 @@ typedef struct {
 	 * have the SHA-1 hash of the hostkey.
 	 */
 	unsigned char hash_sha1[20];
+
+	/**
+	 * Hostkey hash. If type has `GIT_CERT_SSH_SHA256` set, this will
+	 * have the SHA-256 hash of the hostkey.
+	 */
+	unsigned char hash_sha256[32];
 } git_cert_hostkey;
 
 /**
