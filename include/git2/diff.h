@@ -1093,6 +1093,7 @@ typedef enum {
 	GIT_DIFF_FORMAT_RAW          = 3u, /**< like git diff --raw */
 	GIT_DIFF_FORMAT_NAME_ONLY    = 4u, /**< like git diff --name-only */
 	GIT_DIFF_FORMAT_NAME_STATUS  = 5u, /**< like git diff --name-status */
+	GIT_DIFF_FORMAT_PATCH_ID     = 6u, /**< git diff as used by git patch-id */
 } git_diff_format_t;
 
 /**

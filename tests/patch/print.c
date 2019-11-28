@@ -172,3 +172,9 @@ void test_patch_print__binary_not_shown(void)
 	patch_print_from_patchfile(PATCH_BINARY_NOT_PRINTED,
 		strlen(PATCH_BINARY_NOT_PRINTED));
 }
+
+void test_patch_print__binary_add_not_shown(void)
+{
+	patch_print_from_patchfile(PATCH_ADD_BINARY_NOT_PRINTED,
+		strlen(PATCH_ADD_BINARY_NOT_PRINTED));
+}
