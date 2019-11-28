@@ -18,6 +18,7 @@
       <div id="jump_page">
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
@@ -76,8 +77,7 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span>
-<span class="cp">#include &lt;assert.h&gt;</span></pre></div>
+<span class="cp">#include &quot;common.h&quot;</span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -119,16 +119,14 @@ all of the use cases.</p>
         <p>describe_options represents the parsed command line options</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+        <div class='highlight'><pre><span class="k">struct</span> <span class="n">describe_options</span> <span class="p">{</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">**</span><span class="n">commits</span><span class="p">;</span>
   <span class="kt">size_t</span> <span class="n">commit_count</span><span class="p">;</span>
   <span class="n">git_describe_options</span> <span class="n">describe_options</span><span class="p">;</span>
   <span class="n">git_describe_format_options</span> <span class="n">format_options</span><span class="p">;</span>
-<span class="p">}</span> <span class="n">describe_options</span><span class="p">;</span>
+<span class="p">};</span>
 
-<span class="k">typedef</span> <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args_info</span><span class="p">;</span>
-
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">opts_add_commit</span><span class="p">(</span><span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">commit</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">opts_add_commit</span><span class="p">(</span><span class="k">struct</span> <span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">commit</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="kt">size_t</span> <span class="n">sz</span><span class="p">;</span>
 
@@ -139,7 +137,7 @@ all of the use cases.</p>
   <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">[</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commit_count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">commit</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">do_describe_single</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">rev</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">do_describe_single</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">rev</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_object</span> <span class="o">*</span><span class="n">commit</span><span class="p">;</span>
   <span class="n">git_describe_result</span> <span class="o">*</span><span class="n">describe_result</span><span class="p">;</span>
@@ -162,7 +160,7 @@ all of the use cases.</p>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">buf</span><span class="p">.</span><span class="n">ptr</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">do_describe</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">do_describe</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commit_count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">do_describe_single</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
@@ -189,9 +187,9 @@ all of the use cases.</p>
         <p>Parse command line arguments</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_options</span><span class="p">(</span><span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_options</span><span class="p">(</span><span class="k">struct</span> <span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">args</span><span class="p">.</span><span class="n">pos</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="o">++</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">curr</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">];</span>
@@ -240,7 +238,7 @@ all of the use cases.</p>
 
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">describe_options_init</span><span class="p">(</span><span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">describe_options_init</span><span class="p">(</span><span class="k">struct</span> <span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">memset</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">));</span>
 
@@ -252,7 +250,7 @@ all of the use cases.</p>
 
 <span class="kt">int</span> <span class="nf">lg2_describe</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="n">describe_options</span> <span class="n">opts</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">describe_options</span> <span class="n">opts</span><span class="p">;</span>
 
   <span class="n">describe_options_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="p">);</span>
   <span class="n">parse_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>

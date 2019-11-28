@@ -18,6 +18,7 @@
       <div id="jump_page">
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
@@ -76,8 +77,7 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span>
-<span class="cp">#include &lt;assert.h&gt;</span></pre></div>
+<span class="cp">#include &quot;common.h&quot;</span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -94,7 +94,7 @@
 
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+        <div class='highlight'><pre><span class="k">struct</span> <span class="n">merge_options</span> <span class="p">{</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">**</span><span class="n">heads</span><span class="p">;</span>
   <span class="kt">size_t</span> <span class="n">heads_count</span><span class="p">;</span>
 
@@ -102,7 +102,7 @@
   <span class="kt">size_t</span> <span class="n">annotated_count</span><span class="p">;</span>
 
   <span class="kt">int</span> <span class="nl">no_commit</span> <span class="p">:</span> <span class="mi">1</span><span class="p">;</span>
-<span class="p">}</span> <span class="n">merge_options</span><span class="p">;</span>
+<span class="p">};</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">print_usage</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
 <span class="p">{</span>
@@ -110,7 +110,7 @@
   <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">merge_options_init</span><span class="p">(</span><span class="n">merge_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">merge_options_init</span><span class="p">(</span><span class="k">struct</span> <span class="n">merge_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">memset</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">));</span>
 
@@ -120,7 +120,7 @@
   <span class="n">opts</span><span class="o">-&gt;</span><span class="n">annotated_count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">opts_add_refish</span><span class="p">(</span><span class="n">merge_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">refish</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">opts_add_refish</span><span class="p">(</span><span class="k">struct</span> <span class="n">merge_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">refish</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="kt">size_t</span> <span class="n">sz</span><span class="p">;</span>
 
@@ -131,7 +131,7 @@
   <span class="n">opts</span><span class="o">-&gt;</span><span class="n">heads</span><span class="p">[</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">heads_count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">refish</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_options</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">**</span><span class="n">repo_path</span><span class="p">,</span> <span class="n">merge_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_options</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">**</span><span class="n">repo_path</span><span class="p">,</span> <span class="k">struct</span> <span class="n">merge_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
 
@@ -153,7 +153,7 @@
   <span class="p">}</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">int</span> <span class="nf">resolve_heads</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">merge_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">resolve_heads</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">merge_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_annotated_commit</span> <span class="o">**</span><span class="n">annotated</span> <span class="o">=</span> <span class="n">calloc</span><span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">heads_count</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">git_annotated_commit</span> <span class="o">*</span><span class="p">));</span>
   <span class="kt">size_t</span> <span class="n">annotated_count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">;</span>
@@ -271,7 +271,7 @@
   <span class="n"><a name="git_index_conflict_iterator_free-14" class="fnlink" href="../../#HEAD/group/index/git_index_conflict_iterator_free">git_index_conflict_iterator_free</a></span><span class="p">(</span><span class="n">conflicts</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">int</span> <span class="nf">create_merge_commit</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">,</span> <span class="n">merge_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">create_merge_commit</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">,</span> <span class="k">struct</span> <span class="n">merge_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_oid</span> <span class="n">tree_oid</span><span class="p">,</span> <span class="n">commit_oid</span><span class="p">;</span>
   <span class="n">git_tree</span> <span class="o">*</span><span class="n">tree</span><span class="p">;</span>
@@ -347,7 +347,7 @@
 
 <span class="kt">int</span> <span class="nf">lg2_merge</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="n">merge_options</span> <span class="n">opts</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">merge_options</span> <span class="n">opts</span><span class="p">;</span>
   <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">;</span>
   <span class="kt">git_repository_state_t</span> <span class="n">state</span><span class="p">;</span>
   <span class="kt">git_merge_analysis_t</span> <span class="n">analysis</span><span class="p">;</span>

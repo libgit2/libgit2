@@ -18,6 +18,7 @@
       <div id="jump_page">
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
@@ -106,7 +107,7 @@ That is demonstrated in the &quot;create<em>initial</em>commit&quot; helper func
         <p>Forward declarations of helpers</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">struct</span> <span class="n">opts</span> <span class="p">{</span>
+        <div class='highlight'><pre><span class="k">struct</span> <span class="n">init_opts</span> <span class="p">{</span>
   <span class="kt">int</span> <span class="n">no_options</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">quiet</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">bare</span><span class="p">;</span>
@@ -117,11 +118,11 @@ That is demonstrated in the &quot;create<em>initial</em>commit&quot; helper func
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">dir</span><span class="p">;</span>
 <span class="p">};</span>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">create_initial_commit</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">init_opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
 
 <span class="kt">int</span> <span class="nf">lg2_init</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
-  <span class="k">struct</span> <span class="n">opts</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GIT_REPOSITORY_INIT_SHARED_UMASK</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span> <span class="p">};</span>
+  <span class="k">struct</span> <span class="n">init_opts</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GIT_REPOSITORY_INIT_SHARED_UMASK</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span> <span class="p">};</span>
 
   <span class="n">parse_opts</span><span class="p">(</span><span class="o">&amp;</span><span class="n">o</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
 
@@ -361,7 +362,7 @@ but here this is the first commit so there will be no parent.</p>
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">init_opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
   <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">sharedarg</span><span class="p">;</span></pre></div>

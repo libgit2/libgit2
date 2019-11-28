@@ -18,6 +18,7 @@
       <div id="jump_page">
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
@@ -95,11 +96,11 @@ This includes staged and committed files, but unstaged files will not display.</
 
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+        <div class='highlight'><pre><span class="k">struct</span> <span class="n">ls_options</span> <span class="p">{</span>
   <span class="kt">int</span> <span class="n">error_unmatch</span><span class="p">;</span>
   <span class="kt">char</span> <span class="o">*</span><span class="n">files</span><span class="p">[</span><span class="mi">1024</span><span class="p">];</span>
   <span class="kt">size_t</span> <span class="n">file_count</span><span class="p">;</span>
-<span class="p">}</span> <span class="n">ls_options</span><span class="p">;</span>
+<span class="p">};</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">usage</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">message</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
 <span class="p">{</span>
@@ -111,12 +112,12 @@ This includes staged and committed files, but unstaged files will not display.</
   <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">int</span> <span class="nf">parse_options</span><span class="p">(</span><span class="n">ls_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">parse_options</span><span class="p">(</span><span class="k">struct</span> <span class="n">ls_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
   <span class="kt">int</span> <span class="n">parsing_files</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
 
-  <span class="n">memset</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ls_options</span><span class="p">));</span>
+  <span class="n">memset</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="n">ls_options</span><span class="p">));</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span>
     <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
@@ -148,7 +149,7 @@ This includes staged and committed files, but unstaged files will not display.</
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">int</span> <span class="nf">print_paths</span><span class="p">(</span><span class="n">ls_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">print_paths</span><span class="p">(</span><span class="k">struct</span> <span class="n">ls_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="kt">size_t</span> <span class="n">i</span><span class="p">;</span>
   <span class="k">const</span> <span class="n">git_index_entry</span> <span class="o">*</span><span class="n">entry</span><span class="p">;</span>
@@ -183,7 +184,7 @@ This includes staged and committed files, but unstaged files will not display.</
 <span class="kt">int</span> <span class="nf">lg2_ls_files</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
   <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-  <span class="n">ls_options</span> <span class="n">opts</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">ls_options</span> <span class="n">opts</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
 
   <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n">parse_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>

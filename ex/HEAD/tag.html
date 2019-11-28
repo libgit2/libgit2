@@ -18,6 +18,7 @@
       <div id="jump_page">
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
@@ -112,14 +113,14 @@ all of the use cases.</p>
         <p>tag_options represents the parsed command line options</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+        <div class='highlight'><pre><span class="k">struct</span> <span class="n">tag_options</span> <span class="p">{</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">message</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pattern</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">tag_name</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">target</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">num_lines</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">force</span><span class="p">;</span>
-<span class="p">}</span> <span class="n">tag_options</span><span class="p">;</span></pre></div>
+<span class="p">};</span></pre></div>
       </td>
     </tr>
     <tr id='section-4'>
@@ -132,7 +133,7 @@ all of the use cases.</p>
       <td class=code>
         <div class='highlight'><pre><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">;</span>
-  <span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">;</span>
 <span class="p">}</span> <span class="n">tag_state</span><span class="p">;</span></pre></div>
       </td>
     </tr>
@@ -344,7 +345,7 @@ all of the use cases.</p>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">action_delete_tag</span><span class="p">(</span><span class="n">tag_state</span> <span class="o">*</span><span class="n">state</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">opts</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">opts</span><span class="p">;</span>
   <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span><span class="p">;</span>
   <span class="n">git_buf</span> <span class="n">abbrev_oid</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
 
@@ -368,7 +369,7 @@ all of the use cases.</p>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">action_create_lighweight_tag</span><span class="p">(</span><span class="n">tag_state</span> <span class="o">*</span><span class="n">state</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">;</span>
-  <span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">opts</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">opts</span><span class="p">;</span>
   <span class="n">git_oid</span> <span class="n">oid</span><span class="p">;</span>
   <span class="n">git_object</span> <span class="o">*</span><span class="n">target</span><span class="p">;</span>
 
@@ -390,7 +391,7 @@ all of the use cases.</p>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">action_create_tag</span><span class="p">(</span><span class="n">tag_state</span> <span class="o">*</span><span class="n">state</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">;</span>
-  <span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">opts</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">opts</span><span class="p">;</span>
   <span class="n">git_signature</span> <span class="o">*</span><span class="n">tagger</span><span class="p">;</span>
   <span class="n">git_oid</span> <span class="n">oid</span><span class="p">;</span>
   <span class="n">git_object</span> <span class="o">*</span><span class="n">target</span><span class="p">;</span>
@@ -428,7 +429,7 @@ all of the use cases.</p>
         <p>Parse command line arguments and choose action to run when done</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_options</span><span class="p">(</span><span class="n">tag_action</span> <span class="o">*</span><span class="n">action</span><span class="p">,</span> <span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_options</span><span class="p">(</span><span class="n">tag_action</span> <span class="o">*</span><span class="n">action</span><span class="p">,</span> <span class="k">struct</span> <span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
   <span class="o">*</span><span class="n">action</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">action_list_tags</span><span class="p">;</span>
@@ -475,7 +476,7 @@ all of the use cases.</p>
 
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">tag_options_init</span><span class="p">(</span><span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">tag_options_init</span><span class="p">(</span><span class="k">struct</span> <span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">memset</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">));</span>
 
@@ -489,7 +490,7 @@ all of the use cases.</p>
 
 <span class="kt">int</span> <span class="nf">lg2_tag</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="n">tag_options</span> <span class="n">opts</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">tag_options</span> <span class="n">opts</span><span class="p">;</span>
   <span class="n">tag_action</span> <span class="n">action</span><span class="p">;</span>
   <span class="n">tag_state</span> <span class="n">state</span><span class="p">;</span>
 

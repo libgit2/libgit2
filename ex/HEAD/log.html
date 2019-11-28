@@ -18,6 +18,7 @@
       <div id="jump_page">
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
@@ -660,8 +661,7 @@ revwalker configuration calls</li>
       </td>
       <td class=code>
         <div class='highlight'><pre>        <span class="k">break</span><span class="p">;</span>
-    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--&quot;</span><span class="p">))</span> <span class="p">{</span>
-      <span class="o">++</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">match_arg_separator</span><span class="p">(</span><span class="o">&amp;</span><span class="n">args</span><span class="p">))</span> <span class="p">{</span>
       <span class="k">break</span><span class="p">;</span>
     <span class="p">}</span>
     <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--date-order&quot;</span><span class="p">))</span>

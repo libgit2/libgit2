@@ -18,6 +18,7 @@
       <div id="jump_page">
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
@@ -77,7 +78,6 @@
 <span class="cm"> */</span>
 
 <span class="cp">#include &quot;common.h&quot;</span>
-<span class="cp">#include &lt;assert.h&gt;</span>
 
 <span class="cm">/* Define the printf format specifer to use for size_t output */</span>
 <span class="cp">#if defined(_MSC_VER) || defined(__MINGW32__)</span>
@@ -135,7 +135,7 @@
     <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">curr</span> <span class="o">=</span> <span class="n">args</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="o">-&gt;</span><span class="n">pos</span><span class="p">];</span>
     <span class="kt">int</span> <span class="n">bool_arg</span><span class="p">;</span>
 
-    <span class="k">if</span> <span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span> <span class="s">&quot;--&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">match_arg_separator</span><span class="p">(</span><span class="n">args</span><span class="p">))</span> <span class="p">{</span>
       <span class="k">break</span><span class="p">;</span>
     <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span> <span class="s">&quot;--force&quot;</span><span class="p">))</span> <span class="p">{</span>
       <span class="n">opts</span><span class="o">-&gt;</span><span class="n">force</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
@@ -330,11 +330,7 @@ we might need to detach HEAD.</p>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
   <span class="p">}</span>
 
-  <span class="k">if</span> <span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span> <span class="o">&gt;=</span> <span class="n">args</span><span class="p">.</span><span class="n">argc</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;unhandled</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
-    <span class="n">err</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
-  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="s">&quot;--&quot;</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">]))</span> <span class="p">{</span></pre></div>
+  <span class="k">if</span> <span class="p">(</span><span class="n">match_arg_separator</span><span class="p">(</span><span class="o">&amp;</span><span class="n">args</span><span class="p">))</span> <span class="p">{</span></pre></div>
       </td>
     </tr>
     <tr id='section-13'>

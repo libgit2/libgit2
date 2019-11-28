@@ -18,6 +18,7 @@
       <div id="jump_page">
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
@@ -122,10 +123,10 @@ how to do renaming detection and patch formatting.</p>
         <div class="pilwrap">
           <a class="pilcrow" href="#section-3">&#182;</a>
         </div>
-        <p>The &#39;opts&#39; struct captures all the various parsed command line options.</p>
+        <p>The &#39;diff_options&#39; struct captures all the various parsed command line options.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">struct</span> <span class="n">opts</span> <span class="p">{</span>
+        <div class='highlight'><pre><span class="k">struct</span> <span class="n">diff_options</span> <span class="p">{</span>
   <span class="n">git_diff_options</span> <span class="n">diffopts</span><span class="p">;</span>
   <span class="n">git_diff_find_options</span> <span class="n">findopts</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">color</span><span class="p">;</span>
@@ -148,18 +149,17 @@ how to do renaming detection and patch formatting.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">usage</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">message</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">diff_options</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
 <span class="k">static</span> <span class="kt">int</span> <span class="nf">color_printer</span><span class="p">(</span>
   <span class="k">const</span> <span class="n">git_diff_delta</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_diff_hunk</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_diff_line</span><span class="o">*</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">diff_print_stats</span><span class="p">(</span><span class="n">git_diff</span> <span class="o">*</span><span class="n">diff</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">compute_diff_no_index</span><span class="p">(</span><span class="n">git_diff</span> <span class="o">**</span><span class="n">diff</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">diff_print_stats</span><span class="p">(</span><span class="n">git_diff</span> <span class="o">*</span><span class="n">diff</span><span class="p">,</span> <span class="k">struct</span> <span class="n">diff_options</span> <span class="o">*</span><span class="n">o</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">compute_diff_no_index</span><span class="p">(</span><span class="n">git_diff</span> <span class="o">**</span><span class="n">diff</span><span class="p">,</span> <span class="k">struct</span> <span class="n">diff_options</span> <span class="o">*</span><span class="n">o</span><span class="p">);</span>
 
 <span class="kt">int</span> <span class="nf">lg2_diff</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
   <span class="n">git_tree</span> <span class="o">*</span><span class="n">t1</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">*</span><span class="n">t2</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="n">git_diff</span> <span class="o">*</span><span class="n">diff</span><span class="p">;</span>
-
-  <span class="k">struct</span> <span class="n">opts</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="k">struct</span> <span class="n">diff_options</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span>
     <span class="n">GIT_DIFF_OPTIONS_INIT</span><span class="p">,</span> <span class="n">GIT_DIFF_FIND_OPTIONS_INIT</span><span class="p">,</span>
     <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GIT_DIFF_FORMAT_PATCH</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="s">&quot;.&quot;</span>
   <span class="p">};</span>
@@ -280,7 +280,7 @@ are not supported in this example</p>
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">compute_diff_no_index</span><span class="p">(</span><span class="n">git_diff</span> <span class="o">**</span><span class="n">diff</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span> <span class="p">{</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">compute_diff_no_index</span><span class="p">(</span><span class="n">git_diff</span> <span class="o">**</span><span class="n">diff</span><span class="p">,</span> <span class="k">struct</span> <span class="n">diff_options</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span> <span class="p">{</span>
   <span class="n">git_patch</span> <span class="o">*</span><span class="n">patch</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="kt">char</span> <span class="o">*</span><span class="n">file1_str</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="kt">char</span> <span class="o">*</span><span class="n">file2_str</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
@@ -372,10 +372,9 @@ are not supported in this example</p>
         <p>Parse arguments as copied from git-diff.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">diff_options</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
   <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
-
 
   <span class="k">for</span> <span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">args</span><span class="p">.</span><span class="n">pos</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="o">++</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">a</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">];</span>
@@ -482,7 +481,7 @@ are not supported in this example</p>
 
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">diff_print_stats</span><span class="p">(</span><span class="n">git_diff</span> <span class="o">*</span><span class="n">diff</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">diff_print_stats</span><span class="p">(</span><span class="n">git_diff</span> <span class="o">*</span><span class="n">diff</span><span class="p">,</span> <span class="k">struct</span> <span class="n">diff_options</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_diff_stats</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
   <span class="n">git_buf</span> <span class="n">b</span> <span class="o">=</span> <span class="n">GIT_BUF_INIT_CONST</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>

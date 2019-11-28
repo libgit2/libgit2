@@ -18,6 +18,7 @@
       <div id="jump_page">
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
@@ -116,7 +117,7 @@ from <code>git status</code></li>
 
 <span class="cp">#define MAX_PATHSPEC 8</span>
 
-<span class="k">struct</span> <span class="n">opts</span> <span class="p">{</span>
+<span class="k">struct</span> <span class="n">status_opts</span> <span class="p">{</span>
   <span class="n">git_status_options</span> <span class="n">statusopt</span><span class="p">;</span>
   <span class="kt">char</span> <span class="o">*</span><span class="n">repodir</span><span class="p">;</span>
   <span class="kt">char</span> <span class="o">*</span><span class="n">pathspec</span><span class="p">[</span><span class="n">MAX_PATHSPEC</span><span class="p">];</span>
@@ -128,7 +129,7 @@ from <code>git status</code></li>
   <span class="kt">int</span> <span class="n">repeat</span><span class="p">;</span>
 <span class="p">};</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">status_opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">show_branch</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">format</span><span class="p">);</span>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">print_long</span><span class="p">(</span><span class="n">git_status_list</span> <span class="o">*</span><span class="n">status</span><span class="p">);</span>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">print_short</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">git_status_list</span> <span class="o">*</span><span class="n">status</span><span class="p">);</span>
@@ -137,7 +138,7 @@ from <code>git status</code></li>
 <span class="kt">int</span> <span class="nf">lg2_status</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
   <span class="n">git_status_list</span> <span class="o">*</span><span class="n">status</span><span class="p">;</span>
-  <span class="k">struct</span> <span class="n">opts</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span> <span class="n">GIT_STATUS_OPTIONS_INIT</span><span class="p">,</span> <span class="s">&quot;.&quot;</span> <span class="p">};</span>
+  <span class="k">struct</span> <span class="n">status_opts</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span> <span class="n">GIT_STATUS_OPTIONS_INIT</span><span class="p">,</span> <span class="s">&quot;.&quot;</span> <span class="p">};</span>
 
   <span class="n">o</span><span class="p">.</span><span class="n">statusopt</span><span class="p">.</span><span class="n">show</span>  <span class="o">=</span> <span class="n">GIT_STATUS_SHOW_INDEX_AND_WORKDIR</span><span class="p">;</span>
   <span class="n">o</span><span class="p">.</span><span class="n">statusopt</span><span class="p">.</span><span class="n">flags</span> <span class="o">=</span> <span class="n">GIT_STATUS_OPT_INCLUDE_UNTRACKED</span> <span class="o">|</span>
@@ -592,7 +593,7 @@ let&#39;s go take a look at its status.</p>
 
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">status_opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
   <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
 

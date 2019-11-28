@@ -18,6 +18,7 @@
       <div id="jump_page">
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
@@ -188,21 +189,22 @@
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_tag_message-36" class="fnlink" href="../../#HEAD/group/tag/git_tag_message">git_tag_message</a></span><span class="p">(</span><span class="n">tag</span><span class="p">));</span>
 <span class="p">}</span>
 
-<span class="k">enum</span> <span class="p">{</span>
+<span class="k">typedef</span> <span class="k">enum</span> <span class="p">{</span>
   <span class="n">SHOW_TYPE</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
   <span class="n">SHOW_SIZE</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
   <span class="n">SHOW_NONE</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
   <span class="n">SHOW_PRETTY</span> <span class="o">=</span> <span class="mi">4</span>
-<span class="p">};</span>
+<span class="p">}</span> <span class="n">catfile_mode</span><span class="p">;</span>
 
 <span class="cm">/* Forward declarations for option-parsing helper */</span>
-<span class="k">struct</span> <span class="n">opts</span> <span class="p">{</span>
+<span class="k">struct</span> <span class="n">catfile_options</span> <span class="p">{</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">dir</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">rev</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="n">action</span><span class="p">;</span>
+  <span class="n">catfile_mode</span> <span class="n">action</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">verbose</span><span class="p">;</span>
 <span class="p">};</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span></pre></div>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">catfile_options</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span></pre></div>
       </td>
     </tr>
     <tr id='section-5'>
@@ -215,7 +217,7 @@
       <td class=code>
         <div class='highlight'><pre><span class="kt">int</span> <span class="nf">lg2_cat_file</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
-  <span class="k">struct</span> <span class="n">opts</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span> <span class="p">};</span>
+  <span class="k">struct</span> <span class="n">catfile_options</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span> <span class="p">};</span>
   <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="kt">char</span> <span class="n">oidstr</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
 
@@ -311,7 +313,7 @@
 
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">catfile_options</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
   <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
 
