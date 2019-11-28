@@ -68,6 +68,21 @@ GIT_BEGIN_DECL
 
 /**@}*/
 
+/** @name Deprecated Attribute type
+ *
+ * These enumeration values are retained for backward compatibility.
+ * The newer versions of these functions should be preferred in all
+ * new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+typedef git_attr_value_t git_attr_t;
+
+/**@}*/
+
 /** @name Deprecated Blob Functions
  *
  * These functions are retained for backward compatibility.  The newer
