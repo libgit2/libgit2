@@ -796,7 +796,7 @@ static int parse_patch_binary_side(
 
 		encoded_len = ((decoded_len / 4) + !!(decoded_len % 4)) * 5;
 
-		if (encoded_len > ctx->parse_ctx.line_len - 1) {
+		if (!encoded_len || !ctx->parse_ctx.line_len || encoded_len > ctx->parse_ctx.line_len - 1) {
 			error = git_parse_err("truncated binary data at line %"PRIuZ, ctx->parse_ctx.line_num);
 			goto done;
 		}
