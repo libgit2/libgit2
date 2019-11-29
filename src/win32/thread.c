@@ -32,8 +32,6 @@ static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 
 	thread->result = thread->proc(thread->param);
 
-	git__free_tls_data();
-
 	return CLEAN_THREAD_EXIT;
 }
 
@@ -103,9 +101,6 @@ void git_thread_exit(void *value)
 {
 	assert(GIT_GLOBAL->current_thread);
 	GIT_GLOBAL->current_thread->result = value;
-
-	git__free_tls_data();
-
 	ExitThread(CLEAN_THREAD_EXIT);
 }
 
