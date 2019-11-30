@@ -22,15 +22,18 @@ typedef struct git_net_url {
 #define GIT_NET_URL_INIT { NULL }
 
 /** Parses a string containing a URL into a structure.  */
-int git_net_url_parse(git_net_url *url, const char *str);
+extern int git_net_url_parse(git_net_url *url, const char *str);
+
+/** Ensures that a URL is minimally valid (contains a host, port and path) */
+extern bool git_net_url_valid(git_net_url *url);
 
 /** Returns nonzero if the URL is on the default port. */
-int git_net_url_is_default_port(git_net_url *url);
+extern int git_net_url_is_default_port(git_net_url *url);
 
 /** Swaps the contents of one URL for another.  */
-void git_net_url_swap(git_net_url *a, git_net_url *b);
+extern void git_net_url_swap(git_net_url *a, git_net_url *b);
 
 /** Disposes the contents of the structure. */
-void git_net_url_dispose(git_net_url *url);
+extern void git_net_url_dispose(git_net_url *url);
 
 #endif

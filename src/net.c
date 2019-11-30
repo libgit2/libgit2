@@ -153,6 +153,11 @@ done:
 	return error;
 }
 
+bool git_net_url_valid(git_net_url *url)
+{
+	return (url->host && url->port && url->path);
+}
+
 int git_net_url_is_default_port(git_net_url *url)
 {
 	return (strcmp(url->port, default_port_for_scheme(url->scheme)) == 0);
