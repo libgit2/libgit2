@@ -974,6 +974,13 @@
 	"+++ \n" \
 	"Binary files a b c and d e f differ"
 
+#define PATCH_BINARY_FILE_WITH_TRUNCATED_DELTA \
+	"diff --git a/file b/file\n" \
+	"index 1420..b71f\n" \
+	"GIT binary patch\n" \
+	"delta 7\n" \
+	"d"
+
 #define PATCH_MULTIPLE_OLD_PATHS \
 	"diff --git  \n" \
 	"---  \n" \
