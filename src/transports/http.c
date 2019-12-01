@@ -609,16 +609,8 @@ static int on_headers_complete(http_parser *parser)
 	     parser->status_code == 308) &&
 	    t->location) {
 
-		if (gitno_connection_data_handle_redirect(&t->server.url, t->location, s->service_url) < 0)
+		if (git_net_url_apply_redirect(&t->server.url, t->location, s->service_url) < 0)
 			return t->parse_error = PARSE_ERROR_GENERIC;
-
-		/* Set the redirect URL on the stream. This is a transfer of
-		 * ownership of the memory. */
-		if (s->redirect_url)
-			git__free(s->redirect_url);
-
-		s->redirect_url = t->location;
-		t->location = NULL;
 
 		t->connected = 0;
 		t->parse_error = PARSE_ERROR_REPLAY;
@@ -1421,9 +1413,6 @@ static void http_stream_free(git_smart_subtransport_stream *stream)
 
 	if (s->chunk_buffer)
 		git__free(s->chunk_buffer);
-
-	if (s->redirect_url)
-		git__free(s->redirect_url);
 
 	git__free(s);
 }

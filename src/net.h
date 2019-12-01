@@ -30,6 +30,12 @@ extern bool git_net_url_valid(git_net_url *url);
 /** Returns nonzero if the URL is on the default port. */
 extern int git_net_url_is_default_port(git_net_url *url);
 
+/* Applies a redirect to the URL with a git-aware service suffix. */
+extern int git_net_url_apply_redirect(
+	git_net_url *url,
+	const char *redirect_location,
+	const char *service_suffix);
+
 /** Swaps the contents of one URL for another.  */
 extern void git_net_url_swap(git_net_url *a, git_net_url *b);
 
