@@ -455,8 +455,8 @@ void test_online_clone__can_cancel(void)
 {
 	g_options.fetch_opts.callbacks.transfer_progress = cancel_at_half;
 
-	cl_git_fail_with(
-		git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options), 4321);
+	cl_git_fail_with(4321,
+		git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 }
 
 static int cred_cb(git_cred **cred, const char *url, const char *user_from_url,
