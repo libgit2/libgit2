@@ -1817,7 +1817,7 @@ GIT_INLINE(unsigned int) dotgit_flags(
 	git_repository *repo,
 	unsigned int flags)
 {
-	int protectHFS = 0, protectNTFS = 0;
+	int protectHFS = 0, protectNTFS = 1;
 	int error = 0;
 
 	flags |= GIT_PATH_REJECT_DOT_GIT_LITERAL;
@@ -1826,16 +1826,12 @@ GIT_INLINE(unsigned int) dotgit_flags(
 	protectHFS = 1;
 #endif
 
-#ifdef GIT_WIN32
-	protectNTFS = 1;
-#endif
-
 	if (repo && !protectHFS)
 		error = git_repository__cvar(&protectHFS, repo, GIT_CVAR_PROTECTHFS);
 	if (!error && protectHFS)
 		flags |= GIT_PATH_REJECT_DOT_GIT_HFS;
 
-	if (repo && !protectNTFS)
+	if (repo)
 		error = git_repository__cvar(&protectNTFS, repo, GIT_CVAR_PROTECTNTFS);
 	if (!error && protectNTFS)
 		flags |= GIT_PATH_REJECT_DOT_GIT_NTFS;

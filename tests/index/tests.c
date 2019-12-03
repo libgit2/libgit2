@@ -652,6 +652,21 @@ void test_index_tests__honors_protect_filesystems(void)
 	cl_fixture_cleanup("invalid");
 }
 
+void test_index_tests__protectntfs_on_by_default(void)
+{
+	git_repository *repo;
+
+	p_mkdir("invalid", 0700);
+
+	cl_git_pass(git_repository_init(&repo, "./invalid", 0));
+	assert_write_fails(repo, ".git./hello");
+	assert_write_fails(repo, "git~1/hello");
+
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("invalid");
+}
+
 void test_index_tests__remove_entry(void)
 {
 	git_repository *repo;
