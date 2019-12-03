@@ -444,6 +444,7 @@ void test_object_tree_write__protect_filesystems(void)
 
 	cl_git_fail(git_treebuilder_insert(NULL, builder, ".git\xef\xbb\xbf", &bid, GIT_FILEMODE_BLOB));
 	cl_git_fail(git_treebuilder_insert(NULL, builder, ".git\xe2\x80\xad", &bid, GIT_FILEMODE_BLOB));
+	cl_git_fail(git_treebuilder_insert(NULL, builder, ".git::$INDEX_ALLOCATION/dummy-file", &bid, GIT_FILEMODE_BLOB));
 
 	git_treebuilder_free(builder);
 }
