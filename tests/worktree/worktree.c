@@ -216,6 +216,46 @@ void test_worktree_worktree__init(void)
 	git_repository_free(repo);
 }
 
+void test_worktree_worktree__add_remove_add(void)
+{
+	git_worktree *wt;
+	git_repository *repo;
+	git_reference *branch;
+	git_buf path = GIT_BUF_INIT;
+
+	git_worktree_prune_options opts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
+
+	/* Add the worktree */
+	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-add-remove-add"));
+	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-add-remove-add", path.ptr, NULL));
+
+	/* Open and verify created repo */
+	cl_git_pass(git_repository_open(&repo, path.ptr));
+	cl_assert(git__suffixcmp(git_repository_workdir(repo), "worktree-add-remove-add/") == 0);
+	cl_git_pass(git_branch_lookup(&branch, repo, "worktree-add-remove-add", GIT_BRANCH_LOCAL));
+	git_repository_free(repo);
+
+	/* Prune the worktree */
+	opts.flags = GIT_WORKTREE_PRUNE_VALID|GIT_WORKTREE_PRUNE_WORKING_TREE;
+	cl_git_pass(git_worktree_prune(wt, &opts));
+	cl_assert(!git_path_exists(wt->gitdir_path));
+	cl_assert(!git_path_exists(wt->gitlink_path));
+	git_worktree_free(wt);
+
+	/* Add the worktree back */
+	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-add-remove-add", path.ptr, NULL));
+
+	/* Open and verify created repo */
+	cl_git_pass(git_repository_open(&repo, path.ptr));
+	cl_assert(git__suffixcmp(git_repository_workdir(repo), "worktree-add-remove-add/") == 0);
+	cl_git_pass(git_branch_lookup(&branch, repo, "worktree-add-remove-add", GIT_BRANCH_LOCAL));
+
+	git_buf_dispose(&path);
+	git_worktree_free(wt);
+	git_reference_free(branch);
+	git_repository_free(repo);
+}
+
 void test_worktree_worktree__add_locked(void)
 {
 	git_worktree *wt;
@@ -250,12 +290,13 @@ void test_worktree_worktree__init_existing_branch(void)
 
 	cl_git_pass(git_repository_head(&head, fixture.repo));
 	cl_git_pass(git_commit_lookup(&commit, fixture.repo, &head->target.oid));
-	cl_git_pass(git_branch_create(&branch, fixture.repo, "worktree-new", commit, false));
+	cl_git_pass(git_branch_create(&branch, fixture.repo, "worktree-new-exist", commit, false));
 
-	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-new"));
-	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr, NULL));
+	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-new-exist"));
+	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-new-exist", path.ptr, NULL));
 
 	git_buf_dispose(&path);
+	git_worktree_free(wt);
 	git_commit_free(commit);
 	git_reference_free(head);
 	git_reference_free(branch);
