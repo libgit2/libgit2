@@ -113,7 +113,7 @@ typedef enum {
 	/* core.protectHFS */
 	GIT_PROTECTHFS_DEFAULT = GIT_CVAR_FALSE,
 	/* core.protectNTFS */
-	GIT_PROTECTNTFS_DEFAULT = GIT_CVAR_FALSE,
+	GIT_PROTECTNTFS_DEFAULT = GIT_CVAR_TRUE,
 	/* core.fsyncObjectFiles */
 	GIT_FSYNCOBJECTFILES_DEFAULT = GIT_CVAR_FALSE,
 } git_cvar_value;
