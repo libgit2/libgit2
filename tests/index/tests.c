@@ -599,7 +599,7 @@ static void replace_char(char *str, char in, char out)
 			*c = out;
 }
 
-static void write_invalid_filename(git_repository *repo, const char *fn_orig)
+static void assert_write_fails(git_repository *repo, const char *fn_orig)
 {
 	git_index *index;
 	git_oid expected;
@@ -672,13 +672,13 @@ void test_index_tests__write_invalid_filename(void)
 
 	cl_git_pass(git_repository_init(&repo, "./invalid", 0));
 
-	write_invalid_filename(repo, ".git/hello");
-	write_invalid_filename(repo, ".GIT/hello");
-	write_invalid_filename(repo, ".GiT/hello");
-	write_invalid_filename(repo, "./.git/hello");
-	write_invalid_filename(repo, "./foo");
-	write_invalid_filename(repo, "./bar");
-	write_invalid_filename(repo, "foo/../bar");
+	assert_write_fails(repo, ".git/hello");
+	assert_write_fails(repo, ".GIT/hello");
+	assert_write_fails(repo, ".GiT/hello");
+	assert_write_fails(repo, "./.git/hello");
+	assert_write_fails(repo, "./foo");
+	assert_write_fails(repo, "./bar");
+	assert_write_fails(repo, "foo/../bar");
 
 	git_repository_free(repo);
 
@@ -696,10 +696,10 @@ void test_index_tests__honors_protect_filesystems(void)
 	cl_repo_set_bool(repo, "core.protectHFS", true);
 	cl_repo_set_bool(repo, "core.protectNTFS", true);
 
-	write_invalid_filename(repo, ".git./hello");
-	write_invalid_filename(repo, ".git\xe2\x80\xad/hello");
-	write_invalid_filename(repo, "git~1/hello");
-	write_invalid_filename(repo, ".git\xe2\x81\xaf/hello");
+	assert_write_fails(repo, ".git./hello");
+	assert_write_fails(repo, ".git\xe2\x80\xad/hello");
+	assert_write_fails(repo, "git~1/hello");
+	assert_write_fails(repo, ".git\xe2\x81\xaf/hello");
 
 	git_repository_free(repo);
 
