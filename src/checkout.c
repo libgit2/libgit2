@@ -1271,7 +1271,7 @@ static int checkout_verify_paths(
 	int action,
 	git_diff_delta *delta)
 {
-	unsigned int flags = GIT_PATH_REJECT_WORKDIR_DEFAULTS | GIT_PATH_REJECT_DOT_GIT_NTFS;
+	unsigned int flags = GIT_PATH_REJECT_WORKDIR_DEFAULTS;
 
 	if (action & CHECKOUT_ACTION__REMOVE) {
 		if (!git_path_isvalid(repo, delta->old_file.path, delta->old_file.mode, flags)) {
