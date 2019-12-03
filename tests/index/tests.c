@@ -667,6 +667,26 @@ void test_index_tests__protectntfs_on_by_default(void)
 	cl_fixture_cleanup("invalid");
 }
 
+void test_index_tests__can_disable_protectntfs(void)
+{
+	git_repository *repo;
+	git_index *index;
+
+	cl_must_pass(p_mkdir("valid", 0700));
+	cl_git_rewritefile("valid/git~1", "steal the shortname");
+
+	cl_git_pass(git_repository_init(&repo, "./valid", 0));
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_repo_set_bool(repo, "core.protectNTFS", false);
+
+	cl_git_pass(git_index_add_bypath(index, "git~1"));
+
+	git_index_free(index);
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("valid");
+}
+
 void test_index_tests__remove_entry(void)
 {
 	git_repository *repo;
