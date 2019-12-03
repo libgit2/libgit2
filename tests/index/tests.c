@@ -616,6 +616,7 @@ static void assert_write_fails(git_repository *repo, const char *fn_orig)
 	 */
 	fn = git__strdup(fn_orig);
 	replace_char(fn, '/', '_');
+	replace_char(fn, ':', '!');
 
 	git_buf_joinpath(&path, "./invalid", fn);
 
@@ -627,6 +628,7 @@ static void assert_write_fails(git_repository *repo, const char *fn_orig)
 
 	/* kids, don't try this at home */
 	replace_char((char *)entry->path, '_', '/');
+	replace_char((char *)entry->path, '!', ':');
 
 	/* write-tree */
 	cl_git_fail(git_index_write_tree(&expected, index));
@@ -700,6 +702,7 @@ void test_index_tests__honors_protect_filesystems(void)
 	assert_write_fails(repo, ".git\xe2\x80\xad/hello");
 	assert_write_fails(repo, "git~1/hello");
 	assert_write_fails(repo, ".git\xe2\x81\xaf/hello");
+	assert_write_fails(repo, ".git::$INDEX_ALLOCATION/dummy-file");
 
 	git_repository_free(repo);
 
