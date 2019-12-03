@@ -501,6 +501,62 @@ void test_index_tests__cannot_add_invalid_filename(void)
 	cl_fixture_cleanup("invalid");
 }
 
+static void assert_add_fails(git_repository *repo, const char *fn)
+{
+	git_index *index;
+	git_buf path = GIT_BUF_INIT;
+	git_index_entry entry = {{0}};
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_assert(git_index_entrycount(index) == 0);
+
+	entry.path = fn;
+	entry.mode = GIT_FILEMODE_BLOB;
+	cl_git_pass(git_oid_fromstr(&entry.id, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"));
+
+	cl_git_fail(git_index_add(index, &entry));
+
+	cl_assert(git_index_entrycount(index) == 0);
+
+	git_buf_free(&path);
+	git_index_free(index);
+}
+
+/*
+ * Test that writing an invalid filename fails on filesystem
+ * specific protected names
+ */
+void test_index_tests__cannot_add_protected_invalid_filename(void)
+{
+	git_repository *repo;
+	git_index *index;
+
+	cl_must_pass(p_mkdir("invalid", 0700));
+
+	cl_git_pass(git_repository_init(&repo, "./invalid", 0));
+
+	/* add a file to the repository so we can reference it later */
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_mkfile("invalid/dummy.txt", "");
+	cl_git_pass(git_index_add_bypath(index, "dummy.txt"));
+	cl_must_pass(p_unlink("invalid/dummy.txt"));
+	cl_git_pass(git_index_remove_bypath(index, "dummy.txt"));
+	git_index_free(index);
+
+	cl_repo_set_bool(repo, "core.protectHFS", true);
+	cl_repo_set_bool(repo, "core.protectNTFS", true);
+
+	assert_add_fails(repo, ".git./hello");
+	assert_add_fails(repo, ".git\xe2\x80\xad/hello");
+	assert_add_fails(repo, "git~1/hello");
+	assert_add_fails(repo, ".git\xe2\x81\xaf/hello");
+	assert_add_fails(repo, ".git::$INDEX_ALLOCATION/dummy-file");
+
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("invalid");
+}
+
 static void replace_char(char *str, char in, char out)
 {
 	char *c = str;
