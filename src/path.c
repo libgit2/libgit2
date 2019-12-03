@@ -1641,7 +1641,16 @@ GIT_INLINE(bool) verify_dotgit_ntfs(git_repository *repo, const char *path, size
 	return false;
 }
 
-GIT_INLINE(bool) only_spaces_and_dots(const char *path)
+/*
+ * Windows paths that end with spaces and/or dots are elided to the
+ * path without them for backward compatibility.  That is to say
+ * that opening file "foo ", "foo." or even "foo . . ." will all
+ * map to a filename of "foo".  This function identifies spaces and
+ * dots at the end of a filename, whether the proper end of the
+ * filename (end of string) or a colon (which would indicate a
+ * Windows alternate data stream.)
+ */
+GIT_INLINE(bool) ntfs_end_of_filename(const char *path)
 {
 	const char *c = path;
 
@@ -1661,13 +1670,13 @@ GIT_INLINE(bool) verify_dotgit_ntfs_generic(const char *name, size_t len, const 
 
 	if (name[0] == '.' && len >= dotgit_len &&
 	    !strncasecmp(name + 1, dotgit_name, dotgit_len)) {
-		return !only_spaces_and_dots(name + dotgit_len + 1);
+		return !ntfs_end_of_filename(name + dotgit_len + 1);
 	}
 
 	/* Detect the basic NTFS shortname with the first six chars */
 	if (!strncasecmp(name, dotgit_name, 6) && name[6] == '~' &&
 	    name[7] >= '1' && name[7] <= '4')
-		return !only_spaces_and_dots(name + 8);
+		return !ntfs_end_of_filename(name + 8);
 
 	/* Catch fallback names */
 	for (i = 0, saw_tilde = 0; i < 8; i++) {
@@ -1689,7 +1698,7 @@ GIT_INLINE(bool) verify_dotgit_ntfs_generic(const char *name, size_t len, const 
 		}
 	}
 
-	return !only_spaces_and_dots(name + i);
+	return !ntfs_end_of_filename(name + i);
 }
 
 GIT_INLINE(bool) verify_char(unsigned char c, unsigned int flags)
