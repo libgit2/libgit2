@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-#ifndef GIT_WINHTTP
+#if !defined(GIT_WINHTTP) && !defined(__EMSCRIPTEN__)
 
 #include "git2.h"
 #include "http_parser.h"
@@ -735,4 +735,4 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 	return 0;
 }
 
-#endif /* !GIT_WINHTTP */
+#endif /* !defined(GIT_WINHTTP) && !defined(__EMSCRIPTEN__) */

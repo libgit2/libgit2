@@ -37,7 +37,15 @@ static int git_sysdir_guess_system_dirs(git_buf *out)
 #endif
 }
 
-#ifndef GIT_WIN32
+#if defined(__EMSCRIPTEN__)
+static int get_passwd_home(git_buf *out, uid_t uid)
+{
+	giterr_set_str(GITERR_OS, "Not able to get passwd entry with emscripten");
+	return 1;
+}
+#endif
+
+#if !defined(GIT_WIN32) && !defined(__EMSCRIPTEN__)
 static int get_passwd_home(git_buf *out, uid_t uid)
 {
 	struct passwd pwd, *pwdptr;
