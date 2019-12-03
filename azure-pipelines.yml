@@ -174,4 +174,4 @@ jobs:
       echo 'password $(GITHUB_PAT)' >> ~/.netrc
       git push origin gh-pages
     displayName: 'Publish Documentation'
-    condition: eq(variables['Build.Reason'], 'IndividualCI')
+    condition: and(eq(variables['Build.Repository.Name'], 'libgit2/libgit2'), eq(variables['Build.Reason'], 'IndividualCI'))
