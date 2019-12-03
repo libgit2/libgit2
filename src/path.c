@@ -21,7 +21,29 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#define LOOKS_LIKE_DRIVE_PREFIX(S) (git__isalpha((S)[0]) && (S)[1] == ':')
+static int dos_drive_prefix_length(const char *path)
+{
+	int i;
+
+	/*
+	 * Does it start with an ASCII letter (i.e. highest bit not set),
+	 * followed by a colon?
+	 */
+	if (!(0x80 & (unsigned char)*path))
+		return *path && path[1] == ':' ? 2 : 0;
+
+	/*
+	 * While drive letters must be letters of the English alphabet, it is
+	 * possible to assign virtually _any_ Unicode character via `subst` as
+	 * a drive letter to "virtual drives". Even `1`, or `ä`. Or fun stuff
+	 * like this:
+	 *
+	 *	subst ֍: %USERPROFILE%\Desktop
+	 */
+	for (i = 1; i < 4 && (0x80 & (unsigned char)path[i]); i++)
+		; /* skip first UTF-8 character */
+	return path[i] == ':' ? i + 1 : 0;
+}
 
 #ifdef GIT_WIN32
 static bool looks_like_network_computer_name(const char *path, int pos)
@@ -123,11 +145,11 @@ static int win32_prefix_length(const char *path, int len)
 	GIT_UNUSED(len);
 #else
 	/*
-	 * Mimic unix behavior where '/.git' returns '/': 'C:/.git' will return
-	 * 'C:/' here
+	 * Mimic unix behavior where '/.git' returns '/': 'C:/.git'
+	 * will return 'C:/' here
 	 */
-	if (len == 2 && LOOKS_LIKE_DRIVE_PREFIX(path))
-		return 2;
+	if (dos_drive_prefix_length(path) == len)
+		return len;
 
 	/*
 	 * Similarly checks if we're dealing with a network computer name
@@ -272,11 +294,11 @@ const char *git_path_topdir(const char *path)
 
 int git_path_root(const char *path)
 {
-	int offset = 0;
+	int offset = 0, prefix_len;
 
 	/* Does the root of the path look like a windows drive ? */
-	if (LOOKS_LIKE_DRIVE_PREFIX(path))
-		offset += 2;
+	if ((prefix_len = dos_drive_prefix_length(path)))
+		offset += prefix_len;
 
 #ifdef GIT_WIN32
 	/* Are we dealing with a windows network path? */
