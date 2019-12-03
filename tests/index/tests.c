@@ -452,7 +452,7 @@ void test_index_tests__add_bypath_to_a_bare_repository_returns_EBAREPO(void)
 	git_repository_free(bare_repo);
 }
 
-static void add_invalid_filename(git_repository *repo, const char *fn)
+static void assert_add_bypath_fails(git_repository *repo, const char *fn)
 {
 	git_index *index;
 	git_buf path = GIT_BUF_INIT;
@@ -473,7 +473,7 @@ static void add_invalid_filename(git_repository *repo, const char *fn)
 }
 
 /* Test that writing an invalid filename fails */
-void test_index_tests__add_invalid_filename(void)
+void test_index_tests__cannot_add_invalid_filename(void)
 {
 	git_repository *repo;
 
@@ -488,13 +488,13 @@ void test_index_tests__add_invalid_filename(void)
 	if (!git_path_exists("./invalid/.GiT"))
 		cl_must_pass(p_mkdir("./invalid/.GiT", 0777));
 
-	add_invalid_filename(repo, ".git/hello");
-	add_invalid_filename(repo, ".GIT/hello");
-	add_invalid_filename(repo, ".GiT/hello");
-	add_invalid_filename(repo, "./.git/hello");
-	add_invalid_filename(repo, "./foo");
-	add_invalid_filename(repo, "./bar");
-	add_invalid_filename(repo, "subdir/../bar");
+	assert_add_bypath_fails(repo, ".git/hello");
+	assert_add_bypath_fails(repo, ".GIT/hello");
+	assert_add_bypath_fails(repo, ".GiT/hello");
+	assert_add_bypath_fails(repo, "./.git/hello");
+	assert_add_bypath_fails(repo, "./foo");
+	assert_add_bypath_fails(repo, "./bar");
+	assert_add_bypath_fails(repo, "subdir/../bar");
 
 	git_repository_free(repo);
 
