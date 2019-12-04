@@ -78,7 +78,7 @@ out:
 int git_regexp_compile(git_regexp *r, const char *pattern, int flags)
 {
 	unsigned char errmsg[1024];
-	unsigned long erroff;
+	PCRE2_SIZE erroff;
 	int error, cflags = 0;
 
 	if (flags & GIT_REGEXP_ICASE)
