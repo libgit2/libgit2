@@ -68,7 +68,7 @@ Here we do not use release candidates as the changes are supposed to be small an
 
 This is the same as a maintenance release, except that the fix itself will most likely be developed in a private repository and will only be visible to a select group of people until the release.
 
-Everything else remains the same. Occasionally we might opt to backport a security fix to the previous series, based on how recently we started the new series and how serious the issue is.
+We have committed to providing security fixes for the latest two released versions.  E.g. if the latest version is v0.28.x, then we will provide security fixes for both v0.28.x and v0.27.y.
 
 ## Updating documentation
 
