@@ -1422,7 +1422,7 @@ int git_submodule_sync(git_submodule *sm)
 {
 	int error = 0;
 	git_config *cfg = NULL;
-	git_buf key = GIT_BUF_INIT;
+	git_buf key = GIT_BUF_INIT, effective_submodule_url = GIT_BUF_INIT;
 	git_repository *smrepo = NULL;
 
 	if (!sm->url) {
@@ -1434,8 +1434,9 @@ int git_submodule_sync(git_submodule *sm)
 	/* copy URL over to config only if it already exists */
 
 	if (!(error = git_repository_config__weakptr(&cfg, sm->repo)) &&
-		!(error = git_buf_printf(&key, "submodule.%s.url", sm->name)))
-		error = git_config__update_entry(cfg, key.ptr, sm->url, true, true);
+		!(error = git_buf_printf(&key, "submodule.%s.url", sm->name)) &&
+		!(error = git_submodule_resolve_url(&effective_submodule_url, sm->repo, sm->url)))
+		error = git_config__update_entry(cfg, key.ptr, effective_submodule_url.ptr, true, true);
 
 	/* if submodule exists in the working directory, update remote url */
 
@@ -1457,12 +1458,13 @@ int git_submodule_sync(git_submodule *sm)
 		}
 
 		if (!error)
-			error = git_config__update_entry(cfg, key.ptr, sm->url, true, false);
+			error = git_config__update_entry(cfg, key.ptr, effective_submodule_url.ptr, true, false);
 
 		git_repository_free(smrepo);
 	}
 
 	git_buf_dispose(&key);
+	git_buf_dispose(&effective_submodule_url);
 
 	return error;
 }
