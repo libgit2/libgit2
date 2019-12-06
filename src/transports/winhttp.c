@@ -373,11 +373,15 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	int default_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
 	DWORD autologon_policy = WINHTTP_AUTOLOGON_SECURITY_LEVEL_HIGH;
 
+	const char *service_url = s->service_url;
 	size_t i;
 	const git_proxy_options *proxy_opts;
 
+	/* If path already ends in /, remove the leading slash from service_url */
+	if ((git__suffixcmp(t->server.url.path, "/") == 0) && (git__prefixcmp(service_url, "/") == 0))
+		service_url++;
 	/* Prepare URL */
-	git_buf_printf(&buf, "%s%s", t->server.url.path, s->service_url);
+	git_buf_printf(&buf, "%s%s", t->server.url.path, service_url);
 
 	if (git_buf_oom(&buf))
 		return -1;
