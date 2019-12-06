@@ -153,6 +153,76 @@ done:
 	return error;
 }
 
+int git_net_url_joinpath(
+	git_net_url *out,
+	git_net_url *one,
+	const char *two)
+{
+	git_buf path = GIT_BUF_INIT;
+	const char *query;
+	size_t one_len, two_len;
+
+	git_net_url_dispose(out);
+
+	if ((query = strchr(two, '?')) != NULL) {
+		two_len = query - two;
+
+		if (*(++query) != '\0') {
+			out->query = git__strdup(query);
+			GIT_ERROR_CHECK_ALLOC(out->query);
+		}
+	} else {
+		two_len = strlen(two);
+	}
+
+	/* Strip all trailing `/`s from the first path */
+	one_len = one->path ? strlen(one->path) : 0;
+	while (one_len && one->path[one_len - 1] == '/')
+		one_len--;
+
+	/* Strip all leading `/`s from the second path */
+	while (*two == '/') {
+		two++;
+		two_len--;
+	}
+
+	git_buf_put(&path, one->path, one_len);
+	git_buf_putc(&path, '/');
+	git_buf_put(&path, two, two_len);
+
+	if (git_buf_oom(&path))
+		return -1;
+
+	out->path = git_buf_detach(&path);
+
+	if (one->scheme) {
+		out->scheme = git__strdup(one->scheme);
+		GIT_ERROR_CHECK_ALLOC(out->scheme);
+	}
+
+	if (one->host) {
+		out->host = git__strdup(one->host);
+		GIT_ERROR_CHECK_ALLOC(out->host);
+	}
+
+	if (one->port) {
+		out->port = git__strdup(one->port);
+		GIT_ERROR_CHECK_ALLOC(out->port);
+	}
+
+	if (one->username) {
+		out->username = git__strdup(one->username);
+		GIT_ERROR_CHECK_ALLOC(out->username);
+	}
+
+	if (one->password) {
+		out->password = git__strdup(one->password);
+		GIT_ERROR_CHECK_ALLOC(out->password);
+	}
+
+	return 0;
+}
+
 /*
  * Some servers strip the query parameters from the Location header
  * when sending a redirect. Others leave it in place.

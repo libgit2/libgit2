@@ -24,6 +24,12 @@ typedef struct git_net_url {
 /** Parses a string containing a URL into a structure.  */
 extern int git_net_url_parse(git_net_url *url, const char *str);
 
+/** Appends a path and/or query string to the given URL */
+extern int git_net_url_joinpath(
+	git_net_url *out,
+	git_net_url *in,
+	const char *path);
+
 /** Ensures that a URL is minimally valid (contains a host, port and path) */
 extern bool git_net_url_valid(git_net_url *url);
 
