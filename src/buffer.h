@@ -113,6 +113,7 @@ int git_buf_puts(git_buf *buf, const char *string);
 int git_buf_printf(git_buf *buf, const char *format, ...) GIT_FORMAT_PRINTF(2, 3);
 int git_buf_vprintf(git_buf *buf, const char *format, va_list ap);
 void git_buf_clear(git_buf *buf);
+void git_buf_consume_bytes(git_buf *buf, size_t len);
 void git_buf_consume(git_buf *buf, const char *end);
 void git_buf_truncate(git_buf *buf, size_t len);
 void git_buf_shorten(git_buf *buf, size_t amount);
