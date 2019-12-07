@@ -329,8 +329,10 @@ static int queue_objects(git_push *push)
 				goto on_error;
 			}
 
-			error = git_merge_base(&base, push->repo,
-					       &spec->loid, &spec->roid);
+			if (type != GIT_OBJECT_TAG) {
+				error = git_merge_base(&base, push->repo,
+						       &spec->loid, &spec->roid);
+			}
 
 			if (error == GIT_ENOTFOUND ||
 				(!error && !git_oid_equal(&base, &spec->roid))) {
