@@ -75,7 +75,14 @@ struct git_reference {
 	char name[GIT_FLEX_ARRAY];
 };
 
-git_reference *git_reference__set_name(git_reference *ref, const char *name);
+/**
+ * Reallocate the reference with a new name
+ *
+ * Note that this is a dangerous operation, as on success, all existing
+ * pointers to the old reference will now be dangling. Only call this on objects
+ * you control, possibly using `git_reference_dup`.
+ */
+git_reference *git_reference__realloc(git_reference **ptr_to_ref, const char *name);
 
 int git_reference__normalize_name(git_buf *buf, const char *name, unsigned int flags);
 int git_reference__update_terminal(git_repository *repo, const char *ref_name, const git_oid *oid, const git_signature *sig, const char *log_message);

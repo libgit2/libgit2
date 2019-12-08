@@ -126,6 +126,12 @@ GIT_EXTERN(void) git_branch_iterator_free(git_branch_iterator *iter);
  * The new branch name will be checked for validity.
  * See `git_tag_create()` for rules about valid names.
  *
+ * Note that if the move succeeds, the old reference object will not
+ + be valid anymore, and should be freed immediately by the user using
+ + `git_reference_free()`.
+ *
+ * @param out New reference object for the updated name.
+ *
  * @param branch Current underlying reference of the branch.
  *
  * @param new_branch_name Target name of the branch once the move
