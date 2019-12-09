@@ -348,6 +348,39 @@ void git_net_url_swap(git_net_url *a, git_net_url *b)
 	memcpy(b, &tmp, sizeof(git_net_url));
 }
 
+int git_net_url_fmt(git_buf *buf, git_net_url *url)
+{
+	git_buf_puts(buf, url->scheme);
+	git_buf_puts(buf, "://");
+
+	if (url->username) {
+		git_buf_puts(buf, url->username);
+
+		if (url->password) {
+			git_buf_puts(buf, ":");
+			git_buf_puts(buf, url->password);
+		}
+
+		git_buf_putc(buf, '@');
+	}
+
+	git_buf_puts(buf, url->host);
+
+	if (url->port && !git_net_url_is_default_port(url)) {
+		git_buf_putc(buf, ':');
+		git_buf_puts(buf, url->port);
+	}
+
+	git_buf_puts(buf, url->path ? url->path : "/");
+
+	if (url->query) {
+		git_buf_putc(buf, '?');
+		git_buf_puts(buf, url->query);
+	}
+
+	return git_buf_oom(buf) ? -1 : 0;
+}
+
 void git_net_url_dispose(git_net_url *url)
 {
 	if (url->username)
