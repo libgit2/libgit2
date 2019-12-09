@@ -95,6 +95,33 @@
 #define NETIO_BUFSIZE DEFAULT_BUFSIZE
 
 /**
+ * Assert that a consumer-provided argument is valid, setting an
+ * actionable error message and returning -1 if it is not.
+ *
+ * Note that memory leaks can occur in a release-mode assertion
+ * failure -- it is impractical to provide safe clean up routines in these very
+ * extreme failures, but care should be taken to not leak very large objects.
+ */
+#define GIT_ASSERT_ARG(expr) do { \
+		if (!(expr)) { \
+			git_error_set(GIT_ERROR_INVALID, \
+				"invalid argument: '%s'", \
+				#expr); \
+			return -1; \
+		} \
+	} while(0)
+
+/** Internal consistency check to stop the function. */
+#define GIT_ASSERT(expr) do { \
+		if (!(expr)) { \
+			git_error_set(GIT_ERROR_INTERNAL, \
+				"unrecoverable internal error: '%s'", \
+				#expr); \
+			return -1; \
+		} \
+	} while(0)
+
+/**
  * Check a pointer allocation result, returning -1 if it failed.
  */
 #define GIT_ERROR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
