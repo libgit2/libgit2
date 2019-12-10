@@ -1,6 +1,63 @@
 v0.28 + 1
 ---------
 
+# Security Fixes
+
+- CVE-2019-1348: the fast-import stream command "feature
+  export-marks=path" allows writing to arbitrary file paths. As
+  libgit2 does not offer any interface for fast-import, it is not
+  susceptible to this vulnerability.
+
+- CVE-2019-1349: by using NTFS 8.3 short names, backslashes or
+  alternate filesystreams, it is possible to cause submodules to
+  be written into pre-existing directories during a recursive
+  clone using git. As libgit2 rejects cloning into non-empty
+  directories by default, it is not susceptible to this
+  vulnerability.
+
+- CVE-2019-1350: recursive clones may lead to arbitrary remote
+  code executing due to improper quoting of command line
+  arguments. As libgit2 uses libssh2, which does not require us
+  to perform command line parsing, it is not susceptible to this
+  vulnerability.
+
+- CVE-2019-1351: Windows provides the ability to substitute
+  drive letters with arbitrary letters, including multi-byte
+  Unicode letters. To fix any potential issues arising from
+  interpreting such paths as relative paths, we have extended
+  detection of DOS drive prefixes to accomodate for such cases.
+
+- CVE-2019-1352: by using NTFS-style alternative file streams for
+  the ".git" directory, it is possible to overwrite parts of the
+  repository. While this has been fixed in the past for Windows,
+  the same vulnerability may also exist on other systems that
+  write to NTFS filesystems. We now reject any paths starting
+  with ".git:" on all systems.
+
+- CVE-2019-1353: by using NTFS-style 8.3 short names, it was
+  possible to write to the ".git" directory and thus overwrite
+  parts of the repository, leading to possible remote code
+  execution. While this problem was already fixed in the past for
+  Windows, other systems accessing NTFS filesystems are
+  vulnerable to this issue too. We now enable NTFS protecions by
+  default on all systems to fix this attack vector.
+
+- CVE-2019-1354: on Windows, backslashes are not a valid part of
+  a filename but are instead interpreted as directory separators.
+  As other platforms allowed to use such paths, it was possible
+  to write such invalid entries into a Git repository and was
+  thus an attack vector to write into the ".git" dierctory. We
+  now reject any entries starting with ".git\" on all systems.
+
+- CVE-2019-1387: it is possible to let a submodule's git
+  directory point into a sibling's submodule directory, which may
+  result in overwriting parts of the Git repository and thus lead
+  to arbitrary command execution. As libgit2 doesn't provide any
+  way to do submodule clones natively, it is not susceptible to
+  this vulnerability. Users of libgit2 that have implemented
+  recursive submodule clones manually are encouraged to review
+  their implementation for this vulnerability.
+
 ### Breaking API changes
 
 * The "private" implementation details of the `git_cred` structure have been
