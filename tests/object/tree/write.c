@@ -141,7 +141,7 @@ void test_object_tree_write__sorted_subtrees(void)
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
 	for (i = 0; i < ARRAY_SIZE(entries); ++i) {
-		git_oid *id = entries[i].attr == GIT_FILEMODE_TREE ?  &tid : &bid; 
+		git_oid *id = entries[i].attr == GIT_FILEMODE_TREE ?  &tid : &bid;
 
 		cl_git_pass(git_treebuilder_insert(NULL,
 			builder, entries[i].filename, id, entries[i].attr));
@@ -418,10 +418,8 @@ void test_object_tree_write__protect_filesystems(void)
 	 */
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
-#ifndef GIT_WIN32
-	cl_git_pass(git_treebuilder_insert(NULL, builder, ".git.", &bid, GIT_FILEMODE_BLOB));
-	cl_git_pass(git_treebuilder_insert(NULL, builder, "git~1", &bid, GIT_FILEMODE_BLOB));
-#endif
+	cl_git_fail(git_treebuilder_insert(NULL, builder, ".git.", &bid, GIT_FILEMODE_BLOB));
+	cl_git_fail(git_treebuilder_insert(NULL, builder, "git~1", &bid, GIT_FILEMODE_BLOB));
 
 #ifndef __APPLE__
 	cl_git_pass(git_treebuilder_insert(NULL, builder, ".git\xef\xbb\xbf", &bid, GIT_FILEMODE_BLOB));
@@ -444,6 +442,7 @@ void test_object_tree_write__protect_filesystems(void)
 
 	cl_git_fail(git_treebuilder_insert(NULL, builder, ".git\xef\xbb\xbf", &bid, GIT_FILEMODE_BLOB));
 	cl_git_fail(git_treebuilder_insert(NULL, builder, ".git\xe2\x80\xad", &bid, GIT_FILEMODE_BLOB));
+	cl_git_fail(git_treebuilder_insert(NULL, builder, ".git::$INDEX_ALLOCATION/dummy-file", &bid, GIT_FILEMODE_BLOB));
 
 	git_treebuilder_free(builder);
 }

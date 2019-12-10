@@ -29,8 +29,8 @@
  * calls that are supposed to fail!
  */
 #define cl_git_fail(expr) do { \
-	git_error_clear(); \
 	if ((expr) == 0) \
+		git_error_clear(), \
 		cl_git_report_failure(0, 0, __FILE__, __LINE__, "Function call succeeded: " #expr); \
 	} while (0)
 
