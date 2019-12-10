@@ -452,7 +452,7 @@ void test_index_tests__add_bypath_to_a_bare_repository_returns_EBAREPO(void)
 	git_repository_free(bare_repo);
 }
 
-static void add_invalid_filename(git_repository *repo, const char *fn)
+static void assert_add_bypath_fails(git_repository *repo, const char *fn)
 {
 	git_index *index;
 	git_buf path = GIT_BUF_INIT;
@@ -473,7 +473,7 @@ static void add_invalid_filename(git_repository *repo, const char *fn)
 }
 
 /* Test that writing an invalid filename fails */
-void test_index_tests__add_invalid_filename(void)
+void test_index_tests__cannot_add_invalid_filename(void)
 {
 	git_repository *repo;
 
@@ -488,13 +488,69 @@ void test_index_tests__add_invalid_filename(void)
 	if (!git_path_exists("./invalid/.GiT"))
 		cl_must_pass(p_mkdir("./invalid/.GiT", 0777));
 
-	add_invalid_filename(repo, ".git/hello");
-	add_invalid_filename(repo, ".GIT/hello");
-	add_invalid_filename(repo, ".GiT/hello");
-	add_invalid_filename(repo, "./.git/hello");
-	add_invalid_filename(repo, "./foo");
-	add_invalid_filename(repo, "./bar");
-	add_invalid_filename(repo, "subdir/../bar");
+	assert_add_bypath_fails(repo, ".git/hello");
+	assert_add_bypath_fails(repo, ".GIT/hello");
+	assert_add_bypath_fails(repo, ".GiT/hello");
+	assert_add_bypath_fails(repo, "./.git/hello");
+	assert_add_bypath_fails(repo, "./foo");
+	assert_add_bypath_fails(repo, "./bar");
+	assert_add_bypath_fails(repo, "subdir/../bar");
+
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("invalid");
+}
+
+static void assert_add_fails(git_repository *repo, const char *fn)
+{
+	git_index *index;
+	git_buf path = GIT_BUF_INIT;
+	git_index_entry entry = {{0}};
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_assert(git_index_entrycount(index) == 0);
+
+	entry.path = fn;
+	entry.mode = GIT_FILEMODE_BLOB;
+	cl_git_pass(git_oid_fromstr(&entry.id, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"));
+
+	cl_git_fail(git_index_add(index, &entry));
+
+	cl_assert(git_index_entrycount(index) == 0);
+
+	git_buf_free(&path);
+	git_index_free(index);
+}
+
+/*
+ * Test that writing an invalid filename fails on filesystem
+ * specific protected names
+ */
+void test_index_tests__cannot_add_protected_invalid_filename(void)
+{
+	git_repository *repo;
+	git_index *index;
+
+	cl_must_pass(p_mkdir("invalid", 0700));
+
+	cl_git_pass(git_repository_init(&repo, "./invalid", 0));
+
+	/* add a file to the repository so we can reference it later */
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_mkfile("invalid/dummy.txt", "");
+	cl_git_pass(git_index_add_bypath(index, "dummy.txt"));
+	cl_must_pass(p_unlink("invalid/dummy.txt"));
+	cl_git_pass(git_index_remove_bypath(index, "dummy.txt"));
+	git_index_free(index);
+
+	cl_repo_set_bool(repo, "core.protectHFS", true);
+	cl_repo_set_bool(repo, "core.protectNTFS", true);
+
+	assert_add_fails(repo, ".git./hello");
+	assert_add_fails(repo, ".git\xe2\x80\xad/hello");
+	assert_add_fails(repo, "git~1/hello");
+	assert_add_fails(repo, ".git\xe2\x81\xaf/hello");
+	assert_add_fails(repo, ".git::$INDEX_ALLOCATION/dummy-file");
 
 	git_repository_free(repo);
 
@@ -510,7 +566,7 @@ static void replace_char(char *str, char in, char out)
 			*c = out;
 }
 
-static void write_invalid_filename(git_repository *repo, const char *fn_orig)
+static void assert_write_fails(git_repository *repo, const char *fn_orig)
 {
 	git_index *index;
 	git_oid expected;
@@ -527,6 +583,7 @@ static void write_invalid_filename(git_repository *repo, const char *fn_orig)
 	 */
 	fn = git__strdup(fn_orig);
 	replace_char(fn, '/', '_');
+	replace_char(fn, ':', '!');
 
 	git_buf_joinpath(&path, "./invalid", fn);
 
@@ -538,6 +595,7 @@ static void write_invalid_filename(git_repository *repo, const char *fn_orig)
 
 	/* kids, don't try this at home */
 	replace_char((char *)entry->path, '_', '/');
+	replace_char((char *)entry->path, '!', ':');
 
 	/* write-tree */
 	cl_git_fail(git_index_write_tree(&expected, index));
@@ -559,13 +617,13 @@ void test_index_tests__write_invalid_filename(void)
 
 	cl_git_pass(git_repository_init(&repo, "./invalid", 0));
 
-	write_invalid_filename(repo, ".git/hello");
-	write_invalid_filename(repo, ".GIT/hello");
-	write_invalid_filename(repo, ".GiT/hello");
-	write_invalid_filename(repo, "./.git/hello");
-	write_invalid_filename(repo, "./foo");
-	write_invalid_filename(repo, "./bar");
-	write_invalid_filename(repo, "foo/../bar");
+	assert_write_fails(repo, ".git/hello");
+	assert_write_fails(repo, ".GIT/hello");
+	assert_write_fails(repo, ".GiT/hello");
+	assert_write_fails(repo, "./.git/hello");
+	assert_write_fails(repo, "./foo");
+	assert_write_fails(repo, "./bar");
+	assert_write_fails(repo, "foo/../bar");
 
 	git_repository_free(repo);
 
@@ -583,14 +641,50 @@ void test_index_tests__honors_protect_filesystems(void)
 	cl_repo_set_bool(repo, "core.protectHFS", true);
 	cl_repo_set_bool(repo, "core.protectNTFS", true);
 
-	write_invalid_filename(repo, ".git./hello");
-	write_invalid_filename(repo, ".git\xe2\x80\xad/hello");
-	write_invalid_filename(repo, "git~1/hello");
-	write_invalid_filename(repo, ".git\xe2\x81\xaf/hello");
+	assert_write_fails(repo, ".git./hello");
+	assert_write_fails(repo, ".git\xe2\x80\xad/hello");
+	assert_write_fails(repo, "git~1/hello");
+	assert_write_fails(repo, ".git\xe2\x81\xaf/hello");
+	assert_write_fails(repo, ".git::$INDEX_ALLOCATION/dummy-file");
 
 	git_repository_free(repo);
 
 	cl_fixture_cleanup("invalid");
+}
+
+void test_index_tests__protectntfs_on_by_default(void)
+{
+	git_repository *repo;
+
+	p_mkdir("invalid", 0700);
+
+	cl_git_pass(git_repository_init(&repo, "./invalid", 0));
+	assert_write_fails(repo, ".git./hello");
+	assert_write_fails(repo, "git~1/hello");
+
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("invalid");
+}
+
+void test_index_tests__can_disable_protectntfs(void)
+{
+	git_repository *repo;
+	git_index *index;
+
+	cl_must_pass(p_mkdir("valid", 0700));
+	cl_git_rewritefile("valid/git~1", "steal the shortname");
+
+	cl_git_pass(git_repository_init(&repo, "./valid", 0));
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_repo_set_bool(repo, "core.protectNTFS", false);
+
+	cl_git_pass(git_index_add_bypath(index, "git~1"));
+
+	git_index_free(index);
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("valid");
 }
 
 void test_index_tests__remove_entry(void)
