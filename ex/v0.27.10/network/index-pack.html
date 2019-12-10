@@ -16,7 +16,7 @@
     Jump To &hellip;
     <div id="jump_wrapper">
       <div id="jump_page">
-        <a class="source" href="../../#v0.23.0">API Docs</a>
+        <a class="source" href="../../#v0.27.10">API Docs</a>
           <a class="source" href="../add.html">add.c</a>
           <a class="source" href="../blame.html">blame.c</a>
           <a class="source" href="../cat-file.html">cat-file.c</a>
@@ -27,6 +27,7 @@
           <a class="source" href="../general.html">general.c</a>
           <a class="source" href="../init.html">init.c</a>
           <a class="source" href="../log.html">log.c</a>
+          <a class="source" href="../merge.html">merge.c</a>
           <a class="source" href="clone.html">clone.c</a>
           <a class="source" href="common.html">common.c</a>
           <a class="source" href="fetch.html">fetch.c</a>
@@ -115,7 +116,7 @@ the indexing to finish in a worker thread</p>
     <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
   <span class="p">}</span>
 
-  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_indexer_new-1" class="fnlink" href="../../#v0.23.0/group/indexer/git_indexer_new">git_indexer_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">idx</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_indexer_new-1" class="fnlink" href="../../#v0.27.10/group/indexer/git_indexer_new">git_indexer_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">idx</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">puts</span><span class="p">(</span><span class="s">&quot;bad idx&quot;</span><span class="p">);</span>
     <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
   <span class="p">}</span>
@@ -130,7 +131,7 @@ the indexing to finish in a worker thread</p>
     <span class="k">if</span> <span class="p">(</span><span class="n">read_bytes</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
       <span class="k">break</span><span class="p">;</span>
 
-    <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_append-2" class="fnlink" href="../../#v0.23.0/group/indexer/git_indexer_append">git_indexer_append</a></span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">read_bytes</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_append-2" class="fnlink" href="../../#v0.27.10/group/indexer/git_indexer_append">git_indexer_append</a></span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">read_bytes</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
       <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
 
     <span class="n">index_cb</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
@@ -142,17 +143,17 @@ the indexing to finish in a worker thread</p>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
   <span class="p">}</span>
 
-  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_commit-3" class="fnlink" href="../../#v0.23.0/group/indexer/git_indexer_commit">git_indexer_commit</a></span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_commit-3" class="fnlink" href="../../#v0.27.10/group/indexer/git_indexer_commit">git_indexer_commit</a></span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
 
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\r</span><span class="s">Indexing %d of %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="p">.</span><span class="n">indexed_objects</span><span class="p">,</span> <span class="n">stats</span><span class="p">.</span><span class="n">total_objects</span><span class="p">);</span>
 
-  <span class="n"><a name="git_oid_fmt-6" class="fnlink" href="../../#v0.23.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">hash</span><span class="p">,</span> <span class="n"><a name="git_indexer_hash-4" class="fnlink" href="../../#v0.23.0/group/indexer/git_indexer_hash">git_indexer_hash</a></span><span class="p">(</span><span class="n">idx</span><span class="p">));</span>
+  <span class="n"><a name="git_oid_fmt-6" class="fnlink" href="../../#v0.27.10/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">hash</span><span class="p">,</span> <span class="n"><a name="git_indexer_hash-4" class="fnlink" href="../../#v0.27.10/group/indexer/git_indexer_hash">git_indexer_hash</a></span><span class="p">(</span><span class="n">idx</span><span class="p">));</span>
   <span class="n">puts</span><span class="p">(</span><span class="n">hash</span><span class="p">);</span>
 
  <span class="nl">cleanup</span><span class="p">:</span>
   <span class="n">close</span><span class="p">(</span><span class="n">fd</span><span class="p">);</span>
-  <span class="n"><a name="git_indexer_free-5" class="fnlink" href="../../#v0.23.0/group/indexer/git_indexer_free">git_indexer_free</a></span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
+  <span class="n"><a name="git_indexer_free-5" class="fnlink" href="../../#v0.27.10/group/indexer/git_indexer_free">git_indexer_free</a></span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
   <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
       </td>

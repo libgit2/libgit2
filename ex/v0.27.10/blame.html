@@ -16,7 +16,7 @@
     Jump To &hellip;
     <div id="jump_wrapper">
       <div id="jump_page">
-        <a class="source" href="../../#v0.23.0">API Docs</a>
+        <a class="source" href="../../#v0.27.10">API Docs</a>
           <a class="source" href="add.html">add.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
@@ -27,6 +27,7 @@
           <a class="source" href="general.html">general.c</a>
           <a class="source" href="init.html">init.c</a>
           <a class="source" href="log.html">log.c</a>
+          <a class="source" href="merge.html">merge.c</a>
           <a class="source" href="network/clone.html">clone.c</a>
           <a class="source" href="network/common.html">common.c</a>
           <a class="source" href="network/fetch.html">fetch.c</a>
@@ -114,7 +115,7 @@ simulate the output of <code>git blame</code> and a few of its command line argu
   <span class="n">git_blob</span> <span class="o">*</span><span class="n">blob</span><span class="p">;</span>
   <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span><span class="p">;</span>
 
-  <span class="n"><a name="git_libgit2_init-8" class="fnlink" href="../../#v0.23.0/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
+  <span class="n"><a name="git_libgit2_init-8" class="fnlink" href="../../#v0.27.10/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
 
   <span class="n">parse_opts</span><span class="p">(</span><span class="o">&amp;</span><span class="n">o</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">M</span><span class="p">)</span> <span class="n">blameopts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES</span><span class="p">;</span>
@@ -130,7 +131,7 @@ simulate the output of <code>git blame</code> and a few of its command line argu
         <p>Open the repository.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-24" class="fnlink" href="../../#v0.23.0/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span> <span class="s">&quot;Couldn&#39;t open repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
+        <div class='highlight'><pre>  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-24" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span> <span class="s">&quot;Couldn&#39;t open repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-4'>
@@ -143,15 +144,15 @@ nail down the end points.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">commitspec</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse-27" class="fnlink" href="../../#v0.23.0/group/revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">revspec</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">commitspec</span><span class="p">),</span> <span class="s">&quot;Couldn&#39;t parse commit spec&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse-27" class="fnlink" href="../../#v0.27.10/group/revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">revspec</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">commitspec</span><span class="p">),</span> <span class="s">&quot;Couldn&#39;t parse commit spec&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">GIT_REVPARSE_SINGLE</span><span class="p">)</span> <span class="p">{</span>
-      <span class="n"><a name="git_oid_cpy-20" class="fnlink" href="../../#v0.23.0/group/oid/git_oid_cpy">git_oid_cpy</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">,</span> <span class="n"><a name="git_object_id-10" class="fnlink" href="../../#v0.23.0/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">));</span>
-      <span class="n"><a name="git_object_free-14" class="fnlink" href="../../#v0.23.0/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">);</span>
+      <span class="n"><a name="git_oid_cpy-20" class="fnlink" href="../../#v0.27.10/group/oid/git_oid_cpy">git_oid_cpy</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">,</span> <span class="n"><a name="git_object_id-10" class="fnlink" href="../../#v0.27.10/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">));</span>
+      <span class="n"><a name="git_object_free-14" class="fnlink" href="../../#v0.27.10/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">);</span>
     <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-      <span class="n"><a name="git_oid_cpy-21" class="fnlink" href="../../#v0.23.0/group/oid/git_oid_cpy">git_oid_cpy</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">oldest_commit</span><span class="p">,</span> <span class="n"><a name="git_object_id-11" class="fnlink" href="../../#v0.23.0/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">));</span>
-      <span class="n"><a name="git_oid_cpy-22" class="fnlink" href="../../#v0.23.0/group/oid/git_oid_cpy">git_oid_cpy</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">,</span> <span class="n"><a name="git_object_id-12" class="fnlink" href="../../#v0.23.0/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">to</span><span class="p">));</span>
-      <span class="n"><a name="git_object_free-15" class="fnlink" href="../../#v0.23.0/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">);</span>
-      <span class="n"><a name="git_object_free-16" class="fnlink" href="../../#v0.23.0/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">to</span><span class="p">);</span>
+      <span class="n"><a name="git_oid_cpy-21" class="fnlink" href="../../#v0.27.10/group/oid/git_oid_cpy">git_oid_cpy</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">oldest_commit</span><span class="p">,</span> <span class="n"><a name="git_object_id-11" class="fnlink" href="../../#v0.27.10/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">));</span>
+      <span class="n"><a name="git_oid_cpy-22" class="fnlink" href="../../#v0.27.10/group/oid/git_oid_cpy">git_oid_cpy</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">,</span> <span class="n"><a name="git_object_id-12" class="fnlink" href="../../#v0.27.10/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">to</span><span class="p">));</span>
+      <span class="n"><a name="git_object_free-15" class="fnlink" href="../../#v0.27.10/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">);</span>
+      <span class="n"><a name="git_object_free-16" class="fnlink" href="../../#v0.27.10/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">to</span><span class="p">);</span>
     <span class="p">}</span>
   <span class="p">}</span></pre></div>
       </td>
@@ -164,7 +165,7 @@ nail down the end points.</p>
         <p>Run the blame.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_blame_file-2" class="fnlink" href="../../#v0.23.0/group/blame/git_blame_file">git_blame_file</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blame</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">path</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">blameopts</span><span class="p">),</span> <span class="s">&quot;Blame error&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
+        <div class='highlight'><pre>  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_blame_file-2" class="fnlink" href="../../#v0.27.10/group/blame/git_blame_file">git_blame_file</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blame</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">path</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">blameopts</span><span class="p">),</span> <span class="s">&quot;Blame error&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-6'>
@@ -176,19 +177,19 @@ nail down the end points.</p>
 <code>commitish:path/to/file.txt</code> format to find it.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_oid_iszero-23" class="fnlink" href="../../#v0.23.0/group/oid/git_oid_iszero">git_oid_iszero</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">))</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_oid_iszero-23" class="fnlink" href="../../#v0.27.10/group/oid/git_oid_iszero">git_oid_iszero</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">))</span>
     <span class="n">strcpy</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="s">&quot;HEAD&quot;</span><span class="p">);</span>
   <span class="k">else</span>
-    <span class="n"><a name="git_oid_tostr-18" class="fnlink" href="../../#v0.23.0/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">);</span>
+    <span class="n"><a name="git_oid_tostr-18" class="fnlink" href="../../#v0.27.10/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">);</span>
   <span class="n">strcat</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="s">&quot;:&quot;</span><span class="p">);</span>
   <span class="n">strcat</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">path</span><span class="p">);</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-26" class="fnlink" href="../../#v0.23.0/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">spec</span><span class="p">),</span> <span class="s">&quot;Object lookup error&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_blob_lookup-4" class="fnlink" href="../../#v0.23.0/group/blob/git_blob_lookup">git_blob_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blob</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_object_id-13" class="fnlink" href="../../#v0.23.0/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">obj</span><span class="p">)),</span> <span class="s">&quot;Blob lookup error&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-  <span class="n"><a name="git_object_free-17" class="fnlink" href="../../#v0.23.0/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-26" class="fnlink" href="../../#v0.27.10/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">spec</span><span class="p">),</span> <span class="s">&quot;Object lookup error&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_blob_lookup-4" class="fnlink" href="../../#v0.27.10/group/blob/git_blob_lookup">git_blob_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blob</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_object_id-13" class="fnlink" href="../../#v0.27.10/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">obj</span><span class="p">)),</span> <span class="s">&quot;Blob lookup error&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n"><a name="git_object_free-17" class="fnlink" href="../../#v0.27.10/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
 
-  <span class="n">rawdata</span> <span class="o">=</span> <span class="n"><a name="git_blob_rawcontent-6" class="fnlink" href="../../#v0.23.0/group/blob/git_blob_rawcontent">git_blob_rawcontent</a></span><span class="p">(</span><span class="n">blob</span><span class="p">);</span>
-  <span class="n">rawsize</span> <span class="o">=</span> <span class="n"><a name="git_blob_rawsize-7" class="fnlink" href="../../#v0.23.0/group/blob/git_blob_rawsize">git_blob_rawsize</a></span><span class="p">(</span><span class="n">blob</span><span class="p">);</span></pre></div>
+  <span class="n">rawdata</span> <span class="o">=</span> <span class="n"><a name="git_blob_rawcontent-6" class="fnlink" href="../../#v0.27.10/group/blob/git_blob_rawcontent">git_blob_rawcontent</a></span><span class="p">(</span><span class="n">blob</span><span class="p">);</span>
+  <span class="n">rawsize</span> <span class="o">=</span> <span class="n"><a name="git_blob_rawsize-7" class="fnlink" href="../../#v0.27.10/group/blob/git_blob_rawsize">git_blob_rawsize</a></span><span class="p">(</span><span class="n">blob</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-7'>
@@ -205,7 +206,7 @@ nail down the end points.</p>
   <span class="k">while</span> <span class="p">(</span><span class="n">i</span> <span class="o">&lt;</span> <span class="n">rawsize</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">eol</span> <span class="o">=</span> <span class="n">memchr</span><span class="p">(</span><span class="n">rawdata</span> <span class="o">+</span> <span class="n">i</span><span class="p">,</span> <span class="sc">&#39;\n&#39;</span><span class="p">,</span> <span class="n">rawsize</span> <span class="o">-</span> <span class="n">i</span><span class="p">);</span>
     <span class="kt">char</span> <span class="n">oid</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
-    <span class="k">const</span> <span class="n">git_blame_hunk</span> <span class="o">*</span><span class="n">hunk</span> <span class="o">=</span> <span class="n"><a name="git_blame_get_hunk_byline-1" class="fnlink" href="../../#v0.23.0/group/blame/git_blame_get_hunk_byline">git_blame_get_hunk_byline</a></span><span class="p">(</span><span class="n">blame</span><span class="p">,</span> <span class="n">line</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">git_blame_hunk</span> <span class="o">*</span><span class="n">hunk</span> <span class="o">=</span> <span class="n"><a name="git_blame_get_hunk_byline-1" class="fnlink" href="../../#v0.27.10/group/blame/git_blame_get_hunk_byline">git_blame_get_hunk_byline</a></span><span class="p">(</span><span class="n">blame</span><span class="p">,</span> <span class="n">line</span><span class="p">);</span>
 
     <span class="k">if</span> <span class="p">(</span><span class="n">break_on_null_hunk</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">hunk</span><span class="p">)</span>
       <span class="k">break</span><span class="p">;</span>
@@ -214,7 +215,7 @@ nail down the end points.</p>
       <span class="kt">char</span> <span class="n">sig</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
       <span class="n">break_on_null_hunk</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
       
-      <span class="n"><a name="git_oid_tostr-19" class="fnlink" href="../../#v0.23.0/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_commit_id</span><span class="p">);</span>
+      <span class="n"><a name="git_oid_tostr-19" class="fnlink" href="../../#v0.27.10/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_commit_id</span><span class="p">);</span>
       <span class="n">snprintf</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="s">&quot;%s &lt;%s&gt;&quot;</span><span class="p">,</span> <span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_signature</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">,</span> <span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_signature</span><span class="o">-&gt;</span><span class="n">email</span><span class="p">);</span>
 
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s ( %-30s %3d) %.*s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
@@ -238,11 +239,11 @@ nail down the end points.</p>
         <p>Cleanup.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_blob_free-5" class="fnlink" href="../../#v0.23.0/group/blob/git_blob_free">git_blob_free</a></span><span class="p">(</span><span class="n">blob</span><span class="p">);</span>
-  <span class="n"><a name="git_blame_free-3" class="fnlink" href="../../#v0.23.0/group/blame/git_blame_free">git_blame_free</a></span><span class="p">(</span><span class="n">blame</span><span class="p">);</span>
-  <span class="n"><a name="git_repository_free-25" class="fnlink" href="../../#v0.23.0/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n"><a name="git_blob_free-5" class="fnlink" href="../../#v0.27.10/group/blob/git_blob_free">git_blob_free</a></span><span class="p">(</span><span class="n">blob</span><span class="p">);</span>
+  <span class="n"><a name="git_blame_free-3" class="fnlink" href="../../#v0.27.10/group/blame/git_blame_free">git_blame_free</a></span><span class="p">(</span><span class="n">blame</span><span class="p">);</span>
+  <span class="n"><a name="git_repository_free-25" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
 
-  <span class="n"><a name="git_libgit2_shutdown-9" class="fnlink" href="../../#v0.23.0/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
+  <span class="n"><a name="git_libgit2_shutdown-9" class="fnlink" href="../../#v0.27.10/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
