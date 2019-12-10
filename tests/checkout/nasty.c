@@ -206,9 +206,8 @@ void test_checkout_nasty__dot_git_dot(void)
  */
 void test_checkout_nasty__git_tilde1(void)
 {
-#ifdef GIT_WIN32
 	test_checkout_fails("refs/heads/git_tilde1", ".git/foobar");
-#endif
+	test_checkout_fails("refs/heads/git_tilde1", "git~1/foobar");
 }
 
 /* A tree that contains an entry "git~2", when we have forced the short
@@ -272,6 +271,16 @@ void test_checkout_nasty__dot_git_colon_stuff(void)
 #ifdef GIT_WIN32
 	test_checkout_fails("refs/heads/dot_git_colon_stuff", ".git/foobar");
 #endif
+}
+
+/* A tree that contains an entry ".git::$INDEX_ALLOCATION" because NTFS
+ * will interpret that as a synonym to ".git", even when mounted via SMB
+ * on macOS.
+ */
+void test_checkout_nasty__dotgit_alternate_data_stream(void)
+{
+	test_checkout_fails("refs/heads/dotgit_alternate_data_stream", ".git/dummy-file");
+	test_checkout_fails("refs/heads/dotgit_alternate_data_stream", ".git::$INDEX_ALLOCATION/dummy-file");
 }
 
 /* Trees that contains entries with a tree ".git" that contain

@@ -362,3 +362,14 @@ void test_path_core__join_unrooted(void)
 
 	git_buf_dispose(&out);
 }
+
+void test_path_core__join_unrooted_respects_funny_windows_roots(void)
+{
+	test_join_unrooted("💩:/foo/bar/foobar", 9, "bar/foobar", "💩:/foo");
+	test_join_unrooted("💩:/foo/bar/foobar", 13, "foobar", "💩:/foo/bar");
+	test_join_unrooted("💩:/foo", 5, "💩:/foo", "💩:/asdf");
+	test_join_unrooted("💩:/foo/bar", 5, "💩:/foo/bar", "💩:/asdf");
+	test_join_unrooted("💩:/foo/bar/foobar", 9, "💩:/foo/bar/foobar", "💩:/foo");
+	test_join_unrooted("💩:/foo/bar/foobar", 13, "💩:/foo/bar/foobar", "💩:/foo/bar");
+	test_join_unrooted("💩:/foo/bar/foobar", 9, "💩:/foo/bar/foobar", "💩:/foo/");
+}
