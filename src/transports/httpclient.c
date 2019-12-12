@@ -82,7 +82,8 @@ struct git_http_client {
 
 	unsigned request_count;
 	unsigned connected : 1,
-	         keepalive : 1;
+	         keepalive : 1,
+	         request_chunked : 1;
 
 	/* Temporary buffers to avoid extra mallocs */
 	git_buf request_msg;
@@ -587,6 +588,7 @@ int git_http_client_send_request(
 		client->state = SENDING_BODY;
 		client->request_body_len = request->content_length;
 		client->request_body_remain = request->content_length;
+		client->request_chunked = request->chunked;
 	} else {
 		client->state = SENT_REQUEST;
 	}
@@ -600,15 +602,49 @@ int git_http_client_send_body(
 	const char *buffer,
 	size_t buffer_len)
 {
+	git_http_server *server;
+	git_buf hdr = GIT_BUF_INIT;
 	int error;
 
 	assert(client && client->state == SENDING_BODY);
-	assert(buffer_len <= client->request_body_remain);
 
-	error = stream_write(&client->server, buffer, buffer_len);
+	if (!buffer_len)
+		return 0;
 
-	if (error == 0)
+	server = &client->server;
+
+	if (client->request_body_len) {
+		assert(buffer_len <= client->request_body_remain);
+
+		if ((error = stream_write(server, buffer, buffer_len)) < 0)
+			goto done;
+
 		client->request_body_remain -= buffer_len;
+	} else {
+		if ((error = git_buf_printf(&hdr, "%" PRIxZ "\r\n", buffer_len)) < 0 ||
+		    (error = stream_write(server, hdr.ptr, hdr.size)) < 0 ||
+		    (error = stream_write(server, buffer, buffer_len)) < 0 ||
+		    (error = stream_write(server, "\r\n", 2)) < 0)
+			goto done;
+	}
+
+done:
+	git_buf_dispose(&hdr);
+	return error;
+}
+
+static int complete_request(git_http_client *client)
+{
+	int error = 0;
+
+	assert(client && client->state == SENDING_BODY);
+
+	if (client->request_body_len && client->request_body_remain) {
+		git_error_set(GIT_ERROR_NET, "truncated write");
+		error = -1;
+	} else if (client->request_chunked) {
+		error = stream_write(&client->server, "0\r\n\r\n", 5);
+	}
 
 	return error;
 }
@@ -758,15 +794,12 @@ int git_http_client_read_response(
 	assert(response && client);
 
 	if (client->state == SENDING_BODY) {
-		if (client->request_body_len && client->request_body_remain) {
-			git_error_set(GIT_ERROR_NET, "truncated write");
-			return -1;
-		}
-
-		client->state = SENT_REQUEST;
+		if ((error = complete_request(client)) < 0)
+			goto done;
 	} else if (client->state != SENT_REQUEST) {
 		git_error_set(GIT_ERROR_NET, "client is in invalid state");
-		return -1;
+		error = -1;
+		goto done;
 	}
 
 	client->state = READING_RESPONSE;
