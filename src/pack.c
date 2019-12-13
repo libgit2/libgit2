@@ -13,9 +13,6 @@
 #include "odb.h"
 #include "oid.h"
 #include "sha1_lookup.h"
-#include "zstream.h"
-
-#include <zlib.h>
 
 /* Option to bypass checking existence of '.keep' files */
 bool git_disable_pack_keep_file_checks = false;
@@ -766,31 +763,13 @@ cleanup:
 	return error;
 }
 
-static void *use_git_alloc(void *opaq, unsigned int count, unsigned int size)
-{
-	GIT_UNUSED(opaq);
-	return git__calloc(count, size);
-}
-
-static void use_git_free(void *opaq, void *ptr)
-{
-	GIT_UNUSED(opaq);
-	git__free(ptr);
-}
-
 int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, off64_t curpos)
 {
-	int st;
-
 	memset(obj, 0, sizeof(git_packfile_stream));
 	obj->curpos = curpos;
 	obj->p = p;
-	obj->zstream.zalloc = use_git_alloc;
-	obj->zstream.zfree = use_git_free;
-	obj->zstream.next_in = Z_NULL;
-	obj->zstream.next_out = Z_NULL;
-	st = inflateInit(&obj->zstream);
-	if (st != Z_OK) {
+
+	if (git_zstream_init(&obj->zstream, GIT_ZSTREAM_INFLATE) < 0) {
 		git_error_set(GIT_ERROR_ZLIB, "failed to init packfile stream");
 		return -1;
 	}
@@ -800,47 +779,41 @@ int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, 
 
 ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t len)
 {
+	unsigned int window_len;
 	unsigned char *in;
-	size_t written;
-	int st;
+	int error;
 
 	if (obj->done)
 		return 0;
 
-	in = pack_window_open(obj->p, &obj->mw, obj->curpos, &obj->zstream.avail_in);
-	if (in == NULL)
+	if ((in = pack_window_open(obj->p, &obj->mw, obj->curpos, &window_len)) == NULL)
 		return GIT_EBUFS;
 
-	obj->zstream.next_out = buffer;
-	obj->zstream.avail_out = (unsigned int)len;
-	obj->zstream.next_in = in;
-
-	st = inflate(&obj->zstream, Z_SYNC_FLUSH);
-	git_mwindow_close(&obj->mw);
-
-	obj->curpos += obj->zstream.next_in - in;
-	written = len - obj->zstream.avail_out;
-
-	if (st != Z_OK && st != Z_STREAM_END) {
+	if ((error = git_zstream_set_input(&obj->zstream, in, window_len)) < 0 ||
+	    (error = git_zstream_get_output_chunk(buffer, &len, &obj->zstream)) < 0) {
+		git_mwindow_close(&obj->mw);
 		git_error_set(GIT_ERROR_ZLIB, "error reading from the zlib stream");
 		return -1;
 	}
 
-	if (st == Z_STREAM_END)
+	git_mwindow_close(&obj->mw);
+
+	obj->curpos += window_len - obj->zstream.in_len;
+
+	if (git_zstream_eos(&obj->zstream))
 		obj->done = 1;
 
-
 	/* If we didn't write anything out but we're not done, we need more data */
-	if (!written && st != Z_STREAM_END)
+	if (!len && !git_zstream_eos(&obj->zstream))
 		return GIT_EBUFS;
 
-	return written;
+	return len;
 
 }
 
 void git_packfile_stream_dispose(git_packfile_stream *obj)
 {
-	inflateEnd(&obj->zstream);
+	git_zstream_free(&obj->zstream);
 }
 
 static int packfile_unpack_compressed(

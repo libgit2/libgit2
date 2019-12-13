@@ -10,16 +10,15 @@
 
 #include "common.h"
 
-#include <zlib.h>
-
 #include "git2/oid.h"
 
+#include "array.h"
 #include "map.h"
 #include "mwindow.h"
 #include "odb.h"
 #include "offmap.h"
 #include "oidmap.h"
-#include "array.h"
+#include "zstream.h"
 
 #define GIT_PACK_FILE_MODE 0444
 
@@ -116,7 +115,7 @@ struct git_pack_entry {
 typedef struct git_packfile_stream {
 	off64_t curpos;
 	int done;
-	z_stream zstream;
+	git_zstream zstream;
 	struct git_pack_file *p;
 	git_mwindow *mw;
 } git_packfile_stream;
