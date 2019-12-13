@@ -257,6 +257,12 @@ static int on_body(http_parser *parser, const char *buf, size_t len)
 	http_parser_context *ctx = (http_parser_context *) parser->data;
 	size_t max_len;
 
+	/* Saw data when we expected not to (eg, in consume_response_body) */
+	if (ctx->output_buf == NULL && ctx->output_size == 0) {
+		ctx->parse_status = PARSE_STATUS_NO_OUTPUT;
+		return 0;
+	}
+
 	assert(ctx->output_size >= ctx->output_written);
 
 	max_len = min(ctx->output_size - ctx->output_written, len);
@@ -556,117 +562,6 @@ on_error:
 	return error;
 }
 
-int git_http_client_send_request(
-	git_http_client *client,
-	git_http_request *request)
-{
-	int error = -1;
-
-	assert(client && request);
-
-	http_parser_init(&client->parser, HTTP_RESPONSE);
-	git_buf_clear(&client->read_buf);
-
-	if (git_trace_level() >= GIT_TRACE_DEBUG) {
-		git_buf url = GIT_BUF_INIT;
-		git_net_url_fmt(&url, request->url);
-		git_trace(GIT_TRACE_DEBUG, "Sending %s request to %s",
-		          name_for_method(request->method),
-		          url.ptr ? url.ptr : "<invalid>");
-		git_buf_dispose(&url);
-	}
-
-	if ((error = http_client_setup_hosts(client, request)) < 0 ||
-	    (error = http_client_connect(client)) < 0 ||
-	    (error = generate_request(client, request)) < 0 ||
-	    (error = stream_write(&client->server,
-	                          client->request_msg.ptr,
-	                          client->request_msg.size)) < 0)
-		goto done;
-
-	if (request->content_length || request->chunked) {
-		client->state = SENDING_BODY;
-		client->request_body_len = request->content_length;
-		client->request_body_remain = request->content_length;
-		client->request_chunked = request->chunked;
-	} else {
-		client->state = SENT_REQUEST;
-	}
-
-done:
-	return error;
-}
-
-int git_http_client_send_body(
-	git_http_client *client,
-	const char *buffer,
-	size_t buffer_len)
-{
-	git_http_server *server;
-	git_buf hdr = GIT_BUF_INIT;
-	int error;
-
-	assert(client && client->state == SENDING_BODY);
-
-	if (!buffer_len)
-		return 0;
-
-	server = &client->server;
-
-	if (client->request_body_len) {
-		assert(buffer_len <= client->request_body_remain);
-
-		if ((error = stream_write(server, buffer, buffer_len)) < 0)
-			goto done;
-
-		client->request_body_remain -= buffer_len;
-	} else {
-		if ((error = git_buf_printf(&hdr, "%" PRIxZ "\r\n", buffer_len)) < 0 ||
-		    (error = stream_write(server, hdr.ptr, hdr.size)) < 0 ||
-		    (error = stream_write(server, buffer, buffer_len)) < 0 ||
-		    (error = stream_write(server, "\r\n", 2)) < 0)
-			goto done;
-	}
-
-done:
-	git_buf_dispose(&hdr);
-	return error;
-}
-
-static int complete_request(git_http_client *client)
-{
-	int error = 0;
-
-	assert(client && client->state == SENDING_BODY);
-
-	if (client->request_body_len && client->request_body_remain) {
-		git_error_set(GIT_ERROR_NET, "truncated write");
-		error = -1;
-	} else if (client->request_chunked) {
-		error = stream_write(&client->server, "0\r\n\r\n", 5);
-	}
-
-	return error;
-}
-
-static bool parser_settings_initialized;
-static http_parser_settings parser_settings;
-
-GIT_INLINE(http_parser_settings *) http_client_parser_settings(void)
-{
-	if (! parser_settings_initialized) {
-		parser_settings.on_header_field = on_header_field;
-		parser_settings.on_header_value = on_header_value;
-		parser_settings.on_headers_complete = on_headers_complete;
-		parser_settings.on_body = on_body;
-		parser_settings.on_message_complete = on_message_complete;
-
-		parser_settings_initialized = true;
-	}
-
-	return &parser_settings;
-}
-
 GIT_INLINE(int) client_read(git_http_client *client)
 {
 	char *buf = client->read_buf.ptr + client->read_buf.size;
@@ -697,6 +592,25 @@ GIT_INLINE(int) client_read(git_http_client *client)
 
 	return (int)read_len;
 }
+
+static bool parser_settings_initialized;
+static http_parser_settings parser_settings;
+
+GIT_INLINE(http_parser_settings *) http_client_parser_settings(void)
+{
+	if (!parser_settings_initialized) {
+		parser_settings.on_header_field = on_header_field;
+		parser_settings.on_header_value = on_header_value;
+		parser_settings.on_headers_complete = on_headers_complete;
+		parser_settings.on_body = on_body;
+		parser_settings.on_message_complete = on_message_complete;
+
+		parser_settings_initialized = true;
+	}
+
+	return &parser_settings;
+}
+
 
 GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 {
@@ -782,6 +696,134 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 	git_buf_consume_bytes(&client->read_buf, parsed_len);
 
 	return (int)parsed_len;
+}
+
+/*
+ * See if we've consumed the entire response body.  If the client was
+ * reading the body but did not consume it entirely, it's possible that
+ * they knew that the stream had finished (in a git response, seeing a final
+ * flush) and stopped reading.  But if the response was chunked, we may have
+ * not consumed the final chunk marker.  Consume it to ensure that we don't
+ * have it waiting in our socket.  If there's more than just a chunk marker,
+ * close the connection.
+ */
+static void complete_response_body(git_http_client *client)
+{
+	http_parser_context parser_context = {0};
+
+	/* If we're not keeping alive, don't bother. */
+	if (!client->keepalive) {
+		client->connected = 0;
+		return;
+	}
+
+	parser_context.client = client;
+	client->parser.data = &parser_context;
+
+	/* If there was an error, just close the connection. */
+	if (client_read_and_parse(client) < 0 ||
+	    parser_context.error != HPE_OK ||
+	    (parser_context.parse_status != PARSE_STATUS_OK &&
+	     parser_context.parse_status != PARSE_STATUS_NO_OUTPUT)) {
+		git_error_clear();
+		client->connected = 0;
+	}
+}
+
+int git_http_client_send_request(
+	git_http_client *client,
+	git_http_request *request)
+{
+	int error = -1;
+
+	assert(client && request);
+
+	/* If the client did not finish reading, clean up the stream. */
+	if (client->state == READING_BODY)
+		complete_response_body(client);
+
+	http_parser_init(&client->parser, HTTP_RESPONSE);
+
+	if (git_trace_level() >= GIT_TRACE_DEBUG) {
+		git_buf url = GIT_BUF_INIT;
+		git_net_url_fmt(&url, request->url);
+		git_trace(GIT_TRACE_DEBUG, "Sending %s request to %s",
+		          name_for_method(request->method),
+		          url.ptr ? url.ptr : "<invalid>");
+		git_buf_dispose(&url);
+	}
+
+	if ((error = http_client_setup_hosts(client, request)) < 0 ||
+	    (error = http_client_connect(client)) < 0 ||
+	    (error = generate_request(client, request)) < 0 ||
+	    (error = stream_write(&client->server,
+	                          client->request_msg.ptr,
+	                          client->request_msg.size)) < 0)
+		goto done;
+
+	if (request->content_length || request->chunked) {
+		client->state = SENDING_BODY;
+		client->request_body_len = request->content_length;
+		client->request_body_remain = request->content_length;
+		client->request_chunked = request->chunked;
+	} else {
+		client->state = SENT_REQUEST;
+	}
+
+done:
+	return error;
+}
+
+int git_http_client_send_body(
+	git_http_client *client,
+	const char *buffer,
+	size_t buffer_len)
+{
+	git_http_server *server;
+	git_buf hdr = GIT_BUF_INIT;
+	int error;
+
+	assert(client && client->state == SENDING_BODY);
+
+	if (!buffer_len)
+		return 0;
+
+	server = &client->server;
+
+	if (client->request_body_len) {
+		assert(buffer_len <= client->request_body_remain);
+
+		if ((error = stream_write(server, buffer, buffer_len)) < 0)
+			goto done;
+
+		client->request_body_remain -= buffer_len;
+	} else {
+		if ((error = git_buf_printf(&hdr, "%" PRIxZ "\r\n", buffer_len)) < 0 ||
+		    (error = stream_write(server, hdr.ptr, hdr.size)) < 0 ||
+		    (error = stream_write(server, buffer, buffer_len)) < 0 ||
+		    (error = stream_write(server, "\r\n", 2)) < 0)
+			goto done;
+	}
+
+done:
+	git_buf_dispose(&hdr);
+	return error;
+}
+
+static int complete_request(git_http_client *client)
+{
+	int error = 0;
+
+	assert(client && client->state == SENDING_BODY);
+
+	if (client->request_body_len && client->request_body_remain) {
+		git_error_set(GIT_ERROR_NET, "truncated write");
+		error = -1;
+	} else if (client->request_chunked) {
+		error = stream_write(&client->server, "0\r\n\r\n", 5);
+	}
+
+	return error;
 }
 
 int git_http_client_read_response(
