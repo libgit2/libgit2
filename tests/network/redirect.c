@@ -111,3 +111,19 @@ void test_network_redirect__redirect_relative_ssl(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 }
+
+void test_network_redirect__service_query_no_query_params_in_location(void)
+{
+	cl_git_pass(git_net_url_parse(&conndata, "https://foo.com/bar/info/refs?service=git-upload-pack"));
+	cl_git_pass(gitno_connection_data_handle_redirect(&conndata,
+				"/baz/info/refs", "/info/refs?service=git-upload-pack"));
+	cl_assert_equal_s(conndata.path, "/baz");
+}
+
+void test_network_redirect__service_query_with_query_params_in_location(void)
+{
+	cl_git_pass(git_net_url_parse(&conndata, "https://foo.com/bar/info/refs?service=git-upload-pack"));
+	cl_git_pass(gitno_connection_data_handle_redirect(&conndata,
+				"/baz/info/refs?service=git-upload-pack", "/info/refs?service=git-upload-pack"));
+	cl_assert_equal_s(conndata.path, "/baz");
+}
