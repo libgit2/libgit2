@@ -273,7 +273,7 @@ static int ok_pkt(git_pkt **out, const char *line, size_t len)
 	line += 3;
 	len -= 3;
 
-	if (line[len - 1] == '\n')
+	if (len && line[len - 1] == '\n')
 		--len;
 
 	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, len, 1);
