@@ -111,9 +111,10 @@ static void print_perf_data(const git_checkout_perfdata *perfdata, void *payload
  * This is the main "checkout <branch>" function, responsible for performing
  * a branch-based checkout.
  */
-static int perform_checkout_ref(git_repository *repo, git_annotated_commit *target, checkout_options *opts)
+static int perform_checkout_ref(git_repository *repo, git_annotated_commit *target, const char *target_ref, checkout_options *opts)
 {
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_reference *ref = NULL, *branch = NULL;
 	git_commit *target_commit = NULL;
 	int err;
 
@@ -155,10 +156,25 @@ static int perform_checkout_ref(git_repository *repo, git_annotated_commit *targ
 	 * we might need to detach HEAD.
 	 */
 	if (git_annotated_commit_ref(target)) {
-		err = git_repository_set_head(repo, git_annotated_commit_ref(target));
+		const char *target_head;
+
+		if ((err = git_reference_lookup(&ref, repo, git_annotated_commit_ref(target))) < 0)
+			goto error;
+
+		if (git_reference_is_remote(ref)) {
+			if ((err = git_branch_create_from_annotated(&branch, repo, target_ref, target, 0)) < 0)
+				goto error;
+			target_head = git_reference_name(branch);
+		} else {
+			target_head = git_annotated_commit_ref(target);
+		}
+
+		err = git_repository_set_head(repo, target_head);
 	} else {
 		err = git_repository_set_head_detached_from_annotated(repo, target);
 	}
+
+error:
 	if (err != 0) {
 		fprintf(stderr, "failed to update HEAD reference: %s\n", git_error_last()->message);
 		goto cleanup;
@@ -166,8 +182,65 @@ static int perform_checkout_ref(git_repository *repo, git_annotated_commit *targ
 
 cleanup:
 	git_commit_free(target_commit);
+	git_reference_free(branch);
+	git_reference_free(ref);
 
 	return err;
+}
+
+/**
+ * This corresponds to `git switch --guess`: if a given ref does
+ * not exist, git will by default try to guess the reference by
+ * seeing whether any remote has a branch called <ref>. If there
+ * is a single remote only that has it, then it is assumed to be
+ * the desired reference and a local branch is created for it.
+ *
+ * The following is a simplified implementation. It will not try
+ * to check whether the ref is unique across all remotes.
+ */
+static int guess_refish(git_annotated_commit **out, git_repository *repo, const char *ref)
+{
+	git_strarray remotes = { NULL, 0 };
+	git_reference *remote_ref = NULL;
+	int error;
+	size_t i;
+
+	if ((error = git_remote_list(&remotes, repo)) < 0)
+		goto out;
+
+	for (i = 0; i < remotes.count; i++) {
+		char *refname = NULL;
+		size_t reflen;
+
+		reflen = snprintf(refname, 0, "refs/remotes/%s/%s", remotes.strings[i], ref);
+		if ((refname = malloc(reflen + 1)) == NULL) {
+			error = -1;
+			goto next;
+		}
+		snprintf(refname, reflen + 1, "refs/remotes/%s/%s", remotes.strings[i], ref);
+
+		if ((error = git_reference_lookup(&remote_ref, repo, refname)) < 0)
+			goto next;
+
+		break;
+next:
+		free(refname);
+		if (error < 0 && error != GIT_ENOTFOUND)
+			break;
+	}
+
+	if (!remote_ref) {
+		error = GIT_ENOTFOUND;
+		goto out;
+	}
+
+	if ((error = git_annotated_commit_from_ref(out, repo, remote_ref)) < 0)
+		goto out;
+
+out:
+	git_reference_free(remote_ref);
+	git_strarray_free(&remotes);
+	return error;
 }
 
 /** That example's entry point */
@@ -202,12 +275,12 @@ int lg2_checkout(git_repository *repo, int argc, char **argv)
 		/**
 		 * Try to resolve a "refish" argument to a target libgit2 can use
 		 */
-		err = resolve_refish(&checkout_target, repo, args.argv[args.pos]);
-		if (err != 0) {
+		if ((err = resolve_refish(&checkout_target, repo, args.argv[args.pos])) < 0 &&
+		    (err = guess_refish(&checkout_target, repo, args.argv[args.pos])) < 0) {
 			fprintf(stderr, "failed to resolve %s: %s\n", args.argv[args.pos], git_error_last()->message);
 			goto cleanup;
 		}
-		err = perform_checkout_ref(repo, checkout_target, &opts);
+		err = perform_checkout_ref(repo, checkout_target, args.argv[args.pos], &opts);
 	}
 
 cleanup:
