@@ -1502,7 +1502,7 @@ static int refdb_fs_backend__rename(
 	const char *message)
 {
 	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
-	git_reference *old, *new;
+	git_reference *old, *new = NULL;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	int error;
 
@@ -1518,7 +1518,7 @@ static int refdb_fs_backend__rename(
 		return error;
 	}
 
-	new = git_reference__set_name(old, new_name);
+	new = git_reference__realloc(&old, new_name);
 	if (!new) {
 		git_reference_free(old);
 		return -1;

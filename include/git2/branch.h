@@ -75,9 +75,9 @@ GIT_EXTERN(int) git_branch_create_from_annotated(
 /**
  * Delete an existing branch reference.
  *
- * If the branch is successfully deleted, the passed reference
- * object will be invalidated. The reference must be freed manually
- * by the user.
+ * Note that if the deletion succeeds, the reference object will not
+ * be valid anymore, and should be freed immediately by the user using
+ * `git_reference_free()`.
  *
  * @param branch A valid reference representing a branch
  * @return 0 on success, or an error code.
@@ -126,6 +126,12 @@ GIT_EXTERN(void) git_branch_iterator_free(git_branch_iterator *iter);
  * The new branch name will be checked for validity.
  * See `git_tag_create()` for rules about valid names.
  *
+ * Note that if the move succeeds, the old reference object will not
+ + be valid anymore, and should be freed immediately by the user using
+ + `git_reference_free()`.
+ *
+ * @param out New reference object for the updated name.
+ *
  * @param branch Current underlying reference of the branch.
  *
  * @param new_branch_name Target name of the branch once the move
@@ -145,17 +151,14 @@ GIT_EXTERN(int) git_branch_move(
  * Lookup a branch by its name in a repository.
  *
  * The generated reference must be freed by the user.
- *
  * The branch name will be checked for validity.
- * See `git_tag_create()` for rules about valid names.
+ *
+ * @see git_tag_create for rules about valid names.
  *
  * @param out pointer to the looked-up branch reference
- *
  * @param repo the repository to look up the branch
- *
  * @param branch_name Name of the branch to be looked-up;
  * this name is validated for consistency.
- *
  * @param branch_type Type of the considered branch. This should
  * be valued with either GIT_BRANCH_LOCAL or GIT_BRANCH_REMOTE.
  *
@@ -169,65 +172,74 @@ GIT_EXTERN(int) git_branch_lookup(
 	git_branch_t branch_type);
 
 /**
- * Return the name of the given local or remote branch.
+ * Get the branch name
  *
- * The name of the branch matches the definition of the name
- * for git_branch_lookup. That is, if the returned name is given
- * to git_branch_lookup() then the reference is returned that
- * was given to this function.
+ * Given a reference object, this will check that it really is a branch (ie.
+ * it lives under "refs/heads/" or "refs/remotes/"), and return the branch part
+ * of it.
  *
- * @param out where the pointer of branch name is stored;
- * this is valid as long as the ref is not freed.
- * @param ref the reference ideally pointing to a branch
+ * @param out Pointer to the abbreviated reference name.
+ *        Owned by ref, do not free.
  *
- * @return 0 on success; otherwise an error code (e.g., if the
- *  ref is no local or remote branch).
+ * @param ref A reference object, ideally pointing to a branch
+ *
+ * @return 0 on success; GIT_EINVALID if the reference isn't either a local or
+ *         remote branch, otherwise an error code.
  */
 GIT_EXTERN(int) git_branch_name(
 		const char **out,
 		const git_reference *ref);
 
 /**
- * Return the reference supporting the remote tracking branch,
- * given a local branch reference.
+ * Get the upstream of a branch
  *
- * @param out Pointer where to store the retrieved
- * reference.
+ * Given a reference, this will return a new reference object corresponding
+ * to its remote tracking branch. The reference must be a local branch.
  *
+ * @see git_branch_upstream_name for details on the resolution.
+ *
+ * @param out Pointer where to store the retrieved reference.
  * @param branch Current underlying reference of the branch.
  *
  * @return 0 on success; GIT_ENOTFOUND when no remote tracking
- * reference exists, otherwise an error code.
+ *         reference exists, otherwise an error code.
  */
 GIT_EXTERN(int) git_branch_upstream(
 	git_reference **out,
 	const git_reference *branch);
 
 /**
- * Set the upstream configuration for a given local branch
+ * Set a branch's upstream branch
+ *
+ * This will update the configuration to set the branch named `name` as the upstream of `branch`.
+ * Pass a NULL name to unset the upstream information.
+ *
+ * @note the actual tracking reference must have been already created for the
+ * operation to succeed.
  *
  * @param branch the branch to configure
+ * @param branch_name remote-tracking or local branch to set as upstream.
  *
- * @param upstream_name remote-tracking or local branch to set as
- * upstream. Pass NULL to unset.
- *
- * @return 0 or an error code
+ * @return 0 on success; GIT_ENOTFOUND if there's no branch named `branch_name`
+ *         or an error code
  */
-GIT_EXTERN(int) git_branch_set_upstream(git_reference *branch, const char *upstream_name);
+GIT_EXTERN(int) git_branch_set_upstream(
+	git_reference *branch,
+	const char *branch_name);
 
 /**
- * Return the name of the reference supporting the remote tracking branch,
- * given the name of a local branch reference.
+ * Get the upstream name of a branch
  *
- * @param out Pointer to the user-allocated git_buf which will be
- * filled with the name of the reference.
+ * Given a local branch, this will return its remote-tracking branch information,
+ * as a full reference name, ie. "feature/nice" would become
+ * "refs/remote/origin/feature/nice", depending on that branch's configuration.
  *
- * @param repo the repository where the branches live
- *
+ * @param out the buffer into which the name will be written.
+ * @param repo the repository where the branches live.
  * @param refname reference name of the local branch.
  *
- * @return 0, GIT_ENOTFOUND when no remote tracking reference exists,
- *     otherwise an error code.
+ * @return 0 on success, GIT_ENOTFOUND when no remote tracking reference exists,
+ *         or an error code.
  */
 GIT_EXTERN(int) git_branch_upstream_name(
 	git_buf *out,
@@ -235,50 +247,55 @@ GIT_EXTERN(int) git_branch_upstream_name(
 	const char *refname);
 
 /**
- * Determine if the current local branch is pointed at by HEAD.
+ * Determine if HEAD points to the given branch
  *
- * @param branch Current underlying reference of the branch.
+ * @param branch A reference to a local branch.
  *
- * @return 1 if HEAD points at the branch, 0 if it isn't,
- * error code otherwise.
+ * @return 1 if HEAD points at the branch, 0 if it isn't, or a negative value
+ * 		   as an error code.
  */
 GIT_EXTERN(int) git_branch_is_head(
 	const git_reference *branch);
 
 /**
- * Determine if the current branch is checked out in any linked
- * repository.
+ * Determine if any HEAD points to the current branch
  *
- * @param branch Reference to the branch.
+ * This will iterate over all known linked repositories (usually in the form of
+ * worktrees) and report whether any HEAD is pointing at the current branch.
  *
- * @return 1 if branch is checked out, 0 if it isn't,
- * error code otherwise.
+ * @param branch A reference to a local branch.
+ *
+ * @return 1 if branch is checked out, 0 if it isn't, an error code otherwise.
  */
 GIT_EXTERN(int) git_branch_is_checked_out(
 	const git_reference *branch);
 
 /**
- * Return the name of remote that the remote tracking branch belongs to.
+ * Find the remote name of a remote-tracking branch
  *
- * @param out Pointer to the user-allocated git_buf which will be filled with the name of the remote.
+ * This will return the name of the remote whose fetch refspec is matching
+ * the given branch. E.g. given a branch "refs/remotes/test/master", it will
+ * extract the "test" part. If refspecs from multiple remotes match,
+ * the function will return GIT_EAMBIGUOUS.
  *
+ * @param out The buffer into which the name will be written.
  * @param repo The repository where the branch lives.
+ * @param refname complete name of the remote tracking branch.
  *
- * @param canonical_branch_name name of the remote tracking branch.
- *
- * @return 0, GIT_ENOTFOUND
- *     when no remote matching remote was found,
- *     GIT_EAMBIGUOUS when the branch maps to several remotes,
- *     otherwise an error code.
+ * @return 0 on success, GIT_ENOTFOUND when no matching remote was found,
+ *         GIT_EAMBIGUOUS when the branch maps to several remotes,
+ *         otherwise an error code.
  */
 GIT_EXTERN(int) git_branch_remote_name(
 	git_buf *out,
 	git_repository *repo,
-	const char *canonical_branch_name);
-
+	const char *refname);
 
 /**
- * Retrieve the name of the upstream remote of a local branch
+ * Retrieve the upstream remote of a local branch
+ *
+ * This will return the currently configured "branch.*.remote" for a given
+ * branch. This branch must be local.
  *
  * @param buf the buffer into which to write the name
  * @param repo the repository in which to look

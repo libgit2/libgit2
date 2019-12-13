@@ -91,17 +91,22 @@ git_reference *git_reference__alloc(
 	return ref;
 }
 
-git_reference *git_reference__set_name(
-	git_reference *ref, const char *name)
+git_reference *git_reference__realloc(
+	git_reference **ptr_to_ref, const char *name)
 {
-	size_t namelen = strlen(name);
-	size_t reflen;
+	size_t namelen, reflen;
 	git_reference *rewrite = NULL;
+
+	assert(ptr_to_ref && name);
+
+	namelen = strlen(name);
 
 	if (!GIT_ADD_SIZET_OVERFLOW(&reflen, sizeof(git_reference), namelen) &&
 		!GIT_ADD_SIZET_OVERFLOW(&reflen, reflen, 1) &&
-		(rewrite = git__realloc(ref, reflen)) != NULL)
+		(rewrite = git__realloc(*ptr_to_ref, reflen)) != NULL)
 		memcpy(rewrite->name, name, namelen + 1);
+
+	*ptr_to_ref = NULL;
 
 	return rewrite;
 }
