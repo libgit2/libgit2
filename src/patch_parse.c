@@ -1025,13 +1025,17 @@ static int check_filenames(git_patch_parsed *patch)
 	/* Prefer the rename filenames as they are unambiguous and unprefixed */
 	if (patch->rename_old_path)
 		patch->base.delta->old_file.path = patch->rename_old_path;
-	else
+	else if (prefixed_old)
 		patch->base.delta->old_file.path = prefixed_old + old_prefixlen;
+	else
+		patch->base.delta->old_file.path = NULL;
 
 	if (patch->rename_new_path)
 		patch->base.delta->new_file.path = patch->rename_new_path;
-	else
+	else if (prefixed_new)
 		patch->base.delta->new_file.path = prefixed_new + new_prefixlen;
+	else
+		patch->base.delta->new_file.path = NULL;
 
 	if (!patch->base.delta->old_file.path &&
 	    !patch->base.delta->new_file.path)
