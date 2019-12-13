@@ -518,7 +518,6 @@ static int _git_ssh_setup_conn(
 {
 	git_net_url urldata = GIT_NET_URL_INIT;
 	int auth_methods, error = 0;
-	int sub_error;
 	size_t i;
 	ssh_stream *s;
 	git_cred *cred = NULL;
@@ -642,11 +641,10 @@ post_extract:
 
 		if (error == GIT_EAUTH) {
 			/* refresh auth methods */
-			sub_error = list_auth_methods(&auth_methods, session, urldata.username);
-			if (sub_error < 0) {
-				error = sub_error;
+			if ((error = list_auth_methods(&auth_methods, session, urldata.username)) < 0)
 				goto done;
-			}
+			else
+				error = GIT_EAUTH;
 		}
 	}
 
