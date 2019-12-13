@@ -403,7 +403,7 @@ int git_attr_cache__init(git_repository *repo)
 	git_config_free(cfg);
 
 	/* insert default macros */
-	return git_attr_add_macro(repo, "binary", "-diff -crlf -text");
+	return git_attr_add_macro(repo, "binary", "-diff -merge -text -crlf");
 
 cancel:
 	attr_cache__free(cache);

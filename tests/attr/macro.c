@@ -20,20 +20,22 @@ void test_attr_macro__cleanup(void)
 
 void test_attr_macro__macros(void)
 {
-	const char *names[5] = { "rootattr", "binary", "diff", "crlf", "frotz" };
+	const char *names[7] = { "rootattr", "binary", "diff", "crlf", "merge", "text", "frotz" };
 	const char *names2[5] = { "mymacro", "positive", "negative", "rootattr", "another" };
 	const char *names3[3] = { "macro2", "multi2", "multi3" };
-	const char *values[5];
+	const char *values[7];
 
 	g_repo = cl_git_sandbox_init("attr");
 
-	cl_git_pass(git_attr_get_many(values, g_repo, 0, "binfile", 5, names));
+	cl_git_pass(git_attr_get_many(values, g_repo, 0, "binfile", 7, names));
 
 	cl_assert(GIT_ATTR_IS_TRUE(values[0]));
 	cl_assert(GIT_ATTR_IS_TRUE(values[1]));
 	cl_assert(GIT_ATTR_IS_FALSE(values[2]));
 	cl_assert(GIT_ATTR_IS_FALSE(values[3]));
-	cl_assert(GIT_ATTR_IS_UNSPECIFIED(values[4]));
+	cl_assert(GIT_ATTR_IS_FALSE(values[4]));
+	cl_assert(GIT_ATTR_IS_FALSE(values[5]));
+	cl_assert(GIT_ATTR_IS_UNSPECIFIED(values[6]));
 
 	cl_git_pass(git_attr_get_many(values, g_repo, 0, "macro_test", 5, names2));
 
