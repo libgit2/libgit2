@@ -137,6 +137,21 @@ void git_reference_free(git_reference *reference)
 
 int git_reference_delete(git_reference *ref)
 {
+	git_signature *who;
+	int error;
+
+	if ((error = git_reference__log_signature(&who, ref->db->repo)) < 0)
+		return error;
+
+	error = git_reference_delete_with_msg(ref, who, NULL);
+
+	git_signature_free(who);
+
+	return error;
+}
+
+int git_reference_delete_with_msg(git_reference *ref, const git_signature *who, const char *msg)
+{
 	const git_oid *old_id = NULL;
 	const char *old_target = NULL;
 
@@ -145,10 +160,25 @@ int git_reference_delete(git_reference *ref)
 	else
 		old_target = ref->target.symbolic;
 
-	return git_refdb_delete(ref->db, ref->name, old_id, old_target);
+	return git_refdb_delete(ref->db, ref->name, who, msg, old_id, old_target);
 }
 
 int git_reference_remove(git_repository *repo, const char *name)
+{
+	git_signature *who;
+	int error;
+
+	if ((error = git_reference__log_signature(&who, repo)) < 0)
+		return error;
+
+	error = git_reference_remove_with_msg(repo, name, who, NULL);
+
+	git_signature_free(who);
+
+	return error;
+}
+
+int git_reference_remove_with_msg(git_repository *repo, const char *name, const git_signature *who, const char *msg)
 {
 	git_refdb *db;
 	int error;
@@ -156,7 +186,7 @@ int git_reference_remove(git_repository *repo, const char *name)
 	if ((error = git_repository_refdb__weakptr(&db, repo)) < 0)
 		return error;
 
-	return git_refdb_delete(db, name, NULL, NULL);
+	return git_refdb_delete(db, name, who, msg, NULL, NULL);
 }
 
 int git_reference_lookup(git_reference **ref_out,
@@ -664,8 +694,8 @@ static int reference__rename(git_reference **out, git_reference *ref, const char
 {
 	git_repository *repo;
 	git_refname_t normalized;
-	bool should_head_be_updated = false;
 	int error = 0;
+	rename_cb_data payload;
 
 	assert(ref && new_name && signature);
 
@@ -675,27 +705,13 @@ static int reference__rename(git_reference **out, git_reference *ref, const char
 		normalized, repo, new_name, true)) < 0)
 		return error;
 
-	/* Check if we have to update HEAD. */
-	if ((error = git_branch_is_head(ref)) < 0)
-		return error;
-
-	should_head_be_updated = (error > 0);
-
 	if ((error = git_refdb_rename(out, ref->db, ref->name, normalized, force, signature, message)) < 0)
 		return error;
 
-	/* Update HEAD if it was pointing to the reference being renamed */
-	if (should_head_be_updated) {
-		error = git_repository_set_head(ref->db->repo, normalized);
-	} else {
-		rename_cb_data payload;
-		payload.old_name = ref->name;
-		memcpy(&payload.new_name, &normalized, sizeof(normalized));
+	payload.old_name = ref->name;
+	memcpy(&payload.new_name, &normalized, sizeof(normalized));
 
-		error = git_repository_foreach_head(repo, update_wt_heads, 0, &payload);
-	}
-
-	return error;
+	return git_repository_foreach_head(repo, update_wt_heads, 0, &payload);
 }
 
 

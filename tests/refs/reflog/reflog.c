@@ -3,6 +3,7 @@
 #include "futils.h"
 #include "git2/reflog.h"
 #include "reflog.h"
+#include "reflog_helpers.h"
 
 static const char *new_ref = "refs/heads/test-reflog";
 static const char *current_master_tip = "a65fedf39aefe402d3bb6e24df4d4f5fe4547750";
@@ -101,11 +102,14 @@ void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
 {
 	git_reference *master, *new_master;
 	git_buf master_log_path = GIT_BUF_INIT, moved_log_path = GIT_BUF_INIT;
+	size_t old_count;
 
 	git_buf_joinpath(&master_log_path, git_repository_path(g_repo), GIT_REFLOG_DIR);
 	git_buf_puts(&moved_log_path, git_buf_cstr(&master_log_path));
 	git_buf_joinpath(&master_log_path, git_buf_cstr(&master_log_path), "refs/heads/master");
 	git_buf_joinpath(&moved_log_path, git_buf_cstr(&moved_log_path), "refs/moved");
+
+	old_count = reflog_entrycount(g_repo, "refs/heads/master");
 
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&master_log_path)));
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&moved_log_path)));
@@ -116,6 +120,7 @@ void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
 
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&master_log_path)));
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&moved_log_path)));
+	cl_assert_equal_i(old_count + 1, reflog_entrycount(g_repo, "refs/moved"));
 
 	git_reference_free(new_master);
 	git_buf_dispose(&moved_log_path);

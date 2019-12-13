@@ -66,6 +66,8 @@ static void refdb_free_backend(git_refdb *db)
 
 int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
 {
+	assert(backend);
+
 	GIT_ERROR_CHECK_VERSION(backend, GIT_REFDB_BACKEND_VERSION, "git_refdb_backend");
 
 	if (!backend->exists || !backend->lookup || !backend->iterator ||
@@ -210,10 +212,16 @@ int git_refdb_rename(
 	return 0;
 }
 
-int git_refdb_delete(struct git_refdb *db, const char *ref_name, const git_oid *old_id, const char *old_target)
+int git_refdb_delete(struct git_refdb *db, const char *ref_name, const git_signature *who, const char *message, const git_oid *old_id, const char *old_target)
 {
 	assert(db && db->backend);
-	return db->backend->del(db->backend, ref_name, old_id, old_target);
+
+	if (db->backend->version < 2) {
+		/* v1 has missing who/message parameters */
+		return ((git_refdb_backend_del_v1)db->backend->del)(db->backend, ref_name, old_id, old_target);
+	}
+
+	return db->backend->del(db->backend, ref_name, who, message, old_id, old_target);
 }
 
 int git_refdb_reflog_read(git_reflog **out, git_refdb *db,  const char *name)

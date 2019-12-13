@@ -89,6 +89,21 @@ GIT_EXTERN(int) git_transaction_set_reflog(git_transaction *tx, const char *refn
 /**
  * Remove a reference
  *
+ * The difference with `git_transaction_remove` is that you can provide the
+ * information that will be writted to HEAD's reflog, if it happens that
+ * `refname` is the checked out branch.
+ *
+ * @param tx the transaction
+ * @param refname the reference to remove
+ * @param sig the signature to use in the reflog
+ * @param msg the message to write to the reflog
+ * @return 0, GIT_ENOTFOUND if the reference is not among the locked ones, or an error code
+ */
+GIT_EXTERN(int) git_transaction_remove_with_msg(git_transaction *tx, const char *refname, const git_signature *sig, const char *msg);
+
+/**
+ * Remove a reference
+ *
  * @param tx the transaction
  * @param refname the reference to remove
  * @return 0, GIT_ENOTFOUND if the reference is not among the locked ones, or an error code
