@@ -84,8 +84,10 @@ v0.28 + 1
 
 ### Changes or improvements
 
-* libgit2 can now correctly cope with URLs where the host contains a colon
-  but a port is not specified.  (eg `http://example.com:/repo.git`).
+* libgit2 now correctly handles more URLs, such as
+  `http://example.com:/repo.git` (colon but no port),
+  `http://example.com` (no path),
+  and `http://example.com:8080/` (path is /, nonstandard port).
 
 * A carefully constructed commit object with a very large number
   of parents may lead to potential out-of-bounds writes or

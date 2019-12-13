@@ -126,7 +126,7 @@ typedef int GIT_CALLBACK(git_stash_apply_progress_cb)(
 typedef struct git_stash_apply_options {
 	unsigned int version;
 
-	/** See `git_stash_apply_flags_t`, above. */
+	/** See `git_stash_apply_flags`, above. */
 	uint32_t flags;
 
 	/** Options to use when writing files to the working directory. */
