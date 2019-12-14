@@ -16,7 +16,8 @@ typedef struct git_http_client git_http_client;
 /** Method for the HTTP request */
 typedef enum {
 	GIT_HTTP_METHOD_GET,
-	GIT_HTTP_METHOD_POST
+	GIT_HTTP_METHOD_POST,
+	GIT_HTTP_METHOD_CONNECT
 } git_http_method;
 
 /** An HTTP request */
