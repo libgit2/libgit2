@@ -28,6 +28,8 @@ typedef struct {
 	/* Headers */
 	const char *accept;           /**< Contents of the Accept header */
 	const char *content_type;     /**< Content-Type header (for POST) */
+	git_cred *credentials;        /**< Credentials to authenticate with */
+	git_cred *proxy_credentials;  /**< Credentials for proxy */
 	git_strarray *custom_headers; /**< Additional headers to deliver */
 
 	/* To POST a payload, either set content_length OR set chunked. */
@@ -43,6 +45,15 @@ typedef struct {
 	char *content_type;
 	size_t content_length;
 	char *location;
+
+	/* Authentication headers */
+	unsigned server_auth_schemetypes; /**< Schemes requested by remote */
+	unsigned server_auth_credtypes;   /**< Supported cred types for remote */
+
+	unsigned proxy_auth_schemetypes;  /**< Schemes requested by proxy */
+	unsigned proxy_auth_credtypes;    /**< Supported cred types for proxy */
+
+	unsigned resend_credentials : 1;  /**< Resend with authentication */
 } git_http_response;
 
 typedef struct {
@@ -119,6 +130,15 @@ extern int git_http_client_read_body(
 	git_http_client *client,
 	char *buffer,
 	size_t buffer_size);
+
+/**
+ * Reads all of the (remainder of the) body of the response and ignores it.
+ * None of the data from the body will be returned to the caller.
+ *
+ * @param client the client to read the response from
+ * @return 0 or an error code
+ */
+extern int git_http_client_skip_body(git_http_client *client);
 
 /**
  * Examines the status code of the response to determine if it is a
