@@ -145,7 +145,7 @@ void test_pack_packbuilder__get_hash(void)
 
 	seed_packbuilder();
 
-	git_packbuilder_write(_packbuilder, ".", 0, NULL, NULL);
+	cl_git_pass(git_packbuilder_write(_packbuilder, ".", 0, NULL, NULL));
 	git_oid_fmt(hex, git_packbuilder_hash(_packbuilder));
 
 	cl_assert_equal_s(hex, "7f5fa362c664d68ba7221259be1cbd187434b2f0");
@@ -158,7 +158,7 @@ static void test_write_pack_permission(mode_t given, mode_t expected)
 
 	seed_packbuilder();
 
-	git_packbuilder_write(_packbuilder, ".", given, NULL, NULL);
+	cl_git_pass(git_packbuilder_write(_packbuilder, ".", given, NULL, NULL));
 
 	/* Windows does not return group/user bits from stat,
 	* files are never executable.
@@ -197,7 +197,7 @@ void test_pack_packbuilder__permissions_readwrite(void)
 void test_pack_packbuilder__does_not_fsync_by_default(void)
 {
 	seed_packbuilder();
-	git_packbuilder_write(_packbuilder, ".", 0666, NULL, NULL);
+	cl_git_pass(git_packbuilder_write(_packbuilder, ".", 0666, NULL, NULL));
 	cl_assert_equal_sz(0, p_fsync__cnt);
 }
 
@@ -215,7 +215,7 @@ void test_pack_packbuilder__fsync_global_setting(void)
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_FSYNC_GITDIR, 1));
 	p_fsync__cnt = 0;
 	seed_packbuilder();
-	git_packbuilder_write(_packbuilder, ".", 0666, NULL, NULL);
+	cl_git_pass(git_packbuilder_write(_packbuilder, ".", 0666, NULL, NULL));
 	cl_assert_equal_sz(expected_fsyncs, p_fsync__cnt);
 }
 
@@ -224,7 +224,7 @@ void test_pack_packbuilder__fsync_repo_setting(void)
 	cl_repo_set_bool(_repo, "core.fsyncObjectFiles", true);
 	p_fsync__cnt = 0;
 	seed_packbuilder();
-	git_packbuilder_write(_packbuilder, ".", 0666, NULL, NULL);
+	cl_git_pass(git_packbuilder_write(_packbuilder, ".", 0666, NULL, NULL));
 	cl_assert_equal_sz(expected_fsyncs, p_fsync__cnt);
 }
 
