@@ -2170,7 +2170,7 @@ static int lookup_default_remote(git_remote **remote, git_repository *repo)
 	int error = lookup_head_remote(remote, repo);
 
 	/* if that failed, use 'origin' instead */
-	if (error == GIT_ENOTFOUND)
+	if (error == GIT_ENOTFOUND || error == GIT_EUNBORNBRANCH)
 		error = git_remote_lookup(remote, repo, "origin");
 
 	if (error == GIT_ENOTFOUND)
