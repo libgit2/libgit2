@@ -163,6 +163,9 @@ static int on_header_complete(http_parser *parser)
 		}
 
 		response->content_length = (size_t)len;
+	} else if (!strcasecmp("Transfer-Encoding", name->ptr) &&
+	           !strcasecmp("chunked", value->ptr)) {
+			ctx->response->chunked = 1;
 	} else if (!strcasecmp("Proxy-Authenticate", git_buf_cstr(name))) {
 		char *dup = git__strndup(value->ptr, value->size);
 		GIT_ERROR_CHECK_ALLOC(dup);
@@ -351,7 +354,11 @@ static int on_headers_complete(http_parser *parser)
 	/* Stop parsing. */
 	http_parser_pause(parser, 1);
 
-	ctx->client->state = READING_BODY;
+	if (ctx->response->content_type || ctx->response->chunked)
+		ctx->client->state = READING_BODY;
+	else
+		ctx->client->state = DONE;
+
 	return 0;
 }
 
@@ -1003,11 +1010,11 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 /*
  * See if we've consumed the entire response body.  If the client was
  * reading the body but did not consume it entirely, it's possible that
- * they knew that the stream had finished (in a git response, seeing a final
- * flush) and stopped reading.  But if the response was chunked, we may have
- * not consumed the final chunk marker.  Consume it to ensure that we don't
- * have it waiting in our socket.  If there's more than just a chunk marker,
- * close the connection.
+ * they knew that the stream had finished (in a git response, seeing a
+ * final flush) and stopped reading.  But if the response was chunked,
+ * we may have not consumed the final chunk marker.  Consume it to
+ * ensure that we don't have it waiting in our socket.  If there's
+ * more than just a chunk marker, close the connection.
  */
 static void complete_response_body(git_http_client *client)
 {

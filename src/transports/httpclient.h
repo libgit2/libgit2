@@ -53,7 +53,8 @@ typedef struct {
 	unsigned proxy_auth_schemetypes;  /**< Schemes requested by proxy */
 	unsigned proxy_auth_credtypes;    /**< Supported cred types for proxy */
 
-	unsigned resend_credentials : 1;  /**< Resend with authentication */
+	unsigned chunked : 1,             /**< Response body is chunked */
+	         resend_credentials : 1;  /**< Resend with authentication */
 } git_http_response;
 
 typedef struct {
