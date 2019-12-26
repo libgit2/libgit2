@@ -432,6 +432,56 @@ done:
 	return error;
 }
 
+static bool needs_probe(http_stream *stream)
+{
+	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+
+	return (transport->server.auth_schemetypes == GIT_HTTP_AUTH_NTLM ||
+	        transport->server.auth_schemetypes == GIT_HTTP_AUTH_NEGOTIATE);
+}
+
+static int send_probe(http_stream *stream)
+{
+	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+	git_http_client *client = transport->http_client;
+	const char *probe = "0000";
+	size_t len = 4;
+	git_net_url url = GIT_NET_URL_INIT;
+	git_http_request request = {0};
+	git_http_response response = {0};
+	bool complete = false;
+	size_t step, steps = 1;
+	int error;
+
+	/* NTLM requires a full challenge/response */
+	if (transport->server.auth_schemetypes == GIT_HTTP_AUTH_NTLM)
+		steps = GIT_AUTH_STEPS_NTLM;
+
+	/*
+	 * Send at most two requests: one without any authentication to see
+	 * if we get prompted to authenticate.  If we do, send a second one
+	 * with the first authentication message.  The final authentication
+	 * message with the response will occur with the *actual* POST data.
+	 */
+	for (step = 0; step < steps && !complete; step++) {
+		git_net_url_dispose(&url);
+		git_http_response_dispose(&response);
+
+		if ((error = generate_request(&url, &request, stream, len)) < 0 ||
+		    (error = git_http_client_send_request(client, &request)) < 0 ||
+		    (error = git_http_client_send_body(client, probe, len)) < 0 ||
+		    (error = git_http_client_read_response(&response, client)) < 0 ||
+		    (error = git_http_client_skip_body(client)) < 0 ||
+		    (error = handle_response(&complete, stream, &response, true)) < 0)
+			goto done;
+	}
+
+done:
+	git_http_response_dispose(&response);
+	git_net_url_dispose(&url);
+	return error;
+}
+
 /*
 * Write to an HTTP transport - for the first invocation of this function
 * (ie, when stream->state == HTTP_STATE_NONE), we'll send a POST request
@@ -458,6 +508,20 @@ static int http_stream_write(
 		git_net_url_dispose(&url);
 		git_http_response_dispose(&response);
 
+		/*
+		 * If we're authenticating with a connection-based mechanism
+		 * (NTLM, Kerberos), send a "probe" packet.  Servers SHOULD
+		 * authenticate an entire keep-alive connection, so ideally
+		 * we should not need to authenticate but some servers do
+		 * not support this.  By sending a probe packet, we'll be
+		 * able to follow up with a second POST using the actual
+		 * data (and, in the degenerate case, the authentication
+		 * header as well).
+		 */
+		if (needs_probe(stream) && (error = send_probe(stream)) < 0)
+			goto done;
+
+		/* Send the regular POST request. */
 		if ((error = generate_request(&url, &request, stream, len)) < 0 ||
 		    (error = git_http_client_send_request(
 			transport->http_client, &request)) < 0)
@@ -511,6 +575,7 @@ static int http_stream_read_response(
 {
 	http_stream *stream = (http_stream *)s;
 	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+	git_http_client *client = transport->http_client;
 	git_http_response response = {0};
 	bool complete;
 	int error;
@@ -518,7 +583,7 @@ static int http_stream_read_response(
 	*out_len = 0;
 
 	if (stream->state == HTTP_STATE_SENDING_REQUEST) {
-		if ((error = git_http_client_read_response(&response, transport->http_client)) < 0 ||
+		if ((error = git_http_client_read_response(&response, client)) < 0 ||
 		    (error = handle_response(&complete, stream, &response, false)) < 0)
 		    goto done;
 
@@ -526,7 +591,7 @@ static int http_stream_read_response(
 		stream->state = HTTP_STATE_RECEIVING_RESPONSE;
 	}
 
-	error = git_http_client_read_body(transport->http_client, buffer, buffer_size);
+	error = git_http_client_read_body(client, buffer, buffer_size);
 
 	if (error > 0) {
 		*out_len = error;

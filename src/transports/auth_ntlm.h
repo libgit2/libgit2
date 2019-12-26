@@ -11,6 +11,9 @@
 #include "git2.h"
 #include "auth.h"
 
+/* NTLM requires a full request/challenge/response */
+#define GIT_AUTH_STEPS_NTLM 2
+
 #ifdef GIT_NTLM
 
 #if defined(GIT_OPENSSL)
