@@ -405,6 +405,7 @@ void git_net_url_dispose(git_net_url *url)
 	git__free(url->host); url->host = NULL;
 	git__free(url->port); url->port = NULL;
 	git__free(url->path); url->path = NULL;
+	git__free(url->query); url->query = NULL;
 	git__free(url->username); url->username = NULL;
 	git__free(url->password); url->password = NULL;
 }
