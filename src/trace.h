@@ -56,7 +56,7 @@ GIT_INLINE(void) git_trace__null(
 	GIT_UNUSED(fmt);
 }
 
-#define git_trace_level()		((void)0)
+#define git_trace_level()		((git_trace_level_t)0)
 #define git_trace			git_trace__null
 
 #endif
