@@ -56,7 +56,12 @@ void test_win32_longpath__errmsg_on_checkout(void)
 #ifdef GIT_WIN32
 	git_repository *repo;
 
+#if WIN_GIT_PATH_MAX <= MAX_PATH
 	cl_git_fail(git_clone(&repo, cl_fixture("testrepo.git"), path.ptr, NULL));
 	assert_name_too_long();
+#else
+	cl_git_pass(git_clone(&repo, cl_fixture("testrepo.git"), path.ptr, NULL));
+#endif
+
 #endif
 }
