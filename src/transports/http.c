@@ -243,22 +243,23 @@ static int handle_response(
 	/* If we're in the middle of challenge/response auth, continue. */
 	if (allow_replay && response->resend_credentials) {
 		return 0;
-	} else if (allow_replay && response->status == 401) {
+	} else if (allow_replay && response->status == GIT_HTTP_STATUS_UNAUTHORIZED) {
 		if ((error = handle_remote_auth(stream, response)) < 0)
 			return error;
 
 		return git_http_client_skip_body(transport->http_client);
-	} else if (allow_replay && response->status == 407) {
+	} else if (allow_replay && response->status == GIT_HTTP_STATUS_PROXY_AUTHENTICATION_REQUIRED) {
 		if ((error = handle_proxy_auth(stream, response)) < 0)
 			return error;
 
 		return git_http_client_skip_body(transport->http_client);
-	} else if (response->status == 401 || response->status == 407) {
+	} else if (response->status == GIT_HTTP_STATUS_UNAUTHORIZED ||
+	           response->status == GIT_HTTP_STATUS_PROXY_AUTHENTICATION_REQUIRED) {
 		git_error_set(GIT_ERROR_NET, "unexpected authentication failure");
 		return -1;
 	}
 
-	if (response->status != 200) {
+	if (response->status != GIT_HTTP_STATUS_OK) {
 		git_error_set(GIT_ERROR_NET, "unexpected http status code: %d", response->status);
 		return -1;
 	}

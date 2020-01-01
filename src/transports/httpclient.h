@@ -11,6 +11,16 @@
 #include "common.h"
 #include "net.h"
 
+#define GIT_HTTP_STATUS_CONTINUE                      100
+#define GIT_HTTP_STATUS_OK                            200
+#define GIT_HTTP_MOVED_PERMANENTLY                    301
+#define GIT_HTTP_FOUND                                302
+#define GIT_HTTP_SEE_OTHER                            303
+#define GIT_HTTP_TEMPORARY_REDIRECT                   307
+#define GIT_HTTP_PERMANENT_REDIRECT                   308
+#define GIT_HTTP_STATUS_UNAUTHORIZED                  401
+#define GIT_HTTP_STATUS_PROXY_AUTHENTICATION_REQUIRED 407
+
 typedef struct git_http_client git_http_client;
 
 /** Method for the HTTP request */

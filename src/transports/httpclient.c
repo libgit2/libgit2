@@ -126,11 +126,11 @@ struct git_http_client {
 
 bool git_http_response_is_redirect(git_http_response *response)
 {
-	return (response->status == 301 ||
-	        response->status == 302 ||
-	        response->status == 303 ||
-		response->status == 307 ||
-		response->status == 308);
+	return (response->status == GIT_HTTP_MOVED_PERMANENTLY ||
+	        response->status == GIT_HTTP_FOUND ||
+	        response->status == GIT_HTTP_SEE_OTHER ||
+		response->status == GIT_HTTP_TEMPORARY_REDIRECT ||
+		response->status == GIT_HTTP_PERMANENT_REDIRECT);
 }
 
 void git_http_response_dispose(git_http_response *response)
@@ -316,13 +316,13 @@ static int resend_needed(git_http_client *client, git_http_response *response)
 {
 	git_http_auth_context *auth_context;
 
-	if (response->status == 401 &&
+	if (response->status == GIT_HTTP_STATUS_UNAUTHORIZED &&
 	    (auth_context = client->server.auth_context) &&
 	    auth_context->is_complete &&
 	    !auth_context->is_complete(auth_context))
 		return 1;
 
-	if (response->status == 407 &&
+	if (response->status == GIT_HTTP_STATUS_PROXY_AUTHENTICATION_REQUIRED &&
 	    (auth_context = client->proxy.auth_context) &&
 	    auth_context->is_complete &&
 	    !auth_context->is_complete(auth_context))
@@ -914,12 +914,12 @@ static int proxy_connect(
 
 	assert(client->state == DONE);
 
-	if (response.status == 407) {
+	if (response.status == GIT_HTTP_STATUS_PROXY_AUTHENTICATION_REQUIRED) {
 		save_early_response(client, &response);
 
 		error = GIT_RETRY;
 		goto done;
-	} else if (response.status != 200) {
+	} else if (response.status != GIT_HTTP_STATUS_OK) {
 		git_error_set(GIT_ERROR_NET, "proxy returned unexpected status: %d", response.status);
 		error = -1;
 		goto done;
@@ -1236,7 +1236,7 @@ int git_http_client_send_request(
 
 		error = 0;
 
-		if (response.status != 100) {
+		if (response.status != GIT_HTTP_STATUS_CONTINUE) {
 			save_early_response(client, &response);
 			goto done;
 		}
