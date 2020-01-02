@@ -211,7 +211,7 @@ GIT_EXTERN(int) git_branch_upstream(
 /**
  * Set a branch's upstream branch
  *
- * This will update the configuration to set the branch named `name` as the upstream of `branch`.
+ * This will update the configuration to set the branch named `branch_name` as the upstream of `branch`.
  * Pass a NULL name to unset the upstream information.
  *
  * @note the actual tracking reference must have been already created for the
