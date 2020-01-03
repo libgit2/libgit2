@@ -18,6 +18,9 @@
 #include <sys/stat.h>
 
 #ifdef _WIN32
+#	/* included for fs.h */
+#	include "win32/path_w32.h"
+
 #	include <windows.h>
 #	include <io.h>
 #	include <shellapi.h>
