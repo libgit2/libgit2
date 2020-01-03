@@ -92,5 +92,7 @@ void test_win32_longpath__longest_path(void)
 	generate_long_path(&path, WIN_GIT_PATH_MAX - 66); /* account for length of pack file path */
 
 	cl_git_pass(git_clone(&repo, cl_fixture("testrepo.git"), path.ptr, NULL));
+
+	git_repository_free(repo);
 #endif
 }
