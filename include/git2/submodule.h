@@ -37,13 +37,13 @@ GIT_BEGIN_DECL
  * the flags may never be returned because they indicate changes that are
  * supposed to be ignored.
  *
- * Submodule info is contained in 4 places: the HEAD tree, the index, config
- * files (both .git/config and .gitmodules), and the working directory.  Any
+ * Submodule info is contained in 5 places: the HEAD tree, the index,
+ * .gitmodules, .git/config, and the working directory.  Any
  * or all of those places might be missing information about the submodule
- * depending on what state the repo is in.  We consider all four places to
+ * depending on what state the repo is in.  We consider all five places to
  * build the combination of status flags.
  *
- * There are four values that are not really status, but give basic info
+ * There are five values that are not really status, but give basic info
  * about what sources of submodule data are available.  These will be
  * returned even if ignore is set to "ALL".
  *
@@ -51,6 +51,7 @@ GIT_BEGIN_DECL
  * * IN_INDEX  - superproject index contains submodule
  * * IN_CONFIG - superproject gitmodules has submodule
  * * IN_WD     - superproject workdir has submodule
+ * * IN_GITCONFIG - superproject .git/config has submodule
  *
  * The following values will be returned so long as ignore is not "ALL".
  *
@@ -76,6 +77,7 @@ typedef enum {
 	GIT_SUBMODULE_STATUS_IN_INDEX          = (1u << 1),
 	GIT_SUBMODULE_STATUS_IN_CONFIG         = (1u << 2),
 	GIT_SUBMODULE_STATUS_IN_WD             = (1u << 3),
+	GIT_SUBMODULE_STATUS_IN_GITCONFIG      = (1u << 14),
 	GIT_SUBMODULE_STATUS_INDEX_ADDED       = (1u << 4),
 	GIT_SUBMODULE_STATUS_INDEX_DELETED     = (1u << 5),
 	GIT_SUBMODULE_STATUS_INDEX_MODIFIED    = (1u << 6),
@@ -86,9 +88,10 @@ typedef enum {
 	GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED = (1u << 11),
 	GIT_SUBMODULE_STATUS_WD_WD_MODIFIED    = (1u << 12),
 	GIT_SUBMODULE_STATUS_WD_UNTRACKED      = (1u << 13),
+	/* GIT_SUBMODULE_STATUS_IN_GITCONFIG      = (1u << 14), see above */
 } git_submodule_status_t;
 
-#define GIT_SUBMODULE_STATUS__IN_FLAGS		0x000Fu
+#define GIT_SUBMODULE_STATUS__IN_FLAGS		0x400Fu
 #define GIT_SUBMODULE_STATUS__INDEX_FLAGS	0x0070u
 #define GIT_SUBMODULE_STATUS__WD_FLAGS		0x3F80u
 

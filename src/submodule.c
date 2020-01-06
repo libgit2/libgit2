@@ -65,6 +65,7 @@ static int submodule_alloc(git_submodule **out, git_repository *repo, const char
 static git_config_backend *open_gitmodules(git_repository *repo, int gitmod);
 static int gitmodules_snapshot(git_config **snap, git_repository *repo);
 static int get_url_base(git_buf *url, git_repository *repo);
+static int get_value(const char **out, git_config *cfg, git_buf *buf, const char *name, const char *field);
 static int lookup_head_remote_key(git_buf *remote_key, git_repository *repo);
 static int lookup_default_remote(git_remote **remote, git_repository *repo);
 static int submodule_load_each(const git_config_entry *entry, void *payload);
@@ -289,7 +290,7 @@ int git_submodule_lookup(
 	}
 
 	/* If it's not configured or we're looking by path  */
-	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
+	if (location == 0 || (location & ~GIT_SUBMODULE_STATUS_IN_GITCONFIG) == GIT_SUBMODULE_STATUS_IN_WD) {
 		git_config_backend *mods;
 		const char *pattern = "submodule\\..*\\.path";
 		git_buf path = GIT_BUF_INIT;
@@ -335,7 +336,7 @@ int git_submodule_lookup(
 	}
 
 	/* If we still haven't found it, do the WD check */
-	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
+	if (location == 0 || (location & ~GIT_SUBMODULE_STATUS_IN_GITCONFIG) == GIT_SUBMODULE_STATUS_IN_WD) {
 		git_submodule_free(sm);
 		error = GIT_ENOTFOUND;
 
@@ -1604,32 +1605,64 @@ static int submodule_update_head(git_submodule *submodule)
 	return 0;
 }
 
+int submodule_update_gitconfig(git_submodule *sm)
+{
+	git_buf buf = GIT_BUF_INIT;
+	git_config *cfg = NULL;
+	const char *value;
+	int error;
+
+	sm->flags &= ~GIT_SUBMODULE_STATUS_IN_GITCONFIG;
+
+	if ((error = git_repository_config_snapshot(&cfg, sm->repo)) < 0)
+		goto out;
+
+	if ((error = get_value(&value, cfg, &buf, sm->name, "url")) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			git_error_clear();
+			error = 0;
+		}
+		goto out;
+	}
+
+	sm->flags |= GIT_SUBMODULE_STATUS_IN_GITCONFIG;
+
+out:
+	git_config_free(cfg);
+	git_buf_dispose(&buf);
+	return error;
+}
+
 int git_submodule_reload(git_submodule *sm, int force)
 {
-	int error = 0, isvalid;
-	git_config *mods;
+	git_config *mods = NULL;
+	int error;
 
 	GIT_UNUSED(force);
 
 	assert(sm);
 
-	isvalid = git_submodule_name_is_valid(sm->repo, sm->name, 0);
-	if (isvalid <= 0) {
-		/* This should come with a warning, but we've no API for that */
-		return isvalid;
-	}
+	/*
+	 * Check if the submodule name is valid. Note that it is
+	 * intended that we return `GIT_NOERROR` in case the
+	 * submodule name is invalid. As stated in 6b15ceac0
+	 * (submodule: ignore submodules which include path
+	 * traversal in their name, 2018-04-30):
+	 *
+	 *    This leaves us with a half-configured submodule when looking it up by path, but
+	 *    it's the same result as if the configuration really were missing.
+	 *
+	 * This should come with a warning, but we've no API for that yet.
+	 */
+	if ((error = git_submodule_name_is_valid(sm->repo, sm->name, 0)) <= 0)
+		goto out;
 
 	if (!git_repository_is_bare(sm->repo)) {
-		/* refresh config data */
+		/* refresh gitmodules data */
 		if ((error = gitmodules_snapshot(&mods, sm->repo)) < 0 && error != GIT_ENOTFOUND)
-			return error;
-		if (mods != NULL) {
-			error = submodule_read_config(sm, mods);
-			git_config_free(mods);
-
-			if (error < 0)
-				return error;
-		}
+			goto out;
+		if (mods != NULL && (error = submodule_read_config(sm, mods)) < 0)
+			goto out;
 
 		/* refresh wd data */
 		sm->flags &=
@@ -1637,12 +1670,19 @@ int git_submodule_reload(git_submodule *sm, int force)
 			  GIT_SUBMODULE_STATUS__WD_OID_VALID |
 			  GIT_SUBMODULE_STATUS__WD_FLAGS);
 
-		error = submodule_load_from_wd_lite(sm);
+		if ((error = submodule_load_from_wd_lite(sm)) < 0)
+			goto out;
 	}
 
-	if (error == 0 && (error = submodule_update_index(sm)) == 0)
-		error = submodule_update_head(sm);
+	if ((error = submodule_update_gitconfig(sm)) < 0)
+		goto out;
+	if ((error = submodule_update_index(sm)) < 0)
+		goto out;
+	if ((error = submodule_update_head(sm)) < 0)
+		goto out;
 
+out:
+	git_config_free(mods);
 	return error;
 }
 

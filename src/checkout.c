@@ -460,7 +460,7 @@ static bool submodule_is_config_only(
 		return true;
 
 	if (git_submodule_location(&sm_loc, sm) < 0 ||
-		sm_loc == GIT_SUBMODULE_STATUS_IN_CONFIG)
+		(sm_loc & ~GIT_SUBMODULE_STATUS_IN_GITCONFIG) == GIT_SUBMODULE_STATUS_IN_CONFIG)
 		rval = true;
 
 	git_submodule_free(sm);

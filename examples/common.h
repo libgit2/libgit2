@@ -77,6 +77,7 @@ extern int lg2_rev_parse(git_repository *repo, int argc, char **argv);
 extern int lg2_show_index(git_repository *repo, int argc, char **argv);
 extern int lg2_stash(git_repository *repo, int argc, char **argv);
 extern int lg2_status(git_repository *repo, int argc, char **argv);
+extern int lg2_submodule(git_repository *repo, int argc, char **argv);
 extern int lg2_tag(git_repository *repo, int argc, char **argv);
 
 /**
