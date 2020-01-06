@@ -183,7 +183,11 @@ static int gen_request(
 {
 	http_subtransport *t = OWNING_SUBTRANSPORT(s);
 	const char *path = t->server.url.path ? t->server.url.path : "/";
+	const char *service_url = s->service_url;
 	size_t i;
+	/* If path already ends in /, remove the leading slash from service_url */
+	if ((git__suffixcmp(path, "/") == 0) && (git__prefixcmp(service_url, "/") == 0))
+		service_url++;
 
 	if (t->proxy_opts.type == GIT_PROXY_SPECIFIED)
 		git_buf_printf(buf, "%s %s://%s:%s%s%s HTTP/1.1\r\n",
@@ -191,10 +195,10 @@ static int gen_request(
 			t->server.url.scheme,
 			t->server.url.host,
 			t->server.url.port,
-			path, s->service_url);
+			path, service_url);
 	else
 		git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n",
-			s->verb, path, s->service_url);
+			s->verb, path, service_url);
 
 	git_buf_puts(buf, "User-Agent: ");
 	git_http__user_agent(buf);
