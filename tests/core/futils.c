@@ -87,3 +87,29 @@ void test_core_futils__recursive_rmdir_keeps_symlink_targets(void)
 	cl_must_pass(p_rmdir("dir-target"));
 	cl_must_pass(p_unlink("file-target"));
 }
+
+void test_core_futils__mktmp_umask(void)
+{
+#ifdef GIT_WIN32
+	cl_skip();
+#else
+	git_buf path = GIT_BUF_INIT;
+	struct stat st;
+	int fd;
+
+	umask(0);
+	cl_assert((fd = git_futils_mktmp(&path, "foo", 0777)) >= 0);
+	cl_must_pass(p_fstat(fd, &st));
+	cl_assert_equal_i(st.st_mode & 0777, 0777);
+	cl_must_pass(p_unlink(path.ptr));
+	close(fd);
+
+	umask(077);
+	cl_assert((fd = git_futils_mktmp(&path, "foo", 0777)) >= 0);
+	cl_must_pass(p_fstat(fd, &st));
+	cl_assert_equal_i(st.st_mode & 0777, 0700);
+	cl_must_pass(p_unlink(path.ptr));
+	close(fd);
+	git_buf_dispose(&path);
+#endif
+}

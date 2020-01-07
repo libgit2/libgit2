@@ -22,6 +22,12 @@ char git_buf__oom[1];
 	    ((d) > (b)->asize && git_buf_grow((b), (d)) < 0))\
 		return -1;
 
+int git_buffer_global_init(void)
+{
+	/* Seed rand for git_buf_put_rand. */
+	srand((unsigned int)time(NULL));
+	return 0;
+}
 
 int git_buf_init(git_buf *buf, size_t initial_size)
 {
@@ -239,6 +245,20 @@ int git_buf_puts(git_buf *buf, const char *string)
 {
 	assert(string);
 	return git_buf_put(buf, string, strlen(string));
+}
+
+static const char rand_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+int git_buf_put_rand(git_buf *buf, size_t chars)
+{
+	size_t i;
+
+	for (i = 0; i < chars; ++i) {
+		if (git_buf_putc(buf, rand_chars[rand() % strlen(rand_chars)]) == -1)
+			return -1;
+	}
+
+	return 0;
 }
 
 static const char base64_encode[] =

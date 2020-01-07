@@ -30,6 +30,7 @@ typedef int (*git_global_init_fn)(void);
 
 static git_global_init_fn git__init_callbacks[] = {
 	git_allocator_global_init,
+	git_buffer_global_init,
 	git_hash_global_init,
 	git_sysdir_global_init,
 	git_filter_global_init,

@@ -20,6 +20,8 @@
 extern char git_buf__initbuf[];
 extern char git_buf__oom[];
 
+int git_buffer_global_init(void);
+
 /* Use to initialize buffer structure when git_buf is on stack */
 #define GIT_BUF_INIT { git_buf__initbuf, 0, 0 }
 
@@ -112,6 +114,15 @@ int git_buf_put(git_buf *buf, const char *data, size_t len);
 int git_buf_puts(git_buf *buf, const char *string);
 int git_buf_printf(git_buf *buf, const char *format, ...) GIT_FORMAT_PRINTF(2, 3);
 int git_buf_vprintf(git_buf *buf, const char *format, va_list ap);
+
+/**
+ * Append random characters to this git_buf.
+ *
+ * The entropy source for this is *not* cryptographically secure: do not use it
+ * for applications which require a CSPRNG.
+ */
+int git_buf_put_rand(git_buf *buf, size_t chars);
+
 void git_buf_clear(git_buf *buf);
 void git_buf_consume(git_buf *buf, const char *end);
 void git_buf_truncate(git_buf *buf, size_t len);
