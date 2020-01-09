@@ -18,6 +18,13 @@ int main(int argc, char *argv[])
 		return res;
 	}
 
+#if defined(GIT_WIN32) && defined(GIT_TEST_LONGPATHS)
+	if ((res = git_libgit2_opts(GIT_OPT_SET_WINDOWS_LONGPATHS, 1)) < 0) {
+		fprintf(stderr, "failed to set GIT_OPT_SET_WINDOWS_LONGPATHS");
+		return res;
+	}
+#endif
+
 	cl_global_trace_register();
 	cl_sandbox_set_search_path_defaults();
 
