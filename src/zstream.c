@@ -77,6 +77,11 @@ bool git_zstream_done(git_zstream *zstream)
 	return (!zstream->in_len && zstream->zerr == Z_STREAM_END);
 }
 
+bool git_zstream_eos(git_zstream *zstream)
+{
+	return zstream->zerr == Z_STREAM_END;
+}
+
 size_t git_zstream_suggest_output_len(git_zstream *zstream)
 {
 	if (zstream->in_len > ZSTREAM_BUFFER_SIZE)

@@ -7,14 +7,12 @@
 
 #include "pack.h"
 
-#include "odb.h"
 #include "delta.h"
-#include "sha1_lookup.h"
-#include "mwindow.h"
 #include "futils.h"
+#include "mwindow.h"
+#include "odb.h"
 #include "oid.h"
-
-#include <zlib.h>
+#include "sha1_lookup.h"
 
 /* Option to bypass checking existence of '.keep' files */
 bool git_disable_pack_keep_file_checks = false;
@@ -765,31 +763,13 @@ cleanup:
 	return error;
 }
 
-static void *use_git_alloc(void *opaq, unsigned int count, unsigned int size)
-{
-	GIT_UNUSED(opaq);
-	return git__calloc(count, size);
-}
-
-static void use_git_free(void *opaq, void *ptr)
-{
-	GIT_UNUSED(opaq);
-	git__free(ptr);
-}
-
 int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, off64_t curpos)
 {
-	int st;
-
 	memset(obj, 0, sizeof(git_packfile_stream));
 	obj->curpos = curpos;
 	obj->p = p;
-	obj->zstream.zalloc = use_git_alloc;
-	obj->zstream.zfree = use_git_free;
-	obj->zstream.next_in = Z_NULL;
-	obj->zstream.next_out = Z_NULL;
-	st = inflateInit(&obj->zstream);
-	if (st != Z_OK) {
+
+	if (git_zstream_init(&obj->zstream, GIT_ZSTREAM_INFLATE) < 0) {
 		git_error_set(GIT_ERROR_ZLIB, "failed to init packfile stream");
 		return -1;
 	}
@@ -799,110 +779,100 @@ int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, 
 
 ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t len)
 {
+	unsigned int window_len;
 	unsigned char *in;
-	size_t written;
-	int st;
+	int error;
 
 	if (obj->done)
 		return 0;
 
-	in = pack_window_open(obj->p, &obj->mw, obj->curpos, &obj->zstream.avail_in);
-	if (in == NULL)
+	if ((in = pack_window_open(obj->p, &obj->mw, obj->curpos, &window_len)) == NULL)
 		return GIT_EBUFS;
 
-	obj->zstream.next_out = buffer;
-	obj->zstream.avail_out = (unsigned int)len;
-	obj->zstream.next_in = in;
-
-	st = inflate(&obj->zstream, Z_SYNC_FLUSH);
-	git_mwindow_close(&obj->mw);
-
-	obj->curpos += obj->zstream.next_in - in;
-	written = len - obj->zstream.avail_out;
-
-	if (st != Z_OK && st != Z_STREAM_END) {
+	if ((error = git_zstream_set_input(&obj->zstream, in, window_len)) < 0 ||
+	    (error = git_zstream_get_output_chunk(buffer, &len, &obj->zstream)) < 0) {
+		git_mwindow_close(&obj->mw);
 		git_error_set(GIT_ERROR_ZLIB, "error reading from the zlib stream");
 		return -1;
 	}
 
-	if (st == Z_STREAM_END)
+	git_mwindow_close(&obj->mw);
+
+	obj->curpos += window_len - obj->zstream.in_len;
+
+	if (git_zstream_eos(&obj->zstream))
 		obj->done = 1;
 
-
 	/* If we didn't write anything out but we're not done, we need more data */
-	if (!written && st != Z_STREAM_END)
+	if (!len && !git_zstream_eos(&obj->zstream))
 		return GIT_EBUFS;
 
-	return written;
+	return len;
 
 }
 
 void git_packfile_stream_dispose(git_packfile_stream *obj)
 {
-	inflateEnd(&obj->zstream);
+	git_zstream_free(&obj->zstream);
 }
 
 static int packfile_unpack_compressed(
 	git_rawobj *obj,
 	struct git_pack_file *p,
-	git_mwindow **w_curs,
-	off64_t *curpos,
+	git_mwindow **mwindow,
+	off64_t *position,
 	size_t size,
 	git_object_t type)
 {
-	size_t buf_size;
-	int st;
-	z_stream stream;
-	unsigned char *buffer, *in;
+	git_zstream zstream = GIT_ZSTREAM_INIT;
+	size_t buffer_len, total = 0;
+	char *data = NULL;
+	int error;
 
-	GIT_ERROR_CHECK_ALLOC_ADD(&buf_size, size, 1);
-	buffer = git__calloc(1, buf_size);
-	GIT_ERROR_CHECK_ALLOC(buffer);
+	GIT_ERROR_CHECK_ALLOC_ADD(&buffer_len, size, 1);
+	data = git__calloc(1, buffer_len);
+	GIT_ERROR_CHECK_ALLOC(data);
 
-	memset(&stream, 0, sizeof(stream));
-	stream.next_out = buffer;
-	stream.avail_out = (uInt)buf_size;
-	stream.zalloc = use_git_alloc;
-	stream.zfree = use_git_free;
-
-	st = inflateInit(&stream);
-	if (st != Z_OK) {
-		git__free(buffer);
+	if ((error = git_zstream_init(&zstream, GIT_ZSTREAM_INFLATE)) < 0) {
 		git_error_set(GIT_ERROR_ZLIB, "failed to init zlib stream on unpack");
-
-		return -1;
+		goto out;
 	}
 
 	do {
-		in = pack_window_open(p, w_curs, *curpos, &stream.avail_in);
-		stream.next_in = in;
-		st = inflate(&stream, Z_FINISH);
-		git_mwindow_close(w_curs);
+		size_t bytes = buffer_len - total;
+		unsigned int window_len;
+		unsigned char *in;
 
-		if (!stream.avail_out)
-			break; /* the payload is larger than it should be */
+		in = pack_window_open(p, mwindow, *position, &window_len);
 
-		if (st == Z_BUF_ERROR && in == NULL) {
-			inflateEnd(&stream);
-			git__free(buffer);
-			return GIT_EBUFS;
+		if ((error = git_zstream_set_input(&zstream, in, window_len)) < 0 ||
+		    (error = git_zstream_get_output_chunk(data + total, &bytes, &zstream)) < 0) {
+			git_mwindow_close(mwindow);
+			goto out;
 		}
 
-		*curpos += stream.next_in - in;
-	} while (st == Z_OK || st == Z_BUF_ERROR);
+		git_mwindow_close(mwindow);
 
-	inflateEnd(&stream);
+		*position += window_len - zstream.in_len;
+		total += bytes;
+	} while (total < size);
 
-	if ((st != Z_STREAM_END) || stream.total_out != size) {
-		git__free(buffer);
+	if (total != size || !git_zstream_eos(&zstream)) {
 		git_error_set(GIT_ERROR_ZLIB, "error inflating zlib stream");
-		return -1;
+		error = -1;
+		goto out;
 	}
 
 	obj->type = type;
 	obj->len = size;
-	obj->data = buffer;
-	return 0;
+	obj->data = data;
+
+out:
+	git_zstream_free(&zstream);
+	if (error)
+		git__free(data);
+
+	return error;
 }
 
 /*

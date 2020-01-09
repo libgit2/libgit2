@@ -44,6 +44,7 @@ int git_zstream_get_output_chunk(
 int git_zstream_get_output(void *out, size_t *out_len, git_zstream *zstream);
 
 bool git_zstream_done(git_zstream *zstream);
+bool git_zstream_eos(git_zstream *zstream);
 
 void git_zstream_reset(git_zstream *zstream);
 
