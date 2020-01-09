@@ -28,6 +28,8 @@
 #define path__startswith_slash(p) \
 	((p)[0] == '\\' || (p)[0] == '/')
 
+bool git_win32_longpaths_support = false;
+
 GIT_INLINE(int) path__cwd(wchar_t *path, int size)
 {
 	int len;
@@ -86,6 +88,9 @@ int git_win32_path_canonicalize(git_win32_path path)
 {
 	wchar_t *base, *from, *to, *next;
 	size_t len;
+	size_t max_path_length = git_win32_longpaths_support
+		? GIT_WIN_PATH_UTF16
+		: GIT_WIN_SHORT_PATH_UTF16;
 
 	base = to = path__skip_prefix(path);
 
@@ -142,13 +147,17 @@ int git_win32_path_canonicalize(git_win32_path path)
 	while (to > base && to[-1] == L'\\') to--;
 
 	*to = L'\0';
-
-	if ((to - path) > INT_MAX) {
+	len = to - path;
+	if (len >= 8 && wcsncmp(L"\\\\?\\UNC\\", path, 8) != 0) {
+		/* Not a UNC path, max length shorter by 2 */
+		max_path_length -= 2;
+	}
+	if (len >= max_path_length) {
 		SetLastError(ERROR_FILENAME_EXCED_RANGE);
 		return -1;
 	}
 
-	return (int)(to - path);
+	return (int)len;
 }
 
 static int win32_path_cwd(wchar_t *out, size_t len)

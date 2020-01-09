@@ -50,6 +50,7 @@ extern size_t git_mwindow__mapped_limit;
 extern size_t git_mwindow__file_limit;
 extern size_t git_indexer__max_objects;
 extern bool git_disable_pack_keep_file_checks;
+extern bool git_win32_longpaths_support;
 
 char *git__user_agent;
 char *git__ssl_ciphers;
@@ -366,6 +367,18 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE:
 		git_http__expect_continue = (va_arg(ap, int) != 0);
+		break;
+
+	case GIT_OPT_SET_WINDOWS_LONGPATHS:
+#ifdef GIT_WIN32
+		git_win32_longpaths_support = (va_arg(ap, int) != 0);
+#endif
+		break;
+
+	case GIT_OPT_GET_WINDOWS_LONGPATHS:
+#ifdef GIT_WIN32
+		*(va_arg(ap, int *)) = git_win32_longpaths_support;
+#endif
 		break;
 
 	default:

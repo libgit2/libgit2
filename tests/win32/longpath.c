@@ -76,10 +76,17 @@ void test_win32_longpath__errmsg_on_checkout(void)
 	git_repository *repo;
 	git_buf path = GIT_BUF_INIT;
 
-	generate_long_path(&path, WIN_GIT_PATH_MAX);
-
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_WINDOWS_LONGPATHS, 0));
+	generate_long_path(&path, WIN_GIT_SHORT_PATH_MAX);
 	cl_git_fail(git_clone(&repo, cl_fixture("testrepo.git"), path.ptr, NULL));
 	assert_name_too_long();
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_WINDOWS_LONGPATHS, 1));
+	generate_long_path(&path, WIN_GIT_PATH_MAX);
+	cl_git_fail(git_clone(&repo, cl_fixture("testrepo.git"), path.ptr, NULL));
+	assert_name_too_long();
+
+	git_buf_dispose(&path);
 #endif
 }
 
@@ -89,10 +96,27 @@ void test_win32_longpath__longest_path(void)
 	git_repository *repo;
 	git_buf path = GIT_BUF_INIT;
 
-	generate_long_path(&path, WIN_GIT_PATH_MAX - 66); /* account for length of pack file path */
-
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_WINDOWS_LONGPATHS, 1));
+	/* account for length of pack file path */
+	generate_long_path(&path, WIN_GIT_PATH_MAX - 66);
 	cl_git_pass(git_clone(&repo, cl_fixture("testrepo.git"), path.ptr, NULL));
 
+	git_buf_dispose(&path);
 	git_repository_free(repo);
+#endif
+}
+
+void test_win32_longpath__opt(void)
+{
+#ifdef GIT_WIN32
+	int longpaths;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_WINDOWS_LONGPATHS, 1));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_WINDOWS_LONGPATHS, &longpaths));
+	cl_assert(longpaths == 1);
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_WINDOWS_LONGPATHS, 0));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_WINDOWS_LONGPATHS, &longpaths));
+	cl_assert(longpaths == 0);
 #endif
 }
