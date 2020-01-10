@@ -45,6 +45,7 @@
 unsigned long git_win32__createfile_sharemode =
  FILE_SHARE_READ | FILE_SHARE_WRITE;
 int git_win32__retries = 10;
+extern bool git_win32_longpaths_support;
 
 GIT_INLINE(void) set_errno(void)
 {
@@ -636,7 +637,10 @@ int p_futimes(int fd, const struct p_timeval times[2])
 int p_getcwd(char *buffer_out, size_t size)
 {
 	git_win32_path buf;
-	wchar_t *cwd = _wgetcwd(buf, GIT_WIN_PATH_UTF16);
+	int max_path_utf16_length = git_win32_longpaths_support
+		? GIT_WIN_PATH_UTF16
+		: GIT_WIN_SHORT_PATH_UTF16;
+	wchar_t *cwd = _wgetcwd(buf, max_path_utf16_length);
 
 	if (!cwd)
 		return -1;
@@ -662,6 +666,9 @@ static int getfinalpath_w(
 {
 	HANDLE hFile;
 	DWORD dwChars;
+	DWORD max_path_utf16_length = git_win32_longpaths_support
+		? GIT_WIN_PATH_UTF16
+		: GIT_WIN_SHORT_PATH_UTF16;
 
 	/* Use FILE_FLAG_BACKUP_SEMANTICS so we can open a directory. Do not
 	* specify FILE_FLAG_OPEN_REPARSE_POINT; we want to open a handle to the
@@ -673,10 +680,10 @@ static int getfinalpath_w(
 		return -1;
 
 	/* Call GetFinalPathNameByHandle */
-	dwChars = GetFinalPathNameByHandleW(hFile, dest, GIT_WIN_PATH_UTF16, FILE_NAME_NORMALIZED);
+	dwChars = GetFinalPathNameByHandleW(hFile, dest, max_path_utf16_length, FILE_NAME_NORMALIZED);
 	CloseHandle(hFile);
 
-	if (!dwChars || dwChars >= GIT_WIN_PATH_UTF16)
+	if (!dwChars || dwChars >= max_path_utf16_length)
 		return -1;
 
 	/* The path may be delivered to us with a namespace prefix; remove */
@@ -779,6 +786,9 @@ int p_rmdir(const char* path)
 char *p_realpath(const char *orig_path, char *buffer)
 {
 	git_win32_path orig_path_w, buffer_w;
+	DWORD max_path_utf16_length = git_win32_longpaths_support
+		? GIT_WIN_PATH_UTF16
+		: GIT_WIN_SHORT_PATH_UTF16;
 
 	if (git_win32_path_from_utf8(orig_path_w, orig_path) < 0)
 		return NULL;
@@ -786,7 +796,7 @@ char *p_realpath(const char *orig_path, char *buffer)
 	/* Note that if the path provided is a relative path, then the current directory
 	 * is used to resolve the path -- which is a concurrency issue because the current
 	 * directory is a process-wide variable. */
-	if (!GetFullPathNameW(orig_path_w, GIT_WIN_PATH_UTF16, buffer_w, NULL)) {
+	if (!GetFullPathNameW(orig_path_w, max_path_utf16_length, buffer_w, NULL)) {
 		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 			errno = ENAMETOOLONG;
 		else

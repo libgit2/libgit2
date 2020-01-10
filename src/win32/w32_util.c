@@ -7,6 +7,8 @@
 
 #include "w32_util.h"
 
+extern bool git_win32_longpaths_support;
+
 /**
  * Creates a FindFirstFile(Ex) filter string from a UTF-8 path.
  * The filter string enumerates all items in the directory.
@@ -19,6 +21,9 @@ bool git_win32__findfirstfile_filter(git_win32_path dest, const char *src)
 {
 	static const wchar_t suffix[] = L"\\*";
 	int len = git_win32_path_from_utf8(dest, src);
+	size_t max_path_utf16_length = git_win32_longpaths_support
+		? GIT_WIN_PATH_UTF16
+		: GIT_WIN_SHORT_PATH_UTF16;
 
 	/* Ensure the path was converted */
 	if (len < 0)
@@ -35,7 +40,7 @@ bool git_win32__findfirstfile_filter(git_win32_path dest, const char *src)
 	}
 
 	/* Ensure we have enough room to add the suffix */
-	if ((size_t)len >= GIT_WIN_PATH_UTF16 - CONST_STRLEN(suffix))
+	if ((size_t)len >= max_path_utf16_length - CONST_STRLEN(suffix))
 		return false;
 
 	wcscat(dest, suffix);

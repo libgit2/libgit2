@@ -21,6 +21,8 @@
 #include <stdio.h>
 #include <ctype.h>
 
+extern bool git_win32_longpaths_support;
+
 static int dos_drive_prefix_length(const char *path)
 {
 	int i;
@@ -1244,14 +1246,16 @@ int git_path_diriter_init(
 static int diriter_update_paths(git_path_diriter *diriter)
 {
 	size_t filename_len, path_len;
-
+	size_t max_path_utf16_length = git_win32_longpaths_support
+		? GIT_WIN_PATH_UTF16
+		: GIT_WIN_SHORT_PATH_UTF16;
 	filename_len = wcslen(diriter->current.cFileName);
 
 	if (GIT_ADD_SIZET_OVERFLOW(&path_len, diriter->parent_len, filename_len) ||
 		GIT_ADD_SIZET_OVERFLOW(&path_len, path_len, 2))
 		return -1;
 
-	if (path_len > GIT_WIN_PATH_UTF16) {
+	if (path_len > max_path_utf16_length) {
 		git_error_set(GIT_ERROR_FILESYSTEM,
 			"invalid path '%.*ls\\%ls' (path too long)",
 			diriter->parent_len, diriter->path, diriter->current.cFileName);
