@@ -162,10 +162,10 @@
 
   <span class="n">assert</span><span class="p">(</span><span class="n">commit</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">);</span>
 
-  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_reference_dwim-27" class="fnlink" href="../../#v0.27.10/group/reference/git_reference_dwim">git_reference_dwim</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">refish</span><span class="p">);</span>
+  <span class="n">err</span> <span class="o">=</span> <span class="n">git_reference_dwim</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">refish</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">==</span> <span class="n">GIT_OK</span><span class="p">)</span> <span class="p">{</span>
     <span class="n"><a name="git_annotated_commit_from_ref-1" class="fnlink" href="../../#v0.27.10/group/annotated/git_annotated_commit_from_ref">git_annotated_commit_from_ref</a></span><span class="p">(</span><span class="n">commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">ref</span><span class="p">);</span>
-    <span class="n"><a name="git_reference_free-33" class="fnlink" href="../../#v0.27.10/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">ref</span><span class="p">);</span>
+    <span class="n">git_reference_free</span><span class="p">(</span><span class="n">ref</span><span class="p">);</span>
     <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
   <span class="p">}</span>
 
@@ -216,26 +216,26 @@
     <span class="n">git_reference</span> <span class="o">*</span><span class="n">head_ref</span><span class="p">;</span>
 
     <span class="cm">/* HEAD reference is unborn, lookup manually so we don&#39;t try to resolve it */</span>
-    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_reference_lookup-26" class="fnlink" href="../../#v0.27.10/group/reference/git_reference_lookup">git_reference_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">head_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="s">&quot;HEAD&quot;</span><span class="p">);</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">git_reference_lookup</span><span class="p">(</span><span class="o">&amp;</span><span class="n">head_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="s">&quot;HEAD&quot;</span><span class="p">);</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
       <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to lookup HEAD ref</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
       <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="p">}</span>
 
     <span class="cm">/* Grab the reference HEAD should be pointing to */</span>
-    <span class="n">symbolic_ref</span> <span class="o">=</span> <span class="n"><a name="git_reference_symbolic_target-30" class="fnlink" href="../../#v0.27.10/group/reference/git_reference_symbolic_target">git_reference_symbolic_target</a></span><span class="p">(</span><span class="n">head_ref</span><span class="p">);</span>
+    <span class="n">symbolic_ref</span> <span class="o">=</span> <span class="n">git_reference_symbolic_target</span><span class="p">(</span><span class="n">head_ref</span><span class="p">);</span>
 
     <span class="cm">/* Create our master reference on the target OID */</span>
-    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_reference_create-29" class="fnlink" href="../../#v0.27.10/group/reference/git_reference_create">git_reference_create</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">target_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">symbolic_ref</span><span class="p">,</span> <span class="n">target_oid</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">git_reference_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">target_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">symbolic_ref</span><span class="p">,</span> <span class="n">target_oid</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
       <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to create master reference</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
       <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="p">}</span>
 
-    <span class="n"><a name="git_reference_free-34" class="fnlink" href="../../#v0.27.10/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">head_ref</span><span class="p">);</span>
+    <span class="n">git_reference_free</span><span class="p">(</span><span class="n">head_ref</span><span class="p">);</span>
   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
     <span class="cm">/* HEAD exists, just lookup and resolve */</span>
-    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_head-40" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_head">git_repository_head</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">target_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">);</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_head-28" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_head">git_repository_head</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">target_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">);</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
       <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to get HEAD reference</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
       <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
@@ -258,14 +258,14 @@
   <span class="p">}</span>
 
   <span class="cm">/* Move the target reference to the target OID */</span>
-  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_reference_set_target-32" class="fnlink" href="../../#v0.27.10/group/reference/git_reference_set_target">git_reference_set_target</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">new_target_ref</span><span class="p">,</span> <span class="n">target_ref</span><span class="p">,</span> <span class="n">target_oid</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">err</span> <span class="o">=</span> <span class="n">git_reference_set_target</span><span class="p">(</span><span class="o">&amp;</span><span class="n">new_target_ref</span><span class="p">,</span> <span class="n">target_ref</span><span class="p">,</span> <span class="n">target_oid</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to move HEAD reference</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
     <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
   <span class="p">}</span>
 
-  <span class="n"><a name="git_reference_free-35" class="fnlink" href="../../#v0.27.10/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">target_ref</span><span class="p">);</span>
-  <span class="n"><a name="git_reference_free-36" class="fnlink" href="../../#v0.27.10/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">new_target_ref</span><span class="p">);</span>
+  <span class="n">git_reference_free</span><span class="p">(</span><span class="n">target_ref</span><span class="p">);</span>
+  <span class="n">git_reference_free</span><span class="p">(</span><span class="n">new_target_ref</span><span class="p">);</span>
   <span class="n"><a name="git_object_free-22" class="fnlink" href="../../#v0.27.10/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">target</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
@@ -311,18 +311,18 @@
   <span class="kt">int</span> <span class="n">err</span><span class="p">;</span>
 
   <span class="cm">/* Grab our needed references */</span>
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_head-41" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_head">git_repository_head</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">head_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;failed to get repo HEAD&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_head-29" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_head">git_repository_head</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">head_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;failed to get repo HEAD&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">resolve_refish</span><span class="p">(</span><span class="o">&amp;</span><span class="n">merge_commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">heads</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="p">{</span>
     <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to resolve refish %s&quot;</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">heads</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
     <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
   <span class="p">}</span>
 
   <span class="cm">/* Maybe that&#39;s a ref, so DWIM it */</span>
-  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_reference_dwim-28" class="fnlink" href="../../#v0.27.10/group/reference/git_reference_dwim">git_reference_dwim</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">merge_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">heads</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+  <span class="n">err</span> <span class="o">=</span> <span class="n">git_reference_dwim</span><span class="p">(</span><span class="o">&amp;</span><span class="n">merge_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">heads</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
   <span class="n">check_lg2</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="s">&quot;failed to DWIM reference&quot;</span><span class="p">,</span> <span class="n"><a name="giterr_last-11" class="fnlink" href="../../#v0.27.10/group/giterr/giterr_last">giterr_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
 
   <span class="cm">/* Grab a signature */</span>
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_signature_now-45" class="fnlink" href="../../#v0.27.10/group/signature/git_signature_now">git_signature_now</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">sign</span><span class="p">,</span> <span class="s">&quot;Me&quot;</span><span class="p">,</span> <span class="s">&quot;me@example.com&quot;</span><span class="p">),</span> <span class="s">&quot;failed to create signature&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_signature_now-33" class="fnlink" href="../../#v0.27.10/group/signature/git_signature_now">git_signature_now</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">sign</span><span class="p">,</span> <span class="s">&quot;Me&quot;</span><span class="p">,</span> <span class="s">&quot;me@example.com&quot;</span><span class="p">),</span> <span class="s">&quot;failed to create signature&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
 <span class="cp">#define MERGE_COMMIT_MSG &quot;Merge %s &#39;%s&#39;&quot;</span>
   <span class="cm">/* Prepare a standard merge commit message */</span>
@@ -341,7 +341,7 @@
   <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
 
   <span class="cm">/* Setup our parent commits */</span>
-  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_reference_peel-37" class="fnlink" href="../../#v0.27.10/group/reference/git_reference_peel">git_reference_peel</a></span><span class="p">((</span><span class="n">git_object</span> <span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">parents</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">head_ref</span><span class="p">,</span> <span class="n">GIT_OBJ_COMMIT</span><span class="p">);</span>
+  <span class="n">err</span> <span class="o">=</span> <span class="n">git_reference_peel</span><span class="p">((</span><span class="n">git_object</span> <span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">parents</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">head_ref</span><span class="p">,</span> <span class="n">GIT_OBJ_COMMIT</span><span class="p">);</span>
   <span class="n">check_lg2</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="s">&quot;failed to peel head reference&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">annotated_count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
     <span class="n"><a name="git_commit_lookup-8" class="fnlink" href="../../#v0.27.10/group/commit/git_commit_lookup">git_commit_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parents</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_annotated_commit_id-4" class="fnlink" href="../../#v0.27.10/group/annotated/git_annotated_commit_id">git_annotated_commit_id</a></span><span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">annotated</span><span class="p">[</span><span class="n">i</span><span class="p">]));</span>
@@ -349,11 +349,11 @@
 
   <span class="cm">/* Prepare our commit tree */</span>
   <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_index_write_tree-14" class="fnlink" href="../../#v0.27.10/group/index/git_index_write_tree">git_index_write_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree_oid</span><span class="p">,</span> <span class="n">index</span><span class="p">),</span> <span class="s">&quot;failed to write merged tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tree_lookup-46" class="fnlink" href="../../#v0.27.10/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_oid</span><span class="p">),</span> <span class="s">&quot;failed to lookup tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tree_lookup-34" class="fnlink" href="../../#v0.27.10/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_oid</span><span class="p">),</span> <span class="s">&quot;failed to lookup tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="cm">/* Commit time ! */</span>
   <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_commit_create-9" class="fnlink" href="../../#v0.27.10/group/commit/git_commit_create">git_commit_create</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">commit_oid</span><span class="p">,</span>
-                          <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_reference_name-31" class="fnlink" href="../../#v0.27.10/group/reference/git_reference_name">git_reference_name</a></span><span class="p">(</span><span class="n">head_ref</span><span class="p">),</span>
+                          <span class="n">repo</span><span class="p">,</span> <span class="n">git_reference_name</span><span class="p">(</span><span class="n">head_ref</span><span class="p">),</span>
                           <span class="n">sign</span><span class="p">,</span> <span class="n">sign</span><span class="p">,</span>
                           <span class="nb">NULL</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span>
                           <span class="n">tree</span><span class="p">,</span>
@@ -361,7 +361,7 @@
   <span class="n">check_lg2</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="s">&quot;failed to create commit&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="cm">/* We&#39;re done merging, cleanup the repository state */</span>
-  <span class="n"><a name="git_repository_state_cleanup-43" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_state_cleanup">git_repository_state_cleanup</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+  <span class="n"><a name="git_repository_state_cleanup-31" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_state_cleanup">git_repository_state_cleanup</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
 
 <span class="nl">cleanup</span><span class="p">:</span>
   <span class="n">free</span><span class="p">(</span><span class="n">parents</span><span class="p">);</span>
@@ -384,10 +384,10 @@
 
   <span class="n"><a name="git_libgit2_init-12" class="fnlink" href="../../#v0.27.10/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-38" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-26" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
             <span class="s">&quot;Could not open repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
-  <span class="n">state</span> <span class="o">=</span> <span class="n"><a name="git_repository_state-44" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_state">git_repository_state</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+  <span class="n">state</span> <span class="o">=</span> <span class="n"><a name="git_repository_state-32" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_state">git_repository_state</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">state</span> <span class="o">!=</span> <span class="n">GIT_REPOSITORY_STATE_NONE</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;repository is in unexpected state %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">);</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
@@ -443,7 +443,7 @@
 
   <span class="cm">/* If we get here, we actually performed the merge above */</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_index-42" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;failed to get repository index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_index-30" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;failed to get repository index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_index_has_conflicts-15" class="fnlink" href="../../#v0.27.10/group/index/git_index_has_conflicts">git_index_has_conflicts</a></span><span class="p">(</span><span class="n">index</span><span class="p">))</span> <span class="p">{</span>
     <span class="cm">/* Handle conflicts */</span>
@@ -456,7 +456,7 @@
 <span class="nl">cleanup</span><span class="p">:</span>
   <span class="n">free</span><span class="p">(</span><span class="n">opts</span><span class="p">.</span><span class="n">heads</span><span class="p">);</span>
   <span class="n">free</span><span class="p">(</span><span class="n">opts</span><span class="p">.</span><span class="n">annotated</span><span class="p">);</span>
-  <span class="n"><a name="git_repository_free-39" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+  <span class="n"><a name="git_repository_free-27" class="fnlink" href="../../#v0.27.10/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
   <span class="n"><a name="git_libgit2_shutdown-13" class="fnlink" href="../../#v0.27.10/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
