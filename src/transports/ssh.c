@@ -646,6 +646,14 @@ post_extract:
 		}
 
 		error = _git_ssh_authenticate_session(session, cred);
+
+		if (error == GIT_EAUTH) {
+			/* refresh auth methods */
+			if ((error = list_auth_methods(&auth_methods, session, urldata.username)) < 0)
+				goto done;
+			else
+				error = GIT_EAUTH;
+		}
 	}
 
 	if (error < 0)
