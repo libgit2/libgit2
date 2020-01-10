@@ -587,7 +587,9 @@ int ntlm_client_negotiate(
 	size_t *out_len,
 	ntlm_client *ntlm)
 {
-	size_t hostname_len, hostname_offset, domain_len, domain_offset;
+	size_t hostname_len, domain_len;
+	size_t domain_offset = 0;
+	size_t hostname_offset = 0;
 	uint32_t flags = 0;
 
 	assert(out && out_len && ntlm);
