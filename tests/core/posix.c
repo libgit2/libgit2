@@ -189,3 +189,30 @@ void test_core_posix__symlink_resolves_to_correct_type(void)
 
 	git_buf_dispose(&contents);
 }
+
+void test_core_posix__symlink_to_file_across_dirs(void)
+{
+	git_buf contents = GIT_BUF_INIT;
+
+	if (!git_path_supports_symlinks(clar_sandbox_path()))
+		clar__skip();
+
+	/*
+	 * Create a relative symlink that points into another
+	 * directory. This used to not work on Win32, where we
+	 * forgot to convert directory separators to
+	 * Windows-style ones.
+	 */
+	cl_must_pass(git_futils_mkdir("dir", 0777, 0));
+	cl_git_mkfile("dir/target", "symlink target");
+	cl_git_pass(p_symlink("dir/target", "link"));
+
+	cl_git_pass(git_futils_readbuffer(&contents, "dir/target"));
+	cl_assert_equal_s(contents.ptr, "symlink target");
+
+	cl_must_pass(p_unlink("dir/target"));
+	cl_must_pass(p_unlink("link"));
+	cl_must_pass(p_rmdir("dir"));
+
+	git_buf_dispose(&contents);
+}
