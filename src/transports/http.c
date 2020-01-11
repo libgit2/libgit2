@@ -158,7 +158,7 @@ static int handle_auth(
 	}
 
 	if (error > 0) {
-		git_error_set(GIT_ERROR_NET, "%s authentication required but no callback set", server_type);
+		git_error_set(GIT_ERROR_HTTP, "%s authentication required but no callback set", server_type);
 		error = -1;
 	}
 
@@ -175,7 +175,7 @@ GIT_INLINE(int) handle_remote_auth(
 	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
 
 	if (response->server_auth_credtypes == 0) {
-		git_error_set(GIT_ERROR_NET, "server requires authentication that we do not support");
+		git_error_set(GIT_ERROR_HTTP, "server requires authentication that we do not support");
 		return -1;
 	}
 
@@ -197,7 +197,7 @@ GIT_INLINE(int) handle_proxy_auth(
 	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
 
 	if (response->proxy_auth_credtypes == 0) {
-		git_error_set(GIT_ERROR_NET, "proxy requires authentication that we do not support");
+		git_error_set(GIT_ERROR_HTTP, "proxy requires authentication that we do not support");
 		return -1;
 	}
 
@@ -226,7 +226,7 @@ static int handle_response(
 
 	if (allow_replay && git_http_response_is_redirect(response)) {
 		if (!response->location) {
-			git_error_set(GIT_ERROR_NET, "redirect without location");
+			git_error_set(GIT_ERROR_HTTP, "redirect without location");
 			return -1;
 		}
 
@@ -236,7 +236,7 @@ static int handle_response(
 
 		return 0;
 	} else if (git_http_response_is_redirect(response)) {
-		git_error_set(GIT_ERROR_NET, "unexpected redirect");
+		git_error_set(GIT_ERROR_HTTP, "unexpected redirect");
 		return -1;
 	}
 
@@ -255,24 +255,24 @@ static int handle_response(
 		return git_http_client_skip_body(transport->http_client);
 	} else if (response->status == GIT_HTTP_STATUS_UNAUTHORIZED ||
 	           response->status == GIT_HTTP_STATUS_PROXY_AUTHENTICATION_REQUIRED) {
-		git_error_set(GIT_ERROR_NET, "unexpected authentication failure");
+		git_error_set(GIT_ERROR_HTTP, "unexpected authentication failure");
 		return -1;
 	}
 
 	if (response->status != GIT_HTTP_STATUS_OK) {
-		git_error_set(GIT_ERROR_NET, "unexpected http status code: %d", response->status);
+		git_error_set(GIT_ERROR_HTTP, "unexpected http status code: %d", response->status);
 		return -1;
 	}
 
 	/* The response must contain a Content-Type header. */
 	if (!response->content_type) {
-		git_error_set(GIT_ERROR_NET, "no content-type header in response");
+		git_error_set(GIT_ERROR_HTTP, "no content-type header in response");
 		return -1;
 	}
 
 	/* The Content-Type header must match our expectation. */
 	if (strcmp(response->content_type, stream->service->response_type) != 0) {
-		git_error_set(GIT_ERROR_NET, "invalid content-type: '%s'", response->content_type);
+		git_error_set(GIT_ERROR_HTTP, "invalid content-type: '%s'", response->content_type);
 		return -1;
 	}
 
@@ -411,7 +411,7 @@ static int http_stream_read(
 	}
 
 	if (stream->state == HTTP_STATE_SENDING_REQUEST) {
-		git_error_set(GIT_ERROR_NET, "too many redirects or authentication replays");
+		git_error_set(GIT_ERROR_HTTP, "too many redirects or authentication replays");
 		error = -1;
 		goto done;
 	}
@@ -548,7 +548,7 @@ static int http_stream_write(
 	}
 
 	if (stream->state == HTTP_STATE_NONE) {
-		git_error_set(GIT_ERROR_NET,
+		git_error_set(GIT_ERROR_HTTP,
 		              "too many redirects or authentication replays");
 		error = -1;
 		goto done;
@@ -653,7 +653,7 @@ static int http_action(
 		return error;
 
 	if ((service = select_service(action)) == NULL) {
-		git_error_set(GIT_ERROR_NET, "invalid action");
+		git_error_set(GIT_ERROR_HTTP, "invalid action");
 		return -1;
 	}
 

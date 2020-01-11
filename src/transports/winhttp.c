@@ -145,7 +145,7 @@ static int apply_userpass_credentials(HINTERNET request, DWORD target, int mecha
 	} else if (mechanisms & GIT_WINHTTP_AUTH_BASIC) {
 		native_scheme = WINHTTP_AUTH_SCHEME_BASIC;
 	} else {
-		git_error_set(GIT_ERROR_NET, "invalid authentication scheme");
+		git_error_set(GIT_ERROR_HTTP, "invalid authentication scheme");
 		error = -1;
 		goto done;
 	}
@@ -184,7 +184,7 @@ static int apply_default_credentials(HINTERNET request, DWORD target, int mechan
 	} else if ((mechanisms & GIT_WINHTTP_AUTH_NTLM) != 0) {
 		native_scheme = WINHTTP_AUTH_SCHEME_NTLM;
 	} else {
-		git_error_set(GIT_ERROR_NET, "invalid authentication scheme");
+		git_error_set(GIT_ERROR_HTTP, "invalid authentication scheme");
 		return -1;
 	}
 
@@ -287,7 +287,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 	/* If there is no override, we should fail if WinHTTP doesn't think it's fine */
 	if (t->owner->certificate_check_cb == NULL && !valid) {
 		if (!git_error_last())
-			git_error_set(GIT_ERROR_NET, "unknown certificate check failure");
+			git_error_set(GIT_ERROR_HTTP, "unknown certificate check failure");
 
 		return GIT_ECERTIFICATE;
 	}
@@ -311,7 +311,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 		error = valid ? 0 : GIT_ECERTIFICATE;
 
 	if (error < 0 && !git_error_last())
-		git_error_set(GIT_ERROR_NET, "user cancelled certificate check");
+		git_error_set(GIT_ERROR_HTTP, "user cancelled certificate check");
 
 	return error;
 }
@@ -440,7 +440,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			goto on_error;
 
 		if (strcmp(t->proxy.url.scheme, "http") != 0 && strcmp(t->proxy.url.scheme, "https") != 0) {
-			git_error_set(GIT_ERROR_NET, "invalid URL: '%s'", proxy_url);
+			git_error_set(GIT_ERROR_HTTP, "invalid URL: '%s'", proxy_url);
 			error = -1;
 			goto on_error;
 		}
@@ -713,21 +713,21 @@ static void CALLBACK winhttp_status(
 	status = *((DWORD *)info);
 
 	if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_CN_INVALID))
-		git_error_set(GIT_ERROR_NET, "SSL certificate issued for different common name");
+		git_error_set(GIT_ERROR_HTTP, "SSL certificate issued for different common name");
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_DATE_INVALID))
-		git_error_set(GIT_ERROR_NET, "SSL certificate has expired");
+		git_error_set(GIT_ERROR_HTTP, "SSL certificate has expired");
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_INVALID_CA))
-		git_error_set(GIT_ERROR_NET, "SSL certificate signed by unknown CA");
+		git_error_set(GIT_ERROR_HTTP, "SSL certificate signed by unknown CA");
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_INVALID_CERT))
-		git_error_set(GIT_ERROR_NET, "SSL certificate is invalid");
+		git_error_set(GIT_ERROR_HTTP, "SSL certificate is invalid");
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_REV_FAILED))
-		git_error_set(GIT_ERROR_NET, "certificate revocation check failed");
+		git_error_set(GIT_ERROR_HTTP, "certificate revocation check failed");
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_REVOKED))
-		git_error_set(GIT_ERROR_NET, "SSL certificate was revoked");
+		git_error_set(GIT_ERROR_HTTP, "SSL certificate was revoked");
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_SECURITY_CHANNEL_ERROR))
-		git_error_set(GIT_ERROR_NET, "security libraries could not be loaded");
+		git_error_set(GIT_ERROR_HTTP, "security libraries could not be loaded");
 	else
-		git_error_set(GIT_ERROR_NET, "unknown security error %lu", status);
+		git_error_set(GIT_ERROR_HTTP, "unknown security error %lu", status);
 }
 
 static int winhttp_connect(
@@ -971,7 +971,7 @@ static int winhttp_stream_read(
 replay:
 	/* Enforce a reasonable cap on the number of replays */
 	if (replay_count++ >= GIT_HTTP_REPLAY_MAX) {
-		git_error_set(GIT_ERROR_NET, "too many redirects or authentication replays");
+		git_error_set(GIT_ERROR_HTTP, "too many redirects or authentication replays");
 		return -1;
 	}
 
@@ -1177,7 +1177,7 @@ replay:
 		}
 
 		if (HTTP_STATUS_OK != status_code) {
-			git_error_set(GIT_ERROR_NET, "request failed with status code: %lu", status_code);
+			git_error_set(GIT_ERROR_HTTP, "request failed with status code: %lu", status_code);
 			return -1;
 		}
 
@@ -1204,7 +1204,7 @@ replay:
 		}
 
 		if (wcscmp(expected_content_type, content_type)) {
-			git_error_set(GIT_ERROR_NET, "received unexpected content-type");
+			git_error_set(GIT_ERROR_HTTP, "received unexpected content-type");
 			return -1;
 		}
 
@@ -1239,7 +1239,7 @@ static int winhttp_stream_write_single(
 
 	/* This implementation of write permits only a single call. */
 	if (s->sent_request) {
-		git_error_set(GIT_ERROR_NET, "subtransport configured for only one write");
+		git_error_set(GIT_ERROR_HTTP, "subtransport configured for only one write");
 		return -1;
 	}
 
@@ -1270,12 +1270,12 @@ static int put_uuid_string(LPWSTR buffer, size_t buffer_len_cch)
 	if (RPC_S_OK != status &&
 		RPC_S_UUID_LOCAL_ONLY != status &&
 		RPC_S_UUID_NO_ADDRESS != status) {
-		git_error_set(GIT_ERROR_NET, "unable to generate name for temp file");
+		git_error_set(GIT_ERROR_HTTP, "unable to generate name for temp file");
 		return -1;
 	}
 
 	if (buffer_len_cch < UUID_LENGTH_CCH + 1) {
-		git_error_set(GIT_ERROR_NET, "buffer too small for name of temp file");
+		git_error_set(GIT_ERROR_HTTP, "buffer too small for name of temp file");
 		return -1;
 	}
 

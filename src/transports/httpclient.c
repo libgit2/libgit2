@@ -154,7 +154,7 @@ static int on_header_complete(http_parser *parser)
 
 	if (!strcasecmp("Content-Type", name->ptr)) {
 		if (response->content_type) {
-			git_error_set(GIT_ERROR_NET,
+			git_error_set(GIT_ERROR_HTTP,
 			              "multiple content-type headers");
 			return -1;
 		}
@@ -166,14 +166,14 @@ static int on_header_complete(http_parser *parser)
 		int64_t len;
 
 		if (response->content_length) {
-			git_error_set(GIT_ERROR_NET,
+			git_error_set(GIT_ERROR_HTTP,
 			              "multiple content-length headers");
 			return -1;
 		}
 
 		if (git__strntol64(&len, value->ptr, value->size,
 		                   NULL, 10) < 0 || len < 0) {
-			git_error_set(GIT_ERROR_NET,
+			git_error_set(GIT_ERROR_HTTP,
 			              "invalid content-length");
 			return -1;
 		}
@@ -196,7 +196,7 @@ static int on_header_complete(http_parser *parser)
 			return -1;
 	} else if (!strcasecmp("Location", name->ptr)) {
 		if (response->location) {
-			git_error_set(GIT_ERROR_NET,
+			git_error_set(GIT_ERROR_HTTP,
 				"multiple location headers");
 			return -1;
 		}
@@ -235,7 +235,7 @@ static int on_header_field(http_parser *parser, const char *str, size_t len)
 		break;
 
 	default:
-		git_error_set(GIT_ERROR_NET,
+		git_error_set(GIT_ERROR_HTTP,
 		              "header name seen at unexpected time");
 		return ctx->parse_status = PARSE_STATUS_ERROR;
 	}
@@ -258,7 +258,7 @@ static int on_header_value(http_parser *parser, const char *str, size_t len)
 		break;
 
 	default:
-		git_error_set(GIT_ERROR_NET,
+		git_error_set(GIT_ERROR_HTTP,
 		              "header value seen at unexpected time");
 		return ctx->parse_status = PARSE_STATUS_ERROR;
 	}
@@ -348,7 +348,7 @@ static int on_headers_complete(http_parser *parser)
 		break;
 
 	default:
-		git_error_set(GIT_ERROR_NET,
+		git_error_set(GIT_ERROR_HTTP,
 		              "header completion at unexpected time");
 		return ctx->parse_status = PARSE_STATUS_ERROR;
 	}
@@ -511,14 +511,14 @@ static const char *init_auth_context(
 	int error;
 
 	if (!best_scheme_and_challenge(&scheme, &challenge, challenges, credentials)) {
-		git_error_set(GIT_ERROR_NET, "could not find appropriate mechanism for credentials");
+		git_error_set(GIT_ERROR_HTTP, "could not find appropriate mechanism for credentials");
 		return NULL;
 	}
 
 	error = scheme->init_context(&server->auth_context, &server->url);
 
 	if (error == GIT_PASSTHROUGH) {
-		git_error_set(GIT_ERROR_NET, "'%s' authentication is not supported", scheme->name);
+		git_error_set(GIT_ERROR_HTTP, "'%s' authentication is not supported", scheme->name);
 		return NULL;
 	}
 
@@ -585,7 +585,7 @@ static int apply_credentials(
 		if (auth->connection_affinity)
 			free_auth_context(server);
 	} else if (!token.size) {
-		git_error_set(GIT_ERROR_NET, "failed to respond to authentication challange");
+		git_error_set(GIT_ERROR_HTTP, "failed to respond to authentication challange");
 		error = -1;
 		goto done;
 	}
@@ -745,7 +745,7 @@ static int check_certificate(
 	else if (error == GIT_PASSTHROUGH)
 		error = 0;
 	else if (error && !git_error_last())
-		git_error_set(GIT_ERROR_NET,
+		git_error_set(GIT_ERROR_HTTP,
 		              "user rejected certificate for %s", url->host);
 
 	git_error_state_free(&last_error);
@@ -864,7 +864,7 @@ GIT_INLINE(int) server_create_stream(git_http_server *server)
 	else if (strcasecmp(url->scheme, "http") == 0)
 		return git_socket_stream_new(&server->stream, url->host, url->port);
 
-	git_error_set(GIT_ERROR_NET, "unknown http scheme '%s'", url->scheme);
+	git_error_set(GIT_ERROR_HTTP, "unknown http scheme '%s'", url->scheme);
 	return -1;
 }
 
@@ -920,7 +920,7 @@ static int proxy_connect(
 		error = GIT_RETRY;
 		goto done;
 	} else if (response.status != GIT_HTTP_STATUS_OK) {
-		git_error_set(GIT_ERROR_NET, "proxy returned unexpected status: %d", response.status);
+		git_error_set(GIT_ERROR_HTTP, "proxy returned unexpected status: %d", response.status);
 		error = -1;
 		goto done;
 	}
@@ -1044,7 +1044,7 @@ GIT_INLINE(int) client_read(git_http_client *client)
 	max_len = min(max_len, INT_MAX);
 
 	if (max_len == 0) {
-		git_error_set(GIT_ERROR_NET, "no room in output buffer");
+		git_error_set(GIT_ERROR_HTTP, "no room in output buffer");
 		return -1;
 	}
 
@@ -1101,12 +1101,12 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 	http_errno = client->parser.http_errno;
 
 	if (parsed_len > INT_MAX) {
-		git_error_set(GIT_ERROR_NET, "unexpectedly large parse");
+		git_error_set(GIT_ERROR_HTTP, "unexpectedly large parse");
 		return -1;
 	}
 
 	if (parser->upgrade) {
-		git_error_set(GIT_ERROR_NET, "server requested upgrade");
+		git_error_set(GIT_ERROR_HTTP, "server requested upgrade");
 		return -1;
 	}
 
@@ -1140,14 +1140,14 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 
 	/* Most failures will be reported in http_errno */
 	else if (parser->http_errno != HPE_OK) {
-		git_error_set(GIT_ERROR_NET, "http parser error: %s",
+		git_error_set(GIT_ERROR_HTTP, "http parser error: %s",
 		              http_errno_description(http_errno));
 		return -1;
 	}
 
 	/* Otherwise we should have consumed the entire buffer. */
 	else if (parsed_len != client->read_buf.size) {
-		git_error_set(GIT_ERROR_NET,
+		git_error_set(GIT_ERROR_HTTP,
 		              "http parser did not consume entire buffer: %s",
 			      http_errno_description(http_errno));
 		return -1;
@@ -1155,7 +1155,7 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 
 	/* recv returned 0, the server hung up on us */
 	else if (!parsed_len) {
-		git_error_set(GIT_ERROR_NET, "unexpected EOF");
+		git_error_set(GIT_ERROR_HTTP, "unexpected EOF");
 		return -1;
 	}
 
@@ -1281,7 +1281,7 @@ int git_http_client_send_body(
 		return 0;
 
 	if (client->state != SENDING_BODY) {
-		git_error_set(GIT_ERROR_NET, "client is in invalid state");
+		git_error_set(GIT_ERROR_HTTP, "client is in invalid state");
 		return -1;
 	}
 
@@ -1317,7 +1317,7 @@ static int complete_request(git_http_client *client)
 	assert(client && client->state == SENDING_BODY);
 
 	if (client->request_body_len && client->request_body_remain) {
-		git_error_set(GIT_ERROR_NET, "truncated write");
+		git_error_set(GIT_ERROR_HTTP, "truncated write");
 		error = -1;
 	} else if (client->request_chunked) {
 		error = stream_write(&client->server, "0\r\n\r\n", 5);
@@ -1349,7 +1349,7 @@ int git_http_client_read_response(
 	}
 
 	if (client->state != SENT_REQUEST) {
-		git_error_set(GIT_ERROR_NET, "client is in invalid state");
+		git_error_set(GIT_ERROR_HTTP, "client is in invalid state");
 		error = -1;
 		goto done;
 	}
@@ -1392,7 +1392,7 @@ int git_http_client_read_body(
 		return 0;
 
 	if (client->state != READING_BODY) {
-		git_error_set(GIT_ERROR_NET, "client is in invalid state");
+		git_error_set(GIT_ERROR_HTTP, "client is in invalid state");
 		return -1;
 	}
 
@@ -1438,7 +1438,7 @@ int git_http_client_skip_body(git_http_client *client)
 		return 0;
 
 	if (client->state != READING_BODY) {
-		git_error_set(GIT_ERROR_NET, "client is in invalid state");
+		git_error_set(GIT_ERROR_HTTP, "client is in invalid state");
 		return -1;
 	}
 
@@ -1451,7 +1451,7 @@ int git_http_client_skip_body(git_http_client *client)
 		if (parser_context.error != HPE_OK ||
 		    (parser_context.parse_status != PARSE_STATUS_OK &&
 		     parser_context.parse_status != PARSE_STATUS_NO_OUTPUT)) {
-			git_error_set(GIT_ERROR_NET,
+			git_error_set(GIT_ERROR_HTTP,
 			              "unexpected data handled in callback");
 			error = -1;
 		}
