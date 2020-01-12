@@ -1,3 +1,5 @@
+#define GIT_ASSERT_HARD 0
+
 #include "clar_libgit2.h"
 
 static const char *hello_world = "hello, world";
