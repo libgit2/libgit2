@@ -201,7 +201,7 @@ int git_object_lookup_prefix(
 				if (type != GIT_OBJECT_ANY && type != object->cached.type) {
 					git_object_free(object);
 					git_error_set(GIT_ERROR_INVALID,
-						"the requested type does not match the type in ODB");
+						"the requested type does not match the type in the ODB");
 					return GIT_ENOTFOUND;
 				}
 
