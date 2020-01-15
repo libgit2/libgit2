@@ -620,6 +620,7 @@ void test_iterator_workdir__filesystem2(void)
 		"heads/subtrees",
 		"heads/test",
 		"heads/testrepo-worktree",
+		"symref",
 		"tags/e90810b",
 		"tags/foo/bar",
 		"tags/foo/foo/bar",
@@ -632,7 +633,7 @@ void test_iterator_workdir__filesystem2(void)
 
 	cl_git_pass(git_iterator_for_filesystem(
 		&i, "testrepo/.git/refs", NULL));
-	expect_iterator_items(i, 16, expect_base, 16, expect_base);
+	expect_iterator_items(i, 17, expect_base, 17, expect_base);
 	git_iterator_free(i);
 }
 

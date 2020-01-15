@@ -105,3 +105,14 @@ void test_refs_delete__remove(void)
 
 	cl_git_fail(git_reference_lookup(&ref, g_repo, packed_test_head_name));
 }
+
+void test_refs_delete__head(void)
+{
+	git_reference *ref;
+
+	/* Check that it is not possible to delete HEAD */
+
+	cl_git_pass(git_reference_lookup(&ref, g_repo, "HEAD"));
+	cl_git_fail(git_reference_delete(ref));
+	git_reference_free(ref);
+}

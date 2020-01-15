@@ -36,7 +36,7 @@ void test_refs_list__all(void)
 	/* We have exactly 12 refs in total if we include the packed ones:
 	 * there is a reference that exists both in the packfile and as
 	 * loose, but we only list it once */
-	cl_assert_equal_i((int)ref_list.count, 18);
+	cl_assert_equal_i((int)ref_list.count, 19);
 
 	git_strarray_free(&ref_list);
 }
@@ -51,7 +51,7 @@ void test_refs_list__do_not_retrieve_references_which_name_end_with_a_lock_exten
 		"144344043ba4d4a405da03de3844aa829ae8be0e\n");
 
 	cl_git_pass(git_reference_list(&ref_list, g_repo));
-	cl_assert_equal_i((int)ref_list.count, 18);
+	cl_assert_equal_i((int)ref_list.count, 19);
 
 	git_strarray_free(&ref_list);
 }
