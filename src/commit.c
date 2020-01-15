@@ -753,7 +753,7 @@ int git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_r
 		return error;
 
 	if (obj->cached.type != GIT_OBJECT_COMMIT) {
-		git_error_set(GIT_ERROR_INVALID, "the requested type does not match the type in ODB");
+		git_error_set(GIT_ERROR_INVALID, "the requested type does not match the type in the ODB");
 		error = GIT_ENOTFOUND;
 		goto cleanup;
 	}
