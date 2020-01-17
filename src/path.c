@@ -784,6 +784,26 @@ int git_path_find_dir(git_buf *dir, const char *path, const char *base)
 	return error;
 }
 
+static int url_prefix(const char *path)
+{
+	const char *p = path, *colon, *slash;
+
+	/* Skip over host part in SSH protocols */
+	if (!git__prefixcmp(path, "ssh://") && (colon = strchr(p + strlen("ssh://"), ':')))
+		return (colon + 1) - path;
+
+	/* Skip over URL schema, if any */
+	for (; *p && git__isalpha(*p); ++p);
+	if (p[0] == ':' && p[1] == '/' && p[2] == '/')
+		return (p + 3) - path;
+
+	/* Same as the SSH case above, but without explicit ssh:// schema. */
+	if ((colon = strchr(p, ':')) && ((slash = strchr(p, '/')) && slash > colon))
+		return (colon + 1) - path;
+
+	return 0;
+}
+
 int git_path_resolve_relative(git_buf *path, size_t ceiling)
 {
 	char *base, *to, *from, *next;
@@ -799,11 +819,8 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 		ceiling = git_path_root(path->ptr) + 1;
 
 	/* recognize URL prefixes that should not be backed over */
-	if (ceiling == 0) {
-		for (next = path->ptr; *next && git__isalpha(*next); ++next);
-		if (next[0] == ':' && next[1] == '/' && next[2] == '/')
-			ceiling = (next + 3) - path->ptr;
-	}
+	if (ceiling == 0)
+		ceiling = url_prefix(path->ptr);
 
 	base = to = from = path->ptr + ceiling;
 
