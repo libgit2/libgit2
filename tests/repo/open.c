@@ -277,7 +277,9 @@ void test_repo_open__bad_gitlinks(void)
 
 	for (scan = bad_links; *scan != NULL; scan++) {
 		make_gitlink_dir("alternate", *scan);
+		repo = NULL;
 		cl_git_fail(git_repository_open_ext(&repo, "alternate", 0, NULL));
+		cl_assert(repo == NULL);
 	}
 
 	git_futils_rmdir_r("invalid", NULL, GIT_RMDIR_REMOVE_FILES);

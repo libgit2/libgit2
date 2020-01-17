@@ -865,8 +865,7 @@ cleanup:
 
 	if (error < 0)
 		git_repository_free(repo);
-
-	if (repo_ptr)
+	else if (repo_ptr)
 		*repo_ptr = repo;
 
 	return error;
