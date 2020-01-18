@@ -84,7 +84,7 @@ typedef enum {
 
 	/* The child of a folder that is in a directory/file conflict. */
 	GIT_MERGE_DIFF_DF_CHILD = (1 << 11),
-} git_merge_diff_type_t;
+} git_merge_diff_t;
 
 typedef struct {
 	git_repository *repo;
@@ -113,7 +113,7 @@ typedef struct {
  * Description of changes to one file across three trees.
  */
 typedef struct {
-	git_merge_diff_type_t type;
+	git_merge_diff_t type;
 
 	git_index_entry ancestor_entry;
 
