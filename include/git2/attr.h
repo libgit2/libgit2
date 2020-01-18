@@ -238,8 +238,11 @@ GIT_EXTERN(int) git_attr_foreach(
  * disk no longer match the cached contents of memory.  This will cause
  * the attributes files to be reloaded the next time that an attribute
  * access function is called.
+ *
+ * @param repo The repository containing the gitattributes cache
+ * @return 0 on success, or an error code
  */
-GIT_EXTERN(void) git_attr_cache_flush(
+GIT_EXTERN(int) git_attr_cache_flush(
 	git_repository *repo);
 
 /**
