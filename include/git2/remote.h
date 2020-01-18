@@ -517,7 +517,7 @@ struct git_remote_callbacks {
 	 * Returning GIT_PASSTHROUGH will make libgit2 behave as
 	 * though this field isn't set.
 	 */
-	git_cred_acquire_cb credentials;
+	git_credential_acquire_cb credentials;
 
 	/**
 	 * If cert verification fails, this will be called to let the

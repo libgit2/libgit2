@@ -32,21 +32,21 @@ typedef enum {
 
 /** An HTTP request */
 typedef struct {
-	git_http_method method;       /**< Method for the request */
-	git_net_url *url;             /**< Full request URL */
-	git_net_url *proxy;           /**< Proxy to use */
+	git_http_method method;            /**< Method for the request */
+	git_net_url *url;                  /**< Full request URL */
+	git_net_url *proxy;                /**< Proxy to use */
 
 	/* Headers */
-	const char *accept;           /**< Contents of the Accept header */
-	const char *content_type;     /**< Content-Type header (for POST) */
-	git_cred *credentials;        /**< Credentials to authenticate with */
-	git_cred *proxy_credentials;  /**< Credentials for proxy */
-	git_strarray *custom_headers; /**< Additional headers to deliver */
+	const char *accept;                /**< Contents of the Accept header */
+	const char *content_type;          /**< Content-Type header (for POST) */
+	git_credential *credentials;       /**< Credentials to authenticate with */
+	git_credential *proxy_credentials; /**< Credentials for proxy */
+	git_strarray *custom_headers;      /**< Additional headers to deliver */
 
 	/* To POST a payload, either set content_length OR set chunked. */
-	size_t content_length;        /**< Length of the POST body */
-	unsigned chunked : 1,         /**< Post with chunking */
-	         expect_continue : 1; /**< Use expect/continue negotiation */
+	size_t content_length;             /**< Length of the POST body */
+	unsigned chunked : 1,              /**< Post with chunking */
+	         expect_continue : 1;      /**< Use expect/continue negotiation */
 } git_http_request;
 
 typedef struct {

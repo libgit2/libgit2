@@ -710,7 +710,7 @@ int git_remote__connect(git_remote *remote, git_direction direction, const git_r
 	int flags = GIT_TRANSPORTFLAGS_NONE;
 	int error;
 	void *payload = NULL;
-	git_cred_acquire_cb credentials = NULL;
+	git_credential_acquire_cb credentials = NULL;
 	git_transport_cb transport = NULL;
 
 	assert(remote);

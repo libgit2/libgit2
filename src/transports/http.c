@@ -16,7 +16,7 @@
 #include "netops.h"
 #include "global.h"
 #include "remote.h"
-#include "git2/sys/cred.h"
+#include "git2/sys/credential.h"
 #include "smart.h"
 #include "auth.h"
 #include "http.h"
@@ -54,7 +54,7 @@ typedef struct {
 typedef struct {
 	git_net_url url;
 
-	git_cred *cred;
+	git_credential *cred;
 	unsigned auth_schemetypes;
 	unsigned url_cred_presented : 1;
 } http_server;
@@ -100,24 +100,24 @@ static const http_service receive_pack_service = {
 #define OWNING_SUBTRANSPORT(s) ((http_subtransport *)(s)->parent.subtransport)
 
 static int apply_url_credentials(
-	git_cred **cred,
+	git_credential **cred,
 	unsigned int allowed_types,
 	const char *username,
 	const char *password)
 {
-	if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT)
-		return git_cred_userpass_plaintext_new(cred, username, password);
+	if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT)
+		return git_credential_userpass_plaintext_new(cred, username, password);
 
-	if ((allowed_types & GIT_CREDTYPE_DEFAULT) && *username == '\0' && *password == '\0')
-		return git_cred_default_new(cred);
+	if ((allowed_types & GIT_CREDENTIAL_DEFAULT) && *username == '\0' && *password == '\0')
+		return git_credential_default_new(cred);
 
 	return GIT_PASSTHROUGH;
 }
 
-GIT_INLINE(void) free_cred(git_cred **cred)
+GIT_INLINE(void) free_cred(git_credential **cred)
 {
 	if (*cred) {
-		git_cred_free(*cred);
+		git_credential_free(*cred);
 		(*cred) = NULL;
 	}
 }
@@ -128,7 +128,7 @@ static int handle_auth(
 	const char *url,
 	unsigned int allowed_schemetypes,
 	unsigned int allowed_credtypes,
-	git_cred_acquire_cb callback,
+	git_credential_acquire_cb callback,
 	void *callback_payload)
 {
 	int error = 1;
@@ -137,7 +137,7 @@ static int handle_auth(
 		free_cred(&server->cred);
 
 	/* Start with URL-specified credentials, if there were any. */
-	if ((allowed_credtypes & GIT_CREDTYPE_USERPASS_PLAINTEXT) &&
+	if ((allowed_credtypes & GIT_CREDENTIAL_USERPASS_PLAINTEXT) &&
 	    !server->url_cred_presented &&
 	    server->url.username &&
 	    server->url.password) {

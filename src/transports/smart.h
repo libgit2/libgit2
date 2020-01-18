@@ -137,7 +137,7 @@ typedef struct {
 	git_transport parent;
 	git_remote *owner;
 	char *url;
-	git_cred_acquire_cb cred_acquire_cb;
+	git_credential_acquire_cb cred_acquire_cb;
 	void *cred_acquire_payload;
 	git_proxy_options proxy;
 	int direction;

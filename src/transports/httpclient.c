@@ -16,7 +16,7 @@
 #include "auth.h"
 #include "auth_negotiate.h"
 #include "auth_ntlm.h"
-#include "git2/sys/cred.h"
+#include "git2/sys/credential.h"
 #include "net.h"
 #include "stream.h"
 #include "streams/socket.h"
@@ -24,9 +24,9 @@
 #include "auth.h"
 
 static git_http_auth_scheme auth_schemes[] = {
-	{ GIT_HTTP_AUTH_NEGOTIATE, "Negotiate", GIT_CREDTYPE_DEFAULT, git_http_auth_negotiate },
-	{ GIT_HTTP_AUTH_NTLM, "NTLM", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_ntlm },
-	{ GIT_HTTP_AUTH_BASIC, "Basic", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_basic },
+	{ GIT_HTTP_AUTH_NEGOTIATE, "Negotiate", GIT_CREDENTIAL_DEFAULT, git_http_auth_negotiate },
+	{ GIT_HTTP_AUTH_NTLM, "NTLM", GIT_CREDENTIAL_USERPASS_PLAINTEXT, git_http_auth_ntlm },
+	{ GIT_HTTP_AUTH_BASIC, "Basic", GIT_CREDENTIAL_USERPASS_PLAINTEXT, git_http_auth_basic },
 };
 
 #define GIT_READ_BUFFER_SIZE 8192
@@ -456,7 +456,7 @@ static bool best_scheme_and_challenge(
 	git_http_auth_scheme **scheme_out,
 	const char **challenge_out,
 	git_vector *challenges,
-	git_cred *credentials)
+	git_credential *credentials)
 {
 	const char *challenge;
 	size_t i, j;
@@ -504,7 +504,7 @@ static const char *challenge_for_context(
 static const char *init_auth_context(
 	git_http_server *server,
 	git_vector *challenges,
-	git_cred *credentials)
+	git_credential *credentials)
 {
 	git_http_auth_scheme *scheme;
 	const char *challenge;
@@ -540,7 +540,7 @@ static int apply_credentials(
 	git_buf *buf,
 	git_http_server *server,
 	const char *header_name,
-	git_cred *credentials)
+	git_credential *credentials)
 {
 	git_http_auth_context *auth = server->auth_context;
 	git_vector *challenges = &server->auth_challenges;
