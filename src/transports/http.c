@@ -26,9 +26,9 @@
 #include "streams/socket.h"
 
 git_http_auth_scheme auth_schemes[] = {
-	{ GIT_AUTHTYPE_NEGOTIATE, "Negotiate", GIT_CREDTYPE_DEFAULT, git_http_auth_negotiate },
-	{ GIT_AUTHTYPE_NTLM, "NTLM", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_ntlm },
-	{ GIT_AUTHTYPE_BASIC, "Basic", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_basic },
+	{ GIT_HTTP_AUTH_NEGOTIATE, "Negotiate", GIT_CREDTYPE_DEFAULT, git_http_auth_negotiate },
+	{ GIT_HTTP_AUTH_NTLM, "NTLM", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_ntlm },
+	{ GIT_HTTP_AUTH_BASIC, "Basic", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_basic },
 };
 
 static const char *upload_pack_service = "upload-pack";
@@ -78,7 +78,7 @@ typedef struct {
 	git_net_url url;
 	git_stream *stream;
 
-	git_http_authtype_t authtypes;
+	git_http_auth_t authtypes;
 	git_credtype_t credtypes;
 
 	git_cred *cred;
