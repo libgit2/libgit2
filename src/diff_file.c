@@ -50,8 +50,8 @@ static int diff_file_content_init_common(
 		fc->opts_max_size = opts->max_size ?
 			opts->max_size : DIFF_MAX_FILESIZE;
 
-	if (fc->src == GIT_ITERATOR_TYPE_EMPTY)
-		fc->src = GIT_ITERATOR_TYPE_TREE;
+	if (fc->src == GIT_ITERATOR_EMPTY)
+		fc->src = GIT_ITERATOR_TREE;
 
 	if (!fc->driver &&
 		git_diff_driver_lookup(&fc->driver, fc->repo,
@@ -425,7 +425,7 @@ int git_diff_file_content__load(
 		(diff_opts->flags & GIT_DIFF_SHOW_BINARY) == 0)
 		return 0;
 
-	if (fc->src == GIT_ITERATOR_TYPE_WORKDIR)
+	if (fc->src == GIT_ITERATOR_WORKDIR)
 		error = diff_file_content_load_workdir(fc, diff_opts);
 	else
 		error = diff_file_content_load_blob(fc, diff_opts);
