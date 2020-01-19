@@ -725,7 +725,7 @@ static int perform_all(git_remote *remote)
 		if(sret < 0)
 		{
 #ifndef _MSC_VER
-#warning check whether git_remote_stop() does the right thing here, or whether we need to call perform() another time.
+/* #warning check whether git_remote_stop() does the right thing here, or whether we need to call perform() another time. */
 #endif
 			git_remote_stop(remote);
 			git_error_set(GIT_ERROR_NET, "Failed to wait for event: %s", strerror(errno));
@@ -2703,6 +2703,9 @@ char *apply_insteadof(git_config *config, const char *url, int direction)
 
 int git_remote_perform(git_remote *remote, git_event_t events)
 {
+	(void) remote;
+	(void) events;
+
 	/* This is only a stub for now */
 	return GIT_ERROR;
 }
