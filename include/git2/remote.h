@@ -329,7 +329,7 @@ GIT_EXTERN(const git_refspec *)git_remote_get_refspec(const git_remote *remote, 
  * is due to a limitation of the git protocol (over TCP or SSH) which
  * starts up a specific binary which can only do the one or the other.
  *
- * If the git_set_fd_events_cb member in the callbacks structure is NULL,
+ * If the set_fd_events member in the callbacks structure is NULL,
  * this operation blocks until a connection has been established. Otherwise,
  * this function returns GIT_EAGAIN and libgit2 switches to asynchroneous
  * I/O semantics. You must use git_remote_perform() to pass on events to
@@ -795,7 +795,7 @@ GIT_EXTERN(int) git_push_options_init(
  * The .idx file will be created and both it and the packfile with be
  * renamed to their final name.
  *
- * If the git_set_fd_events_cb member in the callbacks structure in opts is
+ * If the set_fd_events member in the callbacks structure in opts is
  * NULL, this operation blocks until the operation has finished.
  * Otherwise, this function returns GIT_EAGAIN and libgit2 switches to
  * asynchroneous I/O semantics. You must use git_remote_perform() to pass on
@@ -815,7 +815,7 @@ GIT_EXTERN(int) git_push_options_init(
  * Connect to the remote if it hasn't been done yet, negotiate with
  * the remote git which objects are missing, create a packfile with the missing objects and send it.
  *
- * If the git_set_fd_events_cb member in the callbacks structure in opts is
+ * If the set_fd_events member in the callbacks structure in opts is
  * NULL, this operation blocks until the operation has finished.
  * Otherwise, this function returns GIT_EAGAIN and libgit2 switches to
  * asynchroneous I/O semantics. You must use git_remote_perform() to pass on
@@ -856,7 +856,7 @@ GIT_EXTERN(int) git_remote_update_tips(
  * Convenience function to connect to a remote, download the data,
  * disconnect and update the remote-tracking branches.
  *
- * If the git_set_fd_events_cb member in the callbacks structure in opts is
+ * If the set_fd_events member in the callbacks structure in opts is
  * NULL, this operation blocks until the operation has finished.
  * Otherwise, this function returns GIT_EAGAIN and libgit2 switches to
  * asynchroneous I/O semantics. You must use git_remote_perform() to pass on
@@ -890,7 +890,7 @@ GIT_EXTERN(int) git_remote_prune(git_remote *remote, const git_remote_callbacks 
  *
  * Peform all the steps from a push.
  *
- * If the git_set_fd_events_cb member in the callbacks structure in opts is
+ * If the set_fd_events member in the callbacks structure in opts is
  * NULL, this operation blocks until the operation has finished.
  * Otherwise, this function returns GIT_EAGAIN and libgit2 switches to
  * asynchroneous I/O semantics. You must use git_remote_perform() to pass on

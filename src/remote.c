@@ -20,6 +20,10 @@
 #include "fetchhead.h"
 #include "push.h"
 
+#ifndef _WIN32
+#include <sys/select.h>
+#endif
+
 #define CONFIG_URL_FMT "remote.%s.url"
 #define CONFIG_PUSHURL_FMT "remote.%s.pushurl"
 #define CONFIG_FETCH_FMT "remote.%s.fetch"
@@ -29,6 +33,62 @@
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
 static int lookup_remote_prune_config(git_remote *remote, git_config *config, const char *name);
 char *apply_insteadof(git_config *config, const char *url, int direction);
+static int is_sync(const git_remote_callbacks *callbacks);
+
+
+typedef struct
+{
+	fd_set readfds;
+	fd_set writefds;
+	fd_set exceptfds;
+	struct timeval timeout;
+
+	git_socket highest_fd;
+} eventcb_data_t;
+
+static int set_fd_events(git_socket fd, git_event_t event, unsigned int timeout, void *payload)
+{
+	eventcb_data_t *evdata = payload;
+	
+	if((event & GIT_EVENT_READ))
+		FD_SET(fd, &evdata->readfds);
+	else
+		FD_CLR(fd, &evdata->readfds);
+
+	if((event & GIT_EVENT_READ))
+		FD_SET(fd, &evdata->writefds);
+	else
+		FD_CLR(fd, &evdata->writefds);
+	
+	FD_SET(fd, &evdata->exceptfds);
+	evdata->timeout.tv_sec = timeout;
+	evdata->highest_fd = fd;
+	
+	return GIT_OK;
+}
+
+static void init_eventcb_data(eventcb_data_t *evdata, git_remote *remote, const git_remote_callbacks *cbs)
+{
+	remote->callbacks = *cbs;
+
+	if(is_sync(cbs))
+		remote->cbref = cbs->payload;
+	else
+	{
+		remote->callbacks.set_fd_events = set_fd_events;
+		FD_ZERO(&evdata->readfds);
+		FD_ZERO(&evdata->writefds);
+		FD_ZERO(&evdata->exceptfds);
+		evdata->timeout.tv_usec = 0;
+		
+		remote->cbref = evdata;
+	}
+}
+
+static int is_sync(const git_remote_callbacks *callbacks)
+{
+	return !callbacks || !callbacks->set_fd_events || callbacks->set_fd_events == set_fd_events;
+}
 
 static int add_refspec_to(git_vector *vector, const char *string, bool is_fetch)
 {
@@ -646,6 +706,47 @@ int git_remote_set_pushurl(git_repository *repo, const char *remote, const char*
 	return set_url(repo, remote, CONFIG_PUSHURL_FMT, url);
 }
 
+static int perform_all(git_remote *remote)
+{
+	eventcb_data_t *evdata = remote->cbref;
+	int err, sret;
+	
+	do
+	{
+		fd_set readfds = evdata->readfds;
+		fd_set writefds = evdata->writefds;
+		fd_set exceptfds = evdata->exceptfds;
+		struct timeval timeout = evdata->timeout;
+		git_event_t events;
+		
+		sret = select(evdata->highest_fd + 1, &readfds, &writefds, &exceptfds, &timeout);
+
+		if(sret < 0)
+		{
+#warning check whether git_remote_stop() does the right thing here, or whether we need to call perform() another time.
+			git_remote_stop(remote);
+			git_error_set(GIT_ERROR_NET, "Failed to wait for event: %s", strerror(errno));
+			return GIT_ERROR;
+		}
+		
+		events = 0;
+		
+		if(FD_ISSET(evdata->highest_fd, &readfds))
+			events |= GIT_EVENT_READ;
+		if(FD_ISSET(evdata->highest_fd, &writefds))
+			events |= GIT_EVENT_WRITE;
+		if(FD_ISSET(evdata->highest_fd, &exceptfds))
+			events |= GIT_EVENT_ERR;
+			
+		if(!events)
+			events |= GIT_EVENT_TIMEOUT;
+		
+		err = git_remote_perform(remote, events);
+	} while(err == GIT_EAGAIN);
+	
+	return GIT_OK;
+}
+
 static int resolve_url(git_buf *resolved_url, const char *url, int direction, const git_remote_callbacks *callbacks)
 {
 	int status;
@@ -768,12 +869,22 @@ on_error:
 
 int git_remote_connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_proxy_options *proxy, const git_strarray *custom_headers)
 {
+	eventcb_data_t evdata;
+	int err;
+
 	git_remote_connection_opts conn;
 
 	conn.proxy = proxy;
 	conn.custom_headers = custom_headers;
 
-	return git_remote__connect(remote, direction, callbacks, &conn);
+	init_eventcb_data(&evdata, remote, callbacks);
+
+	err = git_remote__connect(remote, direction, &remote->callbacks, &conn);
+	
+	if(err == GIT_EAGAIN && is_sync(&remote->callbacks))
+		return perform_all(remote);
+	else
+		return err;
 }
 
 int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote)
@@ -2585,4 +2696,10 @@ char *apply_insteadof(git_config *config, const char *url, int direction)
 	git__free(replacement);
 
 	return result.ptr;
+}
+
+int git_remote_perform(git_remote *remote, git_event_t events)
+{
+	/* This is only a stub for now */
+	return GIT_ERROR;
 }

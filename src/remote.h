@@ -35,12 +35,15 @@ struct git_remote {
 	int prune_refs;
 	int passed_refspecs;
 	
+	void *cbref;
 	const git_strarray *requested_refspecs;
 	union
 	{
 		git_fetch_options *fetch;
 		git_push_options *push;
 	} opts;
+	
+	git_remote_callbacks callbacks;
 };
 
 typedef struct git_remote_connection_opts {
