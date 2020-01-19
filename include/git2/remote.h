@@ -1018,7 +1018,7 @@ GIT_EXTERN(int) git_remote_default_branch(git_buf *out, git_remote *remote);
  *
  * @param remote Remote with active operation
  * @param events Flags with events that occurred
- * @param An error code
+ * @return An error code
  */
 
 GIT_EXTERN(int) git_remote_perform(git_remote *remote, git_event_t events);

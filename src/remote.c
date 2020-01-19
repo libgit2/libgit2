@@ -709,7 +709,8 @@ int git_remote_set_pushurl(git_repository *repo, const char *remote, const char*
 static int perform_all(git_remote *remote)
 {
 	eventcb_data_t *evdata = remote->cbref;
-	int err, sret;
+	git_socket sret;
+	int err;
 	
 	do
 	{
@@ -723,7 +724,9 @@ static int perform_all(git_remote *remote)
 
 		if(sret < 0)
 		{
+#ifndef _MSC_VER
 #warning check whether git_remote_stop() does the right thing here, or whether we need to call perform() another time.
+#endif
 			git_remote_stop(remote);
 			git_error_set(GIT_ERROR_NET, "Failed to wait for event: %s", strerror(errno));
 			return GIT_ERROR;
