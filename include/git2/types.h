@@ -366,6 +366,26 @@ struct git_writestream {
 /** Representation of .mailmap file state. */
 typedef struct git_mailmap git_mailmap;
 
+/**
+ * Event flags for asynchroneous I/O
+ *
+ * These flags are used by libgit2 to inform the application about
+ * events to wait for on a socket, and by the application to signal
+ * to libgit2 which events occurred.
+ *
+ * * GIT_EVENT_READ    - Wait for or signal data arrived on socket
+ * * GIT_EVENT_WRITE   - Wait for or signal socket is ready for write
+ * * GIT_EVENT_ERR     - Signal an error occurred on the socket
+ * * GIT_EVENT_TIMEOUT - Wait for or signal a timeout
+ */
+
+typedef enum {
+	GIT_EVENT_READ    = (1u << 0),
+	GIT_EVENT_WRITE   = (1u << 1),
+	GIT_EVENT_ERR     = (1u << 2),
+	GIT_EVENT_TIMEOUT = (1u << 3)
+} git_event_t;
+
 /** @} */
 GIT_END_DECL
 

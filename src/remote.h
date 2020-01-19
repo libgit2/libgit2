@@ -34,6 +34,13 @@ struct git_remote {
 	git_remote_autotag_option_t download_tags;
 	int prune_refs;
 	int passed_refspecs;
+	
+	const git_strarray *requested_refspecs;
+	union
+	{
+		git_fetch_options *fetch;
+		git_push_options *push;
+	} opts;
 };
 
 typedef struct git_remote_connection_opts {
