@@ -27,7 +27,7 @@ typedef struct gitno_ssl {
 
 /* Represents a socket that may or may not be using SSL */
 typedef struct gitno_socket {
-	GIT_SOCKET socket;
+	git_socket socket;
 	gitno_ssl ssl;
 } gitno_socket;
 

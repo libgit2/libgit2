@@ -38,20 +38,30 @@ GIT_BEGIN_DECL
 
 #if defined(_MSC_VER)
 
+#include <winsock2.h>
+
+typedef SOCKET git_socket;
+
 typedef __int64 git_off_t;
 typedef __time64_t git_time_t;
 
 #elif defined(__MINGW32__)
+
+typedef int git_socket;
 
 typedef off64_t git_off_t;
 typedef __time64_t git_time_t;
 
 #elif defined(__HAIKU__)
 
+typedef int git_socket;
+
 typedef __haiku_std_int64 git_off_t;
 typedef __haiku_std_int64 git_time_t;
 
 #else /* POSIX */
+
+typedef int git_socket;
 
 /*
  * Note: Can't use off_t since if a client program includes <sys/types.h>

@@ -48,7 +48,7 @@ static void net_set_error(const char *str)
 }
 #endif
 
-static int close_socket(GIT_SOCKET s)
+static int close_socket(git_socket s)
 {
 	if (s == INVALID_SOCKET)
 		return 0;
@@ -74,7 +74,7 @@ static int socket_connect(git_stream *stream)
 	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
 	git_socket_stream *st = (git_socket_stream *) stream;
-	GIT_SOCKET s = INVALID_SOCKET;
+	git_socket s = INVALID_SOCKET;
 	int ret;
 
 #ifdef GIT_WIN32

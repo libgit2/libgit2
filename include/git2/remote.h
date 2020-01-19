@@ -8,6 +8,7 @@
 #define INCLUDE_git_remote_h__
 
 #include "common.h"
+
 #include "repository.h"
 #include "refspec.h"
 #include "net.h"

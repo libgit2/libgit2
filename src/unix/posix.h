@@ -17,7 +17,6 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 
-typedef int GIT_SOCKET;
 #define INVALID_SOCKET -1
 
 #define p_lseek(f,n,w) lseek(f, n, w)
