@@ -345,7 +345,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		if (i % 20 == 0) {
 			if (t->cancelled.val) {
 				git_error_set(GIT_ERROR_NET, "The fetch was cancelled by the user");
-				error = GIT_EUSER;
+				error = GIT_ECANCEL;
 				goto on_error;
 			}
 
@@ -424,7 +424,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 
 	if (t->cancelled.val) {
 		git_error_set(GIT_ERROR_NET, "The fetch was cancelled by the user");
-		error = GIT_EUSER;
+		error = GIT_ECANCEL;
 		goto on_error;
 	}
 	if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
@@ -461,7 +461,7 @@ static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, 
 	do {
 		if (t->cancelled.val) {
 			git_error_set(GIT_ERROR_NET, "The fetch was cancelled by the user");
-			return GIT_EUSER;
+			return GIT_ECANCEL;
 		}
 
 		if (writepack->append(writepack, buf->data, buf->offset, stats) < 0)
@@ -499,7 +499,7 @@ static int network_packetsize(size_t received, void *payload)
 		npp->last_fired_bytes = npp->stats->received_bytes;
 
 		if (npp->callback(npp->stats, npp->payload))
-			return GIT_EUSER;
+			return GIT_ECANCEL;
 	}
 
 	return 0;
@@ -554,7 +554,7 @@ int git_smart__download_pack(
 		/* Check cancellation before network call */
 		if (t->cancelled.val) {
 			git_error_clear();
-			error = GIT_EUSER;
+			error = GIT_ECANCEL;
 			goto done;
 		}
 
@@ -562,7 +562,7 @@ int git_smart__download_pack(
 			/* Check cancellation after network call */
 			if (t->cancelled.val) {
 				git_error_clear();
-				error = GIT_EUSER;
+				error = GIT_ECANCEL;
 			} else if (pkt->type == GIT_PKT_PROGRESS) {
 				if (t->progress_cb) {
 					git_pkt_progress *p = (git_pkt_progress *) pkt;

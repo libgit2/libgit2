@@ -31,7 +31,7 @@ static int git_smart__recv_cb(gitno_buffer *buf)
 		error = t->packetsize_cb(bytes_read, t->packetsize_payload);
 		if (error) {
 			git_atomic_set(&t->cancelled, 1);
-			return GIT_EUSER;
+			return GIT_ECANCEL;
 		}
 	}
 
