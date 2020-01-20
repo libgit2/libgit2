@@ -33,7 +33,6 @@
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
 static int lookup_remote_prune_config(git_remote *remote, git_config *config, const char *name);
 char *apply_insteadof(git_config *config, const char *url, int direction);
-static int is_sync(const git_remote_callbacks *callbacks);
 
 
 typedef struct
@@ -67,13 +66,19 @@ static int set_fd_events(git_socket fd, git_event_t event, unsigned int timeout,
 	return GIT_OK;
 }
 
+static int is_sync(const git_remote_callbacks *callbacks)
+{
+	return !callbacks || !callbacks->set_fd_events || callbacks->set_fd_events == set_fd_events;
+}
+
 static void init_eventcb_data(eventcb_data_t *evdata, git_remote *remote, const git_remote_callbacks *cbs)
 {
-	remote->callbacks = *cbs;
-
-	if(is_sync(cbs))
-		remote->cbref = cbs->payload;
+	if(cbs)
+		remote->callbacks = *cbs;
 	else
+		git_remote_init_callbacks(&remote->callbacks, GIT_REMOTE_CALLBACKS_VERSION);
+	
+	if(is_sync(&remote->callbacks))
 	{
 		remote->callbacks.set_fd_events = set_fd_events;
 		FD_ZERO(&evdata->readfds);
@@ -83,11 +88,8 @@ static void init_eventcb_data(eventcb_data_t *evdata, git_remote *remote, const 
 		
 		remote->cbref = evdata;
 	}
-}
-
-static int is_sync(const git_remote_callbacks *callbacks)
-{
-	return !callbacks || !callbacks->set_fd_events || callbacks->set_fd_events == set_fd_events;
+	else
+		remote->cbref = remote->callbacks.payload;
 }
 
 static int add_refspec_to(git_vector *vector, const char *string, bool is_fetch)
@@ -720,7 +722,7 @@ static int perform_all(git_remote *remote)
 		struct timeval timeout = evdata->timeout;
 		git_event_t events;
 		
-		sret = select(evdata->highest_fd + 1, &readfds, &writefds, &exceptfds, &timeout);
+		sret = select((int) evdata->highest_fd + 1, &readfds, &writefds, &exceptfds, &timeout);
 
 		if(sret < 0)
 		{

@@ -509,7 +509,7 @@ typedef int GIT_CALLBACK(git_url_resolve_cb)(git_buf *url_resolved, const char *
  * @return GIT_OK on success, any other error code cancels the operation and is passed through to the application
  */
 
-typedef int GIT_CALLBACK(git_set_fd_events_cb)(git_socket fd, git_event_t event, unsigned int timeout, void *payload);
+typedef int GIT_CALLBACK(git_remote_events_cb)(git_socket fd, git_event_t event, unsigned int timeout, void *payload);
 
 /**
  * The callback settings structure
@@ -611,10 +611,10 @@ struct git_remote_callbacks {
 	 * Callback to inform application about events to wait for on a
 	 * socket
 	 */
-	git_set_fd_events_cb set_fd_events;
+	git_remote_events_cb set_fd_events;
 };
 
-#define GIT_REMOTE_CALLBACKS_VERSION 2
+#define GIT_REMOTE_CALLBACKS_VERSION 1
 #define GIT_REMOTE_CALLBACKS_INIT {GIT_REMOTE_CALLBACKS_VERSION}
 
 /**
@@ -717,7 +717,7 @@ typedef struct {
 	git_strarray custom_headers;
 } git_fetch_options;
 
-#define GIT_FETCH_OPTIONS_VERSION 2
+#define GIT_FETCH_OPTIONS_VERSION 1
 #define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT, GIT_FETCH_PRUNE_UNSPECIFIED, 1, \
 				 GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, GIT_PROXY_OPTIONS_INIT }
 
@@ -768,7 +768,7 @@ typedef struct {
 	git_strarray custom_headers;
 } git_push_options;
 
-#define GIT_PUSH_OPTIONS_VERSION 2
+#define GIT_PUSH_OPTIONS_VERSION 1
 #define GIT_PUSH_OPTIONS_INIT { GIT_PUSH_OPTIONS_VERSION, 1, GIT_REMOTE_CALLBACKS_INIT, GIT_PROXY_OPTIONS_INIT }
 
 /**
