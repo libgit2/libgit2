@@ -47,6 +47,7 @@ typedef __time64_t git_time_t;
 
 #elif defined(__MINGW32__)
 
+#include <winsock2.h>
 typedef SOCKET git_socket;
 
 typedef off64_t git_off_t;
