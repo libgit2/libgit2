@@ -711,7 +711,7 @@ int git_remote_set_pushurl(git_repository *repo, const char *remote, const char*
 static int perform_all(git_remote *remote)
 {
 	eventcb_data_t *evdata = remote->cbref;
-	git_socket sret;
+	int sret;
 	int err;
 	
 	do
