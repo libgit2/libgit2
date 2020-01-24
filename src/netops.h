@@ -36,6 +36,7 @@ typedef struct gitno_buffer {
 	size_t len;
 	size_t offset;
 	int (*recv)(struct gitno_buffer *buffer);
+	int (*poll)(struct gitno_buffer *buffer, int timeout);
 	void *cb_data;
 } gitno_buffer;
 
@@ -59,8 +60,11 @@ enum {
 int gitno__match_host(const char *pattern, const char *host);
 
 void gitno_buffer_setup_fromstream(git_stream *st, gitno_buffer *buf, char *data, size_t len);
-void gitno_buffer_setup_callback(gitno_buffer *buf, char *data, size_t len, int (*recv)(gitno_buffer *buf), void *cb_data);
+void gitno_buffer_setup_callback(gitno_buffer *buf, char *data, size_t len,
+		int (*recv)(gitno_buffer *buf), int (*poll)(gitno_buffer *buf, int timeout),
+		void *cb_data);
 int gitno_recv(gitno_buffer *buf);
+int gitno_poll(gitno_buffer *buf, int timeout);
 
 void gitno_consume(gitno_buffer *buf, const char *ptr);
 void gitno_consume_n(gitno_buffer *buf, size_t cons);

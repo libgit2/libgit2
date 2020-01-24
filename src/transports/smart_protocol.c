@@ -247,6 +247,26 @@ static int recv_pkt(git_pkt **out_pkt, git_pkt_type *out_type, gitno_buffer *buf
 	return error;
 }
 
+static ssize_t recv_pkt_keepalive(transport_smart *t, git_pkt **out_pkt, git_pkt_type *out_type, gitno_buffer *buf)
+{
+	int error;
+
+	if (t->keepalive <= 0)
+		goto recv;
+
+	while (t->keepalive) {
+		if ((error = gitno_poll(buf, t->keepalive * 1000)) < 0)
+			return error;
+		if (error > 0)
+			break;
+		if ((error = t->current_stream->write(t->current_stream, "0005\1", 5)) < 0)
+			return error;
+	}
+
+recv:
+	return recv_pkt(out_pkt, out_type, buf);
+}
+
 static int store_common(transport_smart *t)
 {
 	git_pkt *pkt = NULL;
@@ -308,10 +328,16 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	gitno_buffer *buf = &t->buffer;
 	git_buf data = GIT_BUF_INIT;
 	git_revwalk *walk = NULL;
-	int error = -1;
+	int error = -1, keepalive;
+	git_config *cfg = NULL;
 	git_pkt_type pkt_type;
 	unsigned int i;
 	git_oid oid;
+
+	if (git_repository_config(&cfg, repo) < 0 ||
+	    git_config_get_int32(&keepalive, cfg, "receive.keepAlive") < 0)
+		keepalive = 5;
+	git_config_free(cfg);
 
 	if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 		return error;
@@ -558,7 +584,7 @@ int git_smart__download_pack(
 			goto done;
 		}
 
-		if ((error = recv_pkt(&pkt, NULL, buf)) >= 0) {
+		if ((error = recv_pkt_keepalive(t, &pkt, NULL, buf)) >= 0) {
 			/* Check cancellation after network call */
 			if (t->cancelled.val) {
 				git_error_clear();

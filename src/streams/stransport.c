@@ -171,6 +171,18 @@ static ssize_t stransport_write(git_stream *stream, const char *data, size_t len
 	return (ssize_t)processed;
 }
 
+static int stransport_poll(git_stream *stream, int timeout)
+{
+	stransport_stream *st = GIT_CONTAINER_OF(stream, stransport_stream, parent);
+	git_stream *io;
+	int error;
+
+	if ((error = SSLGetConnection(st->ctx, &(SSLConnectionRef) io)) < 0)
+		return stransport_error(error);
+
+	return git_stream_poll(io);
+}
+
 /*
  * Contrary to typical network IO callbacks, Secure Transport read callback is
  * expected to read *exactly* the requested number of bytes, not just as much
@@ -285,6 +297,7 @@ static int stransport_wrap(
 	st->parent.set_proxy = stransport_set_proxy;
 	st->parent.read = stransport_read;
 	st->parent.write = stransport_write;
+	st->parent.poll = stransport_poll;
 	st->parent.close = stransport_close;
 	st->parent.free = stransport_free;
 

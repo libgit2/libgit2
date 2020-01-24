@@ -325,6 +325,17 @@ struct git_smart_subtransport_stream {
 		const char *buffer,
 		size_t len);
 
+	/**
+	 * Poll the transport for data.
+	 *
+	 * The implementation shall return a negative value on
+	 * errors, 0 on timeout and a positive value if there is
+	 * readable data available for the stream.
+	 */
+	int GIT_CALLBACK(poll)(
+		git_smart_subtransport_stream *stream,
+		int timeout);
+
 	/** Free the stream */
 	void GIT_CALLBACK(free)(
 		git_smart_subtransport_stream *stream);

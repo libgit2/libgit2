@@ -20,17 +20,25 @@ int gitno_recv(gitno_buffer *buf)
 	return buf->recv(buf);
 }
 
+int gitno_poll(gitno_buffer *buf, int timeout)
+{
+	return buf->poll(buf, timeout);
+}
+
 void gitno_buffer_setup_callback(
 	gitno_buffer *buf,
 	char *data,
 	size_t len,
-	int (*recv)(gitno_buffer *buf), void *cb_data)
+	int (*recv)(gitno_buffer *buf),
+	int (*poll)(gitno_buffer *buf, int timeout),
+	void *cb_data)
 {
 	memset(data, 0x0, len);
 	buf->data = data;
 	buf->len = len;
 	buf->offset = 0;
 	buf->recv = recv;
+	buf->poll = poll;
 	buf->cb_data = cb_data;
 }
 
@@ -50,6 +58,12 @@ static int recv_stream(gitno_buffer *buf)
 	return (int)ret;
 }
 
+static int poll_stream(gitno_buffer *buf, int timeout)
+{
+	git_stream *io = (git_stream *) buf->cb_data;
+	return git_stream_poll(io, timeout);
+}
+
 void gitno_buffer_setup_fromstream(git_stream *st, gitno_buffer *buf, char *data, size_t len)
 {
 	memset(data, 0x0, len);
@@ -57,6 +71,7 @@ void gitno_buffer_setup_fromstream(git_stream *st, gitno_buffer *buf, char *data
 	buf->len = len;
 	buf->offset = 0;
 	buf->recv = recv_stream;
+	buf->poll = poll_stream;
 	buf->cb_data = st;
 }
 
@@ -218,4 +233,3 @@ done:
 	git_net_url_dispose(&tmp);
 	return error;
 }
-

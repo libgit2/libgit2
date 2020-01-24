@@ -1415,6 +1415,15 @@ on_error:
 	return -1;
 }
 
+static int http_stream_poll(
+	git_smart_subtransport_stream *stream,
+	int timeout)
+{
+	http_stream *s = GIT_CONTAINER_OF(stream, http_stream, parent);
+	http_subtransport *t = OWNING_SUBTRANSPORT(s);
+	return git_stream_poll(t->server.stream, timeout);
+}
+
 static void http_stream_free(git_smart_subtransport_stream *stream)
 {
 	http_stream *s = GIT_CONTAINER_OF(stream, http_stream, parent);
@@ -1442,6 +1451,7 @@ static int http_stream_alloc(http_subtransport *t,
 	s->parent.subtransport = &t->parent;
 	s->parent.read = http_stream_read;
 	s->parent.write = http_stream_write_single;
+	s->parent.poll = http_stream_poll;
 	s->parent.free = http_stream_free;
 
 	*stream = (git_smart_subtransport_stream *)s;

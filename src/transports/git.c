@@ -130,6 +130,14 @@ static int git_proto_stream_write(
 	return git_stream__write_full(s->io, buffer, len, 0);
 }
 
+static int git_proto_stream_poll(
+	git_smart_subtransport_stream *stream,
+	int timeout)
+{
+	git_proto_stream *s = (git_proto_stream *)stream;
+	return git_stream_poll(s->io, timeout);
+}
+
 static void git_proto_stream_free(git_smart_subtransport_stream *stream)
 {
 	git_proto_stream *s;
@@ -168,6 +176,7 @@ static int git_proto_stream_alloc(
 	s->parent.subtransport = &t->parent;
 	s->parent.read = git_proto_stream_read;
 	s->parent.write = git_proto_stream_write;
+	s->parent.poll = git_proto_stream_poll;
 	s->parent.free = git_proto_stream_free;
 
 	s->cmd = cmd;
