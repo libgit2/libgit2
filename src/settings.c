@@ -29,11 +29,13 @@
 #include "streams/openssl.h"
 #include "streams/mbedtls.h"
 
-void git_libgit2_version(int *major, int *minor, int *rev)
+int git_libgit2_version(int *major, int *minor, int *rev)
 {
 	*major = LIBGIT2_VER_MAJOR;
 	*minor = LIBGIT2_VER_MINOR;
 	*rev = LIBGIT2_VER_REVISION;
+
+	return 0;
 }
 
 int git_libgit2_features(void)

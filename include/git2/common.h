@@ -117,8 +117,9 @@ GIT_BEGIN_DECL
  * @param major Store the major version number
  * @param minor Store the minor version number
  * @param rev Store the revision (patch) number
+ * @return 0 on success or an error code on failure
  */
-GIT_EXTERN(void) git_libgit2_version(int *major, int *minor, int *rev);
+GIT_EXTERN(int) git_libgit2_version(int *major, int *minor, int *rev);
 
 /**
  * Combinations of these values describe the features with which libgit2

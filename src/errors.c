@@ -95,19 +95,25 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 		set_error_from_buffer(error_class);
 }
 
-void git_error_set_str(int error_class, const char *string)
+int git_error_set_str(int error_class, const char *string)
 {
 	git_buf *buf = &GIT_GLOBAL->error_buf;
 
 	assert(string);
 
-	if (!string)
-		return;
+	if (!string) {
+		git_error_set(GIT_ERROR_INVALID, "unspecified caller error");
+		return -1;
+	}
 
 	git_buf_clear(buf);
 	git_buf_puts(buf, string);
-	if (!git_buf_oom(buf))
-		set_error_from_buffer(error_class);
+
+	if (git_buf_oom(buf))
+		return -1;
+
+	set_error_from_buffer(error_class);
+	return 0;
 }
 
 void git_error_clear(void)

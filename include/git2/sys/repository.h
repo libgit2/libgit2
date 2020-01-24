@@ -44,8 +44,11 @@ GIT_EXTERN(int) git_repository_new(git_repository **out);
  * trying to aggressively cleanup the repo before its
  * deallocation. `git_repository_free` already performs this operation
  * before deallocating the repo.
+ *
+ * @param repo The repository to clean up
+ * @return 0 on success, or an error code
  */
-GIT_EXTERN(void) git_repository__cleanup(git_repository *repo);
+GIT_EXTERN(int) git_repository__cleanup(git_repository *repo);
 
 /**
  * Update the filesystem config settings for an open repository
@@ -78,8 +81,9 @@ GIT_EXTERN(int) git_repository_reinit_filesystem(
  *
  * @param repo A repository object
  * @param config A Config object
+ * @return 0 on success, or an error code
  */
-GIT_EXTERN(void) git_repository_set_config(git_repository *repo, git_config *config);
+GIT_EXTERN(int) git_repository_set_config(git_repository *repo, git_config *config);
 
 /**
  * Set the Object Database for this repository
@@ -93,8 +97,9 @@ GIT_EXTERN(void) git_repository_set_config(git_repository *repo, git_config *con
  *
  * @param repo A repository object
  * @param odb An ODB object
+ * @return 0 on success, or an error code
  */
-GIT_EXTERN(void) git_repository_set_odb(git_repository *repo, git_odb *odb);
+GIT_EXTERN(int) git_repository_set_odb(git_repository *repo, git_odb *odb);
 
 /**
  * Set the Reference Database Backend for this repository
@@ -108,8 +113,9 @@ GIT_EXTERN(void) git_repository_set_odb(git_repository *repo, git_odb *odb);
  *
  * @param repo A repository object
  * @param refdb An refdb object
+ * @return 0 on success, or an error code
  */
-GIT_EXTERN(void) git_repository_set_refdb(git_repository *repo, git_refdb *refdb);
+GIT_EXTERN(int) git_repository_set_refdb(git_repository *repo, git_refdb *refdb);
 
 /**
  * Set the index file for this repository
@@ -123,8 +129,9 @@ GIT_EXTERN(void) git_repository_set_refdb(git_repository *repo, git_refdb *refdb
  *
  * @param repo A repository object
  * @param index An index object
+ * @return 0 on success, or an error code
  */
-GIT_EXTERN(void) git_repository_set_index(git_repository *repo, git_index *index);
+GIT_EXTERN(int) git_repository_set_index(git_repository *repo, git_index *index);
 
 /**
  * Set a repository to be bare.

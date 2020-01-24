@@ -258,8 +258,9 @@ GIT_EXTERN(int) git_treebuilder_new(
  * Clear all the entires in the builder
  *
  * @param bld Builder to clear
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(void) git_treebuilder_clear(git_treebuilder *bld);
+GIT_EXTERN(int) git_treebuilder_clear(git_treebuilder *bld);
 
 /**
  * Get the number of entries listed in a treebuilder
@@ -357,8 +358,9 @@ typedef int GIT_CALLBACK(git_treebuilder_filter_cb)(
  * @param bld Tree builder
  * @param filter Callback to filter entries
  * @param payload Extra data to pass to filter callback
+ * @return 0 on success, non-zero callback return value, or error code
  */
-GIT_EXTERN(void) git_treebuilder_filter(
+GIT_EXTERN(int) git_treebuilder_filter(
 	git_treebuilder *bld,
 	git_treebuilder_filter_cb filter,
 	void *payload);

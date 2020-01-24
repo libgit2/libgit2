@@ -834,7 +834,7 @@ out:
 	return error;
 }
 
-void git_treebuilder_filter(
+int git_treebuilder_filter(
 	git_treebuilder *bld,
 	git_treebuilder_filter_cb filter,
 	void *payload)
@@ -850,9 +850,11 @@ void git_treebuilder_filter(
 				git_tree_entry_free(entry);
 			}
 	});
+
+	return 0;
 }
 
-void git_treebuilder_clear(git_treebuilder *bld)
+int git_treebuilder_clear(git_treebuilder *bld)
 {
 	git_tree_entry *e;
 
@@ -860,6 +862,8 @@ void git_treebuilder_clear(git_treebuilder *bld)
 
 	git_strmap_foreach_value(bld->map, e, git_tree_entry_free(e));
 	git_strmap_clear(bld->map);
+
+	return 0;
 }
 
 void git_treebuilder_free(git_treebuilder *bld)

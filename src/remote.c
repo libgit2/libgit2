@@ -1676,20 +1676,24 @@ int git_remote_connected(const git_remote *remote)
 	return remote->transport->is_connected(remote->transport);
 }
 
-void git_remote_stop(git_remote *remote)
+int git_remote_stop(git_remote *remote)
 {
 	assert(remote);
 
 	if (remote->transport && remote->transport->cancel)
 		remote->transport->cancel(remote->transport);
+
+	return 0;
 }
 
-void git_remote_disconnect(git_remote *remote)
+int git_remote_disconnect(git_remote *remote)
 {
 	assert(remote);
 
 	if (git_remote_connected(remote))
 		remote->transport->close(remote->transport);
+
+	return 0;
 }
 
 void git_remote_free(git_remote *remote)

@@ -78,8 +78,9 @@ GIT_EXTERN(int) git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_ba
  * semantics to the Git repository.
  *
  * @param backend The mempack backend
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(void) git_mempack_reset(git_odb_backend *backend);
+GIT_EXTERN(int) git_mempack_reset(git_odb_backend *backend);
 
 GIT_END_DECL
 
