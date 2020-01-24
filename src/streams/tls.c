@@ -71,3 +71,48 @@ int git_tls_stream_wrap(git_stream **out, git_stream *in, const char *host)
 
 	return wrap(out, in, host);
 }
+
+int git_tls_ciphers_foreach(const char **out_name, size_t *out_len, const char **cipher_list)
+{
+	char *sep;
+	assert(out_name && out_len && cipher_list);
+
+	if (*cipher_list == NULL) {
+		*out_name = NULL;
+		*out_len = 0;
+		return GIT_ITEROVER;
+	}
+
+	sep = strchr(*cipher_list, ':');
+	if (sep != NULL) {
+		*out_name = *cipher_list;
+		*out_len = sep - *cipher_list;
+		*cipher_list = sep + 1;
+	} else {
+		*out_name = *cipher_list;
+		*out_len = strlen(*cipher_list);
+		*cipher_list = NULL;
+	}
+
+	return 0;
+}
+
+int git_tls_cipher_lookup(git_tls_cipher *out, const char *name, size_t namelen)
+{
+	size_t idx;
+
+	assert(out);
+
+	for (idx = 0; idx < ARRAY_SIZE(git_tls_ciphers); idx++) {
+		const git_tls_cipher cipher = git_tls_ciphers[idx];
+		if (cipher.nist_name == NULL)
+			continue;
+
+		if (strncasecmp(name, cipher.nist_name, namelen) == 0) {
+			*out = cipher;
+			return 0;
+		}
+	}
+
+	return GIT_ENOTFOUND;
+}

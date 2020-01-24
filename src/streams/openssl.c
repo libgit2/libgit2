@@ -18,6 +18,7 @@
 #include "netops.h"
 #include "git2/transport.h"
 #include "git2/sys/openssl.h"
+#include "tls.h"
 
 #ifndef GIT_WIN32
 # include <sys/types.h>
@@ -35,8 +36,6 @@
 #endif
 
 SSL_CTX *git__ssl_ctx;
-
-#define GIT_SSL_DEFAULT_CIPHERS "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-DSS-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:DHE-DSS-AES128-SHA256:DHE-DSS-AES256-SHA256:DHE-DSS-AES128-SHA:DHE-DSS-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA"
 
 #if (defined(OPENSSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER < 0x10100000L) || \
      (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L)
@@ -200,10 +199,52 @@ static void shutdown_ssl(void)
 	}
 }
 
+int setup_cipher_list(SSL_CTX *ctx)
+{
+	const char *cipher_list = git_libgit2__ssl_ciphers();
+	git_buf cipher_buf = GIT_BUF_INIT;
+	const char *name;
+	size_t len;
+	int error = 0;
+
+	while (git_tls_ciphers_foreach(&name, &len, &cipher_list) == 0) {
+		git_tls_cipher cipher;
+
+		if (git_tls_cipher_lookup(&cipher, name, len) < 0) {
+			continue;
+		}
+
+		git_buf_puts(&cipher_buf, cipher.openssl_name);
+		git_buf_putc(&cipher_buf, ':');
+	}
+
+	/* Strip extraneous ':' character */
+	git_buf_shorten(&cipher_buf, 1);
+
+	GIT_ERROR_CHECK_ALLOC_BUF(&cipher_buf);
+
+	if (git_buf_len(&cipher_buf) == 0) {
+		git_error_set(GIT_ERROR_SSL, "no cipher could be enabled");
+		error = -1;
+		goto cleanup;
+	}
+
+	if (!SSL_CTX_set_cipher_list(ctx, git_buf_cstr(&cipher_buf))) {
+		git_error_set(GIT_ERROR_SSL, "could not set ciphers: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+		error = -1;
+		goto cleanup;
+	}
+
+cleanup:
+	git_buf_dispose(&cipher_buf);
+
+	return error;
+}
+
 int git_openssl_stream_global_init(void)
 {
 	long ssl_opts = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
-	const char *ciphers = git_libgit2__ssl_ciphers();
 
 	/* Older OpenSSL and MacOS OpenSSL doesn't have this */
 #ifdef SSL_OP_NO_COMPRESSION
@@ -227,10 +268,7 @@ int git_openssl_stream_global_init(void)
 	if (!SSL_CTX_set_default_verify_paths(git__ssl_ctx))
 		goto error;
 
-	if (!ciphers)
-		ciphers = GIT_SSL_DEFAULT_CIPHERS;
-
-	if(!SSL_CTX_set_cipher_list(git__ssl_ctx, ciphers))
+	if (setup_cipher_list(git__ssl_ctx) < 0)
 		goto error;
 
 	if (init_bio_method() < 0)
