@@ -278,8 +278,7 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	const char *name, const char *worktree,
 	const git_worktree_add_options *opts)
 {
-	git_buf gitdir = GIT_BUF_INIT, wddir = GIT_BUF_INIT;
-	git_buf buf = GIT_BUF_INIT, ref_buf = GIT_BUF_INIT;
+	git_buf gitdir = GIT_BUF_INIT, wddir = GIT_BUF_INIT, buf = GIT_BUF_INIT;
 	git_reference *ref = NULL, *head = NULL;
 	git_commit *commit = NULL;
 	git_repository *wt = NULL;
@@ -304,11 +303,21 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 			goto out;
 		}
 
-		if (git_branch_is_checked_out(wtopts.ref)) {
-			git_error_set(GIT_ERROR_WORKTREE, "reference is already checked out");
-			err = -1;
+		if ((err = git_reference_dup(&ref, wtopts.ref)) < 0)
 			goto out;
-		}
+	} else if (wtopts.checkout_existing && git_branch_lookup(&ref, repo, name, GIT_BRANCH_LOCAL) == 0) {
+		/* Do nothing */
+	} else if ((err = git_repository_head(&head, repo)) < 0 ||
+		   (err = git_commit_lookup(&commit, repo, &head->target.oid)) < 0 ||
+		   (err = git_branch_create(&ref, repo, name, commit, false)) < 0) {
+			goto out;
+	}
+
+	if (git_branch_is_checked_out(ref)) {
+		git_error_set(GIT_ERROR_WORKTREE, "reference %s is already checked out",
+			      git_reference_name(ref));
+		err = -1;
+		goto out;
 	}
 
 	/* Create gitdir directory ".git/worktrees/<name>" */
@@ -361,31 +370,6 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	    || (err = write_wtfile(gitdir.ptr, "gitdir", &buf)) < 0)
 		goto out;
 
-	/* Set up worktree reference */
-	if (wtopts.ref) {
-		if ((err = git_reference_dup(&ref, wtopts.ref)) < 0)
-			goto out;
-	} else {
-		if ((err = git_buf_printf(&ref_buf, "refs/heads/%s", name)) < 0)
-			goto out;
-		if (!git_reference_lookup(&ref, repo, ref_buf.ptr)) {
-			if (git_branch_is_checked_out(ref)) {
-				git_error_set(GIT_ERROR_WORKTREE,
-					      "reference %s is already checked out",
-					      ref_buf.ptr);
-				err = -1;
-				goto out;
-			}
-		} else {
-			if ((err = git_repository_head(&head, repo)) < 0)
-				goto out;
-			if ((err = git_commit_lookup(&commit, repo, &head->target.oid)) < 0)
-				goto out;
-			if ((err = git_branch_create(&ref, repo, name, commit, false)) < 0)
-				goto out;
-		}
-	}
-
 	/* Set worktree's HEAD */
 	if ((err = git_repository_create_head(gitdir.ptr, git_reference_name(ref))) < 0)
 		goto out;
@@ -405,7 +389,6 @@ out:
 	git_buf_dispose(&gitdir);
 	git_buf_dispose(&wddir);
 	git_buf_dispose(&buf);
-	git_buf_dispose(&ref_buf);
 	git_reference_free(ref);
 	git_reference_free(head);
 	git_commit_free(commit);

@@ -84,12 +84,13 @@ GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
 typedef struct git_worktree_add_options {
 	unsigned int version;
 
-	int lock; /**< lock newly created worktree */
-	git_reference *ref; /**< reference to use for the new worktree HEAD */
+	int lock;		/**< lock newly created worktree */
+	int checkout_existing;	/**< allow checkout of existing branch matching worktree name */
+	git_reference *ref;	/**< reference to use for the new worktree HEAD */
 } git_worktree_add_options;
 
-#define GIT_WORKTREE_ADD_OPTIONS_VERSION 1
-#define GIT_WORKTREE_ADD_OPTIONS_INIT {GIT_WORKTREE_ADD_OPTIONS_VERSION,0,NULL}
+#define GIT_WORKTREE_ADD_OPTIONS_VERSION 2
+#define GIT_WORKTREE_ADD_OPTIONS_INIT {GIT_WORKTREE_ADD_OPTIONS_VERSION,0,0,NULL}
 
 /**
  * Initialize git_worktree_add_options structure
