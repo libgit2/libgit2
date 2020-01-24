@@ -14,16 +14,16 @@
 #include "netops.h"
 
 typedef enum {
-	GIT_AUTHTYPE_BASIC = 1,
-	GIT_AUTHTYPE_NEGOTIATE = 2,
-	GIT_AUTHTYPE_NTLM = 4,
-} git_http_authtype_t;
+	GIT_HTTP_AUTH_BASIC = 1,
+	GIT_HTTP_AUTH_NEGOTIATE = 2,
+	GIT_HTTP_AUTH_NTLM = 4,
+} git_http_auth_t;
 
 typedef struct git_http_auth_context git_http_auth_context;
 
 struct git_http_auth_context {
 	/** Type of scheme */
-	git_http_authtype_t type;
+	git_http_auth_t type;
 
 	/** Supported credentials */
 	git_credtype_t credtypes;
@@ -46,7 +46,7 @@ struct git_http_auth_context {
 
 typedef struct {
 	/** Type of scheme */
-	git_http_authtype_t type;
+	git_http_auth_t type;
 
 	/** Name of the scheme (as used in the Authorization header) */
 	const char *name;

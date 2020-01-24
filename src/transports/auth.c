@@ -47,7 +47,7 @@ on_error:
 }
 
 static git_http_auth_context basic_context = {
-	GIT_AUTHTYPE_BASIC,
+	GIT_HTTP_AUTH_BASIC,
 	GIT_CREDTYPE_USERPASS_PLAINTEXT,
 	0,
 	NULL,

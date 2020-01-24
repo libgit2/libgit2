@@ -207,7 +207,7 @@ int git_http_auth_ntlm(
 		return -1;
 	}
 
-	ctx->parent.type = GIT_AUTHTYPE_NTLM;
+	ctx->parent.type = GIT_HTTP_AUTH_NTLM;
 	ctx->parent.credtypes = GIT_CREDTYPE_USERPASS_PLAINTEXT;
 	ctx->parent.connection_affinity = 1;
 	ctx->parent.set_challenge = ntlm_set_challenge;
