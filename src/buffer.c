@@ -567,6 +567,11 @@ void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf)
 	data[copylen] = '\0';
 }
 
+void git_buf_consume_bytes(git_buf *buf, size_t len)
+{
+	git_buf_consume(buf, buf->ptr + len);
+}
+
 void git_buf_consume(git_buf *buf, const char *end)
 {
 	if (end > buf->ptr && end <= buf->ptr + buf->size) {

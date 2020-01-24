@@ -30,6 +30,7 @@ static char *_remote_proxy_host = NULL;
 static char *_remote_proxy_user = NULL;
 static char *_remote_proxy_pass = NULL;
 static char *_remote_proxy_selfsigned = NULL;
+static char *_remote_expectcontinue = NULL;
 
 static int _orig_proxies_need_reset = 0;
 static char *_orig_http_proxy = NULL;
@@ -74,6 +75,10 @@ void test_online_clone__initialize(void)
 	_remote_proxy_user = cl_getenv("GITTEST_REMOTE_PROXY_USER");
 	_remote_proxy_pass = cl_getenv("GITTEST_REMOTE_PROXY_PASS");
 	_remote_proxy_selfsigned = cl_getenv("GITTEST_REMOTE_PROXY_SELFSIGNED");
+	_remote_expectcontinue = cl_getenv("GITTEST_REMOTE_EXPECTCONTINUE");
+
+	if (_remote_expectcontinue)
+		git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 1);
 
 	_orig_proxies_need_reset = 0;
 }
@@ -99,6 +104,7 @@ void test_online_clone__cleanup(void)
 	git__free(_remote_proxy_user);
 	git__free(_remote_proxy_pass);
 	git__free(_remote_proxy_selfsigned);
+	git__free(_remote_expectcontinue);
 
 	if (_orig_proxies_need_reset) {
 		cl_setenv("HTTP_PROXY", _orig_http_proxy);
@@ -455,8 +461,8 @@ void test_online_clone__can_cancel(void)
 {
 	g_options.fetch_opts.callbacks.transfer_progress = cancel_at_half;
 
-	cl_git_fail_with(
-		git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options), 4321);
+	cl_git_fail_with(4321,
+		git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 }
 
 static int cred_cb(git_cred **cred, const char *url, const char *user_from_url,

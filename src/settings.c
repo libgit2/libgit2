@@ -25,6 +25,7 @@
 #include "refs.h"
 #include "index.h"
 #include "transports/smart.h"
+#include "transports/http.h"
 #include "streams/openssl.h"
 #include "streams/mbedtls.h"
 
@@ -282,6 +283,10 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS:
 		git_disable_pack_keep_file_checks = (va_arg(ap, int) != 0);
+		break;
+
+	case GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE:
+		git_http__expect_continue = (va_arg(ap, int) != 0);
 		break;
 
 	default:

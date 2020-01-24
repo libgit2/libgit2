@@ -65,15 +65,4 @@ int gitno_recv(gitno_buffer *buf);
 void gitno_consume(gitno_buffer *buf, const char *ptr);
 void gitno_consume_n(gitno_buffer *buf, size_t cons);
 
-/*
- * This replaces all the pointers in `data` with freshly-allocated strings,
- * that the caller is responsible for freeing.
- * `gitno_connection_data_free_ptrs` is good for this.
- */
-
-int gitno_connection_data_handle_redirect(
-		git_net_url *data,
-		const char *url,
-		const char *service_suffix);
-
 #endif

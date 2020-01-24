@@ -9,8 +9,11 @@
 #define INCLUDE_transports_http_h__
 
 #include "buffer.h"
+#include "httpclient.h"
 
 #define GIT_HTTP_REPLAY_MAX 15
+
+extern bool git_http__expect_continue;
 
 GIT_INLINE(int) git_http__user_agent(git_buf *buf)
 {

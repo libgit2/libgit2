@@ -203,7 +203,8 @@ typedef enum {
 	GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY,
 	GIT_OPT_GET_PACK_MAX_OBJECTS,
 	GIT_OPT_SET_PACK_MAX_OBJECTS,
-	GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS
+	GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS,
+	GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE
 } git_libgit2_opt_t;
 
 /**
@@ -396,6 +397,11 @@ typedef enum {
  *	 opts(GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS, int enabled)
  *		> This will cause .keep file existence checks to be skipped when
  *		> accessing packfiles, which can help performance with remote filesystems.
+ *
+ *	 opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, int enabled)
+ *		> When connecting to a server using NTLM or Negotiate
+ *		> authentication, use expect/continue when POSTing data.
+ *		> This option is not available on Windows.
  *
  * @param option Option key
  * @param ... value to set the option
