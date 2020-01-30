@@ -331,7 +331,7 @@ Here are the bindings to libgit2 that are currently available:
 * Java
     * Jagged <https://github.com/ethomson/jagged>
 * Julia
-    * LibGit2.jl <https://github.com/jakebolewski/LibGit2.jl>
+    * LibGit2.jl <https://github.com/JuliaLang/julia/tree/master/stdlib/LibGit2>
 * Lua
     * luagit2 <https://github.com/libgit2/luagit2>
 * .NET
