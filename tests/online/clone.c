@@ -291,7 +291,7 @@ void test_online_clone__custom_headers(void)
 }
 
 static int cred_failure_cb(
-	git_cred **cred,
+	git_credential **cred,
 	const char *url,
 	const char *username_from_url,
 	unsigned int allowed_types,
@@ -315,22 +315,22 @@ void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 	cl_git_fail_with(-172, git_clone(&g_repo, _remote_url, "./foo", &g_options));
 }
 
-static int cred_count_calls_cb(git_cred **cred, const char *url, const char *user,
+static int cred_count_calls_cb(git_credential **cred, const char *url, const char *user,
 			       unsigned int allowed_types, void *data)
 {
 	size_t *counter = (size_t *) data;
 
 	GIT_UNUSED(url); GIT_UNUSED(user); GIT_UNUSED(allowed_types);
 
-	if (allowed_types == GIT_CREDTYPE_USERNAME)
-		return git_cred_username_new(cred, "foo");
+	if (allowed_types == GIT_CREDENTIAL_USERNAME)
+		return git_credential_username_new(cred, "foo");
 
 	(*counter)++;
 
 	if (*counter == 3)
 		return GIT_EUSER;
 
-	return git_cred_userpass_plaintext_new(cred, "foo", "bar");
+	return git_credential_userpass_plaintext_new(cred, "foo", "bar");
 }
 
 void test_online_clone__cred_callback_called_again_on_auth_failure(void)
@@ -351,7 +351,7 @@ void test_online_clone__cred_callback_called_again_on_auth_failure(void)
 }
 
 int cred_default(
-	git_cred **cred,
+	git_credential **cred,
 	const char *url,
 	const char *user_from_url,
 	unsigned int allowed_types,
@@ -361,10 +361,10 @@ int cred_default(
 	GIT_UNUSED(user_from_url);
 	GIT_UNUSED(payload);
 
-	if (!(allowed_types & GIT_CREDTYPE_DEFAULT))
+	if (!(allowed_types & GIT_CREDENTIAL_DEFAULT))
 		return 0;
 
-	return git_cred_default_new(cred);
+	return git_credential_default_new(cred);
 }
 
 void test_online_clone__credentials(void)
@@ -372,7 +372,7 @@ void test_online_clone__credentials(void)
 	/* Remote URL environment variable must be set.
 	 * User and password are optional.
 	 */
-	git_cred_userpass_payload user_pass = {
+	git_credential_userpass_payload user_pass = {
 		_remote_user,
 		_remote_pass
 	};
@@ -383,7 +383,7 @@ void test_online_clone__credentials(void)
 	if (cl_is_env_set("GITTEST_REMOTE_DEFAULT")) {
 		g_options.fetch_opts.callbacks.credentials = cred_default;
 	} else {
-		g_options.fetch_opts.callbacks.credentials = git_cred_userpass;
+		g_options.fetch_opts.callbacks.credentials = git_credential_userpass;
 		g_options.fetch_opts.callbacks.payload = &user_pass;
 	}
 
@@ -394,11 +394,11 @@ void test_online_clone__credentials(void)
 
 void test_online_clone__bitbucket_style(void)
 {
-	git_cred_userpass_payload user_pass = {
+	git_credential_userpass_payload user_pass = {
 		"libgit3", "libgit3"
 	};
 
-	g_options.fetch_opts.callbacks.credentials = git_cred_userpass;
+	g_options.fetch_opts.callbacks.credentials = git_credential_userpass;
 	g_options.fetch_opts.callbacks.payload = &user_pass;
 
 	cl_git_pass(git_clone(&g_repo, BB_REPO_URL, "./foo", &g_options));
@@ -408,16 +408,16 @@ void test_online_clone__bitbucket_style(void)
 
 void test_online_clone__bitbucket_uses_creds_in_url(void)
 {
-	git_cred_userpass_payload user_pass = {
+	git_credential_userpass_payload user_pass = {
 		"libgit2", "wrong"
 	};
 
-	g_options.fetch_opts.callbacks.credentials = git_cred_userpass;
+	g_options.fetch_opts.callbacks.credentials = git_credential_userpass;
 	g_options.fetch_opts.callbacks.payload = &user_pass;
 
 	/*
 	 * Correct user and pass are in the URL; the (incorrect) creds in
-	 * the `git_cred_userpass_payload` should be ignored.
+	 * the `git_credential_userpass_payload` should be ignored.
 	 */
 	cl_git_pass(git_clone(&g_repo, BB_REPO_URL_WITH_PASS, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;
@@ -426,11 +426,11 @@ void test_online_clone__bitbucket_uses_creds_in_url(void)
 
 void test_online_clone__bitbucket_falls_back_to_specified_creds(void)
 {
-	git_cred_userpass_payload user_pass = {
+	git_credential_userpass_payload user_pass = {
 		"libgit2", "libgit2"
 	};
 
-	g_options.fetch_opts.callbacks.credentials = git_cred_userpass;
+	g_options.fetch_opts.callbacks.credentials = git_credential_userpass;
 	g_options.fetch_opts.callbacks.payload = &user_pass;
 
 	/*
@@ -441,7 +441,7 @@ void test_online_clone__bitbucket_falls_back_to_specified_creds(void)
 
 	/*
 	 * Incorrect user and pass are in the URL; the (correct) creds in
-	 * the `git_cred_userpass_payload` should be used as a fallback.
+	 * the `git_credential_userpass_payload` should be used as a fallback.
 	 */
 	cl_git_pass(git_clone(&g_repo, BB_REPO_URL_WITH_WRONG_PASS, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;
@@ -465,16 +465,16 @@ void test_online_clone__can_cancel(void)
 		git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 }
 
-static int cred_cb(git_cred **cred, const char *url, const char *user_from_url,
+static int cred_cb(git_credential **cred, const char *url, const char *user_from_url,
 		   unsigned int allowed_types, void *payload)
 {
 	GIT_UNUSED(url); GIT_UNUSED(user_from_url); GIT_UNUSED(payload);
 
-	if (allowed_types & GIT_CREDTYPE_USERNAME)
-		return git_cred_username_new(cred, _remote_user);
+	if (allowed_types & GIT_CREDENTIAL_USERNAME)
+		return git_credential_username_new(cred, _remote_user);
 
-	if (allowed_types & GIT_CREDTYPE_SSH_KEY)
-		return git_cred_ssh_key_new(cred,
+	if (allowed_types & GIT_CREDENTIAL_SSH_KEY)
+		return git_credential_ssh_key_new(cred,
 			_remote_user, _remote_ssh_pubkey,
 			_remote_ssh_privkey, _remote_ssh_passphrase);
 
@@ -482,16 +482,16 @@ static int cred_cb(git_cred **cred, const char *url, const char *user_from_url,
 	return -1;
 }
 
-static int check_ssh_auth_methods(git_cred **cred, const char *url, const char *username_from_url,
+static int check_ssh_auth_methods(git_credential **cred, const char *url, const char *username_from_url,
 				  unsigned int allowed_types, void *data)
 {
 	int *with_user = (int *) data;
 	GIT_UNUSED(cred); GIT_UNUSED(url); GIT_UNUSED(username_from_url); GIT_UNUSED(data);
 
 	if (!*with_user)
-		cl_assert_equal_i(GIT_CREDTYPE_USERNAME, allowed_types);
+		cl_assert_equal_i(GIT_CREDENTIAL_USERNAME, allowed_types);
 	else
-		cl_assert(!(allowed_types & GIT_CREDTYPE_USERNAME));
+		cl_assert(!(allowed_types & GIT_CREDENTIAL_USERNAME));
 
 	return GIT_EUSER;
 }
@@ -566,13 +566,13 @@ void test_online_clone__ssh_with_paths(void)
 	cl_git_pass(git_clone(&g_repo, _remote_url, "./foo", &g_options));
 }
 
-static int cred_foo_bar(git_cred **cred, const char *url, const char *username_from_url,
+static int cred_foo_bar(git_credential **cred, const char *url, const char *username_from_url,
 				  unsigned int allowed_types, void *data)
 
 {
 	GIT_UNUSED(url); GIT_UNUSED(username_from_url); GIT_UNUSED(allowed_types); GIT_UNUSED(data);
 
-	return git_cred_userpass_plaintext_new(cred, "foo", "bar");
+	return git_credential_userpass_plaintext_new(cred, "foo", "bar");
 }
 
 void test_online_clone__ssh_cannot_change_username(void)
@@ -649,20 +649,20 @@ static char *read_key_file(const char *path)
 	return buf;
 }
 
-static int ssh_memory_cred_cb(git_cred **cred, const char *url, const char *user_from_url,
+static int ssh_memory_cred_cb(git_credential **cred, const char *url, const char *user_from_url,
 		   unsigned int allowed_types, void *payload)
 {
 	GIT_UNUSED(url); GIT_UNUSED(user_from_url); GIT_UNUSED(payload);
 
-	if (allowed_types & GIT_CREDTYPE_USERNAME)
-		return git_cred_username_new(cred, _remote_user);
+	if (allowed_types & GIT_CREDENTIAL_USERNAME)
+		return git_credential_username_new(cred, _remote_user);
 
-	if (allowed_types & GIT_CREDTYPE_SSH_KEY)
+	if (allowed_types & GIT_CREDENTIAL_SSH_KEY)
 	{
 		char *pubkey = read_key_file(_remote_ssh_pubkey);
 		char *privkey = read_key_file(_remote_ssh_privkey);
 
-		int ret = git_cred_ssh_key_memory_new(cred, _remote_user, pubkey, privkey, _remote_ssh_passphrase);
+		int ret = git_credential_ssh_key_memory_new(cred, _remote_user, pubkey, privkey, _remote_ssh_passphrase);
 
 		if (privkey)
 			free(privkey);
@@ -737,7 +737,7 @@ void test_online_clone__start_with_http(void)
 }
 
 static int called_proxy_creds;
-static int proxy_cred_cb(git_cred **out, const char *url, const char *username, unsigned int allowed, void *payload)
+static int proxy_cred_cb(git_credential **out, const char *url, const char *username, unsigned int allowed, void *payload)
 {
 	GIT_UNUSED(url);
 	GIT_UNUSED(username);
@@ -745,7 +745,7 @@ static int proxy_cred_cb(git_cred **out, const char *url, const char *username, 
 	GIT_UNUSED(payload);
 
 	called_proxy_creds = 1;
-	return git_cred_userpass_plaintext_new(out, _remote_proxy_user, _remote_proxy_pass);
+	return git_credential_userpass_plaintext_new(out, _remote_proxy_user, _remote_proxy_pass);
 }
 
 static int proxy_cert_cb(git_cert *cert, int valid, const char *host, void *payload)

@@ -19,8 +19,8 @@
 #include "smart.h"
 #include "streams/socket.h"
 
-#include "git2/cred.h"
-#include "git2/sys/cred.h"
+#include "git2/credential.h"
+#include "git2/sys/credential.h"
 
 #ifdef GIT_SSH
 
@@ -45,7 +45,7 @@ typedef struct {
 	git_smart_subtransport parent;
 	transport_smart *owner;
 	ssh_stream *current_stream;
-	git_cred *cred;
+	git_credential *cred;
 	char *cmd_uploadpack;
 	char *cmd_receivepack;
 } ssh_subtransport;
@@ -291,7 +291,7 @@ static int git_ssh_extract_url_parts(
 	return 0;
 }
 
-static int ssh_agent_auth(LIBSSH2_SESSION *session, git_cred_ssh_key *c) {
+static int ssh_agent_auth(LIBSSH2_SESSION *session, git_credential_ssh_key *c) {
 	int rc = LIBSSH2_ERROR_NONE;
 
 	struct libssh2_agent_publickey *curr, *prev = NULL;
@@ -346,21 +346,21 @@ shutdown:
 }
 
 static int _git_ssh_authenticate_session(
-	LIBSSH2_SESSION* session,
-	git_cred* cred)
+	LIBSSH2_SESSION *session,
+	git_credential *cred)
 {
 	int rc;
 
 	do {
 		git_error_clear();
 		switch (cred->credtype) {
-		case GIT_CREDTYPE_USERPASS_PLAINTEXT: {
-			git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
+		case GIT_CREDENTIAL_USERPASS_PLAINTEXT: {
+			git_credential_userpass_plaintext *c = (git_credential_userpass_plaintext *)cred;
 			rc = libssh2_userauth_password(session, c->username, c->password);
 			break;
 		}
-		case GIT_CREDTYPE_SSH_KEY: {
-			git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
+		case GIT_CREDENTIAL_SSH_KEY: {
+			git_credential_ssh_key *c = (git_credential_ssh_key *)cred;
 
 			if (c->privatekey)
 				rc = libssh2_userauth_publickey_fromfile(
@@ -371,17 +371,17 @@ static int _git_ssh_authenticate_session(
 
 			break;
 		}
-		case GIT_CREDTYPE_SSH_CUSTOM: {
-			git_cred_ssh_custom *c = (git_cred_ssh_custom *)cred;
+		case GIT_CREDENTIAL_SSH_CUSTOM: {
+			git_credential_ssh_custom *c = (git_credential_ssh_custom *)cred;
 
 			rc = libssh2_userauth_publickey(
 				session, c->username, (const unsigned char *)c->publickey,
 				c->publickey_len, c->sign_callback, &c->payload);
 			break;
 		}
-		case GIT_CREDTYPE_SSH_INTERACTIVE: {
+		case GIT_CREDENTIAL_SSH_INTERACTIVE: {
 			void **abstract = libssh2_session_abstract(session);
-			git_cred_ssh_interactive *c = (git_cred_ssh_interactive *)cred;
+			git_credential_ssh_interactive *c = (git_credential_ssh_interactive *)cred;
 
 			/* ideally, we should be able to set this by calling
 			 * libssh2_session_init_ex() instead of libssh2_session_init().
@@ -401,8 +401,8 @@ static int _git_ssh_authenticate_session(
 			break;
 		}
 #ifdef GIT_SSH_MEMORY_CREDENTIALS
-		case GIT_CREDTYPE_SSH_MEMORY: {
-			git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
+		case GIT_CREDENTIAL_SSH_MEMORY: {
+			git_credential_ssh_key *c = (git_credential_ssh_key *)cred;
 
 			assert(c->username);
 			assert(c->privatekey);
@@ -438,10 +438,10 @@ static int _git_ssh_authenticate_session(
 	return 0;
 }
 
-static int request_creds(git_cred **out, ssh_subtransport *t, const char *user, int auth_methods)
+static int request_creds(git_credential **out, ssh_subtransport *t, const char *user, int auth_methods)
 {
 	int error, no_callback = 0;
-	git_cred *cred = NULL;
+	git_credential *cred = NULL;
 
 	if (!t->owner->cred_acquire_cb) {
 		no_callback = 1;
@@ -520,7 +520,7 @@ static int _git_ssh_setup_conn(
 	int auth_methods, error = 0;
 	size_t i;
 	ssh_stream *s;
-	git_cred *cred = NULL;
+	git_credential *cred = NULL;
 	LIBSSH2_SESSION* session=NULL;
 	LIBSSH2_CHANNEL* channel=NULL;
 
@@ -609,16 +609,16 @@ post_extract:
 
 	/* we need the username to ask for auth methods */
 	if (!urldata.username) {
-		if ((error = request_creds(&cred, t, NULL, GIT_CREDTYPE_USERNAME)) < 0)
+		if ((error = request_creds(&cred, t, NULL, GIT_CREDENTIAL_USERNAME)) < 0)
 			goto done;
 
-		urldata.username = git__strdup(((git_cred_username *) cred)->username);
+		urldata.username = git__strdup(((git_credential_username *) cred)->username);
 		cred->free(cred);
 		cred = NULL;
 		if (!urldata.username)
 			goto done;
 	} else if (urldata.username && urldata.password) {
-		if ((error = git_cred_userpass_plaintext_new(&cred, urldata.username, urldata.password)) < 0)
+		if ((error = git_credential_userpass_plaintext_new(&cred, urldata.username, urldata.password)) < 0)
 			goto done;
 	}
 
@@ -639,7 +639,7 @@ post_extract:
 		if ((error = request_creds(&cred, t, urldata.username, auth_methods)) < 0)
 			goto done;
 
-		if (strcmp(urldata.username, git_cred_get_username(cred))) {
+		if (strcmp(urldata.username, git_credential_get_username(cred))) {
 			git_error_set(GIT_ERROR_SSH, "username does not match previous request");
 			error = -1;
 			goto done;
@@ -814,23 +814,23 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 			ptr++;
 
 		if (!git__prefixcmp(ptr, SSH_AUTH_PUBLICKEY)) {
-			*out |= GIT_CREDTYPE_SSH_KEY;
-			*out |= GIT_CREDTYPE_SSH_CUSTOM;
+			*out |= GIT_CREDENTIAL_SSH_KEY;
+			*out |= GIT_CREDENTIAL_SSH_CUSTOM;
 #ifdef GIT_SSH_MEMORY_CREDENTIALS
-			*out |= GIT_CREDTYPE_SSH_MEMORY;
+			*out |= GIT_CREDENTIAL_SSH_MEMORY;
 #endif
 			ptr += strlen(SSH_AUTH_PUBLICKEY);
 			continue;
 		}
 
 		if (!git__prefixcmp(ptr, SSH_AUTH_PASSWORD)) {
-			*out |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
+			*out |= GIT_CREDENTIAL_USERPASS_PLAINTEXT;
 			ptr += strlen(SSH_AUTH_PASSWORD);
 			continue;
 		}
 
 		if (!git__prefixcmp(ptr, SSH_AUTH_KEYBOARD_INTERACTIVE)) {
-			*out |= GIT_CREDTYPE_SSH_INTERACTIVE;
+			*out |= GIT_CREDENTIAL_SSH_INTERACTIVE;
 			ptr += strlen(SSH_AUTH_KEYBOARD_INTERACTIVE);
 			continue;
 		}

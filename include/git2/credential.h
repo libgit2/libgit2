@@ -4,15 +4,15 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_git_cred_h__
-#define INCLUDE_git_cred_h__
+#ifndef INCLUDE_git_credential_h__
+#define INCLUDE_git_credential_h__
 
 #include "common.h"
 
 /**
- * @file git2/cred.h
+ * @file git2/credential.h
  * @brief Git authentication & credential management
- * @defgroup git_cred Authentication & credential management
+ * @defgroup git_credential Authentication & credential management
  * @ingroup Git
  * @{
  */
@@ -27,33 +27,33 @@ GIT_BEGIN_DECL
 typedef enum {
 	/**
 	 * A vanilla user/password request
-	 * @see git_cred_userpass_plaintext_new
+	 * @see git_credential_userpass_plaintext_new
 	 */
-	GIT_CREDTYPE_USERPASS_PLAINTEXT = (1u << 0),
+	GIT_CREDENTIAL_USERPASS_PLAINTEXT = (1u << 0),
 
 	/**
 	 * An SSH key-based authentication request
-	 * @see git_cred_ssh_key_new
+	 * @see git_credential_ssh_key_new
 	 */
-	GIT_CREDTYPE_SSH_KEY = (1u << 1),
+	GIT_CREDENTIAL_SSH_KEY = (1u << 1),
 
 	/**
 	 * An SSH key-based authentication request, with a custom signature
-	 * @see git_cred_ssh_custom_new
+	 * @see git_credential_ssh_custom_new
 	 */
-	GIT_CREDTYPE_SSH_CUSTOM = (1u << 2),
+	GIT_CREDENTIAL_SSH_CUSTOM = (1u << 2),
 
 	/**
 	 * An NTLM/Negotiate-based authentication request.
-	 * @see git_cred_default
+	 * @see git_credential_default
 	 */
-	GIT_CREDTYPE_DEFAULT = (1u << 3),
+	GIT_CREDENTIAL_DEFAULT = (1u << 3),
 
 	/**
 	 * An SSH interactive authentication request
-	 * @see git_cred_ssh_interactive_new
+	 * @see git_credential_ssh_interactive_new
 	 */
-	GIT_CREDTYPE_SSH_INTERACTIVE = (1u << 4),
+	GIT_CREDENTIAL_SSH_INTERACTIVE = (1u << 4),
 
 	/**
 	 * Username-only authentication request
@@ -62,9 +62,9 @@ typedef enum {
 	 * (eg. SSH, with no username in its URL) does not know which username
 	 * to use.
 	 *
-	 * @see git_cred_username_new
+	 * @see git_credential_username_new
 	 */
-	GIT_CREDTYPE_USERNAME = (1u << 5),
+	GIT_CREDENTIAL_USERNAME = (1u << 5),
 
 	/**
 	 * An SSH key-based authentication request
@@ -73,62 +73,63 @@ typedef enum {
 	 * Note that because of differences in crypto backend support, it might
 	 * not be functional.
 	 *
-	 * @see git_cred_ssh_key_memory_new
+	 * @see git_credential_ssh_key_memory_new
 	 */
-	GIT_CREDTYPE_SSH_MEMORY = (1u << 6),
-} git_credtype_t;
+	GIT_CREDENTIAL_SSH_MEMORY = (1u << 6),
+} git_credential_t;
 
 /**
  * The base structure for all credential types
  */
-typedef struct git_cred git_cred;
+typedef struct git_credential git_credential;
 
-typedef struct git_cred_userpass_plaintext git_cred_userpass_plaintext;
+typedef struct git_credential_userpass_plaintext git_credential_userpass_plaintext;
 
 /** Username-only credential information */
-typedef struct git_cred_username git_cred_username;
+typedef struct git_credential_username git_credential_username;
 
 /** A key for NTLM/Kerberos "default" credentials */
-typedef struct git_cred git_cred_default;
+typedef struct git_credential git_credential_default;
 
 /**
  * A ssh key from disk
  */
-typedef struct git_cred_ssh_key git_cred_ssh_key;
+typedef struct git_credential_ssh_key git_credential_ssh_key;
 
 /**
  * Keyboard-interactive based ssh authentication
  */
-typedef struct git_cred_ssh_interactive git_cred_ssh_interactive;
+typedef struct git_credential_ssh_interactive git_credential_ssh_interactive;
 
 /**
  * A key with a custom signature function
  */
-typedef struct git_cred_ssh_custom git_cred_ssh_custom;
+typedef struct git_credential_ssh_custom git_credential_ssh_custom;
 
 /**
  * Credential acquisition callback.
  *
  * This callback is usually involved any time another system might need
- * authentication. As such, you are expected to provide a valid git_cred
- * object back, depending on allowed_types (a git_credtype_t bitmask).
+ * authentication. As such, you are expected to provide a valid
+ * git_credential object back, depending on allowed_types (a
+ * git_credential_t bitmask).
  *
  * Note that most authentication details are your responsibility - this
  * callback will be called until the authentication succeeds, or you report
  * an error. As such, it's easy to get in a loop if you fail to stop providing
  * the same incorrect credentials.
  *
- * @param cred The newly created credential object.
+ * @param out The newly created credential object.
  * @param url The resource for which we are demanding a credential.
  * @param username_from_url The username that was embedded in a "user\@host"
  *                          remote url, or NULL if not included.
- * @param allowed_types A bitmask stating which cred types are OK to return.
+ * @param allowed_types A bitmask stating which credential types are OK to return.
  * @param payload The payload provided when specifying this callback.
  * @return 0 for success, < 0 to indicate an error, > 0 to indicate
  *       no credential was acquired
  */
-typedef int GIT_CALLBACK(git_cred_acquire_cb)(
-	git_cred **cred,
+typedef int GIT_CALLBACK(git_credential_acquire_cb)(
+	git_credential **out,
 	const char *url,
 	const char *username_from_url,
 	unsigned int allowed_types,
@@ -142,7 +143,7 @@ typedef int GIT_CALLBACK(git_cred_acquire_cb)(
  *
  * @param cred the object to free
  */
-GIT_EXTERN(void) git_cred_free(git_cred *cred);
+GIT_EXTERN(void) git_credential_free(git_credential *cred);
 
 /**
  * Check whether a credential object contains username information.
@@ -150,7 +151,7 @@ GIT_EXTERN(void) git_cred_free(git_cred *cred);
  * @param cred object to check
  * @return 1 if the credential object has non-NULL username, 0 otherwise
  */
-GIT_EXTERN(int) git_cred_has_username(git_cred *cred);
+GIT_EXTERN(int) git_credential_has_username(git_credential *cred);
 
 /**
  * Return the username associated with a credential object.
@@ -158,7 +159,7 @@ GIT_EXTERN(int) git_cred_has_username(git_cred *cred);
  * @param cred object to check
  * @return the credential username, or NULL if not applicable
  */
-GIT_EXTERN(const char *) git_cred_get_username(git_cred *cred);
+GIT_EXTERN(const char *) git_credential_get_username(git_credential *cred);
 
 /**
  * Create a new plain-text username and password credential object.
@@ -169,8 +170,8 @@ GIT_EXTERN(const char *) git_cred_get_username(git_cred *cred);
  * @param password The password of the credential.
  * @return 0 for success or an error code for failure
  */
-GIT_EXTERN(int) git_cred_userpass_plaintext_new(
-	git_cred **out,
+GIT_EXTERN(int) git_credential_userpass_plaintext_new(
+	git_credential **out,
 	const char *username,
 	const char *password);
 
@@ -178,17 +179,22 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
  * Create a "default" credential usable for Negotiate mechanisms like NTLM
  * or Kerberos authentication.
  *
+ * @param out The newly created credential object.
  * @return 0 for success or an error code for failure
  */
-GIT_EXTERN(int) git_cred_default_new(git_cred **out);
+GIT_EXTERN(int) git_credential_default_new(git_credential **out);
 
 /**
  * Create a credential to specify a username.
  *
  * This is used with ssh authentication to query for the username if
  * none is specified in the url.
+ *
+ * @param out The newly created credential object.
+ * @param username The username to authenticate with
+ * @return 0 for success or an error code for failure
  */
-GIT_EXTERN(int) git_cred_username_new(git_cred **cred, const char *username);
+GIT_EXTERN(int) git_credential_username_new(git_credential **out, const char *username);
 
 /**
  * Create a new passphrase-protected ssh key credential object.
@@ -201,8 +207,8 @@ GIT_EXTERN(int) git_cred_username_new(git_cred **cred, const char *username);
  * @param passphrase The passphrase of the credential.
  * @return 0 for success or an error code for failure
  */
-GIT_EXTERN(int) git_cred_ssh_key_new(
-	git_cred **out,
+GIT_EXTERN(int) git_credential_ssh_key_new(
+	git_credential **out,
 	const char *username,
 	const char *publickey,
 	const char *privatekey,
@@ -218,8 +224,8 @@ GIT_EXTERN(int) git_cred_ssh_key_new(
  * @param passphrase The passphrase of the credential.
  * @return 0 for success or an error code for failure
  */
-GIT_EXTERN(int) git_cred_ssh_key_memory_new(
-	git_cred **out,
+GIT_EXTERN(int) git_credential_ssh_key_memory_new(
+	git_credential **out,
 	const char *username,
 	const char *publickey,
 	const char *privatekey,
@@ -235,7 +241,7 @@ typedef struct _LIBSSH2_USERAUTH_KBDINT_PROMPT LIBSSH2_USERAUTH_KBDINT_PROMPT;
 typedef struct _LIBSSH2_USERAUTH_KBDINT_RESPONSE LIBSSH2_USERAUTH_KBDINT_RESPONSE;
 #endif
 
-typedef void GIT_CALLBACK(git_cred_ssh_interactive_cb)(
+typedef void GIT_CALLBACK(git_credential_ssh_interactive_cb)(
 	const char *name,
 	int name_len,
 	const char *instruction, int instruction_len,
@@ -253,10 +259,10 @@ typedef void GIT_CALLBACK(git_cred_ssh_interactive_cb)(
  * @param payload Additional data to pass to the callback.
  * @return 0 for success or an error code for failure.
  */
-GIT_EXTERN(int) git_cred_ssh_interactive_new(
-	git_cred **out,
+GIT_EXTERN(int) git_credential_ssh_interactive_new(
+	git_credential **out,
 	const char *username,
-	git_cred_ssh_interactive_cb prompt_callback,
+	git_credential_ssh_interactive_cb prompt_callback,
 	void *payload);
 
 /**
@@ -267,11 +273,11 @@ GIT_EXTERN(int) git_cred_ssh_interactive_new(
  * @param username username to use to authenticate
  * @return 0 for success or an error code for failure
  */
-GIT_EXTERN(int) git_cred_ssh_key_from_agent(
-	git_cred **out,
+GIT_EXTERN(int) git_credential_ssh_key_from_agent(
+	git_credential **out,
 	const char *username);
 
-typedef int GIT_CALLBACK(git_cred_sign_cb)(
+typedef int GIT_CALLBACK(git_credential_sign_cb)(
 	LIBSSH2_SESSION *session,
 	unsigned char **sig, size_t *sig_len,
 	const unsigned char *data, size_t data_len,
@@ -295,12 +301,12 @@ typedef int GIT_CALLBACK(git_cred_sign_cb)(
  * @param payload Additional data to pass to the callback.
  * @return 0 for success or an error code for failure
  */
-GIT_EXTERN(int) git_cred_ssh_custom_new(
-	git_cred **out,
+GIT_EXTERN(int) git_credential_ssh_custom_new(
+	git_credential **out,
 	const char *username,
 	const char *publickey,
 	size_t publickey_len,
-	git_cred_sign_cb sign_callback,
+	git_credential_sign_cb sign_callback,
 	void *payload);
 
 /** @} */

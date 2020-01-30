@@ -7,16 +7,16 @@
 
 #include "common.h"
 
-#include "git2/cred_helpers.h"
+#include "git2/credential_helpers.h"
 
-int git_cred_userpass(
-		git_cred **cred,
+int git_credential_userpass(
+		git_credential **cred,
 		const char *url,
 		const char *user_from_url,
 		unsigned int allowed_types,
 		void *payload)
 {
-	git_cred_userpass_payload *userpass = (git_cred_userpass_payload*)payload;
+	git_credential_userpass_payload *userpass = (git_credential_userpass_payload*)payload;
 	const char *effective_username = NULL;
 
 	GIT_UNUSED(url);
@@ -42,12 +42,25 @@ int git_cred_userpass(
 	else
 		return -1;
 
-	if (GIT_CREDTYPE_USERNAME & allowed_types)
-		return git_cred_username_new(cred, effective_username);
+	if (GIT_CREDENTIAL_USERNAME & allowed_types)
+		return git_credential_username_new(cred, effective_username);
 
-	if ((GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) == 0 ||
-			git_cred_userpass_plaintext_new(cred, effective_username, userpass->password) < 0)
+	if ((GIT_CREDENTIAL_USERPASS_PLAINTEXT & allowed_types) == 0 ||
+			git_credential_userpass_plaintext_new(cred, effective_username, userpass->password) < 0)
 		return -1;
 
 	return 0;
+}
+
+/* Deprecated credential functions */
+
+int git_cred_userpass(
+	git_credential **out,
+	const char *url,
+	const char *user_from_url,
+	unsigned int allowed_types,
+	void *payload)
+{
+	return git_credential_userpass(out, url, user_from_url,
+		allowed_types, payload);
 }

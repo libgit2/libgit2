@@ -55,7 +55,7 @@ struct git_transport {
 	int GIT_CALLBACK(connect)(
 		git_transport *transport,
 		const char *url,
-		git_cred_acquire_cb cred_acquire_cb,
+		git_credential_acquire_cb cred_acquire_cb,
 		void *cred_acquire_payload,
 		const git_proxy_options *proxy_opts,
 		int direction,
@@ -266,7 +266,7 @@ GIT_EXTERN(int) git_transport_smart_certificate_check(git_transport *transport, 
  *         refused to provide credentials and callers should behave as if no
  *         callback was set), or < 0 for an error
  */
-GIT_EXTERN(int) git_transport_smart_credentials(git_cred **out, git_transport *transport, const char *user, int methods);
+GIT_EXTERN(int) git_transport_smart_credentials(git_credential **out, git_transport *transport, const char *user, int methods);
 
 /**
  * Get a copy of the proxy options

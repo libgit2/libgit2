@@ -12,7 +12,7 @@
 #include "git2.h"
 #include "buffer.h"
 #include "auth.h"
-#include "git2/sys/cred.h"
+#include "git2/sys/credential.h"
 
 #ifdef GIT_GSSFRAMEWORK
 #import <GSS/GSS.h>
@@ -94,7 +94,7 @@ static void negotiate_context_dispose(http_auth_negotiate_context *ctx)
 static int negotiate_next_token(
 	git_buf *buf,
 	git_http_auth_context *c,
-	git_cred *cred)
+	git_credential *cred)
 {
 	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
 	OM_uint32 status_major, status_minor;
@@ -108,7 +108,7 @@ static int negotiate_next_token(
 	size_t challenge_len;
 	int error = 0;
 
-	assert(buf && ctx && ctx->configured && cred && cred->credtype == GIT_CREDTYPE_DEFAULT);
+	assert(buf && ctx && ctx->configured && cred && cred->credtype == GIT_CREDENTIAL_DEFAULT);
 
 	if (ctx->complete)
 		return 0;
@@ -292,7 +292,7 @@ int git_http_auth_negotiate(
 	}
 
 	ctx->parent.type = GIT_HTTP_AUTH_NEGOTIATE;
-	ctx->parent.credtypes = GIT_CREDTYPE_DEFAULT;
+	ctx->parent.credtypes = GIT_CREDENTIAL_DEFAULT;
 	ctx->parent.connection_affinity = 1;
 	ctx->parent.set_challenge = negotiate_set_challenge;
 	ctx->parent.next_token = negotiate_next_token;

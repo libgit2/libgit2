@@ -26,7 +26,7 @@ struct git_http_auth_context {
 	git_http_auth_t type;
 
 	/** Supported credentials */
-	git_credtype_t credtypes;
+	git_credential_t credtypes;
 
 	/** Connection affinity or request affinity */
 	unsigned connection_affinity : 1;
@@ -35,7 +35,7 @@ struct git_http_auth_context {
 	int (*set_challenge)(git_http_auth_context *ctx, const char *challenge);
 
 	/** Gets the next authentication token from the context */
-	int (*next_token)(git_buf *out, git_http_auth_context *ctx, git_cred *cred);
+	int (*next_token)(git_buf *out, git_http_auth_context *ctx, git_credential *cred);
 
 	/** Examines if all tokens have been presented. */
 	int (*is_complete)(git_http_auth_context *ctx);
@@ -52,7 +52,7 @@ typedef struct {
 	const char *name;
 
 	/** Credential types this scheme supports */
-	git_credtype_t credtypes;
+	git_credential_t credtypes;
 
 	/** Function to initialize an authentication context */
 	int (*init_context)(

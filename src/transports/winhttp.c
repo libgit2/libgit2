@@ -19,7 +19,7 @@
 #include "repository.h"
 #include "global.h"
 #include "http.h"
-#include "git2/sys/cred.h"
+#include "git2/sys/credential.h"
 
 #include <wincrypt.h>
 #include <winhttp.h>
@@ -113,7 +113,7 @@ typedef struct {
 
 typedef struct {
 	git_net_url url;
-	git_cred *cred;
+	git_credential *cred;
 	int auth_mechanisms;
 	bool url_cred_presented;
 } winhttp_server;
@@ -129,9 +129,9 @@ typedef struct {
 	HINTERNET connection;
 } winhttp_subtransport;
 
-static int apply_userpass_credentials(HINTERNET request, DWORD target, int mechanisms, git_cred *cred)
+static int apply_userpass_credentials(HINTERNET request, DWORD target, int mechanisms, git_credential *cred)
 {
-	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
+	git_credential_userpass_plaintext *c = (git_credential_userpass_plaintext *)cred;
 	wchar_t *user = NULL, *pass = NULL;
 	int user_len = 0, pass_len = 0, error = 0;
 	DWORD native_scheme;
@@ -206,22 +206,22 @@ static int apply_default_credentials(HINTERNET request, DWORD target, int mechan
 }
 
 static int acquire_url_cred(
-	git_cred **cred,
+	git_credential **cred,
 	unsigned int allowed_types,
 	const char *username,
 	const char *password)
 {
-	if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT)
-		return git_cred_userpass_plaintext_new(cred, username, password);
+	if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT)
+		return git_credential_userpass_plaintext_new(cred, username, password);
 
-	if ((allowed_types & GIT_CREDTYPE_DEFAULT) && *username == '\0' && *password == '\0')
-		return git_cred_default_new(cred);
+	if ((allowed_types & GIT_CREDENTIAL_DEFAULT) && *username == '\0' && *password == '\0')
+		return git_credential_default_new(cred);
 
 	return 1;
 }
 
 static int acquire_fallback_cred(
-	git_cred **cred,
+	git_credential **cred,
 	const char *url,
 	unsigned int allowed_types)
 {
@@ -229,7 +229,7 @@ static int acquire_fallback_cred(
 
 	/* If the target URI supports integrated Windows authentication
 	 * as an authentication mechanism */
-	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
+	if (GIT_CREDENTIAL_DEFAULT & allowed_types) {
 		wchar_t *wide_url;
 		HRESULT hCoInitResult;
 
@@ -253,13 +253,13 @@ static int acquire_fallback_cred(
 					(URLZONE_LOCAL_MACHINE == dwZone ||
 					URLZONE_INTRANET == dwZone ||
 					URLZONE_TRUSTED == dwZone)) {
-					git_cred *existing = *cred;
+					git_credential *existing = *cred;
 
 					if (existing)
 						existing->free(existing);
 
 					/* Then use default Windows credentials to authenticate this request */
-					error = git_cred_default_new(cred);
+					error = git_credential_default_new(cred);
 				}
 
 				pISM->lpVtbl->Release(pISM);
@@ -345,7 +345,7 @@ static int apply_credentials(
 	HINTERNET request,
 	git_net_url *url,
 	int target,
-	git_cred *creds,
+	git_credential *creds,
 	int mechanisms)
 {
 	int error = 0;
@@ -353,9 +353,9 @@ static int apply_credentials(
 	GIT_UNUSED(url);
 
 	/* If we have creds, just apply them */
-	if (creds && creds->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT)
+	if (creds && creds->credtype == GIT_CREDENTIAL_USERPASS_PLAINTEXT)
 		error = apply_userpass_credentials(request, target, mechanisms, creds);
-	else if (creds && creds->credtype == GIT_CREDTYPE_DEFAULT)
+	else if (creds && creds->credtype == GIT_CREDENTIAL_DEFAULT)
 		error = apply_default_credentials(request, target, mechanisms);
 
 	return error;
@@ -606,23 +606,23 @@ static int parse_unauthorized_response(
 	}
 
 	if (WINHTTP_AUTH_SCHEME_NTLM & supported) {
-		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
-		*allowed_types |= GIT_CREDTYPE_DEFAULT;
+		*allowed_types |= GIT_CREDENTIAL_USERPASS_PLAINTEXT;
+		*allowed_types |= GIT_CREDENTIAL_DEFAULT;
 		*allowed_mechanisms |= GIT_WINHTTP_AUTH_NTLM;
 	}
 
 	if (WINHTTP_AUTH_SCHEME_NEGOTIATE & supported) {
-		*allowed_types |= GIT_CREDTYPE_DEFAULT;
+		*allowed_types |= GIT_CREDENTIAL_DEFAULT;
 		*allowed_mechanisms |= GIT_WINHTTP_AUTH_NEGOTIATE;
 	}
 
 	if (WINHTTP_AUTH_SCHEME_BASIC & supported) {
-		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
+		*allowed_types |= GIT_CREDENTIAL_USERPASS_PLAINTEXT;
 		*allowed_mechanisms |= GIT_WINHTTP_AUTH_BASIC;
 	}
 
 	if (WINHTTP_AUTH_SCHEME_DIGEST & supported) {
-		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
+		*allowed_types |= GIT_CREDENTIAL_USERPASS_PLAINTEXT;
 		*allowed_mechanisms |= GIT_WINHTTP_AUTH_DIGEST;
 	}
 
@@ -907,7 +907,7 @@ static int acquire_credentials(
 	HINTERNET request,
 	winhttp_server *server,
 	const char *url_str,
-	git_cred_acquire_cb cred_cb,
+	git_credential_acquire_cb cred_cb,
 	void *cred_cb_payload)
 {
 	int allowed_types;
@@ -917,7 +917,7 @@ static int acquire_credentials(
 		return -1;
 
 	if (allowed_types) {
-		git_cred_free(server->cred);
+		git_credential_free(server->cred);
 		server->cred = NULL;
 
 		/* Start with URL-specified credentials, if there were any. */
@@ -933,7 +933,7 @@ static int acquire_credentials(
 		if (error > 0 && cred_cb) {
 			error = cred_cb(&server->cred, url_str, server->url.username, allowed_types, cred_cb_payload);
 
-			/* Treat GIT_PASSTHROUGH as though git_cred_acquire_cb isn't set */
+			/* Treat GIT_PASSTHROUGH as though git_credential_acquire_cb isn't set */
 			if (error == GIT_PASSTHROUGH)
 				error = 1;
 			else if (error < 0)
