@@ -20,7 +20,7 @@ jobs:
        CC=gcc
        CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on -DUSE_GSSAPI=ON
-       GITTEST_NEGOTIATE_PASSWORD=$(GITTEST_NEGOTIATE_PASSWORD)
+       GITTEST_NEGOTIATE_PASSWORD=${{ variables.GITTEST_NEGOTIATE_PASSWORD }}
 
 - job: linux_amd64_xenial_gcc_mbedtls
   displayName: 'Linux (amd64; Xenial; GCC; mbedTLS)'
@@ -36,7 +36,7 @@ jobs:
        CC=gcc
        CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on -DUSE_GSSAPI=ON
-       GITTEST_NEGOTIATE_PASSWORD=$(GITTEST_NEGOTIATE_PASSWORD)
+       GITTEST_NEGOTIATE_PASSWORD=${{ variables.GITTEST_NEGOTIATE_PASSWORD }}
 
 - job: linux_amd64_xenial_clang_openssl
   displayName: 'Linux (amd64; Xenial; Clang; OpenSSL)'
@@ -52,7 +52,7 @@ jobs:
        CC=clang
        CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on -DUSE_GSSAPI=ON
-       GITTEST_NEGOTIATE_PASSWORD=$(GITTEST_NEGOTIATE_PASSWORD)
+       GITTEST_NEGOTIATE_PASSWORD=${{ variables.GITTEST_NEGOTIATE_PASSWORD }}
 
 - job: linux_amd64_xenial_clang_mbedtls
   displayName: 'Linux (amd64; Xenial; Clang; mbedTLS)'
@@ -68,7 +68,7 @@ jobs:
        CC=clang
        CMAKE_GENERATOR=Ninja
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on -DUSE_GSSAPI=ON
-       GITTEST_NEGOTIATE_PASSWORD=$(GITTEST_NEGOTIATE_PASSWORD)
+       GITTEST_NEGOTIATE_PASSWORD=${{ variables.GITTEST_NEGOTIATE_PASSWORD }}
 
 - job: macos
   displayName: 'macOS'
@@ -85,7 +85,7 @@ jobs:
         CMAKE_GENERATOR: Ninja
         CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
         SKIP_SSH_TESTS: true
-        GITTEST_NEGOTIATE_PASSWORD: $(GITTEST_NEGOTIATE_PASSWORD)
+        GITTEST_NEGOTIATE_PASSWORD: ${{ variables.GITTEST_NEGOTIATE_PASSWORD }}
 
 - job: windows_vs_amd64
   displayName: 'Windows (amd64; Visual Studio)'
