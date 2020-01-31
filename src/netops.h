@@ -84,6 +84,9 @@ int gitno_connection_data_from_url(
 		const char *url,
 		const char *service_suffix);
 
+/* Format a URL into a buffer */
+int gitno_connection_data_fmt(git_buf *buf, gitno_connection_data *data);
+
 /* This frees all the pointers IN the struct, but not the struct itself. */
 void gitno_connection_data_free_ptrs(gitno_connection_data *data);
 
