@@ -108,7 +108,7 @@ void test_fetchhead_nonetwork__write(void)
 typedef struct {
 	git_vector *fetchhead_vector;
 	size_t idx;
-} fetchhead_ref_cb_data; 
+} fetchhead_ref_cb_data;
 
 static int fetchhead_ref_cb(const char *name, const char *url,
 	const git_oid *oid, unsigned int is_merge, void *payload)
@@ -492,4 +492,22 @@ void test_fetchhead_nonetwork__create_with_multiple_refspecs(void)
 
 	git_remote_free(remote);
 	git_buf_dispose(&path);
+}
+
+void test_fetchhead_nonetwork__credentials_are_stripped(void)
+{
+	git_fetchhead_ref *ref;
+	git_oid oid;
+
+	cl_git_pass(git_oid_fromstr(&oid, "49322bb17d3acc9146f98c97d078513228bbf3c0"));
+	cl_git_pass(git_fetchhead_ref_create(&ref, &oid, 0,
+		"refs/tags/commit_tree", "http://foo:bar@github.com/libgit2/TestGitRepository"));
+	cl_assert_equal_s(ref->remote_url, "http://github.com/libgit2/TestGitRepository");
+	git_fetchhead_ref_free(ref);
+
+	cl_git_pass(git_oid_fromstr(&oid, "49322bb17d3acc9146f98c97d078513228bbf3c0"));
+	cl_git_pass(git_fetchhead_ref_create(&ref, &oid, 0,
+		"refs/tags/commit_tree", "https://foo:bar@github.com/libgit2/TestGitRepository"));
+	cl_assert_equal_s(ref->remote_url, "https://github.com/libgit2/TestGitRepository");
+	git_fetchhead_ref_free(ref);
 }

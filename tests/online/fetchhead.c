@@ -154,3 +154,20 @@ void test_online_fetchhead__colon_only_dst_refspec_creates_no_branch(void)
 
 	cl_assert_equal_i(refs, count_references());
 }
+
+void test_online_fetchhead__creds_get_stripped(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+	git_remote *remote;
+
+	cl_git_pass(git_repository_init(&g_repo, "./foo", 0));
+	cl_git_pass(git_remote_create_anonymous(&remote, g_repo, "https://foo:bar@github.com/libgit2/TestGitRepository"));
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+
+	cl_git_pass(git_futils_readbuffer(&buf, "./foo/.git/FETCH_HEAD"));
+	cl_assert_equal_s(buf.ptr,
+		"49322bb17d3acc9146f98c97d078513228bbf3c0\t\thttps://github.com/libgit2/TestGitRepository\n");
+
+	git_remote_free(remote);
+	git_buf_dispose(&buf);
+}
