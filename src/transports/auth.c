@@ -9,25 +9,25 @@
 
 #include "git2.h"
 #include "buffer.h"
-#include "git2/sys/cred.h"
+#include "git2/sys/credential.h"
 
 static int basic_next_token(
 	git_buf *out,
 	git_http_auth_context *ctx,
-	git_cred *c)
+	git_credential *c)
 {
-	git_cred_userpass_plaintext *cred;
+	git_credential_userpass_plaintext *cred;
 	git_buf raw = GIT_BUF_INIT;
 	int error = -1;
 
 	GIT_UNUSED(ctx);
 
-	if (c->credtype != GIT_CREDTYPE_USERPASS_PLAINTEXT) {
+	if (c->credtype != GIT_CREDENTIAL_USERPASS_PLAINTEXT) {
 		git_error_set(GIT_ERROR_INVALID, "invalid credential type for basic auth");
 		goto on_error;
 	}
 
-	cred = (git_cred_userpass_plaintext *)c;
+	cred = (git_credential_userpass_plaintext *)c;
 
 	git_buf_printf(&raw, "%s:%s", cred->username, cred->password);
 
@@ -47,8 +47,8 @@ on_error:
 }
 
 static git_http_auth_context basic_context = {
-	GIT_AUTHTYPE_BASIC,
-	GIT_CREDTYPE_USERPASS_PLAINTEXT,
+	GIT_HTTP_AUTH_BASIC,
+	GIT_CREDENTIAL_USERPASS_PLAINTEXT,
 	0,
 	NULL,
 	basic_next_token,

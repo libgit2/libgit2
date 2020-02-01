@@ -206,7 +206,7 @@ static void free_symrefs(git_vector *symrefs)
 static int git_smart__connect(
 	git_transport *transport,
 	const char *url,
-	git_cred_acquire_cb cred_acquire_cb,
+	git_credential_acquire_cb cred_acquire_cb,
 	void *cred_acquire_payload,
 	const git_proxy_options *proxy,
 	int direction,
@@ -489,7 +489,7 @@ int git_transport_smart_certificate_check(git_transport *transport, git_cert *ce
 	return t->certificate_check_cb(cert, valid, hostname, t->message_cb_payload);
 }
 
-int git_transport_smart_credentials(git_cred **out, git_transport *transport, const char *user, int methods)
+int git_transport_smart_credentials(git_credential **out, git_transport *transport, const char *user, int methods)
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 

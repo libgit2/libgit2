@@ -201,7 +201,7 @@ on_error:
 static int local_connect(
 	git_transport *transport,
 	const char *url,
-	git_cred_acquire_cb cred_acquire_cb,
+	git_credential_acquire_cb cred_acquire_cb,
 	void *cred_acquire_payload,
 	const git_proxy_options *proxy,
 	int direction, int flags)

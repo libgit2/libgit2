@@ -39,8 +39,8 @@ struct git_diff {
 	git_diff_options opts;
 	git_vector       deltas;    /* vector of git_diff_delta */
 	git_pool pool;
-	git_iterator_type_t old_src;
-	git_iterator_type_t new_src;
+	git_iterator_t old_src;
+	git_iterator_t new_src;
 	git_diff_perfdata perf;
 
 	int (*strcomp)(const char *, const char *);

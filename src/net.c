@@ -153,6 +153,187 @@ done:
 	return error;
 }
 
+int git_net_url_joinpath(
+	git_net_url *out,
+	git_net_url *one,
+	const char *two)
+{
+	git_buf path = GIT_BUF_INIT;
+	const char *query;
+	size_t one_len, two_len;
+
+	git_net_url_dispose(out);
+
+	if ((query = strchr(two, '?')) != NULL) {
+		two_len = query - two;
+
+		if (*(++query) != '\0') {
+			out->query = git__strdup(query);
+			GIT_ERROR_CHECK_ALLOC(out->query);
+		}
+	} else {
+		two_len = strlen(two);
+	}
+
+	/* Strip all trailing `/`s from the first path */
+	one_len = one->path ? strlen(one->path) : 0;
+	while (one_len && one->path[one_len - 1] == '/')
+		one_len--;
+
+	/* Strip all leading `/`s from the second path */
+	while (*two == '/') {
+		two++;
+		two_len--;
+	}
+
+	git_buf_put(&path, one->path, one_len);
+	git_buf_putc(&path, '/');
+	git_buf_put(&path, two, two_len);
+
+	if (git_buf_oom(&path))
+		return -1;
+
+	out->path = git_buf_detach(&path);
+
+	if (one->scheme) {
+		out->scheme = git__strdup(one->scheme);
+		GIT_ERROR_CHECK_ALLOC(out->scheme);
+	}
+
+	if (one->host) {
+		out->host = git__strdup(one->host);
+		GIT_ERROR_CHECK_ALLOC(out->host);
+	}
+
+	if (one->port) {
+		out->port = git__strdup(one->port);
+		GIT_ERROR_CHECK_ALLOC(out->port);
+	}
+
+	if (one->username) {
+		out->username = git__strdup(one->username);
+		GIT_ERROR_CHECK_ALLOC(out->username);
+	}
+
+	if (one->password) {
+		out->password = git__strdup(one->password);
+		GIT_ERROR_CHECK_ALLOC(out->password);
+	}
+
+	return 0;
+}
+
+/*
+ * Some servers strip the query parameters from the Location header
+ * when sending a redirect. Others leave it in place.
+ * Check for both, starting with the stripped case first,
+ * since it appears to be more common.
+ */
+static void remove_service_suffix(
+	git_net_url *url,
+	const char *service_suffix)
+{
+	const char *service_query = strchr(service_suffix, '?');
+	size_t full_suffix_len = strlen(service_suffix);
+	size_t suffix_len = service_query ?
+		(size_t)(service_query - service_suffix) : full_suffix_len;
+	size_t path_len = strlen(url->path);
+	ssize_t truncate = -1;
+
+	/*
+	 * Check for a redirect without query parameters,
+	 * like "/newloc/info/refs"'
+	 */
+	if (suffix_len && path_len >= suffix_len) {
+		size_t suffix_offset = path_len - suffix_len;
+
+		if (git__strncmp(url->path + suffix_offset, service_suffix, suffix_len) == 0 &&
+		    (!service_query || git__strcmp(url->query, service_query + 1) == 0)) {
+			truncate = suffix_offset;
+		}
+	}
+
+	/*
+	 * If we haven't already found where to truncate to remove the
+	 * suffix, check for a redirect with query parameters, like
+	 * "/newloc/info/refs?service=git-upload-pack"
+	 */
+	if (truncate < 0 && git__suffixcmp(url->path, service_suffix) == 0)
+		truncate = path_len - full_suffix_len;
+
+	/* Ensure we leave a minimum of '/' as the path */
+	if (truncate == 0)
+		truncate++;
+
+	if (truncate > 0) {
+		url->path[truncate] = '\0';
+
+		git__free(url->query);
+		url->query = NULL;
+	}
+}
+
+int git_net_url_apply_redirect(
+	git_net_url *url,
+	const char *redirect_location,
+	const char *service_suffix)
+{
+	git_net_url tmp = GIT_NET_URL_INIT;
+	int error = 0;
+
+	assert(url && redirect_location);
+
+	if (redirect_location[0] == '/') {
+		git__free(url->path);
+
+		if ((url->path = git__strdup(redirect_location)) == NULL) {
+			error = -1;
+			goto done;
+		}
+	} else {
+		git_net_url *original = url;
+
+		if ((error = git_net_url_parse(&tmp, redirect_location)) < 0)
+			goto done;
+
+		/* Validate that this is a legal redirection */
+
+		if (original->scheme &&
+			strcmp(original->scheme, tmp.scheme) != 0 &&
+			strcmp(tmp.scheme, "https") != 0) {
+			git_error_set(GIT_ERROR_NET, "cannot redirect from '%s' to '%s'",
+				original->scheme, tmp.scheme);
+
+			error = -1;
+			goto done;
+		}
+
+		if (original->host &&
+		    git__strcasecmp(original->host, tmp.host) != 0) {
+			git_error_set(GIT_ERROR_NET, "cannot redirect from '%s' to '%s'",
+				original->host, tmp.host);
+
+			error = -1;
+			goto done;
+		}
+
+		git_net_url_swap(url, &tmp);
+	}
+
+	/* Remove the service suffix if it was given to us */
+	if (service_suffix)
+		remove_service_suffix(url, service_suffix);
+
+done:
+	git_net_url_dispose(&tmp);
+	return error;
+}
+
+bool git_net_url_valid(git_net_url *url)
+{
+	return (url->host && url->port && url->path);
+}
+
 int git_net_url_is_default_port(git_net_url *url)
 {
 	return (strcmp(url->port, default_port_for_scheme(url->scheme)) == 0);
@@ -167,6 +348,51 @@ void git_net_url_swap(git_net_url *a, git_net_url *b)
 	memcpy(b, &tmp, sizeof(git_net_url));
 }
 
+int git_net_url_fmt(git_buf *buf, git_net_url *url)
+{
+	git_buf_puts(buf, url->scheme);
+	git_buf_puts(buf, "://");
+
+	if (url->username) {
+		git_buf_puts(buf, url->username);
+
+		if (url->password) {
+			git_buf_puts(buf, ":");
+			git_buf_puts(buf, url->password);
+		}
+
+		git_buf_putc(buf, '@');
+	}
+
+	git_buf_puts(buf, url->host);
+
+	if (url->port && !git_net_url_is_default_port(url)) {
+		git_buf_putc(buf, ':');
+		git_buf_puts(buf, url->port);
+	}
+
+	git_buf_puts(buf, url->path ? url->path : "/");
+
+	if (url->query) {
+		git_buf_putc(buf, '?');
+		git_buf_puts(buf, url->query);
+	}
+
+	return git_buf_oom(buf) ? -1 : 0;
+}
+
+int git_net_url_fmt_path(git_buf *buf, git_net_url *url)
+{
+	git_buf_puts(buf, url->path ? url->path : "/");
+
+	if (url->query) {
+		git_buf_putc(buf, '?');
+		git_buf_puts(buf, url->query);
+	}
+
+	return git_buf_oom(buf) ? -1 : 0;
+}
+
 void git_net_url_dispose(git_net_url *url)
 {
 	if (url->username)
@@ -179,6 +405,7 @@ void git_net_url_dispose(git_net_url *url)
 	git__free(url->host); url->host = NULL;
 	git__free(url->port); url->port = NULL;
 	git__free(url->path); url->path = NULL;
+	git__free(url->query); url->query = NULL;
 	git__free(url->username); url->username = NULL;
 	git__free(url->password); url->password = NULL;
 }

@@ -125,7 +125,7 @@ cleanup:
 	return err;
 }
 
-void git_mempack_reset(git_odb_backend *_backend)
+int git_mempack_reset(git_odb_backend *_backend)
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
 	struct memobject *object = NULL;
@@ -137,6 +137,8 @@ void git_mempack_reset(git_odb_backend *_backend)
 	git_array_clear(db->commits);
 
 	git_oidmap_clear(db->objects);
+
+	return 0;
 }
 
 static void impl__free(git_odb_backend *_backend)

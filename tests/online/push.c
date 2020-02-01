@@ -19,8 +19,9 @@ static char *_remote_ssh_pubkey = NULL;
 static char *_remote_ssh_passphrase = NULL;
 
 static char *_remote_default = NULL;
+static char *_remote_expectcontinue = NULL;
 
-static int cred_acquire_cb(git_cred **,	const char *, const char *, unsigned int, void *);
+static int cred_acquire_cb(git_credential **,	const char *, const char *, unsigned int, void *);
 
 static git_remote *_remote;
 static record_callbacks_data _record_cbs_data = {{ 0 }};
@@ -40,7 +41,7 @@ static git_oid _tag_lightweight;
 static git_oid _tag_tag;
 
 static int cred_acquire_cb(
-	git_cred **cred,
+	git_credential **cred,
 	const char *url,
 	const char *user_from_url,
 	unsigned int allowed_types,
@@ -50,40 +51,40 @@ static int cred_acquire_cb(
 	GIT_UNUSED(user_from_url);
 	GIT_UNUSED(payload);
 
-	if (GIT_CREDTYPE_USERNAME & allowed_types) {
+	if (GIT_CREDENTIAL_USERNAME & allowed_types) {
 		if (!_remote_user) {
 			printf("GITTEST_REMOTE_USER must be set\n");
 			return -1;
 		}
 
-		return git_cred_username_new(cred, _remote_user);
+		return git_credential_username_new(cred, _remote_user);
 	}
 
-	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
+	if (GIT_CREDENTIAL_DEFAULT & allowed_types) {
 		if (!_remote_default) {
 			printf("GITTEST_REMOTE_DEFAULT must be set to use NTLM/Negotiate credentials\n");
 			return -1;
 		}
 
-		return git_cred_default_new(cred);
+		return git_credential_default_new(cred);
 	}
 
-	if (GIT_CREDTYPE_SSH_KEY & allowed_types) {
+	if (GIT_CREDENTIAL_SSH_KEY & allowed_types) {
 		if (!_remote_user || !_remote_ssh_pubkey || !_remote_ssh_key || !_remote_ssh_passphrase) {
 			printf("GITTEST_REMOTE_USER, GITTEST_REMOTE_SSH_PUBKEY, GITTEST_REMOTE_SSH_KEY and GITTEST_REMOTE_SSH_PASSPHRASE must be set\n");
 			return -1;
 		}
 
-		return git_cred_ssh_key_new(cred, _remote_user, _remote_ssh_pubkey, _remote_ssh_key, _remote_ssh_passphrase);
+		return git_credential_ssh_key_new(cred, _remote_user, _remote_ssh_pubkey, _remote_ssh_key, _remote_ssh_passphrase);
 	}
 
-	if (GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) {
+	if (GIT_CREDENTIAL_USERPASS_PLAINTEXT & allowed_types) {
 		if (!_remote_user || !_remote_pass) {
 			printf("GITTEST_REMOTE_USER and GITTEST_REMOTE_PASS must be set\n");
 			return -1;
 		}
 
-		return git_cred_userpass_plaintext_new(cred, _remote_user, _remote_pass);
+		return git_credential_userpass_plaintext_new(cred, _remote_user, _remote_pass);
 	}
 
 	return -1;
@@ -366,11 +367,15 @@ void test_online_push__initialize(void)
 	_remote_ssh_pubkey = cl_getenv("GITTEST_REMOTE_SSH_PUBKEY");
 	_remote_ssh_passphrase = cl_getenv("GITTEST_REMOTE_SSH_PASSPHRASE");
 	_remote_default = cl_getenv("GITTEST_REMOTE_DEFAULT");
+	_remote_expectcontinue = cl_getenv("GITTEST_REMOTE_EXPECTCONTINUE");
 	_remote = NULL;
 
 	/* Skip the test if we're missing the remote URL */
 	if (!_remote_url)
 		cl_skip();
+
+	if (_remote_expectcontinue)
+		git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 1);
 
 	cl_git_pass(git_remote_create(&_remote, _repo, "test", _remote_url));
 
@@ -417,9 +422,12 @@ void test_online_push__cleanup(void)
 	git__free(_remote_ssh_pubkey);
 	git__free(_remote_ssh_passphrase);
 	git__free(_remote_default);
+	git__free(_remote_expectcontinue);
 
 	/* Freed by cl_git_sandbox_cleanup */
 	_repo = NULL;
+
+	git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 0);
 
 	record_callbacks_data_clear(&_record_cbs_data);
 

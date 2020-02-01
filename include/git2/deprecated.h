@@ -33,6 +33,8 @@
 #include "status.h"
 #include "submodule.h"
 #include "worktree.h"
+#include "credential.h"
+#include "credential_helpers.h"
 
 /*
  * Users can avoid deprecated functions by defining `GIT_DEPRECATE_HARD`.
@@ -359,7 +361,7 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
 
 /**@}*/
 
-/** @name Deprecated Credential Callback Types
+/** @name Deprecated Credential Types
  *
  * These types are retained for backward compatibility.  The newer
  * versions of these values should be preferred in all new code.
@@ -368,8 +370,77 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
  * this time.
  */
 
-typedef git_cred_sign_cb git_cred_sign_callback;
-typedef git_cred_ssh_interactive_cb git_cred_ssh_interactive_callback;
+typedef git_credential git_cred;
+typedef git_credential_userpass_plaintext git_cred_userpass_plaintext;
+typedef git_credential_username git_cred_username;
+typedef git_credential_default git_cred_default;
+typedef git_credential_ssh_key git_cred_ssh_key;
+typedef git_credential_ssh_interactive git_cred_ssh_interactive;
+typedef git_credential_ssh_custom git_cred_ssh_custom;
+
+typedef git_credential_acquire_cb git_cred_acquire_cb;
+typedef git_credential_sign_cb git_cred_sign_callback;
+typedef git_credential_sign_cb git_cred_sign_cb;
+typedef git_credential_ssh_interactive_cb git_cred_ssh_interactive_callback;
+typedef git_credential_ssh_interactive_cb git_cred_ssh_interactive_cb;
+
+#define git_credtype_t git_credential_t
+
+#define GIT_CREDTYPE_USERPASS_PLAINTEXT GIT_CREDENTIAL_USERPASS_PLAINTEXT
+#define GIT_CREDTYPE_SSH_KEY GIT_CREDENTIAL_SSH_KEY
+#define GIT_CREDTYPE_SSH_CUSTOM GIT_CREDENTIAL_SSH_CUSTOM
+#define GIT_CREDTYPE_DEFAULT GIT_CREDENTIAL_DEFAULT
+#define GIT_CREDTYPE_SSH_INTERACTIVE GIT_CREDENTIAL_SSH_INTERACTIVE
+#define GIT_CREDTYPE_USERNAME GIT_CREDENTIAL_USERNAME
+#define GIT_CREDTYPE_SSH_MEMORY GIT_CREDENTIAL_SSH_MEMORY
+
+GIT_EXTERN(void) git_cred_free(git_credential *cred);
+GIT_EXTERN(int) git_cred_has_username(git_credential *cred);
+GIT_EXTERN(const char *) git_cred_get_username(git_credential *cred);
+GIT_EXTERN(int) git_cred_userpass_plaintext_new(
+	git_credential **out,
+	const char *username,
+	const char *password);
+GIT_EXTERN(int) git_cred_default_new(git_credential **out);
+GIT_EXTERN(int) git_cred_username_new(git_credential **out, const char *username);
+GIT_EXTERN(int) git_cred_ssh_key_new(
+	git_credential **out,
+	const char *username,
+	const char *publickey,
+	const char *privatekey,
+	const char *passphrase);
+GIT_EXTERN(int) git_cred_ssh_key_memory_new(
+	git_credential **out,
+	const char *username,
+	const char *publickey,
+	const char *privatekey,
+	const char *passphrase);
+GIT_EXTERN(int) git_cred_ssh_interactive_new(
+	git_credential **out,
+	const char *username,
+	git_credential_ssh_interactive_cb prompt_callback,
+	void *payload);
+GIT_EXTERN(int) git_cred_ssh_key_from_agent(
+	git_credential **out,
+	const char *username);
+GIT_EXTERN(int) git_cred_ssh_custom_new(
+	git_credential **out,
+	const char *username,
+	const char *publickey,
+	size_t publickey_len,
+	git_credential_sign_cb sign_callback,
+	void *payload);
+
+/* Deprecated Credential Helper Types */
+
+typedef git_credential_userpass_payload git_cred_userpass_payload;
+
+GIT_EXTERN(int) git_cred_userpass(
+	git_credential **out,
+	const char *url,
+	const char *user_from_url,
+	unsigned int allowed_types,
+	void *payload);
 
 /**@}*/
 

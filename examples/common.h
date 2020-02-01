@@ -125,7 +125,7 @@ extern int resolve_refish(git_annotated_commit **commit, git_repository *repo, c
 /**
  * Acquire credentials via command line
  */
-extern int cred_acquire_cb(git_cred **out,
+extern int cred_acquire_cb(git_credential **out,
 		const char *url,
 		const char *username_from_url,
 		unsigned int allowed_types,

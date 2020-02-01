@@ -14,6 +14,7 @@
 #include "futils.h"
 #include "filebuf.h"
 #include "refs.h"
+#include "net.h"
 #include "repository.h"
 
 int git_fetchhead_ref_cmp(const void *a, const void *b)
@@ -34,6 +35,33 @@ int git_fetchhead_ref_cmp(const void *a, const void *b)
 		return 1;
 
 	return 0;
+}
+
+static char *sanitized_remote_url(const char *remote_url)
+{
+	git_net_url url = GIT_NET_URL_INIT;
+	char *sanitized = NULL;
+	int error;
+
+	if (git_net_url_parse(&url, remote_url) == 0) {
+		git_buf buf = GIT_BUF_INIT;
+
+		git__free(url.username);
+		git__free(url.password);
+		url.username = url.password = NULL;
+
+		if ((error = git_net_url_fmt(&buf, &url)) < 0)
+			goto fallback;
+
+		sanitized = git_buf_detach(&buf);
+	}
+
+fallback:
+	if (!sanitized)
+		sanitized = git__strdup(remote_url);
+
+	git_net_url_dispose(&url);
+	return sanitized;
 }
 
 int git_fetchhead_ref_create(
@@ -57,11 +85,15 @@ int git_fetchhead_ref_create(
 	git_oid_cpy(&fetchhead_ref->oid, oid);
 	fetchhead_ref->is_merge = is_merge;
 
-	if (ref_name)
+	if (ref_name) {
 		fetchhead_ref->ref_name = git__strdup(ref_name);
+		GIT_ERROR_CHECK_ALLOC(fetchhead_ref->ref_name);
+	}
 
-	if (remote_url)
-		fetchhead_ref->remote_url = git__strdup(remote_url);
+	if (remote_url) {
+		fetchhead_ref->remote_url = sanitized_remote_url(remote_url);
+		GIT_ERROR_CHECK_ALLOC(fetchhead_ref->remote_url);
+	}
 
 	*out = fetchhead_ref;
 

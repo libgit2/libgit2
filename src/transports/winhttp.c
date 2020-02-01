@@ -19,7 +19,7 @@
 #include "repository.h"
 #include "global.h"
 #include "http.h"
-#include "git2/sys/cred.h"
+#include "git2/sys/credential.h"
 
 #include <wincrypt.h>
 #include <winhttp.h>
@@ -56,6 +56,8 @@
 #ifndef DWORD_MAX
 # define DWORD_MAX 0xffffffff
 #endif
+
+bool git_http__expect_continue = false;
 
 static const char *prefix_https = "https://";
 static const char *upload_pack_service = "upload-pack";
@@ -111,7 +113,7 @@ typedef struct {
 
 typedef struct {
 	git_net_url url;
-	git_cred *cred;
+	git_credential *cred;
 	int auth_mechanisms;
 	bool url_cred_presented;
 } winhttp_server;
@@ -127,9 +129,9 @@ typedef struct {
 	HINTERNET connection;
 } winhttp_subtransport;
 
-static int apply_userpass_credentials(HINTERNET request, DWORD target, int mechanisms, git_cred *cred)
+static int apply_userpass_credentials(HINTERNET request, DWORD target, int mechanisms, git_credential *cred)
 {
-	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
+	git_credential_userpass_plaintext *c = (git_credential_userpass_plaintext *)cred;
 	wchar_t *user = NULL, *pass = NULL;
 	int user_len = 0, pass_len = 0, error = 0;
 	DWORD native_scheme;
@@ -143,7 +145,7 @@ static int apply_userpass_credentials(HINTERNET request, DWORD target, int mecha
 	} else if (mechanisms & GIT_WINHTTP_AUTH_BASIC) {
 		native_scheme = WINHTTP_AUTH_SCHEME_BASIC;
 	} else {
-		git_error_set(GIT_ERROR_NET, "invalid authentication scheme");
+		git_error_set(GIT_ERROR_HTTP, "invalid authentication scheme");
 		error = -1;
 		goto done;
 	}
@@ -182,7 +184,7 @@ static int apply_default_credentials(HINTERNET request, DWORD target, int mechan
 	} else if ((mechanisms & GIT_WINHTTP_AUTH_NTLM) != 0) {
 		native_scheme = WINHTTP_AUTH_SCHEME_NTLM;
 	} else {
-		git_error_set(GIT_ERROR_NET, "invalid authentication scheme");
+		git_error_set(GIT_ERROR_HTTP, "invalid authentication scheme");
 		return -1;
 	}
 
@@ -204,22 +206,22 @@ static int apply_default_credentials(HINTERNET request, DWORD target, int mechan
 }
 
 static int acquire_url_cred(
-	git_cred **cred,
+	git_credential **cred,
 	unsigned int allowed_types,
 	const char *username,
 	const char *password)
 {
-	if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT)
-		return git_cred_userpass_plaintext_new(cred, username, password);
+	if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT)
+		return git_credential_userpass_plaintext_new(cred, username, password);
 
-	if ((allowed_types & GIT_CREDTYPE_DEFAULT) && *username == '\0' && *password == '\0')
-		return git_cred_default_new(cred);
+	if ((allowed_types & GIT_CREDENTIAL_DEFAULT) && *username == '\0' && *password == '\0')
+		return git_credential_default_new(cred);
 
 	return 1;
 }
 
 static int acquire_fallback_cred(
-	git_cred **cred,
+	git_credential **cred,
 	const char *url,
 	unsigned int allowed_types)
 {
@@ -227,7 +229,7 @@ static int acquire_fallback_cred(
 
 	/* If the target URI supports integrated Windows authentication
 	 * as an authentication mechanism */
-	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
+	if (GIT_CREDENTIAL_DEFAULT & allowed_types) {
 		wchar_t *wide_url;
 		HRESULT hCoInitResult;
 
@@ -251,13 +253,13 @@ static int acquire_fallback_cred(
 					(URLZONE_LOCAL_MACHINE == dwZone ||
 					URLZONE_INTRANET == dwZone ||
 					URLZONE_TRUSTED == dwZone)) {
-					git_cred *existing = *cred;
+					git_credential *existing = *cred;
 
 					if (existing)
 						existing->free(existing);
 
 					/* Then use default Windows credentials to authenticate this request */
-					error = git_cred_default_new(cred);
+					error = git_credential_default_new(cred);
 				}
 
 				pISM->lpVtbl->Release(pISM);
@@ -285,7 +287,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 	/* If there is no override, we should fail if WinHTTP doesn't think it's fine */
 	if (t->owner->certificate_check_cb == NULL && !valid) {
 		if (!git_error_last())
-			git_error_set(GIT_ERROR_NET, "unknown certificate check failure");
+			git_error_set(GIT_ERROR_HTTP, "unknown certificate check failure");
 
 		return GIT_ECERTIFICATE;
 	}
@@ -309,7 +311,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 		error = valid ? 0 : GIT_ECERTIFICATE;
 
 	if (error < 0 && !git_error_last())
-		git_error_set(GIT_ERROR_NET, "user cancelled certificate check");
+		git_error_set(GIT_ERROR_HTTP, "user cancelled certificate check");
 
 	return error;
 }
@@ -343,7 +345,7 @@ static int apply_credentials(
 	HINTERNET request,
 	git_net_url *url,
 	int target,
-	git_cred *creds,
+	git_credential *creds,
 	int mechanisms)
 {
 	int error = 0;
@@ -351,9 +353,9 @@ static int apply_credentials(
 	GIT_UNUSED(url);
 
 	/* If we have creds, just apply them */
-	if (creds && creds->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT)
+	if (creds && creds->credtype == GIT_CREDENTIAL_USERPASS_PLAINTEXT)
 		error = apply_userpass_credentials(request, target, mechanisms, creds);
-	else if (creds && creds->credtype == GIT_CREDTYPE_DEFAULT)
+	else if (creds && creds->credtype == GIT_CREDENTIAL_DEFAULT)
 		error = apply_default_credentials(request, target, mechanisms);
 
 	return error;
@@ -438,7 +440,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			goto on_error;
 
 		if (strcmp(t->proxy.url.scheme, "http") != 0 && strcmp(t->proxy.url.scheme, "https") != 0) {
-			git_error_set(GIT_ERROR_NET, "invalid URL: '%s'", proxy_url);
+			git_error_set(GIT_ERROR_HTTP, "invalid URL: '%s'", proxy_url);
 			error = -1;
 			goto on_error;
 		}
@@ -604,23 +606,23 @@ static int parse_unauthorized_response(
 	}
 
 	if (WINHTTP_AUTH_SCHEME_NTLM & supported) {
-		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
-		*allowed_types |= GIT_CREDTYPE_DEFAULT;
+		*allowed_types |= GIT_CREDENTIAL_USERPASS_PLAINTEXT;
+		*allowed_types |= GIT_CREDENTIAL_DEFAULT;
 		*allowed_mechanisms |= GIT_WINHTTP_AUTH_NTLM;
 	}
 
 	if (WINHTTP_AUTH_SCHEME_NEGOTIATE & supported) {
-		*allowed_types |= GIT_CREDTYPE_DEFAULT;
+		*allowed_types |= GIT_CREDENTIAL_DEFAULT;
 		*allowed_mechanisms |= GIT_WINHTTP_AUTH_NEGOTIATE;
 	}
 
 	if (WINHTTP_AUTH_SCHEME_BASIC & supported) {
-		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
+		*allowed_types |= GIT_CREDENTIAL_USERPASS_PLAINTEXT;
 		*allowed_mechanisms |= GIT_WINHTTP_AUTH_BASIC;
 	}
 
 	if (WINHTTP_AUTH_SCHEME_DIGEST & supported) {
-		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
+		*allowed_types |= GIT_CREDENTIAL_USERPASS_PLAINTEXT;
 		*allowed_mechanisms |= GIT_WINHTTP_AUTH_DIGEST;
 	}
 
@@ -711,21 +713,21 @@ static void CALLBACK winhttp_status(
 	status = *((DWORD *)info);
 
 	if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_CN_INVALID))
-		git_error_set(GIT_ERROR_NET, "SSL certificate issued for different common name");
+		git_error_set(GIT_ERROR_HTTP, "SSL certificate issued for different common name");
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_DATE_INVALID))
-		git_error_set(GIT_ERROR_NET, "SSL certificate has expired");
+		git_error_set(GIT_ERROR_HTTP, "SSL certificate has expired");
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_INVALID_CA))
-		git_error_set(GIT_ERROR_NET, "SSL certificate signed by unknown CA");
+		git_error_set(GIT_ERROR_HTTP, "SSL certificate signed by unknown CA");
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_INVALID_CERT))
-		git_error_set(GIT_ERROR_NET, "SSL certificate is invalid");
+		git_error_set(GIT_ERROR_HTTP, "SSL certificate is invalid");
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_REV_FAILED))
-		git_error_set(GIT_ERROR_NET, "certificate revocation check failed");
+		git_error_set(GIT_ERROR_HTTP, "certificate revocation check failed");
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_REVOKED))
-		git_error_set(GIT_ERROR_NET, "SSL certificate was revoked");
+		git_error_set(GIT_ERROR_HTTP, "SSL certificate was revoked");
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_SECURITY_CHANNEL_ERROR))
-		git_error_set(GIT_ERROR_NET, "security libraries could not be loaded");
+		git_error_set(GIT_ERROR_HTTP, "security libraries could not be loaded");
 	else
-		git_error_set(GIT_ERROR_NET, "unknown security error %lu", status);
+		git_error_set(GIT_ERROR_HTTP, "unknown security error %lu", status);
 }
 
 static int winhttp_connect(
@@ -830,7 +832,7 @@ on_error:
 	return error;
 }
 
-static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
+static int do_send_request(winhttp_stream *s, size_t len, bool chunked)
 {
 	int attempts;
 	bool success;
@@ -841,7 +843,7 @@ static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
 	}
 
 	for (attempts = 0; attempts < 5; attempts++) {
-		if (ignore_length) {
+		if (chunked) {
 			success = WinHttpSendRequest(s->request,
 				WINHTTP_NO_ADDITIONAL_HEADERS, 0,
 				WINHTTP_NO_REQUEST_DATA, 0,
@@ -860,13 +862,13 @@ static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
 	return success ? 0 : -1;
 }
 
-static int send_request(winhttp_stream *s, size_t len, int ignore_length)
+static int send_request(winhttp_stream *s, size_t len, bool chunked)
 {
 	int request_failed = 0, cert_valid = 1, error = 0;
 	DWORD ignore_flags;
 
 	git_error_clear();
-	if ((error = do_send_request(s, len, ignore_length)) < 0) {
+	if ((error = do_send_request(s, len, chunked)) < 0) {
 		if (GetLastError() != ERROR_WINHTTP_SECURE_FAILURE) {
 			git_error_set(GIT_ERROR_OS, "failed to send request");
 			return -1;
@@ -895,7 +897,7 @@ static int send_request(winhttp_stream *s, size_t len, int ignore_length)
 		return -1;
 	}
 
-	if ((error = do_send_request(s, len, ignore_length)) < 0)
+	if ((error = do_send_request(s, len, chunked)) < 0)
 		git_error_set(GIT_ERROR_OS, "failed to send request with unchecked certificate");
 
 	return error;
@@ -905,7 +907,7 @@ static int acquire_credentials(
 	HINTERNET request,
 	winhttp_server *server,
 	const char *url_str,
-	git_cred_acquire_cb cred_cb,
+	git_credential_acquire_cb cred_cb,
 	void *cred_cb_payload)
 {
 	int allowed_types;
@@ -915,7 +917,7 @@ static int acquire_credentials(
 		return -1;
 
 	if (allowed_types) {
-		git_cred_free(server->cred);
+		git_credential_free(server->cred);
 		server->cred = NULL;
 
 		/* Start with URL-specified credentials, if there were any. */
@@ -931,7 +933,7 @@ static int acquire_credentials(
 		if (error > 0 && cred_cb) {
 			error = cred_cb(&server->cred, url_str, server->url.username, allowed_types, cred_cb_payload);
 
-			/* Treat GIT_PASSTHROUGH as though git_cred_acquire_cb isn't set */
+			/* Treat GIT_PASSTHROUGH as though git_credential_acquire_cb isn't set */
 			if (error == GIT_PASSTHROUGH)
 				error = 1;
 			else if (error < 0)
@@ -969,7 +971,7 @@ static int winhttp_stream_read(
 replay:
 	/* Enforce a reasonable cap on the number of replays */
 	if (replay_count++ >= GIT_HTTP_REPLAY_MAX) {
-		git_error_set(GIT_ERROR_NET, "too many redirects or authentication replays");
+		git_error_set(GIT_ERROR_HTTP, "too many redirects or authentication replays");
 		return -1;
 	}
 
@@ -984,7 +986,7 @@ replay:
 
 		if (!s->sent_request) {
 
-			if ((error = send_request(s, s->post_body_len, 0)) < 0)
+			if ((error = send_request(s, s->post_body_len, false)) < 0)
 				return error;
 
 			s->sent_request = 1;
@@ -1128,7 +1130,7 @@ replay:
 
 			if (!git__prefixcmp_icase(location8, prefix_https)) {
 				/* Upgrade to secure connection; disconnect and start over */
-				if (gitno_connection_data_handle_redirect(&t->server.url, location8, s->service_url) < 0) {
+				if (git_net_url_apply_redirect(&t->server.url, location8, s->service_url) < 0) {
 					git__free(location8);
 					return -1;
 				}
@@ -1175,7 +1177,7 @@ replay:
 		}
 
 		if (HTTP_STATUS_OK != status_code) {
-			git_error_set(GIT_ERROR_NET, "request failed with status code: %lu", status_code);
+			git_error_set(GIT_ERROR_HTTP, "request failed with status code: %lu", status_code);
 			return -1;
 		}
 
@@ -1202,7 +1204,7 @@ replay:
 		}
 
 		if (wcscmp(expected_content_type, content_type)) {
-			git_error_set(GIT_ERROR_NET, "received unexpected content-type");
+			git_error_set(GIT_ERROR_HTTP, "received unexpected content-type");
 			return -1;
 		}
 
@@ -1237,11 +1239,11 @@ static int winhttp_stream_write_single(
 
 	/* This implementation of write permits only a single call. */
 	if (s->sent_request) {
-		git_error_set(GIT_ERROR_NET, "subtransport configured for only one write");
+		git_error_set(GIT_ERROR_HTTP, "subtransport configured for only one write");
 		return -1;
 	}
 
-	if ((error = send_request(s, len, 0)) < 0)
+	if ((error = send_request(s, len, false)) < 0)
 		return error;
 
 	s->sent_request = 1;
@@ -1268,12 +1270,12 @@ static int put_uuid_string(LPWSTR buffer, size_t buffer_len_cch)
 	if (RPC_S_OK != status &&
 		RPC_S_UUID_LOCAL_ONLY != status &&
 		RPC_S_UUID_NO_ADDRESS != status) {
-		git_error_set(GIT_ERROR_NET, "unable to generate name for temp file");
+		git_error_set(GIT_ERROR_HTTP, "unable to generate name for temp file");
 		return -1;
 	}
 
 	if (buffer_len_cch < UUID_LENGTH_CCH + 1) {
-		git_error_set(GIT_ERROR_NET, "buffer too small for name of temp file");
+		git_error_set(GIT_ERROR_HTTP, "buffer too small for name of temp file");
 		return -1;
 	}
 
@@ -1380,7 +1382,7 @@ static int winhttp_stream_write_chunked(
 			return -1;
 		}
 
-		if ((error = send_request(s, 0, 1)) < 0)
+		if ((error = send_request(s, 0, true)) < 0)
 			return error;
 
 		s->sent_request = 1;

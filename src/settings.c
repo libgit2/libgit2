@@ -25,14 +25,17 @@
 #include "refs.h"
 #include "index.h"
 #include "transports/smart.h"
+#include "transports/http.h"
 #include "streams/openssl.h"
 #include "streams/mbedtls.h"
 
-void git_libgit2_version(int *major, int *minor, int *rev)
+int git_libgit2_version(int *major, int *minor, int *rev)
 {
 	*major = LIBGIT2_VER_MAJOR;
 	*minor = LIBGIT2_VER_MINOR;
 	*rev = LIBGIT2_VER_REVISION;
+
+	return 0;
 }
 
 int git_libgit2_features(void)
@@ -282,6 +285,10 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS:
 		git_disable_pack_keep_file_checks = (va_arg(ap, int) != 0);
+		break;
+
+	case GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE:
+		git_http__expect_continue = (va_arg(ap, int) != 0);
 		break;
 
 	default:

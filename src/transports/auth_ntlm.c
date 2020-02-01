@@ -10,7 +10,7 @@
 #include "buffer.h"
 #include "auth.h"
 #include "auth_ntlm.h"
-#include "git2/sys/cred.h"
+#include "git2/sys/credential.h"
 
 #ifdef GIT_NTLM
 
@@ -39,15 +39,15 @@ static int ntlm_set_challenge(
 	return 0;
 }
 
-static int ntlm_set_credentials(http_auth_ntlm_context *ctx, git_cred *_cred)
+static int ntlm_set_credentials(http_auth_ntlm_context *ctx, git_credential *_cred)
 {
-	git_cred_userpass_plaintext *cred;
+	git_credential_userpass_plaintext *cred;
 	const char *sep, *username;
 	char *domain = NULL, *domainuser = NULL;
 	int error = 0;
 
-	assert(_cred->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT);
-	cred = (git_cred_userpass_plaintext *)_cred;
+	assert(_cred->credtype == GIT_CREDENTIAL_USERPASS_PLAINTEXT);
+	cred = (git_credential_userpass_plaintext *)_cred;
 
 	if ((sep = strchr(cred->username, '\\')) != NULL) {
 		domain = strndup(cred->username, (sep - cred->username));
@@ -78,7 +78,7 @@ done:
 static int ntlm_next_token(
 	git_buf *buf,
 	git_http_auth_context *c,
-	git_cred *cred)
+	git_credential *cred)
 {
 	http_auth_ntlm_context *ctx = (http_auth_ntlm_context *)c;
 	git_buf input_buf = GIT_BUF_INIT;
@@ -207,8 +207,8 @@ int git_http_auth_ntlm(
 		return -1;
 	}
 
-	ctx->parent.type = GIT_AUTHTYPE_NTLM;
-	ctx->parent.credtypes = GIT_CREDTYPE_USERPASS_PLAINTEXT;
+	ctx->parent.type = GIT_HTTP_AUTH_NTLM;
+	ctx->parent.credtypes = GIT_CREDENTIAL_USERPASS_PLAINTEXT;
 	ctx->parent.connection_affinity = 1;
 	ctx->parent.set_challenge = ntlm_set_challenge;
 	ctx->parent.next_token = ntlm_next_token;

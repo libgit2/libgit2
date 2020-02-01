@@ -11,7 +11,7 @@
 #include "net.h"
 #include "types.h"
 #include "cert.h"
-#include "cred.h"
+#include "credential.h"
 
 /**
  * @file git2/transport.h

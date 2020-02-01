@@ -22,15 +22,36 @@ typedef struct git_net_url {
 #define GIT_NET_URL_INIT { NULL }
 
 /** Parses a string containing a URL into a structure.  */
-int git_net_url_parse(git_net_url *url, const char *str);
+extern int git_net_url_parse(git_net_url *url, const char *str);
+
+/** Appends a path and/or query string to the given URL */
+extern int git_net_url_joinpath(
+	git_net_url *out,
+	git_net_url *in,
+	const char *path);
+
+/** Ensures that a URL is minimally valid (contains a host, port and path) */
+extern bool git_net_url_valid(git_net_url *url);
 
 /** Returns nonzero if the URL is on the default port. */
-int git_net_url_is_default_port(git_net_url *url);
+extern int git_net_url_is_default_port(git_net_url *url);
+
+/* Applies a redirect to the URL with a git-aware service suffix. */
+extern int git_net_url_apply_redirect(
+	git_net_url *url,
+	const char *redirect_location,
+	const char *service_suffix);
 
 /** Swaps the contents of one URL for another.  */
-void git_net_url_swap(git_net_url *a, git_net_url *b);
+extern void git_net_url_swap(git_net_url *a, git_net_url *b);
+
+/** Places the URL into the given buffer. */
+extern int git_net_url_fmt(git_buf *out, git_net_url *url);
+
+/** Place the path and query string into the given buffer. */
+extern int git_net_url_fmt_path(git_buf *buf, git_net_url *url);
 
 /** Disposes the contents of the structure. */
-void git_net_url_dispose(git_net_url *url);
+extern void git_net_url_dispose(git_net_url *url);
 
 #endif

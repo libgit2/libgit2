@@ -176,7 +176,7 @@ static int ask(char **out, const char *prompt, char optional)
 	return 0;
 }
 
-int cred_acquire_cb(git_cred **out,
+int cred_acquire_cb(git_credential **out,
 		const char *url,
 		const char *username_from_url,
 		unsigned int allowed_types,
@@ -195,7 +195,7 @@ int cred_acquire_cb(git_cred **out,
 		goto out;
 	}
 
-	if (allowed_types & GIT_CREDTYPE_SSH_KEY) {
+	if (allowed_types & GIT_CREDENTIAL_SSH_KEY) {
 		int n;
 
 		if ((error = ask(&privkey, "SSH Key:", 0)) < 0 ||
@@ -207,14 +207,14 @@ int cred_acquire_cb(git_cred **out,
 		    (n = snprintf(pubkey, n + 1, "%s.pub", privkey)) < 0)
 			goto out;
 
-		error = git_cred_ssh_key_new(out, username, pubkey, privkey, password);
-	} else if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT) {
+		error = git_credential_ssh_key_new(out, username, pubkey, privkey, password);
+	} else if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT) {
 		if ((error = ask(&password, "Password:", 1)) < 0)
 			goto out;
 
-		error = git_cred_userpass_plaintext_new(out, username, password);
-	} else if (allowed_types & GIT_CREDTYPE_USERNAME) {
-		error = git_cred_username_new(out, username);
+		error = git_credential_userpass_plaintext_new(out, username, password);
+	} else if (allowed_types & GIT_CREDENTIAL_USERNAME) {
+		error = git_credential_username_new(out, username);
 	}
 
 out:

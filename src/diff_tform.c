@@ -389,7 +389,7 @@ static int apply_splits_and_deletes(
 			if (insert_delete_side_of_split(diff, &onto, delta) < 0)
 				goto on_error;
 
-			if (diff->new_src == GIT_ITERATOR_TYPE_WORKDIR)
+			if (diff->new_src == GIT_ITERATOR_WORKDIR)
 				delta->status = GIT_DELTA_UNTRACKED;
 			else
 				delta->status = GIT_DELTA_ADDED;
@@ -441,7 +441,7 @@ GIT_INLINE(git_diff_file *) similarity_get_file(git_diff *diff, size_t idx)
 
 typedef struct {
 	size_t idx;
-	git_iterator_type_t src;
+	git_iterator_t src;
 	git_repository *repo;
 	git_diff_file *file;
 	git_buf data;
@@ -460,7 +460,7 @@ static int similarity_init(
 	info->blob = NULL;
 	git_buf_init(&info->data, 0);
 
-	if (info->file->size > 0 || info->src == GIT_ITERATOR_TYPE_WORKDIR)
+	if (info->file->size > 0 || info->src == GIT_ITERATOR_WORKDIR)
 		return 0;
 
 	return git_diff_file__resolve_zero_size(
@@ -475,7 +475,7 @@ static int similarity_sig(
 	int error = 0;
 	git_diff_file *file = info->file;
 
-	if (info->src == GIT_ITERATOR_TYPE_WORKDIR) {
+	if (info->src == GIT_ITERATOR_WORKDIR) {
 		if ((error = git_buf_joinpath(
 			&info->data, git_repository_workdir(info->repo), file->path)) < 0)
 			return error;
@@ -561,13 +561,13 @@ static int similarity_measure(
 	/* if exact match is requested, force calculation of missing OIDs now */
 	if (exact_match) {
 		if (git_oid_is_zero(&a_file->id) &&
-			diff->old_src == GIT_ITERATOR_TYPE_WORKDIR &&
+			diff->old_src == GIT_ITERATOR_WORKDIR &&
 			!git_diff__oid_for_file(&a_file->id,
 				diff, a_file->path, a_file->mode, a_file->size))
 			a_file->flags |= GIT_DIFF_FLAG_VALID_ID;
 
 		if (git_oid_is_zero(&b_file->id) &&
-			diff->new_src == GIT_ITERATOR_TYPE_WORKDIR &&
+			diff->new_src == GIT_ITERATOR_WORKDIR &&
 			!git_diff__oid_for_file(&b_file->id,
 				diff, b_file->path, b_file->mode, b_file->size))
 			b_file->flags |= GIT_DIFF_FLAG_VALID_ID;
@@ -1013,7 +1013,7 @@ find_best_matches:
 
 				delta_make_rename(tgt, src, best_match->similarity);
 
-				src->status = (diff->new_src == GIT_ITERATOR_TYPE_WORKDIR) ?
+				src->status = (diff->new_src == GIT_ITERATOR_WORKDIR) ?
 					GIT_DELTA_UNTRACKED : GIT_DELTA_ADDED;
 				src->nfiles = 1;
 				memset(&src->old_file, 0, sizeof(src->old_file));

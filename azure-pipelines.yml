@@ -19,7 +19,8 @@ jobs:
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Ninja
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on -DUSE_GSSAPI=ON
+       GITTEST_NEGOTIATE_PASSWORD=${{ variables.GITTEST_NEGOTIATE_PASSWORD }}
 
 - job: linux_amd64_xenial_gcc_mbedtls
   displayName: 'Linux (amd64; Xenial; GCC; mbedTLS)'
@@ -34,7 +35,8 @@ jobs:
       environmentVariables: |
        CC=gcc
        CMAKE_GENERATOR=Ninja
-       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on
+       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on -DUSE_GSSAPI=ON
+       GITTEST_NEGOTIATE_PASSWORD=${{ variables.GITTEST_NEGOTIATE_PASSWORD }}
 
 - job: linux_amd64_xenial_clang_openssl
   displayName: 'Linux (amd64; Xenial; Clang; OpenSSL)'
@@ -49,7 +51,8 @@ jobs:
       environmentVariables: |
        CC=clang
        CMAKE_GENERATOR=Ninja
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on -DUSE_GSSAPI=ON
+       GITTEST_NEGOTIATE_PASSWORD=${{ variables.GITTEST_NEGOTIATE_PASSWORD }}
 
 - job: linux_amd64_xenial_clang_mbedtls
   displayName: 'Linux (amd64; Xenial; Clang; mbedTLS)'
@@ -64,7 +67,8 @@ jobs:
       environmentVariables: |
        CC=clang
        CMAKE_GENERATOR=Ninja
-       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on
+       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DVALGRIND=on -DUSE_GSSAPI=ON
+       GITTEST_NEGOTIATE_PASSWORD=${{ variables.GITTEST_NEGOTIATE_PASSWORD }}
 
 - job: macos
   displayName: 'macOS'
@@ -81,6 +85,7 @@ jobs:
         CMAKE_GENERATOR: Ninja
         CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
         SKIP_SSH_TESTS: true
+        GITTEST_NEGOTIATE_PASSWORD: ${{ variables.GITTEST_NEGOTIATE_PASSWORD }}
 
 - job: windows_vs_amd64
   displayName: 'Windows (amd64; Visual Studio)'
@@ -92,6 +97,7 @@ jobs:
         CMAKE_GENERATOR: Visual Studio 12 2013 Win64
         CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON
         SKIP_SSH_TESTS: true
+        SKIP_NEGOTIATE_TESTS: true
 
 - job: windows_vs_x86
   displayName: 'Windows (x86; Visual Studio)'
@@ -103,6 +109,7 @@ jobs:
         CMAKE_GENERATOR: Visual Studio 12 2013
         CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS
         SKIP_SSH_TESTS: true
+        SKIP_NEGOTIATE_TESTS: true
 
 - job: windows_mingw_amd64
   displayName: 'Windows (amd64; MinGW)'
@@ -120,6 +127,7 @@ jobs:
         CMAKE_GENERATOR: MinGW Makefiles
         CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
         SKIP_SSH_TESTS: true
+        SKIP_NEGOTIATE_TESTS: true
 
 - job: windows_mingw_x86
   displayName: 'Windows (x86; MinGW)'
@@ -138,6 +146,7 @@ jobs:
         CMAKE_GENERATOR: MinGW Makefiles
         CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
         SKIP_SSH_TESTS: true
+        SKIP_NEGOTIATE_TESTS: true
 
 - job: documentation
   displayName: 'Generate Documentation'

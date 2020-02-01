@@ -138,7 +138,7 @@ static void set_index(git_repository *repo, git_index *index)
 	}
 }
 
-void git_repository__cleanup(git_repository *repo)
+int git_repository__cleanup(git_repository *repo)
 {
 	assert(repo);
 
@@ -150,6 +150,8 @@ void git_repository__cleanup(git_repository *repo)
 	set_index(repo, NULL);
 	set_odb(repo, NULL);
 	set_refdb(repo, NULL);
+
+	return 0;
 }
 
 void git_repository_free(git_repository *repo)
@@ -1070,10 +1072,11 @@ int git_repository_config_snapshot(git_config **out, git_repository *repo)
 	return git_config_snapshot(out, weak);
 }
 
-void git_repository_set_config(git_repository *repo, git_config *config)
+int git_repository_set_config(git_repository *repo, git_config *config)
 {
 	assert(repo && config);
 	set_config(repo, config);
+	return 0;
 }
 
 int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
@@ -1121,10 +1124,11 @@ int git_repository_odb(git_odb **out, git_repository *repo)
 	return 0;
 }
 
-void git_repository_set_odb(git_repository *repo, git_odb *odb)
+int git_repository_set_odb(git_repository *repo, git_odb *odb)
 {
 	assert(repo && odb);
 	set_odb(repo, odb);
+	return 0;
 }
 
 int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo)
@@ -1161,10 +1165,11 @@ int git_repository_refdb(git_refdb **out, git_repository *repo)
 	return 0;
 }
 
-void git_repository_set_refdb(git_repository *repo, git_refdb *refdb)
+int git_repository_set_refdb(git_repository *repo, git_refdb *refdb)
 {
 	assert(repo && refdb);
 	set_refdb(repo, refdb);
+	return 0;
 }
 
 int git_repository_index__weakptr(git_index **out, git_repository *repo)
@@ -1210,10 +1215,11 @@ int git_repository_index(git_index **out, git_repository *repo)
 	return 0;
 }
 
-void git_repository_set_index(git_repository *repo, git_index *index)
+int git_repository_set_index(git_repository *repo, git_index *index)
 {
 	assert(repo);
 	set_index(repo, index);
+	return 0;
 }
 
 int git_repository_set_namespace(git_repository *repo, const char *namespace)

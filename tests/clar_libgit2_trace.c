@@ -1,7 +1,4 @@
 #include "clar_libgit2_trace.h"
-
-#if defined(GIT_TRACE)
-
 #include "clar_libgit2.h"
 #include "clar_libgit2_timer.h"
 #include "trace.h"
@@ -264,15 +261,3 @@ void cl_global_trace_disable(void)
 	 * once.
 	 */
 }
-
-#else /* GIT_TRACE */
-
-void cl_global_trace_register(void)
-{
-}
-
-void cl_global_trace_disable(void)
-{
-}
-
-#endif /* GIT_TRACE*/

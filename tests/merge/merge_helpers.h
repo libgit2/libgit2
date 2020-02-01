@@ -36,7 +36,7 @@ struct merge_index_conflict_data {
 	struct merge_index_with_status ancestor;
 	struct merge_index_with_status ours;
 	struct merge_index_with_status theirs;
-	git_merge_diff_type_t change_type;
+	git_merge_diff_t change_type;
 };
 
 int merge_trees_from_branches(

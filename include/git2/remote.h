@@ -385,8 +385,9 @@ GIT_EXTERN(int) git_remote_connected(const git_remote *remote);
  * the operation has been cancelled and if so stops the operation.
  *
  * @param remote the remote
+ * @return 0 on success, or an error code
  */
-GIT_EXTERN(void) git_remote_stop(git_remote *remote);
+GIT_EXTERN(int) git_remote_stop(git_remote *remote);
 
 /**
  * Disconnect from the remote
@@ -394,8 +395,9 @@ GIT_EXTERN(void) git_remote_stop(git_remote *remote);
  * Close the connection to the remote.
  *
  * @param remote the remote to disconnect from
+ * @return 0 on success, or an error code
  */
-GIT_EXTERN(void) git_remote_disconnect(git_remote *remote);
+GIT_EXTERN(int) git_remote_disconnect(git_remote *remote);
 
 /**
  * Free the memory associated with a remote
@@ -540,7 +542,7 @@ struct git_remote_callbacks {
 	 * Returning GIT_PASSTHROUGH will make libgit2 behave as
 	 * though this field isn't set.
 	 */
-	git_cred_acquire_cb credentials;
+	git_credential_acquire_cb credentials;
 
 	/**
 	 * If cert verification fails, this will be called to let the

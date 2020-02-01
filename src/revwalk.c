@@ -700,7 +700,7 @@ git_repository *git_revwalk_repository(git_revwalk *walk)
 	return walk->repo;
 }
 
-void git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
+int git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
 {
 	assert(walk);
 
@@ -719,11 +719,14 @@ void git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
 
 	if (walk->sorting != GIT_SORT_NONE)
 		walk->limited = 1;
+
+	return 0;
 }
 
-void git_revwalk_simplify_first_parent(git_revwalk *walk)
+int git_revwalk_simplify_first_parent(git_revwalk *walk)
 {
 	walk->first_parent = 1;
+	return 0;
 }
 
 int git_revwalk_next(git_oid *oid, git_revwalk *walk)
@@ -752,7 +755,7 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 	return error;
 }
 
-void git_revwalk_reset(git_revwalk *walk)
+int git_revwalk_reset(git_revwalk *walk)
 {
 	git_commit_list_node *commit;
 
@@ -777,6 +780,8 @@ void git_revwalk_reset(git_revwalk *walk)
 	walk->limited = 0;
 	walk->did_push = walk->did_hide = 0;
 	walk->sorting = GIT_SORT_NONE;
+
+	return 0;
 }
 
 int git_revwalk_add_hide_cb(

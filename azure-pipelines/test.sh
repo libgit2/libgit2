@@ -6,6 +6,11 @@ if [ -n "$SKIP_TESTS" ]; then
 	exit 0
 fi
 
+# Windows doesn't run the NTLM tests properly (yet)
+if [[ "$(uname -s)" == MINGW* ]]; then
+        SKIP_NTLM_TESTS=1
+fi
+
 SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( pwd ) )}
 BUILD_DIR=$(pwd)
 TMPDIR=${TMPDIR:-/tmp}
@@ -87,6 +92,16 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	echo ""
 	echo "Starting HTTP proxy (NTLM)..."
 	java -jar poxyproxy.jar --address 127.0.0.1 --port 8090 --credentials foo:bar --auth-type ntlm --quiet &
+fi
+
+if [ -z "$SKIP_NTLM_TESTS" ]; then
+	curl -L https://github.com/ethomson/poxygit/releases/download/v0.4.0/poxygit-0.4.0.jar >poxygit.jar
+
+	echo ""
+	echo "Starting HTTP server..."
+	NTLM_DIR=`mktemp -d ${TMPDIR}/ntlm.XXXXXXXX`
+	git init --bare "${NTLM_DIR}/test.git"
+	java -jar poxygit.jar --address 127.0.0.1 --port 9000 --credentials foo:baz --quiet "${NTLM_DIR}" &
 fi
 
 if [ -z "$SKIP_SSH_TESTS" ]; then
@@ -205,6 +220,65 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	unset GITTEST_REMOTE_PROXY_HOST
 	unset GITTEST_REMOTE_PROXY_USER
 	unset GITTEST_REMOTE_PROXY_PASS
+fi
+
+if [ -z "$SKIP_NTLM_TESTS" ]; then
+	echo ""
+	echo "Running NTLM tests (IIS emulation)"
+	echo ""
+
+	export GITTEST_REMOTE_URL="http://localhost:9000/ntlm/test.git"
+	export GITTEST_REMOTE_USER="foo"
+	export GITTEST_REMOTE_PASS="baz"
+	run_test auth_clone_and_push
+	unset GITTEST_REMOTE_URL
+	unset GITTEST_REMOTE_USER
+	unset GITTEST_REMOTE_PASS
+
+	echo ""
+	echo "Running NTLM tests (Apache emulation)"
+	echo ""
+
+	export GITTEST_REMOTE_URL="http://localhost:9000/broken-ntlm/test.git"
+	export GITTEST_REMOTE_USER="foo"
+	export GITTEST_REMOTE_PASS="baz"
+	run_test auth_clone_and_push
+	unset GITTEST_REMOTE_URL
+	unset GITTEST_REMOTE_USER
+	unset GITTEST_REMOTE_PASS
+fi
+
+if [ -z "$SKIP_NEGOTIATE_TESTS" -a -n "$GITTEST_NEGOTIATE_PASSWORD" ]; then
+	echo ""
+	echo "Running SPNEGO tests"
+	echo ""
+
+	if [ "$(uname -s)" = "Darwin" ]; then
+		KINIT_FLAGS="--password-file=STDIN"
+	fi
+
+	echo $GITTEST_NEGOTIATE_PASSWORD | kinit $KINIT_FLAGS test@LIBGIT2.ORG
+	klist -5f
+
+	export GITTEST_REMOTE_URL="https://test.libgit2.org/kerberos/empty.git"
+	export GITTEST_REMOTE_DEFAULT="true"
+	run_test auth_clone
+	unset GITTEST_REMOTE_URL
+	unset GITTEST_REMOTE_DEFAULT
+
+	echo ""
+	echo "Running SPNEGO tests (expect/continue)"
+	echo ""
+
+	export GITTEST_REMOTE_URL="https://test.libgit2.org/kerberos/empty.git"
+	export GITTEST_REMOTE_DEFAULT="true"
+	export GITTEST_REMOTE_EXPECTCONTINUE="true"
+	run_test auth_clone
+	unset GITTEST_REMOTE_URL
+	unset GITTEST_REMOTE_DEFAULT
+	unset GITTEST_REMOTE_EXPECTCONTINUE
+
+	kdestroy -A
 fi
 
 if [ -z "$SKIP_SSH_TESTS" ]; then

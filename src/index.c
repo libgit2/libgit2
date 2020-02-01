@@ -539,13 +539,19 @@ int git_index_clear(git_index *index)
 	git_idxmap_clear(index->entries_map);
 	while (!error && index->entries.length > 0)
 		error = index_remove_entry(index, index->entries.length - 1);
+
+	if (error)
+		goto done;
+
 	index_free_deleted(index);
 
-	git_index_reuc_clear(index);
-	git_index_name_clear(index);
+	if ((error = git_index_name_clear(index)) < 0 ||
+		(error = git_index_reuc_clear(index)) < 0)
+	    goto done;
 
 	git_futils_filestamp_set(&index->stamp, NULL);
 
+done:
 	return error;
 }
 
@@ -2136,7 +2142,7 @@ int git_index_name_add(git_index *index,
 	return 0;
 }
 
-void git_index_name_clear(git_index *index)
+int git_index_name_clear(git_index *index)
 {
 	size_t i;
 	git_index_name_entry *conflict_name;
@@ -2149,6 +2155,8 @@ void git_index_name_clear(git_index *index)
 	git_vector_clear(&index->names);
 
 	index->dirty = 1;
+
+	return 0;
 }
 
 size_t git_index_reuc_entrycount(git_index *index)
@@ -2245,7 +2253,7 @@ int git_index_reuc_remove(git_index *index, size_t position)
 	return error;
 }
 
-void git_index_reuc_clear(git_index *index)
+int git_index_reuc_clear(git_index *index)
 {
 	size_t i;
 
@@ -2257,6 +2265,8 @@ void git_index_reuc_clear(git_index *index)
 	git_vector_clear(&index->reuc);
 
 	index->dirty = 1;
+
+	return 0;
 }
 
 static int index_error_invalid(const char *message)
@@ -3277,8 +3287,9 @@ static int git_index_read_iterator(
 		}
 	}
 
-	git_index_name_clear(index);
-	git_index_reuc_clear(index);
+	if ((error = git_index_name_clear(index)) < 0 ||
+		(error = git_index_reuc_clear(index)) < 0)
+	    goto done;
 
 	git_vector_swap(&new_entries, &index->entries);
 	new_entries_map = git__swap(index->entries_map, new_entries_map);

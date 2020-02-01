@@ -84,8 +84,9 @@ GIT_EXTERN(int) git_revwalk_new(git_revwalk **out, git_repository *repo);
  * is over.
  *
  * @param walker handle to reset.
+ * @return 0 or an error code
  */
-GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);
+GIT_EXTERN(int) git_revwalk_reset(git_revwalk *walker);
 
 /**
  * Add a new root for the traversal
@@ -224,8 +225,9 @@ GIT_EXTERN(int) git_revwalk_next(git_oid *out, git_revwalk *walk);
  *
  * @param walk the walker being used for the traversal.
  * @param sort_mode combination of GIT_SORT_XXX flags
+ * @return 0 or an error code
  */
-GIT_EXTERN(void) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
+GIT_EXTERN(int) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
 
 /**
  * Push and hide the respective endpoints of the given range.
@@ -246,8 +248,10 @@ GIT_EXTERN(int) git_revwalk_push_range(git_revwalk *walk, const char *range);
  * Simplify the history by first-parent
  *
  * No parents other than the first for each commit will be enqueued.
+ *
+ * @return 0 or an error code
  */
-GIT_EXTERN(void) git_revwalk_simplify_first_parent(git_revwalk *walk);
+GIT_EXTERN(int) git_revwalk_simplify_first_parent(git_revwalk *walk);
 
 
 /**
