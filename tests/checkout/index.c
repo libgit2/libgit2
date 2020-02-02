@@ -96,7 +96,7 @@ void test_checkout_index__can_disable_pathspec_match(void)
 	git_checkout_options g_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_object *g_object;
 
-	char *files_to_checkout[] = { "test11.txt", "test12.txt"};
+	char *files_to_checkout[] = { "test10.txt", "test11.txt"};
 	size_t files_to_checkout_size = 2;
 
 	/* reset to beginning of history (i.e. just a README file) */
@@ -134,7 +134,7 @@ void test_checkout_index__can_disable_pathspec_match(void)
 
 	/* We checkout only test10.txt and test11.txt */
 	g_opts.checkout_strategy =
-		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED |
+		GIT_CHECKOUT_FORCE |
 		GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
 	g_opts.paths.strings = files_to_checkout;
 	g_opts.paths.count = files_to_checkout_size;
