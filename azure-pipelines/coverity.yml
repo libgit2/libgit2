@@ -7,6 +7,10 @@ jobs:
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
+  - script: |
+     cd $(Build.SourcesDirectory)/azure-pipelines/docker
+     docker build -t libgit2/xenial --build-arg BASE=ubuntu:xenial -f xenial .
+    displayName: 'Build Docker image'
   - task: Docker@0
     displayName: Build
     inputs:
@@ -24,7 +28,7 @@ jobs:
     displayName: Publish
     inputs:
       action: 'Run an image'
-      imageName: 'libgit2/trusty-openssl:latest'
+      imageName: libgit2/xenial
       volumes: |
        $(Build.SourcesDirectory):/home/libgit2/source
        $(Build.BinariesDirectory):/home/libgit2/build
