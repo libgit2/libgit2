@@ -54,6 +54,7 @@ run_test() {
 		CLAR_SUMMARY="${BUILD_DIR}/results_${1}.xml" ctest -V -R "^${1}$" || RETURN_CODE=$? && true
 
 		if [ "$RETURN_CODE" -eq 0 ]; then
+			FAILED=0
 			break
 		fi
 
