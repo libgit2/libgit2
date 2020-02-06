@@ -864,31 +864,28 @@ static int do_send_request(winhttp_stream *s, size_t len, bool chunked)
 
 static int send_request(winhttp_stream *s, size_t len, bool chunked)
 {
-	int request_failed = 1, cert_valid, client_cert_requested, error, attempts = 0;
+	int request_failed = 1, error, attempts = 0;
 	DWORD ignore_flags, send_request_error;
 
 	git_error_clear();
 
 	while (request_failed && attempts++ < 3) {
+		int cert_valid = 1;
+		int client_cert_requested = 0;
 		request_failed = 0;
-		cert_valid = 1;
-		client_cert_requested = 0;
 		if ((error = do_send_request(s, len, chunked)) < 0) {
 			send_request_error = GetLastError();
 			request_failed = 1;
 			switch (send_request_error) {
-				case ERROR_WINHTTP_SECURE_FAILURE: {
+				case ERROR_WINHTTP_SECURE_FAILURE:
 					cert_valid = 0;
 					break;
-				}
-				case ERROR_WINHTTP_CLIENT_AUTH_CERT_NEEDED: {
+				case ERROR_WINHTTP_CLIENT_AUTH_CERT_NEEDED:
 					client_cert_requested = 1;
 					break;
-				}
-				default: {
+				default:
 					git_error_set(GIT_ERROR_OS, "failed to send request");
 					return -1;
-				}
 			}
 		}
 
