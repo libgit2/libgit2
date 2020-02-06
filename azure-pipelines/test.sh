@@ -54,6 +54,7 @@ run_test() {
 		CLAR_SUMMARY="${BUILD_DIR}/results_${1}.xml" ctest -V -R "^${1}$" || RETURN_CODE=$? && true
 
 		if [ "$RETURN_CODE" -eq 0 ]; then
+			FAILED=0
 			break
 		fi
 
@@ -216,7 +217,9 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	export GITTEST_REMOTE_PROXY_HOST="localhost:8090"
 	export GITTEST_REMOTE_PROXY_USER="foo"
 	export GITTEST_REMOTE_PROXY_PASS="bar"
+	export GITTEST_FLAKY_RETRY=5
 	run_test proxy
+	unset GITTEST_FLAKY_RETRY
 	unset GITTEST_REMOTE_PROXY_HOST
 	unset GITTEST_REMOTE_PROXY_USER
 	unset GITTEST_REMOTE_PROXY_PASS
