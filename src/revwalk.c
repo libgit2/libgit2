@@ -58,7 +58,7 @@ int git_revwalk__push_commit(git_revwalk *walk, const git_oid *oid, const git_re
 			return 0;
 
 		git_error_set(GIT_ERROR_INVALID, "object is not a committish");
-		return -1;
+		return error;
 	}
 	if (error < 0)
 		return error;

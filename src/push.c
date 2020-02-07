@@ -349,8 +349,9 @@ static int queue_objects(git_push *push)
 		if (git_oid_is_zero(&head->oid))
 			continue;
 
-		/* TODO */
-		git_revwalk_hide(rw, &head->oid);
+		if ((error = git_revwalk_hide(rw, &head->oid)) < 0 &&
+		    error != GIT_ENOTFOUND && error != GIT_EINVALIDSPEC && error != GIT_EPEEL)
+			goto on_error;
 	}
 
 	error = git_packbuilder_insert_walk(push->pb, rw);
