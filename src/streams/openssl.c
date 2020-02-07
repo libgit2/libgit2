@@ -160,7 +160,7 @@ static void openssl_locking_function(
 	lock = mode & CRYPTO_LOCK;
 
 	if (lock) {
-		git_mutex_lock(&openssl_locks[n]);
+		(void)git_mutex_lock(&openssl_locks[n]);
 	} else {
 		git_mutex_unlock(&openssl_locks[n]);
 	}
