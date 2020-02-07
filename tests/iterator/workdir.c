@@ -637,13 +637,14 @@ void test_iterator_workdir__filesystem2(void)
 	git_iterator_free(i);
 }
 
-/* Lots of empty dirs, or nearly empty ones, make the old workdir
- * iterator cry.  Also, segfault.
+/*
+ * Lots of empty dirs, or nearly empty ones, make the old workdir
+ * iterator cry. Also, segfault.
  */
 void test_iterator_workdir__filesystem_gunk(void)
 {
-	git_iterator *i;
 	git_buf parent = GIT_BUF_INIT;
+	git_iterator *i;
 	int n;
 
 	if (!cl_is_env_set("GITTEST_INVASIVE_SPEED"))
@@ -653,19 +654,18 @@ void test_iterator_workdir__filesystem_gunk(void)
 
 	for (n = 0; n < 100000; n++) {
 		git_buf_clear(&parent);
-		git_buf_printf(&parent, "%s/refs/heads/foo/%d/subdir",
-			git_repository_path(g_repo), n);
-		cl_assert(!git_buf_oom(&parent));
-
+		cl_git_pass(git_buf_printf(&parent, "%s/refs/heads/foo/%d/subdir", git_repository_path(g_repo), n));
 		cl_git_pass(git_futils_mkdir(parent.ptr, 0775, GIT_MKDIR_PATH));
 	}
 
 	cl_git_pass(git_iterator_for_filesystem(&i, "testrepo/.git/refs", NULL));
 
-	/* should only have 16 items, since we're not asking for trees to be
+	/*
+	 * Should only have 17 items, since we're not asking for trees to be
 	 * returned.  the goal of this test is simply to not crash.
 	 */
-	expect_iterator_items(i, 16, NULL, 15, NULL);
+	expect_iterator_items(i, 17, NULL, 16, NULL);
+
 	git_iterator_free(i);
 	git_buf_dispose(&parent);
 }
