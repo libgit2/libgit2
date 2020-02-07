@@ -67,6 +67,7 @@ v0.28 + 1
   is now hidden, and a new `git_cred_get_username` function has been provided.
 
 * Some errors of class `GIT_ERROR_NET` now have class `GIT_ERROR_HTTP`.
+  Most authentication failures now have error code `GIT_EAUTH` instead of `GIT_ERROR`.
 
 ### Breaking CMake configuration changes
 
