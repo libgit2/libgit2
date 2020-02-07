@@ -400,15 +400,11 @@ void test_notes_notes__can_read_a_note_from_a_commit(void)
 	git_note *note;
 
 	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
-
 	cl_git_pass(git_note_commit_create(&notes_commit_oid, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 1));
-
-	git_commit_lookup(&notes_commit, _repo, &notes_commit_oid);
-
+	cl_git_pass(git_commit_lookup(&notes_commit, _repo, &notes_commit_oid));
 	cl_assert(notes_commit);
 
 	cl_git_pass(git_note_commit_read(&note, _repo, notes_commit, &oid));
-
 	cl_assert_equal_s(git_note_message(note), "I decorate 4a20\n");
 
 	git_commit_free(notes_commit);
@@ -457,7 +453,7 @@ void test_notes_notes__can_insert_a_note_in_an_existing_fanout(void)
 	git_note *_note;
 
 	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
-	
+
 	for (i = 0; i <  MESSAGES_COUNT; i++) {
 		cl_git_pass(git_note_create(&note_oid, _repo, "refs/notes/fanout", _sig, _sig, &target_oid, messages[i], 0));
 		cl_git_pass(git_note_read(&_note, _repo, "refs/notes/fanout", &target_oid));
@@ -511,7 +507,7 @@ void test_notes_notes__can_remove_a_note_from_commit(void)
 
 	cl_git_pass(git_note_commit_create(&notes_commit_oid, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 0));
 
-	git_commit_lookup(&existing_notes_commit, _repo, &notes_commit_oid);
+	cl_git_pass(git_commit_lookup(&existing_notes_commit, _repo, &notes_commit_oid));
 
 	cl_assert(existing_notes_commit);
 
@@ -547,7 +543,7 @@ void test_notes_notes__removing_a_note_which_doesnt_exists_returns_ENOTFOUND(voi
 
 	cl_git_pass(git_oid_fromstr(&target_oid, "8496071c1b46c854b31185ea97743be6a8774479"));
 	cl_git_pass(git_note_remove(_repo, "refs/notes/fanout", _sig, _sig, &target_oid));
-	
+
 	error = git_note_remove(_repo, "refs/notes/fanout", _sig, _sig, &target_oid);
 	cl_git_fail(error);
 	cl_assert_equal_i(GIT_ENOTFOUND, error);
