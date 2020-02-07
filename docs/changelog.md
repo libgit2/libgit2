@@ -66,6 +66,8 @@ v0.28 + 1
   The breaking change is that the `username` member of the underlying struct
   is now hidden, and a new `git_cred_get_username` function has been provided.
 
+* Some errors of class `GIT_ERROR_NET` now have class `GIT_ERROR_HTTP`.
+
 ### Breaking CMake configuration changes
 
 * The CMake option to use a system http-parser library, instead of the
