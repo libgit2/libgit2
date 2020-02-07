@@ -81,6 +81,7 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	git init --bare "${GITDAEMON_DIR}/test.git"
 	git daemon --listen=localhost --export-all --enable=receive-pack --base-path="${GITDAEMON_DIR}" "${GITDAEMON_DIR}" 2>/dev/null &
 	GITDAEMON_PID=$!
+	disown $GITDAEMON_PID
 fi
 
 if [ -z "$SKIP_PROXY_TESTS" ]; then
