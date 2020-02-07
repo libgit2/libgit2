@@ -12,7 +12,6 @@
 #include "mwindow.h"
 #include "odb.h"
 #include "oid.h"
-#include "sha1_lookup.h"
 
 /* Option to bypass checking existence of '.keep' files */
 bool git_disable_pack_keep_file_checks = false;
@@ -1237,6 +1236,27 @@ int git_pack_foreach_entry(
 			return git_error_set_after_callback(error);
 
 	return error;
+}
+
+static int sha1_position(const void *table, size_t stride, unsigned lo,
+			 unsigned hi, const unsigned char *key)
+{
+	const unsigned char *base = table;
+
+	while (lo < hi) {
+		unsigned mi = (lo + hi) / 2;
+		int cmp = git_oid__hashcmp(base + mi * stride, key);
+
+		if (!cmp)
+			return mi;
+
+		if (cmp > 0)
+			hi = mi;
+		else
+			lo = mi+1;
+	}
+
+	return -((int)lo)-1;
 }
 
 static int pack_entry_find_offset(
