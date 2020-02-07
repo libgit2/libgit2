@@ -84,7 +84,7 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 fi
 
 if [ -z "$SKIP_PROXY_TESTS" ]; then
-	curl -L https://github.com/ethomson/poxyproxy/releases/download/v0.7.0/poxyproxy-0.7.0.jar >poxyproxy.jar
+	curl --location --silent https://github.com/ethomson/poxyproxy/releases/download/v0.7.0/poxyproxy-0.7.0.jar >poxyproxy.jar
 
 	echo ""
 	echo "Starting HTTP proxy (Basic)..."
@@ -96,7 +96,7 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 fi
 
 if [ -z "$SKIP_NTLM_TESTS" ]; then
-	curl -L https://github.com/ethomson/poxygit/releases/download/v0.4.0/poxygit-0.4.0.jar >poxygit.jar
+	curl --location --silent https://github.com/ethomson/poxygit/releases/download/v0.4.0/poxygit-0.4.0.jar >poxygit.jar
 
 	echo ""
 	echo "Starting HTTP server..."
