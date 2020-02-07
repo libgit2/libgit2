@@ -31,13 +31,13 @@ void check_blame_hunk_index(git_repository *repo, git_blame *blame, int idx,
 	}
 
 	if (hunk->final_start_line_number != start_line) {
-		hunk_message(idx, hunk, "mismatched start line number: expected %d, got %d",
+		hunk_message(idx, hunk, "mismatched start line number: expected %"PRIuZ", got %"PRIuZ,
 				start_line, hunk->final_start_line_number);
 	}
 	cl_assert_equal_i(hunk->final_start_line_number, start_line);
 
 	if (hunk->lines_in_hunk != len) {
-		hunk_message(idx, hunk, "mismatched line count: expected %d, got %d",
+		hunk_message(idx, hunk, "mismatched line count: expected %"PRIuZ", got %"PRIuZ,
 				len, hunk->lines_in_hunk);
 	}
 	cl_assert_equal_i(hunk->lines_in_hunk, len);
