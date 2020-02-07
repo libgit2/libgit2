@@ -346,6 +346,7 @@ static int generate_request(
 	request->credentials = transport->server.cred;
 	request->proxy = use_proxy ? &transport->proxy.url : NULL;
 	request->proxy_credentials = transport->proxy.cred;
+	request->custom_headers = &transport->owner->custom_headers;
 
 	if (stream->service->method == GIT_HTTP_METHOD_POST) {
 		request->chunked = stream->service->chunked;

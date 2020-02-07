@@ -392,6 +392,21 @@ void test_online_clone__credentials(void)
 	cl_fixture_cleanup("./foo");
 }
 
+void test_online_clone__credentials_via_custom_headers(void)
+{
+	const char *creds = "libgit3:libgit3";
+	git_buf auth = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_puts(&auth, "Authorization: Basic "));
+	cl_git_pass(git_buf_encode_base64(&auth, creds, strlen(creds)));
+	g_options.fetch_opts.custom_headers.count = 1;
+	g_options.fetch_opts.custom_headers.strings = &auth.ptr;
+
+	cl_git_pass(git_clone(&g_repo, "https://bitbucket.org/libgit2/testgitrepository.git", "./foo", &g_options));
+
+	git_buf_dispose(&auth);
+}
+
 void test_online_clone__bitbucket_style(void)
 {
 	git_credential_userpass_payload user_pass = {
