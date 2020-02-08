@@ -1,0 +1,4 @@
+[core]
+	bare = true
+	repositoryformatversion = 0
+	filemode = true

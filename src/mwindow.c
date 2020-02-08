@@ -22,8 +22,12 @@
 #define DEFAULT_MAPPED_LIMIT \
 	((1024 * 1024) * (sizeof(void*) >= 8 ? 8192ULL : 256UL))
 
+/* default ulimit -n on macOS is just 256 */
+#define DEFAULT_FILE_LIMIT 128
+
 size_t git_mwindow__window_size = DEFAULT_WINDOW_SIZE;
 size_t git_mwindow__mapped_limit = DEFAULT_MAPPED_LIMIT;
+size_t git_mwindow__file_limit = DEFAULT_FILE_LIMIT;
 
 /* Whenever you want to read or modify this, grab git__mwindow_mutex */
 static git_mwindow_ctl mem_ctl;
@@ -201,23 +205,17 @@ static void git_mwindow_scan_lru(
 }
 
 /*
- * Close the least recently used window. You should check to see if
- * the file descriptors need closing from time to time. Called under
- * lock from new_window.
+ * Close the least recently used window. Called under lock from new_window.
  */
-static int git_mwindow_close_lru(git_mwindow_file *mwf)
+static int git_mwindow_close_lru_window(void)
 {
 	git_mwindow_ctl *ctl = &mem_ctl;
+	git_mwindow_file *cur;
 	size_t i;
-	git_mwindow *lru_w = NULL, *lru_l = NULL, **list = &mwf->windows;
+	git_mwindow *lru_w = NULL, *lru_l = NULL, **list = NULL;
 
-	/* FIXME: Does this give us any advantage? */
-	if(mwf->windows)
-		git_mwindow_scan_lru(mwf, &lru_w, &lru_l);
-
-	for (i = 0; i < ctl->windowfiles.length; ++i) {
+	git_vector_foreach(&ctl->windowfiles, i, cur) {
 		git_mwindow *last = lru_w;
-		git_mwindow_file *cur = git_vector_get(&ctl->windowfiles, i);
 		git_mwindow_scan_lru(cur, &lru_w, &lru_l);
 		if (lru_w != last)
 			list = &cur->windows;
@@ -242,9 +240,38 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 	return 0;
 }
 
+/*
+ * Close the file that contains the least recently used window. Called under
+ * lock from new_window.
+ */
+static int git_mwindow_close_lru_file(void)
+{
+	git_mwindow_ctl *ctl = &mem_ctl;
+	git_mwindow_file *lru_f = NULL, *cur;
+	size_t i;
+	git_mwindow *lru_w = NULL, *lru_l = NULL;
+
+	git_vector_foreach(&ctl->windowfiles, i, cur) {
+		git_mwindow *last = lru_w;
+		git_mwindow_scan_lru(cur, &lru_w, &lru_l);
+		if (lru_w != last)
+			lru_f = cur;
+	}
+
+	if (!lru_f) {
+		git_error_set(GIT_ERROR_OS, "failed to close memory window file; couldn't find LRU");
+		return -1;
+	}
+
+	git_mwindow_free_all_locked(lru_f);
+	p_close(lru_f->fd);
+	lru_f->fd = -1;
+
+	return 0;
+}
+
 /* This gets called under lock from git_mwindow_open */
 static git_mwindow *new_window(
-	git_mwindow_file *mwf,
 	git_file fd,
 	off64_t size,
 	off64_t offset)
@@ -269,7 +296,7 @@ static git_mwindow *new_window(
 	ctl->mapped += (size_t)len;
 
 	while (git_mwindow__mapped_limit < ctl->mapped &&
-			git_mwindow_close_lru(mwf) == 0) /* nop */;
+			git_mwindow_close_lru_window() == 0) /* nop */;
 
 	/*
 	 * We treat `mapped_limit` as a soft limit. If we can't find a
@@ -283,7 +310,7 @@ static git_mwindow *new_window(
 		 * we're below our soft limits, so free up what we can and try again.
 		 */
 
-		while (git_mwindow_close_lru(mwf) == 0)
+		while (git_mwindow_close_lru_window() == 0)
 			/* nop */;
 
 		if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < 0) {
@@ -339,7 +366,7 @@ unsigned char *git_mwindow_open(
 		 * one.
 		 */
 		if (!w) {
-			w = new_window(mwf, mwf->fd, mwf->size, offset);
+			w = new_window(mwf->fd, mwf->size, offset);
 			if (w == NULL) {
 				git_mutex_unlock(&git__mwindow_mutex);
 				return NULL;
@@ -380,6 +407,9 @@ int git_mwindow_file_register(git_mwindow_file *mwf)
 		git_mutex_unlock(&git__mwindow_mutex);
 		return -1;
 	}
+
+	while (git_mwindow__file_limit <= ctl->windowfiles.length &&
+			git_mwindow_close_lru_file() == 0) /* nop */;
 
 	ret = git_vector_insert(&ctl->windowfiles, mwf);
 	git_mutex_unlock(&git__mwindow_mutex);

@@ -59,6 +59,7 @@ int git_libgit2_features(void)
 /* Declarations for tuneable settings */
 extern size_t git_mwindow__window_size;
 extern size_t git_mwindow__mapped_limit;
+extern size_t git_mwindow__file_limit;
 extern size_t git_indexer__max_objects;
 extern bool git_disable_pack_keep_file_checks;
 
@@ -122,6 +123,14 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_GET_MWINDOW_MAPPED_LIMIT:
 		*(va_arg(ap, size_t *)) = git_mwindow__mapped_limit;
+		break;
+
+	case GIT_OPT_SET_MWINDOW_FILE_LIMIT:
+		git_mwindow__file_limit = va_arg(ap, size_t);
+		break;
+
+	case GIT_OPT_GET_MWINDOW_FILE_LIMIT:
+		*(va_arg(ap, size_t *)) = git_mwindow__file_limit;
 		break;
 
 	case GIT_OPT_GET_SEARCH_PATH:
