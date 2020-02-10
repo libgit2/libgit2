@@ -1,5 +1,5 @@
 name: CIFuzz
-on: [push]
+on: [pull_request]
 jobs:
   Fuzzing:
     runs-on: ubuntu-latest
