@@ -18,6 +18,6 @@ jobs:
       uses: actions/upload-artifact@v1
       if: failure()
       with:
-        name: bug_report
-        path: ./out/bug_report
+        name: artifacts
+        path: ./out/artifacts
 
