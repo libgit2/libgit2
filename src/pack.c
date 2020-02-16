@@ -481,6 +481,9 @@ int git_packfile_resolve_header(
 	off64_t base_offset;
 	int error;
 
+	if (p->mwf.fd == -1 && (error = packfile_open(p)) < 0)
+		return error;
+
 	error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
 	if (error < 0)
 		return error;
@@ -630,6 +633,9 @@ int git_packfile_unpack(
 	struct pack_chain_elem small_stack[SMALL_STACK_SIZE];
 	size_t stack_size = 0, elem_pos, alloclen;
 	git_object_t base_type;
+
+	if (p->mwf.fd == -1 && (error = packfile_open(p)) < 0)
+		return error;
 
 	/*
 	 * TODO: optionally check the CRC on the packfile
