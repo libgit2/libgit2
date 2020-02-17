@@ -96,6 +96,9 @@ typedef struct git_odb_stream git_odb_stream;
 /** A stream to write a packfile to the ODB */
 typedef struct git_odb_writepack git_odb_writepack;
 
+/** a writer for commit-graph files. */
+typedef struct git_commit_graph_writer git_commit_graph_writer;
+
 /** An open refs database handle. */
 typedef struct git_refdb git_refdb;
 
