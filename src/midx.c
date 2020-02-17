@@ -7,11 +7,15 @@
 
 #include "midx.h"
 
+#include "array.h"
 #include "buffer.h"
+#include "filebuf.h"
 #include "futils.h"
 #include "hash.h"
 #include "odb.h"
 #include "pack.h"
+#include "path.h"
+#include "repository.h"
 
 #define MIDX_SIGNATURE 0x4d494458 /* "MIDX" */
 #define MIDX_VERSION 1
@@ -35,6 +39,8 @@ struct git_midx_chunk {
 	off64_t offset;
 	size_t length;
 };
+
+typedef int (*midx_write_cb)(const char *buf, size_t size, void *cb_data);
 
 static int midx_error(const char *message)
 {
@@ -474,4 +480,396 @@ void git_midx_free(git_midx_file *idx)
 	git_buf_dispose(&idx->filename);
 	git_midx_close(idx);
 	git__free(idx);
+}
+
+static int packfile__cmp(const void *a_, const void *b_)
+{
+	const struct git_pack_file *a = a_;
+	const struct git_pack_file *b = b_;
+
+	return strcmp(a->pack_name, b->pack_name);
+}
+
+int git_midx_writer_new(
+		git_midx_writer **out,
+		const char *pack_dir)
+{
+	git_midx_writer *w = git__calloc(1, sizeof(git_midx_writer));
+	GIT_ERROR_CHECK_ALLOC(w);
+
+	if (git_buf_sets(&w->pack_dir, pack_dir) < 0) {
+		git__free(w);
+		return -1;
+	}
+	git_path_squash_slashes(&w->pack_dir);
+
+	if (git_vector_init(&w->packs, 0, packfile__cmp) < 0) {
+		git_buf_dispose(&w->pack_dir);
+		git__free(w);
+		return -1;
+	}
+
+	*out = w;
+	return 0;
+}
+
+void git_midx_writer_free(git_midx_writer *w)
+{
+	struct git_pack_file *p;
+	size_t i;
+
+	if (!w)
+		return;
+
+	git_vector_foreach (&w->packs, i, p)
+		git_mwindow_put_pack(p);
+	git_vector_free(&w->packs);
+	git_buf_dispose(&w->pack_dir);
+	git__free(w);
+}
+
+int git_midx_writer_add(
+		git_midx_writer *w,
+		const char *idx_path)
+{
+	git_buf idx_path_buf = GIT_BUF_INIT;
+	int error;
+	struct git_pack_file *p;
+
+	error = git_path_prettify(&idx_path_buf, idx_path, git_buf_cstr(&w->pack_dir));
+	if (error < 0)
+		return error;
+
+	error = git_mwindow_get_pack(&p, git_buf_cstr(&idx_path_buf));
+	git_buf_dispose(&idx_path_buf);
+	if (error < 0)
+		return error;
+
+	error = git_vector_insert(&w->packs, p);
+	if (error < 0) {
+		git_mwindow_put_pack(p);
+		return error;
+	}
+
+	return 0;
+}
+
+typedef git_array_t(git_midx_entry) object_entry_array_t;
+
+struct object_entry_cb_state {
+	uint32_t pack_index;
+	object_entry_array_t *object_entries_array;
+};
+
+static int object_entry__cb(const git_oid *oid, off64_t offset, void *data)
+{
+	struct object_entry_cb_state *state = (struct object_entry_cb_state *)data;
+
+	git_midx_entry *entry = git_array_alloc(*state->object_entries_array);
+	GIT_ERROR_CHECK_ALLOC(entry);
+
+	git_oid_cpy(&entry->sha1, oid);
+	entry->offset = offset;
+	entry->pack_index = state->pack_index;
+
+	return 0;
+}
+
+static int object_entry__cmp(const void *a_, const void *b_)
+{
+	const git_midx_entry *a = (const git_midx_entry *)a_;
+	const git_midx_entry *b = (const git_midx_entry *)b_;
+
+	return git_oid_cmp(&a->sha1, &b->sha1);
+}
+
+static int write_offset(off64_t offset, midx_write_cb write_cb, void *cb_data)
+{
+	int error;
+	uint32_t word;
+
+	word = htonl((uint32_t)((offset >> 32) & 0xffffffffu));
+	error = write_cb((const char *)&word, sizeof(word), cb_data);
+	if (error < 0)
+		return error;
+	word = htonl((uint32_t)((offset >> 0) & 0xffffffffu));
+	error = write_cb((const char *)&word, sizeof(word), cb_data);
+	if (error < 0)
+		return error;
+
+	return 0;
+}
+
+static int write_chunk_header(int chunk_id, off64_t offset, midx_write_cb write_cb, void *cb_data)
+{
+	uint32_t word = htonl(chunk_id);
+	int error = write_cb((const char *)&word, sizeof(word), cb_data);
+	if (error < 0)
+		return error;
+	return write_offset(offset, write_cb, cb_data);
+
+	return 0;
+}
+
+static int midx_write_buf(const char *buf, size_t size, void *data)
+{
+	git_buf *b = (git_buf *)data;
+	return git_buf_put(b, buf, size);
+}
+
+struct midx_write_hash_context {
+	midx_write_cb write_cb;
+	void *cb_data;
+	git_hash_ctx *ctx;
+};
+
+static int midx_write_hash(const char *buf, size_t size, void *data)
+{
+	struct midx_write_hash_context *ctx = (struct midx_write_hash_context *)data;
+	int error;
+
+	error = git_hash_update(ctx->ctx, buf, size);
+	if (error < 0)
+		return error;
+
+	return ctx->write_cb(buf, size, ctx->cb_data);
+}
+
+static int midx_write(
+		git_midx_writer *w,
+		midx_write_cb write_cb,
+		void *cb_data)
+{
+	int error = 0;
+	size_t i;
+	struct git_pack_file *p;
+	struct git_midx_header hdr = {0};
+	uint32_t oid_fanout_count;
+	uint32_t object_large_offsets_count;
+	uint32_t oid_fanout[256];
+	off64_t offset;
+	git_buf packfile_names = GIT_BUF_INIT,
+		oid_lookup = GIT_BUF_INIT,
+		object_offsets = GIT_BUF_INIT,
+		object_large_offsets = GIT_BUF_INIT;
+	git_oid idx_checksum = {{0}};
+	git_midx_entry *entry;
+	object_entry_array_t object_entries_array = GIT_ARRAY_INIT;
+	git_vector object_entries = GIT_VECTOR_INIT;
+	git_hash_ctx ctx;
+	struct midx_write_hash_context hash_cb_data = {0};
+
+	hdr.signature = htonl(MIDX_SIGNATURE);
+	hdr.version = MIDX_VERSION;
+	hdr.object_id_version = MIDX_OBJECT_ID_VERSION;
+	hdr.base_midx_files = 0;
+
+	hash_cb_data.write_cb = write_cb;
+	hash_cb_data.cb_data = cb_data;
+	hash_cb_data.ctx = &ctx;
+
+	error = git_hash_ctx_init(&ctx);
+	if (error < 0)
+		return error;
+	cb_data = &hash_cb_data;
+	write_cb = midx_write_hash;
+
+	git_vector_sort(&w->packs);
+	git_vector_foreach (&w->packs, i, p) {
+		git_buf relative_index = GIT_BUF_INIT;
+		struct object_entry_cb_state state = {0};
+		size_t path_len;
+
+		state.pack_index = (uint32_t)i;
+		state.object_entries_array = &object_entries_array;
+
+		error = git_buf_sets(&relative_index, p->pack_name);
+		if (error < 0)
+			goto cleanup;
+		error = git_path_make_relative(&relative_index, git_buf_cstr(&w->pack_dir));
+		if (error < 0) {
+			git_buf_dispose(&relative_index);
+			goto cleanup;
+		}
+		path_len = git_buf_len(&relative_index);
+		if (path_len <= strlen(".pack") || git__suffixcmp(git_buf_cstr(&relative_index), ".pack") != 0) {
+			git_buf_dispose(&relative_index);
+			git_error_set(GIT_ERROR_INVALID, "invalid packfile name: '%s'", p->pack_name);
+			error = -1;
+			goto cleanup;
+		}
+		path_len -= strlen(".pack");
+
+		git_buf_put(&packfile_names, git_buf_cstr(&relative_index), path_len);
+		git_buf_puts(&packfile_names, ".idx");
+		git_buf_putc(&packfile_names, '\0');
+		git_buf_dispose(&relative_index);
+
+		error = git_pack_foreach_entry_offset(p, object_entry__cb, &state);
+		if (error < 0)
+			goto cleanup;
+	}
+
+	/* Sort the object entries. */
+	error = git_vector_init(&object_entries, git_array_size(object_entries_array), object_entry__cmp);
+	if (error < 0)
+		goto cleanup;
+	git_array_foreach (object_entries_array, i, entry)
+		error = git_vector_set(NULL, &object_entries, i, entry);
+	git_vector_set_sorted(&object_entries, 0);
+	git_vector_sort(&object_entries);
+	git_vector_uniq(&object_entries, NULL);
+
+	/* Pad the packfile names so it is a multiple of four. */
+	while (git_buf_len(&packfile_names) & 3)
+		git_buf_putc(&packfile_names, '\0');
+
+	/* Fill the OID Fanout table. */
+	oid_fanout_count = 0;
+	for (i = 0; i < 256; i++) {
+		while (oid_fanout_count < git_vector_length(&object_entries) &&
+		       ((const git_midx_entry *)git_vector_get(&object_entries, oid_fanout_count))->sha1.id[0] <= i)
+			++oid_fanout_count;
+		oid_fanout[i] = htonl(oid_fanout_count);
+	}
+
+	/* Fill the OID Lookup table. */
+	git_vector_foreach (&object_entries, i, entry) {
+		error = git_buf_put(&oid_lookup, (const char *)&entry->sha1, sizeof(entry->sha1));
+		if (error < 0)
+			goto cleanup;
+	}
+
+	/* Fill the Object Offsets and Object Large Offsets tables. */
+	object_large_offsets_count = 0;
+	git_vector_foreach (&object_entries, i, entry) {
+		uint32_t word;
+
+		word = htonl((uint32_t)entry->pack_index);
+		error = git_buf_put(&object_offsets, (const char *)&word, sizeof(word));
+		if (error < 0)
+			goto cleanup;
+		if (entry->offset >= 0x80000000l) {
+			word = htonl(0x80000000u | object_large_offsets_count++);
+			error = write_offset(entry->offset, midx_write_buf, &object_large_offsets);
+		} else {
+			word = htonl((uint32_t)entry->offset & 0x7fffffffu);
+		}
+		error = git_buf_put(&object_offsets, (const char *)&word, sizeof(word));
+		if (error < 0)
+			goto cleanup;
+	}
+
+	/* Write the header. */
+	hdr.packfiles = htonl((uint32_t)git_vector_length(&w->packs));
+	hdr.chunks = 4;
+	if (git_buf_len(&object_large_offsets) > 0)
+		hdr.chunks++;
+	error = write_cb((const char *)&hdr, sizeof(hdr), cb_data);
+	if (error < 0)
+		goto cleanup;
+
+	/* Write the chunk headers. */
+	offset = sizeof(hdr) + (hdr.chunks + 1) * 12;
+	error = write_chunk_header(MIDX_PACKFILE_NAMES_ID, offset, write_cb, cb_data);
+	if (error < 0)
+		goto cleanup;
+	offset += git_buf_len(&packfile_names);
+	error = write_chunk_header(MIDX_OID_FANOUT_ID, offset, write_cb, cb_data);
+	if (error < 0)
+		goto cleanup;
+	offset += sizeof(oid_fanout);
+	error = write_chunk_header(MIDX_OID_LOOKUP_ID, offset, write_cb, cb_data);
+	if (error < 0)
+		goto cleanup;
+	offset += git_buf_len(&oid_lookup);
+	error = write_chunk_header(MIDX_OBJECT_OFFSETS_ID, offset, write_cb, cb_data);
+	if (error < 0)
+		goto cleanup;
+	offset += git_buf_len(&object_offsets);
+	if (git_buf_len(&object_large_offsets) > 0) {
+		error = write_chunk_header(MIDX_OBJECT_LARGE_OFFSETS_ID, offset, write_cb, cb_data);
+		if (error < 0)
+			goto cleanup;
+		offset += git_buf_len(&object_large_offsets);
+	}
+	error = write_chunk_header(0, offset, write_cb, cb_data);
+	if (error < 0)
+		goto cleanup;
+
+	/* Write all the chunks. */
+	error = write_cb(git_buf_cstr(&packfile_names), git_buf_len(&packfile_names), cb_data);
+	if (error < 0)
+		goto cleanup;
+	error = write_cb((const char *)oid_fanout, sizeof(oid_fanout), cb_data);
+	if (error < 0)
+		goto cleanup;
+	error = write_cb(git_buf_cstr(&oid_lookup), git_buf_len(&oid_lookup), cb_data);
+	if (error < 0)
+		goto cleanup;
+	error = write_cb(git_buf_cstr(&object_offsets), git_buf_len(&object_offsets), cb_data);
+	if (error < 0)
+		goto cleanup;
+	error = write_cb(git_buf_cstr(&object_large_offsets), git_buf_len(&object_large_offsets), cb_data);
+	if (error < 0)
+		goto cleanup;
+
+	/* Finalize the checksum and write the trailer. */
+	error = git_hash_final(&idx_checksum, &ctx);
+	if (error < 0)
+		goto cleanup;
+	error = write_cb((const char *)&idx_checksum, sizeof(idx_checksum), cb_data);
+	if (error < 0)
+		goto cleanup;
+
+cleanup:
+	git_array_clear(object_entries_array);
+	git_vector_free(&object_entries);
+	git_buf_dispose(&packfile_names);
+	git_buf_dispose(&oid_lookup);
+	git_buf_dispose(&object_offsets);
+	git_buf_dispose(&object_large_offsets);
+	git_hash_ctx_cleanup(&ctx);
+	return error;
+}
+
+static int midx_write_filebuf(const char *buf, size_t size, void *data)
+{
+	git_filebuf *f = (git_filebuf *)data;
+	return git_filebuf_write(f, buf, size);
+}
+
+int git_midx_writer_commit(
+		git_midx_writer *w)
+{
+	int error;
+	int filebuf_flags = GIT_FILEBUF_DO_NOT_BUFFER;
+	git_buf midx_path = GIT_BUF_INIT;
+	git_filebuf output = GIT_FILEBUF_INIT;
+
+	error = git_buf_joinpath(&midx_path, git_buf_cstr(&w->pack_dir), "multi-pack-index");
+	if (error < 0)
+		return error;
+
+	if (git_repository__fsync_gitdir)
+		filebuf_flags |= GIT_FILEBUF_FSYNC;
+	error = git_filebuf_open(&output, git_buf_cstr(&midx_path), filebuf_flags, 0644);
+	git_buf_dispose(&midx_path);
+	if (error < 0)
+		return error;
+
+	error = midx_write(w, midx_write_filebuf, &output);
+	if (error < 0) {
+		git_filebuf_cleanup(&output);
+		return error;
+	}
+
+	return git_filebuf_commit(&output);
+}
+
+int git_midx_writer_dump(
+		git_buf *midx,
+		git_midx_writer *w)
+{
+	return midx_write(w, midx_write_buf, midx);
 }

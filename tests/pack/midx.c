@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 
 #include <git2.h>
+#include <git2/sys/midx.h>
 
 #include "midx.h"
 
@@ -42,5 +43,34 @@ void test_pack_midx__lookup(void)
 	cl_assert_equal_s(git_commit_message(commit), "packed commit one\n");
 
 	git_commit_free(commit);
+	git_repository_free(repo);
+}
+
+void test_pack_midx__writer(void)
+{
+	git_repository *repo;
+	git_midx_writer *w = NULL;
+	git_buf midx = GIT_BUF_INIT, expected_midx = GIT_BUF_INIT, path = GIT_BUF_INIT;
+
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_path(repo), "objects/pack"));
+	cl_git_pass(git_midx_writer_new(&w, git_buf_cstr(&path)));
+
+	cl_git_pass(git_midx_writer_add(w, "pack-d7c6adf9f61318f041845b01440d09aa7a91e1b5.idx"));
+	cl_git_pass(git_midx_writer_add(w, "pack-d85f5d483273108c9d8dd0e4728ccf0b2982423a.idx"));
+	cl_git_pass(git_midx_writer_add(w, "pack-a81e489679b7d3418f9ab594bda8ceb37dd4c695.idx"));
+
+	cl_git_pass(git_midx_writer_dump(&midx, w));
+	cl_git_pass(git_buf_joinpath(&path, git_repository_path(repo), "objects/pack/multi-pack-index"));
+	cl_git_pass(git_futils_readbuffer(&expected_midx, git_buf_cstr(&path)));
+
+	cl_assert_equal_i(git_buf_len(&midx), git_buf_len(&expected_midx));
+	cl_assert_equal_strn(git_buf_cstr(&midx), git_buf_cstr(&expected_midx), git_buf_len(&midx));
+
+	git_buf_dispose(&midx);
+	git_buf_dispose(&expected_midx);
+	git_buf_dispose(&path);
+	git_midx_writer_free(w);
 	git_repository_free(repo);
 }
