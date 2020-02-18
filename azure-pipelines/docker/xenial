@@ -23,7 +23,9 @@ RUN apt-get update && \
         openssl \
         pkgconf \
         python \
-        valgrind
+        valgrind \
+        && \
+    rm -rf /var/lib/apt/lists/*
 
 FROM apt AS mbedtls
 RUN cd /tmp && \
