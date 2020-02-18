@@ -58,7 +58,6 @@ OPTION(USE_SHA1				"Enable SHA1. Can be set to CollisionDetection(ON)/HTTPS/Gene
 OPTION(USE_GSSAPI			"Link with libgssapi for SPNEGO auth"			OFF)
 OPTION(USE_STANDALONE_FUZZERS		"Enable standalone fuzzers (compatible with gcc)"	OFF)
 OPTION(USE_LEAK_CHECKER			"Run tests with leak checker"				OFF)
-OPTION(VALGRIND				"Configure build for valgrind"				OFF)
 OPTION(DEBUG_POOL			"Enable debug pool allocator"				OFF)
 OPTION(ENABLE_WERROR			"Enable compilation with -Werror"			OFF)
 OPTION(USE_BUNDLED_ZLIB    		"Use the bundled version of zlib"			OFF)
