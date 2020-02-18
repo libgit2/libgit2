@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "buffer.h"
+#include "strarray.h"
 
 /**
  * @file git2/repository.h
@@ -129,23 +130,30 @@ typedef enum {
 	/**
 	 * Find and open a git repository, respecting the environment variables
 	 * used by the git command-line tools.
-	 * If set, `git_repository_open_ext` will ignore the other flags and
-	 * the `ceiling_dirs` argument, and will allow a NULL `path` to use
-	 * `GIT_DIR` or search from the current directory.
+	 * If set, a NULL string can be passed as the `path` parameter to use
+	 * the value from the `GIT_DIR` environment variable. If `GIT_DIR` is
+	 * not set, start the search from the current directory (ie. `getcwd()`).
 	 * The search for a repository will respect $GIT_CEILING_DIRECTORIES and
 	 * $GIT_DISCOVERY_ACROSS_FILESYSTEM.  The opened repository will
 	 * respect $GIT_INDEX_FILE, $GIT_NAMESPACE, $GIT_OBJECT_DIRECTORY, and
 	 * $GIT_ALTERNATE_OBJECT_DIRECTORIES.
-	 * In the future, this flag will also cause `git_repository_open_ext`
-	 * to respect $GIT_WORK_TREE and $GIT_COMMON_DIR; currently,
-	 * `git_repository_open_ext` with this flag will error out if either
-	 * $GIT_WORK_TREE or $GIT_COMMON_DIR is set.
 	 */
 	GIT_REPOSITORY_OPEN_FROM_ENV  = (1 << 4),
 } git_repository_open_flag_t;
 
 /**
  * Find and open a repository with extended controls.
+ *
+ * Note that it has the following differing behavior as compared to
+ * `git_repository_open_with_opts`:
+ *
+ * - If `GIT_REPOSITORY_OPEN_FROM_ENV` is set, all other flags as well as the
+ *   `ceiling_dirs` argument will be ignored.
+ *
+ * - The list of allowed environment variables is hardcoded to
+ *   `GIT_DIR`, `GIT_CEILING_DIRECTORIES`, `GIT_DISCOVERY_ACROSS_FILESYSTEM`,
+ *   `GIT_INDEX_FILE`, `GIT_NAMESPACE`, `GIT_OBJECT_DIRECTORY`, `GIT_WORK_TREE`,
+ *   `GIT_COMMON_DIR`, and `GIT_ALTERNATE_OBJECT_DIRECTORIES`.
  *
  * @param out Pointer to the repo which will be opened.  This can
  *        actually be NULL if you only want to use the error code to
@@ -167,6 +175,69 @@ GIT_EXTERN(int) git_repository_open_ext(
 	const char *path,
 	unsigned int flags,
 	const char *ceiling_dirs);
+
+/**
+ * Repository open options structure
+ *
+ * Initialize with `GIT_REPOSITORY_OPEN_OPTIONS_INIT`. Alternatively, you can
+ * use `git_repository_open_init_options`.
+ *
+ * @see git_repository_open_with_opts
+ */
+typedef struct {
+	int version;
+
+	/** Flags to use when opening. See git_repository_open_flag_t */
+	unsigned int flags;
+
+	/**
+	 * An array of path prefixes at which the search for a containing
+	 * repository should terminate.
+	 */
+	git_strarray ceiling_dirs;
+
+	/**
+	 * If GIT_REPOSITORY_OPEN_FROM_ENV is set, this is used as a whitelist
+	 * of environment variables we're allowed to use. An empty array means that
+	 * we can use any of them.
+	 */
+	git_strarray allowed_env;
+} git_repository_open_options;
+
+#define GIT_REPOSITORY_OPEN_OPTIONS_VERSION 1
+#define GIT_REPOSITORY_OPEN_OPTIONS_INIT {GIT_REPOSITORY_OPEN_OPTIONS_VERSION}
+
+/**
+ * Initialize git_repository_open_options structure
+ *
+ * Initializes a `git_repository_open_options` with default values. Equivalent to
+ * creating an instance with `GIT_REPOSITORY_OPEN_OPTIONS_INIT`.
+ *
+ * @param opts The `git_repository_open_options` struct to initialize.
+ * @param version The struct version; pass `GIT_REPOSITORY_OPEN_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_repository_open_init_options(
+	git_repository_open_options *opts,
+	unsigned int version);
+
+/**
+ * Open a repository, with extended options.
+ *
+ * @param out Pointer to the repository which will be opened.
+ *        This can be NULL if you only want to check for the existence of a
+ *        valid repository at this path.
+ * @param path Path to open as git repository.
+ *        If the flags permit "searching", then this can be a path to a
+ *        subdirectory inside the working directory of the repository.
+ *        May be NULL if the GIT_REPOSITORY_OPEN_FROM_ENV flag is set.
+ * @param opts The options to use when opening.
+ * @return 0 on success, a negative error code otherwise.
+ */
+GIT_EXTERN(int) git_repository_open_with_opts(
+	git_repository **out,
+	const char *path,
+	const git_repository_open_options *opts);
 
 /**
  * Open a bare repository on the serverside.

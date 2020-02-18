@@ -1240,3 +1240,67 @@ void test_core_buffer__avoid_printing_into_oom_buffer(void)
 	 */
 	cl_git_fail(git_buf_puts(&buf, "foobar"));
 }
+
+void test_core_buffer__slicing(void)
+{
+	const char *test_str = "test:sep:string";
+	git_buf buf = GIT_BUF_INIT_CONST(test_str, strlen(test_str));
+	git_buf slice = GIT_BUF_INIT;
+
+	cl_assert(git_buf_slice(&slice, &buf, ':'));
+	cl_assert_equal_i(4, slice.size);
+	cl_assert_equal_strn("test", slice.ptr, slice.size);
+
+	cl_assert(git_buf_slice(&slice, &buf, ':'));
+	cl_assert_equal_i(3, slice.size);
+	cl_assert_equal_strn("sep", slice.ptr, slice.size);
+
+	cl_assert(git_buf_slice(&slice, &buf, ':'));
+	cl_assert_equal_i(6, slice.size);
+	cl_assert_equal_strn("string", slice.ptr, slice.size);
+
+	cl_assert(!git_buf_slice(&slice, &buf, ':'));
+}
+
+void test_core_buffer__slicing_edgecases(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+	git_buf slice = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_sets(&buf, "teststringnosep"));
+
+	cl_assert(git_buf_slice(&slice, &buf, ':'));
+	cl_assert_equal_i(15, slice.size);
+	cl_assert_equal_strn("teststringnosep", slice.ptr, slice.size);
+
+	cl_assert(!git_buf_slice(&slice, &buf, ':'));
+	git_buf_dispose(&slice);
+
+	cl_git_pass(git_buf_sets(&buf, ":degen:"));
+
+	cl_assert(git_buf_slice(&slice, &buf, ':'));
+	cl_assert_equal_i(0, slice.size);
+	cl_assert_equal_strn("", slice.ptr, slice.size);
+
+	cl_assert(git_buf_slice(&slice, &buf, ':'));
+	cl_assert_equal_i(5, slice.size);
+	cl_assert_equal_strn("degen", slice.ptr, slice.size);
+
+	cl_assert(git_buf_slice(&slice, &buf, ':'));
+	cl_assert_equal_i(0, slice.size);
+	cl_assert_equal_strn("", slice.ptr, slice.size);
+
+	cl_assert(!git_buf_slice(&slice, &buf, ':'));
+	git_buf_dispose(&slice);
+
+	cl_git_pass(git_buf_sets(&buf, ""));
+
+	cl_assert(git_buf_slice(&slice, &buf, ':'));
+	cl_assert_equal_i(0, slice.size);
+	cl_assert_equal_strn("", slice.ptr, slice.size);
+
+	cl_assert(!git_buf_slice(&slice, &buf, ':'));
+	git_buf_dispose(&slice);
+
+	git_buf_dispose(&buf);
+}

@@ -8,8 +8,8 @@
 #define INCLUDE_git_annotated_commit_h__
 
 #include "common.h"
-#include "repository.h"
 #include "types.h"
+#include "repository.h"
 
 /**
  * @file git2/annotated_commit.h

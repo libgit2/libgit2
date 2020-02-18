@@ -9,6 +9,8 @@
 
 #include "common.h"
 
+#include "vector.h"
+
 #ifdef GIT_WIN32
 # include "win32/utf-conv.h"
 # include "win32/w32_buffer.h"
@@ -64,6 +66,33 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 
 		tgt->count++;
 	}
+
+	return 0;
+}
+
+int git_strarray_parse_pathlist(git_strarray *strarray, const char *pathlist)
+{
+	git_buf pathlist_buf = GIT_BUF_INIT;
+	git_buf path = GIT_BUF_INIT;
+	git_vector paths = GIT_VECTOR_INIT;
+
+	assert(strarray);
+
+	memset(strarray, 0, sizeof(*strarray));
+
+	if (!pathlist)
+		return 0;
+
+	git_buf_attach_notowned(&pathlist_buf, pathlist, strlen(pathlist));
+
+	while (git_buf_slice(&path, &pathlist_buf, GIT_PATH_LIST_SEPARATOR)) {
+		char *path_str = git__strndup(path.ptr, path.size);
+		GIT_ERROR_CHECK_ALLOC(path_str);
+		if (git_vector_insert(&paths, path_str) != 0)
+			return -1;
+	}
+	strarray->strings = (char **)git_vector_detach(&strarray->count, NULL, &paths);
+	git_vector_free(&paths);
 
 	return 0;
 }
@@ -926,3 +955,20 @@ int git__getenv(git_buf *out, const char *name)
 	return git_buf_puts(out, val);
 }
 #endif
+
+int git__getenv_wl(git_buf *out, const char *name, const git_strarray *whitelist)
+{
+	if (whitelist && whitelist->count > 0) {
+		size_t idx;
+
+		for (idx = 0; idx < whitelist->count; idx++) {
+			if (git__strcmp(name, whitelist->strings[idx]) == 0)
+				break;
+		}
+
+		if (idx == whitelist->count)
+			return GIT_ENOTFOUND;
+	}
+
+	return git__getenv(out, name);
+}

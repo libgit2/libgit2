@@ -1044,3 +1044,33 @@ invalid:
 	git_error_set(GIT_ERROR_INVALID, "invalid quoted line");
 	return -1;
 }
+
+int git_buf_slice(git_buf *slice, const git_buf *buf, char sep)
+{
+	size_t pos;
+
+	assert(buf && slice);
+
+	if (slice->ptr == git_buf__initbuf) {
+		slice->ptr = buf->ptr;
+		slice->size = 0;
+	} else {
+		slice->ptr += slice->size + 1;
+	}
+
+	assert(slice->ptr >= buf->ptr);
+
+	pos = slice->ptr - buf->ptr;
+	if (pos > git_buf_len(buf))
+		return 0;
+
+	while (pos < buf->size) {
+		if (buf->ptr[pos] == sep)
+			break;
+		pos++;
+	}
+
+	slice->size = pos - (slice->ptr - buf->ptr);
+
+	return 1;
+}
