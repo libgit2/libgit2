@@ -8,7 +8,6 @@ RUN apt-get update && \
         curl \
         gcc \
         git \
-        gosu \
         krb5-user \
         libcurl4-gnutls-dev \
         libgcrypt20-dev \
@@ -23,6 +22,7 @@ RUN apt-get update && \
         openssl \
         pkgconf \
         python \
+        sudo \
         valgrind \
         && \
     rm -rf /var/lib/apt/lists/*
