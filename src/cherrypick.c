@@ -12,14 +12,13 @@
 #include "merge.h"
 #include "vector.h"
 #include "index.h"
+#include "layout.h"
 
 #include "git2/types.h"
 #include "git2/merge.h"
 #include "git2/cherrypick.h"
 #include "git2/commit.h"
 #include "git2/sys/commit.h"
-
-#define GIT_CHERRYPICK_FILE_MODE		0666
 
 static int write_cherrypick_head(
 	git_repository *repo,
@@ -29,7 +28,7 @@ static int write_cherrypick_head(
 	git_buf file_path = GIT_BUF_INIT;
 	int error = 0;
 
-	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_CHERRYPICK_HEAD_FILE)) >= 0 &&
+	if ((error = git_repository_item_path(&file_path, repo, GIT_REPOSITORY_ITEM_CHERRYPICK_HEAD)) >= 0 &&
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_CHERRYPICK_FILE_MODE)) >= 0 &&
 		(error = git_filebuf_printf(&file, "%s\n", commit_oidstr)) >= 0)
 		error = git_filebuf_commit(&file);
@@ -50,7 +49,7 @@ static int write_merge_msg(
 	git_buf file_path = GIT_BUF_INIT;
 	int error = 0;
 
-	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_MERGE_MSG_FILE)) < 0 ||
+	if ((error = git_repository_item_path(&file_path, repo, GIT_REPOSITORY_ITEM_MERGE_MSG)) < 0 ||
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_CHERRYPICK_FILE_MODE)) < 0 ||
 		(error = git_filebuf_printf(&file, "%s", commit_msg)) < 0)
 		goto cleanup;

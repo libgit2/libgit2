@@ -42,7 +42,7 @@ int git_worktree_list(git_strarray *wts, git_repository *repo)
 	wts->count = 0;
 	wts->strings = NULL;
 
-	if ((error = git_buf_printf(&path, "%s/worktrees/", repo->commondir)) < 0)
+	if ((error = git_buf_printf(&path, "%s/worktrees/", repo->layout.commondir)) < 0)
 		goto exit;
 	if (!git_path_exists(path.ptr) || git_path_is_empty_dir(path.ptr))
 		goto exit;
@@ -137,8 +137,8 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 	}
 
 	if ((wt->name = git__strdup(name)) == NULL
-	    || (wt->commondir_path = git_worktree__read_link(dir, "commondir")) == NULL
-	    || (wt->gitlink_path = git_worktree__read_link(dir, "gitdir")) == NULL
+	    || (wt->commondir_path = git_worktree__read_link(dir, GIT_COMMONDIR_FILE)) == NULL
+	    || (wt->gitlink_path = git_worktree__read_link(dir, GIT_GITDIR_FILE)) == NULL
 	    || (parent && (wt->parent_path = git__strdup(parent)) == NULL)
 	    || (wt->worktree_path = git_path_dirname(wt->gitlink_path)) == NULL) {
 		error = -1;
@@ -171,7 +171,7 @@ int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *na
 
 	*out = NULL;
 
-	if ((error = git_buf_printf(&path, "%s/worktrees/%s", repo->commondir, name)) < 0)
+	if ((error = git_buf_printf(&path, "%s/worktrees/%s", repo->layout.commondir, name)) < 0)
 		goto out;
 
 	if ((error = (open_worktree_dir(out, git_repository_workdir(repo), path.ptr, name))) < 0)
@@ -311,7 +311,7 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	}
 
 	/* Create gitdir directory ".git/worktrees/<name>" */
-	if ((err = git_buf_joinpath(&gitdir, repo->commondir, "worktrees")) < 0)
+	if ((err = git_buf_joinpath(&gitdir, repo->layout.commondir, "worktrees")) < 0)
 		goto out;
 	if (!git_path_exists(gitdir.ptr))
 		if ((err = git_futils_mkdir(gitdir.ptr, 0755, GIT_MKDIR_EXCL)) < 0)
@@ -351,7 +351,7 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 		goto out;
 
 	/* Create gitdir files */
-	if ((err = git_path_prettify_dir(&buf, repo->commondir, NULL) < 0)
+	if ((err = git_path_prettify_dir(&buf, repo->layout.commondir, NULL) < 0)
 	    || (err = git_buf_putc(&buf, '\n')) < 0
 	    || (err = write_wtfile(gitdir.ptr, "commondir", &buf)) < 0)
 		goto out;

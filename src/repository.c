@@ -40,36 +40,11 @@
 
 bool git_repository__fsync_gitdir = false;
 
-static const struct {
-    git_repository_item_t parent;
-	git_repository_item_t fallback;
-    const char *name;
-    bool directory;
-} items[] = {
-	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM__LAST, NULL, true },
-	{ GIT_REPOSITORY_ITEM_WORKDIR, GIT_REPOSITORY_ITEM__LAST, NULL, true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM__LAST, NULL, true },
-	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM__LAST, "index", false },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "objects", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "refs", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "packed-refs", false },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "remotes", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "config", false },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "info", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "hooks", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "logs", true },
-	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM__LAST, "modules", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "worktrees", true }
-};
-
 static int check_repositoryformatversion(git_config *config);
 
-#define GIT_COMMONDIR_FILE "commondir"
-#define GIT_GITDIR_FILE "gitdir"
+#define GIT_BRANCH_MASTER "master"
 
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
-
-#define GIT_BRANCH_MASTER "master"
 
 #define GIT_REPO_VERSION 0
 
@@ -172,10 +147,10 @@ void git_repository_free(git_repository *repo)
 		git_buf_dispose(git_array_get(repo->reserved_names, i));
 	git_array_clear(repo->reserved_names);
 
-	git__free(repo->gitlink);
-	git__free(repo->gitdir);
-	git__free(repo->commondir);
-	git__free(repo->workdir);
+	git__free(repo->layout.gitlink);
+	git__free(repo->layout.gitdir);
+	git__free(repo->layout.commondir);
+	git__free(repo->layout.workdir);
 	git__free(repo->namespace);
 	git__free(repo->ident_name);
 	git__free(repo->ident_email);
@@ -184,52 +159,7 @@ void git_repository_free(git_repository *repo)
 	git__free(repo);
 }
 
-/*
- * Git repository open methods
- *
- * Open a repository object from its path
- */
-static bool valid_repository_path(git_buf *repository_path, git_buf *common_path)
-{
-	/* Check if we have a separate commondir (e.g. we have a
-	 * worktree) */
-	if (git_path_contains_file(repository_path, GIT_COMMONDIR_FILE)) {
-		git_buf common_link  = GIT_BUF_INIT;
-		git_buf_joinpath(&common_link, repository_path->ptr, GIT_COMMONDIR_FILE);
-
-		git_futils_readbuffer(&common_link, common_link.ptr);
-		git_buf_rtrim(&common_link);
-
-		if (git_path_is_relative(common_link.ptr)) {
-			git_buf_joinpath(common_path, repository_path->ptr, common_link.ptr);
-		} else {
-			git_buf_swap(common_path, &common_link);
-		}
-
-		git_buf_dispose(&common_link);
-	}
-	else {
-		git_buf_set(common_path, repository_path->ptr, repository_path->size);
-	}
-
-	/* Make sure the commondir path always has a trailing * slash */
-	if (git_buf_rfind(common_path, '/') != (ssize_t)common_path->size - 1)
-		git_buf_putc(common_path, '/');
-
-	/* Ensure HEAD file exists */
-	if (git_path_contains_file(repository_path, GIT_HEAD_FILE) == false)
-		return false;
-
-	/* Check files in common dir */
-	if (git_path_contains_dir(common_path, GIT_OBJECTS_DIR) == false)
-		return false;
-	if (git_path_contains_dir(common_path, GIT_REFS_DIR) == false)
-		return false;
-
-	return true;
-}
-
-static git_repository *repository_alloc(void)
+static git_repository *repository_alloc(const git_repository_layout *layout)
 {
 	git_repository *repo = git__calloc(1, sizeof(git_repository));
 
@@ -243,6 +173,9 @@ static git_repository *repository_alloc(void)
 
 	/* set all the entries in the configmap cache to `unset` */
 	git_repository__configmap_lookup_cache_clear(repo);
+
+	if (layout)
+		memcpy(&repo->layout, layout, sizeof(*layout));
 
 	return repo;
 
@@ -258,7 +191,7 @@ int git_repository_new(git_repository **out)
 {
 	git_repository *repo;
 
-	*out = repo = repository_alloc();
+	*out = repo = repository_alloc(NULL);
 	GIT_ERROR_CHECK_ALLOC(repo);
 
 	repo->is_bare = 1;
@@ -284,12 +217,15 @@ static int load_config_data(git_repository *repo, const git_config *config)
 	return 0;
 }
 
-static int load_workdir(git_repository *repo, git_config *config, git_buf *parent_path)
+static int repo_is_worktree(unsigned *out, const git_repository *repo);
+
+static int load_workdir(git_repository *repo, git_config *config)
 {
 	int error;
 	git_config_entry *ce;
 	git_buf worktree = GIT_BUF_INIT;
 	git_buf path = GIT_BUF_INIT;
+	unsigned int is_worktree;
 
 	if (repo->is_bare)
 		return 0;
@@ -298,8 +234,14 @@ static int load_workdir(git_repository *repo, git_config *config, git_buf *paren
 			&ce, config, "core.worktree", false)) < 0)
 		return error;
 
+	if ((error = repo_is_worktree(&is_worktree, repo)) < 0)
+		goto cleanup;
+
+	repo->is_worktree = is_worktree;
+
 	if (repo->is_worktree) {
-		char *gitlink = git_worktree__read_link(repo->gitdir, GIT_GITDIR_FILE);
+		/* FIXME: we reread the .git/gitdir gitlink here and might lose the pointer */
+		char *gitlink = git_worktree__read_link(repo->layout.gitdir, GIT_GITDIR_FILE);
 		if (!gitlink) {
 			error = -1;
 			goto cleanup;
@@ -313,255 +255,32 @@ static int load_workdir(git_repository *repo, git_config *config, git_buf *paren
 			goto cleanup;
 		}
 
-		repo->workdir = git_buf_detach(&worktree);
+		repo->layout.workdir = git_buf_detach(&worktree);
 	}
 	else if (ce && ce->value) {
 		if ((error = git_path_prettify_dir(
-				&worktree, ce->value, repo->gitdir)) < 0)
+				&worktree, ce->value, repo->layout.gitdir)) < 0)
 			goto cleanup;
 
-		repo->workdir = git_buf_detach(&worktree);
+		repo->layout.workdir = git_buf_detach(&worktree);
 	}
-	else if (parent_path && git_path_isdir(parent_path->ptr))
-		repo->workdir = git_buf_detach(parent_path);
+	/* FIXME: workdir was already loaded as part of layout construction */
+//	else if (parent_path && git_path_isdir(parent_path->ptr))
+//		repo->layout.workdir = git_buf_detach(parent_path);
 	else {
-		if (git_path_dirname_r(&worktree, repo->gitdir) < 0 ||
+		if (git_path_dirname_r(&worktree, repo->layout.gitdir) < 0 ||
 		    git_path_to_dir(&worktree) < 0) {
 			error = -1;
 			goto cleanup;
 		}
 
-		repo->workdir = git_buf_detach(&worktree);
+		repo->layout.workdir = git_buf_detach(&worktree);
 	}
 
-	GIT_ERROR_CHECK_ALLOC(repo->workdir);
+	GIT_ERROR_CHECK_ALLOC(repo->layout.workdir);
 cleanup:
 	git_buf_dispose(&path);
 	git_config_entry_free(ce);
-	return error;
-}
-
-/*
- * This function returns furthest offset into path where a ceiling dir
- * is found, so we can stop processing the path at that point.
- *
- * Note: converting this to use git_bufs instead of GIT_PATH_MAX buffers on
- * the stack could remove directories name limits, but at the cost of doing
- * repeated malloc/frees inside the loop below, so let's not do it now.
- */
-static size_t find_ceiling_dir_offset(
-	const char *path,
-	const char *ceiling_directories)
-{
-	char buf[GIT_PATH_MAX + 1];
-	char buf2[GIT_PATH_MAX + 1];
-	const char *ceil, *sep;
-	size_t len, max_len = 0, min_len;
-
-	assert(path);
-
-	min_len = (size_t)(git_path_root(path) + 1);
-
-	if (ceiling_directories == NULL || min_len == 0)
-		return min_len;
-
-	for (sep = ceil = ceiling_directories; *sep; ceil = sep + 1) {
-		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
-		len = sep - ceil;
-
-		if (len == 0 || len >= sizeof(buf) || git_path_root(ceil) == -1)
-			continue;
-
-		strncpy(buf, ceil, len);
-		buf[len] = '\0';
-
-		if (p_realpath(buf, buf2) == NULL)
-			continue;
-
-		len = strlen(buf2);
-		if (len > 0 && buf2[len-1] == '/')
-			buf[--len] = '\0';
-
-		if (!strncmp(path, buf2, len) &&
-			(path[len] == '/' || !path[len]) &&
-			len > max_len)
-		{
-			max_len = len;
-		}
-	}
-
-	return (max_len <= min_len ? min_len : max_len);
-}
-
-/*
- * Read the contents of `file_path` and set `path_out` to the repo dir that
- * it points to.  Before calling, set `path_out` to the base directory that
- * should be used if the contents of `file_path` are a relative path.
- */
-static int read_gitfile(git_buf *path_out, const char *file_path)
-{
-	int     error = 0;
-	git_buf file = GIT_BUF_INIT;
-	size_t  prefix_len = strlen(GIT_FILE_CONTENT_PREFIX);
-
-	assert(path_out && file_path);
-
-	if (git_futils_readbuffer(&file, file_path) < 0)
-		return -1;
-
-	git_buf_rtrim(&file);
-	/* apparently on Windows, some people use backslashes in paths */
-	git_path_mkposix(file.ptr);
-
-	if (git_buf_len(&file) <= prefix_len ||
-		memcmp(git_buf_cstr(&file), GIT_FILE_CONTENT_PREFIX, prefix_len) != 0)
-	{
-		git_error_set(GIT_ERROR_REPOSITORY,
-			"the `.git` file at '%s' is malformed", file_path);
-		error = -1;
-	}
-	else if ((error = git_path_dirname_r(path_out, file_path)) >= 0) {
-		const char *gitlink = git_buf_cstr(&file) + prefix_len;
-		while (*gitlink && git__isspace(*gitlink)) gitlink++;
-
-		error = git_path_prettify_dir(
-			path_out, gitlink, git_buf_cstr(path_out));
-	}
-
-	git_buf_dispose(&file);
-	return error;
-}
-
-static int find_repo(
-	git_buf *gitdir_path,
-	git_buf *workdir_path,
-	git_buf *gitlink_path,
-	git_buf *commondir_path,
-	const char *start_path,
-	uint32_t flags,
-	const char *ceiling_dirs)
-{
-	int error;
-	git_buf path = GIT_BUF_INIT;
-	git_buf repo_link = GIT_BUF_INIT;
-	git_buf common_link = GIT_BUF_INIT;
-	struct stat st;
-	dev_t initial_device = 0;
-	int min_iterations;
-	bool in_dot_git;
-	size_t ceiling_offset = 0;
-
-	git_buf_clear(gitdir_path);
-
-	error = git_path_prettify(&path, start_path, NULL);
-	if (error < 0)
-		return error;
-
-	/* in_dot_git toggles each loop:
-	 * /a/b/c/.git, /a/b/c, /a/b/.git, /a/b, /a/.git, /a
-	 * With GIT_REPOSITORY_OPEN_BARE or GIT_REPOSITORY_OPEN_NO_DOTGIT, we
-	 * assume we started with /a/b/c.git and don't append .git the first
-	 * time through.
-	 * min_iterations indicates the number of iterations left before going
-	 * further counts as a search. */
-	if (flags & (GIT_REPOSITORY_OPEN_BARE | GIT_REPOSITORY_OPEN_NO_DOTGIT)) {
-		in_dot_git = true;
-		min_iterations = 1;
-	} else {
-		in_dot_git = false;
-		min_iterations = 2;
-	}
-
-	for (;;) {
-		if (!(flags & GIT_REPOSITORY_OPEN_NO_DOTGIT)) {
-			if (!in_dot_git) {
-				error = git_buf_joinpath(&path, path.ptr, DOT_GIT);
-				if (error < 0)
-					break;
-			}
-			in_dot_git = !in_dot_git;
-		}
-
-		if (p_stat(path.ptr, &st) == 0) {
-			/* check that we have not crossed device boundaries */
-			if (initial_device == 0)
-				initial_device = st.st_dev;
-			else if (st.st_dev != initial_device &&
-				 !(flags & GIT_REPOSITORY_OPEN_CROSS_FS))
-				break;
-
-			if (S_ISDIR(st.st_mode)) {
-				if (valid_repository_path(&path, &common_link)) {
-					git_path_to_dir(&path);
-					git_buf_set(gitdir_path, path.ptr, path.size);
-
-					if (gitlink_path)
-						git_buf_attach(gitlink_path,
-							git_worktree__read_link(path.ptr, GIT_GITDIR_FILE), 0);
-					if (commondir_path)
-						git_buf_swap(&common_link, commondir_path);
-
-					break;
-				}
-			}
-			else if (S_ISREG(st.st_mode) && git__suffixcmp(path.ptr, "/" DOT_GIT) == 0) {
-				error = read_gitfile(&repo_link, path.ptr);
-				if (error < 0)
-					break;
-				if (valid_repository_path(&repo_link, &common_link)) {
-					git_buf_swap(gitdir_path, &repo_link);
-
-					if (gitlink_path)
-						error = git_buf_put(gitlink_path, path.ptr, path.size);
-					if (commondir_path)
-						git_buf_swap(&common_link, commondir_path);
-				}
-				break;
-			}
-		}
-
-		/* Move up one directory. If we're in_dot_git, we'll search the
-		 * parent itself next. If we're !in_dot_git, we'll search .git
-		 * in the parent directory next (added at the top of the loop). */
-		if (git_path_dirname_r(&path, path.ptr) < 0) {
-			error = -1;
-			break;
-		}
-
-		/* Once we've checked the directory (and .git if applicable),
-		 * find the ceiling for a search. */
-		if (min_iterations && (--min_iterations == 0))
-			ceiling_offset = find_ceiling_dir_offset(path.ptr, ceiling_dirs);
-
-		/* Check if we should stop searching here. */
-		if (min_iterations == 0
-		    && (path.ptr[ceiling_offset] == 0
-			|| (flags & GIT_REPOSITORY_OPEN_NO_SEARCH)))
-			break;
-	}
-
-	if (!error && workdir_path && !(flags & GIT_REPOSITORY_OPEN_BARE)) {
-		if (!git_buf_len(gitdir_path))
-			git_buf_clear(workdir_path);
-		else {
-			git_path_dirname_r(workdir_path, path.ptr);
-			git_path_to_dir(workdir_path);
-		}
-		if (git_buf_oom(workdir_path))
-			return -1;
-	}
-
-	/* If we didn't find the repository, and we don't have any other error
-	 * to report, report that. */
-	if (!git_buf_len(gitdir_path) && !error) {
-		git_error_set(GIT_ERROR_REPOSITORY,
-			"could not find repository from '%s'", start_path);
-		error = GIT_ENOTFOUND;
-	}
-
-	git_buf_dispose(&path);
-	git_buf_dispose(&repo_link);
-	git_buf_dispose(&common_link);
 	return error;
 }
 
@@ -570,37 +289,43 @@ int git_repository_open_bare(
 	const char *bare_path)
 {
 	int error;
+	git_repository_layout layout = {0};
 	git_buf path = GIT_BUF_INIT, common_path = GIT_BUF_INIT;
 	git_repository *repo = NULL;
 
 	if ((error = git_path_prettify_dir(&path, bare_path, NULL)) < 0)
 		return error;
 
-	if (!valid_repository_path(&path, &common_path)) {
+	if (!git_layout_is_valid_repository(&path, &common_path)) {
 		git_buf_dispose(&path);
 		git_buf_dispose(&common_path);
 		git_error_set(GIT_ERROR_REPOSITORY, "path is not a repository: %s", bare_path);
 		return GIT_ENOTFOUND;
 	}
 
-	repo = repository_alloc();
-	GIT_ERROR_CHECK_ALLOC(repo);
+	layout.gitdir = git_buf_detach(&path);
+	GIT_ERROR_CHECK_ALLOC(layout.gitdir);
+	layout.commondir = git_buf_detach(&common_path);
+	GIT_ERROR_CHECK_ALLOC(layout.commondir);
 
-	repo->gitdir = git_buf_detach(&path);
-	GIT_ERROR_CHECK_ALLOC(repo->gitdir);
-	repo->commondir = git_buf_detach(&common_path);
-	GIT_ERROR_CHECK_ALLOC(repo->commondir);
+	repo = repository_alloc(&layout);
+	GIT_ERROR_CHECK_ALLOC(repo);
 
 	/* of course we're bare! */
 	repo->is_bare = 1;
 	repo->is_worktree = 0;
-	repo->workdir = NULL;
 
 	*repo_ptr = repo;
 	return 0;
 }
 
-static int _git_repository_open_ext_from_env(
+static int git_repository__open(
+	git_repository **repo_ptr,
+	const char *start_path,
+	unsigned int flags,
+	git_strarray *ceiling_dirs);
+
+static int git_repository__open_from_env(
 	git_repository **out,
 	const char *start_path)
 {
@@ -616,9 +341,11 @@ static int _git_repository_open_ext_from_env(
 	git_buf alts_buf = GIT_BUF_INIT;
 	git_buf work_tree_buf = GIT_BUF_INIT;
 	git_buf common_dir_buf = GIT_BUF_INIT;
-	const char *ceiling_dirs = NULL;
+	git_strarray ceiling_dirs;
 	unsigned flags = 0;
 	int error;
+
+	memset(&ceiling_dirs, 0, sizeof(ceiling_dirs));
 
 	if (!start_path) {
 		error = git__getenv(&dir_buf, "GIT_DIR");
@@ -639,8 +366,8 @@ static int _git_repository_open_ext_from_env(
 		git_error_clear();
 	else if (error < 0)
 		goto error;
-	else
-		ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
+	else if ((error = git_strarray_parse_pathlist(&ceiling_dirs, git_buf_cstr(&ceiling_dirs_buf))) < 0)
+		goto error;
 
 	error = git__getenv(&across_fs_buf, "GIT_DISCOVERY_ACROSS_FILESYSTEM");
 	if (error == GIT_ENOTFOUND)
@@ -706,7 +433,7 @@ static int _git_repository_open_ext_from_env(
 		goto error;
 	}
 
-	error = git_repository_open_ext(&repo, start_path, flags, ceiling_dirs);
+	error = git_repository__open(&repo, start_path, flags, &ceiling_dirs);
 	if (error < 0)
 		goto error;
 
@@ -719,22 +446,19 @@ static int _git_repository_open_ext_from_env(
 		error = 0;
 	} else if (error < 0)
 		goto error;
-        else {
-		const char *end;
-		char *alt, *sep;
+	else {		git_strarray odb_dirs;
+		size_t idx;
 		if (!odb) {
 			error = git_repository_odb(&odb, repo);
 			if (error < 0)
 				goto error;
 		}
 
-		end = git_buf_cstr(&alts_buf) + git_buf_len(&alts_buf);
-		for (sep = alt = alts_buf.ptr; sep != end; alt = sep+1) {
-			for (sep = alt; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++)
-				;
-			if (*sep)
-				*sep = '\0';
-			error = git_odb_add_disk_alternate(odb, alt);
+		if ((error = git_strarray_parse_pathlist(&odb_dirs, alts_buf.ptr)) < 0)
+			goto error;
+
+		for (idx = 0; idx < odb_dirs.count; idx++) {
+			error = git_odb_add_disk_alternate(odb, odb_dirs.strings[idx]);
 			if (error < 0)
 				goto error;
 		}
@@ -775,13 +499,13 @@ static int repo_is_worktree(unsigned *out, const git_repository *repo)
 	int error;
 
 	/* Worktrees cannot have the same commondir and gitdir */
-	if (repo->commondir && repo->gitdir
-	    && !strcmp(repo->commondir, repo->gitdir)) {
+	if (repo->layout.commondir && repo->layout.gitdir
+	    && !strcmp(repo->layout.commondir, repo->layout.gitdir)) {
 		*out = 0;
 		return 0;
 	}
 
-	if ((error = git_buf_joinpath(&gitdir_link, repo->gitdir, "gitdir")) < 0)
+	if ((error = git_buf_joinpath(&gitdir_link, repo->layout.gitdir, "gitdir")) < 0)
 		return -1;
 
 	/* A 'gitdir' file inside a git directory is currently
@@ -792,49 +516,26 @@ static int repo_is_worktree(unsigned *out, const git_repository *repo)
 	return error;
 }
 
-int git_repository_open_ext(
+static int git_repository__open(
 	git_repository **repo_ptr,
 	const char *start_path,
 	unsigned int flags,
-	const char *ceiling_dirs)
+	git_strarray *ceiling_dirs)
 {
 	int error;
-	unsigned is_worktree;
-	git_buf gitdir = GIT_BUF_INIT, workdir = GIT_BUF_INIT,
-		gitlink = GIT_BUF_INIT, commondir = GIT_BUF_INIT;
+	git_repository_layout layout;
 	git_repository *repo = NULL;
 	git_config *config = NULL;
-
-	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV)
-		return _git_repository_open_ext_from_env(repo_ptr, start_path);
 
 	if (repo_ptr)
 		*repo_ptr = NULL;
 
-	error = find_repo(
-		&gitdir, &workdir, &gitlink, &commondir, start_path, flags, ceiling_dirs);
-
+	error = git_layout_find_repo(&layout, start_path, flags, ceiling_dirs);
 	if (error < 0 || !repo_ptr)
 		goto cleanup;
 
-	repo = repository_alloc();
+	repo = repository_alloc(&layout);
 	GIT_ERROR_CHECK_ALLOC(repo);
-
-	repo->gitdir = git_buf_detach(&gitdir);
-	GIT_ERROR_CHECK_ALLOC(repo->gitdir);
-
-	if (gitlink.size) {
-		repo->gitlink = git_buf_detach(&gitlink);
-		GIT_ERROR_CHECK_ALLOC(repo->gitlink);
-	}
-	if (commondir.size) {
-		repo->commondir = git_buf_detach(&commondir);
-		GIT_ERROR_CHECK_ALLOC(repo->commondir);
-	}
-
-	if ((error = repo_is_worktree(&is_worktree, repo)) < 0)
-		goto cleanup;
-	repo->is_worktree = is_worktree;
 
 	/*
 	 * We'd like to have the config, but git doesn't particularly
@@ -854,15 +555,15 @@ int git_repository_open_ext(
 
 		if (config &&
 		    ((error = load_config_data(repo, config)) < 0 ||
-		     (error = load_workdir(repo, config, &workdir)) < 0))
+		     (error = load_workdir(repo, config)) < 0))
 			goto cleanup;
 	}
 
 cleanup:
-	git_buf_dispose(&gitdir);
-	git_buf_dispose(&workdir);
-	git_buf_dispose(&gitlink);
-	git_buf_dispose(&commondir);
+	/*
+	 * FIXME: layout is caller-owned until the repo owns it
+	 * (eg. git_layout_find_repo with a NULL repo_ptr will leak
+	 */
 	git_config_free(config);
 
 	if (error < 0)
@@ -871,6 +572,23 @@ cleanup:
 		*repo_ptr = repo;
 
 	return error;
+}
+
+int git_repository_open_ext(
+	git_repository **repo_ptr,
+	const char *start_path,
+	unsigned int flags,
+	const char *ceilingdirs_paths)
+{
+	git_strarray ceiling_dirs;
+
+	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV)
+		return git_repository__open_from_env(repo_ptr, start_path);
+
+	if (git_strarray_parse_pathlist(&ceiling_dirs, ceilingdirs_paths))
+		return -1;
+
+	return git_repository__open(repo_ptr, start_path, flags, &ceiling_dirs);
 }
 
 int git_repository_open(git_repository **repo_out, const char *path)
@@ -914,7 +632,7 @@ int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)
 {
 	git_repository *repo;
 
-	repo = repository_alloc();
+	repo = repository_alloc(NULL);
 	GIT_ERROR_CHECK_ALLOC(repo);
 
 	git_repository_set_odb(repo, odb);
@@ -927,15 +645,24 @@ int git_repository_discover(
 	git_buf *out,
 	const char *start_path,
 	int across_fs,
-	const char *ceiling_dirs)
+	const char *ceiling_dirs_str)
 {
 	uint32_t flags = across_fs ? GIT_REPOSITORY_OPEN_CROSS_FS : 0;
+	git_repository_layout layout;
+	git_strarray ceiling_dirs;
+	int error;
 
 	assert(start_path);
 
 	git_buf_sanitize(out);
 
-	return find_repo(out, NULL, NULL, NULL, start_path, flags, ceiling_dirs);
+	if ((error = git_strarray_parse_pathlist(&ceiling_dirs, ceiling_dirs_str)) < 0 ||
+		(error = git_layout_find_repo(&layout, start_path, flags, &ceiling_dirs)) < 0)
+		return error;
+
+	git_buf_sets(out, layout.gitdir);
+
+	return 0;
 }
 
 static int load_config(
@@ -1182,7 +909,7 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 		git_buf index_path = GIT_BUF_INIT;
 		git_index *index;
 
-		if ((error = git_buf_joinpath(&index_path, repo->gitdir, GIT_INDEX_FILE)) < 0)
+		if ((error = git_buf_joinpath(&index_path, repo->layout.gitdir, GIT_INDEX_FILE)) < 0)
 			return error;
 
 		error = git_index_open(&index, index_path.ptr);
@@ -1304,9 +1031,9 @@ bool git_repository__reserved_names(
 				reserved_names_add8dot3(repo, repo->gitlink) < 0)
 				goto on_error;
 
-			if (repo->gitdir &&
-				prefixcmp(repo->gitdir, repo->workdir) == 0 &&
-				reserved_names_add8dot3(repo, repo->gitdir) < 0)
+			if (repo->layout.gitdir &&
+				prefixcmp(repo->layout.gitdir, repo->layout.workdir) == 0 &&
+				reserved_names_add8dot3(repo, repo->layout.gitdir) < 0)
 				goto on_error;
 		}
 	}
@@ -1662,103 +1389,6 @@ int git_repository_reinit_filesystem(git_repository *repo, int recurse)
 	return error;
 }
 
-static int repo_write_template(
-	const char *git_dir,
-	bool allow_overwrite,
-	const char *file,
-	mode_t mode,
-	bool hidden,
-	const char *content)
-{
-	git_buf path = GIT_BUF_INIT;
-	int fd, error = 0, flags;
-
-	if (git_buf_joinpath(&path, git_dir, file) < 0)
-		return -1;
-
-	if (allow_overwrite)
-		flags = O_WRONLY | O_CREAT | O_TRUNC;
-	else
-		flags = O_WRONLY | O_CREAT | O_EXCL;
-
-	fd = p_open(git_buf_cstr(&path), flags, mode);
-
-	if (fd >= 0) {
-		error = p_write(fd, content, strlen(content));
-
-		p_close(fd);
-	}
-	else if (errno != EEXIST)
-		error = fd;
-
-#ifdef GIT_WIN32
-	if (!error && hidden) {
-		if (git_win32__set_hidden(path.ptr, true) < 0)
-			error = -1;
-	}
-#else
-	GIT_UNUSED(hidden);
-#endif
-
-	git_buf_dispose(&path);
-
-	if (error)
-		git_error_set(GIT_ERROR_OS,
-			"failed to initialize repository with template '%s'", file);
-
-	return error;
-}
-
-static int repo_write_gitlink(
-	const char *in_dir, const char *to_repo, bool use_relative_path)
-{
-	int error;
-	git_buf buf = GIT_BUF_INIT;
-	git_buf path_to_repo = GIT_BUF_INIT;
-	struct stat st;
-
-	git_path_dirname_r(&buf, to_repo);
-	git_path_to_dir(&buf);
-	if (git_buf_oom(&buf))
-		return -1;
-
-	/* don't write gitlink to natural workdir */
-	if (git__suffixcmp(to_repo, "/" DOT_GIT "/") == 0 &&
-		strcmp(in_dir, buf.ptr) == 0)
-	{
-		error = GIT_PASSTHROUGH;
-		goto cleanup;
-	}
-
-	if ((error = git_buf_joinpath(&buf, in_dir, DOT_GIT)) < 0)
-		goto cleanup;
-
-	if (!p_stat(buf.ptr, &st) && !S_ISREG(st.st_mode)) {
-		git_error_set(GIT_ERROR_REPOSITORY,
-			"cannot overwrite gitlink file into path '%s'", in_dir);
-		error = GIT_EEXISTS;
-		goto cleanup;
-	}
-
-	git_buf_clear(&buf);
-
-	error = git_buf_sets(&path_to_repo, to_repo);
-
-	if (!error && use_relative_path)
-		error = git_path_make_relative(&path_to_repo, in_dir);
-
-	if (!error)
-		error = git_buf_join(&buf, ' ', GIT_FILE_CONTENT_PREFIX, path_to_repo.ptr);
-
-	if (!error)
-		error = repo_write_template(in_dir, true, DOT_GIT, 0666, true, buf.ptr);
-
-cleanup:
-	git_buf_dispose(&buf);
-	git_buf_dispose(&path_to_repo);
-	return error;
-}
-
 static mode_t pick_dir_mode(git_repository_init_options *opts)
 {
 	if (opts->mode == GIT_REPOSITORY_INIT_SHARED_UMASK)
@@ -1799,7 +1429,7 @@ static int repo_init_structure(
 	if ((opts->flags & GIT_REPOSITORY_INIT_BARE) == 0 &&
 		(opts->flags & GIT_REPOSITORY_INIT__NATURAL_WD) == 0)
 	{
-		if (repo_write_gitlink(work_dir, repo_dir, opts->flags & GIT_REPOSITORY_INIT_RELATIVE_GITLINK) < 0)
+		if (git_layout_write_gitlink(work_dir, repo_dir, opts->flags & GIT_REPOSITORY_INIT_RELATIVE_GITLINK) < 0)
 			return -1;
 	}
 
@@ -1872,7 +1502,7 @@ static int repo_init_structure(
 			if (opts->description && strcmp(tpl->path, GIT_DESC_FILE) == 0)
 				content = opts->description;
 
-			error = repo_write_template(
+			error = git_layout_write_template(
 				repo_dir, false, tpl->path, tpl->mode, false, content);
 		}
 	}
@@ -2066,7 +1696,7 @@ int git_repository_init_ext(
 
 	wd = (opts->flags & GIT_REPOSITORY_INIT_BARE) ? NULL : git_buf_cstr(&wd_path);
 
-	if (valid_repository_path(&repo_path, &common_path)) {
+	if (git_layout_is_valid_repository(&repo_path, &common_path)) {
 		if ((opts->flags & GIT_REPOSITORY_INIT_NO_REINIT) != 0) {
 			git_error_set(GIT_ERROR_REPOSITORY,
 				"attempt to reinitialize '%s'", given_repo);
@@ -2138,7 +1768,7 @@ int git_repository_head_detached(git_repository *repo)
 static int get_worktree_file_path(git_buf *out, git_repository *repo, const char *worktree, const char *file)
 {
 	git_buf_clear(out);
-	return git_buf_printf(out, "%s/worktrees/%s/%s", repo->commondir, worktree, file);
+	return git_buf_printf(out, "%s/worktrees/%s/%s", repo->layout.commondir, worktree, file);
 }
 
 int git_repository_head_detached_for_worktree(git_repository *repo, const char *name)
@@ -2224,7 +1854,7 @@ int git_repository_foreach_head(git_repository *repo,
 
 	if (!(flags & GIT_REPOSITORY_FOREACH_HEAD_SKIP_REPO)) {
 		/* Gather HEAD of main repository */
-		if ((error = git_buf_joinpath(&path, repo->commondir, GIT_HEAD_FILE)) < 0 ||
+		if ((error = git_buf_joinpath(&path, repo->layout.commondir, GIT_HEAD_FILE)) < 0 ||
 		    (error = cb(repo, path.ptr, payload) != 0))
 			goto out;
 	}
@@ -2309,58 +1939,15 @@ int git_repository_is_empty(git_repository *repo)
 	return is_empty;
 }
 
-static const char *resolved_parent_path(const git_repository *repo, git_repository_item_t item, git_repository_item_t fallback)
-{
-	const char *parent;
-
-	switch (item) {
-		case GIT_REPOSITORY_ITEM_GITDIR:
-			parent = git_repository_path(repo);
-			break;
-		case GIT_REPOSITORY_ITEM_WORKDIR:
-			parent = git_repository_workdir(repo);
-			break;
-		case GIT_REPOSITORY_ITEM_COMMONDIR:
-			parent = git_repository_commondir(repo);
-			break;
-		default:
-			git_error_set(GIT_ERROR_INVALID, "invalid item directory");
-			return NULL;
-	}
-	if (!parent && fallback != GIT_REPOSITORY_ITEM__LAST)
-		return resolved_parent_path(repo, fallback, GIT_REPOSITORY_ITEM__LAST);
-
-	return parent;
-}
-
 int git_repository_item_path(git_buf *out, const git_repository *repo, git_repository_item_t item)
 {
-	const char *parent = resolved_parent_path(repo, items[item].parent, items[item].fallback);
-	if (parent == NULL) {
-		git_error_set(GIT_ERROR_INVALID, "path cannot exist in repository");
-		return GIT_ENOTFOUND;
-	}
-
-	if (git_buf_sets(out, parent) < 0)
-		return -1;
-
-	if (items[item].name) {
-		if (git_buf_joinpath(out, parent, items[item].name) < 0)
-			return -1;
-	}
-
-	if (items[item].directory) {
-		if (git_path_to_dir(out) < 0)
-			return -1;
-	}
-
-	return 0;
+	return git_layout_item_path(out, &repo->layout, item);
 }
 
 const char *git_repository_path(const git_repository *repo)
 {
 	assert(repo);
-	return repo->gitdir;
+	return repo->layout.gitdir;
 }
 
 const char *git_repository_workdir(const git_repository *repo)
@@ -2370,13 +1957,13 @@ const char *git_repository_workdir(const git_repository *repo)
 	if (repo->is_bare)
 		return NULL;
 
-	return repo->workdir;
+	return repo->layout.workdir;
 }
 
 const char *git_repository_commondir(const git_repository *repo)
 {
 	assert(repo);
-	return repo->commondir;
+	return repo->layout.commondir;
 }
 
 int git_repository_set_workdir(
@@ -2390,7 +1977,7 @@ int git_repository_set_workdir(
 	if (git_path_prettify_dir(&path, workdir, NULL) < 0)
 		return -1;
 
-	if (repo->workdir && strcmp(repo->workdir, path.ptr) == 0)
+	if (repo->layout.workdir && strcmp(repo->layout.workdir, path.ptr) == 0)
 		return 0;
 
 	if (update_gitlink) {
@@ -2399,7 +1986,7 @@ int git_repository_set_workdir(
 		if (git_repository_config__weakptr(&config, repo) < 0)
 			return -1;
 
-		error = repo_write_gitlink(path.ptr, git_repository_path(repo), false);
+		error = git_layout_write_gitlink(path.ptr, git_repository_path(repo), false);
 
 		/* passthrough error means gitlink is unnecessary */
 		if (error == GIT_PASSTHROUGH)
@@ -2412,9 +1999,9 @@ int git_repository_set_workdir(
 	}
 
 	if (!error) {
-		char *old_workdir = repo->workdir;
+		char *old_workdir = repo->layout.workdir;
 
-		repo->workdir = git_buf_detach(&path);
+		repo->layout.workdir = git_buf_detach(&path);
 		repo->is_bare = 0;
 
 		git__free(old_workdir);
@@ -2454,8 +2041,8 @@ int git_repository_set_bare(git_repository *repo)
 	if ((error = git_config__update_entry(config, "core.worktree", NULL, true, true)) < 0)
 		return error;
 
-	git__free(repo->workdir);
-	repo->workdir = NULL;
+	git__free(repo->layout.workdir);
+	repo->layout.workdir = NULL;
 	repo->is_bare = 1;
 
 	return 0;
@@ -2489,7 +2076,7 @@ int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head
 
 	git_oid_fmt(orig_head_str, orig_head);
 
-	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_ORIG_HEAD_FILE)) == 0 &&
+	if ((error = git_repository_item_path(&file_path, repo, GIT_REPOSITORY_ITEM_ORIG_HEAD)) == 0 &&
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_MERGE_FILE_MODE)) == 0 &&
 		(error = git_filebuf_printf(&file, "%.*s\n", GIT_OID_HEXSZ, orig_head_str)) == 0)
 		error = git_filebuf_commit(&file);
@@ -2510,7 +2097,7 @@ int git_repository_message(git_buf *out, git_repository *repo)
 
 	git_buf_sanitize(out);
 
-	if (git_buf_joinpath(&path, repo->gitdir, GIT_MERGE_MSG_FILE) < 0)
+	if (git_buf_joinpath(&path, repo->layout.gitdir, GIT_MERGE_MSG_FILE) < 0)
 		return -1;
 
 	if ((error = p_stat(git_buf_cstr(&path), &st)) < 0) {
@@ -2531,7 +2118,7 @@ int git_repository_message_remove(git_repository *repo)
 	git_buf path = GIT_BUF_INIT;
 	int error;
 
-	if (git_buf_joinpath(&path, repo->gitdir, GIT_MERGE_MSG_FILE) < 0)
+	if (git_buf_joinpath(&path, repo->layout.gitdir, GIT_MERGE_MSG_FILE) < 0)
 		return -1;
 
 	error = p_unlink(git_buf_cstr(&path));
@@ -2775,7 +2362,7 @@ int git_repository_state(git_repository *repo)
 
 	assert(repo);
 
-	if (git_buf_puts(&repo_path, repo->gitdir) < 0)
+	if (git_buf_puts(&repo_path, repo->layout.gitdir) < 0)
 		return -1;
 
 	if (git_path_contains_file(&repo_path, GIT_REBASE_MERGE_INTERACTIVE_FILE))
@@ -2817,7 +2404,7 @@ int git_repository__cleanup_files(
 	for (error = 0, i = 0; !error && i < files_len; ++i) {
 		const char *path;
 
-		if (git_buf_joinpath(&buf, repo->gitdir, files[i]) < 0)
+		if (git_buf_joinpath(&buf, repo->layout.gitdir, files[i]) < 0)
 			return -1;
 
 		path = git_buf_cstr(&buf);
@@ -2861,7 +2448,7 @@ int git_repository_is_shallow(git_repository *repo)
 	struct stat st;
 	int error;
 
-	if ((error = git_buf_joinpath(&path, repo->gitdir, "shallow")) < 0)
+	if ((error = git_buf_joinpath(&path, repo->layout.gitdir, "shallow")) < 0)
 		return error;
 
 	error = git_path_lstat(path.ptr, &st);

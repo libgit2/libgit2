@@ -345,7 +345,7 @@ int merge_test_workdir(git_repository *repo, const struct merge_index_entry expe
 	git_oid actual_oid, expected_oid;
 	git_buf wd = GIT_BUF_INIT;
 
-	git_buf_puts(&wd, repo->workdir);
+	git_buf_puts(&wd, git_repository_workdir(repo));
 	git_path_direach(&wd, 0, dircount, &actual_len);
 
 	if (actual_len != expected_len)

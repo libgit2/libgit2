@@ -24,11 +24,7 @@
 #include "attrcache.h"
 #include "submodule.h"
 #include "diff_driver.h"
-
-#define DOT_GIT ".git"
-#define GIT_DIR DOT_GIT "/"
-#define GIT_DIR_MODE 0755
-#define GIT_BARE_DIR_MODE 0777
+#include "layout.h"
 
 /* Default DOS-compatible 8.3 "short name" for a git repository, "GIT~1" */
 #define GIT_DIR_SHORTNAME "GIT~1"
@@ -127,6 +123,11 @@ enum {
 
 /** Internal structure for repository object */
 struct git_repository {
+	git_repository_layout layout;
+
+	char *namespace;
+	char *configfile;
+
 	git_odb *_odb;
 	git_refdb *_refdb;
 	git_config *_config;
@@ -135,12 +136,6 @@ struct git_repository {
 	git_cache objects;
 	git_attr_cache *attrcache;
 	git_diff_driver_registry *diff_drivers;
-
-	char *gitlink;
-	char *gitdir;
-	char *commondir;
-	char *workdir;
-	char *namespace;
 
 	char *ident_name;
 	char *ident_email;
