@@ -244,15 +244,15 @@ static void *cache_quick(void *arg)
 
 void test_object_cache__fast_thread_rush(void)
 {
-	int try, th, data[THREADCOUNT*2];
+	int try, th, data[THREADCOUNT];
 #ifdef GIT_THREADS
-	git_thread t[THREADCOUNT*2];
+	git_thread t[THREADCOUNT];
 #endif
 
 	for (try = 0; try < REPEAT; ++try) {
 		cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
 
-		for (th = 0; th < THREADCOUNT*2; ++th) {
+		for (th = 0; th < THREADCOUNT; ++th) {
 			data[th] = th;
 #ifdef GIT_THREADS
 			cl_git_pass(
@@ -263,7 +263,7 @@ void test_object_cache__fast_thread_rush(void)
 		}
 
 #ifdef GIT_THREADS
-		for (th = 0; th < THREADCOUNT*2; ++th) {
+		for (th = 0; th < THREADCOUNT; ++th) {
 			void *rval;
 			cl_git_pass(git_thread_join(&t[th], &rval));
 			cl_assert_equal_i(th, *((int *)rval));
