@@ -402,7 +402,6 @@ static int process_multi_pack_index_pack(
 		const char *packfile_name)
 {
 	int error;
-	size_t cmp_len = strlen(packfile_name);
 	struct git_pack_file *pack;
 	size_t found_position;
 	git_buf pack_path = GIT_BUF_INIT, index_prefix = GIT_BUF_INIT;
@@ -411,12 +410,11 @@ static int process_multi_pack_index_pack(
 	if (error < 0)
 		return error;
 
-	/* This is ensured by midx__parse_packfile_name() */
-	if (cmp_len <= strlen(".idx") || git__suffixcmp(git_buf_cstr(&pack_path), ".idx") != 0)
+	/* This is ensured by midx_parse_packfile_name() */
+	if (git_buf_len(&pack_path) <= strlen(".idx") || git__suffixcmp(git_buf_cstr(&pack_path), ".idx") != 0)
 		return git_odb__error_notfound("midx file contained a non-index", NULL, 0);
 
-	cmp_len -= strlen(".idx");
-	git_buf_attach_notowned(&index_prefix, git_buf_cstr(&pack_path), cmp_len);
+	git_buf_attach_notowned(&index_prefix, git_buf_cstr(&pack_path), git_buf_len(&pack_path) - strlen(".idx"));
 
 	if (git_vector_search2(&found_position, &backend->packs, packfile_byname_search_cmp, &index_prefix) == 0) {
 		/* Pack was found in the packs list. Moving it to the midx_packs list. */
@@ -744,6 +742,81 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 	return 0;
 }
 
+static int get_idx_path(
+		git_buf *idx_path,
+		struct pack_backend *backend,
+		struct git_pack_file *p)
+{
+	size_t path_len;
+	int error;
+
+	error = git_path_prettify(idx_path, p->pack_name, backend->pack_folder);
+	if (error < 0)
+		return error;
+	path_len = git_buf_len(idx_path);
+	if (path_len <= strlen(".pack") || git__suffixcmp(git_buf_cstr(idx_path), ".pack") != 0)
+		return git_odb__error_notfound("packfile does not end in .pack", NULL, 0);
+	path_len -= strlen(".pack");
+	error = git_buf_splice(idx_path, path_len, strlen(".pack"), ".idx", strlen(".idx"));
+	if (error < 0)
+		return error;
+
+	return 0;
+}
+
+static int pack_backend__writemidx(git_odb_backend *_backend)
+{
+	struct pack_backend *backend;
+	git_midx_writer *w = NULL;
+	struct git_pack_file *p;
+	size_t i;
+	int error = 0;
+
+	GIT_ASSERT_ARG(_backend);
+
+	backend = (struct pack_backend *)_backend;
+
+	error = git_midx_writer_new(&w, backend->pack_folder);
+	if (error < 0)
+		return error;
+
+	git_vector_foreach(&backend->midx_packs, i, p) {
+		git_buf idx_path = GIT_BUF_INIT;
+		error = get_idx_path(&idx_path, backend, p);
+		if (error < 0)
+			goto cleanup;
+		error = git_midx_writer_add(w, git_buf_cstr(&idx_path));
+		git_buf_dispose(&idx_path);
+		if (error < 0)
+			goto cleanup;
+	}
+	git_vector_foreach(&backend->packs, i, p) {
+		git_buf idx_path = GIT_BUF_INIT;
+		error = get_idx_path(&idx_path, backend, p);
+		if (error < 0)
+			goto cleanup;
+		error = git_midx_writer_add(w, git_buf_cstr(&idx_path));
+		git_buf_dispose(&idx_path);
+		if (error < 0)
+			goto cleanup;
+	}
+
+	/*
+	 * Invalidate the previous midx before writing the new one.
+	 */
+	error = remove_multi_pack_index(backend);
+	if (error < 0)
+		goto cleanup;
+	error = git_midx_writer_commit(w);
+	if (error < 0)
+		goto cleanup;
+	error = refresh_multi_pack_index(backend);
+
+cleanup:
+	git_midx_writer_free(w);
+	return error;
+}
+
 static void pack_backend__free(git_odb_backend *_backend)
 {
 	struct pack_backend *backend;
@@ -792,6 +865,7 @@ static int pack_backend__alloc(struct pack_backend **out, size_t initial_size)
 	backend->parent.refresh = &pack_backend__refresh;
 	backend->parent.foreach = &pack_backend__foreach;
 	backend->parent.writepack = &pack_backend__writepack;
+	backend->parent.writemidx = &pack_backend__writemidx;
 	backend->parent.freshen = &pack_backend__freshen;
 	backend->parent.free = &pack_backend__free;
 

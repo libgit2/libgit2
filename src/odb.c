@@ -1703,6 +1703,35 @@ int git_odb_write_pack(struct git_odb_writepack **out, git_odb *db, git_indexer_
 	return error;
 }
 
+int git_odb_write_multi_pack_index(git_odb *db)
+{
+	size_t i, writes = 0;
+	int error = GIT_ERROR;
+
+	GIT_ASSERT_ARG(db);
+
+	for (i = 0; i < db->backends.length && error < 0; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		/* we don't write in alternates! */
+		if (internal->is_alternate)
+			continue;
+
+		if (b->writemidx != NULL) {
+			++writes;
+			error = b->writemidx(b);
+		}
+	}
+
+	if (error == GIT_PASSTHROUGH)
+		error = 0;
+	if (error < 0 && !writes)
+		error = git_odb__error_unsupported_in_backend("write multi-pack-index");
+
+	return error;
+}
+
 void *git_odb_backend_data_alloc(git_odb_backend *backend, size_t len)
 {
 	GIT_UNUSED(backend);
