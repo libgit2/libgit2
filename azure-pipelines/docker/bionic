@@ -1,13 +1,12 @@
 ARG BASE
-FROM $BASE
+FROM $BASE AS apt
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         clang \
         cmake \
         curl \
         gcc \
         git \
-        gosu \
         libcurl4-openssl-dev \
         libpcre3-dev \
         libssh2-1-dev \
@@ -19,11 +18,12 @@ RUN apt-get update && \
         openssl \
         pkgconf \
         python \
+        sudo \
         valgrind \
         && \
     rm -rf /var/lib/apt/lists/*
-RUN mkdir /var/run/sshd
 
+FROM apt AS mbedtls
 RUN cd /tmp && \
     curl --location --silent https://tls.mbed.org/download/mbedtls-2.16.2-apache.tgz | \
     tar -xz && \
@@ -34,7 +34,9 @@ RUN cd /tmp && \
     cd .. && \
     rm -rf mbedtls-2.16.2
 
+FROM mbedtls AS configure
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod a+x /usr/local/bin/entrypoint.sh
+RUN mkdir /var/run/sshd
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

@@ -8,7 +8,6 @@ RUN apt-get update && \
         curl \
         gcc \
         git \
-        gosu \
         krb5-user \
         libcurl4-gnutls-dev \
         libgcrypt20-dev \
@@ -23,7 +22,10 @@ RUN apt-get update && \
         openssl \
         pkgconf \
         python \
-        valgrind
+        sudo \
+        valgrind \
+        && \
+    rm -rf /var/lib/apt/lists/*
 
 FROM apt AS mbedtls
 RUN cd /tmp && \
