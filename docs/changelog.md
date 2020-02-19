@@ -1,5 +1,289 @@
-v0.28 + 1
----------
+v0.99
+-----
+
+This is v0.99 "Torschlusspanik".  This will be the last minor release
+before libgit2 v1.0.  We expect to only respond to bugs in this release,
+to stabilize it for next major release.
+
+It contains significant refactorings, but is expected to be API-compatible
+with v0.28.0.
+
+### Changes or improvements
+
+* When fetching from an anonymous remote using a URL with authentication
+  information provided in the URL (eg `https://foo:bar@example.com/repo`),
+  we would erroneously include the literal URL in the FETCH_HEAD file.
+  We now remove that to match git's behavior.
+
+* Some credential structures, enums and values have been renamed:
+  `git_cred` is now `git_credential`.  `git_credtype_t` is now
+  `git_credential_t`.  Functions and types beginning with
+  `git_cred_` now begin with `git_credential`, and constants beginning
+  with `GIT_CREDTYPE` now begin with `GIT_CREDENTIAL`.  The former names
+  are deprecated.
+
+* Several function signatures have been changed to return an `int` to
+  indicate error conditions.  We encourage you to check them for errors
+  in the standard way. 
+
+  * `git_attr_cache_flush`
+  * `git_error_set_str`
+  * `git_index_name_clear`
+  * `git_index_reuc_clear`
+  * `git_libgit2_version`
+  * `git_mempack_reset`
+  * `git_oid_cpy`
+  * `git_oid_fmt`
+  * `git_oid_fromraw`
+  * `git_oid_nfmt`
+  * `git_oid_pathfmt`
+  * `git_remote_stop`
+  * `git_remote_disconnect`
+  * `git_repository__cleanup`
+  * `git_repository_set_config`
+  * `git_repository_set_index`
+  * `git_repository_set_odb`
+  * `git_repository_set_refdb`
+  * `git_revwalk_reset`
+  * `git_revwalk_simplify_first_parent`
+  * `git_revwalk_sorting`
+  * `git_treebuilder_clear`
+  * `git_treebuilder_filter`
+
+* The NTLM and Negotiate authentication mechanisms are now supported when
+  talking to git implementations hosted on Apache or nginx servers.
+
+* The `HEAD` symbolic reference can no longer be deleted.
+
+* `git_merge_driver_source_repo` no longer returns a `const git_repository *`,
+  it now returns a non-`const` `git_repository *`.
+
+* Relative symbolic links are now supported on Windows when `core.symlinks`
+  is enabled.
+
+* Servers that provide query parameters with a redirect are now supported.
+
+* `git_submodule_sync` will now resolve relative URLs.
+
+* When creating git endpoint URLs, double-slashes are no longer used when
+  the given git URL has a trailing slash.
+
+* On Windows, a `DllMain` function is no longer included and thread-local
+  storage has moved to fiber-local storage in order to prevent race
+  conditions during shutdown.
+
+* The tracing mechanism (`GIT_TRACE`) is now enabled by default and does
+  not need to be explicitly enabled in CMake.
+
+* The size of Git objects is now represented by `git_object_size_t`
+  instead of `off_t`.
+
+* Binary patches without data can now be parsed.
+
+* A configuration snapshot can now be created from another configuration
+  snapshot, not just a "true" configuration object.
+
+* The `git_commit_with_signature` API will now ensure that referenced
+  objects exist in the object database.
+
+* Stash messages containing newlines will now be replaced with spaces;
+  they will no longer be (erroneously) written to the repository.
+
+* `git_commit_create_with_signature` now verifies the commit information
+  to ensure that it points to a valid tree and valid parents.
+
+* `git_apply` has an option `GIT_APPLY_CHECK` that will only do a dry-run.
+  The index and working directory will remain unmodified, and application
+  will report if it would have worked.
+
+* Patches produced by Mercurial (those that lack some git extended headers)
+  can now be parsed and applied.
+
+* Reference locks are obeyed correctly on POSIX platforms, instead of
+  being removed.
+
+* Patches with empty new files can now be read and applied.
+
+* `git_apply_to_tree` can now correctly apply patches that add new files.
+
+* The program data configuration on Windows (`C:\ProgramData\Git\config`)
+  must be owned by an administrator, a system account or the current user
+  to be read.
+
+* `git_blob_filtered_content` is now deprecated in favor of `git_blob_filter`.
+
+* Configuration files can now be included conditionally using the
+  `onbranch` conditional.
+
+* Checkout can now properly create and remove symbolic links to directories
+  on Windows.
+
+* Stash no longer recomputes trees when committing a worktree, for
+  improved performance.
+
+* Repository templates can now include a `HEAD` file to default the
+  initial default branch.
+
+* Some configuration structures, enums and values have been renamed:
+  `git_cvar_map` is now `git_configmap`, `git_cvar_t` is now
+  `git_configmap_t`, `GIT_CVAR_FALSE` is now `GIT_CONFIGMAP_FALSE`,
+  `GIT_CVAR_TRUE` is now `GIT_CONFIGMAP_TRUE`, `GIT_CVAR_INT32` is now
+  `GIT_CONFIGMAP_INT32`, and `GIT_CVAR_STRING` is now `GIT_CONFIGMAP_STRING`.
+  The former names are deprecated.
+
+* Repositories can now be created at the root of a Windows drive.
+
+* Configuration lookups are now more efficiently cached.
+
+* `git_commit_create_with_signature` now supports a `NULL` signature,
+  which will create a commit without adding a signature.
+
+* When a repository lacks an `info` "common directory", we will no
+  longer erroneously return `GIT_ENOTFOUND` for all attribute lookups.
+
+* Several attribute macros have been renamed: `GIT_ATTR_TRUE` is now
+  `GIT_ATTR_IS_TRUE`, `GIT_ATTR_FALSE` is now `GIT_ATTR_IS_FALSE`,
+  `GIT_ATTR_UNSPECIFIED` is now `GIT_ATTR_IS_UNSPECIFIED`.  The 
+  attribute enum `git_attr_t` is now `git_attr_value_t` and its
+  values have been renamed: `GIT_ATTR_UNSPECIFIED_T` is now
+  `GIT_ATTR_VALUE_UNSPECIFIED`, `GIT_ATTR_TRUE_T` is now
+  `GIT_ATTR_VALUE_TRUE`, `GIT_ATTR_FALSE_T` is now `GIT_ATTR_VALUE_FALSE`,
+  and `GIT_ATTR_VALUE_T` is now `GIT_ATTR_VALUE_STRING`.  The
+  former names are deprecated.
+
+* `git_object__size` is now `git_object_size`.  The former name is
+  deprecated.
+
+* `git_tag_create_frombuffer` is now `git_tag_create_from_buffer`.  The
+  former name is deprecated.
+
+* Several blob creation functions have been renamed:
+  `git_blob_create_frombuffer` is now named `git_blob_create_from_buffer`,
+  `git_blob_create_fromdisk` is now named `git_blob_create_from_disk`,
+  `git_blob_create_fromworkdir` is now named `git_blob_create_from_workdir`,
+  `git_blob_create_fromstream` is now named `git_blob_create_from_stream`,
+  and `git_blob_create_fromstream_commit` is now named
+  `git_blob_create_from_stream_commit`.  The former names are deprecated.
+
+* The function `git_oid_iszero` is now named `git_oid_is_zero`.  The
+  former name is deprecated.
+
+* Pattern matching is now done using `wildmatch` instead of `fnmatch`
+  for compatibility with git.
+
+* The option initialization functions suffixed by `init_options` are now
+  suffixed with `options_init`.  (For example, `git_checkout_init_options`
+  is now `git_checkout_options_init`.)  The former names are deprecated.
+
+* NTLM2 authentication is now supported on non-Windows platforms.
+
+* The `git_cred_sign_callback` callback is now named `git_cred_sign_cb`.
+  The `git_cred_ssh_interactive_callback` callback is now named
+  `git_cred_ssh_interactive_cb`.
+
+* Ignore files now:
+
+  * honor escaped trailing whitespace.
+  * do not incorrectly negate sibling paths of a negated pattern.
+  * honor rules that stop ignoring files after a wildcard
+
+* Attribute files now:
+
+  * honor leading and trailing whitespace.
+  * treat paths beginning with `\` as absolute only on Windows.
+  * properly handle escaped characters.
+  * stop reading macros defined in subdirectories
+
+* The C locale is now correctly used when parsing regular expressions.
+
+* The system PCRE2 or PCRE regular expression libraries are now used
+  when `regcomp_l` is not available on the system.  If none of these
+  are available on the system, an included version of PCRE is used.
+
+* Wildcards in reference specifications are now supported beyond simply
+  a bare wildcard (`*`) for compatibility with git.
+
+* When `git_ignore_path_is_ignored` is provided a path with a trailing
+  slash (eg, `dir/`), it will now treat it as a directory for the
+  purposes of ignore matching.
+
+* Patches that add or remove a file with a space in the path can now
+  be correctly parsed.
+
+* The `git_remote_completion_type` type is now `git_remote_completion_t`.
+  The former name is deprecated.
+
+* The `git_odb_backend_malloc` is now `git_odb_backend_data_alloc`.  The
+  former name is deprecated.
+
+* The `git_transfer_progress_cb` callback is now `git_indexer_progress_cb`
+  and the `git_transfer_progress` structure is now `git_indexer_progress`.
+  The former names are deprecated.
+
+* The example projects are now contained in a single `lg2` executable
+  for ease of use.
+
+* libgit2 now correctly handles more URLs, such as
+  `http://example.com:/repo.git` (colon but no port),
+  `http://example.com` (no path),
+  and `http://example.com:8080/` (path is /, nonstandard port).
+
+* A carefully constructed commit object with a very large number
+  of parents may lead to potential out-of-bounds writes or
+  potential denial of service.
+
+* The ProgramData configuration file is always read for compatibility
+  with Git for Windows and Portable Git installations.  The ProgramData
+  location is not necessarily writable only by administrators, so we
+  now ensure that the configuration file is owned by the administrator
+  or the current user.
+
+### API additions
+
+* The SSH host key now supports SHA-256 when `GIT_CERT_SSH_SHA256` is set.
+
+* The diff format option `GIT_DIFF_FORMAT_PATCH_ID` can now be used to
+  emit an output like `git patch-id`.
+
+* The `git_apply_options_init` function will initialize a
+  `git_apply_options` structure.
+
+* The remote callbacks structure adds a `git_url_resolve_cb` callback
+  that is invoked when connecting to a server, so that applications
+  may edit or replace the URL before connection.
+
+* The information about the original `HEAD` in a rebase operation is
+  available with `git_rebase_orig_head_name`.  Its ID is available with
+  `git_rebase_orig_head_id`.  The `onto` reference name is available with
+  `git_rebase_onto_name` and its ID is available with `git_rebase_onto_id`.
+
+* ODB backends can now free backend data when an error occurs during its
+  backend data creation using `git_odb_backend_data_free`.
+
+* Options may be specified to `git_repository_foreach_head` to control
+  its behavior: `GIT_REPOSITORY_FOREACH_HEAD_SKIP_REPO` will not skip
+  the main repository's HEAD reference, while
+  `GIT_REPOSITORY_FOREACH_HEAD_SKIP_WORKTREES` will now skip the
+  worktree HEAD references.
+
+* The `GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS` option can be specified to
+  `git_libgit2_opts()` to avoid looking for `.keep` files that correspond
+  to packfiles.  This setting can improve performance when packfiles are
+  stored on high-latency filesystems like network filesystems.
+
+* Blobs can now be filtered with `git_blob_filter`, which allows for
+  options to be set with `git_blob_filter_options`, including
+  `GIT_FILTER_NO_SYSTEM_ATTRIBUTES` to disable filtering with system-level
+  attributes in `/etc/gitattributes` and `GIT_ATTR_CHECK_INCLUDE_HEAD` to
+  enable filtering with `.gitattributes` files in the HEAD revision.
+
+### API removals
+
+* The unused `git_headlist_cb` function declaration was removed.
+
+* The unused `git_time_monotonic` API is removed.
+
+* The erroneously exported `inttypes.h` header was removed.
 
 # Security Fixes
 
@@ -82,22 +366,62 @@ v0.28 + 1
   "CollisionDetection". If you were using `SHA1_BACKEND` previously, you'll
   need to check the value you've used, or switch to the autodetection.
 
-### Changes or improvements
+### Authors
 
-* libgit2 now correctly handles more URLs, such as
-  `http://example.com:/repo.git` (colon but no port),
-  `http://example.com` (no path),
-  and `http://example.com:8080/` (path is /, nonstandard port).
+The following individuals provided changes that were included in this
+release:
 
-* A carefully constructed commit object with a very large number
-  of parents may lead to potential out-of-bounds writes or
-  potential denial of service.
-
-* The ProgramData configuration file is always read for compatibility
-  with Git for Windows and Portable Git installations.  The ProgramData
-  location is not necessarily writable only by administrators, so we
-  now ensure that the configuration file is owned by the administrator
-  or the current user.
+* Aaron Patterson
+* Alberto Fanjul
+* Anders Borum
+* Augie Fackler
+* Augustin Fabre
+* Ayush Shridhar
+* brian m. carlson
+* buddyspike
+* Carlos Martín Nieto
+* cheese1
+* Dan Skorupski
+* Daniel Cohen Gindi
+* Dave Lee
+* David Brooks
+* David Turner
+* Denis Laxalde
+* Dhruva Krishnamurthy
+* Dominik Ritter
+* Drew DeVault
+* Edward Thomson
+* Eric Huss
+* Erik Aigner
+* Etienne Samson
+* Gregory Herrero
+* Heiko Voigt
+* Ian Hattendorf
+* Jacques Germishuys
+* Janardhan Pulivarthi
+* Jason Haslam
+* Johannes Schindelin
+* Jordan Wallet
+* Josh Bleecher Snyder
+* kas
+* kdj0c
+* Laurence McGlashan
+* lhchavez
+* Lukas Berk
+* Max Kostyukevich
+* Patrick Steinhardt
+* pcpthm
+* Remy Suen
+* Robert Coup
+* romkatv
+* Scott Furry
+* Sebastian Henke
+* Stefan Widgren
+* Steve King Jr
+* Sven Strickroth
+* Tobias Nießen
+* Tyler Ang-Wanek
+* Tyler Wanek
 
 v0.28
 -----
