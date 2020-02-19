@@ -808,8 +808,11 @@ int git_note_next(
 
 	git_oid_cpy(note_id, &item->id);
 
-	if (!(error = process_entry_path(item->path, annotated_id)))
-		git_iterator_advance(NULL, it);
+	if ((error = process_entry_path(item->path, annotated_id)) < 0)
+		return error;
 
-	return error;
+	if ((error = git_iterator_advance(NULL, it)) < 0 && error != GIT_ITEROVER)
+		return error;
+
+	return 0;
 }
