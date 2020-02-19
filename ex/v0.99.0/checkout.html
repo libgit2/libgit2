@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>checkout.c</title>
+  <link rel="stylesheet" href="../css.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#v0.99.0">API Docs</a>
+          <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
+          <a class="source" href="blame.html">blame.c</a>
+          <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="checkout.html">checkout.c</a>
+          <a class="source" href="clone.html">clone.c</a>
+          <a class="source" href="common.html">common.c</a>
+          <a class="source" href="config.html">config.c</a>
+          <a class="source" href="describe.html">describe.c</a>
+          <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="fetch.html">fetch.c</a>
+          <a class="source" href="for-each-ref.html">for-each-ref.c</a>
+          <a class="source" href="general.html">general.c</a>
+          <a class="source" href="index-pack.html">index-pack.c</a>
+          <a class="source" href="init.html">init.c</a>
+          <a class="source" href="lg2.html">lg2.c</a>
+          <a class="source" href="log.html">log.c</a>
+          <a class="source" href="ls-files.html">ls-files.c</a>
+          <a class="source" href="ls-remote.html">ls-remote.c</a>
+          <a class="source" href="merge.html">merge.c</a>
+          <a class="source" href="remote.html">remote.c</a>
+          <a class="source" href="rev-list.html">rev-list.c</a>
+          <a class="source" href="rev-parse.html">rev-parse.c</a>
+          <a class="source" href="show-index.html">show-index.c</a>
+          <a class="source" href="stash.html">stash.c</a>
+          <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>checkout.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cm">/*</span>
+<span class="cm"> * libgit2 &quot;checkout&quot; example - shows how to perform checkouts</span>
+<span class="cm"> *</span>
+<span class="cm"> * Written by the libgit2 contributors</span>
+<span class="cm"> *</span>
+<span class="cm"> * To the extent possible under law, the author(s) have dedicated all copyright</span>
+<span class="cm"> * and related and neighboring rights to this software to the public domain</span>
+<span class="cm"> * worldwide. This software is distributed without any warranty.</span>
+<span class="cm"> *</span>
+<span class="cm"> * You should have received a copy of the CC0 Public Domain Dedication along</span>
+<span class="cm"> * with this software. If not, see</span>
+<span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
+<span class="cm"> */</span>
+
+<span class="cp">#include &quot;common.h&quot;</span>
+
+<span class="cm">/* Define the printf format specifer to use for size_t output */</span>
+<span class="cp">#if defined(_MSC_VER) || defined(__MINGW32__)</span>
+<span class="cp">#	define PRIuZ &quot;Iu&quot;</span>
+<span class="cp">#	define PRIxZ &quot;Ix&quot;</span>
+<span class="cp">#	define PRIdZ &quot;Id&quot;</span>
+<span class="cp">#else</span>
+<span class="cp">#	define PRIuZ &quot;zu&quot;</span>
+<span class="cp">#	define PRIxZ &quot;zx&quot;</span>
+<span class="cp">#	define PRIdZ &quot;zd&quot;</span>
+<span class="cp">#endif</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>The following example demonstrates how to do checkouts with libgit2.</p>
+
+<p>Recognized options are :
+ --force: force the checkout to happen.
+ --[no-]progress: show checkout progress, on by default.
+ --perf: show performance data.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="nl">force</span> <span class="p">:</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="nl">progress</span> <span class="p">:</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="nl">perf</span> <span class="p">:</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">checkout_options</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">print_usage</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: checkout [options] &lt;branch&gt;</span><span class="se">\n</span><span class="s">&quot;</span>
+    <span class="s">&quot;Options are :</span><span class="se">\n</span><span class="s">&quot;</span>
+    <span class="s">&quot;  --git-dir: use the following git repository.</span><span class="se">\n</span><span class="s">&quot;</span>
+    <span class="s">&quot;  --force: force the checkout.</span><span class="se">\n</span><span class="s">&quot;</span>
+    <span class="s">&quot;  --[no-]progress: show checkout progress.</span><span class="se">\n</span><span class="s">&quot;</span>
+    <span class="s">&quot;  --perf: show performance data.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_options</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">**</span><span class="n">repo_path</span><span class="p">,</span> <span class="n">checkout_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="k">struct</span> <span class="n">args_info</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">args</span><span class="o">-&gt;</span><span class="n">argc</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">print_usage</span><span class="p">();</span>
+
+  <span class="n">memset</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">));</span>
+
+  <span class="cm">/* Default values */</span>
+  <span class="n">opts</span><span class="o">-&gt;</span><span class="n">progress</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">args</span><span class="o">-&gt;</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">args</span><span class="o">-&gt;</span><span class="n">pos</span> <span class="o">&lt;</span> <span class="n">args</span><span class="o">-&gt;</span><span class="n">argc</span><span class="p">;</span> <span class="o">++</span><span class="n">args</span><span class="o">-&gt;</span><span class="n">pos</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">curr</span> <span class="o">=</span> <span class="n">args</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="o">-&gt;</span><span class="n">pos</span><span class="p">];</span>
+    <span class="kt">int</span> <span class="n">bool_arg</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">match_arg_separator</span><span class="p">(</span><span class="n">args</span><span class="p">))</span> <span class="p">{</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span> <span class="s">&quot;--force&quot;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">opts</span><span class="o">-&gt;</span><span class="n">force</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_bool_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">bool_arg</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="s">&quot;--progress&quot;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">opts</span><span class="o">-&gt;</span><span class="n">progress</span> <span class="o">=</span> <span class="n">bool_arg</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_bool_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">bool_arg</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="s">&quot;--perf&quot;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">opts</span><span class="o">-&gt;</span><span class="n">perf</span> <span class="o">=</span> <span class="n">bool_arg</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_str_arg</span><span class="p">(</span><span class="n">repo_path</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="s">&quot;--git-dir&quot;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="k">continue</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-3'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-3">&#182;</a>
+        </div>
+        <p>This function is called to report progression, ie. it&#39;s called once with
+a NULL path and the number of total steps, then for each subsequent path,
+the current completed_step value.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">print_checkout_progress</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">completed_steps</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">total_steps</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">payload</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">path</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;checkout started: %&quot;</span> <span class="n">PRIuZ</span> <span class="s">&quot; steps</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">total_steps</span><span class="p">);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;checkout: %s %&quot;</span> <span class="n">PRIuZ</span> <span class="s">&quot;/%&quot;</span> <span class="n">PRIuZ</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">completed_steps</span><span class="p">,</span> <span class="n">total_steps</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-4'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-4">&#182;</a>
+        </div>
+        <p>This function is called when the checkout completes, and is used to report the
+number of syscalls performed.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">print_perf_data</span><span class="p">(</span><span class="k">const</span> <span class="n">git_checkout_perfdata</span> <span class="o">*</span><span class="n">perfdata</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">payload</span><span class="p">;</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;perf: stat: %&quot;</span> <span class="n">PRIuZ</span> <span class="s">&quot; mkdir: %&quot;</span> <span class="n">PRIuZ</span> <span class="s">&quot; chmod: %&quot;</span> <span class="n">PRIuZ</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+         <span class="n">perfdata</span><span class="o">-&gt;</span><span class="n">stat_calls</span><span class="p">,</span> <span class="n">perfdata</span><span class="o">-&gt;</span><span class="n">mkdir_calls</span><span class="p">,</span> <span class="n">perfdata</span><span class="o">-&gt;</span><span class="n">chmod_calls</span><span class="p">);</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-5'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-5">&#182;</a>
+        </div>
+        <p>This is the main &quot;checkout <branch>&quot; function, responsible for performing
+a branch-based checkout.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">perform_checkout_ref</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">git_annotated_commit</span> <span class="o">*</span><span class="n">target</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">target_ref</span><span class="p">,</span> <span class="n">checkout_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_checkout_options</span> <span class="n">checkout_opts</span> <span class="o">=</span> <span class="n">GIT_CHECKOUT_OPTIONS_INIT</span><span class="p">;</span>
+  <span class="n">git_reference</span> <span class="o">*</span><span class="n">ref</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">*</span><span class="n">branch</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_commit</span> <span class="o">*</span><span class="n">target_commit</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">err</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-6'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-6">&#182;</a>
+        </div>
+        <p>Setup our checkout options from the parsed options</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">checkout_opts</span><span class="p">.</span><span class="n">checkout_strategy</span> <span class="o">=</span> <span class="n">GIT_CHECKOUT_SAFE</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">force</span><span class="p">)</span>
+    <span class="n">checkout_opts</span><span class="p">.</span><span class="n">checkout_strategy</span> <span class="o">=</span> <span class="n">GIT_CHECKOUT_FORCE</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">progress</span><span class="p">)</span>
+    <span class="n">checkout_opts</span><span class="p">.</span><span class="n">progress_cb</span> <span class="o">=</span> <span class="n">print_checkout_progress</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">perf</span><span class="p">)</span>
+    <span class="n">checkout_opts</span><span class="p">.</span><span class="n">perfdata_cb</span> <span class="o">=</span> <span class="n">print_perf_data</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-7'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-7">&#182;</a>
+        </div>
+        <p>Grab the commit we&#39;re interested to move to</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_commit_lookup-9" class="fnlink" href="../../#v0.99.0/group/commit/git_commit_lookup">git_commit_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">target_commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_annotated_commit_id-2" class="fnlink" href="../../#v0.99.0/group/annotated/git_annotated_commit_id">git_annotated_commit_id</a></span><span class="p">(</span><span class="n">target</span><span class="p">));</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to lookup commit: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-11" class="fnlink" href="../../#v0.99.0/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+  <span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-8'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-8">&#182;</a>
+        </div>
+        <p>Perform the checkout so the workdir corresponds to what target_commit
+contains.</p>
+
+<p>Note that it&#39;s okay to pass a git_commit here, because it will be
+peeled to a tree.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_checkout_tree-8" class="fnlink" href="../../#v0.99.0/group/checkout/git_checkout_tree">git_checkout_tree</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="p">(</span><span class="k">const</span> <span class="n">git_object</span> <span class="o">*</span><span class="p">)</span><span class="n">target_commit</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">checkout_opts</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to checkout tree: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-12" class="fnlink" href="../../#v0.99.0/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+  <span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-9'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-9">&#182;</a>
+        </div>
+        <p>Now that the checkout has completed, we have to update HEAD.</p>
+
+<p>Depending on the &quot;origin&quot; of target (ie. it&#39;s an OID or a branch name),
+we might need to detach HEAD.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_annotated_commit_ref-3" class="fnlink" href="../../#v0.99.0/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">))</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">target_head</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">((</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_reference_lookup-15" class="fnlink" href="../../#v0.99.0/group/reference/git_reference_lookup">git_reference_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_annotated_commit_ref-4" class="fnlink" href="../../#v0.99.0/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">)))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="k">goto</span> <span class="n">error</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_reference_is_remote-21" class="fnlink" href="../../#v0.99.0/group/reference/git_reference_is_remote">git_reference_is_remote</a></span><span class="p">(</span><span class="n">ref</span><span class="p">))</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">((</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_branch_create_from_annotated-7" class="fnlink" href="../../#v0.99.0/group/branch/git_branch_create_from_annotated">git_branch_create_from_annotated</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">branch</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">target_ref</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">goto</span> <span class="n">error</span><span class="p">;</span>
+      <span class="n">target_head</span> <span class="o">=</span> <span class="n"><a name="git_reference_name-17" class="fnlink" href="../../#v0.99.0/group/reference/git_reference_name">git_reference_name</a></span><span class="p">(</span><span class="n">branch</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="n">target_head</span> <span class="o">=</span> <span class="n"><a name="git_annotated_commit_ref-5" class="fnlink" href="../../#v0.99.0/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head-23" class="fnlink" href="../../#v0.99.0/group/repository/git_repository_set_head">git_repository_set_head</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target_head</span><span class="p">);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head_detached_from_annotated-24" class="fnlink" href="../../#v0.99.0/group/repository/git_repository_set_head_detached_from_annotated">git_repository_set_head_detached_from_annotated</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target</span><span class="p">);</span>
+  <span class="p">}</span>
+
+<span class="nl">error</span><span class="p">:</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to update HEAD reference: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-13" class="fnlink" href="../../#v0.99.0/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+  <span class="p">}</span>
+
+<span class="nl">cleanup</span><span class="p">:</span>
+  <span class="n"><a name="git_commit_free-10" class="fnlink" href="../../#v0.99.0/group/commit/git_commit_free">git_commit_free</a></span><span class="p">(</span><span class="n">target_commit</span><span class="p">);</span>
+  <span class="n"><a name="git_reference_free-18" class="fnlink" href="../../#v0.99.0/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">branch</span><span class="p">);</span>
+  <span class="n"><a name="git_reference_free-19" class="fnlink" href="../../#v0.99.0/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">ref</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="n">err</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-10'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-10">&#182;</a>
+        </div>
+        <p>This corresponds to <code>git switch --guess</code>: if a given ref does
+not exist, git will by default try to guess the reference by
+seeing whether any remote has a branch called <ref>. If there
+is a single remote only that has it, then it is assumed to be
+the desired reference and a local branch is created for it.</p>
+
+<p>The following is a simplified implementation. It will not try
+to check whether the ref is unique across all remotes.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">guess_refish</span><span class="p">(</span><span class="n">git_annotated_commit</span> <span class="o">**</span><span class="n">out</span><span class="p">,</span> <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">ref</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_strarray</span> <span class="n">remotes</span> <span class="o">=</span> <span class="p">{</span> <span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span> <span class="p">};</span>
+  <span class="n">git_reference</span> <span class="o">*</span><span class="n">remote_ref</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
+  <span class="kt">size_t</span> <span class="n">i</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_list-22" class="fnlink" href="../../#v0.99.0/group/remote/git_remote_list">git_remote_list</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">,</span> <span class="n">repo</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">goto</span> <span class="n">out</span><span class="p">;</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">remotes</span><span class="p">.</span><span class="n">count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">refname</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="kt">size_t</span> <span class="n">reflen</span><span class="p">;</span>
+
+    <span class="n">reflen</span> <span class="o">=</span> <span class="n">snprintf</span><span class="p">(</span><span class="n">refname</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;refs/remotes/%s/%s&quot;</span><span class="p">,</span> <span class="n">remotes</span><span class="p">.</span><span class="n">strings</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ref</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">refname</span> <span class="o">=</span> <span class="n">malloc</span><span class="p">(</span><span class="n">reflen</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">error</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+      <span class="k">goto</span> <span class="n">next</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">snprintf</span><span class="p">(</span><span class="n">refname</span><span class="p">,</span> <span class="n">reflen</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&quot;refs/remotes/%s/%s&quot;</span><span class="p">,</span> <span class="n">remotes</span><span class="p">.</span><span class="n">strings</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ref</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_reference_lookup-16" class="fnlink" href="../../#v0.99.0/group/reference/git_reference_lookup">git_reference_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">refname</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="k">goto</span> <span class="n">next</span><span class="p">;</span>
+
+    <span class="k">break</span><span class="p">;</span>
+<span class="nl">next</span><span class="p">:</span>
+    <span class="n">free</span><span class="p">(</span><span class="n">refname</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">error</span> <span class="o">!=</span> <span class="n">GIT_ENOTFOUND</span><span class="p">)</span>
+      <span class="k">break</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">remote_ref</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="n">GIT_ENOTFOUND</span><span class="p">;</span>
+    <span class="k">goto</span> <span class="n">out</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_annotated_commit_from_ref-1" class="fnlink" href="../../#v0.99.0/group/annotated/git_annotated_commit_from_ref">git_annotated_commit_from_ref</a></span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">remote_ref</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">goto</span> <span class="n">out</span><span class="p">;</span>
+
+<span class="nl">out</span><span class="p">:</span>
+  <span class="n"><a name="git_reference_free-20" class="fnlink" href="../../#v0.99.0/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">remote_ref</span><span class="p">);</span>
+  <span class="n"><a name="git_strarray_free-26" class="fnlink" href="../../#v0.99.0/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-11'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-11">&#182;</a>
+        </div>
+        <p>That example&#39;s entry point</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="kt">int</span> <span class="nf">lg2_checkout</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
+  <span class="n">checkout_options</span> <span class="n">opts</span><span class="p">;</span>
+  <span class="kt">git_repository_state_t</span> <span class="n">state</span><span class="p">;</span>
+  <span class="n">git_annotated_commit</span> <span class="o">*</span><span class="n">checkout_target</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">err</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-12'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-12">&#182;</a>
+        </div>
+        <p>Parse our command line options</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">parse_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">path</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">);</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-13'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-13">&#182;</a>
+        </div>
+        <p>Make sure we&#39;re not about to checkout while something else is going on</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">state</span> <span class="o">=</span> <span class="n"><a name="git_repository_state-25" class="fnlink" href="../../#v0.99.0/group/repository/git_repository_state">git_repository_state</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">state</span> <span class="o">!=</span> <span class="n">GIT_REPOSITORY_STATE_NONE</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;repository is in unexpected state %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">);</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">match_arg_separator</span><span class="p">(</span><span class="o">&amp;</span><span class="n">args</span><span class="p">))</span> <span class="p">{</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-14'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-14">&#182;</a>
+        </div>
+        <p>Try to checkout the given path</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;unhandled path-based checkout</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-15'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-15">&#182;</a>
+        </div>
+        <p>Try to resolve a &quot;refish&quot; argument to a target libgit2 can use</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="k">if</span> <span class="p">((</span><span class="n">err</span> <span class="o">=</span> <span class="n">resolve_refish</span><span class="p">(</span><span class="o">&amp;</span><span class="n">checkout_target</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">]))</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span>
+        <span class="p">(</span><span class="n">err</span> <span class="o">=</span> <span class="n">guess_refish</span><span class="p">(</span><span class="o">&amp;</span><span class="n">checkout_target</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">]))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to resolve %s: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">],</span> <span class="n"><a name="git_error_last-14" class="fnlink" href="../../#v0.99.0/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+      <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">perform_checkout_ref</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">checkout_target</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">);</span>
+  <span class="p">}</span>
+
+<span class="nl">cleanup</span><span class="p">:</span>
+  <span class="n"><a name="git_annotated_commit_free-6" class="fnlink" href="../../#v0.99.0/group/annotated/git_annotated_commit_free">git_annotated_commit_free</a></span><span class="p">(</span><span class="n">checkout_target</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="n">err</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
