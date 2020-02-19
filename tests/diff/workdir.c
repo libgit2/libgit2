@@ -2160,3 +2160,46 @@ void test_diff_workdir__symlink_changed_on_non_symlink_platform(void)
 	git_tree_free(tree);
 	git_vector_free(&pathlist);
 }
+
+void test_diff_workdir__order(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_buf patch = GIT_BUF_INIT;
+	git_oid tree_oid, blob_oid;
+	git_treebuilder *builder;
+	git_tree *tree;
+	git_diff *diff;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	/* Build tree with a single file "abc.txt" */
+	cl_git_pass(git_blob_create_from_buffer(&blob_oid, g_repo, "foo\n", 4));
+	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
+	cl_git_pass(git_treebuilder_insert(NULL, builder, "abc.txt", &blob_oid, GIT_FILEMODE_BLOB));
+	cl_git_pass(git_treebuilder_write(&tree_oid, builder));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_oid));
+
+	/* Create a directory that sorts before and one that sorts after "abc.txt" */
+	cl_git_mkfile("empty_standard_repo/abc.txt", "bar\n");
+	cl_must_pass(p_mkdir("empty_standard_repo/abb", 0777));
+	cl_must_pass(p_mkdir("empty_standard_repo/abd", 0777));
+
+	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
+
+	cl_assert_equal_i(1, git_diff_num_deltas(diff));
+	cl_git_pass(git_diff_to_buf(&patch, diff, GIT_DIFF_FORMAT_PATCH));
+	cl_assert_equal_s(patch.ptr,
+		"diff --git a/abc.txt b/abc.txt\n"
+		"index 257cc56..5716ca5 100644\n"
+		"--- a/abc.txt\n"
+		"+++ b/abc.txt\n"
+		"@@ -1 +1 @@\n"
+		"-foo\n"
+		"+bar\n");
+
+	git_treebuilder_free(builder);
+	git_buf_dispose(&patch);
+	git_diff_free(diff);
+	git_tree_free(tree);
+}
