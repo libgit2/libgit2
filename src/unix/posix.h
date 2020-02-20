@@ -33,7 +33,7 @@ typedef int GIT_SOCKET;
 # define st_atime_nsec st_atim.tv_nsec
 # define st_mtime_nsec st_mtim.tv_nsec
 # define st_ctime_nsec st_ctim.tv_nsec
-#elif !defined(GIT_USE_STAT_MTIME_NSEC) && defined(GIT_USE_NEC)
+#elif !defined(GIT_USE_STAT_MTIME_NSEC) && defined(GIT_USE_NSEC)
 # error GIT_USE_NSEC defined but unknown struct stat nanosecond type
 #endif
 
