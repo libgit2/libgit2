@@ -1257,14 +1257,14 @@ int git_pack_foreach_entry(
 	return error;
 }
 
-static int sha1_position(const void *table, size_t stride, unsigned lo,
-			 unsigned hi, const unsigned char *key)
+int git_pack__lookup_sha1(const void *oid_lookup_table, size_t stride, unsigned lo,
+		unsigned hi, const unsigned char *oid_prefix)
 {
-	const unsigned char *base = table;
+	const unsigned char *base = oid_lookup_table;
 
 	while (lo < hi) {
 		unsigned mi = (lo + hi) / 2;
-		int cmp = git_oid__hashcmp(base + mi * stride, key);
+		int cmp = git_oid__hashcmp(base + mi * stride, oid_prefix);
 
 		if (!cmp)
 			return mi;
@@ -1326,7 +1326,7 @@ static int pack_entry_find_offset(
 		short_oid->id[0], short_oid->id[1], short_oid->id[2], lo, hi, p->num_objects);
 #endif
 
-	pos = sha1_position(index, stride, lo, hi, short_oid->id);
+	pos = git_pack__lookup_sha1(index, stride, lo, hi, short_oid->id);
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */
