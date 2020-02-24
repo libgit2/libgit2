@@ -329,6 +329,8 @@ Here are the bindings to libgit2 that are currently available:
     * hgit2 <https://github.com/jwiegley/gitlib>
 * Java
     * Jagged <https://github.com/ethomson/jagged>
+* Javascript / WebAssembly ( browser and nodejs )
+    * WASM-git <https://github.com/petersalomonsen/wasm-git>
 * Julia
     * LibGit2.jl <https://github.com/JuliaLang/julia/tree/master/stdlib/LibGit2>
 * Lua
