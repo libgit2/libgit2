@@ -50,10 +50,10 @@ static int ntlm_set_credentials(http_auth_ntlm_context *ctx, git_credential *_cr
 	cred = (git_credential_userpass_plaintext *)_cred;
 
 	if ((sep = strchr(cred->username, '\\')) != NULL) {
-		domain = strndup(cred->username, (sep - cred->username));
+		domain = git__strndup(cred->username, (sep - cred->username));
 		GIT_ERROR_CHECK_ALLOC(domain);
 
-		domainuser = strdup(sep + 1);
+		domainuser = git__strdup(sep + 1);
 		GIT_ERROR_CHECK_ALLOC(domainuser);
 
 		username = domainuser;
