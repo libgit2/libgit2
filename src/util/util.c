@@ -21,6 +21,43 @@
 # include <Shlwapi.h>
 #endif
 
+void git_strings_free_deep(char **strings, size_t n)
+{
+	size_t i;
+
+	for (i = 0; i < n; i++)
+		git__free(strings[i]);
+
+	git__free(strings);
+}
+
+int git_strings_copy_deep(char **tgt, char *const *const src, size_t n)
+{
+	size_t i;
+
+	assert(tgt && src);
+
+	if (!n) {
+		*tgt = NULL;
+		return 0;
+	}
+
+	*tgt = git__calloc(n, sizeof(char *));
+	GIT_ERROR_CHECK_ALLOC(tgt);
+
+	for (i = 0; i < n; i++) {
+		if (!src[i])
+			continue;
+
+		if (!(tgt[i] = git__strdup(src[i]))) {
+			git_strings_free_deep(tgt, n);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
 {
 	const char *p;

@@ -13,6 +13,8 @@
 # include <ctype.h>
 #endif
 
+#include "git2/strarray.h"
+
 #include "buffer.h"
 #include "strnlen.h"
 #include "thread-utils.h"
@@ -333,6 +335,26 @@ extern int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst);
  * @return length in bytes of the string that contains valid data
  */
 extern size_t git__utf8_valid_buf_length(const uint8_t *str, size_t str_len);
+
+/**
+ * Free the given array and the strings contained therein.
+ *
+ * @param strings The string array to free
+ * @param n The number of strings to free
+ */
+extern void git_strings_free_deep(char **strings, size_t n);
+
+/**
+ * Copy the strings from one array to another.  The target array will be
+ * created and the strings will be duplicated into it.  Any NULL pointers
+ * in the source will be preserved.
+ *
+ * @param tgt The destination string array
+ * @param src The source string array
+ * @param n The number of strings to copy
+ */
+extern int git_strings_copy_deep(
+	char **tgt, char *const *const src, size_t n);
 
 /*
  * Safely zero-out memory, making sure that the compiler
