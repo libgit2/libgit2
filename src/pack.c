@@ -490,6 +490,12 @@ int git_packfile_resolve_header(
 
 		base_offset = get_delta_base(p, &w_curs, &curpos, type, offset);
 		git_mwindow_close(&w_curs);
+
+		if (base_offset < 0) {
+			error = (int)base_offset;
+			return error;
+		}
+
 		if ((error = git_packfile_stream_open(&stream, p, curpos)) < 0)
 			return error;
 		error = git_delta_read_header_fromstream(&base_size, size_p, &stream);
@@ -508,8 +514,14 @@ int git_packfile_resolve_header(
 			return error;
 		if (type != GIT_OBJECT_OFS_DELTA && type != GIT_OBJECT_REF_DELTA)
 			break;
+
 		base_offset = get_delta_base(p, &w_curs, &curpos, type, base_offset);
 		git_mwindow_close(&w_curs);
+
+		if (base_offset < 0) {
+			error = (int)base_offset;
+			return error;
+		}
 	}
 	*type_p = type;
 
@@ -586,10 +598,6 @@ static int pack_dependency_chain(git_dependency_chain *chain_out,
 		base_offset = get_delta_base(p, &w_curs, &curpos, type, obj_offset);
 		git_mwindow_close(&w_curs);
 
-		if (base_offset == 0) {
-			error = packfile_error("delta offset is zero");
-			goto on_error;
-		}
 		if (base_offset < 0) { /* must actually be an error code */
 			error = (int)base_offset;
 			goto on_error;
@@ -909,12 +917,12 @@ off64_t get_delta_base(
 				return GIT_EBUFS;
 			unsigned_base_offset += 1;
 			if (!unsigned_base_offset || MSB(unsigned_base_offset, 7))
-				return 0; /* overflow */
+				return packfile_error("overflow");
 			c = base_info[used++];
 			unsigned_base_offset = (unsigned_base_offset << 7) + (c & 127);
 		}
 		if (unsigned_base_offset == 0 || (size_t)delta_obj_offset <= unsigned_base_offset)
-			return 0; /* out of bound */
+			return packfile_error("out of bounds");
 		base_offset = delta_obj_offset - unsigned_base_offset;
 		*curpos += used;
 	} else if (type == GIT_OBJECT_REF_DELTA) {
@@ -941,7 +949,7 @@ off64_t get_delta_base(
 			return packfile_error("base entry delta is not in the same pack");
 		*curpos += 20;
 	} else
-		return 0;
+		return packfile_error("unknown object type");
 
 	return base_offset;
 }
