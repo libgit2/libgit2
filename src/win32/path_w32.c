@@ -110,11 +110,10 @@ int git_win32_path_canonicalize(git_win32_path path)
 
 		else if (len == 2 && from[0] == L'.' && from[1] == L'.') {
 			if (to == base) {
-				/* no more path segments to strip, eat the "../" */
+				/* Skip over leading "../" */
 				if (*next == L'\\')
 					len++;
-
-				base = to;
+				to += len;
 			} else {
 				/* back up a path segment */
 				while (to > base && to[-1] == L'\\') to--;
