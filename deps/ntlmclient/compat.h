@@ -32,7 +32,7 @@
 #elif defined(__FreeBSD__)
 /* See man page bwaps64(9) */
 # include <sys/endian.h>
-# define htonll bswap64
+# define htonll htobe64
 #elif defined(sun) || defined(__sun)
 /* See man page byteorder(3SOCKET) */
 # include <sys/types.h>
