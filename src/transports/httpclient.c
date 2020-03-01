@@ -29,7 +29,18 @@ static git_http_auth_scheme auth_schemes[] = {
 	{ GIT_HTTP_AUTH_BASIC, "Basic", GIT_CREDENTIAL_USERPASS_PLAINTEXT, git_http_auth_basic },
 };
 
-#define GIT_READ_BUFFER_SIZE 8192
+/*
+ * Use a 16kb read buffer to match the maximum size of a TLS packet.  This
+ * is critical for compatibility with SecureTransport, which will always do
+ * a network read on every call, even if it has data buffered to return to
+ * you.  That buffered data may be the _end_ of a keep-alive response, so
+ * if SecureTransport performs another network read, it will wait until the
+ * server ultimately times out before it returns that buffered data to you.
+ * Since SecureTransport only reads a single TLS packet at a time, by
+ * calling it with a read buffer that is the maximum size of a TLS packet,
+ * we ensure that it will never buffer.
+ */
+#define GIT_READ_BUFFER_SIZE (16 * 1024)
 
 typedef struct {
 	git_net_url url;
