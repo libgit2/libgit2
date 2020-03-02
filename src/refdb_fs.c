@@ -1505,6 +1505,8 @@ static int refdb_fs_backend__rename(
 	git_reference *old, *new = NULL;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	int error;
+	const char *old_target = NULL;
+	const git_oid *old_id = NULL;
 
 	assert(backend);
 
@@ -1513,7 +1515,12 @@ static int refdb_fs_backend__rename(
 		(error = refdb_fs_backend__lookup(&old, _backend, old_name)) < 0)
 		return error;
 
-	if ((error = refdb_fs_backend__delete(_backend, old_name, NULL, NULL)) < 0) {
+	if (old->type == GIT_REFERENCE_SYMBOLIC)
+		old_target = old->target.symbolic;
+	else
+		old_id = &old->target.oid;
+
+	if ((error = refdb_fs_backend__delete(_backend, old_name, old_id, old_target)) < 0) {
 		git_reference_free(old);
 		return error;
 	}
