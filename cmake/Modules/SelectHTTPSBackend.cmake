@@ -1,5 +1,7 @@
 # Select the backend to use
 
+INCLUDE(SanitizeBool)
+
 # We try to find any packages our backends might use
 FIND_PACKAGE(OpenSSL)
 FIND_PACKAGE(mbedTLS)
@@ -9,6 +11,7 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Darwin")
 ENDIF()
 
 # Auto-select TLS backend
+SanitizeBool(USE_HTTPS)
 IF (USE_HTTPS STREQUAL ON)
 	IF (SECURITY_FOUND)
 		IF (SECURITY_HAS_SSLCREATECONTEXT)

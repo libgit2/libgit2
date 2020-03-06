@@ -28,7 +28,7 @@ SET(LIB_INSTALL_DIR lib CACHE PATH "Where to install libraries to.")
 SET(INCLUDE_INSTALL_DIR include CACHE PATH "Where to install headers to.")
 
 # Enable tracing
-IF (ENABLE_TRACE STREQUAL "ON")
+IF(ENABLE_TRACE)
 	SET(GIT_TRACE 1)
 ENDIF()
 ADD_FEATURE_INFO(tracing GIT_TRACE "tracing support")
