@@ -1150,6 +1150,7 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 	if (*out == NULL) {
 		git_buf odb_path = GIT_BUF_INIT;
 		git_odb *odb;
+		git_odb_options odb_opts = GIT_ODB_OPTIONS_INIT;
 
 		if ((error = git_repository_item_path(&odb_path, repo,
 				GIT_REPOSITORY_ITEM_OBJECTS)) < 0 ||
@@ -1158,8 +1159,12 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 
 		GIT_REFCOUNT_OWN(odb, repo);
 
-		if ((error = git_odb__set_caps(odb, GIT_ODB_CAP_FROM_OWNER)) < 0 ||
-			(error = git_odb__add_default_backends(odb, odb_path.ptr, 0, 0)) < 0) {
+		if ((error = git_odb__set_caps(odb, GIT_ODB_CAP_FROM_OWNER)) < 0) {
+			git_odb_free(odb);
+			return error;
+		}
+		if ((error = git_odb__add_default_backends(odb, odb_path.ptr,
+				&odb_opts, 0, 0)) < 0) {
 			git_odb_free(odb);
 			return error;
 		}
