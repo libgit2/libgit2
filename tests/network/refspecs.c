@@ -153,7 +153,7 @@ static void assert_invalid_rtransform(const char *refspec, const char *name)
 	git_refspec spec;
 	git_buf buf = GIT_BUF_INIT;
 
-	git_refspec__parse(&spec, refspec, true);
+	cl_git_pass(git_refspec__parse(&spec, refspec, true));
 	cl_git_fail(git_refspec_rtransform(&buf, &spec, name));
 
 	git_buf_dispose(&buf);

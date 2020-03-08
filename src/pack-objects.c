@@ -374,7 +374,9 @@ static int write_object(
 		GIT_ERROR_CHECK_ALLOC(zbuf);
 
 		git_zstream_reset(&pb->zstream);
-		git_zstream_set_input(&pb->zstream, data, data_len);
+
+		if ((error = git_zstream_set_input(&pb->zstream, data, data_len)) < 0)
+			goto done;
 
 		while (!git_zstream_done(&pb->zstream)) {
 			if ((error = git_zstream_get_output(zbuf, &zbuf_len, &pb->zstream)) < 0 ||

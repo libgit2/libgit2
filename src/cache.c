@@ -208,10 +208,14 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 			entry = stored_entry;
 		} else if (stored_entry->flags == GIT_CACHE_STORE_RAW &&
 			   entry->flags == GIT_CACHE_STORE_PARSED) {
-			git_cached_obj_decref(stored_entry);
-			git_cached_obj_incref(entry);
-
-			git_oidmap_set(cache->map, &entry->oid, entry);
+			if (git_oidmap_set(cache->map, &entry->oid, entry) == 0) {
+				git_cached_obj_decref(stored_entry);
+				git_cached_obj_incref(entry);
+			} else {
+				git_cached_obj_decref(entry);
+				git_cached_obj_incref(stored_entry);
+				entry = stored_entry;
+			}
 		} else {
 			/* NO OP */
 		}

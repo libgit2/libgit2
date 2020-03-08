@@ -136,11 +136,11 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 		goto out;
 	}
 
-	if ((wt->name = git__strdup(name)) == NULL
-	    || (wt->commondir_path = git_worktree__read_link(dir, "commondir")) == NULL
-	    || (wt->gitlink_path = git_worktree__read_link(dir, "gitdir")) == NULL
-	    || (parent && (wt->parent_path = git__strdup(parent)) == NULL)
-	    || (wt->worktree_path = git_path_dirname(wt->gitlink_path)) == NULL) {
+	if ((wt->name = git__strdup(name)) == NULL ||
+	    (wt->commondir_path = git_worktree__read_link(dir, "commondir")) == NULL ||
+	    (wt->gitlink_path = git_worktree__read_link(dir, "gitdir")) == NULL ||
+	    (parent && (wt->parent_path = git__strdup(parent)) == NULL) ||
+	    (wt->worktree_path = git_path_dirname(wt->gitlink_path)) == NULL) {
 		error = -1;
 		goto out;
 	}
@@ -149,7 +149,10 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 		goto out;
 	wt->gitdir_path = git_buf_detach(&gitdir);
 
-	wt->locked = !!git_worktree_is_locked(NULL, wt);
+	if ((error = git_worktree_is_locked(NULL, wt)) < 0)
+		goto out;
+	wt->locked = !!error;
+	error = 0;
 
 	*out = wt;
 
@@ -403,20 +406,24 @@ out:
 int git_worktree_lock(git_worktree *wt, const char *reason)
 {
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
-	int err;
+	int error;
 
 	assert(wt);
 
-	if ((err = git_worktree_is_locked(NULL, wt)) < 0)
+	if ((error = git_worktree_is_locked(NULL, wt)) < 0)
 		goto out;
+	if (error) {
+		error = GIT_ELOCKED;
+		goto out;
+	}
 
-	if ((err = git_buf_joinpath(&path, wt->gitdir_path, "locked")) < 0)
+	if ((error = git_buf_joinpath(&path, wt->gitdir_path, "locked")) < 0)
 		goto out;
 
 	if (reason)
 		git_buf_attach_notowned(&buf, reason, strlen(reason));
 
-	if ((err = git_futils_writebuffer(&buf, path.ptr, O_CREAT|O_EXCL|O_WRONLY, 0644)) < 0)
+	if ((error = git_futils_writebuffer(&buf, path.ptr, O_CREAT|O_EXCL|O_WRONLY, 0644)) < 0)
 		goto out;
 
 	wt->locked = 1;
@@ -424,16 +431,19 @@ int git_worktree_lock(git_worktree *wt, const char *reason)
 out:
 	git_buf_dispose(&path);
 
-	return err;
+	return error;
 }
 
 int git_worktree_unlock(git_worktree *wt)
 {
 	git_buf path = GIT_BUF_INIT;
+	int error;
 
 	assert(wt);
 
-	if (!git_worktree_is_locked(NULL, wt))
+	if ((error = git_worktree_is_locked(NULL, wt)) < 0)
+		return error;
+	if (!error)
 		return 1;
 
 	if (git_buf_joinpath(&path, wt->gitdir_path, "locked") < 0)
@@ -454,22 +464,25 @@ int git_worktree_unlock(git_worktree *wt)
 int git_worktree_is_locked(git_buf *reason, const git_worktree *wt)
 {
 	git_buf path = GIT_BUF_INIT;
-	int ret;
+	int error, locked;
 
 	assert(wt);
 
 	if (reason)
 		git_buf_clear(reason);
 
-	if ((ret = git_buf_joinpath(&path, wt->gitdir_path, "locked")) < 0)
+	if ((error = git_buf_joinpath(&path, wt->gitdir_path, "locked")) < 0)
 		goto out;
-	if ((ret = git_path_exists(path.ptr)) && reason)
-		git_futils_readbuffer(reason, path.ptr);
+	locked = git_path_exists(path.ptr);
+	if (locked && reason &&
+	    (error = git_futils_readbuffer(reason, path.ptr)) < 0)
+		goto out;
 
+	error = locked;
 out:
 	git_buf_dispose(&path);
 
-	return ret;
+	return error;
 }
 
 const char *git_worktree_name(const git_worktree *wt)
@@ -502,7 +515,6 @@ int git_worktree_pruneinit_options(git_worktree_prune_options *opts,
 int git_worktree_is_prunable(git_worktree *wt,
 	git_worktree_prune_options *opts)
 {
-	git_buf reason = GIT_BUF_INIT;
 	git_worktree_prune_options popts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
 
 	GIT_ERROR_CHECK_VERSION(
@@ -512,20 +524,24 @@ int git_worktree_is_prunable(git_worktree *wt,
 	if (opts)
 		memcpy(&popts, opts, sizeof(popts));
 
-	if ((popts.flags & GIT_WORKTREE_PRUNE_LOCKED) == 0 &&
-		git_worktree_is_locked(&reason, wt))
-	{
-		if (!reason.size)
-			git_buf_attach_notowned(&reason, "no reason given", 15);
-		git_error_set(GIT_ERROR_WORKTREE, "not pruning locked working tree: '%s'", reason.ptr);
-		git_buf_dispose(&reason);
+	if ((popts.flags & GIT_WORKTREE_PRUNE_LOCKED) == 0) {
+		git_buf reason = GIT_BUF_INIT;
+		int error;
 
-		return 0;
+		if ((error = git_worktree_is_locked(&reason, wt)) < 0)
+			return error;
+
+		if (error) {
+			if (!reason.size)
+				git_buf_attach_notowned(&reason, "no reason given", 15);
+			git_error_set(GIT_ERROR_WORKTREE, "not pruning locked working tree: '%s'", reason.ptr);
+			git_buf_dispose(&reason);
+			return 0;
+		}
 	}
 
 	if ((popts.flags & GIT_WORKTREE_PRUNE_VALID) == 0 &&
-		git_worktree_validate(wt) == 0)
-	{
+	    git_worktree_validate(wt) == 0) {
 		git_error_set(GIT_ERROR_WORKTREE, "not pruning valid working tree");
 		return 0;
 	}

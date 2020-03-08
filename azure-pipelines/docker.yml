@@ -13,9 +13,9 @@ steps:
     if [ -f /tmp/dockercache/${{parameters.docker.image}}.tar ]; then docker load < /tmp/dockercache/${{parameters.docker.image}}.tar; fi
   displayName: 'Load Docker cache'
 - script: |
-    cd $(Build.SourcesDirectory)/azure-pipelines/docker
-    docker build -t libgit2/${{parameters.docker.image}} --build-arg BASE=${{parameters.docker.base}} -f ${{parameters.docker.image}} .
-    if [ ! -d /tmp/dockercache ]; then mkdir /tmp/dockercache; fi
+    cd $(Build.SourcesDirectory)/azure-pipelines/docker &&
+    docker build -t libgit2/${{parameters.docker.image}} --build-arg BASE=${{parameters.docker.base}} -f ${{parameters.docker.image}} . &&
+    if [ ! -d /tmp/dockercache ]; then mkdir /tmp/dockercache; fi &&
     docker save libgit2/${{parameters.docker.image}} $(docker history -q libgit2/${{parameters.docker.image}} | grep -v '<missing>') > /tmp/dockercache/${{parameters.docker.image}}.tar
   displayName: 'Build Docker image'
 - task: docker@0

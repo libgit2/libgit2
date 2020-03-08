@@ -30,10 +30,6 @@
 #include <openssl/x509v3.h>
 #include <openssl/bio.h>
 
-#ifdef VALGRIND
-# include <valgrind/memcheck.h>
-#endif
-
 SSL_CTX *git__ssl_ctx;
 
 #define GIT_SSL_DEFAULT_CIPHERS "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-DSS-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:DHE-DSS-AES128-SHA256:DHE-DSS-AES256-SHA256:DHE-DSS-AES128-SHA:DHE-DSS-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA"
@@ -160,7 +156,7 @@ static void openssl_locking_function(
 	lock = mode & CRYPTO_LOCK;
 
 	if (lock) {
-		git_mutex_lock(&openssl_locks[n]);
+		(void)git_mutex_lock(&openssl_locks[n]);
 	} else {
 		git_mutex_unlock(&openssl_locks[n]);
 	}
@@ -200,14 +196,67 @@ static void shutdown_ssl(void)
 	}
 }
 
+#ifdef VALGRIND
+#ifdef OPENSSL_LEGACY_API
+static void *git_openssl_malloc(size_t bytes)
+{
+	return git__calloc(1, bytes);
+}
+
+static void *git_openssl_realloc(void *mem, size_t size)
+{
+	return git__realloc(mem, size);
+}
+
+static void git_openssl_free(void *mem)
+{
+	return git__free(mem);
+}
+#else
+static void *git_openssl_malloc(size_t bytes, const char *file, int line)
+{
+	GIT_UNUSED(file);
+	GIT_UNUSED(line);
+	return git__calloc(1, bytes);
+}
+
+static void *git_openssl_realloc(void *mem, size_t size, const char *file, int line)
+{
+	GIT_UNUSED(file);
+	GIT_UNUSED(line);
+	return git__realloc(mem, size);
+}
+
+static void git_openssl_free(void *mem, const char *file, int line)
+{
+	GIT_UNUSED(file);
+	GIT_UNUSED(line);
+	return git__free(mem);
+}
+#endif
+#endif
+
 int git_openssl_stream_global_init(void)
 {
 	long ssl_opts = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
 	const char *ciphers = git_libgit2__ssl_ciphers();
+#ifdef VALGRIND
+	static bool allocators_initialized = false;
+#endif
 
 	/* Older OpenSSL and MacOS OpenSSL doesn't have this */
 #ifdef SSL_OP_NO_COMPRESSION
 	ssl_opts |= SSL_OP_NO_COMPRESSION;
+#endif
+
+#ifdef VALGRIND
+	/* Swap in our own allocator functions that initialize allocated memory */
+	if (!allocators_initialized &&
+	    CRYPTO_set_mem_functions(git_openssl_malloc,
+				     git_openssl_realloc,
+				     git_openssl_free) != 1)
+		goto error;
+	allocators_initialized = true;
 #endif
 
 	OPENSSL_init_ssl(0, NULL);
@@ -314,11 +363,6 @@ static int bio_read(BIO *b, char *buf, int len)
 static int bio_write(BIO *b, const char *buf, int len)
 {
 	git_stream *io = (git_stream *) BIO_get_data(b);
-
-#ifdef VALGRIND
-	VALGRIND_MAKE_MEM_DEFINED(buf, len);
-#endif
-
 	return (int) git_stream_write(io, buf, len, 0);
 }
 
@@ -595,10 +639,6 @@ static int openssl_connect(git_stream *stream)
 	BIO_set_data(bio, st->io);
 	SSL_set_bio(st->ssl, bio, bio);
 
-#ifdef VALGRIND
-	VALGRIND_MAKE_MEM_DEFINED(st->ssl, sizeof(SSL));
-#endif
-
 	/* specify the host in case SNI is needed */
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
 	SSL_set_tlsext_host_name(st->ssl, st->host);
@@ -608,10 +648,6 @@ static int openssl_connect(git_stream *stream)
 		return ssl_set_error(st->ssl, ret);
 
 	st->connected = true;
-
-#ifdef VALGRIND
-	VALGRIND_MAKE_MEM_DEFINED(st->ssl, sizeof(SSL));
-#endif
 
 	return verify_server_cert(st->ssl, st->host);
 }
@@ -678,10 +714,6 @@ static ssize_t openssl_read(git_stream *stream, void *data, size_t len)
 
 	if ((ret = SSL_read(st->ssl, data, len)) <= 0)
 		return ssl_set_error(st->ssl, ret);
-
-#ifdef VALGRIND
-	VALGRIND_MAKE_MEM_DEFINED(data, ret);
-#endif
 
 	return ret;
 }
