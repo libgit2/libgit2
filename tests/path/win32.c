@@ -203,16 +203,6 @@ void test_path_win32__canonicalize(void)
 	test_canonicalize(L"C:/Foo/Bar", L"C:\\Foo\\Bar");
 	test_canonicalize(L"C:/", L"C:\\");
 
-	test_canonicalize(L"Foo\\\\Bar\\\\Asdf\\\\", L"Foo\\Bar\\Asdf");
-	test_canonicalize(L"Foo\\\\Bar\\\\..\\\\Asdf\\", L"Foo\\Asdf");
-	test_canonicalize(L"Foo\\\\Bar\\\\.\\\\Asdf\\", L"Foo\\Bar\\Asdf");
-	test_canonicalize(L"Foo\\\\..\\Bar\\\\.\\\\Asdf\\", L"Bar\\Asdf");
-	test_canonicalize(L"\\", L"");
-	test_canonicalize(L"", L"");
-	test_canonicalize(L"Foo\\..\\..\\..\\..", L"");
-	test_canonicalize(L"..\\..\\..\\..", L"");
-	test_canonicalize(L"\\..\\..\\..\\..", L"");
-
 	test_canonicalize(L"\\\\?\\C:\\Foo\\Bar", L"\\\\?\\C:\\Foo\\Bar");
 	test_canonicalize(L"\\\\?\\C:\\Foo\\Bar\\", L"\\\\?\\C:\\Foo\\Bar");
 	test_canonicalize(L"\\\\?\\C:\\\\Foo\\.\\Bar\\\\..\\", L"\\\\?\\C:\\Foo");

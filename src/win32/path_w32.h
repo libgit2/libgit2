@@ -26,6 +26,9 @@ extern int git_win32_path_from_utf8(git_win32_path dest, const char *src);
  * canonical (always backslashes, never forward slashes) and process any
  * directory entries of '.' or '..'.
  *
+ * Note that this is intended to be used on absolute Windows paths, those
+ * that start with `C:\`, `\\server\share`, `\\?\`, etc.
+ *
  * This processes the buffer in place.
  *
  * @param path The buffer to process
