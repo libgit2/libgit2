@@ -5,7 +5,7 @@ jobs:
 - job: coverity
   displayName: 'Coverity'
   pool:
-    vmImage: 'Ubuntu 16.04'
+    vmImage: 'ubuntu-18.04'
   steps:
   - script: |
      cd $(Build.SourcesDirectory)/azure-pipelines/docker
