@@ -447,8 +447,7 @@ int p_symlink(const char *target, const char *path)
 	 * relative symlinks, this is not someting we want.
 	 */
 	if (git_win32_path_from_utf8(path_w, path) < 0 ||
-	    git__utf8_to_16(target_w, MAX_PATH, target) < 0 ||
-	    git_win32_path_canonicalize(target_w) < 0)
+	    git_win32_path_relative_from_utf8(target_w, target) < 0)
 		return -1;
 
 	dwFlags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;

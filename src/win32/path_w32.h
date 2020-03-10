@@ -11,7 +11,9 @@
 #include "vector.h"
 
 /**
- * Create a Win32 path (in UCS-2 format) from a UTF-8 string.
+ * Create a Win32 path (in UCS-2 format) from a UTF-8 string.  If the given
+ * path is relative, then it will be turned into an absolute path by having
+ * the current working directory prepended.
  *
  * @param dest The buffer to receive the wide string.
  * @param src The UTF-8 string to convert.
@@ -20,11 +22,24 @@
 extern int git_win32_path_from_utf8(git_win32_path dest, const char *src);
 
 /**
+ * Create a Win32 path (in UCS-2 format) from a UTF-8 string.  If the given
+ * path is relative, then it will not be turned into an absolute path.
+ *
+ * @param dest The buffer to receive the wide string.
+ * @param src The UTF-8 string to convert.
+ * @return The length of the wide string, in characters (not counting the NULL terminator), or < 0 for failure
+ */
+extern int git_win32_path_relative_from_utf8(git_win32_path dest, const char *src);
+
+/**
  * Canonicalize a Win32 UCS-2 path so that it is suitable for delivery to the
  * Win32 APIs: remove multiple directory separators, squashing to a single one,
  * strip trailing directory separators, ensure directory separators are all
  * canonical (always backslashes, never forward slashes) and process any
  * directory entries of '.' or '..'.
+ *
+ * Note that this is intended to be used on absolute Windows paths, those
+ * that start with `C:\`, `\\server\share`, `\\?\`, etc.
  *
  * This processes the buffer in place.
  *
