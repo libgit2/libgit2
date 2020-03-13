@@ -247,9 +247,9 @@ For more advanced use or questions about CMake please read <https://cmake.org/Wi
 
 The following CMake variables are declared:
 
-- `BIN_INSTALL_DIR`: Where to install binaries to.
-- `LIB_INSTALL_DIR`: Where to install libraries to.
-- `INCLUDE_INSTALL_DIR`: Where to install headers to.
+- `CMAKE_INSTALL_BINDIR`: Where to install binaries to.
+- `CMAKE_INSTALL_LIBDIR`: Where to install libraries to.
+- `CMAKE_INSTALL_INCLUDEDIR`: Where to install headers to.
 - `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to ON)
 - `BUILD_CLAR`: Build [Clar](https://github.com/vmg/clar)-based test suite (defaults to ON)
 - `THREADSAFE`: Build libgit2 with threading support (defaults to ON)
