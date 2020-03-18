@@ -63,7 +63,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cm">/*</span>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;general&quot; example - shows basic libgit2 concepts</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -102,7 +102,7 @@ Git Internals that you will need to know to work with Git at this level,
 check out <a href="https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain">Chapter 10</a> of the Pro Git book.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cp">#include &quot;common.h&quot;</span></pre></div>
+        <div class='highlight'><pre><span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span></pre></div>
       </td>
     </tr>
     <tr id='section-Includes'>
@@ -117,7 +117,7 @@ that you need.  It should be the only thing you need to include in order
 to compile properly and get all the libgit2 API.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cp">#include &quot;git2.h&quot;</span>
+        <div class='highlight'><pre><span class="cp">#include</span> <span class="cpf">&quot;git2.h&quot;</span><span class="cp"></span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">oid_parsing</span><span class="p">(</span><span class="n">git_oid</span> <span class="o">*</span><span class="n">out</span><span class="p">);</span>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">object_database</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">git_oid</span> <span class="o">*</span><span class="n">oid</span><span class="p">);</span>
@@ -306,7 +306,7 @@ repository.</p>
   <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
   <span class="n">git_odb_object</span> <span class="o">*</span><span class="n">obj</span><span class="p">;</span>
   <span class="n">git_odb</span> <span class="o">*</span><span class="n">odb</span><span class="p">;</span>
-  <span class="kt">git_object_t</span> <span class="n">otype</span><span class="p">;</span>
+  <span class="n">git_object_t</span> <span class="n">otype</span><span class="p">;</span>
 
   <span class="n"><a name="git_repository_odb-72" class="fnlink" href="../../#v0.99.0/group/repository/git_repository_odb">git_repository_odb</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">odb</span><span class="p">,</span> <span class="n">repo</span><span class="p">);</span></pre></div>
       </td>
@@ -656,7 +656,7 @@ methods, since the objects themselves are very similar.</p>
         <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">tag_parsing</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">;</span>
-  <span class="kt">git_object_t</span> <span class="n">type</span><span class="p">;</span>
+  <span class="n">git_object_t</span> <span class="n">type</span><span class="p">;</span>
   <span class="n">git_tag</span> <span class="o">*</span><span class="n">tag</span><span class="p">;</span>
   <span class="n">git_oid</span> <span class="n">oid</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">message</span><span class="p">;</span>

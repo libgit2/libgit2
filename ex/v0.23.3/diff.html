@@ -58,7 +58,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cm">/*</span>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;diff&quot; example - shows how to use the diff API</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -72,7 +72,7 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -127,7 +127,7 @@ how to do renaming detection and patch formatting.</p>
   <span class="kt">int</span> <span class="n">color</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">cache</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">output</span><span class="p">;</span>
-  <span class="kt">git_diff_format_t</span> <span class="n">format</span><span class="p">;</span>
+  <span class="n">git_diff_format_t</span> <span class="n">format</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">treeish1</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">treeish2</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">dir</span><span class="p">;</span>
@@ -158,11 +158,11 @@ how to do renaming detection and patch formatting.</p>
     <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GIT_DIFF_FORMAT_PATCH</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="s">&quot;.&quot;</span>
   <span class="p">};</span>
 
-  <span class="n"><a name="git_libgit2_init-13" class="fnlink" href="../../#v0.23.3/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
+  <span class="n"><a name="git_libgit2_init-12" class="fnlink" href="../../#v0.23.3/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
 
   <span class="n">parse_opts</span><span class="p">(</span><span class="o">&amp;</span><span class="n">o</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-15" class="fnlink" href="../../#v0.23.3/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">dir</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-14" class="fnlink" href="../../#v0.23.3/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">dir</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
     <span class="s">&quot;Could not open repository&quot;</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">dir</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -268,11 +268,11 @@ are not supported in this example</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n"><a name="git_diff_free-2" class="fnlink" href="../../#v0.23.3/group/diff/git_diff_free">git_diff_free</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
-  <span class="n"><a name="git_tree_free-17" class="fnlink" href="../../#v0.23.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t1</span><span class="p">);</span>
-  <span class="n"><a name="git_tree_free-18" class="fnlink" href="../../#v0.23.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t2</span><span class="p">);</span>
-  <span class="n"><a name="git_repository_free-16" class="fnlink" href="../../#v0.23.3/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_free-16" class="fnlink" href="../../#v0.23.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t1</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_free-17" class="fnlink" href="../../#v0.23.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t2</span><span class="p">);</span>
+  <span class="n"><a name="git_repository_free-15" class="fnlink" href="../../#v0.23.3/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
 
-  <span class="n"><a name="git_libgit2_shutdown-14" class="fnlink" href="../../#v0.23.3/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
+  <span class="n"><a name="git_libgit2_shutdown-13" class="fnlink" href="../../#v0.23.3/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
@@ -447,7 +447,7 @@ are not supported in this example</p>
 <span class="p">{</span>
   <span class="n">git_diff_stats</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
   <span class="n">git_buf</span> <span class="n">b</span> <span class="o">=</span> <span class="n">GIT_BUF_INIT_CONST</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
-  <span class="kt">git_diff_stats_format_t</span> <span class="n">format</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="n">git_diff_stats_format_t</span> <span class="n">format</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
   <span class="n">check_lg2</span><span class="p">(</span>
     <span class="n"><a name="git_diff_get_stats-10" class="fnlink" href="../../#v0.23.3/group/diff/git_diff_get_stats">git_diff_get_stats</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats</span><span class="p">,</span> <span class="n">diff</span><span class="p">),</span> <span class="s">&quot;generating stats for diff&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
@@ -462,12 +462,12 @@ are not supported in this example</p>
     <span class="n">format</span> <span class="o">|=</span> <span class="n">GIT_DIFF_STATS_INCLUDE_SUMMARY</span><span class="p">;</span>
 
   <span class="n">check_lg2</span><span class="p">(</span>
-    <span class="n"><a name="git_diff_stats_to_buf-11" class="fnlink" href="../../#v0.23.3/group/diff/git_diff_stats_to_buf">git_diff_stats_to_buf</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">b</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">format</span><span class="p">,</span> <span class="mi">80</span><span class="p">),</span> <span class="s">&quot;formatting stats&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">git_diff_stats_to_buf</span><span class="p">(</span><span class="o">&amp;</span><span class="n">b</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">format</span><span class="p">,</span> <span class="mi">80</span><span class="p">),</span> <span class="s">&quot;formatting stats&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="n">fputs</span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">stdout</span><span class="p">);</span>
 
   <span class="n"><a name="git_buf_free-1" class="fnlink" href="../../#v0.23.3/group/buf/git_buf_free">git_buf_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">b</span><span class="p">);</span>
-  <span class="n"><a name="git_diff_stats_free-12" class="fnlink" href="../../#v0.23.3/group/diff/git_diff_stats_free">git_diff_stats_free</a></span><span class="p">(</span><span class="n">stats</span><span class="p">);</span>
+  <span class="n"><a name="git_diff_stats_free-11" class="fnlink" href="../../#v0.23.3/group/diff/git_diff_stats_free">git_diff_stats_free</a></span><span class="p">(</span><span class="n">stats</span><span class="p">);</span>
 <span class="p">}</span></pre></div>
       </td>
     </tr>

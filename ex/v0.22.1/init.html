@@ -57,7 +57,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cm">/*</span>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;init&quot; example - shows how to initialize a new repo</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -71,7 +71,7 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -120,7 +120,7 @@ That is demonstrated in the &quot;create<em>initial</em>commit&quot; helper func
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">opts</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GIT_REPOSITORY_INIT_SHARED_UMASK</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span> <span class="p">};</span>
 
-  <span class="n"><a name="git_libgit2_init-2" class="fnlink" href="../../#v0.22.1/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
+  <span class="n"><a name="git_libgit2_init-1" class="fnlink" href="../../#v0.22.1/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
 
   <span class="n">parse_opts</span><span class="p">(</span><span class="o">&amp;</span><span class="n">o</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
 
@@ -138,7 +138,7 @@ That is demonstrated in the &quot;create<em>initial</em>commit&quot; helper func
 simple case of git<em>repository</em>init() API usage...</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_init-7" class="fnlink" href="../../#v0.22.1/group/repository/git_repository_init">git_repository_init</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">dir</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+        <div class='highlight'><pre>    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_init-6" class="fnlink" href="../../#v0.22.1/group/repository/git_repository_init">git_repository_init</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">dir</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
       <span class="s">&quot;Could not initialize repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
   <span class="p">}</span>
   <span class="k">else</span> <span class="p">{</span></pre></div>
@@ -184,7 +184,7 @@ working directory of the repository (with a git-link file)</p>
     <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">shared</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
       <span class="n">initopts</span><span class="p">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">o</span><span class="p">.</span><span class="n">shared</span><span class="p">;</span>
 
-    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_init_ext-8" class="fnlink" href="../../#v0.22.1/group/repository/git_repository_init_ext">git_repository_init_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">dir</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">initopts</span><span class="p">),</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_init_ext-7" class="fnlink" href="../../#v0.22.1/group/repository/git_repository_init_ext">git_repository_init_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">dir</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">initopts</span><span class="p">),</span>
         <span class="s">&quot;Could not initialize repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
   <span class="p">}</span></pre></div>
       </td>
@@ -199,9 +199,9 @@ working directory of the repository (with a git-link file)</p>
       <td class=code>
         <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">o</span><span class="p">.</span><span class="n">quiet</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">bare</span> <span class="o">||</span> <span class="n">o</span><span class="p">.</span><span class="n">gitdir</span><span class="p">)</span>
-      <span class="n">o</span><span class="p">.</span><span class="n">dir</span> <span class="o">=</span> <span class="n"><a name="git_repository_path-9" class="fnlink" href="../../#v0.22.1/group/repository/git_repository_path">git_repository_path</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+      <span class="n">o</span><span class="p">.</span><span class="n">dir</span> <span class="o">=</span> <span class="n"><a name="git_repository_path-8" class="fnlink" href="../../#v0.22.1/group/repository/git_repository_path">git_repository_path</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
     <span class="k">else</span>
-      <span class="n">o</span><span class="p">.</span><span class="n">dir</span> <span class="o">=</span> <span class="n"><a name="git_repository_workdir-10" class="fnlink" href="../../#v0.22.1/group/repository/git_repository_workdir">git_repository_workdir</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+      <span class="n">o</span><span class="p">.</span><span class="n">dir</span> <span class="o">=</span> <span class="n"><a name="git_repository_workdir-9" class="fnlink" href="../../#v0.22.1/group/repository/git_repository_workdir">git_repository_workdir</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
 
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Initialized empty Git repository in %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">dir</span><span class="p">);</span>
   <span class="p">}</span></pre></div>
@@ -223,8 +223,8 @@ people like to have that empty base commit in their repo.</p>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Created empty initial commit</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="p">}</span>
 
-  <span class="n"><a name="git_repository_free-6" class="fnlink" href="../../#v0.22.1/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
-  <span class="n"><a name="git_libgit2_shutdown-3" class="fnlink" href="../../#v0.22.1/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
+  <span class="n"><a name="git_repository_free-5" class="fnlink" href="../../#v0.22.1/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+  <span class="n"><a name="git_libgit2_shutdown-2" class="fnlink" href="../../#v0.22.1/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
@@ -256,13 +256,13 @@ that.</p>
         <p>First use the config to initialize a commit signature for the user.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_signature_default-12" class="fnlink" href="../../#v0.22.1/group/signature/git_signature_default">git_signature_default</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">sig</span><span class="p">,</span> <span class="n">repo</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_signature_default-11" class="fnlink" href="../../#v0.22.1/group/signature/git_signature_default">git_signature_default</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">sig</span><span class="p">,</span> <span class="n">repo</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Unable to create a commit signature.&quot;</span><span class="p">,</span>
           <span class="s">&quot;Perhaps &#39;user.name&#39; and &#39;user.email&#39; are not set&quot;</span><span class="p">);</span>
 
   <span class="cm">/* Now let&#39;s create an empty tree for this commit */</span>
 
-  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_repository_index-11" class="fnlink" href="../../#v0.22.1/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_repository_index-10" class="fnlink" href="../../#v0.22.1/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Could not open repository index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -276,12 +276,12 @@ here to put actual files into the index.  For our purposes, we&#39;ll
 leave it empty for now.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_index_write_tree-5" class="fnlink" href="../../#v0.22.1/group/index/git_index_write_tree">git_index_write_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree_id</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_index_write_tree-4" class="fnlink" href="../../#v0.22.1/group/index/git_index_write_tree">git_index_write_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree_id</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Unable to write initial tree from index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
-  <span class="n"><a name="git_index_free-4" class="fnlink" href="../../#v0.22.1/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+  <span class="n"><a name="git_index_free-3" class="fnlink" href="../../#v0.22.1/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
 
-  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_tree_lookup-14" class="fnlink" href="../../#v0.22.1/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_id</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_tree_lookup-13" class="fnlink" href="../../#v0.22.1/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_id</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Could not look up initial tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -297,7 +297,7 @@ HEAD commit and making that be the parent of the initial commit,
 but here this is the first commit so there will be no parent.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_commit_create_v-1" class="fnlink" href="../../#v0.22.1/group/commit/git_commit_create_v">git_commit_create_v</a></span><span class="p">(</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n">git_commit_create_v</span><span class="p">(</span>
       <span class="o">&amp;</span><span class="n">commit_id</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="s">&quot;HEAD&quot;</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span>
       <span class="nb">NULL</span><span class="p">,</span> <span class="s">&quot;Initial commit&quot;</span><span class="p">,</span> <span class="n">tree</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Could not create the initial commit&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
@@ -311,8 +311,8 @@ but here this is the first commit so there will be no parent.</p>
         <p>Clean up so we don&#39;t leak memory.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_tree_free-15" class="fnlink" href="../../#v0.22.1/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">tree</span><span class="p">);</span>
-  <span class="n"><a name="git_signature_free-13" class="fnlink" href="../../#v0.22.1/group/signature/git_signature_free">git_signature_free</a></span><span class="p">(</span><span class="n">sig</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n"><a name="git_tree_free-14" class="fnlink" href="../../#v0.22.1/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">tree</span><span class="p">);</span>
+  <span class="n"><a name="git_signature_free-12" class="fnlink" href="../../#v0.22.1/group/signature/git_signature_free">git_signature_free</a></span><span class="p">(</span><span class="n">sig</span><span class="p">);</span>
 <span class="p">}</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">usage</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">error</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
