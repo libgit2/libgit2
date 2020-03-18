@@ -25,7 +25,7 @@ TOOL_DIR=${BUILD_DIR}/coverity-tools
 if ! test -d "$TOOL_DIR"
 then
     mkdir -p "$TOOL_DIR"
-    curl --silent --location --data "project=libgit2&token=$COVERITY_TOKEN" "$SCAN_TOOL" |
+    curl --silent --show-error --location --data "project=libgit2&token=$COVERITY_TOKEN" "$SCAN_TOOL" |
         tar -xzC "$TOOL_DIR"
     ln -s "$(find "$TOOL_DIR" -type d -name 'cov-analysis*')" "$TOOL_DIR"/cov-analysis
 fi
@@ -44,7 +44,7 @@ COVERITY_UNSUPPORTED=1 \
 tar -czf libgit2.tgz cov-int
 REVISION=$(cd ${SOURCE_DIR} && git rev-parse --short HEAD)
 HTML="$(curl \
-    --silent \
+    --silent --show-error \
     --write-out "\n%{http_code}" \
     --form token="$COVERITY_TOKEN" \
     --form email=libgit2@gmail.com \

@@ -300,6 +300,10 @@ FILE(GLOB SRC_GIT2 *.c *.h
 	streams/*.c streams/*.h
 	transports/*.c transports/*.h
 	xdiff/*.c xdiff/*.h)
+IF(APPLE)
+	# The old Secure Transport API has been deprecated in macOS 10.15.
+	SET_SOURCE_FILES_PROPERTIES(streams/stransport.c PROPERTIES COMPILE_FLAGS -Wno-deprecated)
+ENDIF()
 
 # the xdiff dependency is not (yet) warning-free, disable warnings as
 # errors for the xdiff sources until we've sorted them out

@@ -25,9 +25,7 @@ RUN apt-get update && \
 
 FROM apt AS mbedtls
 RUN cd /tmp && \
-    curl --location http://secure.globalsign.com/cacert/gsrsaovsslca2018.crt | openssl x509 -inform der -out /tmp/cacert.pem && \
-    curl --location https://curl.haxx.se/ca/cacert.pem >> /tmp/cacert.pem && \
-    curl --location --silent https://tls.mbed.org/download/mbedtls-2.16.2-apache.tgz --cacert /tmp/cacert.pem | \
+    curl --location --silent --show-error https://tls.mbed.org/download/mbedtls-2.16.2-apache.tgz | \
     tar -xz && \
     cd mbedtls-2.16.2 && \
     scripts/config.pl set MBEDTLS_MD4_C 1 && \
