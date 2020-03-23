@@ -146,7 +146,7 @@ static int apply_userpass_credentials(HINTERNET request, DWORD target, int mecha
 		native_scheme = WINHTTP_AUTH_SCHEME_BASIC;
 	} else {
 		git_error_set(GIT_ERROR_HTTP, "invalid authentication scheme");
-		error = -1;
+		error = GIT_EAUTH;
 		goto done;
 	}
 
@@ -185,7 +185,7 @@ static int apply_default_credentials(HINTERNET request, DWORD target, int mechan
 		native_scheme = WINHTTP_AUTH_SCHEME_NTLM;
 	} else {
 		git_error_set(GIT_ERROR_HTTP, "invalid authentication scheme");
-		return -1;
+		return GIT_EAUTH;
 	}
 
 	/*
@@ -602,7 +602,7 @@ static int parse_unauthorized_response(
 	 */
 	if (!WinHttpQueryAuthSchemes(request, &supported, &first, &target)) {
 		git_error_set(GIT_ERROR_OS, "failed to parse supported auth schemes");
-		return -1;
+		return GIT_EAUTH;
 	}
 
 	if (WINHTTP_AUTH_SCHEME_NTLM & supported) {
@@ -972,7 +972,7 @@ replay:
 	/* Enforce a reasonable cap on the number of replays */
 	if (replay_count++ >= GIT_HTTP_REPLAY_MAX) {
 		git_error_set(GIT_ERROR_HTTP, "too many redirects or authentication replays");
-		return -1;
+		return GIT_ERROR; /* not GIT_EAUTH because the exact cause is not clear */
 	}
 
 	/* Connect if necessary */

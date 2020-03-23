@@ -18,7 +18,7 @@ static int basic_next_token(
 {
 	git_credential_userpass_plaintext *cred;
 	git_buf raw = GIT_BUF_INIT;
-	int error = -1;
+	int error = GIT_EAUTH;
 
 	GIT_UNUSED(ctx);
 

@@ -260,7 +260,7 @@ static int negotiate_init_context(
 
 	if (!ctx->oid) {
 		git_error_set(GIT_ERROR_NET, "negotiate authentication is not supported");
-		return -1;
+		return GIT_EAUTH;
 	}
 
 	git_buf_puts(&ctx->target, "HTTP@");

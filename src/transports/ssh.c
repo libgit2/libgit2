@@ -461,13 +461,13 @@ static int request_creds(git_credential **out, ssh_subtransport *t, const char *
 
 	if (no_callback) {
 		git_error_set(GIT_ERROR_SSH, "authentication required but no callback set");
-		return -1;
+		return GIT_EAUTH;
 	}
 
 	if (!(cred->credtype & auth_methods)) {
 		cred->free(cred);
-		git_error_set(GIT_ERROR_SSH, "callback returned unsupported credentials type");
-		return -1;
+		git_error_set(GIT_ERROR_SSH, "authentication callback returned unsupported credentials type");
+		return GIT_EAUTH;
 	}
 
 	*out = cred;
@@ -805,7 +805,7 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 	/* either error, or the remote accepts NONE auth, which is bizarre, let's punt */
 	if (list == NULL && !libssh2_userauth_authenticated(session)) {
 		ssh_error(session, "Failed to retrieve list of SSH authentication methods");
-		return -1;
+		return GIT_EAUTH;
 	}
 
 	ptr = list;
