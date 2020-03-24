@@ -5,8 +5,6 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "refdb_fs.h"
-
 #include "refs.h"
 #include "hash.h"
 #include "repository.h"
