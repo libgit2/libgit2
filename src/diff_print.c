@@ -359,9 +359,9 @@ int diff_delta_format_similarity_header(
 		abort();
 
 	if ((error = git_buf_puts(&old_path, delta->old_file.path)) < 0 ||
-		(error = git_buf_puts(&new_path, delta->new_file.path)) < 0 ||
-		(error = git_buf_quote(&old_path)) < 0 ||
-		(error = git_buf_quote(&new_path)) < 0)
+	    (error = git_buf_puts(&new_path, delta->new_file.path)) < 0 ||
+	    (error = git_buf_quote(&old_path)) < 0 ||
+	    (error = git_buf_quote(&new_path)) < 0)
 		goto done;
 
 	git_buf_printf(out,
@@ -428,8 +428,11 @@ int git_diff_delta__format_file_header(
 	git_buf_printf(out, "diff --git %s %s\n",
 		old_path.ptr, new_path.ptr);
 
+	if (unchanged && delta->old_file.mode != delta->new_file.mode)
+		diff_print_modes(out, delta);
+
 	if (delta->status == GIT_DELTA_RENAMED ||
-		(delta->status == GIT_DELTA_COPIED && unchanged)) {
+	    (delta->status == GIT_DELTA_COPIED && unchanged)) {
 		if ((error = diff_delta_format_similarity_header(out, delta)) < 0)
 			goto done;
 	}
@@ -443,9 +446,6 @@ int git_diff_delta__format_file_header(
 			diff_delta_format_with_paths(out, delta,
 				"--- %s\n+++ %s\n", old_path.ptr, new_path.ptr);
 	}
-
-	if (unchanged && delta->old_file.mode != delta->new_file.mode)
-		diff_print_modes(out, delta);
 
 	if (git_buf_oom(out))
 		error = -1;

@@ -579,6 +579,14 @@
 	"rename from file.txt\n" \
 	"rename to newfile.txt\n"
 
+#define PATCH_RENAME_EXACT_WITH_MODE \
+	"diff --git a/RENAMED.md b/README.md\n" \
+	"old mode 100644\n" \
+	"new mode 100755\n" \
+	"similarity index 100%\n" \
+	"rename from RENAMED.md\n" \
+	"rename to README.md\n"
+
 #define PATCH_RENAME_SIMILAR \
 	"diff --git a/file.txt b/newfile.txt\n" \
 	"similarity index 77%\n" \

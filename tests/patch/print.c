@@ -107,6 +107,12 @@ void test_patch_print__rename_exact(void)
 		strlen(PATCH_RENAME_EXACT));
 }
 
+void test_patch_print__rename_exact_with_mode(void)
+{
+	patch_print_from_patchfile(PATCH_RENAME_EXACT_WITH_MODE,
+		strlen(PATCH_RENAME_EXACT_WITH_MODE));
+}
+
 void test_patch_print__rename_similar(void)
 {
 	patch_print_from_patchfile(PATCH_RENAME_SIMILAR,
