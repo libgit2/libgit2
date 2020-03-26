@@ -596,7 +596,7 @@ static int apply_credentials(
 		if (auth->connection_affinity)
 			free_auth_context(server);
 	} else if (!token.size) {
-		git_error_set(GIT_ERROR_HTTP, "failed to respond to authentication challange");
+		git_error_set(GIT_ERROR_HTTP, "failed to respond to authentication challenge");
 		error = -1;
 		goto done;
 	}
