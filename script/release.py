@@ -37,7 +37,7 @@ def verify_version(version):
         'VER_MINOR':    [ str(version.minor), None ],
         'VER_REVISION': [ str(version.revision), None ],
         'VER_PATCH':    [ '0', None ],
-        'SOVERSION':    [ '"{}.{}"'.format(version.major, version.minor), None ],
+        'SOVERSION':    [ '{}'.format(version.minor), None ],
     }
 
     with open('include/git2/version.h') as f:
