@@ -61,7 +61,7 @@ jobs:
 - job: macos
   displayName: 'macOS'
   pool:
-    vmImage: 'macOS 10.13'
+    vmImage: 'macOS-10.14'
   steps:
   - bash: . '$(Build.SourcesDirectory)/ci/setup-osx.sh'
     displayName: Setup
@@ -76,25 +76,28 @@ jobs:
 
 - job: windows_vs_amd64
   displayName: 'Windows (amd64; Visual Studio)'
-  pool: Hosted
+  pool:
+    vmImage: 'vs2017-win2016'
   steps:
   - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64" -DDEPRECATE_HARD=ON
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 15 2017" -A x64 -DDEPRECATE_HARD=ON
 
 - job: windows_vs_x86
   displayName: 'Windows (x86; Visual Studio)'
-  pool: Hosted
+  pool:
+    vmImage: 'vs2017-win2016'
   steps:
   - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013" -DDEPRECATE_HARD=ON
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 15 2017" -A Win32 -DDEPRECATE_HARD=ON
 
 - job: windows_mingw_amd64
   displayName: 'Windows (amd64; MinGW)'
-  pool: Hosted
+  pool:
+    vmImage: 'vs2017-win2016'
   steps:
   - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw.ps1'
     displayName: Setup
@@ -109,7 +112,8 @@ jobs:
 
 - job: windows_mingw_x86
   displayName: 'Windows (x86; MinGW)'
-  pool: Hosted
+  pool:
+    vmImage: 'vs2017-win2016'
   steps:
   - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw.ps1'
     displayName: Setup
