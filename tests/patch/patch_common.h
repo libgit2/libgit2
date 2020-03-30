@@ -263,6 +263,32 @@
 	"-(this line is changed)\n" \
 	"+(THIS line is changed!)\n"
 
+/* A change in the middle and a deletion of the newline at the end of the file */
+
+#define FILE_CHANGE_MIDDLE_AND_LASTLINE \
+	"hey!\n" \
+	"this is some context!\n" \
+	"around some lines\n" \
+	"that will change\n" \
+	"yes it is!\n" \
+	"(THIS line is changed!)\n" \
+	"and this\n" \
+	"is additional context\n" \
+	"BELOW it! - (THIS line is changed!)"
+
+#define PATCH_ORIGINAL_TO_CHANGE_MIDDLE_AND_LASTLINE_NOCONTEXT \
+	"diff --git a/file.txt b/file.txt\n" \
+	"index 9432026..e05d36c 100644\n" \
+	"--- a/file.txt\n" \
+	"+++ b/file.txt\n" \
+	"@@ -6 +6 @@ yes it is!\n" \
+	"-(this line is changed)\n" \
+	"+(THIS line is changed!)\n" \
+	"@@ -9 +9 @@ is additional context\n" \
+	"-below it!\n" \
+	"+BELOW it! - (THIS line is changed!)\n" \
+	"\\ No newline at end of file\n"
+
 /* A deletion at the beginning of the file and a change in the middle */
 
 #define FILE_DELETE_AND_CHANGE \
@@ -681,6 +707,16 @@
 	"+added line with no nl\n" \
 	"\\ No newline at end of file\n"
 
+#define PATCH_APPEND_NO_NL_IN_OLD_FILE \
+	"diff --git a/file.txt b/file.txt\n" \
+	"index 9432026..83759c0 100644\n" \
+	"--- a/file.txt\n" \
+	"+++ b/file.txt\n" \
+	"@@ -1,1 +1,1 @@\n" \
+	"-foo\n" \
+	"\\ No newline at end of file\n" \
+	"+foo\n"
+
 #define PATCH_NAME_WHITESPACE \
 	"diff --git a/file with spaces.txt b/file with spaces.txt\n" \
 	"index 9432026..83759c0 100644\n" \
@@ -859,3 +895,65 @@
 	"+++ b/test-file\r\n" \
 	"@@ -0,0 +1 @@\r\n" \
 	"+a contents\r\n"
+
+#define PATCH_NO_EXTENDED_HEADERS \
+	"diff --git a/file b/file\n" \
+	"--- a/file\n" \
+	"+++ b/file\n" \
+	"@@ -1,3 +1,3 @@\n" \
+	" a\n" \
+	"-b\n" \
+	"+bb\n" \
+	" c\n"
+
+#define PATCH_BINARY_FILE_WITH_MISSING_PATHS \
+	"diff --git  \n" \
+	"--- \n" \
+	"+++ \n" \
+	"Binary files "
+
+#define PATCH_BINARY_FILE_WITH_WHITESPACE_PATHS \
+	"diff --git a/file b/file\n" \
+	"---  \n" \
+	"+++  \n" \
+	"Binary files "
+
+#define PATCH_BINARY_FILE_WITH_QUOTED_EMPTY_PATHS \
+	"diff --git a/file b/file\n" \
+	"--- \"\"\n" \
+	"+++ \"\"\n" \
+	"Binary files "
+
+#define PATCH_BINARY_FILE_PATH_WITH_SPACES \
+	"diff --git a b c d e f\n" \
+	"--- a b c\n" \
+	"+++ d e f\n" \
+	"Binary files a b c and d e f differ"
+
+#define PATCH_BINARY_FILE_PATH_WITHOUT_BODY_PATHS \
+	"diff --git a b c d e f\n" \
+	"--- \n" \
+	"+++ \n" \
+	"Binary files a b c and d e f differ"
+
+#define PATCH_BINARY_FILE_WITH_TRUNCATED_DELTA \
+	"diff --git a/file b/file\n" \
+	"index 1420..b71f\n" \
+	"GIT binary patch\n" \
+	"delta 7\n" \
+	"d"
+
+#define PATCH_MULTIPLE_OLD_PATHS \
+	"diff --git  \n" \
+	"---  \n" \
+	"+++ \n" \
+	"index 0000..7DDb\n" \
+	"--- \n"
+
+#define PATCH_INTMAX_NEW_LINES \
+	"diff --git a/file b/file\n" \
+	"--- a/file\n" \
+	"+++ b/file\n" \
+	"@@ -0 +2147483647 @@\n" \
+	"\n" \
+	"  "

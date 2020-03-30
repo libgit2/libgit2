@@ -140,6 +140,11 @@ int git_reference_delete(git_reference *ref)
 	const git_oid *old_id = NULL;
 	const char *old_target = NULL;
 
+	if (!strcmp(ref->name, "HEAD")) {
+		git_error_set(GIT_ERROR_REFERENCE, "cannot delete HEAD");
+		return GIT_ERROR;
+	}
+
 	if (ref->type == GIT_REFERENCE_DIRECT)
 		old_id = &ref->target.oid;
 	else

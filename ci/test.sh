@@ -32,11 +32,6 @@ cleanup() {
 	echo "Done."
 }
 
-failure() {
-	echo "Test exited with code: $1"
-	SUCCESS=0
-}
-
 # Ask ctest what it would run if we were to invoke it directly.  This lets
 # us manage the test configuration in a single place (tests/CMakeLists.txt)
 # instead of running clar here as well.  But it allows us to wrap our test
@@ -60,7 +55,35 @@ run_test() {
 		RUNNER="$TEST_CMD"
 	fi
 
-	eval $RUNNER || failure
+	if [[ "$GITTEST_FLAKY_RETRY" > 0 ]]; then
+		ATTEMPTS_REMAIN=$GITTEST_FLAKY_RETRY
+	else
+		ATTEMPTS_REMAIN=1
+	fi
+
+	FAILED=0
+	while [[ "$ATTEMPTS_REMAIN" > 0 ]]; do
+		if [ "$FAILED" -eq 1 ]; then
+			echo ""
+			echo "Re-running flaky ${1} tests..."
+			echo ""
+		fi
+
+		RETURN_CODE=0
+		eval $RUNNER || RETURN_CODE=$? && true
+
+		if [ "$RETURN_CODE" -eq 0 ]; then
+			break
+		fi
+
+		echo "Test exited with code: $RETURN_CODE"
+		ATTEMPTS_REMAIN="$(($ATTEMPTS_REMAIN-1))"
+		FAILED=1
+	done
+
+	if [ "$FAILED" -ne 0 ]; then
+		SUCCESS=0
+	fi
 }
 
 # Configure the test environment; run them early so that we're certain
@@ -160,7 +183,9 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	echo "## Running (online) tests"
 	echo "##############################################################################"
 
+	export GITTEST_FLAKY_RETRY=5
 	run_test online
+	unset GITTEST_FLAKY_RETRY
 fi
 
 if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
@@ -220,7 +245,7 @@ fi
 
 cleanup
 
-if [ "$SUCCESS" -ne "1" ]; then
+if [ "$SUCCESS" -ne 1 ]; then
 	echo "Some tests failed."
 	exit 1
 fi

@@ -59,7 +59,7 @@ static int patch_image_init_fromstr(
 	git_pool_init(&out->pool, sizeof(git_diff_line));
 
 	for (start = in; start < in + in_len; start = end) {
-		end = memchr(start, '\n', in_len);
+		end = memchr(start, '\n', in_len - (start - in));
 
 		if (end == NULL)
 			end = in + in_len;
@@ -199,23 +199,34 @@ static int apply_hunk(
 
 	for (i = 0; i < hunk->line_count; i++) {
 		size_t linenum = hunk->line_start + i;
-		git_diff_line *line = git_array_get(patch->lines, linenum);
+		git_diff_line *line = git_array_get(patch->lines, linenum), *prev;
 
 		if (!line) {
 			error = apply_err("preimage does not contain line %"PRIuZ, linenum);
 			goto done;
 		}
 
-		if (line->origin == GIT_DIFF_LINE_CONTEXT ||
-			line->origin == GIT_DIFF_LINE_DELETION) {
-			if ((error = git_vector_insert(&preimage.lines, line)) < 0)
-				goto done;
-		}
-
-		if (line->origin == GIT_DIFF_LINE_CONTEXT ||
-			line->origin == GIT_DIFF_LINE_ADDITION) {
-			if ((error = git_vector_insert(&postimage.lines, line)) < 0)
-				goto done;
+		switch (line->origin) {
+			case GIT_DIFF_LINE_CONTEXT_EOFNL:
+			case GIT_DIFF_LINE_DEL_EOFNL:
+			case GIT_DIFF_LINE_ADD_EOFNL:
+				prev = i ? git_array_get(patch->lines, linenum - 1) : NULL;
+				if (prev && prev->content[prev->content_len - 1] == '\n')
+					prev->content_len -= 1;
+				break;
+			case GIT_DIFF_LINE_CONTEXT:
+				if ((error = git_vector_insert(&preimage.lines, line)) < 0 ||
+				    (error = git_vector_insert(&postimage.lines, line)) < 0)
+					goto done;
+				break;
+			case GIT_DIFF_LINE_DELETION:
+				if ((error = git_vector_insert(&preimage.lines, line)) < 0)
+					goto done;
+				break;
+			case GIT_DIFF_LINE_ADDITION:
+				if ((error = git_vector_insert(&postimage.lines, line)) < 0)
+					goto done;
+				break;
 		}
 	}
 
@@ -631,9 +642,12 @@ int git_apply_to_tree(
 	for (i = 0; i < git_diff_num_deltas(diff); i++) {
 		delta = git_diff_get_delta(diff, i);
 
-		if ((error = git_index_remove(postimage,
-				delta->old_file.path, 0)) < 0)
-			goto done;
+		if (delta->status == GIT_DELTA_DELETED ||
+			delta->status == GIT_DELTA_RENAMED) {
+			if ((error = git_index_remove(postimage,
+					delta->old_file.path, 0)) < 0)
+				goto done;
+		}
 	}
 
 	if ((error = apply_deltas(repo, pre_reader, NULL, post_reader, postimage, diff, &opts)) < 0)

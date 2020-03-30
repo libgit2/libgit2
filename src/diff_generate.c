@@ -1262,29 +1262,31 @@ cleanup:
 	return error;
 }
 
-#define DIFF_FROM_ITERATORS(MAKE_FIRST, FLAGS_FIRST, MAKE_SECOND, FLAGS_SECOND) do { \
-	git_iterator *a = NULL, *b = NULL; \
-	char *pfx = (opts && !(opts->flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH)) ? \
-		git_pathspec_prefix(&opts->pathspec) : NULL; \
-	git_iterator_options a_opts = GIT_ITERATOR_OPTIONS_INIT, \
-		b_opts = GIT_ITERATOR_OPTIONS_INIT; \
-	a_opts.flags = FLAGS_FIRST; \
-	a_opts.start = pfx; \
-	a_opts.end = pfx; \
-	b_opts.flags = FLAGS_SECOND; \
-	b_opts.start = pfx; \
-	b_opts.end = pfx; \
-	GIT_ERROR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
-	if (opts && (opts->flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH)) { \
-		a_opts.pathlist.strings = opts->pathspec.strings; \
-		a_opts.pathlist.count = opts->pathspec.count; \
-		b_opts.pathlist.strings = opts->pathspec.strings; \
-		b_opts.pathlist.count = opts->pathspec.count; \
-	} \
-	if (!error && !(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
-		error = git_diff__from_iterators(&diff, repo, a, b, opts); \
-	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
-} while (0)
+static int diff_prepare_iterator_opts(char **prefix, git_iterator_options *a, int aflags,
+		git_iterator_options *b, int bflags,
+		const git_diff_options *opts)
+{
+	GIT_ERROR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options");
+
+	*prefix = NULL;
+
+	if (opts && (opts->flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH)) {
+		a->pathlist.strings = opts->pathspec.strings;
+		a->pathlist.count = opts->pathspec.count;
+		b->pathlist.strings = opts->pathspec.strings;
+		b->pathlist.count = opts->pathspec.count;
+	} else if (opts) {
+		*prefix = git_pathspec_prefix(&opts->pathspec);
+		GIT_ERROR_CHECK_ALLOC(prefix);
+	}
+
+	a->flags = aflags;
+	b->flags = bflags;
+	a->start = b->start = *prefix;
+	a->end = b->end = *prefix;
+
+	return 0;
+}
 
 int git_diff_tree_to_tree(
 	git_diff **out,
@@ -1293,8 +1295,12 @@ int git_diff_tree_to_tree(
 	git_tree *new_tree,
 	const git_diff_options *opts)
 {
-	git_diff *diff = NULL;
 	git_iterator_flag_t iflag = GIT_ITERATOR_DONT_IGNORE_CASE;
+	git_iterator_options a_opts = GIT_ITERATOR_OPTIONS_INIT,
+		b_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_iterator *a = NULL, *b = NULL;
+	git_diff *diff = NULL;
+	char *prefix = NULL;
 	int error = 0;
 
 	assert(out && repo);
@@ -1308,13 +1314,19 @@ int git_diff_tree_to_tree(
 	if (opts && (opts->flags & GIT_DIFF_IGNORE_CASE) != 0)
 		iflag = GIT_ITERATOR_IGNORE_CASE;
 
-	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree(&a, old_tree, &a_opts), iflag,
-		git_iterator_for_tree(&b, new_tree, &b_opts), iflag
-	);
+	if ((error = diff_prepare_iterator_opts(&prefix, &a_opts, iflag, &b_opts, iflag, opts)) < 0 ||
+	    (error = git_iterator_for_tree(&a, old_tree, &a_opts)) < 0 ||
+	    (error = git_iterator_for_tree(&b, new_tree, &b_opts)) < 0 ||
+	    (error = git_diff__from_iterators(&diff, repo, a, b, opts)) < 0)
+		goto out;
 
-	if (!error)
-		*out = diff;
+	*out = diff;
+	diff = NULL;
+out:
+	git_iterator_free(a);
+	git_iterator_free(b);
+	git_diff_free(diff);
+	git__free(prefix);
 
 	return error;
 }
@@ -1337,9 +1349,13 @@ int git_diff_tree_to_index(
 	git_index *index,
 	const git_diff_options *opts)
 {
-	git_diff *diff = NULL;
 	git_iterator_flag_t iflag = GIT_ITERATOR_DONT_IGNORE_CASE |
 		GIT_ITERATOR_INCLUDE_CONFLICTS;
+	git_iterator_options a_opts = GIT_ITERATOR_OPTIONS_INIT,
+		b_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_iterator *a = NULL, *b = NULL;
+	git_diff *diff = NULL;
+	char *prefix = NULL;
 	bool index_ignore_case = false;
 	int error = 0;
 
@@ -1352,17 +1368,23 @@ int git_diff_tree_to_index(
 
 	index_ignore_case = index->ignore_case;
 
-	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree(&a, old_tree, &a_opts), iflag,
-		git_iterator_for_index(&b, repo, index, &b_opts), iflag
-	);
+	if ((error = diff_prepare_iterator_opts(&prefix, &a_opts, iflag, &b_opts, iflag, opts)) < 0 ||
+	    (error = git_iterator_for_tree(&a, old_tree, &a_opts)) < 0 ||
+	    (error = git_iterator_for_index(&b, repo, index, &b_opts)) < 0 ||
+	    (error = git_diff__from_iterators(&diff, repo, a, b, opts)) < 0)
+		goto out;
 
 	/* if index is in case-insensitive order, re-sort deltas to match */
-	if (!error && index_ignore_case)
+	if (index_ignore_case)
 		git_diff__set_ignore_case(diff, true);
 
-	if (!error)
-		*out = diff;
+	*out = diff;
+	diff = NULL;
+out:
+	git_iterator_free(a);
+	git_iterator_free(b);
+	git_diff_free(diff);
+	git__free(prefix);
 
 	return error;
 }
@@ -1373,7 +1395,11 @@ int git_diff_index_to_workdir(
 	git_index *index,
 	const git_diff_options *opts)
 {
+	git_iterator_options a_opts = GIT_ITERATOR_OPTIONS_INIT,
+		b_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_iterator *a = NULL, *b = NULL;
 	git_diff *diff = NULL;
+	char *prefix = NULL;
 	int error = 0;
 
 	assert(out && repo);
@@ -1383,20 +1409,24 @@ int git_diff_index_to_workdir(
 	if (!index && (error = diff_load_index(&index, repo)) < 0)
 		return error;
 
-	DIFF_FROM_ITERATORS(
-		git_iterator_for_index(&a, repo, index, &a_opts),
-		GIT_ITERATOR_INCLUDE_CONFLICTS,
+	if ((error = diff_prepare_iterator_opts(&prefix, &a_opts, GIT_ITERATOR_INCLUDE_CONFLICTS,
+						&b_opts, GIT_ITERATOR_DONT_AUTOEXPAND, opts)) < 0 ||
+	    (error = git_iterator_for_index(&a, repo, index, &a_opts)) < 0 ||
+	    (error = git_iterator_for_workdir(&b, repo, index, NULL, &b_opts)) < 0 ||
+	    (error = git_diff__from_iterators(&diff, repo, a, b, opts)) < 0)
+		goto out;
 
-		git_iterator_for_workdir(&b, repo, index, NULL, &b_opts),
-		GIT_ITERATOR_DONT_AUTOEXPAND
-	);
+	if ((diff->opts.flags & GIT_DIFF_UPDATE_INDEX) && ((git_diff_generated *)diff)->index_updated)
+		if ((error = git_index_write(index)) < 0)
+			goto out;
 
-	if (!error && (diff->opts.flags & GIT_DIFF_UPDATE_INDEX) != 0 &&
-		((git_diff_generated *)diff)->index_updated)
-		error = git_index_write(index);
-
-	if (!error)
-		*out = diff;
+	*out = diff;
+	diff = NULL;
+out:
+	git_iterator_free(a);
+	git_iterator_free(b);
+	git_diff_free(diff);
+	git__free(prefix);
 
 	return error;
 }
@@ -1407,24 +1437,33 @@ int git_diff_tree_to_workdir(
 	git_tree *old_tree,
 	const git_diff_options *opts)
 {
+	git_iterator_options a_opts = GIT_ITERATOR_OPTIONS_INIT,
+		b_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_iterator *a = NULL, *b = NULL;
 	git_diff *diff = NULL;
+	char *prefix = NULL;
 	git_index *index;
-	int error = 0;
+	int error;
 
 	assert(out && repo);
 
 	*out = NULL;
 
-	if ((error = git_repository_index__weakptr(&index, repo)))
-		return error;
+	if ((error = diff_prepare_iterator_opts(&prefix, &a_opts, 0,
+						&b_opts, GIT_ITERATOR_DONT_AUTOEXPAND, opts) < 0) ||
+	    (error = git_repository_index__weakptr(&index, repo)) < 0 ||
+	    (error = git_iterator_for_tree(&a, old_tree, &a_opts)) < 0 ||
+	    (error = git_iterator_for_workdir(&b, repo, index, old_tree, &b_opts)) < 0 ||
+	    (error = git_diff__from_iterators(&diff, repo, a, b, opts)) < 0)
+		goto out;
 
-	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree(&a, old_tree, &a_opts), 0,
-		git_iterator_for_workdir(&b, repo, index, old_tree, &b_opts), GIT_ITERATOR_DONT_AUTOEXPAND
-	);
-
-	if (!error)
-		*out = diff;
+	*out = diff;
+	diff = NULL;
+out:
+	git_iterator_free(a);
+	git_iterator_free(b);
+	git_diff_free(diff);
+	git__free(prefix);
 
 	return error;
 }
@@ -1468,24 +1507,35 @@ int git_diff_index_to_index(
 	git_index *new_index,
 	const git_diff_options *opts)
 {
-	git_diff *diff;
-	int error = 0;
+	git_iterator_options a_opts = GIT_ITERATOR_OPTIONS_INIT,
+		b_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_iterator *a = NULL, *b = NULL;
+	git_diff *diff = NULL;
+	char *prefix = NULL;
+	int error;
 
 	assert(out && old_index && new_index);
 
 	*out = NULL;
 
-	DIFF_FROM_ITERATORS(
-		git_iterator_for_index(&a, repo, old_index, &a_opts), GIT_ITERATOR_DONT_IGNORE_CASE,
-		git_iterator_for_index(&b, repo, new_index, &b_opts), GIT_ITERATOR_DONT_IGNORE_CASE
-	);
+	if ((error = diff_prepare_iterator_opts(&prefix, &a_opts, GIT_ITERATOR_DONT_IGNORE_CASE,
+						&b_opts, GIT_ITERATOR_DONT_IGNORE_CASE, opts) < 0) ||
+	    (error = git_iterator_for_index(&a, repo, old_index, &a_opts)) < 0 ||
+	    (error = git_iterator_for_index(&b, repo, new_index, &b_opts)) < 0 ||
+	    (error = git_diff__from_iterators(&diff, repo, a, b, opts)) < 0)
+		goto out;
 
 	/* if index is in case-insensitive order, re-sort deltas to match */
-	if (!error && (old_index->ignore_case || new_index->ignore_case))
+	if (old_index->ignore_case || new_index->ignore_case)
 		git_diff__set_ignore_case(diff, true);
 
-	if (!error)
-		*out = diff;
+	*out = diff;
+	diff = NULL;
+out:
+	git_iterator_free(a);
+	git_iterator_free(b);
+	git_diff_free(diff);
+	git__free(prefix);
 
 	return error;
 }

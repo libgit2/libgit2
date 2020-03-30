@@ -2430,7 +2430,7 @@ static int write_merge_head(
 	assert(repo && heads);
 
 	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_MERGE_HEAD_FILE)) < 0 ||
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_MERGE_FILE_MODE)) < 0)
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_MERGE_FILE_MODE)) < 0)
 		goto cleanup;
 
 	for (i = 0; i < heads_len; i++) {
@@ -2458,7 +2458,7 @@ static int write_merge_mode(git_repository *repo)
 	assert(repo);
 
 	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_MERGE_MODE_FILE)) < 0 ||
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_MERGE_FILE_MODE)) < 0)
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_MERGE_FILE_MODE)) < 0)
 		goto cleanup;
 
 	if ((error = git_filebuf_write(&file, "no-ff", 5)) < 0)
@@ -2689,7 +2689,7 @@ static int write_merge_msg(
 		entries[i].merge_head = heads[i];
 
 	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_MERGE_MSG_FILE)) < 0 ||
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_MERGE_FILE_MODE)) < 0 ||
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_MERGE_FILE_MODE)) < 0 ||
 		(error = git_filebuf_write(&file, "Merge ", 6)) < 0)
 		goto cleanup;
 

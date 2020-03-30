@@ -1,3 +1,48 @@
+v0.28.5
+-------
+
+This is a bugfix release with the following changes:
+
+- Fix an out-of-bounds read when applying patches that do not end
+  with a newline.
+
+- Fix an out-of-bounds read when decoding specially crafted
+  binary patches.
+
+- Fix an out-of-bounds read when receiving a specially crafted
+  "OK" packet via the smarthttp transport.
+
+- Fix lifetime for parsed patches depending on the lifetime of
+  the parsed buffe.
+
+- Several fixes when parsing and applying patches.
+
+- Fix computed patch IDs for patches that have no newline at end
+  of file.
+
+- Fix applying patches to trees that add new files.
+
+- Do not read configuration from a user's home directory if
+  running in a sandboxed environment.
+
+- Fix handling of nested ignore rules overriding wildcard
+  unignores in parent directories.
+
+- Fix reference locks not being correctly honored on Unix
+  systems.
+
+- Follow 308 redirects when fetching or pushing from remote
+  repositories on Windows.
+
+- Fix a race when detaching the libgit2 library on Windows.
+
+- Update the "binary" gitattribute macro to match git's change
+  to "-diff -merge -text -crlf".
+
+- Refuse to delete the HEAD reference.
+
+- Fixes for several memory leaks.
+
 v0.28.4
 --------
 

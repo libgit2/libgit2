@@ -408,7 +408,7 @@ on_error:
 
 static bool hunk_is_bufferblame(git_blame_hunk *hunk)
 {
-	return git_oid_iszero(&hunk->final_commit_id);
+	return hunk && git_oid_iszero(&hunk->final_commit_id);
 }
 
 static int buffer_hunk_cb(

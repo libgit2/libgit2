@@ -794,7 +794,7 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 	if (git_buf_joinpath(&ref_path, basedir, name) < 0)
 		return -1;
 
-	filebuf_flags = GIT_FILEBUF_FORCE;
+	filebuf_flags = GIT_FILEBUF_CREATE_LEADING_DIRS;
 	if (backend->fsync)
 		filebuf_flags |= GIT_FILEBUF_FSYNC;
 
@@ -2079,6 +2079,9 @@ int git_refdb_backend_fs(
 
 	backend = git__calloc(1, sizeof(refdb_fs_backend));
 	GIT_ERROR_CHECK_ALLOC(backend);
+
+	if (git_refdb_init_backend(&backend->parent, GIT_REFDB_BACKEND_VERSION) < 0)
+		goto fail;
 
 	backend->repo = repository;
 

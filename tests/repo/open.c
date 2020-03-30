@@ -88,6 +88,17 @@ void test_repo_open__open_with_discover(void)
 	cl_fixture_cleanup("attr");
 }
 
+void test_repo_open__check_if_repository(void)
+{
+	cl_git_sandbox_init("empty_standard_repo");
+
+	/* Pass NULL for the output parameter to check for but not open the repo */
+	cl_git_pass(git_repository_open_ext(NULL, "empty_standard_repo", 0, NULL));
+	cl_git_fail(git_repository_open_ext(NULL, "repo_does_not_exist", 0, NULL));
+
+	cl_fixture_cleanup("empty_standard_repo");
+}
+
 static void make_gitlink_dir(const char *dir, const char *linktext)
 {
 	git_buf path = GIT_BUF_INIT;
