@@ -179,6 +179,10 @@ if(USE_NTLMCLIENT)
 endif()
 add_feature_info(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
 
+add_subdirectory("${PROJECT_SOURCE_DIR}/deps/reftable" "${PROJECT_BINARY_DIR}/deps/reftable")
+list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/reftable/include")
+list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:reftable>")
+
 #
 # Optional external dependencies
 
