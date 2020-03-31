@@ -1881,6 +1881,7 @@ static const char *builtin_extensions[] = {
 	"noop",
 	"objectformat",
 	"worktreeconfig",
+	"refstorage"
 };
 
 static git_vector user_extensions = { 0, git__strcmp_cb };

@@ -39,28 +39,45 @@ int git_refdb_new(git_refdb **out, git_repository *repo)
 
 int git_refdb_open(git_refdb **out, git_repository *repo)
 {
+	const char *extension = NULL;
+	git_refdb_backend *backend;
+	git_config *cfg;
 	git_refdb *db;
-	git_refdb_backend *dir;
+	int error;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
-	if (git_refdb_new(&db, repo) < 0)
-		return -1;
+	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0 ||
+	    (error = git_config_get_string(&extension, cfg, "extensions.refStorage")) < 0)
+		if (error != GIT_ENOTFOUND)
+			goto out;
 
-	/* Add the default (filesystem) backend */
-	if (git_refdb_backend_fs(&dir, repo) < 0) {
-		git_refdb_free(db);
-		return -1;
+	if (!extension) {
+		if ((error = git_refdb_new(&db, repo)) < 0 ||
+		    (error = git_refdb_backend_fs(&backend, repo)) < 0)
+			goto out;
+	} else if (!git__strcmp(extension, "reftable")) {
+		if ((error = git_refdb_new(&db, repo)) < 0 ||
+		    (error = git_refdb_backend_reftable(&backend, repo)) < 0)
+			goto out;
+	} else {
+		git_error_set(GIT_ERROR_REFERENCE, "unknown reference storage format '%s'",
+			      extension);
+		error = GIT_EINVALID;
+		goto out;
 	}
 
 	db->repo = repo;
-	db->backend = dir;
-
+	db->backend = backend;
 	*out = db;
-	return 0;
+out:
+	if (error)
+		git_refdb_free(db);
+	git_config_free(cfg);
+	return error;
 }
 
 static void refdb_free_backend(git_refdb *db)

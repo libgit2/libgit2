@@ -371,10 +371,39 @@ static int refdb_reftable_iterator_new(
 	it->parent.next_name = refdb_reftable_iterator_next_name;
 	it->parent.free = refdb_reftable_iterator_free;
 	it->table = table;
+
 	if (glob) {
-		it->glob = git__strdup(glob);
-		GIT_ERROR_CHECK_ALLOC(it->glob);
+		const char *separator = NULL;
+		const char *pos;
+
+		for (pos = glob; *pos; pos++) {
+			switch (*pos) {
+			case '?':
+			case '*':
+			case '[':
+			case '\\':
+				break;
+			case '/':
+				separator = pos;
+				/* FALLTHROUGH */
+			default:
+				continue;
+			}
+			break;
+		}
+
+		if (separator) {
+			it->glob = git__strdup(glob);
+		} else {
+			git_str pattern = GIT_STR_INIT;
+			if ((git_str_printf(&pattern, "refs/%s", glob)) < 0)
+				goto out;
+			it->glob = git_str_detach(&pattern);
+		}
+	} else {
+		it->glob = git__strdup("refs/*");
 	}
+	GIT_ERROR_CHECK_ALLOC(it->glob);
 
 	if ((error = reftable_merged_table_seek_ref(table, &it->iter, "")) < 0)
 		goto out;
