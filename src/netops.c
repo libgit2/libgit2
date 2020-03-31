@@ -206,6 +206,35 @@ cleanup:
 	return error;
 }
 
+int gitno_connection_data_fmt(git_buf *buf, gitno_connection_data *d)
+{
+	if (d->host) {
+		git_buf_puts(buf, d->use_ssl ? prefix_https : prefix_http);
+
+		if (d->user) {
+			git_buf_puts(buf, d->user);
+
+			if (d->pass) {
+				git_buf_puts(buf, ":");
+				git_buf_puts(buf, d->pass);
+			}
+
+			git_buf_putc(buf, '@');
+		}
+
+		git_buf_puts(buf, d->host);
+
+		if (d->port && strcmp(d->port, gitno__default_port(d))) {
+			git_buf_putc(buf, ':');
+			git_buf_puts(buf, d->port);
+		}
+	}
+
+	git_buf_puts(buf, d->path ? d->path : "/");
+
+	return git_buf_oom(buf) ? -1 : 0;
+}
+
 void gitno_connection_data_free_ptrs(gitno_connection_data *d)
 {
 	git__free(d->host); d->host = NULL;
