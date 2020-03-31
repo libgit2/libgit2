@@ -4,9 +4,14 @@
 
 static git_repository *g_repo;
 
-void test_refs_update__initialize(void)
+void test_refs_update__initialize_fs(void)
 {
    g_repo = cl_git_sandbox_init("testrepo.git");
+}
+
+void test_refs_update__initialize_reftable(void)
+{
+   g_repo = cl_git_sandbox_init("testrepo-reftable.git");
 }
 
 void test_refs_update__cleanup(void)

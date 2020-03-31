@@ -12,9 +12,14 @@ static const char *other_commit_id = "a65fedf39aefe402d3bb6e24df4d4f5fe4547750";
 
 static git_repository *g_repo;
 
-void test_refs_races__initialize(void)
+void test_refs_races__initialize_fs(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
+}
+
+void test_refs_races__initialize_reftable(void)
+{
+   g_repo = cl_git_sandbox_init("testrepo-reftable");
 }
 
 void test_refs_races__cleanup(void)

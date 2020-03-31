@@ -45,9 +45,23 @@ void test_refs_branches_checkedout__head_is_not_checked_out(void)
 	cl_git_sandbox_cleanup();
 }
 
+void test_refs_branches_checkedout__head_is_not_checked_out_with_reftables(void)
+{
+	repo = cl_git_sandbox_init("testrepo-reftable");
+	assert_checked_out(repo, "HEAD", 0);
+	cl_git_sandbox_cleanup();
+}
+
 void test_refs_branches_checkedout__master_in_bare_repo_is_not_checked_out(void)
 {
 	repo = cl_git_sandbox_init("testrepo.git");
+	assert_checked_out(repo, "refs/heads/master", 0);
+	cl_git_sandbox_cleanup();
+}
+
+void test_refs_branches_checkedout__master_in_bare_repo_is_not_checked_out_with_reftables(void)
+{
+	repo = cl_git_sandbox_init("testrepo-reftable.git");
 	assert_checked_out(repo, "refs/heads/master", 0);
 	cl_git_sandbox_cleanup();
 }

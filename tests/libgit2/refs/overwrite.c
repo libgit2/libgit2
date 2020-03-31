@@ -11,14 +11,19 @@ static const char *ref_test_name = "refs/heads/test";
 
 static git_repository *g_repo;
 
-void test_refs_overwrite__initialize(void)
+void test_refs_overwrite__initialize_fs(void)
 {
-   g_repo = cl_git_sandbox_init("testrepo");
+	g_repo = cl_git_sandbox_init("testrepo");
+}
+
+void test_refs_overwrite__initialize_reftable(void)
+{
+	g_repo = cl_git_sandbox_init("testrepo-reftable");
 }
 
 void test_refs_overwrite__cleanup(void)
 {
-   cl_git_sandbox_cleanup();
+	cl_git_sandbox_cleanup();
 }
 
 void test_refs_overwrite__symbolic(void)

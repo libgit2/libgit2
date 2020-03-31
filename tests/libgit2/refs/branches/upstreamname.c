@@ -4,10 +4,16 @@
 static git_repository *repo;
 static git_buf upstream_name;
 
-void test_refs_branches_upstreamname__initialize(void)
+void test_refs_branches_upstreamname__initialize_fs(void)
 {
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+	memset(&upstream_name, 0, sizeof(git_buf));
+}
 
+void test_refs_branches_upstreamname__initialize_reftable(void)
+{
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo-reftable.git")));
+	memset(&upstream_name, 0, sizeof(git_buf));
 }
 
 void test_refs_branches_upstreamname__cleanup(void)

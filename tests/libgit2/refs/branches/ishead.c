@@ -5,9 +5,15 @@
 static git_repository *repo;
 static git_reference *branch;
 
-void test_refs_branches_ishead__initialize(void)
+void test_refs_branches_ishead__initialize_fs(void)
 {
 	repo = cl_git_sandbox_init("testrepo.git");
+	branch = NULL;
+}
+
+void test_refs_branches_ishead__initialize_reftable(void)
+{
+	repo = cl_git_sandbox_init("testrepo-reftable.git");
 	branch = NULL;
 }
 
@@ -62,17 +68,17 @@ void test_refs_branches_ishead__wont_be_fooled_by_a_non_branch(void)
 /*
  * $ git init .
  * Initialized empty Git repository in d:/temp/tempee/.git/
- * 
+ *
  * $ touch a && git add a
  * $ git commit -m" boom"
  * [master (root-commit) b47b758]  boom
  *  0 files changed
  *  create mode 100644 a
- * 
+ *
  * $ echo "ref: refs/heads/master" > .git/refs/heads/linked
  * $ echo "ref: refs/heads/linked" > .git/refs/heads/super
  * $ echo "ref: refs/heads/super" > .git/HEAD
- * 
+ *
  * $ git branch
  *   linked -> master
  * * master

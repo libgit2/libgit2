@@ -129,9 +129,14 @@ static void test_invalid_revspec(const char* invalid_spec)
 		GIT_EINVALIDSPEC, git_revparse(&revspec, g_repo, invalid_spec));
 }
 
-void test_refs_revparse__initialize(void)
+void test_refs_revparse__initialize_fs(void)
 {
 	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
+}
+
+void test_refs_revparse__initialize_reftable(void)
+{
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo-reftable.git")));
 }
 
 void test_refs_revparse__cleanup(void)

@@ -290,6 +290,9 @@ void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
 	git_str master_log_path = GIT_STR_INIT, moved_log_path = GIT_STR_INIT;
 	git_reflog *reflog;
 
+	if (!is_filesystem)
+		cl_skip();
+
 	cl_git_pass(git_reference_lookup(&master, g_repo, "refs/heads/master"));
 	cl_git_pass(git_reflog_read(&reflog, g_repo, "refs/heads/master"));
 
@@ -337,7 +340,11 @@ void test_refs_reflog_reflog__write_when_explicitly_active(void)
 	git_reference *ref;
 	git_oid id;
 
+	if (!is_filesystem)
+		cl_skip();
+
 	git_oid__fromstr(&id, current_master_tip, GIT_OID_SHA1);
+
 	cl_git_pass(git_reference_ensure_log(g_repo, "refs/tags/foo"));
 
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/tags/foo", &id, 1, NULL));

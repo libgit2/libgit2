@@ -7,9 +7,16 @@ static const char *remote_tracking_branch_name = "refs/remotes/test/master";
 static const char *expected_remote_name = "test";
 static int expected_remote_name_length;
 
-void test_refs_branches_remote__initialize(void)
+void test_refs_branches_remote__initialize_fs(void)
 {
 	g_repo = cl_git_sandbox_init("testrepo");
+
+	expected_remote_name_length = (int)strlen(expected_remote_name) + 1;
+}
+
+void test_refs_branches_remote__initialize_reftable(void)
+{
+	g_repo = cl_git_sandbox_init("testrepo-reftable");
 
 	expected_remote_name_length = (int)strlen(expected_remote_name) + 1;
 }

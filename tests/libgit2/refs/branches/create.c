@@ -6,23 +6,23 @@ static git_repository *repo;
 static git_commit *target;
 static git_reference *branch;
 
-void test_refs_branches_create__initialize(void)
+void test_refs_branches_create__initialize_fs(void)
 {
 	repo = cl_git_sandbox_init("testrepo.git");
-	branch = NULL;
-	target = NULL;
+}
+
+void test_refs_branches_create__initialize_reftable(void)
+{
+	repo = cl_git_sandbox_init("testrepo-reftable.git");
 }
 
 void test_refs_branches_create__cleanup(void)
 {
 	git_reference_free(branch);
 	branch = NULL;
-
 	git_commit_free(target);
 	target = NULL;
-
 	cl_git_sandbox_cleanup();
-	repo = NULL;
 }
 
 static void retrieve_target_from_oid(git_commit **out, git_repository *repo, const char *sha)
