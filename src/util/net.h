@@ -54,4 +54,10 @@ extern int git_net_url_fmt_path(git_buf *buf, git_net_url *url);
 /** Disposes the contents of the structure. */
 extern void git_net_url_dispose(git_net_url *url);
 
+/**
+ * Parses an SSH path string in user@host:path or ssh://host/path
+ * format and returns the results as a URL structure.
+ */
+extern int git_net_url_parse_ssh(git_net_url *url, const char *str);
+
 #endif

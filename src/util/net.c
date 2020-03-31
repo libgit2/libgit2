@@ -408,3 +408,37 @@ void git_net_url_dispose(git_net_url *url)
 	git__free(url->username); url->username = NULL;
 	git__free(url->password); url->password = NULL;
 }
+
+int git_net_url_parse_ssh(git_net_url *url, const char *given)
+{
+	const char *at, *colon;
+	size_t i;
+
+	static const char *ssh_prefixes[] = {
+		"ssh://", "ssh+git://", "git+ssh://"
+	};
+
+	for (i = 0; i < ARRAY_SIZE(ssh_prefixes); i++) {
+		if (!git__prefixcmp(given, ssh_prefixes[i]))
+			return git_net_url_parse(url, given);
+	}
+
+	if ((at = strchr(given, '@')) != NULL) {
+		url->username = git__substrdup(given, at - given);
+		GIT_ERROR_CHECK_ALLOC(url->username);
+
+		given = at + 1;
+	}
+
+	if ((colon = strchr(given, ':')) != NULL) {
+		url->host = git__substrdup(given, colon - given);
+		GIT_ERROR_CHECK_ALLOC(url->host);
+
+		given = colon + 1;
+	}
+
+	url->path = git__strdup(given);
+	GIT_ERROR_CHECK_ALLOC(url->path);
+
+	return 0;
+}
