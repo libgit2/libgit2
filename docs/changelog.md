@@ -43,6 +43,11 @@ This is a bugfix release with the following changes:
 
 - Fixes for several memory leaks.
 
+- When fetching from an anonymous remote using a URL with authentication
+  information provided in the URL (eg `https://foo:bar@example.com/repo`),
+  we would erroneously include the literal URL in the FETCH_HEAD file.
+  We now remove that to match git's behavior.
+
 v0.28.4
 --------
 
