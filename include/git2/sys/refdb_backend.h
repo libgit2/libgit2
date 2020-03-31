@@ -342,6 +342,10 @@ GIT_EXTERN(int) git_refdb_backend_fs(
 	git_refdb_backend **backend_out,
 	git_repository *repo);
 
+GIT_EXTERN(int) git_refdb_backend_reftable(
+	git_refdb_backend **out,
+	git_repository *repository);
+
 /**
  * Sets the custom backend to an existing reference DB
  *

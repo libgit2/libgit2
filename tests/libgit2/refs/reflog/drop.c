@@ -6,9 +6,17 @@ static git_repository *g_repo;
 static git_reflog *g_reflog;
 static size_t entrycount;
 
-void test_refs_reflog_drop__initialize(void)
+void test_refs_reflog_drop__initialize_fs(void)
 {
 	g_repo = cl_git_sandbox_init("testrepo.git");
+
+	git_reflog_read(&g_reflog, g_repo, "HEAD");
+	entrycount = git_reflog_entrycount(g_reflog);
+}
+
+void test_refs_reflog_drop__initialize_reftable(void)
+{
+	g_repo = cl_git_sandbox_init("testrepo-reftable.git");
 
 	git_reflog_read(&g_reflog, g_repo, "HEAD");
 	entrycount = git_reflog_entrycount(g_reflog);
