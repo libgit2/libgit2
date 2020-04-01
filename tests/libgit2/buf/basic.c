@@ -49,3 +49,19 @@ void test_buf_basic__printf(void)
 	cl_assert_equal_s(git_buf_cstr(&buf2), "shoop da 23 woop 42");
 	git_buf_dispose(&buf2);
 }
+
+void test_buf_basic__replace(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+	const char *replacements[][2] = {
+		{ "%a", "aaaaaaaa" },
+		{ "%b", "bbb" },
+		{ "%c", "REPLACEMENT FOR C" }
+	};
+
+	git_buf_puts(&buf, "one two %a three four %b five six %c seven");
+	git_buf_replace(&buf, replacements, 3);
+	cl_assert_equal_s("one two aaaaaaaa three four bbb five six REPLACEMENT FOR C seven", buf.ptr);
+
+	git_buf_dispose(&buf);
+}

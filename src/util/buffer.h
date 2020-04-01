@@ -257,4 +257,16 @@ int git_buf_splice(
 	const char *data,
 	size_t nb_to_insert);
 
+/**
+ * Find occurrences of substrings in the given buf, replacing them
+ * with the corresponding replacement value.  Replacements is an array
+ * of arrays of search strings and corresponding replacement strings.
+ * replacements[0][0] will be replaced with replacements[0][1],
+ * replacements[1][0] will be replaced with replacements[1][1], etc.
+ */
+int git_buf_replace(
+	git_buf *buf,
+	const char *replacements[][2],
+	size_t replacements_len);
+
 #endif

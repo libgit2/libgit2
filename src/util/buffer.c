@@ -1110,3 +1110,48 @@ int git_buf_system_errmsg(git_buf *out)
 	git_buf_puts(out, "no error");
 	return 0;
 }
+
+int git_buf_replace(
+	git_buf *buf,
+	const char *replacements[][2],
+	size_t replacements_len)
+{
+	git_buf replaced = GIT_BUF_INIT;
+	const char *c;
+	size_t i;
+	int error = 0;
+
+	ENSURE_SIZE(&replaced, buf->size);
+
+	for (c = buf->ptr; *c; ) {
+		/* Generally we just advance c */
+		const char *in = c, *out = c;
+		size_t in_len = 1, out_len = 1;
+
+		for (i = 0; i < replacements_len; i++) {
+			if (git__prefixcmp(c, replacements[i][0]) == 0) {
+				in = replacements[i][0];
+				in_len = strlen(in);
+
+				out = replacements[i][1];
+				out_len = strlen(out);
+
+				break;
+			}
+		}
+
+		git_buf_put(&replaced, out, out_len);
+		c += in_len;
+	}
+
+	if (git_buf_oom(&replaced)) {
+		error = -1;
+		goto done;
+	}
+
+	git_buf_swap(&replaced, buf);
+
+done:
+	git_buf_dispose(&replaced);
+	return error;
+}
