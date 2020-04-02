@@ -62,7 +62,8 @@ static const struct {
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "worktrees", true }
 };
 
-static int check_repositoryformatversion(git_config *config);
+static int check_repositoryformatversion(int *version, git_config *config);
+static int check_extensions(git_config *config, int version);
 
 #define GIT_COMMONDIR_FILE "commondir"
 #define GIT_GITDIR_FILE "gitdir"
@@ -72,6 +73,7 @@ static int check_repositoryformatversion(git_config *config);
 #define GIT_BRANCH_MASTER "master"
 
 #define GIT_REPO_VERSION 0
+#define GIT_REPO_MAX_VERSION 1
 
 git_buf git_repository__reserved_names_win32[] = {
 	{ DOT_GIT, 0, CONST_STRLEN(DOT_GIT) },
@@ -813,6 +815,7 @@ int git_repository_open_ext(
 		gitlink = GIT_BUF_INIT, commondir = GIT_BUF_INIT;
 	git_repository *repo = NULL;
 	git_config *config = NULL;
+	int version = 0;
 
 	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV)
 		return _git_repository_open_ext_from_env(repo_ptr, start_path);
@@ -854,7 +857,10 @@ int git_repository_open_ext(
 	if (error < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
 
-	if (config && (error = check_repositoryformatversion(config)) < 0)
+	if (config && (error = check_repositoryformatversion(&version, config)) < 0)
+		goto cleanup;
+
+	if ((error = check_extensions(config, version) < 0))
 		goto cleanup;
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
@@ -1350,11 +1356,11 @@ bool git_repository__reserved_names(
 }
 #endif
 
-static int check_repositoryformatversion(git_config *config)
+static int check_repositoryformatversion(int *version, git_config *config)
 {
-	int version, error;
+	int error;
 
-	error = git_config_get_int32(&version, config, "core.repositoryformatversion");
+	error = git_config_get_int32(version, config, "core.repositoryformatversion");
 	/* git ignores this if the config variable isn't there */
 	if (error == GIT_ENOTFOUND)
 		return 0;
@@ -1362,14 +1368,33 @@ static int check_repositoryformatversion(git_config *config)
 	if (error < 0)
 		return -1;
 
-	if (GIT_REPO_VERSION < version) {
+	if (GIT_REPO_MAX_VERSION < *version) {
 		git_error_set(GIT_ERROR_REPOSITORY,
-			"unsupported repository version %d. Only versions up to %d are supported.",
-			version, GIT_REPO_VERSION);
+			"unsupported repository version %d; only versions up to %d are supported",
+			*version, GIT_REPO_MAX_VERSION);
 		return -1;
 	}
 
 	return 0;
+}
+
+static int check_valid_extension(const git_config_entry *entry, void *payload)
+{
+	GIT_UNUSED(payload);
+
+	if (!strcmp(entry->name, "extensions.noop"))
+		return 0;
+
+	git_error_set(GIT_ERROR_REPOSITORY, "unsupported extension name %s", entry->name);
+	return -1;
+}
+
+static int check_extensions(git_config *config, int version)
+{
+	if (version < 1)
+		return 0;
+
+	return git_config_foreach_match(config, "^extensions\\.", check_valid_extension, NULL);
 }
 
 int git_repository_create_head(const char *git_dir, const char *ref_name)
@@ -1583,11 +1608,15 @@ static int repo_init_config(
 	git_config *config = NULL;
 	bool is_bare = ((flags & GIT_REPOSITORY_INIT_BARE) != 0);
 	bool is_reinit = ((flags & GIT_REPOSITORY_INIT__IS_REINIT) != 0);
+	int version = 0;
 
 	if ((error = repo_local_config(&config, &cfg_path, NULL, repo_dir)) < 0)
 		goto cleanup;
 
-	if (is_reinit && (error = check_repositoryformatversion(config)) < 0)
+	if (is_reinit && (error = check_repositoryformatversion(&version, config)) < 0)
+		goto cleanup;
+
+	if ((error = check_extensions(config, version) < 0))
 		goto cleanup;
 
 #define SET_REPO_CONFIG(TYPE, NAME, VAL) do { \
