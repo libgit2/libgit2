@@ -930,6 +930,9 @@ int get_delta_base(
 
 			git_oid_fromraw(&oid, base_info);
 			if ((entry = git_oidmap_get(p->idx_cache, &oid)) != NULL) {
+				if (entry->offset == 0)
+					return packfile_error("delta offset is zero");
+
 				*curpos += 20;
 				*delta_base_out = entry->offset;
 				return 0;
@@ -948,6 +951,9 @@ int get_delta_base(
 		*curpos += 20;
 	} else
 		return packfile_error("unknown object type");
+
+	if (base_offset == 0)
+		return packfile_error("delta offset is zero");
 
 	*delta_base_out = base_offset;
 	return 0;
