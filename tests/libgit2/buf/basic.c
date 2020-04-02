@@ -65,3 +65,32 @@ void test_buf_basic__replace(void)
 
 	git_buf_dispose(&buf);
 }
+
+void test_buf_basic__shellquote(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_puts(&buf, "filename"));
+	cl_git_pass(git_buf_shellquote(&buf));
+	cl_assert_equal_s("\'filename\'", buf.ptr);
+
+	git_buf_clear(&buf);
+
+	cl_git_pass(git_buf_puts(&buf, "file name"));
+	cl_git_pass(git_buf_shellquote(&buf));
+	cl_assert_equal_s("\'file name\'", buf.ptr);
+
+	git_buf_clear(&buf);
+
+	cl_git_pass(git_buf_puts(&buf, "file\'name"));
+	cl_git_pass(git_buf_shellquote(&buf));
+	cl_assert_equal_s("\'file\'\\\'\'name\'", buf.ptr);
+
+	git_buf_clear(&buf);
+
+	cl_git_pass(git_buf_puts(&buf, "file!name"));
+	cl_git_pass(git_buf_shellquote(&buf));
+	cl_assert_equal_s("\'file\'\\!\'name\'", buf.ptr);
+
+	git_buf_dispose(&buf);
+}

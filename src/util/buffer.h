@@ -269,4 +269,10 @@ int git_buf_replace(
 	const char *replacements[][2],
 	size_t replacements_len);
 
+/**
+ * Quote for shell safety.  Wrap the given buffer in single quotes,
+ * escaping any single quotes and exclamation points.
+ */
+int git_buf_shellquote(git_buf *buf);
+
 #endif

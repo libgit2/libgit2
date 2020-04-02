@@ -1155,3 +1155,40 @@ done:
 	git_buf_dispose(&replaced);
 	return error;
 }
+
+int git_buf_shellquote(git_buf *buf)
+{
+	git_buf quoted = GIT_BUF_INIT;
+	size_t i;
+	int error = 0;
+
+	ENSURE_SIZE(&quoted, buf->size);
+
+	git_buf_putc(&quoted, '\'');
+
+	for (i = 0; i < buf->size; i++) {
+		switch (buf->ptr[i]) {
+		case '\'':
+		case '!':
+			git_buf_puts(&quoted, "'\\");
+			git_buf_putc(&quoted, buf->ptr[i]);
+			git_buf_putc(&quoted, '\'');
+			break;
+		default:
+			git_buf_putc(&quoted, buf->ptr[i]);
+		}
+	}
+
+	git_buf_putc(&quoted, '\'');
+
+	if (git_buf_oom(&quoted)) {
+		error = -1;
+		goto done;
+	}
+
+	git_buf_swap(&quoted, buf);
+
+done:
+	git_buf_dispose(&quoted);
+	return error;
+}
