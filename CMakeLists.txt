@@ -49,7 +49,6 @@ OPTION(THREADSAFE			"Build libgit2 as threadsafe"				 ON)
 OPTION(BUILD_CLAR			"Build Tests using the Clar suite"			 ON)
 OPTION(BUILD_EXAMPLES			"Build library usage example apps"			OFF)
 OPTION(BUILD_FUZZERS			"Build the fuzz targets"				OFF)
-OPTION(TAGS				"Generate tags"						OFF)
 OPTION(PROFILE				"Generate profiling information"			OFF)
 OPTION(ENABLE_TRACE			"Enables tracing support"				ON)
 OPTION(LIBGIT2_FILENAME			"Name of the produced binary"				OFF)
@@ -308,25 +307,6 @@ ENDIF ()
 IF (BUILD_CLAR)
 	ENABLE_TESTING()
 	ADD_SUBDIRECTORY(tests)
-ENDIF ()
-
-IF (TAGS)
-	FIND_PROGRAM(CTAGS ctags)
-	IF (NOT CTAGS)
-		MESSAGE(FATAL_ERROR "Could not find ctags command")
-	ENDIF ()
-
-	FILE(GLOB_RECURSE SRC_ALL *.[ch])
-
-	ADD_CUSTOM_COMMAND(
-		OUTPUT tags
-		COMMAND ${CTAGS} -a ${SRC_ALL}
-		DEPENDS ${SRC_ALL}
-	)
-	ADD_CUSTOM_TARGET(
-		do_tags ALL
-		DEPENDS tags
-	)
 ENDIF ()
 
 IF (BUILD_EXAMPLES)
