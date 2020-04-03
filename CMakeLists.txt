@@ -25,7 +25,7 @@ IF(POLICY CMP0054)
 ENDIF()
 
 # Add find modules to the path
-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${libgit2_SOURCE_DIR}/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${libgit2_SOURCE_DIR}/cmake/")
 
 INCLUDE(CheckLibraryExists)
 INCLUDE(CheckFunctionExists)
