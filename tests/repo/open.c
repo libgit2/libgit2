@@ -36,7 +36,7 @@ void test_repo_open__format_version_1(void)
 	git_config_free(config);
 	git_repository_free(repo);
 
-	git_repository_open(&repo, "empty_bare.git");
+	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
 	cl_assert(git_repository_path(repo) != NULL);
 	cl_assert(git__suffixcmp(git_repository_path(repo), "/") == 0);
 	git_repository_free(repo);
@@ -58,7 +58,7 @@ void test_repo_open__format_version_1_with_valid_extension(void)
 	git_config_free(config);
 	git_repository_free(repo);
 
-	git_repository_open(&repo, "empty_bare.git");
+	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
 	cl_assert(git_repository_path(repo) != NULL);
 	cl_assert(git__suffixcmp(git_repository_path(repo), "/") == 0);
 	git_repository_free(repo);
