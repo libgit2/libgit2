@@ -25,7 +25,8 @@ const cli_opt_spec cli_common_opts[] = {
 };
 
 const cli_cmd_spec cli_cmds[] = {
-	{ "help", cmd_help, "Display help information" },
+	{ "clone", cmd_clone, "Clone a repository into a new directory" },
+	{ "help",  cmd_help,  "Display help information" },
 	{ NULL }
 };
 

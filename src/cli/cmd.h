@@ -25,6 +25,7 @@ extern const cli_cmd_spec cli_cmds[];
 extern const cli_cmd_spec *cli_cmd_spec_byname(const char *name);
 
 /* Commands */
+extern int cmd_clone(int argc, char **argv);
 extern int cmd_help(int argc, char **argv);
 
 #endif /* CLI_cmd_h__ */
