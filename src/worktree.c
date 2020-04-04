@@ -506,7 +506,7 @@ int git_worktree_prune_options_init(
 	return 0;
 }
 
-int git_worktree_pruneinit_options(git_worktree_prune_options *opts,
+int git_worktree_prune_init_options(git_worktree_prune_options *opts,
 	unsigned int version)
 {
 	return git_worktree_prune_options_init(opts, version);
