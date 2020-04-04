@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>commit.c</title>
+  <link rel="stylesheet" href="../css.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#HEAD">API Docs</a>
+          <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
+          <a class="source" href="blame.html">blame.c</a>
+          <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="checkout.html">checkout.c</a>
+          <a class="source" href="clone.html">clone.c</a>
+          <a class="source" href="commit.html">commit.c</a>
+          <a class="source" href="common.html">common.c</a>
+          <a class="source" href="config.html">config.c</a>
+          <a class="source" href="describe.html">describe.c</a>
+          <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="fetch.html">fetch.c</a>
+          <a class="source" href="for-each-ref.html">for-each-ref.c</a>
+          <a class="source" href="general.html">general.c</a>
+          <a class="source" href="index-pack.html">index-pack.c</a>
+          <a class="source" href="init.html">init.c</a>
+          <a class="source" href="lg2.html">lg2.c</a>
+          <a class="source" href="log.html">log.c</a>
+          <a class="source" href="ls-files.html">ls-files.c</a>
+          <a class="source" href="ls-remote.html">ls-remote.c</a>
+          <a class="source" href="merge.html">merge.c</a>
+          <a class="source" href="push.html">push.c</a>
+          <a class="source" href="remote.html">remote.c</a>
+          <a class="source" href="rev-list.html">rev-list.c</a>
+          <a class="source" href="rev-parse.html">rev-parse.c</a>
+          <a class="source" href="show-index.html">show-index.c</a>
+          <a class="source" href="stash.html">stash.c</a>
+          <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>commit.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
+<span class="cm"> * libgit2 &quot;commit&quot; example - shows how to create a git commit</span>
+<span class="cm"> *</span>
+<span class="cm"> * Written by the libgit2 contributors</span>
+<span class="cm"> *</span>
+<span class="cm"> * To the extent possible under law, the author(s) have dedicated all copyright</span>
+<span class="cm"> * and related and neighboring rights to this software to the public domain</span>
+<span class="cm"> * worldwide. This software is distributed without any warranty.</span>
+<span class="cm"> *</span>
+<span class="cm"> * You should have received a copy of the CC0 Public Domain Dedication along</span>
+<span class="cm"> * with this software. If not, see</span>
+<span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
+<span class="cm"> */</span>
+
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>This example demonstrates the libgit2 commit APIs to roughly
+simulate <code>git commit</code> with the commit message argument.</p>
+
+<p>This does not have:</p>
+
+<ul>
+<li>Robust error handling</li>
+<li>Most of the <code>git commit</code> options</li>
+</ul>
+
+<p>This does have:</p>
+
+<ul>
+<li>Example of performing a git commit with a comment</li>
+</ul>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="kt">int</span> <span class="nf">lg2_commit</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">opt</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">comment</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
+
+  <span class="n">git_oid</span> <span class="n">commit_oid</span><span class="p">,</span><span class="n">tree_oid</span><span class="p">;</span>
+  <span class="n">git_tree</span> <span class="o">*</span><span class="n">tree</span><span class="p">;</span>
+  <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">;</span>	
+  <span class="n">git_object</span> <span class="o">*</span><span class="n">parent</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_reference</span> <span class="o">*</span><span class="n">ref</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_signature</span> <span class="o">*</span><span class="n">signature</span><span class="p">;</span>	
+
+  <span class="cm">/* Validate args */</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">3</span> <span class="o">||</span> <span class="n">strcmp</span><span class="p">(</span><span class="n">opt</span><span class="p">,</span> <span class="s">&quot;-m&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span> <span class="p">(</span><span class="s">&quot;USAGE: %s -m &lt;comment&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_revparse_ext-7" class="fnlink" href="../../#HEAD/group/revparse/git_revparse_ext">git_revparse_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="s">&quot;HEAD&quot;</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">==</span> <span class="n">GIT_ENOTFOUND</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;HEAD not found. Creating first commit</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="n">git_error</span> <span class="o">*</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_error_last-2" class="fnlink" href="../../#HEAD/group/error/git_error_last">git_error_last</a></span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ERROR %d: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">-&gt;</span><span class="n">klass</span><span class="p">,</span> <span class="n">err</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="k">else</span> <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ERROR %d: no detailed info</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_index-6" class="fnlink" href="../../#HEAD/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;Could not open repository index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_index_write_tree-5" class="fnlink" href="../../#HEAD/group/index/git_index_write_tree">git_index_write_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree_oid</span><span class="p">,</span> <span class="n">index</span><span class="p">),</span> <span class="s">&quot;Could not write tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);;</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_index_write-4" class="fnlink" href="../../#HEAD/group/index/git_index_write">git_index_write</a></span><span class="p">(</span><span class="n">index</span><span class="p">),</span> <span class="s">&quot;Could not write index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);;</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tree_lookup-10" class="fnlink" href="../../#HEAD/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_oid</span><span class="p">),</span> <span class="s">&quot;Error looking up tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_signature_default-8" class="fnlink" href="../../#HEAD/group/signature/git_signature_default">git_signature_default</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">signature</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;Error creating signature&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_commit_create_v-1" class="fnlink" href="../../#HEAD/group/commit/git_commit_create_v">git_commit_create_v</a></span><span class="p">(</span>
+    <span class="o">&amp;</span><span class="n">commit_oid</span><span class="p">,</span>
+    <span class="n">repo</span><span class="p">,</span>
+    <span class="s">&quot;HEAD&quot;</span><span class="p">,</span>
+    <span class="n">signature</span><span class="p">,</span>
+    <span class="n">signature</span><span class="p">,</span>
+    <span class="nb">NULL</span><span class="p">,</span>
+    <span class="n">comment</span><span class="p">,</span>
+    <span class="n">tree</span><span class="p">,</span>
+    <span class="n">parent</span> <span class="o">?</span> <span class="mi">1</span> <span class="o">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">parent</span><span class="p">),</span> <span class="s">&quot;Error creating commit&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n"><a name="git_index_free-3" class="fnlink" href="../../#HEAD/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+  <span class="n"><a name="git_signature_free-9" class="fnlink" href="../../#HEAD/group/signature/git_signature_free">git_signature_free</a></span><span class="p">(</span><span class="n">signature</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_free-11" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">tree</span><span class="p">);</span>	
+
+  <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
