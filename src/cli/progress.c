@@ -43,7 +43,7 @@ GIT_INLINE(size_t) nl_len(bool *has_nl, const char *str, size_t len)
 	return i;
 }
 
-static int progress_write(cli_progress *progress, bool force, git_buf *line)
+static int progress_write(cli_progress *progress, bool force, git_str *line)
 {
 	bool has_nl;
 	size_t no_nl = no_nl_len(line->ptr, line->size);
@@ -54,9 +54,9 @@ static int progress_write(cli_progress *progress, bool force, git_buf *line)
 	/* Avoid spamming the console with progress updates */
 	if (!force && line->ptr[line->size - 1] != '\n' && progress->last_update) {
 		if (now - progress->last_update < PROGRESS_UPDATE_TIME) {
-			git_buf_clear(&progress->deferred);
-			git_buf_put(&progress->deferred, line->ptr, line->size);
-			return git_buf_oom(&progress->deferred) ? -1 : 0;
+			git_str_clear(&progress->deferred);
+			git_str_put(&progress->deferred, line->ptr, line->size);
+			return git_str_oom(&progress->deferred) ? -1 : 0;
 		}
 	}
 
@@ -79,17 +79,17 @@ static int progress_write(cli_progress *progress, bool force, git_buf *line)
 	    fflush(stdout) != 0)
 		return_os_error("could not print status");
 
-	git_buf_clear(&progress->onscreen);
+	git_str_clear(&progress->onscreen);
 
 	if (line->ptr[line->size - 1] == '\n') {
 		progress->last_update = 0;
 	} else {
-		git_buf_put(&progress->onscreen, line->ptr, line->size);
+		git_str_put(&progress->onscreen, line->ptr, line->size);
 		progress->last_update = now;
 	}
 
-	git_buf_clear(&progress->deferred);
-	return git_buf_oom(&progress->onscreen) ? -1 : 0;
+	git_str_clear(&progress->deferred);
+	return git_str_oom(&progress->onscreen) ? -1 : 0;
 }
 
 static int progress_printf(cli_progress *progress, bool force, const char *fmt, ...)
@@ -97,12 +97,12 @@ static int progress_printf(cli_progress *progress, bool force, const char *fmt, 
 
 int progress_printf(cli_progress *progress, bool force, const char *fmt, ...)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_BUF_INIT;
 	va_list ap;
 	int error;
 
 	va_start(ap, fmt);
-	error = git_buf_vprintf(&buf, fmt, ap);
+	error = git_str_vprintf(&buf, fmt, ap);
 	va_end(ap);
 
 	if (error < 0)
@@ -110,7 +110,7 @@ int progress_printf(cli_progress *progress, bool force, const char *fmt, ...)
 
 	error = progress_write(progress, force, &buf);
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	return error;
 }
 
@@ -123,8 +123,8 @@ static int progress_complete(cli_progress *progress)
 		if (printf("\n") < 0)
 			return_os_error("could not print status");
 
-	git_buf_clear(&progress->deferred);
-	git_buf_clear(&progress->onscreen);
+	git_str_clear(&progress->deferred);
+	git_str_clear(&progress->onscreen);
 	progress->last_update = 0;
 	progress->action_start = 0;
 	progress->action_finish = 0;
@@ -149,7 +149,7 @@ int cli_progress_fetch_sideband(const char *str, int len, void *payload)
 		return 0;
 
 	/* Accumulate the sideband data, then print it line-at-a-time. */
-	if (git_buf_put(&progress->sideband, str, len) < 0)
+	if (git_str_put(&progress->sideband, str, len) < 0)
 		return -1;
 
 	str = progress->sideband.ptr;
@@ -174,7 +174,7 @@ int cli_progress_fetch_sideband(const char *str, int len, void *payload)
 		remain -= line_len;
 	}
 
-	git_buf_consume_bytes(&progress->sideband, (progress->sideband.size - remain));
+	git_str_consume_bytes(&progress->sideband, (progress->sideband.size - remain));
 
 	return 0;
 }
@@ -272,7 +272,7 @@ int cli_progress_fetch_transfer(const git_indexer_progress *stats, void *payload
 
 	default:
 		/* should not be reached */
-		cli_die("unexpected progress state");
+		GIT_ASSERT(!"unexpected progress state");
 	}
 
 	return error;
@@ -322,9 +322,9 @@ void cli_progress_dispose(cli_progress *progress)
 	if (progress == NULL)
 		return;
 
-	git_buf_dispose(&progress->sideband);
-	git_buf_dispose(&progress->onscreen);
-	git_buf_dispose(&progress->deferred);
+	git_str_dispose(&progress->sideband);
+	git_str_dispose(&progress->onscreen);
+	git_str_dispose(&progress->deferred);
 
 	memset(progress, 0, sizeof(cli_progress));
 }

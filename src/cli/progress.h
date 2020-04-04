@@ -9,7 +9,7 @@
 #define CLI_progress_h__
 
 #include <git2.h>
-#include "buffer.h"
+#include "str.h"
 
 /*
  * A general purpose set of progress printing functions.  An individual
@@ -37,9 +37,9 @@ typedef struct {
 	double last_update;
 
 	/* Accumulators for partial output and deferred updates. */
-	git_buf sideband;
-	git_buf onscreen;
-	git_buf deferred;
+	git_str sideband;
+	git_str onscreen;
+	git_str deferred;
 } cli_progress;
 
 #define CLI_PROGRESS_INIT { 0 }
