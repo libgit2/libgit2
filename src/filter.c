@@ -266,7 +266,8 @@ int git_filter_register(
 {
 	int error;
 
-	assert(name && filter);
+	GIT_ASSERT_ARG(name);
+	GIT_ASSERT_ARG(filter);
 
 	if (git_rwlock_wrlock(&filter_registry.lock) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to lock filter registry");
@@ -293,7 +294,7 @@ int git_filter_unregister(const char *name)
 	git_filter_def *fdef;
 	int error = 0;
 
-	assert(name);
+	GIT_ASSERT_ARG(name);
 
 	/* cannot unregister default filters */
 	if (!strcmp(GIT_FILTER_CRLF, name) || !strcmp(GIT_FILTER_IDENT, name)) {
@@ -618,7 +619,7 @@ int git_filter_list_contains(
 {
 	size_t i;
 
-	assert(name);
+	GIT_ASSERT_ARG(name);
 
 	if (!fl)
 		return 0;
@@ -639,7 +640,8 @@ int git_filter_list_push(
 	git_filter_def *fdef = NULL;
 	git_filter_entry *fe;
 
-	assert(fl && filter);
+	GIT_ASSERT_ARG(fl);
+	GIT_ASSERT_ARG(filter);
 
 	if (git_rwlock_rdlock(&filter_registry.lock) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to lock filter registry");
@@ -684,9 +686,8 @@ static int buf_stream_write(
 	git_writestream *s, const char *buffer, size_t len)
 {
 	struct buf_stream *buf_stream = (struct buf_stream *)s;
-	assert(buf_stream);
-
-	assert(buf_stream->complete == 0);
+	GIT_ASSERT_ARG(buf_stream);
+	GIT_ASSERT(buf_stream->complete == 0);
 
 	return git_buf_put(buf_stream->target, buffer, len);
 }
@@ -694,9 +695,9 @@ static int buf_stream_write(
 static int buf_stream_close(git_writestream *s)
 {
 	struct buf_stream *buf_stream = (struct buf_stream *)s;
-	assert(buf_stream);
+	GIT_ASSERT_ARG(buf_stream);
 
-	assert(buf_stream->complete == 0);
+	GIT_ASSERT(buf_stream->complete == 0);
 	buf_stream->complete = 1;
 
 	return 0;
@@ -740,7 +741,7 @@ int git_filter_list_apply_to_data(
 		&writer.parent)) < 0)
 			return error;
 
-	assert(writer.complete);
+	GIT_ASSERT(writer.complete);
 	return error;
 }
 
@@ -759,7 +760,7 @@ int git_filter_list_apply_to_file(
 		filters, repo, path, &writer.parent)) < 0)
 			return error;
 
-	assert(writer.complete);
+	GIT_ASSERT(writer.complete);
 	return error;
 }
 
@@ -790,7 +791,7 @@ int git_filter_list_apply_to_blob(
 		filters, blob, &writer.parent)) < 0)
 			return error;
 
-	assert(writer.complete);
+	GIT_ASSERT(writer.complete);
 	return error;
 }
 
@@ -809,7 +810,7 @@ static int proxy_stream_write(
 	git_writestream *s, const char *buffer, size_t len)
 {
 	struct proxy_stream *proxy_stream = (struct proxy_stream *)s;
-	assert(proxy_stream);
+	GIT_ASSERT_ARG(proxy_stream);
 
 	return git_buf_put(&proxy_stream->input, buffer, len);
 }
@@ -821,7 +822,7 @@ static int proxy_stream_close(git_writestream *s)
 	git_error_state error_state = {0};
 	int error;
 
-	assert(proxy_stream);
+	GIT_ASSERT_ARG(proxy_stream);
 
 	error = proxy_stream->filter->apply(
 		proxy_stream->filter,
@@ -856,11 +857,12 @@ static int proxy_stream_close(git_writestream *s)
 static void proxy_stream_free(git_writestream *s)
 {
 	struct proxy_stream *proxy_stream = (struct proxy_stream *)s;
-	assert(proxy_stream);
 
-	git_buf_dispose(&proxy_stream->input);
-	git_buf_dispose(&proxy_stream->temp_buf);
-	git__free(proxy_stream);
+	if (proxy_stream) {
+		git_buf_dispose(&proxy_stream->input);
+		git_buf_dispose(&proxy_stream->temp_buf);
+		git__free(proxy_stream);
+	}
 }
 
 static int proxy_stream_init(
@@ -914,7 +916,7 @@ static int stream_list_init(
 		git_filter_entry *fe = git_array_get(filters->filters, filter_idx);
 		git_writestream *filter_stream;
 
-		assert(fe->filter->stream || fe->filter->apply);
+		GIT_ASSERT(fe->filter->stream || fe->filter->apply);
 
 		/* If necessary, create a stream that proxies the traditional
 		 * application.
