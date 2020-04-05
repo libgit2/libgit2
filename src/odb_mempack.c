@@ -156,7 +156,7 @@ int git_mempack_new(git_odb_backend **out)
 {
 	struct memory_packer_db *db;
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 
 	db = git__calloc(1, sizeof(struct memory_packer_db));
 	GIT_ERROR_CHECK_ALLOC(db);
