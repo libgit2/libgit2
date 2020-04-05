@@ -817,7 +817,8 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_inde
 	/* Now that we have data in the pack, let's try to parse it */
 
 	/* As the file grows any windows we try to use will be out of date */
-	git_mwindow_free_all(mwf);
+	if ((error = git_mwindow_free_all(mwf)) < 0)
+		goto on_error;
 
 	while (stats->indexed_objects < idx->nr_objects) {
 		if ((error = read_stream_object(idx, stats)) != 0) {
@@ -861,16 +862,16 @@ static int index_path(git_buf *path, git_indexer *idx, const char *suffix)
  * Rewind the packfile by the trailer, as we might need to fix the
  * packfile by injecting objects at the tail and must overwrite it.
  */
-static void seek_back_trailer(git_indexer *idx)
+static int seek_back_trailer(git_indexer *idx)
 {
 	idx->pack->mwf.size -= GIT_OID_RAWSZ;
-	git_mwindow_free_all(&idx->pack->mwf);
+	return git_mwindow_free_all(&idx->pack->mwf);
 }
 
 static int inject_object(git_indexer *idx, git_oid *id)
 {
-	git_odb_object *obj;
-	struct entry *entry;
+	git_odb_object *obj = NULL;
+	struct entry *entry = NULL;
 	struct git_pack_entry *pentry = NULL;
 	git_oid foo = {{0}};
 	unsigned char hdr[64];
@@ -880,12 +881,14 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	size_t len, hdr_len;
 	int error;
 
-	seek_back_trailer(idx);
+	if ((error = seek_back_trailer(idx)) < 0)
+		goto cleanup;
+
 	entry_start = idx->pack->mwf.size;
 
-	if (git_odb_read(&obj, idx->odb, id) < 0) {
+	if ((error = git_odb_read(&obj, idx->odb, id)) < 0) {
 		git_error_set(GIT_ERROR_INDEXER, "missing delta bases");
-		return -1;
+		goto cleanup;
 	}
 
 	data = git_odb_object_data(obj);
@@ -1085,7 +1088,9 @@ static int update_header_and_rehash(git_indexer *idx, git_indexer_progress *stat
 	 * hash_partially() keep the existing trailer out of the
 	 * calculation.
 	 */
-	git_mwindow_free_all(mwf);
+	if (git_mwindow_free_all(mwf) < 0)
+		return -1;
+
 	idx->inbuf_len = 0;
 	while (hashed < mwf->size) {
 		ptr = git_mwindow_open(mwf, &w, hashed, chunk, &left);
@@ -1257,7 +1262,8 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 	if (git_filebuf_commit_at(&index_file, filename.ptr) < 0)
 		goto on_error;
 
-	git_mwindow_free_all(&idx->pack->mwf);
+	if (git_mwindow_free_all(&idx->pack->mwf) < 0)
+		goto on_error;
 
 	/* Truncate file to undo rounding up to next page_size in append_to_pack */
 	if (p_ftruncate(idx->pack->mwf.fd, idx->pack->mwf.size) < 0) {

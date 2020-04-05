@@ -52,7 +52,7 @@ int git_mwindow_global_init(void)
 {
 	int error;
 
-	assert(!git__pack_cache);
+	GIT_ASSERT(!git__pack_cache);
 
 	if ((error = git_mutex_init(&git__mwindow_mutex)) < 0 ||
 	    (error = git_strmap_new(&git__pack_cache)) < 0)
@@ -105,18 +105,18 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 	return 0;
 }
 
-void git_mwindow_put_pack(struct git_pack_file *pack)
+int git_mwindow_put_pack(struct git_pack_file *pack)
 {
-	int count;
+	int count, error;
 
-	if (git_mutex_lock(&git__mwindow_mutex) < 0)
-		return;
+	if ((error = git_mutex_lock(&git__mwindow_mutex)) < 0)
+		return error;
 
 	/* put before get would be a corrupted state */
-	assert(git__pack_cache);
+	GIT_ASSERT(git__pack_cache);
 
 	/* if we cannot find it, the state is corrupted */
-	assert(git_strmap_exists(git__pack_cache, pack->pack_name));
+	GIT_ASSERT(git_strmap_exists(git__pack_cache, pack->pack_name));
 
 	count = git_atomic_dec(&pack->refcount);
 	if (count == 0) {
@@ -125,26 +125,30 @@ void git_mwindow_put_pack(struct git_pack_file *pack)
 	}
 
 	git_mutex_unlock(&git__mwindow_mutex);
-	return;
+	return 0;
 }
 
-void git_mwindow_free_all(git_mwindow_file *mwf)
+int git_mwindow_free_all(git_mwindow_file *mwf)
 {
+	int error;
+
 	if (git_mutex_lock(&git__mwindow_mutex)) {
 		git_error_set(GIT_ERROR_THREAD, "unable to lock mwindow mutex");
-		return;
+		return -1;
 	}
 
-	git_mwindow_free_all_locked(mwf);
+	error = git_mwindow_free_all_locked(mwf);
 
 	git_mutex_unlock(&git__mwindow_mutex);
+
+	return error;
 }
 
 /*
  * Free all the windows in a sequence, typically because we're done
  * with the file
  */
-void git_mwindow_free_all_locked(git_mwindow_file *mwf)
+int git_mwindow_free_all_locked(git_mwindow_file *mwf)
 {
 	git_mwindow_ctl *ctl = &git_mwindow__mem_ctl;
 	size_t i;
@@ -166,7 +170,7 @@ void git_mwindow_free_all_locked(git_mwindow_file *mwf)
 
 	while (mwf->windows) {
 		git_mwindow *w = mwf->windows;
-		assert(w->inuse_cnt == 0);
+		GIT_ASSERT(w->inuse_cnt == 0);
 
 		ctl->mapped -= w->window_map.len;
 		ctl->open_windows--;
@@ -176,6 +180,8 @@ void git_mwindow_free_all_locked(git_mwindow_file *mwf)
 		mwf->windows = w->next;
 		git__free(w);
 	}
+
+	return 0;
 }
 
 /*
@@ -210,8 +216,8 @@ static bool git_mwindow_scan_recently_used(
 	git_mwindow *lru_window = NULL, *lru_last = NULL;
 	bool found = false;
 
-	assert(mwf);
-	assert(out_window);
+	GIT_ASSERT_ARG(mwf);
+	GIT_ASSERT_ARG(out_window);
 
 	lru_window = *out_window;
 	if (out_last)
