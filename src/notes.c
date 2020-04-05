@@ -629,9 +629,8 @@ int git_note_default_ref(git_buf *out, git_repository *repo)
 
 	assert(out && repo);
 
-	git_buf_sanitize(out);
-
-	if ((error = note_get_default_ref(&default_ref, repo)) < 0)
+	if ((error = git_buf_sanitize(out)) < 0 ||
+	    (error = note_get_default_ref(&default_ref, repo)) < 0)
 		return error;
 
 	git_buf_attach(out, default_ref, strlen(default_ref));

@@ -417,7 +417,8 @@ int git_branch_upstream_name(
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(refname);
 
-	git_buf_sanitize(out);
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 	if (!git_reference__is_branch(refname))
 		return not_a_local_branch(refname);
@@ -478,9 +479,8 @@ int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *r
 	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
 		return error;
 
-	git_buf_sanitize(buf);
-
-	if ((error = retrieve_upstream_configuration(buf, cfg, refname, "branch.%s.remote")) < 0)
+	if ((error = git_buf_sanitize(buf)) < 0 ||
+	    (error = retrieve_upstream_configuration(buf, cfg, refname, "branch.%s.remote")) < 0)
 		return error;
 
 	if (git_buf_len(buf) == 0) {
@@ -505,7 +505,8 @@ int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refna
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(refname);
 
-	git_buf_sanitize(buf);
+	if ((error = git_buf_sanitize(buf)) < 0)
+		return error;
 
 	/* Verify that this is a remote branch */
 	if (!git_reference__is_remote(refname)) {

@@ -423,10 +423,11 @@ int git_blob_filter(
 	GIT_ASSERT_ARG(path);
 	GIT_ASSERT_ARG(out);
 
-	git_buf_sanitize(out);
-
 	GIT_ERROR_CHECK_VERSION(
 		given_opts, GIT_BLOB_FILTER_OPTIONS_VERSION, "git_blob_filter_options");
+
+	if (git_buf_sanitize(out) < 0)
+		return -1;
 
 	if (given_opts != NULL)
 		memcpy(&opts, given_opts, sizeof(git_blob_filter_options));

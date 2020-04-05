@@ -725,8 +725,9 @@ int git_filter_list_apply_to_data(
 	struct buf_stream writer;
 	int error;
 
-	git_buf_sanitize(tgt);
-	git_buf_sanitize(src);
+	if ((error = git_buf_sanitize(tgt)) < 0 ||
+	    (error = git_buf_sanitize(src)) < 0)
+	    return error;
 
 	if (!filters) {
 		git_buf_attach_notowned(tgt, src->ptr, src->size);
@@ -832,7 +833,9 @@ static int proxy_stream_close(git_writestream *s)
 	if (error == GIT_PASSTHROUGH) {
 		writebuf = &proxy_stream->input;
 	} else if (error == 0) {
-		git_buf_sanitize(proxy_stream->output);
+		if ((error = git_buf_sanitize(proxy_stream->output)) < 0)
+			return error;
+
 		writebuf = proxy_stream->output;
 	} else {
 		/* close stream before erroring out taking care
@@ -1004,7 +1007,8 @@ int git_filter_list_stream_data(
 	git_writestream *stream_start;
 	int error, initialized = 0;
 
-	git_buf_sanitize(data);
+	if ((error = git_buf_sanitize(data)) < 0)
+		return error;
 
 	if ((error = stream_list_init(&stream_start, &filter_streams, filters, target)) < 0)
 		goto out;

@@ -945,10 +945,12 @@ int git_repository_discover(
 	const char *ceiling_dirs)
 {
 	uint32_t flags = across_fs ? GIT_REPOSITORY_OPEN_CROSS_FS : 0;
+	int error;
 
 	assert(start_path);
 
-	git_buf_sanitize(out);
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 	return find_repo(out, NULL, NULL, NULL, start_path, flags, ceiling_dirs);
 }
@@ -2609,7 +2611,8 @@ int git_repository_message(git_buf *out, git_repository *repo)
 	struct stat st;
 	int error;
 
-	git_buf_sanitize(out);
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 	if (git_buf_joinpath(&path, repo->gitdir, GIT_MERGE_MSG_FILE) < 0)
 		return -1;

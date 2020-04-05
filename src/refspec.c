@@ -245,8 +245,11 @@ static int refspec_transform(
 {
 	const char *from_star, *to_star;
 	size_t replacement_len, star_offset;
+	int error;
 
-	git_buf_sanitize(out);
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
+
 	git_buf_clear(out);
 
 	/*
@@ -278,8 +281,12 @@ static int refspec_transform(
 
 int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *name)
 {
+	int error;
+
 	assert(out && spec && name);
-	git_buf_sanitize(out);
+
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 	if (!git_refspec_src_matches(spec, name)) {
 		git_error_set(GIT_ERROR_INVALID, "ref '%s' doesn't match the source", name);
@@ -294,8 +301,12 @@ int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *nam
 
 int git_refspec_rtransform(git_buf *out, const git_refspec *spec, const char *name)
 {
+	int error;
+
 	assert(out && spec && name);
-	git_buf_sanitize(out);
+
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 	if (!git_refspec_dst_matches(spec, name)) {
 		git_error_set(GIT_ERROR_INVALID, "ref '%s' doesn't match the destination", name);

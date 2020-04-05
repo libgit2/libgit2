@@ -140,13 +140,17 @@ void git_buf_free(git_buf *buf)
 }
 #endif
 
-void git_buf_sanitize(git_buf *buf)
+int git_buf_sanitize(git_buf *buf)
 {
 	if (buf->ptr == NULL) {
-		assert(buf->size == 0 && buf->asize == 0);
+		GIT_ASSERT_ARG(buf->size == 0 && buf->asize == 0);
+
 		buf->ptr = git_buf__initbuf;
-	} else if (buf->asize > buf->size)
+	} else if (buf->asize > buf->size) {
 		buf->ptr[buf->size] = '\0';
+	}
+
+	return 0;
 }
 
 void git_buf_clear(git_buf *buf)

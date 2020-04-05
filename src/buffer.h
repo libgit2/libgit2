@@ -69,7 +69,7 @@ extern int git_buf_try_grow(
  * git_buf__initbuf. If a buffer with a non-NULL ptr is passed in, this method
  * assures that the buffer is '\0'-terminated.
  */
-extern void git_buf_sanitize(git_buf *buf);
+extern int git_buf_sanitize(git_buf *buf);
 
 extern void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
 extern char *git_buf_detach(git_buf *buf);

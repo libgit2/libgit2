@@ -1363,8 +1363,13 @@ int git_packbuilder_foreach(git_packbuilder *pb, int (*cb)(void *buf, size_t siz
 
 int git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb)
 {
+	int error;
+
+	if ((error = git_buf_sanitize(buf)) < 0)
+		return error;
+
 	PREPARE_PACK;
-	git_buf_sanitize(buf);
+
 	return write_pack(pb, &write_pack_buf, buf);
 }
 

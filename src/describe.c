@@ -780,7 +780,8 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 	GIT_ERROR_CHECK_VERSION(given, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION, "git_describe_format_options");
 	normalize_format_options(&opts, given);
 
-	git_buf_sanitize(out);
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 
 	if (opts.always_use_long_format && opts.abbreviated_size == 0) {

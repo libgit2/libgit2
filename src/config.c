@@ -886,7 +886,8 @@ int git_config_get_string_buf(
 	int ret;
 	const char *str;
 
-	git_buf_sanitize(out);
+	if ((ret = git_buf_sanitize(out)) < 0)
+		return ret;
 
 	ret  = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS);
 	str = !ret ? (entry->value ? entry->value : "") : NULL;
@@ -1084,19 +1085,31 @@ void git_config_iterator_free(git_config_iterator *iter)
 
 int git_config_find_global(git_buf *path)
 {
-	git_buf_sanitize(path);
+	int error;
+
+	if ((error = git_buf_sanitize(path)) < 0)
+		return error;
+
 	return git_sysdir_find_global_file(path, GIT_CONFIG_FILENAME_GLOBAL);
 }
 
 int git_config_find_xdg(git_buf *path)
 {
-	git_buf_sanitize(path);
+	int error;
+
+	if ((error = git_buf_sanitize(path)) < 0)
+		return error;
+
 	return git_sysdir_find_xdg_file(path, GIT_CONFIG_FILENAME_XDG);
 }
 
 int git_config_find_system(git_buf *path)
 {
-	git_buf_sanitize(path);
+	int error;
+
+	if ((error = git_buf_sanitize(path)) < 0)
+		return error;
+
 	return git_sysdir_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
 }
 
@@ -1104,7 +1117,9 @@ int git_config_find_programdata(git_buf *path)
 {
 	int ret;
 
-	git_buf_sanitize(path);
+	if ((ret = git_buf_sanitize(path)) < 0)
+		return ret;
+
 	ret = git_sysdir_find_programdata_file(path,
 					       GIT_CONFIG_FILENAME_PROGRAMDATA);
 	if (ret != GIT_OK)
@@ -1360,9 +1375,12 @@ fail_parse:
 
 int git_config_parse_path(git_buf *out, const char *value)
 {
+	int error;
+
 	assert(out && value);
 
-	git_buf_sanitize(out);
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 	if (value[0] == '~') {
 		if (value[1] != '\0' && value[1] != '/') {

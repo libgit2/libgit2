@@ -998,7 +998,8 @@ int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *ur
 
 	assert(out && repo && url);
 
-	git_buf_sanitize(out);
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 	/* We do this in all platforms in case someone on Windows created the .gitmodules */
 	if (strchr(url, '\\')) {
