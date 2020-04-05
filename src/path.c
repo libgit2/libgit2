@@ -274,24 +274,6 @@ size_t git_path_basename_offset(git_buf *buffer)
 	return 0;
 }
 
-const char *git_path_topdir(const char *path)
-{
-	size_t len;
-	ssize_t i;
-
-	assert(path);
-	len = strlen(path);
-
-	if (!len || path[len - 1] != '/')
-		return NULL;
-
-	for (i = (ssize_t)len - 2; i >= 0; --i)
-		if (path[i] == '/')
-			break;
-
-	return &path[i + 1];
-}
-
 int git_path_root(const char *path)
 {
 	int offset = 0, prefix_len;
