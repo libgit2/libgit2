@@ -58,7 +58,9 @@ int git_attr_get(
 	git_attr_rule *rule;
 	git_dir_flag dir_flag = GIT_DIR_FLAG_UNKNOWN;
 
-	assert(value && repo && name);
+	GIT_ASSERT_ARG(value);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
 
 	*value = NULL;
 
@@ -123,7 +125,10 @@ int git_attr_get_many_with_session(
 	if (!num_attr)
 		return 0;
 
-	assert(values && repo && names);
+	GIT_ASSERT_ARG(values);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(pathname);
+	GIT_ASSERT_ARG(names);
 
 	if (git_repository_is_bare(repo))
 		dir_flag = GIT_DIR_FLAG_FALSE;
@@ -206,7 +211,8 @@ int git_attr_foreach(
 	git_strmap *seen = NULL;
 	git_dir_flag dir_flag = GIT_DIR_FLAG_UNKNOWN;
 
-	assert(repo && callback);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(callback);
 
 	if (git_repository_is_bare(repo))
 		dir_flag = GIT_DIR_FLAG_FALSE;
@@ -377,6 +383,9 @@ int git_attr_add_macro(
 	int error;
 	git_attr_rule *macro = NULL;
 	git_pool *pool;
+
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
 
 	if ((error = git_attr_cache__init(repo)) < 0)
 		return error;
