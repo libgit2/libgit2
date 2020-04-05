@@ -133,13 +133,13 @@ typedef struct {
 	uint8_t ignore_ch[256];
 } hashsig_in_progress;
 
-static void hashsig_in_progress_init(
+static int hashsig_in_progress_init(
 	hashsig_in_progress *prog, git_hashsig *sig)
 {
 	int i;
 
 	/* no more than one can be set */
-	assert(!(sig->opt & GIT_HASHSIG_IGNORE_WHITESPACE) ||
+	GIT_ASSERT(!(sig->opt & GIT_HASHSIG_IGNORE_WHITESPACE) ||
 		   !(sig->opt & GIT_HASHSIG_SMART_WHITESPACE));
 
 	if (sig->opt & GIT_HASHSIG_IGNORE_WHITESPACE) {
@@ -153,6 +153,8 @@ static void hashsig_in_progress_init(
 	} else {
 		memset(prog, 0, sizeof(*prog));
 	}
+
+	return 0;
 }
 
 static int hashsig_add_hashes(
@@ -251,7 +253,8 @@ int git_hashsig_create(
 	git_hashsig *sig = hashsig_alloc(opts);
 	GIT_ERROR_CHECK_ALLOC(sig);
 
-	hashsig_in_progress_init(&prog, sig);
+	if ((error = hashsig_in_progress_init(&prog, sig)) < 0)
+		return error;
 
 	error = hashsig_add_hashes(sig, (const uint8_t *)buf, buflen, &prog);
 
@@ -283,7 +286,8 @@ int git_hashsig_create_fromfile(
 		return fd;
 	}
 
-	hashsig_in_progress_init(&prog, sig);
+	if ((error = hashsig_in_progress_init(&prog, sig)) < 0)
+		return error;
 
 	while (!error) {
 		if ((buflen = p_read(fd, buf, sizeof(buf))) <= 0) {
@@ -318,7 +322,7 @@ static int hashsig_heap_compare(const hashsig_heap *a, const hashsig_heap *b)
 {
 	int matches = 0, i, j, cmp;
 
-	assert(a->cmp == b->cmp);
+	GIT_ASSERT_WITH_RETVAL(a->cmp == b->cmp, 0);
 
 	/* hash heaps are sorted - just look for overlap vs total */
 
@@ -354,9 +358,16 @@ int git_hashsig_compare(const git_hashsig *a, const git_hashsig *b)
 	/* if we have fewer than the maximum number of elements, then just use
 	 * one array since the two arrays will be the same
 	 */
-	if (a->mins.size < HASHSIG_HEAP_SIZE)
+	if (a->mins.size < HASHSIG_HEAP_SIZE) {
 		return hashsig_heap_compare(&a->mins, &b->mins);
-	else
-		return (hashsig_heap_compare(&a->mins, &b->mins) +
-				hashsig_heap_compare(&a->maxs, &b->maxs)) / 2;
+	} else {
+		int mins, maxs;
+
+		if ((mins = hashsig_heap_compare(&a->mins, &b->mins)) < 0)
+			return mins;
+		if ((maxs = hashsig_heap_compare(&a->maxs, &b->maxs)) < 0)
+			return maxs;
+
+		return (mins + maxs) / 2;
+	}
 }
