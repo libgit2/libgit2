@@ -99,7 +99,7 @@ int git_error_set_str(int error_class, const char *string)
 {
 	git_buf *buf = &GIT_THREADSTATE->error_buf;
 
-	assert(string);
+	GIT_ASSERT_ARG(string);
 
 	if (!string) {
 		git_error_set(GIT_ERROR_INVALID, "unspecified caller error");
