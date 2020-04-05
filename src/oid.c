@@ -26,7 +26,8 @@ int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 	size_t p;
 	int v;
 
-	assert(out && str);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(str);
 
 	if (!length)
 		return oid_error_invalid("too short");
@@ -316,7 +317,7 @@ git_oid_shorten *git_oid_shorten_new(size_t min_length)
 {
 	git_oid_shorten *os;
 
-	assert((size_t)((int)min_length) == min_length);
+	GIT_ASSERT_ARG_WITH_RETVAL((size_t)((int)min_length) == min_length, NULL);
 
 	os = git__calloc(1, sizeof(git_oid_shorten));
 	if (os == NULL)
