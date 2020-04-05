@@ -187,7 +187,7 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 
 	/* Make sure we were given a section header */
 	c = line[pos++];
-	assert(c == '[');
+	GIT_ASSERT(c == '[');
 
 	c = line[pos++];
 

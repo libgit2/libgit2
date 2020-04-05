@@ -108,7 +108,8 @@ int git_config_add_file_ondisk(
 	struct stat st;
 	int res;
 
-	assert(cfg && path);
+	GIT_ASSERT_ARG(cfg);
+	GIT_ASSERT_ARG(path);
 
 	res = p_stat(path, &st);
 	if (res < 0 && errno != ENOENT && errno != ENOTDIR) {
@@ -316,7 +317,8 @@ int git_config_add_backend(
 	backend_internal *internal;
 	int result;
 
-	assert(cfg && backend);
+	GIT_ASSERT_ARG(cfg);
+	GIT_ASSERT_ARG(backend);
 
 	GIT_ERROR_CHECK_VERSION(backend, GIT_CONFIG_BACKEND_VERSION, "git_config_backend");
 
@@ -514,7 +516,8 @@ int git_config_backend_foreach_match(
 	git_regexp regex;
 	int error = 0;
 
-	assert(backend && cb);
+	GIT_ASSERT_ARG(backend);
+	GIT_ASSERT_ARG(cb);
 
 	if (regexp && git_regexp_compile(&regex, regexp, 0) < 0)
 		return -1;
@@ -1197,7 +1200,7 @@ int git_config_lock(git_transaction **out, git_config *cfg)
 	git_config_backend *backend;
 	backend_internal *internal;
 
-	assert(cfg);
+	GIT_ASSERT_ARG(cfg);
 
 	internal = git_vector_get(&cfg->backends, 0);
 	if (!internal || !internal->backend) {
@@ -1217,7 +1220,7 @@ int git_config_unlock(git_config *cfg, int commit)
 	git_config_backend *backend;
 	backend_internal *internal;
 
-	assert(cfg);
+	GIT_ASSERT_ARG(cfg);
 
 	internal = git_vector_get(&cfg->backends, 0);
 	if (!internal || !internal->backend) {
@@ -1377,7 +1380,8 @@ int git_config_parse_path(git_buf *out, const char *value)
 {
 	int error;
 
-	assert(out && value);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(value);
 
 	if ((error = git_buf_sanitize(out)) < 0)
 		return error;
@@ -1423,7 +1427,8 @@ int git_config__normalize_name(const char *in, char **out)
 {
 	char *name, *fdot, *ldot;
 
-	assert(in && out);
+	GIT_ASSERT_ARG(in);
+	GIT_ASSERT_ARG(out);
 
 	name = git__strdup(in);
 	GIT_ERROR_CHECK_ALLOC(name);
