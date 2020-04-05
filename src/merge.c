@@ -139,7 +139,9 @@ int git_merge_base_many(git_oid *out, git_repository *repo, size_t length, const
 	git_commit_list *result = NULL;
 	int error = 0;
 
-	assert(out && repo && input_array);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(input_array);
 
 	if ((error = merge_bases_many(&result, &walk, repo, length, input_array)) < 0)
 		return error;
@@ -159,7 +161,9 @@ int git_merge_bases_many(git_oidarray *out, git_repository *repo, size_t length,
 	int error = 0;
 	git_array_oid_t array;
 
-	assert(out && repo && input_array);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(input_array);
 
 	if ((error = merge_bases_many(&result, &walk, repo, length, input_array)) < 0)
 		return error;
@@ -193,7 +197,9 @@ int git_merge_base_octopus(git_oid *out, git_repository *repo, size_t length, co
 	unsigned int i;
 	int error = -1;
 
-	assert(out && repo && input_array);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(input_array);
 
 	if (length < 2) {
 		git_error_set(GIT_ERROR_INVALID, "at least two commits are required to find an ancestor");
@@ -581,7 +587,8 @@ int git_repository_mergehead_foreach(
 	git_oid oid;
 	int error = 0;
 
-	assert(repo && cb);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(cb);
 
 	if ((error = git_buf_joinpath(&merge_head_path, repo->gitdir,
 		GIT_MERGE_HEAD_FILE)) < 0)
@@ -650,7 +657,9 @@ static int merge_conflict_resolve_trivial(
 	git_index_entry const *result = NULL;
 	int error = 0;
 
-	assert(resolved && diff_list && conflict);
+	GIT_ASSERT_ARG(resolved);
+	GIT_ASSERT_ARG(diff_list);
+	GIT_ASSERT_ARG(conflict);
 
 	*resolved = 0;
 
@@ -733,7 +742,9 @@ static int merge_conflict_resolve_one_removed(
 	int ours_changed, theirs_changed;
 	int error = 0;
 
-	assert(resolved && diff_list && conflict);
+	GIT_ASSERT_ARG(resolved);
+	GIT_ASSERT_ARG(diff_list);
+	GIT_ASSERT_ARG(conflict);
 
 	*resolved = 0;
 
@@ -773,7 +784,9 @@ static int merge_conflict_resolve_one_renamed(
 	git_index_entry *merged;
 	int error = 0;
 
-	assert(resolved && diff_list && conflict);
+	GIT_ASSERT_ARG(resolved);
+	GIT_ASSERT_ARG(diff_list);
+	GIT_ASSERT_ARG(conflict);
 
 	*resolved = 0;
 
@@ -917,7 +930,9 @@ static int merge_conflict_resolve_contents(
 	bool fallback = false;
 	int error;
 
-	assert(resolved && diff_list && conflict);
+	GIT_ASSERT_ARG(resolved);
+	GIT_ASSERT_ARG(diff_list);
+	GIT_ASSERT_ARG(conflict);
 
 	*resolved = 0;
 
@@ -1517,7 +1532,8 @@ int git_merge_diff_list__find_renames(
 	size_t src_count, tgt_count, i;
 	int error = 0;
 
-	assert(diff_list && opts);
+	GIT_ASSERT_ARG(diff_list);
+	GIT_ASSERT_ARG(opts);
 
 	if ((opts->flags & GIT_MERGE_FIND_RENAMES) == 0)
 		return 0;
@@ -1843,7 +1859,8 @@ static int merge_normalize_opts(
 	git_config_entry *entry = NULL;
 	int error = 0;
 
-	assert(repo && opts);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(opts);
 
 	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
 		return error;
@@ -2070,7 +2087,8 @@ int git_merge__iterators(
 	size_t i;
 	int error = 0;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
@@ -2154,7 +2172,8 @@ int git_merge_trees(
 	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	/* if one side is treesame to the ancestor, take the other side */
 	if (ancestor_tree && merge_opts && (merge_opts->flags & GIT_MERGE_SKIP_REUC)) {
@@ -2441,7 +2460,8 @@ static int write_merge_head(
 	size_t i;
 	int error = 0;
 
-	assert(repo && heads);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(heads);
 
 	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_MERGE_HEAD_FILE)) < 0 ||
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_MERGE_FILE_MODE)) < 0)
@@ -2469,7 +2489,7 @@ static int write_merge_mode(git_repository *repo)
 	git_buf file_path = GIT_BUF_INIT;
 	int error = 0;
 
-	assert(repo);
+	GIT_ASSERT_ARG(repo);
 
 	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_MERGE_MODE_FILE)) < 0 ||
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_MERGE_FILE_MODE)) < 0)
@@ -2689,7 +2709,8 @@ static int write_merge_msg(
 	char sep = 0;
 	int error = 0;
 
-	assert(repo && heads);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(heads);
 
 	entries = git__calloc(heads_len, sizeof(struct merge_msg_entry));
 	GIT_ERROR_CHECK_ALLOC(entries);
@@ -2800,7 +2821,9 @@ int git_merge__setup(
 {
 	int error = 0;
 
-	assert (repo && our_head && heads);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(our_head);
+	GIT_ASSERT_ARG(heads);
 
 	if ((error = git_repository__set_orig_head(repo, git_annotated_commit_id(our_head))) == 0 &&
 		(error = write_merge_head(repo, heads, heads_len)) == 0 &&
@@ -2824,7 +2847,9 @@ static int merge_ancestor_head(
 	size_t i, alloc_len;
 	int error = 0;
 
-	assert(repo && our_head && their_heads);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(our_head);
+	GIT_ASSERT_ARG(their_heads);
 
 	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, their_heads_len, 1);
 	oids = git__calloc(alloc_len, sizeof(git_oid));
@@ -3202,7 +3227,10 @@ int git_merge_analysis_for_ref(
 	int error = 0;
 	bool unborn;
 
-	assert(analysis_out && preference_out && repo && their_heads && their_heads_len > 0);
+	GIT_ASSERT_ARG(analysis_out);
+	GIT_ASSERT_ARG(preference_out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(their_heads && their_heads_len > 0);
 
 	if (their_heads_len != 1) {
 		git_error_set(GIT_ERROR_MERGE, "can only merge a single branch");
@@ -3284,7 +3312,8 @@ int git_merge(
 	unsigned int checkout_strategy;
 	int error = 0;
 
-	assert(repo && their_heads && their_heads_len > 0);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(their_heads && their_heads_len > 0);
 
 	if (their_heads_len != 1) {
 		git_error_set(GIT_ERROR_MERGE, "can only merge a single branch");
