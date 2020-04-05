@@ -556,22 +556,26 @@ int git_buf_printf(git_buf *buf, const char *format, ...)
 	return r;
 }
 
-void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf)
+int git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf)
 {
 	size_t copylen;
 
-	assert(data && datasize && buf);
+	GIT_ASSERT_ARG(data);
+	GIT_ASSERT_ARG(datasize);
+	GIT_ASSERT_ARG(buf);
 
 	data[0] = '\0';
 
 	if (buf->size == 0 || buf->asize <= 0)
-		return;
+		return 0;
 
 	copylen = buf->size;
 	if (copylen > datasize - 1)
 		copylen = datasize - 1;
 	memmove(data, buf->ptr, copylen);
 	data[copylen] = '\0';
+
+	return 0;
 }
 
 void git_buf_consume_bytes(git_buf *buf, size_t len)

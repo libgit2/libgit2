@@ -1024,7 +1024,8 @@ int git_reference_normalize_name(
 		goto cleanup;
 	}
 
-	git_buf_copy_cstr(buffer_out, buffer_size, &buf);
+	if ((error = git_buf_copy_cstr(buffer_out, buffer_size, &buf)) < 0)
+		goto cleanup;
 
 	error = 0;
 

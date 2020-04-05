@@ -145,7 +145,7 @@ GIT_INLINE(size_t) git_buf_len(const git_buf *buf)
 	return buf->size;
 }
 
-void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf);
+int git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf);
 
 #define git_buf_PUTS(buf, str) git_buf_put(buf, str, sizeof(str) - 1)
 
