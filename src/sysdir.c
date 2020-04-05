@@ -45,7 +45,7 @@ static int get_passwd_home(git_buf *out, uid_t uid)
 	long buflen;
 	int error;
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 
 	if ((buflen = sysconf(_SC_GETPW_R_SIZE_MAX)) == -1)
 		buflen = 1024;
@@ -204,7 +204,7 @@ static int git_sysdir_check_selector(git_sysdir_t which)
 
 int git_sysdir_get(const git_buf **out, git_sysdir_t which)
 {
-	assert(out);
+	GIT_ASSERT_ARG(out);
 
 	*out = NULL;
 
