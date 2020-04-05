@@ -69,7 +69,7 @@ int git_buf_text_crlf_to_lf(git_buf *tgt, const git_buf *src)
 	size_t new_size;
 	char *out;
 
-	assert(tgt != src);
+	GIT_ASSERT(tgt != src);
 
 	if (!next)
 		return git_buf_set(tgt, src->ptr, src->size);
@@ -116,7 +116,7 @@ int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src)
 	const char *next = memchr(scan, '\n', src->size);
 	size_t alloclen;
 
-	assert(tgt != src);
+	GIT_ASSERT(tgt != src);
 
 	if (!next)
 		return git_buf_set(tgt, src->ptr, src->size);
