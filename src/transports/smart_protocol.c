@@ -64,7 +64,9 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 			continue;
 		}
 
-		gitno_consume(buf, line_end);
+		if (gitno_consume(buf, line_end) < 0)
+			return -1;
+
 		if (pkt->type == GIT_PKT_ERR) {
 			git_error_set(GIT_ERROR_NET, "remote error: %s", ((git_pkt_err *)pkt)->error);
 			git__free(pkt);
@@ -236,7 +238,9 @@ static int recv_pkt(git_pkt **out_pkt, git_pkt_type *out_type, gitno_buffer *buf
 		}
 	} while (error);
 
-	gitno_consume(buf, line_end);
+	if (gitno_consume(buf, line_end) < 0)
+		return -1;
+
 	if (out_type != NULL)
 		*out_type = pkt->type;
 	if (out_pkt != NULL)
@@ -791,7 +795,8 @@ static int parse_report(transport_smart *transport, git_push *push)
 			continue;
 		}
 
-		gitno_consume(buf, line_end);
+		if (gitno_consume(buf, line_end) < 0)
+			return -1;
 
 		error = 0;
 
