@@ -67,7 +67,6 @@ static void free_cache_object(void *o)
 	git_pack_cache_entry *e = (git_pack_cache_entry *)o;
 
 	if (e != NULL) {
-		assert(e->refcount.val == 0);
 		git__free(e->raw.data);
 		git__free(e);
 	}
@@ -311,8 +310,9 @@ static int pack_index_open(struct git_pack_file *p)
 	if (p->index_version > -1)
 		return 0;
 
+	/* checked by git_pack_file alloc */
 	name_len = strlen(p->pack_name);
-	assert(name_len > strlen(".pack")); /* checked by git_pack_file alloc */
+	GIT_ASSERT(name_len > strlen(".pack"));
 
 	if (git_buf_init(&idx_name, name_len) < 0)
 		return -1;
@@ -372,12 +372,12 @@ static unsigned char *pack_window_open(
  *  - each byte afterwards: low seven bits are size continuation,
  *    with the high bit being "size continues"
  */
-size_t git_packfile__object_header(unsigned char *hdr, size_t size, git_object_t type)
+int git_packfile__object_header(size_t *out, unsigned char *hdr, size_t size, git_object_t type)
 {
 	unsigned char *hdr_base;
 	unsigned char c;
 
-	assert(type >= GIT_OBJECT_COMMIT && type <= GIT_OBJECT_REF_DELTA);
+	GIT_ASSERT_ARG(type >= GIT_OBJECT_COMMIT && type <= GIT_OBJECT_REF_DELTA);
 
 	/* TODO: add support for chunked objects; see git.git 6c0d19b1 */
 
@@ -392,7 +392,8 @@ size_t git_packfile__object_header(unsigned char *hdr, size_t size, git_object_t
 	}
 	*hdr++ = c;
 
-	return (hdr - hdr_base);
+	*out = (hdr - hdr_base);
+	return 0;
 }
 
 
@@ -899,7 +900,7 @@ int get_delta_base(
 	off64_t base_offset;
 	git_oid unused;
 
-	assert(delta_base_out);
+	GIT_ASSERT_ARG(delta_base_out);
 
 	base_info = pack_window_open(p, w_curs, *curpos, &left);
 	/* Assumption: the only reason this would fail is because the file is too small */
@@ -1211,8 +1212,7 @@ int git_pack_foreach_entry(
 		if ((error = pack_index_open(p)) < 0)
 			return error;
 
-		assert(p->index_map.data);
-
+		GIT_ASSERT(p->index_map.data);
 		index = p->index_map.data;
 	}
 
@@ -1299,7 +1299,8 @@ static int pack_entry_find_offset(
 
 		if ((error = pack_index_open(p)) < 0)
 			return error;
-		assert(p->index_map.data);
+
+		GIT_ASSERT(p->index_map.data);
 	}
 
 	index = p->index_map.data;
@@ -1388,7 +1389,7 @@ int git_pack_entry_find(
 	git_oid found_oid;
 	int error;
 
-	assert(p);
+	GIT_ASSERT_ARG(p);
 
 	if (len == GIT_OID_HEXSZ && p->num_bad_objects) {
 		unsigned i;

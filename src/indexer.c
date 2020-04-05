@@ -900,8 +900,8 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	entry->crc = crc32(0L, Z_NULL, 0);
 
 	/* Write out the object header */
-	hdr_len = git_packfile__object_header(hdr, len, git_odb_object_type(obj));
-	if ((error = append_to_pack(idx, hdr, hdr_len)) < 0)
+	if ((error = git_packfile__object_header(&hdr_len, hdr, len, git_odb_object_type(obj))) < 0 ||
+	    (error = append_to_pack(idx, hdr, hdr_len)) < 0)
 		goto cleanup;
 
 	idx->pack->mwf.size += hdr_len;

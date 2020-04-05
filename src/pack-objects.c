@@ -347,10 +347,9 @@ static int write_object(
 	}
 
 	/* Write header */
-	hdr_len = git_packfile__object_header(hdr, data_len, type);
-
-	if ((error = write_cb(hdr, hdr_len, cb_data)) < 0 ||
-		(error = git_hash_update(&pb->ctx, hdr, hdr_len)) < 0)
+	if ((error = git_packfile__object_header(&hdr_len, hdr, data_len, type)) < 0 ||
+	    (error = write_cb(hdr, hdr_len, cb_data)) < 0 ||
+	    (error = git_hash_update(&pb->ctx, hdr, hdr_len)) < 0)
 		goto done;
 
 	if (type == GIT_OBJECT_REF_DELTA) {

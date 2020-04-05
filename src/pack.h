@@ -133,7 +133,7 @@ typedef struct git_packfile_stream {
 	git_mwindow *mw;
 } git_packfile_stream;
 
-size_t git_packfile__object_header(unsigned char *hdr, size_t size, git_object_t type);
+int git_packfile__object_header(size_t *out, unsigned char *hdr, size_t size, git_object_t type);
 
 int git_packfile__name(char **out, const char *path);
 
