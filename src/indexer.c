@@ -239,7 +239,8 @@ static int hash_object_stream(git_indexer*idx, git_packfile_stream *stream)
 {
 	ssize_t read;
 
-	assert(idx && stream);
+	GIT_ASSERT_ARG(idx);
+	GIT_ASSERT_ARG(stream);
 
 	do {
 		if ((read = git_packfile_stream_read(stream, idx->objbuf, sizeof(idx->objbuf))) < 0)
@@ -262,7 +263,7 @@ static int advance_delta_offset(git_indexer *idx, git_object_t type)
 {
 	git_mwindow *w = NULL;
 
-	assert(type == GIT_OBJECT_REF_DELTA || type == GIT_OBJECT_OFS_DELTA);
+	GIT_ASSERT_ARG(type == GIT_OBJECT_REF_DELTA || type == GIT_OBJECT_OFS_DELTA);
 
 	if (type == GIT_OBJECT_REF_DELTA) {
 		idx->off += GIT_OID_RAWSZ;
@@ -282,7 +283,7 @@ static int read_object_stream(git_indexer *idx, git_packfile_stream *stream)
 {
 	ssize_t read;
 
-	assert(stream);
+	GIT_ASSERT_ARG(stream);
 
 	do {
 		read = git_packfile_stream_read(stream, idx->objbuf, sizeof(idx->objbuf));
@@ -612,7 +613,8 @@ static int write_at(git_indexer *idx, const void *data, off64_t offset, size_t s
 	git_map map;
 	int error;
 
-	assert(data && size);
+	GIT_ASSERT_ARG(data);
+	GIT_ASSERT_ARG(size);
 
 	if ((error = git__mmap_alignment(&mmap_alignment)) < 0)
 		return error;
@@ -759,7 +761,9 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_inde
 	struct git_pack_header *hdr = &idx->hdr;
 	git_mwindow_file *mwf = &idx->pack->mwf;
 
-	assert(idx && data && stats);
+	GIT_ASSERT_ARG(idx);
+	GIT_ASSERT_ARG(data);
+	GIT_ASSERT_ARG(stats);
 
 	if ((error = append_to_pack(idx, data, size)) < 0)
 		return error;
@@ -950,7 +954,7 @@ static int fix_thin_pack(git_indexer *idx, git_indexer_progress *stats)
 	unsigned int left = 0;
 	git_oid base;
 
-	assert(git_vector_length(&idx->deltas) > 0);
+	GIT_ASSERT(git_vector_length(&idx->deltas) > 0);
 
 	if (idx->odb == NULL) {
 		git_error_set(GIT_ERROR_INDEXER, "cannot fix a thin pack without an ODB");
