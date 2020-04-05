@@ -655,7 +655,8 @@ int git_describe_commit(
 	int error = -1;
 	git_describe_options normalized;
 
-	assert(committish);
+	GIT_ASSERT_ARG(result);
+	GIT_ASSERT_ARG(committish);
 
 	data.result = git__calloc(1, sizeof(git_describe_result));
 	GIT_ERROR_CHECK_ALLOC(data.result);
@@ -775,7 +776,8 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 	struct commit_name *name;
 	git_describe_format_options opts;
 
-	assert(out && result);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(result);
 
 	GIT_ERROR_CHECK_VERSION(given, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION, "git_describe_format_options");
 	normalize_format_options(&opts, given);
