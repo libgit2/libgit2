@@ -129,7 +129,8 @@ int p_getcwd(char *buffer_out, size_t size)
 {
 	char *cwd_buffer;
 
-	assert(buffer_out && size > 0);
+	GIT_ASSERT_ARG(buffer_out);
+	GIT_ASSERT_ARG(size > 0);
 
 	cwd_buffer = getcwd(buffer_out, size);
 
@@ -196,7 +197,7 @@ int p_write(git_file fd, const void *buf, size_t cnt)
 	while (cnt) {
 		ssize_t r;
 #ifdef GIT_WIN32
-		assert((size_t)((unsigned int)cnt) == cnt);
+		GIT_ASSERT((size_t)((unsigned int)cnt) == cnt);
 		r = write(fd, b, (unsigned int)cnt);
 #else
 		r = write(fd, b, cnt);
@@ -263,7 +264,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, off64_t offset
 
 int p_munmap(git_map *map)
 {
-	assert(map != NULL);
+	GIT_ASSERT_ARG(map);
 	git__free(map->data);
 
 	return 0;
