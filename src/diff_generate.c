@@ -128,7 +128,7 @@ static int diff_delta__from_one(
 	git_diff_delta *delta;
 	const char *matched_pathspec;
 
-	assert((oitem != NULL) ^ (nitem != NULL));
+	GIT_ASSERT_ARG((oitem != NULL) ^ (nitem != NULL));
 
 	if (oitem) {
 		entry = oitem;
@@ -160,7 +160,7 @@ static int diff_delta__from_one(
 	GIT_ERROR_CHECK_ALLOC(delta);
 
 	/* This fn is just for single-sided diffs */
-	assert(status != GIT_DELTA_MODIFIED);
+	GIT_ASSERT(status != GIT_DELTA_MODIFIED);
 	delta->nfiles = 1;
 
 	if (has_old) {
@@ -408,7 +408,9 @@ static git_diff_generated *diff_generated_alloc(
 	git_diff_generated *diff;
 	git_diff_options dflt = GIT_DIFF_OPTIONS_INIT;
 
-	assert(repo && old_iter && new_iter);
+	GIT_ASSERT_ARG_WITH_RETVAL(repo, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(old_iter, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(new_iter, NULL);
 
 	if ((diff = git__calloc(1, sizeof(git_diff_generated))) == NULL)
 		return NULL;
@@ -589,7 +591,7 @@ int git_diff__oid_for_entry(
 	git_filter_list *fl = NULL;
 	int error = 0;
 
-	assert(d->type == GIT_DIFF_TYPE_GENERATED);
+	GIT_ASSERT(d->type == GIT_DIFF_TYPE_GENERATED);
 	diff = (git_diff_generated *)d;
 
 	memset(out, 0, sizeof(*out));
@@ -1302,7 +1304,8 @@ int git_diff_tree_to_tree(
 	char *prefix = NULL;
 	int error = 0;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
@@ -1358,7 +1361,8 @@ int git_diff_tree_to_index(
 	bool index_ignore_case = false;
 	int error = 0;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
@@ -1401,7 +1405,8 @@ int git_diff_index_to_workdir(
 	char *prefix = NULL;
 	int error = 0;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
@@ -1444,7 +1449,8 @@ int git_diff_tree_to_workdir(
 	git_index *index;
 	int error;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
@@ -1477,7 +1483,8 @@ int git_diff_tree_to_workdir_with_index(
 	git_index *index = NULL;
 	int error = 0;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
@@ -1513,7 +1520,9 @@ int git_diff_index_to_index(
 	char *prefix = NULL;
 	int error;
 
-	assert(out && old_index && new_index);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(old_index);
+	GIT_ASSERT_ARG(new_index);
 
 	*out = NULL;
 

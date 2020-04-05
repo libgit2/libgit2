@@ -358,7 +358,7 @@ int git_diff_driver_lookup(
 	int error = 0;
 	const char *values[1], *attrs[] = { "diff" };
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 	*out = NULL;
 
 	if (!repo || !path || !strlen(path))
