@@ -304,9 +304,6 @@ void git_signature__writebuf(git_buf *buf, const char *header, const git_signatu
 	int offset, hours, mins;
 	char sign;
 
-	GIT_ASSERT_ARG(buf);
-	GIT_ASSERT_ARG(sig);
-
 	offset = sig->when.offset;
 	sign = (sig->when.offset < 0 || sig->when.sign == '-') ? '-' : '+';
 
