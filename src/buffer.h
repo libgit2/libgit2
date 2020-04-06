@@ -229,6 +229,9 @@ int git_buf_decode_percent(git_buf *buf, const char *str, size_t len);
 /* Place the value of the given environment variable into the buffer */
 int git_buf_getenv(git_buf *buf, const char *name);
 
+/* Place the value of the current system error message into the buffer */
+int git_buf_system_errmsg(git_buf *buf);
+
 /*
  * Insert, remove or replace a portion of the buffer.
  *

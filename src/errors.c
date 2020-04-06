@@ -60,10 +60,6 @@ void git_error_set(int error_class, const char *fmt, ...)
 
 void git_error_vset(int error_class, const char *fmt, va_list ap)
 {
-#ifdef GIT_WIN32
-	DWORD win32_error_code = (error_class == GIT_ERROR_OS) ? GetLastError() : 0;
-#endif
-	int error_code = (error_class == GIT_ERROR_OS) ? errno : 0;
 	git_buf *buf = &GIT_GLOBAL->error_buf;
 
 	git_buf_clear(buf);
@@ -73,23 +69,8 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 			git_buf_PUTS(buf, ": ");
 	}
 
-	if (error_class == GIT_ERROR_OS) {
-#ifdef GIT_WIN32
-		char * win32_error = git_win32_get_error_message(win32_error_code);
-		if (win32_error) {
-			git_buf_puts(buf, win32_error);
-			git__free(win32_error);
-
-			SetLastError(0);
-		}
-		else
-#endif
-		if (error_code)
-			git_buf_puts(buf, strerror(error_code));
-
-		if (error_code)
-			errno = 0;
-	}
+	if (error_class == GIT_ERROR_OS)
+		git_buf_system_errmsg(buf);
 
 	if (!git_buf_oom(buf))
 		set_error_from_buffer(error_class);
