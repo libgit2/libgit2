@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <git2.h>
+#include <git2client.h>
 #include "cli.h"
 
 static int show_version = 0;
@@ -28,7 +29,7 @@ int main(int argc, char **argv)
 	int args_len = 0;
 	int error = 0;
 
-	if (git_libgit2_init() < 0) {
+	if (cli_global_init() < 0) {
 		fprintf(stderr, "error: failed to initialize libgit2\n");
 		exit(1);
 	}
@@ -60,6 +61,6 @@ int main(int argc, char **argv)
 	}
 
 done:
-	git_libgit2_shutdown();
+	cli_global_shutdown();
 	return error;
 }

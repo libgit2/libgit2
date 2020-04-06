@@ -10,6 +10,7 @@
 
 #include "git2_util.h"
 
+#include "global.h"
 #include "opt.h"
 
 #define PROGRAM_NAME "git2"
