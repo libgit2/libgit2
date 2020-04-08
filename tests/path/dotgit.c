@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "path.h"
+#include "repo_path.h"
 
 static char *gitmodules_altnames[] = {
 	".gitmodules",

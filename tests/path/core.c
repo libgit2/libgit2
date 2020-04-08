@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "path.h"
+#include "repo_path.h"
 
 static void test_make_relative(
 	const char *expected_path,
@@ -44,10 +45,10 @@ void test_path_core__make_relative(void)
 
 	test_make_relative("/path/to/foo.c", "/path/to/foo.c", "d:/path/to", GIT_ENOTFOUND);
 	test_make_relative("d:/path/to/foo.c", "d:/path/to/foo.c", "/path/to", GIT_ENOTFOUND);
-	
+
 	test_make_relative("/path/to/foo.c", "/path/to/foo.c", "not-a-rooted-path", GIT_ENOTFOUND);
 	test_make_relative("not-a-rooted-path", "not-a-rooted-path", "/path/to", GIT_ENOTFOUND);
-	
+
 	test_make_relative("/path", "/path", "pathtofoo", GIT_ENOTFOUND);
 	test_make_relative("path", "path", "pathtofoo", GIT_ENOTFOUND);
 }

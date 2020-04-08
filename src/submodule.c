@@ -18,6 +18,7 @@
 #include "config_backend.h"
 #include "config.h"
 #include "repository.h"
+#include "repo_path.h"
 #include "tree.h"
 #include "iterator.h"
 #include "path.h"

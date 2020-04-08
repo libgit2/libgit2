@@ -20,6 +20,7 @@
 
 #include "refs.h"
 #include "repository.h"
+#include "repo_path.h"
 #include "index.h"
 #include "filter.h"
 #include "blob.h"

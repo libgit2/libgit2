@@ -8,6 +8,7 @@
 #include "refs.h"
 #include "hash.h"
 #include "repository.h"
+#include "repo_path.h"
 #include "futils.h"
 #include "filebuf.h"
 #include "pack.h"

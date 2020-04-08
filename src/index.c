@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #include "repository.h"
+#include "repo_path.h"
 #include "tree.h"
 #include "tree-cache.h"
 #include "hash.h"
