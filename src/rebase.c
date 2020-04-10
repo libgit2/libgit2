@@ -16,6 +16,7 @@
 #include "config.h"
 #include "annotated_commit.h"
 #include "index.h"
+#include <git2/sys/hook.h>
 
 #include <git2/types.h>
 #include <git2/annotated_commit.h>
@@ -724,6 +725,11 @@ int git_rebase_init(
 			goto done;
 
 		branch = head_branch;
+	}
+
+	if (!inmemory && upstream) {
+		if ((error = git_hook_call_pre_rebase(repo, upstream, (head_ref == NULL ? branch : NULL))) < 0)
+			goto done;
 	}
 
 	if (rebase_alloc(&rebase, given_opts) < 0)

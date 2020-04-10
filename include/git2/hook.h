@@ -105,6 +105,11 @@ GIT_EXTERN(int) git_hook_register_callback(
 	git_hook_destructor_cb destructor,
 	void *payload);
 
+GIT_EXTERN(int) git_hook_call_pre_rebase(
+	git_repository *repo,
+	const git_annotated_commit *upstream,
+	const git_annotated_commit *rebased);
+
 /* @} */
 GIT_END_DECL
 #endif
