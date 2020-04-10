@@ -21,12 +21,6 @@ SET(LIBGIT2_INCLUDES
 SET(LIBGIT2_SYSTEM_INCLUDES "")
 SET(LIBGIT2_LIBS "")
 
-# Installation paths
-#
-SET(BIN_INSTALL_DIR bin CACHE PATH "Where to install binaries to.")
-SET(LIB_INSTALL_DIR lib CACHE PATH "Where to install libraries to.")
-SET(INCLUDE_INSTALL_DIR include CACHE PATH "Where to install headers to.")
-
 # Enable tracing
 IF(ENABLE_TRACE)
 	SET(GIT_TRACE 1)
@@ -300,6 +294,10 @@ FILE(GLOB SRC_GIT2 *.c *.h
 	streams/*.c streams/*.h
 	transports/*.c transports/*.h
 	xdiff/*.c xdiff/*.h)
+IF(APPLE)
+	# The old Secure Transport API has been deprecated in macOS 10.15.
+	SET_SOURCE_FILES_PROPERTIES(streams/stransport.c PROPERTIES COMPILE_FLAGS -Wno-deprecated)
+ENDIF()
 
 # the xdiff dependency is not (yet) warning-free, disable warnings as
 # errors for the xdiff sources until we've sorted them out
@@ -387,9 +385,9 @@ ENDIF ()
 
 # Install
 INSTALL(TARGETS git2
-	RUNTIME DESTINATION ${BIN_INSTALL_DIR}
-	LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-	ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-INSTALL(DIRECTORY ${libgit2_SOURCE_DIR}/include/git2 DESTINATION ${INCLUDE_INSTALL_DIR} )
-INSTALL(FILES ${libgit2_SOURCE_DIR}/include/git2.h DESTINATION ${INCLUDE_INSTALL_DIR} )
+INSTALL(DIRECTORY ${libgit2_SOURCE_DIR}/include/git2 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+INSTALL(FILES ${libgit2_SOURCE_DIR}/include/git2.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

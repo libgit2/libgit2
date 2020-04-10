@@ -27,8 +27,8 @@ function(pkg_build_config)
     # Write .pc "header"
     file(WRITE "${PKGCONFIG_FILE}"
         "prefix=\"${CMAKE_INSTALL_PREFIX}\"\n"
-        "libdir=\"${LIB_INSTALL_DIR}\"\n"
-        "includedir=\"${INCLUDE_INSTALL_DIR}\"\n"
+        "libdir=\"${CMAKE_INSTALL_FULL_LIBDIR}\"\n"
+        "includedir=\"${CMAKE_INSTALL_FULL_INCLUDEDIR}\"\n"
         "\n"
         "Name: ${PKGCONFIG_NAME}\n"
         "Description: ${PKGCONFIG_DESCRIPTION}\n"
@@ -73,7 +73,5 @@ function(pkg_build_config)
     file(APPEND "${PKGCONFIG_FILE}" "Cflags: -I\${includedir} ${PKGCONFIG_CFLAGS}\n")
 
     # Install .pc file
-    install(FILES "${PKGCONFIG_FILE}"
-        DESTINATION "${LIB_INSTALL_DIR}/pkgconfig"
-    )
+    install(FILES "${PKGCONFIG_FILE}" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 endfunction()

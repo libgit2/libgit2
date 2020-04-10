@@ -41,6 +41,13 @@
  */
 #ifndef GIT_DEPRECATE_HARD
 
+/*
+ * The credential structures are now opaque by default, and their
+ * definition has moved into the `sys/credential.h` header; include
+ * them here for backward compatibility.
+ */
+#include "sys/credential.h"
+
 /**
  * @file git2/deprecated.h
  * @brief libgit2 deprecated functions and values

@@ -1,3 +1,54 @@
+v1.0
+----
+
+This is release v1.0 "Luftschloss", which is the first stabe release of
+libgit2. The API will stay compatible across all releases of the same major
+version. This release includes bugfixes only and supersedes v0.99, which will
+stop being maintained. Both v0.27 and v0.28 stay supported in accordance with
+our release policy.
+
+### Changes or improvements
+
+- CMake was converted to make use of the GNUInstallDirs module for both our
+  pkgconfig and install targets in favor of our custom build options
+  `BIN_INSTALL_DIR`, `LIB_INSTALL_DIR` and `INCLUDE_INSTALL_DIR`. Instead, you
+  can now use CMakes standard variables `CMAKE_INSTALL_BINDIR`,
+  `CMAKE_INSTALL_LIBDIR` and `CMAKE_INSTALL_INCLUDEDIR`.
+
+- Some CMake build options accepted either a specific value or a boolean value
+  to disable the option altogether or use automatic detection. We only accepted
+  "ON" or "OFF", but none of the other values CMake recognizes as boolean. This
+  was aligned with CMake's understanding of booleans.
+
+- The installed pkgconfig file contained incorrect values for both `libdir` and
+  `includedir` variables.
+
+- If using pcre2 for regular expressions, then we incorrectly added "pcre2"
+  instead of "pcre2-8" to our pkgconfig dependencies, which was corrected.
+
+- Fixed building the bundled ntlmclient dependency on FreeBSD, OpenBSD and
+  SunOS.
+
+- When writing symlinks on Windows, we incorrectly handled relative symlink
+  targets, which was corrected.
+
+- When using the HTTP protocol via macOS' SecureTransport implementation, reads
+  could stall at the end of the session and only continue after a timeout of 60
+  seconds was reached.
+
+- The filesystem-based reference callback didn't corectly initialize the backend
+  version.
+
+- A segmentation fault was fixed when calling `git_blame_buffer()` for files
+  that were modified and added to the index.
+
+- A backwards-incompatible change was introduced when we moved some structures
+  from "git2/credentials.h" into "git2/sys/credentials.h". This was fixed in the
+  case where you do not use hard deprecation.
+
+- Improved error handling in various places.
+
+
 v0.99
 -----
 

@@ -94,17 +94,6 @@ extern int git_sysdir_global_init(void);
 extern int git_sysdir_get(const git_buf **out, git_sysdir_t which);
 
 /**
- * Get search path into a preallocated buffer
- *
- * @param out String buffer to write into
- * @param outlen Size of string buffer
- * @param which Which search path to return
- * @return 0 on success, GIT_EBUFS if out is too small, <0 on other failure
- */
-
-extern int git_sysdir_get_str(char *out, size_t outlen, git_sysdir_t which);
-
-/**
  * Set search paths for global/system/xdg files
  *
  * The first occurrence of the magic string "$PATH" in the new value will

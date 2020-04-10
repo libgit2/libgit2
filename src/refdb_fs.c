@@ -5,8 +5,6 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "refdb_fs.h"
-
 #include "refs.h"
 #include "hash.h"
 #include "repository.h"
@@ -2128,6 +2126,9 @@ int git_refdb_backend_fs(
 
 	backend = git__calloc(1, sizeof(refdb_fs_backend));
 	GIT_ERROR_CHECK_ALLOC(backend);
+
+	if (git_refdb_init_backend(&backend->parent, GIT_REFDB_BACKEND_VERSION) < 0)
+		goto fail;
 
 	backend->repo = repository;
 

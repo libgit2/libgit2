@@ -143,8 +143,12 @@ int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, 
 ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t len);
 void git_packfile_stream_dispose(git_packfile_stream *obj);
 
-off64_t get_delta_base(struct git_pack_file *p, git_mwindow **w_curs,
-		off64_t *curpos, git_object_t type,
+int get_delta_base(
+		off64_t *delta_base_out,
+		struct git_pack_file *p,
+		git_mwindow **w_curs,
+		off64_t *curpos,
+		git_object_t type,
 		off64_t delta_obj_offset);
 
 void git_packfile_close(struct git_pack_file *p, bool unlink_packfile);

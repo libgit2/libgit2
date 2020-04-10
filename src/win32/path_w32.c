@@ -25,6 +25,9 @@
 #define path__is_unc(p) \
 	(((p)[0] == '\\' && (p)[1] == '\\') || ((p)[0] == '/' && (p)[1] == '/'))
 
+#define path__startswith_slash(p) \
+	((p)[0] == '\\' || (p)[0] == '/')
+
 GIT_INLINE(int) path__cwd(wchar_t *path, int size)
 {
 	int len;
@@ -221,7 +224,7 @@ int git_win32_path_from_utf8(git_win32_path out, const char *src)
 			goto on_error;
 	}
 	/* Absolute paths omitting the drive letter */
-	else if (src[0] == '\\' || src[0] == '/') {
+	else if (path__startswith_slash(src)) {
 		if (path__cwd(dest, MAX_PATH) < 0)
 			goto on_error;
 
@@ -255,6 +258,30 @@ on_error:
 		SetLastError(ERROR_FILENAME_EXCED_RANGE);
 
 	return -1;
+}
+
+int git_win32_path_relative_from_utf8(git_win32_path out, const char *src)
+{
+	wchar_t *dest = out, *p;
+	int len;
+
+	/* Handle absolute paths */
+	if (git_path_is_absolute(src) ||
+	    path__is_nt_namespace(src) ||
+	    path__is_unc(src) ||
+	    path__startswith_slash(src)) {
+		return git_win32_path_from_utf8(out, src);
+	}
+
+	if ((len = git__utf8_to_16(dest, MAX_PATH, src)) < 0)
+		return -1;
+
+	for (p = dest; p < (dest + len); p++) {
+		if (*p == L'/')
+			*p = L'\\';
+	}
+
+	return len;
 }
 
 int git_win32_path_to_utf8(git_win32_utf8_path dest, const wchar_t *src)

@@ -68,6 +68,16 @@ struct merge_diff_df_data {
 	git_merge_diff *prev_conflict;
 };
 
+/*
+ * This acts as a negative cache entry marker. In case we've tried to calculate
+ * similarity metrics for a given blob already but `git_hashsig` determined
+ * that it's too small in order to have a meaningful hash signature, we will
+ * insert the address of this marker instead of `NULL`. Like this, we can
+ * easily check whether we have checked a gien entry already and skip doing the
+ * calculation again and again.
+ */
+static int cache_invalid_marker;
+
 /* Merge base computation */
 
 int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_repository *repo, size_t length, const git_oid input_array[])
@@ -1027,6 +1037,9 @@ static int index_entry_similarity_calc(
 	git_object_size_t blobsize;
 	int error;
 
+	if (*out || *out == &cache_invalid_marker)
+		return 0;
+
 	*out = NULL;
 
 	if ((error = git_blob_lookup(&blob, repo, &entry->id)) < 0)
@@ -1047,6 +1060,8 @@ static int index_entry_similarity_calc(
 	error = opts->metric->buffer_signature(out, &diff_file,
 		git_blob_rawcontent(blob), (size_t)blobsize,
 		opts->metric->payload);
+	if (error == GIT_EBUFS)
+		*out = &cache_invalid_marker;
 
 	git_blob_free(blob);
 
@@ -1069,18 +1084,16 @@ static int index_entry_similarity_inexact(
 		return 0;
 
 	/* update signature cache if needed */
-	if (!cache[a_idx] && (error = index_entry_similarity_calc(&cache[a_idx], repo, a, opts)) < 0)
-		return error;
-	if (!cache[b_idx] && (error = index_entry_similarity_calc(&cache[b_idx], repo, b, opts)) < 0)
+	if ((error = index_entry_similarity_calc(&cache[a_idx], repo, a, opts)) < 0 ||
+	    (error = index_entry_similarity_calc(&cache[b_idx], repo, b, opts)) < 0)
 		return error;
 
 	/* some metrics may not wish to process this file (too big / too small) */
-	if (!cache[a_idx] || !cache[b_idx])
+	if (cache[a_idx] == &cache_invalid_marker || cache[b_idx] == &cache_invalid_marker)
 		return 0;
 
 	/* compare signatures */
-	if (opts->metric->similarity(
-		&score, cache[a_idx], cache[b_idx], opts->metric->payload) < 0)
+	if (opts->metric->similarity(&score, cache[a_idx], cache[b_idx], opts->metric->payload) < 0)
 		return -1;
 
 	/* clip score */
@@ -1550,7 +1563,7 @@ int git_merge_diff_list__find_renames(
 done:
 	if (cache != NULL) {
 		for (i = 0; i < cache_size; ++i) {
-			if (cache[i] != NULL)
+			if (cache[i] != NULL && cache[i] != &cache_invalid_marker)
 				opts->metric->free_signature(cache[i], opts->metric->payload);
 		}
 

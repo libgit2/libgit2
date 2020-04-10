@@ -29,9 +29,7 @@ RUN apt-get update && \
 
 FROM apt AS mbedtls
 RUN cd /tmp && \
-    curl --location http://secure.globalsign.com/cacert/gsrsaovsslca2018.crt | openssl x509 -inform der -out /tmp/cacert.pem && \
-    curl --location https://curl.haxx.se/ca/cacert.pem >> /tmp/cacert.pem && \
-    curl --location --silent https://tls.mbed.org/download/mbedtls-2.16.2-apache.tgz --cacert /tmp/cacert.pem | \
+    curl --location --silent --show-error https://tls.mbed.org/download/mbedtls-2.16.2-apache.tgz | \
     tar -xz && \
     cd mbedtls-2.16.2 && \
     scripts/config.pl set MBEDTLS_MD4_C 1 && \
@@ -42,7 +40,7 @@ RUN cd /tmp && \
 
 FROM mbedtls AS libssh2
 RUN cd /tmp && \
-    curl --location --silent https://www.libssh2.org/download/libssh2-1.8.2.tar.gz | \
+    curl --insecure --location --silent --show-error https://www.libssh2.org/download/libssh2-1.8.2.tar.gz | \
     tar -xz && \
     cd libssh2-1.8.2 && \
     CFLAGS=-fPIC cmake -G Ninja -DBUILD_SHARED_LIBS=ON -DCRYPTO_BACKEND=Libgcrypt . && \
@@ -52,7 +50,7 @@ RUN cd /tmp && \
 
 FROM libssh2 AS valgrind
 RUN cd /tmp && \
-    curl --location --silent https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2 | \
+    curl --insecure --location --silent --show-error https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2 | \
     tar -xj && \
     cd valgrind-3.15.0 && \
     ./configure && \
