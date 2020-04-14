@@ -25,7 +25,7 @@
 /* See man page endian(3) */
 # include <endian.h>
 # define htonll htobe64
-#elif defined(__OpenBSD__)
+#elif defined(__NetBSD__) || defined(__OpenBSD__)
 /* See man page htobe64(3) */
 # include <endian.h>
 # define htonll htobe64
