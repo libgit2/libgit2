@@ -298,9 +298,8 @@ void test_diff_stats__binary(void)
 {
 	git_buf buf = GIT_BUF_INIT;
 	const char *stat =
-	" binary.bin | Bin 3 -> 0 bytes\n"
+	" binary.bin | Bin 3 -> 5 bytes\n"
 	" 1 file changed, 0 insertions(+), 0 deletions(-)\n";
-	/* TODO: Actually 0 bytes here should be 5!. Seems like we don't load the new content for binary files? */
 
 	diff_stats_from_commit_oid(
 		&_stats, "8d7523f6fcb2404257889abe0d96f093d9f524f9", false);
