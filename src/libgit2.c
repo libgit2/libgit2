@@ -50,6 +50,8 @@ extern size_t git_mwindow__mapped_limit;
 extern size_t git_mwindow__file_limit;
 extern size_t git_indexer__max_objects;
 extern bool git_disable_pack_keep_file_checks;
+extern int git_odb__packed_priority;
+extern int git_odb__loose_priority;
 
 char *git__user_agent;
 char *git__ssl_ciphers;
@@ -366,6 +368,14 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE:
 		git_http__expect_continue = (va_arg(ap, int) != 0);
+		break;
+
+	case GIT_OPT_SET_ODB_PACKED_PRIORITY:
+		git_odb__packed_priority = va_arg(ap, int);
+		break;
+
+	case GIT_OPT_SET_ODB_LOOSE_PRIORITY:
+		git_odb__loose_priority = va_arg(ap, int);
 		break;
 
 	default:

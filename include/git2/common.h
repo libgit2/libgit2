@@ -207,7 +207,9 @@ typedef enum {
 	GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS,
 	GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE,
 	GIT_OPT_GET_MWINDOW_FILE_LIMIT,
-	GIT_OPT_SET_MWINDOW_FILE_LIMIT
+	GIT_OPT_SET_MWINDOW_FILE_LIMIT,
+	GIT_OPT_SET_ODB_PACKED_PRIORITY,
+	GIT_OPT_SET_ODB_LOOSE_PRIORITY
 } git_libgit2_opt_t;
 
 /**
@@ -420,6 +422,14 @@ typedef enum {
  *		> When connecting to a server using NTLM or Negotiate
  *		> authentication, use expect/continue when POSTing data.
  *		> This option is not available on Windows.
+ *
+ *   opts(GIT_OPT_SET_ODB_PACKED_PRIORITY, int priority)
+ *      > Override the default priority of the packed ODB backend which
+ *      > is added when default backends are assigned to a repository
+ *
+ *   opts(GIT_OPT_SET_ODB_LOOSE_PRIORITY, int priority)
+ *      > Override the default priority of the loose ODB backend which
+ *      > is added when default backends are assigned to a repository
  *
  * @param option Option key
  * @param ... value to set the option
