@@ -259,5 +259,5 @@ void git_xdiff_init(git_xdiff_output *xo, const git_diff_options *opts)
 	if (flags & GIT_DIFF_MINIMAL)
 		xo->params.flags |= XDF_NEED_MINIMAL;
 
-	xo->callback.outf = git_xdiff_cb;
+	xo->callback.out_hunk = git_xdiff_cb;
 }
