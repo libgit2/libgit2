@@ -1,0 +1,6 @@
+[submodule "src/--force"]
+	path = src/--force
+	url = https://github.com/j143/xdiff
+[submodule "src/xdiff"]
+	path = src/xdiff
+	url = https://github.com/j143/xdiff
