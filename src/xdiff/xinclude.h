@@ -23,7 +23,17 @@
 #if !defined(XINCLUDE_H)
 #define XINCLUDE_H
 
-#include "git-compat-util.h"
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+
+#ifdef _WIN32
+#else
+#include <unistd.h>
+#endif
+
 #include "xmacros.h"
 #include "xdiff.h"
 #include "xtypes.h"
@@ -32,5 +42,6 @@
 #include "xdiffi.h"
 #include "xemit.h"
 
+#include "common.h"
 
 #endif /* #if !defined(XINCLUDE_H) */
