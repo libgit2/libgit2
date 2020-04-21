@@ -753,14 +753,14 @@ git_diff_driver *git_patch_generated_driver(git_patch_generated *patch)
 }
 
 void git_patch_generated_old_data(
-	char **ptr, size_t *len, git_patch_generated *patch)
+	char **ptr, long int *len, git_patch_generated *patch)
 {
 	*ptr = patch->ofile.map.data;
 	*len = patch->ofile.map.len;
 }
 
 void git_patch_generated_new_data(
-	char **ptr, size_t *len, git_patch_generated *patch)
+	char **ptr, long int *len, git_patch_generated *patch)
 {
 	*ptr = patch->nfile.map.data;
 	*len = patch->nfile.map.len;
