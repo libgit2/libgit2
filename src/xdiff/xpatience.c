@@ -20,8 +20,6 @@
  *
  */
 #include "xinclude.h"
-#include "xtypes.h"
-#include "xdiff.h"
 
 /*
  * The basic idea of patience diff is to find lines that are unique in
@@ -78,7 +76,7 @@ struct hashmap {
 
 static int is_anchor(xpparam_t const *xpp, const char *line)
 {
-	unsigned long i;
+	int i;
 	for (i = 0; i < xpp->anchors_nr; i++) {
 		if (!strncmp(line, xpp->anchors[i], strlen(xpp->anchors[i])))
 			return 1;
@@ -216,7 +214,7 @@ static struct entry *find_longest_common_sequence(struct hashmap *map)
 	 * do not do that either.
 	 */
 	int anchor_i = -1;
-
+	
 	if (!sequence)
 		return NULL;
 

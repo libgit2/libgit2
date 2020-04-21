@@ -109,53 +109,44 @@ static int xdl_merge_cmp_lines(xdfenv_t *xe1, int i1, xdfenv_t *xe2, int i2,
 	return 0;
 }
 
-static int xdl_recs_copy_0(size_t *out, int use_orig, xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
+static int xdl_recs_copy_0(int use_orig, xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
 {
 	xrecord_t **recs;
-	size_t size = 0;
-
-	*out = 0;
+	int size = 0;
 
 	recs = (use_orig ? xe->xdf1.recs : xe->xdf2.recs) + i;
 
 	if (count < 1)
 		return 0;
 
-	for (i = 0; i < count; ) {
+	for (i = 0; i < count; size += recs[i++]->size)
 		if (dest)
 			memcpy(dest + size, recs[i]->ptr, recs[i]->size);
-
-		GIT_ERROR_CHECK_ALLOC_ADD(&size, size, recs[i++]->size);
-	}
-
 	if (add_nl) {
 		i = recs[count - 1]->size;
 		if (i == 0 || recs[count - 1]->ptr[i - 1] != '\n') {
 			if (needs_cr) {
 				if (dest)
 					dest[size] = '\r';
-				GIT_ERROR_CHECK_ALLOC_ADD(&size, size, 1);
+				size++;
 			}
 
 			if (dest)
 				dest[size] = '\n';
-
-			GIT_ERROR_CHECK_ALLOC_ADD(&size, size, 1);
+			size++;
 		}
 	}
-
-	*out = size;
-	return 0;
+	return size;
 }
 
-static int xdl_recs_copy(size_t *out, xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
+static int xdl_recs_copy(xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
 {
-	return xdl_recs_copy_0(out, 0, xe, i, count, needs_cr, add_nl, dest);
+	return xdl_recs_copy_0(0, xe, i, count, needs_cr, add_nl, dest);
 }
 
-static int xdl_orig_copy(size_t *out, xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
+static int xdl_orig_copy(xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
 {
-	return xdl_recs_copy_0(out, 1, xe, i, count, needs_cr, add_nl, dest);
+	return xdl_recs_copy_0(1, xe, i, count, needs_cr, add_nl, dest);
 }
 
 /*
@@ -202,32 +193,26 @@ static int is_cr_needed(xdfenv_t *xe1, xdfenv_t *xe2, xdmerge_t *m)
 	return needs_cr < 0 ? 0 : needs_cr;
 }
 
-static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
+static int fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 			      xdfenv_t *xe2, const char *name2,
 			      const char *name3,
-			      size_t size, int i, int style,
+			      int size, int i, int style,
 			      xdmerge_t *m, char *dest, int marker_size)
 {
-	int marker1_size = (name1 ? (int)strlen(name1) + 1 : 0);
-	int marker2_size = (name2 ? (int)strlen(name2) + 1 : 0);
-	int marker3_size = (name3 ? (int)strlen(name3) + 1 : 0);
+	int marker1_size = (name1 ? strlen(name1) + 1 : 0);
+	int marker2_size = (name2 ? strlen(name2) + 1 : 0);
+	int marker3_size = (name3 ? strlen(name3) + 1 : 0);
 	int needs_cr = is_cr_needed(xe1, xe2, m);
-	size_t copied;
-
-	*out = 0;
 
 	if (marker_size <= 0)
 		marker_size = DEFAULT_CONFLICT_MARKER_SIZE;
 
 	/* Before conflicting part */
-	if (xdl_recs_copy(&copied, xe1, i, m->i1 - i, 0, 0,
-			      dest ? dest + size : NULL) < 0)
-		return -1;
-
-	GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
+	size += xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
+			      dest ? dest + size : NULL);
 
 	if (!dest) {
-		GIT_ERROR_CHECK_ALLOC_ADD5(&size, size, marker_size, 1, needs_cr,  marker1_size);
+		size += marker_size + 1 + needs_cr + marker1_size;
 	} else {
 		memset(dest + size, '<', marker_size);
 		size += marker_size;
@@ -242,16 +227,13 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 	}
 
 	/* Postimage from side #1 */
-	if (xdl_recs_copy(&copied, xe1, m->i1, m->chg1, needs_cr, 1,
-			      dest ? dest + size : NULL) < 0)
-		return -1;
-
-	GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
+	size += xdl_recs_copy(xe1, m->i1, m->chg1, needs_cr, 1,
+			      dest ? dest + size : NULL);
 
 	if (style == XDL_MERGE_DIFF3) {
 		/* Shared preimage */
 		if (!dest) {
-			GIT_ERROR_CHECK_ALLOC_ADD5(&size, size, marker_size, 1, needs_cr, marker3_size);
+			size += marker_size + 1 + needs_cr + marker3_size;
 		} else {
 			memset(dest + size, '|', marker_size);
 			size += marker_size;
@@ -264,15 +246,12 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 				dest[size++] = '\r';
 			dest[size++] = '\n';
 		}
-
-		if (xdl_orig_copy(&copied, xe1, m->i0, m->chg0, needs_cr, 1,
-				      dest ? dest + size : NULL) < 0)
-			return -1;
-		GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
+		size += xdl_orig_copy(xe1, m->i0, m->chg0, needs_cr, 1,
+				      dest ? dest + size : NULL);
 	}
 
 	if (!dest) {
-		GIT_ERROR_CHECK_ALLOC_ADD4(&size, size, marker_size, 1, needs_cr);
+		size += marker_size + 1 + needs_cr;
 	} else {
 		memset(dest + size, '=', marker_size);
 		size += marker_size;
@@ -282,14 +261,10 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 	}
 
 	/* Postimage from side #2 */
-
-	if (xdl_recs_copy(&copied, xe2, m->i2, m->chg2, needs_cr, 1,
-			      dest ? dest + size : NULL) < 0)
-		return -1;
-	GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
-
+	size += xdl_recs_copy(xe2, m->i2, m->chg2, needs_cr, 1,
+			      dest ? dest + size : NULL);
 	if (!dest) {
-		GIT_ERROR_CHECK_ALLOC_ADD5(&size, size, marker_size, 1, needs_cr, marker2_size);
+		size += marker_size + 1 + needs_cr + marker2_size;
 	} else {
 		memset(dest + size, '>', marker_size);
 		size += marker_size;
@@ -302,71 +277,49 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 			dest[size++] = '\r';
 		dest[size++] = '\n';
 	}
-
-	*out = size;
-	return 0;
+	return size;
 }
 
-static int xdl_fill_merge_buffer(size_t *out,
-				 xdfenv_t *xe1, const char *name1,
+static int xdl_fill_merge_buffer(xdfenv_t *xe1, const char *name1,
 				 xdfenv_t *xe2, const char *name2,
 				 const char *ancestor_name,
 				 int favor,
 				 xdmerge_t *m, char *dest, int style,
 				 int marker_size)
 {
-	size_t size, copied;
-	int i;
-
-	*out = 0;
+	int size, i;
 
 	for (size = i = 0; m; m = m->next) {
 		if (favor && !m->mode)
 			m->mode = favor;
 
-		if (m->mode == 0) {
-			if (fill_conflict_hunk(&size, xe1, name1, xe2, name2,
+		if (m->mode == 0)
+			size = fill_conflict_hunk(xe1, name1, xe2, name2,
 						  ancestor_name,
 						  size, i, style, m, dest,
-						  marker_size) < 0)
-				return -1;
-		}
+						  marker_size);
 		else if (m->mode & 3) {
 			/* Before conflicting part */
-			if (xdl_recs_copy(&copied, xe1, i, m->i1 - i, 0, 0,
-					      dest ? dest + size : NULL) < 0)
-				return -1;
-			GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
-
+			size += xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
+					      dest ? dest + size : NULL);
 			/* Postimage from side #1 */
 			if (m->mode & 1) {
 				int needs_cr = is_cr_needed(xe1, xe2, m);
 
-				if (xdl_recs_copy(&copied, xe1, m->i1, m->chg1, needs_cr, (m->mode & 2),
-						      dest ? dest + size : NULL) < 0)
-					return -1;
-				GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
+				size += xdl_recs_copy(xe1, m->i1, m->chg1, needs_cr, (m->mode & 2),
+						      dest ? dest + size : NULL);
 			}
-
 			/* Postimage from side #2 */
-			if (m->mode & 2) {
-				if (xdl_recs_copy(&copied, xe2, m->i2, m->chg2, 0, 0,
-						      dest ? dest + size : NULL) < 0)
-					return -1;
-				GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
-			}
+			if (m->mode & 2)
+				size += xdl_recs_copy(xe2, m->i2, m->chg2, 0, 0,
+						      dest ? dest + size : NULL);
 		} else
 			continue;
 		i = m->i1 + m->chg1;
 	}
-
-	if (xdl_recs_copy(&copied, xe1, i, xe1->xdf2.nrec - i, 0, 0,
-			      dest ? dest + size : NULL) < 0)
-		return -1;
-	GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
-
-	*out = size;
-	return 0;
+	size += xdl_recs_copy(xe1, i, xe1->xdf2.nrec - i, 0, 0,
+			      dest ? dest + size : NULL);
+	return size;
 }
 
 /*
@@ -660,24 +613,19 @@ static int xdl_do_merge(xdfenv_t *xe1, xdchange_t *xscr1,
 	/* output */
 	if (result) {
 		int marker_size = xmp->marker_size;
-		size_t size;
-
-		if (xdl_fill_merge_buffer(&size, xe1, name1, xe2, name2,
+		int size = xdl_fill_merge_buffer(xe1, name1, xe2, name2,
 						 ancestor_name,
 						 favor, changes, NULL, style,
-						 marker_size) < 0)
-			return -1;
-
+						 marker_size);
 		result->ptr = xdl_malloc(size);
 		if (!result->ptr) {
 			xdl_cleanup_merge(changes);
 			return -1;
 		}
 		result->size = size;
-		if (xdl_fill_merge_buffer(&size, xe1, name1, xe2, name2,
+		xdl_fill_merge_buffer(xe1, name1, xe2, name2,
 				      ancestor_name, favor, changes,
-				      result->ptr, style, marker_size) < 0)
-			return -1;
+				      result->ptr, style, marker_size);
 	}
 	return xdl_cleanup_merge(changes);
 }
