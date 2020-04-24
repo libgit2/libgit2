@@ -18,6 +18,16 @@
 
 #define GIT_REMOTE_ORIGIN "origin"
 
+typedef struct git_remote_connection_opts {
+	const git_strarray *custom_headers;
+	const git_proxy_options *proxy;
+	git_direction dir;
+} git_remote_connection_opts;
+
+#define GIT_REMOTE_CONNECTION_OPTIONS_INIT { NULL, NULL, GIT_DIRECTION_FETCH }
+
+typedef int GIT_CALLBACK(git_perform_cb)(git_remote *remote, git_event_t events);
+
 struct git_remote {
 	char *name;
 	char *url;
@@ -35,25 +45,25 @@ struct git_remote {
 	int prune_refs;
 	int passed_refspecs;
 	
-	void *cbref;
-	const git_strarray *requested_refspecs;
+	git_perform_cb perform_callback;
+	
+	git_strarray custom_headers;
+	git_proxy_options proxy_options;
+	git_direction dir;
+
 	union
 	{
-		git_fetch_options *fetch;
-		git_push_options *push;
+		git_fetch_options fetch;
+		git_push_options push;
 	} opts;
-	
+
+	const git_strarray *requested_refspecs;
+	void *cbref;
+
 	git_remote_callbacks callbacks;
 };
 
-typedef struct git_remote_connection_opts {
-	const git_strarray *custom_headers;
-	const git_proxy_options *proxy;
-} git_remote_connection_opts;
-
-#define GIT_REMOTE_CONNECTION_OPTIONS_INIT { NULL, NULL }
-
-int git_remote__connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_remote_connection_opts *conn);
+int git_remote__connect(git_remote *remote);
 
 int git_remote__urlfordirection(git_buf *url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks);
 int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_url);

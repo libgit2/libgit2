@@ -19,6 +19,7 @@
 #include "refspec.h"
 #include "fetchhead.h"
 #include "push.h"
+#include "proxy.h"
 
 #ifndef _WIN32
 #include <sys/select.h>
@@ -730,7 +731,7 @@ static int perform_all(git_remote *remote)
 /* #warning check whether git_remote_stop() does the right thing here, or whether we need to call perform() another time. */
 #endif
 			git_remote_stop(remote);
-			git_error_set(GIT_ERROR_NET, "Failed to wait for event: %s", strerror(errno));
+			git_error_set(GIT_ERROR_NET, "failed to wait for event: %s", strerror(errno));
 			return GIT_ERROR;
 		}
 		
@@ -809,7 +810,18 @@ static int set_transport_custom_headers(git_transport *t, const git_strarray *cu
 	return t->set_custom_headers(t, custom_headers);
 }
 
-int git_remote__connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_remote_connection_opts *conn)
+static int check_busy(git_remote *remote)
+{
+	if(remote->perform_callback)
+	{
+		git_error_set(GIT_ERROR_NET, "remote is busy");
+		return GIT_EBUSY;
+	}
+	else
+		return GIT_OK;
+}
+
+int git_remote__connect(git_remote *remote)
 {
 	git_transport *t;
 	git_buf url = GIT_BUF_INIT;
@@ -818,22 +830,19 @@ int git_remote__connect(git_remote *remote, git_direction direction, const git_r
 	void *payload = NULL;
 	git_credential_acquire_cb credentials = NULL;
 	git_transport_cb transport = NULL;
+	const git_remote_callbacks *callbacks = &remote->callbacks;
 
 	assert(remote);
 
 	if (callbacks) {
-		GIT_ERROR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		credentials = callbacks->credentials;
 		transport   = callbacks->transport;
 		payload     = callbacks->payload;
 	}
 
-	if (conn->proxy)
-		GIT_ERROR_CHECK_VERSION(conn->proxy, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
-
 	t = remote->transport;
 
-	if ((error = git_remote__urlfordirection(&url, remote, direction, callbacks)) < 0)
+	if ((error = git_remote__urlfordirection(&url, remote, remote->dir, callbacks)) < 0)
 		goto on_error;
 
 	/* If we don't have a transport object yet, and the caller specified a
@@ -847,11 +856,11 @@ int git_remote__connect(git_remote *remote, git_direction direction, const git_r
 	if (!t && (error = git_transport_new(&t, remote, url.ptr)) < 0)
 		goto on_error;
 
-	if ((error = set_transport_custom_headers(t, conn->custom_headers)) != 0)
+	if ((error = set_transport_custom_headers(t, &remote->custom_headers)) != 0)
 		goto on_error;
 
 	if ((error = set_transport_callbacks(t, callbacks)) < 0 ||
-	    (error = t->connect(t, url.ptr, credentials, payload, conn->proxy, direction, flags)) != 0)
+	    (error = t->connect(t, url.ptr, credentials, payload, &remote->proxy_options, remote->dir, flags)) != 0)
 		goto on_error;
 
 	remote->transport = t;
@@ -877,14 +886,27 @@ int git_remote_connect(git_remote *remote, git_direction direction, const git_re
 	eventcb_data_t evdata;
 	int err;
 
-	git_remote_connection_opts conn;
+	assert(remote);
+	
+	if((err = check_busy(remote)))
+		return err;
 
-	conn.proxy = proxy;
-	conn.custom_headers = custom_headers;
+	GIT_ERROR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+        GIT_ERROR_CHECK_VERSION(proxy, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
+
+	git_strarray_free(&remote->custom_headers);
+	if(custom_headers && (err = git_strarray_copy(&remote->custom_headers, custom_headers)))
+		return err;
+
+	git_proxy_options_clear(&remote->proxy_options);
+	if(proxy && (err = git_proxy_options_dup(&remote->proxy_options, proxy)))
+		return err;
+
+	remote->dir = direction;
 
 	init_eventcb_data(&evdata, remote, callbacks);
 
-	err = git_remote__connect(remote, direction, &remote->callbacks, &conn);
+	err = git_remote__connect(remote);
 	
 	if(err == GIT_EAGAIN && is_sync(&remote->callbacks))
 		return perform_all(remote);
@@ -1042,16 +1064,19 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 
 	assert(remote);
 
+	if((error = check_busy(remote)))
+		return error;
+
 	if (!remote->repo) {
 		git_error_set(GIT_ERROR_INVALID, "cannot download detached remote");
 		return -1;
 	}
 
 	if (opts) {
+		GIT_ERROR_CHECK_VERSION(opts, GIT_FETCH_OPTIONS_VERSION, "git_fetch_options");
 		GIT_ERROR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
 		custom_headers = &opts->custom_headers;
-		GIT_ERROR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
 		proxy = &opts->proxy_opts;
 	}
 
@@ -1120,20 +1145,29 @@ int git_remote_fetch(
 	bool prune = false;
 	git_buf reflog_msg_buf = GIT_BUF_INIT;
 	const git_remote_callbacks *cbs = NULL;
-	git_remote_connection_opts conn = GIT_REMOTE_CONNECTION_OPTIONS_INIT;
+	const git_strarray *custom_headers = NULL;
+	const git_proxy_options *proxy_opts = NULL;
+	
+	assert(remote);
 
-	if (opts) {
-		GIT_ERROR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+	if((error = check_busy(remote)))
+		return error;
+
+	if (opts)
+	{
+		GIT_ERROR_CHECK_VERSION(opts, GIT_FETCH_OPTIONS_VERSION, "git_fetch_options");
+
 		cbs = &opts->callbacks;
-		conn.custom_headers = &opts->custom_headers;
+		
 		update_fetchhead = opts->update_fetchhead;
 		tagopt = opts->download_tags;
-		GIT_ERROR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
-		conn.proxy = &opts->proxy_opts;
+		
+		custom_headers = &opts->custom_headers;
+		proxy_opts = &opts->proxy_opts;
 	}
 
 	/* Connect and download everything */
-	if ((error = git_remote__connect(remote, GIT_DIRECTION_FETCH, cbs, &conn)) != 0)
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, proxy_opts, custom_headers)) != 0)
 		return error;
 
 	error = git_remote_download(remote, refspecs, opts);
@@ -1839,6 +1873,10 @@ void git_remote_free(git_remote *remote)
 	git__free(remote->url);
 	git__free(remote->pushurl);
 	git__free(remote->name);
+	
+	git_strarray_free(&remote->custom_headers);
+	git_proxy_options_clear(&remote->proxy_options);
+	
 	git__free(remote);
 }
 
@@ -2545,9 +2583,13 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 	git_push *push;
 	git_refspec *spec;
 	const git_remote_callbacks *cbs = NULL;
-	git_remote_connection_opts conn = GIT_REMOTE_CONNECTION_OPTIONS_INIT;
+	const git_strarray *custom_headers = NULL;
+	const git_proxy_options *proxy_opts = NULL;
 
 	assert(remote);
+
+	if((error = check_busy(remote)))
+		return error;
 
 	if (!remote->repo) {
 		git_error_set(GIT_ERROR_INVALID, "cannot download detached remote");
@@ -2555,13 +2597,16 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 	}
 
 	if (opts) {
+		GIT_ERROR_CHECK_VERSION(opts, GIT_PUSH_OPTIONS_VERSION, "git_push_options");
+		GIT_ERROR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+
 		cbs = &opts->callbacks;
-		conn.custom_headers = &opts->custom_headers;
-		conn.proxy = &opts->proxy_opts;
+		custom_headers = &opts->custom_headers;
+		proxy_opts = &opts->proxy_opts;
 	}
 
 	if (!git_remote_connected(remote) &&
-	    (error = git_remote__connect(remote, GIT_DIRECTION_PUSH, cbs, &conn)) < 0)
+	    (error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, proxy_opts, custom_headers)) < 0)
 		goto cleanup;
 
 	free_refspecs(&remote->active_refspecs);
@@ -2615,16 +2660,19 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 
 	assert(remote);
 
+	if((error = check_busy(remote)))
+		return error;
+
 	if (!remote->repo) {
 		git_error_set(GIT_ERROR_INVALID, "cannot download detached remote");
 		return -1;
 	}
 
 	if (opts) {
-		GIT_ERROR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+		GIT_ERROR_CHECK_VERSION(opts, GIT_PUSH_OPTIONS_VERSION, "git_push_options");
+
 		cbs = &opts->callbacks;
 		custom_headers = &opts->custom_headers;
-		GIT_ERROR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
 		proxy = &opts->proxy_opts;
 	}
 
@@ -2709,9 +2757,19 @@ char *apply_insteadof(git_config *config, const char *url, int direction)
 
 int git_remote_perform(git_remote *remote, git_event_t events)
 {
-	(void) remote;
-	(void) events;
-
-	/* This is only a stub for now */
-	return GIT_ERROR;
+	git_perform_cb cb;
+	
+	assert(remote);
+	
+	if((cb = remote->perform_callback))
+	{
+		remote->perform_callback = NULL;
+		cb(remote, events);
+		return GIT_OK;
+	}
+	else
+	{
+		git_error_set(GIT_ERROR_INVALID, "remote is idle");
+		return GIT_ERROR;
+	}
 }
