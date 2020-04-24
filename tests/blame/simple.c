@@ -239,6 +239,24 @@ void test_blame_simple__can_restrict_lines_min(void)
 }
 
 /*
+ * $ git blame -n c.txt
+ *    orig line no                          final line no
+ * commit    V  author      timestamp                  V
+ * 702c7aa5  1 (Carl Schwan 2020-01-29 01:52:31 +0100  4
+ */
+void test_blame_simple__can_ignore_whitespace_change(void)
+{
+	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
+
+	opts.flags |= GIT_BLAME_IGNORE_WHITESPACE;
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "c.txt", &opts));
+	cl_assert_equal_i(1, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0,  1, 4, 0, "702c7aa5", "c.txt");
+}
+
+/*
  * $ git blame -n b.txt -L ,6
  *    orig line no                          final line no
  * commit    V  author     timestamp                  V
