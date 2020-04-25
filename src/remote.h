@@ -63,9 +63,10 @@ struct git_remote {
 		git_push_options push;
 	} opts;
 
-	const git_strarray *requested_refspecs;
-	void *cbref;
+	git_strarray requested_refspecs;
+	git_buf reflog_message;
 
+	void *cbref;
 	git_remote_callbacks callbacks;
 };
 
