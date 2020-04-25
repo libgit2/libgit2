@@ -468,7 +468,7 @@ static int cancel_at_half(const git_indexer_progress *stats, void *payload)
 	GIT_UNUSED(payload);
 
 	if (stats->received_objects > (stats->total_objects/2))
-		return 4321;
+		return -4321;
 	return 0;
 }
 
@@ -476,7 +476,7 @@ void test_online_clone__can_cancel(void)
 {
 	g_options.fetch_opts.callbacks.transfer_progress = cancel_at_half;
 
-	cl_git_fail_with(4321,
+	cl_git_fail_with(-4321,
 		git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 }
 
