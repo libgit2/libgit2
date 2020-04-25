@@ -381,6 +381,7 @@ typedef struct git_mailmap git_mailmap;
  */
 
 typedef enum {
+	GIT_EVENT_NONE    = 0u,
 	GIT_EVENT_READ    = (1u << 0),
 	GIT_EVENT_WRITE   = (1u << 1),
 	GIT_EVENT_ERR     = (1u << 2),

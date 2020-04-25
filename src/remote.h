@@ -28,6 +28,8 @@ typedef struct git_remote_connection_opts {
 
 typedef int GIT_CALLBACK(git_perform_cb)(git_remote *remote, git_event_t events);
 
+#define GIT_REMOTE_NUM_PERFORMCB	3U
+
 struct git_remote {
 	char *name;
 	char *url;
@@ -45,7 +47,11 @@ struct git_remote {
 	int prune_refs;
 	int passed_refspecs;
 	
-	git_perform_cb perform_callback;
+	git_perform_cb perform_callbacks[GIT_REMOTE_NUM_PERFORMCB];
+	size_t perform_num_cb;
+
+	git_buf resolved_url;
+	git_transport *connect_transport;
 	
 	git_strarray custom_headers;
 	git_proxy_options proxy_options;
