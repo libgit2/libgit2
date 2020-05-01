@@ -5,12 +5,15 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "oid.h"
-#include "tlsdata.h"
+#ifndef INCLUDE_util_hash_sha1_generic_h__
+#define INCLUDE_util_hash_sha1_generic_h__
 
-char *git_oid_tostr_s(const git_oid *oid)
-{
-	char *str = GIT_TLSDATA->oid_fmt;
-	git_oid_nfmt(str, GIT_OID_HEXSZ + 1, oid);
-	return str;
-}
+#include "hash/sha1.h"
+
+struct git_hash_sha1_ctx {
+	unsigned long long size;
+	unsigned int H[5];
+	unsigned int W[16];
+};
+
+#endif

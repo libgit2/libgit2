@@ -5,12 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "oid.h"
-#include "tlsdata.h"
+#ifndef INCLUDE_util_allocators_crtdbg_h
+#define INCLUDE_util_allocators_crtdbg_h
 
-char *git_oid_tostr_s(const git_oid *oid)
-{
-	char *str = GIT_TLSDATA->oid_fmt;
-	git_oid_nfmt(str, GIT_OID_HEXSZ + 1, oid);
-	return str;
-}
+#include "git2_util.h"
+
+#include "alloc.h"
+
+int git_win32_crtdbg_init_allocator(git_allocator *allocator);
+
+#endif

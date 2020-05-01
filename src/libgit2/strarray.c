@@ -5,8 +5,6 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "util.h"
-
 #include "common.h"
 
 int git_strarray_copy(git_strarray *tgt, const git_strarray *src)

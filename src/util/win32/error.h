@@ -5,12 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "oid.h"
-#include "tlsdata.h"
+#ifndef INCLUDE_win32_error_h__
+#define INCLUDE_win32_error_h__
 
-char *git_oid_tostr_s(const git_oid *oid)
-{
-	char *str = GIT_TLSDATA->oid_fmt;
-	git_oid_nfmt(str, GIT_OID_HEXSZ + 1, oid);
-	return str;
-}
+#include "git2_util.h"
+
+extern char *git_win32_get_error_message(DWORD error_code);
+
+#endif
