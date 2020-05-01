@@ -2,7 +2,6 @@
 #include "patch.h"
 #include "patch_parse.h"
 #include "diff_helpers.h"
-#include "../src/diff.h"
 
 #include "../patch/patch_common.h"
 
