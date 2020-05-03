@@ -178,7 +178,7 @@ static int git_proto_stream_alloc(
 		return -1;
 	}
 
-	if ((git_socket_stream_new(&s->io, host, port)) < 0)
+	if ((git_socket_stream_new(&s->io, host, port, NULL, NULL)) < 0)
 		return -1;
 
 	GIT_ERROR_CHECK_VERSION(s->io, GIT_STREAM_VERSION, "git_stream");

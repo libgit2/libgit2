@@ -16,7 +16,7 @@
  * the current platform, whether that's SecureTransport on macOS,
  * OpenSSL or mbedTLS on other Unixes, or something else entirely.
  */
-extern int git_tls_stream_new(git_stream **out, const char *host, const char *port);
+extern int git_tls_stream_new(git_stream **out, const char *host, const char *port, git_remote_events_cb fd_events_cb, void *payload);
 
 /**
  * Create a TLS stream on top of an existing insecure stream, using

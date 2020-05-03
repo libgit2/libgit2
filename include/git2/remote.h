@@ -502,7 +502,10 @@ typedef int GIT_CALLBACK(git_url_resolve_cb)(git_buf *url_resolved, const char *
  *
  * This callback is used while an asynchroneous network operation is in
  * progress. It informs the application which events to wait for on a
- * file descriptor, and how long that timeout should be.
+ * file descriptor, and what the new timeout value shall be.
+ *
+ * If there are no more events to process for this file descriptor, neither the
+ * GIT_EVENT_READ nor GIT_EVENT_WRITE flags are set.
  *
  * @param fd The socket to wait for
  * @param event Event flags

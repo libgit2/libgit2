@@ -28,6 +28,8 @@
 #	endif
 #endif
 
+#define GIT_STREAM_BUFSIZ	2048U
+
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
 {
@@ -161,6 +163,9 @@ static int socket_close(git_stream *stream)
 	git_socket_stream *st = (git_socket_stream *) stream;
 	int error;
 
+	if(st->fd_events_cb)
+		st->fd_events_cb(st->s, GIT_EVENT_NONE, 0U, st->payload);
+
 	error = close_socket(st->s);
 	st->s = INVALID_SOCKET;
 
@@ -171,6 +176,8 @@ static void socket_free(git_stream *stream)
 {
 	git_socket_stream *st = (git_socket_stream *) stream;
 
+	git_buf_dispose(&st->sock_buf);
+
 	git__free(st->host);
 	git__free(st->port);
 	git__free(st);
@@ -179,7 +186,9 @@ static void socket_free(git_stream *stream)
 static int default_socket_stream_new(
 	git_stream **out,
 	const char *host,
-	const char *port)
+	const char *port,
+	git_remote_events_cb fd_events_cb,
+	void *payload)
 {
 	git_socket_stream *st;
 
@@ -203,6 +212,10 @@ static int default_socket_stream_new(
 	st->parent.close = socket_close;
 	st->parent.free = socket_free;
 	st->s = INVALID_SOCKET;
+	
+	git_buf_init(&st->sock_buf, GIT_STREAM_BUFSIZ);
+	st->fd_events_cb = fd_events_cb;
+	st->payload = payload;
 
 	*out = (git_stream *) st;
 	return 0;
@@ -211,9 +224,11 @@ static int default_socket_stream_new(
 int git_socket_stream_new(
 	git_stream **out,
 	const char *host,
-	const char *port)
+	const char *port,
+	git_remote_events_cb fd_events_cb,
+	void *payload)
 {
-	int (*init)(git_stream **, const char *, const char *) = NULL;
+	int (*init)(git_stream **, const char *, const char *, git_remote_events_cb, void *) = NULL;
 	git_stream_registration custom = {0};
 	int error;
 
@@ -231,5 +246,5 @@ int git_socket_stream_new(
 		return -1;
 	}
 
-	return init(out, host, port);
+	return init(out, host, port, fd_events_cb, payload);
 }

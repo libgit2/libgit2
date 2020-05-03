@@ -111,12 +111,16 @@ static int set_fd_events(git_socket fd, git_event_t event, unsigned int timeout,
 	else
 		FD_CLR(fd, &evdata->readfds);
 
-	if((event & GIT_EVENT_READ))
+	if((event & GIT_EVENT_WRITE))
 		FD_SET(fd, &evdata->writefds);
 	else
 		FD_CLR(fd, &evdata->writefds);
 	
-	FD_SET(fd, &evdata->exceptfds);
+	if((event & (GIT_EVENT_READ | GIT_EVENT_WRITE)))
+		FD_SET(fd, &evdata->exceptfds);
+	else
+		FD_CLR(fd, &evdata->exceptfds);
+
 	evdata->timeout.tv_sec = timeout;
 	evdata->highest_fd = fd;
 	

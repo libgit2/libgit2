@@ -101,8 +101,7 @@ int git_stream_register(git_stream_t type, git_stream_registration *registration
 }
 
 
-int git_stream_register_tls(
-	int GIT_CALLBACK(ctor)(git_stream **out, const char *host, const char *port))
+int git_stream_register_tls(git_stream_cb ctor)
 {
 	git_stream_registration registration = {0};
 

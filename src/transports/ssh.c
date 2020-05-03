@@ -553,7 +553,7 @@ static int _git_ssh_setup_conn(
 	GIT_ERROR_CHECK_ALLOC(urldata.port);
 
 post_extract:
-	if ((error = git_socket_stream_new(&s->io, urldata.host, urldata.port)) < 0 ||
+	if ((error = git_socket_stream_new(&s->io, urldata.host, urldata.port, NULL, NULL)) < 0 ||
 	    (error = git_stream_connect(s->io)) < 0)
 		goto done;
 

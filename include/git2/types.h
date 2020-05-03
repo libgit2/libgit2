@@ -374,6 +374,7 @@ typedef struct git_mailmap git_mailmap;
  * events to wait for on a socket, and by the application to signal
  * to libgit2 which events occurred.
  *
+ * * GIT_EVENT_NONE    - No event
  * * GIT_EVENT_READ    - Wait for or signal data arrived on socket
  * * GIT_EVENT_WRITE   - Wait for or signal socket is ready for write
  * * GIT_EVENT_ERR     - Signal an error occurred on the socket

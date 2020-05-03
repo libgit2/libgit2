@@ -16,8 +16,12 @@ typedef struct {
 	char *host;
 	char *port;
 	git_socket s;
+	
+	git_buf sock_buf;
+	git_remote_events_cb fd_events_cb;
+	void *payload;
 } git_socket_stream;
 
-extern int git_socket_stream_new(git_stream **out, const char *host, const char *port);
+extern int git_socket_stream_new(git_stream **out, const char *host, const char *port, git_remote_events_cb fd_events_cb, void *payload);
 
 #endif
