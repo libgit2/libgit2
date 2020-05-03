@@ -38,6 +38,7 @@ struct git_transport {
 	/** Set progress and error callbacks */
 	int GIT_CALLBACK(set_callbacks)(
 		git_transport *transport,
+		git_remote_events_cb fd_events_cb,
 		git_transport_message_cb progress_cb,
 		git_transport_message_cb error_cb,
 		git_transport_certificate_check_cb certificate_check_cb,

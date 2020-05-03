@@ -58,6 +58,7 @@ GIT_INLINE(int) git_smart__reset_stream(transport_smart *t, bool close_subtransp
 
 static int git_smart__set_callbacks(
 	git_transport *transport,
+	git_remote_events_cb fd_events_cb,
 	git_transport_message_cb progress_cb,
 	git_transport_message_cb error_cb,
 	git_transport_certificate_check_cb certificate_check_cb,
@@ -65,6 +66,7 @@ static int git_smart__set_callbacks(
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
+	t->fd_events_cb = fd_events_cb;
 	t->progress_cb = progress_cb;
 	t->error_cb = error_cb;
 	t->certificate_check_cb = certificate_check_cb;

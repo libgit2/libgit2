@@ -635,6 +635,7 @@ cleanup:
 
 static int local_set_callbacks(
 	git_transport *transport,
+	git_remote_events_cb fd_events_cb,
 	git_transport_message_cb progress_cb,
 	git_transport_message_cb error_cb,
 	git_transport_certificate_check_cb certificate_check_cb,
@@ -642,6 +643,7 @@ static int local_set_callbacks(
 {
 	transport_local *t = (transport_local *)transport;
 
+	GIT_UNUSED(fd_events_cb);
 	GIT_UNUSED(certificate_check_cb);
 
 	t->progress_cb = progress_cb;
