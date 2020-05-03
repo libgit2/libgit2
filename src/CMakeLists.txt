@@ -281,3 +281,4 @@ configure_file(util/features.h.in generated/features.h)
 
 add_subdirectory(util)
 add_subdirectory(libgit2)
+add_subdirectory(libgit2client)
