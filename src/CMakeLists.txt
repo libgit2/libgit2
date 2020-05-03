@@ -178,6 +178,10 @@ configure_file(features.h.in git2/sys/features.h)
 add_subdirectory(libgit2)
 add_subdirectory(util)
 
+if(BUILD_CLI)
+	add_subdirectory(cli)
+endif()
+
 # re-export these to the root so that peer projects (tests, fuzzers,
 # examples) can use them
 set(LIBGIT2_INCLUDES ${LIBGIT2_INCLUDES} PARENT_SCOPE)
