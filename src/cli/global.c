@@ -45,7 +45,8 @@ int cli_global_init()
 		git_allocator_global_init,
 		git_hash_global_init,
 		git_threads_global_init,
-		git_ssh_subtransport_register
+		git_ssh_subtransport_register,
+		git_exec_filter_register
 	};
 
 	return git_runtime_init(init_fns, ARRAY_SIZE(init_fns));
