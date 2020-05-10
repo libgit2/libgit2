@@ -165,7 +165,7 @@ static int socket_close(git_stream *stream)
 	git_socket_stream *st = (git_socket_stream *) stream;
 	int error;
 
-	if((remote = st->remote))
+	if((remote = st->remote) && remote->callbacks.set_fd_events)
 		remote->callbacks.set_fd_events(st->s, GIT_EVENT_NONE, 0U, remote->cbref);
 
 	error = close_socket(st->s);

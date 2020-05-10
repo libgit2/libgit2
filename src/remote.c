@@ -828,10 +828,15 @@ static int perform_all_fun(git_remote *remote, git_remote_performall_fun func)
 
 	err = func(remote);
 	
-	if(err == GIT_EAGAIN && is_sync(&remote->callbacks))
-		return perform_all(remote);
-	else
-		return err;
+	if(is_sync(&remote->callbacks))
+	{
+		if(err == GIT_EAGAIN)
+			err = perform_all(remote);
+		
+		remote->callbacks.set_fd_events = NULL;
+	}
+	
+	return err;
 }
 
 static int resolve_url(git_buf *resolved_url, const char *url, int direction, const git_remote_callbacks *callbacks)
