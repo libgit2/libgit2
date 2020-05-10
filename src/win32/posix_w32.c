@@ -982,3 +982,17 @@ int p_inet_pton(int af, const char *src, void *dst)
 	errno = EINVAL;
 	return -1;
 }
+
+int p_setfd_fionbio(git_socket fd, int mode)
+{
+	u_long blocking = mode;
+	int err;
+
+	if((err = ioctlsocket(fd, FIONBIO, &blocking)) == SOCKET_ERROR)
+	{
+		git_error_set(GIT_ERROR_OS, "failed to configure socket blocking behaviour");
+		return GIT_ERROR;
+	}
+	else
+		return GIT_OK;
+}

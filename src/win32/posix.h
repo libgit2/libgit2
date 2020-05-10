@@ -58,4 +58,9 @@ extern int p_lstat_posixly(const char *filename, struct stat *buf);
 extern struct tm * p_localtime_r(const time_t *timer, struct tm *result);
 extern struct tm * p_gmtime_r(const time_t *timer, struct tm *result);
 
+extern int p_setfd_fionbio(git_socket fd, int mode);
+
+#define p_setfd_nonblocking(fd) p_setfd_fionbio((fd), 1)
+#define p_setfd_blocking(fd) p_setfd_fionbio((fd), 0)
+
 #endif

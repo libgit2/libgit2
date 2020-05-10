@@ -88,4 +88,9 @@ GIT_INLINE(int) p_futimes(int f, const struct p_timeval t[2])
 # define p_futimes futimes
 #endif
 
+extern int p_setfd_flags(git_socket fd, int set, int clr);
+
+#define p_setfd_nonblocking(fd) p_setfd_flags((fd), O_NONBLOCK, 0);
+#define p_setfd_blocking(fd) p_setfd_flags((fd), 0, O_NONBLOCK);
+
 #endif

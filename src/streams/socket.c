@@ -21,6 +21,8 @@
 #	include <netdb.h>
 #	include <netinet/in.h>
 #       include <arpa/inet.h>
+#       include <unistd.h>
+#       include <fcntl.h>
 #else
 #	include <winsock2.h>
 #	include <ws2tcpip.h>
