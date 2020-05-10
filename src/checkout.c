@@ -2544,6 +2544,17 @@ cleanup:
 #define CHECKOUT_INDEX_DONT_WRITE_MASK \
 	(GIT_CHECKOUT_DONT_UPDATE_INDEX | GIT_CHECKOUT_DONT_WRITE_INDEX)
 
+GIT_INLINE(void) setup_pathspecs(
+	git_iterator_options *iter_opts,
+	const git_checkout_options *checkout_opts)
+{
+	if (checkout_opts &&
+		(checkout_opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
+		iter_opts->pathlist.count = checkout_opts->paths.count;
+		iter_opts->pathlist.strings = checkout_opts->paths.strings;
+	}
+}
+
 int git_checkout_iterator(
 	git_iterator *target,
 	git_index *index,
@@ -2586,6 +2597,8 @@ int git_checkout_iterator(
 	workdir_opts.start = data.pfx;
 	workdir_opts.end = data.pfx;
 
+	setup_pathspecs(&workdir_opts, opts);
+
 	if ((error = git_iterator_reset_range(target, data.pfx, data.pfx)) < 0 ||
 		(error = git_iterator_for_workdir_ext(
 			&workdir, data.repo, data.opts.target_directory, index, NULL,
@@ -2596,10 +2609,8 @@ int git_checkout_iterator(
 		GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE;
 	baseline_opts.start = data.pfx;
 	baseline_opts.end = data.pfx;
-	if (opts && (opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
-		baseline_opts.pathlist.count = opts->paths.count;
-		baseline_opts.pathlist.strings = opts->paths.strings;
-	}
+
+	setup_pathspecs(&baseline_opts, opts);
 
 	if (data.opts.baseline_index) {
 		if ((error = git_iterator_for_index(
@@ -2689,6 +2700,7 @@ int git_checkout_index(
 	git_index *index,
 	const git_checkout_options *opts)
 {
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error, owned = 0;
 	git_iterator *index_i;
 
@@ -2716,7 +2728,9 @@ int git_checkout_index(
 		return error;
 	GIT_REFCOUNT_INC(index);
 
-	if (!(error = git_iterator_for_index(&index_i, repo, index, NULL)))
+	setup_pathspecs(&iter_opts, opts);
+
+	if (!(error = git_iterator_for_index(&index_i, repo, index, &iter_opts)))
 		error = git_checkout_iterator(index_i, index, opts);
 
 	if (owned)
@@ -2773,10 +2787,7 @@ int git_checkout_tree(
 	if ((error = git_repository_index(&index, repo)) < 0)
 		return error;
 
-	if (opts && (opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
-		iter_opts.pathlist.count = opts->paths.count;
-		iter_opts.pathlist.strings = opts->paths.strings;
-	}
+	setup_pathspecs(&iter_opts, opts);
 
 	if (!(error = git_iterator_for_tree(&tree_i, tree, &iter_opts)))
 		error = git_checkout_iterator(tree_i, index, opts);
