@@ -108,10 +108,12 @@ static int config_file_open(git_config_backend *cfg, git_config_level_t level, c
 	if ((res = git_config_entries_new(&b->entries)) < 0)
 		return res;
 
-	if (!git_path_exists(b->file.path))
+	if (!git_path_exists(b->file.path)) {
 		return 0;
-    if (p_access(b->file.path, R_OK) < 0)
+    }
+    if (p_access(b->file.path, R_OK) < 0) {
         res = GIT_ENOTFOUND; // without this read check sandboxed applications on macOS can't open any repository, because `config_file_read()` below will return GIT_ERROR when it can't read the global /Users/username/.gitconfig file, and the upper layers will just completely abort on GIT_ERROR when loading a config file (which seems a bit extreme).
+    }
 
 	if (res < 0 || (res = config_file_read(b->entries, repo, &b->file, level, 0)) < 0) {
 		git_config_entries_free(b->entries);
