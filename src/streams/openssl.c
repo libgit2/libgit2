@@ -794,10 +794,12 @@ int git_openssl_stream_new(git_stream **out, git_remote *remote, const char *hos
 {
 	git_stream *stream = NULL;
 	int error;
+	
+	GIT_UNUSED(remote);
 
 	assert(out && host && port);
 
-	if ((error = git_socket_stream_new(&stream, remote, host, port)) < 0)
+	if ((error = git_socket_stream_new(&stream, NULL, host, port)) < 0)
 		return error;
 
 	if ((error = openssl_stream_wrap(out, stream, host, 1)) < 0) {

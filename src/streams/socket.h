@@ -23,7 +23,9 @@ typedef struct {
 	git_stream parent;
 	char *host;
 	char *port;
+
 	git_socket s;
+	git_event_t events;
 	
 	struct addrinfo *info;
 	struct addrinfo *curinfo;

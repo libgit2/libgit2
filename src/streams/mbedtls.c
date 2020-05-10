@@ -419,15 +419,18 @@ int git_mbedtls_stream_wrap(
 
 int git_mbedtls_stream_new(
 	git_stream **out,
+	git_remote *remote,
 	const char *host,
 	const char *port)
 {
 	git_stream *stream;
 	int error;
 
+	GIT_UNUSED(remote);
+
 	assert(out && host && port);
 
-	if ((error = git_socket_stream_new(&stream, host, port)) < 0)
+	if ((error = git_socket_stream_new(&stream, NULL, host, port)) < 0)
 		return error;
 
 	if ((error = mbedtls_stream_wrap(out, stream, host, 1)) < 0) {

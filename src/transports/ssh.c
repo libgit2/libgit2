@@ -524,6 +524,10 @@ static int _git_ssh_setup_conn(
 	LIBSSH2_SESSION* session=NULL;
 	LIBSSH2_CHANNEL* channel=NULL;
 
+	/* used only temporarily as long as ssh transport has no async capabilities */
+	eventcb_data_t evdata;
+	git_remote *remote = t->owner->owner;
+
 	t->current_stream = NULL;
 
 	*stream = NULL;
@@ -552,10 +556,20 @@ static int _git_ssh_setup_conn(
 
 	GIT_ERROR_CHECK_ALLOC(urldata.port);
 
+	git_init_eventcb_data(&evdata, remote);
+
 post_extract:
 	if ((error = git_socket_stream_new(&s->io, t->owner->owner, urldata.host, urldata.port)) < 0 ||
 	    (error = git_stream_connect(s->io)) < 0)
-		goto done;
+	{
+		if(error == GIT_EAGAIN)
+		{
+			if((error = git_perform_all(remote)) < 0)
+                        	goto done;
+		}
+		else
+			goto done;
+	}
 
 	if ((error = _git_ssh_session_create(&session, s->io)) < 0)
 		goto done;
@@ -674,6 +688,9 @@ post_extract:
 	t->current_stream = s;
 
 done:
+	if(git_remote_issync(&remote->callbacks))
+		remote->callbacks.set_fd_events = NULL;
+
 	if (error < 0) {
 		ssh_stream_free(*stream);
 

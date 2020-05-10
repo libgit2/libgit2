@@ -44,12 +44,14 @@ static int git_remote_dispatch_performcb(git_remote *remote, git_event_t events)
 	if(num_cb)
 	{
 		git_perform_cb cb;
+		void *cbref;
 		
-		cb = remote->perform_callbacks[--num_cb];
+		cb = remote->perform_callbacks[--num_cb].cb;
+		cbref = remote->perform_callbacks[num_cb].cbref;
 		remote->perform_num_cb = num_cb;
 		
 		if(cb)
-			return cb(remote, events);
+			return cb(remote, cbref, events);
 		else
 		{
 			git_error_set(GIT_ERROR_NET, "invalid perform callback");
@@ -60,13 +62,14 @@ static int git_remote_dispatch_performcb(git_remote *remote, git_event_t events)
 		return GIT_ENOTFOUND;
 }
 
-static int git_remote_add_performcb(git_remote *remote, git_perform_cb cb)
+int git_remote_add_performcb(git_remote *remote, git_perform_cb cb, void *cbref)
 {
 	size_t num_cb = remote->perform_num_cb;
 	
 	if(num_cb < ARRAY_SIZE(remote->perform_callbacks))
 	{
-		remote->perform_callbacks[num_cb++] = cb;
+		remote->perform_callbacks[num_cb].cb = cb;
+		remote->perform_callbacks[num_cb++].cbref = cbref;
 		remote->perform_num_cb = num_cb;
 		return GIT_OK;
 	}
@@ -77,13 +80,13 @@ static int git_remote_add_performcb(git_remote *remote, git_perform_cb cb)
 	}
 }
 
-static int git_remote_rearm_performcb(git_remote *remote, git_event_t events, git_perform_cb cb)
+static int git_remote_rearm_performcb(git_remote *remote, git_perform_cb cb, void *cbref, git_event_t events)
 {
 	int err;
 
 	if((err = git_remote_dispatch_performcb(remote, events)) < 0 && err == GIT_EAGAIN)
 	{
-		if((err = git_remote_add_performcb(remote, cb)) < 0)
+		if((err = git_remote_add_performcb(remote, cb, cbref)) < 0)
 			return err;
 		else
 			return GIT_EAGAIN;
@@ -91,16 +94,6 @@ static int git_remote_rearm_performcb(git_remote *remote, git_event_t events, gi
 	
 	return err;
 }
-
-typedef struct
-{
-	fd_set readfds;
-	fd_set writefds;
-	fd_set exceptfds;
-	struct timeval timeout;
-
-	git_socket highest_fd;
-} eventcb_data_t;
 
 static int set_fd_events(git_socket fd, git_event_t event, unsigned int timeout, void *payload)
 {
@@ -127,7 +120,7 @@ static int set_fd_events(git_socket fd, git_event_t event, unsigned int timeout,
 	return GIT_OK;
 }
 
-static int is_sync(const git_remote_callbacks *callbacks)
+int git_remote_issync(const git_remote_callbacks *callbacks)
 {
 	return !callbacks || !callbacks->set_fd_events || callbacks->set_fd_events == set_fd_events;
 }
@@ -143,9 +136,9 @@ static void init_remote_callbacks(git_remote *remote, const git_remote_callbacks
 		git_remote_init_callbacks(&remote->callbacks, GIT_REMOTE_CALLBACKS_VERSION);
 }
 
-static void init_eventcb_data(eventcb_data_t *evdata, git_remote *remote)
+void git_init_eventcb_data(eventcb_data_t *evdata, git_remote *remote)
 {
-	if(is_sync(&remote->callbacks))
+	if(git_remote_issync(&remote->callbacks))
 	{
 		remote->callbacks.set_fd_events = set_fd_events;
 		FD_ZERO(&evdata->readfds);
@@ -775,7 +768,7 @@ int git_remote_set_pushurl(git_repository *repo, const char *remote, const char*
 	return set_url(repo, remote, CONFIG_PUSHURL_FMT, url);
 }
 
-static int perform_all(git_remote *remote)
+int git_perform_all(git_remote *remote)
 {
 	eventcb_data_t *evdata = remote->cbref;
 	int sret;
@@ -824,14 +817,14 @@ static int perform_all_fun(git_remote *remote, git_remote_performall_fun func)
 	eventcb_data_t evdata;
 	int err;
 	
-	init_eventcb_data(&evdata, remote);
+	git_init_eventcb_data(&evdata, remote);
 
 	err = func(remote);
 	
-	if(is_sync(&remote->callbacks))
+	if(git_remote_issync(&remote->callbacks))
 	{
 		if(err == GIT_EAGAIN)
-			err = perform_all(remote);
+			err = git_perform_all(remote);
 		
 		remote->callbacks.set_fd_events = NULL;
 	}
@@ -907,12 +900,12 @@ static int check_busy(git_remote *remote)
 		return GIT_OK;
 }
 
-static int git_remote__connect_perform(git_remote *remote, git_event_t events)
+static int git_remote__connect_perform(git_remote *remote, void *cbref, git_event_t events)
 {
 	git_transport *t = remote->connect_transport;
 	int err;
 	
-	if((err = git_remote_rearm_performcb(remote, events, git_remote__connect_perform)) < 0)
+	if((err = git_remote_rearm_performcb(remote, git_remote__connect_perform, cbref, events)) < 0)
 	{
 		if(err != GIT_EAGAIN)
 		{
@@ -974,7 +967,7 @@ static int git_remote__connect_goturl(git_remote *remote)
 	{
 		if(error == GIT_EAGAIN)
 		{
-			if((error = git_remote_add_performcb(remote, git_remote__connect_perform)) < 0)
+			if((error = git_remote_add_performcb(remote, git_remote__connect_perform, NULL)) < 0)
 				goto on_error;
 			else
 			{
@@ -1005,11 +998,11 @@ on_error:
 	return error;
 }
 
-static int git_remote__connect_performurl(git_remote *remote, git_event_t events)
+static int git_remote__connect_performurl(git_remote *remote, void *cbref, git_event_t events)
 {
 	int err;
 
-	if((err = git_remote_rearm_performcb(remote, events, git_remote__connect_performurl)) < 0)
+	if((err = git_remote_rearm_performcb(remote, git_remote__connect_performurl, cbref, events)) < 0)
 	{
 		if(err != GIT_EAGAIN)
 			git_buf_dispose(&remote->resolved_url);
@@ -1028,7 +1021,7 @@ int git_remote__connect(git_remote *remote)
 	{
 		if(error == GIT_EAGAIN)
 		{
-			if((error = git_remote_add_performcb(remote, git_remote__connect_performurl)) >= 0)
+			if((error = git_remote_add_performcb(remote, git_remote__connect_performurl, NULL)) >= 0)
 				return GIT_EAGAIN;
 		}
 
@@ -1210,11 +1203,11 @@ static int git_remote_download_negotiated(git_remote *remote)
 	return git_fetch_download_pack(remote, &remote->callbacks);
 }
 
-static int git_remote_download_perform_negotiate(git_remote *remote, git_event_t events)
+static int git_remote_download_perform_negotiate(git_remote *remote, void *cbref, git_event_t events)
 {
 	int err;
 
-	if((err = git_remote_rearm_performcb(remote, events, git_remote_download_perform_negotiate)) < 0)
+	if((err = git_remote_rearm_performcb(remote, git_remote_download_perform_negotiate, cbref, events)) < 0)
 		return err;
 	else
 		return git_remote_download_negotiated(remote);
@@ -1235,7 +1228,7 @@ static int git_remote_download_connected(git_remote *remote)
 	{
 		if(error == GIT_EAGAIN)
 		{
-			if((error = git_remote_add_performcb(remote, git_remote_download_perform_negotiate)) >= 0)
+			if((error = git_remote_add_performcb(remote, git_remote_download_perform_negotiate, NULL)) >= 0)
 				return GIT_EAGAIN;
 		}
 
@@ -1245,11 +1238,11 @@ static int git_remote_download_connected(git_remote *remote)
 		return git_remote_download_negotiated(remote);
 }
 
-static int git_remote_download_performconnect(git_remote *remote, git_event_t events)
+static int git_remote_download_performconnect(git_remote *remote, void *cbref, git_event_t events)
 {
 	int err;
 
-	if((err = git_remote_rearm_performcb(remote, events, git_remote_download_performconnect)) < 0)
+	if((err = git_remote_rearm_performcb(remote, git_remote_download_performconnect, cbref, events)) < 0)
 		return err;
 	else
 		return perform_all_fun(remote, git_remote_download_connected);
@@ -1342,7 +1335,7 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 		{
 			if(error == GIT_EAGAIN)
 			{
-				if((error = git_remote_add_performcb(remote, git_remote_download_performconnect)) >= 0)
+				if((error = git_remote_add_performcb(remote, git_remote_download_performconnect, NULL)) >= 0)
 					return GIT_EAGAIN;
 			}
 
@@ -1390,11 +1383,11 @@ static int git_remote_fetch_disconnected(git_remote *remote)
 	return git_remote_fetch_cleanup(remote, error);
 }
 
-static int git_remote_fetch_performdisconnect(git_remote *remote, git_event_t events)
+static int git_remote_fetch_performdisconnect(git_remote *remote, void *cbref, git_event_t events)
 {
 	int err;
 
-	if((err = git_remote_rearm_performcb(remote, events, git_remote_fetch_performdisconnect)) < 0)
+	if((err = git_remote_rearm_performcb(remote, git_remote_fetch_performdisconnect, cbref, events)) < 0)
 	{
 		if(err == GIT_EAGAIN)
 			return err;
@@ -1415,7 +1408,7 @@ static int git_remote_fetch_downloaded(git_remote *remote)
 	{
 		if(error == GIT_EAGAIN)
 		{
-			if((error = git_remote_add_performcb(remote, git_remote_fetch_performdisconnect)) >= 0)
+			if((error = git_remote_add_performcb(remote, git_remote_fetch_performdisconnect, NULL)) >= 0)
 				return GIT_EAGAIN;
 		}
 
@@ -1425,11 +1418,11 @@ static int git_remote_fetch_downloaded(git_remote *remote)
 		return git_remote_fetch_disconnected(remote);
 }
 
-static int git_remote_fetch_performdownload(git_remote *remote, git_event_t events)
+static int git_remote_fetch_performdownload(git_remote *remote, void *cbref, git_event_t events)
 {
 	int err;
 
-	if((err = git_remote_rearm_performcb(remote, events, git_remote_fetch_performdownload)) < 0)
+	if((err = git_remote_rearm_performcb(remote, git_remote_fetch_performdownload, cbref, events)) < 0)
 	{
 		if(err == GIT_EAGAIN)
 			return err;
@@ -1448,7 +1441,7 @@ static int git_remote_fetch_connected(git_remote *remote)
 	{
 		if(error == GIT_EAGAIN)
 		{
-			if((error = git_remote_add_performcb(remote, git_remote_fetch_performdownload)) >= 0)
+			if((error = git_remote_add_performcb(remote, git_remote_fetch_performdownload, NULL)) >= 0)
 				return GIT_EAGAIN;
 		}
 
@@ -1458,11 +1451,11 @@ static int git_remote_fetch_connected(git_remote *remote)
 		return git_remote_fetch_downloaded(remote);
 }
 
-static int git_remote_fetch_performconnect(git_remote *remote, git_event_t events)
+static int git_remote_fetch_performconnect(git_remote *remote, void *cbref, git_event_t events)
 {
 	int err;
 
-	if((err = git_remote_rearm_performcb(remote, events, git_remote_fetch_performconnect)) < 0)
+	if((err = git_remote_rearm_performcb(remote, git_remote_fetch_performconnect, cbref, events)) < 0)
 	{
 		if(err != GIT_EAGAIN)
 			return git_remote_fetch_cleanup(remote, err);
@@ -1533,7 +1526,7 @@ int git_remote_fetch(
 	{
 		if(error == GIT_EAGAIN)
 		{
-			if((error = git_remote_add_performcb(remote, git_remote_fetch_performconnect)) >= 0)
+			if((error = git_remote_add_performcb(remote, git_remote_fetch_performconnect, NULL)) >= 0)
 				return GIT_EAGAIN;
 		}
 
@@ -2929,11 +2922,11 @@ static int git_remote_upload_finished(git_remote *remote)
 		return GIT_OK;
 }
 
-static int git_remote_upload_perform_finish(git_remote *remote, git_event_t events)
+static int git_remote_upload_perform_finish(git_remote *remote, void *cbref, git_event_t events)
 {
 	int err;
 
-	if((err = git_remote_rearm_performcb(remote, events, git_remote_upload_perform_finish)) < 0)
+	if((err = git_remote_rearm_performcb(remote, git_remote_upload_perform_finish, cbref, events)) < 0)
 		return err;
 	else
 		return git_remote_upload_finished(remote);
@@ -2948,7 +2941,7 @@ static int git_remote_upload_connected(git_remote *remote)
 	{
 		if(error == GIT_EAGAIN)
 		{
-			if((error = git_remote_add_performcb(remote, git_remote_upload_perform_finish)) >= 0)
+			if((error = git_remote_add_performcb(remote, git_remote_upload_perform_finish, NULL)) >= 0)
 				return GIT_EAGAIN;
 		}
 
@@ -2958,11 +2951,11 @@ static int git_remote_upload_connected(git_remote *remote)
 		return git_remote_upload_finished(remote);
 }
 
-static int git_remote_upload_performconnect(git_remote *remote, git_event_t events)
+static int git_remote_upload_performconnect(git_remote *remote, void *cbref, git_event_t events)
 {
 	int err;
 
-	if((err = git_remote_rearm_performcb(remote, events, git_remote_upload_performconnect)) < 0)
+	if((err = git_remote_rearm_performcb(remote, git_remote_upload_performconnect, cbref, events)) < 0)
 		return err;
 	else
 		return perform_all_fun(remote, git_remote_upload_connected);
@@ -3039,7 +3032,7 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 		{
 			if(error == GIT_EAGAIN)
 			{
-				if((error = git_remote_add_performcb(remote, git_remote_upload_performconnect)) >= 0)
+				if((error = git_remote_add_performcb(remote, git_remote_upload_performconnect, NULL)) >= 0)
 					return GIT_EAGAIN;
 			}
 
@@ -3066,11 +3059,11 @@ static int git_remote_push_disconnected(git_remote *remote)
 	return git_remote_push_cleanup(remote, err);
 }
 
-static int git_remote_push_performdisconnect(git_remote *remote, git_event_t events)
+static int git_remote_push_performdisconnect(git_remote *remote, void *cbref, git_event_t events)
 {
 	int err;
 
-	if((err = git_remote_rearm_performcb(remote, events, git_remote_push_performdisconnect)) < 0)
+	if((err = git_remote_rearm_performcb(remote, git_remote_push_performdisconnect, cbref, events)) < 0)
 	{
 		if(err == GIT_EAGAIN)
 			return err;
@@ -3091,7 +3084,7 @@ static int git_remote_push_uploaded(git_remote *remote)
 	{
 		if(error == GIT_EAGAIN)
 		{
-			if((error = git_remote_add_performcb(remote, git_remote_push_performdisconnect)) >= 0)
+			if((error = git_remote_add_performcb(remote, git_remote_push_performdisconnect, NULL)) >= 0)
 				return GIT_EAGAIN;
 		}
 
@@ -3101,11 +3094,11 @@ static int git_remote_push_uploaded(git_remote *remote)
 		return git_remote_push_disconnected(remote);
 }
 
-static int git_remote_push_performupload(git_remote *remote, git_event_t events)
+static int git_remote_push_performupload(git_remote *remote, void *cbref, git_event_t events)
 {
 	int err;
 
-	if((err = git_remote_rearm_performcb(remote, events, git_remote_push_performupload)) < 0)
+	if((err = git_remote_rearm_performcb(remote, git_remote_push_performupload, cbref, events)) < 0)
 	{
 		if(err == GIT_EAGAIN)
 			return err;
@@ -3125,7 +3118,7 @@ static int git_remote_push_connected(git_remote *remote)
 	{
 		if(error == GIT_EAGAIN)
 		{
-			if((error = git_remote_add_performcb(remote, git_remote_push_performupload)) >= 0)
+			if((error = git_remote_add_performcb(remote, git_remote_push_performupload, NULL)) >= 0)
 				return GIT_EAGAIN;
 		}
 
@@ -3135,11 +3128,11 @@ static int git_remote_push_connected(git_remote *remote)
 		return git_remote_push_uploaded(remote);
 }
 
-static int git_remote_push_performconnect(git_remote *remote, git_event_t events)
+static int git_remote_push_performconnect(git_remote *remote, void *cbref, git_event_t events)
 {
 	int err;
 
-	if((err = git_remote_rearm_performcb(remote, events, git_remote_push_performconnect)) < 0)
+	if((err = git_remote_rearm_performcb(remote, git_remote_push_performconnect, cbref, events)) < 0)
 	{
 		if(err != GIT_EAGAIN)
 			return git_remote_push_cleanup(remote, err);
@@ -3197,7 +3190,7 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 	{
 		if(error == GIT_EAGAIN)
 		{
-			if((error = git_remote_add_performcb(remote, git_remote_push_performconnect)) >= 0)
+			if((error = git_remote_add_performcb(remote, git_remote_push_performconnect, NULL)) >= 0)
 				return GIT_EAGAIN;
 		}
 

@@ -26,7 +26,7 @@ typedef struct git_remote_connection_opts {
 
 #define GIT_REMOTE_CONNECTION_OPTIONS_INIT { NULL, NULL, GIT_DIRECTION_FETCH }
 
-typedef int GIT_CALLBACK(git_perform_cb)(git_remote *remote, git_event_t events);
+typedef int GIT_CALLBACK(git_perform_cb)(git_remote *remote, void *cbref, git_event_t events);
 
 #define GIT_REMOTE_NUM_PERFORMCB	3U
 
@@ -47,7 +47,11 @@ struct git_remote {
 	int prune_refs;
 	int passed_refspecs;
 	
-	git_perform_cb perform_callbacks[GIT_REMOTE_NUM_PERFORMCB];
+	struct
+	{
+		git_perform_cb cb;
+		void *cbref;
+	} perform_callbacks[GIT_REMOTE_NUM_PERFORMCB];
 	size_t perform_num_cb;
 
 	git_buf resolved_url;
@@ -70,6 +74,16 @@ struct git_remote {
 	git_remote_callbacks callbacks;
 };
 
+typedef struct
+{
+        fd_set readfds;
+        fd_set writefds;
+        fd_set exceptfds;
+        struct timeval timeout;
+
+        git_socket highest_fd;
+} eventcb_data_t;
+
 int git_remote__connect(git_remote *remote);
 
 int git_remote__urlfordirection(git_buf *url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks);
@@ -77,5 +91,11 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 
 git_refspec *git_remote__matching_refspec(git_remote *remote, const char *refname);
 git_refspec *git_remote__matching_dst_refspec(git_remote *remote, const char *refname);
+
+extern int git_remote_issync(const git_remote_callbacks *callbacks);
+extern int git_remote_add_performcb(git_remote *remote, git_perform_cb cb, void *cbref);
+
+extern void git_init_eventcb_data(eventcb_data_t *evdata, git_remote *remote);
+extern int git_perform_all(git_remote *remote);
 
 #endif

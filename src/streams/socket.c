@@ -31,7 +31,10 @@
 #	endif
 #endif
 
-#define GIT_STREAM_BUFSIZ	2048U
+#define GIT_STREAM_CONNECT_TIMEOUT	60
+#define GIT_STREAM_BUFSIZ		2048U
+
+static int socket_connect_event(git_remote *remote, void *cbref, git_event_t events);
 
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
@@ -74,12 +77,148 @@ static int close_socket(git_socket s)
 
 }
 
+static int socket_connect_failed(git_socket_stream *st, int err)
+{
+	int syserr;
+
+	/* Oops, we couldn't connect to any address */
+	p_freeaddrinfo(st->info);
+	
+	if((syserr = close_socket(st->s)) < 0)
+		err = syserr;
+	
+	st->s = INVALID_SOCKET;
+
+	return err;
+}
+
+static int socket_connect_failed_err(git_socket_stream *st)
+{
+	git_error_set(GIT_ERROR_NET, "failed to connect to %s", st->host);
+
+	return socket_connect_failed(st, GIT_ERROR);
+}
+
+static int socket_connect_connected(git_socket_stream *st)
+{
+	int err;
+
+	p_freeaddrinfo(st->info);
+	
+	/* Reenable blocking operations on socket */
+	if((err = p_setfd_blocking(st->s)) < 0)
+		return err;
+	else
+		return GIT_OK;
+}
+
+static int socket_connect_next(git_socket_stream *st)
+{
+	git_remote *remote = st->remote;
+	struct addrinfo *curinfo;
+	git_socket s;
+	int err;
+	
+	for(curinfo = st->curinfo; curinfo; curinfo = curinfo->ai_next)
+	{
+		s = socket(curinfo->ai_family, curinfo->ai_socktype | SOCK_CLOEXEC, curinfo->ai_protocol);
+
+		if (s == INVALID_SOCKET)
+			continue;
+		
+		if(remote)
+		{
+			if(p_setfd_nonblocking(s) < 0)
+			{
+				if((err = close_socket(s)) < 0)
+					return socket_connect_failed(st, err);
+				else
+					continue;
+			}
+		}
+
+		st->s = s;
+
+#ifdef GIT_WIN32
+		if(connect(s, curinfo->ai_addr, (socklen_t) curinfo->ai_addrlen) == SOCKET_ERROR)
+#else
+		if(connect(s, curinfo->ai_addr, (socklen_t) curinfo->ai_addrlen) < 0)
+#endif
+		{
+#ifdef GIT_WIN32
+			if(WSAGetLastError() == WSAEWOULDBLOCK)
+#else
+			if(errno == EINPROGRESS)
+#endif
+			{
+				st->curinfo = curinfo->ai_next;
+				
+				if((err = git_remote_add_performcb(remote, socket_connect_event, st)) < 0)
+					return socket_connect_failed(st, err);
+
+				err = remote->callbacks.set_fd_events(s, GIT_EVENT_WRITE, GIT_STREAM_CONNECT_TIMEOUT, remote->cbref);
+
+				if(err < 0)
+					return socket_connect_failed(st, err);
+				else
+					return GIT_EAGAIN;
+			}
+		}
+		else
+			return socket_connect_connected(st);
+
+		/* If we can't connect, try the next one */
+		if((err = close_socket(s)) < 0)
+			return socket_connect_failed(st, err);
+	}
+	
+	/* Oops, we couldn't connect to any address */
+	return socket_connect_failed_err(st);
+}
+
+int socket_connect_event(git_remote *remote, void *cbref, git_event_t events)
+{
+	git_socket_stream *st = cbref;
+	int uerr, err;
+
+	uerr = remote->callbacks.set_fd_events(st->s, GIT_EVENT_NONE, 0, remote->cbref);
+
+	if((events & GIT_EVENT_ERR) || uerr < 0)
+	{
+		if((err = close_socket(st->s)) < 0)
+			return socket_connect_failed(st, err);
+		
+		if(uerr < 0)
+			return socket_connect_failed(st, uerr);
+		else
+			return socket_connect_next(st);
+	}
+
+	if((events & GIT_EVENT_WRITE))
+		return socket_connect_connected(st);
+	else
+	{
+		if((events & GIT_EVENT_TIMEOUT))
+		{
+			if((err = close_socket(st->s)) < 0)
+				return socket_connect_failed(st, err);
+			else
+				return socket_connect_next(st);
+		}
+		else
+		{
+			if((err = git_remote_add_performcb(remote, socket_connect_event, st)))
+				return socket_connect_failed(st, err);
+			else
+				return GIT_EAGAIN;
+		}
+	}
+}
+
 static int socket_connect(git_stream *stream)
 {
-	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
 	git_socket_stream *st = (git_socket_stream *) stream;
-	git_socket s = INVALID_SOCKET;
 	int ret;
 
 #ifdef GIT_WIN32
@@ -103,36 +242,15 @@ static int socket_connect(git_stream *stream)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_family = AF_UNSPEC;
 
-	if ((ret = p_getaddrinfo(st->host, st->port, &hints, &info)) != 0) {
+	if ((ret = p_getaddrinfo(st->host, st->port, &hints, &st->info)) != 0) {
 		git_error_set(GIT_ERROR_NET,
 			   "failed to resolve address for %s: %s", st->host, p_gai_strerror(ret));
 		return -1;
 	}
+	
+	st->curinfo = st->info;
 
-	for (p = info; p != NULL; p = p->ai_next) {
-		s = socket(p->ai_family, p->ai_socktype | SOCK_CLOEXEC, p->ai_protocol);
-
-		if (s == INVALID_SOCKET)
-			continue;
-
-		if (connect(s, p->ai_addr, (socklen_t)p->ai_addrlen) == 0)
-			break;
-
-		/* If we can't connect, try the next one */
-		close_socket(s);
-		s = INVALID_SOCKET;
-	}
-
-	/* Oops, we couldn't connect to any address */
-	if (s == INVALID_SOCKET && p == NULL) {
-		git_error_set(GIT_ERROR_OS, "failed to connect to %s", st->host);
-		p_freeaddrinfo(info);
-		return -1;
-	}
-
-	st->s = s;
-	p_freeaddrinfo(info);
-	return 0;
+	return socket_connect_next(st);
 }
 
 static ssize_t socket_write(git_stream *stream, const char *data, size_t len, int flags)
