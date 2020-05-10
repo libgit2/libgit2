@@ -48,13 +48,14 @@ typedef struct {
 	 * Called to create a new connection to a given host.
 	 *
 	 * @param out The created stream
+	 * @param remote Remote associated with this stream
 	 * @param host The hostname to connect to; may be a hostname or
 	 *             IP address
 	 * @param port The port to connect to; may be a port number or
 	 *             service name
 	 * @return 0 or an error code
 	 */
-	int GIT_CALLBACK(init)(git_stream **out, const char *host, const char *port, git_remote_events_cb fd_events_cb, void *payload);
+	int GIT_CALLBACK(init)(git_stream **out, git_remote *remote, const char *host, const char *port);
 
 	/**
 	 * Called to create a new connection on top of the given stream.  If
@@ -114,7 +115,7 @@ GIT_EXTERN(int) git_stream_register(
  * @deprecated Provide a git_stream_registration to git_stream_register
  * @see git_stream_registration
  */
-typedef int GIT_CALLBACK(git_stream_cb)(git_stream **out, const char *host, const char *port, git_remote_events_cb fd_events_cb, void *payload);
+typedef int GIT_CALLBACK(git_stream_cb)(git_stream **out, git_remote *remote, const char *host, const char *port);
 
 /**
  * Register a TLS stream constructor for the library to use.  This stream

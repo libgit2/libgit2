@@ -9,6 +9,7 @@
 
 #include "posix.h"
 #include "netops.h"
+#include "remote.h"
 #include "registry.h"
 #include "stream.h"
 
@@ -160,11 +161,12 @@ static ssize_t socket_read(git_stream *stream, void *data, size_t len)
 
 static int socket_close(git_stream *stream)
 {
+	git_remote *remote;
 	git_socket_stream *st = (git_socket_stream *) stream;
 	int error;
 
-	if(st->fd_events_cb)
-		st->fd_events_cb(st->s, GIT_EVENT_NONE, 0U, st->payload);
+	if((remote = st->remote))
+		remote->callbacks.set_fd_events(st->s, GIT_EVENT_NONE, 0U, remote->cbref);
 
 	error = close_socket(st->s);
 	st->s = INVALID_SOCKET;
@@ -185,10 +187,9 @@ static void socket_free(git_stream *stream)
 
 static int default_socket_stream_new(
 	git_stream **out,
+	git_remote *remote,
 	const char *host,
-	const char *port,
-	git_remote_events_cb fd_events_cb,
-	void *payload)
+	const char *port)
 {
 	git_socket_stream *st;
 
@@ -214,8 +215,7 @@ static int default_socket_stream_new(
 	st->s = INVALID_SOCKET;
 	
 	git_buf_init(&st->sock_buf, GIT_STREAM_BUFSIZ);
-	st->fd_events_cb = fd_events_cb;
-	st->payload = payload;
+	st->remote = remote;
 
 	*out = (git_stream *) st;
 	return 0;
@@ -223,12 +223,11 @@ static int default_socket_stream_new(
 
 int git_socket_stream_new(
 	git_stream **out,
+	git_remote *remote,
 	const char *host,
-	const char *port,
-	git_remote_events_cb fd_events_cb,
-	void *payload)
+	const char *port)
 {
-	int (*init)(git_stream **, const char *, const char *, git_remote_events_cb, void *) = NULL;
+	int (*init)(git_stream **, git_remote *, const char *, const char *) = NULL;
 	git_stream_registration custom = {0};
 	int error;
 
@@ -246,5 +245,5 @@ int git_socket_stream_new(
 		return -1;
 	}
 
-	return init(out, host, port, fd_events_cb, payload);
+	return init(out, remote, host, port);
 }

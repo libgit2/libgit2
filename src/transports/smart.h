@@ -143,6 +143,7 @@ typedef struct {
 	int direction;
 	int flags;
 	git_remote_events_cb fd_events_cb;
+	void *fd_events_payload;
 	git_transport_message_cb progress_cb;
 	git_transport_message_cb error_cb;
 	git_transport_certificate_check_cb certificate_check_cb;

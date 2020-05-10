@@ -15,15 +15,12 @@
 #include "streams/openssl.h"
 #include "streams/stransport.h"
 
-int git_tls_stream_new(git_stream **out, const char *host, const char *port, git_remote_events_cb fd_events_cb, void *payload)
+int git_tls_stream_new(git_stream **out, git_remote *remote, const char *host, const char *port)
 {
-	int (*init)(git_stream **, const char *, const char *, git_remote_events_cb, void *) = NULL;
+	int (*init)(git_stream **, git_remote *, const char *, const char *) = NULL;
 	git_stream_registration custom = {0};
 	int error;
 	
-	GIT_UNUSED(fd_events_cb);
-	GIT_UNUSED(payload);
-
 	assert(out && host && port);
 
 	if ((error = git_stream_registry_lookup(&custom, GIT_STREAM_TLS)) == 0) {
@@ -45,7 +42,7 @@ int git_tls_stream_new(git_stream **out, const char *host, const char *port, git
 		return -1;
 	}
 
-	return init(out, host, port, NULL, NULL);
+	return init(out, remote, host, port);
 }
 
 int git_tls_stream_wrap(git_stream **out, git_stream *in, const char *host)

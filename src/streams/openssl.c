@@ -790,17 +790,14 @@ int git_openssl_stream_wrap(git_stream **out, git_stream *in, const char *host)
 	return openssl_stream_wrap(out, in, host, 0);
 }
 
-int git_openssl_stream_new(git_stream **out, const char *host, const char *port, git_remote_events_cb fd_events_cb, void *payload)
+int git_openssl_stream_new(git_stream **out, git_remote *remote, const char *host, const char *port)
 {
 	git_stream *stream = NULL;
 	int error;
 
-	GIT_UNUSED(fd_events_cb);
-	GIT_UNUSED(payload);
-
 	assert(out && host && port);
 
-	if ((error = git_socket_stream_new(&stream, host, port, NULL, NULL)) < 0)
+	if ((error = git_socket_stream_new(&stream, remote, host, port)) < 0)
 		return error;
 
 	if ((error = openssl_stream_wrap(out, stream, host, 1)) < 0) {

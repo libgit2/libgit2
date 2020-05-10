@@ -879,7 +879,7 @@ int set_transport_callbacks(git_transport *t, const git_remote_callbacks *cbs)
 	if (!t->set_callbacks || !cbs)
 		return 0;
 
-	return t->set_callbacks(t, cbs->set_fd_events, cbs->sideband_progress, NULL,
+	return t->set_callbacks(t, cbs->sideband_progress, NULL,
 				cbs->certificate_check, cbs->payload);
 }
 
