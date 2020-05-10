@@ -137,6 +137,11 @@ IF (MSVC)
 	# /Gd - explicitly set cdecl calling convention
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gd")
 
+	IF (NOT (MSVC_VERSION LESS 1900))
+		# /guard:cf - Enable Control Flow Guard
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /guard:cf")
+	ENDIF()
+
 	IF (STATIC_CRT)
 		SET(CRT_FLAG_DEBUG "/MTd")
 		SET(CRT_FLAG_RELEASE "/MT")
@@ -182,6 +187,11 @@ IF (MSVC)
 	# /LARGEADDRESSAWARE - >2GB user address space on x86
 	# /VERSION - Embed version information in PE header
 	SET(CMAKE_EXE_LINKER_FLAGS "/DYNAMICBASE /NXCOMPAT /LARGEADDRESSAWARE /VERSION:${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}")
+
+	IF (NOT (MSVC_VERSION LESS 1900))
+		# /GUARD:CF - Enable Control Flow Guard
+		SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /GUARD:CF")
+	ENDIF()
 
 	# /DEBUG - Create a PDB
 	# /LTCG - Link time code generation (whole program optimization)
