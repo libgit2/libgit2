@@ -7,3 +7,4 @@ function(add_clar_test name)
 endfunction(add_clar_test)
 
 add_subdirectory(libgit2)
+add_subdirectory(libgit2client)
