@@ -6,6 +6,9 @@
 #include "common.h"
 #include "posix.h"
 
+extern int git_global_test_init(void);
+extern void git_global_test_shutdown(void);
+
 /**
  * Replace for `clar_must_pass` that passes the last library error as the
  * test failure message.

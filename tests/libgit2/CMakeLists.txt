@@ -10,6 +10,7 @@ get_property(LIBGIT2_INCLUDES GLOBAL PROPERTY libgit2_includes)
 get_property(LIBGIT2_SYSTEM_INCLUDES GLOBAL PROPERTY libgit2_system_includes)
 get_property(LIBGIT2_LIBS GLOBAL PROPERTY libgit2_libs)
 
+set(CLAR_SOURCE_DIR "${libgit2_SOURCE_DIR}/tests/clar")
 set(CLAR_FIXTURES "${libgit2_SOURCE_DIR}/tests/resources/")
 add_definitions(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
 add_definitions(-DCLAR_TMPDIR=\"libgit2_tests\")
@@ -18,10 +19,12 @@ add_definitions(-D_FILE_OFFSET_BITS=64)
 # Ensure that we do not use deprecated functions internally
 add_definitions(-DGIT_DEPRECATE_HARD)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${libgit2_BINARY_DIR}/src)
+include_directories(${CLAR_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${libgit2_BINARY_DIR}/src)
 file(GLOB_RECURSE SRC_CASES */*.c */*.h)
 list(SORT SRC_CASES)
-set(SRC_CLAR "main.c" "clar_libgit2.c" "clar_libgit2_trace.c" "clar_libgit2_timer.c" "clar.c")
+
+file(GLOB_RECURSE SRC_CLAR "${CLAR_SOURCE_DIR}/*.c" "${CLAR_SOURCE_DIR}/*.h")
+list(SORT SRC_CLAR)
 
 if(MSVC_IDE)
 	list(APPEND SRC_CLAR "precompiled.c")
@@ -29,20 +32,20 @@ endif()
 
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clar.suite
-	COMMAND ${PYTHON_EXECUTABLE} generate.py -o "${CMAKE_CURRENT_BINARY_DIR}" -f -xonline -xstress -xperf .
+	COMMAND ${PYTHON_EXECUTABLE} "${CLAR_SOURCE_DIR}/generate.py" -o "${CMAKE_CURRENT_BINARY_DIR}" -f -xonline -xstress -xperf .
 	DEPENDS ${SRC_CASES}
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set_source_files_properties(
-	clar.c
+	"${CLAR_SOURCE_DIR}/clar.c"
 	PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clar.suite)
 
 include_directories(${LIBGIT2_INCLUDES})
 include_directories(SYSTEM ${LIBGIT2_SYSTEM_INCLUDES})
 
-add_executable(libgit2_tests ${SRC_CLAR} ${SRC_CASES} ${LIBGIT2_OBJECTS})
+add_executable(libgit2_tests global.c ${SRC_CLAR} ${SRC_CASES} ${LIBGIT2_OBJECTS})
 
 set_target_properties(libgit2_tests PROPERTIES C_STANDARD 90)
 set_target_properties(libgit2_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
