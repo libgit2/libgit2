@@ -47,6 +47,7 @@ Table of Contents
     * [Compiler and linker options](#compiler-and-linker-options)
     * [MacOS X](#macos-x)
     * [Android](#android)
+    * [MinGW](#mingw)
 * [Language Bindings](#language-bindings)
 * [How Can I Contribute?](#how-can-i-contribute)
 * [License](#license)
@@ -303,6 +304,20 @@ with full path to the toolchain):
 
 Add `-DCMAKE_TOOLCHAIN_FILE={pathToToolchainFile}` to cmake command
 when configuring.
+
+MinGW
+-----
+
+If you want to build the library in MinGW environment with SSH support enabled,
+you may need to pass `-DCMAKE_LIBRARY_PATH="${MINGW_PREFIX}/${MINGW_CHOST}/lib/"` flag
+to CMake when configuring. This is because CMake cannot find the Win32 libraries in
+MinGW folders by default and you might see an error message stating that CMake
+could not resolve `ws2_32` library during configuration.
+
+Another option would be to install `msys2-w32api-runtime` package before configuring.
+This package installs the Win32 libraries into `/usr/lib` folder which is by default
+recognized as the library path by CMake. Please note though that this package is meant
+for MSYS subsystem which is different from MinGW.
 
 Language Bindings
 ==================================
