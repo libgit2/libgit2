@@ -156,14 +156,20 @@ void _cl_trace_cb__event_handler(
 	const char *test_name,
 	void *payload)
 {
+	git_buf msg = GIT_BUF_INIT;
+
 	GIT_UNUSED(payload);
 
 	if (!s_trace_tests)
 		return;
 
+	if (!s_trace_method || !s_trace_method->git_trace_cb)
+		return;
+
 	switch (ev) {
 	case CL_TRACE__SUITE_BEGIN:
-		git_trace(GIT_TRACE_TRACE, "\n\n%s\n%s: Begin Suite", HR, suite_name);
+		git_buf_printf(&msg, "\n\n%s\n%s: Begin Suite", HR, suite_name);
+		s_trace_method->git_trace_cb(GIT_TRACE_TRACE, msg.ptr);
 #if 0 && defined(GIT_MSVC_CRTDBG)
 		git_win32__crtdbg_stacktrace__dump(
 			GIT_WIN32__CRTDBG_STACKTRACE__SET_MARK,
@@ -186,41 +192,49 @@ void _cl_trace_cb__event_handler(
 			GIT_WIN32__CRTDBG_STACKTRACE__LEAKS_SINCE_MARK,
 			suite_name);
 #endif
-		git_trace(GIT_TRACE_TRACE, "\n\n%s: End Suite\n%s", suite_name, HR);
+		git_buf_printf(&msg, "\n\n%s: End Suite\n%s", suite_name, HR);
+		s_trace_method->git_trace_cb(GIT_TRACE_TRACE, msg.ptr);
 		break;
 
 	case CL_TRACE__TEST__BEGIN:
-		git_trace(GIT_TRACE_TRACE, "\n%s::%s: Begin Test", suite_name, test_name);
+		git_buf_printf(&msg, "\n%s::%s: Begin Test", suite_name, test_name);
+		s_trace_method->git_trace_cb(GIT_TRACE_TRACE, msg.ptr);
 		cl_perf_timer__init(&s_timer_test);
 		cl_perf_timer__start(&s_timer_test);
 		break;
 
 	case CL_TRACE__TEST__END:
 		cl_perf_timer__stop(&s_timer_test);
-		git_trace(GIT_TRACE_TRACE, "%s::%s: End Test (%.3f %.3f)", suite_name, test_name,
+		git_buf_printf(&msg, "%s::%s: End Test (%.3f %.3f)", suite_name, test_name,
 				  cl_perf_timer__last(&s_timer_run),
 				  cl_perf_timer__last(&s_timer_test));
+		s_trace_method->git_trace_cb(GIT_TRACE_TRACE, msg.ptr);
 		break;
 
 	case CL_TRACE__TEST__RUN_BEGIN:
-		git_trace(GIT_TRACE_TRACE, "%s::%s: Begin Run", suite_name, test_name);
+		git_buf_printf(&msg, "%s::%s: Begin Run", suite_name, test_name);
+		s_trace_method->git_trace_cb(GIT_TRACE_TRACE, msg.ptr);
 		cl_perf_timer__init(&s_timer_run);
 		cl_perf_timer__start(&s_timer_run);
 		break;
 
 	case CL_TRACE__TEST__RUN_END:
 		cl_perf_timer__stop(&s_timer_run);
-		git_trace(GIT_TRACE_TRACE, "%s::%s: End Run", suite_name, test_name);
+		git_buf_printf(&msg, "%s::%s: End Run", suite_name, test_name);
+		s_trace_method->git_trace_cb(GIT_TRACE_TRACE, msg.ptr);
 		break;
 
 	case CL_TRACE__TEST__LONGJMP:
 		cl_perf_timer__stop(&s_timer_run);
-		git_trace(GIT_TRACE_TRACE, "%s::%s: Aborted", suite_name, test_name);
+		git_buf_printf(&msg, "%s::%s: Aborted", suite_name, test_name);
+		s_trace_method->git_trace_cb(GIT_TRACE_TRACE, msg.ptr);
 		break;
 
 	default:
 		break;
 	}
+
+	git_buf_dispose(&msg);
 }
 
 /**
