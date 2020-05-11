@@ -76,7 +76,7 @@ class Module(object):
     def __init__(self, name):
         self.name = name
 
-        self.mtime = 0
+        self.mtime = None
         self.enabled = True
         self.modified = False
 
