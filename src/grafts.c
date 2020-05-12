@@ -7,6 +7,8 @@
 
 #include "grafts.h"
 
+#include "parse.h"
+
 struct git_grafts {
 	/* Map of `git_commit_graft`s */
 	git_oidmap *commits;
@@ -49,6 +51,50 @@ void git_grafts_clear(git_grafts *grafts)
 	});
 
 	git_oidmap_clear(grafts->commits);
+}
+
+int git_grafts_parse(git_grafts *grafts, const char *content, size_t contentlen)
+{
+	git_array_oid_t parents = GIT_ARRAY_INIT;
+	git_parse_ctx parser;
+	int error;
+
+	git_grafts_clear(grafts);
+
+	if ((error = git_parse_ctx_init(&parser, content, contentlen)) < 0)
+		goto error;
+
+	for (; parser.remain_len; git_parse_advance_line(&parser)) {
+		const char *line_start = parser.line, *line_end = parser.line + parser.line_len;
+		git_oid graft_oid;
+
+		if ((error = git_oid_fromstrn(&graft_oid, line_start, GIT_OID_HEXSZ)) < 0) {
+			git_error_set(GIT_ERROR_GRAFTS, "invalid graft OID at line %" PRIuZ, parser.line_num);
+			goto error;
+		}
+		line_start += GIT_OID_HEXSZ;
+
+		while (line_start < line_end && *line_start == ' ') {
+			git_oid *id = git_array_alloc(parents);
+			GIT_ERROR_CHECK_ALLOC(id);
+
+			if ((error = git_oid_fromstrn(id, ++line_start, GIT_OID_HEXSZ)) < 0) {
+				git_error_set(GIT_ERROR_GRAFTS, "invalid parent OID at line %" PRIuZ, parser.line_num);
+				goto error;
+			}
+
+			line_start += GIT_OID_HEXSZ;
+		}
+
+		if ((error = git_grafts_add(grafts, &graft_oid, parents)) < 0)
+			goto error;
+
+		git_array_clear(parents);
+	}
+
+error:
+	git_array_clear(parents);
+	return error;
 }
 
 int git_grafts_add(git_grafts *grafts, const git_oid *oid, git_array_oid_t parents)
