@@ -47,7 +47,7 @@
  * Initialize our memory leak tracking and de-dup data structures.
  * This should ONLY be called by git_libgit2_init().
  */
-void git_win32__crtdbg_stacktrace_init(void);
+int git_win32__crtdbg_stacktrace_init(void);
 
 /**
  * Shutdown our memory leak tracking and dump summary data.

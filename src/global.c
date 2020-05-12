@@ -29,6 +29,10 @@ git_mutex git__mwindow_mutex;
 typedef int (*git_global_init_fn)(void);
 
 static git_global_init_fn git__init_callbacks[] = {
+#if defined(GIT_MSVC_CRTDBG)
+	git_win32__crtdbg_stacktrace_init,
+	git_win32__stack_init,
+#endif
 	git_allocator_global_init,
 	git_threads_global_init,
 	git_hash_global_init,
@@ -69,12 +73,6 @@ static int init_common(void)
 {
 	size_t i;
 	int ret;
-
-	/* Initialize the CRT debug allocator first, before our first malloc */
-#if defined(GIT_MSVC_CRTDBG)
-	git_win32__crtdbg_stacktrace_init();
-	git_win32__stack_init();
-#endif
 
 	/* Initialize subsystems that have global state */
 	for (i = 0; i < ARRAY_SIZE(git__init_callbacks); i++)
@@ -198,11 +196,6 @@ int git_libgit2_shutdown(void)
 
 		FlsFree(_fls_index);
 		git_mutex_free(&git__mwindow_mutex);
-
-#if defined(GIT_MSVC_CRTDBG)
-		git_win32__crtdbg_stacktrace_cleanup();
-		git_win32__stack_cleanup();
-#endif
 	}
 
 	/* Exit the lock */

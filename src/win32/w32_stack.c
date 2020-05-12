@@ -12,6 +12,7 @@
 #include "Dbghelp.h"
 #include "win32/posix.h"
 #include "hash.h"
+#include "global.h"
 
 static bool   g_win32_stack_initialized = false;
 static HANDLE g_win32_stack_process = INVALID_HANDLE_VALUE;
@@ -28,14 +29,18 @@ int git_win32__stack__set_aux_cb(
 	return 0;
 }
 
-void git_win32__stack_init(void)
+int git_win32__stack_init(void)
 {
 	if (!g_win32_stack_initialized) {
 		g_win32_stack_process = GetCurrentProcess();
 		SymSetOptions(SYMOPT_LOAD_LINES);
 		SymInitialize(g_win32_stack_process, NULL, TRUE);
 		g_win32_stack_initialized = true;
+
+		git__on_shutdown(git_win32__stack_cleanup);
 	}
+
+	return 0;
 }
 
 void git_win32__stack_cleanup(void)

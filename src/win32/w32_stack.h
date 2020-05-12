@@ -81,7 +81,7 @@ typedef struct {
  * thread at startup (under a lock if there are other threads
  * active).
  */
-void git_win32__stack_init(void);
+int git_win32__stack_init(void);
 
 /**
  * Cleanup symbol table data.  This should be done in the
