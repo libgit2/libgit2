@@ -235,6 +235,8 @@ GIT_INLINE(int64_t) git_atomic64_get(git_atomic64 *a)
 
 #else
 
+GIT_INLINE(int) git_threads_global_init(void) { return 0; }
+
 #define git_thread unsigned int
 #define git_thread_create(thread, start_routine, arg) 0
 #define git_thread_join(id, status) (void)0

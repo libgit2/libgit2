@@ -35,7 +35,7 @@ static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 	return CLEAN_THREAD_EXIT;
 }
 
-int git_threads_init(void)
+int git_threads_global_init(void)
 {
 	HMODULE hModule = GetModuleHandleW(L"kernel32");
 
