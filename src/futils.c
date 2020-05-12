@@ -834,12 +834,12 @@ int git_futils_rmdir_r(
 	return error;
 }
 
-int git_futils_fake_symlink(const char *old, const char *new)
+int git_futils_fake_symlink(const char *target, const char *path)
 {
 	int retcode = GIT_ERROR;
-	int fd = git_futils_creat_withpath(new, 0755, 0644);
+	int fd = git_futils_creat_withpath(path, 0755, 0644);
 	if (fd >= 0) {
-		retcode = p_write(fd, old, strlen(old));
+		retcode = p_write(fd, target, strlen(target));
 		p_close(fd);
 	}
 	return retcode;
