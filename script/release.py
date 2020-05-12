@@ -56,6 +56,17 @@ def verify_version(version):
         if v[0] != v[1]:
             raise Error("version.h: define '{}' does not match (got '{}', expected '{}')".format(k, v[0], v[1]))
 
+    with open('package.json') as f:
+        pkg = json.load(f)
+
+    try:
+        pkg_version = Version(pkg["version"])
+    except KeyError as err:
+        raise Error("package.json: missing the field {}".format(err))
+
+    if pkg_version != version:
+        raise Error("package.json: version does not match (got '{}', expected '{}')".format(pkg_version, version))
+
 def generate_relnotes(tree, version):
     with open('docs/changelog.md') as f:
         lines = f.readlines()
