@@ -30,6 +30,7 @@ typedef int (*git_global_init_fn)(void);
 
 static git_global_init_fn git__init_callbacks[] = {
 	git_allocator_global_init,
+	git_threads_global_init,
 	git_hash_global_init,
 	git_sysdir_global_init,
 	git_filter_global_init,
@@ -156,8 +157,6 @@ static int synchronized_threads_init(void)
 
 	if ((_fls_index = FlsAlloc(fls_free)) == FLS_OUT_OF_INDEXES)
 		return -1;
-
-	git_threads_init();
 
 	if (git_mutex_init(&git__mwindow_mutex))
 		return -1;
