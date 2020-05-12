@@ -307,7 +307,7 @@ void test_merge_trees_renames__cache_recomputation(void)
 	 */
 	cl_git_pass(git_treebuilder_new(&builder, repo, NULL));
 	for (i = 0; i < 1000; i++) {
-		cl_git_pass(git_buf_printf(&path, "%"PRIuMAX".txt", i));
+		cl_git_pass(git_buf_printf(&path, "%"PRIuZ".txt", i));
 		cl_git_pass(git_treebuilder_insert(NULL, builder, path.ptr, &blob, GIT_FILEMODE_BLOB));
 		git_buf_clear(&path);
 	}
