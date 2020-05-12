@@ -19,11 +19,7 @@
 #include "thread-utils.h"
 #include "git2/global.h"
 #include "transports/ssh.h"
-
-#if defined(GIT_MSVC_CRTDBG)
 #include "win32/w32_stack.h"
-#include "win32/w32_crtdbg_stacktrace.h"
-#endif
 
 git_mutex git__mwindow_mutex;
 
@@ -71,12 +67,6 @@ static int init_common(void)
 {
 	size_t i;
 	int ret;
-
-	/* Initialize the CRT debug allocator first, before our first malloc */
-#if defined(GIT_MSVC_CRTDBG)
-	git_win32__crtdbg_stacktrace_init();
-	git_win32__stack_init();
-#endif
 
 	/* Initialize subsystems that have global state */
 	for (i = 0; i < ARRAY_SIZE(git__init_callbacks); i++)
@@ -200,11 +190,6 @@ int git_libgit2_shutdown(void)
 
 		FlsFree(_fls_index);
 		git_mutex_free(&git__mwindow_mutex);
-
-#if defined(GIT_MSVC_CRTDBG)
-		git_win32__crtdbg_stacktrace_cleanup();
-		git_win32__stack_cleanup();
-#endif
 	}
 
 	/* Exit the lock */

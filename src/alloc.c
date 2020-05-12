@@ -10,6 +10,11 @@
 #include "allocators/stdalloc.h"
 #include "allocators/win32_crtdbg.h"
 
+#if defined(GIT_MSVC_CRTDBG)
+# include "win32/w32_stack.h"
+# include "win32/w32_crtdbg_stacktrace.h"
+#endif
+
 git_allocator git__allocator;
 
 static int setup_default_allocator(void)
@@ -21,8 +26,23 @@ static int setup_default_allocator(void)
 #endif
 }
 
+#if defined(GIT_MSVC_CRTDBG)
+static void allocator_global_shutdown(void)
+{
+	git_win32__crtdbg_stacktrace_cleanup();
+	git_win32__stack_cleanup();
+}
+#endif
+
 int git_allocator_global_init(void)
 {
+#if defined(GIT_MSVC_CRTDBG)
+	git_win32__crtdbg_stacktrace_init();
+	git_win32__stack_init();
+
+	git__on_shutdown(allocator_global_shutdown);
+#endif
+
 	/*
 	 * We don't want to overwrite any allocator which has been set before
 	 * the init function is called.
