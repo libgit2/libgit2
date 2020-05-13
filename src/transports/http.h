@@ -9,6 +9,7 @@
 #define INCLUDE_transports_http_h__
 
 #include "buffer.h"
+#include "settings.h"
 #include "httpclient.h"
 
 #define GIT_HTTP_REPLAY_MAX 15

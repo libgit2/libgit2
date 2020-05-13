@@ -11,6 +11,7 @@
 #include "hash.h"
 #include "sysdir.h"
 #include "filter.h"
+#include "settings.h"
 #include "merge_driver.h"
 #include "streams/registry.h"
 #include "streams/mbedtls.h"
@@ -43,15 +44,14 @@ static git_global_init_fn git__init_callbacks[] = {
 	git_stream_registry_global_init,
 	git_openssl_stream_global_init,
 	git_mbedtls_stream_global_init,
-	git_mwindow_global_init
+	git_mwindow_global_init,
+	git_settings_global_init
 };
 
 static git_global_shutdown_fn git__shutdown_callbacks[ARRAY_SIZE(git__init_callbacks)];
 
 static git_atomic git__n_shutdown_callbacks;
 static git_atomic git__n_inits;
-char *git__user_agent;
-char *git__ssl_ciphers;
 
 void git__on_shutdown(git_global_shutdown_fn callback)
 {
@@ -99,9 +99,6 @@ static void shutdown_common(void)
 		if (cb != NULL)
 			cb();
 	}
-
-	git__free(git__user_agent);
-	git__free(git__ssl_ciphers);
 }
 
 /**

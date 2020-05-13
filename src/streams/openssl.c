@@ -12,6 +12,7 @@
 #include <ctype.h>
 
 #include "global.h"
+#include "settings.h"
 #include "posix.h"
 #include "stream.h"
 #include "streams/socket.h"

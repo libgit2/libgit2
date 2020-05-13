@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "global.h"
+#include "settings.h"
 
 void test_core_useragent__get(void)
 {
