@@ -29,15 +29,20 @@ size_t git_mwindow__window_size = DEFAULT_WINDOW_SIZE;
 size_t git_mwindow__mapped_limit = DEFAULT_MAPPED_LIMIT;
 size_t git_mwindow__file_limit = DEFAULT_FILE_LIMIT;
 
+/* Mutex to control access */
+git_mutex git__mwindow_mutex;
+
 /* Whenever you want to read or modify this, grab git__mwindow_mutex */
 git_mwindow_ctl git_mwindow__mem_ctl;
 
 /* Global list of mwindow files, to open packs once across repos */
 git_strmap *git__pack_cache = NULL;
 
-static void git_mwindow_files_free(void)
+static void git_mwindow_global_shutdown(void)
 {
 	git_strmap *tmp = git__pack_cache;
+
+	git_mutex_free(&git__mwindow_mutex);
 
 	git__pack_cache = NULL;
 	git_strmap_free(tmp);
@@ -47,7 +52,11 @@ int git_mwindow_global_init(void)
 {
 	assert(!git__pack_cache);
 
-	git__on_shutdown(git_mwindow_files_free);
+	git__on_shutdown(git_mwindow_global_shutdown);
+
+	if (git_mutex_init(&git__mwindow_mutex) != 0)
+		return -1;
+
 	return git_strmap_new(&git__pack_cache);
 }
 

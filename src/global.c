@@ -12,6 +12,7 @@
 #include "sysdir.h"
 #include "filter.h"
 #include "settings.h"
+#include "mwindow.h"
 #include "merge_driver.h"
 #include "pool.h"
 #include "streams/registry.h"
@@ -21,8 +22,6 @@
 #include "git2/global.h"
 #include "transports/ssh.h"
 #include "win32/w32_stack.h"
-
-git_mutex git__mwindow_mutex;
 
 typedef int (*git_global_init_fn)(void);
 
@@ -147,9 +146,6 @@ static int synchronized_threads_init(void)
 	if ((_fls_index = FlsAlloc(fls_free)) == FLS_OUT_OF_INDEXES)
 		return -1;
 
-	if (git_mutex_init(&git__mwindow_mutex))
-		return -1;
-
 	error = init_common();
 
 	return error;
@@ -186,7 +182,6 @@ int git_libgit2_shutdown(void)
 		shutdown_common();
 
 		FlsFree(_fls_index);
-		git_mutex_free(&git__mwindow_mutex);
 	}
 
 	/* Exit the lock */
@@ -229,11 +224,7 @@ static void cb__free_status(void *st)
 
 static void init_once(void)
 {
-	if ((init_error = git_mutex_init(&git__mwindow_mutex)) != 0)
-		return;
-
 	pthread_key_create(&_tls_key, &cb__free_status);
-
 	init_error = init_common();
 }
 
@@ -276,7 +267,6 @@ int git_libgit2_shutdown(void)
 	git__free(ptr);
 
 	pthread_key_delete(_tls_key);
-	git_mutex_free(&git__mwindow_mutex);
 	_once_init = new_once;
 
 out:
