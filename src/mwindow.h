@@ -13,6 +13,8 @@
 #include "map.h"
 #include "vector.h"
 
+extern git_mutex git__mwindow_mutex;
+
 typedef struct git_mwindow {
 	struct git_mwindow *next;
 	git_map window_map;
