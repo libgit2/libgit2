@@ -9,7 +9,7 @@
 
 #include "git2/oid.h"
 #include "repository.h"
-#include "global.h"
+#include "tlsdata.h"
 #include <string.h>
 #include <limits.h>
 
@@ -107,7 +107,7 @@ int git_oid_pathfmt(char *str, const git_oid *oid)
 
 char *git_oid_tostr_s(const git_oid *oid)
 {
-	char *str = GIT_GLOBAL->oid_fmt;
+	char *str = GIT_TLSDATA->oid_fmt;
 	git_oid_nfmt(str, GIT_OID_HEXSZ + 1, oid);
 	return str;
 }

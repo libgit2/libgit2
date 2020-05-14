@@ -7,7 +7,7 @@
 
 #include "thread.h"
 
-#include "../global.h"
+#include "../tlsdata.h"
 
 #define CLEAN_THREAD_EXIT 0x6F012842
 
@@ -28,7 +28,7 @@ static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 	git_thread *thread = lpParameter;
 
 	/* Set the current thread for `git_thread_exit` */
-	GIT_GLOBAL->current_thread = thread;
+	GIT_TLSDATA->current_thread = thread;
 
 	thread->result = thread->proc(thread->param);
 
@@ -99,8 +99,8 @@ int git_thread_join(
 
 void git_thread_exit(void *value)
 {
-	assert(GIT_GLOBAL->current_thread);
-	GIT_GLOBAL->current_thread->result = value;
+	assert(GIT_TLSDATA->current_thread);
+	GIT_TLSDATA->current_thread->result = value;
 	ExitThread(CLEAN_THREAD_EXIT);
 }
 
