@@ -655,15 +655,16 @@ static int openssl_connect(git_stream *stream)
 static int openssl_certificate(git_cert **out, git_stream *stream)
 {
 	openssl_stream *st = (openssl_stream *) stream;
-	int len;
 	X509 *cert = SSL_get_peer_certificate(st->ssl);
-	unsigned char *guard, *encoded_cert;
+	unsigned char *guard, *encoded_cert = NULL;
+	int error, len;
 
 	/* Retrieve the length of the certificate first */
 	len = i2d_X509(cert, NULL);
 	if (len < 0) {
 		git_error_set(GIT_ERROR_NET, "failed to retrieve certificate information");
-		return -1;
+		error = -1;
+		goto out;
 	}
 
 	encoded_cert = git__malloc(len);
@@ -673,18 +674,23 @@ static int openssl_certificate(git_cert **out, git_stream *stream)
 
 	len = i2d_X509(cert, &guard);
 	if (len < 0) {
-		git__free(encoded_cert);
 		git_error_set(GIT_ERROR_NET, "failed to retrieve certificate information");
-		return -1;
+		error = -1;
+		goto out;
 	}
 
 	st->cert_info.parent.cert_type = GIT_CERT_X509;
 	st->cert_info.data = encoded_cert;
 	st->cert_info.len = len;
+	encoded_cert = NULL;
 
 	*out = &st->cert_info.parent;
+	error = 0;
 
-	return 0;
+out:
+	git__free(encoded_cert);
+	X509_free(cert);
+	return error;
 }
 
 static int openssl_set_proxy(git_stream *stream, const git_proxy_options *proxy_opts)
