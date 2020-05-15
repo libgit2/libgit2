@@ -17,7 +17,6 @@
 #include "smart.h"
 #include "remote.h"
 #include "repository.h"
-#include "global.h"
 #include "http.h"
 #include "git2/sys/credential.h"
 

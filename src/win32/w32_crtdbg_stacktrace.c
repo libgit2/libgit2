@@ -9,7 +9,7 @@
 
 #if defined(GIT_MSVC_CRTDBG)
 #include "w32_stack.h"
-#include "global.h"
+#include "runtime.h"
 
 #define CRTDBG_STACKTRACE__UID_LEN (15)
 
@@ -238,7 +238,7 @@ int git_win32__crtdbg_stacktrace_init(void)
 
 	LeaveCriticalSection(&g_crtdbg_stacktrace_cs);
 
-	git__on_shutdown(git_win32__crtdbg_stacktrace_cleanup);
+	git_runtime_shutdown_register(git_win32__crtdbg_stacktrace_cleanup);
 
 	return 0;
 }

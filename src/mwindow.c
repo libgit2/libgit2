@@ -10,7 +10,7 @@
 #include "vector.h"
 #include "futils.h"
 #include "map.h"
-#include "global.h"
+#include "runtime.h"
 #include "strmap.h"
 #include "pack.h"
 
@@ -48,7 +48,7 @@ int git_mwindow_global_init(void)
 {
 	assert(!git__pack_cache);
 
-	git__on_shutdown(git_mwindow_global_shutdown);
+	git_runtime_shutdown_register(git_mwindow_global_shutdown);
 
 	if (git_mutex_init(&git__mwindow_mutex) != 0)
 		return -1;

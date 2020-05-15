@@ -12,7 +12,7 @@
 #include "Dbghelp.h"
 #include "win32/posix.h"
 #include "hash.h"
-#include "global.h"
+#include "runtime.h"
 
 static bool   g_win32_stack_initialized = false;
 static HANDLE g_win32_stack_process = INVALID_HANDLE_VALUE;
@@ -37,7 +37,7 @@ int git_win32__stack_init(void)
 		SymInitialize(g_win32_stack_process, NULL, TRUE);
 		g_win32_stack_initialized = true;
 
-		git__on_shutdown(git_win32__stack_cleanup);
+		git_runtime_shutdown_register(git_win32__stack_cleanup);
 	}
 
 	return 0;

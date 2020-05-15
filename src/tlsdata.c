@@ -6,7 +6,7 @@
  */
 
 #include "tlsdata.h"
-#include "global.h"
+#include "runtime.h"
 
 static void tlsdata_dispose(git_tlsdata *tlsdata);
 
@@ -57,7 +57,7 @@ int git_tlsdata_global_init(void)
 	if ((fls_index = FlsAlloc(fls_free)) == FLS_OUT_OF_INDEXES)
 		return -1;
 
-	return git__on_shutdown(git_tlsdata_global_shutdown);
+	return git_runtime_shutdown_register(git_tlsdata_global_shutdown);
 }
 
 git_tlsdata *git_tlsdata_get(void)
@@ -104,7 +104,7 @@ int git_tlsdata_global_init(void)
 	if (pthread_key_create(&tls_key, &tls_free) != 0)
 		return -1;
 
-	return git__on_shutdown(git_tlsdata_global_shutdown);
+	return git_runtime_shutdown_register(git_tlsdata_global_shutdown);
 }
 
 git_tlsdata *git_tlsdata_get(void)
@@ -132,12 +132,12 @@ static git_tlsdata tlsdata;
 static void git_tlsdata_global_shutdown(void)
 {
 	tlsdata_dispose(&tlsdata);
-	memset(&tlsdata, 0, sizeof(git_tlsdata);
+	memset(&tlsdata, 0, sizeof(git_tlsdata));
 }
 
 int git_tlsdata_global_init(void)
 {
-	return git__on_shutdown(git_tlsdata_global_shutdown);
+	return git_runtime_shutdown_register(git_tlsdata_global_shutdown);
 }
 
 git_tlsdata *git_tlsdata_get(void)

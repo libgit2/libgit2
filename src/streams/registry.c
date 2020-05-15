@@ -8,7 +8,7 @@
 #include "git2/errors.h"
 
 #include "common.h"
-#include "global.h"
+#include "runtime.h"
 #include "streams/tls.h"
 #include "streams/mbedtls.h"
 #include "streams/openssl.h"
@@ -32,7 +32,7 @@ int git_stream_registry_global_init(void)
 	if (git_rwlock_init(&stream_registry.lock) < 0)
 		return -1;
 
-	git__on_shutdown(shutdown_stream_registry);
+	git_runtime_shutdown_register(shutdown_stream_registry);
 	return 0;
 }
 

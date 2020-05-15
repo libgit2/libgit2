@@ -19,7 +19,7 @@
 #include "alloc.h"
 #include "sysdir.h"
 #include "cache.h"
-#include "global.h"
+#include "runtime.h"
 #include "object.h"
 #include "odb.h"
 #include "refs.h"
@@ -47,7 +47,7 @@ static void git_settings_global_shutdown(void)
 
 int git_settings_global_init(void)
 {
-	git__on_shutdown(git_settings_global_shutdown);
+	git_runtime_shutdown_register(git_settings_global_shutdown);
 	return 0;
 }
 

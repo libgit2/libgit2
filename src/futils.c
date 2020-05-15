@@ -7,7 +7,7 @@
 
 #include "futils.h"
 
-#include "global.h"
+#include "runtime.h"
 #include "strmap.h"
 #include "hash.h"
 #include <ctype.h>

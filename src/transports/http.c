@@ -14,7 +14,6 @@
 #include "buffer.h"
 #include "net.h"
 #include "netops.h"
-#include "global.h"
 #include "remote.h"
 #include "git2/sys/credential.h"
 #include "smart.h"

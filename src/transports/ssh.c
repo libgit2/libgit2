@@ -11,7 +11,7 @@
 #include <libssh2.h>
 #endif
 
-#include "global.h"
+#include "runtime.h"
 #include "git2.h"
 #include "buffer.h"
 #include "net.h"
@@ -934,7 +934,7 @@ int git_transport_ssh_global_init(void)
 		return -1;
 	}
 
-	git__on_shutdown(shutdown_ssh);
+	git_runtime_shutdown_register(shutdown_ssh);
 	return 0;
 
 #else
