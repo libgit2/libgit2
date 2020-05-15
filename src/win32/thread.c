@@ -6,6 +6,7 @@
  */
 
 #include "thread.h"
+#include "runtime.h"
 
 #define CLEAN_THREAD_EXIT 0x6F012842
 
@@ -60,9 +61,7 @@ int git_threads_global_init(void)
 	if ((fls_index = FlsAlloc(NULL)) == FLS_OUT_OF_INDEXES)
 		return -1;
 
-	git__on_shutdown(git_threads_global_shutdown);
-
-	return 0;
+	return git_runtime_shutdown_register(git_threads_global_shutdown);
 }
 
 int git_thread_create(

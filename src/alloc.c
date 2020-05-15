@@ -6,6 +6,7 @@
  */
 
 #include "alloc.h"
+#include "runtime.h"
 
 #include "allocators/stdalloc.h"
 #include "allocators/win32_crtdbg.h"
@@ -40,7 +41,8 @@ int git_allocator_global_init(void)
 	git_win32__crtdbg_stacktrace_init();
 	git_win32__stack_init();
 
-	git__on_shutdown(allocator_global_shutdown);
+	if (git_runtime_shutdown_register(allocator_global_shutdown) < 0)
+		return -1;
 #endif
 
 	/*

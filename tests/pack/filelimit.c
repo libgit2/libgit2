@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "mwindow.h"
-#include "global.h"
 
 #include <git2.h>
 #include "git2/sys/commit.h"

@@ -8,7 +8,7 @@
 #include "trace.h"
 
 #include "buffer.h"
-#include "global.h"
+#include "runtime.h"
 #include "git2/trace.h"
 
 #ifdef GIT_TRACE

@@ -8,7 +8,7 @@
 #include "merge_driver.h"
 
 #include "vector.h"
-#include "global.h"
+#include "runtime.h"
 #include "merge.h"
 #include "git2/merge.h"
 #include "git2/sys/merge.h"
@@ -209,7 +209,7 @@ int git_merge_driver_global_init(void)
 			merge_driver_name__binary, &git_merge_driver__binary)) < 0)
 		goto done;
 
-	git__on_shutdown(git_merge_driver_global_shutdown);
+	error = git_runtime_shutdown_register(git_merge_driver_global_shutdown);
 
 done:
 	if (error < 0)

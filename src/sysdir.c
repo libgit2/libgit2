@@ -7,7 +7,7 @@
 
 #include "sysdir.h"
 
-#include "global.h"
+#include "runtime.h"
 #include "buffer.h"
 #include "path.h"
 #include <ctype.h>
@@ -189,9 +189,7 @@ int git_sysdir_global_init(void)
 	for (i = 0; !error && i < ARRAY_SIZE(git_sysdir__dirs); i++)
 		error = git_sysdir__dirs[i].guess(&git_sysdir__dirs[i].buf);
 
-	git__on_shutdown(git_sysdir_global_shutdown);
-
-	return error;
+	return git_runtime_shutdown_register(git_sysdir_global_shutdown);
 }
 
 static int git_sysdir_check_selector(git_sysdir_t which)

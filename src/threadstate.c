@@ -6,7 +6,7 @@
  */
 
 #include "threadstate.h"
-#include "global.h"
+#include "runtime.h"
 
 static void threadstate_dispose(git_threadstate *threadstate);
 
@@ -57,9 +57,7 @@ int git_threadstate_global_init(void)
 	if ((fls_index = FlsAlloc(fls_free)) == FLS_OUT_OF_INDEXES)
 		return -1;
 
-	git__on_shutdown(git_threadstate_global_shutdown);
-
-	return 0;
+	return git_runtime_shutdown_register(git_threadstate_global_shutdown);
 }
 
 git_threadstate *git_threadstate_get(void)
@@ -105,9 +103,7 @@ int git_threadstate_global_init(void)
 	if (pthread_key_create(&tls_key, &tls_free) != 0)
 		return -1;
 
-	git__on_shutdown(git_threadstate_global_shutdown);
-
-	return 0;
+	return git_runtime_shutdown_register(git_threadstate_global_shutdown);
 }
 
 git_threadstate *git_threadstate_get(void)
@@ -134,14 +130,12 @@ static git_threadstate threadstate;
 static void git_threadstate_global_shutdown(void)
 {
 	threadstate_dispose(&threadstate);
-	memset(&threadstate, 0, sizeof(git_threadstate);
+	memset(&threadstate, 0, sizeof(git_threadstate));
 }
 
 int git_threadstate_global_init(void)
 {
-	git__on_shutdown(git_threadstate_global_shutdown);
-
-	return 0;
+	return git_runtime_shutdown_register(git_tlsdata_global_shutdown);
 }
 
 git_threadstate *git_threadstate_get(void)

@@ -8,7 +8,6 @@
 #include "git2/errors.h"
 
 #include "common.h"
-#include "global.h"
 #include "streams/registry.h"
 #include "streams/tls.h"
 #include "streams/mbedtls.h"

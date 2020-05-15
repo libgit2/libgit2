@@ -11,7 +11,7 @@
 #include "futils.h"
 #include "hash.h"
 #include "repository.h"
-#include "global.h"
+#include "runtime.h"
 #include "git2/sys/filter.h"
 #include "git2/config.h"
 #include "blob.h"
@@ -206,7 +206,7 @@ int git_filter_global_init(void)
 			GIT_FILTER_IDENT, ident, GIT_FILTER_IDENT_PRIORITY) < 0)
 		error = -1;
 
-	git__on_shutdown(git_filter_global_shutdown);
+	error = git_runtime_shutdown_register(git_filter_global_shutdown);
 
 done:
 	if (error) {
