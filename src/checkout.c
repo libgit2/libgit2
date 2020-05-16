@@ -217,9 +217,10 @@ static bool checkout_is_workdir_modified(
 	ie = git_index_get_bypath(data->index, wditem->path, 0);
 
 	if (ie != NULL &&
-		git_index_time_eq(&wditem->mtime, &ie->mtime) &&
-		wditem->file_size == ie->file_size &&
-		!is_filemode_changed(wditem->mode, ie->mode, data->respect_filemode)) {
+	    !git_index_entry_newer_than_index(ie, data->index) &&
+	    git_index_time_eq(&wditem->mtime, &ie->mtime) &&
+	    wditem->file_size == ie->file_size &&
+	    !is_filemode_changed(wditem->mode, ie->mode, data->respect_filemode)) {
 
 		/* The workdir is modified iff the index entry is modified */
 		return !is_workdir_base_or_new(&ie->id, baseitem, newitem) ||
