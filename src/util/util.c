@@ -58,6 +58,38 @@ int git_strings_copy_deep(char **tgt, char *const *const src, size_t n)
 	return 0;
 }
 
+bool git_strings_contains_prefix(
+	const char **strings,
+	size_t strings_len,
+	const char *str,
+	size_t n)
+{
+	size_t i;
+
+	for (i = 0; i < strings_len; i++) {
+		if (strncmp(strings[i], str, n) == 0)
+			return true;
+	}
+
+	return false;
+}
+
+bool git_strings_contains_key(
+	const char **strings,
+	size_t strings_len,
+	const char *key,
+	char delimiter)
+{
+	const char *c;
+
+	for (c = key; *c; c++) {
+		if (*c == delimiter)
+			break;
+	}
+
+	return *c ? git_strings_contains_prefix(strings, strings_len, key, (c - key)) : false;
+}
+
 int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
 {
 	const char *p;

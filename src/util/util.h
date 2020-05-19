@@ -356,6 +356,31 @@ extern void git_strings_free_deep(char **strings, size_t n);
 extern int git_strings_copy_deep(
 	char **tgt, char *const *const src, size_t n);
 
+/**
+ * Examines the strings in the given strarray for a particular prefix.
+ *
+ * @param strings The array to search
+ * @param strings_len The length of the array
+ * @param str The string prefix to search for
+ * @param n The size of the string prefix
+ * @return true if found, false otherwise
+ */
+extern bool git_strings_contains_prefix(
+	const char **strings, size_t strings_len, const char *str, size_t n);
+
+/**
+ * Examines the strings in the given strarray for a particular key,
+ * ending in the given delimiter.
+ *
+ * @param strings The array to search
+ * @param strings_len The length of the array
+ * @param key The key to search for
+ * @param delimiter The key/value delimiter character in strings
+ * @return true if found, false otherwise
+ */
+extern bool git_strings_contains_key(
+	const char **strings, size_t strings_len, const char *key, char delimiter);
+
 /*
  * Safely zero-out memory, making sure that the compiler
  * doesn't optimize away the operation.
