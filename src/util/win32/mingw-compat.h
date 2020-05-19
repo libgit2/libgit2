@@ -18,6 +18,10 @@ void __mingworg_MemoryBarrier(void);
 #define VOLUME_NAME_DOS 0x0
 #endif
 
+#ifndef DWORD_MAX
+# define DWORD_MAX UINT32_MAX
+#endif
+
 #endif
 
 #endif
