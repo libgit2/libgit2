@@ -1384,8 +1384,9 @@ int git_packbuilder_write(
 	git_indexer_progress_cb progress_cb,
 	void *progress_cb_payload)
 {
+	int error = -1;
 	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
-	git_indexer *indexer;
+	git_indexer *indexer = NULL;
 	git_indexer_progress stats;
 	struct pack_write_context ctx;
 	int t;
@@ -1395,9 +1396,8 @@ int git_packbuilder_write(
 	opts.progress_cb = progress_cb;
 	opts.progress_cb_payload = progress_cb_payload;
 
-	if (git_indexer_new(
-		&indexer, path, mode, pb->odb, &opts) < 0)
-		return -1;
+	if ((error = git_indexer_new(&indexer, path, mode, pb->odb, &opts)) < 0)
+		goto cleanup;
 
 	if (!git_repository__configmap_lookup(&t, pb->repo, GIT_CONFIGMAP_FSYNCOBJECTFILES) && t)
 		git_indexer__set_fsync(indexer, 1);
@@ -1405,16 +1405,17 @@ int git_packbuilder_write(
 	ctx.indexer = indexer;
 	ctx.stats = &stats;
 
-	if (git_packbuilder_foreach(pb, write_cb, &ctx) < 0 ||
-		git_indexer_commit(indexer, &stats) < 0) {
-		git_indexer_free(indexer);
-		return -1;
-	}
+	if ((error = git_packbuilder_foreach(pb, write_cb, &ctx)) < 0)
+		goto cleanup;
+
+	if ((error = git_indexer_commit(indexer, &stats)) < 0)
+		goto cleanup;
 
 	git_oid_cpy(&pb->pack_oid, git_indexer_hash(indexer));
 
+cleanup:
 	git_indexer_free(indexer);
-	return 0;
+	return error;
 }
 
 #undef PREPARE_PACK
