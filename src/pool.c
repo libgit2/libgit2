@@ -37,7 +37,7 @@ size_t git_pool__system_page_size(void)
 }
 
 #ifndef GIT_DEBUG_POOL
-void git_pool_init(git_pool *pool, size_t item_size)
+int git_pool_init(git_pool *pool, size_t item_size)
 {
 	assert(pool);
 	assert(item_size >= 1);
@@ -45,6 +45,8 @@ void git_pool_init(git_pool *pool, size_t item_size)
 	memset(pool, 0, sizeof(git_pool));
 	pool->item_size = item_size;
 	pool->page_size = git_pool__system_page_size();
+
+	return 0;
 }
 
 void git_pool_clear(git_pool *pool)
@@ -125,7 +127,7 @@ static int git_pool__ptr_cmp(const void * a, const void * b)
 	}
 }
 
-void git_pool_init(git_pool *pool, size_t item_size)
+int git_pool_init(git_pool *pool, size_t item_size)
 {
 	assert(pool);
 	assert(item_size >= 1);
@@ -134,6 +136,8 @@ void git_pool_init(git_pool *pool, size_t item_size)
 	pool->item_size = item_size;
 	pool->page_size = git_pool__system_page_size();
 	git_vector_init(&pool->allocations, 100, git_pool__ptr_cmp);
+
+	return 0;
 }
 
 void git_pool_clear(git_pool *pool)
