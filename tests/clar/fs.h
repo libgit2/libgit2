@@ -455,19 +455,46 @@ fs_copy(const char *source, const char *_dest)
 }
 
 static void
-fs_rm(const char *source)
+fs_rmdir_helper(const char *path)
 {
-	char *argv[4];
+	DIR *dir;
+	struct dirent *d;
 
-	argv[0] = "/bin/rm";
-	argv[1] = "-Rf";
-	argv[2] = (char *)source;
-	argv[3] = NULL;
+	cl_assert_(dir = opendir(path), "Could not open dir");
+	while ((d = (errno = 0, readdir(dir))) != NULL) {
+		char *child;
 
-	cl_must_pass_(
-		shell_out(argv),
-		"Failed to cleanup the sandbox"
-	);
+		if (!strcmp(d->d_name, ".") || !strcmp(d->d_name, ".."))
+			continue;
+
+		child = joinpath(path, d->d_name, -1);
+		fs_rm(child);
+		free(child);
+	}
+
+	cl_assert_(errno == 0, "Failed to iterate source dir");
+	closedir(dir);
+
+	cl_must_pass_(rmdir(path), "Could not remove directory");
+}
+
+static void
+fs_rm(const char *path)
+{
+	struct stat st;
+
+	if (lstat(path, &st)) {
+		if (errno == ENOENT)
+			return;
+
+		cl_fail("Cannot copy; cannot stat destination");
+	}
+
+	if (S_ISDIR(st.st_mode)) {
+		fs_rmdir_helper(path);
+	} else {
+		cl_must_pass(unlink(path));
+	}
 }
 
 void
