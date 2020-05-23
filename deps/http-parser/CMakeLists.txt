@@ -1,5 +1,6 @@
-FILE(GLOB SRC_HTTP "*.c" "*.h")
+file(GLOB SRC_HTTP "*.c" "*.h")
+list(SORT SRC_HTTP)
 
-ADD_LIBRARY(http-parser OBJECT ${SRC_HTTP})
+add_library(http-parser OBJECT ${SRC_HTTP})
 
-ENABLE_WARNINGS(implicit-fallthrough=1)
+enable_warnings(implicit-fallthrough=1)
