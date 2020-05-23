@@ -1385,6 +1385,7 @@ int git_packbuilder_write(
 	void *progress_cb_payload)
 {
 	int error = -1;
+	git_buf object_path = GIT_BUF_INIT;
 	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	git_indexer *indexer = NULL;
 	git_indexer_progress stats;
@@ -1392,6 +1393,14 @@ int git_packbuilder_write(
 	int t;
 
 	PREPARE_PACK;
+
+	if (path == NULL) {
+		if ((error = git_repository_item_path(&object_path, pb->repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0)
+			goto cleanup;
+		if ((error = git_buf_joinpath(&object_path, git_buf_cstr(&object_path), "pack")) < 0)
+			goto cleanup;
+		path = git_buf_cstr(&object_path);
+	}
 
 	opts.progress_cb = progress_cb;
 	opts.progress_cb_payload = progress_cb_payload;
@@ -1415,6 +1424,7 @@ int git_packbuilder_write(
 
 cleanup:
 	git_indexer_free(indexer);
+	git_buf_dispose(&object_path);
 	return error;
 }
 
