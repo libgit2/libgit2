@@ -277,32 +277,6 @@ cl_fs_cleanup(void)
 # include <copyfile.h>
 #endif
 
-static int
-shell_out(char * const argv[])
-{
-	int status, piderr;
-	pid_t pid;
-
-	pid = fork();
-
-	if (pid < 0) {
-		fprintf(stderr,
-			"System error: `fork()` call failed (%d) - %s\n",
-			errno, strerror(errno));
-		exit(-1);
-	}
-
-	if (pid == 0) {
-		execv(argv[0], argv);
-	}
-
-	do {
-		piderr = waitpid(pid, &status, WUNTRACED);
-	} while (piderr < 0 && (errno == EAGAIN || errno == EINTR));
-
-	return WEXITSTATUS(status);
-}
-
 static void basename_r(const char **out, int *out_len, const char *in)
 {
 	size_t in_len = strlen(in), start_pos;
