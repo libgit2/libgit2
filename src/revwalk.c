@@ -659,13 +659,11 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 	git_revwalk *walk = git__calloc(1, sizeof(git_revwalk));
 	GIT_ERROR_CHECK_ALLOC(walk);
 
-	if (git_oidmap_new(&walk->commits) < 0)
+	if (git_oidmap_new(&walk->commits) < 0 ||
+	    git_pqueue_init(&walk->iterator_time, 0, 8, git_commit_list_time_cmp) < 0 ||
+	    git_pool_init(&walk->commit_pool, COMMIT_ALLOC) < 0)
 		return -1;
 
-	if (git_pqueue_init(&walk->iterator_time, 0, 8, git_commit_list_time_cmp) < 0)
-		return -1;
-
-	git_pool_init(&walk->commit_pool, COMMIT_ALLOC);
 	walk->get_next = &revwalk_next_unsorted;
 	walk->enqueue = &revwalk_enqueue_unsorted;
 

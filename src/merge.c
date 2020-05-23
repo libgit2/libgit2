@@ -1810,12 +1810,12 @@ git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo)
 
 	diff_list->repo = repo;
 
-	git_pool_init(&diff_list->pool, 1);
 
-	if (git_vector_init(&diff_list->staged, 0, NULL) < 0 ||
-		git_vector_init(&diff_list->conflicts, 0, NULL) < 0 ||
-		git_vector_init(&diff_list->resolved, 0, NULL) < 0) {
-		git_merge_diff_list__free(diff_list);
+	if (git_pool_init(&diff_list->pool, 1) < 0 ||
+	    git_vector_init(&diff_list->staged, 0, NULL) < 0 ||
+	    git_vector_init(&diff_list->conflicts, 0, NULL) < 0 ||
+	    git_vector_init(&diff_list->resolved, 0, NULL) < 0) {
+	    git_merge_diff_list__free(diff_list);
 		return NULL;
 	}
 

@@ -683,7 +683,8 @@ static int refdb_fs_backend__iterator(
 	iter = git__calloc(1, sizeof(refdb_fs_iter));
 	GIT_ERROR_CHECK_ALLOC(iter);
 
-	git_pool_init(&iter->pool, 1);
+	if ((error = git_pool_init(&iter->pool, 1)) < 0)
+		goto out;
 
 	if ((error = git_vector_init(&iter->loose, 8, NULL)) < 0)
 		goto out;
