@@ -1,5 +1,10 @@
-/* fcopyfile on macOS is slower than a simple read/write loop? */
+/*
+ * By default, use a read/write loop to copy files on POSIX systems.
+ * On Linux, use sendfile by default as it's slightly faster.  On
+ * macOS, we avoid fcopyfile by default because it's slightly slower.
+ */
 #undef USE_FCOPYFILE
+#define USE_SENDFILE 1
 
 #ifdef _WIN32
 
@@ -264,6 +269,10 @@ cl_fs_cleanup(void)
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#if defined(__linux__)
+# include <sys/sendfile.h>
+#endif
+
 #if defined(__APPLE__) || defined(__FreeBSD__)
 # include <copyfile.h>
 #endif
@@ -341,12 +350,12 @@ static char *joinpath(const char *dir, const char *base, int base_len)
 }
 
 static void
-fs_copydir_helper(const char *source, const char *dest, int dmode)
+fs_copydir_helper(const char *source, const char *dest, int dest_mode)
 {
 	DIR *source_dir;
 	struct dirent *d;
 
-	mkdir(dest, dmode);
+	mkdir(dest, dest_mode);
 
 	cl_assert_(source_dir = opendir(source), "Could not open source dir");
 	while ((d = (errno = 0, readdir(source_dir))) != NULL) {
@@ -366,19 +375,31 @@ fs_copydir_helper(const char *source, const char *dest, int dmode)
 }
 
 static void
-fs_copyfile_helper(const char *source, const char *dest, int dmode)
+fs_copyfile_helper(const char *source, size_t source_len, const char *dest, int dest_mode)
 {
 	int in, out;
 
 	cl_must_pass((in = open(source, O_RDONLY)));
-	cl_must_pass((out = open(dest, O_WRONLY|O_CREAT|O_TRUNC, dmode)));
+	cl_must_pass((out = open(dest, O_WRONLY|O_CREAT|O_TRUNC, dest_mode)));
 
 #if USE_FCOPYFILE && (defined(__APPLE__) || defined(__FreeBSD__))
+	((void)(source_len)); /* unused */
 	cl_must_pass(fcopyfile(in, out, 0, COPYFILE_DATA));
+#elif USE_SENDFILE && defined(__linux__)
+	{
+		ssize_t ret = 0;
+
+		while (source_len && (ret = sendfile(out, in, NULL, source_len)) > 0) {
+			source_len -= (size_t)ret;
+		}
+		cl_assert(ret >= 0);
+	}
 #else
 	{
 		char buf[131072];
 		ssize_t ret;
+
+		((void)(source_len)); /* unused */
 
 		while ((ret = read(in, buf, sizeof(buf))) > 0) {
 			size_t len = (size_t)ret;
@@ -427,7 +448,7 @@ fs_copy(const char *source, const char *_dest)
 	if (S_ISDIR(source_st.st_mode)) {
 		fs_copydir_helper(source, dest, source_st.st_mode);
 	} else {
-		fs_copyfile_helper(source, dest, source_st.st_mode);
+		fs_copyfile_helper(source, source_st.st_size, dest, source_st.st_mode);
 	}
 
 	free(dbuf);
