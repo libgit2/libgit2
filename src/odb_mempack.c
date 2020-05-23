@@ -110,6 +110,8 @@ int git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_backend *_back
 	if (git_packbuilder_new(&packbuilder, repo) < 0)
 		return -1;
 
+	git_packbuilder_set_threads(packbuilder, 0);
+
 	for (i = 0; i < db->commits.size; ++i) {
 		struct memobject *commit = db->commits.ptr[i];
 
