@@ -140,6 +140,8 @@ void test_checkout_index__can_disable_pathspec_match(void)
 	check_file_contents("testrepo/test10.txt", "original\n");
 	check_file_contents("testrepo/test11.txt", "original\n");
 	check_file_contents("testrepo/test12.txt", "modified\n");
+
+	git_index_free(index);
 }
 
 void test_checkout_index__honor_the_specified_pathspecs(void)
