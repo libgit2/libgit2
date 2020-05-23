@@ -1,3 +1,6 @@
+/* fcopyfile on macOS is slower than a simple read/write loop? */
+#undef USE_FCOPYFILE
+
 #ifdef _WIN32
 
 #define RM_RETRY_COUNT	5
@@ -254,6 +257,16 @@ cl_fs_cleanup(void)
 
 #include <errno.h>
 #include <string.h>
+#include <limits.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#if defined(__APPLE__) || defined(__FreeBSD__)
+# include <copyfile.h>
+#endif
 
 static int
 shell_out(char * const argv[])
@@ -281,31 +294,143 @@ shell_out(char * const argv[])
 	return WEXITSTATUS(status);
 }
 
-static void
-fs_copy(const char *_source, const char *dest)
+static void basename_r(const char **out, int *out_len, const char *in)
 {
-	char *argv[5];
-	char *source;
-	size_t source_len;
+	size_t in_len = strlen(in), start_pos;
 
-	source = strdup(_source);
-	source_len = strlen(source);
+	for (in_len = strlen(in); in_len; in_len--) {
+		if (in[in_len - 1] != '/')
+			break;
+	}
 
-	if (source[source_len - 1] == '/')
-		source[source_len - 1] = 0;
+	for (start_pos = in_len; start_pos; start_pos--) {
+		if (in[start_pos - 1] == '/')
+			break;
+	}
 
-	argv[0] = "/bin/cp";
-	argv[1] = "-R";
-	argv[2] = source;
-	argv[3] = (char *)dest;
-	argv[4] = NULL;
+	cl_assert(in_len - start_pos < INT_MAX);
 
-	cl_must_pass_(
-		shell_out(argv),
-		"Failed to copy test fixtures to sandbox"
-	);
+	if (in_len - start_pos > 0) {
+		*out = &in[start_pos];
+		*out_len = (in_len - start_pos);
+	} else {
+		*out = "/";
+		*out_len = 1;
+	}
+}
 
-	free(source);
+static char *joinpath(const char *dir, const char *base, int base_len)
+{
+	char *out;
+	int len;
+
+	if (base_len == -1) {
+		size_t bl = strlen(base);
+
+		cl_assert(bl < INT_MAX);
+		base_len = (int)bl;
+	}
+
+	len = strlen(dir) + base_len + 2;
+	cl_assert(len > 0);
+
+	cl_assert(out = malloc(len));
+	cl_assert(snprintf(out, len, "%s/%.*s", dir, base_len, base) < len);
+
+	return out;
+}
+
+static void
+fs_copydir_helper(const char *source, const char *dest, int dmode)
+{
+	DIR *source_dir;
+	struct dirent *d;
+
+	mkdir(dest, dmode);
+
+	cl_assert_(source_dir = opendir(source), "Could not open source dir");
+	while ((d = (errno = 0, readdir(source_dir))) != NULL) {
+		char *child;
+
+		if (!strcmp(d->d_name, ".") || !strcmp(d->d_name, ".."))
+			continue;
+
+		child = joinpath(source, d->d_name, -1);
+		fs_copy(child, dest);
+		free(child);
+	}
+
+	cl_assert_(errno == 0, "Failed to iterate source dir");
+
+	closedir(source_dir);
+}
+
+static void
+fs_copyfile_helper(const char *source, const char *dest, int dmode)
+{
+	int in, out;
+
+	cl_must_pass((in = open(source, O_RDONLY)));
+	cl_must_pass((out = open(dest, O_WRONLY|O_CREAT|O_TRUNC, dmode)));
+
+#if USE_FCOPYFILE && (defined(__APPLE__) || defined(__FreeBSD__))
+	cl_must_pass(fcopyfile(in, out, 0, COPYFILE_DATA));
+#else
+	{
+		char buf[131072];
+		ssize_t ret;
+
+		while ((ret = read(in, buf, sizeof(buf))) > 0) {
+			size_t len = (size_t)ret;
+
+			while (len && (ret = write(out, buf, len)) > 0) {
+				cl_assert(ret <= (ssize_t)len);
+				len -= ret;
+			}
+			cl_assert(ret >= 0);
+		}
+		cl_assert(ret == 0);
+	}
+#endif
+
+	close(in);
+	close(out);
+}
+
+static void
+fs_copy(const char *source, const char *_dest)
+{
+	char *dbuf = NULL;
+	const char *dest;
+	struct stat source_st, dest_st;
+
+	cl_must_pass_(lstat(source, &source_st), "Failed to stat copy source");
+
+	if (lstat(_dest, &dest_st) == 0) {
+		const char *base;
+		int base_len;
+
+		/* Target exists and is directory; append basename */
+		cl_assert(S_ISDIR(dest_st.st_mode));
+
+		basename_r(&base, &base_len, source);
+		cl_assert(base_len < INT_MAX);
+
+		dbuf = joinpath(_dest, base, base_len);
+		dest = dbuf;
+	} else if (errno != ENOENT) {
+		cl_fail("Cannot copy; cannot stat destination");
+	} else {
+		dest = _dest;
+	}
+
+	if (S_ISDIR(source_st.st_mode)) {
+		fs_copydir_helper(source, dest, source_st.st_mode);
+	} else {
+		fs_copyfile_helper(source, dest, source_st.st_mode);
+	}
+
+	free(dbuf);
 }
 
 static void
