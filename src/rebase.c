@@ -1196,7 +1196,7 @@ static int notes_ref_lookup(git_buf *out, git_rebase *rebase)
 	}
 
 	error = do_rewrite ?
-		git_config_get_string_buf(out, config, "notes.rewriteref") :
+		git_config__get_string_buf(out, config, "notes.rewriteref") :
 		GIT_ENOTFOUND;
 
 done:

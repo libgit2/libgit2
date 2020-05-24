@@ -15,6 +15,7 @@
 #include "git2/revparse.h"
 #include "blob.h"
 #include "parse.h"
+#include "config.h"
 
 #define MM_FILE ".mailmap"
 #define MM_FILE_CONFIG "mailmap.file"
@@ -358,9 +359,9 @@ static void mailmap_add_from_repository(git_mailmap *mm, git_repository *repo)
 
 	/* Try to load 'mailmap.file' and 'mailmap.blob' cfgs from the repo */
 	if (git_repository_config(&config, repo) == 0) {
-		if (git_config_get_string_buf(&rev_buf, config, MM_BLOB_CONFIG) == 0)
+		if (git_config__get_string_buf(&rev_buf, config, MM_BLOB_CONFIG) == 0)
 			rev = rev_buf.ptr;
-		if (git_config_get_path(&path_buf, config, MM_FILE_CONFIG) == 0)
+		if (git_config__get_path(&path_buf, config, MM_FILE_CONFIG) == 0)
 			path = path_buf.ptr;
 	}
 

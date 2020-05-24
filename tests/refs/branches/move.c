@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "refs.h"
 #include "config/config_helpers.h"
+#include "config.h"
 
 static git_repository *repo;
 
@@ -73,9 +74,9 @@ void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_coll
 
 	cl_git_pass(git_repository_config_snapshot(&config, repo));
 
-	cl_git_pass(git_config_get_string_buf(&buf, config, "branch.master.remote"));
+	cl_git_pass(git_config__get_string_buf(&buf, config, "branch.master.remote"));
 	original_remote = git_buf_detach(&buf);
-	cl_git_pass(git_config_get_string_buf(&buf, config, "branch.master.merge"));
+	cl_git_pass(git_config__get_string_buf(&buf, config, "branch.master.merge"));
 	original_merge  = git_buf_detach(&buf);
 	git_config_free(config);
 

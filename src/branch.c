@@ -389,7 +389,7 @@ static int retrieve_upstream_configuration(
 		canonical_branch_name + strlen(GIT_REFS_HEADS_DIR)) < 0)
 			return -1;
 
-	error = git_config_get_string_buf(out, config, git_buf_cstr(&buf));
+	error = git_config__get_string_buf(out, config, git_buf_cstr(&buf));
 	git_buf_dispose(&buf);
 	return error;
 }
