@@ -1032,10 +1032,10 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		git_buf programdata_buf = GIT_BUF_INIT;
 		git_config *config;
 
-		git_config_find_global(&global_buf);
-		git_config_find_xdg(&xdg_buf);
-		git_config_find_system(&system_buf);
-		git_config_find_programdata(&programdata_buf);
+		git_config__find_global(&global_buf);
+		git_config__find_xdg(&xdg_buf);
+		git_config__find_system(&system_buf);
+		git_config__find_programdata(&programdata_buf);
 
 		/* If there is no global file, open a backend for it anyway */
 		if (git_buf_len(&global_buf) == 0)
@@ -1471,10 +1471,10 @@ static bool are_symlinks_supported(const char *wd_path)
 	 * _not_ set, then we do not test or enable symlink support.
 	 */
 #ifdef GIT_WIN32
-	git_config_find_global(&global_buf);
-	git_config_find_xdg(&xdg_buf);
-	git_config_find_system(&system_buf);
-	git_config_find_programdata(&programdata_buf);
+	git_config__find_global(&global_buf);
+	git_config__find_xdg(&xdg_buf);
+	git_config__find_system(&system_buf);
+	git_config__find_programdata(&programdata_buf);
 
 	if (load_config(&config, NULL,
 	    path_unless_empty(&global_buf),
@@ -1851,7 +1851,7 @@ static int repo_init_structure(
 		if (opts->template_path)
 			tdir = opts->template_path;
 		else if ((error = git_config_open_default(&cfg)) >= 0) {
-			if (!git_config_get_path(&template_buf, cfg, "init.templatedir"))
+			if (!git_config__get_path(&template_buf, cfg, "init.templatedir"))
 				tdir = template_buf.ptr;
 			git_error_clear();
 		}

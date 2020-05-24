@@ -73,6 +73,26 @@ extern int git_config__configmap_lookup(
 	int *out, git_config *config, git_configmap_item item);
 
 /**
+ * Internal config readers that work on `git_buf`s.  The public-facing
+ * versions of these accept a `git_userbuf` and proxy to these.
+ */
+extern int git_config__get_string_buf(
+	git_buf *out, const git_config *cfg, const char *name);
+
+/**
+ * Internal location functions that work on `git_buf`s.  The public-facing
+ * versions of these accept a `git_userbuf` and proxy to these.
+ */
+extern int git_config__find_global(git_buf *path);
+extern int git_config__find_system(git_buf *path);
+extern int git_config__find_xdg(git_buf *path);
+extern int git_config__find_programdata(git_buf *path);
+
+extern int git_config__global_location(git_buf *buf);
+extern int git_config__parse_path(git_buf *out, const char *value);
+extern int git_config__get_path(git_buf *out, const git_config *cfg, const char *name);
+
+/**
  * The opposite of git_config_lookup_map_value, we take an enum value
  * and map it to the string or bool value on the config.
  */
