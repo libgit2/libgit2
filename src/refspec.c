@@ -13,6 +13,7 @@
 #include "util.h"
 #include "vector.h"
 #include "wildmatch.h"
+#include "userbuf.h"
 
 int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 {
@@ -260,10 +261,9 @@ static int refspec_transform(
 	return git_buf_puts(out, to_star + 1);
 }
 
-int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *name)
+int git_refspec__transform(git_buf *out, const git_refspec *spec, const char *name)
 {
 	assert(out && spec && name);
-	git_buf_sanitize(out);
 
 	if (!git_refspec_src_matches(spec, name)) {
 		git_error_set(GIT_ERROR_INVALID, "ref '%s' doesn't match the source", name);
@@ -276,10 +276,15 @@ int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *nam
 	return refspec_transform(out, spec->src, spec->dst, name);
 }
 
-int git_refspec_rtransform(git_buf *out, const git_refspec *spec, const char *name)
+int git_refspec_transform(git_userbuf *out, const git_refspec *spec, const char *name)
+{
+	git_userbuf_sanitize(out);
+	return git_refspec__transform((git_buf *)out, spec, name);
+}
+
+int git_refspec__rtransform(git_buf *out, const git_refspec *spec, const char *name)
 {
 	assert(out && spec && name);
-	git_buf_sanitize(out);
 
 	if (!git_refspec_dst_matches(spec, name)) {
 		git_error_set(GIT_ERROR_INVALID, "ref '%s' doesn't match the destination", name);
@@ -290,6 +295,12 @@ int git_refspec_rtransform(git_buf *out, const git_refspec *spec, const char *na
 		return git_buf_puts(out, spec->src);
 
 	return refspec_transform(out, spec->dst, spec->src, name);
+}
+
+int git_refspec_rtransform(git_userbuf *out, const git_refspec *spec, const char *name)
+{
+	git_userbuf_sanitize(out);
+	return git_refspec__rtransform((git_buf *)out, spec, name);
 }
 
 int git_refspec__serialize(git_buf *out, const git_refspec *refspec)

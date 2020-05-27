@@ -94,13 +94,13 @@ void test_network_refspecs__parsing(void)
 static void assert_valid_transform(const char *refspec, const char *name, const char *result)
 {
 	git_refspec spec;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_refspec__parse(&spec, refspec, true));
 	cl_git_pass(git_refspec_transform(&buf, &spec, name));
 	cl_assert_equal_s(result, buf.ptr);
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_refspec__dispose(&spec);
 }
 
@@ -133,12 +133,12 @@ void test_network_refspecs__no_dst(void)
 static void assert_invalid_transform(const char *refspec, const char *name)
 {
 	git_refspec spec;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	git_refspec__parse(&spec, refspec, true);
 	cl_git_fail(git_refspec_transform(&buf, &spec, name));
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_refspec__dispose(&spec);
 }
 
@@ -151,12 +151,12 @@ void test_network_refspecs__invalid(void)
 static void assert_invalid_rtransform(const char *refspec, const char *name)
 {
 	git_refspec spec;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_refspec__parse(&spec, refspec, true));
 	cl_git_fail(git_refspec_rtransform(&buf, &spec, name));
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_refspec__dispose(&spec);
 }
 

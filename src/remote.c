@@ -1098,7 +1098,7 @@ static int ref_to_update(int *update, git_buf *remote_name, git_remote *remote, 
 	    git__strcmp(git_remote_name(remote), git_buf_cstr(&upstream_remote)) ||
 	    (error = git_branch__upstream_name(&upstream_name, repo, ref_name)) < 0 ||
 	    !git_refspec_dst_matches(spec, git_buf_cstr(&upstream_name)) ||
-	    (error = git_refspec_rtransform(remote_name, spec, upstream_name.ptr)) < 0) {
+	    (error = git_refspec__rtransform(remote_name, spec, upstream_name.ptr)) < 0) {
 		/* Not an error if there is no upstream */
 		if (error == GIT_ENOTFOUND) {
 			git_error_clear();
@@ -1290,7 +1290,7 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 			if (!git_refspec_dst_matches(spec, refname))
 				continue;
 
-			if ((error = git_refspec_rtransform(&buf, spec, refname)) < 0)
+			if ((error = git_refspec__rtransform(&buf, spec, refname)) < 0)
 				goto cleanup;
 
 			key.name = (char *) git_buf_cstr(&buf);
@@ -1413,7 +1413,7 @@ static int update_tips_for_spec(
 		/* If we didn't want to auto-follow the tag, check if the refspec matches */
 		if (!autotag && git_refspec_src_matches(spec, head->name)) {
 			if (spec->dst) {
-				if (git_refspec_transform(&refname, spec, head->name) < 0)
+				if (git_refspec__transform(&refname, spec, head->name) < 0)
 					goto on_error;
 			} else {
 				/*
@@ -1568,7 +1568,7 @@ static int opportunistic_updates(const git_remote *remote, const git_remote_call
 		 */
 
 		git_buf_clear(&refname);
-		if ((error = git_refspec_transform(&refname, spec, head->name)) < 0)
+		if ((error = git_refspec__transform(&refname, spec, head->name)) < 0)
 			goto cleanup;
 
 		error = git_reference_name_to_id(&old, remote->repo, refname.ptr);

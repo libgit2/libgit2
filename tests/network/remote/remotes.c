@@ -256,20 +256,20 @@ void test_network_remote_remotes__fnmatch(void)
 
 void test_network_remote_remotes__transform(void)
 {
-	git_buf ref = GIT_BUF_INIT;
+	git_userbuf ref = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_refspec_transform(&ref, _refspec, "refs/heads/master"));
 	cl_assert_equal_s(ref.ptr, "refs/remotes/test/master");
-	git_buf_dispose(&ref);
+	git_userbuf_dispose(&ref);
 }
 
 void test_network_remote_remotes__transform_destination_to_source(void)
 {
-	git_buf ref = GIT_BUF_INIT;
+	git_userbuf ref = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_refspec_rtransform(&ref, _refspec, "refs/remotes/test/master"));
 	cl_assert_equal_s(ref.ptr, "refs/heads/master");
-	git_buf_dispose(&ref);
+	git_userbuf_dispose(&ref);
 }
 
 void test_network_remote_remotes__missing_refspecs(void)
