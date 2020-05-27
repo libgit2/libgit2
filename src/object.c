@@ -17,6 +17,7 @@
 #include "blob.h"
 #include "oid.h"
 #include "tag.h"
+#include "userbuf.h"
 
 bool git_object__strict_input_validation = true;
 
@@ -485,7 +486,7 @@ cleanup:
 	return error;
 }
 
-int git_object_short_id(git_buf *out, const git_object *obj)
+int git_object_short_id(git_userbuf *out, const git_object *obj)
 {
 	git_repository *repo;
 	int len = GIT_ABBREV_DEFAULT, error;
@@ -494,7 +495,7 @@ int git_object_short_id(git_buf *out, const git_object *obj)
 
 	assert(out && obj);
 
-	git_buf_sanitize(out);
+	git_userbuf_sanitize(out);
 	repo = git_object_owner(obj);
 
 	if ((error = git_repository__configmap_lookup(&len, repo, GIT_CONFIGMAP_ABBREV)) < 0)
@@ -517,13 +518,12 @@ int git_object_short_id(git_buf *out, const git_object *obj)
 		len++;
 	}
 
-	if (!error && !(error = git_buf_grow(out, len + 1))) {
+	if (!error && !(error = git_buf_grow((git_buf *)out, len + 1))) {
 		git_oid_tostr(out->ptr, len + 1, &id);
 		out->size = len;
 	}
 
 	git_odb_free(odb);
-
 	return error;
 }
 
