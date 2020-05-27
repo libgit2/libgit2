@@ -64,18 +64,18 @@ void test_refs_branches_upstream__trying_to_retrieve_a_remote_tracking_reference
 
 void test_refs_branches_upstream__upstream_remote(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_branch_upstream_remote(&buf, repo, "refs/heads/master"));
 	cl_assert_equal_s("test", buf.ptr);
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 }
 
 void test_refs_branches_upstream__upstream_remote_empty_value(void)
 {
 	git_repository *repository;
 	git_config *cfg;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	repository = cl_git_sandbox_init("testrepo.git");
 	cl_git_pass(git_repository_config(&cfg, repository));

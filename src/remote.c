@@ -19,6 +19,7 @@
 #include "refspec.h"
 #include "fetchhead.h"
 #include "push.h"
+#include "branch.h"
 
 #define CONFIG_URL_FMT "remote.%s.url"
 #define CONFIG_PUSHURL_FMT "remote.%s.pushurl"
@@ -1088,9 +1089,9 @@ static int ref_to_update(int *update, git_buf *remote_name, git_remote *remote, 
 
 	if ((!git_reference__is_branch(ref_name)) ||
 	    !git_remote_name(remote) ||
-	    (error = git_branch_upstream_remote(&upstream_remote, repo, ref_name) < 0) ||
+	    (error = git_branch__upstream_remote(&upstream_remote, repo, ref_name) < 0) ||
 	    git__strcmp(git_remote_name(remote), git_buf_cstr(&upstream_remote)) ||
-	    (error = git_branch_upstream_name(&upstream_name, repo, ref_name)) < 0 ||
+	    (error = git_branch__upstream_name(&upstream_name, repo, ref_name)) < 0 ||
 	    !git_refspec_dst_matches(spec, git_buf_cstr(&upstream_name)) ||
 	    (error = git_refspec_rtransform(remote_name, spec, upstream_name.ptr)) < 0) {
 		/* Not an error if there is no upstream */

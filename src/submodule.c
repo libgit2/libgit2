@@ -24,6 +24,7 @@
 #include "index.h"
 #include "worktree.h"
 #include "clone.h"
+#include "branch.h"
 
 #define GIT_MODULES_FILE ".gitmodules"
 
@@ -2123,14 +2124,14 @@ static int lookup_head_remote_key(git_buf *remote_name, git_repository *repo)
 	}
 
 	/* lookup remote tracking branch of HEAD */
-	if ((error = git_branch_upstream_name(
+	if ((error = git_branch__upstream_name(
 		&upstream_name,
 		repo,
 		git_reference_name(head))) < 0)
 		goto done;
 
 	/* lookup remote of remote tracking branch */
-	if ((error = git_branch_remote_name(remote_name, repo, upstream_name.ptr)) < 0)
+	if ((error = git_branch__remote_name(remote_name, repo, upstream_name.ptr)) < 0)
 		goto done;
 
 done:
