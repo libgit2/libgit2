@@ -376,7 +376,7 @@ GIT_EXTERN(const char *) git_submodule_url(git_submodule *submodule);
  * @param url Relative url
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *url);
+GIT_EXTERN(int) git_submodule_resolve_url(git_userbuf *out, git_repository *repo, const char *url);
 
 /**
 * Get the branch for the submodule.
