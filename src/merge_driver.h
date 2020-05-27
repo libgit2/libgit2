@@ -46,7 +46,7 @@ extern int git_merge_driver__builtin_apply(
 	git_merge_driver *self,
 	const char **path_out,
 	uint32_t *mode_out,
-	git_buf *merged_out,
+	git_userbuf *merged_out,
 	const char *filter_name,
 	const git_merge_driver_source *src);
 
