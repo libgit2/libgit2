@@ -12,6 +12,7 @@
 #include "git2/worktree.h"
 
 #include "repository.h"
+#include "userbuf.h"
 
 static bool is_worktree_dir(const char *dir)
 {
@@ -461,7 +462,7 @@ int git_worktree_unlock(git_worktree *wt)
 	return 0;
 }
 
-int git_worktree_is_locked(git_buf *reason, const git_worktree *wt)
+int git_worktree_is_locked(git_userbuf *reason, const git_worktree *wt)
 {
 	git_buf path = GIT_BUF_INIT;
 	int error, locked;
@@ -469,13 +470,15 @@ int git_worktree_is_locked(git_buf *reason, const git_worktree *wt)
 	assert(wt);
 
 	if (reason)
-		git_buf_clear(reason);
+		git_userbuf_sanitize(reason);
 
 	if ((error = git_buf_joinpath(&path, wt->gitdir_path, "locked")) < 0)
 		goto out;
+
 	locked = git_path_exists(path.ptr);
+
 	if (locked && reason &&
-	    (error = git_futils_readbuffer(reason, path.ptr)) < 0)
+		(error = git_futils_readbuffer((git_buf *)reason, path.ptr)) < 0)
 		goto out;
 
 	error = locked;
@@ -525,17 +528,18 @@ int git_worktree_is_prunable(git_worktree *wt,
 		memcpy(&popts, opts, sizeof(popts));
 
 	if ((popts.flags & GIT_WORKTREE_PRUNE_LOCKED) == 0) {
-		git_buf reason = GIT_BUF_INIT;
+		git_userbuf reason = GIT_BUF_INIT;
 		int error;
 
 		if ((error = git_worktree_is_locked(&reason, wt)) < 0)
 			return error;
 
 		if (error) {
-			if (!reason.size)
-				git_buf_attach_notowned(&reason, "no reason given", 15);
-			git_error_set(GIT_ERROR_WORKTREE, "not pruning locked working tree: '%s'", reason.ptr);
-			git_buf_dispose(&reason);
+			const char *msg = reason.size ? reason.ptr :
+				"no reason given";
+			git_error_set(GIT_ERROR_WORKTREE, "not pruning locked working tree: '%s'", msg);
+
+			git_userbuf_dispose(&reason);
 			return 0;
 		}
 	}
