@@ -21,6 +21,7 @@
 #include "tag.h"
 #include "vector.h"
 #include "wildmatch.h"
+#include "userbuf.h"
 
 /* Ported from https://github.com/git/git/blob/89dde7882f71f846ccd0359756d27bebc31108de/builtin/describe.c */
 
@@ -768,7 +769,7 @@ static int normalize_format_options(
 	return 0;
 }
 
-int git_describe_format(git_buf *out, const git_describe_result *result, const git_describe_format_options *given)
+static int git_describe__format(git_buf *out, const git_describe_result *result, const git_describe_format_options *given)
 {
 	int error;
 	git_repository *repo;
@@ -779,9 +780,6 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 
 	GIT_ERROR_CHECK_VERSION(given, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION, "git_describe_format_options");
 	normalize_format_options(&opts, given);
-
-	git_buf_sanitize(out);
-
 
 	if (opts.always_use_long_format && opts.abbreviated_size == 0) {
 		git_error_set(GIT_ERROR_DESCRIBE, "cannot describe - "
@@ -846,6 +844,12 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 	}
 
 	return git_buf_oom(out) ? -1 : 0;
+}
+
+int git_describe_format(git_userbuf *out, const git_describe_result *result, const git_describe_format_options *given)
+{
+	git_userbuf_sanitize(out);
+	return git_describe__format((git_buf *)out, result, given);
 }
 
 void git_describe_result_free(git_describe_result *result)

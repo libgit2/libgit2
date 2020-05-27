@@ -174,7 +174,7 @@ GIT_EXTERN(int) git_describe_workdir(
  * @param opts the formatting options (or NULL for defaults)
  */
 GIT_EXTERN(int) git_describe_format(
-	git_buf *out,
+	git_userbuf *out,
 	const git_describe_result *result,
 	const git_describe_format_options *opts);
 
