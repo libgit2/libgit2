@@ -100,7 +100,7 @@ static int impl__read_header(size_t *len_p, git_object_t *type_p, git_odb_backen
 	return 0;
 }
 
-int git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_backend *_backend)
+int git_mempack_dump(git_userbuf *pack, git_repository *repo, git_odb_backend *_backend)
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
 	git_packbuilder *packbuilder;

@@ -65,7 +65,7 @@ GIT_EXTERN(int) git_mempack_new(git_odb_backend **out);
  * @param backend The mempack backend
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_backend *backend);
+GIT_EXTERN(int) git_mempack_dump(git_userbuf *pack, git_repository *repo, git_odb_backend *backend);
 
 /**
  * Reset the memory packer by clearing all the queued objects.
