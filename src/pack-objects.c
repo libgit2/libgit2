@@ -1392,7 +1392,7 @@ int git_packbuilder_write(
 	PREPARE_PACK;
 
 	if (path == NULL) {
-		if ((error = git_repository_item_path(&object_path, pb->repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0)
+		if ((error = git_repository__item_path(&object_path, pb->repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0)
 			goto cleanup;
 		if ((error = git_buf_joinpath(&object_path, git_buf_cstr(&object_path), "pack")) < 0)
 			goto cleanup;

@@ -347,7 +347,7 @@ int git_blob_create_from_stream(git_writestream **out, git_repository *repo, con
 	stream->parent.close = blob_writestream_close;
 	stream->parent.free  = blob_writestream_free;
 
-	if ((error = git_repository_item_path(&path, repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0
+	if ((error = git_repository__item_path(&path, repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0
 		|| (error = git_buf_joinpath(&path, path.ptr, "streamed")) < 0)
 		goto cleanup;
 

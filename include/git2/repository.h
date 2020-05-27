@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "buffer.h"
+#include "userbuf.h"
 
 /**
  * @file git2/repository.h
@@ -70,8 +71,8 @@ GIT_EXTERN(int) git_repository_wrap_odb(git_repository **out, git_odb *odb);
  * The method will automatically detect if the repository is bare
  * (if there is a repository).
  *
- * @param out A pointer to a user-allocated git_buf which will contain
- * the found path.
+ * @param out A pointer to a user-allocated git_userbuf which will
+ * contain the found path.
  *
  * @param start_path The base path where the lookup starts.
  *
@@ -87,7 +88,7 @@ GIT_EXTERN(int) git_repository_wrap_odb(git_repository **out, git_odb *odb);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_discover(
-		git_buf *out,
+		git_userbuf *out,
 		const char *start_path,
 		int across_fs,
 		const char *ceiling_dirs);
@@ -456,7 +457,7 @@ typedef enum {
  * @param item The repository item for which to retrieve the path
  * @return 0, GIT_ENOTFOUND if the path cannot exist or an error code
  */
-GIT_EXTERN(int) git_repository_item_path(git_buf *out, const git_repository *repo, git_repository_item_t item);
+GIT_EXTERN(int) git_repository_item_path(git_userbuf *out, const git_repository *repo, git_repository_item_t item);
 
 /**
  * Get the path of this repository
@@ -482,7 +483,7 @@ GIT_EXTERN(const char *) git_repository_workdir(const git_repository *repo);
 
 /**
  * Get the path of the shared common directory for this repository.
- * 
+ *
  * If the repository is bare, it is the root directory for the repository.
  * If the repository is a worktree, it is the parent repo's gitdir.
  * Otherwise, it is the gitdir.
@@ -620,11 +621,11 @@ GIT_EXTERN(int) git_repository_index(git_index **out, git_repository *repo);
  * Use this function to get the contents of this file. Don't forget to
  * remove the file after you create the commit.
  *
- * @param out git_buf to write data into
+ * @param out git_userbuf to write data into
  * @param repo Repository to read prepared message from
  * @return 0, GIT_ENOTFOUND if no message exists or an error code
  */
-GIT_EXTERN(int) git_repository_message(git_buf *out, git_repository *repo);
+GIT_EXTERN(int) git_repository_message(git_userbuf *out, git_repository *repo);
 
 /**
  * Remove git's prepared message.
