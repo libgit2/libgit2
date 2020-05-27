@@ -148,7 +148,7 @@ static int update_head_to_remote(
 	const git_remote_head *remote_head, **refs;
 	const git_oid *remote_head_id;
 	git_buf remote_master_name = GIT_BUF_INIT;
-	git_buf branch = GIT_BUF_INIT;
+	git_userbuf branch = GIT_USERBUF_INIT;
 
 	if ((error = git_remote_ls(&refs, &refs_len, remote)) < 0)
 		return error;
@@ -171,7 +171,7 @@ static int update_head_to_remote(
 		goto cleanup;
 	}
 
-	refspec = git_remote__matching_refspec(remote, git_buf_cstr(&branch));
+	refspec = git_remote__matching_refspec(remote, branch.ptr);
 
 	if (refspec == NULL) {
 		git_error_set(GIT_ERROR_NET, "the remote's default branch does not fit the refspec configuration");
@@ -183,18 +183,18 @@ static int update_head_to_remote(
 	if ((error = git_refspec_transform(
 		&remote_master_name,
 		refspec,
-		git_buf_cstr(&branch))) < 0)
+		branch.ptr)) < 0)
 		goto cleanup;
 
 	error = update_head_to_new_branch(
 		repo,
 		remote_head_id,
-		git_buf_cstr(&branch),
+		branch.ptr,
 		reflog_message);
 
 cleanup:
 	git_buf_dispose(&remote_master_name);
-	git_buf_dispose(&branch);
+	git_userbuf_dispose(&branch);
 
 	return error;
 }

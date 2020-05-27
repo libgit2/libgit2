@@ -488,7 +488,7 @@ typedef int GIT_CALLBACK(git_push_update_reference_cb)(const char *refname, cons
  * @param payload Payload provided by the caller
  * @return 0 on success, GIT_PASSTHROUGH or an error
  */
-typedef int GIT_CALLBACK(git_url_resolve_cb)(git_buf *url_resolved, const char *url, int direction, void *payload);
+typedef int GIT_CALLBACK(git_url_resolve_cb)(git_userbuf *url_resolved, const char *url, int direction, void *payload);
 
 /**
  * The callback settings structure
@@ -948,7 +948,7 @@ GIT_EXTERN(int) git_remote_delete(git_repository *repo, const char *name);
  * @return 0, GIT_ENOTFOUND if the remote does not have any references
  * or none of them point to HEAD's commit, or an error message.
  */
-GIT_EXTERN(int) git_remote_default_branch(git_buf *out, git_remote *remote);
+GIT_EXTERN(int) git_remote_default_branch(git_userbuf *out, git_remote *remote);
 
 /** @} */
 GIT_END_DECL

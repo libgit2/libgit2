@@ -56,18 +56,20 @@ void test_network_remote_remotes__parsing(void)
 	git_buf_dispose(&url);
 }
 
-static int urlresolve_callback(git_buf *url_resolved, const char *url, int direction, void *payload)
+static int urlresolve_callback(git_userbuf *url_resolved, const char *url, int direction, void *payload)
 {
+	const char *resolution;
+
 	cl_assert(strcmp(url, "git://github.com/libgit2/libgit2") == 0);
 	cl_assert(strcmp(payload, "payload") == 0);
 	cl_assert(url_resolved->size == 0);
-	
-	if (direction == GIT_DIRECTION_PUSH)
-		git_buf_sets(url_resolved, "pushresolve");
-	if (direction == GIT_DIRECTION_FETCH)
-		git_buf_sets(url_resolved, "fetchresolve");
 
-	return GIT_OK;
+	if (direction == GIT_DIRECTION_PUSH)
+		resolution = "pushresolve";
+	if (direction == GIT_DIRECTION_FETCH)
+		resolution = "fetchresolve";
+
+	return git_userbuf_set(url_resolved, resolution, strlen(resolution));
 }
 
 void test_network_remote_remotes__urlresolve(void)
@@ -91,7 +93,7 @@ void test_network_remote_remotes__urlresolve(void)
 	git_buf_dispose(&url);
 }
 
-static int urlresolve_passthrough_callback(git_buf *url_resolved, const char *url, int direction, void *payload)
+static int urlresolve_passthrough_callback(git_userbuf *url_resolved, const char *url, int direction, void *payload)
 {
 	GIT_UNUSED(url_resolved);
 	GIT_UNUSED(url);
