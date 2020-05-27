@@ -13,12 +13,15 @@
 #include "futils.h"
 #include "tree-cache.h"
 #include "index.h"
+#include "userbuf.h"
 
 #define DEFAULT_TREE_SIZE 16
 #define MAX_FILEMODE_BYTES 6
 
 #define TREE_ENTRY_CHECK_NAMELEN(n) \
 	if (n > UINT16_MAX) { git_error_set(GIT_ERROR_INVALID, "tree entry path too long"); }
+
+static int git_treebuilder__write_with_buffer(git_oid *oid, git_treebuilder *bld, git_buf *tree);
 
 static bool valid_filemode(const int filemode)
 {
@@ -607,7 +610,7 @@ static int write_tree(
 		}
 	}
 
-	if (git_treebuilder_write_with_buffer(oid, bld, shared_buf) < 0)
+	if (git_treebuilder__write_with_buffer(oid, bld, shared_buf) < 0)
 		goto on_error;
 
 	git_treebuilder_free(bld);
@@ -778,13 +781,13 @@ int git_treebuilder_write(git_oid *oid, git_treebuilder *bld)
 	int error;
 	git_buf buffer = GIT_BUF_INIT;
 
-	error = git_treebuilder_write_with_buffer(oid, bld, &buffer);
+	error = git_treebuilder__write_with_buffer(oid, bld, &buffer);
 
 	git_buf_dispose(&buffer);
 	return error;
 }
 
-int git_treebuilder_write_with_buffer(git_oid *oid, git_treebuilder *bld, git_buf *tree)
+static int git_treebuilder__write_with_buffer(git_oid *oid, git_treebuilder *bld, git_buf *tree)
 {
 	int error = 0;
 	size_t i, entrycount;
@@ -832,6 +835,12 @@ out:
 	git_vector_free(&entries);
 
 	return error;
+}
+
+int git_treebuilder_write_with_buffer(git_oid *oid, git_treebuilder *bld, git_userbuf *tree)
+{
+	git_userbuf_sanitize(tree);
+	return git_treebuilder__write_with_buffer(oid, bld, (git_buf *)tree);
 }
 
 int git_treebuilder_filter(
