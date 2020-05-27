@@ -138,7 +138,7 @@ static int write_file_filtered(
 	int error;
 	git_buf tgt = GIT_BUF_INIT;
 
-	error = git_filter_list_apply_to_file(&tgt, fl, NULL, full_path);
+	error = git_filter_list_apply_to_file((git_userbuf *)&tgt, fl, NULL, full_path);
 
 	/* Write the file to disk if it was properly filtered */
 	if (!error) {
@@ -434,7 +434,7 @@ static int git_blob__filter(
 			&fl, git_blob_owner(blob), blob, path,
 			GIT_FILTER_TO_WORKTREE, flags))) {
 
-		error = git_filter_list_apply_to_blob(out, fl, blob);
+		error = git_filter_list_apply_to_blob((git_userbuf *)out, fl, blob);
 
 		git_filter_list_free(fl);
 	}

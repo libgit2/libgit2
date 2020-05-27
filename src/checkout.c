@@ -2157,7 +2157,7 @@ static int checkout_write_merge(
 		if ((error = git_filter_list__load_ext(
 				&fl, data->repo, NULL, git_buf_cstr(&path_workdir),
 				GIT_FILTER_TO_WORKTREE, &filter_opts)) < 0 ||
-			(error = git_filter_list_apply_to_data(&out_data, fl, &in_data)) < 0)
+			(error = git_filter_list_apply_to_data((git_userbuf *)&out_data, fl, (git_userbuf *)&in_data)) < 0)
 			goto done;
 	} else {
 		out_data.ptr = (char *)result.ptr;
