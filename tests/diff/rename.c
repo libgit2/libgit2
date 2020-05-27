@@ -1733,7 +1733,7 @@ void test_diff_rename__identical(void)
     git_diff *diff;
 	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options find_opts = GIT_DIFF_FIND_OPTIONS_INIT;
-	git_buf diff_buf = GIT_BUF_INIT;
+	git_userbuf diff_buf = GIT_USERBUF_INIT;
 	const char *expected =
 		"diff --git a/serving.txt b/sixserving.txt\n"
 		"similarity index 100%\n"
@@ -1759,7 +1759,7 @@ void test_diff_rename__identical(void)
 
 	cl_assert_equal_s(expected, diff_buf.ptr);
 
-	git_buf_dispose(&diff_buf);
+	git_userbuf_dispose(&diff_buf);
 	git_diff_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
@@ -1772,7 +1772,7 @@ void test_diff_rename__rewrite_and_delete(void)
 	git_tree *old_tree, *new_tree;
 	git_diff *diff;
 	git_diff_find_options find_opts = GIT_DIFF_FIND_OPTIONS_INIT;
-	git_buf diff_buf = GIT_BUF_INIT;
+	git_userbuf diff_buf = GIT_USERBUF_INIT;
 	const char *expected =
 		"diff --git a/ikeepsix.txt b/ikeepsix.txt\n"
 		"deleted file mode 100644\n"
@@ -1910,7 +1910,7 @@ void test_diff_rename__rewrite_and_delete(void)
 
 	cl_assert_equal_s(expected, diff_buf.ptr);
 
-	git_buf_dispose(&diff_buf);
+	git_userbuf_dispose(&diff_buf);
 	git_diff_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
@@ -1923,7 +1923,7 @@ void test_diff_rename__delete_and_rename(void)
 	git_tree *old_tree, *new_tree;
 	git_diff *diff;
 	git_diff_find_options find_opts = GIT_DIFF_FIND_OPTIONS_INIT;
-	git_buf diff_buf = GIT_BUF_INIT;
+	git_userbuf diff_buf = GIT_USERBUF_INIT;
 	const char *expected =
 		"diff --git a/sixserving.txt b/sixserving.txt\n"
 		"deleted file mode 100644\n"
@@ -1973,7 +1973,7 @@ void test_diff_rename__delete_and_rename(void)
 
 	cl_assert_equal_s(expected, diff_buf.ptr);
 
-	git_buf_dispose(&diff_buf);
+	git_userbuf_dispose(&diff_buf);
 	git_diff_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);

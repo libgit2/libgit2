@@ -754,13 +754,15 @@ int git_diff_print_callback__to_file_handle(
 	return 0;
 }
 
-/* print a git_diff to a git_buf */
-int git_diff_to_buf(git_buf *out, git_diff *diff, git_diff_format_t format)
+/* print a git_diff to a git_userbuf */
+int git_diff_to_buf(git_userbuf *out, git_diff *diff, git_diff_format_t format)
 {
 	assert(out && diff);
-	git_buf_sanitize(out);
-	return git_diff_print(
-		diff, format, git_diff_print_callback__to_buf, out);
+
+	git_userbuf_sanitize(out);
+
+	return git_diff_print(diff,
+		format, git_diff_print_callback__to_buf, (git_buf *)out);
 }
 
 /* print a git_patch to an output callback */
