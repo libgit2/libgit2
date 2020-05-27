@@ -46,7 +46,7 @@ void test_worktree_submodule__submodule_worktree_child(void)
 
 void test_worktree_submodule__open_discovered_submodule_worktree(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_userbuf path = GIT_USERBUF_INIT;
 	git_repository *repo;
 
 	cl_git_pass(git_repository_discover(&path,
@@ -55,7 +55,7 @@ void test_worktree_submodule__open_discovered_submodule_worktree(void)
 	cl_assert_equal_s(git_repository_workdir(child.worktree),
 		git_repository_workdir(repo));
 
-	git_buf_dispose(&path);
+	git_userbuf_dispose(&path);
 	git_repository_free(repo);
 }
 

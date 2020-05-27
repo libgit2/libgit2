@@ -612,7 +612,7 @@ static int do_match_gitdir(
 		goto out;
 	}
 
-	if ((error = git_repository_item_path(&gitdir, repo, GIT_REPOSITORY_ITEM_GITDIR)) < 0)
+	if ((error = git_repository__item_path(&gitdir, repo, GIT_REPOSITORY_ITEM_GITDIR)) < 0)
 		goto out;
 
 	if (git_path_is_dirsep(gitdir.ptr[gitdir.size - 1]))

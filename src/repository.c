@@ -27,6 +27,7 @@
 #include "refdb.h"
 #include "remote.h"
 #include "merge.h"
+#include "userbuf.h"
 #include "diff_driver.h"
 #include "annotated_commit.h"
 #include "submodule.h"
@@ -939,7 +940,7 @@ int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)
 }
 
 int git_repository_discover(
-	git_buf *out,
+	git_userbuf *out,
 	const char *start_path,
 	int across_fs,
 	const char *ceiling_dirs)
@@ -948,9 +949,8 @@ int git_repository_discover(
 
 	assert(start_path);
 
-	git_buf_sanitize(out);
-
-	return find_repo(out, NULL, NULL, NULL, start_path, flags, ceiling_dirs);
+	git_userbuf_sanitize(out);
+	return find_repo((git_buf *)out, NULL, NULL, NULL, start_path, flags, ceiling_dirs);
 }
 
 static int load_config(
@@ -971,7 +971,7 @@ static int load_config(
 		return error;
 
 	if (repo) {
-		if ((error = git_repository_item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
+		if ((error = git_repository__item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
 			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
 
 		if (error && error != GIT_ENOTFOUND)
@@ -1104,7 +1104,7 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 		git_buf odb_path = GIT_BUF_INIT;
 		git_odb *odb;
 
-		if ((error = git_repository_item_path(&odb_path, repo,
+		if ((error = git_repository__item_path(&odb_path, repo,
 				GIT_REPOSITORY_ITEM_OBJECTS)) < 0 ||
 			(error = git_odb_new(&odb)) < 0)
 			return error;
@@ -2375,7 +2375,7 @@ static const char *resolved_parent_path(const git_repository *repo, git_reposito
 	return parent;
 }
 
-int git_repository_item_path(git_buf *out, const git_repository *repo, git_repository_item_t item)
+int git_repository__item_path(git_buf *out, const git_repository *repo, git_repository_item_t item)
 {
 	const char *parent = resolved_parent_path(repo, items[item].parent, items[item].fallback);
 	if (parent == NULL) {
@@ -2397,6 +2397,12 @@ int git_repository_item_path(git_buf *out, const git_repository *repo, git_repos
 	}
 
 	return 0;
+}
+
+int git_repository_item_path(git_userbuf *out, const git_repository *repo, git_repository_item_t item)
+{
+	git_userbuf_sanitize(out);
+	return git_repository__item_path((git_buf *)out, repo, item);
 }
 
 const char *git_repository_path(const git_repository *repo)
@@ -2544,13 +2550,13 @@ int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head
 	return error;
 }
 
-int git_repository_message(git_buf *out, git_repository *repo)
+int git_repository_message(git_userbuf *out, git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT;
 	struct stat st;
 	int error;
 
-	git_buf_sanitize(out);
+	git_userbuf_sanitize(out);
 
 	if (git_buf_joinpath(&path, repo->gitdir, GIT_MERGE_MSG_FILE) < 0)
 		return -1;
@@ -2560,7 +2566,7 @@ int git_repository_message(git_buf *out, git_repository *repo)
 			error = GIT_ENOTFOUND;
 		git_error_set(GIT_ERROR_OS, "could not access message file");
 	} else {
-		error = git_futils_readbuffer(out, git_buf_cstr(&path));
+		error = git_futils_readbuffer((git_buf *)out, git_buf_cstr(&path));
 	}
 
 	git_buf_dispose(&path);

@@ -332,7 +332,7 @@ int git_ignore__for_path(
 	}
 
 	/* load .git/info/exclude if possible */
-	if ((error = git_repository_item_path(&infopath, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
+	if ((error = git_repository__item_path(&infopath, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
 		(error = push_ignore_file(ignores, &ignores->ign_global, infopath.ptr, GIT_IGNORE_FILE_INREPO)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto cleanup;
