@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "diff_helpers.h"
 #include "repository.h"
+#include "userbuf.h"
 #include "git2/sys/diff.h"
 #include "../checkout/checkout_helpers.h"
 
@@ -1638,7 +1639,7 @@ void test_diff_workdir__patience_diff(void)
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL;
 	git_patch *patch = NULL;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *expected_normal = "diff --git a/test.txt b/test.txt\nindex 34a5acc..d52725f 100644\n--- a/test.txt\n+++ b/test.txt\n@@ -1,10 +1,7 @@\n When I wrote this\n I did not know\n-how to create\n-a patience diff\n I did not know\n how to create\n+a patience diff\n another problem\n-I did not know\n-how to create\n a minimal diff\n";
 	const char *expected_patience = "diff --git a/test.txt b/test.txt\nindex 34a5acc..d52725f 100644\n--- a/test.txt\n+++ b/test.txt\n@@ -1,10 +1,7 @@\n When I wrote this\n I did not know\n+I did not know\n how to create\n a patience diff\n-I did not know\n-how to create\n another problem\n-I did not know\n-how to create\n a minimal diff\n";
 
@@ -1663,7 +1664,7 @@ void test_diff_workdir__patience_diff(void)
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 
 	cl_assert_equal_s(expected_normal, buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -1675,9 +1676,9 @@ void test_diff_workdir__patience_diff(void)
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 
 	cl_assert_equal_s(expected_patience, buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 }

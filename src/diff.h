@@ -66,4 +66,6 @@ extern int git_diff_delta__casecmp(const void *a, const void *b);
 extern int git_diff__entry_cmp(const void *a, const void *b);
 extern int git_diff__entry_icmp(const void *a, const void *b);
 
+extern int git_patch__to_buf(git_buf *out, git_patch *patch);
+
 #endif

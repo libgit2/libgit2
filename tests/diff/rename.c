@@ -617,7 +617,7 @@ void test_diff_rename__patch(void)
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	git_patch *patch;
 	const git_diff_delta *delta;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *expected = "diff --git a/sixserving.txt b/ikeepsix.txt\nindex ad0a8e5..36020db 100644\n--- a/sixserving.txt\n+++ b/ikeepsix.txt\n@@ -1,3 +1,6 @@\n+I Keep Six Honest Serving-Men\n+=============================\n+\n I KEEP six honest serving-men\n  (They taught me all I knew);\n Their names are What and Why and When\n@@ -21,4 +24,4 @@ She sends'em abroad on her own affairs,\n One million Hows, two million Wheres,\n And seven million Whys!\n \n-                -- Rudyard Kipling\n+  -- Rudyard Kipling\n";
 
 	old_tree = resolve_commit_oid_to_tree(g_repo, sha0);
@@ -645,7 +645,7 @@ void test_diff_rename__patch(void)
 
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 	cl_assert_equal_s(expected, buf.ptr);
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 
 	git_patch_free(patch);
 

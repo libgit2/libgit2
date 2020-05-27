@@ -22,23 +22,23 @@
 GIT_BEGIN_DECL
 
 /**
- * Diff print callback that writes to a git_buf.
+ * Diff print callback that writes to a git_userbuf.
  *
  * This function is provided not for you to call it directly, but instead
  * so you can use it as a function pointer to the `git_diff_print` or
  * `git_patch_print` APIs.  When using those APIs, you specify a callback
  * to actually handle the diff and/or patch data.
  *
- * Use this callback to easily write that data to a `git_buf` buffer.  You
- * must pass a `git_buf *` value as the payload to the `git_diff_print`
- * and/or `git_patch_print` function.  The data will be appended to the
- * buffer (after any existing content).
+ * Use this callback to easily write that data to a `git_userbuf` buffer.
+ * You must pass a `git_userbuf *` value as the payload to the
+ * `git_diff_print` and/or `git_patch_print` function.  The data will
+ * be appended to the buffer (after any existing content).
  */
 GIT_EXTERN(int) git_diff_print_callback__to_buf(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk,
 	const git_diff_line *line,
-	void *payload); /**< payload must be a `git_buf *` */
+	void *payload); /**< payload must be a `git_userbuf *` */
 
 /**
  * Diff print callback that writes to stdio FILE handle.

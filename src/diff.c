@@ -225,7 +225,7 @@ int git_diff_format_email__append_patches_tobuf(
 		git_patch *patch = NULL;
 
 		if ((error = git_patch_from_diff(&patch, diff, i)) >= 0)
-			error = git_patch_to_buf(out, patch);
+			error = git_patch__to_buf(out, patch);
 
 		git_patch_free(patch);
 

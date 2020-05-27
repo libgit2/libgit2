@@ -13,6 +13,7 @@
 #include "futils.h"
 #include "zstream.h"
 #include "blob.h"
+#include "userbuf.h"
 #include "delta.h"
 #include "git2/sys/diff.h"
 
@@ -794,9 +795,15 @@ int git_patch_print(
 }
 
 /* print a git_patch to a git_buf */
-int git_patch_to_buf(git_buf *out, git_patch *patch)
+int git_patch__to_buf(git_buf *out, git_patch *patch)
+{
+	return git_patch_print(patch, git_diff_print_callback__to_buf, out);
+}
+
+int git_patch_to_buf(git_userbuf *out, git_patch *patch)
 {
 	assert(out && patch);
-	git_buf_sanitize(out);
-	return git_patch_print(patch, git_diff_print_callback__to_buf, out);
+
+	git_userbuf_sanitize(out);
+	return git_patch__to_buf((git_buf *)out, patch);
 }
