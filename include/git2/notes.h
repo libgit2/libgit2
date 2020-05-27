@@ -277,7 +277,7 @@ GIT_EXTERN(void) git_note_free(git_note *note);
  *
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_note_default_ref(git_buf *out, git_repository *repo);
+GIT_EXTERN(int) git_note_default_ref(git_userbuf *out, git_repository *repo);
 
 /**
  * Loop over all the notes within a specified namespace
