@@ -20,6 +20,7 @@
 #include "fetchhead.h"
 #include "push.h"
 #include "branch.h"
+#include "userbuf.h"
 
 #define CONFIG_URL_FMT "remote.%s.url"
 #define CONFIG_PUSHURL_FMT "remote.%s.pushurl"
@@ -652,11 +653,15 @@ static int resolve_url(git_buf *resolved_url, const char *url, int direction, co
 	int status;
 
 	if (callbacks && callbacks->resolve_url) {
+		git_userbuf user_url = GIT_USERBUF_INIT;
+
 		git_buf_clear(resolved_url);
-		status = callbacks->resolve_url(resolved_url, url, direction, callbacks->payload);
+		status = callbacks->resolve_url(&user_url, url, direction, callbacks->payload);
+
 		if (status != GIT_PASSTHROUGH) {
 			git_error_set_after_callback_function(status, "git_resolve_url_cb");
-			git_buf_sanitize(resolved_url);
+
+			git_buf_attach(resolved_url, user_url.ptr, user_url.size);
 			return status;
 		}
 	}
@@ -2368,7 +2373,7 @@ int git_remote_delete(git_repository *repo, const char *name)
 	return 0;
 }
 
-int git_remote_default_branch(git_buf *out, git_remote *remote)
+int git_remote_default_branch(git_userbuf *out, git_remote *remote)
 {
 	const git_remote_head **heads;
 	const git_remote_head *guess = NULL;
@@ -2387,10 +2392,10 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 	if (strcmp(heads[0]->name, GIT_HEAD_FILE))
 		return GIT_ENOTFOUND;
 
-	git_buf_sanitize(out);
+	git_userbuf_sanitize(out);
 	/* the first one must be HEAD so if that has the symref info, we're done */
 	if (heads[0]->symref_target)
-		return git_buf_puts(out, heads[0]->symref_target);
+		return git_buf_set((git_buf *)out, heads[0]->symref_target, strlen(heads[0]->symref_target));
 
 	/*
 	 * If there's no symref information, we have to look over them
@@ -2420,7 +2425,7 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 	if (!guess)
 		return GIT_ENOTFOUND;
 
-	return git_buf_puts(out, guess->name);
+	return git_buf_set((git_buf *)out, guess->name, strlen(guess->name));
 }
 
 int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts)
