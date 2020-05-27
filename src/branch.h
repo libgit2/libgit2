@@ -12,7 +12,7 @@
 #include "buffer.h"
 
 int git_branch__upstream_name(
-	git_buf *out,
+	git_buf *buf,
 	git_repository *repo,
 	const char *refname);
 

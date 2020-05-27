@@ -15,6 +15,7 @@
 #include "remote.h"
 #include "annotated_commit.h"
 #include "worktree.h"
+#include "userbuf.h"
 
 #include "git2/branch.h"
 
@@ -394,7 +395,7 @@ static int retrieve_upstream_configuration(
 	return error;
 }
 
-int git_branch_upstream_name(
+int git_branch__upstream_name(
 	git_buf *out,
 	git_repository *repo,
 	const char *refname)
@@ -408,8 +409,6 @@ int git_branch_upstream_name(
 	git_config *config;
 
 	assert(out && refname);
-
-	git_buf_sanitize(out);
 
 	if (!git_reference__is_branch(refname))
 		return not_a_local_branch(refname);
@@ -459,7 +458,16 @@ cleanup:
 	return error;
 }
 
-int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname)
+int git_branch_upstream_name(
+	git_userbuf *out,
+	git_repository *repo,
+	const char *refname)
+{
+	git_userbuf_sanitize(out);
+	return git_branch__upstream_name((git_buf *)out, repo, refname);
+}
+
+int git_branch__upstream_remote(git_buf *buf, git_repository *repo, const char *refname)
 {
 	int error;
 	git_config *cfg;
@@ -470,9 +478,7 @@ int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *r
 	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
 		return error;
 
-	git_buf_sanitize(buf);
-
-	if ((error = retrieve_upstream_configuration(buf, cfg, refname, "branch.%s.remote")) < 0)
+	if ((error = retrieve_upstream_configuration((git_buf *)buf, cfg, refname, "branch.%s.remote")) < 0)
 		return error;
 
 	if (git_buf_len(buf) == 0) {
@@ -484,7 +490,13 @@ int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *r
 	return error;
 }
 
-int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refname)
+int git_branch_upstream_remote(git_userbuf *out, git_repository *repo, const char *refname)
+{
+	git_userbuf_sanitize(out);
+	return git_branch__upstream_remote((git_buf *)out, repo, refname);
+}
+
+int git_branch__remote_name(git_buf *buf, git_repository *repo, const char *refname)
 {
 	git_strarray remote_list = {0};
 	size_t i;
@@ -494,8 +506,6 @@ int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refna
 	char *remote_name = NULL;
 
 	assert(buf && repo && refname);
-
-	git_buf_sanitize(buf);
 
 	/* Verify that this is a remote branch */
 	if (!git_reference__is_remote(refname)) {
@@ -552,6 +562,12 @@ cleanup:
 	return error;
 }
 
+int git_branch_remote_name(git_userbuf *out, git_repository *repo, const char *refname)
+{
+	git_userbuf_sanitize(out);
+	return git_branch__remote_name((git_buf *)out, repo, refname);
+}
+
 int git_branch_upstream(
 	git_reference **tracking_out,
 	const git_reference *branch)
@@ -559,7 +575,7 @@ int git_branch_upstream(
 	int error;
 	git_buf tracking_name = GIT_BUF_INIT;
 
-	if ((error = git_branch_upstream_name(&tracking_name,
+	if ((error = git_branch__upstream_name(&tracking_name,
 		git_reference_owner(branch), git_reference_name(branch))) < 0)
 			return error;
 
@@ -643,7 +659,7 @@ int git_branch_set_upstream(git_reference *branch, const char *branch_name)
 	if (local)
 		error = git_buf_puts(&remote_name, ".");
 	else
-		error = git_branch_remote_name(&remote_name, repo, git_reference_name(upstream));
+		error = git_branch__remote_name(&remote_name, repo, git_reference_name(upstream));
 
 	if (error < 0)
 		goto on_error;
