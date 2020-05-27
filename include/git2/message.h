@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "buffer.h"
+#include "userbuf.h"
 
 /**
  * @file git2/message.h
@@ -23,7 +24,7 @@ GIT_BEGIN_DECL
  *
  * Optionally, it can remove lines which start with the comment character.
  *
- * @param out The user-allocated git_buf which will be filled with the
+ * @param out The user-allocated git_userbuf which will be filled with the
  *     cleaned up message.
  *
  * @param message The message to be prettified.
@@ -35,7 +36,7 @@ GIT_BEGIN_DECL
  *
  * @return 0 or an error code.
  */
-GIT_EXTERN(int) git_message_prettify(git_buf *out, const char *message, int strip_comments, char comment_char);
+GIT_EXTERN(int) git_message_prettify(git_userbuf *out, const char *message, int strip_comments, char comment_char);
 
 /**
  * Represents a single git message trailer.
