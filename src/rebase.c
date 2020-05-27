@@ -16,6 +16,7 @@
 #include "config.h"
 #include "annotated_commit.h"
 #include "index.h"
+#include "commit.h"
 
 #include <git2/types.h>
 #include <git2/annotated_commit.h>
@@ -951,9 +952,10 @@ static int rebase_commit__create(
 	git_commit *current_commit = NULL, *commit = NULL;
 	git_tree *parent_tree = NULL, *tree = NULL;
 	git_oid tree_id, commit_id;
-	git_buf commit_content = GIT_BUF_INIT, commit_signature = GIT_BUF_INIT,
-		signature_field = GIT_BUF_INIT;
-	const char *signature_field_string = NULL,
+	git_buf commit_content = GIT_BUF_INIT;
+	git_userbuf commit_signature = GIT_USERBUF_INIT,
+		signature_field = GIT_USERBUF_INIT;
+	char *signature_field_string = NULL,
 		*commit_signature_string = NULL;
 	int error;
 
@@ -985,7 +987,7 @@ static int rebase_commit__create(
 		message = git_commit_message(current_commit);
 	}
 
-	if ((error = git_commit_create_buffer(&commit_content, rebase->repo, author, committer,
+	if ((error = git_commit__create_buffer(&commit_content, rebase->repo, author, committer,
 			message_encoding, message, tree, 1, (const git_commit **)&parent_commit)) < 0)
 		goto done;
 
@@ -995,22 +997,20 @@ static int rebase_commit__create(
 			&commit_signature, &signature_field, git_buf_cstr(&commit_content),
 			rebase->options.payload), "commit signing_cb failed");
 		if (error == GIT_PASSTHROUGH) {
-			git_buf_dispose(&commit_signature);
-			git_buf_dispose(&signature_field);
 			git_error_clear();
 			error = GIT_OK;
 		} else if (error < 0)
 			goto done;
 	}
 
-	if (git_buf_is_allocated(&commit_signature)) {
-		assert(git_buf_contains_nul(&commit_signature));
-		commit_signature_string = git_buf_cstr(&commit_signature);
+	if (commit_signature.size) {
+		commit_signature_string = git__strndup(commit_signature.ptr, commit_signature.size);
+		GIT_ERROR_CHECK_ALLOC(commit_signature_string);
 	}
 
-	if (git_buf_is_allocated(&signature_field)) {
-		assert(git_buf_contains_nul(&signature_field));
-		signature_field_string = git_buf_cstr(&signature_field);
+	if (signature_field.size) {
+		signature_field_string = git__strndup(signature_field.ptr, signature_field.size);
+		GIT_ERROR_CHECK_ALLOC(signature_field_string);
 	}
 
 	if ((error = git_commit_create_with_signature(&commit_id, rebase->repo,
@@ -1027,8 +1027,8 @@ done:
 	if (error < 0)
 		git_commit_free(commit);
 
-	git_buf_dispose(&commit_signature);
-	git_buf_dispose(&signature_field);
+	git__free(commit_signature_string);
+	git__free(signature_field_string);
 	git_buf_dispose(&commit_content);
 	git_commit_free(current_commit);
 	git_tree_free(parent_tree);
