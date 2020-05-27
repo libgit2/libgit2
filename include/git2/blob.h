@@ -12,6 +12,7 @@
 #include "oid.h"
 #include "object.h"
 #include "buffer.h"
+#include "userbuf.h"
 
 /**
  * @file git2/blob.h
@@ -137,22 +138,22 @@ typedef struct {
  * CRLF filtering or other types of changes depending on the file
  * attributes set for the blob and the content detected in it.
  *
- * The output is written into a `git_buf` which the caller must free
- * when done (via `git_buf_dispose`).
+ * The output is written into a `git_userbuf` which the caller must
+ * free when done (via `git_userbuf_dispose`).
  *
  * If no filters need to be applied, then the `out` buffer will just
  * be populated with a pointer to the raw content of the blob.  In
  * that case, be careful to *not* free the blob until done with the
  * buffer or copy it into memory you own.
  *
- * @param out The git_buf to be filled in
+ * @param out The git_userbuf to be filled in
  * @param blob Pointer to the blob
  * @param as_path Path used for file attribute lookups, etc.
  * @param opts Options to use for filtering the blob
  * @return 0 on success or an error code
  */
 GIT_EXTERN(int) git_blob_filter(
-	git_buf *out,
+	git_userbuf *out,
 	git_blob *blob,
 	const char *as_path,
 	git_blob_filter_options *opts);

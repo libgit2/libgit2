@@ -15,6 +15,7 @@
 #include "filebuf.h"
 #include "filter.h"
 #include "buf_text.h"
+#include "userbuf.h"
 
 const void *git_blob_rawcontent(const git_blob *blob)
 {
@@ -400,7 +401,7 @@ int git_blob_is_binary(const git_blob *blob)
 	return git_buf_text_is_binary(&content);
 }
 
-int git_blob_filter(
+static int git_blob__filter(
 	git_buf *out,
 	git_blob *blob,
 	const char *path,
@@ -412,8 +413,6 @@ int git_blob_filter(
 	git_filter_flag_t flags = GIT_FILTER_DEFAULT;
 
 	assert(blob && path && out);
-
-	git_buf_sanitize(out);
 
 	GIT_ERROR_CHECK_VERSION(
 		given_opts, GIT_BLOB_FILTER_OPTIONS_VERSION, "git_blob_filter_options");
@@ -441,6 +440,16 @@ int git_blob_filter(
 	}
 
 	return error;
+}
+
+int git_blob_filter(
+	git_userbuf *out,
+	git_blob *blob,
+	const char *path,
+	git_blob_filter_options *opts)
+{
+	git_userbuf_sanitize(out);
+	return git_blob__filter((git_buf *)out, blob, path, opts);
 }
 
 /* Deprecated functions */
@@ -477,7 +486,7 @@ int git_blob_create_fromstream_commit(
 }
 
 int git_blob_filtered_content(
-	git_buf *out,
+	git_userbuf *out,
 	git_blob *blob,
 	const char *path,
 	int check_for_binary_data)

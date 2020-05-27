@@ -33,7 +33,7 @@ void test_filter_systemattrs__cleanup(void)
 void test_filter_systemattrs__reads_system_attributes(void)
 {
 	git_blob *blob;
-	git_buf buf = { 0 };
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_revparse_single(
 		(git_object **)&blob, g_repo, "799770d")); /* all-lf */
@@ -42,21 +42,23 @@ void test_filter_systemattrs__reads_system_attributes(void)
 
 	cl_git_pass(git_blob_filter(&buf, blob, "file.bin", NULL));
 	cl_assert_equal_s(ALL_LF_TEXT_RAW, buf.ptr);
+	git_userbuf_dispose(&buf);
 
 	cl_git_pass(git_blob_filter(&buf, blob, "file.crlf", NULL));
 	cl_assert_equal_s(ALL_LF_TEXT_AS_CRLF, buf.ptr);
+	git_userbuf_dispose(&buf);
 
 	cl_git_pass(git_blob_filter(&buf, blob, "file.lf", NULL));
 	cl_assert_equal_s(ALL_LF_TEXT_AS_LF, buf.ptr);
+	git_userbuf_dispose(&buf);
 
-	git_buf_dispose(&buf);
 	git_blob_free(blob);
 }
 
 void test_filter_systemattrs__disables_system_attributes(void)
 {
 	git_blob *blob;
-	git_buf buf = { 0 };
+	git_userbuf buf = GIT_USERBUF_INIT;
 	git_blob_filter_options opts = GIT_BLOB_FILTER_OPTIONS_INIT;
 
 	opts.flags |= GIT_BLOB_FILTER_NO_SYSTEM_ATTRIBUTES;
@@ -68,14 +70,16 @@ void test_filter_systemattrs__disables_system_attributes(void)
 
 	cl_git_pass(git_blob_filter(&buf, blob, "file.bin", &opts));
 	cl_assert_equal_s(ALL_LF_TEXT_RAW, buf.ptr);
+	git_userbuf_dispose(&buf);
 
 	/* No attributes mean these are all treated literally */
 	cl_git_pass(git_blob_filter(&buf, blob, "file.crlf", &opts));
 	cl_assert_equal_s(ALL_LF_TEXT_RAW, buf.ptr);
+	git_userbuf_dispose(&buf);
 
 	cl_git_pass(git_blob_filter(&buf, blob, "file.lf", &opts));
 	cl_assert_equal_s(ALL_LF_TEXT_RAW, buf.ptr);
+	git_userbuf_dispose(&buf);
 
-	git_buf_dispose(&buf);
 	git_blob_free(blob);
 }

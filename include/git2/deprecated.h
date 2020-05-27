@@ -35,6 +35,7 @@
 #include "worktree.h"
 #include "credential.h"
 #include "credential_helpers.h"
+#include "userbuf.h"
 
 /*
  * Users can avoid deprecated functions by defining `GIT_DEPRECATE_HARD`.
@@ -104,7 +105,7 @@ GIT_EXTERN(int) git_blob_create_frombuffer(
 
 /** Deprecated in favor of @see git_blob_filter */
 GIT_EXTERN(int) git_blob_filtered_content(
-	git_buf *out,
+	git_userbuf *out,
 	git_blob *blob,
 	const char *as_path,
 	int check_for_binary_data);
