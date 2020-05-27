@@ -25,6 +25,7 @@
 #include "worktree.h"
 #include "clone.h"
 #include "branch.h"
+#include "userbuf.h"
 
 #define GIT_MODULES_FILE ".gitmodules"
 
@@ -75,6 +76,7 @@ static void submodule_get_index_status(unsigned int *, git_submodule *);
 static void submodule_get_wd_status(unsigned int *, git_submodule *, git_repository *, git_submodule_ignore_t);
 static void submodule_update_from_index_entry(git_submodule *sm, const git_index_entry *ie);
 static void submodule_update_from_head_data(git_submodule *sm, mode_t mode, const git_oid *id);
+static int git_submodule__resolve_url(git_buf *out, git_repository *repo, const char *url);
 
 static int submodule_cmp(const void *a, const void *b)
 {
@@ -761,7 +763,7 @@ int git_submodule_add_setup(
 		git_path_contains(&name, DOT_GIT))) {
 
 		/* resolve the actual URL to use */
-		if ((error = git_submodule_resolve_url(&real_url, repo, url)) < 0)
+		if ((error = git_submodule__resolve_url(&real_url, repo, url)) < 0)
 			goto cleanup;
 
 		 if ((error = submodule_repo_init(&subrepo, repo, path, real_url.ptr, use_gitlink)) < 0)
@@ -992,7 +994,7 @@ const char *git_submodule_url(git_submodule *submodule)
 	return submodule->url;
 }
 
-int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *url)
+static int git_submodule__resolve_url(git_buf *out, git_repository *repo, const char *url)
 {
 	int error = 0;
 	git_buf normalized = GIT_BUF_INIT;
@@ -1022,6 +1024,12 @@ int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *ur
 
 	git_buf_dispose(&normalized);
 	return error;
+}
+
+int git_submodule_resolve_url(git_userbuf *out, git_repository *repo, const char *url)
+{
+	git_userbuf_sanitize(out);
+	return git_submodule__resolve_url((git_buf *)out, repo, url);
 }
 
 static int write_var(git_repository *repo, const char *name, const char *var, const char *val)
@@ -1393,7 +1401,7 @@ int git_submodule_init(git_submodule *sm, int overwrite)
 
 	/* write "submodule.NAME.url" */
 
-	if ((error = git_submodule_resolve_url(&effective_submodule_url, sm->repo, sm->url)) < 0 ||
+	if ((error = git_submodule__resolve_url(&effective_submodule_url, sm->repo, sm->url)) < 0 ||
 		(error = git_buf_printf(&key, "submodule.%s.url", sm->name)) < 0 ||
 		(error = git_config__update_entry(
 			cfg, key.ptr, effective_submodule_url.ptr, overwrite != 0, false)) < 0)
@@ -1434,7 +1442,7 @@ int git_submodule_sync(git_submodule *sm)
 	/* copy URL over to config only if it already exists */
 	if ((error = git_repository_config__weakptr(&cfg, sm->repo)) < 0 ||
 	    (error = git_buf_printf(&key, "submodule.%s.url", sm->name)) < 0 ||
-	    (error = git_submodule_resolve_url(&url, sm->repo, sm->url)) < 0 ||
+	    (error = git_submodule__resolve_url(&url, sm->repo, sm->url)) < 0 ||
 	    (error = git_config__update_entry(cfg, key.ptr, url.ptr, true, true)) < 0)
 		goto out;
 

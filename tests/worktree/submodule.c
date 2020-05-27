@@ -62,7 +62,8 @@ void test_worktree_submodule__open_discovered_submodule_worktree(void)
 void test_worktree_submodule__resolve_relative_url(void)
 {
 	git_buf wt_path = GIT_BUF_INIT;
-	git_buf sm_relative_path = GIT_BUF_INIT, wt_relative_path = GIT_BUF_INIT;
+	git_userbuf sm_relative_path = GIT_USERBUF_INIT,
+		wt_relative_path = GIT_USERBUF_INIT;
 	git_repository *repo;
 	git_worktree *wt;
 
@@ -87,6 +88,6 @@ void test_worktree_submodule__resolve_relative_url(void)
 	git_worktree_free(wt);
 	git_repository_free(repo);
 	git_buf_dispose(&wt_path);
-	git_buf_dispose(&sm_relative_path);
-	git_buf_dispose(&wt_relative_path);
+	git_userbuf_dispose(&sm_relative_path);
+	git_userbuf_dispose(&wt_relative_path);
 }
