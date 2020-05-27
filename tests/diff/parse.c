@@ -301,7 +301,8 @@ void test_diff_parse__parsing_minimal_patch_succeeds(void)
 void test_diff_parse__patch_roundtrip_succeeds(void)
 {
 	const char buf1[] = "a\n", buf2[] = "b\n";
-	git_buf patchbuf = GIT_BUF_INIT, diffbuf = GIT_BUF_INIT;
+	git_userbuf patchbuf = GIT_USERBUF_INIT;
+	git_buf diffbuf = GIT_BUF_INIT;
 	git_patch *patch;
 	git_diff *diff;
 
@@ -315,7 +316,7 @@ void test_diff_parse__patch_roundtrip_succeeds(void)
 
 	git_patch_free(patch);
 	git_diff_free(diff);
-	git_buf_dispose(&patchbuf);
+	git_userbuf_dispose(&patchbuf);
 	git_buf_dispose(&diffbuf);
 }
 

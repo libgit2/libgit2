@@ -5,6 +5,7 @@
 #include "diff.h"
 #include "repository.h"
 #include "buf_text.h"
+#include "userbuf.h"
 
 static git_repository *g_repo = NULL;
 
@@ -148,7 +149,7 @@ void test_diff_patch__to_string(void)
 	git_tree *one, *another;
 	git_diff *diff;
 	git_patch *patch;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *expected = "diff --git a/subdir.txt b/subdir.txt\ndeleted file mode 100644\nindex e8ee89e..0000000\n--- a/subdir.txt\n+++ /dev/null\n@@ -1,2 +0,0 @@\n-Is it a bird?\n-Is it a plane?\n";
 
 	g_repo = cl_git_sandbox_init("status");
@@ -171,7 +172,7 @@ void test_diff_patch__to_string(void)
 	cl_assert_equal_sz(31 + 16, git_patch_size(patch, 1, 1, 0));
 	cl_assert_equal_sz(strlen(expected), git_patch_size(patch, 1, 1, 1));
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 	git_tree_free(another);
@@ -185,7 +186,7 @@ void test_diff_patch__config_options(void)
 	git_config *cfg;
 	git_diff *diff;
 	git_patch *patch;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	char *onefile = "staged_changes_modified_file";
 	const char *expected1 = "diff --git c/staged_changes_modified_file i/staged_changes_modified_file\nindex 70bd944..906ee77 100644\n--- c/staged_changes_modified_file\n+++ i/staged_changes_modified_file\n@@ -1 +1,2 @@\n staged_changes_modified_file\n+staged_changes_modified_file\n";
@@ -209,7 +210,7 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 	cl_assert_equal_s(expected1, buf.ptr);
 
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -220,7 +221,7 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 	cl_assert_equal_s(expected2, buf.ptr);
 
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -234,7 +235,7 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 	cl_assert_equal_s(expected3, buf.ptr);
 
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -248,11 +249,11 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 	cl_assert_equal_s(expected4, buf.ptr);
 
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_tree_free(one);
 	git_config_free(cfg);
 }
@@ -473,10 +474,10 @@ static void check_single_patch_stats(
 	cl_assert_equal_sz(dels, actual_dels);
 
 	if (expected != NULL) {
-		git_buf buf = GIT_BUF_INIT;
+		git_userbuf buf = GIT_USERBUF_INIT;
 		cl_git_pass(git_patch_to_buf(&buf, patch));
 		cl_assert_equal_s(expected, buf.ptr);
-		git_buf_dispose(&buf);
+		git_userbuf_dispose(&buf);
 
 		cl_assert_equal_sz(
 			strlen(expected), git_patch_size(patch, 1, 1, 1));
@@ -690,7 +691,7 @@ void test_diff_patch__can_strip_bad_utf8(void)
 
 	git_diff_options opts;
 	git_patch *patch;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_diff_options_init(&opts, GIT_DIFF_OPTIONS_VERSION));
 
@@ -700,5 +701,5 @@ void test_diff_patch__can_strip_bad_utf8(void)
 	cl_assert_equal_s(expected, buf.ptr);
 
 	git_patch_free(patch);
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 }

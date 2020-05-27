@@ -28,15 +28,15 @@ static void ensure_patch_validity(git_patch *patch)
 }
 
 static void ensure_identical_patch_inout(const char *content) {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	git_patch *patch;
 
 	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
 	cl_git_pass(git_patch_to_buf(&buf, patch));
-	cl_assert_equal_strn(git_buf_cstr(&buf), content, strlen(content));
+	cl_assert_equal_strn(buf.ptr, content, strlen(content));
 
 	git_patch_free(patch);
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 }
 
 void test_patch_parse__original_to_change_middle(void)
@@ -131,7 +131,8 @@ void test_patch_parse__files_with_whitespaces_succeeds(void)
 
 void test_patch_parse__lifetime_of_patch_does_not_depend_on_buffer(void)
 {
-	git_buf diff = GIT_BUF_INIT, rendered = GIT_BUF_INIT;
+	git_buf diff = GIT_BUF_INIT;
+	git_userbuf rendered = GIT_USERBUF_INIT;
 	git_patch *patch;
 
 	cl_git_pass(git_buf_sets(&diff, PATCH_ORIGINAL_TO_CHANGE_MIDDLE));
@@ -140,11 +141,11 @@ void test_patch_parse__lifetime_of_patch_does_not_depend_on_buffer(void)
 
 	cl_git_pass(git_patch_to_buf(&rendered, patch));
 	cl_assert_equal_s(PATCH_ORIGINAL_TO_CHANGE_MIDDLE, rendered.ptr);
-	git_buf_dispose(&rendered);
+	git_userbuf_dispose(&rendered);
 
 	cl_git_pass(git_patch_to_buf(&rendered, patch));
 	cl_assert_equal_s(PATCH_ORIGINAL_TO_CHANGE_MIDDLE, rendered.ptr);
-	git_buf_dispose(&rendered);
+	git_userbuf_dispose(&rendered);
 
 	git_patch_free(patch);
 }

@@ -69,7 +69,7 @@ static int validate_and_apply_patchfile(
 	unsigned int mode_expected)
 {
 	git_patch *patch_fromdiff;
-	git_buf validated = GIT_BUF_INIT;
+	git_userbuf validated = GIT_USERBUF_INIT;
 	int error;
 
 	cl_git_pass(git_patch_from_buffers(&patch_fromdiff,
@@ -82,7 +82,7 @@ static int validate_and_apply_patchfile(
 
 	error = apply_patchfile(old, old_len, new, new_len, patchfile, filename_expected, mode_expected);
 
-	git_buf_dispose(&validated);
+	git_userbuf_dispose(&validated);
 	git_patch_free(patch_fromdiff);
 
 	return error;

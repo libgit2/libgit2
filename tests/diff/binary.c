@@ -6,6 +6,7 @@
 #include "delta.h"
 #include "filebuf.h"
 #include "repository.h"
+#include "userbuf.h"
 
 static git_repository *repo;
 
@@ -30,7 +31,7 @@ void test_patch(
 	git_tree *tree_one, *tree_two;
 	git_diff *diff;
 	git_patch *patch;
-	git_buf actual = GIT_BUF_INIT;
+	git_userbuf actual = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_oid_fromstr(&id_one, one));
 	cl_git_pass(git_commit_lookup(&commit_one, repo, &id_one));
@@ -53,12 +54,12 @@ void test_patch(
 
 	cl_assert_equal_s(expected, actual.ptr);
 
-	git_buf_clear(&actual);
+	git_userbuf_clear(&actual);
 	cl_git_pass(git_diff_print(diff, GIT_DIFF_FORMAT_PATCH, git_diff_print_callback__to_buf, &actual));
 
 	cl_assert_equal_s(expected, actual.ptr);
 
-	git_buf_dispose(&actual);
+	git_userbuf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 	git_tree_free(tree_one);
@@ -310,7 +311,7 @@ void test_diff_binary__index_to_workdir(void)
 	git_index *index;
 	git_diff *diff;
 	git_patch *patch;
-	git_buf actual = GIT_BUF_INIT;
+	git_userbuf actual = GIT_USERBUF_INIT;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	const char *expected =
 		"diff --git a/untimely.txt b/untimely.txt\n" \
@@ -347,7 +348,7 @@ void test_diff_binary__index_to_workdir(void)
 		&opts,
 		expected);
 
-	git_buf_dispose(&actual);
+	git_userbuf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 	git_index_free(index);

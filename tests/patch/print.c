@@ -12,7 +12,7 @@
 void patch_print_from_patchfile(const char *data, size_t len)
 {
 	git_patch *patch;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_patch_from_buffer(&patch, data, len, NULL));
 	cl_git_pass(git_patch_to_buf(&buf, patch));
@@ -20,7 +20,7 @@ void patch_print_from_patchfile(const char *data, size_t len)
 	cl_assert_equal_s(data, buf.ptr);
 
 	git_patch_free(patch);
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 }
 
 void test_patch_print__change_middle(void)
