@@ -26,13 +26,16 @@ committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
 Modification 3 to gravy\n";
 
 int signing_cb_passthrough(
-	git_buf *signature,
-	git_buf *signature_field,
+	git_userbuf *signature,
+	git_userbuf *signature_field,
 	const char *commit_content,
 	void *payload)
 {
-	cl_assert_equal_b(false, git_buf_is_allocated(signature));
-	cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
+	cl_assert_equal_p(NULL, signature->ptr);
+	cl_assert_equal_i(0, signature->size);
+	cl_assert_equal_p(NULL, signature_field->ptr);
+	cl_assert_equal_i(0, signature_field->size);
+
 	cl_assert_equal_s(expected_commit_content, commit_content);
 	cl_assert_equal_p(NULL, payload);
 	return GIT_PASSTHROUGH;
@@ -83,8 +86,8 @@ committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n";
 }
 
 int signing_cb_gpg(
-	git_buf *signature,
-	git_buf *signature_field,
+	git_userbuf *signature,
+	git_userbuf *signature_field,
 	const char *commit_content,
 	void *payload)
 {
@@ -105,12 +108,14 @@ cttVRsdOoego+fiy08eFE+aJIeYiINRGhqOBTsuqG4jIdpdKxPE=\n\
 =KbsY\n\
 -----END PGP SIGNATURE-----";
 
-	cl_assert_equal_b(false, git_buf_is_allocated(signature));
-	cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
+	cl_assert_equal_p(NULL, signature->ptr);
+	cl_assert_equal_i(0, signature->size);
+	cl_assert_equal_p(NULL, signature_field->ptr);
+	cl_assert_equal_i(0, signature_field->size);
 	cl_assert_equal_s(expected_commit_content, commit_content);
 	cl_assert_equal_p(NULL, payload);
 
-	cl_git_pass(git_buf_set(signature, gpg_signature, strlen(gpg_signature) + 1));
+	cl_git_pass(git_userbuf_set(signature, gpg_signature, strlen(gpg_signature) + 1));
 	return GIT_OK;
 }
 
@@ -176,22 +181,24 @@ gpgsig -----BEGIN PGP SIGNATURE-----\n\
 
 
 int signing_cb_magic_field(
-	git_buf *signature,
-	git_buf *signature_field,
+	git_userbuf *signature,
+	git_userbuf *signature_field,
 	const char *commit_content,
 	void *payload)
 {
 	const char *signature_content = "magic word: pretty please";
 	const char *signature_field_content = "magicsig";
 
-	cl_assert_equal_b(false, git_buf_is_allocated(signature));
-	cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
+	cl_assert_equal_p(NULL, signature->ptr);
+	cl_assert_equal_i(0, signature->size);
+	cl_assert_equal_p(NULL, signature_field->ptr);
+	cl_assert_equal_i(0, signature_field->size);
 	cl_assert_equal_s(expected_commit_content, commit_content);
 	cl_assert_equal_p(NULL, payload);
 
-	cl_git_pass(git_buf_set(signature, signature_content,
+	cl_git_pass(git_userbuf_set(signature, signature_content,
 		strlen(signature_content) + 1));
-	cl_git_pass(git_buf_set(signature_field, signature_field_content,
+	cl_git_pass(git_userbuf_set(signature_field, signature_field_content,
 		strlen(signature_field_content) + 1));
 
 	return GIT_OK;

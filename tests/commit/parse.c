@@ -422,7 +422,7 @@ committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 void test_commit_parse__arbitrary_field(void)
 {
 	git_commit *commit;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_BUF_INIT;
 	const char *gpgsig = "-----BEGIN PGP SIGNATURE-----\n\
 Version: GnuPG v1.4.12 (Darwin)\n\
 \n\
@@ -445,15 +445,15 @@ cpxtDQQMGYFpXK/71stq\n\
 
 	cl_git_pass(git_commit_header_field(&buf, commit, "tree"));
 	cl_assert_equal_s("6b79e22d69bf46e289df0345a14ca059dfc9bdf6", buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_dispose(&buf);
 
 	cl_git_pass(git_commit_header_field(&buf, commit, "parent"));
 	cl_assert_equal_s("34734e478d6cf50c27c9d69026d93974d052c454", buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_dispose(&buf);
 
 	cl_git_pass(git_commit_header_field(&buf, commit, "gpgsig"));
 	cl_assert_equal_s(gpgsig, buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_dispose(&buf);
 
 	cl_git_fail_with(GIT_ENOTFOUND, git_commit_header_field(&buf, commit, "awesomeness"));
 	cl_git_fail_with(GIT_ENOTFOUND, git_commit_header_field(&buf, commit, "par"));
@@ -464,7 +464,7 @@ cpxtDQQMGYFpXK/71stq\n\
 	cl_git_pass(git_commit_header_field(&buf, commit, "committer"));
 	cl_assert_equal_s("Vicent Marti <tanoku@gmail.com> 1273848544 +0200", buf.ptr);
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_commit__free(commit);
 }
 
@@ -472,7 +472,8 @@ void test_commit_parse__extract_signature(void)
 {
 	git_odb *odb;
 	git_oid commit_id;
-	git_buf signature = GIT_BUF_INIT, signed_data = GIT_BUF_INIT;
+	git_userbuf signature = GIT_USERBUF_INIT,
+		signed_data = GIT_USERBUF_INIT;
 	const char *gpgsig = "-----BEGIN PGP SIGNATURE-----\n\
 Version: GnuPG v1.4.12 (Darwin)\n\
 \n\
@@ -521,8 +522,8 @@ corrupt signature\n";
 	cl_assert_equal_s(gpgsig, signature.ptr);
 	cl_assert_equal_s(data, signed_data.ptr);
 
-	git_buf_clear(&signature);
-	git_buf_clear(&signed_data);
+	git_userbuf_dispose(&signature);
+	git_userbuf_dispose(&signed_data);
 
 	cl_git_pass(git_commit_extract_signature(&signature, &signed_data, g_repo, &commit_id, "gpgsig"));
 	cl_assert_equal_s(gpgsig, signature.ptr);
@@ -539,15 +540,14 @@ corrupt signature\n";
 	cl_assert_equal_i(GIT_ERROR_OBJECT, git_error_last()->klass);
 
 	/* Parse the commit with a single-line signature */
-	git_buf_clear(&signature);
-	git_buf_clear(&signed_data);
+	git_userbuf_dispose(&signature);
+	git_userbuf_dispose(&signed_data);
 	cl_git_pass(git_odb_write(&commit_id, odb, oneline_signature, strlen(oneline_signature), GIT_OBJECT_COMMIT));
 	cl_git_pass(git_commit_extract_signature(&signature, &signed_data, g_repo, &commit_id, NULL));
 	cl_assert_equal_s("bad", signature.ptr);
 	cl_assert_equal_s(oneline_data, signed_data.ptr);
 
-
-	git_buf_dispose(&signature);
-	git_buf_dispose(&signed_data);
+	git_userbuf_dispose(&signature);
+	git_userbuf_dispose(&signed_data);
 
 }
