@@ -180,7 +180,7 @@ static int update_head_to_remote(
 	}
 
 	/* Determine the remote tracking reference name from the local master */
-	if ((error = git_refspec_transform(
+	if ((error = git_refspec__transform(
 		&remote_master_name,
 		refspec,
 		branch.ptr)) < 0)

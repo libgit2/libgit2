@@ -441,7 +441,7 @@ int git_branch__upstream_name(
 			goto cleanup;
 		}
 
-		if (git_refspec_transform(&buf, refspec, git_buf_cstr(&merge_name)) < 0)
+		if (git_refspec__transform(&buf, refspec, git_buf_cstr(&merge_name)) < 0)
 			goto cleanup;
 	} else
 		if (git_buf_set(&buf, git_buf_cstr(&merge_name), git_buf_len(&merge_name)) < 0)
@@ -681,7 +681,7 @@ int git_branch_set_upstream(git_reference *branch, const char *branch_name)
 			goto on_error;
 
 		fetchspec = git_remote__matching_dst_refspec(remote, git_reference_name(upstream));
-		if (!fetchspec || git_refspec_rtransform(&merge_refspec, fetchspec, git_reference_name(upstream)) < 0)
+		if (!fetchspec || git_refspec__rtransform(&merge_refspec, fetchspec, git_reference_name(upstream)) < 0)
 			goto on_error;
 
 		git_remote_free(remote);
