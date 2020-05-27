@@ -7,19 +7,23 @@ static git_buf system_attr_path = GIT_BUF_INIT;
 
 void test_filter_systemattrs__initialize(void)
 {
+	git_userbuf system_path = GIT_USERBUF_INIT;
+
 	g_repo = cl_git_sandbox_init("crlf");
 	cl_must_pass(p_unlink("crlf/.gitattributes"));
 
 	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, &system_attr_path));
+		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, &system_path));
 	cl_git_pass(git_buf_joinpath(&system_attr_path,
-		system_attr_path.ptr, "gitattributes"));
+		system_path.ptr, "gitattributes"));
 
 	cl_git_mkfile(system_attr_path.ptr,
 		"*.txt text\n"
 		"*.bin binary\n"
 		"*.crlf text eol=crlf\n"
 		"*.lf text eol=lf\n");
+
+	git_userbuf_dispose(&system_path);
 }
 
 void test_filter_systemattrs__cleanup(void)

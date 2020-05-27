@@ -564,20 +564,20 @@ void cl_fake_home_cleanup(void *payload)
 
 void cl_fake_home(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_userbuf restore = GIT_USERBUF_INIT;
+	git_buf home = GIT_BUF_INIT;
 
 	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &path));
-
-	_cl_restore_home = git_buf_detach(&path);
+		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &restore));
+	_cl_restore_home = restore.ptr;
 	cl_set_cleanup(cl_fake_home_cleanup, NULL);
 
 	if (!git_path_exists("home"))
 		cl_must_pass(p_mkdir("home", 0777));
-	cl_git_pass(git_path_prettify(&path, "home", NULL));
+	cl_git_pass(git_path_prettify(&home, "home", NULL));
 	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
-	git_buf_dispose(&path);
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, home.ptr));
+	git_buf_dispose(&home);
 }
 
 void cl_sandbox_set_search_path_defaults(void)

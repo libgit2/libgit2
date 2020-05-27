@@ -8,7 +8,7 @@
 #include "repo/repo_helpers.h"
 
 static git_repository *g_repo;
-static git_buf g_global_path = GIT_BUF_INIT;
+static git_userbuf g_global_path = GIT_USERBUF_INIT;
 
 void test_checkout_index__initialize(void)
 {
@@ -33,7 +33,7 @@ void test_checkout_index__cleanup(void)
 {
 	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL,
 		g_global_path.ptr);
-	git_buf_dispose(&g_global_path);
+	git_userbuf_dispose(&g_global_path);
 
 	cl_git_sandbox_cleanup();
 
