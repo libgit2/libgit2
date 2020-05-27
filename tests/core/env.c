@@ -212,7 +212,7 @@ void test_core_env__1(void)
 static void check_global_searchpath(
 	const char *path, int position, const char *file, git_buf *temp)
 {
-	git_buf out = GIT_BUF_INIT;
+	git_userbuf out = GIT_BUF_INIT;
 
 	/* build and set new path */
 	if (position < 0)
@@ -245,7 +245,7 @@ static void check_global_searchpath(
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_sysdir_find_global_file(temp, file));
 
-	git_buf_dispose(&out);
+	git_userbuf_dispose(&out);
 }
 
 void test_core_env__2(void)
@@ -301,21 +301,23 @@ void test_core_env__2(void)
 
 void test_core_env__substitution(void)
 {
-  git_buf buf = GIT_BUF_INIT, expected = GIT_BUF_INIT;
+  git_userbuf buf = GIT_USERBUF_INIT;
+  git_buf joined = GIT_BUF_INIT, expected = GIT_BUF_INIT;
 
   /* Set it to something non-default so we have controllable values */
   cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, "/tmp/a"));
   cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &buf));
   cl_assert_equal_s("/tmp/a", buf.ptr);
+  git_userbuf_dispose(&buf);
 
-  git_buf_clear(&buf);
-  cl_git_pass(git_buf_join(&buf, GIT_PATH_LIST_SEPARATOR, "$PATH", "/tmp/b"));
-  cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, buf.ptr));
+  cl_git_pass(git_buf_join(&joined, GIT_PATH_LIST_SEPARATOR, "$PATH", "/tmp/b"));
+  cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, joined.ptr));
   cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &buf));
 
   cl_git_pass(git_buf_join(&expected, GIT_PATH_LIST_SEPARATOR, "/tmp/a", "/tmp/b"));
   cl_assert_equal_s(expected.ptr, buf.ptr);
 
+  git_buf_dispose(&joined);
   git_buf_dispose(&expected);
-  git_buf_dispose(&buf);
+  git_userbuf_dispose(&buf);
 }
