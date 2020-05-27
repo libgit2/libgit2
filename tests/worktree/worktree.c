@@ -440,7 +440,7 @@ void test_worktree_worktree__validate_invalid_parent(void)
 void test_worktree_worktree__lock_with_reason(void)
 {
 	git_worktree *wt;
-	git_buf reason = GIT_BUF_INIT;
+	git_userbuf reason = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 
@@ -450,14 +450,14 @@ void test_worktree_worktree__lock_with_reason(void)
 	cl_assert_equal_s(reason.ptr, "because");
 	cl_assert(wt->locked);
 
-	git_buf_dispose(&reason);
+	git_userbuf_dispose(&reason);
 	git_worktree_free(wt);
 }
 
 void test_worktree_worktree__lock_without_reason(void)
 {
 	git_worktree *wt;
-	git_buf reason = GIT_BUF_INIT;
+	git_userbuf reason = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 
@@ -467,7 +467,7 @@ void test_worktree_worktree__lock_without_reason(void)
 	cl_assert_equal_i(reason.size, 0);
 	cl_assert(wt->locked);
 
-	git_buf_dispose(&reason);
+	git_userbuf_dispose(&reason);
 	git_worktree_free(wt);
 }
 

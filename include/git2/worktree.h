@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "buffer.h"
+#include "userbuf.h"
 #include "types.h"
 #include "strarray.h"
 
@@ -155,7 +156,7 @@ GIT_EXTERN(int) git_worktree_unlock(git_worktree *wt);
  *  than zero if it is locked, less than zero if there was an
  *  error
  */
-GIT_EXTERN(int) git_worktree_is_locked(git_buf *reason, const git_worktree *wt);
+GIT_EXTERN(int) git_worktree_is_locked(git_userbuf *reason, const git_worktree *wt);
 
 /**
  * Retrieve the name of the worktree
