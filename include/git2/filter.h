@@ -122,7 +122,7 @@ GIT_EXTERN(int) git_filter_list_contains(
 /**
  * Apply filter list to a data buffer.
  *
- * See `git2/buffer.h` for background on `git_buf` objects.
+ * See `git2/userbuf.h` for background on `git_userbuf` objects.
  *
  * If the `in` buffer holds data allocated by libgit2 (i.e. `in->asize` is
  * not zero), then it will be overwritten when applying the filters.  If
@@ -140,9 +140,9 @@ GIT_EXTERN(int) git_filter_list_contains(
  * @return 0 on success, an error code otherwise
  */
 GIT_EXTERN(int) git_filter_list_apply_to_data(
-	git_buf *out,
+	git_userbuf *out,
 	git_filter_list *filters,
-	git_buf *in);
+	git_userbuf *in);
 
 /**
  * Apply a filter list to the contents of a file on disk
@@ -154,7 +154,7 @@ GIT_EXTERN(int) git_filter_list_apply_to_data(
  * taken as relative to the workdir
  */
 GIT_EXTERN(int) git_filter_list_apply_to_file(
-	git_buf *out,
+	git_userbuf *out,
 	git_filter_list *filters,
 	git_repository *repo,
 	const char *path);
@@ -167,7 +167,7 @@ GIT_EXTERN(int) git_filter_list_apply_to_file(
  * @param blob the blob to filter
  */
 GIT_EXTERN(int) git_filter_list_apply_to_blob(
-	git_buf *out,
+	git_userbuf *out,
 	git_filter_list *filters,
 	git_blob *blob);
 
@@ -180,7 +180,7 @@ GIT_EXTERN(int) git_filter_list_apply_to_blob(
  */
 GIT_EXTERN(int) git_filter_list_stream_data(
 	git_filter_list *filters,
-	git_buf *data,
+	git_userbuf *data,
 	git_writestream *target);
 
 /**

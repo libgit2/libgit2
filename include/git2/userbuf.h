@@ -18,10 +18,11 @@
  */
 GIT_BEGIN_DECL
 
-/**
- * An optional initialization macro for `git_userbuf` objects.
- */
+/** An optional initialization macro for `git_userbuf` objects. */
 #define GIT_USERBUF_INIT { NULL, 0, 0 }
+
+/** A constant initialization macro for `git_userbuf` objects. */
+#define GIT_USERBUF_CONST(str, len) { (char *)(str), 0, (size_t)(len) }
 
 /**
  * A data buffer for exporting data from libgit2.

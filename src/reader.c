@@ -120,7 +120,7 @@ static int workdir_reader_read(
 		GIT_FILTER_TO_ODB, GIT_FILTER_DEFAULT)) < 0)
 		goto done;
 
-	if ((error = git_filter_list_apply_to_file(out,
+	if ((error = git_filter_list_apply_to_file((git_userbuf *)out,
 	    filters, reader->repo, path.ptr)) < 0)
 		goto done;
 
