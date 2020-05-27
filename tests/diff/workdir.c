@@ -2165,7 +2165,7 @@ void test_diff_workdir__symlink_changed_on_non_symlink_platform(void)
 void test_diff_workdir__order(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_buf patch = GIT_BUF_INIT;
+	git_userbuf patch = GIT_USERBUF_INIT;
 	git_oid tree_oid, blob_oid;
 	git_treebuilder *builder;
 	git_tree *tree;
@@ -2200,7 +2200,7 @@ void test_diff_workdir__order(void)
 		"+bar\n");
 
 	git_treebuilder_free(builder);
-	git_buf_dispose(&patch);
+	git_userbuf_dispose(&patch);
 	git_diff_free(diff);
 	git_tree_free(tree);
 }
