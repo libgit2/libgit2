@@ -7,6 +7,7 @@
 #ifndef INCLUDE_userbuf_h__
 #define INCLUDE_userbuf_h__
 
+#include "common.h"
 #include "git2/userbuf.h"
 #include "buffer.h"
 

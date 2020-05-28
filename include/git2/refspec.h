@@ -10,7 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "net.h"
-#include "buffer.h"
+#include "userbuf.h"
 
 /**
  * @file git2/refspec.h

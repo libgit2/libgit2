@@ -13,8 +13,6 @@
 # include <ctype.h>
 #endif
 
-#include "git2/buffer.h"
-
 #include "buffer.h"
 #include "common.h"
 #include "strnlen.h"

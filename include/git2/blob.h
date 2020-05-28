@@ -11,7 +11,6 @@
 #include "types.h"
 #include "oid.h"
 #include "object.h"
-#include "buffer.h"
 #include "userbuf.h"
 
 /**

@@ -11,7 +11,6 @@
 #include "config.h"
 #include "common.h"
 #include "blame.h"
-#include "buffer.h"
 #include "checkout.h"
 #include "cherrypick.h"
 #include "clone.h"
@@ -123,17 +122,23 @@ GIT_EXTERN(int) git_blob_filtered_content(
  */
 /**@{*/
 
-/**
- * Free the memory referred to by the git_buf.  This is an alias of
- * `git_buf_dispose` and is preserved for backward compatibility.
- *
- * This function is deprecated, but there is no plan to remove this
- * function at this time.
- *
- * @deprecated Use git_buf_dispose
- * @see git_buf_dispose
+/*
+ * You may hard-deprecate only the git_buf compatibility layer by
+ * setting GIT_DEPRECATE_BUF.
  */
-GIT_EXTERN(void) git_buf_free(git_buf *buffer);
+#ifndef GIT_DEPRECATE_BUF
+
+typedef git_userbuf git_buf;
+
+#define GIT_BUF_INIT_CONST(str, len) GIT_USERBUF_CONST(str, len)
+#define git_buf_set(buf, data, datalen) git_userbuf_set(buf, data, datalen)
+#define git_buf_grow(buf, size) git_userbuf_grow(buf, size)
+#define git_buf_is_binary(b) git_userbuf_is_binary(b)
+#define git_buf_contains_nul(b) git_userbuf_contains_nul(b)
+#define git_buf_dispose(b) git_userbuf_dispose(b)
+#define git_buf_free(b) git_userbuf_dispose(b)
+
+#endif /* GIT_DEPRECATE_BUF */
 
 /**@}*/
 
