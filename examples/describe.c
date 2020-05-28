@@ -59,7 +59,7 @@ static void do_describe_single(git_repository *repo, struct describe_options *op
 {
 	git_object *commit;
 	git_describe_result *describe_result;
-	git_buf buf = { 0 };
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	if (rev) {
 		check_lg2(git_revparse_single(&commit, repo, rev),
