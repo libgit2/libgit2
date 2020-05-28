@@ -837,11 +837,11 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 	}
 
 	/* http_proxy / https_proxy environment variables */
-	error = git__getenv(&val, use_ssl ? "https_proxy" : "http_proxy");
+	error = git_buf_getenv(&val, use_ssl ? "https_proxy" : "http_proxy");
 
 	/* try uppercase environment variables */
 	if (error == GIT_ENOTFOUND)
-		error = git__getenv(&val, use_ssl ? "HTTPS_PROXY" : "HTTP_PROXY");
+		error = git_buf_getenv(&val, use_ssl ? "HTTPS_PROXY" : "HTTP_PROXY");
 
 	if (error < 0) {
 		if (error == GIT_ENOTFOUND) {

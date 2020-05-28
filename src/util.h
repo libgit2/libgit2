@@ -412,8 +412,6 @@ GIT_INLINE(double) git__timer(void)
 
 #endif
 
-extern int git__getenv(git_buf *out, const char *name);
-
 #include "alloc.h"
 
 #endif

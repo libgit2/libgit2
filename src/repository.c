@@ -632,7 +632,7 @@ static int _git_repository_open_ext_from_env(
 	int error;
 
 	if (!start_path) {
-		error = git__getenv(&dir_buf, "GIT_DIR");
+		error = git_buf_getenv(&dir_buf, "GIT_DIR");
 		if (error == GIT_ENOTFOUND) {
 			git_error_clear();
 			start_path = ".";
@@ -645,7 +645,7 @@ static int _git_repository_open_ext_from_env(
 		}
 	}
 
-	error = git__getenv(&ceiling_dirs_buf, "GIT_CEILING_DIRECTORIES");
+	error = git_buf_getenv(&ceiling_dirs_buf, "GIT_CEILING_DIRECTORIES");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
@@ -653,7 +653,7 @@ static int _git_repository_open_ext_from_env(
 	else
 		ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
 
-	error = git__getenv(&across_fs_buf, "GIT_DISCOVERY_ACROSS_FILESYSTEM");
+	error = git_buf_getenv(&across_fs_buf, "GIT_DISCOVERY_ACROSS_FILESYSTEM");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
@@ -667,7 +667,7 @@ static int _git_repository_open_ext_from_env(
 			flags |= GIT_REPOSITORY_OPEN_CROSS_FS;
 	}
 
-	error = git__getenv(&index_file_buf, "GIT_INDEX_FILE");
+	error = git_buf_getenv(&index_file_buf, "GIT_INDEX_FILE");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
@@ -678,13 +678,13 @@ static int _git_repository_open_ext_from_env(
 			goto error;
 	}
 
-	error = git__getenv(&namespace_buf, "GIT_NAMESPACE");
+	error = git_buf_getenv(&namespace_buf, "GIT_NAMESPACE");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
 		goto error;
 
-	error = git__getenv(&object_dir_buf, "GIT_OBJECT_DIRECTORY");
+	error = git_buf_getenv(&object_dir_buf, "GIT_OBJECT_DIRECTORY");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
@@ -695,7 +695,7 @@ static int _git_repository_open_ext_from_env(
 			goto error;
 	}
 
-	error = git__getenv(&work_tree_buf, "GIT_WORK_TREE");
+	error = git_buf_getenv(&work_tree_buf, "GIT_WORK_TREE");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
@@ -706,7 +706,7 @@ static int _git_repository_open_ext_from_env(
 		goto error;
 	}
 
-	error = git__getenv(&work_tree_buf, "GIT_COMMON_DIR");
+	error = git_buf_getenv(&work_tree_buf, "GIT_COMMON_DIR");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
@@ -724,7 +724,7 @@ static int _git_repository_open_ext_from_env(
 	if (odb)
 		git_repository_set_odb(repo, odb);
 
-	error = git__getenv(&alts_buf, "GIT_ALTERNATE_OBJECT_DIRECTORIES");
+	error = git_buf_getenv(&alts_buf, "GIT_ALTERNATE_OBJECT_DIRECTORIES");
 	if (error == GIT_ENOTFOUND) {
 		git_error_clear();
 		error = 0;

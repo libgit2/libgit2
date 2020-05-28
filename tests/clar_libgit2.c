@@ -69,7 +69,7 @@ void cl_git_rmfile(const char *filename)
 char *cl_getenv(const char *name)
 {
 	git_buf out = GIT_BUF_INIT;
-	int error = git__getenv(&out, name);
+	int error = git_buf_getenv(&out, name);
 
 	cl_assert(error >= 0 || error == GIT_ENOTFOUND);
 
