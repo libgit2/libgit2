@@ -101,7 +101,7 @@ static int git_sysdir_guess_global_dirs(git_buf *out)
 	 * we have to get the HOME dir from the password entry file.
 	 */
 	if (!sandbox_id && uid == euid)
-	    error = git__getenv(out, "HOME");
+	    error = git_buf_getenv(out, "HOME");
 	else
 	    error = get_passwd_home(out, euid);
 
@@ -131,10 +131,10 @@ static int git_sysdir_guess_xdg_dirs(git_buf *out)
 	 * directory of the effective user.
 	 */
 	if (uid == euid) {
-		if ((error = git__getenv(&env, "XDG_CONFIG_HOME")) == 0)
+		if ((error = git_buf_getenv(&env, "XDG_CONFIG_HOME")) == 0)
 			error = git_buf_joinpath(out, env.ptr, "git");
 
-		if (error == GIT_ENOTFOUND && (error = git__getenv(&env, "HOME")) == 0)
+		if (error == GIT_ENOTFOUND && (error = git_buf_getenv(&env, "HOME")) == 0)
 			error = git_buf_joinpath(out, env.ptr, ".config/git");
 	} else {
 		if ((error = get_passwd_home(&env, euid)) == 0)

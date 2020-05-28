@@ -194,6 +194,9 @@ int git_buf_decode_base85(git_buf *buf, const char *base64, size_t len, size_t o
 /* Decode the given percent-encoded string and write the result to the buffer */
 int git_buf_decode_percent(git_buf *buf, const char *str, size_t len);
 
+/* Place the value of the given environment variable into the buffer */
+int git_buf_getenv(git_buf *buf, const char *name);
+
 /*
  * Insert, remove or replace a portion of the buffer.
  *
