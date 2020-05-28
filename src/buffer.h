@@ -9,19 +9,21 @@
 
 #include "common.h"
 #include "git2/strarray.h"
-#include "git2/buffer.h"
+#include "git2/userbuf.h"
 
-/* typedef struct {
- *  	char   *ptr;
- *  	size_t asize, size;
- * } git_buf;
- */
+typedef struct {
+	char *ptr;
+	size_t asize, size;
+} git_buf;
 
 extern char git_buf__initbuf[];
 extern char git_buf__oom[];
 
 /* Use to initialize buffer structure when git_buf is on stack */
 #define GIT_BUF_INIT { git_buf__initbuf, 0, 0 }
+
+/* Static initializer for git_buf from static buffer */
+#define GIT_BUF_INIT_CONST(STR,LEN) { (char *)(STR), 0, (size_t)(LEN) }
 
 GIT_INLINE(bool) git_buf_is_allocated(const git_buf *buf)
 {
@@ -35,6 +37,36 @@ GIT_INLINE(bool) git_buf_is_allocated(const git_buf *buf)
  * initialization.
  */
 extern int git_buf_init(git_buf *buf, size_t initial_size);
+
+/**
+ * Dispose the git_buf.  If the memory is owned by libgit2 (in other
+ * words, if asize > 0) then the given ptr will be freed.
+ */
+extern void git_buf_dispose(git_buf *buf);
+
+/**
+ * Sets the buffer to a copy of some raw data.
+ */
+extern int git_buf_set(git_buf *buf, const void *ptr, size_t len);
+
+/**
+ * Resize the buffer allocation to make more space.
+ *
+ * This will attempt to grow the buffer to accommodate the target size.
+ *
+ * If the buffer refers to memory that was not allocated by libgit2 (i.e.
+ * the `asize` field is zero), then `ptr` will be replaced with a newly
+ * allocated block of data.  Be careful so that memory allocated by the
+ * caller is not lost.  As a special variant, if you pass `target_size` as
+ * 0 and the memory is not allocated by libgit2, this will allocate a new
+ * buffer of size `size` and copy the external data into it.
+ *
+ * Currently, this will never shrink a buffer, only expand it.
+ *
+ * If the allocation fails, this will return an error and the buffer will
+ * be marked as invalid for future operations, invaliding the contents.
+*/
+extern int git_buf_grow(git_buf *buf, size_t size);
 
 /**
  * Resize the buffer allocation to make more space.

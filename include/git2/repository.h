@@ -10,7 +10,6 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
-#include "buffer.h"
 #include "userbuf.h"
 
 /**

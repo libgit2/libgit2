@@ -9,7 +9,7 @@
 
 #include "common.h"
 #include "types.h"
-#include "buffer.h"
+#include "userbuf.h"
 
 /**
  * @file git2/describe.h

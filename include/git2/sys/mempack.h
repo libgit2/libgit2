@@ -11,7 +11,7 @@
 #include "git2/types.h"
 #include "git2/oid.h"
 #include "git2/odb.h"
-#include "git2/buffer.h"
+#include "git2/userbuf.h"
 
 /**
  * @file git2/sys/mempack.h

@@ -8,7 +8,6 @@
 #define INCLUDE_git_message_h__
 
 #include "common.h"
-#include "buffer.h"
 #include "userbuf.h"
 
 /**

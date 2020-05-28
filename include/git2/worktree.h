@@ -8,7 +8,6 @@
 #define INCLUDE_git_worktree_h__
 
 #include "common.h"
-#include "buffer.h"
 #include "userbuf.h"
 #include "types.h"
 #include "strarray.h"

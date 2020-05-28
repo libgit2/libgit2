@@ -66,7 +66,6 @@ typedef int64_t git_time_t; /**< time in seconds from epoch */
 /** The maximum size of an object */
 typedef uint64_t git_object_size_t;
 
-#include "buffer.h"
 #include "oid.h"
 
 /** Basic type (loose or packed) of any Git object. */

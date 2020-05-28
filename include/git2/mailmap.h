@@ -9,7 +9,6 @@
 
 #include "common.h"
 #include "types.h"
-#include "buffer.h"
 
 /**
  * @file git2/mailmap.h
