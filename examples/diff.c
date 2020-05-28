@@ -169,7 +169,7 @@ static void compute_diff_no_index(git_diff **diff, struct diff_options *o) {
 	git_patch *patch = NULL;
 	char *file1_str = NULL;
 	char *file2_str = NULL;
-	git_buf buf = {0};
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	if (!o->treeish1 || !o->treeish2) {
 		usage("two files should be provided as arguments", NULL);
@@ -192,7 +192,7 @@ static void compute_diff_no_index(git_diff **diff, struct diff_options *o) {
 		git_diff_from_buffer(diff, buf.ptr, buf.size),
 		"diff from patch", NULL);
 	git_patch_free(patch);
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	free(file1_str);
 	free(file2_str);
 }
@@ -344,7 +344,7 @@ static void parse_opts(struct diff_options *o, int argc, char *argv[])
 static void diff_print_stats(git_diff *diff, struct diff_options *o)
 {
 	git_diff_stats *stats;
-	git_buf b = GIT_BUF_INIT_CONST(NULL, 0);
+	git_userbuf b = GIT_USERBUF_INIT;
 	git_diff_stats_format_t format = 0;
 
 	check_lg2(
@@ -364,6 +364,6 @@ static void diff_print_stats(git_diff *diff, struct diff_options *o)
 
 	fputs(b.ptr, stdout);
 
-	git_buf_dispose(&b);
+	git_userbuf_dispose(&b);
 	git_diff_stats_free(stats);
 }
