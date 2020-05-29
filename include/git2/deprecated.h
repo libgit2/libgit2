@@ -535,6 +535,18 @@ typedef int GIT_CALLBACK(git_headlist_cb)(git_remote_head *rhead, void *payload)
 /**@{*/
 
 /**
+ * Copy a string array object from source to target.
+ *
+ * This function is deprecated, but there is no plan to remove this
+ * function at this time.
+ *
+ * @param tgt target
+ * @param src source
+ * @return 0 on success, < 0 on allocation failure
+ */
+GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
+
+/**
  * Free the memory referred to by the git_strarray.  This is an alias of
  * `git_strarray_dispose` and is preserved for backward compatibility.
  *
