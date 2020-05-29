@@ -28,7 +28,7 @@ void test_worktree_bare__list(void)
 	cl_git_pass(git_worktree_list(&wts, g_repo));
 	cl_assert_equal_i(wts.count, 0);
 
-	git_strarray_free(&wts);
+	git_strarray_dispose(&wts);
 }
 
 void test_worktree_bare__add(void)
@@ -48,7 +48,7 @@ void test_worktree_bare__add(void)
 	cl_assert_equal_i(0, git_repository_is_bare(wtrepo));
 	cl_assert_equal_i(1, git_repository_is_worktree(wtrepo));
 
-	git_strarray_free(&wts);
+	git_strarray_dispose(&wts);
 	git_worktree_free(wt);
 	git_repository_free(wtrepo);
 }

@@ -38,7 +38,7 @@ void test_refs_list__all(void)
 	 * loose, but we only list it once */
 	cl_assert_equal_i((int)ref_list.count, 19);
 
-	git_strarray_free(&ref_list);
+	git_strarray_dispose(&ref_list);
 }
 
 void test_refs_list__do_not_retrieve_references_which_name_end_with_a_lock_extension(void)
@@ -53,5 +53,5 @@ void test_refs_list__do_not_retrieve_references_which_name_end_with_a_lock_exten
 	cl_git_pass(git_reference_list(&ref_list, g_repo));
 	cl_assert_equal_i((int)ref_list.count, 19);
 
-	git_strarray_free(&ref_list);
+	git_strarray_dispose(&ref_list);
 }

@@ -707,7 +707,7 @@ static void reference_listing(git_repository *repo)
 		git_reference_free(ref);
 	}
 
-	git_strarray_free(&ref_list);
+	git_strarray_dispose(&ref_list);
 }
 
 /**

@@ -29,7 +29,7 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 
 		tgt->strings[tgt->count] = git__strdup(src->strings[i]);
 		if (!tgt->strings[tgt->count]) {
-			git_strarray_free(tgt);
+			git_strarray_dispose(tgt);
 			memset(tgt, 0, sizeof(*tgt));
 			return -1;
 		}
@@ -40,7 +40,7 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 	return 0;
 }
 
-void git_strarray_free(git_strarray *array)
+void git_strarray_dispose(git_strarray *array)
 {
 	size_t i;
 
@@ -53,4 +53,9 @@ void git_strarray_free(git_strarray *array)
 	git__free(array->strings);
 
 	memset(array, 0, sizeof(*array));
+}
+
+void git_strarray_free(git_strarray *array)
+{
+	git_strarray_dispose(array);
 }

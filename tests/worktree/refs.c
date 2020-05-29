@@ -56,8 +56,8 @@ void test_worktree_refs__list(void)
 	}
 
 exit:
-	git_strarray_free(&refs);
-	git_strarray_free(&wtrefs);
+	git_strarray_dispose(&refs);
+	git_strarray_dispose(&wtrefs);
 	cl_git_pass(error);
 }
 
