@@ -25,7 +25,7 @@ char *git_pathspec_prefix(const git_strarray *pathspec)
 	const char *scan;
 
 	if (!pathspec || !pathspec->count ||
-		git_buf_text_common_prefix(&prefix, pathspec) < 0)
+		git_buf_text_common_prefix(&prefix, pathspec->strings, pathspec->count) < 0)
 		return NULL;
 
 	/* diff prefix will only be leading non-wildcards */

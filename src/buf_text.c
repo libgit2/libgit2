@@ -152,24 +152,24 @@ int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src)
 	return git_buf_put(tgt, scan, end - scan);
 }
 
-int git_buf_text_common_prefix(git_buf *buf, const git_strarray *strings)
+int git_buf_text_common_prefix(git_buf *buf, char *const *const strings, size_t count)
 {
 	size_t i;
 	const char *str, *pfx;
 
 	git_buf_clear(buf);
 
-	if (!strings || !strings->count)
+	if (!strings || !count)
 		return 0;
 
 	/* initialize common prefix to first string */
-	if (git_buf_sets(buf, strings->strings[0]) < 0)
+	if (git_buf_sets(buf, strings[0]) < 0)
 		return -1;
 
 	/* go through the rest of the strings, truncating to shared prefix */
-	for (i = 1; i < strings->count; ++i) {
+	for (i = 1; i < count; ++i) {
 
-		for (str = strings->strings[i], pfx = buf->ptr;
+		for (str = strings[i], pfx = buf->ptr;
 			 *str && *str == *pfx; str++, pfx++)
 			/* scanning */;
 
