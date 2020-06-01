@@ -1419,15 +1419,20 @@ int git_http_client_read_body(
 	client->parser.data = &parser_context;
 
 	/*
-	 * Clients expect to get a non-zero amount of data from us.
-	 * With a sufficiently small buffer, one might only read a chunk
-	 * length.  Loop until we actually have data to return.
+	 * Clients expect to get a non-zero amount of data from us,
+	 * so we either block until we have data to return, until we
+	 * hit EOF or there's an error.  Do this in a loop, since we
+	 * may end up reading only some stream metadata (like chunk
+	 * information).
 	 */
 	while (!parser_context.output_written) {
 		error = client_read_and_parse(client);
 
 		if (error <= 0)
 			goto done;
+
+		if (client->state == DONE)
+			break;
 	}
 
 	assert(parser_context.output_written <= INT_MAX);
