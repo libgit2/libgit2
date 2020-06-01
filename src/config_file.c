@@ -111,6 +111,15 @@ static int config_file_open(git_config_backend *cfg, git_config_level_t level, c
 	if (!git_path_exists(b->file.path))
 		return 0;
 
+	/*
+	 * git silently ignores configuration files that are not
+	 * readable.  We emulate that behavior.  This is particularly
+	 * important for sandboxed applications on macOS where the
+	 * git configuration files may not be readable.
+	 */
+	if (p_access(b->file.path, R_OK) < 0)
+		return GIT_ENOTFOUND;
+
 	if (res < 0 || (res = config_file_read(b->entries, repo, &b->file, level, 0)) < 0) {
 		git_config_entries_free(b->entries);
 		b->entries = NULL;
