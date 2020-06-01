@@ -132,7 +132,7 @@ static int git_smart__set_custom_headers(
 	size_t i;
 
 	if (t->custom_headers.count)
-		git_strarray_free(&t->custom_headers);
+		git_strarray_dispose(&t->custom_headers);
 
 	if (!custom_headers)
 		return 0;
@@ -465,7 +465,7 @@ static void git_smart__free(git_transport *transport)
 	git_vector_free(refs);
 	git__free((char *)t->proxy.url);
 
-	git_strarray_free(&t->custom_headers);
+	git_strarray_dispose(&t->custom_headers);
 
 	git__free(t);
 }

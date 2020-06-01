@@ -239,7 +239,7 @@ next:
 
 out:
 	git_reference_free(remote_ref);
-	git_strarray_free(&remotes);
+	git_strarray_dispose(&remotes);
 	return error;
 }
 

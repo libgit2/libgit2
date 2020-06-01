@@ -524,6 +524,42 @@ typedef int GIT_CALLBACK(git_headlist_cb)(git_remote_head *rhead, void *payload)
 
 /**@}*/
 
+/** @name Deprecated String Array Functions
+ *
+ * These types are retained for backward compatibility.  The newer
+ * versions of these values should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Copy a string array object from source to target.
+ *
+ * This function is deprecated, but there is no plan to remove this
+ * function at this time.
+ *
+ * @param tgt target
+ * @param src source
+ * @return 0 on success, < 0 on allocation failure
+ */
+GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
+
+/**
+ * Free the memory referred to by the git_strarray.  This is an alias of
+ * `git_strarray_dispose` and is preserved for backward compatibility.
+ *
+ * This function is deprecated, but there is no plan to remove this
+ * function at this time.
+ *
+ * @deprecated Use git_strarray_dispose
+ * @see git_strarray_dispose
+ */
+GIT_EXTERN(void) git_strarray_free(git_strarray *array);
+
+/**@}*/
+
 /** @name Deprecated Options Initialization Functions
  *
  * These functions are retained for backward compatibility.  The newer

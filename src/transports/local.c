@@ -185,12 +185,12 @@ static int store_refs(transport_local *t)
 	}
 
 	t->have_refs = 1;
-	git_strarray_free(&ref_names);
+	git_strarray_dispose(&ref_names);
 	return 0;
 
 on_error:
 	git_vector_free(&t->refs);
-	git_strarray_free(&ref_names);
+	git_strarray_dispose(&ref_names);
 	return -1;
 }
 

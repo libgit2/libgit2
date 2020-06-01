@@ -1237,7 +1237,7 @@ static int prune_candidates(git_vector *candidates, git_remote *remote)
 	}
 
 out:
-	git_strarray_free(&arr);
+	git_strarray_dispose(&arr);
 	return error;
 }
 

@@ -16,7 +16,7 @@ static void ensure_no_refname_starts_with_a_forward_slash(const char *path)
 	for (i = 0; i < ref_list.count; i++)
 		cl_assert(git__prefixcmp(ref_list.strings[i], "/") != 0);
 
-	git_strarray_free(&ref_list);
+	git_strarray_dispose(&ref_list);
 	git_repository_free(repo);
 }
 
@@ -42,6 +42,6 @@ void test_refs_listall__from_repository_with_no_trailing_newline(void)
 
 	cl_assert(ref_list.count > 0);
 
-	git_strarray_free(&ref_list);
+	git_strarray_dispose(&ref_list);
 	git_repository_free(repo);
 }

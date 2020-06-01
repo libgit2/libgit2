@@ -32,7 +32,7 @@ void test_online_remotes__single_branch(void)
 	}
 	cl_assert_equal_i(1, count);
 
-	git_strarray_free(&refs);
+	git_strarray_dispose(&refs);
 
 	cl_git_pass(git_remote_lookup(&remote, repo, "origin"));
 	cl_git_pass(git_remote_get_fetch_refspecs(&refs, remote));
@@ -40,7 +40,7 @@ void test_online_remotes__single_branch(void)
 	cl_assert_equal_i(1, refs.count);
 	cl_assert_equal_s(REFSPEC, refs.strings[0]);
 
-	git_strarray_free(&refs);
+	git_strarray_dispose(&refs);
 	git_remote_free(remote);
 	git_repository_free(repo);
 }

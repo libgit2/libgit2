@@ -2289,7 +2289,7 @@ int git_repository_foreach_head(git_repository *repo,
 
 out:
 	git_buf_dispose(&path);
-	git_strarray_free(&worktrees);
+	git_strarray_dispose(&worktrees);
 	return error;
 }
 
