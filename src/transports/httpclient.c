@@ -1038,6 +1038,7 @@ on_error:
 
 GIT_INLINE(int) client_read(git_http_client *client)
 {
+	http_parser_context *parser_context = client->parser.data;
 	git_stream *stream;
 	char *buf = client->read_buf.ptr + client->read_buf.size;
 	size_t max_len;
@@ -1053,6 +1054,9 @@ GIT_INLINE(int) client_read(git_http_client *client)
 	 */
 	max_len = client->read_buf.asize - client->read_buf.size;
 	max_len = min(max_len, INT_MAX);
+
+	if (parser_context->output_size)
+		max_len = min(max_len, parser_context->output_size);
 
 	if (max_len == 0) {
 		git_error_set(GIT_ERROR_HTTP, "no room in output buffer");
