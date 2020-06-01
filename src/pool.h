@@ -81,7 +81,7 @@ typedef struct {
  * Of course, you can use this in other ways, but those are the
  * two most common patterns.
  */
-extern void git_pool_init(git_pool *pool, size_t item_size);
+extern int git_pool_init(git_pool *pool, size_t item_size);
 
 /**
  * Free all items in pool

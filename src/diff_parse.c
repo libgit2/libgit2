@@ -52,9 +52,8 @@ static git_diff_parsed *diff_parsed_alloc(void)
 
 	diff->base.opts.flags &= ~GIT_DIFF_IGNORE_CASE;
 
-	git_pool_init(&diff->base.pool, 1);
-
-	if (git_vector_init(&diff->patches, 0, NULL) < 0 ||
+	if (git_pool_init(&diff->base.pool, 1) < 0 ||
+	    git_vector_init(&diff->patches, 0, NULL) < 0 ||
 		git_vector_init(&diff->base.deltas, 0, git_diff_delta__cmp) < 0) {
 		git_diff_free(&diff->base);
 		return NULL;

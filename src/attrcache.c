@@ -391,10 +391,9 @@ int git_attr_cache__init(git_repository *repo)
 	 * hashtable for attribute macros, and string pool
 	 */
 	if ((ret = git_strmap_new(&cache->files)) < 0 ||
-	    (ret = git_strmap_new(&cache->macros)) < 0)
+	    (ret = git_strmap_new(&cache->macros)) < 0 ||
+	    (ret = git_pool_init(&cache->pool, 1)) < 0)
 		goto cancel;
-
-	git_pool_init(&cache->pool, 1);
 
 	cache = git__compare_and_swap(&repo->attrcache, NULL, cache);
 	if (cache)

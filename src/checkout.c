@@ -1310,7 +1310,8 @@ static int checkout_get_actions(
 	size_t i, *counts = NULL;
 	uint32_t *actions = NULL;
 
-	git_pool_init(&pathpool, 1);
+	if (git_pool_init(&pathpool, 1) < 0)
+		return -1;
 
 	if (data->opts.paths.count > 0 &&
 		git_pathspec__vinit(&pathspec, &data->opts.paths, &pathpool) < 0)
@@ -2526,9 +2527,8 @@ static int checkout_data_init(
 		git_config_entry_free(conflict_style);
 	}
 
-	git_pool_init(&data->pool, 1);
-
-	if ((error = git_vector_init(&data->removes, 0, git__strcmp_cb)) < 0 ||
+	if ((error = git_pool_init(&data->pool, 1)) < 0 ||
+	    (error = git_vector_init(&data->removes, 0, git__strcmp_cb)) < 0 ||
 	    (error = git_vector_init(&data->remove_conflicts, 0, NULL)) < 0 ||
 	    (error = git_vector_init(&data->update_conflicts, 0, NULL)) < 0 ||
 	    (error = git_buf_puts(&data->target_path, data->opts.target_directory)) < 0 ||

@@ -423,9 +423,8 @@ static git_diff_generated *diff_generated_alloc(
 	git_attr_session__init(&diff->base.attrsession, repo);
 	memcpy(&diff->base.opts, &dflt, sizeof(git_diff_options));
 
-	git_pool_init(&diff->base.pool, 1);
-
-	if (git_vector_init(&diff->base.deltas, 0, git_diff_delta__cmp) < 0) {
+	if (git_pool_init(&diff->base.pool, 1) < 0 ||
+	    git_vector_init(&diff->base.deltas, 0, git_diff_delta__cmp) < 0) {
 		git_diff_free(&diff->base);
 		return NULL;
 	}

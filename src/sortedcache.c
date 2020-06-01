@@ -25,9 +25,8 @@ int git_sortedcache_new(
 	sc = git__calloc(1, alloclen);
 	GIT_ERROR_CHECK_ALLOC(sc);
 
-	git_pool_init(&sc->pool, 1);
-
-	if (git_vector_init(&sc->items, 4, item_cmp) < 0 ||
+	if (git_pool_init(&sc->pool, 1) < 0 ||
+	    git_vector_init(&sc->items, 4, item_cmp) < 0 ||
 	    git_strmap_new(&sc->map) < 0)
 		goto fail;
 
