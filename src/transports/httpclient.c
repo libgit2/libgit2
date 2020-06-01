@@ -1195,7 +1195,7 @@ static void complete_response_body(git_http_client *client)
 	/* If we're not keeping alive, don't bother. */
 	if (!client->keepalive) {
 		client->connected = 0;
-		return;
+		goto done;
 	}
 
 	parser_context.client = client;
@@ -1209,6 +1209,9 @@ static void complete_response_body(git_http_client *client)
 		git_error_clear();
 		client->connected = 0;
 	}
+
+done:
+	git_buf_clear(&client->read_buf);
 }
 
 int git_http_client_send_request(
