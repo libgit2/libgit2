@@ -487,6 +487,9 @@ clar_parse_args(int argc, char **argv)
 void
 clar_test_init(int argc, char **argv)
 {
+	if (argc > 1)
+		clar_parse_args(argc, argv);
+
 	clar_print_init(
 		(int)_clar_callback_count,
 		(int)_clar_suite_count,
@@ -497,9 +500,6 @@ clar_test_init(int argc, char **argv)
 		_clar.write_summary = 1;
 		_clar.summary_filename = strdup(_clar.summary_filename);
 	}
-
-	if (argc > 1)
-		clar_parse_args(argc, argv);
 
 	if (_clar.write_summary &&
 	    !(_clar.summary = clar_summary_init(_clar.summary_filename))) {
