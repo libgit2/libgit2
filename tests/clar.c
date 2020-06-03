@@ -293,6 +293,7 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 	const struct clar_func *test = suite->tests;
 	size_t i, matchlen;
 	struct clar_report *report;
+	int exact = 0;
 
 	if (!suite->enabled)
 		return;
@@ -317,11 +318,19 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 			while (*filter == ':')
 				++filter;
 			matchlen = strlen(filter);
+
+			if (matchlen && filter[matchlen - 1] == '$') {
+				exact = 1;
+				matchlen--;
+			}
 		}
 	}
 
 	for (i = 0; i < suite->test_count; ++i) {
 		if (filter && strncmp(test[i].name, filter, matchlen))
+			continue;
+
+		if (exact && strlen(test[i].name) != matchlen)
 			continue;
 
 		_clar.active_test = test[i].name;
