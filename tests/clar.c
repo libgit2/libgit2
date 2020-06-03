@@ -140,6 +140,8 @@ static struct {
 	int tests_ran;
 	int suites_ran;
 
+	enum cl_output_format output_format;
+
 	int report_errors_only;
 	int exit_on_error;
 	int report_suite_names;

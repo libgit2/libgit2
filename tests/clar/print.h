@@ -1,12 +1,13 @@
+/* clap: clar protocol, the traditional clar output format */
 
-static void clar_print_cl_init(int test_count, int suite_count, const char *suite_names)
+static void clar_print_clap_init(int test_count, int suite_count, const char *suite_names)
 {
 	(void)test_count;
 	printf("Loaded %d suites: %s\n", (int)suite_count, suite_names);
 	printf("Started (test status codes: OK='.' FAILURE='F' SKIPPED='S')\n");
 }
 
-static void clar_print_cl_shutdown(int test_count, int suite_count, int error_count)
+static void clar_print_clap_shutdown(int test_count, int suite_count, int error_count)
 {
 	(void)test_count;
 	(void)suite_count;
@@ -16,7 +17,7 @@ static void clar_print_cl_shutdown(int test_count, int suite_count, int error_co
 	clar_report_all();
 }
 
-static void clar_print_cl_error(int num, const struct clar_report *report, const struct clar_error *error)
+static void clar_print_clap_error(int num, const struct clar_report *report, const struct clar_error *error)
 {
 	printf("  %d) Failure:\n", num);
 
@@ -35,7 +36,7 @@ static void clar_print_cl_error(int num, const struct clar_report *report, const
 	fflush(stdout);
 }
 
-static void clar_print_cl_ontest(const char *test_name, int test_number, enum cl_test_status status)
+static void clar_print_clap_ontest(const char *test_name, int test_number, enum cl_test_status status)
 {
 	(void)test_name;
 	(void)test_number;
@@ -50,7 +51,7 @@ static void clar_print_cl_ontest(const char *test_name, int test_number, enum cl
 	fflush(stdout);
 }
 
-static void clar_print_cl_onsuite(const char *suite_name, int suite_index)
+static void clar_print_clap_onsuite(const char *suite_name, int suite_index)
 {
 	if (_clar.report_suite_names)
 		printf("\n%s", suite_name);
@@ -58,40 +59,52 @@ static void clar_print_cl_onsuite(const char *suite_name, int suite_index)
 	(void)suite_index;
 }
 
-static void clar_print_cl_onabort(const char *fmt, va_list arg)
+static void clar_print_clap_onabort(const char *fmt, va_list arg)
 {
 	vfprintf(stderr, fmt, arg);
 }
 
+/* indirection between protocol output selection */
+
+#define PRINT(FN, args...) do { \
+		switch (_clar.output_format) { \
+			case CL_OUTPUT_CLAP: \
+				clar_print_clap_##FN (args); \
+				break; \
+			default: \
+				abort(); \
+		} \
+	} while (0)
+
 static void clar_print_init(int test_count, int suite_count, const char *suite_names)
 {
-	clar_print_cl_init(test_count, suite_count, suite_names);
+	PRINT(init, test_count, suite_count, suite_names);
 }
 
 static void clar_print_shutdown(int test_count, int suite_count, int error_count)
 {
-	clar_print_cl_shutdown(test_count, suite_count, error_count);
+	PRINT(shutdown, test_count, suite_count, error_count);
 }
 
 static void clar_print_error(int num, const struct clar_report *report, const struct clar_error *error)
 {
-	clar_print_cl_error(num, report, error);
+	PRINT(error, num, report, error);
 }
 
 static void clar_print_ontest(const char *test_name, int test_number, enum cl_test_status status)
 {
-	clar_print_cl_ontest(test_name, test_number, status);
+	PRINT(ontest, test_name, test_number, status);
 }
 
 static void clar_print_onsuite(const char *suite_name, int suite_index)
 {
-	clar_print_cl_onsuite(suite_name, suite_index);
+	PRINT(onsuite, suite_name, suite_index);
 }
 
 static void clar_print_onabort(const char *msg, ...)
 {
 	va_list argp;
 	va_start(argp, msg);
-	clar_print_cl_onabort(msg, argp);
+	PRINT(onabort, msg, argp);
 	va_end(argp);
 }

@@ -16,6 +16,10 @@ enum cl_test_status {
 	CL_TEST_NOTRUN,
 };
 
+enum cl_output_format {
+	CL_OUTPUT_CLAP,
+};
+
 /** Setup clar environment */
 void clar_test_init(int argc, char *argv[]);
 int clar_test_run(void);
