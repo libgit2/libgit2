@@ -1,3 +1,33 @@
+v1.0.1
+------
+
+This is a bugfix release with the following changes:
+
+- Calculating information about renamed files during merges is more
+  efficient because dissimilarity about files is now being cached and
+  no longer needs to be recomputed.
+  
+- The `git_worktree_prune_init_options` has been correctly restored for
+  backward compatibility.  In v1.0 it was incorrectly deprecated with a
+  typo.
+
+- The optional ntlmclient dependency now supports NetBSD.
+
+- A bug where attempting to stash on a bare repository may have failed
+  has been fixed.
+
+- Configuration files that are unreadable due to permissions are now
+  silently ignored, and treated as if they do not exist.  This matches
+  git's behavior; previously this case would have been an error.
+
+- v4 index files are now correctly written; previously we would read
+  them correctly but would not write the prefix-compression accurately,
+  causing corruption.
+
+- A bug where the smart HTTP transport could not read large data packets
+  has been fixed.  Previously, fetching from servers like Gerrit, that
+  sent large data packets, would error.
+
 v1.0
 ----
 
