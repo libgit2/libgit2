@@ -23,7 +23,6 @@
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
           <a class="source" href="clone.html">clone.c</a>
-          <a class="source" href="commit.html">commit.c</a>
           <a class="source" href="common.html">common.c</a>
           <a class="source" href="config.html">config.c</a>
           <a class="source" href="describe.html">describe.c</a>
@@ -38,7 +37,6 @@
           <a class="source" href="ls-files.html">ls-files.c</a>
           <a class="source" href="ls-remote.html">ls-remote.c</a>
           <a class="source" href="merge.html">merge.c</a>
-          <a class="source" href="push.html">push.c</a>
           <a class="source" href="remote.html">remote.c</a>
           <a class="source" href="rev-list.html">rev-list.c</a>
           <a class="source" href="rev-parse.html">rev-parse.c</a>
@@ -363,7 +361,7 @@ to check whether the ref is unique across all remotes.</p>
 
 <span class="nl">out</span><span class="p">:</span>
   <span class="n"><a name="git_reference_free-20" class="fnlink" href="../../#HEAD/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">remote_ref</span><span class="p">);</span>
-  <span class="n"><a name="git_strarray_dispose-26" class="fnlink" href="../../#HEAD/group/strarray/git_strarray_dispose">git_strarray_dispose</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">);</span>
+  <span class="n"><a name="git_strarray_free-26" class="fnlink" href="../../#HEAD/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">);</span>
   <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
       </td>
