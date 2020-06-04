@@ -16,14 +16,13 @@
     Jump To &hellip;
     <div id="jump_wrapper">
       <div id="jump_page">
-        <a class="source" href="../../#HEAD">API Docs</a>
+        <a class="source" href="../../#v1.0.1">API Docs</a>
           <a class="source" href="add.html">add.c</a>
           <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
           <a class="source" href="clone.html">clone.c</a>
-          <a class="source" href="commit.html">commit.c</a>
           <a class="source" href="common.html">common.c</a>
           <a class="source" href="config.html">config.c</a>
           <a class="source" href="describe.html">describe.c</a>
@@ -38,7 +37,6 @@
           <a class="source" href="ls-files.html">ls-files.c</a>
           <a class="source" href="ls-remote.html">ls-remote.c</a>
           <a class="source" href="merge.html">merge.c</a>
-          <a class="source" href="push.html">push.c</a>
           <a class="source" href="remote.html">remote.c</a>
           <a class="source" href="rev-list.html">rev-list.c</a>
           <a class="source" href="rev-parse.html">rev-parse.c</a>
@@ -161,7 +159,7 @@ program is emulating.</p>
   <span class="n">name</span> <span class="o">=</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
   <span class="n">url</span> <span class="o">=</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_create-1" class="fnlink" href="../../#HEAD/group/remote/git_remote_create">git_remote_create</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">url</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_create-1" class="fnlink" href="../../#v1.0.1/group/remote/git_remote_create">git_remote_create</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">url</span><span class="p">),</span>
       <span class="s">&quot;could not create remote&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
@@ -176,7 +174,7 @@ program is emulating.</p>
 
   <span class="n">name</span> <span class="o">=</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_delete-10" class="fnlink" href="../../#HEAD/group/remote/git_remote_delete">git_remote_delete</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_delete-10" class="fnlink" href="../../#v1.0.1/group/remote/git_remote_delete">git_remote_delete</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
       <span class="s">&quot;could not delete remote&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
@@ -194,7 +192,7 @@ program is emulating.</p>
   <span class="n">old</span> <span class="o">=</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
   <span class="n">new</span> <span class="o">=</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
 
-  <span class="n">retval</span> <span class="o">=</span> <span class="n"><a name="git_remote_rename-9" class="fnlink" href="../../#HEAD/group/remote/git_remote_rename">git_remote_rename</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">problems</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">);</span>
+  <span class="n">retval</span> <span class="o">=</span> <span class="n"><a name="git_remote_rename-9" class="fnlink" href="../../#v1.0.1/group/remote/git_remote_rename">git_remote_rename</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">problems</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">retval</span><span class="p">)</span>
     <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 
@@ -202,7 +200,7 @@ program is emulating.</p>
     <span class="n">puts</span><span class="p">(</span><span class="n">problems</span><span class="p">.</span><span class="n">strings</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
   <span class="p">}</span>
 
-  <span class="n"><a name="git_strarray_dispose-11" class="fnlink" href="../../#HEAD/group/strarray/git_strarray_dispose">git_strarray_dispose</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">problems</span><span class="p">);</span>
+  <span class="n"><a name="git_strarray_free-11" class="fnlink" href="../../#v1.0.1/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">problems</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="n">retval</span><span class="p">;</span>
 <span class="p">}</span>
@@ -230,9 +228,9 @@ program is emulating.</p>
     <span class="n">usage</span><span class="p">(</span><span class="s">&quot;you need to specify remote and the new URL&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">push</span><span class="p">)</span>
-    <span class="n">retval</span> <span class="o">=</span> <span class="n"><a name="git_remote_set_pushurl-6" class="fnlink" href="../../#HEAD/group/remote/git_remote_set_pushurl">git_remote_set_pushurl</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">url</span><span class="p">);</span>
+    <span class="n">retval</span> <span class="o">=</span> <span class="n"><a name="git_remote_set_pushurl-6" class="fnlink" href="../../#v1.0.1/group/remote/git_remote_set_pushurl">git_remote_set_pushurl</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">url</span><span class="p">);</span>
   <span class="k">else</span>
-    <span class="n">retval</span> <span class="o">=</span> <span class="n"><a name="git_remote_set_url-5" class="fnlink" href="../../#HEAD/group/remote/git_remote_set_url">git_remote_set_url</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">url</span><span class="p">);</span>
+    <span class="n">retval</span> <span class="o">=</span> <span class="n"><a name="git_remote_set_url-5" class="fnlink" href="../../#v1.0.1/group/remote/git_remote_set_url">git_remote_set_url</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">url</span><span class="p">);</span>
 
   <span class="n">check_lg2</span><span class="p">(</span><span class="n">retval</span><span class="p">,</span> <span class="s">&quot;could not set URL&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">);</span>
 
@@ -255,7 +253,7 @@ program is emulating.</p>
     <span class="p">}</span>
   <span class="p">}</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_list-8" class="fnlink" href="../../#HEAD/group/remote/git_remote_list">git_remote_list</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_list-8" class="fnlink" href="../../#v1.0.1/group/remote/git_remote_list">git_remote_list</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span>
     <span class="s">&quot;could not retrieve remotes&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span> <span class="n">remotes</span><span class="p">.</span><span class="n">count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
@@ -265,22 +263,22 @@ program is emulating.</p>
       <span class="k">continue</span><span class="p">;</span>
     <span class="p">}</span>
 
-    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_lookup-2" class="fnlink" href="../../#HEAD/group/remote/git_remote_lookup">git_remote_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_lookup-2" class="fnlink" href="../../#v1.0.1/group/remote/git_remote_lookup">git_remote_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
       <span class="s">&quot;could not look up remote&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
 
-    <span class="n">fetch</span> <span class="o">=</span> <span class="n"><a name="git_remote_url-3" class="fnlink" href="../../#HEAD/group/remote/git_remote_url">git_remote_url</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+    <span class="n">fetch</span> <span class="o">=</span> <span class="n"><a name="git_remote_url-3" class="fnlink" href="../../#v1.0.1/group/remote/git_remote_url">git_remote_url</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">fetch</span><span class="p">)</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\t</span><span class="s">%s (fetch)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">fetch</span><span class="p">);</span>
-    <span class="n">push</span> <span class="o">=</span> <span class="n"><a name="git_remote_pushurl-4" class="fnlink" href="../../#HEAD/group/remote/git_remote_pushurl">git_remote_pushurl</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+    <span class="n">push</span> <span class="o">=</span> <span class="n"><a name="git_remote_pushurl-4" class="fnlink" href="../../#v1.0.1/group/remote/git_remote_pushurl">git_remote_pushurl</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
     <span class="cm">/* use fetch URL if no distinct push URL has been set */</span>
     <span class="n">push</span> <span class="o">=</span> <span class="n">push</span> <span class="o">?</span> <span class="nl">push</span> <span class="p">:</span> <span class="n">fetch</span><span class="p">;</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">push</span><span class="p">)</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\t</span><span class="s">%s (push)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">push</span><span class="p">);</span>
 
-    <span class="n"><a name="git_remote_free-7" class="fnlink" href="../../#HEAD/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+    <span class="n"><a name="git_remote_free-7" class="fnlink" href="../../#v1.0.1/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
   <span class="p">}</span>
 
-  <span class="n"><a name="git_strarray_dispose-12" class="fnlink" href="../../#HEAD/group/strarray/git_strarray_dispose">git_strarray_dispose</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">);</span>
+  <span class="n"><a name="git_strarray_free-12" class="fnlink" href="../../#v1.0.1/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>

@@ -16,14 +16,13 @@
     Jump To &hellip;
     <div id="jump_wrapper">
       <div id="jump_page">
-        <a class="source" href="../../#HEAD">API Docs</a>
+        <a class="source" href="../../#v1.0.1">API Docs</a>
           <a class="source" href="add.html">add.c</a>
           <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
           <a class="source" href="clone.html">clone.c</a>
-          <a class="source" href="commit.html">commit.c</a>
           <a class="source" href="common.html">common.c</a>
           <a class="source" href="config.html">config.c</a>
           <a class="source" href="describe.html">describe.c</a>
@@ -38,7 +37,6 @@
           <a class="source" href="ls-files.html">ls-files.c</a>
           <a class="source" href="ls-remote.html">ls-remote.c</a>
           <a class="source" href="merge.html">merge.c</a>
-          <a class="source" href="push.html">push.c</a>
           <a class="source" href="remote.html">remote.c</a>
           <a class="source" href="rev-list.html">rev-list.c</a>
           <a class="source" href="rev-parse.html">rev-parse.c</a>
@@ -143,34 +141,34 @@
   <span class="n">git_revspec</span> <span class="n">rs</span><span class="p">;</span>
   <span class="kt">char</span> <span class="n">str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse-14" class="fnlink" href="../../#HEAD/group/revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">rs</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">),</span> <span class="s">&quot;Could not parse&quot;</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse-14" class="fnlink" href="../../#v1.0.1/group/revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">rs</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">),</span> <span class="s">&quot;Could not parse&quot;</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">);</span>
 
   <span class="k">if</span> <span class="p">((</span><span class="n">rs</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">GIT_REVPARSE_SINGLE</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n"><a name="git_oid_tostr-10" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="n"><a name="git_object_id-2" class="fnlink" href="../../#HEAD/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">));</span>
+    <span class="n"><a name="git_oid_tostr-10" class="fnlink" href="../../#v1.0.1/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="n"><a name="git_object_id-2" class="fnlink" href="../../#v1.0.1/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">));</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">str</span><span class="p">);</span>
-    <span class="n"><a name="git_object_free-7" class="fnlink" href="../../#HEAD/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">);</span>
+    <span class="n"><a name="git_object_free-7" class="fnlink" href="../../#v1.0.1/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">);</span>
   <span class="p">}</span>
   <span class="k">else</span> <span class="k">if</span> <span class="p">((</span><span class="n">rs</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">GIT_REVPARSE_RANGE</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n"><a name="git_oid_tostr-11" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="n"><a name="git_object_id-3" class="fnlink" href="../../#HEAD/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">to</span><span class="p">));</span>
+    <span class="n"><a name="git_oid_tostr-11" class="fnlink" href="../../#v1.0.1/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="n"><a name="git_object_id-3" class="fnlink" href="../../#v1.0.1/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">to</span><span class="p">));</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">str</span><span class="p">);</span>
-    <span class="n"><a name="git_object_free-8" class="fnlink" href="../../#HEAD/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">to</span><span class="p">);</span>
+    <span class="n"><a name="git_object_free-8" class="fnlink" href="../../#v1.0.1/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">to</span><span class="p">);</span>
 
     <span class="k">if</span> <span class="p">((</span><span class="n">rs</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">GIT_REVPARSE_MERGE_BASE</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
       <span class="n">git_oid</span> <span class="n">base</span><span class="p">;</span>
-      <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_merge_base-1" class="fnlink" href="../../#HEAD/group/merge/git_merge_base">git_merge_base</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">base</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span>
-            <span class="n"><a name="git_object_id-4" class="fnlink" href="../../#HEAD/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">),</span> <span class="n"><a name="git_object_id-5" class="fnlink" href="../../#HEAD/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">to</span><span class="p">)),</span>
+      <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_merge_base-1" class="fnlink" href="../../#v1.0.1/group/merge/git_merge_base">git_merge_base</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">base</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span>
+            <span class="n"><a name="git_object_id-4" class="fnlink" href="../../#v1.0.1/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">),</span> <span class="n"><a name="git_object_id-5" class="fnlink" href="../../#v1.0.1/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">to</span><span class="p">)),</span>
           <span class="s">&quot;Could not find merge base&quot;</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">);</span>
 
-      <span class="n"><a name="git_oid_tostr-12" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">base</span><span class="p">);</span>
+      <span class="n"><a name="git_oid_tostr-12" class="fnlink" href="../../#v1.0.1/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">base</span><span class="p">);</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">str</span><span class="p">);</span>
     <span class="p">}</span>
 
-    <span class="n"><a name="git_oid_tostr-13" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="n"><a name="git_object_id-6" class="fnlink" href="../../#HEAD/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">));</span>
+    <span class="n"><a name="git_oid_tostr-13" class="fnlink" href="../../#v1.0.1/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="n"><a name="git_object_id-6" class="fnlink" href="../../#v1.0.1/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">));</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;^%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">str</span><span class="p">);</span>
-    <span class="n"><a name="git_object_free-9" class="fnlink" href="../../#HEAD/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">);</span>
+    <span class="n"><a name="git_object_free-9" class="fnlink" href="../../#v1.0.1/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">);</span>
   <span class="p">}</span>
   <span class="k">else</span> <span class="p">{</span>
-    <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Invalid results from <a name="git_revparse-15" class="fnlink" href="../../#HEAD/group/revparse/git_revparse">git_revparse</a>&quot;</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">);</span>
+    <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Invalid results from <a name="git_revparse-15" class="fnlink" href="../../#v1.0.1/group/revparse/git_revparse">git_revparse</a>&quot;</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">);</span>
   <span class="p">}</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>

@@ -16,14 +16,13 @@
     Jump To &hellip;
     <div id="jump_wrapper">
       <div id="jump_page">
-        <a class="source" href="../../#HEAD">API Docs</a>
+        <a class="source" href="../../#v1.0.1">API Docs</a>
           <a class="source" href="add.html">add.c</a>
           <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
           <a class="source" href="clone.html">clone.c</a>
-          <a class="source" href="commit.html">commit.c</a>
           <a class="source" href="common.html">common.c</a>
           <a class="source" href="config.html">config.c</a>
           <a class="source" href="describe.html">describe.c</a>
@@ -38,7 +37,6 @@
           <a class="source" href="ls-files.html">ls-files.c</a>
           <a class="source" href="ls-remote.html">ls-remote.c</a>
           <a class="source" href="merge.html">merge.c</a>
-          <a class="source" href="push.html">push.c</a>
           <a class="source" href="remote.html">remote.c</a>
           <a class="source" href="rev-list.html">rev-list.c</a>
           <a class="source" href="rev-parse.html">rev-parse.c</a>
@@ -236,9 +234,9 @@ a branch-based checkout.</p>
         <p>Grab the commit we&#39;re interested to move to</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_commit_lookup-9" class="fnlink" href="../../#HEAD/group/commit/git_commit_lookup">git_commit_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">target_commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_annotated_commit_id-2" class="fnlink" href="../../#HEAD/group/annotated/git_annotated_commit_id">git_annotated_commit_id</a></span><span class="p">(</span><span class="n">target</span><span class="p">));</span>
+        <div class='highlight'><pre>  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_commit_lookup-9" class="fnlink" href="../../#v1.0.1/group/commit/git_commit_lookup">git_commit_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">target_commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_annotated_commit_id-2" class="fnlink" href="../../#v1.0.1/group/annotated/git_annotated_commit_id">git_annotated_commit_id</a></span><span class="p">(</span><span class="n">target</span><span class="p">));</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to lookup commit: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-11" class="fnlink" href="../../#HEAD/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to lookup commit: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-11" class="fnlink" href="../../#v1.0.1/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
   <span class="p">}</span></pre></div>
       </td>
@@ -255,9 +253,9 @@ contains.</p>
 peeled to a tree.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_checkout_tree-8" class="fnlink" href="../../#HEAD/group/checkout/git_checkout_tree">git_checkout_tree</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="p">(</span><span class="k">const</span> <span class="n">git_object</span> <span class="o">*</span><span class="p">)</span><span class="n">target_commit</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">checkout_opts</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_checkout_tree-8" class="fnlink" href="../../#v1.0.1/group/checkout/git_checkout_tree">git_checkout_tree</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="p">(</span><span class="k">const</span> <span class="n">git_object</span> <span class="o">*</span><span class="p">)</span><span class="n">target_commit</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">checkout_opts</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to checkout tree: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-12" class="fnlink" href="../../#HEAD/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to checkout tree: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-12" class="fnlink" href="../../#v1.0.1/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
   <span class="p">}</span></pre></div>
       </td>
@@ -273,35 +271,35 @@ peeled to a tree.</p>
 we might need to detach HEAD.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_annotated_commit_ref-3" class="fnlink" href="../../#HEAD/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">))</span> <span class="p">{</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_annotated_commit_ref-3" class="fnlink" href="../../#v1.0.1/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">))</span> <span class="p">{</span>
     <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">target_head</span><span class="p">;</span>
 
-    <span class="k">if</span> <span class="p">((</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_reference_lookup-15" class="fnlink" href="../../#HEAD/group/reference/git_reference_lookup">git_reference_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_annotated_commit_ref-4" class="fnlink" href="../../#HEAD/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">)))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_reference_lookup-15" class="fnlink" href="../../#v1.0.1/group/reference/git_reference_lookup">git_reference_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_annotated_commit_ref-4" class="fnlink" href="../../#v1.0.1/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">)))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
       <span class="k">goto</span> <span class="n">error</span><span class="p">;</span>
 
-    <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_reference_is_remote-21" class="fnlink" href="../../#HEAD/group/reference/git_reference_is_remote">git_reference_is_remote</a></span><span class="p">(</span><span class="n">ref</span><span class="p">))</span> <span class="p">{</span>
-      <span class="k">if</span> <span class="p">((</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_branch_create_from_annotated-7" class="fnlink" href="../../#HEAD/group/branch/git_branch_create_from_annotated">git_branch_create_from_annotated</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">branch</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">target_ref</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_reference_is_remote-21" class="fnlink" href="../../#v1.0.1/group/reference/git_reference_is_remote">git_reference_is_remote</a></span><span class="p">(</span><span class="n">ref</span><span class="p">))</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">((</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_branch_create_from_annotated-7" class="fnlink" href="../../#v1.0.1/group/branch/git_branch_create_from_annotated">git_branch_create_from_annotated</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">branch</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">target_ref</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
         <span class="k">goto</span> <span class="n">error</span><span class="p">;</span>
-      <span class="n">target_head</span> <span class="o">=</span> <span class="n"><a name="git_reference_name-17" class="fnlink" href="../../#HEAD/group/reference/git_reference_name">git_reference_name</a></span><span class="p">(</span><span class="n">branch</span><span class="p">);</span>
+      <span class="n">target_head</span> <span class="o">=</span> <span class="n"><a name="git_reference_name-17" class="fnlink" href="../../#v1.0.1/group/reference/git_reference_name">git_reference_name</a></span><span class="p">(</span><span class="n">branch</span><span class="p">);</span>
     <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-      <span class="n">target_head</span> <span class="o">=</span> <span class="n"><a name="git_annotated_commit_ref-5" class="fnlink" href="../../#HEAD/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">);</span>
+      <span class="n">target_head</span> <span class="o">=</span> <span class="n"><a name="git_annotated_commit_ref-5" class="fnlink" href="../../#v1.0.1/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">);</span>
     <span class="p">}</span>
 
-    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head-23" class="fnlink" href="../../#HEAD/group/repository/git_repository_set_head">git_repository_set_head</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target_head</span><span class="p">);</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head-23" class="fnlink" href="../../#v1.0.1/group/repository/git_repository_set_head">git_repository_set_head</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target_head</span><span class="p">);</span>
   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head_detached_from_annotated-24" class="fnlink" href="../../#HEAD/group/repository/git_repository_set_head_detached_from_annotated">git_repository_set_head_detached_from_annotated</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target</span><span class="p">);</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head_detached_from_annotated-24" class="fnlink" href="../../#v1.0.1/group/repository/git_repository_set_head_detached_from_annotated">git_repository_set_head_detached_from_annotated</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target</span><span class="p">);</span>
   <span class="p">}</span>
 
 <span class="nl">error</span><span class="p">:</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to update HEAD reference: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-13" class="fnlink" href="../../#HEAD/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to update HEAD reference: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-13" class="fnlink" href="../../#v1.0.1/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
   <span class="p">}</span>
 
 <span class="nl">cleanup</span><span class="p">:</span>
-  <span class="n"><a name="git_commit_free-10" class="fnlink" href="../../#HEAD/group/commit/git_commit_free">git_commit_free</a></span><span class="p">(</span><span class="n">target_commit</span><span class="p">);</span>
-  <span class="n"><a name="git_reference_free-18" class="fnlink" href="../../#HEAD/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">branch</span><span class="p">);</span>
-  <span class="n"><a name="git_reference_free-19" class="fnlink" href="../../#HEAD/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">ref</span><span class="p">);</span>
+  <span class="n"><a name="git_commit_free-10" class="fnlink" href="../../#v1.0.1/group/commit/git_commit_free">git_commit_free</a></span><span class="p">(</span><span class="n">target_commit</span><span class="p">);</span>
+  <span class="n"><a name="git_reference_free-18" class="fnlink" href="../../#v1.0.1/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">branch</span><span class="p">);</span>
+  <span class="n"><a name="git_reference_free-19" class="fnlink" href="../../#v1.0.1/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">ref</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="n">err</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
@@ -329,7 +327,7 @@ to check whether the ref is unique across all remotes.</p>
   <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
   <span class="kt">size_t</span> <span class="n">i</span><span class="p">;</span>
 
-  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_list-22" class="fnlink" href="../../#HEAD/group/remote/git_remote_list">git_remote_list</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">,</span> <span class="n">repo</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_list-22" class="fnlink" href="../../#v1.0.1/group/remote/git_remote_list">git_remote_list</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">,</span> <span class="n">repo</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">goto</span> <span class="n">out</span><span class="p">;</span>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">remotes</span><span class="p">.</span><span class="n">count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
@@ -343,7 +341,7 @@ to check whether the ref is unique across all remotes.</p>
     <span class="p">}</span>
     <span class="n">snprintf</span><span class="p">(</span><span class="n">refname</span><span class="p">,</span> <span class="n">reflen</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&quot;refs/remotes/%s/%s&quot;</span><span class="p">,</span> <span class="n">remotes</span><span class="p">.</span><span class="n">strings</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ref</span><span class="p">);</span>
 
-    <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_reference_lookup-16" class="fnlink" href="../../#HEAD/group/reference/git_reference_lookup">git_reference_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">refname</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_reference_lookup-16" class="fnlink" href="../../#v1.0.1/group/reference/git_reference_lookup">git_reference_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote_ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">refname</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
       <span class="k">goto</span> <span class="n">next</span><span class="p">;</span>
 
     <span class="k">break</span><span class="p">;</span>
@@ -358,12 +356,12 @@ to check whether the ref is unique across all remotes.</p>
     <span class="k">goto</span> <span class="n">out</span><span class="p">;</span>
   <span class="p">}</span>
 
-  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_annotated_commit_from_ref-1" class="fnlink" href="../../#HEAD/group/annotated/git_annotated_commit_from_ref">git_annotated_commit_from_ref</a></span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">remote_ref</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_annotated_commit_from_ref-1" class="fnlink" href="../../#v1.0.1/group/annotated/git_annotated_commit_from_ref">git_annotated_commit_from_ref</a></span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">remote_ref</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">goto</span> <span class="n">out</span><span class="p">;</span>
 
 <span class="nl">out</span><span class="p">:</span>
-  <span class="n"><a name="git_reference_free-20" class="fnlink" href="../../#HEAD/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">remote_ref</span><span class="p">);</span>
-  <span class="n"><a name="git_strarray_dispose-26" class="fnlink" href="../../#HEAD/group/strarray/git_strarray_dispose">git_strarray_dispose</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">);</span>
+  <span class="n"><a name="git_reference_free-20" class="fnlink" href="../../#v1.0.1/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">remote_ref</span><span class="p">);</span>
+  <span class="n"><a name="git_strarray_free-26" class="fnlink" href="../../#v1.0.1/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">);</span>
   <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
       </td>
@@ -405,7 +403,7 @@ to check whether the ref is unique across all remotes.</p>
         <p>Make sure we&#39;re not about to checkout while something else is going on</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">state</span> <span class="o">=</span> <span class="n"><a name="git_repository_state-25" class="fnlink" href="../../#HEAD/group/repository/git_repository_state">git_repository_state</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">state</span> <span class="o">=</span> <span class="n"><a name="git_repository_state-25" class="fnlink" href="../../#v1.0.1/group/repository/git_repository_state">git_repository_state</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">state</span> <span class="o">!=</span> <span class="n">GIT_REPOSITORY_STATE_NONE</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;repository is in unexpected state %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">);</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
@@ -439,14 +437,14 @@ to check whether the ref is unique across all remotes.</p>
       <td class=code>
         <div class='highlight'><pre>    <span class="k">if</span> <span class="p">((</span><span class="n">err</span> <span class="o">=</span> <span class="n">resolve_refish</span><span class="p">(</span><span class="o">&amp;</span><span class="n">checkout_target</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">]))</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span>
         <span class="p">(</span><span class="n">err</span> <span class="o">=</span> <span class="n">guess_refish</span><span class="p">(</span><span class="o">&amp;</span><span class="n">checkout_target</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">]))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to resolve %s: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">],</span> <span class="n"><a name="git_error_last-14" class="fnlink" href="../../#HEAD/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to resolve %s: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">],</span> <span class="n"><a name="git_error_last-14" class="fnlink" href="../../#v1.0.1/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
       <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
     <span class="p">}</span>
     <span class="n">err</span> <span class="o">=</span> <span class="n">perform_checkout_ref</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">checkout_target</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">);</span>
   <span class="p">}</span>
 
 <span class="nl">cleanup</span><span class="p">:</span>
-  <span class="n"><a name="git_annotated_commit_free-6" class="fnlink" href="../../#HEAD/group/annotated/git_annotated_commit_free">git_annotated_commit_free</a></span><span class="p">(</span><span class="n">checkout_target</span><span class="p">);</span>
+  <span class="n"><a name="git_annotated_commit_free-6" class="fnlink" href="../../#v1.0.1/group/annotated/git_annotated_commit_free">git_annotated_commit_free</a></span><span class="p">(</span><span class="n">checkout_target</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="n">err</span><span class="p">;</span>
 <span class="p">}</span></pre></div>

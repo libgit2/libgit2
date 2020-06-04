@@ -16,14 +16,13 @@
     Jump To &hellip;
     <div id="jump_wrapper">
       <div id="jump_page">
-        <a class="source" href="../../#HEAD">API Docs</a>
+        <a class="source" href="../../#v1.0.1">API Docs</a>
           <a class="source" href="add.html">add.c</a>
           <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
           <a class="source" href="clone.html">clone.c</a>
-          <a class="source" href="commit.html">commit.c</a>
           <a class="source" href="common.html">common.c</a>
           <a class="source" href="config.html">config.c</a>
           <a class="source" href="describe.html">describe.c</a>
@@ -38,7 +37,6 @@
           <a class="source" href="ls-files.html">ls-files.c</a>
           <a class="source" href="ls-remote.html">ls-remote.c</a>
           <a class="source" href="merge.html">merge.c</a>
-          <a class="source" href="push.html">push.c</a>
           <a class="source" href="remote.html">remote.c</a>
           <a class="source" href="rev-list.html">rev-list.c</a>
           <a class="source" href="rev-parse.html">rev-parse.c</a>
@@ -121,17 +119,15 @@ on files passed as its parameters.</p>
   <span class="n">git_index_matched_path_cb</span> <span class="n">matched_cb</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">;</span>
   <span class="n">git_strarray</span> <span class="n">array</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
-  <span class="k">struct</span> <span class="n">index_options</span> <span class="n">options</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+  <span class="k">struct</span> <span class="n">index_options</span> <span class="n">options</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
-
-  <span class="n">options</span><span class="p">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">INDEX_ADD</span><span class="p">;</span>
 
   <span class="cm">/* Parse the options &amp; arguments. */</span>
   <span class="n">parse_opts</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">options</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">);</span>
   <span class="n">strarray_from_args</span><span class="p">(</span><span class="o">&amp;</span><span class="n">array</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">);</span>
 
   <span class="cm">/* Grab the repository&#39;s index. */</span>
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_index-5" class="fnlink" href="../../#HEAD/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;Could not open repository index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_index-5" class="fnlink" href="../../#v1.0.1/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;Could not open repository index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="cm">/* Setup a callback if the requested options need it */</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">options</span><span class="p">.</span><span class="n">verbose</span> <span class="o">||</span> <span class="n">options</span><span class="p">.</span><span class="n">dry_run</span><span class="p">)</span> <span class="p">{</span>
@@ -142,14 +138,14 @@ on files passed as its parameters.</p>
 
   <span class="cm">/* Perform the requested action with the index and files */</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">options</span><span class="p">.</span><span class="n">add_update</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n"><a name="git_index_update_all-4" class="fnlink" href="../../#HEAD/group/index/git_index_update_all">git_index_update_all</a></span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">array</span><span class="p">,</span> <span class="n">matched_cb</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">options</span><span class="p">);</span>
+    <span class="n"><a name="git_index_update_all-4" class="fnlink" href="../../#v1.0.1/group/index/git_index_update_all">git_index_update_all</a></span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">array</span><span class="p">,</span> <span class="n">matched_cb</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">options</span><span class="p">);</span>
   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="n"><a name="git_index_add_all-3" class="fnlink" href="../../#HEAD/group/index/git_index_add_all">git_index_add_all</a></span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">array</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">matched_cb</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">options</span><span class="p">);</span>
+    <span class="n"><a name="git_index_add_all-3" class="fnlink" href="../../#v1.0.1/group/index/git_index_add_all">git_index_add_all</a></span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">array</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">matched_cb</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">options</span><span class="p">);</span>
   <span class="p">}</span>
 
   <span class="cm">/* Cleanup memory */</span>
-  <span class="n"><a name="git_index_write-2" class="fnlink" href="../../#HEAD/group/index/git_index_write">git_index_write</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
-  <span class="n"><a name="git_index_free-1" class="fnlink" href="../../#HEAD/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+  <span class="n"><a name="git_index_write-2" class="fnlink" href="../../#v1.0.1/group/index/git_index_write">git_index_write</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+  <span class="n"><a name="git_index_free-1" class="fnlink" href="../../#v1.0.1/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
@@ -167,7 +163,7 @@ on files passed as its parameters.</p>
   <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">matched_pathspec</span><span class="p">;</span>
 
   <span class="cm">/* Get the file status */</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_status_file-6" class="fnlink" href="../../#HEAD/group/status/git_status_file">git_status_file</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">status</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_status_file-6" class="fnlink" href="../../#v1.0.1/group/status/git_status_file">git_status_file</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">status</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
 
   <span class="k">if</span> <span class="p">((</span><span class="n">status</span> <span class="o">&amp;</span> <span class="n">GIT_STATUS_WT_MODIFIED</span><span class="p">)</span> <span class="o">||</span> <span class="p">(</span><span class="n">status</span> <span class="o">&amp;</span> <span class="n">GIT_STATUS_WT_NEW</span><span class="p">))</span> <span class="p">{</span>

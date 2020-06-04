@@ -16,14 +16,13 @@
     Jump To &hellip;
     <div id="jump_wrapper">
       <div id="jump_page">
-        <a class="source" href="../../#HEAD">API Docs</a>
+        <a class="source" href="../../#v1.0.1">API Docs</a>
           <a class="source" href="add.html">add.c</a>
           <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
           <a class="source" href="clone.html">clone.c</a>
-          <a class="source" href="commit.html">commit.c</a>
           <a class="source" href="common.html">common.c</a>
           <a class="source" href="config.html">config.c</a>
           <a class="source" href="describe.html">describe.c</a>
@@ -38,7 +37,6 @@
           <a class="source" href="ls-files.html">ls-files.c</a>
           <a class="source" href="ls-remote.html">ls-remote.c</a>
           <a class="source" href="merge.html">merge.c</a>
-          <a class="source" href="push.html">push.c</a>
           <a class="source" href="remote.html">remote.c</a>
           <a class="source" href="rev-list.html">rev-list.c</a>
           <a class="source" href="rev-parse.html">rev-parse.c</a>
@@ -146,17 +144,17 @@ all of the use cases.</p>
   <span class="n">git_buf</span> <span class="n">buf</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">0</span> <span class="p">};</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">rev</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-6" class="fnlink" href="../../#HEAD/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">rev</span><span class="p">),</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-6" class="fnlink" href="../../#v1.0.1/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">rev</span><span class="p">),</span>
       <span class="s">&quot;Failed to lookup rev&quot;</span><span class="p">,</span> <span class="n">rev</span><span class="p">);</span>
 
-    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_describe_commit-3" class="fnlink" href="../../#HEAD/group/describe/git_describe_commit">git_describe_commit</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">describe_result</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">describe_options</span><span class="p">),</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_describe_commit-3" class="fnlink" href="../../#v1.0.1/group/describe/git_describe_commit">git_describe_commit</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">describe_result</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">describe_options</span><span class="p">),</span>
       <span class="s">&quot;Failed to describe rev&quot;</span><span class="p">,</span> <span class="n">rev</span><span class="p">);</span>
   <span class="p">}</span>
   <span class="k">else</span>
-    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_describe_workdir-4" class="fnlink" href="../../#HEAD/group/describe/git_describe_workdir">git_describe_workdir</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">describe_result</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">describe_options</span><span class="p">),</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_describe_workdir-4" class="fnlink" href="../../#v1.0.1/group/describe/git_describe_workdir">git_describe_workdir</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">describe_result</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">describe_options</span><span class="p">),</span>
       <span class="s">&quot;Failed to describe workdir&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_describe_format-5" class="fnlink" href="../../#HEAD/group/describe/git_describe_format">git_describe_format</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">buf</span><span class="p">,</span> <span class="n">describe_result</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">format_options</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_describe_format-5" class="fnlink" href="../../#v1.0.1/group/describe/git_describe_format">git_describe_format</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">buf</span><span class="p">,</span> <span class="n">describe_result</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">format_options</span><span class="p">),</span>
       <span class="s">&quot;Failed to format describe rev&quot;</span><span class="p">,</span> <span class="n">rev</span><span class="p">);</span>
 
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">buf</span><span class="p">.</span><span class="n">ptr</span><span class="p">);</span>
@@ -246,8 +244,8 @@ all of the use cases.</p>
 
   <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commit_count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-  <span class="n"><a name="git_describe_options_init-1" class="fnlink" href="../../#HEAD/group/describe/git_describe_options_init">git_describe_options_init</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">describe_options</span><span class="p">,</span> <span class="n">GIT_DESCRIBE_OPTIONS_VERSION</span><span class="p">);</span>
-  <span class="n"><a name="git_describe_format_options_init-2" class="fnlink" href="../../#HEAD/group/describe/git_describe_format_options_init">git_describe_format_options_init</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">format_options</span><span class="p">,</span> <span class="n">GIT_DESCRIBE_FORMAT_OPTIONS_VERSION</span><span class="p">);</span>
+  <span class="n"><a name="git_describe_options_init-1" class="fnlink" href="../../#v1.0.1/group/describe/git_describe_options_init">git_describe_options_init</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">describe_options</span><span class="p">,</span> <span class="n">GIT_DESCRIBE_OPTIONS_VERSION</span><span class="p">);</span>
+  <span class="n"><a name="git_describe_format_options_init-2" class="fnlink" href="../../#v1.0.1/group/describe/git_describe_format_options_init">git_describe_format_options_init</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">format_options</span><span class="p">,</span> <span class="n">GIT_DESCRIBE_FORMAT_OPTIONS_VERSION</span><span class="p">);</span>
 <span class="p">}</span>
 
 <span class="kt">int</span> <span class="nf">lg2_describe</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
