@@ -166,7 +166,7 @@ def main():
     parser.add_argument('--tree', default='HEAD', help='tree to create release for (default: HEAD)')
     parser.add_argument('--dryrun', action='store_true', help='generate release, but do not post it')
     parser.add_argument('--repository', default='libgit2/libgit2', help='GitHub repository to create repository in')
-    parser.add_argument('--user', help='user to authenitcate as')
+    parser.add_argument('--user', help='user to authenticate as')
     parser.add_argument('--password', help='password to authenticate with')
     parser.add_argument('version', type=Version, help='version of the new release')
     args = parser.parse_args()
