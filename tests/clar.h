@@ -18,6 +18,7 @@ enum cl_test_status {
 
 enum cl_output_format {
 	CL_OUTPUT_CLAP,
+	CL_OUTPUT_TAP,
 };
 
 /** Setup clar environment */

@@ -363,6 +363,7 @@ clar_usage(const char *arg)
 	printf("  -v            Increase verbosity (show suite names)\n");
 	printf("  -q            Only report tests that had an error\n");
 	printf("  -Q            Quit as soon as a test fails\n");
+	printf("  -t            Display results in tap format\n");
 	printf("  -l            Print suite names\n");
 	printf("  -r[filename]  Write summary file (to the optional filename)\n");
 	exit(-1);
@@ -378,7 +379,7 @@ clar_parse_args(int argc, char **argv)
 		char *argument = argv[i];
 
 		if (argument[0] != '-' || argument[1] == '\0'
-		    || strchr("sixvqQlr", argument[1]) == NULL) {
+		    || strchr("sixvqQtlr", argument[1]) == NULL) {
 			clar_usage(argv[0]);
 		}
 	}
@@ -459,6 +460,10 @@ clar_parse_args(int argc, char **argv)
 
 		case 'Q':
 			_clar.exit_on_error = 1;
+			break;
+
+		case 't':
+			_clar.output_format = CL_OUTPUT_TAP;
 			break;
 
 		case 'l': {
