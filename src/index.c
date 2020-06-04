@@ -2744,7 +2744,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 			++same_len;
 		}
 		path_len -= same_len;
-		varint_len = git_encode_varint(NULL, 0, same_len);
+		varint_len = git_encode_varint(NULL, 0, strlen(last) - same_len);
 	}
 
 	disk_size = index_entry_size(path_len, varint_len, entry->flags);
@@ -2795,7 +2795,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 
 	if (last) {
 		varint_len = git_encode_varint((unsigned char *) path,
-					  disk_size, same_len);
+					  disk_size, strlen(last) - same_len);
 		assert(varint_len > 0);
 		path += varint_len;
 		disk_size -= varint_len;

@@ -11,6 +11,7 @@
 #define BB_REPO_URL "https://libgit3@bitbucket.org/libgit2/testgitrepository.git"
 #define BB_REPO_URL_WITH_PASS "https://libgit3:libgit3@bitbucket.org/libgit2/testgitrepository.git"
 #define BB_REPO_URL_WITH_WRONG_PASS "https://libgit3:wrong@bitbucket.org/libgit2/testgitrepository.git"
+#define GOOGLESOURCE_REPO_URL "https://chromium.googlesource.com/external/github.com/sergi/go-diff"
 
 #define SSH_REPO_URL "ssh://github.com/libgit2/TestGitRepository"
 
@@ -459,6 +460,13 @@ void test_online_clone__bitbucket_falls_back_to_specified_creds(void)
 	 * the `git_credential_userpass_payload` should be used as a fallback.
 	 */
 	cl_git_pass(git_clone(&g_repo, BB_REPO_URL_WITH_WRONG_PASS, "./foo", &g_options));
+	git_repository_free(g_repo); g_repo = NULL;
+	cl_fixture_cleanup("./foo");
+}
+
+void test_online_clone__googlesource(void)
+{
+	cl_git_pass(git_clone(&g_repo, GOOGLESOURCE_REPO_URL, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;
 	cl_fixture_cleanup("./foo");
 }
