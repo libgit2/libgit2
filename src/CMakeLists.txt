@@ -1,3 +1,6 @@
+add_library(git2internal OBJECT)
+set_target_properties(git2internal PROPERTIES C_STANDARD 90)
+
 IF(DEBUG_POOL)
 	SET(GIT_DEBUG_POOL 1)
 ENDIF()
@@ -81,6 +84,8 @@ ADD_FEATURE_INFO(threadsafe THREADSAFE "threadsafe support")
 if(WIN32 AND EMBED_SSH_PATH)
 	file(GLOB SRC_SSH "${EMBED_SSH_PATH}/src/*.c")
 	list(SORT SRC_SSH)
+	target_sources(git2internal PRIVATE ${SRC_SSH})
+
 	list(APPEND LIBGIT2_SYSTEM_INCLUDES "${EMBED_SSH_PATH}/include")
 	file(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
 	set(GIT_SSH 1)
@@ -104,8 +109,9 @@ IF (WIN32 AND WINHTTP)
 	LIST(APPEND LIBGIT2_PC_LIBS "-lrpcrt4" "-lcrypt32" "-lole32")
 ENDIF()
 
-Include(SelectHTTPSBackend)
-Include(SelectHashes)
+include(SelectHTTPSBackend)
+include(SelectHashes)
+target_sources(git2internal PRIVATE ${SRC_SHA1})
 
 # Specify regular expression implementation
 FIND_PACKAGE(PCRE)
@@ -275,6 +281,7 @@ file(GLOB SRC_H
 	"${libgit2_SOURCE_DIR}/include/git2/*.h"
 	"${libgit2_SOURCE_DIR}/include/git2/sys/*.h")
 list(SORT SRC_H)
+target_sources(git2internal PRIVATE ${SRC_H})
 
 # On Windows use specific platform sources
 if(WIN32 AND NOT CYGWIN)
@@ -282,11 +289,13 @@ if(WIN32 AND NOT CYGWIN)
 
 	file(GLOB SRC_OS win32/*.c win32/*.h)
 	list(SORT SRC_OS)
+	target_sources(git2internal PRIVATE ${SRC_OS})
 elseif(AMIGA)
 	add_definitions(-DNO_ADDRINFO -DNO_READDIR_R -DNO_MMAP)
 else()
 	file(GLOB SRC_OS unix/*.c unix/*.h)
 	list(SORT SRC_OS)
+	target_sources(git2internal PRIVATE ${SRC_OS})
 endif()
 
 IF (USE_LEAK_CHECKER STREQUAL "valgrind")
@@ -299,6 +308,7 @@ file(GLOB SRC_GIT2 *.c *.h
 	transports/*.c transports/*.h
 	xdiff/*.c xdiff/*.h)
 list(SORT SRC_GIT2)
+target_sources(git2internal PRIVATE ${SRC_GIT2})
 
 IF(APPLE)
 	# The old Secure Transport API has been deprecated in macOS 10.15.
@@ -325,10 +335,6 @@ ENDIF()
 
 CONFIGURE_FILE(features.h.in git2/sys/features.h)
 
-SET(LIBGIT2_SOURCES ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_SSH} ${SRC_SHA1})
-
-ADD_LIBRARY(git2internal OBJECT ${LIBGIT2_SOURCES})
-SET_TARGET_PROPERTIES(git2internal PROPERTIES C_STANDARD 90)
 IDE_SPLIT_SOURCES(git2internal)
 LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:git2internal>)
 
