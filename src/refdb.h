@@ -50,6 +50,34 @@ int git_refdb_delete(git_refdb *refdb, const char *ref_name, const git_oid *old_
 int git_refdb_reflog_read(git_reflog **out, git_refdb *db,  const char *name);
 int git_refdb_reflog_write(git_reflog *reflog);
 
+/**
+ * Determine whether a reflog entry should be created for the given reference.
+ *
+ * Whether or not writing to a reference should create a reflog entry is
+ * dependent on a number of things. Most importantly, there's the
+ * "core.logAllRefUpdates" setting that controls in which situations a
+ * reference should get a corresponding reflog entry. The following values for
+ * it are understood:
+ *
+ *     - "false": Do not log reference updates.
+ *
+ *     - "true": Log normal reference updates. This will write entries for
+ *               references in "refs/heads", "refs/remotes", "refs/notes" and
+ *               "HEAD" or if the reference already has a log entry.
+ *
+ *     - "always": Always create a reflog entry.
+ *
+ * If unset, the value will default to "true" for non-bare repositories and
+ * "false" for bare ones.
+ *
+ * @param out pointer to which the result will be written, `1` means a reflog
+ *            entry should be written, `0` means none should be written.
+ * @param db The refdb to decide this for.
+ * @param ref The reference one wants to check.
+ * @return `0` on success, a negative error code otherwise.
+ */
+int git_refdb_should_write_reflog(int *out, git_refdb *db, const git_reference *ref);
+
 int git_refdb_has_log(git_refdb *db, const char *refname);
 int git_refdb_ensure_log(git_refdb *refdb, const char *refname);
 

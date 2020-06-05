@@ -231,6 +231,43 @@ int git_refdb_reflog_read(git_reflog **out, git_refdb *db,  const char *name)
 	return 0;
 }
 
+int git_refdb_should_write_reflog(int *out, git_refdb *db, const git_reference *ref)
+{
+	int error, logall;
+
+	error = git_repository__configmap_lookup(&logall, db->repo, GIT_CONFIGMAP_LOGALLREFUPDATES);
+	if (error < 0)
+		return error;
+
+	/* Defaults to the opposite of the repo being bare */
+	if (logall == GIT_LOGALLREFUPDATES_UNSET)
+		logall = !git_repository_is_bare(db->repo);
+
+	*out = 0;
+	switch (logall) {
+	case GIT_LOGALLREFUPDATES_FALSE:
+		*out = 0;
+		break;
+
+	case GIT_LOGALLREFUPDATES_TRUE:
+		/* Only write if it already has a log,
+		 * or if it's under heads/, remotes/ or notes/
+		 */
+		*out = git_refdb_has_log(db, ref->name) ||
+			!git__prefixcmp(ref->name, GIT_REFS_HEADS_DIR) ||
+			!git__strcmp(ref->name, GIT_HEAD_FILE) ||
+			!git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR) ||
+			!git__prefixcmp(ref->name, GIT_REFS_NOTES_DIR);
+		break;
+
+	case GIT_LOGALLREFUPDATES_ALWAYS:
+		*out = 1;
+		break;
+	}
+
+	return 0;
+}
+
 int git_refdb_has_log(git_refdb *db, const char *refname)
 {
 	assert(db && refname);

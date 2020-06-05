@@ -1128,44 +1128,6 @@ cleanup:
 }
 
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_oid *old, const git_oid *new, const git_signature *author, const char *message);
-static int has_reflog(git_repository *repo, const char *name);
-
-static int should_write_reflog(int *write, git_repository *repo, const char *name)
-{
-	int error, logall;
-
-	error = git_repository__configmap_lookup(&logall, repo, GIT_CONFIGMAP_LOGALLREFUPDATES);
-	if (error < 0)
-		return error;
-
-	/* Defaults to the opposite of the repo being bare */
-	if (logall == GIT_LOGALLREFUPDATES_UNSET)
-		logall = !git_repository_is_bare(repo);
-
-	*write = 0;
-	switch (logall) {
-	case GIT_LOGALLREFUPDATES_FALSE:
-		*write = 0;
-		break;
-
-	case GIT_LOGALLREFUPDATES_TRUE:
-		/* Only write if it already has a log,
-		 * or if it's under heads/, remotes/ or notes/
-		 */
-		*write = has_reflog(repo, name) ||
-			!git__prefixcmp(name, GIT_REFS_HEADS_DIR) ||
-			!git__strcmp(name, GIT_HEAD_FILE) ||
-			!git__prefixcmp(name, GIT_REFS_REMOTES_DIR) ||
-			!git__prefixcmp(name, GIT_REFS_NOTES_DIR);
-		break;
-
-	case GIT_LOGALLREFUPDATES_ALWAYS:
-		*write = 1;
-		break;
-	}
-
-	return 0;
-}
 
 static int cmp_old_ref(int *cmp, git_refdb_backend *backend, const char *name,
 	const git_oid *old_id, const char *old_target)
@@ -1335,7 +1297,10 @@ static int refdb_fs_backend__write_tail(
 	}
 
 	if (update_reflog) {
-		if ((error = should_write_reflog(&should_write, backend->repo, ref->name)) < 0)
+		git_refdb *refdb;
+
+		if ((error = git_repository_refdb__weakptr(&refdb, backend->repo)) < 0 ||
+		    (error = git_refdb_should_write_reflog(&should_write, refdb, ref)) < 0)
 			goto on_error;
 
 		if (should_write) {
