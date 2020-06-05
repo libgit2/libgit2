@@ -4,7 +4,7 @@
 #include "git2/sys/repository.h"
 
 void cl_git_report_failure(
-	int error, int expected, const char *file, int line, const char *fncall)
+	int error, int expected, const char *file, const char *func, int line, const char *fncall)
 {
 	char msg[4096];
 	const git_error *last = git_error_last();
@@ -18,7 +18,7 @@ void cl_git_report_failure(
 	else
 		p_snprintf(msg, 4096, "no error, expected non-zero return");
 
-	clar__assert(0, file, line, fncall, msg, 1);
+	clar__assert(0, file, func, line, fncall, msg, 1);
 }
 
 void cl_git_mkfile(const char *filename, const char *content)
@@ -507,6 +507,7 @@ void clar__assert_equal_file(
 	int ignore_cr,
 	const char *path,
 	const char *file,
+	const char *func,
 	int line)
 {
 	char buf[4000];
@@ -519,7 +520,7 @@ void clar__assert_equal_file(
 
 	while ((bytes = p_read(fd, buf, sizeof(buf))) != 0) {
 		clar__assert(
-			bytes > 0, file, line, "error reading from file", path, 1);
+			bytes > 0, file, func, line, "error reading from file", path, 1);
 
 		if (ignore_cr)
 			bytes = strip_cr_from_buf(buf, bytes);
@@ -532,7 +533,7 @@ void clar__assert_equal_file(
 				buf, sizeof(buf), "file content mismatch at byte %"PRIdZ,
 				(ssize_t)(total_bytes + pos));
 			p_close(fd);
-			clar__fail(file, line, path, buf, 1);
+			clar__fail(file, func, line, path, buf, 1);
 		}
 
 		expected_data += bytes;
@@ -541,8 +542,8 @@ void clar__assert_equal_file(
 
 	p_close(fd);
 
-	clar__assert(!bytes, file, line, "error reading from file", path, 1);
-	clar__assert_equal(file, line, "mismatched file length", 1, "%"PRIuZ,
+	clar__assert(!bytes, file, func, line, "error reading from file", path, 1);
+	clar__assert_equal(file, func, line, "mismatched file length", 1, "%"PRIuZ,
 		(size_t)expected_bytes, (size_t)total_bytes);
 }
 

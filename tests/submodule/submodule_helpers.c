@@ -199,22 +199,22 @@ git_repository *setup_fixture_submodule_with_path(void)
 
 void assert__submodule_exists(
 	git_repository *repo, const char *name,
-	const char *msg, const char *file, int line)
+	const char *msg, const char *file, const char *func, int line)
 {
 	git_submodule *sm;
 	int error = git_submodule_lookup(&sm, repo, name);
 	if (error)
-		cl_git_report_failure(error, 0, file, line, msg);
-	cl_assert_at_line(sm != NULL, file, line);
+		cl_git_report_failure(error, 0, file, func, line, msg);
+	cl_assert_at_line(sm != NULL, file, func, line);
 	git_submodule_free(sm);
 }
 
 void refute__submodule_exists(
 	git_repository *repo, const char *name, int expected_error,
-	const char *msg, const char *file, int line)
+	const char *msg, const char *file, const char *func, int line)
 {
 	clar__assert_equal(
-		file, line, msg, 1, "%i",
+		file, func, line, msg, 1, "%i",
 		expected_error, (int)(git_submodule_lookup(NULL, repo, name)));
 }
 

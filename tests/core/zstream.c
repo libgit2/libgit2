@@ -9,7 +9,7 @@ static const char *data = "This is a test test test of This is a test";
 static void assert_zlib_equal_(
 	const void *expected, size_t e_len,
 	const void *compressed, size_t c_len,
-	const char *msg, const char *file, int line)
+	const char *msg, const char *file, const char *func, int line)
 {
 	z_stream stream;
 	char *expanded = git__calloc(1, e_len + INFLATE_EXTRA);
@@ -26,21 +26,21 @@ static void assert_zlib_equal_(
 	inflateEnd(&stream);
 
 	clar__assert_equal(
-		file, line, msg, 1,
+		file, func, line, msg, 1,
 		"%d", (int)stream.total_out, (int)e_len);
 	clar__assert_equal(
-		file, line, "Buffer len was not exact match", 1,
+		file, func, line, "Buffer len was not exact match", 1,
 		"%d", (int)stream.avail_out, (int)INFLATE_EXTRA);
 
 	clar__assert(
 		memcmp(expanded, expected, e_len) == 0,
-		file, line, "uncompressed data did not match", NULL, 1);
+		file, func, line, "uncompressed data did not match", NULL, 1);
 
 	git__free(expanded);
 }
 
 #define assert_zlib_equal(E,EL,C,CL) \
-	assert_zlib_equal_(E, EL, C, CL, #EL " != " #CL, __FILE__, (int)__LINE__)
+	assert_zlib_equal_(E, EL, C, CL, #EL " != " #CL, __FILE__, __func__, (int)__LINE__)
 
 void test_core_zstream__basic(void)
 {

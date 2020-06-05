@@ -96,6 +96,7 @@ fixture_path(const char *base, const char *fixture_name);
 
 struct clar_error {
 	const char *file;
+	const char *function;
 	size_t line_number;
 	const char *error_msg;
 	char *description;
@@ -139,6 +140,8 @@ static struct {
 
 	int tests_ran;
 	int suites_ran;
+
+	enum cl_output_format output_format;
 
 	int report_errors_only;
 	int exit_on_error;
@@ -370,6 +373,7 @@ clar_usage(const char *arg)
 	printf("  -v            Increase verbosity (show suite names)\n");
 	printf("  -q            Only report tests that had an error\n");
 	printf("  -Q            Quit as soon as a test fails\n");
+	printf("  -t            Display results in tap format\n");
 	printf("  -l            Print suite names\n");
 	printf("  -r[filename]  Write summary file (to the optional filename)\n");
 	exit(-1);
@@ -385,7 +389,7 @@ clar_parse_args(int argc, char **argv)
 		char *argument = argv[i];
 
 		if (argument[0] != '-' || argument[1] == '\0'
-		    || strchr("sixvqQlr", argument[1]) == NULL) {
+		    || strchr("sixvqQtlr", argument[1]) == NULL) {
 			clar_usage(argv[0]);
 		}
 	}
@@ -468,6 +472,10 @@ clar_parse_args(int argc, char **argv)
 			_clar.exit_on_error = 1;
 			break;
 
+		case 't':
+			_clar.output_format = CL_OUTPUT_TAP;
+			break;
+
 		case 'l': {
 			size_t j;
 			printf("Test suites (use -s<name> to run just one):\n");
@@ -496,6 +504,9 @@ clar_parse_args(int argc, char **argv)
 void
 clar_test_init(int argc, char **argv)
 {
+	if (argc > 1)
+		clar_parse_args(argc, argv);
+
 	clar_print_init(
 		(int)_clar_callback_count,
 		(int)_clar_suite_count,
@@ -506,9 +517,6 @@ clar_test_init(int argc, char **argv)
 		_clar.write_summary = 1;
 		_clar.summary_filename = strdup(_clar.summary_filename);
 	}
-
-	if (argc > 1)
-		clar_parse_args(argc, argv);
 
 	if (_clar.write_summary &&
 	    !(_clar.summary = clar_summary_init(_clar.summary_filename))) {
@@ -605,6 +613,7 @@ void clar__skip(void)
 
 void clar__fail(
 	const char *file,
+	const char *function,
 	size_t line,
 	const char *error_msg,
 	const char *description,
@@ -621,6 +630,7 @@ void clar__fail(
 	_clar.last_report->last_error = error;
 
 	error->file = file;
+	error->function = function;
 	error->line_number = line;
 	error->error_msg = error_msg;
 
@@ -637,6 +647,7 @@ void clar__fail(
 void clar__assert(
 	int condition,
 	const char *file,
+	const char *function,
 	size_t line,
 	const char *error_msg,
 	const char *description,
@@ -645,11 +656,12 @@ void clar__assert(
 	if (condition)
 		return;
 
-	clar__fail(file, line, error_msg, description, should_abort);
+	clar__fail(file, function, line, error_msg, description, should_abort);
 }
 
 void clar__assert_equal(
 	const char *file,
+	const char *function,
 	size_t line,
 	const char *err,
 	int should_abort,
@@ -760,7 +772,7 @@ void clar__assert_equal(
 	va_end(args);
 
 	if (!is_equal)
-		clar__fail(file, line, err, buf, should_abort);
+		clar__fail(file, function, line, err, buf, should_abort);
 }
 
 void cl_set_cleanup(void (*cleanup)(void *), void *opaque)
