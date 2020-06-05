@@ -3,21 +3,21 @@
 #include "wildmatch.h"
 
 #define assert_matches(string, pattern, wildmatch, iwildmatch, pathmatch, ipathmatch) \
-	assert_matches_(string, pattern, wildmatch, iwildmatch, pathmatch, ipathmatch, __FILE__, __LINE__)
+	assert_matches_(string, pattern, wildmatch, iwildmatch, pathmatch, ipathmatch, __FILE__, __func__, __LINE__)
 
 static void assert_matches_(const char *string, const char *pattern,
 		char expected_wildmatch, char expected_iwildmatch,
 		char expected_pathmatch, char expected_ipathmatch,
-		const char *file, size_t line)
+		const char *file, const char *func, size_t line)
 {
 	if (wildmatch(pattern, string, WM_PATHNAME) == expected_wildmatch)
-		clar__fail(file, line, "Test failed (wildmatch).", string, 1);
+		clar__fail(file, func, line, "Test failed (wildmatch).", string, 1);
 	if (wildmatch(pattern, string, WM_PATHNAME|WM_CASEFOLD) == expected_iwildmatch)
-		clar__fail(file, line, "Test failed (iwildmatch).", string, 1);
+		clar__fail(file, func, line, "Test failed (iwildmatch).", string, 1);
 	if (wildmatch(pattern, string, 0) == expected_pathmatch)
-		clar__fail(file, line, "Test failed (pathmatch).", string, 1);
+		clar__fail(file, func, line, "Test failed (pathmatch).", string, 1);
 	if (wildmatch(pattern, string, WM_CASEFOLD) == expected_ipathmatch)
-		clar__fail(file, line, "Test failed (ipathmatch).", string, 1);
+		clar__fail(file, func, line, "Test failed (ipathmatch).", string, 1);
 }
 
 /*

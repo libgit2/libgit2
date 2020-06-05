@@ -51,11 +51,11 @@ static void replace_file_with_mode(
 	git_buf_dispose(&content);
 }
 
-#define add_and_check_mode(I,F,X) add_and_check_mode_(I,F,X,__FILE__,__LINE__)
+#define add_and_check_mode(I,F,X) add_and_check_mode_(I,F,X,__FILE__,__func__,__LINE__)
 
 static void add_and_check_mode_(
 	git_index *index, const char *filename, unsigned int expect_mode,
-	const char *file, int line)
+	const char *file, const char *func, int line)
 {
 	size_t pos;
 	const git_index_entry *entry;
@@ -63,11 +63,11 @@ static void add_and_check_mode_(
 	cl_git_pass(git_index_add_bypath(index, filename));
 
 	clar__assert(!git_index_find(&pos, index, filename),
-		file, line, "Cannot find index entry", NULL, 1);
+		file, func, line, "Cannot find index entry", NULL, 1);
 
 	entry = git_index_get_byindex(index, pos);
 
-	clar__assert_equal(file, line, "Expected mode does not match index",
+	clar__assert_equal(file, func, line, "Expected mode does not match index",
 		1, "%07o", (unsigned int)entry->mode, (unsigned int)expect_mode);
 }
 
@@ -153,11 +153,11 @@ void test_index_filemodes__trusted(void)
 	git_index_free(index);
 }
 
-#define add_entry_and_check_mode(I,FF,X) add_entry_and_check_mode_(I,FF,X,__FILE__,__LINE__)
+#define add_entry_and_check_mode(I,FF,X) add_entry_and_check_mode_(I,FF,X,__FILE__,__func__,__LINE__)
 
 static void add_entry_and_check_mode_(
 	git_index *index, bool from_file, git_filemode_t mode,
-	const char *file, int line)
+	const char *file, const char *func, int line)
 {
 	size_t pos;
 	const git_index_entry* entry;
@@ -169,7 +169,7 @@ static void add_entry_and_check_mode_(
 	if (from_file)
 	{
 		clar__assert(!git_index_find(&pos, index, "exec_off"),
-			file, line, "Cannot find original index entry", NULL, 1);
+			file, func, line, "Cannot find original index entry", NULL, 1);
 
 		entry = git_index_get_byindex(index, pos);
 
@@ -184,21 +184,21 @@ static void add_entry_and_check_mode_(
 	if (from_file)
 	{
 		clar__assert(!git_index_add(index, &new_entry),
-			file, line, "Cannot add index entry", NULL, 1);
+			file, func, line, "Cannot add index entry", NULL, 1);
 	}
 	else
 	{
 		const char *content = "hey there\n";
 		clar__assert(!git_index_add_from_buffer(index, &new_entry, content, strlen(content)),
-			file, line, "Cannot add index entry from buffer", NULL, 1);
+			file, func, line, "Cannot add index entry from buffer", NULL, 1);
 	}
 
 	clar__assert(!git_index_find(&pos, index, "filemodes/explicit_test"),
-		file, line, "Cannot find new index entry", NULL, 1);
+		file, func, line, "Cannot find new index entry", NULL, 1);
 
 	entry = git_index_get_byindex(index, pos);
 
-	clar__assert_equal(file, line, "Expected mode does not match index",
+	clar__assert_equal(file, func, line, "Expected mode does not match index",
 		1, "%07o", (unsigned int)entry->mode, (unsigned int)mode);
 }
 

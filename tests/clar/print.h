@@ -126,7 +126,7 @@ static void clar_print_tap_ontest(const char *test_name, int test_number, enum c
 		printf("    at:\n");
 		printf("      file: '"); print_escaped(error->file); printf("'\n");
 		printf("      line: %" PRIuZ "\n", error->line_number);
-		printf("      function: '%s::%s'\n", _clar.active_suite, test_name);
+		printf("      function: '%s'\n", error->function);
 		printf("    ---\n");
 
 		break;
