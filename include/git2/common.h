@@ -230,7 +230,7 @@ typedef enum {
  *		>Set the maximum amount of memory that can be mapped at any time
  *		by the library
  *
- *	* opts(GIT_OPT_GET_SEARCH_PATH, int level, git_buf *buf)
+ *	* opts(GIT_OPT_GET_SEARCH_PATH, int level, git_userbuf *buf)
  *
  *		> Get the search path for a given level of config data.  "level" must
  *		> be one of `GIT_CONFIG_LEVEL_SYSTEM`, `GIT_CONFIG_LEVEL_GLOBAL`,
@@ -280,7 +280,7 @@ typedef enum {
  *		> Get the current bytes in cache and the maximum that would be
  *		> allowed in the cache.
  *
- *	* opts(GIT_OPT_GET_TEMPLATE_PATH, git_buf *out)
+ *	* opts(GIT_OPT_GET_TEMPLATE_PATH, git_userbuf *out)
  *
  *		> Get the default template path.
  *		> The path is written to the `out` buffer.

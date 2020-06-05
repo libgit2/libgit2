@@ -191,10 +191,10 @@ typedef int GIT_CALLBACK(git_filter_check_fn)(
  * `check` callback.  It may be read from or written to as needed.
  */
 typedef int GIT_CALLBACK(git_filter_apply_fn)(
-	git_filter    *self,
-	void         **payload, /* may be read and/or set */
-	git_buf       *to,
-	const git_buf *from,
+	git_filter        *self,
+	void             **payload, /* may be read and/or set */
+	git_userbuf       *to,
+	const git_userbuf *from,
 	const git_filter_source *src);
 
 typedef int GIT_CALLBACK(git_filter_stream_fn)(

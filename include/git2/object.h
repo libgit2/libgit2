@@ -10,7 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
-#include "buffer.h"
+#include "userbuf.h"
 
 /**
  * @file git2/object.h
@@ -118,7 +118,7 @@ GIT_EXTERN(const git_oid *) git_object_id(const git_object *obj);
  * @param obj The object to get an ID for
  * @return 0 on success, <0 for error
  */
-GIT_EXTERN(int) git_object_short_id(git_buf *out, const git_object *obj);
+GIT_EXTERN(int) git_object_short_id(git_userbuf *out, const git_object *obj);
 
 /**
  * Get the object type of an object

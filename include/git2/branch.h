@@ -242,7 +242,7 @@ GIT_EXTERN(int) git_branch_set_upstream(
  *         or an error code.
  */
 GIT_EXTERN(int) git_branch_upstream_name(
-	git_buf *out,
+	git_userbuf *out,
 	git_repository *repo,
 	const char *refname);
 
@@ -287,7 +287,7 @@ GIT_EXTERN(int) git_branch_is_checked_out(
  *         otherwise an error code.
  */
 GIT_EXTERN(int) git_branch_remote_name(
-	git_buf *out,
+	git_userbuf *out,
 	git_repository *repo,
 	const char *refname);
 
@@ -302,7 +302,7 @@ GIT_EXTERN(int) git_branch_remote_name(
  * @param refname the full name of the branch
  * @return 0 or an error code
  */
- GIT_EXTERN(int) git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname);
+ GIT_EXTERN(int) git_branch_upstream_remote(git_userbuf *buf, git_repository *repo, const char *refname);
 
 /** @} */
 GIT_END_DECL
