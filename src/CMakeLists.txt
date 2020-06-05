@@ -41,19 +41,19 @@ CHECK_PROTOTYPE_DEFINITION(qsort_r
 	"void qsort_r(void *base, size_t nmemb, size_t size, void *thunk, int (*compar)(void *, const void *, const void *))"
 	"" "stdlib.h" HAVE_QSORT_R_BSD)
 IF (HAVE_QSORT_R_BSD)
-	ADD_DEFINITIONS(-DHAVE_QSORT_R_BSD)
+	target_compile_definitions(git2internal PRIVATE HAVE_QSORT_R_BSD)
 ENDIF()
 
 CHECK_PROTOTYPE_DEFINITION(qsort_r
 	"void qsort_r(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *, void *), void *arg)"
 	"" "stdlib.h" HAVE_QSORT_R_GNU)
 IF (HAVE_QSORT_R_GNU)
-	ADD_DEFINITIONS(-DHAVE_QSORT_R_GNU)
+	target_compile_definitions(git2internal PRIVATE HAVE_QSORT_R_GNU)
 ENDIF()
 
 CHECK_FUNCTION_EXISTS(qsort_s HAVE_QSORT_S)
 IF (HAVE_QSORT_S)
-	ADD_DEFINITIONS(-DHAVE_QSORT_S)
+	target_compile_definitions(git2internal PRIVATE HAVE_QSORT_S)
 ENDIF ()
 
 # Find required dependencies
@@ -273,7 +273,7 @@ ELSEIF (HAVE_STRUCT_STAT_ST_MTIME_NSEC)
 	SET(GIT_USE_STAT_MTIME_NSEC 1)
 ENDIF()
 
-ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
+target_compile_definitions(git2internal PRIVATE _FILE_OFFSET_BITS=64)
 
 # Collect sourcefiles
 file(GLOB SRC_H
@@ -291,7 +291,7 @@ if(WIN32 AND NOT CYGWIN)
 	list(SORT SRC_OS)
 	target_sources(git2internal PRIVATE ${SRC_OS})
 elseif(AMIGA)
-	add_definitions(-DNO_ADDRINFO -DNO_READDIR_R -DNO_MMAP)
+	target_compile_definitions(git2internal PRIVATE NO_ADDRINFO NO_READDIR_R NO_MMAP)
 else()
 	file(GLOB SRC_OS unix/*.c unix/*.h)
 	list(SORT SRC_OS)
@@ -299,7 +299,7 @@ else()
 endif()
 
 IF (USE_LEAK_CHECKER STREQUAL "valgrind")
-	ADD_DEFINITIONS(-DVALGRIND)
+	target_compile_definitions(git2internal PRIVATE VALGRIND)
 ENDIF()
 
 file(GLOB SRC_GIT2 *.c *.h
@@ -374,7 +374,7 @@ if(SONAME)
 	set_target_properties(git2 PROPERTIES VERSION ${libgit2_VERSION})
 	set_target_properties(git2 PROPERTIES SOVERSION "${libgit2_VERSION_MAJOR}.${libgit2_VERSION_MINOR}")
 	if(LIBGIT2_FILENAME)
-		add_definitions(-DLIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
+		target_compile_definitions(git2internal PRIVATE LIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
 		set_target_properties(git2 PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
 	elseif(DEFINED LIBGIT2_PREFIX)
 		set_target_properties(git2 PROPERTIES PREFIX "${LIBGIT2_PREFIX}")
