@@ -13,6 +13,10 @@ BUILD_PATH=${BUILD_PATH:=$PATH}
 CMAKE=$(which cmake)
 CMAKE_GENERATOR=${CMAKE_GENERATOR:-Unix Makefiles}
 
+if [[ "$(uname -s)" == MINGW* ]]; then
+	BUILD_PATH=$(cygpath "$BUILD_PATH")
+fi
+
 indent() { sed "s/^/    /"; }
 
 echo "Source directory: ${SOURCE_DIR}"
