@@ -71,4 +71,7 @@ jobs:
     steps:
       - run: echo ${{ matrix.platform.os }} ${{matrix.platform.image}}
       - run: |
-          env
+          mkdir build && cd build
+          ../azure-pipelines/build.sh
+          ../azure-pipelines/test.sh
+        shell: bash
