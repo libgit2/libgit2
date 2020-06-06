@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ master, maint/* ]
 
+env:
+  foo: docker.pkg.github.com
+
 jobs:
   # Build the docker container images that we will use for our Linux builds.  This will
   # identify the last commit to the repository that updated the docker images, and try
@@ -55,7 +58,7 @@ jobs:
         platform:
         -
           os: ubuntu-latest
-          image: 'ubuntu:xenial'
+          image: xenial
           cc: gcc
           cmake_generator: Ninja
           cmake_options: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
@@ -95,7 +98,12 @@ jobs:
         env
     - run: echo ${{ matrix.platform.os }} ${{matrix.platform.image}}
     - run: |
-        mkdir build && cd build
-        ../azure-pipelines/build.sh
-        ../azure-pipelines/test.sh
+        if [ -z "${{ matrix.platform.image }}" ]; then
+          docker login https://${{ env.foo }} -u ${{ github.actor }} -p ${{ github.token }}
+          docker run ${{ env.foo }}/${{ matrix.platform.image }}:latest echo hi
+        else
+          mkdir build && cd build
+          ../azure-pipelines/build.sh
+          ../azure-pipelines/test.sh
+        fi
       shell: bash
