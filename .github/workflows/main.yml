@@ -30,7 +30,8 @@ jobs:
         docker login https://docker.pkg.github.com -u ${{github.actor}} -p ${{github.token}}
     - name: Download image
       run: |
-        docker pull docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }} && echo "::set-env name=docker-exists::true"
+        echo "::set-env name=docker-exists::true"
+        docker pull docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }} || echo "::set-env name=docker-exists::false"
     - name: Build image
       run: |
         docker build -t docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container.name }} .
