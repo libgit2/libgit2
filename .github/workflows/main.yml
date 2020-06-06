@@ -102,7 +102,7 @@ jobs:
           docker_container="${{ github.repository }}/${{ matrix.platform.image }}:latest"
           docker login https://${{ env.foo }} -u ${{ github.actor }} -p ${{ github.token }}
           docker pull ${{ env.foo }}/${docker_container}
-          docker run -v /tmp/__home__:/home/libgit2 -v $(pwd):/home/libgit2/source -w /home/libgit2/source -e CC -e CMAKE_GENERATOR -e CMAKE_OPTIONS -e PKG_CONFIG_PATH -e SKIP_SSH_TESTS -e SKIP_NEGOTIATE_TESTS ${{ env.foo }}/${docker_container} "pwd && ls -Flas && mkdir build && cd build && ../azure-pipelines/build.sh && ../azure-pipelines/test.sh"
+          docker run -v /tmp/__home__:/home/libgit2 -v $(pwd):/home/libgit2/source -w /home/libgit2/source -e CC -e CMAKE_GENERATOR -e CMAKE_OPTIONS -e PKG_CONFIG_PATH -e SKIP_SSH_TESTS -e SKIP_NEGOTIATE_TESTS ${{ env.foo }}/${docker_container} /bin/bash -c "pwd && ls -Flas && mkdir build && cd build && ../azure-pipelines/build.sh && ../azure-pipelines/test.sh"
         else
           mkdir build && cd build
           ../azure-pipelines/build.sh
