@@ -62,6 +62,10 @@ jobs:
           os: macos-latest
         -
           os: windows-latest
+    env:
+      CC: $({ matrix.platform.cc }}
+      CMAKE_GENERATOR: ${{ matrix.platform.cmake_generator }}
+      CMAKE_OPTIONS: ${{ matrix.platform.cmake_options }}
     name: Build
     runs-on: ${{ matrix.platform.os }}
     steps:
