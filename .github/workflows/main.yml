@@ -13,6 +13,8 @@ jobs:
         container:
         - { name: xenial, base: ubuntu-xenial }
         - { name: bionic, base: ubuntu-bionic }
+    env:
+      docker-config-path: azure-pipelines/docker
     name: Build docker image
     runs-on: ubuntu-latest    
     steps:
@@ -22,19 +24,19 @@ jobs:
         fetch-depth: 0
     - name: Calculate image label
       run: |
-        echo "::set-env name=docker-label::test2-$(git log -1 --pretty=format:"%h" -- azure-pipelines/docker)"
+        echo "::set-env name=docker-label::test2-$(git log -1 --pretty=format:"%h" -- ${{ env.docker-config-path }})"
     - name: Log in to GitHub Packages
       run: |
         docker login https://docker.pkg.github.com -u ${{github.actor}} -p ${{github.token}}
     - name: Download image
       run: |
-        docker pull docker.pkg.github.com/${{github.repository}}/xenial:${{ env.docker-label }} || echo "::set-env name=docker-exists::true"
+        docker pull docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }} || echo "::set-env name=docker-exists::true"
     - name: Build image
       run: |
-        docker build -t docker.pkg.github.com/${{github.repository}}/xenial:${{ env.docker-label }} --build-arg BASE=ubuntu:xenial -f xenial .
-      working-directory: azure-pipelines/docker
+        docker build -t docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container.name }} .
+      working-directory: ${{ env.docker-config-path }}
       if: ${{env.docker-exists != true}}
     - name: Publish image
       run: |
-        docker push docker.pkg.github.com/${{github.repository}}/xenial:${{env.docker-label}}
+        docker push docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }}
       if: ${{env.docker-exists != true}}
