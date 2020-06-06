@@ -11,8 +11,8 @@ jobs:
     strategy:
       matrix:
         container:
-        - { name: xenial, base: ubuntu-xenial }
-        - { name: bionic, base: ubuntu-bionic }
+        - { name: xenial, base: ubuntu:xenial }
+        - { name: bionic, base: ubuntu:bionic }
     env:
       docker-config-path: azure-pipelines/docker
     name: Build docker image
