@@ -65,7 +65,6 @@ jobs:
         - # macOS
           os: macos-latest
           pkg_config_path: /usr/local/opt/openssl/lib/pkgconfig
-          cmake_generator: Ninja
           cmake_options: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
           skip_ssh_tests: true
         - # Windows Visual Studio amd64
@@ -101,7 +100,7 @@ jobs:
       run: |
         if [ -n "${{ matrix.platform.image }}" ]; then
           docker login https://${{ env.foo }} -u ${{ github.actor }} -p ${{ github.token }}
-          docker pull ${{ env.foo }}/${{ env.platform.image }}:latest
+          docker pull ${{ env.foo }}/${{ matrix.platform.image }}:latest
           docker run ${{ env.foo }}/${{ matrix.platform.image }}:latest echo hi
         else
           mkdir build && cd build
