@@ -99,9 +99,10 @@ jobs:
     - name: Build and test
       run: |
         if [ -n "${{ matrix.platform.image }}" ]; then
+          docker_container="${{ github.repository }}/${{ matrix.platform.image }}:latest"
           docker login https://${{ env.foo }} -u ${{ github.actor }} -p ${{ github.token }}
-          docker pull ${{ env.foo }}/${{ matrix.platform.image }}:latest
-          docker run ${{ env.foo }}/${{ matrix.platform.image }}:latest echo hi
+          docker pull ${{ env.foo }}/${docker_container}
+          docker run ${{ env.foo }}/${docker_container} echo hi
         else
           mkdir build && cd build
           ../azure-pipelines/build.sh
