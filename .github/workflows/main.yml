@@ -24,7 +24,7 @@ jobs:
     env:
       docker-config-path: azure-pipelines/docker
       docker-registry: docker.pkg.github.com
-    name: Build docker image
+    name: Create docker image
     runs-on: ubuntu-latest    
     steps:
     - name: Check out repository
