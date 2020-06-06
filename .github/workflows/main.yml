@@ -63,7 +63,7 @@ jobs:
           os: macos-latest
         -
           os: windows-latest
-    fail-fast: false
+      fail-fast: false
     env:
       CC: $({ matrix.platform.cc }}
       CMAKE_GENERATOR: ${{ matrix.platform.cmake_generator }}
