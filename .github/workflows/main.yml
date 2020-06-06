@@ -2,9 +2,9 @@ name: Containerization
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, maint/* ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, maint/* ]
 
 jobs:
   build_containers:
