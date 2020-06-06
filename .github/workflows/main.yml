@@ -97,9 +97,11 @@ jobs:
     - run: |
         env
     - run: echo ${{ matrix.platform.os }} ${{matrix.platform.image}}
-    - run: |
+    - name: Build and test
+      run: |
         if [ -n "${{ matrix.platform.image }}" ]; then
           docker login https://${{ env.foo }} -u ${{ github.actor }} -p ${{ github.token }}
+          docker pull ${{ env.foo }}/${{ env.platform.image }}:latest
           docker run ${{ env.foo }}/${{ matrix.platform.image }}:latest echo hi
         else
           mkdir build && cd build
