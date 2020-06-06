@@ -52,9 +52,9 @@ jobs:
     strategy:
       matrix:
         platform:
-        - os: ubuntu-latest
-          image: 'ubuntu:xenial' }
-        - os: macos-latest
-        - os: windows-latest
+        - - os: ubuntu-latest
+            image: 'ubuntu:xenial'
+        - - os: macos-latest
+        - - os: windows-latest
     name: Build
       runs-os: ${{ matrix.platform.os }}
