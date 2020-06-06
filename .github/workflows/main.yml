@@ -34,10 +34,10 @@ jobs:
         echo "::set-env name=docker-sha-tag::test3-$(git log -1 --pretty=format:"%h" -- ${{ env.docker-config-path }})"
     - name: Download existing image
       run: |
-        docker login https://docker.pkg.github.com -u ${{github.actor}} -p ${{github.token}}
+        docker login https://${{ env.docker-registry }} -u ${{ github.actor }} -p ${{ github.token }}
 
         echo "::set-env name=docker-container-exists::true"
-        docker pull ${{ env.docker-container-url }}:${{ env.docker-sha-tag }} || echo "::set-env name=docker-container-exists::false"
+        docker pull ${{ env.docker-registry }}/${{ env.docker-container }}:${{ env.docker-sha-tag }} || echo "::set-env name=docker-container-exists::false"
     - name: Build and publish image
       run: |
         docker build -t ${{ env.docker-registry }}/${{ env.docker-container }}:${{ env.docker-sha-tag }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container.name }} .
