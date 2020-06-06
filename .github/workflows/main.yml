@@ -1,0 +1,21 @@
+name: Containerization
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build_container:
+    runs-on: ubuntu-latest    
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+    - name: Calculate docker image label
+      run: |
+        echo "::set-env name=docker-label::libgit2-$(git log -1 --pretty=format:"%h" azure-pipelines/docker)"
+    - name: Build image
+      run: |
+        docker build -t libgit2/xenial:${{ env.docker-label }} --build-arg BASE=ubuntu:xenial -f azure-pipelines/docker/xenial .
+
