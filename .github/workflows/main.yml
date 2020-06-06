@@ -59,15 +59,33 @@ jobs:
           cc: gcc
           cmake_generator: Ninja
           cmake_options: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
-        -
+        - # macOS
           os: macos-latest
-        -
+          pkg_config_path: /usr/local/opt/openssl/lib/pkgconfig
+          cmake_generator: Ninja
+          cmake_options: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
+          skip_ssh_tests: true
+        - # Windows Visual Studio amd64
           os: windows-latest
+          cmake_generator: Visual Studio 15 2017
+          cmake_options: -A Win32 -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS
+          skip_ssh_tests: true
+          skip_negotiate_tests: true
+        - # Windows Visual Studio amd64
+          os: windows-latest
+          cmake_generator: Visual Studio 15 2017
+          cmake_options: -A x64 -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON
+          skip_ssh_tests: true
+          skip_negotiate_tests: true
       fail-fast: false
+    # Turn matrix variables into environment variables.
     env:
       CC: ${{ matrix.platform.cc }}
       CMAKE_GENERATOR: ${{ matrix.platform.cmake_generator }}
       CMAKE_OPTIONS: ${{ matrix.platform.cmake_options }}
+      PKG_CONFIG_PATH: ${{ matrix.platform.pkg_config_path }}
+      SKIP_SSH_TESTS: ${{ matrix.platform.skip_ssh_tests }}
+      SKIP_NEGOTIATE_TESTS: ${{ matrix.platform.skip_negotiate_tests }}
     name: Build
     runs-on: ${{ matrix.platform.os }}
     steps:
