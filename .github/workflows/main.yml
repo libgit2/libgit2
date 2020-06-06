@@ -15,8 +15,10 @@ jobs:
       uses: actions/checkout@v2
     - name: Calculate image label
       run: |
-        cd azure-pipelines/docker && GIT_TRACE=1 git log -1 -- ./
+        cd azure-pipelines/docker && git log -1 -- ./
         echo "::set-env name=docker-label::libgit2-$(git log -1 --pretty=format:"%h" -- azure-pipelines/docker/\*)"
+      env:
+        GIT_TRACE: 1
 #    - name: Log in to GitHub Packages
 #      run: |
 #        docker login https://docker.pkg.github.com -u ${{github.actor}} -p ${{github.token}}
