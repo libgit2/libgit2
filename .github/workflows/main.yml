@@ -60,4 +60,6 @@ jobs:
         -
           os: windows-latest
     name: Build
-      runs-os: ${{ matrix.platform.os }}
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - run: echo ${{ matrix.platform.os }} ${{matrix.platform.image}}
