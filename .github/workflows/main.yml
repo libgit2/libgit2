@@ -38,11 +38,13 @@ jobs:
 
         echo "::set-env name=docker-container-exists::true"
         docker pull ${{ env.docker-container-url }}:${{ env.docker-sha-tag }} || echo "::set-env name=docker-container-exists::false"
-#    - name: Build and publish image
-#      run: |
+    - name: Build and publish image
+      run: |
+        echo hi
+      working-directory: ${{ env.docker-config-path }}
+      if: env.docker-container-exists != 'true'
+        
 #        docker build -t ${{ env.docker-container-url }}:${{ env.docker-sha-tag }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container.name }} .
 #        docker tag ${{ env.docker-container-url }}:${{ env.docker-sha-tag }} ${{ env.docker-container-url }}:latest
 #        docker push ${{ docker.container-url }}:${{ env.docker-sha-tag }}
 #        docker push ${{ docker.container-url }}:latest
-#      working-directory: ${{ env.docker-config-path }}
-#      if: env.docker-container-exists != 'true'
