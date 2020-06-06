@@ -26,8 +26,8 @@ jobs:
       run: |
         docker build -t docker.pkg.github.com/${{github.repository}}/xenial:${{ env.docker-label }} --build-arg BASE=ubuntu:xenial -f xenial .
       working-directory: azure-pipelines/docker
-      if: ${{env.docker-exists != "true"}}
+      if: ${{env.docker-exists != true}}
     - name: Publish image
       run: |
         docker push docker.pkg.github.com/${{github.repository}}/xenial:${{env.docker-label}}
-      if: ${{env.docker-exists != "true"}}
+      if: ${{env.docker-exists != true}}
