@@ -16,11 +16,18 @@ jobs:
     - name: Calculate image label
       run: |
         echo "::set-env name=docker-label::libgit2-$(git log -1 --pretty=format:"%h" azure-pipelines/docker)"
+    - name: Log in to GitHub Packages
+      run: |
+        docker login https://docker.pkg.github.com -u ${{github.actor}} -p ${{github.token}}
+    - name: Download image
+      run: |
+        docker pull docker.pkg.github.com/${{github.repository}}/xenial:${{ env.docker-label }} || echo "::set-env name=docker-exists::true"
     - name: Build image
       run: |
         docker build -t docker.pkg.github.com/${{github.repository}}/xenial:${{ env.docker-label }} --build-arg BASE=ubuntu:xenial -f xenial .
       working-directory: azure-pipelines/docker
+      if: env.docker-exists != "true"
     - name: Publish image
       run: |
-        docker login https://docker.pkg.github.com -u ${{github.actor}} -p ${{github.token}}
         docker push docker.pkg.github.com/${{github.repository}}/xenial:${{env.docker-label}}
+      if: env.docker-exists != "true"
