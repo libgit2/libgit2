@@ -17,5 +17,6 @@ jobs:
         echo "::set-env name=docker-label::libgit2-$(git log -1 --pretty=format:"%h" azure-pipelines/docker)"
     - name: Build image
       run: |
-        docker build -t libgit2/xenial:${{ env.docker-label }} --build-arg BASE=ubuntu:xenial -f azure-pipelines/docker/xenial .
+        docker build -t libgit2/xenial:${{ env.docker-label }} --build-arg BASE=ubuntu:xenial -f xenial .
+      working-directory: azure-pipelines/docker
 
