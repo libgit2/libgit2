@@ -1880,6 +1880,8 @@ static int submodule_read_config(git_submodule *sm, git_config *cfg)
 	git_buf key = GIT_BUF_INIT;
 	const char *value;
 	int error, in_config = 0;
+	git_config *repo_snap_cfg = NULL;
+	bool override_ignore = false;
 
 	/*
 	 * TODO: Look up path in index and if it is present but not a GITLINK
@@ -1943,7 +1945,19 @@ static int submodule_read_config(git_submodule *sm, git_config *cfg)
 		goto cleanup;
 	}
 
-	if ((error = get_value(&value, cfg, &key, sm->name, "ignore")) == 0) {
+	/*
+	 * For `ignore', if the value is set in the parent repository, it
+	 * overrides the setting in `gitmodules' (which can be used as a
+	 * fallback option, in case of failure).
+	 */
+	if ((error = git_repository_config_snapshot(&repo_snap_cfg, sm->repo)) == 0)
+		if ((error = get_value(&value, repo_snap_cfg, &key, sm->name, "ignore")) == 0)
+			override_ignore = true;
+
+	if (!override_ignore)
+		error = get_value(&value, cfg, &key, sm->name, "ignore");
+
+	if (error == 0) {
 		in_config = 1;
 		if ((error = git_submodule_parse_ignore(&sm->ignore, value)) < 0)
 			goto cleanup;
@@ -1958,6 +1972,7 @@ static int submodule_read_config(git_submodule *sm, git_config *cfg)
 	error = 0;
 
 cleanup:
+	git_config_free(repo_snap_cfg);
 	git_buf_dispose(&key);
 	return error;
 }
