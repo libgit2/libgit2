@@ -39,8 +39,4 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod a+x /usr/local/bin/entrypoint.sh
 RUN mkdir /var/run/sshd
 
-RUN useradd --shell /bin/bash libgit2
-RUN mkdir /home/libgit2
-RUN chown --recursive libgit2:libgit2 /home/libgit2
-
-USER libgit2
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
