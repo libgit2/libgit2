@@ -8,15 +8,19 @@ on:
 
 jobs:
   build_container:
+    name: Build docker image
     runs-on: ubuntu-latest    
     steps:
     - name: Check out repository
       uses: actions/checkout@v2
-    - name: Calculate docker image label
+    - name: Calculate image label
       run: |
         echo "::set-env name=docker-label::libgit2-$(git log -1 --pretty=format:"%h" azure-pipelines/docker)"
     - name: Build image
       run: |
-        docker build -t libgit2/xenial:${{ env.docker-label }} --build-arg BASE=ubuntu:xenial -f xenial .
+        docker build -t docker.pkg.github.com/${{github.repository}}/xenial:${{ env.docker-label }} --build-arg BASE=ubuntu:xenial -f xenial .
       working-directory: azure-pipelines/docker
-
+    - name: Publish image
+      run: |
+        echo "${GITHUB_TOKEN}" | docker login https://docker.pkg.github.com -u libgit2 --password-stdin
+        docker push docker.pkg.github.com/${{github.repository}}/xenial:${{env.docker-label}}
