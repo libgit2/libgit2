@@ -49,6 +49,7 @@ jobs:
 
   # Run our CI/CD builds.
   build:
+    needs: [build_containers]
     strategy:
       matrix:
         platform:
@@ -69,9 +70,11 @@ jobs:
     name: Build
     runs-on: ${{ matrix.platform.os }}
     steps:
-      - run: echo ${{ matrix.platform.os }} ${{matrix.platform.image}}
-      - run: |
-          mkdir build && cd build
-          ../azure-pipelines/build.sh
-          ../azure-pipelines/test.sh
+    - name: Check out repository
+      uses: actions/checkout@v2
+    - run: echo ${{ matrix.platform.os }} ${{matrix.platform.image}}
+    - run: |
+        mkdir build && cd build
+        ../azure-pipelines/build.sh
+        ../azure-pipelines/test.sh
         shell: bash
