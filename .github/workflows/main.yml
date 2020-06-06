@@ -31,12 +31,17 @@ jobs:
     - name: Download image
       run: |
         docker pull docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }} && echo "::set-env name=docker-exists::true"
-    - name: Build image
-      run: |
-        docker build -t docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container.name }} .
-      working-directory: ${{ env.docker-config-path }}
-      if: ${{env.docker-exists != true}}
-    - name: Publish image
-      run: |
-        docker push docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }}
-      if: ${{env.docker-exists != true}}
+    - run: |
+        env
+        echo "${{env.docker-exists}}"
+    - run: echo yo
+      if: ${{ env.docker-exists == true }}
+#    - name: Build image
+#      run: |
+#        docker build -t docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container.name }} .
+#      working-directory: ${{ env.docker-config-path }}
+#      if: ${{env.docker-exists != true}}
+#    - name: Publish image
+#      run: |
+#        docker push docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }}
+#      if: ${{env.docker-exists != true}}
