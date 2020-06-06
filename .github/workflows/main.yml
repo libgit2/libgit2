@@ -15,44 +15,44 @@ jobs:
   # to download the image tagged with that sha.  If it does not exist, we'll do a docker
   # build and push the image up to GitHub Packages for the actual CI/CD runs.  We tag
   # with both the sha and "latest" so that the subsequent runs need not know the sha.
-  build_containers:
-    strategy:
-      matrix:
-        container:
-        - { name: xenial, base: 'ubuntu:xenial' }
-        - { name: bionic, base: 'ubuntu:bionic' }
-    env:
-      docker-config-path: azure-pipelines/docker
-      docker-registry: docker.pkg.github.com
-    name: Create docker image
-    runs-on: ubuntu-latest    
-    steps:
-    - name: Check out repository
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-    - name: Calculate image label
-      run: |
-        echo "::set-env name=docker-container::${{ github.repository }}/${{ matrix.container.name }}"
-        echo "::set-env name=docker-sha-tag::test4-$(git log -1 --pretty=format:"%h" -- ${{ env.docker-config-path }})"
-    - name: Download existing image
-      run: |
-        docker login https://${{ env.docker-registry }} -u ${{ github.actor }} -p ${{ github.token }}
-
-        echo "::set-env name=docker-container-exists::true"
-        docker pull ${{ env.docker-registry }}/${{ env.docker-container }}:${{ env.docker-sha-tag }} || echo "::set-env name=docker-container-exists::false"
-    - name: Build and publish image
-      run: |
-        docker build -t ${{ env.docker-registry }}/${{ env.docker-container }}:${{ env.docker-sha-tag }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container.name }} .
-        docker tag ${{ env.docker-registry }}/${{ env.docker-container }}:${{ env.docker-sha-tag }} ${{ env.docker-registry }}/${{ env.docker-container }}:latest
-        docker push ${{ env.docker-registry }}/${{ env.docker-container }}:${{ env.docker-sha-tag }}
-        docker push ${{ env.docker-registry }}/${{ env.docker-container }}:latest
-      working-directory: ${{ env.docker-config-path }}
-      if: env.docker-container-exists != 'true'
+#  build_containers:
+#    strategy:
+#      matrix:
+#        container:
+#        - { name: xenial, base: 'ubuntu:xenial' }
+#        - { name: bionic, base: 'ubuntu:bionic' }
+#    env:
+#      docker-config-path: azure-pipelines/docker
+#      docker-registry: docker.pkg.github.com
+#    name: Create docker image
+#    runs-on: ubuntu-latest    
+#    steps:
+#    - name: Check out repository
+#      uses: actions/checkout@v2
+#      with:
+#        fetch-depth: 0
+#    - name: Calculate image label
+#      run: |
+#        echo "::set-env name=docker-container::${{ github.repository }}/${{ matrix.container.name }}"
+#        echo "::set-env name=docker-sha-tag::test4-$(git log -1 --pretty=format:"%h" -- ${{ env.docker-config-path }})"
+#    - name: Download existing image
+#      run: |
+#        docker login https://${{ env.docker-registry }} -u ${{ github.actor }} -p ${{ github.token }}
+#
+#        echo "::set-env name=docker-container-exists::true"
+#        docker pull ${{ env.docker-registry }}/${{ env.docker-container }}:${{ env.docker-sha-tag }} || echo "::set-env name=docker-container-exists::false"
+#    - name: Build and publish image
+#      run: |
+#        docker build -t ${{ env.docker-registry }}/${{ env.docker-container }}:${{ env.docker-sha-tag }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container.name }} .
+#        docker tag ${{ env.docker-registry }}/${{ env.docker-container }}:${{ env.docker-sha-tag }} ${{ env.docker-registry }}/${{ env.docker-container }}:latest
+#        docker push ${{ env.docker-registry }}/${{ env.docker-container }}:${{ env.docker-sha-tag }}
+#        docker push ${{ env.docker-registry }}/${{ env.docker-container }}:latest
+#      working-directory: ${{ env.docker-config-path }}
+#      if: env.docker-container-exists != 'true'
 
   # Run our CI/CD builds.
   build:
-    needs: [build_containers]
+#    needs: [build_containers]
     strategy:
       matrix:
         platform:
@@ -102,7 +102,7 @@ jobs:
           docker_container="${{ github.repository }}/${{ matrix.platform.image }}:latest"
           docker login https://${{ env.foo }} -u ${{ github.actor }} -p ${{ github.token }}
           docker pull ${{ env.foo }}/${docker_container}
-          docker run -v /tmp/__home__:/home/libgit2 -v $(pwd):/home/libgit2/source -w /home/libgit2/source -e CC -e CMAKE_GENERATOR -e CMAKE_OPTIONS -e PKG_CONFIG_PATH -e SKIP_SSH_TESTS -e SKIP_NEGOTIATE_TESTS ${{ env.foo }}/${docker_container} "mkdir build && cd build && ../azure-pipelines/build.sh && ../azure-pipelines/test.sh"
+          docker run -v /tmp/__home__:/home/libgit2 -v $(pwd):/home/libgit2/source -w /home/libgit2/source -e CC -e CMAKE_GENERATOR -e CMAKE_OPTIONS -e PKG_CONFIG_PATH -e SKIP_SSH_TESTS -e SKIP_NEGOTIATE_TESTS ${{ env.foo }}/${docker_container} "pwd && ls -Flas && mkdir build && cd build && ../azure-pipelines/build.sh && ../azure-pipelines/test.sh"
         else
           mkdir build && cd build
           ../azure-pipelines/build.sh
