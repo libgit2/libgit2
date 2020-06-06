@@ -30,8 +30,10 @@ jobs:
         fetch-depth: 0
     - name: Calculate image label
       run: |
-        echo "::set-env name=docker-container::${{ github.repository }}/${{ matrix.container.name }}"        
+        echo "::set-env name=docker-container::${{ github.repository }}/${{ matrix.container.name }}"
+        echo "::set-env name=docker-container-url::${{ env.docker-registry }}/${{ env.docker-container }}"
         echo "::set-env name=docker-sha-tag::test3-$(git log -1 --pretty=format:"%h" -- ${{ env.docker-config-path }})"
+    - run: echo ${{ env.docker-container-url }}
     - name: Download existing image
       run: |
         docker login https://${{ env.docker-registry }} -u ${{ github.actor }} -p ${{ github.token }}
