@@ -46,3 +46,15 @@ jobs:
         docker push ${{ env.docker-registry }}/${{ env.docker-container }}:latest
       working-directory: ${{ env.docker-config-path }}
       if: env.docker-container-exists != 'true'
+
+  # Run our CI/CD builds.
+  build:
+    strategy:
+      matrix:
+        platform:
+        - - os: ubuntu-latest
+            image: 'ubuntu:xenial' }
+          - os: macos-latest
+          - os: windows-latest
+    name: Build
+      runs-os: ${{ matrix.platform.os }}
