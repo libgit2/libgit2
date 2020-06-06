@@ -55,6 +55,10 @@ jobs:
         -
           os: ubuntu-latest
           image: 'ubuntu:xenial'
+          cc: gcc
+          cmake_generator: Ninja
+          cmake_options: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+          gittest_negotiate_password: ${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}
         -
           os: macos-latest
         -
@@ -63,3 +67,5 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
       - run: echo ${{ matrix.platform.os }} ${{matrix.platform.image}}
+      - run: |
+          env
