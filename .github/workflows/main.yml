@@ -7,7 +7,12 @@ on:
     branches: [ master ]
 
 jobs:
-  build_container:
+  build_containers:
+    strategy:
+      matrix:
+        container:
+        - { name: xenial, base: ubuntu-xenial }
+        - { name: bionic, base: ubuntu-bionic }
     name: Build docker image
     runs-on: ubuntu-latest    
     steps:
@@ -17,7 +22,7 @@ jobs:
         fetch-depth: 0
     - name: Calculate image label
       run: |
-        echo "::set-env name=docker-label::libgit2-$(git log -1 --pretty=format:"%h" -- azure-pipelines/docker)"
+        echo "::set-env name=docker-label::test2-$(git log -1 --pretty=format:"%h" -- azure-pipelines/docker)"
     - name: Log in to GitHub Packages
       run: |
         docker login https://docker.pkg.github.com -u ${{github.actor}} -p ${{github.token}}
