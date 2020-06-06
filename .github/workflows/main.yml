@@ -35,7 +35,7 @@ jobs:
         env
         echo "${{env.docker-exists}}"
     - run: echo yo
-      if: env.docker-exists == 'true'
+      if: env.docker-exists != 'true'
 #    - name: Build image
 #      run: |
 #        docker build -t docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container.name }} .
