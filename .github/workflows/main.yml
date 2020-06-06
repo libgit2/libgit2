@@ -7,6 +7,11 @@ on:
     branches: [ master, maint/* ]
 
 jobs:
+  # Build the docker container images that we will use for our Linux builds.  This will
+  # identify the last commit to the repository that updated the docker images, and try
+  # to download the image tagged with that sha.  If it does not exist, we'll do a docker
+  # build and push the image up to GitHub Packages for the actual CI/CD runs.  We tag
+  # with both the sha and "latest" so that the subsequent runs need not know the sha.
   build_containers:
     strategy:
       matrix:
@@ -24,20 +29,20 @@ jobs:
         fetch-depth: 0
     - name: Calculate image label
       run: |
-        echo "::set-env name=docker-label::test3-$(git log -1 --pretty=format:"%h" -- ${{ env.docker-config-path }})"
-    - name: Log in to GitHub Packages
+        echo "::set-env name=docker-container::${{ github.repository }}/${{ matrix.container.name }}"        
+        echo "::set-env name=docker-container-url::docker.pkg.github.com/${{ env.docker-container }}"
+        echo "::set-env name=docker-sha-tag::test3-$(git log -1 --pretty=format:"%h" -- ${{ env.docker-config-path }})"
+    - name: Download existing image
       run: |
         docker login https://docker.pkg.github.com -u ${{github.actor}} -p ${{github.token}}
-    - name: Download image
-      run: |
+
         echo "::set-env name=docker-exists::true"
-        docker pull docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }} || echo "::set-env name=docker-exists::false"
-    - name: Build image
+        docker pull ${{ env.docker-container-url }}:${{ env.docker-sha-tag }} || echo "::set-env name=docker-exists::false"
+    - name: Build and publish image
       run: |
-        docker build -t docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container.name }} .
+        docker build -t ${{ env.docker-container-url }}:${{ env.docker-sha-tag }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container.name }} .
+        docker tag ${{ env.docker-container-url }}:${{ env.docker-sha-tag }} ${{ env.docker-container-url }}:latest
+        docker push ${{ docker.container-url }}:${{ env.docker-sha-tag }}
+        docker push ${{ docker.container-url }}:latest
       working-directory: ${{ env.docker-config-path }}
-      if: env.docker-exists != 'true'
-    - name: Publish image
-      run: |
-        docker push docker.pkg.github.com/${{ github.repository }}/${{ matrix.container.name }}:${{ env.docker-label }}
       if: env.docker-exists != 'true'
