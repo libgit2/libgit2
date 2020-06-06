@@ -98,7 +98,7 @@ jobs:
         env
     - run: echo ${{ matrix.platform.os }} ${{matrix.platform.image}}
     - run: |
-        if [ -z "${{ matrix.platform.image }}" ]; then
+        if [ -n "${{ matrix.platform.image }}" ]; then
           docker login https://${{ env.foo }} -u ${{ github.actor }} -p ${{ github.token }}
           docker run ${{ env.foo }}/${{ matrix.platform.image }}:latest echo hi
         else
