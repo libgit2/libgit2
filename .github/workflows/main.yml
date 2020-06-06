@@ -41,8 +41,8 @@ jobs:
     - name: Build and publish image
       run: |
         docker build -t ${{ env.docker-container-url }}:${{ env.docker-sha-tag }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container.name }} .
-        docker tag ${{ env.docker-container-url }}:${{ env.docker-sha-tag }} ${{ env.docker-container-url }}:latest
-        docker push ${{ docker.container-url }}:${{ env.docker-sha-tag }}
+#        docker tag ${{ env.docker-container-url }}:${{ env.docker-sha-tag }} ${{ env.docker-container-url }}:latest
+#        docker push ${{ docker.container-url }}:${{ env.docker-sha-tag }}
         docker push ${{ docker.container-url }}:latest
       working-directory: ${{ env.docker-config-path }}
       if: env.docker-container-exists != 'true'
