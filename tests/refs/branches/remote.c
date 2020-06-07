@@ -21,18 +21,18 @@ void test_refs_branches_remote__cleanup(void)
 
 void test_refs_branches_remote__can_get_remote_for_branch(void)
 {
-	git_buf remotename = {0};
+	git_userbuf remotename = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_branch_remote_name(&remotename, g_repo, remote_tracking_branch_name));
 
 	cl_assert_equal_s("test", remotename.ptr);
-	git_buf_dispose(&remotename);
+	git_userbuf_dispose(&remotename);
 }
 
 void test_refs_branches_remote__no_matching_remote_returns_error(void)
 {
 	const char *unknown = "refs/remotes/nonexistent/master";
-	git_buf buf;
+	git_userbuf buf = GIT_BUF_INIT;
 
 	git_error_clear();
 	memset(&buf, 0, sizeof(git_buf));
@@ -43,7 +43,7 @@ void test_refs_branches_remote__no_matching_remote_returns_error(void)
 void test_refs_branches_remote__local_remote_returns_error(void)
 {
 	const char *local = "refs/heads/master";
-	git_buf buf;
+	git_userbuf buf = GIT_BUF_INIT;
 
 	git_error_clear();
 	memset(&buf, 0, sizeof(git_buf));
@@ -54,7 +54,7 @@ void test_refs_branches_remote__local_remote_returns_error(void)
 void test_refs_branches_remote__ambiguous_remote_returns_error(void)
 {
 	git_remote *remote;
-	git_buf buf;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	/* Create the remote */
 	cl_git_pass(git_remote_create_with_fetchspec(&remote, g_repo, "addtest", "http://github.com/libgit2/libgit2", "refs/heads/*:refs/remotes/test/*"));
@@ -62,7 +62,6 @@ void test_refs_branches_remote__ambiguous_remote_returns_error(void)
 	git_remote_free(remote);
 
 	git_error_clear();
-	memset(&buf, 0, sizeof(git_buf));
 	cl_git_fail_with(git_branch_remote_name(&buf, g_repo, remote_tracking_branch_name), GIT_EAMBIGUOUS);
 	cl_assert(git_error_last() != NULL);
 }

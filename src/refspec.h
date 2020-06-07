@@ -48,4 +48,8 @@ int git_refspec_is_wildcard(const git_refspec *spec);
  */
 int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs);
 
+/* Internal transformation functions that manipulate a git_buf */
+extern int git_refspec__transform(git_buf *out, const git_refspec *spec, const char *name);
+extern int git_refspec__rtransform(git_buf *out, const git_refspec *spec, const char *name);
+
 #endif

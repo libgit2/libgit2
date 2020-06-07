@@ -34,7 +34,7 @@ void test_filter_file__apply(void)
 {
 	git_filter_list *fl;
 	git_filter *crlf;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_filter_list_new(
 		&fl, g_repo, GIT_FILTER_TO_ODB, 0));
@@ -44,10 +44,10 @@ void test_filter_file__apply(void)
 
 	cl_git_pass(git_filter_list_push(fl, crlf, NULL));
 
-	cl_git_pass(git_filter_list_apply_to_file(&buf, fl, g_repo, "all-crlf"));
+	cl_git_pass(git_filter_list_apply_to_file((git_userbuf *)&buf, fl, g_repo, "all-crlf"));
 	cl_assert_equal_s("crlf\ncrlf\ncrlf\ncrlf\n", buf.ptr);
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_filter_list_free(fl);
 }
 

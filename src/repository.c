@@ -27,6 +27,7 @@
 #include "refdb.h"
 #include "remote.h"
 #include "merge.h"
+#include "userbuf.h"
 #include "diff_driver.h"
 #include "annotated_commit.h"
 #include "submodule.h"
@@ -632,7 +633,7 @@ static int _git_repository_open_ext_from_env(
 	int error;
 
 	if (!start_path) {
-		error = git__getenv(&dir_buf, "GIT_DIR");
+		error = git_buf_getenv(&dir_buf, "GIT_DIR");
 		if (error == GIT_ENOTFOUND) {
 			git_error_clear();
 			start_path = ".";
@@ -645,7 +646,7 @@ static int _git_repository_open_ext_from_env(
 		}
 	}
 
-	error = git__getenv(&ceiling_dirs_buf, "GIT_CEILING_DIRECTORIES");
+	error = git_buf_getenv(&ceiling_dirs_buf, "GIT_CEILING_DIRECTORIES");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
@@ -653,7 +654,7 @@ static int _git_repository_open_ext_from_env(
 	else
 		ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
 
-	error = git__getenv(&across_fs_buf, "GIT_DISCOVERY_ACROSS_FILESYSTEM");
+	error = git_buf_getenv(&across_fs_buf, "GIT_DISCOVERY_ACROSS_FILESYSTEM");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
@@ -667,7 +668,7 @@ static int _git_repository_open_ext_from_env(
 			flags |= GIT_REPOSITORY_OPEN_CROSS_FS;
 	}
 
-	error = git__getenv(&index_file_buf, "GIT_INDEX_FILE");
+	error = git_buf_getenv(&index_file_buf, "GIT_INDEX_FILE");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
@@ -678,13 +679,13 @@ static int _git_repository_open_ext_from_env(
 			goto error;
 	}
 
-	error = git__getenv(&namespace_buf, "GIT_NAMESPACE");
+	error = git_buf_getenv(&namespace_buf, "GIT_NAMESPACE");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
 		goto error;
 
-	error = git__getenv(&object_dir_buf, "GIT_OBJECT_DIRECTORY");
+	error = git_buf_getenv(&object_dir_buf, "GIT_OBJECT_DIRECTORY");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
@@ -695,7 +696,7 @@ static int _git_repository_open_ext_from_env(
 			goto error;
 	}
 
-	error = git__getenv(&work_tree_buf, "GIT_WORK_TREE");
+	error = git_buf_getenv(&work_tree_buf, "GIT_WORK_TREE");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
@@ -706,7 +707,7 @@ static int _git_repository_open_ext_from_env(
 		goto error;
 	}
 
-	error = git__getenv(&work_tree_buf, "GIT_COMMON_DIR");
+	error = git_buf_getenv(&work_tree_buf, "GIT_COMMON_DIR");
 	if (error == GIT_ENOTFOUND)
 		git_error_clear();
 	else if (error < 0)
@@ -724,7 +725,7 @@ static int _git_repository_open_ext_from_env(
 	if (odb)
 		git_repository_set_odb(repo, odb);
 
-	error = git__getenv(&alts_buf, "GIT_ALTERNATE_OBJECT_DIRECTORIES");
+	error = git_buf_getenv(&alts_buf, "GIT_ALTERNATE_OBJECT_DIRECTORIES");
 	if (error == GIT_ENOTFOUND) {
 		git_error_clear();
 		error = 0;
@@ -939,7 +940,7 @@ int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)
 }
 
 int git_repository_discover(
-	git_buf *out,
+	git_userbuf *out,
 	const char *start_path,
 	int across_fs,
 	const char *ceiling_dirs)
@@ -948,9 +949,8 @@ int git_repository_discover(
 
 	assert(start_path);
 
-	git_buf_sanitize(out);
-
-	return find_repo(out, NULL, NULL, NULL, start_path, flags, ceiling_dirs);
+	git_userbuf_sanitize(out);
+	return find_repo((git_buf *)out, NULL, NULL, NULL, start_path, flags, ceiling_dirs);
 }
 
 static int load_config(
@@ -971,7 +971,7 @@ static int load_config(
 		return error;
 
 	if (repo) {
-		if ((error = git_repository_item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
+		if ((error = git_repository__item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
 			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
 
 		if (error && error != GIT_ENOTFOUND)
@@ -1032,10 +1032,10 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		git_buf programdata_buf = GIT_BUF_INIT;
 		git_config *config;
 
-		git_config_find_global(&global_buf);
-		git_config_find_xdg(&xdg_buf);
-		git_config_find_system(&system_buf);
-		git_config_find_programdata(&programdata_buf);
+		git_config__find_global(&global_buf);
+		git_config__find_xdg(&xdg_buf);
+		git_config__find_system(&system_buf);
+		git_config__find_programdata(&programdata_buf);
 
 		/* If there is no global file, open a backend for it anyway */
 		if (git_buf_len(&global_buf) == 0)
@@ -1104,7 +1104,7 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 		git_buf odb_path = GIT_BUF_INIT;
 		git_odb *odb;
 
-		if ((error = git_repository_item_path(&odb_path, repo,
+		if ((error = git_repository__item_path(&odb_path, repo,
 				GIT_REPOSITORY_ITEM_OBJECTS)) < 0 ||
 			(error = git_odb_new(&odb)) < 0)
 			return error;
@@ -1471,10 +1471,10 @@ static bool are_symlinks_supported(const char *wd_path)
 	 * _not_ set, then we do not test or enable symlink support.
 	 */
 #ifdef GIT_WIN32
-	git_config_find_global(&global_buf);
-	git_config_find_xdg(&xdg_buf);
-	git_config_find_system(&system_buf);
-	git_config_find_programdata(&programdata_buf);
+	git_config__find_global(&global_buf);
+	git_config__find_xdg(&xdg_buf);
+	git_config__find_system(&system_buf);
+	git_config__find_programdata(&programdata_buf);
 
 	if (load_config(&config, NULL,
 	    path_unless_empty(&global_buf),
@@ -1851,7 +1851,7 @@ static int repo_init_structure(
 		if (opts->template_path)
 			tdir = opts->template_path;
 		else if ((error = git_config_open_default(&cfg)) >= 0) {
-			if (!git_config_get_path(&template_buf, cfg, "init.templatedir"))
+			if (!git_config__get_path(&template_buf, cfg, "init.templatedir"))
 				tdir = template_buf.ptr;
 			git_error_clear();
 		}
@@ -2375,7 +2375,7 @@ static const char *resolved_parent_path(const git_repository *repo, git_reposito
 	return parent;
 }
 
-int git_repository_item_path(git_buf *out, const git_repository *repo, git_repository_item_t item)
+int git_repository__item_path(git_buf *out, const git_repository *repo, git_repository_item_t item)
 {
 	const char *parent = resolved_parent_path(repo, items[item].parent, items[item].fallback);
 	if (parent == NULL) {
@@ -2397,6 +2397,12 @@ int git_repository_item_path(git_buf *out, const git_repository *repo, git_repos
 	}
 
 	return 0;
+}
+
+int git_repository_item_path(git_userbuf *out, const git_repository *repo, git_repository_item_t item)
+{
+	git_userbuf_sanitize(out);
+	return git_repository__item_path((git_buf *)out, repo, item);
 }
 
 const char *git_repository_path(const git_repository *repo)
@@ -2544,13 +2550,13 @@ int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head
 	return error;
 }
 
-int git_repository_message(git_buf *out, git_repository *repo)
+int git_repository_message(git_userbuf *out, git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT;
 	struct stat st;
 	int error;
 
-	git_buf_sanitize(out);
+	git_userbuf_sanitize(out);
 
 	if (git_buf_joinpath(&path, repo->gitdir, GIT_MERGE_MSG_FILE) < 0)
 		return -1;
@@ -2560,7 +2566,7 @@ int git_repository_message(git_buf *out, git_repository *repo)
 			error = GIT_ENOTFOUND;
 		git_error_set(GIT_ERROR_OS, "could not access message file");
 	} else {
-		error = git_futils_readbuffer(out, git_buf_cstr(&path));
+		error = git_futils_readbuffer((git_buf *)out, git_buf_cstr(&path));
 	}
 
 	git_buf_dispose(&path);

@@ -247,7 +247,7 @@ static int crlf_apply_to_odb(
 		return GIT_PASSTHROUGH;
 
 	/* Actually drop the carriage returns */
-	return git_buf_text_crlf_to_lf(to, from);
+	return git_buf_text_crlf_to_lf((git_buf *)to, from);
 }
 
 static int crlf_apply_to_workdir(
@@ -369,8 +369,8 @@ static int crlf_check(
 static int crlf_apply(
 	git_filter *self,
 	void **payload, /* may be read and/or set */
-	git_buf *to,
-	const git_buf *from,
+	git_userbuf *to,
+	const git_userbuf *from,
 	const git_filter_source *src)
 {
 	/* initialize payload in case `check` was bypassed */
@@ -382,9 +382,9 @@ static int crlf_apply(
 	}
 
 	if (git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
-		return crlf_apply_to_workdir(*payload, to, from);
+		return crlf_apply_to_workdir(*payload, (git_buf *)to, (git_buf *)from);
 	else
-		return crlf_apply_to_odb(*payload, to, from, src);
+		return crlf_apply_to_odb(*payload, (git_buf *)to, (git_buf *)from, src);
 }
 
 static void crlf_cleanup(

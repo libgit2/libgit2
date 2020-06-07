@@ -1,4 +1,5 @@
 #undef GIT_DEPRECATE_HARD
+#define GIT_DEPRECATE_BUF
 
 #include "clar_libgit2.h"
 #include "git2/sys/stream.h"

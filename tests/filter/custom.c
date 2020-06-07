@@ -95,8 +95,8 @@ static void register_custom_filters(void)
 void test_filter_custom__to_odb(void)
 {
 	git_filter_list *fl;
-	git_buf out = { 0 };
-	git_buf in = GIT_BUF_INIT_CONST(workdir_data, strlen(workdir_data));
+	git_userbuf out = GIT_USERBUF_INIT;
+	git_userbuf in = GIT_USERBUF_CONST(workdir_data, strlen(workdir_data));
 
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "herofile", GIT_FILTER_TO_ODB, 0));
@@ -109,14 +109,14 @@ void test_filter_custom__to_odb(void)
 		0, memcmp(bitflipped_and_reversed_data, out.ptr, out.size));
 
 	git_filter_list_free(fl);
-	git_buf_dispose(&out);
+	git_userbuf_dispose(&out);
 }
 
 void test_filter_custom__to_workdir(void)
 {
 	git_filter_list *fl;
-	git_buf out = { 0 };
-	git_buf in = GIT_BUF_INIT_CONST(
+	git_userbuf out = GIT_USERBUF_INIT;
+	git_userbuf in = GIT_USERBUF_CONST(
 		bitflipped_and_reversed_data, BITFLIPPED_AND_REVERSED_DATA_LEN);
 
 	cl_git_pass(git_filter_list_load(
@@ -130,7 +130,7 @@ void test_filter_custom__to_workdir(void)
 		0, memcmp(workdir_data, out.ptr, out.size));
 
 	git_filter_list_free(fl);
-	git_buf_dispose(&out);
+	git_userbuf_dispose(&out);
 }
 
 void test_filter_custom__can_register_a_custom_filter_in_the_repository(void)
@@ -176,7 +176,7 @@ void test_filter_custom__order_dependency(void)
 {
 	git_index *index;
 	git_blob *blob;
-	git_buf buf = { 0 };
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	/* so if ident and reverse are used together, an interesting thing
 	 * happens - a reversed "$Id$" string is no longer going to trigger
@@ -213,6 +213,7 @@ void test_filter_custom__order_dependency(void)
 	 * time, reverse is not applied yet */
 	cl_assert_equal_s(
 		"This is a test\n$Id$\nHave fun!\n", buf.ptr);
+	git_userbuf_dispose(&buf);
 	git_blob_free(blob);
 
 	cl_git_pass(git_blob_lookup(&blob, g_repo,
@@ -226,9 +227,8 @@ void test_filter_custom__order_dependency(void)
 		"Another test\n$ 59001fe193103b1016b27027c0c827d036fd0ac8 :dI$\nCrazy!\n", buf.ptr);
 	cl_assert_equal_i(0, git_oid_strcmp(
 		git_blob_id(blob), "8ca0df630d728c0c72072b6101b301391ef10095"));
+	git_userbuf_dispose(&buf);
 	git_blob_free(blob);
-
-	git_buf_dispose(&buf);
 }
 
 void test_filter_custom__filter_registry_failure_cases(void)
@@ -245,8 +245,8 @@ void test_filter_custom__filter_registry_failure_cases(void)
 void test_filter_custom__erroneous_filter_fails(void)
 {
 	git_filter_list *filters;
-	git_buf out = GIT_BUF_INIT;
-	git_buf in = GIT_BUF_INIT_CONST(workdir_data, strlen(workdir_data));
+	git_userbuf out = GIT_USERBUF_INIT;
+	git_userbuf in = GIT_USERBUF_CONST(workdir_data, strlen(workdir_data));
 
 	cl_git_pass(git_filter_list_load(
 		&filters, g_repo, NULL, "villain", GIT_FILTER_TO_WORKTREE, 0));
@@ -254,5 +254,5 @@ void test_filter_custom__erroneous_filter_fails(void)
 	cl_git_fail(git_filter_list_apply_to_data(&out, filters, &in));
 
 	git_filter_list_free(filters);
-	git_buf_dispose(&out);
+	git_userbuf_dispose(&out);
 }

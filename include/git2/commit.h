@@ -290,7 +290,7 @@ GIT_EXTERN(int) git_commit_nth_gen_ancestor(
  * @return 0 on succeess, GIT_ENOTFOUND if the field does not exist,
  * or an error code
  */
-GIT_EXTERN(int) git_commit_header_field(git_buf *out, const git_commit *commit, const char *field);
+GIT_EXTERN(int) git_commit_header_field(git_userbuf *out, const git_commit *commit, const char *field);
 
 /**
  * Extract the signature from a commit
@@ -310,7 +310,7 @@ GIT_EXTERN(int) git_commit_header_field(git_buf *out, const git_commit *commit, 
  * @return 0 on success, GIT_ENOTFOUND if the id is not for a commit
  * or the commit does not have a signature.
  */
-GIT_EXTERN(int) git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_repository *repo, git_oid *commit_id, const char *field);
+GIT_EXTERN(int) git_commit_extract_signature(git_userbuf *signature, git_userbuf *signed_data, git_repository *repo, git_oid *commit_id, const char *field);
 
 /**
  * Create new commit in the repository from a list of `git_object` pointers
@@ -461,7 +461,7 @@ GIT_EXTERN(int) git_commit_amend(
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_commit_create_buffer(
-	git_buf *out,
+	git_userbuf *out,
 	git_repository *repo,
 	const git_signature *author,
 	const git_signature *committer,
@@ -521,7 +521,7 @@ GIT_EXTERN(int) git_commit_dup(git_commit **out, git_commit *source);
  * - returns GIT_OK, the signature parameter is expected to be filled.
  */
 typedef int (*git_commit_signing_cb)(
-	git_buf *signature, git_buf *signature_field, const char *commit_content, void *payload);
+	git_userbuf *signature, git_userbuf *signature_field, const char *commit_content, void *payload);
 
 /** @} */
 GIT_END_DECL

@@ -19,6 +19,8 @@
 #include "refspec.h"
 #include "fetchhead.h"
 #include "push.h"
+#include "branch.h"
+#include "userbuf.h"
 
 #define CONFIG_URL_FMT "remote.%s.url"
 #define CONFIG_PUSHURL_FMT "remote.%s.pushurl"
@@ -651,11 +653,15 @@ static int resolve_url(git_buf *resolved_url, const char *url, int direction, co
 	int status;
 
 	if (callbacks && callbacks->resolve_url) {
+		git_userbuf user_url = GIT_USERBUF_INIT;
+
 		git_buf_clear(resolved_url);
-		status = callbacks->resolve_url(resolved_url, url, direction, callbacks->payload);
+		status = callbacks->resolve_url(&user_url, url, direction, callbacks->payload);
+
 		if (status != GIT_PASSTHROUGH) {
 			git_error_set_after_callback_function(status, "git_resolve_url_cb");
-			git_buf_sanitize(resolved_url);
+
+			git_buf_attach(resolved_url, user_url.ptr, user_url.size);
 			return status;
 		}
 	}
@@ -837,11 +843,11 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 	}
 
 	/* http_proxy / https_proxy environment variables */
-	error = git__getenv(&val, use_ssl ? "https_proxy" : "http_proxy");
+	error = git_buf_getenv(&val, use_ssl ? "https_proxy" : "http_proxy");
 
 	/* try uppercase environment variables */
 	if (error == GIT_ENOTFOUND)
-		error = git__getenv(&val, use_ssl ? "HTTPS_PROXY" : "HTTP_PROXY");
+		error = git_buf_getenv(&val, use_ssl ? "HTTPS_PROXY" : "HTTP_PROXY");
 
 	if (error < 0) {
 		if (error == GIT_ENOTFOUND) {
@@ -1088,11 +1094,11 @@ static int ref_to_update(int *update, git_buf *remote_name, git_remote *remote, 
 
 	if ((!git_reference__is_branch(ref_name)) ||
 	    !git_remote_name(remote) ||
-	    (error = git_branch_upstream_remote(&upstream_remote, repo, ref_name) < 0) ||
+	    (error = git_branch__upstream_remote(&upstream_remote, repo, ref_name) < 0) ||
 	    git__strcmp(git_remote_name(remote), git_buf_cstr(&upstream_remote)) ||
-	    (error = git_branch_upstream_name(&upstream_name, repo, ref_name)) < 0 ||
+	    (error = git_branch__upstream_name(&upstream_name, repo, ref_name)) < 0 ||
 	    !git_refspec_dst_matches(spec, git_buf_cstr(&upstream_name)) ||
-	    (error = git_refspec_rtransform(remote_name, spec, upstream_name.ptr)) < 0) {
+	    (error = git_refspec__rtransform(remote_name, spec, upstream_name.ptr)) < 0) {
 		/* Not an error if there is no upstream */
 		if (error == GIT_ENOTFOUND) {
 			git_error_clear();
@@ -1284,7 +1290,7 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 			if (!git_refspec_dst_matches(spec, refname))
 				continue;
 
-			if ((error = git_refspec_rtransform(&buf, spec, refname)) < 0)
+			if ((error = git_refspec__rtransform(&buf, spec, refname)) < 0)
 				goto cleanup;
 
 			key.name = (char *) git_buf_cstr(&buf);
@@ -1407,7 +1413,7 @@ static int update_tips_for_spec(
 		/* If we didn't want to auto-follow the tag, check if the refspec matches */
 		if (!autotag && git_refspec_src_matches(spec, head->name)) {
 			if (spec->dst) {
-				if (git_refspec_transform(&refname, spec, head->name) < 0)
+				if (git_refspec__transform(&refname, spec, head->name) < 0)
 					goto on_error;
 			} else {
 				/*
@@ -1562,7 +1568,7 @@ static int opportunistic_updates(const git_remote *remote, const git_remote_call
 		 */
 
 		git_buf_clear(&refname);
-		if ((error = git_refspec_transform(&refname, spec, head->name)) < 0)
+		if ((error = git_refspec__transform(&refname, spec, head->name)) < 0)
 			goto cleanup;
 
 		error = git_reference_name_to_id(&old, remote->repo, refname.ptr);
@@ -2367,7 +2373,7 @@ int git_remote_delete(git_repository *repo, const char *name)
 	return 0;
 }
 
-int git_remote_default_branch(git_buf *out, git_remote *remote)
+int git_remote_default_branch(git_userbuf *out, git_remote *remote)
 {
 	const git_remote_head **heads;
 	const git_remote_head *guess = NULL;
@@ -2386,10 +2392,10 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 	if (strcmp(heads[0]->name, GIT_HEAD_FILE))
 		return GIT_ENOTFOUND;
 
-	git_buf_sanitize(out);
+	git_userbuf_sanitize(out);
 	/* the first one must be HEAD so if that has the symref info, we're done */
 	if (heads[0]->symref_target)
-		return git_buf_puts(out, heads[0]->symref_target);
+		return git_buf_set((git_buf *)out, heads[0]->symref_target, strlen(heads[0]->symref_target));
 
 	/*
 	 * If there's no symref information, we have to look over them
@@ -2419,7 +2425,7 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 	if (!guess)
 		return GIT_ENOTFOUND;
 
-	return git_buf_puts(out, guess->name);
+	return git_buf_set((git_buf *)out, guess->name, strlen(guess->name));
 }
 
 int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts)

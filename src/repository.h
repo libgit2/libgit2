@@ -235,6 +235,8 @@ int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head
 
 int git_repository__cleanup_files(git_repository *repo, const char *files[], size_t files_len);
 
+int git_repository__item_path(git_buf *out, const git_repository *repo, git_repository_item_t item);
+
 /* The default "reserved names" for a repository */
 extern git_buf git_repository__reserved_names_win32[];
 extern size_t git_repository__reserved_names_win32_len;

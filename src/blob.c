@@ -15,6 +15,7 @@
 #include "filebuf.h"
 #include "filter.h"
 #include "buf_text.h"
+#include "userbuf.h"
 
 const void *git_blob_rawcontent(const git_blob *blob)
 {
@@ -137,7 +138,7 @@ static int write_file_filtered(
 	int error;
 	git_buf tgt = GIT_BUF_INIT;
 
-	error = git_filter_list_apply_to_file(&tgt, fl, NULL, full_path);
+	error = git_filter_list_apply_to_file((git_userbuf *)&tgt, fl, NULL, full_path);
 
 	/* Write the file to disk if it was properly filtered */
 	if (!error) {
@@ -346,7 +347,7 @@ int git_blob_create_from_stream(git_writestream **out, git_repository *repo, con
 	stream->parent.close = blob_writestream_close;
 	stream->parent.free  = blob_writestream_free;
 
-	if ((error = git_repository_item_path(&path, repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0
+	if ((error = git_repository__item_path(&path, repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0
 		|| (error = git_buf_joinpath(&path, path.ptr, "streamed")) < 0)
 		goto cleanup;
 
@@ -400,7 +401,7 @@ int git_blob_is_binary(const git_blob *blob)
 	return git_buf_text_is_binary(&content);
 }
 
-int git_blob_filter(
+static int git_blob__filter(
 	git_buf *out,
 	git_blob *blob,
 	const char *path,
@@ -412,8 +413,6 @@ int git_blob_filter(
 	git_filter_flag_t flags = GIT_FILTER_DEFAULT;
 
 	assert(blob && path && out);
-
-	git_buf_sanitize(out);
 
 	GIT_ERROR_CHECK_VERSION(
 		given_opts, GIT_BLOB_FILTER_OPTIONS_VERSION, "git_blob_filter_options");
@@ -435,12 +434,22 @@ int git_blob_filter(
 			&fl, git_blob_owner(blob), blob, path,
 			GIT_FILTER_TO_WORKTREE, flags))) {
 
-		error = git_filter_list_apply_to_blob(out, fl, blob);
+		error = git_filter_list_apply_to_blob((git_userbuf *)out, fl, blob);
 
 		git_filter_list_free(fl);
 	}
 
 	return error;
+}
+
+int git_blob_filter(
+	git_userbuf *out,
+	git_blob *blob,
+	const char *path,
+	git_blob_filter_options *opts)
+{
+	git_userbuf_sanitize(out);
+	return git_blob__filter((git_buf *)out, blob, path, opts);
 }
 
 /* Deprecated functions */
@@ -477,7 +486,7 @@ int git_blob_create_fromstream_commit(
 }
 
 int git_blob_filtered_content(
-	git_buf *out,
+	git_userbuf *out,
 	git_blob *blob,
 	const char *path,
 	int check_for_binary_data)

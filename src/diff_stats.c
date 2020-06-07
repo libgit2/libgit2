@@ -10,6 +10,7 @@
 #include "vector.h"
 #include "diff.h"
 #include "patch_generate.h"
+#include "userbuf.h"
 
 #define DIFF_RENAME_FILE_SEPARATOR " => "
 #define STATS_FULL_MIN_SCALE 7
@@ -272,7 +273,7 @@ size_t git_diff_stats_deletions(
 }
 
 int git_diff_stats_to_buf(
-	git_buf *out,
+	git_userbuf *out,
 	const git_diff_stats *stats,
 	git_diff_stats_format_t format,
 	size_t width)
@@ -283,13 +284,15 @@ int git_diff_stats_to_buf(
 
 	assert(out && stats);
 
+	git_userbuf_sanitize(out);
+
 	if (format & GIT_DIFF_STATS_NUMBER) {
 		for (i = 0; i < stats->files_changed; ++i) {
 			if ((delta = git_diff_get_delta(stats->diff, i)) == NULL)
 				continue;
 
 			error = git_diff_file_stats__number_to_buf(
-				out, delta, &stats->filestats[i]);
+				(git_buf *)out, delta, &stats->filestats[i]);
 			if (error < 0)
 				return error;
 		}
@@ -310,7 +313,7 @@ int git_diff_stats_to_buf(
 				continue;
 
 			error = git_diff_file_stats__full_to_buf(
-				out, delta, &stats->filestats[i], stats, width);
+				(git_buf *)out, delta, &stats->filestats[i], stats, width);
 			if (error < 0)
 				return error;
 		}
@@ -318,22 +321,22 @@ int git_diff_stats_to_buf(
 
 	if (format & GIT_DIFF_STATS_FULL || format & GIT_DIFF_STATS_SHORT) {
 		git_buf_printf(
-			out, " %" PRIuZ " file%s changed",
+			(git_buf *)out, " %" PRIuZ " file%s changed",
 			stats->files_changed, stats->files_changed != 1 ? "s" : "");
 
 		if (stats->insertions || stats->deletions == 0)
 			git_buf_printf(
-				out, ", %" PRIuZ " insertion%s(+)",
+				(git_buf *)out, ", %" PRIuZ " insertion%s(+)",
 				stats->insertions, stats->insertions != 1 ? "s" : "");
 
 		if (stats->deletions || stats->insertions == 0)
 			git_buf_printf(
-				out, ", %" PRIuZ " deletion%s(-)",
+				(git_buf *)out, ", %" PRIuZ " deletion%s(-)",
 				stats->deletions, stats->deletions != 1 ? "s" : "");
 
-		git_buf_putc(out, '\n');
+		git_buf_putc((git_buf *)out, '\n');
 
-		if (git_buf_oom(out))
+		if (git_buf_oom((git_buf *)out))
 			return -1;
 	}
 
@@ -342,7 +345,7 @@ int git_diff_stats_to_buf(
 			if ((delta = git_diff_get_delta(stats->diff, i)) == NULL)
 				continue;
 
-			error = git_diff_file_stats__summary_to_buf(out, delta);
+			error = git_diff_file_stats__summary_to_buf((git_buf *)out, delta);
 			if (error < 0)
 				return error;
 		}

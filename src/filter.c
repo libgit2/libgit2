@@ -17,6 +17,7 @@
 #include "blob.h"
 #include "attr_file.h"
 #include "array.h"
+#include "userbuf.h"
 
 struct git_filter_source {
 	git_repository *repo;
@@ -720,20 +721,20 @@ static void buf_stream_init(struct buf_stream *writer, git_buf *target)
 }
 
 int git_filter_list_apply_to_data(
-	git_buf *tgt, git_filter_list *filters, git_buf *src)
+	git_userbuf *tgt, git_filter_list *filters, git_userbuf *src)
 {
 	struct buf_stream writer;
 	int error;
 
-	git_buf_sanitize(tgt);
-	git_buf_sanitize(src);
+	git_userbuf_sanitize(tgt);
+	git_userbuf_sanitize(src);
 
 	if (!filters) {
-		git_buf_attach_notowned(tgt, src->ptr, src->size);
+		git_buf_attach_notowned((git_buf *)tgt, src->ptr, src->size);
 		return 0;
 	}
 
-	buf_stream_init(&writer, tgt);
+	buf_stream_init(&writer, (git_buf *)tgt);
 
 	if ((error = git_filter_list_stream_data(filters, src,
 		&writer.parent)) < 0)
@@ -744,7 +745,7 @@ int git_filter_list_apply_to_data(
 }
 
 int git_filter_list_apply_to_file(
-	git_buf *out,
+	git_userbuf *out,
 	git_filter_list *filters,
 	git_repository *repo,
 	const char *path)
@@ -752,7 +753,7 @@ int git_filter_list_apply_to_file(
 	struct buf_stream writer;
 	int error;
 
-	buf_stream_init(&writer, out);
+	buf_stream_init(&writer, (git_buf *)out);
 
 	if ((error = git_filter_list_stream_file(
 		filters, repo, path, &writer.parent)) < 0)
@@ -776,14 +777,14 @@ static int buf_from_blob(git_buf *out, git_blob *blob)
 }
 
 int git_filter_list_apply_to_blob(
-	git_buf *out,
+	git_userbuf *out,
 	git_filter_list *filters,
 	git_blob *blob)
 {
 	struct buf_stream writer;
 	int error;
 
-	buf_stream_init(&writer, out);
+	buf_stream_init(&writer, (git_buf *)out);
 
 	if ((error = git_filter_list_stream_blob(
 		filters, blob, &writer.parent)) < 0)
@@ -825,8 +826,8 @@ static int proxy_stream_close(git_writestream *s)
 	error = proxy_stream->filter->apply(
 		proxy_stream->filter,
 		proxy_stream->payload,
-		proxy_stream->output,
-		&proxy_stream->input,
+		(git_userbuf *)proxy_stream->output,
+		(git_userbuf *)&proxy_stream->input,
 		proxy_stream->source);
 
 	if (error == GIT_PASSTHROUGH) {
@@ -997,14 +998,14 @@ done:
 
 int git_filter_list_stream_data(
 	git_filter_list *filters,
-	git_buf *data,
+	git_userbuf *data,
 	git_writestream *target)
 {
 	git_vector filter_streams = GIT_VECTOR_INIT;
 	git_writestream *stream_start;
 	int error, initialized = 0;
 
-	git_buf_sanitize(data);
+	git_userbuf_sanitize(data);
 
 	if ((error = stream_list_init(&stream_start, &filter_streams, filters, target)) < 0)
 		goto out;
@@ -1035,7 +1036,7 @@ int git_filter_list_stream_blob(
 	if (filters)
 		git_oid_cpy(&filters->source.oid, git_blob_id(blob));
 
-	return git_filter_list_stream_data(filters, &in, target);
+	return git_filter_list_stream_data(filters, (git_userbuf *)&in, target);
 }
 
 int git_filter_init(git_filter *filter, unsigned int version)

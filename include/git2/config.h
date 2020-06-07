@@ -9,7 +9,7 @@
 
 #include "common.h"
 #include "types.h"
-#include "buffer.h"
+#include "userbuf.h"
 
 /**
  * @file git2/config.h
@@ -121,10 +121,10 @@ typedef struct {
  * This method will not guess the path to the xdg compatible
  * config file (.config/git/config).
  *
- * @param out Pointer to a user-allocated git_buf in which to store the path
+ * @param out Pointer to a user-allocated git_userbuf in which to store the path
  * @return 0 if a global configuration file has been found. Its path will be stored in `out`.
  */
-GIT_EXTERN(int) git_config_find_global(git_buf *out);
+GIT_EXTERN(int) git_config_find_global(git_userbuf *out);
 
 /**
  * Locate the path to the global xdg compatible configuration file
@@ -137,11 +137,11 @@ GIT_EXTERN(int) git_config_find_global(git_buf *out);
  * may be used on any `git_config` call to load the
  * xdg compatible configuration file.
  *
- * @param out Pointer to a user-allocated git_buf in which to store the path
+ * @param out Pointer to a user-allocated git_userbuf in which to store the path
  * @return 0 if a xdg compatible configuration file has been
  *	found. Its path will be stored in `out`.
  */
-GIT_EXTERN(int) git_config_find_xdg(git_buf *out);
+GIT_EXTERN(int) git_config_find_xdg(git_userbuf *out);
 
 /**
  * Locate the path to the system configuration file
@@ -149,22 +149,22 @@ GIT_EXTERN(int) git_config_find_xdg(git_buf *out);
  * If /etc/gitconfig doesn't exist, it will look for
  * %PROGRAMFILES%\Git\etc\gitconfig.
  *
- * @param out Pointer to a user-allocated git_buf in which to store the path
+ * @param out Pointer to a user-allocated git_userbuf in which to store the path
  * @return 0 if a system configuration file has been
  *	found. Its path will be stored in `out`.
  */
-GIT_EXTERN(int) git_config_find_system(git_buf *out);
+GIT_EXTERN(int) git_config_find_system(git_userbuf *out);
 
 /**
  * Locate the path to the configuration file in ProgramData
  *
  * Look for the file in %PROGRAMDATA%\Git\config used by portable git.
  *
- * @param out Pointer to a user-allocated git_buf in which to store the path
+ * @param out Pointer to a user-allocated git_userbuf in which to store the path
  * @return 0 if a ProgramData configuration file has been
  *	found. Its path will be stored in `out`.
  */
-GIT_EXTERN(int) git_config_find_programdata(git_buf *out);
+GIT_EXTERN(int) git_config_find_programdata(git_userbuf *out);
 
 /**
  * Open the global, XDG and system configuration files
@@ -371,7 +371,7 @@ GIT_EXTERN(int) git_config_get_bool(int *out, const git_config *cfg, const char 
  * @param name the variable's name
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_path(git_buf *out, const git_config *cfg, const char *name);
+GIT_EXTERN(int) git_config_get_path(git_userbuf *out, const git_config *cfg, const char *name);
 
 /**
  * Get the value of a string config variable.
@@ -405,7 +405,7 @@ GIT_EXTERN(int) git_config_get_string(const char **out, const git_config *cfg, c
  * @param name the variable's name
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_string_buf(git_buf *out, const git_config *cfg, const char *name);
+GIT_EXTERN(int) git_config_get_string_buf(git_userbuf *out, const git_config *cfg, const char *name);
 
 /**
  * Get each value of a multivar in a foreach callback
@@ -718,7 +718,7 @@ GIT_EXTERN(int) git_config_parse_int64(int64_t *out, const char *value);
  * @param out placae to store the result of parsing
  * @param value the path to evaluate
  */
-GIT_EXTERN(int) git_config_parse_path(git_buf *out, const char *value);
+GIT_EXTERN(int) git_config_parse_path(git_userbuf *out, const char *value);
 
 /**
  * Perform an operation on each config variable in a given config backend,

@@ -193,7 +193,7 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 	git_refspec *fetch_spec;
 	size_t i, j;
 	git_buf msg = GIT_BUF_INIT;
-	git_buf ref_name = GIT_BUF_INIT;
+	git_userbuf ref_name = GIT_USERBUF_INIT;
 	git_vector actual_refs = GIT_VECTOR_INIT;
 	git_branch_iterator *iter;
 	char *actual_ref;
@@ -230,12 +230,12 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 
 		/* Find matching remote branch */
 		git_vector_foreach(&actual_refs, j, actual_ref) {
-			if (!strcmp(git_buf_cstr(&ref_name), actual_ref))
+			if (!strcmp(ref_name.ptr, actual_ref))
 				break;
 		}
 
 		if (j == actual_refs.length) {
-			git_buf_printf(&msg, "Did not find expected tracking branch '%s'.", git_buf_cstr(&ref_name));
+			git_buf_printf(&msg, "Did not find expected tracking branch '%s'.", ref_name.ptr);
 			failed = 1;
 			goto failed;
 		}
@@ -269,14 +269,14 @@ failed:
 
 	git_vector_free(&actual_refs);
 	git_buf_dispose(&msg);
-	git_buf_dispose(&ref_name);
+	git_userbuf_dispose(&ref_name);
 }
 
 static void verify_update_tips_callback(git_remote *remote, expected_ref expected_refs[], size_t expected_refs_len)
 {
 	git_refspec *fetch_spec;
 	git_buf msg = GIT_BUF_INIT;
-	git_buf ref_name = GIT_BUF_INIT;
+	git_userbuf ref_name = GIT_USERBUF_INIT;
 	updated_tip *tip = NULL;
 	size_t i, j;
 	int failed = 0;
@@ -293,12 +293,12 @@ static void verify_update_tips_callback(git_remote *remote, expected_ref expecte
 
 		/* Find matching update_tip entry */
 		git_vector_foreach(&_record_cbs_data.updated_tips, j, tip) {
-			if (!strcmp(git_buf_cstr(&ref_name), tip->name))
+			if (!strcmp(ref_name.ptr, tip->name))
 				break;
 		}
 
 		if (j == _record_cbs_data.updated_tips.length) {
-			git_buf_printf(&msg, "Did not find expected updated tip entry for branch '%s'.", git_buf_cstr(&ref_name));
+			git_buf_printf(&msg, "Did not find expected updated tip entry for branch '%s'.", ref_name.ptr);
 			failed = 1;
 			goto failed;
 		}
@@ -314,7 +314,7 @@ failed:
 	if (failed)
 		cl_fail(git_buf_cstr(&msg));
 
-	git_buf_dispose(&ref_name);
+	git_userbuf_dispose(&ref_name);
 	git_buf_dispose(&msg);
 }
 

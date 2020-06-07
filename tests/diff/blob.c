@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "diff_helpers.h"
+#include "userbuf.h"
 
 #define BLOB_DIFF \
     "diff --git a/file b/file\n" \
@@ -83,7 +84,7 @@ void test_diff_blob__patch_with_freed_blobs(void)
 	git_oid a_oid, b_oid;
 	git_blob *a, *b;
 	git_patch *p;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	/* tests/resources/attr/root_test1 */
 	cl_git_pass(git_oid_fromstrn(&a_oid, "45141a79", 8));
@@ -101,7 +102,7 @@ void test_diff_blob__patch_with_freed_blobs(void)
 	cl_assert_equal_s(buf.ptr, BLOB_DIFF);
 
 	git_patch_free(p);
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_blob__can_compare_text_blobs(void)
@@ -831,7 +832,7 @@ void test_diff_blob__using_path_and_attributes(void)
 	size_t bin_len = 33;
 	const char *changed;
 	git_patch *p;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	/* set up custom diff drivers and 'diff' attribute mappings for them */
 
@@ -915,7 +916,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"+More lines\n"
 		"+And more\n"
 		"+Go here\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -925,7 +926,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"diff --git a/zzz.binary b/zzz.binary\n"
 		"index 45141a7..75b0dbb 100644\n"
 		"Binary files a/zzz.binary and b/zzz.binary differ\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -940,7 +941,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"+More lines\n"
 		"+And more\n"
 		"+Go here\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -955,7 +956,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"+More lines\n"
 		"+And more\n"
 		"+Go here\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(p);
 
 	/* "0123456789\n\x01\x02\x03\x04\x05\x06\x07\x08\x09\x00\n0123456789\n"
@@ -971,7 +972,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"diff --git a/zzz.normal b/zzz.normal\n"
 		"index b435cd5..1604519 100644\n"
 		"Binary files a/zzz.normal and b/zzz.normal differ\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -985,7 +986,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"@@ -3 +3 @@\n"
 		"-0123456789\n"
 		"+replace a line\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -999,7 +1000,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"@@ -3 +3 @@\n"
 		"-0123456789\n"
 		"+replace a line\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -1013,10 +1014,10 @@ void test_diff_blob__using_path_and_attributes(void)
 		"@@ -3 +3 @@ 0123456789\n"
 		"-0123456789\n"
 		"+replace a line\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_userbuf_clear(&buf);
 	git_patch_free(p);
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_blob_free(nonbin);
 	git_blob_free(bin);
 }

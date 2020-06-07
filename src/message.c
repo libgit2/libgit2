@@ -6,6 +6,7 @@
  */
 
 #include "message.h"
+#include "userbuf.h"
 
 static size_t line_length_without_trailing_spaces(const char *line, size_t len)
 {
@@ -21,7 +22,7 @@ static size_t line_length_without_trailing_spaces(const char *line, size_t len)
 
 /* Greatly inspired from git.git "stripspace" */
 /* see https://github.com/git/git/blob/497215d8811ac7b8955693ceaad0899ecd894ed2/builtin/stripspace.c#L4-67 */
-int git_message_prettify(git_buf *message_out, const char *message, int strip_comments, char comment_char)
+int git_message_prettify(git_userbuf *message_out, const char *message, int strip_comments, char comment_char)
 {
 	const size_t message_len = strlen(message);
 
@@ -29,7 +30,7 @@ int git_message_prettify(git_buf *message_out, const char *message, int strip_co
 	size_t i, line_length, rtrimmed_line_length;
 	char *next_newline;
 
-	git_buf_sanitize(message_out);
+	git_userbuf_sanitize(message_out);
 
 	for (i = 0; i < strlen(message); i += line_length) {
 		next_newline = memchr(message + i, '\n', message_len - i);
@@ -51,12 +52,12 @@ int git_message_prettify(git_buf *message_out, const char *message, int strip_co
 		}
 
 		if (consecutive_empty_lines > 0 && message_out->size > 0)
-			git_buf_putc(message_out, '\n');
+			git_buf_putc((git_buf *)message_out, '\n');
 
 		consecutive_empty_lines = 0;
-		git_buf_put(message_out, message + i, rtrimmed_line_length);
-		git_buf_putc(message_out, '\n');
+		git_buf_put((git_buf *)message_out, message + i, rtrimmed_line_length);
+		git_buf_putc((git_buf *)message_out, '\n');
 	}
 
-	return git_buf_oom(message_out) ? -1 : 0;
+	return git_buf_oom((git_buf *)message_out) ? -1 : 0;
 }

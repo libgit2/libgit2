@@ -13,6 +13,7 @@
 #include "tree.h"
 #include "repository.h"
 #include "array.h"
+#include "oidarray.h"
 
 #include <time.h>
 
@@ -36,6 +37,26 @@ struct git_commit {
 void git_commit__free(void *commit);
 int git_commit__parse(void *commit, git_odb_object *obj);
 int git_commit__parse_raw(void *commit, const char *data, size_t size);
+
+int git_commit__create_buffer(
+	git_buf *out,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	const git_commit *parents[]);
+
+int git_commit__create_buffer_internal(
+	git_buf *out,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_oid *tree,
+	git_array_oid_t *parents);
 
 typedef enum {
 	GIT_COMMIT_PARSE_QUICK = (1 << 0), /**< Only parse parents and committer info */

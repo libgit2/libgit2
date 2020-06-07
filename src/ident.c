@@ -98,20 +98,20 @@ static int ident_remove_id(
 static int ident_apply(
 	git_filter     *self,
 	void          **payload,
-	git_buf        *to,
-	const git_buf  *from,
+	git_userbuf    *to,
+	const git_userbuf *from,
 	const git_filter_source *src)
 {
 	GIT_UNUSED(self); GIT_UNUSED(payload);
 
 	/* Don't filter binary files */
-	if (git_buf_text_is_binary(from))
+	if (git_buf_text_is_binary((git_buf *)from))
 		return GIT_PASSTHROUGH;
 
 	if (git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
-		return ident_insert_id(to, from, src);
+		return ident_insert_id((git_buf *)to, (git_buf *)from, src);
 	else
-		return ident_remove_id(to, from);
+		return ident_remove_id((git_buf *)to, (git_buf *)from);
 }
 
 git_filter *git_ident_filter_new(void)

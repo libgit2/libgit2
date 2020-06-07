@@ -24,6 +24,8 @@
 #include "index.h"
 #include "worktree.h"
 #include "clone.h"
+#include "branch.h"
+#include "userbuf.h"
 
 #define GIT_MODULES_FILE ".gitmodules"
 
@@ -74,6 +76,7 @@ static void submodule_get_index_status(unsigned int *, git_submodule *);
 static void submodule_get_wd_status(unsigned int *, git_submodule *, git_repository *, git_submodule_ignore_t);
 static void submodule_update_from_index_entry(git_submodule *sm, const git_index_entry *ie);
 static void submodule_update_from_head_data(git_submodule *sm, mode_t mode, const git_oid *id);
+static int git_submodule__resolve_url(git_buf *out, git_repository *repo, const char *url);
 
 static int submodule_cmp(const void *a, const void *b)
 {
@@ -659,7 +662,7 @@ static int submodule_repo_init(
 	 * Old style: sub-repo goes directly into repo/<name>/.git/
 	 */
 	 if (use_gitlink) {
-		error = git_repository_item_path(&repodir, parent_repo, GIT_REPOSITORY_ITEM_MODULES);
+		error = git_repository__item_path(&repodir, parent_repo, GIT_REPOSITORY_ITEM_MODULES);
 		if (error < 0)
 			goto cleanup;
 		error = git_buf_joinpath(&repodir, repodir.ptr, path);
@@ -760,7 +763,7 @@ int git_submodule_add_setup(
 		git_path_contains(&name, DOT_GIT))) {
 
 		/* resolve the actual URL to use */
-		if ((error = git_submodule_resolve_url(&real_url, repo, url)) < 0)
+		if ((error = git_submodule__resolve_url(&real_url, repo, url)) < 0)
 			goto cleanup;
 
 		 if ((error = submodule_repo_init(&subrepo, repo, path, real_url.ptr, use_gitlink)) < 0)
@@ -991,7 +994,7 @@ const char *git_submodule_url(git_submodule *submodule)
 	return submodule->url;
 }
 
-int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *url)
+static int git_submodule__resolve_url(git_buf *out, git_repository *repo, const char *url)
 {
 	int error = 0;
 	git_buf normalized = GIT_BUF_INIT;
@@ -1021,6 +1024,12 @@ int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *ur
 
 	git_buf_dispose(&normalized);
 	return error;
+}
+
+int git_submodule_resolve_url(git_userbuf *out, git_repository *repo, const char *url)
+{
+	git_userbuf_sanitize(out);
+	return git_submodule__resolve_url((git_buf *)out, repo, url);
 }
 
 static int write_var(git_repository *repo, const char *name, const char *var, const char *val)
@@ -1196,7 +1205,7 @@ static int submodule_repo_create(
 	 * <repo-dir>/modules/<name>/ with a gitlink in the
 	 * sub-repo workdir directory to that repository.
 	 */
-	error = git_repository_item_path(&repodir, parent_repo, GIT_REPOSITORY_ITEM_MODULES);
+	error = git_repository__item_path(&repodir, parent_repo, GIT_REPOSITORY_ITEM_MODULES);
 	if (error < 0)
 		goto cleanup;
 	error = git_buf_joinpath(&repodir, repodir.ptr, path);
@@ -1392,7 +1401,7 @@ int git_submodule_init(git_submodule *sm, int overwrite)
 
 	/* write "submodule.NAME.url" */
 
-	if ((error = git_submodule_resolve_url(&effective_submodule_url, sm->repo, sm->url)) < 0 ||
+	if ((error = git_submodule__resolve_url(&effective_submodule_url, sm->repo, sm->url)) < 0 ||
 		(error = git_buf_printf(&key, "submodule.%s.url", sm->name)) < 0 ||
 		(error = git_config__update_entry(
 			cfg, key.ptr, effective_submodule_url.ptr, overwrite != 0, false)) < 0)
@@ -1433,7 +1442,7 @@ int git_submodule_sync(git_submodule *sm)
 	/* copy URL over to config only if it already exists */
 	if ((error = git_repository_config__weakptr(&cfg, sm->repo)) < 0 ||
 	    (error = git_buf_printf(&key, "submodule.%s.url", sm->name)) < 0 ||
-	    (error = git_submodule_resolve_url(&url, sm->repo, sm->url)) < 0 ||
+	    (error = git_submodule__resolve_url(&url, sm->repo, sm->url)) < 0 ||
 	    (error = git_config__update_entry(cfg, key.ptr, url.ptr, true, true)) < 0)
 		goto out;
 
@@ -2123,14 +2132,14 @@ static int lookup_head_remote_key(git_buf *remote_name, git_repository *repo)
 	}
 
 	/* lookup remote tracking branch of HEAD */
-	if ((error = git_branch_upstream_name(
+	if ((error = git_branch__upstream_name(
 		&upstream_name,
 		repo,
 		git_reference_name(head))) < 0)
 		goto done;
 
 	/* lookup remote of remote tracking branch */
-	if ((error = git_branch_remote_name(remote_name, repo, upstream_name.ptr)) < 0)
+	if ((error = git_branch__remote_name(remote_name, repo, upstream_name.ptr)) < 0)
 		goto done;
 
 done:

@@ -182,7 +182,7 @@ void test_submodule_lookup__backslashes(void)
 	git_config *cfg;
 	git_submodule *sm;
 	git_repository *subrepo;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *backslashed_path = "..\\submod2_target";
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "submod2/.gitmodules"));
@@ -195,7 +195,7 @@ void test_submodule_lookup__backslashes(void)
 
 	cl_git_pass(git_submodule_resolve_url(&buf, g_repo, backslashed_path));
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_submodule_free(sm);
 	git_repository_free(subrepo);
 }

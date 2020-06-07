@@ -71,7 +71,7 @@ void test_worktree_open__repository_through_gitdir(void)
 
 void test_worktree_open__open_discovered_worktree(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_userbuf path = GIT_USERBUF_INIT;
 	git_repository *repo;
 
 	cl_git_pass(git_repository_discover(&path,
@@ -80,7 +80,7 @@ void test_worktree_open__open_discovered_worktree(void)
 	cl_assert_equal_s(git_repository_workdir(fixture.worktree),
 		git_repository_workdir(repo));
 
-	git_buf_dispose(&path);
+	git_userbuf_dispose(&path);
 	git_repository_free(repo);
 }
 

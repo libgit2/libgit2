@@ -105,7 +105,7 @@ void test_commit_write__into_buf(void)
 	git_tree *tree;
 	git_commit *parent;
 	git_oid parent_id;
-	git_buf commit = GIT_BUF_INIT;
+	git_userbuf commit = GIT_USERBUF_INIT;
 
 	git_oid_fromstr(&tree_id, tree_id_str);
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
@@ -130,7 +130,7 @@ This is a root commit\n\
    This is a root commit and should be the only one in this branch\n\
 ");
 
-	git_buf_dispose(&commit);
+	git_userbuf_dispose(&commit);
 	git_tree_free(tree);
 	git_commit_free(parent);
 	git_signature_free(author);

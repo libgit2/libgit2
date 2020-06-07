@@ -9,7 +9,7 @@
 void test_config_new__write_new_config(void)
 {
 	git_config *config;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	cl_git_mkfile(TEST_CONFIG, "");
 	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
@@ -22,12 +22,12 @@ void test_config_new__write_new_config(void)
 	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
 
 	cl_git_pass(git_config_get_string_buf(&buf, config, "color.ui"));
-	cl_assert_equal_s("auto", git_buf_cstr(&buf));
-	git_buf_clear(&buf);
+	cl_assert_equal_s("auto", buf.ptr);
+	git_userbuf_dispose(&buf);
 	cl_git_pass(git_config_get_string_buf(&buf, config, "core.editor"));
-	cl_assert_equal_s("ed", git_buf_cstr(&buf));
+	cl_assert_equal_s("ed", buf.ptr);
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_config_free(config);
 
 	cl_must_pass(p_unlink(TEST_CONFIG));

@@ -13,6 +13,7 @@
 #include "iterator.h"
 #include "signature.h"
 #include "blob.h"
+#include "userbuf.h"
 
 static int note_error_notfound(void)
 {
@@ -622,19 +623,19 @@ cleanup:
 	return error;
 }
 
-int git_note_default_ref(git_buf *out, git_repository *repo)
+int git_note_default_ref(git_userbuf *out, git_repository *repo)
 {
 	char *default_ref;
 	int error;
 
 	assert(out && repo);
 
-	git_buf_sanitize(out);
+	git_userbuf_sanitize(out);
 
 	if ((error = note_get_default_ref(&default_ref, repo)) < 0)
 		return error;
 
-	git_buf_attach(out, default_ref, strlen(default_ref));
+	git_buf_attach((git_buf *)out, default_ref, strlen(default_ref));
 	return 0;
 }
 

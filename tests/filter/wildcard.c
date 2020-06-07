@@ -77,18 +77,18 @@ static int wildcard_filter_check(
 }
 
 static int wildcard_filter_apply(
-	git_filter     *self,
-	void          **payload,
-	git_buf        *to,
-	const git_buf  *from,
+	git_filter        *self,
+	void             **payload,
+	git_userbuf       *to,
+	const git_userbuf *from,
 	const git_filter_source *source)
 {
 	const char *filtername = *payload;
 
 	if (filtername && strcmp(filtername, "wcflip") == 0)
-		return bitflip_filter_apply(self, payload, to, from, source);
+		return bitflip_filter_apply(self, payload, (git_buf *)to, (git_buf *)from, source);
 	else if (filtername && strcmp(filtername, "wcreverse") == 0)
-		return reverse_filter_apply(self, payload, to, from, source);
+		return reverse_filter_apply(self, payload, (git_buf *)to, (git_buf *)from, source);
 
 	cl_fail("Unexpected attribute");
 	return GIT_PASSTHROUGH;
@@ -123,12 +123,12 @@ static git_filter *create_wildcard_filter(void)
 void test_filter_wildcard__reverse(void)
 {
 	git_filter_list *fl;
-	git_buf in = GIT_BUF_INIT, out = GIT_BUF_INIT;
+	git_userbuf in = GIT_USERBUF_INIT, out = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "hero-reverse-foo", GIT_FILTER_TO_ODB, 0));
 
-	cl_git_pass(git_buf_put(&in, (char *)input, DATA_LEN));
+	cl_git_pass(git_buf_put((git_buf *)&in, (char *)input, DATA_LEN));
 	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
 
 	cl_assert_equal_i(DATA_LEN, out.size);
@@ -137,19 +137,19 @@ void test_filter_wildcard__reverse(void)
 		0, memcmp(reversed, out.ptr, out.size));
 
 	git_filter_list_free(fl);
-	git_buf_dispose(&out);
-	git_buf_dispose(&in);
+	git_userbuf_dispose(&out);
+	git_userbuf_dispose(&in);
 }
 
 void test_filter_wildcard__flip(void)
 {
 	git_filter_list *fl;
-	git_buf in = GIT_BUF_INIT, out = GIT_BUF_INIT;
+	git_userbuf in = GIT_USERBUF_INIT, out = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "hero-flip-foo", GIT_FILTER_TO_ODB, 0));
 
-	cl_git_pass(git_buf_put(&in, (char *)input, DATA_LEN));
+	cl_git_pass(git_buf_put((git_buf *)&in, (char *)input, DATA_LEN));
 	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
 
 	cl_assert_equal_i(DATA_LEN, out.size);
@@ -158,19 +158,19 @@ void test_filter_wildcard__flip(void)
 		0, memcmp(flipped, out.ptr, out.size));
 
 	git_filter_list_free(fl);
-	git_buf_dispose(&out);
-	git_buf_dispose(&in);
+	git_userbuf_dispose(&out);
+	git_userbuf_dispose(&in);
 }
 
 void test_filter_wildcard__none(void)
 {
 	git_filter_list *fl;
-	git_buf in = GIT_BUF_INIT, out = GIT_BUF_INIT;
+	git_userbuf in = GIT_USERBUF_INIT, out = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "none-foo", GIT_FILTER_TO_ODB, 0));
 
-	cl_git_pass(git_buf_put(&in, (char *)input, DATA_LEN));
+	cl_git_pass(git_buf_put((git_buf *)&in, (char *)input, DATA_LEN));
 	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
 
 	cl_assert_equal_i(DATA_LEN, out.size);
@@ -179,6 +179,6 @@ void test_filter_wildcard__none(void)
 		0, memcmp(input, out.ptr, out.size));
 
 	git_filter_list_free(fl);
-	git_buf_dispose(&out);
-	git_buf_dispose(&in);
+	git_userbuf_dispose(&out);
+	git_userbuf_dispose(&in);
 }

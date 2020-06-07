@@ -2,6 +2,7 @@
 #include "diff_helpers.h"
 #include "repository.h"
 #include "diff_driver.h"
+#include "userbuf.h"
 
 static git_repository *g_repo = NULL;
 
@@ -15,7 +16,7 @@ void test_diff_drivers__cleanup(void)
 	g_repo = NULL;
 }
 
-static void overwrite_filemode(const char *expected, git_buf *actual)
+static void overwrite_filemode(const char *expected, git_userbuf *actual)
 {
 	size_t offset;
 	char *found;
@@ -39,7 +40,7 @@ void test_diff_drivers__patterns(void)
 	git_tree *one;
 	git_diff *diff;
 	git_patch *patch;
-	git_buf actual = GIT_BUF_INIT;
+	git_userbuf actual = GIT_USERBUF_INIT;
 	const char *expected0 = "diff --git a/untimely.txt b/untimely.txt\nindex 9a69d96..57fd0cf 100644\n--- a/untimely.txt\n+++ b/untimely.txt\n@@ -22,3 +22,5 @@ Comes through the blood of the vanguards who\n   dreamed--too soon--it had sounded.\r\n \r\n                 -- Rudyard Kipling\r\n+\r\n+Some new stuff\r\n";
 	const char *expected1 = "diff --git a/untimely.txt b/untimely.txt\nindex 9a69d96..57fd0cf 100644\nBinary files a/untimely.txt and b/untimely.txt differ\n";
 	const char *expected2 = "diff --git a/untimely.txt b/untimely.txt\nindex 9a69d96..57fd0cf 100644\n--- a/untimely.txt\n+++ b/untimely.txt\n@@ -22,3 +22,5 @@ Heaven delivers on earth the Hour that cannot be\n   dreamed--too soon--it had sounded.\r\n \r\n                 -- Rudyard Kipling\r\n+\r\n+Some new stuff\r\n";
@@ -65,7 +66,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 	cl_assert_equal_s(expected0, actual.ptr);
 
-	git_buf_dispose(&actual);
+	git_userbuf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -80,7 +81,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 	cl_assert_equal_s(expected1, actual.ptr);
 
-	git_buf_dispose(&actual);
+	git_userbuf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -95,7 +96,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 	cl_assert_equal_s(expected0, actual.ptr);
 
-	git_buf_dispose(&actual);
+	git_userbuf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -112,7 +113,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 	cl_assert_equal_s(expected1, actual.ptr);
 
-	git_buf_dispose(&actual);
+	git_userbuf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -133,7 +134,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 	cl_assert_equal_s(expected2, actual.ptr);
 
-	git_buf_dispose(&actual);
+	git_userbuf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -146,7 +147,7 @@ void test_diff_drivers__long_lines(void)
 	git_index *idx;
 	git_diff *diff;
 	git_patch *patch;
-	git_buf actual = GIT_BUF_INIT;
+	git_userbuf actual = GIT_USERBUF_INIT;
 	const char *expected = "diff --git a/longlines.txt b/longlines.txt\nindex c1ce6ef..0134431 100644\n--- a/longlines.txt\n+++ b/longlines.txt\n@@ -3,3 +3,5 @@ Phasellus eget erat odio. Praesent at est iaculis, ultricies augue vel, dignissi\n Nam eget dolor fermentum, aliquet nisl at, convallis tellus. Pellentesque rhoncus erat enim, id porttitor elit euismod quis.\n Mauris sollicitudin magna odio, non egestas libero vehicula ut. Etiam et quam velit. Fusce eget libero rhoncus, ultricies felis sit amet, egestas purus.\n Aliquam in semper tellus. Pellentesque adipiscing rutrum velit, quis malesuada lacus consequat eget.\n+newline\n+newline\n";
 
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
@@ -169,7 +170,7 @@ void test_diff_drivers__long_lines(void)
 
 	cl_assert_equal_s(expected, actual.ptr);
 
-	git_buf_dispose(&actual);
+	git_userbuf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 }
@@ -178,7 +179,8 @@ void test_diff_drivers__builtins(void)
 {
 	git_diff *diff;
 	git_patch *patch;
-	git_buf file = GIT_BUF_INIT, actual = GIT_BUF_INIT, expected = GIT_BUF_INIT;
+	git_buf file = GIT_BUF_INIT, expected = GIT_BUF_INIT;
+	git_userbuf actual = GIT_USERBUF_INIT;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_vector files = GIT_VECTOR_INIT;
 	size_t i;
@@ -213,7 +215,7 @@ void test_diff_drivers__builtins(void)
 
 		cl_assert_equal_s(expected.ptr, actual.ptr);
 
-		git_buf_clear(&actual);
+		git_userbuf_clear(&actual);
 		git_patch_free(patch);
 		git_diff_free(diff);
 
@@ -238,15 +240,15 @@ void test_diff_drivers__builtins(void)
 
 		cl_assert_equal_s(expected.ptr, actual.ptr);
 
-		git_buf_clear(&actual);
+		git_userbuf_clear(&actual);
 		git_patch_free(patch);
 		git_diff_free(diff);
 
 		git__free(path);
 	}
 
+	git_userbuf_dispose(&actual);
 	git_buf_dispose(&file);
-	git_buf_dispose(&actual);
 	git_buf_dispose(&expected);
 	git_vector_free(&files);
 }

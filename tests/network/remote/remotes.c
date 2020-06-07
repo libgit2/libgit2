@@ -56,18 +56,20 @@ void test_network_remote_remotes__parsing(void)
 	git_buf_dispose(&url);
 }
 
-static int urlresolve_callback(git_buf *url_resolved, const char *url, int direction, void *payload)
+static int urlresolve_callback(git_userbuf *url_resolved, const char *url, int direction, void *payload)
 {
+	const char *resolution;
+
 	cl_assert(strcmp(url, "git://github.com/libgit2/libgit2") == 0);
 	cl_assert(strcmp(payload, "payload") == 0);
 	cl_assert(url_resolved->size == 0);
 
 	if (direction == GIT_DIRECTION_PUSH)
-		git_buf_sets(url_resolved, "pushresolve");
+		resolution = "pushresolve";
 	if (direction == GIT_DIRECTION_FETCH)
-		git_buf_sets(url_resolved, "fetchresolve");
+		resolution = "fetchresolve";
 
-	return GIT_OK;
+	return git_userbuf_set(url_resolved, resolution, strlen(resolution));
 }
 
 void test_network_remote_remotes__urlresolve(void)
@@ -91,7 +93,7 @@ void test_network_remote_remotes__urlresolve(void)
 	git_buf_dispose(&url);
 }
 
-static int urlresolve_passthrough_callback(git_buf *url_resolved, const char *url, int direction, void *payload)
+static int urlresolve_passthrough_callback(git_userbuf *url_resolved, const char *url, int direction, void *payload)
 {
 	GIT_UNUSED(url_resolved);
 	GIT_UNUSED(url);
@@ -254,20 +256,20 @@ void test_network_remote_remotes__fnmatch(void)
 
 void test_network_remote_remotes__transform(void)
 {
-	git_buf ref = GIT_BUF_INIT;
+	git_userbuf ref = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_refspec_transform(&ref, _refspec, "refs/heads/master"));
 	cl_assert_equal_s(ref.ptr, "refs/remotes/test/master");
-	git_buf_dispose(&ref);
+	git_userbuf_dispose(&ref);
 }
 
 void test_network_remote_remotes__transform_destination_to_source(void)
 {
-	git_buf ref = GIT_BUF_INIT;
+	git_userbuf ref = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_refspec_rtransform(&ref, _refspec, "refs/remotes/test/master"));
 	cl_assert_equal_s(ref.ptr, "refs/heads/master");
-	git_buf_dispose(&ref);
+	git_userbuf_dispose(&ref);
 }
 
 void test_network_remote_remotes__missing_refspecs(void)

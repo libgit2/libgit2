@@ -12,6 +12,7 @@
 #include "patch.h"
 #include "commit.h"
 #include "index.h"
+#include "userbuf.h"
 
 struct patch_id_args {
 	git_hash_ctx ctx;
@@ -225,7 +226,7 @@ int git_diff_format_email__append_patches_tobuf(
 		git_patch *patch = NULL;
 
 		if ((error = git_patch_from_diff(&patch, diff, i)) >= 0)
-			error = git_patch_to_buf(out, patch);
+			error = git_patch__to_buf(out, patch);
 
 		git_patch_free(patch);
 
@@ -237,7 +238,7 @@ int git_diff_format_email__append_patches_tobuf(
 }
 
 int git_diff_format_email(
-	git_buf *out,
+	git_userbuf *out,
 	git_diff *diff,
 	const git_diff_format_email_options *opts)
 {
@@ -292,7 +293,7 @@ int git_diff_format_email(
 		strncpy(summary, opts->summary, offset);
 	}
 
-	error = git_diff_format_email__append_header_tobuf(out,
+	error = git_diff_format_email__append_header_tobuf((git_buf *)out,
 		opts->id, opts->author, summary == NULL ? opts->summary : summary,
 		opts->body, opts->patch_no, opts->total_patches, ignore_marker);
 
@@ -301,14 +302,14 @@ int git_diff_format_email(
 
 	format_flags = GIT_DIFF_STATS_FULL | GIT_DIFF_STATS_INCLUDE_SUMMARY;
 
-	if ((error = git_buf_puts(out, "---\n")) < 0 ||
+	if ((error = git_buf_puts((git_buf *)out, "---\n")) < 0 ||
 		(error = git_diff_get_stats(&stats, diff)) < 0 ||
 		(error = git_diff_stats_to_buf(out, stats, format_flags, 0)) < 0 ||
-		(error = git_buf_putc(out, '\n')) < 0 ||
-		(error = git_diff_format_email__append_patches_tobuf(out, diff)) < 0)
+		(error = git_buf_putc((git_buf *)out, '\n')) < 0 ||
+		(error = git_diff_format_email__append_patches_tobuf((git_buf *)out, diff)) < 0)
 			goto on_error;
 
-	error = git_buf_puts(out, "--\nlibgit2 " LIBGIT2_VERSION "\n\n");
+	error = git_buf_puts((git_buf *)out, "--\nlibgit2 " LIBGIT2_VERSION "\n\n");
 
 on_error:
 	git__free(summary);
@@ -318,7 +319,7 @@ on_error:
 }
 
 int git_diff_commit_as_email(
-	git_buf *out,
+	git_userbuf *out,
 	git_repository *repo,
 	git_commit *commit,
 	size_t patch_no,

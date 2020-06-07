@@ -182,7 +182,7 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 		/* Clear the buffer which can be dirty from previous iteration */
 		git_buf_clear(&remote_ref_name);
 
-		if ((error = git_refspec_transform(&remote_ref_name, fetch_spec, status->ref)) < 0)
+		if ((error = git_refspec__transform(&remote_ref_name, fetch_spec, status->ref)) < 0)
 			goto on_error;
 
 		/* Find matching  push ref spec */

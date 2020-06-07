@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "git2.h"
 #include "common.h"
+#include "git2.h"
 #include "buffer.h"
 #include "auth.h"
 #include "auth_ntlm.h"

@@ -6,7 +6,7 @@
 
 #define TEST_CONFIG "git-test-config"
 
-static git_buf buf = GIT_BUF_INIT;
+static git_userbuf buf = GIT_USERBUF_INIT;
 
 void test_config_stress__initialize(void)
 {
@@ -22,7 +22,7 @@ void test_config_stress__initialize(void)
 
 void test_config_stress__cleanup(void)
 {
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	p_unlink(TEST_CONFIG);
 }
 
@@ -41,9 +41,9 @@ void test_config_stress__dont_break_on_invalid_input(void)
 
 void assert_config_value(git_config *config, const char *key, const char *value)
 {
-	git_buf_clear(&buf);
+	git_userbuf_dispose(&buf);
 	cl_git_pass(git_config_get_string_buf(&buf, config, key));
-	cl_assert_equal_s(value, git_buf_cstr(&buf));
+	cl_assert_equal_s(value, buf.ptr);
 }
 
 void test_config_stress__comments(void)

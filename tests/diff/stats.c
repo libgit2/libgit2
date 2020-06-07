@@ -40,7 +40,7 @@ static void diff_stats_from_commit_oid(
 
 void test_diff_stats__stat(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" file1.txt | 8 +++++---\n" \
 	" 1 file changed, 5 insertions(+), 3 deletions(-)\n";
@@ -53,17 +53,17 @@ void test_diff_stats__stat(void)
 	cl_assert_equal_sz(3, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 0));
-	cl_assert(strcmp(git_buf_cstr(&buf), stat) == 0);
-	git_buf_dispose(&buf);
+	cl_assert(strcmp(buf.ptr, stat) == 0);
+	git_userbuf_dispose(&buf);
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 80));
-	cl_assert(strcmp(git_buf_cstr(&buf), stat) == 0);
-	git_buf_dispose(&buf);
+	cl_assert(strcmp(buf.ptr, stat) == 0);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__multiple_hunks(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" file2.txt | 5 +++--\n" \
 	" file3.txt | 6 ++++--\n" \
@@ -77,13 +77,13 @@ void test_diff_stats__multiple_hunks(void)
 	cl_assert_equal_sz(4, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__numstat(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	"3       2       file2.txt\n"
 	"4       2       file3.txt\n";
@@ -92,13 +92,13 @@ void test_diff_stats__numstat(void)
 		&_stats, "cd471f0d8770371e1bc78bcbb38db4c7e4106bd2", false);
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_NUMBER, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__shortstat(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" 1 file changed, 5 insertions(+), 3 deletions(-)\n";
 
@@ -110,13 +110,13 @@ void test_diff_stats__shortstat(void)
 	cl_assert_equal_sz(3, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_SHORT, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__shortstat_noinsertions(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" 1 file changed, 2 deletions(-)\n";
 
@@ -128,13 +128,13 @@ void test_diff_stats__shortstat_noinsertions(void)
 	cl_assert_equal_sz(2, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_SHORT, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__shortstat_nodeletions(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" 1 file changed, 3 insertions(+)\n";
 
@@ -146,13 +146,13 @@ void test_diff_stats__shortstat_nodeletions(void)
 	cl_assert_equal_sz(0, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_SHORT, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__rename(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" file2.txt => file2.txt.renamed | 1 +\n"
 	" file3.txt => file3.txt.renamed | 4 +++-\n"
@@ -166,13 +166,13 @@ void test_diff_stats__rename(void)
 	cl_assert_equal_sz(1, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__rename_nochanges(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" file2.txt.renamed => file2.txt.renamed2 | 0\n"
 	" file3.txt.renamed => file3.txt.renamed2 | 0\n"
@@ -186,13 +186,13 @@ void test_diff_stats__rename_nochanges(void)
 	cl_assert_equal_sz(0, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__rename_and_modifiy(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" file2.txt.renamed2                      | 2 +-\n"
 	" file3.txt.renamed2 => file3.txt.renamed | 0\n"
@@ -206,13 +206,13 @@ void test_diff_stats__rename_and_modifiy(void)
 	cl_assert_equal_sz(1, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__rename_in_subdirectory(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" dir/{orig.txt => renamed.txt} | 0\n"
 	" 1 file changed, 0 insertions(+), 0 deletions(-)\n";
@@ -225,13 +225,13 @@ void test_diff_stats__rename_in_subdirectory(void)
 	cl_assert_equal_sz(0, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__rename_no_find(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" file2.txt         | 5 -----\n"
 	" file2.txt.renamed | 6 ++++++\n"
@@ -247,13 +247,13 @@ void test_diff_stats__rename_no_find(void)
 	cl_assert_equal_sz(10, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__rename_nochanges_no_find(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" file2.txt.renamed  | 6 ------\n"
 	" file2.txt.renamed2 | 6 ++++++\n"
@@ -269,13 +269,13 @@ void test_diff_stats__rename_nochanges_no_find(void)
 	cl_assert_equal_sz(13, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__rename_and_modify_no_find(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" file2.txt.renamed2 | 2 +-\n"
 	" file3.txt.renamed  | 7 +++++++\n"
@@ -290,13 +290,13 @@ void test_diff_stats__rename_and_modify_no_find(void)
 	cl_assert_equal_sz(8, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__binary(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" binary.bin | Bin 3 -> 0 bytes\n"
 	" 1 file changed, 0 insertions(+), 0 deletions(-)\n";
@@ -310,13 +310,13 @@ void test_diff_stats__binary(void)
 	cl_assert_equal_sz(0, git_diff_stats_deletions(_stats));
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__binary_numstat(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	"-       -       binary.bin\n";
 
@@ -324,13 +324,13 @@ void test_diff_stats__binary_numstat(void)
 		&_stats, "8d7523f6fcb2404257889abe0d96f093d9f524f9", false);
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_NUMBER, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_stats__mode_change(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	const char *stat =
 	" file1.txt.renamed | 0\n" \
 	" 1 file changed, 0 insertions(+), 0 deletions(-)\n" \
@@ -340,6 +340,6 @@ void test_diff_stats__mode_change(void)
 		&_stats, "7ade76dd34bba4733cf9878079f9fd4a456a9189", false);
 
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL | GIT_DIFF_STATS_INCLUDE_SUMMARY, 0));
-	cl_assert_equal_s(stat, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s(stat, buf.ptr);
+	git_userbuf_dispose(&buf);
 }

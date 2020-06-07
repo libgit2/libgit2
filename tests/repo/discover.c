@@ -28,7 +28,8 @@ static void ensure_repository_discover(const char *start_path,
 				       const char *ceiling_dirs,
 				       const char *expected_path)
 {
-	git_buf found_path = GIT_BUF_INIT, resolved = GIT_BUF_INIT;
+	git_userbuf found_path = GIT_USERBUF_INIT;
+	git_buf resolved = GIT_BUF_INIT;
 
 	git_buf_attach(&resolved, p_realpath(expected_path, NULL), 0);
 	cl_assert(resolved.size > 0);
@@ -38,7 +39,7 @@ static void ensure_repository_discover(const char *start_path,
 	cl_assert_equal_s(found_path.ptr, resolved.ptr);
 
 	git_buf_dispose(&resolved);
-	git_buf_dispose(&found_path);
+	git_userbuf_dispose(&found_path);
 }
 
 static void write_file(const char *path, const char *content)
@@ -75,7 +76,7 @@ static void append_ceiling_dir(git_buf *ceiling_dirs, const char *path)
 	cl_assert(git_buf_oom(ceiling_dirs) == 0);
 }
 
-static git_buf discovered;
+static git_userbuf discovered;
 static git_buf ceiling_dirs;
 
 void test_repo_discover__initialize(void)
@@ -84,7 +85,8 @@ void test_repo_discover__initialize(void)
 	const mode_t mode = 0777;
 	git_futils_mkdir_r(DISCOVER_FOLDER, mode);
 
-	git_buf_init(&discovered, 0);
+	memset(&discovered, 0, sizeof(git_userbuf));
+
 	git_buf_init(&ceiling_dirs, 0);
 	append_ceiling_dir(&ceiling_dirs, TEMP_REPO_FOLDER);
 
@@ -114,7 +116,7 @@ void test_repo_discover__initialize(void)
 
 void test_repo_discover__cleanup(void)
 {
-	git_buf_dispose(&discovered);
+	git_userbuf_dispose(&discovered);
 	git_buf_dispose(&ceiling_dirs);
 	cl_git_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, NULL, GIT_RMDIR_REMOVE_FILES));
 }
@@ -203,7 +205,7 @@ void test_repo_discover__discovery_starting_at_file_succeeds(void)
 void test_repo_discover__discovery_starting_at_system_root_causes_no_hang(void)
 {
 #ifdef GIT_WIN32
-	git_buf out = GIT_BUF_INIT;
+	git_userbuf out = GIT_BUF_INIT;
 	cl_git_fail(git_repository_discover(&out, "C:/", 0, NULL));
 	cl_git_fail(git_repository_discover(&out, "//localhost/", 0, NULL));
 #endif

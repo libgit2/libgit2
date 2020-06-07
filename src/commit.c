@@ -22,6 +22,7 @@
 #include "object.h"
 #include "array.h"
 #include "oidarray.h"
+#include "userbuf.h"
 
 void git_commit__free(void *_commit)
 {
@@ -41,7 +42,7 @@ void git_commit__free(void *_commit)
 	git__free(commit);
 }
 
-static int git_commit__create_buffer_internal(
+int git_commit__create_buffer_internal(
 	git_buf *out,
 	const git_signature *author,
 	const git_signature *committer,
@@ -672,7 +673,7 @@ int git_commit_nth_gen_ancestor(
 	return 0;
 }
 
-int git_commit_header_field(git_buf *out, const git_commit *commit, const char *field)
+static int git_commit__header_field(git_buf *out, const git_commit *commit, const char *field)
 {
 	const char *eol, *buf = commit->raw_header;
 
@@ -732,7 +733,13 @@ oom:
 	return -1;
 }
 
-int git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_repository *repo, git_oid *commit_id, const char *field)
+int git_commit_header_field(git_userbuf *out, const git_commit *commit, const char *field)
+{
+	git_userbuf_sanitize(out);
+	return git_commit__header_field((git_buf *)out, commit, field);
+}
+
+static int git_commit__extract_signature(git_buf *signature, git_buf *signed_data, git_repository *repo, git_oid *commit_id, const char *field)
 {
 	git_odb_object *obj;
 	git_odb *odb;
@@ -825,7 +832,17 @@ cleanup:
 	return error;
 }
 
-int git_commit_create_buffer(git_buf *out,
+int git_commit_extract_signature(git_userbuf *signature_out, git_userbuf *signed_data_out, git_repository *repo, git_oid *commit_id, const char *field)
+{
+	git_userbuf_sanitize(signature_out);
+	git_userbuf_sanitize(signed_data_out);
+
+	return git_commit__extract_signature((git_buf *)signature_out,
+		(git_buf *)signed_data_out, repo, commit_id, field);
+}
+
+int git_commit__create_buffer(
+	git_buf *out,
 	git_repository *repo,
 	const git_signature *author,
 	const git_signature *committer,
@@ -854,6 +871,23 @@ int git_commit_create_buffer(git_buf *out,
 
 	git_array_clear(parents_arr);
 	return error;
+}
+
+int git_commit_create_buffer(
+	git_userbuf *out,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	const git_commit *parents[])
+{
+	git_userbuf_sanitize(out);
+	return git_commit__create_buffer((git_buf *)out, repo, author,
+		committer, message_encoding, message, tree,
+		parent_count, parents);
 }
 
 /**

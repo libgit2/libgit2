@@ -282,7 +282,7 @@ void test_config_write__overwrite_multivar_within_duplicate_header(void)
 void test_config_write__write_subsection(void)
 {
 	git_config *cfg;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_BUF_INIT;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_set_string(cfg, "my.own.var", "works"));
@@ -290,9 +290,9 @@ void test_config_write__write_subsection(void)
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "my.own.var"));
-	cl_assert_equal_s("works", git_buf_cstr(&buf));
+	cl_assert_equal_s("works", buf.ptr);
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_config_free(cfg);
 }
 
@@ -308,52 +308,52 @@ void test_config_write__delete_inexistent(void)
 void test_config_write__value_containing_quotes(void)
 {
 	git_config *cfg;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_BUF_INIT;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_set_string(cfg, "core.somevar", "this \"has\" quotes"));
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.somevar"));
-	cl_assert_equal_s("this \"has\" quotes", git_buf_cstr(&buf));
-	git_buf_clear(&buf);
+	cl_assert_equal_s("this \"has\" quotes", buf.ptr);
+	git_userbuf_dispose(&buf);
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.somevar"));
-	cl_assert_equal_s("this \"has\" quotes", git_buf_cstr(&buf));
-	git_buf_clear(&buf);
+	cl_assert_equal_s("this \"has\" quotes", buf.ptr);
+	git_userbuf_dispose(&buf);
 	git_config_free(cfg);
 
 	/* The code path for values that already exist is different, check that one as well */
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_set_string(cfg, "core.somevar", "this also \"has\" quotes"));
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.somevar"));
-	cl_assert_equal_s("this also \"has\" quotes", git_buf_cstr(&buf));
-	git_buf_clear(&buf);
+	cl_assert_equal_s("this also \"has\" quotes", buf.ptr);
+	git_userbuf_dispose(&buf);
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.somevar"));
-	cl_assert_equal_s("this also \"has\" quotes", git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s("this also \"has\" quotes", buf.ptr);
+	git_userbuf_dispose(&buf);
 	git_config_free(cfg);
 }
 
 void test_config_write__escape_value(void)
 {
 	git_config *cfg;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_BUF_INIT;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_set_string(cfg, "core.somevar", "this \"has\" quotes and \t"));
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.somevar"));
-	cl_assert_equal_s("this \"has\" quotes and \t", git_buf_cstr(&buf));
-	git_buf_clear(&buf);
+	cl_assert_equal_s("this \"has\" quotes and \t", buf.ptr);
+	git_userbuf_dispose(&buf);
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.somevar"));
-	cl_assert_equal_s("this \"has\" quotes and \t", git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	cl_assert_equal_s("this \"has\" quotes and \t", buf.ptr);
+	git_userbuf_dispose(&buf);
 	git_config_free(cfg);
 }
 
@@ -362,7 +362,7 @@ void test_config_write__add_value_at_specific_level(void)
 	git_config *cfg, *cfg_specific;
 	int i;
 	int64_t l, expected = +9223372036854775803;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_BUF_INIT;
 
 	/* open config15 as global level config file */
 	cl_git_pass(git_config_new(&cfg));
@@ -390,9 +390,9 @@ void test_config_write__add_value_at_specific_level(void)
 	cl_git_pass(git_config_get_bool(&i, cfg, "core.boolglobal"));
 	cl_assert_equal_b(true, i);
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.stringglobal"));
-	cl_assert_equal_s("I'm a global config value!", git_buf_cstr(&buf));
+	cl_assert_equal_s("I'm a global config value!", buf.ptr);
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_config_free(cfg);
 }
 
@@ -479,7 +479,7 @@ void test_config_write__can_set_an_empty_value(void)
 {
 	git_repository *repository;
 	git_config *config;
-	git_buf buf = {0};
+	git_userbuf buf = {0};
 
 	repository = cl_git_sandbox_init("testrepo.git");
 	cl_git_pass(git_repository_config(&config, repository));
@@ -488,7 +488,7 @@ void test_config_write__can_set_an_empty_value(void)
 	cl_git_pass(git_config_get_string_buf(&buf, config, "core.somevar"));
 	cl_assert_equal_s("", buf.ptr);
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_config_free(config);
 	cl_git_sandbox_cleanup();
 }

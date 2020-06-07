@@ -12,7 +12,7 @@ enum repo_mode {
 };
 
 static git_repository *_repo = NULL;
-static git_buf _global_path = GIT_BUF_INIT;
+static git_userbuf _global_path = GIT_USERBUF_INIT;
 
 void test_repo_init__initialize(void)
 {
@@ -26,7 +26,7 @@ void test_repo_init__cleanup(void)
 {
 	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL,
 		_global_path.ptr);
-	git_buf_dispose(&_global_path);
+	git_userbuf_dispose(&_global_path);
 
 	cl_fixture_cleanup("tmp_global_path");
 }

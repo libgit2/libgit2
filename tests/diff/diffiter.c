@@ -414,7 +414,7 @@ void test_diff_diffiter__iterate_and_generate_patch_text(void)
 
 	for (d = 0; d < num_d; ++d) {
 		git_patch *patch;
-		git_buf buf = GIT_BUF_INIT;
+		git_userbuf buf = GIT_USERBUF_INIT;
 
 		cl_git_pass(git_patch_from_diff(&patch, diff, d));
 		cl_assert(patch != NULL);
@@ -423,7 +423,7 @@ void test_diff_diffiter__iterate_and_generate_patch_text(void)
 
 		cl_assert_equal_s(expected_patch_text[d], buf.ptr);
 
-		git_buf_dispose(&buf);
+		git_userbuf_dispose(&buf);
 		git_patch_free(patch);
 	}
 

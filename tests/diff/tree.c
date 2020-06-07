@@ -530,7 +530,7 @@ void test_diff_tree__diff_tree_with_empty_dir_entry_succeeds(void)
 	const char *content = "This is a blob\n";
 	const git_diff_delta *delta;
 	git_oid empty_tree, invalid_tree, blob;
-	git_buf patch = GIT_BUF_INIT;
+	git_userbuf patch = GIT_USERBUF_INIT;
 	git_treebuilder *builder;
 
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
@@ -571,5 +571,5 @@ void test_diff_tree__diff_tree_with_empty_dir_entry_succeeds(void)
 	cl_assert_equal_s(delta->new_file.path, "blob");
 
 	git_treebuilder_free(builder);
-	git_buf_dispose(&patch);
+	git_userbuf_dispose(&patch);
 }

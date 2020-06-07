@@ -21,7 +21,7 @@ void test_config_validkeyname__cleanup(void)
 
 static void assert_invalid_config_key_name(const char *name)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	cl_git_fail_with(git_config_get_string_buf(&buf, cfg, name),
 		GIT_EINVALIDSPEC);
@@ -33,6 +33,8 @@ static void assert_invalid_config_key_name(const char *name)
 		GIT_EINVALIDSPEC);
 	cl_git_fail_with(git_config_set_multivar(cfg, name, "*", "42"),
 		GIT_EINVALIDSPEC);
+
+	git_userbuf_dispose(&buf);
 }
 
 void test_config_validkeyname__accessing_requires_a_valid_name(void)

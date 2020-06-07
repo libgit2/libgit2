@@ -34,7 +34,7 @@ void test_notes_notesref__cleanup(void)
 void test_notes_notesref__config_corenotesref(void)
 {
 	git_oid oid, note_oid;
-	git_buf default_ref = GIT_BUF_INIT;
+	git_userbuf default_ref = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_signature_now(&_sig, "alice", "alice@example.com"));
 	cl_git_pass(git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479"));
@@ -57,12 +57,12 @@ void test_notes_notesref__config_corenotesref(void)
 
 	cl_git_pass(git_note_default_ref(&default_ref, _repo));
 	cl_assert_equal_s("refs/notes/mydefaultnotesref", default_ref.ptr);
-	git_buf_clear(&default_ref);
+	git_userbuf_dispose(&default_ref);
 
 	cl_git_pass(git_config_delete_entry(_cfg, "core.notesRef"));
 
 	cl_git_pass(git_note_default_ref(&default_ref, _repo));
 	cl_assert_equal_s(GIT_NOTES_DEFAULT_REF, default_ref.ptr);
 
-	git_buf_dispose(&default_ref);
+	git_userbuf_dispose(&default_ref);
 }

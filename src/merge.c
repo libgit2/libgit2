@@ -876,7 +876,7 @@ static int merge_conflict_invoke_driver(
 
 	*out = NULL;
 
-	if ((error = driver->apply(driver, &path, &mode, &buf, name, src)) < 0 ||
+	if ((error = driver->apply(driver, &path, &mode, (git_userbuf *)&buf, name, src)) < 0 ||
 		(error = git_repository_odb(&odb, src->repo)) < 0 ||
 		(error = git_odb_write(&oid, odb, buf.ptr, buf.size, GIT_OBJECT_BLOB)) < 0)
 		goto done;

@@ -25,7 +25,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	git_oid expected_blob_oid, tree_oid, expected_tree_oid, commit_oid, expected_commit_oid;
 	git_signature *signature;
 	git_tree *tree;
-	git_buf buffer;
+	git_userbuf buffer = GIT_USERBUF_INIT;
 
 	/*
 	 * The test below replicates the following git scenario
@@ -111,7 +111,6 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60));
 	cl_git_pass(git_tree_lookup(&tree, repo, &tree_oid));
 
-	memset(&buffer, 0, sizeof(git_buf));
 	cl_git_pass(git_message_prettify(&buffer, "Initial commit", 0, '#'));
 
 	cl_git_pass(git_commit_create_v(
@@ -127,7 +126,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 
 	cl_assert(git_oid_cmp(&expected_commit_oid, &commit_oid) == 0);
 
-	git_buf_dispose(&buffer);
+	git_userbuf_dispose(&buffer);
 	git_signature_free(signature);
 	git_tree_free(tree);
 	git_index_free(index);

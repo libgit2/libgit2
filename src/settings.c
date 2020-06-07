@@ -24,6 +24,7 @@
 #include "odb.h"
 #include "refs.h"
 #include "index.h"
+#include "userbuf.h"
 #include "transports/smart.h"
 #include "transports/http.h"
 #include "streams/openssl.h"
@@ -126,14 +127,14 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_GET_SEARCH_PATH:
 		if ((error = config_level_to_sysdir(va_arg(ap, int))) >= 0) {
-			git_buf *out = va_arg(ap, git_buf *);
+			git_userbuf *out = va_arg(ap, git_userbuf *);
 			const git_buf *tmp;
 
-			git_buf_sanitize(out);
+			git_userbuf_sanitize(out);
 			if ((error = git_sysdir_get(&tmp, error)) < 0)
 				break;
 
-			error = git_buf_sets(out, tmp->ptr);
+			error = git_buf_sets((git_buf *)out, tmp->ptr);
 		}
 		break;
 
@@ -165,14 +166,14 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_GET_TEMPLATE_PATH:
 		{
-			git_buf *out = va_arg(ap, git_buf *);
+			git_userbuf *out = va_arg(ap, git_userbuf *);
 			const git_buf *tmp;
 
-			git_buf_sanitize(out);
+			git_userbuf_sanitize(out);
 			if ((error = git_sysdir_get(&tmp, GIT_SYSDIR_TEMPLATE)) < 0)
 				break;
 
-			error = git_buf_sets(out, tmp->ptr);
+			error = git_buf_sets((git_buf *)out, tmp->ptr);
 		}
 		break;
 

@@ -67,7 +67,7 @@ static int test_driver_apply(
 	git_merge_driver *s,
 	const char **path_out,
 	uint32_t *mode_out,
-	git_buf *merged_out,
+	git_userbuf *merged_out,
 	const char *filter_name,
 	const git_merge_driver_source *src)
 {
@@ -77,8 +77,8 @@ static int test_driver_apply(
 	*path_out = "applied.txt";
 	*mode_out = GIT_FILEMODE_BLOB;
 
-	return git_buf_printf(merged_out, "This is the `%s` driver.\n",
-		filter_name);
+	return git_buf_printf((git_buf *)merged_out,
+		"This is the `%s` driver.\n", filter_name);
 }
 
 static struct test_merge_driver test_driver_custom = {
@@ -172,11 +172,11 @@ void test_merge_driver__shutdown_is_called(void)
     test_driver_custom.shutdown = 0;
     test_driver_wildcard.initialized = 0;
     test_driver_wildcard.shutdown = 0;
-    
+
     /* run the merge with the custom driver */
     set_gitattributes_to("custom");
     merge_branch();
-    
+
 	/* unregister the drivers, ensure their shutdown function is called */
 	test_drivers_unregister();
 
@@ -196,7 +196,7 @@ static int defer_driver_apply(
 	git_merge_driver *s,
 	const char **path_out,
 	uint32_t *mode_out,
-	git_buf *merged_out,
+	git_userbuf *merged_out,
 	const char *filter_name,
 	const git_merge_driver_source *src)
 {
@@ -241,7 +241,7 @@ static int conflict_driver_apply(
 	git_merge_driver *s,
 	const char **path_out,
 	uint32_t *mode_out,
-	git_buf *merged_out,
+	git_userbuf *merged_out,
 	const char *filter_name,
 	const git_merge_driver_source *src)
 {

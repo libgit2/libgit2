@@ -26,7 +26,7 @@ static void assert_email_match(
 	git_oid oid;
 	git_commit *commit = NULL;
 	git_diff *diff = NULL;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	git_oid_fromstr(&oid, oidstr);
 
@@ -40,16 +40,16 @@ static void assert_email_match(
 	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
 	cl_git_pass(git_diff_format_email(&buf, diff, opts));
 
-	cl_assert_equal_s(expected, git_buf_cstr(&buf));
-	git_buf_clear(&buf);
+	cl_assert_equal_s(expected, buf.ptr);
+	git_userbuf_dispose(&buf);
 
 	cl_git_pass(git_diff_commit_as_email(
 		&buf, repo, commit, 1, 1, opts->flags, NULL));
-	cl_assert_equal_s(expected, git_buf_cstr(&buf));
+	cl_assert_equal_s(expected, buf.ptr);
 
 	git_diff_free(diff);
 	git_commit_free(commit);
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_format_email__simple(void)
@@ -145,7 +145,7 @@ void test_diff_format_email__multiple(void)
 	git_commit *commit = NULL;
 	git_diff *diff = NULL;
  	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	const char *email =
 	"From 10808fe9c9be5a190c0ba68d1a002233fb363508 Mon Sep 17 00:00:00 2001\n" \
@@ -251,11 +251,11 @@ void test_diff_format_email__multiple(void)
 	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
 	cl_git_pass(git_diff_format_email(&buf, diff, &opts));
 
-	cl_assert_equal_s(email, git_buf_cstr(&buf));
+	cl_assert_equal_s(email, buf.ptr);
 
 	git_diff_free(diff);
 	git_commit_free(commit);
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_format_email__exclude_marker(void)
@@ -312,7 +312,7 @@ void test_diff_format_email__invalid_no(void)
 	git_commit *commit = NULL;
 	git_diff *diff = NULL;
 	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	git_oid_fromstr(&oid, "9264b96c6d104d0e07ae33d3007b6a48246c6f92");
 
@@ -331,7 +331,7 @@ void test_diff_format_email__invalid_no(void)
 
 	git_diff_free(diff);
 	git_commit_free(commit);
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_format_email__mode_change(void)

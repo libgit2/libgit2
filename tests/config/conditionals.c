@@ -24,6 +24,7 @@ void test_config_conditionals__cleanup(void)
 static void assert_condition_includes(const char *keyword, const char *path, bool expected)
 {
 	git_buf buf = GIT_BUF_INIT;
+	git_userbuf result = GIT_USERBUF_INIT;
 	git_config *cfg;
 
 	cl_git_pass(git_buf_printf(&buf, "[includeIf \"%s:%s\"]\n", keyword, path));
@@ -36,15 +37,15 @@ static void assert_condition_includes(const char *keyword, const char *path, boo
 	cl_git_pass(git_repository_config(&cfg, _repo));
 
 	if (expected) {
-		git_buf_clear(&buf);
-		cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar"));
-		cl_assert_equal_s("baz", git_buf_cstr(&buf));
+		cl_git_pass(git_config_get_string_buf(&result, cfg, "foo.bar"));
+		cl_assert_equal_s("baz", result.ptr);
 	} else {
 		cl_git_fail_with(GIT_ENOTFOUND,
-				 git_config_get_string_buf(&buf, cfg, "foo.bar"));
+				 git_config_get_string_buf(&result, cfg, "foo.bar"));
 	}
 
 	git_buf_dispose(&buf);
+	git_userbuf_dispose(&result);
 	git_config_free(cfg);
 }
 

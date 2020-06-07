@@ -110,7 +110,7 @@ void test_config_global__open_xdg(void)
 	git_config *cfg, *xdg, *selected;
 	const char *str = "teststring";
 	const char *key = "this.variable";
-	git_buf buf = {0};
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	cl_git_mkfile("xdg/git/config", "# XDG config\n[core]\n  test = 1\n");
 
@@ -122,7 +122,7 @@ void test_config_global__open_xdg(void)
 	cl_git_pass(git_config_get_string_buf(&buf, selected, key));
 	cl_assert_equal_s(str, buf.ptr);
 
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 	git_config_free(selected);
 	git_config_free(xdg);
 	git_config_free(cfg);
@@ -133,7 +133,7 @@ void test_config_global__open_programdata(void)
 	git_config *cfg;
 	git_repository *repo;
 	git_buf config_path = GIT_BUF_INIT;
-	git_buf var_contents = GIT_BUF_INIT;
+	git_userbuf var_contents = GIT_USERBUF_INIT;
 
 	if (cl_is_env_set("GITTEST_INVASIVE_FS_STRUCTURE"))
 		cl_skip();
@@ -157,7 +157,7 @@ void test_config_global__open_programdata(void)
 	cl_assert_equal_s("even higher level", var_contents.ptr);
 
 	git_config_free(cfg);
-	git_buf_dispose(&var_contents);
+	git_userbuf_dispose(&var_contents);
 
 	cl_git_pass(git_repository_init(&repo, "./foo.git", true));
 	cl_git_pass(git_repository_config(&cfg, repo));
@@ -165,7 +165,7 @@ void test_config_global__open_programdata(void)
 	cl_assert_equal_s("even higher level", var_contents.ptr);
 
 	git_config_free(cfg);
-	git_buf_dispose(&var_contents);
+	git_userbuf_dispose(&var_contents);
 	git_repository_free(repo);
 	cl_fixture_cleanup("./foo.git");
 }

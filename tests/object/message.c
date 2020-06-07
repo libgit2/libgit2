@@ -4,12 +4,12 @@
 
 static void assert_message_prettifying(char *expected_output, char *input, int strip_comments)
 {
-	git_buf prettified_message = GIT_BUF_INIT;
+	git_userbuf prettified_message = GIT_USERBUF_INIT;
 
 	git_message_prettify(&prettified_message, input, strip_comments, '#');
-	cl_assert_equal_s(expected_output, git_buf_cstr(&prettified_message));
+	cl_assert_equal_s(expected_output, prettified_message.ptr);
 
-	git_buf_dispose(&prettified_message);
+	git_userbuf_dispose(&prettified_message);
 }
 
 #define t40 "A quick brown fox jumps over the lazy do"
@@ -172,28 +172,27 @@ void test_object_message__keep_comments(void)
 
 void test_object_message__message_prettify(void)
 {
-	git_buf buffer;
+	git_userbuf buffer = GIT_USERBUF_INIT;
 
-	memset(&buffer, 0, sizeof(buffer));
 	cl_git_pass(git_message_prettify(&buffer, "", 0, '#'));
 	cl_assert_equal_s(buffer.ptr, "");
-	git_buf_dispose(&buffer);
+	git_userbuf_dispose(&buffer);
 	cl_git_pass(git_message_prettify(&buffer, "", 1, '#'));
 	cl_assert_equal_s(buffer.ptr, "");
-	git_buf_dispose(&buffer);
+	git_userbuf_dispose(&buffer);
 
 	cl_git_pass(git_message_prettify(&buffer, "Short", 0, '#'));
 	cl_assert_equal_s("Short\n", buffer.ptr);
-	git_buf_dispose(&buffer);
+	git_userbuf_dispose(&buffer);
 	cl_git_pass(git_message_prettify(&buffer, "Short", 1, '#'));
 	cl_assert_equal_s("Short\n", buffer.ptr);
-	git_buf_dispose(&buffer);
+	git_userbuf_dispose(&buffer);
 
 	cl_git_pass(git_message_prettify(&buffer, "This is longer\nAnd multiline\n# with some comments still in\n", 0, '#'));
 	cl_assert_equal_s(buffer.ptr, "This is longer\nAnd multiline\n# with some comments still in\n");
-	git_buf_dispose(&buffer);
+	git_userbuf_dispose(&buffer);
 
 	cl_git_pass(git_message_prettify(&buffer, "This is longer\nAnd multiline\n# with some comments still in\n", 1, '#'));
 	cl_assert_equal_s(buffer.ptr, "This is longer\nAnd multiline\n");
-	git_buf_dispose(&buffer);
+	git_userbuf_dispose(&buffer);
 }

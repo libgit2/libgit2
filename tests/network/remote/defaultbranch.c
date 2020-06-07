@@ -24,12 +24,12 @@ void test_network_remote_defaultbranch__cleanup(void)
 
 static void assert_default_branch(const char *should)
 {
-	git_buf name = GIT_BUF_INIT;
+	git_userbuf name = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_remote_connect(g_remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_pass(git_remote_default_branch(&name, g_remote));
 	cl_assert_equal_s(should, name.ptr);
-	git_buf_dispose(&name);
+	git_userbuf_dispose(&name);
 }
 
 void test_network_remote_defaultbranch__master(void)
@@ -54,7 +54,7 @@ void test_network_remote_defaultbranch__no_default_branch(void)
 	git_remote *remote_b;
 	const git_remote_head **heads;
 	size_t len;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_remote_create(&remote_b, g_repo_b, "self", git_repository_path(g_repo_b)));
 	cl_git_pass(git_remote_connect(remote_b, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
@@ -70,7 +70,7 @@ void test_network_remote_defaultbranch__detached_sharing_nonbranch_id(void)
 {
 	git_oid id, id_cloned;
 	git_reference *ref;
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	git_repository *cloned_repo;
 
 	cl_git_pass(git_reference_name_to_id(&id, g_repo_a, "HEAD"));

@@ -6,6 +6,7 @@
 #include "util.h"
 #include "path.h"
 #include "futils.h"
+#include "config.h"
 
 static git_repository *repo;
 
@@ -59,7 +60,7 @@ void test_repo_setters__setting_a_workdir_creates_a_gitlink(void)
 	git_buf_dispose(&content);
 
 	cl_git_pass(git_repository_config(&cfg, repo));
-	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.worktree"));
+	cl_git_pass(git_config__get_string_buf(&buf, cfg, "core.worktree"));
 	cl_assert(git__suffixcmp(git_buf_cstr(&buf), "new_workdir/") == 0);
 
 	git_buf_dispose(&buf);
@@ -81,7 +82,7 @@ void test_repo_setters__setting_a_new_index_on_a_repo_which_has_already_loaded_o
 
 	git_index_free(new_index);
 
-	/* 
+	/*
 	 * Ensure the cleanup method won't try to free the repo as it's already been taken care of
 	 */
 	repo = NULL;
@@ -102,7 +103,7 @@ void test_repo_setters__setting_a_new_odb_on_a_repo_which_already_loaded_one_pro
 
 	git_odb_free(new_odb);
 
-	/* 
+	/*
 	 * Ensure the cleanup method won't try to free the repo as it's already been taken care of
 	 */
 	repo = NULL;

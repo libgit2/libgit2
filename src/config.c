@@ -10,6 +10,7 @@
 #include "git2/config.h"
 #include "git2/sys/config.h"
 
+#include "userbuf.h"
 #include "buf_text.h"
 #include "config_backend.h"
 #include "regexp.h"
@@ -846,7 +847,7 @@ static int is_readonly(const git_config *cfg)
 	return 1;
 }
 
-int git_config_get_path(git_buf *out, const git_config *cfg, const char *name)
+int git_config__get_path(git_buf *out, const git_config *cfg, const char *name)
 {
 	git_config_entry *entry;
 	int error;
@@ -854,10 +855,16 @@ int git_config_get_path(git_buf *out, const git_config *cfg, const char *name)
 	if ((error = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS)) < 0)
 		return error;
 
-	 error = git_config_parse_path(out, entry->value);
+	 error = git_config__parse_path(out, entry->value);
 	 git_config_entry_free(entry);
 
 	 return error;
+}
+
+int git_config_get_path(git_userbuf *out, const git_config *cfg, const char *name)
+{
+	git_userbuf_sanitize(out);
+	return git_config__get_path((git_buf *)out, cfg, name);
 }
 
 int git_config_get_string(
@@ -879,14 +886,12 @@ int git_config_get_string(
 	return ret;
 }
 
-int git_config_get_string_buf(
+int git_config__get_string_buf(
 	git_buf *out, const git_config *cfg, const char *name)
 {
 	git_config_entry *entry;
 	int ret;
 	const char *str;
-
-	git_buf_sanitize(out);
 
 	ret  = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS);
 	str = !ret ? (entry->value ? entry->value : "") : NULL;
@@ -897,6 +902,13 @@ int git_config_get_string_buf(
 	git_config_entry_free(entry);
 
 	return ret;
+}
+
+int git_config_get_string_buf(
+	git_userbuf *out, const git_config *cfg, const char *name)
+{
+	git_userbuf_sanitize(out);
+	return git_config__get_string_buf((git_buf *)out, cfg, name);
 }
 
 char *git_config__get_string_force(
@@ -1082,35 +1094,55 @@ void git_config_iterator_free(git_config_iterator *iter)
 	iter->free(iter);
 }
 
-int git_config_find_global(git_buf *path)
+int git_config__find_global(git_buf *path)
 {
-	git_buf_sanitize(path);
 	return git_sysdir_find_global_file(path, GIT_CONFIG_FILENAME_GLOBAL);
 }
 
-int git_config_find_xdg(git_buf *path)
+int git_config_find_global(git_userbuf *out)
 {
-	git_buf_sanitize(path);
+	git_userbuf_sanitize(out);
+	return git_config__find_global((git_buf *)out);
+}
+
+int git_config__find_xdg(git_buf *path)
+{
 	return git_sysdir_find_xdg_file(path, GIT_CONFIG_FILENAME_XDG);
 }
 
-int git_config_find_system(git_buf *path)
+int git_config_find_xdg(git_userbuf *out)
 {
-	git_buf_sanitize(path);
+	git_userbuf_sanitize(out);
+	return git_config__find_xdg((git_buf *)out);
+}
+
+int git_config__find_system(git_buf *path)
+{
 	return git_sysdir_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
 }
 
-int git_config_find_programdata(git_buf *path)
+int git_config_find_system(git_userbuf *out)
+{
+	git_userbuf_sanitize(out);
+	return git_config__find_system((git_buf *)out);
+}
+
+int git_config__find_programdata(git_buf *path)
 {
 	int ret;
 
-	git_buf_sanitize(path);
 	ret = git_sysdir_find_programdata_file(path,
 					       GIT_CONFIG_FILENAME_PROGRAMDATA);
 	if (ret != GIT_OK)
 		return ret;
 
 	return git_path_validate_system_file_ownership(path->ptr);
+}
+
+int git_config_find_programdata(git_userbuf *out)
+{
+	git_userbuf_sanitize(out);
+	return git_config__find_programdata((git_buf *)out);
 }
 
 int git_config__global_location(git_buf *buf)
@@ -1147,20 +1179,20 @@ int git_config_open_default(git_config **out)
 	if ((error = git_config_new(&cfg)) < 0)
 		return error;
 
-	if (!git_config_find_global(&buf) || !git_config__global_location(&buf)) {
+	if (!git_config__find_global(&buf) || !git_config__global_location(&buf)) {
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_GLOBAL, NULL, 0);
 	}
 
-	if (!error && !git_config_find_xdg(&buf))
+	if (!error && !git_config__find_xdg(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_XDG, NULL, 0);
 
-	if (!error && !git_config_find_system(&buf))
+	if (!error && !git_config__find_system(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_SYSTEM, NULL, 0);
 
-	if (!error && !git_config_find_programdata(&buf))
+	if (!error && !git_config__find_programdata(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_PROGRAMDATA, NULL, 0);
 
@@ -1362,12 +1394,8 @@ fail_parse:
 	return -1;
 }
 
-int git_config_parse_path(git_buf *out, const char *value)
+int git_config__parse_path(git_buf *out, const char *value)
 {
-	assert(out && value);
-
-	git_buf_sanitize(out);
-
 	if (value[0] == '~') {
 		if (value[1] != '\0' && value[1] != '/') {
 			git_error_set(GIT_ERROR_CONFIG, "retrieving a homedir by name is not supported");
@@ -1378,6 +1406,12 @@ int git_config_parse_path(git_buf *out, const char *value)
 	}
 
 	return git_buf_sets(out, value);
+}
+
+int git_config_parse_path(git_userbuf *out, const char *value)
+{
+	git_userbuf_sanitize(out);
+	return git_config__parse_path((git_buf *)out, value);
 }
 
 static int normalize_section(char *start, char *end)

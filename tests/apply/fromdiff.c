@@ -32,7 +32,7 @@ static int apply_gitbuf(
 {
 	git_patch *patch;
 	git_buf result = GIT_BUF_INIT;
-	git_buf patchbuf = GIT_BUF_INIT;
+	git_userbuf patchbuf = GIT_USERBUF_INIT;
 	char *filename;
 	unsigned int mode;
 	int error;
@@ -64,7 +64,7 @@ static int apply_gitbuf(
 
 	git__free(filename);
 	git_buf_dispose(&result);
-	git_buf_dispose(&patchbuf);
+	git_userbuf_dispose(&patchbuf);
 	git_patch_free(patch);
 
 	return error;

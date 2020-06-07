@@ -23,7 +23,7 @@ void test_filter_crlf__to_worktree(void)
 {
 	git_filter_list *fl;
 	git_filter *crlf;
-	git_buf in = { 0 }, out = { 0 };
+	git_userbuf in = GIT_USERBUF_INIT, out = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_filter_list_new(
 		&fl, g_repo, GIT_FILTER_TO_WORKTREE, 0));
@@ -41,14 +41,14 @@ void test_filter_crlf__to_worktree(void)
 	cl_assert_equal_s("Some text\r\nRight here\r\n", out.ptr);
 
 	git_filter_list_free(fl);
-	git_buf_dispose(&out);
+	git_userbuf_dispose(&out);
 }
 
 void test_filter_crlf__to_odb(void)
 {
 	git_filter_list *fl;
 	git_filter *crlf;
-	git_buf in = { 0 }, out = { 0 };
+	git_userbuf in = GIT_USERBUF_INIT, out = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_filter_list_new(
 		&fl, g_repo, GIT_FILTER_TO_ODB, 0));
@@ -66,14 +66,14 @@ void test_filter_crlf__to_odb(void)
 	cl_assert_equal_s("Some text\nRight here\n", out.ptr);
 
 	git_filter_list_free(fl);
-	git_buf_dispose(&out);
+	git_userbuf_dispose(&out);
 }
 
 void test_filter_crlf__with_safecrlf(void)
 {
 	git_filter_list *fl;
 	git_filter *crlf;
-	git_buf in = {0}, out = GIT_BUF_INIT;
+	git_userbuf in = GIT_USERBUF_INIT, out = GIT_USERBUF_INIT;
 
 	cl_repo_set_bool(g_repo, "core.safecrlf", true);
 
@@ -114,14 +114,14 @@ void test_filter_crlf__with_safecrlf(void)
 	cl_assert_equal_s("Normal\nCR only\rand some more\nline-endings.\n", out.ptr);
 
 	git_filter_list_free(fl);
-	git_buf_dispose(&out);
+	git_userbuf_dispose(&out);
 }
 
 void test_filter_crlf__with_safecrlf_and_unsafe_allowed(void)
 {
 	git_filter_list *fl;
 	git_filter *crlf;
-	git_buf in = {0}, out = GIT_BUF_INIT;
+	git_userbuf in = GIT_USERBUF_INIT, out = GIT_USERBUF_INIT;
 
 	cl_repo_set_bool(g_repo, "core.safecrlf", true);
 
@@ -157,14 +157,14 @@ void test_filter_crlf__with_safecrlf_and_unsafe_allowed(void)
 	cl_assert_equal_s("Normal\nLF\nonly\nline-endings.\n", out.ptr);
 
 	git_filter_list_free(fl);
-	git_buf_dispose(&out);
+	git_userbuf_dispose(&out);
 }
 
 void test_filter_crlf__no_safecrlf(void)
 {
 	git_filter_list *fl;
 	git_filter *crlf;
-	git_buf in = {0}, out = GIT_BUF_INIT;
+	git_userbuf in = GIT_USERBUF_INIT, out = GIT_USERBUF_INIT;
 
 	cl_git_pass(git_filter_list_new(
 		&fl, g_repo, GIT_FILTER_TO_ODB, 0));
@@ -196,14 +196,14 @@ void test_filter_crlf__no_safecrlf(void)
 	cl_assert_equal_s("Normal\nLF\nonly\nline-endings.\n", out.ptr);
 
 	git_filter_list_free(fl);
-	git_buf_dispose(&out);
+	git_userbuf_dispose(&out);
 }
 
 void test_filter_crlf__safecrlf_warn(void)
 {
 	git_filter_list *fl;
 	git_filter *crlf;
-	git_buf in = {0}, out = GIT_BUF_INIT;
+	git_userbuf in = GIT_USERBUF_INIT, out = GIT_USERBUF_INIT;
 
 	cl_repo_set_string(g_repo, "core.safecrlf", "warn");
 
@@ -238,5 +238,5 @@ void test_filter_crlf__safecrlf_warn(void)
 	cl_assert_equal_s(in.ptr, out.ptr);
 
 	git_filter_list_free(fl);
-	git_buf_dispose(&out);
+	git_userbuf_dispose(&out);
 }

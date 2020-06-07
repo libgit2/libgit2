@@ -20,7 +20,7 @@ static void add_blob_and_filter(
 {
 	git_oid id;
 	git_blob *blob;
-	git_buf out = { 0 };
+	git_userbuf out = GIT_USERBUF_INIT;
 
 	cl_git_mkfile("crlf/identtest", data);
 	cl_git_pass(git_blob_create_from_workdir(&id, g_repo, "identtest"));
@@ -31,7 +31,7 @@ static void add_blob_and_filter(
 	cl_assert_equal_s(expected, out.ptr);
 
 	git_blob_free(blob);
-	git_buf_dispose(&out);
+	git_userbuf_dispose(&out);
 }
 
 void test_filter_ident__to_worktree(void)

@@ -124,7 +124,7 @@ static void test_tree_to_tree_computed_to_parsed(
 	git_tree *a, *b;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
-	git_buf computed_buf = GIT_BUF_INIT;
+	git_userbuf computed_buf = GIT_USERBUF_INIT;
 
 	repo = cl_git_sandbox_init(sandbox);
 
@@ -154,7 +154,7 @@ static void test_tree_to_tree_computed_to_parsed(
 	git_diff_free(computed);
 	git_diff_free(parsed);
 
-	git_buf_dispose(&computed_buf);
+	git_userbuf_dispose(&computed_buf);
 
 	cl_git_sandbox_cleanup();
 }
@@ -208,7 +208,7 @@ void test_diff_parse__get_patch_from_diff(void)
 	git_diff *computed, *parsed;
 	git_tree *a, *b;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_buf computed_buf = GIT_BUF_INIT;
+	git_userbuf computed_buf = GIT_USERBUF_INIT;
 	git_patch *patch_computed, *patch_parsed;
 
 	repo = cl_git_sandbox_init("diff");
@@ -242,7 +242,7 @@ void test_diff_parse__get_patch_from_diff(void)
 	git_diff_free(computed);
 	git_diff_free(parsed);
 
-	git_buf_dispose(&computed_buf);
+	git_userbuf_dispose(&computed_buf);
 
 	cl_git_sandbox_cleanup();
 }
@@ -286,7 +286,7 @@ void test_diff_parse__parsing_minimal_patch_succeeds(void)
 	    "@@ -1 +1 @@\n"
 	    "-a\n"
 	    "+\n";
-	git_buf buf = GIT_BUF_INIT;
+	git_userbuf buf = GIT_USERBUF_INIT;
 	git_diff *diff;
 
 	cl_git_pass(git_diff_from_buffer(&diff, patch, strlen(patch)));
@@ -294,13 +294,14 @@ void test_diff_parse__parsing_minimal_patch_succeeds(void)
 	cl_assert_equal_s(patch, buf.ptr);
 
 	git_diff_free(diff);
-	git_buf_dispose(&buf);
+	git_userbuf_dispose(&buf);
 }
 
 void test_diff_parse__patch_roundtrip_succeeds(void)
 {
 	const char buf1[] = "a\n", buf2[] = "b\n";
-	git_buf patchbuf = GIT_BUF_INIT, diffbuf = GIT_BUF_INIT;
+	git_userbuf patchbuf = GIT_USERBUF_INIT;
+	git_userbuf diffbuf = GIT_USERBUF_INIT;
 	git_patch *patch;
 	git_diff *diff;
 
@@ -314,8 +315,8 @@ void test_diff_parse__patch_roundtrip_succeeds(void)
 
 	git_patch_free(patch);
 	git_diff_free(diff);
-	git_buf_dispose(&patchbuf);
-	git_buf_dispose(&diffbuf);
+	git_userbuf_dispose(&patchbuf);
+	git_userbuf_dispose(&diffbuf);
 }
 
 #define cl_assert_equal_i_src(i1,i2,file,func,line) clar__assert_equal(file,func,line,#i1 " != " #i2, 1, "%d", (int)(i1), (int)(i2))

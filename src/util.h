@@ -13,8 +13,6 @@
 # include <ctype.h>
 #endif
 
-#include "git2/buffer.h"
-
 #include "buffer.h"
 #include "common.h"
 #include "strnlen.h"
@@ -411,8 +409,6 @@ GIT_INLINE(double) git__timer(void)
 }
 
 #endif
-
-extern int git__getenv(git_buf *out, const char *name);
 
 #include "alloc.h"
 
