@@ -12,7 +12,8 @@
 #include "signature.h"
 #include "refdb.h"
 
-#include <git2/sys/refdb_backend.h>
+#include "git2/sys/refdb_backend.h"
+#include "git2/sys/reflog.h"
 
 void git_reflog_entry__free(git_reflog_entry *entry)
 {
