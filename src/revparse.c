@@ -586,7 +586,7 @@ static int extract_how_many(int *n, const char *spec, size_t *pos)
 			*pos = end_ptr - spec;
 		}
 
-	} 	while (spec[(*pos)] == kind && kind == '~');
+	} while (spec[(*pos)] == kind && kind == '~');
 
 	*n = accumulated;
 
