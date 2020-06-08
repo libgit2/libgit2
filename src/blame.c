@@ -538,7 +538,9 @@ int git_blame_options_init(git_blame_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_blame_init_options(git_blame_options *opts, unsigned int version)
 {
 	return git_blame_options_init(opts, version);
 }
+#endif

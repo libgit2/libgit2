@@ -195,10 +195,12 @@ int git_remote_create_options_init(git_remote_create_options *opts, unsigned int
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_remote_create_init_options(git_remote_create_options *opts, unsigned int version)
 {
 	return git_remote_create_options_init(opts, version);
 }
+#endif
 
 int git_remote_create_with_opts(git_remote **out, const char *url, const git_remote_create_options *opts)
 {

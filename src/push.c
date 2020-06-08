@@ -555,7 +555,9 @@ int git_push_options_init(git_push_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_push_init_options(git_push_options *opts, unsigned int version)
 {
 	return git_push_options_init(opts, version);
 }
+#endif

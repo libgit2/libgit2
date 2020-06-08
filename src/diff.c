@@ -352,10 +352,12 @@ int git_diff_options_init(git_diff_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_diff_init_options(git_diff_options *opts, unsigned int version)
 {
 	return git_diff_options_init(opts, version);
 }
+#endif
 
 int git_diff_find_options_init(
 	git_diff_find_options *opts, unsigned int version)
@@ -365,11 +367,13 @@ int git_diff_find_options_init(
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_diff_find_init_options(
 	git_diff_find_options *opts, unsigned int version)
 {
 	return git_diff_find_options_init(opts, version);
 }
+#endif
 
 int git_diff_format_email_options_init(
 	git_diff_format_email_options *opts, unsigned int version)
@@ -380,11 +384,13 @@ int git_diff_format_email_options_init(
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_diff_format_email_init_options(
 	git_diff_format_email_options *opts, unsigned int version)
 {
 	return git_diff_format_email_options_init(opts, version);
 }
+#endif
 
 static int flush_hunk(git_oid *result, git_hash_ctx *ctx)
 {

@@ -155,7 +155,9 @@ int git_fetch_options_init(git_fetch_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_fetch_init_options(git_fetch_options *opts, unsigned int version)
 {
 	return git_fetch_options_init(opts, version);
 }
+#endif

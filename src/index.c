@@ -3717,9 +3717,11 @@ void git_indexwriter_cleanup(git_indexwriter *writer)
 
 /* Deprecated functions */
 
+#ifndef GIT_DEPRECATE_HARD
 int git_index_add_frombuffer(
     git_index *index, const git_index_entry *source_entry,
     const void *buffer, size_t len)
 {
 	return git_index_add_from_buffer(index, source_entry, buffer, len);
 }
+#endif

@@ -1240,10 +1240,12 @@ int git_submodule_update_options_init(git_submodule_update_options *opts, unsign
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_submodule_update_init_options(git_submodule_update_options *opts, unsigned int version)
 {
 	return git_submodule_update_options_init(opts, version);
 }
+#endif
 
 int git_submodule_update(git_submodule *sm, int init, git_submodule_update_options *_update_options)
 {

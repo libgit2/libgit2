@@ -2928,11 +2928,13 @@ int git_repository_init_options_init(
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_repository_init_init_options(
 	git_repository_init_options *opts, unsigned int version)
 {
 	return git_repository_init_options_init(opts, version);
 }
+#endif
 
 int git_repository_ident(const char **name, const char **email, const git_repository *repo)
 {

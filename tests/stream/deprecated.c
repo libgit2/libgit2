@@ -1,18 +1,17 @@
-#undef GIT_DEPRECATE_HARD
-
 #include "clar_libgit2.h"
 #include "git2/sys/stream.h"
 #include "streams/tls.h"
 #include "streams/socket.h"
 #include "stream.h"
 
-static git_stream test_stream;
-static int ctor_called;
-
 void test_stream_deprecated__cleanup(void)
 {
 	cl_git_pass(git_stream_register(GIT_STREAM_TLS | GIT_STREAM_STANDARD, NULL));
 }
+
+#ifndef GIT_DEPRECATE_HARD
+static git_stream test_stream;
+static int ctor_called;
 
 static int test_stream_init(git_stream **out, const char *host, const char *port)
 {
@@ -24,9 +23,11 @@ static int test_stream_init(git_stream **out, const char *host, const char *port
 
 	return 0;
 }
+#endif
 
 void test_stream_deprecated__register_tls(void)
 {
+#ifndef GIT_DEPRECATE_HARD
 	git_stream *stream;
 	int error;
 
@@ -55,4 +56,5 @@ void test_stream_deprecated__register_tls(void)
 	cl_assert(&test_stream != stream);
 
 	git_stream_free(stream);
+#endif
 }
