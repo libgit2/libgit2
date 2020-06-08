@@ -322,7 +322,7 @@ int git_path_root(const char *path)
 	return -1;	/* Not a real error - signals that path is not rooted */
 }
 
-void git_path_trim_slashes(git_buf *path)
+static void path_trim_slashes(git_buf *path)
 {
 	int ceiling = git_path_root(path->ptr) + 1;
 	assert(ceiling >= 0);
@@ -1219,7 +1219,7 @@ int git_path_diriter_init(
 	if (git_buf_puts(&diriter->path_utf8, path) < 0)
 		return -1;
 
-	git_path_trim_slashes(&diriter->path_utf8);
+	path_trim_slashes(&diriter->path_utf8);
 
 	if (diriter->path_utf8.size == 0) {
 		git_error_set(GIT_ERROR_FILESYSTEM, "could not open directory '%s'", path);
@@ -1368,7 +1368,7 @@ int git_path_diriter_init(
 	if (git_buf_puts(&diriter->path, path) < 0)
 		return -1;
 
-	git_path_trim_slashes(&diriter->path);
+	path_trim_slashes(&diriter->path);
 
 	if (diriter->path.size == 0) {
 		git_error_set(GIT_ERROR_FILESYSTEM, "could not open directory '%s'", path);

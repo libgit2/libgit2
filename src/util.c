@@ -777,7 +777,7 @@ static const int8_t utf8proc_utf8class[256] = {
 	4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-int git__utf8_charlen(const uint8_t *str, size_t str_len)
+static int util_utf8_charlen(const uint8_t *str, size_t str_len)
 {
 	size_t length, i;
 
@@ -802,7 +802,7 @@ int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst)
 	int32_t uc = -1;
 
 	*dst = -1;
-	length = git__utf8_charlen(str, str_len);
+	length = util_utf8_charlen(str, str_len);
 	if (length < 0)
 		return -1;
 
@@ -839,7 +839,7 @@ size_t git__utf8_valid_buf_length(const uint8_t *str, size_t str_len)
 	size_t offset = 0;
 
 	while (offset < str_len) {
-		int length = git__utf8_charlen(str + offset, str_len - offset);
+		int length = util_utf8_charlen(str + offset, str_len - offset);
 
 		if (length < 0)
 			break;

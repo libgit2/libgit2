@@ -445,7 +445,7 @@ GIT_INLINE(int) client_write_request(git_http_client *client)
 				      0);
 }
 
-const char *name_for_method(git_http_method method)
+static const char *name_for_method(git_http_method method)
 {
 	switch (method) {
 	case GIT_HTTP_METHOD_GET:

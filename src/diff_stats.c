@@ -46,7 +46,7 @@ static int digits_for_value(size_t val)
 	return count;
 }
 
-int git_diff_file_stats__full_to_buf(
+static int diff_file_stats_full_to_buf(
 	git_buf *out,
 	const git_diff_delta *delta,
 	const diff_file_stats *filestat,
@@ -134,7 +134,7 @@ on_error:
 	return (git_buf_oom(out) ? -1 : 0);
 }
 
-int git_diff_file_stats__number_to_buf(
+static int diff_file_stats_number_to_buf(
 	git_buf *out,
 	const git_diff_delta *delta,
 	const diff_file_stats *filestats)
@@ -151,7 +151,7 @@ int git_diff_file_stats__number_to_buf(
 	return error;
 }
 
-int git_diff_file_stats__summary_to_buf(
+static int diff_file_stats_summary_to_buf(
 	git_buf *out,
 	const git_diff_delta *delta)
 {
@@ -288,7 +288,7 @@ int git_diff_stats_to_buf(
 			if ((delta = git_diff_get_delta(stats->diff, i)) == NULL)
 				continue;
 
-			error = git_diff_file_stats__number_to_buf(
+			error = diff_file_stats_number_to_buf(
 				out, delta, &stats->filestats[i]);
 			if (error < 0)
 				return error;
@@ -309,7 +309,7 @@ int git_diff_stats_to_buf(
 			if ((delta = git_diff_get_delta(stats->diff, i)) == NULL)
 				continue;
 
-			error = git_diff_file_stats__full_to_buf(
+			error = diff_file_stats_full_to_buf(
 				out, delta, &stats->filestats[i], stats, width);
 			if (error < 0)
 				return error;
@@ -342,7 +342,7 @@ int git_diff_stats_to_buf(
 			if ((delta = git_diff_get_delta(stats->diff, i)) == NULL)
 				continue;
 
-			error = git_diff_file_stats__summary_to_buf(out, delta);
+			error = diff_file_stats_summary_to_buf(out, delta);
 			if (error < 0)
 				return error;
 		}

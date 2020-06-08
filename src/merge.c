@@ -80,7 +80,7 @@ static int cache_invalid_marker;
 
 /* Merge base computation */
 
-int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_repository *repo, size_t length, const git_oid input_array[])
+static int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_repository *repo, size_t length, const git_oid input_array[])
 {
 	git_revwalk *walk = NULL;
 	git_vector list;
@@ -2845,7 +2845,7 @@ on_error:
 	return error;
 }
 
-const char *merge_their_label(const char *branchname)
+static const char *merge_their_label(const char *branchname)
 {
 	const char *slash;
 

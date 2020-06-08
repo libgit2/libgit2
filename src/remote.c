@@ -686,7 +686,7 @@ int git_remote__urlfordirection(git_buf *url_out, struct git_remote *remote, int
 	return resolve_url(url_out, url, direction, callbacks);
 }
 
-int set_transport_callbacks(git_transport *t, const git_remote_callbacks *cbs)
+static int remote_transport_set_callbacks(git_transport *t, const git_remote_callbacks *cbs)
 {
 	if (!t->set_callbacks || !cbs)
 		return 0;
@@ -744,7 +744,7 @@ int git_remote__connect(git_remote *remote, git_direction direction, const git_r
 	if ((error = set_transport_custom_headers(t, conn->custom_headers)) != 0)
 		goto on_error;
 
-	if ((error = set_transport_callbacks(t, callbacks)) < 0 ||
+	if ((error = remote_transport_set_callbacks(t, callbacks)) < 0 ||
 	    (error = t->connect(t, url.ptr, credentials, payload, conn->proxy, direction, flags)) != 0)
 		goto on_error;
 

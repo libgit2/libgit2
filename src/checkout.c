@@ -806,7 +806,7 @@ static int checkout_conflictdata_cmp(const void *a, const void *b)
 	return diff;
 }
 
-int checkout_conflictdata_empty(
+static int checkout_conflictdata_empty(
 	const git_vector *conflicts, size_t idx, void *payload)
 {
 	checkout_conflictdata *conflict;

@@ -941,7 +941,7 @@ static int parse_patch_body(
 		return parse_patch_hunks(patch, ctx);
 }
 
-int check_header_names(
+static int check_header_names(
 	const char *one,
 	const char *two,
 	const char *old_or_new,

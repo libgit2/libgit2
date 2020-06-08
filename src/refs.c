@@ -480,7 +480,7 @@ static int reference__create(
 	return 0;
 }
 
-int configured_ident(git_signature **out, const git_repository *repo)
+static int refs_configured_ident(git_signature **out, const git_repository *repo)
 {
 	if (repo->ident_name && repo->ident_email)
 		return git_signature_now(out, repo->ident_name, repo->ident_email);
@@ -494,7 +494,7 @@ int git_reference__log_signature(git_signature **out, git_repository *repo)
 	int error;
 	git_signature *who;
 
-	if(((error = configured_ident(&who, repo)) < 0) &&
+	if(((error = refs_configured_ident(&who, repo)) < 0) &&
 	   ((error = git_signature_default(&who, repo)) < 0) &&
 	   ((error = git_signature_now(&who, "unknown", "unknown")) < 0))
 		return error;
