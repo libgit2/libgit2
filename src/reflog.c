@@ -14,11 +14,6 @@
 
 #include <git2/sys/refdb_backend.h>
 
-git_reflog_entry *git_reflog_entry__alloc(void)
-{
-	return git__calloc(1, sizeof(git_reflog_entry));
-}
-
 void git_reflog_entry__free(git_reflog_entry *entry)
 {
 	git_signature_free(entry->committer);

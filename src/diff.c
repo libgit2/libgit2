@@ -32,11 +32,6 @@ GIT_INLINE(const char *) diff_delta__path(const git_diff_delta *delta)
 	return str;
 }
 
-const char *git_diff_delta__path(const git_diff_delta *delta)
-{
-	return diff_delta__path(delta);
-}
-
 int git_diff_delta__cmp(const void *a, const void *b)
 {
 	const git_diff_delta *da = a, *db = b;
