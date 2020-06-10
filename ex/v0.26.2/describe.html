@@ -152,7 +152,7 @@ all of the use cases.</p>
   <span class="n">git_buf</span> <span class="n">buf</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">0</span> <span class="p">};</span>
   
   <span class="k">if</span> <span class="p">(</span><span class="n">rev</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-8" class="fnlink" href="../../#v0.26.2/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">rev</span><span class="p">),</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-6" class="fnlink" href="../../#v0.26.2/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">rev</span><span class="p">),</span>
       <span class="s">&quot;Failed to lookup rev&quot;</span><span class="p">,</span> <span class="n">rev</span><span class="p">);</span>
 
     <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_describe_commit-1" class="fnlink" href="../../#v0.26.2/group/describe/git_describe_commit">git_describe_commit</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">describe_result</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">describe_options</span><span class="p">),</span>
@@ -263,7 +263,7 @@ all of the use cases.</p>
 
   <span class="n"><a name="git_libgit2_init-4" class="fnlink" href="../../#v0.26.2/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-6" class="fnlink" href="../../#v0.26.2/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n">git_repository_open_ext</span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
       <span class="s">&quot;Could not open repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="n">describe_options_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="p">);</span>
@@ -271,7 +271,7 @@ all of the use cases.</p>
 
   <span class="n">do_describe</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">);</span>
 
-  <span class="n"><a name="git_repository_free-7" class="fnlink" href="../../#v0.26.2/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+  <span class="n">git_repository_free</span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
   <span class="n"><a name="git_libgit2_shutdown-5" class="fnlink" href="../../#v0.26.2/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
