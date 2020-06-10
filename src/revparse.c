@@ -659,7 +659,7 @@ static int ensure_left_hand_identifier_is_not_known_yet(git_object *object, git_
 	return GIT_EINVALIDSPEC;
 }
 
-int revparse__ext(
+static int revparse(
 	git_object **object_out,
 	git_reference **reference_out,
 	size_t *identifier_len_out,
@@ -835,7 +835,7 @@ int git_revparse_ext(
 	git_object *obj = NULL;
 	git_reference *ref = NULL;
 
-	if ((error = revparse__ext(&obj, &ref, &identifier_len, repo, spec)) < 0)
+	if ((error = revparse(&obj, &ref, &identifier_len, repo, spec)) < 0)
 		goto cleanup;
 
 	*object_out = obj;

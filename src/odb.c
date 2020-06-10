@@ -1510,10 +1510,12 @@ void *git_odb_backend_data_alloc(git_odb_backend *backend, size_t len)
 	return git__malloc(len);
 }
 
+#ifndef GIT_DEPRECATE_HARD
 void *git_odb_backend_malloc(git_odb_backend *backend, size_t len)
 {
 	return git_odb_backend_data_alloc(backend, len);
 }
+#endif
 
 void git_odb_backend_data_free(git_odb_backend *backend, void *data)
 {

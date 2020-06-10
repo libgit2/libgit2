@@ -1000,7 +1000,7 @@ static int multivar_iter_next(git_config_entry **entry, git_config_iterator *_it
 	return error;
 }
 
-void multivar_iter_free(git_config_iterator *_iter)
+static void multivar_iter_free(git_config_iterator *_iter)
 {
 	multivar_iter *iter = (multivar_iter *) _iter;
 

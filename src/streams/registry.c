@@ -5,9 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "git2/errors.h"
-
 #include "common.h"
+
+#include "streams/registry.h"
+
 #include "global.h"
 #include "streams/tls.h"
 #include "streams/mbedtls.h"
@@ -100,7 +101,7 @@ int git_stream_register(git_stream_t type, git_stream_registration *registration
 	return 0;
 }
 
-
+#ifndef GIT_DEPRECATE_HARD
 int git_stream_register_tls(
 	int GIT_CALLBACK(ctor)(git_stream **out, const char *host, const char *port))
 {
@@ -116,3 +117,4 @@ int git_stream_register_tls(
 		return git_stream_register(GIT_STREAM_TLS, NULL);
 	}
 }
+#endif

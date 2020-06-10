@@ -337,7 +337,7 @@ static int diff_delta_format_with_paths(
 	return git_buf_printf(out, template, oldpath, newpath);
 }
 
-int diff_delta_format_similarity_header(
+static int diff_delta_format_similarity_header(
 	git_buf *out,
 	const git_diff_delta *delta)
 {

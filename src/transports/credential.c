@@ -391,6 +391,7 @@ void git_credential_free(git_credential *cred)
 
 /* Deprecated credential functions */
 
+#ifndef GIT_DEPRECATE_HARD
 int git_cred_has_username(git_credential *cred)
 {
 	return git_credential_has_username(cred);
@@ -474,3 +475,4 @@ void git_cred_free(git_credential *cred)
 {
 	git_credential_free(cred);
 }
+#endif

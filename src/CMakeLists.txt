@@ -21,6 +21,8 @@ SET(LIBGIT2_INCLUDES
 SET(LIBGIT2_SYSTEM_INCLUDES "")
 SET(LIBGIT2_LIBS "")
 
+enable_warnings(missing-declarations)
+
 # Enable tracing
 IF(ENABLE_TRACE)
 	SET(GIT_TRACE 1)

@@ -21,7 +21,7 @@ struct git_pool_page {
 
 static void *pool_alloc_page(git_pool *pool, size_t size);
 
-size_t git_pool__system_page_size(void)
+static size_t pool_system_page_size(void)
 {
 	static size_t size = 0;
 
@@ -44,7 +44,7 @@ int git_pool_init(git_pool *pool, size_t item_size)
 
 	memset(pool, 0, sizeof(git_pool));
 	pool->item_size = item_size;
-	pool->page_size = git_pool__system_page_size();
+	pool->page_size = pool_system_page_size();
 
 	return 0;
 }

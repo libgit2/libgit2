@@ -806,7 +806,7 @@ static int checkout_conflictdata_cmp(const void *a, const void *b)
 	return diff;
 }
 
-int checkout_conflictdata_empty(
+static int checkout_conflictdata_empty(
 	const git_vector *conflicts, size_t idx, void *payload)
 {
 	checkout_conflictdata *conflict;
@@ -2820,7 +2820,9 @@ int git_checkout_options_init(git_checkout_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_checkout_init_options(git_checkout_options *opts, unsigned int version)
 {
 	return git_checkout_options_init(opts, version);
 }
+#endif

@@ -195,10 +195,12 @@ int git_remote_create_options_init(git_remote_create_options *opts, unsigned int
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_remote_create_init_options(git_remote_create_options *opts, unsigned int version)
 {
 	return git_remote_create_options_init(opts, version);
 }
+#endif
 
 int git_remote_create_with_opts(git_remote **out, const char *url, const git_remote_create_options *opts)
 {
@@ -686,7 +688,7 @@ int git_remote__urlfordirection(git_buf *url_out, struct git_remote *remote, int
 	return resolve_url(url_out, url, direction, callbacks);
 }
 
-int set_transport_callbacks(git_transport *t, const git_remote_callbacks *cbs)
+static int remote_transport_set_callbacks(git_transport *t, const git_remote_callbacks *cbs)
 {
 	if (!t->set_callbacks || !cbs)
 		return 0;
@@ -744,7 +746,7 @@ int git_remote__connect(git_remote *remote, git_direction direction, const git_r
 	if ((error = set_transport_custom_headers(t, conn->custom_headers)) != 0)
 		goto on_error;
 
-	if ((error = set_transport_callbacks(t, callbacks)) < 0 ||
+	if ((error = remote_transport_set_callbacks(t, callbacks)) < 0 ||
 	    (error = t->connect(t, url.ptr, credentials, payload, conn->proxy, direction, flags)) != 0)
 		goto on_error;
 

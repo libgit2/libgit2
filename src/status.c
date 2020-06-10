@@ -548,10 +548,12 @@ int git_status_options_init(git_status_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_status_init_options(git_status_options *opts, unsigned int version)
 {
 	return git_status_options_init(opts, version);
 }
+#endif
 
 int git_status_list_get_perfdata(
 	git_diff_perfdata *out, const git_status_list *status)

@@ -55,7 +55,9 @@ void git_strarray_dispose(git_strarray *array)
 	memset(array, 0, sizeof(*array));
 }
 
+#ifndef GIT_DEPRECATE_HARD
 void git_strarray_free(git_strarray *array)
 {
 	git_strarray_dispose(array);
 }
+#endif

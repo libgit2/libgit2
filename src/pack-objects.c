@@ -1642,7 +1642,7 @@ static int mark_edges_uninteresting(git_packbuilder *pb, git_commit_list *commit
 	return 0;
 }
 
-int insert_tree(git_packbuilder *pb, git_tree *tree)
+static int pack_objects_insert_tree(git_packbuilder *pb, git_tree *tree)
 {
 	size_t i;
 	int error;
@@ -1669,7 +1669,7 @@ int insert_tree(git_packbuilder *pb, git_tree *tree)
 			if ((error = git_tree_lookup(&subtree, pb->repo, entry_id)) < 0)
 				return error;
 
-			error = insert_tree(pb, subtree);
+			error = pack_objects_insert_tree(pb, subtree);
 			git_tree_free(subtree);
 
 			if (error < 0)
@@ -1695,7 +1695,7 @@ int insert_tree(git_packbuilder *pb, git_tree *tree)
 	return error;
 }
 
-int insert_commit(git_packbuilder *pb, struct walk_object *obj)
+static int pack_objects_insert_commit(git_packbuilder *pb, struct walk_object *obj)
 {
 	int error;
 	git_commit *commit = NULL;
@@ -1712,7 +1712,7 @@ int insert_commit(git_packbuilder *pb, struct walk_object *obj)
 	if ((error = git_tree_lookup(&tree, pb->repo, git_commit_tree_id(commit))) < 0)
 		goto cleanup;
 
-	if ((error = insert_tree(pb, tree)) < 0)
+	if ((error = pack_objects_insert_tree(pb, tree)) < 0)
 		goto cleanup;
 
 cleanup:
@@ -1747,7 +1747,7 @@ int git_packbuilder_insert_walk(git_packbuilder *pb, git_revwalk *walk)
 		if (obj->seen || obj->uninteresting)
 			continue;
 
-		if ((error = insert_commit(pb, obj)) < 0)
+		if ((error = pack_objects_insert_commit(pb, obj)) < 0)
 			return error;
 	}
 
