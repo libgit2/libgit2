@@ -680,49 +680,127 @@ revwalker configuration calls</li>
         <div class="pilwrap">
           <a class="pilcrow" href="#section-23">&#182;</a>
         </div>
-        <p>Found valid --author <em>/;
-        else if (match<em>str</em>arg(&amp;opt-&gt;committer, &amp;args, &quot;--committer&quot;))
-            /</em>* Found valid --committer <em>/;
-        else if (match<em>str</em>arg(&amp;opt-&gt;grep, &amp;args, &quot;--grep&quot;))
-            /</em>* Found valid --grep <em>/;
-        else if (match<em>str</em>arg(&amp;s-&gt;repodir, &amp;args, &quot;--git-dir&quot;))
-            /</em>* Found git-dir. <em>/;
-        else if (match<em>int</em>arg(&amp;opt-&gt;skip, &amp;args, &quot;--skip&quot;, 0))
-            /</em>* Found valid --skip. <em>/;
-        else if (match<em>int</em>arg(&amp;opt-&gt;limit, &amp;args, &quot;--max-count&quot;, 0))
-            /</em>* Found valid --max-count. <em>/;
-        else if (a[1] &gt;= &#39;0&#39; &amp;&amp; a[1] &lt;= &#39;9&#39;)
-            is<em>integer(&amp;opt-&gt;limit, a + 1, 0);
-        else if (match</em>int_arg(&amp;opt-&gt;limit, &amp;args, &quot;-n&quot;, 0))
-            /</em>* Found valid -n. <em>/;
-        else if (!strcmp(a, &quot;--merges&quot;))
-            opt-&gt;min<em>parents = 2;
-        else if (!strcmp(a, &quot;--no-merges&quot;))
-            opt-&gt;max</em>parents = 1;
-        else if (!strcmp(a, &quot;--no-min-parents&quot;))
-            opt-&gt;min<em>parents = 0;
-        else if (!strcmp(a, &quot;--no-max-parents&quot;))
-            opt-&gt;max</em>parents = -1;
-        else if (match<em>int</em>arg(&amp;opt-&gt;max_parents, &amp;args, &quot;--max-parents=&quot;, 1))
-            /</em>* Found valid --max-parents. <em>/;
-        else if (match<em>int</em>arg(&amp;opt-&gt;min_parents, &amp;args, &quot;--min-parents=&quot;, 0))
-            /</em>* Found valid --min<em>parents. */;
-        else if (!strcmp(a, &quot;-p&quot;) || !strcmp(a, &quot;-u&quot;) || !strcmp(a, &quot;--patch&quot;))
-            opt-&gt;show</em>diff = 1;
-        else if (!strcmp(a, &quot;--log-size&quot;))
-            opt-&gt;show<em>log</em>size = 1;
-        else
-            usage(&quot;Unsupported argument&quot;, a);
-    }</p>
-
-<pre><code>return args.pos;
-</code></pre>
-
-<p>}</p>
+        <p>Found valid --author</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>      <span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_str_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opt</span><span class="o">-&gt;</span><span class="n">committer</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">,</span> <span class="s">&quot;--committer&quot;</span><span class="p">))</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-24'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-24">&#182;</a>
+        </div>
+        <p>Found valid --committer</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>      <span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_str_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opt</span><span class="o">-&gt;</span><span class="n">grep</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">,</span> <span class="s">&quot;--grep&quot;</span><span class="p">))</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-25'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-25">&#182;</a>
+        </div>
+        <p>Found valid --grep</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>      <span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_str_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">repodir</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">,</span> <span class="s">&quot;--git-dir&quot;</span><span class="p">))</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-26'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-26">&#182;</a>
+        </div>
+        <p>Found git-dir.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>      <span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_int_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opt</span><span class="o">-&gt;</span><span class="n">skip</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">,</span> <span class="s">&quot;--skip&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-27'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-27">&#182;</a>
+        </div>
+        <p>Found valid --skip.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>      <span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_int_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opt</span><span class="o">-&gt;</span><span class="n">limit</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">,</span> <span class="s">&quot;--max-count&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-28'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-28">&#182;</a>
+        </div>
+        <p>Found valid --max-count.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>      <span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="sc">&#39;0&#39;</span> <span class="o">&amp;&amp;</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="sc">&#39;9&#39;</span><span class="p">)</span>
+      <span class="n">is_integer</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opt</span><span class="o">-&gt;</span><span class="n">limit</span><span class="p">,</span> <span class="n">a</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_int_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opt</span><span class="o">-&gt;</span><span class="n">limit</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">,</span> <span class="s">&quot;-n&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-29'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-29">&#182;</a>
+        </div>
+        <p>Found valid -n.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>      <span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--merges&quot;</span><span class="p">))</span>
+      <span class="n">opt</span><span class="o">-&gt;</span><span class="n">min_parents</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--no-merges&quot;</span><span class="p">))</span>
+      <span class="n">opt</span><span class="o">-&gt;</span><span class="n">max_parents</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--no-min-parents&quot;</span><span class="p">))</span>
+      <span class="n">opt</span><span class="o">-&gt;</span><span class="n">min_parents</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--no-max-parents&quot;</span><span class="p">))</span>
+      <span class="n">opt</span><span class="o">-&gt;</span><span class="n">max_parents</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_int_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opt</span><span class="o">-&gt;</span><span class="n">max_parents</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">,</span> <span class="s">&quot;--max-parents=&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-30'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-30">&#182;</a>
+        </div>
+        <p>Found valid --max-parents.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>      <span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_int_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opt</span><span class="o">-&gt;</span><span class="n">min_parents</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">,</span> <span class="s">&quot;--min-parents=&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-31'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-31">&#182;</a>
+        </div>
+        <p>Found valid --min_parents.</p>
 
       </td>
       <td class=code>
-        <div class='highlight'><pre></pre></div>
+        <div class='highlight'><pre>      <span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-p&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-u&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--patch&quot;</span><span class="p">))</span>
+      <span class="n">opt</span><span class="o">-&gt;</span><span class="n">show_diff</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--log-size&quot;</span><span class="p">))</span>
+      <span class="n">opt</span><span class="o">-&gt;</span><span class="n">show_log_size</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span>
+      <span class="n">usage</span><span class="p">(</span><span class="s">&quot;Unsupported argument&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
       </td>
     </tr>
   </table>
