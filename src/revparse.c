@@ -537,7 +537,8 @@ static int extract_curly_braces_content(git_buf *buf, const char *spec, size_t *
 		if (spec[*pos] == '\0')
 			return GIT_EINVALIDSPEC;
 
-		git_buf_putc(buf, spec[(*pos)++]);
+		if (git_buf_putc(buf, spec[(*pos)++]) < 0)
+			return -1;
 	}
 
 	(*pos)++;
@@ -585,7 +586,7 @@ static int extract_how_many(int *n, const char *spec, size_t *pos)
 			*pos = end_ptr - spec;
 		}
 
-	} 	while (spec[(*pos)] == kind && kind == '~');
+	} while (spec[(*pos)] == kind && kind == '~');
 
 	*n = accumulated;
 
