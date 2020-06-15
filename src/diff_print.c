@@ -351,12 +351,11 @@ static int diff_delta_format_similarity_header(
 		goto done;
 	}
 
+	GIT_ASSERT(delta->status == GIT_DELTA_RENAMED || delta->status == GIT_DELTA_COPIED);
 	if (delta->status == GIT_DELTA_RENAMED)
 		type = "rename";
-	else if (delta->status == GIT_DELTA_COPIED)
-		type = "copy";
 	else
-		abort();
+		type = "copy";
 
 	if ((error = git_buf_puts(&old_path, delta->old_file.path)) < 0 ||
 	    (error = git_buf_puts(&new_path, delta->new_file.path)) < 0 ||
