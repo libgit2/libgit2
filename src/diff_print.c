@@ -742,14 +742,27 @@ int git_diff_print_callback__to_file_handle(
 	void *payload)
 {
 	FILE *fp = payload ? payload : stdout;
+	int error;
 
-	GIT_UNUSED(delta); GIT_UNUSED(hunk);
+	GIT_UNUSED(delta);
+	GIT_UNUSED(hunk);
 
 	if (line->origin == GIT_DIFF_LINE_CONTEXT ||
-		line->origin == GIT_DIFF_LINE_ADDITION ||
-		line->origin == GIT_DIFF_LINE_DELETION)
-		fputc(line->origin, fp);
-	fwrite(line->content, 1, line->content_len, fp);
+	    line->origin == GIT_DIFF_LINE_ADDITION ||
+	    line->origin == GIT_DIFF_LINE_DELETION) {
+		while ((error = fputc(line->origin, fp)) == EINTR)
+			continue;
+		if (error) {
+			git_error_set(GIT_ERROR_OS, "could not write status");
+			return -1;
+		}
+	}
+
+	if (fwrite(line->content, line->content_len, 1, fp) != 1) {
+		git_error_set(GIT_ERROR_OS, "could not write line");
+		return -1;
+	}
+
 	return 0;
 }
 
