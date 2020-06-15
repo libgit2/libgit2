@@ -491,6 +491,9 @@ static int format_binary(
 	}
 	git_buf_putc(pi->buf, '\n');
 
+	if (git_buf_oom(pi->buf))
+		return -1;
+
 	return 0;
 }
 
