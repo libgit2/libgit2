@@ -10,10 +10,10 @@
 #endif
 
 #ifdef GCC_WINDRES
-# define STRINGIZE(x) #x
-# define STRINGIZE_(x) STRINGIZE(x)
+# define _STR(x) #x
+# define STR(x) _STR(x)
 #else
-# define STRINGIZE_(x) x
+# define STR(x) x
 #endif
 
 #ifdef GCC_WINDRES
@@ -40,9 +40,9 @@ BEGIN
     BEGIN
       VALUE "FileDescription",	"libgit2 - the Git linkable library\0"
       VALUE "FileVersion",	LIBGIT2_VERSION "\0"
-      VALUE "InternalName",	STRINGIZE_(LIBGIT2_FILENAME) ".dll\0"
+      VALUE "InternalName",	STR(LIBGIT2_FILENAME) ".dll\0"
       VALUE "LegalCopyright",	"Copyright (C) the libgit2 contributors. All rights reserved.\0"
-      VALUE "OriginalFilename",	STRINGIZE_(LIBGIT2_FILENAME) ".dll\0"
+      VALUE "OriginalFilename",	STR(LIBGIT2_FILENAME) ".dll\0"
       VALUE "ProductName",	"libgit2\0"
       VALUE "ProductVersion",	LIBGIT2_VERSION "\0"
       VALUE "Comments",		LIBGIT2_COMMENTS "\0"
