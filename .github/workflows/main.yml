@@ -1,0 +1,202 @@
+# Continuous integration and pull request validation builds for the
+# master and maintenance branches.
+name: CI Build
+
+on:
+  push:
+    branches: [ master, maint/* ]
+  pull_request:
+    branches: [ master, maint/* ]
+
+env:
+  docker-registry: docker.pkg.github.com
+  docker-config-path: azure-pipelines/docker
+
+jobs:
+  # Build the docker container images that we will use for our Linux
+  # builds.  This will identify the last commit to the repository that
+  # updated the docker images, and try to download the image tagged with
+  # that sha.  If it does not exist, we'll do a docker build and push
+  # the image up to GitHub Packages for the actual CI/CD runs.  We tag
+  # with both the sha and "latest" so that the subsequent runs need not
+  # know the sha.  Only do this on CI builds (when the event is a "push")
+  # because PR builds from forks lack permission to write packages.
+  build_containers:
+    name: Create docker image
+    strategy:
+      matrix:
+        container:
+        - xenial
+        - bionic
+        - docurium
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+      if: github.event_name == 'push'
+    - name: Download existing container
+      run: azure-pipelines/getcontainer.sh ${{ env.docker-config-path }}/${{ matrix.container }}
+      env:
+        DOCKER_REGISTRY: ${{ env.docker-registry }}
+        GITHUB_TOKEN: ${{ secrets.github_token }}
+      if: github.event_name == 'push'
+    - name: Build and publish image
+      run: |
+        docker build -t ${{ env.docker-registry-container-sha }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container }} .
+        docker push ${{ env.docker-registry-container-sha }}
+      working-directory: ${{ env.docker-config-path }}
+      if: github.event_name == 'push' && env.docker-container-exists != 'true'
+
+  # Run our CI/CD builds.  We build a matrix with the various build targets
+  # and their details.  Then we build either in a docker container (Linux)
+  # or on the actual hosts (macOS, Windows).
+  build:
+    name: Build
+    needs: [build_containers]
+    strategy:
+      matrix:
+        platform:
+        - # Xenial, GCC, OpenSSL
+          image: xenial
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+          os: ubuntu-latest
+        - # Xenial, GCC, mbedTLS
+          image: xenial
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+          os: ubuntu-latest
+        - # Xenial, Clang, OpenSSL
+          image: xenial
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+          os: ubuntu-latest
+        - # Xenial, Clang, mbedTLS
+          image: xenial
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            CMAKE_GENERATOR: Ninja
+          os: ubuntu-latest
+        - # macOS
+          os: macos-10.15
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
+            CMAKE_GENERATOR: Ninja
+            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+          setup-script: osx
+        - # Windows amd64 Visual Studio
+          os: windows-2019
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A x64 -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - # Windows x86 Visual Studio
+          os: windows-2019
+          env:
+            ARCH: x86
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A Win32 -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - # Windows amd64 mingw
+          os: windows-2019
+          setup-script: mingw
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: MinGW Makefiles
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
+            BUILD_TEMP: D:\Temp
+            BUILD_PATH: D:\Temp\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - # Windows x86 mingw
+          os: windows-2019
+          setup-script: mingw
+          env:
+            ARCH: x86
+            CMAKE_GENERATOR: MinGW Makefiles
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
+            BUILD_TEMP: D:\Temp
+            BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+      fail-fast: false
+    env: ${{ matrix.platform.env }}
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Set up build environment
+      run: azure-pipelines/setup-${{ matrix.platform.setup-script }}.sh
+      shell: bash
+      if: matrix.platform.setup-script != ''
+    - name: Download container
+      run: azure-pipelines/getcontainer.sh ${{ env.docker-config-path }}/${{ matrix.platform.image }}
+      env:
+        DOCKER_REGISTRY: ${{ env.docker-registry }}
+        GITHUB_TOKEN: ${{ secrets.github_token }}
+      if: matrix.platform.image != ''
+    - name: Create container
+      run: docker build -t ${{ env.docker-registry-container-sha }} -f ${{ matrix.platform.image }} .
+      working-directory: ${{ env.docker-config-path }}
+      if: matrix.platform.image != '' && env.docker-container-exists != 'true'
+    - name: Build and test
+      run: |
+        export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
+
+        if [ -n "${{ matrix.platform.image }}" ]; then
+          docker run -v $(pwd):/home/libgit2/source -w /home/libgit2/source -e CC -e CMAKE_GENERATOR -e CMAKE_OPTIONS -e PKG_CONFIG_PATH -e GITTEST_NEGOTIATE_PASSWORD -e SKIP_SSH_TESTS -e SKIP_NEGOTIATE_TESTS ${{ env.docker-registry-container-sha }} /bin/bash -c "mkdir build && cd build && ../azure-pipelines/build.sh && ../azure-pipelines/test.sh"
+        else
+          mkdir build && cd build
+          ../azure-pipelines/build.sh
+          ../azure-pipelines/test.sh
+        fi
+      shell: bash
+
+  # Generate documentation using docurium.  We'll upload the documentation
+  # as a build artifact so that it can be reviewed as part of a pull
+  # request or in a forked build.  For CI builds in the main repository's
+  # master branch, we'll push the gh-pages branch back up so that it is
+  # published to our documentation site.
+  documentation:
+    name: Generate documentation
+    needs: [build_containers]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Generate documentation
+      run: |
+        git config user.name 'Documentation Generation'
+        git config user.email 'libgit2@users.noreply.github.com'
+        git branch gh-pages origin/gh-pages
+        docker login https://${{ env.docker-registry }} -u ${{ github.actor }} -p ${{ github.token }}
+        docker run --rm -v $(pwd):/home/libgit2/source -w /home/libgit2/source ${{ env.docker-registry }}/${{ github.repository }}/docurium:latest cm doc api.docurium
+        git checkout gh-pages
+        zip --exclude .git/\* --exclude .gitignore --exclude .gitattributes -r api-documentation.zip .
+    - uses: actions/upload-artifact@v2
+      name: Upload artifact
+      with:
+        name: api-documentation
+        path: api-documentation.zip
+    - name: Push documentation branch
+      run: git push origin gh-pages
+      if: github.event_name == 'push' && github.repository == 'libgit2/libgit2'
