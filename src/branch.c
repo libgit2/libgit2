@@ -134,39 +134,37 @@ int git_branch_create_from_annotated(
 		repository, branch_name, commit->commit, commit->description, force);
 }
 
-static int branch_equals(git_repository *repo, const char *path, void *payload)
+static int branch_is_checked_out(git_repository *worktree, void *payload)
 {
 	git_reference *branch = (git_reference *) payload;
 	git_reference *head = NULL;
-	int equal = 0;
+	int error;
 
-	if (git_reference__read_head(&head, repo, path) < 0 ||
-		git_reference_type(head) != GIT_REFERENCE_SYMBOLIC)
-		goto done;
+	if (git_repository_is_bare(worktree))
+		return 0;
 
-	equal = !git__strcmp(head->target.symbolic, branch->name);
+	if ((error = git_reference_lookup(&head, worktree, GIT_HEAD_FILE)) < 0) {
+		if (error == GIT_ENOTFOUND)
+			error = 0;
+		goto out;
+	}
 
-done:
+	if (git_reference_type(head) != GIT_REFERENCE_SYMBOLIC)
+		goto out;
+
+	error = !git__strcmp(head->target.symbolic, branch->name);
+
+out:
 	git_reference_free(head);
-	return equal;
+	return error;
 }
 
 int git_branch_is_checked_out(const git_reference *branch)
 {
-	git_repository *repo;
-	int flags = 0;
-
-	assert(branch);
-
 	if (!git_reference_is_branch(branch))
 		return 0;
-
-	repo = git_reference_owner(branch);
-
-	if (git_repository_is_bare(repo))
-		flags |= GIT_REPOSITORY_FOREACH_HEAD_SKIP_REPO;
-
-	return git_repository_foreach_head(repo, branch_equals, flags, (void *) branch) == 1;
+	return git_repository_foreach_worktree(git_reference_owner(branch),
+					       branch_is_checked_out, (void *)branch) == 1;
 }
 
 int git_branch_delete(git_reference *branch)
