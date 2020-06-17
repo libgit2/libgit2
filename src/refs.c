@@ -263,40 +263,6 @@ int git_reference_lookup_resolved(
 	return 0;
 }
 
-int git_reference__read_head(
-	git_reference **out,
-	git_repository *repo,
-	const char *path)
-{
-	git_buf reference = GIT_BUF_INIT;
-	char *name = NULL;
-	int error;
-
-	if ((error = git_futils_readbuffer(&reference, path)) < 0)
-		goto out;
-	git_buf_rtrim(&reference);
-
-	if (git__strncmp(reference.ptr, GIT_SYMREF, strlen(GIT_SYMREF)) == 0) {
-		git_buf_consume(&reference, reference.ptr + strlen(GIT_SYMREF));
-
-		name = git_path_basename(path);
-
-		if ((*out = git_reference__alloc_symbolic(name, reference.ptr)) == NULL) {
-			error = -1;
-			goto out;
-		}
-	} else {
-		if ((error = git_reference_lookup(out, repo, reference.ptr)) < 0)
-			goto out;
-	}
-
-out:
-	git__free(name);
-	git_buf_dispose(&reference);
-
-	return error;
-}
-
 int git_reference_dwim(git_reference **out, git_repository *repo, const char *refname)
 {
 	int error = 0, i;
