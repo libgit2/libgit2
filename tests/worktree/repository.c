@@ -50,9 +50,12 @@ void test_worktree_repository__head_detached(void)
 
 	cl_assert(git_repository_head_detached(fixture.worktree));
 	cl_assert(git_repository_head_detached_for_worktree(fixture.repo, "testrepo-worktree"));
-	cl_git_fail(git_repository_head_for_worktree(&head, fixture.repo, "testrepo-worktree"));
+	cl_git_pass(git_repository_head_for_worktree(&head, fixture.repo, "testrepo-worktree"));
+
+	cl_assert_equal_oid(&ref->target.oid, &head->target.oid);
 
 	git_reference_free(ref);
+	git_reference_free(head);
 }
 
 void test_worktree_repository__head_detached_fails_for_invalid_worktree(void)
