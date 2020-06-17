@@ -251,9 +251,10 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, off64_t offset
 	GIT_ERROR_CHECK_ALLOC(out->data);
 
 	if (!git__is_ssizet(len) ||
-		(p_lseek(fd, offset, SEEK_SET) < 0) ||
-		(p_read(fd, out->data, len) != (ssize_t)len)) {
+		(p_pread(fd, out->data, len, offset) != (ssize_t)len)) {
 		git_error_set(GIT_ERROR_OS, "mmap emulation failed");
+		git__free(out->data);
+		out->data = NULL;
 		return -1;
 	}
 
@@ -265,6 +266,10 @@ int p_munmap(git_map *map)
 {
 	assert(map != NULL);
 	git__free(map->data);
+
+	/* Initializing will help debug use-after-free */
+	map->len = 0;
+	map->data = NULL;
 
 	return 0;
 }

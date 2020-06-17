@@ -981,3 +981,73 @@ int p_inet_pton(int af, const char *src, void *dst)
 	errno = EINVAL;
 	return -1;
 }
+
+ssize_t p_pread(git_file fd, void *data, size_t size, git_off_t offset)
+{
+	size_t mmap_alignment;
+	size_t page_offset;
+	git_off_t page_start;
+	unsigned char *map_data;
+	git_map map;
+	int error;
+
+	assert(data && size);
+
+	if (!git__is_ssizet(size)) {
+		errno = EINVAL;
+		SetLastError(ERROR_INVALID_PARAMETER);
+		return -1;
+	}
+
+	if ((error = git__mmap_alignment(&mmap_alignment)) < 0)
+		return error;
+
+	/* the offset needs to be at the mmap boundary for the platform */
+	page_offset = offset % mmap_alignment;
+	page_start = offset - page_offset;
+
+	if ((error = p_mmap(&map, page_offset + size, GIT_PROT_READ,
+					GIT_MAP_SHARED, fd, page_start)) < 0)
+		return error;
+
+	map_data = (unsigned char *)map.data;
+	memcpy(data, map_data + page_offset, size);
+	p_munmap(&map);
+
+	return size;
+}
+
+ssize_t p_pwrite(git_file fd, const void *data, size_t size, git_off_t offset)
+{
+	size_t mmap_alignment;
+	size_t page_offset;
+	git_off_t page_start;
+	unsigned char *map_data;
+	git_map map;
+	int error;
+
+	assert(data && size);
+
+	if (!git__is_ssizet(size)) {
+		errno = EINVAL;
+		SetLastError(ERROR_INVALID_PARAMETER);
+		return -1;
+	}
+
+	if ((error = git__mmap_alignment(&mmap_alignment)) < 0)
+		return error;
+
+	/* the offset needs to be at the mmap boundary for the platform */
+	page_offset = offset % mmap_alignment;
+	page_start = offset - page_offset;
+
+	if ((error = p_mmap(&map, page_offset + size, GIT_PROT_WRITE,
+					GIT_MAP_SHARED, fd, page_start)) < 0)
+		return error;
+
+	map_data = (unsigned char *)map.data;
+	memcpy(map_data + page_offset, data, size);
+	p_munmap(&map);
+
+	return size;
+}
