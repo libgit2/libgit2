@@ -623,3 +623,33 @@ void test_worktree_worktree__foreach_head_gives_same_results_in_wt_and_repo(void
 	git_vector_free(&repo_refs);
 	git_vector_free(&worktree_refs);
 }
+
+static int foreach_worktree_cb(git_repository *worktree, void *payload)
+{
+	int *counter = (int *)payload;
+
+	switch (*counter) {
+	case 0:
+		cl_assert_equal_s(git_repository_path(fixture.repo),
+				  git_repository_path(worktree));
+		cl_assert(!git_repository_is_worktree(worktree));
+		break;
+	case 1:
+		cl_assert_equal_s(git_repository_path(fixture.worktree),
+				  git_repository_path(worktree));
+		cl_assert(git_repository_is_worktree(worktree));
+		break;
+	default:
+		cl_fail("more worktrees found than expected");
+	}
+
+	(*counter)++;
+
+	return 0;
+}
+
+void test_worktree_worktree__foreach_worktree_lists_all_worktrees(void)
+{
+	int counter = 0;
+	cl_git_pass(git_repository_foreach_worktree(fixture.repo, foreach_worktree_cb, &counter));
+}

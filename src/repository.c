@@ -2254,6 +2254,51 @@ out:
 	return error;
 }
 
+int git_repository_foreach_worktree(git_repository *repo,
+				    git_repository_foreach_worktree_cb cb,
+				    void *payload)
+{
+	git_strarray worktrees = {0};
+	git_repository *worktree_repo = NULL;
+	git_worktree *worktree = NULL;
+	int error;
+	size_t i;
+
+	if ((error = git_repository_open(&worktree_repo, repo->commondir)) < 0 ||
+	    (error = cb(worktree_repo, payload) != 0))
+		goto out;
+
+	git_repository_free(worktree_repo);
+	worktree_repo = NULL;
+
+	if ((error = git_worktree_list(&worktrees, repo)) < 0)
+		goto out;
+
+	for (i = 0; i < worktrees.count; i++) {
+		git_repository_free(worktree_repo);
+		worktree_repo = NULL;
+		git_worktree_free(worktree);
+		worktree = NULL;
+
+		if ((error = git_worktree_lookup(&worktree, repo, worktrees.strings[i]) < 0) ||
+		    (error = git_repository_open_from_worktree(&worktree_repo, worktree)) < 0) {
+			if (error != GIT_ENOTFOUND)
+				goto out;
+			error = 0;
+			continue;
+		}
+
+		if ((error = cb(worktree_repo, payload)) != 0)
+			goto out;
+	}
+
+out:
+	git_strarray_dispose(&worktrees);
+	git_repository_free(worktree_repo);
+	git_worktree_free(worktree);
+	return error;
+}
+
 int git_repository_foreach_head(git_repository *repo,
 				git_repository_foreach_head_cb cb,
 				int flags, void *payload)
