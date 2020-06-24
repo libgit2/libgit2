@@ -1045,7 +1045,7 @@ int git_remote_connect(git_remote *remote, git_direction direction, const git_re
 	GIT_ERROR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
         GIT_ERROR_CHECK_VERSION(proxy, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
 
-	git_strarray_free(&remote->custom_headers);
+	git_strarray_dispose(&remote->custom_headers);
 	if(custom_headers && (err = git_strarray_copy(&remote->custom_headers, custom_headers)) < 0)
 		return err;
 
@@ -1350,7 +1350,7 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 
 static int git_remote_fetch_cleanup(git_remote *remote, int err)
 {
-	git_strarray_free(&remote->requested_refspecs);
+	git_strarray_dispose(&remote->requested_refspecs);
 	git_buf_dispose(&remote->reflog_message);
 	
 	return err;
@@ -2210,10 +2210,10 @@ void git_remote_free(git_remote *remote)
 	git__free(remote->name);
 	
         git_buf_dispose(&remote->resolved_url);
-	git_strarray_free(&remote->custom_headers);
+	git_strarray_dispose(&remote->custom_headers);
 	git_proxy_options_clear(&remote->proxy_options);
 	
-	git_strarray_free(&remote->requested_refspecs);
+	git_strarray_dispose(&remote->requested_refspecs);
 	
 	git__free(remote);
 }
@@ -3047,7 +3047,7 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 
 static int git_remote_push_cleanup(git_remote *remote, int err)
 {
-	git_strarray_free(&remote->requested_refspecs);
+	git_strarray_dispose(&remote->requested_refspecs);
 	
 	return err;
 }
