@@ -32,5 +32,5 @@ void test_refs_namespaces__namespace_doesnt_show_normal_refs(void)
 	cl_git_pass(git_repository_set_namespace(g_repo, "namespace"));
 	cl_git_pass(git_reference_list(&ref_list, g_repo));
 	cl_assert_equal_i(0, ref_list.count);
-	git_strarray_free(&ref_list);
+	git_strarray_dispose(&ref_list);
 }

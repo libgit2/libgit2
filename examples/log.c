@@ -434,21 +434,28 @@ static int parse_options(
 		else if (!strcmp(a, "--reverse"))
 			set_sorting(s, GIT_SORT_REVERSE);
 		else if (match_str_arg(&opt->author, &args, "--author"))
-			/** Found valid --author */;
+			/** Found valid --author */
+			;
 		else if (match_str_arg(&opt->committer, &args, "--committer"))
-			/** Found valid --committer */;
+			/** Found valid --committer */
+			;
 		else if (match_str_arg(&opt->grep, &args, "--grep"))
-			/** Found valid --grep */;
+			/** Found valid --grep */
+			;
 		else if (match_str_arg(&s->repodir, &args, "--git-dir"))
-			/** Found git-dir. */;
+			/** Found git-dir. */
+			;
 		else if (match_int_arg(&opt->skip, &args, "--skip", 0))
-			/** Found valid --skip. */;
+			/** Found valid --skip. */
+			;
 		else if (match_int_arg(&opt->limit, &args, "--max-count", 0))
-			/** Found valid --max-count. */;
+			/** Found valid --max-count. */
+			;
 		else if (a[1] >= '0' && a[1] <= '9')
 			is_integer(&opt->limit, a + 1, 0);
 		else if (match_int_arg(&opt->limit, &args, "-n", 0))
-			/** Found valid -n. */;
+			/** Found valid -n. */
+			;
 		else if (!strcmp(a, "--merges"))
 			opt->min_parents = 2;
 		else if (!strcmp(a, "--no-merges"))
@@ -458,9 +465,11 @@ static int parse_options(
 		else if (!strcmp(a, "--no-max-parents"))
 			opt->max_parents = -1;
 		else if (match_int_arg(&opt->max_parents, &args, "--max-parents=", 1))
-			/** Found valid --max-parents. */;
+			/** Found valid --max-parents. */
+			;
 		else if (match_int_arg(&opt->min_parents, &args, "--min-parents=", 0))
-			/** Found valid --min_parents. */;
+			/** Found valid --min_parents. */
+			;
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") || !strcmp(a, "--patch"))
 			opt->show_diff = 1;
 		else if (!strcmp(a, "--log-size"))

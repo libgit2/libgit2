@@ -80,6 +80,7 @@
 #include "errors.h"
 #include "thread-utils.h"
 #include "integer.h"
+#include "assert_safe.h"
 
 /*
  * Include the declarations for deprecated functions; this ensures

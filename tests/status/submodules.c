@@ -71,12 +71,12 @@ static int cb_status__match(const char *p, unsigned int s, void *payload)
 	int idx = counts->entry_count++;
 
 	clar__assert_equal(
-		counts->file, counts->line,
+		counts->file, counts->func, counts->line,
 		"Status path mismatch", 1,
 		"%s", counts->expected_paths[idx], p);
 
 	clar__assert_equal(
-		counts->file, counts->line,
+		counts->file, counts->func, counts->line,
 		"Status code mismatch", 1,
 		"%o", counts->expected_statuses[idx], s);
 

@@ -210,6 +210,7 @@ void git_error_system_set(int code)
 
 /* Deprecated error values and functions */
 
+#ifndef GIT_DEPRECATE_HARD
 const git_error *giterr_last(void)
 {
 	return git_error_last();
@@ -229,3 +230,4 @@ void giterr_set_oom(void)
 {
 	git_error_set_oom();
 }
+#endif

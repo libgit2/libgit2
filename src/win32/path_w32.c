@@ -151,7 +151,7 @@ int git_win32_path_canonicalize(git_win32_path path)
 	return (int)(to - path);
 }
 
-int git_win32_path__cwd(wchar_t *out, size_t len)
+static int win32_path_cwd(wchar_t *out, size_t len)
 {
 	int cwd_len;
 
@@ -241,7 +241,7 @@ int git_win32_path_from_utf8(git_win32_path out, const char *src)
 	else {
 		int cwd_len;
 
-		if ((cwd_len = git_win32_path__cwd(dest, MAX_PATH)) < 0)
+		if ((cwd_len = win32_path_cwd(dest, MAX_PATH)) < 0)
 			goto on_error;
 
 		dest[cwd_len++] = L'\\';

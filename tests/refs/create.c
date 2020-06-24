@@ -212,17 +212,12 @@ void test_refs_create__oid_unknown_fails_by_default(void)
 
 void test_refs_create__propagate_eexists(void)
 {
-	int error;
 	git_oid oid;
-	git_reference *ref;
 
 	/* Make sure it works for oid and for symbolic both */
-	git_oid_fromstr(&oid, current_master_tip);
-	error = git_reference_create(&ref, g_repo, current_head_target, &oid, false, NULL);
-	cl_assert(error == GIT_EEXISTS);
-
-	error = git_reference_symbolic_create(&ref, g_repo, "HEAD", current_head_target, false, NULL);
-	cl_assert(error == GIT_EEXISTS);
+	cl_git_pass(git_oid_fromstr(&oid, current_master_tip));
+	cl_git_fail_with(GIT_EEXISTS, git_reference_create(NULL, g_repo, current_head_target, &oid, false, NULL));
+	cl_git_fail_with(GIT_EEXISTS, git_reference_symbolic_create(NULL, g_repo, "HEAD", current_head_target, false, NULL));
 }
 
 void test_refs_create__existing_dir_propagates_edirectory(void)

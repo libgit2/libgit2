@@ -117,7 +117,7 @@ void test_remote_create__with_fetchspec(void)
 	cl_assert_equal_i(1, array.count);
 	cl_assert_equal_i(section_count + 2, count_config_entries_match(_repo, "remote\\."));
 
-	git_strarray_free(&array);
+	git_strarray_dispose(&array);
 	git_remote_free(remote);
 }
 
@@ -132,7 +132,7 @@ void test_remote_create__with_empty_fetchspec(void)
 	cl_assert_equal_i(0, array.count);
 	cl_assert_equal_i(section_count + 1, count_config_entries_match(_repo, "remote\\."));
 
-	git_strarray_free(&array);
+	git_strarray_dispose(&array);
 	git_remote_free(remote);
 }
 
@@ -167,7 +167,7 @@ void test_remote_create__anonymous(void)
 	cl_assert_equal_i(0, array.count);
 	cl_assert_equal_i(section_count, count_config_entries_match(_repo, "remote\\."));
 
-	git_strarray_free(&array);
+	git_strarray_dispose(&array);
 	git_remote_free(remote);
 }
 
@@ -195,7 +195,7 @@ void test_remote_create__detached(void)
 	cl_assert_equal_i(0, array.count);
 	cl_assert_equal_i(section_count, count_config_entries_match(_repo, "remote\\."));
 
-	git_strarray_free(&array);
+	git_strarray_dispose(&array);
 	git_remote_free(remote);
 }
 
@@ -225,7 +225,7 @@ void test_remote_create__with_opts_named(void)
 	cl_assert_equal_i(1, array.count);
 	cl_assert_equal_s("+refs/heads/*:refs/remotes/test-new/*", array.strings[0]);
 
-	git_strarray_free(&array);
+	git_strarray_dispose(&array);
 	git_remote_free(remote);
 }
 
@@ -248,7 +248,7 @@ void test_remote_create__with_opts_named_and_fetchspec(void)
 	cl_assert_equal_i(1, array.count);
 	cl_assert_equal_s("+refs/*:refs/*", array.strings[0]);
 
-	git_strarray_free(&array);
+	git_strarray_dispose(&array);
 	git_remote_free(remote);
 }
 
@@ -270,7 +270,7 @@ void test_remote_create__with_opts_named_no_fetchspec(void)
 	cl_git_pass(git_remote_get_fetch_refspecs(&array, remote));
 	cl_assert_equal_i(0, array.count);
 
-	git_strarray_free(&array);
+	git_strarray_dispose(&array);
 	git_remote_free(remote);
 }
 
@@ -290,7 +290,7 @@ void test_remote_create__with_opts_anonymous(void)
 	cl_git_pass(git_remote_get_fetch_refspecs(&array, remote));
 	cl_assert_equal_i(0, array.count);
 
-	git_strarray_free(&array);
+	git_strarray_dispose(&array);
 	git_remote_free(remote);
 }
 
@@ -308,7 +308,7 @@ void test_remote_create__with_opts_detached(void)
 	cl_git_pass(git_remote_get_fetch_refspecs(&array, remote));
 	cl_assert_equal_i(0, array.count);
 
-	git_strarray_free(&array);
+	git_strarray_dispose(&array);
 
 	git_remote_free(remote);
 
@@ -320,7 +320,7 @@ void test_remote_create__with_opts_detached(void)
 	cl_git_pass(git_remote_get_fetch_refspecs(&array, remote));
 	cl_assert_equal_i(0, array.count);
 
-	git_strarray_free(&array);
+	git_strarray_dispose(&array);
 
 	git_remote_free(remote);
 }

@@ -958,7 +958,7 @@ cleanup:
 	return error;
 }
 
-const char *git_submodule_update_to_str(git_submodule_update_t update)
+static const char *submodule_update_to_str(git_submodule_update_t update)
 {
 	int i;
 	for (i = 0; i < (int)ARRAY_SIZE(_sm_update_map); ++i)
@@ -1240,10 +1240,12 @@ int git_submodule_update_options_init(git_submodule_update_options *opts, unsign
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_submodule_update_init_options(git_submodule_update_options *opts, unsigned int version)
 {
 	return git_submodule_update_options_init(opts, version);
 }
+#endif
 
 int git_submodule_update(git_submodule *sm, int init, git_submodule_update_options *_update_options)
 {
@@ -1401,7 +1403,7 @@ int git_submodule_init(git_submodule *sm, int overwrite)
 	/* write "submodule.NAME.update" if not default */
 
 	val = (sm->update == GIT_SUBMODULE_UPDATE_CHECKOUT) ?
-		NULL : git_submodule_update_to_str(sm->update);
+		NULL : submodule_update_to_str(sm->update);
 
 	if ((error = git_buf_printf(&key, "submodule.%s.update", sm->name)) < 0 ||
 		(error = git_config__update_entry(
@@ -1838,7 +1840,7 @@ int git_submodule_parse_update(git_submodule_update_t *out, const char *value)
 	return 0;
 }
 
-int git_submodule_parse_recurse(git_submodule_recurse_t *out, const char *value)
+static int submodule_parse_recurse(git_submodule_recurse_t *out, const char *value)
 {
 	int val;
 
@@ -1934,7 +1936,7 @@ static int submodule_read_config(git_submodule *sm, git_config *cfg)
 
 	if ((error = get_value(&value, cfg, &key, sm->name, "fetchRecurseSubmodules")) == 0) {
 		in_config = 1;
-		if ((error = git_submodule_parse_recurse(&sm->fetch_recurse, value)) < 0)
+		if ((error = submodule_parse_recurse(&sm->fetch_recurse, value)) < 0)
 			goto cleanup;
 		sm->fetch_recurse_default = sm->fetch_recurse;
 	} else if (error != GIT_ENOTFOUND) {

@@ -17,21 +17,22 @@ void test_ignore_status__cleanup(void)
 }
 
 static void assert_ignored_(
-	bool expected, const char *filepath, const char *file, int line)
+	bool expected, const char *filepath,
+	const char *file, const char *func, int line)
 {
 	int is_ignored = 0;
 	cl_git_expect(
-		git_status_should_ignore(&is_ignored, g_repo, filepath), 0, file, line);
+		git_status_should_ignore(&is_ignored, g_repo, filepath), 0, file, func, line);
 	clar__assert(
 		(expected != 0) == (is_ignored != 0),
-		file, line, "expected != is_ignored", filepath, 1);
+		file, func, line, "expected != is_ignored", filepath, 1);
 }
 #define assert_ignored(expected, filepath) \
-	assert_ignored_(expected, filepath, __FILE__, __LINE__)
+	assert_ignored_(expected, filepath, __FILE__, __func__, __LINE__)
 #define assert_is_ignored(filepath) \
-	assert_ignored_(true, filepath, __FILE__, __LINE__)
+	assert_ignored_(true, filepath, __FILE__, __func__, __LINE__)
 #define refute_is_ignored(filepath) \
-	assert_ignored_(false, filepath, __FILE__, __LINE__)
+	assert_ignored_(false, filepath, __FILE__, __func__, __LINE__)
 
 void test_ignore_status__0(void)
 {

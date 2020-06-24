@@ -80,7 +80,7 @@ static int cache_invalid_marker;
 
 /* Merge base computation */
 
-int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_repository *repo, size_t length, const git_oid input_array[])
+static int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_repository *repo, size_t length, const git_oid input_array[])
 {
 	git_revwalk *walk = NULL;
 	git_vector list;
@@ -1810,12 +1810,12 @@ git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo)
 
 	diff_list->repo = repo;
 
-	git_pool_init(&diff_list->pool, 1);
 
-	if (git_vector_init(&diff_list->staged, 0, NULL) < 0 ||
-		git_vector_init(&diff_list->conflicts, 0, NULL) < 0 ||
-		git_vector_init(&diff_list->resolved, 0, NULL) < 0) {
-		git_merge_diff_list__free(diff_list);
+	if (git_pool_init(&diff_list->pool, 1) < 0 ||
+	    git_vector_init(&diff_list->staged, 0, NULL) < 0 ||
+	    git_vector_init(&diff_list->conflicts, 0, NULL) < 0 ||
+	    git_vector_init(&diff_list->resolved, 0, NULL) < 0) {
+	    git_merge_diff_list__free(diff_list);
 		return NULL;
 	}
 
@@ -2845,7 +2845,7 @@ on_error:
 	return error;
 }
 
-const char *merge_their_label(const char *branchname)
+static const char *merge_their_label(const char *branchname)
 {
 	const char *slash;
 
@@ -3351,10 +3351,12 @@ int git_merge_options_init(git_merge_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_merge_init_options(git_merge_options *opts, unsigned int version)
 {
 	return git_merge_options_init(opts, version);
 }
+#endif
 
 int git_merge_file_input_init(git_merge_file_input *input, unsigned int version)
 {
@@ -3363,10 +3365,12 @@ int git_merge_file_input_init(git_merge_file_input *input, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_merge_file_init_input(git_merge_file_input *input, unsigned int version)
 {
 	return git_merge_file_input_init(input, version);
 }
+#endif
 
 int git_merge_file_options_init(
 	git_merge_file_options *opts, unsigned int version)
@@ -3376,8 +3380,10 @@ int git_merge_file_options_init(
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_merge_file_init_options(
 	git_merge_file_options *opts, unsigned int version)
 {
 	return git_merge_file_options_init(opts, version);
 }
+#endif

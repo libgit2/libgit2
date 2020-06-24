@@ -21,6 +21,8 @@ SET(LIBGIT2_INCLUDES
 SET(LIBGIT2_SYSTEM_INCLUDES "")
 SET(LIBGIT2_LIBS "")
 
+enable_warnings(missing-declarations)
+
 # Enable tracing
 IF(ENABLE_TRACE)
 	SET(GIT_TRACE 1)
@@ -76,12 +78,13 @@ ENDIF()
 ADD_FEATURE_INFO(threadsafe THREADSAFE "threadsafe support")
 
 
-IF (WIN32 AND EMBED_SSH_PATH)
-	FILE(GLOB SRC_SSH "${EMBED_SSH_PATH}/src/*.c")
-	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES "${EMBED_SSH_PATH}/include")
-	FILE(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
-	SET(GIT_SSH 1)
-ENDIF()
+if(WIN32 AND EMBED_SSH_PATH)
+	file(GLOB SRC_SSH "${EMBED_SSH_PATH}/src/*.c")
+	list(SORT SRC_SSH)
+	list(APPEND LIBGIT2_SYSTEM_INCLUDES "${EMBED_SSH_PATH}/include")
+	file(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
+	set(GIT_SSH 1)
+endif()
 
 IF (WIN32 AND WINHTTP)
 	SET(GIT_WINHTTP 1)
@@ -267,33 +270,38 @@ ENDIF()
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
 # Collect sourcefiles
-FILE(GLOB SRC_H
+file(GLOB SRC_H
 	"${libgit2_SOURCE_DIR}/include/git2.h"
 	"${libgit2_SOURCE_DIR}/include/git2/*.h"
 	"${libgit2_SOURCE_DIR}/include/git2/sys/*.h")
+list(SORT SRC_H)
 
 # On Windows use specific platform sources
-IF (WIN32 AND NOT CYGWIN)
-	IF(MSVC)
+if(WIN32 AND NOT CYGWIN)
+	if(MSVC)
 		SET(WIN_RC "win32/git2.rc")
-	ENDIF()
+	endif()
 
-	FILE(GLOB SRC_OS win32/*.c win32/*.h)
-ELSEIF (AMIGA)
-	ADD_DEFINITIONS(-DNO_ADDRINFO -DNO_READDIR_R -DNO_MMAP)
-ELSE()
-	FILE(GLOB SRC_OS unix/*.c unix/*.h)
-ENDIF()
+	file(GLOB SRC_OS win32/*.c win32/*.h)
+	list(SORT SRC_OS)
+elseif(AMIGA)
+	add_definitions(-DNO_ADDRINFO -DNO_READDIR_R -DNO_MMAP)
+else()
+	file(GLOB SRC_OS unix/*.c unix/*.h)
+	list(SORT SRC_OS)
+endif()
 
 IF (USE_LEAK_CHECKER STREQUAL "valgrind")
 	ADD_DEFINITIONS(-DVALGRIND)
 ENDIF()
 
-FILE(GLOB SRC_GIT2 *.c *.h
+file(GLOB SRC_GIT2 *.c *.h
 	allocators/*.c allocators/*.h
 	streams/*.c streams/*.h
 	transports/*.c transports/*.h
 	xdiff/*.c xdiff/*.h)
+list(SORT SRC_GIT2)
+
 IF(APPLE)
 	# The old Secure Transport API has been deprecated in macOS 10.15.
 	SET_SOURCE_FILES_PROPERTIES(streams/stransport.c PROPERTIES COMPILE_FLAGS -Wno-deprecated)

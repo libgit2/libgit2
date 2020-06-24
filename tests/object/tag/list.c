@@ -50,7 +50,7 @@ static void ensure_tag_pattern_match(git_repository *repo,
 	cl_assert_equal_i((int)sucessfully_found, (int)data->expected_matches);
 
 exit:
-	git_strarray_free(&tag_list);
+	git_strarray_dispose(&tag_list);
 	cl_git_pass(error);
 }
 
@@ -74,7 +74,7 @@ void test_object_tag_list__list_all(void)
 
 	cl_assert_equal_i((int)tag_list.count, 6);
 
-	git_strarray_free(&tag_list);
+	git_strarray_dispose(&tag_list);
 }
 
 static const struct pattern_match_t matches[] = {

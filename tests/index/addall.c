@@ -75,7 +75,7 @@ static void check_status_at_line(
 	git_repository *repo,
 	size_t index_adds, size_t index_dels, size_t index_mods,
 	size_t wt_adds, size_t wt_dels, size_t wt_mods, size_t ignores,
-	size_t conflicts, const char *file, int line)
+	size_t conflicts, const char *file, const char *func, int line)
 {
 	index_status_counts vals;
 
@@ -84,25 +84,25 @@ static void check_status_at_line(
 	cl_git_pass(git_status_foreach(repo, index_status_cb, &vals));
 
 	clar__assert_equal(
-		file,line,"wrong index adds", 1, "%"PRIuZ, index_adds, vals.index_adds);
+		file,func,line,"wrong index adds", 1, "%"PRIuZ, index_adds, vals.index_adds);
 	clar__assert_equal(
-		file,line,"wrong index dels", 1, "%"PRIuZ, index_dels, vals.index_dels);
+		file,func,line,"wrong index dels", 1, "%"PRIuZ, index_dels, vals.index_dels);
 	clar__assert_equal(
-		file,line,"wrong index mods", 1, "%"PRIuZ, index_mods, vals.index_mods);
+		file,func,line,"wrong index mods", 1, "%"PRIuZ, index_mods, vals.index_mods);
 	clar__assert_equal(
-		file,line,"wrong workdir adds", 1, "%"PRIuZ, wt_adds, vals.wt_adds);
+		file,func,line,"wrong workdir adds", 1, "%"PRIuZ, wt_adds, vals.wt_adds);
 	clar__assert_equal(
-		file,line,"wrong workdir dels", 1, "%"PRIuZ, wt_dels, vals.wt_dels);
+		file,func,line,"wrong workdir dels", 1, "%"PRIuZ, wt_dels, vals.wt_dels);
 	clar__assert_equal(
-		file,line,"wrong workdir mods", 1, "%"PRIuZ, wt_mods, vals.wt_mods);
+		file,func,line,"wrong workdir mods", 1, "%"PRIuZ, wt_mods, vals.wt_mods);
 	clar__assert_equal(
-		file,line,"wrong ignores", 1, "%"PRIuZ, ignores, vals.ignores);
+		file,func,line,"wrong ignores", 1, "%"PRIuZ, ignores, vals.ignores);
 	clar__assert_equal(
-		file,line,"wrong conflicts", 1, "%"PRIuZ, conflicts, vals.conflicts);
+		file,func,line,"wrong conflicts", 1, "%"PRIuZ, conflicts, vals.conflicts);
 }
 
 #define check_status(R,IA,ID,IM,WA,WD,WM,IG,C) \
-	check_status_at_line(R,IA,ID,IM,WA,WD,WM,IG,C,__FILE__,__LINE__)
+	check_status_at_line(R,IA,ID,IM,WA,WD,WM,IG,C,__FILE__,__func__,__LINE__)
 
 static void check_stat_data(git_index *index, const char *path, bool match)
 {

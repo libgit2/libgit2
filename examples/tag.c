@@ -162,7 +162,7 @@ static void action_list_tags(tag_state *state)
 		each_tag(tag_names.strings[i], state);
 	}
 
-	git_strarray_free(&tag_names);
+	git_strarray_dispose(&tag_names);
 }
 
 static void action_delete_tag(tag_state *state)

@@ -537,7 +537,8 @@ static int extract_curly_braces_content(git_buf *buf, const char *spec, size_t *
 		if (spec[*pos] == '\0')
 			return GIT_EINVALIDSPEC;
 
-		git_buf_putc(buf, spec[(*pos)++]);
+		if (git_buf_putc(buf, spec[(*pos)++]) < 0)
+			return -1;
 	}
 
 	(*pos)++;
@@ -585,7 +586,7 @@ static int extract_how_many(int *n, const char *spec, size_t *pos)
 			*pos = end_ptr - spec;
 		}
 
-	} 	while (spec[(*pos)] == kind && kind == '~');
+	} while (spec[(*pos)] == kind && kind == '~');
 
 	*n = accumulated;
 
@@ -659,7 +660,7 @@ static int ensure_left_hand_identifier_is_not_known_yet(git_object *object, git_
 	return GIT_EINVALIDSPEC;
 }
 
-int revparse__ext(
+static int revparse(
 	git_object **object_out,
 	git_reference **reference_out,
 	size_t *identifier_len_out,
@@ -835,7 +836,7 @@ int git_revparse_ext(
 	git_object *obj = NULL;
 	git_reference *ref = NULL;
 
-	if ((error = revparse__ext(&obj, &ref, &identifier_len, repo, spec)) < 0)
+	if ((error = revparse(&obj, &ref, &identifier_len, repo, spec)) < 0)
 		goto cleanup;
 
 	*object_out = obj;

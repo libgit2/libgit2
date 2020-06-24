@@ -136,10 +136,9 @@ int git_diff__merge(
 		return -1;
 	}
 
-	if (git_vector_init(&onto_new, onto->deltas.length, git_diff_delta__cmp) < 0)
+	if (git_vector_init(&onto_new, onto->deltas.length, git_diff_delta__cmp) < 0 ||
+	    git_pool_init(&onto_pool, 1) < 0)
 		return -1;
-
-	git_pool_init(&onto_pool, 1);
 
 	for (i = 0, j = 0; i < onto->deltas.length || j < from->deltas.length; ) {
 		git_diff_delta *o = GIT_VECTOR_GET(&onto->deltas, i);

@@ -30,7 +30,7 @@ void test_worktree_worktree__list(void)
 	cl_assert_equal_i(wts.count, 1);
 	cl_assert_equal_s(wts.strings[0], "testrepo-worktree");
 
-	git_strarray_free(&wts);
+	git_strarray_dispose(&wts);
 }
 
 void test_worktree_worktree__list_with_invalid_worktree_dirs(void)
@@ -61,7 +61,7 @@ void test_worktree_worktree__list_with_invalid_worktree_dirs(void)
 		cl_git_pass(git_worktree_list(&wts, fixture.worktree));
 		cl_assert_equal_i(wts.count, 1);
 		cl_assert_equal_s(wts.strings[0], "testrepo-worktree");
-		git_strarray_free(&wts);
+		git_strarray_dispose(&wts);
 
 		for (j = 0; j < ARRAY_SIZE(filesets[i]); j++) {
 			git_buf_truncate(&path, len);
@@ -81,7 +81,7 @@ void test_worktree_worktree__list_in_worktree_repo(void)
 	cl_assert_equal_i(wts.count, 1);
 	cl_assert_equal_s(wts.strings[0], "testrepo-worktree");
 
-	git_strarray_free(&wts);
+	git_strarray_dispose(&wts);
 }
 
 void test_worktree_worktree__list_without_worktrees(void)
@@ -380,7 +380,7 @@ void test_worktree_worktree__name(void)
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 	cl_assert_equal_s(git_worktree_name(wt), "testrepo-worktree");
-	
+
 	git_worktree_free(wt);
 }
 

@@ -548,7 +548,7 @@ cleanup:
 	if (error < 0)
 		git_buf_dispose(buf);
 
-	git_strarray_free(&remote_list);
+	git_strarray_dispose(&remote_list);
 	return error;
 }
 

@@ -54,6 +54,7 @@ int git_credential_userpass(
 
 /* Deprecated credential functions */
 
+#ifndef GIT_DEPRECATE_HARD
 int git_cred_userpass(
 	git_credential **out,
 	const char *url,
@@ -64,3 +65,4 @@ int git_cred_userpass(
 	return git_credential_userpass(out, url, user_from_url,
 		allowed_types, payload);
 }
+#endif

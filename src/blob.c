@@ -445,6 +445,7 @@ int git_blob_filter(
 
 /* Deprecated functions */
 
+#ifndef GIT_DEPRECATE_HARD
 int git_blob_create_frombuffer(
 	git_oid *id, git_repository *repo, const void *buffer, size_t len)
 {
@@ -491,3 +492,4 @@ int git_blob_filtered_content(
 
 	return git_blob_filter(out, blob, path, &opts);
 }
+#endif

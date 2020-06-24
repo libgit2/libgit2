@@ -2,7 +2,6 @@
 #include "patch.h"
 #include "patch_parse.h"
 #include "diff_helpers.h"
-#include "../src/diff.h"
 
 #include "../patch/patch_common.h"
 
@@ -319,20 +318,20 @@ void test_diff_parse__patch_roundtrip_succeeds(void)
 	git_buf_dispose(&diffbuf);
 }
 
-#define cl_assert_equal_i_src(i1,i2,file,line) clar__assert_equal(file,line,#i1 " != " #i2, 1, "%d", (int)(i1), (int)(i2))
+#define cl_assert_equal_i_src(i1,i2,file,func,line) clar__assert_equal(file,func,line,#i1 " != " #i2, 1, "%d", (int)(i1), (int)(i2))
 
-static void cl_git_assert_lineinfo_(int old_lineno, int new_lineno, int num_lines, git_patch *patch, size_t hunk_idx, size_t line_idx, const char *file, int lineno)
+static void cl_git_assert_lineinfo_(int old_lineno, int new_lineno, int num_lines, git_patch *patch, size_t hunk_idx, size_t line_idx, const char *file, const char *func, int lineno)
 {
 	const git_diff_line *line;
 
-	cl_git_expect(git_patch_get_line_in_hunk(&line, patch, hunk_idx, line_idx), 0, file, lineno);
-	cl_assert_equal_i_src(old_lineno, line->old_lineno, file, lineno);
-	cl_assert_equal_i_src(new_lineno, line->new_lineno, file, lineno);
-	cl_assert_equal_i_src(num_lines, line->num_lines, file, lineno);
+	cl_git_expect(git_patch_get_line_in_hunk(&line, patch, hunk_idx, line_idx), 0, file, func, lineno);
+	cl_assert_equal_i_src(old_lineno, line->old_lineno, file, func, lineno);
+	cl_assert_equal_i_src(new_lineno, line->new_lineno, file, func, lineno);
+	cl_assert_equal_i_src(num_lines, line->num_lines, file, func, lineno);
 }
 
 #define cl_git_assert_lineinfo(old, new, num, p, h, l) \
-	cl_git_assert_lineinfo_(old,new,num,p,h,l,__FILE__,__LINE__)
+	cl_git_assert_lineinfo_(old,new,num,p,h,l,__FILE__,__func__,__LINE__)
 
 
 void test_diff_parse__issue4672(void)

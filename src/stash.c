@@ -173,7 +173,7 @@ static int stash_to_index(
 	git_index *index,
 	const char *path)
 {
-	git_index *repo_index;
+	git_index *repo_index = NULL;
 	git_index_entry entry = {{0}};
 	struct stat st;
 	int error;
@@ -187,7 +187,7 @@ static int stash_to_index(
 		return error;
 
 	git_index_entry__init_from_stat(&entry, &st,
-		(repo_index != NULL || !repo_index->distrust_filemode));
+		(repo_index == NULL || !repo_index->distrust_filemode));
 
 	entry.path = path;
 
@@ -776,10 +776,12 @@ int git_stash_apply_options_init(git_stash_apply_options *opts, unsigned int ver
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_stash_apply_init_options(git_stash_apply_options *opts, unsigned int version)
 {
 	return git_stash_apply_options_init(opts, version);
 }
+#endif
 
 #define NOTIFY_PROGRESS(opts, progress_type)				\
 	do {								\

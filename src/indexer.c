@@ -123,10 +123,12 @@ int git_indexer_options_init(git_indexer_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_indexer_init_options(git_indexer_options *opts, unsigned int version)
 {
 	return git_indexer_options_init(opts, version);
 }
+#endif
 
 int git_indexer_new(
 		git_indexer **out,

@@ -17,19 +17,20 @@ void test_ignore_path__cleanup(void)
 }
 
 static void assert_is_ignored_(
-	bool expected, const char *filepath, const char *file, int line)
+	bool expected, const char *filepath,
+	const char *file, const char *func, int line)
 {
 	int is_ignored = 0;
 
 	cl_git_expect(
-		git_ignore_path_is_ignored(&is_ignored, g_repo, filepath), 0, file, line);
+		git_ignore_path_is_ignored(&is_ignored, g_repo, filepath), 0, file, func, line);
 
 	clar__assert_equal(
-		file, line, "expected != is_ignored", 1, "%d",
+		file, func, line, "expected != is_ignored", 1, "%d",
 		(int)(expected != 0), (int)(is_ignored != 0));
 }
 #define assert_is_ignored(expected, filepath) \
-	assert_is_ignored_(expected, filepath, __FILE__, __LINE__)
+	assert_is_ignored_(expected, filepath, __FILE__, __func__, __LINE__)
 
 void test_ignore_path__honor_temporary_rules(void)
 {

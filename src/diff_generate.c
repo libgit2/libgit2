@@ -301,14 +301,14 @@ GIT_INLINE(const char *) diff_delta__i2w_path(const git_diff_delta *delta)
 		delta->old_file.path : delta->new_file.path;
 }
 
-int git_diff_delta__i2w_cmp(const void *a, const void *b)
+static int diff_delta_i2w_cmp(const void *a, const void *b)
 {
 	const git_diff_delta *da = a, *db = b;
 	int val = strcmp(diff_delta__i2w_path(da), diff_delta__i2w_path(db));
 	return val ? val : ((int)da->status - (int)db->status);
 }
 
-int git_diff_delta__i2w_casecmp(const void *a, const void *b)
+static int diff_delta_i2w_casecmp(const void *a, const void *b)
 {
 	const git_diff_delta *da = a, *db = b;
 	int val = strcasecmp(diff_delta__i2w_path(da), diff_delta__i2w_path(db));
@@ -361,7 +361,7 @@ static const char *diff_mnemonic_prefix(
 	return pfx;
 }
 
-void git_diff__set_ignore_case(git_diff *diff, bool ignore_case)
+static void diff_set_ignore_case(git_diff *diff, bool ignore_case)
 {
 	if (!ignore_case) {
 		diff->opts.flags &= ~GIT_DIFF_IGNORE_CASE;
@@ -423,16 +423,15 @@ static git_diff_generated *diff_generated_alloc(
 	git_attr_session__init(&diff->base.attrsession, repo);
 	memcpy(&diff->base.opts, &dflt, sizeof(git_diff_options));
 
-	git_pool_init(&diff->base.pool, 1);
-
-	if (git_vector_init(&diff->base.deltas, 0, git_diff_delta__cmp) < 0) {
+	if (git_pool_init(&diff->base.pool, 1) < 0 ||
+	    git_vector_init(&diff->base.deltas, 0, git_diff_delta__cmp) < 0) {
 		git_diff_free(&diff->base);
 		return NULL;
 	}
 
 	/* Use case-insensitive compare if either iterator has
 	 * the ignore_case bit set */
-	git_diff__set_ignore_case(
+	diff_set_ignore_case(
 		&diff->base,
 		git_iterator_ignore_case(old_iter) ||
 		git_iterator_ignore_case(new_iter));
@@ -1376,7 +1375,7 @@ int git_diff_tree_to_index(
 
 	/* if index is in case-insensitive order, re-sort deltas to match */
 	if (index_ignore_case)
-		git_diff__set_ignore_case(diff, true);
+		diff_set_ignore_case(diff, true);
 
 	*out = diff;
 	diff = NULL;
@@ -1527,7 +1526,7 @@ int git_diff_index_to_index(
 
 	/* if index is in case-insensitive order, re-sort deltas to match */
 	if (old_index->ignore_case || new_index->ignore_case)
-		git_diff__set_ignore_case(diff, true);
+		diff_set_ignore_case(diff, true);
 
 	*out = diff;
 	diff = NULL;
@@ -1584,10 +1583,10 @@ int git_diff__paired_foreach(
 	if (i2w_icase && !icase_mismatch) {
 		strcomp = git__strcasecmp;
 
-		git_vector_set_cmp(&idx2wd->deltas, git_diff_delta__i2w_casecmp);
+		git_vector_set_cmp(&idx2wd->deltas, diff_delta_i2w_casecmp);
 		git_vector_sort(&idx2wd->deltas);
 	} else if (idx2wd != NULL) {
-		git_vector_set_cmp(&idx2wd->deltas, git_diff_delta__i2w_cmp);
+		git_vector_set_cmp(&idx2wd->deltas, diff_delta_i2w_cmp);
 		git_vector_sort(&idx2wd->deltas);
 	}
 

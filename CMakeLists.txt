@@ -11,21 +11,12 @@
 # Install:
 # > cmake --build . --target install
 
-PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5.1)
-CMAKE_POLICY(SET CMP0015 NEW)
-IF(POLICY CMP0051)
-	CMAKE_POLICY(SET CMP0051 NEW)
-ENDIF()
-IF(POLICY CMP0042)
-	CMAKE_POLICY(SET CMP0042 NEW)
-ENDIF()
-IF(POLICY CMP0054)
-	CMAKE_POLICY(SET CMP0054 NEW)
-ENDIF()
+
+project(libgit2 C)
 
 # Add find modules to the path
-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${libgit2_SOURCE_DIR}/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${libgit2_SOURCE_DIR}/cmake/")
 
 INCLUDE(CheckLibraryExists)
 INCLUDE(CheckFunctionExists)
@@ -49,8 +40,6 @@ OPTION(THREADSAFE			"Build libgit2 as threadsafe"				 ON)
 OPTION(BUILD_CLAR			"Build Tests using the Clar suite"			 ON)
 OPTION(BUILD_EXAMPLES			"Build library usage example apps"			OFF)
 OPTION(BUILD_FUZZERS			"Build the fuzz targets"				OFF)
-OPTION(TAGS				"Generate tags"						OFF)
-OPTION(PROFILE				"Generate profiling information"			OFF)
 OPTION(ENABLE_TRACE			"Enables tracing support"				ON)
 OPTION(LIBGIT2_FILENAME			"Name of the produced binary"				OFF)
 OPTION(USE_SSH				"Link with libssh2 to enable SSH support"		 ON)
@@ -137,6 +126,11 @@ IF (MSVC)
 	# /Gd - explicitly set cdecl calling convention
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gd")
 
+	IF (NOT (MSVC_VERSION LESS 1900))
+		# /guard:cf - Enable Control Flow Guard
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /guard:cf")
+	ENDIF()
+
 	IF (STATIC_CRT)
 		SET(CRT_FLAG_DEBUG "/MTd")
 		SET(CRT_FLAG_RELEASE "/MT")
@@ -182,6 +176,11 @@ IF (MSVC)
 	# /LARGEADDRESSAWARE - >2GB user address space on x86
 	# /VERSION - Embed version information in PE header
 	SET(CMAKE_EXE_LINKER_FLAGS "/DYNAMICBASE /NXCOMPAT /LARGEADDRESSAWARE /VERSION:${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}")
+
+	IF (NOT (MSVC_VERSION LESS 1900))
+		# /GUARD:CF - Enable Control Flow Guard
+		SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /GUARD:CF")
+	ENDIF()
 
 	# /DEBUG - Create a PDB
 	# /LTCG - Link time code generation (whole program optimization)
@@ -232,35 +231,27 @@ ELSE ()
 		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
 	ENDIF ()
 
-	ENABLE_WARNINGS(documentation)
-	DISABLE_WARNINGS(missing-field-initializers)
-	ENABLE_WARNINGS(strict-aliasing)
-	ENABLE_WARNINGS(strict-prototypes)
-	ENABLE_WARNINGS(declaration-after-statement)
-	ENABLE_WARNINGS(shift-count-overflow)
-	ENABLE_WARNINGS(unused-const-variable)
-	ENABLE_WARNINGS(unused-function)
-	ENABLE_WARNINGS(int-conversion)
+	enable_warnings(documentation)
+	disable_warnings(documentation-deprecated-sync)
+	disable_warnings(missing-field-initializers)
+	enable_warnings(strict-aliasing)
+	enable_warnings(strict-prototypes)
+	enable_warnings(declaration-after-statement)
+	enable_warnings(shift-count-overflow)
+	enable_warnings(unused-const-variable)
+	enable_warnings(unused-function)
+	enable_warnings(int-conversion)
 
 	# MinGW uses gcc, which expects POSIX formatting for printf, but
 	# uses the Windows C library, which uses its own format specifiers.
 	# Disable format specifier warnings.
-	IF(MINGW)
-		DISABLE_WARNINGS(format)
-		DISABLE_WARNINGS(format-security)
-	ELSE()
-		ENABLE_WARNINGS(format)
-		ENABLE_WARNINGS(format-security)
-	ENDIF()
-
-	IF("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
-		DISABLE_WARNINGS(documentation-deprecated-sync)
-	ENDIF()
-
-	IF (PROFILE)
-		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")
-		SET(CMAKE_EXE_LINKER_FLAGS "-pg ${CMAKE_EXE_LINKER_FLAGS}")
-	ENDIF ()
+	if(MINGW)
+		disable_warnings(format)
+		disable_warnings(format-security)
+	else()
+		enable_warnings(format)
+		enable_warnings(format-security)
+	endif()
 ENDIF()
 
 # Ensure that MinGW provides the correct header files.
@@ -298,25 +289,6 @@ ENDIF ()
 IF (BUILD_CLAR)
 	ENABLE_TESTING()
 	ADD_SUBDIRECTORY(tests)
-ENDIF ()
-
-IF (TAGS)
-	FIND_PROGRAM(CTAGS ctags)
-	IF (NOT CTAGS)
-		MESSAGE(FATAL_ERROR "Could not find ctags command")
-	ENDIF ()
-
-	FILE(GLOB_RECURSE SRC_ALL *.[ch])
-
-	ADD_CUSTOM_COMMAND(
-		OUTPUT tags
-		COMMAND ${CTAGS} -a ${SRC_ALL}
-		DEPENDS ${SRC_ALL}
-	)
-	ADD_CUSTOM_TARGET(
-		do_tags ALL
-		DEPENDS tags
-	)
 ENDIF ()
 
 IF (BUILD_EXAMPLES)

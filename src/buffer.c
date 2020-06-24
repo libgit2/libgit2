@@ -133,10 +133,12 @@ void git_buf_dispose(git_buf *buf)
 	git_buf_init(buf, 0);
 }
 
+#ifndef GIT_DEPRECATE_HARD
 void git_buf_free(git_buf *buf)
 {
 	git_buf_dispose(buf);
 }
+#endif
 
 void git_buf_sanitize(git_buf *buf)
 {

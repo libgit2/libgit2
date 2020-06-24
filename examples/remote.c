@@ -129,7 +129,7 @@ static int cmd_rename(git_repository *repo, struct remote_opts *o)
 		puts(problems.strings[0]);
 	}
 
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 
 	return retval;
 }
@@ -207,7 +207,7 @@ static int cmd_show(git_repository *repo, struct remote_opts *o)
 		git_remote_free(remote);
 	}
 
-	git_strarray_free(&remotes);
+	git_strarray_dispose(&remotes);
 
 	return 0;
 }

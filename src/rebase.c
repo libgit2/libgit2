@@ -501,10 +501,12 @@ int git_rebase_options_init(git_rebase_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_rebase_init_options(git_rebase_options *opts, unsigned int version)
 {
 	return git_rebase_options_init(opts, version);
 }
+#endif
 
 static int rebase_ensure_not_in_progress(git_repository *repo)
 {

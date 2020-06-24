@@ -1,4 +1,5 @@
 FILE(GLOB SRC_NTLMCLIENT "ntlm.c" "unicode_builtin.c" "util.c")
+LIST(SORT SRC_NTLMCLIENT)
 
 ADD_DEFINITIONS(-DNTLM_STATIC=1)
 

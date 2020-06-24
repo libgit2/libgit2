@@ -411,7 +411,8 @@ int git_index_open(git_index **index_out, const char *index_path)
 	index = git__calloc(1, sizeof(git_index));
 	GIT_ERROR_CHECK_ALLOC(index);
 
-	git_pool_init(&index->tree_pool, 1);
+	if (git_pool_init(&index->tree_pool, 1) < 0)
+		goto fail;
 
 	if (index_path != NULL) {
 		index->index_file_path = git__strdup(index_path);
@@ -2744,7 +2745,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 			++same_len;
 		}
 		path_len -= same_len;
-		varint_len = git_encode_varint(NULL, 0, same_len);
+		varint_len = git_encode_varint(NULL, 0, strlen(last) - same_len);
 	}
 
 	disk_size = index_entry_size(path_len, varint_len, entry->flags);
@@ -2795,7 +2796,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 
 	if (last) {
 		varint_len = git_encode_varint((unsigned char *) path,
-					  disk_size, same_len);
+					  disk_size, strlen(last) - same_len);
 		assert(varint_len > 0);
 		path += varint_len;
 		disk_size -= varint_len;
@@ -3716,9 +3717,11 @@ void git_indexwriter_cleanup(git_indexwriter *writer)
 
 /* Deprecated functions */
 
+#ifndef GIT_DEPRECATE_HARD
 int git_index_add_frombuffer(
     git_index *index, const git_index_entry *source_entry,
     const void *buffer, size_t len)
 {
 	return git_index_add_from_buffer(index, source_entry, buffer, len);
 }
+#endif

@@ -897,9 +897,8 @@ static int tree_iterator_init(tree_iterator *iter)
 {
 	int error;
 
-	git_pool_init(&iter->entry_pool, sizeof(tree_iterator_entry));
-
-	if ((error = tree_iterator_frame_init(iter, iter->root, NULL)) < 0)
+	if ((error = git_pool_init(&iter->entry_pool, sizeof(tree_iterator_entry))) < 0 ||
+	    (error = tree_iterator_frame_init(iter, iter->root, NULL)) < 0)
 		return error;
 
 	iter->base.flags &= ~GIT_ITERATOR_FIRST_ACCESS;
@@ -1376,7 +1375,8 @@ static int filesystem_iterator_frame_push(
 			filesystem_iterator_entry_cmp)) < 0)
 		goto done;
 
-	git_pool_init(&new_frame->entry_pool, 1);
+	if ((error = git_pool_init(&new_frame->entry_pool, 1)) < 0)
+		goto done;
 
 	/* check if this directory is ignored */
 	filesystem_iterator_frame_push_ignores(iter, frame_entry, new_frame);

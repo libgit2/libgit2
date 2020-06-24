@@ -253,10 +253,12 @@ int git_oid_is_zero(const git_oid *oid_a)
 	return 1;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_oid_iszero(const git_oid *oid_a)
 {
 	return git_oid_is_zero(oid_a);
 }
+#endif
 
 typedef short node_index;
 

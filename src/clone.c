@@ -479,10 +479,12 @@ int git_clone_options_init(git_clone_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_clone_init_options(git_clone_options *opts, unsigned int version)
 {
 	return git_clone_options_init(opts, version);
 }
+#endif
 
 static bool can_link(const char *src, const char *dst, int link)
 {

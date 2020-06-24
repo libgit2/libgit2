@@ -445,7 +445,7 @@ GIT_INLINE(int) client_write_request(git_http_client *client)
 				      0);
 }
 
-const char *name_for_method(git_http_method method)
+static const char *name_for_method(git_http_method method)
 {
 	switch (method) {
 	case GIT_HTTP_METHOD_GET:
@@ -1038,6 +1038,7 @@ on_error:
 
 GIT_INLINE(int) client_read(git_http_client *client)
 {
+	http_parser_context *parser_context = client->parser.data;
 	git_stream *stream;
 	char *buf = client->read_buf.ptr + client->read_buf.size;
 	size_t max_len;
@@ -1053,6 +1054,9 @@ GIT_INLINE(int) client_read(git_http_client *client)
 	 */
 	max_len = client->read_buf.asize - client->read_buf.size;
 	max_len = min(max_len, INT_MAX);
+
+	if (parser_context->output_size)
+		max_len = min(max_len, parser_context->output_size);
 
 	if (max_len == 0) {
 		git_error_set(GIT_ERROR_HTTP, "no room in output buffer");
@@ -1191,7 +1195,7 @@ static void complete_response_body(git_http_client *client)
 	/* If we're not keeping alive, don't bother. */
 	if (!client->keepalive) {
 		client->connected = 0;
-		return;
+		goto done;
 	}
 
 	parser_context.client = client;
@@ -1205,6 +1209,9 @@ static void complete_response_body(git_http_client *client)
 		git_error_clear();
 		client->connected = 0;
 	}
+
+done:
+	git_buf_clear(&client->read_buf);
 }
 
 int git_http_client_send_request(
@@ -1419,15 +1426,20 @@ int git_http_client_read_body(
 	client->parser.data = &parser_context;
 
 	/*
-	 * Clients expect to get a non-zero amount of data from us.
-	 * With a sufficiently small buffer, one might only read a chunk
-	 * length.  Loop until we actually have data to return.
+	 * Clients expect to get a non-zero amount of data from us,
+	 * so we either block until we have data to return, until we
+	 * hit EOF or there's an error.  Do this in a loop, since we
+	 * may end up reading only some stream metadata (like chunk
+	 * information).
 	 */
 	while (!parser_context.output_written) {
 		error = client_read_and_parse(client);
 
 		if (error <= 0)
 			goto done;
+
+		if (client->state == DONE)
+			break;
 	}
 
 	assert(parser_context.output_written <= INT_MAX);

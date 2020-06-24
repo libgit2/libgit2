@@ -524,7 +524,9 @@ int git_tag_peel(git_object **tag_target, const git_tag *tag)
 
 /* Deprecated Functions */
 
+#ifndef GIT_DEPRECATE_HARD
 int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *buffer, int allow_ref_overwrite)
 {
 	return git_tag_create_from_buffer(oid, repo, buffer, allow_ref_overwrite);
 }
+#endif
