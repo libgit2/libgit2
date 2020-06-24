@@ -889,7 +889,7 @@ static int send_request(winhttp_stream *s, size_t len, bool chunked)
 			}
 		}
 
-		if (!request_failed || send_request_error == ERROR_WINHTTP_SECURE_FAILURE) {
+		if (!request_failed || !cert_valid) {
 			git_error_clear();
 			if ((error = certificate_check(s, cert_valid)) < 0) {
 				if (!git_error_last())
