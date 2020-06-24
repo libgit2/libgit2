@@ -28,7 +28,7 @@ typedef struct git_remote_connection_opts {
 
 typedef int GIT_CALLBACK(git_perform_cb)(git_remote *remote, void *cbref, git_event_t events);
 
-#define GIT_REMOTE_NUM_PERFORMCB	3U
+#define GIT_REMOTE_NUM_PERFORMCB	4U
 
 struct git_remote {
 	char *name;
@@ -94,6 +94,7 @@ git_refspec *git_remote__matching_dst_refspec(git_remote *remote, const char *re
 
 extern int git_remote_issync(const git_remote_callbacks *callbacks);
 extern int git_remote_add_performcb(git_remote *remote, git_perform_cb cb, void *cbref);
+extern int git_remote_rearm_performcb(git_remote *remote, git_perform_cb cb, void *cbref, git_event_t events);
 
 extern void git_init_eventcb_data(eventcb_data_t *evdata, git_remote *remote);
 extern int git_perform_all(git_remote *remote);

@@ -203,52 +203,13 @@ static void free_symrefs(git_vector *symrefs)
 	git_vector_free(symrefs);
 }
 
-static int git_smart__connect(
-	git_transport *transport,
-	const char *url,
-	git_credential_acquire_cb cred_acquire_cb,
-	void *cred_acquire_payload,
-	const git_proxy_options *proxy,
-	int direction,
-	int flags)
+static int git_smart__connected(transport_smart *t)
 {
-	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
-	git_smart_subtransport_stream *stream;
-	int error;
+	git_vector symrefs;
 	git_pkt *pkt;
 	git_pkt_ref *first;
-	git_vector symrefs;
-	git_smart_service_t service;
-
-	if (git_smart__reset_stream(t, true) < 0)
-		return -1;
-
-	t->url = git__strdup(url);
-	GIT_ERROR_CHECK_ALLOC(t->url);
-
-	if (git_proxy_options_dup(&t->proxy, proxy) < 0)
-		return -1;
-
-	t->direction = direction;
-	t->flags = flags;
-	t->cred_acquire_cb = cred_acquire_cb;
-	t->cred_acquire_payload = cred_acquire_payload;
-
-	if (GIT_DIRECTION_FETCH == t->direction)
-		service = GIT_SERVICE_UPLOADPACK_LS;
-	else if (GIT_DIRECTION_PUSH == t->direction)
-		service = GIT_SERVICE_RECEIVEPACK_LS;
-	else {
-		git_error_set(GIT_ERROR_NET, "invalid direction");
-		return -1;
-	}
-
-	if ((error = t->wrapped->action(&stream, t->wrapped, t->url, service)) < 0)
-		return error;
-
-	/* Save off the current stream (i.e. socket) that we are working with */
-	t->current_stream = stream;
-
+	int error;
+	
 	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
 
 	/* 2 flushes for RPC; 1 for stateful */
@@ -311,6 +272,78 @@ cleanup:
 	free_symrefs(&symrefs);
 
 	return error;
+	
+}
+
+static int git_smart__connect_perform(git_remote *remote, void *cbref, git_event_t events)
+{
+	transport_smart *t = cbref;
+	int err;
+	
+	if((err = git_remote_rearm_performcb(remote, git_smart__connect_perform, cbref, events)) < 0)
+		return err;
+	else
+		return git_smart__connected(t);
+}
+
+static int git_smart__connect(
+	git_transport *transport,
+	const char *url,
+	git_credential_acquire_cb cred_acquire_cb,
+	void *cred_acquire_payload,
+	const git_proxy_options *proxy,
+	int direction,
+	int flags)
+{
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
+	git_remote *remote = t->owner;
+	git_smart_subtransport_stream *stream;
+	int error;
+	git_smart_service_t service;
+
+	if (git_smart__reset_stream(t, true) < 0)
+		return GIT_ERROR;
+
+	t->url = git__strdup(url);
+	GIT_ERROR_CHECK_ALLOC(t->url);
+
+	if (git_proxy_options_dup(&t->proxy, proxy) < 0)
+		return GIT_ERROR;
+
+	t->direction = direction;
+	t->flags = flags;
+	t->cred_acquire_cb = cred_acquire_cb;
+	t->cred_acquire_payload = cred_acquire_payload;
+
+	if (GIT_DIRECTION_FETCH == t->direction)
+		service = GIT_SERVICE_UPLOADPACK_LS;
+	else if (GIT_DIRECTION_PUSH == t->direction)
+		service = GIT_SERVICE_RECEIVEPACK_LS;
+	else {
+		git_error_set(GIT_ERROR_NET, "invalid direction");
+		return GIT_ERROR;
+	}
+
+	if ((error = t->wrapped->action(&stream, t->wrapped, t->url, service)) < 0)
+	{
+		if(error == GIT_EAGAIN)
+		{
+		        if((error = git_remote_add_performcb(remote, git_smart__connect_perform, t)) >= 0)
+		        {
+				t->current_stream = stream;
+				return GIT_EAGAIN;
+			}
+		}
+
+		return error;
+	}
+	else
+	{
+		/* Save off the current stream (i.e. socket) that we are working with */
+		t->current_stream = stream;
+		
+		return git_smart__connected(t);
+	}
 }
 
 static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transport *transport)
@@ -319,7 +352,7 @@ static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transpo
 
 	if (!t->have_refs) {
 		git_error_set(GIT_ERROR_NET, "the transport has not yet loaded the refs");
-		return -1;
+		return GIT_ERROR;
 	}
 
 	*out = (const git_remote_head **) t->heads.contents;

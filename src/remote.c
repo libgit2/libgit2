@@ -80,7 +80,7 @@ int git_remote_add_performcb(git_remote *remote, git_perform_cb cb, void *cbref)
 	}
 }
 
-static int git_remote_rearm_performcb(git_remote *remote, git_perform_cb cb, void *cbref, git_event_t events)
+int git_remote_rearm_performcb(git_remote *remote, git_perform_cb cb, void *cbref, git_event_t events)
 {
 	int err;
 

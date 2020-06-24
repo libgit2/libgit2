@@ -38,6 +38,7 @@ typedef struct {
 	LIBSSH2_CHANNEL *channel;
 	const char *cmd;
 	char *url;
+	git_net_url net_url;
 	unsigned sent_command : 1;
 } ssh_stream;
 
@@ -197,12 +198,11 @@ static int ssh_stream_write(
 	return 0;
 }
 
-static void ssh_stream_free(git_smart_subtransport_stream *stream)
+static void _ssh_stream_free(ssh_stream *s)
 {
-	ssh_stream *s = GIT_CONTAINER_OF(stream, ssh_stream, parent);
 	ssh_subtransport *t;
 
-	if (!stream)
+	if (!s)
 		return;
 
 	t = OWNING_SUBTRANSPORT(s);
@@ -225,9 +225,18 @@ static void ssh_stream_free(git_smart_subtransport_stream *stream)
 		git_stream_free(s->io);
 		s->io = NULL;
 	}
+	
+	git_net_url_dispose(&s->net_url);
 
 	git__free(s->url);
 	git__free(s);
+}
+
+static void ssh_stream_free(git_smart_subtransport_stream *stream)
+{
+	ssh_stream *s = GIT_CONTAINER_OF(stream, ssh_stream, parent);
+	
+	_ssh_stream_free(s);
 }
 
 static int ssh_stream_alloc(
@@ -491,6 +500,8 @@ static int _git_ssh_session_create(
 		return -1;
 	}
 
+	p_setfd_blocking(socket->s);
+
 	do {
 		rc = libssh2_session_handshake(s, socket->s);
 	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
@@ -510,66 +521,17 @@ static int _git_ssh_session_create(
 
 #define SSH_DEFAULT_PORT "22"
 
-static int _git_ssh_setup_conn(
-	ssh_subtransport *t,
-	const char *url,
-	const char *cmd,
-	git_smart_subtransport_stream **stream)
+static int _git_ssh_connected(git_remote *remote, ssh_subtransport *t)
 {
-	git_net_url urldata = GIT_NET_URL_INIT;
-	int auth_methods, error = 0;
-	size_t i;
-	ssh_stream *s;
+	ssh_stream *s = t->current_stream;
+	git_net_url *urldata = &s->net_url;
 	git_credential *cred = NULL;
 	LIBSSH2_SESSION* session=NULL;
 	LIBSSH2_CHANNEL* channel=NULL;
+	int auth_methods;
+	int error;
 
-	/* used only temporarily as long as ssh transport has no async capabilities */
-	eventcb_data_t evdata;
-	git_remote *remote = t->owner->owner;
-
-	t->current_stream = NULL;
-
-	*stream = NULL;
-	if (ssh_stream_alloc(t, url, cmd, stream) < 0)
-		return -1;
-
-	s = (ssh_stream *)*stream;
-	s->session = NULL;
-	s->channel = NULL;
-
-	for (i = 0; i < ARRAY_SIZE(ssh_prefixes); ++i) {
-		const char *p = ssh_prefixes[i];
-
-		if (!git__prefixcmp(url, p)) {
-			if ((error = git_net_url_parse(&urldata, url)) < 0)
-				goto done;
-
-			goto post_extract;
-		}
-	}
-	if ((error = git_ssh_extract_url_parts(&urldata, url)) < 0)
-		goto done;
-
-	if (urldata.port == NULL)
-		urldata.port = git__strdup(SSH_DEFAULT_PORT);
-
-	GIT_ERROR_CHECK_ALLOC(urldata.port);
-
-	git_init_eventcb_data(&evdata, remote);
-
-post_extract:
-	if ((error = git_socket_stream_new(&s->io, t->owner->owner, urldata.host, urldata.port)) < 0 ||
-	    (error = git_stream_connect(s->io)) < 0)
-	{
-		if(error == GIT_EAGAIN)
-		{
-			if((error = git_perform_all(remote)) < 0)
-                        	goto done;
-		}
-		else
-			goto done;
-	}
+	GIT_UNUSED(remote);
 
 	if ((error = _git_ssh_session_create(&session, s->io)) < 0)
 		goto done;
@@ -611,7 +573,7 @@ post_extract:
 
 		cert_ptr = &cert;
 
-		error = t->owner->certificate_check_cb((git_cert *) cert_ptr, 0, urldata.host, t->owner->message_cb_payload);
+		error = t->owner->certificate_check_cb((git_cert *) cert_ptr, 0, urldata->host, t->owner->message_cb_payload);
 
 		if (error < 0 && error != GIT_PASSTHROUGH) {
 			if (!git_error_last())
@@ -622,21 +584,21 @@ post_extract:
 	}
 
 	/* we need the username to ask for auth methods */
-	if (!urldata.username) {
+	if (!urldata->username) {
 		if ((error = request_creds(&cred, t, NULL, GIT_CREDENTIAL_USERNAME)) < 0)
 			goto done;
 
-		urldata.username = git__strdup(((git_credential_username *) cred)->username);
+		urldata->username = git__strdup(((git_credential_username *) cred)->username);
 		cred->free(cred);
 		cred = NULL;
-		if (!urldata.username)
+		if (!urldata->username)
 			goto done;
-	} else if (urldata.username && urldata.password) {
-		if ((error = git_credential_userpass_plaintext_new(&cred, urldata.username, urldata.password)) < 0)
+	} else if (urldata->username && urldata->password) {
+		if ((error = git_credential_userpass_plaintext_new(&cred, urldata->username, urldata->password)) < 0)
 			goto done;
 	}
 
-	if ((error = list_auth_methods(&auth_methods, session, urldata.username)) < 0)
+	if ((error = list_auth_methods(&auth_methods, session, urldata->username)) < 0)
 		goto done;
 
 	error = GIT_EAUTH;
@@ -650,10 +612,10 @@ post_extract:
 			cred = NULL;
 		}
 
-		if ((error = request_creds(&cred, t, urldata.username, auth_methods)) < 0)
+		if ((error = request_creds(&cred, t, urldata->username, auth_methods)) < 0)
 			goto done;
 
-		if (strcmp(urldata.username, git_credential_get_username(cred))) {
+		if (strcmp(urldata->username, git_credential_get_username(cred))) {
 			git_error_set(GIT_ERROR_SSH, "username does not match previous request");
 			error = -1;
 			goto done;
@@ -663,7 +625,7 @@ post_extract:
 
 		if (error == GIT_EAUTH) {
 			/* refresh auth methods */
-			if ((error = list_auth_methods(&auth_methods, session, urldata.username)) < 0)
+			if ((error = list_auth_methods(&auth_methods, session, urldata->username)) < 0)
 				goto done;
 			else
 				error = GIT_EAUTH;
@@ -685,14 +647,11 @@ post_extract:
 	s->session = session;
 	s->channel = channel;
 
-	t->current_stream = s;
-
 done:
-	if(git_remote_issync(&remote->callbacks))
-		remote->callbacks.set_fd_events = NULL;
+	git_net_url_dispose(urldata);
 
 	if (error < 0) {
-		ssh_stream_free(*stream);
+		_ssh_stream_free(s);
 
 		if (session)
 			libssh2_session_free(session);
@@ -701,9 +660,102 @@ done:
 	if (cred)
 		cred->free(cred);
 
-	git_net_url_dispose(&urldata);
-
 	return error;
+}
+
+static int _git_ssh_conn_perform(git_remote *remote, void *cbref, git_event_t events)
+{
+	ssh_subtransport *t = cbref;
+	int err;
+	
+	if((err = git_remote_rearm_performcb(remote, _git_ssh_conn_perform, cbref, events)) < 0)
+	{
+		if(err != GIT_EAGAIN)
+			_ssh_stream_free(t->current_stream);
+		
+		return err;
+	}
+	else
+		return _git_ssh_connected(remote, cbref);
+}
+
+static int _git_ssh_setup_conn(
+	ssh_subtransport *t,
+	const char *url,
+	const char *cmd,
+	git_smart_subtransport_stream **stream)
+{
+	git_remote *remote = t->owner->owner;
+	ssh_stream *s;
+	git_net_url *urldata;
+	size_t i;
+	int error = 0;
+
+	t->current_stream = NULL;
+
+	*stream = NULL;
+	if (ssh_stream_alloc(t, url, cmd, stream) < 0)
+		return -1;
+
+	s = (ssh_stream *)*stream;
+	s->session = NULL;
+	s->channel = NULL;
+	
+	urldata = &s->net_url;
+
+	for (i = 0; i < ARRAY_SIZE(ssh_prefixes); ++i) {
+		const char *p = ssh_prefixes[i];
+
+		if (!git__prefixcmp(url, p)) {
+			if ((error = git_net_url_parse(urldata, url)) < 0)
+			{
+				_ssh_stream_free(s);
+				return error;
+			}
+
+			goto post_extract;
+		}
+	}
+	if ((error = git_ssh_extract_url_parts(urldata, url)) < 0)
+	{
+		_ssh_stream_free(s);
+		return error;
+	}
+
+	if (urldata->port == NULL)
+		urldata->port = git__strdup(SSH_DEFAULT_PORT);
+
+	GIT_ERROR_CHECK_ALLOC(urldata->port);
+
+post_extract:
+	if ((error = git_socket_stream_new(&s->io, remote, urldata->host, urldata->port)) < 0)
+	{
+		_ssh_stream_free(s);
+		return error;
+	}
+
+	if ((error = git_stream_connect(s->io)) < 0)
+	{
+		if(error == GIT_EAGAIN)
+		{
+			if((error = git_remote_add_performcb(remote, _git_ssh_conn_perform, t)) < 0)
+				_ssh_stream_free(s);
+			else
+			{
+				t->current_stream = s;
+				return GIT_EAGAIN;
+			}
+		}
+		else
+			_ssh_stream_free(s);
+		
+		return error;
+	}
+	else
+	{
+		t->current_stream = s;
+		return _git_ssh_connected(remote, t);
+	}
 }
 
 static int ssh_uploadpack_ls(

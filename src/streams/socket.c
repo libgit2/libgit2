@@ -101,15 +101,9 @@ static int socket_connect_failed_err(git_socket_stream *st)
 
 static int socket_connect_connected(git_socket_stream *st)
 {
-	int err;
-
 	p_freeaddrinfo(st->info);
 	
-	/* Reenable blocking operations on socket */
-	if((err = p_setfd_blocking(st->s)) < 0)
-		return err;
-	else
-		return GIT_OK;
+	return GIT_OK;
 }
 
 static int socket_connect_next(git_socket_stream *st)
