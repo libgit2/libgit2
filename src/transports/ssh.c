@@ -651,8 +651,6 @@ done:
 	git_net_url_dispose(urldata);
 
 	if (error < 0) {
-		_ssh_stream_free(s);
-
 		if (session)
 			libssh2_session_free(session);
 	}
@@ -665,16 +663,10 @@ done:
 
 static int _git_ssh_conn_perform(git_remote *remote, void *cbref, git_event_t events)
 {
-	ssh_subtransport *t = cbref;
 	int err;
 	
 	if((err = git_remote_rearm_performcb(remote, _git_ssh_conn_perform, cbref, events)) < 0)
-	{
-		if(err != GIT_EAGAIN)
-			_ssh_stream_free(t->current_stream);
-		
 		return err;
-	}
 	else
 		return _git_ssh_connected(remote, cbref);
 }
