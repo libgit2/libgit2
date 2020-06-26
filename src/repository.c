@@ -2849,7 +2849,7 @@ int git_repository_state(git_repository *repo)
 	return state;
 }
 
-int git_repository__cleanup_files(
+int git_repository_cleanup_files(
 	git_repository *repo, const char *files[], size_t files_len)
 {
 	git_buf buf = GIT_BUF_INIT;
@@ -2879,22 +2879,46 @@ int git_repository__cleanup_files(
 }
 
 static const char *state_files[] = {
+	GIT_REBASE_MERGE_DIR,
+	GIT_REBASE_APPLY_DIR,
+	GIT_SEQUENCER_DIR,
+};
+
+static const char *state_refs[] = {
 	GIT_MERGE_HEAD_FILE,
 	GIT_MERGE_MODE_FILE,
 	GIT_MERGE_MSG_FILE,
 	GIT_REVERT_HEAD_FILE,
 	GIT_CHERRYPICK_HEAD_FILE,
 	GIT_BISECT_LOG_FILE,
-	GIT_REBASE_MERGE_DIR,
-	GIT_REBASE_APPLY_DIR,
-	GIT_SEQUENCER_DIR,
 };
 
 int git_repository_state_cleanup(git_repository *repo)
 {
+	git_refdb *refdb = NULL;
+	int error;
+	size_t i;
+
 	assert(repo);
 
-	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
+	if ((error = git_repository_refdb(&refdb, repo)) < 0)
+		goto out;
+
+	for (i = 0; i < ARRAY_SIZE(state_refs); i++) {
+		if ((error = git_refdb_delete(refdb, state_refs[i], NULL, NULL)) < 0) {
+			if (error == GIT_ENOTFOUND)
+				continue;
+			goto out;
+		}
+	}
+
+	if ((error = git_repository_cleanup_files(repo, state_files,
+						   ARRAY_SIZE(state_files))) < 0)
+		goto out;
+
+out:
+	git_refdb_free(refdb);
+	return error;
 }
 
 int git_repository_is_shallow(git_repository *repo)

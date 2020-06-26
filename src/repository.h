@@ -233,7 +233,7 @@ GIT_INLINE(int) git_repository__ensure_not_bare(
 
 int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head);
 
-int git_repository__cleanup_files(git_repository *repo, const char *files[], size_t files_len);
+int git_repository_cleanup_files(git_repository *repo, const char *files[], size_t files_len);
 
 /* The default "reserved names" for a repository */
 extern git_buf git_repository__reserved_names_win32[];

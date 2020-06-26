@@ -13,10 +13,10 @@
 #include "revwalk.h"
 #include "commit_list.h"
 #include "path.h"
+#include "refdb.h"
 #include "refs.h"
 #include "object.h"
 #include "iterator.h"
-#include "refs.h"
 #include "diff.h"
 #include "diff_generate.h"
 #include "diff_tform.h"
@@ -3112,12 +3112,23 @@ cleanup:
 static int merge_state_cleanup(git_repository *repo)
 {
 	const char *state_files[] = {
-		GIT_MERGE_HEAD_FILE,
 		GIT_MERGE_MODE_FILE,
 		GIT_MERGE_MSG_FILE,
 	};
+	git_refdb *refdb;
+	int error;
 
-	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
+	if ((error = git_repository_refdb(&refdb, repo)) < 0 ||
+	    (error = git_refdb_delete(refdb, GIT_MERGE_HEAD_FILE, NULL, NULL)) < 0)
+		if (error != GIT_ENOTFOUND)
+			goto out;
+
+	if ((error = git_repository_cleanup_files(repo, state_files, ARRAY_SIZE(state_files))) < 0)
+		goto out;
+
+out:
+	git_refdb_free(refdb);
+	return error;
 }
 
 static int merge_heads(

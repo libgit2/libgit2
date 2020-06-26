@@ -7,11 +7,12 @@
 
 #include "common.h"
 
-#include "repository.h"
 #include "filebuf.h"
-#include "merge.h"
-#include "vector.h"
 #include "index.h"
+#include "merge.h"
+#include "refdb.h"
+#include "repository.h"
+#include "vector.h"
 
 #include "git2/types.h"
 #include "git2/merge.h"
@@ -99,9 +100,24 @@ static int cherrypick_normalize_opts(
 
 static int cherrypick_state_cleanup(git_repository *repo)
 {
-	const char *state_files[] = { GIT_CHERRYPICK_HEAD_FILE, GIT_MERGE_MSG_FILE };
+	const char *state_files[] = { GIT_MERGE_MSG_FILE };
+	git_refdb *refdb = NULL;
+	int error;
 
-	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
+	assert(repo);
+
+	if ((error = git_repository_refdb(&refdb, repo)) < 0 ||
+	    (error = git_refdb_delete(refdb, GIT_CHERRYPICK_HEAD_FILE, NULL, NULL)) < 0)
+		if (error != GIT_ENOTFOUND)
+			goto out;
+
+
+	if ((error = git_repository_cleanup_files(repo, state_files, ARRAY_SIZE(state_files))) < 0)
+		goto out;
+
+out:
+	git_refdb_free(refdb);
+	return error;
 }
 
 static int cherrypick_seterr(git_commit *commit, const char *fmt)
