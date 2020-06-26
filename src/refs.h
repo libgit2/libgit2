@@ -26,8 +26,6 @@ extern bool git_reference__enable_symbolic_ref_target_validation;
 #define GIT_REFS_DIR_MODE 0777
 #define GIT_REFS_FILE_MODE 0666
 
-#define GIT_RENAMED_REF_FILE GIT_REFS_DIR "RENAMED-REF"
-
 #define GIT_SYMREF "ref: "
 
 #define GIT_HEAD_FILE "HEAD"
