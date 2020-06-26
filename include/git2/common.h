@@ -240,7 +240,7 @@ typedef enum {
  *	* opts(GIT_OPT_SET_MWINDOW_FILE_LIMIT, size_t):
  *
  *		> Set the maximum number of files that can be mapped at any time
- *		> by the library
+ *		> by the library. The default (0) is unlimited.
  *
  *	* opts(GIT_OPT_GET_SEARCH_PATH, int level, git_buf *buf)
  *
