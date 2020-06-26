@@ -27,8 +27,12 @@
 #include <git2/sys/refs.h>
 #include <git2/sys/reflog.h>
 
+#define GIT_PACKEDREFS_FILE "packed-refs"
+#define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled fully-peeled sorted "
+#define GIT_PACKEDREFS_FILE_MODE 0666
+
 #define DEFAULT_NESTING_LEVEL	5
-#define MAX_NESTING_LEVEL		10
+#define MAX_NESTING_LEVEL	10
 
 enum {
 	PACKREF_HAS_PEEL = 1,

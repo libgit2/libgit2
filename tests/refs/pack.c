@@ -62,7 +62,7 @@ void test_refs_pack__loose(void)
 	packall();
 
 	/* Ensure the packed-refs file exists */
-	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), GIT_PACKEDREFS_FILE));
+	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), "packed-refs"));
 	cl_assert(git_path_exists(temp_path.ptr));
 
 	/* Ensure the known ref can still be looked up but is now packed */
