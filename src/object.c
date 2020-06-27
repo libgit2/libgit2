@@ -86,7 +86,8 @@ int git_object__from_raw(
 	GIT_ERROR_CHECK_ALLOC(object);
 	object->cached.flags = GIT_CACHE_STORE_PARSED;
 	object->cached.type = type;
-	git_odb_hash(&object->cached.oid, data, size, type);
+	if ((error = git_odb_hash(&object->cached.oid, data, size, type)) < 0)
+		return error;
 
 	/* Parse raw object data */
 	def = &git_objects_table[type];
