@@ -28,6 +28,7 @@ jobs:
         container:
         - xenial
         - bionic
+        - focal
         - docurium
     runs-on: ubuntu-latest
     steps:
@@ -85,6 +86,26 @@ jobs:
             CC: clang
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
             CMAKE_GENERATOR: Ninja
+          os: ubuntu-latest
+        - # Focal, Clang 10, mbedTLS, MemorySanitizer
+          image: focal
+          env:
+            CC: clang-10
+            CFLAGS: -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local/msan -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
+            CMAKE_GENERATOR: Ninja
+            SKIP_SSH_TESTS: true
+            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
+          os: ubuntu-latest
+        - # Focal, Clang 10, OpenSSL, UndefinedBehaviorSanitizer
+          image: focal
+          env:
+            CC: clang-10
+            CFLAGS: -fsanitize=undefined,nullability -fno-sanitize-recover=undefined,nullability -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
+            CMAKE_GENERATOR: Ninja
+            SKIP_SSH_TESTS: true
+            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
           os: ubuntu-latest
         - # macOS
           os: macos-10.15
@@ -161,7 +182,21 @@ jobs:
         export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
 
         if [ -n "${{ matrix.platform.image }}" ]; then
-          docker run -v $(pwd):/home/libgit2/source -w /home/libgit2/source -e CC -e CMAKE_GENERATOR -e CMAKE_OPTIONS -e PKG_CONFIG_PATH -e GITTEST_NEGOTIATE_PASSWORD -e SKIP_SSH_TESTS -e SKIP_NEGOTIATE_TESTS ${{ env.docker-registry-container-sha }} /bin/bash -c "mkdir build && cd build && ../azure-pipelines/build.sh && ../azure-pipelines/test.sh"
+          docker run \
+              --rm \
+              -v "$(pwd):/home/libgit2/source" \
+              -w /home/libgit2/source \
+              -e ASAN_SYMBOLIZER_PATH \
+              -e CC \
+              -e CFLAGS \
+              -e CMAKE_GENERATOR \
+              -e CMAKE_OPTIONS \
+              -e GITTEST_NEGOTIATE_PASSWORD \
+              -e PKG_CONFIG_PATH \
+              -e SKIP_NEGOTIATE_TESTS \
+              -e SKIP_SSH_TESTS \
+              ${{ env.docker-registry-container-sha }} \
+              /bin/bash -c "mkdir build && cd build && ../azure-pipelines/build.sh && ../azure-pipelines/test.sh"
         else
           mkdir build && cd build
           ../azure-pipelines/build.sh
@@ -189,7 +224,12 @@ jobs:
         git config user.email 'libgit2@users.noreply.github.com'
         git branch gh-pages origin/gh-pages
         docker login https://${{ env.docker-registry }} -u ${{ github.actor }} -p ${{ github.token }}
-        docker run --rm -v $(pwd):/home/libgit2/source -w /home/libgit2/source ${{ env.docker-registry }}/${{ github.repository }}/docurium:latest cm doc api.docurium
+        docker run \
+            --rm \
+            -v "$(pwd):/home/libgit2/source" \
+            -w /home/libgit2/source \
+            ${{ env.docker-registry }}/${{ github.repository }}/docurium:latest \
+            cm doc api.docurium
         git checkout gh-pages
         zip --exclude .git/\* --exclude .gitignore --exclude .gitattributes -r api-documentation.zip .
     - uses: actions/upload-artifact@v2
