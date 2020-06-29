@@ -24,10 +24,7 @@ void test_refs_reflog_messages__cleanup(void)
 void test_refs_reflog_messages__setting_head_updates_reflog(void)
 {
 	git_object *tag;
-	git_signature *sig;
 	git_annotated_commit *annotated;
-
-	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
 
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/haacked")); /* 4 */
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/unborn"));
@@ -68,7 +65,6 @@ void test_refs_reflog_messages__setting_head_updates_reflog(void)
 
 	git_annotated_commit_free(annotated);
 	git_object_free(tag);
-	git_signature_free(sig);
 }
 
 void test_refs_reflog_messages__setting_head_to_same_target_ignores_reflog(void)
@@ -87,11 +83,8 @@ void test_refs_reflog_messages__setting_head_to_same_target_ignores_reflog(void)
 
 void test_refs_reflog_messages__detaching_writes_reflog(void)
 {
-	git_signature *sig;
 	git_oid id;
 	const char *msg;
-
-	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
 
 	msg = "checkout: moving from master to e90810b8df3e80c413d903f631643c716887138d";
 	git_oid_fromstr(&id, "e90810b8df3e80c413d903f631643c716887138d");
@@ -107,8 +100,6 @@ void test_refs_reflog_messages__detaching_writes_reflog(void)
 		"e90810b8df3e80c413d903f631643c716887138d",
 		"258f0e2a959a364e40ed6603d5d44fbb24765b10",
 		NULL, msg);
-
-	git_signature_free(sig);
 }
 
 void test_refs_reflog_messages__orphan_branch_does_not_count(void)
