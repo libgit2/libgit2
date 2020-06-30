@@ -78,6 +78,22 @@ int git_refdb_reflog_write(git_reflog *reflog);
  */
 int git_refdb_should_write_reflog(int *out, git_refdb *db, const git_reference *ref);
 
+/**
+ * Determine whether a reflog entry should be created for HEAD if creating one
+ * for the given reference
+ *
+ * In case the given reference is being pointed to by HEAD, then creating a
+ * reflog entry for this reference also requires us to create a corresponding
+ * reflog entry for HEAD. This function can be used to determine that scenario.
+ *
+ * @param out pointer to which the result will be written, `1` means a reflog
+ *            entry should be written, `0` means none should be written.
+ * @param db The refdb to decide this for.
+ * @param ref The reference one wants to check.
+ * @return `0` on success, a negative error code otherwise.
+ */
+int git_refdb_should_write_head_reflog(int *out, git_refdb *db, const git_reference *ref);
+
 int git_refdb_has_log(git_refdb *db, const char *refname);
 int git_refdb_ensure_log(git_refdb *refdb, const char *refname);
 

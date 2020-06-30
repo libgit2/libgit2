@@ -268,6 +268,55 @@ int git_refdb_should_write_reflog(int *out, git_refdb *db, const git_reference *
 	return 0;
 }
 
+int git_refdb_should_write_head_reflog(int *out, git_refdb *db, const git_reference *ref)
+{
+	git_reference *head = NULL, *peeled = NULL;
+	const char *name;
+	int error;
+
+	*out = 0;
+
+	if (ref->type == GIT_REFERENCE_SYMBOLIC) {
+		error = 0;
+		goto out;
+	}
+
+	if ((error = git_refdb_lookup(&head, db, GIT_HEAD_FILE)) < 0)
+		goto out;
+
+	if (git_reference_type(head) == GIT_REFERENCE_DIRECT)
+		goto out;
+
+	/* Go down the symref chain until we find the branch */
+	while (git_reference_type(head) == GIT_REFERENCE_SYMBOLIC) {
+		if ((error = git_refdb_lookup(&peeled, db, git_reference_symbolic_target(head))) < 0)
+			break;
+
+		git_reference_free(head);
+		head = peeled;
+		peeled = NULL;
+	}
+
+	if (error < 0) {
+		if (error != GIT_ENOTFOUND)
+			goto out;
+		error = 0;
+		name = git_reference_symbolic_target(head);
+	} else {
+		name = git_reference_name(head);
+	}
+
+	if (strcmp(name, ref->name))
+		goto out;
+
+	*out = 1;
+
+out:
+	git_reference_free(peeled);
+	git_reference_free(head);
+	return error;
+}
+
 int git_refdb_has_log(git_refdb *db, const char *refname)
 {
 	assert(db && refname);

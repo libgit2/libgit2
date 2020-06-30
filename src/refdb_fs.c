@@ -1181,54 +1181,28 @@ out:
  */
 static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref, const git_signature *who, const char *message)
 {
-	int error;
+	git_reference *head = NULL;
+	git_refdb *refdb = NULL;
+	int error, write_reflog;
 	git_oid old_id;
-	git_reference *tmp = NULL, *head = NULL, *peeled = NULL;
-	const char *name;
 
-	if (ref->type == GIT_REFERENCE_SYMBOLIC)
-		return 0;
+	if ((error = git_repository_refdb(&refdb, backend->repo)) < 0 ||
+	    (error = git_refdb_should_write_head_reflog(&write_reflog, refdb, ref)) < 0)
+		goto out;
+	if (!write_reflog)
+		goto out;
 
 	/* if we can't resolve, we use {0}*40 as old id */
 	if (git_reference_name_to_id(&old_id, backend->repo, ref->name) < 0)
 		memset(&old_id, 0, sizeof(old_id));
 
-	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0)
-		return error;
+	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0 ||
+	    (error = reflog_append(backend, head, &old_id, git_reference_target(ref), who, message)) < 0)
+		goto out;
 
-	if (git_reference_type(head) == GIT_REFERENCE_DIRECT)
-		goto cleanup;
-
-	if ((error = git_reference_lookup(&tmp, backend->repo, GIT_HEAD_FILE)) < 0)
-		goto cleanup;
-
-	/* Go down the symref chain until we find the branch */
-	while (git_reference_type(tmp) == GIT_REFERENCE_SYMBOLIC) {
-		error = git_reference_lookup(&peeled, backend->repo, git_reference_symbolic_target(tmp));
-		if (error < 0)
-			break;
-
-		git_reference_free(tmp);
-		tmp = peeled;
-	}
-
-	if (error == GIT_ENOTFOUND) {
-		error = 0;
-		name = git_reference_symbolic_target(tmp);
-	} else if (error < 0) {
-		goto cleanup;
-	} else {
-		name = git_reference_name(tmp);
-	}
-
-	if (strcmp(name, ref->name))
-		goto cleanup;
-
-	error = reflog_append(backend, head, &old_id, git_reference_target(ref), who, message);
-
-cleanup:
-	git_reference_free(tmp);
+out:
 	git_reference_free(head);
+	git_refdb_free(refdb);
 	return error;
 }
 
