@@ -214,52 +214,17 @@ int git_reference_lookup_resolved(
 	const char *name,
 	int max_nesting)
 {
-	git_refname_t scan_name;
-	git_reference_t scan_type;
-	int error = 0, nesting;
-	git_reference *ref = NULL;
+	git_refname_t normalized;
 	git_refdb *refdb;
+	int error = 0;
 
 	assert(ref_out && repo && name);
 
-	*ref_out = NULL;
-
-	if (max_nesting > MAX_NESTING_LEVEL)
-		max_nesting = MAX_NESTING_LEVEL;
-	else if (max_nesting < 0)
-		max_nesting = DEFAULT_NESTING_LEVEL;
-
-	scan_type = GIT_REFERENCE_SYMBOLIC;
-
-	if ((error = reference_normalize_for_repo(scan_name, repo, name, true)) < 0)
+	if ((error = reference_normalize_for_repo(normalized, repo, name, true)) < 0 ||
+	    (error = git_repository_refdb__weakptr(&refdb, repo)) < 0 ||
+	    (error = git_refdb_resolve(ref_out, refdb, normalized, max_nesting)) < 0)
 		return error;
 
-	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
-		return error;
-
-	for (nesting = max_nesting;
-		 nesting >= 0 && scan_type == GIT_REFERENCE_SYMBOLIC;
-		 nesting--)
-	{
-		if (nesting != max_nesting) {
-			strncpy(scan_name, ref->target.symbolic, sizeof(scan_name));
-			git_reference_free(ref);
-		}
-
-		if ((error = git_refdb_lookup(&ref, refdb, scan_name)) < 0)
-			return error;
-
-		scan_type = ref->type;
-	}
-
-	if (scan_type != GIT_REFERENCE_DIRECT && max_nesting != 0) {
-		git_error_set(GIT_ERROR_REFERENCE,
-			"cannot resolve reference (>%u levels deep)", max_nesting);
-		git_reference_free(ref);
-		return -1;
-	}
-
-	*ref_out = ref;
 	return 0;
 }
 

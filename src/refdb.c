@@ -17,6 +17,9 @@
 #include "reflog.h"
 #include "posix.h"
 
+#define DEFAULT_NESTING_LEVEL	5
+#define MAX_NESTING_LEVEL		10
+
 int git_refdb_new(git_refdb **out, git_repository *repo)
 {
 	git_refdb *db;
@@ -132,6 +135,51 @@ int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 
 	*out = ref;
 	return 0;
+}
+
+int git_refdb_resolve(
+	git_reference **out,
+	git_refdb *db,
+	const char *ref_name,
+	int max_nesting)
+{
+	git_reference *ref = NULL;
+	int error = 0, nesting;
+
+	*out = NULL;
+
+	if (max_nesting > MAX_NESTING_LEVEL)
+		max_nesting = MAX_NESTING_LEVEL;
+	else if (max_nesting < 0)
+		max_nesting = DEFAULT_NESTING_LEVEL;
+
+	if ((error = git_refdb_lookup(&ref, db, ref_name)) < 0)
+		goto out;
+
+	for (nesting = 0; nesting < max_nesting; nesting++) {
+		git_reference *resolved;
+
+		if (ref->type == GIT_REFERENCE_DIRECT)
+			break;
+		if ((error = git_refdb_lookup(&resolved, db, git_reference_symbolic_target(ref))) < 0)
+			goto out;
+
+		git_reference_free(ref);
+		ref = resolved;
+	}
+
+	if (ref->type != GIT_REFERENCE_DIRECT && max_nesting != 0) {
+		git_error_set(GIT_ERROR_REFERENCE,
+			"cannot resolve reference (>%u levels deep)", max_nesting);
+		error = -1;
+		goto out;
+	}
+
+	*out = ref;
+	ref = NULL;
+out:
+	git_reference_free(ref);
+	return error;
 }
 
 int git_refdb_iterator(git_reference_iterator **out, git_refdb *db, const char *glob)

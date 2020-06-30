@@ -30,6 +30,12 @@ int git_refdb_lookup(
 	git_refdb *refdb,
 	const char *ref_name);
 
+int git_refdb_resolve(
+	git_reference **out,
+	git_refdb *db,
+	const char *ref_name,
+	int max_nesting);
+
 int git_refdb_rename(
 	git_reference **out,
 	git_refdb *db,
