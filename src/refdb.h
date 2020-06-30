@@ -30,6 +30,25 @@ int git_refdb_lookup(
 	git_refdb *refdb,
 	const char *ref_name);
 
+/**
+ * Resolve the reference by following symbolic references.
+ *
+ * Given a reference name, this function will follow any symbolic references up
+ * to `max_nesting` deep and return the resolved direct reference. If any of
+ * the intermediate symbolic references points to a non-existing reference,
+ * then that symbolic reference is returned instead with an error code of `0`.
+ * If the given reference is a direct reference already, it is returned
+ * directly.
+ *
+ * If `max_nesting` is `0`, the reference will not be resolved. If it's
+ * negative, it will be set to the default resolve depth which is `5`.
+ *
+ * @param out Pointer to store the result in.
+ * @param db The refdb to use for resolving the reference.
+ * @param ref_name The reference name to lookup and resolve.
+ * @param max_nesting The maximum nesting depth.
+ * @return `0` on success, a negative error code otherwise.
+ */
 int git_refdb_resolve(
 	git_reference **out,
 	git_refdb *db,

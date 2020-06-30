@@ -225,6 +225,18 @@ int git_reference_lookup_resolved(
 	    (error = git_refdb_resolve(ref_out, refdb, normalized, max_nesting)) < 0)
 		return error;
 
+	/*
+	 * The resolved reference may be a symbolic reference in case its
+	 * target doesn't exist. If the user asked us to resolve (e.g.
+	 * `max_nesting != 0`), then we need to return an error in case we got
+	 * a symbolic reference back.
+	 */
+	if (max_nesting && git_reference_type(*ref_out) == GIT_REFERENCE_SYMBOLIC) {
+		git_reference_free(*ref_out);
+		*ref_out = NULL;
+		return GIT_ENOTFOUND;
+	}
+
 	return 0;
 }
 
