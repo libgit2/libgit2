@@ -2,21 +2,25 @@
 #include "../../include/git2/version.h"
 
 #ifndef LIBGIT2_FILENAME
-# define LIBGIT2_FILENAME "git2"
+# ifdef __GNUC__
+#  define LIBGIT2_FILENAME git2
+# else
+#  define LIBGIT2_FILENAME "git2"
+# endif
 #endif
 
 #ifndef LIBGIT2_COMMENTS
 # define LIBGIT2_COMMENTS "For more information visit http://libgit2.github.com/"
 #endif
 
-#ifdef GCC_WINDRES
+#ifdef __GNUC__
 # define _STR(x) #x
 # define STR(x) _STR(x)
 #else
 # define STR(x) x
 #endif
 
-#ifdef GCC_WINDRES
+#ifdef __GNUC__
 VS_VERSION_INFO		VERSIONINFO
 #else
 VS_VERSION_INFO		VERSIONINFO	MOVEABLE IMPURE LOADONCALL DISCARDABLE
