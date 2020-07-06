@@ -22,8 +22,12 @@
 #define DEFAULT_MAPPED_LIMIT \
 	((1024 * 1024) * (sizeof(void*) >= 8 ? 8192ULL : 256UL))
 
+/* default ulimit -n on macOS is just 256 */
+#define DEFAULT_OPEN_LIMIT 128
+
 size_t git_mwindow__window_size = DEFAULT_WINDOW_SIZE;
 size_t git_mwindow__mapped_limit = DEFAULT_MAPPED_LIMIT;
+unsigned int git_mwindow__open_limit = DEFAULT_OPEN_LIMIT;
 
 /* Whenever you want to read or modify this, grab git__mwindow_mutex */
 static git_mwindow_ctl mem_ctl;
@@ -268,7 +272,8 @@ static git_mwindow *new_window(
 
 	ctl->mapped += (size_t)len;
 
-	while (git_mwindow__mapped_limit < ctl->mapped &&
+	while ((git_mwindow__mapped_limit < ctl->mapped ||
+	       git_mwindow__open_limit < ctl->open_windows) &&
 			git_mwindow_close_lru(mwf) == 0) /* nop */;
 
 	/*
