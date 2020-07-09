@@ -278,9 +278,7 @@ list(SORT SRC_H)
 
 # On Windows use specific platform sources
 if(WIN32 AND NOT CYGWIN)
-	if(MSVC)
-		SET(WIN_RC "win32/git2.rc")
-	endif()
+	SET(WIN_RC "win32/git2.rc")
 
 	file(GLOB SRC_OS win32/*.c win32/*.h)
 	list(SORT SRC_OS)
