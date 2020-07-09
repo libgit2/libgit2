@@ -2781,17 +2781,19 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 	ondisk.flags = htons(entry->flags);
 
 	if (entry->flags & GIT_INDEX_ENTRY_EXTENDED) {
+		const size_t path_offset = offsetof(struct entry_long, path);
 		struct entry_long ondisk_ext;
 		memcpy(&ondisk_ext, &ondisk, sizeof(struct entry_short));
 		ondisk_ext.flags_extended = htons(entry->flags_extended &
 			GIT_INDEX_ENTRY_EXTENDED_FLAGS);
-		memcpy(mem, &ondisk_ext, offsetof(struct entry_long, path));
-		path = ((struct entry_long*)mem)->path;
-		disk_size -= offsetof(struct entry_long, path);
+		memcpy(mem, &ondisk_ext, path_offset);
+		path = (char *)mem + path_offset;
+		disk_size -= path_offset;
 	} else {
-		memcpy(mem, &ondisk, offsetof(struct entry_short, path));
-		path = ((struct entry_short*)mem)->path;
-		disk_size -= offsetof(struct entry_short, path);
+		const size_t path_offset = offsetof(struct entry_short, path);
+		memcpy(mem, &ondisk, path_offset);
+		path = (char *)mem + path_offset;
+		disk_size -= path_offset;
 	}
 
 	if (last) {
