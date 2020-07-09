@@ -949,7 +949,7 @@ void test_status_worktree__sorting_by_case(void)
 
 void test_status_worktree__long_filenames(void)
 {
-	char path[260*4+1];
+	char path[260*4+1] = {0};
 	const char *expected_paths[] = {path};
 	const unsigned int expected_statuses[] = {GIT_STATUS_WT_NEW};
 

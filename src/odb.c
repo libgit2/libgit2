@@ -1283,12 +1283,13 @@ int git_odb_write(
 	git_oid *oid, git_odb *db, const void *data, size_t len, git_object_t type)
 {
 	size_t i;
-	int error = GIT_ERROR;
+	int error;
 	git_odb_stream *stream;
 
 	assert(oid && db);
 
-	git_odb_hash(oid, data, len, type);
+	if ((error = git_odb_hash(oid, data, len, type)) < 0)
+		return error;
 
 	if (git_oid_is_zero(oid))
 		return error_null_oid(GIT_EINVALID, "cannot write object");
@@ -1296,7 +1297,7 @@ int git_odb_write(
 	if (git_odb__freshen(db, oid))
 		return 0;
 
-	for (i = 0; i < db->backends.length && error < 0; ++i) {
+	for (i = 0, error = GIT_ERROR; i < db->backends.length && error < 0; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 

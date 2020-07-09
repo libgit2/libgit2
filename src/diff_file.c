@@ -160,8 +160,10 @@ int git_diff_file_content__init_from_src(
 
 			fc->flags |= GIT_DIFF_FLAG__FREE_BLOB;
 		} else {
+			int error;
+			if ((error = git_odb_hash(&fc->file->id, src->buf, src->buflen, GIT_OBJECT_BLOB)) < 0)
+				return error;
 			fc->file->size = src->buflen;
-			git_odb_hash(&fc->file->id, src->buf, src->buflen, GIT_OBJECT_BLOB);
 			fc->file->id_abbrev = GIT_OID_HEXSZ;
 
 			fc->map.len  = src->buflen;

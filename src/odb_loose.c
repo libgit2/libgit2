@@ -304,7 +304,7 @@ static int read_loose_standard(git_rawobj *out, git_buf *obj)
 	 * (including the initial sequence in the head buffer).
 	 */
 	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, hdr.size, 1) ||
-		(body = git__malloc(alloc_size)) == NULL) {
+		(body = git__calloc(1, alloc_size)) == NULL) {
 		error = -1;
 		goto done;
 	}
@@ -386,8 +386,8 @@ static int read_header_loose_standard(
 	git_rawobj *out, const unsigned char *data, size_t len)
 {
 	git_zstream zs = GIT_ZSTREAM_INIT;
-	obj_hdr hdr;
-	unsigned char inflated[MAX_HEADER_LEN];
+	obj_hdr hdr = {0};
+	unsigned char inflated[MAX_HEADER_LEN] = {0};
 	size_t header_len, inflated_len = sizeof(inflated);
 	int error;
 
