@@ -203,7 +203,8 @@ git_global_st *git__global_state(void)
 	if (!ptr)
 		return NULL;
 
-	git_buf_init(&ptr->error_buf, 0);
+	if (git_buf_init(&ptr->error_buf, 0) < 0)
+		return NULL;
 
 	FlsSetValue(_fls_index, ptr);
 	return ptr;
@@ -289,7 +290,9 @@ git_global_st *git__global_state(void)
 	if (!ptr)
 		return NULL;
 
-	git_buf_init(&ptr->error_buf, 0);
+	if (git_buf_init(&ptr->error_buf, 0) < 0)
+		return NULL;
+
 	pthread_setspecific(_tls_key, ptr);
 	return ptr;
 }
