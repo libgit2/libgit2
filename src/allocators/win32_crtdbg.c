@@ -9,26 +9,25 @@
 
 #if defined(GIT_MSVC_CRTDBG)
 
-#include "win32/w32_stack.h"
-#include "win32/w32_crtdbg_stacktrace.h"
+#include "win32/w32_leakcheck.h"
 
 static void *crtdbg__malloc(size_t len, const char *file, int line)
 {
-	void *ptr = _malloc_dbg(len, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
+	void *ptr = _malloc_dbg(len, _NORMAL_BLOCK, git_win32_leakcheck_stacktrace(1,file), line);
 	if (!ptr) git_error_set_oom();
 	return ptr;
 }
 
 static void *crtdbg__calloc(size_t nelem, size_t elsize, const char *file, int line)
 {
-	void *ptr = _calloc_dbg(nelem, elsize, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
+	void *ptr = _calloc_dbg(nelem, elsize, _NORMAL_BLOCK, git_win32_leakcheck_stacktrace(1,file), line);
 	if (!ptr) git_error_set_oom();
 	return ptr;
 }
 
 static char *crtdbg__strdup(const char *str, const char *file, int line)
 {
-	char *ptr = _strdup_dbg(str, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
+	char *ptr = _strdup_dbg(str, _NORMAL_BLOCK, git_win32_leakcheck_stacktrace(1,file), line);
 	if (!ptr) git_error_set_oom();
 	return ptr;
 }
@@ -68,7 +67,7 @@ static char *crtdbg__substrdup(const char *start, size_t n, const char *file, in
 
 static void *crtdbg__realloc(void *ptr, size_t size, const char *file, int line)
 {
-	void *new_ptr = _realloc_dbg(ptr, size, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
+	void *new_ptr = _realloc_dbg(ptr, size, _NORMAL_BLOCK, git_win32_leakcheck_stacktrace(1,file), line);
 	if (!new_ptr) git_error_set_oom();
 	return new_ptr;
 }

@@ -12,8 +12,7 @@
 #include "allocators/win32_crtdbg.h"
 
 #if defined(GIT_MSVC_CRTDBG)
-# include "win32/w32_stack.h"
-# include "win32/w32_crtdbg_stacktrace.h"
+# include "win32/w32_leakcheck.h"
 #endif
 
 git_allocator git__allocator;
@@ -30,16 +29,16 @@ static int setup_default_allocator(void)
 #if defined(GIT_MSVC_CRTDBG)
 static void allocator_global_shutdown(void)
 {
-	git_win32__crtdbg_stacktrace_cleanup();
-	git_win32__stack_cleanup();
+	git_win32_leakcheck_stacktrace_cleanup();
+	git_win32_leakcheck_stack_cleanup();
 }
 #endif
 
 int git_allocator_global_init(void)
 {
 #if defined(GIT_MSVC_CRTDBG)
-	git_win32__crtdbg_stacktrace_init();
-	git_win32__stack_init();
+	git_win32_leakcheck_stacktrace_init();
+	git_win32_leakcheck_stack_init();
 
 	if (git_runtime_shutdown_register(allocator_global_shutdown) < 0)
 		return -1;

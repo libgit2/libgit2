@@ -31,7 +31,6 @@
 #include "transports/smart.h"
 #include "transports/http.h"
 #include "transports/ssh.h"
-#include "win32/w32_stack.h"
 
 #ifdef GIT_OPENSSL
 # include <openssl/err.h>
