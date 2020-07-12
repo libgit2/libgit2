@@ -17,6 +17,9 @@
 #include "reflog.h"
 #include "posix.h"
 
+#define DEFAULT_NESTING_LEVEL	5
+#define MAX_NESTING_LEVEL		10
+
 int git_refdb_new(git_refdb **out, git_repository *repo)
 {
 	git_refdb *db;
@@ -134,6 +137,59 @@ int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 	return 0;
 }
 
+int git_refdb_resolve(
+	git_reference **out,
+	git_refdb *db,
+	const char *ref_name,
+	int max_nesting)
+{
+	git_reference *ref = NULL;
+	int error = 0, nesting;
+
+	*out = NULL;
+
+	if (max_nesting > MAX_NESTING_LEVEL)
+		max_nesting = MAX_NESTING_LEVEL;
+	else if (max_nesting < 0)
+		max_nesting = DEFAULT_NESTING_LEVEL;
+
+	if ((error = git_refdb_lookup(&ref, db, ref_name)) < 0)
+		goto out;
+
+	for (nesting = 0; nesting < max_nesting; nesting++) {
+		git_reference *resolved;
+
+		if (ref->type == GIT_REFERENCE_DIRECT)
+			break;
+
+		if ((error = git_refdb_lookup(&resolved, db, git_reference_symbolic_target(ref))) < 0) {
+			/* If we found a symbolic reference with a nonexistent target, return it. */
+			if (error == GIT_ENOTFOUND) {
+				error = 0;
+				*out = ref;
+				ref = NULL;
+			}
+			goto out;
+		}
+
+		git_reference_free(ref);
+		ref = resolved;
+	}
+
+	if (ref->type != GIT_REFERENCE_DIRECT && max_nesting != 0) {
+		git_error_set(GIT_ERROR_REFERENCE,
+			"cannot resolve reference (>%u levels deep)", max_nesting);
+		error = -1;
+		goto out;
+	}
+
+	*out = ref;
+	ref = NULL;
+out:
+	git_reference_free(ref);
+	return error;
+}
+
 int git_refdb_iterator(git_reference_iterator **out, git_refdb *db, const char *glob)
 {
 	int error;
@@ -229,6 +285,85 @@ int git_refdb_reflog_read(git_reflog **out, git_refdb *db,  const char *name)
 	(*out)->db = db;
 
 	return 0;
+}
+
+int git_refdb_should_write_reflog(int *out, git_refdb *db, const git_reference *ref)
+{
+	int error, logall;
+
+	error = git_repository__configmap_lookup(&logall, db->repo, GIT_CONFIGMAP_LOGALLREFUPDATES);
+	if (error < 0)
+		return error;
+
+	/* Defaults to the opposite of the repo being bare */
+	if (logall == GIT_LOGALLREFUPDATES_UNSET)
+		logall = !git_repository_is_bare(db->repo);
+
+	*out = 0;
+	switch (logall) {
+	case GIT_LOGALLREFUPDATES_FALSE:
+		*out = 0;
+		break;
+
+	case GIT_LOGALLREFUPDATES_TRUE:
+		/* Only write if it already has a log,
+		 * or if it's under heads/, remotes/ or notes/
+		 */
+		*out = git_refdb_has_log(db, ref->name) ||
+			!git__prefixcmp(ref->name, GIT_REFS_HEADS_DIR) ||
+			!git__strcmp(ref->name, GIT_HEAD_FILE) ||
+			!git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR) ||
+			!git__prefixcmp(ref->name, GIT_REFS_NOTES_DIR);
+		break;
+
+	case GIT_LOGALLREFUPDATES_ALWAYS:
+		*out = 1;
+		break;
+	}
+
+	return 0;
+}
+
+int git_refdb_should_write_head_reflog(int *out, git_refdb *db, const git_reference *ref)
+{
+	git_reference *head = NULL, *resolved = NULL;
+	const char *name;
+	int error;
+
+	*out = 0;
+
+	if (ref->type == GIT_REFERENCE_SYMBOLIC) {
+		error = 0;
+		goto out;
+	}
+
+	if ((error = git_refdb_lookup(&head, db, GIT_HEAD_FILE)) < 0)
+		goto out;
+
+	if (git_reference_type(head) == GIT_REFERENCE_DIRECT)
+		goto out;
+
+	/* Go down the symref chain until we find the branch */
+	if ((error = git_refdb_resolve(&resolved, db, git_reference_symbolic_target(head), -1)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			goto out;
+		error = 0;
+		name = git_reference_symbolic_target(head);
+	} else if (git_reference_type(resolved) == GIT_REFERENCE_SYMBOLIC) {
+		name = git_reference_symbolic_target(resolved);
+	} else {
+		name = git_reference_name(resolved);
+	}
+
+	if (strcmp(name, ref->name))
+		goto out;
+
+	*out = 1;
+
+out:
+	git_reference_free(resolved);
+	git_reference_free(head);
+	return error;
 }
 
 int git_refdb_has_log(git_refdb *db, const char *refname)

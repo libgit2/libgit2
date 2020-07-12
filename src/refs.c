@@ -27,9 +27,6 @@
 
 bool git_reference__enable_symbolic_ref_target_validation = true;
 
-#define DEFAULT_NESTING_LEVEL	5
-#define MAX_NESTING_LEVEL		10
-
 enum {
 	GIT_PACKREF_HAS_PEEL = 1,
 	GIT_PACKREF_WAS_LOOSE = 2
@@ -214,52 +211,29 @@ int git_reference_lookup_resolved(
 	const char *name,
 	int max_nesting)
 {
-	git_refname_t scan_name;
-	git_reference_t scan_type;
-	int error = 0, nesting;
-	git_reference *ref = NULL;
+	git_refname_t normalized;
 	git_refdb *refdb;
+	int error = 0;
 
 	assert(ref_out && repo && name);
 
-	*ref_out = NULL;
-
-	if (max_nesting > MAX_NESTING_LEVEL)
-		max_nesting = MAX_NESTING_LEVEL;
-	else if (max_nesting < 0)
-		max_nesting = DEFAULT_NESTING_LEVEL;
-
-	scan_type = GIT_REFERENCE_SYMBOLIC;
-
-	if ((error = reference_normalize_for_repo(scan_name, repo, name, true)) < 0)
+	if ((error = reference_normalize_for_repo(normalized, repo, name, true)) < 0 ||
+	    (error = git_repository_refdb__weakptr(&refdb, repo)) < 0 ||
+	    (error = git_refdb_resolve(ref_out, refdb, normalized, max_nesting)) < 0)
 		return error;
 
-	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
-		return error;
-
-	for (nesting = max_nesting;
-		 nesting >= 0 && scan_type == GIT_REFERENCE_SYMBOLIC;
-		 nesting--)
-	{
-		if (nesting != max_nesting) {
-			strncpy(scan_name, ref->target.symbolic, sizeof(scan_name));
-			git_reference_free(ref);
-		}
-
-		if ((error = git_refdb_lookup(&ref, refdb, scan_name)) < 0)
-			return error;
-
-		scan_type = ref->type;
+	/*
+	 * The resolved reference may be a symbolic reference in case its
+	 * target doesn't exist. If the user asked us to resolve (e.g.
+	 * `max_nesting != 0`), then we need to return an error in case we got
+	 * a symbolic reference back.
+	 */
+	if (max_nesting && git_reference_type(*ref_out) == GIT_REFERENCE_SYMBOLIC) {
+		git_reference_free(*ref_out);
+		*ref_out = NULL;
+		return GIT_ENOTFOUND;
 	}
 
-	if (scan_type != GIT_REFERENCE_DIRECT && max_nesting != 0) {
-		git_error_set(GIT_ERROR_REFERENCE,
-			"cannot resolve reference (>%u levels deep)", max_nesting);
-		git_reference_free(ref);
-		return -1;
-	}
-
-	*ref_out = ref;
 	return 0;
 }
 
@@ -1154,40 +1128,6 @@ int git_reference_cmp(
 	return git_oid__cmp(&ref1->target.oid, &ref2->target.oid);
 }
 
-/**
- * Get the end of a chain of references. If the final one is not
- * found, we return the reference just before that.
- */
-static int get_terminal(git_reference **out, git_repository *repo, const char *ref_name, int nesting)
-{
-	git_reference *ref;
-	int error = 0;
-
-	if (nesting > MAX_NESTING_LEVEL) {
-		git_error_set(GIT_ERROR_REFERENCE, "reference chain too deep (%d)", nesting);
-		return GIT_ENOTFOUND;
-	}
-
-	/* set to NULL to let the caller know that they're at the end of the chain */
-	if ((error = git_reference_lookup(&ref, repo, ref_name)) < 0) {
-		*out = NULL;
-		return error;
-	}
-
-	if (git_reference_type(ref) == GIT_REFERENCE_DIRECT) {
-		*out = ref;
-		error = 0;
-	} else {
-		error = get_terminal(out, repo, git_reference_symbolic_target(ref), nesting + 1);
-		if (error == GIT_ENOTFOUND && !*out)
-			*out = ref;
-		else
-			git_reference_free(ref);
-	}
-
-	return error;
-}
-
 /*
  * Starting with the reference given by `ref_name`, follows symbolic
  * references until a direct reference is found and updated the OID
@@ -1202,31 +1142,37 @@ int git_reference__update_terminal(
 {
 	git_reference *ref = NULL, *ref2 = NULL;
 	git_signature *who = NULL;
+	git_refdb *refdb = NULL;
 	const git_signature *to_use;
 	int error = 0;
 
 	if (!sig && (error = git_reference__log_signature(&who, repo)) < 0)
-		return error;
+		goto out;
 
 	to_use = sig ? sig : who;
-	error = get_terminal(&ref, repo, ref_name, 0);
 
-	/* found a dangling symref */
-	if (error == GIT_ENOTFOUND && ref) {
-		assert(git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC);
-		git_error_clear();
+	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
+		goto out;
+
+	if ((error = git_refdb_resolve(&ref, refdb, ref_name, -1)) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			git_error_clear();
+			error = reference__create(&ref2, repo, ref_name, oid, NULL, 0, to_use,
+						  log_message, NULL, NULL);
+		}
+		goto out;
+	}
+
+	/* In case the resolved reference is symbolic, then it's a dangling symref. */
+	if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
 		error = reference__create(&ref2, repo, ref->target.symbolic, oid, NULL, 0, to_use,
 					  log_message, NULL, NULL);
-	} else if (error == GIT_ENOTFOUND) {
-		git_error_clear();
-		error = reference__create(&ref2, repo, ref_name, oid, NULL, 0, to_use,
-					  log_message, NULL, NULL);
-	}  else if (error == 0) {
-		assert(git_reference_type(ref) == GIT_REFERENCE_DIRECT);
+	} else {
 		error = reference__create(&ref2, repo, ref->name, oid, NULL, 1, to_use,
 					  log_message, &ref->target.oid, NULL);
 	}
 
+out:
 	git_reference_free(ref2);
 	git_reference_free(ref);
 	git_signature_free(who);

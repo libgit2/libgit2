@@ -1128,44 +1128,6 @@ cleanup:
 }
 
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_oid *old, const git_oid *new, const git_signature *author, const char *message);
-static int has_reflog(git_repository *repo, const char *name);
-
-static int should_write_reflog(int *write, git_repository *repo, const char *name)
-{
-	int error, logall;
-
-	error = git_repository__configmap_lookup(&logall, repo, GIT_CONFIGMAP_LOGALLREFUPDATES);
-	if (error < 0)
-		return error;
-
-	/* Defaults to the opposite of the repo being bare */
-	if (logall == GIT_LOGALLREFUPDATES_UNSET)
-		logall = !git_repository_is_bare(repo);
-
-	*write = 0;
-	switch (logall) {
-	case GIT_LOGALLREFUPDATES_FALSE:
-		*write = 0;
-		break;
-
-	case GIT_LOGALLREFUPDATES_TRUE:
-		/* Only write if it already has a log,
-		 * or if it's under heads/, remotes/ or notes/
-		 */
-		*write = has_reflog(repo, name) ||
-			!git__prefixcmp(name, GIT_REFS_HEADS_DIR) ||
-			!git__strcmp(name, GIT_HEAD_FILE) ||
-			!git__prefixcmp(name, GIT_REFS_REMOTES_DIR) ||
-			!git__prefixcmp(name, GIT_REFS_NOTES_DIR);
-		break;
-
-	case GIT_LOGALLREFUPDATES_ALWAYS:
-		*write = 1;
-		break;
-	}
-
-	return 0;
-}
 
 static int cmp_old_ref(int *cmp, git_refdb_backend *backend, const char *name,
 	const git_oid *old_id, const char *old_target)
@@ -1219,54 +1181,28 @@ out:
  */
 static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref, const git_signature *who, const char *message)
 {
-	int error;
+	git_reference *head = NULL;
+	git_refdb *refdb = NULL;
+	int error, write_reflog;
 	git_oid old_id;
-	git_reference *tmp = NULL, *head = NULL, *peeled = NULL;
-	const char *name;
 
-	if (ref->type == GIT_REFERENCE_SYMBOLIC)
-		return 0;
+	if ((error = git_repository_refdb(&refdb, backend->repo)) < 0 ||
+	    (error = git_refdb_should_write_head_reflog(&write_reflog, refdb, ref)) < 0)
+		goto out;
+	if (!write_reflog)
+		goto out;
 
 	/* if we can't resolve, we use {0}*40 as old id */
 	if (git_reference_name_to_id(&old_id, backend->repo, ref->name) < 0)
 		memset(&old_id, 0, sizeof(old_id));
 
-	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0)
-		return error;
+	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0 ||
+	    (error = reflog_append(backend, head, &old_id, git_reference_target(ref), who, message)) < 0)
+		goto out;
 
-	if (git_reference_type(head) == GIT_REFERENCE_DIRECT)
-		goto cleanup;
-
-	if ((error = git_reference_lookup(&tmp, backend->repo, GIT_HEAD_FILE)) < 0)
-		goto cleanup;
-
-	/* Go down the symref chain until we find the branch */
-	while (git_reference_type(tmp) == GIT_REFERENCE_SYMBOLIC) {
-		error = git_reference_lookup(&peeled, backend->repo, git_reference_symbolic_target(tmp));
-		if (error < 0)
-			break;
-
-		git_reference_free(tmp);
-		tmp = peeled;
-	}
-
-	if (error == GIT_ENOTFOUND) {
-		error = 0;
-		name = git_reference_symbolic_target(tmp);
-	} else if (error < 0) {
-		goto cleanup;
-	} else {
-		name = git_reference_name(tmp);
-	}
-
-	if (strcmp(name, ref->name))
-		goto cleanup;
-
-	error = reflog_append(backend, head, &old_id, git_reference_target(ref), who, message);
-
-cleanup:
-	git_reference_free(tmp);
+out:
 	git_reference_free(head);
+	git_refdb_free(refdb);
 	return error;
 }
 
@@ -1335,7 +1271,10 @@ static int refdb_fs_backend__write_tail(
 	}
 
 	if (update_reflog) {
-		if ((error = should_write_reflog(&should_write, backend->repo, ref->name)) < 0)
+		git_refdb *refdb;
+
+		if ((error = git_repository_refdb__weakptr(&refdb, backend->repo)) < 0 ||
+		    (error = git_refdb_should_write_reflog(&should_write, refdb, ref)) < 0)
 			goto on_error;
 
 		if (should_write) {
