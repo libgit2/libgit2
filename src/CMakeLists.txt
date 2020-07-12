@@ -1,3 +1,6 @@
+add_library(git2internal OBJECT)
+set_target_properties(git2internal PROPERTIES C_STANDARD 90)
+
 IF(DEBUG_POOL)
 	SET(GIT_DEBUG_POOL 1)
 ENDIF()
@@ -38,19 +41,19 @@ CHECK_PROTOTYPE_DEFINITION(qsort_r
 	"void qsort_r(void *base, size_t nmemb, size_t size, void *thunk, int (*compar)(void *, const void *, const void *))"
 	"" "stdlib.h" HAVE_QSORT_R_BSD)
 IF (HAVE_QSORT_R_BSD)
-	ADD_DEFINITIONS(-DHAVE_QSORT_R_BSD)
+	target_compile_definitions(git2internal PRIVATE HAVE_QSORT_R_BSD)
 ENDIF()
 
 CHECK_PROTOTYPE_DEFINITION(qsort_r
 	"void qsort_r(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *, void *), void *arg)"
 	"" "stdlib.h" HAVE_QSORT_R_GNU)
 IF (HAVE_QSORT_R_GNU)
-	ADD_DEFINITIONS(-DHAVE_QSORT_R_GNU)
+	target_compile_definitions(git2internal PRIVATE HAVE_QSORT_R_GNU)
 ENDIF()
 
 CHECK_FUNCTION_EXISTS(qsort_s HAVE_QSORT_S)
 IF (HAVE_QSORT_S)
-	ADD_DEFINITIONS(-DHAVE_QSORT_S)
+	target_compile_definitions(git2internal PRIVATE HAVE_QSORT_S)
 ENDIF ()
 
 # Find required dependencies
@@ -81,6 +84,8 @@ ADD_FEATURE_INFO(threadsafe THREADSAFE "threadsafe support")
 if(WIN32 AND EMBED_SSH_PATH)
 	file(GLOB SRC_SSH "${EMBED_SSH_PATH}/src/*.c")
 	list(SORT SRC_SSH)
+	target_sources(git2internal PRIVATE ${SRC_SSH})
+
 	list(APPEND LIBGIT2_SYSTEM_INCLUDES "${EMBED_SSH_PATH}/include")
 	file(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
 	set(GIT_SSH 1)
@@ -104,8 +109,9 @@ IF (WIN32 AND WINHTTP)
 	LIST(APPEND LIBGIT2_PC_LIBS "-lrpcrt4" "-lcrypt32" "-lole32")
 ENDIF()
 
-Include(SelectHTTPSBackend)
-Include(SelectHashes)
+include(SelectHTTPSBackend)
+include(SelectHashes)
+target_sources(git2internal PRIVATE ${SRC_SHA1})
 
 # Specify regular expression implementation
 FIND_PACKAGE(PCRE)
@@ -267,7 +273,7 @@ ELSEIF (HAVE_STRUCT_STAT_ST_MTIME_NSEC)
 	SET(GIT_USE_STAT_MTIME_NSEC 1)
 ENDIF()
 
-ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
+target_compile_definitions(git2internal PRIVATE _FILE_OFFSET_BITS=64)
 
 # Collect sourcefiles
 file(GLOB SRC_H
@@ -275,6 +281,7 @@ file(GLOB SRC_H
 	"${libgit2_SOURCE_DIR}/include/git2/*.h"
 	"${libgit2_SOURCE_DIR}/include/git2/sys/*.h")
 list(SORT SRC_H)
+target_sources(git2internal PRIVATE ${SRC_H})
 
 # On Windows use specific platform sources
 if(WIN32 AND NOT CYGWIN)
@@ -282,15 +289,17 @@ if(WIN32 AND NOT CYGWIN)
 
 	file(GLOB SRC_OS win32/*.c win32/*.h)
 	list(SORT SRC_OS)
+	target_sources(git2internal PRIVATE ${SRC_OS})
 elseif(AMIGA)
-	add_definitions(-DNO_ADDRINFO -DNO_READDIR_R -DNO_MMAP)
+	target_compile_definitions(git2internal PRIVATE NO_ADDRINFO NO_READDIR_R NO_MMAP)
 else()
 	file(GLOB SRC_OS unix/*.c unix/*.h)
 	list(SORT SRC_OS)
+	target_sources(git2internal PRIVATE ${SRC_OS})
 endif()
 
 IF (USE_LEAK_CHECKER STREQUAL "valgrind")
-	ADD_DEFINITIONS(-DVALGRIND)
+	target_compile_definitions(git2internal PRIVATE VALGRIND)
 ENDIF()
 
 file(GLOB SRC_GIT2 *.c *.h
@@ -299,6 +308,7 @@ file(GLOB SRC_GIT2 *.c *.h
 	transports/*.c transports/*.h
 	xdiff/*.c xdiff/*.h)
 list(SORT SRC_GIT2)
+target_sources(git2internal PRIVATE ${SRC_GIT2})
 
 IF(APPLE)
 	# The old Secure Transport API has been deprecated in macOS 10.15.
@@ -325,10 +335,6 @@ ENDIF()
 
 CONFIGURE_FILE(features.h.in git2/sys/features.h)
 
-SET(LIBGIT2_SOURCES ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_SSH} ${SRC_SHA1})
-
-ADD_LIBRARY(git2internal OBJECT ${LIBGIT2_SOURCES})
-SET_TARGET_PROPERTIES(git2internal PROPERTIES C_STANDARD 90)
 IDE_SPLIT_SOURCES(git2internal)
 LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:git2internal>)
 
@@ -364,19 +370,19 @@ ENDIF()
 
 IDE_SPLIT_SOURCES(git2)
 
-IF (SONAME)
-	SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
-	SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_SOVERSION})
-	IF (LIBGIT2_FILENAME)
-		ADD_DEFINITIONS(-DLIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
-		SET_TARGET_PROPERTIES(git2 PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
-	ELSEIF (DEFINED LIBGIT2_PREFIX)
-		SET_TARGET_PROPERTIES(git2 PROPERTIES PREFIX "${LIBGIT2_PREFIX}")
-	ENDIF()
-ENDIF()
+if(SONAME)
+	set_target_properties(git2 PROPERTIES VERSION ${libgit2_VERSION})
+	set_target_properties(git2 PROPERTIES SOVERSION "${libgit2_VERSION_MAJOR}.${libgit2_VERSION_MINOR}")
+	if(LIBGIT2_FILENAME)
+		target_compile_definitions(git2internal PRIVATE LIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
+		set_target_properties(git2 PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
+	elseif(DEFINED LIBGIT2_PREFIX)
+		set_target_properties(git2 PROPERTIES PREFIX "${LIBGIT2_PREFIX}")
+	endif()
+endif()
 
 PKG_BUILD_CONFIG(NAME libgit2
-	VERSION ${LIBGIT2_VERSION_STRING}
+	VERSION ${libgit2_VERSION}
 	DESCRIPTION "The git library, take 2"
 	LIBS_SELF git2
 	PRIVATE_LIBS ${LIBGIT2_PC_LIBS}
