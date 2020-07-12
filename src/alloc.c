@@ -15,7 +15,7 @@ git_allocator git__allocator;
 
 static int setup_default_allocator(void)
 {
-#if defined(GIT_MSVC_CRTDBG)
+#if defined(GIT_WIN32_LEAKCHECK)
 	return git_win32_leakcheck_init_allocator(&git__allocator);
 #else
 	return git_stdalloc_init_allocator(&git__allocator);

@@ -7,7 +7,7 @@
 
 #include "win32_leakcheck.h"
 
-#if defined(GIT_MSVC_CRTDBG)
+#if defined(GIT_WIN32_LEAKCHECK)
 
 #include "win32/w32_leakcheck.h"
 

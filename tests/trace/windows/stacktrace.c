@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "win32/w32_leakcheck.h"
 
-#if defined(GIT_MSVC_CRTDBG)
+#if defined(GIT_WIN32_LEAKCHECK)
 static void a(void)
 {
 	char buf[10000];
@@ -26,7 +26,7 @@ static void c(void)
 
 void test_trace_windows_stacktrace__basic(void)
 {
-#if defined(GIT_MSVC_CRTDBG)
+#if defined(GIT_WIN32_LEAKCHECK)
 	c();
 #endif
 }
@@ -34,7 +34,7 @@ void test_trace_windows_stacktrace__basic(void)
 
 void test_trace_windows_stacktrace__leaks(void)
 {
-#if defined(GIT_MSVC_CRTDBG)
+#if defined(GIT_WIN32_LEAKCHECK)
 	void * p1;
 	void * p2;
 	void * p3;
@@ -124,7 +124,7 @@ void test_trace_windows_stacktrace__leaks(void)
 #endif
 }
 
-#if defined(GIT_MSVC_CRTDBG)
+#if defined(GIT_WIN32_LEAKCHECK)
 static void aux_cb_alloc__1(unsigned int *aux_id)
 {
 	static unsigned int aux_counter = 0;
@@ -141,7 +141,7 @@ static void aux_cb_lookup__1(unsigned int aux_id, char *aux_msg, size_t aux_msg_
 
 void test_trace_windows_stacktrace__aux1(void)
 {
-#if defined(GIT_MSVC_CRTDBG)
+#if defined(GIT_WIN32_LEAKCHECK)
 	git_win32_leakcheck_stack_set_aux_cb(aux_cb_alloc__1, aux_cb_lookup__1);
 	c();
 	c();
