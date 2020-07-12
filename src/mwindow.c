@@ -273,8 +273,9 @@ static int git_mwindow_close_lru_window(void)
 }
 
 /*
- * Close the file that does not have any open windows AND contains the
- * least-recently-used most-recently-used window.
+ * Close the file that does not have any open windows AND whose
+ * most-recently-used window is the least-recently used one across all
+ * currently open files.
  *
  * Called under lock from new_window.
  */

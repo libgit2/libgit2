@@ -6,36 +6,36 @@
 #include "git2/sys/commit.h"
 #include "git2/sys/mempack.h"
 
-static size_t _expected_open_mwindow_files = 0;
-static size_t _original_mwindow_file_limit = 0;
+static size_t expected_open_mwindow_files = 0;
+static size_t original_mwindow_file_limit = 0;
 
 extern git_mwindow_ctl git_mwindow__mem_ctl;
 
 void test_pack_filelimit__initialize_tiny(void)
 {
-	_expected_open_mwindow_files = 1;
-	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_MWINDOW_FILE_LIMIT, &_original_mwindow_file_limit));
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_MWINDOW_FILE_LIMIT, _expected_open_mwindow_files));
+	expected_open_mwindow_files = 1;
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_MWINDOW_FILE_LIMIT, &original_mwindow_file_limit));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_MWINDOW_FILE_LIMIT, expected_open_mwindow_files));
 }
 
 void test_pack_filelimit__initialize_medium(void)
 {
-	_expected_open_mwindow_files = 10;
-	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_MWINDOW_FILE_LIMIT, &_original_mwindow_file_limit));
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_MWINDOW_FILE_LIMIT, _expected_open_mwindow_files));
+	expected_open_mwindow_files = 10;
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_MWINDOW_FILE_LIMIT, &original_mwindow_file_limit));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_MWINDOW_FILE_LIMIT, expected_open_mwindow_files));
 }
 
 void test_pack_filelimit__initialize_unlimited(void)
 {
-	_expected_open_mwindow_files = 15;
-	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_MWINDOW_FILE_LIMIT, &_original_mwindow_file_limit));
+	expected_open_mwindow_files = 15;
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_MWINDOW_FILE_LIMIT, &original_mwindow_file_limit));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_MWINDOW_FILE_LIMIT, 0));
 }
 
 void test_pack_filelimit__cleanup(void)
 {
 	git_buf path = GIT_BUF_INIT;
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_MWINDOW_FILE_LIMIT, _original_mwindow_file_limit));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_MWINDOW_FILE_LIMIT, original_mwindow_file_limit));
 
 	cl_git_pass(git_buf_joinpath(&path, clar_sandbox_path(), "repo.git"));
 	cl_fixture_cleanup(path.ptr);
@@ -105,8 +105,8 @@ void test_pack_filelimit__open_repo_with_multiple_packfiles(void)
 	 */
 	cl_git_pass(git_buf_joinpath(&path, clar_sandbox_path(), "repo.git"));
 	cl_git_pass(git_repository_init(&repo, path.ptr, true));
-	for (i = 1; i <= commit_count; ++i) {
-		create_packfile_commit(repo, &id, parent_id, i, commit_count);
+	for (i = 0; i < commit_count; ++i) {
+		create_packfile_commit(repo, &id, parent_id, i + 1, commit_count);
 		parent_id = &id;
 	}
 
@@ -114,9 +114,7 @@ void test_pack_filelimit__open_repo_with_multiple_packfiles(void)
 	cl_git_pass(git_revwalk_sorting(walk, GIT_SORT_TOPOLOGICAL));
 	cl_git_pass(git_revwalk_push_ref(walk, "refs/heads/master"));
 
-	/*
-	 * Walking the repository requires eventually opening each of the packfiles.
-	 */
+	/* Walking the repository requires eventually opening each of the packfiles. */
 	i = 0;
 	while (git_revwalk_next(&id, walk) == 0)
 		++i;
@@ -130,7 +128,7 @@ void test_pack_filelimit__open_repo_with_multiple_packfiles(void)
 	open_windows = ctl->open_windows;
 	cl_git_pass(git_mutex_unlock(&git__mwindow_mutex));
 
-	cl_assert_equal_i(_expected_open_mwindow_files, open_windows);
+	cl_assert_equal_i(expected_open_mwindow_files, open_windows);
 
 	git_buf_dispose(&path);
 	git_revwalk_free(walk);
