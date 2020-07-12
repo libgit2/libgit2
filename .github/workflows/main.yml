@@ -124,7 +124,7 @@ jobs:
           env:
             ARCH: amd64
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A x64 -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - # Windows x86 Visual Studio
@@ -132,7 +132,7 @@ jobs:
           env:
             ARCH: x86
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A Win32 -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
+            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - # Windows amd64 mingw
