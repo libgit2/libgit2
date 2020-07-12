@@ -13,6 +13,7 @@
 #include "Dbghelp.h"
 #include "win32/posix.h"
 #include "hash.h"
+#include "runtime.h"
 
 /* Stack frames (for stack tracing, below) */
 
@@ -31,6 +32,11 @@ int git_win32_leakcheck_stack_set_aux_cb(
 	return 0;
 }
 
+/**
+ * Load symbol table data.  This should be done in the primary
+ * thread at startup (under a lock if there are other threads
+ * active).
+ */
 void git_win32_leakcheck_stack_init(void)
 {
 	if (!g_win32_stack_initialized) {
@@ -41,6 +47,11 @@ void git_win32_leakcheck_stack_init(void)
 	}
 }
 
+/**
+ * Cleanup symbol table data.  This should be done in the
+ * primary thead at shutdown (under a lock if there are other
+ * threads active).
+ */
 void git_win32_leakcheck_stack_cleanup(void)
 {
 	if (g_win32_stack_initialized) {
@@ -399,6 +410,10 @@ static void dump_summary(const char *label)
 	fflush(stderr);
 }
 
+/**
+ * Initialize our memory leak tracking and de-dup data structures.
+ * This should ONLY be called by git_libgit2_init().
+ */
 void git_win32_leakcheck_stacktrace_init(void)
 {
 	InitializeCriticalSection(&g_crtdbg_stacktrace_cs);
@@ -481,6 +496,21 @@ int git_win32_leakcheck_stacktrace_dump(
 	return r;
 }
 
+/**
+ * Shutdown our memory leak tracking and dump summary data.
+ * This should ONLY be called by git_libgit2_shutdown().
+ *
+ * We explicitly call _CrtDumpMemoryLeaks() during here so
+ * that we can compute summary data for the leaks. We print
+ * the stacktrace of each unique leak.
+ *
+ * This cleanup does not happen if the app calls exit()
+ * without calling the libgit2 shutdown code.
+ *
+ * This info we print here is independent of any automatic
+ * reporting during exit() caused by _CRTDBG_LEAK_CHECK_DF.
+ * Set it in your app if you also want traditional reporting.
+ */
 void git_win32_leakcheck_stacktrace_cleanup(void)
 {
 	/* At shutdown/cleanup, dump cummulative leak info
@@ -520,6 +550,27 @@ const char *git_win32_leakcheck_stacktrace(int skip, const char *file)
 	LeaveCriticalSection(&g_crtdbg_stacktrace_cs);
 
 	return result;
+}
+
+static void git_win32_leakcheck_global_shutdown(void)
+{
+	git_win32_leakcheck_stacktrace_cleanup();
+	git_win32_leakcheck_stack_cleanup();
+}
+
+int git_win32_leakcheck_global_init(void)
+{
+	git_win32_leakcheck_stacktrace_init();
+	git_win32_leakcheck_stack_init();
+
+	return git_runtime_shutdown_register(git_win32_leakcheck_global_shutdown);
+}
+
+#else
+
+int git_win32_leakcheck_global_init(void)
+{
+	return 0;
 }
 
 #endif

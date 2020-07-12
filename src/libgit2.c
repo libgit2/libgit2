@@ -32,6 +32,10 @@
 #include "transports/http.h"
 #include "transports/ssh.h"
 
+#ifdef GIT_WIN32
+# include "win32/w32_leakcheck.h"
+#endif
+
 #ifdef GIT_OPENSSL
 # include <openssl/err.h>
 #endif
@@ -64,6 +68,9 @@ static int git_libgit2_settings_global_init(void)
 int git_libgit2_init(void)
 {
 	static git_runtime_init_fn init_fns[] = {
+#ifdef GIT_WIN32
+		git_win32_leakcheck_global_init,
+#endif
 		git_allocator_global_init,
 		git_threadstate_global_init,
 		git_threads_global_init,

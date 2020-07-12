@@ -10,6 +10,9 @@
 
 #include "common.h"
 
+/* Initialize the win32 leak checking system. */
+int git_win32_leakcheck_global_init(void);
+
 #if defined(GIT_MSVC_CRTDBG)
 
 #include <stdlib.h>
@@ -83,22 +86,6 @@ typedef struct {
 	void *frames[GIT_WIN32_LEAKCHECK_STACK_MAX_FRAMES];
 } git_win32_leakcheck_stack_raw_data;
 
-
-/**
- * Load symbol table data.  This should be done in the primary
- * thread at startup (under a lock if there are other threads
- * active).
- */
-void git_win32_leakcheck_stack_init(void);
-
-/**
- * Cleanup symbol table data.  This should be done in the
- * primary thead at shutdown (under a lock if there are other
- * threads active).
- */
-void git_win32_leakcheck_stack_cleanup(void);
-
-
 /**
  * Capture raw stack trace data for the current process/thread.
  *
@@ -171,29 +158,6 @@ int git_win32_leakcheck_stack(
  * Finally, CRTDBG must be explicitly enabled and configured at program
  * startup.  See tests/main.c for an example.
  */
-
-/**
- * Initialize our memory leak tracking and de-dup data structures.
- * This should ONLY be called by git_libgit2_init().
- */
-void git_win32_leakcheck_stacktrace_init(void);
-
-/**
- * Shutdown our memory leak tracking and dump summary data.
- * This should ONLY be called by git_libgit2_shutdown().
- *
- * We explicitly call _CrtDumpMemoryLeaks() during here so
- * that we can compute summary data for the leaks. We print
- * the stacktrace of each unique leak.
- *
- * This cleanup does not happen if the app calls exit()
- * without calling the libgit2 shutdown code.
- *
- * This info we print here is independent of any automatic
- * reporting during exit() caused by _CRTDBG_LEAK_CHECK_DF.
- * Set it in your app if you also want traditional reporting.
- */
-void git_win32_leakcheck_stacktrace_cleanup(void);
 
 /**
  * Checkpoint options.
