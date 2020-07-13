@@ -2391,20 +2391,22 @@ done:
 int git_repository_is_empty(git_repository *repo)
 {
 	git_reference *head = NULL;
-	int is_empty = 0;
+	git_buf initialbranch = GIT_BUF_INIT;
+	int result = 0;
 
-	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0)
-		return -1;
+	if ((result = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0 ||
+	    (result = git_repository_initialbranch(&initialbranch, repo)) < 0)
+		goto done;
 
-	if (git_reference_type(head) == GIT_REFERENCE_SYMBOLIC)
-		is_empty =
-			(strcmp(git_reference_symbolic_target(head),
-					GIT_REFS_HEADS_DIR "master") == 0) &&
-			repo_contains_no_reference(repo);
+	result = (git_reference_type(head) == GIT_REFERENCE_SYMBOLIC &&
+	          strcmp(git_reference_symbolic_target(head), initialbranch.ptr) == 0 &&
+	          repo_contains_no_reference(repo));
 
+done:
 	git_reference_free(head);
+	git_buf_dispose(&initialbranch);
 
-	return is_empty;
+	return result;
 }
 
 static const char *resolved_parent_path(const git_repository *repo, git_repository_item_t item, git_repository_item_t fallback)
