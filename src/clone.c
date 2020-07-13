@@ -137,6 +137,31 @@ static int update_head_to_new_branch(
 	return error;
 }
 
+static int update_head_to_default(git_repository *repo)
+{
+	git_buf initialbranch = GIT_BUF_INIT;
+	const char *branch_name;
+	int error = 0;
+
+	if ((error = git_repository_initialbranch(&initialbranch, repo)) < 0)
+		goto done;
+
+	if (git__prefixcmp(initialbranch.ptr, GIT_REFS_HEADS_DIR) != 0) {
+		git_error_set(GIT_ERROR_INVALID, "invalid initial branch '%s'", initialbranch.ptr);
+		error = -1;
+		goto done;
+	}
+
+	branch_name = initialbranch.ptr + strlen(GIT_REFS_HEADS_DIR);
+
+	error = setup_tracking_config(repo, branch_name, GIT_REMOTE_ORIGIN,
+		initialbranch.ptr);
+
+done:
+	git_buf_dispose(&initialbranch);
+	return error;
+}
+
 static int update_head_to_remote(
 		git_repository *repo,
 		git_remote *remote,
@@ -155,8 +180,7 @@ static int update_head_to_remote(
 
 	/* We cloned an empty repository or one with an unborn HEAD */
 	if (refs_len == 0 || strcmp(refs[0]->name, GIT_HEAD_FILE))
-		return setup_tracking_config(
-			repo, "master", GIT_REMOTE_ORIGIN, GIT_REFS_HEADS_MASTER_FILE);
+		return update_head_to_default(repo);
 
 	/* We know we have HEAD, let's see where it points */
 	remote_head = refs[0];
