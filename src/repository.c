@@ -2354,6 +2354,40 @@ static int repo_contains_no_reference(git_repository *repo)
 	return error;
 }
 
+int git_repository_initialbranch(git_buf *out, git_repository *repo)
+{
+	git_config *config;
+	git_config_entry *entry = NULL;
+	const char *branch;
+	int error;
+
+	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
+		return error;
+
+	if ((error = git_config_get_entry(&entry, config, "init.defaultbranch")) == 0) {
+		branch = entry->value;
+	}
+	else if (error == GIT_ENOTFOUND) {
+		branch = GIT_BRANCH_DEFAULT;
+	}
+	else {
+		goto done;
+	}
+
+	if ((error = git_buf_puts(out, GIT_REFS_HEADS_DIR)) < 0 ||
+	    (error = git_buf_puts(out, branch)) < 0)
+	    goto done;
+
+	if (!git_reference_is_valid_name(out->ptr)) {
+		git_error_set(GIT_ERROR_INVALID, "the value of init.defaultBranch is not a valid reference name");
+		error = -1;
+	}
+
+done:
+	git_config_entry_free(entry);
+	return error;
+}
+
 int git_repository_is_empty(git_repository *repo)
 {
 	git_reference *head = NULL;
