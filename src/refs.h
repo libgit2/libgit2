@@ -45,7 +45,6 @@ extern bool git_reference__enable_symbolic_ref_target_validation;
 #define GIT_REBASE_APPLY_DIR "rebase-apply/"
 #define GIT_REBASE_APPLY_REBASING_FILE GIT_REBASE_APPLY_DIR "rebasing"
 #define GIT_REBASE_APPLY_APPLYING_FILE GIT_REBASE_APPLY_DIR "applying"
-#define GIT_REFS_HEADS_MASTER_FILE GIT_REFS_HEADS_DIR "master"
 
 #define GIT_SEQUENCER_DIR "sequencer/"
 #define GIT_SEQUENCER_HEAD_FILE GIT_SEQUENCER_DIR "head"
