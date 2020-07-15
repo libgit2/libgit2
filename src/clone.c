@@ -172,7 +172,7 @@ static int update_head_to_remote(
 	git_refspec *refspec;
 	const git_remote_head *remote_head, **refs;
 	const git_oid *remote_head_id;
-	git_buf remote_master_name = GIT_BUF_INIT;
+	git_buf remote_branch_name = GIT_BUF_INIT;
 	git_buf branch = GIT_BUF_INIT;
 
 	if ((error = git_remote_ls(&refs, &refs_len, remote)) < 0)
@@ -203,9 +203,9 @@ static int update_head_to_remote(
 		goto cleanup;
 	}
 
-	/* Determine the remote tracking reference name from the local master */
+	/* Determine the remote tracking ref name from the local branch */
 	if ((error = git_refspec_transform(
-		&remote_master_name,
+		&remote_branch_name,
 		refspec,
 		git_buf_cstr(&branch))) < 0)
 		goto cleanup;
@@ -217,7 +217,7 @@ static int update_head_to_remote(
 		reflog_message);
 
 cleanup:
-	git_buf_dispose(&remote_master_name);
+	git_buf_dispose(&remote_branch_name);
 	git_buf_dispose(&branch);
 
 	return error;
