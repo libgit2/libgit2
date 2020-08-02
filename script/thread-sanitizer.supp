@@ -8,11 +8,6 @@ deadlock:attr_cache_lock
 # data races.
 called_from_lib:libc.so.6
 
-# TODO(#5595): Remove these once the fixes land.
-race:src/odb.c
-race:git_repository_odb__weakptr
-race:cache_store
-
-# TODO(#5595): Investigate and fix this. It can be triggered by the `thread`
+# TODO(#5592): Investigate and fix this. It can be triggered by the `thread`
 # test suite.
 race:git_filter_list__load_ext

@@ -12,6 +12,7 @@
 #include "mwindow.h"
 #include "odb.h"
 #include "oid.h"
+#include "oidarray.h"
 
 /* Option to bypass checking existence of '.keep' files */
 bool git_disable_pack_keep_file_checks = false;
@@ -195,7 +196,8 @@ static void pack_index_free(struct git_pack_file *p)
 	}
 }
 
-static int pack_index_check(const char *path, struct git_pack_file *p)
+/* Run with the packfile lock held */
+static int pack_index_check_locked(const char *path, struct git_pack_file *p)
 {
 	struct git_pack_idx_header *hdr;
 	uint32_t version, nr, i, *index;
@@ -301,7 +303,8 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 	return 0;
 }
 
-static int pack_index_open(struct git_pack_file *p)
+/* Run with the packfile lock held */
+static int pack_index_open_locked(struct git_pack_file *p)
 {
 	int error = 0;
 	size_t name_len;
@@ -324,17 +327,10 @@ static int pack_index_open(struct git_pack_file *p)
 		return -1;
 	}
 
-	if ((error = git_mutex_lock(&p->lock)) < 0) {
-		git_buf_dispose(&idx_name);
-		return error;
-	}
-
 	if (p->index_version == -1)
-		error = pack_index_check(idx_name.ptr, p);
+		error = pack_index_check_locked(idx_name.ptr, p);
 
 	git_buf_dispose(&idx_name);
-
-	git_mutex_unlock(&p->lock);
 
 	return error;
 }
@@ -1015,12 +1011,13 @@ static int packfile_open(struct git_pack_file *p)
 	git_oid sha1;
 	unsigned char *idx_sha1;
 
-	if (p->index_version == -1 && pack_index_open(p) < 0)
-		return git_odb__error_notfound("failed to open packfile", NULL, 0);
-
-	/* if mwf opened by another thread, return now */
 	if (git_mutex_lock(&p->lock) < 0)
 		return packfile_error("failed to get lock for open");
+
+	if (pack_index_open_locked(p) < 0) {
+		git_mutex_unlock(&p->lock);
+		return git_odb__error_notfound("failed to open packfile", NULL, 0);
+	}
 
 	if (p->mwf.fd >= 0) {
 		git_mutex_unlock(&p->lock);
@@ -1210,32 +1207,40 @@ int git_pack_foreach_entry(
 	git_odb_foreach_cb cb,
 	void *data)
 {
-	const unsigned char *index = p->index_map.data, *current;
+	const unsigned char *index, *current;
 	uint32_t i;
 	int error = 0;
+	git_array_oid_t oids = GIT_ARRAY_INIT;
+	git_oid *oid;
 
-	if (index == NULL) {
-		if ((error = pack_index_open(p)) < 0)
-			return error;
+	if (git_mutex_lock(&p->lock) < 0)
+		return packfile_error("failed to get lock for git_pack_foreach_entry");
 
-		GIT_ASSERT(p->index_map.data);
-		index = p->index_map.data;
+	if ((error = pack_index_open_locked(p)) < 0) {
+		git_mutex_unlock(&p->lock);
+		return error;
 	}
 
-	if (p->index_version > 1) {
+	GIT_ASSERT(p->index_map.data);
+	index = p->index_map.data;
+
+	if (p->index_version > 1)
 		index += 8;
-	}
 
 	index += 4 * 256;
 
 	if (p->oids == NULL) {
 		git_vector offsets, oids;
 
-		if ((error = git_vector_init(&oids, p->num_objects, NULL)))
+		if ((error = git_vector_init(&oids, p->num_objects, NULL))) {
+			git_mutex_unlock(&p->lock);
 			return error;
+		}
 
-		if ((error = git_vector_init(&offsets, p->num_objects, git__memcmp4)))
+		if ((error = git_vector_init(&offsets, p->num_objects, git__memcmp4))) {
+			git_mutex_unlock(&p->lock);
 			return error;
+		}
 
 		if (p->index_version > 1) {
 			const unsigned char *off = index + 24 * p->num_objects;
@@ -1256,10 +1261,33 @@ int git_pack_foreach_entry(
 		p->oids = (git_oid **)git_vector_detach(NULL, NULL, &oids);
 	}
 
-	for (i = 0; i < p->num_objects; i++)
-		if ((error = cb(p->oids[i], data)) != 0)
-			return git_error_set_after_callback(error);
+	/* We need to copy the OIDs to another array before we relinquish the lock to avoid races. */
+	git_array_init_to_size(oids, p->num_objects);
+	if (!oids.ptr) {
+		git_mutex_unlock(&p->lock);
+		git_array_clear(oids);
+		GIT_ERROR_CHECK_ARRAY(oids);
+	}
+	for (i = 0; i < p->num_objects; i++) {
+		oid = git_array_alloc(oids);
+		if (!oid) {
+			git_mutex_unlock(&p->lock);
+			git_array_clear(oids);
+			GIT_ERROR_CHECK_ALLOC(oid);
+		}
+		git_oid_cpy(oid, p->oids[i]);
+	}
 
+	git_mutex_unlock(&p->lock);
+
+	git_array_foreach(oids, i, oid) {
+		if ((error = cb(oid, data)) != 0) {
+			git_error_set_after_callback(error);
+			break;
+		}
+	}
+
+	git_array_clear(oids);
 	return error;
 }
 
@@ -1297,18 +1325,17 @@ static int pack_entry_find_offset(
 	int pos, found = 0;
 	off64_t offset;
 	const unsigned char *current = 0;
+	int error = 0;
 
 	*offset_out = 0;
 
-	if (p->index_version == -1) {
-		int error;
+	if (git_mutex_lock(&p->lock) < 0)
+		return packfile_error("failed to get lock for pack_entry_find_offset");
 
-		if ((error = pack_index_open(p)) < 0)
-			return error;
+	if ((error = pack_index_open_locked(p)) < 0)
+		goto cleanup;
 
-		GIT_ASSERT(p->index_map.data);
-	}
-
+	GIT_ASSERT(p->index_map.data);
 	index = p->index_map.data;
 	level1_ofs = p->index_map.data;
 
@@ -1360,14 +1387,19 @@ static int pack_entry_find_offset(
 		}
 	}
 
-	if (!found)
-		return git_odb__error_notfound("failed to find offset for pack entry", short_oid, len);
-	if (found > 1)
-		return git_odb__error_ambiguous("found multiple offsets for pack entry");
+	if (!found) {
+		error = git_odb__error_notfound("failed to find offset for pack entry", short_oid, len);
+		goto cleanup;
+	}
+	if (found > 1) {
+		error = git_odb__error_ambiguous("found multiple offsets for pack entry");
+		goto cleanup;
+	}
 
 	if ((offset = nth_packed_object_offset(p, pos)) < 0) {
 		git_error_set(GIT_ERROR_ODB, "packfile index is corrupt");
-		return -1;
+		error = -1;
+		goto cleanup;
 	}
 
 	*offset_out = offset;
@@ -1382,7 +1414,9 @@ static int pack_entry_find_offset(
 	}
 #endif
 
-	return 0;
+cleanup:
+	git_mutex_unlock(&p->lock);
+	return error;
 }
 
 int git_pack_entry_find(
