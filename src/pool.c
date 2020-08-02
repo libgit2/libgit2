@@ -23,17 +23,18 @@ static void *pool_alloc_page(git_pool *pool, size_t size);
 
 static size_t pool_system_page_size(void)
 {
-	static size_t size = 0;
+	static git_atomic_ssize cached_size = {0};
+	size_t page_size = 0;
 
-	if (!size) {
-		size_t page_size;
+	if ((page_size = (size_t)git_atomic_ssize_get(&cached_size)) == 0) {
 		if (git__page_size(&page_size) < 0)
 			page_size = 4096;
 		/* allow space for malloc overhead */
-		size = (page_size - (2 * sizeof(void *)) - sizeof(git_pool_page));
+		page_size -= (2 * sizeof(void *)) + sizeof(git_pool_page);
+		git_atomic_ssize_set(&cached_size, (int64_t)page_size);
 	}
 
-	return size;
+	return page_size;
 }
 
 #ifndef GIT_DEBUG_POOL
