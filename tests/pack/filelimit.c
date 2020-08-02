@@ -8,6 +8,7 @@
 static size_t expected_open_mwindow_files = 0;
 static size_t original_mwindow_file_limit = 0;
 
+extern git_mutex git__mwindow_mutex;
 extern git_mwindow_ctl git_mwindow__mem_ctl;
 
 void test_pack_filelimit__initialize_tiny(void)

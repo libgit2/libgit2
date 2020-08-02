@@ -29,10 +29,10 @@ size_t git_mwindow__window_size = DEFAULT_WINDOW_SIZE;
 size_t git_mwindow__mapped_limit = DEFAULT_MAPPED_LIMIT;
 size_t git_mwindow__file_limit = DEFAULT_FILE_LIMIT;
 
-/* Mutex to control access */
+/* Mutex to control access to `git_mwindow__mem_ctl` and `git__pack_cache`. */
 git_mutex git__mwindow_mutex;
 
-/* Whenever you want to read or modify this, grab git__mwindow_mutex */
+/* Whenever you want to read or modify this, grab `git__mwindow_mutex` */
 git_mwindow_ctl git_mwindow__mem_ctl;
 
 /* Global list of mwindow files, to open packs once across repos */
@@ -95,10 +95,9 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 
 	error = git_strmap_set(git__pack_cache, pack->pack_name, pack);
 	git_mutex_unlock(&git__mwindow_mutex);
-
 	if (error < 0) {
-		git_packfile_free(pack);
-		return -1;
+		git_packfile_free(pack, false);
+		return error;
 	}
 
 	*out = pack;
@@ -108,6 +107,7 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 int git_mwindow_put_pack(struct git_pack_file *pack)
 {
 	int count, error;
+	struct git_pack_file *pack_to_delete = NULL;
 
 	if ((error = git_mutex_lock(&git__mwindow_mutex)) < 0)
 		return error;
@@ -121,34 +121,19 @@ int git_mwindow_put_pack(struct git_pack_file *pack)
 	count = git_atomic_dec(&pack->refcount);
 	if (count == 0) {
 		git_strmap_delete(git__pack_cache, pack->pack_name);
-		git_packfile_free(pack);
+		pack_to_delete = pack;
 	}
-
 	git_mutex_unlock(&git__mwindow_mutex);
+	git_packfile_free(pack_to_delete, false);
+
 	return 0;
-}
-
-int git_mwindow_free_all(git_mwindow_file *mwf)
-{
-	int error;
-
-	if (git_mutex_lock(&git__mwindow_mutex)) {
-		git_error_set(GIT_ERROR_THREAD, "unable to lock mwindow mutex");
-		return -1;
-	}
-
-	error = git_mwindow_free_all_locked(mwf);
-
-	git_mutex_unlock(&git__mwindow_mutex);
-
-	return error;
 }
 
 /*
  * Free all the windows in a sequence, typically because we're done
- * with the file
+ * with the file. Needs to hold the git__mwindow_mutex.
  */
-int git_mwindow_free_all_locked(git_mwindow_file *mwf)
+static int git_mwindow_free_all_locked(git_mwindow_file *mwf)
 {
 	git_mwindow_ctl *ctl = &git_mwindow__mem_ctl;
 	size_t i;
@@ -182,6 +167,22 @@ int git_mwindow_free_all_locked(git_mwindow_file *mwf)
 	}
 
 	return 0;
+}
+
+int git_mwindow_free_all(git_mwindow_file *mwf)
+{
+	int error;
+
+	if (git_mutex_lock(&git__mwindow_mutex)) {
+		git_error_set(GIT_ERROR_THREAD, "unable to lock mwindow mutex");
+		return -1;
+	}
+
+	error = git_mwindow_free_all_locked(mwf);
+
+	git_mutex_unlock(&git__mwindow_mutex);
+
+	return error;
 }
 
 /*
@@ -256,9 +257,9 @@ static bool git_mwindow_scan_recently_used(
 
 /*
  * Close the least recently used window (that is currently not being used) out
- * of all the files. Called under lock from new_window.
+ * of all the files. Called under lock from new_window_locked.
  */
-static int git_mwindow_close_lru_window(void)
+static int git_mwindow_close_lru_window_locked(void)
 {
 	git_mwindow_ctl *ctl = &git_mwindow__mem_ctl;
 	git_mwindow_file *cur;
@@ -292,13 +293,13 @@ static int git_mwindow_close_lru_window(void)
 }
 
 /*
- * Close the file that does not have any open windows AND whose
+ * Finds the file that does not have any open windows AND whose
  * most-recently-used window is the least-recently used one across all
  * currently open files.
  *
- * Called under lock from new_window.
+ * Called under lock from new_window_locked.
  */
-static int git_mwindow_close_lru_file(void)
+static int git_mwindow_find_lru_file_locked(git_mwindow_file **out)
 {
 	git_mwindow_ctl *ctl = &git_mwindow__mem_ctl;
 	git_mwindow_file *lru_file = NULL, *current_file = NULL;
@@ -320,15 +321,12 @@ static int git_mwindow_close_lru_file(void)
 		return -1;
 	}
 
-	git_mwindow_free_all_locked(lru_file);
-	p_close(lru_file->fd);
-	lru_file->fd = -1;
-
+	*out = lru_file;
 	return 0;
 }
 
 /* This gets called under lock from git_mwindow_open */
-static git_mwindow *new_window(
+static git_mwindow *new_window_locked(
 	git_file fd,
 	off64_t size,
 	off64_t offset)
@@ -338,12 +336,11 @@ static git_mwindow *new_window(
 	off64_t len;
 	git_mwindow *w;
 
-	w = git__malloc(sizeof(*w));
+	w = git__calloc(1, sizeof(*w));
 
 	if (w == NULL)
 		return NULL;
 
-	memset(w, 0x0, sizeof(*w));
 	w->offset = (offset / walign) * walign;
 
 	len = size - w->offset;
@@ -353,7 +350,7 @@ static git_mwindow *new_window(
 	ctl->mapped += (size_t)len;
 
 	while (git_mwindow__mapped_limit < ctl->mapped &&
-			git_mwindow_close_lru_window() == 0) /* nop */;
+			git_mwindow_close_lru_window_locked() == 0) /* nop */;
 
 	/*
 	 * We treat `mapped_limit` as a soft limit. If we can't find a
@@ -367,7 +364,7 @@ static git_mwindow *new_window(
 		 * we're below our soft limits, so free up what we can and try again.
 		 */
 
-		while (git_mwindow_close_lru_window() == 0)
+		while (git_mwindow_close_lru_window_locked() == 0)
 			/* nop */;
 
 		if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < 0) {
@@ -423,7 +420,7 @@ unsigned char *git_mwindow_open(
 		 * one.
 		 */
 		if (!w) {
-			w = new_window(mwf->fd, mwf->size, offset);
+			w = new_window_locked(mwf->fd, mwf->size, offset);
 			if (w == NULL) {
 				git_mutex_unlock(&git__mwindow_mutex);
 				return NULL;
@@ -451,8 +448,11 @@ unsigned char *git_mwindow_open(
 
 int git_mwindow_file_register(git_mwindow_file *mwf)
 {
+	git_vector closed_files = GIT_VECTOR_INIT;
 	git_mwindow_ctl *ctl = &git_mwindow__mem_ctl;
-	int ret;
+	int error;
+	size_t i;
+	git_mwindow_file *closed_file = NULL;
 
 	if (git_mutex_lock(&git__mwindow_mutex)) {
 		git_error_set(GIT_ERROR_THREAD, "unable to lock mwindow mutex");
@@ -460,20 +460,48 @@ int git_mwindow_file_register(git_mwindow_file *mwf)
 	}
 
 	if (ctl->windowfiles.length == 0 &&
-	    git_vector_init(&ctl->windowfiles, 8, NULL) < 0) {
+	    (error = git_vector_init(&ctl->windowfiles, 8, NULL)) < 0) {
 		git_mutex_unlock(&git__mwindow_mutex);
-		return -1;
+		goto cleanup;
 	}
 
 	if (git_mwindow__file_limit) {
+		git_mwindow_file *lru_file;
 		while (git_mwindow__file_limit <= ctl->windowfiles.length &&
-				git_mwindow_close_lru_file() == 0) /* nop */;
+				git_mwindow_find_lru_file_locked(&lru_file) == 0) {
+			if ((error = git_vector_insert(&closed_files, lru_file)) < 0) {
+				/*
+				 * Exceeding the file limit seems preferrable to being open to
+				 * data races that can end up corrupting the heap.
+				 */
+				break;
+			}
+			git_mwindow_free_all_locked(lru_file);
+		}
 	}
 
-	ret = git_vector_insert(&ctl->windowfiles, mwf);
+	error = git_vector_insert(&ctl->windowfiles, mwf);
 	git_mutex_unlock(&git__mwindow_mutex);
+	if (error < 0)
+		goto cleanup;
 
-	return ret;
+	/*
+	 * Once we have released the global windowfiles lock, we can close each
+	 * individual file. Before doing so, acquire that file's lock to avoid
+	 * closing a file that is currently being used.
+	 */
+	git_vector_foreach(&closed_files, i, closed_file) {
+		error = git_mutex_lock(&closed_file->lock);
+		if (error < 0)
+			continue;
+		p_close(closed_file->fd);
+		closed_file->fd = -1;
+		git_mutex_unlock(&closed_file->lock);
+	}
+
+cleanup:
+	git_vector_free(&closed_files);
+	return error;
 }
 
 void git_mwindow_file_deregister(git_mwindow_file *mwf)
