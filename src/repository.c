@@ -2177,12 +2177,6 @@ int git_repository_head_detached(git_repository *repo)
 	return exists;
 }
 
-static int get_worktree_file_path(git_buf *out, git_repository *repo, const char *worktree, const char *file)
-{
-	git_buf_clear(out);
-	return git_buf_printf(out, "%s/worktrees/%s/%s", repo->commondir, worktree, file);
-}
-
 int git_repository_head_detached_for_worktree(git_repository *repo, const char *name)
 {
 	git_reference *ref = NULL;
@@ -2223,7 +2217,8 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 
 int git_repository_head_for_worktree(git_reference **out, git_repository *repo, const char *name)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_repository *worktree_repo = NULL;
+	git_worktree *worktree = NULL;
 	git_reference *head = NULL;
 	int error;
 
@@ -2231,65 +2226,68 @@ int git_repository_head_for_worktree(git_reference **out, git_repository *repo, 
 
 	*out = NULL;
 
-	if ((error = get_worktree_file_path(&path, repo, name, GIT_HEAD_FILE)) < 0 ||
-	    (error = git_reference__read_head(&head, repo, path.ptr)) < 0)
+	if ((error = git_worktree_lookup(&worktree, repo, name)) < 0 ||
+	    (error = git_repository_open_from_worktree(&worktree_repo, worktree)) < 0 ||
+	    (error = git_reference_lookup(&head, worktree_repo, GIT_HEAD_FILE)) < 0)
 		goto out;
 
 	if (git_reference_type(head) != GIT_REFERENCE_DIRECT) {
-		git_reference *resolved;
-
-		error = git_reference_lookup_resolved(&resolved, repo, git_reference_symbolic_target(head), -1);
-		git_reference_free(head);
-		head = resolved;
+		if ((error = git_reference_lookup_resolved(out, worktree_repo, git_reference_symbolic_target(head), -1)) < 0)
+			goto out;
+	} else {
+		*out = head;
+		head = NULL;
 	}
 
-	*out = head;
-
 out:
-	if (error)
-		git_reference_free(head);
-
-	git_buf_dispose(&path);
-
+	git_reference_free(head);
+	git_worktree_free(worktree);
+	git_repository_free(worktree_repo);
 	return error;
 }
 
-int git_repository_foreach_head(git_repository *repo,
-				git_repository_foreach_head_cb cb,
-				int flags, void *payload)
+int git_repository_foreach_worktree(git_repository *repo,
+				    git_repository_foreach_worktree_cb cb,
+				    void *payload)
 {
-	git_strarray worktrees = GIT_VECTOR_INIT;
-	git_buf path = GIT_BUF_INIT;
-	int error = 0;
+	git_strarray worktrees = {0};
+	git_repository *worktree_repo = NULL;
+	git_worktree *worktree = NULL;
+	int error;
 	size_t i;
 
+	if ((error = git_repository_open(&worktree_repo, repo->commondir)) < 0 ||
+	    (error = cb(worktree_repo, payload) != 0))
+		goto out;
 
-	if (!(flags & GIT_REPOSITORY_FOREACH_HEAD_SKIP_REPO)) {
-		/* Gather HEAD of main repository */
-		if ((error = git_buf_joinpath(&path, repo->commondir, GIT_HEAD_FILE)) < 0 ||
-		    (error = cb(repo, path.ptr, payload) != 0))
-			goto out;
-	}
+	git_repository_free(worktree_repo);
+	worktree_repo = NULL;
 
-	if (!(flags & GIT_REPOSITORY_FOREACH_HEAD_SKIP_WORKTREES)) {
-		if ((error = git_worktree_list(&worktrees, repo)) < 0) {
-			error = 0;
-			goto out;
-		}
+	if ((error = git_worktree_list(&worktrees, repo)) < 0)
+		goto out;
 
-		/* Gather HEADs of all worktrees */
-		for (i = 0; i < worktrees.count; i++) {
-			if (get_worktree_file_path(&path, repo, worktrees.strings[i], GIT_HEAD_FILE) < 0)
-				continue;
+	for (i = 0; i < worktrees.count; i++) {
+		git_repository_free(worktree_repo);
+		worktree_repo = NULL;
+		git_worktree_free(worktree);
+		worktree = NULL;
 
-			if ((error = cb(repo, path.ptr, payload)) != 0)
+		if ((error = git_worktree_lookup(&worktree, repo, worktrees.strings[i]) < 0) ||
+		    (error = git_repository_open_from_worktree(&worktree_repo, worktree)) < 0) {
+			if (error != GIT_ENOTFOUND)
 				goto out;
+			error = 0;
+			continue;
 		}
+
+		if ((error = cb(worktree_repo, payload)) != 0)
+			goto out;
 	}
 
 out:
-	git_buf_dispose(&path);
 	git_strarray_dispose(&worktrees);
+	git_repository_free(worktree_repo);
+	git_worktree_free(worktree);
 	return error;
 }
 
