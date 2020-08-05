@@ -844,7 +844,10 @@ static int packfile_unpack_compressed(
 		unsigned int window_len;
 		unsigned char *in;
 
-		in = pack_window_open(p, mwindow, *position, &window_len);
+		if ((in = pack_window_open(p, mwindow, *position, &window_len)) == NULL) {
+			error = -1;
+			goto out;
+		}
 
 		if ((error = git_zstream_set_input(&zstream, in, window_len)) < 0 ||
 		    (error = git_zstream_get_output_chunk(data + total, &bytes, &zstream)) < 0) {
