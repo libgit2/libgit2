@@ -201,10 +201,6 @@ static bool git_mwindow_scan_recently_used(
 	assert(mwf);
 	assert(out_window);
 
-	lru_window = *out_window;
-	if (out_last)
-		lru_last = *out_last;
-
 	for (w_last = NULL, w = mwf->windows; w; w_last = w, w = w->next) {
 		if (w->inuse_cnt) {
 			if (only_unused)
@@ -226,7 +222,7 @@ static bool git_mwindow_scan_recently_used(
 		}
 	}
 
-	if (!lru_window && !lru_last)
+	if (!lru_window)
 		return false;
 
 	*out_window = lru_window;
