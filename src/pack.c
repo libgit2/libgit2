@@ -854,9 +854,12 @@ static int packfile_unpack_compressed(
 
 		git_mwindow_close(mwindow);
 
+		if (!bytes)
+			break;
+
 		*position += window_len - zstream.in_len;
 		total += bytes;
-	} while (total < size);
+	} while (!git_zstream_eos(&zstream));
 
 	if (total != size || !git_zstream_eos(&zstream)) {
 		git_error_set(GIT_ERROR_ZLIB, "error inflating zlib stream");
