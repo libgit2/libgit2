@@ -29,7 +29,6 @@ git_mutex git__mwindow_mutex;
 typedef int (*git_global_init_fn)(void);
 
 static git_global_init_fn git__init_callbacks[] = {
-	git_allocator_global_init,
 	git_hash_global_init,
 	git_sysdir_global_init,
 	git_filter_global_init,
@@ -68,12 +67,6 @@ static int init_common(void)
 {
 	size_t i;
 	int ret;
-
-	/* Initialize the CRT debug allocator first, before our first malloc */
-#if defined(GIT_MSVC_CRTDBG)
-	git_win32__crtdbg_stacktrace_init();
-	git_win32__stack_init();
-#endif
 
 	/* Initialize subsystems that have global state */
 	for (i = 0; i < ARRAY_SIZE(git__init_callbacks); i++)
@@ -139,22 +132,34 @@ static void shutdown_common(void)
  * before cache invalidation of the subsystems' newly written global
  * state.
  */
-#if defined(GIT_THREADS) && defined(GIT_WIN32)
 
-static DWORD _fls_index;
-static volatile LONG _mutex = 0;
+#if defined(GIT_THREADS)
+static git_tls_data *_tls_data = NULL;
 
-static void WINAPI fls_free(void *st)
+static void tls_free(void *st)
 {
 	git__global_state_cleanup(st);
 	git__free(st);
 }
+#endif
+
+#if defined(GIT_THREADS) && defined(GIT_WIN32)
+
+static volatile LONG _mutex = 0;
 
 static int synchronized_threads_init(void)
 {
 	int error;
 
-	if ((_fls_index = FlsAlloc(fls_free)) == FLS_OUT_OF_INDEXES)
+	git_allocator_global_init();
+
+	/* Initialize the CRT debug allocator first, before our first malloc */
+#if defined(GIT_MSVC_CRTDBG)
+	git_win32__crtdbg_stacktrace_init();
+	git_win32__stack_init();
+#endif
+
+	if (git_tls_data__init(&_tls_data, &tls_free) < 0)
 		return -1;
 
 	git_threads_init();
@@ -197,7 +202,8 @@ int git_libgit2_shutdown(void)
 	if ((ret = git_atomic_dec(&git__n_inits)) == 0) {
 		shutdown_common();
 
-		FlsFree(_fls_index);
+		git_tls_data__free(_tls_data);
+		_tls_data = NULL;
 		git_mutex_free(&git__mwindow_mutex);
 
 #if defined(GIT_MSVC_CRTDBG)
@@ -218,7 +224,7 @@ git_global_st *git__global_state(void)
 
 	assert(git_atomic_get(&git__n_inits) > 0);
 
-	if ((ptr = FlsGetValue(_fls_index)) != NULL)
+	if ((ptr = git_tls_data__get(_tls_data)) != NULL)
 		return ptr;
 
 	ptr = git__calloc(1, sizeof(git_global_st));
@@ -227,30 +233,23 @@ git_global_st *git__global_state(void)
 
 	git_buf_init(&ptr->error_buf, 0);
 
-	FlsSetValue(_fls_index, ptr);
+	git_tls_data__set(_tls_data, ptr);
 	return ptr;
 }
 
 #elif defined(GIT_THREADS) && defined(_POSIX_THREADS)
 
-static pthread_key_t _tls_key;
 static pthread_mutex_t _init_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_once_t _once_init = PTHREAD_ONCE_INIT;
 int init_error = 0;
-
-static void cb__free_status(void *st)
-{
-	git__global_state_cleanup(st);
-	git__free(st);
-}
 
 static void init_once(void)
 {
 	if ((init_error = git_mutex_init(&git__mwindow_mutex)) != 0)
 		return;
 
-	pthread_key_create(&_tls_key, &cb__free_status);
-
+	git_allocator_global_init();
+	git_tls_data__init(&_tls_data, &tls_free);
 	init_error = init_common();
 }
 
@@ -273,7 +272,6 @@ int git_libgit2_init(void)
 
 int git_libgit2_shutdown(void)
 {
-	void *ptr = NULL;
 	pthread_once_t new_once = PTHREAD_ONCE_INIT;
 	int error, ret;
 
@@ -286,13 +284,8 @@ int git_libgit2_shutdown(void)
 	/* Shut down any subsystems that have global state */
 	shutdown_common();
 
-	ptr = pthread_getspecific(_tls_key);
-	pthread_setspecific(_tls_key, NULL);
-
-	git__global_state_cleanup(ptr);
-	git__free(ptr);
-
-	pthread_key_delete(_tls_key);
+	git_tls_data__free(_tls_data);
+	_tls_data = NULL;
 	git_mutex_free(&git__mwindow_mutex);
 	_once_init = new_once;
 
@@ -309,7 +302,7 @@ git_global_st *git__global_state(void)
 
 	assert(git_atomic_get(&git__n_inits) > 0);
 
-	if ((ptr = pthread_getspecific(_tls_key)) != NULL)
+	if ((ptr = git_tls_data__get(_tls_data)) != NULL)
 		return ptr;
 
 	ptr = git__calloc(1, sizeof(git_global_st));
@@ -317,7 +310,7 @@ git_global_st *git__global_state(void)
 		return NULL;
 
 	git_buf_init(&ptr->error_buf, 0);
-	pthread_setspecific(_tls_key, ptr);
+	git_tls_data__set(_tls_data, ptr);
 	return ptr;
 }
 
@@ -333,6 +326,7 @@ int git_libgit2_init(void)
 	if ((ret = git_atomic_inc(&git__n_inits)) != 1)
 		return ret;
 
+	git_allocator_global_init();
 	if ((ret = init_common()) < 0)
 		return ret;
 
