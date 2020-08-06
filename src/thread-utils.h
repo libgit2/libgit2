@@ -243,4 +243,52 @@ extern int git_online_cpus(void);
 # define GIT_MEMORY_BARRIER /* noop */
 #endif
 
+/**
+ * An opaque structure for managing TLS in the library
+ */
+typedef struct git_tls_data git_tls_data;
+
+/**
+ * Initializes a thread local storage container.
+ * This has an implementation even without GIT_THREADS
+ * which just serves to encourage use of this where TLS
+ * is necessary.
+ *
+ * Do not call this before the allocator has been initialized.
+ *
+ * @param  out a pointer to store the TLS container in
+ * @param  free_fn the method that should be called when
+ *                 deleting something in the TLS. Will be
+ *                 registered as the clean up callback for
+ *                 the OS specific TLS construct.
+ * @return 0 on success, non-zero on failure
+ */
+int git_tls_data__init(git_tls_data **out,
+	void GIT_CALLBACK(free_fn)(void *payload));
+
+/**
+ * Will set a thread specific value on the TLS. Passing NULL will free the
+ * currently held thread specific value.
+ *
+ * @param  tls the TLS instance to store data on
+ * @param  payload the pointer to store
+ * @return 0 on success, non-zero on failure
+ */
+int git_tls_data__set(git_tls_data *tls, void *payload);
+
+/**
+ * Will get the thread specific value stored in TLS.
+ *
+ * @param  tls the TLS instance to retrieve data from
+ */
+void *git_tls_data__get(git_tls_data *tls);
+
+/**
+ * Must call this to clean up the TLS when no longer in use.
+ * The TLS pointer is unusable after a call to this.
+ * 
+ * @param tls the TLS to free
+ */
+void git_tls_data__free(git_tls_data *tls);
+
 #endif
