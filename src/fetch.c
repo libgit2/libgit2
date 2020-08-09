@@ -51,6 +51,37 @@ static int maybe_want(git_remote *remote, git_remote_head *head, git_odb *odb, g
 	return git_vector_insert(&remote->refs, head);
 }
 
+static int want_oids(git_remote *remote, git_odb *odb)
+{
+	const char *src;
+	git_oid oid;
+	git_refspec *spec;
+	git_remote_head *head;
+	size_t i;
+
+	git_vector_foreach(&remote->active_refspecs, i, spec) {
+		src = git_refspec_src(spec);
+
+		if (git_oid_fromstrp(&oid, src) < 0) {
+			git_error_clear();
+			continue;
+		}
+
+		if (git_odb_exists(odb, &oid))
+			continue;
+
+		remote->need_pack = 1;
+
+		head = git__calloc(1, sizeof *head);
+		GIT_ERROR_CHECK_ALLOC(head);
+		head->oid = oid;
+		head->name = (char *)src;
+		git_vector_insert(&remote->refs, (void *)head);
+	}
+
+	return 0;
+}
+
 static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 {
 	git_remote_head **heads;
@@ -85,6 +116,9 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 	}
 
 	if (git_repository_odb__weakptr(&odb, remote->repo) < 0)
+		goto cleanup;
+
+	if ((error = want_oids(remote, odb)) < 0)
 		goto cleanup;
 
 	if (git_remote_ls((const git_remote_head ***)&heads, &heads_len, remote) < 0)
