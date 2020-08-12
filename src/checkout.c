@@ -1943,7 +1943,7 @@ static int checkout_create_the_new_perform(
 	return 0;
 }
 
-static int checkout_create_the_new(
+static int checkout_create_the_new__single(
 	unsigned int *actions,
 	checkout_data *data)
 {
@@ -1964,6 +1964,15 @@ static int checkout_create_the_new(
 	}
 
 	return 0;
+}
+
+static int checkout_create_the_new(
+	unsigned int *actions,
+	checkout_data *data)
+{
+#ifdef GIT_THREADS
+#endif
+	return checkout_create_the_new__single(actions, data);
 }
 
 static int checkout_create_submodules(
