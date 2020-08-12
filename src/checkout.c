@@ -1859,6 +1859,35 @@ static int checkout_remove_the_old(
 	return 0;
 }
 
+enum {
+	NO_SYMLINKS = 0,
+	SYMLINKS_ONLY = 1
+};
+
+static int checkout_create_the_new_perform(
+	checkout_data *data,
+	unsigned int action,
+	git_diff_delta *delta,
+	unsigned int checkout_option)
+{
+	int error = 0;
+	if (action & CHECKOUT_ACTION__UPDATE_BLOB) {
+		if (checkout_option == NO_SYMLINKS && S_ISLNK(delta->new_file.mode))
+			return 0;
+
+		if (checkout_option == SYMLINKS_ONLY && !S_ISLNK(delta->new_file.mode))
+			return 0;
+
+		if ((error = checkout_blob(data, &delta->new_file)) < 0)
+			return error;
+
+		data->completed_steps++;
+		report_progress(data, delta->new_file.path);
+	}
+
+	return 0;
+}
+
 static int checkout_create_the_new(
 	unsigned int *actions,
 	checkout_data *data)
@@ -1868,21 +1897,15 @@ static int checkout_create_the_new(
 	size_t i;
 
 	git_vector_foreach(&data->diff->deltas, i, delta) {
-		if (actions[i] & CHECKOUT_ACTION__UPDATE_BLOB && !S_ISLNK(delta->new_file.mode)) {
-			if ((error = checkout_blob(data, &delta->new_file)) < 0)
-				return error;
-			data->completed_steps++;
-			report_progress(data, delta->new_file.path);
-		}
+		if ((error = checkout_create_the_new_perform(data, actions[i], delta,
+				NO_SYMLINKS)) < 0)
+			return error;
 	}
 
 	git_vector_foreach(&data->diff->deltas, i, delta) {
-		if (actions[i] & CHECKOUT_ACTION__UPDATE_BLOB && S_ISLNK(delta->new_file.mode)) {
-			if ((error = checkout_blob(data, &delta->new_file)) < 0)
-				return error;
-			data->completed_steps++;
-			report_progress(data, delta->new_file.path);
-		}
+		if ((error = checkout_create_the_new_perform(data, actions[i], delta,
+				SYMLINKS_ONLY)) < 0)
+			return error;
 	}
 
 	return 0;
