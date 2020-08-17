@@ -497,9 +497,27 @@ static int checkout_action_with_wd(
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED: /* case 14/15 or 33 */
 		if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd)) {
+			int pathfound = 0;
+			size_t n = 0;
+
 			GIT_ERROR_CHECK_ERROR(
 				checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, wd) );
-			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, NONE);
+
+			for (n=0; n < data->opts.paths.count; n++) {
+				if (
+					strncmp(
+						data->opts.paths.strings[n],
+						delta->new_file.path,
+						strlen(delta->new_file.path)) == 0) {
+					pathfound = 1;
+					break;
+				}
+			}
+			if ( pathfound ) {
+				*action = CHECKOUT_ACTION__UPDATE_BLOB;
+			} else {
+				*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, NONE);
+			}	
 		}
 		break;
 	case GIT_DELTA_ADDED: /* case 3, 4 or 6 */

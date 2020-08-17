@@ -14,7 +14,7 @@
 
 #include "common.h"
 
-/* Define the printf format specifier to use for size_t output */
+/* Define the printf format specifer to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #	define PRIuZ "Iu"
 #	define PRIxZ "Ix"
@@ -29,6 +29,7 @@
  * The following example demonstrates how to do checkouts with libgit2.
  *
  * Recognized options are :
+ *  -b: create new branch
  *  --force: force the checkout to happen.
  *  --[no-]progress: show checkout progress, on by default.
  *  --perf: show performance data.
@@ -43,11 +44,12 @@ typedef struct {
 static void print_usage(void)
 {
 	fprintf(stderr, "usage: checkout [options] <branch>\n"
-		"Options are :\n"
-		"  --git-dir: use the following git repository.\n"
-		"  --force: force the checkout.\n"
-		"  --[no-]progress: show checkout progress.\n"
-		"  --perf: show performance data.\n");
+					"Options are :\n"
+					"  -b: create new branch"
+					"  --git-dir: use the following git repository.\n"
+					"  --force: force the checkout.\n"
+					"  --[no-]progress: show checkout progress.\n"
+					"  --perf: show performance data.\n");
 	exit(1);
 }
 
@@ -104,7 +106,7 @@ static void print_perf_data(const git_checkout_perfdata *perfdata, void *payload
 {
 	(void)payload;
 	printf("perf: stat: %" PRIuZ " mkdir: %" PRIuZ " chmod: %" PRIuZ "\n",
-	       perfdata->stat_calls, perfdata->mkdir_calls, perfdata->chmod_calls);
+		   perfdata->stat_calls, perfdata->mkdir_calls, perfdata->chmod_calls);
 }
 
 /**
@@ -223,7 +225,7 @@ static int guess_refish(git_annotated_commit **out, git_repository *repo, const 
 			goto next;
 
 		break;
-next:
+	next:
 		free(refname);
 		if (error < 0 && error != GIT_ENOTFOUND)
 			break;
@@ -250,6 +252,14 @@ int lg2_checkout(git_repository *repo, int argc, char **argv)
 	checkout_options opts;
 	git_repository_state_t state;
 	git_annotated_commit *checkout_target = NULL;
+	git_reference *new_branch_ref = NULL;
+	git_object *target_obj = NULL;
+	git_commit *target_commit = NULL;
+	git_reference *branch_ref = NULL;
+	git_reference *upstream_ref = NULL;
+
+	const char *opt_new_branch;
+
 	int err = 0;
 	const char *path = ".";
 
@@ -263,28 +273,93 @@ int lg2_checkout(git_repository *repo, int argc, char **argv)
 		goto cleanup;
 	}
 
+	if (optional_str_arg(&opt_new_branch, &args, "-b", "")) {
+		err = git_revparse_single(&target_obj, repo, "HEAD");
+		if (err != 0) {
+			fprintf(stderr, "error: %s\n", git_error_last()->message);
+			goto cleanup;
+		}
+		err = git_commit_lookup(&target_commit, repo, git_object_id(target_obj));
+		if (err != 0) {
+			fprintf(stderr, "error looking up commit: %s\n", git_error_last()->message);
+			goto cleanup;
+		}
+		err = git_branch_create(&new_branch_ref, repo, opt_new_branch, target_commit, 0);
+		if (err != 0) {
+			fprintf(stderr, "error creating branch: %s\n", git_error_last()->message);
+			goto cleanup;
+		}
+	}
+
 	if (match_arg_separator(&args)) {
 		/**
-		 * Try to checkout the given path
+		 * Try to checkout the given path(s)
 		 */
 
-		fprintf(stderr, "unhandled path-based checkout\n");
-		err = 1;
-		goto cleanup;
+		git_checkout_options copts = GIT_CHECKOUT_OPTIONS_INIT;
+		git_strarray paths;
+
+		copts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+		paths.count = args.argc - args.pos;
+
+		if (paths.count == 0) {
+			fprintf(stderr, "error: no paths specified\n");
+			return GIT_ERROR_INVALID;
+		}
+
+		paths.strings = &args.argv[args.pos];
+		copts.paths = paths;
+
+		err = git_checkout_head(repo, &copts);
+		if (err != 0) {
+			fprintf(stderr, "error: %s\n", git_error_last()->message);
+		}
+		return err;
 	} else {
 		/**
 		 * Try to resolve a "refish" argument to a target libgit2 can use
 		 */
+
+		const char *branchname;
+		char upstreamname[1024] = "origin/";
+
 		if ((err = resolve_refish(&checkout_target, repo, args.argv[args.pos])) < 0 &&
-		    (err = guess_refish(&checkout_target, repo, args.argv[args.pos])) < 0) {
+			(err = guess_refish(&checkout_target, repo, args.argv[args.pos])) < 0) {
 			fprintf(stderr, "failed to resolve %s: %s\n", args.argv[args.pos], git_error_last()->message);
 			goto cleanup;
 		}
 		err = perform_checkout_ref(repo, checkout_target, args.argv[args.pos], &opts);
+		if (err != 0) {
+			fprintf(stderr, "failed to checkout %s: %s\n", args.argv[args.pos], git_error_last()->message);
+			goto cleanup;
+		}
+	    err = git_repository_head(&branch_ref, repo);
+		if (!err && git_branch_upstream(&upstream_ref, branch_ref) == GIT_ENOTFOUND) {
+			branchname = git_reference_shorthand(branch_ref);
+			strcat(upstreamname, branchname);
+
+			err = git_branch_set_upstream(branch_ref,upstreamname);
+			if (err == GIT_ENOTFOUND) {
+				// no upstream exists
+				git_error_clear();
+				err = 0;
+			}
+			if (err != 0) {
+				fprintf(stderr, "error: %s\n", git_error_last()->message);
+				goto cleanup;
+			}
+			printf("Branch '%s' set up to track remote branch '%s'\n", branchname, upstreamname);
+		}
 	}
 
 cleanup:
-	git_annotated_commit_free(checkout_target);
+	git_commit_free(target_commit);
+	git_object_free(target_obj);
 
+	git_annotated_commit_free(checkout_target);
+	git_reference_free(new_branch_ref);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);	
 	return err;
 }
