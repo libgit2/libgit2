@@ -46,6 +46,9 @@
 #   define htonll(x) ((((uint64_t)htonl(x)) << 32) + htonl((uint64_t)(x) >> 32))
 #  endif
 # endif
+#elif defined(__HAIKU__)
+# include <ByteOrder.h>
+# define htonll B_HOST_TO_BENDIAN_INT64
 #endif
 
 #ifndef MIN
