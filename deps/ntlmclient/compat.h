@@ -21,7 +21,9 @@
 # include <stdbool.h>
 #endif
 
-#ifdef __linux__
+#if defined(_WIN32) || defined(__APPLE__)
+/* winsock and macOS > 10.9 have htonll already */
+#elif defined(__linux__)
 /* See man page endian(3) */
 # include <endian.h>
 # define htonll htobe64
@@ -49,6 +51,8 @@
 #elif defined(__HAIKU__)
 # include <ByteOrder.h>
 # define htonll B_HOST_TO_BENDIAN_INT64
+#else
+# error "Please implement htonll for your platform"
 #endif
 
 #ifndef MIN
