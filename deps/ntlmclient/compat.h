@@ -21,31 +21,20 @@
 # include <stdbool.h>
 #endif
 
-#ifdef __linux__
-/* See man page endian(3) */
-# include <endian.h>
-# define htonll htobe64
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-/* See man page htobe64(3) */
-# include <endian.h>
-# define htonll htobe64
-#elif defined(__FreeBSD__)
-/* See man page bwaps64(9) */
-# include <sys/endian.h>
-# define htonll htobe64
-#elif defined(sun) || defined(__sun)
-/* See man page byteorder(3SOCKET) */
-# include <sys/types.h>
-# include <netinet/in.h>
-# include <inttypes.h>
+#if defined(NTLM_BIG_ENDIAN)
+static inline uint64_t ntlm_htonll(uint64_t value)
+{
+	return value;
+}
+#else
 
-# if !defined(htonll)
-#  if defined(_BIG_ENDIAN)
-#   define htonll(x) (x)
-#  else
-#   define htonll(x) ((((uint64_t)htonl(x)) << 32) + htonl((uint64_t)(x) >> 32))
-#  endif
-# endif
+# include <arpa/inet.h>
+
+static inline uint64_t ntlm_htonll(uint64_t value)
+{
+	return ((uint64_t)htonl(value) << 32) + htonl((uint64_t)value >> 32);
+}
+
 #endif
 
 #ifndef MIN
