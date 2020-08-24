@@ -184,7 +184,8 @@ int git_mwindow_contains(git_mwindow *win, off64_t offset)
 /*
  * Find the least- or most-recently-used window in a file that is not currently
  * being used. The 'only_unused' flag controls whether the caller requires the
- * file to only have unused windows.
+ * file to only have unused windows. If '*out_window' is non-null, it is used as
+ * a starting point for the comparison.
  *
  * Returns whether such a window was found in the file.
  */
@@ -197,6 +198,7 @@ static bool git_mwindow_scan_recently_used(
 {
 	git_mwindow *w, *w_last;
 	git_mwindow *lru_window = NULL, *lru_last = NULL;
+	bool found = false;
 
 	assert(mwf);
 	assert(out_window);
@@ -223,10 +225,11 @@ static bool git_mwindow_scan_recently_used(
 				(comparison_sign == GIT_MWINDOW__MRU && lru_window->last_used < w->last_used)) {
 			lru_window = w;
 			lru_last = w_last;
+			found = true;
 		}
 	}
 
-	if (!lru_window && !lru_last)
+	if (!found)
 		return false;
 
 	*out_window = lru_window;
