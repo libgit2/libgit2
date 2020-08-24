@@ -78,7 +78,7 @@ GIT_EXTERN(int) git_annotated_commit_lookup(
 	const git_oid *id);
 
 /**
- * Creates a `git_annotated_comit` from a revision string.
+ * Creates a `git_annotated_commit` from a revision string.
  *
  * See `man gitrevisions`, or
  * http://git-scm.com/docs/git-rev-parse.html#_specifying_revisions for
