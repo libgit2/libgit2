@@ -21,8 +21,7 @@
 
 # if (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 1))
 #  error Atomic primitives do not exist on this version of gcc; configure libgit2 with -DTHREADSAFE=OFF
-# endif
-# if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7))
+# elif (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7))
 #  define GIT_BUILTIN_ATOMIC
 # else
 #  define GIT_BUILTIN_SYNC

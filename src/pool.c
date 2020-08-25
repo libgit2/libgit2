@@ -21,23 +21,19 @@ struct git_pool_page {
 
 static void *pool_alloc_page(git_pool *pool, size_t size);
 
-static size_t pool_system_page_size(void)
+#ifndef GIT_DEBUG_POOL
+
+static size_t system_page_size = 0;
+
+int git_pool_global_init(void)
 {
-	static git_atomic_ssize cached_size = {0};
-	size_t page_size = 0;
-
-	if ((page_size = (size_t)git_atomic_ssize_get(&cached_size)) == 0) {
-		if (git__page_size(&page_size) < 0)
-			page_size = 4096;
-		/* allow space for malloc overhead */
-		page_size -= (2 * sizeof(void *)) + sizeof(git_pool_page);
-		git_atomic_ssize_set(&cached_size, (int64_t)page_size);
-	}
-
-	return page_size;
+	if (git__page_size(&system_page_size) < 0)
+		system_page_size = 4096;
+	/* allow space for malloc overhead */
+	system_page_size -= (2 * sizeof(void *)) + sizeof(git_pool_page);
+	return 0;
 }
 
-#ifndef GIT_DEBUG_POOL
 int git_pool_init(git_pool *pool, size_t item_size)
 {
 	assert(pool);
@@ -45,7 +41,7 @@ int git_pool_init(git_pool *pool, size_t item_size)
 
 	memset(pool, 0, sizeof(git_pool));
 	pool->item_size = item_size;
-	pool->page_size = pool_system_page_size();
+	pool->page_size = system_page_size;
 
 	return 0;
 }
@@ -114,6 +110,11 @@ bool git_pool__ptr_in_pool(git_pool *pool, void *ptr)
 }
 
 #else
+
+int git_pool_global_init(void)
+{
+	return 0;
+}
 
 static int git_pool__ptr_cmp(const void * a, const void * b)
 {

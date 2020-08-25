@@ -12,6 +12,7 @@
 #include "sysdir.h"
 #include "filter.h"
 #include "merge_driver.h"
+#include "pool.h"
 #include "streams/registry.h"
 #include "streams/mbedtls.h"
 #include "streams/openssl.h"
@@ -38,7 +39,8 @@ static git_global_init_fn git__init_callbacks[] = {
 	git_stream_registry_global_init,
 	git_openssl_stream_global_init,
 	git_mbedtls_stream_global_init,
-	git_mwindow_global_init
+	git_mwindow_global_init,
+	git_pool_global_init
 };
 
 static git_global_shutdown_fn git__shutdown_callbacks[ARRAY_SIZE(git__init_callbacks)];
