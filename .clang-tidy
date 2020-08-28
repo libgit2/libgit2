@@ -1,0 +1,4 @@
+---
+Checks:          '-*,clang-analyzer-core.NullDereference,clang-analyzer-nullability.NullableDereferenced'
+WarningsAsErrors: '*'
+...

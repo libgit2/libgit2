@@ -348,7 +348,7 @@ int lg2_merge(git_repository *repo, int argc, char **argv)
 	if (git_index_has_conflicts(index)) {
 		/* Handle conflicts */
 		output_conflicts(index);
-	} else if (!opts.no_commit) {
+	} else if (!opts.no_commit && opts.heads_count) {
 		create_merge_commit(repo, index, &opts);
 		printf("Merge made\n");
 	}

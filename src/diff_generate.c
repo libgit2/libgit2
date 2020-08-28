@@ -361,8 +361,9 @@ static const char *diff_mnemonic_prefix(
 	return pfx;
 }
 
-static void diff_set_ignore_case(git_diff *diff, bool ignore_case)
+static int diff_set_ignore_case(git_diff *diff, bool ignore_case)
 {
+	GIT_ASSERT_ARG(diff);
 	if (!ignore_case) {
 		diff->opts.flags &= ~GIT_DIFF_IGNORE_CASE;
 
@@ -384,6 +385,7 @@ static void diff_set_ignore_case(git_diff *diff, bool ignore_case)
 	}
 
 	git_vector_sort(&diff->deltas);
+	return 0;
 }
 
 static void diff_generated_free(git_diff *d)
@@ -433,10 +435,13 @@ static git_diff_generated *diff_generated_alloc(
 
 	/* Use case-insensitive compare if either iterator has
 	 * the ignore_case bit set */
-	diff_set_ignore_case(
-		&diff->base,
-		git_iterator_ignore_case(old_iter) ||
-		git_iterator_ignore_case(new_iter));
+	if (diff_set_ignore_case(
+			&diff->base,
+			git_iterator_ignore_case(old_iter) ||
+			git_iterator_ignore_case(new_iter)) < 0) {
+		git_diff_free(&diff->base);
+		return NULL;
+	}
 
 	return diff;
 }
@@ -1195,6 +1200,8 @@ int git_diff__from_iterators(
 	diff_in_progress info;
 	int error = 0;
 
+	GIT_ASSERT_ARG(out);
+
 	*out = NULL;
 
 	diff = diff_generated_alloc(repo, old_iter, new_iter);
@@ -1228,7 +1235,7 @@ int git_diff__from_iterators(
 			if ((error = opts->progress_cb(&diff->base,
 					info.oitem ? info.oitem->path : NULL,
 					info.nitem ? info.nitem->path : NULL,
-					opts->payload)))
+					opts->payload)) < 0)
 				break;
 		}
 
@@ -1256,12 +1263,12 @@ int git_diff__from_iterators(
 		old_iter->stat_calls + new_iter->stat_calls;
 
 cleanup:
-	if (!error)
-		*out = &diff->base;
-	else
+	if (error < 0) {
 		git_diff_free(&diff->base);
-
-	return error;
+		return error;
+	}
+	*out = &diff->base;
+	return 0;
 }
 
 static int diff_prepare_iterator_opts(char **prefix, git_iterator_options *a, int aflags,

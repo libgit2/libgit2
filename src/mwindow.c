@@ -282,7 +282,7 @@ static int git_mwindow_close_lru_window(void)
 
 	if (lru_last)
 		lru_last->next = lru_window->next;
-	else
+	else if (list)
 		*list = lru_window->next;
 
 	git__free(lru_window);

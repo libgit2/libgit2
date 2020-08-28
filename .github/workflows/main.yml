@@ -123,13 +123,13 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
           os: ubuntu-latest
-        - # Focal, Clang 10, OpenSSL, UndefinedBehaviorSanitizer
+        - # Focal, Clang 10, OpenSSL, UndefinedBehaviorSanitizer, clang-tidy
           container:
             name: focal
           env:
             CC: clang-10
             CFLAGS: -fsanitize=undefined,nullability -fno-sanitize-recover=undefined,nullability -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DENABLE_CLANG_TIDY=ON
             CMAKE_GENERATOR: Ninja
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true

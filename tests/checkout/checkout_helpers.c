@@ -45,8 +45,6 @@ int checkout_count_callback(
 {
 	checkout_counts *ct = payload;
 
-	GIT_UNUSED(baseline); GIT_UNUSED(target); GIT_UNUSED(workdir);
-
 	if (why & GIT_CHECKOUT_NOTIFY_CONFLICT) {
 		ct->n_conflicts++;
 
@@ -90,7 +88,7 @@ int checkout_count_callback(
 		if (ct->debug) {
 			if (workdir)
 				fprintf(stderr, "M %s\n", workdir->path);
-			else
+			else if (baseline)
 				fprintf(stderr, "D %s\n", baseline->path);
 		}
 	}

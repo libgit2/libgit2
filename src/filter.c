@@ -902,6 +902,8 @@ static int stream_list_init(
 	size_t i;
 	int error = 0;
 
+	GIT_ASSERT_ARG(out);
+
 	*out = NULL;
 
 	if (!filters) {
@@ -938,12 +940,13 @@ static int stream_list_init(
 	}
 
 out:
-	if (error)
+	if (error < 0) {
 		last_stream->close(last_stream);
-	else
-		*out = last_stream;
+		return error;
+	}
+	*out = last_stream;
 
-	return error;
+	return 0;
 }
 
 static void filter_streams_free(git_vector *streams)

@@ -45,6 +45,16 @@
 
 #define GIT_UNUSED(x) ((void)(x))
 
+/*
+ * Assume a predicate is true when running clang-tidy. Compiles to a no-op
+ * otherwise.
+ */
+#if defined(__clang_analyzer__)
+#	define GIT_ASSUME(x) assert(x)
+#else
+#	define GIT_ASSUME(x) GIT_UNUSED(x)
+#endif
+
 /* Define the printf format specifer to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)
 

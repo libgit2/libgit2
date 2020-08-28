@@ -32,7 +32,10 @@ static int annotated_commit_init(
 	*out = NULL;
 
 	annotated_commit = git__calloc(1, sizeof(git_annotated_commit));
-	GIT_ERROR_CHECK_ALLOC(annotated_commit);
+	if (!annotated_commit) {
+		error = GIT_ERROR_NOMEMORY;
+		goto done;
+	}
 
 	annotated_commit->type = GIT_ANNOTATED_COMMIT_REAL;
 
@@ -46,13 +49,18 @@ static int annotated_commit_init(
 		description = annotated_commit->id_str;
 
 	annotated_commit->description = git__strdup(description);
-	GIT_ERROR_CHECK_ALLOC(annotated_commit->description);
+	if (!annotated_commit->description) {
+		error = GIT_ERROR_NOMEMORY;
+		goto done;
+	}
 
 done:
-	if (!error)
-		*out = annotated_commit;
-
-	return error;
+	if (error < 0) {
+		git__free(annotated_commit);
+		return error;
+	}
+	*out = annotated_commit;
+	return 0;
 }
 
 static int annotated_commit_init_from_id(
