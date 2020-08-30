@@ -26,10 +26,10 @@ static void assert_zlib_equal_(
 	inflateEnd(&stream);
 
 	clar__assert_equal(
-		file, func, line, msg, 1,
+		file, func, line, msg,
 		"%d", (int)stream.total_out, (int)e_len);
 	clar__assert_equal(
-		file, func, line, "Buffer len was not exact match", 1,
+		file, func, line, "Buffer len was not exact match",
 		"%d", (int)stream.avail_out, (int)INFLATE_EXTRA);
 
 	clar__assert(

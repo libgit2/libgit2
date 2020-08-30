@@ -11,13 +11,13 @@ static void assert_matches_(const char *string, const char *pattern,
 		const char *file, const char *func, size_t line)
 {
 	if (wildmatch(pattern, string, WM_PATHNAME) == expected_wildmatch)
-		clar__fail(file, func, line, "Test failed (wildmatch).", string, 1);
+		clar__fail(file, func, line, "Test failed (wildmatch).", string);
 	if (wildmatch(pattern, string, WM_PATHNAME|WM_CASEFOLD) == expected_iwildmatch)
-		clar__fail(file, func, line, "Test failed (iwildmatch).", string, 1);
+		clar__fail(file, func, line, "Test failed (iwildmatch).", string);
 	if (wildmatch(pattern, string, 0) == expected_pathmatch)
-		clar__fail(file, func, line, "Test failed (pathmatch).", string, 1);
+		clar__fail(file, func, line, "Test failed (pathmatch).", string);
 	if (wildmatch(pattern, string, WM_CASEFOLD) == expected_ipathmatch)
-		clar__fail(file, func, line, "Test failed (ipathmatch).", string, 1);
+		clar__fail(file, func, line, "Test failed (ipathmatch).", string);
 }
 
 /*

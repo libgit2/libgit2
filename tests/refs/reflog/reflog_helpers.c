@@ -39,7 +39,7 @@ void cl_reflog_check_entry_(git_repository *repo, const char *reflog, size_t idx
 	cl_git_pass(git_reflog_read(&log, repo, reflog));
 	entry = git_reflog_entry_byindex(log, idx);
 	if (entry == NULL)
-		clar__fail(file, func, line, "Reflog has no such entry", NULL, 1);
+		clar__fail(file, func, line, "Reflog has no such entry", NULL);
 
 	if (old_spec) {
 		git_object *obj = NULL;
@@ -93,7 +93,7 @@ void cl_reflog_check_entry_(git_repository *repo, const char *reflog, size_t idx
 			git_buf_printf(&result, "\tMessage: \"%s\" != \"%s\"\n", message, entry_msg);
 	}
 	if (git_buf_len(&result) != 0)
-		clar__fail(file, func, line, "Reflog entry mismatch", git_buf_cstr(&result), 1);
+		clar__fail(file, func, line, "Reflog entry mismatch", git_buf_cstr(&result));
 
 	git_buf_dispose(&result);
 	git_reflog_free(log);

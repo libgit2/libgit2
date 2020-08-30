@@ -163,7 +163,7 @@ static void check_mode_at_line(
 	}
 
 	clar__assert_equal(
-		file, func, line, "expected_mode != actual_mode", 1,
+		file, func, line, "expected_mode != actual_mode",
 		"%07o", (int)expected, (int)(actual & 0777));
 }
 

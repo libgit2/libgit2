@@ -26,7 +26,7 @@ static void assert_is_ignored_(
 		git_ignore_path_is_ignored(&is_ignored, g_repo, filepath), 0, file, func, line);
 
 	clar__assert_equal(
-		file, func, line, "expected != is_ignored", 1, "%d",
+		file, func, line, "expected != is_ignored", "%d",
 		(int)(expected != 0), (int)(is_ignored != 0));
 }
 #define assert_is_ignored(expected, filepath) \

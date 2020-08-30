@@ -214,7 +214,7 @@ void refute__submodule_exists(
 	const char *msg, const char *file, const char *func, int line)
 {
 	clar__assert_equal(
-		file, func, line, msg, 1, "%i",
+		file, func, line, msg, "%i",
 		expected_error, (int)(git_submodule_lookup(NULL, repo, name)));
 }
 

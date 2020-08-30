@@ -89,9 +89,10 @@ GIT_INLINE(void) cl_git_thread_check(void *data)
 {
 	cl_git_thread_err *threaderr = (cl_git_thread_err *)data;
 	if (threaderr->error != 0)
-		clar__assert(0, threaderr->file, threaderr->func, threaderr->line, threaderr->expr, threaderr->error_msg, 1);
+		clar__fail(threaderr->file, threaderr->func, threaderr->line, threaderr->expr, threaderr->error_msg);
 }
 
+CL_NORETURN
 void cl_git_report_failure(int, int, const char *, const char *, int, const char *);
 
 #define cl_assert_at_line(expr,file,func,line) \
@@ -105,13 +106,16 @@ GIT_INLINE(void) clar__assert_in_range(
 	if (lo > val || hi < val) {
 		char buf[128];
 		p_snprintf(buf, sizeof(buf), "%d not in [%d,%d]", val, lo, hi);
-		clar__fail(file, func, line, err, buf, should_abort);
+		if (should_abort)
+			clar__fail(file, func, line, err, buf);
+		else
+			clar__warn(file, func, line, err, buf);
 	}
 }
 
 #define cl_assert_equal_sz(sz1,sz2) do { \
 	size_t __sz1 = (size_t)(sz1), __sz2 = (size_t)(sz2); \
-	clar__assert_equal(__FILE__,__func__,__LINE__,#sz1 " != " #sz2, 1, "%"PRIuZ, __sz1, __sz2); \
+	clar__assert_equal(__FILE__,__func__,__LINE__,#sz1 " != " #sz2, "%"PRIuZ, __sz1, __sz2); \
 } while (0)
 
 #define cl_assert_in_range(L,V,H) \
@@ -142,7 +146,7 @@ GIT_INLINE(void) clar__assert_equal_oid(
 		git_oid_fmt(&err[1], one);
 		git_oid_fmt(&err[47], two);
 
-		clar__fail(file, func, line, desc, err, 1);
+		clar__fail(file, func, line, desc, err);
 	}
 }
 
