@@ -723,3 +723,32 @@ int git_branch_is_head(
 
 	return is_same;
 }
+
+int git_branch_name_is_valid(int *valid, const char *name)
+{
+	git_buf ref_name = GIT_BUF_INIT;
+	int error = 0;
+
+	GIT_ASSERT(valid);
+
+	*valid = 0;
+
+	/*
+	 * Discourage branch name starting with dash,
+	 * https://github.com/git/git/commit/6348624010888b
+	 * and discourage HEAD as branch name,
+	 * https://github.com/git/git/commit/a625b092cc5994
+	 */
+	if (!name || name[0] == '-' || !git__strcmp(name, "HEAD"))
+		goto done;
+
+	if ((error = git_buf_puts(&ref_name, GIT_REFS_HEADS_DIR)) < 0 ||
+	    (error = git_buf_puts(&ref_name, name)) < 0)
+		goto done;
+
+	error = git_reference_name_is_valid(valid, ref_name.ptr);
+
+done:
+	git_buf_dispose(&ref_name);
+	return error;
+}
