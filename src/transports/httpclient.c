@@ -1120,11 +1120,6 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 		return -1;
 	}
 
-	if (parser->upgrade) {
-		git_error_set(GIT_ERROR_HTTP, "server requested upgrade");
-		return -1;
-	}
-
 	if (ctx->parse_status == PARSE_STATUS_ERROR) {
 		client->connected = 0;
 		return ctx->error ? ctx->error : -1;
