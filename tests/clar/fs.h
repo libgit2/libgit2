@@ -273,8 +273,14 @@ cl_fs_cleanup(void)
 # include <sys/sendfile.h>
 #endif
 
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__)
 # include <copyfile.h>
+#endif
+
+#if defined(__FreeBSD__)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/uio.h>
 #endif
 
 static void basename_r(const char **out, int *out_len, const char *in)
