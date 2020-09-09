@@ -365,6 +365,16 @@ GIT_EXTERN(int) git_tag_peel(
  */
 GIT_EXTERN(int) git_tag_dup(git_tag **out, git_tag *source);
 
+/**
+ * Determine whether a tag name is valid
+ *
+ * @param name A tag name to test
+ *
+ * @return 1 if the tag name is acceptable; 0 if it isn't
+ */
+GIT_EXTERN(int) git_tag_is_name_valid(
+	const char* name);
+
 /** @} */
 GIT_END_DECL
 #endif

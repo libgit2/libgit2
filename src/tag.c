@@ -530,3 +530,30 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	return git_tag_create_from_buffer(oid, repo, buffer, allow_ref_overwrite);
 }
 #endif
+
+int git_tag_is_name_valid(
+	const char* name)
+{
+	git_buf ref_name = GIT_BUF_INIT;
+	int ret = false;
+
+	assert(name);
+
+	/* Discourage tag name starting with dash, https://github.com/git/git/commit/4f0accd638b8d27c44066e7a866315ca67cb07ec */
+	if (name[0] == '-')
+		return false;
+
+	if (git_buf_puts(&ref_name, GIT_REFS_TAGS_DIR))
+		goto cleanup;
+	if (git_buf_puts(&ref_name, name))
+		goto cleanup;
+
+	if (git_reference_is_valid_name(git_buf_cstr(&ref_name)) == 1)
+		ret = true;
+
+cleanup:
+	git_buf_dispose(&ref_name);
+	if (!ret)
+		git_error_clear();
+	return ret;
+}
