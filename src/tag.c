@@ -522,6 +522,31 @@ int git_tag_peel(git_object **tag_target, const git_tag *tag)
 	return git_object_peel(tag_target, (const git_object *)tag, GIT_OBJECT_ANY);
 }
 
+int git_tag_name_is_valid(int *valid, const char *name)
+{
+	git_buf ref_name = GIT_BUF_INIT;
+	int error = 0;
+
+	GIT_ASSERT(valid);
+
+	/*
+	 * Discourage tag name starting with dash,
+	 * https://github.com/git/git/commit/4f0accd638b8d2
+	 */
+	if (!name || name[0] == '-')
+		goto done;
+
+	if ((error = git_buf_puts(&ref_name, GIT_REFS_TAGS_DIR)) < 0 ||
+	    (error = git_buf_puts(&ref_name, name)) < 0)
+		goto done;
+
+	error = git_reference_name_is_valid(valid, ref_name.ptr);
+
+done:
+	git_buf_dispose(&ref_name);
+	return error;
+}
+
 /* Deprecated Functions */
 
 #ifndef GIT_DEPRECATE_HARD
