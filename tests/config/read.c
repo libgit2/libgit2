@@ -952,7 +952,16 @@ void test_config_read__get_mapped(void)
 	int known_good;
 
 	cl_set_cleanup(&clean_test_config, NULL);
-	cl_git_mkfile("./testconfig", "[header]\n  key1 = 1\n  key2 = true\n  key3\n  key4 = always\n  key5 = false\n  key6 = 0\n  key7 = never\n  key8 = On\n  key9 = off");
+	cl_git_mkfile("./testconfig", "[header]\n"
+								  "  key1 = 1\n"
+								  "  key2 = true\n"
+								  "  key3\n"
+								  "  key4 = always\n"
+								  "  key5 = false\n"
+								  "  key6 = 0\n"
+								  "  key7 = never\n"
+								  "  key8 = On\n"
+								  "  key9 = off\n");
 	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
 
 	// check parsing bool and string
