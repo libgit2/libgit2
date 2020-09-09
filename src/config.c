@@ -1238,7 +1238,7 @@ int git_config_lookup_map_value(
 		case GIT_CONFIGMAP_TRUE: {
 			int bool_val;
 
-			if (git__parse_bool(&bool_val, value) == 0 &&
+			if (git_config_parse_bool(&bool_val, value) == 0 &&
 				bool_val == (int)m->type) {
 				*out = m->map_value;
 				return 0;
