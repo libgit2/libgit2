@@ -451,7 +451,7 @@ static int parse_variable(git_config_parser *reader, char **var_name, char **var
 			git_buf_attach(&multi_value, value, 0);
 			value = NULL;
 
-			if (parse_multiline_variable(reader, &multi_value, quote_count) < 0 ||
+			if (parse_multiline_variable(reader, &multi_value, quote_count % 2) < 0 ||
 			    git_buf_oom(&multi_value)) {
 				error = -1;
 				git_buf_dispose(&multi_value);

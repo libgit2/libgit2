@@ -59,6 +59,11 @@ void test_config_stress__comments(void)
 	assert_config_value(config, "some.section.multi", "hi, this is a ; multiline comment # with ;\n special chars and other stuff !@#");
 	assert_config_value(config, "some.section.multi2", "good, this is a ; multiline comment # with ;\n special chars and other stuff !@#");
 	assert_config_value(config, "some.section.back", "this is \ba phrase");
+	assert_config_value(config, "some.section.dollar", "some $sign");
+	assert_config_value(config, "some.section.multiquotes", "!ls  x                     ls  # comment2                     $HOME");
+	assert_config_value(config, "some.section.multiquotes2", "!ls  x                      ls  \"# comment2                      $HOME\"");
+	assert_config_value(config, "some.section.multiquotes3", "hi # ho there are # more quotes");
+	assert_config_value(config, "some.section.quotecomment", "hi # ho there are # more");
 
 	git_config_free(config);
 }
