@@ -952,7 +952,7 @@ void test_config_read__get_mapped(void)
 	int known_good;
 
 	cl_set_cleanup(&clean_test_config, NULL);
-	cl_git_mkfile("./testconfig", "[header]\n  key1 = 1\n  key2 = true\n  key3\n  key4 = always\n  key5 = false\n  key6 = 0\n  key7 = never\n");
+	cl_git_mkfile("./testconfig", "[header]\n  key1 = 1\n  key2 = true\n  key3\n  key4 = always\n  key5 = false\n  key6 = 0\n  key7 = never\n  key8 = On\n  key9 = off");
 	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
 
 	// check parsing bool and string
@@ -962,6 +962,8 @@ void test_config_read__get_mapped(void)
 	cl_assert_equal_i(val, MAP_TRUE);
 	cl_git_pass(git_config_get_mapped(&val, cfg, "header.key3", _test_map1, ARRAY_SIZE(_test_map1)));
 	cl_assert_equal_i(val, MAP_TRUE);
+	cl_git_pass(git_config_get_mapped(&val, cfg, "header.key8", _test_map1, ARRAY_SIZE(_test_map1)));
+	cl_assert_equal_i(val, MAP_TRUE);
 
 	cl_git_pass(git_config_get_mapped(&val, cfg, "header.key4", _test_map1, ARRAY_SIZE(_test_map1)));
 	cl_assert_equal_i(val, MAP_ALWAYS);
@@ -969,6 +971,8 @@ void test_config_read__get_mapped(void)
 	cl_git_pass(git_config_get_mapped(&val, cfg, "header.key5", _test_map1, ARRAY_SIZE(_test_map1)));
 	cl_assert_equal_i(val, MAP_FALSE);
 	cl_git_pass(git_config_get_mapped(&val, cfg, "header.key6", _test_map1, ARRAY_SIZE(_test_map1)));
+	cl_assert_equal_i(val, MAP_FALSE);
+	cl_git_pass(git_config_get_mapped(&val, cfg, "header.key9", _test_map1, ARRAY_SIZE(_test_map1)));
 	cl_assert_equal_i(val, MAP_FALSE);
 
 	cl_git_fail(git_config_get_mapped(&val, cfg, "header.key7", _test_map1, ARRAY_SIZE(_test_map1)));
@@ -986,6 +990,8 @@ void test_config_read__get_mapped(void)
 	cl_git_fail(git_config_get_mapped(&val, cfg, "header.key4", _test_map2, ARRAY_SIZE(_test_map2)));
 	cl_git_fail(git_config_get_mapped(&val, cfg, "header.key5", _test_map2, ARRAY_SIZE(_test_map2)));
 	cl_git_fail(git_config_get_mapped(&val, cfg, "header.key7", _test_map2, ARRAY_SIZE(_test_map2)));
+	cl_git_fail(git_config_get_mapped(&val, cfg, "header.key8", _test_map2, ARRAY_SIZE(_test_map2)));
+	cl_git_fail(git_config_get_mapped(&val, cfg, "header.key9", _test_map2, ARRAY_SIZE(_test_map2)));
 
 	git_config_free(cfg);
 }
