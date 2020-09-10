@@ -102,7 +102,11 @@ GIT_EXTERN(int) git_blob_create_fromstream_commit(
 GIT_EXTERN(int) git_blob_create_frombuffer(
 	git_oid *id, git_repository *repo, const void *buffer, size_t len);
 
-/** Deprecated in favor of @see git_blob_filter */
+/** Deprecated in favor of `git_blob_filter`.
+ *
+ * @deprecated Use git_blob_filter
+ * @see git_blob_filter
+ */
 GIT_EXTERN(int) git_blob_filtered_content(
 	git_buf *out,
 	git_blob *blob,
