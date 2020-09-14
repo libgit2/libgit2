@@ -277,12 +277,6 @@ cl_fs_cleanup(void)
 # include <copyfile.h>
 #endif
 
-#if defined(__FreeBSD__)
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
-#endif
-
 static void basename_r(const char **out, int *out_len, const char *in)
 {
 	size_t in_len = strlen(in), start_pos;
@@ -362,7 +356,7 @@ fs_copyfile_helper(const char *source, size_t source_len, const char *dest, int 
 	cl_must_pass((in = open(source, O_RDONLY)));
 	cl_must_pass((out = open(dest, O_WRONLY|O_CREAT|O_TRUNC, dest_mode)));
 
-#if USE_FCOPYFILE && (defined(__APPLE__) || defined(__FreeBSD__))
+#if USE_FCOPYFILE && defined(__APPLE__)
 	((void)(source_len)); /* unused */
 	cl_must_pass(fcopyfile(in, out, 0, COPYFILE_DATA));
 #elif USE_SENDFILE && defined(__linux__)
