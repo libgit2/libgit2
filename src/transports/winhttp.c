@@ -49,6 +49,10 @@
 # define WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2 0x00000800
 #endif
 
+#ifndef WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3
+# define WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3 0x00002000
+#endif
+
 #ifndef HTTP_STATUS_PERMANENT_REDIRECT
 # define HTTP_STATUS_PERMANENT_REDIRECT 308
 #endif
@@ -743,7 +747,8 @@ static int winhttp_connect(
 	DWORD protocols =
 		WINHTTP_FLAG_SECURE_PROTOCOL_TLS1 |
 		WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_1 |
-		WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2;
+		WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2 |
+		WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3;
 
 	t->session = NULL;
 	t->connection = NULL;
@@ -788,14 +793,20 @@ static int winhttp_connect(
 	}
 
 	/*
-	 * Do a best-effort attempt to enable TLS 1.2 but allow this to
-	 * fail; if TLS 1.2 support is not available for some reason,
+	 * Do a best-effort attempt to enable TLS 1.3 and 1.2 but allow this to
+	 * fail; if TLS 1.2 or 1.3 support is not available for some reason,
 	 * ignore the failure (it will keep the default protocols).
 	 */
-	WinHttpSetOption(t->session,
+	if (WinHttpSetOption(t->session,
 		WINHTTP_OPTION_SECURE_PROTOCOLS,
 		&protocols,
-		sizeof(protocols));
+		sizeof(protocols)) == FALSE) {
+		protocols &= ~WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3;
+		WinHttpSetOption(t->session,
+			WINHTTP_OPTION_SECURE_PROTOCOLS,
+			&protocols,
+			sizeof(protocols));
+	}
 
 	if (!WinHttpSetTimeouts(t->session, default_timeout, default_connect_timeout, default_timeout, default_timeout)) {
 		git_error_set(GIT_ERROR_OS, "failed to set timeouts for WinHTTP");
