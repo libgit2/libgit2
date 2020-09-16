@@ -573,6 +573,15 @@
 	"-is additional context\n" \
 	"-below it!\n"
 
+#define PATCH_DELETE_ORIGINAL_SPACES \
+	"diff --git a/file with spaces.txt b/file with spaces.txt\n" \
+	"deleted file mode 100644\n" \
+	"index 9432026..0000000\n" \
+	"--- a/file with spaces.txt\n" \
+	"+++ /dev/null\n" \
+	"@@ -1 +0,0 @@\n" \
+	"-a line\n"
+
 #define PATCH_RENAME_EXACT \
 	"diff --git a/file.txt b/newfile.txt\n" \
 	"similarity index 100%\n" \
@@ -766,6 +775,26 @@
 	" and this\n" \
 	"-is additional context\n" \
 	" below it!\n" \
+
+#define PATCH_NAME_WHITESPACE_TRAILING \
+	"diff --git a/file with spaces.txt  b/file with spaces.txt \n" \
+	"index 9432026..83759c0 100644\n" \
+	"--- a/file with spaces.txt \n" \
+	"+++ b/file with spaces.txt \n" \
+	"@@ -0,3 +0,2 @@\n" \
+	" and this\n" \
+	"-is additional context\n" \
+	" below it!\n" \
+
+#define PATCH_NAME_WHITESPACE_TRAILING_CRLF \
+	"diff --git a/file with spaces.txt  b/file with spaces.txt \r\n" \
+	"index 9432026..83759c0 100644\r\n" \
+	"--- a/file with spaces.txt \r\n" \
+	"+++ b/file with spaces.txt \r\n" \
+	"@@ -0,3 +0,2 @@\r\n" \
+	" and this\r\n" \
+	"-is additional context\r\n" \
+	" below it!\r\n" \
 
 #define PATCH_CORRUPT_GIT_HEADER \
 	"diff --git a/file.txt\n" \

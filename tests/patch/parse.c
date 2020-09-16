@@ -4,28 +4,59 @@
 
 #include "patch_common.h"
 
-static void ensure_patch_validity(git_patch *patch)
+
+static void ensure_patch_validity_null_side(
+		char *idstr, const git_diff_file *side, const git_diff_file *other) {
+	cl_assert(side->path != NULL);
+	cl_assert_equal_s(side->path, other->path);
+	cl_assert(side->mode == GIT_FILEMODE_UNREADABLE);
+	cl_assert_equal_i(0, side->id_abbrev);
+	git_oid_nfmt(idstr, side->id_abbrev, &side->id);
+	cl_assert_equal_s(idstr, "");
+	cl_assert_equal_i(0, side->size);
+}
+
+static void ensure_patch_validity_general(
+	git_patch *patch,
+	char *name,
+	char *old_idstr,
+	char *new_idstr)
 {
 	const git_diff_delta *delta;
 	char idstr[GIT_OID_HEXSZ+1] = {0};
 
 	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
-	cl_assert_equal_i(2, delta->nfiles);
+	cl_assert_equal_i(old_idstr[0] && new_idstr[0] ? 2 : 1, delta->nfiles);
 
-	cl_assert_equal_s(delta->old_file.path, "file.txt");
-	cl_assert(delta->old_file.mode == GIT_FILEMODE_BLOB);
-	cl_assert_equal_i(7, delta->old_file.id_abbrev);
-	git_oid_nfmt(idstr, delta->old_file.id_abbrev, &delta->old_file.id);
-	cl_assert_equal_s(idstr, "9432026");
-	cl_assert_equal_i(0, delta->old_file.size);
+	if (!old_idstr[0]) {
+		cl_assert(delta->status == GIT_DELTA_ADDED);
+		ensure_patch_validity_null_side(idstr, &delta->old_file, &delta->new_file);
+	} else {
+		cl_assert_equal_s(delta->old_file.path, name);
+		cl_assert(delta->old_file.mode == GIT_FILEMODE_BLOB);
+		cl_assert_equal_i(strlen(old_idstr), delta->old_file.id_abbrev);
+		git_oid_nfmt(idstr, delta->old_file.id_abbrev, &delta->old_file.id);
+		cl_assert_equal_s(idstr, old_idstr);
+		cl_assert_equal_i(0, delta->old_file.size);
+	}
 
-	cl_assert_equal_s(delta->new_file.path, "file.txt");
-	cl_assert(delta->new_file.mode == GIT_FILEMODE_BLOB);
-	cl_assert_equal_i(7, delta->new_file.id_abbrev);
-	git_oid_nfmt(idstr, delta->new_file.id_abbrev, &delta->new_file.id);
-	cl_assert_equal_s(idstr, "cd8fd12");
-	cl_assert_equal_i(0, delta->new_file.size);
+	idstr[0] = '\0';
+
+	if (!new_idstr[0]) {
+		cl_assert(delta->status == GIT_DELTA_DELETED);
+		ensure_patch_validity_null_side(idstr, &delta->new_file, &delta->old_file);
+	} else {
+		cl_assert_equal_s(delta->new_file.path, name);
+		cl_assert(delta->new_file.mode == GIT_FILEMODE_BLOB);
+		cl_assert_equal_i(strlen(new_idstr), delta->new_file.id_abbrev);
+		git_oid_nfmt(idstr, delta->new_file.id_abbrev, &delta->new_file.id);
+		cl_assert_equal_s(idstr, new_idstr);
+		cl_assert_equal_i(0, delta->new_file.size);
+	}
 }
+
+#define ensure_patch_validity(patch) \
+	ensure_patch_validity_general(patch, "file.txt", "9432026", "cd8fd12");
 
 static void ensure_identical_patch_inout(const char *content) {
 	git_buf buf = GIT_BUF_INIT;
@@ -127,6 +158,116 @@ void test_patch_parse__no_newline_at_end_of_old_file(void)
 void test_patch_parse__files_with_whitespaces_succeeds(void)
 {
 	ensure_identical_patch_inout(PATCH_NAME_WHITESPACE);
+}
+
+void test_patch_parse__filenames_with_whitespace_are_valid(void)
+{
+	git_patch *patch;
+	const char *content = PATCH_NAME_WHITESPACE;
+
+	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
+	ensure_patch_validity_general(patch, "file with spaces.txt", "9432026", "83759c0");
+	git_patch_free(patch);
+}
+
+void test_patch_parse__filenames_with_trailing_whitespace_are_valid(void)
+{
+	git_patch *patch;
+	const char *content = PATCH_NAME_WHITESPACE_TRAILING;
+
+	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
+	ensure_patch_validity_general(patch, "file with spaces.txt", "9432026", "83759c0");
+	git_patch_free(patch);
+}
+
+void test_patch_parse__filenames_with_trailing_whitespace_and_crlf_endings_are_valid(void)
+{
+	git_patch *patch;
+	const char *content = PATCH_NAME_WHITESPACE_TRAILING_CRLF;
+
+	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
+	ensure_patch_validity_general(patch, "file with spaces.txt", "9432026", "83759c0");
+	git_patch_free(patch);
+}
+
+void test_patch_parse__added_files_are_valid(void)
+{
+	git_patch *patch;
+	const char *content = PATCH_ADD_ORIGINAL;
+
+	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
+	ensure_patch_validity_general(patch, "file.txt", "", "9432026");
+	git_patch_free(patch);
+}
+
+void test_patch_parse__added_filenames_with_whitespace_are_valid(void)
+{
+	git_patch *patch;
+	const git_diff_delta *delta;
+	const char *content = PATCH_ORIGINAL_NEW_FILE_WITH_SPACE;
+	char idstr[GIT_OID_HEXSZ+1] = {0};
+
+	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
+	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
+	cl_assert_equal_i(1, delta->nfiles);
+
+	cl_assert(delta->old_file.path == NULL);
+	cl_assert(delta->old_file.mode == GIT_FILEMODE_UNREADABLE);
+	cl_assert_equal_i(0, delta->old_file.id_abbrev);
+	git_oid_nfmt(idstr, delta->old_file.id_abbrev, &delta->old_file.id);
+	cl_assert_equal_s(idstr, "");
+	cl_assert_equal_i(0, delta->old_file.size);
+
+	idstr[0] = '\0';
+
+	cl_assert_equal_s(delta->new_file.path, "sp ace.txt");
+	cl_assert(delta->new_file.mode == GIT_FILEMODE_BLOB);
+	cl_assert_equal_i(9, delta->new_file.id_abbrev);
+	git_oid_nfmt(idstr, delta->new_file.id_abbrev, &delta->new_file.id);
+	cl_assert_equal_s(idstr, "789819226");
+	cl_assert_equal_i(0, delta->new_file.size);
+
+	git_patch_free(patch);
+}
+
+void test_patch_parse__deleted_files_are_valid(void)
+{
+	git_patch *patch;
+	const char *content = PATCH_DELETE_ORIGINAL;
+
+	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
+	ensure_patch_validity_general(patch, "file.txt", "9432026", "");
+	git_patch_free(patch);
+}
+
+void test_patch_parse__deleted_filenames_with_whitespace_are_valid(void)
+{
+	git_patch *patch;
+	const git_diff_delta *delta;
+	const char *content = PATCH_DELETE_ORIGINAL_SPACES;
+	char idstr[GIT_OID_HEXSZ+1] = {0};
+
+	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
+	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
+	cl_assert_equal_i(1, delta->nfiles);
+
+	cl_assert_equal_s(delta->old_file.path, "file with spaces.txt");
+	cl_assert(delta->old_file.mode == GIT_FILEMODE_BLOB);
+	cl_assert_equal_i(7, delta->old_file.id_abbrev);
+	git_oid_nfmt(idstr, delta->old_file.id_abbrev, &delta->old_file.id);
+	cl_assert_equal_s(idstr, "9432026");
+	cl_assert_equal_i(0, delta->old_file.size);
+
+	idstr[0] = '\0';
+
+	cl_assert(delta->new_file.path == NULL);
+	cl_assert(delta->new_file.mode == GIT_FILEMODE_UNREADABLE);
+	cl_assert_equal_i(0, delta->new_file.id_abbrev);
+	git_oid_nfmt(idstr, delta->new_file.id_abbrev, &delta->new_file.id);
+	cl_assert_equal_s(idstr, "");
+	cl_assert_equal_i(0, delta->new_file.size);
+
+	git_patch_free(patch);
 }
 
 void test_patch_parse__lifetime_of_patch_does_not_depend_on_buffer(void)
