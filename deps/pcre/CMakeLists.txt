@@ -20,9 +20,6 @@ CHECK_FUNCTION_EXISTS(_strtoi64 HAVE__STRTOI64)
 CHECK_TYPE_SIZE("long long"             LONG_LONG)
 CHECK_TYPE_SIZE("unsigned long long"    UNSIGNED_LONG_LONG)
 
-DISABLE_WARNINGS(unused-function)
-DISABLE_WARNINGS(implicit-fallthrough)
-
 # User-configurable options
 
 SET(SUPPORT_PCRE8 1)
@@ -136,5 +133,8 @@ SET(targets)
 # pcre
 INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR}/src/pcre)
 ADD_LIBRARY(pcre OBJECT ${PCRE_HEADERS} ${PCRE_SOURCES} ${PCREPOSIX_SOURCES})
+
+target_disable_warning(pcre unused-function)
+target_disable_warning(pcre implicit-fallthrough)
 
 # end CMakeLists.txt

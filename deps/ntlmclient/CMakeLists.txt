@@ -3,8 +3,6 @@ LIST(SORT SRC_NTLMCLIENT)
 
 ADD_DEFINITIONS(-DNTLM_STATIC=1)
 
-DISABLE_WARNINGS(implicit-fallthrough)
-
 IF(USE_HTTPS STREQUAL "SecureTransport")
 	ADD_DEFINITIONS(-DCRYPT_COMMONCRYPTO)
 	SET(SRC_NTLMCLIENT_CRYPTO "crypt_commoncrypto.c")
@@ -22,3 +20,4 @@ ELSE()
 ENDIF()
 
 ADD_LIBRARY(ntlmclient OBJECT ${SRC_NTLMCLIENT} ${SRC_NTLMCLIENT_CRYPTO})
+target_disable_warning(ntlmclient implicit-fallthrough)

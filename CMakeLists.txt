@@ -97,6 +97,40 @@ IF (DEPRECATE_HARD)
 	ADD_DEFINITIONS(-DGIT_DEPRECATE_HARD)
 ENDIF()
 
+function(target_libgit2_warnings TARGET)
+	if(ENABLE_WERROR)
+		if(MSVC)
+			target_compile_options(${TARGET} PRIVATE -WX)
+		else()
+			target_compile_options(${TARGET} PRIVATE -Werror)
+		endif()
+	endif()
+
+	target_enable_warning(${TARGET} all)
+	target_enable_warning(${TARGET} extra)
+	target_enable_warning(${TARGET} documentation)
+	target_disable_warning(${TARGET} documentation-deprecated-sync)
+	target_disable_warning(${TARGET} missing-field-initializers)
+	target_enable_warning(${TARGET} strict-aliasing)
+	target_enable_warning(${TARGET} strict-prototypes)
+	target_enable_warning(${TARGET} declaration-after-statement)
+	target_enable_warning(${TARGET} shift-count-overflow)
+	target_enable_warning(${TARGET} unused-const-variable)
+	target_enable_warning(${TARGET} unused-function)
+	target_enable_warning(${TARGET} int-conversion)
+
+	# MinGW uses gcc, which expects POSIX formatting for printf, but
+	# uses the Windows C library, which uses its own format specifiers.
+	# Disable format specifier warnings.
+	if(MINGW)
+		target_disable_warning(${TARGET} format)
+		target_disable_warning(${TARGET} format-security)
+	else()
+		target_enable_warning(${TARGET} format)
+		target_enable_warning(${TARGET} format-security)
+	endif()
+endfunction()
+
 # Platform specific compilation flags
 IF (MSVC)
 	IF (STDCALL)
@@ -197,9 +231,6 @@ ELSE ()
 
 	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE ${CMAKE_C_FLAGS}")
 
-	ENABLE_WARNINGS(all)
-	ENABLE_WARNINGS(extra)
-
 	IF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 		SET(CMAKE_C_FLAGS "-D_POSIX_C_SOURCE=200112L -D__EXTENSIONS__ -D_POSIX_PTHREAD_SEMANTICS ${CMAKE_C_FLAGS}")
 	ENDIF()
@@ -220,28 +251,6 @@ ELSE ()
 		# us to define this in order to use them
 		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
 	ENDIF ()
-
-	enable_warnings(documentation)
-	disable_warnings(documentation-deprecated-sync)
-	disable_warnings(missing-field-initializers)
-	enable_warnings(strict-aliasing)
-	enable_warnings(strict-prototypes)
-	enable_warnings(declaration-after-statement)
-	enable_warnings(shift-count-overflow)
-	enable_warnings(unused-const-variable)
-	enable_warnings(unused-function)
-	enable_warnings(int-conversion)
-
-	# MinGW uses gcc, which expects POSIX formatting for printf, but
-	# uses the Windows C library, which uses its own format specifiers.
-	# Disable format specifier warnings.
-	if(MINGW)
-		disable_warnings(format)
-		disable_warnings(format-security)
-	else()
-		enable_warnings(format)
-		enable_warnings(format-security)
-	endif()
 ENDIF()
 
 # Ensure that MinGW provides the correct header files.
