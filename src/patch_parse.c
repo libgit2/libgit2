@@ -198,7 +198,7 @@ static int parse_header_git_index(
 		return -1;
 
 	if (git_parse_peek(&c, &ctx->parse_ctx, 0) == 0 && c == ' ') {
-		uint16_t mode;
+		uint16_t mode = 0;
 
 		git_parse_advance_chars(&ctx->parse_ctx, 1);
 
