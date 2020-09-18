@@ -119,22 +119,19 @@ SET(PCREPOSIX_SOURCES pcreposix.c)
 
 # Build setup
 
-ADD_DEFINITIONS(-DHAVE_CONFIG_H)
-
-IF(MSVC)
-        ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS)
-ENDIF(MSVC)
-
 SET(CMAKE_INCLUDE_CURRENT_DIR 1)
 
 SET(targets)
 
 # Libraries
 # pcre
-INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR}/src/pcre)
-ADD_LIBRARY(pcre OBJECT ${PCRE_HEADERS} ${PCRE_SOURCES} ${PCREPOSIX_SOURCES})
-
+add_library(pcre OBJECT ${PCRE_HEADERS} ${PCRE_SOURCES} ${PCREPOSIX_SOURCES})
+target_include_directories(pcre PRIVATE ${PROJECT_BINARY_DIR}/src/pcre)
 target_disable_warning(pcre unused-function)
 target_disable_warning(pcre implicit-fallthrough)
+target_compile_definitions(pcre PRIVATE HAVE_CONFIG_H)
+if(MSVC)
+	target_compile_definitions(pcre PRIVATE _CRT_SECURE_NO_DEPRECATE _CRT_SECURE_NO_WARNINGS)
+endif()
 
 # end CMakeLists.txt
