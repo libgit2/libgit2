@@ -6,7 +6,7 @@
 and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
-           Copyright (c) 1997-2018 University of Cambridge
+           Copyright (c) 1997-2020 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,17 @@ functions. */
 #include "config.h"
 #endif
 
+
+/* Ensure that the PCREPOSIX_EXP_xxx macros are set appropriately for
+compiling these functions. This must come before including pcreposix.h, where
+they are set for an application (using these functions) if they have not
+previously been set. */
+
+#if defined(_WIN32) && !defined(PCRE_STATIC)
+#  define PCREPOSIX_EXP_DECL extern __declspec(dllexport)
+#  define PCREPOSIX_EXP_DEFN __declspec(dllexport)
+#endif
+
 /* We include pcre.h before pcre_internal.h so that the PCRE library functions
 are declared as "import" for Windows by defining PCRE_EXP_DECL as "import".
 This is needed even though pcre_internal.h itself includes pcre.h, because it
@@ -60,110 +71,110 @@ does so after it has set PCRE_EXP_DECL to "export" if it is not already set. */
 
 static const int eint[] = {
   0,           /* no error */
-  PCRE_REG_EESCAPE, /* \ at end of pattern */
-  PCRE_REG_EESCAPE, /* \c at end of pattern */
-  PCRE_REG_EESCAPE, /* unrecognized character follows \ */
-  PCRE_REG_BADBR,   /* numbers out of order in {} quantifier */
+  REG_EESCAPE, /* \ at end of pattern */
+  REG_EESCAPE, /* \c at end of pattern */
+  REG_EESCAPE, /* unrecognized character follows \ */
+  REG_BADBR,   /* numbers out of order in {} quantifier */
   /* 5 */
-  PCRE_REG_BADBR,   /* number too big in {} quantifier */
-  PCRE_REG_EBRACK,  /* missing terminating ] for character class */
-  PCRE_REG_ECTYPE,  /* invalid escape sequence in character class */
-  PCRE_REG_ERANGE,  /* range out of order in character class */
-  PCRE_REG_BADRPT,  /* nothing to repeat */
+  REG_BADBR,   /* number too big in {} quantifier */
+  REG_EBRACK,  /* missing terminating ] for character class */
+  REG_ECTYPE,  /* invalid escape sequence in character class */
+  REG_ERANGE,  /* range out of order in character class */
+  REG_BADRPT,  /* nothing to repeat */
   /* 10 */
-  PCRE_REG_BADRPT,  /* operand of unlimited repeat could match the empty string */
-  PCRE_REG_ASSERT,  /* internal error: unexpected repeat */
-  PCRE_REG_BADPAT,  /* unrecognized character after (? */
-  PCRE_REG_BADPAT,  /* POSIX named classes are supported only within a class */
-  PCRE_REG_EPAREN,  /* missing ) */
+  REG_BADRPT,  /* operand of unlimited repeat could match the empty string */
+  REG_ASSERT,  /* internal error: unexpected repeat */
+  REG_BADPAT,  /* unrecognized character after (? */
+  REG_BADPAT,  /* POSIX named classes are supported only within a class */
+  REG_EPAREN,  /* missing ) */
   /* 15 */
-  PCRE_REG_ESUBREG, /* reference to non-existent subpattern */
-  PCRE_REG_INVARG,  /* erroffset passed as NULL */
-  PCRE_REG_INVARG,  /* unknown option bit(s) set */
-  PCRE_REG_EPAREN,  /* missing ) after comment */
-  PCRE_REG_ESIZE,   /* parentheses nested too deeply */
+  REG_ESUBREG, /* reference to non-existent subpattern */
+  REG_INVARG,  /* erroffset passed as NULL */
+  REG_INVARG,  /* unknown option bit(s) set */
+  REG_EPAREN,  /* missing ) after comment */
+  REG_ESIZE,   /* parentheses nested too deeply */
   /* 20 */
-  PCRE_REG_ESIZE,   /* regular expression too large */
-  PCRE_REG_ESPACE,  /* failed to get memory */
-  PCRE_REG_EPAREN,  /* unmatched parentheses */
-  PCRE_REG_ASSERT,  /* internal error: code overflow */
-  PCRE_REG_BADPAT,  /* unrecognized character after (?< */
+  REG_ESIZE,   /* regular expression too large */
+  REG_ESPACE,  /* failed to get memory */
+  REG_EPAREN,  /* unmatched parentheses */
+  REG_ASSERT,  /* internal error: code overflow */
+  REG_BADPAT,  /* unrecognized character after (?< */
   /* 25 */
-  PCRE_REG_BADPAT,  /* lookbehind assertion is not fixed length */
-  PCRE_REG_BADPAT,  /* malformed number or name after (?( */
-  PCRE_REG_BADPAT,  /* conditional group contains more than two branches */
-  PCRE_REG_BADPAT,  /* assertion expected after (?( */
-  PCRE_REG_BADPAT,  /* (?R or (?[+-]digits must be followed by ) */
+  REG_BADPAT,  /* lookbehind assertion is not fixed length */
+  REG_BADPAT,  /* malformed number or name after (?( */
+  REG_BADPAT,  /* conditional group contains more than two branches */
+  REG_BADPAT,  /* assertion expected after (?( */
+  REG_BADPAT,  /* (?R or (?[+-]digits must be followed by ) */
   /* 30 */
-  PCRE_REG_ECTYPE,  /* unknown POSIX class name */
-  PCRE_REG_BADPAT,  /* POSIX collating elements are not supported */
-  PCRE_REG_INVARG,  /* this version of PCRE is not compiled with PCRE_UTF8 support */
-  PCRE_REG_BADPAT,  /* spare error */
-  PCRE_REG_BADPAT,  /* character value in \x{} or \o{} is too large */
+  REG_ECTYPE,  /* unknown POSIX class name */
+  REG_BADPAT,  /* POSIX collating elements are not supported */
+  REG_INVARG,  /* this version of PCRE is not compiled with PCRE_UTF8 support */
+  REG_BADPAT,  /* spare error */
+  REG_BADPAT,  /* character value in \x{} or \o{} is too large */
   /* 35 */
-  PCRE_REG_BADPAT,  /* invalid condition (?(0) */
-  PCRE_REG_BADPAT,  /* \C not allowed in lookbehind assertion */
-  PCRE_REG_EESCAPE, /* PCRE does not support \L, \l, \N, \U, or \u */
-  PCRE_REG_BADPAT,  /* number after (?C is > 255 */
-  PCRE_REG_BADPAT,  /* closing ) for (?C expected */
+  REG_BADPAT,  /* invalid condition (?(0) */
+  REG_BADPAT,  /* \C not allowed in lookbehind assertion */
+  REG_EESCAPE, /* PCRE does not support \L, \l, \N, \U, or \u */
+  REG_BADPAT,  /* number after (?C is > 255 */
+  REG_BADPAT,  /* closing ) for (?C expected */
   /* 40 */
-  PCRE_REG_BADPAT,  /* recursive call could loop indefinitely */
-  PCRE_REG_BADPAT,  /* unrecognized character after (?P */
-  PCRE_REG_BADPAT,  /* syntax error in subpattern name (missing terminator) */
-  PCRE_REG_BADPAT,  /* two named subpatterns have the same name */
-  PCRE_REG_BADPAT,  /* invalid UTF-8 string */
+  REG_BADPAT,  /* recursive call could loop indefinitely */
+  REG_BADPAT,  /* unrecognized character after (?P */
+  REG_BADPAT,  /* syntax error in subpattern name (missing terminator) */
+  REG_BADPAT,  /* two named subpatterns have the same name */
+  REG_BADPAT,  /* invalid UTF-8 string */
   /* 45 */
-  PCRE_REG_BADPAT,  /* support for \P, \p, and \X has not been compiled */
-  PCRE_REG_BADPAT,  /* malformed \P or \p sequence */
-  PCRE_REG_BADPAT,  /* unknown property name after \P or \p */
-  PCRE_REG_BADPAT,  /* subpattern name is too long (maximum 32 characters) */
-  PCRE_REG_BADPAT,  /* too many named subpatterns (maximum 10,000) */
+  REG_BADPAT,  /* support for \P, \p, and \X has not been compiled */
+  REG_BADPAT,  /* malformed \P or \p sequence */
+  REG_BADPAT,  /* unknown property name after \P or \p */
+  REG_BADPAT,  /* subpattern name is too long (maximum 32 characters) */
+  REG_BADPAT,  /* too many named subpatterns (maximum 10,000) */
   /* 50 */
-  PCRE_REG_BADPAT,  /* repeated subpattern is too long */
-  PCRE_REG_BADPAT,  /* octal value is greater than \377 (not in UTF-8 mode) */
-  PCRE_REG_BADPAT,  /* internal error: overran compiling workspace */
-  PCRE_REG_BADPAT,  /* internal error: previously-checked referenced subpattern not found */
-  PCRE_REG_BADPAT,  /* DEFINE group contains more than one branch */
+  REG_BADPAT,  /* repeated subpattern is too long */
+  REG_BADPAT,  /* octal value is greater than \377 (not in UTF-8 mode) */
+  REG_BADPAT,  /* internal error: overran compiling workspace */
+  REG_BADPAT,  /* internal error: previously-checked referenced subpattern not found */
+  REG_BADPAT,  /* DEFINE group contains more than one branch */
   /* 55 */
-  PCRE_REG_BADPAT,  /* repeating a DEFINE group is not allowed */
-  PCRE_REG_INVARG,  /* inconsistent NEWLINE options */
-  PCRE_REG_BADPAT,  /* \g is not followed followed by an (optionally braced) non-zero number */
-  PCRE_REG_BADPAT,  /* a numbered reference must not be zero */
-  PCRE_REG_BADPAT,  /* an argument is not allowed for (*ACCEPT), (*FAIL), or (*COMMIT) */
+  REG_BADPAT,  /* repeating a DEFINE group is not allowed */
+  REG_INVARG,  /* inconsistent NEWLINE options */
+  REG_BADPAT,  /* \g is not followed followed by an (optionally braced) non-zero number */
+  REG_BADPAT,  /* a numbered reference must not be zero */
+  REG_BADPAT,  /* an argument is not allowed for (*ACCEPT), (*FAIL), or (*COMMIT) */
   /* 60 */
-  PCRE_REG_BADPAT,  /* (*VERB) not recognized */
-  PCRE_REG_BADPAT,  /* number is too big */
-  PCRE_REG_BADPAT,  /* subpattern name expected */
-  PCRE_REG_BADPAT,  /* digit expected after (?+ */
-  PCRE_REG_BADPAT,  /* ] is an invalid data character in JavaScript compatibility mode */
+  REG_BADPAT,  /* (*VERB) not recognized */
+  REG_BADPAT,  /* number is too big */
+  REG_BADPAT,  /* subpattern name expected */
+  REG_BADPAT,  /* digit expected after (?+ */
+  REG_BADPAT,  /* ] is an invalid data character in JavaScript compatibility mode */
   /* 65 */
-  PCRE_REG_BADPAT,  /* different names for subpatterns of the same number are not allowed */
-  PCRE_REG_BADPAT,  /* (*MARK) must have an argument */
-  PCRE_REG_INVARG,  /* this version of PCRE is not compiled with PCRE_UCP support */
-  PCRE_REG_BADPAT,  /* \c must be followed by an ASCII character */
-  PCRE_REG_BADPAT,  /* \k is not followed by a braced, angle-bracketed, or quoted name */
+  REG_BADPAT,  /* different names for subpatterns of the same number are not allowed */
+  REG_BADPAT,  /* (*MARK) must have an argument */
+  REG_INVARG,  /* this version of PCRE is not compiled with PCRE_UCP support */
+  REG_BADPAT,  /* \c must be followed by an ASCII character */
+  REG_BADPAT,  /* \k is not followed by a braced, angle-bracketed, or quoted name */
   /* 70 */
-  PCRE_REG_BADPAT,  /* internal error: unknown opcode in find_fixedlength() */
-  PCRE_REG_BADPAT,  /* \N is not supported in a class */
-  PCRE_REG_BADPAT,  /* too many forward references */
-  PCRE_REG_BADPAT,  /* disallowed UTF-8/16/32 code point (>= 0xd800 && <= 0xdfff) */
-  PCRE_REG_BADPAT,  /* invalid UTF-16 string (should not occur) */
+  REG_BADPAT,  /* internal error: unknown opcode in find_fixedlength() */
+  REG_BADPAT,  /* \N is not supported in a class */
+  REG_BADPAT,  /* too many forward references */
+  REG_BADPAT,  /* disallowed UTF-8/16/32 code point (>= 0xd800 && <= 0xdfff) */
+  REG_BADPAT,  /* invalid UTF-16 string (should not occur) */
   /* 75 */
-  PCRE_REG_BADPAT,  /* overlong MARK name */
-  PCRE_REG_BADPAT,  /* character value in \u.... sequence is too large */
-  PCRE_REG_BADPAT,  /* invalid UTF-32 string (should not occur) */
-  PCRE_REG_BADPAT,  /* setting UTF is disabled by the application */
-  PCRE_REG_BADPAT,  /* non-hex character in \\x{} (closing brace missing?) */
+  REG_BADPAT,  /* overlong MARK name */
+  REG_BADPAT,  /* character value in \u.... sequence is too large */
+  REG_BADPAT,  /* invalid UTF-32 string (should not occur) */
+  REG_BADPAT,  /* setting UTF is disabled by the application */
+  REG_BADPAT,  /* non-hex character in \\x{} (closing brace missing?) */
   /* 80 */
-  PCRE_REG_BADPAT,  /* non-octal character in \o{} (closing brace missing?) */
-  PCRE_REG_BADPAT,  /* missing opening brace after \o */
-  PCRE_REG_BADPAT,  /* parentheses too deeply nested */
-  PCRE_REG_BADPAT,  /* invalid range in character class */
-  PCRE_REG_BADPAT,  /* group name must start with a non-digit */
+  REG_BADPAT,  /* non-octal character in \o{} (closing brace missing?) */
+  REG_BADPAT,  /* missing opening brace after \o */
+  REG_BADPAT,  /* parentheses too deeply nested */
+  REG_BADPAT,  /* invalid range in character class */
+  REG_BADPAT,  /* group name must start with a non-digit */
   /* 85 */
-  PCRE_REG_BADPAT,  /* parentheses too deeply nested (stack check) */
-  PCRE_REG_BADPAT,  /* missing digits in \x{} or \o{} */
-  PCRE_REG_BADPAT   /* pattern too complicated */
+  REG_BADPAT,  /* parentheses too deeply nested (stack check) */
+  REG_BADPAT,  /* missing digits in \x{} or \o{} */
+  REG_BADPAT   /* pattern too complicated */
 };
 
 /* Table of texts corresponding to POSIX error codes */
@@ -197,7 +208,7 @@ static const char *const pstring[] = {
 *************************************************/
 
 PCREPOSIX_EXP_DEFN size_t PCRE_CALL_CONVENTION
-pcre_regerror(int errcode, const pcre_regex_t *preg, char *errbuf, size_t errbuf_size)
+regerror(int errcode, const regex_t *preg, char *errbuf, size_t errbuf_size)
 {
 const char *message, *addmessage;
 size_t length, addlength;
@@ -232,7 +243,7 @@ return length + addlength;
 *************************************************/
 
 PCREPOSIX_EXP_DEFN void PCRE_CALL_CONVENTION
-pcre_regfree(pcre_regex_t *preg)
+regfree(regex_t *preg)
 {
 (PUBL(free))(preg->re_pcre);
 }
@@ -255,7 +266,7 @@ Returns:      0 on success
 */
 
 PCREPOSIX_EXP_DEFN int PCRE_CALL_CONVENTION
-pcre_regcomp(pcre_regex_t *preg, const char *pattern, int cflags)
+regcomp(regex_t *preg, const char *pattern, int cflags)
 {
 const char *errorptr;
 int erroffset;
@@ -263,13 +274,13 @@ int errorcode;
 int options = 0;
 int re_nsub = 0;
 
-if ((cflags & PCRE_REG_ICASE) != 0)    options |= PCRE_CASELESS;
-if ((cflags & PCRE_REG_NEWLINE) != 0)  options |= PCRE_MULTILINE;
-if ((cflags & PCRE_REG_DOTALL) != 0)   options |= PCRE_DOTALL;
-if ((cflags & PCRE_REG_NOSUB) != 0)    options |= PCRE_NO_AUTO_CAPTURE;
-if ((cflags & PCRE_REG_UTF8) != 0)     options |= PCRE_UTF8;
-if ((cflags & PCRE_REG_UCP) != 0)      options |= PCRE_UCP;
-if ((cflags & PCRE_REG_UNGREEDY) != 0) options |= PCRE_UNGREEDY;
+if ((cflags & REG_ICASE) != 0)    options |= PCRE_CASELESS;
+if ((cflags & REG_NEWLINE) != 0)  options |= PCRE_MULTILINE;
+if ((cflags & REG_DOTALL) != 0)   options |= PCRE_DOTALL;
+if ((cflags & REG_NOSUB) != 0)    options |= PCRE_NO_AUTO_CAPTURE;
+if ((cflags & REG_UTF8) != 0)     options |= PCRE_UTF8;
+if ((cflags & REG_UCP) != 0)      options |= PCRE_UCP;
+if ((cflags & REG_UNGREEDY) != 0) options |= PCRE_UNGREEDY;
 
 preg->re_pcre = pcre_compile2(pattern, options, &errorcode, &errorptr,
   &erroffset, NULL);
@@ -281,12 +292,13 @@ should not happen, but we all make mistakes), return REG_BADPAT. */
 if (preg->re_pcre == NULL)
   {
   return (errorcode < (int)(sizeof(eint)/sizeof(const int)))?
-    eint[errorcode] : PCRE_REG_BADPAT;
+    eint[errorcode] : REG_BADPAT;
   }
 
 (void)pcre_fullinfo((const pcre *)preg->re_pcre, NULL, PCRE_INFO_CAPTURECOUNT,
   &re_nsub);
 preg->re_nsub = (size_t)re_nsub;
+preg->re_erroffset = (size_t)(-1);  /* No meaning after successful compile */
 return 0;
 }
 
@@ -309,8 +321,8 @@ be set. When this is the case, the nmatch and pmatch arguments are ignored, and
 the only result is yes/no/error. */
 
 PCREPOSIX_EXP_DEFN int PCRE_CALL_CONVENTION
-pcre_regexec(const pcre_regex_t *preg, const char *string, size_t nmatch,
-  pcre_regmatch_t pmatch[], int eflags)
+regexec(const regex_t *preg, const char *string, size_t nmatch,
+  regmatch_t pmatch[], int eflags)
 {
 int rc, so, eo;
 int options = 0;
@@ -320,11 +332,9 @@ BOOL allocated_ovector = FALSE;
 BOOL nosub =
   (REAL_PCRE_OPTIONS((const pcre *)preg->re_pcre) & PCRE_NO_AUTO_CAPTURE) != 0;
 
-if ((eflags & PCRE_REG_NOTBOL) != 0) options |= PCRE_NOTBOL;
-if ((eflags & PCRE_REG_NOTEOL) != 0) options |= PCRE_NOTEOL;
-if ((eflags & PCRE_REG_NOTEMPTY) != 0) options |= PCRE_NOTEMPTY;
-
-((pcre_regex_t *)preg)->re_erroffset = (size_t)(-1);  /* Only has meaning after compile */
+if ((eflags & REG_NOTBOL) != 0) options |= PCRE_NOTBOL;
+if ((eflags & REG_NOTEOL) != 0) options |= PCRE_NOTEOL;
+if ((eflags & REG_NOTEMPTY) != 0) options |= PCRE_NOTEMPTY;
 
 /* When no string data is being returned, or no vector has been passed in which
 to put it, ensure that nmatch is zero. Otherwise, ensure the vector for holding
@@ -340,9 +350,9 @@ else if (nmatch > 0)
     }
   else
     {
-    if (nmatch > INT_MAX/(sizeof(int) * 3)) return PCRE_REG_ESPACE;
+    if (nmatch > INT_MAX/(sizeof(int) * 3)) return REG_ESPACE;
     ovector = (int *)malloc(sizeof(int) * nmatch * 3);
-    if (ovector == NULL) return PCRE_REG_ESPACE;
+    if (ovector == NULL) return REG_ESPACE;
     allocated_ovector = TRUE;
     }
   }
@@ -352,9 +362,9 @@ The man page from OS X says "REG_STARTEND affects only the location of the
 string, not how it is matched". That is why the "so" value is used to bump the
 start location rather than being passed as a PCRE "starting offset". */
 
-if ((eflags & PCRE_REG_STARTEND) != 0)
+if ((eflags & REG_STARTEND) != 0)
   {
-  if (pmatch == NULL) return PCRE_REG_INVARG;
+  if (pmatch == NULL) return REG_INVARG;
   so = pmatch[0].rm_so;
   eo = pmatch[0].rm_eo;
   }
@@ -401,20 +411,20 @@ switch(rc)
 
   case 0:
   case (sizeof(eint)/sizeof(int) == ERRCOUNT):
-  return PCRE_REG_ASSERT;
+  return REG_ASSERT;
 /* ========================================================================== */
 
-  case PCRE_ERROR_NOMATCH: return PCRE_REG_NOMATCH;
-  case PCRE_ERROR_NULL: return PCRE_REG_INVARG;
-  case PCRE_ERROR_BADOPTION: return PCRE_REG_INVARG;
-  case PCRE_ERROR_BADMAGIC: return PCRE_REG_INVARG;
-  case PCRE_ERROR_UNKNOWN_NODE: return PCRE_REG_ASSERT;
-  case PCRE_ERROR_NOMEMORY: return PCRE_REG_ESPACE;
-  case PCRE_ERROR_MATCHLIMIT: return PCRE_REG_ESPACE;
-  case PCRE_ERROR_BADUTF8: return PCRE_REG_INVARG;
-  case PCRE_ERROR_BADUTF8_OFFSET: return PCRE_REG_INVARG;
-  case PCRE_ERROR_BADMODE: return PCRE_REG_INVARG;
-  default: return PCRE_REG_ASSERT;
+  case PCRE_ERROR_NOMATCH: return REG_NOMATCH;
+  case PCRE_ERROR_NULL: return REG_INVARG;
+  case PCRE_ERROR_BADOPTION: return REG_INVARG;
+  case PCRE_ERROR_BADMAGIC: return REG_INVARG;
+  case PCRE_ERROR_UNKNOWN_NODE: return REG_ASSERT;
+  case PCRE_ERROR_NOMEMORY: return REG_ESPACE;
+  case PCRE_ERROR_MATCHLIMIT: return REG_ESPACE;
+  case PCRE_ERROR_BADUTF8: return REG_INVARG;
+  case PCRE_ERROR_BADUTF8_OFFSET: return REG_INVARG;
+  case PCRE_ERROR_BADMODE: return REG_INVARG;
+  default: return REG_ASSERT;
   }
 }
 

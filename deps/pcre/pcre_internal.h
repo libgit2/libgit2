@@ -146,9 +146,29 @@ exported symbols. That's why, in the non-Windows case, we set PCRE_EXP_DEFN and
 PCRE_EXP_DATA_DEFN only if they are not already set. */
 
 #ifndef PCRE_EXP_DECL
-# define PCRE_EXP_DECL       extern
-# define PCRE_EXP_DEFN
-# define PCRE_EXP_DATA_DEFN
+#  ifdef _WIN32
+#    ifndef PCRE_STATIC
+#      define PCRE_EXP_DECL       extern __declspec(dllexport)
+#      define PCRE_EXP_DEFN       __declspec(dllexport)
+#      define PCRE_EXP_DATA_DEFN  __declspec(dllexport)
+#    else
+#      define PCRE_EXP_DECL       extern
+#      define PCRE_EXP_DEFN
+#      define PCRE_EXP_DATA_DEFN
+#    endif
+#  else
+#    ifdef __cplusplus
+#      define PCRE_EXP_DECL       extern "C"
+#    else
+#      define PCRE_EXP_DECL       extern
+#    endif
+#    ifndef PCRE_EXP_DEFN
+#      define PCRE_EXP_DEFN       PCRE_EXP_DECL
+#    endif
+#    ifndef PCRE_EXP_DATA_DEFN
+#      define PCRE_EXP_DATA_DEFN
+#    endif
+#  endif
 #endif
 
 /* When compiling with the MSVC compiler, it is sometimes necessary to include

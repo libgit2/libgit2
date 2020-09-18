@@ -44,48 +44,51 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdlib.h>
 
-#define PCREPOSIX_EXP_DEFN  extern
-#define PCREPOSIX_EXP_DECL  extern
+/* Allow for C++ users */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Options, mostly defined by POSIX, but with some extras. */
 
-#define PCRE_REG_ICASE     0x0001   /* Maps to PCRE_CASELESS */
-#define PCRE_REG_NEWLINE   0x0002   /* Maps to PCRE_MULTILINE */
-#define PCRE_REG_NOTBOL    0x0004   /* Maps to PCRE_NOTBOL */
-#define PCRE_REG_NOTEOL    0x0008   /* Maps to PCRE_NOTEOL */
-#define PCRE_REG_DOTALL    0x0010   /* NOT defined by POSIX; maps to PCRE_DOTALL */
-#define PCRE_REG_NOSUB     0x0020   /* Maps to PCRE_NO_AUTO_CAPTURE */
-#define PCRE_REG_UTF8      0x0040   /* NOT defined by POSIX; maps to PCRE_UTF8 */
-#define PCRE_REG_STARTEND  0x0080   /* BSD feature: pass subject string by so,eo */
-#define PCRE_REG_NOTEMPTY  0x0100   /* NOT defined by POSIX; maps to PCRE_NOTEMPTY */
-#define PCRE_REG_UNGREEDY  0x0200   /* NOT defined by POSIX; maps to PCRE_UNGREEDY */
-#define PCRE_REG_UCP       0x0400   /* NOT defined by POSIX; maps to PCRE_UCP */
+#define REG_ICASE     0x0001   /* Maps to PCRE_CASELESS */
+#define REG_NEWLINE   0x0002   /* Maps to PCRE_MULTILINE */
+#define REG_NOTBOL    0x0004   /* Maps to PCRE_NOTBOL */
+#define REG_NOTEOL    0x0008   /* Maps to PCRE_NOTEOL */
+#define REG_DOTALL    0x0010   /* NOT defined by POSIX; maps to PCRE_DOTALL */
+#define REG_NOSUB     0x0020   /* Maps to PCRE_NO_AUTO_CAPTURE */
+#define REG_UTF8      0x0040   /* NOT defined by POSIX; maps to PCRE_UTF8 */
+#define REG_STARTEND  0x0080   /* BSD feature: pass subject string by so,eo */
+#define REG_NOTEMPTY  0x0100   /* NOT defined by POSIX; maps to PCRE_NOTEMPTY */
+#define REG_UNGREEDY  0x0200   /* NOT defined by POSIX; maps to PCRE_UNGREEDY */
+#define REG_UCP       0x0400   /* NOT defined by POSIX; maps to PCRE_UCP */
 
 /* This is not used by PCRE, but by defining it we make it easier
 to slot PCRE into existing programs that make POSIX calls. */
 
-#define PCRE_REG_EXTENDED  0
+#define REG_EXTENDED  0
 
 /* Error values. Not all these are relevant or used by the wrapper. */
 
 enum {
-  PCRE_REG_ASSERT = 1,  /* internal error ? */
-  PCRE_REG_BADBR,       /* invalid repeat counts in {} */
-  PCRE_REG_BADPAT,      /* pattern error */
-  PCRE_REG_BADRPT,      /* ? * + invalid */
-  PCRE_REG_EBRACE,      /* unbalanced {} */
-  PCRE_REG_EBRACK,      /* unbalanced [] */
-  PCRE_REG_ECOLLATE,    /* collation error - not relevant */
-  PCRE_REG_ECTYPE,      /* bad class */
-  PCRE_REG_EESCAPE,     /* bad escape sequence */
-  PCRE_REG_EMPTY,       /* empty expression */
-  PCRE_REG_EPAREN,      /* unbalanced () */
-  PCRE_REG_ERANGE,      /* bad range inside [] */
-  PCRE_REG_ESIZE,       /* expression too big */
-  PCRE_REG_ESPACE,      /* failed to get memory */
-  PCRE_REG_ESUBREG,     /* bad back reference */
-  PCRE_REG_INVARG,      /* bad argument */
-  PCRE_REG_NOMATCH      /* match failed */
+  REG_ASSERT = 1,  /* internal error ? */
+  REG_BADBR,       /* invalid repeat counts in {} */
+  REG_BADPAT,      /* pattern error */
+  REG_BADRPT,      /* ? * + invalid */
+  REG_EBRACE,      /* unbalanced {} */
+  REG_EBRACK,      /* unbalanced [] */
+  REG_ECOLLATE,    /* collation error - not relevant */
+  REG_ECTYPE,      /* bad class */
+  REG_EESCAPE,     /* bad escape sequence */
+  REG_EMPTY,       /* empty expression */
+  REG_EPAREN,      /* unbalanced () */
+  REG_ERANGE,      /* bad range inside [] */
+  REG_ESIZE,       /* expression too big */
+  REG_ESPACE,      /* failed to get memory */
+  REG_ESUBREG,     /* bad back reference */
+  REG_INVARG,      /* bad argument */
+  REG_NOMATCH      /* match failed */
 };
 
 
@@ -95,23 +98,49 @@ typedef struct {
   void *re_pcre;
   size_t re_nsub;
   size_t re_erroffset;
-} pcre_regex_t;
+} regex_t;
 
 /* The structure in which a captured offset is returned. */
 
-typedef int pcre_regoff_t;
+typedef int regoff_t;
 
 typedef struct {
-  pcre_regoff_t rm_so;
-  pcre_regoff_t rm_eo;
-} pcre_regmatch_t;
+  regoff_t rm_so;
+  regoff_t rm_eo;
+} regmatch_t;
+
+/* When an application links to a PCRE DLL in Windows, the symbols that are
+imported have to be identified as such. When building PCRE, the appropriate
+export settings are needed, and are set in pcreposix.c before including this
+file. */
+
+#if defined(_WIN32) && !defined(PCRE_STATIC) && !defined(PCREPOSIX_EXP_DECL)
+#  define PCREPOSIX_EXP_DECL  extern __declspec(dllimport)
+#  define PCREPOSIX_EXP_DEFN  __declspec(dllimport)
+#endif
+
+/* By default, we use the standard "extern" declarations. */
+
+#ifndef PCREPOSIX_EXP_DECL
+#  ifdef __cplusplus
+#    define PCREPOSIX_EXP_DECL  extern "C"
+#    define PCREPOSIX_EXP_DEFN  extern "C"
+#  else
+#    define PCREPOSIX_EXP_DECL  extern
+#    define PCREPOSIX_EXP_DEFN  extern
+#  endif
+#endif
 
 /* The functions */
 
-PCREPOSIX_EXP_DECL int pcre_regcomp(pcre_regex_t *, const char *, int);
-PCREPOSIX_EXP_DECL int pcre_regexec(const pcre_regex_t *, const char *, size_t,
-                     pcre_regmatch_t *, int);
-PCREPOSIX_EXP_DECL size_t pcre_regerror(int, const pcre_regex_t *, char *, size_t);
-PCREPOSIX_EXP_DECL void pcre_regfree(pcre_regex_t *);
+PCREPOSIX_EXP_DECL int regcomp(regex_t *, const char *, int);
+PCREPOSIX_EXP_DECL int regexec(const regex_t *, const char *, size_t,
+                     regmatch_t *, int);
+PCREPOSIX_EXP_DECL size_t regerror(int, const regex_t *, char *, size_t);
+PCREPOSIX_EXP_DECL void regfree(regex_t *);
+
+#ifdef __cplusplus
+}   /* extern "C" */
+#endif
 
 #endif /* End of pcreposix.h */
