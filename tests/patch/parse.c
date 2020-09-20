@@ -176,7 +176,7 @@ void test_patch_parse__filenames_with_trailing_whitespace_are_valid(void)
 	const char *content = PATCH_NAME_WHITESPACE_TRAILING;
 
 	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
-	ensure_patch_validity_general(patch, "file with spaces.txt", "9432026", "83759c0");
+	ensure_patch_validity_general(patch, "file with spaces.txt ", "9432026", "83759c0");
 	git_patch_free(patch);
 }
 
@@ -186,7 +186,7 @@ void test_patch_parse__filenames_with_trailing_whitespace_and_crlf_endings_are_v
 	const char *content = PATCH_NAME_WHITESPACE_TRAILING_CRLF;
 
 	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
-	ensure_patch_validity_general(patch, "file with spaces.txt", "9432026", "83759c0");
+	ensure_patch_validity_general(patch, "file with spaces.txt ", "9432026", "83759c0");
 	git_patch_free(patch);
 }
 
@@ -203,30 +203,10 @@ void test_patch_parse__added_files_are_valid(void)
 void test_patch_parse__added_filenames_with_whitespace_are_valid(void)
 {
 	git_patch *patch;
-	const git_diff_delta *delta;
 	const char *content = PATCH_ORIGINAL_NEW_FILE_WITH_SPACE;
-	char idstr[GIT_OID_HEXSZ+1] = {0};
 
 	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
-	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
-	cl_assert_equal_i(1, delta->nfiles);
-
-	cl_assert(delta->old_file.path == NULL);
-	cl_assert(delta->old_file.mode == GIT_FILEMODE_UNREADABLE);
-	cl_assert_equal_i(0, delta->old_file.id_abbrev);
-	git_oid_nfmt(idstr, delta->old_file.id_abbrev, &delta->old_file.id);
-	cl_assert_equal_s(idstr, "");
-	cl_assert_equal_i(0, delta->old_file.size);
-
-	idstr[0] = '\0';
-
-	cl_assert_equal_s(delta->new_file.path, "sp ace.txt");
-	cl_assert(delta->new_file.mode == GIT_FILEMODE_BLOB);
-	cl_assert_equal_i(9, delta->new_file.id_abbrev);
-	git_oid_nfmt(idstr, delta->new_file.id_abbrev, &delta->new_file.id);
-	cl_assert_equal_s(idstr, "789819226");
-	cl_assert_equal_i(0, delta->new_file.size);
-
+	ensure_patch_validity_general(patch, "sp ace.txt", "", "789819226");
 	git_patch_free(patch);
 }
 
@@ -243,30 +223,10 @@ void test_patch_parse__deleted_files_are_valid(void)
 void test_patch_parse__deleted_filenames_with_whitespace_are_valid(void)
 {
 	git_patch *patch;
-	const git_diff_delta *delta;
 	const char *content = PATCH_DELETE_ORIGINAL_SPACES;
-	char idstr[GIT_OID_HEXSZ+1] = {0};
 
 	cl_git_pass(git_patch_from_buffer(&patch, content, strlen(content), NULL));
-	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
-	cl_assert_equal_i(1, delta->nfiles);
-
-	cl_assert_equal_s(delta->old_file.path, "file with spaces.txt");
-	cl_assert(delta->old_file.mode == GIT_FILEMODE_BLOB);
-	cl_assert_equal_i(7, delta->old_file.id_abbrev);
-	git_oid_nfmt(idstr, delta->old_file.id_abbrev, &delta->old_file.id);
-	cl_assert_equal_s(idstr, "9432026");
-	cl_assert_equal_i(0, delta->old_file.size);
-
-	idstr[0] = '\0';
-
-	cl_assert(delta->new_file.path == NULL);
-	cl_assert(delta->new_file.mode == GIT_FILEMODE_UNREADABLE);
-	cl_assert_equal_i(0, delta->new_file.id_abbrev);
-	git_oid_nfmt(idstr, delta->new_file.id_abbrev, &delta->new_file.id);
-	cl_assert_equal_s(idstr, "");
-	cl_assert_equal_i(0, delta->new_file.size);
-
+	ensure_patch_validity_general(patch, "file with spaces.txt", "9432026", "");
 	git_patch_free(patch);
 }
 

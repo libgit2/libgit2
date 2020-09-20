@@ -366,9 +366,9 @@ void test_diff_stats__new_file(void)
 	"2.21.0\n";
 
 	const char *stat =
-	" Gurjeet Singh | 1 +\n"
+	" Gurjeet Singh\t | 1 +\n"
 	" 1 file changed, 1 insertion(+)\n"
-	" create mode 100644 Gurjeet Singh\n";
+	" create mode 100644 Gurjeet Singh\t\n";
 
 	cl_git_pass(git_diff_from_buffer(&diff, input, strlen(input)));
 	cl_git_pass(git_diff_get_stats(&_stats, diff));
