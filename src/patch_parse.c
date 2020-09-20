@@ -65,7 +65,34 @@ static size_t header_path_len(git_patch_parse_ctx *ctx)
 	return len;
 }
 
-static int parse_header_path_buf(git_buf *path, git_patch_parse_ctx *ctx, size_t path_len)
+/*
+ * XXX -- REVIEW-ONLY COMMENT -- DELETE ME -- this helper is an alternative to
+ * the proposed 'trim' param in parse_header_path_buf(), if that's deemed too
+ * invasive/messy. If not, and that param is retained, this func can be
+ * removed.
+ */
+static bool is_stat_file_line(size_t path_len, const char *line) {
+	char *rewound;
+
+	if (strncmp(line, "\n+++ ", 5) == 0)
+		return true;
+	/* Is this case possible? */
+	if (strncmp(line, "\n--- ", 5) == 0)
+		return true;
+
+	rewound = (char*) (line - path_len - 5);
+	if (strncmp(rewound, "\n+++ ", 5) == 0)
+		return true;
+	if (strncmp(rewound, "\n--- ", 5) == 0)
+		return true;
+	return false;
+}
+
+static int parse_header_path_buf(
+	git_buf *path,
+	git_patch_parse_ctx *ctx,
+	size_t path_len,
+	bool trim)
 {
 	int error;
 
@@ -74,7 +101,13 @@ static int parse_header_path_buf(git_buf *path, git_patch_parse_ctx *ctx, size_t
 
 	git_parse_advance_chars(&ctx->parse_ctx, path_len);
 
-	git_buf_rtrim(path);
+	if (trim)
+		git_buf_rtrim(path);
+	else if (path->size > 0) {
+		assert(is_stat_file_line(path->size, ctx->parse_ctx.line));
+		if (path->ptr[path->size - 1] == '\r' && path->asize > --path->size)
+			path->ptr[path->size] = '\0';
+	}
 
 	if (path->size > 0 && path->ptr[0] == '"' &&
 	    (error = git_buf_unquote(path)) < 0)
@@ -94,7 +127,7 @@ static int parse_header_path(char **out, git_patch_parse_ctx *ctx)
 	git_buf path = GIT_BUF_INIT;
 	int error;
 
-	if ((error = parse_header_path_buf(&path, ctx, header_path_len(ctx))) < 0)
+	if ((error = parse_header_path_buf(&path, ctx, header_path_len(ctx), true)) < 0)
 		goto out;
 	*out = git_buf_detach(&path);
 
@@ -115,13 +148,98 @@ static int parse_header_git_oldpath(
 		goto out;
 	}
 
-	if ((error = parse_header_path_buf(&old_path, ctx, ctx->parse_ctx.line_len - 1)) <  0)
+	if ((error = parse_header_path_buf(&old_path, ctx, ctx->parse_ctx.line_len - 1, false)
+	     ) <  0)
 		goto out;
 
 	patch->old_path = git_buf_detach(&old_path);
 
 out:
 	git_buf_dispose(&old_path);
+	return error;
+}
+
+/*
+ * XXX -- REVIEW-ONLY COMMENT -- DELETE ME -- This function finds the prefixed
+ * name for the /dev/null side of a from-file/to-file pair because their
+ * filenames are unambiguous. It assumes that except for their prefixes, the
+ * two filenames are identical. When that's NOT the case, it returns an error
+ * containing both names. On success, it sets header_old_path AND
+ * header_new_path, which are skipped by parse_header_start() but preferred
+ * during validation in check_filenames().
+ */
+static int parse_header_resolve_addition_deletion(
+	git_patch_parsed *patch, git_patch_parse_ctx *ctx)
+{
+	int error;
+	char *start;
+	char *new, *old;
+	char *lower, *upper;
+
+	new = NULL;
+	old = NULL;
+	error = 0;
+
+	start = (char*) ctx->parse_ctx.line;
+	while (--start > ctx->parse_ctx.content) {
+		if (*start == '\n' &&
+		    git__prefixcmp(start + 1, "diff --git ") == 0) {
+			++start;
+			break;
+		}
+	}
+	assert((git__prefixcmp(start, "diff --git ") == 0));
+	lower = start + strlen("diff --git ");
+	assert((upper = strchr(lower, '\n')));
+	if (*(upper - 1) == '\r')
+		--upper;
+
+	/* --- /dev/null, from-file is NULL bec. to-file has been added */
+	if (patch->base.delta->status == GIT_DELTA_ADDED) {
+		assert(patch->new_path);
+		upper -= strlen(patch->new_path);
+		new = git__strndup(upper, strlen(patch->new_path));
+		if (strcmp(new, patch->new_path) != 0) {
+			error = git_parse_err(
+				"Path mismatch: header %s vs. file %s",
+				new, patch->new_path);
+			goto out;
+		}
+		--upper;
+		assert(*upper == ' ');
+		old = git__strndup(lower, strlen(new));
+	}
+	/* +++ /dev/null, to-file is NULL bec. from-file has been deleted*/
+	else {
+		assert(patch->old_path);
+		old = git__strndup(lower, strlen(patch->old_path));
+		if (strcmp(old, patch->old_path) != 0) {
+			error = git_parse_err(
+				"Path mismatch: header %s vs. file %s",
+				old, patch->old_path);
+			goto out;
+		};
+		lower += strlen(old);
+		assert(*lower == ' ');
+		++lower;
+		new = git__strndup(lower, upper - lower);
+	}
+	/* XXX -- REVIEW-ONLY COMMENT -- DELETE ME -- these pass:
+	 *
+	 * int pfx_len = patch->ctx->opts.prefix_len + strlen("/");
+	 * assert(strcmp(old, new) != 0);
+	 * assert(strcmp(old + pfx_len, new + pfx_len) == 0);
+	 */
+out:
+	if (!error) {
+		patch->header_old_path = old;
+		patch->header_new_path = new;
+		return 0;
+	}
+	if (new)
+		git__free(new);
+	if (old)
+		git__free(old);
 	return error;
 }
 
@@ -137,10 +255,20 @@ static int parse_header_git_newpath(
 		goto out;
 	}
 
-	if ((error = parse_header_path_buf(&new_path, ctx, ctx->parse_ctx.line_len - 1)) <  0)
+	if ((error = parse_header_path_buf(&new_path, ctx, ctx->parse_ctx.line_len - 1, false)
+	     ) <  0)
 		goto out;
 	patch->new_path = git_buf_detach(&new_path);
 
+	if (patch->base.delta->status != GIT_DELTA_ADDED &&
+	    patch->base.delta->status != GIT_DELTA_DELETED)
+		goto out;
+	if (patch->header_old_path != NULL &&
+	    patch->header_new_path != NULL)
+		goto out;
+
+	/* For now, ignore returned error pending expert vetting */
+	parse_header_resolve_addition_deletion(patch, ctx);
 out:
 	git_buf_dispose(&new_path);
 	return error;
@@ -259,7 +387,7 @@ static int parse_header_rename(
 {
 	git_buf path = GIT_BUF_INIT;
 
-	if (parse_header_path_buf(&path, ctx, header_path_len(ctx)) < 0)
+	if (parse_header_path_buf(&path, ctx, header_path_len(ctx), true) < 0)
 		return -1;
 
 	/* Note: the `rename from` and `rename to` lines include the literal
@@ -1023,20 +1151,23 @@ static int check_filenames(git_patch_parsed *patch)
 	    (prefixed_new && check_prefix(&patch->new_prefix, &new_prefixlen, patch, prefixed_new) < 0))
 		return -1;
 
-	/* Prefer the rename filenames as they are unambiguous and unprefixed */
+	/*
+	 * Prefer the rename filenames as they are unambiguous and unprefixed.
+	 * Then prefer ---/+++ names, which are likewise unambiguous but prefixed.
+	 */
 	if (patch->rename_old_path)
 		patch->base.delta->old_file.path = patch->rename_old_path;
 	else if (prefixed_old)
 		patch->base.delta->old_file.path = prefixed_old + old_prefixlen;
 	else
-		patch->base.delta->old_file.path = NULL;
+		assert(patch->base.delta->old_file.path == NULL);
 
 	if (patch->rename_new_path)
 		patch->base.delta->new_file.path = patch->rename_new_path;
 	else if (prefixed_new)
 		patch->base.delta->new_file.path = prefixed_new + new_prefixlen;
 	else
-		patch->base.delta->new_file.path = NULL;
+		assert(patch->base.delta->new_file.path == NULL);
 
 	if (!patch->base.delta->old_file.path &&
 	    !patch->base.delta->new_file.path)
