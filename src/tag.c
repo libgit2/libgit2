@@ -355,7 +355,7 @@ int git_tag_create_from_buffer(git_oid *oid, git_repository *repo, const char *b
 		goto on_error;
 
 	if (tag.type != target_obj->cached.type) {
-		git_error_set(GIT_ERROR_TAG, "the type for the given target is invalid");
+		git_error_set(GIT_ERROR_TAG, "the type for the given target is invalidi now");
 		goto on_error;
 	}
 
