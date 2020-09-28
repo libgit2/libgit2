@@ -18,6 +18,7 @@
 #include "thread-utils.h"
 #include "git2/global.h"
 #include "transports/ssh.h"
+#include "warning.h"
 
 #if defined(GIT_MSVC_CRTDBG)
 #include "win32/w32_stack.h"
@@ -31,6 +32,7 @@ typedef int (*git_global_init_fn)(void);
 static git_global_init_fn git__init_callbacks[] = {
 	git_allocator_global_init,
 	git_hash_global_init,
+	git_warning_global_init,
 	git_sysdir_global_init,
 	git_filter_global_init,
 	git_merge_driver_global_init,
