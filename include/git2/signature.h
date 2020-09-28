@@ -63,6 +63,50 @@ GIT_EXTERN(int) git_signature_now(git_signature **out, const char *name, const c
 GIT_EXTERN(int) git_signature_default(git_signature **out, git_repository *repo);
 
 /**
+ * Create a new action signature based on AUTHOR environment variables,
+ * falling back to the default user, with a now timestamp.
+ *
+ * This uses the GIT_AUTHOR_NAME environment variable for the name,
+ * and GIT_AUTHOR_EMAIL for the email. If GIT_AUTHOR_EMAIL is not found,
+ * it falls back to the EMAIL environment variable.
+ *
+ * If either name or email aren't found in the environment, it uses
+ * the appropriate value from the default user.
+ *
+ * It takes the name and email found above, uses the current time as the
+ * timestamp, and creates a new signature based on that information.
+ * It will return GIT_ENOTFOUND if either the name or email could
+ * not be determined.
+ *
+ * @param out new signature
+ * @param repo repository pointer
+ * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
+ */
+GIT_EXTERN(int) git_signature_author_env(git_signature **out, git_repository *repo);
+
+/**
+ * Create a new action signature based on COMMITTER environment variables,
+ * falling back to the default user, with a now timestamp.
+ *
+ * This uses the GIT_COMMITTER_NAME environment variable for the name,
+ * and GIT_COMMITTER_EMAIL for the email. If GIT_COMMITTER_EMAIL is not found,
+ * it falls back to the EMAIL environment variable.
+ *
+ * If either name or email aren't found in the environment, it uses
+ * the appropriate value from the default user.
+ *
+ * It takes the name and email found above, uses the current time as the
+ * timestamp, and creates a new signature based on that information.
+ * It will return GIT_ENOTFOUND if either the name or email could
+ * not be determined.
+ *
+ * @param out new signature
+ * @param repo repository pointer
+ * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
+ */
+GIT_EXTERN(int) git_signature_committer_env(git_signature **out, git_repository *repo);
+
+/**
  * Create a new signature by parsing the given buffer, which is
  * expected to be in the format "Real Name <email> timestamp tzoffset",
  * where `timestamp` is the number of seconds since the Unix epoch and

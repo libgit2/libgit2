@@ -1,3 +1,13 @@
+v1.?
+----
+
+### Changes or improvements
+
+- Add two new functions, `git_signature_committer_env()` and
+  `git_signature_author_env()`, which create action signatures based on the
+  same environment variables used by the git command line tools, falling
+  back to the default (config) user if need be.
+
 v1.0
 ----
 
