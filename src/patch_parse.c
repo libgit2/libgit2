@@ -407,6 +407,7 @@ static const parse_header_transition transitions[] = {
 
 	{ "--- "                , STATE_DIFF,       STATE_PATH,       parse_header_git_oldpath },
 	{ "--- "                , STATE_INDEX,      STATE_PATH,       parse_header_git_oldpath },
+	{ "--- "                , STATE_FILEMODE,   STATE_PATH,       parse_header_git_oldpath },
 	{ "+++ "                , STATE_PATH,       STATE_END,        parse_header_git_newpath },
 	{ "GIT binary patch"    , STATE_INDEX,      STATE_END,        NULL },
 	{ "Binary files "       , STATE_INDEX,      STATE_END,        NULL },
