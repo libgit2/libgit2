@@ -42,9 +42,9 @@ POSSIBILITY OF SUCH DAMAGE.
 /* The current PCRE version information. */
 
 #define PCRE_MAJOR          8
-#define PCRE_MINOR          42
+#define PCRE_MINOR          43
 #define PCRE_PRERELEASE
-#define PCRE_DATE           2018-03-20
+#define PCRE_DATE           2019-02-23
 
 #define PCRE_EXP_DECL  extern
 
