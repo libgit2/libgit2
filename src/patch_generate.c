@@ -209,9 +209,7 @@ static int patch_generated_load(git_patch_generated *patch, git_patch_generated_
 
 	if ((error = git_diff_file_content__load(
 			&patch->ofile, &patch->base.diff_opts)) < 0 ||
-		should_skip_binary(patch, patch->ofile.file))
-		goto cleanup;
-	if ((error = git_diff_file_content__load(
+	    (error = git_diff_file_content__load(
 			&patch->nfile, &patch->base.diff_opts)) < 0 ||
 		should_skip_binary(patch, patch->nfile.file))
 		goto cleanup;
