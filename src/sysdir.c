@@ -298,8 +298,11 @@ static int git_sysdir_find_in_dirlist(
 	}
 
 done:
+	if (name)
+		git_error_set(GIT_ERROR_OS, "the %s file '%s' doesn't exist", label, name);
+	else
+		git_error_set(GIT_ERROR_OS, "the %s directory doesn't exist", label);
 	git_buf_dispose(path);
-	git_error_set(GIT_ERROR_OS, "the %s file '%s' doesn't exist", label, name);
 	return GIT_ENOTFOUND;
 }
 

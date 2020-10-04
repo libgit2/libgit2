@@ -606,7 +606,7 @@ int git_reference_rename(
 	const char *log_message)
 {
 	refs_update_head_payload payload;
-	git_signature *signature;
+	git_signature *signature = NULL;
 	git_repository *repo;
 	int error;
 
