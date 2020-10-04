@@ -237,7 +237,7 @@ GIT_EXTERN(void) giterr_clear(void);
 GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
 
 /**
- * Indicates that an out-of-memory situation occured.  This is an alias
+ * Indicates that an out-of-memory situation occurred.  This is an alias
  * of `git_error_set_oom` and is preserved for backward compatibility.
  *
  * This function is deprecated, but there is no plan to remove this
