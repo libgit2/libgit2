@@ -665,3 +665,19 @@ void test_repo_init__unwriteable_directory(void)
 	clar__skip();
 #endif
 }
+
+void test_repo_init__defaultbranch_config(void)
+{
+	git_reference *head;
+
+	cl_set_cleanup(&cleanup_repository, "repo");
+
+	create_tmp_global_config("tmp_global_path", "init.defaultbranch", "my_default_branch");
+
+	cl_git_pass(git_repository_init(&_repo, "repo", 0));
+	cl_git_pass(git_reference_lookup(&head, _repo, "HEAD"));
+
+	cl_assert_equal_s("refs/heads/my_default_branch", git_reference_symbolic_target(head));
+
+	git_reference_free(head);
+}

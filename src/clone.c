@@ -137,6 +137,31 @@ static int update_head_to_new_branch(
 	return error;
 }
 
+static int update_head_to_default(git_repository *repo)
+{
+	git_buf initialbranch = GIT_BUF_INIT;
+	const char *branch_name;
+	int error = 0;
+
+	if ((error = git_repository_initialbranch(&initialbranch, repo)) < 0)
+		goto done;
+
+	if (git__prefixcmp(initialbranch.ptr, GIT_REFS_HEADS_DIR) != 0) {
+		git_error_set(GIT_ERROR_INVALID, "invalid initial branch '%s'", initialbranch.ptr);
+		error = -1;
+		goto done;
+	}
+
+	branch_name = initialbranch.ptr + strlen(GIT_REFS_HEADS_DIR);
+
+	error = setup_tracking_config(repo, branch_name, GIT_REMOTE_ORIGIN,
+		initialbranch.ptr);
+
+done:
+	git_buf_dispose(&initialbranch);
+	return error;
+}
+
 static int update_head_to_remote(
 		git_repository *repo,
 		git_remote *remote,
@@ -147,7 +172,7 @@ static int update_head_to_remote(
 	git_refspec *refspec;
 	const git_remote_head *remote_head, **refs;
 	const git_oid *remote_head_id;
-	git_buf remote_master_name = GIT_BUF_INIT;
+	git_buf remote_branch_name = GIT_BUF_INIT;
 	git_buf branch = GIT_BUF_INIT;
 
 	if ((error = git_remote_ls(&refs, &refs_len, remote)) < 0)
@@ -155,8 +180,7 @@ static int update_head_to_remote(
 
 	/* We cloned an empty repository or one with an unborn HEAD */
 	if (refs_len == 0 || strcmp(refs[0]->name, GIT_HEAD_FILE))
-		return setup_tracking_config(
-			repo, "master", GIT_REMOTE_ORIGIN, GIT_REFS_HEADS_MASTER_FILE);
+		return update_head_to_default(repo);
 
 	/* We know we have HEAD, let's see where it points */
 	remote_head = refs[0];
@@ -179,9 +203,9 @@ static int update_head_to_remote(
 		goto cleanup;
 	}
 
-	/* Determine the remote tracking reference name from the local master */
+	/* Determine the remote tracking ref name from the local branch */
 	if ((error = git_refspec_transform(
-		&remote_master_name,
+		&remote_branch_name,
 		refspec,
 		git_buf_cstr(&branch))) < 0)
 		goto cleanup;
@@ -193,7 +217,7 @@ static int update_head_to_remote(
 		reflog_message);
 
 cleanup:
-	git_buf_dispose(&remote_master_name);
+	git_buf_dispose(&remote_branch_name);
 	git_buf_dispose(&branch);
 
 	return error;

@@ -2,6 +2,7 @@
 
 #include "git2/clone.h"
 #include "repository.h"
+#include "repo/repo_helpers.h"
 
 static git_clone_options g_options;
 static git_repository *g_repo;
@@ -22,6 +23,7 @@ void test_clone_empty__initialize(void)
 
 void test_clone_empty__cleanup(void)
 {
+	cl_fixture_cleanup("tmp_global_path");
 	cl_git_sandbox_cleanup();
 }
 
@@ -64,6 +66,21 @@ void test_clone_empty__can_clone_an_empty_local_repo_barely(void)
 	/* ...even when the remote HEAD is unborn as well */
 	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&ref, g_repo_cloned,
 		expected_tracked_branch_name));
+}
+
+void test_clone_empty__respects_initialbranch_config(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	create_tmp_global_config("tmp_global_path", "init.defaultbranch", "my_default_branch");
+
+	cl_set_cleanup(&cleanup_repository, "./empty");
+
+	g_options.bare = true;
+	cl_git_pass(git_clone(&g_repo_cloned, "./empty_bare.git", "./empty", &g_options));
+	cl_git_pass(git_branch_upstream_name(&buf, g_repo_cloned, "refs/heads/my_default_branch"));
+	cl_assert_equal_s("refs/remotes/origin/my_default_branch", buf.ptr);
+	git_buf_dispose(&buf);
 }
 
 void test_clone_empty__can_clone_an_empty_local_repo(void)

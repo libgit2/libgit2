@@ -232,4 +232,10 @@ extern size_t git_repository__reserved_names_posix_len;
 bool git_repository__reserved_names(
 	git_buf **out, size_t *outlen, git_repository *repo, bool include_ntfs);
 
+/*
+ * The default branch for the repository; the `init.defaultBranch`
+ * configuration option, if set, or `master` if it is not.
+ */
+int git_repository_initialbranch(git_buf *out, git_repository *repo);
+
 #endif

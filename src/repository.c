@@ -70,7 +70,7 @@ static int check_extensions(git_config *config, int version);
 
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
-#define GIT_BRANCH_MASTER "master"
+#define GIT_BRANCH_DEFAULT "master"
 
 #define GIT_REPO_VERSION 0
 #define GIT_REPO_MAX_VERSION 1
@@ -1408,9 +1408,6 @@ int git_repository_create_head(const char *git_dir, const char *ref_name)
 	    (error = git_filebuf_open(&ref, ref_path.ptr, 0, GIT_REFS_FILE_MODE)) < 0)
 		goto out;
 
-	if (!ref_name)
-		ref_name = GIT_BRANCH_MASTER;
-
 	if (git__prefixcmp(ref_name, GIT_REFS_DIR) == 0)
 		fmt = "ref: %s\n";
 	else
@@ -2061,6 +2058,43 @@ static int repo_init_directories(
 	return error;
 }
 
+static int repo_init_head(const char *repo_dir, const char *given)
+{
+	git_config *cfg = NULL;
+	git_buf head_path = GIT_BUF_INIT, cfg_branch = GIT_BUF_INIT;
+	const char *initial_head = NULL;
+	int error;
+
+	if ((error = git_buf_joinpath(&head_path, repo_dir, GIT_HEAD_FILE)) < 0)
+		goto out;
+
+	/*
+	 * A template may have set a HEAD; use that unless it's been
+	 * overridden by the caller's given initial head setting.
+	 */
+	if (git_path_exists(head_path.ptr) && !given)
+		goto out;
+
+	if (given) {
+		initial_head = given;
+	} else if ((error = git_config_open_default(&cfg)) >= 0 &&
+	           (error = git_config_get_string_buf(&cfg_branch, cfg, "init.defaultbranch")) >= 0) {
+		initial_head = cfg_branch.ptr;
+	}
+
+	if (!initial_head)
+		initial_head = GIT_BRANCH_DEFAULT;
+
+	error = git_repository_create_head(repo_dir, initial_head);
+
+out:
+	git_config_free(cfg);
+	git_buf_dispose(&head_path);
+	git_buf_dispose(&cfg_branch);
+
+	return error;
+}
+
 static int repo_init_create_origin(git_repository *repo, const char *url)
 {
 	int error;
@@ -2091,7 +2125,7 @@ int git_repository_init_ext(
 	git_repository_init_options *opts)
 {
 	git_buf repo_path = GIT_BUF_INIT, wd_path = GIT_BUF_INIT,
-		common_path = GIT_BUF_INIT, head_path = GIT_BUF_INIT;
+		common_path = GIT_BUF_INIT;
 	const char *wd;
 	bool is_valid;
 	int error;
@@ -2125,16 +2159,7 @@ int git_repository_init_ext(
 	} else {
 		if ((error = repo_init_structure(repo_path.ptr, wd, opts)) < 0 ||
 		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode)) < 0 ||
-		    (error = git_buf_joinpath(&head_path, repo_path.ptr, GIT_HEAD_FILE)) < 0)
-			goto out;
-
-		/*
-		 * Only set the new HEAD if the file does not exist already via
-		 * a template or if the caller has explicitly supplied an
-		 * initial HEAD value.
-		 */
-		if ((!git_path_exists(head_path.ptr) || opts->initial_head) &&
-		    (error = git_repository_create_head(repo_path.ptr, opts->initial_head)) < 0)
+		    (error = repo_init_head(repo_path.ptr, opts->initial_head)) < 0)
 			goto out;
 	}
 
@@ -2146,7 +2171,6 @@ int git_repository_init_ext(
 		goto out;
 
 out:
-	git_buf_dispose(&head_path);
 	git_buf_dispose(&common_path);
 	git_buf_dispose(&repo_path);
 	git_buf_dispose(&wd_path);
@@ -2330,23 +2354,59 @@ static int repo_contains_no_reference(git_repository *repo)
 	return error;
 }
 
+int git_repository_initialbranch(git_buf *out, git_repository *repo)
+{
+	git_config *config;
+	git_config_entry *entry = NULL;
+	const char *branch;
+	int error;
+
+	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
+		return error;
+
+	if ((error = git_config_get_entry(&entry, config, "init.defaultbranch")) == 0) {
+		branch = entry->value;
+	}
+	else if (error == GIT_ENOTFOUND) {
+		branch = GIT_BRANCH_DEFAULT;
+	}
+	else {
+		goto done;
+	}
+
+	if ((error = git_buf_puts(out, GIT_REFS_HEADS_DIR)) < 0 ||
+	    (error = git_buf_puts(out, branch)) < 0)
+	    goto done;
+
+	if (!git_reference_is_valid_name(out->ptr)) {
+		git_error_set(GIT_ERROR_INVALID, "the value of init.defaultBranch is not a valid reference name");
+		error = -1;
+	}
+
+done:
+	git_config_entry_free(entry);
+	return error;
+}
+
 int git_repository_is_empty(git_repository *repo)
 {
 	git_reference *head = NULL;
-	int is_empty = 0;
+	git_buf initialbranch = GIT_BUF_INIT;
+	int result = 0;
 
-	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0)
-		return -1;
+	if ((result = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0 ||
+	    (result = git_repository_initialbranch(&initialbranch, repo)) < 0)
+		goto done;
 
-	if (git_reference_type(head) == GIT_REFERENCE_SYMBOLIC)
-		is_empty =
-			(strcmp(git_reference_symbolic_target(head),
-					GIT_REFS_HEADS_DIR "master") == 0) &&
-			repo_contains_no_reference(repo);
+	result = (git_reference_type(head) == GIT_REFERENCE_SYMBOLIC &&
+	          strcmp(git_reference_symbolic_target(head), initialbranch.ptr) == 0 &&
+	          repo_contains_no_reference(repo));
 
+done:
 	git_reference_free(head);
+	git_buf_dispose(&initialbranch);
 
-	return is_empty;
+	return result;
 }
 
 static const char *resolved_parent_path(const git_repository *repo, git_repository_item_t item, git_repository_item_t fallback)
