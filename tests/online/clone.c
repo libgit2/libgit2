@@ -176,7 +176,7 @@ static int fetch_progress(const git_indexer_progress *stats, void *payload)
 void test_online_clone__can_checkout_a_cloned_repo(void)
 {
 	git_buf path = GIT_BUF_INIT;
-	git_reference *head;
+	git_reference *head, *remote_head;
 	bool checkout_progress_cb_was_called = false,
 		  fetch_progress_cb_was_called = false;
 
@@ -195,9 +195,14 @@ void test_online_clone__can_checkout_a_cloned_repo(void)
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 
+	cl_git_pass(git_reference_lookup(&remote_head, g_repo, "refs/remotes/origin/HEAD"));
+	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(remote_head));
+	cl_assert_equal_s("refs/remotes/origin/master", git_reference_symbolic_target(remote_head));
+
 	cl_assert_equal_i(true, checkout_progress_cb_was_called);
 	cl_assert_equal_i(true, fetch_progress_cb_was_called);
 
+	git_reference_free(remote_head);
 	git_reference_free(head);
 	git_buf_dispose(&path);
 }
