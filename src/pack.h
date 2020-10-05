@@ -106,6 +106,19 @@ struct git_pack_file {
 	char pack_name[GIT_FLEX_ARRAY]; /* more */
 };
 
+/**
+ * Return the position where an OID (or a prefix) would be inserted within the
+ * OID Lookup Table of an .idx file. This performs binary search between the lo
+ * and hi indices.
+ *
+ * The stride parameter is provided because .idx files version 1 store the OIDs
+ * interleaved with the 4-byte file offsets of the objects within the .pack
+ * file (stride = 24), whereas files with version 2 store them in a contiguous
+ * flat array (stride = 20).
+ */
+int git_pack__lookup_sha1(const void *oid_lookup_table, size_t stride, unsigned lo,
+		unsigned hi, const unsigned char *oid_prefix);
+
 struct git_pack_entry {
 	off64_t offset;
 	git_oid sha1;
