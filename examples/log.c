@@ -120,8 +120,6 @@ int lg2_log(git_repository *repo, int argc, char *argv[])
 						NULL, tree, GIT_PATHSPEC_NO_MATCH_ERROR, ps) != 0)
 					unmatched = 1;
 				git_tree_free(tree);
-			} else if (parents == 1) {
-				unmatched = match_with_parent(commit, 0, &diffopts) ? 0 : 1;
 			} else {
 				for (i = 0; i < parents; ++i) {
 					if (match_with_parent(commit, i, &diffopts))
