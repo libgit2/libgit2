@@ -53,6 +53,7 @@ struct log_options {
 	int show_log_size;
 	int skip, limit;
 	int min_parents, max_parents;
+	int follow;
 	git_time_t before;
 	git_time_t after;
 	const char *author;
@@ -82,11 +83,14 @@ int lg2_log(git_repository *repo, int argc, char *argv[])
 	git_pathspec *ps = NULL;
 
 	/** Parse arguments and set up revwalker. */
-	last_arg = parse_options(&s, &opt, argc, argv);
+	memset(&s, 0, sizeof(s));
 	s.repo = repo;
+	s.sorting = GIT_SORT_TIME;
+	last_arg = parse_options(&s, &opt, argc, argv);
 
 	diffopts.pathspec.strings = &argv[last_arg];
 	diffopts.pathspec.count	  = argc - last_arg;
+	diffopts.flags = opt.follow ? GIT_DIFF_FIND_ALL : GIT_DIFF_NORMAL;
 	if (diffopts.pathspec.count > 0)
 		check_lg2(git_pathspec_new(&ps, &diffopts.pathspec),
 			"Building pathspec", NULL);
@@ -398,7 +402,7 @@ static void usage(const char *message, const char *arg)
 		fprintf(stderr, "%s: %s\n", message, arg);
 	else if (message)
 		fprintf(stderr, "%s\n", message);
-	fprintf(stderr, "usage: log [<options>]\n");
+	fprintf(stderr, "usage: log [<options>] [<pathspec>]\n");
 	exit(1);
 }
 
@@ -407,9 +411,6 @@ static int parse_options(
 	struct log_state *s, struct log_options *opt, int argc, char **argv)
 {
 	struct args_info args = ARGS_INFO_INIT;
-
-	memset(s, 0, sizeof(*s));
-	s->sorting = GIT_SORT_TIME;
 
 	memset(opt, 0, sizeof(*opt));
 	opt->max_parents = -1;
@@ -464,6 +465,8 @@ static int parse_options(
 			opt->min_parents = 0;
 		else if (!strcmp(a, "--no-max-parents"))
 			opt->max_parents = -1;
+		else if (!strcmp(a, "--follow"))
+			opt->follow = 1;
 		else if (match_int_arg(&opt->max_parents, &args, "--max-parents=", 1))
 			/** Found valid --max-parents. */
 			;
