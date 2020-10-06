@@ -73,7 +73,7 @@ static int log_message_matches(const git_commit *commit, const char *filter);
 
 int lg2_log(git_repository *repo, int argc, char *argv[])
 {
-	int i, count = 0, printed = 0, parents, last_arg;
+	int i, count, printed, parents, last_arg;
 	struct log_state s;
 	struct log_options opt;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
@@ -96,9 +96,7 @@ int lg2_log(git_repository *repo, int argc, char *argv[])
 
 	/** Use the revwalker to traverse the history. */
 
-	printed = count = 0;
-
-	for (; !git_revwalk_next(&oid, s.walker); git_commit_free(commit)) {
+	for (printed = 0, count = 0; !git_revwalk_next(&oid, s.walker); git_commit_free(commit)) {
 		check_lg2(git_commit_lookup(&commit, s.repo, &oid),
 			"Failed to look up commit", NULL);
 
