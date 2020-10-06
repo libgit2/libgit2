@@ -2045,7 +2045,7 @@ int git_path_validate_system_file_ownership(const char *path)
 		git_error_set(GIT_ERROR_INVALID, "programdata configuration file owner is not valid");
 		ret = GIT_ERROR;
 	}
-	free(info);
+	git__free(info);
 
 cleanup:
 	if (descriptor)
