@@ -860,7 +860,7 @@ int git_repository_open_ext(
 	if (config && (error = check_repositoryformatversion(&version, config)) < 0)
 		goto cleanup;
 
-	if ((error = check_extensions(config, version) < 0))
+	if ((error = check_extensions(config, version)) < 0)
 		goto cleanup;
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
@@ -1613,7 +1613,7 @@ static int repo_init_config(
 	if (is_reinit && (error = check_repositoryformatversion(&version, config)) < 0)
 		goto cleanup;
 
-	if ((error = check_extensions(config, version) < 0))
+	if ((error = check_extensions(config, version)) < 0)
 		goto cleanup;
 
 #define SET_REPO_CONFIG(TYPE, NAME, VAL) do { \
