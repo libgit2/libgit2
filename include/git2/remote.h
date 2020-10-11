@@ -922,14 +922,6 @@ GIT_EXTERN(int) git_remote_rename(
 int git_remote_name_is_valid(int *valid, const char *remote_name);
 
 /**
- * Ensure the remote name is well-formed.
- *
- * @param remote_name name to be checked.
- * @return 1 if the reference name is acceptable; 0 if it isn't
- */
-GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
-
-/**
 * Delete an existing persisted remote.
 *
 * All remote-tracking branches and configuration settings

@@ -340,6 +340,27 @@ GIT_EXTERN(size_t) git_object__size(git_object_t type);
 
 /**@}*/
 
+/** @name Deprecated Remote Functions
+ *
+ * These functions are retained for backward compatibility.  The newer
+ * versions of these functions should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility functions at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Ensure the remote name is well-formed.
+ *
+ * @deprecated Use git_remote_name_is_valid
+ * @param remote_name name to be checked.
+ * @return 1 if the reference name is acceptable; 0 if it isn't
+ */
+GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
+
+/**@}*/
+
 /** @name Deprecated Reference Functions and Constants
  *
  * These functions and enumeration values are retained for backward

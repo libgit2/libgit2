@@ -2124,14 +2124,6 @@ done:
 	return error;
 }
 
-int git_remote_is_valid_name(const char *remote_name)
-{
-	int valid = 0;
-
-	git_remote_name_is_valid(&valid, remote_name);
-	return valid;
-}
-
 git_refspec *git_remote__matching_refspec(git_remote *remote, const char *refname)
 {
 	git_refspec *spec;
@@ -2628,3 +2620,17 @@ char *apply_insteadof(git_config *config, const char *url, int direction)
 
 	return result.ptr;
 }
+
+/* Deprecated functions */
+
+#ifndef GIT_DEPRECATE_HARD
+
+int git_remote_is_valid_name(const char *remote_name)
+{
+	int valid = 0;
+
+	git_remote_name_is_valid(&valid, remote_name);
+	return valid;
+}
+
+#endif
