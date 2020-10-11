@@ -21,7 +21,8 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	size_t llen;
 	int is_glob = 0;
 	const char *lhs, *rhs;
-	int flags;
+	int valid = 0;
+	unsigned int flags;
 
 	assert(refspec && input);
 
@@ -75,57 +76,69 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 
 	if (is_fetch) {
 		/*
-			* LHS
-			* - empty is allowed; it means HEAD.
-			* - otherwise it must be a valid looking ref.
-			*/
+		 * LHS
+		 * - empty is allowed; it means HEAD.
+		 * - otherwise it must be a valid looking ref.
+		 */
 		if (!*refspec->src)
 			; /* empty is ok */
-		else if (!git_reference__is_valid_name(refspec->src, flags))
+		else if (git_reference__name_is_valid(&valid, refspec->src, flags) < 0)
+			goto on_error;
+		else if (!valid)
 			goto invalid;
+
 		/*
-			* RHS
-			* - missing is ok, and is same as empty.
-			* - empty is ok; it means not to store.
-			* - otherwise it must be a valid looking ref.
-			*/
+		 * RHS
+		 * - missing is ok, and is same as empty.
+		 * - empty is ok; it means not to store.
+		 * - otherwise it must be a valid looking ref.
+		 */
 		if (!refspec->dst)
 			; /* ok */
 		else if (!*refspec->dst)
 			; /* ok */
-		else if (!git_reference__is_valid_name(refspec->dst, flags))
+		else if (git_reference__name_is_valid(&valid, refspec->dst, flags) < 0)
+			goto on_error;
+		else if (!valid)
 			goto invalid;
 	} else {
 		/*
-			* LHS
-			* - empty is allowed; it means delete.
-			* - when wildcarded, it must be a valid looking ref.
-			* - otherwise, it must be an extended SHA-1, but
-			*   there is no existing way to validate this.
-			*/
+		 * LHS
+		 * - empty is allowed; it means delete.
+		 * - when wildcarded, it must be a valid looking ref.
+		 * - otherwise, it must be an extended SHA-1, but
+		 *   there is no existing way to validate this.
+		 */
 		if (!*refspec->src)
 			; /* empty is ok */
 		else if (is_glob) {
-			if (!git_reference__is_valid_name(refspec->src, flags))
+			if (git_reference__name_is_valid(&valid, refspec->src, flags) < 0)
+				goto on_error;
+			else if (!valid)
 				goto invalid;
 		}
 		else {
 			; /* anything goes, for now */
 		}
+
 		/*
-			* RHS
-			* - missing is allowed, but LHS then must be a
-			*   valid looking ref.
-			* - empty is not allowed.
-			* - otherwise it must be a valid looking ref.
-			*/
+		 * RHS
+		 * - missing is allowed, but LHS then must be a
+		 *   valid looking ref.
+		 * - empty is not allowed.
+		 * - otherwise it must be a valid looking ref.
+		 */
 		if (!refspec->dst) {
-			if (!git_reference__is_valid_name(refspec->src, flags))
+			if (git_reference__name_is_valid(&valid, refspec->src, flags) < 0)
+				goto on_error;
+			else if (!valid)
 				goto invalid;
 		} else if (!*refspec->dst) {
 			goto invalid;
 		} else {
-			if (!git_reference__is_valid_name(refspec->dst, flags))
+			if (git_reference__name_is_valid(&valid, refspec->dst, flags) < 0)
+				goto on_error;
+			else if (!valid)
 				goto invalid;
 		}
 
@@ -141,10 +154,12 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 
 	return 0;
 
- invalid:
+invalid:
         git_error_set(
                 GIT_ERROR_INVALID,
                 "'%s' is not a valid refspec.", input);
+
+on_error:
         git_refspec__dispose(refspec);
 	return -1;
 }
