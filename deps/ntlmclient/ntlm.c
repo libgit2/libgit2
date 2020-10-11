@@ -132,10 +132,10 @@ int ntlm_client_set_hostname(
 static void free_credentials(ntlm_client *ntlm)
 {
 	if (ntlm->password)
-		memzero(ntlm->password, strlen(ntlm->password));
+		ntlm_memzero(ntlm->password, strlen(ntlm->password));
 
 	if (ntlm->password_utf16)
-		memzero(ntlm->password_utf16, ntlm->password_utf16_len);
+		ntlm_memzero(ntlm->password_utf16, ntlm->password_utf16_len);
 
 	free(ntlm->username);
 	free(ntlm->username_upper);
@@ -1125,7 +1125,7 @@ static bool generate_lm2_response(ntlm_client *ntlm,
 	size_t lm2_len = 16;
 	uint64_t local_nonce;
 
-	local_nonce = htonll(ntlm->nonce);
+	local_nonce = ntlm_htonll(ntlm->nonce);
 
 	if (!ntlm_hmac_ctx_reset(ntlm->hmac_ctx) ||
 		!ntlm_hmac_md5_init(ntlm->hmac_ctx,
@@ -1197,8 +1197,8 @@ static bool generate_ntlm2_response(ntlm_client *ntlm)
 
 	/* the blob's integer values are in network byte order */
 	signature = htonl(0x01010000);
-	timestamp = htonll(ntlm->timestamp);
-	nonce = htonll(ntlm->nonce);
+	timestamp = ntlm_htonll(ntlm->timestamp);
+	nonce = ntlm_htonll(ntlm->nonce);
 
 	/* construct the blob */
 	memcpy(&blob[0], &signature, 4);
