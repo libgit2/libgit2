@@ -1362,7 +1362,7 @@ static int update_tips_for_spec(
 		git_vector *refs,
 		const char *log_message)
 {
-	int error = 0, autotag;
+	int error = 0, autotag, valid;
 	unsigned int i = 0;
 	git_buf refname = GIT_BUF_INIT;
 	git_oid old;
@@ -1390,7 +1390,10 @@ static int update_tips_for_spec(
 		git_buf_clear(&refname);
 
 		/* Ignore malformed ref names (which also saves us from tag^{} */
-		if (!git_reference_is_valid_name(head->name))
+		if (git_reference_name_is_valid(&valid, head->name) < 0)
+			goto on_error;
+
+		if (!valid)
 			continue;
 
 		/* If we have a tag, see if the auto-follow rules say to update it */
@@ -1499,6 +1502,7 @@ static int next_head(const git_remote *remote, git_vector *refs,
 	git_remote_head *head;
 	git_refspec *spec, *passive_spec;
 	size_t i, j, k;
+	int valid;
 
 	active = &remote->active_refspecs;
 	passive = &remote->passive_refspecs;
@@ -1510,7 +1514,10 @@ static int next_head(const git_remote *remote, git_vector *refs,
 	for (; i < refs->length; i++) {
 		head = git_vector_get(refs, i);
 
-		if (!git_reference_is_valid_name(head->name))
+		if (git_reference_name_is_valid(&valid, head->name) < 0)
+			return -1;
+
+		if (!valid)
 			continue;
 
 		for (; j < active->length; j++) {

@@ -239,7 +239,7 @@ int git_reference_lookup_resolved(
 
 int git_reference_dwim(git_reference **out, git_repository *repo, const char *refname)
 {
-	int error = 0, i;
+	int error = 0, i, valid;
 	bool fallbackmode = true, foundvalid = false;
 	git_reference *ref;
 	git_buf refnamebuf = GIT_BUF_INIT, name = GIT_BUF_INIT;
@@ -265,10 +265,11 @@ int git_reference_dwim(git_reference **out, git_repository *repo, const char *re
 
 		git_buf_clear(&refnamebuf);
 
-		if ((error = git_buf_printf(&refnamebuf, formatters[i], git_buf_cstr(&name))) < 0)
+		if ((error = git_buf_printf(&refnamebuf, formatters[i], git_buf_cstr(&name))) < 0 ||
+		    (error = git_reference_name_is_valid(&valid, git_buf_cstr(&refnamebuf))) < 0)
 			goto cleanup;
 
-		if (!git_reference_is_valid_name(git_buf_cstr(&refnamebuf))) {
+		if (!valid) {
 			error = GIT_EINVALIDSPEC;
 			continue;
 		}

@@ -58,12 +58,14 @@ int record_update_tips_cb(const char *refname, const git_oid *a, const git_oid *
 int create_deletion_refspecs(git_vector *out, const git_remote_head **heads, size_t heads_len)
 {
 	git_buf del_spec = GIT_BUF_INIT;
+	int valid;
 	size_t i;
 
 	for (i = 0; i < heads_len; i++) {
 		const git_remote_head *head = heads[i];
 		/* Ignore malformed ref names (which also saves us from tag^{} */
-		if (!git_reference_is_valid_name(head->name))
+		cl_git_pass(git_reference_name_is_valid(&valid, head->name));
+		if (!valid)
 			return 0;
 
 		/* Create a refspec that deletes a branch in the remote */

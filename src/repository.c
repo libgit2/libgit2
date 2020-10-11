@@ -2359,7 +2359,7 @@ int git_repository_initialbranch(git_buf *out, git_repository *repo)
 	git_config *config;
 	git_config_entry *entry = NULL;
 	const char *branch;
-	int error;
+	int valid, error;
 
 	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
 		return error;
@@ -2375,10 +2375,11 @@ int git_repository_initialbranch(git_buf *out, git_repository *repo)
 	}
 
 	if ((error = git_buf_puts(out, GIT_REFS_HEADS_DIR)) < 0 ||
-	    (error = git_buf_puts(out, branch)) < 0)
+	    (error = git_buf_puts(out, branch)) < 0 ||
+	    (error = git_reference_name_is_valid(&valid, out->ptr)) < 0)
 	    goto done;
 
-	if (!git_reference_is_valid_name(out->ptr)) {
+	if (!valid) {
 		git_error_set(GIT_ERROR_INVALID, "the value of init.defaultBranch is not a valid reference name");
 		error = -1;
 	}
