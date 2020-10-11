@@ -135,4 +135,12 @@ extern uint32_t git_pool__open_pages(git_pool *pool);
 #endif
 extern bool git_pool__ptr_in_pool(git_pool *pool, void *ptr);
 
+/**
+ * This function is being called by our global setup routines to
+ * initialize the system pool size.
+ *
+ * @return 0 on success, <0 on failure
+ */
+extern int git_pool_global_init(void);
+
 #endif

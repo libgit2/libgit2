@@ -7,11 +7,29 @@
 #ifndef INCLUDE_thread_utils_h__
 #define INCLUDE_thread_utils_h__
 
-#if defined(__GNUC__) && defined(GIT_THREADS)
+#if defined(GIT_THREADS)
+
+#if defined(__clang__)
+
+# if (__clang_major__ < 3 || (__clang_major__ == 3 && __clang_minor__ < 1))
+#  error Atomic primitives do not exist on this version of clang; configure libgit2 with -DTHREADSAFE=OFF
+# else
+#  define GIT_BUILTIN_ATOMIC
+# endif
+
+#elif defined(__GNUC__)
+
 # if (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 1))
 #  error Atomic primitives do not exist on this version of gcc; configure libgit2 with -DTHREADSAFE=OFF
+# elif (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7))
+#  define GIT_BUILTIN_ATOMIC
+# else
+#  define GIT_BUILTIN_SYNC
 # endif
+
 #endif
+
+#endif /* GIT_THREADS */
 
 /* Common operations even if threading has been disabled */
 typedef struct {
@@ -26,21 +44,25 @@ typedef struct {
 
 typedef struct {
 #if defined(GIT_WIN32)
-	__int64 val;
+	volatile __int64 val;
 #else
-	int64_t val;
+	volatile int64_t val;
 #endif
 } git_atomic64;
 
 typedef git_atomic64 git_atomic_ssize;
 
+#define git_atomic_ssize_set git_atomic64_set
 #define git_atomic_ssize_add git_atomic64_add
+#define git_atomic_ssize_get git_atomic64_get
 
 #else
 
 typedef git_atomic git_atomic_ssize;
 
+#define git_atomic_ssize_set git_atomic_set
 #define git_atomic_ssize_add git_atomic_add
+#define git_atomic_ssize_get git_atomic_get
 
 #endif
 
@@ -56,7 +78,9 @@ GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 {
 #if defined(GIT_WIN32)
 	InterlockedExchange(&a->val, (LONG)val);
-#elif defined(__GNUC__)
+#elif defined(GIT_BUILTIN_ATOMIC)
+	__atomic_store_n(&a->val, val, __ATOMIC_SEQ_CST);
+#elif defined(GIT_BUILTIN_SYNC)
 	__sync_lock_test_and_set(&a->val, val);
 #else
 #	error "Unsupported architecture for atomic operations"
@@ -67,7 +91,9 @@ GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 {
 #if defined(GIT_WIN32)
 	return InterlockedIncrement(&a->val);
-#elif defined(__GNUC__)
+#elif defined(GIT_BUILTIN_ATOMIC)
+	return __atomic_add_fetch(&a->val, 1, __ATOMIC_SEQ_CST);
+#elif defined(GIT_BUILTIN_SYNC)
 	return __sync_add_and_fetch(&a->val, 1);
 #else
 #	error "Unsupported architecture for atomic operations"
@@ -78,7 +104,9 @@ GIT_INLINE(int) git_atomic_add(git_atomic *a, int32_t addend)
 {
 #if defined(GIT_WIN32)
 	return InterlockedExchangeAdd(&a->val, addend);
-#elif defined(__GNUC__)
+#elif defined(GIT_BUILTIN_ATOMIC)
+	return __atomic_add_fetch(&a->val, addend, __ATOMIC_SEQ_CST);
+#elif defined(GIT_BUILTIN_SYNC)
 	return __sync_add_and_fetch(&a->val, addend);
 #else
 #	error "Unsupported architecture for atomic operations"
@@ -89,8 +117,23 @@ GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 {
 #if defined(GIT_WIN32)
 	return InterlockedDecrement(&a->val);
-#elif defined(__GNUC__)
+#elif defined(GIT_BUILTIN_ATOMIC)
+	return __atomic_sub_fetch(&a->val, 1, __ATOMIC_SEQ_CST);
+#elif defined(GIT_BUILTIN_SYNC)
 	return __sync_sub_and_fetch(&a->val, 1);
+#else
+#	error "Unsupported architecture for atomic operations"
+#endif
+}
+
+GIT_INLINE(int) git_atomic_get(git_atomic *a)
+{
+#if defined(GIT_WIN32)
+	return (int)InterlockedCompareExchange(&a->val, 0, 0);
+#elif defined(GIT_BUILTIN_ATOMIC)
+	return __atomic_load_n(&a->val, __ATOMIC_SEQ_CST);
+#elif defined(GIT_BUILTIN_SYNC)
+	return __sync_val_compare_and_swap(&a->val, 0, 0);
 #else
 #	error "Unsupported architecture for atomic operations"
 #endif
@@ -99,15 +142,20 @@ GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 GIT_INLINE(void *) git___compare_and_swap(
 	void * volatile *ptr, void *oldval, void *newval)
 {
-	volatile void *foundval;
 #if defined(GIT_WIN32)
+	volatile void *foundval;
 	foundval = InterlockedCompareExchangePointer((volatile PVOID *)ptr, newval, oldval);
-#elif defined(__GNUC__)
+	return (foundval == oldval) ? oldval : newval;
+#elif defined(GIT_BUILTIN_ATOMIC)
+	bool success = __atomic_compare_exchange(ptr, &oldval, &newval, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+	return success ? oldval : newval;
+#elif defined(GIT_BUILTIN_SYNC)
+	volatile void *foundval;
 	foundval = __sync_val_compare_and_swap(ptr, oldval, newval);
+	return (foundval == oldval) ? oldval : newval;
 #else
 #	error "Unsupported architecture for atomic operations"
 #endif
-	return (foundval == oldval) ? oldval : newval;
 }
 
 GIT_INLINE(volatile void *) git___swap(
@@ -115,8 +163,30 @@ GIT_INLINE(volatile void *) git___swap(
 {
 #if defined(GIT_WIN32)
 	return InterlockedExchangePointer(ptr, newval);
-#else
+#elif defined(GIT_BUILTIN_ATOMIC)
+	void * volatile foundval;
+	__atomic_exchange(ptr, &newval, &foundval, __ATOMIC_SEQ_CST);
+	return foundval;
+#elif defined(GIT_BUILTIN_SYNC)
 	return __sync_lock_test_and_set(ptr, newval);
+#else
+#	error "Unsupported architecture for atomic operations"
+#endif
+}
+
+GIT_INLINE(volatile void *) git___load(void * volatile *ptr)
+{
+#if defined(GIT_WIN32)
+	void *newval = NULL, *oldval = NULL;
+	volatile void *foundval = NULL;
+	foundval = InterlockedCompareExchangePointer((volatile PVOID *)ptr, newval, oldval);
+	return foundval;
+#elif defined(GIT_BUILTIN_ATOMIC)
+	return (volatile void *)__atomic_load_n(ptr, __ATOMIC_SEQ_CST);
+#elif defined(GIT_BUILTIN_SYNC)
+	return (volatile void *)__sync_val_compare_and_swap(ptr, 0, 0);
+#else
+#	error "Unsupported architecture for atomic operations"
 #endif
 }
 
@@ -126,8 +196,36 @@ GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 {
 #if defined(GIT_WIN32)
 	return InterlockedExchangeAdd64(&a->val, addend);
-#elif defined(__GNUC__)
+#elif defined(GIT_BUILTIN_ATOMIC)
+	return __atomic_add_fetch(&a->val, addend, __ATOMIC_SEQ_CST);
+#elif defined(GIT_BUILTIN_SYNC)
 	return __sync_add_and_fetch(&a->val, addend);
+#else
+#	error "Unsupported architecture for atomic operations"
+#endif
+}
+
+GIT_INLINE(void) git_atomic64_set(git_atomic64 *a, int64_t val)
+{
+#if defined(GIT_WIN32)
+	InterlockedExchange64(&a->val, val);
+#elif defined(GIT_BUILTIN_ATOMIC)
+	__atomic_store_n(&a->val, val, __ATOMIC_SEQ_CST);
+#elif defined(GIT_BUILTIN_SYNC)
+	__sync_lock_test_and_set(&a->val, val);
+#else
+#	error "Unsupported architecture for atomic operations"
+#endif
+}
+
+GIT_INLINE(int64_t) git_atomic64_get(git_atomic64 *a)
+{
+#if defined(GIT_WIN32)
+	return (int64_t)InterlockedCompareExchange64(&a->val, 0, 0);
+#elif defined(GIT_BUILTIN_ATOMIC)
+	return __atomic_load_n(&a->val, __ATOMIC_SEQ_CST);
+#elif defined(GIT_BUILTIN_SYNC)
+	return __sync_val_compare_and_swap(&a->val, 0, 0);
 #else
 #	error "Unsupported architecture for atomic operations"
 #endif
@@ -190,6 +288,11 @@ GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 	return --a->val;
 }
 
+GIT_INLINE(int) git_atomic_get(git_atomic *a)
+{
+	return (int)a->val;
+}
+
 GIT_INLINE(void *) git___compare_and_swap(
 	void * volatile *ptr, void *oldval, void *newval)
 {
@@ -216,14 +319,19 @@ GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 	return a->val;
 }
 
-#endif
-
-#endif
-
-GIT_INLINE(int) git_atomic_get(git_atomic *a)
+GIT_INLINE(void) git_atomic64_set(git_atomic64 *a, int64_t val)
 {
-	return (int)a->val;
+	a->val = val;
 }
+
+GIT_INLINE(int64_t) git_atomic64_get(git_atomic64 *a)
+{
+	return (int64_t)a->val;
+}
+
+#endif
+
+#endif
 
 /* Atomically replace oldval with newval
  * @return oldval if it was replaced or newval if it was not
@@ -233,14 +341,24 @@ GIT_INLINE(int) git_atomic_get(git_atomic *a)
 
 #define git__swap(ptr, val) (void *)git___swap((void * volatile *)&ptr, val)
 
+#define git__load(ptr) (void *)git___load((void * volatile *)&ptr)
+
 extern int git_online_cpus(void);
 
-#if defined(GIT_THREADS) && defined(_MSC_VER)
-# define GIT_MEMORY_BARRIER MemoryBarrier()
-#elif defined(GIT_THREADS)
-# define GIT_MEMORY_BARRIER __sync_synchronize()
+#if defined(GIT_THREADS)
+
+# if defined(GIT_WIN32)
+#  define GIT_MEMORY_BARRIER MemoryBarrier()
+# elif defined(GIT_BUILTIN_ATOMIC)
+#  define GIT_MEMORY_BARRIER __atomic_thread_fence(__ATOMIC_SEQ_CST)
+# elif defined(GIT_BUILTIN_SYNC)
+#  define GIT_MEMORY_BARRIER __sync_synchronize()
+# endif
+
 #else
+
 # define GIT_MEMORY_BARRIER /* noop */
+
 #endif
 
 #endif

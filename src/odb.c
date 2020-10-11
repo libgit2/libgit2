@@ -44,8 +44,8 @@ typedef struct
 
 static git_cache *odb_cache(git_odb *odb)
 {
-	if (odb->rc.owner != NULL) {
-		git_repository *owner = odb->rc.owner;
+	git_repository *owner = GIT_REFCOUNT_OWNER(odb);
+	if (owner != NULL) {
 		return &owner->objects;
 	}
 
@@ -664,7 +664,7 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 int git_odb__set_caps(git_odb *odb, int caps)
 {
 	if (caps == GIT_ODB_CAP_FROM_OWNER) {
-		git_repository *repo = odb->rc.owner;
+		git_repository *repo = GIT_REFCOUNT_OWNER(odb);
 		int val;
 
 		if (!repo) {
