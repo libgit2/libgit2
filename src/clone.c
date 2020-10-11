@@ -162,6 +162,55 @@ done:
 	return error;
 }
 
+static int update_remote_head(
+	git_repository *repo,
+	git_remote *remote,
+	git_buf *target,
+	const char *reflog_message)
+{
+	git_refspec *refspec;
+	git_reference *remote_head = NULL;
+	git_buf remote_head_name = GIT_BUF_INIT;
+	git_buf remote_branch_name = GIT_BUF_INIT;
+	int error;
+
+	/* Determine the remote tracking ref name from the local branch */
+	refspec = git_remote__matching_refspec(remote, git_buf_cstr(target));
+
+	if (refspec == NULL) {
+		git_error_set(GIT_ERROR_NET, "the remote's default branch does not fit the refspec configuration");
+		error = GIT_EINVALIDSPEC;
+		goto cleanup;
+	}
+
+	if ((error = git_refspec_transform(
+		&remote_branch_name,
+		refspec,
+		git_buf_cstr(target))) < 0)
+		goto cleanup;
+
+	if ((error = git_buf_printf(&remote_head_name,
+		"%s%s/%s",
+		GIT_REFS_REMOTES_DIR,
+		git_remote_name(remote),
+		GIT_HEAD_FILE)) < 0)
+		goto cleanup;
+
+	error = git_reference_symbolic_create(
+		&remote_head,
+		repo,
+		git_buf_cstr(&remote_head_name),
+		git_buf_cstr(&remote_branch_name),
+		true,
+		reflog_message);
+
+cleanup:
+	git_reference_free(remote_head);
+	git_buf_dispose(&remote_branch_name);
+	git_buf_dispose(&remote_head_name);
+	return error;
+}
+
 static int update_head_to_remote(
 		git_repository *repo,
 		git_remote *remote,
@@ -169,10 +218,8 @@ static int update_head_to_remote(
 {
 	int error = 0;
 	size_t refs_len;
-	git_refspec *refspec;
 	const git_remote_head *remote_head, **refs;
 	const git_oid *remote_head_id;
-	git_buf remote_branch_name = GIT_BUF_INIT;
 	git_buf branch = GIT_BUF_INIT;
 
 	if ((error = git_remote_ls(&refs, &refs_len, remote)) < 0)
@@ -195,19 +242,7 @@ static int update_head_to_remote(
 		goto cleanup;
 	}
 
-	refspec = git_remote__matching_refspec(remote, git_buf_cstr(&branch));
-
-	if (refspec == NULL) {
-		git_error_set(GIT_ERROR_NET, "the remote's default branch does not fit the refspec configuration");
-		error = GIT_EINVALIDSPEC;
-		goto cleanup;
-	}
-
-	/* Determine the remote tracking ref name from the local branch */
-	if ((error = git_refspec_transform(
-		&remote_branch_name,
-		refspec,
-		git_buf_cstr(&branch))) < 0)
+	if ((error = update_remote_head(repo, remote, &branch, reflog_message)) < 0)
 		goto cleanup;
 
 	error = update_head_to_new_branch(
@@ -217,7 +252,6 @@ static int update_head_to_remote(
 		reflog_message);
 
 cleanup:
-	git_buf_dispose(&remote_branch_name);
 	git_buf_dispose(&branch);
 
 	return error;
