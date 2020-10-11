@@ -915,6 +915,15 @@ GIT_EXTERN(int) git_remote_rename(
 /**
  * Ensure the remote name is well-formed.
  *
+ * @param valid output pointer to set with validity of given remote name
+ * @param remote_name name to be checked.
+ * @return 0 on success or an error code
+ */
+int git_remote_name_is_valid(int *valid, const char *remote_name);
+
+/**
+ * Ensure the remote name is well-formed.
+ *
  * @param remote_name name to be checked.
  * @return 1 if the reference name is acceptable; 0 if it isn't
  */

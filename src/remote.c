@@ -2092,24 +2092,42 @@ cleanup:
 	return error;
 }
 
-int git_remote_is_valid_name(
-	const char *remote_name)
+int git_remote_name_is_valid(int *valid, const char *remote_name)
 {
 	git_buf buf = GIT_BUF_INIT;
-	git_refspec refspec;
-	int error = -1;
+	git_refspec refspec = {0};
+	int error;
+
+	GIT_ASSERT(valid);
+
+	*valid = 0;
 
 	if (!remote_name || *remote_name == '\0')
 		return 0;
 
-	git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", remote_name);
+	if ((error = git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", remote_name)) < 0)
+		goto done;
+
 	error = git_refspec__parse(&refspec, git_buf_cstr(&buf), true);
 
+	if (!error)
+		*valid = 1;
+	else if (error == GIT_EINVALIDSPEC)
+		error = 0;
+
+done:
 	git_buf_dispose(&buf);
 	git_refspec__dispose(&refspec);
 
-	git_error_clear();
-	return error == 0;
+	return error;
+}
+
+int git_remote_is_valid_name(const char *remote_name)
+{
+	int valid = 0;
+
+	git_remote_name_is_valid(&valid, remote_name);
+	return valid;
 }
 
 git_refspec *git_remote__matching_refspec(git_remote *remote, const char *refname)
