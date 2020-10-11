@@ -110,12 +110,8 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
 		return error;
 
-	if ((error = git_refspec__parse(&spec, refspec, fetch)) < 0) {
-		if (git_error_last()->klass != GIT_ERROR_NOMEMORY)
-			error = GIT_EINVALIDSPEC;
-
+	if ((error = git_refspec__parse(&spec, refspec, fetch)) < 0)
 		return error;
-	}
 
 	git_refspec__dispose(&spec);
 

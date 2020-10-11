@@ -155,12 +155,13 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	return 0;
 
 invalid:
-        git_error_set(
-                GIT_ERROR_INVALID,
-                "'%s' is not a valid refspec.", input);
+	git_error_set(GIT_ERROR_INVALID,
+	              "'%s' is not a valid refspec.", input);
+	git_refspec__dispose(refspec);
+	return GIT_EINVALIDSPEC;
 
 on_error:
-        git_refspec__dispose(refspec);
+	git_refspec__dispose(refspec);
 	return -1;
 }
 
