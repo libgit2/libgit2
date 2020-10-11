@@ -82,9 +82,11 @@ static int download_tags_value(git_remote *remote, git_config *cfg)
 
 static int ensure_remote_name_is_valid(const char *name)
 {
-	int error = 0;
+	int valid, error;
 
-	if (!git_remote_is_valid_name(name)) {
+	error = git_remote_name_is_valid(&valid, name);
+
+	if (!error && !valid) {
 		git_error_set(
 			GIT_ERROR_CONFIG,
 			"'%s' is not a valid remote name.", name ? name : "(null)");
