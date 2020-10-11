@@ -750,22 +750,6 @@ GIT_EXTERN(int) git_reference_peel(
 GIT_EXTERN(int) git_reference_name_is_valid(int *valid, const char *refname);
 
 /**
- * Ensure the reference name is well-formed.
- *
- * Valid reference names must follow one of two patterns:
- *
- * 1. Top-level names must contain only capital letters and underscores,
- *    and must begin and end with a letter. (e.g. "HEAD", "ORIG_HEAD").
- * 2. Names prefixed with "refs/" can be almost anything.  You must avoid
- *    the characters '~', '^', ':', '\\', '?', '[', and '*', and the
- *    sequences ".." and "@{" which have special meaning to revparse.
- *
- * @param refname name to be checked.
- * @return 1 if the reference name is acceptable; 0 if it isn't
- */
-GIT_EXTERN(int) git_reference_is_valid_name(const char *refname);
-
-/**
  * Get the reference's short name
  *
  * This will transform the reference name into a name "human-readable"
