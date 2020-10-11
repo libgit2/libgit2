@@ -7,6 +7,7 @@
 
 #include "futils.h"
 
+#include "buffer.h"
 #include "global.h"
 #include "strmap.h"
 #include <ctype.h>
@@ -21,32 +22,30 @@ int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 		GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST | GIT_MKDIR_VERIFY_DIR);
 }
 
+/* Reimplementation of mkstemp, except with a umask-modified mode, instead of 0600. */
 int git_futils_mktmp(git_buf *path_out, const char *filename, mode_t mode)
 {
+	/* glibc tries 238328 times, OpenBSD tries INT_MAX times. */
+	unsigned int tries = INT_MAX;
 	int fd;
-	mode_t mask;
+	const int open_flags = O_RDWR | O_CREAT | O_EXCL | O_BINARY | O_CLOEXEC;
 
-	p_umask(mask = p_umask(0));
+	while (tries--) {
+		git_buf_sets(path_out, filename);
+		git_buf_puts(path_out, "_git2_");
+		git_buf_put_rand(path_out, 8);
 
-	git_buf_sets(path_out, filename);
-	git_buf_puts(path_out, "_git2_XXXXXX");
+		if (git_buf_oom(path_out))
+			return -1;
 
-	if (git_buf_oom(path_out))
-		return -1;
+		if ((fd = p_open(path_out->ptr, open_flags, mode)) == -1)
+			continue;
 
-	if ((fd = p_mkstemp(path_out->ptr)) < 0) {
-		git_error_set(GIT_ERROR_OS,
-			"failed to create temporary file '%s'", path_out->ptr);
-		return -1;
+		return fd;
 	}
 
-	if (p_chmod(path_out->ptr, (mode & ~mask))) {
-		git_error_set(GIT_ERROR_OS,
-			"failed to set permissions on file '%s'", path_out->ptr);
-		return -1;
-	}
-
-	return fd;
+	git_error_set(GIT_ERROR_OS, "failed to create temporary file");
+	return -1;
 }
 
 int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode_t mode)
