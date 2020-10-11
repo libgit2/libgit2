@@ -1294,6 +1294,8 @@ int git_reference__name_is_valid(
 {
 	int error;
 
+	GIT_ASSERT(valid && refname);
+
 	*valid = 0;
 
 	error = git_reference__normalize_name(NULL, refname, flags);
@@ -1304,6 +1306,11 @@ int git_reference__name_is_valid(
 		error = 0;
 
 	return error;
+}
+
+int git_reference_name_is_valid(int *valid, const char *refname)
+{
+	return git_reference__name_is_valid(valid, refname, GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL);
 }
 
 int git_reference_is_valid_name(const char *refname)
