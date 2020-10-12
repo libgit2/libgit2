@@ -58,47 +58,48 @@ void test_trace_windows_stacktrace__leaks(void)
 		GIT_WIN32__CRTDBG_STACKTRACE__QUIET |
 		GIT_WIN32__CRTDBG_STACKTRACE__LEAKS_SINCE_MARK,
 		"p1");
-	cl_assert((leaks == 1));
+	cl_assert_equal_i(1, leaks);
 
 	p2 = git__malloc(5);
 	leaks = git_win32__crtdbg_stacktrace__dump(
 		GIT_WIN32__CRTDBG_STACKTRACE__QUIET |
 		GIT_WIN32__CRTDBG_STACKTRACE__LEAKS_SINCE_MARK,
 		"p1,p2");
-	cl_assert((leaks == 2));
+	cl_assert_equal_i(2, leaks);
 
 	p3 = git__malloc(5);
 	leaks = git_win32__crtdbg_stacktrace__dump(
 		GIT_WIN32__CRTDBG_STACKTRACE__QUIET |
 		GIT_WIN32__CRTDBG_STACKTRACE__LEAKS_SINCE_MARK,
 		"p1,p2,p3");
-	cl_assert((leaks == 3));
+	cl_assert_equal_i(3, leaks);
 
 	git__free(p2);
 	leaks = git_win32__crtdbg_stacktrace__dump(
 		GIT_WIN32__CRTDBG_STACKTRACE__QUIET |
 		GIT_WIN32__CRTDBG_STACKTRACE__LEAKS_SINCE_MARK,
 		"p1,p3");
-	cl_assert((leaks == 2));
+	cl_assert_equal_i(2, leaks);
 
 	/* move the mark. only new leaks should appear afterwards */
 	error = git_win32__crtdbg_stacktrace__dump(
 		GIT_WIN32__CRTDBG_STACKTRACE__SET_MARK,
 		NULL);
-	cl_assert((error == 0));
+	/* cannot use cl_git_pass() since that may allocate memory. */
+	cl_assert_equal_i(0, error);
 
 	leaks = git_win32__crtdbg_stacktrace__dump(
 		GIT_WIN32__CRTDBG_STACKTRACE__QUIET |
 		GIT_WIN32__CRTDBG_STACKTRACE__LEAKS_SINCE_MARK,
 		"not_p1,not_p3");
-	cl_assert((leaks == 0));
+	cl_assert_equal_i(0, leaks);
 
 	p4 = git__malloc(5);
 	leaks = git_win32__crtdbg_stacktrace__dump(
 		GIT_WIN32__CRTDBG_STACKTRACE__QUIET |
 		GIT_WIN32__CRTDBG_STACKTRACE__LEAKS_SINCE_MARK,
 		"p4,not_p1,not_p3");
-	cl_assert((leaks == 1));
+	cl_assert_equal_i(1, leaks);
 
 	git__free(p1);
 	git__free(p3);
@@ -106,21 +107,21 @@ void test_trace_windows_stacktrace__leaks(void)
 		GIT_WIN32__CRTDBG_STACKTRACE__QUIET |
 		GIT_WIN32__CRTDBG_STACKTRACE__LEAKS_SINCE_MARK,
 		"p4");
-	cl_assert((leaks == 1));
+	cl_assert_equal_i(1, leaks);
 
 	git__free(p4);
 	leaks = git_win32__crtdbg_stacktrace__dump(
 		GIT_WIN32__CRTDBG_STACKTRACE__QUIET |
 		GIT_WIN32__CRTDBG_STACKTRACE__LEAKS_SINCE_MARK,
 		"end");
-	cl_assert((leaks == 0));
+	cl_assert_equal_i(0, leaks);
 
 	/* confirm current absolute leaks count matches beginning value. */
 	after = git_win32__crtdbg_stacktrace__dump(
 		GIT_WIN32__CRTDBG_STACKTRACE__QUIET |
 		GIT_WIN32__CRTDBG_STACKTRACE__LEAKS_TOTAL,
 		"total");
-	cl_assert((before == after));
+	cl_assert_equal_i(before, after);
 #endif
 }
 
