@@ -1,3 +1,92 @@
+v1.1
+----
+
+This is release v1.1, "Fernweh".
+
+### Changes or improvements
+
+* Our bundled PCRE dependency has been updated to 8.44.
+
+* The `refs/remotes/origin/HEAD` file will be created at clone time to
+  point to the origin's default branch.
+
+* libgit2 now uses the `__atomic_` intrinsics instead of `__sync_`
+  intrinsics on supported gcc and clang versions.
+
+* The `init.defaultBranch` setting is now respected and `master` is
+  no longer the hardcoded as the default branch name.
+
+* Patch files that do not contain an `index` line can now be parsed.
+
+* Configuration files with multi-line values can now contain quotes
+  split across multiple lines.
+
+* Windows clients now attempt to use TLS1.3 when available.
+
+* Servers that request an upgrade to a newer HTTP version are
+  silently ignored instead of erroneously failing.
+
+* Users can pass `NULL` to the options argument to
+  `git_describe_commit`.
+
+* Clones and fetches of very large packfiles now succeeds on 32-bit
+  platforms.
+
+* Custom reference database backends can now handle the repository's
+  `HEAD` correctly.
+
+* Repositories with a large number of packfiles no longer exhaust the
+  number of file descriptors.
+
+* The test framework now supports TAP output when the `-t` flag is
+  specified.
+
+* The test framework can now specify an exact match to a test
+  function using a trailing `$`.
+
+* All checkout types support `GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH`.
+
+* `git_blame` now can ignore whitespace changes using the option
+  `GIT_BLAME_IGNORE_WHITESPACE`.
+
+* Several new examples have been created, including an examples for
+  commit, add and push.
+
+* Mode changes during rename are now supported in patch application.
+
+* `git_checkout_head` now correctly removes untracked files in a
+  subdirectory when the `FORCE | REMOVE_UNTRACKED` options are specified.
+
+v1.0.1
+------
+
+This is a bugfix release with the following changes:
+
+- Calculating information about renamed files during merges is more
+  efficient because dissimilarity about files is now being cached and
+  no longer needs to be recomputed.
+  
+- The `git_worktree_prune_init_options` has been correctly restored for
+  backward compatibility.  In v1.0 it was incorrectly deprecated with a
+  typo.
+
+- The optional ntlmclient dependency now supports NetBSD.
+
+- A bug where attempting to stash on a bare repository may have failed
+  has been fixed.
+
+- Configuration files that are unreadable due to permissions are now
+  silently ignored, and treated as if they do not exist.  This matches
+  git's behavior; previously this case would have been an error.
+
+- v4 index files are now correctly written; previously we would read
+  them correctly but would not write the prefix-compression accurately,
+  causing corruption.
+
+- A bug where the smart HTTP transport could not read large data packets
+  has been fixed.  Previously, fetching from servers like Gerrit, that
+  sent large data packets, would error.
+
 v1.0
 ----
 
