@@ -311,6 +311,11 @@ GIT_INLINE(volatile void *) git___swap(
 	return old;
 }
 
+GIT_INLINE(volatile void *) git___load(void * volatile *ptr)
+{
+	return *ptr;
+}
+
 #ifdef GIT_ARCH_64
 
 GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
