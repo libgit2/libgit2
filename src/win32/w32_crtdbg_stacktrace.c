@@ -57,7 +57,7 @@ static CRITICAL_SECTION g_crtdbg_stacktrace_cs;
  * it and try again.
  */
 
-#define MY_ROW_LIMIT (1024 * 1024)
+#define MY_ROW_LIMIT (2 * 1024 * 1024)
 static git_win32__crtdbg_stacktrace__row  g_cs_rows[MY_ROW_LIMIT];
 static git_win32__crtdbg_stacktrace__row *g_cs_index[MY_ROW_LIMIT];
 
