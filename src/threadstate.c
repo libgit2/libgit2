@@ -135,7 +135,7 @@ static void git_threadstate_global_shutdown(void)
 
 int git_threadstate_global_init(void)
 {
-	return git_runtime_shutdown_register(git_tlsdata_global_shutdown);
+	return git_runtime_shutdown_register(git_threadstate_global_shutdown);
 }
 
 git_threadstate *git_threadstate_get(void)
