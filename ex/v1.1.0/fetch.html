@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>fetch.c</title>
+  <link rel="stylesheet" href="../css.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#v1.1.0">API Docs</a>
+          <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
+          <a class="source" href="blame.html">blame.c</a>
+          <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="checkout.html">checkout.c</a>
+          <a class="source" href="clone.html">clone.c</a>
+          <a class="source" href="commit.html">commit.c</a>
+          <a class="source" href="common.html">common.c</a>
+          <a class="source" href="config.html">config.c</a>
+          <a class="source" href="describe.html">describe.c</a>
+          <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="fetch.html">fetch.c</a>
+          <a class="source" href="for-each-ref.html">for-each-ref.c</a>
+          <a class="source" href="general.html">general.c</a>
+          <a class="source" href="index-pack.html">index-pack.c</a>
+          <a class="source" href="init.html">init.c</a>
+          <a class="source" href="lg2.html">lg2.c</a>
+          <a class="source" href="log.html">log.c</a>
+          <a class="source" href="ls-files.html">ls-files.c</a>
+          <a class="source" href="ls-remote.html">ls-remote.c</a>
+          <a class="source" href="merge.html">merge.c</a>
+          <a class="source" href="push.html">push.c</a>
+          <a class="source" href="remote.html">remote.c</a>
+          <a class="source" href="rev-list.html">rev-list.c</a>
+          <a class="source" href="rev-parse.html">rev-parse.c</a>
+          <a class="source" href="show-index.html">show-index.c</a>
+          <a class="source" href="stash.html">stash.c</a>
+          <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>fetch.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">progress_cb</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">str</span><span class="p">,</span> <span class="kt">int</span> <span class="n">len</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">data</span><span class="p">;</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;remote: %.*s&quot;</span><span class="p">,</span> <span class="n">len</span><span class="p">,</span> <span class="n">str</span><span class="p">);</span>
+  <span class="n">fflush</span><span class="p">(</span><span class="n">stdout</span><span class="p">);</span> <span class="cm">/* We don&#39;t have the \n to force the flush */</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>This function gets called for each remote-tracking branch that gets
+updated. The message we output depends on whether it&#39;s a new one or
+an update.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">update_cb</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">refname</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_oid</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_oid</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">char</span> <span class="n">a_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="n">b_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
+  <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">data</span><span class="p">;</span>
+
+  <span class="n"><a name="git_oid_fmt-1" class="fnlink" href="../../#v1.1.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">b_str</span><span class="p">,</span> <span class="n">b</span><span class="p">);</span>
+  <span class="n">b_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_oid_is_zero-3" class="fnlink" href="../../#v1.1.0/group/oid/git_oid_is_zero">git_oid_is_zero</a></span><span class="p">(</span><span class="n">a</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;[new]     %.20s %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">b_str</span><span class="p">,</span> <span class="n">refname</span><span class="p">);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n"><a name="git_oid_fmt-2" class="fnlink" href="../../#v1.1.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">a_str</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+    <span class="n">a_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;[updated] %.10s..%.10s %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">a_str</span><span class="p">,</span> <span class="n">b_str</span><span class="p">,</span> <span class="n">refname</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-3'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-3">&#182;</a>
+        </div>
+        <p>This gets called during the download and indexing. Here we show
+processed and total objects in the pack and the amount of received
+data. Most frontends will probably want to show a percentage and
+the download rate.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">transfer_progress_cb</span><span class="p">(</span><span class="k">const</span> <span class="n">git_indexer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">payload</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">stats</span><span class="o">-&gt;</span><span class="n">received_objects</span> <span class="o">==</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">total_objects</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Resolving deltas %u/%u</span><span class="se">\r</span><span class="s">&quot;</span><span class="p">,</span>
+           <span class="n">stats</span><span class="o">-&gt;</span><span class="n">indexed_deltas</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">total_deltas</span><span class="p">);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">stats</span><span class="o">-&gt;</span><span class="n">total_objects</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Received %u/%u objects (%u) in %&quot;</span> <span class="n">PRIuZ</span> <span class="s">&quot; bytes</span><span class="se">\r</span><span class="s">&quot;</span><span class="p">,</span>
+           <span class="n">stats</span><span class="o">-&gt;</span><span class="n">received_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">total_objects</span><span class="p">,</span>
+           <span class="n">stats</span><span class="o">-&gt;</span><span class="n">indexed_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">received_bytes</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-4'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-4">&#182;</a>
+        </div>
+        <p>Entry point for this command</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="kt">int</span> <span class="nf">lg2_fetch</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="k">const</span> <span class="n">git_indexer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
+  <span class="n">git_fetch_options</span> <span class="n">fetch_opts</span> <span class="o">=</span> <span class="n">GIT_FETCH_OPTIONS_INIT</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: %s fetch &lt;repo&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]);</span>
+    <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="cm">/* Figure out whether it&#39;s a named remote or a URL */</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Fetching %s for repo %p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">repo</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_lookup-5" class="fnlink" href="../../#v1.1.0/group/remote/git_remote_lookup">git_remote_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_create_anonymous-4" class="fnlink" href="../../#v1.1.0/group/remote/git_remote_create_anonymous">git_remote_create_anonymous</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="k">goto</span> <span class="n">on_error</span><span class="p">;</span>
+
+  <span class="cm">/* Set up the callbacks (only update_tips for now) */</span>
+  <span class="n">fetch_opts</span><span class="p">.</span><span class="n">callbacks</span><span class="p">.</span><span class="n">update_tips</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">update_cb</span><span class="p">;</span>
+  <span class="n">fetch_opts</span><span class="p">.</span><span class="n">callbacks</span><span class="p">.</span><span class="n">sideband_progress</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">progress_cb</span><span class="p">;</span>
+  <span class="n">fetch_opts</span><span class="p">.</span><span class="n">callbacks</span><span class="p">.</span><span class="n">transfer_progress</span> <span class="o">=</span> <span class="n">transfer_progress_cb</span><span class="p">;</span>
+  <span class="n">fetch_opts</span><span class="p">.</span><span class="n">callbacks</span><span class="p">.</span><span class="n">credentials</span> <span class="o">=</span> <span class="n">cred_acquire_cb</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-5'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-5">&#182;</a>
+        </div>
+        <p>Perform the fetch with the configured refspecs from the
+config. Update the reflog for the updated references with
+&quot;fetch&quot;.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_fetch-8" class="fnlink" href="../../#v1.1.0/group/remote/git_remote_fetch">git_remote_fetch</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fetch_opts</span><span class="p">,</span> <span class="s">&quot;fetch&quot;</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">goto</span> <span class="n">on_error</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-6'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-6">&#182;</a>
+        </div>
+        <p>If there are local objects (we got a thin pack), then tell
+the user how many objects we saved from having to cross the
+network.</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">stats</span> <span class="o">=</span> <span class="n"><a name="git_remote_stats-9" class="fnlink" href="../../#v1.1.0/group/remote/git_remote_stats">git_remote_stats</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">stats</span><span class="o">-&gt;</span><span class="n">local_objects</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\r</span><span class="s">Received %u/%u objects in %&quot;</span> <span class="n">PRIuZ</span> <span class="s">&quot; bytes (used %u local objects)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+           <span class="n">stats</span><span class="o">-&gt;</span><span class="n">indexed_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">total_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">received_bytes</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">local_objects</span><span class="p">);</span>
+  <span class="p">}</span> <span class="k">else</span><span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\r</span><span class="s">Received %u/%u objects in %&quot;</span> <span class="n">PRIuZ</span> <span class="s">&quot;bytes</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+      <span class="n">stats</span><span class="o">-&gt;</span><span class="n">indexed_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">total_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">received_bytes</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="n"><a name="git_remote_free-6" class="fnlink" href="../../#v1.1.0/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+
+ <span class="nl">on_error</span><span class="p">:</span>
+  <span class="n"><a name="git_remote_free-7" class="fnlink" href="../../#v1.1.0/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+  <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>push.c</title>
+  <link rel="stylesheet" href="../css.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#v1.1.0">API Docs</a>
+          <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
+          <a class="source" href="blame.html">blame.c</a>
+          <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="checkout.html">checkout.c</a>
+          <a class="source" href="clone.html">clone.c</a>
+          <a class="source" href="commit.html">commit.c</a>
+          <a class="source" href="common.html">common.c</a>
+          <a class="source" href="config.html">config.c</a>
+          <a class="source" href="describe.html">describe.c</a>
+          <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="fetch.html">fetch.c</a>
+          <a class="source" href="for-each-ref.html">for-each-ref.c</a>
+          <a class="source" href="general.html">general.c</a>
+          <a class="source" href="index-pack.html">index-pack.c</a>
+          <a class="source" href="init.html">init.c</a>
+          <a class="source" href="lg2.html">lg2.c</a>
+          <a class="source" href="log.html">log.c</a>
+          <a class="source" href="ls-files.html">ls-files.c</a>
+          <a class="source" href="ls-remote.html">ls-remote.c</a>
+          <a class="source" href="merge.html">merge.c</a>
+          <a class="source" href="push.html">push.c</a>
+          <a class="source" href="remote.html">remote.c</a>
+          <a class="source" href="rev-list.html">rev-list.c</a>
+          <a class="source" href="rev-parse.html">rev-parse.c</a>
+          <a class="source" href="show-index.html">show-index.c</a>
+          <a class="source" href="stash.html">stash.c</a>
+          <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>push.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
+<span class="cm"> * libgit2 &quot;push&quot; example - shows how to push to remote</span>
+<span class="cm"> *</span>
+<span class="cm"> * Written by the libgit2 contributors</span>
+<span class="cm"> *</span>
+<span class="cm"> * To the extent possible under law, the author(s) have dedicated all copyright</span>
+<span class="cm"> * and related and neighboring rights to this software to the public domain</span>
+<span class="cm"> * worldwide. This software is distributed without any warranty.</span>
+<span class="cm"> *</span>
+<span class="cm"> * You should have received a copy of the CC0 Public Domain Dedication along</span>
+<span class="cm"> * with this software. If not, see</span>
+<span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
+<span class="cm"> */</span>
+
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>This example demonstrates the libgit2 push API to roughly
+simulate <code>git push</code>.</p>
+
+<p>This does not have:</p>
+
+<ul>
+<li>Robust error handling</li>
+<li>Any of the <code>git push</code> options</li>
+</ul>
+
+<p>This does have:</p>
+
+<ul>
+<li>Example of push to origin/master</li>
+</ul>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre></pre></div>
+      </td>
+    </tr>
+    <tr id='section-3'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-3">&#182;</a>
+        </div>
+        <p>Entry point for this command</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="kt">int</span> <span class="nf">lg2_push</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">git_push_options</span> <span class="n">options</span><span class="p">;</span>
+  <span class="n">git_remote</span><span class="o">*</span> <span class="n">remote</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">refspec</span> <span class="o">=</span> <span class="s">&quot;refs/heads/master&quot;</span><span class="p">;</span>
+  <span class="k">const</span> <span class="n">git_strarray</span> <span class="n">refspecs</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="o">&amp;</span><span class="n">refspec</span><span class="p">,</span>
+    <span class="mi">1</span>
+  <span class="p">};</span>
+
+    <span class="cm">/* Validate args */</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span> <span class="p">(</span><span class="s">&quot;USAGE: %s</span><span class="se">\n\n</span><span class="s">sorry, no arguments supported yet</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_lookup-1" class="fnlink" href="../../#v1.1.0/group/remote/git_remote_lookup">git_remote_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="s">&quot;origin&quot;</span> <span class="p">),</span> <span class="s">&quot;Unable to lookup remote&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_push_options_init-2" class="fnlink" href="../../#v1.1.0/group/push/git_push_options_init">git_push_options_init</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span> <span class="n">GIT_PUSH_OPTIONS_VERSION</span> <span class="p">),</span> <span class="s">&quot;Error initializing push&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_push-3" class="fnlink" href="../../#v1.1.0/group/remote/git_remote_push">git_remote_push</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">refspecs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">options</span><span class="p">),</span> <span class="s">&quot;Error pushing&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;pushed</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
