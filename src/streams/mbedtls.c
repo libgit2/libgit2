@@ -11,7 +11,7 @@
 
 #include <ctype.h>
 
-#include "global.h"
+#include "runtime.h"
 #include "stream.h"
 #include "streams/socket.h"
 #include "netops.h"
@@ -152,9 +152,7 @@ int git_mbedtls_stream_global_init(void)
 	if (!loaded && crtpath != NULL && stat(crtpath, &statbuf) == 0 && S_ISDIR(statbuf.st_mode))
 		loaded = (git_mbedtls__set_cert_location(crtpath, 1) == 0);
 
-	git__on_shutdown(shutdown_ssl);
-
-	return 0;
+	return git_runtime_shutdown_register(shutdown_ssl);
 
 cleanup:
 	mbedtls_ctr_drbg_free(ctr_drbg);

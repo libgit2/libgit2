@@ -6,8 +6,7 @@
  */
 
 #include "thread.h"
-
-#include "../global.h"
+#include "runtime.h"
 
 #define CLEAN_THREAD_EXIT 0x6F012842
 
@@ -19,6 +18,8 @@ static win32_srwlock_fn win32_srwlock_release_shared;
 static win32_srwlock_fn win32_srwlock_acquire_exclusive;
 static win32_srwlock_fn win32_srwlock_release_exclusive;
 
+static DWORD fls_index;
+
 /* The thread procedure stub used to invoke the caller's procedure
  * and capture the return value for later collection. Windows will
  * only hold a DWORD, but we need to be able to store an entire
@@ -28,14 +29,19 @@ static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 	git_thread *thread = lpParameter;
 
 	/* Set the current thread for `git_thread_exit` */
-	GIT_GLOBAL->current_thread = thread;
+	FlsSetValue(fls_index, thread);
 
 	thread->result = thread->proc(thread->param);
 
 	return CLEAN_THREAD_EXIT;
 }
 
-int git_threads_init(void)
+static void git_threads_global_shutdown(void)
+{
+	FlsFree(fls_index);
+}
+
+int git_threads_global_init(void)
 {
 	HMODULE hModule = GetModuleHandleW(L"kernel32");
 
@@ -52,7 +58,10 @@ int git_threads_init(void)
 			GetProcAddress(hModule, "ReleaseSRWLockExclusive");
 	}
 
-	return 0;
+	if ((fls_index = FlsAlloc(NULL)) == FLS_OUT_OF_INDEXES)
+		return -1;
+
+	return git_runtime_shutdown_register(git_threads_global_shutdown);
 }
 
 int git_thread_create(
@@ -99,8 +108,11 @@ int git_thread_join(
 
 void git_thread_exit(void *value)
 {
-	assert(GIT_GLOBAL->current_thread);
-	GIT_GLOBAL->current_thread->result = value;
+	git_thread *thread = FlsGetValue(fls_index);
+
+	if (thread)
+		thread->result = value;
+
 	ExitThread(CLEAN_THREAD_EXIT);
 }
 

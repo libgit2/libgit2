@@ -5,7 +5,33 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "libgit2.h"
+
+#include <git2.h>
+#include "alloc.h"
+#include "cache.h"
 #include "common.h"
+#include "filter.h"
+#include "hash.h"
+#include "index.h"
+#include "merge_driver.h"
+#include "pool.h"
+#include "mwindow.h"
+#include "object.h"
+#include "odb.h"
+#include "refs.h"
+#include "runtime.h"
+#include "sysdir.h"
+#include "thread-utils.h"
+#include "threadstate.h"
+#include "git2/global.h"
+#include "streams/registry.h"
+#include "streams/mbedtls.h"
+#include "streams/openssl.h"
+#include "transports/smart.h"
+#include "transports/http.h"
+#include "transports/ssh.h"
+#include "win32/w32_stack.h"
 
 #ifdef GIT_OPENSSL
 # include <openssl/err.h>
@@ -15,19 +41,53 @@
 # include <mbedtls/error.h>
 #endif
 
-#include <git2.h>
-#include "alloc.h"
-#include "sysdir.h"
-#include "cache.h"
-#include "global.h"
-#include "object.h"
-#include "odb.h"
-#include "refs.h"
-#include "index.h"
-#include "transports/smart.h"
-#include "transports/http.h"
-#include "streams/openssl.h"
-#include "streams/mbedtls.h"
+/* Declarations for tuneable settings */
+extern size_t git_mwindow__window_size;
+extern size_t git_mwindow__mapped_limit;
+extern size_t git_mwindow__file_limit;
+extern size_t git_indexer__max_objects;
+extern bool git_disable_pack_keep_file_checks;
+
+char *git__user_agent;
+char *git__ssl_ciphers;
+
+static void libgit2_settings_global_shutdown(void)
+{
+	git__free(git__user_agent);
+	git__free(git__ssl_ciphers);
+}
+
+static int git_libgit2_settings_global_init(void)
+{
+	return git_runtime_shutdown_register(libgit2_settings_global_shutdown);
+}
+
+int git_libgit2_init(void)
+{
+	static git_runtime_init_fn init_fns[] = {
+		git_allocator_global_init,
+		git_threadstate_global_init,
+		git_threads_global_init,
+		git_hash_global_init,
+		git_sysdir_global_init,
+		git_filter_global_init,
+		git_merge_driver_global_init,
+		git_transport_ssh_global_init,
+		git_stream_registry_global_init,
+		git_openssl_stream_global_init,
+		git_mbedtls_stream_global_init,
+		git_mwindow_global_init,
+		git_pool_global_init,
+		git_libgit2_settings_global_init
+	};
+
+	return git_runtime_init(init_fns, ARRAY_SIZE(init_fns));
+}
+
+int git_libgit2_shutdown(void)
+{
+	return git_runtime_shutdown();
+}
 
 int git_libgit2_version(int *major, int *minor, int *rev)
 {
@@ -56,13 +116,6 @@ int git_libgit2_features(void)
 	;
 }
 
-/* Declarations for tuneable settings */
-extern size_t git_mwindow__window_size;
-extern size_t git_mwindow__mapped_limit;
-extern size_t git_mwindow__file_limit;
-extern size_t git_indexer__max_objects;
-extern bool git_disable_pack_keep_file_checks;
-
 static int config_level_to_sysdir(int config_level)
 {
 	int val = -1;
@@ -87,9 +140,6 @@ static int config_level_to_sysdir(int config_level)
 
 	return val;
 }
-
-extern char *git__user_agent;
-extern char *git__ssl_ciphers;
 
 const char *git_libgit2__user_agent(void)
 {

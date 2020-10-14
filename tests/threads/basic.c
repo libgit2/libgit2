@@ -54,6 +54,12 @@ static void *return_normally(void *param)
 {
 	return param;
 }
+
+static void *exit_abruptly(void *param)
+{
+	git_thread_exit(param);
+	return NULL;
+}
 #endif
 
 void test_threads_basic__exit(void)
@@ -70,7 +76,7 @@ void test_threads_basic__exit(void)
 	cl_assert_equal_sz(424242, (size_t)result);
 
 	/* Ensure that the return value of `git_thread_exit` is returned. */
-	cl_git_pass(git_thread_create(&thread, return_normally, (void *)232323));
+	cl_git_pass(git_thread_create(&thread, exit_abruptly, (void *)232323));
 	cl_git_pass(git_thread_join(&thread, &result));
 	cl_assert_equal_sz(232323, (size_t)result);
 #endif

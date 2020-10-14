@@ -7,7 +7,7 @@
 
 #include "win32.h"
 
-#include "global.h"
+#include "runtime.h"
 
 #include <wincrypt.h>
 #include <strsafe.h>
@@ -129,7 +129,8 @@ int git_hash_sha1_global_init(void)
 	if ((error = hash_cng_prov_init()) < 0)
 		error = hash_cryptoapi_prov_init();
 
-	git__on_shutdown(sha1_shutdown);
+	if (!error)
+		error = git_runtime_shutdown_register(sha1_shutdown);
 
 	return error;
 }

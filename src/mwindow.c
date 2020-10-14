@@ -10,7 +10,7 @@
 #include "vector.h"
 #include "futils.h"
 #include "map.h"
-#include "global.h"
+#include "runtime.h"
 #include "strmap.h"
 #include "pack.h"
 
@@ -29,15 +29,20 @@ size_t git_mwindow__window_size = DEFAULT_WINDOW_SIZE;
 size_t git_mwindow__mapped_limit = DEFAULT_MAPPED_LIMIT;
 size_t git_mwindow__file_limit = DEFAULT_FILE_LIMIT;
 
+/* Mutex to control access */
+git_mutex git__mwindow_mutex;
+
 /* Whenever you want to read or modify this, grab git__mwindow_mutex */
 git_mwindow_ctl git_mwindow__mem_ctl;
 
 /* Global list of mwindow files, to open packs once across repos */
 git_strmap *git__pack_cache = NULL;
 
-static void git_mwindow_files_free(void)
+static void git_mwindow_global_shutdown(void)
 {
 	git_strmap *tmp = git__pack_cache;
+
+	git_mutex_free(&git__mwindow_mutex);
 
 	git__pack_cache = NULL;
 	git_strmap_free(tmp);
@@ -45,10 +50,15 @@ static void git_mwindow_files_free(void)
 
 int git_mwindow_global_init(void)
 {
+	int error;
+
 	assert(!git__pack_cache);
 
-	git__on_shutdown(git_mwindow_files_free);
-	return git_strmap_new(&git__pack_cache);
+	if ((error = git_mutex_init(&git__mwindow_mutex)) < 0 ||
+	    (error = git_strmap_new(&git__pack_cache)) < 0)
+	    return error;
+
+	return git_runtime_shutdown_register(git_mwindow_global_shutdown);
 }
 
 int git_mwindow_get_pack(struct git_pack_file **out, const char *path)

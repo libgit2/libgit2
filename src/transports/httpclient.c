@@ -10,7 +10,6 @@
 #include "http_parser.h"
 #include "vector.h"
 #include "trace.h"
-#include "global.h"
 #include "httpclient.h"
 #include "http.h"
 #include "auth.h"

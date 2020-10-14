@@ -14,7 +14,7 @@
 #include "posix.h"
 #include "buffer.h"
 #include "http_parser.h"
-#include "global.h"
+#include "runtime.h"
 
 #define DEFAULT_PORT_HTTP  "80"
 #define DEFAULT_PORT_HTTPS "443"
