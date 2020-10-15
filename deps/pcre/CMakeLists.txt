@@ -20,9 +20,6 @@ CHECK_FUNCTION_EXISTS(_strtoi64 HAVE__STRTOI64)
 CHECK_TYPE_SIZE("long long"             LONG_LONG)
 CHECK_TYPE_SIZE("unsigned long long"    UNSIGNED_LONG_LONG)
 
-DISABLE_WARNINGS(unused-function)
-DISABLE_WARNINGS(implicit-fallthrough)
-
 # User-configurable options
 
 SET(SUPPORT_PCRE8 1)
@@ -122,19 +119,19 @@ SET(PCREPOSIX_SOURCES pcreposix.c)
 
 # Build setup
 
-ADD_DEFINITIONS(-DHAVE_CONFIG_H)
-
-IF(MSVC)
-        ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS)
-ENDIF(MSVC)
-
 SET(CMAKE_INCLUDE_CURRENT_DIR 1)
 
 SET(targets)
 
 # Libraries
 # pcre
-INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR}/src/pcre)
-ADD_LIBRARY(pcre OBJECT ${PCRE_HEADERS} ${PCRE_SOURCES} ${PCREPOSIX_SOURCES})
+add_library(pcre OBJECT ${PCRE_HEADERS} ${PCRE_SOURCES} ${PCREPOSIX_SOURCES})
+target_include_directories(pcre PRIVATE ${PROJECT_BINARY_DIR}/src/pcre)
+target_disable_warning(pcre unused-function)
+target_disable_warning(pcre implicit-fallthrough)
+target_compile_definitions(pcre PRIVATE HAVE_CONFIG_H)
+if(MSVC)
+	target_compile_definitions(pcre PRIVATE _CRT_SECURE_NO_DEPRECATE _CRT_SECURE_NO_WARNINGS)
+endif()
 
 # end CMakeLists.txt
