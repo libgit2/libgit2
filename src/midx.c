@@ -114,7 +114,7 @@ static int midx_parse_oid_lookup(
 		return midx_error("missing OID Lookup chunk");
 	if (chunk_oid_lookup->length == 0)
 		return midx_error("empty OID Lookup chunk");
-	if (chunk_oid_lookup->length != idx->num_objects * 20)
+	if (chunk_oid_lookup->length != idx->num_objects * GIT_OID_RAWSZ)
 		return midx_error("OID Lookup chunk has wrong length");
 
 	idx->oid_lookup = oid = (git_oid *)(data + chunk_oid_lookup->offset);
@@ -181,7 +181,7 @@ int git_midx_parse(
 
 	assert(idx);
 
-	if (size < sizeof(struct git_midx_header) + 20)
+	if (size < sizeof(struct git_midx_header) + GIT_OID_RAWSZ)
 		return midx_error("multi-pack index is too short");
 
 	hdr = ((struct git_midx_header *)data);
@@ -201,7 +201,7 @@ int git_midx_parse(
 	last_chunk_offset =
 			sizeof(struct git_midx_header) +
 			(1 + hdr->chunks) * 12;
-	trailer_offset = size - 20;
+	trailer_offset = size - GIT_OID_RAWSZ;
 	if (trailer_offset < last_chunk_offset)
 		return midx_error("wrong index size");
 	git_oid_cpy(&idx->checksum, (git_oid *)(data + trailer_offset));
@@ -353,7 +353,7 @@ bool git_midx_needs_refresh(
 		return true;
 	}
 
-	if (p_lseek(fd, -20, SEEK_END) < 0) {
+	if (p_lseek(fd, -GIT_OID_RAWSZ, SEEK_END) < 0) {
 		p_close(fd);
 		return true;
 	}
@@ -361,7 +361,7 @@ bool git_midx_needs_refresh(
 	bytes_read = p_read(fd, &idx_checksum, GIT_OID_RAWSZ);
 	p_close(fd);
 
-	if (bytes_read < 0)
+	if (bytes_read != GIT_OID_RAWSZ)
 		return true;
 
 	return git_oid_cmp(&idx_checksum, &idx->checksum) == 0;
@@ -385,7 +385,7 @@ int git_midx_entry_find(
 	hi = ntohl(idx->oid_fanout[(int)short_oid->id[0]]);
 	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(idx->oid_fanout[(int)short_oid->id[0] - 1]));
 
-	pos = git_pack__lookup_sha1(idx->oid_lookup, 20, lo, hi, short_oid->id);
+	pos = git_pack__lookup_sha1(idx->oid_lookup, GIT_OID_RAWSZ, lo, hi, short_oid->id);
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */
@@ -451,9 +451,10 @@ int git_midx_foreach_entry(
 
 	assert(idx);
 
-	for (i = 0; i < idx->num_objects; ++i)
+	for (i = 0; i < idx->num_objects; ++i) {
 		if ((error = cb(&idx->oid_lookup[i], data)) != 0)
 			return git_error_set_after_callback(error);
+	}
 
 	return error;
 }
