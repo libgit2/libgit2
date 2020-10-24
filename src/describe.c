@@ -414,9 +414,9 @@ static int show_suffix(
 
 static int describe_not_found(const git_oid *oid, const char *message_format) {
 	char oid_str[GIT_OID_HEXSZ + 1];
-	git_oid_tostr(oid_str, sizeof(oid_str), oid);
 
-	git_error_set(GIT_ERROR_DESCRIBE, message_format, oid_str);
+	git_error_set(GIT_ERROR_DESCRIBE, message_format, 
+		      git_oid_tostr(oid_str, sizeof(oid_str), oid));
 	return GIT_ENOTFOUND;
 }
 
