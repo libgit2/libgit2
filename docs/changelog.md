@@ -1,3 +1,18 @@
+vNext
+-----
+
+### Changes or improvements
+
+* Branch and tag name validation functions have been introduced:
+  `git_branch_name_is_valid` will check if a branch name is valid,
+  and `git_tag_name_is_valid` will check if a tag name is valid.
+
+* Some remote and reference validity checking functions have been
+  introduced with error reporting semantics.  `git_remote_name_is_valid`
+  replaces `git_remote_is_valid_name`.  `git_reference_name_is_valid`
+  replaces `git_reference_is_valid_name`.  Tthe former functions are
+  deprecated.
+
 v1.1
 ----
 
