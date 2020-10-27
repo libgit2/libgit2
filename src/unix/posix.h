@@ -17,7 +17,6 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 
-typedef int GIT_SOCKET;
 #define INVALID_SOCKET -1
 
 #define p_lseek(f,n,w) lseek(f, n, w)
@@ -100,5 +99,10 @@ GIT_INLINE(int) p_futimes(int f, const struct p_timeval t[2])
 #else
 # define p_futimes futimes
 #endif
+
+extern int p_setfd_flags(git_socket fd, int set, int clr);
+
+#define p_setfd_nonblocking(fd) p_setfd_flags((fd), O_NONBLOCK, 0)
+#define p_setfd_blocking(fd) p_setfd_flags((fd), 0, O_NONBLOCK)
 
 #endif

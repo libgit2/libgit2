@@ -270,3 +270,31 @@ int p_munmap(git_map *map)
 }
 
 #endif
+
+#ifndef GIT_WIN32
+
+int p_setfd_flags(git_socket fd, int set, int clr)
+{
+	int flags;
+
+	flags = fcntl(fd, F_GETFL, 0);
+
+	if(flags < 0)
+	{
+		git_error_set(GIT_ERROR_OS, "failed to get socket flags");
+		return GIT_ERROR;
+	}
+
+	flags |= set;
+	flags &= ~clr;
+
+	if(fcntl(fd, F_SETFL, flags) < 0)
+	{
+		git_error_set(GIT_ERROR_OS, "failed to set socket flags");
+		return GIT_ERROR;
+	}
+	else
+		return GIT_OK;
+}
+
+#endif

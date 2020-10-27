@@ -300,14 +300,16 @@ int git_stransport_stream_wrap(
 	return stransport_wrap(out, in, host, 0);
 }
 
-int git_stransport_stream_new(git_stream **out, const char *host, const char *port)
+int git_stransport_stream_new(git_stream **out, git_remote *remote, const char *host, const char *port)
 {
 	git_stream *stream = NULL;
 	int error;
 
+	GIT_UNUSED(remote);
+
 	assert(out && host);
 
-	error = git_socket_stream_new(&stream, host, port);
+	error = git_socket_stream_new(&stream, NULL, host, port);
 
 	if (!error)
 		error = stransport_wrap(out, stream, host, 1);

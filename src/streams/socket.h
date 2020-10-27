@@ -9,15 +9,32 @@
 
 #include "common.h"
 
+#ifdef _WIN32
+  #include <ws2tcpip.h>
+#else
+  #include <sys/types.h>
+  #include <sys/socket.h>
+  #include <netdb.h>
+#endif
+
 #include "netops.h"
 
 typedef struct {
 	git_stream parent;
 	char *host;
 	char *port;
-	GIT_SOCKET s;
+
+	git_socket s;
+	git_event_t events;
+	
+	struct addrinfo *info;
+	struct addrinfo *curinfo;
+	
+	git_buf sock_buf;
+	
+	git_remote *remote;
 } git_socket_stream;
 
-extern int git_socket_stream_new(git_stream **out, const char *host, const char *port);
+extern int git_socket_stream_new(git_stream **out, git_remote *remote, const char *host, const char *port);
 
 #endif

@@ -8,6 +8,7 @@
 #define INCLUDE_git_remote_h__
 
 #include "common.h"
+
 #include "repository.h"
 #include "refspec.h"
 #include "net.h"
@@ -328,6 +329,12 @@ GIT_EXTERN(const git_refspec *)git_remote_get_refspec(const git_remote *remote, 
  * is due to a limitation of the git protocol (over TCP or SSH) which
  * starts up a specific binary which can only do the one or the other.
  *
+ * If the set_fd_events member in the callbacks structure is NULL,
+ * this operation blocks until a connection has been established. Otherwise,
+ * this function returns GIT_EAGAIN and libgit2 switches to asynchroneous
+ * I/O semantics. You must use git_remote_perform() to pass on events to
+ * libgit2 and for checking on the operation status.
+ *
  * @param remote the remote to connect to
  * @param direction GIT_DIRECTION_FETCH if you want to fetch or
  * GIT_DIRECTION_PUSH if you want to push
@@ -491,6 +498,25 @@ typedef int GIT_CALLBACK(git_push_update_reference_cb)(const char *refname, cons
 typedef int GIT_CALLBACK(git_url_resolve_cb)(git_buf *url_resolved, const char *url, int direction, void *payload);
 
 /**
+ * Callback to inform application about which events to wait for
+ *
+ * This callback is used while an asynchroneous network operation is in
+ * progress. It informs the application which events to wait for on a
+ * file descriptor, and what the new timeout value shall be.
+ *
+ * If there are no more events to process for this file descriptor, neither the
+ * GIT_EVENT_READ nor GIT_EVENT_WRITE flags are set.
+ *
+ * @param fd The socket to wait for
+ * @param event Event flags
+ * @param timeout Timeout value in seconds
+ * @param payload Payload provided by application
+ * @return GIT_OK on success, any other error code cancels the operation and is passed through to the application
+ */
+
+typedef int GIT_CALLBACK(git_remote_events_cb)(git_socket fd, git_event_t event, unsigned int timeout, void *payload);
+
+/**
  * The callback settings structure
  *
  * Set the callbacks to be called by the remote when informing the user
@@ -585,6 +611,12 @@ struct git_remote_callbacks {
 	 * The returned URL will be used to connect to the remote instead.
 	 */
 	git_url_resolve_cb resolve_url;
+	
+	/**
+	 * Callback to inform application about events to wait for on a
+	 * socket
+	 */
+	git_remote_events_cb set_fd_events;
 };
 
 #define GIT_REMOTE_CALLBACKS_VERSION 1
@@ -768,6 +800,12 @@ GIT_EXTERN(int) git_push_options_init(
  * The .idx file will be created and both it and the packfile with be
  * renamed to their final name.
  *
+ * If the set_fd_events member in the callbacks structure in opts is
+ * NULL, this operation blocks until the operation has finished.
+ * Otherwise, this function returns GIT_EAGAIN and libgit2 switches to
+ * asynchroneous I/O semantics. You must use git_remote_perform() to pass on
+ * events to libgit2 and for checking on the operation status.
+ *
  * @param remote the remote
  * @param refspecs the refspecs to use for this negotiation and
  * download. Use NULL or an empty array to use the base refspecs
@@ -781,6 +819,12 @@ GIT_EXTERN(int) git_push_options_init(
  *
  * Connect to the remote if it hasn't been done yet, negotiate with
  * the remote git which objects are missing, create a packfile with the missing objects and send it.
+ *
+ * If the set_fd_events member in the callbacks structure in opts is
+ * NULL, this operation blocks until the operation has finished.
+ * Otherwise, this function returns GIT_EAGAIN and libgit2 switches to
+ * asynchroneous I/O semantics. You must use git_remote_perform() to pass on
+ * events to libgit2 and for checking on the operation status.
  *
  * @param remote the remote
  * @param refspecs the refspecs to use for this negotiation and
@@ -817,6 +861,12 @@ GIT_EXTERN(int) git_remote_update_tips(
  * Convenience function to connect to a remote, download the data,
  * disconnect and update the remote-tracking branches.
  *
+ * If the set_fd_events member in the callbacks structure in opts is
+ * NULL, this operation blocks until the operation has finished.
+ * Otherwise, this function returns GIT_EAGAIN and libgit2 switches to
+ * asynchroneous I/O semantics. You must use git_remote_perform() to pass on
+ * events to libgit2 and for checking on the operation status.
+ *
  * @param remote the remote to fetch from
  * @param refspecs the refspecs to use for this fetch. Pass NULL or an
  *                 empty array to use the base refspecs.
@@ -844,6 +894,12 @@ GIT_EXTERN(int) git_remote_prune(git_remote *remote, const git_remote_callbacks 
  * Perform a push
  *
  * Peform all the steps from a push.
+ *
+ * If the set_fd_events member in the callbacks structure in opts is
+ * NULL, this operation blocks until the operation has finished.
+ * Otherwise, this function returns GIT_EAGAIN and libgit2 switches to
+ * asynchroneous I/O semantics. You must use git_remote_perform() to pass on
+ * events to libgit2 and for checking on the operation status.
  *
  * @param remote the remote to push to
  * @param refspecs the refspecs to use for pushing. If NULL or an empty
@@ -949,6 +1005,28 @@ GIT_EXTERN(int) git_remote_delete(git_repository *repo, const char *name);
  * or none of them point to HEAD's commit, or an error message.
  */
 GIT_EXTERN(int) git_remote_default_branch(git_buf *out, git_remote *remote);
+
+/**
+ * Signal events to libgit2 in asynchroneous remote operations
+ *
+ * events may be one of
+ * * GIT_EVENT_READ    - Data is available for read on network socket for remote
+ * * GIT_EVENT_WRITE   - Socket is ready for sending of data to remote
+ * * GIT_EVENT_ERR     - An error occurred waiting for network socket
+ * * GIT_EVENT_TIMEOUT - Operation timed out
+ *
+ * This function returns two error codes that have special meaning:
+ * * GIT_OK     - Operation in progress terminated successfully
+ * * GIT_EAGAIN - Operation is waiting for new events
+ * Any other error codes mean an error has occurred and the operation has
+ * been cancelled.
+ *
+ * @param remote Remote with active operation
+ * @param events Flags with events that occurred
+ * @return An error code
+ */
+
+GIT_EXTERN(int) git_remote_perform(git_remote *remote, git_event_t events);
 
 /** @} */
 GIT_END_DECL

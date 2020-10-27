@@ -899,7 +899,7 @@ int p_rename(const char *from, const char *to)
 	do_with_retries(rename_once(wfrom, wto), ensure_writable(wto));
 }
 
-int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags)
+int p_recv(git_socket socket, void *buffer, size_t length, int flags)
 {
 	if ((size_t)((int)length) != length)
 		return -1; /* git_error_set will be done by caller */
@@ -907,7 +907,7 @@ int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags)
 	return recv(socket, buffer, (int)length, flags);
 }
 
-int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags)
+int p_send(git_socket socket, const void *buffer, size_t length, int flags)
 {
 	if ((size_t)((int)length) != length)
 		return -1; /* git_error_set will be done by caller */
@@ -980,4 +980,18 @@ int p_inet_pton(int af, const char *src, void *dst)
 
 	errno = EINVAL;
 	return -1;
+}
+
+int p_setfd_fionbio(git_socket fd, int mode)
+{
+	u_long blocking = mode;
+	int err;
+
+	if((err = ioctlsocket(fd, FIONBIO, &blocking)) == SOCKET_ERROR)
+	{
+		git_error_set(GIT_ERROR_OS, "failed to configure socket blocking behaviour");
+		return GIT_ERROR;
+	}
+	else
+		return GIT_OK;
 }

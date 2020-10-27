@@ -13,8 +13,9 @@ void test_stream_deprecated__cleanup(void)
 static git_stream test_stream;
 static int ctor_called;
 
-static int test_stream_init(git_stream **out, const char *host, const char *port)
+static int test_stream_init(git_stream **out, git_remote *remote, const char *host, const char *port)
 {
+	GIT_UNUSED(remote);
 	GIT_UNUSED(host);
 	GIT_UNUSED(port);
 
@@ -33,14 +34,14 @@ void test_stream_deprecated__register_tls(void)
 
 	ctor_called = 0;
 	cl_git_pass(git_stream_register_tls(test_stream_init));
-	cl_git_pass(git_tls_stream_new(&stream, "localhost", "443"));
+	cl_git_pass(git_tls_stream_new(&stream, NULL, "localhost", "443"));
 	cl_assert_equal_i(1, ctor_called);
 	cl_assert_equal_p(&test_stream, stream);
 
 	ctor_called = 0;
 	stream = NULL;
 	cl_git_pass(git_stream_register_tls(NULL));
-	error = git_tls_stream_new(&stream, "localhost", "443");
+	error = git_tls_stream_new(&stream, NULL, "localhost", "443");
 
 	/*
 	 * We don't have TLS support enabled, or we're on Windows,

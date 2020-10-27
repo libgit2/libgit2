@@ -19,6 +19,11 @@
 #include "refspec.h"
 #include "fetchhead.h"
 #include "push.h"
+#include "proxy.h"
+
+#ifndef _WIN32
+#include <sys/select.h>
+#endif
 
 #define CONFIG_URL_FMT "remote.%s.url"
 #define CONFIG_PUSHURL_FMT "remote.%s.pushurl"
@@ -26,9 +31,126 @@
 #define CONFIG_PUSH_FMT "remote.%s.push"
 #define CONFIG_TAGOPT_FMT "remote.%s.tagopt"
 
+typedef int (*git_remote_performall_fun)(git_remote *remote);
+
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
 static int lookup_remote_prune_config(git_remote *remote, git_config *config, const char *name);
 char *apply_insteadof(git_config *config, const char *url, int direction);
+
+static int git_remote_dispatch_performcb(git_remote *remote, git_event_t events)
+{
+	size_t num_cb = remote->perform_num_cb;
+	
+	if(num_cb)
+	{
+		git_perform_cb cb;
+		void *cbref;
+		
+		cb = remote->perform_callbacks[--num_cb].cb;
+		cbref = remote->perform_callbacks[num_cb].cbref;
+		remote->perform_num_cb = num_cb;
+		
+		if(cb)
+			return cb(remote, cbref, events);
+		else
+		{
+			git_error_set(GIT_ERROR_NET, "invalid perform callback");
+			return GIT_EINVALID;
+		}
+	}
+	else
+		return GIT_ENOTFOUND;
+}
+
+int git_remote_add_performcb(git_remote *remote, git_perform_cb cb, void *cbref)
+{
+	size_t num_cb = remote->perform_num_cb;
+	
+	if(num_cb < ARRAY_SIZE(remote->perform_callbacks))
+	{
+		remote->perform_callbacks[num_cb].cb = cb;
+		remote->perform_callbacks[num_cb++].cbref = cbref;
+		remote->perform_num_cb = num_cb;
+		return GIT_OK;
+	}
+	else
+	{
+		git_error_set(GIT_ERROR_NET, "maximum number of perform callbacks exceeded");
+		return GIT_ERROR;
+	}
+}
+
+int git_remote_rearm_performcb(git_remote *remote, git_perform_cb cb, void *cbref, git_event_t events)
+{
+	int err;
+
+	if((err = git_remote_dispatch_performcb(remote, events)) < 0 && err == GIT_EAGAIN)
+	{
+		if((err = git_remote_add_performcb(remote, cb, cbref)) < 0)
+			return err;
+		else
+			return GIT_EAGAIN;
+	}
+	
+	return err;
+}
+
+static int set_fd_events(git_socket fd, git_event_t event, unsigned int timeout, void *payload)
+{
+	eventcb_data_t *evdata = payload;
+	
+	if((event & GIT_EVENT_READ))
+		FD_SET(fd, &evdata->readfds);
+	else
+		FD_CLR(fd, &evdata->readfds);
+
+	if((event & GIT_EVENT_WRITE))
+		FD_SET(fd, &evdata->writefds);
+	else
+		FD_CLR(fd, &evdata->writefds);
+	
+	if((event & (GIT_EVENT_READ | GIT_EVENT_WRITE)))
+		FD_SET(fd, &evdata->exceptfds);
+	else
+		FD_CLR(fd, &evdata->exceptfds);
+
+	evdata->timeout.tv_sec = timeout;
+	evdata->highest_fd = fd;
+	
+	return GIT_OK;
+}
+
+int git_remote_issync(const git_remote_callbacks *callbacks)
+{
+	return !callbacks || !callbacks->set_fd_events || callbacks->set_fd_events == set_fd_events;
+}
+
+static void init_remote_callbacks(git_remote *remote, const git_remote_callbacks *cbs)
+{
+	if(cbs)
+	{
+		if(cbs != &remote->callbacks)
+			remote->callbacks = *cbs;
+	}
+	else
+		git_remote_init_callbacks(&remote->callbacks, GIT_REMOTE_CALLBACKS_VERSION);
+}
+
+void git_init_eventcb_data(eventcb_data_t *evdata, git_remote *remote)
+{
+	if(git_remote_issync(&remote->callbacks))
+	{
+		remote->callbacks.set_fd_events = set_fd_events;
+		FD_ZERO(&evdata->readfds);
+		FD_ZERO(&evdata->writefds);
+		FD_ZERO(&evdata->exceptfds);
+		evdata->timeout.tv_usec = 0;
+		
+		remote->cbref = evdata;
+	}
+	else
+		remote->cbref = remote->callbacks.payload;
+}
 
 static int add_refspec_to(git_vector *vector, const char *string, bool is_fetch)
 {
@@ -648,6 +770,70 @@ int git_remote_set_pushurl(git_repository *repo, const char *remote, const char*
 	return set_url(repo, remote, CONFIG_PUSHURL_FMT, url);
 }
 
+int git_perform_all(git_remote *remote)
+{
+	eventcb_data_t *evdata = remote->cbref;
+	int sret;
+	int err;
+	
+	do
+	{
+		fd_set readfds = evdata->readfds;
+		fd_set writefds = evdata->writefds;
+		fd_set exceptfds = evdata->exceptfds;
+		struct timeval timeout = evdata->timeout;
+		git_event_t events;
+		
+		sret = select((int) evdata->highest_fd + 1, &readfds, &writefds, &exceptfds, &timeout);
+
+		if(sret < 0)
+		{
+#ifndef _MSC_VER
+/* #warning check whether git_remote_stop() does the right thing here, or whether we need to call perform() another time. */
+#endif
+			git_remote_stop(remote);
+			git_error_set(GIT_ERROR_NET, "failed to wait for event: %s", strerror(errno));
+			return GIT_ERROR;
+		}
+		
+		events = 0;
+		
+		if(FD_ISSET(evdata->highest_fd, &readfds))
+			events |= GIT_EVENT_READ;
+		if(FD_ISSET(evdata->highest_fd, &writefds))
+			events |= GIT_EVENT_WRITE;
+		if(FD_ISSET(evdata->highest_fd, &exceptfds))
+			events |= GIT_EVENT_ERR;
+			
+		if(!events)
+			events |= GIT_EVENT_TIMEOUT;
+		
+		err = git_remote_perform(remote, events);
+	} while(err == GIT_EAGAIN);
+	
+	return err;
+}
+
+static int perform_all_fun(git_remote *remote, git_remote_performall_fun func)
+{
+	eventcb_data_t evdata;
+	int err;
+	
+	git_init_eventcb_data(&evdata, remote);
+
+	err = func(remote);
+	
+	if(git_remote_issync(&remote->callbacks))
+	{
+		if(err == GIT_EAGAIN)
+			err = git_perform_all(remote);
+		
+		remote->callbacks.set_fd_events = NULL;
+	}
+	
+	return err;
+}
+
 static int resolve_url(git_buf *resolved_url, const char *url, int direction, const git_remote_callbacks *callbacks)
 {
 	int status;
@@ -705,32 +891,62 @@ static int set_transport_custom_headers(git_transport *t, const git_strarray *cu
 	return t->set_custom_headers(t, custom_headers);
 }
 
-int git_remote__connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_remote_connection_opts *conn)
+static int check_busy(git_remote *remote)
 {
-	git_transport *t;
-	git_buf url = GIT_BUF_INIT;
-	int flags = GIT_TRANSPORTFLAGS_NONE;
-	int error;
-	void *payload = NULL;
+	if(remote->perform_num_cb)
+	{
+		git_error_set(GIT_ERROR_NET, "remote is busy");
+		return GIT_EBUSY;
+	}
+	else
+		return GIT_OK;
+}
+
+static int git_remote__connect_perform(git_remote *remote, void *cbref, git_event_t events)
+{
+	git_transport *t = remote->connect_transport;
+	int err;
+	
+	if((err = git_remote_rearm_performcb(remote, git_remote__connect_perform, cbref, events)) < 0)
+	{
+		if(err != GIT_EAGAIN)
+		{
+			if(t == remote->transport)
+				remote->transport = NULL;
+	
+			t->free(t);
+			remote->connect_transport = NULL;
+
+			git_buf_dispose(&remote->resolved_url);
+		}
+	}
+	else
+	{
+		remote->transport = t;
+		remote->connect_transport = NULL;
+
+		git_buf_dispose(&remote->resolved_url);
+	}
+	
+	return err;
+}
+
+static int git_remote__connect_goturl(git_remote *remote)
+{
+	const git_remote_callbacks *callbacks = &remote->callbacks;
 	git_credential_acquire_cb credentials = NULL;
 	git_transport_cb transport = NULL;
-
-	assert(remote);
+	void *payload = NULL;
+	git_transport *t;
+	int error;
 
 	if (callbacks) {
-		GIT_ERROR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		credentials = callbacks->credentials;
 		transport   = callbacks->transport;
 		payload     = callbacks->payload;
 	}
 
-	if (conn->proxy)
-		GIT_ERROR_CHECK_VERSION(conn->proxy, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
-
 	t = remote->transport;
-
-	if ((error = git_remote__urlfordirection(&url, remote, direction, callbacks)) < 0)
-		goto on_error;
 
 	/* If we don't have a transport object yet, and the caller specified a
 	 * custom transport factory, use that */
@@ -740,27 +956,43 @@ int git_remote__connect(git_remote *remote, git_direction direction, const git_r
 
 	/* If we still don't have a transport, then use the global
 	 * transport registrations which map URI schemes to transport factories */
-	if (!t && (error = git_transport_new(&t, remote, url.ptr)) < 0)
+	if (!t && (error = git_transport_new(&t, remote, remote->resolved_url.ptr)) < 0)
 		goto on_error;
 
-	if ((error = set_transport_custom_headers(t, conn->custom_headers)) != 0)
+	if ((error = set_transport_custom_headers(t, &remote->custom_headers)) != 0)
 		goto on_error;
 
-	if ((error = remote_transport_set_callbacks(t, callbacks)) < 0 ||
-	    (error = t->connect(t, url.ptr, credentials, payload, conn->proxy, direction, flags)) != 0)
+	if ((error = remote_transport_set_callbacks(t, callbacks)) < 0)
 		goto on_error;
+	
+	if ((error = t->connect(t, remote->resolved_url.ptr, credentials, payload, &remote->proxy_options, remote->dir, GIT_TRANSPORTFLAGS_NONE)) < 0)
+	{
+		if(error == GIT_EAGAIN)
+		{
+			if((error = git_remote_add_performcb(remote, git_remote__connect_perform, NULL)) < 0)
+				goto on_error;
+			else
+			{
+				remote->connect_transport = t;
+				return GIT_EAGAIN;
+			}
+		}
+		else
+			goto on_error;
+	}
+	else
+	{
+		git_buf_dispose(&remote->resolved_url);
+		remote->transport = t;
 
-	remote->transport = t;
-
-	git_buf_dispose(&url);
-
-	return 0;
-
+		return GIT_OK;
+	}
+	
 on_error:
 	if (t)
 		t->free(t);
 
-	git_buf_dispose(&url);
+	git_buf_dispose(&remote->resolved_url);
 
 	if (t == remote->transport)
 		remote->transport = NULL;
@@ -768,14 +1000,65 @@ on_error:
 	return error;
 }
 
+static int git_remote__connect_performurl(git_remote *remote, void *cbref, git_event_t events)
+{
+	int err;
+
+	if((err = git_remote_rearm_performcb(remote, git_remote__connect_performurl, cbref, events)) < 0)
+	{
+		if(err != GIT_EAGAIN)
+			git_buf_dispose(&remote->resolved_url);
+		
+		return err;
+	}
+	else
+		return git_remote__connect_goturl(remote);
+}
+
+int git_remote__connect(git_remote *remote)
+{
+	int error;
+
+	if ((error = git_remote__urlfordirection(&remote->resolved_url, remote, remote->dir, &remote->callbacks)) < 0)
+	{
+		if(error == GIT_EAGAIN)
+		{
+			if((error = git_remote_add_performcb(remote, git_remote__connect_performurl, NULL)) >= 0)
+				return GIT_EAGAIN;
+		}
+
+		return error;
+	}
+	else
+		return git_remote__connect_goturl(remote);
+}
+
 int git_remote_connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_proxy_options *proxy, const git_strarray *custom_headers)
 {
-	git_remote_connection_opts conn;
+	int err;
 
-	conn.proxy = proxy;
-	conn.custom_headers = custom_headers;
+	assert(remote);
+	
+	if((err = check_busy(remote)) < 0)
+		return err;
 
-	return git_remote__connect(remote, direction, callbacks, &conn);
+	GIT_ERROR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+        GIT_ERROR_CHECK_VERSION(proxy, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
+
+	git_strarray_dispose(&remote->custom_headers);
+	if(custom_headers && (err = git_strarray_copy(&remote->custom_headers, custom_headers)) < 0)
+		return err;
+
+	git_proxy_options_clear(&remote->proxy_options);
+	if(proxy && (err = git_proxy_options_dup(&remote->proxy_options, proxy)) < 0)
+		return err;
+
+	remote->dir = direction;
+
+	init_remote_callbacks(remote, callbacks);
+
+	return perform_all_fun(remote, git_remote__connect);
+		return err;
 }
 
 int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote)
@@ -917,16 +1200,71 @@ static int ls_to_vector(git_vector *out, git_remote *remote)
 	return 0;
 }
 
+static int git_remote_download_negotiated(git_remote *remote)
+{
+	return git_fetch_download_pack(remote, &remote->callbacks);
+}
+
+static int git_remote_download_perform_negotiate(git_remote *remote, void *cbref, git_event_t events)
+{
+	int err;
+
+	if((err = git_remote_rearm_performcb(remote, git_remote_download_perform_negotiate, cbref, events)) < 0)
+		return err;
+	else
+		return git_remote_download_negotiated(remote);
+}
+
+
+static int git_remote_download_connected(git_remote *remote)
+{
+	int error;
+
+	if(remote->push)
+	{
+		git_push_free(remote->push);
+		remote->push = NULL;
+	}
+
+	if((error = git_fetch_negotiate(remote, &remote->opts.fetch)) < 0)
+	{
+		if(error == GIT_EAGAIN)
+		{
+			if((error = git_remote_add_performcb(remote, git_remote_download_perform_negotiate, NULL)) >= 0)
+				return GIT_EAGAIN;
+		}
+
+		return error;
+	}
+	else
+		return git_remote_download_negotiated(remote);
+}
+
+static int git_remote_download_performconnect(git_remote *remote, void *cbref, git_event_t events)
+{
+	int err;
+
+	if((err = git_remote_rearm_performcb(remote, git_remote_download_performconnect, cbref, events)) < 0)
+		return err;
+	else
+		return perform_all_fun(remote, git_remote_download_connected);
+}
+
 int git_remote_download(git_remote *remote, const git_strarray *refspecs, const git_fetch_options *opts)
 {
-	int error = -1;
-	size_t i;
-	git_vector *to_active, specs = GIT_VECTOR_INIT, refs = GIT_VECTOR_INIT;
+	int error;
+	git_vector specs = GIT_VECTOR_INIT;
+	git_vector refs = GIT_VECTOR_INIT;
+	git_vector *to_active;
 	const git_remote_callbacks *cbs = NULL;
 	const git_strarray *custom_headers = NULL;
 	const git_proxy_options *proxy = NULL;
+	size_t i;
 
 	assert(remote);
+
+	if((error = check_busy(remote)) < 0)
+		return error;
 
 	if (!remote->repo) {
 		git_error_set(GIT_ERROR_INVALID, "cannot download detached remote");
@@ -934,22 +1272,22 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 	}
 
 	if (opts) {
+		GIT_ERROR_CHECK_VERSION(opts, GIT_FETCH_OPTIONS_VERSION, "git_fetch_options");
 		GIT_ERROR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+
 		cbs = &opts->callbacks;
 		custom_headers = &opts->custom_headers;
-		GIT_ERROR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
 		proxy = &opts->proxy_opts;
 	}
+	
+	if((error = ls_to_vector(&refs, remote)) < 0)
+		return error;
 
-	if (!git_remote_connected(remote) &&
-	    (error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, proxy, custom_headers)) < 0)
-		goto on_error;
-
-	if (ls_to_vector(&refs, remote) < 0)
-		return -1;
-
-	if ((git_vector_init(&specs, 0, NULL)) < 0)
-		goto on_error;
+	if((error = git_vector_init(&specs, 0, NULL)) < 0)
+	{
+		git_vector_free(&specs);
+		return error;
+	}
 
 	remote->passed_refspecs = 0;
 	if (!refspecs || !refspecs->count) {
@@ -957,7 +1295,11 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 	} else {
 		for (i = 0; i < refspecs->count; i++) {
 			if ((error = add_refspec_to(&specs, refspecs->strings[i], true)) < 0)
-				goto on_error;
+			{
+				free_refspecs(&specs);
+				git_vector_free(&specs);
+				return error;
+			}
 		}
 
 		to_active = &specs;
@@ -965,10 +1307,16 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 	}
 
 	free_refspecs(&remote->passive_refspecs);
-	if ((error = dwim_refspecs(&remote->passive_refspecs, &remote->refspecs, &refs)) < 0)
-		goto on_error;
+	
+	if((error = dwim_refspecs(&remote->passive_refspecs, &remote->refspecs, &refs)) < 0)
+	{
+		free_refspecs(&specs);
+		git_vector_free(&specs);
+		return error;
+	}
 
 	free_refspecs(&remote->active_refspecs);
+
 	error = dwim_refspecs(&remote->active_refspecs, to_active, &refs);
 
 	git_vector_free(&refs);
@@ -978,21 +1326,146 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 	if (error < 0)
 		return error;
 
-	if (remote->push) {
-		git_push_free(remote->push);
-		remote->push = NULL;
+	if(git_remote_connected(remote))
+	{
+		init_remote_callbacks(remote, cbs);
+		return perform_all_fun(remote, git_remote_download_connected);
 	}
+	else
+	{
+		if((error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, proxy, custom_headers)) < 0)
+		{
+			if(error == GIT_EAGAIN)
+			{
+				if((error = git_remote_add_performcb(remote, git_remote_download_performconnect, NULL)) >= 0)
+					return GIT_EAGAIN;
+			}
 
-	if ((error = git_fetch_negotiate(remote, opts)) < 0)
-		return error;
+			return error;
+		}
+		else
+			return perform_all_fun(remote, git_remote_download_connected);
+	}
+}
 
-	return git_fetch_download_pack(remote, cbs);
+static int git_remote_fetch_cleanup(git_remote *remote, int err)
+{
+	git_strarray_dispose(&remote->requested_refspecs);
+	git_buf_dispose(&remote->reflog_message);
+	
+	return err;
+}
 
-on_error:
-	git_vector_free(&refs);
-	free_refspecs(&specs);
-	git_vector_free(&specs);
-	return error;
+static int git_remote_fetch_disconnected(git_remote *remote)
+{
+	const git_remote_callbacks *cbs = &remote->callbacks;
+	const git_fetch_options *fopts = &remote->opts.fetch;
+	int error;
+	bool prune = false;
+
+	/* Create "remote/foo" branches for all remote branches */
+	error = git_remote_update_tips(remote, cbs, fopts->update_fetchhead, fopts->download_tags,
+	                               git_buf_cstr(&remote->reflog_message));
+
+	if (error < 0)
+		return git_remote_fetch_cleanup(remote, error);
+
+	if (fopts && fopts->prune == GIT_FETCH_PRUNE)
+		prune = true;
+	else if (fopts && fopts->prune == GIT_FETCH_PRUNE_UNSPECIFIED && remote->prune_refs)
+		prune = true;
+	else if (fopts && fopts->prune == GIT_FETCH_NO_PRUNE)
+		prune = false;
+	else
+		prune = remote->prune_refs;
+
+	if (prune)
+		error = git_remote_prune(remote, cbs);
+
+	return git_remote_fetch_cleanup(remote, error);
+}
+
+static int git_remote_fetch_performdisconnect(git_remote *remote, void *cbref, git_event_t events)
+{
+	int err;
+
+	if((err = git_remote_rearm_performcb(remote, git_remote_fetch_performdisconnect, cbref, events)) < 0)
+	{
+		if(err == GIT_EAGAIN)
+			return err;
+		else
+			return git_remote_fetch_cleanup(remote, err);
+	}
+	else
+		return git_remote_fetch_disconnected(remote);
+}
+
+
+static int git_remote_fetch_downloaded(git_remote *remote)
+{
+	int error;
+
+	/* We don't need to be connected anymore */
+	if((error = git_remote_disconnect(remote)) < 0)
+	{
+		if(error == GIT_EAGAIN)
+		{
+			if((error = git_remote_add_performcb(remote, git_remote_fetch_performdisconnect, NULL)) >= 0)
+				return GIT_EAGAIN;
+		}
+
+		return git_remote_fetch_cleanup(remote, error);
+	}
+	else
+		return git_remote_fetch_disconnected(remote);
+}
+
+static int git_remote_fetch_performdownload(git_remote *remote, void *cbref, git_event_t events)
+{
+	int err;
+
+	if((err = git_remote_rearm_performcb(remote, git_remote_fetch_performdownload, cbref, events)) < 0)
+	{
+		if(err == GIT_EAGAIN)
+			return err;
+		else
+			return git_remote_fetch_cleanup(remote, err);
+	}
+	else
+		return git_remote_fetch_downloaded(remote);
+}
+
+static int git_remote_fetch_connected(git_remote *remote)
+{
+	int error;
+
+	if((error = git_remote_download(remote, &remote->requested_refspecs, &remote->opts.fetch)) < 0)
+	{
+		if(error == GIT_EAGAIN)
+		{
+			if((error = git_remote_add_performcb(remote, git_remote_fetch_performdownload, NULL)) >= 0)
+				return GIT_EAGAIN;
+		}
+
+		return git_remote_fetch_cleanup(remote, error);
+	}
+	else
+		return git_remote_fetch_downloaded(remote);
+}
+
+static int git_remote_fetch_performconnect(git_remote *remote, void *cbref, git_event_t events)
+{
+	int err;
+
+	if((err = git_remote_rearm_performcb(remote, git_remote_fetch_performconnect, cbref, events)) < 0)
+	{
+		if(err != GIT_EAGAIN)
+			return git_remote_fetch_cleanup(remote, err);
+		else
+			return err;
+	}
+	else
+		return git_remote_fetch_connected(remote);
 }
 
 int git_remote_fetch(
@@ -1001,63 +1474,68 @@ int git_remote_fetch(
 		const git_fetch_options *opts,
 		const char *reflog_message)
 {
-	int error, update_fetchhead = 1;
-	git_remote_autotag_option_t tagopt = remote->download_tags;
-	bool prune = false;
-	git_buf reflog_msg_buf = GIT_BUF_INIT;
-	const git_remote_callbacks *cbs = NULL;
-	git_remote_connection_opts conn = GIT_REMOTE_CONNECTION_OPTIONS_INIT;
+	const git_remote_callbacks *cbs;
+	const git_strarray *custom_headers;
+	const git_proxy_options *proxy_opts;
+	int error;
+	
+	assert(remote);
 
-	if (opts) {
-		GIT_ERROR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+	if((error = check_busy(remote)) < 0)
+		return error;
+
+	if (opts)
+	{
+		GIT_ERROR_CHECK_VERSION(opts, GIT_FETCH_OPTIONS_VERSION, "git_fetch_options");
+
 		cbs = &opts->callbacks;
-		conn.custom_headers = &opts->custom_headers;
-		update_fetchhead = opts->update_fetchhead;
-		tagopt = opts->download_tags;
-		GIT_ERROR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
-		conn.proxy = &opts->proxy_opts;
+		custom_headers = &opts->custom_headers;
+		proxy_opts = &opts->proxy_opts;
+		
+		remote->opts.fetch = *opts;
+	}
+	else
+	{
+		if((error = git_fetch_options_init(&remote->opts.fetch, GIT_FETCH_OPTIONS_VERSION)) < 0)
+			return error;
+
+		cbs = NULL;
+		custom_headers = NULL;
+		proxy_opts = NULL;
+	}
+	
+	if(refspecs)
+	{
+		if((error = git_strarray_copy(&remote->requested_refspecs, refspecs)) < 0)
+			return error;
+	}
+
+	/* Default reflog message */
+	if(reflog_message)
+	{
+		if((error = git_buf_sets(&remote->reflog_message, reflog_message)) < 0)
+			return git_remote_fetch_cleanup(remote, error);
+	}
+	else
+	{
+		if((error = git_buf_printf(&remote->reflog_message, "fetch %s",
+				remote->name ? remote->name : remote->url)) < 0)
+			return git_remote_fetch_cleanup(remote, GIT_ERROR);
 	}
 
 	/* Connect and download everything */
-	if ((error = git_remote__connect(remote, GIT_DIRECTION_FETCH, cbs, &conn)) != 0)
-		return error;
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, proxy_opts, custom_headers)) < 0)
+	{
+		if(error == GIT_EAGAIN)
+		{
+			if((error = git_remote_add_performcb(remote, git_remote_fetch_performconnect, NULL)) >= 0)
+				return GIT_EAGAIN;
+		}
 
-	error = git_remote_download(remote, refspecs, opts);
-
-	/* We don't need to be connected anymore */
-	git_remote_disconnect(remote);
-
-	/* If the download failed, return the error */
-	if (error != 0)
-		return error;
-
-	/* Default reflog message */
-	if (reflog_message)
-		git_buf_sets(&reflog_msg_buf, reflog_message);
-	else {
-		git_buf_printf(&reflog_msg_buf, "fetch %s",
-				remote->name ? remote->name : remote->url);
+		return git_remote_fetch_cleanup(remote, error);
 	}
-
-	/* Create "remote/foo" branches for all remote branches */
-	error = git_remote_update_tips(remote, cbs, update_fetchhead, tagopt, git_buf_cstr(&reflog_msg_buf));
-	git_buf_dispose(&reflog_msg_buf);
-	if (error < 0)
-		return error;
-
-	if (opts && opts->prune == GIT_FETCH_PRUNE)
-		prune = true;
-	else if (opts && opts->prune == GIT_FETCH_PRUNE_UNSPECIFIED && remote->prune_refs)
-		prune = true;
-	else if (opts && opts->prune == GIT_FETCH_NO_PRUNE)
-		prune = false;
 	else
-		prune = remote->prune_refs;
-
-	if (prune)
-		error = git_remote_prune(remote, cbs);
-
-	return error;
+		return git_remote_fetch_connected(remote);
 }
 
 static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *update_heads, const char *fetchspec_src)
@@ -1703,6 +2181,11 @@ void git_remote_free(git_remote *remote)
 	if (remote == NULL)
 		return;
 
+	if (remote->connect_transport != NULL) {
+		remote->connect_transport->free(remote->connect_transport);
+		remote->connect_transport = NULL;
+	}
+
 	if (remote->transport != NULL) {
 		git_remote_disconnect(remote);
 
@@ -1725,6 +2208,13 @@ void git_remote_free(git_remote *remote)
 	git__free(remote->url);
 	git__free(remote->pushurl);
 	git__free(remote->name);
+	
+        git_buf_dispose(&remote->resolved_url);
+	git_strarray_dispose(&remote->custom_headers);
+	git_proxy_options_clear(&remote->proxy_options);
+	
+	git_strarray_dispose(&remote->requested_refspecs);
+	
 	git__free(remote);
 }
 
@@ -2437,6 +2927,55 @@ done:
 	return error;
 }
 
+static int git_remote_upload_finished(git_remote *remote)
+{
+	git_remote_callbacks *cbs = &remote->callbacks;
+
+	if(cbs->push_update_reference)
+		return git_push_status_foreach(remote->push, cbs->push_update_reference, cbs->payload);
+	else
+		return GIT_OK;
+}
+
+static int git_remote_upload_perform_finish(git_remote *remote, void *cbref, git_event_t events)
+{
+	int err;
+
+	if((err = git_remote_rearm_performcb(remote, git_remote_upload_perform_finish, cbref, events)) < 0)
+		return err;
+	else
+		return git_remote_upload_finished(remote);
+}
+
+
+static int git_remote_upload_connected(git_remote *remote)
+{
+	int error;
+
+	if((error = git_push_finish(remote->push, &remote->callbacks)) < 0)
+	{
+		if(error == GIT_EAGAIN)
+		{
+			if((error = git_remote_add_performcb(remote, git_remote_upload_perform_finish, NULL)) >= 0)
+				return GIT_EAGAIN;
+		}
+
+		return error;
+	}
+	else
+		return git_remote_upload_finished(remote);
+}
+
+static int git_remote_upload_performconnect(git_remote *remote, void *cbref, git_event_t events)
+{
+	int err;
+
+	if((err = git_remote_rearm_performcb(remote, git_remote_upload_performconnect, cbref, events)) < 0)
+		return err;
+	else
+		return perform_all_fun(remote, git_remote_upload_connected);
+}
+
 int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts)
 {
 	size_t i;
@@ -2444,28 +2983,31 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 	git_push *push;
 	git_refspec *spec;
 	const git_remote_callbacks *cbs = NULL;
-	git_remote_connection_opts conn = GIT_REMOTE_CONNECTION_OPTIONS_INIT;
+	const git_strarray *custom_headers = NULL;
+	const git_proxy_options *proxy_opts = NULL;
 
 	assert(remote);
 
+	if((error = check_busy(remote)) < 0)
+		return error;
+
 	if (!remote->repo) {
-		git_error_set(GIT_ERROR_INVALID, "cannot download detached remote");
+		git_error_set(GIT_ERROR_INVALID, "cannot upload detached remote");
 		return -1;
 	}
 
 	if (opts) {
-		cbs = &opts->callbacks;
-		conn.custom_headers = &opts->custom_headers;
-		conn.proxy = &opts->proxy_opts;
-	}
+		GIT_ERROR_CHECK_VERSION(opts, GIT_PUSH_OPTIONS_VERSION, "git_push_options");
+		GIT_ERROR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 
-	if (!git_remote_connected(remote) &&
-	    (error = git_remote__connect(remote, GIT_DIRECTION_PUSH, cbs, &conn)) < 0)
-		goto cleanup;
+		cbs = &opts->callbacks;
+		custom_headers = &opts->custom_headers;
+		proxy_opts = &opts->proxy_opts;
+	}
 
 	free_refspecs(&remote->active_refspecs);
 	if ((error = dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs)) < 0)
-		goto cleanup;
+		return error;
 
 	if (remote->push) {
 		git_push_free(remote->push);
@@ -2478,67 +3020,199 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 	push = remote->push;
 
 	if (opts && (error = git_push_set_options(push, opts)) < 0)
-		goto cleanup;
+		return error;
 
 	if (refspecs && refspecs->count > 0) {
 		for (i = 0; i < refspecs->count; i++) {
 			if ((error = git_push_add_refspec(push, refspecs->strings[i])) < 0)
-				goto cleanup;
+				return error;
 		}
 	} else {
 		git_vector_foreach(&remote->refspecs, i, spec) {
 			if (!spec->push)
 				continue;
 			if ((error = git_push_add_refspec(push, spec->string)) < 0)
-				goto cleanup;
+				return error;
 		}
 	}
 
-	if ((error = git_push_finish(push, cbs)) < 0)
-		goto cleanup;
+	if(git_remote_connected(remote))
+	{
+		init_remote_callbacks(remote, cbs);
+		return perform_all_fun(remote, git_remote_upload_connected);
+	}
+	else
+	{
+		if((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, proxy_opts, custom_headers)) < 0)
+		{
+			if(error == GIT_EAGAIN)
+			{
+				if((error = git_remote_add_performcb(remote, git_remote_upload_performconnect, NULL)) >= 0)
+					return GIT_EAGAIN;
+			}
 
-	if (cbs && cbs->push_update_reference &&
-	    (error = git_push_status_foreach(push, cbs->push_update_reference, cbs->payload)) < 0)
-		goto cleanup;
+			return error;
+		}
+		else
+			return perform_all_fun(remote, git_remote_upload_connected);
+	}
+}
 
-cleanup:
-	return error;
+static int git_remote_push_cleanup(git_remote *remote, int err)
+{
+	git_strarray_dispose(&remote->requested_refspecs);
+	
+	return err;
+}
+
+static int git_remote_push_disconnected(git_remote *remote)
+{
+	int err;
+
+	err = git_remote_update_tips(remote, &remote->callbacks, 0, 0, NULL);
+
+	return git_remote_push_cleanup(remote, err);
+}
+
+static int git_remote_push_performdisconnect(git_remote *remote, void *cbref, git_event_t events)
+{
+	int err;
+
+	if((err = git_remote_rearm_performcb(remote, git_remote_push_performdisconnect, cbref, events)) < 0)
+	{
+		if(err == GIT_EAGAIN)
+			return err;
+		else
+			return git_remote_push_cleanup(remote, err);
+	}
+	else
+		return git_remote_push_disconnected(remote);
+}
+
+
+static int git_remote_push_uploaded(git_remote *remote)
+{
+	int error;
+
+	/* We don't need to be connected anymore */
+	if((error = git_remote_disconnect(remote)) < 0)
+	{
+		if(error == GIT_EAGAIN)
+		{
+			if((error = git_remote_add_performcb(remote, git_remote_push_performdisconnect, NULL)) >= 0)
+				return GIT_EAGAIN;
+		}
+
+		return git_remote_push_cleanup(remote, error);
+	}
+	else
+		return git_remote_push_disconnected(remote);
+}
+
+static int git_remote_push_performupload(git_remote *remote, void *cbref, git_event_t events)
+{
+	int err;
+
+	if((err = git_remote_rearm_performcb(remote, git_remote_push_performupload, cbref, events)) < 0)
+	{
+		if(err == GIT_EAGAIN)
+			return err;
+		else
+			return git_remote_push_cleanup(remote, err);
+	}
+	else
+		return git_remote_push_uploaded(remote);
+}
+
+
+static int git_remote_push_connected(git_remote *remote)
+{
+	int error;
+
+	if((error = git_remote_upload(remote, &remote->requested_refspecs, &remote->opts.push)) < 0)
+	{
+		if(error == GIT_EAGAIN)
+		{
+			if((error = git_remote_add_performcb(remote, git_remote_push_performupload, NULL)) >= 0)
+				return GIT_EAGAIN;
+		}
+
+		return git_remote_push_cleanup(remote, error);
+	}
+	else
+		return git_remote_push_uploaded(remote);
+}
+
+static int git_remote_push_performconnect(git_remote *remote, void *cbref, git_event_t events)
+{
+	int err;
+
+	if((err = git_remote_rearm_performcb(remote, git_remote_push_performconnect, cbref, events)) < 0)
+	{
+		if(err != GIT_EAGAIN)
+			return git_remote_push_cleanup(remote, err);
+		else
+			return err;
+	}
+	else
+		return git_remote_push_connected(remote);
 }
 
 int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts)
 {
 	int error;
-	const git_remote_callbacks *cbs = NULL;
-	const git_strarray *custom_headers = NULL;
-	const git_proxy_options *proxy = NULL;
+	const git_remote_callbacks *cbs;
+	const git_strarray *custom_headers;
+	const git_proxy_options *proxy_opts;
 
 	assert(remote);
 
+	if((error = check_busy(remote)))
+		return error;
+
 	if (!remote->repo) {
-		git_error_set(GIT_ERROR_INVALID, "cannot download detached remote");
+		git_error_set(GIT_ERROR_INVALID, "cannot push detached remote");
 		return -1;
 	}
 
-	if (opts) {
-		GIT_ERROR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+	if (opts)
+	{
+		GIT_ERROR_CHECK_VERSION(opts, GIT_PUSH_OPTIONS_VERSION, "git_push_options");
+
 		cbs = &opts->callbacks;
 		custom_headers = &opts->custom_headers;
-		GIT_ERROR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
-		proxy = &opts->proxy_opts;
+		proxy_opts = &opts->proxy_opts;
+		
+		remote->opts.push = *opts;
+	}
+	else
+	{
+		if((error = git_push_options_init(&remote->opts.push, GIT_PUSH_OPTIONS_VERSION)) < 0)
+			return error;
+
+		cbs = NULL;
+		custom_headers = NULL;
+		proxy_opts = NULL;
 	}
 
-	assert(remote);
+	if(refspecs)
+	{
+		if((error = git_strarray_copy(&remote->requested_refspecs, refspecs)) < 0)
+			return error;
+	}
 
-	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, proxy, custom_headers)) < 0)
-		return error;
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, proxy_opts, custom_headers)) < 0)
+	{
+		if(error == GIT_EAGAIN)
+		{
+			if((error = git_remote_add_performcb(remote, git_remote_push_performconnect, NULL)) >= 0)
+				return GIT_EAGAIN;
+		}
 
-	if ((error = git_remote_upload(remote, refspecs, opts)) < 0)
-		return error;
-
-	error = git_remote_update_tips(remote, cbs, 0, 0, NULL);
-
-	git_remote_disconnect(remote);
-	return error;
+		return git_remote_push_cleanup(remote, error);
+	}
+	else
+		return git_remote_push_connected(remote);
 }
 
 #define PREFIX "url"
@@ -2604,4 +3278,19 @@ char *apply_insteadof(git_config *config, const char *url, int direction)
 	git__free(replacement);
 
 	return result.ptr;
+}
+
+int git_remote_perform(git_remote *remote, git_event_t events)
+{
+	int err;
+
+	assert(remote);
+	
+	if((err = git_remote_dispatch_performcb(remote, events)) < 0 && err == GIT_ENOTFOUND)
+	{
+		git_error_set(GIT_ERROR_INVALID, "remote is idle");
+		return GIT_ERROR;
+	}
+	
+	return err;
 }

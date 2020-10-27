@@ -17,8 +17,6 @@
 extern unsigned long git_win32__createfile_sharemode;
 extern int git_win32__retries;
 
-typedef SOCKET GIT_SOCKET;
-
 #define p_lseek(f,n,w) _lseeki64(f, n, w)
 
 extern int p_fstat(int fd, struct stat *buf);
@@ -36,8 +34,8 @@ extern int p_mkdir(const char *path, mode_t mode);
 extern int p_fsync(int fd);
 extern char *p_realpath(const char *orig_path, char *buffer);
 
-extern int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags);
-extern int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags);
+extern int p_recv(git_socket socket, void *buffer, size_t length, int flags);
+extern int p_send(git_socket socket, const void *buffer, size_t length, int flags);
 extern int p_inet_pton(int af, const char* src, void* dst);
 
 extern int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr);
@@ -59,5 +57,10 @@ extern int p_lstat_posixly(const char *filename, struct stat *buf);
 
 extern struct tm * p_localtime_r(const time_t *timer, struct tm *result);
 extern struct tm * p_gmtime_r(const time_t *timer, struct tm *result);
+
+extern int p_setfd_fionbio(git_socket fd, int mode);
+
+#define p_setfd_nonblocking(fd) p_setfd_fionbio((fd), 1)
+#define p_setfd_blocking(fd) p_setfd_fionbio((fd), 0)
 
 #endif

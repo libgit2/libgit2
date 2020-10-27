@@ -38,20 +38,31 @@ GIT_BEGIN_DECL
 
 #if defined(_MSC_VER)
 
+#include <winsock2.h>
+
+typedef SOCKET git_socket;
+
 typedef __int64 git_off_t;
 typedef __time64_t git_time_t;
 
 #elif defined(__MINGW32__)
+
+#include <winsock2.h>
+typedef SOCKET git_socket;
 
 typedef off64_t git_off_t;
 typedef __time64_t git_time_t;
 
 #elif defined(__HAIKU__)
 
+typedef int git_socket;
+
 typedef __haiku_std_int64 git_off_t;
 typedef __haiku_std_int64 git_time_t;
 
 #else /* POSIX */
+
+typedef int git_socket;
 
 /*
  * Note: Can't use off_t since if a client program includes <sys/types.h>
@@ -355,6 +366,28 @@ struct git_writestream {
 
 /** Representation of .mailmap file state. */
 typedef struct git_mailmap git_mailmap;
+
+/**
+ * Event flags for asynchroneous I/O
+ *
+ * These flags are used by libgit2 to inform the application about
+ * events to wait for on a socket, and by the application to signal
+ * to libgit2 which events occurred.
+ *
+ * * GIT_EVENT_NONE    - No event
+ * * GIT_EVENT_READ    - Wait for or signal data arrived on socket
+ * * GIT_EVENT_WRITE   - Wait for or signal socket is ready for write
+ * * GIT_EVENT_ERR     - Signal an error occurred on the socket
+ * * GIT_EVENT_TIMEOUT - Wait for or signal a timeout
+ */
+
+typedef enum {
+	GIT_EVENT_NONE    = 0u,
+	GIT_EVENT_READ    = (1u << 0),
+	GIT_EVENT_WRITE   = (1u << 1),
+	GIT_EVENT_ERR     = (1u << 2),
+	GIT_EVENT_TIMEOUT = (1u << 3)
+} git_event_t;
 
 /** @} */
 GIT_END_DECL
