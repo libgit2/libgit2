@@ -15,7 +15,15 @@
 #define STATS_FULL_MIN_SCALE 7
 
 typedef struct {
+	/*
+	 * The index of the delta within the git_diff. Necessary because a file that
+	 * has changed its mode will be reported as a file deletion followed by a
+	 * file addition.
+	 */
+	size_t index;
+	/* Number of lines added. */
 	size_t insertions;
+	/* Number of lines deleted. */
 	size_t deletions;
 } diff_file_stats;
 
@@ -178,10 +186,12 @@ int git_diff_get_stats(
 	git_diff_stats **out,
 	git_diff *diff)
 {
-	size_t i, deltas;
+	size_t i, j, deltas;
 	size_t total_insertions = 0, total_deletions = 0;
 	git_diff_stats *stats = NULL;
 	int error = 0;
+	git_buf previous_path = GIT_BUF_INIT, current_path = GIT_BUF_INIT;
+	int (*path_compare)(const char *, const char *, size_t) = NULL;
 
 	assert(out && diff);
 
@@ -199,7 +209,11 @@ int git_diff_get_stats(
 	stats->diff = diff;
 	GIT_REFCOUNT_INC(diff);
 
-	for (i = 0; i < deltas && !error; ++i) {
+	path_compare = (diff->opts.flags & GIT_DIFF_IGNORE_CASE)
+			? git__strncasecmp
+			: git__strncmp;
+
+	for (i = 0, j = 0; i < deltas && !error; ++i) {
 		git_patch *patch = NULL;
 		size_t add = 0, remove = 0, namelen;
 		const git_diff_delta *delta;
@@ -219,25 +233,42 @@ int git_diff_get_stats(
 
 		/* and, of course, count the line stats */
 		error = git_patch_line_stats(NULL, &add, &remove, patch);
-
 		git_patch_free(patch);
+		if (error < 0)
+			break;
 
-		stats->filestats[i].insertions = add;
-		stats->filestats[i].deletions = remove;
+		/* coalesce file mode changes into a single changed file */
+		git_buf_swap(&previous_path, &current_path);
+		if ((error = git_buf_set(&current_path, delta->new_file.path, namelen)) < 0)
+			break;
+		if (git_buf_len(&previous_path) != git_buf_len(&current_path) ||
+				path_compare(git_buf_cstr(&previous_path),
+					git_buf_cstr(&current_path),
+					git_buf_len(&previous_path)) != 0) {
+			if (i > 0)
+				++j;
+			stats->filestats[j].index = i;
+		}
+
+		stats->filestats[j].insertions += add;
+		stats->filestats[j].deletions += remove;
 
 		total_insertions += add;
 		total_deletions += remove;
 
 		if (stats->max_name < namelen)
 			stats->max_name = namelen;
-		if (stats->max_filestat < add + remove)
-			stats->max_filestat = add + remove;
+		if (stats->max_filestat < stats->filestats[j].insertions + stats->filestats[j].deletions)
+			stats->max_filestat = stats->filestats[j].insertions + stats->filestats[j].deletions;
 	}
 
-	stats->files_changed = deltas;
+	stats->files_changed = j + 1;
 	stats->insertions = total_insertions;
 	stats->deletions = total_deletions;
 	stats->max_digits = digits_for_value(stats->max_filestat + 1);
+
+	git_buf_dispose(&current_path);
+	git_buf_dispose(&previous_path);
 
 	if (error < 0) {
 		git_diff_stats_free(stats);
@@ -286,7 +317,7 @@ int git_diff_stats_to_buf(
 
 	if (format & GIT_DIFF_STATS_NUMBER) {
 		for (i = 0; i < stats->files_changed; ++i) {
-			if ((delta = git_diff_get_delta(stats->diff, i)) == NULL)
+			if ((delta = git_diff_get_delta(stats->diff, stats->filestats[i].index)) == NULL)
 				continue;
 
 			error = diff_file_stats_number_to_buf(
@@ -307,7 +338,7 @@ int git_diff_stats_to_buf(
 			width = 0;
 
 		for (i = 0; i < stats->files_changed; ++i) {
-			if ((delta = git_diff_get_delta(stats->diff, i)) == NULL)
+			if ((delta = git_diff_get_delta(stats->diff, stats->filestats[i].index)) == NULL)
 				continue;
 
 			error = diff_file_stats_full_to_buf(
@@ -340,7 +371,7 @@ int git_diff_stats_to_buf(
 
 	if (format & GIT_DIFF_STATS_INCLUDE_SUMMARY) {
 		for (i = 0; i < stats->files_changed; ++i) {
-			if ((delta = git_diff_get_delta(stats->diff, i)) == NULL)
+			if ((delta = git_diff_get_delta(stats->diff, stats->filestats[i].index)) == NULL)
 				continue;
 
 			error = diff_file_stats_summary_to_buf(out, delta);

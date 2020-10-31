@@ -377,3 +377,25 @@ void test_diff_stats__new_file(void)
 	git_buf_dispose(&buf);
 	git_diff_free(diff);
 }
+
+void test_diff_stats__npm(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	const char *stat =
+	" file3.txt | 8 +-------\n"
+	" 1 file changed, 1 insertion(+), 7 deletions(-)\n";
+
+	diff_stats_from_commit_oid(
+		&_stats, "1d68a2b4b8abd079a20bab96dfbde90fe49d6bfb", false);
+
+	cl_assert_equal_sz(1, git_diff_stats_files_changed(_stats));
+	cl_assert_equal_sz(1, git_diff_stats_insertions(_stats));
+	cl_assert_equal_sz(7, git_diff_stats_deletions(_stats));
+
+	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 0));
+	cl_assert_equal_s(stat, git_buf_cstr(&buf));
+	git_buf_dispose(&buf);
+
+	cl_git_sandbox_cleanup();
+}
