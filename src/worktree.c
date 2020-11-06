@@ -259,7 +259,14 @@ int git_worktree_validate(const git_worktree *wt)
 			wt->commondir_path);
 		return GIT_ERROR;
 	}
-
+	
+	if (!git_path_exists(wt->worktree_path)) {
+		git_error_set(GIT_ERROR_WORKTREE,
+			"worktree directory ('%s') does not exist ",
+			wt->worktree_path);
+		return GIT_ERROR;
+	}
+	
 	return 0;
 }
 
