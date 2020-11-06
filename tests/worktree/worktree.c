@@ -610,3 +610,17 @@ void test_worktree_worktree__foreach_worktree_lists_all_worktrees(void)
 	int counter = 0;
 	cl_git_pass(git_repository_foreach_worktree(fixture.repo, foreach_worktree_cb, &counter));
 }
+
+void test_worktree_worktree__validate_invalid_worktreedir(void)
+{
+	git_worktree *wt;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	git__free(wt->worktree_path);
+	wt->worktree_path = "/path/to/invalid/worktreedir";
+
+	cl_git_fail(git_worktree_validate(wt));
+
+	wt->worktree_path = NULL;
+	git_worktree_free(wt);
+}
