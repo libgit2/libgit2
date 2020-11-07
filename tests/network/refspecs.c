@@ -13,7 +13,7 @@ static void assert_refspec(unsigned int direction, const char *input, bool is_ex
 	if (is_expected_to_be_valid)
 		cl_assert_equal_i(0, error);
 	else
-		cl_assert_equal_i(GIT_ERROR, error);
+		cl_assert_equal_i(GIT_EINVALIDSPEC, error);
 }
 
 void test_network_refspecs__parsing(void)

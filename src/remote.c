@@ -82,9 +82,11 @@ static int download_tags_value(git_remote *remote, git_config *cfg)
 
 static int ensure_remote_name_is_valid(const char *name)
 {
-	int error = 0;
+	int valid, error;
 
-	if (!git_remote_is_valid_name(name)) {
+	error = git_remote_name_is_valid(&valid, name);
+
+	if (!error && !valid) {
 		git_error_set(
 			GIT_ERROR_CONFIG,
 			"'%s' is not a valid remote name.", name ? name : "(null)");
@@ -110,12 +112,8 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
 		return error;
 
-	if ((error = git_refspec__parse(&spec, refspec, fetch)) < 0) {
-		if (git_error_last()->klass != GIT_ERROR_NOMEMORY)
-			error = GIT_EINVALIDSPEC;
-
+	if ((error = git_refspec__parse(&spec, refspec, fetch)) < 0)
 		return error;
-	}
 
 	git_refspec__dispose(&spec);
 
@@ -1362,7 +1360,7 @@ static int update_tips_for_spec(
 		git_vector *refs,
 		const char *log_message)
 {
-	int error = 0, autotag;
+	int error = 0, autotag, valid;
 	unsigned int i = 0;
 	git_buf refname = GIT_BUF_INIT;
 	git_oid old;
@@ -1390,7 +1388,10 @@ static int update_tips_for_spec(
 		git_buf_clear(&refname);
 
 		/* Ignore malformed ref names (which also saves us from tag^{} */
-		if (!git_reference_is_valid_name(head->name))
+		if (git_reference_name_is_valid(&valid, head->name) < 0)
+			goto on_error;
+
+		if (!valid)
 			continue;
 
 		/* If we have a tag, see if the auto-follow rules say to update it */
@@ -1499,6 +1500,7 @@ static int next_head(const git_remote *remote, git_vector *refs,
 	git_remote_head *head;
 	git_refspec *spec, *passive_spec;
 	size_t i, j, k;
+	int valid;
 
 	active = &remote->active_refspecs;
 	passive = &remote->passive_refspecs;
@@ -1510,7 +1512,10 @@ static int next_head(const git_remote *remote, git_vector *refs,
 	for (; i < refs->length; i++) {
 		head = git_vector_get(refs, i);
 
-		if (!git_reference_is_valid_name(head->name))
+		if (git_reference_name_is_valid(&valid, head->name) < 0)
+			return -1;
+
+		if (!valid)
 			continue;
 
 		for (; j < active->length; j++) {
@@ -2089,24 +2094,34 @@ cleanup:
 	return error;
 }
 
-int git_remote_is_valid_name(
-	const char *remote_name)
+int git_remote_name_is_valid(int *valid, const char *remote_name)
 {
 	git_buf buf = GIT_BUF_INIT;
-	git_refspec refspec;
-	int error = -1;
+	git_refspec refspec = {0};
+	int error;
+
+	GIT_ASSERT(valid);
+
+	*valid = 0;
 
 	if (!remote_name || *remote_name == '\0')
 		return 0;
 
-	git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", remote_name);
+	if ((error = git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", remote_name)) < 0)
+		goto done;
+
 	error = git_refspec__parse(&refspec, git_buf_cstr(&buf), true);
 
+	if (!error)
+		*valid = 1;
+	else if (error == GIT_EINVALIDSPEC)
+		error = 0;
+
+done:
 	git_buf_dispose(&buf);
 	git_refspec__dispose(&refspec);
 
-	git_error_clear();
-	return error == 0;
+	return error;
 }
 
 git_refspec *git_remote__matching_refspec(git_remote *remote, const char *refname)
@@ -2605,3 +2620,17 @@ char *apply_insteadof(git_config *config, const char *url, int direction)
 
 	return result.ptr;
 }
+
+/* Deprecated functions */
+
+#ifndef GIT_DEPRECATE_HARD
+
+int git_remote_is_valid_name(const char *remote_name)
+{
+	int valid = 0;
+
+	git_remote_name_is_valid(&valid, remote_name);
+	return valid;
+}
+
+#endif

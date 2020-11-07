@@ -340,10 +340,32 @@ GIT_EXTERN(size_t) git_object__size(git_object_t type);
 
 /**@}*/
 
-/** @name Deprecated Reference Constants
+/** @name Deprecated Remote Functions
  *
- * These enumeration values are retained for backward compatibility.  The
- * newer versions of these values should be preferred in all new code.
+ * These functions are retained for backward compatibility.  The newer
+ * versions of these functions should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility functions at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Ensure the remote name is well-formed.
+ *
+ * @deprecated Use git_remote_name_is_valid
+ * @param remote_name name to be checked.
+ * @return 1 if the reference name is acceptable; 0 if it isn't
+ */
+GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
+
+/**@}*/
+
+/** @name Deprecated Reference Functions and Constants
+ *
+ * These functions and enumeration values are retained for backward
+ * compatibility.  The newer versions of these values should be
+ * preferred in all new code.
  *
  * There is no plan to remove these backward compatibility values at
  * this time.
@@ -363,6 +385,23 @@ GIT_EXTERN(size_t) git_object__size(git_object_t type);
 #define GIT_REF_FORMAT_ALLOW_ONELEVEL GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL
 #define GIT_REF_FORMAT_REFSPEC_PATTERN GIT_REFERENCE_FORMAT_REFSPEC_PATTERN
 #define GIT_REF_FORMAT_REFSPEC_SHORTHAND GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND
+
+/**
+ * Ensure the reference name is well-formed.
+ *
+ * Valid reference names must follow one of two patterns:
+ *
+ * 1. Top-level names must contain only capital letters and underscores,
+ *    and must begin and end with a letter. (e.g. "HEAD", "ORIG_HEAD").
+ * 2. Names prefixed with "refs/" can be almost anything.  You must avoid
+ *    the characters '~', '^', ':', '\\', '?', '[', and '*', and the
+ *    sequences ".." and "@{" which have special meaning to revparse.
+ *
+ * @deprecated Use git_reference_name_is_valid
+ * @param refname name to be checked.
+ * @return 1 if the reference name is acceptable; 0 if it isn't
+ */
+GIT_EXTERN(int) git_reference_is_valid_name(const char *refname);
 
 GIT_EXTERN(int) git_tag_create_frombuffer(
 	git_oid *oid,

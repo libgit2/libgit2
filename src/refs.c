@@ -239,7 +239,7 @@ int git_reference_lookup_resolved(
 
 int git_reference_dwim(git_reference **out, git_repository *repo, const char *refname)
 {
-	int error = 0, i;
+	int error = 0, i, valid;
 	bool fallbackmode = true, foundvalid = false;
 	git_reference *ref;
 	git_buf refnamebuf = GIT_BUF_INIT, name = GIT_BUF_INIT;
@@ -265,10 +265,11 @@ int git_reference_dwim(git_reference **out, git_repository *repo, const char *re
 
 		git_buf_clear(&refnamebuf);
 
-		if ((error = git_buf_printf(&refnamebuf, formatters[i], git_buf_cstr(&name))) < 0)
+		if ((error = git_buf_printf(&refnamebuf, formatters[i], git_buf_cstr(&name))) < 0 ||
+		    (error = git_reference_name_is_valid(&valid, git_buf_cstr(&refnamebuf))) < 0)
 			goto cleanup;
 
-		if (!git_reference_is_valid_name(git_buf_cstr(&refnamebuf))) {
+		if (!valid) {
 			error = GIT_EINVALIDSPEC;
 			continue;
 		}
@@ -1287,19 +1288,30 @@ cleanup:
 	return error;
 }
 
-int git_reference__is_valid_name(const char *refname, unsigned int flags)
+int git_reference__name_is_valid(
+	int *valid,
+	const char *refname,
+	unsigned int flags)
 {
-	if (git_reference__normalize_name(NULL, refname, flags) < 0) {
-		git_error_clear();
-		return false;
-	}
+	int error;
 
-	return true;
+	GIT_ASSERT(valid && refname);
+
+	*valid = 0;
+
+	error = git_reference__normalize_name(NULL, refname, flags);
+
+	if (!error)
+		*valid = 1;
+	else if (error == GIT_EINVALIDSPEC)
+		error = 0;
+
+	return error;
 }
 
-int git_reference_is_valid_name(const char *refname)
+int git_reference_name_is_valid(int *valid, const char *refname)
 {
-	return git_reference__is_valid_name(refname, GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL);
+	return git_reference__name_is_valid(valid, refname, GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL);
 }
 
 const char *git_reference__shorthand(const char *name)
@@ -1345,3 +1357,18 @@ int git_reference__is_unborn_head(bool *unborn, const git_reference *ref, git_re
 
 	return 0;
 }
+
+/* Deprecated functions */
+
+#ifndef GIT_DEPRECATE_HARD
+
+int git_reference_is_valid_name(const char *refname)
+{
+	int valid = 0;
+
+	git_reference__name_is_valid(&valid, refname, GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL);
+
+	return valid;
+}
+
+#endif

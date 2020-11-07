@@ -304,6 +304,18 @@ GIT_EXTERN(int) git_branch_remote_name(
  */
  GIT_EXTERN(int) git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname);
 
+/**
+ * Determine whether a branch name is valid, meaning that (when prefixed
+ * with `refs/heads/`) that it is a valid reference name, and that any
+ * additional branch name restrictions are imposed (eg, it cannot start
+ * with a `-`).
+ *
+ * @param valid output pointer to set with validity of given branch name
+ * @param name a branch name to test
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_branch_name_is_valid(int *valid, const char *name);
+
 /** @} */
 GIT_END_DECL
 #endif
