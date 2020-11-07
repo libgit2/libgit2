@@ -19,6 +19,7 @@ void cleanup_fixture_worktree(worktree_fixture *fixture)
 		cl_fixture_cleanup(fixture->reponame);
 	if (fixture->worktreename)
 		cl_fixture_cleanup(fixture->worktreename);
+	p_rename("testrepo-worktree-tmp", "testrepo-worktree");
 }
 
 void setup_fixture_worktree(worktree_fixture *fixture)
