@@ -26,12 +26,7 @@ extern bool git_reference__enable_symbolic_ref_target_validation;
 #define GIT_REFS_DIR_MODE 0777
 #define GIT_REFS_FILE_MODE 0666
 
-#define GIT_RENAMED_REF_FILE GIT_REFS_DIR "RENAMED-REF"
-
 #define GIT_SYMREF "ref: "
-#define GIT_PACKEDREFS_FILE "packed-refs"
-#define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled fully-peeled sorted "
-#define GIT_PACKEDREFS_FILE_MODE 0666
 
 #define GIT_HEAD_FILE "HEAD"
 #define GIT_ORIG_HEAD_FILE "ORIG_HEAD"

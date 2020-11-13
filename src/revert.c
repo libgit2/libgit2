@@ -7,10 +7,11 @@
 
 #include "common.h"
 
-#include "repository.h"
 #include "filebuf.h"
-#include "merge.h"
 #include "index.h"
+#include "merge.h"
+#include "refdb.h"
+#include "repository.h"
 
 #include "git2/types.h"
 #include "git2/merge.h"
@@ -100,9 +101,23 @@ static int revert_normalize_opts(
 
 static int revert_state_cleanup(git_repository *repo)
 {
-	const char *state_files[] = { GIT_REVERT_HEAD_FILE, GIT_MERGE_MSG_FILE };
+	const char *state_files[] = { GIT_MERGE_MSG_FILE };
+	git_refdb *refdb = NULL;
+	int error;
 
-	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
+	assert(repo);
+
+	if ((error = git_repository_refdb(&refdb, repo)) < 0 ||
+	    (error = git_refdb_delete(refdb, GIT_REVERT_HEAD_FILE, NULL, NULL)) < 0)
+		if (error != GIT_ENOTFOUND)
+			goto out;
+
+	if ((error = git_repository_cleanup_files(repo, state_files, ARRAY_SIZE(state_files))) < 0)
+		goto out;
+
+out:
+	git_refdb_free(refdb);
+	return error;
 }
 
 static int revert_seterr(git_commit *commit, const char *fmt)

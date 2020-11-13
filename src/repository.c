@@ -2871,44 +2871,69 @@ cleanup:
  */
 int git_repository_state(git_repository *repo)
 {
+	const struct {
+		int prereq;
+		enum {
+			COND_DIR, COND_FILE, COND_REF
+		} condition;
+		const char *name;
+		int state;
+	} states[] = {
+		{ GIT_REPOSITORY_STATE_NONE,       COND_FILE, GIT_REBASE_MERGE_INTERACTIVE_FILE, GIT_REPOSITORY_STATE_REBASE_INTERACTIVE },
+		{ GIT_REPOSITORY_STATE_NONE,       COND_DIR,  GIT_REBASE_MERGE_DIR,              GIT_REPOSITORY_STATE_REBASE_MERGE },
+		{ GIT_REPOSITORY_STATE_NONE,       COND_FILE, GIT_REBASE_APPLY_REBASING_FILE,    GIT_REPOSITORY_STATE_REBASE, },
+		{ GIT_REPOSITORY_STATE_NONE,       COND_FILE, GIT_REBASE_APPLY_APPLYING_FILE,    GIT_REPOSITORY_STATE_APPLY_MAILBOX },
+		{ GIT_REPOSITORY_STATE_NONE,       COND_DIR,  GIT_REBASE_APPLY_DIR,              GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE },
+		{ GIT_REPOSITORY_STATE_NONE,       COND_REF,  GIT_MERGE_HEAD_FILE,               GIT_REPOSITORY_STATE_MERGE },
+		{ GIT_REPOSITORY_STATE_NONE,       COND_REF,  GIT_REVERT_HEAD_FILE,              GIT_REPOSITORY_STATE_REVERT },
+		{ GIT_REPOSITORY_STATE_REVERT,     COND_FILE, GIT_SEQUENCER_TODO_FILE,           GIT_REPOSITORY_STATE_REVERT_SEQUENCE },
+		{ GIT_REPOSITORY_STATE_NONE,       COND_REF,  GIT_CHERRYPICK_HEAD_FILE,          GIT_REPOSITORY_STATE_CHERRYPICK },
+		{ GIT_REPOSITORY_STATE_CHERRYPICK, COND_FILE, GIT_SEQUENCER_TODO_FILE,           GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE },
+		{ GIT_REPOSITORY_STATE_NONE,       COND_FILE, GIT_BISECT_LOG_FILE,               GIT_REPOSITORY_STATE_BISECT },
+	};
 	git_buf repo_path = GIT_BUF_INIT;
-	int state = GIT_REPOSITORY_STATE_NONE;
+	git_refdb *refdb = NULL;
+	int error, state, exists;
+	size_t i;
 
 	assert(repo);
 
-	if (git_buf_puts(&repo_path, repo->gitdir) < 0)
-		return -1;
+	if ((error = git_repository_refdb(&refdb, repo)) < 0 ||
+	    (error = git_buf_puts(&repo_path, repo->gitdir)) < 0)
+		goto out;
 
-	if (git_path_contains_file(&repo_path, GIT_REBASE_MERGE_INTERACTIVE_FILE))
-		state = GIT_REPOSITORY_STATE_REBASE_INTERACTIVE;
-	else if (git_path_contains_dir(&repo_path, GIT_REBASE_MERGE_DIR))
-		state = GIT_REPOSITORY_STATE_REBASE_MERGE;
-	else if (git_path_contains_file(&repo_path, GIT_REBASE_APPLY_REBASING_FILE))
-		state = GIT_REPOSITORY_STATE_REBASE;
-	else if (git_path_contains_file(&repo_path, GIT_REBASE_APPLY_APPLYING_FILE))
-		state = GIT_REPOSITORY_STATE_APPLY_MAILBOX;
-	else if (git_path_contains_dir(&repo_path, GIT_REBASE_APPLY_DIR))
-		state = GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE;
-	else if (git_path_contains_file(&repo_path, GIT_MERGE_HEAD_FILE))
-		state = GIT_REPOSITORY_STATE_MERGE;
-	else if (git_path_contains_file(&repo_path, GIT_REVERT_HEAD_FILE)) {
-		state = GIT_REPOSITORY_STATE_REVERT;
-		if (git_path_contains_file(&repo_path, GIT_SEQUENCER_TODO_FILE)) {
-			state = GIT_REPOSITORY_STATE_REVERT_SEQUENCE;
-		}
-	} else if (git_path_contains_file(&repo_path, GIT_CHERRYPICK_HEAD_FILE)) {
-		state = GIT_REPOSITORY_STATE_CHERRYPICK;
-		if (git_path_contains_file(&repo_path, GIT_SEQUENCER_TODO_FILE)) {
-			state = GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE;
-		}
-	} else if (git_path_contains_file(&repo_path, GIT_BISECT_LOG_FILE))
-		state = GIT_REPOSITORY_STATE_BISECT;
+	state = GIT_REPOSITORY_STATE_NONE;
+	for (i = 0; i < ARRAY_SIZE(states); i++) {
+		if (states[i].prereq != state)
+			continue;
 
+		switch (states[i].condition) {
+		case COND_FILE:
+			if (git_path_contains_file(&repo_path, states[i].name))
+				state = states[i].state;
+			break;
+		case COND_DIR:
+			if (git_path_contains_dir(&repo_path, states[i].name))
+				state = states[i].state;
+			break;
+		case COND_REF:
+			if ((error = git_refdb_exists(&exists, refdb, states[i].name)) < 0)
+				goto out;
+			if (exists)
+				state = states[i].state;
+			break;
+		}
+	}
+
+	error = state;
+
+out:
 	git_buf_dispose(&repo_path);
-	return state;
+	git_refdb_free(refdb);
+	return error;
 }
 
-int git_repository__cleanup_files(
+int git_repository_cleanup_files(
 	git_repository *repo, const char *files[], size_t files_len)
 {
 	git_buf buf = GIT_BUF_INIT;
@@ -2938,22 +2963,46 @@ int git_repository__cleanup_files(
 }
 
 static const char *state_files[] = {
+	GIT_REBASE_MERGE_DIR,
+	GIT_REBASE_APPLY_DIR,
+	GIT_SEQUENCER_DIR,
+};
+
+static const char *state_refs[] = {
 	GIT_MERGE_HEAD_FILE,
 	GIT_MERGE_MODE_FILE,
 	GIT_MERGE_MSG_FILE,
 	GIT_REVERT_HEAD_FILE,
 	GIT_CHERRYPICK_HEAD_FILE,
 	GIT_BISECT_LOG_FILE,
-	GIT_REBASE_MERGE_DIR,
-	GIT_REBASE_APPLY_DIR,
-	GIT_SEQUENCER_DIR,
 };
 
 int git_repository_state_cleanup(git_repository *repo)
 {
+	git_refdb *refdb = NULL;
+	int error;
+	size_t i;
+
 	assert(repo);
 
-	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
+	if ((error = git_repository_refdb(&refdb, repo)) < 0)
+		goto out;
+
+	for (i = 0; i < ARRAY_SIZE(state_refs); i++) {
+		if ((error = git_refdb_delete(refdb, state_refs[i], NULL, NULL)) < 0) {
+			if (error == GIT_ENOTFOUND)
+				continue;
+			goto out;
+		}
+	}
+
+	if ((error = git_repository_cleanup_files(repo, state_files,
+						   ARRAY_SIZE(state_files))) < 0)
+		goto out;
+
+out:
+	git_refdb_free(refdb);
+	return error;
 }
 
 int git_repository_is_shallow(git_repository *repo)
