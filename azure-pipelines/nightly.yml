@@ -71,7 +71,7 @@ jobs:
   pool:
     vmImage: 'macOS-10.15'
   steps:
-  - bash: . '$(Build.SourcesDirectory)/azure-pipelines/setup-osx.sh'
+  - bash: . '$(Build.SourcesDirectory)/ci/setup-osx.sh'
     displayName: Setup
   - template: bash.yml
     parameters:
@@ -114,7 +114,7 @@ jobs:
   pool:
     vmImage: 'vs2017-win2016'
   steps:
-  - bash: . '$(Build.SourcesDirectory)\azure-pipelines\setup-mingw.sh'
+  - bash: . '$(Build.SourcesDirectory)\ci\setup-mingw.sh'
     displayName: Setup
     env:
       TEMP: $(Agent.TempDirectory)
@@ -133,7 +133,7 @@ jobs:
   pool:
     vmImage: 'vs2017-win2016'
   steps:
-  - bash: . '$(Build.SourcesDirectory)\azure-pipelines\setup-mingw.sh'
+  - bash: . '$(Build.SourcesDirectory)\ci\setup-mingw.sh'
     displayName: Setup
     workingDirectory: '$(Build.BinariesDirectory)'
     env:

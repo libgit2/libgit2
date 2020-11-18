@@ -1,61 +1,17 @@
-# Continuous integration and pull request validation builds for the
-# master and maintenance branches.
-name: CI Build
+# Nightly build for the master branch across multiple targets.
+name: Nightly Build
 
 on:
-  push:
-    branches: [ master, maint/* ]
-  pull_request:
-    branches: [ master, maint/* ]
+  schedule:
+  - cron: '15 1 * * *'
 
 env:
   docker-registry: docker.pkg.github.com
   docker-config-path: ci/docker
 
 jobs:
-  # Build the docker container images that we will use for our Linux
-  # builds.  This will identify the last commit to the repository that
-  # updated the docker images, and try to download the image tagged with
-  # that sha.  If it does not exist, we'll do a docker build and push
-  # the image up to GitHub Packages for the actual CI/CD runs.  We tag
-  # with both the sha and "latest" so that the subsequent runs need not
-  # know the sha.  Only do this on CI builds (when the event is a "push")
-  # because PR builds from forks lack permission to write packages.
-  build_containers:
-    name: Create docker image
-    strategy:
-      matrix:
-        container:
-        - xenial
-        - bionic
-        - focal
-        - docurium
-    runs-on: ubuntu-latest
-    steps:
-    - name: Check out repository
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-      if: github.event_name == 'push'
-    - name: Download existing container
-      run: ci/getcontainer.sh ${{ env.docker-config-path }}/${{ matrix.container }}
-      env:
-        DOCKER_REGISTRY: ${{ env.docker-registry }}
-        GITHUB_TOKEN: ${{ secrets.github_token }}
-      if: github.event_name == 'push'
-    - name: Build and publish image
-      run: |
-        docker build -t ${{ env.docker-registry-container-sha }} --build-arg BASE=${{ matrix.container.base }} -f ${{ matrix.container }} .
-        docker push ${{ env.docker-registry-container-sha }}
-      working-directory: ${{ env.docker-config-path }}
-      if: github.event_name == 'push' && env.docker-container-exists != 'true'
-
-  # Run our CI/CD builds.  We build a matrix with the various build targets
-  # and their details.  Then we build either in a docker container (Linux)
-  # or on the actual hosts (macOS, Windows).
   build:
     name: Build
-    needs: [build_containers]
     strategy:
       matrix:
         platform:
@@ -205,40 +161,3 @@ jobs:
           ../ci/test.sh
         fi
       shell: bash
-
-  # Generate documentation using docurium.  We'll upload the documentation
-  # as a build artifact so that it can be reviewed as part of a pull
-  # request or in a forked build.  For CI builds in the main repository's
-  # master branch, we'll push the gh-pages branch back up so that it is
-  # published to our documentation site.
-  documentation:
-    name: Generate documentation
-    needs: [build_containers]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Check out repository
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-    - name: Generate documentation
-      run: |
-        git config user.name 'Documentation Generation'
-        git config user.email 'libgit2@users.noreply.github.com'
-        git branch gh-pages origin/gh-pages
-        docker login https://${{ env.docker-registry }} -u ${{ github.actor }} -p ${{ github.token }}
-        docker run \
-            --rm \
-            -v "$(pwd):/home/libgit2/source" \
-            -w /home/libgit2/source \
-            ${{ env.docker-registry }}/${{ github.repository }}/docurium:latest \
-            cm doc api.docurium
-        git checkout gh-pages
-        zip --exclude .git/\* --exclude .gitignore --exclude .gitattributes -r api-documentation.zip .
-    - uses: actions/upload-artifact@v2
-      name: Upload artifact
-      with:
-        name: api-documentation
-        path: api-documentation.zip
-    - name: Push documentation branch
-      run: git push origin gh-pages
-      if: github.event_name == 'push' && github.repository == 'libgit2/libgit2'
