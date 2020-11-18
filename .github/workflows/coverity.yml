@@ -1,0 +1,30 @@
+# Nightly build for the master branch running coverity.
+name: Coverity Build
+
+on:
+  workflow_dispatch:
+  schedule:
+  - cron: '15 2 * * *'
+
+env:
+  docker-registry: docker.pkg.github.com
+  docker-config-path: ci/docker
+
+jobs:
+  build:
+    name: Coverity
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Download container
+      run: ci/getcontainer.sh ci/docker/xenial
+      env:
+        DOCKER_REGISTRY: ${{ env.docker-registry }}
+        GITHUB_TOKEN: ${{ secrets.github_token }}
+    - name: Run Coverity
+      run: ci/coverity.sh
+      env:
+        COVERITY_TOKEN: ${{ secrets.coverity_token }}
