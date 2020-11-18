@@ -31,6 +31,7 @@ INCLUDE(GNUInstallDirs)
 INCLUDE(IdeSplitSources)
 INCLUDE(FeatureSummary)
 INCLUDE(EnableWarnings)
+INCLUDE(CMakePackageConfigHelpers)
 
 # Build options
 #
@@ -299,3 +300,12 @@ ENDIF()
 
 FEATURE_SUMMARY(WHAT ENABLED_FEATURES DESCRIPTION "Enabled features:")
 FEATURE_SUMMARY(WHAT DISABLED_FEATURES DESCRIPTION "Disabled features:")
+
+configure_package_config_file(
+    "libgit2-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/libgit2-config.cmake"
+    INSTALL_DESTINATION "lib/cmake/libgit2"
+)
+
+install(EXPORT libgit2-targets DESTINATION lib/cmake/libgit2)
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libgit2-config.cmake" DESTINATION "lib/cmake/libgit2")
