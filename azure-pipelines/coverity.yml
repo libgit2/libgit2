@@ -8,7 +8,7 @@ jobs:
     vmImage: 'ubuntu-18.04'
   steps:
   - script: |
-     cd $(Build.SourcesDirectory)/azure-pipelines/docker
+     cd $(Build.SourcesDirectory)/ci/docker
      docker build -t libgit2/xenial --build-arg BASE=ubuntu:xenial -f xenial .
     displayName: 'Build Docker image'
   - task: Docker@0
@@ -22,5 +22,5 @@ jobs:
       envVars: |
        COVERITY_TOKEN=$(COVERITY_TOKEN)
       workDir: '/home/libgit2/build'
-      containerCommand: '/home/libgit2/source/azure-pipelines/coverity.sh'
+      containerCommand: '/home/libgit2/source/ci/coverity.sh'
       detached: false

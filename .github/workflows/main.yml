@@ -10,7 +10,7 @@ on:
 
 env:
   docker-registry: docker.pkg.github.com
-  docker-config-path: azure-pipelines/docker
+  docker-config-path: ci/docker
 
 jobs:
   # Build the docker container images that we will use for our Linux
@@ -38,7 +38,7 @@ jobs:
         fetch-depth: 0
       if: github.event_name == 'push'
     - name: Download existing container
-      run: azure-pipelines/getcontainer.sh ${{ env.docker-config-path }}/${{ matrix.container }}
+      run: ci/getcontainer.sh ${{ env.docker-config-path }}/${{ matrix.container }}
       env:
         DOCKER_REGISTRY: ${{ env.docker-registry }}
         GITHUB_TOKEN: ${{ secrets.github_token }}
@@ -166,11 +166,11 @@ jobs:
       with:
         fetch-depth: 0
     - name: Set up build environment
-      run: azure-pipelines/setup-${{ matrix.platform.setup-script }}.sh
+      run: ci/setup-${{ matrix.platform.setup-script }}.sh
       shell: bash
       if: matrix.platform.setup-script != ''
     - name: Download container
-      run: azure-pipelines/getcontainer.sh ${{ env.docker-config-path }}/${{ matrix.platform.image }}
+      run: ci/getcontainer.sh ${{ env.docker-config-path }}/${{ matrix.platform.image }}
       env:
         DOCKER_REGISTRY: ${{ env.docker-registry }}
         GITHUB_TOKEN: ${{ secrets.github_token }}
@@ -198,11 +198,11 @@ jobs:
               -e SKIP_NEGOTIATE_TESTS \
               -e SKIP_SSH_TESTS \
               ${{ env.docker-registry-container-sha }} \
-              /bin/bash -c "mkdir build && cd build && ../azure-pipelines/build.sh && ../azure-pipelines/test.sh"
+              /bin/bash -c "mkdir build && cd build && ../ci/build.sh && ../ci/test.sh"
         else
           mkdir build && cd build
-          ../azure-pipelines/build.sh
-          ../azure-pipelines/test.sh
+          ../ci/build.sh
+          ../ci/test.sh
         fi
       shell: bash
 
