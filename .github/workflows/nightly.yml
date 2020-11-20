@@ -131,6 +131,7 @@ jobs:
     - name: Set up build environment
       run: ci/setup-${{ matrix.platform.setup-script }}.sh
       shell: bash
+      env: ${{ matrix.platform.env }}
       if: matrix.platform.setup-script != ''
     - name: Download container
       run: ci/getcontainer.sh ${{ env.docker-config-path }}/${{ matrix.platform.image }}
