@@ -67,9 +67,11 @@ jobs:
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
           os: ubuntu-latest
         - # linux arm64
-          os: [ linux, arm64, self-hosted ]
+          os: [ focal, arm64, self-hosted ]
           env:
+            CC: gcc
             CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            ACTIONS_RUNNER_TOKEN: ${{ secrets.ACTIONS_RUNNER_TOKEN }}
         - # macOS
           os: macos-10.15
           env:
