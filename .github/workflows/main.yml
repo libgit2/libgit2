@@ -109,6 +109,18 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
           os: ubuntu-latest
+        - # Focal, Clang 10, OpenSSL, ThreadSanitizer
+          image: focal
+          env:
+            CC: clang-10
+            CFLAGS: -fsanitize=thread -fno-optimize-sibling-calls -fno-omit-frame-pointer
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
+            CMAKE_GENERATOR: Ninja
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
+            TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
+          os: ubuntu-latest
         - # macOS
           os: macos-10.15
           env:
@@ -197,6 +209,7 @@ jobs:
               -e PKG_CONFIG_PATH \
               -e SKIP_NEGOTIATE_TESTS \
               -e SKIP_SSH_TESTS \
+              -e TSAN_OPTIONS \
               ${{ env.docker-registry-container-sha }} \
               /bin/bash -c "mkdir build && cd build && ../ci/build.sh && ../ci/test.sh"
         else
