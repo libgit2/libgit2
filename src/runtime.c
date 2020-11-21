@@ -103,8 +103,8 @@ GIT_INLINE(int) init_unlock(void)
 # error unknown threading model
 #else
 
-# define mutex_lock() 0
-# define mutex_unlock() 0
+# define init_lock() git___noop()
+# define init_unlock() git___noop()
 
 #endif
 
