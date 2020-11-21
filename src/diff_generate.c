@@ -1206,8 +1206,9 @@ int git_diff__from_iterators(
 
 	/* make iterators have matching icase behavior */
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE)) {
-		git_iterator_set_ignore_case(old_iter, true);
-		git_iterator_set_ignore_case(new_iter, true);
+		if ((error = git_iterator_set_ignore_case(old_iter, true)) < 0 ||
+		    (error = git_iterator_set_ignore_case(new_iter, true)) < 0)
+			goto cleanup;
 	}
 
 	/* finish initialization */
