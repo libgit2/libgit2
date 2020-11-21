@@ -71,7 +71,7 @@ int git_midx_entry_find(
 		git_midx_file *idx,
 		const git_oid *short_oid,
 		size_t len);
-void git_midx_close(git_midx_file *idx);
+int git_midx_close(git_midx_file *idx);
 void git_midx_free(git_midx_file *idx);
 
 /* This is exposed for use in the fuzzers. */

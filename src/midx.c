@@ -181,7 +181,7 @@ int git_midx_parse(
 					 chunk_object_offsets = {0},
 					 chunk_object_large_offsets = {0};
 
-	assert(idx);
+	GIT_ASSERT_ARG(idx);
 
 	if (size < sizeof(struct git_midx_header) + 20)
 		return midx_error("multi-pack index is too short");
@@ -338,7 +338,7 @@ int git_midx_entry_find(
 	const unsigned char *object_offset;
 	off64_t offset;
 
-	assert(idx);
+	GIT_ASSERT_ARG(idx);
 
 	hi = ntohl(idx->oid_fanout[(int)short_oid->id[0]]);
 	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(idx->oid_fanout[(int)short_oid->id[0] - 1]));
@@ -399,13 +399,16 @@ int git_midx_entry_find(
 	return 0;
 }
 
-void git_midx_close(git_midx_file *idx)
+int git_midx_close(git_midx_file *idx)
 {
-	assert(idx);
+	GIT_ASSERT_ARG(idx);
 
 	if (idx->index_map.data)
 		git_futils_mmap_free(&idx->index_map);
+
 	git_vector_free(&idx->packfile_names);
+
+	return 0;
 }
 
 void git_midx_free(git_midx_file *idx)
