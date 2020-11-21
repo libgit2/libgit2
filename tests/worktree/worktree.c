@@ -618,6 +618,7 @@ void test_worktree_worktree__validate_invalid_worktreedir(void)
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 	p_rename("testrepo-worktree", "testrepo-worktree-tmp");
 	cl_git_fail(git_worktree_validate(wt));
+	p_rename("testrepo-worktree-tmp", "testrepo-worktree");
 
 	git_worktree_free(wt);
 }
