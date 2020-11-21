@@ -4,7 +4,7 @@
 #cmakedefine GIT_DEBUG_POOL 1
 #cmakedefine GIT_TRACE 1
 #cmakedefine GIT_THREADS 1
-#cmakedefine GIT_MSVC_CRTDBG 1
+#cmakedefine GIT_WIN32_LEAKCHECK 1
 
 #cmakedefine GIT_ARCH_64 1
 #cmakedefine GIT_ARCH_32 1

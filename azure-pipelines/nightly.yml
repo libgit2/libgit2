@@ -92,7 +92,7 @@ jobs:
     parameters:
       environmentVariables:
         CMAKE_GENERATOR: Visual Studio 15 2017
-        CMAKE_OPTIONS: -A x64 -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON
+        CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON
         RUN_INVASIVE_TESTS: true
         SKIP_SSH_TESTS: true
 
@@ -105,7 +105,7 @@ jobs:
     parameters:
       environmentVariables:
         CMAKE_GENERATOR: Visual Studio 15 2017
-        CMAKE_OPTIONS: -A Win32 -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS
+        CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS
         RUN_INVASIVE_TESTS: true
         SKIP_SSH_TESTS: true
 

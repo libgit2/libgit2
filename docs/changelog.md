@@ -13,6 +13,10 @@ vNext
   replaces `git_reference_is_valid_name`.  Tthe former functions are
   deprecated.
 
+### Breaking CMake configuration changes
+
+The `MVSC_CRTDBG` configuration option is now `WIN32_LEAKCHECK`.
+
 v1.1
 ----
 

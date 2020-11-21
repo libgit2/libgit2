@@ -89,8 +89,8 @@ IF(WIN32)
 ENDIF()
 
 IF(MSVC)
-	# Enable MSVC CRTDBG memory leak reporting when in debug mode.
-	OPTION(MSVC_CRTDBG 		"Enable CRTDBG memory leak reporting"			OFF)
+	# Enable leak checking using the debugging C runtime.
+	OPTION(WIN32_LEAKCHECK		"Enable leak reporting via crtdbg"			OFF)
 ENDIF()
 
 IF (DEPRECATE_HARD)
@@ -129,8 +129,8 @@ IF (MSVC)
 		SET(CRT_FLAG_RELEASE "/MD")
 	ENDIF()
 
-	IF (MSVC_CRTDBG)
-		SET(GIT_MSVC_CRTDBG 1)
+	IF (WIN32_LEAKCHECK)
+		SET(GIT_WIN32_LEAKCHECK 1)
 		SET(CRT_FLAG_DEBUG "${CRT_FLAG_DEBUG}")
 		SET(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES} Dbghelp.lib")
 	ENDIF()
