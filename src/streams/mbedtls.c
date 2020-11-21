@@ -181,8 +181,8 @@ static int ssl_set_error(mbedtls_ssl_context *ssl, int error)
 	char errbuf[512];
 	int ret = -1;
 
-	assert(error != MBEDTLS_ERR_SSL_WANT_READ);
-	assert(error != MBEDTLS_ERR_SSL_WANT_WRITE);
+	GIT_ASSERT(error != MBEDTLS_ERR_SSL_WANT_READ);
+	GIT_ASSERT(error != MBEDTLS_ERR_SSL_WANT_WRITE);
 
 	if (error != 0)
 		mbedtls_strerror( error, errbuf, 512 );
@@ -423,7 +423,9 @@ int git_mbedtls_stream_new(
 	git_stream *stream;
 	int error;
 
-	assert(out && host && port);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(host);
+	GIT_ASSERT_ARG(port);
 
 	if ((error = git_socket_stream_new(&stream, host, port)) < 0)
 		return error;
@@ -442,7 +444,7 @@ int git_mbedtls__set_cert_location(const char *path, int is_dir)
 	char errbuf[512];
 	mbedtls_x509_crt *cacert;
 
-	assert(path != NULL);
+	GIT_ASSERT_ARG(path);
 
 	cacert = git__malloc(sizeof(mbedtls_x509_crt));
 	GIT_ERROR_CHECK_ALLOC(cacert);

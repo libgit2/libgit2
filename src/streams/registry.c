@@ -51,7 +51,7 @@ int git_stream_registry_lookup(git_stream_registration *out, git_stream_t type)
 	git_stream_registration *target;
 	int error = GIT_ENOTFOUND;
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 
 	switch(type) {
 	case GIT_STREAM_STANDARD:
@@ -61,7 +61,7 @@ int git_stream_registry_lookup(git_stream_registration *out, git_stream_t type)
 		target = &stream_registry.tls_callbacks;
 		break;
 	default:
-		assert(0);
+		git_error_set(GIT_ERROR_INVALID, "invalid stream type");
 		return -1;
 	}
 
@@ -81,7 +81,7 @@ int git_stream_registry_lookup(git_stream_registration *out, git_stream_t type)
 
 int git_stream_register(git_stream_t type, git_stream_registration *registration)
 {
-	assert(!registration || registration->init);
+	GIT_ASSERT(!registration || registration->init);
 
 	GIT_ERROR_CHECK_VERSION(registration, GIT_STREAM_VERSION, "stream_registration");
 
