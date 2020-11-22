@@ -1003,7 +1003,7 @@ replay:
 		}
 
 		if (s->chunked) {
-			assert(s->verb == post_verb);
+			GIT_ASSERT(s->verb == post_verb);
 
 			/* Flush, if necessary */
 			if (s->chunk_buffer_len > 0 &&
@@ -1054,7 +1054,7 @@ replay:
 				}
 
 				len -= bytes_read;
-				assert(bytes_read == bytes_written);
+				GIT_ASSERT(bytes_read == bytes_written);
 			}
 
 			git__free(buffer);
@@ -1166,7 +1166,7 @@ replay:
 			if (error < 0) {
 				return error;
 			} else if (!error) {
-				assert(t->server.cred);
+				GIT_ASSERT(t->server.cred);
 				winhttp_stream_close(s);
 				goto replay;
 			}
@@ -1180,7 +1180,7 @@ replay:
 			if (error < 0) {
 				return error;
 			} else if (!error) {
-				assert(t->proxy.cred);
+				GIT_ASSERT(t->proxy.cred);
 				winhttp_stream_close(s);
 				goto replay;
 			}
@@ -1266,7 +1266,7 @@ static int winhttp_stream_write_single(
 		return -1;
 	}
 
-	assert((DWORD)len == bytes_written);
+	GIT_ASSERT((DWORD)len == bytes_written);
 
 	return 0;
 }
@@ -1365,7 +1365,7 @@ static int winhttp_stream_write_buffered(
 		return -1;
 	}
 
-	assert((DWORD)len == bytes_written);
+	GIT_ASSERT((DWORD)len == bytes_written);
 
 	s->post_body_len += bytes_written;
 
@@ -1572,7 +1572,7 @@ static int winhttp_action(
 			break;
 
 		default:
-			assert(0);
+			GIT_ASSERT(0);
 	}
 
 	if (!ret)

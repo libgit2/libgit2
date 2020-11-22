@@ -327,7 +327,7 @@ static int _git_close(git_smart_subtransport *subtransport)
 {
 	git_subtransport *t = (git_subtransport *) subtransport;
 
-	assert(!t->current_stream);
+	GIT_ASSERT(!t->current_stream);
 
 	GIT_UNUSED(t);
 
@@ -337,8 +337,6 @@ static int _git_close(git_smart_subtransport *subtransport)
 static void _git_free(git_smart_subtransport *subtransport)
 {
 	git_subtransport *t = (git_subtransport *) subtransport;
-
-	assert(!t->current_stream);
 
 	git__free(t);
 }

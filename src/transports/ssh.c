@@ -238,7 +238,7 @@ static int ssh_stream_alloc(
 {
 	ssh_stream *s;
 
-	assert(stream);
+	GIT_ASSERT_ARG(stream);
 
 	s = git__calloc(sizeof(ssh_stream), 1);
 	GIT_ERROR_CHECK_ALLOC(s);
@@ -404,8 +404,8 @@ static int _git_ssh_authenticate_session(
 		case GIT_CREDENTIAL_SSH_MEMORY: {
 			git_credential_ssh_key *c = (git_credential_ssh_key *)cred;
 
-			assert(c->username);
-			assert(c->privatekey);
+			GIT_ASSERT(c->username);
+			GIT_ASSERT(c->privatekey);
 
 			rc = libssh2_userauth_publickey_frommemory(
 				session,
@@ -483,7 +483,7 @@ static int _git_ssh_session_create(
 	LIBSSH2_SESSION* s;
 	git_socket_stream *socket = GIT_CONTAINER_OF(io, git_socket_stream, parent);
 
-	assert(session);
+	GIT_ASSERT_ARG(session);
 
 	s = libssh2_session_init();
 	if (!s) {
@@ -772,7 +772,7 @@ static int _ssh_close(git_smart_subtransport *subtransport)
 {
 	ssh_subtransport *t = GIT_CONTAINER_OF(subtransport, ssh_subtransport, parent);
 
-	assert(!t->current_stream);
+	GIT_ASSERT(!t->current_stream);
 
 	GIT_UNUSED(t);
 
@@ -782,8 +782,6 @@ static int _ssh_close(git_smart_subtransport *subtransport)
 static void _ssh_free(git_smart_subtransport *subtransport)
 {
 	ssh_subtransport *t = GIT_CONTAINER_OF(subtransport, ssh_subtransport, parent);
-
-	assert(!t->current_stream);
 
 	git__free(t->cmd_uploadpack);
 	git__free(t->cmd_receivepack);
@@ -849,7 +847,7 @@ int git_smart_subtransport_ssh(
 #ifdef GIT_SSH
 	ssh_subtransport *t;
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 
 	GIT_UNUSED(param);
 
@@ -867,7 +865,7 @@ int git_smart_subtransport_ssh(
 	GIT_UNUSED(owner);
 	GIT_UNUSED(param);
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 	*out = NULL;
 
 	git_error_set(GIT_ERROR_INVALID, "cannot create SSH transport. Library was built without SSH support");
@@ -911,7 +909,7 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 	GIT_UNUSED(owner);
 	GIT_UNUSED(payload);
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 	*out = NULL;
 
 	git_error_set(GIT_ERROR_INVALID, "cannot create SSH transport. Library was built without SSH support");
