@@ -148,6 +148,17 @@ jobs:
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
           os: ubuntu-latest
+        - # Focal, Clang 10, mmap emulation (NO_MMAP)
+          container:
+            name: focal
+          env:
+            CC: clang-10
+            CFLAGS: -DNO_MMAP
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local
+            CMAKE_GENERATOR: Ninja
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+          os: ubuntu-latest
         - # macOS
           os: macos-10.15
           env:
