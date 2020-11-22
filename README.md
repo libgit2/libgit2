@@ -140,7 +140,7 @@ adjust to changes made upstream. This has two major consequences:
   we cannot promise a completely stable API.
 * As we have to keep up with changes in behavior made upstream, we may lag
   behind in some areas. We usually to document these incompatibilities in our
-  issue tracker with the label ["git change"](https://github.com/libgit2/libgit2/issues?q=is:open%20is:issue%20label:%22git%20change%22).
+  issue tracker with the label "[git change](https://github.com/libgit2/libgit2/issues?q=is:open%20is:issue%20label:%22git%20change%22)".
 
 Optional dependencies
 =====================
