@@ -11,41 +11,49 @@ env:
   docker-config-path: ci/docker
 
 jobs:
+  # Run our nightly builds.  We build a matrix with the various build
+  # targets and their details.  Then we build either in a docker container
+  # (Linux) or on the actual hosts (macOS, Windows).
   build:
     name: Build
     strategy:
       matrix:
         platform:
         - # Xenial, GCC, OpenSSL
-          image: xenial
+          container:
+            name: xenial
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
           os: ubuntu-latest
         - # Xenial, GCC, mbedTLS
-          image: xenial
+          container:
+            name: xenial
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
           os: ubuntu-latest
         - # Xenial, Clang, OpenSSL
-          image: xenial
+          container:
+            name: xenial
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
           os: ubuntu-latest
         - # Xenial, Clang, mbedTLS
-          image: xenial
+          container:
+            name: xenial
           env:
             CC: clang
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
             CMAKE_GENERATOR: Ninja
           os: ubuntu-latest
         - # Focal, Clang 10, mbedTLS, MemorySanitizer
-          image: focal
+          container:
+            name: focal
           env:
             CC: clang-10
             CFLAGS: -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
@@ -56,7 +64,8 @@ jobs:
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
           os: ubuntu-latest
         - # Focal, Clang 10, OpenSSL, UndefinedBehaviorSanitizer
-          image: focal
+          container:
+            name: focal
           env:
             CC: clang-10
             CFLAGS: -fsanitize=undefined,nullability -fno-sanitize-recover=undefined,nullability -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
@@ -66,11 +75,19 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
           os: ubuntu-latest
-        - # linux arm64
-          os: [ focal, arm64, self-hosted ]
+        - # Focal, Clang 10, OpenSSL, ThreadSanitizer
+          container:
+            name: focal
           env:
-            CC: gcc
-            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            CC: clang-10
+            CFLAGS: -fsanitize=thread -fno-optimize-sibling-calls -fno-omit-frame-pointer
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
+            CMAKE_GENERATOR: Ninja
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
+            TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
+          os: ubuntu-latest
         - # macOS
           os: macos-10.15
           env:
@@ -86,7 +103,7 @@ jobs:
           env:
             ARCH: amd64
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A x64 -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - # Windows x86 Visual Studio
@@ -94,7 +111,7 @@ jobs:
           env:
             ARCH: x86
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A Win32 -DMSVC_CRTDBG=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
+            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - # Windows amd64 mingw
@@ -119,9 +136,53 @@ jobs:
             BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
+        - # Bionic, x86, Clang, OpenSSL
+          container:
+            name: bionic-x86
+            dockerfile: bionic
+            qemu: true
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            RUN_INVASIVE_TESTS: true
+          os: ubuntu-latest
+        - # Bionic, x86, GCC, OpenSSL
+          container:
+            name: bionic-x86
+            dockerfile: bionic
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            RUN_INVASIVE_TESTS: true
+          os: ubuntu-latest
+        - # Bionic, arm32, GCC, OpenSSL
+          container:
+            name: bionic-arm32
+            dockerfile: bionic
+            qemu: true
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON
+            RUN_INVASIVE_TESTS: true
+            SKIP_PROXY_TESTS: true
+          os: ubuntu-latest
+        - # Bionic, arm64, GCC, OpenSSL
+          container:
+            name: bionic-arm64
+            dockerfile: bionic
+            qemu: true
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON
+            RUN_INVASIVE_TESTS: true
+            SKIP_PROXY_TESTS: true
+          os: ubuntu-latest
       fail-fast: false
-    env:
-      ACTIONS_RUNNER_TOKEN: ${{ secrets.ACTIONS_RUNNER_TOKEN }}
+    env: ${{ matrix.platform.env }}
     runs-on: ${{ matrix.platform.os }}
     steps:
     - name: Check out repository
@@ -131,23 +192,27 @@ jobs:
     - name: Set up build environment
       run: ci/setup-${{ matrix.platform.setup-script }}.sh
       shell: bash
-      env: ${{ matrix.platform.env }}
       if: matrix.platform.setup-script != ''
+    - name: Setup QEMU
+      run: docker run --rm --privileged multiarch/qemu-user-static:register --reset
+      if: matrix.platform.container.qemu == true
     - name: Download container
-      run: ci/getcontainer.sh ${{ env.docker-config-path }}/${{ matrix.platform.image }}
+      run: |
+        "${{ github.workspace }}/ci/getcontainer.sh" "${{ matrix.platform.container.name }}" "${{ matrix.platform.container.dockerfile }}"
       env:
         DOCKER_REGISTRY: ${{ env.docker-registry }}
         GITHUB_TOKEN: ${{ secrets.github_token }}
-      if: matrix.platform.image != ''
-    - name: Create container
-      run: docker build -t ${{ env.docker-registry-container-sha }} -f ${{ matrix.platform.image }} .
       working-directory: ${{ env.docker-config-path }}
-      if: matrix.platform.image != '' && env.docker-container-exists != 'true'
+      if: matrix.platform.container.name != ''
+    - name: Create container
+      run: docker build -t ${{ env.docker-registry-container-sha }} -f ${{ env.dockerfile }} .
+      working-directory: ${{ env.docker-config-path }}
+      if: matrix.platform.container.name != '' && env.docker-container-exists != 'true'
     - name: Build and test
       run: |
         export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
 
-        if [ -n "${{ matrix.platform.image }}" ]; then
+        if [ -n "${{ matrix.platform.container.name }}" ]; then
           docker run \
               --rm \
               -v "$(pwd):/home/libgit2/source" \
@@ -161,6 +226,7 @@ jobs:
               -e PKG_CONFIG_PATH \
               -e SKIP_NEGOTIATE_TESTS \
               -e SKIP_SSH_TESTS \
+              -e TSAN_OPTIONS \
               ${{ env.docker-registry-container-sha }} \
               /bin/bash -c "mkdir build && cd build && ../ci/build.sh && ../ci/test.sh"
         else
@@ -168,5 +234,4 @@ jobs:
           ../ci/build.sh
           ../ci/test.sh
         fi
-      env: ${{ matrix.platform.env }}
       shell: bash
