@@ -240,14 +240,15 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, off64_t offset
 {
 	GIT_MMAP_VALIDATE(out, len, prot, flags);
 
-	out->data = NULL;
-	out->len = 0;
-
-	if ((prot & GIT_PROT_WRITE) && ((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED)) {
-		git_error_set(GIT_ERROR_OS, "trying to map shared-writeable");
+	/* writes cannot be emulated without handling pagefaults since write happens by
+	 * writing to mapped memory */
+	if (prot & GIT_PROT_WRITE) {
+		git_error_set(GIT_ERROR_OS, "trying to map %s-writeable",
+				((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED) ? "shared": "private");
 		return -1;
 	}
 
+	out->len = 0;
 	out->data = git__malloc(len);
 	GIT_ERROR_CHECK_ALLOC(out->data);
 
