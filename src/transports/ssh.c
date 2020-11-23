@@ -563,8 +563,27 @@ post_extract:
 	if (t->owner->certificate_check_cb != NULL) {
 		git_cert_hostkey cert = {{ 0 }}, *cert_ptr;
 		const char *key;
+		size_t cert_len;
+		int cert_type;
 
 		cert.parent.cert_type = GIT_CERT_HOSTKEY_LIBSSH2;
+
+		key = libssh2_session_hostkey(session, &cert_len, &cert_type);
+		if (key != NULL) {
+			cert.type |= GIT_CERT_SSH_RAW;
+			cert.hostkey = key;
+			cert.hostkey_len = cert_len;
+			switch (cert_type) {
+				case LIBSSH2_HOSTKEY_TYPE_RSA:
+					cert.raw_type = GIT_CERT_SSH_RAW_TYPE_RSA;
+					break;
+				case LIBSSH2_HOSTKEY_TYPE_DSS:
+					cert.raw_type = GIT_CERT_SSH_RAW_TYPE_DSS;
+					break;
+				default:
+					cert.raw_type = GIT_CERT_SSH_RAW_TYPE_UNKNOWN;
+			}
+		}
 
 #ifdef LIBSSH2_HOSTKEY_HASH_SHA256
 		key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA256);
