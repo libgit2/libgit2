@@ -3,10 +3,10 @@ libgit2 - the Git linkable library
 
 | Build Status | |
 | ------------ | - |
-| **master** branch CI builds | [![Azure Pipelines Build Status](https://dev.azure.com/libgit2/libgit2/_apis/build/status/libgit2?branchName=master)](https://dev.azure.com/libgit2/libgit2/_build/latest?definitionId=7&branchName=master)   |
+| **master** branch CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22) |
 | **v1.0 branch** CI builds | [![Azure Pipelines Build Status](https://dev.azure.com/libgit2/libgit2/_apis/build/status/libgit2?branchName=maint/v1.0)](https://dev.azure.com/libgit2/libgit2/_build/latest?definitionId=7&branchName=maint/v1.0) |
 | **v0.28 branch** CI builds | [![Azure Pipelines Build Status](https://dev.azure.com/libgit2/libgit2/_apis/build/status/libgit2?branchName=maint/v0.28)](https://dev.azure.com/libgit2/libgit2/_build/latest?definitionId=7&branchName=maint/v0.28) |
-| **Nightly** builds | [![Azure Pipelines Build Status](https://libgit2.visualstudio.com/libgit2/_apis/build/status/nightly?branchName=master&label=Full+Build)](https://libgit2.visualstudio.com/libgit2/_build/latest?definitionId=9&branchName=master) [![Coverity Build Status](https://dev.azure.com/libgit2/libgit2/_apis/build/status/coverity?branchName=master&label=Coverity+Build)](https://dev.azure.com/libgit2/libgit2/_build/latest?definitionId=21?branchName=master) [![Coverity Scan Build Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639) |
+| **Nightly** builds | [![Nightly Build](https://github.com/libgit2/libgit2/workflows/Nightly%20Build/badge.svg)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22Nightly+Build%22) [![Coverity Scan Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639) |
 
 `libgit2` is a portable, pure C implementation of the Git core methods
 provided as a linkable library with a solid API, allowing to build Git
