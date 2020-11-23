@@ -2,11 +2,16 @@
 
 set -e
 
-DOCKERFILE_PATH=$1
+IMAGE_NAME=$1
+DOCKERFILE_PATH=$2
+
+if [ "${IMAGE_NAME}" = "" ]; then
+	echo "usage: $0 image_name [dockerfile]"
+	exit 1
+fi
 
 if [ "${DOCKERFILE_PATH}" = "" ]; then
-	echo "usage: $0 dockerfile"
-	exit 1
+	DOCKERFILE_PATH="${IMAGE_NAME}"
 fi
 
 if [ "${DOCKER_REGISTRY}" = "" ]; then
@@ -15,9 +20,10 @@ if [ "${DOCKER_REGISTRY}" = "" ]; then
 	exit 1
 fi
 
-DOCKER_CONTAINER="${GITHUB_REPOSITORY}/$(basename ${DOCKERFILE_PATH})"
+DOCKER_CONTAINER="${GITHUB_REPOSITORY}/${IMAGE_NAME}"
 DOCKER_REGISTRY_CONTAINER="${DOCKER_REGISTRY}/${DOCKER_CONTAINER}"
 
+echo "dockerfile=${DOCKERFILE_PATH}" >> $GITHUB_ENV
 echo "docker-container=${DOCKER_CONTAINER}" >> $GITHUB_ENV
 echo "docker-registry-container=${DOCKER_REGISTRY_CONTAINER}" >> $GITHUB_ENV
 
