@@ -245,7 +245,8 @@ jobs:
       with:
         fetch-depth: 0
     - name: Download container
-      run: "${{ github.workspace }}/ci/getcontainer.sh" xenial
+      run: |
+        "${{ github.workspace }}/ci/getcontainer.sh" xenial
       env:
         DOCKER_REGISTRY: ${{ env.docker-registry }}
         GITHUB_TOKEN: ${{ secrets.github_token }}
