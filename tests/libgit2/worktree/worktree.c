@@ -645,3 +645,16 @@ void test_worktree_worktree__validate_invalid_worktreedir(void)
 
 	git_worktree_free(wt);
 }
+
+void test_worktree_worktree__is_prunable_missing_repo(void)
+{
+	git_worktree *wt;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	p_rename("testrepo", "testrepo-tmp");
+	/* Should not be prunable since the repository moved */
+	cl_assert(!git_worktree_is_prunable(wt, NULL));
+	p_rename("testrepo-tmp", "testrepo");
+
+	git_worktree_free(wt);
+}
