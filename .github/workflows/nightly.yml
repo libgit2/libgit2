@@ -249,6 +249,7 @@ jobs:
       env:
         DOCKER_REGISTRY: ${{ env.docker-registry }}
         GITHUB_TOKEN: ${{ secrets.github_token }}
+      working-directory: ${{ env.docker-config-path }}
     - name: Run Coverity
       run: ci/coverity.sh
       env:
