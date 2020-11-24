@@ -259,14 +259,14 @@ int git_worktree_validate(const git_worktree *wt)
 			wt->commondir_path);
 		return GIT_ERROR;
 	}
-	
+
 	if (!git_path_exists(wt->worktree_path)) {
 		git_error_set(GIT_ERROR_WORKTREE,
 			"worktree directory '%s' does not exist",
 			wt->worktree_path);
 		return GIT_ERROR;
 	}
-	
+
 	return 0;
 }
 
@@ -527,6 +527,7 @@ int git_worktree_is_prunable(git_worktree *wt,
 	git_worktree_prune_options *opts)
 {
 	git_worktree_prune_options popts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
+	git_buf path = GIT_BUF_INIT;
 
 	GIT_ERROR_CHECK_VERSION(
 		opts, GIT_WORKTREE_PRUNE_OPTIONS_VERSION,
@@ -554,6 +555,14 @@ int git_worktree_is_prunable(git_worktree *wt,
 	if ((popts.flags & GIT_WORKTREE_PRUNE_VALID) == 0 &&
 	    git_worktree_validate(wt) == 0) {
 		git_error_set(GIT_ERROR_WORKTREE, "not pruning valid working tree");
+		return 0;
+	}
+
+	if (git_buf_printf(&path, "%s/worktrees/%s", wt->commondir_path, wt->name) < 0)
+		return 0;
+	if (!git_path_exists(path.ptr))
+	{
+		git_error_set(GIT_ERROR_WORKTREE, "worktree gitdir '%s' does not exist", path.ptr);
 		return 0;
 	}
 
