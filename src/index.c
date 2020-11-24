@@ -20,6 +20,7 @@
 #include "idxmap.h"
 #include "diff.h"
 #include "varint.h"
+#include "merge.h"
 
 #include "git2/odb.h"
 #include "git2/oid.h"
@@ -499,6 +500,7 @@ static void index_free_deleted(git_index *index)
 	}
 
 	git_vector_clear(&index->deleted);
+	git_vector_clear(&index->conflicts);
 }
 
 /* call with locked index */
@@ -2050,38 +2052,38 @@ int git_index_conflict_iterator_new(
 	return 0;
 }
 
+// Pass in NULL if you don't need git_merge_file_result
 int git_index_conflict_next(
 	const git_index_entry **ancestor_out,
 	const git_index_entry **our_out,
 	const git_index_entry **their_out,
+    	const git_merge_file_result **merge_file_result_out,
 	git_index_conflict_iterator *iterator)
 {
-	const git_index_entry *entry;
-	int len;
+	git_merge_diff *conflict;
 
 	assert(ancestor_out && our_out && their_out && iterator);
 
 	*ancestor_out = NULL;
 	*our_out = NULL;
 	*their_out = NULL;
+	if (merge_file_result_out) {
+		*merge_file_result_out = NULL;
+	}
 
-	while (iterator->cur < iterator->index->entries.length) {
-		entry = git_index_get_byindex(iterator->index, iterator->cur);
+	if (iterator->cur < iterator->index->conflicts.length) {
 
-		if (git_index_entry_is_conflict(entry)) {
-			if ((len = index_conflict__get_byindex(
-				ancestor_out,
-				our_out,
-				their_out,
-				iterator->index,
-				iterator->cur)) < 0)
-				return len;
+        conflict = git_vector_get(&(iterator->index->conflicts), iterator->cur++);
 
-			iterator->cur += len;
-			return 0;
-		}
+        *ancestor_out = &conflict->ancestor_entry;
+        *our_out = &conflict->our_entry;
+        *their_out = &conflict->their_entry;
 
-		iterator->cur++;
+        if (merge_file_result_out) {
+            *merge_file_result_out = &conflict->merge_result;
+        }
+
+        return 0;
 	}
 
 	return GIT_ITEROVER;

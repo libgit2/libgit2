@@ -197,32 +197,32 @@ void test_index_read_index__handles_conflicts(void)
 	cl_git_pass(git_index_conflict_iterator_new(&conflict_iterator, index));
 
 	cl_git_pass(git_index_conflict_next(
-		&ancestor, &ours, &theirs, conflict_iterator));
+		&ancestor, &ours, &theirs, NULL, conflict_iterator));
 	cl_assert_equal_s("both_sides-1.txt", ancestor->path);
 	cl_assert_equal_s("both_sides-1.txt", ours->path);
 	cl_assert_equal_s("both_sides-1.txt", theirs->path);
 
 	cl_git_pass(git_index_conflict_next(
-		&ancestor, &ours, &theirs, conflict_iterator));
+		&ancestor, &ours, &theirs, NULL, conflict_iterator));
 	cl_assert_equal_s("both_sides-2.txt", ancestor->path);
 	cl_assert_equal_s("both_sides-2.txt", ours->path);
 	cl_assert_equal_s("both_sides-2.txt", theirs->path);
 
 	cl_git_pass(git_index_conflict_next(
-		&ancestor, &ours, &theirs, conflict_iterator));
+		&ancestor, &ours, &theirs, NULL, conflict_iterator));
 	cl_assert_equal_s("new_side-1.txt", ancestor->path);
 	cl_assert_equal_s("new_side-1.txt", ours->path);
 	cl_assert_equal_s("new_side-1.txt", theirs->path);
 
 	cl_git_pass(git_index_conflict_next(
-		&ancestor, &ours, &theirs, conflict_iterator));
+		&ancestor, &ours, &theirs, NULL, conflict_iterator));
 	cl_assert_equal_s("new_side-2.txt", ancestor->path);
 	cl_assert_equal_s("new_side-2.txt", ours->path);
 	cl_assert_equal_s("new_side-2.txt", theirs->path);
 
 
 	cl_git_fail_with(GIT_ITEROVER, git_index_conflict_next(
-		&ancestor, &ours, &theirs, conflict_iterator));
+		&ancestor, &ours, &theirs, NULL, conflict_iterator));
 
 	git_index_conflict_iterator_free(conflict_iterator);
 

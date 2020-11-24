@@ -425,4 +425,30 @@ GIT_EXTERN(int) git_libgit2_opts(int option, ...);
 /** @} */
 GIT_END_DECL
 
+/**
+ * Information about file-level merging
+ */
+typedef struct {
+    /**
+     * True if the output was automerged, false if the output contains
+     * conflict markers.
+     */
+    unsigned int automergeable;
+
+    /**
+     * The path that the resultant merge file should use, or NULL if a
+     * filename conflict would occur.
+     */
+    const char *path;
+
+    /** The mode that the resultant merge file should use.  */
+    unsigned int mode;
+
+    /** The contents of the merge. */
+    const char *ptr;
+
+    /** The length of the merge contents. */
+    size_t len;
+} git_merge_file_result;
+
 #endif

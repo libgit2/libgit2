@@ -182,15 +182,17 @@ static void output_conflicts(git_index *index)
 	const git_index_entry *ancestor;
 	const git_index_entry *our;
 	const git_index_entry *their;
+	const git_merge_file_result *merge_result;
 	int err = 0;
 
 	check_lg2(git_index_conflict_iterator_new(&conflicts, index), "failed to create conflict iterator", NULL);
 
-	while ((err = git_index_conflict_next(&ancestor, &our, &their, conflicts)) == 0) {
-		fprintf(stderr, "conflict: a:%s o:%s t:%s\n",
+	while ((err = git_index_conflict_next(&ancestor, &our, &their, &merge_result, conflicts)) == 0) {
+		fprintf(stderr, "conflict: a:%s o:%s t:%s result:%s\n",
 		        ancestor ? ancestor->path : "NULL",
 		        our->path ? our->path : "NULL",
-		        their->path ? their->path : "NULL");
+		        their->path ? their->path : "NULL",
+                merge_result ? merge_result->path : "NULL");
 	}
 
 	if (err != GIT_ITEROVER) {

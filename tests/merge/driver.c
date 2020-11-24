@@ -68,11 +68,13 @@ static int test_driver_apply(
 	const char **path_out,
 	uint32_t *mode_out,
 	git_buf *merged_out,
+    git_merge_file_result *merge_result_out,
 	const char *filter_name,
 	const git_merge_driver_source *src)
 {
 	GIT_UNUSED(s);
 	GIT_UNUSED(src);
+    GIT_UNUSED(merge_result_out);
 
 	*path_out = "applied.txt";
 	*mode_out = GIT_FILEMODE_BLOB;
@@ -197,6 +199,7 @@ static int defer_driver_apply(
 	const char **path_out,
 	uint32_t *mode_out,
 	git_buf *merged_out,
+    git_merge_file_result *merge_result_out,
 	const char *filter_name,
 	const git_merge_driver_source *src)
 {
@@ -204,6 +207,7 @@ static int defer_driver_apply(
 	GIT_UNUSED(path_out);
 	GIT_UNUSED(mode_out);
 	GIT_UNUSED(merged_out);
+	GIT_UNUSED(merge_result_out);
 	GIT_UNUSED(filter_name);
 	GIT_UNUSED(src);
 
@@ -242,6 +246,7 @@ static int conflict_driver_apply(
 	const char **path_out,
 	uint32_t *mode_out,
 	git_buf *merged_out,
+    git_merge_file_result *merge_result_out,
 	const char *filter_name,
 	const git_merge_driver_source *src)
 {
@@ -249,6 +254,7 @@ static int conflict_driver_apply(
 	GIT_UNUSED(path_out);
 	GIT_UNUSED(mode_out);
 	GIT_UNUSED(merged_out);
+	GIT_UNUSED(merge_result_out);
 	GIT_UNUSED(filter_name);
 	GIT_UNUSED(src);
 

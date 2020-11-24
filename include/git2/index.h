@@ -818,6 +818,7 @@ GIT_EXTERN(int) git_index_conflict_next(
 	const git_index_entry **ancestor_out,
 	const git_index_entry **our_out,
 	const git_index_entry **their_out,
+	const git_merge_file_result **merge_file_result_out,
 	git_index_conflict_iterator *iterator);
 
 /**

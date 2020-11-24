@@ -67,12 +67,13 @@ int git_merge_driver__builtin_apply(
 	const char **path_out,
 	uint32_t *mode_out,
 	git_buf *merged_out,
+	git_merge_file_result *merge_result_out,
 	const char *filter_name,
 	const git_merge_driver_source *src)
 {
 	git_merge_driver__builtin *driver = (git_merge_driver__builtin *)self;
 	git_merge_file_options file_opts = GIT_MERGE_FILE_OPTIONS_INIT;
-	git_merge_file_result result = {0};
+
 	int error;
 
 	GIT_UNUSED(filter_name);
@@ -83,11 +84,12 @@ int git_merge_driver__builtin_apply(
 	if (driver->favor)
 		file_opts.favor = driver->favor;
 
-	if ((error = git_merge_file_from_index(&result, src->repo,
-		src->ancestor, src->ours, src->theirs, &file_opts)) < 0)
-		goto done;
+	if ((error = git_merge_file_from_index(merge_result_out, src->repo,
+		src->ancestor, src->ours, src->theirs, &file_opts)) < 0) {
+        goto done;
+	}
 
-	if (!result.automergeable &&
+	if (!merge_result_out->automergeable &&
 		!(file_opts.flags & GIT_MERGE_FILE_FAVOR__CONFLICTED)) {
 		error = GIT_EMERGECONFLICT;
 		goto done;
@@ -103,13 +105,19 @@ int git_merge_driver__builtin_apply(
 		src->ours ? src->ours->mode : 0,
 		src->theirs ? src->theirs->mode : 0);
 
-	merged_out->ptr = (char *)result.ptr;
-	merged_out->size = result.len;
-	merged_out->asize = result.len;
-	result.ptr = NULL;
+	// FIXME: Dangerous here, merged_out might be released while merge_result_out still being used ?????
+    	merged_out->ptr = (char *)merge_result_out->ptr;
+
+	merged_out->size = merge_result_out->len;
+	merged_out->asize = merge_result_out->len;
 
 done:
-	git_merge_file_result_free(&result);
+    // Do not release git_merge_file_result if the error is GIT_EMERGECONFLICT,
+    // cause it's needed outside
+    if (error < 0 && error != GIT_EMERGECONFLICT) {
+	    merge_result_out->ptr = NULL;
+	    git_merge_file_result_free(merge_result_out);
+    }
 	return error;
 }
 
@@ -118,6 +126,7 @@ static int merge_driver_binary_apply(
 	const char **path_out,
 	uint32_t *mode_out,
 	git_buf *merged_out,
+	git_merge_file_result *merge_result_out,
 	const char *filter_name,
 	const git_merge_driver_source *src)
 {
@@ -125,6 +134,7 @@ static int merge_driver_binary_apply(
 	GIT_UNUSED(path_out);
 	GIT_UNUSED(mode_out);
 	GIT_UNUSED(merged_out);
+	GIT_UNUSED(merge_result_out);
 	GIT_UNUSED(filter_name);
 	GIT_UNUSED(src);
 

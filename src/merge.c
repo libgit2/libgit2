@@ -864,6 +864,7 @@ static int merge_conflict_invoke_driver(
 	const char *name,
 	git_merge_driver *driver,
 	git_merge_diff_list *diff_list,
+    	git_merge_file_result *merge_result_out,
 	git_merge_driver_source *src)
 {
 	git_index_entry *result;
@@ -876,10 +877,10 @@ static int merge_conflict_invoke_driver(
 
 	*out = NULL;
 
-	if ((error = driver->apply(driver, &path, &mode, &buf, name, src)) < 0 ||
+	if ((error = driver->apply(driver, &path, &mode, &buf, merge_result_out, name, src)) < 0 ||
 		(error = git_repository_odb(&odb, src->repo)) < 0 ||
 		(error = git_odb_write(&oid, odb, buf.ptr, buf.size, GIT_OBJECT_BLOB)) < 0)
-		goto done;
+        	goto done;
 
 	result = git_pool_mallocz(&diff_list->pool, sizeof(git_index_entry));
 	GIT_ERROR_CHECK_ALLOC(result);
@@ -894,7 +895,7 @@ static int merge_conflict_invoke_driver(
 	*out = result;
 
 done:
-	git_buf_dispose(&buf);
+    git_buf_dispose(&buf);
 	git_odb_free(odb);
 
 	return error;
@@ -903,12 +904,12 @@ done:
 static int merge_conflict_resolve_contents(
 	int *resolved,
 	git_merge_diff_list *diff_list,
-	const git_merge_diff *conflict,
+	git_merge_diff *conflict,
 	const git_merge_options *merge_opts,
 	const git_merge_file_options *file_opts)
 {
 	git_merge_driver_source source = {0};
-	git_merge_file_result result = {0};
+	git_merge_file_result merge_file_result_out = {0};
 	git_merge_driver *driver;
 	git_merge_driver__builtin builtin = {{0}};
 	git_index_entry *merge_result;
@@ -955,7 +956,7 @@ static int merge_conflict_resolve_contents(
 
 	if (driver) {
 		error = merge_conflict_invoke_driver(&merge_result, name, driver,
-			diff_list, &source);
+			diff_list, &merge_file_result_out, &source);
 
 		if (error == GIT_PASSTHROUGH)
 			fallback = true;
@@ -963,8 +964,12 @@ static int merge_conflict_resolve_contents(
 
 	if (fallback) {
 		error = merge_conflict_invoke_driver(&merge_result, "text",
-			&git_merge_driver__text.base, diff_list, &source);
+			&git_merge_driver__text.base, diff_list, &merge_file_result_out, &source);
 	}
+
+    	// Must be here
+    	conflict->merge_result = merge_file_result_out;
+	conflict->merge_result.path = git__strdup(merge_file_result_out.path);
 
 	if (error < 0) {
 		if (error == GIT_EMERGECONFLICT)
@@ -979,7 +984,10 @@ static int merge_conflict_resolve_contents(
 	*resolved = 1;
 
 done:
-	git_merge_file_result_free(&result);
+	if (error < 0 && error != GIT_EMERGECONFLICT) {
+		git_merge_file_result_free(&merge_file_result_out);
+	}
+
 	git_odb_free(odb);
 
 	return error;
@@ -988,7 +996,7 @@ done:
 static int merge_conflict_resolve(
 	int *out,
 	git_merge_diff_list *diff_list,
-	const git_merge_diff *conflict,
+	git_merge_diff *conflict,
 	const git_merge_options *merge_opts,
 	const git_merge_file_options *file_opts)
 {
@@ -1824,10 +1832,19 @@ git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo)
 
 void git_merge_diff_list__free(git_merge_diff_list *diff_list)
 {
+    size_t i;
+
 	if (!diff_list)
 		return;
 
 	git_vector_free(&diff_list->staged);
+
+	// Free merge_file_result in git_merge_diff??
+	for (i = 0; i < diff_list->conflicts.length; ++i) {
+		git_merge_diff *d = git_vector_get(&diff_list->conflicts, i);
+		git_merge_file_result_free(&d->merge_result);
+	}
+
 	git_vector_free(&diff_list->conflicts);
 	git_vector_free(&diff_list->resolved);
 	git_pool_clear(&diff_list->pool);
@@ -2051,6 +2068,7 @@ static git_iterator *iterator_given_or_empty(git_iterator **empty, git_iterator 
 	return *empty;
 }
 
+// Main entrance of merge
 int git_merge__iterators(
 	git_index **out,
 	git_repository *repo,
@@ -2121,12 +2139,17 @@ int git_merge__iterators(
 				goto done;
 			}
 
-			git_vector_insert(&diff_list->conflicts, conflict);
+            		git_vector_insert(&diff_list->conflicts, conflict);
 		}
 	}
 
 	error = index_from_diff_list(out, diff_list,
 		(opts.flags & GIT_MERGE_SKIP_REUC));
+
+	(*out)->conflicts = diff_list->conflicts;
+	// diff_list resigns the reference to conflicts: make length=0 and content pointer to NULL
+	git_vector_clear(&diff_list->conflicts);
+	diff_list->conflicts.contents = NULL;
 
 done:
 	if (!given_opts || !given_opts->metric)
@@ -3342,6 +3365,15 @@ done:
 	git_index_free(repo_index);
 
 	return error;
+}
+
+void print_merge_file_result(const git_merge_file_result *input)
+{
+	if (input) {
+		printf("git_merge_file_input: path: %s, mode: %u, automergeable: %d, content: %.*s\n", input->path, input->mode, input->automergeable, (int)(input->len), input->ptr);
+	} else {
+		printf("failed to print git_merge_file_input cause it's NULL\n");
+	}
 }
 
 int git_merge_options_init(git_merge_options *opts, unsigned int version)

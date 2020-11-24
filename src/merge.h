@@ -123,6 +123,7 @@ typedef struct {
 	git_index_entry their_entry;
 	git_delta_t their_status;
 
+	git_merge_file_result merge_result;
 } git_merge_diff;
 
 int git_merge__bases_many(
@@ -212,5 +213,7 @@ GIT_INLINE(uint32_t) git_merge_file__best_mode(
 
 	return 0;
 }
+
+void print_merge_file_result(const git_merge_file_result *input);
 
 #endif

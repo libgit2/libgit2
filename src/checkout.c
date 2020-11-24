@@ -939,7 +939,7 @@ static int checkout_conflicts_foreach(
 		goto done;
 
 	/* Collect the conflicts */
-	while ((error = git_index_conflict_next(&ancestor, &ours, &theirs, iterator)) == 0) {
+	while ((error = git_index_conflict_next(&ancestor, &ours, &theirs, NULL, iterator)) == 0) {
 		if (!conflict_pathspec_match(data, workdir, pathspec, ancestor, ours, theirs))
 			continue;
 

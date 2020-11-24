@@ -35,6 +35,12 @@ struct git_index {
 	git_vector deleted; /* deleted entries if readers > 0 */
 	git_atomic readers; /* number of active iterators */
 
+	/* Vector of git_merge_diff entries that represent the conflicts that
+	* have not been automerged.  These items will be written to high-stage
+	* entries in the main index.
+	*/
+	git_vector conflicts;
+
 	unsigned int on_disk:1;
 	unsigned int ignore_case:1;
 	unsigned int distrust_filemode:1;

@@ -154,8 +154,9 @@ static int merge_file__xdiff(
 		theirs->mode);
 
 done:
-	if (error < 0)
-		git_merge_file_result_free(out);
+	// We should not free git_merge_file_result here, or use (error != GIT_EMERGECONFLICT) to estimate it,
+	// cause the GIT_EMERGECONFLICT situation has not been clear here.
+	// git_merge_file_result_free(out);
 
 	return error;
 }
