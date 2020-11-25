@@ -528,6 +528,7 @@ int git_worktree_is_prunable(git_worktree *wt,
 {
 	git_worktree_prune_options popts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
 	git_buf path = GIT_BUF_INIT;
+	int ret = 0;
 
 	GIT_ERROR_CHECK_VERSION(
 		opts, GIT_WORKTREE_PRUNE_OPTIONS_VERSION,
@@ -538,35 +539,40 @@ int git_worktree_is_prunable(git_worktree *wt,
 
 	if ((popts.flags & GIT_WORKTREE_PRUNE_LOCKED) == 0) {
 		git_buf reason = GIT_BUF_INIT;
-		int error;
 
-		if ((error = git_worktree_is_locked(&reason, wt)) < 0)
-			return error;
+		if ((ret = git_worktree_is_locked(&reason, wt)) < 0)
+			goto out;
 
-		if (error) {
+		if (ret) {
 			if (!reason.size)
 				git_buf_attach_notowned(&reason, "no reason given", 15);
 			git_error_set(GIT_ERROR_WORKTREE, "not pruning locked working tree: '%s'", reason.ptr);
 			git_buf_dispose(&reason);
-			return 0;
+			ret = 0;
+			goto out;
 		}
 	}
 
 	if ((popts.flags & GIT_WORKTREE_PRUNE_VALID) == 0 &&
 	    git_worktree_validate(wt) == 0) {
 		git_error_set(GIT_ERROR_WORKTREE, "not pruning valid working tree");
-		return 0;
+		goto out;
 	}
 
-	if (git_buf_printf(&path, "%s/worktrees/%s", wt->commondir_path, wt->name) < 0)
-		return 0;
+	if ((ret = git_buf_printf(&path, "%s/worktrees/%s", wt->commondir_path, wt->name) < 0))
+		goto out;
 	if (!git_path_exists(path.ptr))
 	{
 		git_error_set(GIT_ERROR_WORKTREE, "worktree gitdir '%s' does not exist", path.ptr);
-		return 0;
+		goto out;
 	}
 
-	return 1;
+	ret = 1;
+
+out:
+
+	git_buf_dispose(&path);
+	return ret;
 }
 
 int git_worktree_prune(git_worktree *wt,
