@@ -258,7 +258,8 @@ int git_submodule_lookup(
 	unsigned int location;
 	git_submodule *sm;
 
-	assert(repo && name);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
 
 	if (repo->is_bare) {
 		git_error_set(GIT_ERROR_SUBMODULE, "cannot get submodules without a working tree");
@@ -520,7 +521,8 @@ int git_submodule__map(git_repository *repo, git_strmap *map)
 	git_submodule *sm;
 	git_config *mods = NULL;
 
-	assert(repo && map);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(map);
 
 	/* get sources that we will need to check */
 	if (git_repository_index(&idx, repo) < 0)
@@ -698,7 +700,9 @@ int git_submodule_add_setup(
 	git_repository *subrepo = NULL;
 	bool path_occupied;
 
-	assert(repo && url && path);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(url);
+	GIT_ASSERT_ARG(path);
 
 	/* see if there is already an entry for this submodule */
 
@@ -799,7 +803,8 @@ int git_submodule_repo_init(
 	git_config *cfg = NULL;
 	git_buf buf = GIT_BUF_INIT;
 
-	assert(out && sm);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(sm);
 
 	/* get the configured remote url of the submodule */
 	if ((error = git_buf_printf(&buf, "submodule.%s.url", sm->name)) < 0 ||
@@ -840,7 +845,7 @@ int git_submodule_clone(git_repository **out, git_submodule *submodule, const gi
 	git_submodule_update_options sub_opts = GIT_SUBMODULE_UPDATE_OPTIONS_INIT;
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 
-	assert(submodule);
+	GIT_ASSERT_ARG(submodule);
 
 	if (given_opts)
 		memcpy(&sub_opts, given_opts, sizeof(sub_opts));
@@ -879,7 +884,7 @@ int git_submodule_add_finalize(git_submodule *sm)
 	int error;
 	git_index *index;
 
-	assert(sm);
+	GIT_ASSERT_ARG(sm);
 
 	if ((error = git_repository_index__weakptr(&index, sm->repo)) < 0 ||
 		(error = git_index_add_bypath(index, GIT_MODULES_FILE)) < 0)
@@ -898,7 +903,7 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 	git_index_entry entry;
 	struct stat st;
 
-	assert(sm);
+	GIT_ASSERT_ARG(sm);
 
 	/* force reload of wd OID by git_submodule_open */
 	sm->flags = sm->flags & ~GIT_SUBMODULE_STATUS__WD_OID_VALID;
@@ -969,25 +974,25 @@ static const char *submodule_update_to_str(git_submodule_update_t update)
 
 git_repository *git_submodule_owner(git_submodule *submodule)
 {
-	assert(submodule);
+	GIT_ASSERT_ARG_WITH_RETVAL(submodule, NULL);
 	return submodule->repo;
 }
 
 const char *git_submodule_name(git_submodule *submodule)
 {
-	assert(submodule);
+	GIT_ASSERT_ARG_WITH_RETVAL(submodule, NULL);
 	return submodule->name;
 }
 
 const char *git_submodule_path(git_submodule *submodule)
 {
-	assert(submodule);
+	GIT_ASSERT_ARG_WITH_RETVAL(submodule, NULL);
 	return submodule->path;
 }
 
 const char *git_submodule_url(git_submodule *submodule)
 {
-	assert(submodule);
+	GIT_ASSERT_ARG_WITH_RETVAL(submodule, NULL);
 	return submodule->url;
 }
 
@@ -996,9 +1001,12 @@ int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *ur
 	int error = 0;
 	git_buf normalized = GIT_BUF_INIT;
 
-	assert(out && repo && url);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(url);
 
-	git_buf_sanitize(out);
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 	/* We do this in all platforms in case someone on Windows created the .gitmodules */
 	if (strchr(url, '\\')) {
@@ -1066,28 +1074,30 @@ static int write_mapped_var(git_repository *repo, const char *name, git_configma
 
 const char *git_submodule_branch(git_submodule *submodule)
 {
-	assert(submodule);
+	GIT_ASSERT_ARG_WITH_RETVAL(submodule, NULL);
 	return submodule->branch;
 }
 
 int git_submodule_set_branch(git_repository *repo, const char *name, const char *branch)
 {
-
-	assert(repo && name);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
 
 	return write_var(repo, name, "branch", branch);
 }
 
 int git_submodule_set_url(git_repository *repo, const char *name, const char *url)
 {
-	assert(repo && name && url);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
+	GIT_ASSERT_ARG(url);
 
 	return write_var(repo, name, "url", url);
 }
 
 const git_oid *git_submodule_index_id(git_submodule *submodule)
 {
-	assert(submodule);
+	GIT_ASSERT_ARG_WITH_RETVAL(submodule, NULL);
 
 	if (submodule->flags & GIT_SUBMODULE_STATUS__INDEX_OID_VALID)
 		return &submodule->index_oid;
@@ -1097,7 +1107,7 @@ const git_oid *git_submodule_index_id(git_submodule *submodule)
 
 const git_oid *git_submodule_head_id(git_submodule *submodule)
 {
-	assert(submodule);
+	GIT_ASSERT_ARG_WITH_RETVAL(submodule, NULL);
 
 	if (submodule->flags & GIT_SUBMODULE_STATUS__HEAD_OID_VALID)
 		return &submodule->head_oid;
@@ -1107,7 +1117,7 @@ const git_oid *git_submodule_head_id(git_submodule *submodule)
 
 const git_oid *git_submodule_wd_id(git_submodule *submodule)
 {
-	assert(submodule);
+	GIT_ASSERT_ARG_WITH_RETVAL(submodule, NULL);
 
 	/* load unless we think we have a valid oid */
 	if (!(submodule->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID)) {
@@ -1128,28 +1138,32 @@ const git_oid *git_submodule_wd_id(git_submodule *submodule)
 
 git_submodule_ignore_t git_submodule_ignore(git_submodule *submodule)
 {
-	assert(submodule);
+	GIT_ASSERT_ARG_WITH_RETVAL(submodule, GIT_SUBMODULE_IGNORE_UNSPECIFIED);
+
 	return (submodule->ignore < GIT_SUBMODULE_IGNORE_NONE) ?
 		GIT_SUBMODULE_IGNORE_NONE : submodule->ignore;
 }
 
 int git_submodule_set_ignore(git_repository *repo, const char *name, git_submodule_ignore_t ignore)
 {
-	assert(repo && name);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
 
 	return write_mapped_var(repo, name, _sm_ignore_map, ARRAY_SIZE(_sm_ignore_map), "ignore", ignore);
 }
 
 git_submodule_update_t git_submodule_update_strategy(git_submodule *submodule)
 {
-	assert(submodule);
+	GIT_ASSERT_ARG_WITH_RETVAL(submodule, GIT_SUBMODULE_UPDATE_NONE);
+
 	return (submodule->update < GIT_SUBMODULE_UPDATE_CHECKOUT) ?
 		GIT_SUBMODULE_UPDATE_CHECKOUT : submodule->update;
 }
 
 int git_submodule_set_update(git_repository *repo, const char *name, git_submodule_update_t update)
 {
-	assert(repo && name);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
 
 	return write_mapped_var(repo, name, _sm_update_map, ARRAY_SIZE(_sm_update_map), "update", update);
 }
@@ -1157,13 +1171,14 @@ int git_submodule_set_update(git_repository *repo, const char *name, git_submodu
 git_submodule_recurse_t git_submodule_fetch_recurse_submodules(
 	git_submodule *submodule)
 {
-	assert(submodule);
+	GIT_ASSERT_ARG_WITH_RETVAL(submodule, GIT_SUBMODULE_RECURSE_NO);
 	return submodule->fetch_recurse;
 }
 
 int git_submodule_set_fetch_recurse_submodules(git_repository *repo, const char *name, git_submodule_recurse_t recurse)
 {
-	assert(repo && name);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
 
 	return write_mapped_var(repo, name, _sm_recurse_map, ARRAY_SIZE(_sm_recurse_map), "fetchRecurseSubmodules", recurse);
 }
@@ -1260,7 +1275,7 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 	git_submodule_update_options update_options = GIT_SUBMODULE_UPDATE_OPTIONS_INIT;
 	git_clone_options clone_options = GIT_CLONE_OPTIONS_INIT;
 
-	assert(sm);
+	GIT_ASSERT_ARG(sm);
 
 	if (_update_options)
 		memcpy(&update_options, _update_options, sizeof(git_submodule_update_options));
@@ -1473,7 +1488,8 @@ static int git_submodule__open(
 	unsigned int flags = GIT_REPOSITORY_OPEN_NO_SEARCH;
 	const char *wd;
 
-	assert(sm && subrepo);
+	GIT_ASSERT_ARG(sm);
+	GIT_ASSERT_ARG(subrepo);
 
 	if (git_repository__ensure_not_bare(
 			sm->repo, "open submodule repository") < 0)
@@ -1609,7 +1625,7 @@ int git_submodule_reload(git_submodule *sm, int force)
 
 	GIT_UNUSED(force);
 
-	assert(sm);
+	GIT_ASSERT_ARG(sm);
 
 	if ((error = git_submodule_name_is_valid(sm->repo, sm->name, 0)) <= 0)
 		/* This should come with a warning, but we've no API for that */
@@ -1726,7 +1742,9 @@ int git_submodule_status(unsigned int *status, git_repository *repo, const char 
 	git_submodule *sm;
 	int error;
 
-	assert(status && repo && name);
+	GIT_ASSERT_ARG(status);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
 
 	if ((error = git_submodule_lookup(&sm, repo, name)) < 0)
 		return error;
@@ -1739,7 +1757,8 @@ int git_submodule_status(unsigned int *status, git_repository *repo, const char 
 
 int git_submodule_location(unsigned int *location, git_submodule *sm)
 {
-	assert(location && sm);
+	GIT_ASSERT_ARG(location);
+	GIT_ASSERT_ARG(sm);
 
 	return git_submodule__status(
 		location, NULL, NULL, NULL, sm, GIT_SUBMODULE_IGNORE_ALL);

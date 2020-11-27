@@ -358,7 +358,10 @@ static int pack_backend__read_header(
 	struct git_pack_entry e;
 	int error;
 
-	assert(len_p && type_p && backend && oid);
+	GIT_ASSERT_ARG(len_p);
+	GIT_ASSERT_ARG(type_p);
+	GIT_ASSERT_ARG(backend);
+	GIT_ASSERT_ARG(oid);
 
 	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < 0)
 		return error;
@@ -469,7 +472,9 @@ static int pack_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb c
 	struct pack_backend *backend;
 	unsigned int i;
 
-	assert(_backend && cb);
+	GIT_ASSERT_ARG(_backend);
+	GIT_ASSERT_ARG(cb);
+
 	backend = (struct pack_backend *)_backend;
 
 	/* Make sure we know about the packfiles */
@@ -488,7 +493,7 @@ static int pack_backend__writepack_append(struct git_odb_writepack *_writepack, 
 {
 	struct pack_writepack *writepack = (struct pack_writepack *)_writepack;
 
-	assert(writepack);
+	GIT_ASSERT_ARG(writepack);
 
 	return git_indexer_append(writepack->indexer, data, size, stats);
 }
@@ -497,16 +502,19 @@ static int pack_backend__writepack_commit(struct git_odb_writepack *_writepack, 
 {
 	struct pack_writepack *writepack = (struct pack_writepack *)_writepack;
 
-	assert(writepack);
+	GIT_ASSERT_ARG(writepack);
 
 	return git_indexer_commit(writepack->indexer, stats);
 }
 
 static void pack_backend__writepack_free(struct git_odb_writepack *_writepack)
 {
-	struct pack_writepack *writepack = (struct pack_writepack *)_writepack;
+	struct pack_writepack *writepack;
 
-	assert(writepack);
+	if (!_writepack)
+		return;
+
+	writepack = (struct pack_writepack *)_writepack;
 
 	git_indexer_free(writepack->indexer);
 	git__free(writepack);
@@ -522,7 +530,8 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 	struct pack_backend *backend;
 	struct pack_writepack *writepack;
 
-	assert(out && _backend);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(_backend);
 
 	*out = NULL;
 
@@ -555,7 +564,8 @@ static void pack_backend__free(git_odb_backend *_backend)
 	struct pack_backend *backend;
 	size_t i;
 
-	assert(_backend);
+	if (!_backend)
+		return;
 
 	backend = (struct pack_backend *)_backend;
 

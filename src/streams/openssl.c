@@ -414,8 +414,8 @@ static int ssl_set_error(SSL *ssl, int error)
 
 	err = SSL_get_error(ssl, error);
 
-	assert(err != SSL_ERROR_WANT_READ);
-	assert(err != SSL_ERROR_WANT_WRITE);
+	GIT_ASSERT(err != SSL_ERROR_WANT_READ);
+	GIT_ASSERT(err != SSL_ERROR_WANT_WRITE);
 
 	switch (err) {
 	case SSL_ERROR_WANT_CONNECT:
@@ -757,7 +757,9 @@ static int openssl_stream_wrap(
 {
 	openssl_stream *st;
 
-	assert(out && in && host);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(in);
+	GIT_ASSERT_ARG(host);
 
 	st = git__calloc(1, sizeof(openssl_stream));
 	GIT_ERROR_CHECK_ALLOC(st);
@@ -800,7 +802,9 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 	git_stream *stream = NULL;
 	int error;
 
-	assert(out && host && port);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(host);
+	GIT_ASSERT_ARG(port);
 
 	if ((error = git_socket_stream_new(&stream, host, port)) < 0)
 		return error;

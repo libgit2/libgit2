@@ -228,7 +228,7 @@ int git_tree_entry_dup(git_tree_entry **dest, const git_tree_entry *source)
 {
 	git_tree_entry *cpy;
 
-	assert(source);
+	GIT_ASSERT_ARG(source);
 
 	cpy = alloc_entry(source->filename, source->filename_len, source->oid);
 	if (cpy == NULL)
@@ -261,19 +261,19 @@ git_filemode_t git_tree_entry_filemode_raw(const git_tree_entry *entry)
 
 const char *git_tree_entry_name(const git_tree_entry *entry)
 {
-	assert(entry);
+	GIT_ASSERT_ARG_WITH_RETVAL(entry, NULL);
 	return entry->filename;
 }
 
 const git_oid *git_tree_entry_id(const git_tree_entry *entry)
 {
-	assert(entry);
+	GIT_ASSERT_ARG_WITH_RETVAL(entry, NULL);
 	return entry->oid;
 }
 
 git_object_t git_tree_entry_type(const git_tree_entry *entry)
 {
-	assert(entry);
+	GIT_ASSERT_ARG_WITH_RETVAL(entry, GIT_OBJECT_INVALID);
 
 	if (S_ISGITLINK(entry->attr))
 		return GIT_OBJECT_COMMIT;
@@ -288,7 +288,9 @@ int git_tree_entry_to_object(
 	git_repository *repo,
 	const git_tree_entry *entry)
 {
-	assert(entry && object_out);
+	GIT_ASSERT_ARG(entry);
+	GIT_ASSERT_ARG(object_out);
+
 	return git_object_lookup(object_out, repo, entry->oid, GIT_OBJECT_ANY);
 }
 
@@ -306,7 +308,8 @@ static const git_tree_entry *entry_fromname(
 const git_tree_entry *git_tree_entry_byname(
 	const git_tree *tree, const char *filename)
 {
-	assert(tree && filename);
+	GIT_ASSERT_ARG_WITH_RETVAL(tree, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(filename, NULL);
 
 	return entry_fromname(tree, filename, strlen(filename));
 }
@@ -314,7 +317,7 @@ const git_tree_entry *git_tree_entry_byname(
 const git_tree_entry *git_tree_entry_byindex(
 	const git_tree *tree, size_t idx)
 {
-	assert(tree);
+	GIT_ASSERT_ARG_WITH_RETVAL(tree, NULL);
 	return git_array_get(tree->entries, idx);
 }
 
@@ -324,7 +327,7 @@ const git_tree_entry *git_tree_entry_byid(
 	size_t i;
 	const git_tree_entry *e;
 
-	assert(tree);
+	GIT_ASSERT_ARG_WITH_RETVAL(tree, NULL);
 
 	git_array_foreach(tree->entries, i, e) {
 		if (memcmp(&e->oid->id, &id->id, sizeof(id->id)) == 0)
@@ -336,13 +339,13 @@ const git_tree_entry *git_tree_entry_byid(
 
 size_t git_tree_entrycount(const git_tree *tree)
 {
-	assert(tree);
+	GIT_ASSERT_ARG_WITH_RETVAL(tree, 0);
 	return tree->entries.size;
 }
 
 size_t git_treebuilder_entrycount(git_treebuilder *bld)
 {
-	assert(bld);
+	GIT_ASSERT_ARG_WITH_RETVAL(bld, 0);
 
 	return git_strmap_size(bld->map);
 }
@@ -626,7 +629,9 @@ int git_tree__write_index(
 	git_buf shared_buf = GIT_BUF_INIT;
 	bool old_ignore_case = false;
 
-	assert(oid && index && repo);
+	GIT_ASSERT_ARG(oid);
+	GIT_ASSERT_ARG(index);
+	GIT_ASSERT_ARG(repo);
 
 	if (git_index_has_conflicts(index)) {
 		git_error_set(GIT_ERROR_INDEX,
@@ -680,7 +685,8 @@ int git_treebuilder_new(
 	git_treebuilder *bld;
 	size_t i;
 
-	assert(builder_p && repo);
+	GIT_ASSERT_ARG(builder_p);
+	GIT_ASSERT_ARG(repo);
 
 	bld = git__calloc(1, sizeof(git_treebuilder));
 	GIT_ERROR_CHECK_ALLOC(bld);
@@ -723,7 +729,9 @@ int git_treebuilder_insert(
 	git_tree_entry *entry;
 	int error;
 
-	assert(bld && id && filename);
+	GIT_ASSERT_ARG(bld);
+	GIT_ASSERT_ARG(id);
+	GIT_ASSERT_ARG(filename);
 
 	if ((error = check_entry(bld->repo, filename, id, filemode)) < 0)
 		return error;
@@ -751,7 +759,9 @@ int git_treebuilder_insert(
 
 static git_tree_entry *treebuilder_get(git_treebuilder *bld, const char *filename)
 {
-	assert(bld && filename);
+	GIT_ASSERT_ARG_WITH_RETVAL(bld, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(filename, NULL);
+
 	return git_strmap_get(bld->map, filename);
 }
 
@@ -792,8 +802,8 @@ int git_treebuilder_write_with_buffer(git_oid *oid, git_treebuilder *bld, git_bu
 	git_tree_entry *entry;
 	git_vector entries = GIT_VECTOR_INIT;
 
-	assert(bld);
-	assert(tree);
+	GIT_ASSERT_ARG(bld);
+	GIT_ASSERT_ARG(tree);
 
 	git_buf_clear(tree);
 
@@ -842,7 +852,8 @@ int git_treebuilder_filter(
 	const char *filename;
 	git_tree_entry *entry;
 
-	assert(bld && filter);
+	GIT_ASSERT_ARG(bld);
+	GIT_ASSERT_ARG(filter);
 
 	git_strmap_foreach(bld->map, filename, entry, {
 			if (filter(entry, payload)) {
@@ -858,7 +869,7 @@ int git_treebuilder_clear(git_treebuilder *bld)
 {
 	git_tree_entry *e;
 
-	assert(bld);
+	GIT_ASSERT_ARG(bld);
 
 	git_strmap_foreach_value(bld->map, e, git_tree_entry_free(e));
 	git_strmap_clear(bld->map);
@@ -1174,10 +1185,10 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 
 		for (j = 0; j < steps_up; j++) {
 			tree_stack_entry *current, *popped = git_array_pop(stack);
-			assert(popped);
+			GIT_ASSERT(popped);
 
 			current = git_array_last(stack);
-			assert(current);
+			GIT_ASSERT(current);
 
 			if ((error = create_popped_tree(current, popped, &component)) < 0)
 				goto cleanup;

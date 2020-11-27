@@ -62,7 +62,7 @@ void gitno_buffer_setup_fromstream(git_stream *st, gitno_buffer *buf, char *data
 void gitno_buffer_setup_callback(gitno_buffer *buf, char *data, size_t len, int (*recv)(gitno_buffer *buf), void *cb_data);
 int gitno_recv(gitno_buffer *buf);
 
-void gitno_consume(gitno_buffer *buf, const char *ptr);
+int gitno_consume(gitno_buffer *buf, const char *ptr);
 void gitno_consume_n(gitno_buffer *buf, size_t cons);
 
 #endif

@@ -94,10 +94,7 @@ int git_thread_join(
 
 	/* Check for the thread having exited uncleanly. If exit was unclean,
 	 * then we don't have a return value to give back to the caller. */
-	if (exit != CLEAN_THREAD_EXIT) {
-		assert(false);
-		thread->result = NULL;
-	}
+	GIT_ASSERT(exit == CLEAN_THREAD_EXIT);
 
 	if (value_ptr)
 		*value_ptr = thread->result;
@@ -149,7 +146,7 @@ int git_cond_init(git_cond *cond)
 {
 	/* This is an auto-reset event. */
 	*cond = CreateEventW(NULL, FALSE, FALSE, NULL);
-	assert(*cond);
+	GIT_ASSERT(*cond);
 
 	/* If we can't create the event, claim that the reason was out-of-memory.
 	 * The actual reason can be fetched with GetLastError(). */
@@ -164,7 +161,7 @@ int git_cond_free(git_cond *cond)
 		return EINVAL;
 
 	closed = CloseHandle(*cond);
-	assert(closed);
+	GIT_ASSERT(closed);
 	GIT_UNUSED(closed);
 
 	*cond = NULL;
@@ -186,7 +183,7 @@ int git_cond_wait(git_cond *cond, git_mutex *mutex)
 		return error;
 
 	wait_result = WaitForSingleObject(*cond, INFINITE);
-	assert(WAIT_OBJECT_0 == wait_result);
+	GIT_ASSERT(WAIT_OBJECT_0 == wait_result);
 	GIT_UNUSED(wait_result);
 
 	return git_mutex_lock(mutex);
@@ -200,7 +197,7 @@ int git_cond_signal(git_cond *cond)
 		return EINVAL;
 
 	signaled = SetEvent(*cond);
-	assert(signaled);
+	GIT_ASSERT(signaled);
 	GIT_UNUSED(signaled);
 
 	return 0;

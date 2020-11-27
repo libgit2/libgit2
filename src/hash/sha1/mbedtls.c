@@ -19,28 +19,28 @@ int git_hash_sha1_ctx_init(git_hash_sha1_ctx *ctx)
 
 void git_hash_sha1_ctx_cleanup(git_hash_sha1_ctx *ctx)
 {
-    assert(ctx);
-    mbedtls_sha1_free(&ctx->c);
+	if (ctx)
+		mbedtls_sha1_free(&ctx->c);
 }
 
 int git_hash_sha1_init(git_hash_sha1_ctx *ctx)
 {
-    assert(ctx);
-    mbedtls_sha1_init(&ctx->c);
-    mbedtls_sha1_starts(&ctx->c);
-    return 0;
+	GIT_ASSERT_ARG(ctx);
+	mbedtls_sha1_init(&ctx->c);
+	mbedtls_sha1_starts(&ctx->c);
+	return 0;
 }
 
 int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 {
-    assert(ctx);
-    mbedtls_sha1_update(&ctx->c, data, len);
-    return 0;
+	GIT_ASSERT_ARG(ctx);
+	mbedtls_sha1_update(&ctx->c, data, len);
+	return 0;
 }
 
 int git_hash_sha1_final(git_oid *out, git_hash_sha1_ctx *ctx)
 {
-    assert(ctx);
-    mbedtls_sha1_finish(&ctx->c, out->id);
-    return 0;
+	GIT_ASSERT_ARG(ctx);
+	mbedtls_sha1_finish(&ctx->c, out->id);
+	return 0;
 }

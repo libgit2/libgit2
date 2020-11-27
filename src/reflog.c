@@ -50,7 +50,9 @@ int git_reflog_read(git_reflog **reflog, git_repository *repo,  const char *name
 	git_refdb *refdb;
 	int error;
 
-	assert(reflog && repo && name);
+	GIT_ASSERT_ARG(reflog);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
 
 	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
 		return error;
@@ -62,7 +64,8 @@ int git_reflog_write(git_reflog *reflog)
 {
 	git_refdb *db;
 
-	assert(reflog && reflog->db);
+	GIT_ASSERT_ARG(reflog);
+	GIT_ASSERT_ARG(reflog->db);
 
 	db = reflog->db;
 	return db->backend->reflog_write(db->backend, reflog);
@@ -73,7 +76,9 @@ int git_reflog_append(git_reflog *reflog, const git_oid *new_oid, const git_sign
 	const git_reflog_entry *previous;
 	git_reflog_entry *entry;
 
-	assert(reflog && new_oid && committer);
+	GIT_ASSERT_ARG(reflog);
+	GIT_ASSERT_ARG(new_oid);
+	GIT_ASSERT_ARG(committer);
 
 	entry = git__calloc(1, sizeof(git_reflog_entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
@@ -139,13 +144,13 @@ int git_reflog_delete(git_repository *repo, const char *name)
 
 size_t git_reflog_entrycount(git_reflog *reflog)
 {
-	assert(reflog);
+	GIT_ASSERT_ARG_WITH_RETVAL(reflog, 0);
 	return reflog->entries.length;
 }
 
-const git_reflog_entry * git_reflog_entry_byindex(const git_reflog *reflog, size_t idx)
+const git_reflog_entry *git_reflog_entry_byindex(const git_reflog *reflog, size_t idx)
 {
-	assert(reflog);
+	GIT_ASSERT_ARG_WITH_RETVAL(reflog, NULL);
 
 	if (idx >= reflog->entries.length)
 		return NULL;
@@ -154,27 +159,27 @@ const git_reflog_entry * git_reflog_entry_byindex(const git_reflog *reflog, size
 		&reflog->entries, reflog_inverse_index(idx, reflog->entries.length));
 }
 
-const git_oid * git_reflog_entry_id_old(const git_reflog_entry *entry)
+const git_oid *git_reflog_entry_id_old(const git_reflog_entry *entry)
 {
-	assert(entry);
+	GIT_ASSERT_ARG_WITH_RETVAL(entry, NULL);
 	return &entry->oid_old;
 }
 
-const git_oid * git_reflog_entry_id_new(const git_reflog_entry *entry)
+const git_oid *git_reflog_entry_id_new(const git_reflog_entry *entry)
 {
-	assert(entry);
+	GIT_ASSERT_ARG_WITH_RETVAL(entry, NULL);
 	return &entry->oid_cur;
 }
 
-const git_signature * git_reflog_entry_committer(const git_reflog_entry *entry)
+const git_signature *git_reflog_entry_committer(const git_reflog_entry *entry)
 {
-	assert(entry);
+	GIT_ASSERT_ARG_WITH_RETVAL(entry, NULL);
 	return entry->committer;
 }
 
-const char * git_reflog_entry_message(const git_reflog_entry *entry)
+const char *git_reflog_entry_message(const git_reflog_entry *entry)
 {
-	assert(entry);
+	GIT_ASSERT_ARG_WITH_RETVAL(entry, NULL);
 	return entry->msg;
 }
 

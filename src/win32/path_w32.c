@@ -492,14 +492,12 @@ size_t git_win32_path_remove_namespace(wchar_t *str, size_t len)
 		prefix_len = CONST_STRLEN(unc_prefix);
 	}
 
-	if (remainder) {
-		/*
-		 * Sanity check that the new string isn't longer than the old one.
-		 * (This could only happen due to programmer error introducing a
-		 * prefix longer than the namespace it replaces.)
-		 */
-		assert(len >= remainder_len + prefix_len);
-
+	/*
+	 * Sanity check that the new string isn't longer than the old one.
+	 * (This could only happen due to programmer error introducing a
+	 * prefix longer than the namespace it replaces.)
+	 */
+	if (remainder && len >= remainder_len + prefix_len) {
 		if (prefix)
 			memmove(str, prefix, prefix_len * sizeof(wchar_t));
 

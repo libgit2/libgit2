@@ -66,7 +66,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, off64_t offset
 
 int p_munmap(git_map *map)
 {
-	assert(map != NULL);
+	GIT_ASSERT_ARG(map);
 	munmap(map->data, map->len);
 
 	return 0;

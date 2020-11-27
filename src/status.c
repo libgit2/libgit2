@@ -391,14 +391,14 @@ done:
 
 size_t git_status_list_entrycount(git_status_list *status)
 {
-	assert(status);
+	GIT_ASSERT_ARG_WITH_RETVAL(status, 0);
 
 	return status->paired.length;
 }
 
 const git_status_entry *git_status_byindex(git_status_list *status, size_t i)
 {
-	assert(status);
+	GIT_ASSERT_ARG_WITH_RETVAL(status, NULL);
 
 	return git_vector_get(&status->paired, i);
 }
@@ -492,7 +492,9 @@ int git_status_file(
 	struct status_file_info sfi = {0};
 	git_index *index;
 
-	assert(status_flags && repo && path);
+	GIT_ASSERT_ARG(status_flags);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(path);
 
 	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
 		return error;
@@ -558,7 +560,8 @@ int git_status_init_options(git_status_options *opts, unsigned int version)
 int git_status_list_get_perfdata(
 	git_diff_perfdata *out, const git_status_list *status)
 {
-	assert(out);
+	GIT_ASSERT_ARG(out);
+
 	GIT_ERROR_CHECK_VERSION(out, GIT_DIFF_PERFDATA_VERSION, "git_diff_perfdata");
 
 	out->stat_calls = 0;

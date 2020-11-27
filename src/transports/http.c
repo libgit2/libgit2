@@ -416,7 +416,7 @@ static int http_stream_read(
 		goto done;
 	}
 
-	assert (stream->state == HTTP_STATE_RECEIVING_RESPONSE);
+	GIT_ASSERT(stream->state == HTTP_STATE_RECEIVING_RESPONSE);
 
 	error = git_http_client_read_body(transport->http_client, buffer, buffer_size);
 
@@ -554,7 +554,7 @@ static int http_stream_write(
 		goto done;
 	}
 
-	assert(stream->state == HTTP_STATE_SENDING_REQUEST);
+	GIT_ASSERT(stream->state == HTTP_STATE_SENDING_REQUEST);
 
 	error = git_http_client_send_body(transport->http_client, buffer, len);
 
@@ -588,7 +588,7 @@ static int http_stream_read_response(
 		    (error = handle_response(&complete, stream, &response, false)) < 0)
 		    goto done;
 
-		assert(complete);
+		GIT_ASSERT(complete);
 		stream->state = HTTP_STATE_RECEIVING_RESPONSE;
 	}
 
@@ -637,7 +637,8 @@ static int http_action(
 	const http_service *service;
 	int error;
 
-	assert(out && t);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(t);
 
 	*out = NULL;
 
@@ -720,7 +721,7 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 
 	GIT_UNUSED(param);
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 
 	transport = git__calloc(sizeof(http_subtransport), 1);
 	GIT_ERROR_CHECK_ALLOC(transport);

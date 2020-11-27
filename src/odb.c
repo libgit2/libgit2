@@ -114,7 +114,8 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 	size_t hdrlen;
 	int error;
 
-	assert(id && obj);
+	GIT_ASSERT_ARG(id);
+	GIT_ASSERT_ARG(obj);
 
 	if (!git_object_typeisloose(obj->type)) {
 		git_error_set(GIT_ERROR_INVALID, "invalid object type");
@@ -346,7 +347,7 @@ int git_odb_hash(git_oid *id, const void *data, size_t len, git_object_t type)
 {
 	git_rawobj raw;
 
-	assert(id);
+	GIT_ASSERT_ARG(id);
 
 	raw.data = (void *)data;
 	raw.len = len;
@@ -376,7 +377,7 @@ static int fake_wstream__write(git_odb_stream *_stream, const char *data, size_t
 {
 	fake_wstream *stream = (fake_wstream *)_stream;
 
-	assert(stream->written + len <= stream->size);
+	GIT_ASSERT(stream->written + len <= stream->size);
 
 	memcpy(stream->buffer + stream->written, data, len);
 	stream->written += len;
@@ -470,12 +471,13 @@ static int add_backend_internal(
 {
 	backend_internal *internal;
 
-	assert(odb && backend);
+	GIT_ASSERT_ARG(odb);
+	GIT_ASSERT_ARG(backend);
 
 	GIT_ERROR_CHECK_VERSION(backend, GIT_ODB_BACKEND_VERSION, "git_odb_backend");
 
 	/* Check if the backend is already owned by another ODB */
-	assert(!backend->odb || backend->odb == odb);
+	GIT_ASSERT(!backend->odb || backend->odb == odb);
 
 	internal = git__malloc(sizeof(backend_internal));
 	GIT_ERROR_CHECK_ALLOC(internal);
@@ -507,7 +509,7 @@ int git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority)
 
 size_t git_odb_num_backends(git_odb *odb)
 {
-	assert(odb);
+	GIT_ASSERT_ARG(odb);
 	return odb->backends.length;
 }
 
@@ -523,7 +525,9 @@ int git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos)
 {
 	backend_internal *internal;
 
-	assert(out && odb);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(odb);
+
 	internal = git_vector_get(&odb->backends, pos);
 
 	if (internal && internal->backend) {
@@ -645,7 +649,8 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 {
 	git_odb *db;
 
-	assert(out && objects_dir);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(objects_dir);
 
 	*out = NULL;
 
@@ -755,7 +760,8 @@ static int odb_freshen_1(
 
 int git_odb__freshen(git_odb *db, const git_oid *id)
 {
-	assert(db && id);
+	GIT_ASSERT_ARG(db);
+	GIT_ASSERT_ARG(id);
 
 	if (odb_freshen_1(db, id, false))
 		return 1;
@@ -771,7 +777,8 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 {
 	git_odb_object *object;
 
-	assert(db && id);
+	GIT_ASSERT_ARG(db);
+	GIT_ASSERT_ARG(id);
 
 	if (git_oid_is_zero(id))
 		return 0;
@@ -839,7 +846,8 @@ int git_odb_exists_prefix(
 	int error;
 	git_oid key = {{0}};
 
-	assert(db && short_id);
+	GIT_ASSERT_ARG(db);
+	GIT_ASSERT_ARG(short_id);
 
 	if (len < GIT_OID_MINPREFIXLEN)
 		return git_odb__error_ambiguous("prefix length too short");
@@ -875,7 +883,8 @@ int git_odb_expand_ids(
 {
 	size_t i;
 
-	assert(db && ids);
+	GIT_ASSERT_ARG(db);
+	GIT_ASSERT_ARG(ids);
 
 	for (i = 0; i < count; i++) {
 		git_odb_expand_id *query = &ids[i];
@@ -997,7 +1006,11 @@ int git_odb__read_header_or_object(
 	int error = GIT_ENOTFOUND;
 	git_odb_object *object;
 
-	assert(db && id && out && len_p && type_p);
+	GIT_ASSERT_ARG(db);
+	GIT_ASSERT_ARG(id);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(len_p);
+	GIT_ASSERT_ARG(type_p);
 
 	*out = NULL;
 
@@ -1104,7 +1117,9 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 {
 	int error;
 
-	assert(out && db && id);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(db);
+	GIT_ASSERT_ARG(id);
 
 	if (git_oid_is_zero(id))
 		return error_null_oid(GIT_ENOTFOUND, "cannot read object");
@@ -1237,7 +1252,8 @@ int git_odb_read_prefix(
 	git_oid key = {{0}};
 	int error;
 
-	assert(out && db);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(db);
 
 	if (len < GIT_OID_MINPREFIXLEN)
 		return git_odb__error_ambiguous("prefix length too short");
@@ -1286,7 +1302,8 @@ int git_odb_write(
 	int error;
 	git_odb_stream *stream;
 
-	assert(oid && db);
+	GIT_ASSERT_ARG(oid);
+	GIT_ASSERT_ARG(db);
 
 	if ((error = git_odb_hash(oid, data, len, type)) < 0)
 		return error;
@@ -1346,7 +1363,8 @@ int git_odb_open_wstream(
 	int error = GIT_ERROR;
 	git_hash_ctx *ctx = NULL;
 
-	assert(stream && db);
+	GIT_ASSERT_ARG(stream);
+	GIT_ASSERT_ARG(db);
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
@@ -1456,7 +1474,8 @@ int git_odb_open_rstream(
 	size_t i, reads = 0;
 	int error = GIT_ERROR;
 
-	assert(stream && db);
+	GIT_ASSERT_ARG(stream);
+	GIT_ASSERT_ARG(db);
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
@@ -1481,7 +1500,8 @@ int git_odb_write_pack(struct git_odb_writepack **out, git_odb *db, git_indexer_
 	size_t i, writes = 0;
 	int error = GIT_ERROR;
 
-	assert(out && db);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(db);
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
@@ -1527,7 +1547,8 @@ void git_odb_backend_data_free(git_odb_backend *backend, void *data)
 int git_odb_refresh(struct git_odb *db)
 {
 	size_t i;
-	assert(db);
+
+	GIT_ASSERT_ARG(db);
 
 	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);

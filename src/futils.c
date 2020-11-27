@@ -185,7 +185,8 @@ int git_futils_readbuffer_updated(
 	git_buf buf = GIT_BUF_INIT;
 	git_oid checksum_new;
 
-	assert(out && path && *path);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(path && *path);
 
 	if (updated != NULL)
 		*updated = 0;
@@ -493,7 +494,7 @@ int git_futils_mkdir(
 			goto done;
 		}
 
-		assert(len);
+		GIT_ASSERT(len);
 
 		/*
 		 * We've walked all the given path's parents and it's either relative
@@ -1128,8 +1129,6 @@ int git_futils_filestamp_check(
 void git_futils_filestamp_set(
 	git_futils_filestamp *target, const git_futils_filestamp *source)
 {
-	assert(target);
-
 	if (source)
 		memcpy(target, source, sizeof(*target));
 	else

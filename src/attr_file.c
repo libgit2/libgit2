@@ -351,7 +351,9 @@ uint32_t git_attr_file__name_hash(const char *name)
 {
 	uint32_t h = 5381;
 	int c;
-	assert(name);
+
+	GIT_ASSERT_ARG(name);
+
 	while ((c = (int)*name++) != 0)
 		h = ((h << 5) + h) + c;
 	return h;
@@ -660,7 +662,8 @@ int git_attr_fnmatch__parse(
 	int slash_count, allow_space;
 	bool escaped;
 
-	assert(spec && base && *base);
+	GIT_ASSERT_ARG(spec);
+	GIT_ASSERT_ARG(base && *base);
 
 	if (parse_optimized_patterns(spec, pool, *base))
 		return 0;
@@ -828,7 +831,7 @@ int git_attr_assignment__parse(
 	const char *scan = *base;
 	git_attr_assignment *assign = NULL;
 
-	assert(assigns && !assigns->length);
+	GIT_ASSERT_ARG(assigns && !assigns->length);
 
 	git_vector_set_cmp(assigns, sort_by_hash_and_name);
 
@@ -954,7 +957,7 @@ void git_attr_rule__free(git_attr_rule *rule)
 
 int git_attr_session__init(git_attr_session *session, git_repository *repo)
 {
-	assert(repo);
+	GIT_ASSERT_ARG(repo);
 
 	memset(session, 0, sizeof(*session));
 	session->key = git_atomic_inc(&repo->attr_session_key);

@@ -77,7 +77,7 @@ void git_diff_addref(git_diff *diff)
 
 size_t git_diff_num_deltas(const git_diff *diff)
 {
-	assert(diff);
+	GIT_ASSERT_ARG(diff);
 	return diff->deltas.length;
 }
 
@@ -86,7 +86,7 @@ size_t git_diff_num_deltas_of_type(const git_diff *diff, git_delta_t type)
 	size_t i, count = 0;
 	const git_diff_delta *delta;
 
-	assert(diff);
+	GIT_ASSERT_ARG(diff);
 
 	git_vector_foreach(&diff->deltas, i, delta) {
 		count += (delta->status == type);
@@ -97,7 +97,7 @@ size_t git_diff_num_deltas_of_type(const git_diff *diff, git_delta_t type)
 
 const git_diff_delta *git_diff_get_delta(const git_diff *diff, size_t idx)
 {
-	assert(diff);
+	GIT_ASSERT_ARG_WITH_RETVAL(diff, NULL);
 	return git_vector_get(&diff->deltas, idx);
 }
 
@@ -108,7 +108,7 @@ int git_diff_is_sorted_icase(const git_diff *diff)
 
 int git_diff_get_perfdata(git_diff_perfdata *out, const git_diff *diff)
 {
-	assert(out);
+	GIT_ASSERT_ARG(out);
 	GIT_ERROR_CHECK_VERSION(out, GIT_DIFF_PERFDATA_VERSION, "git_diff_perfdata");
 	out->stat_calls = diff->perf.stat_calls;
 	out->oid_calculations = diff->perf.oid_calculations;
@@ -127,7 +127,7 @@ int git_diff_foreach(
 	git_diff_delta *delta;
 	size_t idx;
 
-	assert(diff);
+	GIT_ASSERT_ARG(diff);
 
 	git_vector_foreach(&diff->deltas, idx, delta) {
 		git_patch *patch;
@@ -243,8 +243,9 @@ int git_diff_format_email(
 	size_t allocsize;
 	int error;
 
-	assert(out && diff && opts);
-	assert(opts->summary && opts->id && opts->author);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(diff);
+	GIT_ASSERT_ARG(opts && opts->summary && opts->id && opts->author);
 
 	GIT_ERROR_CHECK_VERSION(opts,
 		GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION,
@@ -326,7 +327,9 @@ int git_diff_commit_as_email(
 		GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
 	int error;
 
-	assert (out && repo && commit);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(commit);
 
 	opts.flags = flags;
 	opts.patch_no = patch_no;

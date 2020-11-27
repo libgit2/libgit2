@@ -281,7 +281,8 @@ int git_net_url_apply_redirect(
 	git_net_url tmp = GIT_NET_URL_INIT;
 	int error = 0;
 
-	assert(url && redirect_location);
+	GIT_ASSERT(url);
+	GIT_ASSERT(redirect_location);
 
 	if (redirect_location[0] == '/') {
 		git__free(url->path);

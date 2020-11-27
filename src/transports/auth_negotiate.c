@@ -65,7 +65,9 @@ static int negotiate_set_challenge(
 {
 	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
 
-	assert(ctx && ctx->configured && challenge);
+	GIT_ASSERT_ARG(ctx);
+	GIT_ASSERT_ARG(challenge);
+	GIT_ASSERT(ctx->configured);
 
 	git__free(ctx->challenge);
 
@@ -108,7 +110,12 @@ static int negotiate_next_token(
 	size_t challenge_len;
 	int error = 0;
 
-	assert(buf && ctx && ctx->configured && cred && cred->credtype == GIT_CREDENTIAL_DEFAULT);
+	GIT_ASSERT_ARG(buf);
+	GIT_ASSERT_ARG(ctx);
+	GIT_ASSERT_ARG(cred);
+
+	GIT_ASSERT(ctx->configured);
+	GIT_ASSERT(cred->credtype == GIT_CREDENTIAL_DEFAULT);
 
 	if (ctx->complete)
 		return 0;
@@ -202,7 +209,7 @@ static int negotiate_is_complete(git_http_auth_context *c)
 {
 	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
 
-	assert(ctx);
+	GIT_ASSERT_ARG(ctx);
 
 	return (ctx->complete == 1);
 }

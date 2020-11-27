@@ -309,7 +309,7 @@ static int read_loose_standard(git_rawobj *out, git_buf *obj)
 		goto done;
 	}
 
-	assert(decompressed >= head_len);
+	GIT_ASSERT(decompressed >= head_len);
 	body_len = decompressed - head_len;
 
 	if (body_len)
@@ -344,7 +344,8 @@ static int read_loose(git_rawobj *out, git_buf *loc)
 	int error;
 	git_buf obj = GIT_BUF_INIT;
 
-	assert(out && loc);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(loc);
 
 	if (git_buf_oom(loc))
 		return -1;
@@ -411,7 +412,8 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 	ssize_t obj_len;
 	int fd, error;
 
-	assert(out && loc);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(loc);
 
 	if (git_buf_oom(loc))
 		return -1;
@@ -585,7 +587,8 @@ static int loose_backend__read_header(size_t *len_p, git_object_t *type_p, git_o
 	git_rawobj raw;
 	int error;
 
-	assert(backend && oid);
+	GIT_ASSERT_ARG(backend);
+	GIT_ASSERT_ARG(oid);
 
 	raw.len = 0;
 	raw.type = GIT_OBJECT_INVALID;
@@ -609,7 +612,8 @@ static int loose_backend__read(void **buffer_p, size_t *len_p, git_object_t *typ
 	git_rawobj raw;
 	int error = 0;
 
-	assert(backend && oid);
+	GIT_ASSERT_ARG(backend);
+	GIT_ASSERT_ARG(oid);
 
 	if (locate_object(&object_path, (loose_backend *)backend, oid) < 0) {
 		error = git_odb__error_notfound("no matching loose object",
@@ -636,7 +640,7 @@ static int loose_backend__read_prefix(
 {
 	int error = 0;
 
-	assert(len >= GIT_OID_MINPREFIXLEN && len <= GIT_OID_HEXSZ);
+	GIT_ASSERT_ARG(len >= GIT_OID_MINPREFIXLEN && len <= GIT_OID_HEXSZ);
 
 	if (len == GIT_OID_HEXSZ) {
 		/* We can fall back to regular read method */
@@ -647,7 +651,7 @@ static int loose_backend__read_prefix(
 		git_buf object_path = GIT_BUF_INIT;
 		git_rawobj raw;
 
-		assert(backend && short_oid);
+		GIT_ASSERT_ARG(backend && short_oid);
 
 		if ((error = locate_object_short_oid(&object_path, out_oid,
 				(loose_backend *)backend, short_oid, len)) == 0 &&
@@ -669,7 +673,8 @@ static int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
 	git_buf object_path = GIT_BUF_INIT;
 	int error;
 
-	assert(backend && oid);
+	GIT_ASSERT_ARG(backend);
+	GIT_ASSERT_ARG(oid);
 
 	error = locate_object(&object_path, (loose_backend *)backend, oid);
 
@@ -684,7 +689,10 @@ static int loose_backend__exists_prefix(
 	git_buf object_path = GIT_BUF_INIT;
 	int error;
 
-	assert(backend && out && short_id && len >= GIT_OID_MINPREFIXLEN);
+	GIT_ASSERT_ARG(backend);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(short_id);
+	GIT_ASSERT_ARG(len >= GIT_OID_MINPREFIXLEN);
 
 	error = locate_object_short_oid(
 		&object_path, out, (loose_backend *)backend, short_id, len);
@@ -759,7 +767,8 @@ static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb 
 	struct foreach_state state;
 	loose_backend *backend = (loose_backend *) _backend;
 
-	assert(backend && cb);
+	GIT_ASSERT_ARG(backend);
+	GIT_ASSERT_ARG(cb);
 
 	objects_dir = backend->objects_dir;
 
@@ -833,7 +842,7 @@ static int loose_backend__writestream(git_odb_stream **stream_out, git_odb_backe
 	size_t hdrlen;
 	int error;
 
-	assert(_backend);
+	GIT_ASSERT_ARG(_backend);
 
 	backend = (loose_backend *)_backend;
 	*stream_out = NULL;
@@ -991,7 +1000,11 @@ static int loose_backend__readstream(
 	obj_hdr hdr;
 	int error = 0;
 
-	assert(stream_out && len_out && type_out && _backend && oid);
+	GIT_ASSERT_ARG(stream_out);
+	GIT_ASSERT_ARG(len_out);
+	GIT_ASSERT_ARG(type_out);
+	GIT_ASSERT_ARG(_backend);
+	GIT_ASSERT_ARG(oid);
 
 	backend = (loose_backend *)_backend;
 	*stream_out = NULL;
@@ -1108,11 +1121,7 @@ static int loose_backend__freshen(
 
 static void loose_backend__free(git_odb_backend *_backend)
 {
-	loose_backend *backend;
-	assert(_backend);
-	backend = (loose_backend *)_backend;
-
-	git__free(backend);
+	git__free(_backend);
 }
 
 int git_odb_backend_loose(
@@ -1126,7 +1135,8 @@ int git_odb_backend_loose(
 	loose_backend *backend;
 	size_t objects_dirlen, alloclen;
 
-	assert(backend_out && objects_dir);
+	GIT_ASSERT_ARG(backend_out);
+	GIT_ASSERT_ARG(objects_dir);
 
 	objects_dirlen = strlen(objects_dir);
 

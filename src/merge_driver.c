@@ -32,33 +32,38 @@ static struct merge_driver_registry merge_driver_registry;
 
 static void git_merge_driver_global_shutdown(void);
 
-git_repository* git_merge_driver_source_repo(const git_merge_driver_source *src)
+git_repository *git_merge_driver_source_repo(
+	const git_merge_driver_source *src)
 {
-	assert(src);
+	GIT_ASSERT_ARG_WITH_RETVAL(src, NULL);
 	return src->repo;
 }
 
-const git_index_entry* git_merge_driver_source_ancestor(const git_merge_driver_source *src)
+const git_index_entry *git_merge_driver_source_ancestor(
+	const git_merge_driver_source *src)
 {
-	assert(src);
+	GIT_ASSERT_ARG_WITH_RETVAL(src, NULL);
 	return src->ancestor;
 }
 
-const git_index_entry* git_merge_driver_source_ours(const git_merge_driver_source *src)
+const git_index_entry *git_merge_driver_source_ours(
+	const git_merge_driver_source *src)
 {
-	assert(src);
+	GIT_ASSERT_ARG_WITH_RETVAL(src, NULL);
 	return src->ours;
 }
 
-const git_index_entry* git_merge_driver_source_theirs(const git_merge_driver_source *src)
+const git_index_entry *git_merge_driver_source_theirs(
+	const git_merge_driver_source *src)
 {
-	assert(src);
+	GIT_ASSERT_ARG_WITH_RETVAL(src, NULL);
 	return src->theirs;
 }
 
-const git_merge_file_options* git_merge_driver_source_file_options(const git_merge_driver_source *src)
+const git_merge_file_options *git_merge_driver_source_file_options(
+	const git_merge_driver_source *src)
 {
-	assert(src);
+	GIT_ASSERT_ARG_WITH_RETVAL(src, NULL);
 	return src->file_opts;
 }
 
@@ -262,7 +267,8 @@ int git_merge_driver_register(const char *name, git_merge_driver *driver)
 {
 	int error;
 
-	assert(name && driver);
+	GIT_ASSERT_ARG(name);
+	GIT_ASSERT_ARG(driver);
 
 	if (git_rwlock_wrlock(&merge_driver_registry.lock) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to lock merge driver registry");

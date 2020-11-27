@@ -67,8 +67,10 @@ static int create_branch(
 	int error = -1;
 	int bare = git_repository_is_bare(repository);
 
-	assert(branch_name && commit && ref_out);
-	assert(git_object_owner((const git_object *)commit) == repository);
+	GIT_ASSERT_ARG(branch_name);
+	GIT_ASSERT_ARG(commit);
+	GIT_ASSERT_ARG(ref_out);
+	GIT_ASSERT_ARG(git_commit_owner(commit) == repository);
 
 	if (!git__strcmp(branch_name, "HEAD")) {
 		git_error_set(GIT_ERROR_REFERENCE, "'HEAD' is not a valid branch name");
@@ -161,6 +163,8 @@ out:
 
 int git_branch_is_checked_out(const git_reference *branch)
 {
+	GIT_ASSERT_ARG(branch);
+
 	if (!git_reference_is_branch(branch))
 		return 0;
 	return git_repository_foreach_worktree(git_reference_owner(branch),
@@ -173,7 +177,7 @@ int git_branch_delete(git_reference *branch)
 	git_buf config_section = GIT_BUF_INIT;
 	int error = -1;
 
-	assert(branch);
+	GIT_ASSERT_ARG(branch);
 
 	if (!git_reference_is_branch(branch) && !git_reference_is_remote(branch)) {
 		git_error_set(GIT_ERROR_INVALID, "reference '%s' is not a valid branch.",
@@ -288,7 +292,8 @@ int git_branch_move(
 	        log_message = GIT_BUF_INIT;
 	int error;
 
-	assert(branch && new_branch_name);
+	GIT_ASSERT_ARG(branch);
+	GIT_ASSERT_ARG(new_branch_name);
 
 	if (!git_reference_is_branch(branch))
 		return not_a_local_branch(git_reference_name(branch));
@@ -333,7 +338,10 @@ int git_branch_lookup(
 	git_branch_t branch_type)
 {
 	int error = -1;
-	assert(ref_out && repo && branch_name);
+
+	GIT_ASSERT_ARG(ref_out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(branch_name);
 
 	switch (branch_type) {
 	case GIT_BRANCH_LOCAL:
@@ -346,7 +354,7 @@ int git_branch_lookup(
 			error = retrieve_branch_reference(ref_out, repo, branch_name, true);
 		break;
 	default:
-		assert(false);
+		GIT_ASSERT(false);
 	}
 	return error;
 }
@@ -357,7 +365,8 @@ int git_branch_name(
 {
 	const char *branch_name;
 
-	assert(out && ref);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(ref);
 
 	branch_name = ref->name;
 
@@ -405,9 +414,11 @@ int git_branch_upstream_name(
 	const git_refspec *refspec;
 	git_config *config;
 
-	assert(out && refname);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(refname);
 
-	git_buf_sanitize(out);
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 	if (!git_reference__is_branch(refname))
 		return not_a_local_branch(refname);
@@ -468,9 +479,8 @@ int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *r
 	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
 		return error;
 
-	git_buf_sanitize(buf);
-
-	if ((error = retrieve_upstream_configuration(buf, cfg, refname, "branch.%s.remote")) < 0)
+	if ((error = git_buf_sanitize(buf)) < 0 ||
+	    (error = retrieve_upstream_configuration(buf, cfg, refname, "branch.%s.remote")) < 0)
 		return error;
 
 	if (git_buf_len(buf) == 0) {
@@ -491,9 +501,12 @@ int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refna
 	int error = 0;
 	char *remote_name = NULL;
 
-	assert(buf && repo && refname);
+	GIT_ASSERT_ARG(buf);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(refname);
 
-	git_buf_sanitize(buf);
+	if ((error = git_buf_sanitize(buf)) < 0)
+		return error;
 
 	/* Verify that this is a remote branch */
 	if (!git_reference__is_remote(refname)) {
@@ -702,7 +715,7 @@ int git_branch_is_head(
 	bool is_same = false;
 	int error;
 
-	assert(branch);
+	GIT_ASSERT_ARG(branch);
 
 	if (!git_reference_is_branch(branch))
 		return false;

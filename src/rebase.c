@@ -186,8 +186,8 @@ static git_rebase_operation *rebase_operation_alloc(
 {
 	git_rebase_operation *operation;
 
-	assert((type == GIT_REBASE_OPERATION_EXEC) == !id);
-	assert((type == GIT_REBASE_OPERATION_EXEC) == !!exec);
+	GIT_ASSERT_WITH_RETVAL((type == GIT_REBASE_OPERATION_EXEC) == !id, NULL);
+	GIT_ASSERT_WITH_RETVAL((type == GIT_REBASE_OPERATION_EXEC) == !!exec, NULL);
 
 	if ((operation = git_array_alloc(rebase->operations)) == NULL)
 		return NULL;
@@ -301,7 +301,7 @@ int git_rebase_open(
 	size_t state_path_len;
 	int error;
 
-	assert(repo);
+	GIT_ASSERT_ARG(repo);
 
 	if ((error = rebase_check_versions(given_opts)) < 0)
 		return error;
@@ -701,7 +701,8 @@ int git_rebase_init(
 	bool inmemory = (given_opts && given_opts->inmemory);
 	int error;
 
-	assert(repo && (upstream || onto));
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(upstream || onto);
 
 	*out = NULL;
 
@@ -912,7 +913,8 @@ int git_rebase_next(
 {
 	int error;
 
-	assert(out && rebase);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(rebase);
 
 	if ((error = rebase_movenext(rebase)) < 0)
 		return error;
@@ -931,7 +933,9 @@ int git_rebase_inmemory_index(
 	git_index **out,
 	git_rebase *rebase)
 {
-	assert(out && rebase && rebase->index);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(rebase);
+	GIT_ASSERT_ARG(rebase->index);
 
 	GIT_REFCOUNT_INC(rebase->index);
 	*out = rebase->index;
@@ -1006,12 +1010,12 @@ static int rebase_commit__create(
 	}
 
 	if (git_buf_is_allocated(&commit_signature)) {
-		assert(git_buf_contains_nul(&commit_signature));
+		GIT_ASSERT(git_buf_contains_nul(&commit_signature));
 		commit_signature_string = git_buf_cstr(&commit_signature);
 	}
 
 	if (git_buf_is_allocated(&signature_field)) {
-		assert(git_buf_contains_nul(&signature_field));
+		GIT_ASSERT(git_buf_contains_nul(&signature_field));
 		signature_field_string = git_buf_cstr(&signature_field);
 	}
 
@@ -1055,7 +1059,7 @@ static int rebase_commit_merge(
 	int error;
 
 	operation = git_array_get(rebase->operations, rebase->current);
-	assert(operation);
+	GIT_ASSERT(operation);
 
 	if ((error = rebase_ensure_not_dirty(rebase->repo, false, true, GIT_EUNMERGED)) < 0 ||
 		(error = git_repository_head(&head, rebase->repo)) < 0 ||
@@ -1095,9 +1099,9 @@ static int rebase_commit_inmemory(
 	git_commit *commit = NULL;
 	int error = 0;
 
-	assert(rebase->index);
-	assert(rebase->last_commit);
-	assert(rebase->current < rebase->operations.size);
+	GIT_ASSERT_ARG(rebase->index);
+	GIT_ASSERT_ARG(rebase->last_commit);
+	GIT_ASSERT_ARG(rebase->current < rebase->operations.size);
 
 	if ((error = rebase_commit__create(&commit, rebase, rebase->index,
 		rebase->last_commit, author, committer, message_encoding, message)) < 0)
@@ -1125,7 +1129,8 @@ int git_rebase_commit(
 {
 	int error;
 
-	assert(rebase && committer);
+	GIT_ASSERT_ARG(rebase);
+	GIT_ASSERT_ARG(committer);
 
 	if (rebase->inmemory)
 		error = rebase_commit_inmemory(
@@ -1145,7 +1150,7 @@ int git_rebase_abort(git_rebase *rebase)
 	git_commit *orig_head_commit = NULL;
 	int error;
 
-	assert(rebase);
+	GIT_ASSERT_ARG(rebase);
 
 	if (rebase->inmemory)
 		return 0;
@@ -1358,7 +1363,7 @@ int git_rebase_finish(
 {
 	int error = 0;
 
-	assert(rebase);
+	GIT_ASSERT_ARG(rebase);
 
 	if (rebase->inmemory)
 		return 0;
@@ -1373,14 +1378,17 @@ int git_rebase_finish(
 }
 
 const char *git_rebase_orig_head_name(git_rebase *rebase) {
+	GIT_ASSERT_ARG_WITH_RETVAL(rebase, NULL);
 	return rebase->orig_head_name;
 }
 
 const git_oid *git_rebase_orig_head_id(git_rebase *rebase) {
+	GIT_ASSERT_ARG_WITH_RETVAL(rebase, NULL);
 	return &rebase->orig_head_id;
 }
 
 const char *git_rebase_onto_name(git_rebase *rebase) {
+	GIT_ASSERT_ARG_WITH_RETVAL(rebase, NULL);
 	return rebase->onto_name;
 }
 
@@ -1390,21 +1398,21 @@ const git_oid *git_rebase_onto_id(git_rebase *rebase) {
 
 size_t git_rebase_operation_entrycount(git_rebase *rebase)
 {
-	assert(rebase);
+	GIT_ASSERT_ARG_WITH_RETVAL(rebase, 0);
 
 	return git_array_size(rebase->operations);
 }
 
 size_t git_rebase_operation_current(git_rebase *rebase)
 {
-	assert(rebase);
+	GIT_ASSERT_ARG_WITH_RETVAL(rebase, 0);
 
 	return rebase->started ? rebase->current : GIT_REBASE_NO_OPERATION;
 }
 
 git_rebase_operation *git_rebase_operation_byindex(git_rebase *rebase, size_t idx)
 {
-	assert(rebase);
+	GIT_ASSERT_ARG_WITH_RETVAL(rebase, NULL);
 
 	return git_array_get(rebase->operations, idx);
 }

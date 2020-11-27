@@ -158,7 +158,7 @@ static int store_refs(transport_local *t)
 	git_remote_head *head;
 	git_strarray ref_names = {0};
 
-	assert(t);
+	GIT_ASSERT_ARG(t);
 
 	if (git_reference_list(&ref_names, t->repo) < 0)
 		goto on_error;

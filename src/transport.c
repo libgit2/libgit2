@@ -148,8 +148,8 @@ int git_transport_register(
 	size_t i;
 	int error = 0;
 
-	assert(scheme);
-	assert(cb);
+	GIT_ASSERT_ARG(scheme);
+	GIT_ASSERT_ARG(cb);
 
 	if ((error = git_buf_printf(&prefix, "%s://", scheme)) < 0)
 		goto on_error;
@@ -186,7 +186,7 @@ int git_transport_unregister(const char *scheme)
 	size_t i;
 	int error = 0;
 
-	assert(scheme);
+	GIT_ASSERT_ARG(scheme);
 
 	if ((error = git_buf_printf(&prefix, "%s://", scheme)) < 0)
 		goto done;

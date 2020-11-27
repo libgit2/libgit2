@@ -546,7 +546,9 @@ int git_stash_save(
 	git_buf msg = GIT_BUF_INIT;
 	int error;
 
-	assert(out && repo && stasher);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(stasher);
 
 	if ((error = git_repository__ensure_not_bare(repo, "stash save")) < 0)
 		return error;

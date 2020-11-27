@@ -18,7 +18,8 @@
 
 const void *git_blob_rawcontent(const git_blob *blob)
 {
-	assert(blob);
+	GIT_ASSERT_ARG_WITH_RETVAL(blob, NULL);
+
 	if (blob->raw)
 		return blob->data.raw.data;
 	else
@@ -27,7 +28,8 @@ const void *git_blob_rawcontent(const git_blob *blob)
 
 git_object_size_t git_blob_rawsize(const git_blob *blob)
 {
-	assert(blob);
+	GIT_ASSERT_ARG(blob);
+
 	if (blob->raw)
 		return blob->data.raw.size;
 	else
@@ -53,7 +55,9 @@ void git_blob__free(void *_blob)
 int git_blob__parse_raw(void *_blob, const char *data, size_t size)
 {
 	git_blob *blob = (git_blob *) _blob;
-	assert(blob);
+
+	GIT_ASSERT_ARG(blob);
+
 	blob->raw = 1;
 	blob->data.raw.data = data;
 	blob->data.raw.size = size;
@@ -63,7 +67,9 @@ int git_blob__parse_raw(void *_blob, const char *data, size_t size)
 int git_blob__parse(void *_blob, git_odb_object *odb_obj)
 {
 	git_blob *blob = (git_blob *) _blob;
-	assert(blob);
+
+	GIT_ASSERT_ARG(blob);
+
 	git_cached_obj_incref((git_cached_obj *)odb_obj);
 	blob->raw = 0;
 	blob->data.odb = odb_obj;
@@ -77,7 +83,8 @@ int git_blob_create_from_buffer(
 	git_odb *odb;
 	git_odb_stream *stream;
 
-	assert(id && repo);
+	GIT_ASSERT_ARG(id);
+	GIT_ASSERT_ARG(repo);
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
 		(error = git_odb_open_wstream(&stream, odb, len, GIT_OBJECT_BLOB)) < 0)
@@ -188,7 +195,7 @@ int git_blob__create_from_paths(
 	mode_t mode;
 	git_buf path = GIT_BUF_INIT;
 
-	assert(hint_path || !try_load_filters);
+	GIT_ASSERT_ARG(hint_path || !try_load_filters);
 
 	if (!content_path) {
 		if (git_repository__ensure_not_bare(repo, "create blob from file") < 0)
@@ -331,7 +338,8 @@ int git_blob_create_from_stream(git_writestream **out, git_repository *repo, con
 	git_buf path = GIT_BUF_INIT;
 	blob_writestream *stream;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	stream = git__calloc(1, sizeof(blob_writestream));
 	GIT_ERROR_CHECK_ALLOC(stream);
@@ -391,7 +399,7 @@ int git_blob_is_binary(const git_blob *blob)
 	git_buf content = GIT_BUF_INIT;
 	git_object_size_t size;
 
-	assert(blob);
+	GIT_ASSERT_ARG(blob);
 
 	size = git_blob_rawsize(blob);
 
@@ -411,12 +419,15 @@ int git_blob_filter(
 	git_blob_filter_options opts = GIT_BLOB_FILTER_OPTIONS_INIT;
 	git_filter_flag_t flags = GIT_FILTER_DEFAULT;
 
-	assert(blob && path && out);
-
-	git_buf_sanitize(out);
+	GIT_ASSERT_ARG(blob);
+	GIT_ASSERT_ARG(path);
+	GIT_ASSERT_ARG(out);
 
 	GIT_ERROR_CHECK_VERSION(
 		given_opts, GIT_BLOB_FILTER_OPTIONS_VERSION, "git_blob_filter_options");
+
+	if (git_buf_sanitize(out) < 0)
+		return -1;
 
 	if (given_opts != NULL)
 		memcpy(&opts, given_opts, sizeof(git_blob_filter_options));

@@ -117,7 +117,7 @@ int p_munmap(git_map *map)
 {
 	int error = 0;
 
-	assert(map != NULL);
+	GIT_ASSERT_ARG(map);
 
 	if (map->data) {
 		if (!UnmapViewOfFile(map->data)) {
