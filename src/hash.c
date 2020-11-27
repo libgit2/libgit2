@@ -41,8 +41,10 @@ int git_hash_init(git_hash_ctx *ctx)
 		case GIT_HASH_ALGO_SHA1:
 			return git_hash_sha1_init(&ctx->sha1);
 		default:
-			GIT_ASSERT(0);
+			/* unreachable */ ;
 	}
+	GIT_ASSERT(0);
+	return -1;
 }
 
 int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
@@ -51,8 +53,10 @@ int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 		case GIT_HASH_ALGO_SHA1:
 			return git_hash_sha1_update(&ctx->sha1, data, len);
 		default:
-			GIT_ASSERT(0);
+			/* unreachable */ ;
 	}
+	GIT_ASSERT(0);
+	return -1;
 }
 
 int git_hash_final(git_oid *out, git_hash_ctx *ctx)
@@ -61,8 +65,10 @@ int git_hash_final(git_oid *out, git_hash_ctx *ctx)
 		case GIT_HASH_ALGO_SHA1:
 			return git_hash_sha1_final(out, &ctx->sha1);
 		default:
-			GIT_ASSERT(0);
+			/* unreachable */ ;
 	}
+	GIT_ASSERT(0);
+	return -1;
 }
 
 int git_hash_buf(git_oid *out, const void *data, size_t len)
