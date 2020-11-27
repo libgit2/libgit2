@@ -80,7 +80,18 @@ typedef enum {
 	GIT_CERT_SSH_SHA1 = (1 << 1),
 	/** SHA-256 is available */
 	GIT_CERT_SSH_SHA256 = (1 << 2),
+	/** Raw hostkey is available */
+	GIT_CERT_SSH_RAW = (1 << 3),
 } git_cert_ssh_t;
+
+typedef enum {
+	/** The raw key is of an unknown type. */
+	GIT_CERT_SSH_RAW_TYPE_UNKNOWN = 0,
+	/** The raw key is an RSA key. */
+	GIT_CERT_SSH_RAW_TYPE_RSA = 1,
+	/** The raw key is a DSS key. */
+	GIT_CERT_SSH_RAW_TYPE_DSS = 2,
+} git_cert_ssh_raw_type_t;
 
 /**
  * Hostkey information taken from libssh2
@@ -89,28 +100,45 @@ typedef struct {
 	git_cert parent; /**< The parent cert */
 
 	/**
-	 * A hostkey type from libssh2, either
-	 * `GIT_CERT_SSH_MD5` or `GIT_CERT_SSH_SHA1`
+	 * A bitmask containing the available fields.
 	 */
 	git_cert_ssh_t type;
 
 	/**
-	 * Hostkey hash. If type has `GIT_CERT_SSH_MD5` set, this will
+	 * Hostkey hash. If `type` has `GIT_CERT_SSH_MD5` set, this will
 	 * have the MD5 hash of the hostkey.
 	 */
 	unsigned char hash_md5[16];
 
 	/**
-	 * Hostkey hash. If type has `GIT_CERT_SSH_SHA1` set, this will
+	 * Hostkey hash. If `type` has `GIT_CERT_SSH_SHA1` set, this will
 	 * have the SHA-1 hash of the hostkey.
 	 */
 	unsigned char hash_sha1[20];
 
 	/**
-	 * Hostkey hash. If type has `GIT_CERT_SSH_SHA256` set, this will
+	 * Hostkey hash. If `type` has `GIT_CERT_SSH_SHA256` set, this will
 	 * have the SHA-256 hash of the hostkey.
 	 */
 	unsigned char hash_sha256[32];
+
+	/**
+	 * Raw hostkey type. If `type` has `GIT_CERT_SSH_RAW` set, this will
+	 * have the type of the raw hostkey.
+	 */
+	git_cert_ssh_raw_type_t raw_type;
+
+	/**
+	 * Pointer to the raw hostkey. If `type` has `GIT_CERT_SSH_RAW` set,
+	 * this will have the raw contents of the hostkey.
+	 */
+	const char *hostkey;
+
+	/**
+	 * Raw hostkey length. If `type` has `GIT_CERT_SSH_RAW` set, this will
+	 * have the length of the raw contents of the hostkey.
+	 */
+	size_t hostkey_len;
 } git_cert_hostkey;
 
 /**
