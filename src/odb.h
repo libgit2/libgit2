@@ -40,6 +40,7 @@ struct git_odb_object {
 /* EXPORT */
 struct git_odb {
 	git_refcount rc;
+	git_mutex lock;  /* protects backends */
 	git_vector backends;
 	git_cache own_cache;
 	unsigned int do_fsync :1;
