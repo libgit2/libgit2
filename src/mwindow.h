@@ -13,8 +13,6 @@
 #include "map.h"
 #include "vector.h"
 
-extern git_mutex git__mwindow_mutex;
-
 typedef struct git_mwindow {
 	struct git_mwindow *next;
 	git_map window_map;
@@ -24,6 +22,7 @@ typedef struct git_mwindow {
 } git_mwindow;
 
 typedef struct git_mwindow_file {
+	git_mutex lock; /* protects updates to fd */
 	git_mwindow *windows;
 	int fd;
 	off64_t size;
@@ -41,7 +40,6 @@ typedef struct git_mwindow_ctl {
 
 int git_mwindow_contains(git_mwindow *win, off64_t offset);
 int git_mwindow_free_all(git_mwindow_file *mwf); /* locks */
-int git_mwindow_free_all_locked(git_mwindow_file *mwf); /* run under lock */
 unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor, off64_t offset, size_t extra, unsigned int *left);
 int git_mwindow_file_register(git_mwindow_file *mwf);
 void git_mwindow_file_deregister(git_mwindow_file *mwf);

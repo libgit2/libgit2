@@ -24,8 +24,6 @@
 #include "zstream.h"
 #include "object.h"
 
-extern git_mutex git__mwindow_mutex;
-
 size_t git_indexer__max_objects = UINT32_MAX;
 
 #define UINT31_MAX (0x7FFFFFFF)
@@ -679,7 +677,7 @@ static int read_stream_object(git_indexer *idx, git_indexer_progress *stats)
 		return GIT_EBUFS;
 
 	if (!idx->have_stream) {
-		error = git_packfile_unpack_header(&entry_size, &type, &idx->pack->mwf, &w, &idx->off);
+		error = git_packfile_unpack_header(&entry_size, &type, idx->pack, &w, &idx->off);
 		if (error == GIT_EBUFS) {
 			idx->off = entry_start;
 			return error;
@@ -970,7 +968,7 @@ static int fix_thin_pack(git_indexer *idx, git_indexer_progress *stats)
 			continue;
 
 		curpos = delta->delta_off;
-		error = git_packfile_unpack_header(&size, &type, &idx->pack->mwf, &w, &curpos);
+		error = git_packfile_unpack_header(&size, &type, idx->pack, &w, &curpos);
 		if (error < 0)
 			return error;
 
@@ -1333,13 +1331,7 @@ void git_indexer_free(git_indexer *idx)
 
 	git_vector_free_deep(&idx->deltas);
 
-	if (!git_mutex_lock(&git__mwindow_mutex)) {
-		if (!idx->pack_committed)
-			git_packfile_close(idx->pack, true);
-
-		git_packfile_free(idx->pack);
-		git_mutex_unlock(&git__mwindow_mutex);
-	}
+	git_packfile_free(idx->pack, !idx->pack_committed);
 
 	iter = 0;
 	while (git_oidmap_iterate((void **) &value, idx->expected_oids, &iter, &key) == 0)
