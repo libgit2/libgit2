@@ -33,7 +33,7 @@ struct git_index {
 	git_idxmap *entries_map;
 
 	git_vector deleted; /* deleted entries if readers > 0 */
-	git_atomic readers; /* number of active iterators */
+	git_atomic32 readers; /* number of active iterators */
 
 	unsigned int on_disk:1;
 	unsigned int ignore_case:1;

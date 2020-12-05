@@ -36,7 +36,7 @@ typedef struct {
 	char *url;
 	int direction;
 	int flags;
-	git_atomic cancelled;
+	git_atomic32 cancelled;
 	git_repository *repo;
 	git_transport_message_cb progress_cb;
 	git_transport_message_cb error_cb;
@@ -671,7 +671,7 @@ static void local_cancel(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
 
-	git_atomic_set(&t->cancelled, 1);
+	git_atomic32_set(&t->cancelled, 1);
 }
 
 static int local_close(git_transport *transport)

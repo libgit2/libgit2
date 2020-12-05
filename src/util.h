@@ -169,19 +169,19 @@ extern int git__strncasecmp(const char *a, const char *b, size_t sz);
 extern int git__strcasesort_cmp(const char *a, const char *b);
 
 typedef struct {
-	git_atomic refcount;
+	git_atomic32 refcount;
 	void *owner;
 } git_refcount;
 
 typedef void (*git_refcount_freeptr)(void *r);
 
 #define GIT_REFCOUNT_INC(r) { \
-	git_atomic_inc(&(r)->rc.refcount);	\
+	git_atomic32_inc(&(r)->rc.refcount);	\
 }
 
 #define GIT_REFCOUNT_DEC(_r, do_free) { \
 	git_refcount *r = &(_r)->rc; \
-	int val = git_atomic_dec(&r->refcount); \
+	int val = git_atomic32_dec(&r->refcount); \
 	if (val <= 0 && r->owner == NULL) { do_free(_r); } \
 }
 
@@ -191,7 +191,7 @@ typedef void (*git_refcount_freeptr)(void *r);
 
 #define GIT_REFCOUNT_OWNER(r) git__load((r)->rc.owner)
 
-#define GIT_REFCOUNT_VAL(r) git_atomic_get((r)->rc.refcount)
+#define GIT_REFCOUNT_VAL(r) git_atomic32_get((r)->rc.refcount)
 
 
 static signed char from_hex[] = {

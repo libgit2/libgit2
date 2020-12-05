@@ -58,7 +58,7 @@ struct git_pack_idx_header {
 
 typedef struct git_pack_cache_entry {
 	size_t last_usage; /* enough? */
-	git_atomic refcount;
+	git_atomic32 refcount;
 	git_rawobj raw;
 } git_pack_cache_entry;
 
@@ -86,7 +86,7 @@ struct git_pack_file {
 	git_mwindow_file mwf;
 	git_map index_map;
 	git_mutex lock; /* protect updates to index_map */
-	git_atomic refcount;
+	git_atomic32 refcount;
 
 	uint32_t num_objects;
 	uint32_t num_bad_objects;

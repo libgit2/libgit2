@@ -535,7 +535,7 @@ int git_smart__download_pack(
 		/* We might have something in the buffer already from negotiate_fetch */
 		if (t->buffer.offset > 0 && !t->cancelled.val)
 			if (t->packetsize_cb(t->buffer.offset, t->packetsize_payload))
-				git_atomic_set(&t->cancelled, 1);
+				git_atomic32_set(&t->cancelled, 1);
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||

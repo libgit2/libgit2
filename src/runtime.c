@@ -9,9 +9,9 @@
 #include "runtime.h"
 
 static git_runtime_shutdown_fn shutdown_callback[32];
-static git_atomic shutdown_callback_count;
+static git_atomic32 shutdown_callback_count;
 
-static git_atomic init_count;
+static git_atomic32 init_count;
 
 static int init_common(git_runtime_init_fn init_fns[], size_t cnt)
 {
@@ -34,9 +34,9 @@ static void shutdown_common(void)
 	git_runtime_shutdown_fn cb;
 	int pos;
 
-	for (pos = git_atomic_get(&shutdown_callback_count);
+	for (pos = git_atomic32_get(&shutdown_callback_count);
 	     pos > 0;
-	     pos = git_atomic_dec(&shutdown_callback_count)) {
+	     pos = git_atomic32_dec(&shutdown_callback_count)) {
 		cb = git__swap(shutdown_callback[pos - 1], NULL);
 
 		if (cb != NULL)
@@ -46,12 +46,12 @@ static void shutdown_common(void)
 
 int git_runtime_shutdown_register(git_runtime_shutdown_fn callback)
 {
-	int count = git_atomic_inc(&shutdown_callback_count);
+	int count = git_atomic32_inc(&shutdown_callback_count);
 
 	if (count > (int)ARRAY_SIZE(shutdown_callback) || count == 0) {
 		git_error_set(GIT_ERROR_INVALID,
 		              "too many shutdown callbacks registered");
-		git_atomic_dec(&shutdown_callback_count);
+		git_atomic32_dec(&shutdown_callback_count);
 		return -1;
 	}
 
@@ -116,7 +116,7 @@ int git_runtime_init(git_runtime_init_fn init_fns[], size_t cnt)
 		return -1;
 
 	/* Only do work on a 0 -> 1 transition of the refcount */
-	if ((ret = git_atomic_inc(&init_count)) == 1) {
+	if ((ret = git_atomic32_inc(&init_count)) == 1) {
 		if (init_common(init_fns, cnt) < 0)
 			ret = -1;
 	}
@@ -136,7 +136,7 @@ int git_runtime_shutdown(void)
 		return -1;
 
 	/* Only do work on a 1 -> 0 transition of the refcount */
-	if ((ret = git_atomic_dec(&init_count)) == 0)
+	if ((ret = git_atomic32_dec(&init_count)) == 0)
 		shutdown_common();
 
 	/* Exit the lock */

@@ -30,7 +30,7 @@ static int git_smart__recv_cb(gitno_buffer *buf)
 	if (t->packetsize_cb && !t->cancelled.val) {
 		error = t->packetsize_cb(bytes_read, t->packetsize_payload);
 		if (error) {
-			git_atomic_set(&t->cancelled, 1);
+			git_atomic32_set(&t->cancelled, 1);
 			return GIT_EUSER;
 		}
 	}
@@ -389,7 +389,7 @@ static void git_smart__cancel(git_transport *transport)
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
-	git_atomic_set(&t->cancelled, 1);
+	git_atomic32_set(&t->cancelled, 1);
 }
 
 static int git_smart__is_connected(git_transport *transport)

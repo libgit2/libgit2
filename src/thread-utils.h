@@ -38,7 +38,7 @@ typedef struct {
 #else
 	volatile int val;
 #endif
-} git_atomic;
+} git_atomic32;
 
 #ifdef GIT_ARCH_64
 
@@ -58,11 +58,11 @@ typedef git_atomic64 git_atomic_ssize;
 
 #else
 
-typedef git_atomic git_atomic_ssize;
+typedef git_atomic32 git_atomic_ssize;
 
-#define git_atomic_ssize_set git_atomic_set
-#define git_atomic_ssize_add git_atomic_add
-#define git_atomic_ssize_get git_atomic_get
+#define git_atomic_ssize_set git_atomic32_set
+#define git_atomic_ssize_add git_atomic32_add
+#define git_atomic_ssize_get git_atomic32_get
 
 #endif
 
@@ -74,7 +74,7 @@ typedef git_atomic git_atomic_ssize;
 #   include "unix/pthread.h"
 #endif
 
-GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
+GIT_INLINE(void) git_atomic32_set(git_atomic32 *a, int val)
 {
 #if defined(GIT_WIN32)
 	InterlockedExchange(&a->val, (LONG)val);
@@ -87,7 +87,7 @@ GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 #endif
 }
 
-GIT_INLINE(int) git_atomic_inc(git_atomic *a)
+GIT_INLINE(int) git_atomic32_inc(git_atomic32 *a)
 {
 #if defined(GIT_WIN32)
 	return InterlockedIncrement(&a->val);
@@ -100,7 +100,7 @@ GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 #endif
 }
 
-GIT_INLINE(int) git_atomic_add(git_atomic *a, int32_t addend)
+GIT_INLINE(int) git_atomic32_add(git_atomic32 *a, int32_t addend)
 {
 #if defined(GIT_WIN32)
 	return InterlockedExchangeAdd(&a->val, addend);
@@ -113,7 +113,7 @@ GIT_INLINE(int) git_atomic_add(git_atomic *a, int32_t addend)
 #endif
 }
 
-GIT_INLINE(int) git_atomic_dec(git_atomic *a)
+GIT_INLINE(int) git_atomic32_dec(git_atomic32 *a)
 {
 #if defined(GIT_WIN32)
 	return InterlockedDecrement(&a->val);
@@ -126,7 +126,7 @@ GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 #endif
 }
 
-GIT_INLINE(int) git_atomic_get(git_atomic *a)
+GIT_INLINE(int) git_atomic32_get(git_atomic32 *a)
 {
 #if defined(GIT_WIN32)
 	return (int)InterlockedCompareExchange(&a->val, 0, 0);
@@ -268,28 +268,28 @@ GIT_INLINE(int64_t) git_atomic64_get(git_atomic64 *a)
 #define GIT_RWLOCK_STATIC_INIT	0
 
 
-GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
+GIT_INLINE(void) git_atomic32_set(git_atomic32 *a, int val)
 {
 	a->val = val;
 }
 
-GIT_INLINE(int) git_atomic_inc(git_atomic *a)
+GIT_INLINE(int) git_atomic32_inc(git_atomic32 *a)
 {
 	return ++a->val;
 }
 
-GIT_INLINE(int) git_atomic_add(git_atomic *a, int32_t addend)
+GIT_INLINE(int) git_atomic32_add(git_atomic32 *a, int32_t addend)
 {
 	a->val += addend;
 	return a->val;
 }
 
-GIT_INLINE(int) git_atomic_dec(git_atomic *a)
+GIT_INLINE(int) git_atomic32_dec(git_atomic32 *a)
 {
 	return --a->val;
 }
 
-GIT_INLINE(int) git_atomic_get(git_atomic *a)
+GIT_INLINE(int) git_atomic32_get(git_atomic32 *a)
 {
 	return (int)a->val;
 }

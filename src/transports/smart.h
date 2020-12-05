@@ -153,7 +153,7 @@ typedef struct {
 	git_vector refs;
 	git_vector heads;
 	git_vector common;
-	git_atomic cancelled;
+	git_atomic32 cancelled;
 	packetsize_cb packetsize_cb;
 	void *packetsize_payload;
 	unsigned rpc : 1,
