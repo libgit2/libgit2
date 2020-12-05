@@ -9,7 +9,7 @@
 
 #include "repository.h"
 #include "commit.h"
-#include "thread-utils.h"
+#include "thread.h"
 #include "util.h"
 #include "odb.h"
 #include "object.h"

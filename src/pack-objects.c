@@ -12,7 +12,7 @@
 #include "iterator.h"
 #include "netops.h"
 #include "pack.h"
-#include "thread-utils.h"
+#include "thread.h"
 #include "tree.h"
 #include "util.h"
 #include "revwalk.h"

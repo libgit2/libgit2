@@ -18,7 +18,7 @@
 #include "buffer.h"
 #include "common.h"
 #include "strnlen.h"
-#include "thread-utils.h"
+#include "thread.h"
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define bitsizeof(x) (CHAR_BIT * sizeof(x))

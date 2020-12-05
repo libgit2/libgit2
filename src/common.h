@@ -78,7 +78,7 @@
 #include "git2/types.h"
 #include "git2/errors.h"
 #include "errors.h"
-#include "thread-utils.h"
+#include "thread.h"
 #include "integer.h"
 #include "assert_safe.h"
 
