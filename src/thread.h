@@ -367,52 +367,56 @@ GIT_INLINE(int64_t) git_atomic64_get(git_atomic64 *a)
 
 #endif
 
-/**
- * An opaque structure for managing TLS in the library
- */
-typedef struct git_tls_data git_tls_data;
+/* Thread-local data */
+
+#if !defined(GIT_THREADS)
+# define git_tlsdata_key int
+#elif defined(GIT_WIN32)
+# define git_tlsdata_key DWORD
+#elif defined(_POSIX_THREADS)
+# define git_tlsdata_key pthread_key_t
+#else
+# error unknown threading model
+#endif
 
 /**
- * Initializes a thread local storage container.
- * This has an implementation even without GIT_THREADS
- * which just serves to encourage use of this where TLS
- * is necessary.
+ * Create a thread-local data key.  The destroy function will be
+ * called upon thread exit.  On some platforms, it may be called
+ * when all threads have deleted their keys.
  *
- * Do not call this before the allocator has been initialized.
+ * Note that the tlsdata functions do not set an error message on
+ * failure; this is because the error handling in libgit2 is itself
+ * handled by thread-local data storage.
  *
- * @param  out a pointer to store the TLS container in
- * @param  free_fn the method that should be called when
- *                 deleting something in the TLS. Will be
- *                 registered as the clean up callback for
- *                 the OS specific TLS construct.
+ * @param key the tlsdata key
+ * @param destroy_fn function pointer called upon thread exit
  * @return 0 on success, non-zero on failure
  */
-int git_tls_data__init(git_tls_data **out,
-	void GIT_CALLBACK(free_fn)(void *payload));
+int git_tlsdata_init(git_tlsdata_key *key, void (GIT_SYSTEM_CALL *destroy_fn)(void *));
 
 /**
- * Will set a thread specific value on the TLS. Passing NULL will free the
- * currently held thread specific value.
+ * Set a the thread-local value for the given key.
  *
- * @param  tls the TLS instance to store data on
- * @param  payload the pointer to store
+ * @param key the tlsdata key to store data on
+ * @param value the pointer to store
  * @return 0 on success, non-zero on failure
  */
-int git_tls_data__set(git_tls_data *tls, void *payload);
+int git_tlsdata_set(git_tlsdata_key key, void *value);
 
 /**
- * Will get the thread specific value stored in TLS.
+ * Get the thread-local value for the given key.
  *
- * @param  tls the TLS instance to retrieve data from
+ * @param key the tlsdata key to retrieve the value of
+ * @return the pointer stored with git_tlsdata_set
  */
-void *git_tls_data__get(git_tls_data *tls);
+void *git_tlsdata_get(git_tlsdata_key key);
 
 /**
- * Must call this to clean up the TLS when no longer in use.
- * The TLS pointer is unusable after a call to this.
+ * Delete the given thread-local key.
  *
- * @param tls the TLS to free
+ * @param key the tlsdata key to dispose
+ * @return 0 on success, non-zero on failure
  */
-void git_tls_data__free(git_tls_data *tls);
+int git_tlsdata_dispose(git_tlsdata_key key);
 
 #endif
