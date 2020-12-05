@@ -93,7 +93,7 @@ static void set_odb(git_repository *repo, git_odb *odb)
 		GIT_REFCOUNT_INC(odb);
 	}
 
-	if ((odb = git__swap(repo->_odb, odb)) != NULL) {
+	if ((odb = git_atomic_swap(repo->_odb, odb)) != NULL) {
 		GIT_REFCOUNT_OWN(odb, NULL);
 		git_odb_free(odb);
 	}
@@ -106,7 +106,7 @@ static void set_refdb(git_repository *repo, git_refdb *refdb)
 		GIT_REFCOUNT_INC(refdb);
 	}
 
-	if ((refdb = git__swap(repo->_refdb, refdb)) != NULL) {
+	if ((refdb = git_atomic_swap(repo->_refdb, refdb)) != NULL) {
 		GIT_REFCOUNT_OWN(refdb, NULL);
 		git_refdb_free(refdb);
 	}
@@ -119,7 +119,7 @@ static void set_config(git_repository *repo, git_config *config)
 		GIT_REFCOUNT_INC(config);
 	}
 
-	if ((config = git__swap(repo->_config, config)) != NULL) {
+	if ((config = git_atomic_swap(repo->_config, config)) != NULL) {
 		GIT_REFCOUNT_OWN(config, NULL);
 		git_config_free(config);
 	}
@@ -134,7 +134,7 @@ static void set_index(git_repository *repo, git_index *index)
 		GIT_REFCOUNT_INC(index);
 	}
 
-	if ((index = git__swap(repo->_index, index)) != NULL) {
+	if ((index = git_atomic_swap(repo->_index, index)) != NULL) {
 		GIT_REFCOUNT_OWN(index, NULL);
 		git_index_free(index);
 	}
@@ -1054,7 +1054,7 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		if (!error) {
 			GIT_REFCOUNT_OWN(config, repo);
 
-			config = git__compare_and_swap(&repo->_config, NULL, config);
+			config = git_atomic_compare_and_swap(&repo->_config, NULL, config);
 			if (config != NULL) {
 				GIT_REFCOUNT_OWN(config, NULL);
 				git_config_free(config);
@@ -1107,7 +1107,7 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(out);
 
-	*out = git__load(repo->_odb);
+	*out = git_atomic_load(repo->_odb);
 	if (*out == NULL) {
 		git_buf odb_path = GIT_BUF_INIT;
 		git_odb *odb;
@@ -1125,14 +1125,14 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 			return error;
 		}
 
-		odb = git__compare_and_swap(&repo->_odb, NULL, odb);
+		odb = git_atomic_compare_and_swap(&repo->_odb, NULL, odb);
 		if (odb != NULL) {
 			GIT_REFCOUNT_OWN(odb, NULL);
 			git_odb_free(odb);
 		}
 
 		git_buf_dispose(&odb_path);
-		*out = git__load(repo->_odb);
+		*out = git_atomic_load(repo->_odb);
 	}
 
 	return error;
@@ -1170,7 +1170,7 @@ int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo)
 		if (!error) {
 			GIT_REFCOUNT_OWN(refdb, repo);
 
-			refdb = git__compare_and_swap(&repo->_refdb, NULL, refdb);
+			refdb = git_atomic_compare_and_swap(&repo->_refdb, NULL, refdb);
 			if (refdb != NULL) {
 				GIT_REFCOUNT_OWN(refdb, NULL);
 				git_refdb_free(refdb);
@@ -1218,7 +1218,7 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 		if (!error) {
 			GIT_REFCOUNT_OWN(index, repo);
 
-			index = git__compare_and_swap(&repo->_index, NULL, index);
+			index = git_atomic_compare_and_swap(&repo->_index, NULL, index);
 			if (index != NULL) {
 				GIT_REFCOUNT_OWN(index, NULL);
 				git_index_free(index);
@@ -3044,8 +3044,8 @@ int git_repository_set_ident(git_repository *repo, const char *name, const char 
 		GIT_ERROR_CHECK_ALLOC(tmp_email);
 	}
 
-	tmp_name = git__swap(repo->ident_name, tmp_name);
-	tmp_email = git__swap(repo->ident_email, tmp_email);
+	tmp_name = git_atomic_swap(repo->ident_name, tmp_name);
+	tmp_email = git_atomic_swap(repo->ident_email, tmp_email);
 
 	git__free(tmp_name);
 	git__free(tmp_email);

@@ -37,7 +37,7 @@ static void shutdown_common(void)
 	for (pos = git_atomic32_get(&shutdown_callback_count);
 	     pos > 0;
 	     pos = git_atomic32_dec(&shutdown_callback_count)) {
-		cb = git__swap(shutdown_callback[pos - 1], NULL);
+		cb = git_atomic_swap(shutdown_callback[pos - 1], NULL);
 
 		if (cb != NULL)
 			cb();

@@ -495,7 +495,7 @@ static void index_free_deleted(git_index *index)
 		return;
 
 	for (i = 0; i < index->deleted.length; ++i) {
-		git_index_entry *ie = git__swap(index->deleted.contents[i], NULL);
+		git_index_entry *ie = git_atomic_swap(index->deleted.contents[i], NULL);
 		index_entry_free(ie);
 	}
 
@@ -2295,7 +2295,7 @@ int git_index_reuc_clear(git_index *index)
 	GIT_ASSERT_ARG(index);
 
 	for (i = 0; i < index->reuc.length; ++i)
-		index_entry_reuc_free(git__swap(index->reuc.contents[i], NULL));
+		index_entry_reuc_free(git_atomic_swap(index->reuc.contents[i], NULL));
 
 	git_vector_clear(&index->reuc);
 
@@ -3197,7 +3197,7 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 		/* well, this isn't good */;
 	} else {
 		git_vector_swap(&entries, &index->entries);
-		entries_map = git__swap(index->entries_map, entries_map);
+		entries_map = git_atomic_swap(index->entries_map, entries_map);
 	}
 
 	index->dirty = 1;
@@ -3331,7 +3331,7 @@ static int git_index_read_iterator(
 	    goto done;
 
 	git_vector_swap(&new_entries, &index->entries);
-	new_entries_map = git__swap(index->entries_map, new_entries_map);
+	new_entries_map = git_atomic_swap(index->entries_map, new_entries_map);
 
 	git_vector_foreach(&remove_entries, i, entry) {
 		if (index->tree)

@@ -139,7 +139,7 @@ GIT_INLINE(int) git_atomic32_get(git_atomic32 *a)
 #endif
 }
 
-GIT_INLINE(void *) git___compare_and_swap(
+GIT_INLINE(void *) git_atomic__compare_and_swap(
 	void * volatile *ptr, void *oldval, void *newval)
 {
 #if defined(GIT_WIN32)
@@ -158,7 +158,7 @@ GIT_INLINE(void *) git___compare_and_swap(
 #endif
 }
 
-GIT_INLINE(volatile void *) git___swap(
+GIT_INLINE(volatile void *) git_atomic__swap(
 	void * volatile *ptr, void *newval)
 {
 #if defined(GIT_WIN32)
@@ -174,7 +174,7 @@ GIT_INLINE(volatile void *) git___swap(
 #endif
 }
 
-GIT_INLINE(volatile void *) git___load(void * volatile *ptr)
+GIT_INLINE(volatile void *) git_atomic__load(void * volatile *ptr)
 {
 #if defined(GIT_WIN32)
 	void *newval = NULL, *oldval = NULL;
@@ -294,7 +294,7 @@ GIT_INLINE(int) git_atomic32_get(git_atomic32 *a)
 	return (int)a->val;
 }
 
-GIT_INLINE(void *) git___compare_and_swap(
+GIT_INLINE(void *) git_atomic__compare_and_swap(
 	void * volatile *ptr, void *oldval, void *newval)
 {
 	if (*ptr == oldval)
@@ -304,7 +304,7 @@ GIT_INLINE(void *) git___compare_and_swap(
 	return oldval;
 }
 
-GIT_INLINE(volatile void *) git___swap(
+GIT_INLINE(volatile void *) git_atomic__swap(
 	void * volatile *ptr, void *newval)
 {
 	volatile void *old = *ptr;
@@ -312,7 +312,7 @@ GIT_INLINE(volatile void *) git___swap(
 	return old;
 }
 
-GIT_INLINE(volatile void *) git___load(void * volatile *ptr)
+GIT_INLINE(volatile void *) git_atomic__load(void * volatile *ptr)
 {
 	return *ptr;
 }
@@ -342,12 +342,14 @@ GIT_INLINE(int64_t) git_atomic64_get(git_atomic64 *a)
 /* Atomically replace oldval with newval
  * @return oldval if it was replaced or newval if it was not
  */
-#define git__compare_and_swap(P,O,N) \
-	git___compare_and_swap((void * volatile *)P, O, N)
+#define git_atomic_compare_and_swap(P,O,N) \
+	git_atomic__compare_and_swap((void * volatile *)P, O, N)
 
-#define git__swap(ptr, val) (void *)git___swap((void * volatile *)&ptr, val)
+#define git_atomic_swap(ptr, val) \
+	(void *)git_atomic__swap((void * volatile *)&ptr, val)
 
-#define git__load(ptr) (void *)git___load((void * volatile *)&ptr)
+#define git_atomic_load(ptr) \
+	(void *)git_atomic__load((void * volatile *)&ptr)
 
 #if defined(GIT_THREADS)
 

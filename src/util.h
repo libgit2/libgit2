@@ -186,10 +186,10 @@ typedef void (*git_refcount_freeptr)(void *r);
 }
 
 #define GIT_REFCOUNT_OWN(r, o) { \
-	(void)git__swap((r)->rc.owner, o); \
+	(void)git_atomic_swap((r)->rc.owner, o); \
 }
 
-#define GIT_REFCOUNT_OWNER(r) git__load((r)->rc.owner)
+#define GIT_REFCOUNT_OWNER(r) git_atomic_load((r)->rc.owner)
 
 #define GIT_REFCOUNT_VAL(r) git_atomic32_get((r)->rc.refcount)
 
