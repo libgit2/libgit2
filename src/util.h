@@ -414,6 +414,8 @@ GIT_INLINE(double) git__timer(void)
 
 extern int git__getenv(git_buf *out, const char *name);
 
+GIT_INLINE(int) git__noop(void) { return 0; }
+
 #include "alloc.h"
 
 #endif

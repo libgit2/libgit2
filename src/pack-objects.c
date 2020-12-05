@@ -50,7 +50,7 @@ struct walk_object {
 #ifdef GIT_THREADS
 # define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) git_mutex_##op(&(pb)->mtx)
 #else
-# define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) GIT_UNUSED(pb)
+# define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) git__noop()
 #endif
 
 #define git_packbuilder__cache_lock(pb) GIT_PACKBUILDER__MUTEX_OP(pb, cache_mutex, lock)
