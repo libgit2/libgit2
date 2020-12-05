@@ -349,8 +349,6 @@ GIT_INLINE(int64_t) git_atomic64_get(git_atomic64 *a)
 
 #define git__load(ptr) (void *)git___load((void * volatile *)&ptr)
 
-extern int git_online_cpus(void);
-
 #if defined(GIT_THREADS)
 
 # if defined(GIT_WIN32)
