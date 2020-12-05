@@ -20,6 +20,7 @@ void test_pack_threadsafety__cleanup(void)
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_MWINDOW_FILE_LIMIT, original_mwindow_file_limit));
 }
 
+#ifdef GIT_THREADS
 static void *get_status(void *arg)
 {
 	const char *repo_path = (const char *)arg;
@@ -33,6 +34,7 @@ static void *get_status(void *arg)
 
 	return NULL;
 }
+#endif
 
 void test_pack_threadsafety__open_repo_in_multiple_threads(void)
 {
