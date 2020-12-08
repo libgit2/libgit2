@@ -687,7 +687,7 @@ typedef struct {
 	void *payload;
 } git__qsort_r_glue;
 
-static int GIT_STDLIB_CALL git__qsort_r_glue_cmp(
+static int GIT_LIBGIT2_CALL git__qsort_r_glue_cmp(
 	void *payload, const void *a, const void *b)
 {
 	git__qsort_r_glue *glue = payload;

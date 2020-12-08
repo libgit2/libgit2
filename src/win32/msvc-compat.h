@@ -23,6 +23,14 @@ typedef SSIZE_T ssize_t;
 
 #endif
 
-#define GIT_STDLIB_CALL __cdecl
+/*
+ * Offer GIT_LIBGIT2_CALL for our calling conventions (__cdecl, always).
+ * This is useful for providing callbacks to userspace code.
+ *
+ * Offer GIT_SYSTEM_CALL for the system calling conventions (__stdcall on
+ * Win32).  Useful for providing callbacks to system libraries.
+ */
+#define GIT_LIBGIT2_CALL __cdecl
+#define GIT_SYSTEM_CALL NTAPI
 
 #endif

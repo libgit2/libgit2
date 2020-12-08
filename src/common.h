@@ -63,7 +63,9 @@
 #	include <pthread.h>
 #	include <sched.h>
 # endif
-#define GIT_STDLIB_CALL
+
+#define GIT_LIBGIT2_CALL
+#define GIT_SYSTEM_CALL
 
 #ifdef GIT_USE_STAT_ATIMESPEC
 # define st_atim st_atimespec
