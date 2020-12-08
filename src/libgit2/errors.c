@@ -26,22 +26,41 @@ static git_error uninitialized_error = {
 	GIT_ERROR_INVALID
 };
 
+static git_error tlsdata_error = {
+	"thread-local data initialization failure",
+	GIT_ERROR
+};
+
 static void set_error_from_buffer(int error_class)
 {
-	git_error *error = &GIT_THREADSTATE->error_t;
-	git_str *buf = &GIT_THREADSTATE->error_buf;
+	git_threadstate *threadstate = GIT_THREADSTATE;
+	git_error *error;
+	git_str *buf;
+
+	if (!threadstate)
+		return;
+
+	error = &threadstate->error_t;
+	buf = &threadstate->error_buf;
 
 	error->message = buf->ptr;
 	error->klass = error_class;
 
-	GIT_THREADSTATE->last_error = error;
+	threadstate->last_error = error;
 }
 
 static void set_error(int error_class, char *string)
 {
-	git_str *buf = &GIT_THREADSTATE->error_buf;
+	git_threadstate *threadstate = GIT_THREADSTATE;
+	git_str *buf;
+
+	if (!threadstate)
+		return;
+
+	buf = &threadstate->error_buf;
 
 	git_str_clear(buf);
+
 	if (string) {
 		git_str_puts(buf, string);
 		git__free(string);
@@ -52,7 +71,12 @@ static void set_error(int error_class, char *string)
 
 void git_error_set_oom(void)
 {
-	GIT_THREADSTATE->last_error = &oom_error;
+	git_threadstate *threadstate = GIT_THREADSTATE;
+
+	if (!threadstate)
+		return;
+
+	threadstate->last_error = &oom_error;
 }
 
 void git_error_set(int error_class, const char *fmt, ...)
@@ -69,10 +93,18 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 #ifdef GIT_WIN32
 	DWORD win32_error_code = (error_class == GIT_ERROR_OS) ? GetLastError() : 0;
 #endif
+
+	git_threadstate *threadstate = GIT_THREADSTATE;
 	int error_code = (error_class == GIT_ERROR_OS) ? errno : 0;
-	git_str *buf = &GIT_THREADSTATE->error_buf;
+	git_str *buf;
+
+	if (!threadstate)
+		return;
+
+	buf = &threadstate->error_buf;
 
 	git_str_clear(buf);
+
 	if (fmt) {
 		git_str_vprintf(buf, fmt, ap);
 		if (error_class == GIT_ERROR_OS)
@@ -81,7 +113,7 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 
 	if (error_class == GIT_ERROR_OS) {
 #ifdef GIT_WIN32
-		char * win32_error = git_win32_get_error_message(win32_error_code);
+		char *win32_error = git_win32_get_error_message(win32_error_code);
 		if (win32_error) {
 			git_str_puts(buf, win32_error);
 			git__free(win32_error);
@@ -103,9 +135,15 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 
 int git_error_set_str(int error_class, const char *string)
 {
-	git_str *buf = &GIT_THREADSTATE->error_buf;
+	git_threadstate *threadstate = GIT_THREADSTATE;
+	git_str *buf;
 
 	GIT_ASSERT_ARG(string);
+
+	if (!threadstate)
+		return -1;
+
+	buf = &threadstate->error_buf;
 
 	git_str_clear(buf);
 	git_str_puts(buf, string);
@@ -119,9 +157,14 @@ int git_error_set_str(int error_class, const char *string)
 
 void git_error_clear(void)
 {
-	if (GIT_THREADSTATE->last_error != NULL) {
+	git_threadstate *threadstate = GIT_THREADSTATE;
+
+	if (!threadstate)
+		return;
+
+	if (threadstate->last_error != NULL) {
 		set_error(0, NULL);
-		GIT_THREADSTATE->last_error = NULL;
+		threadstate->last_error = NULL;
 	}
 
 	errno = 0;
@@ -132,17 +175,29 @@ void git_error_clear(void)
 
 const git_error *git_error_last(void)
 {
+	git_threadstate *threadstate;
+
 	/* If the library is not initialized, return a static error. */
 	if (!git_libgit2_init_count())
 		return &uninitialized_error;
 
-	return GIT_THREADSTATE->last_error;
+	if ((threadstate = GIT_THREADSTATE) == NULL)
+		return &tlsdata_error;
+
+	return threadstate->last_error;
 }
 
 int git_error_state_capture(git_error_state *state, int error_code)
 {
-	git_error *error = GIT_THREADSTATE->last_error;
-	git_str *error_buf = &GIT_THREADSTATE->error_buf;
+	git_threadstate *threadstate = GIT_THREADSTATE;
+	git_error *error;
+	git_str *error_buf;
+
+	if (!threadstate)
+		return -1;
+
+	error = threadstate->last_error;
+	error_buf = &threadstate->error_buf;
 
 	memset(state, 0, sizeof(git_error_state));
 
