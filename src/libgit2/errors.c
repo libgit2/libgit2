@@ -33,7 +33,7 @@ static git_error tlsdata_error = {
 
 static void set_error_from_buffer(int error_class)
 {
-	git_threadstate *threadstate = GIT_THREADSTATE;
+	git_threadstate *threadstate = git_threadstate_get();
 	git_error *error;
 	git_str *buf;
 
@@ -51,7 +51,7 @@ static void set_error_from_buffer(int error_class)
 
 static void set_error(int error_class, char *string)
 {
-	git_threadstate *threadstate = GIT_THREADSTATE;
+	git_threadstate *threadstate = git_threadstate_get();
 	git_str *buf;
 
 	if (!threadstate)
@@ -71,7 +71,7 @@ static void set_error(int error_class, char *string)
 
 void git_error_set_oom(void)
 {
-	git_threadstate *threadstate = GIT_THREADSTATE;
+	git_threadstate *threadstate = git_threadstate_get();
 
 	if (!threadstate)
 		return;
@@ -94,7 +94,7 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 	DWORD win32_error_code = (error_class == GIT_ERROR_OS) ? GetLastError() : 0;
 #endif
 
-	git_threadstate *threadstate = GIT_THREADSTATE;
+	git_threadstate *threadstate = git_threadstate_get();
 	int error_code = (error_class == GIT_ERROR_OS) ? errno : 0;
 	git_str *buf;
 
@@ -135,7 +135,7 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 
 int git_error_set_str(int error_class, const char *string)
 {
-	git_threadstate *threadstate = GIT_THREADSTATE;
+	git_threadstate *threadstate = git_threadstate_get();
 	git_str *buf;
 
 	GIT_ASSERT_ARG(string);
@@ -157,7 +157,7 @@ int git_error_set_str(int error_class, const char *string)
 
 void git_error_clear(void)
 {
-	git_threadstate *threadstate = GIT_THREADSTATE;
+	git_threadstate *threadstate = git_threadstate_get();
 
 	if (!threadstate)
 		return;
@@ -181,7 +181,7 @@ const git_error *git_error_last(void)
 	if (!git_libgit2_init_count())
 		return &uninitialized_error;
 
-	if ((threadstate = GIT_THREADSTATE) == NULL)
+	if ((threadstate = git_threadstate_get()) == NULL)
 		return &tlsdata_error;
 
 	return threadstate->last_error;
@@ -189,7 +189,7 @@ const git_error *git_error_last(void)
 
 int git_error_state_capture(git_error_state *state, int error_code)
 {
-	git_threadstate *threadstate = GIT_THREADSTATE;
+	git_threadstate *threadstate = git_threadstate_get();
 	git_error *error;
 	git_str *error_buf;
 

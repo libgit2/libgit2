@@ -155,7 +155,7 @@ int git_oid_pathfmt(char *str, const git_oid *oid)
 
 char *git_oid_tostr_s(const git_oid *oid)
 {
-	git_threadstate *threadstate = GIT_THREADSTATE;
+	git_threadstate *threadstate = git_threadstate_get();
 	char *str;
 
 	if (!threadstate)
