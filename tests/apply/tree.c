@@ -87,10 +87,6 @@ void test_apply_tree__adds_file(void)
 	cl_git_pass(git_apply_to_tree(&index, repo, a_tree, diff, NULL));
 	merge_test_index(index, expected, 7);
 
-	cl_git_pass(git_diff_from_buffer(&diff,
-		DIFF_DUPLICATE_FILE, strlen(DIFF_DUPLICATE_FILE)));
-	cl_git_fail(git_apply_to_tree(&index, repo, a_tree, diff, NULL));
-
 	git_index_free(index);
 	git_diff_free(diff);
 	git_tree_free(a_tree);
