@@ -96,3 +96,27 @@ void test_apply_tree__adds_file(void)
 	git_tree_free(a_tree);
 	git_commit_free(a_commit);
 }
+
+void test_apply_tree__adds_duplicate_file(void)
+{
+	git_oid a_oid;
+	git_commit *a_commit;
+	git_tree *a_tree;
+	git_diff *diff;
+	git_index *index = NULL;
+
+	git_oid_fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+
+	cl_git_pass(git_commit_lookup(&a_commit, repo, &a_oid));
+
+	cl_git_pass(git_commit_tree(&a_tree, a_commit));
+
+	cl_git_pass(git_diff_from_buffer(&diff,
+		DIFF_DUPLICATE_FILE, strlen(DIFF_DUPLICATE_FILE)));
+	cl_git_fail(git_apply_to_tree(&index, repo, a_tree, diff, NULL));
+
+	git_index_free(index);
+	git_diff_free(diff);
+	git_tree_free(a_tree);
+	git_commit_free(a_commit);
+}
