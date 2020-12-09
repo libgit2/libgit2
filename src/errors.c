@@ -10,6 +10,7 @@
 #include "threadstate.h"
 #include "posix.h"
 #include "buffer.h"
+#include "libgit2.h"
 
 /********************************************
  * New error handling
@@ -18,6 +19,11 @@
 static git_error g_git_oom_error = {
 	"Out of memory",
 	GIT_ERROR_NOMEMORY
+};
+
+static git_error g_git_uninitialized_error = {
+	"libgit2 has not been initialized; you must call git_libgit2_init",
+	GIT_ERROR_INVALID
 };
 
 static void set_error_from_buffer(int error_class)
@@ -131,6 +137,10 @@ void git_error_clear(void)
 
 const git_error *git_error_last(void)
 {
+	/* If the library is not initialized, return a static error. */
+	if (!git_libgit2_init_count())
+		return &g_git_uninitialized_error;
+
 	return GIT_THREADSTATE->last_error;
 }
 

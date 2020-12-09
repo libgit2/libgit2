@@ -28,6 +28,15 @@ typedef void (*git_runtime_shutdown_fn)(void);
  */
 int git_runtime_init(git_runtime_init_fn init_fns[], size_t cnt);
 
+/*
+ * Returns the number of initializations active (the number of calls to
+ * `git_runtime_init` minus the number of calls sto `git_runtime_shutdown`).
+ * If 0, the runtime is not currently initialized.
+ *
+ * @return The number of initializations performed or an error
+ */
+int git_runtime_init_count(void);
+
 /**
  * Shut down the runtime.  If this is the last shutdown call,
  * such that there are no remaining `init` calls, then any

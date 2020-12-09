@@ -90,6 +90,11 @@ int git_libgit2_init(void)
 	return git_runtime_init(init_fns, ARRAY_SIZE(init_fns));
 }
 
+int git_libgit2_init_count(void)
+{
+	return git_runtime_init_count();
+}
+
 int git_libgit2_shutdown(void)
 {
 	return git_runtime_shutdown();
