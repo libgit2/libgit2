@@ -562,7 +562,6 @@ static int apply_one(
 		post_entry.path = filename;
 		post_entry.mode = mode;
 		git_oid_cpy(&post_entry.id, &post_id);
-
 		if ((error = git_index_add(postimage, &post_entry)) < 0)
 			goto done;
 	}
@@ -650,7 +649,12 @@ int git_apply_to_tree(
 	 */
 	for (i = 0; i < git_diff_num_deltas(diff); i++) {
 		delta = git_diff_get_delta(diff, i);
-
+		if (delta->status == GIT_DELTA_ADDED &&
+			git_index_find(NULL, postimage, delta->new_file.path) != GIT_ENOTFOUND) {
+				git_error_clear();
+				error = GIT_EEXISTS;
+				goto done;
+		}
 		if (delta->status == GIT_DELTA_DELETED ||
 			delta->status == GIT_DELTA_RENAMED) {
 			if ((error = git_index_remove(postimage,
