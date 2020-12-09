@@ -57,7 +57,7 @@ static git_pack_cache_entry *new_cache_object(git_rawobj *source)
 	if (!e)
 		return NULL;
 
-	git_atomic_inc(&e->refcount);
+	git_atomic32_inc(&e->refcount);
 	memcpy(&e->raw, source, sizeof(git_rawobj));
 
 	return e;
@@ -114,7 +114,7 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, off64_t offset)
 		return NULL;
 
 	if ((entry = git_offmap_get(cache->entries, offset)) != NULL) {
-		git_atomic_inc(&entry->refcount);
+		git_atomic32_inc(&entry->refcount);
 		entry->last_usage = cache->use_ctr++;
 	}
 	git_mutex_unlock(&cache->lock);
@@ -129,7 +129,7 @@ static void free_lowest_entry(git_pack_cache *cache)
 	git_pack_cache_entry *entry;
 
 	git_offmap_foreach(cache->entries, offset, entry, {
-		if (entry && git_atomic_get(&entry->refcount) == 0) {
+		if (entry && git_atomic32_get(&entry->refcount) == 0) {
 			cache->memory_used -= entry->raw.len;
 			git_offmap_delete(cache->entries, offset);
 			free_cache_object(entry);
@@ -759,7 +759,7 @@ int git_packfile_unpack(
 		GIT_ERROR_CHECK_ALLOC(obj->data);
 
 		memcpy(obj->data, data, obj->len + 1);
-		git_atomic_dec(&cached->refcount);
+		git_atomic32_dec(&cached->refcount);
 		goto cleanup;
 	}
 
@@ -807,7 +807,7 @@ int git_packfile_unpack(
 		}
 
 		if (cached) {
-			git_atomic_dec(&cached->refcount);
+			git_atomic32_dec(&cached->refcount);
 			cached = NULL;
 		}
 
@@ -821,7 +821,7 @@ cleanup:
 	if (error < 0) {
 		git__free(obj->data);
 		if (cached)
-			git_atomic_dec(&cached->refcount);
+			git_atomic32_dec(&cached->refcount);
 	}
 
 	if (elem)

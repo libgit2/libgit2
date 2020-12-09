@@ -13,6 +13,11 @@
 # include "win32/utf-conv.h"
 # include "win32/w32_buffer.h"
 
+# ifndef WIN32_LEAN_AND_MEAN
+#  define WIN32_LEAN_AND_MEAN
+# endif
+# include <windows.h>
+
 # ifdef HAVE_QSORT_S
 #  include <search.h>
 # endif
@@ -20,6 +25,10 @@
 
 #ifdef _MSC_VER
 # include <Shlwapi.h>
+#endif
+
+#if defined(hpux) || defined(__hpux) || defined(_hpux)
+# include <sys/pstat.h>
 #endif
 
 int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
@@ -678,7 +687,7 @@ typedef struct {
 	void *payload;
 } git__qsort_r_glue;
 
-static int GIT_STDLIB_CALL git__qsort_r_glue_cmp(
+static int GIT_LIBGIT2_CALL git__qsort_r_glue_cmp(
 	void *payload, const void *a, const void *b)
 {
 	git__qsort_r_glue *glue = payload;
@@ -893,3 +902,43 @@ int git__getenv(git_buf *out, const char *name)
 	return git_buf_puts(out, val);
 }
 #endif
+
+/*
+ * By doing this in two steps we can at least get
+ * the function to be somewhat coherent, even
+ * with this disgusting nest of #ifdefs.
+ */
+#ifndef _SC_NPROCESSORS_ONLN
+#	ifdef _SC_NPROC_ONLN
+#		define _SC_NPROCESSORS_ONLN _SC_NPROC_ONLN
+#	elif defined _SC_CRAY_NCPU
+#		define _SC_NPROCESSORS_ONLN _SC_CRAY_NCPU
+#	endif
+#endif
+
+int git__online_cpus(void)
+{
+#ifdef _SC_NPROCESSORS_ONLN
+	long ncpus;
+#endif
+
+#ifdef _WIN32
+	SYSTEM_INFO info;
+	GetSystemInfo(&info);
+
+	if ((int)info.dwNumberOfProcessors > 0)
+		return (int)info.dwNumberOfProcessors;
+#elif defined(hpux) || defined(__hpux) || defined(_hpux)
+	struct pst_dynamic psd;
+
+	if (!pstat_getdynamic(&psd, sizeof(psd), (size_t)1, 0))
+		return (int)psd.psd_proc_cnt;
+#endif
+
+#ifdef _SC_NPROCESSORS_ONLN
+	if ((ncpus = (long)sysconf(_SC_NPROCESSORS_ONLN)) > 0)
+		return (int)ncpus;
+#endif
+
+	return 1;
+}

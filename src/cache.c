@@ -9,7 +9,7 @@
 
 #include "repository.h"
 #include "commit.h"
-#include "thread-utils.h"
+#include "thread.h"
 #include "util.h"
 #include "odb.h"
 #include "object.h"
@@ -235,7 +235,7 @@ void git_cached_obj_decref(void *_obj)
 {
 	git_cached_obj *obj = _obj;
 
-	if (git_atomic_dec(&obj->refcount) == 0) {
+	if (git_atomic32_dec(&obj->refcount) == 0) {
 		switch (obj->flags) {
 		case GIT_CACHE_STORE_RAW:
 			git_odb_object__free(_obj);

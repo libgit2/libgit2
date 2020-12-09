@@ -79,7 +79,7 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 	git__free(packname);
 
 	if (pack != NULL) {
-		git_atomic_inc(&pack->refcount);
+		git_atomic32_inc(&pack->refcount);
 		git_mutex_unlock(&git__mwindow_mutex);
 		*out = pack;
 		return 0;
@@ -91,7 +91,7 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 		return error;
 	}
 
-	git_atomic_inc(&pack->refcount);
+	git_atomic32_inc(&pack->refcount);
 
 	error = git_strmap_set(git__pack_cache, pack->pack_name, pack);
 	git_mutex_unlock(&git__mwindow_mutex);
@@ -118,7 +118,7 @@ int git_mwindow_put_pack(struct git_pack_file *pack)
 	/* if we cannot find it, the state is corrupted */
 	GIT_ASSERT(git_strmap_exists(git__pack_cache, pack->pack_name));
 
-	count = git_atomic_dec(&pack->refcount);
+	count = git_atomic32_dec(&pack->refcount);
 	if (count == 0) {
 		git_strmap_delete(git__pack_cache, pack->pack_name);
 		pack_to_delete = pack;

@@ -108,7 +108,7 @@ static int attr_cache_upsert(git_attr_cache *cache, git_attr_file *file)
 	 * Replace the existing value if another thread has
 	 * created it in the meantime.
 	 */
-	old = git__swap(entry->file[file->source], file);
+	old = git_atomic_swap(entry->file[file->source], file);
 
 	if (old) {
 		GIT_REFCOUNT_OWN(old, NULL);
@@ -132,7 +132,7 @@ static int attr_cache_remove(git_attr_cache *cache, git_attr_file *file)
 		return error;
 
 	if ((entry = attr_cache_lookup_entry(cache, file->entry->path)) != NULL)
-		old = git__compare_and_swap(&entry->file[file->source], file, NULL);
+		old = git_atomic_compare_and_swap(&entry->file[file->source], file, NULL);
 
 	attr_cache_unlock(cache);
 
@@ -321,7 +321,7 @@ static void attr_cache__free(git_attr_cache *cache)
 
 		git_strmap_foreach_value(cache->files, entry, {
 			for (i = 0; i < GIT_ATTR_FILE_NUM_SOURCES; ++i) {
-				if ((file = git__swap(entry->file[i], NULL)) != NULL) {
+				if ((file = git_atomic_swap(entry->file[i], NULL)) != NULL) {
 					GIT_REFCOUNT_OWN(file, NULL);
 					git_attr_file__free(file);
 				}
@@ -395,7 +395,7 @@ int git_attr_cache__init(git_repository *repo)
 	    (ret = git_pool_init(&cache->pool, 1)) < 0)
 		goto cancel;
 
-	cache = git__compare_and_swap(&repo->attrcache, NULL, cache);
+	cache = git_atomic_compare_and_swap(&repo->attrcache, NULL, cache);
 	if (cache)
 		goto cancel; /* raced with another thread, free this but no error */
 
@@ -417,7 +417,7 @@ int git_attr_cache_flush(git_repository *repo)
 	/* this could be done less expensively, but for now, we'll just free
 	 * the entire attrcache and let the next use reinitialize it...
 	 */
-	if (repo && (cache = git__swap(repo->attrcache, NULL)) != NULL)
+	if (repo && (cache = git_atomic_swap(repo->attrcache, NULL)) != NULL)
 		attr_cache__free(cache);
 
 	return 0;

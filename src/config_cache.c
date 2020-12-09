@@ -111,7 +111,7 @@ int git_config__configmap_lookup(int *out, git_config *config, git_configmap_ite
 
 int git_repository__configmap_lookup(int *out, git_repository *repo, git_configmap_item item)
 {
-	*out = (int)(intptr_t)git__load(repo->configmap_cache[(int)item]);
+	*out = (int)(intptr_t)git_atomic_load(repo->configmap_cache[(int)item]);
 
 	if (*out == GIT_CONFIGMAP_NOT_CACHED) {
 		int error;
@@ -122,7 +122,7 @@ int git_repository__configmap_lookup(int *out, git_repository *repo, git_configm
 			(error = git_config__configmap_lookup(out, config, item)) < 0)
 			return error;
 
-		git__compare_and_swap(&repo->configmap_cache[(int)item], &oldval, out);
+		git_atomic_compare_and_swap(&repo->configmap_cache[(int)item], &oldval, out);
 	}
 
 	return 0;

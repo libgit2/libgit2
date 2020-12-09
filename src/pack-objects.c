@@ -12,7 +12,7 @@
 #include "iterator.h"
 #include "netops.h"
 #include "pack.h"
-#include "thread-utils.h"
+#include "thread.h"
 #include "tree.h"
 #include "util.h"
 #include "revwalk.h"
@@ -1158,7 +1158,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 	int ret, active_threads = 0;
 
 	if (!pb->nr_threads)
-		pb->nr_threads = git_online_cpus();
+		pb->nr_threads = git__online_cpus();
 
 	if (pb->nr_threads <= 1) {
 		find_deltas(pb, list, &list_size, window, depth);

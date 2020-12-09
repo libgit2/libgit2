@@ -461,7 +461,7 @@ static void index_free(git_index *index)
 	/* index iterators increment the refcount of the index, so if we
 	 * get here then there should be no outstanding iterators.
 	 */
-	if (git_atomic_get(&index->readers))
+	if (git_atomic32_get(&index->readers))
 		return;
 
 	git_index_clear(index);
@@ -488,14 +488,14 @@ void git_index_free(git_index *index)
 /* call with locked index */
 static void index_free_deleted(git_index *index)
 {
-	int readers = (int)git_atomic_get(&index->readers);
+	int readers = (int)git_atomic32_get(&index->readers);
 	size_t i;
 
 	if (readers > 0 || !index->deleted.length)
 		return;
 
 	for (i = 0; i < index->deleted.length; ++i) {
-		git_index_entry *ie = git__swap(index->deleted.contents[i], NULL);
+		git_index_entry *ie = git_atomic_swap(index->deleted.contents[i], NULL);
 		index_entry_free(ie);
 	}
 
@@ -516,7 +516,7 @@ static int index_remove_entry(git_index *index, size_t pos)
 	error = git_vector_remove(&index->entries, pos);
 
 	if (!error) {
-		if (git_atomic_get(&index->readers) > 0) {
+		if (git_atomic32_get(&index->readers) > 0) {
 			error = git_vector_insert(&index->deleted, entry);
 		} else {
 			index_entry_free(entry);
@@ -2295,7 +2295,7 @@ int git_index_reuc_clear(git_index *index)
 	GIT_ASSERT_ARG(index);
 
 	for (i = 0; i < index->reuc.length; ++i)
-		index_entry_reuc_free(git__swap(index->reuc.contents[i], NULL));
+		index_entry_reuc_free(git_atomic_swap(index->reuc.contents[i], NULL));
 
 	git_vector_clear(&index->reuc);
 
@@ -3197,7 +3197,7 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 		/* well, this isn't good */;
 	} else {
 		git_vector_swap(&entries, &index->entries);
-		entries_map = git__swap(index->entries_map, entries_map);
+		entries_map = git_atomic_swap(index->entries_map, entries_map);
 	}
 
 	index->dirty = 1;
@@ -3331,7 +3331,7 @@ static int git_index_read_iterator(
 	    goto done;
 
 	git_vector_swap(&new_entries, &index->entries);
-	new_entries_map = git__swap(index->entries_map, new_entries_map);
+	new_entries_map = git_atomic_swap(index->entries_map, new_entries_map);
 
 	git_vector_foreach(&remove_entries, i, entry) {
 		if (index->tree)
@@ -3637,7 +3637,7 @@ int git_index_snapshot_new(git_vector *snap, git_index *index)
 
 	GIT_REFCOUNT_INC(index);
 
-	git_atomic_inc(&index->readers);
+	git_atomic32_inc(&index->readers);
 	git_vector_sort(&index->entries);
 
 	error = git_vector_dup(snap, &index->entries, index->entries._cmp);
@@ -3652,7 +3652,7 @@ void git_index_snapshot_release(git_vector *snap, git_index *index)
 {
 	git_vector_free(snap);
 
-	git_atomic_dec(&index->readers);
+	git_atomic32_dec(&index->readers);
 
 	git_index_free(index);
 }

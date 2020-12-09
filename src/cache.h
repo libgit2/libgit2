@@ -13,7 +13,7 @@
 #include "git2/oid.h"
 #include "git2/odb.h"
 
-#include "thread-utils.h"
+#include "thread.h"
 #include "oidmap.h"
 
 enum {
@@ -23,11 +23,11 @@ enum {
 };
 
 typedef struct {
-	git_oid    oid;
-	int16_t    type;  /* git_object_t value */
-	uint16_t   flags; /* GIT_CACHE_STORE value */
-	size_t     size;
-	git_atomic refcount;
+	git_oid      oid;
+	int16_t      type;  /* git_object_t value */
+	uint16_t     flags; /* GIT_CACHE_STORE value */
+	size_t       size;
+	git_atomic32 refcount;
 } git_cached_obj;
 
 typedef struct {
@@ -61,7 +61,7 @@ GIT_INLINE(size_t) git_cache_size(git_cache *cache)
 GIT_INLINE(void) git_cached_obj_incref(void *_obj)
 {
 	git_cached_obj *obj = _obj;
-	git_atomic_inc(&obj->refcount);
+	git_atomic32_inc(&obj->refcount);
 }
 
 void git_cached_obj_decref(void *_obj);

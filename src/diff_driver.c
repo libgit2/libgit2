@@ -144,7 +144,7 @@ static git_diff_driver_registry *git_repository_driver_registry(
 {
 	if (!repo->diff_drivers) {
 		git_diff_driver_registry *reg = git_diff_driver_registry_new();
-		reg = git__compare_and_swap(&repo->diff_drivers, NULL, reg);
+		reg = git_atomic_compare_and_swap(&repo->diff_drivers, NULL, reg);
 
 		if (reg != NULL) /* if we race, free losing allocation */
 			git_diff_driver_registry_free(reg);

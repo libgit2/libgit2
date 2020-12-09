@@ -4,8 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_thread_utils_h__
-#define INCLUDE_thread_utils_h__
+#ifndef INCLUDE_thread_h__
+#define INCLUDE_thread_h__
 
 #if defined(GIT_THREADS)
 
@@ -38,7 +38,7 @@ typedef struct {
 #else
 	volatile int val;
 #endif
-} git_atomic;
+} git_atomic32;
 
 #ifdef GIT_ARCH_64
 
@@ -58,11 +58,11 @@ typedef git_atomic64 git_atomic_ssize;
 
 #else
 
-typedef git_atomic git_atomic_ssize;
+typedef git_atomic32 git_atomic_ssize;
 
-#define git_atomic_ssize_set git_atomic_set
-#define git_atomic_ssize_add git_atomic_add
-#define git_atomic_ssize_get git_atomic_get
+#define git_atomic_ssize_set git_atomic32_set
+#define git_atomic_ssize_add git_atomic32_add
+#define git_atomic_ssize_get git_atomic32_get
 
 #endif
 
@@ -74,7 +74,7 @@ typedef git_atomic git_atomic_ssize;
 #   include "unix/pthread.h"
 #endif
 
-GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
+GIT_INLINE(void) git_atomic32_set(git_atomic32 *a, int val)
 {
 #if defined(GIT_WIN32)
 	InterlockedExchange(&a->val, (LONG)val);
@@ -87,7 +87,7 @@ GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 #endif
 }
 
-GIT_INLINE(int) git_atomic_inc(git_atomic *a)
+GIT_INLINE(int) git_atomic32_inc(git_atomic32 *a)
 {
 #if defined(GIT_WIN32)
 	return InterlockedIncrement(&a->val);
@@ -100,7 +100,7 @@ GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 #endif
 }
 
-GIT_INLINE(int) git_atomic_add(git_atomic *a, int32_t addend)
+GIT_INLINE(int) git_atomic32_add(git_atomic32 *a, int32_t addend)
 {
 #if defined(GIT_WIN32)
 	return InterlockedExchangeAdd(&a->val, addend);
@@ -113,7 +113,7 @@ GIT_INLINE(int) git_atomic_add(git_atomic *a, int32_t addend)
 #endif
 }
 
-GIT_INLINE(int) git_atomic_dec(git_atomic *a)
+GIT_INLINE(int) git_atomic32_dec(git_atomic32 *a)
 {
 #if defined(GIT_WIN32)
 	return InterlockedDecrement(&a->val);
@@ -126,7 +126,7 @@ GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 #endif
 }
 
-GIT_INLINE(int) git_atomic_get(git_atomic *a)
+GIT_INLINE(int) git_atomic32_get(git_atomic32 *a)
 {
 #if defined(GIT_WIN32)
 	return (int)InterlockedCompareExchange(&a->val, 0, 0);
@@ -139,7 +139,7 @@ GIT_INLINE(int) git_atomic_get(git_atomic *a)
 #endif
 }
 
-GIT_INLINE(void *) git___compare_and_swap(
+GIT_INLINE(void *) git_atomic__compare_and_swap(
 	void * volatile *ptr, void *oldval, void *newval)
 {
 #if defined(GIT_WIN32)
@@ -158,7 +158,7 @@ GIT_INLINE(void *) git___compare_and_swap(
 #endif
 }
 
-GIT_INLINE(volatile void *) git___swap(
+GIT_INLINE(volatile void *) git_atomic__swap(
 	void * volatile *ptr, void *newval)
 {
 #if defined(GIT_WIN32)
@@ -174,7 +174,7 @@ GIT_INLINE(volatile void *) git___swap(
 #endif
 }
 
-GIT_INLINE(volatile void *) git___load(void * volatile *ptr)
+GIT_INLINE(volatile void *) git_atomic__load(void * volatile *ptr)
 {
 #if defined(GIT_WIN32)
 	void *newval = NULL, *oldval = NULL;
@@ -268,33 +268,33 @@ GIT_INLINE(int64_t) git_atomic64_get(git_atomic64 *a)
 #define GIT_RWLOCK_STATIC_INIT	0
 
 
-GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
+GIT_INLINE(void) git_atomic32_set(git_atomic32 *a, int val)
 {
 	a->val = val;
 }
 
-GIT_INLINE(int) git_atomic_inc(git_atomic *a)
+GIT_INLINE(int) git_atomic32_inc(git_atomic32 *a)
 {
 	return ++a->val;
 }
 
-GIT_INLINE(int) git_atomic_add(git_atomic *a, int32_t addend)
+GIT_INLINE(int) git_atomic32_add(git_atomic32 *a, int32_t addend)
 {
 	a->val += addend;
 	return a->val;
 }
 
-GIT_INLINE(int) git_atomic_dec(git_atomic *a)
+GIT_INLINE(int) git_atomic32_dec(git_atomic32 *a)
 {
 	return --a->val;
 }
 
-GIT_INLINE(int) git_atomic_get(git_atomic *a)
+GIT_INLINE(int) git_atomic32_get(git_atomic32 *a)
 {
 	return (int)a->val;
 }
 
-GIT_INLINE(void *) git___compare_and_swap(
+GIT_INLINE(void *) git_atomic__compare_and_swap(
 	void * volatile *ptr, void *oldval, void *newval)
 {
 	if (*ptr == oldval)
@@ -304,7 +304,7 @@ GIT_INLINE(void *) git___compare_and_swap(
 	return oldval;
 }
 
-GIT_INLINE(volatile void *) git___swap(
+GIT_INLINE(volatile void *) git_atomic__swap(
 	void * volatile *ptr, void *newval)
 {
 	volatile void *old = *ptr;
@@ -312,7 +312,7 @@ GIT_INLINE(volatile void *) git___swap(
 	return old;
 }
 
-GIT_INLINE(volatile void *) git___load(void * volatile *ptr)
+GIT_INLINE(volatile void *) git_atomic__load(void * volatile *ptr)
 {
 	return *ptr;
 }
@@ -342,14 +342,14 @@ GIT_INLINE(int64_t) git_atomic64_get(git_atomic64 *a)
 /* Atomically replace oldval with newval
  * @return oldval if it was replaced or newval if it was not
  */
-#define git__compare_and_swap(P,O,N) \
-	git___compare_and_swap((void * volatile *)P, O, N)
+#define git_atomic_compare_and_swap(P,O,N) \
+	git_atomic__compare_and_swap((void * volatile *)P, O, N)
 
-#define git__swap(ptr, val) (void *)git___swap((void * volatile *)&ptr, val)
+#define git_atomic_swap(ptr, val) \
+	(void *)git_atomic__swap((void * volatile *)&ptr, val)
 
-#define git__load(ptr) (void *)git___load((void * volatile *)&ptr)
-
-extern int git_online_cpus(void);
+#define git_atomic_load(ptr) \
+	(void *)git_atomic__load((void * volatile *)&ptr)
 
 #if defined(GIT_THREADS)
 
@@ -366,5 +366,57 @@ extern int git_online_cpus(void);
 # define GIT_MEMORY_BARRIER /* noop */
 
 #endif
+
+/* Thread-local data */
+
+#if !defined(GIT_THREADS)
+# define git_tlsdata_key int
+#elif defined(GIT_WIN32)
+# define git_tlsdata_key DWORD
+#elif defined(_POSIX_THREADS)
+# define git_tlsdata_key pthread_key_t
+#else
+# error unknown threading model
+#endif
+
+/**
+ * Create a thread-local data key.  The destroy function will be
+ * called upon thread exit.  On some platforms, it may be called
+ * when all threads have deleted their keys.
+ *
+ * Note that the tlsdata functions do not set an error message on
+ * failure; this is because the error handling in libgit2 is itself
+ * handled by thread-local data storage.
+ *
+ * @param key the tlsdata key
+ * @param destroy_fn function pointer called upon thread exit
+ * @return 0 on success, non-zero on failure
+ */
+int git_tlsdata_init(git_tlsdata_key *key, void (GIT_SYSTEM_CALL *destroy_fn)(void *));
+
+/**
+ * Set a the thread-local value for the given key.
+ *
+ * @param key the tlsdata key to store data on
+ * @param value the pointer to store
+ * @return 0 on success, non-zero on failure
+ */
+int git_tlsdata_set(git_tlsdata_key key, void *value);
+
+/**
+ * Get the thread-local value for the given key.
+ *
+ * @param key the tlsdata key to retrieve the value of
+ * @return the pointer stored with git_tlsdata_set
+ */
+void *git_tlsdata_get(git_tlsdata_key key);
+
+/**
+ * Delete the given thread-local key.
+ *
+ * @param key the tlsdata key to dispose
+ * @return 0 on success, non-zero on failure
+ */
+int git_tlsdata_dispose(git_tlsdata_key key);
 
 #endif

@@ -17,7 +17,7 @@
 
 static git_repository *_repo;
 static git_tree *_a, *_b;
-static git_atomic _counts[4];
+static git_atomic32 _counts[4];
 static int _check_counts;
 #ifdef GIT_WIN32
 static int _retries;
@@ -66,10 +66,10 @@ static void free_trees(void)
 	git_tree_free(_b); _b = NULL;
 
 	if (_check_counts) {
-		cl_assert_equal_i(288, git_atomic_get(&_counts[0]));
-		cl_assert_equal_i(112, git_atomic_get(&_counts[1]));
-		cl_assert_equal_i( 80, git_atomic_get(&_counts[2]));
-		cl_assert_equal_i( 96, git_atomic_get(&_counts[3]));
+		cl_assert_equal_i(288, git_atomic32_get(&_counts[0]));
+		cl_assert_equal_i(112, git_atomic32_get(&_counts[1]));
+		cl_assert_equal_i( 80, git_atomic32_get(&_counts[2]));
+		cl_assert_equal_i( 96, git_atomic32_get(&_counts[3]));
 	}
 }
 
@@ -107,14 +107,14 @@ static void *run_index_diffs(void *arg)
 	/* keep some diff stats to make sure results are as expected */
 
 	i = git_diff_num_deltas(diff);
-	git_atomic_add(&_counts[0], (int32_t)i);
+	git_atomic32_add(&_counts[0], (int32_t)i);
 	exp[0] = (int)i;
 
 	while (i > 0) {
 		switch (git_diff_get_delta(diff, --i)->status) {
-		case GIT_DELTA_MODIFIED: exp[1]++; git_atomic_inc(&_counts[1]); break;
-		case GIT_DELTA_ADDED:    exp[2]++; git_atomic_inc(&_counts[2]); break;
-		case GIT_DELTA_DELETED:  exp[3]++; git_atomic_inc(&_counts[3]); break;
+		case GIT_DELTA_MODIFIED: exp[1]++; git_atomic32_inc(&_counts[1]); break;
+		case GIT_DELTA_ADDED:    exp[2]++; git_atomic32_inc(&_counts[2]); break;
+		case GIT_DELTA_DELETED:  exp[3]++; git_atomic32_inc(&_counts[3]); break;
 		default: break;
 		}
 	}

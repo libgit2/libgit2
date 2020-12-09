@@ -22,7 +22,7 @@
 #include "refs.h"
 #include "runtime.h"
 #include "sysdir.h"
-#include "thread-utils.h"
+#include "thread.h"
 #include "threadstate.h"
 #include "git2/global.h"
 #include "streams/registry.h"

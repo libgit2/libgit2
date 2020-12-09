@@ -12,7 +12,7 @@
 #include "util.h"
 #include "futils.h"
 #include "vector.h"
-#include "thread-utils.h"
+#include "thread.h"
 #include "pool.h"
 #include "strmap.h"
 
