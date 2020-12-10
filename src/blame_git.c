@@ -68,9 +68,9 @@ int git_blame__get_origin(
 		git_commit *commit,
 		const char *path)
 {
-	git_blame__entry *e;
+	git_blame__entry *e = NULL;
 
-	for (e = blame->ent; e; e = e->next) {
+	for (e = blame->ent; e && e->suspect; e = e->next) {
 		if (e->suspect->commit == commit && !strcmp(e->suspect->path, path)) {
 			*out = origin_incref(e->suspect);
 		}
@@ -90,6 +90,8 @@ static bool same_suspect(git_blame__origin *a, git_blame__origin *b)
 {
 	if (a == b)
 		return true;
+	GIT_ASSERT_ARG(a);
+	GIT_ASSERT_ARG(b);
 	if (git_oid_cmp(git_commit_id(a->commit), git_commit_id(b->commit)))
 		return false;
 	return 0 == strcmp(a->path, b->path);

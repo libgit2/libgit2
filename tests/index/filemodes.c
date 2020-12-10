@@ -68,7 +68,7 @@ static void add_and_check_mode_(
 	entry = git_index_get_byindex(index, pos);
 
 	clar__assert_equal(file, func, line, "Expected mode does not match index",
-		1, "%07o", (unsigned int)entry->mode, (unsigned int)expect_mode);
+		"%07o", (unsigned int)entry->mode, (unsigned int)expect_mode);
 }
 
 void test_index_filemodes__untrusted(void)
@@ -199,7 +199,7 @@ static void add_entry_and_check_mode_(
 	entry = git_index_get_byindex(index, pos);
 
 	clar__assert_equal(file, func, line, "Expected mode does not match index",
-		1, "%07o", (unsigned int)entry->mode, (unsigned int)mode);
+		"%07o", (unsigned int)entry->mode, (unsigned int)mode);
 }
 
 void test_index_filemodes__explicit(void)

@@ -154,6 +154,10 @@ static int readline(char **out)
 		goto error;
 	}
 
+	if (!line && (line = malloc(1)) == NULL) {
+		error = -1;
+		goto error;
+	}
 	line[length] = '\0';
 	*out = line;
 	line = NULL;

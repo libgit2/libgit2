@@ -53,7 +53,7 @@ static int diff_file_stats_full_to_buf(
 	const git_diff_stats *stats,
 	size_t width)
 {
-	const char *old_path = NULL, *new_path = NULL, *adddel_path = NULL;
+	const char *old_path = NULL, *new_path = NULL;
 	size_t padding;
 	git_object_size_t old_size, new_size;
 
@@ -61,6 +61,8 @@ static int diff_file_stats_full_to_buf(
 	new_path = delta->new_file.path;
 	old_size = delta->old_file.size;
 	new_size = delta->new_file.size;
+
+	GIT_ASSERT_ARG(old_path || new_path);
 
 	if (old_path && new_path && strcmp(old_path, new_path) != 0) {
 		size_t common_dirlen;
@@ -82,7 +84,7 @@ static int diff_file_stats_full_to_buf(
 		if (error < 0)
 			goto on_error;
 	} else {
-		adddel_path = new_path ? new_path : old_path;
+		const char *adddel_path = new_path ? new_path : old_path;
 		if (git_buf_printf(out, " %s", adddel_path) < 0)
 			goto on_error;
 

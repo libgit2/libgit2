@@ -21,25 +21,25 @@ void test_core_array__bsearch2(void)
 	int *i, key;
 	size_t p;
 
-	i = git_array_alloc(integers); *i = 2;
-	i = git_array_alloc(integers); *i = 3;
-	i = git_array_alloc(integers); *i = 5;
-	i = git_array_alloc(integers); *i = 7;
-	i = git_array_alloc(integers); *i = 7;
-	i = git_array_alloc(integers); *i = 8;
-	i = git_array_alloc(integers); *i = 13;
-	i = git_array_alloc(integers); *i = 21;
-	i = git_array_alloc(integers); *i = 25;
-	i = git_array_alloc(integers); *i = 42;
-	i = git_array_alloc(integers); *i = 69;
-	i = git_array_alloc(integers); *i = 121;
-	i = git_array_alloc(integers); *i = 256;
-	i = git_array_alloc(integers); *i = 512;
-	i = git_array_alloc(integers); *i = 513;
-	i = git_array_alloc(integers); *i = 514;
-	i = git_array_alloc(integers); *i = 516;
-	i = git_array_alloc(integers); *i = 516;
-	i = git_array_alloc(integers); *i = 517;
+	i = git_array_alloc(integers); cl_assert(i); *i = 2;
+	i = git_array_alloc(integers); cl_assert(i); *i = 3;
+	i = git_array_alloc(integers); cl_assert(i); *i = 5;
+	i = git_array_alloc(integers); cl_assert(i); *i = 7;
+	i = git_array_alloc(integers); cl_assert(i); *i = 7;
+	i = git_array_alloc(integers); cl_assert(i); *i = 8;
+	i = git_array_alloc(integers); cl_assert(i); *i = 13;
+	i = git_array_alloc(integers); cl_assert(i); *i = 21;
+	i = git_array_alloc(integers); cl_assert(i); *i = 25;
+	i = git_array_alloc(integers); cl_assert(i); *i = 42;
+	i = git_array_alloc(integers); cl_assert(i); *i = 69;
+	i = git_array_alloc(integers); cl_assert(i); *i = 121;
+	i = git_array_alloc(integers); cl_assert(i); *i = 256;
+	i = git_array_alloc(integers); cl_assert(i); *i = 512;
+	i = git_array_alloc(integers); cl_assert(i); *i = 513;
+	i = git_array_alloc(integers); cl_assert(i); *i = 514;
+	i = git_array_alloc(integers); cl_assert(i); *i = 516;
+	i = git_array_alloc(integers); cl_assert(i); *i = 516;
+	i = git_array_alloc(integers); cl_assert(i); *i = 517;
 
 	/* value to search for, expected position, return code */
 	expect_pos(3, 1, GIT_OK);

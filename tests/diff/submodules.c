@@ -49,7 +49,7 @@ static void check_diff_patches_at_line(
 		cl_git_pass(git_patch_to_buf(&buf, patch));
 
 		clar__assert_equal(
-			file, func, line, "expected diff did not match actual diff", 1,
+			file, func, line, "expected diff did not match actual diff",
 			"%s", expected[d], get_buf_ptr(&buf));
 		git_buf_dispose(&buf);
 	}

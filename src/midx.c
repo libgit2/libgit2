@@ -447,7 +447,7 @@ int git_midx_foreach_entry(
 		void *data)
 {
 	size_t i;
-	int error;
+	int error = 0;
 
 	GIT_ASSERT_ARG(idx);
 

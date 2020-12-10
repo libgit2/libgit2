@@ -1,0 +1,3 @@
+IF(ENABLE_CLANG_TIDY)
+	set(CMAKE_C_CLANG_TIDY clang-tidy)
+ENDIF()

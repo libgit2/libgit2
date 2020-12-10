@@ -407,25 +407,32 @@ static int loose_lookup(
 	else
 		ref_dir = backend->commonpath;
 
-	if ((error = loose_readbuffer(&ref_file, ref_dir, ref_name)) < 0)
-		/* cannot read loose ref file - gah */;
-	else if (git__prefixcmp(git_buf_cstr(&ref_file), GIT_SYMREF) == 0) {
+	if ((error = loose_readbuffer(&ref_file, ref_dir, ref_name)) < 0) {
+		/* cannot read loose ref file - gah */
+		goto done;
+	}
+
+	if (git__prefixcmp(git_buf_cstr(&ref_file), GIT_SYMREF) == 0) {
 		const char *target;
 
 		git_buf_rtrim(&ref_file);
 
-		if (!(target = loose_parse_symbolic(&ref_file)))
+		if (!(target = loose_parse_symbolic(&ref_file))) {
 			error = -1;
-		else if (out != NULL)
+			goto done;
+		}
+		if (out != NULL)
 			*out = git_reference__alloc_symbolic(ref_name, target);
 	} else {
 		git_oid oid;
 
-		if (!(error = loose_parse_oid(&oid, ref_name, &ref_file)) &&
-			out != NULL)
+		if ((error = loose_parse_oid(&oid, ref_name, &ref_file)) < 0)
+			goto done;
+		if (out != NULL)
 			*out = git_reference__alloc(ref_name, &oid, NULL);
 	}
 
+done:
 	git_buf_dispose(&ref_file);
 	return error;
 }
@@ -443,6 +450,8 @@ static int packed_lookup(
 {
 	int error = 0;
 	struct packref *entry;
+
+	GIT_ASSERT_ARG(out);
 
 	if ((error = packed_reload(backend)) < 0)
 		return error;
@@ -472,6 +481,7 @@ static int refdb_fs_backend__lookup(
 	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
 	int error;
 
+	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(backend);
 
 	if (!(error = loose_lookup(out, backend, ref_name)))

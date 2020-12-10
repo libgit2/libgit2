@@ -18,6 +18,7 @@ project(libgit2 VERSION "1.1.0" LANGUAGES C)
 # Add find modules to the path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${libgit2_SOURCE_DIR}/cmake/")
 
+INCLUDE(ClangTidy)
 INCLUDE(CheckLibraryExists)
 INCLUDE(CheckFunctionExists)
 INCLUDE(CheckSymbolExists)
@@ -50,6 +51,7 @@ OPTION(USE_STANDALONE_FUZZERS		"Enable standalone fuzzers (compatible with gcc)"
 OPTION(USE_LEAK_CHECKER			"Run tests with leak checker"				OFF)
 OPTION(DEBUG_POOL			"Enable debug pool allocator"				OFF)
 OPTION(ENABLE_WERROR			"Enable compilation with -Werror"			OFF)
+OPTION(ENABLE_CLANG_TIDY			"Enable use of clang-tidy"			OFF)
 OPTION(USE_BUNDLED_ZLIB    		"Use the bundled version of zlib"			OFF)
    SET(USE_HTTP_PARSER			"" CACHE STRING "Specifies the HTTP Parser implementation; either system or builtin.")
 OPTION(DEPRECATE_HARD			"Do not include deprecated functions in the library"	OFF)

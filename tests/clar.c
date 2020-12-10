@@ -591,6 +591,7 @@ clar_test(int argc, char **argv)
 	return errors;
 }
 
+CL_NORETURN
 static void abort_test(void)
 {
 	if (!_clar.trampoline_enabled) {
@@ -611,13 +612,12 @@ void clar__skip(void)
 	abort_test();
 }
 
-void clar__fail(
+void clar__warn(
 	const char *file,
 	const char *function,
 	size_t line,
 	const char *error_msg,
-	const char *description,
-	int should_abort)
+	const char *description)
 {
 	struct clar_error *error = calloc(1, sizeof(struct clar_error));
 
@@ -639,24 +639,17 @@ void clar__fail(
 
 	_clar.total_errors++;
 	_clar.last_report->status = CL_TEST_FAILURE;
-
-	if (should_abort)
-		abort_test();
 }
 
-void clar__assert(
-	int condition,
+void clar__fail(
 	const char *file,
 	const char *function,
 	size_t line,
 	const char *error_msg,
-	const char *description,
-	int should_abort)
+	const char *description)
 {
-	if (condition)
-		return;
-
-	clar__fail(file, function, line, error_msg, description, should_abort);
+	clar__warn(file, function, line, error_msg, description);
+	abort_test();
 }
 
 void clar__assert_equal(
@@ -664,7 +657,6 @@ void clar__assert_equal(
 	const char *function,
 	size_t line,
 	const char *err,
-	int should_abort,
 	const char *fmt,
 	...)
 {
@@ -772,7 +764,7 @@ void clar__assert_equal(
 	va_end(args);
 
 	if (!is_equal)
-		clar__fail(file, function, line, err, buf, should_abort);
+		clar__fail(file, function, line, err, buf);
 }
 
 void cl_set_cleanup(void (*cleanup)(void *), void *opaque)
