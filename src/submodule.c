@@ -254,6 +254,15 @@ int git_submodule_lookup(
 	git_repository *repo,
 	const char *name)    /* trailing slash is allowed */
 {
+	return git_submodule__lookup_with_cache(out, repo, name, repo->submodule_cache);
+}
+
+int git_submodule__lookup_with_cache(
+	git_submodule **out, /* NULL if user only wants to test existence */
+	git_repository *repo,
+	const char *name,    /* trailing slash is allowed */
+	git_strmap *cache)
+{
 	int error;
 	unsigned int location;
 	git_submodule *sm;
@@ -266,8 +275,8 @@ int git_submodule_lookup(
 		return -1;
 	}
 
-	if (repo->submodule_cache != NULL) {
-		if ((sm = git_strmap_get(repo->submodule_cache, name)) != NULL) {
+	if (cache != NULL) {
+		if ((sm = git_strmap_get(cache, name)) != NULL) {
 			if (out) {
 				*out = sm;
 				GIT_REFCOUNT_INC(*out);

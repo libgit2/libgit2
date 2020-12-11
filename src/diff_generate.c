@@ -680,6 +680,8 @@ typedef struct {
 	git_iterator *new_iter;
 	const git_index_entry *oitem;
 	const git_index_entry *nitem;
+	git_strmap *submodule_cache;
+	bool submodule_cache_initialized;
 } diff_in_progress;
 
 #define MODE_BITS_MASK 0000777
@@ -694,6 +696,7 @@ static int maybe_modified_submodule(
 	git_submodule *sub;
 	unsigned int sm_status = 0;
 	git_submodule_ignore_t ign = diff->base.opts.ignore_submodules;
+	git_strmap *submodule_cache = NULL;
 
 	*status = GIT_DELTA_UNMODIFIED;
 
@@ -701,8 +704,29 @@ static int maybe_modified_submodule(
 		ign == GIT_SUBMODULE_IGNORE_ALL)
 		return 0;
 
-	if ((error = git_submodule_lookup(
-			&sub, diff->base.repo, info->nitem->path)) < 0) {
+	if (diff->base.repo->submodule_cache != NULL) {
+		submodule_cache = diff->base.repo->submodule_cache;
+	} else {
+		if (!info->submodule_cache_initialized) {
+			info->submodule_cache_initialized = true;
+			/* Cache the submodule information to avoid having to parse it for every submodule. */
+			if (git_strmap_new(&info->submodule_cache) == 0) {
+				if (git_submodule__map(diff->base.repo, info->submodule_cache) < 0) {
+					/* If the caching failed for whatever reason, bail out and clean up. */
+					git_submodule *sm = NULL;
+					git_strmap_foreach_value(info->submodule_cache, sm, {
+						git_submodule_free(sm);
+					});
+					git_strmap_free(info->submodule_cache);
+					info->submodule_cache = NULL;
+				}
+			}
+		}
+		submodule_cache = info->submodule_cache;
+	}
+
+	if ((error = git_submodule__lookup_with_cache(
+			&sub, diff->base.repo, info->nitem->path, submodule_cache)) < 0) {
 
 		/* GIT_EEXISTS means dir with .git in it was found - ignore it */
 		if (error == GIT_EEXISTS) {
@@ -1192,7 +1216,7 @@ int git_diff__from_iterators(
 	const git_diff_options *opts)
 {
 	git_diff_generated *diff;
-	diff_in_progress info;
+	diff_in_progress info = {0};
 	int error = 0;
 
 	*out = NULL;
@@ -1260,6 +1284,13 @@ cleanup:
 		*out = &diff->base;
 	else
 		git_diff_free(&diff->base);
+	if (info.submodule_cache) {
+		git_submodule *sm = NULL;
+		git_strmap_foreach_value(info.submodule_cache, sm, {
+			git_submodule_free(sm);
+		});
+		git_strmap_free(info.submodule_cache);
+	}
 
 	return error;
 }

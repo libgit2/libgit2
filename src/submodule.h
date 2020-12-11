@@ -122,9 +122,9 @@ enum {
 #define GIT_SUBMODULE_STATUS__CLEAR_INTERNAL(S) \
 	((S) & ~(0xFFFFFFFFu << 20))
 
-/* Internal lookup does not attempt to refresh cached data */
-extern int git_submodule__lookup(
-	git_submodule **out, git_repository *repo, const char *path);
+/* Submodule lookup with an explicit cache */
+extern int git_submodule__lookup_with_cache(
+	git_submodule **out, git_repository *repo, const char *path, git_strmap *cache);
 
 /* Internal status fn returns status and optionally the various OIDs */
 extern int git_submodule__status(
