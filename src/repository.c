@@ -3066,5 +3066,5 @@ int git_repository_submodule_cache_clear(git_repository *repo)
 
 	error = git_submodule_cache_free(repo->submodule_cache);
 	repo->submodule_cache = NULL;
-	return 0;
+	return error;
 }
