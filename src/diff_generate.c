@@ -709,18 +709,12 @@ static int maybe_modified_submodule(
 	} else {
 		if (!info->submodule_cache_initialized) {
 			info->submodule_cache_initialized = true;
-			/* Cache the submodule information to avoid having to parse it for every submodule. */
-			if (git_strmap_new(&info->submodule_cache) == 0) {
-				if (git_submodule__map(diff->base.repo, info->submodule_cache) < 0) {
-					/* If the caching failed for whatever reason, bail out and clean up. */
-					git_submodule *sm = NULL;
-					git_strmap_foreach_value(info->submodule_cache, sm, {
-						git_submodule_free(sm);
-					});
-					git_strmap_free(info->submodule_cache);
-					info->submodule_cache = NULL;
-				}
-			}
+			/*
+			 * Try to cache the submodule information to avoid having to parse it for
+			 * every submodule. It is okay if it fails, the cache will still be NULL
+			 * and the submodules will be attempted to be looked up individually.
+			 */
+			git_submodule_cache_init(&info->submodule_cache, diff->base.repo);
 		}
 		submodule_cache = info->submodule_cache;
 	}
@@ -1284,13 +1278,8 @@ cleanup:
 		*out = &diff->base;
 	else
 		git_diff_free(&diff->base);
-	if (info.submodule_cache) {
-		git_submodule *sm = NULL;
-		git_strmap_foreach_value(info.submodule_cache, sm, {
-			git_submodule_free(sm);
-		});
-		git_strmap_free(info.submodule_cache);
-	}
+	if (info.submodule_cache)
+		git_submodule_cache_free(info.submodule_cache);
 
 	return error;
 }
