@@ -34,8 +34,8 @@
 int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
 {
 	const char *p;
-	int64_t n, nn;
-	int c, ovfl, v, neg, ndig;
+	int64_t n, nn, v;
+	int c, ovfl, neg, ndig;
 
 	p = nptr;
 	neg = 0;
@@ -110,19 +110,11 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 		if (v >= base)
 			break;
 		v = neg ? -v : v;
-		if (n > INT64_MAX / base || n < INT64_MIN / base) {
+		if (git__multiply_int64_overflow(&nn, n, base) || git__add_int64_overflow(&n, nn, v)) {
 			ovfl = 1;
 			/* Keep on iterating until the end of this number */
 			continue;
 		}
-		nn = n * base;
-		if ((v > 0 && nn > INT64_MAX - v) ||
-		    (v < 0 && nn < INT64_MIN - v)) {
-			ovfl = 1;
-			/* Keep on iterating until the end of this number */
-			continue;
-		}
-		n = nn + v;
 	}
 
 Return:
