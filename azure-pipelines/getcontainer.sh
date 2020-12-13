@@ -18,18 +18,18 @@ fi
 DOCKER_CONTAINER="${GITHUB_REPOSITORY}/$(basename ${DOCKERFILE_PATH})"
 DOCKER_REGISTRY_CONTAINER="${DOCKER_REGISTRY}/${DOCKER_CONTAINER}"
 
-echo "::set-env name=docker-container::${DOCKER_CONTAINER}"
-echo "::set-env name=docker-registry-container::${DOCKER_REGISTRY_CONTAINER}"
+echo "docker-container=${DOCKER_CONTAINER}" >> $GITHUB_ENV
+echo "docker-registry-container=${DOCKER_REGISTRY_CONTAINER}" >> $GITHUB_ENV
 
 # Identify the last git commit that touched the Dockerfiles
 # Use this as a hash to identify the resulting docker containers
 DOCKER_SHA=$(git log -1 --pretty=format:"%h" -- "${DOCKERFILE_PATH}")
-echo "::set-env name=docker-sha::${DOCKER_SHA}"
+echo "docker-sha=${DOCKER_SHA}" >> $GITHUB_ENV
 
 DOCKER_REGISTRY_CONTAINER_SHA="${DOCKER_REGISTRY_CONTAINER}:${DOCKER_SHA}"
 
-echo "::set-env name=docker-registry-container-sha::${DOCKER_REGISTRY_CONTAINER_SHA}"
-echo "::set-env name=docker-registry-container-latest::${DOCKER_REGISTRY_CONTAINER}:latest"
+echo "docker-registry-container-sha=${DOCKER_REGISTRY_CONTAINER_SHA}" >> $GITHUB_ENV
+echo "docker-registry-container-latest=${DOCKER_REGISTRY_CONTAINER}:latest" >> $GITHUB_ENV
 
 exists="true"
 docker login https://${DOCKER_REGISTRY} -u ${GITHUB_ACTOR} -p ${GITHUB_TOKEN} || exists="false"
@@ -39,7 +39,7 @@ if [ "${exists}" != "false" ]; then
 fi
 
 if [ "${exists}" = "true" ]; then
-	echo "::set-env name=docker-container-exists::true"
+	echo "docker-container-exists=true" >> $GITHUB_ENV
 else
-	echo "::set-env name=docker-container-exists::false"
+	echo "docker-container-exists=false" >> $GITHUB_ENV
 fi
