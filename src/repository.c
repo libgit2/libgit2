@@ -3055,30 +3055,16 @@ int git_repository_set_ident(git_repository *repo, const char *name, const char 
 
 int git_repository_submodule_cache_all(git_repository *repo)
 {
-	int error;
-
 	GIT_ASSERT_ARG(repo);
-
-	if ((error = git_strmap_new(&repo->submodule_cache)))
-		return error;
-
-	error = git_submodule__map(repo, repo->submodule_cache);
-	return error;
+	return git_submodule_cache_init(&repo->submodule_cache, repo);
 }
 
 int git_repository_submodule_cache_clear(git_repository *repo)
 {
-	git_submodule *sm;
-
+	int error = 0;
 	GIT_ASSERT_ARG(repo);
 
-	if (repo->submodule_cache == NULL) {
-		return 0;
-	}
-	git_strmap_foreach_value(repo->submodule_cache, sm, {
-		git_submodule_free(sm);
-	});
-	git_strmap_free(repo->submodule_cache);
-	repo->submodule_cache = 0;
-	return 0;
+	error = git_submodule_cache_free(repo->submodule_cache);
+	repo->submodule_cache = NULL;
+	return error;
 }

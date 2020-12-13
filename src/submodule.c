@@ -249,10 +249,47 @@ out:
 	return error;
 }
 
+int git_submodule_cache_init(git_strmap **out, git_repository *repo)
+{
+	int error = 0;
+	git_strmap *cache = NULL;
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+	if ((error = git_strmap_new(&cache)) < 0)
+		return error;
+	if ((error = git_submodule__map(repo, cache)) < 0) {
+		git_submodule_cache_free(cache);
+		return error;
+	}
+	*out = cache;
+	return error;
+}
+
+int git_submodule_cache_free(git_strmap *cache)
+{
+	git_submodule *sm = NULL;
+	if (cache == NULL)
+		return 0;
+	git_strmap_foreach_value(cache, sm, {
+		git_submodule_free(sm);
+	});
+	git_strmap_free(cache);
+	return 0;
+}
+
 int git_submodule_lookup(
 	git_submodule **out, /* NULL if user only wants to test existence */
 	git_repository *repo,
 	const char *name)    /* trailing slash is allowed */
+{
+	return git_submodule__lookup_with_cache(out, repo, name, repo->submodule_cache);
+}
+
+int git_submodule__lookup_with_cache(
+	git_submodule **out, /* NULL if user only wants to test existence */
+	git_repository *repo,
+	const char *name,    /* trailing slash is allowed */
+	git_strmap *cache)
 {
 	int error;
 	unsigned int location;
@@ -266,8 +303,8 @@ int git_submodule_lookup(
 		return -1;
 	}
 
-	if (repo->submodule_cache != NULL) {
-		if ((sm = git_strmap_get(repo->submodule_cache, name)) != NULL) {
+	if (cache != NULL) {
+		if ((sm = git_strmap_get(cache, name)) != NULL) {
 			if (out) {
 				*out = sm;
 				GIT_REFCOUNT_INC(*out);
