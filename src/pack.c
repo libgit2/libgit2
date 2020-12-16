@@ -908,7 +908,7 @@ static int packfile_unpack_compressed(
 
 	do {
 		size_t bytes = buffer_len - total;
-		unsigned int window_len;
+		unsigned int window_len, consumed;
 		unsigned char *in;
 
 		if ((in = pack_window_open(p, mwindow, *position, &window_len)) == NULL) {
@@ -924,10 +924,15 @@ static int packfile_unpack_compressed(
 
 		git_mwindow_close(mwindow);
 
-		if (!bytes)
-			break;
+		consumed = window_len - (unsigned int)zstream.in_len;
 
-		*position += window_len - zstream.in_len;
+		if (!bytes && !consumed) {
+			git_error_set(GIT_ERROR_ZLIB, "error inflating zlib stream");
+			error = -1;
+			goto out;
+		}
+
+		*position += consumed;
 		total += bytes;
 	} while (!git_zstream_eos(&zstream));
 
