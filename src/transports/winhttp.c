@@ -451,7 +451,13 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		git_buf_puts(&processed_url, t->proxy.url.scheme);
 		git_buf_PUTS(&processed_url, "://");
 
+		if (git_net_url_is_ipv6(&t->proxy.url))
+			git_buf_putc(&processed_url, '[');
+
 		git_buf_puts(&processed_url, t->proxy.url.host);
+
+		if (git_net_url_is_ipv6(&t->proxy.url))
+			git_buf_putc(&processed_url, ']');
 
 		if (!git_net_url_is_default_port(&t->proxy.url))
 			git_buf_printf(&processed_url, ":%s", t->proxy.url.port);
@@ -736,10 +742,11 @@ static void CALLBACK winhttp_status(
 static int winhttp_connect(
 	winhttp_subtransport *t)
 {
-	wchar_t *wide_host;
+	wchar_t *wide_host = NULL;
 	int32_t port;
-	wchar_t *wide_ua;
-	git_buf ua = GIT_BUF_INIT;
+	wchar_t *wide_ua = NULL;
+	git_buf ipv6 = GIT_BUF_INIT, ua = GIT_BUF_INIT;
+	const char *host;
 	int error = -1;
 	int default_timeout = TIMEOUT_INFINITE;
 	int default_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
@@ -755,28 +762,32 @@ static int winhttp_connect(
 	/* Prepare port */
 	if (git__strntol32(&port, t->server.url.port,
 			   strlen(t->server.url.port), NULL, 10) < 0)
-		return -1;
+		goto on_error;
+
+	/* IPv6? Add braces around the host. */
+	if (git_net_url_is_ipv6(&t->server.url)) {
+		if (git_buf_printf(&ipv6, "[%s]", t->server.url.host) < 0)
+			goto on_error;
+
+		host = ipv6.ptr;
+	} else {
+		host = t->server.url.host;
+	}
 
 	/* Prepare host */
-	if (git__utf8_to_16_alloc(&wide_host, t->server.url.host) < 0) {
+	if (git__utf8_to_16_alloc(&wide_host, host) < 0) {
 		git_error_set(GIT_ERROR_OS, "unable to convert host to wide characters");
-		return -1;
+		goto on_error;
 	}
 
 
-	if ((error = git_http__user_agent(&ua)) < 0) {
-		git__free(wide_host);
-		return error;
-	}
+	if (git_http__user_agent(&ua) < 0)
+		goto on_error;
 
 	if (git__utf8_to_16_alloc(&wide_ua, git_buf_cstr(&ua)) < 0) {
 		git_error_set(GIT_ERROR_OS, "unable to convert host to wide characters");
-		git__free(wide_host);
-		git_buf_dispose(&ua);
-		return -1;
+		goto on_error;
 	}
-
-	git_buf_dispose(&ua);
 
 	/* Establish session */
 	t->session = WinHttpOpen(
@@ -836,6 +847,7 @@ on_error:
 	if (error < 0)
 		winhttp_close_connection(t);
 
+	git_buf_dispose(&ipv6);
 	git__free(wide_host);
 	git__free(wide_ua);
 
