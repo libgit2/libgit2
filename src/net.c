@@ -335,7 +335,7 @@ bool git_net_url_valid(git_net_url *url)
 	return (url->host && url->port && url->path);
 }
 
-int git_net_url_is_default_port(git_net_url *url)
+bool git_net_url_is_default_port(git_net_url *url)
 {
 	const char *default_port;
 
