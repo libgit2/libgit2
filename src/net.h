@@ -36,6 +36,9 @@ extern bool git_net_url_valid(git_net_url *url);
 /** Returns true if the URL is on the default port. */
 extern bool git_net_url_is_default_port(git_net_url *url);
 
+/** Returns true if the host portion of the URL is an ipv6 address. */
+extern bool git_net_url_is_ipv6(git_net_url *url);
+
 /* Applies a redirect to the URL with a git-aware service suffix. */
 extern int git_net_url_apply_redirect(
 	git_net_url *url,

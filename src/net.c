@@ -345,6 +345,11 @@ bool git_net_url_is_default_port(git_net_url *url)
 		return false;
 }
 
+bool git_net_url_is_ipv6(git_net_url *url)
+{
+	return (strchr(url->host, ':') != NULL);
+}
+
 void git_net_url_swap(git_net_url *a, git_net_url *b)
 {
 	git_net_url tmp = GIT_NET_URL_INIT;
