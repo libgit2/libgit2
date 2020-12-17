@@ -631,6 +631,26 @@ GIT_INLINE(int) apply_proxy_credentials(
 	                         request->proxy_credentials);
 }
 
+static int puts_host_and_port(git_buf *buf, git_net_url *url, bool force_port)
+{
+	bool ipv6 = git_net_url_is_ipv6(url);
+
+	if (ipv6)
+		git_buf_putc(buf, '[');
+
+	git_buf_puts(buf, url->host);
+
+	if (ipv6)
+		git_buf_putc(buf, ']');
+
+	if (force_port || !git_net_url_is_default_port(url)) {
+		git_buf_putc(buf, ':');
+		git_buf_puts(buf, url->port);
+	}
+
+	return git_buf_oom(buf) ? -1 : 0;
+}
+
 static int generate_connect_request(
 	git_http_client *client,
 	git_http_request *request)
@@ -641,14 +661,17 @@ static int generate_connect_request(
 	git_buf_clear(&client->request_msg);
 	buf = &client->request_msg;
 
-	git_buf_printf(buf, "CONNECT %s:%s HTTP/1.1\r\n",
-	               client->server.url.host, client->server.url.port);
+	git_buf_puts(buf, "CONNECT ");
+	puts_host_and_port(buf, &client->server.url, true);
+	git_buf_puts(buf, " HTTP/1.1\r\n");
 
 	git_buf_puts(buf, "User-Agent: ");
 	git_http__user_agent(buf);
 	git_buf_puts(buf, "\r\n");
 
-	git_buf_printf(buf, "Host: %s\r\n", client->proxy.url.host);
+	git_buf_puts(buf, "Host: ");
+	puts_host_and_port(buf, &client->proxy.url, false);
+	git_buf_puts(buf, "\r\n");
 
 	if ((error = apply_proxy_credentials(buf, client, request) < 0))
 		return -1;
@@ -687,11 +710,8 @@ static int generate_request(
 	git_http__user_agent(buf);
 	git_buf_puts(buf, "\r\n");
 
-	git_buf_printf(buf, "Host: %s", request->url->host);
-
-	if (!git_net_url_is_default_port(request->url))
-		git_buf_printf(buf, ":%s", request->url->port);
-
+	git_buf_puts(buf, "Host: ");
+	puts_host_and_port(buf, request->url, false);
 	git_buf_puts(buf, "\r\n");
 
 	if (request->accept)
@@ -902,7 +922,7 @@ static int proxy_connect(
 	int error;
 
 	if (!client->proxy_connected || !client->keepalive) {
-		git_trace(GIT_TRACE_DEBUG, "Connecting to proxy %s:%s",
+		git_trace(GIT_TRACE_DEBUG, "Connecting to proxy %s port %s",
 			  client->proxy.url.host, client->proxy.url.port);
 
 		if ((error = server_create_stream(&client->proxy)) < 0 ||
@@ -1023,7 +1043,7 @@ static int http_client_connect(
 			goto on_error;
 	}
 
-	git_trace(GIT_TRACE_DEBUG, "Connecting to remote %s:%s",
+	git_trace(GIT_TRACE_DEBUG, "Connecting to remote %s port %s",
 	          client->server.url.host, client->server.url.port);
 
 	if ((error = server_connect(client)) < 0)
