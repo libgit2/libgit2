@@ -1,10 +1,7 @@
 name: "CodeQL"
 
 on:
-  push:
-    branches: [ master, maint/* ]
-  pull_request:
-    branches: [ master, maint/* ]
+  workflow_dispatch:
   schedule:
     - cron: '21 3 * * 1'
 
