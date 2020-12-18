@@ -79,8 +79,12 @@ GIT_INLINE(int) git__is_int(long long p)
 
 # define git__add_int64_overflow(out, one, two) \
     __builtin_add_overflow(one, two, out)
-# define git__multiply_int64_overflow(out, one, two) \
-    __builtin_mul_overflow(one, two, out)
+
+/* clang on 32-bit systems produces an undefined reference to `__mulodi4`. */
+# if !defined(__clang__) || !defined(GIT_ARCH_32)
+#  define git__multiply_int64_overflow(out, one, two) \
+     __builtin_mul_overflow(one, two, out)
+# endif
 
 /* Use Microsoft's safe integer handling functions where available */
 #elif defined(_MSC_VER)
@@ -156,6 +160,10 @@ GIT_INLINE(bool) git__add_int64_overflow(int64_t *out, int64_t one, int64_t two)
 	return false;
 }
 
+#endif
+
+/* If we could not provide an intrinsic implementation for this, provide a (slow) fallback. */
+#if !defined(git__multiply_int64_overflow)
 GIT_INLINE(bool) git__multiply_int64_overflow(int64_t *out, int64_t one, int64_t two)
 {
 	if ((one == -1 && two == INT_MIN) ||
@@ -166,7 +174,6 @@ GIT_INLINE(bool) git__multiply_int64_overflow(int64_t *out, int64_t one, int64_t
 	*out = one * two;
 	return false;
 }
-
 #endif
 
 #endif
