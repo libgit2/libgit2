@@ -166,11 +166,18 @@ GIT_INLINE(bool) git__add_int64_overflow(int64_t *out, int64_t one, int64_t two)
 #if !defined(git__multiply_int64_overflow)
 GIT_INLINE(bool) git__multiply_int64_overflow(int64_t *out, int64_t one, int64_t two)
 {
-	if ((one == -1 && two == INT_MIN) ||
-	    (two == -1 && one == INT_MIN) ||
-	    (one && INT64_MAX / one < two) ||
-	    (one && INT64_MIN / one > two))
+	if ((one == -1 && two == INT64_MIN) ||
+	    (two == -1 && one == INT64_MIN))
 		return true;
+	if (one && two) {
+		if (one > 0 == two > 0) {
+			if (INT64_MAX / one < two)
+				return true;
+		} else {
+			if (INT64_MIN / one < two)
+				return true;
+		}
+	}
 	*out = one * two;
 	return false;
 }
