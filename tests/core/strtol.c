@@ -30,6 +30,7 @@ void test_core_strtol__int32(void)
 {
 	assert_l32_parses("123", 123, 10);
 	assert_l32_parses("  +123 ", 123, 10);
+	assert_l32_parses("  -123 ", -123, 10);
 	assert_l32_parses("  +2147483647 ", 2147483647, 10);
 	assert_l32_parses("  -2147483648 ", -2147483648LL, 10);
 	assert_l32_parses("A", 10, 16);
@@ -46,6 +47,7 @@ void test_core_strtol__int64(void)
 {
 	assert_l64_parses("123", 123, 10);
 	assert_l64_parses("  +123 ", 123, 10);
+	assert_l64_parses("  -123 ", -123, 10);
 	assert_l64_parses("  +2147483647 ", 2147483647, 10);
 	assert_l64_parses("  -2147483648 ", -2147483648LL, 10);
 	assert_l64_parses("  2147483657 ", 2147483657LL, 10);
