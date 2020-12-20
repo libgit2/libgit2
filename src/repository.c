@@ -182,6 +182,10 @@ void git_repository_free(git_repository *repo)
 	git__free(repo->ident_name);
 	git__free(repo->ident_email);
 
+	if (repo->hook_payload_free != NULL) {
+		repo->hook_payload_free(repo->hook_payload);
+	}
+
 	git__memzero(repo, sizeof(*repo));
 	git__free(repo);
 }
