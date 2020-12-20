@@ -74,6 +74,9 @@ typedef git_atomic32 git_atomic_ssize;
 #   include "unix/pthread.h"
 #endif
 
+/*
+ * Atomically sets the contents of *a to be val.
+ */
 GIT_INLINE(void) git_atomic32_set(git_atomic32 *a, int val)
 {
 #if defined(GIT_WIN32)
@@ -87,6 +90,10 @@ GIT_INLINE(void) git_atomic32_set(git_atomic32 *a, int val)
 #endif
 }
 
+/*
+ * Atomically increments the contents of *a by 1, and stores the result back into *a.
+ * @return the result of the operation.
+ */
 GIT_INLINE(int) git_atomic32_inc(git_atomic32 *a)
 {
 #if defined(GIT_WIN32)
@@ -100,10 +107,14 @@ GIT_INLINE(int) git_atomic32_inc(git_atomic32 *a)
 #endif
 }
 
+/*
+ * Atomically adds the contents of *a and addend, and stores the result back into *a.
+ * @return the result of the operation.
+ */
 GIT_INLINE(int) git_atomic32_add(git_atomic32 *a, int32_t addend)
 {
 #if defined(GIT_WIN32)
-	return InterlockedExchangeAdd(&a->val, addend);
+	return InterlockedAdd(&a->val, addend);
 #elif defined(GIT_BUILTIN_ATOMIC)
 	return __atomic_add_fetch(&a->val, addend, __ATOMIC_SEQ_CST);
 #elif defined(GIT_BUILTIN_SYNC)
@@ -113,6 +124,10 @@ GIT_INLINE(int) git_atomic32_add(git_atomic32 *a, int32_t addend)
 #endif
 }
 
+/*
+ * Atomically decrements the contents of *a by 1, and stores the result back into *a.
+ * @return the result of the operation.
+ */
 GIT_INLINE(int) git_atomic32_dec(git_atomic32 *a)
 {
 #if defined(GIT_WIN32)
@@ -126,6 +141,10 @@ GIT_INLINE(int) git_atomic32_dec(git_atomic32 *a)
 #endif
 }
 
+/*
+ * Atomically gets the contents of *a.
+ * @return the contents of *a.
+ */
 GIT_INLINE(int) git_atomic32_get(git_atomic32 *a)
 {
 #if defined(GIT_WIN32)
@@ -143,16 +162,13 @@ GIT_INLINE(void *) git_atomic__compare_and_swap(
 	void * volatile *ptr, void *oldval, void *newval)
 {
 #if defined(GIT_WIN32)
-	volatile void *foundval;
-	foundval = InterlockedCompareExchangePointer((volatile PVOID *)ptr, newval, oldval);
-	return (foundval == oldval) ? oldval : newval;
+	return InterlockedCompareExchangePointer((volatile PVOID *)ptr, newval, oldval);
 #elif defined(GIT_BUILTIN_ATOMIC)
-	bool success = __atomic_compare_exchange(ptr, &oldval, &newval, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
-	return success ? oldval : newval;
+	void *foundval = oldval;
+	__atomic_compare_exchange(ptr, &foundval, &newval, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+	return foundval;
 #elif defined(GIT_BUILTIN_SYNC)
-	volatile void *foundval;
-	foundval = __sync_val_compare_and_swap(ptr, oldval, newval);
-	return (foundval == oldval) ? oldval : newval;
+	return __sync_val_compare_and_swap(ptr, oldval, newval);
 #else
 #	error "Unsupported architecture for atomic operations"
 #endif
@@ -164,11 +180,11 @@ GIT_INLINE(volatile void *) git_atomic__swap(
 #if defined(GIT_WIN32)
 	return InterlockedExchangePointer(ptr, newval);
 #elif defined(GIT_BUILTIN_ATOMIC)
-	void * volatile foundval;
+	void * volatile foundval = NULL;
 	__atomic_exchange(ptr, &newval, &foundval, __ATOMIC_SEQ_CST);
 	return foundval;
 #elif defined(GIT_BUILTIN_SYNC)
-	return __sync_lock_test_and_set(ptr, newval);
+	return (volatile void *)__sync_lock_test_and_set(ptr, newval);
 #else
 #	error "Unsupported architecture for atomic operations"
 #endif
@@ -178,9 +194,7 @@ GIT_INLINE(volatile void *) git_atomic__load(void * volatile *ptr)
 {
 #if defined(GIT_WIN32)
 	void *newval = NULL, *oldval = NULL;
-	volatile void *foundval = NULL;
-	foundval = InterlockedCompareExchangePointer((volatile PVOID *)ptr, newval, oldval);
-	return foundval;
+	return (volatile void *)InterlockedCompareExchangePointer((volatile PVOID *)ptr, newval, oldval);
 #elif defined(GIT_BUILTIN_ATOMIC)
 	return (volatile void *)__atomic_load_n(ptr, __ATOMIC_SEQ_CST);
 #elif defined(GIT_BUILTIN_SYNC)
@@ -192,10 +206,14 @@ GIT_INLINE(volatile void *) git_atomic__load(void * volatile *ptr)
 
 #ifdef GIT_ARCH_64
 
+/*
+ * Atomically adds the contents of *a and addend, and stores the result back into *a.
+ * @return the result of the operation.
+ */
 GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 {
 #if defined(GIT_WIN32)
-	return InterlockedExchangeAdd64(&a->val, addend);
+	return InterlockedAdd64(&a->val, addend);
 #elif defined(GIT_BUILTIN_ATOMIC)
 	return __atomic_add_fetch(&a->val, addend, __ATOMIC_SEQ_CST);
 #elif defined(GIT_BUILTIN_SYNC)
@@ -205,6 +223,9 @@ GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 #endif
 }
 
+/*
+ * Atomically sets the contents of *a to be val.
+ */
 GIT_INLINE(void) git_atomic64_set(git_atomic64 *a, int64_t val)
 {
 #if defined(GIT_WIN32)
@@ -218,6 +239,10 @@ GIT_INLINE(void) git_atomic64_set(git_atomic64 *a, int64_t val)
 #endif
 }
 
+/*
+ * Atomically gets the contents of *a.
+ * @return the contents of *a.
+ */
 GIT_INLINE(int64_t) git_atomic64_get(git_atomic64 *a)
 {
 #if defined(GIT_WIN32)
@@ -297,11 +322,10 @@ GIT_INLINE(int) git_atomic32_get(git_atomic32 *a)
 GIT_INLINE(void *) git_atomic__compare_and_swap(
 	void * volatile *ptr, void *oldval, void *newval)
 {
-	if (*ptr == oldval)
+	void *foundval = *ptr;
+	if (foundval == oldval)
 		*ptr = newval;
-	else
-		oldval = newval;
-	return oldval;
+	return foundval;
 }
 
 GIT_INLINE(volatile void *) git_atomic__swap(
@@ -339,17 +363,50 @@ GIT_INLINE(int64_t) git_atomic64_get(git_atomic64 *a)
 
 #endif
 
-/* Atomically replace oldval with newval
- * @return oldval if it was replaced or newval if it was not
+/*
+ * Atomically replace the contents of *ptr (if they are equal to oldval) with
+ * newval. ptr must point to a pointer or a value that is the same size as a
+ * pointer. This is semantically compatible with:
+ *
+ *   #define git_atomic_compare_and_swap(ptr, oldval, newval) \
+ *   ({                                                       \
+ *       void *foundval = *ptr;                               \
+ *       if (foundval == oldval)                              \
+ *           *ptr = newval;                                   \
+ *       foundval;                                            \
+ *   })
+ *
+ * @return the original contents of *ptr.
  */
-#define git_atomic_compare_and_swap(P,O,N) \
-	git_atomic__compare_and_swap((void * volatile *)P, O, N)
+#define git_atomic_compare_and_swap(ptr, oldval, newval) \
+	git_atomic__compare_and_swap((void * volatile *)ptr, oldval, newval)
 
-#define git_atomic_swap(ptr, val) \
-	(void *)git_atomic__swap((void * volatile *)&ptr, val)
+/*
+ * Atomically replace the contents of v with newval. v must be the same size as
+ * a pointer. This is semantically compatible with:
+ *
+ *   #define git_atomic_swap(v, newval) \
+ *   ({                                 \
+ *       volatile void *old = v;        \
+ *       v = newval;                    \
+ *       old;                           \
+ *   })
+ *
+ * @return the original contents of v.
+ */
+#define git_atomic_swap(v, newval) \
+	(void *)git_atomic__swap((void * volatile *)&(v), newval)
 
-#define git_atomic_load(ptr) \
-	(void *)git_atomic__load((void * volatile *)&ptr)
+/*
+ * Atomically reads the contents of v. v must be the same size as a pointer.
+ * This is semantically compatible with:
+ *
+ *   #define git_atomic_load(v) v
+ *
+ * @return the contents of v.
+ */
+#define git_atomic_load(v) \
+	(void *)git_atomic__load((void * volatile *)&(v))
 
 #if defined(GIT_THREADS)
 
