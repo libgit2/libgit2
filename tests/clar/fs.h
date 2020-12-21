@@ -396,7 +396,7 @@ static void
 fs_copy(const char *source, const char *_dest)
 {
 	char *dbuf = NULL;
-	const char *dest;
+	const char *dest = NULL;
 	struct stat source_st, dest_st;
 
 	cl_must_pass_(lstat(source, &source_st), "Failed to stat copy source");
