@@ -580,6 +580,8 @@ post_extract:
 				case LIBSSH2_HOSTKEY_TYPE_DSS:
 					cert.raw_type = GIT_CERT_SSH_RAW_TYPE_DSS;
 					break;
+					
+#ifdef LIBSSH2_HOSTKEY_TYPE_ECDSA_256
 				case LIBSSH2_HOSTKEY_TYPE_ECDSA_256:
 					cert.raw_type = GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_256;
 					break;
@@ -589,9 +591,13 @@ post_extract:
 				case LIBSSH2_KNOWNHOST_KEY_ECDSA_521:
 					cert.raw_type = GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_521;
 					break;
+#endif
+					
+#ifdef LIBSSH2_HOSTKEY_TYPE_ED25519
 				case LIBSSH2_HOSTKEY_TYPE_ED25519:
 					cert.raw_type = GIT_CERT_SSH_RAW_TYPE_KEY_ED25519;
 					break;
+#endif
 				default:
 					cert.raw_type = GIT_CERT_SSH_RAW_TYPE_UNKNOWN;
 			}
