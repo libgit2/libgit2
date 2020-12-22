@@ -91,6 +91,14 @@ typedef enum {
 	GIT_CERT_SSH_RAW_TYPE_RSA = 1,
 	/** The raw key is a DSS key. */
 	GIT_CERT_SSH_RAW_TYPE_DSS = 2,
+	/** The raw key is a ECDSA 256 key. */
+	GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_256 = 3,
+	/** The raw key is a ECDSA 384 key. */
+	GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_384 = 4,
+	/** The raw key is a ECDSA 521 key. */
+	GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_521 = 5,
+	/** The raw key is a ED25519 key. */
+	GIT_CERT_SSH_RAW_TYPE_KEY_ED25519 = 6
 } git_cert_ssh_raw_type_t;
 
 /**
