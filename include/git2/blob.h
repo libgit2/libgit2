@@ -120,6 +120,7 @@ typedef enum {
  * The options used when applying filter options to a file.
  */
 typedef struct {
+	/** The struct version; set to `GIT_BLOB_FILTER_OPTIONS_VERSION`. */
 	int version;
 
 	/** Flags to control the filtering process, see `git_blob_filter_flag_t` above */
