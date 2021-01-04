@@ -119,7 +119,7 @@ typedef enum {
 /**
  * The options used when applying filter options to a file.
  *
- * Initialize with `GIT_BLOB_FILTER_OPTIONS_VERSION`.
+ * Initialize with `GIT_BLOB_FILTER_OPTIONS_INIT`.
  *
  */
 typedef struct {
