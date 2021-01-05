@@ -10,7 +10,7 @@ void test_filter_bare__initialize(void)
 	cl_git_pass(git_repository_open(&g_repo, "crlf.git"));
 
 	filter_opts.flags |= GIT_BLOB_FILTER_NO_SYSTEM_ATTRIBUTES;
-	filter_opts.flags |= GIT_BLOB_FILTER_ATTTRIBUTES_FROM_HEAD;
+	filter_opts.flags |= GIT_BLOB_FILTER_ATTRIBUTES_FROM_HEAD;
 }
 
 void test_filter_bare__cleanup(void)
