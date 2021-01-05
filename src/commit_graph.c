@@ -333,6 +333,40 @@ static int git_commit_graph_entry_get_byindex(
 	return 0;
 }
 
+bool git_commit_graph_needs_refresh(const git_commit_graph_file *cgraph, const char *path)
+{
+	git_file fd = -1;
+	struct stat st;
+	ssize_t bytes_read;
+	git_oid cgraph_checksum = {{0}};
+
+	if (path == NULL)
+		path = git_buf_cstr(&cgraph->filename);
+
+	/* TODO: properly open the file without access time using O_NOATIME */
+	fd = git_futils_open_ro(path);
+	if (fd < 0)
+		return true;
+
+	if (p_fstat(fd, &st) < 0) {
+		p_close(fd);
+		return true;
+	}
+
+	if (!S_ISREG(st.st_mode) || !git__is_sizet(st.st_size)
+	    || (size_t)st.st_size != cgraph->graph_map.len) {
+		p_close(fd);
+		return true;
+	}
+
+	bytes_read = p_pread(fd, cgraph_checksum.id, GIT_OID_RAWSZ, st.st_size - GIT_OID_RAWSZ);
+	p_close(fd);
+	if (bytes_read != GIT_OID_RAWSZ)
+		return true;
+
+	return !git_oid_equal(&cgraph_checksum, &cgraph->checksum);
+}
+
 int git_commit_graph_entry_find(
 		git_commit_graph_entry *e,
 		const git_commit_graph_file *cgraph,
