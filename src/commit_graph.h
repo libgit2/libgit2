@@ -57,7 +57,48 @@ typedef struct git_commit_graph_file {
 	git_buf filename;
 } git_commit_graph_file;
 
+/**
+ * An entry in the commit-graph file. Provides a subset of the information that
+ * can be obtained from the commit header.
+ */
+typedef struct git_commit_graph_entry {
+	/* The generation number of the commit within the graph */
+	size_t generation;
+
+	/* Time in seconds from UNIX epoch. */
+	git_time_t commit_time;
+
+	/* The number of parents of the commit. */
+	size_t parent_count;
+
+	/*
+	 * The indices of the parent commits within the Commit Data table. The value
+	 * of `GIT_COMMIT_GRAPH_MISSING_PARENT` indicates that no parent is in that
+	 * position.
+	 */
+	size_t parent_indices[2];
+
+	/* The index within the Extra Edge List of any parent after the first two. */
+	size_t extra_parents_index;
+
+	/* The SHA-1 hash of the root tree of the commit. */
+	git_oid tree_oid;
+
+	/* The SHA-1 hash of the requested commit. */
+	git_oid sha1;
+} git_commit_graph_entry;
+
 int git_commit_graph_open(git_commit_graph_file **cgraph_out, const char *path);
+int git_commit_graph_entry_find(
+		git_commit_graph_entry *e,
+		const git_commit_graph_file *cgraph,
+		const git_oid *short_oid,
+		size_t len);
+int git_commit_graph_entry_parent(
+		git_commit_graph_entry *parent,
+		const git_commit_graph_file *cgraph,
+		const git_commit_graph_entry *entry,
+		size_t n);
 int git_commit_graph_close(git_commit_graph_file *cgraph);
 void git_commit_graph_free(git_commit_graph_file *cgraph);
 

@@ -32,6 +32,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
 	git_commit_graph_file cgraph = {{0}};
+	git_commit_graph_entry e;
 	git_buf commit_graph_buf = GIT_BUF_INIT;
 	git_oid oid = {{0}};
 	bool append_hash = false;
@@ -66,6 +67,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			    (const unsigned char *)git_buf_cstr(&commit_graph_buf),
 			    git_buf_len(&commit_graph_buf))
 	    < 0)
+		goto cleanup;
+
+	/* Search for any oid, just to exercise that codepath. */
+	if (git_commit_graph_entry_find(&e, &cgraph, &oid, GIT_OID_HEXSZ) < 0)
 		goto cleanup;
 
 cleanup:
