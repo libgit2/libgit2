@@ -408,6 +408,15 @@ int git_blob_is_binary(const git_blob *blob)
 	return git_buf_text_is_binary(&content);
 }
 
+int git_blob_filter_options_init(
+	git_blob_filter_options *opts,
+	unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(opts, version,
+		git_blob_filter_options, GIT_BLOB_FILTER_OPTIONS_INIT);
+	return 0;
+}
+
 int git_blob_filter(
 	git_buf *out,
 	git_blob *blob,
