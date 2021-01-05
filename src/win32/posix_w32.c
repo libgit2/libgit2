@@ -981,3 +981,73 @@ int p_inet_pton(int af, const char *src, void *dst)
 	errno = EINVAL;
 	return -1;
 }
+
+ssize_t p_pread(int fd, void *data, size_t size, off64_t offset)
+{
+	HANDLE fh;
+	DWORD rsize = 0;
+	OVERLAPPED ov = {0};
+	LARGE_INTEGER pos = {0};
+	off64_t final_offset = 0;
+
+	/* Fail if the final offset would have overflowed to match POSIX semantics. */
+	if (!git__is_ssizet(size) || git__add_int64_overflow(&final_offset, offset, (int64_t)size)) {
+		errno = EINVAL;
+		return -1;	
+	}
+
+	/*
+	 * Truncate large writes to the maximum allowable size: the caller
+	 * needs to always call this in a loop anyways.
+	 */
+	if (size > INT32_MAX) {
+		size = INT32_MAX;
+	}
+
+	pos.QuadPart = offset;
+	ov.Offset = pos.LowPart;
+	ov.OffsetHigh = pos.HighPart;
+	fh = (HANDLE)_get_osfhandle(fd);
+
+	if (ReadFile(fh, data, (DWORD)size, &rsize, &ov)) {
+		return (ssize_t)rsize;
+	}
+
+	set_errno();
+	return -1;
+}
+
+ssize_t p_pwrite(int fd, const void *data, size_t size, off64_t offset)
+{
+	HANDLE fh;
+	DWORD wsize = 0;
+	OVERLAPPED ov = {0};
+	LARGE_INTEGER pos = {0};
+	off64_t final_offset = 0;
+
+	/* Fail if the final offset would have overflowed to match POSIX semantics. */
+	if (!git__is_ssizet(size) || git__add_int64_overflow(&final_offset, offset, (int64_t)size)) {
+		errno = EINVAL;
+		return -1;	
+	}
+
+	/*
+	 * Truncate large writes to the maximum allowable size: the caller
+	 * needs to always call this in a loop anyways.
+	 */
+	if (size > INT32_MAX) {
+		size = INT32_MAX;
+	}
+
+	pos.QuadPart = offset;
+	ov.Offset = pos.LowPart;
+	ov.OffsetHigh = pos.HighPart;
+	fh = (HANDLE)_get_osfhandle(fd);
+
+	if (WriteFile(fh, data, (DWORD)size, &wsize, &ov)) {
+		return (ssize_t)wsize;
+	}
+
+	set_errno();
+	return -1;
+}

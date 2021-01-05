@@ -603,6 +603,23 @@ static void hash_partially(git_indexer *idx, const uint8_t *data, size_t size)
 
 static int write_at(git_indexer *idx, const void *data, off64_t offset, size_t size)
 {
+#ifdef NO_MMAP
+	size_t remaining_size = size;
+	const char *ptr = (const char *)data;
+
+	/* Handle data size larger that ssize_t */
+	while (remaining_size > 0) {
+		ssize_t nb;
+		HANDLE_EINTR(nb, p_pwrite(idx->pack->mwf.fd, (void *)ptr,
+					  remaining_size, offset));
+		if (nb <= 0)
+			return -1;
+
+		ptr += nb;
+		offset += nb;
+		remaining_size -= nb;
+	}
+#else
 	git_file fd = idx->pack->mwf.fd;
 	size_t mmap_alignment;
 	size_t page_offset;
@@ -627,6 +644,7 @@ static int write_at(git_indexer *idx, const void *data, off64_t offset, size_t s
 	map_data = (unsigned char *)map.data;
 	memcpy(map_data + page_offset, data, size);
 	p_munmap(&map);
+#endif
 
 	return 0;
 }
