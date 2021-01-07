@@ -1130,8 +1130,7 @@ static int packfile_open_locked(struct git_pack_file *p)
 
 	/* Verify the pack matches its index. */
 	if (p->num_objects != ntohl(hdr.hdr_entries) ||
-		p_lseek(p->mwf.fd, p->mwf.size - GIT_OID_RAWSZ, SEEK_SET) == -1 ||
-		p_read(p->mwf.fd, sha1.id, GIT_OID_RAWSZ) < 0)
+		p_pread(p->mwf.fd, sha1.id, GIT_OID_RAWSZ, p->mwf.size - GIT_OID_RAWSZ) < 0)
 		goto cleanup;
 
 	idx_sha1 = ((unsigned char *)p->index_map.data) + p->index_map.len - 40;
