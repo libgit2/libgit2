@@ -364,7 +364,7 @@ bool git_midx_needs_refresh(
 	if (bytes_read != GIT_OID_RAWSZ)
 		return true;
 
-	return git_oid_cmp(&idx_checksum, &idx->checksum) == 0;
+	return !git_oid_equal(&idx_checksum, &idx->checksum);
 }
 
 int git_midx_entry_find(
