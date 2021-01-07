@@ -353,12 +353,7 @@ bool git_midx_needs_refresh(
 		return true;
 	}
 
-	if (p_lseek(fd, -GIT_OID_RAWSZ, SEEK_END) < 0) {
-		p_close(fd);
-		return true;
-	}
-
-	bytes_read = p_read(fd, &idx_checksum, GIT_OID_RAWSZ);
+	bytes_read = p_pread(fd, &idx_checksum, GIT_OID_RAWSZ, st.st_size - GIT_OID_RAWSZ);
 	p_close(fd);
 
 	if (bytes_read != GIT_OID_RAWSZ)

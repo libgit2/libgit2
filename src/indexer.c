@@ -656,7 +656,6 @@ static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 	size_t page_offset;
 	off64_t page_start;
 	off64_t current_size = idx->pack->mwf.size;
-	int fd = idx->pack->mwf.fd;
 	int error;
 
 	if (!size)
@@ -673,8 +672,7 @@ static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 	page_offset = new_size % mmap_alignment;
 	page_start = new_size - page_offset;
 
-	if (p_lseek(fd, page_start + mmap_alignment - 1, SEEK_SET) < 0 ||
-	    p_write(idx->pack->mwf.fd, data, 1) < 0) {
+	if (p_pwrite(idx->pack->mwf.fd, data, 1, page_start + mmap_alignment - 1) < 0) {
 		git_error_set(GIT_ERROR_OS, "cannot extend packfile '%s'", idx->pack->pack_name);
 		return -1;
 	}
