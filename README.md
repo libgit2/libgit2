@@ -33,6 +33,7 @@ Additionally, the example code has been released to the public domain (see the
 Table of Contents
 =================
 
+* [Using libgit2](#using-libgit2)
 * [Quick Start](#quick-start)
 * [Getting Help](#getting-help)
 * [What It Can Do](#what-it-can-do)
@@ -51,6 +52,28 @@ Table of Contents
 * [Language Bindings](#language-bindings)
 * [How Can I Contribute?](#how-can-i-contribute)
 * [License](#license)
+
+Using libgit2
+=============
+
+Most of these instructions assume that you're writing an application
+in C and want to use libgit2 directly.  If you're _not_ using C,
+and you're writing in a different language or platform like .NET,
+Node.js, or Ruby, then there is probably a
+"[language binding](#language-bindings)" that you can use to take care
+of the messy tasks of calling into native code.
+
+But if you _do_ want to use libgit2 directly - because you're building
+an application in C - then you may be able use an existing binary.
+There are packages for the
+[vcpkg](https://github.com/Microsoft/vcpkg) and
+[conan](https://conan.io/center/libgit2)
+package managers.  And libgit2 is available in 
+[Homebrew](https://formulae.brew.sh/formula/libgit2) and most Linux
+distributions.
+
+However, these versions _may_ be outdated and we recommend using the
+latest version if possible.  Thankfully libgit2 is not hard to compile.
 
 Quick Start
 ===========
