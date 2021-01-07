@@ -688,3 +688,19 @@ void test_repo_init__defaultbranch_config(void)
 
 	git_reference_free(head);
 }
+
+void test_repo_init__defaultbranch_config_empty(void)
+{
+	git_reference *head;
+
+	cl_set_cleanup(&cleanup_repository, "repo");
+
+	create_tmp_global_config("tmp_global_path", "init.defaultbranch", "");
+
+	cl_git_pass(git_repository_init(&g_repo, "repo", 0));
+	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
+
+	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
+
+	git_reference_free(head);
+}
