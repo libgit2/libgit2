@@ -448,7 +448,7 @@ int git_blob_filter(
 	if ((opts.flags & GIT_BLOB_FILTER_NO_SYSTEM_ATTRIBUTES) != 0)
 		flags |= GIT_FILTER_NO_SYSTEM_ATTRIBUTES;
 
-	if ((opts.flags & GIT_BLOB_FILTER_ATTTRIBUTES_FROM_HEAD) != 0)
+	if ((opts.flags & GIT_BLOB_FILTER_ATTRIBUTES_FROM_HEAD) != 0)
 		flags |= GIT_FILTER_ATTRIBUTES_FROM_HEAD;
 
 	if (!(error = git_filter_list_load(

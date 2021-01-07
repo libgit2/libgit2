@@ -113,7 +113,7 @@ typedef enum {
 	 * When set, filters will be loaded from a `.gitattributes` file
 	 * in the HEAD commit.
 	 */
-	GIT_BLOB_FILTER_ATTTRIBUTES_FROM_HEAD = (1 << 2),
+	GIT_BLOB_FILTER_ATTRIBUTES_FROM_HEAD = (1 << 2),
 } git_blob_filter_flag_t;
 
 /**

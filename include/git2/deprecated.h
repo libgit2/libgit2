@@ -80,15 +80,18 @@ typedef git_attr_value_t git_attr_t;
 
 /**@}*/
 
-/** @name Deprecated Blob Functions
+/** @name Deprecated Blob Functions and Constants
  *
- * These functions are retained for backward compatibility.  The newer
- * versions of these functions should be preferred in all new code.
+ * These functions and enumeration values are retained for backward
+ * compatibility.  The newer versions of these functions and values
+ * should be preferred in all new code.
  *
  * There is no plan to remove these backward compatibility values at
  * this time.
  */
 /**@{*/
+
+#define GIT_BLOB_FILTER_ATTTRIBUTES_FROM_HEAD GIT_BLOB_FILTER_ATTRIBUTES_FROM_HEAD
 
 GIT_EXTERN(int) git_blob_create_fromworkdir(git_oid *id, git_repository *repo, const char *relative_path);
 GIT_EXTERN(int) git_blob_create_fromdisk(git_oid *id, git_repository *repo, const char *path);
