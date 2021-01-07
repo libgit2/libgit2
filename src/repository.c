@@ -2092,7 +2092,8 @@ static int repo_init_head(const char *repo_dir, const char *given)
 	if (given) {
 		initial_head = given;
 	} else if ((error = git_config_open_default(&cfg)) >= 0 &&
-	           (error = git_config_get_string_buf(&cfg_branch, cfg, "init.defaultbranch")) >= 0) {
+	           (error = git_config_get_string_buf(&cfg_branch, cfg, "init.defaultbranch")) >= 0 &&
+	           *cfg_branch.ptr) {
 		initial_head = cfg_branch.ptr;
 	}
 
