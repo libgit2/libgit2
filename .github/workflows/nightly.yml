@@ -1,4 +1,4 @@
-# Nightly build for the master branch across multiple targets.
+# Nightly build for the main branch across multiple targets.
 name: Nightly Build
 
 on:
