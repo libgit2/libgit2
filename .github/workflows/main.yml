@@ -1,12 +1,12 @@
 # Continuous integration and pull request validation builds for the
-# master and maintenance branches.
+# main and maintenance branches.
 name: CI Build
 
 on:
   push:
-    branches: [ master, maint/* ]
+    branches: [ main, maint/* ]
   pull_request:
-    branches: [ master, maint/* ]
+    branches: [ main, maint/* ]
 
 env:
   docker-registry: docker.pkg.github.com
@@ -254,7 +254,7 @@ jobs:
   # Generate documentation using docurium.  We'll upload the documentation
   # as a build artifact so that it can be reviewed as part of a pull
   # request or in a forked build.  For CI builds in the main repository's
-  # master branch, we'll push the gh-pages branch back up so that it is
+  # main branch, we'll push the gh-pages branch back up so that it is
   # published to our documentation site.
   documentation:
     name: Generate documentation
