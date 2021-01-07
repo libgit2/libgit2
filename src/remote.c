@@ -1141,6 +1141,16 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 		ref_name = git_reference_name(resolved_ref);
 	}
 
+	/*
+	 * The ref name may be unresolvable - perhaps it's pointing to
+	 * something invalid.  In this case, there is no remote head for
+	 * this ref.
+	 */
+	if (!ref_name) {
+		error = 0;
+		goto cleanup;
+	}
+
 	if ((error = ref_to_update(&update, &remote_name, remote, spec, ref_name)) < 0)
 		goto cleanup;
 
