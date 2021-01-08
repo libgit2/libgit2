@@ -1727,6 +1727,17 @@ int git_odb__error_notfound(
 	return GIT_ENOTFOUND;
 }
 
+int git_odb__error_missing(
+	const char *message, const git_oid *oid, size_t oid_len)
+{
+	char oid_str[GIT_OID_HEXSZ + 1];
+	git_oid_tostr(oid_str, oid_len+1, oid);
+	git_error_set(GIT_ERROR_ODB, "object missing/promised - %s (%.*s)",
+		message, (int) oid_len, oid_str);
+
+	return GIT_EMISSING;
+}
+
 static int error_null_oid(int error, const char *message)
 {
 	git_error_set(GIT_ERROR_ODB, "odb: %s: null OID cannot exist", message);

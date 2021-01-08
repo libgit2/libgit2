@@ -115,6 +115,12 @@ int git_odb__error_notfound(
 	const char *message, const git_oid *oid, size_t oid_len);
 
 /*
+ * Generate a GIT_EMISSING error for the ODB.
+ */
+int git_odb__error_missing(
+	const char *message, const git_oid *oid, size_t oid_len);
+
+/*
  * Generate a GIT_EAMBIGUOUS error for the ODB.
  */
 int git_odb__error_ambiguous(const char *message);
