@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include <string.h>
+
 #include "pack.h"
 
 #include "delta.h"
@@ -1171,6 +1173,8 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	struct stat st;
 	struct git_pack_file *p;
 	size_t path_len = path ? strlen(path) : 0, alloc_len;
+	size_t root_len;
+	char promisor_path[GIT_PATH_MAX];
 
 	*pack_out = NULL;
 
@@ -1190,8 +1194,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	 * the index looks sane.
 	 */
 	if (git__suffixcmp(path, ".idx") == 0) {
-		size_t root_len = path_len - strlen(".idx");
-
+		root_len = path_len - strlen(".idx");
 		if (!git_disable_pack_keep_file_checks) {
 			memcpy(p->pack_name + root_len, ".keep", sizeof(".keep"));
 			if (git_path_exists(p->pack_name) == true)
@@ -1199,6 +1202,22 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 		}
 
 		memcpy(p->pack_name + root_len, ".pack", sizeof(".pack"));
+	} else {
+		root_len = path_len - strlen(".pack");
+	}
+
+	/*
+	 * Check for a .promisor file.
+	 */
+	memcpy(promisor_path, p->pack_name, root_len);
+	if (root_len + strlen(".promisor") > GIT_PATH_MAX) {
+		git_error_set(GIT_ERROR_OS, "failed to check packfile promisor");
+		git__free(p);
+		return -1;
+	}
+	memcpy(promisor_path + root_len, ".promisor", sizeof(".promisor"));
+	if (!p_stat(promisor_path, &st) && S_ISREG(st.st_mode)) {
+		p->pack_promisor = 1;
 	}
 
 	if (p_stat(p->pack_name, &st) < 0 || !S_ISREG(st.st_mode)) {
