@@ -33,6 +33,9 @@ if [ -f "/etc/debian_version" ]; then
 	(source /etc/lsb-release && echo "${DISTRIB_DESCRIPTION}") | indent
 fi
 
+CORES=$(getconf _NPROCESSORS_ONLN || true)
+echo "Number of cores: ${CORES:-(Unknown)}"
+
 echo "Kernel version:"
 uname -a 2>&1 | indent
 
@@ -64,4 +67,12 @@ echo "##########################################################################
 echo "## Building libgit2"
 echo "##############################################################################"
 
-env PATH="${BUILD_PATH}" "${CMAKE}" --build .
+# Determine parallelism; newer cmake supports `--build --parallel` but
+# we cannot yet rely on that.
+if [ "${CMAKE_GENERATOR}" = "Unix Makefiles" -a "${CORES}" != "" ]; then
+	BUILDER=(make -j ${CORES})
+else
+	BUILDER=("${CMAKE}" --build .)
+fi
+
+env PATH="${BUILD_PATH}" "${BUILDER[@]}"
