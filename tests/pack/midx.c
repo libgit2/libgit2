@@ -15,6 +15,7 @@ void test_pack_midx__parse(void)
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 	cl_git_pass(git_buf_joinpath(&midx_path, git_repository_path(repo), "objects/pack/multi-pack-index"));
 	cl_git_pass(git_midx_open(&idx, git_buf_cstr(&midx_path)));
+	cl_assert_equal_i(git_midx_needs_refresh(idx, git_buf_cstr(&midx_path)), 0);
 
 	cl_git_pass(git_oid_fromstr(&id, "5001298e0c09ad9c34e4249bc5801c75e9754fa5"));
 	cl_git_pass(git_midx_entry_find(&e, idx, &id, GIT_OID_HEXSZ));
