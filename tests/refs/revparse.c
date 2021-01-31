@@ -50,7 +50,7 @@ static void test_id_inrepo(
 	const char *spec,
 	const char *expected_left,
 	const char *expected_right,
-	git_revparse_mode_t expected_flags,
+	git_revspec_t expected_flags,
 	git_repository *repo)
 {
 	git_revspec revspec;
@@ -90,7 +90,7 @@ static void test_object_and_ref(const char *spec, const char *expected_oid, cons
 static void test_rangelike(const char *rangelike,
 						   const char *expected_left,
 						   const char *expected_right,
-						   git_revparse_mode_t expected_revparseflags)
+						   git_revspec_t expected_revparseflags)
 {
 	char objstr[64] = {0};
 	git_revspec revspec;
@@ -117,7 +117,7 @@ static void test_id(
 	const char *spec,
 	const char *expected_left,
 	const char *expected_right,
-	git_revparse_mode_t expected_flags)
+	git_revspec_t expected_flags)
 {
 	test_id_inrepo(spec, expected_left, expected_right, expected_flags, g_repo);
 }
@@ -735,53 +735,53 @@ void test_refs_revparse__range(void)
 	test_rangelike("be3563a^1..be3563a",
 	               "9fd738e8f7967c078dceed8190330fc8648ee56a",
 	               "be3563ae3f795b2b4353bcce3a527ad0a4f7f644",
-	               GIT_REVPARSE_RANGE);
+	               GIT_REVSPEC_RANGE);
 
 	test_rangelike("be3563a^1...be3563a",
 	               "9fd738e8f7967c078dceed8190330fc8648ee56a",
 	               "be3563ae3f795b2b4353bcce3a527ad0a4f7f644",
-	               GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
+	               GIT_REVSPEC_RANGE | GIT_REVSPEC_MERGE_BASE);
 
 	test_rangelike("be3563a^1.be3563a", NULL, NULL, 0);
 }
 
 void test_refs_revparse__parses_range_operator(void)
 {
-	test_id("HEAD", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL, GIT_REVPARSE_SINGLE);
+	test_id("HEAD", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL, GIT_REVSPEC_SINGLE);
 	test_id("HEAD~3..HEAD",
 		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
-		GIT_REVPARSE_RANGE);
+		GIT_REVSPEC_RANGE);
 
 	test_id("HEAD~3...HEAD",
 		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
-		GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
+		GIT_REVSPEC_RANGE | GIT_REVSPEC_MERGE_BASE);
 
 	test_id("HEAD~3..",
 		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
-		GIT_REVPARSE_RANGE);
+		GIT_REVSPEC_RANGE);
 
 	test_id("HEAD~3...",
 		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
-		GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
+		GIT_REVSPEC_RANGE | GIT_REVSPEC_MERGE_BASE);
 
 	test_id("..HEAD~3",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
-		GIT_REVPARSE_RANGE);
+		GIT_REVSPEC_RANGE);
 
 	test_id("...HEAD~3",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
-		GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
+		GIT_REVSPEC_RANGE | GIT_REVSPEC_MERGE_BASE);
 
 	test_id("...",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
-		GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
+		GIT_REVSPEC_RANGE | GIT_REVSPEC_MERGE_BASE);
 
 	test_invalid_revspec("..");
 }

@@ -29,6 +29,7 @@
 #include "trace.h"
 #include "repository.h"
 #include "revert.h"
+#include "revparse.h"
 #include "stash.h"
 #include "status.h"
 #include "submodule.h"
@@ -414,6 +415,25 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
 
 /**@}*/
 
+/** @name Deprecated Revspec Constants
+ *
+ * These enumeration values are retained for backward compatibility.
+ * The newer versions of these values should be preferred in all new
+ * code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+typedef git_revspec_t git_revparse_mode_t;
+
+#define GIT_REVPARSE_SINGLE GIT_REVSPEC_SINGLE
+#define GIT_REVPARSE_RANGE GIT_REVSPEC_RANGE
+#define GIT_REVPARSE_MERGE_BASE GIT_REVSPEC_MERGE_BASE
+
+/**@}*/
+
 /** @name Deprecated Credential Types
  *
  * These types are retained for backward compatibility.  The newer
@@ -422,6 +442,7 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
  * There is no plan to remove these backward compatibility values at
  * this time.
  */
+/**@{*/
 
 typedef git_credential git_cred;
 typedef git_credential_userpass_plaintext git_cred_userpass_plaintext;
