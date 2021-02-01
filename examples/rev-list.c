@@ -73,7 +73,7 @@ static int push_range(git_repository *repo, git_revwalk *walk, const char *range
 	if ((error = git_revparse(&revspec, repo, range)))
 		return error;
 
-	if (revspec.flags & GIT_REVPARSE_MERGE_BASE) {
+	if (revspec.flags & GIT_REVSPEC_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
 		return GIT_EINVALIDSPEC;
 	}

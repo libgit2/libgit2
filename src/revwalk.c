@@ -238,7 +238,7 @@ int git_revwalk_push_range(git_revwalk *walk, const char *range)
 		goto out;
 	}
 
-	if (revspec.flags & GIT_REVPARSE_MERGE_BASE) {
+	if (revspec.flags & GIT_REVSPEC_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
 		git_error_set(GIT_ERROR_INVALID, "symmetric differences not implemented in revwalk");
 		error = GIT_EINVALIDSPEC;

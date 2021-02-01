@@ -894,7 +894,7 @@ int git_revparse(
 	if ((dotdot = strstr(spec, "..")) != NULL) {
 		char *lstr;
 		const char *rstr;
-		revspec->flags = GIT_REVPARSE_RANGE;
+		revspec->flags = GIT_REVSPEC_RANGE;
 
 		/*
 		 * Following git.git, don't allow '..' because it makes command line
@@ -910,7 +910,7 @@ int git_revparse(
 		lstr = git__substrdup(spec, dotdot - spec);
 		rstr = dotdot + 2;
 		if (dotdot[2] == '.') {
-			revspec->flags |= GIT_REVPARSE_MERGE_BASE;
+			revspec->flags |= GIT_REVSPEC_MERGE_BASE;
 			rstr++;
 		}
 
@@ -928,7 +928,7 @@ int git_revparse(
 
 		git__free((void*)lstr);
 	} else {
-		revspec->flags = GIT_REVPARSE_SINGLE;
+		revspec->flags = GIT_REVSPEC_SINGLE;
 		error = git_revparse_single(&revspec->from, repo, spec);
 	}
 
