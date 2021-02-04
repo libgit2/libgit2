@@ -13,7 +13,8 @@
 #include "vector.h"
 #include "attr_file.h"
 
-#define GIT_IGNORE_FILE			".gitignore"
+//#define GIT_IGNORE_FILE			".gitignore"
+#define GIT_IGNORE_FILE			".nxxmignore"
 #define GIT_IGNORE_FILE_INREPO	"exclude"
 #define GIT_IGNORE_FILE_XDG		"ignore"
 
