@@ -259,30 +259,38 @@ cleanup:
 
 static int update_head_to_branch(
 		git_repository *repo,
-		const char *remote_name,
+		git_remote *remote,
 		const char *branch,
 		const char *reflog_message)
 {
 	int retcode;
 	git_buf remote_branch_name = GIT_BUF_INIT;
 	git_reference* remote_ref = NULL;
+	git_buf default_branch = GIT_BUF_INIT;
 
-	GIT_ASSERT_ARG(remote_name);
+	GIT_ASSERT_ARG(remote);
 	GIT_ASSERT_ARG(branch);
 
 	if ((retcode = git_buf_printf(&remote_branch_name, GIT_REFS_REMOTES_DIR "%s/%s",
-		remote_name, branch)) < 0 )
+		git_remote_name(remote), branch)) < 0 )
 		goto cleanup;
 
 	if ((retcode = git_reference_lookup(&remote_ref, repo, git_buf_cstr(&remote_branch_name))) < 0)
 		goto cleanup;
 
-	retcode = update_head_to_new_branch(repo, git_reference_target(remote_ref), branch,
-			reflog_message);
+	if ((retcode = update_head_to_new_branch(repo, git_reference_target(remote_ref), branch,
+			reflog_message)) < 0)
+		goto cleanup;
+
+	if ((retcode = git_remote_default_branch(&default_branch, remote)) < 0)
+		goto cleanup;
+
+	retcode = update_remote_head(repo, remote, &default_branch, reflog_message);
 
 cleanup:
 	git_reference_free(remote_ref);
 	git_buf_dispose(&remote_branch_name);
+	git_buf_dispose(&default_branch);
 	return retcode;
 }
 
@@ -367,8 +375,7 @@ static int checkout_branch(git_repository *repo, git_remote *remote, const git_c
 	int error;
 
 	if (branch)
-		error = update_head_to_branch(repo, git_remote_name(remote), branch,
-				reflog_message);
+		error = update_head_to_branch(repo, remote, branch, reflog_message);
 	/* Point HEAD to the same ref as the remote's head */
 	else
 		error = update_head_to_remote(repo, remote, reflog_message);
