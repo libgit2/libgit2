@@ -302,7 +302,7 @@ static int lookup_proxy(
 		remote = transport->owner->owner;
 		use_ssl = !strcmp(transport->server.url.scheme, "https");
 
-		error = git_remote__get_http_proxy(remote, use_ssl, &config);
+		error = git_remote__get_http_proxy(remote, use_ssl, &transport->server.url, &config);
 
 		if (error || !config)
 			goto done;
