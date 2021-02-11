@@ -36,6 +36,7 @@ static char *_remote_expectcontinue = NULL;
 static int _orig_proxies_need_reset = 0;
 static char *_orig_http_proxy = NULL;
 static char *_orig_https_proxy = NULL;
+static char *_orig_no_proxy = NULL;
 
 static int ssl_cert(git_cert *cert, int valid, const char *host, void *payload)
 {
@@ -110,9 +111,11 @@ void test_online_clone__cleanup(void)
 	if (_orig_proxies_need_reset) {
 		cl_setenv("HTTP_PROXY", _orig_http_proxy);
 		cl_setenv("HTTPS_PROXY", _orig_https_proxy);
+		cl_setenv("NO_PROXY", _orig_no_proxy);
 
 		git__free(_orig_http_proxy);
 		git__free(_orig_https_proxy);
+		git__free(_orig_no_proxy);
 	}
 
 	git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, NULL);
@@ -854,6 +857,7 @@ void test_online_clone__proxy_credentials_in_environment(void)
 
 	_orig_http_proxy = cl_getenv("HTTP_PROXY");
 	_orig_https_proxy = cl_getenv("HTTPS_PROXY");
+	_orig_no_proxy = cl_getenv("NO_PROXY");
 	_orig_proxies_need_reset = 1;
 
 	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_AUTO;
@@ -865,6 +869,7 @@ void test_online_clone__proxy_credentials_in_environment(void)
 
 	cl_setenv("HTTP_PROXY", url.ptr);
 	cl_setenv("HTTPS_PROXY", url.ptr);
+	cl_setenv("NO_PROXY", NULL);
 
 	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 
@@ -891,6 +896,67 @@ void test_online_clone__proxy_credentials_in_url_https(void)
 	cl_assert(called_proxy_creds == 0);
 
 	git_buf_dispose(&url);
+}
+
+struct no_proxy_test_entry {
+	char no_proxy[128];
+	bool bypass;
+};
+
+static struct no_proxy_test_entry no_proxy_test_entries[] = {
+	{"*", true},
+	{"github.com", true},
+	{"github.com:443", true},
+	{"github.com:80", false},
+	{".github.com", false},
+	{"*.github.com", false},
+	{".com", true},
+	{"*.com", true},
+	{".com:443", true},
+	{"*.com:443", true},
+	{".com:80", false},
+	{"*.com:80", false},
+	{"", false}
+};
+
+void test_online_clone__no_proxy_in_environment(void)
+{
+	int error = 0;
+	unsigned int i;
+	git_buf proxy_url = GIT_BUF_INIT;
+
+	_orig_http_proxy = cl_getenv("HTTP_PROXY");
+	_orig_https_proxy = cl_getenv("HTTPS_PROXY");
+	_orig_no_proxy = cl_getenv("NO_PROXY");
+	_orig_proxies_need_reset = 1;
+
+	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_AUTO;
+	g_options.fetch_opts.proxy_opts.certificate_check = proxy_cert_cb;
+
+	cl_git_pass(git_buf_printf(&proxy_url, "http://does-not-exists.example.org:1234/"));
+
+	cl_setenv("HTTP_PROXY", proxy_url.ptr);
+	cl_setenv("HTTPS_PROXY", proxy_url.ptr);
+
+
+	for (i = 0; i < ARRAY_SIZE(no_proxy_test_entries); ++i) {
+		cl_setenv("NO_PROXY", no_proxy_test_entries[i].no_proxy);
+		error = git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options);
+
+		if (no_proxy_test_entries[i].bypass) {
+			cl_assert_(error == 0, no_proxy_test_entries[i].no_proxy);
+		} else {
+			cl_assert_(error == -1, no_proxy_test_entries[i].no_proxy);
+		}
+
+		if (g_repo) {
+			git_repository_free(g_repo);
+			g_repo = NULL;
+		}
+		cl_fixture_cleanup("./foo");
+	}
+
+	git_buf_dispose(&proxy_url);
 }
 
 void test_online_clone__proxy_auto_not_detected(void)
