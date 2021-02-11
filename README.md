@@ -392,6 +392,7 @@ Here are the bindings to libgit2 that are currently available:
 * Python
     * pygit2 <https://github.com/libgit2/pygit2>
 * R
+    * gert <https://docs.ropensci.org/gert>
     * git2r <https://github.com/ropensci/git2r>
 * Ruby
     * Rugged <https://github.com/libgit2/rugged>
