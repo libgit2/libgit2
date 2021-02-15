@@ -121,7 +121,7 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 		return error;
 
 	/*
-	 * "$^" is a unmatcheable regexp: it will not match anything at all, so
+	 * "$^" is an unmatchable regexp: it will not match anything at all, so
 	 * all values will be considered new and we will not replace any
 	 * present value.
 	 */
@@ -1317,7 +1317,7 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 			if (error == GIT_ENOTFOUND)
 				continue;
 
-			/* if we did find a source, remove it from the candiates */
+			/* If we did find a source, remove it from the candidates. */
 			if ((error = git_vector_set((void **) &src_name, &candidates, i, NULL)) < 0)
 				goto cleanup;
 
@@ -1682,7 +1682,7 @@ int git_remote_update_tips(
 			goto out;
 	}
 
-	/* only try to do opportunisitic updates if the refpec lists differ */
+	/* Only try to do opportunistic updates if the refpec lists differ. */
 	if (remote->passed_refspecs)
 		error = opportunistic_updates(remote, callbacks, &refs, reflog_message);
 

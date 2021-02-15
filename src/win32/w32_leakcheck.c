@@ -513,7 +513,7 @@ int git_win32_leakcheck_stacktrace_dump(
  */
 void git_win32_leakcheck_stacktrace_cleanup(void)
 {
-	/* At shutdown/cleanup, dump cummulative leak info
+	/* At shutdown/cleanup, dump cumulative leak info
 	 * with everything since startup.  This might generate
 	 * extra noise if the caller has been doing checkpoint
 	 * dumps, but it might also eliminate some false
