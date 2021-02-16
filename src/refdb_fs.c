@@ -254,7 +254,8 @@ static int loose_lookup_to_packfile(refdb_fs_backend *backend, const char *name)
 	if ((error = loose_parse_oid(&oid, name, &ref_file)) < 0)
 		goto done;
 
-	git_sortedcache_wlock(backend->refcache);
+	if ((error = git_sortedcache_wlock(backend->refcache)) < 0)
+		goto done;
 
 	if (!(error = git_sortedcache_upsert(
 			(void **)&ref, backend->refcache, name))) {
@@ -760,7 +761,8 @@ static int reference_path_available(
 		}
 	}
 
-	git_sortedcache_rlock(backend->refcache);
+	if ((error = git_sortedcache_rlock(backend->refcache)) < 0)
+		return error;
 
 	for (i = 0; i < git_sortedcache_entrycount(backend->refcache); ++i) {
 		struct packref *ref = git_sortedcache_entry(backend->refcache, i);
