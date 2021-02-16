@@ -2868,7 +2868,9 @@ static int write_entries(git_index *index, git_filebuf *file)
 	/* If index->entries is sorted case-insensitively, then we need
 	 * to re-sort it case-sensitively before writing */
 	if (index->ignore_case) {
-		git_vector_dup(&case_sorted, &index->entries, git_index_entry_cmp);
+		if ((error = git_vector_dup(&case_sorted, &index->entries, git_index_entry_cmp)) < 0)
+			return error;
+
 		git_vector_sort(&case_sorted);
 		entries = &case_sorted;
 	} else {
