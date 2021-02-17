@@ -71,6 +71,13 @@ typedef size_t size_t;
 # define GIT_FORMAT_PRINTF(a,b) /* empty */
 #endif
 
+/** Declare that a function's return value must be used. */
+#if defined(__GNUC__)
+# define GIT_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#else
+# define GIT_WARN_UNUSED_RESULT
+#endif
+
 #if (defined(_WIN32)) && !defined(__CYGWIN__)
 #define GIT_WIN32 1
 #endif
