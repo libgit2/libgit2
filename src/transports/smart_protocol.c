@@ -389,9 +389,6 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			git_pkt_ack *pkt;
 			unsigned int j;
 
-			if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
-				goto on_error;
-
 			git_vector_foreach(&t->common, j, pkt) {
 				if ((error = git_pkt_buffer_have(&pkt->oid, &data)) < 0)
 					goto on_error;
@@ -408,9 +405,6 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	if (t->rpc && t->common.length > 0) {
 		git_pkt_ack *pkt;
 		unsigned int j;
-
-		if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
-			goto on_error;
 
 		git_vector_foreach(&t->common, j, pkt) {
 			if ((error = git_pkt_buffer_have(&pkt->oid, &data)) < 0)
