@@ -2861,14 +2861,16 @@ static int write_entries(git_index *index, git_filebuf *file)
 {
 	int error = 0;
 	size_t i;
-	git_vector case_sorted, *entries;
+	git_vector case_sorted = GIT_VECTOR_INIT, *entries = NULL;
 	git_index_entry *entry;
 	const char *last = NULL;
 
 	/* If index->entries is sorted case-insensitively, then we need
 	 * to re-sort it case-sensitively before writing */
 	if (index->ignore_case) {
-		git_vector_dup(&case_sorted, &index->entries, git_index_entry_cmp);
+		if ((error = git_vector_dup(&case_sorted, &index->entries, git_index_entry_cmp)) < 0)
+			goto done;
+
 		git_vector_sort(&case_sorted);
 		entries = &case_sorted;
 	} else {
@@ -2885,9 +2887,8 @@ static int write_entries(git_index *index, git_filebuf *file)
 			last = entry->path;
 	}
 
-	if (index->ignore_case)
-		git_vector_free(&case_sorted);
-
+done:
+	git_vector_free(&case_sorted);
 	return error;
 }
 
