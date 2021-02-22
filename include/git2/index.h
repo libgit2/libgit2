@@ -349,7 +349,7 @@ GIT_EXTERN(int) git_index_write_tree(git_oid *out, git_index *index);
  *
  * The index must not contain any file in conflict.
  *
- * @param out Pointer where to store OID of the the written tree
+ * @param out Pointer where to store OID of the written tree
  * @param index Index to write
  * @param repo Repository where to write the tree
  * @return 0 on success, GIT_EUNMERGED when the index is not clean
