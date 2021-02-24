@@ -54,7 +54,7 @@ void test_core_sortedcache__name_only(void)
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_sortedcache_lookup_index(&pos, sc, "abc"));
 
-	git_sortedcache_clear(sc, true);
+	cl_git_pass(git_sortedcache_clear(sc, true));
 
 	cl_assert_equal_sz(0, git_sortedcache_entrycount(sc));
 	cl_assert(git_sortedcache_entry(sc, 0) == NULL);
@@ -154,7 +154,7 @@ void test_core_sortedcache__in_memory(void)
 
 	cl_assert_equal_i(0, free_count);
 
-	git_sortedcache_clear(sc, true);
+	cl_git_pass(git_sortedcache_clear(sc, true));
 
 	cl_assert_equal_i(5, free_count);
 
@@ -247,7 +247,7 @@ static void sortedcache_test_reload(git_sortedcache *sc)
 
 	cl_assert(git_sortedcache_lockandload(sc, &buf) > 0);
 
-	git_sortedcache_clear(sc, false); /* clear once we already have lock */
+	cl_git_pass(git_sortedcache_clear(sc, false)); /* clear once we already have lock */
 
 	for (scan = buf.ptr; *scan; scan = after + 1) {
 		int val = strtol(scan, &after, 0);

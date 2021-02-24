@@ -133,7 +133,8 @@ void git_sortedcache_updated(git_sortedcache *sc);
  * If `wlock` is true, grabs write lock and releases when done, otherwise
  * you should already be holding a write lock when you call this.
  */
-int git_sortedcache_clear(git_sortedcache *sc, bool wlock);
+GIT_WARN_UNUSED_RESULT int git_sortedcache_clear(
+	git_sortedcache *sc, bool wlock);
 
 /* Find and/or insert item, returning pointer to item data.
  * You should already be holding the write lock when you call this.
