@@ -764,6 +764,24 @@ int git_filter_list_apply_to_file(
 	return error;
 }
 
+int git_filter_list_apply_to_git_file(
+	git_buf *out,
+	git_filter_list *filters,
+	git_file fd)
+{
+	struct buf_stream writer;
+	int error;
+	
+	buf_stream_init(&writer, out);
+	
+	if ((error = git_filter_list_stream_git_file(
+			 filters, fd, &writer.parent)) < 0)
+		return error;
+	
+	GIT_ASSERT(writer.complete);
+	return error;
+}
+
 static int buf_from_blob(git_buf *out, git_blob *blob)
 {
 	git_object_size_t rawsize = git_blob_rawsize(blob);
@@ -997,6 +1015,38 @@ done:
 		p_close(fd);
 	filter_streams_free(&filter_streams);
 	git_buf_dispose(&abspath);
+	return error;
+}
+
+int git_filter_list_stream_git_file(
+	git_filter_list *filters,
+	git_file fd,
+	git_writestream *target)
+{
+	char buf[FILTERIO_BUFSIZE];
+	git_vector filter_streams = GIT_VECTOR_INIT;
+	git_writestream *stream_start;
+	ssize_t readlen;
+	int error, initialized = 0;
+	
+	if ((error = stream_list_init(
+			&stream_start, &filter_streams, filters, target)))
+		goto done;
+	initialized = 1;
+
+	while ((readlen = p_read(fd, buf, sizeof(buf))) > 0) {
+		if ((error = stream_start->write(stream_start, buf, readlen)) < 0)
+			goto done;
+	}
+	
+	if (readlen < 0)
+		error = -1;
+	
+done:
+	if (initialized)
+		error |= stream_start->close(stream_start);
+
+	filter_streams_free(&filter_streams);
 	return error;
 }
 
