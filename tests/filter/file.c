@@ -2,6 +2,8 @@
 #include "git2/sys/filter.h"
 #include "crlf.h"
 #include "buffer.h"
+#include "path.h"
+#include "futils.h"
 
 static git_repository *g_repo = NULL;
 
@@ -94,6 +96,66 @@ void test_filter_file__apply_stream(void)
 	cl_git_pass(git_filter_list_stream_file(fl, g_repo, "all-crlf", &write_target.base));
 	cl_assert_equal_s("crlf\ncrlf\ncrlf\ncrlf\n", write_target.buf.ptr);
 
+	git_filter_list_free(fl);
+	write_target.base.free(&write_target.base);
+}
+
+void test_filter_file__apply_git_file(void)
+{
+	git_filter_list *fl;
+	git_filter *crlf;
+	git_buf buf = GIT_BUF_INIT;
+	git_file fd;
+	git_buf abspath = GIT_BUF_INIT;
+	const char *base = git_repository_workdir(g_repo);
+	
+	cl_git_pass(git_filter_list_new(
+																	&fl, g_repo, GIT_FILTER_TO_ODB, 0));
+	
+	crlf = git_filter_lookup(GIT_FILTER_CRLF);
+	cl_assert(crlf != NULL);
+	
+	cl_git_pass(git_filter_list_push(fl, crlf, NULL));
+	
+	cl_git_pass(git_path_join_unrooted(&abspath, "all-crlf", base, NULL));
+	fd = git_futils_open_ro(abspath.ptr);
+	cl_assert(fd >= 0);
+	
+	cl_git_pass(git_filter_list_apply_to_git_file(&buf, fl, fd));
+	cl_assert_equal_s("crlf\ncrlf\ncrlf\ncrlf\n", buf.ptr);
+	
+	git_buf_dispose(&buf);
+	git_filter_list_free(fl);
+}
+
+void test_filter_file__apply_git_file_stream(void)
+{
+	git_filter_list *fl;
+	git_filter *crlf;
+	git_file fd;
+	git_buf abspath = GIT_BUF_INIT;
+	const char *base = git_repository_workdir(g_repo);
+	
+	struct buf_writestream write_target = { {
+		buf_writestream_write,
+		buf_writestream_close,
+		buf_writestream_free } };
+	
+	cl_git_pass(git_filter_list_new(
+		&fl, g_repo, GIT_FILTER_TO_ODB, 0));
+	
+	crlf = git_filter_lookup(GIT_FILTER_CRLF);
+	cl_assert(crlf != NULL);
+	
+	cl_git_pass(git_filter_list_push(fl, crlf, NULL));
+	
+	cl_git_pass(git_path_join_unrooted(&abspath, "all-crlf", base, NULL));
+	fd = git_futils_open_ro(abspath.ptr);
+	cl_assert(fd >= 0);
+	
+	cl_git_pass(git_filter_list_stream_git_file(fl, fd, &write_target.base));
+	cl_assert_equal_s("crlf\ncrlf\ncrlf\ncrlf\n", write_target.buf.ptr);
+	
 	git_filter_list_free(fl);
 	write_target.base.free(&write_target.base);
 }
