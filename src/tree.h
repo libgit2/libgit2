@@ -32,6 +32,7 @@ struct git_tree {
 struct git_treebuilder {
 	git_repository *repo;
 	git_strmap *map;
+	git_buf write_cache;
 };
 
 GIT_INLINE(bool) git_tree_entry__is_tree(const struct git_tree_entry *e)
