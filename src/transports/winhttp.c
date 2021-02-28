@@ -268,7 +268,7 @@ static int acquire_fallback_cred(
 				pISM->lpVtbl->Release(pISM);
 			}
 
-			/* Only unitialize if the call to CoInitializeEx was successful. */
+			/* Only uninitialize if the call to CoInitializeEx was successful. */
 			if (SUCCEEDED(hCoInitResult))
 				CoUninitialize();
 		}

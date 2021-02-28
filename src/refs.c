@@ -1343,7 +1343,7 @@ const char *git_reference__shorthand(const char *name)
 	else if (!git__prefixcmp(name, GIT_REFS_DIR))
 		return name + strlen(GIT_REFS_DIR);
 
-	/* No shorthands are avaiable, so just return the name */
+	/* No shorthands are available, so just return the name. */
 	return name;
 }
 
