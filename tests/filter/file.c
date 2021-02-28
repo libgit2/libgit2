@@ -126,6 +126,7 @@ void test_filter_file__apply_git_file(void)
 	cl_assert_equal_s("crlf\ncrlf\ncrlf\ncrlf\n", buf.ptr);
 	
 	git_buf_dispose(&buf);
+	git_buf_dispose(&abspath);
 	git_filter_list_free(fl);
 }
 
@@ -159,4 +160,6 @@ void test_filter_file__apply_git_file_stream(void)
 	
 	git_filter_list_free(fl);
 	write_target.base.free(&write_target.base);
+	
+	git_buf_dispose(&abspath);
 }
