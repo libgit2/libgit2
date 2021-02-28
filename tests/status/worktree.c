@@ -1006,7 +1006,7 @@ void test_status_worktree__update_stat_cache_0(void)
 	cl_git_pass(git_status_list_new(&status, repo, &opts));
 	check_status0(status);
 	cl_git_pass(git_status_list_get_perfdata(&perf, status));
-	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(13 + 3 + 5, perf.stat_calls);
 	cl_assert_equal_sz(5, perf.oid_calculations);
 
 	git_status_list_free(status);
@@ -1020,7 +1020,7 @@ void test_status_worktree__update_stat_cache_0(void)
 	cl_git_pass(git_status_list_new(&status, repo, &opts));
 	check_status0(status);
 	cl_git_pass(git_status_list_get_perfdata(&perf, status));
-	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(13 + 3 + 5, perf.stat_calls);
 	cl_assert_equal_sz(5, perf.oid_calculations);
 
 	git_status_list_free(status);
