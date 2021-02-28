@@ -11,7 +11,6 @@
 #include "types.h"
 #include "oid.h"
 #include "buffer.h"
-#include "posix.h"
 
 /**
  * @file git2/filter.h
@@ -161,18 +160,6 @@ GIT_EXTERN(int) git_filter_list_apply_to_file(
 	const char *path);
 
 /**
- * Apply a filter list to the contents of a git_file on disk
- *
- * @param out buffer into which to store the filtered file
- * @param filters the list of filters to apply
- * @param fd the file to filter
- */
-GIT_EXTERN(int) git_filter_list_apply_to_git_file(
-	git_buf *out,
-	git_filter_list *filters,
-	git_file fd);
-
-/**
  * Apply a filter list to the contents of a blob
  *
  * @param out buffer into which to store the filtered file
@@ -209,18 +196,6 @@ GIT_EXTERN(int) git_filter_list_stream_file(
 	git_filter_list *filters,
 	git_repository *repo,
 	const char *path,
-	git_writestream *target);
-
-/**
- * Apply a filter list to a git_file as a stream
- *
- * @param filters the list of filters to apply
- * @param fd the file to filter
- * @param target the stream into which the data will be written
- */
-GIT_EXTERN(int) git_filter_list_stream_git_file(
-	git_filter_list *filters,
-	git_file fd,
 	git_writestream *target);
 
 /**

@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/sys/filter.h"
+#include "filter.h"
 #include "crlf.h"
 #include "buffer.h"
 #include "path.h"
@@ -121,7 +122,7 @@ void test_filter_file__apply_git_file(void)
 	fd = git_futils_open_ro(abspath.ptr);
 	cl_assert(fd >= 0);
 	
-	cl_git_pass(git_filter_list_apply_to_git_file(&buf, fl, fd));
+	cl_git_pass(git_filter_list__apply_to_git_file(&buf, fl, fd));
 	cl_assert_equal_s("crlf\ncrlf\ncrlf\ncrlf\n", buf.ptr);
 	
 	git_buf_dispose(&buf);
@@ -153,7 +154,7 @@ void test_filter_file__apply_git_file_stream(void)
 	fd = git_futils_open_ro(abspath.ptr);
 	cl_assert(fd >= 0);
 	
-	cl_git_pass(git_filter_list_stream_git_file(fl, fd, &write_target.base));
+	cl_git_pass(git_filter_list__stream_git_file(fl, fd, &write_target.base));
 	cl_assert_equal_s("crlf\ncrlf\ncrlf\ncrlf\n", write_target.buf.ptr);
 	
 	git_filter_list_free(fl);

@@ -252,7 +252,7 @@ int git_odb__hashfd_filtered(
 	if (!fl)
 		return git_odb__hashfd(out, fd, size, type);
 	
-	error = git_filter_list_apply_to_git_file(&post, fl, fd);
+	error = git_filter_list__apply_to_git_file(&post, fl, fd);
 	
 	if (!error)
 		error = git_odb_hash(out, post.ptr, post.size, type);

@@ -764,7 +764,7 @@ int git_filter_list_apply_to_file(
 	return error;
 }
 
-int git_filter_list_apply_to_git_file(
+int git_filter_list__apply_to_git_file(
 	git_buf *out,
 	git_filter_list *filters,
 	git_file fd)
@@ -774,7 +774,7 @@ int git_filter_list_apply_to_git_file(
 	
 	buf_stream_init(&writer, out);
 	
-	if ((error = git_filter_list_stream_git_file(
+	if ((error = git_filter_list__stream_git_file(
 			 filters, fd, &writer.parent)) < 0)
 		return error;
 	
@@ -1018,7 +1018,7 @@ done:
 	return error;
 }
 
-int git_filter_list_stream_git_file(
+int git_filter_list__stream_git_file(
 	git_filter_list *filters,
 	git_file fd,
 	git_writestream *target)
