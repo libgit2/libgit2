@@ -1160,7 +1160,10 @@ static int handle_unmatched_old_item(
 	if (git_index_entry_is_conflict(info->oitem))
 		delta_type = GIT_DELTA_CONFLICTED;
 
-	if ((error = diff_delta__from_one(diff, delta_type, info->oitem, NULL)) < 0)
+	if ((info->oitem->flags_extended & GIT_INDEX_ENTRY_SKIP_WORKTREE) != 0)
+		delta_type = GIT_DELTA_UNMODIFIED;
+	
+	else if ((error = diff_delta__from_one(diff, delta_type, info->oitem, NULL)) < 0)
 		return error;
 
 	/* if we are generating TYPECHANGE records then check for that
