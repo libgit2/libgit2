@@ -112,7 +112,8 @@ typedef struct {
 	DWORD post_body_len;
 	unsigned sent_request : 1,
 		received_response : 1,
-		chunked : 1;
+		chunked : 1,
+		status_sending_request_reached: 1;
 } winhttp_stream;
 
 typedef struct {
@@ -708,30 +709,36 @@ static void CALLBACK winhttp_status(
 	DWORD status;
 
 	GIT_UNUSED(connection);
-	GIT_UNUSED(ctx);
 	GIT_UNUSED(info_len);
 
-	if (code != WINHTTP_CALLBACK_STATUS_SECURE_FAILURE)
-		return;
+	switch (code) {
+		case WINHTTP_CALLBACK_STATUS_SECURE_FAILURE:
+			status = *((DWORD *)info);
 
-	status = *((DWORD *)info);
+			if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_CN_INVALID))
+				git_error_set(GIT_ERROR_HTTP, "SSL certificate issued for different common name");
+			else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_DATE_INVALID))
+				git_error_set(GIT_ERROR_HTTP, "SSL certificate has expired");
+			else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_INVALID_CA))
+				git_error_set(GIT_ERROR_HTTP, "SSL certificate signed by unknown CA");
+			else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_INVALID_CERT))
+				git_error_set(GIT_ERROR_HTTP, "SSL certificate is invalid");
+			else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_REV_FAILED))
+				git_error_set(GIT_ERROR_HTTP, "certificate revocation check failed");
+			else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_REVOKED))
+				git_error_set(GIT_ERROR_HTTP, "SSL certificate was revoked");
+			else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_SECURITY_CHANNEL_ERROR))
+				git_error_set(GIT_ERROR_HTTP, "security libraries could not be loaded");
+			else
+				git_error_set(GIT_ERROR_HTTP, "unknown security error %lu", status);
 
-	if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_CN_INVALID))
-		git_error_set(GIT_ERROR_HTTP, "SSL certificate issued for different common name");
-	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_DATE_INVALID))
-		git_error_set(GIT_ERROR_HTTP, "SSL certificate has expired");
-	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_INVALID_CA))
-		git_error_set(GIT_ERROR_HTTP, "SSL certificate signed by unknown CA");
-	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_INVALID_CERT))
-		git_error_set(GIT_ERROR_HTTP, "SSL certificate is invalid");
-	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_REV_FAILED))
-		git_error_set(GIT_ERROR_HTTP, "certificate revocation check failed");
-	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_REVOKED))
-		git_error_set(GIT_ERROR_HTTP, "SSL certificate was revoked");
-	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_SECURITY_CHANNEL_ERROR))
-		git_error_set(GIT_ERROR_HTTP, "security libraries could not be loaded");
-	else
-		git_error_set(GIT_ERROR_HTTP, "unknown security error %lu", status);
+			break;
+
+		case WINHTTP_CALLBACK_STATUS_SENDING_REQUEST:
+			((winhttp_stream *) ctx)->status_sending_request_reached = 1;
+
+			break;
+	}
 }
 
 static int winhttp_connect(
@@ -826,7 +833,12 @@ static int winhttp_connect(
 		goto on_error;
 	}
 
-	if (WinHttpSetStatusCallback(t->connection, winhttp_status, WINHTTP_CALLBACK_FLAG_SECURE_FAILURE, 0) == WINHTTP_INVALID_STATUS_CALLBACK) {
+	if (WinHttpSetStatusCallback(
+			t->connection,
+			winhttp_status,
+			WINHTTP_CALLBACK_FLAG_SECURE_FAILURE | WINHTTP_CALLBACK_FLAG_SEND_REQUEST,
+			0
+		) == WINHTTP_INVALID_STATUS_CALLBACK) {
 		git_error_set(GIT_ERROR_OS, "failed to set status callback");
 		goto on_error;
 	}
@@ -858,12 +870,12 @@ static int do_send_request(winhttp_stream *s, size_t len, bool chunked)
 			success = WinHttpSendRequest(s->request,
 				WINHTTP_NO_ADDITIONAL_HEADERS, 0,
 				WINHTTP_NO_REQUEST_DATA, 0,
-				WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH, 0);
+				WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH, (DWORD_PTR)s);
 		} else {
 			success = WinHttpSendRequest(s->request,
 				WINHTTP_NO_ADDITIONAL_HEADERS, 0,
 				WINHTTP_NO_REQUEST_DATA, 0,
-				(DWORD)len, 0);
+				(DWORD)len, (DWORD_PTR)s);
 		}
 
 		if (success || GetLastError() != (DWORD)SEC_E_BUFFER_TOO_SMALL)
@@ -875,41 +887,72 @@ static int do_send_request(winhttp_stream *s, size_t len, bool chunked)
 
 static int send_request(winhttp_stream *s, size_t len, bool chunked)
 {
-	int request_failed = 0, cert_valid = 1, error = 0;
-	DWORD ignore_flags;
+	int request_failed = 1, error, attempts = 0;
+	DWORD ignore_flags, send_request_error;
 
 	git_error_clear();
-	if ((error = do_send_request(s, len, chunked)) < 0) {
-		if (GetLastError() != ERROR_WINHTTP_SECURE_FAILURE) {
-			git_error_set(GIT_ERROR_OS, "failed to send request");
-			return -1;
+
+	while (request_failed && attempts++ < 3) {
+		int cert_valid = 1;
+		int client_cert_requested = 0;
+		request_failed = 0;
+
+		if ((error = do_send_request(s, len, chunked)) < 0) {
+			send_request_error = GetLastError();
+			request_failed = 1;
+
+			switch (send_request_error) {
+				case ERROR_WINHTTP_SECURE_FAILURE:
+					cert_valid = 0;
+					break;
+				case ERROR_WINHTTP_CLIENT_AUTH_CERT_NEEDED:
+					client_cert_requested = 1;
+					break;
+				default:
+					git_error_set(GIT_ERROR_OS, "failed to send request");
+					return -1;
+			}
 		}
 
-		request_failed = 1;
-		cert_valid = 0;
+		/*
+		 * Only check the certificate if we were able to reach the sending request phase, or
+		 * received a secure failure error. Otherwise, the server certificate won't be available
+		 * since the request wasn't able to complete (e.g. proxy auth required)
+		 */
+		if (!cert_valid ||
+			(!request_failed && s->status_sending_request_reached)) {
+			git_error_clear();
+			if ((error = certificate_check(s, cert_valid)) < 0) {
+				if (!git_error_last())
+					git_error_set(GIT_ERROR_OS, "user cancelled certificate check");
+
+				return error;
+			}
+		}
+
+		/* if neither the request nor the certificate check returned errors, we're done */
+		if (!request_failed)
+			return 0;
+
+		if (!cert_valid) {
+			ignore_flags = no_check_cert_flags;
+			if (!WinHttpSetOption(s->request, WINHTTP_OPTION_SECURITY_FLAGS, &ignore_flags, sizeof(ignore_flags))) {
+				git_error_set(GIT_ERROR_OS, "failed to set security options");
+				return -1;
+			}
+		}
+
+		if (client_cert_requested) {
+			/*
+			 * Client certificates are not supported, explicitly tell the server that
+			 * (it's possible a client certificate was requested but is not required)
+			 */
+			if (!WinHttpSetOption(s->request, WINHTTP_OPTION_CLIENT_CERT_CONTEXT, WINHTTP_NO_CLIENT_CERT_CONTEXT, 0)) {
+				git_error_set(GIT_ERROR_OS, "failed to set client cert context");
+				return -1;
+			}
+		}
 	}
-
-	git_error_clear();
-	if ((error = certificate_check(s, cert_valid)) < 0) {
-		if (!git_error_last())
-			git_error_set(GIT_ERROR_OS, "user cancelled certificate check");
-
-		return error;
-	}
-
-	/* if neither the request nor the certificate check returned errors, we're done */
-	if (!request_failed)
-		return 0;
-
-	ignore_flags = no_check_cert_flags;
-
-	if (!WinHttpSetOption(s->request, WINHTTP_OPTION_SECURITY_FLAGS, &ignore_flags, sizeof(ignore_flags))) {
-		git_error_set(GIT_ERROR_OS, "failed to set security options");
-		return -1;
-	}
-
-	if ((error = do_send_request(s, len, chunked)) < 0)
-		git_error_set(GIT_ERROR_OS, "failed to send request with unchecked certificate");
 
 	return error;
 }
