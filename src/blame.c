@@ -76,6 +76,14 @@ static git_blame_hunk* new_hunk(
 	return hunk;
 }
 
+static void free_hunk(git_blame_hunk *hunk)
+{
+	git__free((void*)hunk->orig_path);
+	git_signature_free(hunk->final_signature);
+	git_signature_free(hunk->orig_signature);
+	git__free(hunk);
+}
+
 static git_blame_hunk* dup_hunk(git_blame_hunk *hunk)
 {
 	git_blame_hunk *newhunk = new_hunk(
@@ -90,17 +98,14 @@ static git_blame_hunk* dup_hunk(git_blame_hunk *hunk)
 	git_oid_cpy(&newhunk->orig_commit_id, &hunk->orig_commit_id);
 	git_oid_cpy(&newhunk->final_commit_id, &hunk->final_commit_id);
 	newhunk->boundary = hunk->boundary;
-	git_signature_dup(&newhunk->final_signature, hunk->final_signature);
-	git_signature_dup(&newhunk->orig_signature, hunk->orig_signature);
-	return newhunk;
-}
 
-static void free_hunk(git_blame_hunk *hunk)
-{
-	git__free((void*)hunk->orig_path);
-	git_signature_free(hunk->final_signature);
-	git_signature_free(hunk->orig_signature);
-	git__free(hunk);
+	if (git_signature_dup(&newhunk->final_signature, hunk->final_signature) < 0 ||
+		git_signature_dup(&newhunk->orig_signature, hunk->orig_signature) < 0) {
+		free_hunk(newhunk);
+		return NULL;
+	}
+
+	return newhunk;
 }
 
 /* Starting with the hunk that includes start_line, shift all following hunks'
