@@ -238,4 +238,6 @@ extern int git_attr_assignment__parse(
 	git_vector *assigns,
 	const char **scan);
 
+extern int git_attr__does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match);
+
 #endif
