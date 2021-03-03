@@ -60,6 +60,7 @@
 #include "git2/revparse.h"
 #include "git2/revwalk.h"
 #include "git2/signature.h"
+#include "git2/sparse.h"
 #include "git2/stash.h"
 #include "git2/status.h"
 #include "git2/submodule.h"
