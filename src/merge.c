@@ -2277,8 +2277,11 @@ static int create_virtual_base(
 	result->type = GIT_ANNOTATED_COMMIT_VIRTUAL;
 	result->index = index;
 
-	insert_head_ids(&result->parents, one);
-	insert_head_ids(&result->parents, two);
+	if (insert_head_ids(&result->parents, one) < 0 ||
+		insert_head_ids(&result->parents, two) < 0) {
+		git_annotated_commit_free(result);
+		return -1;
+	}
 
 	*out = result;
 	return 0;
