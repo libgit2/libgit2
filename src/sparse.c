@@ -131,7 +131,7 @@ int git_sparse__init(
 		error = 0;
 	}
 	
-	if ((error = git_attr_cache__get(&sparse->sparse, sparse->repo, NULL, GIT_ATTR_FILE__FROM_FILE,
+	if ((error = git_attr_cache__get(&sparse->sparse, repo, NULL, GIT_ATTR_FILE__FROM_FILE,
 		 infopath.ptr, GIT_SPARSE_CHECKOUT_FILE, parse_sparse_file, false)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto cleanup;
@@ -146,47 +146,22 @@ cleanup:
 	return error;
 }
 
-void git_sparse__free(git_sparse *sparse)
+int git_sparse__lookup(int* checkout, git_sparse* sparse, const char* pathname, git_dir_flag dir_flag)
 {
-	git_attr_file__free(sparse->sparse);
-}
-
-int git_sparse_check_path(
-	int *checkout,
-	git_repository *repo,
-	const char *pathname)
-{
-	int error;
-	int sparse_checkout_enabled = false;
-	const char *workdir;
 	git_attr_path path;
-	git_sparse sparse;
-	git_dir_flag dir_flag = GIT_DIR_FLAG_FALSE;
+	const char *workdir;
+	int error;
 	
-	assert(repo && checkout && pathname);
+	assert(checkout && pathname && sparse);
 	
 	*checkout = GIT_SPARSE_CHECKOUT;
 	
-	if ((error = git_repository__configmap_lookup(&sparse_checkout_enabled, repo, GIT_CONFIGMAP_SPARSECHECKOUT)) < 0 ||
-			sparse_checkout_enabled == false)
-		goto cleanup;
-	
-	workdir = git_repository_workdir(repo);
-	
-	memset(&path, 0, sizeof(path));
-	memset(&sparse, 0, sizeof(sparse));
-	
-	if (!git__suffixcmp(pathname, "/"))
-		dir_flag = GIT_DIR_FLAG_TRUE;
-	else if (git_repository_is_bare(repo))
-		dir_flag = GIT_DIR_FLAG_FALSE;
-	
-	if ((error = git_attr_path__init(&path, pathname, workdir, dir_flag)) < 0 ||
-			(error = git_sparse__init(repo, &sparse)) < 0)
-		goto cleanup;
+	workdir = git_repository_workdir(sparse->repo);
+	if ((error = git_attr_path__init(&path, pathname, workdir, dir_flag)))
+		return -1;
 	
 	while (1) {
-		if (sparse_lookup_in_rules(checkout, sparse.sparse, &path))
+		if (sparse_lookup_in_rules(checkout, sparse->sparse, &path))
 			goto cleanup;
 		
 		/* move up one directory */
@@ -199,9 +174,46 @@ int git_sparse_check_path(
 			path.basename++;
 		path.is_dir = 1;
 	}
-	
+
 cleanup:
 	git_attr_path__free(&path);
+	return 0;
+}
+
+void git_sparse__free(git_sparse *sparse)
+{
+	git_attr_file__free(sparse->sparse);
+}
+
+int git_sparse_check_path(
+	int *checkout,
+	git_repository *repo,
+	const char *pathname)
+{
+	int error;
+	int sparse_checkout_enabled = false;
+	git_sparse sparse;
+	git_dir_flag dir_flag = GIT_DIR_FLAG_FALSE;
+	
+	assert(repo && checkout && pathname);
+	
+	*checkout = GIT_SPARSE_CHECKOUT;
+	
+	if ((error = git_repository__configmap_lookup(&sparse_checkout_enabled, repo, GIT_CONFIGMAP_SPARSECHECKOUT)) < 0 ||
+			sparse_checkout_enabled == false)
+		goto cleanup;
+
+	if ((error = git_sparse__init(repo, &sparse)) < 0)
+		goto cleanup;
+	
+	if (!git__suffixcmp(pathname, "/"))
+		dir_flag = GIT_DIR_FLAG_TRUE;
+	else if (git_repository_is_bare(repo))
+		dir_flag = GIT_DIR_FLAG_FALSE;
+	
+	error = git_sparse__lookup(checkout, &sparse, pathname, dir_flag);
+	
+cleanup:
 	git_sparse__free(&sparse);
 	return error;
 }
