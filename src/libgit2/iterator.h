@@ -276,6 +276,8 @@ extern bool git_iterator_current_is_ignored(git_iterator *iter);
 
 extern bool git_iterator_current_tree_is_ignored(git_iterator *iter);
 
+extern bool git_iterator_current_skip_checkout(git_iterator *iter);
+
 /**
  * Get full path of the current item from a workdir iterator.  This will
  * return NULL for a non-workdir iterator.  The git_str is still owned by

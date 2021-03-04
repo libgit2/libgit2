@@ -20,7 +20,9 @@ typedef struct {
 } git_sparse;
 
 enum {
-	GIT_SPARSE_NO_CHECKOUT = 0,
+	GIT_SPARSE_UNCHECKED = -2,
+	GIT_SPARSE_NOTFOUND = -1,
+	GIT_SPARSE_NOCHECKOUT = 0,
 	GIT_SPARSE_CHECKOUT = 1,
 };
 
