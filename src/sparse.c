@@ -201,7 +201,7 @@ int git_sparse_check_path(
 	
 	if ((error = git_repository__configmap_lookup(&sparse_checkout_enabled, repo, GIT_CONFIGMAP_SPARSECHECKOUT)) < 0 ||
 			sparse_checkout_enabled == false)
-		goto cleanup;
+		return 0;
 
 	if ((error = git_sparse__init(repo, &sparse)) < 0)
 		goto cleanup;
