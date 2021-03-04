@@ -71,7 +71,18 @@ typedef size_t size_t;
 # define GIT_FORMAT_PRINTF(a,b) /* empty */
 #endif
 
-/** Declare that a function's return value must be used. */
+/**
+ * Declare that a function's return value must be used.
+ *
+ * Used mostly to guard against potential silent bugs at runtime. This is
+ * recommended to be added to functions that:
+ *
+ * - Allocate / reallocate memory. This prevents memory leaks or errors where
+ *   buffers are expected to have grown to a certain size, but could not be
+ *   resized.
+ * - Acquire locks. When a lock cannot be acquired, that will almost certainly
+ *   cause a data race / undefined behavior.
+ */
 #if defined(__GNUC__)
 # define GIT_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #else
