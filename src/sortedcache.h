@@ -88,7 +88,7 @@ void git_sortedcache_free(git_sortedcache *sc);
 void git_sortedcache_incref(git_sortedcache *sc);
 
 /* Get the pathname associated with this cache at creation time */
-GIT_WARN_UNUSED_RESULT const char *git_sortedcache_path(git_sortedcache *sc);
+const char *git_sortedcache_path(git_sortedcache *sc);
 
 /*
  * CACHE WRITE FUNCTIONS
@@ -145,7 +145,7 @@ GIT_WARN_UNUSED_RESULT int git_sortedcache_upsert(
 /* Removes entry at pos from cache
  * You should already be holding the write lock when you call this.
  */
-GIT_WARN_UNUSED_RESULT int git_sortedcache_remove(git_sortedcache *sc, size_t pos);
+int git_sortedcache_remove(git_sortedcache *sc, size_t pos);
 
 /*
  * CACHE READ FUNCTIONS
@@ -163,23 +163,20 @@ GIT_WARN_UNUSED_RESULT int git_sortedcache_rlock(git_sortedcache *sc);
 void git_sortedcache_runlock(git_sortedcache *sc);
 
 /* Lookup item by key - returns NULL if not found */
-GIT_WARN_UNUSED_RESULT void *git_sortedcache_lookup(
-	const git_sortedcache *sc, const char *key);
+void *git_sortedcache_lookup(const git_sortedcache *sc, const char *key);
 
 /* Get how many items are in the cache
  *
  * You can call this function without holding a lock, but be aware
  * that it may change before you use it.
  */
-GIT_WARN_UNUSED_RESULT size_t git_sortedcache_entrycount(
-	const git_sortedcache *sc);
+size_t git_sortedcache_entrycount(const git_sortedcache *sc);
 
 /* Lookup item by index - returns NULL if out of range */
-GIT_WARN_UNUSED_RESULT void *git_sortedcache_entry(
-	git_sortedcache *sc, size_t pos);
+void *git_sortedcache_entry(git_sortedcache *sc, size_t pos);
 
 /* Lookup index of item by key - returns GIT_ENOTFOUND if not found */
-GIT_WARN_UNUSED_RESULT int git_sortedcache_lookup_index(
+int git_sortedcache_lookup_index(
 	size_t *out, git_sortedcache *sc, const char *key);
 
 #endif
