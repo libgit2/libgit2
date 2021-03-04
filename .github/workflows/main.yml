@@ -123,6 +123,7 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
+            UBSAN_OPTIONS: print_stacktrace=1
           os: ubuntu-latest
         - # Focal, Clang 10, OpenSSL, UndefinedBehaviorSanitizer
           container:
@@ -135,6 +136,7 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
+            UBSAN_OPTIONS: print_stacktrace=1
           os: ubuntu-latest
         - # Focal, Clang 10, OpenSSL, ThreadSanitizer
           container:
@@ -147,6 +149,7 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
+            UBSAN_OPTIONS: print_stacktrace=1
             TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
           os: ubuntu-latest
         - # macOS
@@ -242,6 +245,7 @@ jobs:
               -e SKIP_NEGOTIATE_TESTS \
               -e SKIP_SSH_TESTS \
               -e TSAN_OPTIONS \
+              -e UBSAN_OPTIONS \
               ${{ env.docker-registry-container-sha }} \
               /bin/bash -c "mkdir build && cd build && ../ci/build.sh && ../ci/test.sh"
         else
