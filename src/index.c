@@ -26,6 +26,7 @@
 #include "git2/oid.h"
 #include "git2/blob.h"
 #include "git2/config.h"
+#include "git2/sparse.h"
 #include "git2/sys/index.h"
 
 static int index_apply_to_wd_diff(git_index *index, int action, const git_strarray *paths,
@@ -974,7 +975,8 @@ static int index_entry_init(
 	struct stat st;
 	git_oid oid;
 	git_repository *repo;
-
+	int checkout = 0;
+	
 	if (INDEX_OWNER(index) == NULL)
 		return create_index_error(-1,
 			"could not initialize index entry. "
@@ -1013,6 +1015,9 @@ static int index_entry_init(
 	entry->id = oid;
 	git_index_entry__init_from_stat(entry, &st, !index->distrust_filemode);
 
+	if (git_sparse_check_path(&checkout, repo, rel_path) == 0 && checkout == 0)
+		entry->flags_extended = GIT_INDEX_ENTRY_SKIP_WORKTREE;
+	
 	*entry_out = (git_index_entry *)entry;
 	return 0;
 }
