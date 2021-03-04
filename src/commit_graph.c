@@ -9,6 +9,7 @@
 
 #include "futils.h"
 #include "hash.h"
+#include "pack.h"
 
 #define GIT_COMMIT_GRAPH_MISSING_PARENT 0x70000000
 
@@ -277,6 +278,142 @@ int git_commit_graph_open(git_commit_graph_file **cgraph_out, const char *path)
 	*cgraph_out = cgraph;
 	return 0;
 }
+
+static int git_commit_graph_entry_get_byindex(
+		git_commit_graph_entry *e,
+		const git_commit_graph_file *cgraph,
+		size_t pos)
+{
+	const unsigned char *commit_data;
+
+	GIT_ASSERT_ARG(e);
+	GIT_ASSERT_ARG(cgraph);
+
+	if (pos >= cgraph->num_commits) {
+		git_error_set(GIT_ERROR_INVALID, "commit index %zu does not exist", pos);
+		return GIT_ENOTFOUND;
+	}
+
+	commit_data = cgraph->commit_data + pos * (GIT_OID_RAWSZ + 4 * sizeof(uint32_t));
+	git_oid_cpy(&e->tree_oid, (const git_oid *)commit_data);
+	e->parent_indices[0] = ntohl(*((uint32_t *)(commit_data + GIT_OID_RAWSZ)));
+	e->parent_indices[1]
+			= ntohl(*((uint32_t *)(commit_data + GIT_OID_RAWSZ + sizeof(uint32_t))));
+	e->parent_count = (e->parent_indices[0] != GIT_COMMIT_GRAPH_MISSING_PARENT)
+			+ (e->parent_indices[1] != GIT_COMMIT_GRAPH_MISSING_PARENT);
+	e->generation = ntohl(*((uint32_t *)(commit_data + GIT_OID_RAWSZ + 2 * sizeof(uint32_t))));
+	e->commit_time = ntohl(*((uint32_t *)(commit_data + GIT_OID_RAWSZ + 3 * sizeof(uint32_t))));
+
+	e->commit_time |= (e->generation & 0x3ull) << 32ull;
+	e->generation >>= 2u;
+	if (e->parent_indices[1] & 0x80000000u) {
+		uint32_t extra_edge_list_pos = e->parent_indices[1] & 0x7fffffff;
+
+		/* Make sure we're not being sent out of bounds */
+		if (extra_edge_list_pos >= cgraph->num_extra_edge_list) {
+			git_error_set(GIT_ERROR_INVALID,
+				      "commit %u does not exist",
+				      extra_edge_list_pos);
+			return GIT_ENOTFOUND;
+		}
+
+		e->extra_parents_index = extra_edge_list_pos;
+		while (extra_edge_list_pos < cgraph->num_extra_edge_list
+		       && (ntohl(*(
+					   (uint32_t *)(cgraph->extra_edge_list
+							+ extra_edge_list_pos * sizeof(uint32_t))))
+			   & 0x80000000u)
+				       == 0) {
+			extra_edge_list_pos++;
+			e->parent_count++;
+		}
+
+	}
+	git_oid_cpy(&e->sha1, &cgraph->oid_lookup[pos]);
+	return 0;
+}
+
+int git_commit_graph_entry_find(
+		git_commit_graph_entry *e,
+		const git_commit_graph_file *cgraph,
+		const git_oid *short_oid,
+		size_t len)
+{
+	int pos, found = 0;
+	uint32_t hi, lo;
+	const git_oid *current = NULL;
+
+	GIT_ASSERT_ARG(e);
+	GIT_ASSERT_ARG(cgraph);
+	GIT_ASSERT_ARG(short_oid);
+
+	hi = ntohl(cgraph->oid_fanout[(int)short_oid->id[0]]);
+	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(cgraph->oid_fanout[(int)short_oid->id[0] - 1]));
+
+	pos = git_pack__lookup_sha1(cgraph->oid_lookup, GIT_OID_RAWSZ, lo, hi, short_oid->id);
+
+	if (pos >= 0) {
+		/* An object matching exactly the oid was found */
+		found = 1;
+		current = cgraph->oid_lookup + pos;
+	} else {
+		/* No object was found */
+		/* pos refers to the object with the "closest" oid to short_oid */
+		pos = -1 - pos;
+		if (pos < (int)cgraph->num_commits) {
+			current = cgraph->oid_lookup + pos;
+
+			if (!git_oid_ncmp(short_oid, current, len))
+				found = 1;
+		}
+	}
+
+	if (found && len != GIT_OID_HEXSZ && pos + 1 < (int)cgraph->num_commits) {
+		/* Check for ambiguousity */
+		const git_oid *next = current + 1;
+
+		if (!git_oid_ncmp(short_oid, next, len)) {
+			found = 2;
+		}
+	}
+
+	if (!found)
+		return git_odb__error_notfound(
+				"failed to find offset for multi-pack index entry", short_oid, len);
+	if (found > 1)
+		return git_odb__error_ambiguous(
+				"found multiple offsets for multi-pack index entry");
+
+	return git_commit_graph_entry_get_byindex(e, cgraph, pos);
+}
+
+int git_commit_graph_entry_parent(
+		git_commit_graph_entry *parent,
+		const git_commit_graph_file *cgraph,
+		const git_commit_graph_entry *entry,
+		size_t n)
+{
+	GIT_ASSERT_ARG(parent);
+	GIT_ASSERT_ARG(cgraph);
+
+	if (n >= entry->parent_count) {
+		git_error_set(GIT_ERROR_INVALID, "parent index %zu does not exist", n);
+		return GIT_ENOTFOUND;
+	}
+
+	if (n == 0 || (n == 1 && entry->parent_count == 2))
+		return git_commit_graph_entry_get_byindex(parent, cgraph, entry->parent_indices[n]);
+
+	return git_commit_graph_entry_get_byindex(
+			parent,
+			cgraph,
+			ntohl(
+					*(uint32_t *)(cgraph->extra_edge_list
+						      + (entry->extra_parents_index + n - 1)
+								      * sizeof(uint32_t)))
+					& 0x7fffffff);
+}
+
 
 int git_commit_graph_close(git_commit_graph_file *cgraph)
 {
