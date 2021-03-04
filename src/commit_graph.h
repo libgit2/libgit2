@@ -89,6 +89,14 @@ typedef struct git_commit_graph_entry {
 } git_commit_graph_entry;
 
 int git_commit_graph_open(git_commit_graph_file **cgraph_out, const char *path);
+
+/*
+ * Returns whether the commit_graph_file needs to be reloaded since the
+ * contents of the commit-graph file have changed on disk. If `path` is NULL,
+ * the filename stored in `cgraph` will be used.
+ */
+bool git_commit_graph_needs_refresh(const git_commit_graph_file *cgraph, const char *path);
+
 int git_commit_graph_entry_find(
 		git_commit_graph_entry *e,
 		const git_commit_graph_file *cgraph,

@@ -15,6 +15,7 @@ void test_graph_commit_graph__parse(void)
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 	cl_git_pass(git_buf_joinpath(&commit_graph_path, git_repository_path(repo), "objects/info/commit-graph"));
 	cl_git_pass(git_commit_graph_open(&cgraph, git_buf_cstr(&commit_graph_path)));
+	cl_assert_equal_i(git_commit_graph_needs_refresh(cgraph, git_buf_cstr(&commit_graph_path)), 0);
 
 	cl_git_pass(git_oid_fromstr(&id, "5001298e0c09ad9c34e4249bc5801c75e9754fa5"));
 	cl_git_pass(git_commit_graph_entry_find(&e, cgraph, &id, GIT_OID_HEXSZ));
