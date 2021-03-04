@@ -125,10 +125,10 @@ program is emulating.</p>
 
   <span class="n"><a name="git_libgit2_init-2" class="fnlink" href="../../#v0.23.0/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n">git_repository_discover</span><span class="p">(</span><span class="o">&amp;</span><span class="n">buf</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_discover-15" class="fnlink" href="../../#v0.23.0/group/repository/git_repository_discover">git_repository_discover</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">buf</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
     <span class="s">&quot;Could not find repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n">git_repository_open</span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">buf</span><span class="p">.</span><span class="n">ptr</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open-14" class="fnlink" href="../../#v0.23.0/group/repository/git_repository_open">git_repository_open</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">buf</span><span class="p">.</span><span class="n">ptr</span><span class="p">),</span>
     <span class="s">&quot;Could not open repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
   <span class="n"><a name="git_buf_free-1" class="fnlink" href="../../#v0.23.0/group/buf/git_buf_free">git_buf_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">buf</span><span class="p">);</span>
 
@@ -208,7 +208,7 @@ program is emulating.</p>
     <span class="n">puts</span><span class="p">(</span><span class="n">problems</span><span class="p">.</span><span class="n">strings</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
   <span class="p">}</span>
 
-  <span class="n"><a name="git_strarray_free-14" class="fnlink" href="../../#v0.23.0/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">problems</span><span class="p">);</span>
+  <span class="n"><a name="git_strarray_free-16" class="fnlink" href="../../#v0.23.0/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">problems</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="n">retval</span><span class="p">;</span>
 <span class="p">}</span>
@@ -286,7 +286,7 @@ program is emulating.</p>
     <span class="n"><a name="git_remote_free-10" class="fnlink" href="../../#v0.23.0/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
   <span class="p">}</span>
 
-  <span class="n"><a name="git_strarray_free-15" class="fnlink" href="../../#v0.23.0/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">);</span>
+  <span class="n"><a name="git_strarray_free-17" class="fnlink" href="../../#v0.23.0/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
