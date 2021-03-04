@@ -368,7 +368,7 @@ all of the use cases.</p>
   <span class="n"><a name="git_object_free-6" class="fnlink" href="../../#HEAD/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">action_create_lighweight_tag</span><span class="p">(</span><span class="n">tag_state</span> <span class="o">*</span><span class="n">state</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">action_create_lightweight_tag</span><span class="p">(</span><span class="n">tag_state</span> <span class="o">*</span><span class="n">state</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">tag_options</span> <span class="o">*</span><span class="n">opts</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">opts</span><span class="p">;</span>
@@ -448,7 +448,7 @@ all of the use cases.</p>
         <span class="n">print_usage</span><span class="p">();</span>
 
       <span class="k">if</span> <span class="p">(</span><span class="o">*</span><span class="n">action</span> <span class="o">!=</span> <span class="o">&amp;</span><span class="n">action_create_tag</span><span class="p">)</span>
-        <span class="o">*</span><span class="n">action</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">action_create_lighweight_tag</span><span class="p">;</span>
+        <span class="o">*</span><span class="n">action</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">action_create_lightweight_tag</span><span class="p">;</span>
     <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span> <span class="s">&quot;-n&quot;</span><span class="p">))</span> <span class="p">{</span>
       <span class="n">opts</span><span class="o">-&gt;</span><span class="n">num_lines</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
       <span class="o">*</span><span class="n">action</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">action_list_tags</span><span class="p">;</span>
