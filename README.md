@@ -3,7 +3,7 @@ libgit2 - the Git linkable library
 
 | Build Status | |
 | ------------ | - |
-| **master** branch CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush) |
+| **main** branch CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush) |
 | **v1.1 branch** CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?branch=maint%2Fv1.1&event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush+branch%3Amaint%2Fv1.1) |
 | **v1.0 branch** CI builds | [![Azure Pipelines Build Status](https://dev.azure.com/libgit2/libgit2/_apis/build/status/libgit2?branchName=maint/v1.0)](https://dev.azure.com/libgit2/libgit2/_build/latest?definitionId=7&branchName=maint/v1.0) |
 | **Nightly** builds | [![Nightly Build](https://github.com/libgit2/libgit2/workflows/Nightly%20Build/badge.svg)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22Nightly+Build%22) [![Coverity Scan Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639) |
@@ -242,7 +242,7 @@ run the index tests:
     $ ./libgit2_clar -sindex
 
 To run a single test named `index::racy::diff`, which corresponds to the test
-function [`test_index_racy__diff`](https://github.com/libgit2/libgit2/blob/master/tests/index/racy.c#L23):
+function [`test_index_racy__diff`](https://github.com/libgit2/libgit2/blob/main/tests/index/racy.c#L23):
 
     $ ./libgit2_clar -sindex::racy::diff
 
@@ -252,7 +252,7 @@ applicable to your platform or is particularly expensive.
 
 **Note:** There should be _no_ failing tests when you build an unmodified
 source tree from a [release](https://github.com/libgit2/libgit2/releases),
-or from the [master branch](https://github.com/libgit2/libgit2/tree/master).
+or from the [main branch](https://github.com/libgit2/libgit2/tree/main).
 Please contact us or [open an issue](https://github.com/libgit2/libgit2/issues)
 if you see test failures.
 
