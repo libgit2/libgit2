@@ -21,7 +21,7 @@ static bool sparse_lookup_in_rules(
 			continue;
 		if (git_attr_fnmatch__match(match, path)) {
 			*checkout = ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0) ?
-			GIT_SPARSE_CHECKOUT : GIT_SPARSE_NO_CHECKOUT;
+			GIT_SPARSE_CHECKOUT : GIT_SPARSE_NOCHECKOUT;
 			return true;
 		}
 	}
