@@ -160,6 +160,9 @@ int git_sparse__lookup(int* checkout, git_sparse* sparse, const char* pathname, 
 	if ((error = git_attr_path__init(&path, pathname, workdir, dir_flag)))
 		return -1;
 	
+	/* No match -> no checkout */
+	*checkout = GIT_SPARSE_NOCHECKOUT;
+	
 	while (1) {
 		if (sparse_lookup_in_rules(checkout, sparse->sparse, &path))
 			goto cleanup;
