@@ -48,6 +48,49 @@ typedef enum {
 } git_stash_flags;
 
 /**
+ * Create a new stash containing local modifications without storing it anywhere
+ * in the ref namespace.
+ *
+ * @param out Object id of the commit containing the stashed state.
+ *
+ * @param repo The owning repository.
+ *
+ * @param stasher The identity of the person performing the stashing.
+ *
+ * @param message Optional description along with the stashed state.
+ *
+ * @param flags Flags to control the stashing process. (see GIT_STASH_* above)
+ *
+ * @return 0 on success, GIT_ENOTFOUND where there's nothing to stash,
+ * or error code.
+ */
+GIT_EXTERN(int) git_stash_create(
+	git_oid *out,
+	git_repository *repo,
+	const git_signature *stasher,
+	const char *message,
+	uint32_t flags);
+
+/**
+ * Store a stash created via git_stash_create in the stash ref, updating the
+ * stash reflog.
+ *
+ * @param stash_id Object id of the commit containing the stashed state.
+ * This commit becomes the target of the direct reference refs/stash.
+ *
+ * @param repo The owning repository.
+ *
+ * @param message Optional description along with the stashed state.
+ *
+ * @return 0 on success, GIT_ENOTFOUND where there's nothing to stash,
+ * or error code.
+ */
+GIT_EXTERN(int) git_stash_store(
+	const git_oid *stash_id,
+	git_repository *repo,
+	const char *message);
+
+/**
  * Save the local modifications to a new stash.
  *
  * @param out Object id of the commit containing the stashed state.
