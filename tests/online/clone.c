@@ -869,6 +869,28 @@ void test_online_clone__proxy_credentials_in_environment(void)
 	git_buf_dispose(&url);
 }
 
+void test_online_clone__proxy_credentials_in_url_https(void)
+{
+	git_buf url = GIT_BUF_INIT;
+
+	if (!_remote_proxy_host || !_remote_proxy_user || !_remote_proxy_pass)
+		cl_skip();
+
+	cl_git_pass(git_buf_printf(&url, "%s://%s:%s@%s/",
+		_remote_proxy_scheme ? _remote_proxy_scheme : "http",
+		_remote_proxy_user, _remote_proxy_pass, _remote_proxy_host));
+
+	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
+	g_options.fetch_opts.proxy_opts.url = url.ptr;
+	g_options.fetch_opts.proxy_opts.certificate_check = proxy_cert_cb;
+	g_options.fetch_opts.callbacks.certificate_check = ssl_cert;
+	called_proxy_creds = 0;
+	cl_git_pass(git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+	cl_assert(called_proxy_creds == 0);
+
+	git_buf_dispose(&url);
+}
+
 void test_online_clone__proxy_auto_not_detected(void)
 {
 	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_AUTO;
