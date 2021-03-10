@@ -119,6 +119,33 @@ GIT_EXTERN(int) git_blob_filtered_content(
 
 /**@}*/
 
+/** @name Deprecated Tree Functions
+ *
+ * These functions are retained for backward compatibility.  The
+ * newer versions of these functions and values should be preferred
+ * in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Write the contents of the tree builder as a tree object.
+ * This is an alias of `git_treebuilder_write` and is preserved
+ * for backward compatibility.
+ *
+ * This function is deprecated, but there is no plan to remove this
+ * function at this time.
+ *
+ * @deprecated Use git_treebuilder_write
+ * @see git_treebuilder_write
+ */
+GIT_EXTERN(int) git_treebuilder_write_with_buffer(
+	git_oid *oid, git_treebuilder *bld, git_buf *tree);
+
+/**@}*/
+
 /** @name Deprecated Buffer Functions
  *
  * These functions and enumeration values are retained for backward
