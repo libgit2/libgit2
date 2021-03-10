@@ -12,6 +12,7 @@
 #include "git2/odb.h"
 #include "git2/oid.h"
 #include "git2/types.h"
+#include "git2/sys/commit_graph.h"
 
 #include "cache.h"
 #include "commit_graph.h"
@@ -44,10 +45,8 @@ struct git_odb {
 	git_mutex lock;  /* protects backends */
 	git_vector backends;
 	git_cache own_cache;
-	git_buf objects_dir;
-	git_commit_graph_file *cgraph;
+	git_commit_graph *cgraph;
 	unsigned int do_fsync :1;
-	unsigned int cgraph_checked :1;
 };
 
 typedef enum {
@@ -132,11 +131,11 @@ int git_odb__read_header_or_object(
 	git_odb *db, const git_oid *id);
 
 /*
- * Attempt to get the ODB's commit graph. This object is still owned by the
- * ODB. If the repository does not contain a commit graph, it will return zero
- * and `*out` will be set to NULL.
+ * Attempt to get the ODB's commit-graph file. This object is still owned by
+ * the ODB. If the repository does not contain a commit-graph, it will return
+ * GIT_ENOTFOUND.
  */
-int git_odb__get_commit_graph(git_commit_graph_file **out, git_odb *odb);
+int git_odb__get_commit_graph_file(git_commit_graph_file **out, git_odb *odb);
 
 /* freshen an entry in the object database */
 int git_odb__freshen(git_odb *db, const git_oid *id);

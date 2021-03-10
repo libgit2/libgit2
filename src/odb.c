@@ -465,13 +465,6 @@ int git_odb_new(git_odb **out)
 		git__free(db);
 		return -1;
 	}
-	if (git_buf_init(&db->objects_dir, 0) < 0) {
-		git_vector_free(&db->backends);
-		git_cache_dispose(&db->own_cache);
-		git_mutex_free(&db->lock);
-		git__free(db);
-		return -1;
-	}
 
 	*out = db;
 	GIT_REFCOUNT_INC(db);
@@ -619,17 +612,6 @@ int git_odb__add_default_backends(
 	git_mutex_unlock(&db->lock);
 #endif
 
-	if (git_mutex_lock(&db->lock) < 0) {
-		git_error_set(GIT_ERROR_ODB, "failed to acquire the odb lock");
-		return -1;
-	}
-	if (git_buf_len(&db->objects_dir) == 0 && git_buf_sets(&db->objects_dir, objects_dir) < 0) {
-		git_mutex_unlock(&db->lock);
-		git_odb_free(db);
-		return -1;
-	}
-	git_mutex_unlock(&db->lock);
-
 	/* add the loose object backend */
 	if (git_odb_backend_loose(&loose, objects_dir, -1, db->do_fsync, 0, 0) < 0 ||
 		add_backend_internal(db, loose, GIT_LOOSE_PRIORITY, as_alternates, inode) < 0)
@@ -639,6 +621,16 @@ int git_odb__add_default_backends(
 	if (git_odb_backend_pack(&packed, objects_dir) < 0 ||
 		add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates, inode) < 0)
 		return -1;
+
+	if (git_mutex_lock(&db->lock) < 0) {
+		git_error_set(GIT_ERROR_ODB, "failed to acquire the odb lock");
+		return -1;
+	}
+	if (!db->cgraph && git_commit_graph_new(&db->cgraph, objects_dir, false) < 0) {
+		git_mutex_unlock(&db->lock);
+		return -1;
+	}
+	git_mutex_unlock(&db->lock);
 
 	return load_alternates(db, objects_dir, alternate_depth);
 }
@@ -701,6 +693,23 @@ int git_odb_add_disk_alternate(git_odb *odb, const char *path)
 	return git_odb__add_default_backends(odb, path, true, 0);
 }
 
+int git_odb_set_commit_graph(git_odb *odb, git_commit_graph *cgraph)
+{
+	int error = 0;
+
+	GIT_ASSERT_ARG(odb);
+
+	if ((error = git_mutex_lock(&odb->lock)) < 0) {
+		git_error_set(GIT_ERROR_ODB, "failed to acquire the db lock");
+		return error;
+	}
+	git_commit_graph_free(odb->cgraph);
+	odb->cgraph = cgraph;
+	git_mutex_unlock(&odb->lock);
+
+	return error;
+}
+
 int git_odb_open(git_odb **out, const char *objects_dir)
 {
 	git_odb *db;
@@ -760,7 +769,6 @@ static void odb_free(git_odb *db)
 	if (locked)
 		git_mutex_unlock(&db->lock);
 
-	git_buf_dispose(&db->objects_dir);
 	git_commit_graph_free(db->cgraph);
 	git_vector_free(&db->backends);
 	git_cache_dispose(&db->own_cache);
@@ -806,51 +814,27 @@ static int odb_exists_1(
 	return (int)found;
 }
 
-int git_odb__get_commit_graph(git_commit_graph_file **out, git_odb *db)
+int git_odb__get_commit_graph_file(git_commit_graph_file **out, git_odb *db)
 {
 	int error = 0;
+	git_commit_graph_file *result = NULL;
 
 	if ((error = git_mutex_lock(&db->lock)) < 0) {
 		git_error_set(GIT_ERROR_ODB, "failed to acquire the db lock");
 		return error;
 	}
-	if (!db->cgraph_checked) {
-		git_buf commit_graph_path = GIT_BUF_INIT;
-		git_commit_graph_file *cgraph = NULL;
-
-		/* We only check once, no matter the result. */
-		db->cgraph_checked = 1;
-
-		if (git_buf_len(&db->objects_dir) == 0) {
-			/*
-			 * This odb was not opened with an objects directory
-			 * associated. Skip opening the commit graph.
-			 */
-			goto done;
-		}
-
-		if ((error = git_buf_joinpath(
-				     &commit_graph_path,
-				     git_buf_cstr(&db->objects_dir),
-				     "info/commit-graph"))
-		    < 0) {
-			git_buf_dispose(&commit_graph_path);
-			goto done;
-		}
-		/* Best effort */
-		error = git_commit_graph_open(&cgraph, git_buf_cstr(&commit_graph_path));
-		git_buf_dispose(&commit_graph_path);
-
-		if (error < 0)
-			goto done;
-
-		db->cgraph = cgraph;
+	if (!db->cgraph) {
+		error = GIT_ENOTFOUND;
+		goto done;
 	}
+	error = git_commit_graph_get_file(&result, db->cgraph);
+	if (error)
+		goto done;
+	*out = result;
 
 done:
-	*out = db->cgraph;
 	git_mutex_unlock(&db->lock);
-	return 0;
+	return error;
 }
 
 static int odb_freshen_1(
@@ -1762,13 +1746,8 @@ int git_odb_refresh(struct git_odb *db)
 			}
 		}
 	}
-	if (db->cgraph && git_commit_graph_needs_refresh(db->cgraph, NULL)) {
-		/* We just free the commit graph. The next time it is requested, it will be re-loaded. */
-		git_commit_graph_free(db->cgraph);
-		db->cgraph = NULL;
-	}
-	/* Force a lazy re-check next time it is needed. */
-	db->cgraph_checked = 0;
+	if (db->cgraph)
+		git_commit_graph_refresh(db->cgraph);
 	git_mutex_unlock(&db->lock);
 
 	return 0;

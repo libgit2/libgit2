@@ -102,6 +102,9 @@ typedef struct git_refdb git_refdb;
 /** A custom backend for refs */
 typedef struct git_refdb_backend git_refdb_backend;
 
+/** A git commit-graph */
+typedef struct git_commit_graph git_commit_graph;
+
 /**
  * Representation of an existing git repository,
  * including all its object contents
