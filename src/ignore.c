@@ -101,7 +101,7 @@ static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
  */
 static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match)
 {
-	int error = 0, wildmatch_flags;
+	int error = 0, wildmatch_flags, effective_flags;
 	size_t i;
 	git_attr_fnmatch *rule;
 	char *path;
@@ -141,8 +141,17 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 		if (git_buf_oom(&buf))
 			goto out;
 
+		/* if rule isn't for full path we match without PATHNAME flag
+			 as lines like *.txt should match something like dir/test.txt
+			 requiring * to also match /
+		*/
+		effective_flags = wildmatch_flags;
+		if ((rule->flags & GIT_ATTR_FNMATCH_FULLPATH) == 0) {
+			effective_flags &= ~WM_PATHNAME;
+		}
+
 		/* if we found a match, we want to keep this rule */
-		if ((wildmatch(git_buf_cstr(&buf), path, wildmatch_flags)) == WM_MATCH) {
+		if ((wildmatch(git_buf_cstr(&buf), path, effective_flags)) == WM_MATCH) {
 			*out = 1;
 			error = 0;
 			goto out;
