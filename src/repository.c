@@ -2494,6 +2494,22 @@ const char *git_repository_workdir(const git_repository *repo)
 	return repo->workdir;
 }
 
+int git_repository_workdir_path(
+	git_buf *out, git_repository *repo, const char *path)
+{
+	int error;
+
+	if (!repo->workdir) {
+		git_error_set(GIT_ERROR_REPOSITORY, "repository has no working directory");
+		return GIT_EBAREREPO;
+	}
+
+	if (!(error = git_buf_joinpath(out, repo->workdir, path)))
+		error = git_path_validate_workdir_buf(repo, out);
+
+	return error;
+}
+
 const char *git_repository_commondir(const git_repository *repo)
 {
 	GIT_ASSERT_ARG_WITH_RETVAL(repo, NULL);

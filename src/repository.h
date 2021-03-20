@@ -241,4 +241,12 @@ bool git_repository__reserved_names(
  */
 int git_repository_initialbranch(git_buf *out, git_repository *repo);
 
+/*
+ * Given a relative `path`, this makes it absolute based on the
+ * repository's working directory.  This will perform validation
+ * to ensure that the path is not longer than MAX_PATH on Windows
+ * (unless `core.longpaths` is set in the repo config).
+ */
+int git_repository_workdir_path(git_buf *out, git_repository *repo, const char *path);
+
 #endif
