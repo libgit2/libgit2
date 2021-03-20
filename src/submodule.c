@@ -418,7 +418,7 @@ int git_submodule_name_is_valid(git_repository *repo, const char *name, int flag
 		git_buf_attach_notowned(&buf, name, strlen(name));
 	}
 
-	isvalid =  git_path_isvalid(repo, buf.ptr, 0, flags);
+	isvalid =  git_path_validate(repo, buf.ptr, 0, flags);
 	git_buf_dispose(&buf);
 
 	return isvalid;

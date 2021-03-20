@@ -626,15 +626,20 @@ extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or
 #define GIT_PATH_REJECT_INDEX_DEFAULTS \
 	GIT_PATH_REJECT_TRAVERSAL | GIT_PATH_REJECT_DOT_GIT
 
-/*
- * Determine whether a path is a valid git path or not - this must not contain
+/**
+ * Validate a "bare" git path.  This ensures that the given path is legal
+ * to place in the index or a tree.  This should be checked by mechanisms
+ * like `git_index_add` and `git_treebuilder_insert` when taking user
+ * data, and by `git_checkout` before constructing on-disk paths.
+ *
+ * This will ensure that a git path does not contain any "unsafe" components,
  * a '.' or '..' component, or a component that is ".git" (in any case).
  *
  * `repo` is optional.  If specified, it will be used to determine the short
  * path name to reject (if `GIT_PATH_REJECT_DOS_SHORTNAME` is specified),
  * in addition to the default of "git~1".
  */
-extern bool git_path_isvalid(
+extern bool git_path_validate(
 	git_repository *repo,
 	const char *path,
 	uint16_t mode,

@@ -944,7 +944,7 @@ static int index_entry_create(
 	if (st)
 		mode = st->st_mode;
 
-	if (!git_path_isvalid(repo, path, mode, path_valid_flags)) {
+	if (!git_path_validate(repo, path, mode, path_valid_flags)) {
 		git_error_set(GIT_ERROR_INDEX, "invalid path: '%s'", path);
 		return -1;
 	}
