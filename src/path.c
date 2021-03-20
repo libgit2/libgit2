@@ -1923,7 +1923,7 @@ GIT_INLINE(bool) should_validate_longpaths(git_repository *repo)
 int git_path_validate_workdir(git_repository *repo, const char *path)
 {
 	if (should_validate_longpaths(repo))
-		return git_path_validate_ondisk(path, strlen(path));
+		return git_path_validate_filesystem(path, strlen(path));
 
 	return 0;
 }
@@ -1934,7 +1934,7 @@ int git_path_validate_workdir_with_len(
 	size_t path_len)
 {
 	if (should_validate_longpaths(repo))
-		return git_path_validate_ondisk(path, path_len);
+		return git_path_validate_filesystem(path, path_len);
 
 	return 0;
 }
