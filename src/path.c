@@ -1904,6 +1904,46 @@ bool git_path_validate(
 	return verify_component(repo, start, (c - start), mode, flags);
 }
 
+#ifdef GIT_WIN32
+GIT_INLINE(bool) should_validate_longpaths(git_repository *repo)
+{
+	int longpaths = 0;
+
+	if (repo &&
+	    git_repository__configmap_lookup(&longpaths, repo, GIT_CONFIGMAP_LONGPATHS) < 0)
+		longpaths = 0;
+
+	return (longpaths == 0);
+}
+
+#else
+# define should_validate_longpaths(repo) (GIT_UNUSED(repo), false)
+#endif
+
+int git_path_validate_workdir(git_repository *repo, const char *path)
+{
+	if (should_validate_longpaths(repo))
+		return git_path_validate_ondisk(path, strlen(path));
+
+	return 0;
+}
+
+int git_path_validate_workdir_with_len(
+	git_repository *repo,
+	const char *path,
+	size_t path_len)
+{
+	if (should_validate_longpaths(repo))
+		return git_path_validate_ondisk(path, path_len);
+
+	return 0;
+}
+
+int git_path_validate_workdir_buf(git_repository *repo, git_buf *path)
+{
+	return git_path_validate_workdir_with_len(repo, path->ptr, path->size);
+}
+
 int git_path_normalize_slashes(git_buf *out, const char *path)
 {
 	int error;
