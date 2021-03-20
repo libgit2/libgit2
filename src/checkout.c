@@ -2032,7 +2032,7 @@ static int checkout_merge_path(
 	const char *our_label_raw, *their_label_raw, *suffix;
 	int error = 0;
 
-	if ((error = git_buf_joinpath(out, git_repository_workdir(data->repo), result->path)) < 0)
+	if ((error = git_buf_joinpath(out, data->opts.target_directory, result->path)) < 0)
 		return error;
 
 	/* Most conflicts simply use the filename in the index */
