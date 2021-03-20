@@ -330,6 +330,10 @@ static int mailmap_add_file_ondisk(
 	if (error < 0)
 		goto cleanup;
 
+	error = git_path_validate_workdir_buf(repo, &fullpath);
+	if (error < 0)
+		goto cleanup;
+
 	error = git_futils_readbuffer(&content, fullpath.ptr);
 	if (error < 0)
 		goto cleanup;
