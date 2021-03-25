@@ -355,6 +355,7 @@ Here are the bindings to libgit2 that are currently available:
     * dlibgit <https://github.com/s-ludwig/dlibgit>
 * Delphi
     * GitForDelphi <https://github.com/libgit2/GitForDelphi>
+    * libgit2-delphi <https://github.com/todaysoftware/libgit2-delphi>
 * Erlang
     * Geef <https://github.com/carlosmn/geef>
 * Go
