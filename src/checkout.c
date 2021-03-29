@@ -1966,11 +1966,231 @@ static int checkout_create_the_new__single(
 	return 0;
 }
 
+#ifdef GIT_THREADS
+
+typedef struct {
+	int error;
+	size_t index;
+	bool skipped;
+} checkout_progress_pair;
+
+typedef struct {
+	git_thread thread;
+	const unsigned int *actions;
+	checkout_data *cd;
+
+	git_cond *cond;
+	git_mutex *mutex;
+
+	git_atomic32 *delta_index;
+	git_atomic32 *error;
+	git_vector *progress_pairs;
+} thread_params;
+
+static void *checkout_create_the_new__thread(void *arg)
+{
+	thread_params *worker = arg;
+	size_t i;
+	checkout_buffers *buffers = git__malloc(sizeof(checkout_buffers));
+
+	// TODO if the thread fails to allocate, signal and have the parent thread check the return value
+	// TODO deduplicate this setup with checkout_data_init
+	git_buf_init(&buffers->target_path, 0);
+	git_buf_init(&buffers->tmp, 0);
+	git_tlsdata_set(worker->cd->buffers, buffers);
+	git_buf_puts(&buffers->target_path, worker->cd->opts.target_directory);
+	git_path_to_dir(&buffers->target_path);
+	buffers->target_len = git_buf_len(&buffers->target_path);
+
+	while ((i = git_atomic32_add(worker->delta_index, 1)) <
+			git_vector_length(&worker->cd->diff->deltas)) {
+		checkout_progress_pair *progress_pair;
+		git_diff_delta *delta = git_vector_get(&worker->cd->diff->deltas, i);
+
+		if (delta == NULL || git_atomic32_get(worker->error) != 0)
+			return NULL;
+
+		progress_pair = (checkout_progress_pair *)git__malloc(
+			sizeof(checkout_progress_pair));
+		if (progress_pair == NULL) {
+			git_atomic32_set(worker->error, -1);
+			git_cond_signal(worker->cond);
+			return NULL;
+		}
+
+		/* We skip symlink operations, because we handle them
+		 * in the main thread to avoid a symlink security flaw.
+		 */
+		if (!S_ISLNK(delta->new_file.mode) &&
+		    worker->actions[i] & CHECKOUT_ACTION__UPDATE_BLOB) {
+			/* We will retry failed operations in the calling thread to handle
+			 * the case where might encounter a file locking error due to
+			 * multithreading and name collisions.
+			 */
+			progress_pair->index = i;
+			progress_pair->error = checkout_blob(worker->cd, &delta->new_file);
+			progress_pair->skipped = false;
+		} else {
+			progress_pair->index = i;
+			progress_pair->error = 0;
+			progress_pair->skipped = true;
+		}
+
+		git_mutex_lock(worker->mutex);
+		git_vector_insert(worker->progress_pairs, progress_pair);
+		git_cond_signal(worker->cond);
+		git_mutex_unlock(worker->mutex);
+	}
+
+	return NULL;
+}
+
+static int checkout_create_the_new__parallel(
+	unsigned int *actions,
+	checkout_data *data)
+{
+	thread_params *p;
+	size_t i, num_threads = git__online_cpus(), last_index = 0, current_index = 0,
+		num_deltas = git_vector_length(&data->diff->deltas);
+	int ret;
+	checkout_progress_pair *progress_pair;
+	git_atomic32 delta_index, error;
+	git_diff_delta *delta;
+	git_vector errored_pairs, progress_pairs, temp;
+	git_cond cond;
+	git_mutex mutex;
+
+	if (
+			(ret = git_vector_init(&progress_pairs, num_deltas, NULL)) < 0 ||
+			(ret = git_vector_init(&errored_pairs, num_deltas, NULL)) < 0 ||
+			(ret = git_vector_init(&temp, num_deltas, NULL)) < 0)
+		return ret;
+
+	p = git__mallocarray(num_threads, sizeof(*p));
+	GIT_ERROR_CHECK_ALLOC(p);
+
+	git_cond_init(&cond);
+	git_mutex_init(&mutex);
+	git_mutex_lock(&mutex);
+
+	git_atomic32_set(&delta_index, -1);
+	git_atomic32_set(&error, 0);
+
+	/* Initialize worker threads */
+	for (i = 0; i < num_threads; ++i) {
+		p[i].actions = actions;
+		p[i].cd = data;
+		p[i].cond = &cond;
+		p[i].mutex = &mutex;
+		p[i].error = &error;
+		p[i].delta_index = &delta_index;
+		p[i].progress_pairs = &progress_pairs;
+	}
+
+	/* Start worker threads */
+	for (i = 0; i < num_threads; ++i) {
+		ret = git_thread_create(&p[i].thread, checkout_create_the_new__thread, &p[i]);
+
+		/* On error, we will cleanly exit any started worker threads,
+		 * and then return with our error code */
+		if (ret) {
+			git_atomic32_set(&error, -1);
+			git_error_set(GIT_ERROR_THREAD, "unable to create thread");
+			git_mutex_unlock(&mutex);
+			/* Only clean up the number of threads we have started */
+			num_threads = i;
+			ret = -1;
+			goto cleanup;
+		}
+	}
+
+	while (last_index < num_deltas) {
+		if ((ret = git_atomic32_get(&error)) != 0) {
+			git_mutex_unlock(&mutex);
+			goto cleanup;
+		}
+
+		current_index = git_vector_length(&progress_pairs);
+
+		if (last_index == current_index) {
+			git_cond_wait(&cond, &mutex);
+			current_index = git_vector_length(&progress_pairs);
+		}
+
+		git_vector_clear(&temp);
+		for (; last_index < current_index; ++last_index) {
+			progress_pair = git_vector_get(&progress_pairs,
+				last_index);
+			delta = git_vector_get(&data->diff->deltas, last_index);
+
+			if (progress_pair->skipped)
+				continue;
+
+			/* We will retry errored checkouts synchronously after all the workers
+			 * complete
+			 */
+			if (progress_pair->error < 0) {
+				git_vector_insert(&errored_pairs, progress_pair);
+				continue;
+			}
+
+			git_vector_insert(&temp, delta);
+		}
+
+		git_mutex_unlock(&mutex);
+
+		for (i = 0; i < git_vector_length(&temp); ++i) {
+		  delta = git_vector_get(&temp, i);
+			data->completed_steps++;
+			report_progress(data, delta->new_file.path);
+		}
+
+		git_mutex_lock(&mutex);
+	}
+
+	git_mutex_unlock(&mutex);
+
+	git_vector_foreach(&errored_pairs, i, progress_pair) {
+		delta = git_vector_get(&data->diff->deltas, progress_pair->index);
+		if ((ret = checkout_create_the_new_perform(data, actions[progress_pair->index],
+				delta, NO_SYMLINKS)) < 0)
+			goto cleanup;
+	}
+
+	/* After we create everything else, we need to create all the symlinks
+	 * to ensure that we don't accidentally write data through symlinks into
+	 * the .git directory.
+	 */
+	git_vector_foreach(&data->diff->deltas, i, delta) {
+		if ((ret = checkout_create_the_new_perform(data, actions[i], delta,
+				SYMLINKS_ONLY)) < 0)
+			goto cleanup;
+	}
+
+cleanup:
+	for (i = 0; i < num_threads; ++i) {
+		git_thread_join(&p[i].thread, NULL);
+	}
+
+	git__free(p);
+	git_vector_free(&errored_pairs);
+	git_vector_free(&temp);
+	git_vector_free_deep(&progress_pairs);
+	git_cond_free(&cond);
+	git_mutex_free(&mutex);
+
+	return ret;
+}
+
+#endif
+
 static int checkout_create_the_new(
 	unsigned int *actions,
 	checkout_data *data)
 {
 #ifdef GIT_THREADS
+	if (git__online_cpus() > 1)
+		return checkout_create_the_new__parallel(actions, data);
 #endif
 	return checkout_create_the_new__single(actions, data);
 }
