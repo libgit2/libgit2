@@ -31,6 +31,7 @@
 #include "transports/smart.h"
 #include "transports/http.h"
 #include "transports/ssh.h"
+#include "custom_tls.h"
 
 #ifdef GIT_WIN32
 # include "win32/w32_leakcheck.h"
@@ -74,6 +75,7 @@ int git_libgit2_init(void)
 		git_allocator_global_init,
 		git_threadstate_global_init,
 		git_threads_global_init,
+		git_custom_tls__global_init,
 		git_hash_global_init,
 		git_sysdir_global_init,
 		git_filter_global_init,

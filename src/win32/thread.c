@@ -27,11 +27,18 @@ static DWORD fls_index;
 static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 {
 	git_thread *thread = lpParameter;
-
 	/* Set the current thread for `git_thread_exit` */
 	FlsSetValue(fls_index, thread);
 
+	if (thread->tls.set_storage_on_thread) {
+		thread->tls.set_storage_on_thread(thread->tls.payload);
+	}
+
 	thread->result = thread->proc(thread->param);
+
+	if (thread->tls.teardown_storage_on_thread) {
+		thread->tls.teardown_storage_on_thread();
+	}
 
 	return CLEAN_THREAD_EXIT;
 }
@@ -72,6 +79,9 @@ int git_thread_create(
 	thread->result = NULL;
 	thread->param = arg;
 	thread->proc = start_routine;
+	if (git_custom_tls__init(&thread->tls) < 0)
+		return -1;
+
 	thread->thread = CreateThread(
 		NULL, 0, git_win32__threadproc, thread, 0, NULL);
 
@@ -107,8 +117,11 @@ void git_thread_exit(void *value)
 {
 	git_thread *thread = FlsGetValue(fls_index);
 
-	if (thread)
+	if (thread) {
+    if (thread->tls.teardown_storage_on_thread)
+      thread->tls.teardown_storage_on_thread();
 		thread->result = value;
+  }
 
 	ExitThread(CLEAN_THREAD_EXIT);
 }
