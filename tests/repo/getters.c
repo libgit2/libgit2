@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "repo/repo_helpers.h"
 
 void test_repo_getters__is_empty_correctly_deals_with_pristine_looking_repos(void)
 {
@@ -18,6 +19,18 @@ void test_repo_getters__is_empty_can_detect_used_repositories(void)
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 
+	cl_assert_equal_i(false, git_repository_is_empty(repo));
+
+	git_repository_free(repo);
+}
+
+void test_repo_getters__is_empty_can_detect_repositories_with_defaultbranch_config_empty(void)
+{
+	git_repository *repo;
+
+	create_tmp_global_config("tmp_global_path", "init.defaultBranch", "");
+
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 	cl_assert_equal_i(false, git_repository_is_empty(repo));
 
 	git_repository_free(repo);
