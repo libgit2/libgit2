@@ -2365,10 +2365,11 @@ int git_repository_initialbranch(git_buf *out, git_repository *repo)
 	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
 		return error;
 
-	if ((error = git_config_get_entry(&entry, config, "init.defaultbranch")) == 0) {
+	if ((error = git_config_get_entry(&entry, config, "init.defaultbranch")) == 0 &&
+		*entry->value) {
 		branch = entry->value;
 	}
-	else if (error == GIT_ENOTFOUND) {
+	else if (!error || error == GIT_ENOTFOUND) {
 		branch = GIT_BRANCH_DEFAULT;
 	}
 	else {
