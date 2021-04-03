@@ -34,19 +34,12 @@ static int parse_sparse_file(
 {
 	int error = 0;
 	int ignore_case = false;
-	const char *scan = data, *context = NULL;
+	const char *scan = data;
 	git_attr_fnmatch *match = NULL;
-	
 	GIT_UNUSED(allow_macros);
 	
 	if (git_repository__configmap_lookup(&ignore_case, repo, GIT_CONFIGMAP_IGNORECASE) < 0)
 		git_error_clear();
-	
-	/* if subdir file path, convert context for file paths */
-	if (attrs->entry &&
-		git_path_root(attrs->entry->path) < 0 &&
-		!git__suffixcmp(attrs->entry->path, "/" GIT_SPARSE_CHECKOUT_FILE))
-		context = attrs->entry->path;
 	
 	if (git_mutex_lock(&attrs->lock) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to lock sparse-checkout file");
