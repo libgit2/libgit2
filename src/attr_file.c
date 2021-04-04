@@ -403,7 +403,7 @@ int git_attr_file__load_standalone(git_attr_file **out, const char *path)
 
 	if ((error = git_attr_file__new(&file, NULL, GIT_ATTR_FILE__FROM_FILE)) < 0 ||
 	    (error = git_attr_file__parse_buffer(NULL, file, content.ptr, true)) < 0 ||
-	    (error = git_attr_cache__alloc_file_entry(&file->entry, NULL, path, &file->pool)) < 0)
+	    (error = git_attr_cache__alloc_file_entry(&file->entry, NULL, NULL, path, &file->pool)) < 0)
 		goto out;
 
 	*out = file;
@@ -503,14 +503,19 @@ git_attr_assignment *git_attr_rule__lookup_assignment(
 }
 
 int git_attr_path__init(
-	git_attr_path *info, const char *path, const char *base, git_dir_flag dir_flag)
+	git_attr_path *info,
+	git_repository *repo,
+	const char *path,
+	const char *base,
+	git_dir_flag dir_flag)
 {
 	ssize_t root;
 
 	/* build full path as best we can */
 	git_buf_init(&info->full, 0);
 
-	if (git_path_join_unrooted(&info->full, path, base, &root) < 0)
+	if (git_path_join_unrooted(&info->full, path, base, &root) < 0 ||
+	    git_path_validate_workdir_buf(repo, &info->full) < 0)
 		return -1;
 
 	info->path = info->full.ptr + root;

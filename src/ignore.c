@@ -453,7 +453,7 @@ int git_ignore__lookup(
 	*out = GIT_IGNORE_NOTFOUND;
 
 	if (git_attr_path__init(
-		&path, pathname, git_repository_workdir(ignores->repo), dir_flag) < 0)
+		&path, ignores->repo, pathname, git_repository_workdir(ignores->repo), dir_flag) < 0)
 		return -1;
 
 	/* first process builtins - success means path was found */
@@ -537,7 +537,7 @@ int git_ignore_path_is_ignored(
 	else if (git_repository_is_bare(repo))
 		dir_flag = GIT_DIR_FLAG_FALSE;
 
-	if ((error = git_attr_path__init(&path, pathname, workdir, dir_flag)) < 0 ||
+	if ((error = git_attr_path__init(&path, repo, pathname, workdir, dir_flag)) < 0 ||
 		(error = git_ignore__for_path(repo, path.path, &ignores)) < 0)
 		goto cleanup;
 
