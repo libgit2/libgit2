@@ -972,8 +972,10 @@ int git_filter_list_stream_file(
 
 	if ((error = stream_list_init(
 			&stream_start, &filter_streams, filters, target)) < 0 ||
-		(error = git_path_join_unrooted(&abspath, path, base, NULL)) < 0)
+	    (error = git_path_join_unrooted(&abspath, path, base, NULL)) < 0 ||
+	    (error = git_path_validate_workdir_buf(repo, &abspath)) < 0)
 		goto done;
+
 	initialized = 1;
 
 	if ((fd = git_futils_open_ro(abspath.ptr)) < 0) {
