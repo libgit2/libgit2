@@ -2702,9 +2702,9 @@ int git_repository_hashfile(
 	 * now that is not possible because git_filters_load() needs it.
 	 */
 
-	error = git_path_join_unrooted(
-		&full_path, path, git_repository_workdir(repo), NULL);
-	if (error < 0)
+	if ((error = git_path_join_unrooted(
+		&full_path, path, git_repository_workdir(repo), NULL)) < 0 ||
+	    (error = git_path_validate_workdir_buf(repo, &full_path)) < 0)
 		return error;
 
 	if (!as_path)
