@@ -394,8 +394,7 @@ static int diff_file_content_load_workdir(
 	if (fc->file->mode == GIT_FILEMODE_TREE)
 		return 0;
 
-	if (git_buf_joinpath(
-			&path, git_repository_workdir(fc->repo), fc->file->path) < 0)
+	if (git_repository_workdir_path(&path, fc->repo, fc->file->path) < 0)
 		return -1;
 
 	if (S_ISLNK(fc->file->mode))
