@@ -56,7 +56,9 @@ typedef struct {
 
 enum {
 	COMPLETED_STEPS_MUTEX_INITIALIZED = 1,
-	PERFDATA_MUTEX_INITIALIZED = 2
+	INDEX_MUTEX_INITIALIZED = 2,
+	MKPATH_MUTEX_INITIALIZED = 4,
+	PERFDATA_MUTEX_INITIALIZED = 8
 };
 
 typedef struct {
@@ -84,6 +86,8 @@ typedef struct {
 	git_strmap *mkdir_map;
 	git_attr_session attr_session;
 	git_mutex completed_steps_mutex;
+	git_mutex index_mutex;
+	git_mutex mkpath_mutex;
 	git_mutex perfdata_mutex;
 	unsigned int mutexes_initialized;
 } checkout_data;
@@ -1449,15 +1453,20 @@ static int mkpath2file(
 	checkout_data *data, const char *path, unsigned int mode)
 {
 	struct stat st;
-	bool remove_existing = should_remove_existing(data);
-	unsigned int flags =
+	bool remove_existing;
+	unsigned int flags;
+	int error;
+
+	git_mutex_lock(&data->mkpath_mutex);
+
+	remove_existing = should_remove_existing(data);
+	flags =
 		(remove_existing ? MKDIR_REMOVE_EXISTING : MKDIR_NORMAL) |
 		GIT_MKDIR_SKIP_LAST;
-	int error;
 
 	if ((error = checkout_mkdir(
 			data, path, data->opts.target_directory, mode, flags)) < 0)
-		return error;
+		goto cleanup;
 
 	if (remove_existing) {
 		git_mutex_lock(&data->perfdata_mutex);
@@ -1474,12 +1483,14 @@ static int mkpath2file(
 			error = git_futils_rmdir_r(path, NULL, GIT_RMDIR_REMOVE_FILES);
 		} else if (errno != ENOENT) {
 			git_error_set(GIT_ERROR_OS, "failed to stat '%s'", path);
-			return GIT_EEXISTS;
+			error = GIT_EEXISTS;
 		} else {
 			git_error_clear();
 		}
 	}
 
+cleanup:
+	git_mutex_unlock(&data->mkpath_mutex);
 	return error;
 }
 
@@ -1556,12 +1567,19 @@ static int blob_content_to_file(
 	filter_opts.attr_session = &data->attr_session;
 	filter_opts.temp_buf = &buffers->tmp;
 
-	if (!data->opts.disable_filters &&
-		(error = git_filter_list__load_ext(
+	if (!data->opts.disable_filters) {
+		git_mutex_lock(&data->index_mutex);
+
+		error = git_filter_list__load_ext(
 			&fl, data->repo, blob, hint_path,
-			GIT_FILTER_TO_WORKTREE, &filter_opts))) {
-		p_close(fd);
-		return error;
+			GIT_FILTER_TO_WORKTREE, &filter_opts);
+
+		git_mutex_unlock(&data->index_mutex);
+
+		if (error) {
+			p_close(fd);
+			return error;
+		}
 	}
 
 	/* setup the writer */
@@ -1817,8 +1835,11 @@ static int checkout_blob(
 		data, &file->id, fullpath->ptr, NULL, file->mode, &st);
 
 	/* update the index unless prevented */
-	if (!error && (data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0)
+	if (!error && (data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0) {
+		git_mutex_lock(&data->index_mutex);
 		error = checkout_update_index(data, file, &st);
+		git_mutex_unlock(&data->index_mutex);
+	}
 
 	/* update the submodule data if this was a new .gitmodules file */
 	if (!error && strcmp(file->path, ".gitmodules") == 0)
@@ -2410,6 +2431,12 @@ static void checkout_data_clear(checkout_data *data)
 	if (data->mutexes_initialized & COMPLETED_STEPS_MUTEX_INITIALIZED)
 		git_mutex_free(&data->completed_steps_mutex);
 
+	if (data->mutexes_initialized & INDEX_MUTEX_INITIALIZED)
+		git_mutex_free(&data->index_mutex);
+
+	if (data->mutexes_initialized & MKPATH_MUTEX_INITIALIZED)
+		git_mutex_free(&data->mkpath_mutex);
+
 	if (data->mutexes_initialized & PERFDATA_MUTEX_INITIALIZED)
 		git_mutex_free(&data->perfdata_mutex);
 }
@@ -2441,6 +2468,16 @@ static int checkout_data_init(
 		goto cleanup;
 
 	data->mutexes_initialized |= COMPLETED_STEPS_MUTEX_INITIALIZED;
+
+	if ((error = git_mutex_init(&data->index_mutex)) < 0)
+		goto cleanup;
+
+	data->mutexes_initialized |= INDEX_MUTEX_INITIALIZED;
+
+	if ((error = git_mutex_init(&data->mkpath_mutex)) < 0)
+		goto cleanup;
+
+	data->mutexes_initialized |= MKPATH_MUTEX_INITIALIZED;
 
 	if ((error = git_mutex_init(&data->perfdata_mutex)) < 0)
 		goto cleanup;
