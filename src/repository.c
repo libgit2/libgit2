@@ -2381,7 +2381,7 @@ int git_repository_initialbranch(git_buf *out, git_repository *repo)
 	    goto done;
 
 	if (!git_reference_is_valid_name(out->ptr)) {
-		git_error_set(GIT_ERROR_INVALID, "the value of init.defaultBranch is not a valid reference name");
+		git_error_set(GIT_ERROR_INVALID, "the value of init.defaultBranch is not a valid branch name");
 		error = -1;
 	}
 
