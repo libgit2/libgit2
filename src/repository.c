@@ -2335,21 +2335,19 @@ int git_repository_head_unborn(git_repository *repo)
 	return 0;
 }
 
-static int at_least_one_cb(const char *refname, void *payload)
-{
-	GIT_UNUSED(refname);
-	GIT_UNUSED(payload);
-	return GIT_PASSTHROUGH;
-}
-
 static int repo_contains_no_reference(git_repository *repo)
 {
-	int error = git_reference_foreach_name(repo, &at_least_one_cb, NULL);
+	git_reference_iterator *iter;
+	const char *refname;
+	int error;
 
-	if (error == GIT_PASSTHROUGH)
-		return 0;
+	if ((error = git_reference_iterator_new(&iter, repo)) < 0)
+		return error;
 
-	if (!error)
+	error = git_reference_next_name(&refname, iter);
+	git_reference_iterator_free(iter);
+
+	if (error == GIT_ITEROVER)
 		return 1;
 
 	return error;
