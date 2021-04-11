@@ -20,7 +20,7 @@ static void ensure_tag_pattern_match(git_repository *repo,
 	int already_found[MAX_USED_TAGS] = { 0 };
 	git_strarray tag_list;
 	int error = 0;
-	size_t sucessfully_found = 0;
+	size_t successfully_found = 0;
 	size_t i, j;
 
 	cl_assert(data->expected_matches <= MAX_USED_TAGS);
@@ -42,12 +42,12 @@ static void ensure_tag_pattern_match(git_repository *repo,
 			if (!already_found[j] && !strcmp(data->expected_results[j], tag_list.strings[i]))
 			{
 				already_found[j] = 1;
-				sucessfully_found++;
+				successfully_found++;
 				break;
 			}
 		}
 	}
-	cl_assert_equal_i((int)sucessfully_found, (int)data->expected_matches);
+	cl_assert_equal_i((int)successfully_found, (int)data->expected_matches);
 
 exit:
 	git_strarray_dispose(&tag_list);
