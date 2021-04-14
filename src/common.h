@@ -83,6 +83,7 @@
 #include "thread.h"
 #include "integer.h"
 #include "assert_safe.h"
+#include "utf8.h"
 
 /*
  * Include the declarations for deprecated functions; this ensures
