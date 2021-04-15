@@ -135,6 +135,9 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 		goto out;
 	}
 
+	if ((error = git_path_validate_workdir(NULL, dir)) < 0)
+		goto out;
+
 	if ((wt = git__calloc(1, sizeof(*wt))) == NULL) {
 		error = -1;
 		goto out;
@@ -264,14 +267,14 @@ int git_worktree_validate(const git_worktree *wt)
 			wt->commondir_path);
 		return GIT_ERROR;
 	}
-	
+
 	if (!git_path_exists(wt->worktree_path)) {
 		git_error_set(GIT_ERROR_WORKTREE,
 			"worktree directory '%s' does not exist",
 			wt->worktree_path);
 		return GIT_ERROR;
 	}
-	
+
 	return 0;
 }
 
