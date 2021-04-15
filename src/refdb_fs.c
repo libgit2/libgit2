@@ -1145,8 +1145,11 @@ static int cmp_old_ref(int *cmp, git_refdb_backend *backend, const char *name,
 	if (!old_id && !old_target)
 		return 0;
 
-	if ((error = refdb_fs_backend__lookup(&old_ref, backend, name)) < 0)
+	if ((error = refdb_fs_backend__lookup(&old_ref, backend, name)) < 0) {
+		if (error == GIT_ENOTFOUND && old_id && git_oid_is_zero(old_id))
+			return 0;
 		goto out;
+	}
 
 	/* If the types don't match, there's no way the values do */
 	if (old_id && old_ref->type != GIT_REFERENCE_DIRECT) {
