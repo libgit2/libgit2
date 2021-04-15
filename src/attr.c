@@ -523,10 +523,14 @@ static int collect_attr_files(
 		return error;
 
 	/* Resolve path in a non-bare repo */
-	if (workdir != NULL)
-		error = git_path_find_dir(&dir, path, workdir);
-	else
+	if (workdir != NULL) {
+		if (!(error = git_repository_workdir_path(&dir, repo, path)))
+			error = git_path_find_dir(&dir);
+	}
+	else {
 		error = git_path_dirname_r(&dir, path);
+	}
+
 	if (error < 0)
 		goto cleanup;
 

@@ -283,7 +283,7 @@ extern int git_path_prettify_dir(git_buf *path_out, const char *path, const char
  * appends the trailing '/'.  If the path does not exist, it is
  * treated like a regular filename.
  */
-extern int git_path_find_dir(git_buf *dir, const char *path, const char *base);
+extern int git_path_find_dir(git_buf *dir);
 
 /**
  * Resolve relative references within a path.

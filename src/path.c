@@ -754,15 +754,13 @@ bool git_path_contains_file(git_buf *base, const char *file)
 	return _check_dir_contents(base, file, &git_path_isfile);
 }
 
-int git_path_find_dir(git_buf *dir, const char *path, const char *base)
+int git_path_find_dir(git_buf *dir)
 {
-	int error = git_path_join_unrooted(dir, path, base, NULL);
+	int error = 0;
+	char buf[GIT_PATH_MAX];
 
-	if (!error) {
-		char buf[GIT_PATH_MAX];
-		if (p_realpath(dir->ptr, buf) != NULL)
-			error = git_buf_sets(dir, buf);
-	}
+	if (p_realpath(dir->ptr, buf) != NULL)
+		error = git_buf_sets(dir, buf);
 
 	/* call dirname if this is not a directory */
 	if (!error) /* && git_path_isdir(dir->ptr) == false) */
