@@ -42,7 +42,7 @@ int git_runtime_init_count(void);
  * such that there are no remaining `init` calls, then any
  * shutdown hooks that have been registered will be invoked.
  *
- * The number of oustanding initializations will be returned.
+ * The number of outstanding initializations will be returned.
  * If this number is 0, then the runtime is shutdown.
  *
  * @return The number of outstanding initializations (after this one) or an error
