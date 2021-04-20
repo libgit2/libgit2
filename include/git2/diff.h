@@ -168,6 +168,10 @@ typedef enum {
 	 *  can apply given diff information to binary files.
 	 */
 	GIT_DIFF_SHOW_BINARY = (1u << 30),
+	
+	/** Skip files in the diff that are excluded by the `sparse-checkout` file.
+	 */
+	GIT_DIFF_SKIP_SPARSE_FILES = (1u << 31),
 } git_diff_option_t;
 
 /**

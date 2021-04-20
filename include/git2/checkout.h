@@ -178,6 +178,12 @@ typedef enum {
 	GIT_CHECKOUT_DONT_WRITE_INDEX = (1u << 23),
 
 	/**
+	 *  Remove files that are excluded by the sparse-checkout ruleset.
+	 * 	Does nothing when GIT_CHECKOUT_SAFE is set.
+	 */
+	GIT_CHECKOUT_REMOVE_SPARSE_FILES = (1u << 24),
+	
+	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
 	 */
 

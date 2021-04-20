@@ -20,11 +20,13 @@
 #include "idxmap.h"
 #include "diff.h"
 #include "varint.h"
+#include "sparse.h"
 
 #include "git2/odb.h"
 #include "git2/oid.h"
 #include "git2/blob.h"
 #include "git2/config.h"
+#include "git2/sparse.h"
 #include "git2/sys/index.h"
 
 static int index_apply_to_wd_diff(git_index *index, int action, const git_strarray *paths,
@@ -973,7 +975,8 @@ static int index_entry_init(
 	struct stat st;
 	git_oid oid;
 	git_repository *repo;
-
+	int checkout = 0;
+	
 	if (INDEX_OWNER(index) == NULL)
 		return create_index_error(-1,
 			"could not initialize index entry. "
@@ -1012,6 +1015,9 @@ static int index_entry_init(
 	entry->id = oid;
 	git_index_entry__init_from_stat(entry, &st, !index->distrust_filemode);
 
+	if (git_sparse_check_path(&checkout, repo, rel_path) == 0 && checkout == 0)
+		entry->flags_extended = GIT_INDEX_ENTRY_SKIP_WORKTREE;
+	
 	*entry_out = (git_index_entry *)entry;
 	return 0;
 }
@@ -3108,6 +3114,7 @@ typedef struct read_tree_data {
 	git_vector *new_entries;
 	git_vector_cmp entry_cmp;
 	git_tree_cache *tree;
+	git_sparse *sparse;
 } read_tree_data;
 
 static int read_tree_cb(
@@ -3144,6 +3151,13 @@ static int read_tree_cb(
 
 	index_entry_adjust_namemask(entry, path.size);
 	git_buf_dispose(&path);
+	
+	if (data->sparse) {
+		int checkout = GIT_SPARSE_CHECKOUT;
+		if (git_sparse__lookup(&checkout, data->sparse, entry->path, GIT_DIR_FLAG_FALSE) == 0 &&
+				checkout == GIT_SPARSE_NOCHECKOUT)
+			entry->flags_extended = GIT_INDEX_ENTRY_SKIP_WORKTREE;
+	}
 
 	if (git_vector_insert(data->new_entries, entry) < 0) {
 		index_entry_free(entry);
@@ -3161,7 +3175,9 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 	read_tree_data data;
 	size_t i;
 	git_index_entry *e;
-
+	git_sparse sparse;
+	int sparse_checkout_enabled = false;
+	git_repository* repo = INDEX_OWNER(index);
 	if (git_idxmap_new(&entries_map) < 0)
 		return -1;
 
@@ -3171,7 +3187,13 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 	data.old_entries = &index->entries;
 	data.new_entries = &entries;
 	data.entry_cmp   = index->entries_search;
-
+	
+	if (repo == NULL || git_repository__configmap_lookup(&sparse_checkout_enabled, repo, GIT_CONFIGMAP_SPARSECHECKOUT) < 0 ||
+			sparse_checkout_enabled == false || git_sparse__init(repo, &sparse) < 0)
+		data.sparse = NULL;
+	else
+		data.sparse = &sparse;
+	
 	index->tree = NULL;
 	git_pool_clear(&index->tree_pool);
 
@@ -3206,6 +3228,10 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 cleanup:
 	git_vector_free(&entries);
 	git_idxmap_free(entries_map);
+	
+	if (data.sparse != NULL)
+		git_sparse__free(&sparse);
+	
 	if (error < 0)
 		return error;
 
