@@ -42,4 +42,14 @@ extern int git_filter_list__load_ext(
 extern git_filter *git_crlf_filter_new(void);
 extern git_filter *git_ident_filter_new(void);
 
+extern int git_filter_list__apply_to_git_file(
+	git_buf *out,
+	git_filter_list *filters,
+	git_file fd);
+
+extern int git_filter_list__stream_git_file(
+	git_filter_list *filters,
+	git_file fd,
+	git_writestream *target);
+
 #endif

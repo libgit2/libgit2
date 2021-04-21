@@ -62,7 +62,7 @@ void test_diff_workdir__to_index(void)
 		git_diff_perfdata perf = GIT_DIFF_PERFDATA_INIT;
 		cl_git_pass(git_diff_get_perfdata(&perf, diff));
 		cl_assert_equal_sz(
-			13 /* in root */ + 3 /* in subdir */, perf.stat_calls);
+			13 /* in root */ + 3 /* in subdir */ + 5 /* for oid */, perf.stat_calls);
 		cl_assert_equal_sz(5, perf.oid_calculations);
 	}
 
@@ -1815,7 +1815,7 @@ void test_diff_workdir__can_update_index(void)
 	basic_diff_status(&diff, &opts);
 
 	cl_git_pass(git_diff_get_perfdata(&perf, diff));
-	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(13 + 3 + 5, perf.stat_calls);
 	cl_assert_equal_sz(5, perf.oid_calculations);
 
 	git_diff_free(diff);
@@ -1830,7 +1830,7 @@ void test_diff_workdir__can_update_index(void)
 	basic_diff_status(&diff, &opts);
 
 	cl_git_pass(git_diff_get_perfdata(&perf, diff));
-	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(13 + 3 + 5, perf.stat_calls);
 	cl_assert_equal_sz(5, perf.oid_calculations);
 
 	git_diff_free(diff);
