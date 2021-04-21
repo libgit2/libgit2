@@ -245,7 +245,7 @@ GIT_EXTERN(int) git_blob_create_from_stream_commit(
  * Write an in-memory buffer to the ODB as a blob
  *
  * @param id return the id of the written blob
- * @param repo repository where to blob will be written
+ * @param repo repository where the blob will be written
  * @param buffer data to be written into the blob
  * @param len length of the data
  * @return 0 or an error code
