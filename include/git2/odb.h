@@ -70,7 +70,7 @@ GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
  *
  * @param odb database to add the backend to
  * @param path path to the objects folder for the alternate
- * @return 0 on success; error code otherwise
+ * @return 0 on success, error code otherwise
  */
 GIT_EXTERN(int) git_odb_add_disk_alternate(git_odb *odb, const char *path);
 
@@ -300,7 +300,7 @@ GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **out, git_odb *db, git_obje
  * @param stream the stream
  * @param buffer the data to write
  * @param len the buffer's length
- * @return 0 if the write succeeded; error code otherwise
+ * @return 0 if the write succeeded, error code otherwise
  */
 GIT_EXTERN(int) git_odb_stream_write(git_odb_stream *stream, const char *buffer, size_t len);
 
@@ -315,7 +315,7 @@ GIT_EXTERN(int) git_odb_stream_write(git_odb_stream *stream, const char *buffer,
  *
  * @param out pointer to store the resulting object's id
  * @param stream the stream
- * @return 0 on success; an error code otherwise
+ * @return 0 on success, an error code otherwise
  */
 GIT_EXTERN(int) git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream);
 
@@ -357,7 +357,7 @@ GIT_EXTERN(void) git_odb_stream_free(git_odb_stream *stream);
  * @param type pointer where to store the type of the object
  * @param db object database where the stream will read from
  * @param oid oid of the object the stream will read from
- * @return 0 if the stream was created; error code otherwise
+ * @return 0 if the stream was created, error code otherwise
  */
 GIT_EXTERN(int) git_odb_open_rstream(
 	git_odb_stream **out,
@@ -496,7 +496,7 @@ GIT_EXTERN(git_object_t) git_odb_object_type(git_odb_object *object);
  * @param odb database to add the backend to
  * @param backend pointer to a git_odb_backend instance
  * @param priority Value for ordering the backends queue
- * @return 0 on success; error code otherwise
+ * @return 0 on success, error code otherwise
  */
 GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int priority);
 
@@ -517,7 +517,7 @@ GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int 
  * @param odb database to add the backend to
  * @param backend pointer to a git_odb_backend instance
  * @param priority Value for ordering the backends queue
- * @return 0 on success; error code otherwise
+ * @return 0 on success, error code otherwise
  */
 GIT_EXTERN(int) git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority);
 
@@ -535,7 +535,7 @@ GIT_EXTERN(size_t) git_odb_num_backends(git_odb *odb);
  * @param out output pointer to ODB backend at pos
  * @param odb object database
  * @param pos index into object database backend list
- * @return 0 on success; GIT_ENOTFOUND if pos is invalid; other errors < 0
+ * @return 0 on success, GIT_ENOTFOUND if pos is invalid, other errors < 0
  */
 GIT_EXTERN(int) git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos);
 
