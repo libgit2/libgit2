@@ -94,9 +94,8 @@ GIT_EXTERN(void) git_odb_free(git_odb *db);
  * @param out pointer where to store the read object
  * @param db database to search for the object in.
  * @param id identity of the object to read.
- * @return
- * - 0 if the object was read;
- * - GIT_ENOTFOUND if the object is not in the database.
+ * @return 0 if the object was read, GIT_ENOTFOUND if the object is
+ *         not in the database.
  */
 GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id);
 
@@ -122,10 +121,9 @@ GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *i
  * @param db database to search for the object in.
  * @param short_id a prefix of the id of the object to read.
  * @param len the length of the prefix
- * @return
- * - 0 if the object was read;
- * - GIT_ENOTFOUND if the object is not in the database.
- * - GIT_EAMBIGUOUS if the prefix is ambiguous (several objects match the prefix)
+ * @return 0 if the object was read, GIT_ENOTFOUND if the object is not in the
+ *         database. GIT_EAMBIGUOUS if the prefix is ambiguous
+ *         (several objects match the prefix)
  */
 GIT_EXTERN(int) git_odb_read_prefix(git_odb_object **out, git_odb *db, const git_oid *short_id, size_t len);
 
@@ -143,9 +141,8 @@ GIT_EXTERN(int) git_odb_read_prefix(git_odb_object **out, git_odb *db, const git
  * @param type_out pointer where to store the type
  * @param db database to search for the object in.
  * @param id identity of the object to read.
- * @return
- * - 0 if the object was read;
- * - GIT_ENOTFOUND if the object is not in the database.
+ * @return 0 if the object was read, GIT_ENOTFOUND if the object is not
+ *         in the database.
  */
 GIT_EXTERN(int) git_odb_read_header(size_t *len_out, git_object_t *type_out, git_odb *db, const git_oid *id);
 
@@ -154,9 +151,7 @@ GIT_EXTERN(int) git_odb_read_header(size_t *len_out, git_object_t *type_out, git
  *
  * @param db database to be searched for the given object.
  * @param id the object to search for.
- * @return
- * - 1, if the object was found
- * - 0, otherwise
+ * @return 1 if the object was found, 0 otherwise
  */
 GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
 
