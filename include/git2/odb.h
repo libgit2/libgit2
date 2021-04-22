@@ -159,6 +159,16 @@ GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
  * Determine if an object can be found in the object database by an
  * abbreviated object ID.
  *
+ * This method queries all available ODB backends
+ * trying to match the 'len' first hexadecimal
+ * characters of the 'short_id'.
+ * The remaining (GIT_OID_HEXSZ-len)*4 bits of
+ * 'short_id' must be 0s.
+ * 'len' must be at least GIT_OID_MINPREFIXLEN,
+ * and the prefix must be long enough to identify
+ * a unique object in all the backends; the
+ * method will fail otherwise.
+ *
  * @param out The full OID of the found object if just one is found.
  * @param db The database to be searched for the given object.
  * @param short_id A prefix of the id of the object to read.
