@@ -186,6 +186,44 @@ void git_repository_free(git_repository *repo)
 	git__free(repo);
 }
 
+/* Check if we have a separate commondir (e.g. we have a worktree) */
+static int lookup_commondir(git_buf *out, git_buf *repository_path)
+{
+	git_buf common_link  = GIT_BUF_INIT;
+	int error;
+
+	/*
+	 * If there's no commondir file, the repository path is the
+	 * common path, but it needs a trailing slash.
+	 */
+	if (!git_path_contains_file(repository_path, GIT_COMMONDIR_FILE)) {
+		if ((error = git_buf_set(out, repository_path->ptr, repository_path->size)) == 0)
+		    error = git_path_to_dir(out);
+
+		goto done;
+	}
+
+	if ((error = git_buf_joinpath(&common_link, repository_path->ptr, GIT_COMMONDIR_FILE)) < 0 ||
+	    (error = git_futils_readbuffer(&common_link, common_link.ptr)) < 0)
+		goto done;
+
+	git_buf_rtrim(&common_link);
+	if (git_path_is_relative(common_link.ptr)) {
+		if ((error = git_buf_joinpath(out, repository_path->ptr, common_link.ptr)) < 0)
+			goto done;
+	} else {
+		git_buf_swap(out, &common_link);
+	}
+
+	git_buf_dispose(&common_link);
+
+	/* Make sure the commondir path always has a trailing slash */
+	error = git_path_prettify_dir(out, out->ptr, NULL);
+
+done:
+	return error;
+}
+
 /*
  * Git repository open methods
  *
@@ -197,38 +235,13 @@ static int is_valid_repository_path(bool *out, git_buf *repository_path, git_buf
 
 	*out = false;
 
-	/* Check if we have a separate commondir (e.g. we have a
-	 * worktree) */
-	if (git_path_contains_file(repository_path, GIT_COMMONDIR_FILE)) {
-		git_buf common_link  = GIT_BUF_INIT;
-
-		if ((error = git_buf_joinpath(&common_link, repository_path->ptr, GIT_COMMONDIR_FILE)) < 0 ||
-		    (error = git_futils_readbuffer(&common_link, common_link.ptr)) < 0)
-			return error;
-
-		git_buf_rtrim(&common_link);
-		if (git_path_is_relative(common_link.ptr)) {
-			if ((error = git_buf_joinpath(common_path, repository_path->ptr, common_link.ptr)) < 0)
-				return error;
-		} else {
-			git_buf_swap(common_path, &common_link);
-		}
-
-		git_buf_dispose(&common_link);
-	}
-	else {
-		if ((error = git_buf_set(common_path, repository_path->ptr, repository_path->size)) < 0)
-			return error;
-	}
-
-	/* Make sure the commondir path always has a trailing * slash */
-	if (git_buf_rfind(common_path, '/') != (ssize_t)common_path->size - 1)
-		if ((error = git_buf_putc(common_path, '/')) < 0)
-			return error;
+	if ((error = lookup_commondir(common_path, repository_path)) < 0)
+		return error;
 
 	/* Ensure HEAD file exists */
 	if (git_path_contains_file(repository_path, GIT_HEAD_FILE) == false)
 		return 0;
+
 	/* Check files in common dir */
 	if (git_path_contains_dir(common_path, GIT_OBJECTS_DIR) == false)
 		return 0;
