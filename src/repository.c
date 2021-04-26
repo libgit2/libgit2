@@ -187,7 +187,7 @@ void git_repository_free(git_repository *repo)
 }
 
 /* Check if we have a separate commondir (e.g. we have a worktree) */
-static int lookup_commondir(git_buf *out, git_buf *repository_path)
+static int lookup_commondir(bool *separate, git_buf *commondir, git_buf *repository_path)
 {
 	git_buf common_link  = GIT_BUF_INIT;
 	int error;
@@ -197,11 +197,14 @@ static int lookup_commondir(git_buf *out, git_buf *repository_path)
 	 * common path, but it needs a trailing slash.
 	 */
 	if (!git_path_contains_file(repository_path, GIT_COMMONDIR_FILE)) {
-		if ((error = git_buf_set(out, repository_path->ptr, repository_path->size)) == 0)
-		    error = git_path_to_dir(out);
+		if ((error = git_buf_set(commondir, repository_path->ptr, repository_path->size)) == 0)
+		    error = git_path_to_dir(commondir);
 
+		*separate = false;
 		goto done;
 	}
+
+	*separate = true;
 
 	if ((error = git_buf_joinpath(&common_link, repository_path->ptr, GIT_COMMONDIR_FILE)) < 0 ||
 	    (error = git_futils_readbuffer(&common_link, common_link.ptr)) < 0)
@@ -209,19 +212,35 @@ static int lookup_commondir(git_buf *out, git_buf *repository_path)
 
 	git_buf_rtrim(&common_link);
 	if (git_path_is_relative(common_link.ptr)) {
-		if ((error = git_buf_joinpath(out, repository_path->ptr, common_link.ptr)) < 0)
+		if ((error = git_buf_joinpath(commondir, repository_path->ptr, common_link.ptr)) < 0)
 			goto done;
 	} else {
-		git_buf_swap(out, &common_link);
+		git_buf_swap(commondir, &common_link);
 	}
 
 	git_buf_dispose(&common_link);
 
 	/* Make sure the commondir path always has a trailing slash */
-	error = git_path_prettify_dir(out, out->ptr, NULL);
+	error = git_path_prettify_dir(commondir, commondir->ptr, NULL);
 
 done:
 	return error;
+}
+
+GIT_INLINE(int) validate_repo_path(git_buf *path)
+{
+	/*
+	 * The longest static path in a repository (or commondir) is the
+	 * packed refs file.  (Loose refs may be longer since they
+	 * include the reference name, but will be validated when the
+	 * path is constructed.)
+	 */
+	static size_t suffix_len =
+		CONST_STRLEN("objects/pack/pack-.pack.lock") +
+		GIT_OID_HEXSZ;
+
+	return git_path_validate_filesystem_with_suffix(
+		path->ptr, path->size, suffix_len);
 }
 
 /*
@@ -231,11 +250,12 @@ done:
  */
 static int is_valid_repository_path(bool *out, git_buf *repository_path, git_buf *common_path)
 {
+	bool separate_commondir = false;
 	int error;
 
 	*out = false;
 
-	if ((error = lookup_commondir(common_path, repository_path)) < 0)
+	if ((error = lookup_commondir(&separate_commondir, common_path, repository_path)) < 0)
 		return error;
 
 	/* Ensure HEAD file exists */
@@ -247,6 +267,12 @@ static int is_valid_repository_path(bool *out, git_buf *repository_path, git_buf
 		return 0;
 	if (git_path_contains_dir(common_path, GIT_REFS_DIR) == false)
 		return 0;
+
+	/* Ensure the repo (and commondir) are valid paths */
+	if ((error = validate_repo_path(common_path)) < 0 ||
+	    (separate_commondir &&
+	     (error = validate_repo_path(repository_path)) < 0))
+		return error;
 
 	*out = true;
 	return 0;

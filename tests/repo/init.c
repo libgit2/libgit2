@@ -704,3 +704,35 @@ void test_repo_init__defaultbranch_config_empty(void)
 
 	git_reference_free(head);
 }
+
+void test_repo_init__longpath(void)
+{
+#ifdef GIT_WIN32
+	size_t padding = CONST_STRLEN("objects/pack/pack-.pack.lock") + GIT_OID_HEXSZ;
+	size_t max, i;
+	git_buf path = GIT_BUF_INIT;
+	git_repository *one = NULL, *two = NULL;
+
+	/*
+	 * Files within repositories need to fit within MAX_PATH;
+	 * that means a repo path must be at most (MAX_PATH - 18).
+	 */
+	cl_git_pass(git_buf_puts(&path, clar_sandbox_path()));
+	cl_git_pass(git_buf_putc(&path, '/'));
+
+	max = ((MAX_PATH) - path.size) - padding;
+
+	for (i = 0; i < max - 1; i++)
+		cl_git_pass(git_buf_putc(&path, 'a'));
+
+	cl_git_pass(git_repository_init(&one, path.ptr, 1));
+
+	/* Paths longer than this are rejected */
+	cl_git_pass(git_buf_putc(&path, 'z'));
+	cl_git_fail(git_repository_init(&two, path.ptr, 1));
+
+	git_repository_free(one);
+	git_repository_free(two);
+	git_buf_dispose(&path);
+#endif
+}
