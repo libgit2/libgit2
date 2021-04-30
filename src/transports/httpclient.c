@@ -1476,7 +1476,7 @@ int git_http_client_skip_body(git_http_client *client)
 			              "unexpected data handled in callback");
 			error = -1;
 		}
-	} while (!error);
+	} while (error >= 0 && client->state != DONE);
 
 	if (error < 0)
 		client->connected = 0;
