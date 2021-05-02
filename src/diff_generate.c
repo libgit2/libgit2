@@ -596,8 +596,7 @@ int git_diff__oid_for_entry(
 
 	memset(out, 0, sizeof(*out));
 
-	if (git_buf_joinpath(&full_path,
-		git_repository_workdir(diff->base.repo), entry.path) < 0)
+	if (git_repository_workdir_path(&full_path, diff->base.repo, entry.path) < 0)
 		return -1;
 
 	if (!mode) {

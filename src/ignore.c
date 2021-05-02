@@ -309,12 +309,17 @@ int git_ignore__for_path(
 		if ((error = git_path_dirname_r(&local, path)) < 0 ||
 		    (error = git_path_resolve_relative(&local, 0)) < 0 ||
 		    (error = git_path_to_dir(&local)) < 0 ||
-		    (error = git_buf_joinpath(&ignores->dir, workdir, local.ptr)) < 0)
-		{;} /* Nothing, we just want to stop on the first error */
+		    (error = git_buf_joinpath(&ignores->dir, workdir, local.ptr)) < 0 ||
+		    (error = git_path_validate_workdir_buf(repo, &ignores->dir)) < 0) {
+			/* Nothing, we just want to stop on the first error */
+		}
+
 		git_buf_dispose(&local);
 	} else {
-		error = git_buf_joinpath(&ignores->dir, path, "");
+		if (!(error = git_buf_joinpath(&ignores->dir, path, "")))
+		    error = git_path_validate_filesystem(ignores->dir.ptr, ignores->dir.size);
 	}
+
 	if (error < 0)
 		goto cleanup;
 
@@ -453,7 +458,7 @@ int git_ignore__lookup(
 	*out = GIT_IGNORE_NOTFOUND;
 
 	if (git_attr_path__init(
-		&path, pathname, git_repository_workdir(ignores->repo), dir_flag) < 0)
+		&path, ignores->repo, pathname, git_repository_workdir(ignores->repo), dir_flag) < 0)
 		return -1;
 
 	/* first process builtins - success means path was found */
@@ -537,7 +542,7 @@ int git_ignore_path_is_ignored(
 	else if (git_repository_is_bare(repo))
 		dir_flag = GIT_DIR_FLAG_FALSE;
 
-	if ((error = git_attr_path__init(&path, pathname, workdir, dir_flag)) < 0 ||
+	if ((error = git_attr_path__init(&path, repo, pathname, workdir, dir_flag)) < 0 ||
 		(error = git_ignore__for_path(repo, path.path, &ignores)) < 0)
 		goto cleanup;
 
@@ -590,15 +595,13 @@ int git_ignore__check_pathspec_for_exact_ignores(
 	git_attr_fnmatch *match;
 	int ignored;
 	git_buf path = GIT_BUF_INIT;
-	const char *wd, *filename;
+	const char *filename;
 	git_index *idx;
 
 	if ((error = git_repository__ensure_not_bare(
 			repo, "validate pathspec")) < 0 ||
 		(error = git_repository_index(&idx, repo)) < 0)
 		return error;
-
-	wd = git_repository_workdir(repo);
 
 	git_vector_foreach(vspec, i, match) {
 		/* skip wildcard matches (if they are being used) */
@@ -612,7 +615,7 @@ int git_ignore__check_pathspec_for_exact_ignores(
 		if (git_index_get_bypath(idx, filename, 0) != NULL)
 			continue;
 
-		if ((error = git_buf_joinpath(&path, wd, filename)) < 0)
+		if ((error = git_repository_workdir_path(&path, repo, filename)) < 0)
 			break;
 
 		/* is there a file on disk that matches this exactly? */

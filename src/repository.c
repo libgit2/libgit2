@@ -186,6 +186,63 @@ void git_repository_free(git_repository *repo)
 	git__free(repo);
 }
 
+/* Check if we have a separate commondir (e.g. we have a worktree) */
+static int lookup_commondir(bool *separate, git_buf *commondir, git_buf *repository_path)
+{
+	git_buf common_link  = GIT_BUF_INIT;
+	int error;
+
+	/*
+	 * If there's no commondir file, the repository path is the
+	 * common path, but it needs a trailing slash.
+	 */
+	if (!git_path_contains_file(repository_path, GIT_COMMONDIR_FILE)) {
+		if ((error = git_buf_set(commondir, repository_path->ptr, repository_path->size)) == 0)
+		    error = git_path_to_dir(commondir);
+
+		*separate = false;
+		goto done;
+	}
+
+	*separate = true;
+
+	if ((error = git_buf_joinpath(&common_link, repository_path->ptr, GIT_COMMONDIR_FILE)) < 0 ||
+	    (error = git_futils_readbuffer(&common_link, common_link.ptr)) < 0)
+		goto done;
+
+	git_buf_rtrim(&common_link);
+	if (git_path_is_relative(common_link.ptr)) {
+		if ((error = git_buf_joinpath(commondir, repository_path->ptr, common_link.ptr)) < 0)
+			goto done;
+	} else {
+		git_buf_swap(commondir, &common_link);
+	}
+
+	git_buf_dispose(&common_link);
+
+	/* Make sure the commondir path always has a trailing slash */
+	error = git_path_prettify_dir(commondir, commondir->ptr, NULL);
+
+done:
+	return error;
+}
+
+GIT_INLINE(int) validate_repo_path(git_buf *path)
+{
+	/*
+	 * The longest static path in a repository (or commondir) is the
+	 * packed refs file.  (Loose refs may be longer since they
+	 * include the reference name, but will be validated when the
+	 * path is constructed.)
+	 */
+	static size_t suffix_len =
+		CONST_STRLEN("objects/pack/pack-.pack.lock") +
+		GIT_OID_HEXSZ;
+
+	return git_path_validate_filesystem_with_suffix(
+		path->ptr, path->size, suffix_len);
+}
+
 /*
  * Git repository open methods
  *
@@ -193,47 +250,29 @@ void git_repository_free(git_repository *repo)
  */
 static int is_valid_repository_path(bool *out, git_buf *repository_path, git_buf *common_path)
 {
+	bool separate_commondir = false;
 	int error;
 
 	*out = false;
 
-	/* Check if we have a separate commondir (e.g. we have a
-	 * worktree) */
-	if (git_path_contains_file(repository_path, GIT_COMMONDIR_FILE)) {
-		git_buf common_link  = GIT_BUF_INIT;
-
-		if ((error = git_buf_joinpath(&common_link, repository_path->ptr, GIT_COMMONDIR_FILE)) < 0 ||
-		    (error = git_futils_readbuffer(&common_link, common_link.ptr)) < 0)
-			return error;
-
-		git_buf_rtrim(&common_link);
-		if (git_path_is_relative(common_link.ptr)) {
-			if ((error = git_buf_joinpath(common_path, repository_path->ptr, common_link.ptr)) < 0)
-				return error;
-		} else {
-			git_buf_swap(common_path, &common_link);
-		}
-
-		git_buf_dispose(&common_link);
-	}
-	else {
-		if ((error = git_buf_set(common_path, repository_path->ptr, repository_path->size)) < 0)
-			return error;
-	}
-
-	/* Make sure the commondir path always has a trailing * slash */
-	if (git_buf_rfind(common_path, '/') != (ssize_t)common_path->size - 1)
-		if ((error = git_buf_putc(common_path, '/')) < 0)
-			return error;
+	if ((error = lookup_commondir(&separate_commondir, common_path, repository_path)) < 0)
+		return error;
 
 	/* Ensure HEAD file exists */
 	if (git_path_contains_file(repository_path, GIT_HEAD_FILE) == false)
 		return 0;
+
 	/* Check files in common dir */
 	if (git_path_contains_dir(common_path, GIT_OBJECTS_DIR) == false)
 		return 0;
 	if (git_path_contains_dir(common_path, GIT_REFS_DIR) == false)
 		return 0;
+
+	/* Ensure the repo (and commondir) are valid paths */
+	if ((error = validate_repo_path(common_path)) < 0 ||
+	    (separate_commondir &&
+	     (error = validate_repo_path(repository_path)) < 0))
+		return error;
 
 	*out = true;
 	return 0;
@@ -2493,6 +2532,22 @@ const char *git_repository_workdir(const git_repository *repo)
 	return repo->workdir;
 }
 
+int git_repository_workdir_path(
+	git_buf *out, git_repository *repo, const char *path)
+{
+	int error;
+
+	if (!repo->workdir) {
+		git_error_set(GIT_ERROR_REPOSITORY, "repository has no working directory");
+		return GIT_EBAREREPO;
+	}
+
+	if (!(error = git_buf_joinpath(out, repo->workdir, path)))
+		error = git_path_validate_workdir_buf(repo, out);
+
+	return error;
+}
+
 const char *git_repository_commondir(const git_repository *repo)
 {
 	GIT_ASSERT_ARG_WITH_RETVAL(repo, NULL);
@@ -2685,9 +2740,9 @@ int git_repository_hashfile(
 	 * now that is not possible because git_filters_load() needs it.
 	 */
 
-	error = git_path_join_unrooted(
-		&full_path, path, git_repository_workdir(repo), NULL);
-	if (error < 0)
+	if ((error = git_path_join_unrooted(
+		&full_path, path, git_repository_workdir(repo), NULL)) < 0 ||
+	    (error = git_path_validate_workdir_buf(repo, &full_path)) < 0)
 		return error;
 
 	if (!as_path)

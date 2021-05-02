@@ -44,6 +44,7 @@ extern bool git_attr_cache__is_cached(
 
 extern int git_attr_cache__alloc_file_entry(
 	git_attr_file_entry **out,
+	git_repository *repo,
 	const char *base,
 	const char *path,
 	git_pool *pool);

@@ -1278,7 +1278,8 @@ static int filesystem_iterator_entry_hash(
 		return git_repository_hashfile(&entry->id,
 			iter->base.repo, entry->path, GIT_OBJECT_BLOB, NULL);
 
-	if (!(error = git_buf_joinpath(&fullpath, iter->root, entry->path)))
+	if (!(error = git_buf_joinpath(&fullpath, iter->root, entry->path)) &&
+	    !(error = git_path_validate_workdir_buf(iter->base.repo, &fullpath)))
 		error = git_odb_hashfile(&entry->id, fullpath.ptr, GIT_OBJECT_BLOB);
 
 	git_buf_dispose(&fullpath);
@@ -1359,7 +1360,8 @@ static int filesystem_iterator_frame_push(
 	else
 		git_buf_puts(&root, iter->root);
 
-	if (git_buf_oom(&root)) {
+	if (git_buf_oom(&root) ||
+	    git_path_validate_workdir_buf(iter->base.repo, &root) < 0) {
 		error = -1;
 		goto done;
 	}
@@ -1389,7 +1391,8 @@ static int filesystem_iterator_frame_push(
 		iterator_pathlist_search_t pathlist_match = ITERATOR_PATHLIST_FULL;
 		bool dir_expected = false;
 
-		if ((error = git_path_diriter_fullpath(&path, &path_len, &diriter)) < 0)
+		if ((error = git_path_diriter_fullpath(&path, &path_len, &diriter)) < 0 ||
+		    (error = git_path_validate_workdir_with_len(iter->base.repo, path, path_len)) < 0)
 			goto done;
 
 		GIT_ASSERT(path_len > iter->root_len);
@@ -1562,7 +1565,8 @@ static int filesystem_iterator_is_dir(
 	}
 
 	if ((error = git_buf_joinpath(&fullpath, iter->root, entry->path)) < 0 ||
-		(error = p_stat(fullpath.ptr, &st)) < 0)
+	    (error = git_path_validate_workdir_buf(iter->base.repo, &fullpath)) < 0 ||
+	    (error = p_stat(fullpath.ptr, &st)) < 0)
 		goto done;
 
 	*is_dir = S_ISDIR(st.st_mode);

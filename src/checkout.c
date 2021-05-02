@@ -329,6 +329,9 @@ static int checkout_target_fullpath(
 	if (path && git_buf_puts(&data->target_path, path) < 0)
 		return -1;
 
+	if (git_path_validate_workdir_buf(data->repo, &data->target_path) < 0)
+		return -1;
+
 	*out = &data->target_path;
 
 	return 0;
@@ -1278,14 +1281,14 @@ static int checkout_verify_paths(
 	unsigned int flags = GIT_PATH_REJECT_WORKDIR_DEFAULTS;
 
 	if (action & CHECKOUT_ACTION__REMOVE) {
-		if (!git_path_isvalid(repo, delta->old_file.path, delta->old_file.mode, flags)) {
+		if (!git_path_validate(repo, delta->old_file.path, delta->old_file.mode, flags)) {
 			git_error_set(GIT_ERROR_CHECKOUT, "cannot remove invalid path '%s'", delta->old_file.path);
 			return -1;
 		}
 	}
 
 	if (action & ~CHECKOUT_ACTION__REMOVE) {
-		if (!git_path_isvalid(repo, delta->new_file.path, delta->new_file.mode, flags)) {
+		if (!git_path_validate(repo, delta->new_file.path, delta->new_file.mode, flags)) {
 			git_error_set(GIT_ERROR_CHECKOUT, "cannot checkout to invalid path '%s'", delta->new_file.path);
 			return -1;
 		}
@@ -2032,7 +2035,8 @@ static int checkout_merge_path(
 	const char *our_label_raw, *their_label_raw, *suffix;
 	int error = 0;
 
-	if ((error = git_buf_joinpath(out, git_repository_workdir(data->repo), result->path)) < 0)
+	if ((error = git_buf_joinpath(out, data->opts.target_directory, result->path)) < 0 ||
+	    (error = git_path_validate_workdir_buf(data->repo, out)) < 0)
 		return error;
 
 	/* Most conflicts simply use the filename in the index */
@@ -2331,6 +2335,22 @@ static void checkout_data_clear(checkout_data *data)
 	git_attr_session__free(&data->attr_session);
 }
 
+static int validate_target_directory(checkout_data *data)
+{
+	int error;
+
+	if ((error = git_path_validate_workdir(data->repo, data->opts.target_directory)) < 0)
+		return error;
+
+	if (git_path_isdir(data->opts.target_directory))
+		return 0;
+
+	error = checkout_mkdir(data, data->opts.target_directory, NULL,
+	                       GIT_DIR_MODE, GIT_MKDIR_VERIFY_DIR);
+
+	return error;
+}
+
 static int checkout_data_init(
 	checkout_data *data,
 	git_iterator *target,
@@ -2363,10 +2383,7 @@ static int checkout_data_init(
 
 	if (!data->opts.target_directory)
 		data->opts.target_directory = git_repository_workdir(repo);
-	else if (!git_path_isdir(data->opts.target_directory) &&
-			 (error = checkout_mkdir(data,
-				data->opts.target_directory, NULL,
-				GIT_DIR_MODE, GIT_MKDIR_VERIFY_DIR)) < 0)
+	else if ((error = validate_target_directory(data)) < 0)
 		goto cleanup;
 
 	if ((error = git_repository_index(&data->index, data->repo)) < 0)

@@ -317,27 +317,6 @@ extern int git__date_rfc2822_fmt(char *out, size_t len, const git_time *date);
 extern size_t git__unescape(char *str);
 
 /*
- * Iterate through an UTF-8 string, yielding one
- * codepoint at a time.
- *
- * @param str current position in the string
- * @param str_len size left in the string; -1 if the string is NULL-terminated
- * @param dst pointer where to store the current codepoint
- * @return length in bytes of the read codepoint; -1 if the codepoint was invalid
- */
-extern int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst);
-
-/*
- * Iterate through an UTF-8 string and stops after finding any invalid UTF-8
- * codepoints.
- *
- * @param str string to scan
- * @param str_len size of the string
- * @return length in bytes of the string that contains valid data
- */
-extern size_t git__utf8_valid_buf_length(const uint8_t *str, size_t str_len);
-
-/*
  * Safely zero-out memory, making sure that the compiler
  * doesn't optimize away the operation.
  */

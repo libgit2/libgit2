@@ -38,6 +38,7 @@ GIT_INLINE(git_attr_file_entry *) attr_cache_lookup_entry(
 
 int git_attr_cache__alloc_file_entry(
 	git_attr_file_entry **out,
+	git_repository *repo,
 	const char *base,
 	const char *path,
 	git_pool *pool)
@@ -65,6 +66,9 @@ int git_attr_cache__alloc_file_entry(
 	}
 	memcpy(&ce->fullpath[baselen], path, pathlen);
 
+	if (git_path_validate_workdir_with_len(repo, ce->fullpath, pathlen + baselen) < 0)
+		return -1;
+
 	ce->path = &ce->fullpath[baselen];
 	*out = ce;
 
@@ -79,8 +83,8 @@ static int attr_cache_make_entry(
 	git_attr_file_entry *entry = NULL;
 	int error;
 
-	if ((error = git_attr_cache__alloc_file_entry(&entry, git_repository_workdir(repo),
-						      path, &cache->pool)) < 0)
+	if ((error = git_attr_cache__alloc_file_entry(&entry, repo,
+		git_repository_workdir(repo), path, &cache->pool)) < 0)
 		return error;
 
 	if ((error = git_strmap_set(cache->files, entry->path, entry)) < 0)
@@ -169,7 +173,8 @@ static int attr_cache_lookup(
 	if (base != NULL && git_path_root(filename) < 0) {
 		git_buf *p = attr_session ? &attr_session->tmp : &path;
 
-		if (git_buf_joinpath(p, base, filename) < 0)
+		if (git_buf_joinpath(p, base, filename) < 0 ||
+		    git_path_validate_workdir_buf(repo, p) < 0)
 			return -1;
 
 		filename = p->ptr;

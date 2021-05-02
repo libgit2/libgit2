@@ -476,8 +476,8 @@ static int similarity_sig(
 	git_diff_file *file = info->file;
 
 	if (info->src == GIT_ITERATOR_WORKDIR) {
-		if ((error = git_buf_joinpath(
-			&info->data, git_repository_workdir(info->repo), file->path)) < 0)
+		if ((error = git_repository_workdir_path(
+			&info->data, info->repo, file->path)) < 0)
 			return error;
 
 		/* if path is not a regular file, just skip this item */

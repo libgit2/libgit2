@@ -198,11 +198,7 @@ int git_blob__create_from_paths(
 	GIT_ASSERT_ARG(hint_path || !try_load_filters);
 
 	if (!content_path) {
-		if (git_repository__ensure_not_bare(repo, "create blob from file") < 0)
-			return GIT_EBAREREPO;
-
-		if (git_buf_joinpath(
-				&path, git_repository_workdir(repo), hint_path) < 0)
+		if (git_repository_workdir_path(&path, repo, hint_path) < 0)
 			return -1;
 
 		content_path = path.ptr;

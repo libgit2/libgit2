@@ -207,8 +207,11 @@ extern git_attr_assignment *git_attr_rule__lookup_assignment(
 typedef enum { GIT_DIR_FLAG_TRUE = 1, GIT_DIR_FLAG_FALSE = 0, GIT_DIR_FLAG_UNKNOWN = -1 } git_dir_flag;
 
 extern int git_attr_path__init(
-	git_attr_path *info, const char *path, const char *base, git_dir_flag is_dir);
-
+	git_attr_path *out,
+	git_repository *repo,
+	const char *path,
+	const char *base,
+	git_dir_flag is_dir);
 extern void git_attr_path__free(git_attr_path *info);
 
 extern int git_attr_assignment__parse(

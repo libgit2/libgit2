@@ -4,6 +4,7 @@
 #include "clone.h"
 #include "buffer.h"
 #include "futils.h"
+#include "repository.h"
 
 static git_buf path = GIT_BUF_INIT;
 
@@ -29,6 +30,7 @@ void test_win32_longpath__initialize(void)
 void test_win32_longpath__cleanup(void)
 {
 	git_buf_dispose(&path);
+	cl_git_sandbox_cleanup();
 }
 
 #ifdef GIT_WIN32
@@ -58,5 +60,19 @@ void test_win32_longpath__errmsg_on_checkout(void)
 
 	cl_git_fail(git_clone(&repo, cl_fixture("testrepo.git"), path.ptr, NULL));
 	assert_name_too_long();
+#endif
+}
+
+void test_win32_longpath__workdir_path_validated(void)
+{
+#ifdef GIT_WIN32
+	git_repository *repo = cl_git_sandbox_init("testrepo");
+	git_buf out = GIT_BUF_INIT;
+
+	cl_git_pass(git_repository_workdir_path(&out, repo, "a.txt"));
+
+	/* even if the repo path is a drive letter, this is too long */
+	cl_git_fail(git_repository_workdir_path(&out, repo, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.txt"));
+	cl_assert(git__prefixcmp(git_error_last()->message, "path too long") == 0);
 #endif
 }

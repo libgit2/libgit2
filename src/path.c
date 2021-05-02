@@ -754,15 +754,13 @@ bool git_path_contains_file(git_buf *base, const char *file)
 	return _check_dir_contents(base, file, &git_path_isfile);
 }
 
-int git_path_find_dir(git_buf *dir, const char *path, const char *base)
+int git_path_find_dir(git_buf *dir)
 {
-	int error = git_path_join_unrooted(dir, path, base, NULL);
+	int error = 0;
+	char buf[GIT_PATH_MAX];
 
-	if (!error) {
-		char buf[GIT_PATH_MAX];
-		if (p_realpath(dir->ptr, buf) != NULL)
-			error = git_buf_sets(dir, buf);
-	}
+	if (p_realpath(dir->ptr, buf) != NULL)
+		error = git_buf_sets(dir, buf);
 
 	/* call dirname if this is not a directory */
 	if (!error) /* && git_path_isdir(dir->ptr) == false) */
@@ -1562,8 +1560,8 @@ GIT_INLINE(bool) verify_dospath(
 static int32_t next_hfs_char(const char **in, size_t *len)
 {
 	while (*len) {
-		int32_t codepoint;
-		int cp_len = git__utf8_iterate((const uint8_t *)(*in), (int)(*len), &codepoint);
+		uint32_t codepoint;
+		int cp_len = git_utf8_iterate(&codepoint, *in, *len);
 		if (cp_len < 0)
 			return -1;
 
@@ -1595,7 +1593,7 @@ static int32_t next_hfs_char(const char **in, size_t *len)
 		 * the ASCII range, which is perfectly fine, because the
 		 * git folder name can only be composed of ascii characters
 		 */
-		return git__tolower(codepoint);
+		return git__tolower((int)codepoint);
 	}
 	return 0; /* NULL byte -- end of string */
 }
@@ -1877,7 +1875,7 @@ GIT_INLINE(unsigned int) dotgit_flags(
 	return flags;
 }
 
-bool git_path_isvalid(
+bool git_path_validate(
 	git_repository *repo,
 	const char *path,
 	uint16_t mode,
@@ -1902,6 +1900,46 @@ bool git_path_isvalid(
 	}
 
 	return verify_component(repo, start, (c - start), mode, flags);
+}
+
+#ifdef GIT_WIN32
+GIT_INLINE(bool) should_validate_longpaths(git_repository *repo)
+{
+	int longpaths = 0;
+
+	if (repo &&
+	    git_repository__configmap_lookup(&longpaths, repo, GIT_CONFIGMAP_LONGPATHS) < 0)
+		longpaths = 0;
+
+	return (longpaths == 0);
+}
+
+#else
+# define should_validate_longpaths(repo) (GIT_UNUSED(repo), false)
+#endif
+
+int git_path_validate_workdir(git_repository *repo, const char *path)
+{
+	if (should_validate_longpaths(repo))
+		return git_path_validate_filesystem(path, strlen(path));
+
+	return 0;
+}
+
+int git_path_validate_workdir_with_len(
+	git_repository *repo,
+	const char *path,
+	size_t path_len)
+{
+	if (should_validate_longpaths(repo))
+		return git_path_validate_filesystem(path, path_len);
+
+	return 0;
+}
+
+int git_path_validate_workdir_buf(git_repository *repo, git_buf *path)
+{
+	return git_path_validate_workdir_with_len(repo, path->ptr, path->size);
 }
 
 int git_path_normalize_slashes(git_buf *out, const char *path)

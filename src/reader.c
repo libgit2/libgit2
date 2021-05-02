@@ -98,8 +98,7 @@ static int workdir_reader_read(
 	git_oid id;
 	int error;
 
-	if ((error = git_buf_joinpath(&path,
-		git_repository_workdir(reader->repo), filename)) < 0)
+	if ((error = git_repository_workdir_path(&path, reader->repo, filename)) < 0)
 		goto done;
 
 	if ((error = p_lstat(path.ptr, &st)) < 0) {
