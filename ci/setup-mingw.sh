@@ -9,9 +9,9 @@ BUILD_TEMP=$(cygpath $BUILD_TEMP)
 
 case "$ARCH" in
 	amd64)
-		MINGW_URI="https://bintray.com/libgit2/build-dependencies/download_file?file_path=mingw-w64-x86_64-8.1.0-release-win32-seh-rt_v6-rev0.zip";;
+		MINGW_URI="https://github.com/libgit2/ci-dependencies/releases/download/2021-05-04/mingw-x86_64-8.1.0-release-win32-sjlj-rt_v6-rev0.zip";;
 	x86)
-		MINGW_URI="https://bintray.com/libgit2/build-dependencies/download_file?file_path=mingw-w64-i686-8.1.0-release-win32-sjlj-rt_v6-rev0.zip";;
+		MINGW_URI="https://github.com/libgit2/ci-dependencies/releases/download/2021-05-04/mingw-i686-8.1.0-release-win32-sjlj-rt_v6-rev0.zip";;
 esac
 
 if [ -z "$MINGW_URI" ]; then
