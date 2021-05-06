@@ -362,10 +362,7 @@ static int diff_file_content_load_workdir_file(
 	if (!(error = git_futils_readbuffer_fd(&raw, fd, (size_t)fc->file->size))) {
 		git_buf out = GIT_BUF_INIT;
 
-		error = git_filter_list_apply_to_data(&out, fl, &raw);
-
-		if (out.ptr != raw.ptr)
-			git_buf_dispose(&raw);
+		error = git_filter_list__convert_buf(&out, fl, &raw);
 
 		if (!error) {
 			fc->map.len  = out.size;

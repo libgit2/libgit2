@@ -742,6 +742,28 @@ int git_filter_list_apply_to_buffer(
 	return error;
 }
 
+int git_filter_list__convert_buf(
+	git_buf *out,
+	git_filter_list *filters,
+	git_buf *in)
+{
+	int error;
+
+	if (!filters || git_filter_list_length(filters) == 0) {
+		git_buf_swap(out, in);
+		git_buf_dispose(in);
+		return 0;
+	}
+
+	error = git_filter_list_apply_to_buffer(out, filters,
+		in->ptr, in->size);
+
+	if (!error)
+		git_buf_dispose(in);
+
+	return error;
+}
+
 int git_filter_list_apply_to_file(
 	git_buf *out,
 	git_filter_list *filters,

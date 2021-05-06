@@ -36,6 +36,15 @@ extern int git_filter_list__load_ext(
 	git_filter_options *filter_opts);
 
 /*
+ * The given input buffer will be converted to the given output buffer.
+ * The input buffer will be freed (_if_ it was allocated).
+ */
+extern int git_filter_list__convert_buf(
+	git_buf *out,
+	git_filter_list *filters,
+	git_buf *in);
+
+/*
  * Available filters
  */
 
