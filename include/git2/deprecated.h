@@ -18,6 +18,7 @@
 #include "describe.h"
 #include "diff.h"
 #include "errors.h"
+#include "filter.h"
 #include "index.h"
 #include "indexer.h"
 #include "merge.h"
@@ -116,6 +117,29 @@ GIT_EXTERN(int) git_blob_filtered_content(
 	git_blob *blob,
 	const char *as_path,
 	int check_for_binary_data);
+
+/**@}*/
+
+/** @name Deprecated Filter Functions
+ *
+ * These functions are retained for backward compatibility.  The
+ * newer versions of these functions should be preferred in all
+ * new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/** Deprecated in favor of `git_filter_list_stream_buffer`.
+ *
+ * @deprecated Use git_filter_list_stream_buffer
+ * @see Use git_filter_list_stream_buffer
+ */
+GIT_EXTERN(int) git_filter_list_stream_data(
+	git_filter_list *filters,
+	git_buf *data,
+	git_writestream *target);
 
 /**@}*/
 

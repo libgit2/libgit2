@@ -175,12 +175,14 @@ GIT_EXTERN(int) git_filter_list_apply_to_blob(
  * Apply a filter list to an arbitrary buffer as a stream
  *
  * @param filters the list of filters to apply
- * @param data the buffer to filter
+ * @param buffer the buffer to filter
+ * @param len the size of the buffer
  * @param target the stream into which the data will be written
  */
-GIT_EXTERN(int) git_filter_list_stream_data(
+GIT_EXTERN(int) git_filter_list_stream_buffer(
 	git_filter_list *filters,
-	git_buf *data,
+	const char *buffer,
+	size_t len,
 	git_writestream *target);
 
 /**

@@ -737,8 +737,8 @@ int git_filter_list_apply_to_data(
 
 	buf_stream_init(&writer, tgt);
 
-	if ((error = git_filter_list_stream_data(filters, src,
-		&writer.parent)) < 0)
+	if ((error = git_filter_list_stream_buffer(filters,
+		src->ptr, src->size, &writer.parent)) < 0)
 			return error;
 
 	GIT_ASSERT(writer.complete);
@@ -1002,24 +1002,21 @@ done:
 	return error;
 }
 
-int git_filter_list_stream_data(
+int git_filter_list_stream_buffer(
 	git_filter_list *filters,
-	git_buf *data,
+	const char *buffer,
+	size_t len,
 	git_writestream *target)
 {
 	git_vector filter_streams = GIT_VECTOR_INIT;
 	git_writestream *stream_start;
 	int error, initialized = 0;
 
-	if ((error = git_buf_sanitize(data)) < 0)
-		return error;
-
 	if ((error = stream_list_init(&stream_start, &filter_streams, filters, target)) < 0)
 		goto out;
 	initialized = 1;
 
-	if ((error = stream_start->write(
-			stream_start, data->ptr, data->size)) < 0)
+	if ((error = stream_start->write(stream_start, buffer, len)) < 0)
 		goto out;
 
 out:
@@ -1043,7 +1040,7 @@ int git_filter_list_stream_blob(
 	if (filters)
 		git_oid_cpy(&filters->source.oid, git_blob_id(blob));
 
-	return git_filter_list_stream_data(filters, &in, target);
+	return git_filter_list_stream_buffer(filters, in.ptr, in.size, target);
 }
 
 int git_filter_init(git_filter *filter, unsigned int version)
@@ -1051,3 +1048,20 @@ int git_filter_init(git_filter *filter, unsigned int version)
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(filter, version, git_filter, GIT_FILTER_INIT);
 	return 0;
 }
+
+#ifndef GIT_DEPRECATE_HARD
+
+int git_filter_list_stream_data(
+	git_filter_list *filters,
+	git_buf *data,
+	git_writestream *target)
+{
+	int error;
+
+	if ((error = git_buf_sanitize(data)) < 0)
+		return error;
+
+	return git_filter_list_stream_buffer(filters, data->ptr, data->size, target);
+}
+
+#endif
