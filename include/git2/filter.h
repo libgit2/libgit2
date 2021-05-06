@@ -125,6 +125,21 @@ GIT_EXTERN(int) git_filter_list_contains(
  * @param out Buffer to store the result of the filtering
  * @param filters A loaded git_filter_list (or NULL)
  * @param in Buffer containing the data to filter
+ * @param in_len The length of the input buffer
+ * @return 0 on success, an error code otherwise
+ */
+GIT_EXTERN(int) git_filter_list_apply_to_buffer(
+	git_buf *out,
+	git_filter_list *filters,
+	const char *in,
+	size_t in_len);
+
+/**
+ * Apply filter list to a data buffer.
+ *
+ * @param out Buffer to store the result of the filtering
+ * @param filters A loaded git_filter_list (or NULL)
+ * @param in Buffer containing the data to filter
  * @return 0 on success, an error code otherwise
  */
 GIT_EXTERN(int) git_filter_list_apply_to_data(

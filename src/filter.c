@@ -720,7 +720,7 @@ static void buf_stream_init(struct buf_stream *writer, git_buf *target)
 	git_buf_clear(target);
 }
 
-static int git_filter_list_apply_to_buffer(
+int git_filter_list_apply_to_buffer(
 	git_buf *out,
 	git_filter_list *filters,
 	const char *in,
