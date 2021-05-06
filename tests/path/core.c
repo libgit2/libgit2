@@ -361,6 +361,9 @@ void test_path_core__validate_workdir_with_core_longpath(void)
 	/* set core.longpaths explicitly off */
 	cl_git_pass(git_config_set_bool(config, "core.longpaths", 0));
 	cl_must_fail(git_path_validate_workdir(repo, "/c/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/aaaaaaaaa/longer_than_260.txt"));
+
+	git_config_free(config);
+	git_repository_free(repo);
 #endif
 }
 

@@ -859,6 +859,7 @@ on_error:
 	if (error < 0)
 		winhttp_close_connection(t);
 
+	git_buf_dispose(&ua);
 	git_buf_dispose(&ipv6);
 	git__free(wide_host);
 	git__free(wide_ua);

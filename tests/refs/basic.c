@@ -80,5 +80,6 @@ void test_refs_basic__longpaths(void)
 
 	git_reference_free(one);
 	git_reference_free(two);
+	git_buf_dispose(&refname);
 #endif
 }
