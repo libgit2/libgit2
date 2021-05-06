@@ -720,29 +720,37 @@ static void buf_stream_init(struct buf_stream *writer, git_buf *target)
 	git_buf_clear(target);
 }
 
-int git_filter_list_apply_to_data(
-	git_buf *tgt, git_filter_list *filters, git_buf *src)
+static int git_filter_list_apply_to_buffer(
+	git_buf *out,
+	git_filter_list *filters,
+	const char *in,
+	size_t in_len)
 {
 	struct buf_stream writer;
 	int error;
 
-	if ((error = git_buf_sanitize(tgt)) < 0 ||
-	    (error = git_buf_sanitize(src)) < 0)
-	    return error;
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
-	if (!filters) {
-		git_buf_attach_notowned(tgt, src->ptr, src->size);
-		return 0;
-	}
-
-	buf_stream_init(&writer, tgt);
+	buf_stream_init(&writer, out);
 
 	if ((error = git_filter_list_stream_buffer(filters,
-		src->ptr, src->size, &writer.parent)) < 0)
+		in, in_len, &writer.parent)) < 0)
 			return error;
 
 	GIT_ASSERT(writer.complete);
 	return error;
+}
+
+int git_filter_list_apply_to_data(
+	git_buf *tgt, git_filter_list *filters, git_buf *src)
+{
+	int error;
+
+	if ((error = git_buf_sanitize(src)) < 0)
+	    return error;
+
+	return git_filter_list_apply_to_buffer(tgt, filters, src->ptr, src->size);
 }
 
 int git_filter_list_apply_to_file(
