@@ -742,17 +742,6 @@ int git_filter_list_apply_to_buffer(
 	return error;
 }
 
-int git_filter_list_apply_to_data(
-	git_buf *tgt, git_filter_list *filters, git_buf *src)
-{
-	int error;
-
-	if ((error = git_buf_sanitize(src)) < 0)
-	    return error;
-
-	return git_filter_list_apply_to_buffer(tgt, filters, src->ptr, src->size);
-}
-
 int git_filter_list_apply_to_file(
 	git_buf *out,
 	git_filter_list *filters,
@@ -1070,6 +1059,17 @@ int git_filter_list_stream_data(
 		return error;
 
 	return git_filter_list_stream_buffer(filters, data->ptr, data->size, target);
+}
+
+int git_filter_list_apply_to_data(
+	git_buf *tgt, git_filter_list *filters, git_buf *src)
+{
+	int error;
+
+	if ((error = git_buf_sanitize(src)) < 0)
+	    return error;
+
+	return git_filter_list_apply_to_buffer(tgt, filters, src->ptr, src->size);
 }
 
 #endif

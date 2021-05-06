@@ -135,19 +135,6 @@ GIT_EXTERN(int) git_filter_list_apply_to_buffer(
 	size_t in_len);
 
 /**
- * Apply filter list to a data buffer.
- *
- * @param out Buffer to store the result of the filtering
- * @param filters A loaded git_filter_list (or NULL)
- * @param in Buffer containing the data to filter
- * @return 0 on success, an error code otherwise
- */
-GIT_EXTERN(int) git_filter_list_apply_to_data(
-	git_buf *out,
-	git_filter_list *filters,
-	git_buf *in);
-
-/**
  * Apply a filter list to the contents of a file on disk
  *
  * @param out buffer into which to store the filtered file

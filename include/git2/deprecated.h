@@ -141,6 +141,16 @@ GIT_EXTERN(int) git_filter_list_stream_data(
 	git_buf *data,
 	git_writestream *target);
 
+/** Deprecated in favor of `git_filter_list_apply_to_buffer`.
+ *
+ * @deprecated Use git_filter_list_apply_to_buffer
+ * @see Use git_filter_list_apply_to_buffer
+ */
+GIT_EXTERN(int) git_filter_list_apply_to_data(
+	git_buf *out,
+	git_filter_list *filters,
+	git_buf *in);
+
 /**@}*/
 
 /** @name Deprecated Tree Functions
