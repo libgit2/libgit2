@@ -1227,12 +1227,12 @@ int git_buf_common_prefix(git_buf *buf, const git_strarray *strings)
 int git_buf_is_binary(const git_buf *buf)
 {
 	const char *scan = buf->ptr, *end = buf->ptr + buf->size;
-	git_bom_t bom;
+	git_buf_bom_t bom;
 	int printable = 0, nonprintable = 0;
 
 	scan += git_buf_detect_bom(&bom, buf);
 
-	if (bom > GIT_BOM_UTF8)
+	if (bom > GIT_BUF_BOM_UTF8)
 		return 1;
 
 	while (scan < end) {
@@ -1257,12 +1257,12 @@ int git_buf_contains_nul(const git_buf *buf)
 	return (memchr(buf->ptr, '\0', buf->size) != NULL);
 }
 
-int git_buf_detect_bom(git_bom_t *bom, const git_buf *buf)
+int git_buf_detect_bom(git_buf_bom_t *bom, const git_buf *buf)
 {
 	const char *ptr;
 	size_t len;
 
-	*bom = GIT_BOM_NONE;
+	*bom = GIT_BUF_BOM_NONE;
 	/* need at least 2 bytes to look for any BOM */
 	if (buf->size < 2)
 		return 0;
@@ -1273,19 +1273,19 @@ int git_buf_detect_bom(git_bom_t *bom, const git_buf *buf)
 	switch (*ptr++) {
 	case 0:
 		if (len >= 4 && ptr[0] == 0 && ptr[1] == '\xFE' && ptr[2] == '\xFF') {
-			*bom = GIT_BOM_UTF32_BE;
+			*bom = GIT_BUF_BOM_UTF32_BE;
 			return 4;
 		}
 		break;
 	case '\xEF':
 		if (len >= 3 && ptr[0] == '\xBB' && ptr[1] == '\xBF') {
-			*bom = GIT_BOM_UTF8;
+			*bom = GIT_BUF_BOM_UTF8;
 			return 3;
 		}
 		break;
 	case '\xFE':
 		if (*ptr == '\xFF') {
-			*bom = GIT_BOM_UTF16_BE;
+			*bom = GIT_BUF_BOM_UTF16_BE;
 			return 2;
 		}
 		break;
@@ -1293,10 +1293,10 @@ int git_buf_detect_bom(git_bom_t *bom, const git_buf *buf)
 		if (*ptr != '\xFE')
 			break;
 		if (len >= 4 && ptr[1] == 0 && ptr[2] == 0) {
-			*bom = GIT_BOM_UTF32_LE;
+			*bom = GIT_BUF_BOM_UTF32_LE;
 			return 4;
 		} else {
-			*bom = GIT_BOM_UTF16_LE;
+			*bom = GIT_BUF_BOM_UTF16_LE;
 			return 2;
 		}
 		break;

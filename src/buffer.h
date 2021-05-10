@@ -18,16 +18,16 @@
  */
 
 typedef enum {
-	GIT_BOM_NONE = 0,
-	GIT_BOM_UTF8 = 1,
-	GIT_BOM_UTF16_LE = 2,
-	GIT_BOM_UTF16_BE = 3,
-	GIT_BOM_UTF32_LE = 4,
-	GIT_BOM_UTF32_BE = 5
-} git_bom_t;
+	GIT_BUF_BOM_NONE = 0,
+	GIT_BUF_BOM_UTF8 = 1,
+	GIT_BUF_BOM_UTF16_LE = 2,
+	GIT_BUF_BOM_UTF16_BE = 3,
+	GIT_BUF_BOM_UTF32_LE = 4,
+	GIT_BUF_BOM_UTF32_BE = 5
+} git_buf_bom_t;
 
 typedef struct {
-	git_bom_t bom; /* BOM found at head of text */
+	git_buf_bom_t bom; /* BOM found at head of text */
 	unsigned int nul, cr, lf, crlf; /* NUL, CR, LF and CRLF counts */
 	unsigned int printable, nonprintable; /* These are just approximations! */
 } git_buf_text_stats;
@@ -293,7 +293,7 @@ extern int git_buf_common_prefix(git_buf *buf, const git_strarray *strs);
  * @param buf Buffer in which to check the first bytes for a BOM
  * @return Number of bytes of BOM data (or 0 if no BOM found)
  */
-extern int git_buf_detect_bom(git_bom_t *bom, const git_buf *buf);
+extern int git_buf_detect_bom(git_buf_bom_t *bom, const git_buf *buf);
 
 /**
  * Gather stats for a piece of text

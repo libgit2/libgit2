@@ -43,9 +43,9 @@ static git_buf_text_stats g_crlf_filtered_stats[CRLF_NUM_TEST_OBJECTS] = {
 	{ 0, 0, 2, 2, 2, 6, 0 },
 	{ 0, 0, 4, 4, 1, 31, 0 },
 	{ 0, 1, 1, 2, 1, 9, 5 },
-	{ GIT_BOM_UTF8, 0, 0, 1, 0, 16, 0 },
-	{ GIT_BOM_UTF8, 0, 2, 2, 2, 27, 0 },
-	{ GIT_BOM_UTF16_BE, 5, 0, 0, 0, 7, 5 },
+	{ GIT_BUF_BOM_UTF8, 0, 0, 1, 0, 16, 0 },
+	{ GIT_BUF_BOM_UTF8, 0, 2, 2, 2, 27, 0 },
+	{ GIT_BUF_BOM_UTF16_BE, 5, 0, 0, 0, 7, 5 },
 };
 
 void test_object_blob_filter__initialize(void)
