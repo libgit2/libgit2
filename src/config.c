@@ -10,7 +10,6 @@
 #include "git2/config.h"
 #include "git2/sys/config.h"
 
-#include "buf_text.h"
 #include "config_backend.h"
 #include "regexp.h"
 #include "sysdir.h"
@@ -1497,7 +1496,7 @@ int git_config_rename_section(
 	int error = 0;
 	struct rename_data data;
 
-	git_buf_text_puts_escape_regex(&pattern, old_section_name);
+	git_buf_puts_escape_regex(&pattern, old_section_name);
 
 	if ((error = git_buf_puts(&pattern, "\\..+")) < 0)
 		goto cleanup;

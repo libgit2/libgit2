@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "posix.h"
 #include "filter.h"
-#include "buf_text.h"
 #include "git2/sys/filter.h"
 
 #define VERY_SECURE_ENCRYPTION(b) ((b) ^ 0xff)

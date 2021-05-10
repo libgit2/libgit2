@@ -2,7 +2,6 @@
 #include "repository.h"
 #include "git2/sys/repository.h"
 #include "mailmap_testdata.h"
-#include "buf_text.h"
 
 static git_repository *g_repo;
 static git_mailmap *g_mailmap;
@@ -109,7 +108,7 @@ void test_mailmap_parsing__windows_string(void)
 
 	/* Parse with windows-style line endings */
 	git_buf_attach_notowned(&unixbuf, string_mailmap, strlen(string_mailmap));
-	cl_git_pass(git_buf_text_lf_to_crlf(&winbuf, &unixbuf));
+	cl_git_pass(git_buf_lf_to_crlf(&winbuf, &unixbuf));
 
 	cl_git_pass(git_mailmap_from_buffer(&g_mailmap, winbuf.ptr, winbuf.size));
 	git_buf_dispose(&winbuf);

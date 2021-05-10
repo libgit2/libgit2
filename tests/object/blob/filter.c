@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "posix.h"
 #include "blob.h"
-#include "buf_text.h"
 
 static git_repository *g_repo = NULL;
 
@@ -97,7 +96,7 @@ void test_object_blob_filter__stats(void)
 	for (i = 0; i < CRLF_NUM_TEST_OBJECTS; i++) {
 		cl_git_pass(git_blob_lookup(&blob, g_repo, &g_crlf_oids[i]));
 		cl_git_pass(git_blob__getbuf(&buf, blob));
-		git_buf_text_gather_stats(&stats, &buf, false);
+		git_buf_gather_text_stats(&stats, &buf, false);
 		cl_assert_equal_i(
 			0, memcmp(&g_crlf_filtered_stats[i], &stats, sizeof(stats)));
 		git_blob_free(blob);

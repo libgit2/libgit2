@@ -2,7 +2,6 @@
 #include "posix.h"
 #include "blob.h"
 #include "filter.h"
-#include "buf_text.h"
 #include "git2/sys/filter.h"
 #include "git2/sys/repository.h"
 
