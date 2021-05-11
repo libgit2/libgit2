@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "posix.h"
 #include "blob.h"
-#include "buf_text.h"
 
 static git_repository *g_repo = NULL;
 
@@ -44,9 +43,9 @@ static git_buf_text_stats g_crlf_filtered_stats[CRLF_NUM_TEST_OBJECTS] = {
 	{ 0, 0, 2, 2, 2, 6, 0 },
 	{ 0, 0, 4, 4, 1, 31, 0 },
 	{ 0, 1, 1, 2, 1, 9, 5 },
-	{ GIT_BOM_UTF8, 0, 0, 1, 0, 16, 0 },
-	{ GIT_BOM_UTF8, 0, 2, 2, 2, 27, 0 },
-	{ GIT_BOM_UTF16_BE, 5, 0, 0, 0, 7, 5 },
+	{ GIT_BUF_BOM_UTF8, 0, 0, 1, 0, 16, 0 },
+	{ GIT_BUF_BOM_UTF8, 0, 2, 2, 2, 27, 0 },
+	{ GIT_BUF_BOM_UTF16_BE, 5, 0, 0, 0, 7, 5 },
 };
 
 void test_object_blob_filter__initialize(void)
@@ -97,7 +96,7 @@ void test_object_blob_filter__stats(void)
 	for (i = 0; i < CRLF_NUM_TEST_OBJECTS; i++) {
 		cl_git_pass(git_blob_lookup(&blob, g_repo, &g_crlf_oids[i]));
 		cl_git_pass(git_blob__getbuf(&buf, blob));
-		git_buf_text_gather_stats(&stats, &buf, false);
+		git_buf_gather_text_stats(&stats, &buf, false);
 		cl_assert_equal_i(
 			0, memcmp(&g_crlf_filtered_stats[i], &stats, sizeof(stats)));
 		git_blob_free(blob);

@@ -13,7 +13,6 @@
 #include "diff.h"
 #include "strmap.h"
 #include "map.h"
-#include "buf_text.h"
 #include "config.h"
 #include "regexp.h"
 #include "repository.h"
@@ -428,8 +427,8 @@ int git_diff_driver_content_is_binary(
 	 * let's just use the simple NUL-byte detection that core git uses.
 	 */
 
-	/* previously was: if (git_buf_text_is_binary(&search)) */
-	if (git_buf_text_contains_nul(&search))
+	/* previously was: if (git_buf_is_binary(&search)) */
+	if (git_buf_contains_nul(&search))
 		return 1;
 
 	return 0;

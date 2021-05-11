@@ -14,7 +14,6 @@
 
 #include "filebuf.h"
 #include "filter.h"
-#include "buf_text.h"
 
 const void *git_blob_rawcontent(const git_blob *blob)
 {
@@ -401,7 +400,7 @@ int git_blob_is_binary(const git_blob *blob)
 
 	git_buf_attach_notowned(&content, git_blob_rawcontent(blob),
 		(size_t)min(size, GIT_FILTER_BYTES_TO_CHECK_NUL));
-	return git_buf_text_is_binary(&content);
+	return git_buf_is_binary(&content);
 }
 
 int git_blob_filter_options_init(

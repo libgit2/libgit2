@@ -12,7 +12,6 @@
 #include "git2/types.h"
 #include "git2/index.h"
 #include "buffer.h"
-#include "buf_text.h"
 #include "vector.h"
 #include "posix.h"
 #include "config_backend.h"

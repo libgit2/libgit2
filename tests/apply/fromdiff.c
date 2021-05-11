@@ -3,7 +3,6 @@
 
 #include "apply.h"
 #include "repository.h"
-#include "buf_text.h"
 
 #include "../patch/patch_common.h"
 

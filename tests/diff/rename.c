@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "diff_helpers.h"
-#include "buf_text.h"
 
 static git_repository *g_repo = NULL;
 
@@ -513,7 +512,7 @@ void test_diff_rename__working_directory_changes(void)
 	cl_git_pass(
 		git_futils_readbuffer(&old_content, "renames/songof7cities.txt"));
 	cl_git_pass(
-		git_buf_text_lf_to_crlf(&content, &old_content));
+		git_buf_lf_to_crlf(&content, &old_content));
 	cl_git_pass(
 		git_futils_writebuffer(&content, "renames/songof7cities.txt", 0, 0));
 

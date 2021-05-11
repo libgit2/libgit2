@@ -10,7 +10,6 @@
 #include "repository.h"
 #include "filebuf.h"
 #include "attrcache.h"
-#include "buf_text.h"
 #include "git2/blob.h"
 #include "git2/tree.h"
 #include "blob.h"
@@ -123,7 +122,7 @@ int git_attr_file__load(
 	struct stat st;
 	bool nonexistent = false;
 	int bom_offset;
-	git_bom_t bom;
+	git_buf_bom_t bom;
 	git_oid id;
 	git_object_size_t blobsize;
 
@@ -192,9 +191,9 @@ int git_attr_file__load(
 
 	/* advance over a UTF8 BOM */
 	content_str = git_buf_cstr(&content);
-	bom_offset = git_buf_text_detect_bom(&bom, &content);
+	bom_offset = git_buf_detect_bom(&bom, &content);
 
-	if (bom == GIT_BOM_UTF8)
+	if (bom == GIT_BUF_BOM_UTF8)
 		content_str += bom_offset;
 
 	/* store the key of the attr_reader; don't bother with cache
