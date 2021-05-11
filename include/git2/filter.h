@@ -122,27 +122,17 @@ GIT_EXTERN(int) git_filter_list_contains(
 /**
  * Apply filter list to a data buffer.
  *
- * See `git2/buffer.h` for background on `git_buf` objects.
- *
- * If the `in` buffer holds data allocated by libgit2 (i.e. `in->asize` is
- * not zero), then it will be overwritten when applying the filters.  If
- * not, then it will be left untouched.
- *
- * If there are no filters to apply (or `filters` is NULL), then the `out`
- * buffer will reference the `in` buffer data (with `asize` set to zero)
- * instead of allocating data.  This keeps allocations to a minimum, but
- * it means you have to be careful about freeing the `in` data since `out`
- * may be pointing to it!
- *
  * @param out Buffer to store the result of the filtering
  * @param filters A loaded git_filter_list (or NULL)
  * @param in Buffer containing the data to filter
+ * @param in_len The length of the input buffer
  * @return 0 on success, an error code otherwise
  */
-GIT_EXTERN(int) git_filter_list_apply_to_data(
+GIT_EXTERN(int) git_filter_list_apply_to_buffer(
 	git_buf *out,
 	git_filter_list *filters,
-	git_buf *in);
+	const char *in,
+	size_t in_len);
 
 /**
  * Apply a filter list to the contents of a file on disk
@@ -175,12 +165,14 @@ GIT_EXTERN(int) git_filter_list_apply_to_blob(
  * Apply a filter list to an arbitrary buffer as a stream
  *
  * @param filters the list of filters to apply
- * @param data the buffer to filter
+ * @param buffer the buffer to filter
+ * @param len the size of the buffer
  * @param target the stream into which the data will be written
  */
-GIT_EXTERN(int) git_filter_list_stream_data(
+GIT_EXTERN(int) git_filter_list_stream_buffer(
 	git_filter_list *filters,
-	git_buf *data,
+	const char *buffer,
+	size_t len,
 	git_writestream *target);
 
 /**
