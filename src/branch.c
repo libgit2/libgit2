@@ -492,6 +492,14 @@ static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, c
 	return error;
 }
 
+int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname) {
+	git_branch_upstream_with_format(buf, repo, refname, "branch.%s.remote");
+}
+
+int git_branch_upstream_merge(git_buf *buf, git_repository *repo, const char *refname) {
+	git_branch_upstream_with_format(buf, repo, refname, "branch.%s.merge");
+}
+
 int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refname)
 {
 	git_strarray remote_list = {0};
