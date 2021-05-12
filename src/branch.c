@@ -468,7 +468,7 @@ cleanup:
 	return error;
 }
 
-int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname)
+static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, const char *refname, const char *format)
 {
 	int error;
 	git_config *cfg;
@@ -480,7 +480,7 @@ int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *r
 		return error;
 
 	if ((error = git_buf_sanitize(buf)) < 0 ||
-	    (error = retrieve_upstream_configuration(buf, cfg, refname, "branch.%s.remote")) < 0)
+	    (error = retrieve_upstream_configuration(buf, cfg, refname, format)) < 0)
 		return error;
 
 	if (git_buf_len(buf) == 0) {
