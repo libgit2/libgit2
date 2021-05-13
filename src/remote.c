@@ -600,6 +600,22 @@ const char *git_remote_url(const git_remote *remote)
 	return remote->url;
 }
 
+int git_remote_set_instance_url(git_remote *remote, const char *url)
+{
+	char *tmp;
+
+	GIT_ASSERT_ARG(remote);
+	GIT_ASSERT_ARG(url);
+
+	if ((tmp = git__strdup(url)) == NULL)
+		return -1;
+
+	git__free(remote->url);
+	remote->url = tmp;
+
+	return 0;
+}
+
 static int set_url(git_repository *repo, const char *remote, const char *pattern, const char *url)
 {
 	git_config *cfg;
@@ -643,6 +659,22 @@ const char *git_remote_pushurl(const git_remote *remote)
 {
 	GIT_ASSERT_ARG_WITH_RETVAL(remote, NULL);
 	return remote->pushurl;
+}
+
+int git_remote_set_instance_pushurl(git_remote *remote, const char *url)
+{
+	char *tmp;
+
+	GIT_ASSERT_ARG(remote);
+	GIT_ASSERT_ARG(url);
+
+	if ((tmp = git__strdup(url)) == NULL)
+		return -1;
+
+	git__free(remote->pushurl);
+	remote->pushurl = tmp;
+
+	return 0;
 }
 
 int git_remote_set_pushurl(git_repository *repo, const char *remote, const char* url)

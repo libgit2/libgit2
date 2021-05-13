@@ -121,6 +121,51 @@ void test_network_remote_remotes__urlresolve_passthrough(void)
 	git_buf_dispose(&url);
 }
 
+void test_network_remote_remotes__instance_url(void)
+{
+	git_buf url = GIT_BUF_INIT;
+	const char *orig_url = "git://github.com/libgit2/libgit2";
+
+	cl_assert_equal_s(git_remote_name(_remote), "test");
+	cl_assert_equal_s(git_remote_url(_remote), orig_url);
+
+	cl_git_pass(git_remote__urlfordirection(&url, _remote, GIT_DIRECTION_FETCH, NULL));
+	cl_assert_equal_s(url.ptr, orig_url);
+	git_buf_clear(&url);
+
+	cl_git_pass(git_remote__urlfordirection(&url, _remote, GIT_DIRECTION_PUSH, NULL));
+	cl_assert_equal_s(url.ptr, orig_url);
+	git_buf_clear(&url);
+
+	/* Setting the instance url updates the fetch and push URLs */
+	git_remote_set_instance_url(_remote, "https://github.com/new/remote/url");
+	cl_assert_equal_s(git_remote_url(_remote), "https://github.com/new/remote/url");
+	cl_assert_equal_p(git_remote_pushurl(_remote), NULL);
+
+	cl_git_pass(git_remote__urlfordirection(&url, _remote, GIT_DIRECTION_FETCH, NULL));
+	cl_assert_equal_s(url.ptr, "https://github.com/new/remote/url");
+	git_buf_clear(&url);
+
+	cl_git_pass(git_remote__urlfordirection(&url, _remote, GIT_DIRECTION_PUSH, NULL));
+	cl_assert_equal_s(url.ptr, "https://github.com/new/remote/url");
+	git_buf_clear(&url);
+
+	/* Setting the instance push url updates only the push URL */
+	git_remote_set_instance_pushurl(_remote, "https://github.com/new/push/url");
+	cl_assert_equal_s(git_remote_url(_remote), "https://github.com/new/remote/url");
+	cl_assert_equal_s(git_remote_pushurl(_remote), "https://github.com/new/push/url");
+
+	cl_git_pass(git_remote__urlfordirection(&url, _remote, GIT_DIRECTION_FETCH, NULL));
+	cl_assert_equal_s(url.ptr, "https://github.com/new/remote/url");
+	git_buf_clear(&url);
+
+	cl_git_pass(git_remote__urlfordirection(&url, _remote, GIT_DIRECTION_PUSH, NULL));
+	cl_assert_equal_s(url.ptr, "https://github.com/new/push/url");
+	git_buf_clear(&url);
+
+	git_buf_dispose(&url);
+}
+
 void test_network_remote_remotes__pushurl(void)
 {
 	const char *name = git_remote_name(_remote);

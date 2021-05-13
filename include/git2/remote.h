@@ -212,7 +212,8 @@ GIT_EXTERN(const char *) git_remote_name(const git_remote *remote);
  * Get the remote's url
  *
  * If url.*.insteadOf has been configured for this URL, it will
- * return the modified URL.
+ * return the modified URL.  If `git_remote_set_instance_pushurl`
+ * has been called for this remote, then that URL will be returned.
  *
  * @param remote the remote
  * @return a pointer to the url
@@ -220,10 +221,11 @@ GIT_EXTERN(const char *) git_remote_name(const git_remote *remote);
 GIT_EXTERN(const char *) git_remote_url(const git_remote *remote);
 
 /**
- * Get the remote's url for pushing
+ * Get the remote's url for pushing.
  *
  * If url.*.pushInsteadOf has been configured for this URL, it
- * will return the modified URL.
+ * will return the modified URL.  If `git_remote_set_instance_pushurl`
+ * has been called for this remote, then that URL will be returned.
  *
  * @param remote the remote
  * @return a pointer to the url or NULL if no special url for pushing is set
@@ -256,6 +258,26 @@ GIT_EXTERN(int) git_remote_set_url(git_repository *repo, const char *remote, con
  * @return 0, or an error code
  */
 GIT_EXTERN(int) git_remote_set_pushurl(git_repository *repo, const char *remote, const char* url);
+
+/**
+ * Set the url for this particular url instance.  The URL in the
+ * configuration will be ignored, and will not be changed.
+ *
+ * @param remote the remote's name
+ * @param url the url to set
+ * @return 0 or an error value
+ */
+GIT_EXTERN(int) git_remote_set_instance_url(git_remote *remote, const char *url);
+
+/**
+ * Set the push url for this particular url instance.  The URL in the
+ * configuration will be ignored, and will not be changed.
+ *
+ * @param remote the remote's name
+ * @param url the url to set
+ * @return 0 or an error value
+ */
+GIT_EXTERN(int) git_remote_set_instance_pushurl(git_remote *remote, const char *url);
 
 /**
  * Add a fetch refspec to the remote's configuration
