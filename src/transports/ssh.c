@@ -362,13 +362,10 @@ static int _git_ssh_authenticate_session(
 		case GIT_CREDENTIAL_SSH_KEY: {
 			git_credential_ssh_key *c = (git_credential_ssh_key *)cred;
 
-			if (c->privatekey) {
+			if (c->privatekey)
 				rc = libssh2_userauth_publickey_fromfile(
 					session, c->username, c->publickey,
 					c->privatekey, c->passphrase);
-				if (rc == LIBSSH2_ERROR_FILE)
-					rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
-			}
 			else
 				rc = ssh_agent_auth(session, c);
 
@@ -429,6 +426,7 @@ static int _git_ssh_authenticate_session(
 
 	if (rc == LIBSSH2_ERROR_PASSWORD_EXPIRED ||
 		rc == LIBSSH2_ERROR_AUTHENTICATION_FAILED ||
+		rc == LIBSSH2_ERROR_FILE ||
 		rc == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
 			return GIT_EAUTH;
 
