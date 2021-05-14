@@ -458,10 +458,11 @@ typedef struct {
  *
  * @param updates an array containing the updates which will be sent
  * as commands to the destination.
+ * @param the remote being pushed /// PATCH
  * @param len number of elements in `updates`
  * @param payload Payload provided by the caller
  */
-typedef int GIT_CALLBACK(git_push_negotiation)(const git_push_update **updates, size_t len, void *payload);
+typedef int GIT_CALLBACK(git_push_negotiation)(git_remote *remote, const git_push_update **updates, size_t len, void *payload);
 
 /**
  * Callback used to inform of the update status from the remote.

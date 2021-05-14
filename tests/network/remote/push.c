@@ -29,9 +29,12 @@ void test_network_remote_push__cleanup(void)
 	cl_fixture_cleanup("dummy.git");
 }
 
-int negotiation_cb(const git_push_update **updates, size_t len, void *payload)
+int negotiation_cb(git_remote *remote, const git_push_update **updates, size_t len, void *payload)
 {
 	const git_push_update *expected = payload;
+
+	/// PATCH
+	GIT_UNUSED(remote);
 
 	cl_assert_equal_i(1, len);
 	cl_assert_equal_s(expected->src_refname, updates[0]->src_refname);
