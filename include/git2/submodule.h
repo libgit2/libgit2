@@ -224,6 +224,13 @@ GIT_EXTERN(int) git_submodule_lookup(
 	const char *name);
 
 /**
+ * Dup (retain) a submodule
+ *
+ * @param submodule Submodule object
+ */
+GIT_EXTERN(git_submodule *) git_submodule_dup(git_submodule *submodule);
+
+/**
  * Release a submodule
  *
  * @param submodule Submodule object

@@ -1854,6 +1854,14 @@ static void submodule_release(git_submodule *sm)
 	git__free(sm);
 }
 
+git_submodule* git_submodule_dup(git_submodule *sm)
+{
+	if (!sm)
+		return;
+	GIT_REFCOUNT_INC(sm);
+	return sm;
+}
+
 void git_submodule_free(git_submodule *sm)
 {
 	if (!sm)
