@@ -471,9 +471,10 @@ cleanup:
 typedef enum {
   GIT_BRANCH_UPSTREAM_FORMAT_REMOTE = 1,
   GIT_BRANCH_UPSTREAM_FORMAT_MERGE = 2
-} git_branch_upstream_format;
+} git_branch_upstream_format_type_t;
 
-static const char* git_branch_upstream_format_string_for_id(git_branch_upstream_format id) {
+static const char* git_branch_upstream_format_string_for_id(git_branch_upstream_format_type_t id)
+{
   switch (id) {
   case GIT_BRANCH_UPSTREAM_FORMAT_REMOTE: return "branch.%s.remote";
   case GIT_BRANCH_UPSTREAM_FORMAT_MERGE: return "branch.%s.merge";
@@ -481,7 +482,8 @@ static const char* git_branch_upstream_format_string_for_id(git_branch_upstream_
   };
 }
 
-static const char* git_branch_upstream_format_name_for_id(git_branch_upstream_format id) {
+static const char* git_branch_upstream_format_name_for_id(git_branch_upstream_format_type_t id)
+{
   switch (id) {
   case GIT_BRANCH_UPSTREAM_FORMAT_REMOTE: return "remote";
   case GIT_BRANCH_UPSTREAM_FORMAT_MERGE: return "merge";
@@ -489,7 +491,7 @@ static const char* git_branch_upstream_format_name_for_id(git_branch_upstream_fo
   };
 }
 
-static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, const char *refname, git_branch_upstream_format id)
+static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, const char *refname, git_branch_upstream_format_type_t id)
 {
 	int error;
 	git_config *cfg;
