@@ -97,6 +97,9 @@ GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, co
  * of updating does not match the one passed through `current_value`
  * (i.e. if the ref has changed since the user read it).
  *
+ * If `current_value` is all zeros, this function will return GIT_EMODIFIED
+ * if the ref already exists.
+ *
  * @param out Pointer to the newly created reference
  * @param repo Repository where that reference will live
  * @param name The name of the reference
