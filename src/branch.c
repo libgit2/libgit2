@@ -492,11 +492,13 @@ static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, c
 	return error;
 }
 
-int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname) {
+int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname)
+{
 	git_branch_upstream_with_format(buf, repo, refname, "branch.%s.remote");
 }
 
-int git_branch_upstream_merge(git_buf *buf, git_repository *repo, const char *refname) {
+int git_branch_upstream_merge(git_buf *buf, git_repository *repo, const char *refname)
+{
 	git_branch_upstream_with_format(buf, repo, refname, "branch.%s.merge");
 }
 
