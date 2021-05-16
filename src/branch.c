@@ -468,10 +468,33 @@ cleanup:
 	return error;
 }
 
-static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, const char *refname, const char *format)
+typedef enum {
+  GIT_BRANCH_UPSTREAM_FORMAT_REMOTE = 1,
+  GIT_BRANCH_UPSTREAM_FORMAT_MERGE = 2
+} git_branch_upstream_format;
+
+static const char* git_branch_upstream_format_string_for_id(git_branch_upstream_format id) {
+  switch (id) {
+  case GIT_BRANCH_UPSTREAM_FORMAT_REMOTE: return "branch.%s.remote";
+  case GIT_BRANCH_UPSTREAM_FORMAT_MERGE: return "branch.%s.merge";
+  default: return ""; // OK?
+  };
+}
+
+static const char* git_branch_upstream_format_name_for_id(git_branch_upstream_format id) {
+  switch (id) {
+  case GIT_BRANCH_UPSTREAM_FORMAT_REMOTE: return "remote";
+  case GIT_BRANCH_UPSTREAM_FORMAT_MERGE: return "merge";
+  default: return "UNDEFINED"; // OK?
+  };
+}
+
+static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, const char *refname, git_branch_upstream_format id)
 {
 	int error;
 	git_config *cfg;
+	const char *format = git_branch_upstream_format_string_for_id(id);
+	const char *format_name = git_branch_upstream_format_name_for_id(id);
 
 	if (!git_reference__is_branch(refname))
 		return not_a_local_branch(refname);
@@ -484,7 +507,7 @@ static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, c
 		return error;
 
 	if (git_buf_len(buf) == 0) {
-		git_error_set(GIT_ERROR_REFERENCE, "branch '%s' does not have an upstream remote", refname);
+		git_error_set(GIT_ERROR_REFERENCE, "branch '%s' does not have an upstream %s", refname, format_name);
 		error = GIT_ENOTFOUND;
 		git_buf_clear(buf);
 	}
@@ -494,12 +517,12 @@ static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, c
 
 int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname)
 {
-	git_branch_upstream_with_format(buf, repo, refname, "branch.%s.remote");
+	return git_branch_upstream_with_format(buf, repo, refname, GIT_BRANCH_UPSTREAM_FORMAT_REMOTE);
 }
 
 int git_branch_upstream_merge(git_buf *buf, git_repository *repo, const char *refname)
 {
-	git_branch_upstream_with_format(buf, repo, refname, "branch.%s.merge");
+	return git_branch_upstream_with_format(buf, repo, refname, GIT_BRANCH_UPSTREAM_FORMAT_MERGE);
 }
 
 int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refname)
