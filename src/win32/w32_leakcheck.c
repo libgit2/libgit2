@@ -558,6 +558,11 @@ static void git_win32_leakcheck_global_shutdown(void)
 	git_win32_leakcheck_stack_cleanup();
 }
 
+bool git_win32_leakcheck_has_leaks(void)
+{
+	return (g_transient_count_total_leaks > 0);
+}
+
 int git_win32_leakcheck_global_init(void)
 {
 	git_win32_leakcheck_stacktrace_init();
