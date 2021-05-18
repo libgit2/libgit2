@@ -1,6 +1,10 @@
 #include "clar_libgit2.h"
 #include "clar_libgit2_trace.h"
 
+#ifdef GIT_WIN32_LEAKCHECK
+# include "win32/w32_leakcheck.h"
+#endif
+
 #ifdef _WIN32
 int __cdecl main(int argc, char *argv[])
 #else
@@ -28,6 +32,11 @@ int main(int argc, char *argv[])
 
 	cl_global_trace_disable();
 	git_libgit2_shutdown();
+
+#ifdef GIT_WIN32_LEAKCHECK
+	if (git_win32_leakcheck_has_leaks())
+		res = res || 1;
+#endif
 
 	at_exit_cmd = getenv("CLAR_AT_EXIT");
 	if (at_exit_cmd != NULL) {
