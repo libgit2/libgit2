@@ -31,10 +31,12 @@ void test_refs_races__create_matching_zero_old(void)
 	git_oid_fromstr(&zero_id, "0000000000000000000000000000000000000000");
 
 	cl_git_fail(git_reference_create_matching(&ref, g_repo, refname, &id, 1, &zero_id, NULL));
+	git_reference_free(ref);
 
 	cl_git_pass(git_reference_create_matching(&ref, g_repo, other_refname, &id, 1, &zero_id, NULL));
-	cl_git_fail(git_reference_create_matching(&ref, g_repo, other_refname, &id, 1, &zero_id, NULL));
+	git_reference_free(ref);
 
+	cl_git_fail(git_reference_create_matching(&ref, g_repo, other_refname, &id, 1, &zero_id, NULL));
 	git_reference_free(ref);
 }
 
