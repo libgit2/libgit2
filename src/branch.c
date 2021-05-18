@@ -468,35 +468,10 @@ cleanup:
 	return error;
 }
 
-typedef enum {
-  GIT_BRANCH_UPSTREAM_FORMAT_REMOTE = 1,
-  GIT_BRANCH_UPSTREAM_FORMAT_MERGE = 2
-} git_branch_upstream_format_type_t;
-
-static const char* git_branch_upstream_format_string_for_id(git_branch_upstream_format_type_t id)
-{
-  switch (id) {
-  case GIT_BRANCH_UPSTREAM_FORMAT_REMOTE: return "branch.%s.remote";
-  case GIT_BRANCH_UPSTREAM_FORMAT_MERGE: return "branch.%s.merge";
-  default: return ""; // OK?
-  };
-}
-
-static const char* git_branch_upstream_format_name_for_id(git_branch_upstream_format_type_t id)
-{
-  switch (id) {
-  case GIT_BRANCH_UPSTREAM_FORMAT_REMOTE: return "remote";
-  case GIT_BRANCH_UPSTREAM_FORMAT_MERGE: return "merge";
-  default: return "UNDEFINED"; // OK?
-  };
-}
-
-static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, const char *refname, git_branch_upstream_format_type_t id)
+static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, const char *refname, const char *format, const char *format_name)
 {
 	int error;
 	git_config *cfg;
-	const char *format = git_branch_upstream_format_string_for_id(id);
-	const char *format_name = git_branch_upstream_format_name_for_id(id);
 
 	if (!git_reference__is_branch(refname))
 		return not_a_local_branch(refname);
@@ -519,12 +494,12 @@ static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, c
 
 int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname)
 {
-	return git_branch_upstream_with_format(buf, repo, refname, GIT_BRANCH_UPSTREAM_FORMAT_REMOTE);
+	return git_branch_upstream_with_format(buf, repo, refname, "branch.%s.remote", "remote");
 }
 
 int git_branch_upstream_merge(git_buf *buf, git_repository *repo, const char *refname)
 {
-	return git_branch_upstream_with_format(buf, repo, refname, GIT_BRANCH_UPSTREAM_FORMAT_MERGE);
+	return git_branch_upstream_with_format(buf, repo, refname, "branch.%s.merge", "merge");
 }
 
 int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refname)
