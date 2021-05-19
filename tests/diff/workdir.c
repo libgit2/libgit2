@@ -2203,3 +2203,38 @@ void test_diff_workdir__order(void)
 	git_diff_free(diff);
 	git_tree_free(tree);
 }
+
+void test_diff_workdir__ignore_blank_lines(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff;
+	git_patch *patch;
+	git_buf buf = GIT_BUF_INIT;
+
+	g_repo = cl_git_sandbox_init("rebase");
+	cl_git_rewritefile("rebase/gravy.txt", "GRAVY SOUP.\n\n\nGet eight pounds of coarse lean beef--wash it clean and lay it in your\n\npot, put in the same ingredients as for the shin soup, with the same\nquantity of water, and follow the process directed for that. Strain the\nsoup through a sieve, and serve it up clear, with nothing more than\ntoasted bread in it; two table-spoonsful of mushroom catsup will add a\nfine flavour to the soup!\n");
+
+	/* Perform the diff normally */
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_git_pass(git_patch_to_buf(&buf, patch));
+
+	cl_assert_equal_s("diff --git a/gravy.txt b/gravy.txt\nindex c4e6cca..3c617e6 100644\n--- a/gravy.txt\n+++ b/gravy.txt\n@@ -1,8 +1,10 @@\n GRAVY SOUP.\n \n+\n Get eight pounds of coarse lean beef--wash it clean and lay it in your\n+\n pot, put in the same ingredients as for the shin soup, with the same\n quantity of water, and follow the process directed for that. Strain the\n soup through a sieve, and serve it up clear, with nothing more than\n toasted bread in it; two table-spoonsful of mushroom catsup will add a\n-fine flavour to the soup.\n+fine flavour to the soup!\n", buf.ptr);
+
+	git_buf_dispose(&buf);
+	git_patch_free(patch);
+	git_diff_free(diff);
+
+	/* Perform the diff ignoring blank lines */
+	opts.flags |= GIT_DIFF_IGNORE_BLANK_LINES;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_git_pass(git_patch_to_buf(&buf, patch));
+
+	cl_assert_equal_s("diff --git a/gravy.txt b/gravy.txt\nindex c4e6cca..3c617e6 100644\n--- a/gravy.txt\n+++ b/gravy.txt\n@@ -5,4 +7,4 @@ pot, put in the same ingredients as for the shin soup, with the same\n quantity of water, and follow the process directed for that. Strain the\n soup through a sieve, and serve it up clear, with nothing more than\n toasted bread in it; two table-spoonsful of mushroom catsup will add a\n-fine flavour to the soup.\n+fine flavour to the soup!\n", buf.ptr);
+
+	git_buf_dispose(&buf);
+	git_patch_free(patch);
+	git_diff_free(diff);
+}
