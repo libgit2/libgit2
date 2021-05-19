@@ -1857,7 +1857,7 @@ static void submodule_release(git_submodule *sm)
 git_submodule* git_submodule_dup(git_submodule *sm)
 {
 	if (!sm)
-		return;
+		return NULL;
 	GIT_REFCOUNT_INC(sm);
 	return sm;
 }
