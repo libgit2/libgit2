@@ -33,7 +33,7 @@ static void attr_file_free(git_attr_file *file)
 int git_attr_file__new(
 	git_attr_file **out,
 	git_attr_file_entry *entry,
-	git_attr_file_source_t source_type)
+	git_attr_file_source *source)
 {
 	git_attr_file *attrs = git__calloc(1, sizeof(git_attr_file));
 	GIT_ERROR_CHECK_ALLOC(attrs);
@@ -48,7 +48,7 @@ int git_attr_file__new(
 
 	GIT_REFCOUNT_INC(attrs);
 	attrs->entry = entry;
-	attrs->source_type = source_type;
+	memcpy(&attrs->source, source, sizeof(git_attr_file_source));
 	*out = attrs;
 	return 0;
 
@@ -108,7 +108,7 @@ int git_attr_file__load(
 	git_repository *repo,
 	git_attr_session *attr_session,
 	git_attr_file_entry *entry,
-	git_attr_file_source_t source_type,
+	git_attr_file_source *source,
 	git_attr_file_parser parser,
 	bool allow_macros)
 {
@@ -128,7 +128,7 @@ int git_attr_file__load(
 
 	*out = NULL;
 
-	switch (source_type) {
+	switch (source->type) {
 	case GIT_ATTR_FILE_SOURCE_MEMORY:
 		/* in-memory attribute file doesn't need data */
 		break;
@@ -182,11 +182,11 @@ int git_attr_file__load(
 		break;
 	}
 	default:
-		git_error_set(GIT_ERROR_INVALID, "unknown file source %d", source_type);
+		git_error_set(GIT_ERROR_INVALID, "unknown file source %d", source->type);
 		return -1;
 	}
 
-	if ((error = git_attr_file__new(&file, entry, source_type)) < 0)
+	if ((error = git_attr_file__new(&file, entry, source)) < 0)
 		goto cleanup;
 
 	/* advance over a UTF8 BOM */
@@ -210,11 +210,11 @@ int git_attr_file__load(
 	/* write cache breakers */
 	if (nonexistent)
 		file->nonexistent = 1;
-	else if (source_type == GIT_ATTR_FILE_SOURCE_INDEX)
+	else if (source->type == GIT_ATTR_FILE_SOURCE_INDEX)
 		git_oid_cpy(&file->cache_data.oid, git_blob_id(blob));
-	else if (source_type == GIT_ATTR_FILE_SOURCE_HEAD)
+	else if (source->type == GIT_ATTR_FILE_SOURCE_HEAD)
 		git_oid_cpy(&file->cache_data.oid, git_tree_id(tree));
-	else if (source_type == GIT_ATTR_FILE_SOURCE_FILE)
+	else if (source->type == GIT_ATTR_FILE_SOURCE_FILE)
 		git_futils_filestamp_set_from_stat(&file->cache_data.stamp, &st);
 	/* else always cacheable */
 
@@ -245,7 +245,7 @@ int git_attr_file__out_of_date(
 	else if (file->nonexistent)
 		return 1;
 
-	switch (file->source_type) {
+	switch (file->source.type) {
 	case GIT_ATTR_FILE_SOURCE_MEMORY:
 		return 0;
 
@@ -278,7 +278,7 @@ int git_attr_file__out_of_date(
 	}
 
 	default:
-		git_error_set(GIT_ERROR_INVALID, "invalid file type %d", file->source_type);
+		git_error_set(GIT_ERROR_INVALID, "invalid file type %d", file->source.type);
 		return -1;
 	}
 }
@@ -389,6 +389,7 @@ int git_attr_file__lookup_one(
 int git_attr_file__load_standalone(git_attr_file **out, const char *path)
 {
 	git_buf content = GIT_BUF_INIT;
+	git_attr_file_source source = { GIT_ATTR_FILE_SOURCE_FILE };
 	git_attr_file *file = NULL;
 	int error;
 
@@ -400,7 +401,7 @@ int git_attr_file__load_standalone(git_attr_file **out, const char *path)
 	 * don't have to free it - freeing file+pool will free cache entry, too.
 	 */
 
-	if ((error = git_attr_file__new(&file, NULL, GIT_ATTR_FILE_SOURCE_FILE)) < 0 ||
+	if ((error = git_attr_file__new(&file, NULL, &source)) < 0 ||
 	    (error = git_attr_file__parse_buffer(NULL, file, content.ptr, true)) < 0 ||
 	    (error = git_attr_cache__alloc_file_entry(&file->entry, NULL, NULL, path, &file->pool)) < 0)
 		goto out;

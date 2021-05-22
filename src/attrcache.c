@@ -112,7 +112,7 @@ static int attr_cache_upsert(git_attr_cache *cache, git_attr_file *file)
 	 * Replace the existing value if another thread has
 	 * created it in the meantime.
 	 */
-	old = git_atomic_swap(entry->file[file->source_type], file);
+	old = git_atomic_swap(entry->file[file->source.type], file);
 
 	if (old) {
 		GIT_REFCOUNT_OWN(old, NULL);
@@ -136,7 +136,7 @@ static int attr_cache_remove(git_attr_cache *cache, git_attr_file *file)
 		return error;
 
 	if ((entry = attr_cache_lookup_entry(cache, file->entry->path)) != NULL)
-		old = git_atomic_compare_and_swap(&entry->file[file->source_type], file, NULL);
+		old = git_atomic_compare_and_swap(&entry->file[file->source.type], file, NULL);
 
 	attr_cache_unlock(cache);
 
@@ -220,6 +220,7 @@ int git_attr_cache__get(
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_attr_file_entry *entry = NULL;
 	git_attr_file *file = NULL, *updated = NULL;
+	git_attr_file_source source = { source_type };
 
 	if ((error = attr_cache_lookup(&file, &entry, repo, attr_session,
 	                               source_type, base, filename)) < 0)
@@ -228,7 +229,7 @@ int git_attr_cache__get(
 	/* load file if we don't have one or if existing one is out of date */
 	if (!file || (error = git_attr_file__out_of_date(repo, attr_session, file)) > 0)
 		error = git_attr_file__load(&updated, repo, attr_session,
-		                            entry, source_type, parser,
+		                            entry, &source, parser,
 		                            allow_macros);
 
 	/* if we loaded the file, insert into and/or update cache */
