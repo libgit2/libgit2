@@ -70,9 +70,9 @@ void test_ignore_status__0(void)
 
 	/* confirm that ignore files were cached */
 	cl_assert(git_attr_cache__is_cached(
-		g_repo, GIT_ATTR_FILE__FROM_FILE, ".git/info/exclude"));
+		g_repo, GIT_ATTR_FILE_SOURCE_FILE, ".git/info/exclude"));
 	cl_assert(git_attr_cache__is_cached(
-		g_repo, GIT_ATTR_FILE__FROM_FILE, ".gitignore"));
+		g_repo, GIT_ATTR_FILE_SOURCE_FILE, ".gitignore"));
 }
 
 

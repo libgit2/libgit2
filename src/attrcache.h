@@ -31,7 +31,7 @@ extern int git_attr_cache__get(
 	git_attr_file **file,
 	git_repository *repo,
 	git_attr_session *attr_session,
-	git_attr_file_source source,
+	git_attr_file_source_t source_type,
 	const char *base,
 	const char *filename,
 	git_attr_file_parser parser,
@@ -39,7 +39,7 @@ extern int git_attr_cache__get(
 
 extern bool git_attr_cache__is_cached(
 	git_repository *repo,
-	git_attr_file_source source,
+	git_attr_file_source_t source_type,
 	const char *path);
 
 extern int git_attr_cache__alloc_file_entry(

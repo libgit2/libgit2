@@ -37,13 +37,13 @@
 	(GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_ALLOWMACRO)
 
 typedef enum {
-	GIT_ATTR_FILE__IN_MEMORY   = 0,
-	GIT_ATTR_FILE__FROM_FILE   = 1,
-	GIT_ATTR_FILE__FROM_INDEX  = 2,
-	GIT_ATTR_FILE__FROM_HEAD   = 3,
+	GIT_ATTR_FILE_SOURCE_MEMORY = 0,
+	GIT_ATTR_FILE_SOURCE_FILE   = 1,
+	GIT_ATTR_FILE_SOURCE_INDEX  = 2,
+	GIT_ATTR_FILE_SOURCE_HEAD   = 3,
 
-	GIT_ATTR_FILE_NUM_SOURCES  = 4
-} git_attr_file_source;
+	GIT_ATTR_FILE_NUM_SOURCES   = 4
+} git_attr_file_source_t;
 
 extern const char *git_attr__true;
 extern const char *git_attr__false;
@@ -81,7 +81,7 @@ typedef struct {
 	git_refcount rc;
 	git_mutex lock;
 	git_attr_file_entry *entry;
-	git_attr_file_source source;
+	git_attr_file_source_t source_type;
 	git_vector rules;			/* vector of <rule*> or <fnmatch*> */
 	git_pool pool;
 	unsigned int nonexistent:1;
@@ -142,7 +142,7 @@ typedef int (*git_attr_file_parser)(
 int git_attr_file__new(
 	git_attr_file **out,
 	git_attr_file_entry *entry,
-	git_attr_file_source source);
+	git_attr_file_source_t source_type);
 
 void git_attr_file__free(git_attr_file *file);
 
@@ -151,7 +151,7 @@ int git_attr_file__load(
 	git_repository *repo,
 	git_attr_session *attr_session,
 	git_attr_file_entry *ce,
-	git_attr_file_source source,
+	git_attr_file_source_t source_type,
 	git_attr_file_parser parser,
 	bool allow_macros);
 
