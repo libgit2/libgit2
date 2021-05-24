@@ -162,7 +162,7 @@ int git_attr_file__load(
 
 		break;
 	}
-	case GIT_ATTR_FILE_SOURCE_HEAD: {
+	case GIT_ATTR_FILE_SOURCE_COMMIT: {
 		if ((error = git_repository_head_tree(&tree, repo)) < 0 ||
 		    (error = git_tree_entry_bypath(&tree_entry, tree, entry->path)) < 0 ||
 		    (error = git_blob_lookup(&blob, repo, git_tree_entry_id(tree_entry))) < 0)
@@ -212,7 +212,7 @@ int git_attr_file__load(
 		file->nonexistent = 1;
 	else if (source->type == GIT_ATTR_FILE_SOURCE_INDEX)
 		git_oid_cpy(&file->cache_data.oid, git_blob_id(blob));
-	else if (source->type == GIT_ATTR_FILE_SOURCE_HEAD)
+	else if (source->type == GIT_ATTR_FILE_SOURCE_COMMIT)
 		git_oid_cpy(&file->cache_data.oid, git_tree_id(tree));
 	else if (source->type == GIT_ATTR_FILE_SOURCE_FILE)
 		git_futils_filestamp_set_from_stat(&file->cache_data.stamp, &st);
@@ -264,7 +264,7 @@ int git_attr_file__out_of_date(
 		return (git_oid__cmp(&file->cache_data.oid, &id) != 0);
 	}
 
-	case GIT_ATTR_FILE_SOURCE_HEAD: {
+	case GIT_ATTR_FILE_SOURCE_COMMIT: {
 		git_tree *tree;
 		int error;
 

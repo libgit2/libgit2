@@ -40,13 +40,21 @@ typedef enum {
 	GIT_ATTR_FILE_SOURCE_MEMORY = 0,
 	GIT_ATTR_FILE_SOURCE_FILE   = 1,
 	GIT_ATTR_FILE_SOURCE_INDEX  = 2,
-	GIT_ATTR_FILE_SOURCE_HEAD   = 3,
+	GIT_ATTR_FILE_SOURCE_COMMIT = 3,
 
 	GIT_ATTR_FILE_NUM_SOURCES   = 4
 } git_attr_file_source_t;
 
 typedef struct {
+	/* The source location for the attribute file. */
 	git_attr_file_source_t type;
+
+	/*
+	 * The filename of the attribute file to read (relative to the
+	 * given base path).
+	 */
+	const char *base;
+	const char *filename;
 } git_attr_file_source;
 
 extern const char *git_attr__true;

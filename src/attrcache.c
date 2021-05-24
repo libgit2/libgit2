@@ -158,41 +158,42 @@ static int attr_cache_lookup(
 	git_attr_file_entry **out_entry,
 	git_repository *repo,
 	git_attr_session *attr_session,
-	git_attr_file_source_t source_type,
-	const char *base,
-	const char *filename)
+	git_attr_file_source *source)
 {
 	int error = 0;
 	git_buf path = GIT_BUF_INIT;
-	const char *wd = git_repository_workdir(repo), *relfile;
+	const char *wd = git_repository_workdir(repo);
+	const char *filename;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_attr_file_entry *entry = NULL;
 	git_attr_file *file = NULL;
 
 	/* join base and path as needed */
-	if (base != NULL && git_path_root(filename) < 0) {
+	if (source->base != NULL && git_path_root(source->filename) < 0) {
 		git_buf *p = attr_session ? &attr_session->tmp : &path;
 
-		if (git_buf_joinpath(p, base, filename) < 0 ||
+		if (git_buf_joinpath(p, source->base, source->filename) < 0 ||
 		    git_path_validate_workdir_buf(repo, p) < 0)
 			return -1;
 
 		filename = p->ptr;
+	} else {
+		filename = source->filename;
 	}
 
-	relfile = filename;
-	if (wd && !git__prefixcmp(relfile, wd))
-		relfile += strlen(wd);
+	if (wd && !git__prefixcmp(filename, wd))
+		filename += strlen(wd);
 
 	/* check cache for existing entry */
 	if ((error = attr_cache_lock(cache)) < 0)
 		goto cleanup;
 
-	entry = attr_cache_lookup_entry(cache, relfile);
-	if (!entry)
-		error = attr_cache_make_entry(&entry, repo, relfile);
-	else if (entry->file[source_type] != NULL) {
-		file = entry->file[source_type];
+	entry = attr_cache_lookup_entry(cache, filename);
+
+	if (!entry) {
+		error = attr_cache_make_entry(&entry, repo, filename);
+	} else if (entry->file[source->type] != NULL) {
+		file = entry->file[source->type];
 		GIT_REFCOUNT_INC(file);
 	}
 
@@ -210,9 +211,7 @@ int git_attr_cache__get(
 	git_attr_file **out,
 	git_repository *repo,
 	git_attr_session *attr_session,
-	git_attr_file_source_t source_type,
-	const char *base,
-	const char *filename,
+	git_attr_file_source *source,
 	git_attr_file_parser parser,
 	bool allow_macros)
 {
@@ -220,16 +219,14 @@ int git_attr_cache__get(
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_attr_file_entry *entry = NULL;
 	git_attr_file *file = NULL, *updated = NULL;
-	git_attr_file_source source = { source_type };
 
-	if ((error = attr_cache_lookup(&file, &entry, repo, attr_session,
-	                               source_type, base, filename)) < 0)
+	if ((error = attr_cache_lookup(&file, &entry, repo, attr_session, source)) < 0)
 		return error;
 
 	/* load file if we don't have one or if existing one is out of date */
 	if (!file || (error = git_attr_file__out_of_date(repo, attr_session, file)) > 0)
 		error = git_attr_file__load(&updated, repo, attr_session,
-		                            entry, &source, parser,
+		                            entry, source, parser,
 		                            allow_macros);
 
 	/* if we loaded the file, insert into and/or update cache */
