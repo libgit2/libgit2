@@ -121,9 +121,43 @@ int git_ssh_session_server_hostkey(git_ssh_session *s, git_cert_hostkey *cert)
 	ssh_key pkey;
 	unsigned char hash[32];
 	unsigned char *hash_ptr = (unsigned char *)&hash;
+	char *b64_key;
 	size_t hash_len;
 
 	if (ssh_get_server_publickey(s->session, &pkey) == SSH_OK) {
+
+		if (ssh_pki_export_pubkey_base64(pkey, &b64_key) == SSH_OK) {
+			cert->type |= GIT_CERT_SSH_RAW;
+			memcpy(&cert->hostkey, b64_key, strlen(b64_key));
+			switch (ssh_key_type(pkey)) {
+				case SSH_KEYTYPE_RSA:
+				case SSH_KEYTYPE_RSA1:
+					cert->raw_type = GIT_CERT_SSH_RAW_TYPE_RSA;
+					break;
+				case SSH_KEYTYPE_DSS:
+					cert->raw_type = GIT_CERT_SSH_RAW_TYPE_DSS;
+					break;
+
+				case SSH_KEYTYPE_ECDSA_P256:
+					cert->raw_type = GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_256;
+					break;
+				case SSH_KEYTYPE_ECDSA_P384:
+					cert->raw_type = GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_384;
+					break;
+				case SSH_KEYTYPE_ECDSA_P521:
+					cert->raw_type = GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_521;
+					break;
+
+				case SSH_KEYTYPE_ED25519:
+					cert->raw_type = GIT_CERT_SSH_RAW_TYPE_KEY_ED25519;
+					break;
+
+				case SSH_KEYTYPE_UNKNOWN:
+				default:
+					cert->raw_type = GIT_CERT_SSH_RAW_TYPE_UNKNOWN;
+					break;
+			}
+		}
 
 		if (ssh_get_publickey_hash(pkey, SSH_PUBLICKEY_HASH_MD5, &hash_ptr, &hash_len) == SSH_OK) {
 			cert->type |= GIT_CERT_SSH_MD5;
