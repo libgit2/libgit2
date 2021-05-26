@@ -341,25 +341,22 @@ int _git_ssh_authenticate_session(git_ssh_session *s, git_credential *cred)
 				}
 				break;
 			}
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
-			case GIT_CREDTYPE_SSH_MEMORY: {
-				git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
+			case GIT_CREDENTIAL_SSH_MEMORY: {
+				git_credential_ssh_key *c = (git_credential_ssh_key *)cred;
+				ssh_key key;
 
 				assert(c->username);
 				assert(c->privatekey);
 
-				rc = libssh2_userauth_publickey_frommemory(
-					s->session,
-					c->username,
-					strlen(c->username),
-					c->publickey,
-					c->publickey ? strlen(c->publickey) : 0,
-					c->privatekey,
-					strlen(c->privatekey),
-					c->passphrase);
+				rc = ssh_pki_import_privkey_base64(c->privatekey, c->passphrase, NULL, NULL, &key);
+				if (rc != SSH_OK)
+					break;
+
+				rc = ssh_userauth_publickey(s->session, c->username, key);
+
+				ssh_key_free(key);
 				break;
 			}
-#endif
 			default:
 				rc = SSH_AUTH_ERROR;
 		}
