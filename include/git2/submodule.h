@@ -224,11 +224,13 @@ GIT_EXTERN(int) git_submodule_lookup(
 	const char *name);
 
 /**
- * Dup (retain) a submodule
+ * Create an in-memory copy of a submodule. The copy must be explicitly
+ * free'd or it will leak.
  *
- * @param submodule Submodule object
+ * @param out Pointer to store the copy of the submodule
+ * @param source Original tag to copy
  */
-GIT_EXTERN(git_submodule *) git_submodule_dup(git_submodule *submodule);
+GIT_EXTERN(int) git_submodule_dup(git_submodule **out, git_submodule *source);
 
 /**
  * Release a submodule
