@@ -1856,7 +1856,13 @@ static void submodule_release(git_submodule *sm)
 
 int git_submodule_dup(git_submodule **out, git_submodule *source)
 {
-	return git_object_dup((git_object **)out, (git_object *)source);
+	GIT_ASSERT_ARG(out);
+
+	if (source != NULL)
+		GIT_REFCOUNT_INC(source);
+
+	*out = source;
+	return 0;
 }
 
 void git_submodule_free(git_submodule *sm)
