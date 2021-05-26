@@ -190,6 +190,32 @@ int git_ssh_session_server_hostkey(git_ssh_session *s, git_cert_hostkey *cert)
 	return 0;
 }
 
+int git_ssh_session_server_is_known(git_ssh_session *s, int *valid)
+{
+	int error = 0;
+	switch (ssh_session_is_known_server(s->session)) {
+		case SSH_KNOWN_HOSTS_OK:
+			*valid = 1;
+			break;
+		case SSH_KNOWN_HOSTS_NOT_FOUND:
+		case SSH_KNOWN_HOSTS_UNKNOWN:
+			*valid = 0;
+			break;
+		case SSH_KNOWN_HOSTS_CHANGED:
+		case SSH_KNOWN_HOSTS_OTHER:
+			*valid = 0;
+			error = -1;
+			git_error_set(GIT_SSH, "host key mismatch");
+			break;
+		case SSH_KNOWN_HOSTS_ERROR:
+			*valid = 0;
+			error = -1;
+			git_error_set(GIT_SSH, "failed to check known hosts");
+			break;
+	}
+	return error;
+}
+
 #define SSH_AUTH_PUBLICKEY "publickey"
 #define SSH_AUTH_PASSWORD "password"
 #define SSH_AUTH_KEYBOARD_INTERACTIVE "keyboard-interactive"

@@ -367,17 +367,18 @@ post_extract:
 		goto done;
 
 	if (t->owner->certificate_check_cb != NULL) {
-		git_cert_hostkey cert = {{ 0 }}, *cert_ptr;
+		git_cert_hostkey cert = {{ 0 }};
+		int valid;
 
 		if ((error = git_ssh_session_server_hostkey(session, &cert)) < 0)
 			goto done;
 
 		/* We don't currently trust any hostkeys */
+		if ((error = git_ssh_session_server_is_known(session, &valid)) < 0)
+			goto done;
+
 		git_error_clear();
-
-		cert_ptr = &cert;
-
-		error = t->owner->certificate_check_cb((git_cert *) cert_ptr, 0, urldata.host, t->owner->message_cb_payload);
+		error = t->owner->certificate_check_cb((git_cert *) &cert, valid, urldata.host, t->owner->message_cb_payload);
 
 		if (error < 0 && error != GIT_PASSTHROUGH) {
 			if (!git_error_last())

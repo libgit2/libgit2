@@ -184,6 +184,13 @@ int git_ssh_session_server_hostkey(git_ssh_session *s, git_cert_hostkey *cert)
 	return 0;
 }
 
+int git_ssh_session_server_is_known(git_ssh_session *s, int *valid)
+{
+	GIT_UNUSED(s);
+	*valid = 0;
+	return 0;
+}
+
 #define SSH_AUTH_PUBLICKEY "publickey"
 #define SSH_AUTH_PASSWORD "password"
 #define SSH_AUTH_KEYBOARD_INTERACTIVE "keyboard-interactive"

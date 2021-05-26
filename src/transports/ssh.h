@@ -67,6 +67,7 @@ int _git_ssh_authenticate_session(git_ssh_session *s, git_credential *cred);
 int git__ssh_agent_auth(git_ssh_session *s, git_credential_ssh_key *c);
 int git__ssh_list_auth_methods(int *out, git_ssh_session *s, const char *username);
 int git_ssh_session_server_hostkey(git_ssh_session *s, git_cert_hostkey *cert);
+int git_ssh_session_server_is_known(git_ssh_session *s, int *valid);
 
 git_ssh_channel *git_ssh_channel_open(git_ssh_session *s);
 void git_ssh_channel_free(git_ssh_channel *c);
