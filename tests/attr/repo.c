@@ -341,7 +341,7 @@ void test_attr_repo__sysdir_with_session(void)
 	g_repo = cl_git_sandbox_reopen();
 
 	cl_git_pass(git_attr_session__init(&session, g_repo));
-	cl_git_pass(git_attr_get_many_with_session(values, g_repo, &session, 0, "file", ARRAY_SIZE(attrs), attrs));
+	cl_git_pass(git_attr_get_many_with_session(values, g_repo, &session, NULL, "file", ARRAY_SIZE(attrs), attrs));
 
 	cl_assert_equal_s(values[0], "1");
 	cl_assert_equal_s(values[1], "2");

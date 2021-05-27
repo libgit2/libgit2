@@ -136,7 +136,7 @@ extern int git_attr_get_many_with_session(
 	const char **values_out,
 	git_repository *repo,
 	git_attr_session *attr_session,
-	uint32_t flags,
+	git_attr_options *opts,
 	const char *path,
 	size_t num_attr,
 	const char **names);

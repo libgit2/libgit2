@@ -36,16 +36,16 @@ git_attr_value_t git_attr_value(const char *attr)
 static int collect_attr_files(
 	git_repository *repo,
 	git_attr_session *attr_session,
-	uint32_t flags,
+	git_attr_options *opts,
 	const char *path,
 	git_vector *files);
 
 static void release_attr_files(git_vector *files);
 
-int git_attr_get(
+int git_attr_get_ext(
 	const char **value,
 	git_repository *repo,
-	uint32_t flags,
+	git_attr_options *opts,
 	const char *pathname,
 	const char *name)
 {
@@ -61,6 +61,7 @@ int git_attr_get(
 	GIT_ASSERT_ARG(value);
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(name);
+	GIT_ERROR_CHECK_VERSION(opts, GIT_ATTR_OPTIONS_VERSION, "git_attr_options");
 
 	*value = NULL;
 
@@ -70,7 +71,7 @@ int git_attr_get(
 	if (git_attr_path__init(&path, repo, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files)) < 0)
+	if ((error = collect_attr_files(repo, NULL, opts, pathname, &files)) < 0)
 		goto cleanup;
 
 	memset(&attr, 0, sizeof(attr));
@@ -97,6 +98,20 @@ cleanup:
 	return error;
 }
 
+int git_attr_get(
+	const char **value,
+	git_repository *repo,
+	uint32_t flags,
+	const char *pathname,
+	const char *name)
+{
+	git_attr_options opts = GIT_ATTR_OPTIONS_INIT;
+
+	opts.flags = flags;
+
+	return git_attr_get_ext(value, repo, &opts, pathname, name);
+}
+
 
 typedef struct {
 	git_attr_name name;
@@ -107,7 +122,7 @@ int git_attr_get_many_with_session(
 	const char **values,
 	git_repository *repo,
 	git_attr_session *attr_session,
-	uint32_t flags,
+	git_attr_options *opts,
 	const char *pathname,
 	size_t num_attr,
 	const char **names)
@@ -129,6 +144,7 @@ int git_attr_get_many_with_session(
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(pathname);
 	GIT_ASSERT_ARG(names);
+	GIT_ERROR_CHECK_VERSION(opts, GIT_ATTR_OPTIONS_VERSION, "git_attr_options");
 
 	if (git_repository_is_bare(repo))
 		dir_flag = GIT_DIR_FLAG_FALSE;
@@ -136,7 +152,7 @@ int git_attr_get_many_with_session(
 	if (git_attr_path__init(&path, repo, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, attr_session, flags, pathname, &files)) < 0)
+	if ((error = collect_attr_files(repo, attr_session, opts, pathname, &files)) < 0)
 		goto cleanup;
 
 	info = git__calloc(num_attr, sizeof(attr_get_many_info));
@@ -190,13 +206,43 @@ int git_attr_get_many(
 	size_t num_attr,
 	const char **names)
 {
+	git_attr_options opts = GIT_ATTR_OPTIONS_INIT;
+
+	opts.flags = flags;
+
 	return git_attr_get_many_with_session(
-		values, repo, NULL, flags, pathname, num_attr, names);
+		values, repo, NULL, &opts, pathname, num_attr, names);
+}
+
+int git_attr_get_many_ext(
+	const char **values,
+	git_repository *repo,
+	git_attr_options *opts,
+	const char *pathname,
+	size_t num_attr,
+	const char **names)
+{
+	return git_attr_get_many_with_session(
+		values, repo, NULL, opts, pathname, num_attr, names);
 }
 
 int git_attr_foreach(
 	git_repository *repo,
 	uint32_t flags,
+	const char *pathname,
+	int (*callback)(const char *name, const char *value, void *payload),
+	void *payload)
+{
+	git_attr_options opts = GIT_ATTR_OPTIONS_INIT;
+
+	opts.flags = flags;
+
+	return git_attr_foreach_ext(repo, &opts, pathname, callback, payload);
+}
+
+int git_attr_foreach_ext(
+	git_repository *repo,
+	git_attr_options *opts,
 	const char *pathname,
 	int (*callback)(const char *name, const char *value, void *payload),
 	void *payload)
@@ -213,6 +259,7 @@ int git_attr_foreach(
 
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(callback);
+	GIT_ERROR_CHECK_VERSION(opts, GIT_ATTR_OPTIONS_VERSION, "git_attr_options");
 
 	if (git_repository_is_bare(repo))
 		dir_flag = GIT_DIR_FLAG_FALSE;
@@ -220,7 +267,7 @@ int git_attr_foreach(
 	if (git_attr_path__init(&path, repo, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files)) < 0 ||
+	if ((error = collect_attr_files(repo, NULL, opts, pathname, &files)) < 0 ||
 	    (error = git_strmap_new(&seen)) < 0)
 		goto cleanup;
 
@@ -331,7 +378,7 @@ static int system_attr_file(
 static int attr_setup(
 	git_repository *repo,
 	git_attr_session *attr_session,
-	uint32_t flags)
+	git_attr_options *opts)
 {
 	git_buf system = GIT_BUF_INIT, info = GIT_BUF_INIT;
 	git_attr_file_source index_source = { GIT_ATTR_FILE_SOURCE_INDEX, NULL, GIT_ATTR_FILE };
@@ -379,7 +426,7 @@ static int attr_setup(
 	    (error = preload_attr_source(repo, attr_session, &index_source)) < 0)
 			goto out;
 
-	if ((flags & GIT_ATTR_CHECK_INCLUDE_HEAD) != 0 &&
+	if ((opts && (opts->flags & GIT_ATTR_CHECK_INCLUDE_HEAD) != 0) &&
 	    (error = preload_attr_source(repo, attr_session, &head_source)) < 0)
 		goto out;
 
@@ -545,7 +592,7 @@ static void release_attr_files(git_vector *files)
 static int collect_attr_files(
 	git_repository *repo,
 	git_attr_session *attr_session,
-	uint32_t flags,
+	git_attr_options *opts,
 	const char *path,
 	git_vector *files)
 {
@@ -554,7 +601,7 @@ static int collect_attr_files(
 	const char *workdir = git_repository_workdir(repo);
 	attr_walk_up_info info = { NULL };
 
-	if ((error = attr_setup(repo, attr_session, flags)) < 0)
+	if ((error = attr_setup(repo, attr_session, opts)) < 0)
 		return error;
 
 	/* Resolve path in a non-bare repo */
@@ -584,7 +631,7 @@ static int collect_attr_files(
 
 	info.repo = repo;
 	info.attr_session = attr_session;
-	info.flags = flags;
+	info.flags = opts ? opts->flags : 0;
 	info.workdir = workdir;
 	if (git_repository_index__weakptr(&info.index, repo) < 0)
 		git_error_clear(); /* no error even if there is no index */
@@ -604,7 +651,7 @@ static int collect_attr_files(
 			goto cleanup;
 	}
 
-	if ((flags & GIT_ATTR_CHECK_NO_SYSTEM) == 0) {
+	if (!opts || (opts->flags & GIT_ATTR_CHECK_NO_SYSTEM) == 0) {
 		error = system_attr_file(&dir, attr_session);
 
 		if (!error)
