@@ -8,6 +8,7 @@
 #define INCLUDE_git_cert_h__
 
 #include "common.h"
+#include "types.h"
 
 /**
  * @file git2/cert.h
