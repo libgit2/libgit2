@@ -172,7 +172,7 @@ tags:
  *
  * @param s String to froznicate
  * @return A newly allocated string or `NULL` in case an error occurred.
- * /
+ */
 char *froznicate(const char *s);
 ```
 
