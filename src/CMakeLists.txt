@@ -33,10 +33,13 @@ IF(ENABLE_TRACE)
 ENDIF()
 ADD_FEATURE_INFO(tracing GIT_TRACE "tracing support")
 
-CHECK_FUNCTION_EXISTS(futimens HAVE_FUTIMENS)
+enable_warnings(error)
+CHECK_SYMBOL_EXISTS(futimens sys/stat.h HAVE_FUTIMENS)
+# CHECK_FUNCTION_EXISTS(futimens HAVE_FUTIMENS)
 IF (HAVE_FUTIMENS)
 	SET(GIT_USE_FUTIMENS 1)
 ENDIF ()
+DISABLE_WARNINGS(error)
 
 CHECK_PROTOTYPE_DEFINITION(qsort_r
 	"void qsort_r(void *base, size_t nmemb, size_t size, void *thunk, int (*compar)(void *, const void *, const void *))"
