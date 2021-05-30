@@ -298,14 +298,15 @@ int git_odb__hashlink(git_oid *out, const char *path)
 		GIT_ERROR_CHECK_ALLOC(link_data);
 
 		read_len = p_readlink(path, link_data, size);
-		link_data[size] = '\0';
-		if (read_len != size) {
+		if (read_len == -1) {
 			git_error_set(GIT_ERROR_OS, "failed to read symlink data for '%s'", path);
 			git__free(link_data);
 			return -1;
 		}
+		GIT_ASSERT(read_len <= size);
+		link_data[read_len] = '\0';
 
-		result = git_odb_hash(out, link_data, size, GIT_OBJECT_BLOB);
+		result = git_odb_hash(out, link_data, read_len, GIT_OBJECT_BLOB);
 		git__free(link_data);
 	} else {
 		int fd = git_futils_open_ro(path);
