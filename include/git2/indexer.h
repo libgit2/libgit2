@@ -64,6 +64,7 @@ typedef struct git_indexer_options {
 
 	/** progress_cb function to call with progress information */
 	git_indexer_progress_cb progress_cb;
+
 	/** progress_cb_payload payload for the progress callback */
 	void *progress_cb_payload;
 
