@@ -51,7 +51,7 @@ typedef struct git_indexer_progress {
  * Type for progress callbacks during indexing.  Return a value less
  * than zero to cancel the indexing or download.
  *
- * @param stats Structure containing information about the state of the tran    sfer
+ * @param stats Structure containing information about the state of the transfer
  * @param payload Payload provided by caller
  */
 typedef int GIT_CALLBACK(git_indexer_progress_cb)(const git_indexer_progress *stats, void *payload);
