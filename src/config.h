@@ -8,6 +8,8 @@
 #define INCLUDE_config_h__
 
 #include "common.h"
+// iOS/OSX architecture definitions
+#include <TargetConditionals.h>
 
 #include "git2.h"
 #include "git2/config.h"
@@ -16,7 +18,11 @@
 
 #define GIT_CONFIG_FILENAME_PROGRAMDATA "config"
 #define GIT_CONFIG_FILENAME_SYSTEM "gitconfig"
+#if TARGET_OS_IPHONE
+#define GIT_CONFIG_FILENAME_GLOBAL "Documents/.gitconfig"
+#else 
 #define GIT_CONFIG_FILENAME_GLOBAL ".gitconfig"
+#endif
 #define GIT_CONFIG_FILENAME_XDG    "config"
 
 #define GIT_CONFIG_FILENAME_INREPO "config"

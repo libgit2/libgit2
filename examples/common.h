@@ -133,4 +133,18 @@ extern int cred_acquire_cb(git_credential **out,
 		unsigned int allowed_types,
 		void *payload);
 
+// iOS/OSX architecture definitions
+#include <TargetConditionals.h>
+#if TARGET_OS_IPHONE 
+#include "ios_error.h"
+#define isatty ios_isatty
+#define fork   ios_fork
+#undef stdin
+#undef stdout
+#undef stderr
+#define stdin thread_stdin
+#define stdout thread_stdout
+#define stderr thread_stderr
+#define printf(args...) fprintf(thread_stdout, args)
+#endif
 #endif

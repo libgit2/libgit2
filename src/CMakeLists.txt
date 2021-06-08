@@ -222,6 +222,11 @@ ENDIF()
 # Optional external dependency: libssh2
 IF (USE_SSH)
 	FIND_PKGLIBRARIES(LIBSSH2 libssh2)
+	# MacOSX / iOS / simulator:
+	if (NOT LIBSSH2_FOUND)
+	    SET(LIBSSH2_FOUND 1)
+	    SET(LIBSSH2_LIBRARIES "-framework libssh2 -framework openssl")
+	ENDIF()
 ENDIF()
 IF (LIBSSH2_FOUND)
 	SET(GIT_SSH 1)
