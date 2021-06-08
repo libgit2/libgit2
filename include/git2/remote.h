@@ -944,7 +944,7 @@ GIT_EXTERN(int) git_remote_delete(git_repository *repo, const char *name);
  *
  * This function must only be called after connecting.
  *
- * @param out the buffern in which to store the reference name
+ * @param out the buffer in which to store the reference name
  * @param remote the remote
  * @return 0, GIT_ENOTFOUND if the remote does not have any references
  * or none of them point to HEAD's commit, or an error message.
