@@ -51,7 +51,6 @@ int lg2_push(git_repository *repo, int argc, char **argv) {
 	check_lg2(git_remote_init_callbacks(&callbacks, GIT_REMOTE_CALLBACKS_VERSION), "Error initializing remote callbacks", NULL);
 	callbacks.credentials = cred_acquire_cb;
 	
-	
 	check_lg2(git_push_options_init(&options, GIT_PUSH_OPTIONS_VERSION ), "Error initializing push", NULL);
 	options.callbacks = callbacks;
 	
