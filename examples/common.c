@@ -183,22 +183,50 @@ int cred_acquire_cb(git_credential **out,
 		void *payload)
 {
 	char *username = NULL, *password = NULL, *privkey = NULL, *pubkey = NULL;
+	git_repository* repo = (git_repository*) payload;
 	int error = 1;
+	// iOS addition: let's get the config file
+	git_config* cfg;
+	git_config_entry *entry = NULL;
 
 	UNUSED(url);
-	UNUSED(payload);
+	/* UNUSED(payload); */
+	/* iOS addition: get username, password, identityFile from config */
+	error = git_repository_config(&cfg, repo);
 
 	if (username_from_url) {
 		if ((username = strdup(username_from_url)) == NULL)
 			goto out;
-	} else if ((error = ask(&username, "Username:", 0)) < 0) {
-		goto out;
+	} else {
+		error = git_config_get_entry(&entry, cfg, "user.name");
+		if (error >= 0) {
+			username = strdup(entry->value);
+		} else if ((error = ask(&username, "Username:", 0)) < 0) {
+			goto out;
+		}
 	}
 
 	if (allowed_types & GIT_CREDENTIAL_SSH_KEY) {
 		int n;
 
-		if ((error = ask(&privkey, "SSH Key:", 0)) < 0 ||
+		error = git_config_get_entry(&entry, cfg, "user.identityFile");
+		if (error >= 0) {
+			char* home = getenv("SSH_HOME"); 
+			if (home == NULL) 
+				home = getenv("HOME"); 
+			if (home != NULL) {
+				n = snprintf(NULL, 0, "%s/.ssh/%s", home, entry->value);
+				privkey = malloc(n + 1);
+				if (privkey != NULL) {
+					snprintf(privkey, n + 1, "%s/.ssh/%s", home, entry->value);
+				}
+			} else {
+				privkey = strdup(entry->value);
+			}
+			error = git_config_get_entry(&entry, cfg, "user.password");
+			if (error >= 0) 
+				password = strdup(entry->value);
+		} else if ((error = ask(&privkey, "SSH Key:", 0)) < 0 ||
 		    (error = ask(&password, "Password:", 1)) < 0)
 			goto out;
 
@@ -209,8 +237,12 @@ int cred_acquire_cb(git_credential **out,
 
 		error = git_credential_ssh_key_new(out, username, pubkey, privkey, password);
 	} else if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT) {
-		if ((error = ask(&password, "Password:", 1)) < 0)
+		error = git_config_get_entry(&entry, cfg, "user.password");
+		if (error >= 0) {
+			password = strdup(entry->value);
+		} else if ((error = ask(&password, "Password:", 1)) < 0) {
 			goto out;
+		}
 
 		error = git_credential_userpass_plaintext_new(out, username, password);
 	} else if (allowed_types & GIT_CREDENTIAL_USERNAME) {
@@ -222,6 +254,7 @@ out:
 	free(password);
 	free(privkey);
 	free(pubkey);
+	git_config_free(cfg);
 	return error;
 }
 

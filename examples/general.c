@@ -99,7 +99,7 @@ int lg2_general(git_repository *repo, int argc, char** argv)
 	 *
 	 * [me]: http://libgit2.github.com/libgit2/#HEAD/group/repository
 	 */
-	repo_path = (argc > 1) ? argv[1] : "/opt/libgit2-test/.git";
+	repo_path = (argc > 1) ? argv[1] : "./.git";
 
 	error = git_repository_open(&repo, repo_path);
 	check_error(error, "opening repository");

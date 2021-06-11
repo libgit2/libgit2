@@ -82,6 +82,7 @@ int lg2_pull(git_repository *repo, int argc, char **argv)
 	fetch_opts.callbacks.sideband_progress = &progress_cb;
 	fetch_opts.callbacks.transfer_progress = transfer_progress_cb;
 	fetch_opts.callbacks.credentials = cred_acquire_cb;
+	fetch_opts.callbacks.payload = repo; // iOS addition, send repo to cb to get username/password or identityFile
 
 	/**
 	 * Perform the fetch with the configured refspecs from the
