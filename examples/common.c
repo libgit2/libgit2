@@ -186,50 +186,62 @@ int cred_acquire_cb(git_credential **out,
 	git_repository* repo = (git_repository*) payload;
 	int error = 1;
 	// iOS addition: let's get the config file
-	git_config* cfg;
+	git_config* cfg = NULL;
 	git_config_entry *entry = NULL;
 
 	UNUSED(url);
 	/* UNUSED(payload); */
 	/* iOS addition: get username, password, identityFile from config */
-	error = git_repository_config(&cfg, repo);
+	if (repo != NULL) 
+		error = git_repository_config(&cfg, repo);
+	else 
+		error = git_config_open_default(&cfg);
 
 	if (username_from_url) {
 		if ((username = strdup(username_from_url)) == NULL)
 			goto out;
 	} else {
-		error = git_config_get_entry(&entry, cfg, "user.name");
-		if (error >= 0) {
-			username = strdup(entry->value);
-		} else if ((error = ask(&username, "Username:", 0)) < 0) {
-			goto out;
+		if (cfg != NULL) {
+			error = git_config_get_entry(&entry, cfg, "user.name");
+			if (error >= 0) {
+				username = strdup(entry->value);
+			}
+		}
+		if (username == NULL) {
+			if ((error = ask(&username, "Username:", 0)) < 0) {
+				goto out;
+			}
 		}
 	}
 
 	if (allowed_types & GIT_CREDENTIAL_SSH_KEY) {
 		int n;
 
-		error = git_config_get_entry(&entry, cfg, "user.identityFile");
-		if (error >= 0) {
-			char* home = getenv("SSH_HOME"); 
-			if (home == NULL) 
-				home = getenv("HOME"); 
-			if (home != NULL) {
-				n = snprintf(NULL, 0, "%s/.ssh/%s", home, entry->value);
-				privkey = malloc(n + 1);
-				if (privkey != NULL) {
-					snprintf(privkey, n + 1, "%s/.ssh/%s", home, entry->value);
+		if (cfg != NULL) { 
+			error = git_config_get_entry(&entry, cfg, "user.identityFile");
+			if (error >= 0) {
+				char* home = getenv("SSH_HOME"); 
+				if (home == NULL) 
+					home = getenv("HOME"); 
+				if (home != NULL) {
+					n = snprintf(NULL, 0, "%s/.ssh/%s", home, entry->value);
+					privkey = malloc(n + 1);
+					if (privkey != NULL) {
+						snprintf(privkey, n + 1, "%s/.ssh/%s", home, entry->value);
+					}
+				} else {
+					privkey = strdup(entry->value);
 				}
-			} else {
-				privkey = strdup(entry->value);
+				error = git_config_get_entry(&entry, cfg, "user.password");
+				if (error >= 0) 
+					password = strdup(entry->value);
 			}
-			error = git_config_get_entry(&entry, cfg, "user.password");
-			if (error >= 0) 
-				password = strdup(entry->value);
-		} else if ((error = ask(&privkey, "SSH Key:", 0)) < 0 ||
-		    (error = ask(&password, "Password:", 1)) < 0)
-			goto out;
-
+		}
+		if (privkey == NULL) {
+			if ((error = ask(&privkey, "SSH Key:", 0)) < 0 ||
+					(error = ask(&password, "Password:", 1)) < 0)
+				goto out;
+		}
 		if ((n = snprintf(NULL, 0, "%s.pub", privkey)) < 0 ||
 		    (pubkey = malloc(n + 1)) == NULL ||
 		    (n = snprintf(pubkey, n + 1, "%s.pub", privkey)) < 0)
@@ -237,11 +249,16 @@ int cred_acquire_cb(git_credential **out,
 
 		error = git_credential_ssh_key_new(out, username, pubkey, privkey, password);
 	} else if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT) {
-		error = git_config_get_entry(&entry, cfg, "user.password");
-		if (error >= 0) {
-			password = strdup(entry->value);
-		} else if ((error = ask(&password, "Password:", 1)) < 0) {
-			goto out;
+		if (cfg != NULL) {
+			error = git_config_get_entry(&entry, cfg, "user.password");
+			if (error >= 0) {
+				password = strdup(entry->value);
+			}
+		}
+		if (password == NULL) {
+			if ((error = ask(&password, "Password:", 1)) < 0) {
+				goto out;
+			}
 		}
 
 		error = git_credential_userpass_plaintext_new(out, username, password);
