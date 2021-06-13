@@ -146,7 +146,7 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 			 requiring * to also match /
 		*/
 		effective_flags = wildmatch_flags;
-		if ((rule->flags & GIT_ATTR_FNMATCH_FULLPATH) == 0) {
+		if (!(rule->flags & GIT_ATTR_FNMATCH_FULLPATH)) {
 			effective_flags &= ~WM_PATHNAME;
 		}
 
@@ -645,4 +645,3 @@ int git_ignore__check_pathspec_for_exact_ignores(
 
 	return error;
 }
-
