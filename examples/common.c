@@ -245,6 +245,8 @@ int cred_acquire_cb(git_credential **out,
 				} else {
 					privkey = strdup(entry->value);
 				}
+
+				printf("SSH authentication: Using private key: %s\n", privkey);
 				error = git_config_get_entry(&entry, cfg, "user.password");
 				if (error >= 0)
 					password = strdup(entry->value);
