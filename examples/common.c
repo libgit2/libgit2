@@ -233,7 +233,10 @@ int cred_acquire_cb(git_credential **out,
 				char* home = getenv("SSH_HOME");
 				if (home == NULL)
 					home = getenv("HOME");
-				if (home != NULL) {
+				if (home != NULL
+						// Use the value if it's an absolute path.
+						&& strncmp(entry->value, "~", 1) != 0
+						&& strncmp(entry->value, "/", 1) != 0) {
 					n = snprintf(NULL, 0, "%s/.ssh/%s", home, entry->value);
 					privkey = malloc(n + 1);
 					if (privkey != NULL) {
@@ -245,16 +248,21 @@ int cred_acquire_cb(git_credential **out,
 				error = git_config_get_entry(&entry, cfg, "user.password");
 				if (error >= 0)
 					password = strdup(entry->value);
+			} else {
+				const git_error* err = git_error_last();
+				printf("No user.identityFile found in git config: %s.\n", err->message);
 			}
 		}
 		if (privkey == NULL) {
-			printf("No user.identityFile found in git config.\n");
 			if ((error = ask(&privkey, "SSH Key:", 0)) < 0 ||
 					(error = ask(&password, "Password:", 1)) < 0)
 				goto out;
-			printf("Consider running,");
-			printf("    lg2 config user.identityFile\t '%s'", privkey);
-			printf("    lg2 config user.password\t '%s'", password);
+			printf("Consider running,\n");
+			printf("    lg2 config user.identityFile '%s'\n", privkey);
+			if (strcmp(password, "") != 0) {
+				printf("    lg2 config user.password 'your_password_here'\n");
+			}
+			printf("to save this username/password pair.\n");
 		}
 
 		// Expand path to private key
