@@ -248,10 +248,13 @@ int cred_acquire_cb(git_credential **out,
 			}
 		}
 		if (privkey == NULL) {
-			printf("No user.identityFile found in git config\n");
+			printf("No user.identityFile found in git config.\n");
 			if ((error = ask(&privkey, "SSH Key:", 0)) < 0 ||
 					(error = ask(&password, "Password:", 1)) < 0)
 				goto out;
+			printf("Consider running,");
+			printf("    lg2 config user.identityFile\t '%s'", privkey);
+			printf("    lg2 config user.password\t '%s'", password);
 		}
 
 		// Expand path to private key
