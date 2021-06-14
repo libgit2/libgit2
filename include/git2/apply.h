@@ -100,6 +100,7 @@ GIT_EXTERN(int) git_apply_options_init(git_apply_options *opts, unsigned int ver
  * @param preimage the tree to apply the diff to
  * @param diff the diff to apply
  * @param options the options for the apply (or null for defaults)
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_apply_to_tree(
 	git_index **out,
@@ -137,6 +138,7 @@ typedef enum {
  * @param diff the diff to apply
  * @param location the location to apply (workdir, index or both)
  * @param options the options for the apply (or null for defaults)
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_apply(
 	git_repository *repo,

@@ -356,6 +356,11 @@ typedef enum {
  *		>
  *		> - `ciphers` is the list of ciphers that are eanbled.
  *
+ *	* opts(GIT_OPT_GET_USER_AGENT, git_buf *out)
+ *
+ *		> Get the value of the User-Agent header.
+ *		> The User-Agent is written to the `out` buffer.
+ *
  *	* opts(GIT_OPT_ENABLE_OFS_DELTA, int enabled)
  *
  *		> Enable or disable the use of "offset deltas" when creating packfiles,
