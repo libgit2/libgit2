@@ -155,6 +155,14 @@ static int readline(char **out)
 		goto error;
 	}
 
+	// We encountered an EOF (line == NULL -> first
+	// getchar() was null).
+	if (line == NULL) {
+		error = -1;
+		errno = EIO; // Report generic IO error.
+		goto error;
+	}
+
 	line[length] = '\0';
 	*out = line;
 	line = NULL;
@@ -169,8 +177,8 @@ static int ask(char **out, const char *prompt, char optional)
 	printf("%s ", prompt);
 	fflush(stdout);
 
-	if (!readline(out) && !optional) {
-		fprintf(stderr, "Could not read response: %s", strerror(errno));
+	if (readline(out) <= 0 && !optional) {
+		fprintf(stderr, "Could not read response: %s\n", strerror(errno));
 		return -1;
 	}
 
