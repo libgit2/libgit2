@@ -141,14 +141,14 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 		if (git_buf_oom(&buf))
 			goto out;
 
-		/* if rule isn't for full path we match without PATHNAME flag
+		/*
+		 * if rule isn't for full path we match without PATHNAME flag
 		 * as lines like *.txt should match something like dir/test.txt
 		 * requiring * to also match /
-		*/
+		 */
 		effective_flags = wildmatch_flags;
-		if (!(rule->flags & GIT_ATTR_FNMATCH_FULLPATH)) {
+		if (!(rule->flags & GIT_ATTR_FNMATCH_FULLPATH))
 			effective_flags &= ~WM_PATHNAME;
-		}
 
 		/* if we found a match, we want to keep this rule */
 		if ((wildmatch(git_buf_cstr(&buf), path, effective_flags)) == WM_MATCH) {
