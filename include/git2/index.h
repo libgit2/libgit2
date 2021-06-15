@@ -702,7 +702,7 @@ GIT_EXTERN(int) git_index_update_all(
  * @param at_pos the address to which the position of the index entry is written (optional)
  * @param index an existing index object
  * @param path path to search
- * @return 0 with valid value in at_pos; an error code otherwise
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *path);
 
@@ -713,7 +713,7 @@ GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *pat
  * @param at_pos the address to which the position of the index entry is written (optional)
  * @param index an existing index object
  * @param prefix the prefix to search for
- * @return 0 with valid value in at_pos; an error code otherwise
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_find_prefix(size_t *at_pos, git_index *index, const char *prefix);
 
