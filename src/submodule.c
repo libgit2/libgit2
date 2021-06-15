@@ -1857,9 +1857,9 @@ static void submodule_release(git_submodule *sm)
 int git_submodule_dup(git_submodule **out, git_submodule *source)
 {
 	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(source);
 
-	if (source != NULL)
-		GIT_REFCOUNT_INC(source);
+	GIT_REFCOUNT_INC(source);
 
 	*out = source;
 	return 0;
