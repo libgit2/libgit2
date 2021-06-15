@@ -48,7 +48,7 @@ void test_submodule_lookup__can_be_dupped(void)
 	git_submodule *sm_duplicate;
 	const char *oid = "480095882d281ed676fe5b863569520e54a7d5c0";
 
-	// Check original
+	/* Check original */
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
 	cl_assert(git_submodule_owner(sm) == g_repo);
 	cl_assert_equal_s("sm_unchanged", git_submodule_name(sm));
@@ -62,11 +62,11 @@ void test_submodule_lookup__can_be_dupped(void)
 	cl_assert(git_submodule_ignore(sm) == GIT_SUBMODULE_IGNORE_NONE);
 	cl_assert(git_submodule_update_strategy(sm) == GIT_SUBMODULE_UPDATE_CHECKOUT);
 
-	// Duplicate and free original
+	/* Duplicate and free original */
 	cl_assert(git_submodule_dup(&sm_duplicate, sm) == 0);
 	git_submodule_free(sm);
 
-	// Check duplicate
+	/* Check duplicate */
 	cl_assert(git_submodule_owner(sm_duplicate) == g_repo);
 	cl_assert_equal_s("sm_unchanged", git_submodule_name(sm_duplicate));
 	cl_assert(git__suffixcmp(git_submodule_path(sm_duplicate), "sm_unchanged") == 0);
