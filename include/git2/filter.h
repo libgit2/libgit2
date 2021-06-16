@@ -52,6 +52,19 @@ typedef enum {
 } git_filter_flag_t;
 
 /**
+ * Filtering options
+ */
+typedef struct {
+	unsigned int version;
+
+	/** See `git_filter_flag_t` above */
+	uint32_t flags;
+} git_filter_options;
+
+ #define GIT_FILTER_OPTIONS_VERSION 1
+ #define GIT_FILTER_OPTIONS_INIT {GIT_FILTER_OPTIONS_VERSION}
+
+/**
  * A filter that can transform file data
  *
  * This represents a filter that can be used to transform or even replace
@@ -102,6 +115,29 @@ GIT_EXTERN(int) git_filter_list_load(
 	const char *path,
 	git_filter_mode_t mode,
 	uint32_t flags);
+
+/**
+ * Load the filter list for a given path.
+ *
+ * This will return 0 (success) but set the output git_filter_list to NULL
+ * if no filters are requested for the given file.
+ *
+ * @param filters Output newly created git_filter_list (or NULL)
+ * @param repo Repository object that contains `path`
+ * @param blob The blob to which the filter will be applied (if known)
+ * @param path Relative path of the file to be filtered
+ * @param mode Filtering direction (WT->ODB or ODB->WT)
+ * @param opts The `git_filter_options` to use when loading filters
+ * @return 0 on success (which could still return NULL if no filters are
+ *         needed for the requested file), <0 on error
+ */
+GIT_EXTERN(int) git_filter_list_load_ext(
+	git_filter_list **filters,
+	git_repository *repo,
+	git_blob *blob,
+	const char *path,
+	git_filter_mode_t mode,
+	git_filter_options *opts);
 
 /**
  * Query the filter list to see if a given filter (by name) will run.

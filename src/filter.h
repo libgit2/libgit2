@@ -16,12 +16,12 @@
 #define GIT_FILTER_BYTES_TO_CHECK_NUL 8000
 
 typedef struct {
-	uint32_t flags;
+	git_filter_options options;
 	git_attr_session *attr_session;
 	git_buf *temp_buf;
 } git_filter_session;
 
-#define GIT_FILTER_SESSION_INIT {0}
+#define GIT_FILTER_SESSION_INIT {GIT_FILTER_OPTIONS_INIT, 0}
 
 extern int git_filter_global_init(void);
 
