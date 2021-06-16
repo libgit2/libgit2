@@ -19,7 +19,6 @@
 # include <unistd.h>
 #endif
 #include <errno.h>
-#include <wordexp.h>
 
 void check_lg2(int error, const char *message, const char *extra)
 {
@@ -197,6 +196,7 @@ int cred_acquire_cb(git_credential **out,
 	// iOS addition: let's get the config file
 	git_config* cfg = NULL;
 	git_config_entry *entry = NULL;
+	char* newPrivkey = NULL;
 
 	UNUSED(url);
 	/* UNUSED(payload); */
@@ -225,14 +225,13 @@ int cred_acquire_cb(git_credential **out,
 
 	if (allowed_types & GIT_CREDENTIAL_SSH_KEY) {
 		int n;
-		wordexp_t expanded;
+		char* home = getenv("SSH_HOME");
+		if (home == NULL)
+			home = getenv("HOME");
 
 		if (cfg != NULL) {
 			error = git_config_get_entry(&entry, cfg, "user.identityFile");
 			if (error >= 0) {
-				char* home = getenv("SSH_HOME");
-				if (home == NULL)
-					home = getenv("HOME");
 				if (home != NULL
 						// Use the value if it's an absolute path.
 						&& strncmp(entry->value, "~", 1) != 0
@@ -267,14 +266,17 @@ int cred_acquire_cb(git_credential **out,
 			printf("to save this username/password pair.\n");
 		}
 
-		// Expand path to private key
-		if ((error = wordexp(privkey, &expanded, 0)) < 0) {
-			goto out;
+		// iOS: we only expand ~/ 
+		home = getenv("HOME");
+		if ((strncmp(privkey, "~/", 2) == 0) && (home != NULL)) {
+			n = snprintf(NULL, 0, "%s/.ssh%s", home, privkey + 2);
+			newPrivkey = malloc(n + 1);
+			if (newPrivkey != NULL) {
+				snprintf(newPrivkey, n + 1, "%s/.ssh%s", home, privkey + 2);
+				free(privkey);
+				privkey = newPrivkey;
+			}
 		}
-
-		free(privkey);
-		privkey = strdup(expanded.we_wordv[0]);
-		wordfree(&expanded);
 
 		if ((n = snprintf(NULL, 0, "%s.pub", privkey)) < 0 ||
 		    (pubkey = malloc(n + 1)) == NULL ||
