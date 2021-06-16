@@ -878,6 +878,7 @@ GIT_EXTERN(git_remote_autotag_option_t) git_remote_autotag(const git_remote *rem
  * @param value the new value to take.
  */
 GIT_EXTERN(int) git_remote_set_autotag(git_repository *repo, const char *remote, git_remote_autotag_option_t value);
+
 /**
  * Retrieve the ref-prune setting
  *
