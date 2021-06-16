@@ -19,6 +19,7 @@
 # include <unistd.h>
 #endif
 #include <errno.h>
+#include <wordexp.h>
 
 void check_lg2(int error, const char *message, const char *extra)
 {
@@ -154,6 +155,14 @@ static int readline(char **out)
 		goto error;
 	}
 
+	// We encountered an EOF (line == NULL -> first
+	// getchar() was null).
+	if (line == NULL) {
+		error = -1;
+		errno = EIO; // Report generic IO error.
+		goto error;
+	}
+
 	line[length] = '\0';
 	*out = line;
 	line = NULL;
@@ -168,8 +177,8 @@ static int ask(char **out, const char *prompt, char optional)
 	printf("%s ", prompt);
 	fflush(stdout);
 
-	if (!readline(out) && !optional) {
-		fprintf(stderr, "Could not read response: %s", strerror(errno));
+	if (readline(out) <= 0 && !optional) {
+		fprintf(stderr, "Could not read response: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -192,9 +201,9 @@ int cred_acquire_cb(git_credential **out,
 	UNUSED(url);
 	/* UNUSED(payload); */
 	/* iOS addition: get username, password, identityFile from config */
-	if (repo != NULL) 
+	if (repo != NULL)
 		error = git_repository_config(&cfg, repo);
-	else 
+	else
 		error = git_config_open_default(&cfg);
 
 	if (username_from_url) {
@@ -216,14 +225,18 @@ int cred_acquire_cb(git_credential **out,
 
 	if (allowed_types & GIT_CREDENTIAL_SSH_KEY) {
 		int n;
+		wordexp_t expanded;
 
-		if (cfg != NULL) { 
+		if (cfg != NULL) {
 			error = git_config_get_entry(&entry, cfg, "user.identityFile");
 			if (error >= 0) {
-				char* home = getenv("SSH_HOME"); 
-				if (home == NULL) 
-					home = getenv("HOME"); 
-				if (home != NULL) {
+				char* home = getenv("SSH_HOME");
+				if (home == NULL)
+					home = getenv("HOME");
+				if (home != NULL
+						// Use the value if it's an absolute path.
+						&& strncmp(entry->value, "~", 1) != 0
+						&& strncmp(entry->value, "/", 1) != 0) {
 					n = snprintf(NULL, 0, "%s/.ssh/%s", home, entry->value);
 					privkey = malloc(n + 1);
 					if (privkey != NULL) {
@@ -232,16 +245,37 @@ int cred_acquire_cb(git_credential **out,
 				} else {
 					privkey = strdup(entry->value);
 				}
+
+				printf("SSH authentication: Using private key: %s\n", privkey);
 				error = git_config_get_entry(&entry, cfg, "user.password");
-				if (error >= 0) 
+				if (error >= 0)
 					password = strdup(entry->value);
+			} else {
+				const git_error* err = git_error_last();
+				printf("No user.identityFile found in git config: %s.\n", err->message);
 			}
 		}
 		if (privkey == NULL) {
 			if ((error = ask(&privkey, "SSH Key:", 0)) < 0 ||
 					(error = ask(&password, "Password:", 1)) < 0)
 				goto out;
+			printf("Consider running,\n");
+			printf("    lg2 config user.identityFile '%s'\n", privkey);
+			if (strcmp(password, "") != 0) {
+				printf("    lg2 config user.password 'your_password_here'\n");
+			}
+			printf("to save this username/password pair.\n");
 		}
+
+		// Expand path to private key
+		if ((error = wordexp(privkey, &expanded, 0)) < 0) {
+			goto out;
+		}
+
+		free(privkey);
+		privkey = strdup(expanded.we_wordv[0]);
+		wordfree(&expanded);
+
 		if ((n = snprintf(NULL, 0, "%s.pub", privkey)) < 0 ||
 		    (pubkey = malloc(n + 1)) == NULL ||
 		    (n = snprintf(pubkey, n + 1, "%s.pub", privkey)) < 0)
