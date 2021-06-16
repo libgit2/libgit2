@@ -42,7 +42,9 @@ static int sideband_progress(const char *str, int len, void *payload)
 	(void)payload; /* unused */
 
 	printf("remote: %.*s", len, str);
+#if TARGET_OS_IPHONE
 	fflush(thread_stdout);
+#endif
 	return 0;
 }
 
