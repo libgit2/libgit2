@@ -269,10 +269,10 @@ int cred_acquire_cb(git_credential **out,
 		// iOS: we only expand ~/ 
 		home = getenv("HOME");
 		if ((strncmp(privkey, "~/", 2) == 0) && (home != NULL)) {
-			n = snprintf(NULL, 0, "%s/.ssh%s", home, privkey + 2);
+			n = snprintf(NULL, 0, "%s/.ssh%s", home, privkey + 1);
 			newPrivkey = malloc(n + 1);
 			if (newPrivkey != NULL) {
-				snprintf(newPrivkey, n + 1, "%s/.ssh%s", home, privkey + 2);
+				snprintf(newPrivkey, n + 1, "%s/.ssh%s", home, privkey + 1);
 				free(privkey);
 				privkey = newPrivkey;
 			}
