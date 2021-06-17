@@ -14,6 +14,7 @@ struct {
 	{ "blame",        lg2_blame,        1 },
 	{ "cat-file",     lg2_cat_file,     1 },
 	{ "checkout",     lg2_checkout,     1 },
+	{ "branch",       lg2_branch,       1 },
 	{ "clone",        lg2_clone,        0 },
 	{ "commit",       lg2_commit,       1 },
 	{ "config",       lg2_config,       1 },
@@ -28,8 +29,8 @@ struct {
 	{ "ls-files",     lg2_ls_files,     1 },
 	{ "ls-remote",    lg2_ls_remote,    1 },
 	{ "merge",        lg2_merge,        1 },
-	{ "push",         lg2_push,        1  },
-	{ "pull",         lg2_pull,        1  },
+	{ "push",         lg2_push,         1 },
+	{ "pull",         lg2_pull,         1 },
 	{ "remote",       lg2_remote,       1 },
 	{ "rev-list",     lg2_rev_list,     1 },
 	{ "rev-parse",    lg2_rev_parse,    1 },
@@ -46,10 +47,11 @@ static int run_command(git_command_fn fn, git_repository *repo, struct args_info
 	/* Run the command. If something goes wrong, print the error message to stderr */
 	error = fn(repo, args.argc - args.pos, &args.argv[args.pos]);
 	if (error < 0) {
-		if (git_error_last() == NULL)
-			fprintf(stderr, "Error without message");
-		else
+		if (git_error_last() == NULL) {
+			fprintf(stderr, "Error has no message.\n");
+		} else {
 			fprintf(stderr, "Bad news:\n %s\n", git_error_last()->message);
+		}
 	}
 
 	return !!error;

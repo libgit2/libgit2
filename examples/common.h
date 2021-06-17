@@ -55,6 +55,11 @@
 #include "args.h"
 
 extern int lg2_add(git_repository *repo, int argc, char **argv);
+
+extern int lg2_branch(git_repository *repo, int argc, char **argv);
+extern int lg2_branch_create_from_head(git_repository *repo, char *branch_name);
+extern int lg2_branch_delete(git_repository *repo, char *branch_name);
+
 extern int lg2_blame(git_repository *repo, int argc, char **argv);
 extern int lg2_cat_file(git_repository *repo, int argc, char **argv);
 extern int lg2_checkout(git_repository *repo, int argc, char **argv);
@@ -124,6 +129,11 @@ extern void *xrealloc(void *oldp, size_t newsz);
  * Convert a refish to an annotated commit.
  */
 extern int resolve_refish(git_annotated_commit **commit, git_repository *repo, const char *refish);
+
+/**
+ * Get a given repo's HEAD.
+ */
+extern int get_repo_head(git_commit **commit, git_repository *repo);
 
 /**
  * Acquire credentials via command line
