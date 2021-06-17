@@ -18,7 +18,7 @@ The bundled dependencies in the `deps` directories are governed
 by the following licenses:
 
 - http-parser is licensed under [MIT license](../deps/http-parser/COPYING)
-- regex is governed by [LGPL v2.1+ license](../deps/regex/COPYING)
+- pcre is governed by [BSD license](../deps/pcre/LICENCE)
 - winhttp is governed by [LGPL v2.1+](../deps/winhttp/COPYING.LGPL) and [GPL v2 with linking exception](../deps/winhttp/COPYING.GPL)
 - zlib is governed by [zlib license](../deps/zlib/COPYING)
 
