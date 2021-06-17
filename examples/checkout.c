@@ -32,12 +32,14 @@
  *  --force: force the checkout to happen.
  *  --[no-]progress: show checkout progress, on by default.
  *  --perf: show performance data.
+ *  -b: create the branch if it doesn't exist.
  */
 
 typedef struct {
 	int force : 1;
 	int progress : 1;
 	int perf : 1;
+	int create : 1;
 } checkout_options;
 
 static void print_usage(void)
@@ -47,7 +49,8 @@ static void print_usage(void)
 		"  --git-dir: use the following git repository.\n"
 		"  --force: force the checkout.\n"
 		"  --[no-]progress: show checkout progress.\n"
-		"  --perf: show performance data.\n");
+		"  --perf: show performance data.\n"
+		"  -b: create <branch> if it doesn't exist.\n");
 	exit(1);
 }
 
@@ -67,6 +70,8 @@ static void parse_options(const char **repo_path, checkout_options *opts, struct
 
 		if (match_arg_separator(args)) {
 			break;
+		} else if (!strcmp(curr, "-b")) {
+			opts->create = 1;
 		} else if (!strcmp(curr, "--force")) {
 			opts->force = 1;
 		} else if (match_bool_arg(&bool_arg, args, "--progress")) {
@@ -252,9 +257,11 @@ int lg2_checkout(git_repository *repo, int argc, char **argv)
 	git_annotated_commit *checkout_target = NULL;
 	int err = 0;
 	const char *path = ".";
+	char *branch_name = NULL;
 
 	/** Parse our command line options */
 	parse_options(&path, &opts, &args);
+	branch_name = argv[args.pos];
 
 	/** Make sure we're not about to checkout while something else is going on */
 	state = git_repository_state(repo);
@@ -272,12 +279,23 @@ int lg2_checkout(git_repository *repo, int argc, char **argv)
 		err = 1;
 		goto cleanup;
 	} else {
+		if (opts.create) {
+			err = lg2_branch_create_from_head(repo, branch_name);
+			if (err < 0) {
+				fprintf(stderr, "failed to create %s: %s\n", args.argv[args.pos],
+						git_error_last()->message);
+				goto cleanup;
+			}
+		}
+
 		/**
 		 * Try to resolve a "refish" argument to a target libgit2 can use
 		 */
-		if ((err = resolve_refish(&checkout_target, repo, args.argv[args.pos])) < 0 &&
-		    (err = guess_refish(&checkout_target, repo, args.argv[args.pos])) < 0) {
-			fprintf(stderr, "failed to resolve %s: %s\n", args.argv[args.pos], git_error_last()->message);
+
+		if ((err = resolve_refish(&checkout_target, repo, branch_name)) < 0 &&
+		    (err = guess_refish(&checkout_target, repo, branch_name)) < 0) {
+			fprintf(stderr, "failed to resolve %s: %s\n", branch_name,
+						git_error_last()->message);
 			goto cleanup;
 		}
 		err = perform_checkout_ref(repo, checkout_target, args.argv[args.pos], &opts);

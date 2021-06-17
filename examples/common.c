@@ -126,6 +126,27 @@ int resolve_refish(git_annotated_commit **commit, git_repository *repo, const ch
 	return err;
 }
 
+int get_repo_head(git_commit **head, git_repository *repo)
+{
+	git_oid head_id;
+	int error = 0;
+
+	error = git_reference_name_to_id(&head_id, repo, "HEAD");
+	if (error != 0) {
+		fprintf(stderr, "failed to resolve HEAD.\n");
+		goto cleanup;
+	}
+
+	error = git_commit_lookup(head, repo, &head_id);
+	if (error != 0 || *head == NULL) {
+		printf("Error looking up HEAD's commit.\n");
+		goto cleanup;
+	}
+
+cleanup:
+	return error;
+}
+
 static int readline(char **out)
 {
 	int c, error = 0, length = 0, allocated = 0;
