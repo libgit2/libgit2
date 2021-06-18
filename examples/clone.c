@@ -71,14 +71,31 @@ int lg2_clone(git_repository *repo, int argc, char **argv)
 	git_repository *cloned_repo = NULL;
 	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
-	const char *url = argv[1];
-	const char *path = argv[2];
+	char *url = argv[1];
+	char *path = NULL;
 	int error;
 
 	(void)repo; /* unused */
 
-	/* Validate args */
-	if (argc < 3) {
+	/* Parse/validate args */
+	if (argc == 2) {
+		size_t chars_from_end = 0;
+		size_t full_len = strlen(url);
+		char *c = url + full_len - 1;
+
+		for (; c >= url; --c,++chars_from_end) {
+			if (*c == '/') {
+				break;
+			}
+		}
+
+		// Determine where the name of the path should start.
+		path = url + full_len - chars_from_end;
+
+		printf("Cloning into ./%s\n", path);
+	} else if (argc == 3) {
+		path = argv[2];
+	} else {
 		printf ("USAGE: %s <url> <path>\n", argv[0]);
 		return -1;
 	}
