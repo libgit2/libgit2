@@ -214,7 +214,7 @@ int lg2_branch(git_repository *repo, int argc, char **argv)
 		fprintf(stderr, "       branch -d <branch name>\n");
 		fprintf(stderr, "           deletes <branch name>\n");
 		fprintf(stderr, "       branch -u <upstream branch name>\n");
-		fprintf(stderr, "           sets the current branch's upstream.\n");
+		fprintf(stderr, "           sets the current branch's upstream (upstream must exist).\n");
 		fprintf(stderr, "       branch --unset-upstream\n");
 		fprintf(stderr, "           clears upstream information for the current branch.\n");
 		fprintf(stderr, "       branch --list\n");

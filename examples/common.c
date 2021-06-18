@@ -287,7 +287,7 @@ int cred_acquire_cb(git_credential **out,
 			printf("to save this username/password pair.\n");
 		}
 
-		// iOS: we only expand ~/ 
+		// iOS: we only expand ~/
 		home = getenv("HOME");
 		if ((strncmp(privkey, "~/", 2) == 0) && (home != NULL)) {
 			n = snprintf(NULL, 0, "%s/%s", home, privkey + 1);
@@ -330,6 +330,32 @@ out:
 	free(pubkey);
 	git_config_free(cfg);
 	return error;
+}
+
+int certificate_confirm_cb(struct git_cert *cert,
+		int valid,
+		const char *host,
+		void *payload)
+{
+	char* do_connect = NULL;
+
+	UNUSED(cert);
+	UNUSED(payload);
+	if (valid) {
+		// If certificate is valid, proceed with the connection.
+		printf("Connecting to %s...\n", host);
+		return 0;
+	}
+
+	printf("Invalid certificate for host %s.\n", host);
+	ask(&do_connect, "Connect anyway? y/[n] ", 0);
+
+	if (do_connect != NULL && strcmp(do_connect, "y") == 0) {
+		printf("Connecting anyway...\n");
+		return 0;
+	} else {
+		return -1; // Don't connect.
+	}
 }
 
 char *read_file(const char *path)
