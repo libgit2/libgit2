@@ -144,6 +144,15 @@ extern int cred_acquire_cb(git_credential **out,
 		unsigned int allowed_types,
 		void *payload);
 
+/**
+ * Request that the user confirm a remote certificate before
+ * connecting.
+ */
+extern int certificate_confirm_cb(struct git_cert *cert,
+		int valid,
+		const char *host,
+		void *payload);
+
 // iOS/OSX architecture definitions
 #include <TargetConditionals.h>
 #if TARGET_OS_IPHONE 
