@@ -27,7 +27,7 @@ static void print_progress(const progress_data *pd)
 		       pd->fetch_progress.indexed_deltas,
 		       pd->fetch_progress.total_deltas);
 	} else {
-		printf("net %3d%% (%4" PRIuZ " kb, %5u/%5u)  /  idx %3d%% (%5u/%5u)  /  chk %3d%% (%4" PRIuZ "/%4" PRIuZ")%s\n",
+		printf("net %3d%% (%4" PRIuZ " kb, %5u/%5u)  /  idx %3d%% (%5u/%5u)  /  chk %3d%% (%4" PRIuZ "/%4" PRIuZ")%s\r",
 		   network_percent, kbytes,
 		   pd->fetch_progress.received_objects, pd->fetch_progress.total_objects,
 		   index_percent, pd->fetch_progress.indexed_objects, pd->fetch_progress.total_objects,
@@ -55,6 +55,7 @@ static int fetch_progress(const git_indexer_progress *stats, void *payload)
 	print_progress(pd);
 	return 0;
 }
+
 static void checkout_progress(const char *path, size_t cur, size_t tot, void *payload)
 {
 	progress_data *pd = (progress_data*)payload;
@@ -63,7 +64,6 @@ static void checkout_progress(const char *path, size_t cur, size_t tot, void *pa
 	pd->path = path;
 	print_progress(pd);
 }
-
 
 int lg2_clone(git_repository *repo, int argc, char **argv)
 {
@@ -88,11 +88,16 @@ int lg2_clone(git_repository *repo, int argc, char **argv)
 	checkout_opts.progress_cb = checkout_progress;
 	checkout_opts.progress_payload = &pd;
 	clone_opts.checkout_opts = checkout_opts;
+
+	// 'Counting objects' output:
 	clone_opts.fetch_opts.callbacks.sideband_progress = sideband_progress;
-	// clone_opts.fetch_opts.callbacks.transfer_progress = &fetch_progress; // incompatible with below
-	clone_opts.fetch_opts.callbacks.credentials = cred_acquire_cb;
-	clone_opts.fetch_opts.callbacks.payload = NULL; // iOS addition, send repo to cb to get username/password or identityFile
-	// clone_opts.fetch_opts.callbacks.payload = &pd;
+
+	// Download progress.
+	clone_opts.fetch_opts.callbacks.transfer_progress = fetch_progress;
+	clone_opts.fetch_opts.callbacks.payload = &pd;
+
+	// We're cloning, so shouldn't rely on repo-specific configurations.
+	clone_opts.fetch_opts.callbacks.credentials = repoless_cred_acquire_cb;
 
 	/* Do the clone */
 	error = git_clone(&cloned_repo, url, path, &clone_opts);
@@ -105,3 +110,4 @@ int lg2_clone(git_repository *repo, int argc, char **argv)
 	else if (cloned_repo) git_repository_free(cloned_repo);
 	return error;
 }
+
