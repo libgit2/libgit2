@@ -80,23 +80,7 @@ int lg2_commit(git_repository *repo, int argc, char **argv)
 		else printf("ERROR %d: no detailed info\n", error);
 
 		goto cleanup;
-	} else if (opts.amend_head) {
-		error = get_repo_head(&old_head, repo);
-		if (error) {
-			goto cleanup;
-		}
-
-		error = git_commit_amend(&commit_oid,
-				old_head,
-				"HEAD", // Make HEAD point to the new commit.
-				NULL, // Leave the author untouched
-				NULL, // Leave the committer untouched
-				MESSAGE_ENCODING,
-				opts.message,
-				NULL); // Use the same tree
-		printf("Updated HEAD.\n");
-		goto cleanup;
-	}
+	} else
 
 	check_lg2(git_repository_index(&index, repo), "Could not open repository index", NULL);
 	check_lg2(git_index_write_tree(&tree_oid, index), "Could not write tree", NULL);
@@ -106,16 +90,33 @@ int lg2_commit(git_repository *repo, int argc, char **argv)
 
 	check_lg2(git_signature_default(&signature, repo), "Error creating signature", NULL);
 
-	check_lg2(git_commit_create_v(
-		&commit_oid,
-		repo,
-		"HEAD",
-		signature,
-		signature,
-		MESSAGE_ENCODING,
-		opts.message,
-		tree,
-		parent ? 1 : 0, parent), "Error creating commit", NULL);
+	if (opts.amend_head) {
+		error = get_repo_head(&old_head, repo);
+		if (error) {
+			goto cleanup;
+		}
+
+		error = git_commit_amend(&commit_oid,
+				old_head,
+				"HEAD", // Point HEAD to the last commit
+				NULL, // Leave the author untouched
+				signature, // DO update the committer.
+				MESSAGE_ENCODING,
+				opts.message,
+				tree); // Do update the tree.
+		printf("Updated HEAD.\n");
+	} else {
+		check_lg2(git_commit_create_v(
+			&commit_oid,
+			repo,
+			"HEAD",
+			signature,
+			signature,
+			MESSAGE_ENCODING,
+			opts.message,
+			tree,
+			parent ? 1 : 0, parent), "Error creating commit", NULL);
+	}
 
 cleanup:
 	git_index_free(index);
