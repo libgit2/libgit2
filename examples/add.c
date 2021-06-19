@@ -170,3 +170,4 @@ static void parse_opts(const char **repo_path, struct index_options *opts, struc
 		}
 	}
 }
+
