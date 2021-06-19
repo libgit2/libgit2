@@ -236,9 +236,18 @@ static void action_create_tag(tag_state *state)
 	git_signature_free(tagger);
 }
 
-static void print_usage(void)
+static void action_print_usage(tag_state *state)
 {
-	fprintf(stderr, "usage: see `git help tag`\n");
+	UNUSED(state);
+
+	fprintf(stderr, "usage: lg2 tag [-a] [-d] [-f] [-l] [-m] [-n] [<tag name>] [<target>]\n");
+	fprintf(stderr,
+		" These commands should work:\n"
+		"  - Tag name listing (`lg2 tag`)\n"
+		"  - Filtered tag listing with messages (`lg2 tag -n3 -l \"v0.1*\"`)\n"
+		"  - Lightweight tag creation (`lg2 tag test v0.18.0`)\n"
+		"  - Tag creation (`lg2 tag -a -m \"Test message\" test v0.18.0`)\n"
+		"  - Tag deletion (`lg2 tag -d test`)\n");
 	exit(1);
 }
 
@@ -256,8 +265,10 @@ static void parse_options(tag_action *action, struct tag_options *opts, int argc
 				opts->tag_name = curr;
 			else if (!opts->target)
 				opts->target = curr;
-			else
-				print_usage();
+			else {
+				*action = &action_print_usage;
+				return;
+			}
 
 			if (*action != &action_create_tag)
 				*action = &action_create_lightweight_tag;
@@ -276,6 +287,9 @@ static void parse_options(tag_action *action, struct tag_options *opts, int argc
 			*action = &action_delete_tag;
 		} else if (match_str_arg(&opts->message, &args, "-m")) {
 			*action = &action_create_tag;
+		} else {
+			*action = &action_print_usage;
+			return;
 		}
 	}
 }
