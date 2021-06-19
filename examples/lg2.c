@@ -12,9 +12,9 @@ struct {
 } commands[] = {
 	{ "add",          lg2_add,          1 },
 	{ "blame",        lg2_blame,        1 },
+	{ "branch",       lg2_branch,       1 },
 	{ "cat-file",     lg2_cat_file,     1 },
 	{ "checkout",     lg2_checkout,     1 },
-	{ "branch",       lg2_branch,       1 },
 	{ "clone",        lg2_clone,        0 },
 	{ "commit",       lg2_commit,       1 },
 	{ "config",       lg2_config,       1 },
@@ -32,6 +32,7 @@ struct {
 	{ "push",         lg2_push,         1 },
 	{ "pull",         lg2_pull,         1 },
 	{ "remote",       lg2_remote,       1 },
+	{ "reset",        lg2_reset,        1 },
 	{ "rev-list",     lg2_rev_list,     1 },
 	{ "rev-parse",    lg2_rev_parse,    1 },
 	{ "show-index",   lg2_show_index,   0 },
