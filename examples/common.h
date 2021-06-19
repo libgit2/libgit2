@@ -142,7 +142,14 @@ extern int cred_acquire_cb(git_credential **out,
 		const char *url,
 		const char *username_from_url,
 		unsigned int allowed_types,
-		void *payload);
+		void *repo_payload);
+
+extern int repoless_cred_acquire_cb(git_credential **out,
+		const char *url,
+		const char *username_from_url,
+		unsigned int allowed_types,
+		void *ignored_payload);
+
 
 /**
  * Request that the user confirm a remote certificate before

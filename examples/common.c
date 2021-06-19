@@ -332,6 +332,16 @@ out:
 	return error;
 }
 
+int repoless_cred_acquire_cb(git_credential **out,
+		const char *url,
+		const char *username_from_url,
+		unsigned int allowed_types,
+		void *ignored_payload)
+{
+	UNUSED(ignored_payload);
+	return cred_acquire_cb(out, url, username_from_url, allowed_types, NULL);
+}
+
 int certificate_confirm_cb(struct git_cert *cert,
 		int valid,
 		const char *host,
