@@ -1137,8 +1137,10 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 	if (error == GIT_ENOTFOUND && git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
 		ref_name = git_reference_symbolic_target(ref);
 		error = 0;
-	} else {
+	} else if (!error) {
 		ref_name = git_reference_name(resolved_ref);
+	} else {
+		goto cleanup;
 	}
 
 	/*
