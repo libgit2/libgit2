@@ -31,6 +31,7 @@ struct {
 	{ "merge",        lg2_merge,        1 },
 	{ "push",         lg2_push,         1 },
 	{ "pull",         lg2_pull,         1 },
+	{ "rebase",       lg2_rebase,       1 },
 	{ "remote",       lg2_remote,       1 },
 	{ "reset",        lg2_reset,        1 },
 	{ "rev-list",     lg2_rev_list,     1 },

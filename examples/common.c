@@ -235,7 +235,7 @@ error:
 	return error;
 }
 
-static int ask(char **out, const char *prompt, char optional)
+int ask(char **out, const char *prompt, char optional)
 {
 	printf("%s ", prompt);
 	fflush(stdout);
@@ -519,6 +519,20 @@ int certificate_confirm_cb(struct git_cert *cert,
 		return 0;
 	} else {
 		return -1; // Don't connect.
+	}
+}
+
+void handle_signature_create_error(int source_err)
+{
+	const git_error *err = git_error_last();
+	fprintf(stderr, "Error creating signature.\n");
+
+	if ((err && err->klass == GIT_ERROR_CONFIG) || source_err == GIT_ENOTFOUND) {
+		fprintf(stderr, "This seems to be a configuration error, ");
+		fprintf(stderr,
+			"probably the result of missing or invalid "
+			"author information.\n");
+		fprintf(stderr, INSTRUCTIONS_FOR_STORING_AUTHOR_INFORMATION);
 	}
 }
 

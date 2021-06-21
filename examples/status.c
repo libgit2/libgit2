@@ -202,6 +202,8 @@ static int show_change_details_long(
 			wstatus = "renamed:  ";
 		if (s->status & GIT_STATUS_WT_TYPECHANGE)
 			wstatus = "typechange:";
+		if (s->status & GIT_STATUS_CONFLICTED)
+			wstatus = "conflicts: ";
 
 		if (listing_index_changes && istatus == NULL)
 			continue;

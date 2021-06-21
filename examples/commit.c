@@ -91,17 +91,7 @@ int lg2_commit(git_repository *repo, int argc, char **argv)
 
 	error = git_signature_default(&signature, repo);
 	if (error) {
-		const git_error *err = git_error_last();
-		fprintf(stderr, "Error creating signature.\n");
-
-		// If it's a configuration error,
-		if ((err && err->klass == GIT_ERROR_CONFIG) || error == GIT_ENOTFOUND) {
-			fprintf(stderr, "This seems to be a configuration error, ");
-			fprintf(stderr,
-				"probably the result of missing or invalid "
-				"author information.\n");
-			fprintf(stderr, INSTRUCTIONS_FOR_STORING_AUTHOR_INFORMATION);
-		}
+		handle_signature_create_error(error);
 
 		goto cleanup;
 	}
