@@ -21,7 +21,7 @@ static int config_get(git_config *cfg, const char *key)
 
 	if ((error = git_config_get_entry(&entry, cfg, key)) < 0) {
 		if (error != GIT_ENOTFOUND)
-			printf("Unable to get configuration: %s\n", git_error_last()->message);
+			fprintf(stderr, "Unable to get configuration: %s\n", git_error_last()->message);
 		return 1;
 	}
 
@@ -32,7 +32,7 @@ static int config_get(git_config *cfg, const char *key)
 static int config_set(git_config *cfg, const char *key, const char *value)
 {
 	if (git_config_set_string(cfg, key, value) < 0) {
-		printf("Unable to set configuration: %s\n", git_error_last()->message);
+		fprintf(stderr, "Unable to set configuration: %s\n", git_error_last()->message);
 		return 1;
 	}
 	return 0;
@@ -44,7 +44,7 @@ int lg2_config(git_repository *repo, int argc, char **argv)
 	int error;
 
 	if ((error = git_repository_config(&cfg, repo)) < 0) {
-		printf("Unable to obtain repository config: %s\n", git_error_last()->message);
+		fprintf(stderr, "Unable to obtain repository config: %s\n", git_error_last()->message);
 		goto out;
 	}
 
@@ -53,7 +53,17 @@ int lg2_config(git_repository *repo, int argc, char **argv)
 	} else if (argc == 3) {
 		error = config_set(cfg, argv[1], argv[2]);
 	} else {
-		printf("USAGE: %s config <KEY> [<VALUE>]\n", argv[0]);
+		printf("USAGE: lg2 %s <KEY> [<VALUE>]\n", argv[0]);
+
+		// If the repository already has a .git directory,
+		if (!git_repository_is_bare(repo)) {
+			printf("    This repository's configuration file should be located at");
+			printf(" %s%s\n\n", git_repository_commondir(repo), "config");
+		}
+
+		printf("    To update global configurations, try editing "
+					DOCUMENTATION_EXPECTED_HOMEDIR ".gitconfig.\n");
+
 		error = 1;
 	}
 

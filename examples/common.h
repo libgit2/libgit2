@@ -175,9 +175,23 @@ extern int certificate_confirm_cb(struct git_cert *cert,
 		const char *host,
 		void *payload);
 
+/**
+ * Repeated documentation output.
+ */
+#define INSTRUCTIONS_FOR_STORING_AUTHOR_INFORMATION \
+		  "Try running \n" \
+		  "    lg2 config user.name 'Your Name'\n" \
+		  "    lg2 config user.email youremail@example.com\n" \
+		  "to provide authorship information for new commits " \
+		  "in this repository.\n" \
+		  "This information is used to label new commits " \
+		  "and will travel with them " \
+		  "(e.g. it's shared with servers when you `lg2 push`).\n"
+
 // iOS/OSX architecture definitions
 #include <TargetConditionals.h>
-#if TARGET_OS_IPHONE 
+#if TARGET_OS_IPHONE
+
 #include "ios_error.h"
 #define isatty ios_isatty
 #define fork   ios_fork
@@ -188,5 +202,13 @@ extern int certificate_confirm_cb(struct git_cert *cert,
 #define stdout thread_stdout
 #define stderr thread_stderr
 #define printf(args...) fprintf(thread_stdout, args)
+#define DOCUMENTATION_EXPECTED_HOMEDIR "~/Documents/"
+
+#else
+
+#define DOCUMENTATION_EXPECTED_HOMEDIR "~/"
+
 #endif
+
+
 #endif
