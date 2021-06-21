@@ -239,7 +239,8 @@ static int ask(char **out, const char *prompt, char optional)
 	fflush(stdout);
 
 	if (readline(out) <= 0 && !optional) {
-		fprintf(stderr, "Could not read response: %s\n", strerror(errno));
+		fprintf(stderr, "Could not read response: %s\n",
+				errno != 0 ? strerror(errno) : "No message");
 		return -1;
 	}
 
@@ -388,7 +389,7 @@ int certificate_confirm_cb(struct git_cert *cert,
 		return 0;
 	}
 
-	printf("Invalid certificate for host %s.\n", host);
+	printf("Certificate for host '%s' may not be valid.\n", host);
 	ask(&do_connect, "Connect anyway? y/[n] ", 0);
 
 	if (do_connect != NULL && strcmp(do_connect, "y") == 0) {

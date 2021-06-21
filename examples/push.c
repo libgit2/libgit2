@@ -35,6 +35,7 @@ typedef struct {
 
 	git_strarray refspecs; // Owned by; lifetime must be \leq argv lifetime.
 	int start_tracking;
+	int force_push;
 } push_opts;
 static void push_opts_free(push_opts *);
 
@@ -42,12 +43,13 @@ static void push_opts_free(push_opts *);
 static int parse_args(git_repository *repo, push_opts *opts, int argc, char **argv);
 
 static int start_tracking(git_repository *, git_refspec *);
+static int push_status_cb(const char *refname, const char *status, void *payload);
 
 /** Entry point for this command */
 int lg2_push(git_repository *repo, int argc, char **argv)
 {
 	push_opts cmdline_opts;
-	int error;
+	int error = 0;
 
 	git_push_options options;
 	git_remote_callbacks callbacks;
@@ -60,6 +62,9 @@ int lg2_push(git_repository *repo, int argc, char **argv)
 		fprintf(stderr, "          Push to the given remote. If <refspec> is not\n"
 						"          present, the current branch must be tracking an\n"
 						"          upstream branch in <remote>.\n");
+		fprintf(stderr, "       %s --force %s\n"
+						"          Force updating each of the given refspecs.\n",
+						argv[0], "<remote> <refspec>*");
 		fprintf(stderr, "       %s -u %s %s\n", argv[0], "<remote>", "<refspec>*");
 		fprintf(stderr, "          Act like %s %s %s, but start tracking\n"
 						"          each successfully pushed branch's upstream.\n",
@@ -74,7 +79,9 @@ int lg2_push(git_repository *repo, int argc, char **argv)
 
 	callbacks.certificate_check = certificate_confirm_cb;
 	callbacks.credentials = cred_acquire_cb;
-	callbacks.payload = repo; // iOS addition, send repo to cb to get username/password or identityFile
+	callbacks.payload = repo;
+
+	callbacks.push_update_reference = push_status_cb;
 
 	check_lg2(git_push_options_init(&options, GIT_PUSH_OPTIONS_VERSION ), "Error initializing push", NULL);
 	options.callbacks = callbacks;
@@ -93,9 +100,24 @@ int lg2_push(git_repository *repo, int argc, char **argv)
 
 			error = start_tracking(repo, refspec);
 			if (error != 0) {
-				fprintf(stderr, "Can't make %s track %s.\n",
-						git_refspec_src(refspec),
-						git_refspec_dst(refspec));
+				const char *src = git_refspec_src(refspec);
+				const char *dst = git_refspec_dst(refspec);
+
+				fprintf(stderr, "Can't make %s track %s.\n", src, dst);
+				fprintf(stderr,
+					" This may be because one of the given refspecs is formatted incorrectly.\n"
+					"These are some example refspecs:\n"
+					"   +refs/heads/localbranch1:refs/remotes/origin/make_it_track_this\n"
+					"        Here, the '+' means we're forcing the update.\n"
+					"   refs/remotes/origin/somebranch\n"
+					"        Updates somebranch with the contents of this branch, "
+					" but doesn't force it.\n"
+					" ");
+
+				fprintf(stderr,
+					" You can also try `lg2 branch -u '%s'`, "
+					"which sets the current branch's upstream to %s.\n",
+					dst, dst);
 			}
 
 			git_refspec_free(refspec);
@@ -105,6 +127,28 @@ int lg2_push(git_repository *repo, int argc, char **argv)
 cleanup:
 	push_opts_free(&cmdline_opts);
 	return error;
+}
+
+static int push_status_cb(const char *refname, const char *status, void *payload)
+{
+	UNUSED(payload);
+
+	if (status != NULL) {
+		fprintf(stderr, "ERROR updating %s: %s\n", refname, status);
+		fprintf(stderr,
+			"If you want to create an upstream branch or overwrite\n"
+			"upstream changes, you may want to try running\n"
+			"    lg2 push --force <remote name> <refspec>...\n"
+			"or just\n"
+			"	lg2 push --force\t\t to update only the current branch.\n"
+			"This forces the remote to accept local changes, but\n"
+			"may overwrite other changes!\n");
+
+		// An error!
+		return -1;
+	}
+
+	return 0;
 }
 
 static int start_tracking(git_repository *repo, git_refspec *refspec)
@@ -193,6 +237,25 @@ cleanup:
 	return error;
 }
 
+/// Returns a heap-allocated copy of [arg] (formatted).
+static char * cpy_and_format_refspec_arg(const char *arg, push_opts *opts)
+{
+	char *result;
+
+	if (opts->force_push && arg[0] != '+') {
+		// If we're force-pushing, prefix the path with a '+'.
+		result = (char*) malloc(strlen(arg) + 2);
+		result[0] = '+';
+
+		strcpy(result + 1, arg);
+	} else {
+		result = (char*) malloc(strlen(arg) + 1);
+		strcpy(result, arg);
+	}
+
+	return result;
+}
+
 static int parse_args(git_repository *repo, push_opts *opts, int argc, char **argv)
 {
 	int i;
@@ -207,6 +270,8 @@ static int parse_args(git_repository *repo, push_opts *opts, int argc, char **ar
 			return 1;
 		} else if (strcmp(arg, "-u") == 0 || strcmp(arg, "--set-upstream") == 0) {
 			opts->start_tracking = 1;
+		} else if (strcmp(arg, "--force") == 0) {
+			opts->force_push = 1;
 		} else {
 			fprintf(stderr, "Unknown argument: %s\n", arg);
 			return 1;
@@ -238,7 +303,7 @@ static int parse_args(git_repository *repo, push_opts *opts, int argc, char **ar
 
 		for (j = 0; j < opts->refspecs.count; j++) {
 			char *arg = argv[j + i];
-			opts->refspecs.strings[j] = strcpy((char*) malloc(strlen(arg)), arg);
+			opts->refspecs.strings[j] = cpy_and_format_refspec_arg(arg, opts);
 		}
 	} else {
 		git_reference *head;
@@ -261,9 +326,11 @@ static int parse_args(git_repository *repo, push_opts *opts, int argc, char **ar
 
 		opts->refspecs.count = 1;
 		opts->refspecs.strings = (char**) malloc(1 * sizeof(char*));
-		opts->refspecs.strings[0] = strcpy((char*) malloc(strlen(branch_name)), branch_name);
+		opts->refspecs.strings[0] = cpy_and_format_refspec_arg(branch_name, opts);
 
 		git_reference_free(head);
+
+		printf("No refspecs given. Pushing: %s\n", opts->refspecs.strings[0]);
 	}
 
 	return 0;
