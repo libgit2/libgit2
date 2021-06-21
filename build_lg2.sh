@@ -45,7 +45,7 @@ cmake $source_dir \
 make
 pushd examples
 # We need a dynamic library, not an executable:
-ld -arch arm64 -dylib -syslibroot ${IOS_SDKROOT} -F${frameworks_dir}/Frameworks_iphoneos CMakeFiles/lg2.dir/add.c.o CMakeFiles/lg2.dir/args.c.o CMakeFiles/lg2.dir/blame.c.o CMakeFiles/lg2.dir/cat-file.c.o CMakeFiles/lg2.dir/checkout.c.o CMakeFiles/lg2.dir/clone.c.o CMakeFiles/lg2.dir/commit.c.o CMakeFiles/lg2.dir/common.c.o CMakeFiles/lg2.dir/config.c.o CMakeFiles/lg2.dir/describe.c.o CMakeFiles/lg2.dir/diff.c.o CMakeFiles/lg2.dir/fetch.c.o CMakeFiles/lg2.dir/for-each-ref.c.o CMakeFiles/lg2.dir/general.c.o CMakeFiles/lg2.dir/index-pack.c.o CMakeFiles/lg2.dir/init.c.o CMakeFiles/lg2.dir/lg2.c.o CMakeFiles/lg2.dir/log.c.o CMakeFiles/lg2.dir/ls-files.c.o CMakeFiles/lg2.dir/ls-remote.c.o CMakeFiles/lg2.dir/merge.c.o CMakeFiles/lg2.dir/path.c.o CMakeFiles/lg2.dir/push.c.o CMakeFiles/lg2.dir/pull.c.o CMakeFiles/lg2.dir/branch.c.o CMakeFiles/lg2.dir/remote.c.o CMakeFiles/lg2.dir/reset.c.o CMakeFiles/lg2.dir/rev-list.c.o CMakeFiles/lg2.dir/rev-parse.c.o CMakeFiles/lg2.dir/show-index.c.o CMakeFiles/lg2.dir/stash.c.o CMakeFiles/lg2.dir/status.c.o CMakeFiles/lg2.dir/tag.c.o -o lg2.dylib ../libgit2.a -lpthread -framework CoreFoundation -framework Security -framework libssh2 -framework openssl -framework ios_system -liconv -lz
+ld -arch arm64 -dylib -syslibroot ${IOS_SDKROOT} -F${frameworks_dir}/Frameworks_iphoneos CMakeFiles/lg2.dir/*.c.o  -o lg2.dylib ../libgit2.a -lpthread -framework CoreFoundation -framework Security -framework libssh2 -framework openssl -framework ios_system -liconv -lz
 popd
 popd
 
@@ -66,7 +66,7 @@ cmake $source_dir \
 make
 pushd examples
 # We need a dynamic library, not an executable:
-ld -arch x86_64 -dylib -syslibroot ${SIM_SDKROOT} -F${frameworks_dir}/Frameworks_iphonesimulator CMakeFiles/lg2.dir/add.c.o CMakeFiles/lg2.dir/args.c.o CMakeFiles/lg2.dir/blame.c.o CMakeFiles/lg2.dir/cat-file.c.o CMakeFiles/lg2.dir/checkout.c.o CMakeFiles/lg2.dir/clone.c.o CMakeFiles/lg2.dir/commit.c.o CMakeFiles/lg2.dir/common.c.o CMakeFiles/lg2.dir/config.c.o CMakeFiles/lg2.dir/describe.c.o CMakeFiles/lg2.dir/diff.c.o CMakeFiles/lg2.dir/fetch.c.o CMakeFiles/lg2.dir/for-each-ref.c.o CMakeFiles/lg2.dir/general.c.o CMakeFiles/lg2.dir/index-pack.c.o CMakeFiles/lg2.dir/init.c.o CMakeFiles/lg2.dir/lg2.c.o CMakeFiles/lg2.dir/log.c.o CMakeFiles/lg2.dir/ls-files.c.o CMakeFiles/lg2.dir/ls-remote.c.o CMakeFiles/lg2.dir/merge.c.o CMakeFiles/lg2.dir/path.c.o CMakeFiles/lg2.dir/push.c.o CMakeFiles/lg2.dir/pull.c.o CMakeFiles/lg2.dir/branch.c.o CMakeFiles/lg2.dir/remote.c.o CMakeFiles/lg2.dir/reset.c.o CMakeFiles/lg2.dir/rev-list.c.o CMakeFiles/lg2.dir/rev-parse.c.o CMakeFiles/lg2.dir/show-index.c.o CMakeFiles/lg2.dir/stash.c.o CMakeFiles/lg2.dir/status.c.o CMakeFiles/lg2.dir/tag.c.o -o lg2.dylib ../libgit2.a -lpthread -framework CoreFoundation -framework Security -framework libssh2 -framework openssl -framework ios_system -liconv -lz
+ld -arch x86_64 -dylib -syslibroot ${SIM_SDKROOT} -F${frameworks_dir}/Frameworks_iphonesimulator CMakeFiles/lg2.dir/*.c.o  -o lg2.dylib ../libgit2.a -lpthread -framework CoreFoundation -framework Security -framework libssh2 -framework openssl -framework ios_system -liconv -lz
 popd
 popd
 
