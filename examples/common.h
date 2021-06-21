@@ -53,6 +53,7 @@
 #define UNUSED(x) (void)(x)
 
 #include "args.h"
+#include "path.h"
 
 extern int lg2_add(git_repository *repo, int argc, char **argv);
 
@@ -135,6 +136,19 @@ extern int resolve_refish(git_annotated_commit **commit, git_repository *repo, c
  * Get a given repo's HEAD.
  */
 extern int get_repo_head(git_commit **commit, git_repository *repo);
+
+/**
+ * Convert a path relative to the current working directory into a path
+ * relative to the repository's working (or base, if bare) directory.
+ */
+extern void get_repopath_to(char **out_path, const char *target_relpath, git_repository *repo);
+
+/**
+ * Opposite of get_repopath_to.
+ * Returns the path to (repo-workdir-relative) target relative to
+ * the **program**'s current working directory.
+ */
+extern void get_relpath_to(char **out_path, const char *target_repopath, git_repository *repo);
 
 /**
  * Acquire credentials via command line

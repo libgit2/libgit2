@@ -41,6 +41,7 @@ struct index_options {
 
 /* Forward declarations for helpers */
 static void parse_opts(const char **repo_path, struct index_options *opts, struct args_info *args);
+static void init_array(git_strarray *array, git_repository *repo, struct args_info *args);
 int print_matched_cb(const char *path, const char *matched_pathspec, void *payload);
 
 int lg2_add(git_repository *repo, int argc, char **argv)
@@ -55,7 +56,7 @@ int lg2_add(git_repository *repo, int argc, char **argv)
 
 	/* Parse the options & arguments. */
 	parse_opts(NULL, &options, &args);
-	strarray_from_args(&array, &args);
+	init_array(&array, repo, &args);
 
 	/* Grab the repository's index. */
 	check_lg2(git_repository_index(&index, repo), "Could not open repository index", NULL);
@@ -77,6 +78,7 @@ int lg2_add(git_repository *repo, int argc, char **argv)
 	/* Cleanup memory */
 	git_index_write(index);
 	git_index_free(index);
+	git_strarray_dispose(&array);
 
 	return 0;
 }
@@ -110,16 +112,16 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 	return ret;
 }
 
-void init_array(git_strarray *array, int argc, char **argv)
+static void init_array(git_strarray *array, git_repository *repo, struct args_info *args)
 {
-	unsigned int i;
+	size_t i;
 
-	array->count = argc;
+	array->count = args->argc - args->pos;
 	array->strings = calloc(array->count, sizeof(char *));
 	assert(array->strings != NULL);
 
 	for (i = 0; i < array->count; i++) {
-		array->strings[i] = argv[i];
+		get_repopath_to(&array->strings[i], args->argv[i + args->pos], repo);
 	}
 
 	return;
@@ -139,11 +141,11 @@ static void parse_opts(const char **repo_path, struct index_options *opts, struc
 	if (args->argc <= 1)
 		print_usage();
 
-	for (args->pos = 1; args->pos < args->argc; ++args->pos) {
+	for (args->pos = 0; args->pos < args->argc; ++args->pos) {
 		const char *curr = args->argv[args->pos];
 
 		if (curr[0] != '-') {
-			if (!strcmp("add", curr)) {
+			if (!strcmp("add", curr) && args->pos < 1) {
 				opts->mode = INDEX_ADD;
 				continue;
 			} else if (opts->mode == INDEX_NONE) {

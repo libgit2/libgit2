@@ -29,15 +29,16 @@ typedef struct {
 	git_strarray paths_to_reset;
 } reset_opts;
 
-static int parse_options(reset_opts *out, int argc, char **argv);
+static int parse_options(reset_opts *out, struct args_info *args, git_repository *repo);
 
 int lg2_reset(git_repository *repo, int argc, char **argv)
 {
 	reset_opts options;
 	git_object *target = NULL;
+	struct args_info args = ARGS_INFO_INIT;
 	int error = 0;
 
-	if (parse_options(&options, argc, argv)) {
+	if (parse_options(&options, &args, repo)) {
 		fprintf(stderr,
 			"USAGE: %s [<treeish>] [--] [<pathspec>...]\n"
 			"    <treeish>:  Where to reset to. Defaults to HEAD."
@@ -82,14 +83,16 @@ cleanup:
 	return error;
 }
 
-/// Lifetime(out) <= Lifetime(argv)
-static int parse_options(reset_opts *out, int argc, char **argv)
+static int parse_options(reset_opts *out, struct args_info *args, git_repository *repo)
 {
 	int i;
 	int path_start = -1;
+	int argc = args->argc;
+	char **argv = args->argv;
 
 	out->reset_to = NULL;
 	out->paths_to_reset.count = 0;
+	out->paths_to_reset.strings = NULL;
 
 	if (argc == 1) {
 		// We need to have at least one argument.
@@ -123,9 +126,17 @@ static int parse_options(reset_opts *out, int argc, char **argv)
 
 	// We're now parsing pathspecs, if there are any.
 	path_start = i;
-
+	args->pos = i;
 	out->paths_to_reset.count = argc - path_start;
-	out->paths_to_reset.strings = path_start < argc ? argv + path_start : NULL;
+
+	if (out->paths_to_reset.count > 0) {
+		out->paths_to_reset.strings = (char **) malloc(out->paths_to_reset.count * sizeof(char*));
+
+		// Make all given paths relative to the repo's working directory.
+		for (i = path_start; i < argc; i++) {
+			get_repopath_to(&out->paths_to_reset.strings[i - path_start], argv[i], repo);
+		}
+	}
 
 	return 0;
 }

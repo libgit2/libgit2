@@ -77,6 +77,9 @@ int main(int argc, char **argv)
 	int return_code = 1;
 	size_t i;
 
+	if (test_path_lib())
+		fprintf(stderr, "Warning: Path library failed tests.\n");
+
 	if (argc < 2)
 		usage(argv[0]);
 

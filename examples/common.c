@@ -147,6 +147,47 @@ cleanup:
 	return error;
 }
 
+static const char * repo_base_path(git_repository *repo)
+{
+	const char *workdir_path = git_repository_workdir(repo);
+
+	// If we don't have a working directory for the repository,
+	// default to the directory we would put the ".git" folder in.
+	if (workdir_path == NULL) {
+		workdir_path = git_repository_path(repo);
+	}
+
+	return workdir_path;
+}
+
+void get_repopath_to(char **out_path, const char *target, git_repository *repo)
+{
+	const char *workdir_path = repo_base_path(repo);
+
+	path_relative_to(out_path, target, workdir_path);
+}
+
+void get_relpath_to(char **out_path, const char *target_path, git_repository *repo)
+{
+	const char *repo_path = repo_base_path(repo);
+	char *program_path = getcwd(NULL, 0);
+
+	const char *target_abspath = NULL;
+	char *target_abspath_builder = NULL;
+
+	if (target_path[0] != '/') {
+		join_paths(&target_abspath_builder, repo_path, target_path);
+		target_abspath = target_abspath_builder;
+	} else {
+		target_abspath = target_path;
+	}
+
+	path_relative_to(out_path, target_abspath, program_path);
+
+	free(target_abspath_builder);
+	free(program_path);
+}
+
 static int readline(char **out)
 {
 	int c, error = 0, length = 0, allocated = 0;
@@ -217,7 +258,6 @@ int cred_acquire_cb(git_credential **out,
 	// iOS addition: let's get the config file
 	git_config* cfg = NULL;
 	git_config_entry *entry = NULL;
-	char* newPrivkey = NULL;
 
 	UNUSED(url);
 	/* UNUSED(payload); */
@@ -287,17 +327,8 @@ int cred_acquire_cb(git_credential **out,
 			printf("to save this username/password pair.\n");
 		}
 
-		// iOS: we only expand ~/
-		home = getenv("HOME");
-		if ((strncmp(privkey, "~/", 2) == 0) && (home != NULL)) {
-			n = snprintf(NULL, 0, "%s/%s", home, privkey + 1);
-			newPrivkey = malloc(n + 1);
-			if (newPrivkey != NULL) {
-				snprintf(newPrivkey, n + 1, "%s/%s", home, privkey + 1);
-				free(privkey);
-				privkey = newPrivkey;
-			}
-		}
+		// For compatability with iOS, we only expand ~/
+		expand_path(&privkey);
 
 		if ((n = snprintf(NULL, 0, "%s.pub", privkey)) < 0 ||
 		    (pubkey = malloc(n + 1)) == NULL ||

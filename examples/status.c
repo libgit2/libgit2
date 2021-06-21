@@ -57,8 +57,9 @@ struct status_opts {
 
 static void parse_opts(struct status_opts *o, int argc, char *argv[]);
 static void show_branch(git_repository *repo, int format);
-static void print_long(git_status_list *status);
+static void print_long(git_repository *repo, git_status_list *status);
 static void print_short(git_repository *repo, git_status_list *status);
+static void format_path(char **out, const char *path, git_repository *repo);
 static int print_submod(git_submodule *sm, const char *name, void *payload);
 
 int lg2_status(git_repository *repo, int argc, char *argv[])
@@ -107,7 +108,7 @@ show_status:
 	}
 
 	if (o.format == FORMAT_LONG)
-		print_long(status);
+		print_long(repo, status);
 	else
 		print_short(repo, status);
 
@@ -149,30 +150,38 @@ static void show_branch(git_repository *repo, int format)
 	git_reference_free(head);
 }
 
-/**
- * This function print out an output similar to git's status command
- * in long form, including the command-line hints.
- */
-static void print_long(git_status_list *status)
+static int show_change_details_long(
+		int *rm_in_workdir,
+		git_repository *repo,
+		git_status_list *status, int listing_index_changes)
 {
+	int header = 0;
+	int listing_workdir_changes = !listing_index_changes;
 	size_t i, maxi = git_status_list_entrycount(status);
 	const git_status_entry *s;
-	int header = 0, changes_in_index = 0;
-	int changed_in_workdir = 0, rm_in_workdir = 0;
 	const char *old_path, *new_path;
 
-	/** Print index changes. */
 
 	for (i = 0; i < maxi; ++i) {
 		char *istatus = NULL;
+		char *wstatus = NULL;
+		char *status_description = NULL;
 
 		s = git_status_byindex(status, i);
+
+		/**
+		 * With `GIT_STATUS_OPT_INCLUDE_UNMODIFIED` (not used in this example)
+		 * `index_to_workdir` may not be `NULL` even if there are
+		 * no differences, in which case it will be a `GIT_DELTA_UNMODIFIED`.
+		 */
+		if (listing_workdir_changes && s->index_to_workdir == NULL)
+			continue;
 
 		if (s->status == GIT_STATUS_CURRENT)
 			continue;
 
-		if (s->status & GIT_STATUS_WT_DELETED)
-			rm_in_workdir = 1;
+		if (listing_index_changes && s->status & GIT_STATUS_WT_DELETED)
+			*rm_in_workdir = 1;
 
 		if (s->status & GIT_STATUS_INDEX_NEW)
 			istatus = "new file: ";
@@ -185,47 +194,6 @@ static void print_long(git_status_list *status)
 		if (s->status & GIT_STATUS_INDEX_TYPECHANGE)
 			istatus = "typechange:";
 
-		if (istatus == NULL)
-			continue;
-
-		if (!header) {
-			printf("# Changes to be committed:\n");
-			printf("#   (use \"git reset HEAD <file>...\" to unstage)\n");
-			printf("#\n");
-			header = 1;
-		}
-
-		old_path = s->head_to_index->old_file.path;
-		new_path = s->head_to_index->new_file.path;
-
-		if (old_path && new_path && strcmp(old_path, new_path))
-			printf("#\t%s  %s -> %s\n", istatus, old_path, new_path);
-		else
-			printf("#\t%s  %s\n", istatus, old_path ? old_path : new_path);
-	}
-
-	if (header) {
-		changes_in_index = 1;
-		printf("#\n");
-	}
-	header = 0;
-
-	/** Print workdir changes to tracked files. */
-
-	for (i = 0; i < maxi; ++i) {
-		char *wstatus = NULL;
-
-		s = git_status_byindex(status, i);
-
-		/**
-		 * With `GIT_STATUS_OPT_INCLUDE_UNMODIFIED` (not used in this example)
-		 * `index_to_workdir` may not be `NULL` even if there are
-		 * no differences, in which case it will be a `GIT_DELTA_UNMODIFIED`.
-		 */
-		if (s->status == GIT_STATUS_CURRENT || s->index_to_workdir == NULL)
-			continue;
-
-		/** Print out the output since we know the file has some changes */
 		if (s->status & GIT_STATUS_WT_MODIFIED)
 			wstatus = "modified: ";
 		if (s->status & GIT_STATUS_WT_DELETED)
@@ -235,30 +203,83 @@ static void print_long(git_status_list *status)
 		if (s->status & GIT_STATUS_WT_TYPECHANGE)
 			wstatus = "typechange:";
 
-		if (wstatus == NULL)
+		if (listing_index_changes && istatus == NULL)
+			continue;
+		if (listing_workdir_changes && wstatus == NULL)
 			continue;
 
-		if (!header) {
+		if (!header && listing_index_changes) {
+			printf("# Changes to be committed:\n");
+			printf("#   (use \"git reset HEAD <file>...\" to unstage)\n");
+			printf("#\n");
+			header = 1;
+		}
+
+		if (!header && listing_workdir_changes) {
 			printf("# Changes not staged for commit:\n");
-			printf("#   (use \"git add%s <file>...\" to update what will be committed)\n", rm_in_workdir ? "/rm" : "");
+			printf("#   (use \"git add%s <file>...\" to update what will be committed)\n", *rm_in_workdir ? "/rm" : "");
 			printf("#   (use \"git checkout -- <file>...\" to discard changes in working directory)\n");
 			printf("#\n");
 			header = 1;
 		}
 
-		old_path = s->index_to_workdir->old_file.path;
-		new_path = s->index_to_workdir->new_file.path;
 
-		if (old_path && new_path && strcmp(old_path, new_path))
-			printf("#\t%s  %s -> %s\n", wstatus, old_path, new_path);
-		else
-			printf("#\t%s  %s\n", wstatus, old_path ? old_path : new_path);
+		if (listing_index_changes) {
+			old_path = s->head_to_index->old_file.path;
+			new_path = s->head_to_index->new_file.path;
+
+			status_description = istatus;
+		} else {
+			old_path = s->index_to_workdir->old_file.path;
+			new_path = s->index_to_workdir->new_file.path;
+
+			status_description = wstatus;
+		}
+
+		if (old_path && new_path && strcmp(old_path, new_path)) {
+			char *formatted_old_path = NULL;
+			char *formatted_new_path = NULL;
+			format_path(&formatted_old_path, old_path, repo);
+			format_path(&formatted_new_path, new_path, repo);
+
+			printf("#\t%s  %s -> %s\n", status_description, formatted_old_path, formatted_new_path);
+
+			free(formatted_old_path);
+			free(formatted_new_path);
+		} else {
+			char *formatted_path = NULL;
+			format_path(&formatted_path, old_path ? old_path : new_path, repo);
+
+			printf("#\t%s  %s\n", status_description, formatted_path);
+
+			free(formatted_path);
+		}
 	}
 
 	if (header) {
-		changed_in_workdir = 1;
 		printf("#\n");
 	}
+
+	return header;
+}
+
+/**
+ * This function print out an output similar to git's status command
+ * in long form, including the command-line hints.
+ */
+static void print_long(git_repository *repo, git_status_list *status)
+{
+	int changed_in_index = 0;
+	int changed_in_workdir = 0, rm_in_workdir = 0;
+	size_t i, maxi = git_status_list_entrycount(status);
+	const git_status_entry *s;
+	int header;
+
+	/** Print index changes. */
+	changed_in_index = show_change_details_long(&rm_in_workdir, repo, status, 1);
+
+	/** Print workdir changes to tracked files. */
+	changed_in_workdir = show_change_details_long(&rm_in_workdir, repo, status, 0);
 
 	/** Print untracked files. */
 
@@ -268,6 +289,7 @@ static void print_long(git_status_list *status)
 		s = git_status_byindex(status, i);
 
 		if (s->status == GIT_STATUS_WT_NEW) {
+			char *formatted_path = NULL;
 
 			if (!header) {
 				printf("# Untracked files:\n");
@@ -276,7 +298,9 @@ static void print_long(git_status_list *status)
 				header = 1;
 			}
 
-			printf("#\t%s\n", s->index_to_workdir->old_file.path);
+			format_path(&formatted_path, s->index_to_workdir->old_file.path, repo);
+			printf("#\t%s\n", formatted_path);
+			free(formatted_path);
 		}
 	}
 
@@ -288,6 +312,7 @@ static void print_long(git_status_list *status)
 		s = git_status_byindex(status, i);
 
 		if (s->status == GIT_STATUS_IGNORED) {
+			char *formatted_path = NULL;
 
 			if (!header) {
 				printf("# Ignored files:\n");
@@ -296,11 +321,13 @@ static void print_long(git_status_list *status)
 				header = 1;
 			}
 
-			printf("#\t%s\n", s->index_to_workdir->old_file.path);
+			format_path(&formatted_path, s->index_to_workdir->old_file.path, repo);
+			printf("#\t%s\n", formatted_path);
+			free(formatted_path);
 		}
 	}
 
-	if (!changes_in_index && changed_in_workdir)
+	if (!changed_in_index && changed_in_workdir)
 		printf("no changes added to commit (use \"git add\" and/or \"git commit -a\")\n");
 }
 
@@ -314,6 +341,7 @@ static void print_short(git_repository *repo, git_status_list *status)
 	const git_status_entry *s;
 	char istatus, wstatus;
 	const char *extra, *a, *b, *c;
+	char *fa, *fb, *fc;
 
 	for (i = 0; i < maxi; ++i) {
 		s = git_status_byindex(status, i);
@@ -396,6 +424,10 @@ static void print_short(git_repository *repo, git_status_list *status)
 			c = s->index_to_workdir->new_file.path;
 		}
 
+		format_path(&fa, a, repo);
+		format_path(&fb, b, repo);
+		format_path(&fc, c, repo);
+
 		if (istatus == 'R') {
 			if (wstatus == 'R')
 				printf("%c%c %s %s %s%s\n", istatus, wstatus, a, b, c, extra);
@@ -407,29 +439,65 @@ static void print_short(git_repository *repo, git_status_list *status)
 			else
 				printf("%c%c %s%s\n", istatus, wstatus, a, extra);
 		}
+
+		free(fa);
+		free(fb);
+		free(fc);
 	}
 
 	for (i = 0; i < maxi; ++i) {
 		s = git_status_byindex(status, i);
 
-		if (s->status == GIT_STATUS_WT_NEW)
-			printf("?? %s\n", s->index_to_workdir->old_file.path);
+		if (s->status == GIT_STATUS_WT_NEW) {
+			char *formatted_path = NULL;
+			format_path(&formatted_path, s->index_to_workdir->old_file.path, repo);
+
+			printf("?? %s\n", formatted_path);
+
+			free(formatted_path);
+		}
 	}
 }
 
 static int print_submod(git_submodule *sm, const char *name, void *payload)
 {
+	git_repository *repo = git_submodule_owner(sm);
 	int *count = payload;
+	char *path;
 	(void)name;
 
 	if (*count == 0)
 		printf("# Submodules\n");
 	(*count)++;
 
-	printf("# - submodule '%s' at %s\n",
-		git_submodule_name(sm), git_submodule_path(sm));
+	format_path(&path, git_submodule_path(sm), repo);
+	printf("# - submodule '%s' at %s\n", git_submodule_name(sm), path);
+	free(path);
 
 	return 0;
+}
+
+static void format_path(char **out, const char *path, git_repository *repo)
+{
+	*out = NULL;
+
+	if (path != NULL) {
+		get_relpath_to(out, path, repo);
+	}
+}
+
+static void usage_error(const char *program_name, const char *bad_arg)
+{
+	fprintf(stderr, "Unrecognised argument: %s\n", bad_arg);
+	fprintf(stderr,
+		"USAGE: %s [-s|-b|-z] [--short|--long]\n"
+		"          [--porcelain] [--branch] [--ignored]\n"
+		"          [--untracked-files=<no|normal|all>]\n"
+		"          [--repeat] [--list-submodules]\n"
+		"Warning: Some of the above options (e.g. --porcelain)\n"
+		"         are not fully implemented.\n"
+		, program_name);
+	exit(1);
 }
 
 /**
@@ -484,7 +552,7 @@ static void parse_opts(struct status_opts *o, int argc, char *argv[])
 		else if (!strcmp(a, "--list-submodules"))
 			o->showsubmod = 1;
 		else
-			check_lg2(-1, "Unsupported option", a);
+			usage_error(a, argv[0]);
 	}
 
 	if (o->format == FORMAT_DEFAULT)
