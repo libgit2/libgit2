@@ -442,6 +442,8 @@ int cred_acquire_cb(git_credential **out,
 			printf("    lg2 config user.identityFile '%s'\n", privkey);
 			if (strcmp(password, "") != 0) {
 				printf("    lg2 config user.password 'your_password_here'\n");
+			} else {
+				printf("    lg2 config user.password \"\"\n");
 			}
 			printf("to save this username/password pair.\n\n");
 
