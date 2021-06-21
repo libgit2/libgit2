@@ -206,6 +206,24 @@ void join_paths(char **out, const char *left, const char *right)
 	}
 }
 
+const char * file_extension_from_path(const char * path)
+{
+	size_t len = strlen(path);
+	const char *end = path + len;
+	const char *ptr = NULL;
+	const char *ext_ptr = end;
+
+	for (ptr = path; ptr < end; ptr++) {
+		if (*ptr == '/') {
+			ext_ptr = end;
+		} else if (*ptr == '.') {
+			ext_ptr = ptr;
+		}
+	}
+
+	return ext_ptr;
+}
+
 int test_path_lib()
 {
 	char *tmp = NULL;
@@ -240,6 +258,11 @@ int test_path_lib()
 	path_relative_to(&tmp, "/1/2/3/", "/1/2/3/");
 	if (strcmp(tmp, "./")) FAIL_TESTS;
 	free(tmp);
+
+	if (strcmp(file_extension_from_path("id/ed.2/3"), "")) FAIL_TESTS;
+	if (strcmp(file_extension_from_path("/.ssh/id_ed25519.pub"), ".pub")) FAIL_TESTS;
+	if (strcmp(file_extension_from_path("/ssh/id_ed25519.pub"), ".pub")) FAIL_TESTS;
+	if (strcmp(file_extension_from_path(""), "")) FAIL_TESTS;
 
 	return 0;
 }

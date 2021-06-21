@@ -17,6 +17,8 @@
 
 #ifndef _WIN32
 # include <unistd.h>
+# include <sys/types.h>
+# include <dirent.h>
 #endif
 #include <errno.h>
 
@@ -247,6 +249,111 @@ static int ask(char **out, const char *prompt, char optional)
 	return 0;
 }
 
+static int ask_for_ssh_key(char **privkey, const char *suggested_keys_directory)
+{
+	int result = 0;
+	int num_suggestions = 0;
+	int answer_asnum = -1;
+	int i;
+	char **suggestions = NULL;
+	int listing_failure = 0;
+
+#ifndef _WIN32
+	int dir_fd = open(suggested_keys_directory, O_DIRECTORY | O_RDONLY);
+	DIR *dir = NULL;
+
+	if (dir_fd != -1) {
+		dir = fdopendir(dir_fd);
+	}
+
+	if (dir != NULL) {
+		struct dirent *entry = NULL;
+
+		printf("SSH keys in %s:\n", suggested_keys_directory);
+
+		// On POSIX, we can list the contents of a directory:
+		while ((entry = readdir(dir)) != NULL) {
+			const char *name = entry->d_name;
+			const char *ext = file_extension_from_path(name);
+
+			// Only count id_*, but not public key files.
+			if (strncmp(name, "id_", 3) == 0 && strcmp(ext, ".pub") != 0) {
+				num_suggestions ++;
+				printf(" %d\t\t%s\n", num_suggestions, name);
+
+				// Check for overflow.
+				if (num_suggestions < 0) {
+					fprintf(stderr, "Too many paths to list.\n");
+					return -1;
+				}
+			}
+		}
+
+		rewinddir(dir);
+		suggestions = (char **) malloc(sizeof(char *) * num_suggestions);
+		i = 0;
+
+		while ((entry = readdir(dir)) != NULL) {
+			const char *name = entry->d_name;
+			const char *ext = file_extension_from_path(name);
+
+			if (strncmp(name, "id_", 3) == 0 && strcmp(ext, ".pub") != 0
+						&& i < num_suggestions) {
+				join_paths(&suggestions[i], suggested_keys_directory, name);
+				i++;
+			}
+		}
+
+		for (; i < num_suggestions; i++) {
+			suggestions[i] = NULL;
+		}
+
+		if (num_suggestions == 0) {
+			printf(" [ No suggested keys ] \n");
+		}
+
+		printf("\n");
+		printf("Enter the number to the left of the desired key ");
+		printf("or the path to some other SSH key (the private key).\n");
+
+		closedir(dir);
+	} else {
+		fprintf(stderr, "Warning: Unable to list keys in %s: %s (%d).\n",
+				suggested_keys_directory, strerror(errno), errno);
+		listing_failure = 1;
+	}
+
+#else
+	listing_failure = 1;
+#endif
+
+	if (listing_failure) {
+		printf("Enter the path to a private SSH key.\n");
+	}
+
+	result = ask(privkey, "SSH Key: ", 0);
+
+	if (result >= 0) {
+		answer_asnum = atoi(*privkey);
+
+		// Try to convert a number into one of the listed ssh keys.
+		if (answer_asnum > 0 && answer_asnum < num_suggestions + 1) {
+			const char *suggestion = suggestions[answer_asnum - 1];
+
+			free(*privkey);
+			*privkey = strcpy((char *) malloc(strlen(suggestion) + 1), suggestion);
+		}
+	}
+
+//cleanup:
+	for (i = 0; i < num_suggestions; i++) {
+		free(suggestions[i]);
+	}
+	free(suggestions);
+
+	return result;
+}
+
 int cred_acquire_cb(git_credential **out,
 		const char *url,
 		const char *username_from_url,
@@ -316,16 +423,27 @@ int cred_acquire_cb(git_credential **out,
 				printf("No user.identityFile found in git config: %s.\n", err->message);
 			}
 		}
+
 		if (privkey == NULL) {
-			if ((error = ask(&privkey, "SSH Key:", 0)) < 0 ||
-					(error = ask(&password, "Password:", 1)) < 0)
+			char *suggested_ssh_path = NULL;
+			n = snprintf(NULL, 0, "%s/.ssh/", home);
+
+			suggested_ssh_path = (char *) malloc(n + 1);
+			snprintf(suggested_ssh_path, n + 1, "%s/.ssh/", home);
+
+			if ((error = ask_for_ssh_key(&privkey, suggested_ssh_path)) < 0 ||
+					(error = ask(&password, "Password:", 1)) < 0) {
+				free(suggested_ssh_path);
 				goto out;
+			}
 			printf("Consider running,\n");
 			printf("    lg2 config user.identityFile '%s'\n", privkey);
 			if (strcmp(password, "") != 0) {
 				printf("    lg2 config user.password 'your_password_here'\n");
 			}
-			printf("to save this username/password pair.\n");
+			printf("to save this username/password pair.\n\n");
+
+			free(suggested_ssh_path);
 		}
 
 		// For compatability with iOS, we only expand ~/

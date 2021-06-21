@@ -38,6 +38,12 @@ extern void expand_path(char **path);
 extern void join_paths(char **out, const char *path_a, const char *path_b);
 
 /**
+ * Get a pointer to the beginning of the region after the last '.' (and '/') in
+ * path. If no '.' is in path, returns a pointer to the end of the path.
+ */
+extern const char * file_extension_from_path(const char * path);
+
+/**
  * Test the path library's functionality. In debug mode,
  * rather than returning, the program crashes.
  *
