@@ -331,7 +331,7 @@ static int ask_for_ssh_key(char **privkey, const char *suggested_keys_directory)
 		printf("Enter the path to a private SSH key.\n");
 	}
 
-	result = ask(privkey, "SSH Key: ", 0);
+	result = ask(privkey, "SSH Key:", 0);
 
 	if (result >= 0) {
 		answer_asnum = atoi(*privkey);
@@ -418,6 +418,8 @@ int cred_acquire_cb(git_credential **out,
 				error = git_config_get_entry(&entry, cfg, "user.password");
 				if (error >= 0)
 					password = strdup(entry->value);
+				else
+					error = ask(&password, "Password:", 1);
 			} else {
 				const git_error* err = git_error_last();
 				printf("No user.identityFile found in git config: %s.\n", err->message);
