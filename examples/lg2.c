@@ -50,7 +50,7 @@ static int run_command(git_command_fn fn, git_repository *repo, struct args_info
 	error = fn(repo, args.argc - args.pos, &args.argv[args.pos]);
 	if (error < 0) {
 		if (git_error_last() == NULL) {
-			fprintf(stderr, "Error has no message.\n");
+			fprintf(stderr, "Warning: An error occurred!\n");
 		} else {
 			fprintf(stderr, "Bad news:\n %s\n", git_error_last()->message);
 		}
