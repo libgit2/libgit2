@@ -20,7 +20,8 @@ enum subcmd {
 	SUBCMD_APPLY,
 	SUBCMD_LIST,
 	SUBCMD_POP,
-	SUBCMD_PUSH
+	SUBCMD_PUSH,
+	SUBCMD_DROP
 };
 
 struct opts {
@@ -34,13 +35,15 @@ static void usage(const char *fmt, ...)
 	va_list ap;
 
 	fputs("usage: git stash list\n", stderr);
-	fputs("   or: git stash ( pop | apply )\n", stderr);
+	fputs("   or: git stash ( pop | apply | drop )\n", stderr);
 	fputs("   or: git stash [push]\n", stderr);
 	fputs("\n", stderr);
 
 	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);
 	va_end(ap);
+
+	fputs("\n", stderr);
 
 	exit(1);
 }
@@ -58,6 +61,8 @@ static void parse_subcommand(struct opts *opts, int argc, char *argv[])
 		cmd = SUBCMD_POP;
 	} else if (!strcmp(arg, "push")) {
 		cmd = SUBCMD_PUSH;
+	} else if (!strcmp(arg, "drop")) {
+		cmd = SUBCMD_DROP;
 	} else {
 		usage("invalid command %s", arg);
 		return;
@@ -137,6 +142,17 @@ static int cmd_pop(git_repository *repo, struct opts *opts)
 	return 0;
 }
 
+static int cmd_drop(git_repository *repo, struct opts *opts)
+{
+	if (opts->argc)
+		usage("drop does not accept any parameters");
+
+	check_lg2(git_stash_drop(repo, 0), "Unable to drop top of stash.", NULL);
+	printf("Dropped refs/stash@{0}\n");
+
+	return 0;
+}
+
 int lg2_stash(git_repository *repo, int argc, char *argv[])
 {
 	struct opts opts = { 0 };
@@ -152,7 +168,10 @@ int lg2_stash(git_repository *repo, int argc, char *argv[])
 			return cmd_push(repo, &opts);
 		case SUBCMD_POP:
 			return cmd_pop(repo, &opts);
+		case SUBCMD_DROP:
+			return cmd_drop(repo, &opts);
 	}
 
 	return -1;
 }
+
