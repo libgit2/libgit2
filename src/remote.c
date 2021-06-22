@@ -1116,7 +1116,7 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 	git_reference *resolved_ref = NULL;
 	git_buf remote_name = GIT_BUF_INIT;
 	git_config *config = NULL;
-	const char *ref_name;
+	const char *ref_name = NULL;
 	int error = 0, update;
 
 	assert(out && spec && ref);
@@ -1129,7 +1129,7 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 	if (error == GIT_ENOTFOUND && git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
 		ref_name = git_reference_symbolic_target(ref);
 		error = 0;
-	} else {
+	} else if (resolved_ref) {
 		ref_name = git_reference_name(resolved_ref);
 	}
 
