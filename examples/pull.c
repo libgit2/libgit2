@@ -62,10 +62,10 @@ int lg2_pull(git_repository *repo, int argc, char **argv)
 
     /* iOS additions to have 'lg2 pull' work */
 	char* origin = "origin";
-	char* argv_merge[2]; 
-	
+	char* argv_merge[2];
+
 	if (argc == 2) {
-		origin = argv[1]; 
+		origin = argv[1];
 	} else if (argc > 2) {
 		fprintf(stderr, "usage: %s pull [branch]\n", argv[-1]);
 		return EXIT_FAILURE;
@@ -81,7 +81,9 @@ int lg2_pull(git_repository *repo, int argc, char **argv)
 	fetch_opts.callbacks.update_tips = &update_cb;
 	fetch_opts.callbacks.sideband_progress = &progress_cb;
 	fetch_opts.callbacks.transfer_progress = transfer_progress_cb;
+
 	fetch_opts.callbacks.credentials = cred_acquire_cb;
+	fetch_opts.callbacks.certificate_check = certificate_confirm_cb;
 	fetch_opts.callbacks.payload = repo; // iOS addition, send repo to cb to get username/password or identityFile
 
 	/**
@@ -107,10 +109,10 @@ int lg2_pull(git_repository *repo, int argc, char **argv)
 	}
 	/* iOS: Now we merge with current directory */
 
-	argv_merge[0] = "merge"; 
+	argv_merge[0] = "merge";
 	argv_merge[1] = "FETCH_HEAD";
 	lg2_merge(repo, 2, argv_merge);
-	
+
 	/* Done */
 
 	git_remote_free(remote);

@@ -15,6 +15,10 @@
 
 #include "common.h"
 
+/**
+ * This example roughly simulates the `git rebase` command.
+ */
+
 typedef struct {
 	git_annotated_commit *upstream;
 	git_annotated_commit *onto;
