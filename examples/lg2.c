@@ -22,7 +22,10 @@ struct {
 	{ "diff",         lg2_diff,         1 },
 	{ "fetch",        lg2_fetch,        1 },
 	{ "for-each-ref", lg2_for_each_ref, 1 },
-	{ "general",      lg2_general,      0 },
+// Uncomment to test the general example. Hidden
+// because, while an important example, it doesn't
+// make sense for general use.
+//	{ "general",      lg2_general,      0 },
 	{ "index-pack",   lg2_index_pack,   1 },
 	{ "init",         lg2_init,         0 },
 	{ "log",          lg2_log,          1 },
