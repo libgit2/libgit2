@@ -77,6 +77,9 @@ GIT_INLINE(int) git__is_int(long long p)
 # define git__sub_int_overflow(out, one, two) \
     __builtin_ssub_overflow(one, two, out)
 
+# define git__add_int64_overflow(out, one, two) \
+    __builtin_add_overflow(one, two, out)
+
 /* Use Microsoft's safe integer handling functions where available */
 #elif defined(_MSC_VER)
 
@@ -91,6 +94,9 @@ GIT_INLINE(int) git__is_int(long long p)
     (IntAdd(one, two, out) != S_OK)
 #define git__sub_int_overflow(out, one, two) \
     (IntSub(one, two, out) != S_OK)
+
+#define git__add_int64_overflow(out, one, two) \
+    (LongLongAdd(one, two, out) != S_OK)
 
 #else
 
@@ -133,6 +139,15 @@ GIT_INLINE(bool) git__sub_int_overflow(int *out, int one, int two)
 	    (two < 0 && one > (INT_MAX + two)))
 		return true;
 	*out = one - two;
+	return false;
+}
+
+GIT_INLINE(bool) git__add_int64_overflow(int64_t *out, int64_t one, int64_t two)
+{
+	if ((two > 0 && one > (INT64_MAX - two)) ||
+	    (two < 0 && one < (INT64_MIN - two)))
+		return true;
+	*out = one + two;
 	return false;
 }
 
