@@ -29,6 +29,7 @@
 enum index_mode {
 	INDEX_NONE,
 	INDEX_ADD,
+	INDEX_REMOVE
 };
 
 struct index_options {
@@ -36,9 +37,14 @@ struct index_options {
 	int verbose;
 	git_repository *repo;
 	enum index_mode mode;
-	int add_update;
 	int force;
 	int some_ignored;
+
+	// Specific to INDEX_ADD
+	int add_update;
+
+	// Specific to INDEX_REMOVE
+	int update_index_only;
 };
 
 /* Forward declarations for helpers */
@@ -75,7 +81,35 @@ int lg2_add(git_repository *repo, int argc, char **argv)
 	options.repo = repo;
 
 	/* Perform the requested action with the index and files */
-	if (options.add_update) {
+	if (options.mode == INDEX_REMOVE) {
+		// Remove everything in &array.
+		git_index_remove_all(index, &array, matched_cb, &options);
+
+		if (!options.update_index_only) {
+			size_t i;
+			fprintf(stderr,
+				"Warning: Currently `lg2 rm file1 file2...` is not implemented.\n"
+				"	While the given files have been removed from the index,"
+				" they have not been deleted.\n\n");
+			fprintf(stderr, "Running `lg2 rm --cached files...` instead will"
+							" hide this warning.\n\n");
+			fprintf(stderr,
+				"Please manually delete the following files:\n");
+
+			for (i = 0; i < array.count; i++) {
+				fprintf(stderr, "\t%s\n", array.strings[i]);
+			}
+
+			fprintf(stderr, "On most POSIX systems, this can be done with:\n");
+			fprintf(stderr, "\t rm -rf ");
+
+			for (i = 0; i < array.count; i++) {
+				fprintf(stderr, " %s", array.strings[i]);
+			}
+
+			fprintf(stderr, "\n\n");
+		}
+	} else if (options.add_update) {
 		if (options.force) {
 			fprintf(stderr, "Warning: --force is ignored when using the -u option.\n");
 			fprintf(stderr,
@@ -125,6 +159,12 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 	int ret;
 	unsigned status;
 	(void)matched_pathspec;
+
+	if (opts->mode == INDEX_REMOVE) {
+		printf("remove '%s'\n", path);
+
+		return opts->dry_run ? 1 : 0;
+	}
 
 	/* Get the file status */
 	if (git_status_file(&status, opts->repo, path) < 0)
@@ -176,7 +216,6 @@ static int filter_matched_cb(const char *path, const char *matched_pathspec, voi
 	}
 
 	if (options->verbose == 1 || options->dry_run == 1) {
-		printf("Verbose(%d), dry(%d)\n", options->verbose, options->dry_run);
 		result = print_matched_cb(path, matched_pathspec, payload);
 	}
 
@@ -203,11 +242,20 @@ static void init_array(git_strarray *array, git_repository *repo, struct args_in
 
 void print_usage(void)
 {
-	fprintf(stderr, "usage: add [options] [--] file-spec [file-spec] [...]\n\n");
+	fprintf(stderr, "usage: lg2 add [options] [--] file-spec [file-spec] [...]\n\n");
 	fprintf(stderr, "\t-n, --dry-run    dry run\n");
 	fprintf(stderr, "\t-v, --verbose    be verbose\n");
 	fprintf(stderr, "\t-u, --update     update tracked files\n");
-	fprintf(stderr, "\t-f, --force      add files, even if in .gitignore\n");
+	fprintf(stderr, "\t-f, --force      add files, even if in .gitignore\n\n\n");
+
+	fprintf(stderr, "usage: lg2 rm [options] [--] file-spec [file-spec] [...]\n\n");
+	fprintf(stderr, "\t-n, --dry-run    dry run\n");
+	fprintf(stderr, "\t-v, --verbose    be verbose\n");
+	fprintf(stderr, "\t--cached         only update the index (not the working tree)\n");
+	fprintf(stderr, "\t-f, --force      remove files, even if in .gitignore\n");
+	fprintf(stderr, "Note: At present, `lg2 rm` always behaves as if it were given "
+			"--cached.\n");
+
 	exit(1);
 }
 
@@ -223,6 +271,9 @@ static void parse_opts(const char **repo_path, struct index_options *opts, struc
 			if (!strcmp("add", curr) && args->pos < 1) {
 				opts->mode = INDEX_ADD;
 				continue;
+			} else if (!strcmp("rm", curr) && args->pos < 1) {
+				opts->mode = INDEX_REMOVE;
+				continue;
 			} else if (opts->mode == INDEX_NONE) {
 				fprintf(stderr, "missing command: %s", curr);
 				print_usage();
@@ -236,6 +287,8 @@ static void parse_opts(const char **repo_path, struct index_options *opts, struc
 				   match_bool_arg(&opts->dry_run, args, "--dry-run") ||
 				   match_str_arg(repo_path, args, "--git-dir")) {
 			continue;
+		} else if (opts->mode == INDEX_REMOVE && !strcmp("--cached", curr)) {
+			opts->update_index_only = 1;
 		} else if (opts->mode == INDEX_ADD &&
 				  (!strcmp("-u", curr) || !strcmp("--update", curr))) {
 			opts->add_update = 1;
@@ -251,5 +304,10 @@ static void parse_opts(const char **repo_path, struct index_options *opts, struc
 			print_usage();
 		}
 	}
+
+	// match_bool_arg sets its result to -1 if neither --no-[arg here] nor
+	// --[arg-here] is present.
+	if (opts->dry_run != 1) opts->dry_run = 0;
+	if (opts->verbose != 1) opts->verbose = 0;
 }
 
