@@ -37,12 +37,15 @@ struct index_options {
 	git_repository *repo;
 	enum index_mode mode;
 	int add_update;
+	int force;
+	int some_ignored;
 };
 
 /* Forward declarations for helpers */
 static void parse_opts(const char **repo_path, struct index_options *opts, struct args_info *args);
 static void init_array(git_strarray *array, git_repository *repo, struct args_info *args);
-int print_matched_cb(const char *path, const char *matched_pathspec, void *payload);
+static int print_matched_cb(const char *path, const char *matched_pathspec, void *payload);
+static int filter_matched_cb(const char *path, const char *matched_pathspec, void *payload);
 
 int lg2_add(git_repository *repo, int argc, char **argv)
 {
@@ -61,18 +64,46 @@ int lg2_add(git_repository *repo, int argc, char **argv)
 	/* Grab the repository's index. */
 	check_lg2(git_repository_index(&index, repo), "Could not open repository index", NULL);
 
-	/* Setup a callback if the requested options need it */
-	if (options.verbose || options.dry_run) {
-		matched_cb = &print_matched_cb;
-	}
+	/**
+	 * We'll filter matched paths based on the `.gitignore`.
+	 * Note that while `git_index_add_all` supports a flag that
+	 * determines whether the `.gitignore` is checked, but `git_index_update_all`
+	 * currently doesn't.
+	 */
+	matched_cb = &filter_matched_cb;
 
 	options.repo = repo;
 
 	/* Perform the requested action with the index and files */
 	if (options.add_update) {
+		if (options.force) {
+			fprintf(stderr, "Warning: --force is ignored when using the -u option.\n");
+			fprintf(stderr,
+				"To remove files from the index, use"
+				"`lg2 rm --cached file1 file2...` \n");
+		}
+
 		git_index_update_all(index, &array, matched_cb, &options);
 	} else {
-		git_index_add_all(index, &array, 0, matched_cb, &options);
+		unsigned int add_options = GIT_INDEX_ADD_FORCE;
+
+		/**
+		 * If we were only using `git_index_add_all`,
+		 * we could set `add_options` to `GIT_INDEX_ADD_FORCE` if we decided
+		 * not to check the `.gitignore`.
+		 *
+		 * In this case, `GIT_INDEX_ADD_FORCE` is enabled because we want our
+		 * callback to decide whether to force-add files.
+		 */
+
+		git_index_add_all(index, &array, add_options, matched_cb, &options);
+	}
+
+	if (options.some_ignored) {
+		printf(
+			"Warning: Some paths were ignored as per one of your .gitignore files.\n"
+			"Re-run with --verbose to see which files were ignored.\n"
+			"Re-run with --force to forcibly add these files.\n");
 	}
 
 	/* Cleanup memory */
@@ -112,6 +143,49 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 	return ret;
 }
 
+static int filter_matched_cb(const char *path, const char *matched_pathspec, void *payload) {
+	int result = 0, err = 0;
+	struct index_options *options = (struct index_options *)(payload);
+
+	UNUSED(matched_pathspec);
+
+	// Check the .gitignore
+	if (!options->force) {
+		int ignored = 0;
+
+		err = git_ignore_path_is_ignored(&ignored, options->repo, path);
+		if (err) {
+			// If err is negative, we stop processing. Return the (negative) error.
+			fprintf(stderr, "Unable to process .gitignore file!\n");
+			return err;
+		}
+
+		// If ignored, result becomes 1, so exclude the path.
+		// Else, ignored is zero, so we include the path.
+		result = ignored;
+	}
+
+	// If excluding the path, stop now.
+	if (result != 0) {
+		if (options->verbose) {
+			fprintf(stderr, "Ignoring %s: is in the .gitignore.\n", path);
+		}
+
+		options->some_ignored = 1;
+		return result;
+	}
+
+	if (options->verbose == 1 || options->dry_run == 1) {
+		printf("Verbose(%d), dry(%d)\n", options->verbose, options->dry_run);
+		result = print_matched_cb(path, matched_pathspec, payload);
+	}
+
+	/**
+	 * Here, if we return 0, the file is added. If positive, the file is skipped.
+	 */
+	return result;
+}
+
 static void init_array(git_strarray *array, git_repository *repo, struct args_info *args)
 {
 	size_t i;
@@ -133,6 +207,7 @@ void print_usage(void)
 	fprintf(stderr, "\t-n, --dry-run    dry run\n");
 	fprintf(stderr, "\t-v, --verbose    be verbose\n");
 	fprintf(stderr, "\t-u, --update     update tracked files\n");
+	fprintf(stderr, "\t-f, --force      add files, even if in .gitignore\n");
 	exit(1);
 }
 
@@ -157,13 +232,18 @@ static void parse_opts(const char **repo_path, struct index_options *opts, struc
 				break;
 			}
 		} else if (match_bool_arg(&opts->verbose, args, "--verbose") ||
+				   match_bool_arg(&opts->verbose, args, "-v") ||
 				   match_bool_arg(&opts->dry_run, args, "--dry-run") ||
-				   match_str_arg(repo_path, args, "--git-dir") ||
-				   (opts->mode == INDEX_ADD && match_bool_arg(&opts->add_update, args, "--update"))) {
+				   match_str_arg(repo_path, args, "--git-dir")) {
 			continue;
-		} else if (match_bool_arg(NULL, args, "--help")) {
+		} else if (opts->mode == INDEX_ADD &&
+				  (!strcmp("-u", curr) || !strcmp("--update", curr))) {
+			opts->add_update = 1;
+		} else if (!strcmp("--help", curr) || !strcmp("-h", curr)) {
 			print_usage();
 			break;
+		} else if (!strcmp("--force", curr) || !strcmp("-f", curr)) {
+			opts->force = 1;
 		} else if (match_arg_separator(args)) {
 			break;
 		} else {

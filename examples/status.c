@@ -212,15 +212,15 @@ static int show_change_details_long(
 
 		if (!header && listing_index_changes) {
 			printf("# Changes to be committed:\n");
-			printf("#   (use \"git reset HEAD <file>...\" to unstage)\n");
+			printf("#   (use \"lg2 reset HEAD <file>...\" to unstage)\n");
 			printf("#\n");
 			header = 1;
 		}
 
 		if (!header && listing_workdir_changes) {
 			printf("# Changes not staged for commit:\n");
-			printf("#   (use \"git add%s <file>...\" to update what will be committed)\n", *rm_in_workdir ? "/rm" : "");
-			printf("#   (use \"git checkout -- <file>...\" to discard changes in working directory)\n");
+			printf("#   (use \"lg2 add%s <file>...\" to update what will be committed)\n", *rm_in_workdir ? "/rm" : "");
+			printf("#   (use \"lg2 checkout --force -- <file>...\" to discard changes in working directory)\n");
 			printf("#\n");
 			header = 1;
 		}
@@ -295,7 +295,7 @@ static void print_long(git_repository *repo, git_status_list *status)
 
 			if (!header) {
 				printf("# Untracked files:\n");
-				printf("#   (use \"git add <file>...\" to include in what will be committed)\n");
+				printf("#   (use \"lg2 add <file>...\" to include in what will be committed)\n");
 				printf("#\n");
 				header = 1;
 			}
@@ -318,7 +318,7 @@ static void print_long(git_repository *repo, git_status_list *status)
 
 			if (!header) {
 				printf("# Ignored files:\n");
-				printf("#   (use \"git add -f <file>...\" to include in what will be committed)\n");
+				printf("#   (use \"lg2 add -f <file>...\" to include in what will be committed)\n");
 				printf("#\n");
 				header = 1;
 			}
@@ -330,7 +330,7 @@ static void print_long(git_repository *repo, git_status_list *status)
 	}
 
 	if (!changed_in_index && changed_in_workdir)
-		printf("no changes added to commit (use \"git add\" and/or \"git commit -a\")\n");
+		printf("no changes added to commit (use \"lg2 add\" to add files to commit)\n");
 }
 
 /**

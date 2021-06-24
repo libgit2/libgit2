@@ -40,7 +40,12 @@ typedef struct {
 	int progress : 1;
 	int perf : 1;
 	int create : 1;
+
+	git_strarray paths;
+	char *branch_name;
 } checkout_options;
+
+static void free_checkout_options(checkout_options *opts);
 
 static void print_usage(void)
 {
@@ -54,8 +59,11 @@ static void print_usage(void)
 	exit(1);
 }
 
-static void parse_options(const char **repo_path, checkout_options *opts, struct args_info *args)
+/// Lifetime(opts) ~ Lifetime(args->argv)
+static void parse_options(const char **repo_path, git_repository *repo, checkout_options *opts, struct args_info *args)
 {
+	int path_based = 0;
+
 	if (args->argc <= 1)
 		print_usage();
 
@@ -69,6 +77,10 @@ static void parse_options(const char **repo_path, checkout_options *opts, struct
 		int bool_arg;
 
 		if (match_arg_separator(args)) {
+			// After handling the argument separator,
+			// we have a list of paths to reset.
+			path_based = 1;
+
 			break;
 		} else if (!strcmp(curr, "-b")) {
 			opts->create = 1;
@@ -80,14 +92,52 @@ static void parse_options(const char **repo_path, checkout_options *opts, struct
 			opts->perf = bool_arg;
 		} else if (match_str_arg(repo_path, args, "--git-dir")) {
 			continue;
+		} else if (!strcmp(curr, "--help") || !strcmp(curr, "-h")) {
+			print_usage();
+		} else if (opts->branch_name == NULL) {
+			opts->branch_name = args->argv[args->pos];
 		} else {
+			fprintf(stderr, "Invalid argument: %s\n", curr);
+			print_usage();
 			break;
 		}
 	}
+
+	if (path_based) {
+		size_t paths_start = args->pos;
+		opts->paths.count = args->argc - args->pos;
+		opts->paths.strings = (char **) malloc(opts->paths.count * sizeof(char*));
+
+		for (; args->pos < args->argc; ++args->pos) {
+			char **current_out = &opts->paths.strings[args->pos - paths_start];
+			char *current_userpath = args->argv[args->pos];
+
+			/**
+			 * The user gives us paths relative to their working directory.
+			 * Convert them to paths relative to the repository's directory.
+			 */
+			get_repopath_to(current_out, current_userpath, repo);
+		}
+	} else {
+		// No paths.
+		opts->paths.strings = NULL;
+	}
+
+	if (args->pos < args->argc) {
+		opts->branch_name = args->argv[args->pos];
+	} else if (opts->branch_name == NULL) {
+		printf("Checking out HEAD...\n");
+		opts->branch_name = "HEAD";
+	}
+}
+
+static void free_checkout_options(checkout_options *opts) {
+	// get_repopath_to copies strings -- we need to free the array of paths.
+	git_strarray_dispose(&opts->paths);
 }
 
 /**
- * This function is called to report progression, ie. it's called once with
+ * This function is called to report progression, i.e. it's called once with
  * a NULL path and the number of total steps, then for each subsequent path,
  * the current completed_step value.
  */
@@ -133,6 +183,14 @@ static int perform_checkout_ref(git_repository *repo, git_annotated_commit *targ
 
 	if (opts->perf)
 		checkout_opts.perfdata_cb = print_perf_data;
+
+	if (opts->paths.count > 0) {
+		checkout_opts.paths = opts->paths;
+
+		// opts->paths shouldn't contain wildcard patterns (e.g. no *.txt globbing).
+		// Let the user's shell handle that.
+		checkout_opts.checkout_strategy |= GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+	}
 
 	/** Grab the commit we're interested to move to */
 	err = git_commit_lookup(&target_commit, repo, git_annotated_commit_id(target));
@@ -260,49 +318,58 @@ int lg2_checkout(git_repository *repo, int argc, char **argv)
 	char *branch_name = NULL;
 
 	/** Parse our command line options */
-	parse_options(&path, &opts, &args);
-	branch_name = argv[args.pos];
+	parse_options(&path, repo, &opts, &args);
+	branch_name = opts.branch_name;
 
 	/** Make sure we're not about to checkout while something else is going on */
 	state = git_repository_state(repo);
 	if (state != GIT_REPOSITORY_STATE_NONE) {
 		fprintf(stderr, "repository is in unexpected state %d\n", state);
+
+		if (state == GIT_REPOSITORY_STATE_MERGE) {
+			fprintf(stderr, "It looks like a merge is in progress. Either "
+				"resolve the conflicts (see `lg2 status`), `lg2 add` each changed "
+				"file and commit the result, or run `lg2 reset HEAD` to stop the "
+				"merge.\n");
+		} else if (state == GIT_REPOSITORY_STATE_REBASE
+				|| state == GIT_REPOSITORY_STATE_REBASE_INTERACTIVE
+				|| state == GIT_REPOSITORY_STATE_REBASE_MERGE) {
+			fprintf(stderr, "It looks like a rebase is in progress. "
+					"If you want to cancel the rebase, run `lg2 rebase --abort`.\n");
+		}
+
 		goto cleanup;
 	}
 
-	if (match_arg_separator(&args)) {
+
+	if (opts.create) {
 		/**
-		 * Try to checkout the given path
+		 * Try to create the branch before checking it out
 		 */
 
-		fprintf(stderr, "unhandled path-based checkout\n");
-		err = 1;
-		goto cleanup;
-	} else {
-		if (opts.create) {
-			err = lg2_branch_create_from_head(repo, branch_name);
-			if (err < 0) {
-				fprintf(stderr, "failed to create %s: %s\n", args.argv[args.pos],
-						git_error_last()->message);
-				goto cleanup;
-			}
-		}
-
-		/**
-		 * Try to resolve a "refish" argument to a target libgit2 can use
-		 */
-
-		if ((err = resolve_refish(&checkout_target, repo, branch_name)) < 0 &&
-		    (err = guess_refish(&checkout_target, repo, branch_name)) < 0) {
-			fprintf(stderr, "failed to resolve %s: %s\n", branch_name,
-						git_error_last()->message);
+		err = lg2_branch_create_from_head(repo, branch_name);
+		if (err < 0) {
+			fprintf(stderr, "failed to create %s: %s\n", branch_name,
+					git_error_last()->message);
 			goto cleanup;
 		}
-		err = perform_checkout_ref(repo, checkout_target, args.argv[args.pos], &opts);
 	}
+
+	/**
+	 * Try to resolve a "refish" argument to a target libgit2 can use
+	 */
+
+	if ((err = resolve_refish(&checkout_target, repo, branch_name)) < 0 &&
+		(err = guess_refish(&checkout_target, repo, branch_name)) < 0) {
+		fprintf(stderr, "failed to resolve %s: %s\n", branch_name,
+					git_error_last()->message);
+		goto cleanup;
+	}
+	err = perform_checkout_ref(repo, checkout_target, branch_name, &opts);
 
 cleanup:
 	git_annotated_commit_free(checkout_target);
+	free_checkout_options(&opts);
 
 	return err;
 }
