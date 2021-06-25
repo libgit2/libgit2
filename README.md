@@ -104,7 +104,8 @@ Getting Help
 
 **Chat with us**
 
-- via IRC: join [#libgit2](https://webchat.freenode.net/#libgit2) on Freenode
+- via IRC: join [#libgit2](https://web.libera.chat/#libgit2) on
+  [libera](https://libera.chat).
 - via Slack: visit [slack.libgit2.org](http://slack.libgit2.org/) to sign up,
   then join us in `#libgit2`
 
