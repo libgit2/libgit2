@@ -1,6 +1,6 @@
 # Releasing the library
 
-We have three kinds of releases: "full" releases, maintenance releases and security releases. Full ones release the state of the `master` branch whereas maintenance releases provide bugfixes building on top of the currently released series. Security releases are also for the current series but only contain security fixes on top of the previous release.
+We have three kinds of releases: "full" releases, maintenance releases and security releases. Full ones release the state of the `main` branch whereas maintenance releases provide bugfixes building on top of the currently released series. Security releases are also for the current series but only contain security fixes on top of the previous release.
 
 ## Full release
 
@@ -40,7 +40,7 @@ followed by the three sections in the changelog. For release candidates we can a
 
 During the freeze, and certainly after the first release candidate, any bindings the core team work with should be updated in order to discover any issues that might come up with the multitude of approaches to memory management, embedding or linking.
 
-Create a branch `maint/v0.X` at the current state of `master` after you've created the tag. This will be used for maintenance releases and lets our dependents track the latest state of the series.
+Create a branch `maint/v0.X` at the current state of `main` after you've created the tag. This will be used for maintenance releases and lets our dependents track the latest state of the series.
 
 ## Maintenance release
 
@@ -76,7 +76,7 @@ We use docurium to generate our documentation. It is a tool written in ruby whic
 
     gem install docurium
 
-and run it against our description file with the tip of master checked out.
+and run it against our description file with the tip of `main` checked out.
 
     cm doc api.docurium
 
