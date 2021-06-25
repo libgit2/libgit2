@@ -76,7 +76,7 @@ We use docurium to generate our documentation. It is a tool written in ruby whic
 
     gem install docurium
 
-and run it against our description file with the tip of main checked out.
+and run it against our description file with the tip of `main` checked out.
 
     cm doc api.docurium
 
