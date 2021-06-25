@@ -262,6 +262,7 @@ void test_repo_init__symlinks_win32_enabled_by_global_config(void)
 	 * Create a new repository (can't use `assert_config_on_init` since we
 	 * want to examine configuration levels with more granularity.)
 	 */
+	cl_set_cleanup(&cleanup_repository, "config_entry/test.non.bare.git");
 	cl_git_pass(git_repository_init(&_repo, "config_entry/test.non.bare.git", false));
 
 	/* Ensure that core.symlinks remains set (via the global config). */
