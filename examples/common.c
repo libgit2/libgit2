@@ -711,6 +711,7 @@ static int is_host_unknown(git_cert_hostkey *cert, const char *hostname)
 {
 	int error = -1; // Assume failure unless set otherwise.
 	int num_knownhosts = 0;
+	int updated_knownhosts = 0;
 
 	LIBSSH2_SESSION *session = NULL;
 	LIBSSH2_KNOWNHOSTS *hosts = NULL;
@@ -759,7 +760,7 @@ static int is_host_unknown(git_cert_hostkey *cert, const char *hostname)
 		key = (const char *) cert->hash_sha1;
 		key_hash_size = sizeof(cert->hash_sha1);
 	} else {
-		fprintf(stderr, "Certificate was not hashed using a supported hash type (SHA256 or MD5).\n");
+		fprintf(stderr, "Certificate was not hashed using a supported hash type (SHA-256, SHA-1, or MD5).\n");
 		error = -1;
 		goto cleanup;
 	}
@@ -770,21 +771,6 @@ static int is_host_unknown(git_cert_hostkey *cert, const char *hostname)
 			printf("Host %s is in known_hosts!\n", hostname);
 			error = 0;
 			break;
-		case LIBSSH2_KNOWNHOST_CHECK_NOTFOUND:
-			fprintf(stderr, "No key was found for %s in %s.\n",
-					hostname, knownhosts_filepath);
-
-			error = ask_add_knownhost_key(session, hosts, hostname, key, key_hash_size,
-					get_libssh2_cert_type(cert));
-			if (!error) {
-				error = libssh2_knownhost_writefile(hosts, knownhosts_filepath,
-						LIBSSH2_KNOWNHOST_FILE_OPENSSH);
-
-				if (error) {
-					fprintf(stderr, "Error while writing to %s.\n", knownhosts_filepath);
-				}
-			}
-			break;
 		case LIBSSH2_KNOWNHOST_CHECK_FAILURE:
 			fprintf(stderr,
 					"Error encountered while checking the"
@@ -792,16 +778,37 @@ static int is_host_unknown(git_cert_hostkey *cert, const char *hostname)
 					knownhosts_filepath, hostname);
 			error = 1;
 			break;
+		case LIBSSH2_KNOWNHOST_CHECK_NOTFOUND:
+			fprintf(stderr, "No key was found for %s in %s.\n",
+					hostname, knownhosts_filepath);
+
+			error = ask_add_knownhost_key(session, hosts, hostname, key, key_hash_size,
+					get_libssh2_cert_type(cert));
+			updated_knownhosts = !error;
+			break;
 		case LIBSSH2_KNOWNHOST_CHECK_MISMATCH:
 			fprintf(stderr,
-					"ERROR: Key for %s does not match that in known_hosts! "
-					"    "
-					"    Please ensure that you really are connecting to the correct "
-					"    host.\n",
+					"Warning: Key for %s does not match that in known_hosts! \n"
+					"    \n"
+					"    Please ensure that you really are connecting to the correct \n"
+					"    host.\n\n",
 					hostname);
-			error = -2;
+			error = ask_add_knownhost_key(session, hosts, hostname, key, key_hash_size,
+					get_libssh2_cert_type(cert));
+			updated_knownhosts = !error;
 			break;
 	}
+
+
+	if (updated_knownhosts) {
+		error = libssh2_knownhost_writefile(hosts, knownhosts_filepath,
+				LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+
+		if (error) {
+			fprintf(stderr, "Error while writing to %s.\n", knownhosts_filepath);
+		}
+	}
+
 
 cleanup:
 	libssh2_session_free(session);
