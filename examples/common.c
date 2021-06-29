@@ -21,6 +21,12 @@
 # include <dirent.h>
 #endif
 #include <errno.h>
+#include <limits.h>
+
+#include <git2/sys/features.h>
+#ifdef GIT_SSH
+#include <libssh2.h>
+#endif
 
 void check_lg2(int error, const char *message, const char *extra)
 {
@@ -331,6 +337,12 @@ static int ask_for_ssh_key(char **privkey, const char *suggested_keys_directory)
 		printf("Enter the path to a private SSH key.\n");
 	}
 
+#ifndef GIT_SSH
+	fprintf(stderr,
+		"WARNING: libgit2 was not compiled with ssh support. "
+		"Authentication will probably fail.\n");
+#endif
+
 	result = ask(privkey, "SSH Key:", 0);
 
 	if (result >= 0) {
@@ -496,25 +508,355 @@ int repoless_cred_acquire_cb(git_credential **out,
 	return cred_acquire_cb(out, url, username_from_url, allowed_types, NULL);
 }
 
+/**
+ * Print the base-64 encoded version of data to stdout.
+ * size is in bytes.
+ *
+ * See https://en.wikipedia.org/wiki/Base64
+ */
+static void print_b64(const unsigned char *data, size_t size)
+{
+	const unsigned char *end = data + size;
+	const unsigned char *ptr = data;
+	size_t bit_idx = 0;
+
+	if (size >= UINT_MAX / 8 - 1) {
+		printf("< Too many bytes to encode >");
+		return;
+	}
+
+	while (ptr < end) {
+		unsigned char current = 0;
+		unsigned char next = 0;
+
+		size_t end_idx = bit_idx + 6;
+		size_t shift_current = end_idx < 8 ? 8 - end_idx : 0;
+		size_t bits_in_next = end_idx < 8 ? 0 : end_idx - 8;
+
+		// The six bits we want are part of the next byte!
+		// Fetch it, if possible.
+		if (bit_idx > 0 && ptr < end - 1) {
+			next = *(ptr + 1);
+		}
+
+		current = *ptr >> shift_current;
+
+		current <<= bits_in_next;
+		current += (next >> (8 - bits_in_next));
+
+		current &= 0x3F;
+
+		// Here: current is zero except for its last six bits.
+
+		if (current < 26) {
+			putchar('A' + (char) current);
+		} else if (current >= 26 && current < 26 * 2) {
+			current -= 26;
+			putchar('a' + (char) current);
+		} else if (current >= 26 * 2 && current < 26 * 2 + 10) {
+			current -= 26 * 2;
+			putchar('0' + (char) current);
+		} else if (current == 62) {
+			putchar('+');
+		} else if (current == 63) {
+			putchar('/');
+		} else {
+			printf("?\n[!!BUG!!] print_b64 logic error.\n");
+			exit(1);
+		}
+
+		// We handle 6 bits at a time (because 2^6 = 64).
+		bit_idx += 6;
+
+		// If bit_idx > 8, we've advanced a byte.
+		// Preserves invariant: bit_idx \in [0, 8)
+		if (bit_idx >= 8) {
+			bit_idx = bit_idx % 8;
+			ptr++;
+		}
+	}
+
+	// Padding.
+	for (; bit_idx % 8 != 0; bit_idx += 6) {
+		putchar('=');
+	}
+}
+
+#ifdef GIT_SSH
+static void print_hostkey_hash(const git_cert_hostkey *ssh_cert)
+{
+	if (ssh_cert->type & GIT_CERT_SSH_MD5) {
+		printf("MD5: ");
+		print_b64(ssh_cert->hash_md5, sizeof(ssh_cert->hash_md5));
+		printf("\n");
+	}
+
+	if (ssh_cert->type & GIT_CERT_SSH_SHA1) {
+		printf("SHA1: ");
+		print_b64(ssh_cert->hash_sha1, sizeof(ssh_cert->hash_sha1));
+		printf("\n");
+	}
+
+	if (ssh_cert->type & GIT_CERT_SSH_SHA256) {
+		printf("SHA256: ");
+		print_b64(ssh_cert->hash_sha256, sizeof(ssh_cert->hash_sha256));
+		printf("\n");
+	}
+
+	if (ssh_cert->type & GIT_CERT_SSH_RAW) {
+		printf("[Note] The raw certificate is available.\n");
+	}
+
+	if (ssh_cert->type == 0) {
+		printf("Beware: No certificate hash information available.\n");
+	}
+}
+
+static char * get_knownhosts_filepath(void)
+{
+	char *result = NULL;
+	const char *home = getenv("SSH_HOME");
+
+	if (home == NULL)
+		home = getenv("HOME");
+
+	if (home == NULL)
+		return NULL;
+
+	join_paths(&result, home, ".ssh/known_hosts");
+	return result;
+}
+
+/**
+ * Returns the LIBSSH2_KNOWNHOST_KEYENC type corresponding to the given ssh cert.
+ * Returns zero or LIBSSH2_KNOWNHOST_KEY_UNKNOWN on failure.
+ */
+static int get_libssh2_cert_type(git_cert_hostkey *cert)
+{
+	if ((cert->type & GIT_CERT_SSH_RAW) == 0) {
+		fprintf(stderr, "WARNING: No raw information associated with the certificate.\n");
+		return 0;
+	}
+
+	switch (cert->raw_type) {
+		case GIT_CERT_SSH_RAW_TYPE_RSA:
+			return LIBSSH2_KNOWNHOST_KEY_SSHRSA;
+		case GIT_CERT_SSH_RAW_TYPE_DSS:
+			return LIBSSH2_KNOWNHOST_KEY_SSHDSS;
+		case GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_256:
+			return LIBSSH2_KNOWNHOST_KEY_ECDSA_256;
+		case GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_384:
+			return LIBSSH2_KNOWNHOST_KEY_ECDSA_384;
+		case GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_521:
+			return LIBSSH2_KNOWNHOST_KEY_ECDSA_521;
+		case GIT_CERT_SSH_RAW_TYPE_KEY_ED25519:
+			return LIBSSH2_KNOWNHOST_KEY_ED25519;
+		default:
+			break;
+	}
+
+	fprintf(stderr, "WARNING: Unknown remote certificate raw_type!\n");
+	return LIBSSH2_KNOWNHOST_KEY_UNKNOWN;
+}
+
+static int ask_add_knownhost_key(LIBSSH2_SESSION *session, LIBSSH2_KNOWNHOSTS *hosts,
+		const char *hostname, const char *key, size_t key_len, int libssh2_cert_rawtype)
+{
+	char *buf = NULL;
+	int typemask = LIBSSH2_KNOWNHOST_TYPE_PLAIN | LIBSSH2_KNOWNHOST_KEYENC_RAW | libssh2_cert_rawtype;
+	int result = 0;
+
+	// We need mutable copies of the hostname and key
+	char *hostname_copy = malloc(strlen(hostname) + 1);
+	char *key_copy = malloc(strlen(key) + 1);
+	strcpy(key_copy, key);
+	strcpy(hostname_copy, hostname);
+
+	printf(
+		"Would you like to add the following host/key pair to your known_hosts"
+		" file?\n");
+	printf("Hostname: %s\n", hostname);
+	printf("Key: ");
+	print_b64((unsigned char *) key, key_len);
+	printf("\n");
+
+	printf("Note: The hostname will be stored unhashed.\n");
+
+	ask(&buf, "Add the host/key pair? y/[n]", 1);
+	if (buf == NULL || buf[0] != 'y' || buf[1] != '\0') {
+		printf("Not adding hostname/key pair (expected y or n).\n");
+		result = -1;
+		goto cleanup;
+	}
+
+	result = libssh2_knownhost_addc(hosts, hostname_copy, NULL,
+				key_copy, key_len, NULL, 0, typemask, NULL);
+	if (result != 0) {
+		free(buf);
+		libssh2_session_last_error(session, &buf, NULL, 1);
+
+		fprintf(stderr, "Error adding key: %s\n", buf);
+		goto cleanup;
+	}
+
+cleanup:
+	free(hostname_copy);
+	free(key_copy);
+	free(buf);
+
+	return result;
+}
+
+static int is_host_unknown(git_cert_hostkey *cert, const char *hostname)
+{
+	int error = -1; // Assume failure unless set otherwise.
+	int num_knownhosts = 0;
+
+	LIBSSH2_SESSION *session = NULL;
+	LIBSSH2_KNOWNHOSTS *hosts = NULL;
+	const char *key = NULL;
+	int typemask = LIBSSH2_KNOWNHOST_TYPE_PLAIN | LIBSSH2_KNOWNHOST_KEYENC_RAW;
+	size_t key_hash_size = 0;
+
+	char *knownhosts_filepath = get_knownhosts_filepath();
+	if (knownhosts_filepath == NULL) {
+		fprintf(stderr, "Unable to determine location of SSH_CONFIG_DIR/known_hosts file\n");
+		return -1;
+	}
+
+	session = libssh2_session_init();
+
+	if (session == NULL) {
+		fprintf(stderr, "Unable to open a libssh2 session!\n");
+
+		goto cleanup;
+	}
+
+	hosts = libssh2_knownhost_init(session);
+	num_knownhosts = libssh2_knownhost_readfile(hosts, knownhosts_filepath, LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+	if (num_knownhosts <= 0) {
+		char *errmsg = NULL;
+		libssh2_session_last_error(session, &errmsg, NULL, 1);
+
+		fprintf(stderr, "Unable to read known_hosts file: %s. Error: %s.\n",
+				knownhosts_filepath, errmsg);
+
+		free(errmsg);
+
+		error = -1;
+		goto cleanup;
+	}
+
+	printf("There are %d known hosts...\n", num_knownhosts);
+
+	if (cert->type & GIT_CERT_SSH_SHA256) {
+		key = (const char *) cert->hash_sha256;
+		key_hash_size = sizeof(cert->hash_sha256);
+	} else if (cert->type & GIT_CERT_SSH_MD5) {
+		key = (const char *) cert->hash_md5;
+		key_hash_size = sizeof(cert->hash_md5);
+	} else if (cert->type & GIT_CERT_SSH_SHA1) {
+		key = (const char *) cert->hash_sha1;
+		key_hash_size = sizeof(cert->hash_sha1);
+	} else {
+		fprintf(stderr, "Certificate was not hashed using a supported hash type (SHA256 or MD5).\n");
+		error = -1;
+		goto cleanup;
+	}
+
+	error = libssh2_knownhost_check(hosts, hostname, key, key_hash_size, typemask, NULL);
+	switch (error) {
+		case LIBSSH2_KNOWNHOST_CHECK_MATCH:
+			printf("Host %s is in known_hosts!\n", hostname);
+			error = 0;
+			break;
+		case LIBSSH2_KNOWNHOST_CHECK_NOTFOUND:
+			fprintf(stderr, "No key was found for %s in %s.\n",
+					hostname, knownhosts_filepath);
+
+			error = ask_add_knownhost_key(session, hosts, hostname, key, key_hash_size,
+					get_libssh2_cert_type(cert));
+			if (!error) {
+				error = libssh2_knownhost_writefile(hosts, knownhosts_filepath,
+						LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+
+				if (error) {
+					fprintf(stderr, "Error while writing to %s.\n", knownhosts_filepath);
+				}
+			}
+			break;
+		case LIBSSH2_KNOWNHOST_CHECK_FAILURE:
+			fprintf(stderr,
+					"Error encountered while checking the"
+					"known hosts file (%s) for %s!\n",
+					knownhosts_filepath, hostname);
+			error = 1;
+			break;
+		case LIBSSH2_KNOWNHOST_CHECK_MISMATCH:
+			fprintf(stderr,
+					"ERROR: Key for %s does not match that in known_hosts! "
+					"    "
+					"    Please ensure that you really are connecting to the correct "
+					"    host.\n",
+					hostname);
+			error = -2;
+			break;
+	}
+
+cleanup:
+	libssh2_session_free(session);
+	free(knownhosts_filepath);
+
+	return error;
+}
+
+#endif
+
 int certificate_confirm_cb(struct git_cert *cert,
 		int valid,
-		const char *host,
+		const char *hostname,
 		void *payload)
 {
 	char* do_connect = NULL;
 
-	UNUSED(cert);
 	UNUSED(payload);
 	if (valid) {
 		// If certificate is valid, proceed with the connection.
-		printf("Connecting to %s...\n", host);
+		printf("Connecting to %s...\n", hostname);
 		return 0;
 	}
 
-	printf("Certificate for host '%s' may not be valid.\n", host);
-	ask(&do_connect, "Connect anyway? y/[n] ", 0);
+#ifdef GIT_SSH
+	/**
+	 * At the time of this writing, libgit2 states that "we don't currently
+	 * trust any hostkeys".
+	 *
+	 * As such, we need to check this ourselves.
+	 */
+	if (cert->cert_type == GIT_CERT_HOSTKEY_LIBSSH2) {
+		git_cert_hostkey *ssh_cert = (git_cert_hostkey *) cert;
 
-	if (do_connect != NULL && strcmp(do_connect, "y") == 0) {
+		printf("\nHost: %s\n", hostname);
+		print_hostkey_hash(ssh_cert);
+		if (!is_host_unknown(ssh_cert, hostname)) {
+			// If it's known, its certificate is valid.
+			return 0;
+		}
+	}
+#else
+	// No SSH? Don't connect to an SSH server.
+	if (cert->cert_type == GIT_CERT_HOSTKEY_LIBSSH2) {
+		fprintf(stderr,
+			"WARNING: libgit2 was not compiled with SSH support,"
+			" which is **required** to connect to this host.\n");
+		return -1;
+	}
+#endif
+
+	printf("Certificate for host '%s' may not be valid.\n", hostname);
+	ask(&do_connect, "Connect anyway? yes/[n] ", 0);
+
+	if (do_connect != NULL && strcmp(do_connect, "yes") == 0) {
 		printf("Connecting anyway...\n");
 		return 0;
 	} else {
@@ -567,5 +909,43 @@ out:
 	if (fd >= 0)
 		close(fd);
 	return buf;
+}
+
+static int interactive_tests(void)
+{
+	char *buf = NULL;
+	int error = 0;
+
+	printf("[...] Running lg2's test suite. Some tests require user interaction.\n");
+
+	if (test_path_lib()) fatal("Pathlib tests failed.", NULL);
+
+	error = ask(&buf, "Prompt test [Type the lowercase letter 'y' to pass]:", 0);
+	if (error || buf == NULL) fatal("Unable to read user input!", NULL);
+
+	if (buf[0] != 'y' || buf[1] != '\0') fatal("Input did not match the expected.", NULL);
+	free(buf);
+
+	printf("The following two lines should match:\n%s\n", "VGhpcyBtdXN0IHBhc3Mu");
+	print_b64((unsigned char*) "This must pass.", sizeof(char) * strlen("This must pass."));
+	printf("\n\n");
+
+	printf("The following two lines should match:\n%s\n", "IT1Bbm90aGVyIHRlc3Q9IQ==");
+	print_b64((unsigned char*) "!=Another test=!", sizeof(char) * strlen("!=Another test=!"));
+	printf("\n\n");
+
+	print_b64((unsigned char*) "A", 1);
+	printf("\n");
+
+	return 0;
+}
+
+int lg2_interactive_tests(git_repository *repo, int argc, char **argv)
+{
+	UNUSED(repo);
+	UNUSED(argc);
+	UNUSED(argv);
+
+	return interactive_tests();
 }
 
