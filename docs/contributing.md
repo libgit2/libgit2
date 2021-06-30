@@ -35,7 +35,7 @@ easily accessible permanent record of the conversation.
 
 ## Libgit2 Versions
 
-The `master` branch is the main branch where development happens.
+The `main` branch is the main branch where development happens.
 Releases are tagged
 (e.g. [v0.21.0](https://github.com/libgit2/libgit2/releases/tag/v0.21.0) )
 and when a critical bug fix needs to be backported, it will be done on a
@@ -51,7 +51,7 @@ commit SHA
 Using [`git describe`](http://git-scm.com/docs/git-describe) is a
 great way to tell us what version you're working with.
 
-If you're not running against the latest `master` branch version,
+If you're not running against the latest `main` branch version,
 please compile and test against that to avoid re-reporting an issue that's
 already been fixed.
 
@@ -68,11 +68,11 @@ flow](https://guides.github.com/introduction/flow/index.html), where
 contributors fork the [libgit2 repository](https://github.com/libgit2/libgit2),
 make their changes on branch, and submit a
 [Pull Request](https://help.github.com/articles/using-pull-requests)
-(a.k.a. "PR").  Pull requests should usually be targeted at the `master`
+(a.k.a. "PR").  Pull requests should usually be targeted at the `main`
 branch.
 
 Life will be a lot easier for you (and us) if you follow this pattern
-(i.e. fork, named branch, submit PR).  If you use your fork's `master`
+(i.e. fork, named branch, submit PR).  If you use your fork's `main`
 branch directly, things can get messy.
 
 Please include a nice description of your changes when you submit your PR;
