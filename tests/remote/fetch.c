@@ -5,6 +5,8 @@
 
 static git_repository *repo1;
 static git_repository *repo2;
+static char* repo1_path;
+static char* repo2_path;
 
 static const char *REPO1_REFNAME = "refs/heads/main";
 static const char *REPO2_REFNAME = "refs/remotes/repo1/main";
@@ -12,42 +14,43 @@ static char *FORCE_FETCHSPEC = "+refs/heads/main:refs/remotes/repo1/main";
 static char *NON_FORCE_FETCHSPEC = "refs/heads/main:refs/remotes/repo1/main";
 
 char* strip_trailing_slash(char *path)  {
-	char *result = NULL;
 	if (path[strlen(path) - 1] == '/') {
-		result = (char *) malloc(strlen(path) - 1);
+		char* result = (char *) calloc(strlen(path) - 1, sizeof(char));
 		memcpy(result, path, strlen(path) - 1);
+		return result;
 	} else {
-		result = (char *) malloc(strlen(path));
+		char* result = (char *) calloc(strlen(path), sizeof(char));
 		strncpy(result, path, strlen(path));
+		return result;
 	}
-	return result;
 }
 
 
 void test_remote_fetch__initialize(void) {
 	git_config *c;
-	git_buf repo1_path = GIT_BUF_INIT;
-	git_buf repo2_path = GIT_BUF_INIT;
+	git_buf repo1_path_buf = GIT_BUF_INIT;
+	git_buf repo2_path_buf = GIT_BUF_INIT;
 	const char *sandbox = clar_sandbox_path();
 
-	cl_git_pass(git_buf_join(&repo1_path, '/', sandbox, "fetchtest_repo1"));
-	cl_git_pass(git_repository_init(&repo1, repo1_path.ptr, true));
+	cl_git_pass(git_buf_join(&repo1_path_buf, '/', sandbox, "fetchtest_repo1"));
+	repo1_path = calloc(repo1_path_buf.size, sizeof(char));
+	git_buf_copy_cstr(repo1_path, repo1_path_buf.size, &repo1_path_buf);
+	cl_git_pass(git_repository_init(&repo1, repo1_path, true));
 
-	cl_git_pass(git_buf_join(&repo2_path, '/', sandbox, "fetchtest_repo2"));
-	cl_git_pass(git_repository_init(&repo2, repo2_path.ptr, true));
+	cl_git_pass(git_buf_join(&repo2_path_buf, '/', sandbox, "fetchtest_repo2"));
+	repo2_path = calloc(repo2_path_buf.size, sizeof(char));
+	git_buf_copy_cstr(repo2_path, repo2_path_buf.size, &repo2_path_buf);
+	cl_git_pass(git_repository_init(&repo2, repo2_path, true));
 
 	cl_git_pass(git_repository_config(&c, repo1));
 	cl_git_pass(git_config_set_string(c, "user.email", "some@email"));
 	cl_git_pass(git_config_set_string(c, "user.name", "some@name"));
 	git_config_free(c);
-	git_buf_dispose(&repo1_path);
-	git_buf_dispose(&repo2_path);
+	git_buf_dispose(&repo1_path_buf);
+	git_buf_dispose(&repo2_path_buf);
 }
 
 void test_remote_fetch__cleanup(void) {
-	char *repo1_path = strip_trailing_slash(repo1->gitdir);
-	char *repo2_path = strip_trailing_slash(repo2->gitdir);
-
 	git_repository_free(repo1);
 	git_repository_free(repo2);
 
