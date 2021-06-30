@@ -110,12 +110,8 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
 		return error;
 
-	if ((error = git_refspec__parse(&spec, refspec, fetch)) < 0) {
-		if (git_error_last()->klass != GIT_ERROR_NOMEMORY)
-			error = GIT_EINVALIDSPEC;
-
+	if ((error = git_refspec__parse(&spec, refspec, fetch)) < 0)
 		return error;
-	}
 
 	git_refspec__dispose(&spec);
 
@@ -1116,7 +1112,7 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 	git_reference *resolved_ref = NULL;
 	git_buf remote_name = GIT_BUF_INIT;
 	git_config *config = NULL;
-	const char *ref_name;
+	const char *ref_name = NULL;
 	int error = 0, update;
 
 	assert(out && spec && ref);
@@ -1129,8 +1125,18 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 	if (error == GIT_ENOTFOUND && git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
 		ref_name = git_reference_symbolic_target(ref);
 		error = 0;
-	} else {
+	} else if (resolved_ref) {
 		ref_name = git_reference_name(resolved_ref);
+	}
+
+	/*
+	 * The ref name may be unresolvable - perhaps it's pointing to
+	 * something invalid.  In this case, there is no remote head for
+	 * this ref.
+	 */
+	if (!ref_name) {
+		error = 0;
+		goto cleanup;
 	}
 
 	if ((error = ref_to_update(&update, &remote_name, remote, spec, ref_name)) < 0)

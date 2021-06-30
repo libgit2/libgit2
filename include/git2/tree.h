@@ -334,6 +334,7 @@ GIT_EXTERN(int) git_treebuilder_insert(
  *
  * @param bld Tree builder
  * @param filename Filename of the entry to remove
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_treebuilder_remove(
 	git_treebuilder *bld, const char *filename);
@@ -477,6 +478,7 @@ typedef struct {
  * @param baseline the tree to base these changes on
  * @param nupdates the number of elements in the update list
  * @param updates the list of updates to perform
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseline, size_t nupdates, const git_tree_update *updates);
 

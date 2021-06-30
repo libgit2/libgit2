@@ -1287,19 +1287,32 @@ cleanup:
 	return error;
 }
 
-int git_reference__is_valid_name(const char *refname, unsigned int flags)
+int git_reference__name_is_valid(
+	int *valid,
+	const char *refname,
+	unsigned int flags)
 {
-	if (git_reference__normalize_name(NULL, refname, flags) < 0) {
-		git_error_clear();
-		return false;
-	}
+	int error;
 
-	return true;
+	*valid = 0;
+
+	error = git_reference__normalize_name(NULL, refname, flags);
+
+	if (!error)
+		*valid = 1;
+	else if (error == GIT_EINVALIDSPEC)
+		error = 0;
+
+	return error;
 }
 
 int git_reference_is_valid_name(const char *refname)
 {
-	return git_reference__is_valid_name(refname, GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL);
+	int valid = 0;
+
+	git_reference__name_is_valid(&valid, refname, GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL);
+
+	return valid;
 }
 
 const char *git_reference__shorthand(const char *name)

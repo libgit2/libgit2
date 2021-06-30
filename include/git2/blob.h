@@ -118,6 +118,10 @@ typedef enum {
 
 /**
  * The options used when applying filter options to a file.
+ *
+ * Initialize with `GIT_BLOB_FILTER_OPTIONS_INIT`. Alternatively, you can
+ * use `git_blob_filter_options_init`.
+ *
  */
 typedef struct {
 	int version;
@@ -128,6 +132,18 @@ typedef struct {
 
 #define GIT_BLOB_FILTER_OPTIONS_VERSION 1
 #define GIT_BLOB_FILTER_OPTIONS_INIT {GIT_BLOB_FILTER_OPTIONS_VERSION, GIT_BLOB_FILTER_CHECK_FOR_BINARY}
+
+/**
+ * Initialize git_blob_filter_options structure
+ *
+ * Initializes a `git_blob_filter_options` with default values. Equivalent
+ * to creating an instance with `GIT_BLOB_FILTER_OPTIONS_INIT`.
+ *
+ * @param opts The `git_blob_filter_options` struct to initialize.
+ * @param version The struct version; pass `GIT_BLOB_FILTER_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_blob_filter_options_init(git_blob_filter_options *opts, unsigned int version);
 
 /**
  * Get a buffer with the filtered content of a blob.
@@ -229,7 +245,7 @@ GIT_EXTERN(int) git_blob_create_from_stream_commit(
  * Write an in-memory buffer to the ODB as a blob
  *
  * @param id return the id of the written blob
- * @param repo repository where to blob will be written
+ * @param repo repository where the blob will be written
  * @param buffer data to be written into the blob
  * @param len length of the data
  * @return 0 or an error code

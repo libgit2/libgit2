@@ -2078,7 +2078,8 @@ static int repo_init_head(const char *repo_dir, const char *given)
 	if (given) {
 		initial_head = given;
 	} else if ((error = git_config_open_default(&cfg)) >= 0 &&
-	           (error = git_config_get_string_buf(&cfg_branch, cfg, "init.defaultbranch")) >= 0) {
+	           (error = git_config_get_string_buf(&cfg_branch, cfg, "init.defaultbranch")) >= 0 &&
+	           *cfg_branch.ptr) {
 		initial_head = cfg_branch.ptr;
 	}
 
@@ -2334,21 +2335,19 @@ int git_repository_head_unborn(git_repository *repo)
 	return 0;
 }
 
-static int at_least_one_cb(const char *refname, void *payload)
-{
-	GIT_UNUSED(refname);
-	GIT_UNUSED(payload);
-	return GIT_PASSTHROUGH;
-}
-
 static int repo_contains_no_reference(git_repository *repo)
 {
-	int error = git_reference_foreach_name(repo, &at_least_one_cb, NULL);
+	git_reference_iterator *iter;
+	const char *refname;
+	int error;
 
-	if (error == GIT_PASSTHROUGH)
-		return 0;
+	if ((error = git_reference_iterator_new(&iter, repo)) < 0)
+		return error;
 
-	if (!error)
+	error = git_reference_next_name(&refname, iter);
+	git_reference_iterator_free(iter);
+
+	if (error == GIT_ITEROVER)
 		return 1;
 
 	return error;
@@ -2364,10 +2363,11 @@ int git_repository_initialbranch(git_buf *out, git_repository *repo)
 	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
 		return error;
 
-	if ((error = git_config_get_entry(&entry, config, "init.defaultbranch")) == 0) {
+	if ((error = git_config_get_entry(&entry, config, "init.defaultbranch")) == 0 &&
+		*entry->value) {
 		branch = entry->value;
 	}
-	else if (error == GIT_ENOTFOUND) {
+	else if (!error || error == GIT_ENOTFOUND) {
 		branch = GIT_BRANCH_DEFAULT;
 	}
 	else {
@@ -2379,7 +2379,7 @@ int git_repository_initialbranch(git_buf *out, git_repository *repo)
 	    goto done;
 
 	if (!git_reference_is_valid_name(out->ptr)) {
-		git_error_set(GIT_ERROR_INVALID, "the value of init.defaultBranch is not a valid reference name");
+		git_error_set(GIT_ERROR_INVALID, "the value of init.defaultBranch is not a valid branch name");
 		error = -1;
 	}
 

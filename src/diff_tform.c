@@ -1038,7 +1038,7 @@ find_best_matches:
 				memcpy(&src->old_file, &swap, sizeof(src->old_file));
 
 				/* if we've just swapped the new element into the correct
-				 * place, clear the SPLIT flag
+				 * place, clear the SPLIT and RENAME_TARGET flags
 				 */
 				if (tgt2src[s].idx == t &&
 					tgt2src[s].similarity >
@@ -1046,7 +1046,7 @@ find_best_matches:
 					src->status     = GIT_DELTA_RENAMED;
 					src->similarity = tgt2src[s].similarity;
 					tgt2src[s].similarity = 0;
-					src->flags &= ~GIT_DIFF_FLAG__TO_SPLIT;
+					src->flags &= ~(GIT_DIFF_FLAG__TO_SPLIT | GIT_DIFF_FLAG__IS_RENAME_TARGET);
 					num_rewrites--;
 				}
 				/* otherwise, if we just overwrote a source, update mapping */

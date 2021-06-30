@@ -262,6 +262,7 @@ void test_repo_init__symlinks_win32_enabled_by_global_config(void)
 	 * Create a new repository (can't use `assert_config_on_init` since we
 	 * want to examine configuration levels with more granularity.)
 	 */
+	cl_set_cleanup(&cleanup_repository, "config_entry/test.non.bare.git");
 	cl_git_pass(git_repository_init(&_repo, "config_entry/test.non.bare.git", false));
 
 	/* Ensure that core.symlinks remains set (via the global config). */
@@ -678,6 +679,22 @@ void test_repo_init__defaultbranch_config(void)
 	cl_git_pass(git_reference_lookup(&head, _repo, "HEAD"));
 
 	cl_assert_equal_s("refs/heads/my_default_branch", git_reference_symbolic_target(head));
+
+	git_reference_free(head);
+}
+
+void test_repo_init__defaultbranch_config_empty(void)
+{
+	git_reference *head;
+
+	cl_set_cleanup(&cleanup_repository, "repo");
+
+	create_tmp_global_config("tmp_global_path", "init.defaultbranch", "");
+
+	cl_git_pass(git_repository_init(&_repo, "repo", 0));
+	cl_git_pass(git_reference_lookup(&head, _repo, "HEAD"));
+
+	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 
 	git_reference_free(head);
 }

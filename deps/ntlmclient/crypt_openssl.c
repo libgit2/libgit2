@@ -71,7 +71,7 @@ static inline void HMAC_CTX_free(HMAC_CTX *ctx)
 static inline int HMAC_CTX_reset(HMAC_CTX *ctx)
 {
 	HMAC_CTX_cleanup(ctx);
-	memzero(ctx, sizeof(HMAC_CTX));
+	ntlm_memzero(ctx, sizeof(HMAC_CTX));
 	return 1;
 }
 
