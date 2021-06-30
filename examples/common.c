@@ -797,6 +797,7 @@ static int is_host_unknown(git_cert_hostkey *cert, const char *hostname)
 
 
 cleanup:
+	libssh2_knownhost_free(hosts);
 	libssh2_session_free(session);
 	free(knownhosts_filepath);
 
