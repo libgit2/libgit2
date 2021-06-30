@@ -1,3 +1,31 @@
+v1.1.1
+------
+
+This is a bugfix release with the following changes:
+
+* Fixes a bug where decompressing packfiles could fail in rare
+  instances.
+
+* Ensure worktree paths are validated in more cases.
+
+* Builds without thread-safety (`THREADSAFE=OFF`) are supported again.
+
+* Builds without mmap (`NO_MMAP`) are supported again.
+
+* mbedTLS is supported in non-default locations.
+
+* Malformed branch names or missing branches on remotes are ignored.
+
+* Use compiler intrinsics to detect arithmetic overflows in more cases.
+
+* The configuration cache functions properly on systems with strict
+  alignment.
+
+* A missing options initializer function (`git_blob_filter_options_init`)
+  was added for `git_blob_filter_options`.
+
+* Several documentation fixes.
+
 v1.1
 ----
 
