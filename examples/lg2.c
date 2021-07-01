@@ -11,6 +11,7 @@ struct {
 	char requires_repo;
 } commands[] = {
 	{ "add",          lg2_add,          1 },
+	{ "apply",        lg2_apply,        1 },
 	{ "rm",           lg2_add,          1 },
 	{ "blame",        lg2_blame,        1 },
 	{ "branch",       lg2_branch,       1 },

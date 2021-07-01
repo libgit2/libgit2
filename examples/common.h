@@ -56,6 +56,7 @@
 #include "path.h"
 
 extern int lg2_add(git_repository *repo, int argc, char **argv);
+extern int lg2_apply(git_repository *repo, int argc, char **argv);
 
 extern int lg2_branch(git_repository *repo, int argc, char **argv);
 extern int lg2_branch_create_from_head(git_repository *repo, char *branch_name);
