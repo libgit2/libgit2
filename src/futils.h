@@ -257,7 +257,7 @@ extern int git_futils_truncate(const char *path, int mode);
  */
 extern int git_futils_filesize(uint64_t *out, git_file fd);
 
-#define GIT_PERMS_IS_EXEC(MODE)		(((MODE) & 0111) != 0)
+#define GIT_PERMS_IS_EXEC(MODE)		(((MODE) & 0100) != 0)
 #define GIT_PERMS_CANONICAL(MODE)	(GIT_PERMS_IS_EXEC(MODE) ? 0755 : 0644)
 #define GIT_PERMS_FOR_WRITE(MODE)   (GIT_PERMS_IS_EXEC(MODE) ? 0777 : 0666)
 

@@ -605,6 +605,45 @@ void test_status_worktree__filemode_changes(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
+void test_status_worktree__filemode_non755(void)
+{
+	git_repository *repo = cl_git_sandbox_init("filemodes");
+	status_entry_counts counts;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	git_buf executable_path = GIT_BUF_INIT;
+	git_buf nonexecutable_path = GIT_BUF_INIT;
+
+	if (!cl_is_chmod_supported())
+		return;
+
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_INCLUDE_IGNORED |
+		GIT_STATUS_OPT_INCLUDE_UNMODIFIED;
+
+	git_buf_joinpath(&executable_path, git_repository_workdir(repo), "exec_on");
+	cl_must_pass(p_chmod(git_buf_cstr(&executable_path), 0744));
+	git_buf_dispose(&executable_path);
+
+	git_buf_joinpath(&nonexecutable_path, git_repository_workdir(repo), "exec_off");
+
+	cl_must_pass(p_chmod(git_buf_cstr(&nonexecutable_path), 0655));
+	git_buf_dispose(&nonexecutable_path);
+
+	memset(&counts, 0, sizeof(counts));
+	counts.expected_entry_count = filemode_count;
+	counts.expected_paths = filemode_paths;
+	counts.expected_statuses = filemode_statuses;
+
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts)
+	);
+
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+}
+
+
 static int cb_status__interrupt(const char *p, unsigned int s, void *payload)
 {
 	volatile int *count = (int *)payload;
