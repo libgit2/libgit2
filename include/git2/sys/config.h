@@ -84,7 +84,8 @@ struct git_config_backend {
 	void GIT_CALLBACK(free)(struct git_config_backend *);
 };
 #define GIT_CONFIG_BACKEND_VERSION 1
-#define GIT_CONFIG_BACKEND_INIT {GIT_CONFIG_BACKEND_VERSION}
+#define GIT_CONFIG_BACKEND_INIT {GIT_CONFIG_BACKEND_VERSION, 0, NULL, NULL, \
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL}
 
 /**
  * Initializes a `git_config_backend` with default values. Equivalent to

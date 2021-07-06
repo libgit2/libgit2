@@ -197,7 +197,8 @@ typedef struct {
 } git_status_options;
 
 #define GIT_STATUS_OPTIONS_VERSION 1
-#define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION}
+#define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION, \
+	GIT_STATUS_SHOW_INDEX_AND_WORKDIR, GIT_STATUS_OPT_DEFAULTS, {NULL, 0}, NULL}
 
 /**
  * Initialize git_status_options structure

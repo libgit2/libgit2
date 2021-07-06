@@ -103,7 +103,8 @@ struct git_odb_backend {
 };
 
 #define GIT_ODB_BACKEND_VERSION 1
-#define GIT_ODB_BACKEND_INIT {GIT_ODB_BACKEND_VERSION}
+#define GIT_ODB_BACKEND_INIT {GIT_ODB_BACKEND_VERSION, NULL, NULL, NULL, NULL, \
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL}
 
 /**
  * Initializes a `git_odb_backend` with default values. Equivalent to

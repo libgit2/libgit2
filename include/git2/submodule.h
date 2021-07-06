@@ -153,10 +153,9 @@ typedef struct git_submodule_update_options {
 } git_submodule_update_options;
 
 #define GIT_SUBMODULE_UPDATE_OPTIONS_VERSION 1
-#define GIT_SUBMODULE_UPDATE_OPTIONS_INIT \
-	{ GIT_SUBMODULE_UPDATE_OPTIONS_VERSION, \
-		{ GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE }, \
-	GIT_FETCH_OPTIONS_INIT, 1 }
+#define GIT_SUBMODULE_UPDATE_OPTIONS_INIT { \
+    GIT_SUBMODULE_UPDATE_OPTIONS_VERSION, GIT_CHECKOUT_OPTIONS_INIT, \
+	GIT_FETCH_OPTIONS_INIT, 1}
 
 /**
  * Initialize git_submodule_update_options structure

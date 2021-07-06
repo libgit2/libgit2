@@ -271,7 +271,7 @@ struct git_filter {
 };
 
 #define GIT_FILTER_VERSION 1
-#define GIT_FILTER_INIT {GIT_FILTER_VERSION}
+#define GIT_FILTER_INIT {GIT_FILTER_VERSION, NULL, NULL, NULL, NULL, NULL, NULL}
 
 /**
  * Initializes a `git_filter` with default values. Equivalent to

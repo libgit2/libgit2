@@ -73,7 +73,7 @@ typedef struct git_indexer_options {
 } git_indexer_options;
 
 #define GIT_INDEXER_OPTIONS_VERSION 1
-#define GIT_INDEXER_OPTIONS_INIT { GIT_INDEXER_OPTIONS_VERSION }
+#define GIT_INDEXER_OPTIONS_INIT {GIT_INDEXER_OPTIONS_VERSION, NULL, NULL, 0}
 
 /**
  * Initializes a `git_indexer_options` with default values. Equivalent to

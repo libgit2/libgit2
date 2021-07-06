@@ -125,7 +125,8 @@ struct git_transport {
 };
 
 #define GIT_TRANSPORT_VERSION 1
-#define GIT_TRANSPORT_INIT {GIT_TRANSPORT_VERSION}
+#define GIT_TRANSPORT_INIT {GIT_TRANSPORT_VERSION, NULL, NULL, NULL, NULL, \
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL}
 
 /**
  * Initializes a `git_transport` with default values. Equivalent to

@@ -87,7 +87,7 @@ typedef struct {
 } git_apply_options;
 
 #define GIT_APPLY_OPTIONS_VERSION 1
-#define GIT_APPLY_OPTIONS_INIT {GIT_APPLY_OPTIONS_VERSION}
+#define GIT_APPLY_OPTIONS_INIT {GIT_APPLY_OPTIONS_VERSION, NULL, NULL, NULL, 0}
 
 GIT_EXTERN(int) git_apply_options_init(git_apply_options *opts, unsigned int version);
 

@@ -79,7 +79,8 @@ typedef struct {
 } git_proxy_options;
 
 #define GIT_PROXY_OPTIONS_VERSION 1
-#define GIT_PROXY_OPTIONS_INIT {GIT_PROXY_OPTIONS_VERSION}
+#define GIT_PROXY_OPTIONS_INIT {GIT_PROXY_OPTIONS_VERSION, GIT_PROXY_NONE, \
+	NULL, NULL, NULL, NULL}
 
 /**
  * Initialize git_proxy_options structure

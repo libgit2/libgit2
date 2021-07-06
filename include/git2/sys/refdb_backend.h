@@ -313,7 +313,9 @@ struct git_refdb_backend {
 };
 
 #define GIT_REFDB_BACKEND_VERSION 1
-#define GIT_REFDB_BACKEND_INIT {GIT_REFDB_BACKEND_VERSION}
+#define GIT_REFDB_BACKEND_INIT {GIT_REFDB_BACKEND_VERSION, NULL, NULL, NULL, \
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, \
+	NULL, NULL}
 
 /**
  * Initializes a `git_refdb_backend` with default values. Equivalent to

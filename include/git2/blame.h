@@ -89,8 +89,13 @@ typedef struct git_blame_options {
 	size_t max_line;
 } git_blame_options;
 
+#define GIT_BLAME_OPTIONS_DEFAULT_MIN_MATCH_CHAR 20
+#define GIT_BLAME_OPTIONS_DEFAULT_MIN_LINE 1
+
 #define GIT_BLAME_OPTIONS_VERSION 1
-#define GIT_BLAME_OPTIONS_INIT {GIT_BLAME_OPTIONS_VERSION}
+#define GIT_BLAME_OPTIONS_INIT {GIT_BLAME_OPTIONS_VERSION, GIT_BLAME_NORMAL, \
+	GIT_BLAME_OPTIONS_DEFAULT_MIN_MATCH_CHAR, {{0}}, {{0}}, \
+    GIT_BLAME_OPTIONS_DEFAULT_MIN_LINE, 0}
 
 /**
  * Initialize git_blame_options structure

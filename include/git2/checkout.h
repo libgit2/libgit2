@@ -326,7 +326,9 @@ typedef struct git_checkout_options {
 } git_checkout_options;
 
 #define GIT_CHECKOUT_OPTIONS_VERSION 1
-#define GIT_CHECKOUT_OPTIONS_INIT {GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE}
+#define GIT_CHECKOUT_OPTIONS_INIT {GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE, \
+	0, 0, 0, 0, GIT_CHECKOUT_NOTIFY_NONE, NULL, NULL, NULL, NULL, {NULL, 0}, \
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL}
 
 /**
  * Initialize git_checkout_options structure
