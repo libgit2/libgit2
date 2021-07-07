@@ -35,14 +35,16 @@ int git_futils_mktmp(git_buf *path_out, const char *filename, mode_t mode)
 	if (git_buf_oom(path_out))
 		return -1;
 
-	// This avoids a call to `mkstemp(3)`, because that way there is no need to
-	// call `chmod(2)`, which causes issues under some platforms (e.g. with NFS).
+	/*
+	 * This avoids a call to `mkstemp(3)`, because that way there is no need to
+	 * call `chmod(2)`, which causes issues under some platforms (e.g. with NFS).
+	 */
 	template = path_out->ptr + strlen(path_out->ptr) - 6;
 	random = (uint64_t)(git__timer() * 1.0E9);
 	for (count = 0; count < TMP_MAX; count++) {
 		uint64_t template_value = random;
 		int i;
-		// MMIX PRNG.
+		/* MMIX PRNG. */
 		random = random * 0x5851F42D4C957F2Dull + 0x14057B7EF767814Full;
 
 		for (i = 0; i < 6; i++) {
