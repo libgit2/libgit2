@@ -304,7 +304,7 @@ static int git_commit_graph_entry_get_byindex(
 	e->generation = ntohl(*((uint32_t *)(commit_data + GIT_OID_RAWSZ + 2 * sizeof(uint32_t))));
 	e->commit_time = ntohl(*((uint32_t *)(commit_data + GIT_OID_RAWSZ + 3 * sizeof(uint32_t))));
 
-	e->commit_time |= (e->generation & 0x3ull) << 32ull;
+	e->commit_time |= (e->generation & UINT64_C(0x3)) << UINT64_C(32);
 	e->generation >>= 2u;
 	if (e->parent_indices[1] & 0x80000000u) {
 		uint32_t extra_edge_list_pos = e->parent_indices[1] & 0x7fffffff;
