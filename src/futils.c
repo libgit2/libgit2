@@ -24,10 +24,10 @@ int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 
 int git_futils_mktmp(git_buf *path_out, const char *filename, mode_t mode)
 {
-	int fd;
-	mode_t mask;
-
-	p_umask(mask = p_umask(0));
+	int fd, count;
+	char *template;
+	uint64_t random;
+	const char *alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890_-";
 
 	git_buf_sets(path_out, filename);
 	git_buf_puts(path_out, "_git2_XXXXXX");
@@ -35,19 +35,33 @@ int git_futils_mktmp(git_buf *path_out, const char *filename, mode_t mode)
 	if (git_buf_oom(path_out))
 		return -1;
 
-	if ((fd = p_mkstemp(path_out->ptr)) < 0) {
-		git_error_set(GIT_ERROR_OS,
+	// This avoids a call to `mkstemp(3)`, because that way there is no need to
+	// call `chmod(2)`, which causes issues under some platforms (e.g. with NFS).
+	template = path_out->ptr + strlen(path_out->ptr) - 6;
+	random = (uint64_t)(git__timer() * 1.0E9);
+	for (count = 0; count < TMP_MAX; count++) {
+		uint64_t template_value = random;
+		int i;
+		// MMIX PRNG.
+		random = random * 0x5851F42D4C957F2Dull + 0x14057B7EF767814Full;
+
+		for (i = 0; i < 6; i++) {
+			template[i] = alphabet[template_value & 0x3f];
+			template_value >>= 6;
+		}
+
+		fd = p_open(path_out->ptr, O_RDWR | O_CREAT | O_EXCL, mode);
+		if (fd < 0) {
+			if (errno == EEXIST)
+					continue;
+			break;
+		}
+
+		return fd;
+	}
+	git_error_set(GIT_ERROR_OS,
 			"failed to create temporary file '%s'", path_out->ptr);
-		return -1;
-	}
-
-	if (p_chmod(path_out->ptr, (mode & ~mask))) {
-		git_error_set(GIT_ERROR_OS,
-			"failed to set permissions on file '%s'", path_out->ptr);
-		return -1;
-	}
-
-	return fd;
+	return -1;
 }
 
 int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode_t mode)
