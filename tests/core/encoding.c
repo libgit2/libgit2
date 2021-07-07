@@ -14,7 +14,7 @@ void test_core_encoding__decode(void)
 	cl_assert(size == 4);
 
 	buf = (unsigned char *)"\xaa\xaa\xfe\xdc\xbaXY";
-	cl_assert(git_decode_varint(buf, &size) == 1489279344088ULL);
+	cl_assert(git_decode_varint(buf, &size) == UINT64_C(1489279344088));
 	cl_assert(size == 6);
 
 	buf = (unsigned char *)"\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xfe\xdc\xbaXY";
@@ -35,8 +35,8 @@ void test_core_encoding__encode(void)
 	cl_assert(git_encode_varint(buf, 100, 267869656) == 4);
 	cl_assert(!memcmp(buf, "\xfe\xdc\xbaX", 4));
 
-	cl_assert(git_encode_varint(buf, 100, 1489279344088ULL) == 6);
+	cl_assert(git_encode_varint(buf, 100, UINT64_C(1489279344088)) == 6);
 	cl_assert(!memcmp(buf, "\xaa\xaa\xfe\xdc\xbaX", 6));
 
-	cl_assert(git_encode_varint(buf, 1, 1489279344088ULL) == -1);
+	cl_assert(git_encode_varint(buf, 1, UINT64_C(1489279344088)) == -1);
 }
