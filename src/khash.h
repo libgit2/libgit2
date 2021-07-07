@@ -137,11 +137,7 @@ typedef unsigned int khint32_t;
 typedef unsigned long khint32_t;
 #endif
 
-#if ULONG_MAX == ULLONG_MAX
-typedef unsigned long khint64_t;
-#else
-typedef unsigned long long khint64_t;
-#endif
+typedef int64_t khint64_t;
 
 #ifndef kh_inline
 #ifdef _MSC_VER

@@ -11,7 +11,7 @@
 #include "hash/sha1.h"
 
 struct git_hash_sha1_ctx {
-	unsigned long long size;
+	uint64_t size;
 	unsigned int H[5];
 	unsigned int W[16];
 };

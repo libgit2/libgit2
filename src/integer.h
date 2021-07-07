@@ -43,10 +43,10 @@ GIT_INLINE(int) git__is_ulong(int64_t p)
 }
 
 /** @return true if p fits into the range of an int */
-GIT_INLINE(int) git__is_int(long long p)
+GIT_INLINE(int) git__is_int(int64_t p)
 {
 	int r = (int)p;
-	return p == (long long)r;
+	return p == (int64_t)r;
 }
 
 /* Use clang/gcc compiler intrinsics whenever possible */
