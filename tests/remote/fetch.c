@@ -13,33 +13,18 @@ static const char *REPO2_REFNAME = "refs/remotes/repo1/main";
 static char *FORCE_FETCHSPEC = "+refs/heads/main:refs/remotes/repo1/main";
 static char *NON_FORCE_FETCHSPEC = "refs/heads/main:refs/remotes/repo1/main";
 
-char* strip_trailing_slash(char *path)  {
-	if (path[strlen(path) - 1] == '/') {
-		char* result = (char *) calloc(strlen(path) - 1, sizeof(char));
-		memcpy(result, path, strlen(path) - 1);
-		return result;
-	} else {
-		char* result = (char *) calloc(strlen(path), sizeof(char));
-		strncpy(result, path, strlen(path));
-		return result;
-	}
-}
-
-
 void test_remote_fetch__initialize(void) {
 	git_config *c;
 	git_buf repo1_path_buf = GIT_BUF_INIT;
 	git_buf repo2_path_buf = GIT_BUF_INIT;
 	const char *sandbox = clar_sandbox_path();
 
-	cl_git_pass(git_buf_join(&repo1_path_buf, '/', sandbox, "fetchtest_repo1"));
-	repo1_path = calloc(repo1_path_buf.size, sizeof(char));
-	git_buf_copy_cstr(repo1_path, repo1_path_buf.size, &repo1_path_buf);
+	cl_git_pass(git_buf_joinpath(&repo1_path_buf, sandbox, "fetchtest_repo1"));
+	repo1_path = git_buf_detach(&repo1_path_buf);
 	cl_git_pass(git_repository_init(&repo1, repo1_path, true));
 
-	cl_git_pass(git_buf_join(&repo2_path_buf, '/', sandbox, "fetchtest_repo2"));
-	repo2_path = calloc(repo2_path_buf.size, sizeof(char));
-	git_buf_copy_cstr(repo2_path, repo2_path_buf.size, &repo2_path_buf);
+	cl_git_pass(git_buf_joinpath(&repo2_path_buf, sandbox, "fetchtest_repo2"));
+	repo2_path = git_buf_detach(&repo2_path_buf);
 	cl_git_pass(git_repository_init(&repo2, repo2_path, true));
 
 	cl_git_pass(git_repository_config(&c, repo1));
