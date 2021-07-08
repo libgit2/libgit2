@@ -660,8 +660,8 @@ static int ask_add_knownhost_key(LIBSSH2_SESSION *session, LIBSSH2_KNOWNHOSTS *h
 
 	// We need mutable copies of the hostname and key
 	char *hostname_copy = malloc(strlen(hostname) + 1);
-	char *key_copy = malloc(strlen(key) + 1);
-	strcpy(key_copy, key);
+	char *key_copy = malloc(key_len + 1);
+	memcpy(key_copy, key, key_len + 1);
 	strcpy(hostname_copy, hostname);
 
 	printf(
@@ -671,8 +671,6 @@ static int ask_add_knownhost_key(LIBSSH2_SESSION *session, LIBSSH2_KNOWNHOSTS *h
 	printf("Key: ");
 	print_b64((unsigned char *) key, key_len);
 	printf("\n");
-
-	printf("Note: The hostname will be stored unhashed.\n");
 
 	ask(&buf, "Add the host/key pair? y/[n]", 1);
 	if (buf == NULL || buf[0] != 'y' || buf[1] != '\0') {
@@ -733,11 +731,11 @@ static int is_host_unknown(git_cert_hostkey *cert, const char *hostname)
 
 		fprintf(stderr, "Unable to read known_hosts file: %s. Error: %s.\n",
 				knownhosts_filepath, errmsg);
+		num_knownhosts = 0;
 
 		free(errmsg);
 
-		error = -1;
-		goto cleanup;
+		// Continue with an empty known_hosts file.
 	}
 
 	printf("There are %d known hosts...\n", num_knownhosts);
