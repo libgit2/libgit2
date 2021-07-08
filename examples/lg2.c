@@ -45,6 +45,7 @@ struct {
 	{ "self-test",    lg2_interactive_tests, 0 },
 	{ "stash",        lg2_stash,        1 },
 	{ "status",       lg2_status,       1 },
+	{ "submodule",    lg2_submodule,    1 },
 	{ "tag",          lg2_tag,          1 },
 };
 
