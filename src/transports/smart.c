@@ -226,6 +226,8 @@ static int git_smart__connect(
 	t->url = git__strdup(url);
 	GIT_ERROR_CHECK_ALLOC(t->url);
 
+	git_proxy_options_clear(&t->proxy);
+
 	if (git_proxy_options_dup(&t->proxy, proxy) < 0)
 		return -1;
 
