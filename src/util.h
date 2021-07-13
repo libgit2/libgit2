@@ -359,7 +359,7 @@ GIT_INLINE(double) git__timer(void)
    return (double)time * scaling_factor / 1.0E9;
 }
 
-#elif defined(AMIGA)
+#elif defined(__amigaos4__)
 
 #include <proto/timer.h>
 
