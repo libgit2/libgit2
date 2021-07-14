@@ -575,3 +575,11 @@ void test_ignore_path__negative_prefix_rule(void)
 	assert_is_ignored(true, "ff");
 	assert_is_ignored(false, "f");
 }
+
+void test_ignore_path__negative_more_specific(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "*.txt\n!/dir/test.txt\n");
+	assert_is_ignored(true, "test.txt");
+	assert_is_ignored(false, "dir/test.txt");
+	assert_is_ignored(true, "outer/dir/test.txt");
+}
