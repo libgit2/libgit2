@@ -32,7 +32,7 @@ void path_relative_to(char **out_path, const char *target_path, const char *relt
 	char *target_path_abs = expand_to_new_path(target_path);
 	char *result = NULL;
 
-	size_t keep_start = 0, dirs_up = 0, outpath_len = 0;
+	size_t keep_start = 0, dirs_up = 0, outpath_len = 0, last_div_location = 0;
 	size_t relto_abs_len = strlen(relto_abs);
 	size_t target_abs_len = strlen(target_path_abs);
 	size_t i;
@@ -40,11 +40,31 @@ void path_relative_to(char **out_path, const char *target_path, const char *relt
 	*out_path = NULL;
 
 	for (i = 0; i <= relto_abs_len && i <= target_abs_len; i++) {
-		keep_start = i;
 		if (relto_abs[i] != target_path_abs[i]) {
 			break;
+		} else if (relto_abs[i] == PATH_DELIM) {
+			last_div_location = i;
 		}
 	}
+
+	// Handles the following case:
+	// 	/foo/bar
+	// 	/foo/bar/baz
+	// last_div_location should point to the end of
+	// '/foo/bar', even though both don't end in PATH_DELIM.
+	if (i == relto_abs_len && target_path_abs[i] == PATH_DELIM) {
+		last_div_location = i;
+	} else if (i == target_abs_len && relto_abs[i] == PATH_DELIM) {
+		last_div_location = i;
+	}
+
+	// Handle the following case:
+	// 	/Makefile
+	// 	/Makefile_includes/foo
+	// Here, keep_start should point to
+	// the beginning of Makefile, not the
+	// end of Makefile_includes
+	keep_start = last_div_location;
 
 	// Here, i is the index at which the paths differ (or the end of the shorter).
 
@@ -227,7 +247,7 @@ const char * file_extension_from_path(const char * path)
 int test_path_lib()
 {
 	char *tmp = NULL;
-#define FAIL_TESTS { free(tmp); assert(0); return -1; }
+#define FAIL_TESTS { printf("tmp: %s\n", tmp); free(tmp); assert(0); return -1; }
 
 	join_paths(&tmp, "/a/b/c", "d/e/../f");
 	if (strcmp(tmp, "/a/b/c/d/e/../f")) FAIL_TESTS;
@@ -236,11 +256,26 @@ int test_path_lib()
 	if (strcmp(tmp, "/a/b/c/d/f")) FAIL_TESTS;
 	free(tmp);
 
+	join_paths(&tmp, "/folder1/folder2", "folder1/folder2/folder3");
+	if (strcmp(tmp, "/folder1/folder2/folder1/folder2/folder3")) FAIL_TESTS;
+
+	expand_path(&tmp);
+	if (strcmp(tmp, "/folder1/folder2/folder1/folder2/folder3")) FAIL_TESTS;
+	free(tmp);
+
 	join_paths(&tmp, "/.(a)./b/cthing", "../../../");
 	if (strcmp(tmp, "/.(a)./b/cthing/../../../")) FAIL_TESTS;
 
 	expand_path(&tmp);
 	if (strcmp(tmp, "/")) FAIL_TESTS;
+	free(tmp);
+
+	path_relative_to(&tmp, "/", "/a/");
+	if (strcmp(tmp, "../")) FAIL_TESTS;
+	free(tmp);
+
+	path_relative_to(&tmp, "/a/test/path", "/a/test/");
+	if (strcmp(tmp, "path")) FAIL_TESTS;
 	free(tmp);
 
 	path_relative_to(&tmp, "/a/test/path", "/a/test");
@@ -257,6 +292,10 @@ int test_path_lib()
 
 	path_relative_to(&tmp, "/1/2/3/", "/1/2/3/");
 	if (strcmp(tmp, "./")) FAIL_TESTS;
+	free(tmp);
+
+	path_relative_to(&tmp, "/Makefile", "/Make_utils/Foo/bar");
+	if (strcmp(tmp, "../../../Makefile")) FAIL_TESTS;
 	free(tmp);
 
 	if (strcmp(file_extension_from_path("id/ed.2/3"), "")) FAIL_TESTS;
