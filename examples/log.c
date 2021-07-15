@@ -399,6 +399,11 @@ static void usage(const char *message, const char *arg)
 	else if (message)
 		fprintf(stderr, "%s\n", message);
 	fprintf(stderr, "usage: log [<options>]\n");
+	fprintf(stderr,
+			" --max-count: Maximum number of commits to log\n"
+			" --author: Display only commits by the given author\n"
+			"Sorting options: \n"
+			" --date-order, --topo-order, --reverse");
 	exit(1);
 }
 
