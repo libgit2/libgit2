@@ -251,7 +251,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		double current_time = git__timer();
 		double elapsed = current_time - pb->last_progress_report_time;
 
-		if (elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
+		if (elapsed < 0 || elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			pb->last_progress_report_time = current_time;
 
 			ret = pb->progress_cb(
@@ -922,7 +922,7 @@ static int report_delta_progress(
 		double current_time = git__timer();
 		double elapsed = current_time - pb->last_progress_report_time;
 
-		if (force || elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
+		if (force || elapsed < 0 || elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			pb->last_progress_report_time = current_time;
 
 			ret = pb->progress_cb(
