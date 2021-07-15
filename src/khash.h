@@ -131,13 +131,8 @@ int main() {
 
 /* compiler specific configuration */
 
-#if UINT_MAX == 0xffffffffu
-typedef unsigned int khint32_t;
-#elif ULONG_MAX == 0xffffffffu
-typedef unsigned long khint32_t;
-#endif
-
-typedef int64_t khint64_t;
+typedef uint32_t khint32_t;
+typedef uint64_t khint64_t;
 
 #ifndef kh_inline
 #ifdef _MSC_VER
