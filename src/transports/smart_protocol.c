@@ -975,9 +975,10 @@ static int stream_thunk(void *buf, size_t size, void *data)
 
 	if (payload->cb) {
 		double current_time = git__timer();
+		double elapsed = current_time - payload->last_progress_report_time;
 		payload->last_bytes += size;
 
-		if ((current_time - payload->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
+		if (elapsed < 0 || elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			payload->last_progress_report_time = current_time;
 			error = payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload);
 		}
