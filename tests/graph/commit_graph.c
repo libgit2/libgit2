@@ -23,14 +23,14 @@ void test_graph_commit_graph__parse(void)
 	cl_git_pass(git_oid_fromstr(&id, "418382dff1ffb8bdfba833f4d8bbcde58b1e7f47"));
 	cl_assert_equal_oid(&e.tree_oid, &id);
 	cl_assert_equal_i(e.generation, 1);
-	cl_assert_equal_i(e.commit_time, 1273610423ull);
+	cl_assert_equal_i(e.commit_time, UINT64_C(1273610423));
 	cl_assert_equal_i(e.parent_count, 0);
 
 	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
 	cl_git_pass(git_commit_graph_entry_find(&e, cgraph, &id, GIT_OID_HEXSZ));
 	cl_assert_equal_oid(&e.sha1, &id);
 	cl_assert_equal_i(e.generation, 5);
-	cl_assert_equal_i(e.commit_time, 1274813907ull);
+	cl_assert_equal_i(e.commit_time, UINT64_C(1274813907));
 	cl_assert_equal_i(e.parent_count, 2);
 
 	cl_git_pass(git_oid_fromstr(&id, "9fd738e8f7967c078dceed8190330fc8648ee56a"));
@@ -66,7 +66,7 @@ void test_graph_commit_graph__parse_octopus_merge(void)
 	cl_git_pass(git_oid_fromstr(&id, "348f16ffaeb73f319a75cec5b16a0a47d2d5e27c"));
 	cl_assert_equal_oid(&e.tree_oid, &id);
 	cl_assert_equal_i(e.generation, 7);
-	cl_assert_equal_i(e.commit_time, 1447083009ull);
+	cl_assert_equal_i(e.commit_time, UINT64_C(1447083009));
 	cl_assert_equal_i(e.parent_count, 3);
 
 	cl_git_pass(git_oid_fromstr(&id, "ad2ace9e15f66b3d1138922e6ffdc3ea3f967fa6"));

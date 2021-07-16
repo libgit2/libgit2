@@ -20,7 +20,7 @@
 		: 32 * 1024 * 1024)
 
 #define DEFAULT_MAPPED_LIMIT \
-	((1024 * 1024) * (sizeof(void*) >= 8 ? 8192ULL : 256UL))
+	((1024 * 1024) * (sizeof(void*) >= 8 ? UINT64_C(8192) : UINT64_C(256)))
 
 /* default is unlimited */
 #define DEFAULT_FILE_LIMIT 0
