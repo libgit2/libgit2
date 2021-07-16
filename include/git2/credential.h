@@ -231,23 +231,26 @@ GIT_EXTERN(int) git_credential_ssh_key_memory_new(
 	const char *privatekey,
 	const char *passphrase);
 
-/*
- * If the user hasn't included libssh2.h before git2.h, we need to
- * define a few types for the callback signatures.
- */
-#ifndef LIBSSH2_VERSION
-typedef struct _LIBSSH2_SESSION LIBSSH2_SESSION;
-typedef struct _LIBSSH2_USERAUTH_KBDINT_PROMPT LIBSSH2_USERAUTH_KBDINT_PROMPT;
-typedef struct _LIBSSH2_USERAUTH_KBDINT_RESPONSE LIBSSH2_USERAUTH_KBDINT_RESPONSE;
-#endif
+typedef struct git_ssh_session git_ssh_session;
+typedef struct {
+    char *text;
+    unsigned int length;
+    unsigned int echo;
+} git_credential_ssh_interactive_prompt;
+
+typedef struct {
+	char *text;
+	unsigned int length;
+} git_credential_ssh_interactive_response;
 
 typedef void GIT_CALLBACK(git_credential_ssh_interactive_cb)(
+	git_ssh_session *session,
 	const char *name,
 	int name_len,
 	const char *instruction, int instruction_len,
-	int num_prompts, const LIBSSH2_USERAUTH_KBDINT_PROMPT *prompts,
-	LIBSSH2_USERAUTH_KBDINT_RESPONSE *responses,
-	void **abstract);
+	int num_prompts, const git_credential_ssh_interactive_prompt *prompts,
+	git_credential_ssh_interactive_response *responses,
+	void *payload);
 
 
 /**
@@ -278,10 +281,10 @@ GIT_EXTERN(int) git_credential_ssh_key_from_agent(
 	const char *username);
 
 typedef int GIT_CALLBACK(git_credential_sign_cb)(
-	LIBSSH2_SESSION *session,
+	git_ssh_session *session,
 	unsigned char **sig, size_t *sig_len,
 	const unsigned char *data, size_t data_len,
-	void **abstract);
+	void *payload);
 
 /**
  * Create an ssh key credential with a custom signing function.

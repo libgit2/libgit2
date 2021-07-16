@@ -103,7 +103,7 @@ typedef enum {
 } git_cert_ssh_raw_type_t;
 
 /**
- * Hostkey information taken from libssh2
+ * Hostkey information for SSH hosts
  */
 typedef struct {
 	git_cert parent; /**< The parent cert */

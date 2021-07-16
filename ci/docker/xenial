@@ -24,6 +24,7 @@ RUN apt-get update && \
         python \
         sudo \
         valgrind \
+        xz-utils \
         && \
     rm -rf /var/lib/apt/lists/*
 
@@ -48,7 +49,19 @@ RUN cd /tmp && \
     cd .. && \
     rm -rf libssh2-1.8.2
 
-FROM libssh2 AS valgrind
+FROM libssh2 AS libssh
+RUN cd /tmp && \
+    curl --insecure --location --silent --show-error https://www.libssh.org/files/0.9/libssh-0.9.5.tar.xz | \
+    tar -xJ && \
+    cd libssh-0.9.5 && \
+    mkdir build && \
+    cd build && \
+    CFLAGS=-fPIC cmake -G Ninja -DBUILD_SHARED_LIBS=ON -DWITH_GCRYPT=ON .. && \
+    ninja install && \
+    cd ../.. && \
+    rm -rf libssh-0.9.5
+
+FROM libssh AS valgrind
 RUN cd /tmp && \
     curl --insecure --location --silent --show-error https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2 | \
     tar -xj && \
