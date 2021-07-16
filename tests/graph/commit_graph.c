@@ -66,7 +66,7 @@ void test_graph_commit_graph__parse_octopus_merge(void)
 	cl_git_pass(git_oid_fromstr(&id, "348f16ffaeb73f319a75cec5b16a0a47d2d5e27c"));
 	cl_assert_equal_oid(&e.tree_oid, &id);
 	cl_assert_equal_i(e.generation, 7);
-	cl_assert_equal_i(e.commit_time, INT64_C(1447083009));
+	cl_assert_equal_i(e.commit_time, UINT64_C(1447083009));
 	cl_assert_equal_i(e.parent_count, 3);
 
 	cl_git_pass(git_oid_fromstr(&id, "ad2ace9e15f66b3d1138922e6ffdc3ea3f967fa6"));
