@@ -37,8 +37,18 @@ GIT_INLINE(int) git_error_set_after_callback_function(
 }
 
 #ifdef GIT_WIN32
+#if defined(_MSC_VER) && _MSC_VER >= 1300
 #define git_error_set_after_callback(code) \
 	git_error_set_after_callback_function((code), __FUNCTION__)
+#else
+/* VC++6 doesn't support __FUNCTION__, fallback to __FILE__:__LINE__, with
+ * macro to handle the fact _LINE__ isn't a string
+ */
+#define __AS_STRING__(x) #x
+#define __LINESTRING__ __AS_STRING__(__LINE__)
+#define git_error_set_after_callback(code) \
+	git_error_set_after_callback_function((code), __FILE__ ":" __LINESTRING__)
+#endif
 #else
 #define git_error_set_after_callback(code) \
 	git_error_set_after_callback_function((code), __func__)
