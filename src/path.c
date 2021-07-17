@@ -1223,7 +1223,11 @@ int git_path_diriter_init(
 
 	diriter->handle = FindFirstFileExW(
 		path_filter,
+#if _WIN32_WINNT >= 0x0600
 		is_win7_or_later ? FindExInfoBasic : FindExInfoStandard,
+#else
+		FindExInfoStandard,
+#endif
 		&diriter->current,
 		FindExSearchNameMatch,
 		NULL,
