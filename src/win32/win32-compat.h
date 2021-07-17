@@ -7,7 +7,7 @@
 #ifndef INCLUDE_win32_win32_compat_h__
 #define INCLUDE_win32_win32_compat_h__
 
-#include <stdint.h>
+#include <git2/stdint.h>
 #include <time.h>
 #include <wchar.h>
 #include <sys/stat.h>
