@@ -29,7 +29,11 @@ static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 	git_thread *thread = lpParameter;
 
 	/* Set the current thread for `git_thread_exit` */
+#if _WIN32_WINNT >= 0x0502
 	FlsSetValue(fls_index, thread);
+#else
+	TlsSetValue(fls_index, thread);
+#endif
 
 	thread->result = thread->proc(thread->param);
 
@@ -38,7 +42,11 @@ static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 
 static void git_threads_global_shutdown(void)
 {
+#if _WIN32_WINNT >= 0x0502
 	FlsFree(fls_index);
+#else
+	TlsFree(fls_index);
+#endif
 }
 
 int git_threads_global_init(void)
@@ -58,8 +66,13 @@ int git_threads_global_init(void)
 			GetProcAddress(hModule, "ReleaseSRWLockExclusive");
 	}
 
+#if _WIN32_WINNT >= 0x0502
 	if ((fls_index = FlsAlloc(NULL)) == FLS_OUT_OF_INDEXES)
 		return -1;
+#else
+	if ((fls_index = TlsAlloc()) == TLS_OUT_OF_INDEXES)
+		return -1;
+#endif
 
 	return git_runtime_shutdown_register(git_threads_global_shutdown);
 }
@@ -105,7 +118,11 @@ int git_thread_join(
 
 void git_thread_exit(void *value)
 {
+#if _WIN32_WINNT >= 0x0502
 	git_thread *thread = FlsGetValue(fls_index);
+#else
+	git_thread *thread = TlsGetValue(fls_index);
+#endif
 
 	if (thread)
 		thread->result = value;
