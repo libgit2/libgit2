@@ -322,7 +322,7 @@ extern size_t git__unescape(char *str);
  */
 GIT_INLINE(void) git__memzero(void *data, size_t size)
 {
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && (defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0501)
 	SecureZeroMemory((PVOID)data, size);
 #else
 	volatile uint8_t *scan = (volatile uint8_t *)data;
