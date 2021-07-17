@@ -39,7 +39,12 @@ GIT_BEGIN_DECL
 #if defined(_MSC_VER)
 
 typedef __int64 git_off_t;
+#if _MSC_VER >= 1400
 typedef __time64_t git_time_t;
+#else
+/* Not a time type, but keeps it 64-bit on legacy MSVC */
+typedef __int64 git_time_t;
+#endif
 
 #elif defined(__MINGW32__)
 
