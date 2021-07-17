@@ -436,6 +436,7 @@ out:
 
 int p_symlink(const char *target, const char *path)
 {
+#ifdef _WIN32_WINNT >= 0x0600
 	git_win32_path target_w, path_w;
 	DWORD dwFlags;
 
@@ -458,6 +459,10 @@ int p_symlink(const char *target, const char *path)
 		return -1;
 
 	return 0;
+#else
+	/* Symlinks are unavailable before Vista. */
+	return git_futils_fake_symlink(target, path);
+#endif
 }
 
 struct open_opts {
