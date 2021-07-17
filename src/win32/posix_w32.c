@@ -436,7 +436,7 @@ out:
 
 int p_symlink(const char *target, const char *path)
 {
-#ifdef _WIN32_WINNT >= 0x0600
+#if _WIN32_WINNT >= 0x0600
 	git_win32_path target_w, path_w;
 	DWORD dwFlags;
 
