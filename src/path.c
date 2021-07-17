@@ -2022,6 +2022,48 @@ done:
 	return supported;
 }
 
+#ifdef GIT_WIN32
+static SID_IDENTIFIER_AUTHORITY nt_authority = {SECURITY_NT_AUTHORITY};
+
+static int is_local_sys_sid(PSID owner_sid)
+{
+#if _WIN32_WINNT >= 0x0501
+	return IsWellKnownSid(owner_sid, WinLocalSystemSid);
+#else
+	PSID local_sys_sid = NULL;
+	BOOL ret;
+	if (!AllocateAndInitializeSid(&nt_authority, 1,
+		SECURITY_LOCAL_SYSTEM_RID, 0, 0, 0, 0, 0, 0, 0,
+		&local_sys_sid)) {
+		git_error_set(GIT_ERROR_OS, "couldn't get local system SID");
+		return -1;
+	}
+	ret = EqualSid(owner_sid, local_sys_sid);
+	FreeSid(local_sys_sid);
+	return (ret != FALSE) ? 0 : 1;
+#endif
+}
+
+static int is_admin_sid(PSID owner_sid)
+{
+#if _WIN32_WINNT >= 0x0501
+	return IsWellKnownSid(owner_sid, WinBuiltinAdministratorsSid);
+#else
+	PSID admins_sid = NULL;
+	BOOL ret;
+	if (!AllocateAndInitializeSid(&nt_authority, 2,
+		SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0,
+		&admins_sid)) {
+		git_error_set(GIT_ERROR_OS, "couldn't get admins SID");
+		return -1;
+	}
+	ret = EqualSid(owner_sid, admins_sid);
+	FreeSid(admins_sid);
+	return (ret != FALSE) ? 0 : 1;
+#endif
+}
+#endif
+
 int git_path_validate_system_file_ownership(const char *path)
 {
 #ifndef GIT_WIN32
@@ -2061,8 +2103,8 @@ int git_path_validate_system_file_ownership(const char *path)
 		goto cleanup;
 	}
 
-	if (IsWellKnownSid(owner_sid, WinBuiltinAdministratorsSid) ||
-	    IsWellKnownSid(owner_sid, WinLocalSystemSid)) {
+	if (is_admin_sid(owner_sid) == 0 ||
+	    is_local_sys_sid(owner_sid == 0)) {
 		ret = GIT_OK;
 		goto cleanup;
 	}
