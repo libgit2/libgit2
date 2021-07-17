@@ -336,9 +336,28 @@ GIT_INLINE(void) git__memzero(void *data, size_t size)
 
 GIT_INLINE(double) git__timer(void)
 {
+#if _WIN32_WINNT >= 0x0600
 	/* GetTickCount64 returns the number of milliseconds that have
 	 * elapsed since the system was started. */
 	return (double) GetTickCount64() / (double) 1000;
+#else
+	/* We need the initial tick count to detect if the tick
+	 * count has rolled over. */
+	static DWORD initial_tick_count = 0;
+
+	/* GetTickCount returns the number of milliseconds that have
+	 * elapsed since the system was started. */
+	DWORD count = GetTickCount();
+
+	if(initial_tick_count == 0) {
+		initial_tick_count = count;
+	} else if (count < initial_tick_count) {
+		/* The tick count has rolled over - adjust for it. */
+		count = (0xFFFFFFFF - initial_tick_count) + count;
+	}
+
+	return (double) count / (double) 1000;
+#endif
 }
 
 #elif __APPLE__
