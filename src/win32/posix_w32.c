@@ -823,6 +823,24 @@ char *p_realpath(const char *orig_path, char *buffer)
 	return buffer;
 }
 
+#if defined(_MSC_VER) && _MSC_VER < 1300
+/* _vscprintf seems to be a 2002/2003 addition to MSVC. The next easiest way
+ * to get the length of a formatted string? Why, just measure the result of
+ * fprintf writing to /dev/null! (This would be easier if _vsnprintf had the
+ * same semantics as vsnprintf...) Unsure how slow this can be, but it works.
+ */
+static int _vscprintf(const char *format, va_list argptr)
+{
+	int chars;
+	FILE *nulf = fopen("NUL", "wb");
+	if (nulf == NULL)
+		return -1;
+	chars = vfprintf(nulf, format, argptr);
+	fclose(nulf);
+	return chars;
+}
+#endif
+
 int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr)
 {
 #if defined(_MSC_VER)
