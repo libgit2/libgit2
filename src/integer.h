@@ -86,8 +86,10 @@ GIT_INLINE(int) git__is_int(int64_t p)
      __builtin_mul_overflow(one, two, out)
 # endif
 
-/* Use Microsoft's safe integer handling functions where available */
-#elif defined(_MSC_VER)
+/* Use Microsoft's safe integer handling functions where available.
+ * Seems intsafe.h is available with the Vista PSDK or VS 2010, maybe earlier
+ */
+#elif defined(_MSC_VER) && (_MSC_VER >= 1600 || (defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0600))
 
 # define ENABLE_INTSAFE_SIGNED_FUNCTIONS
 # include <intsafe.h>
