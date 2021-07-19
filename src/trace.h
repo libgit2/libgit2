@@ -47,15 +47,6 @@ GIT_INLINE(void) git_trace__write_fmt(
 }
 
 #define git_trace_level()		(git_trace__data.level)
-/* Varadic macros are a C99 feature */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
-#define git_trace(l, ...)		{ \
-									if (git_trace__data.level >= l && \
-										git_trace__data.callback != NULL) { \
-										git_trace__write_fmt(l, __VA_ARGS__); \
-									} \
-								}
-#else
 GIT_INLINE(void) git_trace(git_trace_level_t level, const char *fmt, ...)
 {
 	if (git_trace__data.level >= level &&
@@ -67,7 +58,6 @@ GIT_INLINE(void) git_trace(git_trace_level_t level, const char *fmt, ...)
 		va_end(ap);
 	}
 }
-#endif
 #else
 
 GIT_INLINE(void) git_trace__null(
