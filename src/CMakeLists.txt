@@ -6,6 +6,11 @@ IF(DEBUG_POOL)
 ENDIF()
 ADD_FEATURE_INFO(debugpool GIT_DEBUG_POOL "debug pool allocator")
 
+IF(DEBUG_STRICT_ALLOC)
+	SET(GIT_DEBUG_STRICT_ALLOC 1)
+ENDIF()
+ADD_FEATURE_INFO(debugalloc GIT_DEBUG_STRICT_ALLOC "debug strict allocators")
+
 INCLUDE(PkgBuildConfig)
 INCLUDE(SanitizeBool)
 
