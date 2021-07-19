@@ -517,13 +517,18 @@ static int cb_tag_foreach(const char *name, git_oid *oid, void *data)
 	return 0;
 }
 
-static git_pobject **compute_write_order(git_packbuilder *pb)
+static int compute_write_order(git_pobject ***out, git_packbuilder *pb)
 {
 	size_t i, wo_end, last_untagged;
 	git_pobject **wo;
 
+	*out = NULL;
+
+	if (!pb->nr_objects)
+		return 0;
+
 	if ((wo = git__mallocarray(pb->nr_objects, sizeof(*wo))) == NULL)
-		return NULL;
+		return -1;
 
 	for (i = 0; i < pb->nr_objects; i++) {
 		git_pobject *po = pb->object_list + i;
@@ -552,7 +557,7 @@ static git_pobject **compute_write_order(git_packbuilder *pb)
 	 */
 	if (git_tag_foreach(pb->repo, &cb_tag_foreach, pb) < 0) {
 		git__free(wo);
-		return NULL;
+		return -1;
 	}
 
 	/*
@@ -609,10 +614,11 @@ static git_pobject **compute_write_order(git_packbuilder *pb)
 	if (wo_end != pb->nr_objects) {
 		git__free(wo);
 		git_error_set(GIT_ERROR_INVALID, "invalid write order");
-		return NULL;
+		return -1;
 	}
 
-	return wo;
+	*out = wo;
+	return 0;
 }
 
 static int write_pack(git_packbuilder *pb,
@@ -625,15 +631,15 @@ static int write_pack(git_packbuilder *pb,
 	struct git_pack_header ph;
 	git_oid entry_oid;
 	size_t i = 0;
-	int error = 0;
+	int error;
 
-	write_order = compute_write_order(pb);
-	if (write_order == NULL)
-		return -1;
+	if ((error = compute_write_order(&write_order, pb)) < 0)
+		return error;
 
 	if (!git__is_uint32(pb->nr_objects)) {
 		git_error_set(GIT_ERROR_INVALID, "too many objects");
-		return -1;
+		error = -1;
+		goto done;
 	}
 
 	/* Write pack header */
