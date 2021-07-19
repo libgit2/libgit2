@@ -1535,7 +1535,8 @@ int git_merge_diff_list__find_renames(
 	GIT_ASSERT_ARG(diff_list);
 	GIT_ASSERT_ARG(opts);
 
-	if ((opts->flags & GIT_MERGE_FIND_RENAMES) == 0)
+	if ((opts->flags & GIT_MERGE_FIND_RENAMES) == 0 ||
+	    !diff_list->conflicts.length)
 		return 0;
 
 	similarity_ours = git__calloc(diff_list->conflicts.length,
