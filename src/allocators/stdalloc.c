@@ -9,34 +9,56 @@
 
 static void *stdalloc__malloc(size_t len, const char *file, int line)
 {
-	void *ptr = malloc(len);
+	void *ptr;
 
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
 
-	if (!ptr) git_error_set_oom();
+#ifdef GIT_DEBUG_STRICT_ALLOC
+	if (!len)
+		return NULL;
+#endif
+
+	ptr = malloc(len);
+
+	if (!ptr)
+		git_error_set_oom();
+
 	return ptr;
 }
 
 static void *stdalloc__calloc(size_t nelem, size_t elsize, const char *file, int line)
 {
-	void *ptr = calloc(nelem, elsize);
+	void *ptr;
 
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
 
-	if (!ptr) git_error_set_oom();
+#ifdef GIT_DEBUG_STRICT_ALLOC
+	if (!elsize || !nelem)
+		return NULL;
+#endif
+
+	ptr = calloc(nelem, elsize);
+
+	if (!ptr)
+		git_error_set_oom();
+
 	return ptr;
 }
 
 static char *stdalloc__strdup(const char *str, const char *file, int line)
 {
-	char *ptr = strdup(str);
+	char *ptr;
 
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
 
-	if (!ptr) git_error_set_oom();
+	ptr = strdup(str);
+
+	if (!ptr)
+		git_error_set_oom();
+
 	return ptr;
 }
 
@@ -48,7 +70,7 @@ static char *stdalloc__strndup(const char *str, size_t n, const char *file, int 
 	length = p_strnlen(str, n);
 
 	if (GIT_ADD_SIZET_OVERFLOW(&alloclength, length, 1) ||
-		!(ptr = stdalloc__malloc(alloclength, file, line)))
+	    !(ptr = stdalloc__malloc(alloclength, file, line)))
 		return NULL;
 
 	if (length)
@@ -65,7 +87,7 @@ static char *stdalloc__substrdup(const char *start, size_t n, const char *file, 
 	size_t alloclen;
 
 	if (GIT_ADD_SIZET_OVERFLOW(&alloclen, n, 1) ||
-		!(ptr = stdalloc__malloc(alloclen, file, line)))
+	    !(ptr = stdalloc__malloc(alloclen, file, line)))
 		return NULL;
 
 	memcpy(ptr, start, n);
@@ -75,12 +97,21 @@ static char *stdalloc__substrdup(const char *start, size_t n, const char *file, 
 
 static void *stdalloc__realloc(void *ptr, size_t size, const char *file, int line)
 {
-	void *new_ptr = realloc(ptr, size);
+	void *new_ptr;
 
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
 
-	if (!new_ptr) git_error_set_oom();
+#ifdef GIT_DEBUG_STRICT_ALLOC
+	if (!size)
+		return NULL;
+#endif
+
+	new_ptr = realloc(ptr, size);
+
+	if (!new_ptr)
+		git_error_set_oom();
+
 	return new_ptr;
 }
 
