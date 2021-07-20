@@ -35,7 +35,7 @@ static void *stdalloc__calloc(size_t nelem, size_t elsize, const char *file, int
 	GIT_UNUSED(line);
 
 #ifdef GIT_DEBUG_STRICT_ALLOC
-	if (!elsize)
+	if (!elsize || !nelem)
 		return NULL;
 #endif
 
