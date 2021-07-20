@@ -271,6 +271,7 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 	struct git_pack_file *last_found = backend->last_found, *p;
 	git_midx_entry midx_entry;
 	size_t i;
+	bool has_promisor = false;
 
 	if (backend->midx &&
 		git_midx_entry_find(&midx_entry, backend->midx, oid, GIT_OID_HEXSZ) == 0 &&
@@ -281,9 +282,15 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 		return 0;
 	}
 
-	if (last_found &&
-		git_pack_entry_find(e, last_found, oid, GIT_OID_HEXSZ) == 0)
-		return 0;
+	if (last_found) {
+		if (git_pack_entry_find(e, last_found, oid, GIT_OID_HEXSZ) == 0)
+			return 0;
+
+		if (last_found->pack_promisor) {
+			// if an object is referred to from a promisor pack it's "promised"
+			has_promisor = true;
+		}
+	}
 
 	git_vector_foreach(&backend->packs, i, p) {
 		if (p == last_found)
@@ -295,8 +302,12 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 		}
 	}
 
-	return git_odb__error_notfound(
-		"failed to find pack entry", oid, GIT_OID_HEXSZ);
+	if (has_promisor)
+		return git_odb__error_missing(
+			"pack entry is promised", oid, GIT_OID_HEXSZ);
+	else
+		return git_odb__error_notfound(
+			"failed to find pack entry", oid, GIT_OID_HEXSZ);
 }
 
 static int pack_entry_find_prefix(
