@@ -194,18 +194,6 @@ typedef enum {
  * Checkout will invoke an options notification callback (`notify_cb`) for
  * certain cases - you pick which ones via `notify_flags`:
  *
- * - GIT_CHECKOUT_NOTIFY_CONFLICT invokes checkout on conflicting paths.
- *
- * - GIT_CHECKOUT_NOTIFY_DIRTY notifies about "dirty" files, i.e. those that
- *   do not need an update but no longer match the baseline.  Core git
- *   displays these files when checkout runs, but won't stop the checkout.
- *
- * - GIT_CHECKOUT_NOTIFY_UPDATED sends notification for any file changed.
- *
- * - GIT_CHECKOUT_NOTIFY_UNTRACKED notifies about untracked files.
- *
- * - GIT_CHECKOUT_NOTIFY_IGNORED notifies about ignored files.
- *
  * Returning a non-zero value from this callback will cancel the checkout.
  * The non-zero return value will be propagated back and returned by the
  * git_checkout_... call.
@@ -216,10 +204,32 @@ typedef enum {
  */
 typedef enum {
 	GIT_CHECKOUT_NOTIFY_NONE      = 0,
+
+	/**
+	 * Invokes checkout on conflicting paths.
+	 */
 	GIT_CHECKOUT_NOTIFY_CONFLICT  = (1u << 0),
+
+	/**
+	 * Notifies about "dirty" files, i.e. those that do not need an update
+	 * but no longer match the baseline.  Core git displays these files when
+	 * checkout runs, but won't stop the checkout.
+	 */
 	GIT_CHECKOUT_NOTIFY_DIRTY     = (1u << 1),
+
+	/**
+	 * Sends notification for any file changed.
+	 */
 	GIT_CHECKOUT_NOTIFY_UPDATED   = (1u << 2),
+
+	/**
+	 * Notifies about untracked files.
+	 */
 	GIT_CHECKOUT_NOTIFY_UNTRACKED = (1u << 3),
+
+	/**
+	 * Notifies about ignored files.
+	 */
 	GIT_CHECKOUT_NOTIFY_IGNORED   = (1u << 4),
 
 	GIT_CHECKOUT_NOTIFY_ALL       = 0x0FFFFu

@@ -241,32 +241,43 @@ typedef enum {
  * Although this is called a "file", it could represent a file, a symbolic
  * link, a submodule commit id, or even a tree (although that only if you
  * are tracking type changes or ignored/untracked directories).
- *
- * The `id` is the `git_oid` of the item.  If the entry represents an
- * absent side of a diff (e.g. the `old_file` of a `GIT_DELTA_ADDED` delta),
- * then the oid will be zeroes.
- *
- * `path` is the NUL-terminated path to the entry relative to the working
- * directory of the repository.
- *
- * `size` is the size of the entry in bytes.
- *
- * `flags` is a combination of the `git_diff_flag_t` types
- *
- * `mode` is, roughly, the stat() `st_mode` value for the item.  This will
- * be restricted to one of the `git_filemode_t` values.
- *
- * The `id_abbrev` represents the known length of the `id` field, when
- * converted to a hex string.  It is generally `GIT_OID_HEXSZ`, unless this
- * delta was created from reading a patch file, in which case it may be
- * abbreviated to something reasonable, like 7 characters.
  */
 typedef struct {
+	/**
+	 * The `git_oid` of the item.  If the entry represents an
+	 * absent side of a diff (e.g. the `old_file` of a `GIT_DELTA_ADDED` delta),
+	 * then the oid will be zeroes.
+	 */
 	git_oid            id;
+
+	/**
+	 * The NUL-terminated path to the entry relative to the working
+	 * directory of the repository.
+	 */
 	const char        *path;
+
+	/**
+	 * The size of the entry in bytes.
+	 */
 	git_object_size_t  size;
+
+	/**
+	 * A combination of the `git_diff_flag_t` types
+	 */
 	uint32_t           flags;
+
+	/**
+	 * Roughly, the stat() `st_mode` value for the item.  This will
+	 * be restricted to one of the `git_filemode_t` values.
+	 */
 	uint16_t           mode;
+
+	/**
+	 * Represents the known length of the `id` field, when
+	 * converted to a hex string.  It is generally `GIT_OID_HEXSZ`, unless this
+	 * delta was created from reading a patch file, in which case it may be
+	 * abbreviated to something reasonable, like 7 characters.
+	 */
 	uint16_t           id_abbrev;
 } git_diff_file;
 
