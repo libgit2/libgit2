@@ -73,7 +73,7 @@ static int log_message_matches(const git_commit *commit, const char *filter);
 
 int lg2_log(git_repository *repo, int argc, char *argv[])
 {
-	int i, count = 0, printed = 0, parents, last_arg;
+	int i, count, printed, parents, last_arg;
 	struct log_state s;
 	struct log_options opt;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
@@ -96,9 +96,7 @@ int lg2_log(git_repository *repo, int argc, char *argv[])
 
 	/** Use the revwalker to traverse the history. */
 
-	printed = count = 0;
-
-	for (; !git_revwalk_next(&oid, s.walker); git_commit_free(commit)) {
+	for (printed = 0, count = 0; !git_revwalk_next(&oid, s.walker); git_commit_free(commit)) {
 		check_lg2(git_commit_lookup(&commit, s.repo, &oid),
 			"Failed to look up commit", NULL);
 
@@ -118,8 +116,6 @@ int lg2_log(git_repository *repo, int argc, char *argv[])
 						NULL, tree, GIT_PATHSPEC_NO_MATCH_ERROR, ps) != 0)
 					unmatched = 1;
 				git_tree_free(tree);
-			} else if (parents == 1) {
-				unmatched = match_with_parent(commit, 0, &diffopts) ? 0 : 1;
 			} else {
 				for (i = 0; i < parents; ++i) {
 					if (match_with_parent(commit, i, &diffopts))
@@ -424,8 +420,6 @@ static int parse_options(
 			else
 				/** Try failed revision parse as filename. */
 				break;
-		} else if (!match_arg_separator(&args)) {
-			break;
 		}
 		else if (!strcmp(a, "--date-order"))
 			set_sorting(s, GIT_SORT_TIME);
