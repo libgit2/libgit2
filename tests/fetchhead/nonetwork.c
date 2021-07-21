@@ -82,7 +82,7 @@ void test_fetchhead_nonetwork__write(void)
 	int equals = 0;
 	size_t i;
 
-	git_vector_init(&fetchhead_vector, 6, NULL);
+	cl_git_pass(git_vector_init(&fetchhead_vector, 6, NULL));
 
 	cl_set_cleanup(&cleanup_repository, "./test1");
 	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));

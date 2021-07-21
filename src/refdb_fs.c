@@ -122,7 +122,7 @@ static int packed_reload(refdb_fs_backend *backend)
 	 */
 	if (error <= 0) {
 		if (error == GIT_ENOTFOUND) {
-			git_sortedcache_clear(backend->refcache, true);
+			GIT_UNUSED(git_sortedcache_clear(backend->refcache, true));
 			git_error_clear();
 			error = 0;
 		}
@@ -131,7 +131,7 @@ static int packed_reload(refdb_fs_backend *backend)
 
 	/* At this point, refresh the packed refs from the loaded buffer. */
 
-	git_sortedcache_clear(backend->refcache, false);
+	GIT_UNUSED(git_sortedcache_clear(backend->refcache, false));
 
 	scan = (char *)packedrefs.ptr;
 	eof  = scan + packedrefs.size;
@@ -219,7 +219,7 @@ static int packed_reload(refdb_fs_backend *backend)
 parse_failed:
 	git_error_set(GIT_ERROR_REFERENCE, "corrupted packed references file");
 
-	git_sortedcache_clear(backend->refcache, false);
+	GIT_UNUSED(git_sortedcache_clear(backend->refcache, false));
 	git_sortedcache_wunlock(backend->refcache);
 	git_buf_dispose(&packedrefs);
 

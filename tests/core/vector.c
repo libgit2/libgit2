@@ -8,7 +8,7 @@ void test_core_vector__0(void)
 {
 	git_vector x;
 	int i;
-	git_vector_init(&x, 1, NULL);
+	cl_git_pass(git_vector_init(&x, 1, NULL));
 	for (i = 0; i < 10; ++i) {
 		git_vector_insert(&x, (void*) 0xabc);
 	}
@@ -21,7 +21,7 @@ void test_core_vector__1(void)
 {
 	git_vector x;
 	/* make initial capacity exact for our insertions. */
-	git_vector_init(&x, 3, NULL);
+	cl_git_pass(git_vector_init(&x, 3, NULL));
 	git_vector_insert(&x, (void*) 0xabc);
 	git_vector_insert(&x, (void*) 0xdef);
 	git_vector_insert(&x, (void*) 0x123);
@@ -76,7 +76,7 @@ void test_core_vector__3(void)
 {
 	git_vector x;
 	intptr_t i;
-	git_vector_init(&x, 1, &compare_them);
+	cl_git_pass(git_vector_init(&x, 1, &compare_them));
 
 	for (i = 0; i < 10; i += 2) {
 		git_vector_insert_sorted(&x, (void*)(i + 1), NULL);
@@ -99,7 +99,7 @@ void test_core_vector__4(void)
 {
 	git_vector x;
 	intptr_t i;
-	git_vector_init(&x, 1, &compare_them);
+	cl_git_pass(git_vector_init(&x, 1, &compare_them));
 
 	for (i = 0; i < 10; i += 2) {
 		git_vector_insert_sorted(&x, (void*)(i + 1), NULL);
@@ -163,7 +163,7 @@ void test_core_vector__5(void)
 	git_vector x;
 	int i;
 
-	git_vector_init(&x, 1, &compare_structs);
+	cl_git_pass(git_vector_init(&x, 1, &compare_structs));
 
 	for (i = 0; i < 10; i += 2)
 		git_vector_insert_sorted(&x, alloc_struct(i), &merge_structs);
@@ -205,7 +205,7 @@ void test_core_vector__remove_matching(void)
 	size_t i;
 	void *compare;
 
-	git_vector_init(&x, 1, NULL);
+	cl_git_pass(git_vector_init(&x, 1, NULL));
 	git_vector_insert(&x, (void*) 0x001);
 
 	cl_assert(x.length == 1);

@@ -26,11 +26,13 @@ typedef struct git_vector {
 
 #define GIT_VECTOR_INIT {0}
 
-int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp);
+GIT_WARN_UNUSED_RESULT int git_vector_init(
+	git_vector *v, size_t initial_size, git_vector_cmp cmp);
 void git_vector_free(git_vector *v);
 void git_vector_free_deep(git_vector *v); /* free each entry and self */
 void git_vector_clear(git_vector *v);
-int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp);
+GIT_WARN_UNUSED_RESULT int git_vector_dup(
+	git_vector *v, const git_vector *src, git_vector_cmp cmp);
 void git_vector_swap(git_vector *a, git_vector *b);
 int git_vector_size_hint(git_vector *v, size_t size_hint);
 
