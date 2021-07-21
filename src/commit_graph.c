@@ -43,7 +43,7 @@ static int commit_graph_error(const char *message)
 }
 
 static int commit_graph_parse_oid_fanout(
-		git_commit_graph_file *cgraph,
+		git_commit_graph_file *file,
 		const unsigned char *data,
 		struct git_commit_graph_chunk *chunk_oid_fanout)
 {
@@ -55,20 +55,20 @@ static int commit_graph_parse_oid_fanout(
 	if (chunk_oid_fanout->length != 256 * 4)
 		return commit_graph_error("OID Fanout chunk has wrong length");
 
-	cgraph->oid_fanout = (const uint32_t *)(data + chunk_oid_fanout->offset);
+	file->oid_fanout = (const uint32_t *)(data + chunk_oid_fanout->offset);
 	nr = 0;
 	for (i = 0; i < 256; ++i) {
-		uint32_t n = ntohl(cgraph->oid_fanout[i]);
+		uint32_t n = ntohl(file->oid_fanout[i]);
 		if (n < nr)
 			return commit_graph_error("index is non-monotonic");
 		nr = n;
 	}
-	cgraph->num_commits = nr;
+	file->num_commits = nr;
 	return 0;
 }
 
 static int commit_graph_parse_oid_lookup(
-		git_commit_graph_file *cgraph,
+		git_commit_graph_file *file,
 		const unsigned char *data,
 		struct git_commit_graph_chunk *chunk_oid_lookup)
 {
@@ -79,12 +79,12 @@ static int commit_graph_parse_oid_lookup(
 		return commit_graph_error("missing OID Lookup chunk");
 	if (chunk_oid_lookup->length == 0)
 		return commit_graph_error("empty OID Lookup chunk");
-	if (chunk_oid_lookup->length != cgraph->num_commits * GIT_OID_RAWSZ)
+	if (chunk_oid_lookup->length != file->num_commits * GIT_OID_RAWSZ)
 		return commit_graph_error("OID Lookup chunk has wrong length");
 
-	cgraph->oid_lookup = oid = (git_oid *)(data + chunk_oid_lookup->offset);
+	file->oid_lookup = oid = (git_oid *)(data + chunk_oid_lookup->offset);
 	prev_oid = &zero_oid;
-	for (i = 0; i < cgraph->num_commits; ++i, ++oid) {
+	for (i = 0; i < file->num_commits; ++i, ++oid) {
 		if (git_oid_cmp(prev_oid, oid) >= 0)
 			return commit_graph_error("OID Lookup index is non-monotonic");
 		prev_oid = oid;
@@ -94,7 +94,7 @@ static int commit_graph_parse_oid_lookup(
 }
 
 static int commit_graph_parse_commit_data(
-		git_commit_graph_file *cgraph,
+		git_commit_graph_file *file,
 		const unsigned char *data,
 		struct git_commit_graph_chunk *chunk_commit_data)
 {
@@ -102,16 +102,16 @@ static int commit_graph_parse_commit_data(
 		return commit_graph_error("missing Commit Data chunk");
 	if (chunk_commit_data->length == 0)
 		return commit_graph_error("empty Commit Data chunk");
-	if (chunk_commit_data->length != cgraph->num_commits * (GIT_OID_RAWSZ + 16))
+	if (chunk_commit_data->length != file->num_commits * (GIT_OID_RAWSZ + 16))
 		return commit_graph_error("Commit Data chunk has wrong length");
 
-	cgraph->commit_data = data + chunk_commit_data->offset;
+	file->commit_data = data + chunk_commit_data->offset;
 
 	return 0;
 }
 
 static int commit_graph_parse_extra_edge_list(
-		git_commit_graph_file *cgraph,
+		git_commit_graph_file *file,
 		const unsigned char *data,
 		struct git_commit_graph_chunk *chunk_extra_edge_list)
 {
@@ -120,13 +120,16 @@ static int commit_graph_parse_extra_edge_list(
 	if (chunk_extra_edge_list->length % 4 != 0)
 		return commit_graph_error("malformed Extra Edge List chunk");
 
-	cgraph->extra_edge_list = data + chunk_extra_edge_list->offset;
-	cgraph->num_extra_edge_list = chunk_extra_edge_list->length / 4;
+	file->extra_edge_list = data + chunk_extra_edge_list->offset;
+	file->num_extra_edge_list = chunk_extra_edge_list->length / 4;
 
 	return 0;
 }
 
-int git_commit_graph_parse(git_commit_graph_file *cgraph, const unsigned char *data, size_t size)
+int git_commit_graph_file_parse(
+		git_commit_graph_file *file,
+		const unsigned char *data,
+		size_t size)
 {
 	struct git_commit_graph_header *hdr;
 	const unsigned char *chunk_hdr;
@@ -139,7 +142,7 @@ int git_commit_graph_parse(git_commit_graph_file *cgraph, const unsigned char *d
 				      chunk_commit_data = {0}, chunk_extra_edge_list = {0},
 				      chunk_unsupported = {0};
 
-	GIT_ASSERT_ARG(cgraph);
+	GIT_ASSERT_ARG(file);
 
 	if (size < sizeof(struct git_commit_graph_header) + GIT_OID_RAWSZ)
 		return commit_graph_error("commit-graph is too short");
@@ -161,11 +164,11 @@ int git_commit_graph_parse(git_commit_graph_file *cgraph, const unsigned char *d
 	trailer_offset = size - GIT_OID_RAWSZ;
 	if (trailer_offset < last_chunk_offset)
 		return commit_graph_error("wrong commit-graph size");
-	git_oid_cpy(&cgraph->checksum, (git_oid *)(data + trailer_offset));
+	git_oid_cpy(&file->checksum, (git_oid *)(data + trailer_offset));
 
 	if (git_hash_buf(&cgraph_checksum, data, (size_t)trailer_offset) < 0)
 		return commit_graph_error("could not calculate signature");
-	if (!git_oid_equal(&cgraph_checksum, &cgraph->checksum))
+	if (!git_oid_equal(&cgraph_checksum, &file->checksum))
 		return commit_graph_error("index signature mismatch");
 
 	chunk_hdr = data + sizeof(struct git_commit_graph_header);
@@ -214,25 +217,60 @@ int git_commit_graph_parse(git_commit_graph_file *cgraph, const unsigned char *d
 	}
 	last_chunk->length = (size_t)(trailer_offset - last_chunk_offset);
 
-	error = commit_graph_parse_oid_fanout(cgraph, data, &chunk_oid_fanout);
+	error = commit_graph_parse_oid_fanout(file, data, &chunk_oid_fanout);
 	if (error < 0)
 		return error;
-	error = commit_graph_parse_oid_lookup(cgraph, data, &chunk_oid_lookup);
+	error = commit_graph_parse_oid_lookup(file, data, &chunk_oid_lookup);
 	if (error < 0)
 		return error;
-	error = commit_graph_parse_commit_data(cgraph, data, &chunk_commit_data);
+	error = commit_graph_parse_commit_data(file, data, &chunk_commit_data);
 	if (error < 0)
 		return error;
-	error = commit_graph_parse_extra_edge_list(cgraph, data, &chunk_extra_edge_list);
+	error = commit_graph_parse_extra_edge_list(file, data, &chunk_extra_edge_list);
 	if (error < 0)
 		return error;
 
 	return 0;
 }
 
-int git_commit_graph_open(git_commit_graph_file **cgraph_out, const char *path)
+int git_commit_graph_new(git_commit_graph **cgraph_out, const char *objects_dir, bool open_file)
 {
-	git_commit_graph_file *cgraph;
+	git_commit_graph *cgraph = NULL;
+	int error = 0;
+
+	GIT_ASSERT_ARG(cgraph_out);
+	GIT_ASSERT_ARG(objects_dir);
+
+	cgraph = git__calloc(1, sizeof(git_commit_graph));
+	GIT_ERROR_CHECK_ALLOC(cgraph);
+
+	error = git_buf_joinpath(&cgraph->filename, objects_dir, "info/commit-graph");
+	if (error < 0)
+		goto error;
+
+	if (open_file) {
+		error = git_commit_graph_file_open(&cgraph->file, git_buf_cstr(&cgraph->filename));
+		if (error < 0)
+			goto error;
+		cgraph->checked = 1;
+	}
+
+	*cgraph_out = cgraph;
+	return 0;
+
+error:
+	git_commit_graph_free(cgraph);
+	return error;
+}
+
+int git_commit_graph_open(git_commit_graph **cgraph_out, const char *objects_dir)
+{
+	return git_commit_graph_new(cgraph_out, objects_dir, true);
+}
+
+int git_commit_graph_file_open(git_commit_graph_file **file_out, const char *path)
+{
+	git_commit_graph_file *file;
 	git_file fd = -1;
 	size_t cgraph_size;
 	struct stat st;
@@ -245,56 +283,92 @@ int git_commit_graph_open(git_commit_graph_file **cgraph_out, const char *path)
 
 	if (p_fstat(fd, &st) < 0) {
 		p_close(fd);
-		git_error_set(GIT_ERROR_ODB, "multi-pack-index file not found - '%s'", path);
-		return -1;
+		git_error_set(GIT_ERROR_ODB, "commit-graph file not found - '%s'", path);
+		return GIT_ENOTFOUND;
 	}
 
 	if (!S_ISREG(st.st_mode) || !git__is_sizet(st.st_size)) {
 		p_close(fd);
 		git_error_set(GIT_ERROR_ODB, "invalid pack index '%s'", path);
-		return -1;
+		return GIT_ENOTFOUND;
 	}
 	cgraph_size = (size_t)st.st_size;
 
-	cgraph = git__calloc(1, sizeof(git_commit_graph_file));
-	GIT_ERROR_CHECK_ALLOC(cgraph);
+	file = git__calloc(1, sizeof(git_commit_graph_file));
+	GIT_ERROR_CHECK_ALLOC(file);
 
-	error = git_buf_sets(&cgraph->filename, path);
-	if (error < 0)
-		return error;
-
-	error = git_futils_mmap_ro(&cgraph->graph_map, fd, 0, cgraph_size);
+	error = git_futils_mmap_ro(&file->graph_map, fd, 0, cgraph_size);
 	p_close(fd);
 	if (error < 0) {
-		git_commit_graph_free(cgraph);
+		git_commit_graph_file_free(file);
 		return error;
 	}
 
-	if ((error = git_commit_graph_parse(cgraph, cgraph->graph_map.data, cgraph_size)) < 0) {
-		git_commit_graph_free(cgraph);
+	if ((error = git_commit_graph_file_parse(file, file->graph_map.data, cgraph_size)) < 0) {
+		git_commit_graph_file_free(file);
 		return error;
 	}
 
-	*cgraph_out = cgraph;
+	*file_out = file;
 	return 0;
+}
+
+int git_commit_graph_get_file(git_commit_graph_file **file_out, git_commit_graph *cgraph)
+{
+	if (!cgraph->checked) {
+		int error = 0;
+		git_commit_graph_file *result = NULL;
+
+		/* We only check once, no matter the result. */
+		cgraph->checked = 1;
+
+		/* Best effort */
+		error = git_commit_graph_file_open(&result, git_buf_cstr(&cgraph->filename));
+
+		if (error < 0)
+			return error;
+
+		cgraph->file = result;
+	}
+	if (!cgraph->file)
+		return GIT_ENOTFOUND;
+
+	*file_out = cgraph->file;
+	return 0;
+}
+
+void git_commit_graph_refresh(git_commit_graph *cgraph)
+{
+	if (!cgraph->checked)
+		return;
+
+	if (cgraph->file
+	    && git_commit_graph_file_needs_refresh(cgraph->file, git_buf_cstr(&cgraph->filename))) {
+		/* We just free the commit graph. The next time it is requested, it will be
+		 * re-loaded. */
+		git_commit_graph_file_free(cgraph->file);
+		cgraph->file = NULL;
+	}
+	/* Force a lazy re-check next time it is needed. */
+	cgraph->checked = 0;
 }
 
 static int git_commit_graph_entry_get_byindex(
 		git_commit_graph_entry *e,
-		const git_commit_graph_file *cgraph,
+		const git_commit_graph_file *file,
 		size_t pos)
 {
 	const unsigned char *commit_data;
 
 	GIT_ASSERT_ARG(e);
-	GIT_ASSERT_ARG(cgraph);
+	GIT_ASSERT_ARG(file);
 
-	if (pos >= cgraph->num_commits) {
+	if (pos >= file->num_commits) {
 		git_error_set(GIT_ERROR_INVALID, "commit index %zu does not exist", pos);
 		return GIT_ENOTFOUND;
 	}
 
-	commit_data = cgraph->commit_data + pos * (GIT_OID_RAWSZ + 4 * sizeof(uint32_t));
+	commit_data = file->commit_data + pos * (GIT_OID_RAWSZ + 4 * sizeof(uint32_t));
 	git_oid_cpy(&e->tree_oid, (const git_oid *)commit_data);
 	e->parent_indices[0] = ntohl(*((uint32_t *)(commit_data + GIT_OID_RAWSZ)));
 	e->parent_indices[1]
@@ -310,7 +384,7 @@ static int git_commit_graph_entry_get_byindex(
 		uint32_t extra_edge_list_pos = e->parent_indices[1] & 0x7fffffff;
 
 		/* Make sure we're not being sent out of bounds */
-		if (extra_edge_list_pos >= cgraph->num_extra_edge_list) {
+		if (extra_edge_list_pos >= file->num_extra_edge_list) {
 			git_error_set(GIT_ERROR_INVALID,
 				      "commit %u does not exist",
 				      extra_edge_list_pos);
@@ -318,9 +392,9 @@ static int git_commit_graph_entry_get_byindex(
 		}
 
 		e->extra_parents_index = extra_edge_list_pos;
-		while (extra_edge_list_pos < cgraph->num_extra_edge_list
+		while (extra_edge_list_pos < file->num_extra_edge_list
 		       && (ntohl(*(
-					   (uint32_t *)(cgraph->extra_edge_list
+					   (uint32_t *)(file->extra_edge_list
 							+ extra_edge_list_pos * sizeof(uint32_t))))
 			   & 0x80000000u)
 				       == 0) {
@@ -329,19 +403,16 @@ static int git_commit_graph_entry_get_byindex(
 		}
 
 	}
-	git_oid_cpy(&e->sha1, &cgraph->oid_lookup[pos]);
+	git_oid_cpy(&e->sha1, &file->oid_lookup[pos]);
 	return 0;
 }
 
-bool git_commit_graph_needs_refresh(const git_commit_graph_file *cgraph, const char *path)
+bool git_commit_graph_file_needs_refresh(const git_commit_graph_file *file, const char *path)
 {
 	git_file fd = -1;
 	struct stat st;
 	ssize_t bytes_read;
 	git_oid cgraph_checksum = {{0}};
-
-	if (path == NULL)
-		path = git_buf_cstr(&cgraph->filename);
 
 	/* TODO: properly open the file without access time using O_NOATIME */
 	fd = git_futils_open_ro(path);
@@ -354,7 +425,7 @@ bool git_commit_graph_needs_refresh(const git_commit_graph_file *cgraph, const c
 	}
 
 	if (!S_ISREG(st.st_mode) || !git__is_sizet(st.st_size)
-	    || (size_t)st.st_size != cgraph->graph_map.len) {
+	    || (size_t)st.st_size != file->graph_map.len) {
 		p_close(fd);
 		return true;
 	}
@@ -364,12 +435,12 @@ bool git_commit_graph_needs_refresh(const git_commit_graph_file *cgraph, const c
 	if (bytes_read != GIT_OID_RAWSZ)
 		return true;
 
-	return !git_oid_equal(&cgraph_checksum, &cgraph->checksum);
+	return !git_oid_equal(&cgraph_checksum, &file->checksum);
 }
 
 int git_commit_graph_entry_find(
 		git_commit_graph_entry *e,
-		const git_commit_graph_file *cgraph,
+		const git_commit_graph_file *file,
 		const git_oid *short_oid,
 		size_t len)
 {
@@ -378,31 +449,31 @@ int git_commit_graph_entry_find(
 	const git_oid *current = NULL;
 
 	GIT_ASSERT_ARG(e);
-	GIT_ASSERT_ARG(cgraph);
+	GIT_ASSERT_ARG(file);
 	GIT_ASSERT_ARG(short_oid);
 
-	hi = ntohl(cgraph->oid_fanout[(int)short_oid->id[0]]);
-	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(cgraph->oid_fanout[(int)short_oid->id[0] - 1]));
+	hi = ntohl(file->oid_fanout[(int)short_oid->id[0]]);
+	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(file->oid_fanout[(int)short_oid->id[0] - 1]));
 
-	pos = git_pack__lookup_sha1(cgraph->oid_lookup, GIT_OID_RAWSZ, lo, hi, short_oid->id);
+	pos = git_pack__lookup_sha1(file->oid_lookup, GIT_OID_RAWSZ, lo, hi, short_oid->id);
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */
 		found = 1;
-		current = cgraph->oid_lookup + pos;
+		current = file->oid_lookup + pos;
 	} else {
 		/* No object was found */
 		/* pos refers to the object with the "closest" oid to short_oid */
 		pos = -1 - pos;
-		if (pos < (int)cgraph->num_commits) {
-			current = cgraph->oid_lookup + pos;
+		if (pos < (int)file->num_commits) {
+			current = file->oid_lookup + pos;
 
 			if (!git_oid_ncmp(short_oid, current, len))
 				found = 1;
 		}
 	}
 
-	if (found && len != GIT_OID_HEXSZ && pos + 1 < (int)cgraph->num_commits) {
+	if (found && len != GIT_OID_HEXSZ && pos + 1 < (int)file->num_commits) {
 		/* Check for ambiguousity */
 		const git_oid *next = current + 1;
 
@@ -413,22 +484,22 @@ int git_commit_graph_entry_find(
 
 	if (!found)
 		return git_odb__error_notfound(
-				"failed to find offset for multi-pack index entry", short_oid, len);
+				"failed to find offset for commit-graph index entry", short_oid, len);
 	if (found > 1)
 		return git_odb__error_ambiguous(
-				"found multiple offsets for multi-pack index entry");
+				"found multiple offsets for commit-graph index entry");
 
-	return git_commit_graph_entry_get_byindex(e, cgraph, pos);
+	return git_commit_graph_entry_get_byindex(e, file, pos);
 }
 
 int git_commit_graph_entry_parent(
 		git_commit_graph_entry *parent,
-		const git_commit_graph_file *cgraph,
+		const git_commit_graph_file *file,
 		const git_commit_graph_entry *entry,
 		size_t n)
 {
 	GIT_ASSERT_ARG(parent);
-	GIT_ASSERT_ARG(cgraph);
+	GIT_ASSERT_ARG(file);
 
 	if (n >= entry->parent_count) {
 		git_error_set(GIT_ERROR_INVALID, "parent index %zu does not exist", n);
@@ -436,35 +507,43 @@ int git_commit_graph_entry_parent(
 	}
 
 	if (n == 0 || (n == 1 && entry->parent_count == 2))
-		return git_commit_graph_entry_get_byindex(parent, cgraph, entry->parent_indices[n]);
+		return git_commit_graph_entry_get_byindex(parent, file, entry->parent_indices[n]);
 
 	return git_commit_graph_entry_get_byindex(
 			parent,
-			cgraph,
+			file,
 			ntohl(
-					*(uint32_t *)(cgraph->extra_edge_list
+					*(uint32_t *)(file->extra_edge_list
 						      + (entry->extra_parents_index + n - 1)
 								      * sizeof(uint32_t)))
 					& 0x7fffffff);
 }
 
-
-int git_commit_graph_close(git_commit_graph_file *cgraph)
+int git_commit_graph_file_close(git_commit_graph_file *file)
 {
-	GIT_ASSERT_ARG(cgraph);
+	GIT_ASSERT_ARG(file);
 
-	if (cgraph->graph_map.data)
-		git_futils_mmap_free(&cgraph->graph_map);
+	if (file->graph_map.data)
+		git_futils_mmap_free(&file->graph_map);
 
 	return 0;
 }
 
-void git_commit_graph_free(git_commit_graph_file *cgraph)
+void git_commit_graph_free(git_commit_graph *cgraph)
 {
 	if (!cgraph)
 		return;
 
 	git_buf_dispose(&cgraph->filename);
-	git_commit_graph_close(cgraph);
+	git_commit_graph_file_free(cgraph->file);
 	git__free(cgraph);
+}
+
+void git_commit_graph_file_free(git_commit_graph_file *file)
+{
+	if (!file)
+		return;
+
+	git_commit_graph_file_close(file);
+	git__free(file);
 }

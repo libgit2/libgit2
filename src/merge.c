@@ -387,7 +387,7 @@ static int paint_down_to_common(
 	int error;
 	unsigned int i;
 
-	if (git_pqueue_init(&list, 0, twos->length * 2, git_commit_list_time_cmp) < 0)
+	if (git_pqueue_init(&list, 0, twos->length * 2, git_commit_list_generation_cmp) < 0)
 		return -1;
 
 	one->flags |= PARENT1;

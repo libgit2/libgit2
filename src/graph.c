@@ -43,7 +43,7 @@ static int mark_parents(git_revwalk *walk, git_commit_list_node *one,
 		return 0;
 	}
 
-	if (git_pqueue_init(&list, 0, 2, git_commit_list_time_cmp) < 0)
+	if (git_pqueue_init(&list, 0, 2, git_commit_list_generation_cmp) < 0)
 		return -1;
 
 	if (git_commit_list_parse(walk, one) < 0)
