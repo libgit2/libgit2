@@ -468,7 +468,7 @@ cleanup:
 	return error;
 }
 
-int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname)
+static int git_branch_upstream_with_format(git_buf *buf, git_repository *repo, const char *refname, const char *format, const char *format_name)
 {
 	int error;
 	git_config *cfg;
@@ -480,16 +480,26 @@ int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *r
 		return error;
 
 	if ((error = git_buf_sanitize(buf)) < 0 ||
-	    (error = retrieve_upstream_configuration(buf, cfg, refname, "branch.%s.remote")) < 0)
+	    (error = retrieve_upstream_configuration(buf, cfg, refname, format)) < 0)
 		return error;
 
 	if (git_buf_len(buf) == 0) {
-		git_error_set(GIT_ERROR_REFERENCE, "branch '%s' does not have an upstream remote", refname);
+		git_error_set(GIT_ERROR_REFERENCE, "branch '%s' does not have an upstream %s", refname, format_name);
 		error = GIT_ENOTFOUND;
 		git_buf_clear(buf);
 	}
 
 	return error;
+}
+
+int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname)
+{
+	return git_branch_upstream_with_format(buf, repo, refname, "branch.%s.remote", "remote");
+}
+
+int git_branch_upstream_merge(git_buf *buf, git_repository *repo, const char *refname)
+{
+	return git_branch_upstream_with_format(buf, repo, refname, "branch.%s.merge", "merge");
 }
 
 int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refname)
