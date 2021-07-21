@@ -2,10 +2,19 @@
 #include "refs.h"
 
 static git_repository *g_repo;
+static int read_head_tracker;
 
-void test_refs_lookup__initialize(void)
+void test_refs_lookup__initialize_fs(void)
 {
 	g_repo = cl_git_sandbox_init("testrepo.git");
+	read_head_tracker = 1;
+}
+
+void test_refs_lookup__initialize_reftable(void)
+{
+	g_repo = cl_git_sandbox_init("testrepo-reftable.git");
+	/* HEAD_TRACKER is a backwards-compatibility only file in reftable */
+	read_head_tracker = 0;
 }
 
 void test_refs_lookup__cleanup(void)
@@ -25,9 +34,11 @@ void test_refs_lookup__with_resolve(void)
 	cl_assert(git_reference_cmp(a, b) == 0);
 	git_reference_free(b);
 
-	cl_git_pass(git_reference_lookup_resolved(&b, g_repo, "HEAD_TRACKER", 5));
-	cl_assert(git_reference_cmp(a, b) == 0);
-	git_reference_free(b);
+	if (read_head_tracker) {
+		cl_git_pass(git_reference_lookup_resolved(&b, g_repo, "HEAD_TRACKER", 5));
+		cl_assert(git_reference_cmp(a, b) == 0);
+		git_reference_free(b);
+	}
 
 	git_reference_free(a);
 }

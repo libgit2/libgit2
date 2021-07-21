@@ -9,10 +9,15 @@
 static const char *g_email = "foo@example.com";
 static git_repository *g_repo;
 
-/* Fixture setup and teardown */
-void test_refs_reflog_messages__initialize(void)
+void test_refs_reflog_messages__initialize_fs(void)
 {
 	g_repo = cl_git_sandbox_init("testrepo.git");
+	cl_git_pass(git_repository_set_ident(g_repo, "Foo Bar", g_email));
+}
+
+void test_refs_reflog_messages__initialize_reftable(void)
+{
+	g_repo = cl_git_sandbox_init("testrepo-reftable.git");
 	cl_git_pass(git_repository_set_ident(g_repo, "Foo Bar", g_email));
 }
 

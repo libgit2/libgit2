@@ -1437,6 +1437,8 @@ static int check_valid_extension(const git_config_entry *entry, void *payload)
 
 	if (!strcmp(entry->name, "extensions.noop"))
 		return 0;
+	if (!strcasecmp(entry->name, "extensions.refStorage"))
+		return 0;
 
 	git_error_set(GIT_ERROR_REPOSITORY, "unsupported extension name %s", entry->name);
 	return -1;

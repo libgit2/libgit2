@@ -4,12 +4,23 @@
 static git_repository *repo;
 static git_reference *fake_remote;
 
-void test_refs_branches_iterator__initialize(void)
+void test_refs_branches_iterator__initialize_fs(void)
 {
 	git_oid id;
 
 	cl_fixture_sandbox("testrepo.git");
 	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
+
+	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
+	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL));
+}
+
+void test_refs_branches_iterator__initialize_reftable(void)
+{
+	git_oid id;
+
+	cl_fixture_sandbox("testrepo-reftable.git");
+	cl_git_pass(git_repository_open(&repo, "testrepo-reftable.git"));
 
 	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
 	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL));

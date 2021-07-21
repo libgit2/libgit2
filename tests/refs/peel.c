@@ -3,9 +3,15 @@
 static git_repository *g_repo;
 static git_repository *g_peel_repo;
 
-void test_refs_peel__initialize(void)
+void test_refs_peel__initialize_fs(void)
 {
 	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
+	cl_git_pass(git_repository_open(&g_peel_repo, cl_fixture("peeled.git")));
+}
+
+void test_refs_peel__initialize_reftable(void)
+{
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo-reftable.git")));
 	cl_git_pass(git_repository_open(&g_peel_repo, cl_fixture("peeled.git")));
 }
 

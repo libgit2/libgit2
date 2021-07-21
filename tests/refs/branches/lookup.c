@@ -4,11 +4,14 @@
 static git_repository *repo;
 static git_reference *branch;
 
-void test_refs_branches_lookup__initialize(void)
+void test_refs_branches_lookup__initialize_fs(void)
 {
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+}
 
-	branch = NULL;
+void test_refs_branches_lookup__initialize_reftable(void)
+{
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo-reftable.git")));
 }
 
 void test_refs_branches_lookup__cleanup(void)

@@ -7,16 +7,30 @@
 
 static git_repository *repo;
 static git_reference *fake_remote;
+static int is_filesystem_based;
 
-void test_refs_branches_delete__initialize(void)
+void test_refs_branches_delete__initialize_fs(void)
 {
 	git_oid id;
 
 	repo = cl_git_sandbox_init("testrepo.git");
+	is_filesystem_based = 1;
 
 	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
 	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL));
 }
+
+void test_refs_branches_delete__initialize_reftable(void)
+{
+	git_oid id;
+
+	repo = cl_git_sandbox_init("testrepo-reftable.git");
+	is_filesystem_based = 0;
+
+	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
+	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL));
+}
+
 
 void test_refs_branches_delete__cleanup(void)
 {
@@ -122,6 +136,13 @@ void test_refs_branches_delete__removes_reflog(void)
 	git_oid oidzero = {{0}};
 	git_signature *sig;
 
+	/*
+	 * This is rather a specialty of how the filesystem-based reflog
+	 * behaves. Reftable will not remove the reflog on branch deletion.
+	 */
+	if (!is_filesystem_based)
+		cl_skip();
+
 	/* Ensure the reflog has at least one entry */
 	cl_git_pass(git_signature_now(&sig, "Me", "user@example.com"));
 	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/track-local"));
@@ -155,6 +176,9 @@ void test_refs_branches_delete__removes_empty_folders(void)
 
 	git_buf ref_folder = GIT_BUF_INIT;
 	git_buf reflog_folder = GIT_BUF_INIT;
+
+	if (!is_filesystem_based)
+		cl_skip();
 
 	/* Create a new branch with a nested name */
 	cl_git_pass(git_oid_fromstr(&commit_id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));

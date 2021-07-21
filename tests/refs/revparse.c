@@ -130,9 +130,14 @@ static void test_invalid_revspec(const char* invalid_spec)
 		GIT_EINVALIDSPEC, git_revparse(&revspec, g_repo, invalid_spec));
 }
 
-void test_refs_revparse__initialize(void)
+void test_refs_revparse__initialize_fs(void)
 {
 	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
+}
+
+void test_refs_revparse__initialize_reftable(void)
+{
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo-reftable.git")));
 }
 
 void test_refs_revparse__cleanup(void)
@@ -292,7 +297,7 @@ void test_refs_revparse__upstream(void)
 void test_refs_revparse__ordinal(void)
 {
 	assert_invalid_single_spec("master@{-2}");
-	
+
 	/* TODO: make the test below actually fail
 	 * cl_git_fail(git_revparse_single(&g_obj, g_repo, "master@{1a}"));
 	 */
@@ -555,7 +560,7 @@ void test_refs_revparse__a_too_short_objectid_returns_EAMBIGUOUS(void)
 /*
  * $ echo "aabqhq" | git hash-object -t blob --stdin
  * dea509d0b3cb8ee0650f6ca210bc83f4678851ba
- * 
+ *
  * $ echo "aaazvc" | git hash-object -t blob --stdin
  * dea509d097ce692e167dfc6a48a7a280cc5e877e
  */
@@ -569,11 +574,11 @@ void test_refs_revparse__a_not_precise_enough_objectid_returns_EAMBIGUOUS(void)
 
 	cl_git_mkfile("testrepo/one.txt", "aabqhq\n");
 	cl_git_mkfile("testrepo/two.txt", "aaazvc\n");
-	
+
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_add_bypath(index, "one.txt"));
 	cl_git_pass(git_index_add_bypath(index, "two.txt"));
-	
+
 	cl_git_fail_with(git_revparse_single(&obj, repo, "dea509d0"), GIT_EAMBIGUOUS);
 
 	cl_git_pass(git_revparse_single(&obj, repo, "dea509d09"));
@@ -588,7 +593,7 @@ void test_refs_revparse__issue_994(void)
 	git_repository *repo;
 	git_reference *head, *with_at;
 	git_object *target;
-	
+
 	repo = cl_git_sandbox_init("testrepo.git");
 
 	cl_assert_equal_i(GIT_ENOTFOUND,

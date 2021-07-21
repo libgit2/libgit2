@@ -8,9 +8,15 @@ static git_repository *g_repo;
 
 static const char *loose_tag_ref_name = "refs/tags/e90810b";
 
-void test_refs_basic__initialize(void)
+void test_refs_basic__initialize_fs(void)
 {
 	g_repo = cl_git_sandbox_init("testrepo");
+	cl_git_pass(git_repository_set_ident(g_repo, "me", "foo@example.com"));
+}
+
+void test_refs_basic__initialize_reftable(void)
+{
+	g_repo = cl_git_sandbox_init("testrepo-reftable");
 	cl_git_pass(git_repository_set_ident(g_repo, "me", "foo@example.com"));
 }
 

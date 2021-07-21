@@ -9,11 +9,23 @@ static const char *current_master_tip = "099fabac3a9ea935598528c27f866e34089c2ef
 static const char *current_head_target = "refs/heads/master";
 
 static git_repository *g_repo;
+static const char *g_repo_name;
+static int is_filesystem_based;
 
-void test_refs_create__initialize(void)
+void test_refs_create__initialize_fs(void)
 {
-	g_repo = cl_git_sandbox_init("testrepo");
+	g_repo_name = "testrepo";
+	g_repo = cl_git_sandbox_init(g_repo_name);
 	p_fsync__cnt = 0;
+	is_filesystem_based = 1;
+}
+
+void test_refs_create__initialize_reftable(void)
+{
+	g_repo_name = "testrepo-reftable";
+	g_repo = cl_git_sandbox_init("testrepo-reftable");
+	p_fsync__cnt = 0;
+	is_filesystem_based = 0;
 }
 
 void test_refs_create__cleanup(void)
@@ -42,7 +54,8 @@ void test_refs_create__symbolic(void)
 	/* Ensure the reference can be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head_tracker));
 	cl_assert(git_reference_type(looked_up_ref) & GIT_REFERENCE_SYMBOLIC);
-	cl_assert(reference_is_packed(looked_up_ref) == 0);
+	if (is_filesystem_based)
+		cl_assert(reference_is_packed(looked_up_ref) == 0);
 	cl_assert_equal_s(looked_up_ref->name, new_head_tracker);
 
 	/* ...peeled.. */
@@ -55,7 +68,7 @@ void test_refs_create__symbolic(void)
 	git_reference_free(resolved_ref);
 
 	/* Similar test with a fresh new repository */
-	cl_git_pass(git_repository_open(&repo2, "testrepo"));
+	cl_git_pass(git_repository_open(&repo2, g_repo_name));
 
 	cl_git_pass(git_reference_lookup(&looked_up_ref, repo2, new_head_tracker));
 	cl_git_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
@@ -92,7 +105,8 @@ void test_refs_create__symbolic_with_arbitrary_content(void)
 	/* Ensure the reference can be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head_tracker));
 	cl_assert(git_reference_type(looked_up_ref) & GIT_REFERENCE_SYMBOLIC);
-	cl_assert(reference_is_packed(looked_up_ref) == 0);
+	if (is_filesystem_based)
+		cl_assert(reference_is_packed(looked_up_ref) == 0);
 	cl_assert_equal_s(looked_up_ref->name, new_head_tracker);
 	git_reference_free(looked_up_ref);
 
@@ -100,12 +114,13 @@ void test_refs_create__symbolic_with_arbitrary_content(void)
 	cl_assert_equal_s(git_reference_symbolic_target(new_reference), arbitrary_target);
 
 	/* Similar test with a fresh new repository object */
-	cl_git_pass(git_repository_open(&repo2, "testrepo"));
+	cl_git_pass(git_repository_open(&repo2, g_repo_name));
 
 	/* Ensure the reference can be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, repo2, new_head_tracker));
 	cl_assert(git_reference_type(looked_up_ref) & GIT_REFERENCE_SYMBOLIC);
-	cl_assert(reference_is_packed(looked_up_ref) == 0);
+	if (is_filesystem_based)
+		cl_assert(reference_is_packed(looked_up_ref) == 0);
 	cl_assert_equal_s(looked_up_ref->name, new_head_tracker);
 
 	/* Ensure the target is what we expect it to be */
@@ -153,7 +168,8 @@ void test_refs_create__oid(void)
 	/* Ensure the reference can be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head));
 	cl_assert(git_reference_type(looked_up_ref) & GIT_REFERENCE_DIRECT);
-	cl_assert(reference_is_packed(looked_up_ref) == 0);
+	if (is_filesystem_based)
+		cl_assert(reference_is_packed(looked_up_ref) == 0);
 	cl_assert_equal_s(looked_up_ref->name, new_head);
 
 	/* ...and that it points to the current master tip */
@@ -161,7 +177,7 @@ void test_refs_create__oid(void)
 	git_reference_free(looked_up_ref);
 
 	/* Similar test with a fresh new repository */
-	cl_git_pass(git_repository_open(&repo2, "testrepo"));
+	cl_git_pass(git_repository_open(&repo2, g_repo_name));
 
 	cl_git_pass(git_reference_lookup(&looked_up_ref, repo2, new_head));
 	cl_assert_equal_oid(&id, git_reference_target(looked_up_ref));
@@ -231,8 +247,7 @@ void test_refs_create__existing_dir_propagates_edirectory(void)
 
 	/* Create and write the new object id reference */
 	cl_git_pass(git_reference_create(&new_reference, g_repo, dir_head, &id, 1, NULL));
-	cl_git_fail_with(GIT_EDIRECTORY,
-		git_reference_create(&fail_reference, g_repo, fail_head, &id, false, NULL));
+	cl_git_fail(git_reference_create(&fail_reference, g_repo, fail_head, &id, false, NULL));
 
 	git_reference_free(new_reference);
 }
@@ -332,8 +347,9 @@ static void count_fsyncs(size_t *create_count, size_t *compress_count)
 void test_refs_create__does_not_fsync_by_default(void)
 {
 	size_t create_count, compress_count;
+	if (!is_filesystem_based)
+		cl_skip();
 	count_fsyncs(&create_count, &compress_count);
-
 	cl_assert_equal_i(0, create_count);
 	cl_assert_equal_i(0, compress_count);
 }
@@ -341,6 +357,9 @@ void test_refs_create__does_not_fsync_by_default(void)
 void test_refs_create__fsyncs_when_global_opt_set(void)
 {
 	size_t create_count, compress_count;
+
+	if (!is_filesystem_based)
+		cl_skip();
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_FSYNC_GITDIR, 1));
 	count_fsyncs(&create_count, &compress_count);
@@ -352,6 +371,9 @@ void test_refs_create__fsyncs_when_global_opt_set(void)
 void test_refs_create__fsyncs_when_repo_config_set(void)
 {
 	size_t create_count, compress_count;
+
+	if (!is_filesystem_based)
+		cl_skip();
 
 	cl_repo_set_bool(g_repo, "core.fsyncObjectFiles", true);
 

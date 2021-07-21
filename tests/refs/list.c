@@ -5,20 +5,24 @@
 #include "reflog.h"
 
 static git_repository *g_repo;
+static int is_filesystem;
 
-
-
-void test_refs_list__initialize(void)
+void test_refs_list__initialize_fs(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
+   is_filesystem = 1;
+}
+
+void test_refs_list__initialize_reftable(void)
+{
+   g_repo = cl_git_sandbox_init("testrepo-reftable");
+   is_filesystem = 0;
 }
 
 void test_refs_list__cleanup(void)
 {
    cl_git_sandbox_cleanup();
 }
-
-
 
 void test_refs_list__all(void)
 {
@@ -44,6 +48,9 @@ void test_refs_list__all(void)
 void test_refs_list__do_not_retrieve_references_which_name_end_with_a_lock_extension(void)
 {
 	git_strarray ref_list;
+
+	if (!is_filesystem)
+		cl_skip();
 
 	/* Create a fake locked reference */
 	cl_git_mkfile(

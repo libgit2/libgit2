@@ -2,6 +2,23 @@
 
 #include "repository.h"
 
+static git_repository *repo;
+
+void test_refs_shorthand__initialize_fs(void)
+{
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+}
+
+void test_refs_shorthand__initialize_reftable(void)
+{
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo-reftable.git")));
+}
+
+void test_refs_shorthand__cleanup(void)
+{
+	git_repository_free(repo);
+}
+
 void assert_shorthand(git_repository *repo, const char *refname, const char *shorthand)
 {
 	git_reference *ref;
@@ -13,15 +30,8 @@ void assert_shorthand(git_repository *repo, const char *refname, const char *sho
 
 void test_refs_shorthand__0(void)
 {
-	git_repository *repo;
-
-	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
-
-
 	assert_shorthand(repo, "refs/heads/master", "master");
 	assert_shorthand(repo, "refs/tags/test", "test");
 	assert_shorthand(repo, "refs/remotes/test/master", "test/master");
 	assert_shorthand(repo, "refs/notes/fanout", "notes/fanout");
-
-	git_repository_free(repo);
 }

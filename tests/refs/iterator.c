@@ -3,10 +3,18 @@
 #include "vector.h"
 
 static git_repository *repo;
+static int is_reftable;
 
-void test_refs_iterator__initialize(void)
+void test_refs_iterator__initialize_fs(void)
 {
 	repo = cl_git_sandbox_init("testrepo.git");
+	is_reftable = 0;
+}
+
+void test_refs_iterator__initialize_reftable(void)
+{
+	repo = cl_git_sandbox_init("testrepo-reftable.git");
+	is_reftable = 1;
 }
 
 void test_refs_iterator__cleanup(void)
@@ -157,6 +165,8 @@ void test_refs_iterator__foreach_through_symlink(void)
 #ifdef GIT_WIN32
 	cl_skip();
 #endif
+	if (is_reftable)
+		cl_skip();
 
 	cl_git_pass(git_vector_init(&output, 32, &refcmp_cb));
 

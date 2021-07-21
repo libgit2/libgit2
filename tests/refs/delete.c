@@ -10,20 +10,24 @@ static const char *packed_test_head_name = "refs/heads/packed-test";
 static const char *current_master_tip = "a65fedf39aefe402d3bb6e24df4d4f5fe4547750";
 
 static git_repository *g_repo;
+static int is_fs_backend;
 
-
-
-void test_refs_delete__initialize(void)
+void test_refs_delete__initialize_fs(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
+   is_fs_backend = 1;
+}
+
+void test_refs_delete__initialize_reftable(void)
+{
+   g_repo = cl_git_sandbox_init("testrepo-reftable");
+   is_fs_backend = 0;
 }
 
 void test_refs_delete__cleanup(void)
 {
    cl_git_sandbox_cleanup();
 }
-
-
 
 void test_refs_delete__packed_loose(void)
 {
@@ -33,13 +37,15 @@ void test_refs_delete__packed_loose(void)
 
 	/* Ensure the loose reference exists on the file system */
 	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), packed_test_head_name));
-	cl_assert(git_path_exists(temp_path.ptr));
+	if (is_fs_backend)
+		cl_assert(git_path_exists(temp_path.ptr));
 
 	/* Lookup the reference */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, packed_test_head_name));
 
 	/* Ensure it's the loose version that has been found */
-	cl_assert(reference_is_packed(looked_up_ref) == 0);
+	if (is_fs_backend)
+		cl_assert(reference_is_packed(looked_up_ref) == 0);
 
 	/* Now that the reference is deleted... */
 	cl_git_pass(git_reference_delete(looked_up_ref));
@@ -49,7 +55,8 @@ void test_refs_delete__packed_loose(void)
 	cl_git_fail(git_reference_lookup(&another_looked_up_ref, g_repo, packed_test_head_name));
 
 	/* Ensure the loose reference doesn't exist any longer on the file system */
-	cl_assert(!git_path_exists(temp_path.ptr));
+	if (is_fs_backend)
+		cl_assert(!git_path_exists(temp_path.ptr));
 
 	git_reference_free(another_looked_up_ref);
 	git_buf_dispose(&temp_path);
@@ -73,7 +80,8 @@ void test_refs_delete__packed_only(void)
 	cl_git_pass(git_reference_lookup(&ref, g_repo, new_ref));
 
 	/* Ensure it's a loose reference */
-	cl_assert(reference_is_packed(ref) == 0);
+	if (is_fs_backend)
+		cl_assert(reference_is_packed(ref) == 0);
 
 	/* Pack all existing references */
 	cl_git_pass(git_repository_refdb(&refdb, g_repo));
@@ -84,7 +92,8 @@ void test_refs_delete__packed_only(void)
 	cl_git_pass(git_reference_lookup(&ref, g_repo, new_ref));
 
 	/* Ensure it's a packed reference */
-	cl_assert(reference_is_packed(ref) == 1);
+	if (is_fs_backend)
+		cl_assert(reference_is_packed(ref) == 1);
 
 	/* This should pass */
 	cl_git_pass(git_reference_delete(ref));

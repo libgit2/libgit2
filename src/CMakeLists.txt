@@ -224,6 +224,10 @@ ELSEIF(USE_BUNDLED_ZLIB OR NOT ZLIB_FOUND)
 	ADD_FEATURE_INFO(zlib ON "using bundled zlib")
 ENDIF()
 
+add_subdirectory("${libgit2_SOURCE_DIR}/deps/reftable" "${libgit2_BINARY_DIR}/deps/reftable")
+list(APPEND LIBGIT2_LIBS reftable)
+list(APPEND LIBGIT2_SYSTEM_INCLUDES $<TARGET_PROPERTY:reftable,INCLUDE_DIRECTORIES>)
+
 # Optional external dependency: libssh2
 IF (USE_SSH)
 	FIND_PKGLIBRARIES(LIBSSH2 libssh2)
@@ -267,7 +271,6 @@ IF (ICONV_FOUND)
 	LIST(APPEND LIBGIT2_PC_LIBS ${ICONV_LIBRARIES})
 ENDIF()
 ADD_FEATURE_INFO(iconv GIT_USE_ICONV "iconv encoding conversion support")
-
 
 IF (THREADSAFE)
 	IF (NOT WIN32)

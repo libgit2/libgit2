@@ -4,12 +4,21 @@
 static git_repository *repo;
 static git_reference *fake_remote;
 
-void test_refs_foreachglob__initialize(void)
+void test_refs_foreachglob__initialize_fs(void)
 {
 	git_oid id;
 
-	cl_fixture_sandbox("testrepo.git");
-	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
+	repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
+	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL));
+}
+
+void test_refs_foreachglob__initialize_reftable(void)
+{
+	git_oid id;
+
+	repo = cl_git_sandbox_init("testrepo-reftable.git");
 
 	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
 	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL));
@@ -19,11 +28,7 @@ void test_refs_foreachglob__cleanup(void)
 {
 	git_reference_free(fake_remote);
 	fake_remote = NULL;
-
-	git_repository_free(repo);
-	repo = NULL;
-
-	cl_fixture_cleanup("testrepo.git");
+	cl_git_sandbox_cleanup();
 }
 
 static int count_cb(const char *reference_name, void *payload)

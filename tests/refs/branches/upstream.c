@@ -5,20 +5,22 @@
 static git_repository *repo;
 static git_reference *branch, *upstream;
 
-void test_refs_branches_upstream__initialize(void)
+void test_refs_branches_upstream__initialize_fs(void)
 {
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+}
 
-	branch = NULL;
-	upstream = NULL;
+void test_refs_branches_upstream__initialize_reftable(void)
+{
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo-reftable.git")));
 }
 
 void test_refs_branches_upstream__cleanup(void)
 {
 	git_reference_free(upstream);
+	upstream = NULL;
 	git_reference_free(branch);
 	branch = NULL;
-
 	git_repository_free(repo);
 	repo = NULL;
 }

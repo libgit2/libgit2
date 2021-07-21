@@ -1,6 +1,8 @@
 #include "clar_libgit2.h"
 #include "refs.h"
 #include "repo_helpers.h"
+#include "repository.h"
+#include "refdb.h"
 #include "posix.h"
 
 void make_head_unborn(git_repository* repo, const char *target)
@@ -13,12 +15,9 @@ void make_head_unborn(git_repository* repo, const char *target)
 
 void delete_head(git_repository* repo)
 {
-	git_buf head_path = GIT_BUF_INIT;
-
-	cl_git_pass(git_buf_joinpath(&head_path, git_repository_path(repo), GIT_HEAD_FILE));
-	cl_git_pass(p_unlink(git_buf_cstr(&head_path)));
-
-	git_buf_dispose(&head_path);
+	git_refdb *refdb;
+	cl_git_pass(git_repository_refdb__weakptr(&refdb, repo));
+	cl_git_pass(git_refdb_delete(refdb, GIT_HEAD_FILE, NULL, NULL));
 }
 
 void create_tmp_global_config(const char *dirname, const char *key, const char *val)

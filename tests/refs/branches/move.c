@@ -4,9 +4,14 @@
 
 static git_repository *repo;
 
-void test_refs_branches_move__initialize(void)
+void test_refs_branches_move__initialize_fs(void)
 {
 	repo = cl_git_sandbox_init("testrepo.git");
+}
+
+void test_refs_branches_move__initialize_reftable(void)
+{
+	repo = cl_git_sandbox_init("testrepo-reftable.git");
 }
 
 void test_refs_branches_move__cleanup(void)
