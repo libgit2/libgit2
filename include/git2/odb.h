@@ -539,6 +539,21 @@ GIT_EXTERN(size_t) git_odb_num_backends(git_odb *odb);
  */
 GIT_EXTERN(int) git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos);
 
+/**
+ * Set the git commit-graph for the ODB.
+ *
+ * After a successfull call, the ownership of the cgraph parameter will be
+ * transferred to libgit2, and the caller should not free it.
+ *
+ * The commit-graph can also be unset by explicitly passing NULL as the cgraph
+ * parameter.
+ *
+ * @param odb object database
+ * @param cgraph the git commit-graph
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_odb_set_commit_graph(git_odb *odb, git_commit_graph *cgraph);
+
 /** @} */
 GIT_END_DECL
 #endif
