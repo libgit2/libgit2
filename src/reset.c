@@ -188,7 +188,12 @@ int git_reset(
 	git_reset_t reset_type,
 	const git_checkout_options *checkout_opts)
 {
-	return reset(repo, target, git_oid_tostr_s(git_object_id(target)), reset_type, checkout_opts);
+	const char *idstr;
+
+	if ((idstr = git_oid_tostr_s(git_object_id(target))) == NULL)
+		return -1;
+
+	return reset(repo, target, idstr, reset_type, checkout_opts);
 }
 
 int git_reset_from_annotated(

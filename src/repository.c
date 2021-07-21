@@ -2789,12 +2789,18 @@ cleanup:
 
 static int checkout_message(git_buf *out, git_reference *old, const char *new)
 {
+	const char *idstr;
+
 	git_buf_puts(out, "checkout: moving from ");
 
-	if (git_reference_type(old) == GIT_REFERENCE_SYMBOLIC)
+	if (git_reference_type(old) == GIT_REFERENCE_SYMBOLIC) {
 		git_buf_puts(out, git_reference__shorthand(git_reference_symbolic_target(old)));
-	else
-		git_buf_puts(out, git_oid_tostr_s(git_reference_target(old)));
+	} else {
+		if ((idstr = git_oid_tostr_s(git_reference_target(old))) == NULL)
+			return -1;
+
+		git_buf_puts(out, idstr);
+	}
 
 	git_buf_puts(out, " to ");
 
@@ -2830,8 +2836,11 @@ static int detach(git_repository *repo, const git_oid *id, const char *new)
 	if ((error = git_object_peel(&peeled, object, GIT_OBJECT_COMMIT)) < 0)
 		goto cleanup;
 
-	if (new == NULL)
-		new = git_oid_tostr_s(git_object_id(peeled));
+	if (new == NULL &&
+	    (new = git_oid_tostr_s(git_object_id(peeled))) == NULL) {
+		error = -1;
+		goto cleanup;
+	}
 
 	if ((error = checkout_message(&log_message, current, new)) < 0)
 		goto cleanup;
@@ -2919,6 +2928,7 @@ int git_repository_detach_head(git_repository* repo)
 	git_reference *old_head = NULL,	*new_head = NULL, *current = NULL;
 	git_object *object = NULL;
 	git_buf log_message = GIT_BUF_INIT;
+	const char *idstr;
 	int error;
 
 	GIT_ASSERT_ARG(repo);
@@ -2932,7 +2942,12 @@ int git_repository_detach_head(git_repository* repo)
 	if ((error = git_object_lookup(&object, repo, git_reference_target(old_head), GIT_OBJECT_COMMIT)) < 0)
 		goto cleanup;
 
-	if ((error = checkout_message(&log_message, current, git_oid_tostr_s(git_object_id(object)))) < 0)
+	if ((idstr = git_oid_tostr_s(git_object_id(object))) == NULL) {
+		error = -1;
+		goto cleanup;
+	}
+
+	if ((error = checkout_message(&log_message, current, idstr)) < 0)
 		goto cleanup;
 
 	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_reference_target(old_head),

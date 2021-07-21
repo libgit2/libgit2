@@ -16,32 +16,51 @@
  * New error handling
  ********************************************/
 
-static git_error g_git_oom_error = {
+static git_error oom_error = {
 	"Out of memory",
 	GIT_ERROR_NOMEMORY
 };
 
-static git_error g_git_uninitialized_error = {
+static git_error uninitialized_error = {
 	"libgit2 has not been initialized; you must call git_libgit2_init",
 	GIT_ERROR_INVALID
 };
 
+static git_error tlsdata_error = {
+	"thread-local data initialization failure",
+	GIT_ERROR
+};
+
 static void set_error_from_buffer(int error_class)
 {
-	git_error *error = &GIT_THREADSTATE->error_t;
-	git_buf *buf = &GIT_THREADSTATE->error_buf;
+	git_threadstate *threadstate = git_threadstate_get();
+	git_error *error;
+	git_buf *buf;
+
+	if (!threadstate)
+		return;
+
+	error = &threadstate->error_t;
+	buf = &threadstate->error_buf;
 
 	error->message = buf->ptr;
 	error->klass = error_class;
 
-	GIT_THREADSTATE->last_error = error;
+	threadstate->last_error = error;
 }
 
 static void set_error(int error_class, char *string)
 {
-	git_buf *buf = &GIT_THREADSTATE->error_buf;
+	git_threadstate *threadstate = git_threadstate_get();
+	git_buf *buf;
+
+	if (!threadstate)
+		return;
+
+	buf = &threadstate->error_buf;
 
 	git_buf_clear(buf);
+
 	if (string) {
 		git_buf_puts(buf, string);
 		git__free(string);
@@ -52,7 +71,12 @@ static void set_error(int error_class, char *string)
 
 void git_error_set_oom(void)
 {
-	GIT_THREADSTATE->last_error = &g_git_oom_error;
+	git_threadstate *threadstate = git_threadstate_get();
+
+	if (!threadstate)
+		return;
+
+	threadstate->last_error = &oom_error;
 }
 
 void git_error_set(int error_class, const char *fmt, ...)
@@ -66,13 +90,21 @@ void git_error_set(int error_class, const char *fmt, ...)
 
 void git_error_vset(int error_class, const char *fmt, va_list ap)
 {
+	git_threadstate *threadstate = git_threadstate_get();
+	int error_code = (error_class == GIT_ERROR_OS) ? errno : 0;
+	git_buf *buf;
+
 #ifdef GIT_WIN32
 	DWORD win32_error_code = (error_class == GIT_ERROR_OS) ? GetLastError() : 0;
 #endif
-	int error_code = (error_class == GIT_ERROR_OS) ? errno : 0;
-	git_buf *buf = &GIT_THREADSTATE->error_buf;
+
+	if (!threadstate)
+		return;
+
+	buf = &threadstate->error_buf;
 
 	git_buf_clear(buf);
+
 	if (fmt) {
 		git_buf_vprintf(buf, fmt, ap);
 		if (error_class == GIT_ERROR_OS)
@@ -81,7 +113,7 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 
 	if (error_class == GIT_ERROR_OS) {
 #ifdef GIT_WIN32
-		char * win32_error = git_win32_get_error_message(win32_error_code);
+		char *win32_error = git_win32_get_error_message(win32_error_code);
 		if (win32_error) {
 			git_buf_puts(buf, win32_error);
 			git__free(win32_error);
@@ -103,14 +135,20 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 
 int git_error_set_str(int error_class, const char *string)
 {
-	git_buf *buf = &GIT_THREADSTATE->error_buf;
+	git_threadstate *threadstate = git_threadstate_get();
+	git_buf *buf;
 
 	GIT_ASSERT_ARG(string);
+
+	if (!threadstate)
+		return -1;
 
 	if (!string) {
 		git_error_set(GIT_ERROR_INVALID, "unspecified caller error");
 		return -1;
 	}
+
+	buf = &threadstate->error_buf;
 
 	git_buf_clear(buf);
 	git_buf_puts(buf, string);
@@ -124,9 +162,14 @@ int git_error_set_str(int error_class, const char *string)
 
 void git_error_clear(void)
 {
-	if (GIT_THREADSTATE->last_error != NULL) {
+	git_threadstate *threadstate = git_threadstate_get();
+
+	if (!threadstate)
+		return;
+
+	if (threadstate->last_error != NULL) {
 		set_error(0, NULL);
-		GIT_THREADSTATE->last_error = NULL;
+		threadstate->last_error = NULL;
 	}
 
 	errno = 0;
@@ -137,17 +180,29 @@ void git_error_clear(void)
 
 const git_error *git_error_last(void)
 {
+	git_threadstate *threadstate;
+
 	/* If the library is not initialized, return a static error. */
 	if (!git_libgit2_init_count())
-		return &g_git_uninitialized_error;
+		return &uninitialized_error;
 
-	return GIT_THREADSTATE->last_error;
+	if ((threadstate = git_threadstate_get()) == NULL)
+		return &tlsdata_error;
+
+	return threadstate->last_error;
 }
 
 int git_error_state_capture(git_error_state *state, int error_code)
 {
-	git_error *error = GIT_THREADSTATE->last_error;
-	git_buf *error_buf = &GIT_THREADSTATE->error_buf;
+	git_threadstate *threadstate = git_threadstate_get();
+	git_error *error;
+	git_buf *error_buf;
+
+	if (!threadstate)
+		return -1;
+
+	error = threadstate->last_error;
+	error_buf = &threadstate->error_buf;
 
 	memset(state, 0, sizeof(git_error_state));
 
@@ -155,13 +210,13 @@ int git_error_state_capture(git_error_state *state, int error_code)
 		return 0;
 
 	state->error_code = error_code;
-	state->oom = (error == &g_git_oom_error);
+	state->oom = (error == &oom_error);
 
 	if (error) {
 		state->error_msg.klass = error->klass;
 
 		if (state->oom)
-			state->error_msg.message = g_git_oom_error.message;
+			state->error_msg.message = oom_error.message;
 		else
 			state->error_msg.message = git_buf_detach(error_buf);
 	}

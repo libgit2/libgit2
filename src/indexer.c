@@ -453,7 +453,13 @@ static int store_object(git_indexer *idx)
 	pentry->offset = entry_start;
 
 	if (git_oidmap_exists(idx->pack->idx_cache, &pentry->sha1)) {
-		git_error_set(GIT_ERROR_INDEXER, "duplicate object %s found in pack", git_oid_tostr_s(&pentry->sha1));
+		const char *idstr = git_oid_tostr_s(&pentry->sha1);
+
+		if (!idstr)
+			git_error_set(GIT_ERROR_INDEXER, "failed to parse object id");
+		else
+			git_error_set(GIT_ERROR_INDEXER, "duplicate object %s found in pack", idstr);
+
 		git__free(pentry);
 		goto on_error;
 	}

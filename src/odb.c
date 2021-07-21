@@ -1286,12 +1286,14 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 			data = raw.data;
 
 			if (found && git_oid__cmp(&full_oid, &found_full_oid)) {
+				const char *full_str = git_oid_tostr_s(&full_oid);
+				const char *found_str = git_oid_tostr_s(&found_full_oid);
 				git_buf buf = GIT_BUF_INIT;
 
-				git_buf_printf(&buf, "multiple matches for prefix: %s",
-					git_oid_tostr_s(&full_oid));
-				git_buf_printf(&buf, " %s",
-					git_oid_tostr_s(&found_full_oid));
+				if (!full_str || !found_str)
+					git_buf_printf(&buf, "failed to parse object id");
+				else
+					git_buf_printf(&buf, "multiple matches for prefix: %s %s", full_str, found_str);
 
 				error = git_odb__error_ambiguous(buf.ptr);
 				git_buf_dispose(&buf);

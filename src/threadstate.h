@@ -19,6 +19,4 @@ typedef struct {
 extern int git_threadstate_global_init(void);
 extern git_threadstate *git_threadstate_get(void);
 
-#define GIT_THREADSTATE (git_threadstate_get())
-
 #endif

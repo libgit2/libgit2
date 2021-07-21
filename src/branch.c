@@ -122,7 +122,12 @@ int git_branch_create(
 	const git_commit *commit,
 	int force)
 {
-	return create_branch(ref_out, repository, branch_name, commit, git_oid_tostr_s(git_commit_id(commit)), force);
+	const char *idstr = git_oid_tostr_s(git_commit_id(commit));
+
+	if (!idstr)
+		return -1;
+
+	return create_branch(ref_out, repository, branch_name, commit, idstr, force);
 }
 
 int git_branch_create_from_annotated(
