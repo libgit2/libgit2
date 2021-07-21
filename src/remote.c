@@ -1027,7 +1027,13 @@ int git_remote_fetch(
 	if ((error = git_remote__connect(remote, GIT_DIRECTION_FETCH, cbs, &conn)) != 0)
 		return error;
 
+	if (cbs && cbs->connect)
+		cbs->connect(remote, cbs->payload);
+
 	error = git_remote_download(remote, refspecs, opts);
+
+	if (cbs && cbs->disconnect)
+		cbs->disconnect(remote, cbs->payload);
 
 	/* We don't need to be connected anymore */
 	git_remote_disconnect(remote);
@@ -2570,10 +2576,16 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, proxy, custom_headers)) < 0)
 		return error;
 
+	if (cbs && cbs->connect)
+		cbs->connect(remote, cbs->payload);
+
 	if ((error = git_remote_upload(remote, refspecs, opts)) < 0)
 		return error;
 
 	error = git_remote_update_tips(remote, cbs, 0, 0, NULL);
+
+	if (cbs && cbs->disconnect)
+		cbs->disconnect(remote, cbs->payload);
 
 	git_remote_disconnect(remote);
 	return error;
