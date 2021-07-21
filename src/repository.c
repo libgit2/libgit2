@@ -1093,8 +1093,7 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		if (!error) {
 			GIT_REFCOUNT_OWN(config, repo);
 
-			config = git_atomic_compare_and_swap(&repo->_config, NULL, config);
-			if (config != NULL) {
+			if (git_atomic_compare_and_swap(&repo->_config, NULL, config) != NULL) {
 				GIT_REFCOUNT_OWN(config, NULL);
 				git_config_free(config);
 			}
@@ -1164,8 +1163,7 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 			return error;
 		}
 
-		odb = git_atomic_compare_and_swap(&repo->_odb, NULL, odb);
-		if (odb != NULL) {
+		if (git_atomic_compare_and_swap(&repo->_odb, NULL, odb) != NULL) {
 			GIT_REFCOUNT_OWN(odb, NULL);
 			git_odb_free(odb);
 		}
@@ -1209,8 +1207,7 @@ int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo)
 		if (!error) {
 			GIT_REFCOUNT_OWN(refdb, repo);
 
-			refdb = git_atomic_compare_and_swap(&repo->_refdb, NULL, refdb);
-			if (refdb != NULL) {
+			if (git_atomic_compare_and_swap(&repo->_refdb, NULL, refdb) != NULL) {
 				GIT_REFCOUNT_OWN(refdb, NULL);
 				git_refdb_free(refdb);
 			}
@@ -1257,8 +1254,7 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 		if (!error) {
 			GIT_REFCOUNT_OWN(index, repo);
 
-			index = git_atomic_compare_and_swap(&repo->_index, NULL, index);
-			if (index != NULL) {
+			if (git_atomic_compare_and_swap(&repo->_index, NULL, index) != NULL) {
 				GIT_REFCOUNT_OWN(index, NULL);
 				git_index_free(index);
 			}
