@@ -348,7 +348,7 @@ static int diff_file_content_load_workdir_file(
 		goto cleanup;
 
 	/* if there are no filters, try to mmap the file */
-	if (fl == NULL) {
+	if ((diff_opts->flags & GIT_DIFF_DISABLE_MMAP) == 0 && fl == NULL) {
 		if (!(error = git_futils_mmap_ro(
 				&fc->map, fd, 0, (size_t)fc->file->size))) {
 			fc->flags |= GIT_DIFF_FLAG__UNMAP_DATA;
