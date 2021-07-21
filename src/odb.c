@@ -53,7 +53,11 @@ static git_cache *odb_cache(git_odb *odb)
 }
 
 static int odb_otype_fast(git_object_t *type_p, git_odb *db, const git_oid *id);
-static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth);
+static int load_alternates(
+		git_odb *odb,
+		const char *objects_dir,
+		const git_odb_options *opts,
+		int alternate_depth);
 static int error_null_oid(int error, const char *message);
 
 static git_object_t odb_hardcoded_type(const git_oid *id)
@@ -570,8 +574,11 @@ int git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos)
 }
 
 int git_odb__add_default_backends(
-	git_odb *db, const char *objects_dir,
-	bool as_alternates, int alternate_depth)
+		git_odb *db,
+		const char *objects_dir,
+		const git_odb_options *opts,
+		bool as_alternates,
+		int alternate_depth)
 {
 	size_t i;
 	struct stat st;
@@ -617,14 +624,18 @@ int git_odb__add_default_backends(
 		return -1;
 
 	/* add the packed file backend */
-	if (git_odb_backend_pack(&packed, objects_dir) < 0 ||
+	if (git_odb_backend_pack_ext(&packed, objects_dir, opts) < 0 ||
 		add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates, inode) < 0)
 		return -1;
 
-	return load_alternates(db, objects_dir, alternate_depth);
+	return load_alternates(db, objects_dir, opts, alternate_depth);
 }
 
-static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth)
+static int load_alternates(
+		git_odb *odb,
+		const char *objects_dir,
+		const git_odb_options *opts,
+		int alternate_depth)
 {
 	git_buf alternates_path = GIT_BUF_INIT;
 	git_buf alternates_buf = GIT_BUF_INIT;
@@ -667,7 +678,8 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 			alternate = git_buf_cstr(&alternates_path);
 		}
 
-		if ((result = git_odb__add_default_backends(odb, alternate, true, alternate_depth + 1)) < 0)
+		if ((result = git_odb__add_default_backends(odb, alternate, opts, true,
+				alternate_depth + 1)) < 0)
 			break;
 	}
 
@@ -679,10 +691,28 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 
 int git_odb_add_disk_alternate(git_odb *odb, const char *path)
 {
-	return git_odb__add_default_backends(odb, path, true, 0);
+	const git_odb_options opts = GIT_ODB_OPTIONS_INIT;
+	return git_odb_add_disk_alternate_ext(odb, path, &opts);
+}
+
+int git_odb_add_disk_alternate_ext(
+		git_odb *odb,
+		const char *path,
+		const git_odb_options *opts)
+{
+	return git_odb__add_default_backends(odb, path, opts, true, 0);
 }
 
 int git_odb_open(git_odb **out, const char *objects_dir)
+{
+	const git_odb_options opts = GIT_ODB_OPTIONS_INIT;
+	return git_odb_open_ext(out, objects_dir, &opts);
+}
+
+int git_odb_open_ext(
+		git_odb **out,
+		const char *objects_dir,
+		const git_odb_options *opts)
 {
 	git_odb *db;
 
@@ -694,7 +724,7 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 	if (git_odb_new(&db) < 0)
 		return -1;
 
-	if (git_odb__add_default_backends(db, objects_dir, 0, 0) < 0) {
+	if (git_odb__add_default_backends(db, objects_dir, opts, false, 0) < 0) {
 		git_odb_free(db);
 		return -1;
 	}

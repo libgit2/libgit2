@@ -23,6 +23,19 @@
 GIT_BEGIN_DECL
 
 /**
+ * Extended options structure for initializing odb backends.
+ *
+ * This contains extra options for `git_odb_*` that enable
+ * additional initialization features.
+ */
+struct git_odb_options {
+	unsigned int version;
+};
+
+#define GIT_ODB_OPTIONS_VERSION 1
+#define GIT_ODB_OPTIONS_INIT {GIT_ODB_OPTIONS_VERSION}
+
+/**
  * Function type for callbacks from git_odb_foreach.
  */
 typedef int GIT_CALLBACK(git_odb_foreach_cb)(const git_oid *id, void *payload);
@@ -58,6 +71,28 @@ GIT_EXTERN(int) git_odb_new(git_odb **out);
 GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
 
 /**
+ * Create a new object database with extended controls and automatically add
+ * the two default backends:
+ *
+ *	- git_odb_backend_loose: read and write loose object files
+ *		from disk, assuming `objects_dir` as the Objects folder
+ *
+ *	- git_odb_backend_pack: read objects from packfiles,
+ *		assuming `objects_dir` as the Objects folder which
+ *		contains a 'pack/' folder with the corresponding data
+ *
+ * @param out location to store the database pointer, if opened.
+ *			Set to NULL if the open failed.
+ * @param objects_dir path of the backends' "objects" directory.
+ * @param opts Pointer to git_odb_options struct.
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_open_ext(
+		git_odb **out,
+		const char *objects_dir,
+		const git_odb_options *opts);
+
+/**
  * Add an on-disk alternate to an existing Object DB.
  *
  * Note that the added path must point to an `objects`, not
@@ -73,6 +108,27 @@ GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
  * @return 0 on success, error code otherwise
  */
 GIT_EXTERN(int) git_odb_add_disk_alternate(git_odb *odb, const char *path);
+
+/**
+ * Add an on-disk alternate to an existing Object DB with extended controls.
+ *
+ * Note that the added path must point to an `objects`, not
+ * to a full repository, to use it as an alternate store.
+ *
+ * Alternate backends are always checked for objects *after*
+ * all the main backends have been exhausted.
+ *
+ * Writing is disabled on alternate backends.
+ *
+ * @param odb database to add the backend to
+ * @param path path to the objects folder for the alternate
+ * @param opts Pointer to git_odb_options struct.
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_odb_add_disk_alternate_ext(
+		git_odb *odb,
+		const char *path,
+		const git_odb_options *opts);
 
 /**
  * Close an open object database.
