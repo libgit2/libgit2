@@ -356,6 +356,23 @@ void test_checkout_index__can_overwrite_modified_file(void)
 	check_file_contents("./testrepo/new.txt", "my new file\n");
 }
 
+void test_checkout_index__can_overwrite_modified_file_in_pathspec(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_strarray paths;
+	const char *pathstrings[] = {"new.txt"};	
+
+	paths.count = 1;
+	paths.strings = (char **)pathstrings;
+	opts.paths = paths;
+
+	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
+
+	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
+
+	check_file_contents("./testrepo/new.txt", "my new file\n");
+}
+
 void test_checkout_index__options_disable_filters(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
