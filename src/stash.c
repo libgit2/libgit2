@@ -468,7 +468,7 @@ cleanup:
 }
 
 static int update_reflog(
-	git_oid *w_commit_oid,
+	const git_oid *w_commit_oid,
 	git_repository *repo,
 	const char *message)
 {
@@ -534,8 +534,10 @@ static int reset_index_and_workdir(git_repository *repo, git_commit *commit, uin
 	return git_checkout_tree(repo, (git_object *)commit, &opts);
 }
 
-int git_stash_save(
-	git_oid *out,
+static int create_stash(
+	git_oid *out_stash_id,
+	git_commit **out_reset_commit,
+	git_buf *out_stash_message,
 	git_repository *repo,
 	const git_signature *stasher,
 	const char *message,
@@ -544,14 +546,14 @@ int git_stash_save(
 	git_index *index = NULL;
 	git_commit *b_commit = NULL, *i_commit = NULL, *u_commit = NULL;
 	git_buf msg = GIT_BUF_INIT;
+	git_commit *reset_commit = NULL;
 	int error;
 
-	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(out_stash_id);
+	GIT_ASSERT_ARG(out_reset_commit);
+	GIT_ASSERT_ARG(out_stash_message);
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(stasher);
-
-	if ((error = git_repository__ensure_not_bare(repo, "stash save")) < 0)
-		return error;
 
 	if ((error = retrieve_base_commit_and_message(&b_commit, &msg, repo)) < 0)
 		goto cleanup;
@@ -574,26 +576,122 @@ int git_stash_save(
 	if ((error = prepare_worktree_commit_message(&msg, message)) < 0)
 		goto cleanup;
 
-	if ((error = commit_worktree(out, repo, stasher, git_buf_cstr(&msg),
+	if ((error = commit_worktree(out_stash_id, repo, stasher, git_buf_cstr(&msg),
 				     i_commit, b_commit, u_commit)) < 0)
 		goto cleanup;
 
-	git_buf_rtrim(&msg);
+    reset_commit = (flags & GIT_STASH_KEEP_INDEX) ? i_commit : b_commit;
+	*out_reset_commit = reset_commit;
 
-	if ((error = update_reflog(out, repo, git_buf_cstr(&msg))) < 0)
-		goto cleanup;
-
-	if ((error = reset_index_and_workdir(repo, (flags & GIT_STASH_KEEP_INDEX) ? i_commit : b_commit,
-					     flags)) < 0)
-		goto cleanup;
+	git_buf_swap(out_stash_message, &msg);
 
 cleanup:
 
 	git_buf_dispose(&msg);
-	git_commit_free(i_commit);
-	git_commit_free(b_commit);
+	if (reset_commit != i_commit) {
+		git_commit_free(i_commit);
+	}
+	if (reset_commit != b_commit) {
+		git_commit_free(b_commit);
+	}
 	git_commit_free(u_commit);
 	git_index_free(index);
+
+	return error;
+}
+
+int git_stash_create(
+	git_oid *out,
+	git_repository *repo,
+	const git_signature *stasher,
+	const char *message,
+	uint32_t flags)
+{
+	git_commit *reset_commit = NULL;
+	git_buf stash_message = GIT_BUF_INIT;
+	int error;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(stasher);
+
+	if ((error = git_repository__ensure_not_bare(repo, "stash create")) < 0)
+		goto cleanup;
+
+	error = create_stash(out, &reset_commit, &stash_message, repo,
+					stasher, message, flags);
+
+cleanup:
+
+	git_buf_dispose(&stash_message);
+	git_commit_free(reset_commit);
+
+	return error;
+}
+
+int git_stash_store(
+	const git_oid *stash_id,
+	git_repository *repo,
+	const char *message)
+{
+	git_buf msg = GIT_BUF_INIT;
+	int error;
+
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(stash_id);
+
+	if (!message) {
+		git_buf_puts(&msg, "Created via \"git stash store\".");
+	} else {
+		git_buf_puts(&msg, message);
+		git_buf_rtrim(&msg);
+	}
+
+	if (git_buf_oom(&msg)) {
+		error = -1;
+		goto cleanup;
+	}
+
+	error = update_reflog(stash_id, repo, git_buf_cstr(&msg));
+
+cleanup:
+
+	git_buf_dispose(&msg);
+
+	return error;
+}
+
+int git_stash_save(
+	git_oid *out,
+	git_repository *repo,
+	const git_signature *stasher,
+	const char *message,
+	uint32_t flags)
+{
+	git_commit *reset_commit = NULL;
+	git_buf stash_message = GIT_BUF_INIT;
+	int error;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(stasher);
+
+	if ((error = git_repository__ensure_not_bare(repo, "stash save")) < 0)
+		goto cleanup;
+
+	if ((error = create_stash(out, &reset_commit, &stash_message, repo,
+						stasher, message, flags)) < 0)
+		goto cleanup;
+
+	if ((error = git_stash_store(out, repo, git_buf_cstr(&stash_message))) < 0)
+		goto cleanup;
+
+	error = reset_index_and_workdir(repo, reset_commit, flags);
+
+cleanup:
+
+	git_buf_dispose(&stash_message);
+	git_commit_free(reset_commit);
 
 	return error;
 }

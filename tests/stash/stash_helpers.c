@@ -55,3 +55,25 @@ void assert_status(
 		cl_assert_equal_i((unsigned int)status_flags, status);
 	}
 }
+
+void assert_object_oid(
+	git_repository *repo,
+	const char* revision,
+	const char* expected_oid,
+	git_object_t type)
+{
+	int result;
+	git_object *obj;
+
+	result = git_revparse_single(&obj, repo, revision);
+
+	if (!expected_oid) {
+		cl_assert_equal_i(GIT_ENOTFOUND, result);
+		return;
+	} else
+		cl_assert_equal_i(0, result);
+
+	cl_git_pass(git_oid_streq(git_object_id(obj), expected_oid));
+	cl_assert_equal_i(type, git_object_type(obj));
+	git_object_free(obj);
+}

@@ -35,27 +35,9 @@ void test_stash_save__cleanup(void)
 	cl_fixture_cleanup("sorry-it-is-a-non-bare-only-party");
 }
 
-static void assert_object_oid(const char* revision, const char* expected_oid, git_object_t type)
-{
-	int result;
-	git_object *obj;
-
-	result = git_revparse_single(&obj, repo, revision);
-
-	if (!expected_oid) {
-		cl_assert_equal_i(GIT_ENOTFOUND, result);
-		return;
-	} else
-		cl_assert_equal_i(0, result);
-
-	cl_git_pass(git_oid_streq(git_object_id(obj), expected_oid));
-	cl_assert_equal_i(type, git_object_type(obj));
-	git_object_free(obj);
-}
-
 static void assert_blob_oid(const char* revision, const char* expected_oid)
 {
-	assert_object_oid(revision, expected_oid, GIT_OBJECT_BLOB);
+	assert_object_oid(repo, revision, expected_oid, GIT_OBJECT_BLOB);
 }
 
 void test_stash_save__does_not_keep_index_by_default(void)
@@ -275,12 +257,12 @@ void test_stash_save__can_stash_against_a_detached_head(void)
 
 void test_stash_save__stashing_updates_the_reflog(void)
 {
-	assert_object_oid("refs/stash@{0}", NULL, GIT_OBJECT_COMMIT);
+	assert_object_oid(repo, "refs/stash@{0}", NULL, GIT_OBJECT_COMMIT);
 
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
 
-	assert_object_oid("refs/stash@{0}", git_oid_tostr_s(&stash_tip_oid), GIT_OBJECT_COMMIT);
-	assert_object_oid("refs/stash@{1}", NULL, GIT_OBJECT_COMMIT);
+	assert_object_oid(repo, "refs/stash@{0}", git_oid_tostr_s(&stash_tip_oid), GIT_OBJECT_COMMIT);
+	assert_object_oid(repo, "refs/stash@{1}", NULL, GIT_OBJECT_COMMIT);
 }
 
 void test_stash_save__multiline_message(void)
@@ -289,7 +271,7 @@ void test_stash_save__multiline_message(void)
 	const git_reflog_entry *entry;
 	git_reflog *reflog;
 
-	assert_object_oid("refs/stash@{0}", NULL, GIT_OBJECT_COMMIT);
+	assert_object_oid(repo, "refs/stash@{0}", NULL, GIT_OBJECT_COMMIT);
 
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, msg, GIT_STASH_DEFAULT));
 
@@ -297,7 +279,7 @@ void test_stash_save__multiline_message(void)
 	cl_assert(entry = git_reflog_entry_byindex(reflog, 0));
 	cl_assert_equal_s(git_reflog_entry_message(entry), "On master: This  is a multiline message");
 
-	assert_object_oid("refs/stash@{0}", git_oid_tostr_s(&stash_tip_oid), GIT_OBJECT_COMMIT);
+	assert_object_oid(repo, "refs/stash@{0}", git_oid_tostr_s(&stash_tip_oid), GIT_OBJECT_COMMIT);
 	assert_commit_message_contains("refs/stash@{0}", msg);
 
 	git_reflog_free(reflog);
@@ -406,7 +388,7 @@ void test_stash_save__can_stage_normal_then_stage_untracked(void)
 	assert_blob_oid("stash@{1}^2:who", "cc628ccd10742baea8241c5924df992b5c019f71");		/* world */
 	assert_blob_oid("stash@{1}^2:when", NULL);
 
-	assert_object_oid("stash@{1}^3", NULL, GIT_OBJECT_COMMIT);
+	assert_object_oid(repo, "stash@{1}^3", NULL, GIT_OBJECT_COMMIT);
 
 	assert_blob_oid("stash@{0}^0:what", "ce013625030ba8dba906f756967f9e9ca394464a");	/* hello */
 	assert_blob_oid("stash@{0}^0:how", "ac790413e2d7a26c3767e78c57bb28716686eebc");		/* small */
@@ -435,7 +417,7 @@ void test_stash_save__including_untracked_without_any_untracked_file_creates_an_
 
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
 
-	assert_object_oid("stash^3^{tree}", EMPTY_TREE, GIT_OBJECT_TREE);
+	assert_object_oid(repo, "stash^3^{tree}", EMPTY_TREE, GIT_OBJECT_TREE);
 }
 
 void test_stash_save__ignored_directory(void)
