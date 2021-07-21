@@ -172,7 +172,7 @@ void test_clone_nonetwork__can_checkout_given_branch(void)
 
 	cl_git_pass(git_reference_lookup(&remote_head, g_repo, "refs/remotes/origin/HEAD"));
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(remote_head));
-	cl_assert_equal_s("refs/remotes/origin/test", git_reference_symbolic_target(remote_head));
+	cl_assert_equal_s("refs/remotes/origin/master", git_reference_symbolic_target(remote_head));
 
 	git_reference_free(remote_head);
 }
