@@ -32,6 +32,7 @@
 /** Entry point for this command */
 int lg2_push(git_repository *repo, int argc, char **argv) {
 	git_push_options options;
+	git_remote_callbacks callbacks;
 	git_remote* remote = NULL;
 	char *refspec = "refs/heads/master";
 	const git_strarray refspecs = {
@@ -47,7 +48,11 @@ int lg2_push(git_repository *repo, int argc, char **argv) {
 
 	check_lg2(git_remote_lookup(&remote, repo, "origin" ), "Unable to lookup remote", NULL);
 	
+	check_lg2(git_remote_init_callbacks(&callbacks, GIT_REMOTE_CALLBACKS_VERSION), "Error initializing remote callbacks", NULL);
+	callbacks.credentials = cred_acquire_cb;
+
 	check_lg2(git_push_options_init(&options, GIT_PUSH_OPTIONS_VERSION ), "Error initializing push", NULL);
+	options.callbacks = callbacks;
 
 	check_lg2(git_remote_push(remote, &refspecs, &options), "Error pushing", NULL);
 
