@@ -391,6 +391,20 @@ GIT_EXTERN(int) git_odb_write_pack(
 	void *progress_payload);
 
 /**
+ * Write a `multi-pack-index` file from all the `.pack` files in the ODB.
+ *
+ * If the ODB layer understands pack files, then this will create a file called
+ * `multi-pack-index` next to the `.pack` and `.idx` files, which will contain
+ * an index of all objects stored in `.pack` files. This will allow for
+ * O(log n) lookup for n objects (regardless of how many packfiles there
+ * exist).
+ *
+ * @param db object database where the `multi-pack-index` file will be written.
+ */
+GIT_EXTERN(int) git_odb_write_multi_pack_index(
+	git_odb *db);
+
+/**
  * Determine the object-ID (sha1 hash) of a data buffer
  *
  * The resulting SHA-1 OID will be the identifier for the data
