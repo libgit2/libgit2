@@ -2238,3 +2238,42 @@ void test_diff_workdir__ignore_blank_lines(void)
 	git_patch_free(patch);
 	git_diff_free(diff);
 }
+
+void test_diff_workdir__completely_ignored_shows_empty_diff(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff;
+	git_patch *patch;
+	git_buf buf = GIT_BUF_INIT;
+	char *pathspec = "subdir.txt";
+
+	opts.pathspec.strings = &pathspec;
+	opts.pathspec.count = 1;
+
+	g_repo = cl_git_sandbox_init("status");
+	cl_git_rewritefile("status/subdir.txt", "Is it a bird?\n\nIs it a plane?\n");
+
+	/* Perform the diff normally */
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_git_pass(git_patch_to_buf(&buf, patch));
+
+	cl_assert_equal_s("diff --git a/subdir.txt b/subdir.txt\nindex e8ee89e..53c8db5 100644\n--- a/subdir.txt\n+++ b/subdir.txt\n@@ -1,2 +1,3 @@\n Is it a bird?\n+\n Is it a plane?\n", buf.ptr);
+
+	git_buf_dispose(&buf);
+	git_patch_free(patch);
+	git_diff_free(diff);
+
+	/* Perform the diff ignoring blank lines */
+	opts.flags |= GIT_DIFF_IGNORE_BLANK_LINES;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_git_pass(git_patch_to_buf(&buf, patch));
+
+	cl_assert_equal_s("", buf.ptr);
+
+	git_buf_dispose(&buf);
+	git_patch_free(patch);
+	git_diff_free(diff);
+}
