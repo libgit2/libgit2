@@ -657,6 +657,19 @@ int git_apply_to_tree(
 	for (i = 0; i < git_diff_num_deltas(diff); i++) {
 		delta = git_diff_get_delta(diff, i);
 
+		if (delta->status == GIT_DELTA_ADDED ||
+			delta->status == GIT_DELTA_RENAMED) {
+			error = git_index_find(NULL, postimage, delta->new_file.path);
+			if (!error) {
+				error = GIT_EEXISTS;
+				git_error_clear();
+			}
+			if (error != GIT_ENOTFOUND)
+				goto done;
+			error = 0;
+			git_error_clear();
+		}
+
 		if (delta->status == GIT_DELTA_DELETED ||
 			delta->status == GIT_DELTA_RENAMED) {
 			if ((error = git_index_remove(postimage,
