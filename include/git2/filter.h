@@ -49,6 +49,12 @@ typedef enum {
 
 	/** Load attributes from `.gitattributes` in the root of HEAD */
 	GIT_FILTER_ATTRIBUTES_FROM_HEAD = (1u << 2),
+
+	/**
+	 * Load attributes from `.gitattributes` in a given commit.
+	 * This can only be specified in a `git_filter_options`.
+	 */
+	GIT_FILTER_ATTRIBUTES_FROM_COMMIT = (1u << 3),
 } git_filter_flag_t;
 
 /**
@@ -59,6 +65,12 @@ typedef struct {
 
 	/** See `git_filter_flag_t` above */
 	uint32_t flags;
+
+	/**
+	 * The commit to load attributes from, when
+	 * `GIT_FILTER_ATTRIBUTES_FROM_COMMIT` is specified.
+	 */
+	git_oid *commit_id;
 } git_filter_options;
 
  #define GIT_FILTER_OPTIONS_VERSION 1
