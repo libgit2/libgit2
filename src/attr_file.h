@@ -55,6 +55,12 @@ typedef struct {
 	 */
 	const char *base;
 	const char *filename;
+
+	/*
+	 * The commit ID when the given source type is a commit (or NULL
+	 * for the repository's HEAD commit.)
+	 */
+	git_oid *commit_id;
 } git_attr_file_source;
 
 extern const char *git_attr__true;
@@ -171,7 +177,7 @@ int git_attr_file__load_standalone(
 	git_attr_file **out, const char *path);
 
 int git_attr_file__out_of_date(
-	git_repository *repo, git_attr_session *session, git_attr_file *file);
+	git_repository *repo, git_attr_session *session, git_attr_file *file, git_attr_file_source *source);
 
 int git_attr_file__parse_buffer(
 	git_repository *repo, git_attr_file *attrs, const char *data, bool allow_macros);

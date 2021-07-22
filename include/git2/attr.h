@@ -130,9 +130,13 @@ GIT_EXTERN(git_attr_value_t) git_attr_value(const char *attr);
  *
  * Passing the `GIT_ATTR_CHECK_INCLUDE_HEAD` flag will use attributes
  * from a `.gitattributes` file in the repository at the HEAD revision.
+ *
+ * Passing the `GIT_ATTR_CHECK_INCLUDE_COMMIT` flag will use attributes
+ * from a `.gitattributes` file in a specific commit.
  */
 #define GIT_ATTR_CHECK_NO_SYSTEM        (1 << 2)
 #define GIT_ATTR_CHECK_INCLUDE_HEAD     (1 << 3)
+#define GIT_ATTR_CHECK_INCLUDE_COMMIT   (1 << 4)
 
 /**
 * An options structure for querying attributes.
@@ -142,6 +146,12 @@ typedef struct {
 
 	/** A combination of GIT_ATTR_CHECK flags */
 	unsigned int flags;
+
+	/**
+	 * The commit to load attributes from, when
+	 * `GIT_ATTR_CHECK_INCLUDE_COMMIT` is specified.
+	 */
+	git_oid *commit_id;
 } git_attr_options;
 
 #define GIT_ATTR_OPTIONS_VERSION 1

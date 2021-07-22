@@ -113,6 +113,7 @@ int git_attr_file__load(
 	bool allow_macros)
 {
 	int error = 0;
+	git_commit *commit = NULL;
 	git_tree *tree = NULL;
 	git_tree_entry *tree_entry = NULL;
 	git_blob *blob = NULL;
@@ -163,8 +164,14 @@ int git_attr_file__load(
 		break;
 	}
 	case GIT_ATTR_FILE_SOURCE_COMMIT: {
-		if ((error = git_repository_head_tree(&tree, repo)) < 0)
-			goto cleanup;
+		if (source->commit_id) {
+			if ((error = git_commit_lookup(&commit, repo, source->commit_id)) < 0 ||
+			    (error = git_commit_tree(&tree, commit)) < 0)
+				goto cleanup;
+		} else {
+			if ((error = git_repository_head_tree(&tree, repo)) < 0)
+				goto cleanup;
+		}
 
 		if ((error = git_tree_entry_bypath(&tree_entry, tree, entry->path)) < 0) {
 			/*
@@ -239,6 +246,7 @@ cleanup:
 	git_blob_free(blob);
 	git_tree_entry_free(tree_entry);
 	git_tree_free(tree);
+	git_commit_free(commit);
 	git_buf_dispose(&content);
 
 	return error;
@@ -247,7 +255,8 @@ cleanup:
 int git_attr_file__out_of_date(
 	git_repository *repo,
 	git_attr_session *attr_session,
-	git_attr_file *file)
+	git_attr_file *file,
+	git_attr_file_source *source)
 {
 	if (!file)
 		return 1;
@@ -280,13 +289,26 @@ int git_attr_file__out_of_date(
 	}
 
 	case GIT_ATTR_FILE_SOURCE_COMMIT: {
-		git_tree *tree;
+		git_tree *tree = NULL;
 		int error;
 
-		if ((error = git_repository_head_tree(&tree, repo)) < 0)
+		if (source->commit_id) {
+			git_commit *commit = NULL;
+
+			if ((error = git_commit_lookup(&commit, repo, source->commit_id)) < 0)
+				return error;
+
+			error = git_commit_tree(&tree, commit);
+
+			git_commit_free(commit);
+		} else {
+			error = git_repository_head_tree(&tree, repo);
+		}
+
+		if (error < 0)
 			return error;
 
-		error = git_oid__cmp(&file->cache_data.oid, git_tree_id(tree));
+		error = (git_oid__cmp(&file->cache_data.oid, git_tree_id(tree)) != 0);
 
 		git_tree_free(tree);
 		return error;

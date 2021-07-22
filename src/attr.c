@@ -381,8 +381,9 @@ static int attr_setup(
 	git_attr_options *opts)
 {
 	git_buf system = GIT_BUF_INIT, info = GIT_BUF_INIT;
-	git_attr_file_source index_source = { GIT_ATTR_FILE_SOURCE_INDEX, NULL, GIT_ATTR_FILE };
-	git_attr_file_source head_source = { GIT_ATTR_FILE_SOURCE_COMMIT, NULL, GIT_ATTR_FILE };
+	git_attr_file_source index_source = { GIT_ATTR_FILE_SOURCE_INDEX, NULL, GIT_ATTR_FILE, NULL };
+	git_attr_file_source head_source = { GIT_ATTR_FILE_SOURCE_COMMIT, NULL, GIT_ATTR_FILE, NULL };
+	git_attr_file_source commit_source = { GIT_ATTR_FILE_SOURCE_COMMIT, NULL, GIT_ATTR_FILE, NULL };
 	git_index *idx = NULL;
 	const char *workdir;
 	int error = 0;
@@ -429,6 +430,13 @@ static int attr_setup(
 	if ((opts && (opts->flags & GIT_ATTR_CHECK_INCLUDE_HEAD) != 0) &&
 	    (error = preload_attr_source(repo, attr_session, &head_source)) < 0)
 		goto out;
+
+	if ((opts && (opts->flags & GIT_ATTR_CHECK_INCLUDE_COMMIT) != 0)) {
+		commit_source.commit_id = opts->commit_id;
+
+		if ((error = preload_attr_source(repo, attr_session, &commit_source)) < 0)
+			goto out;
+	}
 
 	if (attr_session)
 		attr_session->init_setup = 1;
@@ -480,7 +488,7 @@ int git_attr_add_macro(
 typedef struct {
 	git_repository *repo;
 	git_attr_session *attr_session;
-	uint32_t flags;
+	git_attr_options *opts;
 	const char *workdir;
 	git_index *index;
 	git_vector *files;
@@ -513,7 +521,8 @@ static int attr_decide_sources(
 		break;
 	}
 
-	if ((flags & GIT_ATTR_CHECK_INCLUDE_HEAD) != 0)
+	if ((flags & GIT_ATTR_CHECK_INCLUDE_HEAD) != 0 ||
+	    (flags & GIT_ATTR_CHECK_INCLUDE_COMMIT) != 0)
 		srcs[count++] = GIT_ATTR_FILE_SOURCE_COMMIT;
 
 	return count;
@@ -563,12 +572,18 @@ static int push_one_attr(void *ref, const char *path)
 	int error = 0, n_src, i;
 	bool allow_macros;
 
-	n_src = attr_decide_sources(
-		info->flags, info->workdir != NULL, info->index != NULL, src);
+	n_src = attr_decide_sources(info->opts ? info->opts->flags : 0,
+	                            info->workdir != NULL,
+	                            info->index != NULL,
+	                            src);
+
 	allow_macros = info->workdir ? !strcmp(info->workdir, path) : false;
 
 	for (i = 0; !error && i < n_src; ++i) {
 		git_attr_file_source source = { src[i], path, GIT_ATTR_FILE };
+
+		if (src[i] == GIT_ATTR_FILE_SOURCE_COMMIT && info->opts)
+			source.commit_id = info->opts->commit_id;
 
 		error = push_attr_source(info->repo, info->attr_session, info->files,
 		                       &source, allow_macros);
@@ -631,7 +646,7 @@ static int collect_attr_files(
 
 	info.repo = repo;
 	info.attr_session = attr_session;
-	info.flags = opts ? opts->flags : 0;
+	info.opts = opts;
 	info.workdir = workdir;
 	if (git_repository_index__weakptr(&info.index, repo) < 0)
 		git_error_clear(); /* no error even if there is no index */

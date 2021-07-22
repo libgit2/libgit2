@@ -224,16 +224,17 @@ int git_attr_cache__get(
 		return error;
 
 	/* load file if we don't have one or if existing one is out of date */
-	if (!file || (error = git_attr_file__out_of_date(repo, attr_session, file)) > 0)
+	if (!file ||
+	    (error = git_attr_file__out_of_date(repo, attr_session, file, source)) > 0)
 		error = git_attr_file__load(&updated, repo, attr_session,
 		                            entry, source, parser,
 		                            allow_macros);
 
 	/* if we loaded the file, insert into and/or update cache */
 	if (updated) {
-		if ((error = attr_cache_upsert(cache, updated)) < 0)
+		if ((error = attr_cache_upsert(cache, updated)) < 0) {
 			git_attr_file__free(updated);
-		else {
+		} else {
 			git_attr_file__free(file); /* offset incref from lookup */
 			file = updated;
 		}
