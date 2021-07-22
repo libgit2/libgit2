@@ -163,9 +163,24 @@ int git_attr_file__load(
 		break;
 	}
 	case GIT_ATTR_FILE_SOURCE_COMMIT: {
-		if ((error = git_repository_head_tree(&tree, repo)) < 0 ||
-		    (error = git_tree_entry_bypath(&tree_entry, tree, entry->path)) < 0 ||
-		    (error = git_blob_lookup(&blob, repo, git_tree_entry_id(tree_entry))) < 0)
+		if ((error = git_repository_head_tree(&tree, repo)) < 0)
+			goto cleanup;
+
+		if ((error = git_tree_entry_bypath(&tree_entry, tree, entry->path)) < 0) {
+			/*
+			 * If the attributes file does not exist, we can
+			 * cache an empty file for this commit to prevent
+			 * needless future lookups.
+			 */
+			if (error == GIT_ENOTFOUND) {
+				error = 0;
+				break;
+			}
+
+			goto cleanup;
+		}
+
+		if ((error = git_blob_lookup(&blob, repo, git_tree_entry_id(tree_entry))) < 0)
 			goto cleanup;
 
 		/*
