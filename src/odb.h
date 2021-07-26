@@ -12,11 +12,13 @@
 #include "git2/odb.h"
 #include "git2/oid.h"
 #include "git2/types.h"
+#include "git2/sys/commit_graph.h"
 
-#include "vector.h"
 #include "cache.h"
-#include "posix.h"
+#include "commit_graph.h"
 #include "filter.h"
+#include "posix.h"
+#include "vector.h"
 
 #define GIT_OBJECTS_DIR "objects/"
 #define GIT_OBJECT_DIR_MODE 0777
@@ -43,6 +45,7 @@ struct git_odb {
 	git_mutex lock;  /* protects backends */
 	git_vector backends;
 	git_cache own_cache;
+	git_commit_graph *cgraph;
 	unsigned int do_fsync :1;
 };
 
@@ -126,6 +129,13 @@ int git_odb__error_ambiguous(const char *message);
 int git_odb__read_header_or_object(
 	git_odb_object **out, size_t *len_p, git_object_t *type_p,
 	git_odb *db, const git_oid *id);
+
+/*
+ * Attempt to get the ODB's commit-graph file. This object is still owned by
+ * the ODB. If the repository does not contain a commit-graph, it will return
+ * GIT_ENOTFOUND.
+ */
+int git_odb__get_commit_graph_file(git_commit_graph_file **out, git_odb *odb);
 
 /* freshen an entry in the object database */
 int git_odb__freshen(git_odb *db, const git_oid *id);

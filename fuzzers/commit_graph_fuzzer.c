@@ -31,7 +31,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
-	git_commit_graph_file cgraph = {{0}};
+	git_commit_graph_file file = {{0}};
 	git_commit_graph_entry e;
 	git_buf commit_graph_buf = GIT_BUF_INIT;
 	git_oid oid = {{0}};
@@ -62,19 +62,19 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		git_buf_attach_notowned(&commit_graph_buf, (char *)data, size);
 	}
 
-	if (git_commit_graph_parse(
-			    &cgraph,
+	if (git_commit_graph_file_parse(
+			    &file,
 			    (const unsigned char *)git_buf_cstr(&commit_graph_buf),
 			    git_buf_len(&commit_graph_buf))
 	    < 0)
 		goto cleanup;
 
 	/* Search for any oid, just to exercise that codepath. */
-	if (git_commit_graph_entry_find(&e, &cgraph, &oid, GIT_OID_HEXSZ) < 0)
+	if (git_commit_graph_entry_find(&e, &file, &oid, GIT_OID_HEXSZ) < 0)
 		goto cleanup;
 
 cleanup:
-	git_commit_graph_close(&cgraph);
+	git_commit_graph_file_close(&file);
 	git_buf_dispose(&commit_graph_buf);
 	return 0;
 }

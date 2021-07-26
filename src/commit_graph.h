@@ -10,6 +10,9 @@
 
 #include "common.h"
 
+#include "git2/types.h"
+#include "git2/sys/commit_graph.h"
+
 #include "map.h"
 
 /**
@@ -52,9 +55,6 @@ typedef struct git_commit_graph_file {
 
 	/* The trailer of the file. Contains the SHA1-checksum of the whole file. */
 	git_oid checksum;
-
-	/* something like ".git/objects/info/commit-graph". */
-	git_buf filename;
 } git_commit_graph_file;
 
 /**
@@ -88,29 +88,60 @@ typedef struct git_commit_graph_entry {
 	git_oid sha1;
 } git_commit_graph_entry;
 
-int git_commit_graph_open(git_commit_graph_file **cgraph_out, const char *path);
+/* A wrapper for git_commit_graph_file to enable lazy loading in the ODB. */
+struct git_commit_graph {
+	/* The path to the commit-graph file. Something like ".git/objects/info/commit-graph". */
+	git_buf filename;
+
+	/* The underlying commit-graph file. */
+	git_commit_graph_file *file;
+
+	/* Whether the commit-graph file was already checked for validity. */
+	bool checked;
+};
+
+/** Create a new commit-graph, optionally opening the underlying file. */
+int git_commit_graph_new(git_commit_graph **cgraph_out, const char *objects_dir, bool open_file);
+
+/** Open and validate a commit-graph file. */
+int git_commit_graph_file_open(git_commit_graph_file **file_out, const char *path);
 
 /*
- * Returns whether the commit_graph_file needs to be reloaded since the
- * contents of the commit-graph file have changed on disk. If `path` is NULL,
- * the filename stored in `cgraph` will be used.
+ * Attempt to get the git_commit_graph's commit-graph file. This object is
+ * still owned by the git_commit_graph. If the repository does not contain a commit graph,
+ * it will return GIT_ENOTFOUND.
+ *
+ * This function is not thread-safe.
  */
-bool git_commit_graph_needs_refresh(const git_commit_graph_file *cgraph, const char *path);
+int git_commit_graph_get_file(git_commit_graph_file **file_out, git_commit_graph *cgraph);
+
+/* Marks the commit-graph file as needing a refresh. */
+void git_commit_graph_refresh(git_commit_graph *cgraph);
+
+/*
+ * Returns whether the git_commit_graph_file needs to be reloaded since the
+ * contents of the commit-graph file have changed on disk.
+ */
+bool git_commit_graph_file_needs_refresh(
+		const git_commit_graph_file *file, const char *path);
 
 int git_commit_graph_entry_find(
 		git_commit_graph_entry *e,
-		const git_commit_graph_file *cgraph,
+		const git_commit_graph_file *file,
 		const git_oid *short_oid,
 		size_t len);
 int git_commit_graph_entry_parent(
 		git_commit_graph_entry *parent,
-		const git_commit_graph_file *cgraph,
+		const git_commit_graph_file *file,
 		const git_commit_graph_entry *entry,
 		size_t n);
-int git_commit_graph_close(git_commit_graph_file *cgraph);
-void git_commit_graph_free(git_commit_graph_file *cgraph);
+int git_commit_graph_file_close(git_commit_graph_file *cgraph);
+void git_commit_graph_file_free(git_commit_graph_file *cgraph);
 
 /* This is exposed for use in the fuzzers. */
-int git_commit_graph_parse(git_commit_graph_file *cgraph, const unsigned char *data, size_t size);
+int git_commit_graph_file_parse(
+		git_commit_graph_file *file,
+		const unsigned char *data,
+		size_t size);
 
 #endif
