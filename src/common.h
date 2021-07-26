@@ -19,6 +19,8 @@
 # define GIT_INLINE(type) static __inline type
 #elif defined(__GNUC__)
 # define GIT_INLINE(type) static __inline__ type
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
+# define GIT_INLINE(type) static inline type
 #else
 # define GIT_INLINE(type) static type
 #endif
