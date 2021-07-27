@@ -179,14 +179,14 @@ int git_graph_descendant_of(git_repository *repo, const git_oid *commit, const g
 	if (git_oid_equal(commit, ancestor))
 		return 0;
 
-	return git_graph_reachable_from_any(repo, ancestor, 1, commit);
+	return git_graph_reachable_from_any(repo, ancestor, commit, 1);
 }
 
 int git_graph_reachable_from_any(
 		git_repository *repo,
 		const git_oid *commit_id,
-		size_t length,
-		const git_oid descendant_array[])
+		const git_oid descendant_array[],
+		size_t length)
 {
 	git_revwalk *walk = NULL;
 	git_vector list;

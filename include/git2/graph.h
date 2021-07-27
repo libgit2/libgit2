@@ -68,8 +68,8 @@ GIT_EXTERN(int) git_graph_descendant_of(
 GIT_EXTERN(int) git_graph_reachable_from_any(
 	git_repository *repo,
 	const git_oid *commit,
-	size_t length,
-	const git_oid descendant_array[]);
+	const git_oid descendant_array[],
+	size_t length);
 
 /** @} */
 GIT_END_DECL

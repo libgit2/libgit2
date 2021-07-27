@@ -45,11 +45,11 @@ void test_graph_reachable_from_any__returns_correct_result(void)
 
 	cl_assert_equal_i(
 			git_graph_reachable_from_any(
-					repo, git_object_id(branchH1), 1, git_object_id(branchA1)),
+					repo, git_object_id(branchH1), git_object_id(branchA1), 1),
 			0);
 	cl_assert_equal_i(
 			git_graph_reachable_from_any(
-					repo, git_object_id(branchH1), 1, git_object_id(branchA2)),
+					repo, git_object_id(branchH1), git_object_id(branchA2), 1),
 			0);
 
 	cl_git_pass(git_oid_cpy(&descendants[0], git_object_id(branchA1)));
@@ -60,10 +60,10 @@ void test_graph_reachable_from_any__returns_correct_result(void)
 	cl_git_pass(git_oid_cpy(&descendants[5], git_object_id(branchC2)));
 	cl_git_pass(git_oid_cpy(&descendants[6], git_object_id(branchH2)));
 	cl_assert_equal_i(
-			git_graph_reachable_from_any(repo, git_object_id(branchH2), 6, descendants),
+			git_graph_reachable_from_any(repo, git_object_id(branchH2), descendants, 6),
 			0);
 	cl_assert_equal_i(
-			git_graph_reachable_from_any(repo, git_object_id(branchH2), 7, descendants),
+			git_graph_reachable_from_any(repo, git_object_id(branchH2), descendants, 7),
 			1);
 
 	git_object_free(branchA1);
@@ -197,8 +197,8 @@ void test_graph_reachable_from_any__exhaustive(void)
 			actual_reachable = git_graph_reachable_from_any(
 					repo,
 					git_commit_id(parent_commit),
-					n_descendants,
-					descendants);
+					descendants,
+					n_descendants);
 			if (actual_reachable != expected_reachable) {
 				git_buf error_message_buf = GIT_BUF_INIT;
 				char parent_oidbuf[9] = {0}, child_oidbuf[9] = {0};
