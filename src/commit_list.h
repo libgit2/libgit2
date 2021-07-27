@@ -46,6 +46,7 @@ typedef struct git_commit_list {
 } git_commit_list;
 
 git_commit_list_node *git_commit_list_alloc_node(git_revwalk *walk);
+int git_commit_list_generation_cmp(const void *a, const void *b);
 int git_commit_list_time_cmp(const void *a, const void *b);
 void git_commit_list_free(git_commit_list **list_p);
 git_commit_list *git_commit_list_insert(git_commit_list_node *item, git_commit_list **list_p);
