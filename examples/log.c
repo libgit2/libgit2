@@ -429,7 +429,7 @@ static int parse_options(
 			else
 				/** Try failed revision parse as filename. */
 				break;
-		} else if (!match_arg_separator(&args)) {
+		} else if (match_arg_separator(&args)) {
 			break;
 		}
 		else if (!strcmp(a, "--date-order"))
