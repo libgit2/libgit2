@@ -189,7 +189,7 @@ static void output_conflicts(git_index *index)
 	while ((err = git_index_conflict_next(&ancestor, &our, &their, conflicts)) == 0) {
 		fprintf(stderr, "conflict: a:%s o:%s t:%s\n",
 		        ancestor ? ancestor->path : "NULL",
-		        our->path ? our->path : "NULL",
+		        (our != NULL && our->path) ? our->path : "NULL",
 		        their->path ? their->path : "NULL");
 	}
 
