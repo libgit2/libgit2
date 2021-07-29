@@ -71,11 +71,11 @@ void test_attr_repo__get_one(void)
 	}
 
 	cl_assert(git_attr_cache__is_cached(
-		g_repo, GIT_ATTR_FILE__FROM_FILE, ".git/info/attributes"));
+		g_repo, GIT_ATTR_FILE_SOURCE_FILE, ".git/info/attributes"));
 	cl_assert(git_attr_cache__is_cached(
-		g_repo, GIT_ATTR_FILE__FROM_FILE, ".gitattributes"));
+		g_repo, GIT_ATTR_FILE_SOURCE_FILE, ".gitattributes"));
 	cl_assert(git_attr_cache__is_cached(
-		g_repo, GIT_ATTR_FILE__FROM_FILE, "sub/.gitattributes"));
+		g_repo, GIT_ATTR_FILE_SOURCE_FILE, "sub/.gitattributes"));
 }
 
 void test_attr_repo__get_one_start_deep(void)
@@ -92,11 +92,11 @@ void test_attr_repo__get_one_start_deep(void)
 	}
 
 	cl_assert(git_attr_cache__is_cached(
-		g_repo, GIT_ATTR_FILE__FROM_FILE, ".git/info/attributes"));
+		g_repo, GIT_ATTR_FILE_SOURCE_FILE, ".git/info/attributes"));
 	cl_assert(git_attr_cache__is_cached(
-		g_repo, GIT_ATTR_FILE__FROM_FILE, ".gitattributes"));
+		g_repo, GIT_ATTR_FILE_SOURCE_FILE, ".gitattributes"));
 	cl_assert(git_attr_cache__is_cached(
-		g_repo, GIT_ATTR_FILE__FROM_FILE, "sub/.gitattributes"));
+		g_repo, GIT_ATTR_FILE_SOURCE_FILE, "sub/.gitattributes"));
 }
 
 void test_attr_repo__get_many(void)
@@ -341,7 +341,7 @@ void test_attr_repo__sysdir_with_session(void)
 	g_repo = cl_git_sandbox_reopen();
 
 	cl_git_pass(git_attr_session__init(&session, g_repo));
-	cl_git_pass(git_attr_get_many_with_session(values, g_repo, &session, 0, "file", ARRAY_SIZE(attrs), attrs));
+	cl_git_pass(git_attr_get_many_with_session(values, g_repo, &session, NULL, "file", ARRAY_SIZE(attrs), attrs));
 
 	cl_assert_equal_s(values[0], "1");
 	cl_assert_equal_s(values[1], "2");
