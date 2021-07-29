@@ -27,6 +27,7 @@
 typedef struct {
 	char *reset_to;
 	git_strarray paths_to_reset;
+	git_reset_t reset_type;
 } reset_opts;
 
 static int parse_options(reset_opts *out, struct args_info *args, git_repository *repo);
@@ -40,7 +41,7 @@ int lg2_reset(git_repository *repo, int argc, char **argv)
 
 	if (parse_options(&options, &args, repo)) {
 		fprintf(stderr,
-			"USAGE: %s [<treeish>] [--] [<pathspec>...]\n"
+			"USAGE: %s [<treeish>] [--hard] [--] [<pathspec>...]\n"
 			"    <treeish>:  Where to reset to. Defaults to HEAD."
 					" At present, only soft resets are supported.\n"
 			"    <pathspec>: If any are given, rather than resetting"
@@ -68,12 +69,21 @@ int lg2_reset(git_repository *repo, int argc, char **argv)
 	 * Reset the entire repository. Here, we're doing a SOFT reset.
 	 * See the git_reset_t enum for additional options.
 	 *
-	 * We're not doing a GIT_RESET_HARD and not tracking progress,
-	 * so checkout_opts are null.
+	 * checkout_opts can be used to track reset progress for a hard reset.
 	 */
-	if (options.paths_to_reset.count == 0) {
-		error = git_reset(repo, target, GIT_RESET_SOFT, NULL);
+	if (options.paths_to_reset.count == 0 || options.reset_type == GIT_RESET_HARD) {
+		git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+		if (options.paths_to_reset.count > 0) {
+			checkout_opts.paths = options.paths_to_reset;
+		}
+
+		error = git_reset(repo, target, options.reset_type, &checkout_opts);
 	} else {
+		if (options.reset_type != GIT_RESET_SOFT) {
+			fprintf(stderr, "WARNING: --hard: Not supported for a list of paths.\n");
+		}
+
 		error = git_reset_default(repo, target, &options.paths_to_reset);
 	}
 
@@ -90,9 +100,10 @@ static int parse_options(reset_opts *out, struct args_info *args, git_repository
 	int argc = args->argc;
 	char **argv = args->argv;
 
-	out->reset_to = NULL;
+	out->reset_to = "HEAD"; // Default to "HEAD" for what to reset to.
 	out->paths_to_reset.count = 0;
 	out->paths_to_reset.strings = NULL;
+	out->reset_type = GIT_RESET_SOFT;
 
 	if (argc == 1) {
 		// We need to have at least one argument.
@@ -101,22 +112,16 @@ static int parse_options(reset_opts *out, struct args_info *args, git_repository
 
 	for (i = 1; i < argc; i++) {
 		if (*argv[i] != '-') {
-			if (i >= 2) {
-				// reset --somearg1 --somearg2 path1 path2...
-				//                              ^^^
-				//                               i
-
-				// We did't have a tree-like reset_to argument.
-				// We default to HEAD.
-				out->reset_to = "HEAD";
-
-				break;
-			}
-
-			// Otherwise, it's the <tree-like> argument.
 			out->reset_to = argv[i];
+
+			// Start processing subsequent arguments as paths.
+			i++;
+			break;
+		} else if (strcmp(argv[i], "--hard") == 0) {
+			out->reset_type = GIT_RESET_HARD;
 		} else if (strcmp(argv[i], "--") == 0) {
-			// Start processing path arguments.
+			// After --, all arguments are interpreted as paths.
+			i++;
 			break;
 		} else {
 			// Display help.
