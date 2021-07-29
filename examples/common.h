@@ -198,6 +198,12 @@ extern int certificate_confirm_cb(struct git_cert *cert,
 extern void handle_signature_create_error(int source_error);
 
 /**
+ * Prints a description of a given git_repository_state and how to return
+ * to the default state (GIT_REPOSITORY_STATE_NONE).
+ */
+extern void print_repo_state_description(git_repository_state_t state);
+
+/**
  * Repeated documentation output.
  */
 #define INSTRUCTIONS_FOR_STORING_AUTHOR_INFORMATION \

@@ -324,19 +324,8 @@ int lg2_checkout(git_repository *repo, int argc, char **argv)
 	/** Make sure we're not about to checkout while something else is going on */
 	state = git_repository_state(repo);
 	if (state != GIT_REPOSITORY_STATE_NONE) {
-		fprintf(stderr, "repository is in unexpected state %d\n", state);
-
-		if (state == GIT_REPOSITORY_STATE_MERGE) {
-			fprintf(stderr, "It looks like a merge is in progress. Either "
-				"resolve the conflicts (see `lg2 status`), `lg2 add` each changed "
-				"file and commit the result, or run `lg2 reset HEAD` to stop the "
-				"merge.\n");
-		} else if (state == GIT_REPOSITORY_STATE_REBASE
-				|| state == GIT_REPOSITORY_STATE_REBASE_INTERACTIVE
-				|| state == GIT_REPOSITORY_STATE_REBASE_MERGE) {
-			fprintf(stderr, "It looks like a rebase is in progress. "
-					"If you want to cancel the rebase, run `lg2 rebase --abort`.\n");
-		}
+		fprintf(stderr, "ERROR: \n");
+		print_repo_state_description(state);
 
 		goto cleanup;
 	}

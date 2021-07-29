@@ -31,6 +31,7 @@ struct merge_options {
 	size_t annotated_count;
 
 	int no_commit : 1;
+	int abort_merge;
 };
 
 static void print_usage(void)
@@ -47,6 +48,7 @@ static void merge_options_init(struct merge_options *opts)
 	opts->heads_count = 0;
 	opts->annotated = NULL;
 	opts->annotated_count = 0;
+	opts->abort_merge = 0;
 }
 
 static void opts_add_refish(struct merge_options *opts, const char *refish)
@@ -74,6 +76,8 @@ static void parse_options(const char **repo_path, struct merge_options *opts, in
 			opts_add_refish(opts, curr);
 		} else if (!strcmp(curr, "--no-commit")) {
 			opts->no_commit = 1;
+		} else if (!strcmp(curr, "--abort")) {
+			opts->abort_merge = 1;
 		} else if (match_str_arg(repo_path, &args, "--git-dir")) {
 			continue;
 		} else {
@@ -288,8 +292,29 @@ int lg2_merge(git_repository *repo, int argc, char **argv)
 	parse_options(&path, &opts, argc, argv);
 
 	state = git_repository_state(repo);
+	if (opts.abort_merge) {
+		char **reset_args = malloc(sizeof(char *) * 4);
+		reset_args[0] = "reset";
+		reset_args[1] = "--hard";
+		reset_args[2] = "HEAD";
+		reset_args[3] = NULL;
+
+		if (state != GIT_REPOSITORY_STATE_MERGE) {
+			fprintf(stderr, "Error: No merge in progress.\n");
+			err = 1;
+			goto cleanup;
+		}
+
+		// Equivalent to `git reset --hard HEAD`
+		err = lg2_reset(repo, 3, reset_args);
+
+		free(reset_args);
+		goto cleanup;
+	}
+
 	if (state != GIT_REPOSITORY_STATE_NONE) {
-		fprintf(stderr, "repository is in unexpected state %d\n", state);
+		fprintf(stderr, "Error: repository is in unexpected state:\n");
+		print_repo_state_description(state);
 		goto cleanup;
 	}
 

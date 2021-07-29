@@ -80,8 +80,12 @@ int lg2_reset(git_repository *repo, int argc, char **argv)
 
 		error = git_reset(repo, target, options.reset_type, &checkout_opts);
 	} else {
+		/**
+		 * If we just have a list of paths to reset, we can use `git_reset_default`.
+		 */
+
 		if (options.reset_type != GIT_RESET_SOFT) {
-			fprintf(stderr, "WARNING: --hard: Not supported for a list of paths.\n");
+			fprintf(stderr, "WARNING: Non-soft reset: Not supported for a list of paths.\n");
 		}
 
 		error = git_reset_default(repo, target, &options.paths_to_reset);
