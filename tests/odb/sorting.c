@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/sys/odb_backend.h"
+#include "odb.h"
 
 typedef struct {
 	git_odb_backend base;
@@ -43,6 +44,11 @@ void test_odb_sorting__cleanup(void)
 {
 	git_odb_free(_odb);
 	_odb = NULL;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_ODB_LOOSE_PRIORITY,
+	                             GIT_ODB_DEFAULT_LOOSE_PRIORITY));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_ODB_PACKED_PRIORITY,
+	                             GIT_ODB_DEFAULT_PACKED_PRIORITY));
 }
 
 void test_odb_sorting__basic_backends_sorting(void)
