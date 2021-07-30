@@ -60,14 +60,13 @@ int lg2_pull(git_repository *repo, int argc, char **argv)
 	const git_indexer_progress *stats;
 	git_fetch_options fetch_opts = GIT_FETCH_OPTIONS_INIT;
 
-    /* iOS additions to have 'lg2 pull' work */
-	char* origin = "origin";
-	char* argv_merge[2];
+	char *origin = "origin";
+	char *argv_merge[2];
 
 	if (argc == 2) {
 		origin = argv[1];
 	} else if (argc > 2) {
-		fprintf(stderr, "usage: %s pull [branch]\n", argv[-1]);
+		fprintf(stderr, "usage: %s pull [remote]\n", argv[-1]);
 		return EXIT_FAILURE;
 	}
 
@@ -84,7 +83,7 @@ int lg2_pull(git_repository *repo, int argc, char **argv)
 
 	fetch_opts.callbacks.credentials = cred_acquire_cb;
 	fetch_opts.callbacks.certificate_check = certificate_confirm_cb;
-	fetch_opts.callbacks.payload = repo; // iOS addition, send repo to cb to get username/password or identityFile
+	fetch_opts.callbacks.payload = repo; // send repo to cb to get username/password or identityFile
 
 	/**
 	 * Perform the fetch with the configured refspecs from the
@@ -107,8 +106,8 @@ int lg2_pull(git_repository *repo, int argc, char **argv)
 		printf("\rReceived %u/%u objects in %" PRIuZ "bytes\n",
 			stats->indexed_objects, stats->total_objects, stats->received_bytes);
 	}
-	/* iOS: Now we merge with current directory */
 
+	/** Now we merge with current directory */
 	argv_merge[0] = "merge";
 	argv_merge[1] = "FETCH_HEAD";
 	lg2_merge(repo, 2, argv_merge);

@@ -78,7 +78,7 @@ int lg2_fetch(git_repository *repo, int argc, char **argv)
 
 	fetch_opts.callbacks.certificate_check = certificate_confirm_cb;
 	fetch_opts.callbacks.credentials = cred_acquire_cb;
-	fetch_opts.callbacks.payload = repo; // iOS addition, send repo to cb to get username/password or identityFile
+	fetch_opts.callbacks.payload = repo; // Send repo to cb to get username/password or identityFile
 
 	/**
 	 * Perform the fetch with the configured refspecs from the

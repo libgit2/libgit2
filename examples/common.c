@@ -375,13 +375,11 @@ int cred_acquire_cb(git_credential **out,
 	char *username = NULL, *password = NULL, *privkey = NULL, *pubkey = NULL;
 	git_repository* repo = (git_repository*) payload;
 	int error = 1;
-	// iOS addition: let's get the config file
 	git_config* cfg = NULL;
 	git_config_entry *entry = NULL;
 
 	UNUSED(url);
-	/* UNUSED(payload); */
-	/* iOS addition: get username, password, identityFile from config */
+	/* Get username, password, identityFile from config */
 	if (repo != NULL)
 		error = git_repository_config(&cfg, repo);
 	else
