@@ -26,27 +26,52 @@ GIT_BEGIN_DECL
 typedef enum {
 	/** Normal blame, the default */
 	GIT_BLAME_NORMAL = 0,
-	/** Track lines that have moved within a file (like `git blame -M`).
-	 * NOT IMPLEMENTED. */
+
+	/**
+	 * Track lines that have moved within a file (like `git blame -M`).
+	 *
+	 * This is not yet implemented and reserved for future use.
+	 */
 	GIT_BLAME_TRACK_COPIES_SAME_FILE = (1<<0),
-	/** Track lines that have moved across files in the same commit (like `git blame -C`).
-	 * NOT IMPLEMENTED. */
+
+	/**
+	 * Track lines that have moved across files in the same commit
+	 * (like `git blame -C`).
+	 *
+	 * This is not yet implemented and reserved for future use.
+	 */
 	GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES = (1<<1),
-	/** Track lines that have been copied from another file that exists in the
-	 * same commit (like `git blame -CC`). Implies SAME_FILE.
-	 * NOT IMPLEMENTED. */
+
+	/**
+	 * Track lines that have been copied from another file that exists
+	 * in the same commit (like `git blame -CC`).  Implies SAME_FILE.
+	 *
+	 * This is not yet implemented and reserved for future use.
+	 */
 	GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES = (1<<2),
-	/** Track lines that have been copied from another file that exists in *any*
-	 * commit (like `git blame -CCC`). Implies SAME_COMMIT_COPIES.
-	 * NOT IMPLEMENTED. */
+
+	/**
+	 * Track lines that have been copied from another file that exists in
+	 * *any* commit (like `git blame -CCC`).  Implies SAME_COMMIT_COPIES.
+	 *
+	 * This is not yet implemented and reserved for future use.
+	 */
 	GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES = (1<<3),
-	/** Restrict the search of commits to those reachable following only the
-	 * first parents. */
+
+	/**
+	 * Restrict the search of commits to those reachable following only
+	 * the first parents.
+	 */
 	GIT_BLAME_FIRST_PARENT = (1<<4),
-	/** Use mailmap file to map author and committer names and email addresses
-	 * to canonical real names and email addresses. The mailmap will be read
-	 * from the working directory, or HEAD in a bare repository. */
+
+	/**
+	 * Use mailmap file to map author and committer names and email
+	 * addresses to canonical real names and email addresses. The
+	 * mailmap will be read from the working directory, or HEAD in a
+	 * bare repository.
+	 */
 	GIT_BLAME_USE_MAILMAP = (1<<5),
+
 	/** Ignore whitespace differences */
 	GIT_BLAME_IGNORE_WHITESPACE = (1<<6),
 } git_blame_flag_t;
@@ -63,25 +88,33 @@ typedef struct git_blame_options {
 
 	/** A combination of `git_blame_flag_t` */
 	uint32_t flags;
-	/** The lower bound on the number of alphanumeric
-	 *   characters that must be detected as moving/copying within a file for it to
-	 *   associate those lines with the parent commit. The default value is 20.
-	 *   This value only takes effect if any of the `GIT_BLAME_TRACK_COPIES_*`
-	 *   flags are specified.
+
+	/**
+	 * The lower bound on the number of alphanumeric characters that
+	 * must be detected as moving/copying within a file for it to
+	 * associate those lines with the parent commit. The default value
+	 * is 20.
+	 *
+	 * This value only takes effect if any of the `GIT_BLAME_TRACK_COPIES_*`
+	 * flags are specified.
 	 */
 	uint16_t min_match_characters;
+
 	/** The id of the newest commit to consider. The default is HEAD. */
 	git_oid newest_commit;
+
 	/**
 	 * The id of the oldest commit to consider.
 	 * The default is the first commit encountered with a NULL parent.
 	 */
 	git_oid oldest_commit;
+
 	/**
 	 * The first line in the file to blame.
 	 * The default is 1 (line numbers start with 1).
 	 */
 	size_t min_line;
+
 	/**
 	 * The last line in the file to blame.
 	 * The default is the last line of the file.
@@ -158,8 +191,8 @@ typedef struct git_blame_hunk {
 	git_signature *orig_signature;
 
 	/**
-	 * The 1 iff the hunk has been tracked to a boundary commit (the root, or
-	 * the commit specified in git_blame_options.oldest_commit)
+	 * The 1 iff the hunk has been tracked to a boundary commit (the root,
+	 * or the commit specified in git_blame_options.oldest_commit)
 	 */
 	char boundary;
 } git_blame_hunk;
