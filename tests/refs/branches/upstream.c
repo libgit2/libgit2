@@ -92,6 +92,8 @@ void test_refs_branches_upstream__upstream_merge(void)
 	cl_git_pass(git_branch_upstream_merge(&buf, repository, "refs/heads/test"));
 	cl_assert_equal_s("refs/heads/master", buf.ptr);
 	git_buf_dispose(&buf);
+
+	cl_git_sandbox_cleanup();
 }
 
 void test_refs_branches_upstream__upstream_remote_empty_value(void)
