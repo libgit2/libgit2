@@ -75,8 +75,8 @@ void test_refs_branches_upstream__upstream_merge(void)
 {
 	git_reference *branch;
 	git_repository *repository;
-    git_buf buf = GIT_BUF_INIT;
-    
+	git_buf buf = GIT_BUF_INIT;
+
 	repository = cl_git_sandbox_init("testrepo.git");
 
 	/* check repository */
@@ -89,9 +89,9 @@ void test_refs_branches_upstream__upstream_merge(void)
 	git_reference_free(branch);
 
 	/* check merge branch */
-    cl_git_pass(git_branch_upstream_merge(&buf, repository, "refs/heads/test"));
-    cl_assert_equal_s("refs/heads/master", buf.ptr);
-    git_buf_dispose(&buf);
+	cl_git_pass(git_branch_upstream_merge(&buf, repository, "refs/heads/test"));
+	cl_assert_equal_s("refs/heads/master", buf.ptr);
+	git_buf_dispose(&buf);
 }
 
 void test_refs_branches_upstream__upstream_remote_empty_value(void)
