@@ -29,8 +29,8 @@
  * We work under the assumption that most objects for long-running
  * operations will be packed
  */
-int git_odb__loose_priority = 1;
-int git_odb__packed_priority = 2;
+int git_odb__loose_priority = GIT_ODB_DEFAULT_LOOSE_PRIORITY;
+int git_odb__packed_priority = GIT_ODB_DEFAULT_PACKED_PRIORITY;
 
 bool git_odb__strict_hash_verification = true;
 

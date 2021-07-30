@@ -24,6 +24,9 @@
 #define GIT_OBJECT_DIR_MODE 0777
 #define GIT_OBJECT_FILE_MODE 0444
 
+#define GIT_ODB_DEFAULT_LOOSE_PRIORITY 1
+#define GIT_ODB_DEFAULT_PACKED_PRIORITY 2
+
 extern bool git_odb__strict_hash_verification;
 
 /* DO NOT EXPORT */
