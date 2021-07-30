@@ -136,6 +136,24 @@ GIT_INLINE(int) git_error__check_version(const void *structure, unsigned int exp
 #define GIT_ERROR_CHECK_VERSION(S,V,N) if (git_error__check_version(S,V,N) < 0) return -1
 
 /**
+ * Declare that a function's return value must be used.
+ *
+ * Used mostly to guard against potential silent bugs at runtime. This is
+ * recommended to be added to functions that:
+ *
+ * - Allocate / reallocate memory. This prevents memory leaks or errors where
+ *   buffers are expected to have grown to a certain size, but could not be
+ *   resized.
+ * - Acquire locks. When a lock cannot be acquired, that will almost certainly
+ *   cause a data race / undefined behavior.
+ */
+#if defined(__GNUC__)
+# define GIT_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#else
+# define GIT_WARN_UNUSED_RESULT
+#endif
+
+/**
  * Initialize a structure with a version.
  */
 GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int version)
