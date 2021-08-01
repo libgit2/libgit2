@@ -232,33 +232,189 @@ jobs:
       run: docker build -t ${{ env.docker-registry-container-sha }} -f ${{ env.dockerfile }} .
       working-directory: ${{ env.docker-config-path }}
       if: matrix.platform.container.name != '' && env.docker-container-exists != 'true'
-    - name: Build and test
+    - name: Build
       run: |
-        export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
-
+        mkdir build && chmod 0777 build
         if [ -n "${{ matrix.platform.container.name }}" ]; then
           docker run \
               --rm \
               --user libgit2:libgit2 \
               -v "$(pwd)/source:/home/libgit2/source" \
+              -v "$(pwd)/build:/home/libgit2/build" \
               -w /home/libgit2 \
               -e ASAN_SYMBOLIZER_PATH \
               -e CC \
               -e CFLAGS \
               -e CMAKE_GENERATOR \
               -e CMAKE_OPTIONS \
-              -e GITTEST_NEGOTIATE_PASSWORD \
               -e PKG_CONFIG_PATH \
-              -e SKIP_NEGOTIATE_TESTS \
-              -e SKIP_SSH_TESTS \
+              ${{ env.docker-registry-container-sha }} \
+              /bin/bash -c "cd build && ../source/ci/build.sh"
+        else
+          cd build
+          ../source/ci/build.sh
+        fi
+      shell: bash
+    - name: Test offline
+      if: ${{ always() }}
+      run: |
+        if [ -n "${{ matrix.platform.container.name }}" ]; then
+          docker run \
+              --rm \
+              --user libgit2:libgit2 \
+              -v "$(pwd)/source:/home/libgit2/source" \
+              -v "$(pwd)/build:/home/libgit2/build" \
+              -w /home/libgit2 \
+              -e ASAN_SYMBOLIZER_PATH \
               -e TSAN_OPTIONS \
               -e UBSAN_OPTIONS \
               ${{ env.docker-registry-container-sha }} \
-              /bin/bash -c "mkdir build && cd build && ../source/ci/build.sh && ../source/ci/test.sh"
+              /bin/bash -c "cd build && TEST_ONLY=OFFLINE ../source/ci/test.sh"
         else
-          mkdir build && cd build
-          ../source/ci/build.sh
-          ../source/ci/test.sh
+          cd build
+          TEST_ONLY=OFFLINE ../source/ci/test.sh
+        fi
+      shell: bash
+    - name: Test online
+      if: ${{ always() }}
+      run: |
+        if [ -n "${{ matrix.platform.container.name }}" ]; then
+          docker run \
+              --rm \
+              --user libgit2:libgit2 \
+              -v "$(pwd)/source:/home/libgit2/source" \
+              -v "$(pwd)/build:/home/libgit2/build" \
+              -w /home/libgit2 \
+              -e ASAN_SYMBOLIZER_PATH \
+              -e TSAN_OPTIONS \
+              -e UBSAN_OPTIONS \
+              ${{ env.docker-registry-container-sha }} \
+              /bin/bash -c "cd build && TEST_ONLY=ONLINE ../source/ci/test.sh"
+        else
+          cd build
+          TEST_ONLY=ONLINE ../source/ci/test.sh
+        fi
+      shell: bash
+    - name: Test gitdaemon
+      if: ${{ always() }}
+      run: |
+        if [ -n "${{ matrix.platform.container.name }}" ]; then
+          docker run \
+              --rm \
+              --user libgit2:libgit2 \
+              -v "$(pwd)/source:/home/libgit2/source" \
+              -v "$(pwd)/build:/home/libgit2/build" \
+              -w /home/libgit2 \
+              -e ASAN_SYMBOLIZER_PATH \
+              -e TSAN_OPTIONS \
+              -e UBSAN_OPTIONS \
+              ${{ env.docker-registry-container-sha }} \
+              /bin/bash -c "cd build && TEST_ONLY=GITDAEMON ../source/ci/test.sh"
+        else
+          cd build
+          TEST_ONLY=GITDAEMON ../source/ci/test.sh
+        fi
+      shell: bash
+    - name: Test proxy
+      if: ${{ always() }}
+      run: |
+        if [ -n "${{ matrix.platform.container.name }}" ]; then
+          docker run \
+              --rm \
+              --user libgit2:libgit2 \
+              -v "$(pwd)/source:/home/libgit2/source" \
+              -v "$(pwd)/build:/home/libgit2/build" \
+              -w /home/libgit2 \
+              -e ASAN_SYMBOLIZER_PATH \
+              -e TSAN_OPTIONS \
+              -e UBSAN_OPTIONS \
+              ${{ env.docker-registry-container-sha }} \
+              /bin/bash -c "cd build && TEST_ONLY=PROXY ../source/ci/test.sh"
+        else
+          cd build
+          TEST_ONLY=PROXY ../source/ci/test.sh
+        fi
+      shell: bash
+    - name: Test ntlm
+      if: ${{ always() }}
+      run: |
+        if [ -n "${{ matrix.platform.container.name }}" ]; then
+          docker run \
+              --rm \
+              --user libgit2:libgit2 \
+              -v "$(pwd)/source:/home/libgit2/source" \
+              -v "$(pwd)/build:/home/libgit2/build" \
+              -w /home/libgit2 \
+              -e ASAN_SYMBOLIZER_PATH \
+              -e TSAN_OPTIONS \
+              -e UBSAN_OPTIONS \
+              ${{ env.docker-registry-container-sha }} \
+              /bin/bash -c "cd build && TEST_ONLY=NTLM ../source/ci/test.sh"
+        else
+          cd build
+          TEST_ONLY=NTLM ../source/ci/test.sh
+        fi
+      shell: bash
+    - name: Test negotiate
+      if: ${{ always() && env.SKIP_NEGOTIATE_TESTS != 'true' }}
+      run: |
+        export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
+        if [ -n "${{ matrix.platform.container.name }}" ]; then
+          docker run \
+              --rm \
+              --user libgit2:libgit2 \
+              -v "$(pwd)/source:/home/libgit2/source" \
+              -v "$(pwd)/build:/home/libgit2/build" \
+              -w /home/libgit2 \
+              -e ASAN_SYMBOLIZER_PATH \
+              -e GITTEST_NEGOTIATE_PASSWORD \
+              -e TSAN_OPTIONS \
+              -e UBSAN_OPTIONS \
+              ${{ env.docker-registry-container-sha }} \
+              /bin/bash -c "cd build && TEST_ONLY=NEGOTIATE ../source/ci/test.sh"
+        else
+          cd build
+          TEST_ONLY=NEGOTIATE ../source/ci/test.sh
+        fi
+      shell: bash
+    - name: Test ssh
+      if: ${{ always() && env.SKIP_SSH_TESTS != 'true' }}
+      run: |
+        if [ -n "${{ matrix.platform.container.name }}" ]; then
+          docker run \
+              --rm \
+              --user libgit2:libgit2 \
+              -v "$(pwd)/source:/home/libgit2/source" \
+              -v "$(pwd)/build:/home/libgit2/build" \
+              -w /home/libgit2 \
+              -e ASAN_SYMBOLIZER_PATH \
+              -e TSAN_OPTIONS \
+              -e UBSAN_OPTIONS \
+              ${{ env.docker-registry-container-sha }} \
+              /bin/bash -c "cd build && TEST_ONLY=SSH ../source/ci/test.sh"
+        else
+          cd build
+          TEST_ONLY=SSH ../source/ci/test.sh
+        fi
+      shell: bash
+    - name: Test fuzzers
+      if: ${{ always() }}
+      run: |
+        if [ -n "${{ matrix.platform.container.name }}" ]; then
+          docker run \
+              --rm \
+              --user libgit2:libgit2 \
+              -v "$(pwd)/source:/home/libgit2/source" \
+              -v "$(pwd)/build:/home/libgit2/build" \
+              -w /home/libgit2 \
+              -e ASAN_SYMBOLIZER_PATH \
+              -e TSAN_OPTIONS \
+              -e UBSAN_OPTIONS \
+              ${{ env.docker-registry-container-sha }} \
+              /bin/bash -c "cd build && TEST_ONLY=FUZZERS ../source/ci/test.sh"
+        else
+          cd build
+          TEST_ONLY=FUZZERS ../source/ci/test.sh
         fi
       shell: bash
 

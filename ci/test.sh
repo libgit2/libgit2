@@ -75,7 +75,7 @@ echo "##########################################################################
 echo "## Configuring test environment"
 echo "##############################################################################"
 
-if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
+if [ -z "$SKIP_GITDAEMON_TESTS" -a \( -z "$TEST_ONLY" -o "$TEST_ONLY" = "GITDAEMON" \) ]; then
 	echo "Starting git daemon..."
 	GITDAEMON_DIR=`mktemp -d ${TMPDIR}/gitdaemon.XXXXXXXX`
 	git init --bare "${GITDAEMON_DIR}/test.git"
@@ -84,19 +84,35 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	disown $GITDAEMON_PID
 fi
 
-if [ -z "$SKIP_PROXY_TESTS" ]; then
+if [ -z "$SKIP_PROXY_TESTS" -a \( -z "$TEST_ONLY" -o "$TEST_ONLY" = "PROXY" \) ]; then
 	curl --location --silent --show-error https://github.com/ethomson/poxyproxy/releases/download/v0.7.0/poxyproxy-0.7.0.jar >poxyproxy.jar
 
 	echo ""
 	echo "Starting HTTP proxy (Basic)..."
 	java -jar poxyproxy.jar --address 127.0.0.1 --port 8080 --credentials foo:bar --auth-type basic --quiet &
 
+	echo "Waiting for proxy to be ready..."
+	# Exit code 7 is "connection refused"
+	exitcode=7
+	while [ "$exitcode" -eq 7 ]; do
+		sleep 1
+		curl --fail http://foo:bar@127.0.0.1:8080 || exitcode=$?
+	done
+
 	echo ""
 	echo "Starting HTTP proxy (NTLM)..."
 	java -jar poxyproxy.jar --address 127.0.0.1 --port 8090 --credentials foo:bar --auth-type ntlm --quiet &
+
+	echo "Waiting for proxy to be ready..."
+	# Exit code 7 is "connection refused"
+	exitcode=7
+	while [ "$exitcode" -eq 7 ]; do
+		sleep 1
+		curl --fail http://foo:bar@127.0.0.1:8090 || exitcode=$?
+	done
 fi
 
-if [ -z "$SKIP_NTLM_TESTS" ]; then
+if [ -z "$SKIP_NTLM_TESTS" -a \( -z "$TEST_ONLY" -o "$TEST_ONLY" = "NTLM" \) ]; then
 	curl --location --silent --show-error https://github.com/ethomson/poxygit/releases/download/v0.4.0/poxygit-0.4.0.jar >poxygit.jar
 
 	echo ""
@@ -104,9 +120,17 @@ if [ -z "$SKIP_NTLM_TESTS" ]; then
 	NTLM_DIR=`mktemp -d ${TMPDIR}/ntlm.XXXXXXXX`
 	git init --bare "${NTLM_DIR}/test.git"
 	java -jar poxygit.jar --address 127.0.0.1 --port 9000 --credentials foo:baz --quiet "${NTLM_DIR}" &
+
+	echo "Waiting for proxy to be ready..."
+	# Exit code 7 is "connection refused"
+	exitcode=7
+	while [ "$exitcode" -eq 7 ]; do
+		sleep 1
+		curl --fail http://foo:bar@127.0.0.1:9000 || exitcode=$?
+	done
 fi
 
-if [ -z "$SKIP_SSH_TESTS" ]; then
+if [ -z "$SKIP_SSH_TESTS" -a \( -z "$TEST_ONLY" -o "$TEST_ONLY" = "SSH" \) ]; then
 	echo "Starting ssh daemon..."
 	HOME=`mktemp -d ${TMPDIR}/home.XXXXXXXX`
 	SSHD_DIR=`mktemp -d ${TMPDIR}/sshd.XXXXXXXX`
@@ -150,7 +174,7 @@ fi
 
 # Run the tests that do not require network connectivity.
 
-if [ -z "$SKIP_OFFLINE_TESTS" ]; then
+if [ -z "$SKIP_OFFLINE_TESTS" -a \( -z "$TEST_ONLY" -o "$TEST_ONLY" = "OFFLINE" \) ]; then
 	echo ""
 	echo "##############################################################################"
 	echo "## Running (offline) tests"
@@ -173,7 +197,7 @@ if [ -n "$RUN_INVASIVE_TESTS" ]; then
 	unset GITTEST_INVASIVE_SPEED
 fi
 
-if [ -z "$SKIP_ONLINE_TESTS" ]; then
+if [ -z "$SKIP_ONLINE_TESTS" -a \( -z "$TEST_ONLY" -o "$TEST_ONLY" = "ONLINE" \) ]; then
 	# Run the various online tests.  The "online" test suite only includes the
 	# default online tests that do not require additional configuration.  The
 	# "proxy" and "ssh" test suites require further setup.
@@ -188,7 +212,7 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	unset GITTEST_FLAKY_RETRY
 fi
 
-if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
+if [ -z "$SKIP_GITDAEMON_TESTS" -a \( -z "$TEST_ONLY" -o "$TEST_ONLY" = "GITDAEMON" \) ]; then
 	echo ""
 	echo "Running gitdaemon tests"
 	echo ""
@@ -198,7 +222,7 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	unset GITTEST_REMOTE_URL
 fi
 
-if [ -z "$SKIP_PROXY_TESTS" ]; then
+if [ -z "$SKIP_PROXY_TESTS" -a \( -z "$TEST_ONLY" -o "$TEST_ONLY" = "PROXY" \) ]; then
 	echo ""
 	echo "Running proxy tests (Basic authentication)"
 	echo ""
@@ -226,7 +250,7 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	unset GITTEST_REMOTE_PROXY_PASS
 fi
 
-if [ -z "$SKIP_NTLM_TESTS" ]; then
+if [ -z "$SKIP_NTLM_TESTS" -a \( -z "$TEST_ONLY" -o "$TEST_ONLY" = "NTLM" \) ]; then
 	echo ""
 	echo "Running NTLM tests (IIS emulation)"
 	echo ""
@@ -252,7 +276,7 @@ if [ -z "$SKIP_NTLM_TESTS" ]; then
 	unset GITTEST_REMOTE_PASS
 fi
 
-if [ -z "$SKIP_NEGOTIATE_TESTS" -a -n "$GITTEST_NEGOTIATE_PASSWORD" ]; then
+if [ -z "$SKIP_NEGOTIATE_TESTS" -a -n "$GITTEST_NEGOTIATE_PASSWORD" -a \( -z "$TEST_ONLY" -o "$TEST_ONLY" = "NEGOTIATE" \) ]; then
 	echo ""
 	echo "Running SPNEGO tests"
 	echo ""
@@ -285,7 +309,7 @@ if [ -z "$SKIP_NEGOTIATE_TESTS" -a -n "$GITTEST_NEGOTIATE_PASSWORD" ]; then
 	kdestroy -A
 fi
 
-if [ -z "$SKIP_SSH_TESTS" ]; then
+if [ -z "$SKIP_SSH_TESTS" -a \( -z "$TEST_ONLY" -o "$TEST_ONLY" = "SSH" \) ]; then
 	echo ""
 	echo "Running ssh tests"
 	echo ""
@@ -305,7 +329,7 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	unset GITTEST_REMOTE_SSH_FINGERPRINT
 fi
 
-if [ -z "$SKIP_FUZZERS" ]; then
+if [ -z "$SKIP_FUZZERS" -a \( -z "$TEST_ONLY" -o "$TEST_ONLY" = "FUZZERS" \) ]; then
 	echo ""
 	echo "##############################################################################"
 	echo "## Running fuzzers"
