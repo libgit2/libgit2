@@ -44,10 +44,10 @@
 #endif
 
 #if defined(__GNUC__)
-# define GIT_UNUSED(x)                                                                              \
-	do {                                                                                       \
-		typeof(x) _unused __attribute__((unused));                                         \
-		_unused = (x);                                                                     \
+# define GIT_UNUSED(x)                                                         \
+	do {                                                                   \
+		typeof(x) _unused __attribute__((unused));                     \
+		_unused = (x);                                                 \
 	} while (0)
 #else
 # define GIT_UNUSED(x) ((void)(x))
