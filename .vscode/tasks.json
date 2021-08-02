@@ -6,7 +6,7 @@
       {
         "label": "Build",
         "type": "shell",
-        "command": "cd build && cmake --build .",
+        "command": "cd build && cmake --build . --parallel",
         "group": "build",
         "presentation": {
           "reveal": "always",
