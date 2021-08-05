@@ -104,6 +104,11 @@ static int apply_url_credentials(
 	const char *username,
 	const char *password)
 {
+	GIT_ASSERT_ARG(username);
+
+	if (!password)
+		password = "";
+
 	if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT)
 		return git_credential_userpass_plaintext_new(cred, username, password);
 
@@ -138,8 +143,7 @@ static int handle_auth(
 	/* Start with URL-specified credentials, if there were any. */
 	if ((allowed_credtypes & GIT_CREDENTIAL_USERPASS_PLAINTEXT) &&
 	    !server->url_cred_presented &&
-	    server->url.username &&
-	    server->url.password) {
+	    server->url.username) {
 		error = apply_url_credentials(&server->cred, allowed_credtypes, server->url.username, server->url.password);
 		server->url_cred_presented = 1;
 
