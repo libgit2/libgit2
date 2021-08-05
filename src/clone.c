@@ -285,6 +285,9 @@ static int update_head_to_branch(
 	if ((retcode = git_remote_default_branch(&default_branch, remote)) < 0)
 		goto cleanup;
 
+	if (!git_remote__matching_refspec(remote, git_buf_cstr(&default_branch)))
+		goto cleanup;
+
 	retcode = update_remote_head(repo, remote, &default_branch, reflog_message);
 
 cleanup:
