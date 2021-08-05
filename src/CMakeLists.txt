@@ -11,6 +11,11 @@ IF(DEBUG_STRICT_ALLOC)
 ENDIF()
 ADD_FEATURE_INFO(debugalloc GIT_DEBUG_STRICT_ALLOC "debug strict allocators")
 
+IF(DEBUG_ARRAY_CASTING)
+	SET(GIT_DEBUG_ARRAY_CASTING 1)
+ENDIF()
+ADD_FEATURE_INFO(debugarray GIT_DEBUG_ARRAY_CASTING "test array type usage")
+
 INCLUDE(PkgBuildConfig)
 INCLUDE(SanitizeBool)
 
