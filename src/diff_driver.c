@@ -389,13 +389,13 @@ int git_diff_driver_lookup(
 
 void git_diff_driver_free(git_diff_driver *driver)
 {
-	size_t i;
+	git_diff_driver_pattern *pat;
 
 	if (!driver)
 		return;
 
-	for (i = 0; i < git_array_size(driver->fn_patterns); ++i)
-		git_regexp_dispose(& git_array_get(driver->fn_patterns, i)->re);
+	while ((pat = git_array_pop(driver->fn_patterns)) != NULL)
+		git_regexp_dispose(&pat->re);
 	git_array_clear(driver->fn_patterns);
 
 	git_regexp_dispose(&driver->word_pattern);
