@@ -9,6 +9,8 @@
 #ifndef PRIVATE_CRYPT_COMMON_H__
 #define PRIVATE_CRYPT_COMMON_H__
 
+#include "ntlmclient.h"
+
 #if defined(CRYPT_OPENSSL)
 # include "crypt_openssl.h"
 #elif defined(CRYPT_MBEDTLS)
