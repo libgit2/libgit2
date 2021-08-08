@@ -11,7 +11,7 @@ on:
 
 env:
   docker-registry: docker.pkg.github.com
-  docker-config-path: ci/docker
+  docker-config-path: source/ci/docker
 
 jobs:
   # Build the docker container images that we will use for our Linux
@@ -55,7 +55,7 @@ jobs:
       if: matrix.container.qemu == true
     - name: Download existing container
       run: |
-        "${{ github.workspace }}/ci/getcontainer.sh" "${{ matrix.container.name }}" "${{ matrix.container.dockerfile }}"
+        "${{ github.workspace }}/source/ci/getcontainer.sh" "${{ matrix.container.name }}" "${{ matrix.container.dockerfile }}"
       env:
         DOCKER_REGISTRY: ${{ env.docker-registry }}
         GITHUB_TOKEN: ${{ secrets.github_token }}
@@ -206,9 +206,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v2
       with:
+        path: source
         fetch-depth: 0
     - name: Set up build environment
-      run: ci/setup-${{ matrix.platform.setup-script }}.sh
+      run: source/ci/setup-${{ matrix.platform.setup-script }}.sh
       shell: bash
       if: matrix.platform.setup-script != ''
     - name: Setup QEMU
@@ -216,7 +217,7 @@ jobs:
       if: matrix.platform.container.qemu == true
     - name: Download container
       run: |
-        "${{ github.workspace }}/ci/getcontainer.sh" "${{ matrix.platform.container.name }}" "${{ matrix.platform.container.dockerfile }}"
+        "${{ github.workspace }}/source/ci/getcontainer.sh" "${{ matrix.platform.container.name }}" "${{ matrix.platform.container.dockerfile }}"
       env:
         DOCKER_REGISTRY: ${{ env.docker-registry }}
         GITHUB_TOKEN: ${{ secrets.github_token }}
@@ -233,8 +234,9 @@ jobs:
         if [ -n "${{ matrix.platform.container.name }}" ]; then
           docker run \
               --rm \
-              -v "$(pwd):/home/libgit2/source" \
-              -w /home/libgit2/source \
+              --user libgit2:libgit2 \
+              -v "$(pwd)/source:/home/libgit2/source" \
+              -w /home/libgit2 \
               -e ASAN_SYMBOLIZER_PATH \
               -e CC \
               -e CFLAGS \
@@ -247,11 +249,11 @@ jobs:
               -e TSAN_OPTIONS \
               -e UBSAN_OPTIONS \
               ${{ env.docker-registry-container-sha }} \
-              /bin/bash -c "mkdir build && cd build && ../ci/build.sh && ../ci/test.sh"
+              /bin/bash -c "mkdir build && cd build && ../source/ci/build.sh && ../source/ci/test.sh"
         else
           mkdir build && cd build
-          ../ci/build.sh
-          ../ci/test.sh
+          ../source/ci/build.sh
+          ../source/ci/test.sh
         fi
       shell: bash
 
