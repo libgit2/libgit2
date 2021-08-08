@@ -91,10 +91,10 @@ GIT_BEGIN_DECL
 
 /**
  * The separator used in path list strings (ie like in the PATH
- * environment variable). A semi-colon ";" is used on Windows, and
- * a colon ":" for all other systems.
+ * environment variable). A semi-colon ";" is used on Windows and
+ * AmigaOS, and a colon ":" for all other systems.
  */
-#ifdef GIT_WIN32
+#if defined(GIT_WIN32) || defined(AMIGA)
 #define GIT_PATH_LIST_SEPARATOR ';'
 #else
 #define GIT_PATH_LIST_SEPARATOR ':'
