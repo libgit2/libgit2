@@ -109,6 +109,13 @@ int p_open(const char *path, volatile int flags, ...)
 {
 	mode_t mode = 0;
 
+	#ifdef GIT_DEBUG_STRICT_OPEN
+	if (strstr(path, "//") != NULL) {
+		errno = EACCES;
+		return -1;
+	}
+	#endif
+
 	if (flags & O_CREAT) {
 		va_list arg_list;
 
