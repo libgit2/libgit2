@@ -578,7 +578,7 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 		}
 	}
 
-	if ((error = git_buf_printf(&path, "%s/", backend->commonpath)) < 0 ||
+	if ((error = git_buf_puts(&path, backend->commonpath)) < 0 ||
 		(error = git_buf_put(&path, ref_prefix, ref_prefix_len)) < 0) {
 		git_buf_dispose(&path);
 		return error;
@@ -1609,8 +1609,9 @@ static char *setup_namespace(git_repository *repo, const char *in)
 			GIT_MKDIR_PATH, NULL) < 0)
 		goto done;
 
-	/* Return root of the namespaced gitpath, i.e. without the trailing '/refs' */
+	/* Return root of the namespaced gitpath, i.e. without the trailing 'refs' */
 	git_buf_rtruncate_at_char(&path, '/');
+	git_buf_putc(&path, '/');
 	out = git_buf_detach(&path);
 
 done:
