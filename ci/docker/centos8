@@ -1,0 +1,30 @@
+ARG BASE=centos:8
+FROM ${BASE} AS yum
+RUN yum install -y \
+	which \
+	git \
+	libarchive \
+	cmake \
+	gcc \
+	make \
+	openssl-devel \
+	openssh-server \
+	git-daemon \
+	java-1.8.0-openjdk-headless \
+	sudo \
+	python39
+
+FROM yum AS libssh2
+RUN cd /tmp && \
+    curl https://libssh2.org/download/libssh2-1.8.0.tar.gz | tar -xz && \
+    cd libssh2-1.8.0 && \
+    ./configure && \
+    make && \
+    make install
+
+FROM libssh2 AS adduser
+RUN useradd --shell /bin/bash libgit2 --create-home
+
+FROM adduser AS configure
+ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
+RUN mkdir /var/run/sshd
