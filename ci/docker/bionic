@@ -36,9 +36,8 @@ RUN cd /tmp && \
     cd .. && \
     rm -rf mbedtls-2.16.2
 
-FROM mbedtls AS configure
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod a+x /usr/local/bin/entrypoint.sh
-RUN mkdir /var/run/sshd
+FROM mbedtls AS adduser
+RUN useradd --shell /bin/bash libgit2 --create-home
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+FROM adduser AS configure
+RUN mkdir /var/run/sshd

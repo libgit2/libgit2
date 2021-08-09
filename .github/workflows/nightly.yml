@@ -215,6 +215,7 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v2
       with:
+        path: source
         fetch-depth: 0
     - name: Set up build environment
       run: ci/setup-${{ matrix.platform.setup-script }}.sh
@@ -242,8 +243,9 @@ jobs:
         if [ -n "${{ matrix.platform.container.name }}" ]; then
           docker run \
               --rm \
-              -v "$(pwd):/home/libgit2/source" \
-              -w /home/libgit2/source \
+              --user libgit2:libgit2 \
+              -v "$(pwd)/source:/home/libgit2/source" \
+              -w /home/libgit2 \
               -e ASAN_SYMBOLIZER_PATH \
               -e CC \
               -e CFLAGS \
@@ -255,11 +257,11 @@ jobs:
               -e SKIP_SSH_TESTS \
               -e TSAN_OPTIONS \
               ${{ env.docker-registry-container-sha }} \
-              /bin/bash -c "mkdir build && cd build && ../ci/build.sh && ../ci/test.sh"
+              /bin/bash -c "mkdir build && cd build && ../source/ci/build.sh && ../source/ci/test.sh"
         else
           mkdir build && cd build
-          ../ci/build.sh
-          ../ci/test.sh
+          ../source/ci/build.sh
+          ../source/ci/test.sh
         fi
       shell: bash
 
