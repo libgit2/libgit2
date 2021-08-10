@@ -288,7 +288,7 @@ jobs:
         docker login https://${{ env.docker-registry }} -u ${{ github.actor }} -p ${{ github.token }}
         docker run \
             --rm \
-            -v "$(pwd):/home/libgit2/source" \
+            -v "$(pwd)/source:/home/libgit2/source" \
             -w /home/libgit2/source \
             ${{ env.docker-registry }}/${{ github.repository }}/docurium:latest \
             cm doc api.docurium
