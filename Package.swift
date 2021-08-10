@@ -119,7 +119,11 @@ let package = Package(
                         "-D_DEBUG",
                         "-std=gnu90",
                         
-//                        "-headerpad_max_install_names",
+                        /// NOTE:
+                        /// Only one necessary flag.
+                        /// Disable -fmodules flag.
+                        /// Clang finds (struct entry) in different file ( search.h ).
+                        "-fno-modules",
                     ])
                 ],
                 cxxSettings: nil,
@@ -182,6 +186,3 @@ let package = Package(
         .binaryTarget(name: "libcrypto", path: "libcrypto.xcframework"),
     ]
 )
-
-//let settings = package.targets.first?.cSettings
-//print("Package: \(String(describing: settings))")
