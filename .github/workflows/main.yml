@@ -283,7 +283,7 @@ jobs:
         docker run \
             --rm \
             -v "$(pwd):/home/libgit2" \
-            -w /home/libgit2/source \
+            -w /home/libgit2 \
             ${{ env.docker-registry }}/${{ github.repository }}/docurium:latest \
             cm doc api.docurium
         git checkout gh-pages
