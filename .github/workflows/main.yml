@@ -268,19 +268,13 @@ jobs:
     needs: [build_containers]
     runs-on: ubuntu-latest
     steps:
-    - name: Setup defaults
-      run: |
-        if [ "${{ matrix.container.dockerfile }}" = "" ]; then
-          echo "dockerfile=${{ matrix.container.dockerfile }}" >> $GITHUB_ENV
-        else
-          echo "dockerfile=${{ matrix.container.dockerfile }}" >> $GITHUB_ENV
-        fi
     - name: Check out repository
       uses: actions/checkout@v2
       with:
         path: source
         fetch-depth: 0
     - name: Generate documentation
+      working-directory: source
       run: |
         git config user.name 'Documentation Generation'
         git config user.email 'libgit2@users.noreply.github.com'
@@ -288,7 +282,7 @@ jobs:
         docker login https://${{ env.docker-registry }} -u ${{ github.actor }} -p ${{ github.token }}
         docker run \
             --rm \
-            -v "$(pwd)/source:/home/libgit2/source" \
+            -v "$(pwd):/home/libgit2" \
             -w /home/libgit2/source \
             ${{ env.docker-registry }}/${{ github.repository }}/docurium:latest \
             cm doc api.docurium
@@ -298,7 +292,8 @@ jobs:
       name: Upload artifact
       with:
         name: api-documentation
-        path: api-documentation.zip
+        path: source/api-documentation.zip
     - name: Push documentation branch
+      working-directory: source
       run: git push origin gh-pages
       if: github.event_name != 'pull_request' && github.repository == 'libgit2/libgit2'
