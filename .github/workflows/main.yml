@@ -48,6 +48,7 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v2
       with:
+        path: source
         fetch-depth: 0
       if: github.event_name != 'pull_request'
     - name: Setup QEMU
@@ -277,6 +278,7 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v2
       with:
+        path: source
         fetch-depth: 0
     - name: Generate documentation
       run: |
