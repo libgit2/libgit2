@@ -7,11 +7,13 @@
 
 #include "streams/openssl.h"
 #include "streams/openssl_legacy.h"
+#include "streams/openssl_dynamic.h"
 
 #ifdef GIT_OPENSSL
 
 #include <ctype.h>
 
+#include "common.h"
 #include "runtime.h"
 #include "settings.h"
 #include "posix.h"
@@ -27,10 +29,12 @@
 # include <netinet/in.h>
 #endif
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/x509v3.h>
-#include <openssl/bio.h>
+#ifndef GIT_OPENSSL_DYNAMIC
+# include <openssl/ssl.h>
+# include <openssl/err.h>
+# include <openssl/x509v3.h>
+# include <openssl/bio.h>
+#endif
 
 SSL_CTX *git__ssl_ctx;
 
@@ -58,27 +62,45 @@ static void shutdown_ssl(void)
 }
 
 #ifdef VALGRIND
+# if !defined(GIT_OPENSSL_LEGACY) && !defined(GIT_OPENSSL_DYNAMIC)
+
 static void *git_openssl_malloc(size_t bytes, const char *file, int line)
 {
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
 	return git__calloc(1, bytes);
 }
-
+ 
 static void *git_openssl_realloc(void *mem, size_t size, const char *file, int line)
 {
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
 	return git__realloc(mem, size);
 }
-
+ 
 static void git_openssl_free(void *mem, const char *file, int line)
 {
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
-	return git__free(mem);
+	git__free(mem);
 }
-#endif
+# else /* !GIT_OPENSSL_LEGACY && !GIT_OPENSSL_DYNAMIC */
+static void *git_openssl_malloc(size_t bytes)
+{
+	return git__calloc(1, bytes);
+}
+
+static void *git_openssl_realloc(void *mem, size_t size)
+{
+	return git__realloc(mem, size);
+}
+
+static void git_openssl_free(void *mem)
+{
+	git__free(mem);
+}
+# endif /* !GIT_OPENSSL_LEGACY && !GIT_OPENSSL_DYNAMIC */
+#endif /* VALGRIND */
 
 int git_openssl_stream_global_init(void)
 {
@@ -91,6 +113,11 @@ int git_openssl_stream_global_init(void)
 	/* Older OpenSSL and MacOS OpenSSL doesn't have this */
 #ifdef SSL_OP_NO_COMPRESSION
 	ssl_opts |= SSL_OP_NO_COMPRESSION;
+#endif
+
+#ifdef GIT_OPENSSL_DYNAMIC
+	if (git_openssl_stream_dynamic_init() < 0)
+		return -1;
 #endif
 
 #ifdef VALGRIND
@@ -144,7 +171,7 @@ error:
 	return -1;
 }
 
-#ifndef GIT_OPENSSL_LEGACY
+#if !defined(GIT_OPENSSL_LEGACY) && !defined(GIT_OPENSSL_DYNAMIC)
 int git_openssl_set_locking(void)
 {
 # ifdef GIT_THREADS

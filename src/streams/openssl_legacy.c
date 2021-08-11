@@ -8,15 +8,17 @@
 #include "streams/openssl.h"
 #include "streams/openssl_legacy.h"
 
-#if defined(GIT_OPENSSL) && defined(GIT_OPENSSL_LEGACY)
-
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/x509v3.h>
-#include <openssl/bio.h>
-
 #include "runtime.h"
 #include "git2/sys/openssl.h"
+
+#if defined(GIT_OPENSSL) && !defined(GIT_OPENSSL_DYNAMIC)
+# include <openssl/ssl.h>
+# include <openssl/err.h>
+# include <openssl/x509v3.h>
+# include <openssl/bio.h>
+#endif
+
+#if defined(GIT_OPENSSL_LEGACY) || defined(GIT_OPENSSL_DYNAMIC)
 
 /*
  * OpenSSL 1.1 made BIO opaque so we have to use functions to interact with it
@@ -25,16 +27,16 @@
  * with ifdefs. We do the same for OPENSSL_init_ssl.
  */
 
-int OPENSSL_init_ssl(int opts, void *settings)
+int OPENSSL_init_ssl__legacy(uint64_t opts, const void *settings)
 {
 	GIT_UNUSED(opts);
 	GIT_UNUSED(settings);
 	SSL_load_error_strings();
-	OpenSSL_add_ssl_algorithms();
+	SSL_library_init();
 	return 0;
 }
 
-BIO_METHOD* BIO_meth_new(int type, const char *name)
+BIO_METHOD* BIO_meth_new__legacy(int type, const char *name)
 {
 	BIO_METHOD *meth = git__calloc(1, sizeof(BIO_METHOD));
 	if (!meth) {
@@ -47,85 +49,89 @@ BIO_METHOD* BIO_meth_new(int type, const char *name)
 	return meth;
 }
 
-void BIO_meth_free(BIO_METHOD *biom)
+void BIO_meth_free__legacy(BIO_METHOD *biom)
 {
 	git__free(biom);
 }
 
-int BIO_meth_set_write(BIO_METHOD *biom, int (*write) (BIO *, const char *, int))
+int BIO_meth_set_write__legacy(BIO_METHOD *biom, int (*write) (BIO *, const char *, int))
 {
 	biom->bwrite = write;
 	return 1;
 }
 
-int BIO_meth_set_read(BIO_METHOD *biom, int (*read) (BIO *, char *, int))
+int BIO_meth_set_read__legacy(BIO_METHOD *biom, int (*read) (BIO *, char *, int))
 {
 	biom->bread = read;
 	return 1;
 }
 
-int BIO_meth_set_puts(BIO_METHOD *biom, int (*puts) (BIO *, const char *))
+int BIO_meth_set_puts__legacy(BIO_METHOD *biom, int (*puts) (BIO *, const char *))
 {
 	biom->bputs = puts;
 	return 1;
 }
 
-int BIO_meth_set_gets(BIO_METHOD *biom, int (*gets) (BIO *, char *, int))
+int BIO_meth_set_gets__legacy(BIO_METHOD *biom, int (*gets) (BIO *, char *, int))
 
 {
 	biom->bgets = gets;
 	return 1;
 }
 
-int BIO_meth_set_ctrl(BIO_METHOD *biom, long (*ctrl) (BIO *, int, long, void *))
+int BIO_meth_set_ctrl__legacy(BIO_METHOD *biom, long (*ctrl) (BIO *, int, long, void *))
 {
 	biom->ctrl = ctrl;
 	return 1;
 }
 
-int BIO_meth_set_create(BIO_METHOD *biom, int (*create) (BIO *))
+int BIO_meth_set_create__legacy(BIO_METHOD *biom, int (*create) (BIO *))
 {
 	biom->create = create;
 	return 1;
 }
 
-int BIO_meth_set_destroy(BIO_METHOD *biom, int (*destroy) (BIO *))
+int BIO_meth_set_destroy__legacy(BIO_METHOD *biom, int (*destroy) (BIO *))
 {
 	biom->destroy = destroy;
 	return 1;
 }
 
-int BIO_get_new_index(void)
+int BIO_get_new_index__legacy(void)
 {
 	/* This exists as of 1.1 so before we'd just have 0 */
 	return 0;
 }
 
-void BIO_set_init(BIO *b, int init)
+void BIO_set_init__legacy(BIO *b, int init)
 {
 	b->init = init;
 }
 
-void BIO_set_data(BIO *a, void *ptr)
+void BIO_set_data__legacy(BIO *a, void *ptr)
 {
 	a->ptr = ptr;
 }
 
-void *BIO_get_data(BIO *a)
+void *BIO_get_data__legacy(BIO *a)
 {
 	return a->ptr;
 }
 
-const unsigned char *ASN1_STRING_get0_data(const ASN1_STRING *x)
+const unsigned char *ASN1_STRING_get0_data__legacy(const ASN1_STRING *x)
 {
 	return ASN1_STRING_data((ASN1_STRING *)x);
+}
+
+long SSL_CTX_set_options__legacy(SSL_CTX *ctx, long op)
+{
+	return SSL_CTX_ctrl(ctx, SSL_CTRL_OPTIONS, op, NULL);
 }
 
 # if defined(GIT_THREADS)
 static git_mutex *openssl_locks;
 
-static void openssl_locking_function(
-	int mode, int n, const char *file, int line)
+static void openssl_locking_function(int mode, int n, const char *file, int line)
 {
 	int lock;
 
@@ -134,11 +140,10 @@ static void openssl_locking_function(
 
 	lock = mode & CRYPTO_LOCK;
 
-	if (lock) {
+	if (lock)
 		(void)git_mutex_lock(&openssl_locks[n]);
-	} else {
+	else
 		git_mutex_unlock(&openssl_locks[n]);
-	}
 }
 
 static void shutdown_ssl_locking(void)
@@ -163,6 +168,20 @@ int git_openssl_set_locking(void)
 {
 	int num_locks, i;
 
+#ifndef GIT_THREADS
+	git_error_set(GIT_ERROR_THREAD, "libgit2 was not built with threads");
+	return -1;
+#endif
+
+#ifdef GIT_OPENSSL_DYNAMIC
+	/*
+	 * This function is required on legacy versions of OpenSSL; when building
+	 * with dynamically-loaded OpenSSL, we detect whether we loaded it or not.
+	 */
+	if (!CRYPTO_set_locking_callback)
+		return 0;
+#endif
+
 	CRYPTO_THREADID_set_callback(threadid_cb);
 
 	num_locks = CRYPTO_num_locks();
@@ -181,21 +200,4 @@ int git_openssl_set_locking(void)
 }
 #endif /* GIT_THREADS */
 
-#ifdef VALGRIND
-void *git_openssl_malloc(size_t bytes)
-{
-	return git__calloc(1, bytes);
-}
-
-void *git_openssl_realloc(void *mem, size_t size)
-{
-	return git__realloc(mem, size);
-}
-
-void git_openssl_free(void *mem)
-{
-	return git__free(mem);
-}
-#endif
-
-#endif /* GIT_OPENSSL && GIT_OPENSSL_LEGACY */
+#endif /* GIT_OPENSSL_LEGACY || GIT_OPENSSL_DYNAMIC */
