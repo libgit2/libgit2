@@ -1442,7 +1442,8 @@ GIT_EXTERN(int) git_diff_format_email(
  * @param commit pointer to up commit
  * @param patch_no patch number of the commit
  * @param total_patches total number of patches in the patch set
- * @param flags determines the formatting of the e-mail
+ * @param flags determines the formatting of the e-mail,
+ *  see `git_diff_format_email_flags_t`
  * @param diff_opts structure with options to influence diff or NULL for defaults.
  * @return 0 or an error code
  */
