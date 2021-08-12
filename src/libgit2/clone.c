@@ -22,6 +22,7 @@
 #include "fs_path.h"
 #include "repository.h"
 #include "odb.h"
+#include "net.h"
 
 static int clone_local_into(git_repository *repo, git_remote *remote, const git_fetch_options *fetch_opts, const git_checkout_options *co_opts, const char *branch, int link);
 
@@ -336,8 +337,9 @@ static int create_and_configure_origin(
 	git_remote_create_cb remote_create = options->remote_cb;
 	void *payload = options->remote_cb_payload;
 
-	/* If the path exists and is a dir, the url should be the absolute path */
-	if (git_fs_path_root(url) < 0 && git_fs_path_exists(url) && git_fs_path_isdir(url)) {
+	/* If the path is local and exists it should be the absolute path. */
+	if (!git_net_str_is_url(url) && git_fs_path_root(url) < 0 &&
+	    git_fs_path_exists(url)) {
 		if (p_realpath(url, buf) == NULL)
 			return -1;
 
@@ -458,26 +460,25 @@ cleanup:
 int git_clone__should_clone_local(const char *url_or_path, git_clone_local_t local)
 {
 	git_str fromurl = GIT_STR_INIT;
-	const char *path = url_or_path;
-	bool is_url, is_local;
+	bool is_local;
 
 	if (local == GIT_CLONE_NO_LOCAL)
 		return 0;
 
-	if ((is_url = git_fs_path_is_local_file_url(url_or_path)) != 0) {
-		if (git_fs_path_fromurl(&fromurl, url_or_path) < 0) {
+	if (git_net_str_is_url(url_or_path)) {
+		/* If GIT_CLONE_LOCAL_AUTO is specified, any url should be treated as remote */
+		if (local == GIT_CLONE_LOCAL_AUTO ||
+		    !git_fs_path_is_local_file_url(url_or_path))
+			return 0;
+
+		if (git_fs_path_fromurl(&fromurl, url_or_path) == 0)
+			is_local = git_fs_path_isdir(git_str_cstr(&fromurl));
+		else
 			is_local = -1;
-			goto done;
-		}
-
-		path = fromurl.ptr;
+		git_str_dispose(&fromurl);
+	} else {
+		is_local = git_fs_path_isdir(url_or_path);
 	}
-
-	is_local = (!is_url || local != GIT_CLONE_LOCAL_AUTO) &&
-		git_fs_path_isdir(path);
-
-done:
-	git_str_dispose(&fromurl);
 	return is_local;
 }
 
