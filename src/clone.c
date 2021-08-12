@@ -317,6 +317,17 @@ static int default_remote_create(
 }
 
 /*
+ * Helper function to determine if a string actually is an URL and not a local
+ * path.
+ * Filesystems might misinterpret an URL as a local file so we should avoid
+ * accessing the filesystem with those if possible.
+ */
+GIT_INLINE(bool) url_has_scheme(const char *url)
+{
+	return strstr(url, "://") != NULL;
+}
+
+/*
  * submodules?
  */
 
@@ -332,8 +343,9 @@ static int create_and_configure_origin(
 	git_remote_create_cb remote_create = options->remote_cb;
 	void *payload = options->remote_cb_payload;
 
-	/* If the path exists and is a dir, the url should be the absolute path */
-	if (git_fs_path_root(url) < 0 && git_fs_path_exists(url) && git_fs_path_isdir(url)) {
+	/* If the path is local and exists it should be the absolute path. */
+	if (!url_has_scheme(url) && git_fs_path_root(url) < 0 &&
+	    git_fs_path_exists(url)) {
 		if (p_realpath(url, buf) == NULL)
 			return -1;
 
@@ -424,30 +436,42 @@ cleanup:
 	return error;
 }
 
+/*
+ * We try to determine if we shouldn't do local cloning without asking the
+ * filesystem since the filesystem is unpredictable and can generate false
+ * positives.
+ * Only check if url_or_path is an existing directory when we have ruled out
+ * that is is a valid url.
+ */
 int git_clone__should_clone_local(const char *url_or_path, git_clone_local_t local)
 {
-	git_str fromurl = GIT_STR_INIT;
-	const char *path = url_or_path;
-	bool is_url, is_local;
-
 	if (local == GIT_CLONE_NO_LOCAL)
 		return 0;
 
-	if ((is_url = git_fs_path_is_local_file_url(url_or_path)) != 0) {
-		if (git_fs_path_fromurl(&fromurl, url_or_path) < 0) {
-			is_local = -1;
-			goto done;
-		}
+	/*
+	 * If it is a "file://"-style URL we need to unwrap it to know.
+	 * GIT_CLONE_LOCAL_AUTO also says that this case shouldn't use local cloning.
+	 */
+	if (git_fs_path_is_local_file_url(url_or_path)) {
+		git_str fromurl = GIT_STR_INIT;
+		bool is_local;
 
-		path = fromurl.ptr;
+		if (local == GIT_CLONE_LOCAL_AUTO)
+			return 0;
+
+		if (git_fs_path_fromurl(&fromurl, url_or_path) == 0)
+			is_local = git_fs_path_isdir(git_str_cstr(&fromurl));
+		else
+			is_local = -1;
+		git_str_dispose(&fromurl);
+		return is_local;
 	}
 
-	is_local = (!is_url || local != GIT_CLONE_LOCAL_AUTO) &&
-		git_fs_path_isdir(path);
+	/* Not a "file://" url, check that it isn't a remote url before filesystem */
+	if (url_has_scheme(url_or_path))
+		return 0;
 
-done:
-	git_str_dispose(&fromurl);
-	return is_local;
+	return git_fs_path_isdir(url_or_path);
 }
 
 static int git__clone(
