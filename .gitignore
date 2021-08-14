@@ -6,3 +6,7 @@
 CMakeSettings.json
 .vs
 .idea
+
+#GitUp
+xcode
+binaries
