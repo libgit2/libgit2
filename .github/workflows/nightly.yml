@@ -8,7 +8,7 @@ on:
 
 env:
   docker-registry: docker.pkg.github.com
-  docker-config-path: ci/docker
+  docker-config-path: source/ci/docker
 
 jobs:
   # Run our nightly builds.  We build a matrix with the various build
@@ -218,7 +218,7 @@ jobs:
         path: source
         fetch-depth: 0
     - name: Set up build environment
-      run: ci/setup-${{ matrix.platform.setup-script }}.sh
+      run: source/ci/setup-${{ matrix.platform.setup-script }}.sh
       shell: bash
       if: matrix.platform.setup-script != ''
     - name: Setup QEMU
@@ -226,7 +226,7 @@ jobs:
       if: matrix.platform.container.qemu == true
     - name: Download container
       run: |
-        "${{ github.workspace }}/ci/getcontainer.sh" "${{ matrix.platform.container.name }}" "${{ matrix.platform.container.dockerfile }}"
+        "${{ github.workspace }}/source/ci/getcontainer.sh" "${{ matrix.platform.container.name }}" "${{ matrix.platform.container.dockerfile }}"
       env:
         DOCKER_REGISTRY: ${{ env.docker-registry }}
         GITHUB_TOKEN: ${{ secrets.github_token }}
@@ -272,15 +272,16 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v2
       with:
+        path: source
         fetch-depth: 0
     - name: Download container
       run: |
-        "${{ github.workspace }}/ci/getcontainer.sh" xenial
+        "${{ github.workspace }}/source/ci/getcontainer.sh" xenial
       env:
         DOCKER_REGISTRY: ${{ env.docker-registry }}
         GITHUB_TOKEN: ${{ secrets.github_token }}
       working-directory: ${{ env.docker-config-path }}
     - name: Run Coverity
-      run: ci/coverity.sh
+      run: source/ci/coverity.sh
       env:
         COVERITY_TOKEN: ${{ secrets.coverity_token }}
