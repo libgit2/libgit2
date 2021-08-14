@@ -422,10 +422,11 @@ static int _git_ssh_authenticate_session(
 		default:
 			rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 		}
-	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	} while (LIBSSH2_ERROR_TIMEOUT == rc);
 
 	if (rc == LIBSSH2_ERROR_PASSWORD_EXPIRED ||
 		rc == LIBSSH2_ERROR_AUTHENTICATION_FAILED ||
+		rc == LIBSSH2_ERROR_FILE || /// PATCH: Invalid key file
 		rc == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
 			return GIT_EAUTH;
 
@@ -452,6 +453,7 @@ static int request_creds(git_credential **out, ssh_subtransport *t, const char *
 		if (error == GIT_PASSTHROUGH) {
 			no_callback = 1;
 		} else if (error < 0) {
+			git_error_set(GIT_ERROR_SSH, "credentials callback returned an error");
 			return error;
 		} else if (!cred) {
 			git_error_set(GIT_ERROR_SSH, "callback failed to initialize SSH credentials");
@@ -479,7 +481,6 @@ static int _git_ssh_session_create(
 	LIBSSH2_SESSION** session,
 	git_stream *io)
 {
-	int rc = 0;
 	LIBSSH2_SESSION* s;
 	git_socket_stream *socket = GIT_CONTAINER_OF(io, git_socket_stream, parent);
 
@@ -491,11 +492,12 @@ static int _git_ssh_session_create(
 		return -1;
 	}
 
-	do {
-		rc = libssh2_session_handshake(s, socket->s);
-	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	/// PATCH
+	/* Configure libssh2 to be blocking with a 30s timeout */
+	libssh2_session_set_blocking(s, 1);
+	libssh2_session_set_timeout(s, 30 * 1000);
 
-	if (rc != LIBSSH2_ERROR_NONE) {
+	if (libssh2_session_handshake(s, socket->s) != LIBSSH2_ERROR_NONE) {
 		ssh_error(s, "failed to start SSH session");
 		libssh2_session_free(s);
 		return -1;
