@@ -293,6 +293,7 @@ target_compile_definitions(git2internal PRIVATE _FILE_OFFSET_BITS=64)
 
 # Collect sourcefiles
 file(GLOB SRC_H
+    "${libgit2_SOURCE_DIR}/include/gitup_extensions.h"
 	"${libgit2_SOURCE_DIR}/include/git2.h"
 	"${libgit2_SOURCE_DIR}/include/git2/*.h"
 	"${libgit2_SOURCE_DIR}/include/git2/sys/*.h")
