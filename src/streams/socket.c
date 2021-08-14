@@ -74,6 +74,7 @@ static int socket_connect(git_stream *stream)
 	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
 	git_socket_stream *st = (git_socket_stream *) stream;
+    struct timeval tv; /// PATCH
 	GIT_SOCKET s = INVALID_SOCKET;
 	int ret;
 
@@ -123,6 +124,17 @@ static int socket_connect(git_stream *stream)
 		git_error_set(GIT_ERROR_OS, "failed to connect to %s", st->host);
 		p_freeaddrinfo(info);
 		return -1;
+	}
+
+	/// PATCH
+	/* Configure a 30 seconds timeout for recv() and send() on the socket */
+	tv.tv_sec = 30;
+	tv.tv_usec = 0;
+	if (setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+		net_set_error("error setting socket receive timeout");
+	}
+	if (setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0) {
+		net_set_error("error setting socket send timeout");
 	}
 
 	st->s = s;
