@@ -279,6 +279,11 @@ typedef struct {
 	 * abbreviated to something reasonable, like 7 characters.
 	 */
 	uint16_t           id_abbrev;
+    
+    /// Use later GIT_EXTERN(const git_index_entry *) git_index_get_bypath(git_index *index, const char *path, int stage);
+    /// PATCH
+    git_time_t         ctime;
+    git_time_t         mtime;
 } git_diff_file;
 
 /**

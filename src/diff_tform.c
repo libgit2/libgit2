@@ -108,6 +108,11 @@ git_diff_delta *git_diff__merge_like_cgit(
 	dup->old_file.size  = a->old_file.size;
 	dup->old_file.flags = a->old_file.flags;
 
+	/// PATCH
+	dup->old_file.mtime = a->old_file.mtime;
+	dup->old_file.ctime = a->old_file.ctime;
+
+
 	return dup;
 }
 
