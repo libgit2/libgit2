@@ -43,6 +43,8 @@ jobs:
           dockerfile: bionic
           base: multiarch/ubuntu-core:arm64-bionic
           qemu: true
+        - name: centos7
+        - name: centos8
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
