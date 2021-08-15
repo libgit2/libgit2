@@ -107,6 +107,18 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
           os: ubuntu-latest
+        - # CentOS 7
+          container:
+            name: centos7
+          env:
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+          os: ubuntu-latest
+        - # CentOS 8
+          container:
+            name: centos8
+          env:
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+          os: ubuntu-latest
         - # macOS
           os: macos-10.15
           env:
