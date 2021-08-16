@@ -112,6 +112,7 @@ jobs:
             name: centos7
           env:
             CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            SKIP_NEGOTIATE_TESTS: true
             BUILD_PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
           os: ubuntu-latest
         - # CentOS 8
@@ -119,6 +120,7 @@ jobs:
             name: centos8
           env:
             CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            SKIP_NEGOTIATE_TESTS: true
           os: ubuntu-latest
         - # macOS
           os: macos-10.15

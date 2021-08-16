@@ -4,7 +4,6 @@ RUN yum install -y \
 	which \
 	git \
 	libarchive \
-	cmake \
 	gcc \
 	gcc-c++ \
 	make \
