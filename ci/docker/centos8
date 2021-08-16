@@ -22,9 +22,22 @@ RUN cd /tmp && \
     cd libssh2-1.8.0 && \
     ./configure && \
     make && \
-    make install
+    make install && \
+    cd .. && \
+    rm -rf libssh2-1.8.0
 
-FROM libssh2 AS adduser
+FROM libssh2 AS valgrind
+RUN cd /tmp && \
+    curl --insecure --location --silent --show-error https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2 | \
+        tar -xj && \
+    cd valgrind-3.15.0 && \
+    CC=clang-10 ./configure && \
+    make MAKEFLAGS="-j -l$(grep -c ^processor /proc/cpuinfo)" && \
+    make install && \
+    cd .. && \
+    rm -rf valgrind-3.15.0
+
+FROM valgrind AS adduser
 RUN useradd --shell /bin/bash libgit2 --create-home
 
 FROM adduser AS configure
