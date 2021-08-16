@@ -49,16 +49,14 @@ void test_object_lookupmissing__missing(void)
 	 * from a packfile that is not marked as being a promisor-packfile. */
 
 	/* Path -> object. */
-	/* TODO - should be EMISSING. */
-	cl_assert_equal_i(GIT_ENOTFOUND,
+	cl_assert_equal_i(GIT_EMISSING,
 		git_object_lookup_bypath(&g_result_object, (git_object*)g_root_tree,
 			"files/first/large_file", GIT_OBJECT_ANY));
 
 	/* Path -> tree-entry -> object. */
 	cl_git_pass(git_tree_entry_bypath(&g_result_entry, g_root_tree,
 		"files/first/large_file"));
-	/* TODO - should be EMISSING. */
-	cl_assert_equal_i(GIT_ENOTFOUND,
+	cl_assert_equal_i(GIT_EMISSING,
 		git_tree_entry_to_object(&g_result_object, g_repo, g_result_entry));
 }
 
@@ -68,16 +66,16 @@ void test_object_lookupmissing__missing_with_promisor(void)
 	 * so probably is available at the remote (ie, a partial clone) */
 
 	/* Path -> object. */
-	/* TODO - should be EPROMISED. */
-	cl_assert_equal_i(GIT_ENOTFOUND,
+	/* TODO: add a new error code for this - EPROMISED. */
+	cl_assert_equal_i(GIT_EMISSING,
 		git_object_lookup_bypath(&g_result_object, (git_object*)g_root_tree,
 			"files/second/large_file", GIT_OBJECT_ANY));
 
 	/* Path -> tree-entry -> object. */
 	cl_git_pass(git_tree_entry_bypath(&g_result_entry, g_root_tree,
 		"files/second/large_file"));
-	/* TODO - should be EPROMISED. */
-	cl_assert_equal_i(GIT_ENOTFOUND,
+	/* TODO: add a new error code for this - EPROMISED. */
+	cl_assert_equal_i(GIT_EMISSING,
 		git_tree_entry_to_object(&g_result_object, g_repo, g_result_entry));
 }
 
