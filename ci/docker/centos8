@@ -12,7 +12,9 @@ RUN yum install -y \
 	git-daemon \
 	java-1.8.0-openjdk-headless \
 	sudo \
-	python39
+	python39 \
+	krb5-workstation \
+	krb5-libs
 
 FROM yum AS libssh2
 RUN cd /tmp && \
