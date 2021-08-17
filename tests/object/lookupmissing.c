@@ -79,6 +79,33 @@ void test_object_lookupmissing__missing_with_promisor(void)
 		git_tree_entry_to_object(&g_result_object, g_repo, g_result_entry));
 }
 
+void test_object_lookupmissing__missing_commit_tree(void)
+{
+	git_reference* branch;
+	git_commit* commit;
+	git_tree* tree;
+
+	cl_git_pass(git_branch_lookup(
+		&branch, g_repo, "unpeelable-commit", GIT_BRANCH_LOCAL));
+	cl_git_pass(git_reference_peel(
+		(git_object**)&commit, branch, GIT_OBJECT_COMMIT));
+
+	/* commit -> tree. */
+	cl_assert_equal_i(GIT_EMISSING, git_commit_tree(&tree, commit));
+
+	/* peel(commit) -> tree */
+	cl_assert_equal_i(GIT_EMISSING,
+		git_object_peel((git_object**)&tree, (git_object*)commit, GIT_OBJECT_TREE));
+
+	/* peel(branch) -> tree */
+	cl_assert_equal_i(GIT_EMISSING,
+		git_reference_peel((git_object**)&tree, branch, GIT_OBJECT_TREE));
+
+	git_commit_free(commit);
+	git_reference_free(branch);
+
+}
+
 void test_object_lookupmissing__normal(void)
 {
 	/* Make sure that lookups are otherwise still working as normal in this

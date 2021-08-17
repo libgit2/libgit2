@@ -617,8 +617,12 @@ const char *git_commit_body(git_commit *commit)
 
 int git_commit_tree(git_tree **tree_out, const git_commit *commit)
 {
+	int error;
+
 	GIT_ASSERT_ARG(commit);
-	return git_tree_lookup(tree_out, commit->object.repo, &commit->tree_id);
+	error = git_tree_lookup(tree_out, commit->object.repo, &commit->tree_id);
+	return (error == GIT_ENOTFOUND) ?
+		git_odb__error_missing(&commit->tree_id) : error;
 }
 
 const git_oid *git_commit_parent_id(
