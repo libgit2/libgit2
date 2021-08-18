@@ -16,6 +16,12 @@ static git_indexer_progress _stats;
 
 extern bool git_disable_pack_keep_file_checks;
 
+const char PACKFILE_WITH_KEEPFILE[] =
+	"partial-clone.git/objects/pack/pack-f7bed0df7143d342c3e17728b1d590544c4d458a.pack";
+const char PACKFILE_WITH_PROMISORFILE[] =
+	"partial-clone.git/objects/pack/pack-4a2420ffcda572e65dd8bed2a3b110a5c518e32c.pack";
+
+
 void test_pack_packbuilder__initialize(void)
 {
 	_repo = cl_git_sandbox_init("testrepo.git");
@@ -273,9 +279,65 @@ void test_pack_packbuilder__foreach_with_cancel(void)
 	git_indexer_free(idx);
 }
 
-void test_pack_packbuilder__keep_file_check(void)
+
+void test_pack_packbuilder__extra_file_checks(void)
 {
-	assert(!git_disable_pack_keep_file_checks);
+	git_buf path = GIT_BUF_INIT;
+	struct git_pack_file *pack_file;
+
+	/* .pack file with .keep file */
+	cl_git_pass(git_buf_joinpath(&path, CLAR_FIXTURE_PATH, PACKFILE_WITH_KEEPFILE));
+	cl_assert(git_path_exists(path.ptr));
+	git_packfile_alloc(&pack_file, path.ptr);
+
+	cl_assert(pack_file->pack_keep);
+	cl_assert(!pack_file->pack_promisor);
+
+	git_packfile_free(pack_file, false);
+
+	/* .pack file with .promisor file */
+	cl_git_pass(git_buf_joinpath(&path, CLAR_FIXTURE_PATH, PACKFILE_WITH_PROMISORFILE));
+	cl_assert(git_path_exists(path.ptr));
+	git_packfile_alloc(&pack_file, path.ptr);
+
+	cl_assert(!pack_file->pack_keep);
+	cl_assert(pack_file->pack_promisor);
+
+	git_packfile_free(pack_file, false);
+
+	git_buf_dispose(&path);
+}
+
+
+
+void test_pack_packbuilder__extra_file_checks_disabled(void)
+{
+	git_buf path = GIT_BUF_INIT;
+	struct git_pack_file *pack_file;
+
+	cl_assert(!git_disable_pack_keep_file_checks);
 	cl_git_pass(git_libgit2_opts(GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS, true));
-	assert(git_disable_pack_keep_file_checks);
+	cl_assert(git_disable_pack_keep_file_checks);
+
+	/* .pack file with .keep file */
+	cl_git_pass(git_buf_joinpath(&path, CLAR_FIXTURE_PATH, PACKFILE_WITH_KEEPFILE));
+	cl_assert(git_path_exists(path.ptr));
+	git_packfile_alloc(&pack_file, path.ptr);
+
+	cl_assert(!pack_file->pack_keep);
+	cl_assert(!pack_file->pack_promisor);
+
+	git_packfile_free(pack_file, false);
+
+	/* .pack file with .promisor file */
+	cl_git_pass(git_buf_joinpath(&path, CLAR_FIXTURE_PATH, PACKFILE_WITH_PROMISORFILE));
+	cl_assert(git_path_exists(path.ptr));
+	git_packfile_alloc(&pack_file, path.ptr);
+
+	cl_assert(!pack_file->pack_keep);
+	cl_assert(!pack_file->pack_promisor);
+
+	git_packfile_free(pack_file, false);
+
+	git_buf_dispose(&path);
 }
