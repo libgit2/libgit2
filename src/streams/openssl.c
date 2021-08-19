@@ -251,13 +251,18 @@ int git_openssl_stream_global_init(void)
 #endif
 
 #ifdef VALGRIND
-	/* Swap in our own allocator functions that initialize allocated memory */
-	if (!allocators_initialized &&
+	/*
+	 * Swap in our own allocator functions that initialize
+	 * allocated memory to avoid spurious valgrind warnings.
+	 * Don't error on failure; many builds of OpenSSL do not
+	 * allow you to set these functions.
+	 */
+	if (!allocators_initialized) {
 	    CRYPTO_set_mem_functions(git_openssl_malloc,
 				     git_openssl_realloc,
-				     git_openssl_free) != 1)
-		goto error;
-	allocators_initialized = true;
+				     git_openssl_free);
+		allocators_initialized = true;
+	}
 #endif
 
 	OPENSSL_init_ssl(0, NULL);
