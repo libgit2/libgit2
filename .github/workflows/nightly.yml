@@ -112,15 +112,17 @@ jobs:
             name: centos7
           env:
             CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
-            BUILD_PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
           os: ubuntu-latest
         - # CentOS 8
           container:
             name: centos8
           env:
             CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
+            SKIP_SSH_TESTS: true
           os: ubuntu-latest
         - # macOS
           os: macos-10.15
