@@ -1,4 +1,5 @@
 ARG BASE=centos:7
+
 FROM ${BASE} AS yum
 RUN yum install -y \
 	which \
