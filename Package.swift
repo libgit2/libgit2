@@ -86,27 +86,14 @@ let package = Package(
                 resources: nil,
                 publicHeadersPath: "include",
                 cSettings: [
-                    .headerSearchPath("include/git2/sys/features.h"),
                     .headerSearchPath("src"),
-                    .headerSearchPath("include"),
                     .headerSearchPath("deps/http-parser"),
                     .headerSearchPath("deps/ntlmclient"),
                     .define("HAVE_QSORT_R_BSD"),
                     .define("_FILE_OFFSET_BITS", to: "64"),
                     .define("SHA1DC_NO_STANDARD_INCLUDES", to: "1"),
                     .define("SHA1DC_CUSTOM_INCLUDE_SHA1_C", to: "\"common.h\""),
-                    .define("SHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C", to: "\"common.h\""),
-                                        
-                    .define("USE_HEADERMAP", to: "NO"),
-                    .define("GCC_INLINES_ARE_PRIVATE_EXTERN", to: "NO"),
-                    .define("GCC_SYMBOLS_PRIVATE_EXTERN", to: "NO"),
-//                    .unsafeFlags([
-//                        /// NOTE:
-//                        /// Only one necessary flag.
-//                        /// Disable -fmodules flag.
-//                        /// Clang finds (struct entry) in different file ( search.h ).
-////                        "-fno-modules",
-//                    ])
+                    .define("SHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C", to: "\"common.h\""),                                        
                 ],
                 cxxSettings: nil,
                 swiftSettings: nil,
@@ -114,7 +101,7 @@ let package = Package(
                     .linkedFramework("CoreFoundation"),
                     .linkedFramework("Security"),
                     .linkedLibrary("z"),
-                    .linkedLibrary("iconv"),                    
+                    .linkedLibrary("iconv"),
                 ]
         ),
         
