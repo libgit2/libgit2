@@ -18,7 +18,9 @@ int main(int argc, char *argv[])
 
 	res = git_libgit2_init();
 	if (res < 0) {
-		fprintf(stderr, "failed to init libgit2");
+		const git_error *err = git_error_last();
+		const char *msg = err ? err->message : "unknown failure";
+		fprintf(stderr, "failed to init libgit2: %s\n", msg);
 		return res;
 	}
 
