@@ -122,7 +122,9 @@ int git_openssl_stream_dynamic_init(void)
 	int err = 0;
 
 	if ((openssl_handle = dlopen("libssl.so.1.1", RTLD_NOW)) == NULL &&
+	    (openssl_handle = dlopen("libssl.1.1.dylib", RTLD_NOW)) == NULL &&
 	    (openssl_handle = dlopen("libssl.so.1.0.0", RTLD_NOW)) == NULL &&
+	    (openssl_handle = dlopen("libssl.1.0.0.dylib", RTLD_NOW)) == NULL &&
 	    (openssl_handle = dlopen("libssl.so.10", RTLD_NOW)) == NULL) {
 		git_error_set(GIT_ERROR_SSL, "could not load ssl libraries");
 		return -1;
