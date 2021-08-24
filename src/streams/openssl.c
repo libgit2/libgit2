@@ -102,7 +102,7 @@ static void git_openssl_free(void *mem)
 # endif /* !GIT_OPENSSL_LEGACY && !GIT_OPENSSL_DYNAMIC */
 #endif /* VALGRIND */
 
-int git_openssl_stream_global_init(void)
+static int openssl_init(void)
 {
 	long ssl_opts = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
 	const char *ciphers = git_libgit2__ssl_ciphers();
@@ -113,11 +113,6 @@ int git_openssl_stream_global_init(void)
 	/* Older OpenSSL and MacOS OpenSSL doesn't have this */
 #ifdef SSL_OP_NO_COMPRESSION
 	ssl_opts |= SSL_OP_NO_COMPRESSION;
-#endif
-
-#ifdef GIT_OPENSSL_DYNAMIC
-	if (git_openssl_stream_dynamic_init() < 0)
-		return -1;
 #endif
 
 #ifdef VALGRIND
@@ -169,6 +164,49 @@ error:
 	SSL_CTX_free(git__ssl_ctx);
 	git__ssl_ctx = NULL;
 	return -1;
+}
+
+/*
+ * When we use dynamic loading, we defer OpenSSL initialization until
+ * it's first used.  `openssl_ensure_initialized` will do the work
+ * under a mutex.
+ */
+git_mutex openssl_mutex;
+bool openssl_initialized;
+
+int git_openssl_stream_global_init(void)
+{
+#ifndef GIT_OPENSSL_DYNAMIC
+	return openssl_init();
+#else
+	if (git_mutex_init(&openssl_mutex) != 0)
+		return -1;
+
+	return 0;
+#endif
+}
+
+static int openssl_ensure_initialized(void)
+{
+#ifdef GIT_OPENSSL_DYNAMIC
+	int error = 0;
+
+	if (git_mutex_lock(&openssl_mutex) != 0)
+		return -1;
+
+	if (!openssl_initialized) {
+		if ((error = git_openssl_stream_dynamic_init()) == 0)
+			error = openssl_init();
+
+		openssl_initialized = true;
+	}
+
+	error |= git_mutex_unlock(&openssl_mutex);
+	return error;
+
+#else
+	return 0;
+#endif
 }
 
 #if !defined(GIT_OPENSSL_LEGACY) && !defined(GIT_OPENSSL_DYNAMIC)
@@ -644,6 +682,9 @@ static int openssl_stream_wrap(
 
 int git_openssl_stream_wrap(git_stream **out, git_stream *in, const char *host)
 {
+	if (openssl_ensure_initialized() < 0)
+		return -1;
+
 	return openssl_stream_wrap(out, in, host, 0);
 }
 
@@ -655,6 +696,9 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(host);
 	GIT_ASSERT_ARG(port);
+
+	if (openssl_ensure_initialized() < 0)
+		return -1;
 
 	if ((error = git_socket_stream_new(&stream, host, port)) < 0)
 		return error;
@@ -669,6 +713,9 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 
 int git_openssl__set_cert_location(const char *file, const char *path)
 {
+	if (openssl_ensure_initialized() < 0)
+		return -1;
+
 	if (SSL_CTX_load_verify_locations(git__ssl_ctx, file, path) == 0) {
 		char errmsg[256];
 
