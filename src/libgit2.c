@@ -36,14 +36,6 @@
 # include "win32/w32_leakcheck.h"
 #endif
 
-#ifdef GIT_OPENSSL
-# include <openssl/err.h>
-#endif
-
-#ifdef GIT_MBEDTLS
-# include <mbedtls/error.h>
-#endif
-
 /* Declarations for tuneable settings */
 extern size_t git_mwindow__window_size;
 extern size_t git_mwindow__mapped_limit;

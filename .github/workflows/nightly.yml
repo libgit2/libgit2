@@ -59,6 +59,14 @@ jobs:
             CMAKE_OPTIONS: -DTHREADSAFE=OFF -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
             CMAKE_GENERATOR: Ninja
           os: ubuntu-latest
+        - # Xenial, Clang, OpenSSL (dynamically loaded)
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            CMAKE_GENERATOR: Ninja
+          os: ubuntu-latest
         - # Focal, Clang 10, mbedTLS, MemorySanitizer
           container:
             name: focal
@@ -115,11 +123,28 @@ jobs:
             PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
           os: ubuntu-latest
+        - # CentOS 7, OpenSSL (dynamically loaded)
+          container:
+            name: centos7
+          env:
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
+            SKIP_NEGOTIATE_TESTS: true
+          os: ubuntu-latest
         - # CentOS 8
           container:
             name: centos8
           env:
             CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
+            SKIP_NEGOTIATE_TESTS: true
+            SKIP_SSH_TESTS: true
+          os: ubuntu-latest
+        - # CentOS 8, OpenSSL (dynamically loaded)
+          container:
+            name: centos8
+          env:
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
             PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
             SKIP_SSH_TESTS: true
@@ -180,6 +205,16 @@ jobs:
             BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
+        - # Bionic, GCC, OpenSSL (dynamically loaded)
+          container:
+            name: bionic
+            dockerfile: bionic
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            RUN_INVASIVE_TESTS: true
+          os: ubuntu-latest
         - # Bionic, x86, Clang, OpenSSL
           container:
             name: bionic-x86

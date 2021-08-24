@@ -6,14 +6,17 @@
  * copyright information, see the included LICENSE.txt file.
  */
 
-#ifndef PRIVATE_CRYPT_MBEDTLS_H__
-#define PRIVATE_CRYPT_MBEDTLS_H__
+#ifndef PRIVATE_UNICODE_ICONV_H__
+#define PRIVATE_UNICODE_ICONV_H__
 
-#include "mbedtls/md.h"
+#include <locale.h>
+#include <iconv.h>
 
-struct ntlm_crypt_ctx {
-	mbedtls_md_context_t hmac;
-	unsigned int hmac_initialized : 1;
+#include "ntlmclient.h"
+
+struct ntlm_unicode_ctx {
+	iconv_t utf8_to_16;
+	iconv_t utf16_to_8;
 };
 
-#endif /* PRIVATE_CRYPT_MBEDTLS_H__ */
+#endif /* PRIVATE_UNICODE_ICONV_H__ */

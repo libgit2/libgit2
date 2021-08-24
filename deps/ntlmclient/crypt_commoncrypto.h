@@ -11,8 +11,8 @@
 
 #include <CommonCrypto/CommonCrypto.h>
 
-typedef struct {
-	CCHmacContext native;
-} ntlm_hmac_ctx;
+struct ntlm_crypt_ctx {
+	CCHmacContext hmac;
+};
 
 #endif /* PRIVATE_CRYPT_COMMONCRYPTO_H__ */
