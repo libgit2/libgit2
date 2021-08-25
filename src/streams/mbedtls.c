@@ -442,8 +442,6 @@ int git_mbedtls__set_cert_location(const char *file, const char *path)
 	char errbuf[512];
 	mbedtls_x509_crt *cacert;
 
-	GIT_ASSERT_ARG(path);
-
 	cacert = git__malloc(sizeof(mbedtls_x509_crt));
 	GIT_ERROR_CHECK_ALLOC(cacert);
 
