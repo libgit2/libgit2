@@ -127,7 +127,7 @@ void test_odb_foreach__files_in_objects_dir(void)
 	cl_fixture_sandbox("testrepo.git");
 	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
 
-	cl_git_pass(git_buf_printf(&buf, "%s/objects/somefile", git_repository_path(repo)));
+	cl_git_pass(git_buf_joinpath(&buf, git_repository_path(repo), "objects/somefile"));
 	cl_git_mkfile(buf.ptr, "");
 	git_buf_dispose(&buf);
 

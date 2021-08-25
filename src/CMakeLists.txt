@@ -11,6 +11,11 @@ IF(DEBUG_STRICT_ALLOC)
 ENDIF()
 ADD_FEATURE_INFO(debugalloc GIT_DEBUG_STRICT_ALLOC "debug strict allocators")
 
+IF(DEBUG_STRICT_OPEN)
+	SET(GIT_DEBUG_STRICT_OPEN 1)
+ENDIF()
+ADD_FEATURE_INFO(debugopen GIT_DEBUG_STRICT_OPEN "path validation in open")
+
 INCLUDE(PkgBuildConfig)
 INCLUDE(SanitizeBool)
 
