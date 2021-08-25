@@ -26,18 +26,18 @@ typedef struct _GIT_REPARSE_DATA_BUFFER {
 			USHORT PrintNameLength;
 			ULONG  Flags;
 			WCHAR  PathBuffer[1];
-		} SymbolicLinkReparseBuffer;
+		} SymbolicLink;
 		struct {
 			USHORT SubstituteNameOffset;
 			USHORT SubstituteNameLength;
 			USHORT PrintNameOffset;
 			USHORT PrintNameLength;
 			WCHAR  PathBuffer[1];
-		} MountPointReparseBuffer;
+		} MountPoint;
 		struct {
 			UCHAR DataBuffer[1];
-		} GenericReparseBuffer;
-	};
+		} Generic;
+	} ReparseBuffer;
 } GIT_REPARSE_DATA_BUFFER;
 
 #define REPARSE_DATA_HEADER_SIZE			8
