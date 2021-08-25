@@ -235,6 +235,7 @@ ELSE ()
 	enable_warnings(unused-function)
 	enable_warnings(int-conversion)
 	enable_warnings(c11-extensions)
+	enable_warnings(c99-c11-compat)
 
 	# MinGW uses gcc, which expects POSIX formatting for printf, but
 	# uses the Windows C library, which uses its own format specifiers.
