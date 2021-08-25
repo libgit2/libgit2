@@ -1251,8 +1251,9 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 			}
 			case GIT_TREE_UPDATE_REMOVE:
 			{
+				tree_stack_entry *last = git_array_last(stack);
 				char *basename = git_path_basename(update->path);
-				error = git_treebuilder_remove(git_array_last(stack)->bld, basename);
+				error = git_treebuilder_remove(last->bld, basename);
 				git__free(basename);
 				break;
 			}
