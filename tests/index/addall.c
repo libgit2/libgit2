@@ -318,11 +318,9 @@ void test_index_addall__files_in_folders(void)
 
 void test_index_addall__hidden_files(void)
 {
+#ifdef GIT_WIN32
 	git_index *index;
 
-	GIT_UNUSED(index);
-
-#ifdef GIT_WIN32
 	addall_create_test_repo(true);
 
 	cl_git_pass(git_repository_index(&index, g_repo));

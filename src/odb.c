@@ -573,7 +573,7 @@ int git_odb__add_default_backends(
 	git_odb *db, const char *objects_dir,
 	bool as_alternates, int alternate_depth)
 {
-	size_t i;
+	size_t i = 0;
 	struct stat st;
 	ino_t inode;
 	git_odb_backend *loose, *packed;
@@ -582,7 +582,7 @@ int git_odb__add_default_backends(
 	 * a cross-platform workaround for this */
 #ifdef GIT_WIN32
 	GIT_UNUSED(i);
-	GIT_UNUSED(st);
+	GIT_UNUSED(&st);
 
 	inode = 0;
 #else
