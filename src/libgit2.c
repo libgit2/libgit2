@@ -261,10 +261,7 @@ int git_libgit2_opts(int key, ...)
 		{
 			const char *file = va_arg(ap, const char *);
 			const char *path = va_arg(ap, const char *);
-			if (file)
-				error = git_mbedtls__set_cert_location(file, 0);
-			if (error && path)
-				error = git_mbedtls__set_cert_location(path, 1);
+			error = git_mbedtls__set_cert_location(file, path);
 		}
 #else
 		git_error_set(GIT_ERROR_SSL, "TLS backend doesn't support certificate locations");
