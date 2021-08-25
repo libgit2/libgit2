@@ -179,9 +179,9 @@ if [ -n "$RUN_INVASIVE_TESTS" ]; then
 fi
 
 if [ -z "$SKIP_ONLINE_TESTS" ]; then
-	# Run the various online tests.  The "online" test suite only includes the
-	# default online tests that do not require additional configuration.  The
-	# "proxy" and "ssh" test suites require further setup.
+	# Run the online tests.  The "online" test suite only includes the
+	# default online tests that do not require additional configuration.
+	# The "proxy" and "ssh" test suites require further setup.
 
 	echo ""
 	echo "##############################################################################"
@@ -191,6 +191,14 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	export GITTEST_FLAKY_RETRY=5
 	run_test online
 	unset GITTEST_FLAKY_RETRY
+
+	# Run the online tests that immutably change global state separately
+	# to avoid polluting the test environment.
+	echo ""
+	echo "##############################################################################"
+	echo "## Running (online_customcert) tests"
+	echo "##############################################################################"
+	run_test online_customcert
 fi
 
 if [ -z "$SKIP_GITDAEMON_TESTS" ]; then

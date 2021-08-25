@@ -114,6 +114,8 @@ void test_online_clone__cleanup(void)
 		git__free(_orig_http_proxy);
 		git__free(_orig_https_proxy);
 	}
+
+	git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, NULL);
 }
 
 void test_online_clone__network_full(void)
