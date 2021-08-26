@@ -19,12 +19,12 @@
 #include "array.h"
 
 struct git_filter_source {
-	git_repository *repo;
-	const char     *path;
-	git_oid         oid;  /* zero if unknown (which is likely) */
-	uint16_t        filemode; /* zero if unknown */
-	git_filter_mode_t mode;
-	uint32_t        flags;
+	git_repository    *repo;
+	const char        *path;
+	git_oid            oid;  /* zero if unknown (which is likely) */
+	uint16_t           filemode; /* zero if unknown */
+	git_filter_mode_t  mode;
+	git_filter_options options;
 };
 
 typedef struct {
@@ -396,7 +396,7 @@ git_filter_mode_t git_filter_source_mode(const git_filter_source *src)
 
 uint32_t git_filter_source_flags(const git_filter_source *src)
 {
-	return src->flags;
+	return src->options.flags;
 }
 
 static int filter_list_new(
@@ -416,7 +416,8 @@ static int filter_list_new(
 	fl->source.repo = src->repo;
 	fl->source.path = fl->path;
 	fl->source.mode = src->mode;
-	fl->source.flags = src->flags;
+
+	memcpy(&fl->source.options, &src->options, sizeof(git_filter_options));
 
 	*out = fl;
 	return 0;
@@ -425,25 +426,30 @@ static int filter_list_new(
 static int filter_list_check_attributes(
 	const char ***out,
 	git_repository *repo,
-	git_attr_session *attr_session,
+	git_filter_session *filter_session,
 	git_filter_def *fdef,
 	const git_filter_source *src)
 {
 	const char **strs = git__calloc(fdef->nattrs, sizeof(const char *));
-	uint32_t flags = 0;
+	git_attr_options attr_opts = GIT_ATTR_OPTIONS_INIT;
 	size_t i;
 	int error;
 
 	GIT_ERROR_CHECK_ALLOC(strs);
 
-	if ((src->flags & GIT_FILTER_NO_SYSTEM_ATTRIBUTES) != 0)
-		flags |= GIT_ATTR_CHECK_NO_SYSTEM;
+	if ((src->options.flags & GIT_FILTER_NO_SYSTEM_ATTRIBUTES) != 0)
+		attr_opts.flags |= GIT_ATTR_CHECK_NO_SYSTEM;
 
-	if ((src->flags & GIT_FILTER_ATTRIBUTES_FROM_HEAD) != 0)
-		flags |= GIT_ATTR_CHECK_INCLUDE_HEAD;
+	if ((src->options.flags & GIT_FILTER_ATTRIBUTES_FROM_HEAD) != 0)
+		attr_opts.flags |= GIT_ATTR_CHECK_INCLUDE_HEAD;
+
+	if ((src->options.flags & GIT_FILTER_ATTRIBUTES_FROM_COMMIT) != 0) {
+		attr_opts.flags |= GIT_ATTR_CHECK_INCLUDE_COMMIT;
+		attr_opts.commit_id = src->options.commit_id;
+	}
 
 	error = git_attr_get_many_with_session(
-		strs, repo, attr_session, flags, src->path, fdef->nattrs, fdef->attrs);
+		strs, repo, filter_session->attr_session, &attr_opts, src->path, fdef->nattrs, fdef->attrs);
 
 	/* if no values were found but no matches are needed, it's okay! */
 	if (error == GIT_ENOTFOUND && !fdef->nmatches) {
@@ -488,17 +494,17 @@ int git_filter_list_new(
 	src.repo = repo;
 	src.path = NULL;
 	src.mode = mode;
-	src.flags = flags;
+	src.options.flags = flags;
 	return filter_list_new(out, &src);
 }
 
-int git_filter_list__load_ext(
+int git_filter_list__load(
 	git_filter_list **filters,
 	git_repository *repo,
 	git_blob *blob, /* can be NULL */
 	const char *path,
 	git_filter_mode_t mode,
-	git_filter_options *filter_opts)
+	git_filter_session *filter_session)
 {
 	int error = 0;
 	git_filter_list *fl = NULL;
@@ -515,7 +521,8 @@ int git_filter_list__load_ext(
 	src.repo = repo;
 	src.path = path;
 	src.mode = mode;
-	src.flags = filter_opts->flags;
+
+	memcpy(&src.options, &filter_session->options, sizeof(git_filter_options));
 
 	if (blob)
 		git_oid_cpy(&src.oid, git_blob_id(blob));
@@ -529,7 +536,8 @@ int git_filter_list__load_ext(
 
 		if (fdef->nattrs > 0) {
 			error = filter_list_check_attributes(
-				&values, repo, filter_opts->attr_session, fdef, &src);
+				&values, repo,
+				filter_session, fdef, &src);
 
 			if (error == GIT_ENOTFOUND) {
 				error = 0;
@@ -556,7 +564,7 @@ int git_filter_list__load_ext(
 				if ((error = filter_list_new(&fl, &src)) < 0)
 					break;
 
-				fl->temp_buf = filter_opts->temp_buf;
+				fl->temp_buf = filter_session->temp_buf;
 			}
 
 			fe = git_array_alloc(fl->filters);
@@ -580,6 +588,23 @@ int git_filter_list__load_ext(
 	return error;
 }
 
+int git_filter_list_load_ext(
+	git_filter_list **filters,
+	git_repository *repo,
+	git_blob *blob, /* can be NULL */
+	const char *path,
+	git_filter_mode_t mode,
+	git_filter_options *opts)
+{
+	git_filter_session filter_session = GIT_FILTER_SESSION_INIT;
+
+	if (opts)
+		memcpy(&filter_session.options, opts, sizeof(git_filter_options));
+
+	return git_filter_list__load(
+		filters, repo, blob, path, mode, &filter_session);
+}
+
 int git_filter_list_load(
 	git_filter_list **filters,
 	git_repository *repo,
@@ -588,12 +613,12 @@ int git_filter_list_load(
 	git_filter_mode_t mode,
 	uint32_t flags)
 {
-	git_filter_options filter_opts = GIT_FILTER_OPTIONS_INIT;
+	git_filter_session filter_session = GIT_FILTER_SESSION_INIT;
 
-	filter_opts.flags = flags;
+	filter_session.options.flags = flags;
 
-	return git_filter_list__load_ext(
-		filters, repo, blob, path, mode, &filter_opts);
+	return git_filter_list__load(
+		filters, repo, blob, path, mode, &filter_session);
 }
 
 void git_filter_list_free(git_filter_list *fl)

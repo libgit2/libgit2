@@ -49,7 +49,7 @@ static bool test_file_contents(const char *filename, const char *expected)
 	git_buf file_path_buf = GIT_BUF_INIT, file_buf = GIT_BUF_INIT;
 	bool equals;
 	
-	git_buf_printf(&file_path_buf, "%s/%s", git_repository_path(repo), filename);
+	git_buf_joinpath(&file_path_buf, git_repository_path(repo), filename);
 	
 	cl_git_pass(git_futils_readbuffer(&file_buf, file_path_buf.ptr));
 	equals = (strcmp(file_buf.ptr, expected) == 0);
@@ -64,7 +64,7 @@ static void write_file_contents(const char *filename, const char *output)
 {
 	git_buf file_path_buf = GIT_BUF_INIT;
 
-	git_buf_printf(&file_path_buf, "%s/%s", git_repository_path(repo),
+	git_buf_joinpath(&file_path_buf, git_repository_path(repo),
 		filename);
 	cl_git_rewritefile(file_path_buf.ptr, output);
 

@@ -11,7 +11,7 @@ on:
 
 env:
   docker-registry: docker.pkg.github.com
-  docker-config-path: ci/docker
+  docker-config-path: source/ci/docker
 
 jobs:
   # Build the docker container images that we will use for our Linux
@@ -43,11 +43,14 @@ jobs:
           dockerfile: bionic
           base: multiarch/ubuntu-core:arm64-bionic
           qemu: true
+        - name: centos7
+        - name: centos8
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
       uses: actions/checkout@v2
       with:
+        path: source
         fetch-depth: 0
       if: github.event_name != 'pull_request'
     - name: Setup QEMU
@@ -55,7 +58,7 @@ jobs:
       if: matrix.container.qemu == true
     - name: Download existing container
       run: |
-        "${{ github.workspace }}/ci/getcontainer.sh" "${{ matrix.container.name }}" "${{ matrix.container.dockerfile }}"
+        "${{ github.workspace }}/source/ci/getcontainer.sh" "${{ matrix.container.name }}" "${{ matrix.container.dockerfile }}"
       env:
         DOCKER_REGISTRY: ${{ env.docker-registry }}
         GITHUB_TOKEN: ${{ secrets.github_token }}
@@ -67,7 +70,9 @@ jobs:
           BASE_ARG="--build-arg BASE=${{ matrix.container.base }}"
         fi
         docker build -t ${{ env.docker-registry-container-sha }} ${BASE_ARG} -f ${{ env.dockerfile }} .
+        docker tag ${{ env.docker-registry-container-sha }} ${{ env.docker-registry-container-latest }}
         docker push ${{ env.docker-registry-container-sha }}
+        docker push ${{ env.docker-registry-container-latest }}
       working-directory: ${{ env.docker-config-path }}
       if: github.event_name != 'pull_request' && env.docker-container-exists != 'true'
 
@@ -86,7 +91,7 @@ jobs:
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DDEBUG_STRICT_ALLOC=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
           os: ubuntu-latest
         - # Xenial, GCC, mbedTLS
           container:
@@ -206,9 +211,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v2
       with:
+        path: source
         fetch-depth: 0
     - name: Set up build environment
-      run: ci/setup-${{ matrix.platform.setup-script }}.sh
+      run: source/ci/setup-${{ matrix.platform.setup-script }}.sh
       shell: bash
       if: matrix.platform.setup-script != ''
     - name: Setup QEMU
@@ -216,7 +222,7 @@ jobs:
       if: matrix.platform.container.qemu == true
     - name: Download container
       run: |
-        "${{ github.workspace }}/ci/getcontainer.sh" "${{ matrix.platform.container.name }}" "${{ matrix.platform.container.dockerfile }}"
+        "${{ github.workspace }}/source/ci/getcontainer.sh" "${{ matrix.platform.container.name }}" "${{ matrix.platform.container.dockerfile }}"
       env:
         DOCKER_REGISTRY: ${{ env.docker-registry }}
         GITHUB_TOKEN: ${{ secrets.github_token }}
@@ -233,8 +239,9 @@ jobs:
         if [ -n "${{ matrix.platform.container.name }}" ]; then
           docker run \
               --rm \
-              -v "$(pwd):/home/libgit2/source" \
-              -w /home/libgit2/source \
+              --user libgit2:libgit2 \
+              -v "$(pwd)/source:/home/libgit2/source" \
+              -w /home/libgit2 \
               -e ASAN_SYMBOLIZER_PATH \
               -e CC \
               -e CFLAGS \
@@ -247,11 +254,11 @@ jobs:
               -e TSAN_OPTIONS \
               -e UBSAN_OPTIONS \
               ${{ env.docker-registry-container-sha }} \
-              /bin/bash -c "mkdir build && cd build && ../ci/build.sh && ../ci/test.sh"
+              /bin/bash -c "mkdir build && cd build && ../source/ci/build.sh && ../source/ci/test.sh"
         else
           mkdir build && cd build
-          ../ci/build.sh
-          ../ci/test.sh
+          ../source/ci/build.sh
+          ../source/ci/test.sh
         fi
       shell: bash
 
@@ -265,18 +272,13 @@ jobs:
     needs: [build_containers]
     runs-on: ubuntu-latest
     steps:
-    - name: Setup defaults
-      run: |
-        if [ "${{ matrix.container.dockerfile }}" = "" ]; then
-          echo "dockerfile=${{ matrix.container.dockerfile }}" >> $GITHUB_ENV
-        else
-          echo "dockerfile=${{ matrix.container.dockerfile }}" >> $GITHUB_ENV
-        fi
     - name: Check out repository
       uses: actions/checkout@v2
       with:
+        path: source
         fetch-depth: 0
     - name: Generate documentation
+      working-directory: source
       run: |
         git config user.name 'Documentation Generation'
         git config user.email 'libgit2@users.noreply.github.com'
@@ -284,8 +286,8 @@ jobs:
         docker login https://${{ env.docker-registry }} -u ${{ github.actor }} -p ${{ github.token }}
         docker run \
             --rm \
-            -v "$(pwd):/home/libgit2/source" \
-            -w /home/libgit2/source \
+            -v "$(pwd):/home/libgit2" \
+            -w /home/libgit2 \
             ${{ env.docker-registry }}/${{ github.repository }}/docurium:latest \
             cm doc api.docurium
         git checkout gh-pages
@@ -294,7 +296,8 @@ jobs:
       name: Upload artifact
       with:
         name: api-documentation
-        path: api-documentation.zip
+        path: source/api-documentation.zip
     - name: Push documentation branch
+      working-directory: source
       run: git push origin gh-pages
       if: github.event_name != 'pull_request' && github.repository == 'libgit2/libgit2'

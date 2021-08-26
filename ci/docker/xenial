@@ -1,4 +1,5 @@
 ARG BASE=ubuntu:xenial
+
 FROM ${BASE} AS apt
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -59,9 +60,8 @@ RUN cd /tmp && \
     cd .. && \
     rm -rf valgrind-3.15.0
 
-FROM valgrind AS configure
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod a+x /usr/local/bin/entrypoint.sh
-RUN mkdir /var/run/sshd
+FROM valgrind AS adduser
+RUN useradd --shell /bin/bash libgit2 --create-home
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+FROM adduser AS configure
+RUN mkdir /var/run/sshd

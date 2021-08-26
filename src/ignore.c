@@ -247,11 +247,12 @@ static int push_ignore_file(
 	const char *base,
 	const char *filename)
 {
-	int error = 0;
+	git_attr_file_source source = { GIT_ATTR_FILE_SOURCE_FILE, base, filename };
 	git_attr_file *file = NULL;
+	int error = 0;
 
-	error = git_attr_cache__get(&file, ignores->repo, NULL, GIT_ATTR_FILE__FROM_FILE,
-				    base, filename, parse_ignore_file, false);
+	error = git_attr_cache__get(&file, ignores->repo, NULL, &source, parse_ignore_file, false);
+
 	if (error < 0)
 		return error;
 
@@ -272,13 +273,13 @@ static int push_one_ignore(void *payload, const char *path)
 
 static int get_internal_ignores(git_attr_file **out, git_repository *repo)
 {
+	git_attr_file_source source = { GIT_ATTR_FILE_SOURCE_MEMORY, NULL, GIT_IGNORE_INTERNAL };
 	int error;
 
 	if ((error = git_attr_cache__init(repo)) < 0)
 		return error;
 
-	error = git_attr_cache__get(out, repo, NULL, GIT_ATTR_FILE__IN_MEMORY, NULL,
-				    GIT_IGNORE_INTERNAL, NULL, false);
+	error = git_attr_cache__get(out, repo, NULL, &source, NULL, false);
 
 	/* if internal rules list is empty, insert default rules */
 	if (!error && !(*out)->rules.length)

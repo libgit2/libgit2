@@ -14,6 +14,8 @@
 #include "crypt.h"
 #include "compat.h"
 
+#define NTLM_UNUSED(x) ((void)(x))
+
 #define NTLM_LM_RESPONSE_LEN 24
 #define NTLM_NTLM_RESPONSE_LEN 24
 #define NTLM_NTLM_HASH_LEN 16
@@ -66,9 +68,11 @@ struct ntlm_client {
 
 	ntlm_state state;
 
-	/* crypto contexts */
-	ntlm_hmac_ctx *hmac_ctx;
-	ntlm_unicode_ctx *unicode_ctx;
+	/* subsystem contexts */
+	ntlm_crypt_ctx crypt_ctx;
+	ntlm_unicode_ctx unicode_ctx;
+	int crypt_initialized : 1,
+	    unicode_initialized : 1;
 
 	/* error message as set by the library */
 	const char *errmsg;
@@ -85,23 +89,23 @@ struct ntlm_client {
 	char *password;
 
 	/* strings as converted to utf16 */
+	char *hostname_utf16;
 	char *target_utf16;
 	char *username_utf16;
 	char *username_upper_utf16;
 	char *userdomain_utf16;
-	char *hostname_utf16;
 	char *password_utf16;
+
+	size_t hostname_utf16_len;
+	size_t username_utf16_len;
+	size_t username_upper_utf16_len;
+	size_t userdomain_utf16_len;
+	size_t password_utf16_len;
+	size_t target_utf16_len;
 
 	/* timestamp and nonce; only for debugging */
 	uint64_t nonce;
 	uint64_t timestamp;
-
-	size_t username_utf16_len;
-	size_t username_upper_utf16_len;
-	size_t userdomain_utf16_len;
-	size_t hostname_utf16_len;
-	size_t password_utf16_len;
-	size_t target_utf16_len;
 
 	unsigned char lm_response[NTLM_LM_RESPONSE_LEN];
 	size_t lm_response_len;

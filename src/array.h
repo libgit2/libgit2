@@ -70,13 +70,13 @@ on_oom:
 #define git_array_alloc(a) \
 	(((a).size >= (a).asize) ? \
 	git_array_grow(&(a), sizeof(*(a).ptr)) : \
-	((a).ptr ? &(a).ptr[(a).size++] : NULL))
+	((a).ptr ? &(a).ptr[(a).size++] : (void *)NULL))
 
-#define git_array_last(a) ((a).size ? &(a).ptr[(a).size - 1] : NULL)
+#define git_array_last(a) ((a).size ? &(a).ptr[(a).size - 1] : (void *)NULL)
 
-#define git_array_pop(a) ((a).size ? &(a).ptr[--(a).size] : NULL)
+#define git_array_pop(a) ((a).size ? &(a).ptr[--(a).size] : (void *)NULL)
 
-#define git_array_get(a, i) (((i) < (a).size) ? &(a).ptr[(i)] : NULL)
+#define git_array_get(a, i) (((i) < (a).size) ? &(a).ptr[(i)] : (void *)NULL)
 
 #define git_array_size(a) (a).size
 

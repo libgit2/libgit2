@@ -3,6 +3,7 @@
 
 #cmakedefine GIT_DEBUG_POOL 1
 #cmakedefine GIT_DEBUG_STRICT_ALLOC 1
+#cmakedefine GIT_DEBUG_STRICT_OPEN 1
 
 #cmakedefine GIT_TRACE 1
 #cmakedefine GIT_THREADS 1
@@ -34,6 +35,7 @@
 #cmakedefine GIT_WINHTTP 1
 #cmakedefine GIT_HTTPS 1
 #cmakedefine GIT_OPENSSL 1
+#cmakedefine GIT_OPENSSL_DYNAMIC 1
 #cmakedefine GIT_SECURE_TRANSPORT 1
 #cmakedefine GIT_MBEDTLS 1
 

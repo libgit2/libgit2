@@ -14,7 +14,7 @@
 
 #ifdef GIT_NTLM
 
-#include "ntlm.h"
+#include "ntlmclient.h"
 
 typedef struct {
 	git_http_auth_context parent;

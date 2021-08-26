@@ -70,9 +70,9 @@ void test_worktree_merge__merge_setup(void)
 		    ours, (const git_annotated_commit **)&theirs, 1));
 
 	for (i = 0; i < ARRAY_SIZE(merge_files); i++) {
-		git_buf_clear(&path);
-		cl_git_pass(git_buf_printf(&path, "%s/%s",
-			    fixture.worktree->gitdir, merge_files[i]));
+		cl_git_pass(git_buf_joinpath(&path,
+		            fixture.worktree->gitdir,
+		            merge_files[i]));
 		cl_assert(git_path_exists(path.ptr));
 	}
 
