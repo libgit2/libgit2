@@ -115,12 +115,13 @@ typedef struct {
 
 	/**
 	 * The number of commits in level N is less than X times the number of
-	 * commits in level N + 1.
+	 * commits in level N + 1. Default is 2.
 	 */
 	float size_multiple;
 
 	/**
 	 * The number of commits in level N + 1 is more than C commits.
+	 * Default is 64000.
 	 */
 	size_t max_commits;
 } git_commit_graph_writer_options;
@@ -129,7 +130,6 @@ typedef struct {
 #define GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT                                                       \
 	{                                                                                          \
 		GIT_COMMIT_GRAPH_WRITER_OPTIONS_VERSION,                                           \
-		GIT_COMMIT_GRAPH_SPLIT_STRATEGY_SINGLE_FILE, 2.0f, 64000                           \
 	}
 
 /**

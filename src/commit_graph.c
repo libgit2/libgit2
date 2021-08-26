@@ -1143,6 +1143,18 @@ static int commit_graph_write_filebuf(const char *buf, size_t size, void *data)
 	return git_filebuf_write(f, buf, size);
 }
 
+int git_commit_graph_writer_options_init(
+	git_commit_graph_writer_options *opts,
+	unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+			opts,
+			version,
+			git_commit_graph_writer_options,
+			GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT);
+	return 0;
+}
+
 int git_commit_graph_writer_commit(
 		git_commit_graph_writer *w,
 		git_commit_graph_writer_options *opts)
@@ -1152,7 +1164,7 @@ int git_commit_graph_writer_commit(
 	git_buf commit_graph_path = GIT_BUF_INIT;
 	git_filebuf output = GIT_FILEBUF_INIT;
 
-	/* TODO: support options. */
+	/* TODO: support options and fill in defaults. */
 	GIT_UNUSED(opts);
 
 	error = git_buf_joinpath(
