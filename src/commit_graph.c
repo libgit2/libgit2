@@ -832,7 +832,8 @@ static int compute_generation_numbers(git_vector *commits)
 		*(size_t *)git_array_alloc(index_stack) = i;
 
 	while (git_array_size(index_stack)) {
-		i = *git_array_pop(index_stack);
+		size_t *index_ptr = git_array_pop(index_stack);
+		i = *index_ptr;
 		child_packed_commit = git_vector_get(commits, i);
 
 		if (commit_states[i] == GENERATION_NUMBER_COMMIT_STATE_VISITED) {
@@ -1017,6 +1018,7 @@ commit_graph_write(git_commit_graph_writer *w, commit_graph_write_cb write_cb, v
 		uint64_t commit_time;
 		uint32_t generation;
 		uint32_t word;
+		size_t *packed_index;
 		unsigned int parentcount = (unsigned int)git_array_size(packed_commit->parents);
 
 		error = git_buf_put(
@@ -1026,20 +1028,24 @@ commit_graph_write(git_commit_graph_writer *w, commit_graph_write_cb write_cb, v
 		if (error < 0)
 			goto cleanup;
 
-		if (parentcount == 0)
+		if (parentcount == 0) {
 			word = htonl(GIT_COMMIT_GRAPH_MISSING_PARENT);
-		else
-			word = htonl((uint32_t)*git_array_get(packed_commit->parent_indices, 0));
+		} else {
+			packed_index = git_array_get(packed_commit->parent_indices, 0);
+			word = htonl((uint32_t)*packed_index);
+		}
 		error = git_buf_put(&commit_data, (const char *)&word, sizeof(word));
 		if (error < 0)
 			goto cleanup;
 
-		if (parentcount < 2)
+		if (parentcount < 2) {
 			word = htonl(GIT_COMMIT_GRAPH_MISSING_PARENT);
-		else if (parentcount == 2)
-			word = htonl((uint32_t)*git_array_get(packed_commit->parent_indices, 1));
-		else
+		} else if (parentcount == 2) {
+			packed_index = git_array_get(packed_commit->parent_indices, 1);
+			word = htonl((uint32_t)*packed_index);
+		} else {
 			word = htonl(0x80000000u | extra_edge_list_count);
+		}
 		error = git_buf_put(&commit_data, (const char *)&word, sizeof(word));
 		if (error < 0)
 			goto cleanup;
@@ -1047,9 +1053,13 @@ commit_graph_write(git_commit_graph_writer *w, commit_graph_write_cb write_cb, v
 		if (parentcount > 2) {
 			unsigned int parent_i;
 			for (parent_i = 1; parent_i < parentcount; ++parent_i) {
-				word = htonl((uint32_t)(
-						*git_array_get(packed_commit->parent_indices, parent_i)
-						| (parent_i + 1 == parentcount ? 0x80000000u : 0)));
+				packed_index = git_array_get(
+						packed_commit->parent_indices, parent_i);
+				word = htonl(
+						(uint32_t)(*packed_index
+							   | (parent_i + 1 == parentcount
+									      ? 0x80000000u
+									      : 0)));
 				error = git_buf_put(
 						&extra_edge_list,
 						(const char *)&word,
