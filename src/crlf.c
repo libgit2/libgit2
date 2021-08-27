@@ -386,6 +386,17 @@ static int crlf_apply(
 		return crlf_apply_to_odb(*payload, to, from, src);
 }
 
+static int crlf_stream(
+	git_writestream **out,
+	git_filter *self,
+	void **payload,
+	const git_filter_source *src,
+	git_writestream *next)
+{
+	return git_filter_buffered_stream_new(out,
+		self, crlf_apply, NULL, payload, src, next);
+}
+
 static void crlf_cleanup(
 	git_filter *self,
 	void       *payload)
@@ -405,7 +416,7 @@ git_filter *git_crlf_filter_new(void)
 	f->f.initialize = NULL;
 	f->f.shutdown = git_filter_free;
 	f->f.check    = crlf_check;
-	f->f.apply    = crlf_apply;
+	f->f.stream   = crlf_stream;
 	f->f.cleanup  = crlf_cleanup;
 
 	return (git_filter *)f;
