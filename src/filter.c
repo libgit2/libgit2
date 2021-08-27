@@ -939,6 +939,32 @@ int git_filter_buffered_stream_new(
 	return 0;
 }
 
+static int setup_stream(
+	git_writestream **out,
+	git_filter_entry *fe,
+	git_filter_list *filters,
+	git_writestream *last_stream)
+{
+#ifndef GIT_DEPRECATE_HARD
+	GIT_ASSERT(fe->filter->stream || fe->filter->apply);
+
+	/*
+	 * If necessary, create a stream that proxies the traditional
+	 * application.
+	 */
+	if (!fe->filter->stream) {
+		/* Create a stream that proxies the one-shot apply */
+		return git_filter_buffered_stream_new(out,
+			fe->filter, fe->filter->apply, filters->temp_buf,
+			&fe->payload, &filters->source, last_stream);
+	}
+#endif
+
+	GIT_ASSERT(fe->filter->stream);
+	return fe->filter->stream(out, fe->filter,
+		&fe->payload, &filters->source, last_stream);
+}
+
 static int stream_list_init(
 	git_writestream **out,
 	git_vector *streams,
@@ -960,22 +986,11 @@ static int stream_list_init(
 	for (i = 0; i < git_array_size(filters->filters); ++i) {
 		size_t filter_idx = (filters->source.mode == GIT_FILTER_TO_WORKTREE) ?
 			git_array_size(filters->filters) - 1 - i : i;
+
 		git_filter_entry *fe = git_array_get(filters->filters, filter_idx);
 		git_writestream *filter_stream;
 
-		GIT_ASSERT(fe->filter->stream || fe->filter->apply);
-
-		/* If necessary, create a stream that proxies the traditional
-		 * application.
-		 */
-		if (fe->filter->stream)
-			error = fe->filter->stream(&filter_stream, fe->filter,
-				&fe->payload, &filters->source, last_stream);
-		else
-			/* Create a stream that proxies the one-shot apply */
-			error = git_filter_buffered_stream_new(&filter_stream,
-				fe->filter, fe->filter->apply, filters->temp_buf,
-				&fe->payload, &filters->source, last_stream);
+		error = setup_stream(&filter_stream, fe, filters, last_stream);
 
 		if (error < 0)
 			goto out;

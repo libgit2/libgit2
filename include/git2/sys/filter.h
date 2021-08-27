@@ -178,6 +178,7 @@ typedef int GIT_CALLBACK(git_filter_check_fn)(
 	const git_filter_source *src,
 	const char             **attr_values);
 
+#ifndef GIT_DEPRECATE_HARD
 /**
  * Callback to actually perform the data filtering
  *
@@ -189,6 +190,8 @@ typedef int GIT_CALLBACK(git_filter_check_fn)(
  *
  * The `payload` value will refer to any payload that was set by the
  * `check` callback.  It may be read from or written to as needed.
+ *
+ * @deprecated use git_filter_stream_fn
  */
 typedef int GIT_CALLBACK(git_filter_apply_fn)(
 	git_filter              *self,
@@ -196,6 +199,7 @@ typedef int GIT_CALLBACK(git_filter_apply_fn)(
 	git_buf                 *to,
 	const git_buf           *from,
 	const git_filter_source *src);
+#endif
 
 /**
  * Callback to perform the data filtering.
@@ -263,12 +267,16 @@ struct git_filter {
 	 */
 	git_filter_check_fn    check;
 
+#ifdef GIT_DEPRECATE_HARD
+	void *reserved;
+#else
 	/**
 	 * Provided for backward compatibility; this will apply the
 	 * filter to the given contents in a `git_buf`.  Callers should
 	 * provide a `stream` function instead.
 	 */
 	git_filter_apply_fn    apply;
+#endif
 
 	/**
 	 * Called to apply the filter, this function will provide a
