@@ -130,9 +130,32 @@ GIT_EXTERN(git_attr_value_t) git_attr_value(const char *attr);
  *
  * Passing the `GIT_ATTR_CHECK_INCLUDE_HEAD` flag will use attributes
  * from a `.gitattributes` file in the repository at the HEAD revision.
+ *
+ * Passing the `GIT_ATTR_CHECK_INCLUDE_COMMIT` flag will use attributes
+ * from a `.gitattributes` file in a specific commit.
  */
 #define GIT_ATTR_CHECK_NO_SYSTEM        (1 << 2)
 #define GIT_ATTR_CHECK_INCLUDE_HEAD     (1 << 3)
+#define GIT_ATTR_CHECK_INCLUDE_COMMIT   (1 << 4)
+
+/**
+* An options structure for querying attributes.
+*/
+typedef struct {
+	unsigned int version;
+
+	/** A combination of GIT_ATTR_CHECK flags */
+	unsigned int flags;
+
+	/**
+	 * The commit to load attributes from, when
+	 * `GIT_ATTR_CHECK_INCLUDE_COMMIT` is specified.
+	 */
+	git_oid *commit_id;
+} git_attr_options;
+
+#define GIT_ATTR_OPTIONS_VERSION 1
+#define GIT_ATTR_OPTIONS_INIT {GIT_ATTR_OPTIONS_VERSION}
 
 /**
  * Look up the value of one git attribute for path.
@@ -153,6 +176,28 @@ GIT_EXTERN(int) git_attr_get(
 	const char **value_out,
 	git_repository *repo,
 	uint32_t flags,
+	const char *path,
+	const char *name);
+
+/**
+ * Look up the value of one git attribute for path with extended options.
+ *
+ * @param value_out Output of the value of the attribute.  Use the GIT_ATTR_...
+ *             macros to test for TRUE, FALSE, UNSPECIFIED, etc. or just
+ *             use the string value for attributes set to a value.  You
+ *             should NOT modify or free this value.
+ * @param repo The repository containing the path.
+ * @param opts The `git_attr_options` to use when querying these attributes.
+ * @param path The path to check for attributes.  Relative paths are
+ *             interpreted relative to the repo root.  The file does
+ *             not have to exist, but if it does not, then it will be
+ *             treated as a plain file (not a directory).
+ * @param name The name of the attribute to look up.
+ */
+GIT_EXTERN(int) git_attr_get_ext(
+	const char **value_out,
+	git_repository *repo,
+	git_attr_options *opts,
 	const char *path,
 	const char *name);
 
@@ -194,6 +239,30 @@ GIT_EXTERN(int) git_attr_get_many(
 	const char **names);
 
 /**
+ * Look up a list of git attributes for path with extended options.
+ *
+ * @param values_out An array of num_attr entries that will have string
+ *             pointers written into it for the values of the attributes.
+ *             You should not modify or free the values that are written
+ *             into this array (although of course, you should free the
+ *             array itself if you allocated it).
+ * @param repo The repository containing the path.
+ * @param opts The `git_attr_options` to use when querying these attributes.
+ * @param path The path inside the repo to check attributes.  This
+ *             does not have to exist, but if it does not, then
+ *             it will be treated as a plain file (i.e. not a directory).
+ * @param num_attr The number of attributes being looked up
+ * @param names An array of num_attr strings containing attribute names.
+ */
+GIT_EXTERN(int) git_attr_get_many_ext(
+	const char **values_out,
+	git_repository *repo,
+	git_attr_options *opts,
+	const char *path,
+	size_t num_attr,
+	const char **names);
+
+/**
  * The callback used with git_attr_foreach.
  *
  * This callback will be invoked only once per attribute name, even if there
@@ -227,6 +296,26 @@ typedef int GIT_CALLBACK(git_attr_foreach_cb)(const char *name, const char *valu
 GIT_EXTERN(int) git_attr_foreach(
 	git_repository *repo,
 	uint32_t flags,
+	const char *path,
+	git_attr_foreach_cb callback,
+	void *payload);
+
+/**
+ * Loop over all the git attributes for a path with extended options.
+ *
+ * @param repo The repository containing the path.
+ * @param opts The `git_attr_options` to use when querying these attributes.
+ * @param path Path inside the repo to check attributes.  This does not have
+ *             to exist, but if it does not, then it will be treated as a
+ *             plain file (i.e. not a directory).
+ * @param callback Function to invoke on each attribute name and value.
+ *                 See git_attr_foreach_cb.
+ * @param payload Passed on as extra parameter to callback function.
+ * @return 0 on success, non-zero callback return value, or error code
+ */
+GIT_EXTERN(int) git_attr_foreach_ext(
+	git_repository *repo,
+	git_attr_options *opts,
 	const char *path,
 	git_attr_foreach_cb callback,
 	void *payload);

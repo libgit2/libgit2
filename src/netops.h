@@ -14,7 +14,7 @@
 #include "net.h"
 
 #ifdef GIT_OPENSSL
-# include <openssl/ssl.h>
+# include "streams/openssl.h"
 #endif
 
 typedef struct gitno_ssl {

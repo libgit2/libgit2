@@ -112,7 +112,7 @@ static int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_r
 	if (commit == NULL)
 		goto on_error;
 
-	if (git_merge__bases_many(&result, walk, commit, &list) < 0)
+	if (git_merge__bases_many(&result, walk, commit, &list, 0) < 0)
 		goto on_error;
 
 	if (!result) {
@@ -243,7 +243,7 @@ static int merge_bases(git_commit_list **out, git_revwalk **walk_out, git_reposi
 	if (commit == NULL)
 		goto on_error;
 
-	if (git_merge__bases_many(&result, walk, commit, &list) < 0)
+	if (git_merge__bases_many(&result, walk, commit, &list, 0) < 0)
 		goto on_error;
 
 	if (!result) {
@@ -378,7 +378,11 @@ static int clear_commit_marks(git_commit_list_node *commit, unsigned int mark)
 }
 
 static int paint_down_to_common(
-	git_commit_list **out, git_revwalk *walk, git_commit_list_node *one, git_vector *twos)
+		git_commit_list **out,
+		git_revwalk *walk,
+		git_commit_list_node *one,
+		git_vector *twos,
+		uint32_t minimum_generation)
 {
 	git_pqueue list;
 	git_commit_list *result = NULL;
@@ -387,7 +391,7 @@ static int paint_down_to_common(
 	int error;
 	unsigned int i;
 
-	if (git_pqueue_init(&list, 0, twos->length * 2, git_commit_list_time_cmp) < 0)
+	if (git_pqueue_init(&list, 0, twos->length * 2, git_commit_list_generation_cmp) < 0)
 		return -1;
 
 	one->flags |= PARENT1;
@@ -399,7 +403,6 @@ static int paint_down_to_common(
 			return -1;
 
 		two->flags |= PARENT2;
-
 		if (git_pqueue_insert(&list, two) < 0)
 			return -1;
 	}
@@ -427,6 +430,8 @@ static int paint_down_to_common(
 			git_commit_list_node *p = commit->parents[i];
 			if ((p->flags & flags) == flags)
 				continue;
+			if (p->generation < minimum_generation)
+				continue;
 
 			if ((error = git_commit_list_parse(walk, p)) < 0)
 				return error;
@@ -442,7 +447,7 @@ static int paint_down_to_common(
 	return 0;
 }
 
-static int remove_redundant(git_revwalk *walk, git_vector *commits)
+static int remove_redundant(git_revwalk *walk, git_vector *commits, uint32_t minimum_generation)
 {
 	git_vector work = GIT_VECTOR_INIT;
 	unsigned char *redundant;
@@ -478,7 +483,7 @@ static int remove_redundant(git_revwalk *walk, git_vector *commits)
 				goto done;
 		}
 
-		error = paint_down_to_common(&common, walk, commit, &work);
+		error = paint_down_to_common(&common, walk, commit, &work, minimum_generation);
 		if (error < 0)
 			goto done;
 
@@ -510,7 +515,12 @@ done:
 	return error;
 }
 
-int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_list_node *one, git_vector *twos)
+int git_merge__bases_many(
+		git_commit_list **out,
+		git_revwalk *walk,
+		git_commit_list_node *one,
+		git_vector *twos,
+		uint32_t minimum_generation)
 {
 	int error;
 	unsigned int i;
@@ -532,7 +542,7 @@ int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_l
 	if (git_commit_list_parse(walk, one) < 0)
 		return -1;
 
-	error = paint_down_to_common(&result, walk, one, twos);
+	error = paint_down_to_common(&result, walk, one, twos, minimum_generation);
 	if (error < 0)
 		return error;
 
@@ -559,7 +569,7 @@ int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_l
 
 		if ((error = clear_commit_marks(one, ALL_FLAGS)) < 0 ||
 		    (error = clear_commit_marks_many(twos, ALL_FLAGS)) < 0 ||
-		    (error = remove_redundant(walk, &redundant)) < 0) {
+		    (error = remove_redundant(walk, &redundant, minimum_generation)) < 0) {
 			git_vector_free(&redundant);
 			return error;
 		}

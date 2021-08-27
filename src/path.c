@@ -1915,7 +1915,13 @@ GIT_INLINE(bool) should_validate_longpaths(git_repository *repo)
 }
 
 #else
-# define should_validate_longpaths(repo) (GIT_UNUSED(repo), false)
+
+GIT_INLINE(bool) should_validate_longpaths(git_repository *repo)
+{
+	GIT_UNUSED(repo);
+
+	return false;
+}
 #endif
 
 int git_path_validate_workdir(git_repository *repo, const char *path)

@@ -1460,6 +1460,11 @@ static int update_tips_for_spec(
 		if (error < 0 && error != GIT_ENOTFOUND)
 			goto on_error;
 
+		if (!(error || error == GIT_ENOTFOUND)
+				&& !spec->force
+				&& !git_graph_descendant_of(remote->repo, &head->oid, &old))
+			continue;
+
 		if (error == GIT_ENOTFOUND) {
 			memset(&old, 0, GIT_OID_RAWSZ);
 

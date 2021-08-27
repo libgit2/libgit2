@@ -16,24 +16,24 @@
 #define GIT_FILTER_BYTES_TO_CHECK_NUL 8000
 
 typedef struct {
+	git_filter_options options;
 	git_attr_session *attr_session;
 	git_buf *temp_buf;
-	uint32_t flags;
-} git_filter_options;
+} git_filter_session;
 
-#define GIT_FILTER_OPTIONS_INIT {0}
+#define GIT_FILTER_SESSION_INIT {GIT_FILTER_OPTIONS_INIT, 0}
 
 extern int git_filter_global_init(void);
 
 extern void git_filter_free(git_filter *filter);
 
-extern int git_filter_list__load_ext(
+extern int git_filter_list__load(
 	git_filter_list **filters,
 	git_repository *repo,
 	git_blob *blob, /* can be NULL */
 	const char *path,
 	git_filter_mode_t mode,
-	git_filter_options *filter_opts);
+	git_filter_session *filter_session);
 
 /*
  * The given input buffer will be converted to the given output buffer.

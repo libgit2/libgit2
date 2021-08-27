@@ -23,14 +23,14 @@
 
 #define GIT_ALTERNATES_FILE "info/alternates"
 
+#define GIT_ALTERNATES_MAX_DEPTH 5
+
 /*
  * We work under the assumption that most objects for long-running
  * operations will be packed
  */
-#define GIT_LOOSE_PRIORITY 1
-#define GIT_PACKED_PRIORITY 2
-
-#define GIT_ALTERNATES_MAX_DEPTH 5
+int git_odb__loose_priority = GIT_ODB_DEFAULT_LOOSE_PRIORITY;
+int git_odb__packed_priority = GIT_ODB_DEFAULT_PACKED_PRIORITY;
 
 bool git_odb__strict_hash_verification = true;
 
@@ -573,7 +573,7 @@ int git_odb__add_default_backends(
 	git_odb *db, const char *objects_dir,
 	bool as_alternates, int alternate_depth)
 {
-	size_t i;
+	size_t i = 0;
 	struct stat st;
 	ino_t inode;
 	git_odb_backend *loose, *packed;
@@ -582,7 +582,7 @@ int git_odb__add_default_backends(
 	 * a cross-platform workaround for this */
 #ifdef GIT_WIN32
 	GIT_UNUSED(i);
-	GIT_UNUSED(st);
+	GIT_UNUSED(&st);
 
 	inode = 0;
 #else
@@ -613,12 +613,12 @@ int git_odb__add_default_backends(
 
 	/* add the loose object backend */
 	if (git_odb_backend_loose(&loose, objects_dir, -1, db->do_fsync, 0, 0) < 0 ||
-		add_backend_internal(db, loose, GIT_LOOSE_PRIORITY, as_alternates, inode) < 0)
+		add_backend_internal(db, loose, git_odb__loose_priority, as_alternates, inode) < 0)
 		return -1;
 
 	/* add the packed file backend */
 	if (git_odb_backend_pack(&packed, objects_dir) < 0 ||
-		add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates, inode) < 0)
+		add_backend_internal(db, packed, git_odb__packed_priority, as_alternates, inode) < 0)
 		return -1;
 
 	if (git_mutex_lock(&db->lock) < 0) {

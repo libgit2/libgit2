@@ -1024,7 +1024,7 @@ static void create_paths(const char *root, int depth)
 	int i;
 
 	cl_git_pass(git_buf_puts(&fullpath, root));
-	cl_git_pass(git_buf_putc(&fullpath, '/'));
+	cl_git_pass(git_path_to_dir(&fullpath));
 
 	root_len = fullpath.size;
 

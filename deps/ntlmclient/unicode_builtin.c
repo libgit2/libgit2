@@ -13,10 +13,6 @@
 #include "unicode.h"
 #include "compat.h"
 
-struct ntlm_unicode_ctx {
-	ntlm_client *ntlm;
-};
-
 typedef unsigned int    UTF32;   /* at least 32 bits */
 typedef unsigned short  UTF16;   /* at least 16 bits */
 typedef unsigned char   UTF8;    /* typically 8 bits */
@@ -281,15 +277,10 @@ static ConversionResult ConvertUTF8toUTF16 (
 }
 
 
-ntlm_unicode_ctx *ntlm_unicode_ctx_init(ntlm_client *ntlm)
+bool ntlm_unicode_init(ntlm_client *ntlm)
 {
-	ntlm_unicode_ctx *ctx;
-
-	if ((ctx = malloc(sizeof(ntlm_unicode_ctx))) == NULL)
-		return NULL;
-
-	ctx->ntlm = ntlm;
-	return ctx;
+	NTLM_UNUSED(ntlm);
+	return true;
 }
 
 typedef enum {
@@ -300,7 +291,7 @@ typedef enum {
 static inline bool unicode_builtin_encoding_convert(
 	char **converted,
 	size_t *converted_len,
-	ntlm_unicode_ctx *ctx,
+	ntlm_client *ntlm,
 	const char *string,
 	size_t string_len,
 	unicode_builtin_encoding_direction direction)
@@ -332,7 +323,7 @@ static inline bool unicode_builtin_encoding_convert(
 	out_size = (out_size + 7) & ~7;
 
 	if ((out = malloc(out_size)) == NULL) {
-		ntlm_client_set_errmsg(ctx->ntlm, "out of memory");
+		ntlm_client_set_errmsg(ntlm, "out of memory");
 		return false;
 	}
 
@@ -358,17 +349,17 @@ static inline bool unicode_builtin_encoding_convert(
 				success = true;
 				goto done;
 			case sourceExhausted:
-				ntlm_client_set_errmsg(ctx->ntlm,
+				ntlm_client_set_errmsg(ntlm,
 					"invalid unicode string; trailing data remains");
 				goto done;
 			case targetExhausted:
 				break;
 			case sourceIllegal:
-				ntlm_client_set_errmsg(ctx->ntlm,
+				ntlm_client_set_errmsg(ntlm,
 					"invalid unicode string; trailing data remains");
 				goto done;
 			default:
-				ntlm_client_set_errmsg(ctx->ntlm,
+				ntlm_client_set_errmsg(ntlm,
 					"unknown unicode conversion failure");
 				goto done;
 		}
@@ -377,13 +368,12 @@ static inline bool unicode_builtin_encoding_convert(
 		out_size = ((((out_size << 1) - (out_size >> 1)) + 7) & ~7);
 
 		if (out_size > NTLM_UNICODE_MAX_LEN) {
-			ntlm_client_set_errmsg(ctx->ntlm,
-				"unicode conversion too large");
+			ntlm_client_set_errmsg(ntlm, "unicode conversion too large");
 			goto done;
 		}
 
 		if ((new_out = realloc(out, out_size)) == NULL) {
-			ntlm_client_set_errmsg(ctx->ntlm, "out of memory");
+			ntlm_client_set_errmsg(ntlm, "out of memory");
 			goto done;
 		}
 
@@ -419,27 +409,26 @@ done:
 bool ntlm_unicode_utf8_to_16(
 	char **converted,
 	size_t *converted_len,
-	ntlm_unicode_ctx *ctx,
+	ntlm_client *client,
 	const char *string,
 	size_t string_len)
 {
 	return unicode_builtin_encoding_convert(converted, converted_len,
-		ctx, string, string_len, unicode_builtin_utf8_to_16);
+		client, string, string_len, unicode_builtin_utf8_to_16);
 }
 
 bool ntlm_unicode_utf16_to_8(
 	char **converted,
 	size_t *converted_len,
-	ntlm_unicode_ctx *ctx,
+	ntlm_client *client,
 	const char *string,
 	size_t string_len)
 {
 	return unicode_builtin_encoding_convert(converted, converted_len,
-		ctx, string, string_len, unicode_builtin_utf16_to_8);
+		client, string, string_len, unicode_builtin_utf16_to_8);
 }
 
-void ntlm_unicode_ctx_free(ntlm_unicode_ctx *ctx)
+void ntlm_unicode_shutdown(ntlm_client *ntlm)
 {
-	if (ctx)
-		free(ctx);
+	NTLM_UNUSED(ntlm);
 }

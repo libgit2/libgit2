@@ -12,6 +12,24 @@
 #include "odb.h"
 #include "commit.h"
 
+int git_commit_list_generation_cmp(const void *a, const void *b)
+{
+	uint32_t generation_a = ((git_commit_list_node *) a)->generation;
+	uint32_t generation_b = ((git_commit_list_node *) b)->generation;
+
+	if (!generation_a || !generation_b) {
+		/* Fall back to comparing by timestamps if at least one commit lacks a generation. */
+		return git_commit_list_time_cmp(a, b);
+	}
+
+	if (generation_a < generation_b)
+		return 1;
+	if (generation_a > generation_b)
+		return -1;
+
+	return 0;
+}
+
 int git_commit_list_time_cmp(const void *a, const void *b)
 {
 	int64_t time_a = ((git_commit_list_node *) a)->time;

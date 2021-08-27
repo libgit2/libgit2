@@ -114,6 +114,12 @@ typedef enum {
 	 * in the HEAD commit.
 	 */
 	GIT_BLOB_FILTER_ATTRIBUTES_FROM_HEAD = (1 << 2),
+
+	/**
+	 * When set, filters will be loaded from a `.gitattributes` file
+	 * in the specified commit.
+	 */
+	GIT_BLOB_FILTER_ATTRIBUTES_FROM_COMMIT = (1 << 3),
 } git_blob_filter_flag_t;
 
 /**
@@ -128,6 +134,12 @@ typedef struct {
 
 	/** Flags to control the filtering process, see `git_blob_filter_flag_t` above */
 	uint32_t flags;
+
+	/**
+	 * The commit to load attributes from, when
+	 * `GIT_BLOB_FILTER_ATTRIBUTES_FROM_COMMIT` is specified.
+	 */
+	git_oid *commit_id;
 } git_blob_filter_options;
 
 #define GIT_BLOB_FILTER_OPTIONS_VERSION 1

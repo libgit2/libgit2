@@ -44,8 +44,9 @@ void test_worktree_worktree__list_with_invalid_worktree_dirs(void)
 	git_strarray wts;
 	size_t i, j, len;
 
-	cl_git_pass(git_buf_printf(&path, "%s/worktrees/invalid",
-		    fixture.repo->commondir));
+	cl_git_pass(git_buf_joinpath(&path,
+	            fixture.repo->commondir,
+	            "worktrees/invalid"));
 	cl_git_pass(p_mkdir(path.ptr, 0755));
 
 	len = path.size;
@@ -145,9 +146,9 @@ void test_worktree_worktree__open_invalid_commondir(void)
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_sets(&buf, "/path/to/nonexistent/commondir"));
-	cl_git_pass(git_buf_printf(&path,
-		    "%s/worktrees/testrepo-worktree/commondir",
-		    fixture.repo->commondir));
+	cl_git_pass(git_buf_joinpath(&path,
+	            fixture.repo->commondir,
+	            "worktrees/testrepo-worktree/commondir"));
 	cl_git_pass(git_futils_writebuffer(&buf, path.ptr, O_RDWR, 0644));
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
@@ -165,9 +166,9 @@ void test_worktree_worktree__open_invalid_gitdir(void)
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_sets(&buf, "/path/to/nonexistent/gitdir"));
-	cl_git_pass(git_buf_printf(&path,
-		    "%s/worktrees/testrepo-worktree/gitdir",
-		    fixture.repo->commondir));
+	cl_git_pass(git_buf_joinpath(&path,
+	            fixture.repo->commondir,
+	            "worktrees/testrepo-worktree/gitdir"));
 	cl_git_pass(git_futils_writebuffer(&buf, path.ptr, O_RDWR, 0644));
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));

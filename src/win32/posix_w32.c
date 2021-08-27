@@ -543,6 +543,13 @@ int p_open(const char *path, int flags, ...)
 	mode_t mode = 0;
 	struct open_opts opts = {0};
 
+	#ifdef GIT_DEBUG_STRICT_OPEN
+	if (strstr(path, "//") != NULL) {
+		errno = EACCES;
+		return -1;
+	}
+	#endif
+
 	if (git_win32_path_from_utf8(wpath, path) < 0)
 		return -1;
 

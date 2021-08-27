@@ -122,7 +122,7 @@ static int packed_reload(refdb_fs_backend *backend)
 	 */
 	if (error <= 0) {
 		if (error == GIT_ENOTFOUND) {
-			git_sortedcache_clear(backend->refcache, true);
+			GIT_UNUSED(git_sortedcache_clear(backend->refcache, true));
 			git_error_clear();
 			error = 0;
 		}
@@ -131,7 +131,7 @@ static int packed_reload(refdb_fs_backend *backend)
 
 	/* At this point, refresh the packed refs from the loaded buffer. */
 
-	git_sortedcache_clear(backend->refcache, false);
+	GIT_UNUSED(git_sortedcache_clear(backend->refcache, false));
 
 	scan = (char *)packedrefs.ptr;
 	eof  = scan + packedrefs.size;
@@ -219,7 +219,7 @@ static int packed_reload(refdb_fs_backend *backend)
 parse_failed:
 	git_error_set(GIT_ERROR_REFERENCE, "corrupted packed references file");
 
-	git_sortedcache_clear(backend->refcache, false);
+	GIT_UNUSED(git_sortedcache_clear(backend->refcache, false));
 	git_sortedcache_wunlock(backend->refcache);
 	git_buf_dispose(&packedrefs);
 
@@ -578,7 +578,7 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 		}
 	}
 
-	if ((error = git_buf_printf(&path, "%s/", backend->commonpath)) < 0 ||
+	if ((error = git_buf_puts(&path, backend->commonpath)) < 0 ||
 		(error = git_buf_put(&path, ref_prefix, ref_prefix_len)) < 0) {
 		git_buf_dispose(&path);
 		return error;
@@ -1609,8 +1609,9 @@ static char *setup_namespace(git_repository *repo, const char *in)
 			GIT_MKDIR_PATH, NULL) < 0)
 		goto done;
 
-	/* Return root of the namespaced gitpath, i.e. without the trailing '/refs' */
+	/* Return root of the namespaced gitpath, i.e. without the trailing 'refs' */
 	git_buf_rtruncate_at_char(&path, '/');
+	git_buf_putc(&path, '/');
 	out = git_buf_detach(&path);
 
 done:
