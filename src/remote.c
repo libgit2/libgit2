@@ -682,8 +682,16 @@ int git_remote_set_pushurl(git_repository *repo, const char *remote, const char*
 	return set_url(repo, remote, CONFIG_PUSHURL_FMT, url);
 }
 
-static int resolve_url(git_buf *resolved_url, const char *url, int direction, const git_remote_callbacks *callbacks)
+static int resolve_url(
+	git_buf *resolved_url,
+	const char *url,
+	int direction,
+	const git_remote_callbacks *callbacks)
 {
+#ifdef GIT_DEPRECATE_HARD
+	GIT_UNUSED(direction);
+	GIT_UNUSED(callbacks);
+#else
 	int status, error;
 
 	if (callbacks && callbacks->resolve_url) {
@@ -698,11 +706,16 @@ static int resolve_url(git_buf *resolved_url, const char *url, int direction, co
 			return status;
 		}
 	}
+#endif
 
 	return git_buf_sets(resolved_url, url);
 }
 
-int git_remote__urlfordirection(git_buf *url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks)
+int git_remote__urlfordirection(
+	git_buf *url_out,
+	struct git_remote *remote,
+	int direction,
+	const git_remote_callbacks *callbacks)
 {
 	const char *url = NULL;
 

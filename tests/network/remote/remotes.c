@@ -98,6 +98,7 @@ void test_network_remote_remotes__remote_ready(void)
 	git_buf_dispose(&url);
 }
 
+#ifndef GIT_DEPRECATE_HARD
 static int urlresolve_callback(git_buf *url_resolved, const char *url, int direction, void *payload)
 {
 	cl_assert(strcmp(url, "git://github.com/libgit2/libgit2") == 0);
@@ -111,9 +112,11 @@ static int urlresolve_callback(git_buf *url_resolved, const char *url, int direc
 
 	return GIT_OK;
 }
+#endif
 
 void test_network_remote_remotes__urlresolve(void)
 {
+#ifndef GIT_DEPRECATE_HARD
 	git_buf url = GIT_BUF_INIT;
 
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
@@ -131,8 +134,10 @@ void test_network_remote_remotes__urlresolve(void)
 	cl_assert_equal_s(url.ptr, "pushresolve");
 
 	git_buf_dispose(&url);
+#endif
 }
 
+#ifndef GIT_DEPRECATE_HARD
 static int urlresolve_passthrough_callback(git_buf *url_resolved, const char *url, int direction, void *payload)
 {
 	GIT_UNUSED(url_resolved);
@@ -141,9 +146,11 @@ static int urlresolve_passthrough_callback(git_buf *url_resolved, const char *ur
 	GIT_UNUSED(payload);
 	return GIT_PASSTHROUGH;
 }
+#endif
 
 void test_network_remote_remotes__urlresolve_passthrough(void)
 {
+#ifndef GIT_DEPRECATE_HARD
 	git_buf url = GIT_BUF_INIT;
 	const char *orig_url = "git://github.com/libgit2/libgit2";
 
@@ -161,6 +168,7 @@ void test_network_remote_remotes__urlresolve_passthrough(void)
 	cl_assert_equal_s(url.ptr, orig_url);
 
 	git_buf_dispose(&url);
+#endif
 }
 
 void test_network_remote_remotes__instance_url(void)
