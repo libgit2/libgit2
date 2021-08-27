@@ -23,7 +23,7 @@
 /**
  * Function type for callbacks from git_pack_foreach_entry_offset.
  */
-typedef int GIT_CALLBACK(git_pack_foreach_entry_offset_cb)(
+typedef int git_pack_foreach_entry_offset_cb(
 		const git_oid *id,
 		off64_t offset,
 		void *payload);
@@ -185,8 +185,11 @@ int git_pack_foreach_entry(
 		git_odb_foreach_cb cb,
 		void *data);
 /**
- * Similar to git_pack_foreach_entry, but it also provides the offset of the
- * object within the packfile. It also does not sort the objects in any order.
+ * Similar to git_pack_foreach_entry, but:
+ * - It also provides the offset of the object within the
+ *   packfile.
+ * - It does not sort the objects in any order.
+ * - It retains the lock while invoking the callback.
  */
 int git_pack_foreach_entry_offset(
 		struct git_pack_file *p,

@@ -643,12 +643,7 @@ static int midx_write(
 	int error = 0;
 	size_t i;
 	struct git_pack_file *p;
-	struct git_midx_header hdr = {
-			.signature = htonl(MIDX_SIGNATURE),
-			.version = MIDX_VERSION,
-			.object_id_version = MIDX_OBJECT_ID_VERSION,
-			.base_midx_files = 0,
-	};
+	struct git_midx_header hdr = {0};
 	uint32_t oid_fanout_count;
 	uint32_t object_large_offsets_count;
 	uint32_t oid_fanout[256];
@@ -662,11 +657,16 @@ static int midx_write(
 	object_entry_array_t object_entries_array = GIT_ARRAY_INIT;
 	git_vector object_entries = GIT_VECTOR_INIT;
 	git_hash_ctx ctx;
-	struct midx_write_hash_context hash_cb_data = {
-		.write_cb = write_cb,
-		.cb_data = cb_data,
-		.ctx = &ctx,
-	};
+	struct midx_write_hash_context hash_cb_data = {0};
+
+	hdr.signature = htonl(MIDX_SIGNATURE);
+	hdr.version = MIDX_VERSION;
+	hdr.object_id_version = MIDX_OBJECT_ID_VERSION;
+	hdr.base_midx_files = 0;
+
+	hash_cb_data.write_cb = write_cb;
+	hash_cb_data.cb_data = cb_data;
+	hash_cb_data.ctx = &ctx;
 
 	error = git_hash_ctx_init(&ctx);
 	if (error < 0)
@@ -677,11 +677,11 @@ static int midx_write(
 	git_vector_sort(&w->packs);
 	git_vector_foreach (&w->packs, i, p) {
 		git_buf relative_index = GIT_BUF_INIT;
-		struct object_entry_cb_state state = {
-				.pack_index = (uint32_t)i,
-				.object_entries_array = &object_entries_array,
-		};
+		struct object_entry_cb_state state = {0};
 		size_t path_len;
+
+		state.pack_index = (uint32_t)i;
+		state.object_entries_array = &object_entries_array;
 
 		error = git_buf_sets(&relative_index, p->pack_name);
 		if (error < 0)
@@ -694,6 +694,8 @@ static int midx_write(
 		path_len = git_buf_len(&relative_index);
 		if (path_len <= strlen(".pack") || git__suffixcmp(git_buf_cstr(&relative_index), ".pack") != 0) {
 			git_buf_dispose(&relative_index);
+			git_error_set(GIT_ERROR_INVALID, "invalid packfile name: '%s'", p->pack_name);
+			error = -1;
 			goto cleanup;
 		}
 		path_len -= strlen(".pack");

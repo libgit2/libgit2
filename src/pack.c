@@ -1396,6 +1396,7 @@ int git_pack_foreach_entry_offset(
 
 	index += 4 * 256;
 
+	/* all offsets should have been validated by pack_index_check_locked */
 	if (p->index_version > 1) {
 		const unsigned char *offsets = index + 24 * p->num_objects;
 		const unsigned char *large_offset_ptr;
@@ -1406,7 +1407,7 @@ int git_pack_foreach_entry_offset(
 			if (current_offset & 0x80000000) {
 				large_offset_ptr = large_offsets + (current_offset & 0x7fffffff) * 8;
 				if (large_offset_ptr >= large_offsets_end) {
-					error = -1;
+					error = packfile_error("invalid large offset");
 					goto cleanup;
 				}
 				current_offset = (((off64_t)ntohl(*((uint32_t *)(large_offset_ptr + 0)))) << 32) |
