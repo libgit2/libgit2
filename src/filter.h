@@ -11,6 +11,7 @@
 
 #include "attr_file.h"
 #include "git2/filter.h"
+#include "git2/sys/filter.h"
 
 /* Amount of file to examine for NUL byte when checking binary-ness */
 #define GIT_FILTER_BYTES_TO_CHECK_NUL 8000
@@ -50,5 +51,14 @@ extern int git_filter_list__convert_buf(
 
 extern git_filter *git_crlf_filter_new(void);
 extern git_filter *git_ident_filter_new(void);
+
+extern int git_filter_buffered_stream_new(
+	git_writestream **out,
+	git_filter *filter,
+	int (*write_fn)(git_filter *, void **, git_buf *, const git_buf *, const git_filter_source *),
+	git_buf *temp_buf,
+	void **payload,
+	const git_filter_source *source,
+	git_writestream *target);
 
 #endif
