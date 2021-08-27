@@ -127,7 +127,7 @@ static int attr_cache_remove(git_attr_cache *cache, git_attr_file *file)
 {
 	int error = 0;
 	git_attr_file_entry *entry;
-	git_attr_file *old = NULL;
+	git_attr_file *oldfile = NULL;
 
 	if (!file)
 		return 0;
@@ -136,13 +136,13 @@ static int attr_cache_remove(git_attr_cache *cache, git_attr_file *file)
 		return error;
 
 	if ((entry = attr_cache_lookup_entry(cache, file->entry->path)) != NULL)
-		old = git_atomic_compare_and_swap(&entry->file[file->source.type], file, NULL);
+		oldfile = git_atomic_compare_and_swap(&entry->file[file->source.type], file, NULL);
 
 	attr_cache_unlock(cache);
 
-	if (old) {
-		GIT_REFCOUNT_OWN(old, NULL);
-		git_attr_file__free(old);
+	if (oldfile == file) {
+		GIT_REFCOUNT_OWN(file, NULL);
+		git_attr_file__free(file);
 	}
 
 	return error;
@@ -401,8 +401,7 @@ int git_attr_cache__init(git_repository *repo)
 	    (ret = git_pool_init(&cache->pool, 1)) < 0)
 		goto cancel;
 
-	cache = git_atomic_compare_and_swap(&repo->attrcache, NULL, cache);
-	if (cache)
+	if (git_atomic_compare_and_swap(&repo->attrcache, NULL, cache) != NULL)
 		goto cancel; /* raced with another thread, free this but no error */
 
 	git_config_free(cfg);
