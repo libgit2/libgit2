@@ -56,8 +56,7 @@ ELSE()
 	MESSAGE(FATAL_ERROR "Asked for unknown SHA1 backend: ${USE_SHA1}")
 ENDIF()
 
-FILE(GLOB SRC_SHA1_UMBRELLA "hash/sha1.h")
-list(APPEND SRC_SHA1 ${SRC_SHA1_UMBRELLA})
+list(APPEND SRC_SHA1 "hash/sha1.h")
 list(SORT SRC_SHA1)
 
 ADD_FEATURE_INFO(SHA ON "using ${USE_SHA1}")
