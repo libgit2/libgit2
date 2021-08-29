@@ -205,6 +205,27 @@ GIT_EXTERN(void) git_buf_free(git_buf *buffer);
 
 /**@}*/
 
+/** @name Deprecated Commit Definitions
+ */
+/**@{*/
+
+/**
+ * Provide a commit signature during commit creation.
+ *
+ * Callers should instead define a `git_commit_create_cb` that
+ * generates a commit buffer using `git_commit_create_buffer`, sign
+ * that buffer and call `git_commit_create_with_signature`.
+ *
+ * @deprecated use a `git_commit_create_cb` instead
+ */
+typedef int (*git_commit_signing_cb)(
+	git_buf *signature,
+	git_buf *signature_field,
+	const char *commit_content,
+	void *payload);
+
+/**@}*/
+
 /** @name Deprecated Config Functions and Constants
  */
 /**@{*/

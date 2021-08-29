@@ -943,6 +943,7 @@ int git_rebase_inmemory_index(
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 static int create_signed(
 	git_oid *out,
 	git_rebase *rebase,
@@ -988,6 +989,7 @@ done:
 	git_buf_dispose(&commit_content);
 	return error;
 }
+#endif
 
 static int rebase_commit__create(
 	git_commit **out,
@@ -1044,11 +1046,14 @@ static int rebase_commit__create(
 
 		git_error_set_after_callback_function(error,
 			"commit_create_cb");
-	} else if (rebase->options.signing_cb) {
+	}
+#ifndef GIT_DEPRECATE_HARD
+	else if (rebase->options.signing_cb) {
 		error = create_signed(&commit_id, rebase, author,
 			committer, message_encoding, message, tree,
 			1, (const git_commit **)&parent_commit);
 	}
+#endif
 
 	if (error == GIT_PASSTHROUGH)
 		error = git_commit_create(&commit_id, rebase->repo, NULL,

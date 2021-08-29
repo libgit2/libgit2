@@ -248,29 +248,33 @@ void test_rebase_sign__create_propagates_error(void)
 	git_rebase_free(rebase);
 }
 
-static const char *expected_commit_content = "tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
-parent f87d14a4a236582a0278a916340a793714256864\n\
-author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
-committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
-\n\
-Modification 3 to gravy\n";
-
+#ifndef GIT_DEPRECATE_HARD
 int signing_cb_passthrough(
 	git_buf *signature,
 	git_buf *signature_field,
 	const char *commit_content,
 	void *payload)
 {
+	static const char *expected_commit_content = "\
+tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
+parent f87d14a4a236582a0278a916340a793714256864\n\
+author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
+committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
+\n\
+Modification 3 to gravy\n";
+
 	cl_assert_equal_b(false, git_buf_is_allocated(signature));
 	cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
 	cl_assert_equal_s(expected_commit_content, commit_content);
 	cl_assert_equal_p(NULL, payload);
 	return GIT_PASSTHROUGH;
 }
+#endif /* !GIT_DEPRECATE_HARD */
 
 /* git checkout gravy ; git rebase --merge veal */
 void test_rebase_sign__passthrough_signing_cb(void)
 {
+#ifndef GIT_DEPRECATE_HARD
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
@@ -310,15 +314,18 @@ committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n";
 	git_annotated_commit_free(upstream_head);
 	git_commit_free(commit);
 	git_rebase_free(rebase);
+#endif /* !GIT_DEPRECATE_HARD */
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int signing_cb_gpg(
 	git_buf *signature,
 	git_buf *signature_field,
 	const char *commit_content,
 	void *payload)
 {
-	const char *gpg_signature = "-----BEGIN PGP SIGNATURE-----\n\
+	const char *gpg_signature = "\
+-----BEGIN PGP SIGNATURE-----\n\
 \n\
 iQIzBAEBCgAdFiEEgVlDEfSlmKn0fvGgK++h5T2/ctIFAlwZcrAACgkQK++h5T2/\n\
 ctIPVhAA42RyZhMdKl5Bm0KtQco2scsukIg2y7tjSwhti91zDu3HQgpusjjo0fQx\n\
@@ -343,10 +350,12 @@ cttVRsdOoego+fiy08eFE+aJIeYiINRGhqOBTsuqG4jIdpdKxPE=\n\
 	cl_git_pass(git_buf_set(signature, gpg_signature, strlen(gpg_signature) + 1));
 	return GIT_OK;
 }
+#endif /* !GIT_DEPRECATE_HARD */
 
 /* git checkout gravy ; git rebase --merge veal */
 void test_rebase_sign__gpg_with_no_field(void)
 {
+#ifndef GIT_DEPRECATE_HARD
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
@@ -354,7 +363,8 @@ void test_rebase_sign__gpg_with_no_field(void)
 	git_oid commit_id, expected_id;
 	git_rebase_options rebase_opts = GIT_REBASE_OPTIONS_INIT;
 	git_commit *commit;
-	const char *expected_commit_raw_header = "tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
+	const char *expected_commit_raw_header = "\
+tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
 parent f87d14a4a236582a0278a916340a793714256864\n\
 author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
 committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
@@ -402,9 +412,11 @@ gpgsig -----BEGIN PGP SIGNATURE-----\n\
 	git_annotated_commit_free(upstream_head);
 	git_commit_free(commit);
 	git_rebase_free(rebase);
+#endif /* !GIT_DEPRECATE_HARD */
 }
 
 
+#ifndef GIT_DEPRECATE_HARD
 int signing_cb_magic_field(
 	git_buf *signature,
 	git_buf *signature_field,
@@ -426,10 +438,12 @@ int signing_cb_magic_field(
 
 	return GIT_OK;
 }
+#endif /* !GIT_DEPRECATE_HARD */
 
 /* git checkout gravy ; git rebase --merge veal */
 void test_rebase_sign__custom_signature_field(void)
 {
+#ifndef GIT_DEPRECATE_HARD
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
@@ -437,7 +451,8 @@ void test_rebase_sign__custom_signature_field(void)
 	git_oid commit_id, expected_id;
 	git_rebase_options rebase_opts = GIT_REBASE_OPTIONS_INIT;
 	git_commit *commit;
-	const char *expected_commit_raw_header = "tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
+	const char *expected_commit_raw_header = "\
+tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
 parent f87d14a4a236582a0278a916340a793714256864\n\
 author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
 committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
@@ -470,5 +485,5 @@ magicsig magic word: pretty please\n";
 	git_annotated_commit_free(upstream_head);
 	git_commit_free(commit);
 	git_rebase_free(rebase);
+#endif /* !GIT_DEPRECATE_HARD */
 }
-

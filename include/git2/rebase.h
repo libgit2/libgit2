@@ -86,17 +86,26 @@ typedef struct {
 	 */
 	git_commit_create_cb commit_create_cb;
 
+#ifdef GIT_DEPRECATE_HARD
+	void *reserved;
+#else
 	/**
 	 * If provided, this will be called with the commit content, allowing
 	 * a signature to be added to the rebase commit. Can be skipped with
 	 * GIT_PASSTHROUGH. If GIT_PASSTHROUGH is returned, a commit will be made
 	 * without a signature.
+	 *
 	 * This field is only used when performing git_rebase_commit.
 	 *
 	 * This callback is not invoked if a `git_commit_create_cb` is
 	 * specified.
+	 *
+	 * This callback is deprecated; users should provide a
+	 * creation callback as `commit_create_cb` that produces a
+	 * commit buffer, signs it, and commits it.
 	 */
-	git_commit_signing_cb signing_cb;
+	int (*signing_cb)(git_buf *, git_buf *, const char *, void *);
+#endif
 
 	/**
 	 * This will be passed to each of the callbacks in this struct

@@ -539,27 +539,6 @@ typedef int (*git_commit_create_cb)(
 	const git_commit *parents[],
 	void *payload);
 
-/**
- * Commit signing callback.
- *
- * The callback will be called with the commit content, giving a user an
- * opportunity to sign the commit content. The signature_field
- * buf may be left empty to specify the default field "gpgsig".
- *
- * Signatures can take the form of any string, and can be created on an arbitrary
- * header field. Signatures are most commonly used for verifying authorship of a
- * commit using GPG or a similar cryptographically secure signing algorithm.
- * See https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work for more
- * details.
- *
- * When the callback:
- * - returns GIT_PASSTHROUGH, no signature will be added to the commit.
- * - returns < 0, commit creation will be aborted.
- * - returns GIT_OK, the signature parameter is expected to be filled.
- */
-typedef int (*git_commit_signing_cb)(
-	git_buf *signature, git_buf *signature_field, const char *commit_content, void *payload);
-
 /** @} */
 GIT_END_DECL
 #endif
