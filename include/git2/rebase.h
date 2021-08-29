@@ -75,11 +75,26 @@ typedef struct {
 	git_checkout_options checkout_options;
 
 	/**
+	 * Optional callback that allows users to override commit
+	 * creation in `git_rebase_commit`.  If specified, users can
+	 * create their own commit and provide the commit ID, which
+	 * may be useful for signing commits or otherwise customizing
+	 * the commit creation.
+	 *
+	 * If this callback returns `GIT_PASSTHROUGH`, then
+	 * `git_rebase_commit` will continue to create the commit.
+	 */
+	git_commit_create_cb commit_create_cb;
+
+	/**
 	 * If provided, this will be called with the commit content, allowing
 	 * a signature to be added to the rebase commit. Can be skipped with
 	 * GIT_PASSTHROUGH. If GIT_PASSTHROUGH is returned, a commit will be made
 	 * without a signature.
 	 * This field is only used when performing git_rebase_commit.
+	 *
+	 * This callback is not invoked if a `git_commit_create_cb` is
+	 * specified.
 	 */
 	git_commit_signing_cb signing_cb;
 
