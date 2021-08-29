@@ -17,6 +17,7 @@ TMPDIR=${TMPDIR:-/tmp}
 USER=${USER:-$(whoami)}
 
 SUCCESS=1
+CONTINUE_ON_FAILURE=0
 
 cleanup() {
 	echo "Cleaning up..."
@@ -64,6 +65,10 @@ run_test() {
 	done
 
 	if [ "$FAILED" -ne 0 ]; then
+		if [ "$CONTINUE_ON_FAILURE" -ne 1 ]; then
+			exit 1
+		fi
+
 		SUCCESS=0
 	fi
 }
