@@ -72,7 +72,7 @@ void do_time_travelling_fetch(git_oid *commit1id, git_oid *commit2id,
 		.strings = &refspec_strs,
 	};
 
-	// create two commits in repo 1 and a reference to them
+	/* create two commits in repo 1 and a reference to them */
 	{
 		git_oid empty_tree_id;
 		git_tree *empty_tree;
@@ -92,7 +92,7 @@ void do_time_travelling_fetch(git_oid *commit1id, git_oid *commit2id,
 		git_treebuilder_free(tb);
 	}
 
-	// fetch the reference via the remote
+	/* fetch the reference via the remote */
 	{
 		git_remote *remote;
 
@@ -103,7 +103,7 @@ void do_time_travelling_fetch(git_oid *commit1id, git_oid *commit2id,
 		git_remote_free(remote);
 	}
 
-	// assert that repo2 references the second commit
+	/* assert that repo2 references the second commit */
 	{
 		const git_oid *target;
 		git_reference *ref;
@@ -113,7 +113,7 @@ void do_time_travelling_fetch(git_oid *commit1id, git_oid *commit2id,
 		git_reference_free(ref);
 	}
 
-	// set the reference in repo1 to point to the older commit
+	/* set the reference in repo1 to point to the older commit */
 	{
 		git_reference *ref;
 		git_reference *ref2;
@@ -124,7 +124,7 @@ void do_time_travelling_fetch(git_oid *commit1id, git_oid *commit2id,
 		git_reference_free(ref2);
 	}
 
-	// fetch the reference again
+	/* fetch the reference again */
 	{
 		git_remote *remote;
 
@@ -144,7 +144,7 @@ void test_remote_fetch__dont_update_refs_if_not_descendant_and_not_force(void) {
 
 	do_time_travelling_fetch(&commit1id, &commit2id, false);
 
-	// assert that the reference in repo2 has not changed
+	/* assert that the reference in repo2 has not changed */
 	cl_git_pass(git_reference_lookup(&ref, repo2, REPO2_REFNAME));
 	target = git_reference_target(ref);
 	cl_assert_equal_b(git_oid_cmp(target, &commit2id), 0);
@@ -160,7 +160,7 @@ void test_remote_fetch__do_update_refs_if_not_descendant_and_force(void) {
 
 	do_time_travelling_fetch(&commit1id, &commit2id, true);
 
-	// assert that the reference in repo2 has changed
+	/* assert that the reference in repo2 has changed */
 	cl_git_pass(git_reference_lookup(&ref, repo2, REPO2_REFNAME));
 	target = git_reference_target(ref);
 	cl_assert_equal_b(git_oid_cmp(target, &commit1id), 0);
