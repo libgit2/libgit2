@@ -20,6 +20,14 @@
 #include "oidmap.h"
 #include "zstream.h"
 
+/**
+ * Function type for callbacks from git_pack_foreach_entry_offset.
+ */
+typedef int git_pack_foreach_entry_offset_cb(
+		const git_oid *id,
+		off64_t offset,
+		void *payload);
+
 #define GIT_PACK_FILE_MODE 0444
 
 #define PACK_SIGNATURE 0x5041434b	/* "PACK" */
@@ -175,6 +183,17 @@ int git_pack_entry_find(
 int git_pack_foreach_entry(
 		struct git_pack_file *p,
 		git_odb_foreach_cb cb,
+		void *data);
+/**
+ * Similar to git_pack_foreach_entry, but:
+ * - It also provides the offset of the object within the
+ *   packfile.
+ * - It does not sort the objects in any order.
+ * - It retains the lock while invoking the callback.
+ */
+int git_pack_foreach_entry_offset(
+		struct git_pack_file *p,
+		git_pack_foreach_entry_offset_cb cb,
 		void *data);
 
 #endif
