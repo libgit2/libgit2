@@ -12,6 +12,8 @@
 
 #include <ctype.h>
 
+#include "git2/sys/midx.h"
+
 #include "map.h"
 #include "mwindow.h"
 #include "odb.h"
@@ -66,6 +68,20 @@ typedef struct git_midx_entry {
 	/* The SHA-1 hash of the requested object. */
 	git_oid sha1;
 } git_midx_entry;
+
+/*
+ * A writer for `multi-pack-index` files.
+ */
+struct git_midx_writer {
+	/*
+	 * The path of the directory where the .pack/.idx files are stored. The
+	 * `multi-pack-index` file will be written to the same directory.
+	 */
+	git_buf pack_dir;
+
+	/* The list of `git_pack_file`s. */
+	git_vector packs;
+};
 
 int git_midx_open(
 		git_midx_file **idx_out,

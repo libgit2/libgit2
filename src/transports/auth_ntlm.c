@@ -85,7 +85,7 @@ static int ntlm_next_token(
 	git_buf input_buf = GIT_BUF_INIT;
 	const unsigned char *msg;
 	size_t challenge_len, msg_len;
-	int error = -1;
+	int error = GIT_EAUTH;
 
 	GIT_ASSERT_ARG(buf);
 	GIT_ASSERT_ARG(ctx);
