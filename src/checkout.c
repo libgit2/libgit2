@@ -2622,6 +2622,9 @@ int git_checkout_iterator(
 	if ((error = checkout_get_actions(&actions, &counts, &data, workdir)) != 0)
 		goto cleanup;
 
+	if (data.strategy & GIT_CHECKOUT_DRY_RUN)
+		goto cleanup;
+	
 	data.total_steps = counts[CHECKOUT_ACTION__REMOVE] +
 		counts[CHECKOUT_ACTION__REMOVE_CONFLICT] +
 		counts[CHECKOUT_ACTION__UPDATE_BLOB] +

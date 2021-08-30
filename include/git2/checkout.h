@@ -178,6 +178,12 @@ typedef enum {
 	GIT_CHECKOUT_DONT_WRITE_INDEX = (1u << 23),
 
 	/**
+	 * Show what would be done by a checkout.  Stop after sending
+	 * notifications; don't update the working directory or index.
+	 */
+	GIT_CHECKOUT_DRY_RUN = (1u << 24),
+	
+	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
 	 */
 
