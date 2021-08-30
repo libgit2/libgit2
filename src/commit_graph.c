@@ -915,8 +915,11 @@ static int write_offset(off64_t offset, commit_graph_write_cb write_cb, void *cb
 	return 0;
 }
 
-static int
-write_chunk_header(int chunk_id, off64_t offset, commit_graph_write_cb write_cb, void *cb_data)
+static int write_chunk_header(
+		int chunk_id,
+		off64_t offset,
+		commit_graph_write_cb write_cb,
+		void *cb_data)
 {
 	uint32_t word = htonl(chunk_id);
 	int error = write_cb((const char *)&word, sizeof(word), cb_data);
@@ -954,8 +957,10 @@ static void packed_commit_free_dup(void *packed_commit)
 	packed_commit_free(packed_commit);
 }
 
-static int
-commit_graph_write(git_commit_graph_writer *w, commit_graph_write_cb write_cb, void *cb_data)
+static int commit_graph_write(
+		git_commit_graph_writer *w,
+		commit_graph_write_cb write_cb,
+		void *cb_data)
 {
 	int error = 0;
 	size_t i;
@@ -996,18 +1001,17 @@ commit_graph_write(git_commit_graph_writer *w, commit_graph_write_cb write_cb, v
 	/* Fill the OID Fanout table. */
 	oid_fanout_count = 0;
 	for (i = 0; i < 256; i++) {
-		while (oid_fanout_count < git_vector_length(&w->commits)
-		       && ((struct packed_commit *)git_vector_get(&w->commits, oid_fanout_count))
-						       ->sha1.id[0]
-				       <= i)
+		while (oid_fanout_count < git_vector_length(&w->commits) &&
+		       (packed_commit = (struct packed_commit *)git_vector_get(&w->commits, oid_fanout_count)) &&
+		       packed_commit->sha1.id[0] <= i)
 			++oid_fanout_count;
 		oid_fanout[i] = htonl(oid_fanout_count);
 	}
 
 	/* Fill the OID Lookup table. */
 	git_vector_foreach (&w->commits, i, packed_commit) {
-		error = git_buf_put(
-				&oid_lookup, (const char *)&packed_commit->sha1, sizeof(git_oid));
+		error = git_buf_put(&oid_lookup,
+			(const char *)&packed_commit->sha1, sizeof(git_oid));
 		if (error < 0)
 			goto cleanup;
 	}
@@ -1021,8 +1025,7 @@ commit_graph_write(git_commit_graph_writer *w, commit_graph_write_cb write_cb, v
 		size_t *packed_index;
 		unsigned int parentcount = (unsigned int)git_array_size(packed_commit->parents);
 
-		error = git_buf_put(
-				&commit_data,
+		error = git_buf_put(&commit_data,
 				(const char *)&packed_commit->tree_oid,
 				sizeof(git_oid));
 		if (error < 0)
@@ -1054,14 +1057,10 @@ commit_graph_write(git_commit_graph_writer *w, commit_graph_write_cb write_cb, v
 			unsigned int parent_i;
 			for (parent_i = 1; parent_i < parentcount; ++parent_i) {
 				packed_index = git_array_get(
-						packed_commit->parent_indices, parent_i);
-				word = htonl(
-						(uint32_t)(*packed_index
-							   | (parent_i + 1 == parentcount
-									      ? 0x80000000u
-									      : 0)));
-				error = git_buf_put(
-						&extra_edge_list,
+					packed_commit->parent_indices, parent_i);
+				word = htonl((uint32_t)(*packed_index | (parent_i + 1 == parentcount ? 0x80000000u : 0)));
+
+				error = git_buf_put(&extra_edge_list,
 						(const char *)&word,
 						sizeof(word));
 				if (error < 0)

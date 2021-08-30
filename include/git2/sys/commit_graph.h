@@ -127,9 +127,8 @@ typedef struct {
 } git_commit_graph_writer_options;
 
 #define GIT_COMMIT_GRAPH_WRITER_OPTIONS_VERSION 1
-#define GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT                                                       \
-	{                                                                                          \
-		GIT_COMMIT_GRAPH_WRITER_OPTIONS_VERSION,                                           \
+#define GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT { \
+		GIT_COMMIT_GRAPH_WRITER_OPTIONS_VERSION \
 	}
 
 /**
