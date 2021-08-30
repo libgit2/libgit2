@@ -722,7 +722,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 	while (tl->type) {
 		size_t len = strlen(tl->type);
 		if (match_string(date, tl->type) >= len-1) {
-			update_tm(tm, now, tl->length * *num);
+			update_tm(tm, now, tl->length * (unsigned long)*num);
 			*num = 0;
 			*touched = 1;
 			return end;
