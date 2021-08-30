@@ -38,6 +38,13 @@ extern char git_buf__oom[];
 /* Use to initialize buffer structure when git_buf is on stack */
 #define GIT_BUF_INIT { git_buf__initbuf, 0, 0 }
 
+/**
+ * Static initializer for git_buf from static buffer
+ */
+#ifdef GIT_DEPRECATE_HARD
+# define GIT_BUF_INIT_CONST(STR,LEN) { (char *)(STR), 0, (size_t)(LEN) }
+#endif
+
 GIT_INLINE(bool) git_buf_is_allocated(const git_buf *buf)
 {
 	return (buf->ptr != NULL && buf->asize > 0);
@@ -50,6 +57,33 @@ GIT_INLINE(bool) git_buf_is_allocated(const git_buf *buf)
  * initialization.
  */
 extern int git_buf_init(git_buf *buf, size_t initial_size);
+
+#ifdef GIT_DEPRECATE_HARD
+
+/**
+ * Resize the buffer allocation to make more space.
+ *
+ * This will attempt to grow the buffer to accommodate the target size.
+ *
+ * If the buffer refers to memory that was not allocated by libgit2 (i.e.
+ * the `asize` field is zero), then `ptr` will be replaced with a newly
+ * allocated block of data.  Be careful so that memory allocated by the
+ * caller is not lost.  As a special variant, if you pass `target_size` as
+ * 0 and the memory is not allocated by libgit2, this will allocate a new
+ * buffer of size `size` and copy the external data into it.
+ *
+ * Currently, this will never shrink a buffer, only expand it.
+ *
+ * If the allocation fails, this will return an error and the buffer will be
+ * marked as invalid for future operations, invaliding the contents.
+ *
+ * @param buffer The buffer to be resized; may or may not be allocated yet
+ * @param target_size The desired available size
+ * @return 0 on success, -1 on allocation failure
+ */
+int git_buf_grow(git_buf *buffer, size_t target_size);
+
+#endif
 
 /**
  * Resize the buffer allocation to make more space.
@@ -120,6 +154,11 @@ GIT_INLINE(bool) git_buf_oom(const git_buf *buf)
  * return code of these functions and call them in a series then just call
  * git_buf_oom at the end.
  */
+
+#ifdef GIT_DEPRECATE_HARD
+int git_buf_set(git_buf *buffer, const void *data, size_t datalen);
+#endif
+
 int git_buf_sets(git_buf *buf, const char *string);
 int git_buf_putc(git_buf *buf, char c);
 int git_buf_putcn(git_buf *buf, char c, size_t len);
@@ -310,5 +349,25 @@ extern int git_buf_detect_bom(git_buf_bom_t *bom, const git_buf *buf);
  */
 extern bool git_buf_gather_text_stats(
 	git_buf_text_stats *stats, const git_buf *buf, bool skip_bom);
+
+#ifdef GIT_DEPRECATE_HARD
+
+/**
+* Check quickly if buffer looks like it contains binary data
+*
+* @param buf Buffer to check
+* @return 1 if buffer looks like non-text data
+*/
+int git_buf_is_binary(const git_buf *buf);
+
+/**
+* Check quickly if buffer contains a NUL byte
+*
+* @param buf Buffer to check
+* @return 1 if buffer contains a NUL byte
+*/
+int git_buf_contains_nul(const git_buf *buf);
+
+#endif
 
 #endif
