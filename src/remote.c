@@ -600,6 +600,22 @@ const char *git_remote_url(const git_remote *remote)
 	return remote->url;
 }
 
+int git_remote_set_instance_url(git_remote *remote, const char *url)
+{
+	char *tmp;
+
+	GIT_ASSERT_ARG(remote);
+	GIT_ASSERT_ARG(url);
+
+	if ((tmp = git__strdup(url)) == NULL)
+		return -1;
+
+	git__free(remote->url);
+	remote->url = tmp;
+
+	return 0;
+}
+
 static int set_url(git_repository *repo, const char *remote, const char *pattern, const char *url)
 {
 	git_config *cfg;
@@ -645,13 +661,37 @@ const char *git_remote_pushurl(const git_remote *remote)
 	return remote->pushurl;
 }
 
+int git_remote_set_instance_pushurl(git_remote *remote, const char *url)
+{
+	char *tmp;
+
+	GIT_ASSERT_ARG(remote);
+	GIT_ASSERT_ARG(url);
+
+	if ((tmp = git__strdup(url)) == NULL)
+		return -1;
+
+	git__free(remote->pushurl);
+	remote->pushurl = tmp;
+
+	return 0;
+}
+
 int git_remote_set_pushurl(git_repository *repo, const char *remote, const char* url)
 {
 	return set_url(repo, remote, CONFIG_PUSHURL_FMT, url);
 }
 
-static int resolve_url(git_buf *resolved_url, const char *url, int direction, const git_remote_callbacks *callbacks)
+static int resolve_url(
+	git_buf *resolved_url,
+	const char *url,
+	int direction,
+	const git_remote_callbacks *callbacks)
 {
+#ifdef GIT_DEPRECATE_HARD
+	GIT_UNUSED(direction);
+	GIT_UNUSED(callbacks);
+#else
 	int status, error;
 
 	if (callbacks && callbacks->resolve_url) {
@@ -666,22 +706,35 @@ static int resolve_url(git_buf *resolved_url, const char *url, int direction, co
 			return status;
 		}
 	}
+#endif
 
 	return git_buf_sets(resolved_url, url);
 }
 
-int git_remote__urlfordirection(git_buf *url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks)
+int git_remote__urlfordirection(
+	git_buf *url_out,
+	struct git_remote *remote,
+	int direction,
+	const git_remote_callbacks *callbacks)
 {
 	const char *url = NULL;
 
 	GIT_ASSERT_ARG(remote);
 	GIT_ASSERT_ARG(direction == GIT_DIRECTION_FETCH || direction == GIT_DIRECTION_PUSH);
 
-	if (direction == GIT_DIRECTION_FETCH) {
-		url = remote->url;
-	} else if (direction == GIT_DIRECTION_PUSH) {
-		url = remote->pushurl ? remote->pushurl : remote->url;
+	if (callbacks && callbacks->remote_ready) {
+		int status = callbacks->remote_ready(remote, direction, callbacks->payload);
+
+		if (status != 0 && status != GIT_PASSTHROUGH) {
+			git_error_set_after_callback_function(status, "git_remote_ready_cb");
+			return status;
+		}
 	}
+
+	if (direction == GIT_DIRECTION_FETCH)
+		url = remote->url;
+	else if (direction == GIT_DIRECTION_PUSH)
+		url = remote->pushurl ? remote->pushurl : remote->url;
 
 	if (!url) {
 		git_error_set(GIT_ERROR_INVALID,
@@ -690,6 +743,7 @@ int git_remote__urlfordirection(git_buf *url_out, struct git_remote *remote, int
 			direction == GIT_DIRECTION_FETCH ? "fetch" : "push");
 		return GIT_EINVALID;
 	}
+
 	return resolve_url(url_out, url, direction, callbacks);
 }
 
