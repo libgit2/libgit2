@@ -162,7 +162,7 @@ static int handle_auth(
 
 	if (error > 0) {
 		git_error_set(GIT_ERROR_HTTP, "%s authentication required but no callback set", server_type);
-		error = -1;
+		error = GIT_EAUTH;
 	}
 
 	if (!error)
@@ -179,7 +179,7 @@ GIT_INLINE(int) handle_remote_auth(
 
 	if (response->server_auth_credtypes == 0) {
 		git_error_set(GIT_ERROR_HTTP, "server requires authentication that we do not support");
-		return -1;
+		return GIT_EAUTH;
 	}
 
 	/* Otherwise, prompt for credentials. */
@@ -201,7 +201,7 @@ GIT_INLINE(int) handle_proxy_auth(
 
 	if (response->proxy_auth_credtypes == 0) {
 		git_error_set(GIT_ERROR_HTTP, "proxy requires authentication that we do not support");
-		return -1;
+		return GIT_EAUTH;
 	}
 
 	/* Otherwise, prompt for credentials. */
@@ -259,7 +259,7 @@ static int handle_response(
 	} else if (response->status == GIT_HTTP_STATUS_UNAUTHORIZED ||
 	           response->status == GIT_HTTP_STATUS_PROXY_AUTHENTICATION_REQUIRED) {
 		git_error_set(GIT_ERROR_HTTP, "unexpected authentication failure");
-		return -1;
+		return GIT_EAUTH;
 	}
 
 	if (response->status != GIT_HTTP_STATUS_OK) {
@@ -416,7 +416,7 @@ static int http_stream_read(
 
 	if (stream->state == HTTP_STATE_SENDING_REQUEST) {
 		git_error_set(GIT_ERROR_HTTP, "too many redirects or authentication replays");
-		error = -1;
+		error = GIT_ERROR; /* not GIT_EAUTH, because the exact cause is unclear */
 		goto done;
 	}
 
@@ -554,7 +554,7 @@ static int http_stream_write(
 	if (stream->state == HTTP_STATE_NONE) {
 		git_error_set(GIT_ERROR_HTTP,
 		              "too many redirects or authentication replays");
-		error = -1;
+		error = GIT_ERROR; /* not GIT_EAUTH because the exact cause is unclear */
 		goto done;
 	}
 
