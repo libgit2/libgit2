@@ -714,8 +714,10 @@ static int midx_write(
 	error = git_vector_init(&object_entries, git_array_size(object_entries_array), object_entry__cmp);
 	if (error < 0)
 		goto cleanup;
-	git_array_foreach (object_entries_array, i, entry)
-		error = git_vector_set(NULL, &object_entries, i, entry);
+	git_array_foreach (object_entries_array, i, entry) {
+		if ((error = git_vector_set(NULL, &object_entries, i, entry)) < 0)
+			goto cleanup;
+	}
 	git_vector_set_sorted(&object_entries, 0);
 	git_vector_sort(&object_entries);
 	git_vector_uniq(&object_entries, NULL);
@@ -751,10 +753,12 @@ static int midx_write(
 			goto cleanup;
 		if (entry->offset >= 0x80000000l) {
 			word = htonl(0x80000000u | object_large_offsets_count++);
-			error = write_offset(entry->offset, midx_write_buf, &object_large_offsets);
+			if ((error = write_offset(entry->offset, midx_write_buf, &object_large_offsets)) < 0)
+				goto cleanup;
 		} else {
 			word = htonl((uint32_t)entry->offset & 0x7fffffffu);
 		}
+
 		error = git_buf_put(&object_offsets, (const char *)&word, sizeof(word));
 		if (error < 0)
 			goto cleanup;
