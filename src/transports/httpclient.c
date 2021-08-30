@@ -670,7 +670,7 @@ static int generate_connect_request(
 	git_buf_puts(buf, "\r\n");
 
 	git_buf_puts(buf, "Host: ");
-	puts_host_and_port(buf, &client->proxy.url, false);
+	puts_host_and_port(buf, &client->server.url, true);
 	git_buf_puts(buf, "\r\n");
 
 	if ((error = apply_proxy_credentials(buf, client, request) < 0))
