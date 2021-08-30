@@ -1298,7 +1298,12 @@ int git_pack_foreach_entry(
 		return error;
 	}
 
-	GIT_ASSERT(p->index_map.data);
+	if (!p->index_map.data) {
+		git_error_set(GIT_ERROR_INTERNAL, "internal error: p->index_map.data == NULL");
+		git_mutex_unlock(&p->lock);
+		return -1;
+	}
+
 	index = p->index_map.data;
 
 	if (p->index_version > 1)
@@ -1387,7 +1392,11 @@ int git_pack_foreach_entry_offset(
 		if ((error = pack_index_open_locked(p)) < 0)
 			goto cleanup;
 
-		GIT_ASSERT(p->index_map.data);
+		if (!p->index_map.data) {
+			git_error_set(GIT_ERROR_INTERNAL, "internal error: p->index_map.data == NULL");
+			goto cleanup;
+		}
+
 		index = p->index_map.data;
 	}
 
@@ -1479,7 +1488,11 @@ static int pack_entry_find_offset(
 	if ((error = pack_index_open_locked(p)) < 0)
 		goto cleanup;
 
-	GIT_ASSERT(p->index_map.data);
+	if (!p->index_map.data) {
+		git_error_set(GIT_ERROR_INTERNAL, "internal error: p->index_map.data == NULL");
+		goto cleanup;
+	}
+
 	index = p->index_map.data;
 	level1_ofs = p->index_map.data;
 

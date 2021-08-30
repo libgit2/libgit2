@@ -206,7 +206,8 @@ int git_filter_global_init(void)
 			GIT_FILTER_IDENT, ident, GIT_FILTER_IDENT_PRIORITY) < 0)
 		error = -1;
 
-	error = git_runtime_shutdown_register(git_filter_global_shutdown);
+	if (!error)
+		error = git_runtime_shutdown_register(git_filter_global_shutdown);
 
 done:
 	if (error) {
