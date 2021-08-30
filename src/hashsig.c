@@ -286,8 +286,10 @@ int git_hashsig_create_fromfile(
 		return fd;
 	}
 
-	if ((error = hashsig_in_progress_init(&prog, sig)) < 0)
+	if ((error = hashsig_in_progress_init(&prog, sig)) < 0) {
+		p_close(fd);
 		return error;
+	}
 
 	while (!error) {
 		if ((buflen = p_read(fd, buf, sizeof(buf))) <= 0) {
