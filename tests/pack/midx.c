@@ -3,6 +3,7 @@
 #include <git2.h>
 #include <git2/sys/midx.h>
 
+#include "futils.h"
 #include "midx.h"
 
 void test_pack_midx__parse(void)
@@ -73,4 +74,37 @@ void test_pack_midx__writer(void)
 	git_buf_dispose(&path);
 	git_midx_writer_free(w);
 	git_repository_free(repo);
+}
+
+void test_pack_midx__odb_create(void)
+{
+	git_repository *repo;
+	git_odb *odb;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+	git_buf midx = GIT_BUF_INIT, expected_midx = GIT_BUF_INIT, midx_path = GIT_BUF_INIT;
+	struct stat st;
+
+	opts.bare = true;
+	opts.local = GIT_CLONE_LOCAL;
+	cl_git_pass(git_clone(&repo, cl_fixture("testrepo/.gitted"), "./clone.git", &opts));
+	cl_git_pass(git_buf_joinpath(&midx_path, git_repository_path(repo), "objects/pack/multi-pack-index"));
+	cl_git_fail(p_stat(git_buf_cstr(&midx_path), &st));
+
+	cl_git_pass(git_repository_odb(&odb, repo));
+	cl_git_pass(git_odb_write_multi_pack_index(odb));
+	git_odb_free(odb);
+
+	cl_git_pass(p_stat(git_buf_cstr(&midx_path), &st));
+
+	cl_git_pass(git_futils_readbuffer(&expected_midx, cl_fixture("testrepo.git/objects/pack/multi-pack-index")));
+	cl_git_pass(git_futils_readbuffer(&midx, git_buf_cstr(&midx_path)));
+	cl_assert_equal_i(git_buf_len(&midx), git_buf_len(&expected_midx));
+	cl_assert_equal_strn(git_buf_cstr(&midx), git_buf_cstr(&expected_midx), git_buf_len(&midx));
+
+	git_repository_free(repo);
+	git_buf_dispose(&midx);
+	git_buf_dispose(&midx_path);
+	git_buf_dispose(&expected_midx);
+
+	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
 }
