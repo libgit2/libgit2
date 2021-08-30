@@ -839,9 +839,10 @@ int git_filter_list_apply_to_blob(
 	return error;
 }
 
-struct proxy_stream {
+struct buffered_stream {
 	git_writestream parent;
 	git_filter *filter;
+	int (*write_fn)(git_filter *, void **, git_buf *, const git_buf *, const git_filter_source *);
 	const git_filter_source *source;
 	void **payload;
 	git_buf input;
@@ -850,90 +851,118 @@ struct proxy_stream {
 	git_writestream *target;
 };
 
-static int proxy_stream_write(
+static int buffered_stream_write(
 	git_writestream *s, const char *buffer, size_t len)
 {
-	struct proxy_stream *proxy_stream = (struct proxy_stream *)s;
-	GIT_ASSERT_ARG(proxy_stream);
+	struct buffered_stream *buffered_stream = (struct buffered_stream *)s;
+	GIT_ASSERT_ARG(buffered_stream);
 
-	return git_buf_put(&proxy_stream->input, buffer, len);
+	return git_buf_put(&buffered_stream->input, buffer, len);
 }
 
-static int proxy_stream_close(git_writestream *s)
+static int buffered_stream_close(git_writestream *s)
 {
-	struct proxy_stream *proxy_stream = (struct proxy_stream *)s;
+	struct buffered_stream *buffered_stream = (struct buffered_stream *)s;
 	git_buf *writebuf;
 	git_error_state error_state = {0};
 	int error;
 
-	GIT_ASSERT_ARG(proxy_stream);
+	GIT_ASSERT_ARG(buffered_stream);
 
-	error = proxy_stream->filter->apply(
-		proxy_stream->filter,
-		proxy_stream->payload,
-		proxy_stream->output,
-		&proxy_stream->input,
-		proxy_stream->source);
+	error = buffered_stream->write_fn(
+		buffered_stream->filter,
+		buffered_stream->payload,
+		buffered_stream->output,
+		&buffered_stream->input,
+		buffered_stream->source);
 
 	if (error == GIT_PASSTHROUGH) {
-		writebuf = &proxy_stream->input;
+		writebuf = &buffered_stream->input;
 	} else if (error == 0) {
-		if ((error = git_buf_sanitize(proxy_stream->output)) < 0)
+		if ((error = git_buf_sanitize(buffered_stream->output)) < 0)
 			return error;
 
-		writebuf = proxy_stream->output;
+		writebuf = buffered_stream->output;
 	} else {
 		/* close stream before erroring out taking care
 		 * to preserve the original error */
 		git_error_state_capture(&error_state, error);
-		proxy_stream->target->close(proxy_stream->target);
+		buffered_stream->target->close(buffered_stream->target);
 		git_error_state_restore(&error_state);
 		return error;
 	}
 
-	if ((error = proxy_stream->target->write(
-			proxy_stream->target, writebuf->ptr, writebuf->size)) == 0)
-		error = proxy_stream->target->close(proxy_stream->target);
+	if ((error = buffered_stream->target->write(
+			buffered_stream->target, writebuf->ptr, writebuf->size)) == 0)
+		error = buffered_stream->target->close(buffered_stream->target);
 
 	return error;
 }
 
-static void proxy_stream_free(git_writestream *s)
+static void buffered_stream_free(git_writestream *s)
 {
-	struct proxy_stream *proxy_stream = (struct proxy_stream *)s;
+	struct buffered_stream *buffered_stream = (struct buffered_stream *)s;
 
-	if (proxy_stream) {
-		git_buf_dispose(&proxy_stream->input);
-		git_buf_dispose(&proxy_stream->temp_buf);
-		git__free(proxy_stream);
+	if (buffered_stream) {
+		git_buf_dispose(&buffered_stream->input);
+		git_buf_dispose(&buffered_stream->temp_buf);
+		git__free(buffered_stream);
 	}
 }
 
-static int proxy_stream_init(
+int git_filter_buffered_stream_new(
 	git_writestream **out,
 	git_filter *filter,
+	int (*write_fn)(git_filter *, void **, git_buf *, const git_buf *, const git_filter_source *),
 	git_buf *temp_buf,
 	void **payload,
 	const git_filter_source *source,
 	git_writestream *target)
 {
-	struct proxy_stream *proxy_stream = git__calloc(1, sizeof(struct proxy_stream));
-	GIT_ERROR_CHECK_ALLOC(proxy_stream);
+	struct buffered_stream *buffered_stream = git__calloc(1, sizeof(struct buffered_stream));
+	GIT_ERROR_CHECK_ALLOC(buffered_stream);
 
-	proxy_stream->parent.write = proxy_stream_write;
-	proxy_stream->parent.close = proxy_stream_close;
-	proxy_stream->parent.free = proxy_stream_free;
-	proxy_stream->filter = filter;
-	proxy_stream->payload = payload;
-	proxy_stream->source = source;
-	proxy_stream->target = target;
-	proxy_stream->output = temp_buf ? temp_buf : &proxy_stream->temp_buf;
+	buffered_stream->parent.write = buffered_stream_write;
+	buffered_stream->parent.close = buffered_stream_close;
+	buffered_stream->parent.free = buffered_stream_free;
+	buffered_stream->filter = filter;
+	buffered_stream->write_fn = write_fn;
+	buffered_stream->output = temp_buf ? temp_buf : &buffered_stream->temp_buf;
+	buffered_stream->payload = payload;
+	buffered_stream->source = source;
+	buffered_stream->target = target;
 
 	if (temp_buf)
 		git_buf_clear(temp_buf);
 
-	*out = (git_writestream *)proxy_stream;
+	*out = (git_writestream *)buffered_stream;
 	return 0;
+}
+
+static int setup_stream(
+	git_writestream **out,
+	git_filter_entry *fe,
+	git_filter_list *filters,
+	git_writestream *last_stream)
+{
+#ifndef GIT_DEPRECATE_HARD
+	GIT_ASSERT(fe->filter->stream || fe->filter->apply);
+
+	/*
+	 * If necessary, create a stream that proxies the traditional
+	 * application.
+	 */
+	if (!fe->filter->stream) {
+		/* Create a stream that proxies the one-shot apply */
+		return git_filter_buffered_stream_new(out,
+			fe->filter, fe->filter->apply, filters->temp_buf,
+			&fe->payload, &filters->source, last_stream);
+	}
+#endif
+
+	GIT_ASSERT(fe->filter->stream);
+	return fe->filter->stream(out, fe->filter,
+		&fe->payload, &filters->source, last_stream);
 }
 
 static int stream_list_init(
@@ -957,22 +986,11 @@ static int stream_list_init(
 	for (i = 0; i < git_array_size(filters->filters); ++i) {
 		size_t filter_idx = (filters->source.mode == GIT_FILTER_TO_WORKTREE) ?
 			git_array_size(filters->filters) - 1 - i : i;
+
 		git_filter_entry *fe = git_array_get(filters->filters, filter_idx);
 		git_writestream *filter_stream;
 
-		GIT_ASSERT(fe->filter->stream || fe->filter->apply);
-
-		/* If necessary, create a stream that proxies the traditional
-		 * application.
-		 */
-		if (fe->filter->stream)
-			error = fe->filter->stream(&filter_stream, fe->filter,
-				&fe->payload, &filters->source, last_stream);
-		else
-			/* Create a stream that proxies the one-shot apply */
-			error = proxy_stream_init(&filter_stream, fe->filter,
-				filters->temp_buf, &fe->payload, &filters->source,
-				last_stream);
+		error = setup_stream(&filter_stream, fe, filters, last_stream);
 
 		if (error < 0)
 			goto out;

@@ -113,6 +113,17 @@ static int ident_apply(
 		return ident_remove_id(to, from);
 }
 
+static int ident_stream(
+	git_writestream **out,
+	git_filter *self,
+	void **payload,
+	const git_filter_source *src,
+	git_writestream *next)
+{
+	return git_filter_buffered_stream_new(out,
+		self, ident_apply, NULL, payload, src, next);
+}
+
 git_filter *git_ident_filter_new(void)
 {
 	git_filter *f = git__calloc(1, sizeof(git_filter));
@@ -122,7 +133,7 @@ git_filter *git_ident_filter_new(void)
 	f->version = GIT_FILTER_VERSION;
 	f->attributes = "+ident"; /* apply to files with ident attribute set */
 	f->shutdown = git_filter_free;
-	f->apply    = ident_apply;
+	f->stream   = ident_stream;
 
 	return f;
 }

@@ -93,6 +93,17 @@ static int wildcard_filter_apply(
 	return GIT_PASSTHROUGH;
 }
 
+static int wildcard_filter_stream(
+	git_writestream **out,
+	git_filter *self,
+	void **payload,
+	const git_filter_source *src,
+	git_writestream *next)
+{
+	return git_filter_buffered_stream_new(out,
+		self, wildcard_filter_apply, NULL, payload, src, next);
+}
+
 static void wildcard_filter_cleanup(git_filter *self, void *payload)
 {
 	GIT_UNUSED(self);
@@ -112,7 +123,7 @@ static git_filter *create_wildcard_filter(void)
 	filter->version = GIT_FILTER_VERSION;
 	filter->attributes = "filter=*";
 	filter->check = wildcard_filter_check;
-	filter->apply = wildcard_filter_apply;
+	filter->stream = wildcard_filter_stream;
 	filter->cleanup = wildcard_filter_cleanup;
 	filter->shutdown = wildcard_filter_free;
 
