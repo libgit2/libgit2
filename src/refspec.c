@@ -21,9 +21,11 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	size_t llen;
 	int is_glob = 0;
 	const char *lhs, *rhs;
-	int flags;
+	int valid = 0;
+	unsigned int flags;
 
-	assert(refspec && input);
+	GIT_ASSERT_ARG(refspec);
+	GIT_ASSERT_ARG(input);
 
 	memset(refspec, 0x0, sizeof(git_refspec));
 	refspec->push = !is_fetch;
@@ -75,57 +77,69 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 
 	if (is_fetch) {
 		/*
-			* LHS
-			* - empty is allowed; it means HEAD.
-			* - otherwise it must be a valid looking ref.
-			*/
+		 * LHS
+		 * - empty is allowed; it means HEAD.
+		 * - otherwise it must be a valid looking ref.
+		 */
 		if (!*refspec->src)
 			; /* empty is ok */
-		else if (!git_reference__is_valid_name(refspec->src, flags))
+		else if (git_reference__name_is_valid(&valid, refspec->src, flags) < 0)
+			goto on_error;
+		else if (!valid)
 			goto invalid;
+
 		/*
-			* RHS
-			* - missing is ok, and is same as empty.
-			* - empty is ok; it means not to store.
-			* - otherwise it must be a valid looking ref.
-			*/
+		 * RHS
+		 * - missing is ok, and is same as empty.
+		 * - empty is ok; it means not to store.
+		 * - otherwise it must be a valid looking ref.
+		 */
 		if (!refspec->dst)
 			; /* ok */
 		else if (!*refspec->dst)
 			; /* ok */
-		else if (!git_reference__is_valid_name(refspec->dst, flags))
+		else if (git_reference__name_is_valid(&valid, refspec->dst, flags) < 0)
+			goto on_error;
+		else if (!valid)
 			goto invalid;
 	} else {
 		/*
-			* LHS
-			* - empty is allowed; it means delete.
-			* - when wildcarded, it must be a valid looking ref.
-			* - otherwise, it must be an extended SHA-1, but
-			*   there is no existing way to validate this.
-			*/
+		 * LHS
+		 * - empty is allowed; it means delete.
+		 * - when wildcarded, it must be a valid looking ref.
+		 * - otherwise, it must be an extended SHA-1, but
+		 *   there is no existing way to validate this.
+		 */
 		if (!*refspec->src)
 			; /* empty is ok */
 		else if (is_glob) {
-			if (!git_reference__is_valid_name(refspec->src, flags))
+			if (git_reference__name_is_valid(&valid, refspec->src, flags) < 0)
+				goto on_error;
+			else if (!valid)
 				goto invalid;
 		}
 		else {
 			; /* anything goes, for now */
 		}
+
 		/*
-			* RHS
-			* - missing is allowed, but LHS then must be a
-			*   valid looking ref.
-			* - empty is not allowed.
-			* - otherwise it must be a valid looking ref.
-			*/
+		 * RHS
+		 * - missing is allowed, but LHS then must be a
+		 *   valid looking ref.
+		 * - empty is not allowed.
+		 * - otherwise it must be a valid looking ref.
+		 */
 		if (!refspec->dst) {
-			if (!git_reference__is_valid_name(refspec->src, flags))
+			if (git_reference__name_is_valid(&valid, refspec->src, flags) < 0)
+				goto on_error;
+			else if (!valid)
 				goto invalid;
 		} else if (!*refspec->dst) {
 			goto invalid;
 		} else {
-			if (!git_reference__is_valid_name(refspec->dst, flags))
+			if (git_reference__name_is_valid(&valid, refspec->dst, flags) < 0)
+				goto on_error;
+			else if (!valid)
 				goto invalid;
 		}
 
@@ -141,11 +155,14 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 
 	return 0;
 
- invalid:
-        git_error_set(
-                GIT_ERROR_INVALID,
-                "'%s' is not a valid refspec.", input);
-        git_refspec__dispose(refspec);
+invalid:
+	git_error_set(GIT_ERROR_INVALID,
+	              "'%s' is not a valid refspec.", input);
+	git_refspec__dispose(refspec);
+	return GIT_EINVALIDSPEC;
+
+on_error:
+	git_refspec__dispose(refspec);
 	return -1;
 }
 
@@ -164,7 +181,8 @@ void git_refspec__dispose(git_refspec *refspec)
 int git_refspec_parse(git_refspec **out_refspec, const char *input, int is_fetch)
 {
 	git_refspec *refspec;
-	assert(out_refspec && input);
+	GIT_ASSERT_ARG(out_refspec);
+	GIT_ASSERT_ARG(input);
 
 	*out_refspec = NULL;
 
@@ -203,7 +221,7 @@ const char *git_refspec_string(const git_refspec *refspec)
 
 int git_refspec_force(const git_refspec *refspec)
 {
-	assert(refspec);
+	GIT_ASSERT_ARG(refspec);
 
 	return refspec->force;
 }
@@ -229,8 +247,11 @@ static int refspec_transform(
 {
 	const char *from_star, *to_star;
 	size_t replacement_len, star_offset;
+	int error;
 
-	git_buf_sanitize(out);
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
+
 	git_buf_clear(out);
 
 	/*
@@ -242,7 +263,7 @@ static int refspec_transform(
 	from_star = strchr(from, '*');
 	to_star = strchr(to, '*');
 
-	assert(from_star && to_star);
+	GIT_ASSERT(from_star && to_star);
 
 	/* star offset, both in 'from' and in 'name' */
 	star_offset = from_star - from;
@@ -262,8 +283,14 @@ static int refspec_transform(
 
 int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *name)
 {
-	assert(out && spec && name);
-	git_buf_sanitize(out);
+	int error;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(spec);
+	GIT_ASSERT_ARG(name);
+
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 	if (!git_refspec_src_matches(spec, name)) {
 		git_error_set(GIT_ERROR_INVALID, "ref '%s' doesn't match the source", name);
@@ -278,8 +305,14 @@ int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *nam
 
 int git_refspec_rtransform(git_buf *out, const git_refspec *spec, const char *name)
 {
-	assert(out && spec && name);
-	git_buf_sanitize(out);
+	int error;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(spec);
+	GIT_ASSERT_ARG(name);
+
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 	if (!git_refspec_dst_matches(spec, name)) {
 		git_error_set(GIT_ERROR_INVALID, "ref '%s' doesn't match the destination", name);
@@ -306,14 +339,15 @@ int git_refspec__serialize(git_buf *out, const git_refspec *refspec)
 
 int git_refspec_is_wildcard(const git_refspec *spec)
 {
-	assert(spec && spec->src);
+	GIT_ASSERT_ARG(spec);
+	GIT_ASSERT_ARG(spec->src);
 
 	return (spec->src[strlen(spec->src) - 1] == '*');
 }
 
 git_direction git_refspec_direction(const git_refspec *spec)
 {
-	assert(spec);
+	GIT_ASSERT_ARG(spec);
 
 	return spec->push;
 }
@@ -332,7 +366,9 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 		NULL
 	};
 
-	assert(out && spec && refs);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(spec);
+	GIT_ASSERT_ARG(refs);
 
 	cur = git__calloc(1, sizeof(git_refspec));
 	GIT_ERROR_CHECK_ALLOC(cur);

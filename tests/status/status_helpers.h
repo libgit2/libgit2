@@ -9,6 +9,7 @@ typedef struct {
 	const char** expected_paths;
 	int expected_entry_count;
 	const char *file;
+	const char *func;
 	int line;
 	bool debug;
 } status_entry_counts;
@@ -18,6 +19,7 @@ typedef struct {
 	(counts).expected_statuses = (statuses); \
 	(counts).expected_paths = (paths); \
 	(counts).file = __FILE__; \
+	(counts).func = __func__; \
 	(counts).line = __LINE__; \
 	} while (0)
 

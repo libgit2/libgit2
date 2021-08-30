@@ -155,7 +155,7 @@ GIT_EXTERN(int) git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb);
  * Write the new pack and corresponding index file to path.
  *
  * @param pb The packbuilder
- * @param path to the directory where the packfile and index should be stored
+ * @param path Path to the directory where the packfile and index should be stored, or NULL for default location
  * @param mode permissions to use creating a packfile or 0 for defaults
  * @param progress_cb function to call with progress information from the indexer (optional)
  * @param progress_cb_payload payload for the progress callback (optional)

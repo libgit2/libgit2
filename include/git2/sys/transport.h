@@ -9,6 +9,7 @@
 #define INCLUDE_sys_git_transport_h
 
 #include "git2/net.h"
+#include "git2/transport.h"
 #include "git2/types.h"
 #include "git2/strarray.h"
 #include "git2/proxy.h"

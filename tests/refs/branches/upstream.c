@@ -71,6 +71,31 @@ void test_refs_branches_upstream__upstream_remote(void)
 	git_buf_dispose(&buf);
 }
 
+void test_refs_branches_upstream__upstream_merge(void)
+{
+	git_reference *branch;
+	git_repository *repository;
+	git_buf buf = GIT_BUF_INIT;
+
+	repository = cl_git_sandbox_init("testrepo.git");
+
+	/* check repository */
+	cl_git_pass(git_reference_lookup(&branch, repository, "refs/heads/test"));
+	cl_git_pass(git_branch_set_upstream(branch, "test/master"));
+
+	assert_config_entry_value(repository, "branch.test.remote", "test");
+	assert_config_entry_value(repository, "branch.test.merge", "refs/heads/master");
+
+	git_reference_free(branch);
+
+	/* check merge branch */
+	cl_git_pass(git_branch_upstream_merge(&buf, repository, "refs/heads/test"));
+	cl_assert_equal_s("refs/heads/master", buf.ptr);
+	git_buf_dispose(&buf);
+
+	cl_git_sandbox_cleanup();
+}
+
 void test_refs_branches_upstream__upstream_remote_empty_value(void)
 {
 	git_repository *repository;

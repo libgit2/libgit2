@@ -17,9 +17,24 @@
 #include "ntlm.h"
 #include "crypt.h"
 
+bool ntlm_crypt_init(ntlm_client *ntlm)
+{
+	const mbedtls_md_info_t *info = mbedtls_md_info_from_type(MBEDTLS_MD_MD5);
+
+	mbedtls_md_init(&ntlm->crypt_ctx.hmac);
+
+	if (mbedtls_md_setup(&ntlm->crypt_ctx.hmac, info, 1) != 0) {
+		ntlm_client_set_errmsg(ntlm, "could not setup mbedtls digest");
+		return false;
+	}
+
+	return true;
+}
+
+
 bool ntlm_random_bytes(
-	ntlm_client *ntlm,
 	unsigned char *out,
+	ntlm_client *ntlm,
 	size_t len)
 {
 	mbedtls_ctr_drbg_context ctr_drbg;
@@ -51,6 +66,7 @@ bool ntlm_random_bytes(
 
 bool ntlm_des_encrypt(
 	ntlm_des_block *out,
+	ntlm_client *ntlm,
 	ntlm_des_block *plaintext,
 	ntlm_des_block *key)
 {
@@ -60,8 +76,10 @@ bool ntlm_des_encrypt(
 	mbedtls_des_init(&ctx);
 
 	if (mbedtls_des_setkey_enc(&ctx, *key) ||
-		mbedtls_des_crypt_ecb(&ctx, *plaintext, *out))
+	    mbedtls_des_crypt_ecb(&ctx, *plaintext, *out)) {
+		ntlm_client_set_errmsg(ntlm, "DES encryption failed");
 		goto done;
+	}
 
 	success = true;
 
@@ -72,10 +90,13 @@ done:
 
 bool ntlm_md4_digest(
 	unsigned char out[CRYPT_MD4_DIGESTSIZE],
+	ntlm_client *ntlm,
 	const unsigned char *in,
 	size_t in_len)
 {
 	mbedtls_md4_context ctx;
+
+	NTLM_UNUSED(ntlm);
 
 	mbedtls_md4_init(&ctx);
 	mbedtls_md4_starts(&ctx);
@@ -86,60 +107,40 @@ bool ntlm_md4_digest(
 	return true;
 }
 
-ntlm_hmac_ctx *ntlm_hmac_ctx_init(void)
-{
-	ntlm_hmac_ctx *ctx;
-	const mbedtls_md_info_t *info = mbedtls_md_info_from_type(MBEDTLS_MD_MD5);
-
-	if ((ctx = calloc(1, sizeof(ntlm_hmac_ctx))) == NULL)
-		return NULL;
-
-	mbedtls_md_init(&ctx->mbed);
-
-	if (mbedtls_md_setup(&ctx->mbed, info, 1) != 0) {
-		free(ctx);
-		return false;
-	}
-
-	return ctx;
-}
-
-bool ntlm_hmac_ctx_reset(ntlm_hmac_ctx *ctx)
-{
-	return !mbedtls_md_hmac_reset(&ctx->mbed);
-}
-
 bool ntlm_hmac_md5_init(
-	ntlm_hmac_ctx *ctx,
+	ntlm_client *ntlm,
 	const unsigned char *key,
 	size_t key_len)
 {
-	return !mbedtls_md_hmac_starts(&ctx->mbed, key, key_len);
+	if (ntlm->crypt_ctx.hmac_initialized) {
+		if (mbedtls_md_hmac_reset(&ntlm->crypt_ctx.hmac))
+			return false;
+	}
+
+	ntlm->crypt_ctx.hmac_initialized = !mbedtls_md_hmac_starts(&ntlm->crypt_ctx.hmac, key, key_len);
+	return ntlm->crypt_ctx.hmac_initialized;
 }
 
 bool ntlm_hmac_md5_update(
-	ntlm_hmac_ctx *ctx,
+	ntlm_client *ntlm,
 	const unsigned char *in,
 	size_t in_len)
 {
-	return !mbedtls_md_hmac_update(&ctx->mbed, in, in_len);
+	return !mbedtls_md_hmac_update(&ntlm->crypt_ctx.hmac, in, in_len);
 }
 
 bool ntlm_hmac_md5_final(
 	unsigned char *out,
 	size_t *out_len,
-	ntlm_hmac_ctx *ctx)
+	ntlm_client *ntlm)
 {
 	if (*out_len < CRYPT_MD5_DIGESTSIZE)
 		return false;
 
-	return !mbedtls_md_hmac_finish(&ctx->mbed, out);
+	return !mbedtls_md_hmac_finish(&ntlm->crypt_ctx.hmac, out);
 }
 
-void ntlm_hmac_ctx_free(ntlm_hmac_ctx *ctx)
+void ntlm_crypt_shutdown(ntlm_client *ntlm)
 {
-	if (ctx) {
-		mbedtls_md_free(&ctx->mbed);
-		free(ctx);
-	}
+	mbedtls_md_free(&ntlm->crypt_ctx.hmac);
 }

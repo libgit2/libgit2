@@ -2,7 +2,6 @@
 #include "posix.h"
 #include "blob.h"
 #include "filter.h"
-#include "buf_text.h"
 #include "git2/sys/filter.h"
 #include "git2/sys/repository.h"
 #include "custom_helpers.h"
@@ -123,13 +122,12 @@ static git_filter *create_wildcard_filter(void)
 void test_filter_wildcard__reverse(void)
 {
 	git_filter_list *fl;
-	git_buf in = GIT_BUF_INIT, out = GIT_BUF_INIT;
+	git_buf out = GIT_BUF_INIT;
 
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "hero-reverse-foo", GIT_FILTER_TO_ODB, 0));
 
-	cl_git_pass(git_buf_put(&in, (char *)input, DATA_LEN));
-	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
+	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, (char *)input, DATA_LEN));
 
 	cl_assert_equal_i(DATA_LEN, out.size);
 
@@ -138,19 +136,17 @@ void test_filter_wildcard__reverse(void)
 
 	git_filter_list_free(fl);
 	git_buf_dispose(&out);
-	git_buf_dispose(&in);
 }
 
 void test_filter_wildcard__flip(void)
 {
 	git_filter_list *fl;
-	git_buf in = GIT_BUF_INIT, out = GIT_BUF_INIT;
+	git_buf out = GIT_BUF_INIT;
 
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "hero-flip-foo", GIT_FILTER_TO_ODB, 0));
 
-	cl_git_pass(git_buf_put(&in, (char *)input, DATA_LEN));
-	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
+	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, (char *)input, DATA_LEN));
 
 	cl_assert_equal_i(DATA_LEN, out.size);
 
@@ -159,19 +155,17 @@ void test_filter_wildcard__flip(void)
 
 	git_filter_list_free(fl);
 	git_buf_dispose(&out);
-	git_buf_dispose(&in);
 }
 
 void test_filter_wildcard__none(void)
 {
 	git_filter_list *fl;
-	git_buf in = GIT_BUF_INIT, out = GIT_BUF_INIT;
+	git_buf out = GIT_BUF_INIT;
 
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "none-foo", GIT_FILTER_TO_ODB, 0));
 
-	cl_git_pass(git_buf_put(&in, (char *)input, DATA_LEN));
-	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
+	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, (char *)input, DATA_LEN));
 
 	cl_assert_equal_i(DATA_LEN, out.size);
 
@@ -180,5 +174,4 @@ void test_filter_wildcard__none(void)
 
 	git_filter_list_free(fl);
 	git_buf_dispose(&out);
-	git_buf_dispose(&in);
 }

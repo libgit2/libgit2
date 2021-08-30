@@ -53,44 +53,44 @@ static int GIT_FORMAT_PRINTF(2, 3) cl_setenv_printf(const char *name, const char
  * from the caller rather than those of the helper. The expression strings
  * distinguish between the possible failures within the helper. */
 
-static void env_pass_(const char *path, const char *file, int line)
+static void env_pass_(const char *path, const char *file, const char *func, int line)
 {
 	git_repository *repo;
-	cl_git_expect(git_repository_open_ext(NULL, path, GIT_REPOSITORY_OPEN_FROM_ENV, NULL), 0, file, line);
-	cl_git_expect(git_repository_open_ext(&repo, path, GIT_REPOSITORY_OPEN_FROM_ENV, NULL), 0, file, line);
-	cl_assert_at_line(git__suffixcmp(git_repository_path(repo), "attr/.git/") == 0, file, line);
-	cl_assert_at_line(git__suffixcmp(git_repository_workdir(repo), "attr/") == 0, file, line);
-	cl_assert_at_line(!git_repository_is_bare(repo), file, line);
+	cl_git_expect(git_repository_open_ext(NULL, path, GIT_REPOSITORY_OPEN_FROM_ENV, NULL), 0, file, func, line);
+	cl_git_expect(git_repository_open_ext(&repo, path, GIT_REPOSITORY_OPEN_FROM_ENV, NULL), 0, file, func, line);
+	cl_assert_at_line(git__suffixcmp(git_repository_path(repo), "attr/.git/") == 0, file, func, line);
+	cl_assert_at_line(git__suffixcmp(git_repository_workdir(repo), "attr/") == 0, file, func, line);
+	cl_assert_at_line(!git_repository_is_bare(repo), file, func, line);
 	git_repository_free(repo);
 }
-#define env_pass(path) env_pass_((path), __FILE__, __LINE__)
+#define env_pass(path) env_pass_((path), __FILE__, __func__, __LINE__)
 
-#define cl_git_fail_at_line(expr, file, line) clar__assert((expr) < 0, file, line, "Expected function call to fail: " #expr, NULL, 1)
+#define cl_git_fail_at_line(expr, file, func, line) clar__assert((expr) < 0, file, func, line, "Expected function call to fail: " #expr, NULL, 1)
 
-static void env_fail_(const char *path, const char *file, int line)
+static void env_fail_(const char *path, const char *file, const char *func, int line)
 {
 	git_repository *repo;
-	cl_git_fail_at_line(git_repository_open_ext(NULL, path, GIT_REPOSITORY_OPEN_FROM_ENV, NULL), file, line);
-	cl_git_fail_at_line(git_repository_open_ext(&repo, path, GIT_REPOSITORY_OPEN_FROM_ENV, NULL), file, line);
+	cl_git_fail_at_line(git_repository_open_ext(NULL, path, GIT_REPOSITORY_OPEN_FROM_ENV, NULL), file, func, line);
+	cl_git_fail_at_line(git_repository_open_ext(&repo, path, GIT_REPOSITORY_OPEN_FROM_ENV, NULL), file, func, line);
 }
-#define env_fail(path) env_fail_((path), __FILE__, __LINE__)
+#define env_fail(path) env_fail_((path), __FILE__, __func__, __LINE__)
 
 static void env_cd_(
 	const char *path,
-	void (*passfail_)(const char *, const char *, int),
-	const char *file, int line)
+	void (*passfail_)(const char *, const char *, const char *, int),
+	const char *file, const char *func, int line)
 {
 	git_buf cwd_buf = GIT_BUF_INIT;
 	cl_git_pass(git_path_prettify_dir(&cwd_buf, ".", NULL));
 	cl_must_pass(p_chdir(path));
-	passfail_(NULL, file, line);
+	passfail_(NULL, file, func, line);
 	cl_must_pass(p_chdir(git_buf_cstr(&cwd_buf)));
 	git_buf_dispose(&cwd_buf);
 }
-#define env_cd_pass(path) env_cd_((path), env_pass_, __FILE__, __LINE__)
-#define env_cd_fail(path) env_cd_((path), env_fail_, __FILE__, __LINE__)
+#define env_cd_pass(path) env_cd_((path), env_pass_, __FILE__, __func__, __LINE__)
+#define env_cd_fail(path) env_cd_((path), env_fail_, __FILE__, __func__, __LINE__)
 
-static void env_check_objects_(bool a, bool t, bool p, const char *file, int line)
+static void env_check_objects_(bool a, bool t, bool p, const char *file, const char *func, int line)
 {
 	git_repository *repo;
 	git_oid oid_a, oid_t, oid_p;
@@ -98,32 +98,32 @@ static void env_check_objects_(bool a, bool t, bool p, const char *file, int lin
 	cl_git_pass(git_oid_fromstr(&oid_a, "45141a79a77842c59a63229403220a4e4be74e3d"));
 	cl_git_pass(git_oid_fromstr(&oid_t, "1385f264afb75a56a5bec74243be9b367ba4ca08"));
 	cl_git_pass(git_oid_fromstr(&oid_p, "0df1a5865c8abfc09f1f2182e6a31be550e99f07"));
-	cl_git_expect(git_repository_open_ext(&repo, "attr", GIT_REPOSITORY_OPEN_FROM_ENV, NULL), 0, file, line);
+	cl_git_expect(git_repository_open_ext(&repo, "attr", GIT_REPOSITORY_OPEN_FROM_ENV, NULL), 0, file, func, line);
 
 	if (a) {
-		cl_git_expect(git_object_lookup(&object, repo, &oid_a, GIT_OBJECT_BLOB), 0, file, line);
+		cl_git_expect(git_object_lookup(&object, repo, &oid_a, GIT_OBJECT_BLOB), 0, file, func, line);
 		git_object_free(object);
 	} else {
-		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_a, GIT_OBJECT_BLOB), file, line);
+		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_a, GIT_OBJECT_BLOB), file, func, line);
 	}
 
 	if (t) {
-		cl_git_expect(git_object_lookup(&object, repo, &oid_t, GIT_OBJECT_BLOB), 0, file, line);
+		cl_git_expect(git_object_lookup(&object, repo, &oid_t, GIT_OBJECT_BLOB), 0, file, func, line);
 		git_object_free(object);
 	} else {
-		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_t, GIT_OBJECT_BLOB), file, line);
+		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_t, GIT_OBJECT_BLOB), file, func, line);
 	}
 
 	if (p) {
-		cl_git_expect(git_object_lookup(&object, repo, &oid_p, GIT_OBJECT_COMMIT), 0, file, line);
+		cl_git_expect(git_object_lookup(&object, repo, &oid_p, GIT_OBJECT_COMMIT), 0, file, func, line);
 		git_object_free(object);
 	} else {
-		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_p, GIT_OBJECT_COMMIT), file, line);
+		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_p, GIT_OBJECT_COMMIT), file, func, line);
 	}
 
 	git_repository_free(repo);
 }
-#define env_check_objects(a, t, t2) env_check_objects_((a), (t), (t2), __FILE__, __LINE__)
+#define env_check_objects(a, t, t2) env_check_objects_((a), (t), (t2), __FILE__, __func__, __LINE__)
 
 void test_repo_env__open(void)
 {

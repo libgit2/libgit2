@@ -27,9 +27,6 @@
 
 bool git_reference__enable_symbolic_ref_target_validation = true;
 
-#define DEFAULT_NESTING_LEVEL	5
-#define MAX_NESTING_LEVEL		10
-
 enum {
 	GIT_PACKREF_HAS_PEEL = 1,
 	GIT_PACKREF_WAS_LOOSE = 2
@@ -53,7 +50,8 @@ git_reference *git_reference__alloc_symbolic(
 {
 	git_reference *ref;
 
-	assert(name && target);
+	GIT_ASSERT_ARG_WITH_RETVAL(name, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(target, NULL);
 
 	ref = alloc_ref(name);
 	if (!ref)
@@ -76,7 +74,8 @@ git_reference *git_reference__alloc(
 {
 	git_reference *ref;
 
-	assert(name && oid);
+	GIT_ASSERT_ARG_WITH_RETVAL(name, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(oid, NULL);
 
 	ref = alloc_ref(name);
 	if (!ref)
@@ -97,7 +96,8 @@ git_reference *git_reference__realloc(
 	size_t namelen, reflen;
 	git_reference *rewrite = NULL;
 
-	assert(ptr_to_ref && name);
+	GIT_ASSERT_ARG_WITH_RETVAL(ptr_to_ref, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(name, NULL);
 
 	namelen = strlen(name);
 
@@ -214,92 +214,37 @@ int git_reference_lookup_resolved(
 	const char *name,
 	int max_nesting)
 {
-	git_refname_t scan_name;
-	git_reference_t scan_type;
-	int error = 0, nesting;
-	git_reference *ref = NULL;
+	git_refname_t normalized;
 	git_refdb *refdb;
+	int error = 0;
 
-	assert(ref_out && repo && name);
+	GIT_ASSERT_ARG(ref_out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
 
-	*ref_out = NULL;
-
-	if (max_nesting > MAX_NESTING_LEVEL)
-		max_nesting = MAX_NESTING_LEVEL;
-	else if (max_nesting < 0)
-		max_nesting = DEFAULT_NESTING_LEVEL;
-
-	scan_type = GIT_REFERENCE_SYMBOLIC;
-
-	if ((error = reference_normalize_for_repo(scan_name, repo, name, true)) < 0)
+	if ((error = reference_normalize_for_repo(normalized, repo, name, true)) < 0 ||
+	    (error = git_repository_refdb__weakptr(&refdb, repo)) < 0 ||
+	    (error = git_refdb_resolve(ref_out, refdb, normalized, max_nesting)) < 0)
 		return error;
 
-	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
-		return error;
-
-	for (nesting = max_nesting;
-		 nesting >= 0 && scan_type == GIT_REFERENCE_SYMBOLIC;
-		 nesting--)
-	{
-		if (nesting != max_nesting) {
-			strncpy(scan_name, ref->target.symbolic, sizeof(scan_name));
-			git_reference_free(ref);
-		}
-
-		if ((error = git_refdb_lookup(&ref, refdb, scan_name)) < 0)
-			return error;
-
-		scan_type = ref->type;
+	/*
+	 * The resolved reference may be a symbolic reference in case its
+	 * target doesn't exist. If the user asked us to resolve (e.g.
+	 * `max_nesting != 0`), then we need to return an error in case we got
+	 * a symbolic reference back.
+	 */
+	if (max_nesting && git_reference_type(*ref_out) == GIT_REFERENCE_SYMBOLIC) {
+		git_reference_free(*ref_out);
+		*ref_out = NULL;
+		return GIT_ENOTFOUND;
 	}
 
-	if (scan_type != GIT_REFERENCE_DIRECT && max_nesting != 0) {
-		git_error_set(GIT_ERROR_REFERENCE,
-			"cannot resolve reference (>%u levels deep)", max_nesting);
-		git_reference_free(ref);
-		return -1;
-	}
-
-	*ref_out = ref;
 	return 0;
-}
-
-int git_reference__read_head(
-	git_reference **out,
-	git_repository *repo,
-	const char *path)
-{
-	git_buf reference = GIT_BUF_INIT;
-	char *name = NULL;
-	int error;
-
-	if ((error = git_futils_readbuffer(&reference, path)) < 0)
-		goto out;
-	git_buf_rtrim(&reference);
-
-	if (git__strncmp(reference.ptr, GIT_SYMREF, strlen(GIT_SYMREF)) == 0) {
-		git_buf_consume(&reference, reference.ptr + strlen(GIT_SYMREF));
-
-		name = git_path_basename(path);
-
-		if ((*out = git_reference__alloc_symbolic(name, reference.ptr)) == NULL) {
-			error = -1;
-			goto out;
-		}
-	} else {
-		if ((error = git_reference_lookup(out, repo, reference.ptr)) < 0)
-			goto out;
-	}
-
-out:
-	git__free(name);
-	git_buf_dispose(&reference);
-
-	return error;
 }
 
 int git_reference_dwim(git_reference **out, git_repository *repo, const char *refname)
 {
-	int error = 0, i;
+	int error = 0, i, valid;
 	bool fallbackmode = true, foundvalid = false;
 	git_reference *ref;
 	git_buf refnamebuf = GIT_BUF_INIT, name = GIT_BUF_INIT;
@@ -325,10 +270,11 @@ int git_reference_dwim(git_reference **out, git_repository *repo, const char *re
 
 		git_buf_clear(&refnamebuf);
 
-		if ((error = git_buf_printf(&refnamebuf, formatters[i], git_buf_cstr(&name))) < 0)
+		if ((error = git_buf_printf(&refnamebuf, formatters[i], git_buf_cstr(&name))) < 0 ||
+		    (error = git_reference_name_is_valid(&valid, git_buf_cstr(&refnamebuf))) < 0)
 			goto cleanup;
 
-		if (!git_reference_is_valid_name(git_buf_cstr(&refnamebuf))) {
+		if (!valid) {
 			error = GIT_EINVALIDSPEC;
 			continue;
 		}
@@ -366,25 +312,25 @@ cleanup:
  */
 git_reference_t git_reference_type(const git_reference *ref)
 {
-	assert(ref);
+	GIT_ASSERT_ARG(ref);
 	return ref->type;
 }
 
 const char *git_reference_name(const git_reference *ref)
 {
-	assert(ref);
+	GIT_ASSERT_ARG_WITH_RETVAL(ref, NULL);
 	return ref->name;
 }
 
 git_repository *git_reference_owner(const git_reference *ref)
 {
-	assert(ref);
+	GIT_ASSERT_ARG_WITH_RETVAL(ref, NULL);
 	return ref->db->repo;
 }
 
 const git_oid *git_reference_target(const git_reference *ref)
 {
-	assert(ref);
+	GIT_ASSERT_ARG_WITH_RETVAL(ref, NULL);
 
 	if (ref->type != GIT_REFERENCE_DIRECT)
 		return NULL;
@@ -394,7 +340,7 @@ const git_oid *git_reference_target(const git_reference *ref)
 
 const git_oid *git_reference_target_peel(const git_reference *ref)
 {
-	assert(ref);
+	GIT_ASSERT_ARG_WITH_RETVAL(ref, NULL);
 
 	if (ref->type != GIT_REFERENCE_DIRECT || git_oid_is_zero(&ref->peel))
 		return NULL;
@@ -404,7 +350,7 @@ const git_oid *git_reference_target_peel(const git_reference *ref)
 
 const char *git_reference_symbolic_target(const git_reference *ref)
 {
-	assert(ref);
+	GIT_ASSERT_ARG_WITH_RETVAL(ref, NULL);
 
 	if (ref->type != GIT_REFERENCE_SYMBOLIC)
 		return NULL;
@@ -429,8 +375,9 @@ static int reference__create(
 	git_reference *ref = NULL;
 	int error = 0;
 
-	assert(repo && name);
-	assert(symbolic || signature);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
+	GIT_ASSERT_ARG(symbolic || signature);
 
 	if (ref_out)
 		*ref_out = NULL;
@@ -444,7 +391,7 @@ static int reference__create(
 		return error;
 
 	if (oid != NULL) {
-		assert(symbolic == NULL);
+		GIT_ASSERT(symbolic == NULL);
 
 		if (!git_object__is_valid(repo, oid, GIT_OBJECT_ANY)) {
 			git_error_set(GIT_ERROR_REFERENCE,
@@ -480,7 +427,7 @@ static int reference__create(
 	return 0;
 }
 
-int configured_ident(git_signature **out, const git_repository *repo)
+static int refs_configured_ident(git_signature **out, const git_repository *repo)
 {
 	if (repo->ident_name && repo->ident_email)
 		return git_signature_now(out, repo->ident_name, repo->ident_email);
@@ -494,7 +441,7 @@ int git_reference__log_signature(git_signature **out, git_repository *repo)
 	int error;
 	git_signature *who;
 
-	if(((error = configured_ident(&who, repo)) < 0) &&
+	if(((error = refs_configured_ident(&who, repo)) < 0) &&
 	   ((error = git_signature_default(&who, repo)) < 0) &&
 	   ((error = git_signature_now(&who, "unknown", "unknown")) < 0))
 		return error;
@@ -516,7 +463,7 @@ int git_reference_create_matching(
 	int error;
 	git_signature *who = NULL;
 
-	assert(id);
+	GIT_ASSERT_ARG(id);
 
 	if ((error = git_reference__log_signature(&who, repo)) < 0)
 		return error;
@@ -551,7 +498,7 @@ int git_reference_symbolic_create_matching(
 	int error;
 	git_signature *who = NULL;
 
-	assert(target);
+	GIT_ASSERT_ARG(target);
 
 	if ((error = git_reference__log_signature(&who, repo)) < 0)
 		return error;
@@ -592,7 +539,9 @@ int git_reference_set_target(
 	int error;
 	git_repository *repo;
 
-	assert(out && ref && id);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(ref);
+	GIT_ASSERT_ARG(id);
 
 	repo = ref->db->repo;
 
@@ -619,7 +568,9 @@ int git_reference_symbolic_set_target(
 {
 	int error;
 
-	assert(out && ref && target);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(ref);
+	GIT_ASSERT_ARG(target);
 
 	if ((error = ensure_is_an_updatable_symbolic_reference(ref)) < 0)
 		return error;
@@ -631,83 +582,32 @@ int git_reference_symbolic_set_target(
 typedef struct {
     const char *old_name;
     git_refname_t new_name;
-} rename_cb_data;
+} refs_update_head_payload;
 
-static int update_wt_heads(git_repository *repo, const char *path, void *payload)
+static int refs_update_head(git_repository *worktree, void *_payload)
 {
-	rename_cb_data *data = (rename_cb_data *) payload;
-	git_reference *head = NULL;
-	char *gitdir = NULL;
+	refs_update_head_payload *payload = (refs_update_head_payload *)_payload;
+	git_reference *head = NULL, *updated = NULL;
 	int error;
 
-	if ((error = git_reference__read_head(&head, repo, path)) < 0) {
-		git_error_set(GIT_ERROR_REFERENCE, "could not read HEAD when renaming references");
+	if ((error = git_reference_lookup(&head, worktree, GIT_HEAD_FILE)) < 0)
 		goto out;
-	}
-
-	if ((gitdir = git_path_dirname(path)) == NULL) {
-		error = -1;
-		goto out;
-	}
 
 	if (git_reference_type(head) != GIT_REFERENCE_SYMBOLIC ||
-	    git__strcmp(head->target.symbolic, data->old_name) != 0) {
-		error = 0;
+	    git__strcmp(git_reference_symbolic_target(head), payload->old_name) != 0)
 		goto out;
-	}
 
-	/* Update HEAD it was pointing to the reference being renamed */
-	if ((error = git_repository_create_head(gitdir, data->new_name)) < 0) {
+	/* Update HEAD if it was pointing to the reference being renamed */
+	if ((error = git_reference_symbolic_set_target(&updated, head, payload->new_name, NULL)) < 0) {
 		git_error_set(GIT_ERROR_REFERENCE, "failed to update HEAD after renaming reference");
 		goto out;
 	}
 
 out:
+	git_reference_free(updated);
 	git_reference_free(head);
-	git__free(gitdir);
-
 	return error;
 }
-
-static int reference__rename(git_reference **out, git_reference *ref, const char *new_name, int force,
-				 const git_signature *signature, const char *message)
-{
-	git_repository *repo;
-	git_refname_t normalized;
-	bool should_head_be_updated = false;
-	int error = 0;
-
-	assert(ref && new_name && signature);
-
-	repo = git_reference_owner(ref);
-
-	if ((error = reference_normalize_for_repo(
-		normalized, repo, new_name, true)) < 0)
-		return error;
-
-	/* Check if we have to update HEAD. */
-	if ((error = git_branch_is_head(ref)) < 0)
-		return error;
-
-	should_head_be_updated = (error > 0);
-
-	if ((error = git_refdb_rename(out, ref->db, ref->name, normalized, force, signature, message)) < 0)
-		return error;
-
-	/* Update HEAD if it was pointing to the reference being renamed */
-	if (should_head_be_updated) {
-		error = git_repository_set_head(ref->db->repo, normalized);
-	} else {
-		rename_cb_data payload;
-		payload.old_name = ref->name;
-		memcpy(&payload.new_name, &normalized, sizeof(normalized));
-
-		error = git_repository_foreach_head(repo, update_wt_heads, 0, &payload);
-	}
-
-	return error;
-}
-
 
 int git_reference_rename(
 	git_reference **out,
@@ -716,17 +616,29 @@ int git_reference_rename(
 	int force,
 	const char *log_message)
 {
-	git_signature *who;
+	refs_update_head_payload payload;
+	git_signature *signature = NULL;
+	git_repository *repo;
 	int error;
 
-	assert(out && ref);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(ref);
 
-	if ((error = git_reference__log_signature(&who, ref->db->repo)) < 0)
-		return error;
+	repo = git_reference_owner(ref);
 
-	error = reference__rename(out, ref, new_name, force, who, log_message);
-	git_signature_free(who);
+	if ((error = git_reference__log_signature(&signature, repo)) < 0 ||
+	    (error = reference_normalize_for_repo(payload.new_name, repo, new_name, true)) < 0 ||
+	    (error = git_refdb_rename(out, ref->db, ref->name, payload.new_name, force, signature, log_message)) < 0)
+		goto out;
 
+	payload.old_name = ref->name;
+
+	/* We may have to update any HEAD that was pointing to the renamed reference. */
+	if ((error = git_repository_foreach_worktree(repo, refs_update_head, &payload)) < 0)
+		goto out;
+
+out:
+	git_signature_free(signature);
 	return error;
 }
 
@@ -876,7 +788,8 @@ int git_reference_list(
 {
 	git_vector ref_list;
 
-	assert(array && repo);
+	GIT_ASSERT_ARG(array);
+	GIT_ASSERT_ARG(repo);
 
 	array->strings = NULL;
 	array->count = 0;
@@ -960,7 +873,8 @@ static bool is_all_caps_and_underscore(const char *name, size_t len)
 	size_t i;
 	char c;
 
-	assert(name && len > 0);
+	GIT_ASSERT_ARG(name);
+	GIT_ASSERT_ARG(len > 0);
 
 	for (i = 0; i < len; i++)
 	{
@@ -991,7 +905,7 @@ int git_reference__normalize_name(
 	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
 #endif
 
-	assert(name);
+	GIT_ASSERT_ARG(name);
 
 	process_flags = flags;
 	current = (char *)name;
@@ -1123,7 +1037,8 @@ int git_reference_normalize_name(
 		goto cleanup;
 	}
 
-	git_buf_copy_cstr(buffer_out, buffer_size, &buf);
+	if ((error = git_buf_copy_cstr(buffer_out, buffer_size, &buf)) < 0)
+		goto cleanup;
 
 	error = 0;
 
@@ -1139,7 +1054,9 @@ int git_reference_cmp(
 	const git_reference *ref2)
 {
 	git_reference_t type1, type2;
-	assert(ref1 && ref2);
+
+	GIT_ASSERT_ARG(ref1);
+	GIT_ASSERT_ARG(ref2);
 
 	type1 = git_reference_type(ref1);
 	type2 = git_reference_type(ref2);
@@ -1152,40 +1069,6 @@ int git_reference_cmp(
 		return strcmp(ref1->target.symbolic, ref2->target.symbolic);
 
 	return git_oid__cmp(&ref1->target.oid, &ref2->target.oid);
-}
-
-/**
- * Get the end of a chain of references. If the final one is not
- * found, we return the reference just before that.
- */
-static int get_terminal(git_reference **out, git_repository *repo, const char *ref_name, int nesting)
-{
-	git_reference *ref;
-	int error = 0;
-
-	if (nesting > MAX_NESTING_LEVEL) {
-		git_error_set(GIT_ERROR_REFERENCE, "reference chain too deep (%d)", nesting);
-		return GIT_ENOTFOUND;
-	}
-
-	/* set to NULL to let the caller know that they're at the end of the chain */
-	if ((error = git_reference_lookup(&ref, repo, ref_name)) < 0) {
-		*out = NULL;
-		return error;
-	}
-
-	if (git_reference_type(ref) == GIT_REFERENCE_DIRECT) {
-		*out = ref;
-		error = 0;
-	} else {
-		error = get_terminal(out, repo, git_reference_symbolic_target(ref), nesting + 1);
-		if (error == GIT_ENOTFOUND && !*out)
-			*out = ref;
-		else
-			git_reference_free(ref);
-	}
-
-	return error;
 }
 
 /*
@@ -1202,31 +1085,37 @@ int git_reference__update_terminal(
 {
 	git_reference *ref = NULL, *ref2 = NULL;
 	git_signature *who = NULL;
+	git_refdb *refdb = NULL;
 	const git_signature *to_use;
 	int error = 0;
 
 	if (!sig && (error = git_reference__log_signature(&who, repo)) < 0)
-		return error;
+		goto out;
 
 	to_use = sig ? sig : who;
-	error = get_terminal(&ref, repo, ref_name, 0);
 
-	/* found a dangling symref */
-	if (error == GIT_ENOTFOUND && ref) {
-		assert(git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC);
-		git_error_clear();
+	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
+		goto out;
+
+	if ((error = git_refdb_resolve(&ref, refdb, ref_name, -1)) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			git_error_clear();
+			error = reference__create(&ref2, repo, ref_name, oid, NULL, 0, to_use,
+						  log_message, NULL, NULL);
+		}
+		goto out;
+	}
+
+	/* In case the resolved reference is symbolic, then it's a dangling symref. */
+	if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
 		error = reference__create(&ref2, repo, ref->target.symbolic, oid, NULL, 0, to_use,
 					  log_message, NULL, NULL);
-	} else if (error == GIT_ENOTFOUND) {
-		git_error_clear();
-		error = reference__create(&ref2, repo, ref_name, oid, NULL, 0, to_use,
-					  log_message, NULL, NULL);
-	}  else if (error == 0) {
-		assert(git_reference_type(ref) == GIT_REFERENCE_DIRECT);
+	} else {
 		error = reference__create(&ref2, repo, ref->name, oid, NULL, 1, to_use,
 					  log_message, &ref->target.oid, NULL);
 	}
 
+out:
 	git_reference_free(ref2);
 	git_reference_free(ref);
 	git_signature_free(who);
@@ -1290,7 +1179,8 @@ int git_reference_has_log(git_repository *repo, const char *refname)
 	int error;
 	git_refdb *refdb;
 
-	assert(repo && refname);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(refname);
 
 	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
 		return error;
@@ -1303,7 +1193,8 @@ int git_reference_ensure_log(git_repository *repo, const char *refname)
 	int error;
 	git_refdb *refdb;
 
-	assert(repo && refname);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(refname);
 
 	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
 		return error;
@@ -1318,7 +1209,7 @@ int git_reference__is_branch(const char *ref_name)
 
 int git_reference_is_branch(const git_reference *ref)
 {
-	assert(ref);
+	GIT_ASSERT_ARG(ref);
 	return git_reference__is_branch(ref->name);
 }
 
@@ -1329,7 +1220,7 @@ int git_reference__is_remote(const char *ref_name)
 
 int git_reference_is_remote(const git_reference *ref)
 {
-	assert(ref);
+	GIT_ASSERT_ARG(ref);
 	return git_reference__is_remote(ref->name);
 }
 
@@ -1340,7 +1231,7 @@ int git_reference__is_tag(const char *ref_name)
 
 int git_reference_is_tag(const git_reference *ref)
 {
-	assert(ref);
+	GIT_ASSERT_ARG(ref);
 	return git_reference__is_tag(ref->name);
 }
 
@@ -1351,7 +1242,7 @@ int git_reference__is_note(const char *ref_name)
 
 int git_reference_is_note(const git_reference *ref)
 {
-	assert(ref);
+	GIT_ASSERT_ARG(ref);
 	return git_reference__is_note(ref->name);
 }
 
@@ -1373,7 +1264,7 @@ int git_reference_peel(
 	git_object *target = NULL;
 	int error;
 
-	assert(ref);
+	GIT_ASSERT_ARG(ref);
 
 	if (ref->type == GIT_REFERENCE_DIRECT) {
 		resolved = ref;
@@ -1415,19 +1306,30 @@ cleanup:
 	return error;
 }
 
-int git_reference__is_valid_name(const char *refname, unsigned int flags)
+int git_reference__name_is_valid(
+	int *valid,
+	const char *refname,
+	unsigned int flags)
 {
-	if (git_reference__normalize_name(NULL, refname, flags) < 0) {
-		git_error_clear();
-		return false;
-	}
+	int error;
 
-	return true;
+	GIT_ASSERT(valid && refname);
+
+	*valid = 0;
+
+	error = git_reference__normalize_name(NULL, refname, flags);
+
+	if (!error)
+		*valid = 1;
+	else if (error == GIT_EINVALIDSPEC)
+		error = 0;
+
+	return error;
 }
 
-int git_reference_is_valid_name(const char *refname)
+int git_reference_name_is_valid(int *valid, const char *refname)
 {
-	return git_reference__is_valid_name(refname, GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL);
+	return git_reference__name_is_valid(valid, refname, GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL);
 }
 
 const char *git_reference__shorthand(const char *name)
@@ -1441,7 +1343,7 @@ const char *git_reference__shorthand(const char *name)
 	else if (!git__prefixcmp(name, GIT_REFS_DIR))
 		return name + strlen(GIT_REFS_DIR);
 
-	/* No shorthands are avaiable, so just return the name */
+	/* No shorthands are available, so just return the name. */
 	return name;
 }
 
@@ -1454,7 +1356,10 @@ int git_reference__is_unborn_head(bool *unborn, const git_reference *ref, git_re
 {
 	int error;
 	git_reference *tmp_ref;
-	assert(unborn && ref && repo);
+
+	GIT_ASSERT_ARG(unborn);
+	GIT_ASSERT_ARG(ref);
+	GIT_ASSERT_ARG(repo);
 
 	if (ref->type == GIT_REFERENCE_DIRECT) {
 		*unborn = 0;
@@ -1473,3 +1378,18 @@ int git_reference__is_unborn_head(bool *unborn, const git_reference *ref, git_re
 
 	return 0;
 }
+
+/* Deprecated functions */
+
+#ifndef GIT_DEPRECATE_HARD
+
+int git_reference_is_valid_name(const char *refname)
+{
+	int valid = 0;
+
+	git_reference__name_is_valid(&valid, refname, GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL);
+
+	return valid;
+}
+
+#endif

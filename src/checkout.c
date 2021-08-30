@@ -26,7 +26,6 @@
 #include "diff.h"
 #include "diff_generate.h"
 #include "pathspec.h"
-#include "buf_text.h"
 #include "diff_xdiff.h"
 #include "path.h"
 #include "attr.h"
@@ -44,7 +43,6 @@ enum {
 	CHECKOUT_ACTION__REMOVE_CONFLICT = 16,
 	CHECKOUT_ACTION__UPDATE_CONFLICT = 32,
 	CHECKOUT_ACTION__MAX = 32,
-	CHECKOUT_ACTION__DEFER_REMOVE = 64,
 	CHECKOUT_ACTION__REMOVE_AND_UPDATE =
 		(CHECKOUT_ACTION__UPDATE_BLOB | CHECKOUT_ACTION__REMOVE),
 };
@@ -196,7 +194,7 @@ static bool checkout_is_workdir_modified(
 		}
 
 		if (git_submodule_status(&sm_status, data->repo, wditem->path, GIT_SUBMODULE_IGNORE_UNSPECIFIED) < 0 ||
-			GIT_SUBMODULE_STATUS_IS_WD_DIRTY(sm_status))
+		    GIT_SUBMODULE_STATUS_IS_WD_DIRTY(sm_status))
 			rval = true;
 		else if ((sm_oid = git_submodule_wd_id(sm)) == NULL)
 			rval = false;
@@ -217,9 +215,10 @@ static bool checkout_is_workdir_modified(
 	ie = git_index_get_bypath(data->index, wditem->path, 0);
 
 	if (ie != NULL &&
-		git_index_time_eq(&wditem->mtime, &ie->mtime) &&
-		wditem->file_size == ie->file_size &&
-		!is_filemode_changed(wditem->mode, ie->mode, data->respect_filemode)) {
+	    !git_index_entry_newer_than_index(ie, data->index) &&
+	    git_index_time_eq(&wditem->mtime, &ie->mtime) &&
+	    wditem->file_size == ie->file_size &&
+	    !is_filemode_changed(wditem->mode, ie->mode, data->respect_filemode)) {
 
 		/* The workdir is modified iff the index entry is modified */
 		return !is_workdir_base_or_new(&ie->id, baseitem, newitem) ||
@@ -273,9 +272,8 @@ static int checkout_action_common(
 
 		/* if the file is on disk and doesn't match our mode, force update */
 		if (wd &&
-			GIT_PERMS_IS_EXEC(wd->mode) !=
-			GIT_PERMS_IS_EXEC(delta->new_file.mode))
-				*action |= CHECKOUT_ACTION__REMOVE;
+		    GIT_PERMS_IS_EXEC(wd->mode) != GIT_PERMS_IS_EXEC(delta->new_file.mode))
+			*action |= CHECKOUT_ACTION__REMOVE;
 
 		notify = GIT_CHECKOUT_NOTIFY_UPDATED;
 	}
@@ -330,6 +328,9 @@ static int checkout_target_fullpath(
 	if (path && git_buf_puts(&data->target_path, path) < 0)
 		return -1;
 
+	if (git_path_validate_workdir_buf(data->repo, &data->target_path) < 0)
+		return -1;
+
 	*out = &data->target_path;
 
 	return 0;
@@ -371,8 +372,13 @@ static int checkout_action_wd_only(
 	if (!git_pathspec__match(
 			pathspec, wd->path,
 			(data->strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH) != 0,
-			git_iterator_ignore_case(workdir), NULL, NULL))
-		return git_iterator_advance(wditem, workdir);
+			git_iterator_ignore_case(workdir), NULL, NULL)) {
+
+		if (wd->mode == GIT_FILEMODE_TREE)
+			return git_iterator_advance_into(wditem, workdir);
+		else
+			return git_iterator_advance(wditem, workdir);
+	}
 
 	/* check if item is tracked in the index but not in the checkout diff */
 	if (data->index != NULL) {
@@ -794,13 +800,13 @@ static int checkout_conflictdata_cmp(const void *a, const void *b)
 	int diff;
 
 	if ((diff = checkout_idxentry_cmp(ca->ancestor, cb->ancestor)) == 0 &&
-		(diff = checkout_idxentry_cmp(ca->ours, cb->theirs)) == 0)
+	    (diff = checkout_idxentry_cmp(ca->ours, cb->theirs)) == 0)
 		diff = checkout_idxentry_cmp(ca->theirs, cb->theirs);
 
 	return diff;
 }
 
-int checkout_conflictdata_empty(
+static int checkout_conflictdata_empty(
 	const git_vector *conflicts, size_t idx, void *payload)
 {
 	checkout_conflictdata *conflict;
@@ -1173,7 +1179,7 @@ static int checkout_conflicts_mark_directoryfile(
 	/* Find d/f conflicts */
 	git_vector_foreach(&data->update_conflicts, i, conflict) {
 		if ((conflict->ours && conflict->theirs) ||
-			(!conflict->ours && !conflict->theirs))
+		    (!conflict->ours && !conflict->theirs))
 			continue;
 
 		path = conflict->ours ?
@@ -1222,8 +1228,8 @@ static int checkout_get_update_conflicts(
 		return 0;
 
 	if ((error = checkout_conflicts_load(data, workdir, pathspec)) < 0 ||
-		(error = checkout_conflicts_coalesce_renames(data)) < 0 ||
-		(error = checkout_conflicts_mark_directoryfile(data)) < 0)
+	    (error = checkout_conflicts_coalesce_renames(data)) < 0 ||
+	    (error = checkout_conflicts_mark_directoryfile(data)) < 0)
 		goto done;
 
 done:
@@ -1239,7 +1245,7 @@ static int checkout_conflict_append_remove(
 	checkout_data *data = payload;
 	const char *name;
 
-	assert(ancestor || ours || theirs);
+	GIT_ASSERT_ARG(ancestor || ours || theirs);
 
 	if (ancestor)
 		name = git__strdup(ancestor->path);
@@ -1274,14 +1280,14 @@ static int checkout_verify_paths(
 	unsigned int flags = GIT_PATH_REJECT_WORKDIR_DEFAULTS;
 
 	if (action & CHECKOUT_ACTION__REMOVE) {
-		if (!git_path_isvalid(repo, delta->old_file.path, delta->old_file.mode, flags)) {
+		if (!git_path_validate(repo, delta->old_file.path, delta->old_file.mode, flags)) {
 			git_error_set(GIT_ERROR_CHECKOUT, "cannot remove invalid path '%s'", delta->old_file.path);
 			return -1;
 		}
 	}
 
 	if (action & ~CHECKOUT_ACTION__REMOVE) {
-		if (!git_path_isvalid(repo, delta->new_file.path, delta->new_file.mode, flags)) {
+		if (!git_path_validate(repo, delta->new_file.path, delta->new_file.mode, flags)) {
 			git_error_set(GIT_ERROR_CHECKOUT, "cannot checkout to invalid path '%s'", delta->new_file.path);
 			return -1;
 		}
@@ -1304,14 +1310,15 @@ static int checkout_get_actions(
 	size_t i, *counts = NULL;
 	uint32_t *actions = NULL;
 
-	git_pool_init(&pathpool, 1);
+	if (git_pool_init(&pathpool, 1) < 0)
+		return -1;
 
 	if (data->opts.paths.count > 0 &&
-		git_pathspec__vinit(&pathspec, &data->opts.paths, &pathpool) < 0)
+	    git_pathspec__vinit(&pathspec, &data->opts.paths, &pathpool) < 0)
 		return -1;
 
 	if ((error = git_iterator_current(&wditem, workdir)) < 0 &&
-		error != GIT_ITEROVER)
+	    error != GIT_ITEROVER)
 		goto fail;
 
 	deltas = &data->diff->deltas;
@@ -1350,8 +1357,7 @@ static int checkout_get_actions(
 	counts[CHECKOUT_ACTION__REMOVE] += data->removes.length;
 
 	if (counts[CHECKOUT_ACTION__CONFLICT] > 0 &&
-		(data->strategy & GIT_CHECKOUT_ALLOW_CONFLICTS) == 0)
-	{
+	    (data->strategy & GIT_CHECKOUT_ALLOW_CONFLICTS) == 0) {
 		git_error_set(GIT_ERROR_CHECKOUT, "%"PRIuZ" %s checkout",
 			counts[CHECKOUT_ACTION__CONFLICT],
 			counts[CHECKOUT_ACTION__CONFLICT] == 1 ?
@@ -1362,7 +1368,7 @@ static int checkout_get_actions(
 
 
 	if ((error = checkout_get_remove_conflicts(data, workdir, &pathspec)) < 0 ||
-		(error = checkout_get_update_conflicts(data, workdir, &pathspec)) < 0)
+	    (error = checkout_get_update_conflicts(data, workdir, &pathspec)) < 0)
 		goto fail;
 
 	counts[CHECKOUT_ACTION__REMOVE_CONFLICT] = git_vector_length(&data->remove_conflicts);
@@ -1483,7 +1489,9 @@ static int checkout_stream_write(
 static int checkout_stream_close(git_writestream *s)
 {
 	struct checkout_stream *stream = (struct checkout_stream *)s;
-	assert(stream && stream->open);
+
+	GIT_ASSERT_ARG(stream);
+	GIT_ASSERT_ARG(stream->open);
 
 	stream->open = 0;
 	return p_close(stream->fd);
@@ -1505,7 +1513,7 @@ static int blob_content_to_file(
 	int flags = data->opts.file_open_flags;
 	mode_t file_mode = data->opts.file_mode ?
 		data->opts.file_mode : entry_filemode;
-	git_filter_options filter_opts = GIT_FILTER_OPTIONS_INIT;
+	git_filter_session filter_session = GIT_FILTER_SESSION_INIT;
 	struct checkout_stream writer;
 	mode_t mode;
 	git_filter_list *fl = NULL;
@@ -1528,13 +1536,13 @@ static int blob_content_to_file(
 		return fd;
 	}
 
-	filter_opts.attr_session = &data->attr_session;
-	filter_opts.temp_buf = &data->tmp;
+	filter_session.attr_session = &data->attr_session;
+	filter_session.temp_buf = &data->tmp;
 
 	if (!data->opts.disable_filters &&
-		(error = git_filter_list__load_ext(
+		(error = git_filter_list__load(
 			&fl, data->repo, blob, hint_path,
-			GIT_FILTER_TO_WORKTREE, &filter_opts))) {
+			GIT_FILTER_TO_WORKTREE, &filter_session))) {
 		p_close(fd);
 		return error;
 	}
@@ -1550,7 +1558,7 @@ static int blob_content_to_file(
 
 	error = git_filter_list_stream_blob(fl, blob, &writer.base);
 
-	assert(writer.open == 0);
+	GIT_ASSERT(writer.open == 0);
 
 	git_filter_list_free(fl);
 
@@ -1853,26 +1861,6 @@ static int checkout_remove_the_old(
 	return 0;
 }
 
-static int checkout_deferred_remove(git_repository *repo, const char *path)
-{
-#if 0
-	int error = git_futils_rmdir_r(
-		path, data->opts.target_directory, GIT_RMDIR_EMPTY_PARENTS);
-
-	if (error == GIT_ENOTFOUND) {
-		error = 0;
-		git_error_clear();
-	}
-
-	return error;
-#else
-	GIT_UNUSED(repo);
-	GIT_UNUSED(path);
-	assert(false);
-	return 0;
-#endif
-}
-
 static int checkout_create_the_new(
 	unsigned int *actions,
 	checkout_data *data)
@@ -1882,15 +1870,6 @@ static int checkout_create_the_new(
 	size_t i;
 
 	git_vector_foreach(&data->diff->deltas, i, delta) {
-		if (actions[i] & CHECKOUT_ACTION__DEFER_REMOVE) {
-			/* this had a blocker directory that should only be removed iff
-			 * all of the contents of the directory were safely removed
-			 */
-			if ((error = checkout_deferred_remove(
-					data->repo, delta->old_file.path)) < 0)
-				return error;
-		}
-
 		if (actions[i] & CHECKOUT_ACTION__UPDATE_BLOB && !S_ISLNK(delta->new_file.mode)) {
 			if ((error = checkout_blob(data, &delta->new_file)) < 0)
 				return error;
@@ -1915,20 +1894,10 @@ static int checkout_create_submodules(
 	unsigned int *actions,
 	checkout_data *data)
 {
-	int error = 0;
 	git_diff_delta *delta;
 	size_t i;
 
 	git_vector_foreach(&data->diff->deltas, i, delta) {
-		if (actions[i] & CHECKOUT_ACTION__DEFER_REMOVE) {
-			/* this has a blocker directory that should only be removed iff
-			 * all of the contents of the directory were safely removed
-			 */
-			if ((error = checkout_deferred_remove(
-					data->repo, delta->old_file.path)) < 0)
-				return error;
-		}
-
 		if (actions[i] & CHECKOUT_ACTION__UPDATE_SUBMODULE) {
 			int error = checkout_submodule(data, &delta->new_file);
 			if (error < 0)
@@ -2011,7 +1980,7 @@ static int checkout_write_entry(
 	struct stat st;
 	int error;
 
-	assert (side == conflict->ours || side == conflict->theirs);
+	GIT_ASSERT(side == conflict->ours || side == conflict->theirs);
 
 	if (checkout_target_fullpath(&fullpath, data, side->path) < 0)
 		return -1;
@@ -2065,7 +2034,8 @@ static int checkout_merge_path(
 	const char *our_label_raw, *their_label_raw, *suffix;
 	int error = 0;
 
-	if ((error = git_buf_joinpath(out, git_repository_workdir(data->repo), result->path)) < 0)
+	if ((error = git_buf_joinpath(out, data->opts.target_directory, result->path)) < 0 ||
+	    (error = git_path_validate_workdir_buf(data->repo, out)) < 0)
 		return error;
 
 	/* Most conflicts simply use the filename in the index */
@@ -2094,7 +2064,7 @@ static int checkout_write_merge(
 	git_merge_file_result result = {0};
 	git_filebuf output = GIT_FILEBUF_INIT;
 	git_filter_list *fl = NULL;
-	git_filter_options filter_opts = GIT_FILTER_OPTIONS_INIT;
+	git_filter_session filter_session = GIT_FILTER_SESSION_INIT;
 	int error = 0;
 
 	if (data->opts.checkout_strategy & GIT_CHECKOUT_CONFLICT_STYLE_DIFF3)
@@ -2144,13 +2114,13 @@ static int checkout_write_merge(
 		in_data.ptr = (char *)result.ptr;
 		in_data.size = result.len;
 
-		filter_opts.attr_session = &data->attr_session;
-		filter_opts.temp_buf = &data->tmp;
+		filter_session.attr_session = &data->attr_session;
+		filter_session.temp_buf = &data->tmp;
 
-		if ((error = git_filter_list__load_ext(
+		if ((error = git_filter_list__load(
 				&fl, data->repo, NULL, git_buf_cstr(&path_workdir),
-				GIT_FILTER_TO_WORKTREE, &filter_opts)) < 0 ||
-			(error = git_filter_list_apply_to_data(&out_data, fl, &in_data)) < 0)
+				GIT_FILTER_TO_WORKTREE, &filter_session)) < 0 ||
+			(error = git_filter_list__convert_buf(&out_data, fl, &in_data)) < 0)
 			goto done;
 	} else {
 		out_data.ptr = (char *)result.ptr;
@@ -2364,6 +2334,22 @@ static void checkout_data_clear(checkout_data *data)
 	git_attr_session__free(&data->attr_session);
 }
 
+static int validate_target_directory(checkout_data *data)
+{
+	int error;
+
+	if ((error = git_path_validate_workdir(data->repo, data->opts.target_directory)) < 0)
+		return error;
+
+	if (git_path_isdir(data->opts.target_directory))
+		return 0;
+
+	error = checkout_mkdir(data, data->opts.target_directory, NULL,
+	                       GIT_DIR_MODE, GIT_MKDIR_VERIFY_DIR);
+
+	return error;
+}
+
 static int checkout_data_init(
 	checkout_data *data,
 	git_iterator *target,
@@ -2396,10 +2382,7 @@ static int checkout_data_init(
 
 	if (!data->opts.target_directory)
 		data->opts.target_directory = git_repository_workdir(repo);
-	else if (!git_path_isdir(data->opts.target_directory) &&
-			 (error = checkout_mkdir(data,
-				data->opts.target_directory, NULL,
-				GIT_DIR_MODE, GIT_MKDIR_VERIFY_DIR)) < 0)
+	else if ((error = validate_target_directory(data)) < 0)
 		goto cleanup;
 
 	if ((error = git_repository_index(&data->index, data->repo)) < 0)
@@ -2520,9 +2503,8 @@ static int checkout_data_init(
 		git_config_entry_free(conflict_style);
 	}
 
-	git_pool_init(&data->pool, 1);
-
-	if ((error = git_vector_init(&data->removes, 0, git__strcmp_cb)) < 0 ||
+	if ((error = git_pool_init(&data->pool, 1)) < 0 ||
+	    (error = git_vector_init(&data->removes, 0, git__strcmp_cb)) < 0 ||
 	    (error = git_vector_init(&data->remove_conflicts, 0, NULL)) < 0 ||
 	    (error = git_vector_init(&data->update_conflicts, 0, NULL)) < 0 ||
 	    (error = git_buf_puts(&data->target_path, data->opts.target_directory)) < 0 ||
@@ -2543,6 +2525,17 @@ cleanup:
 
 #define CHECKOUT_INDEX_DONT_WRITE_MASK \
 	(GIT_CHECKOUT_DONT_UPDATE_INDEX | GIT_CHECKOUT_DONT_WRITE_INDEX)
+
+GIT_INLINE(void) setup_pathspecs(
+	git_iterator_options *iter_opts,
+	const git_checkout_options *checkout_opts)
+{
+	if (checkout_opts &&
+		(checkout_opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
+		iter_opts->pathlist.count = checkout_opts->paths.count;
+		iter_opts->pathlist.strings = checkout_opts->paths.strings;
+	}
+}
 
 int git_checkout_iterator(
 	git_iterator *target,
@@ -2586,6 +2579,8 @@ int git_checkout_iterator(
 	workdir_opts.start = data.pfx;
 	workdir_opts.end = data.pfx;
 
+	setup_pathspecs(&workdir_opts, opts);
+
 	if ((error = git_iterator_reset_range(target, data.pfx, data.pfx)) < 0 ||
 		(error = git_iterator_for_workdir_ext(
 			&workdir, data.repo, data.opts.target_directory, index, NULL,
@@ -2596,10 +2591,8 @@ int git_checkout_iterator(
 		GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE;
 	baseline_opts.start = data.pfx;
 	baseline_opts.end = data.pfx;
-	if (opts && (opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
-		baseline_opts.pathlist.count = opts->paths.count;
-		baseline_opts.pathlist.strings = opts->paths.strings;
-	}
+
+	setup_pathspecs(&baseline_opts, opts);
 
 	if (data.opts.baseline_index) {
 		if ((error = git_iterator_for_index(
@@ -2613,7 +2606,7 @@ int git_checkout_iterator(
 	}
 
 	/* Should not have case insensitivity mismatch */
-	assert(git_iterator_ignore_case(workdir) == git_iterator_ignore_case(baseline));
+	GIT_ASSERT(git_iterator_ignore_case(workdir) == git_iterator_ignore_case(baseline));
 
 	/* Generate baseline-to-target diff which will include an entry for
 	 * every possible update that might need to be made.
@@ -2664,7 +2657,7 @@ int git_checkout_iterator(
 		(error = checkout_extensions_update_index(&data)) < 0)
 		goto cleanup;
 
-	assert(data.completed_steps == data.total_steps);
+	GIT_ASSERT(data.completed_steps == data.total_steps);
 
 	if (data.opts.perfdata_cb)
 		data.opts.perfdata_cb(&data.perfdata, data.opts.perfdata_payload);
@@ -2689,6 +2682,7 @@ int git_checkout_index(
 	git_index *index,
 	const git_checkout_options *opts)
 {
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error, owned = 0;
 	git_iterator *index_i;
 
@@ -2716,7 +2710,9 @@ int git_checkout_index(
 		return error;
 	GIT_REFCOUNT_INC(index);
 
-	if (!(error = git_iterator_for_index(&index_i, repo, index, NULL)))
+	setup_pathspecs(&iter_opts, opts);
+
+	if (!(error = git_iterator_for_index(&index_i, repo, index, &iter_opts)))
 		error = git_checkout_iterator(index_i, index, opts);
 
 	if (owned)
@@ -2773,10 +2769,7 @@ int git_checkout_tree(
 	if ((error = git_repository_index(&index, repo)) < 0)
 		return error;
 
-	if (opts && (opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
-		iter_opts.pathlist.count = opts->paths.count;
-		iter_opts.pathlist.strings = opts->paths.strings;
-	}
+	setup_pathspecs(&iter_opts, opts);
 
 	if (!(error = git_iterator_for_tree(&tree_i, tree, &iter_opts)))
 		error = git_checkout_iterator(tree_i, index, opts);
@@ -2792,7 +2785,8 @@ int git_checkout_head(
 	git_repository *repo,
 	const git_checkout_options *opts)
 {
-	assert(repo);
+	GIT_ASSERT_ARG(repo);
+
 	return git_checkout_tree(repo, NULL, opts);
 }
 
@@ -2803,7 +2797,9 @@ int git_checkout_options_init(git_checkout_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_checkout_init_options(git_checkout_options *opts, unsigned int version)
 {
 	return git_checkout_options_init(opts, version);
 }
+#endif

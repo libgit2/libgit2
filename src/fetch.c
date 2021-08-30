@@ -21,9 +21,12 @@
 
 static int maybe_want(git_remote *remote, git_remote_head *head, git_odb *odb, git_refspec *tagspec, git_remote_autotag_option_t tagopt)
 {
-	int match = 0;
+	int match = 0, valid;
 
-	if (!git_reference_is_valid_name(head->name))
+	if (git_reference_name_is_valid(&valid, head->name) < 0)
+		return -1;
+
+	if (!valid)
 		return 0;
 
 	if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
@@ -155,7 +158,9 @@ int git_fetch_options_init(git_fetch_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_fetch_init_options(git_fetch_options *opts, unsigned int version)
 {
 	return git_fetch_options_init(opts, version);
 }
+#endif

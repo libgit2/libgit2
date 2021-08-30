@@ -54,7 +54,7 @@ int lg2_blame(git_repository *repo, int argc, char *argv[])
 	 */
 	if (o.commitspec) {
 		check_lg2(git_revparse(&revspec, repo, o.commitspec), "Couldn't parse commit spec", NULL);
-		if (revspec.flags & GIT_REVPARSE_SINGLE) {
+		if (revspec.flags & GIT_REVSPEC_SINGLE) {
 			git_oid_cpy(&blameopts.newest_commit, git_object_id(revspec.from));
 			git_object_free(revspec.from);
 		} else {

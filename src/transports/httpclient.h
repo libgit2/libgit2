@@ -90,7 +90,7 @@ extern int git_http_client_new(
 
 /*
  * Sends a request to the host specified by the request URL.  If the
- * method is POST, either the the content_length or the chunked flag must
+ * method is POST, either the content_length or the chunked flag must
  * be specified.  The body should be provided in subsequent calls to
  * git_http_client_send_body.
  *

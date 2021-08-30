@@ -28,8 +28,10 @@ int git_message_prettify(git_buf *message_out, const char *message, int strip_co
 	int consecutive_empty_lines = 0;
 	size_t i, line_length, rtrimmed_line_length;
 	char *next_newline;
+	int error;
 
-	git_buf_sanitize(message_out);
+	if ((error = git_buf_sanitize(message_out)) < 0)
+		return error;
 
 	for (i = 0; i < strlen(message); i += line_length) {
 		next_newline = memchr(message + i, '\n', message_len - i);

@@ -108,7 +108,7 @@ done:
 		git_buf details = GIT_BUF_INIT;
 		git_buf_printf(&details, "filename=%s, system=%s, autocrlf=%s, attrs={%s}",
 			git_path_basename(actual_path->ptr), systype, cd->autocrlf, cd->attrs);
-		clar__fail(__FILE__, __LINE__,
+		clar__fail(__FILE__, __func__, __LINE__,
 			"checked out contents did not match expected", details.ptr, 0);
 		git_buf_dispose(&details);
 	}

@@ -5,8 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "config.h"
+#include "config_backend.h"
 
+#include "config.h"
 #include "config_entries.h"
 
 typedef struct {

@@ -43,6 +43,7 @@ void test_index_version__can_write_v4(void)
 	    "xz",
 	    "xyzzyx"
 	};
+	git_repository *repo;
 	git_index_entry entry;
 	git_index *index;
 	size_t i;
@@ -63,7 +64,8 @@ void test_index_version__can_write_v4(void)
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
-	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_repository_open(&repo, git_repository_path(g_repo)));
+	cl_git_pass(git_repository_index(&index, repo));
 	cl_assert(git_index_version(index) == 4);
 
 	for (i = 0; i < ARRAY_SIZE(paths); i++) {
@@ -74,6 +76,7 @@ void test_index_version__can_write_v4(void)
 	}
 
 	git_index_free(index);
+	git_repository_free(repo);
 }
 
 void test_index_version__v4_uses_path_compression(void)

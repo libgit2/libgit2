@@ -81,7 +81,7 @@ void test_config_global__lock_missing_global_config(void)
 	git_config_entry *entry;
 	git_transaction *transaction;
 
-	p_unlink("home/.gitconfig"); /* No global config */
+	(void)p_unlink("home/.gitconfig"); /* No global config */
 
 	cl_git_pass(git_config_open_default(&cfg));
 	cl_git_pass(git_config_lock(&transaction, cfg));

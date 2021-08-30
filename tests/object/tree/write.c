@@ -453,7 +453,8 @@ static void test_invalid_objects(bool should_allow_invalid)
 	git_oid valid_blob_id, invalid_blob_id, valid_tree_id, invalid_tree_id;
 
 #define assert_allowed(expr) \
-	clar__assert(!(expr) == should_allow_invalid, __FILE__, __LINE__, \
+	clar__assert(!(expr) == should_allow_invalid, \
+		__FILE__, __func__, __LINE__, \
 		(should_allow_invalid ? \
 		 "Expected function call to succeed: " #expr : \
 		 "Expected function call to fail: " #expr), \

@@ -48,8 +48,10 @@ int lg2_add(git_repository *repo, int argc, char **argv)
 	git_index_matched_path_cb matched_cb = NULL;
 	git_index *index;
 	git_strarray array = {0};
-	struct index_options options;
+	struct index_options options = {0};
 	struct args_info args = ARGS_INFO_INIT;
+
+	options.mode = INDEX_ADD;
 
 	/* Parse the options & arguments. */
 	parse_opts(NULL, &options, &args);

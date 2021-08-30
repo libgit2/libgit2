@@ -7,7 +7,6 @@
 #include "buffer.h"
 #include "posix.h"
 #include "git2/buffer.h"
-#include "buf_text.h"
 #include <ctype.h>
 
 /* Used as default value for git_buf->ptr so that people can always
@@ -133,18 +132,24 @@ void git_buf_dispose(git_buf *buf)
 	git_buf_init(buf, 0);
 }
 
+#ifndef GIT_DEPRECATE_HARD
 void git_buf_free(git_buf *buf)
 {
 	git_buf_dispose(buf);
 }
+#endif
 
-void git_buf_sanitize(git_buf *buf)
+int git_buf_sanitize(git_buf *buf)
 {
 	if (buf->ptr == NULL) {
-		assert(buf->size == 0 && buf->asize == 0);
+		GIT_ASSERT_ARG(buf->size == 0 && buf->asize == 0);
+
 		buf->ptr = git_buf__initbuf;
-	} else if (buf->asize > buf->size)
+	} else if (buf->asize > buf->size) {
 		buf->ptr[buf->size] = '\0';
+	}
+
+	return 0;
 }
 
 void git_buf_clear(git_buf *buf)
@@ -181,16 +186,6 @@ int git_buf_set(git_buf *buf, const void *data, size_t len)
 	return 0;
 }
 
-int git_buf_is_binary(const git_buf *buf)
-{
-	return git_buf_text_is_binary(buf);
-}
-
-int git_buf_contains_nul(const git_buf *buf)
-{
-	return git_buf_text_contains_nul(buf);
-}
-
 int git_buf_sets(git_buf *buf, const char *string)
 {
 	return git_buf_set(buf, string, string ? strlen(string) : 0);
@@ -223,7 +218,7 @@ int git_buf_put(git_buf *buf, const char *data, size_t len)
 	if (len) {
 		size_t new_size;
 
-		assert(data);
+		GIT_ASSERT_ARG(data);
 
 		GIT_ERROR_CHECK_ALLOC_ADD(&new_size, buf->size, len);
 		GIT_ERROR_CHECK_ALLOC_ADD(&new_size, new_size, 1);
@@ -237,7 +232,8 @@ int git_buf_put(git_buf *buf, const char *data, size_t len)
 
 int git_buf_puts(git_buf *buf, const char *string)
 {
-	assert(string);
+	GIT_ASSERT_ARG(string);
+
 	return git_buf_put(buf, string, strlen(string));
 }
 
@@ -317,7 +313,7 @@ int git_buf_decode_base64(git_buf *buf, const char *base64, size_t len)
 		return -1;
 	}
 
-	assert(len % 4 == 0);
+	GIT_ASSERT_ARG(len % 4 == 0);
 	GIT_ERROR_CHECK_ALLOC_ADD(&new_size, (len / 4 * 3), buf->size);
 	GIT_ERROR_CHECK_ALLOC_ADD(&new_size, new_size, 1);
 	ENSURE_SIZE(buf, new_size);
@@ -363,7 +359,7 @@ int git_buf_encode_base85(git_buf *buf, const char *data, size_t len)
 
 		for (i = 24; i >= 0; i -= 8) {
 			uint8_t ch = *data++;
-			acc |= ch << i;
+			acc |= (uint32_t)ch << i;
 
 			if (--len == 0)
 				break;
@@ -549,22 +545,26 @@ int git_buf_printf(git_buf *buf, const char *format, ...)
 	return r;
 }
 
-void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf)
+int git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf)
 {
 	size_t copylen;
 
-	assert(data && datasize && buf);
+	GIT_ASSERT_ARG(data);
+	GIT_ASSERT_ARG(datasize);
+	GIT_ASSERT_ARG(buf);
 
 	data[0] = '\0';
 
 	if (buf->size == 0 || buf->asize <= 0)
-		return;
+		return 0;
 
 	copylen = buf->size;
 	if (copylen > datasize - 1)
 		copylen = datasize - 1;
 	memmove(data, buf->ptr, copylen);
 	data[copylen] = '\0';
+
+	return 0;
 }
 
 void git_buf_consume_bytes(git_buf *buf, size_t len)
@@ -757,7 +757,8 @@ int git_buf_join(
 	ssize_t offset_a = -1;
 
 	/* not safe to have str_b point internally to the buffer */
-	assert(str_b < buf->ptr || str_b >= buf->ptr + buf->size);
+	if (buf->size)
+		GIT_ASSERT_ARG(str_b < buf->ptr || str_b >= buf->ptr + buf->size);
 
 	/* figure out if we need to insert a separator */
 	if (separator && strlen_a) {
@@ -767,7 +768,7 @@ int git_buf_join(
 	}
 
 	/* str_a could be part of the buffer */
-	if (str_a >= buf->ptr && str_a < buf->ptr + buf->size)
+	if (buf->size && str_a >= buf->ptr && str_a < buf->ptr + buf->size)
 		offset_a = str_a - buf->ptr;
 
 	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, strlen_a, strlen_b);
@@ -807,9 +808,9 @@ int git_buf_join3(
 	char *tgt;
 
 	/* for this function, disallow pointers into the existing buffer */
-	assert(str_a < buf->ptr || str_a >= buf->ptr + buf->size);
-	assert(str_b < buf->ptr || str_b >= buf->ptr + buf->size);
-	assert(str_c < buf->ptr || str_c >= buf->ptr + buf->size);
+	GIT_ASSERT(str_a < buf->ptr || str_a >= buf->ptr + buf->size);
+	GIT_ASSERT(str_b < buf->ptr || str_b >= buf->ptr + buf->size);
+	GIT_ASSERT(str_c < buf->ptr || str_c >= buf->ptr + buf->size);
 
 	if (separator) {
 		if (len_a > 0) {
@@ -882,7 +883,9 @@ int git_buf_splice(
 	char *splice_loc;
 	size_t new_size, alloc_size;
 
-	assert(buf && where <= buf->size && nb_to_remove <= buf->size - where);
+	GIT_ASSERT(buf);
+	GIT_ASSERT(where <= buf->size);
+	GIT_ASSERT(nb_to_remove <= buf->size - where);
 
 	splice_loc = buf->ptr + where;
 
@@ -1043,4 +1046,313 @@ int git_buf_unquote(git_buf *buf)
 invalid:
 	git_error_set(GIT_ERROR_INVALID, "invalid quoted line");
 	return -1;
+}
+
+int git_buf_puts_escaped(
+	git_buf *buf,
+	const char *string,
+	const char *esc_chars,
+	const char *esc_with)
+{
+	const char *scan;
+	size_t total = 0, esc_len = strlen(esc_with), count, alloclen;
+
+	if (!string)
+		return 0;
+
+	for (scan = string; *scan; ) {
+		/* count run of non-escaped characters */
+		count = strcspn(scan, esc_chars);
+		total += count;
+		scan += count;
+		/* count run of escaped characters */
+		count = strspn(scan, esc_chars);
+		total += count * (esc_len + 1);
+		scan += count;
+	}
+
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, total, 1);
+	if (git_buf_grow_by(buf, alloclen) < 0)
+		return -1;
+
+	for (scan = string; *scan; ) {
+		count = strcspn(scan, esc_chars);
+
+		memmove(buf->ptr + buf->size, scan, count);
+		scan += count;
+		buf->size += count;
+
+		for (count = strspn(scan, esc_chars); count > 0; --count) {
+			/* copy escape sequence */
+			memmove(buf->ptr + buf->size, esc_with, esc_len);
+			buf->size += esc_len;
+			/* copy character to be escaped */
+			buf->ptr[buf->size] = *scan;
+			buf->size++;
+			scan++;
+		}
+	}
+
+	buf->ptr[buf->size] = '\0';
+
+	return 0;
+}
+
+void git_buf_unescape(git_buf *buf)
+{
+	buf->size = git__unescape(buf->ptr);
+}
+
+int git_buf_crlf_to_lf(git_buf *tgt, const git_buf *src)
+{
+	const char *scan = src->ptr;
+	const char *scan_end = src->ptr + src->size;
+	const char *next = memchr(scan, '\r', src->size);
+	size_t new_size;
+	char *out;
+
+	GIT_ASSERT(tgt != src);
+
+	if (!next)
+		return git_buf_set(tgt, src->ptr, src->size);
+
+	/* reduce reallocs while in the loop */
+	GIT_ERROR_CHECK_ALLOC_ADD(&new_size, src->size, 1);
+	if (git_buf_grow(tgt, new_size) < 0)
+		return -1;
+
+	out = tgt->ptr;
+	tgt->size = 0;
+
+	/* Find the next \r and copy whole chunk up to there to tgt */
+	for (; next; scan = next + 1, next = memchr(scan, '\r', scan_end - scan)) {
+		if (next > scan) {
+			size_t copylen = (size_t)(next - scan);
+			memcpy(out, scan, copylen);
+			out += copylen;
+		}
+
+		/* Do not drop \r unless it is followed by \n */
+		if (next + 1 == scan_end || next[1] != '\n')
+			*out++ = '\r';
+	}
+
+	/* Copy remaining input into dest */
+	if (scan < scan_end) {
+		size_t remaining = (size_t)(scan_end - scan);
+		memcpy(out, scan, remaining);
+		out += remaining;
+	}
+
+	tgt->size = (size_t)(out - tgt->ptr);
+	tgt->ptr[tgt->size] = '\0';
+
+	return 0;
+}
+
+int git_buf_lf_to_crlf(git_buf *tgt, const git_buf *src)
+{
+	const char *start = src->ptr;
+	const char *end = start + src->size;
+	const char *scan = start;
+	const char *next = memchr(scan, '\n', src->size);
+	size_t alloclen;
+
+	GIT_ASSERT(tgt != src);
+
+	if (!next)
+		return git_buf_set(tgt, src->ptr, src->size);
+
+	/* attempt to reduce reallocs while in the loop */
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, src->size, src->size >> 4);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	if (git_buf_grow(tgt, alloclen) < 0)
+		return -1;
+	tgt->size = 0;
+
+	for (; next; scan = next + 1, next = memchr(scan, '\n', end - scan)) {
+		size_t copylen = next - scan;
+
+		/* if we find mixed line endings, carry on */
+		if (copylen && next[-1] == '\r')
+			copylen--;
+
+		GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, copylen, 3);
+		if (git_buf_grow_by(tgt, alloclen) < 0)
+			return -1;
+
+		if (copylen) {
+			memcpy(tgt->ptr + tgt->size, scan, copylen);
+			tgt->size += copylen;
+		}
+
+		tgt->ptr[tgt->size++] = '\r';
+		tgt->ptr[tgt->size++] = '\n';
+	}
+
+	tgt->ptr[tgt->size] = '\0';
+	return git_buf_put(tgt, scan, end - scan);
+}
+
+int git_buf_common_prefix(git_buf *buf, const git_strarray *strings)
+{
+	size_t i;
+	const char *str, *pfx;
+
+	git_buf_clear(buf);
+
+	if (!strings || !strings->count)
+		return 0;
+
+	/* initialize common prefix to first string */
+	if (git_buf_sets(buf, strings->strings[0]) < 0)
+		return -1;
+
+	/* go through the rest of the strings, truncating to shared prefix */
+	for (i = 1; i < strings->count; ++i) {
+
+		for (str = strings->strings[i], pfx = buf->ptr;
+			 *str && *str == *pfx; str++, pfx++)
+			/* scanning */;
+
+		git_buf_truncate(buf, pfx - buf->ptr);
+
+		if (!buf->size)
+			break;
+	}
+
+	return 0;
+}
+
+int git_buf_is_binary(const git_buf *buf)
+{
+	const char *scan = buf->ptr, *end = buf->ptr + buf->size;
+	git_buf_bom_t bom;
+	int printable = 0, nonprintable = 0;
+
+	scan += git_buf_detect_bom(&bom, buf);
+
+	if (bom > GIT_BUF_BOM_UTF8)
+		return 1;
+
+	while (scan < end) {
+		unsigned char c = *scan++;
+
+		/* Printable characters are those above SPACE (0x1F) excluding DEL,
+		 * and including BS, ESC and FF.
+		 */
+		if ((c > 0x1F && c != 127) || c == '\b' || c == '\033' || c == '\014')
+			printable++;
+		else if (c == '\0')
+			return true;
+		else if (!git__isspace(c))
+			nonprintable++;
+	}
+
+	return ((printable >> 7) < nonprintable);
+}
+
+int git_buf_contains_nul(const git_buf *buf)
+{
+	return (memchr(buf->ptr, '\0', buf->size) != NULL);
+}
+
+int git_buf_detect_bom(git_buf_bom_t *bom, const git_buf *buf)
+{
+	const char *ptr;
+	size_t len;
+
+	*bom = GIT_BUF_BOM_NONE;
+	/* need at least 2 bytes to look for any BOM */
+	if (buf->size < 2)
+		return 0;
+
+	ptr = buf->ptr;
+	len = buf->size;
+
+	switch (*ptr++) {
+	case 0:
+		if (len >= 4 && ptr[0] == 0 && ptr[1] == '\xFE' && ptr[2] == '\xFF') {
+			*bom = GIT_BUF_BOM_UTF32_BE;
+			return 4;
+		}
+		break;
+	case '\xEF':
+		if (len >= 3 && ptr[0] == '\xBB' && ptr[1] == '\xBF') {
+			*bom = GIT_BUF_BOM_UTF8;
+			return 3;
+		}
+		break;
+	case '\xFE':
+		if (*ptr == '\xFF') {
+			*bom = GIT_BUF_BOM_UTF16_BE;
+			return 2;
+		}
+		break;
+	case '\xFF':
+		if (*ptr != '\xFE')
+			break;
+		if (len >= 4 && ptr[1] == 0 && ptr[2] == 0) {
+			*bom = GIT_BUF_BOM_UTF32_LE;
+			return 4;
+		} else {
+			*bom = GIT_BUF_BOM_UTF16_LE;
+			return 2;
+		}
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+bool git_buf_gather_text_stats(
+	git_buf_text_stats *stats, const git_buf *buf, bool skip_bom)
+{
+	const char *scan = buf->ptr, *end = buf->ptr + buf->size;
+	int skip;
+
+	memset(stats, 0, sizeof(*stats));
+
+	/* BOM detection */
+	skip = git_buf_detect_bom(&stats->bom, buf);
+	if (skip_bom)
+		scan += skip;
+
+	/* Ignore EOF character */
+	if (buf->size > 0 && end[-1] == '\032')
+		end--;
+
+	/* Counting loop */
+	while (scan < end) {
+		unsigned char c = *scan++;
+
+		if (c > 0x1F && c != 0x7F)
+			stats->printable++;
+		else switch (c) {
+			case '\0':
+				stats->nul++;
+				stats->nonprintable++;
+				break;
+			case '\n':
+				stats->lf++;
+				break;
+			case '\r':
+				stats->cr++;
+				if (scan < end && *scan == '\n')
+					stats->crlf++;
+				break;
+			case '\t': case '\f': case '\v': case '\b': case 0x1b: /*ESC*/
+				stats->printable++;
+				break;
+			default:
+				stats->nonprintable++;
+				break;
+			}
+	}
+
+	/* Treat files with a bare CR as binary */
+	return (stats->cr != stats->crlf || stats->nul > 0 ||
+		((stats->printable >> 7) < stats->nonprintable));
 }

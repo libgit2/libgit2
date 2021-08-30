@@ -138,28 +138,6 @@ void *git_idxmap_icase_get(git_idxmap_icase *map, const git_index_entry *key)
 	return kh_val(map, idx);
 }
 
-void git_idxmap_insert(git_idxmap *map, const git_index_entry *key, void *value, int *rval)
-{
-	khiter_t idx = kh_put(idx, map, key, rval);
-
-	if ((*rval) >= 0) {
-		if ((*rval) == 0)
-			kh_key(map, idx) = key;
-		kh_val(map, idx) = value;
-	}
-}
-
-void git_idxmap_icase_insert(git_idxmap_icase *map, const git_index_entry *key, void *value, int *rval)
-{
-	khiter_t idx = kh_put(idxicase, map, key, rval);
-
-	if ((*rval) >= 0) {
-		if ((*rval) == 0)
-			kh_key(map, idx) = key;
-		kh_val(map, idx) = value;
-	}
-}
-
 int git_idxmap_delete(git_idxmap *map, const git_index_entry *key)
 {
 	khiter_t idx = kh_get(idx, map, key);

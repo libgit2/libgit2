@@ -263,7 +263,7 @@ GIT_INLINE(bool) git_iterator_ignore_case(git_iterator *iter)
 	return ((iter->flags & GIT_ITERATOR_IGNORE_CASE) != 0);
 }
 
-extern void git_iterator_set_ignore_case(
+extern int git_iterator_set_ignore_case(
 	git_iterator *iter, bool ignore_case);
 
 extern int git_iterator_current_tree_entry(

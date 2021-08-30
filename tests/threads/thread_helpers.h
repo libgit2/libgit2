@@ -1,4 +1,4 @@
-#include "thread-utils.h"
+#include "thread.h"
 
 void run_in_parallel(
 	int repeats,

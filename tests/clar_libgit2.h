@@ -12,15 +12,15 @@
  *
  * Use this wrapper around all `git_` library calls that return error codes!
  */
-#define cl_git_pass(expr) cl_git_expect((expr), 0, __FILE__, __LINE__)
+#define cl_git_pass(expr) cl_git_expect((expr), 0, __FILE__, __func__, __LINE__)
 
-#define cl_git_fail_with(error, expr) cl_git_expect((expr), error, __FILE__, __LINE__)
+#define cl_git_fail_with(error, expr) cl_git_expect((expr), error, __FILE__, __func__, __LINE__)
 
-#define cl_git_expect(expr, expected, file, line) do { \
+#define cl_git_expect(expr, expected, file, func, line) do { \
 	int _lg2_error; \
 	git_error_clear(); \
 	if ((_lg2_error = (expr)) != expected) \
-		cl_git_report_failure(_lg2_error, expected, file, line, "Function call failed: " #expr); \
+		cl_git_report_failure(_lg2_error, expected, file, func, line, "Function call failed: " #expr); \
 	} while (0)
 
 /**
@@ -31,7 +31,7 @@
 #define cl_git_fail(expr) do { \
 	if ((expr) == 0) \
 		git_error_clear(), \
-		cl_git_report_failure(0, 0, __FILE__, __LINE__, "Function call succeeded: " #expr); \
+		cl_git_report_failure(0, 0, __FILE__, __func__, __LINE__, "Function call succeeded: " #expr); \
 	} while (0)
 
 /**
@@ -41,7 +41,7 @@
 	int _win32_res; \
 	if ((_win32_res = (expr)) == 0) { \
 		git_error_set(GIT_ERROR_OS, "Returned: %d, system error code: %lu", _win32_res, GetLastError()); \
-		cl_git_report_failure(_win32_res, 0, __FILE__, __LINE__, "System call failed: " #expr); \
+		cl_git_report_failure(_win32_res, 0, __FILE__, __func__, __LINE__, "System call failed: " #expr); \
 	} \
 	} while(0)
 
@@ -58,22 +58,24 @@
 typedef struct {
 	int error;
 	const char *file;
+	const char *func;
 	int line;
 	const char *expr;
 	char error_msg[4096];
 } cl_git_thread_err;
 
 #ifdef GIT_THREADS
-# define cl_git_thread_pass(threaderr, expr) cl_git_thread_pass_(threaderr, (expr), __FILE__, __LINE__)
+# define cl_git_thread_pass(threaderr, expr) cl_git_thread_pass_(threaderr, (expr), __FILE__, __func__, __LINE__)
 #else
 # define cl_git_thread_pass(threaderr, expr) cl_git_pass(expr)
 #endif
 
-#define cl_git_thread_pass_(__threaderr, __expr, __file, __line) do { \
+#define cl_git_thread_pass_(__threaderr, __expr, __file, __func, __line) do { \
 	git_error_clear(); \
 	if ((((cl_git_thread_err *)__threaderr)->error = (__expr)) != 0) { \
 		const git_error *_last = git_error_last(); \
 		((cl_git_thread_err *)__threaderr)->file = __file; \
+		((cl_git_thread_err *)__threaderr)->func = __func; \
 		((cl_git_thread_err *)__threaderr)->line = __line; \
 		((cl_git_thread_err *)__threaderr)->expr = "Function call failed: " #__expr; \
 		p_snprintf(((cl_git_thread_err *)__threaderr)->error_msg, 4096, "thread 0x%" PRIxZ " - error %d - %s", \
@@ -87,38 +89,39 @@ GIT_INLINE(void) cl_git_thread_check(void *data)
 {
 	cl_git_thread_err *threaderr = (cl_git_thread_err *)data;
 	if (threaderr->error != 0)
-		clar__assert(0, threaderr->file, threaderr->line, threaderr->expr, threaderr->error_msg, 1);
+		clar__assert(0, threaderr->file, threaderr->func, threaderr->line, threaderr->expr, threaderr->error_msg, 1);
 }
 
-void cl_git_report_failure(int, int, const char *, int, const char *);
+void cl_git_report_failure(int, int, const char *, const char *, int, const char *);
 
-#define cl_assert_at_line(expr,file,line) \
-	clar__assert((expr) != 0, file, line, "Expression is not true: " #expr, NULL, 1)
+#define cl_assert_at_line(expr,file,func,line) \
+	clar__assert((expr) != 0, file, func, line, "Expression is not true: " #expr, NULL, 1)
 
 GIT_INLINE(void) clar__assert_in_range(
 	int lo, int val, int hi,
-	const char *file, int line, const char *err, int should_abort)
+	const char *file, const char *func, int line,
+	const char *err, int should_abort)
 {
 	if (lo > val || hi < val) {
 		char buf[128];
 		p_snprintf(buf, sizeof(buf), "%d not in [%d,%d]", val, lo, hi);
-		clar__fail(file, line, err, buf, should_abort);
+		clar__fail(file, func, line, err, buf, should_abort);
 	}
 }
 
 #define cl_assert_equal_sz(sz1,sz2) do { \
 	size_t __sz1 = (size_t)(sz1), __sz2 = (size_t)(sz2); \
-	clar__assert_equal(__FILE__,__LINE__,#sz1 " != " #sz2, 1, "%"PRIuZ, __sz1, __sz2); \
+	clar__assert_equal(__FILE__,__func__,__LINE__,#sz1 " != " #sz2, 1, "%"PRIuZ, __sz1, __sz2); \
 } while (0)
 
 #define cl_assert_in_range(L,V,H) \
-	clar__assert_in_range((L),(V),(H),__FILE__,__LINE__,"Range check: " #V " in [" #L "," #H "]", 1)
+	clar__assert_in_range((L),(V),(H),__FILE__,__func__,__LINE__,"Range check: " #V " in [" #L "," #H "]", 1)
 
 #define cl_assert_equal_file(DATA,SIZE,PATH) \
-	clar__assert_equal_file(DATA,SIZE,0,PATH,__FILE__,(int)__LINE__)
+	clar__assert_equal_file(DATA,SIZE,0,PATH,__FILE__,__func__,(int)__LINE__)
 
 #define cl_assert_equal_file_ignore_cr(DATA,SIZE,PATH) \
-	clar__assert_equal_file(DATA,SIZE,1,PATH,__FILE__,(int)__LINE__)
+	clar__assert_equal_file(DATA,SIZE,1,PATH,__FILE__,__func__,(int)__LINE__)
 
 void clar__assert_equal_file(
 	const char *expected_data,
@@ -126,10 +129,11 @@ void clar__assert_equal_file(
 	int ignore_cr,
 	const char *path,
 	const char *file,
+	const char *func,
 	int line);
 
 GIT_INLINE(void) clar__assert_equal_oid(
-	const char *file, int line, const char *desc,
+	const char *file, const char *func, int line, const char *desc,
 	const git_oid *one, const git_oid *two)
 {
 	if (git_oid_cmp(one, two)) {
@@ -138,12 +142,12 @@ GIT_INLINE(void) clar__assert_equal_oid(
 		git_oid_fmt(&err[1], one);
 		git_oid_fmt(&err[47], two);
 
-		clar__fail(file, line, desc, err, 1);
+		clar__fail(file, func, line, desc, err, 1);
 	}
 }
 
 #define cl_assert_equal_oid(one, two) \
-	clar__assert_equal_oid(__FILE__, __LINE__, \
+	clar__assert_equal_oid(__FILE__, __func__, __LINE__, \
 		"OID mismatch: " #one " != " #two, (one), (two))
 
 /*

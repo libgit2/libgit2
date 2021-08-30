@@ -89,6 +89,61 @@ void test_checkout_index__can_remove_untracked_files(void)
 	cl_assert_equal_i(false, git_path_isdir("./testrepo/dir"));
 }
 
+void test_checkout_index__can_disable_pathspec_match(void)
+{
+	char *files_to_checkout[] = { "test10.txt", "test11.txt"};
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_object *objects;
+	git_index *index;
+
+	/* reset to beginning of history (i.e. just a README file) */
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	cl_git_pass(git_revparse_single(&objects, g_repo, "8496071c1b46c854b31185ea97743be6a8774479"));
+	cl_git_pass(git_checkout_tree(g_repo, objects, &opts));
+	cl_git_pass(git_repository_set_head_detached(g_repo, git_object_id(objects)));
+	git_object_free(objects);
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	/* We create 4 files and commit them */
+	cl_git_mkfile("testrepo/test9.txt", "original\n");
+	cl_git_mkfile("testrepo/test10.txt", "original\n");
+	cl_git_mkfile("testrepo/test11.txt", "original\n");
+	cl_git_mkfile("testrepo/test12.txt", "original\n");
+
+	cl_git_pass(git_index_add_bypath(index, "test9.txt"));
+	cl_git_pass(git_index_add_bypath(index, "test10.txt"));
+	cl_git_pass(git_index_add_bypath(index, "test11.txt"));
+	cl_git_pass(git_index_add_bypath(index, "test12.txt"));
+	cl_git_pass(git_index_write(index));
+
+	cl_repo_commit_from_index(NULL, g_repo, NULL, 0, "commit our test files");
+
+	/* We modify the content of all 4 of our files */
+	cl_git_rewritefile("testrepo/test9.txt", "modified\n");
+	cl_git_rewritefile("testrepo/test10.txt", "modified\n");
+	cl_git_rewritefile("testrepo/test11.txt", "modified\n");
+	cl_git_rewritefile("testrepo/test12.txt", "modified\n");
+
+	/* We checkout only test10.txt and test11.txt */
+	opts.checkout_strategy =
+		GIT_CHECKOUT_FORCE |
+		GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+	opts.paths.strings = files_to_checkout;
+	opts.paths.count = ARRAY_SIZE(files_to_checkout);
+	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
+
+	/* The only files that have been reverted to their original content
+	   should be test10.txt and test11.txt */
+	check_file_contents("testrepo/test9.txt", "modified\n");
+	check_file_contents("testrepo/test10.txt", "original\n");
+	check_file_contents("testrepo/test11.txt", "original\n");
+	check_file_contents("testrepo/test12.txt", "modified\n");
+
+	git_index_free(index);
+}
+
 void test_checkout_index__honor_the_specified_pathspecs(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;

@@ -48,7 +48,7 @@ static void options_cmp(void *one, void *two, size_t size, const char *name)
 
 			p_snprintf(desc, 1024, "Difference in %s at byte %" PRIuZ ": macro=%u / func=%u",
 				name, i, ((char *)one)[i], ((char *)two)[i]);
-			clar__fail(__FILE__, __LINE__,
+			clar__fail(__FILE__, __func__, __LINE__,
 				"Difference between macro and function options initializer",
 				desc, 0);
 			return;
@@ -81,6 +81,11 @@ void test_core_structinit__compare(void)
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_blame_options, GIT_BLAME_OPTIONS_VERSION, \
 		GIT_BLAME_OPTIONS_INIT, git_blame_options_init);
+
+	/* blob_filter_options */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_blob_filter_options, GIT_BLOB_FILTER_OPTIONS_VERSION, \
+		GIT_BLOB_FILTER_OPTIONS_INIT, git_blob_filter_options_init);
 
 	/* checkout */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \

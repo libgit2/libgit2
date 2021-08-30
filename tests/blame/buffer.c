@@ -17,6 +17,32 @@ void test_blame_buffer__cleanup(void)
 	git_repository_free(g_repo);
 }
 
+void test_blame_buffer__index(void)
+{
+	const git_blame_hunk *hunk;
+	const char *buffer = "Hello\nWorld!";
+
+	/*
+	 * We need to open a different file from the ones used in other tests. Close
+	 * the one opened in test_blame_buffer__initialize() to avoid a leak.
+	 */
+	git_blame_free(g_fileblame);
+	g_fileblame = NULL;
+	cl_git_pass(git_blame_file(&g_fileblame, g_repo, "file.txt", NULL));
+
+	cl_git_pass(git_blame_buffer(&g_bufferblame, g_fileblame, buffer, strlen(buffer)));
+	cl_assert_equal_i(2, git_blame_get_hunk_count(g_bufferblame));
+
+	check_blame_hunk_index(g_repo, g_bufferblame, 0,  1, 1, 0, "836bc00b", "file.txt");
+	hunk = git_blame_get_hunk_byline(g_bufferblame, 1);
+	cl_assert(hunk);
+	cl_assert_equal_s("lhchavez", hunk->final_signature->name);
+	check_blame_hunk_index(g_repo, g_bufferblame, 1,  2, 1, 0, "00000000", "file.txt");
+	hunk = git_blame_get_hunk_byline(g_bufferblame, 2);
+	cl_assert(hunk);
+	cl_assert(hunk->final_signature == NULL);
+}
+
 void test_blame_buffer__added_line(void)
 {
 	const git_blame_hunk *hunk;

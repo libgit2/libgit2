@@ -15,7 +15,6 @@
 #include "futils.h"
 #include "hash.h"
 #include "filter.h"
-#include "buf_text.h"
 #include "repository.h"
 
 typedef enum {
@@ -219,7 +218,7 @@ static int crlf_apply_to_odb(
 	if (ca->crlf_action == GIT_CRLF_BINARY || !git_buf_len(from))
 		return GIT_PASSTHROUGH;
 
-	is_binary = git_buf_text_gather_stats(&stats, from, false);
+	is_binary = git_buf_gather_text_stats(&stats, from, false);
 
 	/* Heuristics to see if we can skip the conversion.
 	 * Straight from Core Git.
@@ -247,7 +246,7 @@ static int crlf_apply_to_odb(
 		return GIT_PASSTHROUGH;
 
 	/* Actually drop the carriage returns */
-	return git_buf_text_crlf_to_lf(to, from);
+	return git_buf_crlf_to_lf(to, from);
 }
 
 static int crlf_apply_to_workdir(
@@ -262,7 +261,7 @@ static int crlf_apply_to_workdir(
 	if (git_buf_len(from) == 0 || output_eol(ca) != GIT_EOL_CRLF)
 		return GIT_PASSTHROUGH;
 
-	is_binary = git_buf_text_gather_stats(&stats, from, false);
+	is_binary = git_buf_gather_text_stats(&stats, from, false);
 
 	/* If there are no LFs, or all LFs are part of a CRLF, nothing to do */
 	if (stats.lf == 0 || stats.lf == stats.crlf)
@@ -281,7 +280,7 @@ static int crlf_apply_to_workdir(
 			return GIT_PASSTHROUGH;
 	}
 
-	return git_buf_text_lf_to_crlf(to, from);
+	return git_buf_lf_to_crlf(to, from);
 }
 
 static int convert_attrs(

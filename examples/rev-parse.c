@@ -69,17 +69,17 @@ static int parse_revision(git_repository *repo, struct parse_state *ps)
 
 	check_lg2(git_revparse(&rs, repo, ps->spec), "Could not parse", ps->spec);
 
-	if ((rs.flags & GIT_REVPARSE_SINGLE) != 0) {
+	if ((rs.flags & GIT_REVSPEC_SINGLE) != 0) {
 		git_oid_tostr(str, sizeof(str), git_object_id(rs.from));
 		printf("%s\n", str);
 		git_object_free(rs.from);
 	}
-	else if ((rs.flags & GIT_REVPARSE_RANGE) != 0) {
+	else if ((rs.flags & GIT_REVSPEC_RANGE) != 0) {
 		git_oid_tostr(str, sizeof(str), git_object_id(rs.to));
 		printf("%s\n", str);
 		git_object_free(rs.to);
 
-		if ((rs.flags & GIT_REVPARSE_MERGE_BASE) != 0) {
+		if ((rs.flags & GIT_REVSPEC_MERGE_BASE) != 0) {
 			git_oid base;
 			check_lg2(git_merge_base(&base, repo,
 						git_object_id(rs.from), git_object_id(rs.to)),

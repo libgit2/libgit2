@@ -29,6 +29,14 @@ GIT_BEGIN_DECL
 typedef struct git_patch git_patch;
 
 /**
+ * Get the repository associated with this patch. May be NULL.
+ *
+ * @param patch the patch
+ * @return a pointer to the repository
+ */
+GIT_EXTERN(git_repository *) git_patch_owner(const git_patch *patch);
+
+/**
  * Return a patch for an entry in the diff list.
  *
  * The `git_patch` is a newly created object contains the text diffs

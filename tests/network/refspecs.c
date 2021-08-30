@@ -13,7 +13,7 @@ static void assert_refspec(unsigned int direction, const char *input, bool is_ex
 	if (is_expected_to_be_valid)
 		cl_assert_equal_i(0, error);
 	else
-		cl_assert_equal_i(GIT_ERROR, error);
+		cl_assert_equal_i(GIT_EINVALIDSPEC, error);
 }
 
 void test_network_refspecs__parsing(void)
@@ -153,7 +153,7 @@ static void assert_invalid_rtransform(const char *refspec, const char *name)
 	git_refspec spec;
 	git_buf buf = GIT_BUF_INIT;
 
-	git_refspec__parse(&spec, refspec, true);
+	cl_git_pass(git_refspec__parse(&spec, refspec, true));
 	cl_git_fail(git_refspec_rtransform(&buf, &spec, name));
 
 	git_buf_dispose(&buf);

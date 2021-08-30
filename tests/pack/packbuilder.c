@@ -151,6 +151,15 @@ void test_pack_packbuilder__get_hash(void)
 	cl_assert_equal_s(hex, "7f5fa362c664d68ba7221259be1cbd187434b2f0");
 }
 
+void test_pack_packbuilder__write_default_path(void)
+{
+	seed_packbuilder();
+
+	cl_git_pass(git_packbuilder_write(_packbuilder, NULL, 0, NULL, NULL));
+	cl_assert(git_path_exists("objects/pack/pack-7f5fa362c664d68ba7221259be1cbd187434b2f0.idx"));
+	cl_assert(git_path_exists("objects/pack/pack-7f5fa362c664d68ba7221259be1cbd187434b2f0.pack"));
+}
+
 static void test_write_pack_permission(mode_t given, mode_t expected)
 {
 	struct stat statbuf;

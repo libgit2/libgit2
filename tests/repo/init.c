@@ -11,30 +11,30 @@ enum repo_mode {
 	BARE_REPOSITORY = 1
 };
 
-static git_repository *_repo = NULL;
-static git_buf _global_path = GIT_BUF_INIT;
+static git_repository *g_repo = NULL;
+static git_buf g_global_path = GIT_BUF_INIT;
 
 void test_repo_init__initialize(void)
 {
-	_repo = NULL;
+	g_repo = NULL;
 
 	git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL,
-			 &_global_path);
+			 &g_global_path);
 }
 
 void test_repo_init__cleanup(void)
 {
 	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL,
-		_global_path.ptr);
-	git_buf_dispose(&_global_path);
+		g_global_path.ptr);
+	git_buf_dispose(&g_global_path);
 
 	cl_fixture_cleanup("tmp_global_path");
 }
 
 static void cleanup_repository(void *path)
 {
-	git_repository_free(_repo);
-	_repo = NULL;
+	git_repository_free(g_repo);
+	g_repo = NULL;
 
 	cl_fixture_cleanup((const char *)path);
 }
@@ -49,9 +49,9 @@ static void ensure_repository_init(
 
 	cl_assert(!git_path_isdir(working_directory));
 
-	cl_git_pass(git_repository_init(&_repo, working_directory, is_bare));
+	cl_git_pass(git_repository_init(&g_repo, working_directory, is_bare));
 
-	workdir = git_repository_workdir(_repo);
+	workdir = git_repository_workdir(g_repo);
 	if (workdir != NULL || expected_working_directory != NULL) {
 		cl_assert(
 			git__suffixcmp(workdir, expected_working_directory) == 0
@@ -59,19 +59,19 @@ static void ensure_repository_init(
 	}
 
 	cl_assert(
-		git__suffixcmp(git_repository_path(_repo), expected_path_repository) == 0
+		git__suffixcmp(git_repository_path(g_repo), expected_path_repository) == 0
 	);
 
-	cl_assert(git_repository_is_bare(_repo) == is_bare);
+	cl_assert(git_repository_is_bare(g_repo) == is_bare);
 
 #ifdef GIT_WIN32
 	if (!is_bare) {
-		DWORD fattrs = GetFileAttributes(git_repository_path(_repo));
+		DWORD fattrs = GetFileAttributes(git_repository_path(g_repo));
 		cl_assert((fattrs & FILE_ATTRIBUTE_HIDDEN) != 0);
 	}
 #endif
 
-	cl_assert(git_repository_is_empty(_repo));
+	cl_assert(git_repository_is_empty(g_repo));
 }
 
 void test_repo_init__standard_repo(void)
@@ -112,13 +112,14 @@ void test_repo_init__bare_repo_escaping_current_workdir(void)
 	cl_git_pass(chdir(git_buf_cstr(&path_repository)));
 
 	/* Initialize a bare repo with a relative path escaping out of the current working directory */
-	cl_git_pass(git_repository_init(&_repo, "../d/e.git", 1));
-	cl_git_pass(git__suffixcmp(git_repository_path(_repo), "/a/b/d/e.git/"));
+	cl_git_pass(git_repository_init(&g_repo, "../d/e.git", 1));
+	cl_git_pass(git__suffixcmp(git_repository_path(g_repo), "/a/b/d/e.git/"));
 
-	git_repository_free(_repo);
+	git_repository_free(g_repo);
+	g_repo = NULL;
 
 	/* Open a bare repo with a relative path escaping out of the current working directory */
-	cl_git_pass(git_repository_open(&_repo, "../d/e.git"));
+	cl_git_pass(git_repository_open(&g_repo, "../d/e.git"));
 
 	cl_git_pass(chdir(git_buf_cstr(&path_current_workdir)));
 
@@ -133,11 +134,12 @@ void test_repo_init__reinit_bare_repo(void)
 	cl_set_cleanup(&cleanup_repository, "reinit.git");
 
 	/* Initialize the repository */
-	cl_git_pass(git_repository_init(&_repo, "reinit.git", 1));
-	git_repository_free(_repo);
+	cl_git_pass(git_repository_init(&g_repo, "reinit.git", 1));
+	git_repository_free(g_repo);
+	g_repo = NULL;
 
 	/* Reinitialize the repository */
-	cl_git_pass(git_repository_init(&_repo, "reinit.git", 1));
+	cl_git_pass(git_repository_init(&g_repo, "reinit.git", 1));
 }
 
 void test_repo_init__reinit_too_recent_bare_repo(void)
@@ -145,8 +147,8 @@ void test_repo_init__reinit_too_recent_bare_repo(void)
 	git_config *config;
 
 	/* Initialize the repository */
-	cl_git_pass(git_repository_init(&_repo, "reinit.git", 1));
-	git_repository_config(&config, _repo);
+	cl_git_pass(git_repository_init(&g_repo, "reinit.git", 1));
+	git_repository_config(&config, g_repo);
 
 	/*
 	 * Hack the config of the repository to make it look like it has
@@ -155,10 +157,11 @@ void test_repo_init__reinit_too_recent_bare_repo(void)
 	cl_git_pass(git_config_set_int32(config, "core.repositoryformatversion", 42));
 
 	git_config_free(config);
-	git_repository_free(_repo);
+	git_repository_free(g_repo);
+	g_repo = NULL;
 
 	/* Try to reinitialize the repository */
-	cl_git_fail(git_repository_init(&_repo, "reinit.git", 1));
+	cl_git_fail(git_repository_init(&g_repo, "reinit.git", 1));
 
 	cl_fixture_cleanup("reinit.git");
 }
@@ -172,15 +175,15 @@ void test_repo_init__additional_templates(void)
 	ensure_repository_init("tester", 0, "tester/.git/", "tester/");
 
 	cl_git_pass(
-		git_buf_joinpath(&path, git_repository_path(_repo), "description"));
+		git_buf_joinpath(&path, git_repository_path(g_repo), "description"));
 	cl_assert(git_path_isfile(git_buf_cstr(&path)));
 
 	cl_git_pass(
-		git_buf_joinpath(&path, git_repository_path(_repo), "info/exclude"));
+		git_buf_joinpath(&path, git_repository_path(g_repo), "info/exclude"));
 	cl_assert(git_path_isfile(git_buf_cstr(&path)));
 
 	cl_git_pass(
-		git_buf_joinpath(&path, git_repository_path(_repo), "hooks"));
+		git_buf_joinpath(&path, git_repository_path(g_repo), "hooks"));
 	cl_assert(git_path_isdir(git_buf_cstr(&path)));
 	/* won't confirm specific contents of hooks dir since it may vary */
 
@@ -197,9 +200,9 @@ static void assert_config_entry_on_init_bytype(
 
 	cl_set_cleanup(&cleanup_repository, "config_entry");
 
-	cl_git_pass(git_repository_init(&_repo, repo_path, is_bare));
+	cl_git_pass(git_repository_init(&g_repo, repo_path, is_bare));
 
-	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_repository_config(&config, g_repo));
 	error = git_config_get_bool(&current_value, config, config_key);
 	git_config_free(config);
 
@@ -215,7 +218,8 @@ static void assert_config_entry_on_init(
 	const char *config_key, int expected_value)
 {
 	assert_config_entry_on_init_bytype(config_key, expected_value, true);
-	git_repository_free(_repo);
+	git_repository_free(g_repo);
+	g_repo = NULL;
 
 	assert_config_entry_on_init_bytype(config_key, expected_value, false);
 }
@@ -262,10 +266,10 @@ void test_repo_init__symlinks_win32_enabled_by_global_config(void)
 	 * Create a new repository (can't use `assert_config_on_init` since we
 	 * want to examine configuration levels with more granularity.)
 	 */
-	cl_git_pass(git_repository_init(&_repo, "config_entry/test.non.bare.git", false));
+	cl_git_pass(git_repository_init(&g_repo, "config_entry/test.non.bare.git", false));
 
 	/* Ensure that core.symlinks remains set (via the global config). */
-	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_repository_config(&config, g_repo));
 	cl_git_pass(git_config_get_bool(&val, config, "core.symlinks"));
 	cl_assert_equal_i(1, val);
 
@@ -278,6 +282,9 @@ void test_repo_init__symlinks_win32_enabled_by_global_config(void)
 	git_config_free(repo_config);
 
 	git_config_free(config);
+
+	git_repository_free(g_repo);
+	g_repo = NULL;
 #endif
 }
 
@@ -324,18 +331,18 @@ void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 
 	/* Init a new repo */
 	cl_set_cleanup(&cleanup_repository, "not.overwrite.git");
-	cl_git_pass(git_repository_init(&_repo, "not.overwrite.git", 1));
+	cl_git_pass(git_repository_init(&g_repo, "not.overwrite.git", 1));
 
 	/* Change the "core.ignorecase" config value to something unlikely */
-	git_repository_config(&config, _repo);
+	git_repository_config(&config, g_repo);
 	git_config_set_int32(config, "core.ignorecase", 42);
 	git_config_free(config);
-	git_repository_free(_repo);
-	_repo = NULL;
+	git_repository_free(g_repo);
+	g_repo = NULL;
 
 	/* Reinit the repository */
-	cl_git_pass(git_repository_init(&_repo, "not.overwrite.git", 1));
-	git_repository_config(&config, _repo);
+	cl_git_pass(git_repository_init(&g_repo, "not.overwrite.git", 1));
+	git_repository_config(&config, g_repo);
 
 	/* Ensure the "core.ignorecase" config value hasn't been updated */
 	cl_git_pass(git_config_get_int32(&current_value, config, "core.ignorecase"));
@@ -350,26 +357,26 @@ void test_repo_init__reinit_overwrites_filemode(void)
 
 	/* Init a new repo */
 	cl_set_cleanup(&cleanup_repository, "overwrite.git");
-	cl_git_pass(git_repository_init(&_repo, "overwrite.git", 1));
+	cl_git_pass(git_repository_init(&g_repo, "overwrite.git", 1));
 
 	/* Change the "core.filemode" config value to something unlikely */
-	cl_repo_set_bool(_repo, "core.filemode", !expected);
+	cl_repo_set_bool(g_repo, "core.filemode", !expected);
 
-	git_repository_free(_repo);
-	_repo = NULL;
+	git_repository_free(g_repo);
+	g_repo = NULL;
 
 	/* Reinit the repository */
-	cl_git_pass(git_repository_init(&_repo, "overwrite.git", 1));
+	cl_git_pass(git_repository_init(&g_repo, "overwrite.git", 1));
 
 	/* Ensure the "core.filemode" config value has been reset */
-	current_value = cl_repo_get_bool(_repo, "core.filemode");
+	current_value = cl_repo_get_bool(g_repo, "core.filemode");
 	cl_assert_equal_i(expected, current_value);
 }
 
 void test_repo_init__sets_logAllRefUpdates_according_to_type_of_repository(void)
 {
 	assert_config_entry_on_init_bytype("core.logallrefupdates", GIT_ENOTFOUND, true);
-	git_repository_free(_repo);
+	git_repository_free(g_repo);
 	assert_config_entry_on_init_bytype("core.logallrefupdates", true, false);
 }
 
@@ -378,16 +385,16 @@ void test_repo_init__extended_0(void)
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
 	/* without MKDIR this should fail */
-	cl_git_fail(git_repository_init_ext(&_repo, "extended", &opts));
+	cl_git_fail(git_repository_init_ext(&g_repo, "extended", &opts));
 
 	/* make the directory first, then it should succeed */
 	cl_git_pass(git_futils_mkdir("extended", 0775, 0));
-	cl_git_pass(git_repository_init_ext(&_repo, "extended", &opts));
+	cl_git_pass(git_repository_init_ext(&g_repo, "extended", &opts));
 
-	cl_assert(!git__suffixcmp(git_repository_workdir(_repo), "/extended/"));
-	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/extended/.git/"));
-	cl_assert(!git_repository_is_bare(_repo));
-	cl_assert(git_repository_is_empty(_repo));
+	cl_assert(!git__suffixcmp(git_repository_workdir(g_repo), "/extended/"));
+	cl_assert(!git__suffixcmp(git_repository_path(g_repo), "/extended/.git/"));
+	cl_assert(!git_repository_is_bare(g_repo));
+	cl_assert(git_repository_is_empty(g_repo));
 
 	cleanup_repository("extended");
 }
@@ -407,33 +414,33 @@ void test_repo_init__extended_1(void)
 	opts.initial_head = "development";
 	opts.origin_url = "https://github.com/libgit2/libgit2.git";
 
-	cl_git_pass(git_repository_init_ext(&_repo, "root/b/c.git", &opts));
+	cl_git_pass(git_repository_init_ext(&g_repo, "root/b/c.git", &opts));
 
-	cl_assert(!git__suffixcmp(git_repository_workdir(_repo), "/c_wd/"));
-	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/c.git/"));
+	cl_assert(!git__suffixcmp(git_repository_workdir(g_repo), "/c_wd/"));
+	cl_assert(!git__suffixcmp(git_repository_path(g_repo), "/c.git/"));
 	cl_assert(git_path_isfile("root/b/c_wd/.git"));
-	cl_assert(!git_repository_is_bare(_repo));
+	cl_assert(!git_repository_is_bare(g_repo));
 	/* repo will not be counted as empty because we set head to "development" */
-	cl_assert(!git_repository_is_empty(_repo));
+	cl_assert(!git_repository_is_empty(g_repo));
 
-	cl_git_pass(git_path_lstat(git_repository_path(_repo), &st));
+	cl_git_pass(git_path_lstat(git_repository_path(g_repo), &st));
 	cl_assert(S_ISDIR(st.st_mode));
 	if (cl_is_chmod_supported())
 		cl_assert((S_ISGID & st.st_mode) == S_ISGID);
 	else
 		cl_assert((S_ISGID & st.st_mode) == 0);
 
-	cl_git_pass(git_reference_lookup(&ref, _repo, "HEAD"));
+	cl_git_pass(git_reference_lookup(&ref, g_repo, "HEAD"));
 	cl_assert(git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC);
 	cl_assert_equal_s("refs/heads/development", git_reference_symbolic_target(ref));
 	git_reference_free(ref);
 
-	cl_git_pass(git_remote_lookup(&remote, _repo, "origin"));
+	cl_git_pass(git_remote_lookup(&remote, g_repo, "origin"));
 	cl_assert_equal_s("origin", git_remote_name(remote));
 	cl_assert_equal_s(opts.origin_url, git_remote_url(remote));
 	git_remote_free(remote);
 
-	git_repository_free(_repo);
+	git_repository_free(g_repo);
 	cl_fixture_cleanup("root");
 }
 
@@ -449,17 +456,17 @@ void test_repo_init__relative_gitdir(void)
 		GIT_REPOSITORY_INIT_NO_DOTGIT_DIR;
 
 	/* make the directory first, then it should succeed */
-	cl_git_pass(git_repository_init_ext(&_repo, "root/b/my_repository", &opts));
+	cl_git_pass(git_repository_init_ext(&g_repo, "root/b/my_repository", &opts));
 
-	cl_assert(!git__suffixcmp(git_repository_workdir(_repo), "root/b/c_wd/"));
-	cl_assert(!git__suffixcmp(git_repository_path(_repo), "root/b/my_repository/"));
-	cl_assert(!git_repository_is_bare(_repo));
-	cl_assert(git_repository_is_empty(_repo));
+	cl_assert(!git__suffixcmp(git_repository_workdir(g_repo), "root/b/c_wd/"));
+	cl_assert(!git__suffixcmp(git_repository_path(g_repo), "root/b/my_repository/"));
+	cl_assert(!git_repository_is_bare(g_repo));
+	cl_assert(git_repository_is_empty(g_repo));
 
 	/* Verify that the gitlink and worktree entries are relative */
 
 	/* Verify worktree */
-	assert_config_entry_value(_repo, "core.worktree", "../c_wd/");
+	assert_config_entry_value(g_repo, "core.worktree", "../c_wd/");
 
 	/* Verify gitlink */
 	cl_git_pass(git_futils_readbuffer(&dot_git_content, "root/b/c_wd/.git"));
@@ -485,18 +492,18 @@ void test_repo_init__relative_gitdir_2(void)
 		GIT_REPOSITORY_INIT_NO_DOTGIT_DIR;
 
 	/* make the directory first, then it should succeed */
-	cl_git_pass(git_repository_init_ext(&_repo, "root/b/my_repository", &opts));
+	cl_git_pass(git_repository_init_ext(&g_repo, "root/b/my_repository", &opts));
 	git_buf_dispose(&full_path);
 
-	cl_assert(!git__suffixcmp(git_repository_workdir(_repo), "root/b/c_wd/"));
-	cl_assert(!git__suffixcmp(git_repository_path(_repo), "root/b/my_repository/"));
-	cl_assert(!git_repository_is_bare(_repo));
-	cl_assert(git_repository_is_empty(_repo));
+	cl_assert(!git__suffixcmp(git_repository_workdir(g_repo), "root/b/c_wd/"));
+	cl_assert(!git__suffixcmp(git_repository_path(g_repo), "root/b/my_repository/"));
+	cl_assert(!git_repository_is_bare(g_repo));
+	cl_assert(git_repository_is_empty(g_repo));
 
 	/* Verify that the gitlink and worktree entries are relative */
 
 	/* Verify worktree */
-	assert_config_entry_value(_repo, "core.worktree", "../c_wd/");
+	assert_config_entry_value(g_repo, "core.worktree", "../c_wd/");
 
 	/* Verify gitlink */
 	cl_git_pass(git_futils_readbuffer(&dot_git_content, "root/b/c_wd/.git"));
@@ -513,11 +520,11 @@ void test_repo_init__can_reinit_an_initialized_repository(void)
 	cl_set_cleanup(&cleanup_repository, "extended");
 
 	cl_git_pass(git_futils_mkdir("extended", 0775, 0));
-	cl_git_pass(git_repository_init(&_repo, "extended", false));
+	cl_git_pass(git_repository_init(&g_repo, "extended", false));
 
 	cl_git_pass(git_repository_init(&reinit, "extended", false));
 
-	cl_assert_equal_s(git_repository_path(_repo), git_repository_path(reinit));
+	cl_assert_equal_s(git_repository_path(g_repo), git_repository_path(reinit));
 
 	git_repository_free(reinit);
 }
@@ -529,10 +536,10 @@ void test_repo_init__init_with_initial_commit(void)
 	cl_set_cleanup(&cleanup_repository, "committed");
 
 	/* Initialize the repository */
-	cl_git_pass(git_repository_init(&_repo, "committed", 0));
+	cl_git_pass(git_repository_init(&g_repo, "committed", 0));
 
 	/* Index will be automatically created when requested for a new repo */
-	cl_git_pass(git_repository_index(&index, _repo));
+	cl_git_pass(git_repository_index(&index, g_repo));
 
 	/* Create a file so we can commit it
 	 *
@@ -558,7 +565,7 @@ void test_repo_init__init_with_initial_commit(void)
 	/* Make sure we're ready to use git_signature_default :-) */
 	{
 		git_config *cfg, *local;
-		cl_git_pass(git_repository_config(&cfg, _repo));
+		cl_git_pass(git_repository_config(&cfg, g_repo));
 		cl_git_pass(git_config_open_level(&local, cfg, GIT_CONFIG_LEVEL_LOCAL));
 		cl_git_pass(git_config_set_string(local, "user.name", "Test User"));
 		cl_git_pass(git_config_set_string(local, "user.email", "t@example.com"));
@@ -572,12 +579,12 @@ void test_repo_init__init_with_initial_commit(void)
 		git_oid tree_id, commit_id;
 		git_tree *tree;
 
-		cl_git_pass(git_signature_default(&sig, _repo));
+		cl_git_pass(git_signature_default(&sig, g_repo));
 		cl_git_pass(git_index_write_tree(&tree_id, index));
-		cl_git_pass(git_tree_lookup(&tree, _repo, &tree_id));
+		cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
 
 		cl_git_pass(git_commit_create_v(
-			&commit_id, _repo, "HEAD", sig, sig,
+			&commit_id, g_repo, "HEAD", sig, sig,
 			NULL, "First", tree, 0));
 
 		git_tree_free(tree);
@@ -663,5 +670,69 @@ void test_repo_init__unwriteable_directory(void)
 	cl_must_pass(p_rmdir("unwriteable"));
 #else
 	clar__skip();
+#endif
+}
+
+void test_repo_init__defaultbranch_config(void)
+{
+	git_reference *head;
+
+	cl_set_cleanup(&cleanup_repository, "repo");
+
+	create_tmp_global_config("tmp_global_path", "init.defaultbranch", "my_default_branch");
+
+	cl_git_pass(git_repository_init(&g_repo, "repo", 0));
+	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
+
+	cl_assert_equal_s("refs/heads/my_default_branch", git_reference_symbolic_target(head));
+
+	git_reference_free(head);
+}
+
+void test_repo_init__defaultbranch_config_empty(void)
+{
+	git_reference *head;
+
+	cl_set_cleanup(&cleanup_repository, "repo");
+
+	create_tmp_global_config("tmp_global_path", "init.defaultbranch", "");
+
+	cl_git_pass(git_repository_init(&g_repo, "repo", 0));
+	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
+
+	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
+
+	git_reference_free(head);
+}
+
+void test_repo_init__longpath(void)
+{
+#ifdef GIT_WIN32
+	size_t padding = CONST_STRLEN("objects/pack/pack-.pack.lock") + GIT_OID_HEXSZ;
+	size_t max, i;
+	git_buf path = GIT_BUF_INIT;
+	git_repository *one = NULL, *two = NULL;
+
+	/*
+	 * Files within repositories need to fit within MAX_PATH;
+	 * that means a repo path must be at most (MAX_PATH - 18).
+	 */
+	cl_git_pass(git_buf_puts(&path, clar_sandbox_path()));
+	cl_git_pass(git_buf_putc(&path, '/'));
+
+	max = ((MAX_PATH) - path.size) - padding;
+
+	for (i = 0; i < max - 1; i++)
+		cl_git_pass(git_buf_putc(&path, 'a'));
+
+	cl_git_pass(git_repository_init(&one, path.ptr, 1));
+
+	/* Paths longer than this are rejected */
+	cl_git_pass(git_buf_putc(&path, 'z'));
+	cl_git_fail(git_repository_init(&two, path.ptr, 1));
+
+	git_repository_free(one);
+	git_repository_free(two);
+	git_buf_dispose(&path);
 #endif
 }

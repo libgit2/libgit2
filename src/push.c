@@ -349,8 +349,9 @@ static int queue_objects(git_push *push)
 		if (git_oid_is_zero(&head->oid))
 			continue;
 
-		/* TODO */
-		git_revwalk_hide(rw, &head->oid);
+		if ((error = git_revwalk_hide(rw, &head->oid)) < 0 &&
+		    error != GIT_ENOTFOUND && error != GIT_EINVALIDSPEC && error != GIT_EPEEL)
+			goto on_error;
 	}
 
 	error = git_packbuilder_insert_walk(push->pb, rw);
@@ -554,7 +555,9 @@ int git_push_options_init(git_push_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_push_init_options(git_push_options *opts, unsigned int version)
 {
 	return git_push_options_init(opts, version);
 }
+#endif

@@ -33,7 +33,7 @@ int git_reset_default(
 	int error;
 	git_index *index = NULL;
 
-	assert(pathspecs != NULL && pathspecs->count > 0);
+	GIT_ASSERT_ARG(pathspecs && pathspecs->count > 0);
 
 	memset(&entry, 0, sizeof(git_index_entry));
 
@@ -62,10 +62,10 @@ int git_reset_default(
 	for (i = 0, max_i = git_diff_num_deltas(diff); i < max_i; ++i) {
 		const git_diff_delta *delta = git_diff_get_delta(diff, i);
 
-		assert(delta->status == GIT_DELTA_ADDED ||
-			delta->status == GIT_DELTA_MODIFIED ||
-			delta->status == GIT_DELTA_CONFLICTED ||
-			delta->status == GIT_DELTA_DELETED);
+		GIT_ASSERT(delta->status == GIT_DELTA_ADDED ||
+		           delta->status == GIT_DELTA_MODIFIED ||
+		           delta->status == GIT_DELTA_CONFLICTED ||
+		           delta->status == GIT_DELTA_DELETED);
 
 		error = git_index_conflict_remove(index, delta->old_file.path);
 		if (error < 0) {
@@ -113,7 +113,8 @@ static int reset(
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_buf log_message = GIT_BUF_INIT;
 
-	assert(repo && target);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(target);
 
 	if (checkout_opts)
 		opts = *checkout_opts;

@@ -86,6 +86,7 @@ static struct map_data _configmaps[] = {
 	{"core.protecthfs", NULL, 0, GIT_PROTECTHFS_DEFAULT },
 	{"core.protectntfs", NULL, 0, GIT_PROTECTNTFS_DEFAULT },
 	{"core.fsyncobjectfiles", NULL, 0, GIT_FSYNCOBJECTFILES_DEFAULT },
+	{"core.longpaths", NULL, 0, GIT_LONGPATHS_DEFAULT },
 };
 
 int git_config__configmap_lookup(int *out, git_config *config, git_configmap_item item)
@@ -111,17 +112,21 @@ int git_config__configmap_lookup(int *out, git_config *config, git_configmap_ite
 
 int git_repository__configmap_lookup(int *out, git_repository *repo, git_configmap_item item)
 {
-	*out = repo->configmap_cache[(int)item];
+	intptr_t value = (intptr_t)git_atomic_load(repo->configmap_cache[(int)item]);
 
-	if (*out == GIT_CONFIGMAP_NOT_CACHED) {
-		int error;
+	*out = (int)value;
+
+	if (value == GIT_CONFIGMAP_NOT_CACHED) {
 		git_config *config;
+		intptr_t oldval = value;
+		int error;
 
 		if ((error = git_repository_config__weakptr(&config, repo)) < 0 ||
 			(error = git_config__configmap_lookup(out, config, item)) < 0)
 			return error;
 
-		repo->configmap_cache[(int)item] = *out;
+		value = *out;
+		git_atomic_compare_and_swap(&repo->configmap_cache[(int)item], (void *)oldval, (void *)value);
 	}
 
 	return 0;

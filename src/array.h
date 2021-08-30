@@ -41,8 +41,8 @@
 
 typedef git_array_t(char) git_array_generic_t;
 
-/* use a generic array for growth so this can return the new item */
-GIT_INLINE(void *) git_array_grow(void *_a, size_t item_size)
+/* use a generic array for growth, return 0 on success */
+GIT_INLINE(int) git_array_grow(void *_a, size_t item_size)
 {
 	volatile git_array_generic_t *a = _a;
 	size_t new_size;
@@ -59,24 +59,24 @@ GIT_INLINE(void *) git_array_grow(void *_a, size_t item_size)
 	if ((new_array = git__reallocarray(a->ptr, new_size, item_size)) == NULL)
 		goto on_oom;
 
-	a->ptr = new_array; a->asize = new_size; a->size++;
-	return a->ptr + (a->size - 1) * item_size;
+	a->ptr = new_array;
+	a->asize = new_size;
+	return 0;
 
 on_oom:
 	git_array_clear(*a);
-	return NULL;
+	return -1;
 }
 
 #define git_array_alloc(a) \
-	(((a).size >= (a).asize) ? \
-	git_array_grow(&(a), sizeof(*(a).ptr)) : \
-	((a).ptr ? &(a).ptr[(a).size++] : NULL))
+	(((a).size < (a).asize || git_array_grow(&(a), sizeof(*(a).ptr)) == 0) ? \
+	&(a).ptr[(a).size++] : (void *)NULL)
 
-#define git_array_last(a) ((a).size ? &(a).ptr[(a).size - 1] : NULL)
+#define git_array_last(a) ((a).size ? &(a).ptr[(a).size - 1] : (void *)NULL)
 
-#define git_array_pop(a) ((a).size ? &(a).ptr[--(a).size] : NULL)
+#define git_array_pop(a) ((a).size ? &(a).ptr[--(a).size] : (void *)NULL)
 
-#define git_array_get(a, i) (((i) < (a).size) ? &(a).ptr[(i)] : NULL)
+#define git_array_get(a, i) (((i) < (a).size) ? &(a).ptr[(i)] : (void *)NULL)
 
 #define git_array_size(a) (a).size
 

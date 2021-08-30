@@ -655,7 +655,8 @@ int git_describe_commit(
 	int error = -1;
 	git_describe_options normalized;
 
-	assert(committish);
+	GIT_ASSERT_ARG(result);
+	GIT_ASSERT_ARG(committish);
 
 	data.result = git__calloc(1, sizeof(git_describe_result));
 	GIT_ERROR_CHECK_ALLOC(data.result);
@@ -685,7 +686,7 @@ int git_describe_commit(
 			get_name, &data)) < 0)
 				goto cleanup;
 
-	if (git_oidmap_size(data.names) == 0 && !opts->show_commit_oid_as_fallback) {
+	if (git_oidmap_size(data.names) == 0 && !normalized.show_commit_oid_as_fallback) {
 		git_error_set(GIT_ERROR_DESCRIBE, "cannot describe - "
 			"no reference found, cannot describe anything.");
 		error = -1;
@@ -775,12 +776,14 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 	struct commit_name *name;
 	git_describe_format_options opts;
 
-	assert(out && result);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(result);
 
 	GIT_ERROR_CHECK_VERSION(given, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION, "git_describe_format_options");
 	normalize_format_options(&opts, given);
 
-	git_buf_sanitize(out);
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
 
 
 	if (opts.always_use_long_format && opts.abbreviated_size == 0) {
@@ -876,10 +879,12 @@ int git_describe_options_init(git_describe_options *opts, unsigned int version)
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_describe_init_options(git_describe_options *opts, unsigned int version)
 {
 	return git_describe_options_init(opts, version);
 }
+#endif
 
 int git_describe_format_options_init(git_describe_format_options *opts, unsigned int version)
 {
@@ -888,7 +893,9 @@ int git_describe_format_options_init(git_describe_format_options *opts, unsigned
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_describe_init_format_options(git_describe_format_options *opts, unsigned int version)
 {
 	return git_describe_format_options_init(opts, version);
 }
+#endif

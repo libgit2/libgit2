@@ -90,7 +90,7 @@ void test_submodule_add__url_relative(void)
 	/* make sure we don't default to origin - rename origin -> test_remote */
 	cl_git_pass(git_remote_rename(&problems, g_repo, "origin", "test_remote"));
 	cl_assert_equal_i(0, problems.count);
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 	cl_git_fail(git_remote_lookup(&remote, g_repo, "origin"));
 
 	cl_git_pass(

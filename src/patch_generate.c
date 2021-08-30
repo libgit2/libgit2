@@ -209,9 +209,7 @@ static int patch_generated_load(git_patch_generated *patch, git_patch_generated_
 
 	if ((error = git_diff_file_content__load(
 			&patch->ofile, &patch->base.diff_opts)) < 0 ||
-		should_skip_binary(patch, patch->ofile.file))
-		goto cleanup;
-	if ((error = git_diff_file_content__load(
+	    (error = git_diff_file_content__load(
 			&patch->nfile, &patch->base.diff_opts)) < 0 ||
 		should_skip_binary(patch, patch->nfile.file))
 		goto cleanup;
@@ -563,7 +561,7 @@ static int patch_from_sources(
 	patch_generated_with_delta *pd;
 	git_xdiff_output xo;
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 	*out = NULL;
 
 	if ((error = patch_generated_with_delta_alloc(
@@ -842,7 +840,7 @@ static int patch_generated_line_cb(
 	GIT_UNUSED(hunk_);
 
 	hunk = git_array_last(patch->base.hunks);
-	assert(hunk); /* programmer error if no hunk is available */
+	GIT_ASSERT(hunk); /* programmer error if no hunk is available */
 
 	line = git_array_alloc(patch->base.lines);
 	GIT_ERROR_CHECK_ALLOC(line);

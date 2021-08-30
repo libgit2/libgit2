@@ -43,7 +43,7 @@ static size_t count_references(void)
 	cl_git_pass(git_reference_list(&array, g_repo));
 	refs = array.count;
 
-	git_strarray_free(&array);
+	git_strarray_dispose(&array);
 
 	return refs;
 }

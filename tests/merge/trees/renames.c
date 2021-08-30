@@ -274,3 +274,80 @@ void test_merge_trees_renames__submodules(void)
 	cl_assert(merge_test_index(index, merge_index_entries, 7));
 	git_index_free(index);
 }
+
+void test_merge_trees_renames__cache_recomputation(void)
+{
+	git_oid blob, binary, ancestor_oid, theirs_oid, ours_oid;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
+	git_buf path = GIT_BUF_INIT;
+	git_treebuilder *builder;
+	git_tree *ancestor_tree, *their_tree, *our_tree;
+	git_index *index;
+	size_t blob_size;
+	void *data;
+	size_t i;
+
+	cl_git_pass(git_oid_fromstr(&blob, "a2d8d1824c68541cca94ffb90f79291eba495921"));
+
+	/*
+	 * Create a 50MB blob that consists of NUL bytes only. It is important
+	 * that this blob is of a special format, most importantly it cannot
+	 * contain more than four non-consecutive newlines or NUL bytes. This
+	 * is because of git_hashsig's inner workings where all files with less
+	 * than four "lines" are deemed to small.
+	 */
+	blob_size = 50 * 1024 * 1024;
+	cl_assert(data = git__calloc(blob_size, 1));
+	cl_git_pass(git_blob_create_from_buffer(&binary, repo, data, blob_size));
+
+	/*
+	 * Create the common ancestor, which has 1000 dummy blobs and the binary
+	 * blob. The dummy blobs serve as potential rename targets for the
+	 * dummy blob.
+	 */
+	cl_git_pass(git_treebuilder_new(&builder, repo, NULL));
+	for (i = 0; i < 1000; i++) {
+		cl_git_pass(git_buf_printf(&path, "%"PRIuZ".txt", i));
+		cl_git_pass(git_treebuilder_insert(NULL, builder, path.ptr, &blob, GIT_FILEMODE_BLOB));
+		git_buf_clear(&path);
+	}
+	cl_git_pass(git_treebuilder_insert(NULL, builder, "original.bin", &binary, GIT_FILEMODE_BLOB));
+	cl_git_pass(git_treebuilder_write(&ancestor_oid, builder));
+
+	/* We now the binary blob in our tree. */
+	cl_git_pass(git_treebuilder_remove(builder, "original.bin"));
+	cl_git_pass(git_treebuilder_insert(NULL, builder, "renamed.bin", &binary, GIT_FILEMODE_BLOB));
+	cl_git_pass(git_treebuilder_write(&ours_oid, builder));
+
+	git_treebuilder_free(builder);
+
+	/* And move everything into a subdirectory in their tree. */
+	cl_git_pass(git_treebuilder_new(&builder, repo, NULL));
+	cl_git_pass(git_treebuilder_insert(NULL, builder, "subdir", &ancestor_oid, GIT_FILEMODE_TREE));
+	cl_git_pass(git_treebuilder_write(&theirs_oid, builder));
+
+	/*
+	 * Now merge ancestor, ours and theirs. As `git_hashsig` refuses to
+	 * create a hash signature for the 50MB binary file, we historically
+	 * didn't cache the hashsig computation for it. As a result, we now
+	 * started looking up the 50MB blob and scanning it at least 1000
+	 * times, which takes a long time.
+	 *
+	 * The number of 1000 blobs is chosen in such a way that it's
+	 * noticeable when the bug creeps in again, as it takes around 12
+	 * minutes on my machine to compute the following merge.
+	 */
+	opts.target_limit = 5000;
+	cl_git_pass(git_tree_lookup(&ancestor_tree, repo, &ancestor_oid));
+	cl_git_pass(git_tree_lookup(&their_tree, repo, &theirs_oid));
+	cl_git_pass(git_tree_lookup(&our_tree, repo, &ours_oid));
+	cl_git_pass(git_merge_trees(&index, repo, ancestor_tree, our_tree, their_tree, &opts));
+
+	git_treebuilder_free(builder);
+	git_buf_dispose(&path);
+	git_index_free(index);
+	git_tree_free(ancestor_tree);
+	git_tree_free(their_tree);
+	git_tree_free(our_tree);
+	git__free(data);
+}

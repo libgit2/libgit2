@@ -6,7 +6,6 @@
  */
 
 #include "diff_xdiff.h"
-#include "util.h"
 
 #include "git2/errors.h"
 #include "diff.h"
@@ -128,7 +127,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 			info->hunk.header_len = sizeof(info->hunk.header) - 1;
 
 		/* Sanitize the hunk header in case there is invalid Unicode */
-		buffer_len = git__utf8_valid_buf_length((const uint8_t *) bufs[0].ptr, info->hunk.header_len);
+		buffer_len = git_utf8_valid_buf_length(bufs[0].ptr, info->hunk.header_len);
 		/* Sanitizing the hunk header may delete the newline, so add it back again if there is room */
 		if (buffer_len < info->hunk.header_len) {
 			bufs[0].ptr[buffer_len] = '\n';
@@ -258,6 +257,9 @@ void git_xdiff_init(git_xdiff_output *xo, const git_diff_options *opts)
 		xo->params.flags |= XDF_PATIENCE_DIFF;
 	if (flags & GIT_DIFF_MINIMAL)
 		xo->params.flags |= XDF_NEED_MINIMAL;
+
+	if (flags & GIT_DIFF_IGNORE_BLANK_LINES)
+		xo->params.flags |= XDF_IGNORE_BLANK_LINES;
 
 	xo->callback.outf = git_xdiff_cb;
 }

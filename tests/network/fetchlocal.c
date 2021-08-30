@@ -49,7 +49,7 @@ void test_network_fetchlocal__complete(void)
 	cl_assert_equal_i(19, (int)refnames.count);
 	cl_assert(callcount > 0);
 
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 	git_remote_free(origin);
 	git_repository_free(repo);
 }
@@ -77,7 +77,7 @@ void test_network_fetchlocal__prune(void)
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(19, (int)refnames.count);
 	cl_assert(callcount > 0);
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 	git_remote_free(origin);
 
 	cl_git_pass(git_reference_lookup(&ref, remote_repo, "refs/heads/br2"));
@@ -90,7 +90,7 @@ void test_network_fetchlocal__prune(void)
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(18, (int)refnames.count);
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 	git_remote_free(origin);
 
 	cl_git_pass(git_reference_lookup(&ref, remote_repo, "refs/heads/packed"));
@@ -103,7 +103,7 @@ void test_network_fetchlocal__prune(void)
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(17, (int)refnames.count);
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 	git_remote_free(origin);
 
 	git_repository_free(repo);
@@ -168,7 +168,7 @@ void test_network_fetchlocal__prune_overlapping(void)
 	assert_ref_exists(repo, "refs/remotes/origin/pr/42");
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(20, (int)refnames.count);
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 
 	cl_git_pass(git_config_delete_multivar(config, "remote.origin.fetch", "refs"));
 	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/pull/*/head:refs/remotes/origin/pr/*"));
@@ -183,7 +183,7 @@ void test_network_fetchlocal__prune_overlapping(void)
 	assert_ref_exists(repo, "refs/remotes/origin/pr/42");
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(20, (int)refnames.count);
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 
 	cl_git_pass(git_config_delete_multivar(config, "remote.origin.fetch", "refs"));
 	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/heads/*:refs/remotes/origin/*"));
@@ -195,7 +195,7 @@ void test_network_fetchlocal__prune_overlapping(void)
 	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
 
 	git_config_free(config);
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 	git_remote_free(origin);
 	git_repository_free(repo);
 }
@@ -224,7 +224,7 @@ void test_network_fetchlocal__fetchprune(void)
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(19, (int)refnames.count);
 	cl_assert(callcount > 0);
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 	git_remote_free(origin);
 
 	cl_git_pass(git_reference_lookup(&ref, remote_repo, "refs/heads/br2"));
@@ -237,7 +237,7 @@ void test_network_fetchlocal__fetchprune(void)
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(18, (int)refnames.count);
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 	git_remote_free(origin);
 
 	cl_git_pass(git_reference_lookup(&ref, remote_repo, "refs/heads/packed"));
@@ -253,7 +253,7 @@ void test_network_fetchlocal__fetchprune(void)
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(17, (int)refnames.count);
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 	git_remote_free(origin);
 
 	git_repository_free(repo);
@@ -333,13 +333,13 @@ void test_network_fetchlocal__partial(void)
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
 	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
 
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(20, (int)refnames.count); /* 18 remote + 1 local */
 	cl_assert(callcount > 0);
 
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 	git_remote_free(origin);
 }
 
@@ -420,7 +420,7 @@ void test_network_fetchlocal__multi_remotes(void)
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(33, (int)refnames.count);
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 
 	cl_git_pass(git_remote_set_url(repo, "test_with_pushurl", cl_git_fixture_url("testrepo.git")));
 	cl_git_pass(git_remote_lookup(&test2, repo, "test_with_pushurl"));
@@ -429,7 +429,7 @@ void test_network_fetchlocal__multi_remotes(void)
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(45, (int)refnames.count);
 
-	git_strarray_free(&refnames);
+	git_strarray_dispose(&refnames);
 	git_remote_free(test);
 	git_remote_free(test2);
 }

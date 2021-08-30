@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "diff_helpers.h"
-#include "buf_text.h"
 
 static git_repository *g_repo = NULL;
 
@@ -22,6 +21,8 @@ void test_diff_rename__cleanup(void)
 #define RENAME_MODIFICATION_COMMIT "19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13"
 #define REWRITE_DELETE_COMMIT "84d8efa38af7ace2b302de0adbda16b1f1cd2e1b"
 #define DELETE_RENAME_COMMIT "be053a189b0bbde545e0a3f59ce00b46ad29ce0d"
+#define BREAK_REWRITE_BASE_COMMIT "db98035f715427eef1f5e17f03e1801c05301e9e"
+#define BREAK_REWRITE_COMMIT "7e7bfb88ba9bc65fd700fee1819cf1c317aafa56"
 
 /*
  * Renames repo has:
@@ -513,7 +514,7 @@ void test_diff_rename__working_directory_changes(void)
 	cl_git_pass(
 		git_futils_readbuffer(&old_content, "renames/songof7cities.txt"));
 	cl_git_pass(
-		git_buf_text_lf_to_crlf(&content, &old_content));
+		git_buf_lf_to_crlf(&content, &old_content));
 	cl_git_pass(
 		git_futils_writebuffer(&content, "renames/songof7cities.txt", 0, 0));
 
@@ -1974,6 +1975,59 @@ void test_diff_rename__delete_and_rename(void)
 	cl_assert_equal_s(expected, diff_buf.ptr);
 
 	git_buf_dispose(&diff_buf);
+	git_diff_free(diff);
+	git_tree_free(old_tree);
+	git_tree_free(new_tree);
+}
+
+/*
+ * The break_rewrite branch contains a testcase reduced from
+ * a real-world scenario, rather than being "constructed" like
+ * the above tests seem to be. There are two commits layered
+ * on top of the repo's initial commit; the base commit which
+ * clears out the files from the initial commit and installs
+ * four files. And then there's the modification commit which
+ * mutates the files in such a way as to trigger the bug in
+ * libgit2.
+ * commit db98035f715427eef1f5e17f03e1801c05301e9e
+ *   serving.txt     (deleted)
+ *   sevencities.txt (deleted)
+ *   AAA             (313 lines)
+ *   BBB             (314 lines)
+ *   CCC             (704 lines)
+ *   DDD             (314 lines, identical to BBB)
+ * commit 7e7bfb88ba9bc65fd700fee1819cf1c317aafa56
+ *   This deletes CCC and makes slight modifications
+ *   to AAA, BBB, and DDD. The find_best_matches loop
+ *   for git_diff_find_similar computes the following:
+ *   CCC    moved to    AAA     (similarity 91)
+ *   CCC    copied to   AAA     (similarity 91)
+ *   DDD    moved to    BBB     (similarity 52)
+ *   CCC    copied to   BBB     (similarity 90)
+ *   BBB    moved to    DDD     (similarity 52)
+ *   CCC    copied to   DDD     (similarity 90)
+ * The code to rewrite the diffs by resolving these
+ * copies/renames would resolve the BBB <-> DDD moves
+ * but then still leave BBB as a rename target for
+ * the deleted file CCC. Since the split flag on BBB
+ * was cleared, this would trigger an error.
+ */
+void test_diff_rename__break_rewrite(void)
+{
+	const char *old_sha = BREAK_REWRITE_BASE_COMMIT;
+	const char *new_sha = BREAK_REWRITE_COMMIT;
+	git_tree *old_tree, *new_tree;
+	git_diff *diff;
+	git_diff_find_options find_opts = GIT_DIFF_FIND_OPTIONS_INIT;
+
+	old_tree = resolve_commit_oid_to_tree(g_repo, old_sha);
+	new_tree = resolve_commit_oid_to_tree(g_repo, new_sha);
+
+	find_opts.flags = GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES | GIT_DIFF_BREAK_REWRITES | GIT_DIFF_BREAK_REWRITES_FOR_RENAMES_ONLY;
+
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, old_tree, new_tree, NULL));
+	cl_git_pass(git_diff_find_similar(diff, &find_opts));
+
 	git_diff_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);

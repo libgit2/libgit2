@@ -123,7 +123,7 @@ static void do_junction(const char *old, const char *new)
 	reparse_buf = LocalAlloc(LMEM_FIXED|LMEM_ZEROINIT, reparse_buflen);
 	cl_assert(reparse_buf);
 
-	subst_utf16 = reparse_buf->MountPointReparseBuffer.PathBuffer;
+	subst_utf16 = reparse_buf->ReparseBuffer.MountPoint.PathBuffer;
 	print_utf16 = subst_utf16 + subst_utf16_len + 1;
 
 	ret = git__utf8_to_16(subst_utf16, subst_utf16_len + 1,
@@ -135,10 +135,10 @@ static void do_junction(const char *old, const char *new)
 	cl_assert_equal_i(print_utf16_len, ret);
 
 	reparse_buf->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
-	reparse_buf->MountPointReparseBuffer.SubstituteNameOffset = 0;
-	reparse_buf->MountPointReparseBuffer.SubstituteNameLength = subst_byte_len;
-	reparse_buf->MountPointReparseBuffer.PrintNameOffset = (USHORT)(subst_byte_len + sizeof(WCHAR));
-	reparse_buf->MountPointReparseBuffer.PrintNameLength = print_byte_len;
+	reparse_buf->ReparseBuffer.MountPoint.SubstituteNameOffset = 0;
+	reparse_buf->ReparseBuffer.MountPoint.SubstituteNameLength = subst_byte_len;
+	reparse_buf->ReparseBuffer.MountPoint.PrintNameOffset = (USHORT)(subst_byte_len + sizeof(WCHAR));
+	reparse_buf->ReparseBuffer.MountPoint.PrintNameLength = print_byte_len;
 	reparse_buf->ReparseDataLength = reparse_buflen - REPARSE_DATA_HEADER_SIZE;
 
 	cl_win32_pass(DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT,

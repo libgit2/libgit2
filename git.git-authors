@@ -25,9 +25,9 @@
 #   contributed code (possibly with some exceptions)
 # "no" means the author does not consent
 # "ask" means that the contributor wants to give/withhold
-#   his/her consent on a patch-by-patch basis.
+#   their consent on a patch-by-patch basis.
 # "???" means the person is a prominent contributor who has
-#   not yet made his/her standpoint clear.
+#   not yet made their standpoint clear.
 #
 # Please try to keep the list alphabetically ordered. It will
 # help in case we get all 600-ish git.git authors on it.

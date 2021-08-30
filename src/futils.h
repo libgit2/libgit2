@@ -257,7 +257,7 @@ extern int git_futils_truncate(const char *path, int mode);
  */
 extern int git_futils_filesize(uint64_t *out, git_file fd);
 
-#define GIT_PERMS_IS_EXEC(MODE)		(((MODE) & 0111) != 0)
+#define GIT_PERMS_IS_EXEC(MODE)		(((MODE) & 0100) != 0)
 #define GIT_PERMS_CANONICAL(MODE)	(GIT_PERMS_IS_EXEC(MODE) ? 0755 : 0644)
 #define GIT_PERMS_FOR_WRITE(MODE)   (GIT_PERMS_IS_EXEC(MODE) ? 0777 : 0666)
 
@@ -316,11 +316,11 @@ extern void git_futils_mmap_free(git_map *map);
 /**
  * Create a "fake" symlink (text file containing the target path).
  *
- * @param new symlink file to be created
- * @param old original symlink target
+ * @param target original symlink target
+ * @param path symlink file to be created
  * @return 0 on success, -1 on error
  */
-extern int git_futils_fake_symlink(const char *new, const char *old);
+extern int git_futils_fake_symlink(const char *target, const char *path);
 
 /**
  * A file stamp represents a snapshot of information about a file that can

@@ -36,7 +36,7 @@
 #endif
 
 #ifndef PRIuZ
-/* Define the printf format specifer to use for size_t output */
+/* Define the printf format specifier to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #	define PRIuZ "Iu"
 #else
@@ -59,6 +59,7 @@ extern int lg2_blame(git_repository *repo, int argc, char **argv);
 extern int lg2_cat_file(git_repository *repo, int argc, char **argv);
 extern int lg2_checkout(git_repository *repo, int argc, char **argv);
 extern int lg2_clone(git_repository *repo, int argc, char **argv);
+extern int lg2_commit(git_repository *repo, int argc, char **argv);
 extern int lg2_config(git_repository *repo, int argc, char **argv);
 extern int lg2_describe(git_repository *repo, int argc, char **argv);
 extern int lg2_diff(git_repository *repo, int argc, char **argv);
@@ -71,6 +72,7 @@ extern int lg2_log(git_repository *repo, int argc, char **argv);
 extern int lg2_ls_files(git_repository *repo, int argc, char **argv);
 extern int lg2_ls_remote(git_repository *repo, int argc, char **argv);
 extern int lg2_merge(git_repository *repo, int argc, char **argv);
+extern int lg2_push(git_repository *repo, int argc, char **argv);
 extern int lg2_remote(git_repository *repo, int argc, char **argv);
 extern int lg2_rev_list(git_repository *repo, int argc, char **argv);
 extern int lg2_rev_parse(git_repository *repo, int argc, char **argv);

@@ -23,28 +23,32 @@ extern struct git_trace_data git_trace__data;
 
 GIT_INLINE(void) git_trace__write_fmt(
 	git_trace_level_t level,
-	const char *fmt, ...)
+	const char *fmt,
+	va_list ap)
 {
 	git_trace_cb callback = git_trace__data.callback;
 	git_buf message = GIT_BUF_INIT;
-	va_list ap;
 
-	va_start(ap, fmt);
 	git_buf_vprintf(&message, fmt, ap);
-	va_end(ap);
 
 	callback(level, git_buf_cstr(&message));
 
 	git_buf_dispose(&message);
 }
 
-#define git_trace_level()		(git_trace__data.level)
-#define git_trace(l, ...)		{ \
-									if (git_trace__data.level >= l && \
-										git_trace__data.callback != NULL) { \
-										git_trace__write_fmt(l, __VA_ARGS__); \
-									} \
-								}
+#define git_trace_level()	(git_trace__data.level)
+
+GIT_INLINE(void) git_trace(git_trace_level_t level, const char *fmt, ...)
+{
+	if (git_trace__data.level >= level &&
+	    git_trace__data.callback != NULL) {
+		va_list ap;
+
+		va_start(ap, fmt);
+		git_trace__write_fmt(level, fmt, ap);
+		va_end(ap);
+	}
+}
 
 #else
 
@@ -56,8 +60,8 @@ GIT_INLINE(void) git_trace__null(
 	GIT_UNUSED(fmt);
 }
 
-#define git_trace_level()		((git_trace_level_t)0)
-#define git_trace			git_trace__null
+#define git_trace_level()	((git_trace_level_t)0)
+#define git_trace		git_trace__null
 
 #endif
 

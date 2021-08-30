@@ -14,7 +14,7 @@
 #include "posix.h"
 #include "buffer.h"
 #include "http_parser.h"
-#include "global.h"
+#include "runtime.h"
 
 #define DEFAULT_PORT_HTTP  "80"
 #define DEFAULT_PORT_HTTPS "443"
@@ -281,7 +281,8 @@ int git_net_url_apply_redirect(
 	git_net_url tmp = GIT_NET_URL_INIT;
 	int error = 0;
 
-	assert(url && redirect_location);
+	GIT_ASSERT(url);
+	GIT_ASSERT(redirect_location);
 
 	if (redirect_location[0] == '/') {
 		git__free(url->path);
@@ -334,9 +335,19 @@ bool git_net_url_valid(git_net_url *url)
 	return (url->host && url->port && url->path);
 }
 
-int git_net_url_is_default_port(git_net_url *url)
+bool git_net_url_is_default_port(git_net_url *url)
 {
-	return (strcmp(url->port, default_port_for_scheme(url->scheme)) == 0);
+	const char *default_port;
+
+	if ((default_port = default_port_for_scheme(url->scheme)) != NULL)
+		return (strcmp(url->port, default_port) == 0);
+	else
+		return false;
+}
+
+bool git_net_url_is_ipv6(git_net_url *url)
+{
+	return (strchr(url->host, ':') != NULL);
 }
 
 void git_net_url_swap(git_net_url *a, git_net_url *b)

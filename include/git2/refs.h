@@ -97,6 +97,9 @@ GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, co
  * of updating does not match the one passed through `current_value`
  * (i.e. if the ref has changed since the user read it).
  *
+ * If `current_value` is all zeros, this function will return GIT_EMODIFIED
+ * if the ref already exists.
+ *
  * @param out Pointer to the newly created reference
  * @param repo Repository where that reference will live
  * @param name The name of the reference
@@ -169,7 +172,7 @@ GIT_EXTERN(int) git_reference_symbolic_create(git_reference **out, git_repositor
  *
  * The message for the reflog will be ignored if the reference does
  * not belong in the standard set (HEAD, branches and remote-tracking
- * branches) and and it does not have a reflog.
+ * branches) and it does not have a reflog.
  *
  * @param out Pointer to the newly created reference
  * @param repo Repository where that reference will live
@@ -206,7 +209,7 @@ GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, 
  *
  * The message for the reflog will be ignored if the reference does
  * not belong in the standard set (HEAD, branches and remote-tracking
- * branches) and and it does not have a reflog.
+ * branches) and it does not have a reflog.
  *
  * It will return GIT_EMODIFIED if the reference's value at the time
  * of updating does not match the one passed through `current_id`
@@ -318,7 +321,7 @@ GIT_EXTERN(git_repository *) git_reference_owner(const git_reference *ref);
  *
  * The message for the reflog will be ignored if the reference does
  * not belong in the standard set (HEAD, branches and remote-tracking
- * branches) and and it does not have a reflog.
+ * branches) and it does not have a reflog.
  *
  * @param out Pointer to the newly created reference
  * @param ref The reference
@@ -743,10 +746,11 @@ GIT_EXTERN(int) git_reference_peel(
  *    the characters '~', '^', ':', '\\', '?', '[', and '*', and the
  *    sequences ".." and "@{" which have special meaning to revparse.
  *
+ * @param valid output pointer to set with validity of given reference name
  * @param refname name to be checked.
- * @return 1 if the reference name is acceptable; 0 if it isn't
+ * @return 0 on success or an error code
  */
-GIT_EXTERN(int) git_reference_is_valid_name(const char *refname);
+GIT_EXTERN(int) git_reference_name_is_valid(int *valid, const char *refname);
 
 /**
  * Get the reference's short name

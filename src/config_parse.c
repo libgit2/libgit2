@@ -7,8 +7,6 @@
 
 #include "config_parse.h"
 
-#include "buf_text.h"
-
 #include <ctype.h>
 
 const char *git_config_escapes = "ntb\"\\";
@@ -187,7 +185,7 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 
 	/* Make sure we were given a section header */
 	c = line[pos++];
-	assert(c == '[');
+	GIT_ASSERT(c == '[');
 
 	c = line[pos++];
 
@@ -230,10 +228,10 @@ fail_parse:
 static int skip_bom(git_parse_ctx *parser)
 {
 	git_buf buf = GIT_BUF_INIT_CONST(parser->content, parser->content_len);
-	git_bom_t bom;
-	int bom_offset = git_buf_text_detect_bom(&bom, &buf);
+	git_buf_bom_t bom;
+	int bom_offset = git_buf_detect_bom(&bom, &buf);
 
-	if (bom == GIT_BOM_UTF8)
+	if (bom == GIT_BUF_BOM_UTF8)
 		git_parse_advance_chars(parser, bom_offset);
 
 	/* TODO: reference implementation is pretty stupid with BoM */
@@ -451,7 +449,7 @@ static int parse_variable(git_config_parser *reader, char **var_name, char **var
 			git_buf_attach(&multi_value, value, 0);
 			value = NULL;
 
-			if (parse_multiline_variable(reader, &multi_value, quote_count) < 0 ||
+			if (parse_multiline_variable(reader, &multi_value, quote_count % 2) < 0 ||
 			    git_buf_oom(&multi_value)) {
 				error = -1;
 				git_buf_dispose(&multi_value);

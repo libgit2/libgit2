@@ -18,6 +18,7 @@
 #include "describe.h"
 #include "diff.h"
 #include "errors.h"
+#include "filter.h"
 #include "index.h"
 #include "indexer.h"
 #include "merge.h"
@@ -29,6 +30,7 @@
 #include "trace.h"
 #include "repository.h"
 #include "revert.h"
+#include "revparse.h"
 #include "stash.h"
 #include "status.h"
 #include "submodule.h"
@@ -40,6 +42,13 @@
  * Users can avoid deprecated functions by defining `GIT_DEPRECATE_HARD`.
  */
 #ifndef GIT_DEPRECATE_HARD
+
+/*
+ * The credential structures are now opaque by default, and their
+ * definition has moved into the `sys/credential.h` header; include
+ * them here for backward compatibility.
+ */
+#include "sys/credential.h"
 
 /**
  * @file git2/deprecated.h
@@ -73,15 +82,18 @@ typedef git_attr_value_t git_attr_t;
 
 /**@}*/
 
-/** @name Deprecated Blob Functions
+/** @name Deprecated Blob Functions and Constants
  *
- * These functions are retained for backward compatibility.  The newer
- * versions of these functions should be preferred in all new code.
+ * These functions and enumeration values are retained for backward
+ * compatibility.  The newer versions of these functions and values
+ * should be preferred in all new code.
  *
  * There is no plan to remove these backward compatibility values at
  * this time.
  */
 /**@{*/
+
+#define GIT_BLOB_FILTER_ATTTRIBUTES_FROM_HEAD GIT_BLOB_FILTER_ATTRIBUTES_FROM_HEAD
 
 GIT_EXTERN(int) git_blob_create_fromworkdir(git_oid *id, git_repository *repo, const char *relative_path);
 GIT_EXTERN(int) git_blob_create_fromdisk(git_oid *id, git_repository *repo, const char *path);
@@ -95,12 +107,76 @@ GIT_EXTERN(int) git_blob_create_fromstream_commit(
 GIT_EXTERN(int) git_blob_create_frombuffer(
 	git_oid *id, git_repository *repo, const void *buffer, size_t len);
 
-/** Deprecated in favor of @see git_blob_filter */
+/** Deprecated in favor of `git_blob_filter`.
+ *
+ * @deprecated Use git_blob_filter
+ * @see git_blob_filter
+ */
 GIT_EXTERN(int) git_blob_filtered_content(
 	git_buf *out,
 	git_blob *blob,
 	const char *as_path,
 	int check_for_binary_data);
+
+/**@}*/
+
+/** @name Deprecated Filter Functions
+ *
+ * These functions are retained for backward compatibility.  The
+ * newer versions of these functions should be preferred in all
+ * new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/** Deprecated in favor of `git_filter_list_stream_buffer`.
+ *
+ * @deprecated Use git_filter_list_stream_buffer
+ * @see Use git_filter_list_stream_buffer
+ */
+GIT_EXTERN(int) git_filter_list_stream_data(
+	git_filter_list *filters,
+	git_buf *data,
+	git_writestream *target);
+
+/** Deprecated in favor of `git_filter_list_apply_to_buffer`.
+ *
+ * @deprecated Use git_filter_list_apply_to_buffer
+ * @see Use git_filter_list_apply_to_buffer
+ */
+GIT_EXTERN(int) git_filter_list_apply_to_data(
+	git_buf *out,
+	git_filter_list *filters,
+	git_buf *in);
+
+/**@}*/
+
+/** @name Deprecated Tree Functions
+ *
+ * These functions are retained for backward compatibility.  The
+ * newer versions of these functions and values should be preferred
+ * in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Write the contents of the tree builder as a tree object.
+ * This is an alias of `git_treebuilder_write` and is preserved
+ * for backward compatibility.
+ *
+ * This function is deprecated, but there is no plan to remove this
+ * function at this time.
+ *
+ * @deprecated Use git_treebuilder_write
+ * @see git_treebuilder_write
+ */
+GIT_EXTERN(int) git_treebuilder_write_with_buffer(
+	git_oid *oid, git_treebuilder *bld, git_buf *tree);
 
 /**@}*/
 
@@ -226,7 +302,7 @@ GIT_EXTERN(void) giterr_clear(void);
 GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
 
 /**
- * Indicates that an out-of-memory situation occured.  This is an alias
+ * Indicates that an out-of-memory situation occurred.  This is an alias
  * of `git_error_set_oom` and is preserved for backward compatibility.
  *
  * This function is deprecated, but there is no plan to remove this
@@ -329,10 +405,32 @@ GIT_EXTERN(size_t) git_object__size(git_object_t type);
 
 /**@}*/
 
-/** @name Deprecated Reference Constants
+/** @name Deprecated Remote Functions
  *
- * These enumeration values are retained for backward compatibility.  The
- * newer versions of these values should be preferred in all new code.
+ * These functions are retained for backward compatibility.  The newer
+ * versions of these functions should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility functions at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Ensure the remote name is well-formed.
+ *
+ * @deprecated Use git_remote_name_is_valid
+ * @param remote_name name to be checked.
+ * @return 1 if the reference name is acceptable; 0 if it isn't
+ */
+GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
+
+/**@}*/
+
+/** @name Deprecated Reference Functions and Constants
+ *
+ * These functions and enumeration values are retained for backward
+ * compatibility.  The newer versions of these values should be
+ * preferred in all new code.
  *
  * There is no plan to remove these backward compatibility values at
  * this time.
@@ -353,11 +451,47 @@ GIT_EXTERN(size_t) git_object__size(git_object_t type);
 #define GIT_REF_FORMAT_REFSPEC_PATTERN GIT_REFERENCE_FORMAT_REFSPEC_PATTERN
 #define GIT_REF_FORMAT_REFSPEC_SHORTHAND GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND
 
+/**
+ * Ensure the reference name is well-formed.
+ *
+ * Valid reference names must follow one of two patterns:
+ *
+ * 1. Top-level names must contain only capital letters and underscores,
+ *    and must begin and end with a letter. (e.g. "HEAD", "ORIG_HEAD").
+ * 2. Names prefixed with "refs/" can be almost anything.  You must avoid
+ *    the characters '~', '^', ':', '\\', '?', '[', and '*', and the
+ *    sequences ".." and "@{" which have special meaning to revparse.
+ *
+ * @deprecated Use git_reference_name_is_valid
+ * @param refname name to be checked.
+ * @return 1 if the reference name is acceptable; 0 if it isn't
+ */
+GIT_EXTERN(int) git_reference_is_valid_name(const char *refname);
+
 GIT_EXTERN(int) git_tag_create_frombuffer(
 	git_oid *oid,
 	git_repository *repo,
 	const char *buffer,
 	int force);
+
+/**@}*/
+
+/** @name Deprecated Revspec Constants
+ *
+ * These enumeration values are retained for backward compatibility.
+ * The newer versions of these values should be preferred in all new
+ * code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+typedef git_revspec_t git_revparse_mode_t;
+
+#define GIT_REVPARSE_SINGLE GIT_REVSPEC_SINGLE
+#define GIT_REVPARSE_RANGE GIT_REVSPEC_RANGE
+#define GIT_REVPARSE_MERGE_BASE GIT_REVSPEC_MERGE_BASE
 
 /**@}*/
 
@@ -369,6 +503,7 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
  * There is no plan to remove these backward compatibility values at
  * this time.
  */
+/**@{*/
 
 typedef git_credential git_cred;
 typedef git_credential_userpass_plaintext git_cred_userpass_plaintext;
@@ -514,6 +649,42 @@ typedef git_push_transfer_progress_cb git_push_transfer_progress;
  * Callback for listing the remote heads
  */
 typedef int GIT_CALLBACK(git_headlist_cb)(git_remote_head *rhead, void *payload);
+
+/**@}*/
+
+/** @name Deprecated String Array Functions
+ *
+ * These types are retained for backward compatibility.  The newer
+ * versions of these values should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Copy a string array object from source to target.
+ *
+ * This function is deprecated, but there is no plan to remove this
+ * function at this time.
+ *
+ * @param tgt target
+ * @param src source
+ * @return 0 on success, < 0 on allocation failure
+ */
+GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
+
+/**
+ * Free the memory referred to by the git_strarray.  This is an alias of
+ * `git_strarray_dispose` and is preserved for backward compatibility.
+ *
+ * This function is deprecated, but there is no plan to remove this
+ * function at this time.
+ *
+ * @deprecated Use git_strarray_dispose
+ * @see git_strarray_dispose
+ */
+GIT_EXTERN(void) git_strarray_free(git_strarray *array);
 
 /**@}*/
 

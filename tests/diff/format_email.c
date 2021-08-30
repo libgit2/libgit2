@@ -487,7 +487,7 @@ void test_diff_format_email__binary(void)
 	"Subject: [PATCH] Modified binary file\n" \
 	"\n" \
 	"---\n" \
-	" binary.bin | Bin 3 -> 0 bytes\n" \
+	" binary.bin | Bin 3 -> 5 bytes\n" \
 	" 1 file changed, 0 insertions(+), 0 deletions(-)\n" \
 	"\n" \
 	"diff --git a/binary.bin b/binary.bin\n" \
@@ -496,7 +496,6 @@ void test_diff_format_email__binary(void)
 	"--\n" \
 	"libgit2 " LIBGIT2_VERSION "\n" \
 	"\n";
-	/* TODO: Actually 0 bytes here should be 5!. Seems like we don't load the new content for binary files? */
 
 	opts.summary = "Modified binary file";
 

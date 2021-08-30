@@ -365,11 +365,14 @@ static void trim_common_tail(mmfile_t *a, mmfile_t *b, long ctx)
 	b->size -= trimmed - recovered;
 }
 
-static int diff_hunks(mmfile_t file_a, mmfile_t file_b, void *cb_data)
+static int diff_hunks(mmfile_t file_a, mmfile_t file_b, void *cb_data, git_blame_options *options)
 {
-	xpparam_t xpp = {0};
 	xdemitconf_t xecfg = {0};
 	xdemitcb_t ecb = {0};
+	xpparam_t xpp = {0};
+
+	if (options->flags & GIT_BLAME_IGNORE_WHITESPACE)
+		xpp.flags |= XDF_IGNORE_WHITESPACE;
 
 	xecfg.hunk_func = my_emit;
 	ecb.priv = cb_data;
@@ -409,7 +412,7 @@ static int pass_blame_to_parent(
 	fill_origin_blob(parent, &file_p);
 	fill_origin_blob(target, &file_o);
 
-	if (diff_hunks(file_p, file_o, &d) < 0)
+	if (diff_hunks(file_p, file_o, &d, &blame->options) < 0)
 		return -1;
 
 	/* The reset (i.e. anything after tlno) are the same as the parent */

@@ -13,7 +13,6 @@
 #include "diff.h"
 #include "strmap.h"
 #include "map.h"
-#include "buf_text.h"
 #include "config.h"
 #include "regexp.h"
 #include "repository.h"
@@ -142,18 +141,23 @@ static int diff_driver_funcname(const git_config_entry *entry, void *payload)
 static git_diff_driver_registry *git_repository_driver_registry(
 	git_repository *repo)
 {
-	if (!repo->diff_drivers) {
-		git_diff_driver_registry *reg = git_diff_driver_registry_new();
-		reg = git__compare_and_swap(&repo->diff_drivers, NULL, reg);
+	git_diff_driver_registry *reg = git_atomic_load(repo->diff_drivers), *newreg;
+	if (reg)
+		return reg;
 
-		if (reg != NULL) /* if we race, free losing allocation */
-			git_diff_driver_registry_free(reg);
-	}
-
-	if (!repo->diff_drivers)
+	newreg = git_diff_driver_registry_new();
+	if (!newreg) {
 		git_error_set(GIT_ERROR_REPOSITORY, "unable to create diff driver registry");
-
-	return repo->diff_drivers;
+		return newreg;
+	}
+	reg = git_atomic_compare_and_swap(&repo->diff_drivers, NULL, newreg);
+	if (!reg) {
+		reg = newreg;
+	} else {
+		/* if we race, free losing allocation */
+		git_diff_driver_registry_free(newreg);
+	}
+	return reg;
 }
 
 static int diff_driver_alloc(
@@ -358,7 +362,7 @@ int git_diff_driver_lookup(
 	int error = 0;
 	const char *values[1], *attrs[] = { "diff" };
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 	*out = NULL;
 
 	if (!repo || !path || !strlen(path))
@@ -390,13 +394,13 @@ int git_diff_driver_lookup(
 
 void git_diff_driver_free(git_diff_driver *driver)
 {
-	size_t i;
+	git_diff_driver_pattern *pat;
 
 	if (!driver)
 		return;
 
-	for (i = 0; i < git_array_size(driver->fn_patterns); ++i)
-		git_regexp_dispose(& git_array_get(driver->fn_patterns, i)->re);
+	while ((pat = git_array_pop(driver->fn_patterns)) != NULL)
+		git_regexp_dispose(&pat->re);
 	git_array_clear(driver->fn_patterns);
 
 	git_regexp_dispose(&driver->word_pattern);
@@ -428,8 +432,8 @@ int git_diff_driver_content_is_binary(
 	 * let's just use the simple NUL-byte detection that core git uses.
 	 */
 
-	/* previously was: if (git_buf_text_is_binary(&search)) */
-	if (git_buf_text_contains_nul(&search))
+	/* previously was: if (git_buf_is_binary(&search)) */
+	if (git_buf_contains_nul(&search))
 		return 1;
 
 	return 0;

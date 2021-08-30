@@ -49,9 +49,9 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	 * tree 2b297e643c551e76cfa1f93810c50811382f9117
 	 * author nulltoken <emeric.fermas@gmail.com> 1323847743 +0100
 	 * committer nulltoken <emeric.fermas@gmail.com> 1323847743 +0100
-	 * 
+	 *
 	 *     Initial commit
-	 * 
+	 *
 	 * diff --git a/test.txt b/test.txt
 	 * new file mode 100644
 	 * index 0000000..9daeafb
@@ -141,14 +141,14 @@ static void assert_commit_tree_has_n_entries(git_commit *c, int count)
 	git_tree_free(tree);
 }
 
-static void assert_commit_is_head_(git_commit *c, const char *file, int line)
+static void assert_commit_is_head_(git_commit *c, const char *file, const char *func, int line)
 {
 	git_commit *head;
 	cl_git_pass(git_revparse_single((git_object **)&head, repo, "HEAD"));
-	clar__assert(git_oid_equal(git_commit_id(c), git_commit_id(head)), file, line, "Commit is not the HEAD", NULL, 1);
+	clar__assert(git_oid_equal(git_commit_id(c), git_commit_id(head)), file, func, line, "Commit is not the HEAD", NULL, 1);
 	git_commit_free(head);
 }
-#define assert_commit_is_head(C) assert_commit_is_head_((C),__FILE__,__LINE__)
+#define assert_commit_is_head(C) assert_commit_is_head_((C),__FILE__,__func__,__LINE__)
 
 void test_object_commit_commitstagedfile__amend_commit(void)
 {

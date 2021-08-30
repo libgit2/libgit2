@@ -21,11 +21,6 @@
 # include <stdbool.h>
 #endif
 
-#ifdef __linux__
-# include <endian.h>
-# define htonll htobe64
-#endif
-
 #ifndef MIN
 # define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #endif

@@ -14,7 +14,6 @@
 #include "utf-conv.h"
 #include "repository.h"
 #include "reparse.h"
-#include "global.h"
 #include "buffer.h"
 #include <errno.h>
 #include <io.h>
@@ -447,8 +446,7 @@ int p_symlink(const char *target, const char *path)
 	 * relative symlinks, this is not someting we want.
 	 */
 	if (git_win32_path_from_utf8(path_w, path) < 0 ||
-	    git__utf8_to_16(target_w, MAX_PATH, target) < 0 ||
-	    git_win32_path_canonicalize(target_w) < 0)
+	    git_win32_path_relative_from_utf8(target_w, target) < 0)
 		return -1;
 
 	dwFlags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
@@ -544,6 +542,13 @@ int p_open(const char *path, int flags, ...)
 	git_win32_path wpath;
 	mode_t mode = 0;
 	struct open_opts opts = {0};
+
+	#ifdef GIT_DEBUG_STRICT_OPEN
+	if (strstr(path, "//") != NULL) {
+		errno = EACCES;
+		return -1;
+	}
+	#endif
 
 	if (git_win32_path_from_utf8(wpath, path) < 0)
 		return -1;
@@ -981,5 +986,75 @@ int p_inet_pton(int af, const char *src, void *dst)
 	}
 
 	errno = EINVAL;
+	return -1;
+}
+
+ssize_t p_pread(int fd, void *data, size_t size, off64_t offset)
+{
+	HANDLE fh;
+	DWORD rsize = 0;
+	OVERLAPPED ov = {0};
+	LARGE_INTEGER pos = {0};
+	off64_t final_offset = 0;
+
+	/* Fail if the final offset would have overflowed to match POSIX semantics. */
+	if (!git__is_ssizet(size) || git__add_int64_overflow(&final_offset, offset, (int64_t)size)) {
+		errno = EINVAL;
+		return -1;	
+	}
+
+	/*
+	 * Truncate large writes to the maximum allowable size: the caller
+	 * needs to always call this in a loop anyways.
+	 */
+	if (size > INT32_MAX) {
+		size = INT32_MAX;
+	}
+
+	pos.QuadPart = offset;
+	ov.Offset = pos.LowPart;
+	ov.OffsetHigh = pos.HighPart;
+	fh = (HANDLE)_get_osfhandle(fd);
+
+	if (ReadFile(fh, data, (DWORD)size, &rsize, &ov)) {
+		return (ssize_t)rsize;
+	}
+
+	set_errno();
+	return -1;
+}
+
+ssize_t p_pwrite(int fd, const void *data, size_t size, off64_t offset)
+{
+	HANDLE fh;
+	DWORD wsize = 0;
+	OVERLAPPED ov = {0};
+	LARGE_INTEGER pos = {0};
+	off64_t final_offset = 0;
+
+	/* Fail if the final offset would have overflowed to match POSIX semantics. */
+	if (!git__is_ssizet(size) || git__add_int64_overflow(&final_offset, offset, (int64_t)size)) {
+		errno = EINVAL;
+		return -1;	
+	}
+
+	/*
+	 * Truncate large writes to the maximum allowable size: the caller
+	 * needs to always call this in a loop anyways.
+	 */
+	if (size > INT32_MAX) {
+		size = INT32_MAX;
+	}
+
+	pos.QuadPart = offset;
+	ov.Offset = pos.LowPart;
+	ov.OffsetHigh = pos.HighPart;
+	fh = (HANDLE)_get_osfhandle(fd);
+
+	if (WriteFile(fh, data, (DWORD)size, &wsize, &ov)) {
+		return (ssize_t)wsize;
+	}
+
+	set_errno();
 	return -1;
 }

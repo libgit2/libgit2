@@ -178,6 +178,30 @@ void test_config_include__rewriting_include_refreshes_values(void)
 	cl_git_pass(p_unlink("second"));
 }
 
+void test_config_include__rewriting_include_twice_refreshes_values(void)
+{
+	cl_git_mkfile("top-level", "[include]\npath = included");
+	cl_git_mkfile("included", "[foo]\nbar = first-value");
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "top-level"));
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar"));
+
+	git_buf_clear(&buf);
+	cl_git_mkfile("included", "[foo]\nother = value2");
+	cl_git_fail(git_config_get_string_buf(&buf, cfg, "foo.bar"));
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.other"));
+	cl_assert_equal_s(buf.ptr, "value2");
+
+	git_buf_clear(&buf);
+	cl_git_mkfile("included", "[foo]\nanother = bar");
+	cl_git_fail(git_config_get_string_buf(&buf, cfg, "foo.other"));
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.another"));
+	cl_assert_equal_s(buf.ptr, "bar");
+
+	cl_git_pass(p_unlink("top-level"));
+	cl_git_pass(p_unlink("included"));
+}
+
 void test_config_include__included_variables_cannot_be_deleted(void)
 {
 	cl_git_mkfile("top-level", "[include]\npath = included\n");

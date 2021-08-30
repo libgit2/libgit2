@@ -253,6 +253,7 @@ GIT_EXTERN(int) git_remote_set_url(git_repository *repo, const char *remote, con
  * @param repo the repository in which to perform the change
  * @param remote the remote's name
  * @param url the url to set
+ * @return 0, or an error code
  */
 GIT_EXTERN(int) git_remote_set_pushurl(git_repository *repo, const char *remote, const char* url);
 
@@ -876,8 +877,10 @@ GIT_EXTERN(git_remote_autotag_option_t) git_remote_autotag(const git_remote *rem
  * @param repo the repository in which to make the change
  * @param remote the name of the remote
  * @param value the new value to take.
+ * @return 0, or an error code.
  */
 GIT_EXTERN(int) git_remote_set_autotag(git_repository *repo, const char *remote, git_remote_autotag_option_t value);
+
 /**
  * Retrieve the ref-prune setting
  *
@@ -915,10 +918,11 @@ GIT_EXTERN(int) git_remote_rename(
 /**
  * Ensure the remote name is well-formed.
  *
+ * @param valid output pointer to set with validity of given remote name
  * @param remote_name name to be checked.
- * @return 1 if the reference name is acceptable; 0 if it isn't
+ * @return 0 on success or an error code
  */
-GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
+int git_remote_name_is_valid(int *valid, const char *remote_name);
 
 /**
 * Delete an existing persisted remote.
@@ -943,7 +947,7 @@ GIT_EXTERN(int) git_remote_delete(git_repository *repo, const char *name);
  *
  * This function must only be called after connecting.
  *
- * @param out the buffern in which to store the reference name
+ * @param out the buffer in which to store the reference name
  * @param remote the remote
  * @return 0, GIT_ENOTFOUND if the remote does not have any references
  * or none of them point to HEAD's commit, or an error message.

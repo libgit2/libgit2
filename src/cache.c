@@ -9,7 +9,7 @@
 
 #include "repository.h"
 #include "commit.h"
-#include "thread-utils.h"
+#include "thread.h"
 #include "util.h"
 #include "odb.h"
 #include "object.h"
@@ -39,27 +39,6 @@ int git_cache_set_max_object_size(git_object_t type, size_t size)
 
 	git_cache__max_object_size[type] = size;
 	return 0;
-}
-
-void git_cache_dump_stats(git_cache *cache)
-{
-	git_cached_obj *object;
-
-	if (git_cache_size(cache) == 0)
-		return;
-
-	printf("Cache %p: %"PRIuZ" items cached, %"PRIdZ" bytes\n",
-		cache, git_cache_size(cache), cache->used_memory);
-
-	git_oidmap_foreach_value(cache->map, object, {
-		char oid_str[9];
-		printf(" %s%c %s (%"PRIuZ")\n",
-			git_object_type2string(object->type),
-			object->flags == GIT_CACHE_STORE_PARSED ? '*' : ' ',
-			git_oid_tostr(oid_str, sizeof(oid_str), &object->oid),
-			object->size
-		);
-	});
 }
 
 int git_cache_init(git_cache *cache)
@@ -189,7 +168,7 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 		return entry;
 
 	/* soften the load on the cache */
-	if (git_cache__current_storage.val > git_cache__max_storage)
+	if (git_atomic_ssize_get(&git_cache__current_storage) > git_cache__max_storage)
 		cache_evict_entries(cache);
 
 	/* not found */
@@ -208,10 +187,14 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 			entry = stored_entry;
 		} else if (stored_entry->flags == GIT_CACHE_STORE_RAW &&
 			   entry->flags == GIT_CACHE_STORE_PARSED) {
-			git_cached_obj_decref(stored_entry);
-			git_cached_obj_incref(entry);
-
-			git_oidmap_set(cache->map, &entry->oid, entry);
+			if (git_oidmap_set(cache->map, &entry->oid, entry) == 0) {
+				git_cached_obj_decref(stored_entry);
+				git_cached_obj_incref(entry);
+			} else {
+				git_cached_obj_decref(entry);
+				git_cached_obj_incref(stored_entry);
+				entry = stored_entry;
+			}
 		} else {
 			/* NO OP */
 		}
@@ -252,7 +235,7 @@ void git_cached_obj_decref(void *_obj)
 {
 	git_cached_obj *obj = _obj;
 
-	if (git_atomic_dec(&obj->refcount) == 0) {
+	if (git_atomic32_dec(&obj->refcount) == 0) {
 		switch (obj->flags) {
 		case GIT_CACHE_STORE_RAW:
 			git_odb_object__free(_obj);

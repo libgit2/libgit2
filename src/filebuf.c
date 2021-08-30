@@ -184,7 +184,7 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 
 		} while (zs->avail_out == 0);
 
-		assert(zs->avail_in == 0);
+		GIT_ASSERT(zs->avail_in == 0);
 
 		if (file->compute_digest)
 			git_hash_update(&file->digest, source, len);
@@ -278,10 +278,9 @@ int git_filebuf_open_withsize(git_filebuf *file, const char *path, int flags, mo
 	int compression, error = -1;
 	size_t path_len, alloc_len;
 
-	/* opening an already open buffer is a programming error;
-	 * assert that this never happens instead of returning
-	 * an error code */
-	assert(file && path && file->buffer == NULL);
+	GIT_ASSERT_ARG(file);
+	GIT_ASSERT_ARG(path);
+	GIT_ASSERT(file->buffer == NULL);
 
 	memset(file, 0x0, sizeof(git_filebuf));
 
@@ -389,7 +388,9 @@ cleanup:
 
 int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 {
-	assert(oid && file && file->compute_digest);
+	GIT_ASSERT_ARG(oid);
+	GIT_ASSERT_ARG(file);
+	GIT_ASSERT_ARG(file->compute_digest);
 
 	flush_buffer(file);
 
@@ -415,7 +416,8 @@ int git_filebuf_commit_at(git_filebuf *file, const char *path)
 int git_filebuf_commit(git_filebuf *file)
 {
 	/* temporary files cannot be committed */
-	assert(file && file->path_original);
+	GIT_ASSERT_ARG(file);
+	GIT_ASSERT(file->path_original);
 
 	file->flush_mode = Z_FINISH;
 	flush_buffer(file);

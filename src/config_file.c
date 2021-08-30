@@ -111,6 +111,15 @@ static int config_file_open(git_config_backend *cfg, git_config_level_t level, c
 	if (!git_path_exists(b->file.path))
 		return 0;
 
+	/*
+	 * git silently ignores configuration files that are not
+	 * readable.  We emulate that behavior.  This is particularly
+	 * important for sandboxed applications on macOS where the
+	 * git configuration files may not be readable.
+	 */
+	if (p_access(b->file.path, R_OK) < 0)
+		return GIT_ENOTFOUND;
+
 	if (res < 0 || (res = config_file_read(b->entries, repo, &b->file, level, 0)) < 0) {
 		git_config_entries_free(b->entries);
 		b->entries = NULL;
@@ -155,22 +164,26 @@ out:
 	return error;
 }
 
+static void config_file_clear_includes(config_file_backend* cfg)
+{
+	config_file *include;
+	uint32_t i;
+
+	git_array_foreach(cfg->file.includes, i, include)
+		config_file_clear(include);
+	git_array_clear(cfg->file.includes);
+}
+
 static int config_file_set_entries(git_config_backend *cfg, git_config_entries *entries)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
 	git_config_entries *old = NULL;
-	config_file *include;
 	int error;
-	uint32_t i;
 
 	if (b->parent.readonly) {
 		git_error_set(GIT_ERROR_CONFIG, "this backend is read-only");
 		return -1;
 	}
-
-	git_array_foreach(b->file.includes, i, include)
-		config_file_clear(include);
-	git_array_clear(b->file.includes);
 
 	if ((error = git_mutex_lock(&b->values_mutex)) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to lock config backend");
@@ -192,6 +205,8 @@ static int config_file_refresh_from_buffer(git_config_backend *cfg, const char *
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
 	git_config_entries *entries = NULL;
 	int error;
+
+	config_file_clear_includes(b);
 
 	if ((error = git_config_entries_new(&entries)) < 0 ||
 	    (error = config_file_read_buffer(entries, b->repo, &b->file,
@@ -219,6 +234,8 @@ static int config_file_refresh(git_config_backend *cfg)
 
 	if (!modified)
 		return 0;
+
+	config_file_clear_includes(b);
 
 	if ((error = git_config_entries_new(&entries)) < 0 ||
 	    (error = config_file_read(entries, b->repo, &b->file, b->level, 0)) < 0 ||
@@ -356,7 +373,7 @@ static int config_file_set_multivar(
 	int result;
 	char *key;
 
-	assert(regexp);
+	GIT_ASSERT_ARG(regexp);
 
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
@@ -522,7 +539,7 @@ static char *escape_value(const char *ptr)
 	size_t len;
 	const char *esc;
 
-	assert(ptr);
+	GIT_ASSERT_ARG_WITH_RETVAL(ptr, NULL);
 
 	len = strlen(ptr);
 	if (!len)

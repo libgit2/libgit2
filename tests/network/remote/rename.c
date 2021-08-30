@@ -25,7 +25,7 @@ void test_network_remote_rename__renaming_a_remote_moves_related_configuration_s
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "just/renamed"));
 	cl_assert_equal_i(0, problems.count);
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 
 	assert_config_entry_existence(_repo, "remote.test.fetch", false);
 	assert_config_entry_existence(_repo, "remote.just/renamed.fetch", true);
@@ -39,7 +39,7 @@ void test_network_remote_rename__renaming_a_remote_updates_branch_related_config
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "just/renamed"));
 	cl_assert_equal_i(0, problems.count);
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 
 	assert_config_entry_value(_repo, "branch.master.remote", "just/renamed");
 }
@@ -50,7 +50,7 @@ void test_network_remote_rename__renaming_a_remote_updates_default_fetchrefspec(
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "just/renamed"));
 	cl_assert_equal_i(0, problems.count);
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 
 	assert_config_entry_value(_repo, "remote.just/renamed.fetch", "+refs/heads/*:refs/remotes/just/renamed/*");
 }
@@ -71,7 +71,7 @@ void test_network_remote_rename__renaming_a_remote_without_a_fetchrefspec_doesnt
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "just/renamed"));
 	cl_assert_equal_i(0, problems.count);
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 
 	assert_config_entry_existence(_repo, "remote.just/renamed.fetch", false);
 }
@@ -90,11 +90,11 @@ void test_network_remote_rename__renaming_a_remote_notifies_of_non_default_fetch
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "just/renamed"));
 	cl_assert_equal_i(1, problems.count);
 	cl_assert_equal_s("+refs/*:refs/*", problems.strings[0]);
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 
 	assert_config_entry_value(_repo, "remote.just/renamed.fetch", "+refs/*:refs/*");
 
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 }
 
 void test_network_remote_rename__new_name_can_contain_dots(void)
@@ -103,7 +103,7 @@ void test_network_remote_rename__new_name_can_contain_dots(void)
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "just.renamed"));
 	cl_assert_equal_i(0, problems.count);
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 	assert_config_entry_existence(_repo, "remote.just.renamed.fetch", true);
 }
 
@@ -126,7 +126,7 @@ void test_network_remote_rename__renamed_name_is_persisted(void)
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "just/renamed"));
 	cl_assert_equal_i(0, problems.count);
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 
 	cl_git_pass(git_repository_open(&another_repo, "testrepo.git"));
 	cl_git_pass(git_remote_lookup(&renamed, _repo, "just/renamed"));
@@ -154,7 +154,7 @@ void test_network_remote_rename__renaming_a_remote_moves_the_underlying_referenc
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "just/renamed"));
 	cl_assert_equal_i(0, problems.count);
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 
 	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&underlying, _repo, "refs/remotes/test/master"));
 	cl_git_pass(git_reference_lookup(&underlying, _repo, "refs/remotes/just/renamed/master"));
@@ -176,7 +176,7 @@ void test_network_remote_rename__overwrite_ref_in_target(void)
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "renamed"));
 	cl_assert_equal_i(0, problems.count);
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 
 	/* make sure there's only one remote-tracking branch */
 	cl_git_pass(git_branch_iterator_new(&iter, _repo, GIT_BRANCH_REMOTE));
@@ -214,7 +214,7 @@ void test_network_remote_rename__symref_head(void)
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "renamed"));
 	cl_assert_equal_i(0, problems.count);
-	git_strarray_free(&problems);
+	git_strarray_dispose(&problems);
 
 	cl_git_pass(git_vector_init(&refs, 2, (git_vector_cmp) git_reference_cmp));
 	cl_git_pass(git_branch_iterator_new(&iter, _repo, GIT_BRANCH_REMOTE));

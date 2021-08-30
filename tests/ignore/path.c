@@ -17,19 +17,20 @@ void test_ignore_path__cleanup(void)
 }
 
 static void assert_is_ignored_(
-	bool expected, const char *filepath, const char *file, int line)
+	bool expected, const char *filepath,
+	const char *file, const char *func, int line)
 {
 	int is_ignored = 0;
 
 	cl_git_expect(
-		git_ignore_path_is_ignored(&is_ignored, g_repo, filepath), 0, file, line);
+		git_ignore_path_is_ignored(&is_ignored, g_repo, filepath), 0, file, func, line);
 
 	clar__assert_equal(
-		file, line, "expected != is_ignored", 1, "%d",
+		file, func, line, "expected != is_ignored", 1, "%d",
 		(int)(expected != 0), (int)(is_ignored != 0));
 }
 #define assert_is_ignored(expected, filepath) \
-	assert_is_ignored_(expected, filepath, __FILE__, __LINE__)
+	assert_is_ignored_(expected, filepath, __FILE__, __func__, __LINE__)
 
 void test_ignore_path__honor_temporary_rules(void)
 {
@@ -255,7 +256,7 @@ void test_ignore_path__globs_without_star(void)
 void test_ignore_path__skip_gitignore_directory(void)
 {
 	cl_git_rewritefile("attr/.git/info/exclude", "/NewFolder\n/NewFolder/NewFolder");
-	p_unlink("attr/.gitignore");
+	cl_must_pass(p_unlink("attr/.gitignore"));
 	cl_assert(!git_path_exists("attr/.gitignore"));
 	p_mkdir("attr/.gitignore", 0777);
 	cl_git_mkfile("attr/.gitignore/garbage.txt", "new_file\n");
@@ -268,12 +269,11 @@ void test_ignore_path__skip_gitignore_directory(void)
 
 void test_ignore_path__subdirectory_gitignore(void)
 {
-	p_unlink("attr/.gitignore");
+	cl_must_pass(p_unlink("attr/.gitignore"));
 	cl_assert(!git_path_exists("attr/.gitignore"));
 	cl_git_mkfile(
 		"attr/.gitignore",
 		"file1\n");
-	p_mkdir("attr/dir", 0777);
 	cl_git_mkfile(
 		"attr/dir/.gitignore",
 		"file2/\n");
@@ -574,4 +574,12 @@ void test_ignore_path__negative_prefix_rule(void)
 	assert_is_ignored(true, "fff");
 	assert_is_ignored(true, "ff");
 	assert_is_ignored(false, "f");
+}
+
+void test_ignore_path__negative_more_specific(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "*.txt\n!/dir/test.txt\n");
+	assert_is_ignored(true, "test.txt");
+	assert_is_ignored(false, "dir/test.txt");
+	assert_is_ignored(true, "outer/dir/test.txt");
 }

@@ -183,7 +183,9 @@ static int default_socket_stream_new(
 {
 	git_socket_stream *st;
 
-	assert(out && host && port);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(host);
+	GIT_ASSERT_ARG(port);
 
 	st = git__calloc(1, sizeof(git_socket_stream));
 	GIT_ERROR_CHECK_ALLOC(st);
@@ -217,7 +219,9 @@ int git_socket_stream_new(
 	git_stream_registration custom = {0};
 	int error;
 
-	assert(out && host && port);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(host);
+	GIT_ASSERT_ARG(port);
 
 	if ((error = git_stream_registry_lookup(&custom, GIT_STREAM_STANDARD)) == 0)
 		init = custom.init;

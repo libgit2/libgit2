@@ -198,7 +198,7 @@ static int parse_header_git_index(
 		return -1;
 
 	if (git_parse_peek(&c, &ctx->parse_ctx, 0) == 0 && c == ' ') {
-		uint16_t mode;
+		uint16_t mode = 0;
 
 		git_parse_advance_chars(&ctx->parse_ctx, 1);
 
@@ -407,10 +407,12 @@ static const parse_header_transition transitions[] = {
 
 	{ "--- "                , STATE_DIFF,       STATE_PATH,       parse_header_git_oldpath },
 	{ "--- "                , STATE_INDEX,      STATE_PATH,       parse_header_git_oldpath },
+	{ "--- "                , STATE_FILEMODE,   STATE_PATH,       parse_header_git_oldpath },
 	{ "+++ "                , STATE_PATH,       STATE_END,        parse_header_git_newpath },
 	{ "GIT binary patch"    , STATE_INDEX,      STATE_END,        NULL },
 	{ "Binary files "       , STATE_INDEX,      STATE_END,        NULL },
 
+	{ "similarity index "   , STATE_END,        STATE_SIMILARITY, parse_header_similarity },
 	{ "similarity index "   , STATE_DIFF,       STATE_SIMILARITY, parse_header_similarity },
 	{ "dissimilarity index ", STATE_DIFF,       STATE_SIMILARITY, parse_header_dissimilarity },
 	{ "rename from "        , STATE_SIMILARITY, STATE_RENAME,     parse_header_renamefrom },
@@ -940,7 +942,7 @@ static int parse_patch_body(
 		return parse_patch_hunks(patch, ctx);
 }
 
-int check_header_names(
+static int check_header_names(
 	const char *one,
 	const char *two,
 	const char *old_or_new,
@@ -1166,7 +1168,8 @@ int git_patch_parse(
 	size_t start, used;
 	int error = 0;
 
-	assert(out && ctx);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(ctx);
 
 	*out = NULL;
 

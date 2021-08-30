@@ -2,7 +2,7 @@
 #include <sys/syslimits.h>
 #endif
 
-static char _clar_path[4096];
+static char _clar_path[4096 + 1];
 
 static int
 is_valid_tmp_path(const char *path)
@@ -39,7 +39,8 @@ find_tmp_path(char *buffer, size_t length)
 			if (length >= PATH_MAX && realpath(env, buffer) != NULL)
 				return 0;
 #endif
-			strncpy(buffer, env, length);
+			strncpy(buffer, env, length - 1);
+			buffer[length - 1] = '\0';
 			return 0;
 		}
 	}
@@ -50,7 +51,8 @@ find_tmp_path(char *buffer, size_t length)
 		if (length >= PATH_MAX && realpath("/tmp", buffer) != NULL)
 			return 0;
 #endif
-		strncpy(buffer, "/tmp", length);
+		strncpy(buffer, "/tmp", length - 1);
+		buffer[length - 1] = '\0';
 		return 0;
 	}
 
@@ -65,7 +67,8 @@ find_tmp_path(char *buffer, size_t length)
 
 	/* This system doesn't like us, try to use the current directory */
 	if (is_valid_tmp_path(".")) {
-		strncpy(buffer, ".", length);
+		strncpy(buffer, ".", length - 1);
+		buffer[length - 1] = '\0';
 		return 0;
 	}
 

@@ -128,7 +128,7 @@ static int diff_delta__from_one(
 	git_diff_delta *delta;
 	const char *matched_pathspec;
 
-	assert((oitem != NULL) ^ (nitem != NULL));
+	GIT_ASSERT_ARG((oitem != NULL) ^ (nitem != NULL));
 
 	if (oitem) {
 		entry = oitem;
@@ -160,7 +160,7 @@ static int diff_delta__from_one(
 	GIT_ERROR_CHECK_ALLOC(delta);
 
 	/* This fn is just for single-sided diffs */
-	assert(status != GIT_DELTA_MODIFIED);
+	GIT_ASSERT(status != GIT_DELTA_MODIFIED);
 	delta->nfiles = 1;
 
 	if (has_old) {
@@ -301,14 +301,14 @@ GIT_INLINE(const char *) diff_delta__i2w_path(const git_diff_delta *delta)
 		delta->old_file.path : delta->new_file.path;
 }
 
-int git_diff_delta__i2w_cmp(const void *a, const void *b)
+static int diff_delta_i2w_cmp(const void *a, const void *b)
 {
 	const git_diff_delta *da = a, *db = b;
 	int val = strcmp(diff_delta__i2w_path(da), diff_delta__i2w_path(db));
 	return val ? val : ((int)da->status - (int)db->status);
 }
 
-int git_diff_delta__i2w_casecmp(const void *a, const void *b)
+static int diff_delta_i2w_casecmp(const void *a, const void *b)
 {
 	const git_diff_delta *da = a, *db = b;
 	int val = strcasecmp(diff_delta__i2w_path(da), diff_delta__i2w_path(db));
@@ -361,7 +361,7 @@ static const char *diff_mnemonic_prefix(
 	return pfx;
 }
 
-void git_diff__set_ignore_case(git_diff *diff, bool ignore_case)
+static void diff_set_ignore_case(git_diff *diff, bool ignore_case)
 {
 	if (!ignore_case) {
 		diff->opts.flags &= ~GIT_DIFF_IGNORE_CASE;
@@ -408,7 +408,9 @@ static git_diff_generated *diff_generated_alloc(
 	git_diff_generated *diff;
 	git_diff_options dflt = GIT_DIFF_OPTIONS_INIT;
 
-	assert(repo && old_iter && new_iter);
+	GIT_ASSERT_ARG_WITH_RETVAL(repo, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(old_iter, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(new_iter, NULL);
 
 	if ((diff = git__calloc(1, sizeof(git_diff_generated))) == NULL)
 		return NULL;
@@ -423,16 +425,15 @@ static git_diff_generated *diff_generated_alloc(
 	git_attr_session__init(&diff->base.attrsession, repo);
 	memcpy(&diff->base.opts, &dflt, sizeof(git_diff_options));
 
-	git_pool_init(&diff->base.pool, 1);
-
-	if (git_vector_init(&diff->base.deltas, 0, git_diff_delta__cmp) < 0) {
+	if (git_pool_init(&diff->base.pool, 1) < 0 ||
+	    git_vector_init(&diff->base.deltas, 0, git_diff_delta__cmp) < 0) {
 		git_diff_free(&diff->base);
 		return NULL;
 	}
 
 	/* Use case-insensitive compare if either iterator has
 	 * the ignore_case bit set */
-	git_diff__set_ignore_case(
+	diff_set_ignore_case(
 		&diff->base,
 		git_iterator_ignore_case(old_iter) ||
 		git_iterator_ignore_case(new_iter));
@@ -590,13 +591,12 @@ int git_diff__oid_for_entry(
 	git_filter_list *fl = NULL;
 	int error = 0;
 
-	assert(d->type == GIT_DIFF_TYPE_GENERATED);
+	GIT_ASSERT(d->type == GIT_DIFF_TYPE_GENERATED);
 	diff = (git_diff_generated *)d;
 
 	memset(out, 0, sizeof(*out));
 
-	if (git_buf_joinpath(&full_path,
-		git_repository_workdir(diff->base.repo), entry.path) < 0)
+	if (git_repository_workdir_path(&full_path, diff->base.repo, entry.path) < 0)
 		return -1;
 
 	if (!mode) {
@@ -679,6 +679,8 @@ typedef struct {
 	git_iterator *new_iter;
 	const git_index_entry *oitem;
 	const git_index_entry *nitem;
+	git_strmap *submodule_cache;
+	bool submodule_cache_initialized;
 } diff_in_progress;
 
 #define MODE_BITS_MASK 0000777
@@ -693,6 +695,7 @@ static int maybe_modified_submodule(
 	git_submodule *sub;
 	unsigned int sm_status = 0;
 	git_submodule_ignore_t ign = diff->base.opts.ignore_submodules;
+	git_strmap *submodule_cache = NULL;
 
 	*status = GIT_DELTA_UNMODIFIED;
 
@@ -700,8 +703,23 @@ static int maybe_modified_submodule(
 		ign == GIT_SUBMODULE_IGNORE_ALL)
 		return 0;
 
-	if ((error = git_submodule_lookup(
-			&sub, diff->base.repo, info->nitem->path)) < 0) {
+	if (diff->base.repo->submodule_cache != NULL) {
+		submodule_cache = diff->base.repo->submodule_cache;
+	} else {
+		if (!info->submodule_cache_initialized) {
+			info->submodule_cache_initialized = true;
+			/*
+			 * Try to cache the submodule information to avoid having to parse it for
+			 * every submodule. It is okay if it fails, the cache will still be NULL
+			 * and the submodules will be attempted to be looked up individually.
+			 */
+			git_submodule_cache_init(&info->submodule_cache, diff->base.repo);
+		}
+		submodule_cache = info->submodule_cache;
+	}
+
+	if ((error = git_submodule__lookup_with_cache(
+			&sub, diff->base.repo, info->nitem->path, submodule_cache)) < 0) {
 
 		/* GIT_EEXISTS means dir with .git in it was found - ignore it */
 		if (error == GIT_EEXISTS) {
@@ -1191,7 +1209,7 @@ int git_diff__from_iterators(
 	const git_diff_options *opts)
 {
 	git_diff_generated *diff;
-	diff_in_progress info;
+	diff_in_progress info = {0};
 	int error = 0;
 
 	*out = NULL;
@@ -1205,8 +1223,9 @@ int git_diff__from_iterators(
 
 	/* make iterators have matching icase behavior */
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE)) {
-		git_iterator_set_ignore_case(old_iter, true);
-		git_iterator_set_ignore_case(new_iter, true);
+		if ((error = git_iterator_set_ignore_case(old_iter, true)) < 0 ||
+		    (error = git_iterator_set_ignore_case(new_iter, true)) < 0)
+			goto cleanup;
 	}
 
 	/* finish initialization */
@@ -1258,6 +1277,8 @@ cleanup:
 		*out = &diff->base;
 	else
 		git_diff_free(&diff->base);
+	if (info.submodule_cache)
+		git_submodule_cache_free(info.submodule_cache);
 
 	return error;
 }
@@ -1303,7 +1324,8 @@ int git_diff_tree_to_tree(
 	char *prefix = NULL;
 	int error = 0;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
@@ -1359,7 +1381,8 @@ int git_diff_tree_to_index(
 	bool index_ignore_case = false;
 	int error = 0;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
@@ -1376,7 +1399,7 @@ int git_diff_tree_to_index(
 
 	/* if index is in case-insensitive order, re-sort deltas to match */
 	if (index_ignore_case)
-		git_diff__set_ignore_case(diff, true);
+		diff_set_ignore_case(diff, true);
 
 	*out = diff;
 	diff = NULL;
@@ -1402,7 +1425,8 @@ int git_diff_index_to_workdir(
 	char *prefix = NULL;
 	int error = 0;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
@@ -1445,7 +1469,8 @@ int git_diff_tree_to_workdir(
 	git_index *index;
 	int error;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
@@ -1478,7 +1503,8 @@ int git_diff_tree_to_workdir_with_index(
 	git_index *index = NULL;
 	int error = 0;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
@@ -1514,7 +1540,9 @@ int git_diff_index_to_index(
 	char *prefix = NULL;
 	int error;
 
-	assert(out && old_index && new_index);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(old_index);
+	GIT_ASSERT_ARG(new_index);
 
 	*out = NULL;
 
@@ -1527,7 +1555,7 @@ int git_diff_index_to_index(
 
 	/* if index is in case-insensitive order, re-sort deltas to match */
 	if (old_index->ignore_case || new_index->ignore_case)
-		git_diff__set_ignore_case(diff, true);
+		diff_set_ignore_case(diff, true);
 
 	*out = diff;
 	diff = NULL;
@@ -1584,10 +1612,10 @@ int git_diff__paired_foreach(
 	if (i2w_icase && !icase_mismatch) {
 		strcomp = git__strcasecmp;
 
-		git_vector_set_cmp(&idx2wd->deltas, git_diff_delta__i2w_casecmp);
+		git_vector_set_cmp(&idx2wd->deltas, diff_delta_i2w_casecmp);
 		git_vector_sort(&idx2wd->deltas);
 	} else if (idx2wd != NULL) {
-		git_vector_set_cmp(&idx2wd->deltas, git_diff_delta__i2w_cmp);
+		git_vector_set_cmp(&idx2wd->deltas, diff_delta_i2w_cmp);
 		git_vector_sort(&idx2wd->deltas);
 	}
 

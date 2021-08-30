@@ -110,6 +110,8 @@ int git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_backend *_back
 	if (git_packbuilder_new(&packbuilder, repo) < 0)
 		return -1;
 
+	git_packbuilder_set_threads(packbuilder, 0);
+
 	for (i = 0; i < db->commits.size; ++i) {
 		struct memobject *commit = db->commits.ptr[i];
 
@@ -154,7 +156,7 @@ int git_mempack_new(git_odb_backend **out)
 {
 	struct memory_packer_db *db;
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 
 	db = git__calloc(1, sizeof(struct memory_packer_db));
 	GIT_ERROR_CHECK_ALLOC(db);

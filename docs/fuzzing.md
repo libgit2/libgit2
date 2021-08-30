@@ -3,7 +3,7 @@
 libgit2 is currently using [libFuzzer](https://libfuzzer.info) to perform
 automated fuzz testing. libFuzzer only works with clang.
 
-## Prerequisites** for building fuzz targets:
+## Prerequisites for building fuzz targets:
 
 1. All the prerequisites for [building libgit2](https://github.com/libgit2/libgit2).
 2. A recent version of clang. 6.0 is preferred. [pre-build Debian/Ubuntu
@@ -27,14 +27,15 @@ automated fuzz testing. libFuzzer only works with clang.
 
 ## Run the fuzz targets
 
-1. `ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolize-6.0
+1. `ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolize
    LSAN_OPTIONS=allocator_may_return_null=1
-   ASAN_OPTIONS=allocator_may_return_null=1 ./build/fuzz/fuzz_packfile_raw
-   fuzz/corpora/fuzz_packfile_raw/`
+   ASAN_OPTIONS=allocator_may_return_null=1 ./build/fuzzers/packfile_fuzzer
+   fuzzers/corpora/packfile/`
 
 The `LSAN_OPTIONS` and `ASAN_OPTIONS` are there to allow `malloc(3)` to return
-`NULL`. The `LLVM_PROFILE_FILE` is there to override the path where libFuzzer
-will write the coverage report.
+`NULL`, which is expected if a huge chunk of memory is allocated. The
+`LLVM_PROFILE_FILE` environment string can also be added to override the path
+where libFuzzer will write the coverage report.
 
 ## Get coverage
 

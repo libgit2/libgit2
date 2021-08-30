@@ -566,8 +566,7 @@ void test_index_tests__cannot_add_invalid_filename(void)
 {
 	git_repository *repo;
 
-	p_mkdir("invalid", 0700);
-
+	cl_must_pass(p_mkdir("invalid", 0700));
 	cl_git_pass(git_repository_init(&repo, "./invalid", 0));
 	cl_must_pass(p_mkdir("./invalid/subdir", 0777));
 

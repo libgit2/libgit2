@@ -365,6 +365,18 @@ GIT_EXTERN(int) git_tag_peel(
  */
 GIT_EXTERN(int) git_tag_dup(git_tag **out, git_tag *source);
 
+/**
+ * Determine whether a tag name is valid, meaning that (when prefixed
+ * with `refs/tags/`) that it is a valid reference name, and that any
+ * additional tag name restrictions are imposed (eg, it cannot start
+ * with a `-`).
+ *
+ * @param valid output pointer to set with validity of given tag name
+ * @param name a tag name to test
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_tag_name_is_valid(int *valid, const char *name);
+
 /** @} */
 GIT_END_DECL
 #endif

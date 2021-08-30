@@ -30,5 +30,5 @@ void test_config_new__write_new_config(void)
 	git_buf_dispose(&buf);
 	git_config_free(config);
 
-	p_unlink(TEST_CONFIG);
+	cl_must_pass(p_unlink(TEST_CONFIG));
 }

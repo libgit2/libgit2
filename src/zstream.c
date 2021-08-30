@@ -156,7 +156,7 @@ int git_zstream_get_output(void *out, size_t *out_len, git_zstream *zstream)
 	}
 
 	/* either we finished the input or we did not flush the data */
-	assert(zstream->in_len > 0 || zstream->flush == Z_FINISH);
+	GIT_ASSERT(zstream->in_len > 0 || zstream->flush == Z_FINISH);
 
 	/* set out_size to number of bytes actually written to output */
 	*out_len = *out_len - out_remain;

@@ -4,7 +4,6 @@
 #include "diff_helpers.h"
 #include "diff.h"
 #include "repository.h"
-#include "buf_text.h"
 
 static git_repository *g_repo = NULL;
 

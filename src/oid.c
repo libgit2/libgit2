@@ -9,7 +9,7 @@
 
 #include "git2/oid.h"
 #include "repository.h"
-#include "global.h"
+#include "threadstate.h"
 #include <string.h>
 #include <limits.h>
 
@@ -26,7 +26,8 @@ int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 	size_t p;
 	int v;
 
-	assert(out && str);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(str);
 
 	if (!length)
 		return oid_error_invalid("too short");
@@ -107,7 +108,7 @@ int git_oid_pathfmt(char *str, const git_oid *oid)
 
 char *git_oid_tostr_s(const git_oid *oid)
 {
-	char *str = GIT_GLOBAL->oid_fmt;
+	char *str = GIT_THREADSTATE->oid_fmt;
 	git_oid_nfmt(str, GIT_OID_HEXSZ + 1, oid);
 	return str;
 }
@@ -253,10 +254,12 @@ int git_oid_is_zero(const git_oid *oid_a)
 	return 1;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_oid_iszero(const git_oid *oid_a)
 {
 	return git_oid_is_zero(oid_a);
 }
+#endif
 
 typedef short node_index;
 
@@ -314,7 +317,7 @@ git_oid_shorten *git_oid_shorten_new(size_t min_length)
 {
 	git_oid_shorten *os;
 
-	assert((size_t)((int)min_length) == min_length);
+	GIT_ASSERT_ARG_WITH_RETVAL((size_t)((int)min_length) == min_length, NULL);
 
 	os = git__calloc(1, sizeof(git_oid_shorten));
 	if (os == NULL)

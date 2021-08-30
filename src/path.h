@@ -67,8 +67,6 @@ extern int git_path_basename_r(git_buf *buffer, const char *path);
  */
 extern size_t git_path_basename_offset(git_buf *buffer);
 
-extern const char *git_path_topdir(const char *path);
-
 /**
  * Find offset to root of path if path has one.
  *
@@ -285,7 +283,7 @@ extern int git_path_prettify_dir(git_buf *path_out, const char *path, const char
  * appends the trailing '/'.  If the path does not exist, it is
  * treated like a regular filename.
  */
-extern int git_path_find_dir(git_buf *dir, const char *path, const char *base);
+extern int git_path_find_dir(git_buf *dir);
 
 /**
  * Resolve relative references within a path.
@@ -628,19 +626,94 @@ extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or
 #define GIT_PATH_REJECT_INDEX_DEFAULTS \
 	GIT_PATH_REJECT_TRAVERSAL | GIT_PATH_REJECT_DOT_GIT
 
-/*
- * Determine whether a path is a valid git path or not - this must not contain
+/**
+ * Validate a "bare" git path.  This ensures that the given path is legal
+ * to place in the index or a tree.  This should be checked by mechanisms
+ * like `git_index_add` and `git_treebuilder_insert` when taking user
+ * data, and by `git_checkout` before constructing on-disk paths.
+ *
+ * This will ensure that a git path does not contain any "unsafe" components,
  * a '.' or '..' component, or a component that is ".git" (in any case).
+ *
+ * (Note: if you take or construct an on-disk path -- a workdir path,
+ * a path to a git repository or a reference name that could be a loose
+ * ref -- you should _also_ validate that with `git_path_validate_workdir`.)
  *
  * `repo` is optional.  If specified, it will be used to determine the short
  * path name to reject (if `GIT_PATH_REJECT_DOS_SHORTNAME` is specified),
  * in addition to the default of "git~1".
  */
-extern bool git_path_isvalid(
+extern bool git_path_validate(
 	git_repository *repo,
 	const char *path,
 	uint16_t mode,
 	unsigned int flags);
+
+/**
+ * Validate an on-disk path, taking into account that it will have a
+ * suffix appended (eg, `.lock`).
+ */
+GIT_INLINE(int) git_path_validate_filesystem_with_suffix(
+	const char *path,
+	size_t path_len,
+	size_t suffix_len)
+{
+#ifdef GIT_WIN32
+	size_t path_chars, total_chars;
+
+	path_chars = git_utf8_char_length(path, path_len);
+
+	if (GIT_ADD_SIZET_OVERFLOW(&total_chars, path_chars, suffix_len) ||
+	    total_chars > MAX_PATH) {
+		git_error_set(GIT_ERROR_FILESYSTEM, "path too long: '%s'", path);
+		return -1;
+	}
+	return 0;
+#else
+	GIT_UNUSED(path);
+	GIT_UNUSED(path_len);
+	GIT_UNUSED(suffix_len);
+	return 0;
+#endif
+}
+
+/**
+ * Validate an path on the filesystem.  This ensures that the given
+ * path is valid for the operating system/platform; for example, this
+ * will ensure that the given absolute path is smaller than MAX_PATH on
+ * Windows.
+ *
+ * For paths within the working directory, you should use ensure that
+ * `core.longpaths` is obeyed.  Use `git_path_validate_workdir`.
+ */
+GIT_INLINE(int) git_path_validate_filesystem(
+	const char *path,
+	size_t path_len)
+{
+	return git_path_validate_filesystem_with_suffix(path, path_len, 0);
+}
+
+/**
+ * Validate a path relative to the repo's worktree.  This ensures that
+ * the given working tree path is valid for the operating system/platform.
+ * This will ensure that an absolute path is smaller than MAX_PATH on
+ * Windows, while keeping `core.longpaths` configuration settings in mind.
+ *
+ * This should be checked by mechamisms like `git_checkout` after
+ * contructing on-disk paths and before trying to write them.
+ *
+ * If the repository is null, no repository configuration is applied.
+ */
+extern int git_path_validate_workdir(
+	git_repository *repo,
+	const char *path);
+extern int git_path_validate_workdir_with_len(
+	git_repository *repo,
+	const char *path,
+	size_t path_len);
+extern int git_path_validate_workdir_buf(
+	git_repository *repo,
+	git_buf *buf);
 
 /**
  * Convert any backslashes into slashes
