@@ -14,6 +14,7 @@
 #include "git2/sys/commit_graph.h"
 
 #include "map.h"
+#include "vector.h"
 
 /**
  * A commit-graph file.
@@ -117,6 +118,20 @@ int git_commit_graph_get_file(git_commit_graph_file **file_out, git_commit_graph
 
 /* Marks the commit-graph file as needing a refresh. */
 void git_commit_graph_refresh(git_commit_graph *cgraph);
+
+/*
+ * A writer for `commit-graph` files.
+ */
+struct git_commit_graph_writer {
+	/*
+	 * The path of the `objects/info` directory where the `commit-graph` will be
+	 * stored.
+	 */
+	git_buf objects_info_dir;
+
+	/* The list of packed commits. */
+	git_vector commits;
+};
 
 /*
  * Returns whether the git_commit_graph_file needs to be reloaded since the

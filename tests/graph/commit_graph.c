@@ -1,8 +1,10 @@
 #include "clar_libgit2.h"
 
 #include <git2.h>
+#include <git2/sys/commit_graph.h>
 
 #include "commit_graph.h"
+#include "futils.h"
 
 void test_graph_commit_graph__parse(void)
 {
@@ -87,4 +89,37 @@ void test_graph_commit_graph__parse_octopus_merge(void)
 	git_commit_graph_file_free(file);
 	git_repository_free(repo);
 	git_buf_dispose(&commit_graph_path);
+}
+
+void test_graph_commit_graph__writer(void)
+{
+	git_repository *repo;
+	git_commit_graph_writer *w = NULL;
+	git_revwalk *walk;
+	git_commit_graph_writer_options opts = GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT;
+	git_buf cgraph = GIT_BUF_INIT, expected_cgraph = GIT_BUF_INIT, path = GIT_BUF_INIT;
+
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_path(repo), "objects/info"));
+	cl_git_pass(git_commit_graph_writer_new(&w, git_buf_cstr(&path)));
+
+	/* This is equivalent to `git commit-graph write --reachable`. */
+	cl_git_pass(git_revwalk_new(&walk, repo));
+	cl_git_pass(git_revwalk_push_glob(walk, "refs/*"));
+	cl_git_pass(git_commit_graph_writer_add_revwalk(w, walk));
+	git_revwalk_free(walk);
+
+	cl_git_pass(git_commit_graph_writer_dump(&cgraph, w, &opts));
+	cl_git_pass(git_buf_joinpath(&path, git_repository_path(repo), "objects/info/commit-graph"));
+	cl_git_pass(git_futils_readbuffer(&expected_cgraph, git_buf_cstr(&path)));
+
+	cl_assert_equal_i(git_buf_len(&cgraph), git_buf_len(&expected_cgraph));
+	cl_assert_equal_i(memcmp(git_buf_cstr(&cgraph), git_buf_cstr(&expected_cgraph), git_buf_len(&cgraph)), 0);
+
+	git_buf_dispose(&cgraph);
+	git_buf_dispose(&expected_cgraph);
+	git_buf_dispose(&path);
+	git_commit_graph_writer_free(w);
+	git_repository_free(repo);
 }

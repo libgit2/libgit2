@@ -7,11 +7,19 @@
 
 #include "commit_graph.h"
 
+#include "array.h"
+#include "filebuf.h"
 #include "futils.h"
 #include "hash.h"
+#include "oidarray.h"
+#include "oidmap.h"
 #include "pack.h"
+#include "repository.h"
+#include "revwalk.h"
 
 #define GIT_COMMIT_GRAPH_MISSING_PARENT 0x70000000
+#define GIT_COMMIT_GRAPH_GENERATION_NUMBER_MAX 0x3FFFFFFF
+#define GIT_COMMIT_GRAPH_GENERATION_NUMBER_INFINITY 0xFFFFFFFF
 
 #define COMMIT_GRAPH_SIGNATURE 0x43475048 /* "CGPH" */
 #define COMMIT_GRAPH_VERSION 1
@@ -35,6 +43,62 @@ struct git_commit_graph_chunk {
 	off64_t offset;
 	size_t length;
 };
+
+typedef git_array_t(size_t) parent_index_array_t;
+
+struct packed_commit {
+	size_t index;
+	git_oid sha1;
+	git_oid tree_oid;
+	uint32_t generation;
+	git_time_t commit_time;
+	git_array_oid_t parents;
+	parent_index_array_t parent_indices;
+};
+
+static void packed_commit_free(struct packed_commit *p)
+{
+	if (!p)
+		return;
+
+	git_array_clear(p->parents);
+	git_array_clear(p->parent_indices);
+	git__free(p);
+}
+
+static struct packed_commit *packed_commit_new(git_commit *commit)
+{
+	unsigned int i, parentcount = git_commit_parentcount(commit);
+	struct packed_commit *p = git__calloc(1, sizeof(struct packed_commit));
+	if (!p)
+		goto cleanup;
+
+	git_array_init_to_size(p->parents, parentcount);
+	if (parentcount && !p->parents.ptr)
+		goto cleanup;
+
+	if (git_oid_cpy(&p->sha1, git_commit_id(commit)) < 0)
+		goto cleanup;
+	if (git_oid_cpy(&p->tree_oid, git_commit_tree_id(commit)) < 0)
+		goto cleanup;
+	p->commit_time = git_commit_time(commit);
+
+	for (i = 0; i < parentcount; ++i) {
+		git_oid *parent_id = git_array_alloc(p->parents);
+		if (!parent_id)
+			goto cleanup;
+		if (git_oid_cpy(parent_id, git_commit_parent_id(commit, i)) < 0)
+			goto cleanup;
+	}
+
+	return p;
+
+cleanup:
+	packed_commit_free(p);
+	return NULL;
+}
+
+typedef int (*commit_graph_write_cb)(const char *buf, size_t size, void *cb_data);
 
 static int commit_graph_error(const char *message)
 {
@@ -371,8 +435,8 @@ static int git_commit_graph_entry_get_byindex(
 	commit_data = file->commit_data + pos * (GIT_OID_RAWSZ + 4 * sizeof(uint32_t));
 	git_oid_cpy(&e->tree_oid, (const git_oid *)commit_data);
 	e->parent_indices[0] = ntohl(*((uint32_t *)(commit_data + GIT_OID_RAWSZ)));
-	e->parent_indices[1]
-			= ntohl(*((uint32_t *)(commit_data + GIT_OID_RAWSZ + sizeof(uint32_t))));
+	e->parent_indices[1] = ntohl(
+			*((uint32_t *)(commit_data + GIT_OID_RAWSZ + sizeof(uint32_t))));
 	e->parent_count = (e->parent_indices[0] != GIT_COMMIT_GRAPH_MISSING_PARENT)
 			+ (e->parent_indices[1] != GIT_COMMIT_GRAPH_MISSING_PARENT);
 	e->generation = ntohl(*((uint32_t *)(commit_data + GIT_OID_RAWSZ + 2 * sizeof(uint32_t))));
@@ -401,7 +465,6 @@ static int git_commit_graph_entry_get_byindex(
 			extra_edge_list_pos++;
 			e->parent_count++;
 		}
-
 	}
 	git_oid_cpy(&e->sha1, &file->oid_lookup[pos]);
 	return 0;
@@ -546,4 +609,600 @@ void git_commit_graph_file_free(git_commit_graph_file *file)
 
 	git_commit_graph_file_close(file);
 	git__free(file);
+}
+
+static int packed_commit__cmp(const void *a_, const void *b_)
+{
+	const struct packed_commit *a = a_;
+	const struct packed_commit *b = b_;
+	return git_oid_cmp(&a->sha1, &b->sha1);
+}
+
+int git_commit_graph_writer_new(git_commit_graph_writer **out, const char *objects_info_dir)
+{
+	git_commit_graph_writer *w = git__calloc(1, sizeof(git_commit_graph_writer));
+	GIT_ERROR_CHECK_ALLOC(w);
+
+	if (git_buf_sets(&w->objects_info_dir, objects_info_dir) < 0) {
+		git__free(w);
+		return -1;
+	}
+
+	if (git_vector_init(&w->commits, 0, packed_commit__cmp) < 0) {
+		git_buf_dispose(&w->objects_info_dir);
+		git__free(w);
+		return -1;
+	}
+
+	*out = w;
+	return 0;
+}
+
+void git_commit_graph_writer_free(git_commit_graph_writer *w)
+{
+	struct packed_commit *packed_commit;
+	size_t i;
+
+	if (!w)
+		return;
+
+	git_vector_foreach (&w->commits, i, packed_commit)
+		packed_commit_free(packed_commit);
+	git_vector_free(&w->commits);
+	git_buf_dispose(&w->objects_info_dir);
+	git__free(w);
+}
+
+struct object_entry_cb_state {
+	git_repository *repo;
+	git_odb *db;
+	git_vector *commits;
+};
+
+static int object_entry__cb(const git_oid *id, void *data)
+{
+	struct object_entry_cb_state *state = (struct object_entry_cb_state *)data;
+	git_commit *commit = NULL;
+	struct packed_commit *packed_commit = NULL;
+	size_t header_len;
+	git_object_t header_type;
+	int error = 0;
+
+	error = git_odb_read_header(&header_len, &header_type, state->db, id);
+	if (error < 0)
+		return error;
+
+	if (header_type != GIT_OBJECT_COMMIT)
+		return 0;
+
+	error = git_commit_lookup(&commit, state->repo, id);
+	if (error < 0)
+		return error;
+
+	packed_commit = packed_commit_new(commit);
+	git_commit_free(commit);
+	GIT_ERROR_CHECK_ALLOC(packed_commit);
+
+	error = git_vector_insert(state->commits, packed_commit);
+	if (error < 0) {
+		packed_commit_free(packed_commit);
+		return error;
+	}
+
+	return 0;
+}
+
+int git_commit_graph_writer_add_index_file(
+		git_commit_graph_writer *w,
+		git_repository *repo,
+		const char *idx_path)
+{
+	int error;
+	struct git_pack_file *p = NULL;
+	struct object_entry_cb_state state = {0};
+	state.repo = repo;
+	state.commits = &w->commits;
+
+	error = git_repository_odb(&state.db, repo);
+	if (error < 0)
+		goto cleanup;
+
+	error = git_mwindow_get_pack(&p, idx_path);
+	if (error < 0)
+		goto cleanup;
+
+	error = git_pack_foreach_entry(p, object_entry__cb, &state);
+	if (error < 0)
+		goto cleanup;
+
+cleanup:
+	git_mwindow_put_pack(p);
+	git_odb_free(state.db);
+	return error;
+}
+
+int git_commit_graph_writer_add_revwalk(git_commit_graph_writer *w, git_revwalk *walk)
+{
+	int error;
+	git_oid id;
+	git_repository *repo = git_revwalk_repository(walk);
+	git_commit *commit;
+	struct packed_commit* packed_commit;
+
+	while ((git_revwalk_next(&id, walk)) == 0) {
+		error = git_commit_lookup(&commit, repo, &id);
+		if (error < 0)
+			return error;
+
+		packed_commit = packed_commit_new(commit);
+		git_commit_free(commit);
+		GIT_ERROR_CHECK_ALLOC(packed_commit);
+
+		error = git_vector_insert(&w->commits, packed_commit);
+		if (error < 0) {
+			packed_commit_free(packed_commit);
+			return error;
+		}
+	}
+
+	return 0;
+}
+
+enum generation_number_commit_state {
+	GENERATION_NUMBER_COMMIT_STATE_UNVISITED = 0,
+	GENERATION_NUMBER_COMMIT_STATE_ADDED = 1,
+	GENERATION_NUMBER_COMMIT_STATE_EXPANDED = 2,
+	GENERATION_NUMBER_COMMIT_STATE_VISITED = 3,
+};
+
+static int compute_generation_numbers(git_vector *commits)
+{
+	git_array_t(size_t) index_stack = GIT_ARRAY_INIT;
+	size_t i, j;
+	size_t *parent_idx;
+	enum generation_number_commit_state *commit_states = NULL;
+	struct packed_commit *child_packed_commit;
+	git_oidmap *packed_commit_map = NULL;
+	int error = 0;
+
+	/* First populate the parent indices fields */
+	error = git_oidmap_new(&packed_commit_map);
+	if (error < 0)
+		goto cleanup;
+	git_vector_foreach (commits, i, child_packed_commit) {
+		child_packed_commit->index = i;
+		error = git_oidmap_set(
+				packed_commit_map, &child_packed_commit->sha1, child_packed_commit);
+		if (error < 0)
+			goto cleanup;
+	}
+
+	git_vector_foreach (commits, i, child_packed_commit) {
+		size_t parent_i, *parent_idx_ptr;
+		struct packed_commit *parent_packed_commit;
+		git_oid *parent_id;
+		git_array_init_to_size(
+				child_packed_commit->parent_indices,
+				git_array_size(child_packed_commit->parents));
+		if (git_array_size(child_packed_commit->parents)
+		    && !child_packed_commit->parent_indices.ptr) {
+			error = -1;
+			goto cleanup;
+		}
+		git_array_foreach (child_packed_commit->parents, parent_i, parent_id) {
+			parent_packed_commit = git_oidmap_get(packed_commit_map, parent_id);
+			if (!parent_packed_commit) {
+				git_error_set(GIT_ERROR_ODB,
+					      "parent commit %s not found in commit graph",
+					      git_oid_tostr_s(parent_id));
+				error = GIT_ENOTFOUND;
+				goto cleanup;
+			}
+			parent_idx_ptr = git_array_alloc(child_packed_commit->parent_indices);
+			if (!parent_idx_ptr) {
+				error = -1;
+				goto cleanup;
+			}
+			*parent_idx_ptr = parent_packed_commit->index;
+		}
+	}
+
+	/*
+	 * We copy all the commits to the stack and then during visitation,
+	 * each node can be added up to two times to the stack.
+	 */
+	git_array_init_to_size(index_stack, 3 * git_vector_length(commits));
+	if (!index_stack.ptr) {
+		error = -1;
+		goto cleanup;
+	}
+
+	commit_states = (enum generation_number_commit_state *)git__calloc(
+			git_vector_length(commits), sizeof(enum generation_number_commit_state));
+	if (!commit_states) {
+		error = -1;
+		goto cleanup;
+	}
+
+	/*
+	 * Perform a Post-Order traversal so that all parent nodes are fully
+	 * visited before the child node.
+	 */
+	git_vector_foreach (commits, i, child_packed_commit)
+		*(size_t *)git_array_alloc(index_stack) = i;
+
+	while (git_array_size(index_stack)) {
+		size_t *index_ptr = git_array_pop(index_stack);
+		i = *index_ptr;
+		child_packed_commit = git_vector_get(commits, i);
+
+		if (commit_states[i] == GENERATION_NUMBER_COMMIT_STATE_VISITED) {
+			/* This commit has already been fully visited. */
+			continue;
+		}
+		if (commit_states[i] == GENERATION_NUMBER_COMMIT_STATE_EXPANDED) {
+			/* All of the commits parents have been visited. */
+			child_packed_commit->generation = 0;
+			git_array_foreach (child_packed_commit->parent_indices, j, parent_idx) {
+				struct packed_commit *parent = git_vector_get(commits, *parent_idx);
+				if (child_packed_commit->generation < parent->generation)
+					child_packed_commit->generation = parent->generation;
+			}
+			if (child_packed_commit->generation
+			    < GIT_COMMIT_GRAPH_GENERATION_NUMBER_MAX) {
+				++child_packed_commit->generation;
+			}
+			commit_states[i] = GENERATION_NUMBER_COMMIT_STATE_VISITED;
+			continue;
+		}
+
+		/*
+		 * This is the first time we see this commit. We need
+		 * to visit all its parents before we can fully visit
+		 * it.
+		 */
+		if (git_array_size(child_packed_commit->parent_indices) == 0) {
+			/*
+			 * Special case: if the commit has no parents, there's
+			 * no need to add it to the stack just to immediately
+			 * remove it.
+			 */
+			commit_states[i] = GENERATION_NUMBER_COMMIT_STATE_VISITED;
+			child_packed_commit->generation = 1;
+			continue;
+		}
+
+		/*
+		 * Add this current commit again so that it is visited
+		 * again once all its children have been visited.
+		 */
+		*(size_t *)git_array_alloc(index_stack) = i;
+		git_array_foreach (child_packed_commit->parent_indices, j, parent_idx) {
+			if (commit_states[*parent_idx]
+			    != GENERATION_NUMBER_COMMIT_STATE_UNVISITED) {
+				/* This commit has already been considered. */
+				continue;
+			}
+
+			commit_states[*parent_idx] = GENERATION_NUMBER_COMMIT_STATE_ADDED;
+			*(size_t *)git_array_alloc(index_stack) = *parent_idx;
+		}
+		commit_states[i] = GENERATION_NUMBER_COMMIT_STATE_EXPANDED;
+	}
+
+cleanup:
+	git_oidmap_free(packed_commit_map);
+	git__free(commit_states);
+	git_array_clear(index_stack);
+
+	return error;
+}
+
+static int write_offset(off64_t offset, commit_graph_write_cb write_cb, void *cb_data)
+{
+	int error;
+	uint32_t word;
+
+	word = htonl((uint32_t)((offset >> 32) & 0xffffffffu));
+	error = write_cb((const char *)&word, sizeof(word), cb_data);
+	if (error < 0)
+		return error;
+	word = htonl((uint32_t)((offset >> 0) & 0xffffffffu));
+	error = write_cb((const char *)&word, sizeof(word), cb_data);
+	if (error < 0)
+		return error;
+
+	return 0;
+}
+
+static int write_chunk_header(
+		int chunk_id,
+		off64_t offset,
+		commit_graph_write_cb write_cb,
+		void *cb_data)
+{
+	uint32_t word = htonl(chunk_id);
+	int error = write_cb((const char *)&word, sizeof(word), cb_data);
+	if (error < 0)
+		return error;
+	return write_offset(offset, write_cb, cb_data);
+}
+
+static int commit_graph_write_buf(const char *buf, size_t size, void *data)
+{
+	git_buf *b = (git_buf *)data;
+	return git_buf_put(b, buf, size);
+}
+
+struct commit_graph_write_hash_context {
+	commit_graph_write_cb write_cb;
+	void *cb_data;
+	git_hash_ctx *ctx;
+};
+
+static int commit_graph_write_hash(const char *buf, size_t size, void *data)
+{
+	struct commit_graph_write_hash_context *ctx = data;
+	int error;
+
+	error = git_hash_update(ctx->ctx, buf, size);
+	if (error < 0)
+		return error;
+
+	return ctx->write_cb(buf, size, ctx->cb_data);
+}
+
+static void packed_commit_free_dup(void *packed_commit)
+{
+	packed_commit_free(packed_commit);
+}
+
+static int commit_graph_write(
+		git_commit_graph_writer *w,
+		commit_graph_write_cb write_cb,
+		void *cb_data)
+{
+	int error = 0;
+	size_t i;
+	struct packed_commit *packed_commit;
+	struct git_commit_graph_header hdr = {0};
+	uint32_t oid_fanout_count;
+	uint32_t extra_edge_list_count;
+	uint32_t oid_fanout[256];
+	off64_t offset;
+	git_buf oid_lookup = GIT_BUF_INIT, commit_data = GIT_BUF_INIT,
+		extra_edge_list = GIT_BUF_INIT;
+	git_oid cgraph_checksum = {{0}};
+	git_hash_ctx ctx;
+	struct commit_graph_write_hash_context hash_cb_data = {0};
+
+	hdr.signature = htonl(COMMIT_GRAPH_SIGNATURE);
+	hdr.version = COMMIT_GRAPH_VERSION;
+	hdr.object_id_version = COMMIT_GRAPH_OBJECT_ID_VERSION;
+	hdr.chunks = 0;
+	hdr.base_graph_files = 0;
+	hash_cb_data.write_cb = write_cb;
+	hash_cb_data.cb_data = cb_data;
+	hash_cb_data.ctx = &ctx;
+
+	error = git_hash_ctx_init(&ctx);
+	if (error < 0)
+		return error;
+	cb_data = &hash_cb_data;
+	write_cb = commit_graph_write_hash;
+
+	/* Sort the commits. */
+	git_vector_sort(&w->commits);
+	git_vector_uniq(&w->commits, packed_commit_free_dup);
+	error = compute_generation_numbers(&w->commits);
+	if (error < 0)
+		goto cleanup;
+
+	/* Fill the OID Fanout table. */
+	oid_fanout_count = 0;
+	for (i = 0; i < 256; i++) {
+		while (oid_fanout_count < git_vector_length(&w->commits) &&
+		       (packed_commit = (struct packed_commit *)git_vector_get(&w->commits, oid_fanout_count)) &&
+		       packed_commit->sha1.id[0] <= i)
+			++oid_fanout_count;
+		oid_fanout[i] = htonl(oid_fanout_count);
+	}
+
+	/* Fill the OID Lookup table. */
+	git_vector_foreach (&w->commits, i, packed_commit) {
+		error = git_buf_put(&oid_lookup,
+			(const char *)&packed_commit->sha1, sizeof(git_oid));
+		if (error < 0)
+			goto cleanup;
+	}
+
+	/* Fill the Commit Data and Extra Edge List tables. */
+	extra_edge_list_count = 0;
+	git_vector_foreach (&w->commits, i, packed_commit) {
+		uint64_t commit_time;
+		uint32_t generation;
+		uint32_t word;
+		size_t *packed_index;
+		unsigned int parentcount = (unsigned int)git_array_size(packed_commit->parents);
+
+		error = git_buf_put(&commit_data,
+				(const char *)&packed_commit->tree_oid,
+				sizeof(git_oid));
+		if (error < 0)
+			goto cleanup;
+
+		if (parentcount == 0) {
+			word = htonl(GIT_COMMIT_GRAPH_MISSING_PARENT);
+		} else {
+			packed_index = git_array_get(packed_commit->parent_indices, 0);
+			word = htonl((uint32_t)*packed_index);
+		}
+		error = git_buf_put(&commit_data, (const char *)&word, sizeof(word));
+		if (error < 0)
+			goto cleanup;
+
+		if (parentcount < 2) {
+			word = htonl(GIT_COMMIT_GRAPH_MISSING_PARENT);
+		} else if (parentcount == 2) {
+			packed_index = git_array_get(packed_commit->parent_indices, 1);
+			word = htonl((uint32_t)*packed_index);
+		} else {
+			word = htonl(0x80000000u | extra_edge_list_count);
+		}
+		error = git_buf_put(&commit_data, (const char *)&word, sizeof(word));
+		if (error < 0)
+			goto cleanup;
+
+		if (parentcount > 2) {
+			unsigned int parent_i;
+			for (parent_i = 1; parent_i < parentcount; ++parent_i) {
+				packed_index = git_array_get(
+					packed_commit->parent_indices, parent_i);
+				word = htonl((uint32_t)(*packed_index | (parent_i + 1 == parentcount ? 0x80000000u : 0)));
+
+				error = git_buf_put(&extra_edge_list,
+						(const char *)&word,
+						sizeof(word));
+				if (error < 0)
+					goto cleanup;
+			}
+			extra_edge_list_count += parentcount - 1;
+		}
+
+		generation = packed_commit->generation;
+		commit_time = (uint64_t)packed_commit->commit_time;
+		if (generation > GIT_COMMIT_GRAPH_GENERATION_NUMBER_MAX)
+			generation = GIT_COMMIT_GRAPH_GENERATION_NUMBER_MAX;
+		word = ntohl((uint32_t)((generation << 2) | ((commit_time >> 32ull) & 0x3ull)));
+		error = git_buf_put(&commit_data, (const char *)&word, sizeof(word));
+		if (error < 0)
+			goto cleanup;
+		word = ntohl((uint32_t)(commit_time & 0xffffffffull));
+		error = git_buf_put(&commit_data, (const char *)&word, sizeof(word));
+		if (error < 0)
+			goto cleanup;
+	}
+
+	/* Write the header. */
+	hdr.chunks = 3;
+	if (git_buf_len(&extra_edge_list) > 0)
+		hdr.chunks++;
+	error = write_cb((const char *)&hdr, sizeof(hdr), cb_data);
+	if (error < 0)
+		goto cleanup;
+
+	/* Write the chunk headers. */
+	offset = sizeof(hdr) + (hdr.chunks + 1) * 12;
+	error = write_chunk_header(COMMIT_GRAPH_OID_FANOUT_ID, offset, write_cb, cb_data);
+	if (error < 0)
+		goto cleanup;
+	offset += sizeof(oid_fanout);
+	error = write_chunk_header(COMMIT_GRAPH_OID_LOOKUP_ID, offset, write_cb, cb_data);
+	if (error < 0)
+		goto cleanup;
+	offset += git_buf_len(&oid_lookup);
+	error = write_chunk_header(COMMIT_GRAPH_COMMIT_DATA_ID, offset, write_cb, cb_data);
+	if (error < 0)
+		goto cleanup;
+	offset += git_buf_len(&commit_data);
+	if (git_buf_len(&extra_edge_list) > 0) {
+		error = write_chunk_header(
+				COMMIT_GRAPH_EXTRA_EDGE_LIST_ID, offset, write_cb, cb_data);
+		if (error < 0)
+			goto cleanup;
+		offset += git_buf_len(&extra_edge_list);
+	}
+	error = write_chunk_header(0, offset, write_cb, cb_data);
+	if (error < 0)
+		goto cleanup;
+
+	/* Write all the chunks. */
+	error = write_cb((const char *)oid_fanout, sizeof(oid_fanout), cb_data);
+	if (error < 0)
+		goto cleanup;
+	error = write_cb(git_buf_cstr(&oid_lookup), git_buf_len(&oid_lookup), cb_data);
+	if (error < 0)
+		goto cleanup;
+	error = write_cb(git_buf_cstr(&commit_data), git_buf_len(&commit_data), cb_data);
+	if (error < 0)
+		goto cleanup;
+	error = write_cb(git_buf_cstr(&extra_edge_list), git_buf_len(&extra_edge_list), cb_data);
+	if (error < 0)
+		goto cleanup;
+
+	/* Finalize the checksum and write the trailer. */
+	error = git_hash_final(&cgraph_checksum, &ctx);
+	if (error < 0)
+		goto cleanup;
+	error = write_cb((const char *)&cgraph_checksum, sizeof(cgraph_checksum), cb_data);
+	if (error < 0)
+		goto cleanup;
+
+cleanup:
+	git_buf_dispose(&oid_lookup);
+	git_buf_dispose(&commit_data);
+	git_buf_dispose(&extra_edge_list);
+	git_hash_ctx_cleanup(&ctx);
+	return error;
+}
+
+static int commit_graph_write_filebuf(const char *buf, size_t size, void *data)
+{
+	git_filebuf *f = (git_filebuf *)data;
+	return git_filebuf_write(f, buf, size);
+}
+
+int git_commit_graph_writer_options_init(
+	git_commit_graph_writer_options *opts,
+	unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+			opts,
+			version,
+			git_commit_graph_writer_options,
+			GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT);
+	return 0;
+}
+
+int git_commit_graph_writer_commit(
+		git_commit_graph_writer *w,
+		git_commit_graph_writer_options *opts)
+{
+	int error;
+	int filebuf_flags = GIT_FILEBUF_DO_NOT_BUFFER;
+	git_buf commit_graph_path = GIT_BUF_INIT;
+	git_filebuf output = GIT_FILEBUF_INIT;
+
+	/* TODO: support options and fill in defaults. */
+	GIT_UNUSED(opts);
+
+	error = git_buf_joinpath(
+			&commit_graph_path, git_buf_cstr(&w->objects_info_dir), "commit-graph");
+	if (error < 0)
+		return error;
+
+	if (git_repository__fsync_gitdir)
+		filebuf_flags |= GIT_FILEBUF_FSYNC;
+	error = git_filebuf_open(&output, git_buf_cstr(&commit_graph_path), filebuf_flags, 0644);
+	git_buf_dispose(&commit_graph_path);
+	if (error < 0)
+		return error;
+
+	error = commit_graph_write(w, commit_graph_write_filebuf, &output);
+	if (error < 0) {
+		git_filebuf_cleanup(&output);
+		return error;
+	}
+
+	return git_filebuf_commit(&output);
+}
+
+int git_commit_graph_writer_dump(
+		git_buf *cgraph,
+		git_commit_graph_writer *w,
+		git_commit_graph_writer_options *opts)
+{
+	/* TODO: support options. */
+	GIT_UNUSED(opts);
+	return commit_graph_write(w, commit_graph_write_buf, cgraph);
 }
