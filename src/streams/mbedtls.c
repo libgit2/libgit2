@@ -68,8 +68,6 @@ static void shutdown_ssl(void)
 	}
 }
 
-int git_mbedtls__set_cert_location(const char *path, int is_dir);
-
 int git_mbedtls_stream_global_init(void)
 {
 	int loaded = 0;
@@ -148,9 +146,9 @@ int git_mbedtls_stream_global_init(void)
 
 	/* load default certificates */
 	if (crtpath != NULL && stat(crtpath, &statbuf) == 0 && S_ISREG(statbuf.st_mode))
-		loaded = (git_mbedtls__set_cert_location(crtpath, 0) == 0);
+		loaded = (git_mbedtls__set_cert_location(crtpath, NULL) == 0);
 	if (!loaded && crtpath != NULL && stat(crtpath, &statbuf) == 0 && S_ISDIR(statbuf.st_mode))
-		loaded = (git_mbedtls__set_cert_location(crtpath, 1) == 0);
+		loaded = (git_mbedtls__set_cert_location(NULL, crtpath) == 0);
 
 	return git_runtime_shutdown_register(shutdown_ssl);
 
@@ -438,23 +436,22 @@ int git_mbedtls_stream_new(
 	return error;
 }
 
-int git_mbedtls__set_cert_location(const char *path, int is_dir)
+int git_mbedtls__set_cert_location(const char *file, const char *path)
 {
 	int ret = 0;
 	char errbuf[512];
 	mbedtls_x509_crt *cacert;
 
-	GIT_ASSERT_ARG(path);
+	GIT_ASSERT_ARG(file || path);
 
 	cacert = git__malloc(sizeof(mbedtls_x509_crt));
 	GIT_ERROR_CHECK_ALLOC(cacert);
 
 	mbedtls_x509_crt_init(cacert);
-	if (is_dir) {
+	if (file)
+		ret = mbedtls_x509_crt_parse_file(cacert, file);
+	if (ret >= 0 && path)
 		ret = mbedtls_x509_crt_parse_path(cacert, path);
-	} else {
-		ret = mbedtls_x509_crt_parse_file(cacert, path);
-	}
 	/* mbedtls_x509_crt_parse_path returns the number of invalid certs on success */
 	if (ret < 0) {
 		mbedtls_x509_crt_free(cacert);
