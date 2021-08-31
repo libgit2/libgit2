@@ -716,7 +716,8 @@ int git_commit_graph_writer_add_index_file(
 		goto cleanup;
 
 cleanup:
-	git_mwindow_put_pack(p);
+	if (p)
+		git_mwindow_put_pack(p);
 	git_odb_free(state.db);
 	return error;
 }
