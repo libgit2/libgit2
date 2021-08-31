@@ -168,6 +168,17 @@ extern int git__strncasecmp(const char *a, const char *b, size_t sz);
 
 extern int git__strcasesort_cmp(const char *a, const char *b);
 
+/*
+ * Compare some NUL-terminated `a` to a possibly non-NUL terminated
+ * `b` of length `b_len`; like `strncmp` but ensuring that
+ * `strlen(a) == b_len` as well.
+ */
+GIT_INLINE(int) git__strlcmp(const char *a, const char *b, size_t b_len)
+{
+	int cmp = strncmp(a, b, b_len);
+	return cmp ? cmp : (int)a[b_len];
+}
+
 typedef struct {
 	git_atomic32 refcount;
 	void *owner;
