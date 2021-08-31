@@ -3,19 +3,19 @@
 
 static git_net_url conndata;
 
-void test_network_urlparse__initialize(void)
+void test_network_url_parse__initialize(void)
 {
 	memset(&conndata, 0, sizeof(conndata));
 }
 
-void test_network_urlparse__cleanup(void)
+void test_network_url_parse__cleanup(void)
 {
 	git_net_url_dispose(&conndata);
 }
 
 /* Hostname */
 
-void test_network_urlparse__hostname_trivial(void)
+void test_network_url_parse__hostname_trivial(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://example.com/resource"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -27,7 +27,7 @@ void test_network_urlparse__hostname_trivial(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__hostname_root(void)
+void test_network_url_parse__hostname_root(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://example.com/"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -39,7 +39,7 @@ void test_network_urlparse__hostname_root(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__hostname_implied_root(void)
+void test_network_url_parse__hostname_implied_root(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://example.com"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -51,7 +51,7 @@ void test_network_urlparse__hostname_implied_root(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__hostname_implied_root_custom_port(void)
+void test_network_url_parse__hostname_implied_root_custom_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://example.com:42"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -63,7 +63,7 @@ void test_network_urlparse__hostname_implied_root_custom_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__hostname_implied_root_empty_port(void)
+void test_network_url_parse__hostname_implied_root_empty_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://example.com:"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -75,7 +75,7 @@ void test_network_urlparse__hostname_implied_root_empty_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__hostname_encoded_password(void)
+void test_network_url_parse__hostname_encoded_password(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 				"https://user:pass%2fis%40bad@hostname.com:1234/"));
@@ -88,7 +88,7 @@ void test_network_urlparse__hostname_encoded_password(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__hostname_user(void)
+void test_network_url_parse__hostname_user(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 				"https://user@example.com/resource"));
@@ -101,7 +101,7 @@ void test_network_urlparse__hostname_user(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__hostname_user_pass(void)
+void test_network_url_parse__hostname_user_pass(void)
 {
 	/* user:pass@hostname.tld/resource */
 	cl_git_pass(git_net_url_parse(&conndata,
@@ -115,7 +115,7 @@ void test_network_urlparse__hostname_user_pass(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__hostname_port(void)
+void test_network_url_parse__hostname_port(void)
 {
 	/* hostname.tld:port/resource */
 	cl_git_pass(git_net_url_parse(&conndata,
@@ -129,7 +129,7 @@ void test_network_urlparse__hostname_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__hostname_empty_port(void)
+void test_network_url_parse__hostname_empty_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://example.com:/resource"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -141,7 +141,7 @@ void test_network_urlparse__hostname_empty_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__hostname_user_port(void)
+void test_network_url_parse__hostname_user_port(void)
 {
 	/* user@hostname.tld:port/resource */
 	cl_git_pass(git_net_url_parse(&conndata,
@@ -155,7 +155,7 @@ void test_network_urlparse__hostname_user_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__hostname_user_pass_port(void)
+void test_network_url_parse__hostname_user_pass_port(void)
 {
 	/* user:pass@hostname.tld:port/resource */
 	cl_git_pass(git_net_url_parse(&conndata,
@@ -171,7 +171,7 @@ void test_network_urlparse__hostname_user_pass_port(void)
 
 /* IPv4 addresses */
 
-void test_network_urlparse__ipv4_trivial(void)
+void test_network_url_parse__ipv4_trivial(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://192.168.1.1/resource"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -183,7 +183,7 @@ void test_network_urlparse__ipv4_trivial(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv4_root(void)
+void test_network_url_parse__ipv4_root(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://192.168.1.1/"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -195,7 +195,7 @@ void test_network_urlparse__ipv4_root(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv4_implied_root(void)
+void test_network_url_parse__ipv4_implied_root(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://192.168.1.1"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -207,7 +207,7 @@ void test_network_urlparse__ipv4_implied_root(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv4_implied_root_custom_port(void)
+void test_network_url_parse__ipv4_implied_root_custom_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://192.168.1.1:42"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -219,7 +219,7 @@ void test_network_urlparse__ipv4_implied_root_custom_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__ipv4_implied_root_empty_port(void)
+void test_network_url_parse__ipv4_implied_root_empty_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://192.168.1.1:"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -231,7 +231,7 @@ void test_network_urlparse__ipv4_implied_root_empty_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv4_encoded_password(void)
+void test_network_url_parse__ipv4_encoded_password(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 		"https://user:pass%2fis%40bad@192.168.1.1:1234/"));
@@ -244,7 +244,7 @@ void test_network_urlparse__ipv4_encoded_password(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__ipv4_user(void)
+void test_network_url_parse__ipv4_user(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 		"https://user@192.168.1.1/resource"));
@@ -257,7 +257,7 @@ void test_network_urlparse__ipv4_user(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv4_user_pass(void)
+void test_network_url_parse__ipv4_user_pass(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 		"https://user:pass@192.168.1.1/resource"));
@@ -270,7 +270,7 @@ void test_network_urlparse__ipv4_user_pass(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv4_port(void)
+void test_network_url_parse__ipv4_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 		"https://192.168.1.1:9191/resource"));
@@ -283,7 +283,7 @@ void test_network_urlparse__ipv4_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__ipv4_empty_port(void)
+void test_network_url_parse__ipv4_empty_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://192.168.1.1:/resource"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -295,7 +295,7 @@ void test_network_urlparse__ipv4_empty_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv4_user_port(void)
+void test_network_url_parse__ipv4_user_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 		"https://user@192.168.1.1:9191/resource"));
@@ -308,7 +308,7 @@ void test_network_urlparse__ipv4_user_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__ipv4_user_pass_port(void)
+void test_network_url_parse__ipv4_user_pass_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 		"https://user:pass@192.168.1.1:9191/resource"));
@@ -323,7 +323,7 @@ void test_network_urlparse__ipv4_user_pass_port(void)
 
 /* IPv6 addresses */
 
-void test_network_urlparse__ipv6_trivial(void)
+void test_network_url_parse__ipv6_trivial(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://[fe80::dcad:beff:fe00:0001]/resource"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -335,7 +335,7 @@ void test_network_urlparse__ipv6_trivial(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv6_root(void)
+void test_network_url_parse__ipv6_root(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://[fe80::dcad:beff:fe00:0001]/"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -347,7 +347,7 @@ void test_network_urlparse__ipv6_root(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv6_implied_root(void)
+void test_network_url_parse__ipv6_implied_root(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://[fe80::dcad:beff:fe00:0001]"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -359,7 +359,7 @@ void test_network_urlparse__ipv6_implied_root(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv6_implied_root_custom_port(void)
+void test_network_url_parse__ipv6_implied_root_custom_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://[fe80::dcad:beff:fe00:0001]:42"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -371,7 +371,7 @@ void test_network_urlparse__ipv6_implied_root_custom_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__ipv6_implied_root_empty_port(void)
+void test_network_url_parse__ipv6_implied_root_empty_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://[fe80::dcad:beff:fe00:0001]:"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -383,7 +383,7 @@ void test_network_urlparse__ipv6_implied_root_empty_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv6_encoded_password(void)
+void test_network_url_parse__ipv6_encoded_password(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 		"https://user:pass%2fis%40bad@[fe80::dcad:beff:fe00:0001]:1234/"));
@@ -396,7 +396,7 @@ void test_network_urlparse__ipv6_encoded_password(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__ipv6_user(void)
+void test_network_url_parse__ipv6_user(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 		"https://user@[fe80::dcad:beff:fe00:0001]/resource"));
@@ -409,7 +409,7 @@ void test_network_urlparse__ipv6_user(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv6_user_pass(void)
+void test_network_url_parse__ipv6_user_pass(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 		"https://user:pass@[fe80::dcad:beff:fe00:0001]/resource"));
@@ -422,7 +422,7 @@ void test_network_urlparse__ipv6_user_pass(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv6_port(void)
+void test_network_url_parse__ipv6_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 		"https://[fe80::dcad:beff:fe00:0001]:9191/resource"));
@@ -435,7 +435,7 @@ void test_network_urlparse__ipv6_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__ipv6_empty_port(void)
+void test_network_url_parse__ipv6_empty_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://[fe80::dcad:beff:fe00:0001]:/resource"));
 	cl_assert_equal_s(conndata.scheme, "http");
@@ -447,7 +447,7 @@ void test_network_urlparse__ipv6_empty_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_urlparse__ipv6_user_port(void)
+void test_network_url_parse__ipv6_user_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 		"https://user@[fe80::dcad:beff:fe00:0001]:9191/resource"));
@@ -460,7 +460,7 @@ void test_network_urlparse__ipv6_user_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__ipv6_user_pass_port(void)
+void test_network_url_parse__ipv6_user_pass_port(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 		"https://user:pass@[fe80::dcad:beff:fe00:0001]:9191/resource"));
@@ -473,7 +473,7 @@ void test_network_urlparse__ipv6_user_pass_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_urlparse__ipv6_invalid_addresses(void)
+void test_network_url_parse__ipv6_invalid_addresses(void)
 {
 	/* Opening bracket missing */
 	cl_git_fail_with(GIT_EINVALIDSPEC, git_net_url_parse(&conndata,
