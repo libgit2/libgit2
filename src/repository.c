@@ -2335,6 +2335,12 @@ int git_repository_foreach_worktree(git_repository *repo,
 	int error;
 	size_t i;
 
+	/* apply operation to repository supplied when commondir is empty, implying there's
+	 * no linked worktrees to iterate, which can occur when using custom odb/refdb
+	 */
+	if (!repo->commondir)
+		return cb(repo, payload);
+
 	if ((error = git_repository_open(&worktree_repo, repo->commondir)) < 0 ||
 	    (error = cb(worktree_repo, payload) != 0))
 		goto out;
