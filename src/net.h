@@ -54,6 +54,11 @@ extern int git_net_url_fmt(git_buf *out, git_net_url *url);
 /** Place the path and query string into the given buffer. */
 extern int git_net_url_fmt_path(git_buf *buf, git_net_url *url);
 
+/** Determines if the url matches given pattern or pattern list */
+extern bool git_net_url_matches_pattern(
+	git_net_url *url,
+	const char *pattern);
+
 /** Disposes the contents of the structure. */
 extern void git_net_url_dispose(git_net_url *url);
 
