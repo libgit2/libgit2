@@ -58,6 +58,9 @@ extern int git_net_url_fmt_path(git_buf *buf, git_net_url *url);
 extern bool git_net_url_matches_pattern(
 	git_net_url *url,
 	const char *pattern);
+extern bool git_net_url_matches_pattern_list(
+	git_net_url *url,
+	const char *pattern_list);
 
 /** Disposes the contents of the structure. */
 extern void git_net_url_dispose(git_net_url *url);
