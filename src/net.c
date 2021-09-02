@@ -35,6 +35,46 @@ static const char *default_port_for_scheme(const char *scheme)
 	return NULL;
 }
 
+int git_net_url_dup(git_net_url *out, git_net_url *in)
+{
+	if (in->scheme) {
+		out->scheme = git__strdup(in->scheme);
+		GIT_ERROR_CHECK_ALLOC(out->scheme);
+	}
+
+	if (in->host) {
+		out->host = git__strdup(in->host);
+		GIT_ERROR_CHECK_ALLOC(out->host);
+	}
+
+	if (in->port) {
+		out->port = git__strdup(in->port);
+		GIT_ERROR_CHECK_ALLOC(out->port);
+	}
+
+	if (in->path) {
+		out->path = git__strdup(in->path);
+		GIT_ERROR_CHECK_ALLOC(out->path);
+	}
+
+	if (in->query) {
+		out->query = git__strdup(in->query);
+		GIT_ERROR_CHECK_ALLOC(out->query);
+	}
+
+	if (in->username) {
+		out->username = git__strdup(in->username);
+		GIT_ERROR_CHECK_ALLOC(out->username);
+	}
+
+	if (in->password) {
+		out->password = git__strdup(in->password);
+		GIT_ERROR_CHECK_ALLOC(out->password);
+	}
+
+	return 0;
+}
+
 int git_net_url_parse(git_net_url *url, const char *given)
 {
 	struct http_parser_url u = {0};
