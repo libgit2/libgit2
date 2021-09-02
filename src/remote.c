@@ -849,112 +849,91 @@ int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote
 	return remote->transport->ls(out, size, remote->transport);
 }
 
-int git_remote__get_http_proxy_bypass(git_net_url *url, git_buf *no_proxy_env, bool *bypass)
+static int lookup_config(char **out, git_config *cfg, const char *name)
 {
-	int error = 0;
-	char *p_start = no_proxy_env->ptr;
-	size_t p_length = 0;
-	char c;
-	git_buf hostport = GIT_BUF_INIT;
-
-	error = git_buf_printf(&hostport, "%s:%s", url->host, url->port);
-	if (error < 0)
-		return error;
-
-	*bypass = false;
-
-	do {
-		c = *(p_start + p_length);
-		if ((c == ',') || (c == 0)) {
-			if ((p_length == 1) && (*p_start == '*')) {
-				// wildcard match (*)
-				goto found;
-			} else if ((p_length == strlen(url->host)) && !memcmp(p_start, url->host, p_length)) {
-				// exact host match
-				goto found;
-			} else if ((p_length == strlen(hostport.ptr)) && !memcmp(p_start, hostport.ptr, p_length)) {
-				// exact host:port match
-				goto found;
-			} else {
-				if ((p_length >= 2) && (*p_start == '*') && (*(p_start + 1) == '.')) {
-					// *.foo == .foo
-					p_start++;
-					p_length--;
-				}
-				if ((*p_start == '.') && (strlen(url->host) > p_length) && !memcmp(p_start, url->host + strlen(url->host) - p_length, p_length)) {
-					// host suffix match (.example.org)
-					goto found;
-				} else if ((*p_start == '.') && (strlen(hostport.ptr) > p_length) && !memcmp(p_start, hostport.ptr + strlen(hostport.ptr) - p_length, p_length)) {
-					// host:port suffix match (.example.org:443)
-					goto found;
-				}
-			}
-			p_start += p_length + 1;
-			p_length = 0;
-		} else {
-			p_length++;
-		}
-	} while(c != 0);
-
-	goto end;
-
-found:
-	*bypass = true;
-
-end:
-	git_buf_dispose(&hostport);
-	return 0;
-}
-
-int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, git_net_url *url, char **proxy_url)
-{
-	git_config *cfg;
 	git_config_entry *ce = NULL;
-	git_buf proxy_env = GIT_BUF_INIT;
-	git_buf no_proxy_env = GIT_BUF_INIT;
-	bool bypass = false;
 	int error;
 
-	GIT_ASSERT_ARG(remote);
-
-	if (!proxy_url || !remote->repo)
-		return -1;
-
-	*proxy_url = NULL;
-
-	if ((error = git_repository_config__weakptr(&cfg, remote->repo)) < 0)
-		return error;
-
-	/* Go through the possible sources for proxy configuration, from most specific
-	 * to least specific. */
-
-	/* remote.<name>.proxy config setting */
-	if (remote->name && remote->name[0]) {
-		git_buf buf = GIT_BUF_INIT;
-
-		if ((error = git_buf_printf(&buf, "remote.%s.proxy", remote->name)) < 0)
-			return error;
-
-		error = git_config__lookup_entry(&ce, cfg, git_buf_cstr(&buf), false);
-		git_buf_dispose(&buf);
-
-		if (error < 0)
-			return error;
-
-		if (ce && ce->value) {
-			*proxy_url = git__strdup(ce->value);
-			goto found;
-		}
-	}
-
-	/* http.proxy config setting */
-	if ((error = git_config__lookup_entry(&ce, cfg, "http.proxy", false)) < 0)
+	if ((error = git_config__lookup_entry(&ce, cfg, name, false)) < 0)
 		return error;
 
 	if (ce && ce->value) {
-		*proxy_url = git__strdup(ce->value);
-		goto found;
+		*out = git__strdup(ce->value);
+		GIT_ERROR_CHECK_ALLOC(*out);
+	} else {
+		error = GIT_ENOTFOUND;
 	}
+
+	git_config_entry_free(ce);
+	return error;
+}
+
+static void url_config_trim(git_net_url *url)
+{
+	size_t len = strlen(url->path);
+
+	if (url->path[len - 1] == '/') {
+		len--;
+	} else {
+		while (len && url->path[len - 1] != '/')
+			len--;
+	}
+
+	url->path[len] = '\0';
+}
+
+static int http_proxy_config(char **out, git_remote *remote, git_net_url *url)
+{
+	git_config *cfg;
+	git_buf buf = GIT_BUF_INIT;
+	git_net_url lookup_url = GIT_NET_URL_INIT;
+	int error;
+
+	if ((error = git_net_url_dup(&lookup_url, url)) < 0 ||
+	    (error = git_repository_config__weakptr(&cfg, remote->repo)) < 0)
+		goto done;
+
+	/* remote.<name>.proxy config setting */
+	if (remote->name && remote->name[0]) {
+		git_buf_clear(&buf);
+
+		if ((error = git_buf_printf(&buf, "remote.%s.proxy", remote->name)) < 0 ||
+		    (error = lookup_config(out, cfg, buf.ptr)) != GIT_ENOTFOUND)
+			goto done;
+	}
+
+	while (true) {
+		git_buf_clear(&buf);
+
+		if ((error = git_buf_puts(&buf, "http.")) < 0 ||
+		    (error = git_net_url_fmt(&buf, &lookup_url)) < 0 ||
+		    (error = git_buf_puts(&buf, ".proxy")) < 0 ||
+		    (error = lookup_config(out, cfg, buf.ptr)) != GIT_ENOTFOUND)
+			goto done;
+
+		if (! lookup_url.path[0])
+			break;
+
+		url_config_trim(&lookup_url);
+	}
+
+	git_buf_clear(&buf);
+
+	error = lookup_config(out, cfg, "http.proxy");
+
+done:
+	git_buf_dispose(&buf);
+	git_net_url_dispose(&lookup_url);
+	return error;
+}
+
+static int http_proxy_env(char **out, git_remote *remote, git_net_url *url)
+{
+	git_buf proxy_env = GIT_BUF_INIT, no_proxy_env = GIT_BUF_INIT;
+	bool use_ssl = (strcmp(url->scheme, "https") == 0);
+	int error;
+
+	GIT_UNUSED(remote);
 
 	/* http_proxy / https_proxy environment variables */
 	error = git__getenv(&proxy_env, use_ssl ? "https_proxy" : "http_proxy");
@@ -963,44 +942,49 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, git_net_url *ur
 	if (error == GIT_ENOTFOUND)
 		error = git__getenv(&proxy_env, use_ssl ? "HTTPS_PROXY" : "HTTP_PROXY");
 
-	if (error < 0) {
-		if (error == GIT_ENOTFOUND) {
-			git_error_clear();
-			error = 0;
-		}
-
-		return error;
-	}
+	if (error)
+		goto done;
 
 	/* no_proxy/NO_PROXY environment variables */
 	error = git__getenv(&no_proxy_env, "no_proxy");
+
 	if (error == GIT_ENOTFOUND)
 		error = git__getenv(&no_proxy_env, "NO_PROXY");
 
-	if (error == GIT_ENOTFOUND) {
-		git_error_clear();
-		error = 0;
-	} else if (error < 0) {
-		goto cleanup;
-	} else {
-		error = git_remote__get_http_proxy_bypass(url, &no_proxy_env, &bypass);
-	}
+	if (error && error != GIT_ENOTFOUND)
+		goto done;
 
-	if (bypass) {
-		git_buf_dispose(&proxy_env);
-		goto cleanup;
-	} else {
-		*proxy_url = git_buf_detach(&proxy_env);
-	}
+	if (!git_net_url_matches_pattern_list(url, no_proxy_env.ptr))
+		*out = git_buf_detach(&proxy_env);
+	else
+		error = GIT_ENOTFOUND;
 
-found:
-	GIT_ERROR_CHECK_ALLOC(*proxy_url);
-
-cleanup:
+done:
+	git_buf_dispose(&proxy_env);
 	git_buf_dispose(&no_proxy_env);
-	git_config_entry_free(ce);
-
 	return error;
+}
+
+int git_remote__http_proxy(char **out, git_remote *remote, git_net_url *url)
+{
+	int error;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(remote);
+	GIT_ASSERT_ARG(remote->repo);
+
+	*out = NULL;
+
+	/*
+	 * Go through the possible sources for proxy configuration,
+	 * Examine the various git config options first, then
+	 * consult environment variables.
+	 */
+	if ((error = http_proxy_config(out, remote, url)) != GIT_ENOTFOUND ||
+	    (error = http_proxy_env(out, remote, url)) != GIT_ENOTFOUND)
+		return error;
+
+	return 0;
 }
 
 /* DWIM `refspecs` based on `refs` and append the output to `out` */

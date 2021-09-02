@@ -373,7 +373,6 @@ static int winhttp_stream_connect(winhttp_stream *s)
 {
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	git_buf buf = GIT_BUF_INIT;
-	bool use_ssl;
 	char *proxy_url = NULL;
 	wchar_t ct[MAX_CONTENT_TYPE_LEN];
 	LPCWSTR types[] = { L"*/*", NULL };
@@ -430,8 +429,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	proxy_opts = &t->owner->proxy;
 	if (proxy_opts->type == GIT_PROXY_AUTO) {
 		/* Set proxy if necessary */
-		use_ssl = strcmp(t->server.url.scheme, "https") == 0;
-		if (git_remote__get_http_proxy(t->owner->owner, use_ssl, &t->server.url, &proxy_url) < 0)
+		if (git_remote__http_proxy(&proxy_url, t->owner->owner, &t->server.url) < 0)
 			goto on_error;
 	}
 	else if (proxy_opts->type == GIT_PROXY_SPECIFIED) {
@@ -744,7 +742,7 @@ static void CALLBACK winhttp_status(
 				git_error_set(GIT_ERROR_HTTP, "unknown security error %lu", status);
 
 			break;
-		
+
 		case WINHTTP_CALLBACK_STATUS_SENDING_REQUEST:
 			((winhttp_stream *) ctx)->status_sending_request_reached = 1;
 
