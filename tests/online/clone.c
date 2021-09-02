@@ -36,6 +36,7 @@ static char *_remote_expectcontinue = NULL;
 static int _orig_proxies_need_reset = 0;
 static char *_orig_http_proxy = NULL;
 static char *_orig_https_proxy = NULL;
+static char *_orig_no_proxy = NULL;
 
 static int ssl_cert(git_cert *cert, int valid, const char *host, void *payload)
 {
@@ -110,9 +111,11 @@ void test_online_clone__cleanup(void)
 	if (_orig_proxies_need_reset) {
 		cl_setenv("HTTP_PROXY", _orig_http_proxy);
 		cl_setenv("HTTPS_PROXY", _orig_https_proxy);
+		cl_setenv("NO_PROXY", _orig_no_proxy);
 
 		git__free(_orig_http_proxy);
 		git__free(_orig_https_proxy);
+		git__free(_orig_no_proxy);
 	}
 
 	git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, NULL);
@@ -854,6 +857,7 @@ void test_online_clone__proxy_credentials_in_environment(void)
 
 	_orig_http_proxy = cl_getenv("HTTP_PROXY");
 	_orig_https_proxy = cl_getenv("HTTPS_PROXY");
+	_orig_no_proxy = cl_getenv("NO_PROXY");
 	_orig_proxies_need_reset = 1;
 
 	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_AUTO;
@@ -865,6 +869,7 @@ void test_online_clone__proxy_credentials_in_environment(void)
 
 	cl_setenv("HTTP_PROXY", url.ptr);
 	cl_setenv("HTTPS_PROXY", url.ptr);
+	cl_setenv("NO_PROXY", NULL);
 
 	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 

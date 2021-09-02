@@ -4,17 +4,17 @@
 
 static git_net_url conndata;
 
-void test_network_redirect__initialize(void)
+void test_network_url_redirect__initialize(void)
 {
 	memset(&conndata, 0, sizeof(conndata));
 }
 
-void test_network_redirect__cleanup(void)
+void test_network_url_redirect__cleanup(void)
 {
 	git_net_url_dispose(&conndata);
 }
 
-void test_network_redirect__redirect_http(void)
+void test_network_url_redirect__redirect_http(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 				"http://example.com/foo/bar/baz"));
@@ -28,7 +28,7 @@ void test_network_redirect__redirect_http(void)
 	cl_assert_equal_p(conndata.password, NULL);
 }
 
-void test_network_redirect__redirect_ssl(void)
+void test_network_url_redirect__redirect_ssl(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 				"https://example.com/foo/bar/baz"));
@@ -42,7 +42,7 @@ void test_network_redirect__redirect_ssl(void)
 	cl_assert_equal_p(conndata.password, NULL);
 }
 
-void test_network_redirect__redirect_leaves_root_path(void)
+void test_network_url_redirect__redirect_leaves_root_path(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 				"https://example.com/foo/bar/baz"));
@@ -56,7 +56,7 @@ void test_network_redirect__redirect_leaves_root_path(void)
 	cl_assert_equal_p(conndata.password, NULL);
 }
 
-void test_network_redirect__redirect_encoded_username_password(void)
+void test_network_url_redirect__redirect_encoded_username_password(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata,
 				"https://user%2fname:pass%40word%zyx%v@example.com/foo/bar/baz"));
@@ -70,7 +70,7 @@ void test_network_redirect__redirect_encoded_username_password(void)
 	cl_assert_equal_s(conndata.password, "pass@word%zyx%v");
 }
 
-void test_network_redirect__redirect_cross_host_denied(void)
+void test_network_url_redirect__redirect_cross_host_denied(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "https://bar.com/bar/baz"));
 	cl_git_fail_with(git_net_url_apply_redirect(&conndata,
@@ -78,7 +78,7 @@ void test_network_redirect__redirect_cross_host_denied(void)
 			-1);
 }
 
-void test_network_redirect__redirect_http_downgrade_denied(void)
+void test_network_url_redirect__redirect_http_downgrade_denied(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "https://foo.com/bar/baz"));
 	cl_git_fail_with(git_net_url_apply_redirect(&conndata,
@@ -86,7 +86,7 @@ void test_network_redirect__redirect_http_downgrade_denied(void)
 			-1);
 }
 
-void test_network_redirect__redirect_relative(void)
+void test_network_url_redirect__redirect_relative(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "http://foo.com/bar/baz/biff"));
 	cl_git_pass(git_net_url_apply_redirect(&conndata,
@@ -99,7 +99,7 @@ void test_network_redirect__redirect_relative(void)
 	cl_assert_equal_p(conndata.password, NULL);
 }
 
-void test_network_redirect__redirect_relative_ssl(void)
+void test_network_url_redirect__redirect_relative_ssl(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "https://foo.com/bar/baz/biff"));
 	cl_git_pass(git_net_url_apply_redirect(&conndata,
@@ -112,7 +112,7 @@ void test_network_redirect__redirect_relative_ssl(void)
 	cl_assert_equal_p(conndata.password, NULL);
 }
 
-void test_network_redirect__service_query_no_query_params_in_location(void)
+void test_network_url_redirect__service_query_no_query_params_in_location(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "https://foo.com/bar/info/refs?service=git-upload-pack"));
 	cl_git_pass(git_net_url_apply_redirect(&conndata,
@@ -120,7 +120,7 @@ void test_network_redirect__service_query_no_query_params_in_location(void)
 	cl_assert_equal_s(conndata.path, "/baz");
 }
 
-void test_network_redirect__service_query_with_query_params_in_location(void)
+void test_network_url_redirect__service_query_with_query_params_in_location(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "https://foo.com/bar/info/refs?service=git-upload-pack"));
 	cl_git_pass(git_net_url_apply_redirect(&conndata,

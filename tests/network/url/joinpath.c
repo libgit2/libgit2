@@ -4,19 +4,19 @@
 
 static git_net_url source, target;
 
-void test_network_joinpath__initialize(void)
+void test_network_url_joinpath__initialize(void)
 {
 	memset(&source, 0, sizeof(source));
 	memset(&target, 0, sizeof(target));
 }
 
-void test_network_joinpath__cleanup(void)
+void test_network_url_joinpath__cleanup(void)
 {
 	git_net_url_dispose(&source);
 	git_net_url_dispose(&target);
 }
 
-void test_network_joinpath__target_paths_and_queries(void)
+void test_network_url_joinpath__target_paths_and_queries(void)
 {
 	cl_git_pass(git_net_url_parse(&source, "http://example.com/a/b"));
 
@@ -31,7 +31,7 @@ void test_network_joinpath__target_paths_and_queries(void)
 	git_net_url_dispose(&target);
 }
 
-void test_network_joinpath__source_query_removed(void)
+void test_network_url_joinpath__source_query_removed(void)
 {
 	cl_git_pass(git_net_url_parse(&source, "http://example.com/a/b?query&one&two"));
 
@@ -46,7 +46,7 @@ void test_network_joinpath__source_query_removed(void)
 	git_net_url_dispose(&target);
 }
 
-void test_network_joinpath__source_lacks_path(void)
+void test_network_url_joinpath__source_lacks_path(void)
 {
 	cl_git_pass(git_net_url_parse(&source, "http://example.com"));
 
@@ -91,7 +91,7 @@ void test_network_joinpath__source_lacks_path(void)
 	git_net_url_dispose(&target);
 }
 
-void test_network_joinpath__source_is_slash(void)
+void test_network_url_joinpath__source_is_slash(void)
 {
 	cl_git_pass(git_net_url_parse(&source, "http://example.com/"));
 
@@ -137,7 +137,7 @@ void test_network_joinpath__source_is_slash(void)
 }
 
 
-void test_network_joinpath__source_has_query(void)
+void test_network_url_joinpath__source_has_query(void)
 {
 	cl_git_pass(git_net_url_parse(&source, "http://example.com?query"));
 
@@ -183,7 +183,7 @@ void test_network_joinpath__source_has_query(void)
 }
 
 
-void test_network_joinpath__empty_query_ignored(void)
+void test_network_url_joinpath__empty_query_ignored(void)
 {
 	cl_git_pass(git_net_url_parse(&source, "http://example.com/foo"));
 

@@ -35,6 +35,46 @@ static const char *default_port_for_scheme(const char *scheme)
 	return NULL;
 }
 
+int git_net_url_dup(git_net_url *out, git_net_url *in)
+{
+	if (in->scheme) {
+		out->scheme = git__strdup(in->scheme);
+		GIT_ERROR_CHECK_ALLOC(out->scheme);
+	}
+
+	if (in->host) {
+		out->host = git__strdup(in->host);
+		GIT_ERROR_CHECK_ALLOC(out->host);
+	}
+
+	if (in->port) {
+		out->port = git__strdup(in->port);
+		GIT_ERROR_CHECK_ALLOC(out->port);
+	}
+
+	if (in->path) {
+		out->path = git__strdup(in->path);
+		GIT_ERROR_CHECK_ALLOC(out->path);
+	}
+
+	if (in->query) {
+		out->query = git__strdup(in->query);
+		GIT_ERROR_CHECK_ALLOC(out->query);
+	}
+
+	if (in->username) {
+		out->username = git__strdup(in->username);
+		GIT_ERROR_CHECK_ALLOC(out->username);
+	}
+
+	if (in->password) {
+		out->password = git__strdup(in->password);
+		GIT_ERROR_CHECK_ALLOC(out->password);
+	}
+
+	return 0;
+}
+
 int git_net_url_parse(git_net_url *url, const char *given)
 {
 	struct http_parser_url u = {0};
@@ -402,6 +442,80 @@ int git_net_url_fmt_path(git_buf *buf, git_net_url *url)
 	}
 
 	return git_buf_oom(buf) ? -1 : 0;
+}
+
+static bool matches_pattern(
+	git_net_url *url,
+	const char *pattern,
+	size_t pattern_len)
+{
+	const char *domain, *port = NULL, *colon;
+	size_t host_len, domain_len, port_len = 0, wildcard = 0;
+
+	GIT_UNUSED(url);
+	GIT_UNUSED(pattern);
+
+	if (!pattern_len)
+		return false;
+	else if (pattern_len == 1 && pattern[0] == '*')
+		return true;
+	else if (pattern_len > 1 && pattern[0] == '*' && pattern[1] == '.')
+		wildcard = 2;
+	else if (pattern[0] == '.')
+		wildcard = 1;
+
+	domain = pattern + wildcard;
+	domain_len = pattern_len - wildcard;
+
+	if ((colon = memchr(domain, ':', domain_len)) != NULL) {
+		domain_len = colon - domain;
+		port = colon + 1;
+		port_len = pattern_len - wildcard - domain_len - 1;
+	}
+
+	/* A pattern's port *must* match if it's specified */
+	if (port_len && git__strlcmp(url->port, port, port_len) != 0)
+		return false;
+
+	/* No wildcard?  Host must match exactly. */
+	if (!wildcard)
+		return !git__strlcmp(url->host, domain, domain_len);
+
+	/* Wildcard: ensure there's (at least) a suffix match */
+	if ((host_len = strlen(url->host)) < domain_len ||
+	    memcmp(url->host + (host_len - domain_len), domain, domain_len))
+		return false;
+
+	/* The pattern is *.domain and the host is simply domain */
+	if (host_len == domain_len)
+		return true;
+
+	/* The pattern is *.domain and the host is foo.domain */
+	return (url->host[host_len - domain_len - 1] == '.');
+}
+
+bool git_net_url_matches_pattern(git_net_url *url, const char *pattern)
+{
+	return matches_pattern(url, pattern, strlen(pattern));
+}
+
+bool git_net_url_matches_pattern_list(
+	git_net_url *url,
+	const char *pattern_list)
+{
+	const char *pattern, *pattern_end, *sep;
+
+	for (pattern = pattern_list;
+	     pattern && *pattern;
+	     pattern = sep ? sep + 1 : NULL) {
+		sep = strchr(pattern, ',');
+		pattern_end = sep ? sep : strchr(pattern, '\0');
+
+		if (matches_pattern(url, pattern, (pattern_end - pattern)))
+			return true;
+	}
+
+	return false;
 }
 
 void git_net_url_dispose(git_net_url *url)

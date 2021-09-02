@@ -290,7 +290,6 @@ static int lookup_proxy(
 {
 	const char *proxy;
 	git_remote *remote;
-	bool use_ssl;
 	char *config = NULL;
 	int error = 0;
 
@@ -304,9 +303,8 @@ static int lookup_proxy(
 
 	case GIT_PROXY_AUTO:
 		remote = transport->owner->owner;
-		use_ssl = !strcmp(transport->server.url.scheme, "https");
 
-		error = git_remote__get_http_proxy(remote, use_ssl, &config);
+		error = git_remote__http_proxy(&config, remote, &transport->server.url);
 
 		if (error || !config)
 			goto done;
