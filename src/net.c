@@ -401,6 +401,9 @@ void git_net_url_swap(git_net_url *a, git_net_url *b)
 
 int git_net_url_fmt(git_buf *buf, git_net_url *url)
 {
+	GIT_ASSERT_ARG(in->scheme);
+	GIT_ASSERT_ARG(in->host);
+
 	git_buf_puts(buf, url->scheme);
 	git_buf_puts(buf, "://");
 
