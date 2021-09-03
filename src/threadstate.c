@@ -36,7 +36,8 @@ static void threadstate_dispose(git_threadstate *threadstate)
 	if (!threadstate)
 		return;
 
-	git__free(threadstate->error_t.message);
+    if (threadstate->error_t.message != git_buf__initbuf)
+        git__free(threadstate->error_t.message);
 	threadstate->error_t.message = NULL;
 }
 
