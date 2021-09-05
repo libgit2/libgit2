@@ -448,7 +448,7 @@ int git_blob_filter(
 
 	if ((opts.flags & GIT_BLOB_FILTER_ATTRIBUTES_FROM_COMMIT) != 0) {
 		filter_opts.flags |= GIT_FILTER_ATTRIBUTES_FROM_COMMIT;
-		filter_opts.commit_id = opts.commit_id;
+		git_oid_cpy(&filter_opts.commit_id, &opts.commit_id);
 	}
 
 	if (!(error = git_filter_list_load_ext(

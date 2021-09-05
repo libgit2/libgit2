@@ -382,7 +382,7 @@ static int attr_setup(
 {
 	git_buf system = GIT_BUF_INIT, info = GIT_BUF_INIT;
 	git_attr_file_source index_source = { GIT_ATTR_FILE_SOURCE_INDEX, NULL, GIT_ATTR_FILE, NULL };
-	git_attr_file_source head_source = { GIT_ATTR_FILE_SOURCE_COMMIT, NULL, GIT_ATTR_FILE, NULL };
+	git_attr_file_source head_source = { GIT_ATTR_FILE_SOURCE_HEAD, NULL, GIT_ATTR_FILE, NULL };
 	git_attr_file_source commit_source = { GIT_ATTR_FILE_SOURCE_COMMIT, NULL, GIT_ATTR_FILE, NULL };
 	git_index *idx = NULL;
 	const char *workdir;
@@ -432,7 +432,7 @@ static int attr_setup(
 		goto out;
 
 	if ((opts && (opts->flags & GIT_ATTR_CHECK_INCLUDE_COMMIT) != 0)) {
-		commit_source.commit_id = opts->commit_id;
+		commit_source.commit_id = &opts->commit_id;
 
 		if ((error = preload_attr_source(repo, attr_session, &commit_source)) < 0)
 			goto out;
@@ -521,8 +521,10 @@ static int attr_decide_sources(
 		break;
 	}
 
-	if ((flags & GIT_ATTR_CHECK_INCLUDE_HEAD) != 0 ||
-	    (flags & GIT_ATTR_CHECK_INCLUDE_COMMIT) != 0)
+	if ((flags & GIT_ATTR_CHECK_INCLUDE_HEAD) != 0)
+		srcs[count++] = GIT_ATTR_FILE_SOURCE_HEAD;
+
+	if ((flags & GIT_ATTR_CHECK_INCLUDE_COMMIT) != 0)
 		srcs[count++] = GIT_ATTR_FILE_SOURCE_COMMIT;
 
 	return count;
@@ -583,7 +585,7 @@ static int push_one_attr(void *ref, const char *path)
 		git_attr_file_source source = { src[i], path, GIT_ATTR_FILE };
 
 		if (src[i] == GIT_ATTR_FILE_SOURCE_COMMIT && info->opts)
-			source.commit_id = info->opts->commit_id;
+			source.commit_id = &info->opts->commit_id;
 
 		error = push_attr_source(info->repo, info->attr_session, info->files,
 		                       &source, allow_macros);

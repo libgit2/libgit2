@@ -70,7 +70,7 @@ typedef struct {
 	 * The commit to load attributes from, when
 	 * `GIT_FILTER_ATTRIBUTES_FROM_COMMIT` is specified.
 	 */
-	git_oid *commit_id;
+	git_oid commit_id;
 } git_filter_options;
 
  #define GIT_FILTER_OPTIONS_VERSION 1

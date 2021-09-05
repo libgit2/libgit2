@@ -139,7 +139,7 @@ typedef struct {
 	 * The commit to load attributes from, when
 	 * `GIT_BLOB_FILTER_ATTRIBUTES_FROM_COMMIT` is specified.
 	 */
-	git_oid *commit_id;
+	git_oid commit_id;
 } git_blob_filter_options;
 
 #define GIT_BLOB_FILTER_OPTIONS_VERSION 1
