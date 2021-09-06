@@ -16,6 +16,7 @@
 #include "git2/commit.h"
 #include "git2/tree.h"
 
+#include "checkout.h"
 #include "remote.h"
 #include "futils.h"
 #include "refs.h"

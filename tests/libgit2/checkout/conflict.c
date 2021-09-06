@@ -308,8 +308,6 @@ void test_checkout_conflict__directory_file(void)
 		{ 0100644, CONFLICTING_THEIRS_OID, 3, "df-4/file" },
 	};
 
-	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
-
 	create_index(checkout_index_entries, 12);
 	cl_git_pass(git_index_write(g_index));
 
@@ -347,7 +345,6 @@ void test_checkout_conflict__directory_file_with_custom_labels(void)
 		{ 0100644, CONFLICTING_THEIRS_OID, 3, "df-4/file" },
 	};
 
-	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
 	opts.our_label = "HEAD";
 	opts.their_label = "branch";
 
@@ -388,8 +385,6 @@ void test_checkout_conflict__link_file(void)
 		{ 0100644, CONFLICTING_THEIRS_OID, 3, "link-4" },
 	};
 
-	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
-
 	create_index(checkout_index_entries, 12);
 	cl_git_pass(git_index_write(g_index));
 
@@ -415,8 +410,6 @@ void test_checkout_conflict__links(void)
 		{ 0120000, LINK_THEIRS_OID, 3, "link-2" },
 	};
 
-	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
-
 	create_index(checkout_index_entries, 5);
 	cl_git_pass(git_index_write(g_index));
 
@@ -435,8 +428,6 @@ void test_checkout_conflict__add_add(void)
 		{ 0100644, CONFLICTING_OURS_OID, 2, "conflicting.txt" },
 		{ 0100644, CONFLICTING_THEIRS_OID, 3, "conflicting.txt" },
 	};
-
-	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
 
 	create_index(checkout_index_entries, 2);
 	cl_git_pass(git_index_write(g_index));
@@ -476,8 +467,6 @@ void test_checkout_conflict__mode_change(void)
 		{ 0100644, CONFLICTING_OURS_OID, 2, "executable-6" },
 		{ 0100755, CONFLICTING_THEIRS_OID, 3, "executable-6" },
 	};
-
-	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
 
 	create_index(checkout_index_entries, 18);
 	cl_git_pass(git_index_write(g_index));
@@ -607,8 +596,6 @@ void test_checkout_conflict__renames(void)
 			"7-both-renamed.txt"
 		}
 	};
-
-	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
 
 	create_index(checkout_index_entries, 41);
 	create_index_names(checkout_name_entries, 9);
@@ -793,7 +780,7 @@ void test_checkout_conflict__rename_keep_ours(void)
 		}
 	};
 
-	opts.checkout_strategy |= GIT_CHECKOUT_SAFE | GIT_CHECKOUT_USE_OURS;
+	opts.checkout_strategy |= GIT_CHECKOUT_USE_OURS;
 
 	create_index(checkout_index_entries, 41);
 	create_index_names(checkout_name_entries, 9);
@@ -925,8 +912,6 @@ void test_checkout_conflict__name_mangled_file_exists_in_workdir(void)
 			"test-three.txt"
 		}
 	};
-
-	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
 
 	create_index(checkout_index_entries, 24);
 	create_index_names(checkout_name_entries, 6);
