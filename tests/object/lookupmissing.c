@@ -49,15 +49,17 @@ void test_object_lookupmissing__missing(void)
 	 * from a packfile that is not marked as being a promisor-packfile. */
 
 	/* Path -> object. */
-	cl_assert_equal_i(GIT_EMISSING,
+	cl_assert_equal_i(GIT_ENOTFOUND,
 		git_object_lookup_bypath(&g_result_object, (git_object*)g_root_tree,
 			"files/first/large_file", GIT_OBJECT_ANY));
+	cl_assert_equal_i(GIT_EOBJECTMISSING, git_error_last()->subcode);
 
 	/* Path -> tree-entry -> object. */
 	cl_git_pass(git_tree_entry_bypath(&g_result_entry, g_root_tree,
 		"files/first/large_file"));
-	cl_assert_equal_i(GIT_EMISSING,
+	cl_assert_equal_i(GIT_ENOTFOUND,
 		git_tree_entry_to_object(&g_result_object, g_repo, g_result_entry));
+	cl_assert_equal_i(GIT_EOBJECTMISSING, git_error_last()->subcode);
 }
 
 void test_object_lookupmissing__missing_with_promisor(void)
@@ -65,18 +67,22 @@ void test_object_lookupmissing__missing_with_promisor(void)
 	/* files/second/large_file is missing from a promisor packfile -
 	 * so probably is available at the remote (ie, a partial clone) */
 
+	/* TODO: add a "promised" error subcode for this situation. */
+
 	/* Path -> object. */
-	/* TODO: add a new error code for this - EPROMISED. */
-	cl_assert_equal_i(GIT_EMISSING,
+	cl_assert_equal_i(GIT_ENOTFOUND,
 		git_object_lookup_bypath(&g_result_object, (git_object*)g_root_tree,
 			"files/second/large_file", GIT_OBJECT_ANY));
+	cl_assert_equal_i(GIT_EOBJECTMISSING, git_error_last()->subcode);
+
 
 	/* Path -> tree-entry -> object. */
 	cl_git_pass(git_tree_entry_bypath(&g_result_entry, g_root_tree,
 		"files/second/large_file"));
-	/* TODO: add a new error code for this - EPROMISED. */
-	cl_assert_equal_i(GIT_EMISSING,
+	cl_assert_equal_i(GIT_ENOTFOUND,
 		git_tree_entry_to_object(&g_result_object, g_repo, g_result_entry));
+	cl_assert_equal_i(GIT_EOBJECTMISSING, git_error_last()->subcode);
+
 }
 
 void test_object_lookupmissing__missing_commit_tree(void)
@@ -91,25 +97,53 @@ void test_object_lookupmissing__missing_commit_tree(void)
 		(git_object**)&commit, branch, GIT_OBJECT_COMMIT));
 
 	/* commit -> tree. */
-	cl_assert_equal_i(GIT_EMISSING, git_commit_tree(&tree, commit));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_commit_tree(&tree, commit));
+	cl_assert_equal_i(GIT_EOBJECTMISSING, git_error_last()->subcode);
 
 	/* peel(commit) -> tree */
-	cl_assert_equal_i(GIT_EMISSING,
+	cl_assert_equal_i(GIT_ENOTFOUND,
 		git_object_peel((git_object**)&tree, (git_object*)commit, GIT_OBJECT_TREE));
+	cl_assert_equal_i(GIT_EOBJECTMISSING, git_error_last()->subcode);
 
 	/* peel(branch) -> tree */
-	cl_assert_equal_i(GIT_EMISSING,
+	cl_assert_equal_i(GIT_ENOTFOUND,
 		git_reference_peel((git_object**)&tree, branch, GIT_OBJECT_TREE));
+	cl_assert_equal_i(GIT_EOBJECTMISSING, git_error_last()->subcode);
 
 	git_commit_free(commit);
 	git_reference_free(branch);
+}
 
+void test_object_lookupmissing__nosuchpath(void)
+{
+	/* These objects definitely don't exist - we know because we can see
+	 * that the parent objects don't have children with these names. */
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_object_lookup_bypath(&g_result_object, (git_object*)g_root_tree,
+			"files/first/nonexistent", GIT_OBJECT_ANY));
+	cl_assert_equal_i(GIT_ENOSUCHPATH, git_error_last()->subcode);
+
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_object_lookup_bypath(&g_result_object, (git_object*)g_root_tree,
+			"files/second/nonexistent", GIT_OBJECT_ANY));
+	cl_assert_equal_i(GIT_ENOSUCHPATH, git_error_last()->subcode);
+
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_object_lookup_bypath(&g_result_object, (git_object*)g_root_tree,
+			"files/first/README/nonexistent", GIT_OBJECT_ANY));
+	cl_assert_equal_i(GIT_ENOSUCHPATH, git_error_last()->subcode);
+
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_object_lookup_bypath(&g_result_object, (git_object*)g_root_tree,
+			"files/second/README/nonexistent", GIT_OBJECT_ANY));
+	cl_assert_equal_i(GIT_ENOSUCHPATH, git_error_last()->subcode);
 }
 
 void test_object_lookupmissing__normal(void)
 {
 	/* Make sure that lookups are otherwise still working as normal in this
 	 * incomplete packfile / incomplete promisor-packfile. */
+	git_oid oid;
 
 	cl_git_pass(
 		git_object_lookup_bypath(&g_result_object, (git_object*)g_root_tree,
@@ -121,12 +155,10 @@ void test_object_lookupmissing__normal(void)
 			"files/second/README", GIT_OBJECT_BLOB));
 	git_object_free(g_result_object);
 
-	cl_assert_equal_i(GIT_ENOTFOUND,
-		git_object_lookup_bypath(&g_result_object, (git_object*)g_root_tree,
-			"files/first/nonexistent", GIT_OBJECT_ANY));
-
-	cl_assert_equal_i(GIT_ENOTFOUND,
-		git_object_lookup_bypath(&g_result_object, (git_object*)g_root_tree,
-			"files/second/nonexistent", GIT_OBJECT_ANY));
+	/* Lookups by OID won't have any extra information. */
+	cl_git_pass(git_oid_fromstr(&oid, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
+	cl_assert_equal_i(
+		GIT_ENOTFOUND, git_object_lookup(&g_result_object, g_repo, &oid, GIT_OBJECT_ANY));
+	cl_assert_equal_i(0, git_error_last()->subcode);
 }
 

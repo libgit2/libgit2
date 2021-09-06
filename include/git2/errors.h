@@ -58,11 +58,26 @@ typedef enum {
 	GIT_EMISMATCH       = -33,	/**< Hashsum mismatch in object */
 	GIT_EINDEXDIRTY     = -34,	/**< Unsaved changes in the index would be overwritten */
 	GIT_EAPPLYFAIL      = -35,	/**< Patch application failed */
-	GIT_EMISSING        = -36,  /**< Encountered tree-entry not backed by object */
 } git_error_code;
+
+
+/**
+ * Extra information for certain error codes.
+ * This extra information might not always be available - for example, more information
+ * is available when lookung up an object by path than when looking it up by OID.
+ */
+typedef enum {
+	GIT_NO_SUBCODE      = 0,
+
+	/** Subcodes for GIT_ENOTFOUND */
+	GIT_ENOSUCHPATH     = -3001, /**< Object at requested path DOES NOT exist */
+	GIT_EOBJECTMISSING  = -3002, /**< Object at requested path SHOULD exist, but is not in the ODB. */
+} git_error_subcode;
 
 /**
  * Structure to store extra details of the last error that occurred.
+ * The error code is not included since it is returned directly by the erroring function,
+ * but the error subcode and error class are included.
  *
  * This is kept on a per-thread basis if GIT_THREADS was defined when the
  * library was build, otherwise one is kept globally for the library
@@ -70,6 +85,7 @@ typedef enum {
 typedef struct {
 	char *message;
 	int klass;
+	int subcode;
 } git_error;
 
 /** Error classes */

@@ -145,8 +145,8 @@ void test_core_errors__restore_oom(void)
 	cl_assert_equal_i(-1, git_error_state_capture(&err_state, -1));
 
 	cl_assert(git_error_last() == NULL);
-	cl_assert_equal_i(GIT_ERROR_NOMEMORY, err_state.error_msg.klass);
-	cl_assert_equal_s("Out of memory", err_state.error_msg.message);
+	cl_assert_equal_i(GIT_ERROR_NOMEMORY, err_state.error.klass);
+	cl_assert_equal_s("Out of memory", err_state.error.message);
 
 	git_error_state_restore(&err_state);
 

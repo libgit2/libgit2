@@ -121,9 +121,9 @@ int git_odb__error_notfound(
 	const char *message, const git_oid *oid, size_t oid_len);
 
 /*
- * Generate a GIT_EMISSING error for the ODB.
+ * Generate a GIT_ENOTFOUND error with subcode GIT_EOBJECTMISSING.
  */
-int git_odb__error_missing(const git_oid *oid);
+int git_odb__error_notfound_missing(const git_oid *oid);
 
 /*
  * Generate a GIT_EAMBIGUOUS error for the ODB.

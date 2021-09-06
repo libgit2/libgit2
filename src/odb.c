@@ -1809,10 +1809,11 @@ int git_odb__error_notfound(
 }
 
 
-int git_odb__error_missing(const git_oid *oid)
+int git_odb__error_notfound_missing(const git_oid *oid)
 {
 	git_odb__error_notfound("object is missing/promised", oid, GIT_OID_HEXSZ);
-	return GIT_EMISSING;
+	git_error_subcode_set(GIT_EOBJECTMISSING);
+	return GIT_ENOTFOUND;
 }
 
 static int error_null_oid(int error, const char *message)

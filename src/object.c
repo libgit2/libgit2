@@ -441,8 +441,8 @@ int git_object_peel(
 
 	git_object_free(deref);
 
-	/* GIT_EMISSING is slightly more precise / informative than peel error. */
-	if (error < 0 && error != GIT_EMISSING)
+	/* GIT_ENOTFOUND is slightly more precise / informative than peel error. */
+	if (error < 0 && error != GIT_ENOTFOUND)
 		error = peel_error(error, git_object_id(object), target_type);
 
 	return error;
