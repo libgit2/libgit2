@@ -603,7 +603,6 @@ static void hash_partially(git_indexer *idx, const uint8_t *data, size_t size)
 
 static int write_at(git_indexer *idx, const void *data, off64_t offset, size_t size)
 {
-#ifdef NO_MMAP
 	size_t remaining_size = size;
 	const char *ptr = (const char *)data;
 
@@ -619,65 +618,21 @@ static int write_at(git_indexer *idx, const void *data, off64_t offset, size_t s
 		offset += nb;
 		remaining_size -= nb;
 	}
-#else
-	git_file fd = idx->pack->mwf.fd;
-	size_t mmap_alignment;
-	size_t page_offset;
-	off64_t page_start;
-	unsigned char *map_data;
-	git_map map;
-	int error;
-
-	GIT_ASSERT_ARG(data);
-	GIT_ASSERT_ARG(size);
-
-	if ((error = git__mmap_alignment(&mmap_alignment)) < 0)
-		return error;
-
-	/* the offset needs to be at the mmap boundary for the platform */
-	page_offset = offset % mmap_alignment;
-	page_start = offset - page_offset;
-
-	if ((error = p_mmap(&map, page_offset + size, GIT_PROT_WRITE, GIT_MAP_SHARED, fd, page_start)) < 0)
-		return error;
-
-	map_data = (unsigned char *)map.data;
-	memcpy(map_data + page_offset, data, size);
-	p_munmap(&map);
-#endif
 
 	return 0;
 }
 
 static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 {
-	off64_t new_size;
-	size_t mmap_alignment;
-	size_t page_offset;
-	off64_t page_start;
-	off64_t current_size = idx->pack->mwf.size;
-	int error;
-
 	if (!size)
 		return 0;
 
-	if ((error = git__mmap_alignment(&mmap_alignment)) < 0)
-		return error;
-
-	/* Write a single byte to force the file system to allocate space now or
-	 * report an error, since we can't report errors when writing using mmap.
-	 * Round the size up to the nearest page so that we only need to perform file
-	 * I/O when we add a page, instead of whenever we write even a single byte. */
-	new_size = current_size + size;
-	page_offset = new_size % mmap_alignment;
-	page_start = new_size - page_offset;
-
-	if (p_pwrite(idx->pack->mwf.fd, data, 1, page_start + mmap_alignment - 1) < 0) {
+	if (write_at(idx, data, idx->pack->mwf.size, size) < 0) {
 		git_error_set(GIT_ERROR_OS, "cannot extend packfile '%s'", idx->pack->pack_name);
 		return -1;
 	}
 
-	return write_at(idx, data, idx->pack->mwf.size, size);
+	return 0;
 }
 
 static int read_stream_object(git_indexer *idx, git_indexer_progress *stats)
