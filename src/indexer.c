@@ -1234,12 +1234,6 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 	if (git_mwindow_free_all(&idx->pack->mwf) < 0)
 		goto on_error;
 
-	/* Truncate file to undo rounding up to next page_size in append_to_pack */
-	if (p_ftruncate(idx->pack->mwf.fd, idx->pack->mwf.size) < 0) {
-		git_error_set(GIT_ERROR_OS, "failed to truncate pack file '%s'", idx->pack->pack_name);
-		return -1;
-	}
-
 	if (idx->do_fsync && p_fsync(idx->pack->mwf.fd) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to fsync packfile");
 		goto on_error;
