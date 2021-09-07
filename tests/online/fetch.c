@@ -226,13 +226,13 @@ void test_online_fetch__twice(void)
 void test_online_fetch__proxy(void)
 {
     git_remote *remote;
-    git_buf url = GIT_BUF_INIT;
+    git_str url = GIT_STR_INIT;
     git_fetch_options fetch_opts;
 
     if (!_remote_proxy_host || !_remote_proxy_user || !_remote_proxy_pass)
         cl_skip();
 
-    cl_git_pass(git_buf_printf(&url, "%s://%s:%s@%s/",
+    cl_git_pass(git_str_printf(&url, "%s://%s:%s@%s/",
         _remote_proxy_scheme ? _remote_proxy_scheme : "http",
         _remote_proxy_user, _remote_proxy_pass, _remote_proxy_host));
 
@@ -245,5 +245,5 @@ void test_online_fetch__proxy(void)
     cl_git_pass(git_remote_fetch(remote, NULL, &fetch_opts, NULL));
 
     git_remote_free(remote);
-    git_buf_dispose(&url);
+    git_str_dispose(&url);
 }

@@ -9,13 +9,10 @@
 
 #ifndef GIT_WINHTTP
 
-#include "git2.h"
 #include "http_parser.h"
-#include "buffer.h"
 #include "net.h"
 #include "netops.h"
 #include "remote.h"
-#include "git2/sys/credential.h"
 #include "smart.h"
 #include "auth.h"
 #include "http.h"
@@ -25,6 +22,7 @@
 #include "streams/tls.h"
 #include "streams/socket.h"
 #include "httpclient.h"
+#include "git2/sys/credential.h"
 
 bool git_http__expect_continue = false;
 

@@ -5,11 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "git2.h"
-#include "common.h"
-#include "buffer.h"
-#include "auth.h"
 #include "auth_ntlm.h"
+
+#include "common.h"
+#include "str.h"
+#include "auth.h"
 #include "git2/sys/credential.h"
 
 #ifdef GIT_NTLM
@@ -77,12 +77,12 @@ done:
 }
 
 static int ntlm_next_token(
-	git_buf *buf,
+	git_str *buf,
 	git_http_auth_context *c,
 	git_credential *cred)
 {
 	http_auth_ntlm_context *ctx = (http_auth_ntlm_context *)c;
-	git_buf input_buf = GIT_BUF_INIT;
+	git_str input_buf = GIT_STR_INIT;
 	const unsigned char *msg;
 	size_t challenge_len, msg_len;
 	int error = GIT_EAUTH;
@@ -129,7 +129,7 @@ static int ntlm_next_token(
 			goto done;
 		}
 
-		if (git_buf_decode_base64(&input_buf,
+		if (git_str_decode_base64(&input_buf,
 		    ctx->challenge + 5, challenge_len - 5) < 0) {
 			git_error_set(GIT_ERROR_NET, "invalid NTLM challenge from server");
 			goto done;
@@ -149,16 +149,16 @@ static int ntlm_next_token(
 		}
 	}
 
-	git_buf_puts(buf, "NTLM ");
-	git_buf_encode_base64(buf, (const char *)msg, msg_len);
+	git_str_puts(buf, "NTLM ");
+	git_str_encode_base64(buf, (const char *)msg, msg_len);
 
-	if (git_buf_oom(buf))
+	if (git_str_oom(buf))
 		goto done;
 
 	error = 0;
 
 done:
-	git_buf_dispose(&input_buf);
+	git_str_dispose(&input_buf);
 	return error;
 }
 

@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "git2/refspec.h"
-#include "buffer.h"
+#include "str.h"
 #include "vector.h"
 
 struct git_refspec {
@@ -25,6 +25,9 @@ struct git_refspec {
 
 #define GIT_REFSPEC_TAGS "refs/tags/*:refs/tags/*"
 
+int git_refspec__transform(git_str *out, const git_refspec *spec, const char *name);
+int git_refspec__rtransform(git_str *out, const git_refspec *spec, const char *name);
+
 int git_refspec__parse(
 	struct git_refspec *refspec,
 	const char *str,
@@ -32,7 +35,7 @@ int git_refspec__parse(
 
 void git_refspec__dispose(git_refspec *refspec);
 
-int git_refspec__serialize(git_buf *out, const git_refspec *refspec);
+int git_refspec__serialize(git_str *out, const git_refspec *refspec);
 
 /**
  * Determines if a refspec is a wildcard refspec.

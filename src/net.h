@@ -52,10 +52,10 @@ extern int git_net_url_apply_redirect(
 extern void git_net_url_swap(git_net_url *a, git_net_url *b);
 
 /** Places the URL into the given buffer. */
-extern int git_net_url_fmt(git_buf *out, git_net_url *url);
+extern int git_net_url_fmt(git_str *out, git_net_url *url);
 
 /** Place the path and query string into the given buffer. */
-extern int git_net_url_fmt_path(git_buf *buf, git_net_url *url);
+extern int git_net_url_fmt_path(git_str *buf, git_net_url *url);
 
 /** Determines if the url matches given pattern or pattern list */
 extern bool git_net_url_matches_pattern(

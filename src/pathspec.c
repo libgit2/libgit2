@@ -20,11 +20,11 @@
 /* what is the common non-wildcard prefix for all items in the pathspec */
 char *git_pathspec_prefix(const git_strarray *pathspec)
 {
-	git_buf prefix = GIT_BUF_INIT;
+	git_str prefix = GIT_STR_INIT;
 	const char *scan;
 
 	if (!pathspec || !pathspec->count ||
-		git_buf_common_prefix(&prefix, pathspec->strings, pathspec->count) < 0)
+		git_str_common_prefix(&prefix, pathspec->strings, pathspec->count) < 0)
 		return NULL;
 
 	/* diff prefix will only be leading non-wildcards */
@@ -33,16 +33,16 @@ char *git_pathspec_prefix(const git_strarray *pathspec)
 			(scan == prefix.ptr || (*(scan - 1) != '\\')))
 			break;
 	}
-	git_buf_truncate(&prefix, scan - prefix.ptr);
+	git_str_truncate(&prefix, scan - prefix.ptr);
 
 	if (prefix.size <= 0) {
-		git_buf_dispose(&prefix);
+		git_str_dispose(&prefix);
 		return NULL;
 	}
 
-	git_buf_unescape(&prefix);
+	git_str_unescape(&prefix);
 
-	return git_buf_detach(&prefix);
+	return git_str_detach(&prefix);
 }
 
 /* is there anything in the spec that needs to be filtered on */

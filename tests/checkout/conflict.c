@@ -85,14 +85,14 @@ void test_checkout_conflict__cleanup(void)
 
 static void create_index(struct checkout_index_entry *entries, size_t entries_len)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	size_t i;
 
 	for (i = 0; i < entries_len; i++) {
-		git_buf_joinpath(&path, TEST_REPO_PATH, entries[i].path);
+		git_str_joinpath(&path, TEST_REPO_PATH, entries[i].path);
 
 		if (entries[i].stage == 3 && (i == 0 || strcmp(entries[i-1].path, entries[i].path) != 0 || entries[i-1].stage != 2))
-			p_unlink(git_buf_cstr(&path));
+			p_unlink(git_str_cstr(&path));
 
 		cl_git_pass(git_index_remove_bypath(g_index, entries[i].path));
 	}
@@ -110,7 +110,7 @@ static void create_index(struct checkout_index_entry *entries, size_t entries_le
 		cl_git_pass(git_index_add(g_index, &entry));
 	}
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 static void create_index_names(struct checkout_name_entry *entries, size_t entries_len)
@@ -139,16 +139,16 @@ static void create_conflicting_index(void)
 
 static void ensure_workdir_contents(const char *path, const char *contents)
 {
-	git_buf fullpath = GIT_BUF_INIT, data_buf = GIT_BUF_INIT;
+	git_str fullpath = GIT_STR_INIT, data_buf = GIT_STR_INIT;
 
 	cl_git_pass(
-		git_buf_joinpath(&fullpath, git_repository_workdir(g_repo), path));
+		git_str_joinpath(&fullpath, git_repository_workdir(g_repo), path));
 
-	cl_git_pass(git_futils_readbuffer(&data_buf, git_buf_cstr(&fullpath)));
-	cl_assert(strcmp(git_buf_cstr(&data_buf), contents) == 0);
+	cl_git_pass(git_futils_readbuffer(&data_buf, git_str_cstr(&fullpath)));
+	cl_assert(strcmp(git_str_cstr(&data_buf), contents) == 0);
 
-	git_buf_dispose(&fullpath);
-	git_buf_dispose(&data_buf);
+	git_str_dispose(&fullpath);
+	git_str_dispose(&data_buf);
 }
 
 static void ensure_workdir_oid(const char *path, const char *oid_str)
@@ -166,16 +166,16 @@ static void ensure_workdir_mode(const char *path, int mode)
 	GIT_UNUSED(path);
 	GIT_UNUSED(mode);
 #else
-	git_buf fullpath = GIT_BUF_INIT;
+	git_str fullpath = GIT_STR_INIT;
 	struct stat st;
 
 	cl_git_pass(
-		git_buf_joinpath(&fullpath, git_repository_workdir(g_repo), path));
+		git_str_joinpath(&fullpath, git_repository_workdir(g_repo), path));
 
-	cl_git_pass(p_stat(git_buf_cstr(&fullpath), &st));
+	cl_git_pass(p_stat(git_str_cstr(&fullpath), &st));
 	cl_assert_equal_i((mode & S_IRWXU), (st.st_mode & S_IRWXU));
 
-	git_buf_dispose(&fullpath);
+	git_str_dispose(&fullpath);
 #endif
 }
 
@@ -197,22 +197,22 @@ static void ensure_workdir_link(
 	if (!symlinks) {
 		ensure_workdir_contents(path, target);
 	} else {
-		git_buf fullpath = GIT_BUF_INIT;
+		git_str fullpath = GIT_STR_INIT;
 		char actual[1024];
 		struct stat st;
 		int len;
 
 		cl_git_pass(
-			git_buf_joinpath(&fullpath, git_repository_workdir(g_repo), path));
+			git_str_joinpath(&fullpath, git_repository_workdir(g_repo), path));
 
-		cl_git_pass(p_lstat(git_buf_cstr(&fullpath), &st));
+		cl_git_pass(p_lstat(git_str_cstr(&fullpath), &st));
 		cl_assert(S_ISLNK(st.st_mode));
 
-		cl_assert((len = p_readlink(git_buf_cstr(&fullpath), actual, 1024)) > 0);
+		cl_assert((len = p_readlink(git_str_cstr(&fullpath), actual, 1024)) > 0);
 		actual[len] = '\0';
 		cl_assert(strcmp(actual, target) == 0);
 
-		git_buf_dispose(&fullpath);
+		git_str_dispose(&fullpath);
 	}
 }
 

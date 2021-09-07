@@ -735,13 +735,13 @@ void git__qsort_r(
 }
 
 #ifdef GIT_WIN32
-int git__getenv(git_buf *out, const char *name)
+int git__getenv(git_str *out, const char *name)
 {
 	wchar_t *wide_name = NULL, *wide_value = NULL;
 	DWORD value_len;
 	int error = -1;
 
-	git_buf_clear(out);
+	git_str_clear(out);
 
 	if (git__utf8_to_16_alloc(&wide_name, name) < 0)
 		return -1;
@@ -754,7 +754,7 @@ int git__getenv(git_buf *out, const char *name)
 	}
 
 	if (value_len)
-		error = git_buf_put_w(out, wide_value, value_len);
+		error = git_str_put_w(out, wide_value, value_len);
 	else if (GetLastError() == ERROR_SUCCESS || GetLastError() == ERROR_ENVVAR_NOT_FOUND)
 		error = GIT_ENOTFOUND;
 	else
@@ -765,16 +765,16 @@ int git__getenv(git_buf *out, const char *name)
 	return error;
 }
 #else
-int git__getenv(git_buf *out, const char *name)
+int git__getenv(git_str *out, const char *name)
 {
 	const char *val = getenv(name);
 
-	git_buf_clear(out);
+	git_str_clear(out);
 
 	if (!val)
 		return GIT_ENOTFOUND;
 
-	return git_buf_puts(out, val);
+	return git_str_puts(out, val);
 }
 #endif
 

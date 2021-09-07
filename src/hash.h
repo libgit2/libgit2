@@ -16,7 +16,7 @@
 typedef struct {
 	void *data;
 	size_t len;
-} git_buf_vec;
+} git_str_vec;
 
 typedef enum {
 	GIT_HASH_ALGORITHM_NONE = 0,
@@ -40,6 +40,6 @@ int git_hash_update(git_hash_ctx *c, const void *data, size_t len);
 int git_hash_final(unsigned char *out, git_hash_ctx *c);
 
 int git_hash_buf(unsigned char *out, const void *data, size_t len, git_hash_algorithm_t algorithm);
-int git_hash_vec(unsigned char *out, git_buf_vec *vec, size_t n, git_hash_algorithm_t algorithm);
+int git_hash_vec(unsigned char *out, git_str_vec *vec, size_t n, git_hash_algorithm_t algorithm);
 
 #endif

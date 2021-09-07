@@ -15,24 +15,24 @@ static char *NON_FORCE_FETCHSPEC = "refs/heads/main:refs/remotes/repo1/main";
 
 void test_remote_fetch__initialize(void) {
 	git_config *c;
-	git_buf repo1_path_buf = GIT_BUF_INIT;
-	git_buf repo2_path_buf = GIT_BUF_INIT;
+	git_str repo1_path_buf = GIT_STR_INIT;
+	git_str repo2_path_buf = GIT_STR_INIT;
 	const char *sandbox = clar_sandbox_path();
 
-	cl_git_pass(git_buf_joinpath(&repo1_path_buf, sandbox, "fetchtest_repo1"));
-	repo1_path = git_buf_detach(&repo1_path_buf);
+	cl_git_pass(git_str_joinpath(&repo1_path_buf, sandbox, "fetchtest_repo1"));
+	repo1_path = git_str_detach(&repo1_path_buf);
 	cl_git_pass(git_repository_init(&repo1, repo1_path, true));
 
-	cl_git_pass(git_buf_joinpath(&repo2_path_buf, sandbox, "fetchtest_repo2"));
-	repo2_path = git_buf_detach(&repo2_path_buf);
+	cl_git_pass(git_str_joinpath(&repo2_path_buf, sandbox, "fetchtest_repo2"));
+	repo2_path = git_str_detach(&repo2_path_buf);
 	cl_git_pass(git_repository_init(&repo2, repo2_path, true));
 
 	cl_git_pass(git_repository_config(&c, repo1));
 	cl_git_pass(git_config_set_string(c, "user.email", "some@email"));
 	cl_git_pass(git_config_set_string(c, "user.name", "some@name"));
 	git_config_free(c);
-	git_buf_dispose(&repo1_path_buf);
-	git_buf_dispose(&repo2_path_buf);
+	git_str_dispose(&repo1_path_buf);
+	git_str_dispose(&repo2_path_buf);
 }
 
 void test_remote_fetch__cleanup(void) {

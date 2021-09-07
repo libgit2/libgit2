@@ -15,41 +15,41 @@ static void cleanup_basic_dirs(void *ref)
 
 void test_core_mkdir__absolute(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	cl_set_cleanup(cleanup_basic_dirs, NULL);
 
-	git_buf_joinpath(&path, clar_sandbox_path(), "d0");
+	git_str_joinpath(&path, clar_sandbox_path(), "d0");
 
 	/* make a directory */
 	cl_assert(!git_path_isdir(path.ptr));
 	cl_git_pass(git_futils_mkdir(path.ptr, 0755, 0));
 	cl_assert(git_path_isdir(path.ptr));
 
-	git_buf_joinpath(&path, path.ptr, "subdir");
+	git_str_joinpath(&path, path.ptr, "subdir");
 	cl_assert(!git_path_isdir(path.ptr));
 	cl_git_pass(git_futils_mkdir(path.ptr, 0755, 0));
 	cl_assert(git_path_isdir(path.ptr));
 
 	/* ensure mkdir_r works for a single subdir */
-	git_buf_joinpath(&path, path.ptr, "another");
+	git_str_joinpath(&path, path.ptr, "another");
 	cl_assert(!git_path_isdir(path.ptr));
 	cl_git_pass(git_futils_mkdir_r(path.ptr, 0755));
 	cl_assert(git_path_isdir(path.ptr));
 
 	/* ensure mkdir_r works */
-	git_buf_joinpath(&path, clar_sandbox_path(), "d1/foo/bar/asdf");
+	git_str_joinpath(&path, clar_sandbox_path(), "d1/foo/bar/asdf");
 	cl_assert(!git_path_isdir(path.ptr));
 	cl_git_pass(git_futils_mkdir_r(path.ptr, 0755));
 	cl_assert(git_path_isdir(path.ptr));
 
 	/* ensure we don't imply recursive */
-	git_buf_joinpath(&path, clar_sandbox_path(), "d2/foo/bar/asdf");
+	git_str_joinpath(&path, clar_sandbox_path(), "d2/foo/bar/asdf");
 	cl_assert(!git_path_isdir(path.ptr));
 	cl_git_fail(git_futils_mkdir(path.ptr, 0755, 0));
 	cl_assert(!git_path_isdir(path.ptr));
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_core_mkdir__basic(void)
@@ -230,7 +230,7 @@ void test_core_mkdir__chmods(void)
 void test_core_mkdir__keeps_parent_symlinks(void)
 {
 #ifndef GIT_WIN32
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	cl_set_cleanup(cleanup_basic_dirs, NULL);
 
@@ -250,14 +250,14 @@ void test_core_mkdir__keeps_parent_symlinks(void)
 	cl_must_pass(symlink("d0", "d2"));
 	cl_assert(git_path_islink("d2"));
 
-	git_buf_joinpath(&path, clar_sandbox_path(), "d2/other/dir");
+	git_str_joinpath(&path, clar_sandbox_path(), "d2/other/dir");
 
 	cl_git_pass(git_futils_mkdir(path.ptr, 0755, GIT_MKDIR_PATH|GIT_MKDIR_REMOVE_SYMLINKS));
 	cl_assert(git_path_islink("d2"));
 	cl_assert(git_path_isdir("d2/other/dir"));
 	cl_assert(git_path_isdir("d0/other/dir"));
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 #endif
 }
 

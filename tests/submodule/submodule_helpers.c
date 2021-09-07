@@ -1,5 +1,4 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
 #include "path.h"
 #include "util.h"
 #include "posix.h"
@@ -12,12 +11,12 @@
  */
 void rewrite_gitmodules(const char *workdir)
 {
-	git_buf in_f = GIT_BUF_INIT, out_f = GIT_BUF_INIT, path = GIT_BUF_INIT;
+	git_str in_f = GIT_STR_INIT, out_f = GIT_STR_INIT, path = GIT_STR_INIT;
 	FILE *in, *out;
 	char line[256];
 
-	cl_git_pass(git_buf_joinpath(&in_f, workdir, "gitmodules"));
-	cl_git_pass(git_buf_joinpath(&out_f, workdir, ".gitmodules"));
+	cl_git_pass(git_str_joinpath(&in_f, workdir, "gitmodules"));
+	cl_git_pass(git_str_joinpath(&out_f, workdir, ".gitmodules"));
 
 	cl_assert((in  = fopen(in_f.ptr, "rb")) != NULL);
 	cl_assert((out = fopen(out_f.ptr, "wb")) != NULL);
@@ -32,16 +31,16 @@ void rewrite_gitmodules(const char *workdir)
 			scan += strlen("path =");
 			while (*scan == ' ') scan++;
 
-			git_buf_joinpath(&path, workdir, scan);
-			git_buf_rtrim(&path);
-			git_buf_joinpath(&path, path.ptr, ".gitted");
+			git_str_joinpath(&path, workdir, scan);
+			git_str_rtrim(&path);
+			git_str_joinpath(&path, path.ptr, ".gitted");
 
-			if (!git_buf_oom(&path) && p_access(path.ptr, F_OK) == 0) {
-				git_buf_joinpath(&out_f, workdir, scan);
-				git_buf_rtrim(&out_f);
-				git_buf_joinpath(&out_f, out_f.ptr, ".git");
+			if (!git_str_oom(&path) && p_access(path.ptr, F_OK) == 0) {
+				git_str_joinpath(&out_f, workdir, scan);
+				git_str_rtrim(&out_f);
+				git_str_joinpath(&out_f, out_f.ptr, ".git");
 
-				if (!git_buf_oom(&out_f))
+				if (!git_str_oom(&out_f))
 					p_rename(path.ptr, out_f.ptr);
 			}
 		}
@@ -57,18 +56,18 @@ void rewrite_gitmodules(const char *workdir)
 		while (*scan == ' ') scan++;
 
 		if (*scan == '.') {
-			git_buf_joinpath(&path, workdir, scan);
-			git_buf_rtrim(&path);
+			git_str_joinpath(&path, workdir, scan);
+			git_str_rtrim(&path);
 		} else if (!*scan || *scan == '\n') {
-			git_buf_joinpath(&path, workdir, "../testrepo.git");
+			git_str_joinpath(&path, workdir, "../testrepo.git");
 		} else {
 			fputs(line, out);
 			continue;
 		}
 
 		git_path_prettify(&path, path.ptr, NULL);
-		git_buf_putc(&path, '\n');
-		cl_assert(!git_buf_oom(&path));
+		git_str_putc(&path, '\n');
+		cl_assert(!git_str_oom(&path));
 
 		fwrite(line, scan - line, sizeof(char), out);
 		fputs(path.ptr, out);
@@ -79,9 +78,9 @@ void rewrite_gitmodules(const char *workdir)
 
 	cl_must_pass(p_unlink(in_f.ptr));
 
-	git_buf_dispose(&in_f);
-	git_buf_dispose(&out_f);
-	git_buf_dispose(&path);
+	git_str_dispose(&in_f);
+	git_str_dispose(&out_f);
+	git_str_dispose(&path);
 }
 
 static void cleanup_fixture_submodules(void *payload)

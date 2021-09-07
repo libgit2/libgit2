@@ -3,7 +3,6 @@
 
 #include "git2/checkout.h"
 #include "repository.h"
-#include "buffer.h"
 #include "futils.h"
 
 static const char *repo_name = "nasty";
@@ -28,9 +27,9 @@ static void test_checkout_passes(const char *refname, const char *filename)
 	git_oid commit_id;
 	git_commit *commit;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_joinpath(&path, repo_name, filename));
+	cl_git_pass(git_str_joinpath(&path, repo_name, filename));
 
 	cl_git_pass(git_reference_name_to_id(&commit_id, repo, refname));
 	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
@@ -42,7 +41,7 @@ static void test_checkout_passes(const char *refname, const char *filename)
 	cl_assert(!git_path_exists(path.ptr));
 
 	git_commit_free(commit);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 static void test_checkout_fails(const char *refname, const char *filename)
@@ -50,9 +49,9 @@ static void test_checkout_fails(const char *refname, const char *filename)
 	git_oid commit_id;
 	git_commit *commit;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_joinpath(&path, repo_name, filename));
+	cl_git_pass(git_str_joinpath(&path, repo_name, filename));
 
 	cl_git_pass(git_reference_name_to_id(&commit_id, repo, refname));
 	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
@@ -63,7 +62,7 @@ static void test_checkout_fails(const char *refname, const char *filename)
 	cl_assert(!git_path_exists(path.ptr));
 
 	git_commit_free(commit);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 /* A tree that contains ".git" as a tree, with a blob inside

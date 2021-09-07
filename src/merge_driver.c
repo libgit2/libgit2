@@ -110,7 +110,7 @@ int git_merge_driver__builtin_apply(
 
 	merged_out->ptr = (char *)result.ptr;
 	merged_out->size = result.len;
-	merged_out->asize = result.len;
+	merged_out->reserved = 0;
 	result.ptr = NULL;
 
 done:

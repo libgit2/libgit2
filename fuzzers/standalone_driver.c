@@ -16,7 +16,7 @@ extern int LLVMFuzzerInitialize(int *argc, char ***argv);
 
 static int run_one_file(const char *filename)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	int error = 0;
 
 	if (git_futils_readbuffer(&buf, filename) < 0) {
@@ -27,7 +27,7 @@ static int run_one_file(const char *filename)
 
 	LLVMFuzzerTestOneInput((const unsigned char *)buf.ptr, buf.size);
 exit:
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	return error;
 }
 

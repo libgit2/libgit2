@@ -255,7 +255,7 @@ static void add_submodule_with_commit(const char *name)
 	git_submodule *sm;
 	git_repository *smrepo;
 	git_index *idx;
-	git_buf p = GIT_BUF_INIT;
+	git_str p = GIT_STR_INIT;
 
 	cl_git_pass(git_submodule_add_setup(&sm, g_repo,
 		"https://github.com/libgit2/libgit2.git", name, 1));
@@ -265,9 +265,9 @@ static void add_submodule_with_commit(const char *name)
 	cl_git_pass(git_submodule_open(&smrepo, sm));
 	cl_git_pass(git_repository_index(&idx, smrepo));
 
-	cl_git_pass(git_buf_joinpath(&p, git_repository_workdir(smrepo), "file"));
+	cl_git_pass(git_str_joinpath(&p, git_repository_workdir(smrepo), "file"));
 	cl_git_mkfile(p.ptr, "new file");
-	git_buf_dispose(&p);
+	git_str_dispose(&p);
 
 	cl_git_pass(git_index_add_bypath(idx, "file"));
 	cl_git_pass(git_index_write(idx));
@@ -284,7 +284,7 @@ static void add_submodule_with_commit(const char *name)
 void test_submodule_lookup__just_added(void)
 {
 	git_submodule *sm;
-	git_buf snap1 = GIT_BUF_INIT, snap2 = GIT_BUF_INIT;
+	git_str snap1 = GIT_STR_INIT, snap2 = GIT_STR_INIT;
 	git_reference *original_head = NULL;
 
 	refute_submodule_exists(g_repo, "sm_just_added", GIT_ENOTFOUND);
@@ -333,7 +333,7 @@ void test_submodule_lookup__just_added(void)
 	baseline_tests();
 
 	cl_git_rewritefile("submod2/.gitmodules", snap2.ptr);
-	git_buf_dispose(&snap2);
+	git_str_dispose(&snap2);
 
 	refute_submodule_exists(g_repo, "mismatch_name", GIT_ENOTFOUND);
 	refute_submodule_exists(g_repo, "mismatch_path", GIT_ENOTFOUND);
@@ -344,7 +344,7 @@ void test_submodule_lookup__just_added(void)
 	baseline_tests();
 
 	cl_git_rewritefile("submod2/.gitmodules", snap1.ptr);
-	git_buf_dispose(&snap1);
+	git_str_dispose(&snap1);
 
 	refute_submodule_exists(g_repo, "mismatch_name", GIT_ENOTFOUND);
 	refute_submodule_exists(g_repo, "mismatch_path", GIT_ENOTFOUND);

@@ -9,7 +9,7 @@
 
 #include "git2/sys/filter.h"
 #include "filter.h"
-#include "buffer.h"
+#include "str.h"
 
 static int ident_find_id(
 	const char **id_start, const char **id_end, const char *start, size_t len)
@@ -40,7 +40,7 @@ static int ident_find_id(
 }
 
 static int ident_insert_id(
-	git_buf *to, const git_buf *from, const git_filter_source *src)
+	git_str *to, const git_str *from, const git_filter_source *src)
 {
 	char oid[GIT_OID_HEXSZ+1];
 	const char *id_start, *id_end, *from_end = from->ptr + from->size;
@@ -60,20 +60,20 @@ static int ident_insert_id(
 		5 /* "$Id: " */ + GIT_OID_HEXSZ + 2 /* " $" */ +
 		(size_t)(from_end - id_end);
 
-	if (git_buf_grow(to, need_size) < 0)
+	if (git_str_grow(to, need_size) < 0)
 		return -1;
 
-	git_buf_set(to, from->ptr, (size_t)(id_start - from->ptr));
-	git_buf_put(to, "$Id: ", 5);
-	git_buf_put(to, oid, GIT_OID_HEXSZ);
-	git_buf_put(to, " $", 2);
-	git_buf_put(to, id_end, (size_t)(from_end - id_end));
+	git_str_set(to, from->ptr, (size_t)(id_start - from->ptr));
+	git_str_put(to, "$Id: ", 5);
+	git_str_put(to, oid, GIT_OID_HEXSZ);
+	git_str_put(to, " $", 2);
+	git_str_put(to, id_end, (size_t)(from_end - id_end));
 
-	return git_buf_oom(to) ? -1 : 0;
+	return git_str_oom(to) ? -1 : 0;
 }
 
 static int ident_remove_id(
-	git_buf *to, const git_buf *from)
+	git_str *to, const git_str *from)
 {
 	const char *id_start, *id_end, *from_end = from->ptr + from->size;
 	size_t need_size;
@@ -84,27 +84,27 @@ static int ident_remove_id(
 	need_size = (size_t)(id_start - from->ptr) +
 		4 /* "$Id$" */ + (size_t)(from_end - id_end);
 
-	if (git_buf_grow(to, need_size) < 0)
+	if (git_str_grow(to, need_size) < 0)
 		return -1;
 
-	git_buf_set(to, from->ptr, (size_t)(id_start - from->ptr));
-	git_buf_put(to, "$Id$", 4);
-	git_buf_put(to, id_end, (size_t)(from_end - id_end));
+	git_str_set(to, from->ptr, (size_t)(id_start - from->ptr));
+	git_str_put(to, "$Id$", 4);
+	git_str_put(to, id_end, (size_t)(from_end - id_end));
 
-	return git_buf_oom(to) ? -1 : 0;
+	return git_str_oom(to) ? -1 : 0;
 }
 
 static int ident_apply(
 	git_filter     *self,
 	void          **payload,
-	git_buf        *to,
-	const git_buf  *from,
+	git_str        *to,
+	const git_str  *from,
 	const git_filter_source *src)
 {
 	GIT_UNUSED(self); GIT_UNUSED(payload);
 
 	/* Don't filter binary files */
-	if (git_buf_is_binary(from))
+	if (git_str_is_binary(from))
 		return GIT_PASSTHROUGH;
 
 	if (git_filter_source_mode(src) == GIT_FILTER_SMUDGE)

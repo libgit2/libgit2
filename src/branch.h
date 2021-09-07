@@ -9,10 +9,22 @@
 
 #include "common.h"
 
-#include "buffer.h"
+#include "str.h"
 
-int git_branch_upstream__name(
-	git_buf *tracking_name,
+int git_branch__remote_name(
+	git_str *out,
+	git_repository *repo,
+	const char *refname);
+int git_branch__upstream_remote(
+	git_str *out,
+	git_repository *repo,
+	const char *refname);
+int git_branch__upstream_merge(
+	git_str *out,
+	git_repository *repo,
+	const char *refname);
+int git_branch__upstream_name(
+	git_str *tracking_name,
 	git_repository *repo,
 	const char *canonical_branch_name);
 

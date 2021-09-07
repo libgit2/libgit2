@@ -145,15 +145,15 @@ void test_clone_nonetwork__cope_with_already_existing_directory(void)
 
 void test_clone_nonetwork__can_prevent_the_checkout_of_a_standard_repo(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	g_options.checkout_opts.checkout_strategy = 0;
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
-	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&path)));
+	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
+	cl_assert_equal_i(false, git_path_isfile(git_str_cstr(&path)));
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_clone_nonetwork__can_checkout_given_branch(void)
@@ -304,9 +304,9 @@ static void assert_correct_reflog(const char *name)
 {
 	git_reflog *log;
 	const git_reflog_entry *entry;
-	git_buf expected_message = GIT_BUF_INIT;
+	git_str expected_message = GIT_STR_INIT;
 
-	git_buf_printf(&expected_message,
+	git_str_printf(&expected_message,
 		"clone: from %s", cl_git_fixture_url("testrepo.git"));
 
 	cl_git_pass(git_reflog_read(&log, g_repo, name));
@@ -316,7 +316,7 @@ static void assert_correct_reflog(const char *name)
 
 	git_reflog_free(log);
 
-	git_buf_dispose(&expected_message);
+	git_str_dispose(&expected_message);
 }
 
 void test_clone_nonetwork__clone_updates_reflog_properly(void)

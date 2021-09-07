@@ -2,7 +2,7 @@
 #include "odb.h"
 #include "filebuf.h"
 
-static git_buf destpath, filepath;
+static git_str destpath, filepath;
 static const char *paths[] = {
 	"A.git", "B.git", "C.git", "D.git", "E.git", "F.git", "G.git"
 };
@@ -13,8 +13,8 @@ void test_odb_alternates__cleanup(void)
 {
 	size_t i;
 
-	git_buf_dispose(&destpath);
-	git_buf_dispose(&filepath);
+	git_str_dispose(&destpath);
+	git_str_dispose(&filepath);
 
 	for (i = 0; i < ARRAY_SIZE(paths); i++)
 		cl_fixture_cleanup(paths[i]);
@@ -22,18 +22,18 @@ void test_odb_alternates__cleanup(void)
 
 static void init_linked_repo(const char *path, const char *alternate)
 {
-	git_buf_clear(&destpath);
-	git_buf_clear(&filepath);
+	git_str_clear(&destpath);
+	git_str_clear(&filepath);
 
 	cl_git_pass(git_repository_init(&repo, path, 1));
 	cl_git_pass(git_path_prettify(&destpath, alternate, NULL));
-	cl_git_pass(git_buf_joinpath(&destpath, destpath.ptr, "objects"));
-	cl_git_pass(git_buf_joinpath(&filepath, git_repository_path(repo), "objects/info"));
+	cl_git_pass(git_str_joinpath(&destpath, destpath.ptr, "objects"));
+	cl_git_pass(git_str_joinpath(&filepath, git_repository_path(repo), "objects/info"));
 	cl_git_pass(git_futils_mkdir(filepath.ptr, 0755, GIT_MKDIR_PATH));
-	cl_git_pass(git_buf_joinpath(&filepath, filepath.ptr , "alternates"));
+	cl_git_pass(git_str_joinpath(&filepath, filepath.ptr , "alternates"));
 
-	cl_git_pass(git_filebuf_open(&file, git_buf_cstr(&filepath), 0, 0666));
-	git_filebuf_printf(&file, "%s\n", git_buf_cstr(&destpath));
+	cl_git_pass(git_filebuf_open(&file, git_str_cstr(&filepath), 0, 0666));
+	git_filebuf_printf(&file, "%s\n", git_str_cstr(&destpath));
 	cl_git_pass(git_filebuf_commit(&file));
 
 	git_repository_free(repo);

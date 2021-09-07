@@ -915,7 +915,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"+More lines\n"
 		"+And more\n"
 		"+Go here\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -925,7 +925,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"diff --git a/zzz.binary b/zzz.binary\n"
 		"index 45141a7..75b0dbb 100644\n"
 		"Binary files a/zzz.binary and b/zzz.binary differ\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -940,7 +940,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"+More lines\n"
 		"+And more\n"
 		"+Go here\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -955,7 +955,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"+More lines\n"
 		"+And more\n"
 		"+Go here\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(p);
 
 	/* "0123456789\n\x01\x02\x03\x04\x05\x06\x07\x08\x09\x00\n0123456789\n"
@@ -971,7 +971,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"diff --git a/zzz.normal b/zzz.normal\n"
 		"index b435cd5..1604519 100644\n"
 		"Binary files a/zzz.normal and b/zzz.normal differ\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -985,7 +985,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"@@ -3 +3 @@\n"
 		"-0123456789\n"
 		"+replace a line\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -999,7 +999,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"@@ -3 +3 @@\n"
 		"-0123456789\n"
 		"+replace a line\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -1013,7 +1013,7 @@ void test_diff_blob__using_path_and_attributes(void)
 		"@@ -3 +3 @@ 0123456789\n"
 		"-0123456789\n"
 		"+replace a line\n", buf.ptr);
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(p);
 
 	git_buf_dispose(&buf);

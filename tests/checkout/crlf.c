@@ -11,9 +11,9 @@
 static git_repository *g_repo;
 
 static const char *systype;
-static git_buf expected_fixture = GIT_BUF_INIT;
+static git_str expected_fixture = GIT_STR_INIT;
 
-static int unlink_file(void *payload, git_buf *path)
+static int unlink_file(void *payload, git_str *path)
 {
 	char *fn;
 
@@ -30,7 +30,7 @@ static int unlink_file(void *payload, git_buf *path)
 
 void test_checkout_crlf__initialize(void)
 {
-	git_buf reponame = GIT_BUF_INIT;
+	git_str reponame = GIT_STR_INIT;
 
 	g_repo = cl_git_sandbox_init("crlf");
 
@@ -38,7 +38,7 @@ void test_checkout_crlf__initialize(void)
 	 * remove the contents of the working directory so that we can
 	 * check out over it.
 	 */
-	cl_git_pass(git_buf_puts(&reponame, "crlf"));
+	cl_git_pass(git_str_puts(&reponame, "crlf"));
 	cl_git_pass(git_path_direach(&reponame, 0, unlink_file, NULL));
 
 	if (GIT_EOL_NATIVE == GIT_EOL_CRLF)
@@ -46,7 +46,7 @@ void test_checkout_crlf__initialize(void)
 	else
 		systype = "posix";
 
-	git_buf_dispose(&reponame);
+	git_str_dispose(&reponame);
 }
 
 void test_checkout_crlf__cleanup(void)
@@ -55,7 +55,7 @@ void test_checkout_crlf__cleanup(void)
 
 	if (expected_fixture.size) {
 		cl_fixture_cleanup(expected_fixture.ptr);
-		git_buf_dispose(&expected_fixture);
+		git_str_dispose(&expected_fixture);
 	}
 }
 
@@ -66,11 +66,11 @@ struct compare_data
 	const char *attrs;
 };
 
-static int compare_file(void *payload, git_buf *actual_path)
+static int compare_file(void *payload, git_str *actual_path)
 {
-	git_buf expected_path = GIT_BUF_INIT;
-	git_buf actual_contents = GIT_BUF_INIT;
-	git_buf expected_contents = GIT_BUF_INIT;
+	git_str expected_path = GIT_STR_INIT;
+	git_str actual_contents = GIT_STR_INIT;
+	git_str expected_contents = GIT_STR_INIT;
 	struct compare_data *cd = payload;
 	bool failed = true;
 	int cmp_git, cmp_gitattributes;
@@ -85,7 +85,7 @@ static int compare_file(void *payload, git_buf *actual_path)
 		goto done;
 	}
 
-	cl_git_pass(git_buf_joinpath(&expected_path, cd->dirname, basename));
+	cl_git_pass(git_str_joinpath(&expected_path, cd->dirname, basename));
 
 	if (!git_path_isfile(expected_path.ptr) ||
 		!git_path_isfile(actual_path->ptr))
@@ -105,61 +105,61 @@ static int compare_file(void *payload, git_buf *actual_path)
 
 done:
 	if (failed) {
-		git_buf details = GIT_BUF_INIT;
-		git_buf_printf(&details, "filename=%s, system=%s, autocrlf=%s, attrs={%s}",
+		git_str details = GIT_STR_INIT;
+		git_str_printf(&details, "filename=%s, system=%s, autocrlf=%s, attrs={%s}",
 			git_path_basename(actual_path->ptr), systype, cd->autocrlf, cd->attrs);
 		clar__fail(__FILE__, __func__, __LINE__,
 			"checked out contents did not match expected", details.ptr, 0);
-		git_buf_dispose(&details);
+		git_str_dispose(&details);
 	}
 
 	git__free(basename);
-	git_buf_dispose(&expected_contents);
-	git_buf_dispose(&actual_contents);
-	git_buf_dispose(&expected_path);
+	git_str_dispose(&expected_contents);
+	git_str_dispose(&actual_contents);
+	git_str_dispose(&expected_path);
 
 	return 0;
 }
 
 static void test_checkout(const char *autocrlf, const char *attrs)
 {
-	git_buf attrbuf = GIT_BUF_INIT;
-	git_buf expected_dirname = GIT_BUF_INIT;
-	git_buf systype_and_direction = GIT_BUF_INIT;
-	git_buf sandboxname = GIT_BUF_INIT;
-	git_buf reponame = GIT_BUF_INIT;
+	git_str attrbuf = GIT_STR_INIT;
+	git_str expected_dirname = GIT_STR_INIT;
+	git_str systype_and_direction = GIT_STR_INIT;
+	git_str sandboxname = GIT_STR_INIT;
+	git_str reponame = GIT_STR_INIT;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	struct compare_data compare_data = { NULL, autocrlf, attrs };
 	const char *c;
 
-	cl_git_pass(git_buf_puts(&reponame, "crlf"));
+	cl_git_pass(git_str_puts(&reponame, "crlf"));
 
-	cl_git_pass(git_buf_puts(&systype_and_direction, systype));
-	cl_git_pass(git_buf_puts(&systype_and_direction, "_to_workdir"));
+	cl_git_pass(git_str_puts(&systype_and_direction, systype));
+	cl_git_pass(git_str_puts(&systype_and_direction, "_to_workdir"));
 
-	cl_git_pass(git_buf_puts(&sandboxname, "autocrlf_"));
-	cl_git_pass(git_buf_puts(&sandboxname, autocrlf));
+	cl_git_pass(git_str_puts(&sandboxname, "autocrlf_"));
+	cl_git_pass(git_str_puts(&sandboxname, autocrlf));
 
 	if (*attrs) {
-		cl_git_pass(git_buf_puts(&sandboxname, ","));
+		cl_git_pass(git_str_puts(&sandboxname, ","));
 
 		for (c = attrs; *c; c++) {
 			if (*c == ' ')
-				cl_git_pass(git_buf_putc(&sandboxname, ','));
+				cl_git_pass(git_str_putc(&sandboxname, ','));
 			else if (*c == '=')
-				cl_git_pass(git_buf_putc(&sandboxname, '_'));
+				cl_git_pass(git_str_putc(&sandboxname, '_'));
 			else
-				cl_git_pass(git_buf_putc(&sandboxname, *c));
+				cl_git_pass(git_str_putc(&sandboxname, *c));
 		}
 
-		cl_git_pass(git_buf_printf(&attrbuf, "* %s\n", attrs));
+		cl_git_pass(git_str_printf(&attrbuf, "* %s\n", attrs));
 		cl_git_mkfile("crlf/.gitattributes", attrbuf.ptr);
 	}
 
 	cl_repo_set_string(g_repo, "core.autocrlf", autocrlf);
 
-	cl_git_pass(git_buf_joinpath(&expected_dirname, systype_and_direction.ptr, sandboxname.ptr));
-	cl_git_pass(git_buf_joinpath(&expected_fixture, "crlf_data", expected_dirname.ptr));
+	cl_git_pass(git_str_joinpath(&expected_dirname, systype_and_direction.ptr, sandboxname.ptr));
+	cl_git_pass(git_str_joinpath(&expected_fixture, "crlf_data", expected_dirname.ptr));
 	cl_fixture_sandbox(expected_fixture.ptr);
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
@@ -169,14 +169,14 @@ static void test_checkout(const char *autocrlf, const char *attrs)
 	cl_git_pass(git_path_direach(&reponame, 0, compare_file, &compare_data));
 
 	cl_fixture_cleanup(expected_fixture.ptr);
-	git_buf_dispose(&expected_fixture);
+	git_str_dispose(&expected_fixture);
 
-	git_buf_dispose(&attrbuf);
-	git_buf_dispose(&expected_fixture);
-	git_buf_dispose(&expected_dirname);
-	git_buf_dispose(&sandboxname);
-	git_buf_dispose(&systype_and_direction);
-	git_buf_dispose(&reponame);
+	git_str_dispose(&attrbuf);
+	git_str_dispose(&expected_fixture);
+	git_str_dispose(&expected_dirname);
+	git_str_dispose(&sandboxname);
+	git_str_dispose(&systype_and_direction);
+	git_str_dispose(&reponame);
 }
 
 static void empty_workdir(const char *name)

@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "posix.h"
-#include "buffer.h"
 #include "path.h"
 
 #ifdef GIT_WIN32
@@ -82,7 +81,7 @@ static void do_junction(const char *old, const char *new)
 {
 	GIT_REPARSE_DATA_BUFFER *reparse_buf;
 	HANDLE handle;
-	git_buf unparsed_buf = GIT_BUF_INIT;
+	git_str unparsed_buf = GIT_STR_INIT;
 	wchar_t *subst_utf16, *print_utf16;
 	DWORD ioctl_ret;
 	int subst_utf16_len, subst_byte_len, print_utf16_len, print_byte_len, ret;
@@ -93,14 +92,14 @@ static void do_junction(const char *old, const char *new)
 	 * backslashes instead of forward, and end in a trailing backslash.
 	 * eg: \??\C:\Foo\
 	 */
-	git_buf_puts(&unparsed_buf, "\\??\\");
+	git_str_puts(&unparsed_buf, "\\??\\");
 
 	for (i = 0; i < strlen(old); i++)
-		git_buf_putc(&unparsed_buf, old[i] == '/' ? '\\' : old[i]);
+		git_str_putc(&unparsed_buf, old[i] == '/' ? '\\' : old[i]);
 
-	git_buf_putc(&unparsed_buf, '\\');
+	git_str_putc(&unparsed_buf, '\\');
 
-	subst_utf16_len = git__utf8_to_16(NULL, 0, git_buf_cstr(&unparsed_buf));
+	subst_utf16_len = git__utf8_to_16(NULL, 0, git_str_cstr(&unparsed_buf));
 	subst_byte_len = subst_utf16_len * sizeof(WCHAR);
 
 	print_utf16_len = subst_utf16_len - 4;
@@ -127,11 +126,11 @@ static void do_junction(const char *old, const char *new)
 	print_utf16 = subst_utf16 + subst_utf16_len + 1;
 
 	ret = git__utf8_to_16(subst_utf16, subst_utf16_len + 1,
-		git_buf_cstr(&unparsed_buf));
+		git_str_cstr(&unparsed_buf));
 	cl_assert_equal_i(subst_utf16_len, ret);
 
 	ret = git__utf8_to_16(print_utf16,
-		print_utf16_len + 1, git_buf_cstr(&unparsed_buf) + 4);
+		print_utf16_len + 1, git_str_cstr(&unparsed_buf) + 4);
 	cl_assert_equal_i(print_utf16_len, ret);
 
 	reparse_buf->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
@@ -147,7 +146,7 @@ static void do_junction(const char *old, const char *new)
 	CloseHandle(handle);
 	LocalFree(reparse_buf);
 
-	git_buf_dispose(&unparsed_buf);
+	git_str_dispose(&unparsed_buf);
 }
 
 static void do_custom_reparse(const char *path)
@@ -300,7 +299,7 @@ void test_core_link__stat_dangling_symlink_directory(void)
 
 void test_core_link__lstat_symlink(void)
 {
-	git_buf target_path = GIT_BUF_INIT;
+	git_str target_path = GIT_STR_INIT;
 	struct stat st;
 
 	if (!should_run())
@@ -309,10 +308,10 @@ void test_core_link__lstat_symlink(void)
 	/* Windows always writes the canonical path as the link target, so
 	 * write the full path on all platforms.
 	 */
-	git_buf_join(&target_path, '/', clar_sandbox_path(), "lstat_target");
+	git_str_join(&target_path, '/', clar_sandbox_path(), "lstat_target");
 
 	cl_git_rewritefile("lstat_target", "This is the target of a symbolic link.\n");
-	do_symlink(git_buf_cstr(&target_path), "lstat_symlink", 0);
+	do_symlink(git_str_cstr(&target_path), "lstat_symlink", 0);
 
 	cl_must_pass(p_lstat("lstat_target", &st));
 	cl_assert(S_ISREG(st.st_mode));
@@ -320,32 +319,32 @@ void test_core_link__lstat_symlink(void)
 
 	cl_must_pass(p_lstat("lstat_symlink", &st));
 	cl_assert(S_ISLNK(st.st_mode));
-	cl_assert_equal_i(git_buf_len(&target_path), st.st_size);
+	cl_assert_equal_i(git_str_len(&target_path), st.st_size);
 
-	git_buf_dispose(&target_path);
+	git_str_dispose(&target_path);
 }
 
 void test_core_link__lstat_symlink_directory(void)
 {
-	git_buf target_path = GIT_BUF_INIT;
+	git_str target_path = GIT_STR_INIT;
 	struct stat st;
 
 	if (!should_run())
 		clar__skip();
 
-	git_buf_join(&target_path, '/', clar_sandbox_path(), "lstat_dirtarget");
+	git_str_join(&target_path, '/', clar_sandbox_path(), "lstat_dirtarget");
 
 	p_mkdir("lstat_dirtarget", 0777);
-	do_symlink(git_buf_cstr(&target_path), "lstat_dirlink", 1);
+	do_symlink(git_str_cstr(&target_path), "lstat_dirlink", 1);
 
 	cl_must_pass(p_lstat("lstat_dirtarget", &st));
 	cl_assert(S_ISDIR(st.st_mode));
 
 	cl_must_pass(p_lstat("lstat_dirlink", &st));
 	cl_assert(S_ISLNK(st.st_mode));
-	cl_assert_equal_i(git_buf_len(&target_path), st.st_size);
+	cl_assert_equal_i(git_str_len(&target_path), st.st_size);
 
-	git_buf_dispose(&target_path);
+	git_str_dispose(&target_path);
 }
 
 void test_core_link__lstat_dangling_symlink(void)
@@ -383,13 +382,13 @@ void test_core_link__lstat_dangling_symlink_directory(void)
 void test_core_link__stat_junction(void)
 {
 #ifdef GIT_WIN32
-	git_buf target_path = GIT_BUF_INIT;
+	git_str target_path = GIT_STR_INIT;
 	struct stat st;
 
-	git_buf_join(&target_path, '/', clar_sandbox_path(), "stat_junctarget");
+	git_str_join(&target_path, '/', clar_sandbox_path(), "stat_junctarget");
 
 	p_mkdir("stat_junctarget", 0777);
-	do_junction(git_buf_cstr(&target_path), "stat_junction");
+	do_junction(git_str_cstr(&target_path), "stat_junction");
 
 	cl_must_pass(p_stat("stat_junctarget", &st));
 	cl_assert(S_ISDIR(st.st_mode));
@@ -397,40 +396,40 @@ void test_core_link__stat_junction(void)
 	cl_must_pass(p_stat("stat_junction", &st));
 	cl_assert(S_ISDIR(st.st_mode));
 
-	git_buf_dispose(&target_path);
+	git_str_dispose(&target_path);
 #endif
 }
 
 void test_core_link__stat_dangling_junction(void)
 {
 #ifdef GIT_WIN32
-	git_buf target_path = GIT_BUF_INIT;
+	git_str target_path = GIT_STR_INIT;
 	struct stat st;
 
-	git_buf_join(&target_path, '/', clar_sandbox_path(), "stat_nonexistent_junctarget");
+	git_str_join(&target_path, '/', clar_sandbox_path(), "stat_nonexistent_junctarget");
 
 	p_mkdir("stat_nonexistent_junctarget", 0777);
-	do_junction(git_buf_cstr(&target_path), "stat_dangling_junction");
+	do_junction(git_str_cstr(&target_path), "stat_dangling_junction");
 
 	RemoveDirectory("stat_nonexistent_junctarget");
 
 	cl_must_fail(p_stat("stat_nonexistent_junctarget", &st));
 	cl_must_fail(p_stat("stat_dangling_junction", &st));
 
-	git_buf_dispose(&target_path);
+	git_str_dispose(&target_path);
 #endif
 }
 
 void test_core_link__lstat_junction(void)
 {
 #ifdef GIT_WIN32
-	git_buf target_path = GIT_BUF_INIT;
+	git_str target_path = GIT_STR_INIT;
 	struct stat st;
 
-	git_buf_join(&target_path, '/', clar_sandbox_path(), "lstat_junctarget");
+	git_str_join(&target_path, '/', clar_sandbox_path(), "lstat_junctarget");
 
 	p_mkdir("lstat_junctarget", 0777);
-	do_junction(git_buf_cstr(&target_path), "lstat_junction");
+	do_junction(git_str_cstr(&target_path), "lstat_junction");
 
 	cl_must_pass(p_lstat("lstat_junctarget", &st));
 	cl_assert(S_ISDIR(st.st_mode));
@@ -438,20 +437,20 @@ void test_core_link__lstat_junction(void)
 	cl_must_pass(p_lstat("lstat_junction", &st));
 	cl_assert(S_ISLNK(st.st_mode));
 
-	git_buf_dispose(&target_path);
+	git_str_dispose(&target_path);
 #endif
 }
 
 void test_core_link__lstat_dangling_junction(void)
 {
 #ifdef GIT_WIN32
-	git_buf target_path = GIT_BUF_INIT;
+	git_str target_path = GIT_STR_INIT;
 	struct stat st;
 
-	git_buf_join(&target_path, '/', clar_sandbox_path(), "lstat_nonexistent_junctarget");
+	git_str_join(&target_path, '/', clar_sandbox_path(), "lstat_nonexistent_junctarget");
 
 	p_mkdir("lstat_nonexistent_junctarget", 0777);
-	do_junction(git_buf_cstr(&target_path), "lstat_dangling_junction");
+	do_junction(git_str_cstr(&target_path), "lstat_dangling_junction");
 
 	RemoveDirectory("lstat_nonexistent_junctarget");
 
@@ -459,9 +458,9 @@ void test_core_link__lstat_dangling_junction(void)
 
 	cl_must_pass(p_lstat("lstat_dangling_junction", &st));
 	cl_assert(S_ISLNK(st.st_mode));
-	cl_assert_equal_i(git_buf_len(&target_path), st.st_size);
+	cl_assert_equal_i(git_str_len(&target_path), st.st_size);
 
-	git_buf_dispose(&target_path);
+	git_str_dispose(&target_path);
 #endif
 }
 
@@ -554,79 +553,79 @@ void test_core_link__readlink_normal_file(void)
 
 void test_core_link__readlink_symlink(void)
 {
-	git_buf target_path = GIT_BUF_INIT;
+	git_str target_path = GIT_STR_INIT;
 	int len;
 	char buf[2048];
 
 	if (!should_run())
 		clar__skip();
 
-	git_buf_join(&target_path, '/', clar_sandbox_path(), "readlink_target");
+	git_str_join(&target_path, '/', clar_sandbox_path(), "readlink_target");
 
 	cl_git_rewritefile("readlink_target", "This is the target of a symlink\n");
-	do_symlink(git_buf_cstr(&target_path), "readlink_link", 0);
+	do_symlink(git_str_cstr(&target_path), "readlink_link", 0);
 
 	len = p_readlink("readlink_link", buf, 2048);
 	cl_must_pass(len);
 
 	buf[len] = 0;
 
-	cl_assert_equal_s(git_buf_cstr(&target_path), buf);
+	cl_assert_equal_s(git_str_cstr(&target_path), buf);
 
-	git_buf_dispose(&target_path);
+	git_str_dispose(&target_path);
 }
 
 void test_core_link__readlink_dangling(void)
 {
-	git_buf target_path = GIT_BUF_INIT;
+	git_str target_path = GIT_STR_INIT;
 	int len;
 	char buf[2048];
 
 	if (!should_run())
 		clar__skip();
 
-	git_buf_join(&target_path, '/', clar_sandbox_path(), "readlink_nonexistent");
+	git_str_join(&target_path, '/', clar_sandbox_path(), "readlink_nonexistent");
 
-	do_symlink(git_buf_cstr(&target_path), "readlink_dangling", 0);
+	do_symlink(git_str_cstr(&target_path), "readlink_dangling", 0);
 
 	len = p_readlink("readlink_dangling", buf, 2048);
 	cl_must_pass(len);
 
 	buf[len] = 0;
 
-	cl_assert_equal_s(git_buf_cstr(&target_path), buf);
+	cl_assert_equal_s(git_str_cstr(&target_path), buf);
 
-	git_buf_dispose(&target_path);
+	git_str_dispose(&target_path);
 }
 
 void test_core_link__readlink_multiple(void)
 {
-	git_buf target_path = GIT_BUF_INIT,
-		path3 = GIT_BUF_INIT, path2 = GIT_BUF_INIT, path1 = GIT_BUF_INIT;
+	git_str target_path = GIT_STR_INIT,
+		path3 = GIT_STR_INIT, path2 = GIT_STR_INIT, path1 = GIT_STR_INIT;
 	int len;
 	char buf[2048];
 
 	if (!should_run())
 		clar__skip();
 
-	git_buf_join(&target_path, '/', clar_sandbox_path(), "readlink_final");
-	git_buf_join(&path3, '/', clar_sandbox_path(), "readlink_3");
-	git_buf_join(&path2, '/', clar_sandbox_path(), "readlink_2");
-	git_buf_join(&path1, '/', clar_sandbox_path(), "readlink_1");
+	git_str_join(&target_path, '/', clar_sandbox_path(), "readlink_final");
+	git_str_join(&path3, '/', clar_sandbox_path(), "readlink_3");
+	git_str_join(&path2, '/', clar_sandbox_path(), "readlink_2");
+	git_str_join(&path1, '/', clar_sandbox_path(), "readlink_1");
 
-	do_symlink(git_buf_cstr(&target_path), git_buf_cstr(&path3), 0);
-	do_symlink(git_buf_cstr(&path3), git_buf_cstr(&path2), 0);
-	do_symlink(git_buf_cstr(&path2), git_buf_cstr(&path1), 0);
+	do_symlink(git_str_cstr(&target_path), git_str_cstr(&path3), 0);
+	do_symlink(git_str_cstr(&path3), git_str_cstr(&path2), 0);
+	do_symlink(git_str_cstr(&path2), git_str_cstr(&path1), 0);
 
 	len = p_readlink("readlink_1", buf, 2048);
 	cl_must_pass(len);
 
 	buf[len] = 0;
 
-	cl_assert_equal_s(git_buf_cstr(&path2), buf);
+	cl_assert_equal_s(git_str_cstr(&path2), buf);
 
-	git_buf_dispose(&path1);
-	git_buf_dispose(&path2);
-	git_buf_dispose(&path3);
-	git_buf_dispose(&target_path);
+	git_str_dispose(&path1);
+	git_str_dispose(&path2);
+	git_str_dispose(&path3);
+	git_str_dispose(&target_path);
 }

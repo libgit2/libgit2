@@ -116,33 +116,33 @@ void test_reset_soft__resetting_against_an_unborn_head_repo_makes_the_head_no_lo
 
 void test_reset_soft__fails_when_merging(void)
 {
-	git_buf merge_head_path = GIT_BUF_INIT;
+	git_str merge_head_path = GIT_STR_INIT;
 
 	cl_git_pass(git_repository_detach_head(repo));
-	cl_git_pass(git_buf_joinpath(&merge_head_path, git_repository_path(repo), "MERGE_HEAD"));
-	cl_git_mkfile(git_buf_cstr(&merge_head_path), "beefbeefbeefbeefbeefbeefbeefbeefbeefbeef\n");
+	cl_git_pass(git_str_joinpath(&merge_head_path, git_repository_path(repo), "MERGE_HEAD"));
+	cl_git_mkfile(git_str_cstr(&merge_head_path), "beefbeefbeefbeefbeefbeefbeefbeefbeefbeef\n");
 
 	cl_git_pass(git_revparse_single(&target, repo, KNOWN_COMMIT_IN_BARE_REPO));
 
 	cl_assert_equal_i(GIT_EUNMERGED, git_reset(repo, target, GIT_RESET_SOFT, NULL));
-	cl_git_pass(p_unlink(git_buf_cstr(&merge_head_path)));
+	cl_git_pass(p_unlink(git_str_cstr(&merge_head_path)));
 
-	git_buf_dispose(&merge_head_path);
+	git_str_dispose(&merge_head_path);
 }
 
 void test_reset_soft__fails_when_index_contains_conflicts_independently_of_MERGE_HEAD_file_existence(void)
 {
 	git_index *index;
 	git_reference *head;
-	git_buf merge_head_path = GIT_BUF_INIT;
+	git_str merge_head_path = GIT_STR_INIT;
 
 	cl_git_sandbox_cleanup();
 
 	repo = cl_git_sandbox_init("mergedrepo");
 
-	cl_git_pass(git_buf_joinpath(&merge_head_path, git_repository_path(repo), "MERGE_HEAD"));
-	cl_git_pass(p_unlink(git_buf_cstr(&merge_head_path)));
-	git_buf_dispose(&merge_head_path);
+	cl_git_pass(git_str_joinpath(&merge_head_path, git_repository_path(repo), "MERGE_HEAD"));
+	cl_git_pass(p_unlink(git_str_cstr(&merge_head_path)));
+	git_str_dispose(&merge_head_path);
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_assert_equal_i(true, git_index_has_conflicts(index));

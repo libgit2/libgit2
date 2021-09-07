@@ -52,7 +52,7 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 {
 	git_remote *remote;
 	git_fetch_options fetch_opts = GIT_FETCH_OPTIONS_INIT;
-	git_buf fetchhead_buf = GIT_BUF_INIT;
+	git_str fetchhead_buf = GIT_STR_INIT;
 	int equals = 0;
 	git_strarray array, *active_refs = NULL;
 
@@ -72,7 +72,7 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 
 	equals = (strcmp(fetchhead_buf.ptr, expected_fetchhead) == 0);
 
-	git_buf_dispose(&fetchhead_buf);
+	git_str_dispose(&fetchhead_buf);
 
 	cl_assert(equals);
 }
@@ -157,7 +157,7 @@ void test_online_fetchhead__colon_only_dst_refspec_creates_no_branch(void)
 
 void test_online_fetchhead__creds_get_stripped(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	git_remote *remote;
 
 	cl_git_pass(git_repository_init(&g_repo, "./foo", 0));
@@ -169,5 +169,5 @@ void test_online_fetchhead__creds_get_stripped(void)
 		"49322bb17d3acc9146f98c97d078513228bbf3c0\t\thttps://github.com/libgit2/TestGitRepository\n");
 
 	git_remote_free(remote);
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 }

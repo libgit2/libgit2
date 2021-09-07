@@ -124,9 +124,9 @@
 #define GIT_ERROR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
 
 /**
- * Check a buffer allocation result, returning -1 if it failed.
+ * Check a string buffer allocation result, returning -1 if it failed.
  */
-#define GIT_ERROR_CHECK_ALLOC_BUF(buf) if ((void *)(buf) == NULL || git_buf_oom(buf)) { return -1; }
+#define GIT_ERROR_CHECK_ALLOC_STR(buf) if ((void *)(buf) == NULL || git_str_oom(buf)) { return -1; }
 
 /**
  * Check a return value and propagate result if non-zero.
@@ -201,6 +201,9 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 	if (GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize)) { return -1; }
 
 /* NOTE: other git_error functions are in the public errors.h header file */
+
+/* Forward declare git_str */
+typedef struct git_str git_str;
 
 #include "util.h"
 

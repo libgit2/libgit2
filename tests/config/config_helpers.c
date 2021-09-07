@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "config_helpers.h"
 #include "repository.h"
-#include "buffer.h"
 
 void assert_config_entry_existence(
 	git_repository *repo,
@@ -13,7 +12,7 @@ void assert_config_entry_existence(
 	int result;
 
 	cl_git_pass(git_repository_config__weakptr(&config, repo));
-	
+
 	result = git_config_get_entry(&entry, config, name);
 	git_config_entry_free(entry);
 
@@ -35,7 +34,7 @@ void assert_config_entry_value(
 
 	cl_git_pass(git_config_get_string_buf(&buf, config, name));
 
-	cl_assert_equal_s(expected_value, git_buf_cstr(&buf));
+	cl_assert_equal_s(expected_value, buf.ptr);
 	git_buf_dispose(&buf);
 }
 

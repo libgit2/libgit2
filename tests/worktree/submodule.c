@@ -61,14 +61,14 @@ void test_worktree_submodule__open_discovered_submodule_worktree(void)
 
 void test_worktree_submodule__resolve_relative_url(void)
 {
-	git_buf wt_path = GIT_BUF_INIT;
+	git_str wt_path = GIT_STR_INIT;
 	git_buf sm_relative_path = GIT_BUF_INIT, wt_relative_path = GIT_BUF_INIT;
 	git_repository *repo;
 	git_worktree *wt;
 
 	cl_git_pass(git_futils_mkdir("subdir", 0755, GIT_MKDIR_PATH));
 	cl_git_pass(git_path_prettify_dir(&wt_path, "subdir", NULL));
-	cl_git_pass(git_buf_joinpath(&wt_path, wt_path.ptr, "wt"));
+	cl_git_pass(git_str_joinpath(&wt_path, wt_path.ptr, "wt"));
 
 	/* Open child repository, which is a submodule */
 	cl_git_pass(git_repository_open(&child.repo, WORKTREE_CHILD));
@@ -86,7 +86,7 @@ void test_worktree_submodule__resolve_relative_url(void)
 
 	git_worktree_free(wt);
 	git_repository_free(repo);
-	git_buf_dispose(&wt_path);
+	git_str_dispose(&wt_path);
 	git_buf_dispose(&sm_relative_path);
 	git_buf_dispose(&wt_relative_path);
 }

@@ -90,7 +90,7 @@ static void assert_workdir_matches_tree(
 	git_object *obj;
 	git_tree *tree;
 	size_t i, max_i;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	if (!root)
 		root = git_repository_workdir(repo);
@@ -106,7 +106,7 @@ static void assert_workdir_matches_tree(
 		const git_tree_entry *te = git_tree_entry_byindex(tree, i);
 		cl_assert(te);
 
-		cl_git_pass(git_buf_joinpath(&path, root, git_tree_entry_name(te)));
+		cl_git_pass(git_str_joinpath(&path, root, git_tree_entry_name(te)));
 
 		switch (git_tree_entry_type(te)) {
 		case GIT_OBJECT_COMMIT:
@@ -139,7 +139,7 @@ static void assert_workdir_matches_tree(
 	}
 
 	git_tree_free(tree);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_checkout_typechange__checkout_typechanges_safe(void)
@@ -226,31 +226,31 @@ static void force_create_file(const char *file)
 
 static int make_submodule_dirty(git_submodule *sm, const char *name, void *payload)
 {
-	git_buf submodulepath = GIT_BUF_INIT;
-	git_buf dirtypath = GIT_BUF_INIT;
+	git_str submodulepath = GIT_STR_INIT;
+	git_str dirtypath = GIT_STR_INIT;
 	git_repository *submodule_repo;
 
 	GIT_UNUSED(name);
 	GIT_UNUSED(payload);
 
 	/* remove submodule directory in preparation for init and repo_init */
-	cl_git_pass(git_buf_joinpath(
+	cl_git_pass(git_str_joinpath(
 		&submodulepath,
 		git_repository_workdir(g_repo),
 		git_submodule_path(sm)
 	));
-	git_futils_rmdir_r(git_buf_cstr(&submodulepath), NULL, GIT_RMDIR_REMOVE_FILES);
+	git_futils_rmdir_r(git_str_cstr(&submodulepath), NULL, GIT_RMDIR_REMOVE_FILES);
 
 	/* initialize submodule's repository */
 	cl_git_pass(git_submodule_repo_init(&submodule_repo, sm, 0));
 
 	/* create a file in the submodule workdir to make it dirty */
 	cl_git_pass(
-		git_buf_joinpath(&dirtypath, git_repository_workdir(submodule_repo), "dirty"));
-	force_create_file(git_buf_cstr(&dirtypath));
+		git_str_joinpath(&dirtypath, git_repository_workdir(submodule_repo), "dirty"));
+	force_create_file(git_str_cstr(&dirtypath));
 
-	git_buf_dispose(&dirtypath);
-	git_buf_dispose(&submodulepath);
+	git_str_dispose(&dirtypath);
+	git_str_dispose(&submodulepath);
 	git_repository_free(submodule_repo);
 
 	return 0;

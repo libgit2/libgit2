@@ -11,6 +11,7 @@
 
 #include "repository.h"
 
+#include "buf.h"
 #include "commit.h"
 #include "hash.h"
 #include "tree.h"
@@ -491,7 +492,7 @@ cleanup:
 	return error;
 }
 
-int git_object_short_id(git_buf *out, const git_object *obj)
+static int git_object__short_id(git_str *out, const git_object *obj)
 {
 	git_repository *repo;
 	int len = GIT_ABBREV_DEFAULT, error;
@@ -500,9 +501,6 @@ int git_object_short_id(git_buf *out, const git_object *obj)
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(obj);
-
-	if ((error = git_buf_sanitize(out)) < 0)
-		return error;
 
 	repo = git_object_owner(obj);
 
@@ -526,7 +524,7 @@ int git_object_short_id(git_buf *out, const git_object *obj)
 		len++;
 	}
 
-	if (!error && !(error = git_buf_grow(out, len + 1))) {
+	if (!error && !(error = git_str_grow(out, len + 1))) {
 		git_oid_tostr(out->ptr, len + 1, &id);
 		out->size = len;
 	}
@@ -534,6 +532,11 @@ int git_object_short_id(git_buf *out, const git_object *obj)
 	git_odb_free(odb);
 
 	return error;
+}
+
+int git_object_short_id(git_buf *out, const git_object *obj)
+{
+	GIT_BUF_WRAP_PRIVATE(out, git_object__short_id, obj);
 }
 
 bool git_object__is_valid(

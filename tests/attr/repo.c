@@ -230,12 +230,12 @@ void test_attr_repo__manpage_example(void)
 
 static void add_to_workdir(const char *filename, const char *content)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_joinpath(&buf, "attr", filename));
-	cl_git_rewritefile(git_buf_cstr(&buf), content);
+	cl_git_pass(git_str_joinpath(&buf, "attr", filename));
+	cl_git_rewritefile(git_str_cstr(&buf), content);
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 }
 
 static void assert_proper_normalization(git_index *index, const char *filename, const char *expected_sha)
@@ -311,12 +311,12 @@ void test_attr_repo__bare_repo_with_index(void)
 
 void test_attr_repo__sysdir(void)
 {
-	git_buf sysdir = GIT_BUF_INIT;
+	git_str sysdir = GIT_STR_INIT;
 	const char *value;
 
 	cl_git_pass(p_mkdir("system", 0777));
 	cl_git_rewritefile("system/gitattributes", "file merge=foo");
-	cl_git_pass(git_buf_joinpath(&sysdir, clar_sandbox_path(), "system"));
+	cl_git_pass(git_str_joinpath(&sysdir, clar_sandbox_path(), "system"));
 	cl_git_pass(git_sysdir_set(GIT_SYSDIR_SYSTEM, sysdir.ptr));
 	g_repo = cl_git_sandbox_reopen();
 
@@ -325,18 +325,18 @@ void test_attr_repo__sysdir(void)
 
 	cl_git_pass(p_unlink("system/gitattributes"));
 	cl_git_pass(p_rmdir("system"));
-	git_buf_dispose(&sysdir);
+	git_str_dispose(&sysdir);
 }
 
 void test_attr_repo__sysdir_with_session(void)
 {
 	const char *values[2], *attrs[2] = { "foo", "bar" };
-	git_buf sysdir = GIT_BUF_INIT;
+	git_str sysdir = GIT_STR_INIT;
 	git_attr_session session;
 
 	cl_git_pass(p_mkdir("system", 0777));
 	cl_git_rewritefile("system/gitattributes", "file foo=1 bar=2");
-	cl_git_pass(git_buf_joinpath(&sysdir, clar_sandbox_path(), "system"));
+	cl_git_pass(git_str_joinpath(&sysdir, clar_sandbox_path(), "system"));
 	cl_git_pass(git_sysdir_set(GIT_SYSDIR_SYSTEM, sysdir.ptr));
 	g_repo = cl_git_sandbox_reopen();
 
@@ -348,7 +348,7 @@ void test_attr_repo__sysdir_with_session(void)
 
 	cl_git_pass(p_unlink("system/gitattributes"));
 	cl_git_pass(p_rmdir("system"));
-	git_buf_dispose(&sysdir);
+	git_str_dispose(&sysdir);
 	git_attr_session__free(&session);
 }
 
@@ -371,11 +371,11 @@ void test_attr_repo__rewrite(void)
 
 void test_attr_repo__rewrite_sysdir(void)
 {
-	git_buf sysdir = GIT_BUF_INIT;
+	git_str sysdir = GIT_STR_INIT;
 	const char *value;
 
 	cl_git_pass(p_mkdir("system", 0777));
-	cl_git_pass(git_buf_joinpath(&sysdir, clar_sandbox_path(), "system"));
+	cl_git_pass(git_str_joinpath(&sysdir, clar_sandbox_path(), "system"));
 	cl_git_pass(git_sysdir_set(GIT_SYSDIR_SYSTEM, sysdir.ptr));
 	g_repo = cl_git_sandbox_reopen();
 
@@ -387,7 +387,7 @@ void test_attr_repo__rewrite_sysdir(void)
 	cl_git_pass(git_attr_get(&value, g_repo, 0, "file", "foo"));
 	cl_assert_equal_s(value, "second");
 
-	git_buf_dispose(&sysdir);
+	git_str_dispose(&sysdir);
 }
 
 void test_attr_repo__unlink(void)

@@ -2,42 +2,41 @@
 
 #include "git2/clone.h"
 #include "clone.h"
-#include "buffer.h"
 #include "path.h"
 #include "posix.h"
 #include "futils.h"
 
-static int file_url(git_buf *buf, const char *host, const char *path)
+static int file_url(git_str *buf, const char *host, const char *path)
 {
 	if (path[0] == '/')
 		path++;
 
-	git_buf_clear(buf);
-	return git_buf_printf(buf, "file://%s/%s", host, path);
+	git_str_clear(buf);
+	return git_str_printf(buf, "file://%s/%s", host, path);
 }
 
 #ifdef GIT_WIN32
-static int git_style_unc_path(git_buf *buf, const char *host, const char *path)
+static int git_style_unc_path(git_str *buf, const char *host, const char *path)
 {
-	git_buf_clear(buf);
+	git_str_clear(buf);
 
 	if (host)
-		git_buf_printf(buf, "//%s/", host);
+		git_str_printf(buf, "//%s/", host);
 
 	if (path[0] == '/')
 		path++;
 
 	if (git__isalpha(path[0]) && path[1] == ':' && path[2] == '/') {
-		git_buf_printf(buf, "%c$/", path[0]);
+		git_str_printf(buf, "%c$/", path[0]);
 		path += 3;
 	}
 
-	git_buf_puts(buf, path);
+	git_str_puts(buf, path);
 
-	return git_buf_oom(buf) ? -1 : 0;
+	return git_str_oom(buf) ? -1 : 0;
 }
 
-static int unc_path(git_buf *buf, const char *host, const char *path)
+static int unc_path(git_str *buf, const char *host, const char *path)
 {
 	char *c;
 
@@ -54,7 +53,7 @@ static int unc_path(git_buf *buf, const char *host, const char *path)
 
 void test_clone_local__should_clone_local(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
 	/* we use a fixture path because it needs to exist for us to want to clone */
 	const char *path = cl_fixture("testrepo.git");
@@ -79,8 +78,8 @@ void test_clone_local__should_clone_local(void)
 
 	/* Ensure that file:/// urls are percent decoded: .git == %2e%67%69%74 */
 	cl_git_pass(file_url(&buf, "", path));
-	git_buf_shorten(&buf, 4);
-	cl_git_pass(git_buf_puts(&buf, "%2e%67%69%74"));
+	git_str_shorten(&buf, 4);
+	cl_git_pass(git_str_puts(&buf, "%2e%67%69%74"));
 	cl_assert_equal_i(0, git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL_AUTO));
 	cl_assert_equal_i(1,  git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL));
 	cl_assert_equal_i(1,  git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL_NO_LINKS));
@@ -91,14 +90,14 @@ void test_clone_local__should_clone_local(void)
 	cl_assert_equal_i(1,  git_clone__should_clone_local(path, GIT_CLONE_LOCAL_NO_LINKS));
 	cl_assert_equal_i(0, git_clone__should_clone_local(path, GIT_CLONE_NO_LOCAL));
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 }
 
 void test_clone_local__hardlinks(void)
 {
 	git_repository *repo;
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	struct stat st;
 
 	/*
@@ -117,21 +116,21 @@ void test_clone_local__hardlinks(void)
 	cl_git_pass(git_clone(&repo, cl_git_path_url("clone.git"), "./clone2.git", &opts));
 
 #ifndef GIT_WIN32
-	git_buf_clear(&buf);
-	cl_git_pass(git_buf_join_n(&buf, '/', 4, git_repository_path(repo), "objects", "08", "b041783f40edfe12bb406c9c9a8a040177c125"));
+	git_str_clear(&buf);
+	cl_git_pass(git_str_join_n(&buf, '/', 4, git_repository_path(repo), "objects", "08", "b041783f40edfe12bb406c9c9a8a040177c125"));
 
 	cl_git_pass(p_stat(buf.ptr, &st));
 	cl_assert_equal_i(2, st.st_nlink);
 #endif
 
 	git_repository_free(repo);
-	git_buf_clear(&buf);
+	git_str_clear(&buf);
 
 	opts.local = GIT_CLONE_LOCAL_NO_LINKS;
 	cl_git_pass(git_clone(&repo, cl_git_path_url("clone.git"), "./clone3.git", &opts));
 
-	git_buf_clear(&buf);
-	cl_git_pass(git_buf_join_n(&buf, '/', 4, git_repository_path(repo), "objects", "08", "b041783f40edfe12bb406c9c9a8a040177c125"));
+	git_str_clear(&buf);
+	cl_git_pass(git_str_join_n(&buf, '/', 4, git_repository_path(repo), "objects", "08", "b041783f40edfe12bb406c9c9a8a040177c125"));
 
 	cl_git_pass(p_stat(buf.ptr, &st));
 	cl_assert_equal_i(1, st.st_nlink);
@@ -142,14 +141,14 @@ void test_clone_local__hardlinks(void)
 	cl_git_pass(git_clone(&repo, "./clone.git", "./clone4.git", NULL));
 
 #ifndef GIT_WIN32
-	git_buf_clear(&buf);
-	cl_git_pass(git_buf_join_n(&buf, '/', 4, git_repository_path(repo), "objects", "08", "b041783f40edfe12bb406c9c9a8a040177c125"));
+	git_str_clear(&buf);
+	cl_git_pass(git_str_join_n(&buf, '/', 4, git_repository_path(repo), "objects", "08", "b041783f40edfe12bb406c9c9a8a040177c125"));
 
 	cl_git_pass(p_stat(buf.ptr, &st));
 	cl_assert_equal_i(3, st.st_nlink);
 #endif
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	git_repository_free(repo);
 
 	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
@@ -164,7 +163,7 @@ void test_clone_local__standard_unc_paths_are_written_git_style(void)
 	git_repository *repo;
 	git_remote *remote;
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
-	git_buf unc = GIT_BUF_INIT, git_unc = GIT_BUF_INIT;
+	git_str unc = GIT_STR_INIT, git_unc = GIT_STR_INIT;
 
 	/* we use a fixture path because it needs to exist for us to want to clone */
 	const char *path = cl_fixture("testrepo.git");
@@ -179,8 +178,8 @@ void test_clone_local__standard_unc_paths_are_written_git_style(void)
 
 	git_remote_free(remote);
 	git_repository_free(repo);
-	git_buf_dispose(&unc);
-	git_buf_dispose(&git_unc);
+	git_str_dispose(&unc);
+	git_str_dispose(&git_unc);
 
 	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
 #endif
@@ -192,7 +191,7 @@ void test_clone_local__git_style_unc_paths(void)
 	git_repository *repo;
 	git_remote *remote;
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
-	git_buf git_unc = GIT_BUF_INIT;
+	git_str git_unc = GIT_STR_INIT;
 
 	/* we use a fixture path because it needs to exist for us to want to clone */
 	const char *path = cl_fixture("testrepo.git");
@@ -206,7 +205,7 @@ void test_clone_local__git_style_unc_paths(void)
 
 	git_remote_free(remote);
 	git_repository_free(repo);
-	git_buf_dispose(&git_unc);
+	git_str_dispose(&git_unc);
 
 	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
 #endif

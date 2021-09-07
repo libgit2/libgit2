@@ -208,7 +208,7 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 	cl_assert_equal_s(expected1, buf.ptr);
 
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -219,7 +219,7 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 	cl_assert_equal_s(expected2, buf.ptr);
 
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -233,7 +233,7 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 	cl_assert_equal_s(expected3, buf.ptr);
 
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -247,7 +247,7 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 	cl_assert_equal_s(expected4, buf.ptr);
 
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -267,7 +267,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	const git_diff_hunk *hunk;
 	const git_diff_line *line;
 	size_t hunklen;
-	git_buf old_content = GIT_BUF_INIT, actual = GIT_BUF_INIT;
+	git_str old_content = GIT_STR_INIT, actual = GIT_STR_INIT;
 	const char *new_content = "The Song of Seven Cities\n------------------------\n\nI WAS Lord of Cities very sumptuously builded.\nSeven roaring Cities paid me tribute from afar.\nIvory their outposts were--the guardrooms of them gilded,\nAnd garrisoned with Amazons invincible in war.\n\nThis is some new text;\nNot as good as the old text;\nBut here it is.\n\nSo they warred and trafficked only yesterday, my Cities.\nTo-day there is no mark or mound of where my Cities stood.\nFor the River rose at midnight and it washed away my Cities.\nThey are evened with Atlantis and the towns before the Flood.\n\nRain on rain-gorged channels raised the water-levels round them,\nFreshet backed on freshet swelled and swept their world from sight,\nTill the emboldened floods linked arms and, flashing forward, drowned them--\nDrowned my Seven Cities and their peoples in one night!\n\nLow among the alders lie their derelict foundations,\nThe beams wherein they trusted and the plinths whereon they built--\nMy rulers and their treasure and their unborn populations,\nDead, destroyed, aborted, and defiled with mud and silt!\n\nAnother replacement;\nBreaking up the poem;\nGenerating some hunks.\n\nTo the sound of trumpets shall their seed restore my Cities\nWealthy and well-weaponed, that once more may I behold\nAll the world go softly when it walks before my Cities,\nAnd the horses and the chariots fleeing from them as of old!\n\n  -- Rudyard Kipling\n";
 
 	g_repo = cl_git_sandbox_init("renames");
@@ -311,7 +311,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 0));
 	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)line->origin);
-	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
+	cl_git_pass(git_str_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("Ivory their outposts were--the guardrooms of them gilded,\n", actual.ptr);
 	cl_assert_equal_i(6, line->old_lineno);
 	cl_assert_equal_i(6, line->new_lineno);
@@ -319,7 +319,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 3));
 	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)line->origin);
-	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
+	cl_git_pass(git_str_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("All the world went softly when it walked before my Cities--\n", actual.ptr);
 	cl_assert_equal_i(9, line->old_lineno);
 	cl_assert_equal_i(-1, line->new_lineno);
@@ -327,7 +327,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 12));
 	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)line->origin);
-	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
+	cl_git_pass(git_str_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("This is some new text;\n", actual.ptr);
 	cl_assert_equal_i(-1, line->old_lineno);
 	cl_assert_equal_i(9, line->new_lineno);
@@ -348,7 +348,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 1, 0));
 	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)line->origin);
-	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
+	cl_git_pass(git_str_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("My rulers and their treasure and their unborn populations,\n", actual.ptr);
 	cl_assert_equal_i(31, line->old_lineno);
 	cl_assert_equal_i(25, line->new_lineno);
@@ -356,7 +356,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 1, 3));
 	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)line->origin);
-	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
+	cl_git_pass(git_str_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("The Daughters of the Palace whom they cherished in my Cities,\n", actual.ptr);
 	cl_assert_equal_i(34, line->old_lineno);
 	cl_assert_equal_i(-1, line->new_lineno);
@@ -364,7 +364,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 1, 12));
 	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)line->origin);
-	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
+	cl_git_pass(git_str_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("Another replacement;\n", actual.ptr);
 	cl_assert_equal_i(-1, line->old_lineno);
 	cl_assert_equal_i(28, line->new_lineno);
@@ -375,7 +375,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	/* Let's check line numbers when there is no newline */
 
-	git_buf_rtrim(&old_content);
+	git_str_rtrim(&old_content);
 	cl_git_rewritefile("renames/songof7cities.txt", old_content.ptr);
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, head, &opt));
@@ -403,35 +403,35 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 1));
 	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)line->origin);
-	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
+	cl_git_pass(git_str_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("And the horses and the chariots fleeing from them as of old!\n", actual.ptr);
 	cl_assert_equal_i(47, line->old_lineno);
 	cl_assert_equal_i(47, line->new_lineno);
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 2));
 	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)line->origin);
-	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
+	cl_git_pass(git_str_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("\n", actual.ptr);
 	cl_assert_equal_i(48, line->old_lineno);
 	cl_assert_equal_i(48, line->new_lineno);
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 3));
 	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)line->origin);
-	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
+	cl_git_pass(git_str_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("  -- Rudyard Kipling\n", actual.ptr);
 	cl_assert_equal_i(49, line->old_lineno);
 	cl_assert_equal_i(-1, line->new_lineno);
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 4));
 	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)line->origin);
-	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
+	cl_git_pass(git_str_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("  -- Rudyard Kipling", actual.ptr);
 	cl_assert_equal_i(-1, line->old_lineno);
 	cl_assert_equal_i(49, line->new_lineno);
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 5));
 	cl_assert_equal_i(GIT_DIFF_LINE_DEL_EOFNL, (int)line->origin);
-	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
+	cl_git_pass(git_str_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("\n\\ No newline at end of file\n", actual.ptr);
 	cl_assert_equal_i(-1, line->old_lineno);
 	cl_assert_equal_i(49, line->new_lineno);
@@ -439,8 +439,8 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	git_patch_free(patch);
 	git_diff_free(diff);
 
-	git_buf_dispose(&actual);
-	git_buf_dispose(&old_content);
+	git_str_dispose(&actual);
+	git_str_dispose(&old_content);
 	git_tree_free(head);
 }
 
@@ -532,7 +532,7 @@ static void check_single_patch_stats(
 void test_diff_patch__line_counts_with_eofnl(void)
 {
 	git_config *cfg;
-	git_buf content = GIT_BUF_INIT;
+	git_str content = GIT_STR_INIT;
 	const char *end;
 	git_index *index;
 	const char *expected =
@@ -565,15 +565,15 @@ void test_diff_patch__line_counts_with_eofnl(void)
 
 	/* remove first line */
 
-	end = git_buf_cstr(&content) + git_buf_find(&content, '\n') + 1;
-	git_buf_consume(&content, end);
+	end = git_str_cstr(&content) + git_str_find(&content, '\n') + 1;
+	git_str_consume(&content, end);
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
 	check_single_patch_stats(g_repo, 1, 0, 1, 3, NULL, NULL);
 
 	/* remove trailing whitespace */
 
-	git_buf_rtrim(&content);
+	git_str_rtrim(&content);
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
 	check_single_patch_stats(g_repo, 2, 1, 2, 6, NULL, NULL);
@@ -585,7 +585,7 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
-	cl_git_pass(git_buf_putc(&content, '\n'));
+	cl_git_pass(git_str_putc(&content, '\n'));
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
 	check_single_patch_stats(g_repo, 1, 1, 1, 3, NULL, NULL);
@@ -613,7 +613,7 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	check_single_patch_stats(
 		g_repo, 1, 1, 1, 6, expected_sizes, expected);
 
-	git_buf_dispose(&content);
+	git_str_dispose(&content);
 }
 
 void test_diff_patch__can_strip_bad_utf8(void)

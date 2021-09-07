@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 
 #include "notes.h"
-#include "buffer.h"
 
 static git_repository *_repo;
 static git_note *_note;
@@ -57,7 +56,7 @@ void test_notes_notesref__config_corenotesref(void)
 
 	cl_git_pass(git_note_default_ref(&default_ref, _repo));
 	cl_assert_equal_s("refs/notes/mydefaultnotesref", default_ref.ptr);
-	git_buf_clear(&default_ref);
+	git_buf_dispose(&default_ref);
 
 	cl_git_pass(git_config_delete_entry(_cfg, "core.notesRef"));
 

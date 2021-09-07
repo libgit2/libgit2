@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 
-#include "buffer.h"
 #include "path.h"
 #include "remote.h"
 

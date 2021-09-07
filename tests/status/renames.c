@@ -1,5 +1,4 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
 #include "path.h"
 #include "posix.h"
 #include "status_helpers.h"
@@ -23,11 +22,11 @@ void test_status_renames__cleanup(void)
 static void _rename_helper(
 	git_repository *repo, const char *from, const char *to, const char *extra)
 {
-	git_buf oldpath = GIT_BUF_INIT, newpath = GIT_BUF_INIT;
+	git_str oldpath = GIT_STR_INIT, newpath = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_joinpath(
+	cl_git_pass(git_str_joinpath(
 		&oldpath, git_repository_workdir(repo), from));
-	cl_git_pass(git_buf_joinpath(
+	cl_git_pass(git_str_joinpath(
 		&newpath, git_repository_workdir(repo), to));
 
 	cl_git_pass(p_rename(oldpath.ptr, newpath.ptr));
@@ -35,8 +34,8 @@ static void _rename_helper(
 	if (extra)
 		cl_git_append2file(newpath.ptr, extra);
 
-	git_buf_dispose(&oldpath);
-	git_buf_dispose(&newpath);
+	git_str_dispose(&oldpath);
+	git_str_dispose(&newpath);
 }
 
 #define rename_file(R,O,N) _rename_helper((R), (O), (N), NULL)

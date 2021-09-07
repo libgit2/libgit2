@@ -38,7 +38,7 @@ struct git_blob {
 void git_blob__free(void *blob);
 int git_blob__parse(void *blob, git_odb_object *obj);
 int git_blob__parse_raw(void *blob, const char *data, size_t size);
-int git_blob__getbuf(git_buf *buffer, git_blob *blob);
+int git_blob__getbuf(git_str *buffer, git_blob *blob);
 
 extern int git_blob__create_from_paths(
 	git_oid *out_oid,

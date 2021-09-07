@@ -41,9 +41,9 @@ void test_config_stress__dont_break_on_invalid_input(void)
 
 void assert_config_value(git_config *config, const char *key, const char *value)
 {
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	cl_git_pass(git_config_get_string_buf(&buf, config, key));
-	cl_assert_equal_s(value, git_buf_cstr(&buf));
+	cl_assert_equal_s(value, buf.ptr);
 }
 
 void test_config_stress__comments(void)

@@ -13,7 +13,7 @@
 #include "git2/refs.h"
 #include "git2/refdb.h"
 #include "strmap.h"
-#include "buffer.h"
+#include "str.h"
 #include "oid.h"
 
 extern bool git_reference__enable_symbolic_ref_target_validation;
@@ -83,7 +83,7 @@ struct git_reference {
  */
 git_reference *git_reference__realloc(git_reference **ptr_to_ref, const char *name);
 
-int git_reference__normalize_name(git_buf *buf, const char *name, unsigned int flags);
+int git_reference__normalize_name(git_str *buf, const char *name, unsigned int flags);
 int git_reference__update_terminal(git_repository *repo, const char *ref_name, const git_oid *oid, const git_signature *sig, const char *log_message);
 int git_reference__name_is_valid(int *valid, const char *name, unsigned int flags);
 int git_reference__is_branch(const char *ref_name);

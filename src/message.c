@@ -5,7 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "message.h"
+#include "buf.h"
+
+#include "git2/message.h"
 
 static size_t line_length_without_trailing_spaces(const char *line, size_t len)
 {
@@ -21,17 +23,17 @@ static size_t line_length_without_trailing_spaces(const char *line, size_t len)
 
 /* Greatly inspired from git.git "stripspace" */
 /* see https://github.com/git/git/blob/497215d8811ac7b8955693ceaad0899ecd894ed2/builtin/stripspace.c#L4-67 */
-int git_message_prettify(git_buf *message_out, const char *message, int strip_comments, char comment_char)
+static int git_message__prettify(
+	git_str *message_out,
+	const char *message,
+	int strip_comments,
+	char comment_char)
 {
 	const size_t message_len = strlen(message);
 
 	int consecutive_empty_lines = 0;
 	size_t i, line_length, rtrimmed_line_length;
 	char *next_newline;
-	int error;
-
-	if ((error = git_buf_sanitize(message_out)) < 0)
-		return error;
 
 	for (i = 0; i < strlen(message); i += line_length) {
 		next_newline = memchr(message + i, '\n', message_len - i);
@@ -53,12 +55,21 @@ int git_message_prettify(git_buf *message_out, const char *message, int strip_co
 		}
 
 		if (consecutive_empty_lines > 0 && message_out->size > 0)
-			git_buf_putc(message_out, '\n');
+			git_str_putc(message_out, '\n');
 
 		consecutive_empty_lines = 0;
-		git_buf_put(message_out, message + i, rtrimmed_line_length);
-		git_buf_putc(message_out, '\n');
+		git_str_put(message_out, message + i, rtrimmed_line_length);
+		git_str_putc(message_out, '\n');
 	}
 
-	return git_buf_oom(message_out) ? -1 : 0;
+	return git_str_oom(message_out) ? -1 : 0;
+}
+
+int git_message_prettify(
+	git_buf *message_out,
+	const char *message,
+	int strip_comments,
+	char comment_char)
+{
+	GIT_BUF_WRAP_PRIVATE(message_out, git_message__prettify, message, strip_comments, comment_char);
 }

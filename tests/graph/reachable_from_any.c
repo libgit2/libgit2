@@ -200,12 +200,12 @@ void test_graph_reachable_from_any__exhaustive(void)
 					descendants,
 					n_descendants);
 			if (actual_reachable != expected_reachable) {
-				git_buf error_message_buf = GIT_BUF_INIT;
+				git_str error_message_buf = GIT_STR_INIT;
 				char parent_oidbuf[9] = {0}, child_oidbuf[9] = {0};
 
 				cl_git_pass(git_oid_nfmt(
 						parent_oidbuf, 8, git_commit_id(parent_commit)));
-				git_buf_printf(&error_message_buf,
+				git_str_printf(&error_message_buf,
 					       "git_graph_reachable_from_any(\"%s\", %zu, "
 					       "{",
 					       parent_oidbuf,
@@ -216,14 +216,14 @@ void test_graph_reachable_from_any__exhaustive(void)
 							git_oid_nfmt(child_oidbuf,
 								     8,
 								     &descendants[descendant_i]));
-					git_buf_printf(&error_message_buf, " \"%s\"", child_oidbuf);
+					git_str_printf(&error_message_buf, " \"%s\"", child_oidbuf);
 				}
-				git_buf_printf(&error_message_buf,
+				git_str_printf(&error_message_buf,
 					       " }) = %d, expected = %d",
 					       actual_reachable,
 					       expected_reachable);
 				cl_check_(actual_reachable == expected_reachable,
-					  git_buf_cstr(&error_message_buf));
+					  git_str_cstr(&error_message_buf));
 			}
 		}
 	}

@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/repository.h"
 #include "git2/merge.h"
-#include "buffer.h"
 #include "merge.h"
 #include "../merge_helpers.h"
 #include "futils.h"
@@ -279,7 +278,7 @@ void test_merge_trees_renames__cache_recomputation(void)
 {
 	git_oid blob, binary, ancestor_oid, theirs_oid, ours_oid;
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	git_treebuilder *builder;
 	git_tree *ancestor_tree, *their_tree, *our_tree;
 	git_index *index;
@@ -307,9 +306,9 @@ void test_merge_trees_renames__cache_recomputation(void)
 	 */
 	cl_git_pass(git_treebuilder_new(&builder, repo, NULL));
 	for (i = 0; i < 1000; i++) {
-		cl_git_pass(git_buf_printf(&path, "%"PRIuZ".txt", i));
+		cl_git_pass(git_str_printf(&path, "%"PRIuZ".txt", i));
 		cl_git_pass(git_treebuilder_insert(NULL, builder, path.ptr, &blob, GIT_FILEMODE_BLOB));
-		git_buf_clear(&path);
+		git_str_clear(&path);
 	}
 	cl_git_pass(git_treebuilder_insert(NULL, builder, "original.bin", &binary, GIT_FILEMODE_BLOB));
 	cl_git_pass(git_treebuilder_write(&ancestor_oid, builder));
@@ -344,7 +343,7 @@ void test_merge_trees_renames__cache_recomputation(void)
 	cl_git_pass(git_merge_trees(&index, repo, ancestor_tree, our_tree, their_tree, &opts));
 
 	git_treebuilder_free(builder);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	git_index_free(index);
 	git_tree_free(ancestor_tree);
 	git_tree_free(their_tree);

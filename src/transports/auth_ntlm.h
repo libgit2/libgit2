@@ -8,7 +8,6 @@
 #ifndef INCLUDE_transports_auth_ntlm_h__
 #define INCLUDE_transports_auth_ntlm_h__
 
-#include "git2.h"
 #include "auth.h"
 
 /* NTLM requires a full request/challenge/response */

@@ -13,7 +13,7 @@
 #include "git2/attr.h"
 #include "vector.h"
 #include "pool.h"
-#include "buffer.h"
+#include "str.h"
 #include "futils.h"
 
 #define GIT_ATTR_FILE			".gitattributes"
@@ -118,7 +118,7 @@ struct git_attr_file_entry {
 };
 
 typedef struct {
-	git_buf  full;
+	git_str  full;
 	char    *path;
 	char    *basename;
 	int      is_dir;
@@ -132,8 +132,8 @@ typedef struct {
 	int key;
 	unsigned int init_setup:1,
 		init_sysdir:1;
-	git_buf sysdir;
-	git_buf tmp;
+	git_str sysdir;
+	git_str tmp;
 } git_attr_session;
 
 extern int git_attr_session__init(git_attr_session *attr_session, git_repository *repo);

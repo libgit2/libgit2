@@ -28,16 +28,17 @@ static void ensure_repository_discover(const char *start_path,
 				       const char *ceiling_dirs,
 				       const char *expected_path)
 {
-	git_buf found_path = GIT_BUF_INIT, resolved = GIT_BUF_INIT;
+	git_buf found_path = GIT_BUF_INIT;
+	git_str resolved = GIT_STR_INIT;
 
-	git_buf_attach(&resolved, p_realpath(expected_path, NULL), 0);
+	git_str_attach(&resolved, p_realpath(expected_path, NULL), 0);
 	cl_assert(resolved.size > 0);
 	cl_git_pass(git_path_to_dir(&resolved));
 	cl_git_pass(git_repository_discover(&found_path, start_path, 1, ceiling_dirs));
 
 	cl_assert_equal_s(found_path.ptr, resolved.ptr);
 
-	git_buf_dispose(&resolved);
+	git_str_dispose(&resolved);
 	git_buf_dispose(&found_path);
 }
 
@@ -59,24 +60,24 @@ static void write_file(const char *path, const char *content)
 }
 
 /*no check is performed on ceiling_dirs length, so be sure it's long enough */
-static void append_ceiling_dir(git_buf *ceiling_dirs, const char *path)
+static void append_ceiling_dir(git_str *ceiling_dirs, const char *path)
 {
-	git_buf pretty_path = GIT_BUF_INIT;
+	git_str pretty_path = GIT_STR_INIT;
 	char ceiling_separator[2] = { GIT_PATH_LIST_SEPARATOR, '\0' };
 
 	cl_git_pass(git_path_prettify_dir(&pretty_path, path, NULL));
 
 	if (ceiling_dirs->size > 0)
-		git_buf_puts(ceiling_dirs, ceiling_separator);
+		git_str_puts(ceiling_dirs, ceiling_separator);
 
-	git_buf_puts(ceiling_dirs, pretty_path.ptr);
+	git_str_puts(ceiling_dirs, pretty_path.ptr);
 
-	git_buf_dispose(&pretty_path);
-	cl_assert(git_buf_oom(ceiling_dirs) == 0);
+	git_str_dispose(&pretty_path);
+	cl_assert(git_str_oom(ceiling_dirs) == 0);
 }
 
 static git_buf discovered;
-static git_buf ceiling_dirs;
+static git_str ceiling_dirs;
 
 void test_repo_discover__initialize(void)
 {
@@ -84,8 +85,7 @@ void test_repo_discover__initialize(void)
 	const mode_t mode = 0777;
 	git_futils_mkdir_r(DISCOVER_FOLDER, mode);
 
-	git_buf_init(&discovered, 0);
-	git_buf_init(&ceiling_dirs, 0);
+	git_str_init(&ceiling_dirs, 0);
 	append_ceiling_dir(&ceiling_dirs, TEMP_REPO_FOLDER);
 
 	cl_git_pass(git_repository_init(&repo, DISCOVER_FOLDER, 1));
@@ -115,7 +115,7 @@ void test_repo_discover__initialize(void)
 void test_repo_discover__cleanup(void)
 {
 	git_buf_dispose(&discovered);
-	git_buf_dispose(&ceiling_dirs);
+	git_str_dispose(&ceiling_dirs);
 	cl_git_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, NULL, GIT_RMDIR_REMOVE_FILES));
 }
 

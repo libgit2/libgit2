@@ -9,7 +9,7 @@
 
 #include <zlib.h>
 
-#include "buffer.h"
+#include "str.h"
 
 #define ZSTREAM_BUFFER_SIZE (1024 * 1024)
 #define ZSTREAM_BUFFER_MIN_EXTRA 8
@@ -164,7 +164,7 @@ int git_zstream_get_output(void *out, size_t *out_len, git_zstream *zstream)
 	return 0;
 }
 
-static int zstream_buf(git_buf *out, const void *in, size_t in_len, git_zstream_t type)
+static int zstream_buf(git_str *out, const void *in, size_t in_len, git_zstream_t type)
 {
 	git_zstream zs = GIT_ZSTREAM_INIT;
 	int error = 0;
@@ -178,7 +178,7 @@ static int zstream_buf(git_buf *out, const void *in, size_t in_len, git_zstream_
 	while (!git_zstream_done(&zs)) {
 		size_t step = git_zstream_suggest_output_len(&zs), written;
 
-		if ((error = git_buf_grow_by(out, step)) < 0)
+		if ((error = git_str_grow_by(out, step)) < 0)
 			goto done;
 
 		written = out->asize - out->size;
@@ -199,12 +199,12 @@ done:
 	return error;
 }
 
-int git_zstream_deflatebuf(git_buf *out, const void *in, size_t in_len)
+int git_zstream_deflatebuf(git_str *out, const void *in, size_t in_len)
 {
 	return zstream_buf(out, in, in_len, GIT_ZSTREAM_DEFLATE);
 }
 
-int git_zstream_inflatebuf(git_buf *out, const void *in, size_t in_len)
+int git_zstream_inflatebuf(git_str *out, const void *in, size_t in_len)
 {
 	return zstream_buf(out, in, in_len, GIT_ZSTREAM_INFLATE);
 }

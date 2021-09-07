@@ -1,5 +1,4 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
 
 static git_repository *_repo;
 
@@ -18,14 +17,14 @@ void test_repo_hashfile__cleanup(void)
 void test_repo_hashfile__simple(void)
 {
 	git_oid a, b;
-	git_buf full = GIT_BUF_INIT;
+	git_str full = GIT_STR_INIT;
 
 	/* hash with repo relative path */
 	cl_git_pass(git_odb_hashfile(&a, "status/current_file", GIT_OBJECT_BLOB));
 	cl_git_pass(git_repository_hashfile(&b, _repo, "current_file", GIT_OBJECT_BLOB, NULL));
 	cl_assert_equal_oid(&a, &b);
 
-	cl_git_pass(git_buf_joinpath(&full, git_repository_workdir(_repo), "current_file"));
+	cl_git_pass(git_str_joinpath(&full, git_repository_workdir(_repo), "current_file"));
 
 	/* hash with full path */
 	cl_git_pass(git_odb_hashfile(&a, full.ptr, GIT_OBJECT_BLOB));
@@ -36,20 +35,20 @@ void test_repo_hashfile__simple(void)
 	cl_git_fail(git_odb_hashfile(&a, full.ptr, GIT_OBJECT_ANY));
 	cl_git_fail(git_repository_hashfile(&b, _repo, full.ptr, GIT_OBJECT_OFS_DELTA, NULL));
 
-	git_buf_dispose(&full);
+	git_str_dispose(&full);
 }
 
 void test_repo_hashfile__filtered_in_workdir(void)
 {
-	git_buf root = GIT_BUF_INIT, txt = GIT_BUF_INIT, bin = GIT_BUF_INIT;
+	git_str root = GIT_STR_INIT, txt = GIT_STR_INIT, bin = GIT_STR_INIT;
 	char cwd[GIT_PATH_MAX];
 	git_oid a, b;
 
 	cl_must_pass(p_getcwd(cwd, GIT_PATH_MAX));
 	cl_must_pass(p_mkdir("absolute", 0777));
-	cl_git_pass(git_buf_joinpath(&root, cwd, "status"));
-	cl_git_pass(git_buf_joinpath(&txt, root.ptr, "testfile.txt"));
-	cl_git_pass(git_buf_joinpath(&bin, root.ptr, "testfile.bin"));
+	cl_git_pass(git_str_joinpath(&root, cwd, "status"));
+	cl_git_pass(git_str_joinpath(&txt, root.ptr, "testfile.txt"));
+	cl_git_pass(git_str_joinpath(&bin, root.ptr, "testfile.bin"));
 
 	cl_repo_set_bool(_repo, "core.autocrlf", true);
 
@@ -120,22 +119,22 @@ void test_repo_hashfile__filtered_in_workdir(void)
 	cl_git_fail(git_odb_hashfile(&a, "status/testfile.txt", 0));
 	cl_git_fail(git_repository_hashfile(&b, _repo, "testfile.txt", GIT_OBJECT_ANY, NULL));
 
-	git_buf_dispose(&txt);
-	git_buf_dispose(&bin);
-	git_buf_dispose(&root);
+	git_str_dispose(&txt);
+	git_str_dispose(&bin);
+	git_str_dispose(&root);
 }
 
 void test_repo_hashfile__filtered_outside_workdir(void)
 {
-	git_buf root = GIT_BUF_INIT, txt = GIT_BUF_INIT, bin = GIT_BUF_INIT;
+	git_str root = GIT_STR_INIT, txt = GIT_STR_INIT, bin = GIT_STR_INIT;
 	char cwd[GIT_PATH_MAX];
 	git_oid a, b;
 
 	cl_must_pass(p_getcwd(cwd, GIT_PATH_MAX));
 	cl_must_pass(p_mkdir("absolute", 0777));
-	cl_git_pass(git_buf_joinpath(&root, cwd, "absolute"));
-	cl_git_pass(git_buf_joinpath(&txt, root.ptr, "testfile.txt"));
-	cl_git_pass(git_buf_joinpath(&bin, root.ptr, "testfile.bin"));
+	cl_git_pass(git_str_joinpath(&root, cwd, "absolute"));
+	cl_git_pass(git_str_joinpath(&txt, root.ptr, "testfile.txt"));
+	cl_git_pass(git_str_joinpath(&bin, root.ptr, "testfile.bin"));
 
 	cl_repo_set_bool(_repo, "core.autocrlf", true);
 	cl_git_append2file("status/.gitattributes", "*.txt text\n*.bin binary\n\n");
@@ -166,7 +165,7 @@ void test_repo_hashfile__filtered_outside_workdir(void)
 	cl_git_pass(git_repository_hashfile(&b, _repo, bin.ptr, GIT_OBJECT_BLOB, NULL));
 	cl_assert_equal_oid(&a, &b);
 
-	git_buf_dispose(&txt);
-	git_buf_dispose(&bin);
-	git_buf_dispose(&root);
+	git_str_dispose(&txt);
+	git_str_dispose(&bin);
+	git_str_dispose(&root);
 }

@@ -8,6 +8,7 @@
 #include "commit_graph.h"
 
 #include "array.h"
+#include "buf.h"
 #include "filebuf.h"
 #include "futils.h"
 #include "hash.h"
@@ -308,12 +309,12 @@ int git_commit_graph_new(git_commit_graph **cgraph_out, const char *objects_dir,
 	cgraph = git__calloc(1, sizeof(git_commit_graph));
 	GIT_ERROR_CHECK_ALLOC(cgraph);
 
-	error = git_buf_joinpath(&cgraph->filename, objects_dir, "info/commit-graph");
+	error = git_str_joinpath(&cgraph->filename, objects_dir, "info/commit-graph");
 	if (error < 0)
 		goto error;
 
 	if (open_file) {
-		error = git_commit_graph_file_open(&cgraph->file, git_buf_cstr(&cgraph->filename));
+		error = git_commit_graph_file_open(&cgraph->file, git_str_cstr(&cgraph->filename));
 		if (error < 0)
 			goto error;
 		cgraph->checked = 1;
@@ -387,7 +388,7 @@ int git_commit_graph_get_file(git_commit_graph_file **file_out, git_commit_graph
 		cgraph->checked = 1;
 
 		/* Best effort */
-		error = git_commit_graph_file_open(&result, git_buf_cstr(&cgraph->filename));
+		error = git_commit_graph_file_open(&result, git_str_cstr(&cgraph->filename));
 
 		if (error < 0)
 			return error;
@@ -407,7 +408,7 @@ void git_commit_graph_refresh(git_commit_graph *cgraph)
 		return;
 
 	if (cgraph->file
-	    && git_commit_graph_file_needs_refresh(cgraph->file, git_buf_cstr(&cgraph->filename))) {
+	    && git_commit_graph_file_needs_refresh(cgraph->file, git_str_cstr(&cgraph->filename))) {
 		/* We just free the commit graph. The next time it is requested, it will be
 		 * re-loaded. */
 		git_commit_graph_file_free(cgraph->file);
@@ -597,7 +598,7 @@ void git_commit_graph_free(git_commit_graph *cgraph)
 	if (!cgraph)
 		return;
 
-	git_buf_dispose(&cgraph->filename);
+	git_str_dispose(&cgraph->filename);
 	git_commit_graph_file_free(cgraph->file);
 	git__free(cgraph);
 }
@@ -623,13 +624,13 @@ int git_commit_graph_writer_new(git_commit_graph_writer **out, const char *objec
 	git_commit_graph_writer *w = git__calloc(1, sizeof(git_commit_graph_writer));
 	GIT_ERROR_CHECK_ALLOC(w);
 
-	if (git_buf_sets(&w->objects_info_dir, objects_info_dir) < 0) {
+	if (git_str_sets(&w->objects_info_dir, objects_info_dir) < 0) {
 		git__free(w);
 		return -1;
 	}
 
 	if (git_vector_init(&w->commits, 0, packed_commit__cmp) < 0) {
-		git_buf_dispose(&w->objects_info_dir);
+		git_str_dispose(&w->objects_info_dir);
 		git__free(w);
 		return -1;
 	}
@@ -649,7 +650,7 @@ void git_commit_graph_writer_free(git_commit_graph_writer *w)
 	git_vector_foreach (&w->commits, i, packed_commit)
 		packed_commit_free(packed_commit);
 	git_vector_free(&w->commits);
-	git_buf_dispose(&w->objects_info_dir);
+	git_str_dispose(&w->objects_info_dir);
 	git__free(w);
 }
 
@@ -931,8 +932,8 @@ static int write_chunk_header(
 
 static int commit_graph_write_buf(const char *buf, size_t size, void *data)
 {
-	git_buf *b = (git_buf *)data;
-	return git_buf_put(b, buf, size);
+	git_str *b = (git_str *)data;
+	return git_str_put(b, buf, size);
 }
 
 struct commit_graph_write_hash_context {
@@ -971,8 +972,8 @@ static int commit_graph_write(
 	uint32_t extra_edge_list_count;
 	uint32_t oid_fanout[256];
 	off64_t offset;
-	git_buf oid_lookup = GIT_BUF_INIT, commit_data = GIT_BUF_INIT,
-		extra_edge_list = GIT_BUF_INIT;
+	git_str oid_lookup = GIT_STR_INIT, commit_data = GIT_STR_INIT,
+		extra_edge_list = GIT_STR_INIT;
 	git_oid cgraph_checksum = {{0}};
 	git_hash_ctx ctx;
 	struct commit_graph_write_hash_context hash_cb_data = {0};
@@ -1011,7 +1012,7 @@ static int commit_graph_write(
 
 	/* Fill the OID Lookup table. */
 	git_vector_foreach (&w->commits, i, packed_commit) {
-		error = git_buf_put(&oid_lookup,
+		error = git_str_put(&oid_lookup,
 			(const char *)&packed_commit->sha1, sizeof(git_oid));
 		if (error < 0)
 			goto cleanup;
@@ -1026,7 +1027,7 @@ static int commit_graph_write(
 		size_t *packed_index;
 		unsigned int parentcount = (unsigned int)git_array_size(packed_commit->parents);
 
-		error = git_buf_put(&commit_data,
+		error = git_str_put(&commit_data,
 				(const char *)&packed_commit->tree_oid,
 				sizeof(git_oid));
 		if (error < 0)
@@ -1038,7 +1039,7 @@ static int commit_graph_write(
 			packed_index = git_array_get(packed_commit->parent_indices, 0);
 			word = htonl((uint32_t)*packed_index);
 		}
-		error = git_buf_put(&commit_data, (const char *)&word, sizeof(word));
+		error = git_str_put(&commit_data, (const char *)&word, sizeof(word));
 		if (error < 0)
 			goto cleanup;
 
@@ -1050,7 +1051,7 @@ static int commit_graph_write(
 		} else {
 			word = htonl(0x80000000u | extra_edge_list_count);
 		}
-		error = git_buf_put(&commit_data, (const char *)&word, sizeof(word));
+		error = git_str_put(&commit_data, (const char *)&word, sizeof(word));
 		if (error < 0)
 			goto cleanup;
 
@@ -1061,7 +1062,7 @@ static int commit_graph_write(
 					packed_commit->parent_indices, parent_i);
 				word = htonl((uint32_t)(*packed_index | (parent_i + 1 == parentcount ? 0x80000000u : 0)));
 
-				error = git_buf_put(&extra_edge_list,
+				error = git_str_put(&extra_edge_list,
 						(const char *)&word,
 						sizeof(word));
 				if (error < 0)
@@ -1075,18 +1076,18 @@ static int commit_graph_write(
 		if (generation > GIT_COMMIT_GRAPH_GENERATION_NUMBER_MAX)
 			generation = GIT_COMMIT_GRAPH_GENERATION_NUMBER_MAX;
 		word = ntohl((uint32_t)((generation << 2) | ((commit_time >> 32ull) & 0x3ull)));
-		error = git_buf_put(&commit_data, (const char *)&word, sizeof(word));
+		error = git_str_put(&commit_data, (const char *)&word, sizeof(word));
 		if (error < 0)
 			goto cleanup;
 		word = ntohl((uint32_t)(commit_time & 0xffffffffull));
-		error = git_buf_put(&commit_data, (const char *)&word, sizeof(word));
+		error = git_str_put(&commit_data, (const char *)&word, sizeof(word));
 		if (error < 0)
 			goto cleanup;
 	}
 
 	/* Write the header. */
 	hdr.chunks = 3;
-	if (git_buf_len(&extra_edge_list) > 0)
+	if (git_str_len(&extra_edge_list) > 0)
 		hdr.chunks++;
 	error = write_cb((const char *)&hdr, sizeof(hdr), cb_data);
 	if (error < 0)
@@ -1101,17 +1102,17 @@ static int commit_graph_write(
 	error = write_chunk_header(COMMIT_GRAPH_OID_LOOKUP_ID, offset, write_cb, cb_data);
 	if (error < 0)
 		goto cleanup;
-	offset += git_buf_len(&oid_lookup);
+	offset += git_str_len(&oid_lookup);
 	error = write_chunk_header(COMMIT_GRAPH_COMMIT_DATA_ID, offset, write_cb, cb_data);
 	if (error < 0)
 		goto cleanup;
-	offset += git_buf_len(&commit_data);
-	if (git_buf_len(&extra_edge_list) > 0) {
+	offset += git_str_len(&commit_data);
+	if (git_str_len(&extra_edge_list) > 0) {
 		error = write_chunk_header(
 				COMMIT_GRAPH_EXTRA_EDGE_LIST_ID, offset, write_cb, cb_data);
 		if (error < 0)
 			goto cleanup;
-		offset += git_buf_len(&extra_edge_list);
+		offset += git_str_len(&extra_edge_list);
 	}
 	error = write_chunk_header(0, offset, write_cb, cb_data);
 	if (error < 0)
@@ -1121,13 +1122,13 @@ static int commit_graph_write(
 	error = write_cb((const char *)oid_fanout, sizeof(oid_fanout), cb_data);
 	if (error < 0)
 		goto cleanup;
-	error = write_cb(git_buf_cstr(&oid_lookup), git_buf_len(&oid_lookup), cb_data);
+	error = write_cb(git_str_cstr(&oid_lookup), git_str_len(&oid_lookup), cb_data);
 	if (error < 0)
 		goto cleanup;
-	error = write_cb(git_buf_cstr(&commit_data), git_buf_len(&commit_data), cb_data);
+	error = write_cb(git_str_cstr(&commit_data), git_str_len(&commit_data), cb_data);
 	if (error < 0)
 		goto cleanup;
-	error = write_cb(git_buf_cstr(&extra_edge_list), git_buf_len(&extra_edge_list), cb_data);
+	error = write_cb(git_str_cstr(&extra_edge_list), git_str_len(&extra_edge_list), cb_data);
 	if (error < 0)
 		goto cleanup;
 
@@ -1140,9 +1141,9 @@ static int commit_graph_write(
 		goto cleanup;
 
 cleanup:
-	git_buf_dispose(&oid_lookup);
-	git_buf_dispose(&commit_data);
-	git_buf_dispose(&extra_edge_list);
+	git_str_dispose(&oid_lookup);
+	git_str_dispose(&commit_data);
+	git_str_dispose(&extra_edge_list);
 	git_hash_ctx_cleanup(&ctx);
 	return error;
 }
@@ -1171,21 +1172,21 @@ int git_commit_graph_writer_commit(
 {
 	int error;
 	int filebuf_flags = GIT_FILEBUF_DO_NOT_BUFFER;
-	git_buf commit_graph_path = GIT_BUF_INIT;
+	git_str commit_graph_path = GIT_STR_INIT;
 	git_filebuf output = GIT_FILEBUF_INIT;
 
 	/* TODO: support options and fill in defaults. */
 	GIT_UNUSED(opts);
 
-	error = git_buf_joinpath(
-			&commit_graph_path, git_buf_cstr(&w->objects_info_dir), "commit-graph");
+	error = git_str_joinpath(
+			&commit_graph_path, git_str_cstr(&w->objects_info_dir), "commit-graph");
 	if (error < 0)
 		return error;
 
 	if (git_repository__fsync_gitdir)
 		filebuf_flags |= GIT_FILEBUF_FSYNC;
-	error = git_filebuf_open(&output, git_buf_cstr(&commit_graph_path), filebuf_flags, 0644);
-	git_buf_dispose(&commit_graph_path);
+	error = git_filebuf_open(&output, git_str_cstr(&commit_graph_path), filebuf_flags, 0644);
+	git_str_dispose(&commit_graph_path);
 	if (error < 0)
 		return error;
 
@@ -1199,9 +1200,17 @@ int git_commit_graph_writer_commit(
 }
 
 int git_commit_graph_writer_dump(
-		git_buf *cgraph,
-		git_commit_graph_writer *w,
-		git_commit_graph_writer_options *opts)
+	git_buf *cgraph,
+	git_commit_graph_writer *w,
+	git_commit_graph_writer_options *opts)
+{
+	GIT_BUF_WRAP_PRIVATE(cgraph, git_commit_graph__writer_dump, w, opts);
+}
+
+int git_commit_graph__writer_dump(
+	git_str *cgraph,
+	git_commit_graph_writer *w,
+	git_commit_graph_writer_options *opts)
 {
 	/* TODO: support options. */
 	GIT_UNUSED(opts);

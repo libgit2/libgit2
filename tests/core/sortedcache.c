@@ -241,7 +241,7 @@ void test_core_sortedcache__in_memory(void)
 static void sortedcache_test_reload(git_sortedcache *sc)
 {
 	int count = 0;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	char *scan, *after;
 	sortedcache_test_struct *item;
 
@@ -266,7 +266,7 @@ static void sortedcache_test_reload(git_sortedcache *sc)
 
 	git_sortedcache_wunlock(sc);
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 }
 
 void test_core_sortedcache__on_disk(void)

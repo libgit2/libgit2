@@ -1,5 +1,4 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
 #include "refs.h"
 #include "posix.h"
 
@@ -23,17 +22,18 @@ void test_repo_message__none(void)
 
 void test_repo_message__message(void)
 {
-	git_buf path = GIT_BUF_INIT, actual = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
+	git_buf actual = GIT_BUF_INIT;
 	const char expected[] = "Test\n\nThis is a test of the emergency broadcast system\n";
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_path(_repo), "MERGE_MSG"));
-	cl_git_mkfile(git_buf_cstr(&path), expected);
+	cl_git_pass(git_str_joinpath(&path, git_repository_path(_repo), "MERGE_MSG"));
+	cl_git_mkfile(git_str_cstr(&path), expected);
 
 	cl_git_pass(git_repository_message(&actual, _repo));
-	cl_assert_equal_s(expected, git_buf_cstr(&actual));
+	cl_assert_equal_s(expected, actual.ptr);
 	git_buf_dispose(&actual);
 
-	cl_git_pass(p_unlink(git_buf_cstr(&path)));
+	cl_git_pass(p_unlink(git_str_cstr(&path)));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_message(&actual, _repo));
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }

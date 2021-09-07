@@ -11,8 +11,8 @@
 
 #include "git2.h"
 #include "git2/transport.h"
-#include "buffer.h"
 #include "posix.h"
+#include "str.h"
 #include "netops.h"
 #include "smart.h"
 #include "remote.h"
@@ -372,7 +372,7 @@ static int apply_credentials(
 static int winhttp_stream_connect(winhttp_stream *s)
 {
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	char *proxy_url = NULL;
 	wchar_t ct[MAX_CONTENT_TYPE_LEN];
 	LPCWSTR types[] = { L"*/*", NULL };
@@ -391,13 +391,13 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	if ((git__suffixcmp(t->server.url.path, "/") == 0) && (git__prefixcmp(service_url, "/") == 0))
 		service_url++;
 	/* Prepare URL */
-	git_buf_printf(&buf, "%s%s", t->server.url.path, service_url);
+	git_str_printf(&buf, "%s%s", t->server.url.path, service_url);
 
-	if (git_buf_oom(&buf))
+	if (git_str_oom(&buf))
 		return -1;
 
 	/* Convert URL to wide characters */
-	if (git__utf8_to_16_alloc(&s->request_uri, git_buf_cstr(&buf)) < 0) {
+	if (git__utf8_to_16_alloc(&s->request_uri, git_str_cstr(&buf)) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to convert string to wide form");
 		goto on_error;
 	}
@@ -438,7 +438,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	}
 
 	if (proxy_url) {
-		git_buf processed_url = GIT_BUF_INIT;
+		git_str processed_url = GIT_STR_INIT;
 		WINHTTP_PROXY_INFO proxy_info;
 		wchar_t *proxy_wide;
 
@@ -453,28 +453,28 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			goto on_error;
 		}
 
-		git_buf_puts(&processed_url, t->proxy.url.scheme);
-		git_buf_PUTS(&processed_url, "://");
+		git_str_puts(&processed_url, t->proxy.url.scheme);
+		git_str_PUTS(&processed_url, "://");
 
 		if (git_net_url_is_ipv6(&t->proxy.url))
-			git_buf_putc(&processed_url, '[');
+			git_str_putc(&processed_url, '[');
 
-		git_buf_puts(&processed_url, t->proxy.url.host);
+		git_str_puts(&processed_url, t->proxy.url.host);
 
 		if (git_net_url_is_ipv6(&t->proxy.url))
-			git_buf_putc(&processed_url, ']');
+			git_str_putc(&processed_url, ']');
 
 		if (!git_net_url_is_default_port(&t->proxy.url))
-			git_buf_printf(&processed_url, ":%s", t->proxy.url.port);
+			git_str_printf(&processed_url, ":%s", t->proxy.url.port);
 
-		if (git_buf_oom(&processed_url)) {
+		if (git_str_oom(&processed_url)) {
 			error = -1;
 			goto on_error;
 		}
 
 		/* Convert URL to wide characters */
 		error = git__utf8_to_16_alloc(&proxy_wide, processed_url.ptr);
-		git_buf_dispose(&processed_url);
+		git_str_dispose(&processed_url);
 		if (error < 0)
 			goto on_error;
 
@@ -525,13 +525,13 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 	if (post_verb == s->verb) {
 		/* Send Content-Type and Accept headers -- only necessary on a POST */
-		git_buf_clear(&buf);
-		if (git_buf_printf(&buf,
+		git_str_clear(&buf);
+		if (git_str_printf(&buf,
 			"Content-Type: application/x-git-%s-request",
 			s->service) < 0)
 			goto on_error;
 
-		if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf)) < 0) {
+		if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_str_cstr(&buf)) < 0) {
 			git_error_set(GIT_ERROR_OS, "failed to convert content-type to wide characters");
 			goto on_error;
 		}
@@ -542,13 +542,13 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			goto on_error;
 		}
 
-		git_buf_clear(&buf);
-		if (git_buf_printf(&buf,
+		git_str_clear(&buf);
+		if (git_str_printf(&buf,
 			"Accept: application/x-git-%s-result",
 			s->service) < 0)
 			goto on_error;
 
-		if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf)) < 0) {
+		if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_str_cstr(&buf)) < 0) {
 			git_error_set(GIT_ERROR_OS, "failed to convert accept header to wide characters");
 			goto on_error;
 		}
@@ -562,9 +562,9 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 	for (i = 0; i < t->owner->custom_headers.count; i++) {
 		if (t->owner->custom_headers.strings[i]) {
-			git_buf_clear(&buf);
-			git_buf_puts(&buf, t->owner->custom_headers.strings[i]);
-			if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf)) < 0) {
+			git_str_clear(&buf);
+			git_str_puts(&buf, t->owner->custom_headers.strings[i]);
+			if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_str_cstr(&buf)) < 0) {
 				git_error_set(GIT_ERROR_OS, "failed to convert custom header to wide characters");
 				goto on_error;
 			}
@@ -597,7 +597,7 @@ on_error:
 		winhttp_stream_close(s);
 
 	git__free(proxy_url);
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	return error;
 }
 
@@ -646,23 +646,23 @@ static int parse_unauthorized_response(
 static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 {
 	DWORD bytes_written;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
 	/* Chunk header */
-	git_buf_printf(&buf, "%"PRIXZ"\r\n", len);
+	git_str_printf(&buf, "%"PRIXZ"\r\n", len);
 
-	if (git_buf_oom(&buf))
+	if (git_str_oom(&buf))
 		return -1;
 
 	if (!WinHttpWriteData(request,
-		git_buf_cstr(&buf),	(DWORD)git_buf_len(&buf),
+		git_str_cstr(&buf),	(DWORD)git_str_len(&buf),
 		&bytes_written)) {
-		git_buf_dispose(&buf);
+		git_str_dispose(&buf);
 		git_error_set(GIT_ERROR_OS, "failed to write chunk header");
 		return -1;
 	}
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	/* Chunk body */
 	if (!WinHttpWriteData(request,
@@ -756,7 +756,7 @@ static int winhttp_connect(
 	wchar_t *wide_host = NULL;
 	int32_t port;
 	wchar_t *wide_ua = NULL;
-	git_buf ipv6 = GIT_BUF_INIT, ua = GIT_BUF_INIT;
+	git_str ipv6 = GIT_STR_INIT, ua = GIT_STR_INIT;
 	const char *host;
 	int error = -1;
 	int default_timeout = TIMEOUT_INFINITE;
@@ -777,7 +777,7 @@ static int winhttp_connect(
 
 	/* IPv6? Add braces around the host. */
 	if (git_net_url_is_ipv6(&t->server.url)) {
-		if (git_buf_printf(&ipv6, "[%s]", t->server.url.host) < 0)
+		if (git_str_printf(&ipv6, "[%s]", t->server.url.host) < 0)
 			goto on_error;
 
 		host = ipv6.ptr;
@@ -795,7 +795,7 @@ static int winhttp_connect(
 	if (git_http__user_agent(&ua) < 0)
 		goto on_error;
 
-	if (git__utf8_to_16_alloc(&wide_ua, git_buf_cstr(&ua)) < 0) {
+	if (git__utf8_to_16_alloc(&wide_ua, git_str_cstr(&ua)) < 0) {
 		git_error_set(GIT_ERROR_OS, "unable to convert host to wide characters");
 		goto on_error;
 	}
@@ -863,8 +863,8 @@ on_error:
 	if (error < 0)
 		winhttp_close_connection(t);
 
-	git_buf_dispose(&ua);
-	git_buf_dispose(&ipv6);
+	git_str_dispose(&ua);
+	git_str_dispose(&ipv6);
 	git__free(wide_host);
 	git__free(wide_ua);
 

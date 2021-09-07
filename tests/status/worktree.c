@@ -100,9 +100,9 @@ void test_status_worktree__empty_repository(void)
 	cl_assert_equal_i(0, count);
 }
 
-static int remove_file_cb(void *data, git_buf *file)
+static int remove_file_cb(void *data, git_str *file)
 {
-	const char *filename = git_buf_cstr(file);
+	const char *filename = git_str_cstr(file);
 
 	GIT_UNUSED(data);
 
@@ -112,7 +112,7 @@ static int remove_file_cb(void *data, git_buf *file)
 	if (git_path_isdir(filename))
 		cl_git_pass(git_futils_rmdir_r(filename, NULL, GIT_RMDIR_REMOVE_FILES));
 	else
-		cl_git_pass(p_unlink(git_buf_cstr(file)));
+		cl_git_pass(p_unlink(git_str_cstr(file)));
 
 	return 0;
 }
@@ -122,12 +122,12 @@ void test_status_worktree__purged_worktree(void)
 {
 	status_entry_counts counts;
 	git_repository *repo = cl_git_sandbox_init("status");
-	git_buf workdir = GIT_BUF_INIT;
+	git_str workdir = GIT_STR_INIT;
 
 	/* first purge the contents of the worktree */
-	cl_git_pass(git_buf_sets(&workdir, git_repository_workdir(repo)));
+	cl_git_pass(git_str_sets(&workdir, git_repository_workdir(repo)));
 	cl_git_pass(git_path_direach(&workdir, 0, remove_file_cb, NULL));
-	git_buf_dispose(&workdir);
+	git_str_dispose(&workdir);
 
 	/* now get status */
 	memset(&counts, 0x0, sizeof(status_entry_counts));
@@ -369,78 +369,78 @@ static int cb_status__check_592(const char *p, unsigned int s, void *payload)
 void test_status_worktree__issue_592(void)
 {
 	git_repository *repo;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	repo = cl_git_sandbox_init("issue_592");
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "l.txt"));
-	cl_git_pass(p_unlink(git_buf_cstr(&path)));
+	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(repo), "l.txt"));
+	cl_git_pass(p_unlink(git_str_cstr(&path)));
 	cl_assert(!git_path_exists("issue_592/l.txt"));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "l.txt"));
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_status_worktree__issue_592_2(void)
 {
 	git_repository *repo;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	repo = cl_git_sandbox_init("issue_592");
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "c/a.txt"));
-	cl_git_pass(p_unlink(git_buf_cstr(&path)));
+	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(repo), "c/a.txt"));
+	cl_git_pass(p_unlink(git_str_cstr(&path)));
 	cl_assert(!git_path_exists("issue_592/c/a.txt"));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "c/a.txt"));
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_status_worktree__issue_592_3(void)
 {
 	git_repository *repo;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	repo = cl_git_sandbox_init("issue_592");
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "c"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(repo), "c"));
+	cl_git_pass(git_futils_rmdir_r(git_str_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
 	cl_assert(!git_path_exists("issue_592/c/a.txt"));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "c/a.txt"));
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_status_worktree__issue_592_4(void)
 {
 	git_repository *repo;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	repo = cl_git_sandbox_init("issue_592");
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "t/b.txt"));
-	cl_git_pass(p_unlink(git_buf_cstr(&path)));
+	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(repo), "t/b.txt"));
+	cl_git_pass(p_unlink(git_str_cstr(&path)));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "t/b.txt"));
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_status_worktree__issue_592_5(void)
 {
 	git_repository *repo;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	repo = cl_git_sandbox_init("issue_592");
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "t"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
-	cl_git_pass(p_mkdir(git_buf_cstr(&path), 0777));
+	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(repo), "t"));
+	cl_git_pass(git_futils_rmdir_r(git_str_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_git_pass(p_mkdir(git_str_cstr(&path), 0777));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, NULL));
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_status_worktree__issue_592_ignores_0(void)
@@ -610,8 +610,8 @@ void test_status_worktree__filemode_non755(void)
 	git_repository *repo = cl_git_sandbox_init("filemodes");
 	status_entry_counts counts;
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
-	git_buf executable_path = GIT_BUF_INIT;
-	git_buf nonexecutable_path = GIT_BUF_INIT;
+	git_str executable_path = GIT_STR_INIT;
+	git_str nonexecutable_path = GIT_STR_INIT;
 
 	if (!cl_is_chmod_supported())
 		return;
@@ -620,14 +620,14 @@ void test_status_worktree__filemode_non755(void)
 		GIT_STATUS_OPT_INCLUDE_IGNORED |
 		GIT_STATUS_OPT_INCLUDE_UNMODIFIED;
 
-	git_buf_joinpath(&executable_path, git_repository_workdir(repo), "exec_on");
-	cl_must_pass(p_chmod(git_buf_cstr(&executable_path), 0744));
-	git_buf_dispose(&executable_path);
+	git_str_joinpath(&executable_path, git_repository_workdir(repo), "exec_on");
+	cl_must_pass(p_chmod(git_str_cstr(&executable_path), 0744));
+	git_str_dispose(&executable_path);
 
-	git_buf_joinpath(&nonexecutable_path, git_repository_workdir(repo), "exec_off");
+	git_str_joinpath(&nonexecutable_path, git_repository_workdir(repo), "exec_off");
 
-	cl_must_pass(p_chmod(git_buf_cstr(&nonexecutable_path), 0655));
-	git_buf_dispose(&nonexecutable_path);
+	cl_must_pass(p_chmod(git_str_cstr(&nonexecutable_path), 0655));
+	git_str_dispose(&nonexecutable_path);
 
 	memset(&counts, 0, sizeof(counts));
 	counts.expected_entry_count = filemode_count;
@@ -789,7 +789,7 @@ static void assert_ignore_case(
 	int expected_camel_cased_file_status)
 {
 	unsigned int status;
-	git_buf lower_case_path = GIT_BUF_INIT, camel_case_path = GIT_BUF_INIT;
+	git_str lower_case_path = GIT_STR_INIT, camel_case_path = GIT_STR_INIT;
 	git_repository *repo, *repo2;
 
 	repo = cl_git_sandbox_init("empty_standard_repo");
@@ -797,10 +797,10 @@ static void assert_ignore_case(
 
 	cl_repo_set_bool(repo, "core.ignorecase", should_ignore_case);
 
-	cl_git_pass(git_buf_joinpath(&lower_case_path,
+	cl_git_pass(git_str_joinpath(&lower_case_path,
 		git_repository_workdir(repo), "plop"));
 
-	cl_git_mkfile(git_buf_cstr(&lower_case_path), "");
+	cl_git_mkfile(git_str_cstr(&lower_case_path), "");
 
 	stage_and_commit(repo, "plop");
 
@@ -809,10 +809,10 @@ static void assert_ignore_case(
 	cl_git_pass(git_status_file(&status, repo2, "plop"));
 	cl_assert_equal_i(GIT_STATUS_CURRENT, status);
 
-	cl_git_pass(git_buf_joinpath(&camel_case_path,
+	cl_git_pass(git_str_joinpath(&camel_case_path,
 		git_repository_workdir(repo), "Plop"));
 
-	cl_git_pass(p_rename(git_buf_cstr(&lower_case_path), git_buf_cstr(&camel_case_path)));
+	cl_git_pass(p_rename(git_str_cstr(&lower_case_path), git_str_cstr(&camel_case_path)));
 
 	cl_git_pass(git_status_file(&status, repo2, "plop"));
 	cl_assert_equal_i(expected_lower_cased_file_status, status);
@@ -821,8 +821,8 @@ static void assert_ignore_case(
 	cl_assert_equal_i(expected_camel_cased_file_status, status);
 
 	git_repository_free(repo2);
-	git_buf_dispose(&lower_case_path);
-	git_buf_dispose(&camel_case_path);
+	git_str_dispose(&lower_case_path);
+	git_str_dispose(&camel_case_path);
 }
 
 void test_status_worktree__file_status_honors_core_ignorecase_true(void)

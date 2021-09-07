@@ -394,12 +394,12 @@ void test_object_tree_write__cruel_paths(void)
 
 	for (i = 0; i < count; ++i) {
 		for (j = 0; j < count; ++j) {
-			git_buf b = GIT_BUF_INIT;
-			cl_git_pass(git_buf_joinpath(&b, the_paths[i], the_paths[j]));
+			git_str b = GIT_STR_INIT;
+			cl_git_pass(git_str_joinpath(&b, the_paths[i], the_paths[j]));
 			cl_git_pass(git_tree_entry_bypath(&te, tree, b.ptr));
 			cl_assert_equal_s(the_paths[j], git_tree_entry_name(te));
 			git_tree_entry_free(te);
-			git_buf_dispose(&b);
+			git_str_dispose(&b);
 		}
 	}
 

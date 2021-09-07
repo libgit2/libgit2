@@ -12,6 +12,7 @@
 #include "git2/diff.h"
 #include "git2/status.h"
 
+#include "buf.h"
 #include "commit.h"
 #include "commit_list.h"
 #include "oidmap.h"
@@ -322,7 +323,7 @@ static unsigned long finish_depth_computation(
 	return seen_commits;
 }
 
-static int display_name(git_buf *buf, git_repository *repo, struct commit_name *n)
+static int display_name(git_str *buf, git_repository *repo, struct commit_name *n)
 {
 	if (n->prio == 2 && !n->tag) {
 		if (git_tag_lookup(&n->tag, repo, &n->sha1) < 0) {
@@ -346,9 +347,9 @@ static int display_name(git_buf *buf, git_repository *repo, struct commit_name *
 	}
 
 	if (n->tag)
-		git_buf_printf(buf, "%s", git_tag_name(n->tag));
+		git_str_printf(buf, "%s", git_tag_name(n->tag));
 	else
-		git_buf_printf(buf, "%s", n->path);
+		git_str_printf(buf, "%s", n->path);
 
 	return 0;
 }
@@ -388,7 +389,7 @@ static int find_unique_abbrev_size(
 }
 
 static int show_suffix(
-	git_buf *buf,
+	git_str *buf,
 	int depth,
 	git_repository *repo,
 	const git_oid *id,
@@ -403,11 +404,11 @@ static int show_suffix(
 
 	git_oid_fmt(hex_oid, id);
 
-	git_buf_printf(buf, "-%d-g", depth);
+	git_str_printf(buf, "-%d-g", depth);
 
-	git_buf_put(buf, hex_oid, size);
+	git_str_put(buf, hex_oid, size);
 
-	return git_buf_oom(buf) ? -1 : 0;
+	return git_str_oom(buf) ? -1 : 0;
 }
 
 #define MAX_CANDIDATES_TAGS FLAG_BITS - 1
@@ -769,7 +770,10 @@ static int normalize_format_options(
 	return 0;
 }
 
-int git_describe_format(git_buf *out, const git_describe_result *result, const git_describe_format_options *given)
+static int git_describe__format(
+	git_str *out,
+	const git_describe_result *result,
+	const git_describe_format_options *given)
 {
 	int error;
 	git_repository *repo;
@@ -781,10 +785,6 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 
 	GIT_ERROR_CHECK_VERSION(given, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION, "git_describe_format_options");
 	normalize_format_options(&opts, given);
-
-	if ((error = git_buf_sanitize(out)) < 0)
-		return error;
-
 
 	if (opts.always_use_long_format && opts.abbreviated_size == 0) {
 		git_error_set(GIT_ERROR_DESCRIBE, "cannot describe - "
@@ -809,9 +809,9 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 		}
 
 		if (result->dirty && opts.dirty_suffix)
-			git_buf_puts(out, opts.dirty_suffix);
+			git_str_puts(out, opts.dirty_suffix);
 
-		return git_buf_oom(out) ? -1 : 0;
+		return git_str_oom(out) ? -1 : 0;
 	}
 
 	/* If we didn't find *any* tags, we fall back to the commit's id */
@@ -824,12 +824,12 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 			return -1;
 
 		git_oid_fmt(hex_oid, &result->commit_id);
-		git_buf_put(out, hex_oid, size);
+		git_str_put(out, hex_oid, size);
 
 		if (result->dirty && opts.dirty_suffix)
-			git_buf_puts(out, opts.dirty_suffix);
+			git_str_puts(out, opts.dirty_suffix);
 
-		return git_buf_oom(out) ? -1 : 0;
+		return git_str_oom(out) ? -1 : 0;
 	}
 
 	/* Lastly, if we found a matching tag, we show that */
@@ -845,10 +845,18 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 	}
 
 	if (result->dirty && opts.dirty_suffix) {
-		git_buf_puts(out, opts.dirty_suffix);
+		git_str_puts(out, opts.dirty_suffix);
 	}
 
-	return git_buf_oom(out) ? -1 : 0;
+	return git_str_oom(out) ? -1 : 0;
+}
+
+int git_describe_format(
+	git_buf *out,
+	const git_describe_result *result,
+	const git_describe_format_options *given)
+{
+	GIT_BUF_WRAP_PRIVATE(out, git_describe__format, result, given);
 }
 
 void git_describe_result_free(git_describe_result *result)

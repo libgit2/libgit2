@@ -30,8 +30,8 @@ static int apply_patchfile(
 	unsigned int mode_expected)
 {
 	git_patch *patch;
-	git_buf result = GIT_BUF_INIT;
-	git_buf patchbuf = GIT_BUF_INIT;
+	git_str result = GIT_STR_INIT;
+	git_str patchbuf = GIT_STR_INIT;
 	char *filename;
 	unsigned int mode;
 	int error;
@@ -50,8 +50,8 @@ static int apply_patchfile(
 	}
 
 	git__free(filename);
-	git_buf_dispose(&result);
-	git_buf_dispose(&patchbuf);
+	git_str_dispose(&result);
+	git_str_dispose(&patchbuf);
 	git_patch_free(patch);
 
 	return error;

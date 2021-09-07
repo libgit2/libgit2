@@ -168,7 +168,7 @@ void test_core_posix__unlink_removes_symlink(void)
 
 void test_core_posix__symlink_resolves_to_correct_type(void)
 {
-	git_buf contents = GIT_BUF_INIT;
+	git_str contents = GIT_STR_INIT;
 
 	if (!git_path_supports_symlinks(clar_sandbox_path()))
 		clar__skip();
@@ -187,12 +187,12 @@ void test_core_posix__symlink_resolves_to_correct_type(void)
 	cl_must_pass(p_rmdir("dir"));
 	cl_must_pass(p_rmdir("file"));
 
-	git_buf_dispose(&contents);
+	git_str_dispose(&contents);
 }
 
 void test_core_posix__relative_symlink(void)
 {
-	git_buf contents = GIT_BUF_INIT;
+	git_str contents = GIT_STR_INIT;
 
 	if (!git_path_supports_symlinks(clar_sandbox_path()))
 		clar__skip();
@@ -207,12 +207,12 @@ void test_core_posix__relative_symlink(void)
 	cl_must_pass(p_unlink("dir/link"));
 	cl_must_pass(p_rmdir("dir"));
 
-	git_buf_dispose(&contents);
+	git_str_dispose(&contents);
 }
 
 void test_core_posix__symlink_to_file_across_dirs(void)
 {
-	git_buf contents = GIT_BUF_INIT;
+	git_str contents = GIT_STR_INIT;
 
 	if (!git_path_supports_symlinks(clar_sandbox_path()))
 		clar__skip();
@@ -234,5 +234,5 @@ void test_core_posix__symlink_to_file_across_dirs(void)
 	cl_must_pass(p_unlink("link"));
 	cl_must_pass(p_rmdir("dir"));
 
-	git_buf_dispose(&contents);
+	git_str_dispose(&contents);
 }

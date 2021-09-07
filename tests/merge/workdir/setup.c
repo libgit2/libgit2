@@ -46,29 +46,29 @@ void test_merge_workdir_setup__cleanup(void)
 
 static bool test_file_contents(const char *filename, const char *expected)
 {
-	git_buf file_path_buf = GIT_BUF_INIT, file_buf = GIT_BUF_INIT;
+	git_str file_path_buf = GIT_STR_INIT, file_buf = GIT_STR_INIT;
 	bool equals;
 	
-	git_buf_joinpath(&file_path_buf, git_repository_path(repo), filename);
+	git_str_joinpath(&file_path_buf, git_repository_path(repo), filename);
 	
 	cl_git_pass(git_futils_readbuffer(&file_buf, file_path_buf.ptr));
 	equals = (strcmp(file_buf.ptr, expected) == 0);
 
-	git_buf_dispose(&file_path_buf);
-	git_buf_dispose(&file_buf);
+	git_str_dispose(&file_path_buf);
+	git_str_dispose(&file_buf);
 	
 	return equals;
 }
 
 static void write_file_contents(const char *filename, const char *output)
 {
-	git_buf file_path_buf = GIT_BUF_INIT;
+	git_str file_path_buf = GIT_STR_INIT;
 
-	git_buf_joinpath(&file_path_buf, git_repository_path(repo),
+	git_str_joinpath(&file_path_buf, git_repository_path(repo),
 		filename);
 	cl_git_rewritefile(file_path_buf.ptr, output);
 
-	git_buf_dispose(&file_path_buf);
+	git_str_dispose(&file_path_buf);
 }
 
 /* git merge --no-ff octo1 */
@@ -464,41 +464,41 @@ static int create_remote_tracking_branch(const char *branch_name, const char *oi
 {
 	int error = 0;
 
-	git_buf remotes_path = GIT_BUF_INIT,
-		origin_path = GIT_BUF_INIT,
-		filename = GIT_BUF_INIT,
-		data = GIT_BUF_INIT;
+	git_str remotes_path = GIT_STR_INIT,
+		origin_path = GIT_STR_INIT,
+		filename = GIT_STR_INIT,
+		data = GIT_STR_INIT;
 
-	if ((error = git_buf_puts(&remotes_path, git_repository_path(repo))) < 0 ||
-		(error = git_buf_puts(&remotes_path, GIT_REFS_REMOTES_DIR)) < 0)
+	if ((error = git_str_puts(&remotes_path, git_repository_path(repo))) < 0 ||
+		(error = git_str_puts(&remotes_path, GIT_REFS_REMOTES_DIR)) < 0)
 		goto done;
 
-	if (!git_path_exists(git_buf_cstr(&remotes_path)) &&
-		(error = p_mkdir(git_buf_cstr(&remotes_path), 0777)) < 0)
+	if (!git_path_exists(git_str_cstr(&remotes_path)) &&
+		(error = p_mkdir(git_str_cstr(&remotes_path), 0777)) < 0)
 		goto done;
 
-	if ((error = git_buf_puts(&origin_path, git_buf_cstr(&remotes_path))) < 0 ||
-		(error = git_buf_puts(&origin_path, "origin")) < 0)
+	if ((error = git_str_puts(&origin_path, git_str_cstr(&remotes_path))) < 0 ||
+		(error = git_str_puts(&origin_path, "origin")) < 0)
 		goto done;
 
-	if (!git_path_exists(git_buf_cstr(&origin_path)) &&
-		(error = p_mkdir(git_buf_cstr(&origin_path), 0777)) < 0)
+	if (!git_path_exists(git_str_cstr(&origin_path)) &&
+		(error = p_mkdir(git_str_cstr(&origin_path), 0777)) < 0)
 		goto done;
 
-	if ((error = git_buf_puts(&filename, git_buf_cstr(&origin_path))) < 0 ||
-		(error = git_buf_puts(&filename, "/")) < 0 ||
-		(error = git_buf_puts(&filename, branch_name)) < 0 ||
-		(error = git_buf_puts(&data, oid_str)) < 0 ||
-		(error = git_buf_puts(&data, "\n")) < 0)
+	if ((error = git_str_puts(&filename, git_str_cstr(&origin_path))) < 0 ||
+		(error = git_str_puts(&filename, "/")) < 0 ||
+		(error = git_str_puts(&filename, branch_name)) < 0 ||
+		(error = git_str_puts(&data, oid_str)) < 0 ||
+		(error = git_str_puts(&data, "\n")) < 0)
 		goto done;
 
-	cl_git_rewritefile(git_buf_cstr(&filename), git_buf_cstr(&data));
+	cl_git_rewritefile(git_str_cstr(&filename), git_str_cstr(&data));
 
 done:
-	git_buf_dispose(&remotes_path);
-	git_buf_dispose(&origin_path);
-	git_buf_dispose(&filename);
-	git_buf_dispose(&data);
+	git_str_dispose(&remotes_path);
+	git_str_dispose(&origin_path);
+	git_str_dispose(&filename);
+	git_str_dispose(&data);
 
 	return error;
 }

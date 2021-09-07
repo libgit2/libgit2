@@ -643,7 +643,7 @@ void test_iterator_workdir__filesystem2(void)
  */
 void test_iterator_workdir__filesystem_gunk(void)
 {
-	git_buf parent = GIT_BUF_INIT;
+	git_str parent = GIT_STR_INIT;
 	git_iterator *i;
 	int n;
 
@@ -653,8 +653,8 @@ void test_iterator_workdir__filesystem_gunk(void)
 	g_repo = cl_git_sandbox_init("testrepo");
 
 	for (n = 0; n < 100000; n++) {
-		git_buf_clear(&parent);
-		cl_git_pass(git_buf_printf(&parent, "%s/refs/heads/foo/%d/subdir", git_repository_path(g_repo), n));
+		git_str_clear(&parent);
+		cl_git_pass(git_str_printf(&parent, "%s/refs/heads/foo/%d/subdir", git_repository_path(g_repo), n));
 		cl_git_pass(git_futils_mkdir(parent.ptr, 0775, GIT_MKDIR_PATH));
 	}
 
@@ -667,7 +667,7 @@ void test_iterator_workdir__filesystem_gunk(void)
 	expect_iterator_items(i, 17, NULL, 16, NULL);
 
 	git_iterator_free(i);
-	git_buf_dispose(&parent);
+	git_str_dispose(&parent);
 }
 
 void test_iterator_workdir__skips_unreadable_dirs(void)
@@ -1019,19 +1019,19 @@ void test_iterator_workdir__pathlist_with_dirs(void)
 
 static void create_paths(const char *root, int depth)
 {
-	git_buf fullpath = GIT_BUF_INIT;
+	git_str fullpath = GIT_STR_INIT;
 	size_t root_len;
 	int i;
 
-	cl_git_pass(git_buf_puts(&fullpath, root));
+	cl_git_pass(git_str_puts(&fullpath, root));
 	cl_git_pass(git_path_to_dir(&fullpath));
 
 	root_len = fullpath.size;
 
 	for (i = 0; i < 8; i++) {
 		bool file = (depth == 0 || (i % 2) == 0);
-		git_buf_truncate(&fullpath, root_len);
-		cl_git_pass(git_buf_printf(&fullpath, "item%d", i));
+		git_str_truncate(&fullpath, root_len);
+		cl_git_pass(git_str_printf(&fullpath, "item%d", i));
 
 		if (file) {
 			cl_git_rewritefile(fullpath.ptr, "This is a file!\n");
@@ -1043,7 +1043,7 @@ static void create_paths(const char *root, int depth)
 		}
 	}
 
-	git_buf_dispose(&fullpath);
+	git_str_dispose(&fullpath);
 }
 
 void test_iterator_workdir__pathlist_for_deeply_nested_item(void)

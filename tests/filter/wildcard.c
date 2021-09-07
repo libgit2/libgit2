@@ -78,8 +78,8 @@ static int wildcard_filter_check(
 static int wildcard_filter_apply(
 	git_filter     *self,
 	void          **payload,
-	git_buf        *to,
-	const git_buf  *from,
+	git_str        *to,
+	const git_str  *from,
 	const git_filter_source *source)
 {
 	const char *filtername = *payload;

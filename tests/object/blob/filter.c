@@ -24,7 +24,7 @@ static off64_t g_crlf_raw_len[CRLF_NUM_TEST_OBJECTS] = {
 
 static git_oid g_crlf_oids[CRLF_NUM_TEST_OBJECTS];
 
-static git_buf g_crlf_filtered[CRLF_NUM_TEST_OBJECTS] = {
+static git_str g_crlf_filtered[CRLF_NUM_TEST_OBJECTS] = {
 	{ "", 0, 0 },
 	{ "foo\nbar\n", 0, 8 },
 	{ "foo\rbar\r", 0, 8 },
@@ -36,16 +36,16 @@ static git_buf g_crlf_filtered[CRLF_NUM_TEST_OBJECTS] = {
 	{ "\xFE\xFF\x00T\x00h\x00i\x00s\x00!", 0, 12 }
 };
 
-static git_buf_text_stats g_crlf_filtered_stats[CRLF_NUM_TEST_OBJECTS] = {
+static git_str_text_stats g_crlf_filtered_stats[CRLF_NUM_TEST_OBJECTS] = {
 	{ 0, 0, 0, 0, 0, 0, 0 },
 	{ 0, 0, 0, 2, 0, 6, 0 },
 	{ 0, 0, 2, 0, 0, 6, 0 },
 	{ 0, 0, 2, 2, 2, 6, 0 },
 	{ 0, 0, 4, 4, 1, 31, 0 },
 	{ 0, 1, 1, 2, 1, 9, 5 },
-	{ GIT_BUF_BOM_UTF8, 0, 0, 1, 0, 16, 0 },
-	{ GIT_BUF_BOM_UTF8, 0, 2, 2, 2, 27, 0 },
-	{ GIT_BUF_BOM_UTF16_BE, 5, 0, 0, 0, 7, 5 },
+	{ GIT_STR_BOM_UTF8, 0, 0, 1, 0, 16, 0 },
+	{ GIT_STR_BOM_UTF8, 0, 2, 2, 2, 27, 0 },
+	{ GIT_STR_BOM_UTF16_BE, 5, 0, 0, 0, 7, 5 },
 };
 
 void test_object_blob_filter__initialize(void)
@@ -90,19 +90,19 @@ void test_object_blob_filter__stats(void)
 {
 	int i;
 	git_blob *blob;
-	git_buf buf = GIT_BUF_INIT;
-	git_buf_text_stats stats;
+	git_str buf = GIT_STR_INIT;
+	git_str_text_stats stats;
 
 	for (i = 0; i < CRLF_NUM_TEST_OBJECTS; i++) {
 		cl_git_pass(git_blob_lookup(&blob, g_repo, &g_crlf_oids[i]));
 		cl_git_pass(git_blob__getbuf(&buf, blob));
-		git_buf_gather_text_stats(&stats, &buf, false);
+		git_str_gather_text_stats(&stats, &buf, false);
 		cl_assert_equal_i(
 			0, memcmp(&g_crlf_filtered_stats[i], &stats, sizeof(stats)));
 		git_blob_free(blob);
 	}
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 }
 
 void test_object_blob_filter__to_odb(void)

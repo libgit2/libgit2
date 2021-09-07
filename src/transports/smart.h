@@ -12,8 +12,8 @@
 #include "git2.h"
 #include "vector.h"
 #include "netops.h"
-#include "buffer.h"
 #include "push.h"
+#include "str.h"
 #include "git2/sys/transport.h"
 
 #define GIT_SIDE_BAND_DATA     1
@@ -189,11 +189,11 @@ int git_smart__update_heads(transport_smart *t, git_vector *symrefs);
 
 /* smart_pkt.c */
 int git_pkt_parse_line(git_pkt **head, const char **endptr, const char *line, size_t linelen);
-int git_pkt_buffer_flush(git_buf *buf);
+int git_pkt_buffer_flush(git_str *buf);
 int git_pkt_send_flush(GIT_SOCKET s);
-int git_pkt_buffer_done(git_buf *buf);
-int git_pkt_buffer_wants(const git_remote_head * const *refs, size_t count, transport_smart_caps *caps, git_buf *buf);
-int git_pkt_buffer_have(git_oid *oid, git_buf *buf);
+int git_pkt_buffer_done(git_str *buf);
+int git_pkt_buffer_wants(const git_remote_head * const *refs, size_t count, transport_smart_caps *caps, git_str *buf);
+int git_pkt_buffer_have(git_oid *oid, git_str *buf);
 void git_pkt_free(git_pkt *pkt);
 
 #endif

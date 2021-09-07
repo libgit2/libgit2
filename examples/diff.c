@@ -344,7 +344,7 @@ static void parse_opts(struct diff_options *o, int argc, char *argv[])
 static void diff_print_stats(git_diff *diff, struct diff_options *o)
 {
 	git_diff_stats *stats;
-	git_buf b = GIT_BUF_INIT_CONST(NULL, 0);
+	git_buf b = GIT_BUF_INIT;
 	git_diff_stats_format_t format = 0;
 
 	check_lg2(

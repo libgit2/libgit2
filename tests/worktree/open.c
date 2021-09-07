@@ -55,17 +55,17 @@ void test_worktree_open__repository_through_gitlink(void)
 
 void test_worktree_open__repository_through_gitdir(void)
 {
-	git_buf gitdir_path = GIT_BUF_INIT;
+	git_str gitdir_path = GIT_STR_INIT;
 	git_repository *wt;
 
-	cl_git_pass(git_buf_joinpath(&gitdir_path, COMMON_REPO, ".git"));
-	cl_git_pass(git_buf_joinpath(&gitdir_path, gitdir_path.ptr, "worktrees"));
-	cl_git_pass(git_buf_joinpath(&gitdir_path, gitdir_path.ptr, "testrepo-worktree"));
+	cl_git_pass(git_str_joinpath(&gitdir_path, COMMON_REPO, ".git"));
+	cl_git_pass(git_str_joinpath(&gitdir_path, gitdir_path.ptr, "worktrees"));
+	cl_git_pass(git_str_joinpath(&gitdir_path, gitdir_path.ptr, "testrepo-worktree"));
 
 	cl_git_pass(git_repository_open(&wt, gitdir_path.ptr));
 	assert_worktree_valid(wt, COMMON_REPO, WORKTREE_REPO);
 
-	git_buf_dispose(&gitdir_path);
+	git_str_dispose(&gitdir_path);
 	git_repository_free(wt);
 }
 

@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "posix.h"
-#include "buffer.h"
+#include "str.h"
 #include "vector.h"
 
 #include "git2/sys/path.h"
@@ -35,13 +35,13 @@
  * The `git_path_dirname` implementation is thread safe. The returned
  * string must be manually free'd.
  *
- * The `git_path_dirname_r` implementation writes the dirname to a `git_buf`
+ * The `git_path_dirname_r` implementation writes the dirname to a `git_str`
  * if the buffer pointer is not NULL.
  * It returns an error code < 0 if there is an allocation error, otherwise
  * the length of the dirname (which will be > 0).
  */
 extern char *git_path_dirname(const char *path);
-extern int git_path_dirname_r(git_buf *buffer, const char *path);
+extern int git_path_dirname_r(git_str *buffer, const char *path);
 
 /*
  * This function returns the basename of the file, which is the last
@@ -55,17 +55,17 @@ extern int git_path_dirname_r(git_buf *buffer, const char *path);
  * The `git_path_basename` implementation is thread safe. The returned
  * string must be manually free'd.
  *
- * The `git_path_basename_r` implementation writes the basename to a `git_buf`.
+ * The `git_path_basename_r` implementation writes the basename to a `git_str`.
  * It returns an error code < 0 if there is an allocation error, otherwise
  * the length of the basename (which will be >= 0).
  */
 extern char *git_path_basename(const char *path);
-extern int git_path_basename_r(git_buf *buffer, const char *path);
+extern int git_path_basename_r(git_str *buffer, const char *path);
 
 /* Return the offset of the start of the basename.  Unlike the other
  * basename functions, this returns 0 if the path is empty.
  */
-extern size_t git_path_basename_offset(git_buf *buffer);
+extern size_t git_path_basename_offset(git_str *buffer);
 
 /**
  * Find offset to root of path if path has one.
@@ -80,7 +80,7 @@ extern int git_path_root(const char *path);
 /**
  * Ensure path has a trailing '/'.
  */
-extern int git_path_to_dir(git_buf *path);
+extern int git_path_to_dir(git_str *path);
 
 /**
  * Ensure string has a trailing '/' if there is space for it.
@@ -150,12 +150,12 @@ GIT_INLINE(int) git_path_at_end_of_segment(const char *p)
 	return !*p || *p == '/';
 }
 
-extern int git__percent_decode(git_buf *decoded_out, const char *input);
+extern int git__percent_decode(git_str *decoded_out, const char *input);
 
 /**
  * Extract path from file:// URL.
  */
-extern int git_path_fromurl(git_buf *local_path_out, const char *file_url);
+extern int git_path_fromurl(git_str *local_path_out, const char *file_url);
 
 
 /**
@@ -205,7 +205,7 @@ extern int git_path_lstat(const char *path, struct stat *st);
  * @param item Item that might be in the directory.
  * @return 0 if item exists in directory, <0 otherwise.
  */
-extern bool git_path_contains(git_buf *dir, const char *item);
+extern bool git_path_contains(git_str *dir, const char *item);
 
 /**
  * Check if the given path contains the given subdirectory.
@@ -214,7 +214,7 @@ extern bool git_path_contains(git_buf *dir, const char *item);
  * @param subdir Subdirectory name to look for in parent
  * @return true if subdirectory exists, false otherwise.
  */
-extern bool git_path_contains_dir(git_buf *parent, const char *subdir);
+extern bool git_path_contains_dir(git_str *parent, const char *subdir);
 
 /**
  * Determine the common directory length between two paths, including
@@ -237,7 +237,7 @@ extern size_t git_path_common_dirlen(const char *one, const char *two);
  *         if there was not common root between the paths,
  *         or <0.
  */
-extern int git_path_make_relative(git_buf *path, const char *parent);
+extern int git_path_make_relative(git_str *path, const char *parent);
 
 /**
  * Check if the given path contains the given file.
@@ -246,7 +246,7 @@ extern int git_path_make_relative(git_buf *path, const char *parent);
  * @param file File name to look for in parent
  * @return true if file exists, false otherwise.
  */
-extern bool git_path_contains_file(git_buf *dir, const char *file);
+extern bool git_path_contains_file(git_str *dir, const char *file);
 
 /**
  * Prepend base to unrooted path or just copy path over.
@@ -255,24 +255,24 @@ extern bool git_path_contains_file(git_buf *dir, const char *file);
  * is, either the end of the base directory prefix or the path root.
  */
 extern int git_path_join_unrooted(
-	git_buf *path_out, const char *path, const char *base, ssize_t *root_at);
+	git_str *path_out, const char *path, const char *base, ssize_t *root_at);
 
 /**
  * Removes multiple occurrences of '/' in a row, squashing them into a
  * single '/'.
  */
-extern void git_path_squash_slashes(git_buf *path);
+extern void git_path_squash_slashes(git_str *path);
 
 /**
  * Clean up path, prepending base if it is not already rooted.
  */
-extern int git_path_prettify(git_buf *path_out, const char *path, const char *base);
+extern int git_path_prettify(git_str *path_out, const char *path, const char *base);
 
 /**
  * Clean up path, prepending base if it is not already rooted and
  * appending a slash.
  */
-extern int git_path_prettify_dir(git_buf *path_out, const char *path, const char *base);
+extern int git_path_prettify_dir(git_str *path_out, const char *path, const char *base);
 
 /**
  * Get a directory from a path.
@@ -283,7 +283,7 @@ extern int git_path_prettify_dir(git_buf *path_out, const char *path, const char
  * appends the trailing '/'.  If the path does not exist, it is
  * treated like a regular filename.
  */
-extern int git_path_find_dir(git_buf *dir);
+extern int git_path_find_dir(git_str *dir);
 
 /**
  * Resolve relative references within a path.
@@ -295,7 +295,7 @@ extern int git_path_find_dir(git_buf *dir);
  * Additionally, this will recognize an "c:/" drive prefix or a "xyz://" URL
  * prefix and not touch that part of the path.
  */
-extern int git_path_resolve_relative(git_buf *path, size_t ceiling);
+extern int git_path_resolve_relative(git_str *path, size_t ceiling);
 
 /**
  * Apply a relative path to base path.
@@ -306,7 +306,7 @@ extern int git_path_resolve_relative(git_buf *path, size_t ceiling);
  * slash, "." will be eaten with no change, and ".." will remove a
  * segment from the base path.
  */
-extern int git_path_apply_relative(git_buf *target, const char *relpath);
+extern int git_path_apply_relative(git_str *target, const char *relpath);
 
 enum {
 	GIT_PATH_DIR_IGNORE_CASE = (1u << 0),
@@ -328,9 +328,9 @@ enum {
  * @return 0 on success or error code from OS error or from callback
  */
 extern int git_path_direach(
-	git_buf *pathbuf,
+	git_str *pathbuf,
 	uint32_t flags,
-	int (*callback)(void *payload, git_buf *path),
+	int (*callback)(void *payload, git_str *path),
 	void *payload);
 
 /**
@@ -360,7 +360,7 @@ extern int git_path_cmp(
  * @param payload Passed to fn as the first ath.
  */
 extern int git_path_walk_up(
-	git_buf *pathbuf,
+	git_str *pathbuf,
 	const char *ceiling,
 	int (*callback)(void *payload, const char *path),
 	void *payload);
@@ -429,10 +429,10 @@ extern bool git_path_has_non_ascii(const char *path, size_t pathlen);
 
 typedef struct {
 	iconv_t map;
-	git_buf buf;
+	git_str buf;
 } git_path_iconv_t;
 
-#define GIT_PATH_ICONV_INIT { (iconv_t)-1, GIT_BUF_INIT }
+#define GIT_PATH_ICONV_INIT { (iconv_t)-1, GIT_STR_INIT }
 
 /* Init iconv data for converting decomposed UTF-8 to precomposed */
 extern int git_path_iconv_init_precompose(git_path_iconv_t *ic);
@@ -461,7 +461,7 @@ struct git_path_diriter
 	git_win32_path path;
 	size_t parent_len;
 
-	git_buf path_utf8;
+	git_str path_utf8;
 	size_t parent_utf8_len;
 
 	HANDLE handle;
@@ -472,13 +472,13 @@ struct git_path_diriter
 	unsigned int needs_next;
 };
 
-#define GIT_PATH_DIRITER_INIT { {0}, 0, GIT_BUF_INIT, 0, INVALID_HANDLE_VALUE }
+#define GIT_PATH_DIRITER_INIT { {0}, 0, GIT_STR_INIT, 0, INVALID_HANDLE_VALUE }
 
 #else
 
 struct git_path_diriter
 {
-	git_buf path;
+	git_str path;
 	size_t parent_len;
 
 	unsigned int flags;
@@ -490,7 +490,7 @@ struct git_path_diriter
 #endif
 };
 
-#define GIT_PATH_DIRITER_INIT { GIT_BUF_INIT }
+#define GIT_PATH_DIRITER_INIT { GIT_STR_INIT }
 
 #endif
 
@@ -584,7 +584,7 @@ extern int git_path_dirload(
 
 /* Used for paths to repositories on the filesystem */
 extern bool git_path_is_local_file_url(const char *file_url);
-extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or_path);
+extern int git_path_from_url_or_path(git_str *local_path_out, const char *url_or_path);
 
 /* Flags to determine path validity in `git_path_isvalid` */
 #define GIT_PATH_REJECT_TRAVERSAL          (1 << 0)
@@ -713,12 +713,12 @@ extern int git_path_validate_workdir_with_len(
 	size_t path_len);
 extern int git_path_validate_workdir_buf(
 	git_repository *repo,
-	git_buf *buf);
+	git_str *buf);
 
 /**
  * Convert any backslashes into slashes
  */
-int git_path_normalize_slashes(git_buf *out, const char *path);
+int git_path_normalize_slashes(git_str *out, const char *path);
 
 bool git_path_supports_symlinks(const char *dir);
 

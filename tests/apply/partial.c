@@ -83,8 +83,8 @@ static int apply_buf(
 	void *payload)
 {
 	git_patch *patch;
-	git_buf result = GIT_BUF_INIT;
-	git_buf patchbuf = GIT_BUF_INIT;
+	git_str result = GIT_STR_INIT;
+	git_str patchbuf = GIT_STR_INIT;
 	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
 	char *filename;
 	unsigned int mode;
@@ -103,8 +103,8 @@ static int apply_buf(
 	}
 
 	git__free(filename);
-	git_buf_dispose(&result);
-	git_buf_dispose(&patchbuf);
+	git_str_dispose(&result);
+	git_str_dispose(&patchbuf);
 	git_patch_free(patch);
 
 	return error;

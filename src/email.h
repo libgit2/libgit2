@@ -12,7 +12,7 @@
 #include "git2/email.h"
 
 extern int git_email__append_from_diff(
-	git_buf *out,
+	git_str *out,
 	git_diff *diff,
 	size_t patch_idx,
 	size_t patch_count,

@@ -49,7 +49,7 @@ void test_refs_basic__longpaths(void)
 	const char *base;
 	size_t base_len, extra_len;
 	ssize_t remain_len, i;
-	git_buf refname = GIT_BUF_INIT;
+	git_str refname = GIT_STR_INIT;
 	git_reference *one = NULL, *two = NULL;
 	git_oid id;
 
@@ -62,10 +62,10 @@ void test_refs_basic__longpaths(void)
 	remain_len = (ssize_t)MAX_PATH - (base_len + extra_len);
 	cl_assert(remain_len > 0);
 
-	cl_git_pass(git_buf_puts(&refname, "refs/heads/"));
+	cl_git_pass(git_str_puts(&refname, "refs/heads/"));
 
 	for (i = 0; i < remain_len; i++) {
-		cl_git_pass(git_buf_putc(&refname, 'a'));
+		cl_git_pass(git_str_putc(&refname, 'a'));
 	}
 
 	/*
@@ -75,11 +75,11 @@ void test_refs_basic__longpaths(void)
 	cl_git_pass(git_reference_create(&one, g_repo, refname.ptr, &id, 0, NULL));
 
 	/* Adding one more character gives us a path that is too long. */
-	cl_git_pass(git_buf_putc(&refname, 'z'));
+	cl_git_pass(git_str_putc(&refname, 'z'));
 	cl_git_fail(git_reference_create(&two, g_repo, refname.ptr, &id, 0, NULL));
 
 	git_reference_free(one);
 	git_reference_free(two);
-	git_buf_dispose(&refname);
+	git_str_dispose(&refname);
 #endif
 }

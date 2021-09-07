@@ -46,7 +46,7 @@ void test_checkout_icase__cleanup(void)
 static char *get_filename(const char *in)
 {
 	char *search_dirname, *search_filename, *filename = NULL;
-	git_buf out = GIT_BUF_INIT;
+	git_str out = GIT_STR_INIT;
 	DIR *dir;
 	struct dirent *de;
 
@@ -57,8 +57,8 @@ static char *get_filename(const char *in)
 
 	while ((de = readdir(dir))) {
 		if (strcasecmp(de->d_name, search_filename) == 0) {
-			git_buf_join(&out, '/', search_dirname, de->d_name);
-			filename = git_buf_detach(&out);
+			git_str_join(&out, '/', search_dirname, de->d_name);
+			filename = git_str_detach(&out);
 			break;
 		}
 	}
@@ -67,7 +67,7 @@ static char *get_filename(const char *in)
 
 	git__free(search_dirname);
 	git__free(search_filename);
-	git_buf_dispose(&out);
+	git_str_dispose(&out);
 
 	return filename;
 }

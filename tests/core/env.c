@@ -83,7 +83,7 @@ static void setenv_and_check(const char *name, const char *value)
 
 void test_core_env__0(void)
 {
-	git_buf path = GIT_BUF_INIT, found = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT, found = GIT_STR_INIT;
 	char testfile[16], tidx = '0';
 	char **val;
 	const char *testname = "testfile";
@@ -110,9 +110,9 @@ void test_core_env__0(void)
 		 * accidentally make this test pass...
 		 */
 		testfile[testlen] = tidx++;
-		cl_git_pass(git_buf_joinpath(&path, path.ptr, testfile));
+		cl_git_pass(git_str_joinpath(&path, path.ptr, testfile));
 		cl_git_mkfile(path.ptr, "find me");
-		git_buf_rtruncate_at_char(&path, '/');
+		git_str_rtruncate_at_char(&path, '/');
 
 		cl_assert_equal_i(
 			GIT_ENOTFOUND, git_sysdir_find_global_file(&found, testfile));
@@ -162,14 +162,14 @@ void test_core_env__0(void)
 		(void)p_rmdir(*val);
 	}
 
-	git_buf_dispose(&path);
-	git_buf_dispose(&found);
+	git_str_dispose(&path);
+	git_str_dispose(&found);
 }
 
 
 void test_core_env__1(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_sysdir_find_global_file(&path, "nonexistentfile"));
@@ -206,21 +206,21 @@ void test_core_env__1(void)
 		GIT_ENOTFOUND, git_sysdir_find_system_file(&path, "nonexistentfile"));
 #endif
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 static void check_global_searchpath(
-	const char *path, int position, const char *file, git_buf *temp)
+	const char *path, int position, const char *file, git_str *temp)
 {
-	git_buf out = GIT_BUF_INIT;
+	git_str out = GIT_STR_INIT;
 
 	/* build and set new path */
 	if (position < 0)
-		cl_git_pass(git_buf_join(temp, GIT_PATH_LIST_SEPARATOR, path, "$PATH"));
+		cl_git_pass(git_str_join(temp, GIT_PATH_LIST_SEPARATOR, path, "$PATH"));
 	else if (position > 0)
-		cl_git_pass(git_buf_join(temp, GIT_PATH_LIST_SEPARATOR, "$PATH", path));
+		cl_git_pass(git_str_join(temp, GIT_PATH_LIST_SEPARATOR, "$PATH", path));
 	else
-		cl_git_pass(git_buf_sets(temp, path));
+		cl_git_pass(git_str_sets(temp, path));
 
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, temp->ptr));
@@ -245,12 +245,12 @@ static void check_global_searchpath(
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_sysdir_find_global_file(temp, file));
 
-	git_buf_dispose(&out);
+	git_str_dispose(&out);
 }
 
 void test_core_env__2(void)
 {
-	git_buf path = GIT_BUF_INIT, found = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT, found = GIT_STR_INIT;
 	char testfile[16], tidx = '0';
 	char **val;
 	const char *testname = "alternate";
@@ -276,9 +276,9 @@ void test_core_env__2(void)
 		 * deleting files won't accidentally make a test pass.
 		 */
 		testfile[testlen] = tidx++;
-		cl_git_pass(git_buf_joinpath(&path, path.ptr, testfile));
+		cl_git_pass(git_str_joinpath(&path, path.ptr, testfile));
 		cl_git_mkfile(path.ptr, "find me");
-		git_buf_rtruncate_at_char(&path, '/');
+		git_str_rtruncate_at_char(&path, '/');
 
 		/* default should be NOTFOUND */
 		cl_assert_equal_i(
@@ -290,32 +290,32 @@ void test_core_env__2(void)
 		check_global_searchpath(path.ptr,  1, testfile, &found);
 
 		/* cleanup */
-		cl_git_pass(git_buf_joinpath(&path, path.ptr, testfile));
+		cl_git_pass(git_str_joinpath(&path, path.ptr, testfile));
 		(void)p_unlink(path.ptr);
 		(void)p_rmdir(*val);
 	}
 
-	git_buf_dispose(&path);
-	git_buf_dispose(&found);
+	git_str_dispose(&path);
+	git_str_dispose(&found);
 }
 
 void test_core_env__substitution(void)
 {
-  git_buf buf = GIT_BUF_INIT, expected = GIT_BUF_INIT;
+  git_str buf = GIT_STR_INIT, expected = GIT_STR_INIT;
 
   /* Set it to something non-default so we have controllable values */
   cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, "/tmp/a"));
   cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &buf));
   cl_assert_equal_s("/tmp/a", buf.ptr);
 
-  git_buf_clear(&buf);
-  cl_git_pass(git_buf_join(&buf, GIT_PATH_LIST_SEPARATOR, "$PATH", "/tmp/b"));
+  git_str_clear(&buf);
+  cl_git_pass(git_str_join(&buf, GIT_PATH_LIST_SEPARATOR, "$PATH", "/tmp/b"));
   cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, buf.ptr));
   cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &buf));
 
-  cl_git_pass(git_buf_join(&expected, GIT_PATH_LIST_SEPARATOR, "/tmp/a", "/tmp/b"));
+  cl_git_pass(git_str_join(&expected, GIT_PATH_LIST_SEPARATOR, "/tmp/a", "/tmp/b"));
   cl_assert_equal_s(expected.ptr, buf.ptr);
 
-  git_buf_dispose(&expected);
-  git_buf_dispose(&buf);
+  git_str_dispose(&expected);
+  git_str_dispose(&buf);
 }

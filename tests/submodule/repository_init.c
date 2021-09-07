@@ -11,7 +11,7 @@ void test_submodule_repository_init__basic(void)
 {
 	git_submodule *sm;
 	git_repository *repo;
-	git_buf dot_git_content = GIT_BUF_INIT;
+	git_str dot_git_content = GIT_STR_INIT;
 
 	g_repo = setup_fixture_submod2();
 
@@ -34,5 +34,5 @@ void test_submodule_repository_init__basic(void)
 
 	git_submodule_free(sm);
 	git_repository_free(repo);
-	git_buf_dispose(&dot_git_content);
+	git_str_dispose(&dot_git_content);
 }

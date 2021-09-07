@@ -7,6 +7,7 @@
 
 #include "filter.h"
 
+#include "buf.h"
 #include "common.h"
 #include "futils.h"
 #include "hash.h"
@@ -36,7 +37,7 @@ typedef struct {
 struct git_filter_list {
 	git_array_t(git_filter_entry) filters;
 	git_filter_source source;
-	git_buf *temp_buf;
+	git_str *temp_buf;
 	char path[GIT_FLEX_ARRAY];
 };
 
@@ -68,7 +69,7 @@ static void git_filter_global_shutdown(void);
 
 
 static int filter_def_scan_attrs(
-	git_buf *attrs, size_t *nattr, size_t *nmatch, const char *attr_str)
+	git_str *attrs, size_t *nattr, size_t *nmatch, const char *attr_str)
 {
 	const char *start, *scan = attr_str;
 	int has_eq;
@@ -92,9 +93,9 @@ static int filter_def_scan_attrs(
 				(*nmatch)++;
 
 			if (has_eq)
-				git_buf_putc(attrs, '=');
-			git_buf_put(attrs, start, scan - start);
-			git_buf_putc(attrs, '\0');
+				git_str_putc(attrs, '=');
+			git_str_put(attrs, start, scan - start);
+			git_str_putc(attrs, '\0');
 		}
 	}
 
@@ -152,7 +153,7 @@ static int filter_registry_insert(
 {
 	git_filter_def *fdef;
 	size_t nattr = 0, nmatch = 0, alloc_len;
-	git_buf attrs = GIT_BUF_INIT;
+	git_str attrs = GIT_STR_INIT;
 
 	if (filter_def_scan_attrs(&attrs, &nattr, &nmatch, filter->attributes) < 0)
 		return -1;
@@ -171,7 +172,7 @@ static int filter_registry_insert(
 	fdef->priority    = priority;
 	fdef->nattrs      = nattr;
 	fdef->nmatches    = nmatch;
-	fdef->attrdata    = git_buf_detach(&attrs);
+	fdef->attrdata    = git_str_detach(&attrs);
 
 	filter_def_set_attrs(fdef);
 
@@ -710,7 +711,7 @@ size_t git_filter_list_length(const git_filter_list *fl)
 
 struct buf_stream {
 	git_writestream parent;
-	git_buf *target;
+	git_str *target;
 	bool complete;
 };
 
@@ -721,7 +722,7 @@ static int buf_stream_write(
 	GIT_ASSERT_ARG(buf_stream);
 	GIT_ASSERT(buf_stream->complete == 0);
 
-	return git_buf_put(buf_stream->target, buffer, len);
+	return git_str_put(buf_stream->target, buffer, len);
 }
 
 static int buf_stream_close(git_writestream *s)
@@ -740,7 +741,7 @@ static void buf_stream_free(git_writestream *s)
 	GIT_UNUSED(s);
 }
 
-static void buf_stream_init(struct buf_stream *writer, git_buf *target)
+static void buf_stream_init(struct buf_stream *writer, git_str *target)
 {
 	memset(writer, 0, sizeof(struct buf_stream));
 
@@ -749,7 +750,7 @@ static void buf_stream_init(struct buf_stream *writer, git_buf *target)
 	writer->parent.free = buf_stream_free;
 	writer->target = target;
 
-	git_buf_clear(target);
+	git_str_clear(target);
 }
 
 int git_filter_list_apply_to_buffer(
@@ -758,11 +759,17 @@ int git_filter_list_apply_to_buffer(
 	const char *in,
 	size_t in_len)
 {
+	GIT_BUF_WRAP_PRIVATE(out, git_filter_list__apply_to_buffer, filters, in, in_len);
+}
+
+int git_filter_list__apply_to_buffer(
+	git_str *out,
+	git_filter_list *filters,
+	const char *in,
+	size_t in_len)
+{
 	struct buf_stream writer;
 	int error;
-
-	if ((error = git_buf_sanitize(out)) < 0)
-		return error;
 
 	buf_stream_init(&writer, out);
 
@@ -775,29 +782,38 @@ int git_filter_list_apply_to_buffer(
 }
 
 int git_filter_list__convert_buf(
-	git_buf *out,
+	git_str *out,
 	git_filter_list *filters,
-	git_buf *in)
+	git_str *in)
 {
 	int error;
 
 	if (!filters || git_filter_list_length(filters) == 0) {
-		git_buf_swap(out, in);
-		git_buf_dispose(in);
+		git_str_swap(out, in);
+		git_str_dispose(in);
 		return 0;
 	}
 
-	error = git_filter_list_apply_to_buffer(out, filters,
+	error = git_filter_list__apply_to_buffer(out, filters,
 		in->ptr, in->size);
 
 	if (!error)
-		git_buf_dispose(in);
+		git_str_dispose(in);
 
 	return error;
 }
 
 int git_filter_list_apply_to_file(
 	git_buf *out,
+	git_filter_list *filters,
+	git_repository *repo,
+	const char *path)
+{
+	GIT_BUF_WRAP_PRIVATE(out, git_filter_list__apply_to_file, filters, repo, path);
+}
+
+int git_filter_list__apply_to_file(
+	git_str *out,
 	git_filter_list *filters,
 	git_repository *repo,
 	const char *path)
@@ -815,7 +831,7 @@ int git_filter_list_apply_to_file(
 	return error;
 }
 
-static int buf_from_blob(git_buf *out, git_blob *blob)
+static int buf_from_blob(git_str *out, git_blob *blob)
 {
 	git_object_size_t rawsize = git_blob_rawsize(blob);
 
@@ -824,12 +840,20 @@ static int buf_from_blob(git_buf *out, git_blob *blob)
 		return -1;
 	}
 
-	git_buf_attach_notowned(out, git_blob_rawcontent(blob), (size_t)rawsize);
+	git_str_attach_notowned(out, git_blob_rawcontent(blob), (size_t)rawsize);
 	return 0;
 }
 
 int git_filter_list_apply_to_blob(
 	git_buf *out,
+	git_filter_list *filters,
+	git_blob *blob)
+{
+	GIT_BUF_WRAP_PRIVATE(out, git_filter_list__apply_to_blob, filters, blob);
+}
+
+int git_filter_list__apply_to_blob(
+	git_str *out,
 	git_filter_list *filters,
 	git_blob *blob)
 {
@@ -849,12 +873,13 @@ int git_filter_list_apply_to_blob(
 struct buffered_stream {
 	git_writestream parent;
 	git_filter *filter;
-	int (*write_fn)(git_filter *, void **, git_buf *, const git_buf *, const git_filter_source *);
+	int (*write_fn)(git_filter *, void **, git_str *, const git_str *, const git_filter_source *);
+	int (*legacy_write_fn)(git_filter *, void **, git_buf *, const git_buf *, const git_filter_source *);
 	const git_filter_source *source;
 	void **payload;
-	git_buf input;
-	git_buf temp_buf;
-	git_buf *output;
+	git_str input;
+	git_str temp_buf;
+	git_str *output;
 	git_writestream *target;
 };
 
@@ -864,13 +889,13 @@ static int buffered_stream_write(
 	struct buffered_stream *buffered_stream = (struct buffered_stream *)s;
 	GIT_ASSERT_ARG(buffered_stream);
 
-	return git_buf_put(&buffered_stream->input, buffer, len);
+	return git_str_put(&buffered_stream->input, buffer, len);
 }
 
 static int buffered_stream_close(git_writestream *s)
 {
 	struct buffered_stream *buffered_stream = (struct buffered_stream *)s;
-	git_buf *writebuf;
+	git_str *writebuf;
 	git_error_state error_state = {0};
 	int error;
 
@@ -886,9 +911,6 @@ static int buffered_stream_close(git_writestream *s)
 	if (error == GIT_PASSTHROUGH) {
 		writebuf = &buffered_stream->input;
 	} else if (error == 0) {
-		if ((error = git_buf_sanitize(buffered_stream->output)) < 0)
-			return error;
-
 		writebuf = buffered_stream->output;
 	} else {
 		/* close stream before erroring out taking care
@@ -911,8 +933,8 @@ static void buffered_stream_free(git_writestream *s)
 	struct buffered_stream *buffered_stream = (struct buffered_stream *)s;
 
 	if (buffered_stream) {
-		git_buf_dispose(&buffered_stream->input);
-		git_buf_dispose(&buffered_stream->temp_buf);
+		git_str_dispose(&buffered_stream->input);
+		git_str_dispose(&buffered_stream->temp_buf);
 		git__free(buffered_stream);
 	}
 }
@@ -920,8 +942,8 @@ static void buffered_stream_free(git_writestream *s)
 int git_filter_buffered_stream_new(
 	git_writestream **out,
 	git_filter *filter,
-	int (*write_fn)(git_filter *, void **, git_buf *, const git_buf *, const git_filter_source *),
-	git_buf *temp_buf,
+	int (*write_fn)(git_filter *, void **, git_str *, const git_str *, const git_filter_source *),
+	git_str *temp_buf,
 	void **payload,
 	const git_filter_source *source,
 	git_writestream *target)
@@ -940,11 +962,42 @@ int git_filter_buffered_stream_new(
 	buffered_stream->target = target;
 
 	if (temp_buf)
-		git_buf_clear(temp_buf);
+		git_str_clear(temp_buf);
 
 	*out = (git_writestream *)buffered_stream;
 	return 0;
 }
+
+#ifndef GIT_DEPRECATE_HARD
+static int buffered_legacy_stream_new(
+	git_writestream **out,
+	git_filter *filter,
+	int (*legacy_write_fn)(git_filter *, void **, git_buf *, const git_buf *, const git_filter_source *),
+	git_str *temp_buf,
+	void **payload,
+	const git_filter_source *source,
+	git_writestream *target)
+{
+	struct buffered_stream *buffered_stream = git__calloc(1, sizeof(struct buffered_stream));
+	GIT_ERROR_CHECK_ALLOC(buffered_stream);
+
+	buffered_stream->parent.write = buffered_stream_write;
+	buffered_stream->parent.close = buffered_stream_close;
+	buffered_stream->parent.free = buffered_stream_free;
+	buffered_stream->filter = filter;
+	buffered_stream->legacy_write_fn = legacy_write_fn;
+	buffered_stream->output = temp_buf ? temp_buf : &buffered_stream->temp_buf;
+	buffered_stream->payload = payload;
+	buffered_stream->source = source;
+	buffered_stream->target = target;
+
+	if (temp_buf)
+		git_str_clear(temp_buf);
+
+	*out = (git_writestream *)buffered_stream;
+	return 0;
+}
+#endif
 
 static int setup_stream(
 	git_writestream **out,
@@ -961,7 +1014,7 @@ static int setup_stream(
 	 */
 	if (!fe->filter->stream) {
 		/* Create a stream that proxies the one-shot apply */
-		return git_filter_buffered_stream_new(out,
+		return buffered_legacy_stream_new(out,
 			fe->filter, fe->filter->apply, filters->temp_buf,
 			&fe->payload, &filters->source, last_stream);
 	}
@@ -1032,7 +1085,7 @@ int git_filter_list_stream_file(
 	git_writestream *target)
 {
 	char buf[FILTERIO_BUFSIZE];
-	git_buf abspath = GIT_BUF_INIT;
+	git_str abspath = GIT_STR_INIT;
 	const char *base = repo ? git_repository_workdir(repo) : NULL;
 	git_vector filter_streams = GIT_VECTOR_INIT;
 	git_writestream *stream_start;
@@ -1067,7 +1120,7 @@ done:
 	if (fd >= 0)
 		p_close(fd);
 	filter_streams_free(&filter_streams);
-	git_buf_dispose(&abspath);
+	git_str_dispose(&abspath);
 	return error;
 }
 
@@ -1101,7 +1154,7 @@ int git_filter_list_stream_blob(
 	git_blob *blob,
 	git_writestream *target)
 {
-	git_buf in = GIT_BUF_INIT;
+	git_str in = GIT_STR_INIT;
 
 	if (buf_from_blob(&in, blob) < 0)
 		return -1;
@@ -1125,22 +1178,12 @@ int git_filter_list_stream_data(
 	git_buf *data,
 	git_writestream *target)
 {
-	int error;
-
-	if ((error = git_buf_sanitize(data)) < 0)
-		return error;
-
 	return git_filter_list_stream_buffer(filters, data->ptr, data->size, target);
 }
 
 int git_filter_list_apply_to_data(
 	git_buf *tgt, git_filter_list *filters, git_buf *src)
 {
-	int error;
-
-	if ((error = git_buf_sanitize(src)) < 0)
-	    return error;
-
 	return git_filter_list_apply_to_buffer(tgt, filters, src->ptr, src->size);
 }
 

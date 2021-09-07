@@ -279,12 +279,12 @@ static const char *expected_index_ci[] = {
 
 void test_iterator_index__case_folding(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	int fs_is_ci = 0;
 
-	cl_git_pass(git_buf_joinpath(&path, cl_fixture("icase"), ".gitted/CoNfIg"));
+	cl_git_pass(git_str_joinpath(&path, cl_fixture("icase"), ".gitted/CoNfIg"));
 	fs_is_ci = git_path_exists(path.ptr);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	index_iterator_test(
 		"icase", NULL, NULL, 0, ARRAY_SIZE(expected_index_cs),
@@ -978,22 +978,22 @@ void test_iterator_index__pathlist_with_directory(void)
 
 static void create_paths(git_index *index, const char *root, int depth)
 {
-	git_buf fullpath = GIT_BUF_INIT;
+	git_str fullpath = GIT_STR_INIT;
 	git_index_entry entry;
 	size_t root_len;
 	int i;
 
 	if (root) {
-		cl_git_pass(git_buf_puts(&fullpath, root));
-		cl_git_pass(git_buf_putc(&fullpath, '/'));
+		cl_git_pass(git_str_puts(&fullpath, root));
+		cl_git_pass(git_str_putc(&fullpath, '/'));
 	}
 
 	root_len = fullpath.size;
 
 	for (i = 0; i < 8; i++) {
 		bool file = (depth == 0 || (i % 2) == 0);
-		git_buf_truncate(&fullpath, root_len);
-		cl_git_pass(git_buf_printf(&fullpath, "item%d", i));
+		git_str_truncate(&fullpath, root_len);
+		cl_git_pass(git_str_printf(&fullpath, "item%d", i));
 
 		if (file) {
 			memset(&entry, 0, sizeof(git_index_entry));
@@ -1007,7 +1007,7 @@ static void create_paths(git_index *index, const char *root, int depth)
 		}
 	}
 
-	git_buf_dispose(&fullpath);
+	git_str_dispose(&fullpath);
 }
 
 void test_iterator_index__pathlist_for_deeply_nested_item(void)

@@ -460,7 +460,7 @@ void test_diff_rename__working_directory_changes(void)
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	diff_expects exp;
-	git_buf old_content = GIT_BUF_INIT, content = GIT_BUF_INIT;;
+	git_str old_content = GIT_STR_INIT, content = GIT_STR_INIT;;
 
 	tree = resolve_commit_oid_to_tree(g_repo, sha0);
 	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED | GIT_DIFF_INCLUDE_UNTRACKED;
@@ -514,7 +514,7 @@ void test_diff_rename__working_directory_changes(void)
 	cl_git_pass(
 		git_futils_readbuffer(&old_content, "renames/songof7cities.txt"));
 	cl_git_pass(
-		git_buf_lf_to_crlf(&content, &old_content));
+		git_str_lf_to_crlf(&content, &old_content));
 	cl_git_pass(
 		git_futils_writebuffer(&content, "renames/songof7cities.txt", 0, 0));
 
@@ -576,7 +576,7 @@ void test_diff_rename__working_directory_changes(void)
 
 	cl_git_pass(git_oid_fromstr(&id, blobsha));
 	cl_git_pass(git_blob_lookup(&blob, g_repo, &id));
-	cl_git_pass(git_buf_set(
+	cl_git_pass(git_str_set(
 		&content, git_blob_rawcontent(blob), (size_t)git_blob_rawsize(blob)));
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 	git_blob_free(blob);
@@ -604,8 +604,8 @@ void test_diff_rename__working_directory_changes(void)
 	git_diff_free(diff);
 
 	git_tree_free(tree);
-	git_buf_dispose(&content);
-	git_buf_dispose(&old_content);
+	git_str_dispose(&content);
+	git_str_dispose(&old_content);
 }
 
 void test_diff_rename__patch(void)
@@ -666,7 +666,7 @@ void test_diff_rename__patch(void)
 
 void test_diff_rename__file_exchange(void)
 {
-	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT;
+	git_str c1 = GIT_STR_INIT, c2 = GIT_STR_INIT;
 	git_index *index;
 	git_tree *tree;
 	git_diff *diff;
@@ -708,13 +708,13 @@ void test_diff_rename__file_exchange(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_dispose(&c1);
-	git_buf_dispose(&c2);
+	git_str_dispose(&c1);
+	git_str_dispose(&c2);
 }
 
 void test_diff_rename__file_exchange_three(void)
 {
-	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT, c3 = GIT_BUF_INIT;
+	git_str c1 = GIT_STR_INIT, c2 = GIT_STR_INIT, c3 = GIT_STR_INIT;
 	git_index *index;
 	git_tree *tree;
 	git_diff *diff;
@@ -760,14 +760,14 @@ void test_diff_rename__file_exchange_three(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_dispose(&c1);
-	git_buf_dispose(&c2);
-	git_buf_dispose(&c3);
+	git_str_dispose(&c1);
+	git_str_dispose(&c2);
+	git_str_dispose(&c3);
 }
 
 void test_diff_rename__file_partial_exchange(void)
 {
-	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT;
+	git_str c1 = GIT_STR_INIT, c2 = GIT_STR_INIT;
 	git_index *index;
 	git_tree *tree;
 	git_diff *diff;
@@ -779,7 +779,7 @@ void test_diff_rename__file_partial_exchange(void)
 	cl_git_pass(git_futils_readbuffer(&c1, "renames/untimely.txt"));
 	cl_git_pass(git_futils_writebuffer(&c1, "renames/songof7cities.txt", 0, 0));
 	for (i = 0; i < 100; ++i)
-		cl_git_pass(git_buf_puts(&c2, "this is not the content you are looking for\n"));
+		cl_git_pass(git_str_puts(&c2, "this is not the content you are looking for\n"));
 	cl_git_pass(git_futils_writebuffer(&c2, "renames/untimely.txt", 0, 0));
 
 	cl_git_pass(
@@ -813,13 +813,13 @@ void test_diff_rename__file_partial_exchange(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_dispose(&c1);
-	git_buf_dispose(&c2);
+	git_str_dispose(&c1);
+	git_str_dispose(&c2);
 }
 
 void test_diff_rename__rename_and_copy_from_same_source(void)
 {
-	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT;
+	git_str c1 = GIT_STR_INIT, c2 = GIT_STR_INIT;
 	git_index *index;
 	git_tree *tree;
 	git_diff *diff;
@@ -831,9 +831,9 @@ void test_diff_rename__rename_and_copy_from_same_source(void)
 	 * and the second 2/3 of file into another new place
 	 */
 	cl_git_pass(git_futils_readbuffer(&c1, "renames/songof7cities.txt"));
-	cl_git_pass(git_buf_set(&c2, c1.ptr, c1.size));
-	git_buf_truncate(&c1, c1.size * 2 / 3);
-	git_buf_consume(&c2, ((char *)c2.ptr) + (c2.size / 3));
+	cl_git_pass(git_str_set(&c2, c1.ptr, c1.size));
+	git_str_truncate(&c1, c1.size * 2 / 3);
+	git_str_consume(&c2, ((char *)c2.ptr) + (c2.size / 3));
 	cl_git_pass(git_futils_writebuffer(&c1, "renames/song_a.txt", 0, 0));
 	cl_git_pass(git_futils_writebuffer(&c2, "renames/song_b.txt", 0, 0));
 
@@ -870,13 +870,13 @@ void test_diff_rename__rename_and_copy_from_same_source(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_dispose(&c1);
-	git_buf_dispose(&c2);
+	git_str_dispose(&c1);
+	git_str_dispose(&c2);
 }
 
 void test_diff_rename__from_deleted_to_split(void)
 {
-	git_buf c1 = GIT_BUF_INIT;
+	git_str c1 = GIT_STR_INIT;
 	git_index *index;
 	git_tree *tree;
 	git_diff *diff;
@@ -924,7 +924,7 @@ void test_diff_rename__from_deleted_to_split(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_dispose(&c1);
+	git_str_dispose(&c1);
 }
 
 struct rename_expected
@@ -967,7 +967,7 @@ void test_diff_rename__rejected_match_can_match_others(void)
 	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
-	git_buf one = GIT_BUF_INIT, two = GIT_BUF_INIT;
+	git_str one = GIT_STR_INIT, two = GIT_STR_INIT;
 	unsigned int status[] = { GIT_DELTA_RENAMED, GIT_DELTA_RENAMED };
 	const char *sources[] = { "Class1.cs", "Class2.cs" };
 	const char *targets[] = { "ClassA.cs", "ClassB.cs" };
@@ -1024,25 +1024,25 @@ void test_diff_rename__rejected_match_can_match_others(void)
 	git_index_free(index);
 	git_reference_free(head);
 	git_reference_free(selfsimilar);
-	git_buf_dispose(&one);
-	git_buf_dispose(&two);
+	git_str_dispose(&one);
+	git_str_dispose(&two);
 }
 
 static void write_similarity_file_two(const char *filename, size_t b_lines)
 {
-	git_buf contents = GIT_BUF_INIT;
+	git_str contents = GIT_STR_INIT;
 	size_t i;
 
 	for (i = 0; i < b_lines; i++)
-		git_buf_printf(&contents, "%02d - bbbbb\r\n", (int)(i+1));
+		git_str_printf(&contents, "%02d - bbbbb\r\n", (int)(i+1));
 
 	for (i = b_lines; i < 50; i++)
-		git_buf_printf(&contents, "%02d - aaaaa%s", (int)(i+1), (i == 49 ? "" : "\r\n"));
+		git_str_printf(&contents, "%02d - aaaaa%s", (int)(i+1), (i == 49 ? "" : "\r\n"));
 
 	cl_git_pass(
 		git_futils_writebuffer(&contents, filename, O_RDWR|O_CREAT, 0777));
 
-	git_buf_dispose(&contents);
+	git_str_dispose(&contents);
 }
 
 void test_diff_rename__rejected_match_can_match_others_two(void)
@@ -1346,7 +1346,7 @@ void test_diff_rename__rewrite_on_single_file(void)
 
 void test_diff_rename__can_find_copy_to_split(void)
 {
-	git_buf c1 = GIT_BUF_INIT;
+	git_str c1 = GIT_STR_INIT;
 	git_index *index;
 	git_tree *tree;
 	git_diff *diff;
@@ -1390,12 +1390,12 @@ void test_diff_rename__can_find_copy_to_split(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_dispose(&c1);
+	git_str_dispose(&c1);
 }
 
 void test_diff_rename__can_delete_unmodified_deltas(void)
 {
-	git_buf c1 = GIT_BUF_INIT;
+	git_str c1 = GIT_STR_INIT;
 	git_index *index;
 	git_tree *tree;
 	git_diff *diff;
@@ -1438,7 +1438,7 @@ void test_diff_rename__can_delete_unmodified_deltas(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_dispose(&c1);
+	git_str_dispose(&c1);
 }
 
 void test_diff_rename__matches_config_behavior(void)

@@ -641,7 +641,7 @@ static int compare_checksum(git_index *index)
 int git_index_read(git_index *index, int force)
 {
 	int error = 0, updated;
-	git_buf buffer = GIT_BUF_INIT;
+	git_str buffer = GIT_STR_INIT;
 	git_futils_filestamp stamp = index->stamp;
 
 	if (!index->index_file_path)
@@ -687,7 +687,7 @@ int git_index_read(git_index *index, int force)
 		index->dirty = 0;
 	}
 
-	git_buf_dispose(&buffer);
+	git_str_dispose(&buffer);
 	return error;
 }
 
@@ -969,7 +969,7 @@ static int index_entry_init(
 {
 	int error = 0;
 	git_index_entry *entry = NULL;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	struct stat st;
 	git_oid oid;
 	git_repository *repo;
@@ -992,7 +992,7 @@ static int index_entry_init(
 		return -1;
 
 	error = git_path_lstat(path.ptr, &st);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	if (error < 0)
 		return error;
@@ -1525,7 +1525,7 @@ int git_index_add_from_buffer(
 static int add_repo_as_submodule(git_index_entry **out, git_index *index, const char *path)
 {
 	git_repository *sub;
-	git_buf abspath = GIT_BUF_INIT;
+	git_str abspath = GIT_STR_INIT;
 	git_repository *repo = INDEX_OWNER(index);
 	git_reference *head;
 	git_index_entry *entry;
@@ -1556,7 +1556,7 @@ static int add_repo_as_submodule(git_index_entry **out, git_index *index, const 
 
 	git_reference_free(head);
 	git_repository_free(sub);
-	git_buf_dispose(&abspath);
+	git_str_dispose(&abspath);
 
 	*out = entry;
 	return 0;
@@ -1722,12 +1722,12 @@ int git_index_remove(git_index *index, const char *path, int stage)
 
 int git_index_remove_directory(git_index *index, const char *dir, int stage)
 {
-	git_buf pfx = GIT_BUF_INIT;
+	git_str pfx = GIT_STR_INIT;
 	int error = 0;
 	size_t pos;
 	git_index_entry *entry;
 
-	if (!(error = git_buf_sets(&pfx, dir)) &&
+	if (!(error = git_str_sets(&pfx, dir)) &&
 		!(error = git_path_to_dir(&pfx)))
 		index_find(&pos, index, pfx.ptr, pfx.size, GIT_INDEX_STAGE_ANY);
 
@@ -1746,7 +1746,7 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 		/* removed entry at 'pos' so we don't need to increment */
 	}
 
-	git_buf_dispose(&pfx);
+	git_str_dispose(&pfx);
 
 	return error;
 }
@@ -2892,7 +2892,7 @@ done:
 	return error;
 }
 
-static int write_extension(git_filebuf *file, struct index_extension *header, git_buf *data)
+static int write_extension(git_filebuf *file, struct index_extension *header, git_str *data)
 {
 	struct index_extension ondisk;
 
@@ -2904,30 +2904,30 @@ static int write_extension(git_filebuf *file, struct index_extension *header, gi
 	return git_filebuf_write(file, data->ptr, data->size);
 }
 
-static int create_name_extension_data(git_buf *name_buf, git_index_name_entry *conflict_name)
+static int create_name_extension_data(git_str *name_buf, git_index_name_entry *conflict_name)
 {
 	int error = 0;
 
 	if (conflict_name->ancestor == NULL)
-		error = git_buf_put(name_buf, "\0", 1);
+		error = git_str_put(name_buf, "\0", 1);
 	else
-		error = git_buf_put(name_buf, conflict_name->ancestor, strlen(conflict_name->ancestor) + 1);
+		error = git_str_put(name_buf, conflict_name->ancestor, strlen(conflict_name->ancestor) + 1);
 
 	if (error != 0)
 		goto on_error;
 
 	if (conflict_name->ours == NULL)
-		error = git_buf_put(name_buf, "\0", 1);
+		error = git_str_put(name_buf, "\0", 1);
 	else
-		error = git_buf_put(name_buf, conflict_name->ours, strlen(conflict_name->ours) + 1);
+		error = git_str_put(name_buf, conflict_name->ours, strlen(conflict_name->ours) + 1);
 
 	if (error != 0)
 		goto on_error;
 
 	if (conflict_name->theirs == NULL)
-		error = git_buf_put(name_buf, "\0", 1);
+		error = git_str_put(name_buf, "\0", 1);
 	else
-		error = git_buf_put(name_buf, conflict_name->theirs, strlen(conflict_name->theirs) + 1);
+		error = git_str_put(name_buf, conflict_name->theirs, strlen(conflict_name->theirs) + 1);
 
 on_error:
 	return error;
@@ -2935,7 +2935,7 @@ on_error:
 
 static int write_name_extension(git_index *index, git_filebuf *file)
 {
-	git_buf name_buf = GIT_BUF_INIT;
+	git_str name_buf = GIT_STR_INIT;
 	git_vector *out = &index->names;
 	git_index_name_entry *conflict_name;
 	struct index_extension extension;
@@ -2953,28 +2953,28 @@ static int write_name_extension(git_index *index, git_filebuf *file)
 
 	error = write_extension(file, &extension, &name_buf);
 
-	git_buf_dispose(&name_buf);
+	git_str_dispose(&name_buf);
 
 done:
 	return error;
 }
 
-static int create_reuc_extension_data(git_buf *reuc_buf, git_index_reuc_entry *reuc)
+static int create_reuc_extension_data(git_str *reuc_buf, git_index_reuc_entry *reuc)
 {
 	int i;
 	int error = 0;
 
-	if ((error = git_buf_put(reuc_buf, reuc->path, strlen(reuc->path) + 1)) < 0)
+	if ((error = git_str_put(reuc_buf, reuc->path, strlen(reuc->path) + 1)) < 0)
 		return error;
 
 	for (i = 0; i < 3; i++) {
-		if ((error = git_buf_printf(reuc_buf, "%o", reuc->mode[i])) < 0 ||
-			(error = git_buf_put(reuc_buf, "\0", 1)) < 0)
+		if ((error = git_str_printf(reuc_buf, "%o", reuc->mode[i])) < 0 ||
+			(error = git_str_put(reuc_buf, "\0", 1)) < 0)
 			return error;
 	}
 
 	for (i = 0; i < 3; i++) {
-		if (reuc->mode[i] && (error = git_buf_put(reuc_buf, (char *)&reuc->oid[i].id, GIT_OID_RAWSZ)) < 0)
+		if (reuc->mode[i] && (error = git_str_put(reuc_buf, (char *)&reuc->oid[i].id, GIT_OID_RAWSZ)) < 0)
 			return error;
 	}
 
@@ -2983,7 +2983,7 @@ static int create_reuc_extension_data(git_buf *reuc_buf, git_index_reuc_entry *r
 
 static int write_reuc_extension(git_index *index, git_filebuf *file)
 {
-	git_buf reuc_buf = GIT_BUF_INIT;
+	git_str reuc_buf = GIT_STR_INIT;
 	git_vector *out = &index->reuc;
 	git_index_reuc_entry *reuc;
 	struct index_extension extension;
@@ -3001,7 +3001,7 @@ static int write_reuc_extension(git_index *index, git_filebuf *file)
 
 	error = write_extension(file, &extension, &reuc_buf);
 
-	git_buf_dispose(&reuc_buf);
+	git_str_dispose(&reuc_buf);
 
 done:
 	return error;
@@ -3010,7 +3010,7 @@ done:
 static int write_tree_extension(git_index *index, git_filebuf *file)
 {
 	struct index_extension extension;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	int error;
 
 	if (index->tree == NULL)
@@ -3025,7 +3025,7 @@ static int write_tree_extension(git_index *index, git_filebuf *file)
 
 	error = write_extension(file, &extension, &buf);
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	return error;
 }
@@ -3115,13 +3115,13 @@ static int read_tree_cb(
 {
 	read_tree_data *data = payload;
 	git_index_entry *entry = NULL, *old_entry;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	size_t pos;
 
 	if (git_tree_entry__is_tree(tentry))
 		return 0;
 
-	if (git_buf_joinpath(&path, root, tentry->filename) < 0)
+	if (git_str_joinpath(&path, root, tentry->filename) < 0)
 		return -1;
 
 	if (index_entry_create(&entry, INDEX_OWNER(data->index), path.ptr, NULL, false) < 0)
@@ -3143,7 +3143,7 @@ static int read_tree_cb(
 	}
 
 	index_entry_adjust_namemask(entry, path.size);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	if (git_vector_insert(data->new_entries, entry) < 0) {
 		index_entry_free(entry);
@@ -3540,7 +3540,7 @@ static int index_apply_to_all(
 	size_t i;
 	git_pathspec ps;
 	const char *match;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	GIT_ASSERT_ARG(index);
 
@@ -3569,7 +3569,7 @@ static int index_apply_to_all(
 		}
 
 		/* index manipulation may alter entry, so don't depend on it */
-		if ((error = git_buf_sets(&path, entry->path)) < 0)
+		if ((error = git_str_sets(&path, entry->path)) < 0)
 			break;
 
 		switch (action) {
@@ -3598,7 +3598,7 @@ static int index_apply_to_all(
 		}
 	}
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	git_pathspec__clear(&ps);
 
 	return error;

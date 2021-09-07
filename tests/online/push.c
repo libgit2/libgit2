@@ -1,5 +1,4 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
 #include "posix.h"
 #include "vector.h"
 #include "../submodule/submodule_helpers.h"
@@ -129,28 +128,28 @@ static void do_verify_push_status(record_callbacks_data *data, const push_status
 			}
 
 	if (failed) {
-		git_buf msg = GIT_BUF_INIT;
+		git_str msg = GIT_STR_INIT;
 
-		git_buf_puts(&msg, "Expected and actual push statuses differ:\nEXPECTED:\n");
+		git_str_puts(&msg, "Expected and actual push statuses differ:\nEXPECTED:\n");
 
 		for(i = 0; i < expected_len; i++) {
-			git_buf_printf(&msg, "%s: %s\n",
+			git_str_printf(&msg, "%s: %s\n",
 				expected[i].ref,
 				expected[i].success ? "success" : "failed");
 		}
 
-		git_buf_puts(&msg, "\nACTUAL:\n");
+		git_str_puts(&msg, "\nACTUAL:\n");
 
 		git_vector_foreach(actual, i, iter) {
 			if (iter->success)
-				git_buf_printf(&msg, "%s: success\n", iter->ref);
+				git_str_printf(&msg, "%s: success\n", iter->ref);
 			else
-				git_buf_printf(&msg, "%s: failed with message: %s", iter->ref, iter->msg);
+				git_str_printf(&msg, "%s: failed with message: %s", iter->ref, iter->msg);
 		}
 
-		cl_fail(git_buf_cstr(&msg));
+		cl_fail(git_str_cstr(&msg));
 
-		git_buf_dispose(&msg);
+		git_str_dispose(&msg);
 	}
 
 	git_vector_foreach(actual, i, iter) {
@@ -192,7 +191,7 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 {
 	git_refspec *fetch_spec;
 	size_t i, j;
-	git_buf msg = GIT_BUF_INIT;
+	git_str msg = GIT_STR_INIT;
 	git_buf ref_name = GIT_BUF_INIT;
 	git_vector actual_refs = GIT_VECTOR_INIT;
 	git_branch_iterator *iter;
@@ -230,12 +229,12 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 
 		/* Find matching remote branch */
 		git_vector_foreach(&actual_refs, j, actual_ref) {
-			if (!strcmp(git_buf_cstr(&ref_name), actual_ref))
+			if (!strcmp(ref_name.ptr, actual_ref))
 				break;
 		}
 
 		if (j == actual_refs.length) {
-			git_buf_printf(&msg, "Did not find expected tracking branch '%s'.", git_buf_cstr(&ref_name));
+			git_str_printf(&msg, "Did not find expected tracking branch '%s'.", ref_name.ptr);
 			failed = 1;
 			goto failed;
 		}
@@ -244,7 +243,7 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 		cl_git_pass(git_reference_name_to_id(&oid, remote->repo, actual_ref));
 
 		if (git_oid_cmp(expected_refs[i].oid, &oid) != 0) {
-			git_buf_puts(&msg, "Tracking branch commit does not match expected ID.");
+			git_str_puts(&msg, "Tracking branch commit does not match expected ID.");
 			failed = 1;
 			goto failed;
 		}
@@ -255,27 +254,27 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 
 	/* Make sure there are no extra branches */
 	if (actual_refs.length > 0) {
-		git_buf_puts(&msg, "Unexpected remote tracking branches exist.");
+		git_str_puts(&msg, "Unexpected remote tracking branches exist.");
 		failed = 1;
 		goto failed;
 	}
 
 failed:
 	if (failed)
-		cl_fail(git_buf_cstr(&msg));
+		cl_fail(git_str_cstr(&msg));
 
 	git_vector_foreach(&actual_refs, i, actual_ref)
 		git__free(actual_ref);
 
 	git_vector_free(&actual_refs);
-	git_buf_dispose(&msg);
+	git_str_dispose(&msg);
 	git_buf_dispose(&ref_name);
 }
 
 static void verify_update_tips_callback(git_remote *remote, expected_ref expected_refs[], size_t expected_refs_len)
 {
 	git_refspec *fetch_spec;
-	git_buf msg = GIT_BUF_INIT;
+	git_str msg = GIT_STR_INIT;
 	git_buf ref_name = GIT_BUF_INIT;
 	updated_tip *tip = NULL;
 	size_t i, j;
@@ -293,18 +292,18 @@ static void verify_update_tips_callback(git_remote *remote, expected_ref expecte
 
 		/* Find matching update_tip entry */
 		git_vector_foreach(&_record_cbs_data.updated_tips, j, tip) {
-			if (!strcmp(git_buf_cstr(&ref_name), tip->name))
+			if (!strcmp(ref_name.ptr, tip->name))
 				break;
 		}
 
 		if (j == _record_cbs_data.updated_tips.length) {
-			git_buf_printf(&msg, "Did not find expected updated tip entry for branch '%s'.", git_buf_cstr(&ref_name));
+			git_str_printf(&msg, "Did not find expected updated tip entry for branch '%s'.", ref_name.ptr);
 			failed = 1;
 			goto failed;
 		}
 
 		if (git_oid_cmp(expected_refs[i].oid, &tip->new_oid) != 0) {
-			git_buf_printf(&msg, "Updated tip ID does not match expected ID");
+			git_str_printf(&msg, "Updated tip ID does not match expected ID");
 			failed = 1;
 			goto failed;
 		}
@@ -312,10 +311,10 @@ static void verify_update_tips_callback(git_remote *remote, expected_ref expecte
 
 failed:
 	if (failed)
-		cl_fail(git_buf_cstr(&msg));
+		cl_fail(git_str_cstr(&msg));
 
 	git_buf_dispose(&ref_name);
-	git_buf_dispose(&msg);
+	git_str_dispose(&msg);
 }
 
 void test_online_push__initialize(void)

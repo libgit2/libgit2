@@ -23,7 +23,7 @@ typedef struct {
 } tree_reader;
 
 static int tree_reader_read(
-	git_buf *out,
+	git_str *out,
 	git_oid *out_id,
 	git_filemode_t *out_filemode,
 	git_reader *_reader,
@@ -42,7 +42,7 @@ static int tree_reader_read(
 	blobsize = git_blob_rawsize(blob);
 	GIT_ERROR_CHECK_BLOBSIZE(blobsize);
 
-	if ((error = git_buf_set(out, git_blob_rawcontent(blob), (size_t)blobsize)) < 0)
+	if ((error = git_str_set(out, git_blob_rawcontent(blob), (size_t)blobsize)) < 0)
 		goto done;
 
 	if (out_id)
@@ -83,14 +83,14 @@ typedef struct {
 } workdir_reader;
 
 static int workdir_reader_read(
-	git_buf *out,
+	git_str *out,
 	git_oid *out_id,
 	git_filemode_t *out_filemode,
 	git_reader *_reader,
 	const char *filename)
 {
 	workdir_reader *reader = (workdir_reader *)_reader;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	struct stat st;
 	git_filemode_t filemode;
 	git_filter_list *filters = NULL;
@@ -120,7 +120,7 @@ static int workdir_reader_read(
 		GIT_FILTER_TO_ODB, GIT_FILTER_DEFAULT)) < 0)
 		goto done;
 
-	if ((error = git_filter_list_apply_to_file(out,
+	if ((error = git_filter_list__apply_to_file(out,
 	    filters, reader->repo, path.ptr)) < 0)
 		goto done;
 
@@ -146,7 +146,7 @@ static int workdir_reader_read(
 
 done:
 	git_filter_list_free(filters);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	return error;
 }
 
@@ -186,7 +186,7 @@ typedef struct {
 } index_reader;
 
 static int index_reader_read(
-	git_buf *out,
+	git_str *out,
 	git_oid *out_id,
 	git_filemode_t *out_filemode,
 	git_reader *_reader,
@@ -247,7 +247,7 @@ int git_reader_for_index(
 /* generic */
 
 int git_reader_read(
-	git_buf *out,
+	git_str *out,
 	git_oid *out_id,
 	git_filemode_t *out_filemode,
 	git_reader *reader,

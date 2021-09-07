@@ -189,13 +189,13 @@ void test_core_filebuf__symlink_follow(void)
 void test_core_filebuf__symlink_follow_absolute_paths(void)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
-	git_buf source = GIT_BUF_INIT, target = GIT_BUF_INIT;
+	git_str source = GIT_STR_INIT, target = GIT_STR_INIT;
 
 	if (!git_path_supports_symlinks(clar_sandbox_path()))
 		cl_skip();
 
-	cl_git_pass(git_buf_joinpath(&source, clar_sandbox_path(), "linkdir/link"));
-	cl_git_pass(git_buf_joinpath(&target, clar_sandbox_path(), "linkdir/target"));
+	cl_git_pass(git_str_joinpath(&source, clar_sandbox_path(), "linkdir/link"));
+	cl_git_pass(git_str_joinpath(&target, clar_sandbox_path(), "linkdir/target"));
 	cl_git_pass(p_mkdir("linkdir", 0777));
 	cl_git_pass(p_symlink(target.ptr, source.ptr));
 
@@ -208,8 +208,8 @@ void test_core_filebuf__symlink_follow_absolute_paths(void)
 	cl_assert_equal_i(true, git_path_exists("linkdir/target"));
 
 	git_filebuf_cleanup(&file);
-	git_buf_dispose(&source);
-	git_buf_dispose(&target);
+	git_str_dispose(&source);
+	git_str_dispose(&target);
 
 	cl_git_pass(git_futils_rmdir_r("linkdir", NULL, GIT_RMDIR_REMOVE_FILES));
 }

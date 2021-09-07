@@ -444,7 +444,7 @@ typedef struct {
 	git_iterator_t src;
 	git_repository *repo;
 	git_diff_file *file;
-	git_buf data;
+	git_str data;
 	git_odb_object *odb_obj;
 	git_blob *blob;
 } similarity_info;
@@ -458,7 +458,7 @@ static int similarity_init(
 	info->file = similarity_get_file(diff, file_idx);
 	info->odb_obj = NULL;
 	info->blob = NULL;
-	git_buf_init(&info->data, 0);
+	git_str_init(&info->data, 0);
 
 	if (info->file->size > 0 || info->src == GIT_ITERATOR_WORKDIR)
 		return 0;
@@ -529,7 +529,7 @@ static void similarity_unload(similarity_info *info)
 	if (info->blob)
 		git_blob_free(info->blob);
 	else
-		git_buf_dispose(&info->data);
+		git_str_dispose(&info->data);
 }
 
 #define FLAG_SET(opts,flag_name) (((opts)->flags & flag_name) != 0)

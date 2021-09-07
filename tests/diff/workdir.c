@@ -1663,7 +1663,7 @@ void test_diff_workdir__patience_diff(void)
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 
 	cl_assert_equal_s(expected_normal, buf.ptr);
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -1675,9 +1675,8 @@ void test_diff_workdir__patience_diff(void)
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 
 	cl_assert_equal_s(expected_patience, buf.ptr);
-	git_buf_clear(&buf);
-
 	git_buf_dispose(&buf);
+
 	git_patch_free(patch);
 	git_diff_free(diff);
 }
@@ -1754,7 +1753,7 @@ void test_diff_workdir__with_stale_index(void)
 	git_index_free(idx);
 }
 
-static int touch_file(void *payload, git_buf *path)
+static int touch_file(void *payload, git_str *path)
 {
 	struct stat st;
 	struct p_timeval times[2];
@@ -1804,10 +1803,10 @@ void test_diff_workdir__can_update_index(void)
 
 	/* touch all the files so stat times are different */
 	{
-		git_buf path = GIT_BUF_INIT;
-		cl_git_pass(git_buf_sets(&path, "status"));
+		git_str path = GIT_STR_INIT;
+		cl_git_pass(git_str_sets(&path, "status"));
 		cl_git_pass(git_path_direach(&path, 0, touch_file, NULL));
-		git_buf_dispose(&path);
+		git_str_dispose(&path);
 	}
 
 	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
@@ -1873,9 +1872,9 @@ void test_diff_workdir__binary_detection(void)
 {
 	git_index *idx;
 	git_diff *diff = NULL;
-	git_buf b = GIT_BUF_INIT;
+	git_str b = GIT_STR_INIT;
 	int i;
-	git_buf data[10] = {
+	git_str data[10] = {
 		{ "1234567890", 0, 10 },         /* 0 - all ascii text control */
 		{ "\xC3\x85\xC3\xBC\xE2\x80\xA0\x48\xC3\xB8\xCF\x80\xCE\xA9", 0, 14 },            /* 1 - UTF-8 multibyte text */
 		{ "\xEF\xBB\xBF\xC3\x9C\xE2\xA4\x92\xC6\x92\x38\xC2\xA3\xE2\x82\xAC", 0, 16 }, /* 2 - UTF-8 with BOM */
@@ -1899,7 +1898,7 @@ void test_diff_workdir__binary_detection(void)
 	 * then we will try with test data in index and ASCII in workdir.
 	 */
 
-	cl_git_pass(git_buf_sets(&b, "empty_standard_repo/0"));
+	cl_git_pass(git_str_sets(&b, "empty_standard_repo/0"));
 	for (i = 0; i < 10; ++i) {
 		b.ptr[b.size - 1] = '0' + i;
 		cl_git_mkfile(b.ptr, "baseline");
@@ -1931,7 +1930,7 @@ void test_diff_workdir__binary_detection(void)
 
 	git_diff_free(diff);
 
-	cl_git_pass(git_buf_sets(&b, "empty_standard_repo/0"));
+	cl_git_pass(git_str_sets(&b, "empty_standard_repo/0"));
 	for (i = 0; i < 10; ++i) {
 		b.ptr[b.size - 1] = '0' + i;
 		cl_git_pass(git_index_add_bypath(idx, &b.ptr[b.size - 1]));
@@ -1959,7 +1958,7 @@ void test_diff_workdir__binary_detection(void)
 	git_diff_free(diff);
 
 	git_index_free(idx);
-	git_buf_dispose(&b);
+	git_str_dispose(&b);
 }
 
 void test_diff_workdir__to_index_conflicted(void) {
@@ -2006,7 +2005,7 @@ void test_diff_workdir__only_writes_index_when_necessary(void)
 	git_reference *head;
 	git_object *head_object;
 	git_oid initial, first, second;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	struct stat st;
 	struct p_timeval times[2];
 
@@ -2040,7 +2039,7 @@ void test_diff_workdir__only_writes_index_when_necessary(void)
 	cl_assert(!git_oid_equal(&initial, &first));
 
 	/* touch all the files so stat times are different */
-	cl_git_pass(git_buf_sets(&path, "status"));
+	cl_git_pass(git_str_sets(&path, "status"));
 	cl_git_pass(git_path_direach(&path, 0, touch_file, NULL));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
@@ -2050,7 +2049,7 @@ void test_diff_workdir__only_writes_index_when_necessary(void)
 	git_oid_cpy(&second, git_index_checksum(index));
 	cl_assert(!git_oid_equal(&first, &second));
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	git_object_free(head_object);
 	git_reference_free(head);
 	git_index_free(index);

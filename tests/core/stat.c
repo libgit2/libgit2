@@ -98,17 +98,17 @@ void test_core_stat__0(void)
 void test_core_stat__root(void)
 {
 	const char *sandbox = clar_sandbox_path();
-	git_buf root = GIT_BUF_INIT;
+	git_str root = GIT_STR_INIT;
 	int root_len;
 	struct stat st;
 
 	root_len = git_path_root(sandbox);
 	cl_assert(root_len >= 0);
 
-	git_buf_set(&root, sandbox, root_len+1);
+	git_str_set(&root, sandbox, root_len+1);
 
 	cl_must_pass(p_stat(root.ptr, &st));
 	cl_assert(S_ISDIR(st.st_mode));
 
-	git_buf_dispose(&root);
+	git_str_dispose(&root);
 }

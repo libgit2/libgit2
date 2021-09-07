@@ -1,20 +1,19 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
 
 static void expect_quote_pass(const char *expected, const char *str)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_puts(&buf, str));
-	cl_git_pass(git_buf_quote(&buf));
+	cl_git_pass(git_str_puts(&buf, str));
+	cl_git_pass(git_str_quote(&buf));
 
-	cl_assert_equal_s(expected, git_buf_cstr(&buf));
-	cl_assert_equal_i(strlen(expected), git_buf_len(&buf));
+	cl_assert_equal_s(expected, git_str_cstr(&buf));
+	cl_assert_equal_i(strlen(expected), git_str_len(&buf));
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 }
 
-void test_buf_quote__quote_succeeds(void)
+void test_str_quote__quote_succeeds(void)
 {
 	expect_quote_pass("", "");
 	expect_quote_pass("foo", "foo");
@@ -30,28 +29,28 @@ void test_buf_quote__quote_succeeds(void)
 
 static void expect_unquote_pass(const char *expected, const char *quoted)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_puts(&buf, quoted));
-	cl_git_pass(git_buf_unquote(&buf));
+	cl_git_pass(git_str_puts(&buf, quoted));
+	cl_git_pass(git_str_unquote(&buf));
 
-	cl_assert_equal_s(expected, git_buf_cstr(&buf));
-	cl_assert_equal_i(strlen(expected), git_buf_len(&buf));
+	cl_assert_equal_s(expected, git_str_cstr(&buf));
+	cl_assert_equal_i(strlen(expected), git_str_len(&buf));
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 }
 
 static void expect_unquote_fail(const char *quoted)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_puts(&buf, quoted));
-	cl_git_fail(git_buf_unquote(&buf));
+	cl_git_pass(git_str_puts(&buf, quoted));
+	cl_git_fail(git_str_unquote(&buf));
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 }
 
-void test_buf_quote__unquote_succeeds(void)
+void test_str_quote__unquote_succeeds(void)
 {
 	expect_unquote_pass("", "\"\"");
 	expect_unquote_pass(" ", "\" \"");
@@ -68,7 +67,7 @@ void test_buf_quote__unquote_succeeds(void)
 	expect_unquote_pass("0xff: \377", "\"0xff: \\377\"");
 }
 
-void test_buf_quote__unquote_fails(void)
+void test_str_quote__unquote_fails(void)
 {
 	expect_unquote_fail("no quotes at all");
 	expect_unquote_fail("\"no trailing quote");

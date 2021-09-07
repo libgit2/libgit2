@@ -2,7 +2,6 @@
 
 #include "git2/sys/diff.h"
 
-#include "buffer.h"
 #include "delta.h"
 #include "filebuf.h"
 #include "repository.h"
@@ -53,7 +52,7 @@ void test_patch(
 
 	cl_assert_equal_s(expected, actual.ptr);
 
-	git_buf_clear(&actual);
+	git_buf_dispose(&actual);
 	cl_git_pass(git_diff_print(diff, GIT_DIFF_FORMAT_PATCH, git_diff_print_callback__to_buf, &actual));
 
 	cl_assert_equal_s(expected, actual.ptr);
@@ -197,7 +196,7 @@ void test_diff_binary__delete(void)
 void test_diff_binary__delta(void)
 {
 	git_index *index;
-	git_buf contents = GIT_BUF_INIT;
+	git_str contents = GIT_STR_INIT;
 	size_t i;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	const char *expected =
@@ -239,7 +238,7 @@ void test_diff_binary__delta(void)
 		expected);
 
 	git_index_free(index);
-	git_buf_dispose(&contents);
+	git_str_dispose(&contents);
 }
 
 void test_diff_binary__delta_append(void)
@@ -283,7 +282,7 @@ void test_diff_binary__empty_for_no_diff(void)
 	git_commit *commit;
 	git_tree *tree;
 	git_diff *diff;
-	git_buf actual = GIT_BUF_INIT;
+	git_str actual = GIT_STR_INIT;
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
 	opts.id_abbrev = GIT_OID_HEXSZ;
@@ -299,7 +298,7 @@ void test_diff_binary__empty_for_no_diff(void)
 
 	cl_assert_equal_s("", actual.ptr);
 
-	git_buf_dispose(&actual);
+	git_str_dispose(&actual);
 	git_diff_free(diff);
 	git_commit_free(commit);
 	git_tree_free(tree);
@@ -359,24 +358,24 @@ static int print_cb(
 	const git_diff_line *line,
 	void *payload)
 {
-	git_buf *buf = (git_buf *)payload;
+	git_str *buf = (git_str *)payload;
 
 	GIT_UNUSED(delta);
 
 	if (hunk)
-		git_buf_put(buf, hunk->header, hunk->header_len);
+		git_str_put(buf, hunk->header, hunk->header_len);
 
 	if (line)
-		git_buf_put(buf, line->content, line->content_len);
+		git_str_put(buf, line->content, line->content_len);
 
-	return git_buf_oom(buf) ? -1 : 0;
+	return git_str_oom(buf) ? -1 : 0;
 }
 
 void test_diff_binary__print_patch_from_diff(void)
 {
 	git_index *index;
 	git_diff *diff;
-	git_buf actual = GIT_BUF_INIT;
+	git_str actual = GIT_STR_INIT;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	const char *expected =
 		"diff --git a/untimely.txt b/untimely.txt\n" \
@@ -403,7 +402,7 @@ void test_diff_binary__print_patch_from_diff(void)
 
 	cl_assert_equal_s(expected, actual.ptr);
 
-	git_buf_dispose(&actual);
+	git_str_dispose(&actual);
 	git_diff_free(diff);
 	git_index_free(index);
 }
@@ -411,13 +410,13 @@ void test_diff_binary__print_patch_from_diff(void)
 struct diff_data {
 	char *old_path;
 	git_oid old_id;
-	git_buf old_binary_base85;
+	git_str old_binary_base85;
 	size_t old_binary_inflatedlen;
 	git_diff_binary_t old_binary_type;
 
 	char *new_path;
 	git_oid new_id;
-	git_buf new_binary_base85;
+	git_str new_binary_base85;
 	size_t new_binary_inflatedlen;
 	git_diff_binary_t new_binary_type;
 };
@@ -452,12 +451,12 @@ static int binary_cb(
 
 	GIT_UNUSED(delta);
 
-	git_buf_encode_base85(&diff_data->old_binary_base85,
+	git_str_encode_base85(&diff_data->old_binary_base85,
 		binary->old_file.data, binary->old_file.datalen);
 	diff_data->old_binary_inflatedlen = binary->old_file.inflatedlen;
 	diff_data->old_binary_type = binary->old_file.type;
 
-	git_buf_encode_base85(&diff_data->new_binary_base85,
+	git_str_encode_base85(&diff_data->new_binary_base85,
 		binary->new_file.data, binary->new_file.datalen);
 	diff_data->new_binary_inflatedlen = binary->new_file.inflatedlen;
 	diff_data->new_binary_type = binary->new_file.type;
@@ -541,6 +540,6 @@ void test_diff_binary__blob_to_blob(void)
 	git__free(diff_data.old_path);
 	git__free(diff_data.new_path);
 
-	git_buf_dispose(&diff_data.old_binary_base85);
-	git_buf_dispose(&diff_data.new_binary_base85);
+	git_str_dispose(&diff_data.old_binary_base85);
+	git_str_dispose(&diff_data.new_binary_base85);
 }

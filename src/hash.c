@@ -101,7 +101,7 @@ int git_hash_buf(
 
 int git_hash_vec(
 	unsigned char *out,
-	git_buf_vec *vec,
+	git_str_vec *vec,
 	size_t n,
 	git_hash_algorithm_t algorithm)
 {

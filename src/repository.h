@@ -19,7 +19,7 @@
 #include "array.h"
 #include "cache.h"
 #include "refs.h"
-#include "buffer.h"
+#include "str.h"
 #include "object.h"
 #include "attrcache.h"
 #include "submodule.h"
@@ -148,7 +148,7 @@ struct git_repository {
 	char *ident_name;
 	char *ident_email;
 
-	git_array_t(git_buf) reserved_names;
+	git_array_t(git_str) reserved_names;
 
 	unsigned is_bare:1;
 	unsigned is_worktree:1;
@@ -196,6 +196,8 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo);
 int git_repository__configmap_lookup(int *out, git_repository *repo, git_configmap_item item);
 void git_repository__configmap_lookup_cache_clear(git_repository *repo);
 
+int git_repository__item_path(git_str *out, const git_repository *repo, git_repository_item_t item);
+
 GIT_INLINE(int) git_repository__ensure_not_bare(
 	git_repository *repo,
 	const char *operation_name)
@@ -216,10 +218,10 @@ int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head
 int git_repository__cleanup_files(git_repository *repo, const char *files[], size_t files_len);
 
 /* The default "reserved names" for a repository */
-extern git_buf git_repository__reserved_names_win32[];
+extern git_str git_repository__reserved_names_win32[];
 extern size_t git_repository__reserved_names_win32_len;
 
-extern git_buf git_repository__reserved_names_posix[];
+extern git_str git_repository__reserved_names_posix[];
 extern size_t git_repository__reserved_names_posix_len;
 
 /*
@@ -233,13 +235,13 @@ extern size_t git_repository__reserved_names_posix_len;
  * will still be populated with good defaults.
  */
 bool git_repository__reserved_names(
-	git_buf **out, size_t *outlen, git_repository *repo, bool include_ntfs);
+	git_str **out, size_t *outlen, git_repository *repo, bool include_ntfs);
 
 /*
  * The default branch for the repository; the `init.defaultBranch`
  * configuration option, if set, or `master` if it is not.
  */
-int git_repository_initialbranch(git_buf *out, git_repository *repo);
+int git_repository_initialbranch(git_str *out, git_repository *repo);
 
 /*
  * Given a relative `path`, this makes it absolute based on the
@@ -247,7 +249,7 @@ int git_repository_initialbranch(git_buf *out, git_repository *repo);
  * to ensure that the path is not longer than MAX_PATH on Windows
  * (unless `core.longpaths` is set in the repo config).
  */
-int git_repository_workdir_path(git_buf *out, git_repository *repo, const char *path);
+int git_repository_workdir_path(git_str *out, git_repository *repo, const char *path);
 
 int git_repository__extensions(char ***out, size_t *out_len);
 int git_repository__set_extensions(const char **extensions, size_t len);

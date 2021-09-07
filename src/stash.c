@@ -9,7 +9,6 @@
 
 #include "repository.h"
 #include "commit.h"
-#include "message.h"
 #include "tree.h"
 #include "reflog.h"
 #include "blob.h"
@@ -43,20 +42,20 @@ static int retrieve_head(git_reference **out, git_repository *repo)
 	return error;
 }
 
-static int append_abbreviated_oid(git_buf *out, const git_oid *b_commit)
+static int append_abbreviated_oid(git_str *out, const git_oid *b_commit)
 {
 	char *formatted_oid;
 
 	formatted_oid = git_oid_allocfmt(b_commit);
 	GIT_ERROR_CHECK_ALLOC(formatted_oid);
 
-	git_buf_put(out, formatted_oid, 7);
+	git_str_put(out, formatted_oid, 7);
 	git__free(formatted_oid);
 
-	return git_buf_oom(out) ? -1 : 0;
+	return git_str_oom(out) ? -1 : 0;
 }
 
-static int append_commit_description(git_buf *out, git_commit *commit)
+static int append_commit_description(git_str *out, git_commit *commit)
 {
 	const char *summary = git_commit_summary(commit);
 	GIT_ERROR_CHECK_ALLOC(summary);
@@ -64,16 +63,16 @@ static int append_commit_description(git_buf *out, git_commit *commit)
 	if (append_abbreviated_oid(out, git_commit_id(commit)) < 0)
 		return -1;
 
-	git_buf_putc(out, ' ');
-	git_buf_puts(out, summary);
-	git_buf_putc(out, '\n');
+	git_str_putc(out, ' ');
+	git_str_puts(out, summary);
+	git_str_putc(out, '\n');
 
-	return git_buf_oom(out) ? -1 : 0;
+	return git_str_oom(out) ? -1 : 0;
 }
 
 static int retrieve_base_commit_and_message(
 	git_commit **b_commit,
-	git_buf *stash_message,
+	git_str *stash_message,
 	git_repository *repo)
 {
 	git_reference *head = NULL;
@@ -83,9 +82,9 @@ static int retrieve_base_commit_and_message(
 		return error;
 
 	if (strcmp("HEAD", git_reference_name(head)) == 0)
-		error = git_buf_puts(stash_message, "(no branch): ");
+		error = git_str_puts(stash_message, "(no branch): ");
 	else
-		error = git_buf_printf(
+		error = git_str_printf(
 			stash_message,
 			"%s: ",
 			git_reference_name(head) + strlen(GIT_REFS_HEADS_DIR));
@@ -128,13 +127,13 @@ static int commit_index(
 {
 	git_tree *i_tree = NULL;
 	git_oid i_commit_oid;
-	git_buf msg = GIT_BUF_INIT;
+	git_str msg = GIT_STR_INIT;
 	int error;
 
 	if ((error = build_tree_from_index(&i_tree, repo, index)) < 0)
 		goto cleanup;
 
-	if ((error = git_buf_printf(&msg, "index on %s\n", message)) < 0)
+	if ((error = git_str_printf(&msg, "index on %s\n", message)) < 0)
 		goto cleanup;
 
 	if ((error = git_commit_create(
@@ -144,7 +143,7 @@ static int commit_index(
 		stasher,
 		stasher,
 		NULL,
-		git_buf_cstr(&msg),
+		git_str_cstr(&msg),
 		i_tree,
 		1,
 		&parent)) < 0)
@@ -154,7 +153,7 @@ static int commit_index(
 
 cleanup:
 	git_tree_free(i_tree);
-	git_buf_dispose(&msg);
+	git_str_dispose(&msg);
 	return error;
 }
 
@@ -303,13 +302,13 @@ static int commit_untracked(
 {
 	git_tree *u_tree = NULL;
 	git_oid u_commit_oid;
-	git_buf msg = GIT_BUF_INIT;
+	git_str msg = GIT_STR_INIT;
 	int error;
 
 	if ((error = build_untracked_tree(&u_tree, repo, i_commit, flags)) < 0)
 		goto cleanup;
 
-	if ((error = git_buf_printf(&msg, "untracked files on %s\n", message)) < 0)
+	if ((error = git_str_printf(&msg, "untracked files on %s\n", message)) < 0)
 		goto cleanup;
 
 	if ((error = git_commit_create(
@@ -319,7 +318,7 @@ static int commit_untracked(
 		stasher,
 		stasher,
 		NULL,
-		git_buf_cstr(&msg),
+		git_str_cstr(&msg),
 		u_tree,
 		0,
 		NULL)) < 0)
@@ -329,7 +328,7 @@ static int commit_untracked(
 
 cleanup:
 	git_tree_free(u_tree);
-	git_buf_dispose(&msg);
+	git_str_dispose(&msg);
 	return error;
 }
 
@@ -437,33 +436,33 @@ cleanup:
 	return error;
 }
 
-static int prepare_worktree_commit_message(git_buf *out, const char *user_message)
+static int prepare_worktree_commit_message(git_str *out, const char *user_message)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	int error = 0;
 
 	if (!user_message) {
-		git_buf_printf(&buf, "WIP on %s", git_buf_cstr(out));
+		git_str_printf(&buf, "WIP on %s", git_str_cstr(out));
 	} else {
 		const char *colon;
 
-		if ((colon = strchr(git_buf_cstr(out), ':')) == NULL)
+		if ((colon = strchr(git_str_cstr(out), ':')) == NULL)
 			goto cleanup;
 
-		git_buf_puts(&buf, "On ");
-		git_buf_put(&buf, git_buf_cstr(out), colon - out->ptr);
-		git_buf_printf(&buf, ": %s\n", user_message);
+		git_str_puts(&buf, "On ");
+		git_str_put(&buf, git_str_cstr(out), colon - out->ptr);
+		git_str_printf(&buf, ": %s\n", user_message);
 	}
 
-	if (git_buf_oom(&buf)) {
+	if (git_str_oom(&buf)) {
 		error = -1;
 		goto cleanup;
 	}
 
-	git_buf_swap(out, &buf);
+	git_str_swap(out, &buf);
 
 cleanup:
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	return error;
 }
 
@@ -543,7 +542,7 @@ int git_stash_save(
 {
 	git_index *index = NULL;
 	git_commit *b_commit = NULL, *i_commit = NULL, *u_commit = NULL;
-	git_buf msg = GIT_BUF_INIT;
+	git_str msg = GIT_STR_INIT;
 	int error;
 
 	GIT_ASSERT_ARG(out);
@@ -563,24 +562,24 @@ int git_stash_save(
 		goto cleanup;
 
 	if ((error = commit_index(&i_commit, repo, index, stasher,
-				  git_buf_cstr(&msg), b_commit)) < 0)
+				  git_str_cstr(&msg), b_commit)) < 0)
 		goto cleanup;
 
 	if ((flags & (GIT_STASH_INCLUDE_UNTRACKED | GIT_STASH_INCLUDE_IGNORED)) &&
 	    (error = commit_untracked(&u_commit, repo, stasher,
-				      git_buf_cstr(&msg), i_commit, flags)) < 0)
+				      git_str_cstr(&msg), i_commit, flags)) < 0)
 		goto cleanup;
 
 	if ((error = prepare_worktree_commit_message(&msg, message)) < 0)
 		goto cleanup;
 
-	if ((error = commit_worktree(out, repo, stasher, git_buf_cstr(&msg),
+	if ((error = commit_worktree(out, repo, stasher, git_str_cstr(&msg),
 				     i_commit, b_commit, u_commit)) < 0)
 		goto cleanup;
 
-	git_buf_rtrim(&msg);
+	git_str_rtrim(&msg);
 
-	if ((error = update_reflog(out, repo, git_buf_cstr(&msg))) < 0)
+	if ((error = update_reflog(out, repo, git_str_cstr(&msg))) < 0)
 		goto cleanup;
 
 	if ((error = reset_index_and_workdir(repo, (flags & GIT_STASH_KEEP_INDEX) ? i_commit : b_commit,
@@ -589,7 +588,7 @@ int git_stash_save(
 
 cleanup:
 
-	git_buf_dispose(&msg);
+	git_str_dispose(&msg);
 	git_commit_free(i_commit);
 	git_commit_free(b_commit);
 	git_commit_free(u_commit);

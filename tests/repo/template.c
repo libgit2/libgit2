@@ -7,7 +7,7 @@
 
 static git_repository *_repo = NULL;
 static mode_t g_umask = 0;
-static git_buf _global_path = GIT_BUF_INIT;
+static git_str _global_path = GIT_STR_INIT;
 
 static const char *fixture_repo;
 static const char *fixture_templates;
@@ -27,7 +27,7 @@ void test_repo_template__cleanup(void)
 {
 	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL,
 		_global_path.ptr);
-	git_buf_dispose(&_global_path);
+	git_str_dispose(&_global_path);
 
 	cl_fixture_cleanup("tmp_global_path");
 
@@ -51,14 +51,14 @@ static void assert_hooks_match(
 	const char *hook_path,
 	bool core_filemode)
 {
-	git_buf expected = GIT_BUF_INIT;
-	git_buf actual = GIT_BUF_INIT;
+	git_str expected = GIT_STR_INIT;
+	git_str actual = GIT_STR_INIT;
 	struct stat expected_st, st;
 
-	cl_git_pass(git_buf_joinpath(&expected, template_dir, hook_path));
+	cl_git_pass(git_str_joinpath(&expected, template_dir, hook_path));
 	cl_git_pass(git_path_lstat(expected.ptr, &expected_st));
 
-	cl_git_pass(git_buf_joinpath(&actual, repo_dir, hook_path));
+	cl_git_pass(git_str_joinpath(&actual, repo_dir, hook_path));
 	cl_git_pass(git_path_lstat(actual.ptr, &st));
 
 	cl_assert(expected_st.st_size == st.st_size);
@@ -76,20 +76,20 @@ static void assert_hooks_match(
 		cl_assert_equal_i_fmt(expected_mode, st.st_mode, "%07o");
 	}
 
-	git_buf_dispose(&expected);
-	git_buf_dispose(&actual);
+	git_str_dispose(&expected);
+	git_str_dispose(&actual);
 }
 
 static void assert_mode_seems_okay(
 	const char *base, const char *path,
 	git_filemode_t expect_mode, bool expect_setgid, bool core_filemode)
 {
-	git_buf full = GIT_BUF_INIT;
+	git_str full = GIT_STR_INIT;
 	struct stat st;
 
-	cl_git_pass(git_buf_joinpath(&full, base, path));
+	cl_git_pass(git_str_joinpath(&full, base, path));
 	cl_git_pass(git_path_lstat(full.ptr, &st));
-	git_buf_dispose(&full);
+	git_str_dispose(&full);
 
 	if (!core_filemode) {
 		CLEAR_FOR_CORE_FILEMODE(expect_mode);
@@ -115,7 +115,7 @@ static void setup_repo(const char *name, git_repository_init_options *opts)
 
 static void setup_templates(const char *name, bool setup_globally)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	cl_fixture_sandbox("template");
 	if (strcmp(name, "template"))
@@ -127,40 +127,40 @@ static void setup_templates(const char *name, bool setup_globally)
 	 * Create a symlink from link.sample to update.sample if the filesystem
 	 * supports it.
 	 */
-	cl_git_pass(git_buf_join3(&path, '/', name, "hooks", "link.sample"));
+	cl_git_pass(git_str_join3(&path, '/', name, "hooks", "link.sample"));
 #ifdef GIT_WIN32
 	cl_git_mkfile(path.ptr, "#!/bin/sh\necho hello, world\n");
 #else
 	cl_must_pass(p_symlink("update.sample", path.ptr));
 #endif
 
-	git_buf_clear(&path);
+	git_str_clear(&path);
 
 	/* Create a file starting with a dot */
-	cl_git_pass(git_buf_join3(&path, '/', name, "hooks", ".dotfile"));
+	cl_git_pass(git_str_join3(&path, '/', name, "hooks", ".dotfile"));
 	cl_git_mkfile(path.ptr, "something\n");
 
-	git_buf_clear(&path);
+	git_str_clear(&path);
 
 	if (setup_globally) {
-		cl_git_pass(git_buf_joinpath(&path, clar_sandbox_path(), name));
+		cl_git_pass(git_str_joinpath(&path, clar_sandbox_path(), name));
 		create_tmp_global_config("tmp_global_path", "init.templatedir", path.ptr);
 	}
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 static void validate_templates(git_repository *repo, const char *template_path)
 {
-	git_buf path = GIT_BUF_INIT, expected = GIT_BUF_INIT, actual = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT, expected = GIT_STR_INIT, actual = GIT_STR_INIT;
 	int filemode;
 
-	cl_git_pass(git_buf_joinpath(&path, template_path, "description"));
+	cl_git_pass(git_str_joinpath(&path, template_path, "description"));
 	cl_git_pass(git_futils_readbuffer(&expected, path.ptr));
 
-	git_buf_clear(&path);
+	git_str_clear(&path);
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_path(repo), "description"));
+	cl_git_pass(git_str_joinpath(&path, git_repository_path(repo), "description"));
 	cl_git_pass(git_futils_readbuffer(&actual, path.ptr));
 
 	cl_assert_equal_s(expected.ptr, actual.ptr);
@@ -177,9 +177,9 @@ static void validate_templates(git_repository *repo, const char *template_path)
 		template_path, git_repository_path(repo),
 		"hooks/.dotfile", filemode);
 
-	git_buf_dispose(&expected);
-	git_buf_dispose(&actual);
-	git_buf_dispose(&path);
+	git_str_dispose(&expected);
+	git_str_dispose(&actual);
+	git_str_dispose(&path);
 }
 
 void test_repo_template__external_templates_specified_in_options(void)
@@ -252,7 +252,7 @@ void test_repo_template__extended_with_template_and_shared_mode(void)
 void test_repo_template__templated_head_is_used(void)
 {
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
-	git_buf head = GIT_BUF_INIT;
+	git_str head = GIT_STR_INIT;
 
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
 
@@ -263,13 +263,13 @@ void test_repo_template__templated_head_is_used(void)
 	cl_git_pass(git_futils_readbuffer(&head, "repo/.git/HEAD"));
 	cl_assert_equal_s("foobar\n", head.ptr);
 
-	git_buf_dispose(&head);
+	git_str_dispose(&head);
 }
 
 void test_repo_template__initial_head_option_overrides_template_head(void)
 {
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
-	git_buf head = GIT_BUF_INIT;
+	git_str head = GIT_STR_INIT;
 
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
 	opts.initial_head = "manual";
@@ -281,7 +281,7 @@ void test_repo_template__initial_head_option_overrides_template_head(void)
 	cl_git_pass(git_futils_readbuffer(&head, "repo/.git/HEAD"));
 	cl_assert_equal_s("ref: refs/heads/manual\n", head.ptr);
 
-	git_buf_dispose(&head);
+	git_str_dispose(&head);
 }
 
 void test_repo_template__empty_template_path(void)

@@ -120,19 +120,19 @@ static void assert_branch_matches_name(
 	const char *expected, const char *lookup_as)
 {
 	git_reference *ref;
-	git_buf b = GIT_BUF_INIT;
+	git_str b = GIT_STR_INIT;
 
 	cl_git_pass(git_branch_lookup(&ref, repo, lookup_as, GIT_BRANCH_LOCAL));
 
-	cl_git_pass(git_buf_sets(&b, "refs/heads/"));
-	cl_git_pass(git_buf_puts(&b, expected));
+	cl_git_pass(git_str_sets(&b, "refs/heads/"));
+	cl_git_pass(git_str_puts(&b, expected));
 	cl_assert_equal_s(b.ptr, git_reference_name(ref));
 
 	cl_git_pass(
 		git_oid_cmp(git_reference_target(ref), git_commit_id(target)));
 
 	git_reference_free(ref);
-	git_buf_dispose(&b);
+	git_str_dispose(&b);
 }
 
 void test_refs_branches_create__can_create_branch_with_unicode(void)

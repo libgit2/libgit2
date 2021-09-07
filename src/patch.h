@@ -63,6 +63,7 @@ typedef struct {
 
 #define GIT_PATCH_OPTIONS_INIT { 1 }
 
+extern int git_patch__to_buf(git_str *out, git_patch *patch);
 extern void git_patch_free(git_patch *patch);
 
 #endif

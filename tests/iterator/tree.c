@@ -623,7 +623,7 @@ static void build_test_tree(
 	const char *scan = fmt, *next;
 	char type, delimiter;
 	git_filemode_t mode = GIT_FILEMODE_BLOB;
-	git_buf name = GIT_BUF_INIT;
+	git_str name = GIT_STR_INIT;
 	va_list arglist;
 
 	cl_git_pass(git_treebuilder_new(&builder, repo, NULL)); /* start builder */
@@ -640,7 +640,7 @@ static void build_test_tree(
 		delimiter = *scan++; /* read and skip delimiter */
 		for (next = scan; *next && *next != delimiter; ++next)
 			/* seek end */;
-		cl_git_pass(git_buf_set(&name, scan, (size_t)(next - scan)));
+		cl_git_pass(git_str_set(&name, scan, (size_t)(next - scan)));
 		for (scan = next; *scan && (*scan == delimiter || *scan == ','); ++scan)
 			/* skip delimiter and optional comma */;
 
@@ -653,7 +653,7 @@ static void build_test_tree(
 	cl_git_pass(git_treebuilder_write(out, builder));
 
 	git_treebuilder_free(builder);
-	git_buf_dispose(&name);
+	git_str_dispose(&name);
 }
 
 void test_iterator_tree__case_conflicts_0(void)

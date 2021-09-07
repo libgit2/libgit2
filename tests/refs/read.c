@@ -31,7 +31,7 @@ void test_refs_read__loose_tag(void)
 	/* lookup a loose tag reference */
 	git_reference *reference;
 	git_object *object;
-	git_buf ref_name_from_tag_name = GIT_BUF_INIT;
+	git_str ref_name_from_tag_name = GIT_STR_INIT;
 
 	cl_git_pass(git_reference_lookup(&reference, g_repo, loose_tag_ref_name));
 	cl_assert(git_reference_type(reference) & GIT_REFERENCE_DIRECT);
@@ -43,9 +43,9 @@ void test_refs_read__loose_tag(void)
 	cl_assert(git_object_type(object) == GIT_OBJECT_TAG);
 
 	/* Ensure the name of the tag matches the name of the reference */
-	cl_git_pass(git_buf_joinpath(&ref_name_from_tag_name, GIT_REFS_TAGS_DIR, git_tag_name((git_tag *)object)));
+	cl_git_pass(git_str_joinpath(&ref_name_from_tag_name, GIT_REFS_TAGS_DIR, git_tag_name((git_tag *)object)));
 	cl_assert_equal_s(ref_name_from_tag_name.ptr, loose_tag_ref_name);
-	git_buf_dispose(&ref_name_from_tag_name);
+	git_str_dispose(&ref_name_from_tag_name);
 
 	git_object_free(object);
 

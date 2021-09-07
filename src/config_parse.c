@@ -67,7 +67,7 @@ static int parse_subsection_header(git_config_parser *reader, const char *line, 
 	int c, rpos;
 	const char *first_quote, *last_quote;
 	const char *line_start = line;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	size_t quoted_len, alloc_len, base_name_len = strlen(base_name);
 
 	/* Skip any additional whitespace before our section name */
@@ -97,8 +97,8 @@ static int parse_subsection_header(git_config_parser *reader, const char *line, 
 	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, base_name_len, quoted_len);
 	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
 
-	if (git_buf_grow(&buf, alloc_len) < 0 ||
-	    git_buf_printf(&buf, "%s.", base_name) < 0)
+	if (git_str_grow(&buf, alloc_len) < 0 ||
+	    git_str_printf(&buf, "%s.", base_name) < 0)
 		goto end_error;
 
 	rpos = 0;
@@ -132,25 +132,25 @@ static int parse_subsection_header(git_config_parser *reader, const char *line, 
 			break;
 		}
 
-		git_buf_putc(&buf, (char)c);
+		git_str_putc(&buf, (char)c);
 		c = line[++rpos];
 	} while (line + rpos < last_quote);
 
 end_parse:
-	if (git_buf_oom(&buf))
+	if (git_str_oom(&buf))
 		goto end_error;
 
 	if (line[rpos] != '"' || line[rpos + 1] != ']') {
 		set_parse_error(reader, rpos, "unexpected text after closing quotes");
-		git_buf_dispose(&buf);
+		git_str_dispose(&buf);
 		return -1;
 	}
 
-	*section_name = git_buf_detach(&buf);
+	*section_name = git_str_detach(&buf);
 	return (int)(&line[rpos + 2] - line_start); /* rpos is at the closing quote */
 
 end_error:
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	return -1;
 }
@@ -227,11 +227,11 @@ fail_parse:
 
 static int skip_bom(git_parse_ctx *parser)
 {
-	git_buf buf = GIT_BUF_INIT_CONST(parser->content, parser->content_len);
-	git_buf_bom_t bom;
-	int bom_offset = git_buf_detect_bom(&bom, &buf);
+	git_str buf = GIT_STR_INIT_CONST(parser->content, parser->content_len);
+	git_str_bom_t bom;
+	int bom_offset = git_str_detect_bom(&bom, &buf);
 
-	if (bom == GIT_BUF_BOM_UTF8)
+	if (bom == GIT_STR_BOM_UTF8)
 		git_parse_advance_chars(parser, bom_offset);
 
 	/* TODO: reference implementation is pretty stupid with BoM */
@@ -325,7 +325,7 @@ done:
 	return 0;
 }
 
-static int parse_multiline_variable(git_config_parser *reader, git_buf *value, int in_quotes)
+static int parse_multiline_variable(git_config_parser *reader, git_str *value, int in_quotes)
 {
 	int quote_count;
 	bool multiline = true;
@@ -358,7 +358,7 @@ static int parse_multiline_variable(git_config_parser *reader, git_buf *value, i
 			goto out;
 
 		/* Add this line to the multiline var */
-		if ((error = git_buf_puts(value, proc_line)) < 0)
+		if ((error = git_str_puts(value, proc_line)) < 0)
 			goto out;
 
 next:
@@ -445,18 +445,18 @@ static int parse_variable(git_config_parser *reader, char **var_name, char **var
 			goto out;
 
 		if (multiline) {
-			git_buf multi_value = GIT_BUF_INIT;
-			git_buf_attach(&multi_value, value, 0);
+			git_str multi_value = GIT_STR_INIT;
+			git_str_attach(&multi_value, value, 0);
 			value = NULL;
 
 			if (parse_multiline_variable(reader, &multi_value, quote_count % 2) < 0 ||
-			    git_buf_oom(&multi_value)) {
+			    git_str_oom(&multi_value)) {
 				error = -1;
-				git_buf_dispose(&multi_value);
+				git_str_dispose(&multi_value);
 				goto out;
 			}
 
-			value = git_buf_detach(&multi_value);
+			value = git_str_detach(&multi_value);
 		}
 	}
 

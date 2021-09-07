@@ -92,7 +92,7 @@ typedef struct git_commit_graph_entry {
 /* A wrapper for git_commit_graph_file to enable lazy loading in the ODB. */
 struct git_commit_graph {
 	/* The path to the commit-graph file. Something like ".git/objects/info/commit-graph". */
-	git_buf filename;
+	git_str filename;
 
 	/* The underlying commit-graph file. */
 	git_commit_graph_file *file;
@@ -127,11 +127,16 @@ struct git_commit_graph_writer {
 	 * The path of the `objects/info` directory where the `commit-graph` will be
 	 * stored.
 	 */
-	git_buf objects_info_dir;
+	git_str objects_info_dir;
 
 	/* The list of packed commits. */
 	git_vector commits;
 };
+
+int git_commit_graph__writer_dump(
+	git_str *cgraph,
+	git_commit_graph_writer *w,
+	git_commit_graph_writer_options *opts);
 
 /*
  * Returns whether the git_commit_graph_file needs to be reloaded since the

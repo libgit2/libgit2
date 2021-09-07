@@ -7,7 +7,7 @@
 
 #include "trace.h"
 
-#include "buffer.h"
+#include "str.h"
 #include "runtime.h"
 #include "git2/trace.h"
 

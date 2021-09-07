@@ -47,16 +47,16 @@ static bool try_create_file_with_nsec_timestamp(const char *path)
  */
 static bool should_expect_nsecs(void)
 {
-	git_buf nsec_path = GIT_BUF_INIT;
+	git_str nsec_path = GIT_STR_INIT;
 	bool expect;
 
-	git_buf_joinpath(&nsec_path, clar_sandbox_path(), "nsec_test");
+	git_str_joinpath(&nsec_path, clar_sandbox_path(), "nsec_test");
 
 	expect = try_create_file_with_nsec_timestamp(nsec_path.ptr);
 
 	cl_must_pass(p_unlink(nsec_path.ptr));
 
-	git_buf_dispose(&nsec_path);
+	git_str_dispose(&nsec_path);
 
 	return expect;
 }

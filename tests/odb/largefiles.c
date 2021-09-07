@@ -23,11 +23,11 @@ void test_odb_largefiles__cleanup(void)
 static void writefile(git_oid *oid)
 {
 	static git_odb_stream *stream;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	size_t i;
 
 	for (i = 0; i < 3041; i++)
-		cl_git_pass(git_buf_puts(&buf, "Hello, world.\n"));
+		cl_git_pass(git_str_puts(&buf, "Hello, world.\n"));
 
 	cl_git_pass(git_odb_open_wstream(&stream, odb, LARGEFILE_SIZE, GIT_OBJECT_BLOB));
 	for (i = 0; i < 126103; i++)
@@ -36,13 +36,13 @@ static void writefile(git_oid *oid)
 	cl_git_pass(git_odb_stream_finalize_write(oid, stream));
 
 	git_odb_stream_free(stream);
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 }
 
 void test_odb_largefiles__write_from_memory(void)
 {
 	git_oid expected, oid;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	size_t i;
 
 #ifndef GIT_ARCH_64
@@ -55,7 +55,7 @@ void test_odb_largefiles__write_from_memory(void)
 		cl_skip();
 
 	for (i = 0; i < (3041*126103); i++)
-		cl_git_pass(git_buf_puts(&buf, "Hello, world.\n"));
+		cl_git_pass(git_str_puts(&buf, "Hello, world.\n"));
 
 	git_oid_fromstr(&expected, "3fb56989cca483b21ba7cb0a6edb229d10e1c26c");
 	cl_git_pass(git_odb_write(&oid, odb, buf.ptr, buf.size, GIT_OBJECT_BLOB));

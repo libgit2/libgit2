@@ -12,12 +12,12 @@ void test_graph_commit_graph__parse(void)
 	struct git_commit_graph_file *file;
 	struct git_commit_graph_entry e, parent;
 	git_oid id;
-	git_buf commit_graph_path = GIT_BUF_INIT;
+	git_str commit_graph_path = GIT_STR_INIT;
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
-	cl_git_pass(git_buf_joinpath(&commit_graph_path, git_repository_path(repo), "objects/info/commit-graph"));
-	cl_git_pass(git_commit_graph_file_open(&file, git_buf_cstr(&commit_graph_path)));
-	cl_assert_equal_i(git_commit_graph_file_needs_refresh(file, git_buf_cstr(&commit_graph_path)), 0);
+	cl_git_pass(git_str_joinpath(&commit_graph_path, git_repository_path(repo), "objects/info/commit-graph"));
+	cl_git_pass(git_commit_graph_file_open(&file, git_str_cstr(&commit_graph_path)));
+	cl_assert_equal_i(git_commit_graph_file_needs_refresh(file, git_str_cstr(&commit_graph_path)), 0);
 
 	cl_git_pass(git_oid_fromstr(&id, "5001298e0c09ad9c34e4249bc5801c75e9754fa5"));
 	cl_git_pass(git_commit_graph_entry_find(&e, file, &id, GIT_OID_HEXSZ));
@@ -47,7 +47,7 @@ void test_graph_commit_graph__parse(void)
 
 	git_commit_graph_file_free(file);
 	git_repository_free(repo);
-	git_buf_dispose(&commit_graph_path);
+	git_str_dispose(&commit_graph_path);
 }
 
 void test_graph_commit_graph__parse_octopus_merge(void)
@@ -56,11 +56,11 @@ void test_graph_commit_graph__parse_octopus_merge(void)
 	struct git_commit_graph_file *file;
 	struct git_commit_graph_entry e, parent;
 	git_oid id;
-	git_buf commit_graph_path = GIT_BUF_INIT;
+	git_str commit_graph_path = GIT_STR_INIT;
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("merge-recursive/.gitted")));
-	cl_git_pass(git_buf_joinpath(&commit_graph_path, git_repository_path(repo), "objects/info/commit-graph"));
-	cl_git_pass(git_commit_graph_file_open(&file, git_buf_cstr(&commit_graph_path)));
+	cl_git_pass(git_str_joinpath(&commit_graph_path, git_repository_path(repo), "objects/info/commit-graph"));
+	cl_git_pass(git_commit_graph_file_open(&file, git_str_cstr(&commit_graph_path)));
 
 	cl_git_pass(git_oid_fromstr(&id, "d71c24b3b113fd1d1909998c5bfe33b86a65ee03"));
 	cl_git_pass(git_commit_graph_entry_find(&e, file, &id, GIT_OID_HEXSZ));
@@ -88,7 +88,7 @@ void test_graph_commit_graph__parse_octopus_merge(void)
 
 	git_commit_graph_file_free(file);
 	git_repository_free(repo);
-	git_buf_dispose(&commit_graph_path);
+	git_str_dispose(&commit_graph_path);
 }
 
 void test_graph_commit_graph__writer(void)
@@ -97,12 +97,13 @@ void test_graph_commit_graph__writer(void)
 	git_commit_graph_writer *w = NULL;
 	git_revwalk *walk;
 	git_commit_graph_writer_options opts = GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT;
-	git_buf cgraph = GIT_BUF_INIT, expected_cgraph = GIT_BUF_INIT, path = GIT_BUF_INIT;
+	git_buf cgraph = GIT_BUF_INIT;
+	git_str expected_cgraph = GIT_STR_INIT, path = GIT_STR_INIT;
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_path(repo), "objects/info"));
-	cl_git_pass(git_commit_graph_writer_new(&w, git_buf_cstr(&path)));
+	cl_git_pass(git_str_joinpath(&path, git_repository_path(repo), "objects/info"));
+	cl_git_pass(git_commit_graph_writer_new(&w, git_str_cstr(&path)));
 
 	/* This is equivalent to `git commit-graph write --reachable`. */
 	cl_git_pass(git_revwalk_new(&walk, repo));
@@ -111,15 +112,15 @@ void test_graph_commit_graph__writer(void)
 	git_revwalk_free(walk);
 
 	cl_git_pass(git_commit_graph_writer_dump(&cgraph, w, &opts));
-	cl_git_pass(git_buf_joinpath(&path, git_repository_path(repo), "objects/info/commit-graph"));
-	cl_git_pass(git_futils_readbuffer(&expected_cgraph, git_buf_cstr(&path)));
+	cl_git_pass(git_str_joinpath(&path, git_repository_path(repo), "objects/info/commit-graph"));
+	cl_git_pass(git_futils_readbuffer(&expected_cgraph, git_str_cstr(&path)));
 
-	cl_assert_equal_i(git_buf_len(&cgraph), git_buf_len(&expected_cgraph));
-	cl_assert_equal_i(memcmp(git_buf_cstr(&cgraph), git_buf_cstr(&expected_cgraph), git_buf_len(&cgraph)), 0);
+	cl_assert_equal_i(cgraph.size, git_str_len(&expected_cgraph));
+	cl_assert_equal_i(memcmp(cgraph.ptr, git_str_cstr(&expected_cgraph), cgraph.size), 0);
 
 	git_buf_dispose(&cgraph);
-	git_buf_dispose(&expected_cgraph);
-	git_buf_dispose(&path);
+	git_str_dispose(&expected_cgraph);
+	git_str_dispose(&path);
 	git_commit_graph_writer_free(w);
 	git_repository_free(repo);
 }

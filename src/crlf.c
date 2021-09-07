@@ -12,6 +12,7 @@
 #include "git2/index.h"
 #include "git2/sys/filter.h"
 
+#include "buf.h"
 #include "futils.h"
 #include "hash.h"
 #include "filter.h"
@@ -152,7 +153,7 @@ static git_configmap_value output_eol(struct crlf_attrs *ca)
 GIT_INLINE(int) check_safecrlf(
 	struct crlf_attrs *ca,
 	const git_filter_source *src,
-	git_buf_text_stats *stats)
+	git_str_text_stats *stats)
 {
 	const char *filename = git_filter_source_path(src);
 
@@ -206,19 +207,19 @@ GIT_INLINE(int) check_safecrlf(
 
 static int crlf_apply_to_odb(
 	struct crlf_attrs *ca,
-	git_buf *to,
-	const git_buf *from,
+	git_str *to,
+	const git_str *from,
 	const git_filter_source *src)
 {
-	git_buf_text_stats stats;
+	git_str_text_stats stats;
 	bool is_binary;
 	int error;
 
 	/* Binary attribute? Empty file? Nothing to do */
-	if (ca->crlf_action == GIT_CRLF_BINARY || !git_buf_len(from))
+	if (ca->crlf_action == GIT_CRLF_BINARY || from->size == 0)
 		return GIT_PASSTHROUGH;
 
-	is_binary = git_buf_gather_text_stats(&stats, from, false);
+	is_binary = git_str_gather_text_stats(&stats, from, false);
 
 	/* Heuristics to see if we can skip the conversion.
 	 * Straight from Core Git.
@@ -246,22 +247,22 @@ static int crlf_apply_to_odb(
 		return GIT_PASSTHROUGH;
 
 	/* Actually drop the carriage returns */
-	return git_buf_crlf_to_lf(to, from);
+	return git_str_crlf_to_lf(to, from);
 }
 
 static int crlf_apply_to_workdir(
 	struct crlf_attrs *ca,
-	git_buf *to,
-	const git_buf *from)
+	git_str *to,
+	const git_str *from)
 {
-	git_buf_text_stats stats;
+	git_str_text_stats stats;
 	bool is_binary;
 
 	/* Empty file? Nothing to do. */
-	if (git_buf_len(from) == 0 || output_eol(ca) != GIT_EOL_CRLF)
+	if (git_str_len(from) == 0 || output_eol(ca) != GIT_EOL_CRLF)
 		return GIT_PASSTHROUGH;
 
-	is_binary = git_buf_gather_text_stats(&stats, from, false);
+	is_binary = git_str_gather_text_stats(&stats, from, false);
 
 	/* If there are no LFs, or all LFs are part of a CRLF, nothing to do */
 	if (stats.lf == 0 || stats.lf == stats.crlf)
@@ -280,7 +281,7 @@ static int crlf_apply_to_workdir(
 			return GIT_PASSTHROUGH;
 	}
 
-	return git_buf_lf_to_crlf(to, from);
+	return git_str_lf_to_crlf(to, from);
 }
 
 static int convert_attrs(
@@ -368,22 +369,24 @@ static int crlf_check(
 static int crlf_apply(
 	git_filter *self,
 	void **payload, /* may be read and/or set */
-	git_buf *to,
-	const git_buf *from,
+	git_str *to,
+	const git_str *from,
 	const git_filter_source *src)
 {
+	int error = 0;
+
 	/* initialize payload in case `check` was bypassed */
 	if (!*payload) {
-		int error = crlf_check(self, payload, src, NULL);
-
-		if (error < 0)
+		if ((error = crlf_check(self, payload, src, NULL)) < 0)
 			return error;
 	}
 
 	if (git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
-		return crlf_apply_to_workdir(*payload, to, from);
+		error = crlf_apply_to_workdir(*payload, to, from);
 	else
-		return crlf_apply_to_odb(*payload, to, from, src);
+		error = crlf_apply_to_odb(*payload, to, from, src);
+
+	return error;
 }
 
 static int crlf_stream(

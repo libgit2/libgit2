@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "git2/merge.h"
-#include "buffer.h"
 #include "merge.h"
 #include "index.h"
 #include "../merge_helpers.h"
@@ -109,29 +108,29 @@ static int merge_branch(void)
 static void write_files(char *files[])
 {
 	char *filename;
-	git_buf path = GIT_BUF_INIT, content = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT, content = GIT_STR_INIT;
 	size_t i;
 
 	for (i = 0, filename = files[i]; filename; filename = files[++i]) {
-		git_buf_clear(&path);
-		git_buf_clear(&content);
+		git_str_clear(&path);
+		git_str_clear(&content);
 
-		git_buf_printf(&path, "%s/%s", TEST_REPO_PATH, filename);
-		git_buf_printf(&content, "This is a dirty file in the working directory!\n\n"
+		git_str_printf(&path, "%s/%s", TEST_REPO_PATH, filename);
+		git_str_printf(&content, "This is a dirty file in the working directory!\n\n"
 			"It will not be staged!  Its filename is %s.\n", filename);
 
 		cl_git_mkfile(path.ptr, content.ptr);
 	}
 
-	git_buf_dispose(&path);
-	git_buf_dispose(&content);
+	git_str_dispose(&path);
+	git_str_dispose(&content);
 }
 
 static void hack_index(char *files[])
 {
 	char *filename;
 	struct stat statbuf;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	git_index_entry *entry;
 	struct p_timeval times[2];
 	time_t now;
@@ -153,12 +152,12 @@ static void hack_index(char *files[])
 	times[1].tv_usec = 0;
 
 	for (i = 0, filename = files[i]; filename; filename = files[++i]) {
-		git_buf_clear(&path);
+		git_str_clear(&path);
 
 		cl_assert(entry = (git_index_entry *)
 			git_index_get_bypath(repo_index, filename, 0));
 
-		cl_git_pass(git_buf_printf(&path, "%s/%s", TEST_REPO_PATH, filename));
+		cl_git_pass(git_str_printf(&path, "%s/%s", TEST_REPO_PATH, filename));
 		cl_git_pass(p_utimes(path.ptr, times));
 		cl_git_pass(p_stat(path.ptr, &statbuf));
 
@@ -178,7 +177,7 @@ static void hack_index(char *files[])
 		entry->file_size = (uint32_t)statbuf.st_size;
 	}
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 static void stage_random_files(char *files[])
@@ -196,7 +195,7 @@ static void stage_content(char *content[])
 {
 	git_reference *head;
 	git_object *head_object;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	char *filename, *text;
 	size_t i;
 
@@ -208,9 +207,9 @@ static void stage_content(char *content[])
 		filename && text;
 		filename = content[++i], text = content[++i]) {
 
-		git_buf_clear(&path);
+		git_str_clear(&path);
 
-		cl_git_pass(git_buf_printf(&path, "%s/%s", TEST_REPO_PATH, filename));
+		cl_git_pass(git_str_printf(&path, "%s/%s", TEST_REPO_PATH, filename));
 
 		cl_git_mkfile(path.ptr, text);
 		cl_git_pass(git_index_add_bypath(repo_index, filename));
@@ -218,7 +217,7 @@ static void stage_content(char *content[])
 
 	git_object_free(head_object);
 	git_reference_free(head);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 static int merge_dirty_files(char *dirty_files[])

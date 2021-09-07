@@ -7,6 +7,16 @@
 
 #include "common.h"
 
+#include "pack-objects.h"
+#include "refs.h"
+#include "posix.h"
+#include "path.h"
+#include "repository.h"
+#include "odb.h"
+#include "push.h"
+#include "remote.h"
+#include "proxy.h"
+
 #include "git2/types.h"
 #include "git2/net.h"
 #include "git2/repository.h"
@@ -18,17 +28,6 @@
 #include "git2/pack.h"
 #include "git2/commit.h"
 #include "git2/revparse.h"
-
-#include "pack-objects.h"
-#include "refs.h"
-#include "posix.h"
-#include "path.h"
-#include "buffer.h"
-#include "repository.h"
-#include "odb.h"
-#include "push.h"
-#include "remote.h"
-#include "proxy.h"
 
 typedef struct {
 	git_transport parent;
@@ -71,7 +70,7 @@ static int add_ref(transport_local *t, const char *name)
 	git_remote_head *head;
 	git_oid obj_id;
 	git_object *obj = NULL, *target = NULL;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	int error;
 
 	if ((error = git_reference_lookup(&ref, t->repo, name)) < 0)
@@ -132,11 +131,11 @@ static int add_ref(transport_local *t, const char *name)
 	head = git__calloc(1, sizeof(git_remote_head));
 	GIT_ERROR_CHECK_ALLOC(head);
 
-	if (git_buf_join(&buf, 0, name, peeled) < 0) {
+	if (git_str_join(&buf, 0, name, peeled) < 0) {
 		free_head(head);
 		return -1;
 	}
-	head->name = git_buf_detach(&buf);
+	head->name = git_str_detach(&buf);
 
 	if (!(error = git_tag_peel(&target, (git_tag *)obj))) {
 		git_oid_cpy(&head->oid, git_object_id(target));
@@ -210,7 +209,7 @@ static int local_connect(
 	int error;
 	transport_local *t = (transport_local *) transport;
 	const char *path;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
 	GIT_UNUSED(cred_acquire_cb);
 	GIT_UNUSED(cred_acquire_payload);
@@ -228,14 +227,14 @@ static int local_connect(
 
 	/* 'url' may be a url or path; convert to a path */
 	if ((error = git_path_from_url_or_path(&buf, url)) < 0) {
-		git_buf_dispose(&buf);
+		git_str_dispose(&buf);
 		return error;
 	}
-	path = git_buf_cstr(&buf);
+	path = git_str_cstr(&buf);
 
 	error = git_repository_open(&repo, path);
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	if (error < 0)
 		return -1;
@@ -346,7 +345,7 @@ static int local_push(
 	push_spec *spec;
 	char *url = NULL;
 	const char *path;
-	git_buf buf = GIT_BUF_INIT, odb_path = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT, odb_path = GIT_STR_INIT;
 	int error;
 	size_t j;
 
@@ -354,14 +353,14 @@ static int local_push(
 
 	/* 'push->remote->url' may be a url or path; convert to a path */
 	if ((error = git_path_from_url_or_path(&buf, push->remote->url)) < 0) {
-		git_buf_dispose(&buf);
+		git_str_dispose(&buf);
 		return error;
 	}
-	path = git_buf_cstr(&buf);
+	path = git_str_cstr(&buf);
 
 	error = git_repository_open(&remote_repo, path);
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	if (error < 0)
 		return error;
@@ -378,12 +377,12 @@ static int local_push(
 		goto on_error;
 	}
 
-	if ((error = git_repository_item_path(&odb_path, remote_repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0
-		|| (error = git_buf_joinpath(&odb_path, odb_path.ptr, "pack")) < 0)
+	if ((error = git_repository__item_path(&odb_path, remote_repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0
+		|| (error = git_str_joinpath(&odb_path, odb_path.ptr, "pack")) < 0)
 		goto on_error;
 
 	error = git_packbuilder_write(push->pb, odb_path.ptr, 0, transfer_to_push_transfer, (void *) cbs);
-	git_buf_dispose(&odb_path);
+	git_str_dispose(&odb_path);
 
 	if (error < 0)
 		goto on_error;
@@ -479,7 +478,7 @@ static const char *compressing_objects_fmt = "Compressing objects: %.0f%% (%d/%d
 
 static int local_counting(int stage, unsigned int current, unsigned int total, void *payload)
 {
-	git_buf progress_info = GIT_BUF_INIT;
+	git_str progress_info = GIT_STR_INIT;
 	transport_local *t = payload;
 	int error;
 
@@ -487,22 +486,22 @@ static int local_counting(int stage, unsigned int current, unsigned int total, v
 		return 0;
 
 	if (stage == GIT_PACKBUILDER_ADDING_OBJECTS) {
-		git_buf_printf(&progress_info, counting_objects_fmt, current);
+		git_str_printf(&progress_info, counting_objects_fmt, current);
 	} else if (stage == GIT_PACKBUILDER_DELTAFICATION) {
 		float perc = (((float) current) / total) * 100;
-		git_buf_printf(&progress_info, compressing_objects_fmt, perc, current, total);
+		git_str_printf(&progress_info, compressing_objects_fmt, perc, current, total);
 		if (current == total)
-			git_buf_printf(&progress_info, ", done\n");
+			git_str_printf(&progress_info, ", done\n");
 		else
-			git_buf_putc(&progress_info, '\r');
+			git_str_putc(&progress_info, '\r');
 
 	}
 
-	if (git_buf_oom(&progress_info))
+	if (git_str_oom(&progress_info))
 		return -1;
 
-	error = t->progress_cb(git_buf_cstr(&progress_info), (int)git_buf_len(&progress_info), t->message_cb_payload);
-	git_buf_dispose(&progress_info);
+	error = t->progress_cb(git_str_cstr(&progress_info), (int)git_str_len(&progress_info), t->message_cb_payload);
+	git_str_dispose(&progress_info);
 
 	return error;
 }
@@ -545,7 +544,7 @@ static int local_download_pack(
 	git_packbuilder *pack = NULL;
 	git_odb_writepack *writepack = NULL;
 	git_odb *odb = NULL;
-	git_buf progress_info = GIT_BUF_INIT;
+	git_str progress_info = GIT_STR_INIT;
 
 	if ((error = git_revwalk_new(&walk, t->repo)) < 0)
 		goto cleanup;
@@ -584,11 +583,11 @@ static int local_download_pack(
 	if ((error = git_packbuilder_insert_walk(pack, walk)))
 		goto cleanup;
 
-	if ((error = git_buf_printf(&progress_info, counting_objects_fmt, git_packbuilder_object_count(pack))) < 0)
+	if ((error = git_str_printf(&progress_info, counting_objects_fmt, git_packbuilder_object_count(pack))) < 0)
 		goto cleanup;
 
 	if (t->progress_cb &&
-	    (error = t->progress_cb(git_buf_cstr(&progress_info), (int)git_buf_len(&progress_info), t->message_cb_payload)) < 0)
+	    (error = t->progress_cb(git_str_cstr(&progress_info), (int)git_str_len(&progress_info), t->message_cb_payload)) < 0)
 		goto cleanup;
 
 	/* Walk the objects, building a packfile */
@@ -596,13 +595,13 @@ static int local_download_pack(
 		goto cleanup;
 
 	/* One last one with the newline */
-	git_buf_clear(&progress_info);
-	git_buf_printf(&progress_info, counting_objects_fmt, git_packbuilder_object_count(pack));
-	if ((error = git_buf_putc(&progress_info, '\n')) < 0)
+	git_str_clear(&progress_info);
+	git_str_printf(&progress_info, counting_objects_fmt, git_packbuilder_object_count(pack));
+	if ((error = git_str_putc(&progress_info, '\n')) < 0)
 		goto cleanup;
 
 	if (t->progress_cb &&
-	    (error = t->progress_cb(git_buf_cstr(&progress_info), (int)git_buf_len(&progress_info), t->message_cb_payload)) < 0)
+	    (error = t->progress_cb(git_str_cstr(&progress_info), (int)git_str_len(&progress_info), t->message_cb_payload)) < 0)
 		goto cleanup;
 
 	if ((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) != 0)
@@ -627,7 +626,7 @@ static int local_download_pack(
 
 cleanup:
 	if (writepack) writepack->free(writepack);
-	git_buf_dispose(&progress_info);
+	git_str_dispose(&progress_info);
 	git_packbuilder_free(pack);
 	git_revwalk_free(walk);
 	return error;

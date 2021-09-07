@@ -38,14 +38,14 @@ static int GIT_FORMAT_PRINTF(2, 3) cl_setenv_printf(const char *name, const char
 {
 	int ret;
 	va_list args;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
 	va_start(args, fmt);
-	cl_git_pass(git_buf_vprintf(&buf, fmt, args));
+	cl_git_pass(git_str_vprintf(&buf, fmt, args));
 	va_end(args);
 
-	ret = cl_setenv(name, git_buf_cstr(&buf));
-	git_buf_dispose(&buf);
+	ret = cl_setenv(name, git_str_cstr(&buf));
+	git_str_dispose(&buf);
 	return ret;
 }
 
@@ -80,12 +80,12 @@ static void env_cd_(
 	void (*passfail_)(const char *, const char *, const char *, int),
 	const char *file, const char *func, int line)
 {
-	git_buf cwd_buf = GIT_BUF_INIT;
+	git_str cwd_buf = GIT_STR_INIT;
 	cl_git_pass(git_path_prettify_dir(&cwd_buf, ".", NULL));
 	cl_must_pass(p_chdir(path));
 	passfail_(NULL, file, func, line);
-	cl_must_pass(p_chdir(git_buf_cstr(&cwd_buf)));
-	git_buf_dispose(&cwd_buf);
+	cl_must_pass(p_chdir(git_str_cstr(&cwd_buf)));
+	git_str_dispose(&cwd_buf);
 }
 #define env_cd_pass(path) env_cd_((path), env_pass_, __FILE__, __func__, __LINE__)
 #define env_cd_fail(path) env_cd_((path), env_fail_, __FILE__, __func__, __LINE__)
@@ -128,7 +128,7 @@ static void env_check_objects_(bool a, bool t, bool p, const char *file, const c
 void test_repo_env__open(void)
 {
 	git_repository *repo = NULL;
-	git_buf repo_dir_buf = GIT_BUF_INIT;
+	git_str repo_dir_buf = GIT_STR_INIT;
 	const char *repo_dir = NULL;
 	git_index *index = NULL;
 	const char *t_obj = "testrepo.git/objects";
@@ -142,7 +142,7 @@ void test_repo_env__open(void)
 	cl_git_pass(p_rename("attr/.gitted", "attr/.git"));
 
 	cl_git_pass(git_path_prettify_dir(&repo_dir_buf, "attr", NULL));
-	repo_dir = git_buf_cstr(&repo_dir_buf);
+	repo_dir = git_str_cstr(&repo_dir_buf);
 
 	/* GIT_DIR that doesn't exist */
 	cl_setenv("GIT_DIR", "does-not-exist");
@@ -271,7 +271,7 @@ void test_repo_env__open(void)
 	cl_fixture_cleanup("testrepo.git");
 	cl_fixture_cleanup("attr");
 
-	git_buf_dispose(&repo_dir_buf);
+	git_str_dispose(&repo_dir_buf);
 
 	clear_git_env();
 }

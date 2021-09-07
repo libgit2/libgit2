@@ -1,10 +1,9 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
 #include "futils.h"
 
 void test_config_global__initialize(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	cl_git_pass(git_futils_mkdir_r("home", 0777));
 	cl_git_pass(git_path_prettify(&path, "home", NULL));
@@ -21,7 +20,7 @@ void test_config_global__initialize(void)
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, path.ptr));
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_config_global__cleanup(void)
@@ -132,24 +131,25 @@ void test_config_global__open_programdata(void)
 {
 	git_config *cfg;
 	git_repository *repo;
-	git_buf config_path = GIT_BUF_INIT;
+	git_buf dir_path = GIT_BUF_INIT;
+	git_str config_path = GIT_STR_INIT;
 	git_buf var_contents = GIT_BUF_INIT;
 
 	if (cl_is_env_set("GITTEST_INVASIVE_FS_STRUCTURE"))
 		cl_skip();
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH,
-		GIT_CONFIG_LEVEL_PROGRAMDATA, &config_path));
+		GIT_CONFIG_LEVEL_PROGRAMDATA, &dir_path));
 
-	if (!git_path_isdir(config_path.ptr))
-		cl_git_pass(p_mkdir(config_path.ptr, 0777));
+	if (!git_path_isdir(dir_path.ptr))
+		cl_git_pass(p_mkdir(dir_path.ptr, 0777));
 
-	cl_git_pass(git_buf_puts(&config_path, "/config"));
+	cl_git_pass(git_str_joinpath(&config_path, dir_path.ptr, "config"));
 
 	cl_git_pass(git_config_open_ondisk(&cfg, config_path.ptr));
 	cl_git_pass(git_config_set_string(cfg, "programdata.var", "even higher level"));
 
-	git_buf_dispose(&config_path);
+	git_str_dispose(&config_path);
 	git_config_free(cfg);
 
 	git_config_open_default(&cfg);
@@ -165,6 +165,7 @@ void test_config_global__open_programdata(void)
 	cl_assert_equal_s("even higher level", var_contents.ptr);
 
 	git_config_free(cfg);
+	git_buf_dispose(&dir_path);
 	git_buf_dispose(&var_contents);
 	git_repository_free(repo);
 	cl_fixture_cleanup("./foo.git");

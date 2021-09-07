@@ -256,22 +256,22 @@ int git_tree_cache_new(git_tree_cache **out, const char *name, git_pool *pool)
 	return 0;
 }
 
-static void write_tree(git_buf *out, git_tree_cache *tree)
+static void write_tree(git_str *out, git_tree_cache *tree)
 {
 	size_t i;
 
-	git_buf_printf(out, "%s%c%"PRIdZ" %"PRIuZ"\n", tree->name, 0, tree->entry_count, tree->children_count);
+	git_str_printf(out, "%s%c%"PRIdZ" %"PRIuZ"\n", tree->name, 0, tree->entry_count, tree->children_count);
 
 	if (tree->entry_count != -1)
-		git_buf_put(out, (const char *) &tree->oid, GIT_OID_RAWSZ);
+		git_str_put(out, (const char *) &tree->oid, GIT_OID_RAWSZ);
 
 	for (i = 0; i < tree->children_count; i++)
 		write_tree(out, tree->children[i]);
 }
 
-int git_tree_cache_write(git_buf *out, git_tree_cache *tree)
+int git_tree_cache_write(git_str *out, git_tree_cache *tree)
 {
 	write_tree(out, tree);
 
-	return git_buf_oom(out) ? -1 : 0;
+	return git_str_oom(out) ? -1 : 0;
 }

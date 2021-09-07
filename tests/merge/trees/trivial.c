@@ -30,15 +30,15 @@ static int merge_trivial(git_index **index, const char *ours, const char *theirs
 	git_commit *our_commit, *their_commit, *ancestor_commit;
 	git_tree *our_tree, *their_tree, *ancestor_tree;
 	git_oid our_oid, their_oid, ancestor_oid;
-	git_buf branch_buf = GIT_BUF_INIT;
+	git_str branch_buf = GIT_STR_INIT;
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
 
-	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours);
+	git_str_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours);
 	cl_git_pass(git_reference_name_to_id(&our_oid, repo, branch_buf.ptr));
 	cl_git_pass(git_commit_lookup(&our_commit, repo, &our_oid));
 
-	git_buf_clear(&branch_buf);
-	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, theirs);
+	git_str_clear(&branch_buf);
+	git_str_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, theirs);
 	cl_git_pass(git_reference_name_to_id(&their_oid, repo, branch_buf.ptr));
 	cl_git_pass(git_commit_lookup(&their_commit, repo, &their_oid));
 
@@ -51,7 +51,7 @@ static int merge_trivial(git_index **index, const char *ours, const char *theirs
 
 	cl_git_pass(git_merge_trees(index, repo, ancestor_tree, our_tree, their_tree, &opts));
 
-	git_buf_dispose(&branch_buf);
+	git_str_dispose(&branch_buf);
 	git_tree_free(our_tree);
 	git_tree_free(their_tree);
 	git_tree_free(ancestor_tree);

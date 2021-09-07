@@ -14,9 +14,7 @@
 #include "git2/sys/diff.h"
 #include "git2/oid.h"
 
-#include <stdio.h>
 #include "vector.h"
-#include "buffer.h"
 #include "iterator.h"
 #include "repository.h"
 #include "pool.h"
@@ -53,7 +51,7 @@ struct git_diff {
 };
 
 extern int git_diff_delta__format_file_header(
-	git_buf *out,
+	git_str *out,
 	const git_diff_delta *delta,
 	const char *oldpfx,
 	const char *newpfx,

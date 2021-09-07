@@ -7,32 +7,33 @@
 
 #include "worktree.h"
 
+#include "buf.h"
+#include "repository.h"
+
 #include "git2/branch.h"
 #include "git2/commit.h"
 #include "git2/worktree.h"
 
-#include "repository.h"
-
 static bool is_worktree_dir(const char *dir)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	int error;
 
-	if (git_buf_sets(&buf, dir) < 0)
+	if (git_str_sets(&buf, dir) < 0)
 		return -1;
 
 	error = git_path_contains_file(&buf, "commondir")
 		&& git_path_contains_file(&buf, "gitdir")
 		&& git_path_contains_file(&buf, "HEAD");
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	return error;
 }
 
 int git_worktree_list(git_strarray *wts, git_repository *repo)
 {
 	git_vector worktrees = GIT_VECTOR_INIT;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	char *worktree;
 	size_t i, len;
 	int error;
@@ -43,7 +44,7 @@ int git_worktree_list(git_strarray *wts, git_repository *repo)
 	wts->count = 0;
 	wts->strings = NULL;
 
-	if ((error = git_buf_joinpath(&path, repo->commondir, "worktrees/")) < 0)
+	if ((error = git_str_joinpath(&path, repo->commondir, "worktrees/")) < 0)
 		goto exit;
 	if (!git_path_exists(path.ptr) || git_path_is_empty_dir(path.ptr))
 		goto exit;
@@ -53,8 +54,8 @@ int git_worktree_list(git_strarray *wts, git_repository *repo)
 	len = path.size;
 
 	git_vector_foreach(&worktrees, i, worktree) {
-		git_buf_truncate(&path, len);
-		git_buf_puts(&path, worktree);
+		git_str_truncate(&path, len);
+		git_str_puts(&path, worktree);
 
 		if (!is_worktree_dir(path.ptr)) {
 			git_vector_remove(&worktrees, i);
@@ -65,68 +66,68 @@ int git_worktree_list(git_strarray *wts, git_repository *repo)
 	wts->strings = (char **)git_vector_detach(&wts->count, NULL, &worktrees);
 
 exit:
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	return error;
 }
 
 char *git_worktree__read_link(const char *base, const char *file)
 {
-	git_buf path = GIT_BUF_INIT, buf = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT, buf = GIT_STR_INIT;
 
 	GIT_ASSERT_ARG_WITH_RETVAL(base, NULL);
 	GIT_ASSERT_ARG_WITH_RETVAL(file, NULL);
 
-	if (git_buf_joinpath(&path, base, file) < 0)
+	if (git_str_joinpath(&path, base, file) < 0)
 		goto err;
 	if (git_futils_readbuffer(&buf, path.ptr) < 0)
 		goto err;
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
-	git_buf_rtrim(&buf);
+	git_str_rtrim(&buf);
 
 	if (!git_path_is_relative(buf.ptr))
-		return git_buf_detach(&buf);
+		return git_str_detach(&buf);
 
-	if (git_buf_sets(&path, base) < 0)
+	if (git_str_sets(&path, base) < 0)
 		goto err;
 	if (git_path_apply_relative(&path, buf.ptr) < 0)
 		goto err;
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
-	return git_buf_detach(&path);
+	return git_str_detach(&path);
 
 err:
-	git_buf_dispose(&buf);
-	git_buf_dispose(&path);
+	git_str_dispose(&buf);
+	git_str_dispose(&path);
 
 	return NULL;
 }
 
-static int write_wtfile(const char *base, const char *file, const git_buf *buf)
+static int write_wtfile(const char *base, const char *file, const git_str *buf)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	int err;
 
 	GIT_ASSERT_ARG(base);
 	GIT_ASSERT_ARG(file);
 	GIT_ASSERT_ARG(buf);
 
-	if ((err = git_buf_joinpath(&path, base, file)) < 0)
+	if ((err = git_str_joinpath(&path, base, file)) < 0)
 		goto out;
 
 	if ((err = git_futils_writebuffer(buf, path.ptr, O_CREAT|O_EXCL|O_WRONLY, 0644)) < 0)
 		goto out;
 
 out:
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	return err;
 }
 
 static int open_worktree_dir(git_worktree **out, const char *parent, const char *dir, const char *name)
 {
-	git_buf gitdir = GIT_BUF_INIT;
+	git_str gitdir = GIT_STR_INIT;
 	git_worktree *wt = NULL;
 	int error = 0;
 
@@ -154,7 +155,7 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 
 	if ((error = git_path_prettify_dir(&gitdir, dir, NULL)) < 0)
 		goto out;
-	wt->gitdir_path = git_buf_detach(&gitdir);
+	wt->gitdir_path = git_str_detach(&gitdir);
 
 	if ((error = git_worktree_is_locked(NULL, wt)) < 0)
 		goto out;
@@ -166,14 +167,14 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 out:
 	if (error)
 		git_worktree_free(wt);
-	git_buf_dispose(&gitdir);
+	git_str_dispose(&gitdir);
 
 	return error;
 }
 
 int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *name)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	git_worktree *wt = NULL;
 	int error;
 
@@ -182,14 +183,14 @@ int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *na
 
 	*out = NULL;
 
-	if ((error = git_buf_join3(&path, '/', repo->commondir, "worktrees", name)) < 0)
+	if ((error = git_str_join3(&path, '/', repo->commondir, "worktrees", name)) < 0)
 		goto out;
 
 	if ((error = (open_worktree_dir(out, git_repository_workdir(repo), path.ptr, name))) < 0)
 		goto out;
 
 out:
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	if (error)
 		git_worktree_free(wt);
@@ -199,7 +200,7 @@ out:
 
 int git_worktree_open_from_repository(git_worktree **out, git_repository *repo)
 {
-	git_buf parent = GIT_BUF_INIT;
+	git_str parent = GIT_STR_INIT;
 	const char *gitdir, *commondir;
 	char *name = NULL;
 	int error = 0;
@@ -224,7 +225,7 @@ int git_worktree_open_from_repository(git_worktree **out, git_repository *repo)
 
 out:
 	git__free(name);
-	git_buf_dispose(&parent);
+	git_str_dispose(&parent);
 
 	return error;
 }
@@ -298,7 +299,7 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	const char *name, const char *worktree,
 	const git_worktree_add_options *opts)
 {
-	git_buf gitdir = GIT_BUF_INIT, wddir = GIT_BUF_INIT, buf = GIT_BUF_INIT;
+	git_str gitdir = GIT_STR_INIT, wddir = GIT_STR_INIT, buf = GIT_STR_INIT;
 	git_reference *ref = NULL, *head = NULL;
 	git_commit *commit = NULL;
 	git_repository *wt = NULL;
@@ -334,12 +335,12 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	}
 
 	/* Create gitdir directory ".git/worktrees/<name>" */
-	if ((err = git_buf_joinpath(&gitdir, repo->commondir, "worktrees")) < 0)
+	if ((err = git_str_joinpath(&gitdir, repo->commondir, "worktrees")) < 0)
 		goto out;
 	if (!git_path_exists(gitdir.ptr))
 		if ((err = git_futils_mkdir(gitdir.ptr, 0755, GIT_MKDIR_EXCL)) < 0)
 			goto out;
-	if ((err = git_buf_joinpath(&gitdir, gitdir.ptr, name)) < 0)
+	if ((err = git_str_joinpath(&gitdir, gitdir.ptr, name)) < 0)
 		goto out;
 	if ((err = git_futils_mkdir(gitdir.ptr, 0755, GIT_MKDIR_EXCL)) < 0)
 		goto out;
@@ -355,7 +356,7 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	if (wtopts.lock) {
 		int fd;
 
-		if ((err = git_buf_joinpath(&buf, gitdir.ptr, "locked")) < 0)
+		if ((err = git_str_joinpath(&buf, gitdir.ptr, "locked")) < 0)
 			goto out;
 
 		if ((fd = p_creat(buf.ptr, 0644)) < 0) {
@@ -364,22 +365,22 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 		}
 
 		p_close(fd);
-		git_buf_clear(&buf);
+		git_str_clear(&buf);
 	}
 
 	/* Create worktree .git file */
-	if ((err = git_buf_printf(&buf, "gitdir: %s\n", gitdir.ptr)) < 0)
+	if ((err = git_str_printf(&buf, "gitdir: %s\n", gitdir.ptr)) < 0)
 		goto out;
 	if ((err = write_wtfile(wddir.ptr, ".git", &buf)) < 0)
 		goto out;
 
 	/* Create gitdir files */
 	if ((err = git_path_prettify_dir(&buf, repo->commondir, NULL) < 0)
-	    || (err = git_buf_putc(&buf, '\n')) < 0
+	    || (err = git_str_putc(&buf, '\n')) < 0
 	    || (err = write_wtfile(gitdir.ptr, "commondir", &buf)) < 0)
 		goto out;
-	if ((err = git_buf_joinpath(&buf, wddir.ptr, ".git")) < 0
-	    || (err = git_buf_putc(&buf, '\n')) < 0
+	if ((err = git_str_joinpath(&buf, wddir.ptr, ".git")) < 0
+	    || (err = git_str_putc(&buf, '\n')) < 0
 	    || (err = write_wtfile(gitdir.ptr, "gitdir", &buf)) < 0)
 		goto out;
 
@@ -412,9 +413,9 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 		goto out;
 
 out:
-	git_buf_dispose(&gitdir);
-	git_buf_dispose(&wddir);
-	git_buf_dispose(&buf);
+	git_str_dispose(&gitdir);
+	git_str_dispose(&wddir);
+	git_str_dispose(&buf);
 	git_reference_free(ref);
 	git_reference_free(head);
 	git_commit_free(commit);
@@ -425,7 +426,7 @@ out:
 
 int git_worktree_lock(git_worktree *wt, const char *reason)
 {
-	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT, path = GIT_STR_INIT;
 	int error;
 
 	GIT_ASSERT_ARG(wt);
@@ -437,11 +438,11 @@ int git_worktree_lock(git_worktree *wt, const char *reason)
 		goto out;
 	}
 
-	if ((error = git_buf_joinpath(&path, wt->gitdir_path, "locked")) < 0)
+	if ((error = git_str_joinpath(&path, wt->gitdir_path, "locked")) < 0)
 		goto out;
 
 	if (reason)
-		git_buf_attach_notowned(&buf, reason, strlen(reason));
+		git_str_attach_notowned(&buf, reason, strlen(reason));
 
 	if ((error = git_futils_writebuffer(&buf, path.ptr, O_CREAT|O_EXCL|O_WRONLY, 0644)) < 0)
 		goto out;
@@ -449,14 +450,14 @@ int git_worktree_lock(git_worktree *wt, const char *reason)
 	wt->locked = 1;
 
 out:
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	return error;
 }
 
 int git_worktree_unlock(git_worktree *wt)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	int error;
 
 	GIT_ASSERT_ARG(wt);
@@ -466,32 +467,32 @@ int git_worktree_unlock(git_worktree *wt)
 	if (!error)
 		return 1;
 
-	if (git_buf_joinpath(&path, wt->gitdir_path, "locked") < 0)
+	if (git_str_joinpath(&path, wt->gitdir_path, "locked") < 0)
 		return -1;
 
 	if (p_unlink(path.ptr) != 0) {
-		git_buf_dispose(&path);
+		git_str_dispose(&path);
 		return -1;
 	}
 
 	wt->locked = 0;
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	return 0;
 }
 
-int git_worktree_is_locked(git_buf *reason, const git_worktree *wt)
+static int git_worktree__is_locked(git_str *reason, const git_worktree *wt)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	int error, locked;
 
 	GIT_ASSERT_ARG(wt);
 
 	if (reason)
-		git_buf_clear(reason);
+		git_str_clear(reason);
 
-	if ((error = git_buf_joinpath(&path, wt->gitdir_path, "locked")) < 0)
+	if ((error = git_str_joinpath(&path, wt->gitdir_path, "locked")) < 0)
 		goto out;
 	locked = git_path_exists(path.ptr);
 	if (locked && reason &&
@@ -500,8 +501,27 @@ int git_worktree_is_locked(git_buf *reason, const git_worktree *wt)
 
 	error = locked;
 out:
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
+	return error;
+}
+
+int git_worktree_is_locked(git_buf *reason, const git_worktree *wt)
+{
+	git_str str = GIT_STR_INIT;
+	int error = 0;
+
+	if (reason && (error = git_buf_tostr(&str, reason)) < 0)
+		return error;
+
+	error = git_worktree__is_locked(reason ? &str : NULL, wt);
+
+	if (error >= 0 && reason) {
+		if (git_buf_fromstr(reason, &str) < 0)
+			error = -1;
+	}
+
+	git_str_dispose(&str);
 	return error;
 }
 
@@ -547,17 +567,17 @@ int git_worktree_is_prunable(git_worktree *wt,
 		memcpy(&popts, opts, sizeof(popts));
 
 	if ((popts.flags & GIT_WORKTREE_PRUNE_LOCKED) == 0) {
-		git_buf reason = GIT_BUF_INIT;
+		git_str reason = GIT_STR_INIT;
 		int error;
 
-		if ((error = git_worktree_is_locked(&reason, wt)) < 0)
+		if ((error = git_worktree__is_locked(&reason, wt)) < 0)
 			return error;
 
 		if (error) {
 			if (!reason.size)
-				git_buf_attach_notowned(&reason, "no reason given", 15);
+				git_str_attach_notowned(&reason, "no reason given", 15);
 			git_error_set(GIT_ERROR_WORKTREE, "not pruning locked working tree: '%s'", reason.ptr);
-			git_buf_dispose(&reason);
+			git_str_dispose(&reason);
 			return 0;
 		}
 	}
@@ -575,7 +595,7 @@ int git_worktree_prune(git_worktree *wt,
 	git_worktree_prune_options *opts)
 {
 	git_worktree_prune_options popts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	char *wtpath;
 	int err;
 
@@ -592,7 +612,7 @@ int git_worktree_prune(git_worktree *wt,
 	}
 
 	/* Delete gitdir in parent repository */
-	if ((err = git_buf_join3(&path, '/', wt->commondir_path, "worktrees", wt->name)) < 0)
+	if ((err = git_str_join3(&path, '/', wt->commondir_path, "worktrees", wt->name)) < 0)
 		goto out;
 	if (!git_path_exists(path.ptr))
 	{
@@ -613,7 +633,7 @@ int git_worktree_prune(git_worktree *wt,
 
 	if ((wtpath = git_path_dirname(wt->gitlink_path)) == NULL)
 		goto out;
-	git_buf_attach(&path, wtpath, 0);
+	git_str_attach(&path, wtpath, 0);
 	if (!git_path_exists(path.ptr))
 	{
 		git_error_set(GIT_ERROR_WORKTREE, "working tree '%s' does not exist", path.ptr);
@@ -624,7 +644,7 @@ int git_worktree_prune(git_worktree *wt,
 		goto out;
 
 out:
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	return err;
 }

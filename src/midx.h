@@ -54,7 +54,7 @@ typedef struct git_midx_file {
 	git_oid checksum;
 
 	/* something like ".git/objects/pack/multi-pack-index". */
-	git_buf filename;
+	git_str filename;
 } git_midx_file;
 
 /*
@@ -77,7 +77,7 @@ struct git_midx_writer {
 	 * The path of the directory where the .pack/.idx files are stored. The
 	 * `multi-pack-index` file will be written to the same directory.
 	 */
-	git_buf pack_dir;
+	git_str pack_dir;
 
 	/* The list of `git_pack_file`s. */
 	git_vector packs;

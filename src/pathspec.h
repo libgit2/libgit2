@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "git2/pathspec.h"
-#include "buffer.h"
+#include "str.h"
 #include "vector.h"
 #include "pool.h"
 #include "array.h"

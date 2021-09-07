@@ -201,12 +201,12 @@ void test_stash_save__untracked_regression(void)
 	const char *paths[] = {"what", "where", "how", "why"};
 	git_reference *head;
 	git_commit *head_commit;
-	git_buf untracked_dir;
+	git_str untracked_dir;
 
 	const char* workdir = git_repository_workdir(repo);
 
-	git_buf_init(&untracked_dir, 0);
-	git_buf_printf(&untracked_dir, "%sz", workdir);
+	git_str_init(&untracked_dir, 0);
+	git_str_printf(&untracked_dir, "%sz", workdir);
 
 	cl_assert(!p_mkdir(untracked_dir.ptr, 0777));
 
@@ -227,7 +227,7 @@ void test_stash_save__untracked_regression(void)
 
 	git_reference_free(head);
 	git_commit_free(head_commit);
-	git_buf_dispose(&untracked_dir);
+	git_str_dispose(&untracked_dir);
 }
 
 #define MESSAGE "Look Ma! I'm on TV!"

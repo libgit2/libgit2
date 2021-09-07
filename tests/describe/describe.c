@@ -32,7 +32,7 @@ void test_describe_describe__describe_a_repo_with_no_refs(void)
 {
 	git_repository *repo;
 	git_describe_options opts = GIT_DESCRIBE_OPTIONS_INIT;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	git_object *object;
 	git_describe_result *result = NULL;
 
@@ -50,6 +50,6 @@ void test_describe_describe__describe_a_repo_with_no_refs(void)
 
 	git_describe_result_free(result);
 	git_object_free(object);
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	cl_git_sandbox_cleanup();
 }

@@ -17,15 +17,15 @@ int merge_trees_from_branches(
 	git_commit *our_commit, *their_commit, *ancestor_commit = NULL;
 	git_tree *our_tree, *their_tree, *ancestor_tree = NULL;
 	git_oid our_oid, their_oid, ancestor_oid;
-	git_buf branch_buf = GIT_BUF_INIT;
+	git_str branch_buf = GIT_STR_INIT;
 	int error;
 
-	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours_name);
+	git_str_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours_name);
 	cl_git_pass(git_reference_name_to_id(&our_oid, repo, branch_buf.ptr));
 	cl_git_pass(git_commit_lookup(&our_commit, repo, &our_oid));
 
-	git_buf_clear(&branch_buf);
-	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, theirs_name);
+	git_str_clear(&branch_buf);
+	git_str_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, theirs_name);
 	cl_git_pass(git_reference_name_to_id(&their_oid, repo, branch_buf.ptr));
 	cl_git_pass(git_commit_lookup(&their_commit, repo, &their_oid));
 
@@ -43,7 +43,7 @@ int merge_trees_from_branches(
 
 	error = git_merge_trees(index, repo, ancestor_tree, our_tree, their_tree, opts);
 
-	git_buf_dispose(&branch_buf);
+	git_str_dispose(&branch_buf);
 	git_tree_free(our_tree);
 	git_tree_free(their_tree);
 	git_tree_free(ancestor_tree);
@@ -61,21 +61,21 @@ int merge_commits_from_branches(
 {
 	git_commit *our_commit, *their_commit;
 	git_oid our_oid, their_oid;
-	git_buf branch_buf = GIT_BUF_INIT;
+	git_str branch_buf = GIT_STR_INIT;
 	int error;
 
-	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours_name);
+	git_str_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours_name);
 	cl_git_pass(git_reference_name_to_id(&our_oid, repo, branch_buf.ptr));
 	cl_git_pass(git_commit_lookup(&our_commit, repo, &our_oid));
 
-	git_buf_clear(&branch_buf);
-	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, theirs_name);
+	git_str_clear(&branch_buf);
+	git_str_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, theirs_name);
 	cl_git_pass(git_reference_name_to_id(&their_oid, repo, branch_buf.ptr));
 	cl_git_pass(git_commit_lookup(&their_commit, repo, &their_oid));
 
 	error = git_merge_commits(index, repo, our_commit, their_commit, opts);
 
-	git_buf_dispose(&branch_buf);
+	git_str_dispose(&branch_buf);
 	git_commit_free(our_commit);
 	git_commit_free(their_commit);
 
@@ -328,12 +328,12 @@ int merge_test_reuc(git_index *index, const struct merge_reuc_entry expected[], 
 	return 1;
 }
 
-int dircount(void *payload, git_buf *pathbuf)
+int dircount(void *payload, git_str *pathbuf)
 {
 	size_t *entries = payload;
-	size_t len = git_buf_len(pathbuf);
+	size_t len = git_str_len(pathbuf);
 
-	if (len < 5 || strcmp(pathbuf->ptr + (git_buf_len(pathbuf) - 5), "/.git") != 0)
+	if (len < 5 || strcmp(pathbuf->ptr + (git_str_len(pathbuf) - 5), "/.git") != 0)
 		(*entries)++;
 
 	return 0;
@@ -343,9 +343,9 @@ int merge_test_workdir(git_repository *repo, const struct merge_index_entry expe
 {
 	size_t actual_len = 0, i;
 	git_oid actual_oid, expected_oid;
-	git_buf wd = GIT_BUF_INIT;
+	git_str wd = GIT_STR_INIT;
 
-	git_buf_puts(&wd, repo->workdir);
+	git_str_puts(&wd, repo->workdir);
 	git_path_direach(&wd, 0, dircount, &actual_len);
 
 	if (actual_len != expected_len)
@@ -359,7 +359,7 @@ int merge_test_workdir(git_repository *repo, const struct merge_index_entry expe
 			return 0;
 	}
 
-	git_buf_dispose(&wd);
+	git_str_dispose(&wd);
 
 	return 1;
 }

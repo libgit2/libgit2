@@ -299,7 +299,7 @@ int git_signature_from_buffer(git_signature **out, const char *buf)
 	return error;
 }
 
-void git_signature__writebuf(git_buf *buf, const char *header, const git_signature *sig)
+void git_signature__writebuf(git_str *buf, const char *header, const git_signature *sig)
 {
 	int offset, hours, mins;
 	char sign;
@@ -313,7 +313,7 @@ void git_signature__writebuf(git_buf *buf, const char *header, const git_signatu
 	hours = offset / 60;
 	mins = offset % 60;
 
-	git_buf_printf(buf, "%s%s <%s> %u %c%02d%02d\n",
+	git_str_printf(buf, "%s%s <%s> %u %c%02d%02d\n",
 			header ? header : "", sig->name, sig->email,
 			(unsigned)sig->when.time, sign, hours, mins);
 }

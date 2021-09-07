@@ -2,7 +2,6 @@
 #include "odb.h"
 #include "git2/odb_backend.h"
 #include "pack.h"
-#include "buffer.h"
 
 static git_odb *_odb;
 static git_repository *_repo;
@@ -121,15 +120,15 @@ void test_odb_foreach__files_in_objects_dir(void)
 {
 	git_repository *repo;
 	git_odb *odb;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	int nobj = 0;
 
 	cl_fixture_sandbox("testrepo.git");
 	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
 
-	cl_git_pass(git_buf_joinpath(&buf, git_repository_path(repo), "objects/somefile"));
+	cl_git_pass(git_str_joinpath(&buf, git_repository_path(repo), "objects/somefile"));
 	cl_git_mkfile(buf.ptr, "");
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	cl_git_pass(git_repository_odb(&odb, repo));
 	cl_git_pass(git_odb_foreach(odb, foreach_cb, &nobj));

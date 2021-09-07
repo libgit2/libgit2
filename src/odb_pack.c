@@ -166,7 +166,7 @@ struct pack_writepack {
 
 static int packfile_sort__cb(const void *a_, const void *b_);
 
-static int packfile_load__cb(void *_data, git_buf *path);
+static int packfile_load__cb(void *_data, git_str *path);
 
 static int packfile_byname_search_cmp(const void *path, const void *pack_entry);
 
@@ -195,10 +195,10 @@ static int pack_entry_find_prefix(
 
 static int packfile_byname_search_cmp(const void *path_, const void *p_)
 {
-	const git_buf *path = (const git_buf *)path_;
+	const git_str *path = (const git_str *)path_;
 	const struct git_pack_file *p = (const struct git_pack_file *)p_;
 
-	return strncmp(p->pack_name, git_buf_cstr(path), git_buf_len(path));
+	return strncmp(p->pack_name, git_str_cstr(path), git_str_len(path));
 }
 
 static int packfile_sort__cb(const void *a_, const void *b_)
@@ -231,20 +231,20 @@ static int packfile_sort__cb(const void *a_, const void *b_)
 }
 
 
-static int packfile_load__cb(void *data, git_buf *path)
+static int packfile_load__cb(void *data, git_str *path)
 {
 	struct pack_backend *backend = data;
 	struct git_pack_file *pack;
-	const char *path_str = git_buf_cstr(path);
-	git_buf index_prefix = GIT_BUF_INIT;
-	size_t cmp_len = git_buf_len(path);
+	const char *path_str = git_str_cstr(path);
+	git_str index_prefix = GIT_STR_INIT;
+	size_t cmp_len = git_str_len(path);
 	int error;
 
 	if (cmp_len <= strlen(".idx") || git__suffixcmp(path_str, ".idx") != 0)
 		return 0; /* not an index */
 
 	cmp_len -= strlen(".idx");
-	git_buf_attach_notowned(&index_prefix, path_str, cmp_len);
+	git_str_attach_notowned(&index_prefix, path_str, cmp_len);
 
 	if (git_vector_search2(NULL, &backend->midx_packs, packfile_byname_search_cmp, &index_prefix) == 0)
 		return 0;
@@ -404,29 +404,29 @@ static int process_multi_pack_index_pack(
 	int error;
 	struct git_pack_file *pack;
 	size_t found_position;
-	git_buf pack_path = GIT_BUF_INIT, index_prefix = GIT_BUF_INIT;
+	git_str pack_path = GIT_STR_INIT, index_prefix = GIT_STR_INIT;
 
-	error = git_buf_joinpath(&pack_path, backend->pack_folder, packfile_name);
+	error = git_str_joinpath(&pack_path, backend->pack_folder, packfile_name);
 	if (error < 0)
 		return error;
 
 	/* This is ensured by midx_parse_packfile_name() */
-	if (git_buf_len(&pack_path) <= strlen(".idx") || git__suffixcmp(git_buf_cstr(&pack_path), ".idx") != 0)
+	if (git_str_len(&pack_path) <= strlen(".idx") || git__suffixcmp(git_str_cstr(&pack_path), ".idx") != 0)
 		return git_odb__error_notfound("midx file contained a non-index", NULL, 0);
 
-	git_buf_attach_notowned(&index_prefix, git_buf_cstr(&pack_path), git_buf_len(&pack_path) - strlen(".idx"));
+	git_str_attach_notowned(&index_prefix, git_str_cstr(&pack_path), git_str_len(&pack_path) - strlen(".idx"));
 
 	if (git_vector_search2(&found_position, &backend->packs, packfile_byname_search_cmp, &index_prefix) == 0) {
 		/* Pack was found in the packs list. Moving it to the midx_packs list. */
-		git_buf_dispose(&pack_path);
+		git_str_dispose(&pack_path);
 		git_vector_set(NULL, &backend->midx_packs, i, git_vector_get(&backend->packs, found_position));
 		git_vector_remove(&backend->packs, found_position);
 		return 0;
 	}
 
 	/* Pack was not found. Allocate a new one. */
-	error = git_mwindow_get_pack(&pack, git_buf_cstr(&pack_path));
-	git_buf_dispose(&pack_path);
+	error = git_mwindow_get_pack(&pack, git_str_cstr(&pack_path));
+	git_str_dispose(&pack_path);
 	if (error < 0)
 		return error;
 
@@ -442,11 +442,11 @@ static int process_multi_pack_index_pack(
 static int refresh_multi_pack_index(struct pack_backend *backend)
 {
 	int error;
-	git_buf midx_path = GIT_BUF_INIT;
+	git_str midx_path = GIT_STR_INIT;
 	const char *packfile_name;
 	size_t i;
 
-	error = git_buf_joinpath(&midx_path, backend->pack_folder, "multi-pack-index");
+	error = git_str_joinpath(&midx_path, backend->pack_folder, "multi-pack-index");
 	if (error < 0)
 		return error;
 
@@ -457,19 +457,19 @@ static int refresh_multi_pack_index(struct pack_backend *backend)
 	 * refreshing the new multi-pack-index fails, or the file is deleted.
 	 */
 	if (backend->midx) {
-		if (!git_midx_needs_refresh(backend->midx, git_buf_cstr(&midx_path))) {
-			git_buf_dispose(&midx_path);
+		if (!git_midx_needs_refresh(backend->midx, git_str_cstr(&midx_path))) {
+			git_str_dispose(&midx_path);
 			return 0;
 		}
 		error = remove_multi_pack_index(backend);
 		if (error < 0) {
-			git_buf_dispose(&midx_path);
+			git_str_dispose(&midx_path);
 			return error;
 		}
 	}
 
-	error = git_midx_open(&backend->midx, git_buf_cstr(&midx_path));
-	git_buf_dispose(&midx_path);
+	error = git_midx_open(&backend->midx, git_str_cstr(&midx_path));
+	git_str_dispose(&midx_path);
 	if (error < 0)
 		return error;
 
@@ -505,7 +505,7 @@ static int pack_backend__refresh(git_odb_backend *backend_)
 {
 	int error;
 	struct stat st;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	struct pack_backend *backend = (struct pack_backend *)backend_;
 
 	if (backend->pack_folder == NULL)
@@ -523,10 +523,10 @@ static int pack_backend__refresh(git_odb_backend *backend_)
 	}
 
 	/* reload all packs */
-	git_buf_sets(&path, backend->pack_folder);
+	git_str_sets(&path, backend->pack_folder);
 	error = git_path_direach(&path, 0, packfile_load__cb, backend);
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	git_vector_sort(&backend->packs);
 
 	return error;
@@ -743,7 +743,7 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 }
 
 static int get_idx_path(
-		git_buf *idx_path,
+		git_str *idx_path,
 		struct pack_backend *backend,
 		struct git_pack_file *p)
 {
@@ -753,11 +753,11 @@ static int get_idx_path(
 	error = git_path_prettify(idx_path, p->pack_name, backend->pack_folder);
 	if (error < 0)
 		return error;
-	path_len = git_buf_len(idx_path);
-	if (path_len <= strlen(".pack") || git__suffixcmp(git_buf_cstr(idx_path), ".pack") != 0)
+	path_len = git_str_len(idx_path);
+	if (path_len <= strlen(".pack") || git__suffixcmp(git_str_cstr(idx_path), ".pack") != 0)
 		return git_odb__error_notfound("packfile does not end in .pack", NULL, 0);
 	path_len -= strlen(".pack");
-	error = git_buf_splice(idx_path, path_len, strlen(".pack"), ".idx", strlen(".idx"));
+	error = git_str_splice(idx_path, path_len, strlen(".pack"), ".idx", strlen(".idx"));
 	if (error < 0)
 		return error;
 
@@ -781,22 +781,22 @@ static int pack_backend__writemidx(git_odb_backend *_backend)
 		return error;
 
 	git_vector_foreach(&backend->midx_packs, i, p) {
-		git_buf idx_path = GIT_BUF_INIT;
+		git_str idx_path = GIT_STR_INIT;
 		error = get_idx_path(&idx_path, backend, p);
 		if (error < 0)
 			goto cleanup;
-		error = git_midx_writer_add(w, git_buf_cstr(&idx_path));
-		git_buf_dispose(&idx_path);
+		error = git_midx_writer_add(w, git_str_cstr(&idx_path));
+		git_str_dispose(&idx_path);
 		if (error < 0)
 			goto cleanup;
 	}
 	git_vector_foreach(&backend->packs, i, p) {
-		git_buf idx_path = GIT_BUF_INIT;
+		git_str idx_path = GIT_STR_INIT;
 		error = get_idx_path(&idx_path, backend, p);
 		if (error < 0)
 			goto cleanup;
-		error = git_midx_writer_add(w, git_buf_cstr(&idx_path));
-		git_buf_dispose(&idx_path);
+		error = git_midx_writer_add(w, git_str_cstr(&idx_path));
+		git_str_dispose(&idx_path);
 		if (error < 0)
 			goto cleanup;
 	}
@@ -896,15 +896,15 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 {
 	int error = 0;
 	struct pack_backend *backend = NULL;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	if (pack_backend__alloc(&backend, 8) < 0)
 		return -1;
 
-	if (!(error = git_buf_joinpath(&path, objects_dir, "pack")) &&
-		git_path_isdir(git_buf_cstr(&path)))
+	if (!(error = git_str_joinpath(&path, objects_dir, "pack")) &&
+		git_path_isdir(git_str_cstr(&path)))
 	{
-		backend->pack_folder = git_buf_detach(&path);
+		backend->pack_folder = git_str_detach(&path);
 		error = pack_backend__refresh((git_odb_backend *)backend);
 	}
 
@@ -915,7 +915,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 
 	*backend_out = (git_odb_backend *)backend;
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	return error;
 }

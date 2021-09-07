@@ -69,7 +69,7 @@ void test_submodule_nosubs__add_and_delete(void)
 {
 	git_repository *repo = cl_git_sandbox_init("status");
 	git_submodule *sm;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
 	cl_git_fail(git_submodule_lookup(NULL, repo, "libgit2"));
 	cl_git_fail(git_submodule_lookup(NULL, repo, "submodules/libgit2"));
@@ -85,7 +85,7 @@ void test_submodule_nosubs__add_and_delete(void)
 	cl_git_pass(git_futils_readbuffer(&buf, "status/.gitmodules"));
 	cl_assert(strstr(buf.ptr, "[submodule \"submodules/libgit2\"]") != NULL);
 	cl_assert(strstr(buf.ptr, "path = submodules/libgit2") != NULL);
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	/* lookup */
 

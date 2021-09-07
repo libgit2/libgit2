@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/sys/filter.h"
 #include "crlf.h"
-#include "buffer.h"
 
 static git_repository *g_repo = NULL;
 
@@ -53,13 +52,13 @@ void test_filter_file__apply(void)
 
 struct buf_writestream {
 	git_writestream base;
-	git_buf buf;
+	git_str buf;
 };
 
 int buf_writestream_write(git_writestream *s, const char *buf, size_t len)
 {
 	struct buf_writestream *stream = (struct buf_writestream *)s;
-	return git_buf_put(&stream->buf, buf, len);
+	return git_str_put(&stream->buf, buf, len);
 }
 
 int buf_writestream_close(git_writestream *s)
@@ -71,7 +70,7 @@ int buf_writestream_close(git_writestream *s)
 void buf_writestream_free(git_writestream *s)
 {
 	struct buf_writestream *stream = (struct buf_writestream *)s;
-	git_buf_dispose(&stream->buf);
+	git_str_dispose(&stream->buf);
 }
 
 void test_filter_file__apply_stream(void)

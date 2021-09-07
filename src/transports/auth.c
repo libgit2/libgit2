@@ -7,17 +7,15 @@
 
 #include "auth.h"
 
-#include "git2.h"
-#include "buffer.h"
 #include "git2/sys/credential.h"
 
 static int basic_next_token(
-	git_buf *out,
+	git_str *out,
 	git_http_auth_context *ctx,
 	git_credential *c)
 {
 	git_credential_userpass_plaintext *cred;
-	git_buf raw = GIT_BUF_INIT;
+	git_str raw = GIT_STR_INIT;
 	int error = GIT_EAUTH;
 
 	GIT_UNUSED(ctx);
@@ -29,11 +27,11 @@ static int basic_next_token(
 
 	cred = (git_credential_userpass_plaintext *)c;
 
-	git_buf_printf(&raw, "%s:%s", cred->username, cred->password);
+	git_str_printf(&raw, "%s:%s", cred->username, cred->password);
 
-	if (git_buf_oom(&raw) ||
-		git_buf_puts(out, "Basic ") < 0 ||
-		git_buf_encode_base64(out, git_buf_cstr(&raw), raw.size) < 0)
+	if (git_str_oom(&raw) ||
+		git_str_puts(out, "Basic ") < 0 ||
+		git_str_encode_base64(out, git_str_cstr(&raw), raw.size) < 0)
 		goto on_error;
 
 	error = 0;
@@ -42,7 +40,7 @@ on_error:
 	if (raw.size)
 		git__memzero(raw.ptr, raw.size);
 
-	git_buf_dispose(&raw);
+	git_str_dispose(&raw);
 	return error;
 }
 

@@ -1,7 +1,6 @@
 #include "clar.h"
 #include "clar_libgit2.h"
 
-#include "buffer.h"
 #include "diff_generate.h"
 
 static git_repository *repo;
@@ -43,7 +42,7 @@ static void assert_email_match(
 	git_buf buf = GIT_BUF_INIT;
 
 	email_for_commit(&buf, commit_id, opts);
-	cl_assert_equal_s(expected, git_buf_cstr(&buf));
+	cl_assert_equal_s(expected, buf.ptr);
 
 	git_buf_dispose(&buf);
 }
@@ -54,15 +53,17 @@ static void assert_subject_match(
 	git_email_create_options *opts)
 {
 	git_buf buf = GIT_BUF_INIT;
-	const char *loc;
+	char *subject, *nl;
 
 	email_for_commit(&buf, commit_id, opts);
 
-	cl_assert((loc = strstr(buf.ptr, "\nSubject: ")) != NULL);
-	git_buf_consume(&buf, (loc + 10));
-	git_buf_truncate_at_char(&buf, '\n');
+	cl_assert((subject = strstr(buf.ptr, "\nSubject: ")) != NULL);
+	subject += 10;
 
-	cl_assert_equal_s(expected, git_buf_cstr(&buf));
+	if ((nl = strchr(subject, '\n')) != NULL)
+		*nl = '\0';
+
+	cl_assert_equal_s(expected, subject);
 
 	git_buf_dispose(&buf);
 }
@@ -327,7 +328,7 @@ void test_email_create__custom_summary_and_body(void)
 	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
 	cl_git_pass(git_email_create_from_diff(&buf, diff, 2, 4, &oid, summary, body, git_commit_author(commit), &opts));
 
-	cl_assert_equal_s(expected, git_buf_cstr(&buf));
+	cl_assert_equal_s(expected, buf.ptr);
 
 	git_diff_free(diff);
 	git_commit_free(commit);

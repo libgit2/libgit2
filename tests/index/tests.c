@@ -28,7 +28,7 @@ static struct test_entry test_entries[] = {
 /* Helpers */
 static void copy_file(const char *src, const char *dst)
 {
-	git_buf source_buf = GIT_BUF_INIT;
+	git_str source_buf = GIT_STR_INIT;
 	git_file dst_fd;
 
 	cl_git_pass(git_futils_readbuffer(&source_buf, src));
@@ -40,28 +40,28 @@ static void copy_file(const char *src, const char *dst)
 	cl_git_pass(p_write(dst_fd, source_buf.ptr, source_buf.size));
 
 cleanup:
-	git_buf_dispose(&source_buf);
+	git_str_dispose(&source_buf);
 	p_close(dst_fd);
 }
 
 static void files_are_equal(const char *a, const char *b)
 {
-	git_buf buf_a = GIT_BUF_INIT;
-	git_buf buf_b = GIT_BUF_INIT;
+	git_str buf_a = GIT_STR_INIT;
+	git_str buf_b = GIT_STR_INIT;
 	int pass;
 
 	if (git_futils_readbuffer(&buf_a, a) < 0)
 		cl_assert(0);
 
 	if (git_futils_readbuffer(&buf_b, b) < 0) {
-		git_buf_dispose(&buf_a);
+		git_str_dispose(&buf_a);
 		cl_assert(0);
 	}
 
 	pass = (buf_a.size == buf_b.size && !memcmp(buf_a.ptr, buf_b.ptr, buf_a.size));
 
-	git_buf_dispose(&buf_a);
-	git_buf_dispose(&buf_b);
+	git_str_dispose(&buf_a);
+	git_str_dispose(&buf_b);
 
 	cl_assert(pass);
 }
@@ -544,12 +544,12 @@ void test_index_tests__add_bypath_to_a_bare_repository_returns_EBAREPO(void)
 static void assert_add_bypath_fails(git_repository *repo, const char *fn)
 {
 	git_index *index;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_assert(git_index_entrycount(index) == 0);
 
-	git_buf_joinpath(&path, "./invalid", fn);
+	git_str_joinpath(&path, "./invalid", fn);
 
 	cl_git_mkfile(path.ptr, NULL);
 	cl_git_fail(git_index_add_bypath(index, fn));
@@ -557,7 +557,7 @@ static void assert_add_bypath_fails(git_repository *repo, const char *fn)
 
 	cl_assert(git_index_entrycount(index) == 0);
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	git_index_free(index);
 }
 
@@ -592,7 +592,7 @@ void test_index_tests__cannot_add_invalid_filename(void)
 static void assert_add_fails(git_repository *repo, const char *fn)
 {
 	git_index *index;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	git_index_entry entry = {{0}};
 
 	cl_git_pass(git_repository_index(&index, repo));
@@ -606,7 +606,7 @@ static void assert_add_fails(git_repository *repo, const char *fn)
 
 	cl_assert(git_index_entrycount(index) == 0);
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	git_index_free(index);
 }
 
@@ -659,7 +659,7 @@ static void assert_write_fails(git_repository *repo, const char *fn_orig)
 	git_index *index;
 	git_oid expected;
 	const git_index_entry *entry;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	char *fn;
 
 	cl_git_pass(git_repository_index(&index, repo));
@@ -673,7 +673,7 @@ static void assert_write_fails(git_repository *repo, const char *fn_orig)
 	replace_char(fn, '/', '_');
 	replace_char(fn, ':', '!');
 
-	git_buf_joinpath(&path, "./invalid", fn);
+	git_str_joinpath(&path, "./invalid", fn);
 
 	cl_git_mkfile(path.ptr, NULL);
 
@@ -691,7 +691,7 @@ static void assert_write_fails(git_repository *repo, const char *fn_orig)
 	p_unlink(path.ptr);
 
 	cl_git_pass(git_index_remove_all(index, NULL, NULL, NULL));
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	git_index_free(index);
 	git__free(fn);
 }

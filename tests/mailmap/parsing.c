@@ -103,15 +103,15 @@ void test_mailmap_parsing__string(void)
 
 void test_mailmap_parsing__windows_string(void)
 {
-	git_buf unixbuf = GIT_BUF_INIT;
-	git_buf winbuf = GIT_BUF_INIT;
+	git_str unixbuf = GIT_STR_INIT;
+	git_str winbuf = GIT_STR_INIT;
 
 	/* Parse with windows-style line endings */
-	git_buf_attach_notowned(&unixbuf, string_mailmap, strlen(string_mailmap));
-	cl_git_pass(git_buf_lf_to_crlf(&winbuf, &unixbuf));
+	git_str_attach_notowned(&unixbuf, string_mailmap, strlen(string_mailmap));
+	cl_git_pass(git_str_lf_to_crlf(&winbuf, &unixbuf));
 
 	cl_git_pass(git_mailmap_from_buffer(&g_mailmap, winbuf.ptr, winbuf.size));
-	git_buf_dispose(&winbuf);
+	git_str_dispose(&winbuf);
 
 	/* We should have parsed all of the entries */
 	check_mailmap_entries(g_mailmap, entries, ARRAY_SIZE(entries));

@@ -33,14 +33,14 @@ void test_submodule_inject_option__url(void)
 {
 	int foundit;
 	git_submodule *sm;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_joinpath(&buf, git_repository_workdir(g_repo), ".gitmodules"));
+	cl_git_pass(git_str_joinpath(&buf, git_repository_workdir(g_repo), ".gitmodules"));
 	cl_git_rewritefile(buf.ptr,
 			   "[submodule \"naughty\"]\n"
 			   "    path = testrepo\n"
 			   "    url = -u./payload\n");
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	/* We do want to find it, but with the appropriate field empty */
 	foundit = 0;
@@ -58,14 +58,14 @@ void test_submodule_inject_option__path(void)
 {
 	int foundit;
 	git_submodule *sm;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_joinpath(&buf, git_repository_workdir(g_repo), ".gitmodules"));
+	cl_git_pass(git_str_joinpath(&buf, git_repository_workdir(g_repo), ".gitmodules"));
 	cl_git_rewritefile(buf.ptr,
 			   "[submodule \"naughty\"]\n"
 			   "    path = --something\n"
 			   "    url = blah.git\n");
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	/* We do want to find it, but with the appropriate field empty */
 	foundit = 0;

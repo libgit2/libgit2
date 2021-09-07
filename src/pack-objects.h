@@ -10,7 +10,7 @@
 
 #include "common.h"
 
-#include "buffer.h"
+#include "str.h"
 #include "hash.h"
 #include "oidmap.h"
 #include "netops.h"
@@ -96,6 +96,6 @@ struct git_packbuilder {
 	bool done;
 };
 
-int git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb);
+int git_packbuilder__write_buf(git_str *buf, git_packbuilder *pb);
 
 #endif

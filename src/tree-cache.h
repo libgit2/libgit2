@@ -11,7 +11,7 @@
 #include "common.h"
 
 #include "pool.h"
-#include "buffer.h"
+#include "str.h"
 #include "git2/oid.h"
 
 typedef struct git_tree_cache {
@@ -24,7 +24,7 @@ typedef struct git_tree_cache {
 	char name[GIT_FLEX_ARRAY];
 } git_tree_cache;
 
-int git_tree_cache_write(git_buf *out, git_tree_cache *tree);
+int git_tree_cache_write(git_str *out, git_tree_cache *tree);
 int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer_size, git_pool *pool);
 void git_tree_cache_invalidate_path(git_tree_cache *tree, const char *path);
 const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char *path);

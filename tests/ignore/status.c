@@ -610,12 +610,12 @@ void test_ignore_status__filenames_with_special_prefixes_do_not_interfere_with_s
 	int i;
 
 	for (i = 0; *(test_cases + i) != NULL; i++) {
-		git_buf file = GIT_BUF_INIT;
+		git_str file = GIT_STR_INIT;
 		char *file_name = *(test_cases + i);
 		git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
 
-		cl_git_pass(git_buf_joinpath(&file, "empty_standard_repo", file_name));
-		cl_git_mkfile(git_buf_cstr(&file), "Please don't ignore me!");
+		cl_git_pass(git_str_joinpath(&file, "empty_standard_repo", file_name));
+		cl_git_mkfile(git_str_cstr(&file), "Please don't ignore me!");
 
 		memset(&st, 0, sizeof(st));
 		cl_git_pass(git_status_foreach(repo, cb_status__single, &st));
@@ -626,7 +626,7 @@ void test_ignore_status__filenames_with_special_prefixes_do_not_interfere_with_s
 		cl_assert(st.status == GIT_STATUS_WT_NEW);
 
 		cl_git_sandbox_cleanup();
-		git_buf_dispose(&file);
+		git_str_dispose(&file);
 	}
 }
 

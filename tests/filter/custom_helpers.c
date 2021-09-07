@@ -8,8 +8,8 @@
 int bitflip_filter_apply(
 	git_filter     *self,
 	void          **payload,
-	git_buf        *to,
-	const git_buf  *from,
+	git_str        *to,
+	const git_str  *from,
 	const git_filter_source *source)
 {
 	const unsigned char *src = (const unsigned char *)from->ptr;
@@ -25,7 +25,7 @@ int bitflip_filter_apply(
 	if (!from->size)
 		return 0;
 
-	cl_git_pass(git_buf_grow(to, from->size));
+	cl_git_pass(git_str_grow(to, from->size));
 
 	dst = (unsigned char *)to->ptr;
 
@@ -70,8 +70,8 @@ git_filter *create_bitflip_filter(void)
 int reverse_filter_apply(
 	git_filter     *self,
 	void          **payload,
-	git_buf        *to,
-	const git_buf  *from,
+	git_str        *to,
+	const git_str  *from,
 	const git_filter_source *source)
 {
 	const unsigned char *src = (const unsigned char *)from->ptr;
@@ -87,7 +87,7 @@ int reverse_filter_apply(
 	if (!from->size)
 		return 0;
 
-	cl_git_pass(git_buf_grow(to, from->size));
+	cl_git_pass(git_str_grow(to, from->size));
 
 	dst = (unsigned char *)to->ptr + from->size - 1;
 

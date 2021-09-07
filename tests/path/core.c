@@ -12,11 +12,11 @@ static void test_make_relative(
 	const char *parent,
 	int expected_status)
 {
-	git_buf buf = GIT_BUF_INIT;
-	git_buf_puts(&buf, path);
+	git_str buf = GIT_STR_INIT;
+	git_str_puts(&buf, path);
 	cl_assert_equal_i(expected_status, git_path_make_relative(&buf, parent));
 	cl_assert_equal_s(expected_path, buf.ptr);
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 }
 
 void test_path_core__make_relative(void)
@@ -373,19 +373,19 @@ static void test_join_unrooted(
 	const char *path,
 	const char *base)
 {
-	git_buf result = GIT_BUF_INIT;
+	git_str result = GIT_STR_INIT;
 	ssize_t root_at;
 
 	cl_git_pass(git_path_join_unrooted(&result, path, base, &root_at));
 	cl_assert_equal_s(expected_result, result.ptr);
 	cl_assert_equal_i(expected_rootlen, root_at);
 
-	git_buf_dispose(&result);
+	git_str_dispose(&result);
 }
 
 void test_path_core__join_unrooted(void)
 {
-	git_buf out = GIT_BUF_INIT;
+	git_str out = GIT_STR_INIT;
 
 	test_join_unrooted("foo", 0, "foo", NULL);
 	test_join_unrooted("foo/bar", 0, "foo/bar", NULL);
@@ -421,7 +421,7 @@ void test_path_core__join_unrooted(void)
 	/* Trailing slash in the base is ignored */
 	test_join_unrooted("c:/foo/bar/foobar", 6, "c:/foo/bar/foobar", "c:/foo/");
 
-	git_buf_dispose(&out);
+	git_str_dispose(&out);
 }
 
 void test_path_core__join_unrooted_respects_funny_windows_roots(void)
