@@ -1307,8 +1307,11 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 
 #if !defined(NO_MMAP) && defined(GIT_WIN32)
 	/*
-	 * Truncate file to undo rounding up to next page_size in append_to_pack only
-	 * when mmap was used, to prevent failures in non-Windows remote filesystems.
+	 * Some non-Windows remote filesystems fail when truncating files if the
+	 * file permissions change after opening the file (done by p_mkstemp).
+	 *
+	 * Truncation is only needed when mmap is used to undo rounding up to next
+	 * page_size in append_to_pack.
 	 */
 	if (p_ftruncate(idx->pack->mwf.fd, idx->pack->mwf.size) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to truncate pack file '%s'", idx->pack->pack_name);
