@@ -34,7 +34,7 @@
 # define GIT_CONTAINER_OF(ptr, type, member) \
 	__builtin_choose_expr( \
 	    __builtin_offsetof(type, member) == 0 && \
-	    __builtin_types_compatible_p(typeof(&((type *) 0)->member), typeof(ptr)), \
+	    __builtin_types_compatible_p(__typeof__(&((type *) 0)->member), __typeof__(ptr)), \
 		((type *) (ptr)), \
 		(void)0)
 #else

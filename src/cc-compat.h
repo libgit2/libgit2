@@ -29,12 +29,6 @@
 #	endif
 #endif
 
-#ifdef __GNUC__
-#	define GIT_TYPEOF(x) (__typeof__(x))
-#else
-#	define GIT_TYPEOF(x)
-#endif
-
 #if defined(__GNUC__)
 #	define GIT_ALIGN(x,size) x __attribute__ ((aligned(size)))
 #elif defined(_MSC_VER)
@@ -46,7 +40,7 @@
 #if defined(__GNUC__)
 # define GIT_UNUSED(x)                                                         \
 	do {                                                                   \
-		typeof(x) _unused __attribute__((unused));                     \
+		__typeof__(x) _unused __attribute__((unused));                 \
 		_unused = (x);                                                 \
 	} while (0)
 #else
