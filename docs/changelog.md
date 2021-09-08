@@ -1,3 +1,13 @@
+v1.?
+----
+
+### Changes or improvements
+
+- Add two new functions, `git_signature_committer_env()` and
+  `git_signature_author_env()`, which create action signatures based on the
+  same environment variables used by the git command line tools, falling
+  back to the default (config) user if need be.
+
 v1.2
 -----
 
@@ -238,7 +248,7 @@ This is a bugfix release with the following changes:
 - Calculating information about renamed files during merges is more
   efficient because dissimilarity about files is now being cached and
   no longer needs to be recomputed.
-  
+
 - The `git_worktree_prune_init_options` has been correctly restored for
   backward compatibility.  In v1.0 it was incorrectly deprecated with a
   typo.
@@ -337,7 +347,7 @@ with v0.28.0.
 
 * Several function signatures have been changed to return an `int` to
   indicate error conditions.  We encourage you to check them for errors
-  in the standard way. 
+  in the standard way.
 
   * `git_attr_cache_flush`
   * `git_error_set_str`
@@ -456,7 +466,7 @@ with v0.28.0.
 
 * Several attribute macros have been renamed: `GIT_ATTR_TRUE` is now
   `GIT_ATTR_IS_TRUE`, `GIT_ATTR_FALSE` is now `GIT_ATTR_IS_FALSE`,
-  `GIT_ATTR_UNSPECIFIED` is now `GIT_ATTR_IS_UNSPECIFIED`.  The 
+  `GIT_ATTR_UNSPECIFIED` is now `GIT_ATTR_IS_UNSPECIFIED`.  The
   attribute enum `git_attr_t` is now `git_attr_value_t` and its
   values have been renamed: `GIT_ATTR_UNSPECIFIED_T` is now
   `GIT_ATTR_VALUE_UNSPECIFIED`, `GIT_ATTR_TRUE_T` is now

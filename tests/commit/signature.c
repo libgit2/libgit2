@@ -1,6 +1,9 @@
 #include "clar_libgit2.h"
 #include "signature.h"
 
+static git_repository *_repo;
+static git_repository *_bare;
+
 static int try_build_signature(const char *name, const char *email, git_time_t time, int offset)
 {
 	git_signature *sign;
@@ -27,6 +30,20 @@ static void assert_name_and_email(
 	cl_assert_equal_s(expected_email, sign->email);
 
 	git_signature_free(sign);
+}
+
+void test_commit_signature__initialize(void)
+{
+	cl_git_pass(git_repository_open(&_repo, cl_fixture("testrepo.git")));
+	cl_git_pass(git_repository_open(&_bare, cl_fixture("empty_bare.git")));
+}
+
+void test_commit_signature__cleanup(void)
+{
+	git_repository_free(_repo);
+	_repo = NULL;
+	git_repository_free(_bare);
+	_bare = NULL;
 }
 
 void test_commit_signature__leading_and_trailing_spaces_are_trimmed(void)
@@ -145,4 +162,106 @@ void test_commit_signature__pos_and_neg_zero_offsets_dont_match(void)
 
 	git_signature_free((git_signature *)with_neg_zero);
 	git_signature_free((git_signature *)with_pos_zero);
+}
+
+void test_commit_signature__author_from_environment(void)
+{
+	git_signature *signature;
+
+	cl_setenv("GIT_AUTHOR_NAME", "Test User");
+	cl_setenv("GIT_AUTHOR_EMAIL", "test@example.com");
+	cl_git_pass(git_signature_author_env(&signature, _repo));
+
+	cl_assert_equal_s("Test User", signature->name);
+	cl_assert_equal_s("test@example.com", signature->email);
+
+	git_signature_free(signature);
+}
+
+void test_commit_signature__author_from_environment_email_fallback(void)
+{
+	git_signature *signature;
+
+	cl_setenv("GIT_AUTHOR_EMAIL", NULL);
+	cl_setenv("EMAIL", "emailtest@example.com");
+	cl_git_pass(git_signature_author_env(&signature, _repo));
+
+	cl_assert_equal_s("emailtest@example.com", signature->email);
+
+	git_signature_free(signature);
+}
+
+void test_commit_signature__committer_from_environment(void)
+{
+	git_signature *signature;
+
+	cl_setenv("GIT_COMMITTER_NAME", "Test User");
+	cl_setenv("GIT_COMMITTER_EMAIL", "test@example.com");
+	cl_git_pass(git_signature_committer_env(&signature, _repo));
+
+	cl_assert_equal_s("Test User", signature->name);
+	cl_assert_equal_s("test@example.com", signature->email);
+
+	git_signature_free(signature);
+}
+
+void test_commit_signature__committer_from_environment_email_fallback(void)
+{
+	git_signature *signature;
+
+	cl_setenv("GIT_COMMITTER_EMAIL", NULL);
+	cl_setenv("EMAIL", "emailtest@example.com");
+	cl_git_pass(git_signature_committer_env(&signature, _repo));
+
+	cl_assert_equal_s("emailtest@example.com", signature->email);
+
+	git_signature_free(signature);
+}
+
+void test_commit_signature__author_config_fallback(void)
+{
+	git_signature *signature;
+
+	cl_setenv("GIT_AUTHOR_NAME", NULL);
+	cl_setenv("GIT_AUTHOR_EMAIL", NULL);
+	cl_setenv("EMAIL", NULL);
+	cl_git_pass(git_signature_author_env(&signature, _repo));
+
+	cl_assert_equal_s("emailfromconfig@example.com", signature->email);
+	cl_assert_equal_s("name from config", signature->name);
+
+	git_signature_free(signature);
+}
+
+void test_commit_signature__committer_config_fallback(void)
+{
+	git_signature *signature;
+
+	cl_setenv("GIT_COMMITTER_NAME", NULL);
+	cl_setenv("GIT_COMMITTER_EMAIL", NULL);
+	cl_setenv("EMAIL", NULL);
+	cl_git_pass(git_signature_committer_env(&signature, _repo));
+
+	cl_assert_equal_s("emailfromconfig@example.com", signature->email);
+	cl_assert_equal_s("name from config", signature->name);
+
+	git_signature_free(signature);
+}
+
+void test_commit_signature__not_found(void)
+{
+	git_signature *signature;
+	int error;
+
+	cl_setenv("GIT_COMMITTER_NAME", NULL);
+	cl_setenv("GIT_COMMITTER_EMAIL", NULL);
+	cl_setenv("GIT_AUTHOR_NAME", NULL);
+	cl_setenv("GIT_AUTHOR_EMAIL", NULL);
+	cl_setenv("EMAIL", NULL);
+
+	error = git_signature_committer_env(&signature, _bare);
+
+	cl_assert_equal_i(GIT_ENOTFOUND, error);
+
+	git_signature_free(signature);
 }

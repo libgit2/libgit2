@@ -61,6 +61,26 @@ static char *extract_trimmed(const char *ptr, size_t len)
 	return git__substrdup(ptr, len);
 }
 
+static int set_buf_from_env(git_buf *buf, const char *env_name)
+{
+	int error;
+	git_buf temp_buf = GIT_BUF_INIT;
+
+	error = git__getenv(&temp_buf, env_name);
+
+	if (error == GIT_ENOTFOUND) {
+		git_error_clear();
+		error = 0;
+	}
+	else if (!error && temp_buf.size > 0) {
+		error = git_buf_sets(buf, git_buf_cstr(&temp_buf));
+	}
+
+	git_buf_dispose(&temp_buf);
+
+	return error;
+}
+
 int git_signature_new(git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset)
 {
 	git_signature *p = NULL;
@@ -194,6 +214,52 @@ int git_signature_default(git_signature **out, git_repository *repo)
 
 	git_config_free(cfg);
 	return error;
+}
+
+int git_signature_from_env(git_signature **out, git_repository *repo, const char *name_var, const char *email_var)
+{
+	git_buf name = GIT_BUF_INIT;
+	git_buf email = GIT_BUF_INIT;
+	git_signature *default_sig;
+	int error;
+
+	*out = NULL;
+
+	error = git_signature_default(&default_sig, repo);
+
+	if (!error) {
+		git_buf_sets(&name, default_sig->name);
+		git_buf_sets(&email, default_sig->email);
+		git_signature_free(default_sig);
+	}
+	else {
+		git_error_clear();
+		error = 0;
+	}
+
+	if (!(error = set_buf_from_env(&name, name_var)) &&
+		!(error = set_buf_from_env(&email, "EMAIL")) &&
+		!(error = set_buf_from_env(&email, email_var))) {
+		if (email.size > 0 && name.size > 0)
+			error = git_signature_now(out, git_buf_cstr(&name), git_buf_cstr(&email));
+		else
+			error = GIT_ENOTFOUND;
+	}
+
+	git_buf_dispose(&name);
+	git_buf_dispose(&email);
+
+	return error;
+}
+
+int git_signature_author_env(git_signature **out, git_repository *repo)
+{
+	return git_signature_from_env(out, repo, "GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL");
+}
+
+int git_signature_committer_env(git_signature **out, git_repository *repo)
+{
+	return git_signature_from_env(out, repo, "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL");
 }
 
 int git_signature__parse(git_signature *sig, const char **buffer_out,

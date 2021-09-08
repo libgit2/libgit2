@@ -9,7 +9,7 @@
 [remote "joshaber"]
 	url = git://github.com/libgit2/libgit2
 [remote "empty-remote-url"]
-	url = 
+	url =
 	pushurl =
 [remote "empty-remote-pushurl"]
 	pushurl =
@@ -34,7 +34,10 @@
    merge = refs/heads/master
 [branch "mergeless"]
    remote = test
-   merge = 
+   merge =
 [branch "mergeandremoteless"]
-   remote = 
-   merge = 
+   remote =
+   merge =
+[user]
+   name = name from config
+   email = emailfromconfig@example.com
