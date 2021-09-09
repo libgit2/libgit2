@@ -405,7 +405,10 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 		goto out;
 
 	/* Checkout worktree's HEAD */
-	coopts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	if (opts != NULL)
+		memcpy(&coopts, &wtopts.checkout_opts, sizeof(coopts));
+	else
+		coopts.checkout_strategy = GIT_CHECKOUT_FORCE;
 	if ((err = git_checkout_head(wt, &coopts)) < 0)
 		goto out;
 
