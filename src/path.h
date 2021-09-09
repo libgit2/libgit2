@@ -85,7 +85,7 @@ extern int git_path_to_dir(git_buf *path);
 /**
  * Ensure string has a trailing '/' if there is space for it.
  */
-extern void git_path_string_to_dir(char* path, size_t size);
+extern void git_path_string_to_dir(char *path, size_t size);
 
 /**
  * Taken from git.git; returns nonzero if the given path is "." or "..".

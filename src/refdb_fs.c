@@ -764,7 +764,7 @@ static bool ref_is_available(
 static int reference_path_available(
 	refdb_fs_backend *backend,
 	const char *new_ref,
-	const char* old_ref,
+	const char *old_ref,
 	int force)
 {
 	size_t i;

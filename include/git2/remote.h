@@ -243,7 +243,7 @@ GIT_EXTERN(const char *) git_remote_pushurl(const git_remote *remote);
  * @param url the url to set
  * @return 0 or an error value
  */
-GIT_EXTERN(int) git_remote_set_url(git_repository *repo, const char *remote, const char* url);
+GIT_EXTERN(int) git_remote_set_url(git_repository *repo, const char *remote, const char *url);
 
 /**
  * Set the remote's url for pushing in the configuration.
@@ -257,7 +257,7 @@ GIT_EXTERN(int) git_remote_set_url(git_repository *repo, const char *remote, con
  * @param url the url to set
  * @return 0, or an error code
  */
-GIT_EXTERN(int) git_remote_set_pushurl(git_repository *repo, const char *remote, const char* url);
+GIT_EXTERN(int) git_remote_set_pushurl(git_repository *repo, const char *remote, const char *url);
 
 /**
  * Set the url for this particular url instance.  The URL in the
@@ -451,7 +451,7 @@ typedef int GIT_CALLBACK(git_push_transfer_progress_cb)(
 	unsigned int current,
 	unsigned int total,
 	size_t bytes,
-	void* payload);
+	void *payload);
 
 /**
  * Represents an update which will be performed on the remote during push

@@ -1151,7 +1151,7 @@ static void deletes_by_oid_free(git_oidmap *map) {
 	git_oidmap_free(map);
 }
 
-static int deletes_by_oid_enqueue(git_oidmap *map, git_pool* pool, const git_oid *id, size_t idx)
+static int deletes_by_oid_enqueue(git_oidmap *map, git_pool *pool, const git_oid *id, size_t idx)
 {
 	deletes_by_oid_queue *queue;
 	size_t *array_entry;

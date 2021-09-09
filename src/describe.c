@@ -391,7 +391,7 @@ static int show_suffix(
 	git_buf *buf,
 	int depth,
 	git_repository *repo,
-	const git_oid* id,
+	const git_oid *id,
 	unsigned int abbrev_size)
 {
 	int error, size = 0;

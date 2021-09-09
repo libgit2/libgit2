@@ -728,7 +728,7 @@ int git_commit_graph_writer_add_revwalk(git_commit_graph_writer *w, git_revwalk 
 	git_oid id;
 	git_repository *repo = git_revwalk_repository(walk);
 	git_commit *commit;
-	struct packed_commit* packed_commit;
+	struct packed_commit *packed_commit;
 
 	while ((git_revwalk_next(&id, walk)) == 0) {
 		error = git_commit_lookup(&commit, repo, &id);

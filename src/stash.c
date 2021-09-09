@@ -56,7 +56,7 @@ static int append_abbreviated_oid(git_buf *out, const git_oid *b_commit)
 	return git_buf_oom(out) ? -1 : 0;
 }
 
-static int append_commit_description(git_buf *out, git_commit* commit)
+static int append_commit_description(git_buf *out, git_commit *commit)
 {
 	const char *summary = git_commit_summary(commit);
 	GIT_ERROR_CHECK_ALLOC(summary);

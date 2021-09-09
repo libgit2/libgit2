@@ -677,7 +677,7 @@ int git_remote_set_instance_pushurl(git_remote *remote, const char *url)
 	return 0;
 }
 
-int git_remote_set_pushurl(git_repository *repo, const char *remote, const char* url)
+int git_remote_set_pushurl(git_repository *repo, const char *remote, const char *url)
 {
 	return set_url(repo, remote, CONFIG_PUSHURL_FMT, url);
 }

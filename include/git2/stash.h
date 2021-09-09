@@ -200,7 +200,7 @@ GIT_EXTERN(int) git_stash_apply(
  */
 typedef int GIT_CALLBACK(git_stash_cb)(
 	size_t index,
-	const char* message,
+	const char *message,
 	const git_oid *stash_id,
 	void *payload);
 

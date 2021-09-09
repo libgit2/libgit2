@@ -22,7 +22,7 @@
 int git_reset_default(
 	git_repository *repo,
 	const git_object *target,
-	const git_strarray* pathspecs)
+	const git_strarray *pathspecs)
 {
 	git_object *commit = NULL;
 	git_tree *tree = NULL;

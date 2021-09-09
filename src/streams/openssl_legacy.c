@@ -36,7 +36,7 @@ int OPENSSL_init_ssl__legacy(uint64_t opts, const void *settings)
 	return 0;
 }
 
-BIO_METHOD* BIO_meth_new__legacy(int type, const char *name)
+BIO_METHOD *BIO_meth_new__legacy(int type, const char *name)
 {
 	BIO_METHOD *meth = git__calloc(1, sizeof(BIO_METHOD));
 	if (!meth) {

@@ -249,7 +249,7 @@ int git_reference_dwim(git_reference **out, git_repository *repo, const char *re
 	git_reference *ref;
 	git_buf refnamebuf = GIT_BUF_INIT, name = GIT_BUF_INIT;
 
-	static const char* formatters[] = {
+	static const char *formatters[] = {
 		"%s",
 		GIT_REFS_DIR "%s",
 		GIT_REFS_TAGS_DIR "%s",
@@ -1246,7 +1246,7 @@ int git_reference_is_note(const git_reference *ref)
 	return git_reference__is_note(ref->name);
 }
 
-static int peel_error(int error, const git_reference *ref, const char* msg)
+static int peel_error(int error, const git_reference *ref, const char *msg)
 {
 	git_error_set(
 		GIT_ERROR_INVALID,
