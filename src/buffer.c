@@ -600,6 +600,13 @@ void git_buf_shorten(git_buf *buf, size_t amount)
 		git_buf_clear(buf);
 }
 
+void git_buf_truncate_at_char(git_buf *buf, char separator)
+{
+	ssize_t idx = git_buf_find(buf, separator);
+	if (idx >= 0)
+		git_buf_truncate(buf, (size_t)idx);
+}
+
 void git_buf_rtruncate_at_char(git_buf *buf, char separator)
 {
 	ssize_t idx = git_buf_rfind_next(buf, separator);
