@@ -294,6 +294,102 @@ typedef git_configmap git_cvar_map;
 
 /**@}*/
 
+/** @name Deprecated Diff Functions and Constants
+ *
+ * These functions and enumeration values are retained for backward
+ * compatibility.  The newer versions of these functions and values
+ * should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Formatting options for diff e-mail generation
+ */
+typedef enum {
+	/** Normal patch, the default */
+	GIT_DIFF_FORMAT_EMAIL_NONE = 0,
+
+	/** Don't insert "[PATCH]" in the subject header*/
+	GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER = (1 << 0),
+
+} git_diff_format_email_flags_t;
+
+/**
+ * Options for controlling the formatting of the generated e-mail.
+ */
+typedef struct {
+	unsigned int version;
+
+	/** see `git_diff_format_email_flags_t` above */
+	uint32_t flags;
+
+	/** This patch number */
+	size_t patch_no;
+
+	/** Total number of patches in this series */
+	size_t total_patches;
+
+	/** id to use for the commit */
+	const git_oid *id;
+
+	/** Summary of the change */
+	const char *summary;
+
+	/** Commit message's body */
+	const char *body;
+
+	/** Author of the change */
+	const git_signature *author;
+} git_diff_format_email_options;
+
+#define GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION 1
+#define GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT {GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION, 0, 1, 1, NULL, NULL, NULL, NULL}
+
+/**
+ * Create an e-mail ready patch from a diff.
+ *
+ * @deprecated git_email_create_from_diff
+ * @see git_email_create_from_diff
+ */
+GIT_EXTERN(int) git_diff_format_email(
+	git_buf *out,
+	git_diff *diff,
+	const git_diff_format_email_options *opts);
+
+/**
+ * Create an e-mail ready patch for a commit.
+ *
+ * @deprecated git_email_create_from_commit
+ * @see git_email_create_from_commit
+ */
+GIT_EXTERN(int) git_diff_commit_as_email(
+	git_buf *out,
+	git_repository *repo,
+	git_commit *commit,
+	size_t patch_no,
+	size_t total_patches,
+	uint32_t flags,
+	const git_diff_options *diff_opts);
+
+/**
+ * Initialize git_diff_format_email_options structure
+ *
+ * Initializes a `git_diff_format_email_options` with default values. Equivalent
+ * to creating an instance with GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT.
+ *
+ * @param opts The `git_blame_options` struct to initialize.
+ * @param version The struct version; pass `GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_diff_format_email_options_init(
+	git_diff_format_email_options *opts,
+	unsigned int version);
+
+/**@}*/
+
 /** @name Deprecated Error Functions and Constants
  *
  * These functions and enumeration values are retained for backward

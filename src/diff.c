@@ -7,13 +7,15 @@
 
 #include "diff.h"
 
-#include "git2/version.h"
-#include "git2/email.h"
-#include "diff_generate.h"
+#include "common.h"
 #include "patch.h"
 #include "email.h"
 #include "commit.h"
 #include "index.h"
+#include "diff_generate.h"
+
+#include "git2/version.h"
+#include "git2/email.h"
 
 struct patch_id_args {
 	git_hash_ctx ctx;
@@ -152,6 +154,8 @@ int git_diff_foreach(
 	return error;
 }
 
+#ifndef GIT_DEPRECATE_HARD
+
 int git_diff_format_email(
 	git_buf *out,
 	git_diff *diff,
@@ -216,35 +220,16 @@ int git_diff_commit_as_email(
 	return error;
 }
 
-int git_diff_options_init(git_diff_options *opts, unsigned int version)
-{
-	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
-		opts, version, git_diff_options, GIT_DIFF_OPTIONS_INIT);
-	return 0;
-}
-
-#ifndef GIT_DEPRECATE_HARD
 int git_diff_init_options(git_diff_options *opts, unsigned int version)
 {
 	return git_diff_options_init(opts, version);
 }
-#endif
 
-int git_diff_find_options_init(
-	git_diff_find_options *opts, unsigned int version)
-{
-	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
-		opts, version, git_diff_find_options, GIT_DIFF_FIND_OPTIONS_INIT);
-	return 0;
-}
-
-#ifndef GIT_DEPRECATE_HARD
 int git_diff_find_init_options(
 	git_diff_find_options *opts, unsigned int version)
 {
 	return git_diff_find_options_init(opts, version);
 }
-#endif
 
 int git_diff_format_email_options_init(
 	git_diff_format_email_options *opts, unsigned int version)
@@ -255,13 +240,28 @@ int git_diff_format_email_options_init(
 	return 0;
 }
 
-#ifndef GIT_DEPRECATE_HARD
 int git_diff_format_email_init_options(
 	git_diff_format_email_options *opts, unsigned int version)
 {
 	return git_diff_format_email_options_init(opts, version);
 }
+
 #endif
+
+int git_diff_options_init(git_diff_options *opts, unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_diff_options, GIT_DIFF_OPTIONS_INIT);
+	return 0;
+}
+
+int git_diff_find_options_init(
+	git_diff_find_options *opts, unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_diff_find_options, GIT_DIFF_FIND_OPTIONS_INIT);
+	return 0;
+}
 
 static int flush_hunk(git_oid *result, git_hash_ctx *ctx)
 {
