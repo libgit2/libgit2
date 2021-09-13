@@ -393,7 +393,7 @@ IDE_SPLIT_SOURCES(git2)
 
 if(SONAME)
 	set_target_properties(git2 PROPERTIES VERSION ${libgit2_VERSION})
-	set_target_properties(git2 PROPERTIES SOVERSION "${libgit2_VERSION_MAJOR}.${libgit2_VERSION_MINOR}")
+	set_target_properties(git2 PROPERTIES SOVERSION "${libgit2_VERSION_MAJOR}")
 	if(LIBGIT2_FILENAME)
 		target_compile_definitions(git2 PRIVATE LIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
 		set_target_properties(git2 PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})

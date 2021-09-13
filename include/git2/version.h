@@ -13,6 +13,6 @@
 #define LIBGIT2_VER_REVISION 0
 #define LIBGIT2_VER_PATCH 0
 
-#define LIBGIT2_SOVERSION "1.2"
+#define LIBGIT2_SOVERSION "1"
 
 #endif
