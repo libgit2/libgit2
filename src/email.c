@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "email.h"
+
 #include "buffer.h"
 #include "common.h"
 #include "diff_generate.h"
@@ -187,7 +189,7 @@ static int append_patches(git_buf *out, git_diff *diff)
 	return error;
 }
 
-int git_email_create_from_diff(
+int git_email__append_from_diff(
 	git_buf *out,
 	git_diff *diff,
 	size_t patch_idx,
@@ -223,6 +225,29 @@ int git_email_create_from_diff(
 	    (error = append_diffstat(out, diff)) == 0 &&
 	    (error = append_patches(out, diff)) == 0)
 		error = git_buf_puts(out, "--\nlibgit2 " LIBGIT2_VERSION "\n\n");
+
+	return error;
+}
+
+int git_email_create_from_diff(
+	git_buf *out,
+	git_diff *diff,
+	size_t patch_idx,
+	size_t patch_count,
+	const git_oid *commit_id,
+	const char *summary,
+	const char *body,
+	const git_signature *author,
+	const git_email_create_options *given_opts)
+{
+	int error;
+
+	git_buf_sanitize(out);
+	git_buf_clear(out);
+
+	error = git_email__append_from_diff(out, diff, patch_idx,
+		patch_count, commit_id, summary, body, author,
+		given_opts);
 
 	return error;
 }
