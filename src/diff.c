@@ -8,6 +8,7 @@
 #include "diff.h"
 
 #include "git2/version.h"
+#include "git2/email.h"
 #include "diff_generate.h"
 #include "patch.h"
 #include "commit.h"
@@ -323,26 +324,28 @@ int git_diff_commit_as_email(
 	const git_diff_options *diff_opts)
 {
 	git_diff *diff = NULL;
-	git_diff_format_email_options opts =
-		GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
+	git_email_create_options opts = GIT_EMAIL_CREATE_OPTIONS_INIT;
+	const git_oid *commit_id;
+	const char *summary, *body;
+	const git_signature *author;
 	int error;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(commit);
 
-	opts.flags = flags;
-	opts.patch_no = patch_no;
-	opts.total_patches = total_patches;
-	opts.id = git_commit_id(commit);
-	opts.summary = git_commit_summary(commit);
-	opts.body = git_commit_body(commit);
-	opts.author = git_commit_author(commit);
+	commit_id = git_commit_id(commit);
+	summary = git_commit_summary(commit);
+	body = git_commit_body(commit);
+	author = git_commit_author(commit);
+
+	if ((flags & GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER) != 0)
+		opts.subject_prefix = "";
 
 	if ((error = git_diff__commit(&diff, repo, commit, diff_opts)) < 0)
 		return error;
 
-	error = git_diff_format_email(out, diff, &opts);
+	error = git_email_create_from_diff(out, diff, patch_no, total_patches, commit_id, summary, body, author, &opts);
 
 	git_diff_free(diff);
 	return error;
