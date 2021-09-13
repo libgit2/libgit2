@@ -2,6 +2,7 @@
 #include "clar_libgit2.h"
 
 #include "buffer.h"
+#include "diff_generate.h"
 
 static git_repository *repo;
 
@@ -111,27 +112,60 @@ void test_email_create__commit(void)
 		email, "9264b96c6d104d0e07ae33d3007b6a48246c6f92", NULL);
 }
 
-void test_email_create__mode_change(void)
+void test_email_create__custom_summary_and_body(void)
 {
-	const char *expected =
-	"From 7ade76dd34bba4733cf9878079f9fd4a456a9189 Mon Sep 17 00:00:00 2001\n" \
-	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
-	"Date: Thu, 10 Apr 2014 10:05:03 +0200\n" \
-	"Subject: [PATCH] Update permissions\n" \
+	const char *expected = "From 627e7e12d87e07a83fad5b6bfa25e86ead4a5270 Mon Sep 17 00:00:00 2001\n" \
+	"From: Patrick Steinhardt <ps@pks.im>\n" \
+	"Date: Tue, 24 Nov 2015 13:34:39 +0100\n" \
+	"Subject: [PPPPPATCH 2/4] This is a subject\n" \
 	"\n" \
+	"Modify content of file3.txt by appending a new line. Make this\n" \
+	"commit message somewhat longer to test behavior with newlines\n" \
+	"embedded in the message body.\n" \
+	"\n" \
+	"Also test if new paragraphs are included correctly.\n" \
 	"---\n" \
-	" file1.txt.renamed | 0\n" \
-	" 1 file changed, 0 insertions(+), 0 deletions(-)\n" \
-	" mode change 100644 => 100755 file1.txt.renamed\n" \
+	" file3.txt | 1 +\n" \
+	" 1 file changed, 1 insertion(+)\n" \
 	"\n" \
-	"diff --git a/file1.txt.renamed b/file1.txt.renamed\n" \
-	"old mode 100644\n" \
-	"new mode 100755\n" \
+	"diff --git a/file3.txt b/file3.txt\n" \
+	"index 9a2d780..7309653 100644\n" \
+	"--- a/file3.txt\n" \
+	"+++ b/file3.txt\n" \
+	"@@ -3,3 +3,4 @@ file3!\n" \
+	" file3\n" \
+	" file3\n" \
+	" file3\n" \
+	"+file3\n" \
 	"--\n" \
 	"libgit2 " LIBGIT2_VERSION "\n" \
 	"\n";
 
-	assert_email_match(expected, "7ade76dd34bba4733cf9878079f9fd4a456a9189", NULL);
+	const char *summary = "This is a subject\nwith\nnewlines";
+	const char *body = "Modify content of file3.txt by appending a new line. Make this\n" \
+	"commit message somewhat longer to test behavior with newlines\n" \
+	"embedded in the message body.\n" \
+	"\n" \
+	"Also test if new paragraphs are included correctly.";
+
+	git_oid oid;
+	git_commit *commit = NULL;
+	git_diff *diff = NULL;
+	git_buf buf = GIT_BUF_INIT;
+	git_email_create_options opts = GIT_EMAIL_CREATE_OPTIONS_INIT;
+
+	opts.subject_prefix = "PPPPPATCH";
+
+	git_oid_fromstr(&oid, "627e7e12d87e07a83fad5b6bfa25e86ead4a5270");
+	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
+	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
+	cl_git_pass(git_email_create_from_diff(&buf, diff, 2, 4, &oid, summary, body, git_commit_author(commit), &opts));
+
+	cl_assert_equal_s(expected, git_buf_cstr(&buf));
+
+	git_diff_free(diff);
+	git_commit_free(commit);
+	git_buf_dispose(&buf);
 }
 
 void test_email_create__commit_subjects(void)

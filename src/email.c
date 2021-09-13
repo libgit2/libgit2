@@ -38,9 +38,6 @@ static int append_prefix(
 	const char *subject_prefix = opts->subject_prefix ?
 		opts->subject_prefix : "PATCH";
 
-	if (!include_prefix(patch_count, opts))
-		return 0;
-
 	git_buf_putc(out, '[');
 
 	if (*subject_prefix)
@@ -66,47 +63,65 @@ static int append_prefix(
 		               patch_count + (start_number - 1));
 	}
 
-	git_buf_puts(out, "] ");
+	git_buf_puts(out, "]");
 
 	return git_buf_oom(out) ? -1 : 0;
 }
 
 static int append_subject(
 	git_buf *out,
-	git_commit *commit,
 	size_t patch_idx,
 	size_t patch_count,
+	const char *summary,
 	git_email_create_options *opts)
 {
+	bool prefix = include_prefix(patch_count, opts);
+	size_t summary_len = summary ? strlen(summary) : 0;
 	int error;
 
-	if ((error = git_buf_puts(out, "Subject: ")) < 0 ||
-	    (error = append_prefix(out, patch_idx, patch_count, opts)) < 0 ||
-	    (error = git_buf_puts(out, git_commit_summary(commit))) < 0 ||
-	    (error = git_buf_putc(out, '\n')) < 0)
+	if (summary_len) {
+		const char *nl = strchr(summary, '\n');
+
+		if (nl)
+			summary_len = (nl - summary);
+	}
+
+	if ((error = git_buf_puts(out, "Subject: ")) < 0)
 		return error;
 
-	return 0;
+	if (prefix &&
+	    (error = append_prefix(out, patch_idx, patch_count, opts)) < 0)
+		return error;
+
+	if (prefix && summary_len && (error = git_buf_putc(out, ' ')) < 0)
+		return error;
+
+	if (summary_len &&
+	    (error = git_buf_put(out, summary, summary_len)) < 0)
+		return error;
+
+	return git_buf_putc(out, '\n');
 }
 
 static int append_header(
 	git_buf *out,
-	git_commit *commit,
 	size_t patch_idx,
 	size_t patch_count,
+	const git_oid *commit_id,
+	const char *summary,
+	const git_signature *author,
 	git_email_create_options *opts)
 {
-	const git_signature *author = git_commit_author(commit);
 	char id[GIT_OID_HEXSZ];
 	char date[GIT_DATE_RFC2822_SZ];
 	int error;
 
-	if ((error = git_oid_fmt(id, git_commit_id(commit))) < 0 ||
+	if ((error = git_oid_fmt(id, commit_id)) < 0 ||
 	    (error = git_buf_printf(out, "From %.*s %s\n", GIT_OID_HEXSZ, id, EMAIL_TIMESTAMP)) < 0 ||
 	    (error = git_buf_printf(out, "From: %s <%s>\n", author->name, author->email)) < 0 ||
 	    (error = git__date_rfc2822_fmt(date, sizeof(date), &author->when)) < 0 ||
 	    (error = git_buf_printf(out, "Date: %s\n", date)) < 0 ||
-	    (error = append_subject(out, commit, patch_idx, patch_count, opts)) < 0)
+	    (error = append_subject(out, patch_idx, patch_count, summary, opts)) < 0)
 		return error;
 
 	if ((error = git_buf_putc(out, '\n')) < 0)
@@ -115,9 +130,8 @@ static int append_header(
 	return 0;
 }
 
-static int append_body(git_buf *out, git_commit *commit)
+static int append_body(git_buf *out, const char *body)
 {
-	const char *body = git_commit_body(commit);
 	size_t body_len;
 	int error;
 
@@ -173,18 +187,25 @@ static int append_patches(git_buf *out, git_diff *diff)
 	return error;
 }
 
-int git_email_create_from_commit(
+int git_email_create_from_diff(
 	git_buf *out,
-	git_commit *commit,
+	git_diff *diff,
+	size_t patch_idx,
+	size_t patch_count,
+	const git_oid *commit_id,
+	const char *summary,
+	const char *body,
+	const git_signature *author,
 	const git_email_create_options *given_opts)
 {
-	git_diff *diff = NULL;
 	git_email_create_options opts = GIT_EMAIL_CREATE_OPTIONS_INIT;
-	git_repository *repo;
-	int error = 0;
+	int error;
 
 	GIT_ASSERT_ARG(out);
-	GIT_ASSERT_ARG(commit);
+	GIT_ASSERT_ARG(diff);
+	GIT_ASSERT_ARG(!patch_idx || patch_idx <= patch_count);
+	GIT_ASSERT_ARG(commit_id);
+	GIT_ASSERT_ARG(author);
 
 	GIT_ERROR_CHECK_VERSION(given_opts,
 		GIT_EMAIL_CREATE_OPTIONS_VERSION,
@@ -196,16 +217,49 @@ int git_email_create_from_commit(
 	git_buf_sanitize(out);
 	git_buf_clear(out);
 
-	repo = git_commit_owner(commit);
-
-	if ((error = git_diff__commit(&diff, repo, commit, &opts.diff_opts)) == 0 &&
-	    (error = append_header(out, commit, 1, 1, &opts)) == 0 &&
-	    (error = append_body(out, commit)) == 0 &&
+	if ((error = append_header(out, patch_idx, patch_count, commit_id, summary, author, &opts)) == 0 &&
+	    (error = append_body(out, body)) == 0 &&
 	    (error = git_buf_puts(out, "---\n")) == 0 &&
 	    (error = append_diffstat(out, diff)) == 0 &&
 	    (error = append_patches(out, diff)) == 0)
 		error = git_buf_puts(out, "--\nlibgit2 " LIBGIT2_VERSION "\n\n");
 
+	return error;
+}
+
+int git_email_create_from_commit(
+	git_buf *out,
+	git_commit *commit,
+	const git_email_create_options *opts)
+{
+	const git_diff_options *diff_opts;
+	git_diff *diff = NULL;
+	git_repository *repo;
+	const git_signature *author;
+	const char *summary, *body;
+	const git_oid *commit_id;
+	int error = -1;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(commit);
+
+	GIT_ERROR_CHECK_VERSION(opts,
+		GIT_EMAIL_CREATE_OPTIONS_VERSION,
+		"git_email_create_options");
+
+	repo = git_commit_owner(commit);
+	author = git_commit_author(commit);
+	summary = git_commit_summary(commit);
+	body = git_commit_body(commit);
+	commit_id = git_commit_id(commit);
+	diff_opts = opts ? &opts->diff_opts : NULL;
+
+	if ((error = git_diff__commit(&diff, repo, commit, diff_opts)) < 0)
+		goto done;
+
+	error = git_email_create_from_diff(out, diff, 1, 1, commit_id, summary, body, author, opts);
+
+done:
 	git_diff_free(diff);
 	return error;
 }
