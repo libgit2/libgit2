@@ -327,7 +327,6 @@ void test_diff_format_email__invalid_no(void)
 	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
 	cl_git_fail(git_diff_format_email(&buf, diff, &opts));
 	cl_git_fail(git_diff_commit_as_email(&buf, repo, commit, 2, 1, 0, NULL));
-	cl_git_fail(git_diff_commit_as_email(&buf, repo, commit, 0, 0, 0, NULL));
 
 	git_diff_free(diff);
 	git_commit_free(commit);
