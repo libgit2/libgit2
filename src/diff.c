@@ -11,6 +11,7 @@
 #include "git2/email.h"
 #include "diff_generate.h"
 #include "patch.h"
+#include "email.h"
 #include "commit.h"
 #include "index.h"
 
@@ -151,97 +152,12 @@ int git_diff_foreach(
 	return error;
 }
 
-static int diff_format_email_append_header_tobuf(
-	git_buf *out,
-	const git_oid *id,
-	const git_signature *author,
-	const char *summary,
-	const char *body,
-	size_t patch_no,
-	size_t total_patches,
-	bool exclude_patchno_marker)
-{
-	char idstr[GIT_OID_HEXSZ + 1];
-	char date_str[GIT_DATE_RFC2822_SZ];
-	int error = 0;
-
-	git_oid_fmt(idstr, id);
-	idstr[GIT_OID_HEXSZ] = '\0';
-
-	if ((error = git__date_rfc2822_fmt(date_str, sizeof(date_str),
-		&author->when)) < 0)
-		return error;
-
-	error = git_buf_printf(out,
-				"From %s Mon Sep 17 00:00:00 2001\n" \
-				"From: %s <%s>\n" \
-				"Date: %s\n" \
-				"Subject: ",
-				idstr,
-				author->name, author->email,
-				date_str);
-
-	if (error < 0)
-		return error;
-
-	if (!exclude_patchno_marker) {
-		if (total_patches == 1) {
-			error = git_buf_puts(out, "[PATCH] ");
-		} else {
-			error = git_buf_printf(out, "[PATCH %"PRIuZ"/%"PRIuZ"] ",
-				patch_no, total_patches);
-		}
-
-		if (error < 0)
-			return error;
-	}
-
-	error = git_buf_printf(out, "%s\n\n", summary);
-
-	if (body) {
-		git_buf_puts(out, body);
-
-		if (out->ptr[out->size - 1] != '\n')
-			git_buf_putc(out, '\n');
-	}
-
-	return error;
-}
-
-static int diff_format_email_append_patches_tobuf(
-	git_buf *out,
-	git_diff *diff)
-{
-	size_t i, deltas;
-	int error = 0;
-
-	deltas = git_diff_num_deltas(diff);
-
-	for (i = 0; i < deltas; ++i) {
-		git_patch *patch = NULL;
-
-		if ((error = git_patch_from_diff(&patch, diff, i)) >= 0)
-			error = git_patch_to_buf(out, patch);
-
-		git_patch_free(patch);
-
-		if (error < 0)
-			break;
-	}
-
-	return error;
-}
-
 int git_diff_format_email(
 	git_buf *out,
 	git_diff *diff,
 	const git_diff_format_email_options *opts)
 {
-	git_diff_stats *stats = NULL;
-	char *summary = NULL, *loc = NULL;
-	bool ignore_marker;
-	unsigned int format_flags = 0;
-	size_t allocsize;
+	git_email_create_options email_create_opts = GIT_EMAIL_CREATE_OPTIONS_INIT;
 	int error;
 
 	GIT_ASSERT_ARG(out);
@@ -252,64 +168,13 @@ int git_diff_format_email(
 		GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION,
 		"git_format_email_options");
 
-	ignore_marker = (opts->flags &
-		GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER) != 0;
+	if ((opts->flags & GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER) != 0)
+		email_create_opts.subject_prefix = "";
 
-	if (!ignore_marker) {
-		if (opts->patch_no > opts->total_patches) {
-			git_error_set(GIT_ERROR_INVALID,
-				"patch %"PRIuZ" out of range. max %"PRIuZ,
-				opts->patch_no, opts->total_patches);
-			return -1;
-		}
 
-		if (opts->patch_no == 0) {
-			git_error_set(GIT_ERROR_INVALID,
-				"invalid patch no %"PRIuZ". should be >0", opts->patch_no);
-			return -1;
-		}
-	}
-
-	/* the summary we receive may not be clean.
-	 * it could potentially contain new line characters
-	 * or not be set, sanitize, */
-	if ((loc = strpbrk(opts->summary, "\r\n")) != NULL) {
-		size_t offset = 0;
-
-		if ((offset = (loc - opts->summary)) == 0) {
-			git_error_set(GIT_ERROR_INVALID, "summary is empty");
-			error = -1;
-			goto on_error;
-		}
-
-		GIT_ERROR_CHECK_ALLOC_ADD(&allocsize, offset, 1);
-		summary = git__calloc(allocsize, sizeof(char));
-		GIT_ERROR_CHECK_ALLOC(summary);
-
-		strncpy(summary, opts->summary, offset);
-	}
-
-	error = diff_format_email_append_header_tobuf(out,
-		opts->id, opts->author, summary == NULL ? opts->summary : summary,
-		opts->body, opts->patch_no, opts->total_patches, ignore_marker);
-
-	if (error < 0)
-		goto on_error;
-
-	format_flags = GIT_DIFF_STATS_FULL | GIT_DIFF_STATS_INCLUDE_SUMMARY;
-
-	if ((error = git_buf_puts(out, "---\n")) < 0 ||
-		(error = git_diff_get_stats(&stats, diff)) < 0 ||
-		(error = git_diff_stats_to_buf(out, stats, format_flags, 0)) < 0 ||
-		(error = git_buf_putc(out, '\n')) < 0 ||
-		(error = diff_format_email_append_patches_tobuf(out, diff)) < 0)
-			goto on_error;
-
-	error = git_buf_puts(out, "--\nlibgit2 " LIBGIT2_VERSION "\n\n");
-
-on_error:
-	git__free(summary);
-	git_diff_stats_free(stats);
+	error = git_email__append_from_diff(out, diff, opts->patch_no,
+		opts->total_patches, opts->id, opts->summary, opts->body,
+		opts->author, &email_create_opts);
 
 	return error;
 }
