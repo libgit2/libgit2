@@ -136,4 +136,8 @@ void test_remote_httpproxy__env(void)
 	/* configuration overrides environment variables */
 	cl_setenv("NO_PROXY", "github.none");
 	assert_config_match("http.https://github.com.proxy", "http://localhost:11/");
+
+	/* empty env behaves like unset env */
+	cl_setenv("HTTPS_PROXY", "");
+	assert_proxy_is(NULL);
 }
