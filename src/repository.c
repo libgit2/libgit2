@@ -2850,8 +2850,8 @@ cleanup:
 }
 
 int git_repository_set_head(
-	git_repository* repo,
-	const char* refname)
+	git_repository *repo,
+	const char *refname)
 {
 	git_reference *ref = NULL, *current = NULL, *new_head = NULL;
 	git_buf log_message = GIT_BUF_INIT;
@@ -2900,8 +2900,8 @@ cleanup:
 }
 
 int git_repository_set_head_detached(
-	git_repository* repo,
-	const git_oid* commitish)
+	git_repository *repo,
+	const git_oid *commitish)
 {
 	return detach(repo, commitish, NULL);
 }
@@ -2916,7 +2916,7 @@ int git_repository_set_head_detached_from_annotated(
 	return detach(repo, git_annotated_commit_id(commitish), commitish->description);
 }
 
-int git_repository_detach_head(git_repository* repo)
+int git_repository_detach_head(git_repository *repo)
 {
 	git_reference *old_head = NULL,	*new_head = NULL, *current = NULL;
 	git_object *object = NULL;

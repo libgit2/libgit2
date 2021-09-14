@@ -674,7 +674,7 @@ void git_note_free(git_note *note)
 }
 
 static int process_entry_path(
-	const char* entry_path,
+	const char *entry_path,
 	git_oid *annotated_object_id)
 {
 	int error = 0;
@@ -796,8 +796,8 @@ cleanup:
 }
 
 int git_note_next(
-	git_oid* note_id,
-	git_oid* annotated_id,
+	git_oid *note_id,
+	git_oid *annotated_id,
 	git_note_iterator *it)
 {
 	int error;

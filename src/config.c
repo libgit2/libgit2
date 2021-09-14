@@ -511,7 +511,7 @@ int git_config_backend_foreach_match(
 	void *payload)
 {
 	git_config_entry *entry;
-	git_config_iterator* iter;
+	git_config_iterator *iter;
 	git_regexp regex;
 	int error = 0;
 

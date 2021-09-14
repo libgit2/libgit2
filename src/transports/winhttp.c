@@ -250,7 +250,7 @@ static int acquire_fallback_cred(
 		hCoInitResult = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
 		if (SUCCEEDED(hCoInitResult) || hCoInitResult == RPC_E_CHANGED_MODE) {
-			IInternetSecurityManager* pISM;
+			IInternetSecurityManager *pISM;
 
 			/* And if the target URI is in the My Computer, Intranet, or Trusted zones */
 			if (SUCCEEDED(CoCreateInstance(&CLSID_InternetSecurityManager, NULL,

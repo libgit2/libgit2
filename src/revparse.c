@@ -14,7 +14,7 @@
 
 #include "git2.h"
 
-static int maybe_sha_or_abbrev(git_object** out, git_repository *repo, const char *spec, size_t speclen)
+static int maybe_sha_or_abbrev(git_object **out, git_repository *repo, const char *spec, size_t speclen)
 {
 	git_oid oid;
 
@@ -24,7 +24,7 @@ static int maybe_sha_or_abbrev(git_object** out, git_repository *repo, const cha
 	return git_object_lookup_prefix(out, repo, &oid, speclen, GIT_OBJECT_ANY);
 }
 
-static int maybe_sha(git_object** out, git_repository *repo, const char *spec)
+static int maybe_sha(git_object **out, git_repository *repo, const char *spec)
 {
 	size_t speclen = strlen(spec);
 
@@ -34,7 +34,7 @@ static int maybe_sha(git_object** out, git_repository *repo, const char *spec)
 	return maybe_sha_or_abbrev(out, repo, spec, speclen);
 }
 
-static int maybe_abbrev(git_object** out, git_repository *repo, const char *spec)
+static int maybe_abbrev(git_object **out, git_repository *repo, const char *spec)
 {
 	size_t speclen = strlen(spec);
 
@@ -310,7 +310,7 @@ cleanup:
 	return error;
 }
 
-static int handle_at_syntax(git_object **out, git_reference **ref, const char *spec, size_t identifier_len, git_repository* repo, const char *curly_braces_content)
+static int handle_at_syntax(git_object **out, git_reference **ref, const char *spec, size_t identifier_len, git_repository *repo, const char *curly_braces_content)
 {
 	bool is_numeric;
 	int parsed = 0, error = -1;

@@ -476,11 +476,11 @@ static int request_creds(git_credential **out, ssh_subtransport *t, const char *
 }
 
 static int _git_ssh_session_create(
-	LIBSSH2_SESSION** session,
+	LIBSSH2_SESSION **session,
 	git_stream *io)
 {
 	int rc = 0;
-	LIBSSH2_SESSION* s;
+	LIBSSH2_SESSION *s;
 	git_socket_stream *socket = GIT_CONTAINER_OF(io, git_socket_stream, parent);
 
 	GIT_ASSERT_ARG(session);
@@ -521,8 +521,8 @@ static int _git_ssh_setup_conn(
 	size_t i;
 	ssh_stream *s;
 	git_credential *cred = NULL;
-	LIBSSH2_SESSION* session=NULL;
-	LIBSSH2_CHANNEL* channel=NULL;
+	LIBSSH2_SESSION *session=NULL;
+	LIBSSH2_CHANNEL *channel=NULL;
 
 	t->current_stream = NULL;
 

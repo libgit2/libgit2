@@ -265,7 +265,7 @@ static int update_head_to_branch(
 {
 	int retcode;
 	git_buf remote_branch_name = GIT_BUF_INIT;
-	git_reference* remote_ref = NULL;
+	git_reference *remote_ref = NULL;
 	git_buf default_branch = GIT_BUF_INIT;
 
 	GIT_ASSERT_ARG(remote);

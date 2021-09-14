@@ -413,7 +413,7 @@ int git_path_to_dir(git_buf *path)
 	return git_buf_oom(path) ? -1 : 0;
 }
 
-void git_path_string_to_dir(char* path, size_t size)
+void git_path_string_to_dir(char *path, size_t size)
 {
 	size_t end = strlen(path);
 

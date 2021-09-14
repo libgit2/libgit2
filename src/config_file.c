@@ -164,7 +164,7 @@ out:
 	return error;
 }
 
-static void config_file_clear_includes(config_file_backend* cfg)
+static void config_file_clear_includes(config_file_backend *cfg)
 {
 	config_file *include;
 	uint32_t i;
@@ -1104,7 +1104,7 @@ static int write_on_eof(
 /*
  * This is pretty much the parsing, except we write out anything we don't have
  */
-static int config_file_write(config_file_backend *cfg, const char *orig_key, const char *key, const git_regexp *preg, const char* value)
+static int config_file_write(config_file_backend *cfg, const char *orig_key, const char *key, const git_regexp *preg, const char *value)
 
 {
 	char *orig_section = NULL, *section = NULL, *orig_name, *name, *ldot;

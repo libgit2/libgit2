@@ -797,8 +797,8 @@ GIT_EXTERN(int) git_repository_hashfile(
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_set_head(
-	git_repository* repo,
-	const char* refname);
+	git_repository *repo,
+	const char *refname);
 
 /**
  * Make the repository HEAD directly point to the Commit.
@@ -817,8 +817,8 @@ GIT_EXTERN(int) git_repository_set_head(
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_set_head_detached(
-	git_repository* repo,
-	const git_oid* commitish);
+	git_repository *repo,
+	const git_oid *commitish);
 
 /**
  * Make the repository HEAD directly point to the Commit.
@@ -854,7 +854,7 @@ GIT_EXTERN(int) git_repository_set_head_detached_from_annotated(
  * branch or an error code
  */
 GIT_EXTERN(int) git_repository_detach_head(
-	git_repository* repo);
+	git_repository *repo);
 
 /**
  * Repository state

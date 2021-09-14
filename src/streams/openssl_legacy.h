@@ -42,7 +42,7 @@
 #if defined(GIT_OPENSSL_LEGACY) || defined(GIT_OPENSSL_DYNAMIC)
 
 extern int OPENSSL_init_ssl__legacy(uint64_t opts, const void *settings);
-extern BIO_METHOD* BIO_meth_new__legacy(int type, const char *name);
+extern BIO_METHOD *BIO_meth_new__legacy(int type, const char *name);
 extern void BIO_meth_free__legacy(BIO_METHOD *biom);
 extern int BIO_meth_set_write__legacy(BIO_METHOD *biom, int (*write) (BIO *, const char *, int));
 extern int BIO_meth_set_read__legacy(BIO_METHOD *biom, int (*read) (BIO *, char *, int));

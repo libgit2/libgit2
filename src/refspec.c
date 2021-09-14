@@ -359,7 +359,7 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 	git_remote_head key;
 	git_refspec *cur;
 
-	const char* formatters[] = {
+	const char *formatters[] = {
 		GIT_REFS_DIR "%s",
 		GIT_REFS_TAGS_DIR "%s",
 		GIT_REFS_HEADS_DIR "%s",

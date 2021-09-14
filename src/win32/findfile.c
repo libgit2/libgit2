@@ -49,7 +49,7 @@ static int win32_path_to_8(git_buf *dest, const wchar_t *src)
 	return git_buf_sets(dest, utf8_path);
 }
 
-static wchar_t* win32_walkpath(wchar_t *path, wchar_t *buf, size_t buflen)
+static wchar_t *win32_walkpath(wchar_t *path, wchar_t *buf, size_t buflen)
 {
 	wchar_t term, *base = path;
 

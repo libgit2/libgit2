@@ -670,7 +670,7 @@ int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 
 	va_start(ap, nbuf);
 	for (i = 0; i < nbuf; ++i) {
-		const char* segment;
+		const char *segment;
 		size_t segment_len;
 
 		segment = va_arg(ap, const char *);
@@ -702,7 +702,7 @@ int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 
 	va_start(ap, nbuf);
 	for (i = 0; i < nbuf; ++i) {
-		const char* segment;
+		const char *segment;
 		size_t segment_len;
 
 		segment = va_arg(ap, const char *);
