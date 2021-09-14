@@ -69,7 +69,7 @@ static void assert_subject_match(
 
 void test_email_create__commit(void)
 {
-	const char *email =
+	const char *expected =
 	"From 9264b96c6d104d0e07ae33d3007b6a48246c6f92 Mon Sep 17 00:00:00 2001\n" \
 	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
 	"Date: Wed, 9 Apr 2014 20:57:01 +0200\n" \
@@ -109,7 +109,120 @@ void test_email_create__commit(void)
 	"\n";
 
 	assert_email_match(
-		email, "9264b96c6d104d0e07ae33d3007b6a48246c6f92", NULL);
+		expected, "9264b96c6d104d0e07ae33d3007b6a48246c6f92", NULL);
+}
+
+void test_email_create__rename(void)
+{
+	const char *expected =
+	"From 6e05acc5a5dab507d91a0a0cc0fb05a3dd98892d Mon Sep 17 00:00:00 2001\n" \
+	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
+	"Date: Wed, 9 Apr 2014 21:15:56 +0200\n" \
+	"Subject: [PATCH] Renamed file1.txt -> file1.txt.renamed\n" \
+	"\n" \
+	"---\n" \
+	" file1.txt => file1.txt.renamed | 4 ++--\n" \
+	" 1 file changed, 2 insertions(+), 2 deletions(-)\n" \
+	"\n" \
+	"diff --git a/file1.txt b/file1.txt.renamed\n" \
+	"similarity index 86%\n" \
+	"rename from file1.txt\n" \
+	"rename to file1.txt.renamed\n" \
+	"index af8f41d..a97157a 100644\n" \
+	"--- a/file1.txt\n" \
+	"+++ b/file1.txt.renamed\n" \
+	"@@ -3,13 +3,13 @@ file1.txt\n" \
+	" _file1.txt_\n" \
+	" file1.txt\n" \
+	" file1.txt\n" \
+	"-file1.txt\n" \
+	"+file1.txt_renamed\n" \
+	" file1.txt\n" \
+	" \n" \
+	" \n" \
+	" file1.txt\n" \
+	" file1.txt\n" \
+	"-file1.txt\n" \
+	"+file1.txt_renamed\n" \
+	" file1.txt\n" \
+	" file1.txt\n" \
+	" _file1.txt_\n" \
+	"--\n" \
+	"libgit2 " LIBGIT2_VERSION "\n" \
+	"\n";
+
+	assert_email_match(expected, "6e05acc5a5dab507d91a0a0cc0fb05a3dd98892d", NULL);
+}
+
+void test_email_create__rename_as_add_delete(void)
+{
+	const char *expected =
+	"From 6e05acc5a5dab507d91a0a0cc0fb05a3dd98892d Mon Sep 17 00:00:00 2001\n" \
+	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
+	"Date: Wed, 9 Apr 2014 21:15:56 +0200\n" \
+	"Subject: [PATCH] Renamed file1.txt -> file1.txt.renamed\n" \
+	"\n" \
+	"---\n" \
+	" file1.txt         | 17 -----------------\n" \
+	" file1.txt.renamed | 17 +++++++++++++++++\n" \
+	" 2 files changed, 17 insertions(+), 17 deletions(-)\n" \
+	" delete mode 100644 file1.txt\n" \
+	" create mode 100644 file1.txt.renamed\n" \
+	"\n" \
+	"diff --git a/file1.txt b/file1.txt\n" \
+	"deleted file mode 100644\n" \
+	"index af8f41d..0000000\n" \
+	"--- a/file1.txt\n" \
+	"+++ /dev/null\n" \
+	"@@ -1,17 +0,0 @@\n" \
+	"-file1.txt\n" \
+	"-file1.txt\n" \
+	"-_file1.txt_\n" \
+	"-file1.txt\n" \
+	"-file1.txt\n" \
+	"-file1.txt\n" \
+	"-file1.txt\n" \
+	"-\n" \
+	"-\n" \
+	"-file1.txt\n" \
+	"-file1.txt\n" \
+	"-file1.txt\n" \
+	"-file1.txt\n" \
+	"-file1.txt\n" \
+	"-_file1.txt_\n" \
+	"-_file1.txt_\n" \
+	"-file1.txt\n" \
+	"diff --git a/file1.txt.renamed b/file1.txt.renamed\n" \
+	"new file mode 100644\n" \
+	"index 0000000..a97157a\n" \
+	"--- /dev/null\n" \
+	"+++ b/file1.txt.renamed\n" \
+	"@@ -0,0 +1,17 @@\n" \
+	"+file1.txt\n" \
+	"+file1.txt\n" \
+	"+_file1.txt_\n" \
+	"+file1.txt\n" \
+	"+file1.txt\n" \
+	"+file1.txt_renamed\n" \
+	"+file1.txt\n" \
+	"+\n" \
+	"+\n" \
+	"+file1.txt\n" \
+	"+file1.txt\n" \
+	"+file1.txt_renamed\n" \
+	"+file1.txt\n" \
+	"+file1.txt\n" \
+	"+_file1.txt_\n" \
+	"+_file1.txt_\n" \
+	"+file1.txt\n" \
+	"--\n" \
+	"libgit2 " LIBGIT2_VERSION "\n" \
+	"\n";
+
+	git_email_create_options opts = GIT_EMAIL_CREATE_OPTIONS_INIT;
+	opts.flags |= GIT_EMAIL_CREATE_NO_RENAMES;
+
+	assert_email_match(expected, "6e05acc5a5dab507d91a0a0cc0fb05a3dd98892d", &opts);
 }
 
 void test_email_create__binary(void)

@@ -32,6 +32,9 @@ typedef enum {
 	 * patch is for a single commit (1/1).
 	 */
 	GIT_EMAIL_CREATE_ALWAYS_NUMBER = (1u << 1),
+
+	/** Do not perform rename or similarity detection. */
+	GIT_EMAIL_CREATE_NO_RENAMES = (1u << 2),
 } git_email_create_flags_t;
 
 /**
@@ -45,6 +48,9 @@ typedef struct {
 
 	/** Options to use when creating diffs */
 	git_diff_options diff_opts;
+
+	/** Options for finding similarities within diffs */
+	git_diff_find_options diff_find_opts;
 
 	/**
 	 * The subject prefix, by default "PATCH".  If set to an empty
@@ -65,14 +71,16 @@ typedef struct {
 } git_email_create_options;
 
 /*
- * By default, our options include binary diffs to match `git format-patch`.
+ * By default, our options include rename detection and binary
+ * diffs to match `git format-patch`.
  */
 #define GIT_EMAIL_CREATE_OPTIONS_VERSION 1
 #define GIT_EMAIL_CREATE_OPTIONS_INIT \
 { \
 	GIT_EMAIL_CREATE_OPTIONS_VERSION, \
 	GIT_EMAIL_CREATE_DEFAULT, \
-	{ GIT_DIFF_OPTIONS_VERSION, GIT_DIFF_SHOW_BINARY, GIT_SUBMODULE_IGNORE_UNSPECIFIED, {NULL,0}, NULL, NULL, NULL, 3 } \
+	{ GIT_DIFF_OPTIONS_VERSION, GIT_DIFF_SHOW_BINARY, GIT_SUBMODULE_IGNORE_UNSPECIFIED, {NULL,0}, NULL, NULL, NULL, 3 }, \
+	GIT_DIFF_FIND_OPTIONS_INIT \
 }
 
 /**

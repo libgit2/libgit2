@@ -258,9 +258,10 @@ int git_email_create_from_commit(
 	const git_email_create_options *given_opts)
 {
 	git_email_create_options opts = GIT_EMAIL_CREATE_OPTIONS_INIT;
-	const git_diff_options *diff_opts;
 	git_diff *diff = NULL;
 	git_repository *repo;
+	git_diff_options *diff_opts;
+	git_diff_find_options *find_opts;
 	const git_signature *author;
 	const char *summary, *body;
 	const git_oid *commit_id;
@@ -282,8 +283,13 @@ int git_email_create_from_commit(
 	body = git_commit_body(commit);
 	commit_id = git_commit_id(commit);
 	diff_opts = &opts.diff_opts;
+	find_opts = &opts.diff_find_opts;
 
 	if ((error = git_diff__commit(&diff, repo, commit, diff_opts)) < 0)
+		goto done;
+
+	if ((opts.flags & GIT_EMAIL_CREATE_NO_RENAMES) == 0 &&
+	    (error = git_diff_find_similar(diff, find_opts)) < 0)
 		goto done;
 
 	error = git_email_create_from_diff(out, diff, 1, 1, commit_id, summary, body, author, &opts);
