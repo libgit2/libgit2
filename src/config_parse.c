@@ -349,7 +349,7 @@ static int parse_multiline_variable(git_config_parser *reader, git_buf *value, i
 		}
 
 		/* If it was just a comment, pretend it didn't exist */
-		quote_count = strip_comments(line, !!in_quotes);
+		quote_count = strip_comments(line, in_quotes);
 		if (line[0] == '\0')
 			goto next;
 
