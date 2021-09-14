@@ -112,6 +112,59 @@ void test_email_create__commit(void)
 		email, "9264b96c6d104d0e07ae33d3007b6a48246c6f92", NULL);
 }
 
+void test_email_create__binary(void)
+{
+	const char *expected =
+	"From 8d7523f6fcb2404257889abe0d96f093d9f524f9 Mon Sep 17 00:00:00 2001\n" \
+	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
+	"Date: Sun, 13 Apr 2014 18:10:18 +0200\n" \
+	"Subject: [PATCH] Modified binary file\n" \
+	"\n" \
+	"---\n" \
+	" binary.bin | Bin 3 -> 5 bytes\n" \
+	" 1 file changed, 0 insertions(+), 0 deletions(-)\n" \
+	"\n" \
+	"diff --git a/binary.bin b/binary.bin\n" \
+	"index bd474b2519cc15eab801ff851cc7d50f0dee49a1..9ac35ff15cd8864aeafd889e4826a3150f0b06c4 100644\n" \
+	"GIT binary patch\n" \
+	"literal 5\n" \
+	"Mc${NkU}WL~000&M4gdfE\n" \
+	"\n" \
+	"literal 3\n" \
+	"Kc${Nk-~s>u4FC%O\n" \
+	"\n" \
+	"--\n" \
+	"libgit2 " LIBGIT2_VERSION "\n" \
+	"\n";
+
+	assert_email_match(expected, "8d7523f6fcb2404257889abe0d96f093d9f524f9", NULL);
+}
+
+void test_email_create__binary_not_included(void)
+{
+	const char *expected =
+	"From 8d7523f6fcb2404257889abe0d96f093d9f524f9 Mon Sep 17 00:00:00 2001\n" \
+	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
+	"Date: Sun, 13 Apr 2014 18:10:18 +0200\n" \
+	"Subject: [PATCH] Modified binary file\n" \
+	"\n" \
+	"---\n" \
+	" binary.bin | Bin 3 -> 5 bytes\n" \
+	" 1 file changed, 0 insertions(+), 0 deletions(-)\n" \
+	"\n" \
+	"diff --git a/binary.bin b/binary.bin\n" \
+	"index bd474b2..9ac35ff 100644\n" \
+	"Binary files a/binary.bin and b/binary.bin differ\n" \
+	"--\n" \
+	"libgit2 " LIBGIT2_VERSION "\n" \
+	"\n";
+
+	git_email_create_options opts = GIT_EMAIL_CREATE_OPTIONS_INIT;
+	opts.diff_opts.flags &= ~GIT_DIFF_SHOW_BINARY;
+
+	assert_email_match(expected, "8d7523f6fcb2404257889abe0d96f093d9f524f9", &opts);
+}
+
 void test_email_create__custom_summary_and_body(void)
 {
 	const char *expected = "From 627e7e12d87e07a83fad5b6bfa25e86ead4a5270 Mon Sep 17 00:00:00 2001\n" \

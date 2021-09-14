@@ -255,8 +255,9 @@ int git_email_create_from_diff(
 int git_email_create_from_commit(
 	git_buf *out,
 	git_commit *commit,
-	const git_email_create_options *opts)
+	const git_email_create_options *given_opts)
 {
+	git_email_create_options opts = GIT_EMAIL_CREATE_OPTIONS_INIT;
 	const git_diff_options *diff_opts;
 	git_diff *diff = NULL;
 	git_repository *repo;
@@ -268,21 +269,24 @@ int git_email_create_from_commit(
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(commit);
 
-	GIT_ERROR_CHECK_VERSION(opts,
+	GIT_ERROR_CHECK_VERSION(given_opts,
 		GIT_EMAIL_CREATE_OPTIONS_VERSION,
 		"git_email_create_options");
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(git_email_create_options));
 
 	repo = git_commit_owner(commit);
 	author = git_commit_author(commit);
 	summary = git_commit_summary(commit);
 	body = git_commit_body(commit);
 	commit_id = git_commit_id(commit);
-	diff_opts = opts ? &opts->diff_opts : NULL;
+	diff_opts = &opts.diff_opts;
 
 	if ((error = git_diff__commit(&diff, repo, commit, diff_opts)) < 0)
 		goto done;
 
-	error = git_email_create_from_diff(out, diff, 1, 1, commit_id, summary, body, author, opts);
+	error = git_email_create_from_diff(out, diff, 1, 1, commit_id, summary, body, author, &opts);
 
 done:
 	git_diff_free(diff);

@@ -64,12 +64,16 @@ typedef struct {
 	size_t reroll_number;
 } git_email_create_options;
 
+/*
+ * By default, our options include binary diffs to match `git format-patch`.
+ */
 #define GIT_EMAIL_CREATE_OPTIONS_VERSION 1
-#define GIT_EMAIL_CREATE_OPTIONS_INIT { \
-		GIT_EMAIL_CREATE_OPTIONS_VERSION, \
-		GIT_EMAIL_CREATE_DEFAULT, \
-		GIT_DIFF_OPTIONS_INIT \
-	}
+#define GIT_EMAIL_CREATE_OPTIONS_INIT \
+{ \
+	GIT_EMAIL_CREATE_OPTIONS_VERSION, \
+	GIT_EMAIL_CREATE_DEFAULT, \
+	{ GIT_DIFF_OPTIONS_VERSION, GIT_DIFF_SHOW_BINARY, GIT_SUBMODULE_IGNORE_UNSPECIFIED, {NULL,0}, NULL, NULL, NULL, 3 } \
+}
 
 /**
  * Create a diff for a commit in mbox format for sending via email.
