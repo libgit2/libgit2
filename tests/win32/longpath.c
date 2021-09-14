@@ -64,6 +64,7 @@ void test_win32_longpath__workdir_path_validated(void)
 #endif
 }
 
+#ifdef GIT_WIN32
 static void assert_longpath_status_and_add(git_repository* repo) {
 	git_index *index;
 	git_buf out = GIT_BUF_INIT;
@@ -85,6 +86,7 @@ static void assert_longpath_status_and_add(git_repository* repo) {
 	git_index_free(index);
 	git_buf_dispose(&out);
 }
+#endif
 
 void test_win32_longpath__status_and_add(void)
 {
