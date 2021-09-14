@@ -249,4 +249,8 @@ int git_repository_initialbranch(git_buf *out, git_repository *repo);
  */
 int git_repository_workdir_path(git_buf *out, git_repository *repo, const char *path);
 
+int git_repository__extensions(char ***out, size_t *out_len);
+int git_repository__set_extensions(const char **extensions, size_t len);
+void git_repository__free_extensions(void);
+
 #endif

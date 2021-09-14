@@ -1427,15 +1427,60 @@ static int check_repositoryformatversion(int *version, git_config *config)
 	return 0;
 }
 
+static const char *builtin_extensions[] = {
+	"noop"
+};
+
+static git_vector user_extensions = GIT_VECTOR_INIT;
+
 static int check_valid_extension(const git_config_entry *entry, void *payload)
 {
+	git_buf cfg = GIT_BUF_INIT;
+	bool reject;
+	const char *extension;
+	size_t i;
+	int error = 0;
+
 	GIT_UNUSED(payload);
 
-	if (!strcmp(entry->name, "extensions.noop"))
-		return 0;
+	git_vector_foreach (&user_extensions, i, extension) {
+		git_buf_clear(&cfg);
 
+		/*
+		 * Users can specify that they don't want to support an
+		 * extension with a '!' prefix.
+		 */
+		if ((reject = (extension[0] == '!')) == true)
+			extension = &extension[1];
+
+		if ((error = git_buf_printf(&cfg, "extensions.%s", extension)) < 0)
+			goto done;
+
+		if (strcmp(entry->name, cfg.ptr) == 0) {
+			if (reject)
+				goto fail;
+
+			goto done;
+		}
+	}
+
+	for (i = 0; i < ARRAY_SIZE(builtin_extensions); i++) {
+		extension = builtin_extensions[i];
+
+		if ((error = git_buf_printf(&cfg, "extensions.%s", extension)) < 0)
+			goto done;
+
+		if (strcmp(entry->name, cfg.ptr) == 0)
+			goto done;
+	}
+
+fail:
 	git_error_set(GIT_ERROR_REPOSITORY, "unsupported extension name %s", entry->name);
-	return -1;
+	error = -1;
+
+done:
+	git_buf_dispose(&cfg);
+	return error;
 }
 
 static int check_extensions(git_config *config, int version)
@@ -1444,6 +1489,70 @@ static int check_extensions(git_config *config, int version)
 		return 0;
 
 	return git_config_foreach_match(config, "^extensions\\.", check_valid_extension, NULL);
+}
+
+int git_repository__extensions(char ***out, size_t *out_len)
+{
+	git_vector extensions;
+	const char *builtin, *user;
+	char *extension;
+	size_t i, j;
+
+	if (git_vector_init(&extensions, 8, NULL) < 0)
+		return -1;
+
+	for (i = 0; i < ARRAY_SIZE(builtin_extensions); i++) {
+		bool match = false;
+
+		builtin = builtin_extensions[i];
+
+		git_vector_foreach (&user_extensions, j, user) {
+			if (user[0] == '!' && strcmp(builtin, &user[1]) == 0) {
+				match = true;
+				break;
+			}
+		}
+
+		if (match)
+			continue;
+
+		if ((extension = git__strdup(builtin)) == NULL ||
+		    git_vector_insert(&extensions, extension) < 0)
+			return -1;
+	}
+
+	git_vector_foreach (&user_extensions, i, user) {
+		if (user[0] == '!')
+			continue;
+
+		if ((extension = git__strdup(user)) == NULL ||
+		    git_vector_insert(&extensions, extension) < 0)
+			return -1;
+	}
+
+	*out = (char **)git_vector_detach(out_len, NULL, &extensions);
+	return 0;
+}
+
+int git_repository__set_extensions(const char **extensions, size_t len)
+{
+	char *extension;
+	size_t i;
+
+	git_repository__free_extensions();
+
+	for (i = 0; i < len; i++) {
+		if ((extension = git__strdup(extensions[i])) == NULL ||
+		    git_vector_insert(&user_extensions, extension) < 0)
+			return -1;
+	}
+
+	return 0;
+}
+
+void git_repository__free_extensions(void)
+{
+	git_vector_free_deep(&user_extensions);
 }
 
 int git_repository_create_head(const char *git_dir, const char *ref_name)
