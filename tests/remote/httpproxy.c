@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "futils.h"
 #include "remote.h"
 #include "net.h"
 
@@ -120,12 +121,7 @@ void assert_global_config_match(const char *config, const char *expected)
 void test_remote_httpproxy__config_overrides_detached_remote(void)
 {
 	cl_fake_home();
-	
-	/*
-	 * http.proxy should be honored, then http.<url>.proxy should
-	 * be honored in increasing specificity of the url.  finally,
-	 * remote.<name>.proxy is the most specific.
-	 */
+
 	assert_global_config_match(NULL, NULL);
 	assert_global_config_match("http.proxy", "http://localhost:1/");
 	assert_global_config_match("http.https://github.com.proxy", "http://localhost:2/");
@@ -133,6 +129,8 @@ void test_remote_httpproxy__config_overrides_detached_remote(void)
 	assert_global_config_match("http.https://github.com/libgit2.proxy", "http://localhost:4/");
 	assert_global_config_match("http.https://github.com/libgit2/.proxy", "http://localhost:5/");
 	assert_global_config_match("http.https://github.com/libgit2/libgit2.proxy", "http://localhost:6/");
+
+	cl_git_pass(git_futils_rmdir_r("home", NULL, GIT_RMDIR_REMOVE_FILES));
 }
 
 void test_remote_httpproxy__config_empty_overrides(void)
