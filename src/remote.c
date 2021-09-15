@@ -888,10 +888,20 @@ static int http_proxy_config(char **out, git_remote *remote, git_net_url *url)
 	git_buf buf = GIT_BUF_INIT;
 	git_net_url lookup_url = GIT_NET_URL_INIT;
 	int error;
+	int cleanup_config = 0;
 
-	if ((error = git_net_url_dup(&lookup_url, url)) < 0 ||
-	    (error = git_repository_config__weakptr(&cfg, remote->repo)) < 0)
+	if ((error = git_net_url_dup(&lookup_url, url)) < 0)
 		goto done;
+
+	if (remote->repo) {
+		if ((error = git_repository_config__weakptr(&cfg, remote->repo)) < 0)
+			goto done;
+	} else {
+		if ((error = git_config_open_default(&cfg)) < 0)
+			goto done;
+
+		cleanup_config = 1;
+	}
 
 	/* remote.<name>.proxy config setting */
 	if (remote->name && remote->name[0]) {
@@ -921,7 +931,10 @@ static int http_proxy_config(char **out, git_remote *remote, git_net_url *url)
 
 	error = lookup_config(out, cfg, "http.proxy");
 
-done:
+    done:
+	if (cleanup_config)
+		git_config_free(cfg);
+
 	git_buf_dispose(&buf);
 	git_net_url_dispose(&lookup_url);
 	return error;
@@ -971,7 +984,6 @@ int git_remote__http_proxy(char **out, git_remote *remote, git_net_url *url)
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(remote);
-	GIT_ASSERT_ARG(remote->repo);
 
 	*out = NULL;
 

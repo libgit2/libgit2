@@ -93,6 +93,48 @@ void test_remote_httpproxy__config_overrides(void)
 	assert_config_match("remote.lg2.proxy", "http://localhost:7/");
 }
 
+void assert_global_config_match(const char *config, const char *expected)
+{
+	git_remote *remote;
+	char *proxy;
+	git_config* cfg;
+
+	if (config) {
+	    cl_git_pass(git_config_open_default(&cfg));
+	    git_config_set_string(cfg, config, expected);
+	    git_config_free(cfg);
+	}
+
+	cl_git_pass(git_remote_create_detached(&remote, "https://github.com/libgit2/libgit2"));
+	cl_git_pass(git_remote__http_proxy(&proxy, remote, &url));
+
+	if (expected)
+		cl_assert_equal_s(proxy, expected);
+	else
+		cl_assert_equal_p(proxy, expected);
+
+	git_remote_free(remote);
+	git__free(proxy);
+}
+
+void test_remote_httpproxy__config_overrides_detached_remote(void)
+{
+	cl_fake_home();
+	
+	/*
+	 * http.proxy should be honored, then http.<url>.proxy should
+	 * be honored in increasing specificity of the url.  finally,
+	 * remote.<name>.proxy is the most specific.
+	 */
+	assert_global_config_match(NULL, NULL);
+	assert_global_config_match("http.proxy", "http://localhost:1/");
+	assert_global_config_match("http.https://github.com.proxy", "http://localhost:2/");
+	assert_global_config_match("http.https://github.com/.proxy", "http://localhost:3/");
+	assert_global_config_match("http.https://github.com/libgit2.proxy", "http://localhost:4/");
+	assert_global_config_match("http.https://github.com/libgit2/.proxy", "http://localhost:5/");
+	assert_global_config_match("http.https://github.com/libgit2/libgit2.proxy", "http://localhost:6/");
+}
+
 void test_remote_httpproxy__config_empty_overrides(void)
 {
 	/*
