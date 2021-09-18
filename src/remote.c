@@ -884,7 +884,7 @@ static void url_config_trim(git_net_url *url)
 
 static int http_proxy_config(char **out, git_remote *remote, git_net_url *url)
 {
-	git_config *cfg;
+	git_config *cfg = NULL;
 	git_buf buf = GIT_BUF_INIT;
 	git_net_url lookup_url = GIT_NET_URL_INIT;
 	int error;
