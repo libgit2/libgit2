@@ -36,6 +36,13 @@ GIT_EXTERN(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git
  * Lookup a blob object from a repository,
  * given a prefix of its identifier (short id).
  *
+ * The object obtained will be so that its identifier
+ * matches the first 'len' hexadecimal characters
+ * (packets of 4 bits) of the given 'id'.
+ * 'len' must be at least GIT_OID_MINPREFIXLEN, and
+ * long enough to identify a unique object matching
+ * the prefix; otherwise the method will fail.
+ *
  * @see git_object_lookup_prefix
  *
  * @param blob pointer to the looked up blob
