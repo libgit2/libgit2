@@ -18,7 +18,7 @@ RUN yum install -y \
 
 FROM yum AS libssh2
 RUN cd /tmp && \
-    curl https://libssh2.org/download/libssh2-1.8.0.tar.gz | tar -xz && \
+    curl --location --silent --show-error https://www.libssh2.org/download/libssh2-1.8.0.tar.gz | tar -xz && \
     cd libssh2-1.8.0 && \
     ./configure && \
     make && \
