@@ -138,12 +138,13 @@ static int write_file_filtered(
 	git_object_size_t *size,
 	git_odb *odb,
 	const char *full_path,
-	git_filter_list *fl)
+	git_filter_list *fl,
+	git_repository* repo)
 {
 	int error;
 	git_buf tgt = GIT_BUF_INIT;
 
-	error = git_filter_list_apply_to_file(&tgt, fl, NULL, full_path);
+	error = git_filter_list_apply_to_file(&tgt, fl, repo, full_path);
 
 	/* Write the file to disk if it was properly filtered */
 	if (!error) {
@@ -238,7 +239,7 @@ int git_blob__create_from_paths(
 			error = write_file_stream(id, odb, content_path, size);
 		else {
 			/* We need to apply one or more filters */
-			error = write_file_filtered(id, &size, odb, content_path, fl);
+			error = write_file_filtered(id, &size, odb, content_path, fl, repo);
 
 			git_filter_list_free(fl);
 		}

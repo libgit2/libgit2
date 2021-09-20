@@ -64,15 +64,12 @@ void test_win32_longpath__workdir_path_validated(void)
 #endif
 }
 
-void test_win32_longpath__status_and_add(void)
-{
 #ifdef GIT_WIN32
-	git_repository *repo = cl_git_sandbox_init("testrepo");
+static void assert_longpath_status_and_add(git_repository* repo) {
 	git_index *index;
 	git_buf out = GIT_BUF_INIT;
 	unsigned int status_flags;
 
-	cl_repo_set_bool(repo, "core.longpaths", true);
 	cl_git_pass(git_repository_workdir_path(&out, repo, LONG_FILENAME));
 
 	cl_git_rewritefile(out.ptr, "This is a long path.\r\n");
@@ -88,5 +85,28 @@ void test_win32_longpath__status_and_add(void)
 
 	git_index_free(index);
 	git_buf_dispose(&out);
+}
+#endif
+
+void test_win32_longpath__status_and_add(void)
+{
+#ifdef GIT_WIN32
+	git_repository *repo = cl_git_sandbox_init("testrepo");
+
+	cl_repo_set_bool(repo, "core.longpaths", true);
+
+	assert_longpath_status_and_add(repo);
+#endif
+}
+
+void test_win32_longpath__status_and_add_with_filter(void)
+{
+#ifdef GIT_WIN32
+	git_repository *repo = cl_git_sandbox_init("testrepo");
+
+	cl_repo_set_bool(repo, "core.longpaths", true);
+	cl_repo_set_bool(repo, "core.autocrlf", true);
+
+	assert_longpath_status_and_add(repo);
 #endif
 }
