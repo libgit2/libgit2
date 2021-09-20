@@ -65,14 +65,16 @@ void test_win32_longpath__workdir_path_validated(void)
 }
 
 #ifdef GIT_WIN32
-static void assert_longpath_status_and_add(git_repository* repo) {
+static void assert_longpath_status_and_add(git_repository *repo, const char *wddata, const char *repodata) {
 	git_index *index;
+	git_blob *blob;
 	git_buf out = GIT_BUF_INIT;
+	const git_index_entry *entry;
 	unsigned int status_flags;
 
 	cl_git_pass(git_repository_workdir_path(&out, repo, LONG_FILENAME));
 
-	cl_git_rewritefile(out.ptr, "This is a long path.\r\n");
+	cl_git_rewritefile(out.ptr, wddata);
 
 	cl_git_pass(git_status_file(&status_flags, repo, LONG_FILENAME));
 	cl_assert_equal_i(GIT_STATUS_WT_NEW, status_flags);
@@ -83,6 +85,11 @@ static void assert_longpath_status_and_add(git_repository* repo) {
 	cl_git_pass(git_status_file(&status_flags, repo, LONG_FILENAME));
 	cl_assert_equal_i(GIT_STATUS_INDEX_NEW, status_flags);
 
+	cl_assert((entry = git_index_get_bypath(index, LONG_FILENAME, 0)) != NULL);
+	cl_git_pass(git_blob_lookup(&blob, repo, &entry->id));
+	cl_assert_equal_s(repodata, git_blob_rawcontent(blob));
+
+	git_blob_free(blob);
 	git_index_free(index);
 	git_buf_dispose(&out);
 }
@@ -95,7 +102,13 @@ void test_win32_longpath__status_and_add(void)
 
 	cl_repo_set_bool(repo, "core.longpaths", true);
 
-	assert_longpath_status_and_add(repo);
+	/*
+	 * Doing no content filtering, we expect the data we add
+	 * to be the data in the repository.
+	 */
+	assert_longpath_status_and_add(repo,
+	    "This is a long path.\r\n",
+	    "This is a long path.\r\n");
 #endif
 }
 
@@ -107,6 +120,12 @@ void test_win32_longpath__status_and_add_with_filter(void)
 	cl_repo_set_bool(repo, "core.longpaths", true);
 	cl_repo_set_bool(repo, "core.autocrlf", true);
 
-	assert_longpath_status_and_add(repo);
+	/*
+	 * With `core.autocrlf`, we expect the data we add to have
+	 * newline conversion performed.
+	 */
+	assert_longpath_status_and_add(repo,
+	    "This is a long path.\r\n",
+	    "This is a long path.\n");
 #endif
 }
