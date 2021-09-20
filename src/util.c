@@ -755,7 +755,7 @@ int git__getenv(git_buf *out, const char *name)
 
 	if (value_len)
 		error = git_buf_put_w(out, wide_value, value_len);
-	else if (GetLastError() == ERROR_ENVVAR_NOT_FOUND)
+	else if (GetLastError() == ERROR_SUCCESS || GetLastError() == ERROR_ENVVAR_NOT_FOUND)
 		error = GIT_ENOTFOUND;
 	else
 		git_error_set(GIT_ERROR_OS, "could not read environment variable '%s'", name);
