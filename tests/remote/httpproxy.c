@@ -112,6 +112,11 @@ void test_remote_httpproxy__env(void)
 	orig_no_proxy = cl_getenv("NO_PROXY");
 	orig_proxies_need_reset = 1;
 
+	/* Clear everything for a fresh start */
+	cl_setenv("HTTP_PROXY", NULL);
+	cl_setenv("HTTPS_PROXY", NULL);
+	cl_setenv("NO_PROXY", NULL);
+
 	/* HTTP proxy is ignored for HTTPS */
 	cl_setenv("HTTP_PROXY", "http://localhost:9/");
 	assert_proxy_is(NULL);
@@ -133,11 +138,11 @@ void test_remote_httpproxy__env(void)
 	cl_setenv("NO_PROXY", "github.dev,github.com,github.foo");
 	assert_proxy_is(NULL);
 
-	/* configuration overrides environment variables */
-	cl_setenv("NO_PROXY", "github.none");
-	assert_config_match("http.https://github.com.proxy", "http://localhost:11/");
-
-	/* empty env behaves like unset env */
 	cl_setenv("HTTPS_PROXY", "");
 	assert_proxy_is(NULL);
+
+	/* configuration overrides environment variables */
+	cl_setenv("HTTPS_PROXY", "http://localhost:10/");
+	cl_setenv("NO_PROXY", "github.none");
+	assert_config_match("http.https://github.com.proxy", "http://localhost:11/");
 }
