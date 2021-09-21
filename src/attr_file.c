@@ -163,8 +163,9 @@ int git_attr_file__load(
 
 		break;
 	}
+	case GIT_ATTR_FILE_SOURCE_HEAD:
 	case GIT_ATTR_FILE_SOURCE_COMMIT: {
-		if (source->commit_id) {
+		if (source->type == GIT_ATTR_FILE_SOURCE_COMMIT) {
 			if ((error = git_commit_lookup(&commit, repo, source->commit_id)) < 0 ||
 			    (error = git_commit_tree(&tree, commit)) < 0)
 				goto cleanup;
@@ -234,6 +235,8 @@ int git_attr_file__load(
 		file->nonexistent = 1;
 	else if (source->type == GIT_ATTR_FILE_SOURCE_INDEX)
 		git_oid_cpy(&file->cache_data.oid, git_blob_id(blob));
+	else if (source->type == GIT_ATTR_FILE_SOURCE_HEAD)
+		git_oid_cpy(&file->cache_data.oid, git_tree_id(tree));
 	else if (source->type == GIT_ATTR_FILE_SOURCE_COMMIT)
 		git_oid_cpy(&file->cache_data.oid, git_tree_id(tree));
 	else if (source->type == GIT_ATTR_FILE_SOURCE_FILE)
@@ -288,22 +291,29 @@ int git_attr_file__out_of_date(
 		return (git_oid__cmp(&file->cache_data.oid, &id) != 0);
 	}
 
+	case GIT_ATTR_FILE_SOURCE_HEAD: {
+		git_tree *tree = NULL;
+		int error = git_repository_head_tree(&tree, repo);
+
+		if (error < 0)
+			return error;
+
+		error = (git_oid__cmp(&file->cache_data.oid, git_tree_id(tree)) != 0);
+
+		git_tree_free(tree);
+		return error;
+	}
+
 	case GIT_ATTR_FILE_SOURCE_COMMIT: {
+		git_commit *commit = NULL;
 		git_tree *tree = NULL;
 		int error;
 
-		if (source->commit_id) {
-			git_commit *commit = NULL;
+		if ((error = git_commit_lookup(&commit, repo, source->commit_id)) < 0)
+			return error;
 
-			if ((error = git_commit_lookup(&commit, repo, source->commit_id)) < 0)
-				return error;
-
-			error = git_commit_tree(&tree, commit);
-
-			git_commit_free(commit);
-		} else {
-			error = git_repository_head_tree(&tree, repo);
-		}
+		error = git_commit_tree(&tree, commit);
+		git_commit_free(commit);
 
 		if (error < 0)
 			return error;

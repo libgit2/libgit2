@@ -147,11 +147,17 @@ typedef struct {
 	/** A combination of GIT_ATTR_CHECK flags */
 	unsigned int flags;
 
+#ifdef GIT_DEPRECATE_HARD
+	void *reserved;
+#else
+	git_oid *commit_id;
+#endif
+
 	/**
 	 * The commit to load attributes from, when
 	 * `GIT_ATTR_CHECK_INCLUDE_COMMIT` is specified.
 	 */
-	git_oid *commit_id;
+	git_oid attr_commit_id;
 } git_attr_options;
 
 #define GIT_ATTR_OPTIONS_VERSION 1
