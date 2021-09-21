@@ -135,11 +135,17 @@ typedef struct {
 	/** Flags to control the filtering process, see `git_blob_filter_flag_t` above */
 	uint32_t flags;
 
+#ifdef GIT_DEPRECATE_HARD
+	void *reserved;
+#else
+	git_oid *commit_id;
+#endif
+
 	/**
 	 * The commit to load attributes from, when
 	 * `GIT_BLOB_FILTER_ATTRIBUTES_FROM_COMMIT` is specified.
 	 */
-	git_oid *commit_id;
+	git_oid attr_commit_id;
 } git_blob_filter_options;
 
 #define GIT_BLOB_FILTER_OPTIONS_VERSION 1

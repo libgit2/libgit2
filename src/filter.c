@@ -446,7 +446,13 @@ static int filter_list_check_attributes(
 
 	if ((src->options.flags & GIT_FILTER_ATTRIBUTES_FROM_COMMIT) != 0) {
 		attr_opts.flags |= GIT_ATTR_CHECK_INCLUDE_COMMIT;
-		attr_opts.commit_id = src->options.commit_id;
+
+#ifndef GIT_DEPRECATE_HARD
+		if (src->options.commit_id)
+			git_oid_cpy(&attr_opts.attr_commit_id, src->options.commit_id);
+		else
+#endif
+		git_oid_cpy(&attr_opts.attr_commit_id, &src->options.attr_commit_id);
 	}
 
 	error = git_attr_get_many_with_session(
