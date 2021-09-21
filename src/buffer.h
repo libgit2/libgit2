@@ -171,6 +171,7 @@ void git_buf_consume_bytes(git_buf *buf, size_t len);
 void git_buf_consume(git_buf *buf, const char *end);
 void git_buf_truncate(git_buf *buf, size_t len);
 void git_buf_shorten(git_buf *buf, size_t amount);
+void git_buf_truncate_at_char(git_buf *buf, char separator);
 void git_buf_rtruncate_at_char(git_buf *path, char separator);
 
 /** General join with separator */
