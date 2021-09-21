@@ -249,13 +249,7 @@ void test_rebase_sign__create_propagates_error(void)
 }
 
 #ifndef GIT_DEPRECATE_HARD
-int signing_cb_passthrough(
-	git_buf *signature,
-	git_buf *signature_field,
-	const char *commit_content,
-	void *payload)
-{
-	static const char *expected_commit_content = "\
+static const char *expected_commit_content = "\
 tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
 parent f87d14a4a236582a0278a916340a793714256864\n\
 author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
@@ -263,6 +257,12 @@ committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
 \n\
 Modification 3 to gravy\n";
 
+int signing_cb_passthrough(
+	git_buf *signature,
+	git_buf *signature_field,
+	const char *commit_content,
+	void *payload)
+{
 	cl_assert_equal_b(false, git_buf_is_allocated(signature));
 	cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
 	cl_assert_equal_s(expected_commit_content, commit_content);

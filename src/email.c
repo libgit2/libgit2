@@ -217,7 +217,6 @@ int git_email__append_from_diff(
 		memcpy(&opts, given_opts, sizeof(git_email_create_options));
 
 	git_buf_sanitize(out);
-	git_buf_clear(out);
 
 	if ((error = append_header(out, patch_idx, patch_count, commit_id, summary, author, &opts)) == 0 &&
 	    (error = append_body(out, body)) == 0 &&
