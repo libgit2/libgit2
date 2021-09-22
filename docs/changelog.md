@@ -1,3 +1,49 @@
+v1.3
+----
+
+This is release v1.3.0, "Zugunruhe".  This release includes only minor new featuers that will be helpful for users to have an orderly transition to the v2.0 lineage.
+
+## New Features
+* Support custom git extensions by @ethomson in https://github.com/libgit2/libgit2/pull/6031
+* Introduce `git_email_create`; deprecate `git_diff_format_email` by @ethomson in https://github.com/libgit2/libgit2/pull/6061
+
+## Bug fixes
+* #6028: Check if `threadstate->error_t.message` is not `git_buf__initbuf` before freeing. by @arroz in https://github.com/libgit2/libgit2/pull/6029
+* remote: Mark `git_remote_name_is_valid` as `GIT_EXTERN` by @lhchavez in https://github.com/libgit2/libgit2/pull/6032
+* Fix config parsing for multiline with multiple quoted comment chars by @basile-henry in https://github.com/libgit2/libgit2/pull/6043
+* indexer: Avoid one `mmap(2)`/`munmap(2)` pair per `git_indexer_append` call by @lhchavez in https://github.com/libgit2/libgit2/pull/6039
+* merge: Check file mode when resolving renames by @ccstolley in https://github.com/libgit2/libgit2/pull/6060
+* Allow proxy options when connecting with a detached remote. by @lrm29 in https://github.com/libgit2/libgit2/pull/6058
+* win32: allow empty environment variables by @ethomson in https://github.com/libgit2/libgit2/pull/6063
+* Fixes for deprecated APIs by @ethomson in https://github.com/libgit2/libgit2/pull/6066
+* filter: use a `git_oid` in filter options, not a pointer by @ethomson in https://github.com/libgit2/libgit2/pull/6067
+
+## Code cleanups
+* notes: use a buffer internally by @ethomson in https://github.com/libgit2/libgit2/pull/6047
+* Fix coding style for pointer by @punkymaniac in https://github.com/libgit2/libgit2/pull/6045
+* Use __typeof__ GNUC keyword for ISO C compatibility by @duncanthomson in https://github.com/libgit2/libgit2/pull/6041
+* Discover libssh2 without pkg-config by @stac47 in https://github.com/libgit2/libgit2/pull/6053
+* Longpath filter bug by @lrm29 in https://github.com/libgit2/libgit2/pull/6055
+* Add test to ensure empty proxy env behaves like unset env by @sathieu in https://github.com/libgit2/libgit2/pull/6052
+* Stdint header condition has been reverted. by @lolgear in https://github.com/libgit2/libgit2/pull/6020
+* diff: update `GIT_DIFF_IGNORE_BLANK_LINES` by @ethomson in https://github.com/libgit2/libgit2/pull/6068
+
+## CI Improvements
+* ci: pull libssh2 from www.libssh2.org by @ethomson in https://github.com/libgit2/libgit2/pull/6064
+
+## Documentation changes
+* Update README.md by @shijinglu in https://github.com/libgit2/libgit2/pull/6050
+
+## New Contributors
+* @basile-henry made their first contribution in https://github.com/libgit2/libgit2/pull/6043
+* @duncanthomson made their first contribution in https://github.com/libgit2/libgit2/pull/6041
+* @stac47 made their first contribution in https://github.com/libgit2/libgit2/pull/6053
+* @shijinglu made their first contribution in https://github.com/libgit2/libgit2/pull/6050
+* @ccstolley made their first contribution in https://github.com/libgit2/libgit2/pull/6060
+* @sathieu made their first contribution in https://github.com/libgit2/libgit2/pull/6052
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.2.0...v1.3.0
+
 v1.2
 -----
 
