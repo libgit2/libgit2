@@ -1,7 +1,7 @@
 v1.3
 ----
 
-This is release v1.3.0, "Zugunruhe".  This release includes only minor new featuers that will be helpful for users to have an orderly transition to the v2.0 lineage.
+This is release v1.3.0, "Zugunruhe".  This release includes only minor new features that will be helpful for users to have an orderly transition to the v2.0 lineage.
 
 ## New Features
 * Support custom git extensions by @ethomson in https://github.com/libgit2/libgit2/pull/6031
