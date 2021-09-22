@@ -133,6 +133,9 @@ typedef enum {
 	 */
 	GIT_DIFF_INDENT_HEURISTIC = (1u << 18),
 
+	/** Ignore blank lines */
+	GIT_DIFF_IGNORE_BLANK_LINES = (1u << 19),
+
 	/** Treat all files as text, disabling binary attributes & detection */
 	GIT_DIFF_FORCE_TEXT = (1u << 20),
 	/** Treat all files as binary, disabling text diffs */
@@ -168,10 +171,6 @@ typedef enum {
 	 *  can apply given diff information to binary files.
 	 */
 	GIT_DIFF_SHOW_BINARY = (1u << 30),
-
-	/** Ignore blank lines */
-	GIT_DIFF_IGNORE_BLANK_LINES = (1u << 31),
-
 } git_diff_option_t;
 
 /**
