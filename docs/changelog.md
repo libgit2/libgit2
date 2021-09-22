@@ -44,6 +44,8 @@ This is release v1.3.0, "Zugunruhe".  This release includes only minor new featu
 
 **Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.2.0...v1.3.0
 
+---------------------------------------------------------------------
+
 v1.2
 -----
 
@@ -217,6 +219,8 @@ This is meant to be the final minor release in the v1 lineage.  v2.0 will be the
 
 **Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.1.0...v1.2.0
 
+---------------------------------------------------------------------
+
 v1.1
 ----
 
@@ -305,6 +309,8 @@ This is a bugfix release with the following changes:
 - A bug where the smart HTTP transport could not read large data packets
   has been fixed.  Previously, fetching from servers like Gerrit, that
   sent large data packets, would error.
+
+---------------------------------------------------------------------
 
 v1.0
 ----
@@ -785,6 +791,8 @@ release:
 * Tyler Ang-Wanek
 * Tyler Wanek
 
+---------------------------------------------------------------------
+
 v0.28
 -----
 
@@ -933,6 +941,8 @@ v0.28
   out such files is not allowed as this can make a Git implementation write
   outside of the repository and bypass the fsck checks for CVE-2018-11235.
 
+---------------------------------------------------------------------
+
 v0.27
 ---------
 
@@ -1049,6 +1059,8 @@ v0.27
   `git_odb_backend` interface have changed their signatures to allow providing
   the object's size and type to the caller.
 
+---------------------------------------------------------------------
+    
 v0.26
 -----
 
@@ -1293,6 +1305,8 @@ v0.25
   to provide the name of a merge driver to be used to handle files changed
   during a merge.
 
+---------------------------------------------------------------------
+
 v0.24
 -------
 
@@ -1407,6 +1421,8 @@ v0.24
 
 * `git_remote_connect()` now takes a `custom_headers` argument to set
   the extra HTTP header fields to send.
+
+---------------------------------------------------------------------
 
 v0.23
 ------
@@ -1706,6 +1722,8 @@ v0.23
 
 * It is no longer allowed to call `git_buf_grow()` on buffers
   borrowing the memory they point to.
+
+---------------------------------------------------------------------
 
 v0.22
 ------
