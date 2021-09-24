@@ -1535,3 +1535,11 @@ int git_config_init_backend(git_config_backend *backend, unsigned int version)
 		backend, version, git_config_backend, GIT_CONFIG_BACKEND_INIT);
 	return 0;
 }
+
+int git_config_update_entry(git_config *config, const char *key,
+			    const char *value, bool overwrite_existing,
+			    bool only_if_existing)
+{
+	return git_config__update_entry(config, key, value, overwrite_existing,
+					only_if_existing);
+}

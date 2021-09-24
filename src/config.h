@@ -94,4 +94,10 @@ int git_config_lookup_map_enum(git_configmap_t *type_out,
  */
 GIT_EXTERN(int) git_config_unlock(git_config *cfg, int commit);
 
+GIT_EXTERN(int) git_config_update_entry(
+	git_config *cfg,
+	const char *key,
+	const char *value,
+	bool overwrite_existing,
+	bool only_if_existing);
 #endif
