@@ -2840,34 +2840,36 @@ int git_repository_hashfile(
 	git_file fd = -1;
 	uint64_t len;
 	git_buf full_path = GIT_BUF_INIT;
+	const char *workdir = git_repository_workdir(repo);
 
 	 /* as_path can be NULL */
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(path);
 	GIT_ASSERT_ARG(repo);
 
-	/* At some point, it would be nice if repo could be NULL to just
-	 * apply filter rules defined in system and global files, but for
-	 * now that is not possible because git_filters_load() needs it.
-	 */
-
-	if ((error = git_path_join_unrooted(
-		&full_path, path, git_repository_workdir(repo), NULL)) < 0 ||
+	if ((error = git_path_join_unrooted(&full_path, path, workdir, NULL)) < 0 ||
 	    (error = git_path_validate_workdir_buf(repo, &full_path)) < 0)
 		return error;
 
-	if (!as_path)
-		as_path = path;
+	/*
+	 * NULL as_path means that we should derive it from the
+	 * given path.
+	 */
+	if (!as_path) {
+		if (workdir && !git__prefixcmp(full_path.ptr, workdir))
+			as_path = full_path.ptr + strlen(workdir);
+		else
+			as_path = "";
+	}
 
 	/* passing empty string for "as_path" indicated --no-filters */
 	if (strlen(as_path) > 0) {
 		error = git_filter_list_load(
 			&fl, repo, NULL, as_path,
 			GIT_FILTER_TO_ODB, GIT_FILTER_DEFAULT);
+
 		if (error < 0)
 			return error;
-	} else {
-		error = 0;
 	}
 
 	/* at this point, error is a count of the number of loaded filters */
