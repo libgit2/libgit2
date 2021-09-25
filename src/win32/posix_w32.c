@@ -648,6 +648,8 @@ int p_getcwd(char *buffer_out, size_t size)
 	if (!cwd)
 		return -1;
 
+	git_win32_path_remove_namespace(cwd, wcslen(cwd));
+
 	/* Convert the working directory back to UTF-8 */
 	if (git__utf16_to_8(buffer_out, size, cwd) < 0) {
 		DWORD code = GetLastError();
@@ -660,6 +662,7 @@ int p_getcwd(char *buffer_out, size_t size)
 		return -1;
 	}
 
+	git_path_mkposix(buffer_out);
 	return 0;
 }
 
