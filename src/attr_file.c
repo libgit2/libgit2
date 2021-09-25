@@ -561,8 +561,7 @@ int git_attr_path__init(
 	/* build full path as best we can */
 	git_buf_init(&info->full, 0);
 
-	if (git_path_join_unrooted(&info->full, path, base, &root) < 0 ||
-	    git_path_validate_workdir_buf(repo, &info->full) < 0)
+	if (git_path_join_unrooted(&info->full, path, base, &root) < 0)
 		return -1;
 
 	info->path = info->full.ptr + root;
