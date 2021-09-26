@@ -551,7 +551,6 @@ git_attr_assignment *git_attr_rule__lookup_assignment(
 
 int git_attr_path__init(
 	git_attr_path *info,
-	git_repository *repo,
 	const char *path,
 	const char *base,
 	git_dir_flag dir_flag)

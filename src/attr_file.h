@@ -227,7 +227,6 @@ typedef enum { GIT_DIR_FLAG_TRUE = 1, GIT_DIR_FLAG_FALSE = 0, GIT_DIR_FLAG_UNKNO
 
 extern int git_attr_path__init(
 	git_attr_path *out,
-	git_repository *repo,
 	const char *path,
 	const char *base,
 	git_dir_flag is_dir);
