@@ -2369,7 +2369,7 @@ done:
 
 	git_annotated_commit_free(other);
 	git_annotated_commit_free(new_base);
-	git_oidarray_free(&bases);
+	git_oidarray_dispose(&bases);
 	git_array_clear(head_ids);
 	return error;
 }

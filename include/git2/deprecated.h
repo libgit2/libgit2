@@ -779,6 +779,30 @@ GIT_EXTERN(int) git_oid_iszero(const git_oid *id);
 
 /**@}*/
 
+/** @name Deprecated OID Array Functions
+ *
+ * These types are retained for backward compatibility.  The newer
+ * versions of these values should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Free the memory referred to by the git_oidarray.  This is an alias of
+ * `git_oidarray_dispose` and is preserved for backward compatibility.
+ *
+ * This function is deprecated, but there is no plan to remove this
+ * function at this time.
+ *
+ * @deprecated Use git_oidarray_dispose
+ * @see git_oidarray_dispose
+ */
+GIT_EXTERN(void) git_oidarray_free(git_oidarray *array);
+
+/**@}*/
+
 /** @name Deprecated Transfer Progress Types
  *
  * These types are retained for backward compatibility.  The newer
