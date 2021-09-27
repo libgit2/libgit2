@@ -37,12 +37,6 @@ SET(LIBGIT2_LIBS "")
 
 enable_warnings(missing-declarations)
 
-# Enable tracing
-IF(ENABLE_TRACE)
-	SET(GIT_TRACE 1)
-ENDIF()
-ADD_FEATURE_INFO(tracing GIT_TRACE "tracing support")
-
 IF (HAVE_FUTIMENS)
 	SET(GIT_USE_FUTIMENS 1)
 ENDIF ()

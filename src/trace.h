@@ -12,8 +12,6 @@
 #include <git2/trace.h>
 #include "str.h"
 
-#ifdef GIT_TRACE
-
 struct git_trace_data {
 	git_trace_level_t level;
 	git_trace_cb callback;
@@ -49,20 +47,5 @@ GIT_INLINE(void) git_trace(git_trace_level_t level, const char *fmt, ...)
 		va_end(ap);
 	}
 }
-
-#else
-
-GIT_INLINE(void) git_trace__null(
-	git_trace_level_t level,
-	const char *fmt, ...)
-{
-	GIT_UNUSED(level);
-	GIT_UNUSED(fmt);
-}
-
-#define git_trace_level()	((git_trace_level_t)0)
-#define git_trace		git_trace__null
-
-#endif
 
 #endif
