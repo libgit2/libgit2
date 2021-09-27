@@ -26,6 +26,10 @@ static int config_get(git_config *cfg, const char *key)
 	}
 
 	puts(entry->value);
+
+	/* Free the git_config_entry after use with `git_config_entry_free()`. */
+	git_config_entry_free(entry);
+
 	return 0;
 }
 
@@ -57,6 +61,11 @@ int lg2_config(git_repository *repo, int argc, char **argv)
 		error = 1;
 	}
 
+	/**
+	 * The configuration file must be freed once it's no longer
+	 * being used by the user.
+	*/
+	git_config_free(cfg);
 out:
 	return error;
 }
