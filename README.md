@@ -278,7 +278,7 @@ The following CMake variables are declared:
 - `CMAKE_INSTALL_LIBDIR`: Where to install libraries to.
 - `CMAKE_INSTALL_INCLUDEDIR`: Where to install headers to.
 - `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to ON)
-- `BUILD_CLAR`: Build [Clar](https://github.com/vmg/clar)-based test suite (defaults to ON)
+- `BUILD_TESTS`: Build the unit and integration test suites (defaults to ON)
 - `THREADSAFE`: Build libgit2 with threading support (defaults to ON)
 
 To list all build options and their current value, you can do the
