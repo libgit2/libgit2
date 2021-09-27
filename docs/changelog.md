@@ -7,6 +7,9 @@ This is release v1.3.0, "Zugunruhe".  This release includes only minor new featu
 * Support custom git extensions by @ethomson in https://github.com/libgit2/libgit2/pull/6031
 * Introduce `git_email_create`; deprecate `git_diff_format_email` by @ethomson in https://github.com/libgit2/libgit2/pull/6061
 
+## Deprecated APIs
+* `git_oidarray_free` is deprecated; callers should use `git_oidarray_dispose`
+
 ## Bug fixes
 * #6028: Check if `threadstate->error_t.message` is not `git_buf__initbuf` before freeing. by @arroz in https://github.com/libgit2/libgit2/pull/6029
 * remote: Mark `git_remote_name_is_valid` as `GIT_EXTERN` by @lhchavez in https://github.com/libgit2/libgit2/pull/6032
@@ -17,6 +20,9 @@ This is release v1.3.0, "Zugunruhe".  This release includes only minor new featu
 * win32: allow empty environment variables by @ethomson in https://github.com/libgit2/libgit2/pull/6063
 * Fixes for deprecated APIs by @ethomson in https://github.com/libgit2/libgit2/pull/6066
 * filter: use a `git_oid` in filter options, not a pointer by @ethomson in https://github.com/libgit2/libgit2/pull/6067
+* diff: update `GIT_DIFF_IGNORE_BLANK_LINES` by @ethomson in https://github.com/libgit2/libgit2/pull/6068 
+* Attribute lookups are always on relative paths by @ethomson in https://github.com/libgit2/libgit2/pull/6073
+* Handle long paths when querying attributes by @ethomson in https://github.com/libgit2/libgit2/pull/6075
 
 ## Code cleanups
 * notes: use a buffer internally by @ethomson in https://github.com/libgit2/libgit2/pull/6047
@@ -26,7 +32,8 @@ This is release v1.3.0, "Zugunruhe".  This release includes only minor new featu
 * Longpath filter bug by @lrm29 in https://github.com/libgit2/libgit2/pull/6055
 * Add test to ensure empty proxy env behaves like unset env by @sathieu in https://github.com/libgit2/libgit2/pull/6052
 * Stdint header condition has been reverted. by @lolgear in https://github.com/libgit2/libgit2/pull/6020
-* diff: update `GIT_DIFF_IGNORE_BLANK_LINES` by @ethomson in https://github.com/libgit2/libgit2/pull/6068
+* buf: `common_prefix` takes a string array by @ethomson in https://github.com/libgit2/libgit2/pull/6077
+* oidarray: introduce `git_oidarray_dispose` by @ethomson in https://github.com/libgit2/libgit2/pull/6076
 
 ## CI Improvements
 * ci: pull libssh2 from www.libssh2.org by @ethomson in https://github.com/libgit2/libgit2/pull/6064
