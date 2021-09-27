@@ -4,18 +4,18 @@
 # TODO: The Chromium build file (in deps/chromium-zlib/zlib/BUILD.gn) supports
 # more platforms (like ARM with NEON), more can be enabled as needed.
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.11)
+cmake_minimum_required(VERSION 3.11)
 
 include(FetchContent)
 include(FindGit)
 
 # Ensure that the git binary is present to download the sources.
 find_package(Git)
-IF(NOT Git_FOUND)
+if(NOT Git_FOUND)
 	message(FATAL_ERROR "git is required to download the Chromium zlib sources")
-ENDIF()
+endif()
 
-FetchContent_Populate(chromium_zlib_src
+fetchcontent_populate(chromium_zlib_src
 	GIT_REPOSITORY https://chromium.googlesource.com/chromium/src/third_party/zlib.git
 	GIT_TAG 2c183c9f93a328bfb3121284da13cf89a0f7e64a
 	QUIET
@@ -31,8 +31,8 @@ disable_warnings(missing-declarations)
 
 # -O3 is also set by the Chromium configuration and has been deemed safe enough
 # for them.
-SET(CMAKE_C_FLAGS_RELWITHDEBINFO "-O3 -g -DNDEBUG")
-SET(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O3 -g -DNDEBUG")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 
 # Common definitions.
 add_definitions(
