@@ -34,6 +34,7 @@ This is release v1.3.0, "Zugunruhe".  This release includes only minor new featu
 * Stdint header condition has been reverted. by @lolgear in https://github.com/libgit2/libgit2/pull/6020
 * buf: `common_prefix` takes a string array by @ethomson in https://github.com/libgit2/libgit2/pull/6077
 * oidarray: introduce `git_oidarray_dispose` by @ethomson in https://github.com/libgit2/libgit2/pull/6076
+* examples: Free the git_config and git_config_entry after use by @257 in https://github.com/libgit2/libgit2/pull/6071
 
 ## CI Improvements
 * ci: pull libssh2 from www.libssh2.org by @ethomson in https://github.com/libgit2/libgit2/pull/6064
@@ -48,6 +49,7 @@ This is release v1.3.0, "Zugunruhe".  This release includes only minor new featu
 * @shijinglu made their first contribution in https://github.com/libgit2/libgit2/pull/6050
 * @ccstolley made their first contribution in https://github.com/libgit2/libgit2/pull/6060
 * @sathieu made their first contribution in https://github.com/libgit2/libgit2/pull/6052
+* @257 made their first contribution in https://github.com/libgit2/libgit2/pull/6071
 
 **Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.2.0...v1.3.0
 
