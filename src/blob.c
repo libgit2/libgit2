@@ -277,21 +277,20 @@ int git_blob_create_from_disk(
 {
 	int error;
 	git_buf full_path = GIT_BUF_INIT;
-	const char *workdir, *hintpath;
+	const char *workdir, *hintpath = NULL;
 
 	if ((error = git_path_prettify(&full_path, path, NULL)) < 0) {
 		git_buf_dispose(&full_path);
 		return error;
 	}
 
-	hintpath = git_buf_cstr(&full_path);
 	workdir  = git_repository_workdir(repo);
 
-	if (workdir && !git__prefixcmp(hintpath, workdir))
-		hintpath += strlen(workdir);
+	if (workdir && !git__prefixcmp(full_path.ptr, workdir))
+		hintpath = full_path.ptr + strlen(workdir);
 
 	error = git_blob__create_from_paths(
-		id, NULL, repo, git_buf_cstr(&full_path), hintpath, 0, true);
+		id, NULL, repo, git_buf_cstr(&full_path), hintpath, 0, !!hintpath);
 
 	git_buf_dispose(&full_path);
 	return error;

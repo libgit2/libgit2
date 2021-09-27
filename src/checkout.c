@@ -1520,8 +1520,7 @@ static int blob_content_to_file(
 	int fd;
 	int error = 0;
 
-	if (hint_path == NULL)
-		hint_path = path;
+	GIT_ASSERT(hint_path != NULL);
 
 	if ((error = mkpath2file(data, path, data->opts.dir_mode)) < 0)
 		return error;
@@ -1789,7 +1788,7 @@ static int checkout_blob(
 	}
 
 	error = checkout_write_content(
-		data, &file->id, fullpath->ptr, NULL, file->mode, &st);
+		data, &file->id, fullpath->ptr, file->path, file->mode, &st);
 
 	/* update the index unless prevented */
 	if (!error && (data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0)
@@ -1975,7 +1974,7 @@ static int checkout_write_entry(
 	checkout_conflictdata *conflict,
 	const git_index_entry *side)
 {
-	const char *hint_path = NULL, *suffix;
+	const char *hint_path, *suffix;
 	git_buf *fullpath;
 	struct stat st;
 	int error;
@@ -1998,9 +1997,9 @@ static int checkout_write_entry(
 
 		if (checkout_path_suffixed(fullpath, suffix) < 0)
 			return -1;
-
-		hint_path = side->path;
 	}
+
+	hint_path = side->path;
 
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0 &&
 		(error = checkout_safe_for_update_only(data, fullpath->ptr, side->mode)) <= 0)
@@ -2118,7 +2117,7 @@ static int checkout_write_merge(
 		filter_session.temp_buf = &data->tmp;
 
 		if ((error = git_filter_list__load(
-				&fl, data->repo, NULL, git_buf_cstr(&path_workdir),
+				&fl, data->repo, NULL, result.path,
 				GIT_FILTER_TO_WORKTREE, &filter_session)) < 0 ||
 			(error = git_filter_list__convert_buf(&out_data, fl, &in_data)) < 0)
 			goto done;

@@ -629,6 +629,8 @@ static int collect_attr_files(
 	const char *workdir = git_repository_workdir(repo);
 	attr_walk_up_info info = { NULL };
 
+	GIT_ASSERT(!git_path_is_absolute(path));
+
 	if ((error = attr_setup(repo, attr_session, opts)) < 0)
 		return error;
 
