@@ -324,7 +324,7 @@ extern int git_buf_lf_to_crlf(git_buf *tgt, const git_buf *src);
  *
  * Buffer will be set to empty if there is no common prefix
  */
-extern int git_buf_common_prefix(git_buf *buf, const git_strarray *strs);
+extern int git_buf_common_prefix(git_buf *buf, char *const *const strings, size_t count);
 
 /**
  * Check if a buffer begins with a UTF BOM
