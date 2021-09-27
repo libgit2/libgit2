@@ -68,7 +68,7 @@ int git_attr_get_ext(
 	if (git_repository_is_bare(repo))
 		dir_flag = GIT_DIR_FLAG_FALSE;
 
-	if (git_attr_path__init(&path, repo, pathname, git_repository_workdir(repo), dir_flag) < 0)
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
 	if ((error = collect_attr_files(repo, NULL, opts, pathname, &files)) < 0)
@@ -149,7 +149,7 @@ int git_attr_get_many_with_session(
 	if (git_repository_is_bare(repo))
 		dir_flag = GIT_DIR_FLAG_FALSE;
 
-	if (git_attr_path__init(&path, repo, pathname, git_repository_workdir(repo), dir_flag) < 0)
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
 	if ((error = collect_attr_files(repo, attr_session, opts, pathname, &files)) < 0)
@@ -264,7 +264,7 @@ int git_attr_foreach_ext(
 	if (git_repository_is_bare(repo))
 		dir_flag = GIT_DIR_FLAG_FALSE;
 
-	if (git_attr_path__init(&path, repo, pathname, git_repository_workdir(repo), dir_flag) < 0)
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
 	if ((error = collect_attr_files(repo, NULL, opts, pathname, &files)) < 0 ||
