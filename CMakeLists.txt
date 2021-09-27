@@ -66,9 +66,7 @@ IF (UNIX)
 	ENDIF()
 
 	OPTION(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"				OFF)
-ENDIF()
 
-IF (APPLE)
 	OPTION(USE_ICONV		"Link with and use iconv library"			 ON)
 ENDIF()
 
