@@ -64,9 +64,7 @@ IF (UNIX)
 	ELSE()
 	    OPTION(USE_NTLMCLIENT		"Enable NTLM support on Unix."				ON )
 	ENDIF()
-ENDIF()
 
-IF (UNIX AND NOT APPLE)
 	OPTION(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"				OFF)
 ENDIF()
 
