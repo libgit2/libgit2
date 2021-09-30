@@ -119,7 +119,7 @@ void test_odb_largefiles__streamread(void)
 
 	cl_assert_equal_sz(LARGEFILE_SIZE, total);
 
-	git_hash_final(&read_oid, &hash);
+	git_hash_final(read_oid.id, &hash);
 
 	cl_assert_equal_oid(&oid, &read_oid);
 

@@ -136,7 +136,7 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 	vec[1].data = obj->data;
 	vec[1].len = obj->len;
 
-	return git_hash_vec(id, vec, 2, GIT_HASH_ALGORITHM_SHA1);
+	return git_hash_vec(id->id, vec, 2, GIT_HASH_ALGORITHM_SHA1);
 }
 
 
@@ -237,7 +237,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_object_t type)
 		goto done;
 	}
 
-	error = git_hash_final(out, &ctx);
+	error = git_hash_final(out->id, &ctx);
 
 done:
 	git_hash_ctx_cleanup(&ctx);
@@ -1607,7 +1607,7 @@ int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
 		return git_odb_stream__invalid_length(stream,
 			"stream_finalize_write()");
 
-	git_hash_final(out, stream->hash_ctx);
+	git_hash_final(out->id, stream->hash_ctx);
 
 	if (git_odb__freshen(stream->backend->odb, out))
 		return 0;

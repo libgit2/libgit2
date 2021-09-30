@@ -128,7 +128,7 @@ void test_pack_packbuilder__create_pack(void)
 
 	cl_git_pass(git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA1));
 	cl_git_pass(git_hash_update(&ctx, buf.ptr, buf.size));
-	cl_git_pass(git_hash_final(&hash, &ctx));
+	cl_git_pass(git_hash_final(hash.id, &ctx));
 	git_hash_ctx_cleanup(&ctx);
 
 	git_buf_dispose(&path);

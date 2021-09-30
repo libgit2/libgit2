@@ -397,7 +397,7 @@ int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 	if (verify_last_error(file) < 0)
 		return -1;
 
-	git_hash_final(oid, &file->digest);
+	git_hash_final(oid->id, &file->digest);
 	git_hash_ctx_cleanup(&file->digest);
 	file->compute_digest = 0;
 

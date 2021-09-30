@@ -38,9 +38,9 @@ int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 	return 0;
 }
 
-int git_hash_sha1_final(git_oid *out, git_hash_sha1_ctx *ctx)
+int git_hash_sha1_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 {
 	GIT_ASSERT_ARG(ctx);
-	mbedtls_sha1_finish(&ctx->c, out->id);
+	mbedtls_sha1_finish(&ctx->c, out);
 	return 0;
 }

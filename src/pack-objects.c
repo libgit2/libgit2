@@ -664,7 +664,7 @@ static int write_pack(git_packbuilder *pb,
 		pb->nr_remaining -= pb->nr_written;
 	} while (pb->nr_remaining && i < pb->nr_objects);
 
-	if ((error = git_hash_final(&entry_oid, &pb->ctx)) < 0)
+	if ((error = git_hash_final(entry_oid.id, &pb->ctx)) < 0)
 		goto done;
 
 	error = write_cb(entry_oid.id, GIT_OID_RAWSZ, cb_data);

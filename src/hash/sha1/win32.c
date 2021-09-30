@@ -181,14 +181,14 @@ GIT_INLINE(int) hash_cryptoapi_update(git_hash_sha1_ctx *ctx, const void *_data,
 	return 0;
 }
 
-GIT_INLINE(int) hash_cryptoapi_final(git_oid *out, git_hash_sha1_ctx *ctx)
+GIT_INLINE(int) hash_cryptoapi_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 {
-	DWORD len = 20;
+	DWORD len = GIT_HASH_SHA1_SIZE;
 	int error = 0;
 
 	GIT_ASSERT(ctx->ctx.cryptoapi.valid);
 
-	if (!CryptGetHashParam(ctx->ctx.cryptoapi.hash_handle, HP_HASHVAL, out->id, &len, 0)) {
+	if (!CryptGetHashParam(ctx->ctx.cryptoapi.hash_handle, HP_HASHVAL, out, &len, 0)) {
 		git_error_set(GIT_ERROR_OS, "legacy hash data could not be finished");
 		error = -1;
 	}
@@ -262,9 +262,9 @@ GIT_INLINE(int) hash_cng_update(git_hash_sha1_ctx *ctx, const void *_data, size_
 	return 0;
 }
 
-GIT_INLINE(int) hash_cng_final(git_oid *out, git_hash_sha1_ctx *ctx)
+GIT_INLINE(int) hash_cng_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 {
-	if (ctx->prov->prov.cng.finish_hash(ctx->ctx.cng.hash_handle, out->id, GIT_OID_RAWSZ, 0) < 0) {
+	if (ctx->prov->prov.cng.finish_hash(ctx->ctx.cng.hash_handle, out, GIT_HASH_SHA1_SIZE, 0) < 0) {
 		git_error_set(GIT_ERROR_OS, "hash could not be finished");
 		return -1;
 	}
@@ -315,7 +315,7 @@ int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 	return (ctx->type == CNG) ? hash_cng_update(ctx, data, len) : hash_cryptoapi_update(ctx, data, len);
 }
 
-int git_hash_sha1_final(git_oid *out, git_hash_sha1_ctx *ctx)
+int git_hash_sha1_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 {
 	GIT_ASSERT_ARG(ctx);
 	GIT_ASSERT_ARG(ctx->type);

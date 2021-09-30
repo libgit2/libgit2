@@ -230,7 +230,7 @@ int git_commit_graph_file_parse(
 		return commit_graph_error("wrong commit-graph size");
 	git_oid_cpy(&file->checksum, (git_oid *)(data + trailer_offset));
 
-	if (git_hash_buf(&cgraph_checksum, data, (size_t)trailer_offset, GIT_HASH_ALGORITHM_SHA1) < 0)
+	if (git_hash_buf(cgraph_checksum.id, data, (size_t)trailer_offset, GIT_HASH_ALGORITHM_SHA1) < 0)
 		return commit_graph_error("could not calculate signature");
 	if (!git_oid_equal(&cgraph_checksum, &file->checksum))
 		return commit_graph_error("index signature mismatch");
@@ -1132,7 +1132,7 @@ static int commit_graph_write(
 		goto cleanup;
 
 	/* Finalize the checksum and write the trailer. */
-	error = git_hash_final(&cgraph_checksum, &ctx);
+	error = git_hash_final(cgraph_checksum.id, &ctx);
 	if (error < 0)
 		goto cleanup;
 	error = write_cb((const char *)&cgraph_checksum, sizeof(cgraph_checksum), cb_data);

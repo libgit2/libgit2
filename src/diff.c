@@ -269,7 +269,7 @@ static int flush_hunk(git_oid *result, git_hash_ctx *ctx)
 	unsigned short carry = 0;
 	int error, i;
 
-	if ((error = git_hash_final(&hash, ctx)) < 0 ||
+	if ((error = git_hash_final(hash.id, ctx)) < 0 ||
 	    (error = git_hash_init(ctx)) < 0)
 		return error;
 

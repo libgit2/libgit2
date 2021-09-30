@@ -36,10 +36,10 @@ int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 	return 0;
 }
 
-int git_hash_sha1_final(git_oid *out, git_hash_sha1_ctx *ctx)
+int git_hash_sha1_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 {
 	GIT_ASSERT_ARG(ctx);
-	if (SHA1DCFinal(out->id, &ctx->c)) {
+	if (SHA1DCFinal(out, &ctx->c)) {
 		git_error_set(GIT_ERROR_SHA1, "SHA1 collision attack detected");
 		return -1;
 	}

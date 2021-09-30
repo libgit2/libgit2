@@ -278,7 +278,7 @@ int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 	return 0;
 }
 
-int git_hash_sha1_final(git_oid *out, git_hash_sha1_ctx *ctx)
+int git_hash_sha1_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 {
 	static const unsigned char pad[64] = { 0x80 };
 	unsigned int padlen[2];
@@ -294,7 +294,7 @@ int git_hash_sha1_final(git_oid *out, git_hash_sha1_ctx *ctx)
 
 	/* Output hash */
 	for (i = 0; i < 5; i++)
-		put_be32(out->id + i*4, ctx->H[i]);
+		put_be32(out + i*4, ctx->H[i]);
 
 	return 0;
 }

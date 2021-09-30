@@ -66,7 +66,7 @@ int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 	return -1;
 }
 
-int git_hash_final(git_oid *out, git_hash_ctx *ctx)
+int git_hash_final(unsigned char *out, git_hash_ctx *ctx)
 {
 	switch (ctx->algorithm) {
 	case GIT_HASH_ALGORITHM_SHA1:
@@ -80,7 +80,7 @@ int git_hash_final(git_oid *out, git_hash_ctx *ctx)
 }
 
 int git_hash_buf(
-	git_oid *out,
+	unsigned char *out,
 	const void *data,
 	size_t len,
 	git_hash_algorithm_t algorithm)
@@ -100,7 +100,7 @@ int git_hash_buf(
 }
 
 int git_hash_vec(
-	git_oid *out,
+	unsigned char *out,
 	git_buf_vec *vec,
 	size_t n,
 	git_hash_algorithm_t algorithm)
