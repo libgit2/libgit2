@@ -152,8 +152,8 @@ int git_indexer_new(
 	idx->mode = mode ? mode : GIT_PACK_FILE_MODE;
 	git_buf_init(&idx->entry_data, 0);
 
-	if ((error = git_hash_ctx_init(&idx->hash_ctx)) < 0 ||
-	    (error = git_hash_ctx_init(&idx->trailer)) < 0 ||
+	if ((error = git_hash_ctx_init(&idx->hash_ctx, GIT_HASH_ALGORITHM_SHA1)) < 0 ||
+	    (error = git_hash_ctx_init(&idx->trailer, GIT_HASH_ALGORITHM_SHA1)) < 0 ||
 	    (error = git_oidmap_new(&idx->expected_oids)) < 0)
 		goto cleanup;
 

@@ -136,7 +136,7 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 	vec[1].data = obj->data;
 	vec[1].len = obj->len;
 
-	return git_hash_vec(id, vec, 2);
+	return git_hash_vec(id, vec, 2, GIT_HASH_ALGORITHM_SHA1);
 }
 
 
@@ -210,7 +210,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_object_t type)
 		return -1;
 	}
 
-	if ((error = git_hash_ctx_init(&ctx)) < 0)
+	if ((error = git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA1)) < 0)
 		return error;
 
 	if ((error = git_odb__format_object_header(&hdr_len, hdr,
@@ -1561,7 +1561,7 @@ int git_odb_open_wstream(
 	ctx = git__malloc(sizeof(git_hash_ctx));
 	GIT_ERROR_CHECK_ALLOC(ctx);
 
-	if ((error = git_hash_ctx_init(ctx)) < 0 ||
+	if ((error = git_hash_ctx_init(ctx, GIT_HASH_ALGORITHM_SHA1)) < 0 ||
 		(error = hash_header(ctx, size, type)) < 0)
 		goto done;
 

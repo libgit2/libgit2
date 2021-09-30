@@ -141,7 +141,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	pb->repo = repo;
 	pb->nr_threads = 1; /* do not spawn any thread by default */
 
-	if (git_hash_ctx_init(&pb->ctx) < 0 ||
+	if (git_hash_ctx_init(&pb->ctx, GIT_HASH_ALGORITHM_SHA1) < 0 ||
 		git_zstream_init(&pb->zstream, GIT_ZSTREAM_DEFLATE) < 0 ||
 		git_repository_odb(&pb->odb, repo) < 0 ||
 		packbuilder_config(pb) < 0)

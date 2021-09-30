@@ -23,7 +23,7 @@ static int sha1_file(git_oid *oid, const char *filename)
 	fd = p_open(filename, O_RDONLY);
 	cl_assert(fd >= 0);
 
-	cl_git_pass(git_hash_ctx_init(&ctx));
+	cl_git_pass(git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA1));
 
 	while ((read_len = p_read(fd, buf, 2048)) > 0)
 		cl_git_pass(git_hash_update(&ctx, buf, (size_t)read_len));

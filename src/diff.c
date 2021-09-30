@@ -352,7 +352,7 @@ int git_diff_patchid(git_oid *out, git_diff *diff, git_diff_patchid_options *opt
 
 	memset(&args, 0, sizeof(args));
 	args.first_file = 1;
-	if ((error = git_hash_ctx_init(&args.ctx)) < 0)
+	if ((error = git_hash_ctx_init(&args.ctx, GIT_HASH_ALGORITHM_SHA1)) < 0)
 		goto out;
 
 	if ((error = git_diff_print(diff,

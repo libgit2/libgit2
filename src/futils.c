@@ -216,7 +216,7 @@ int git_futils_readbuffer_updated(
 	p_close(fd);
 
 	if (checksum) {
-		if ((error = git_hash_buf(&checksum_new, buf.ptr, buf.size)) < 0) {
+		if ((error = git_hash_buf(&checksum_new, buf.ptr, buf.size, GIT_HASH_ALGORITHM_SHA1)) < 0) {
 			git_buf_dispose(&buf);
 			return error;
 		}

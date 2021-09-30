@@ -33,14 +33,14 @@ typedef struct git_hash_ctx {
 
 int git_hash_global_init(void);
 
-int git_hash_ctx_init(git_hash_ctx *ctx);
+int git_hash_ctx_init(git_hash_ctx *ctx, git_hash_algorithm_t algorithm);
 void git_hash_ctx_cleanup(git_hash_ctx *ctx);
 
 int git_hash_init(git_hash_ctx *c);
 int git_hash_update(git_hash_ctx *c, const void *data, size_t len);
 int git_hash_final(git_oid *out, git_hash_ctx *c);
 
-int git_hash_buf(git_oid *out, const void *data, size_t len);
-int git_hash_vec(git_oid *out, git_buf_vec *vec, size_t n);
+int git_hash_buf(git_oid *out, const void *data, size_t len, git_hash_algorithm_t algorithm);
+int git_hash_vec(git_oid *out, git_buf_vec *vec, size_t n, git_hash_algorithm_t algorithm);
 
 #endif
