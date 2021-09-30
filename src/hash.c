@@ -19,15 +19,15 @@ int git_hash_ctx_init(git_hash_ctx *ctx)
 	if ((error = git_hash_sha1_ctx_init(&ctx->ctx.sha1)) < 0)
 		return error;
 
-	ctx->algo = GIT_HASH_ALGO_SHA1;
+	ctx->algorithm = GIT_HASH_ALGORITHM_SHA1;
 
 	return 0;
 }
 
 void git_hash_ctx_cleanup(git_hash_ctx *ctx)
 {
-	switch (ctx->algo) {
-		case GIT_HASH_ALGO_SHA1:
+	switch (ctx->algorithm) {
+		case GIT_HASH_ALGORITHM_SHA1:
 			git_hash_sha1_ctx_cleanup(&ctx->ctx.sha1);
 			return;
 		default:
@@ -37,8 +37,8 @@ void git_hash_ctx_cleanup(git_hash_ctx *ctx)
 
 int git_hash_init(git_hash_ctx *ctx)
 {
-	switch (ctx->algo) {
-		case GIT_HASH_ALGO_SHA1:
+	switch (ctx->algorithm) {
+		case GIT_HASH_ALGORITHM_SHA1:
 			return git_hash_sha1_init(&ctx->ctx.sha1);
 		default:
 			/* unreachable */ ;
@@ -49,8 +49,8 @@ int git_hash_init(git_hash_ctx *ctx)
 
 int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 {
-	switch (ctx->algo) {
-		case GIT_HASH_ALGO_SHA1:
+	switch (ctx->algorithm) {
+		case GIT_HASH_ALGORITHM_SHA1:
 			return git_hash_sha1_update(&ctx->ctx.sha1, data, len);
 		default:
 			/* unreachable */ ;
@@ -61,8 +61,8 @@ int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 
 int git_hash_final(git_oid *out, git_hash_ctx *ctx)
 {
-	switch (ctx->algo) {
-		case GIT_HASH_ALGO_SHA1:
+	switch (ctx->algorithm) {
+		case GIT_HASH_ALGORITHM_SHA1:
 			return git_hash_sha1_final(out, &ctx->ctx.sha1);
 		default:
 			/* unreachable */ ;

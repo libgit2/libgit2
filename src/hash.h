@@ -18,9 +18,9 @@ typedef struct {
 } git_buf_vec;
 
 typedef enum {
-	GIT_HASH_ALGO_UNKNOWN = 0,
-	GIT_HASH_ALGO_SHA1,
-} git_hash_algo_t;
+	GIT_HASH_ALGORITHM_NONE = 0,
+	GIT_HASH_ALGORITHM_SHA1
+} git_hash_algorithm_t;
 
 #include "hash/sha1.h"
 
@@ -28,7 +28,7 @@ typedef struct git_hash_ctx {
 	union {
 		git_hash_sha1_ctx sha1;
 	} ctx;
-	git_hash_algo_t algo;
+	git_hash_algorithm_t algorithm;
 } git_hash_ctx;
 
 int git_hash_global_init(void);
