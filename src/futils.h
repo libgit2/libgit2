@@ -14,7 +14,7 @@
 #include "path.h"
 #include "pool.h"
 #include "strmap.h"
-#include "oid.h"
+#include "hash.h"
 
 /**
  * Filebuffer methods
@@ -23,7 +23,10 @@
  */
 extern int git_futils_readbuffer(git_buf *obj, const char *path);
 extern int git_futils_readbuffer_updated(
-	git_buf *obj, const char *path, git_oid *checksum, int *updated);
+	git_buf *obj,
+	const char *path,
+	unsigned char checksum[GIT_HASH_SHA1_SIZE],
+	int *updated);
 extern int git_futils_readbuffer_fd(git_buf *obj, git_file fd, size_t len);
 
 /* Additional constants for `git_futils_writebuffer`'s `open_flags`.  We
