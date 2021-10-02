@@ -32,7 +32,7 @@ typedef enum {
 	/**
 	 * Connect via the URL given in the options
 	 */
-	GIT_PROXY_SPECIFIED,
+	GIT_PROXY_SPECIFIED
 } git_proxy_t;
 
 /**

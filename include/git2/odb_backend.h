@@ -71,7 +71,7 @@ GIT_EXTERN(int) git_odb_backend_one_pack(git_odb_backend **out, const char *inde
 typedef enum {
 	GIT_STREAM_RDONLY = (1 << 1),
 	GIT_STREAM_WRONLY = (1 << 2),
-	GIT_STREAM_RW = (GIT_STREAM_RDONLY | GIT_STREAM_WRONLY),
+	GIT_STREAM_RW = (GIT_STREAM_RDONLY | GIT_STREAM_WRONLY)
 } git_odb_stream_t;
 
 /**

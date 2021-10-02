@@ -30,7 +30,7 @@ GIT_BEGIN_DECL
  * Currently unused.
  */
 typedef enum {
-	GIT_TRANSPORTFLAGS_NONE = 0,
+	GIT_TRANSPORTFLAGS_NONE = 0
 } git_transport_flags_t;
 
 struct git_transport {
@@ -289,7 +289,7 @@ typedef enum {
 	GIT_SERVICE_UPLOADPACK_LS = 1,
 	GIT_SERVICE_UPLOADPACK = 2,
 	GIT_SERVICE_RECEIVEPACK_LS = 3,
-	GIT_SERVICE_RECEIVEPACK = 4,
+	GIT_SERVICE_RECEIVEPACK = 4
 } git_smart_service_t;
 
 typedef struct git_smart_subtransport git_smart_subtransport;

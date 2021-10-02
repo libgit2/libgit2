@@ -75,7 +75,7 @@ typedef enum {
 	 *
 	 * @see git_credential_ssh_key_memory_new
 	 */
-	GIT_CREDENTIAL_SSH_MEMORY = (1u << 6),
+	GIT_CREDENTIAL_SSH_MEMORY = (1u << 6)
 } git_credential_t;
 
 /**

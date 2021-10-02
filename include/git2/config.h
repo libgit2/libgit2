@@ -55,7 +55,7 @@ typedef enum {
 	/** Represents the highest level available config file (i.e. the most
 	 * specific config file available that actually is loaded)
 	 */
-	GIT_CONFIG_HIGHEST_LEVEL = -1,
+	GIT_CONFIG_HIGHEST_LEVEL = -1
 } git_config_level_t;
 
 /**

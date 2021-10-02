@@ -79,7 +79,7 @@ typedef enum {
 	GIT_STREAM_STANDARD = 1,
 
 	/** A TLS-encrypted socket. */
-	GIT_STREAM_TLS = 2,
+	GIT_STREAM_TLS = 2
 } git_stream_t;
 
 /**

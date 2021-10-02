@@ -86,7 +86,7 @@ typedef struct git_index_entry {
  */
 typedef enum {
 	GIT_INDEX_ENTRY_EXTENDED  = (0x4000),
-	GIT_INDEX_ENTRY_VALID     = (0x8000),
+	GIT_INDEX_ENTRY_VALID     = (0x8000)
 } git_index_entry_flag_t;
 
 #define GIT_INDEX_ENTRY_STAGE(E) \
@@ -119,7 +119,7 @@ typedef enum {
 
 	GIT_INDEX_ENTRY_EXTENDED_FLAGS =  (GIT_INDEX_ENTRY_INTENT_TO_ADD | GIT_INDEX_ENTRY_SKIP_WORKTREE),
 
-	GIT_INDEX_ENTRY_UPTODATE       =  (1 << 2),
+	GIT_INDEX_ENTRY_UPTODATE       =  (1 << 2)
 } git_index_entry_extended_flag_t;
 
 /** Capabilities of system that affect index actions. */
@@ -127,7 +127,7 @@ typedef enum {
 	GIT_INDEX_CAPABILITY_IGNORE_CASE = 1,
 	GIT_INDEX_CAPABILITY_NO_FILEMODE = 2,
 	GIT_INDEX_CAPABILITY_NO_SYMLINKS = 4,
-	GIT_INDEX_CAPABILITY_FROM_OWNER  = -1,
+	GIT_INDEX_CAPABILITY_FROM_OWNER  = -1
 } git_index_capability_t;
 
 
@@ -140,7 +140,7 @@ typedef enum {
 	GIT_INDEX_ADD_DEFAULT = 0,
 	GIT_INDEX_ADD_FORCE = (1u << 0),
 	GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH = (1u << 1),
-	GIT_INDEX_ADD_CHECK_PATHSPEC = (1u << 2),
+	GIT_INDEX_ADD_CHECK_PATHSPEC = (1u << 2)
 } git_index_add_option_t;
 
 /** Git index stage states */
@@ -163,7 +163,7 @@ typedef enum {
 	GIT_INDEX_STAGE_OURS = 2,
 
 	/** The "theirs" side of a conflict. */
-	GIT_INDEX_STAGE_THEIRS = 3,
+	GIT_INDEX_STAGE_THEIRS = 3
 } git_index_stage_t;
 
 /**

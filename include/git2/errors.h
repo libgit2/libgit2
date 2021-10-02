@@ -57,7 +57,7 @@ typedef enum {
 	GIT_RETRY           = -32,	/**< Internal only */
 	GIT_EMISMATCH       = -33,	/**< Hashsum mismatch in object */
 	GIT_EINDEXDIRTY     = -34,	/**< Unsaved changes in the index would be overwritten */
-	GIT_EAPPLYFAIL      = -35,	/**< Patch application failed */
+	GIT_EAPPLYFAIL      = -35	/**< Patch application failed */
 } git_error_code;
 
 /**

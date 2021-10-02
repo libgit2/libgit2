@@ -313,7 +313,7 @@ typedef enum {
 	GIT_DIFF_FORMAT_EMAIL_NONE = 0,
 
 	/** Don't insert "[PATCH]" in the subject header*/
-	GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER = (1 << 0),
+	GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER = (1 << 0)
 
 } git_diff_format_email_flags_t;
 

@@ -59,7 +59,7 @@ typedef enum {
 	 * Don't actually make changes, just test that the patch applies.
 	 * This is the equivalent of `git apply --check`.
 	 */
-	GIT_APPLY_CHECK = (1 << 0),
+	GIT_APPLY_CHECK = (1 << 0)
 } git_apply_flags_t;
 
 /**
@@ -127,7 +127,7 @@ typedef enum {
 	 * Apply the patch to both the working directory and the index.
 	 * This is the equivalent of `git apply --index`.
 	 */
-	GIT_APPLY_LOCATION_BOTH = 2,
+	GIT_APPLY_LOCATION_BOTH = 2
 } git_apply_location_t;
 
 /**
