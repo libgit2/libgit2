@@ -51,7 +51,7 @@ ide_split_sources(libgit2_tests)
 # this on newer compilers to avoid unnecessary recompilation.
 #
 if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
-	add_definitions(-include \"clar_suite.h\")
+	target_compile_options(libgit2_tests PRIVATE -include "clar_suite.h")
 endif()
 
 if(MSVC_IDE)
@@ -79,3 +79,15 @@ add_clar_test(ssh                 -v -sonline::push -sonline::clone::ssh_cert -s
 add_clar_test(proxy               -v -sonline::clone::proxy)
 add_clar_test(auth_clone          -v -sonline::clone::cred)
 add_clar_test(auth_clone_and_push -v -sonline::clone::push -sonline::push)
+
+# Header file validation project
+add_executable(headertest headertest.c)
+set_target_properties(headertest PROPERTIES C_STANDARD 90)
+set_target_properties(headertest PROPERTIES C_EXTENSIONS OFF)
+target_include_directories(headertest PRIVATE ${LIBGIT2_INCLUDES})
+
+if (MSVC)
+    target_compile_options(headertest PUBLIC /W4 /WX)
+else()
+    target_compile_options(headertest PUBLIC -Wall -Wextra -pedantic -Werror)
+endif()
