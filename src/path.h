@@ -694,28 +694,6 @@ GIT_INLINE(int) git_path_validate_filesystem(
 }
 
 /**
- * Validate a path relative to the repo's worktree.  This ensures that
- * the given working tree path is valid for the operating system/platform.
- * This will ensure that an absolute path is smaller than MAX_PATH on
- * Windows, while keeping `core.longpaths` configuration settings in mind.
- *
- * This should be checked by mechamisms like `git_checkout` after
- * contructing on-disk paths and before trying to write them.
- *
- * If the repository is null, no repository configuration is applied.
- */
-extern int git_path_validate_workdir(
-	git_repository *repo,
-	const char *path);
-extern int git_path_validate_workdir_with_len(
-	git_repository *repo,
-	const char *path,
-	size_t path_len);
-extern int git_path_validate_workdir_buf(
-	git_repository *repo,
-	git_buf *buf);
-
-/**
  * Convert any backslashes into slashes
  */
 int git_path_normalize_slashes(git_buf *out, const char *path);

@@ -320,7 +320,7 @@ int git_ignore__for_path(
 		    (error = git_path_resolve_relative(&local, 0)) < 0 ||
 		    (error = git_path_to_dir(&local)) < 0 ||
 		    (error = git_buf_joinpath(&ignores->dir, workdir, local.ptr)) < 0 ||
-		    (error = git_path_validate_workdir_buf(repo, &ignores->dir)) < 0) {
+		    (error = git_repository_validate_workdir_path_buf(repo, &ignores->dir)) < 0) {
 			/* Nothing, we just want to stop on the first error */
 		}
 

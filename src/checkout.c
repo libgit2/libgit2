@@ -328,7 +328,7 @@ static int checkout_target_fullpath(
 	if (path && git_buf_puts(&data->target_path, path) < 0)
 		return -1;
 
-	if (git_path_validate_workdir_buf(data->repo, &data->target_path) < 0)
+	if (git_repository_validate_workdir_path_buf(data->repo, &data->target_path) < 0)
 		return -1;
 
 	*out = &data->target_path;
@@ -2034,7 +2034,7 @@ static int checkout_merge_path(
 	int error = 0;
 
 	if ((error = git_buf_joinpath(out, data->opts.target_directory, result->path)) < 0 ||
-	    (error = git_path_validate_workdir_buf(data->repo, out)) < 0)
+	    (error = git_repository_validate_workdir_path_buf(data->repo, out)) < 0)
 		return error;
 
 	/* Most conflicts simply use the filename in the index */
@@ -2337,7 +2337,7 @@ static int validate_target_directory(checkout_data *data)
 {
 	int error;
 
-	if ((error = git_path_validate_workdir(data->repo, data->opts.target_directory)) < 0)
+	if ((error = git_repository_validate_workdir_path(data->repo, data->opts.target_directory)) < 0)
 		return error;
 
 	if (git_path_isdir(data->opts.target_directory))
@@ -2623,7 +2623,7 @@ int git_checkout_iterator(
 
 	if (data.strategy & GIT_CHECKOUT_DRY_RUN)
 		goto cleanup;
-	
+
 	data.total_steps = counts[CHECKOUT_ACTION__REMOVE] +
 		counts[CHECKOUT_ACTION__REMOVE_CONFLICT] +
 		counts[CHECKOUT_ACTION__UPDATE_BLOB] +

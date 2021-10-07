@@ -382,7 +382,7 @@ int git_submodule__lookup_with_cache(
 			if (git_buf_join3(&path, '/',
 			                  git_repository_workdir(repo),
 					  name, DOT_GIT) < 0 ||
-			    git_path_validate_workdir_buf(NULL, &path) < 0)
+			    git_repository_validate_workdir_path_buf(NULL, &path) < 0)
 				return -1;
 
 			if (git_path_exists(path.ptr))

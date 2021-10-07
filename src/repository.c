@@ -2654,7 +2654,7 @@ int git_repository_workdir_path(
 	}
 
 	if (!(error = git_buf_joinpath(out, repo->workdir, path)))
-		error = git_path_validate_workdir_buf(repo, out);
+		error = git_repository_validate_workdir_path_buf(repo, out);
 
 	return error;
 }
@@ -2848,7 +2848,7 @@ int git_repository_hashfile(
 	GIT_ASSERT_ARG(repo);
 
 	if ((error = git_path_join_unrooted(&full_path, path, workdir, NULL)) < 0 ||
-	    (error = git_path_validate_workdir_buf(repo, &full_path)) < 0)
+	    (error = git_repository_validate_workdir_path_buf(repo, &full_path)) < 0)
 		return error;
 
 	/*
@@ -3235,4 +3235,53 @@ int git_repository_submodule_cache_clear(git_repository *repo)
 	error = git_submodule_cache_free(repo->submodule_cache);
 	repo->submodule_cache = NULL;
 	return error;
+}
+
+
+#ifdef GIT_WIN32
+GIT_INLINE(bool) should_validate_longpaths(git_repository *repo)
+{
+	int longpaths = 0;
+
+	if (repo &&
+	    git_repository__configmap_lookup(&longpaths, repo, GIT_CONFIGMAP_LONGPATHS) < 0)
+		longpaths = 0;
+
+	return (longpaths == 0);
+}
+
+#else
+
+GIT_INLINE(bool) should_validate_longpaths(git_repository *repo)
+{
+	GIT_UNUSED(repo);
+
+	return false;
+}
+#endif
+
+int git_repository_validate_workdir_path(
+	git_repository *repo,
+	const char *path)
+{
+	if (should_validate_longpaths(repo))
+		return git_path_validate_filesystem(path, strlen(path));
+
+	return 0;
+}
+
+int git_repository_validate_workdir_path_with_len(
+	git_repository *repo,
+	const char *path,
+	size_t path_len)
+{
+	if (should_validate_longpaths(repo))
+		return git_path_validate_filesystem(path, path_len);
+
+	return 0;
+}
+
+int git_repository_validate_workdir_path_buf(git_repository *repo, git_buf *path)
+{
+	return git_repository_validate_workdir_path_with_len(repo, path->ptr, path->size);
 }

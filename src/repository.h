@@ -249,6 +249,29 @@ int git_repository_initialbranch(git_buf *out, git_repository *repo);
  */
 int git_repository_workdir_path(git_buf *out, git_repository *repo, const char *path);
 
+/*
+ * Path validation within repository working directories; these
+ * functions ensure a working tree paths is valid for the operating
+ * system/platform.  For example, these will ensure that an absolute
+ * path is smaller than `MAX_PATH` on Windows, while keeping the
+ * repository configuration (`core.longpaths`) into account.
+ *
+ * These should be checked by mechamisms like `git_checkout` after
+ * contructing on-disk paths and before trying to write them.
+ *
+ * If the repository is null, no repository configuration is applied.
+ */
+int git_repository_validate_workdir_path(
+	git_repository *repo,
+	const char *path);
+int git_repository_validate_workdir_path_with_len(
+	git_repository *repo,
+	const char *path,
+	size_t path_len);
+int git_repository_validate_workdir_path_buf(
+	git_repository *repo,
+	git_buf *buf);
+
 int git_repository__extensions(char ***out, size_t *out_len);
 int git_repository__set_extensions(const char **extensions, size_t len);
 void git_repository__free_extensions(void);
