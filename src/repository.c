@@ -239,7 +239,7 @@ GIT_INLINE(int) validate_repo_path(git_buf *path)
 		CONST_STRLEN("objects/pack/pack-.pack.lock") +
 		GIT_OID_HEXSZ;
 
-	return git_path_validate_filesystem_with_suffix(
+	return git_path_validate_length_with_suffix(
 		path->ptr, path->size, suffix_len);
 }
 
@@ -3265,7 +3265,7 @@ int git_repository_validate_workdir_path(
 	const char *path)
 {
 	if (should_validate_longpaths(repo))
-		return git_path_validate_filesystem(path, strlen(path));
+		return git_path_validate_length(path, strlen(path));
 
 	return 0;
 }
@@ -3276,7 +3276,7 @@ int git_repository_validate_workdir_path_with_len(
 	size_t path_len)
 {
 	if (should_validate_longpaths(repo))
-		return git_path_validate_filesystem(path, path_len);
+		return git_path_validate_length(path, path_len);
 
 	return 0;
 }

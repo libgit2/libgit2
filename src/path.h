@@ -637,7 +637,8 @@ extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or
  *
  * (Note: if you take or construct an on-disk path -- a workdir path,
  * a path to a git repository or a reference name that could be a loose
- * ref -- you should _also_ validate that with `git_path_validate_workdir`.)
+ * ref -- you should _also_ validate that with
+ * `git_repository_validate_workdir_path`.)
  *
  * `repo` is optional.  If specified, it will be used to determine the short
  * path name to reject (if `GIT_PATH_REJECT_DOS_SHORTNAME` is specified),
@@ -653,7 +654,7 @@ extern bool git_path_validate(
  * Validate an on-disk path, taking into account that it will have a
  * suffix appended (eg, `.lock`).
  */
-GIT_INLINE(int) git_path_validate_filesystem_with_suffix(
+GIT_INLINE(int) git_path_validate_length_with_suffix(
 	const char *path,
 	size_t path_len,
 	size_t suffix_len)
@@ -684,13 +685,14 @@ GIT_INLINE(int) git_path_validate_filesystem_with_suffix(
  * Windows.
  *
  * For paths within the working directory, you should use ensure that
- * `core.longpaths` is obeyed.  Use `git_path_validate_workdir`.
+ * `core.longpaths` is obeyed.  Use `git_repository_validate_workdir_path`
+ * instead.
  */
-GIT_INLINE(int) git_path_validate_filesystem(
+GIT_INLINE(int) git_path_validate_length(
 	const char *path,
 	size_t path_len)
 {
-	return git_path_validate_filesystem_with_suffix(path, path_len, 0);
+	return git_path_validate_length_with_suffix(path, path_len, 0);
 }
 
 /**

@@ -327,7 +327,7 @@ int git_ignore__for_path(
 		git_buf_dispose(&local);
 	} else {
 		if (!(error = git_buf_joinpath(&ignores->dir, path, "")))
-		    error = git_path_validate_filesystem(ignores->dir.ptr, ignores->dir.size);
+		    error = git_path_validate_length(ignores->dir.ptr, ignores->dir.size);
 	}
 
 	if (error < 0)

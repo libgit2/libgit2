@@ -76,7 +76,7 @@ GIT_INLINE(int) loose_path(
 	if (git_buf_joinpath(out, base, refname) < 0)
 		return -1;
 
-	return git_path_validate_filesystem_with_suffix(out->ptr, out->size,
+	return git_path_validate_length_with_suffix(out->ptr, out->size,
 		CONST_STRLEN(".lock"));
 }
 
@@ -1361,7 +1361,7 @@ static int refdb_fs_backend__prune_refs(
 				git_buf_cstr(&relative_path));
 
 		if (!error)
-			error = git_path_validate_filesystem(base_path.ptr, base_path.size);
+			error = git_path_validate_length(base_path.ptr, base_path.size);
 
 		if (error < 0)
 			goto cleanup;
