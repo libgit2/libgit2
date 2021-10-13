@@ -768,7 +768,7 @@ typedef struct {
 	 *
 	 * This is a little different from the `-l` option from Git because we
 	 * will still process up to this many matches before abandoning the search.
-	 * Defaults to 200.
+	 * Defaults to 1000.
 	 */
 	size_t rename_limit;
 
