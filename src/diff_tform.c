@@ -241,7 +241,7 @@ int git_diff_find_similar__calc_similarity(
 
 #define DEFAULT_THRESHOLD 50
 #define DEFAULT_BREAK_REWRITE_THRESHOLD 60
-#define DEFAULT_RENAME_LIMIT 200
+#define DEFAULT_RENAME_LIMIT 1000
 
 static int normalize_find_opts(
 	git_diff *diff,
