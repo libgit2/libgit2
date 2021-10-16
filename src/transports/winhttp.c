@@ -1347,7 +1347,7 @@ static int put_uuid_string(LPWSTR buffer, size_t buffer_len_cch)
 		return -1;
 	}
 
-#if !defined(__MINGW32__) || defined(MINGW_HAS_SECURE_API)
+#if ((defined(_MSC_VER) && _MSC_VER >= 1400) && !defined(__MINGW32__)) || defined(MINGW_HAS_SECURE_API)
 	result = swprintf_s(buffer, buffer_len_cch,
 #else
 	result = wsprintfW(buffer,

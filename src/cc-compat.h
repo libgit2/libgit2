@@ -61,6 +61,15 @@
 #		define PRIxZ "I64x"
 #		define PRIXZ "I64X"
 #		define PRIdZ "I64d"
+#	elif defined(_MSC_VER) && _MSC_VER < 1300
+/* Old MSVC doesn't support these identifiers. (Assumes LP32, but I believe
+ * the unreleased AXP64 target is the only LP64 target that doesn't support
+ * the I length.)
+ */
+#		define PRIuZ "u"
+#		define PRIxZ "x"
+#		define PRIXZ "X"
+#		define PRIdZ "d"
 #	else
 #		define PRIuZ "Iu"
 #		define PRIxZ "Ix"

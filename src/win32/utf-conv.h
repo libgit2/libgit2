@@ -12,7 +12,12 @@
 #include <wchar.h>
 
 #ifndef WC_ERR_INVALID_CHARS
-# define WC_ERR_INVALID_CHARS	0x80
+# if _WIN32_WINNT >= 0x0600
+#  define WC_ERR_INVALID_CHARS	0x80
+# else
+/* Windows before Vista will reject this flag */
+#  define WC_ERR_INVALID_CHARS	0x0
+# endif
 #endif
 
 /**

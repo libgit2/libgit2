@@ -70,7 +70,8 @@ int git_tlsdata_dispose(git_tlsdata_key key)
 	return 0;
 }
 
-#elif defined(GIT_WIN32)
+#elif defined(GIT_WIN32) && _WIN32_WINNT >= 0x0502
+/* Fibre-local storage requires Server 2003 */
 
 int git_tlsdata_init(git_tlsdata_key *key, void (GIT_SYSTEM_CALL *destroy_fn)(void *))
 {
@@ -99,6 +100,43 @@ void *git_tlsdata_get(git_tlsdata_key key)
 int git_tlsdata_dispose(git_tlsdata_key key)
 {
 	if (!FlsFree(key))
+		return -1;
+
+	return 0;
+}
+
+#elif defined(GIT_WIN32)
+
+int git_tlsdata_init(git_tlsdata_key *key, void (GIT_SYSTEM_CALL *destroy_fn)(void *))
+{
+	/* XXX: We should take the dtor like the FLS path takes, emulated like
+	 * the threadless implementation. Only threadsafe.c uses it for now.
+	 */
+	DWORD fls_index = TlsAlloc();
+
+	if (fls_index == TLS_OUT_OF_INDEXES)
+		return -1;
+
+	*key = fls_index;
+	return 0;
+}
+
+int git_tlsdata_set(git_tlsdata_key key, void *value)
+{
+	if (!TlsSetValue(key, value))
+		return -1;
+
+	return 0;
+}
+
+void *git_tlsdata_get(git_tlsdata_key key)
+{
+	return TlsGetValue(key);
+}
+
+int git_tlsdata_dispose(git_tlsdata_key key)
+{
+	if (!TlsFree(key))
 		return -1;
 
 	return 0;

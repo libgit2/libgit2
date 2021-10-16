@@ -216,7 +216,8 @@ int p_ftruncate(int fd, off64_t size)
 		return -1;
 	}
 
-#if !defined(__MINGW32__) || defined(MINGW_HAS_SECURE_API)
+	/* Requires MSVC 2005 */
+#if ((defined(_MSC_VER) && _MSC_VER >= 1400) && !defined(__MINGW32__)) || defined(MINGW_HAS_SECURE_API)
 	return ((_chsize_s(fd, size) == 0) ? 0 : -1);
 #else
 	/* TODO MINGW32 Find a replacement for _chsize() that handles big files. */
@@ -435,6 +436,7 @@ out:
 
 int p_symlink(const char *target, const char *path)
 {
+#if _WIN32_WINNT >= 0x0600
 	git_win32_path target_w, path_w;
 	DWORD dwFlags;
 
@@ -457,6 +459,10 @@ int p_symlink(const char *target, const char *path)
 		return -1;
 
 	return 0;
+#else
+	/* Symlinks are unavailable before Vista. */
+	return git_futils_fake_symlink(target, path);
+#endif
 }
 
 struct open_opts {
@@ -670,6 +676,7 @@ static int getfinalpath_w(
 	git_win32_path dest,
 	const wchar_t *path)
 {
+#if _WIN32_WINNT >= 0x0600
 	HANDLE hFile;
 	DWORD dwChars;
 
@@ -691,6 +698,14 @@ static int getfinalpath_w(
 
 	/* The path may be delivered to us with a namespace prefix; remove */
 	return (int)git_win32_path_remove_namespace(dest, dwChars);
+#else
+	/* GetFinalPathNameByHandle is Vista only, though I think a reimpl is
+	 * possible. We could revert 307712613b77e8290a2c5d08ef3ae81c1e3139f3
+	 * which made it dynamically loaded, but it doesn't change the
+	 * semantics anyways; it'd just return -1. So let's do that for now.
+	 */
+	return -1;
+#endif
 }
 
 static int follow_and_lstat_link(git_win32_path path, struct stat *buf)
@@ -826,6 +841,24 @@ char *p_realpath(const char *orig_path, char *buffer)
 
 	return buffer;
 }
+
+#if defined(_MSC_VER) && _MSC_VER < 1300
+/* _vscprintf seems to be a 2002/2003 addition to MSVC. The next easiest way
+ * to get the length of a formatted string? Why, just measure the result of
+ * fprintf writing to /dev/null! (This would be easier if _vsnprintf had the
+ * same semantics as vsnprintf...) Unsure how slow this can be, but it works.
+ */
+static int _vscprintf(const char *format, va_list argptr)
+{
+	int chars;
+	FILE *nulf = fopen("NUL", "wb");
+	if (nulf == NULL)
+		return -1;
+	chars = vfprintf(nulf, format, argptr);
+	fclose(nulf);
+	return chars;
+}
+#endif
 
 int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr)
 {

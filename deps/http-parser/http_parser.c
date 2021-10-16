@@ -33,6 +33,10 @@
 # define ULLONG_MAX ((uint64_t) -1) /* 2^64-1 */
 #endif
 
+#ifndef UINT16_MAX
+# define UINT16_MAX 0xFFFF
+#endif
+
 #ifndef MIN
 # define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif

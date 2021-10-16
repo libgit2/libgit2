@@ -78,7 +78,7 @@ GIT_INLINE(void) git_win32__filetime_to_timespec(
 	winTime -= INT64_C(116444736000000000); /* Windows to Unix Epoch conversion */
 	ts->tv_sec = (time_t)(winTime / 10000000);
 #ifdef GIT_USE_NSEC
-	ts->tv_nsec = (winTime % 10000000) * 100;
+	ts->tv_nsec = (long)(winTime % 10000000) * 100;
 #else
 	ts->tv_nsec = 0;
 #endif
@@ -90,8 +90,8 @@ GIT_INLINE(void) git_win32__timeval_to_filetime(
 	int64_t ticks = (tv.tv_sec * INT64_C(10000000)) +
 		(tv.tv_usec * INT64_C(10)) + INT64_C(116444736000000000);
 
-	ft->dwHighDateTime = ((ticks >> 32) & INT64_C(0xffffffff));
-	ft->dwLowDateTime = (ticks & INT64_C(0xffffffff));
+	ft->dwHighDateTime = (DWORD)((ticks >> 32) & INT64_C(0xffffffff));
+	ft->dwLowDateTime = (DWORD)(ticks & INT64_C(0xffffffff));
 }
 
 GIT_INLINE(void) git_win32__stat_init(

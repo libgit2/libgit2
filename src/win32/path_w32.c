@@ -13,6 +13,10 @@
 #include "reparse.h"
 #include "dir.h"
 
+#ifndef IO_REPARSE_TAG_SYMLINK
+#define IO_REPARSE_TAG_SYMLINK (0xA000000CL)
+#endif
+
 #define PATH__NT_NAMESPACE     L"\\\\?\\"
 #define PATH__NT_NAMESPACE_LEN 4
 
