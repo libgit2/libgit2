@@ -1808,6 +1808,14 @@ int git_odb__error_notfound(
 	return GIT_ENOTFOUND;
 }
 
+
+int git_odb__error_notfound_missing(const git_oid *oid)
+{
+	git_odb__error_notfound("object is missing/promised", oid, GIT_OID_HEXSZ);
+	git_error_subcode_set(GIT_EOBJECTMISSING);
+	return GIT_ENOTFOUND;
+}
+
 static int error_null_oid(int error, const char *message)
 {
 	git_error_set(GIT_ERROR_ODB, "odb: %s: null OID cannot exist", message);

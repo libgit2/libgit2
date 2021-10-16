@@ -55,12 +55,19 @@ int git_error_system_last(void);
 void git_error_system_set(int code);
 
 /**
+ * Set the error subtype for this thread.
+ * This should be called after calling git_error_set -
+ * setting the overall error resets the subcode.
+ */
+void git_error_subcode_set(int subcode);
+
+/**
  * Structure to preserve libgit2 error state
  */
 typedef struct {
 	int error_code;
 	unsigned int oom : 1;
-	git_error error_msg;
+	git_error error;
 } git_error_state;
 
 /**

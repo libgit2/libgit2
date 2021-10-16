@@ -288,10 +288,14 @@ int git_tree_entry_to_object(
 	git_repository *repo,
 	const git_tree_entry *entry)
 {
+	int error;
+
 	GIT_ASSERT_ARG(entry);
 	GIT_ASSERT_ARG(object_out);
 
-	return git_object_lookup(object_out, repo, entry->oid, GIT_OBJECT_ANY);
+	error = git_object_lookup(object_out, repo, entry->oid, GIT_OBJECT_ANY);
+	return (error == GIT_ENOTFOUND) ?
+		git_odb__error_notfound_missing(entry->oid) : error;
 }
 
 static const git_tree_entry *entry_fromname(
@@ -918,6 +922,7 @@ int git_tree_entry_bypath(
 	if (entry == NULL) {
 		git_error_set(GIT_ERROR_TREE,
 			   "the path '%.*s' does not exist in the given tree", (int) filename_len, path);
+		git_error_subcode_set(GIT_ENOSUCHPATH);
 		return GIT_ENOTFOUND;
 	}
 
@@ -928,6 +933,7 @@ int git_tree_entry_bypath(
 		if (!git_tree_entry__is_tree(entry)) {
 			git_error_set(GIT_ERROR_TREE,
 				   "the path '%.*s' exists but is not a tree", (int) filename_len, path);
+			git_error_subcode_set(GIT_ENOSUCHPATH);
 			return GIT_ENOTFOUND;
 		}
 
@@ -943,8 +949,11 @@ int git_tree_entry_bypath(
 		return git_tree_entry_dup(entry_out, entry);
 	}
 
-	if (git_tree_lookup(&subtree, root->object.repo, entry->oid) < 0)
-		return -1;
+	error = git_tree_lookup(&subtree, root->object.repo, entry->oid);
+	if (error < 0) {
+		return (error == GIT_ENOTFOUND) ?
+			git_odb__error_notfound_missing(entry->oid) : error;
+	}
 
 	error = git_tree_entry_bypath(
 		entry_out,

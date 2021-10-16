@@ -26,18 +26,19 @@ static git_error g_git_uninitialized_error = {
 	GIT_ERROR_INVALID
 };
 
-static void set_error_from_buffer(int error_class)
+static void set_error_from_buffer(int error_class, int error_subcode)
 {
 	git_error *error = &GIT_THREADSTATE->error_t;
 	git_buf *buf = &GIT_THREADSTATE->error_buf;
 
 	error->message = buf->ptr;
 	error->klass = error_class;
+	error->subcode = error_subcode;
 
 	GIT_THREADSTATE->last_error = error;
 }
 
-static void set_error(int error_class, char *string)
+static void set_error(int error_class, int error_subcode, char *string)
 {
 	git_buf *buf = &GIT_THREADSTATE->error_buf;
 
@@ -47,7 +48,7 @@ static void set_error(int error_class, char *string)
 		git__free(string);
 	}
 
-	set_error_from_buffer(error_class);
+	set_error_from_buffer(error_class, error_subcode);
 }
 
 void git_error_set_oom(void)
@@ -98,7 +99,7 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 	}
 
 	if (!git_buf_oom(buf))
-		set_error_from_buffer(error_class);
+		set_error_from_buffer(error_class, GIT_NO_SUBCODE);
 }
 
 int git_error_set_str(int error_class, const char *string)
@@ -113,14 +114,14 @@ int git_error_set_str(int error_class, const char *string)
 	if (git_buf_oom(buf))
 		return -1;
 
-	set_error_from_buffer(error_class);
+	set_error_from_buffer(error_class, GIT_NO_SUBCODE);
 	return 0;
 }
 
 void git_error_clear(void)
 {
 	if (GIT_THREADSTATE->last_error != NULL) {
-		set_error(0, NULL);
+		set_error(0, 0, NULL);
 		GIT_THREADSTATE->last_error = NULL;
 	}
 
@@ -153,12 +154,13 @@ int git_error_state_capture(git_error_state *state, int error_code)
 	state->oom = (error == &g_git_oom_error);
 
 	if (error) {
-		state->error_msg.klass = error->klass;
+		state->error.klass = error->klass;
+		state->error.subcode = error->subcode;
 
 		if (state->oom)
-			state->error_msg.message = g_git_oom_error.message;
+			state->error.message = g_git_oom_error.message;
 		else
-			state->error_msg.message = git_buf_detach(error_buf);
+			state->error.message = git_buf_detach(error_buf);
 	}
 
 	git_error_clear();
@@ -171,11 +173,11 @@ int git_error_state_restore(git_error_state *state)
 
 	git_error_clear();
 
-	if (state && state->error_msg.message) {
+	if (state && state->error.message) {
 		if (state->oom)
 			git_error_set_oom();
 		else
-			set_error(state->error_msg.klass, state->error_msg.message);
+			set_error(state->error.klass, state->error.subcode, state->error.message);
 
 		ret = state->error_code;
 		memset(state, 0, sizeof(git_error_state));
@@ -190,7 +192,7 @@ void git_error_state_free(git_error_state *state)
 		return;
 
 	if (!state->oom)
-		git__free(state->error_msg.message);
+		git__free(state->error.message);
 
 	memset(state, 0, sizeof(git_error_state));
 }
@@ -212,6 +214,12 @@ void git_error_system_set(int code)
 	errno = code;
 #endif
 }
+
+void git_error_subcode_set(int subcode)
+{
+	GIT_THREADSTATE->last_error->subcode = subcode;
+}
+
 
 /* Deprecated error values and functions */
 
