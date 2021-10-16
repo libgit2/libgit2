@@ -62,14 +62,14 @@ int xdl_emit_diffrec(char const *rec, long size, char const *pre, long psize,
 
 void *xdl_mmfile_first(mmfile_t *mmf, long *size)
 {
-	*size = mmf->size;
+	*size = (long)mmf->size;
 	return mmf->ptr;
 }
 
 
 long xdl_mmfile_size(mmfile_t *mmf)
 {
-	return mmf->size;
+	return (long)mmf->size;
 }
 
 
@@ -339,7 +339,7 @@ int xdl_num_out(char *out, long val) {
 		*str++ = '0';
 	*str = '\0';
 
-	return str - out;
+	return (int)(str - out);
 }
 
 int xdl_emit_hunk_hdr(long s1, long c1, long s2, long c2,
@@ -377,7 +377,7 @@ int xdl_emit_hunk_hdr(long s1, long c1, long s2, long c2,
 	if (func && funclen) {
 		buf[nb++] = ' ';
 		if (funclen > (long)(sizeof(buf) - nb - 1))
-			funclen = sizeof(buf) - nb - 1;
+			funclen = (long)sizeof(buf) - nb - 1;
 		memcpy(buf + nb, func, funclen);
 		nb += funclen;
 	}
