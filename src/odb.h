@@ -65,8 +65,11 @@ int git_odb__set_caps(git_odb *odb, int caps);
  * Add the default loose and packed backends for a database.
  */
 int git_odb__add_default_backends(
-	git_odb *db, const char *objects_dir,
-	bool as_alternates, int alternate_depth);
+		git_odb *db,
+		const char *objects_dir,
+		const git_odb_options *opts,
+		bool as_alternates,
+		int alternate_depth);
 
 /*
  * Hash a git_rawobj internally.

@@ -84,6 +84,9 @@ typedef enum {
 /** An open object database handle. */
 typedef struct git_odb git_odb;
 
+/** Options to initialize ODB backends. */
+typedef struct git_odb_options git_odb_options;
+
 /** A custom backend in an ODB */
 typedef struct git_odb_backend git_odb_backend;
 

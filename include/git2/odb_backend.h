@@ -35,6 +35,20 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **out, const char *objects_dir);
 
 /**
+ * Create a backend for the packfiles with extended controls.
+ *
+ * @param out location to store the odb backend pointer
+ * @param objects_dir the Git repository's objects directory
+ * @param opts Pointer to git_odb_options struct.
+ *
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_backend_pack_ext(
+		git_odb_backend **out,
+		const char *objects_dir,
+		const git_odb_options *opts);
+
+/**
  * Create a backend for loose objects
  *
  * @param out location to store the odb backend pointer

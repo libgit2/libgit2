@@ -894,9 +894,20 @@ int git_odb_backend_one_pack(git_odb_backend **backend_out, const char *idx)
 
 int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 {
+	const git_odb_options opts = GIT_ODB_OPTIONS_INIT;
+	return git_odb_backend_pack_ext(backend_out, objects_dir, &opts);
+}
+
+GIT_EXTERN(int) git_odb_backend_pack_ext(
+		git_odb_backend **backend_out,
+		const char *objects_dir,
+		const git_odb_options *opts)
+{
 	int error = 0;
 	struct pack_backend *backend = NULL;
 	git_buf path = GIT_BUF_INIT;
+	GIT_ASSERT_ARG(backend_out);
+	GIT_ASSERT_ARG(opts);
 
 	if (pack_backend__alloc(&backend, 8) < 0)
 		return -1;
