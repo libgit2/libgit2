@@ -10,7 +10,7 @@ void test_repo_reservedname__cleanup(void)
 void test_repo_reservedname__includes_shortname_on_win32(void)
 {
 	git_repository *repo;
-	git_buf *reserved;
+	git_str *reserved;
 	size_t reserved_len;
 
 	repo = cl_git_sandbox_init("nasty");
@@ -29,7 +29,7 @@ void test_repo_reservedname__includes_shortname_on_win32(void)
 void test_repo_reservedname__includes_shortname_when_requested(void)
 {
 	git_repository *repo;
-	git_buf *reserved;
+	git_str *reserved;
 	size_t reserved_len;
 
 	repo = cl_git_sandbox_init("nasty");
@@ -47,7 +47,7 @@ void test_repo_reservedname__custom_shortname_recognized(void)
 {
 #ifdef GIT_WIN32
 	git_repository *repo;
-	git_buf *reserved;
+	git_str *reserved;
 	size_t reserved_len;
 
 	if (!cl_sandbox_supports_8dot3())
@@ -83,7 +83,7 @@ void test_repo_reservedname__submodule_pointer(void)
 #ifdef GIT_WIN32
 	git_repository *super_repo, *sub_repo;
 	git_submodule *sub;
-	git_buf *sub_reserved;
+	git_str *sub_reserved;
 	size_t sub_reserved_len;
 
 	if (!cl_sandbox_supports_8dot3())
@@ -117,16 +117,16 @@ void test_repo_reservedname__submodule_pointer_during_create(void)
 	git_repository *repo;
 	git_submodule *sm;
 	git_submodule_update_options update_options = GIT_SUBMODULE_UPDATE_OPTIONS_INIT;
-	git_buf url = GIT_BUF_INIT;
+	git_str url = GIT_STR_INIT;
 
 	repo = setup_fixture_super();
 
-	cl_git_pass(git_buf_joinpath(&url, clar_sandbox_path(), "sub.git"));
+	cl_git_pass(git_str_joinpath(&url, clar_sandbox_path(), "sub.git"));
 	cl_repo_set_string(repo, "submodule.sub.url", url.ptr);
 
 	cl_git_pass(git_submodule_lookup(&sm, repo, "sub"));
 	cl_git_pass(git_submodule_update(sm, 1, &update_options));
 
 	git_submodule_free(sm);
-	git_buf_dispose(&url);
+	git_str_dispose(&url);
 }

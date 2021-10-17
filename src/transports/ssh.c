@@ -12,8 +12,6 @@
 #endif
 
 #include "runtime.h"
-#include "git2.h"
-#include "buffer.h"
 #include "net.h"
 #include "netops.h"
 #include "smart.h"
@@ -65,7 +63,7 @@ static void ssh_error(LIBSSH2_SESSION *session, const char *errmsg)
  *
  * For example: git-upload-pack '/libgit2/libgit2'
  */
-static int gen_proto(git_buf *request, const char *cmd, const char *url)
+static int gen_proto(git_str *request, const char *cmd, const char *url)
 {
 	const char *repo;
 	int len;
@@ -94,13 +92,13 @@ done:
 
 	len = strlen(cmd) + 1 /* Space */ + 1 /* Quote */ + strlen(repo) + 1 /* Quote */ + 1;
 
-	git_buf_grow(request, len);
-	git_buf_puts(request, cmd);
-	git_buf_puts(request, " '");
-	git_buf_decode_percent(request, repo, strlen(repo));
-	git_buf_puts(request, "'");
+	git_str_grow(request, len);
+	git_str_puts(request, cmd);
+	git_str_puts(request, " '");
+	git_str_decode_percent(request, repo, strlen(repo));
+	git_str_puts(request, "'");
 
-	if (git_buf_oom(request))
+	if (git_str_oom(request))
 		return -1;
 
 	return 0;
@@ -109,7 +107,7 @@ done:
 static int send_command(ssh_stream *s)
 {
 	int error;
-	git_buf request = GIT_BUF_INIT;
+	git_str request = GIT_STR_INIT;
 
 	error = gen_proto(&request, s->cmd, s->url);
 	if (error < 0)
@@ -124,7 +122,7 @@ static int send_command(ssh_stream *s)
 	s->sent_command = 1;
 
 cleanup:
-	git_buf_dispose(&request);
+	git_str_dispose(&request);
 	return error;
 }
 
@@ -580,7 +578,7 @@ post_extract:
 				case LIBSSH2_HOSTKEY_TYPE_DSS:
 					cert.raw_type = GIT_CERT_SSH_RAW_TYPE_DSS;
 					break;
-					
+
 #ifdef LIBSSH2_HOSTKEY_TYPE_ECDSA_256
 				case LIBSSH2_HOSTKEY_TYPE_ECDSA_256:
 					cert.raw_type = GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_256;
@@ -592,7 +590,7 @@ post_extract:
 					cert.raw_type = GIT_CERT_SSH_RAW_TYPE_KEY_ECDSA_521;
 					break;
 #endif
-					
+
 #ifdef LIBSSH2_HOSTKEY_TYPE_ED25519
 				case LIBSSH2_HOSTKEY_TYPE_ED25519:
 					cert.raw_type = GIT_CERT_SSH_RAW_TYPE_KEY_ED25519;

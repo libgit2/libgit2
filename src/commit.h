@@ -33,6 +33,29 @@ struct git_commit {
 	char *body;
 };
 
+int git_commit__header_field(
+	git_str *out,
+	const git_commit *commit,
+	const char *field);
+
+int git_commit__extract_signature(
+	git_str *signature,
+	git_str *signed_data,
+	git_repository *repo,
+	git_oid *commit_id,
+	const char *field);
+
+int git_commit__create_buffer(
+	git_str *out,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	const git_commit *parents[]);
+
 void git_commit__free(void *commit);
 int git_commit__parse(void *commit, git_odb_object *obj);
 int git_commit__parse_raw(void *commit, const char *data, size_t size);

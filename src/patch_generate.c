@@ -261,7 +261,7 @@ static int create_binary(
 	const char *b_data,
 	size_t b_datalen)
 {
-	git_buf deflate = GIT_BUF_INIT, delta = GIT_BUF_INIT;
+	git_str deflate = GIT_STR_INIT, delta = GIT_STR_INIT;
 	size_t delta_data_len = 0;
 	int error;
 
@@ -302,18 +302,18 @@ static int create_binary(
 	if (delta.size && delta.size < deflate.size) {
 		*out_type = GIT_DIFF_BINARY_DELTA;
 		*out_datalen = delta.size;
-		*out_data = git_buf_detach(&delta);
+		*out_data = git_str_detach(&delta);
 		*out_inflatedlen = delta_data_len;
 	} else {
 		*out_type = GIT_DIFF_BINARY_LITERAL;
 		*out_datalen = deflate.size;
-		*out_data = git_buf_detach(&deflate);
+		*out_data = git_str_detach(&deflate);
 		*out_inflatedlen = b_datalen;
 	}
 
 done:
-	git_buf_dispose(&deflate);
-	git_buf_dispose(&delta);
+	git_str_dispose(&deflate);
+	git_str_dispose(&delta);
 
 	return error;
 }

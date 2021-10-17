@@ -1,11 +1,10 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
 #include "refs.h"
 #include "posix.h"
 #include "futils.h"
 
 static git_repository *_repo;
-static git_buf _path;
+static git_str _path;
 
 void test_repo_state__initialize(void)
 {
@@ -15,14 +14,14 @@ void test_repo_state__initialize(void)
 void test_repo_state__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
-	git_buf_dispose(&_path);
+	git_str_dispose(&_path);
 }
 
 static void setup_simple_state(const char *filename)
 {
-	cl_git_pass(git_buf_joinpath(&_path, git_repository_path(_repo), filename));
-	git_futils_mkpath2file(git_buf_cstr(&_path), 0777);
-	cl_git_mkfile(git_buf_cstr(&_path), "dummy");
+	cl_git_pass(git_str_joinpath(&_path, git_repository_path(_repo), filename));
+	git_futils_mkpath2file(git_str_cstr(&_path), 0777);
+	cl_git_mkfile(git_str_cstr(&_path), "dummy");
 }
 
 static void assert_repo_state(git_repository_state_t state)

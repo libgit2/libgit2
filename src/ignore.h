@@ -26,7 +26,7 @@
  */
 typedef struct {
 	git_repository *repo;
-	git_buf dir; /* current directory reflected in ign_path */
+	git_str dir; /* current directory reflected in ign_path */
 	git_attr_file *ign_internal;
 	git_vector ign_path;
 	git_vector ign_global;

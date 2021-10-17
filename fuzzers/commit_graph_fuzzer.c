@@ -11,8 +11,8 @@
 
 #include "git2.h"
 
-#include "buffer.h"
 #include "common.h"
+#include "str.h"
 #include "futils.h"
 #include "hash.h"
 #include "commit_graph.h"
@@ -33,7 +33,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
 	git_commit_graph_file file = {{0}};
 	git_commit_graph_entry e;
-	git_buf commit_graph_buf = GIT_BUF_INIT;
+	git_str commit_graph_buf = GIT_STR_INIT;
 	unsigned char hash[GIT_HASH_SHA1_SIZE];
 	git_oid oid = {{0}};
 	bool append_hash = false;
@@ -51,7 +51,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	size -= 4;
 
 	if (append_hash) {
-		if (git_buf_init(&commit_graph_buf, size + GIT_HASH_SHA1_SIZE) < 0)
+		if (git_str_init(&commit_graph_buf, size + GIT_HASH_SHA1_SIZE) < 0)
 			goto cleanup;
 		if (git_hash_buf(hash, data, size, GIT_HASH_ALGORITHM_SHA1) < 0) {
 			fprintf(stderr, "Failed to compute the SHA1 hash\n");
@@ -62,13 +62,13 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
 		memcpy(oid.id, hash, GIT_OID_RAWSZ);
 	} else {
-		git_buf_attach_notowned(&commit_graph_buf, (char *)data, size);
+		git_str_attach_notowned(&commit_graph_buf, (char *)data, size);
 	}
 
 	if (git_commit_graph_file_parse(
 			    &file,
-			    (const unsigned char *)git_buf_cstr(&commit_graph_buf),
-			    git_buf_len(&commit_graph_buf))
+			    (const unsigned char *)git_str_cstr(&commit_graph_buf),
+			    git_str_len(&commit_graph_buf))
 	    < 0)
 		goto cleanup;
 
@@ -78,6 +78,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
 cleanup:
 	git_commit_graph_file_close(&file);
-	git_buf_dispose(&commit_graph_buf);
+	git_str_dispose(&commit_graph_buf);
 	return 0;
 }

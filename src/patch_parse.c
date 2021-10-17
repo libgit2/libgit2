@@ -65,19 +65,19 @@ static size_t header_path_len(git_patch_parse_ctx *ctx)
 	return len;
 }
 
-static int parse_header_path_buf(git_buf *path, git_patch_parse_ctx *ctx, size_t path_len)
+static int parse_header_path_buf(git_str *path, git_patch_parse_ctx *ctx, size_t path_len)
 {
 	int error;
 
-	if ((error = git_buf_put(path, ctx->parse_ctx.line, path_len)) < 0)
+	if ((error = git_str_put(path, ctx->parse_ctx.line, path_len)) < 0)
 		return error;
 
 	git_parse_advance_chars(&ctx->parse_ctx, path_len);
 
-	git_buf_rtrim(path);
+	git_str_rtrim(path);
 
 	if (path->size > 0 && path->ptr[0] == '"' &&
-	    (error = git_buf_unquote(path)) < 0)
+	    (error = git_str_unquote(path)) < 0)
 		return error;
 
 	git_path_squash_slashes(path);
@@ -91,22 +91,22 @@ static int parse_header_path_buf(git_buf *path, git_patch_parse_ctx *ctx, size_t
 
 static int parse_header_path(char **out, git_patch_parse_ctx *ctx)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	int error;
 
 	if ((error = parse_header_path_buf(&path, ctx, header_path_len(ctx))) < 0)
 		goto out;
-	*out = git_buf_detach(&path);
+	*out = git_str_detach(&path);
 
 out:
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	return error;
 }
 
 static int parse_header_git_oldpath(
 	git_patch_parsed *patch, git_patch_parse_ctx *ctx)
 {
-	git_buf old_path = GIT_BUF_INIT;
+	git_str old_path = GIT_STR_INIT;
 	int error;
 
 	if (patch->old_path) {
@@ -118,17 +118,17 @@ static int parse_header_git_oldpath(
 	if ((error = parse_header_path_buf(&old_path, ctx, ctx->parse_ctx.line_len - 1)) <  0)
 		goto out;
 
-	patch->old_path = git_buf_detach(&old_path);
+	patch->old_path = git_str_detach(&old_path);
 
 out:
-	git_buf_dispose(&old_path);
+	git_str_dispose(&old_path);
 	return error;
 }
 
 static int parse_header_git_newpath(
 	git_patch_parsed *patch, git_patch_parse_ctx *ctx)
 {
-	git_buf new_path = GIT_BUF_INIT;
+	git_str new_path = GIT_STR_INIT;
 	int error;
 
 	if (patch->new_path) {
@@ -139,10 +139,10 @@ static int parse_header_git_newpath(
 
 	if ((error = parse_header_path_buf(&new_path, ctx, ctx->parse_ctx.line_len - 1)) <  0)
 		goto out;
-	patch->new_path = git_buf_detach(&new_path);
+	patch->new_path = git_str_detach(&new_path);
 
 out:
-	git_buf_dispose(&new_path);
+	git_str_dispose(&new_path);
 	return error;
 }
 
@@ -257,7 +257,7 @@ static int parse_header_rename(
 	char **out,
 	git_patch_parse_ctx *ctx)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
 	if (parse_header_path_buf(&path, ctx, header_path_len(ctx)) < 0)
 		return -1;
@@ -265,7 +265,7 @@ static int parse_header_rename(
 	/* Note: the `rename from` and `rename to` lines include the literal
 	 * filename.  They do *not* include the prefix.  (Who needs consistency?)
 	 */
-	*out = git_buf_detach(&path);
+	*out = git_str_detach(&path);
 	return 0;
 }
 
@@ -766,7 +766,7 @@ static int parse_patch_binary_side(
 	git_patch_parse_ctx *ctx)
 {
 	git_diff_binary_t type = GIT_DIFF_BINARY_NONE;
-	git_buf base85 = GIT_BUF_INIT, decoded = GIT_BUF_INIT;
+	git_str base85 = GIT_STR_INIT, decoded = GIT_STR_INIT;
 	int64_t len;
 	int error = 0;
 
@@ -815,7 +815,7 @@ static int parse_patch_binary_side(
 			goto done;
 		}
 
-		if ((error = git_buf_decode_base85(
+		if ((error = git_str_decode_base85(
 			&decoded, ctx->parse_ctx.line, encoded_len, decoded_len)) < 0)
 			goto done;
 
@@ -835,11 +835,11 @@ static int parse_patch_binary_side(
 	binary->type = type;
 	binary->inflatedlen = (size_t)len;
 	binary->datalen = decoded.size;
-	binary->data = git_buf_detach(&decoded);
+	binary->data = git_str_detach(&decoded);
 
 done:
-	git_buf_dispose(&base85);
-	git_buf_dispose(&decoded);
+	git_str_dispose(&base85);
+	git_str_dispose(&decoded);
 	return error;
 }
 

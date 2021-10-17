@@ -18,7 +18,7 @@ void assert_describe(
 	cl_git_pass(git_describe_commit(&result, object, opts));
 	cl_git_pass(git_describe_format(&label, result, fmt_opts));
 
-	cl_must_pass(wildmatch(expected_output, git_buf_cstr(&label), 0));
+	cl_must_pass(wildmatch(expected_output, label.ptr, 0));
 
 	git_describe_result_free(result);
 	git_object_free(object);
@@ -37,7 +37,7 @@ void assert_describe_workdir(
 	cl_git_pass(git_describe_workdir(&result, repo, opts));
 	cl_git_pass(git_describe_format(&label, result, fmt_opts));
 
-	cl_must_pass(wildmatch(expected_output, git_buf_cstr(&label), 0));
+	cl_must_pass(wildmatch(expected_output, label.ptr, 0));
 
 	git_describe_result_free(result);
 	git_buf_dispose(&label);

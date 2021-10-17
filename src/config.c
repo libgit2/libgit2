@@ -10,6 +10,7 @@
 #include "git2/config.h"
 #include "git2/sys/config.h"
 
+#include "buf.h"
 #include "config_backend.h"
 #include "regexp.h"
 #include "sysdir.h"
@@ -848,7 +849,40 @@ static int is_readonly(const git_config *cfg)
 	return 1;
 }
 
-int git_config_get_path(git_buf *out, const git_config *cfg, const char *name)
+static int git_config__parse_path(git_str *out, const char *value)
+{
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(value);
+
+	if (value[0] == '~') {
+		if (value[1] != '\0' && value[1] != '/') {
+			git_error_set(GIT_ERROR_CONFIG, "retrieving a homedir by name is not supported");
+			return -1;
+		}
+
+		return git_sysdir_expand_global_file(out, value[1] ? &value[2] : NULL);
+	}
+
+	return git_str_sets(out, value);
+}
+
+int git_config_parse_path(git_buf *out, const char *value)
+{
+	GIT_BUF_WRAP_PRIVATE(out, git_config__parse_path, value);
+}
+
+int git_config_get_path(
+	git_buf *out,
+	const git_config *cfg,
+	const char *name)
+{
+	GIT_BUF_WRAP_PRIVATE(out, git_config__get_path, cfg, name);
+}
+
+int git_config__get_path(
+	git_str *out,
+	const git_config *cfg,
+	const char *name)
 {
 	git_config_entry *entry;
 	int error;
@@ -856,7 +890,7 @@ int git_config_get_path(git_buf *out, const git_config *cfg, const char *name)
 	if ((error = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS)) < 0)
 		return error;
 
-	 error = git_config_parse_path(out, entry->value);
+	 error = git_config__parse_path(out, entry->value);
 	 git_config_entry_free(entry);
 
 	 return error;
@@ -884,18 +918,24 @@ int git_config_get_string(
 int git_config_get_string_buf(
 	git_buf *out, const git_config *cfg, const char *name)
 {
+	GIT_BUF_WRAP_PRIVATE(out, git_config__get_string_buf, cfg, name);
+}
+
+int git_config__get_string_buf(
+	git_str *out, const git_config *cfg, const char *name)
+{
 	git_config_entry *entry;
 	int ret;
 	const char *str;
 
-	if ((ret = git_buf_sanitize(out)) < 0)
-		return ret;
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(cfg);
 
 	ret  = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS);
 	str = !ret ? (entry->value ? entry->value : "") : NULL;
 
 	if (str)
-		ret = git_buf_puts(out, str);
+		ret = git_str_puts(out, str);
 
 	git_config_entry_free(entry);
 
@@ -1087,101 +1127,112 @@ void git_config_iterator_free(git_config_iterator *iter)
 
 int git_config_find_global(git_buf *path)
 {
-	int error;
+	GIT_BUF_WRAP_PRIVATE(path, git_sysdir_find_global_file, GIT_CONFIG_FILENAME_GLOBAL);
+}
 
-	if ((error = git_buf_sanitize(path)) < 0)
-		return error;
-
+int git_config__find_global(git_str *path)
+{
 	return git_sysdir_find_global_file(path, GIT_CONFIG_FILENAME_GLOBAL);
 }
 
 int git_config_find_xdg(git_buf *path)
 {
-	int error;
+	GIT_BUF_WRAP_PRIVATE(path, git_sysdir_find_global_file, GIT_CONFIG_FILENAME_XDG);
+}
 
-	if ((error = git_buf_sanitize(path)) < 0)
-		return error;
-
+int git_config__find_xdg(git_str *path)
+{
 	return git_sysdir_find_xdg_file(path, GIT_CONFIG_FILENAME_XDG);
 }
 
 int git_config_find_system(git_buf *path)
 {
-	int error;
+	GIT_BUF_WRAP_PRIVATE(path, git_sysdir_find_global_file, GIT_CONFIG_FILENAME_SYSTEM);
+}
 
-	if ((error = git_buf_sanitize(path)) < 0)
-		return error;
-
+int git_config__find_system(git_str *path)
+{
 	return git_sysdir_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
 }
 
 int git_config_find_programdata(git_buf *path)
 {
+	git_str str = GIT_STR_INIT;
+	int error;
+
+	if ((error = git_buf_tostr(&str, path)) == 0 &&
+	    (error = git_config__find_programdata(&str)) == 0)
+		error = git_buf_fromstr(path, &str);
+
+	git_str_dispose(&str);
+	return error;
+}
+
+int git_config__find_programdata(git_str *path)
+{
 	int ret;
 
-	if ((ret = git_buf_sanitize(path)) < 0)
-		return ret;
+	ret = git_sysdir_find_programdata_file(path, GIT_CONFIG_FILENAME_PROGRAMDATA);
 
-	ret = git_sysdir_find_programdata_file(path,
-					       GIT_CONFIG_FILENAME_PROGRAMDATA);
 	if (ret != GIT_OK)
 		return ret;
 
 	return git_path_validate_system_file_ownership(path->ptr);
 }
 
-int git_config__global_location(git_buf *buf)
+int git_config__global_location(git_str *buf)
 {
-	const git_buf *paths;
+	const git_str *paths;
 	const char *sep, *start;
 
 	if (git_sysdir_get(&paths, GIT_SYSDIR_GLOBAL) < 0)
 		return -1;
 
 	/* no paths, so give up */
-	if (!paths || !git_buf_len(paths))
+	if (!paths || !git_str_len(paths))
 		return -1;
 
 	/* find unescaped separator or end of string */
-	for (sep = start = git_buf_cstr(paths); *sep; ++sep) {
+	for (sep = start = git_str_cstr(paths); *sep; ++sep) {
 		if (*sep == GIT_PATH_LIST_SEPARATOR &&
 			(sep <= start || sep[-1] != '\\'))
 			break;
 	}
 
-	if (git_buf_set(buf, start, (size_t)(sep - start)) < 0)
+	if (git_str_set(buf, start, (size_t)(sep - start)) < 0)
 		return -1;
 
-	return git_buf_joinpath(buf, buf->ptr, GIT_CONFIG_FILENAME_GLOBAL);
+	return git_str_joinpath(buf, buf->ptr, GIT_CONFIG_FILENAME_GLOBAL);
 }
 
 int git_config_open_default(git_config **out)
 {
 	int error;
 	git_config *cfg = NULL;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
 	if ((error = git_config_new(&cfg)) < 0)
 		return error;
 
-	if (!git_config_find_global(&buf) || !git_config__global_location(&buf)) {
+	if (!git_config__find_global(&buf) ||
+	    !git_config__global_location(&buf)) {
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_GLOBAL, NULL, 0);
 	}
 
-	if (!error && !git_config_find_xdg(&buf))
+	if (!error && !git_config__find_xdg(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_XDG, NULL, 0);
 
-	if (!error && !git_config_find_system(&buf))
+	if (!error && !git_config__find_system(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_SYSTEM, NULL, 0);
 
-	if (!error && !git_config_find_programdata(&buf))
+	if (!error && !git_config__find_programdata(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_PROGRAMDATA, NULL, 0);
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	if (error) {
 		git_config_free(cfg);
@@ -1375,28 +1426,6 @@ fail_parse:
 	return -1;
 }
 
-int git_config_parse_path(git_buf *out, const char *value)
-{
-	int error;
-
-	GIT_ASSERT_ARG(out);
-	GIT_ASSERT_ARG(value);
-
-	if ((error = git_buf_sanitize(out)) < 0)
-		return error;
-
-	if (value[0] == '~') {
-		if (value[1] != '\0' && value[1] != '/') {
-			git_error_set(GIT_ERROR_CONFIG, "retrieving a homedir by name is not supported");
-			return -1;
-		}
-
-		return git_sysdir_expand_global_file(out, value[1] ? &value[2] : NULL);
-	}
-
-	return git_buf_sets(out, value);
-}
-
 static int normalize_section(char *start, char *end)
 {
 	char *scan;
@@ -1459,7 +1488,7 @@ invalid:
 
 struct rename_data {
 	git_config *config;
-	git_buf *name;
+	git_str *name;
 	size_t old_len;
 };
 
@@ -1469,15 +1498,15 @@ static int rename_config_entries_cb(
 {
 	int error = 0;
 	struct rename_data *data = (struct rename_data *)payload;
-	size_t base_len = git_buf_len(data->name);
+	size_t base_len = git_str_len(data->name);
 
 	if (base_len > 0 &&
-		!(error = git_buf_puts(data->name, entry->name + data->old_len)))
+		!(error = git_str_puts(data->name, entry->name + data->old_len)))
 	{
 		error = git_config_set_string(
-			data->config, git_buf_cstr(data->name), entry->value);
+			data->config, git_str_cstr(data->name), entry->value);
 
-		git_buf_truncate(data->name, base_len);
+		git_str_truncate(data->name, base_len);
 	}
 
 	if (!error)
@@ -1492,13 +1521,13 @@ int git_config_rename_section(
 	const char *new_section_name)
 {
 	git_config *config;
-	git_buf pattern = GIT_BUF_INIT, replace = GIT_BUF_INIT;
+	git_str pattern = GIT_STR_INIT, replace = GIT_STR_INIT;
 	int error = 0;
 	struct rename_data data;
 
-	git_buf_puts_escape_regex(&pattern, old_section_name);
+	git_str_puts_escape_regex(&pattern, old_section_name);
 
-	if ((error = git_buf_puts(&pattern, "\\..+")) < 0)
+	if ((error = git_str_puts(&pattern, "\\..+")) < 0)
 		goto cleanup;
 
 	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
@@ -1508,7 +1537,7 @@ int git_config_rename_section(
 	data.name    = &replace;
 	data.old_len = strlen(old_section_name) + 1;
 
-	if ((error = git_buf_join(&replace, '.', new_section_name, "")) < 0)
+	if ((error = git_str_join(&replace, '.', new_section_name, "")) < 0)
 		goto cleanup;
 
 	if (new_section_name != NULL &&
@@ -1520,11 +1549,11 @@ int git_config_rename_section(
 	}
 
 	error = git_config_foreach_match(
-		config, git_buf_cstr(&pattern), rename_config_entries_cb, &data);
+		config, git_str_cstr(&pattern), rename_config_entries_cb, &data);
 
 cleanup:
-	git_buf_dispose(&pattern);
-	git_buf_dispose(&replace);
+	git_str_dispose(&pattern);
+	git_str_dispose(&replace);
 
 	return error;
 }

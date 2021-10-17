@@ -1,7 +1,6 @@
 #include "clar.h"
 #include "clar_libgit2.h"
 
-#include "buffer.h"
 #include "commit.h"
 #include "diff.h"
 #include "diff_generate.h"
@@ -41,12 +40,12 @@ static void assert_email_match(
 	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
 	cl_git_pass(git_diff_format_email(&buf, diff, opts));
 
-	cl_assert_equal_s(expected, git_buf_cstr(&buf));
-	git_buf_clear(&buf);
+	cl_assert_equal_s(expected, buf.ptr);
+	git_buf_dispose(&buf);
 
 	cl_git_pass(git_diff_commit_as_email(
 		&buf, repo, commit, 1, 1, opts->flags, NULL));
-	cl_assert_equal_s(expected, git_buf_cstr(&buf));
+	cl_assert_equal_s(expected, buf.ptr);
 
 	git_diff_free(diff);
 	git_commit_free(commit);
@@ -258,7 +257,7 @@ void test_diff_format_email__multiple(void)
 	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
 	cl_git_pass(git_diff_format_email(&buf, diff, &opts));
 
-	cl_assert_equal_s(email, git_buf_cstr(&buf));
+	cl_assert_equal_s(email, buf.ptr);
 
 	git_diff_free(diff);
 	git_commit_free(commit);

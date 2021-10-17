@@ -8,6 +8,7 @@
 #include "diff.h"
 
 #include "common.h"
+#include "buf.h"
 #include "patch.h"
 #include "email.h"
 #include "commit.h"
@@ -162,6 +163,7 @@ int git_diff_format_email(
 	const git_diff_format_email_options *opts)
 {
 	git_email_create_options email_create_opts = GIT_EMAIL_CREATE_OPTIONS_INIT;
+	git_str email = GIT_STR_INIT;
 	int error;
 
 	GIT_ASSERT_ARG(out);
@@ -172,14 +174,29 @@ int git_diff_format_email(
 		GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION,
 		"git_format_email_options");
 
+	/* This is a `git_buf` special case; subsequent calls append. */
+	email.ptr = out->ptr;
+	email.asize = out->reserved;
+	email.size = out->size;
+
+	out->ptr = git_str__initstr;
+	out->reserved = 0;
+	out->size = 0;
+
 	if ((opts->flags & GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER) != 0)
 		email_create_opts.subject_prefix = "";
 
-
-	error = git_email__append_from_diff(out, diff, opts->patch_no,
+	error = git_email__append_from_diff(&email, diff, opts->patch_no,
 		opts->total_patches, opts->id, opts->summary, opts->body,
 		opts->author, &email_create_opts);
 
+	if (error < 0)
+		goto done;
+
+	error = git_buf_fromstr(out, &email);
+
+done:
+	git_str_dispose(&email);
 	return error;
 }
 
@@ -282,7 +299,7 @@ static int flush_hunk(git_oid *result, git_hash_ctx *ctx)
 	return 0;
 }
 
-static void strip_spaces(git_buf *buf)
+static void strip_spaces(git_str *buf)
 {
 	char *src = buf->ptr, *dst = buf->ptr;
 	char c;
@@ -295,7 +312,7 @@ static void strip_spaces(git_buf *buf)
 		}
 	}
 
-	git_buf_truncate(buf, len);
+	git_str_truncate(buf, len);
 }
 
 static int diff_patchid_print_callback_to_buf(
@@ -305,7 +322,7 @@ static int diff_patchid_print_callback_to_buf(
 	void *payload)
 {
 	struct patch_id_args *args = (struct patch_id_args *) payload;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	int error = 0;
 
 	if (line->origin == GIT_DIFF_LINE_CONTEXT_EOFNL ||
@@ -331,7 +348,7 @@ static int diff_patchid_print_callback_to_buf(
 		args->first_file = 0;
 
 out:
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	return error;
 }
 

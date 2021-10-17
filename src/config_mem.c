@@ -14,7 +14,7 @@
 typedef struct {
 	git_config_backend parent;
 	git_config_entries *entries;
-	git_buf cfg;
+	git_str cfg;
 } config_memory_backend;
 
 typedef struct {
@@ -38,7 +38,7 @@ static int read_variable_cb(
 	void *payload)
 {
 	config_memory_parse_data *parse_data = (config_memory_parse_data *) payload;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	git_config_entry *entry;
 	const char *c;
 	int result;
@@ -52,19 +52,19 @@ static int read_variable_cb(
 		 * here. Git appears to warn in most cases if it sees
 		 * un-namespaced config options.
 		 */
-		git_buf_puts(&buf, current_section);
-		git_buf_putc(&buf, '.');
+		git_str_puts(&buf, current_section);
+		git_str_putc(&buf, '.');
 	}
 
 	for (c = var_name; *c; c++)
-		git_buf_putc(&buf, git__tolower(*c));
+		git_str_putc(&buf, git__tolower(*c));
 
-	if (git_buf_oom(&buf))
+	if (git_str_oom(&buf))
 		return -1;
 
 	entry = git__calloc(1, sizeof(git_config_entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
-	entry->name = git_buf_detach(&buf);
+	entry->name = git_str_detach(&buf);
 	entry->value = var_value ? git__strdup(var_value) : NULL;
 	entry->level = parse_data->level;
 	entry->include_depth = 0;
@@ -178,7 +178,7 @@ static void config_memory_free(git_config_backend *_backend)
 		return;
 
 	git_config_entries_free(backend->entries);
-	git_buf_dispose(&backend->cfg);
+	git_str_dispose(&backend->cfg);
 	git__free(backend);
 }
 
@@ -194,7 +194,7 @@ int git_config_backend_from_string(git_config_backend **out, const char *cfg, si
 		return -1;
 	}
 
-	if (git_buf_set(&backend->cfg, cfg, len) < 0) {
+	if (git_str_set(&backend->cfg, cfg, len) < 0) {
 		git_config_entries_free(backend->entries);
 		git__free(backend);
 		return -1;

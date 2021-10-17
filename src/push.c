@@ -159,7 +159,7 @@ int git_push_add_refspec(git_push *push, const char *refspec)
 
 int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 {
-	git_buf remote_ref_name = GIT_BUF_INIT;
+	git_str remote_ref_name = GIT_STR_INIT;
 	size_t i, j;
 	git_refspec *fetch_spec;
 	push_spec *push_spec = NULL;
@@ -180,9 +180,9 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 			continue;
 
 		/* Clear the buffer which can be dirty from previous iteration */
-		git_buf_clear(&remote_ref_name);
+		git_str_clear(&remote_ref_name);
 
-		if ((error = git_refspec_transform(&remote_ref_name, fetch_spec, status->ref)) < 0)
+		if ((error = git_refspec__transform(&remote_ref_name, fetch_spec, status->ref)) < 0)
 			goto on_error;
 
 		/* Find matching  push ref spec */
@@ -197,7 +197,7 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 
 		/* Update the remote ref */
 		if (git_oid_is_zero(&push_spec->loid)) {
-			error = git_reference_lookup(&remote_ref, push->remote->repo, git_buf_cstr(&remote_ref_name));
+			error = git_reference_lookup(&remote_ref, push->remote->repo, git_str_cstr(&remote_ref_name));
 
 			if (error >= 0) {
 				error = git_reference_delete(remote_ref);
@@ -205,7 +205,7 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 			}
 		} else {
 			error = git_reference_create(NULL, push->remote->repo,
-						git_buf_cstr(&remote_ref_name), &push_spec->loid, 1,
+						git_str_cstr(&remote_ref_name), &push_spec->loid, 1,
 						"update by push");
 		}
 
@@ -218,7 +218,7 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 		}
 
 		if (fire_callback && callbacks && callbacks->update_tips) {
-			error = callbacks->update_tips(git_buf_cstr(&remote_ref_name),
+			error = callbacks->update_tips(git_str_cstr(&remote_ref_name),
 						&push_spec->roid, &push_spec->loid, callbacks->payload);
 
 			if (error < 0)
@@ -229,7 +229,7 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 	error = 0;
 
 on_error:
-	git_buf_dispose(&remote_ref_name);
+	git_str_dispose(&remote_ref_name);
 	return error;
 }
 

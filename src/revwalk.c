@@ -131,7 +131,7 @@ int git_revwalk__push_glob(git_revwalk *walk, const char *glob, const git_revwal
 {
 	git_revwalk__push_options opts = GIT_REVWALK__PUSH_OPTIONS_INIT;
 	int error = 0;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	git_reference *ref;
 	git_reference_iterator *iter;
 	size_t wildcard;
@@ -144,15 +144,15 @@ int git_revwalk__push_glob(git_revwalk *walk, const char *glob, const git_revwal
 
 	/* refs/ is implied if not given in the glob */
 	if (git__prefixcmp(glob, GIT_REFS_DIR) != 0)
-		git_buf_joinpath(&buf, GIT_REFS_DIR, glob);
+		git_str_joinpath(&buf, GIT_REFS_DIR, glob);
 	else
-		git_buf_puts(&buf, glob);
-	GIT_ERROR_CHECK_ALLOC_BUF(&buf);
+		git_str_puts(&buf, glob);
+	GIT_ERROR_CHECK_ALLOC_STR(&buf);
 
 	/* If no '?', '*' or '[' exist, we append '/ *' to the glob */
 	wildcard = strcspn(glob, "?*[");
 	if (!glob[wildcard])
-		git_buf_put(&buf, "/*", 2);
+		git_str_put(&buf, "/*", 2);
 
 	if ((error = git_reference_iterator_glob_new(&iter, walk->repo, buf.ptr)) < 0)
 		goto out;
@@ -169,7 +169,7 @@ int git_revwalk__push_glob(git_revwalk *walk, const char *glob, const git_revwal
 	if (error == GIT_ITEROVER)
 		error = 0;
 out:
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	return error;
 }
 

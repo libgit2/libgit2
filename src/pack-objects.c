@@ -7,6 +7,7 @@
 
 #include "pack-objects.h"
 
+#include "buf.h"
 #include "zstream.h"
 #include "delta.h"
 #include "iterator.h"
@@ -33,7 +34,7 @@ struct unpacked {
 
 struct tree_walk_context {
 	git_packbuilder *pb;
-	git_buf buf;
+	git_str buf;
 };
 
 struct pack_write_context {
@@ -685,8 +686,8 @@ done:
 
 static int write_pack_buf(void *buf, size_t size, void *data)
 {
-	git_buf *b = (git_buf *)data;
-	return git_buf_put(b, buf, size);
+	git_str *b = (git_str *)data;
+	return git_str_put(b, buf, size);
 }
 
 static int type_size_sort(const void *_a, const void *_b)
@@ -947,7 +948,7 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 	size_t *list_size, size_t window, size_t depth)
 {
 	git_pobject *po;
-	git_buf zbuf = GIT_BUF_INIT;
+	git_str zbuf = GIT_STR_INIT;
 	struct unpacked *array;
 	size_t idx = 0, count = 0;
 	size_t mem_usage = 0;
@@ -1045,7 +1046,7 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 
 			memcpy(po->delta_data, zbuf.ptr, zbuf.size);
 			po->z_delta_size = zbuf.size;
-			git_buf_clear(&zbuf);
+			git_str_clear(&zbuf);
 
 			GIT_ASSERT(git_packbuilder__cache_lock(pb) == 0);
 			pb->delta_cache_size -= po->delta_size;
@@ -1093,7 +1094,7 @@ on_error:
 		git__free(array[i].data);
 	}
 	git__free(array);
-	git_buf_dispose(&zbuf);
+	git_str_dispose(&zbuf);
 
 	return error;
 }
@@ -1360,16 +1361,16 @@ int git_packbuilder_foreach(git_packbuilder *pb, int (*cb)(void *buf, size_t siz
 	return write_pack(pb, cb, payload);
 }
 
-int git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb)
+int git_packbuilder__write_buf(git_str *buf, git_packbuilder *pb)
 {
-	int error;
-
-	if ((error = git_buf_sanitize(buf)) < 0)
-		return error;
-
 	PREPARE_PACK;
 
 	return write_pack(pb, &write_pack_buf, buf);
+}
+
+int git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb)
+{
+	GIT_BUF_WRAP_PRIVATE(buf, git_packbuilder__write_buf, pb);
 }
 
 static int write_cb(void *buf, size_t len, void *payload)
@@ -1386,7 +1387,7 @@ int git_packbuilder_write(
 	void *progress_cb_payload)
 {
 	int error = -1;
-	git_buf object_path = GIT_BUF_INIT;
+	git_str object_path = GIT_STR_INIT;
 	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	git_indexer *indexer = NULL;
 	git_indexer_progress stats;
@@ -1396,11 +1397,11 @@ int git_packbuilder_write(
 	PREPARE_PACK;
 
 	if (path == NULL) {
-		if ((error = git_repository_item_path(&object_path, pb->repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0)
+		if ((error = git_repository__item_path(&object_path, pb->repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0)
 			goto cleanup;
-		if ((error = git_buf_joinpath(&object_path, git_buf_cstr(&object_path), "pack")) < 0)
+		if ((error = git_str_joinpath(&object_path, git_str_cstr(&object_path), "pack")) < 0)
 			goto cleanup;
-		path = git_buf_cstr(&object_path);
+		path = git_str_cstr(&object_path);
 	}
 
 	opts.progress_cb = progress_cb;
@@ -1425,7 +1426,7 @@ int git_packbuilder_write(
 
 cleanup:
 	git_indexer_free(indexer);
-	git_buf_dispose(&object_path);
+	git_str_dispose(&object_path);
 	return error;
 }
 
@@ -1447,10 +1448,10 @@ static int cb_tree_walk(
 	if (git_tree_entry_type(entry) == GIT_OBJECT_COMMIT)
 		return 0;
 
-	if (!(error = git_buf_sets(&ctx->buf, root)) &&
-		!(error = git_buf_puts(&ctx->buf, git_tree_entry_name(entry))))
+	if (!(error = git_str_sets(&ctx->buf, root)) &&
+		!(error = git_str_puts(&ctx->buf, git_tree_entry_name(entry))))
 		error = git_packbuilder_insert(
-			ctx->pb, git_tree_entry_id(entry), git_buf_cstr(&ctx->buf));
+			ctx->pb, git_tree_entry_id(entry), git_str_cstr(&ctx->buf));
 
 	return error;
 }
@@ -1474,14 +1475,14 @@ int git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *oid)
 {
 	int error;
 	git_tree *tree = NULL;
-	struct tree_walk_context context = { pb, GIT_BUF_INIT };
+	struct tree_walk_context context = { pb, GIT_STR_INIT };
 
 	if (!(error = git_tree_lookup(&tree, pb->repo, oid)) &&
 	    !(error = git_packbuilder_insert(pb, oid, NULL)))
 		error = git_tree_walk(tree, GIT_TREEWALK_PRE, cb_tree_walk, &context);
 
 	git_tree_free(tree);
-	git_buf_dispose(&context.buf);
+	git_str_dispose(&context.buf);
 	return error;
 }
 

@@ -1,4 +1,3 @@
-#include "buffer.h"
 #include "git2/object.h"
 #include "git2/repository.h"
 

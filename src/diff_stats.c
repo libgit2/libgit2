@@ -5,8 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "diff_stats.h"
 
+#include "buf.h"
+#include "common.h"
 #include "vector.h"
 #include "diff.h"
 #include "patch_generate.h"
@@ -47,7 +49,7 @@ static int digits_for_value(size_t val)
 }
 
 static int diff_file_stats_full_to_buf(
-	git_buf *out,
+	git_str *out,
 	const git_diff_delta *delta,
 	const diff_file_stats *filestat,
 	const git_diff_stats *stats,
@@ -70,12 +72,12 @@ static int diff_file_stats_full_to_buf(
 
 		if ((common_dirlen = git_path_common_dirlen(old_path, new_path)) &&
 		    common_dirlen <= INT_MAX) {
-			error = git_buf_printf(out, " %.*s{%s"DIFF_RENAME_FILE_SEPARATOR"%s}",
+			error = git_str_printf(out, " %.*s{%s"DIFF_RENAME_FILE_SEPARATOR"%s}",
 					       (int) common_dirlen, old_path,
 					       old_path + common_dirlen,
 					       new_path + common_dirlen);
 		} else {
-			error = git_buf_printf(out, " %s" DIFF_RENAME_FILE_SEPARATOR "%s",
+			error = git_str_printf(out, " %s" DIFF_RENAME_FILE_SEPARATOR "%s",
 					       old_path, new_path);
 		}
 
@@ -83,7 +85,7 @@ static int diff_file_stats_full_to_buf(
 			goto on_error;
 	} else {
 		adddel_path = new_path ? new_path : old_path;
-		if (git_buf_printf(out, " %s", adddel_path) < 0)
+		if (git_str_printf(out, " %s", adddel_path) < 0)
 			goto on_error;
 
 		padding = stats->max_name - strlen(adddel_path);
@@ -92,28 +94,28 @@ static int diff_file_stats_full_to_buf(
 			padding += strlen(DIFF_RENAME_FILE_SEPARATOR);
 	}
 
-	if (git_buf_putcn(out, ' ', padding) < 0 ||
-		git_buf_puts(out, " | ") < 0)
+	if (git_str_putcn(out, ' ', padding) < 0 ||
+		git_str_puts(out, " | ") < 0)
 		goto on_error;
 
 	if (delta->flags & GIT_DIFF_FLAG_BINARY) {
-		if (git_buf_printf(out,
+		if (git_str_printf(out,
 				"Bin %" PRId64 " -> %" PRId64 " bytes", old_size, new_size) < 0)
 			goto on_error;
 	}
 	else {
-		if (git_buf_printf(out,
+		if (git_str_printf(out,
 				"%*" PRIuZ, stats->max_digits,
 				filestat->insertions + filestat->deletions) < 0)
 			goto on_error;
 
 		if (filestat->insertions || filestat->deletions) {
-			if (git_buf_putc(out, ' ') < 0)
+			if (git_str_putc(out, ' ') < 0)
 				goto on_error;
 
 			if (!width) {
-				if (git_buf_putcn(out, '+', filestat->insertions) < 0 ||
-					git_buf_putcn(out, '-', filestat->deletions) < 0)
+				if (git_str_putcn(out, '+', filestat->insertions) < 0 ||
+					git_str_putcn(out, '-', filestat->deletions) < 0)
 					goto on_error;
 			} else {
 				size_t total = filestat->insertions + filestat->deletions;
@@ -122,21 +124,21 @@ static int diff_file_stats_full_to_buf(
 				size_t plus = full * filestat->insertions / total;
 				size_t minus = full - plus;
 
-				if (git_buf_putcn(out, '+', max(plus,  1)) < 0 ||
-					git_buf_putcn(out, '-', max(minus, 1)) < 0)
+				if (git_str_putcn(out, '+', max(plus,  1)) < 0 ||
+					git_str_putcn(out, '-', max(minus, 1)) < 0)
 					goto on_error;
 			}
 		}
 	}
 
-	git_buf_putc(out, '\n');
+	git_str_putc(out, '\n');
 
 on_error:
-	return (git_buf_oom(out) ? -1 : 0);
+	return (git_str_oom(out) ? -1 : 0);
 }
 
 static int diff_file_stats_number_to_buf(
-	git_buf *out,
+	git_str *out,
 	const git_diff_delta *delta,
 	const diff_file_stats *filestats)
 {
@@ -144,29 +146,29 @@ static int diff_file_stats_number_to_buf(
 	const char *path = delta->new_file.path;
 
 	if (delta->flags & GIT_DIFF_FLAG_BINARY)
-		error = git_buf_printf(out, "%-8c" "%-8c" "%s\n", '-', '-', path);
+		error = git_str_printf(out, "%-8c" "%-8c" "%s\n", '-', '-', path);
 	else
-		error = git_buf_printf(out, "%-8" PRIuZ "%-8" PRIuZ "%s\n",
+		error = git_str_printf(out, "%-8" PRIuZ "%-8" PRIuZ "%s\n",
 			filestats->insertions, filestats->deletions, path);
 
 	return error;
 }
 
 static int diff_file_stats_summary_to_buf(
-	git_buf *out,
+	git_str *out,
 	const git_diff_delta *delta)
 {
 	if (delta->old_file.mode != delta->new_file.mode) {
 		if (delta->old_file.mode == 0) {
-			git_buf_printf(out, " create mode %06o %s\n",
+			git_str_printf(out, " create mode %06o %s\n",
 				delta->new_file.mode, delta->new_file.path);
 		}
 		else if (delta->new_file.mode == 0) {
-			git_buf_printf(out, " delete mode %06o %s\n",
+			git_str_printf(out, " delete mode %06o %s\n",
 				delta->old_file.mode, delta->old_file.path);
 		}
 		else {
-			git_buf_printf(out, " mode change %06o => %06o %s\n",
+			git_str_printf(out, " mode change %06o => %06o %s\n",
 				delta->old_file.mode, delta->new_file.mode, delta->new_file.path);
 		}
 	}
@@ -279,6 +281,15 @@ int git_diff_stats_to_buf(
 	git_diff_stats_format_t format,
 	size_t width)
 {
+	GIT_BUF_WRAP_PRIVATE(out, git_diff__stats_to_buf, stats, format, width);
+}
+
+int git_diff__stats_to_buf(
+	git_str *out,
+	const git_diff_stats *stats,
+	git_diff_stats_format_t format,
+	size_t width)
+{
 	int error = 0;
 	size_t i;
 	const git_diff_delta *delta;
@@ -320,23 +331,23 @@ int git_diff_stats_to_buf(
 	}
 
 	if (format & GIT_DIFF_STATS_FULL || format & GIT_DIFF_STATS_SHORT) {
-		git_buf_printf(
+		git_str_printf(
 			out, " %" PRIuZ " file%s changed",
 			stats->files_changed, stats->files_changed != 1 ? "s" : "");
 
 		if (stats->insertions || stats->deletions == 0)
-			git_buf_printf(
+			git_str_printf(
 				out, ", %" PRIuZ " insertion%s(+)",
 				stats->insertions, stats->insertions != 1 ? "s" : "");
 
 		if (stats->deletions || stats->insertions == 0)
-			git_buf_printf(
+			git_str_printf(
 				out, ", %" PRIuZ " deletion%s(-)",
 				stats->deletions, stats->deletions != 1 ? "s" : "");
 
-		git_buf_putc(out, '\n');
+		git_str_putc(out, '\n');
 
-		if (git_buf_oom(out))
+		if (git_str_oom(out))
 			return -1;
 	}
 

@@ -28,22 +28,22 @@ void test_online_customcert__initialize(void)
 	g_repo = NULL;
 
 	if (!initialized) {
-		git_buf path = GIT_BUF_INIT, file = GIT_BUF_INIT;
+		git_str path = GIT_STR_INIT, file = GIT_STR_INIT;
 		char cwd[GIT_PATH_MAX];
 
 		cl_fixture_sandbox(CUSTOM_CERT_ONE_PATH);
 		cl_fixture_sandbox(CUSTOM_CERT_TWO_FILE);
 
 		cl_must_pass(p_getcwd(cwd, GIT_PATH_MAX));
-		cl_git_pass(git_buf_joinpath(&path, cwd, CUSTOM_CERT_ONE_PATH));
-		cl_git_pass(git_buf_joinpath(&file, cwd, CUSTOM_CERT_TWO_FILE));
+		cl_git_pass(git_str_joinpath(&path, cwd, CUSTOM_CERT_ONE_PATH));
+		cl_git_pass(git_str_joinpath(&file, cwd, CUSTOM_CERT_TWO_FILE));
 
 		cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS,
 		                             file.ptr, path.ptr));
 		initialized = true;
 
-		git_buf_dispose(&file);
-		git_buf_dispose(&path);
+		git_str_dispose(&file);
+		git_str_dispose(&path);
 	}
 #endif
 }

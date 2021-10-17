@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "clar_libgit2_timer.h"
-#include "buffer.h"
 
 void cl_perf_timer__init(cl_perf_timer *t)
 {

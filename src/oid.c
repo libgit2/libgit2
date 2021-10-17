@@ -162,14 +162,14 @@ int git_oid__parse(
 	return 0;
 }
 
-void git_oid__writebuf(git_buf *buf, const char *header, const git_oid *oid)
+void git_oid__writebuf(git_str *buf, const char *header, const git_oid *oid)
 {
 	char hex_oid[GIT_OID_HEXSZ];
 
 	git_oid_fmt(hex_oid, oid);
-	git_buf_puts(buf, header);
-	git_buf_put(buf, hex_oid, GIT_OID_HEXSZ);
-	git_buf_putc(buf, '\n');
+	git_str_puts(buf, header);
+	git_str_put(buf, hex_oid, GIT_OID_HEXSZ);
+	git_str_putc(buf, '\n');
 }
 
 int git_oid_fromraw(git_oid *out, const unsigned char *raw)

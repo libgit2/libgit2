@@ -9,7 +9,7 @@
 
 #include "threadstate.h"
 #include "posix.h"
-#include "buffer.h"
+#include "str.h"
 #include "libgit2.h"
 
 /********************************************
@@ -29,7 +29,7 @@ static git_error g_git_uninitialized_error = {
 static void set_error_from_buffer(int error_class)
 {
 	git_error *error = &GIT_THREADSTATE->error_t;
-	git_buf *buf = &GIT_THREADSTATE->error_buf;
+	git_str *buf = &GIT_THREADSTATE->error_buf;
 
 	error->message = buf->ptr;
 	error->klass = error_class;
@@ -39,11 +39,11 @@ static void set_error_from_buffer(int error_class)
 
 static void set_error(int error_class, char *string)
 {
-	git_buf *buf = &GIT_THREADSTATE->error_buf;
+	git_str *buf = &GIT_THREADSTATE->error_buf;
 
-	git_buf_clear(buf);
+	git_str_clear(buf);
 	if (string) {
-		git_buf_puts(buf, string);
+		git_str_puts(buf, string);
 		git__free(string);
 	}
 
@@ -70,20 +70,20 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 	DWORD win32_error_code = (error_class == GIT_ERROR_OS) ? GetLastError() : 0;
 #endif
 	int error_code = (error_class == GIT_ERROR_OS) ? errno : 0;
-	git_buf *buf = &GIT_THREADSTATE->error_buf;
+	git_str *buf = &GIT_THREADSTATE->error_buf;
 
-	git_buf_clear(buf);
+	git_str_clear(buf);
 	if (fmt) {
-		git_buf_vprintf(buf, fmt, ap);
+		git_str_vprintf(buf, fmt, ap);
 		if (error_class == GIT_ERROR_OS)
-			git_buf_PUTS(buf, ": ");
+			git_str_PUTS(buf, ": ");
 	}
 
 	if (error_class == GIT_ERROR_OS) {
 #ifdef GIT_WIN32
 		char * win32_error = git_win32_get_error_message(win32_error_code);
 		if (win32_error) {
-			git_buf_puts(buf, win32_error);
+			git_str_puts(buf, win32_error);
 			git__free(win32_error);
 
 			SetLastError(0);
@@ -91,26 +91,26 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 		else
 #endif
 		if (error_code)
-			git_buf_puts(buf, strerror(error_code));
+			git_str_puts(buf, strerror(error_code));
 
 		if (error_code)
 			errno = 0;
 	}
 
-	if (!git_buf_oom(buf))
+	if (!git_str_oom(buf))
 		set_error_from_buffer(error_class);
 }
 
 int git_error_set_str(int error_class, const char *string)
 {
-	git_buf *buf = &GIT_THREADSTATE->error_buf;
+	git_str *buf = &GIT_THREADSTATE->error_buf;
 
 	GIT_ASSERT_ARG(string);
 
-	git_buf_clear(buf);
-	git_buf_puts(buf, string);
+	git_str_clear(buf);
+	git_str_puts(buf, string);
 
-	if (git_buf_oom(buf))
+	if (git_str_oom(buf))
 		return -1;
 
 	set_error_from_buffer(error_class);
@@ -142,7 +142,7 @@ const git_error *git_error_last(void)
 int git_error_state_capture(git_error_state *state, int error_code)
 {
 	git_error *error = GIT_THREADSTATE->last_error;
-	git_buf *error_buf = &GIT_THREADSTATE->error_buf;
+	git_str *error_buf = &GIT_THREADSTATE->error_buf;
 
 	memset(state, 0, sizeof(git_error_state));
 
@@ -158,7 +158,7 @@ int git_error_state_capture(git_error_state *state, int error_code)
 		if (state->oom)
 			state->error_msg.message = g_git_oom_error.message;
 		else
-			state->error_msg.message = git_buf_detach(error_buf);
+			state->error_msg.message = git_str_detach(error_buf);
 	}
 
 	git_error_clear();

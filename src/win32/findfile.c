@@ -34,7 +34,7 @@ static int git_win32__expand_path(_findfile_path *dest, const wchar_t *src)
 	return 0;
 }
 
-static int win32_path_to_8(git_buf *dest, const wchar_t *src)
+static int win32_path_to_8(git_str *dest, const wchar_t *src)
 {
 	git_win32_utf8_path utf8_path;
 
@@ -46,7 +46,7 @@ static int win32_path_to_8(git_buf *dest, const wchar_t *src)
 	/* Convert backslashes to forward slashes */
 	git_path_mkposix(utf8_path);
 
-	return git_buf_sets(dest, utf8_path);
+	return git_str_sets(dest, utf8_path);
 }
 
 static wchar_t *win32_walkpath(wchar_t *path, wchar_t *buf, size_t buflen)
@@ -70,7 +70,7 @@ static wchar_t *win32_walkpath(wchar_t *path, wchar_t *buf, size_t buflen)
 	return (path != base) ? path : NULL;
 }
 
-static int win32_find_git_in_path(git_buf *buf, const wchar_t *gitexe, const wchar_t *subdir)
+static int win32_find_git_in_path(git_str *buf, const wchar_t *gitexe, const wchar_t *subdir)
 {
 	wchar_t *env = _wgetenv(L"PATH"), lastch;
 	_findfile_path root;
@@ -106,7 +106,7 @@ static int win32_find_git_in_path(git_buf *buf, const wchar_t *gitexe, const wch
 }
 
 static int win32_find_git_in_registry(
-	git_buf *buf, const HKEY hive, const wchar_t *key, const wchar_t *subdir)
+	git_str *buf, const HKEY hive, const wchar_t *key, const wchar_t *subdir)
 {
 	HKEY hKey;
 	int error = GIT_ENOTFOUND;
@@ -141,12 +141,12 @@ static int win32_find_git_in_registry(
 }
 
 static int win32_find_existing_dirs(
-	git_buf *out, const wchar_t *tmpl[])
+	git_str *out, const wchar_t *tmpl[])
 {
 	_findfile_path path16;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
-	git_buf_clear(out);
+	git_str_clear(out);
 
 	for (; *tmpl != NULL; tmpl++) {
 		if (!git_win32__expand_path(&path16, *tmpl) &&
@@ -156,43 +156,43 @@ static int win32_find_existing_dirs(
 			win32_path_to_8(&buf, path16.path);
 
 			if (buf.size)
-				git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
+				git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 		}
 	}
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
-	return (git_buf_oom(out) ? -1 : 0);
+	return (git_str_oom(out) ? -1 : 0);
 }
 
-int git_win32__find_system_dirs(git_buf *out, const wchar_t *subdir)
+int git_win32__find_system_dirs(git_str *out, const wchar_t *subdir)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
 	/* directories where git.exe & git.cmd are found */
 	if (!win32_find_git_in_path(&buf, L"git.exe", subdir) && buf.size)
-		git_buf_set(out, buf.ptr, buf.size);
+		git_str_set(out, buf.ptr, buf.size);
 	else
-		git_buf_clear(out);
+		git_str_clear(out);
 
 	if (!win32_find_git_in_path(&buf, L"git.cmd", subdir) && buf.size)
-		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
+		git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
 	/* directories where git is installed according to registry */
 	if (!win32_find_git_in_registry(
 			&buf, HKEY_CURRENT_USER, REG_MSYSGIT_INSTALL_LOCAL, subdir) && buf.size)
-		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
+		git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
 	if (!win32_find_git_in_registry(
 			&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL, subdir) && buf.size)
-		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
+		git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
-	return (git_buf_oom(out) ? -1 : 0);
+	return (git_str_oom(out) ? -1 : 0);
 }
 
-int git_win32__find_global_dirs(git_buf *out)
+int git_win32__find_global_dirs(git_str *out)
 {
 	static const wchar_t *global_tmpls[4] = {
 		L"%HOME%\\",
@@ -204,7 +204,7 @@ int git_win32__find_global_dirs(git_buf *out)
 	return win32_find_existing_dirs(out, global_tmpls);
 }
 
-int git_win32__find_xdg_dirs(git_buf *out)
+int git_win32__find_xdg_dirs(git_str *out)
 {
 	static const wchar_t *global_tmpls[7] = {
 		L"%XDG_CONFIG_HOME%\\git",
@@ -219,7 +219,7 @@ int git_win32__find_xdg_dirs(git_buf *out)
 	return win32_find_existing_dirs(out, global_tmpls);
 }
 
-int git_win32__find_programdata_dirs(git_buf *out)
+int git_win32__find_programdata_dirs(git_str *out)
 {
 	static const wchar_t *programdata_tmpls[2] = {
 		L"%PROGRAMDATA%\\Git",

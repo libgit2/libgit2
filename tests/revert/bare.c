@@ -1,7 +1,6 @@
 #include "clar.h"
 #include "clar_libgit2.h"
 
-#include "buffer.h"
 #include "futils.h"
 #include "git2/revert.h"
 

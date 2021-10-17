@@ -15,7 +15,7 @@ void test_diff_submodules__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-#define get_buf_ptr(buf) ((buf)->asize ? (buf)->ptr : NULL)
+#define get_buf_ptr(buf) ((buf)->size ? (buf)->ptr : NULL)
 
 static void check_diff_patches_at_line(
 	git_diff *diff, const char **expected,

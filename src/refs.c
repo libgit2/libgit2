@@ -247,7 +247,7 @@ int git_reference_dwim(git_reference **out, git_repository *repo, const char *re
 	int error = 0, i, valid;
 	bool fallbackmode = true, foundvalid = false;
 	git_reference *ref;
-	git_buf refnamebuf = GIT_BUF_INIT, name = GIT_BUF_INIT;
+	git_str refnamebuf = GIT_STR_INIT, name = GIT_STR_INIT;
 
 	static const char *formatters[] = {
 		"%s",
@@ -260,18 +260,18 @@ int git_reference_dwim(git_reference **out, git_repository *repo, const char *re
 	};
 
 	if (*refname)
-		git_buf_puts(&name, refname);
+		git_str_puts(&name, refname);
 	else {
-		git_buf_puts(&name, GIT_HEAD_FILE);
+		git_str_puts(&name, GIT_HEAD_FILE);
 		fallbackmode = false;
 	}
 
 	for (i = 0; formatters[i] && (fallbackmode || i == 0); i++) {
 
-		git_buf_clear(&refnamebuf);
+		git_str_clear(&refnamebuf);
 
-		if ((error = git_buf_printf(&refnamebuf, formatters[i], git_buf_cstr(&name))) < 0 ||
-		    (error = git_reference_name_is_valid(&valid, git_buf_cstr(&refnamebuf))) < 0)
+		if ((error = git_str_printf(&refnamebuf, formatters[i], git_str_cstr(&name))) < 0 ||
+		    (error = git_reference_name_is_valid(&valid, git_str_cstr(&refnamebuf))) < 0)
 			goto cleanup;
 
 		if (!valid) {
@@ -280,7 +280,7 @@ int git_reference_dwim(git_reference **out, git_repository *repo, const char *re
 		}
 		foundvalid = true;
 
-		error = git_reference_lookup_resolved(&ref, repo, git_buf_cstr(&refnamebuf), -1);
+		error = git_reference_lookup_resolved(&ref, repo, git_str_cstr(&refnamebuf), -1);
 
 		if (!error) {
 			*out = ref;
@@ -296,14 +296,14 @@ cleanup:
 	if (error && !foundvalid) {
 		/* never found a valid reference name */
 		git_error_set(GIT_ERROR_REFERENCE,
-			"could not use '%s' as valid reference name", git_buf_cstr(&name));
+			"could not use '%s' as valid reference name", git_str_cstr(&name));
 	}
 
 	if (error == GIT_ENOTFOUND)
 		git_error_set(GIT_ERROR_REFERENCE, "no reference found for shorthand '%s'", refname);
 
-	git_buf_dispose(&name);
-	git_buf_dispose(&refnamebuf);
+	git_str_dispose(&name);
+	git_str_dispose(&refnamebuf);
 	return error;
 }
 
@@ -891,7 +891,7 @@ static bool is_all_caps_and_underscore(const char *name, size_t len)
 
 /* Inspired from https://github.com/git/git/blob/f06d47e7e0d9db709ee204ed13a8a7486149f494/refs.c#L36-100 */
 int git_reference__normalize_name(
-	git_buf *buf,
+	git_str *buf,
 	const char *name,
 	unsigned int flags)
 {
@@ -914,7 +914,7 @@ int git_reference__normalize_name(
 		goto cleanup;
 
 	if (normalize)
-		git_buf_clear(buf);
+		git_str_clear(buf);
 
 #ifdef GIT_USE_ICONV
 	if ((flags & GIT_REFERENCE_FORMAT__PRECOMPOSE_UNICODE) != 0) {
@@ -927,9 +927,9 @@ int git_reference__normalize_name(
 #endif
 
 	if (!validate) {
-		git_buf_sets(buf, current);
+		git_str_sets(buf, current);
 
-		error = git_buf_oom(buf) ? -1 : 0;
+		error = git_str_oom(buf) ? -1 : 0;
 		goto cleanup;
 	}
 
@@ -949,13 +949,13 @@ int git_reference__normalize_name(
 				process_flags &= ~GIT_REFERENCE_FORMAT_REFSPEC_PATTERN;
 
 			if (normalize) {
-				size_t cur_len = git_buf_len(buf);
+				size_t cur_len = git_str_len(buf);
 
-				git_buf_joinpath(buf, git_buf_cstr(buf), current);
-				git_buf_truncate(buf,
+				git_str_joinpath(buf, git_str_cstr(buf), current);
+				git_str_truncate(buf,
 					cur_len + segment_len + (segments_count ? 1 : 0));
 
-				if (git_buf_oom(buf)) {
+				if (git_str_oom(buf)) {
 					error = -1;
 					goto cleanup;
 				}
@@ -1008,7 +1008,7 @@ cleanup:
 			"the given reference name '%s' is not valid", name);
 
 	if (error && normalize)
-		git_buf_dispose(buf);
+		git_str_dispose(buf);
 
 #ifdef GIT_USE_ICONV
 	git_path_iconv_clear(&ic);
@@ -1023,13 +1023,13 @@ int git_reference_normalize_name(
 	const char *name,
 	unsigned int flags)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	int error;
 
 	if ((error = git_reference__normalize_name(&buf, name, flags)) < 0)
 		goto cleanup;
 
-	if (git_buf_len(&buf) > buffer_size - 1) {
+	if (git_str_len(&buf) > buffer_size - 1) {
 		git_error_set(
 		GIT_ERROR_REFERENCE,
 		"the provided buffer is too short to hold the normalization of '%s'", name);
@@ -1037,13 +1037,13 @@ int git_reference_normalize_name(
 		goto cleanup;
 	}
 
-	if ((error = git_buf_copy_cstr(buffer_out, buffer_size, &buf)) < 0)
+	if ((error = git_str_copy_cstr(buffer_out, buffer_size, &buf)) < 0)
 		goto cleanup;
 
 	error = 0;
 
 cleanup:
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	return error;
 }
 
@@ -1143,12 +1143,12 @@ int git_reference__update_for_commit(
 {
 	git_reference *ref_new = NULL;
 	git_commit *commit = NULL;
-	git_buf reflog_msg = GIT_BUF_INIT;
+	git_str reflog_msg = GIT_STR_INIT;
 	const git_signature *who;
 	int error;
 
 	if ((error = git_commit_lookup(&commit, repo, id)) < 0 ||
-		(error = git_buf_printf(&reflog_msg, "%s%s: %s",
+		(error = git_str_printf(&reflog_msg, "%s%s: %s",
 			operation ? operation : "commit",
 			commit_type(commit),
 			git_commit_summary(commit))) < 0)
@@ -1161,15 +1161,15 @@ int git_reference__update_for_commit(
 			return error;
 
 		error = reference__create(&ref_new, repo, ref->name, id, NULL, 1, who,
-					  git_buf_cstr(&reflog_msg), &ref->target.oid, NULL);
+					  git_str_cstr(&reflog_msg), &ref->target.oid, NULL);
 	}
 	else
 		error = git_reference__update_terminal(
-			repo, ref_name, id, who, git_buf_cstr(&reflog_msg));
+			repo, ref_name, id, who, git_str_cstr(&reflog_msg));
 
 done:
 	git_reference_free(ref_new);
-	git_buf_dispose(&reflog_msg);
+	git_str_dispose(&reflog_msg);
 	git_commit_free(commit);
 	return error;
 }

@@ -153,8 +153,8 @@ void test_refs_branches_delete__removes_empty_folders(void)
 	git_oid oidzero = {{0}};
 	git_signature *sig;
 
-	git_buf ref_folder = GIT_BUF_INIT;
-	git_buf reflog_folder = GIT_BUF_INIT;
+	git_str ref_folder = GIT_STR_INIT;
+	git_str reflog_folder = GIT_STR_INIT;
 
 	/* Create a new branch with a nested name */
 	cl_git_pass(git_oid_fromstr(&commit_id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
@@ -170,19 +170,19 @@ void test_refs_branches_delete__removes_empty_folders(void)
 	git_signature_free(sig);
 	git_reflog_free(log);
 
-	cl_git_pass(git_buf_joinpath(&ref_folder, commondir, "refs/heads/some/deep"));
-	cl_git_pass(git_buf_join3(&reflog_folder, '/', commondir, GIT_REFLOG_DIR, "refs/heads/some/deep"));
+	cl_git_pass(git_str_joinpath(&ref_folder, commondir, "refs/heads/some/deep"));
+	cl_git_pass(git_str_join3(&reflog_folder, '/', commondir, GIT_REFLOG_DIR, "refs/heads/some/deep"));
 
-	cl_assert(git_path_exists(git_buf_cstr(&ref_folder)) == true);
-	cl_assert(git_path_exists(git_buf_cstr(&reflog_folder)) == true);
+	cl_assert(git_path_exists(git_str_cstr(&ref_folder)) == true);
+	cl_assert(git_path_exists(git_str_cstr(&reflog_folder)) == true);
 
 	cl_git_pass(git_branch_delete(branch));
 
-	cl_assert(git_path_exists(git_buf_cstr(&ref_folder)) == false);
-	cl_assert(git_path_exists(git_buf_cstr(&reflog_folder)) == false);
+	cl_assert(git_path_exists(git_str_cstr(&ref_folder)) == false);
+	cl_assert(git_path_exists(git_str_cstr(&reflog_folder)) == false);
 
 	git_reference_free(branch);
-	git_buf_dispose(&ref_folder);
-	git_buf_dispose(&reflog_folder);
+	git_str_dispose(&ref_folder);
+	git_str_dispose(&reflog_folder);
 }
 

@@ -178,7 +178,8 @@ void test_diff_drivers__builtins(void)
 {
 	git_diff *diff;
 	git_patch *patch;
-	git_buf file = GIT_BUF_INIT, actual = GIT_BUF_INIT, expected = GIT_BUF_INIT;
+	git_str file = GIT_STR_INIT, expected = GIT_STR_INIT;
+	git_buf actual = GIT_BUF_INIT;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_vector files = GIT_VECTOR_INIT;
 	size_t i;
@@ -205,15 +206,15 @@ void test_diff_drivers__builtins(void)
 		cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 		cl_git_pass(git_patch_to_buf(&actual, patch));
 
-		git_buf_sets(&expected, "userdiff/expected/nodriver/diff.");
-		git_buf_puts(&expected, extension);
+		git_str_sets(&expected, "userdiff/expected/nodriver/diff.");
+		git_str_puts(&expected, extension);
 		cl_git_pass(git_futils_readbuffer(&expected, expected.ptr));
 
 		overwrite_filemode(expected.ptr, &actual);
 
 		cl_assert_equal_s(expected.ptr, actual.ptr);
 
-		git_buf_clear(&actual);
+		git_buf_dispose(&actual);
 		git_patch_free(patch);
 		git_diff_free(diff);
 
@@ -230,24 +231,24 @@ void test_diff_drivers__builtins(void)
 		cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 		cl_git_pass(git_patch_to_buf(&actual, patch));
 
-		git_buf_sets(&expected, "userdiff/expected/driver/diff.");
-		git_buf_puts(&expected, extension);
+		git_str_sets(&expected, "userdiff/expected/driver/diff.");
+		git_str_puts(&expected, extension);
 		cl_git_pass(git_futils_readbuffer(&expected, expected.ptr));
 
 		overwrite_filemode(expected.ptr, &actual);
 
 		cl_assert_equal_s(expected.ptr, actual.ptr);
 
-		git_buf_clear(&actual);
+		git_buf_dispose(&actual);
 		git_patch_free(patch);
 		git_diff_free(diff);
 
 		git__free(path);
 	}
 
-	git_buf_dispose(&file);
 	git_buf_dispose(&actual);
-	git_buf_dispose(&expected);
+	git_str_dispose(&file);
+	git_str_dispose(&expected);
 	git_vector_free(&files);
 }
 

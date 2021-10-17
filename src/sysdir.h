@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "posix.h"
-#include "buffer.h"
+#include "str.h"
 
 /**
  * Find a "global" file (i.e. one in a user's home directory).
@@ -19,7 +19,7 @@
  * @param filename name of file to find in the home directory
  * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
  */
-extern int git_sysdir_find_global_file(git_buf *path, const char *filename);
+extern int git_sysdir_find_global_file(git_str *path, const char *filename);
 
 /**
  * Find an "XDG" file (i.e. one in user's XDG config path).
@@ -28,7 +28,7 @@ extern int git_sysdir_find_global_file(git_buf *path, const char *filename);
  * @param filename name of file to find in the home directory
  * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
  */
-extern int git_sysdir_find_xdg_file(git_buf *path, const char *filename);
+extern int git_sysdir_find_xdg_file(git_str *path, const char *filename);
 
 /**
  * Find a "system" file (i.e. one shared for all users of the system).
@@ -37,7 +37,7 @@ extern int git_sysdir_find_xdg_file(git_buf *path, const char *filename);
  * @param filename name of file to find in the home directory
  * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
  */
-extern int git_sysdir_find_system_file(git_buf *path, const char *filename);
+extern int git_sysdir_find_system_file(git_str *path, const char *filename);
 
 /**
  * Find a "ProgramData" file (i.e. one in %PROGRAMDATA%)
@@ -46,7 +46,7 @@ extern int git_sysdir_find_system_file(git_buf *path, const char *filename);
  * @param filename name of file to find in the ProgramData directory
  * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
  */
-extern int git_sysdir_find_programdata_file(git_buf *path, const char *filename);
+extern int git_sysdir_find_programdata_file(git_str *path, const char *filename);
 
 /**
  * Find template directory.
@@ -54,7 +54,7 @@ extern int git_sysdir_find_programdata_file(git_buf *path, const char *filename)
  * @param path buffer to write the full path into
  * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
  */
-extern int git_sysdir_find_template_dir(git_buf *path);
+extern int git_sysdir_find_template_dir(git_str *path);
 
 /**
  * Expand the name of a "global" file (i.e. one in a user's home
@@ -66,7 +66,7 @@ extern int git_sysdir_find_template_dir(git_buf *path);
  * @param filename name of file in the home directory
  * @return 0 on success or -1 on error
  */
-extern int git_sysdir_expand_global_file(git_buf *path, const char *filename);
+extern int git_sysdir_expand_global_file(git_str *path, const char *filename);
 
 typedef enum {
 	GIT_SYSDIR_SYSTEM = 0,
@@ -87,11 +87,11 @@ extern int git_sysdir_global_init(void);
 /**
  * Get the search path for global/system/xdg files
  *
- * @param out pointer to git_buf containing search path
+ * @param out pointer to git_str containing search path
  * @param which which list of paths to return
  * @return 0 on success, <0 on failure
  */
-extern int git_sysdir_get(const git_buf **out, git_sysdir_t which);
+extern int git_sysdir_get(const git_str **out, git_sysdir_t which);
 
 /**
  * Set search paths for global/system/xdg files

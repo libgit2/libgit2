@@ -70,7 +70,7 @@ void test_stash_apply__cleanup(void)
 
 void test_stash_apply__with_default(void)
 {
-	git_buf where = GIT_BUF_INIT;
+	git_str where = GIT_STR_INIT;
 
 	cl_git_pass(git_stash_apply(repo, 0, NULL));
 
@@ -85,7 +85,7 @@ void test_stash_apply__with_default(void)
 	cl_git_pass(git_futils_readbuffer(&where, "stash/where"));
 	cl_assert_equal_s("....\n", where.ptr);
 
-	git_buf_dispose(&where);
+	git_str_dispose(&where);
 }
 
 void test_stash_apply__with_existing_file(void)
@@ -114,7 +114,7 @@ void test_stash_apply__merges_new_file(void)
 
 void test_stash_apply__with_reinstate_index(void)
 {
-	git_buf where = GIT_BUF_INIT;
+	git_str where = GIT_STR_INIT;
 	git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
 
 	opts.flags = GIT_STASH_APPLY_REINSTATE_INDEX;
@@ -132,7 +132,7 @@ void test_stash_apply__with_reinstate_index(void)
 	cl_git_pass(git_futils_readbuffer(&where, "stash/where"));
 	cl_assert_equal_s("....\n", where.ptr);
 
-	git_buf_dispose(&where);
+	git_str_dispose(&where);
 }
 
 void test_stash_apply__conflict_index_with_default(void)

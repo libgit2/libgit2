@@ -1,7 +1,5 @@
 #include "clar_libgit2.h"
 
-#include "buffer.h"
-
 static git_repository *_repo;
 static git_signature *_sig;
 
@@ -282,7 +280,7 @@ void test_notes_notes__inserting_a_note_without_passing_a_namespace_uses_the_def
 	create_note(&note_oid, NULL, "08b041783f40edfe12bb406c9c9a8a040177c125", "hello world\n");
 
 	cl_git_pass(git_note_read(&note, _repo, NULL, &target_oid));
-	cl_git_pass(git_note_read(&default_namespace_note, _repo, git_buf_cstr(&default_ref), &target_oid));
+	cl_git_pass(git_note_read(&default_namespace_note, _repo, default_ref.ptr, &target_oid));
 
 	assert_note_equal(note, "hello world\n", &note_oid);
 	assert_note_equal(default_namespace_note, "hello world\n", &note_oid);

@@ -25,7 +25,7 @@ typedef struct git_reader git_reader;
  * reader after disposing the underlying object that it reads.
  */
 struct git_reader {
-	int (*read)(git_buf *out, git_oid *out_oid, git_filemode_t *mode, git_reader *reader, const char *filename);
+	int (*read)(git_str *out, git_oid *out_oid, git_filemode_t *mode, git_reader *reader, const char *filename);
 };
 
 /**
@@ -91,7 +91,7 @@ extern int git_reader_for_workdir(
  * @param filename The filename to read from the reader
  */
 extern int git_reader_read(
-	git_buf *out,
+	git_str *out,
 	git_oid *out_id,
 	git_filemode_t *out_filemode,
 	git_reader *reader,

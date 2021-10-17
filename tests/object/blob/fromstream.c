@@ -1,5 +1,4 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
 #include "posix.h"
 #include "path.h"
 #include "futils.h"
@@ -48,15 +47,15 @@ void test_object_blob_fromstream__multiple_write(void)
 
 static void write_attributes(git_repository *repo)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_joinpath(&buf, git_repository_path(repo), "info"));
-	cl_git_pass(git_buf_joinpath(&buf, git_buf_cstr(&buf), "attributes"));
+	cl_git_pass(git_str_joinpath(&buf, git_repository_path(repo), "info"));
+	cl_git_pass(git_str_joinpath(&buf, git_str_cstr(&buf), "attributes"));
 
-	cl_git_pass(git_futils_mkpath2file(git_buf_cstr(&buf), 0777));
-	cl_git_rewritefile(git_buf_cstr(&buf), GITATTR);
+	cl_git_pass(git_futils_mkpath2file(git_str_cstr(&buf), 0777));
+	cl_git_rewritefile(git_str_cstr(&buf), GITATTR);
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 }
 
 static void assert_named_chunked_blob(const char *expected_sha, const char *fake_name)

@@ -1,5 +1,4 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
 #include "zstream.h"
 
 static const char *data = "This is a test test test of This is a test";
@@ -60,7 +59,7 @@ void test_core_zstream__basic(void)
 
 void test_core_zstream__fails_on_trailing_garbage(void)
 {
-	git_buf deflated = GIT_BUF_INIT, inflated = GIT_BUF_INIT;
+	git_str deflated = GIT_STR_INIT, inflated = GIT_STR_INIT;
 	char i = 0;
 
 	/* compress a simple string */
@@ -68,29 +67,29 @@ void test_core_zstream__fails_on_trailing_garbage(void)
 
 	/* append some garbage */
 	for (i = 0; i < 10; i++) {
-		git_buf_putc(&deflated, i);
+		git_str_putc(&deflated, i);
 	}
 
 	cl_git_fail(git_zstream_inflatebuf(&inflated, deflated.ptr, deflated.size));
 
-	git_buf_dispose(&deflated);
-	git_buf_dispose(&inflated);
+	git_str_dispose(&deflated);
+	git_str_dispose(&inflated);
 }
 
 void test_core_zstream__buffer(void)
 {
-	git_buf out = GIT_BUF_INIT;
+	git_str out = GIT_STR_INIT;
 	cl_git_pass(git_zstream_deflatebuf(&out, data, strlen(data) + 1));
 	assert_zlib_equal(data, strlen(data) + 1, out.ptr, out.size);
-	git_buf_dispose(&out);
+	git_str_dispose(&out);
 }
 
 #define BIG_STRING_PART "Big Data IS Big - Long Data IS Long - We need a buffer larger than 1024 x 1024 to make sure we trigger chunked compression - Big Big Data IS Bigger than Big - Long Long Data IS Longer than Long"
 
-static void compress_and_decompress_input_various_ways(git_buf *input)
+static void compress_and_decompress_input_various_ways(git_str *input)
 {
-	git_buf out1 = GIT_BUF_INIT, out2 = GIT_BUF_INIT;
-	git_buf inflated = GIT_BUF_INIT;
+	git_str out1 = GIT_STR_INIT, out2 = GIT_STR_INIT;
+	git_str inflated = GIT_STR_INIT;
 	size_t i, fixed_size = max(input->size / 2, 256);
 	char *fixed = git__malloc(fixed_size);
 	cl_assert(fixed);
@@ -119,7 +118,7 @@ static void compress_and_decompress_input_various_ways(git_buf *input)
 		while (!git_zstream_done(&zs)) {
 			size_t written = use_fixed_size;
 			cl_git_pass(git_zstream_get_output(fixed, &written, &zs));
-			cl_git_pass(git_buf_put(&out2, fixed, written));
+			cl_git_pass(git_str_put(&out2, fixed, written));
 		}
 
 		git_zstream_free(&zs);
@@ -129,30 +128,30 @@ static void compress_and_decompress_input_various_ways(git_buf *input)
 		cl_assert_equal_sz(out1.size, out2.size);
 		cl_assert(!memcmp(out1.ptr, out2.ptr, out1.size));
 
-		git_buf_dispose(&out2);
+		git_str_dispose(&out2);
 	}
 
 	cl_git_pass(git_zstream_inflatebuf(&inflated, out1.ptr, out1.size));
 	cl_assert_equal_i(input->size, inflated.size);
 	cl_assert(memcmp(input->ptr, inflated.ptr, inflated.size) == 0);
 
-	git_buf_dispose(&out1);
-	git_buf_dispose(&inflated);
+	git_str_dispose(&out1);
+	git_str_dispose(&inflated);
 	git__free(fixed);
 }
 
 void test_core_zstream__big_data(void)
 {
-	git_buf in = GIT_BUF_INIT;
+	git_str in = GIT_STR_INIT;
 	size_t scan, target;
 
 	for (target = 1024; target <= 1024 * 1024 * 4; target *= 8) {
 
 		/* make a big string that's easy to compress */
-		git_buf_clear(&in);
+		git_str_clear(&in);
 		while (in.size < target)
 			cl_git_pass(
-				git_buf_put(&in, BIG_STRING_PART, strlen(BIG_STRING_PART)));
+				git_str_put(&in, BIG_STRING_PART, strlen(BIG_STRING_PART)));
 
 		compress_and_decompress_input_various_ways(&in);
 
@@ -164,5 +163,5 @@ void test_core_zstream__big_data(void)
 		compress_and_decompress_input_various_ways(&in);
 	}
 
-	git_buf_dispose(&in);
+	git_str_dispose(&in);
 }

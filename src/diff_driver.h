@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "attr_file.h"
-#include "buffer.h"
+#include "str.h"
 
 typedef struct git_diff_driver_registry git_diff_driver_registry;
 
@@ -34,12 +34,12 @@ typedef long (*git_diff_find_context_fn)(
 	const char *, long, char *, long, void *);
 
 typedef int (*git_diff_find_context_line)(
-	git_diff_driver *, git_buf *);
+	git_diff_driver *, git_str *);
 
 typedef struct {
 	git_diff_driver *driver;
 	git_diff_find_context_line match_line;
-	git_buf line;
+	git_str line;
 } git_diff_find_context_payload;
 
 void git_diff_find_context_init(

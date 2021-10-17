@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/repository.h"
 #include "git2/merge.h"
-#include "buffer.h"
 #include "merge.h"
 
 #define TEST_REPO_PATH "merge-resolve"
@@ -71,14 +70,23 @@ static int test_driver_apply(
 	const char *filter_name,
 	const git_merge_driver_source *src)
 {
+	git_str str = GIT_STR_INIT;
+	int error;
+
 	GIT_UNUSED(s);
 	GIT_UNUSED(src);
 
 	*path_out = "applied.txt";
 	*mode_out = GIT_FILEMODE_BLOB;
 
-	return git_buf_printf(merged_out, "This is the `%s` driver.\n",
+	error = git_str_printf(&str, "This is the `%s` driver.\n",
 		filter_name);
+
+	merged_out->ptr = str.ptr;
+	merged_out->size = str.size;
+	merged_out->reserved = 0;
+
+	return error;
 }
 
 static struct test_merge_driver test_driver_custom = {
@@ -117,19 +125,19 @@ static void test_drivers_unregister(void)
 
 static void set_gitattributes_to(const char *driver)
 {
-	git_buf line = GIT_BUF_INIT;
+	git_str line = GIT_STR_INIT;
 
 	if (driver && strcmp(driver, ""))
-		git_buf_printf(&line, "automergeable.txt merge=%s\n", driver);
+		git_str_printf(&line, "automergeable.txt merge=%s\n", driver);
 	else if (driver)
-		git_buf_printf(&line, "automergeable.txt merge\n");
+		git_str_printf(&line, "automergeable.txt merge\n");
 	else
-		git_buf_printf(&line, "automergeable.txt -merge\n");
+		git_str_printf(&line, "automergeable.txt -merge\n");
 
-	cl_assert(!git_buf_oom(&line));
+	cl_assert(!git_str_oom(&line));
 
 	cl_git_mkfile(TEST_REPO_PATH "/.gitattributes", line.ptr);
-	git_buf_dispose(&line);
+	git_str_dispose(&line);
 }
 
 static void merge_branch(void)
@@ -172,11 +180,11 @@ void test_merge_driver__shutdown_is_called(void)
     test_driver_custom.shutdown = 0;
     test_driver_wildcard.initialized = 0;
     test_driver_wildcard.shutdown = 0;
-    
+
     /* run the merge with the custom driver */
     set_gitattributes_to("custom");
     merge_branch();
-    
+
 	/* unregister the drivers, ensure their shutdown function is called */
 	test_drivers_unregister();
 

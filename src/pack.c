@@ -308,7 +308,7 @@ static int pack_index_open_locked(struct git_pack_file *p)
 {
 	int error = 0;
 	size_t name_len;
-	git_buf idx_name = GIT_BUF_INIT;
+	git_str idx_name = GIT_STR_INIT;
 
 	if (p->index_version > -1)
 		goto cleanup;
@@ -317,12 +317,12 @@ static int pack_index_open_locked(struct git_pack_file *p)
 	name_len = strlen(p->pack_name);
 	GIT_ASSERT(name_len > strlen(".pack"));
 
-	if ((error = git_buf_init(&idx_name, name_len)) < 0)
+	if ((error = git_str_init(&idx_name, name_len)) < 0)
 		goto cleanup;
 
-	git_buf_put(&idx_name, p->pack_name, name_len - strlen(".pack"));
-	git_buf_puts(&idx_name, ".idx");
-	if (git_buf_oom(&idx_name)) {
+	git_str_put(&idx_name, p->pack_name, name_len - strlen(".pack"));
+	git_str_puts(&idx_name, ".idx");
+	if (git_str_oom(&idx_name)) {
 		error = -1;
 		goto cleanup;
 	}
@@ -331,7 +331,7 @@ static int pack_index_open_locked(struct git_pack_file *p)
 		error = pack_index_check_locked(idx_name.ptr, p);
 
 cleanup:
-	git_buf_dispose(&idx_name);
+	git_str_dispose(&idx_name);
 
 	return error;
 }
@@ -1156,17 +1156,17 @@ cleanup:
 int git_packfile__name(char **out, const char *path)
 {
 	size_t path_len;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
 	path_len = strlen(path);
 
 	if (path_len < strlen(".idx"))
 		return git_odb__error_notfound("invalid packfile path", NULL, 0);
 
-	if (git_buf_printf(&buf, "%.*s.pack", (int)(path_len - strlen(".idx")), path) < 0)
+	if (git_str_printf(&buf, "%.*s.pack", (int)(path_len - strlen(".idx")), path) < 0)
 		return -1;
 
-	*out = git_buf_detach(&buf);
+	*out = git_str_detach(&buf);
 	return 0;
 }
 

@@ -36,11 +36,11 @@ void test_refs_rename__loose(void)
 {
 	/* rename a loose reference */
 	git_reference *looked_up_ref, *new_ref, *another_looked_up_ref;
-	git_buf temp_path = GIT_BUF_INIT;
+	git_str temp_path = GIT_STR_INIT;
 	const char *new_name = "refs/tags/Nemo/knows/refs.kung-fu";
 
 	/* Ensure the ref doesn't exist on the file system */
-	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), new_name));
+	cl_git_pass(git_str_joinpath(&temp_path, git_repository_path(g_repo), new_name));
 	cl_assert(!git_path_exists(temp_path.ptr));
 
 	/* Retrieval of the reference to rename */
@@ -66,23 +66,23 @@ void test_refs_rename__loose(void)
 	cl_assert(reference_is_packed(new_ref) == 0);
 
 	/* ...and the ref can be found in the file system */
-	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), new_name));
+	cl_git_pass(git_str_joinpath(&temp_path, git_repository_path(g_repo), new_name));
 	cl_assert(git_path_exists(temp_path.ptr));
 
 	git_reference_free(new_ref);
 	git_reference_free(another_looked_up_ref);
-	git_buf_dispose(&temp_path);
+	git_str_dispose(&temp_path);
 }
 
 void test_refs_rename__packed(void)
 {
 	/* rename a packed reference (should make it loose) */
 	git_reference *looked_up_ref, *new_ref, *another_looked_up_ref;
-	git_buf temp_path = GIT_BUF_INIT;
+	git_str temp_path = GIT_STR_INIT;
 	const char *brand_new_name = "refs/heads/brand_new_name";
 
 	/* Ensure the ref doesn't exist on the file system */
-	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), packed_head_name));
+	cl_git_pass(git_str_joinpath(&temp_path, git_repository_path(g_repo), packed_head_name));
 	cl_assert(!git_path_exists(temp_path.ptr));
 
 	/* The reference can however be looked-up... */
@@ -108,23 +108,23 @@ void test_refs_rename__packed(void)
 	cl_assert(reference_is_packed(new_ref) == 0);
 
 	/* ...and the ref now happily lives in the file system */
-	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), brand_new_name));
+	cl_git_pass(git_str_joinpath(&temp_path, git_repository_path(g_repo), brand_new_name));
 	cl_assert(git_path_exists(temp_path.ptr));
 
 	git_reference_free(new_ref);
 	git_reference_free(another_looked_up_ref);
-	git_buf_dispose(&temp_path);
+	git_str_dispose(&temp_path);
 }
 
 void test_refs_rename__packed_doesnt_pack_others(void)
 {
 	/* renaming a packed reference does not pack another reference which happens to be in both loose and pack state */
 	git_reference *looked_up_ref, *another_looked_up_ref, *renamed_ref;
-	git_buf temp_path = GIT_BUF_INIT;
+	git_str temp_path = GIT_STR_INIT;
 	const char *brand_new_name = "refs/heads/brand_new_name";
 
 	/* Ensure the other reference exists on the file system */
-	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), packed_test_head_name));
+	cl_git_pass(git_str_joinpath(&temp_path, git_repository_path(g_repo), packed_test_head_name));
 	cl_assert(git_path_exists(temp_path.ptr));
 
 	/* Lookup the other reference */
@@ -155,7 +155,7 @@ void test_refs_rename__packed_doesnt_pack_others(void)
 
 	git_reference_free(renamed_ref);
 	git_reference_free(another_looked_up_ref);
-	git_buf_dispose(&temp_path);
+	git_str_dispose(&temp_path);
 }
 
 void test_refs_rename__name_collision(void)

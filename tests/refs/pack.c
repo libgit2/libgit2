@@ -33,11 +33,11 @@ static void packall(void)
 void test_refs_pack__empty(void)
 {
 	/* create a packfile for an empty folder */
-	git_buf temp_path = GIT_BUF_INIT;
+	git_str temp_path = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_join_n(&temp_path, '/', 3, git_repository_path(g_repo), GIT_REFS_HEADS_DIR, "empty_dir"));
+	cl_git_pass(git_str_join_n(&temp_path, '/', 3, git_repository_path(g_repo), GIT_REFS_HEADS_DIR, "empty_dir"));
 	cl_git_pass(git_futils_mkdir_r(temp_path.ptr, GIT_REFS_DIR_MODE));
-	git_buf_dispose(&temp_path);
+	git_str_dispose(&temp_path);
 
 	packall();
 }
@@ -46,7 +46,7 @@ void test_refs_pack__loose(void)
 {
 	/* create a packfile from all the loose refs in a repo */
 	git_reference *reference;
-	git_buf temp_path = GIT_BUF_INIT;
+	git_str temp_path = GIT_STR_INIT;
 
 	/* Ensure a known loose ref can be looked up */
 	cl_git_pass(git_reference_lookup(&reference, g_repo, loose_tag_ref_name));
@@ -62,7 +62,7 @@ void test_refs_pack__loose(void)
 	packall();
 
 	/* Ensure the packed-refs file exists */
-	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), GIT_PACKEDREFS_FILE));
+	cl_git_pass(git_str_joinpath(&temp_path, git_repository_path(g_repo), GIT_PACKEDREFS_FILE));
 	cl_assert(git_path_exists(temp_path.ptr));
 
 	/* Ensure the known ref can still be looked up but is now packed */
@@ -71,11 +71,11 @@ void test_refs_pack__loose(void)
 	cl_assert_equal_s(reference->name, loose_tag_ref_name);
 
 	/* Ensure the known ref has been removed from the loose folder structure */
-	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), loose_tag_ref_name));
+	cl_git_pass(git_str_joinpath(&temp_path, git_repository_path(g_repo), loose_tag_ref_name));
 	cl_assert(!git_path_exists(temp_path.ptr));
 
 	git_reference_free(reference);
-	git_buf_dispose(&temp_path);
+	git_str_dispose(&temp_path);
 }
 
 void test_refs_pack__symbolic(void)

@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "../checkout/checkout_helpers.h"
 
-#include "buffer.h"
 #include "index.h"
 #include "repository.h"
 
@@ -24,9 +23,9 @@ void test_index_racy__diff(void)
 {
 	git_index *index;
 	git_diff *diff;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "A"));
+	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(g_repo), "A"));
 	cl_git_mkfile(path.ptr, "A");
 
 	/* Put 'A' into the index */
@@ -46,21 +45,21 @@ void test_index_racy__diff(void)
 
 	git_index_free(index);
 	git_diff_free(diff);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_index_racy__write_index_just_after_file(void)
 {
 	git_index *index;
 	git_diff *diff;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	struct p_timeval times[2];
 
 	/* Make sure we do have a timestamp */
 	cl_git_pass(git_repository_index(&index, g_repo));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "A"));
+	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(g_repo), "A"));
 	cl_git_mkfile(path.ptr, "A");
 	/* Force the file's timestamp to be a second after we wrote the index */
 	times[0].tv_sec = index->stamp.mtime.tv_sec + 1;
@@ -95,7 +94,7 @@ void test_index_racy__write_index_just_after_file(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, NULL));
 	cl_assert_equal_i(1, git_diff_num_deltas(diff));
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	git_diff_free(diff);
 	git_index_free(index);
 }
@@ -103,7 +102,7 @@ void test_index_racy__write_index_just_after_file(void)
 
 static void setup_race(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	git_index *index;
 	git_index_entry *entry;
 	struct stat st;
@@ -112,7 +111,7 @@ static void setup_race(void)
 	cl_git_pass(git_repository_index__weakptr(&index, g_repo));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "A"));
+	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(g_repo), "A"));
 
 	cl_git_mkfile(path.ptr, "A");
 	cl_git_pass(git_index_add_bypath(index, "A"));
@@ -129,7 +128,7 @@ static void setup_race(void)
 	entry->mtime.seconds = (int32_t)st.st_mtime;
 	entry->mtime.nanoseconds = (int32_t)st.st_mtime_nsec;
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_index_racy__smudges_index_entry_on_save(void)
@@ -169,14 +168,14 @@ void test_index_racy__detects_diff_of_change_in_identical_timestamp(void)
 
 static void setup_uptodate_files(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	git_index *index;
 	const git_index_entry *a_entry;
 	git_index_entry new_entry = {{0}};
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "A"));
+	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(g_repo), "A"));
 	cl_git_mkfile(path.ptr, "A");
 
 	/* Put 'A' into the index */
@@ -196,7 +195,7 @@ static void setup_uptodate_files(void)
 	cl_git_pass(git_index_add_from_buffer(index, &new_entry, "hello!\n", 7));
 
 	git_index_free(index);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_index_racy__adding_to_index_is_uptodate(void)

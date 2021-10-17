@@ -338,7 +338,7 @@ void test_refs_reflog_messages__updating_a_direct_reference(void)
 
 void test_refs_reflog_messages__creating_branches_default_messages(void)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	git_annotated_commit *annotated;
 	git_object *obj;
 	git_commit *target;
@@ -350,11 +350,11 @@ void test_refs_reflog_messages__creating_branches_default_messages(void)
 
 	cl_git_pass(git_branch_create(&branch1, g_repo, NEW_BRANCH_NAME, target, false));
 
-	cl_git_pass(git_buf_printf(&buf, "branch: Created from %s", git_oid_tostr_s(git_commit_id(target))));
+	cl_git_pass(git_str_printf(&buf, "branch: Created from %s", git_oid_tostr_s(git_commit_id(target))));
 	cl_reflog_check_entry(g_repo, "refs/heads/" NEW_BRANCH_NAME, 0,
 		GIT_OID_HEX_ZERO,
 		git_oid_tostr_s(git_commit_id(target)),
-		g_email, git_buf_cstr(&buf));
+		g_email, git_str_cstr(&buf));
 
 	cl_git_pass(git_reference_remove(g_repo, "refs/heads/" NEW_BRANCH_NAME));
 
@@ -367,7 +367,7 @@ void test_refs_reflog_messages__creating_branches_default_messages(void)
 		g_email, "branch: Created from e90810b8df3");
 
 	git_annotated_commit_free(annotated);
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	git_commit_free(target);
 	git_reference_free(branch1);
 	git_reference_free(branch2);

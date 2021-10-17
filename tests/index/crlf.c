@@ -14,7 +14,7 @@
 static git_repository *g_repo;
 static git_index *g_index;
 
-static git_buf expected_fixture = GIT_BUF_INIT;
+static git_str expected_fixture = GIT_STR_INIT;
 
 void test_index_crlf__initialize(void)
 {
@@ -29,7 +29,7 @@ void test_index_crlf__cleanup(void)
 
 	if (expected_fixture.size) {
 		cl_fixture_cleanup(expected_fixture.ptr);
-		git_buf_dispose(&expected_fixture);
+		git_str_dispose(&expected_fixture);
 	}
 }
 
@@ -42,11 +42,11 @@ struct compare_data
 	const char *attrs;
 };
 
-static int add_and_check_file(void *payload, git_buf *actual_path)
+static int add_and_check_file(void *payload, git_str *actual_path)
 {
-	git_buf expected_path = GIT_BUF_INIT;
-	git_buf expected_path_fail = GIT_BUF_INIT;
-	git_buf expected_contents = GIT_BUF_INIT;
+	git_str expected_path = GIT_STR_INIT;
+	git_str expected_path_fail = GIT_STR_INIT;
+	git_str expected_contents = GIT_STR_INIT;
 	struct compare_data *cd = payload;
 	char *basename;
 	const git_index_entry *entry;
@@ -60,10 +60,10 @@ static int add_and_check_file(void *payload, git_buf *actual_path)
 		goto done;
 	}
 
-	cl_git_pass(git_buf_joinpath(&expected_path, cd->dirname, basename));
+	cl_git_pass(git_str_joinpath(&expected_path, cd->dirname, basename));
 
-	cl_git_pass(git_buf_puts(&expected_path_fail, expected_path.ptr));
-	cl_git_pass(git_buf_puts(&expected_path_fail, ".fail"));
+	cl_git_pass(git_str_puts(&expected_path_fail, expected_path.ptr));
+	cl_git_pass(git_str_puts(&expected_path_fail, ".fail"));
 
 	if (git_path_isfile(expected_path.ptr)) {
 		cl_git_pass(git_index_add_bypath(g_index, basename));
@@ -79,7 +79,7 @@ static int add_and_check_file(void *payload, git_buf *actual_path)
 		git_blob_free(blob);
 	} else if (git_path_isfile(expected_path_fail.ptr)) {
 		cl_git_pass(git_futils_readbuffer(&expected_contents, expected_path_fail.ptr));
-		git_buf_rtrim(&expected_contents);
+		git_str_rtrim(&expected_contents);
 
 		if (git_index_add_bypath(g_index, basename) == 0 ||
 			git_error_last()->klass != GIT_ERROR_FILTER ||
@@ -93,18 +93,18 @@ static int add_and_check_file(void *payload, git_buf *actual_path)
 
 done:
 	if (failed) {
-		git_buf details = GIT_BUF_INIT;
-		git_buf_printf(&details, "filename=%s, system=%s, autocrlf=%s, safecrlf=%s, attrs={%s}",
+		git_str details = GIT_STR_INIT;
+		git_str_printf(&details, "filename=%s, system=%s, autocrlf=%s, safecrlf=%s, attrs={%s}",
 			basename, cd->systype, cd->autocrlf, cd->safecrlf, cd->attrs);
 		clar__fail(__FILE__, __func__, __LINE__,
 			"index contents did not match expected", details.ptr, 0);
-		git_buf_dispose(&details);
+		git_str_dispose(&details);
 	}
 
 	git__free(basename);
-	git_buf_dispose(&expected_contents);
-	git_buf_dispose(&expected_path);
-	git_buf_dispose(&expected_path_fail);
+	git_str_dispose(&expected_contents);
+	git_str_dispose(&expected_path);
+	git_str_dispose(&expected_path_fail);
 	return 0;
 }
 
@@ -118,34 +118,34 @@ static const char *system_type(void)
 
 static void test_add_index(const char *safecrlf, const char *autocrlf, const char *attrs)
 {
-	git_buf attrbuf = GIT_BUF_INIT;
-	git_buf expected_dirname = GIT_BUF_INIT;
-	git_buf sandboxname = GIT_BUF_INIT;
-	git_buf reponame = GIT_BUF_INIT;
+	git_str attrbuf = GIT_STR_INIT;
+	git_str expected_dirname = GIT_STR_INIT;
+	git_str sandboxname = GIT_STR_INIT;
+	git_str reponame = GIT_STR_INIT;
 	struct compare_data compare_data = { system_type(), NULL, safecrlf, autocrlf, attrs };
 	const char *c;
 
-	git_buf_puts(&reponame, "crlf");
+	git_str_puts(&reponame, "crlf");
 
-	git_buf_puts(&sandboxname, "autocrlf_");
-	git_buf_puts(&sandboxname, autocrlf);
+	git_str_puts(&sandboxname, "autocrlf_");
+	git_str_puts(&sandboxname, autocrlf);
 
-	git_buf_puts(&sandboxname, ",safecrlf_");
-	git_buf_puts(&sandboxname, safecrlf);
+	git_str_puts(&sandboxname, ",safecrlf_");
+	git_str_puts(&sandboxname, safecrlf);
 
 	if (*attrs) {
-		git_buf_puts(&sandboxname, ",");
+		git_str_puts(&sandboxname, ",");
 
 		for (c = attrs; *c; c++) {
 			if (*c == ' ')
-				git_buf_putc(&sandboxname, ',');
+				git_str_putc(&sandboxname, ',');
 			else if (*c == '=')
-				git_buf_putc(&sandboxname, '_');
+				git_str_putc(&sandboxname, '_');
 			else
-				git_buf_putc(&sandboxname, *c);
+				git_str_putc(&sandboxname, *c);
 		}
 
-		git_buf_printf(&attrbuf, "* %s\n", attrs);
+		git_str_printf(&attrbuf, "* %s\n", attrs);
 		cl_git_mkfile("crlf/.gitattributes", attrbuf.ptr);
 	}
 
@@ -154,23 +154,23 @@ static void test_add_index(const char *safecrlf, const char *autocrlf, const cha
 
 	cl_git_pass(git_index_clear(g_index));
 
-	git_buf_joinpath(&expected_dirname, "crlf_data", system_type());
-	git_buf_puts(&expected_dirname, "_to_odb");
+	git_str_joinpath(&expected_dirname, "crlf_data", system_type());
+	git_str_puts(&expected_dirname, "_to_odb");
 
-	git_buf_joinpath(&expected_fixture, expected_dirname.ptr, sandboxname.ptr);
+	git_str_joinpath(&expected_fixture, expected_dirname.ptr, sandboxname.ptr);
 	cl_fixture_sandbox(expected_fixture.ptr);
 
 	compare_data.dirname = sandboxname.ptr;
 	cl_git_pass(git_path_direach(&reponame, 0, add_and_check_file, &compare_data));
 
 	cl_fixture_cleanup(expected_fixture.ptr);
-	git_buf_dispose(&expected_fixture);
+	git_str_dispose(&expected_fixture);
 
-	git_buf_dispose(&attrbuf);
-	git_buf_dispose(&expected_fixture);
-	git_buf_dispose(&expected_dirname);
-	git_buf_dispose(&sandboxname);
-	git_buf_dispose(&reponame);
+	git_str_dispose(&attrbuf);
+	git_str_dispose(&expected_fixture);
+	git_str_dispose(&expected_dirname);
+	git_str_dispose(&sandboxname);
+	git_str_dispose(&reponame);
 }
 
 static void set_up_workingdir(const char *name)
@@ -196,16 +196,16 @@ static void set_up_workingdir(const char *name)
 	git_path_dirload(&contents, cl_fixture("crlf"), 0, 0);
 	git_vector_foreach(&contents, i, fn) {
 		char *basename = git_path_basename(fn);
-		git_buf dest_filename = GIT_BUF_INIT;
+		git_str dest_filename = GIT_STR_INIT;
 
 		if (strcmp(basename, ".gitted") &&
 			strcmp(basename, ".gitattributes")) {
-			git_buf_joinpath(&dest_filename, name, basename);
+			git_str_joinpath(&dest_filename, name, basename);
 			cl_git_pass(git_futils_cp(fn, dest_filename.ptr, 0644));
 		}
 
 		git__free(basename);
-		git_buf_dispose(&dest_filename);
+		git_str_dispose(&dest_filename);
 	}
 	git_vector_free_deep(&contents);
 }

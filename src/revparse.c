@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-#include "buffer.h"
+#include "str.h"
 #include "tree.h"
 #include "refdb.h"
 #include "regexp.h"
@@ -145,7 +145,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 	size_t i, numentries, cur;
 	const git_reflog_entry *entry;
 	const char *msg;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
 	cur = position;
 
@@ -179,16 +179,16 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 		if (cur > 0)
 			continue;
 
-		if ((git_buf_put(&buf, msg+regexmatches[1].start, regexmatches[1].end - regexmatches[1].start)) < 0)
+		if ((git_str_put(&buf, msg+regexmatches[1].start, regexmatches[1].end - regexmatches[1].start)) < 0)
 			goto cleanup;
 
-		if ((error = git_reference_dwim(base_ref, repo, git_buf_cstr(&buf))) == 0)
+		if ((error = git_reference_dwim(base_ref, repo, git_str_cstr(&buf))) == 0)
 			goto cleanup;
 
 		if (error < 0 && error != GIT_ENOTFOUND)
 			goto cleanup;
 
-		error = maybe_abbrev(out, repo, git_buf_cstr(&buf));
+		error = maybe_abbrev(out, repo, git_str_cstr(&buf));
 
 		goto cleanup;
 	}
@@ -197,7 +197,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 
 cleanup:
 	git_reference_free(ref);
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	git_regexp_dispose(&preg);
 	git_reflog_free(reflog);
 	return error;
@@ -314,12 +314,12 @@ static int handle_at_syntax(git_object **out, git_reference **ref, const char *s
 {
 	bool is_numeric;
 	int parsed = 0, error = -1;
-	git_buf identifier = GIT_BUF_INIT;
+	git_str identifier = GIT_STR_INIT;
 	git_time_t timestamp;
 
 	GIT_ASSERT(*out == NULL);
 
-	if (git_buf_put(&identifier, spec, identifier_len) < 0)
+	if (git_str_put(&identifier, spec, identifier_len) < 0)
 		return -1;
 
 	is_numeric = !try_parse_numeric(&parsed, curly_braces_content);
@@ -331,15 +331,15 @@ static int handle_at_syntax(git_object **out, git_reference **ref, const char *s
 
 	if (is_numeric) {
 		if (parsed < 0)
-			error = retrieve_previously_checked_out_branch_or_revision(out, ref, repo, git_buf_cstr(&identifier), -parsed);
+			error = retrieve_previously_checked_out_branch_or_revision(out, ref, repo, git_str_cstr(&identifier), -parsed);
 		else
-			error = retrieve_revobject_from_reflog(out, ref, repo, git_buf_cstr(&identifier), parsed);
+			error = retrieve_revobject_from_reflog(out, ref, repo, git_str_cstr(&identifier), parsed);
 
 		goto cleanup;
 	}
 
 	if (!strcmp(curly_braces_content, "u") || !strcmp(curly_braces_content, "upstream")) {
-		error = retrieve_remote_tracking_reference(ref, git_buf_cstr(&identifier), repo);
+		error = retrieve_remote_tracking_reference(ref, git_str_cstr(&identifier), repo);
 
 		goto cleanup;
 	}
@@ -347,10 +347,10 @@ static int handle_at_syntax(git_object **out, git_reference **ref, const char *s
 	if (git__date_parse(&timestamp, curly_braces_content) < 0)
 		goto cleanup;
 
-	error = retrieve_revobject_from_reflog(out, ref, repo, git_buf_cstr(&identifier), (size_t)timestamp);
+	error = retrieve_revobject_from_reflog(out, ref, repo, git_str_cstr(&identifier), (size_t)timestamp);
 
 cleanup:
-	git_buf_dispose(&identifier);
+	git_str_dispose(&identifier);
 	return error;
 }
 
@@ -520,9 +520,9 @@ static int handle_caret_curly_syntax(git_object **out, git_object *obj, const ch
 	return git_object_peel(out, obj, expected_type);
 }
 
-static int extract_curly_braces_content(git_buf *buf, const char *spec, size_t *pos)
+static int extract_curly_braces_content(git_str *buf, const char *spec, size_t *pos)
 {
-	git_buf_clear(buf);
+	git_str_clear(buf);
 
 	GIT_ASSERT_ARG(spec[*pos] == '^' || spec[*pos] == '@');
 
@@ -537,7 +537,7 @@ static int extract_curly_braces_content(git_buf *buf, const char *spec, size_t *
 		if (spec[*pos] == '\0')
 			return GIT_EINVALIDSPEC;
 
-		if (git_buf_putc(buf, spec[(*pos)++]) < 0)
+		if (git_str_putc(buf, spec[(*pos)++]) < 0)
 			return -1;
 	}
 
@@ -546,18 +546,18 @@ static int extract_curly_braces_content(git_buf *buf, const char *spec, size_t *
 	return 0;
 }
 
-static int extract_path(git_buf *buf, const char *spec, size_t *pos)
+static int extract_path(git_str *buf, const char *spec, size_t *pos)
 {
-	git_buf_clear(buf);
+	git_str_clear(buf);
 
 	GIT_ASSERT_ARG(spec[*pos] == ':');
 
 	(*pos)++;
 
-	if (git_buf_puts(buf, spec + *pos) < 0)
+	if (git_str_puts(buf, spec + *pos) < 0)
 		return -1;
 
-	*pos += git_buf_len(buf);
+	*pos += git_str_len(buf);
 
 	return 0;
 }
@@ -610,7 +610,7 @@ static int object_from_reference(git_object **object, git_reference *reference)
 static int ensure_base_rev_loaded(git_object **object, git_reference **reference, const char *spec, size_t identifier_len, git_repository *repo, bool allow_empty_identifier)
 {
 	int error;
-	git_buf identifier = GIT_BUF_INIT;
+	git_str identifier = GIT_STR_INIT;
 
 	if (*object != NULL)
 		return 0;
@@ -621,11 +621,11 @@ static int ensure_base_rev_loaded(git_object **object, git_reference **reference
 	if (!allow_empty_identifier && identifier_len == 0)
 		return GIT_EINVALIDSPEC;
 
-	if (git_buf_put(&identifier, spec, identifier_len) < 0)
+	if (git_str_put(&identifier, spec, identifier_len) < 0)
 		return -1;
 
-	error = revparse_lookup_object(object, reference, repo, git_buf_cstr(&identifier));
-	git_buf_dispose(&identifier);
+	error = revparse_lookup_object(object, reference, repo, git_str_cstr(&identifier));
+	git_str_dispose(&identifier);
 
 	return error;
 }
@@ -669,7 +669,7 @@ static int revparse(
 {
 	size_t pos = 0, identifier_len = 0;
 	int error = -1, n;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
 	git_reference *reference = NULL;
 	git_object *base_rev = NULL;
@@ -698,7 +698,7 @@ static int revparse(
 				if ((error = extract_curly_braces_content(&buf, spec, &pos)) < 0)
 					goto cleanup;
 
-				if ((error = handle_caret_curly_syntax(&temp_object, base_rev, git_buf_cstr(&buf))) < 0)
+				if ((error = handle_caret_curly_syntax(&temp_object, base_rev, git_str_cstr(&buf))) < 0)
 					goto cleanup;
 
 				git_object_free(base_rev);
@@ -750,11 +750,11 @@ static int revparse(
 				if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, true)) < 0)
 					goto cleanup;
 
-				if ((error = handle_colon_syntax(&temp_object, base_rev, git_buf_cstr(&buf))) < 0)
+				if ((error = handle_colon_syntax(&temp_object, base_rev, git_str_cstr(&buf))) < 0)
 					goto cleanup;
 			} else {
-				if (*git_buf_cstr(&buf) == '/') {
-					if ((error = handle_grep_syntax(&temp_object, repo, NULL, git_buf_cstr(&buf) + 1)) < 0)
+				if (*git_str_cstr(&buf) == '/') {
+					if ((error = handle_grep_syntax(&temp_object, repo, NULL, git_str_cstr(&buf) + 1)) < 0)
 						goto cleanup;
 				} else {
 
@@ -783,7 +783,7 @@ static int revparse(
 				if ((error = ensure_base_rev_is_not_known_yet(base_rev)) < 0)
 					goto cleanup;
 
-				if ((error = handle_at_syntax(&temp_object, &reference, spec, identifier_len, repo, git_buf_cstr(&buf))) < 0)
+				if ((error = handle_at_syntax(&temp_object, &reference, spec, identifier_len, repo, git_str_cstr(&buf))) < 0)
 					goto cleanup;
 
 				if (temp_object != NULL)
@@ -824,7 +824,7 @@ cleanup:
 		git_reference_free(reference);
 	}
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	return error;
 }
 

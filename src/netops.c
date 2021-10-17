@@ -11,7 +11,7 @@
 #include "git2/errors.h"
 
 #include "posix.h"
-#include "buffer.h"
+#include "str.h"
 #include "http_parser.h"
 #include "runtime.h"
 

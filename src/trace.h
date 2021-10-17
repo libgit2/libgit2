@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include <git2/trace.h>
-#include "buffer.h"
+#include "str.h"
 
 #ifdef GIT_TRACE
 
@@ -27,13 +27,13 @@ GIT_INLINE(void) git_trace__write_fmt(
 	va_list ap)
 {
 	git_trace_cb callback = git_trace__data.callback;
-	git_buf message = GIT_BUF_INIT;
+	git_str message = GIT_STR_INIT;
 
-	git_buf_vprintf(&message, fmt, ap);
+	git_str_vprintf(&message, fmt, ap);
 
-	callback(level, git_buf_cstr(&message));
+	callback(level, git_str_cstr(&message));
 
-	git_buf_dispose(&message);
+	git_str_dispose(&message);
 }
 
 #define git_trace_level()	(git_trace__data.level)

@@ -7,16 +7,16 @@
 
 #include "common.h"
 
-#include "git2/types.h"
-#include "git2/errors.h"
-#include "git2/refs.h"
-#include "git2/revwalk.h"
-
 #include "smart.h"
 #include "util.h"
 #include "netops.h"
 #include "posix.h"
-#include "buffer.h"
+#include "str.h"
+
+#include "git2/types.h"
+#include "git2/errors.h"
+#include "git2/refs.h"
+#include "git2/revwalk.h"
 
 #include <ctype.h>
 
@@ -522,43 +522,43 @@ void git_pkt_free(git_pkt *pkt)
 	git__free(pkt);
 }
 
-int git_pkt_buffer_flush(git_buf *buf)
+int git_pkt_buffer_flush(git_str *buf)
 {
-	return git_buf_put(buf, pkt_flush_str, strlen(pkt_flush_str));
+	return git_str_put(buf, pkt_flush_str, strlen(pkt_flush_str));
 }
 
-static int buffer_want_with_caps(const git_remote_head *head, transport_smart_caps *caps, git_buf *buf)
+static int buffer_want_with_caps(const git_remote_head *head, transport_smart_caps *caps, git_str *buf)
 {
-	git_buf str = GIT_BUF_INIT;
+	git_str str = GIT_STR_INIT;
 	char oid[GIT_OID_HEXSZ +1] = {0};
 	size_t len;
 
 	/* Prefer multi_ack_detailed */
 	if (caps->multi_ack_detailed)
-		git_buf_puts(&str, GIT_CAP_MULTI_ACK_DETAILED " ");
+		git_str_puts(&str, GIT_CAP_MULTI_ACK_DETAILED " ");
 	else if (caps->multi_ack)
-		git_buf_puts(&str, GIT_CAP_MULTI_ACK " ");
+		git_str_puts(&str, GIT_CAP_MULTI_ACK " ");
 
 	/* Prefer side-band-64k if the server supports both */
 	if (caps->side_band_64k)
-		git_buf_printf(&str, "%s ", GIT_CAP_SIDE_BAND_64K);
+		git_str_printf(&str, "%s ", GIT_CAP_SIDE_BAND_64K);
 	else if (caps->side_band)
-		git_buf_printf(&str, "%s ", GIT_CAP_SIDE_BAND);
+		git_str_printf(&str, "%s ", GIT_CAP_SIDE_BAND);
 
 	if (caps->include_tag)
-		git_buf_puts(&str, GIT_CAP_INCLUDE_TAG " ");
+		git_str_puts(&str, GIT_CAP_INCLUDE_TAG " ");
 
 	if (caps->thin_pack)
-		git_buf_puts(&str, GIT_CAP_THIN_PACK " ");
+		git_str_puts(&str, GIT_CAP_THIN_PACK " ");
 
 	if (caps->ofs_delta)
-		git_buf_puts(&str, GIT_CAP_OFS_DELTA " ");
+		git_str_puts(&str, GIT_CAP_OFS_DELTA " ");
 
-	if (git_buf_oom(&str))
+	if (git_str_oom(&str))
 		return -1;
 
 	len = strlen("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ +
-		 git_buf_len(&str) + 1 /* LF */;
+		 git_str_len(&str) + 1 /* LF */;
 
 	if (len > 0xffff) {
 		git_error_set(GIT_ERROR_NET,
@@ -566,13 +566,13 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 		return -1;
 	}
 
-	git_buf_grow_by(buf, len);
+	git_str_grow_by(buf, len);
 	git_oid_fmt(oid, &head->oid);
-	git_buf_printf(buf,
-		"%04xwant %s %s\n", (unsigned int)len, oid, git_buf_cstr(&str));
-	git_buf_dispose(&str);
+	git_str_printf(buf,
+		"%04xwant %s %s\n", (unsigned int)len, oid, git_str_cstr(&str));
+	git_str_dispose(&str);
 
-	GIT_ERROR_CHECK_ALLOC_BUF(buf);
+	GIT_ERROR_CHECK_ALLOC_STR(buf);
 
 	return 0;
 }
@@ -586,7 +586,7 @@ int git_pkt_buffer_wants(
 	const git_remote_head * const *refs,
 	size_t count,
 	transport_smart_caps *caps,
-	git_buf *buf)
+	git_str *buf)
 {
 	size_t i = 0;
 	const git_remote_head *head;
@@ -612,26 +612,26 @@ int git_pkt_buffer_wants(
 			continue;
 
 		git_oid_fmt(oid, &head->oid);
-		git_buf_put(buf, pkt_want_prefix, strlen(pkt_want_prefix));
-		git_buf_put(buf, oid, GIT_OID_HEXSZ);
-		git_buf_putc(buf, '\n');
-		if (git_buf_oom(buf))
+		git_str_put(buf, pkt_want_prefix, strlen(pkt_want_prefix));
+		git_str_put(buf, oid, GIT_OID_HEXSZ);
+		git_str_putc(buf, '\n');
+		if (git_str_oom(buf))
 			return -1;
 	}
 
 	return git_pkt_buffer_flush(buf);
 }
 
-int git_pkt_buffer_have(git_oid *oid, git_buf *buf)
+int git_pkt_buffer_have(git_oid *oid, git_str *buf)
 {
 	char oidhex[GIT_OID_HEXSZ + 1];
 
 	memset(oidhex, 0x0, sizeof(oidhex));
 	git_oid_fmt(oidhex, oid);
-	return git_buf_printf(buf, "%s%s\n", pkt_have_prefix, oidhex);
+	return git_str_printf(buf, "%s%s\n", pkt_have_prefix, oidhex);
 }
 
-int git_pkt_buffer_done(git_buf *buf)
+int git_pkt_buffer_done(git_str *buf)
 {
-	return git_buf_puts(buf, pkt_done_str);
+	return git_str_puts(buf, pkt_done_str);
 }

@@ -39,21 +39,21 @@ void test_diff_parse__nonpatches_fail_with_notfound(void)
 static void test_parse_invalid_diff(const char *invalid_diff)
 {
 	git_diff *diff;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 
 	/* throw some random (legitimate) diffs in with the given invalid
 	 * one.
 	 */
-	git_buf_puts(&buf, PATCH_ORIGINAL_TO_CHANGE_FIRSTLINE);
-	git_buf_puts(&buf, PATCH_BINARY_DELTA);
-	git_buf_puts(&buf, invalid_diff);
-	git_buf_puts(&buf, PATCH_ORIGINAL_TO_CHANGE_MIDDLE);
-	git_buf_puts(&buf, PATCH_BINARY_LITERAL);
+	git_str_puts(&buf, PATCH_ORIGINAL_TO_CHANGE_FIRSTLINE);
+	git_str_puts(&buf, PATCH_BINARY_DELTA);
+	git_str_puts(&buf, invalid_diff);
+	git_str_puts(&buf, PATCH_ORIGINAL_TO_CHANGE_MIDDLE);
+	git_str_puts(&buf, PATCH_BINARY_LITERAL);
 
 	cl_git_fail_with(GIT_ERROR,
 		git_diff_from_buffer(&diff, buf.ptr, buf.size));
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 }
 
 void test_diff_parse__exact_rename(void)

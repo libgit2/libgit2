@@ -177,9 +177,9 @@ void test_worktree_refs__creating_refs_uses_commondir(void)
 {
 	   git_reference *head, *branch, *lookup;
 	   git_commit *commit;
-	   git_buf refpath = GIT_BUF_INIT;
+	   git_str refpath = GIT_STR_INIT;
 
-	   cl_git_pass(git_buf_joinpath(&refpath,
+	   cl_git_pass(git_str_joinpath(&refpath,
 		       git_repository_commondir(fixture.worktree), "refs/heads/testbranch"));
 	   cl_assert(!git_path_exists(refpath.ptr));
 
@@ -194,5 +194,5 @@ void test_worktree_refs__creating_refs_uses_commondir(void)
 	   git_reference_free(branch);
 	   git_reference_free(head);
 	   git_commit_free(commit);
-	   git_buf_dispose(&refpath);
+	   git_str_dispose(&refpath);
 }

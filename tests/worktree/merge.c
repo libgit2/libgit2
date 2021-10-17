@@ -57,7 +57,7 @@ void test_worktree_merge__merge_setup(void)
 {
 	git_reference *ours_ref, *theirs_ref;
 	git_annotated_commit *ours, *theirs;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	unsigned i;
 
 	cl_git_pass(git_reference_lookup(&ours_ref, fixture.worktree, MASTER_BRANCH));
@@ -70,13 +70,13 @@ void test_worktree_merge__merge_setup(void)
 		    ours, (const git_annotated_commit **)&theirs, 1));
 
 	for (i = 0; i < ARRAY_SIZE(merge_files); i++) {
-		cl_git_pass(git_buf_joinpath(&path,
+		cl_git_pass(git_str_joinpath(&path,
 		            fixture.worktree->gitdir,
 		            merge_files[i]));
 		cl_assert(git_path_exists(path.ptr));
 	}
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	git_reference_free(ours_ref);
 	git_reference_free(theirs_ref);
 	git_annotated_commit_free(ours);
@@ -85,7 +85,7 @@ void test_worktree_merge__merge_setup(void)
 
 void test_worktree_merge__merge_conflict(void)
 {
-	git_buf path = GIT_BUF_INIT, buf = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT, buf = GIT_STR_INIT;
 	git_reference *theirs_ref;
 	git_annotated_commit *theirs;
 	git_index *index;
@@ -111,11 +111,11 @@ void test_worktree_merge__merge_conflict(void)
 	git_annotated_commit_free(theirs);
 	git_index_free(index);
 
-	cl_git_pass(git_buf_joinpath(&path, fixture.worktree->workdir, "branch_file.txt"));
+	cl_git_pass(git_str_joinpath(&path, fixture.worktree->workdir, "branch_file.txt"));
 	cl_git_pass(git_futils_readbuffer(&buf, path.ptr));
 	cl_assert_equal_s(buf.ptr, CONFLICT_BRANCH_FILE_TXT);
 
-	git_buf_dispose(&path);
-	git_buf_dispose(&buf);
+	git_str_dispose(&path);
+	git_str_dispose(&buf);
 }
 

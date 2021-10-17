@@ -201,7 +201,7 @@ void git_sortedcache_runlock(git_sortedcache *sc)
 /* if the file has changed, lock cache and load file contents into buf;
  * returns <0 on error, >0 if file has not changed
  */
-int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf)
+int git_sortedcache_lockandload(git_sortedcache *sc, git_str *buf)
 {
 	int error, fd;
 	struct stat st;

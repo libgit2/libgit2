@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 
 #include "repository.h"
-#include "buffer.h"
 #include "submodule.h"
 
 static const char *repo_name = "win32-forbidden";

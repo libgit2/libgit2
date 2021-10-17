@@ -195,21 +195,21 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 
 #define MAX_SYMLINK_DEPTH 5
 
-static int resolve_symlink(git_buf *out, const char *path)
+static int resolve_symlink(git_str *out, const char *path)
 {
 	int i, error, root;
 	ssize_t ret;
 	struct stat st;
-	git_buf curpath = GIT_BUF_INIT, target = GIT_BUF_INIT;
+	git_str curpath = GIT_STR_INIT, target = GIT_STR_INIT;
 
-	if ((error = git_buf_grow(&target, GIT_PATH_MAX + 1)) < 0 ||
-	    (error = git_buf_puts(&curpath, path)) < 0)
+	if ((error = git_str_grow(&target, GIT_PATH_MAX + 1)) < 0 ||
+	    (error = git_str_puts(&curpath, path)) < 0)
 		return error;
 
 	for (i = 0; i < MAX_SYMLINK_DEPTH; i++) {
 		error = p_lstat(curpath.ptr, &st);
 		if (error < 0 && errno == ENOENT) {
-			error = git_buf_puts(out, curpath.ptr);
+			error = git_str_puts(out, curpath.ptr);
 			goto cleanup;
 		}
 
@@ -220,7 +220,7 @@ static int resolve_symlink(git_buf *out, const char *path)
 		}
 
 		if (!S_ISLNK(st.st_mode)) {
-			error = git_buf_puts(out, curpath.ptr);
+			error = git_str_puts(out, curpath.ptr);
 			goto cleanup;
 		}
 
@@ -243,16 +243,16 @@ static int resolve_symlink(git_buf *out, const char *path)
 
 		root = git_path_root(target.ptr);
 		if (root >= 0) {
-			if ((error = git_buf_sets(&curpath, target.ptr)) < 0)
+			if ((error = git_str_sets(&curpath, target.ptr)) < 0)
 				goto cleanup;
 		} else {
-			git_buf dir = GIT_BUF_INIT;
+			git_str dir = GIT_STR_INIT;
 
 			if ((error = git_path_dirname_r(&dir, curpath.ptr)) < 0)
 				goto cleanup;
 
-			git_buf_swap(&curpath, &dir);
-			git_buf_dispose(&dir);
+			git_str_swap(&curpath, &dir);
+			git_str_dispose(&dir);
 
 			if ((error = git_path_apply_relative(&curpath, target.ptr)) < 0)
 				goto cleanup;
@@ -263,8 +263,8 @@ static int resolve_symlink(git_buf *out, const char *path)
 	error = -1;
 
 cleanup:
-	git_buf_dispose(&curpath);
-	git_buf_dispose(&target);
+	git_str_dispose(&curpath);
+	git_str_dispose(&target);
 	return error;
 }
 
@@ -332,13 +332,13 @@ int git_filebuf_open_withsize(git_filebuf *file, const char *path, int flags, mo
 
 	/* If we are writing to a temp file */
 	if (flags & GIT_FILEBUF_TEMPORARY) {
-		git_buf tmp_path = GIT_BUF_INIT;
+		git_str tmp_path = GIT_STR_INIT;
 
 		/* Open the file as temporary for locking */
 		file->fd = git_futils_mktmp(&tmp_path, path, mode);
 
 		if (file->fd < 0) {
-			git_buf_dispose(&tmp_path);
+			git_str_dispose(&tmp_path);
 			goto cleanup;
 		}
 		file->fd_is_open = true;
@@ -346,17 +346,17 @@ int git_filebuf_open_withsize(git_filebuf *file, const char *path, int flags, mo
 
 		/* No original path */
 		file->path_original = NULL;
-		file->path_lock = git_buf_detach(&tmp_path);
+		file->path_lock = git_str_detach(&tmp_path);
 		GIT_ERROR_CHECK_ALLOC(file->path_lock);
 	} else {
-		git_buf resolved_path = GIT_BUF_INIT;
+		git_str resolved_path = GIT_STR_INIT;
 
 		if ((error = resolve_symlink(&resolved_path, path)) < 0)
 			goto cleanup;
 
 		/* Save the original path of the file */
 		path_len = resolved_path.size;
-		file->path_original = git_buf_detach(&resolved_path);
+		file->path_original = git_str_detach(&resolved_path);
 
 		/* create the locking path by appending ".lock" to the original */
 		GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, path_len, GIT_FILELOCK_EXTLENGTH);

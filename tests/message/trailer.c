@@ -1,5 +1,4 @@
 #include "clar_libgit2.h"
-#include "message.h"
 
 static void assert_trailers(const char *message, git_message_trailer *trailers)
 {

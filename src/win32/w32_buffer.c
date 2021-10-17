@@ -7,7 +7,6 @@
 
 #include "w32_buffer.h"
 
-#include "../buffer.h"
 #include "utf-conv.h"
 
 GIT_INLINE(int) handle_wc_error(void)
@@ -20,7 +19,7 @@ GIT_INLINE(int) handle_wc_error(void)
 	return -1;
 }
 
-int git_buf_put_w(git_buf *buf, const wchar_t *string_w, size_t len_w)
+int git_str_put_w(git_str *buf, const wchar_t *string_w, size_t len_w)
 {
 	int utf8_len, utf8_write_len;
 	size_t new_size;
@@ -43,7 +42,7 @@ int git_buf_put_w(git_buf *buf, const wchar_t *string_w, size_t len_w)
 	GIT_ERROR_CHECK_ALLOC_ADD(&new_size, buf->size, (size_t)utf8_len);
 	GIT_ERROR_CHECK_ALLOC_ADD(&new_size, new_size, 1);
 
-	if (git_buf_grow(buf, new_size) < 0)
+	if (git_str_grow(buf, new_size) < 0)
 		return -1;
 
 	if ((utf8_write_len = WideCharToMultiByte(

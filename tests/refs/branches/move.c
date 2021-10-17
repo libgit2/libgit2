@@ -67,16 +67,14 @@ void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_coll
 {
 	git_reference *original_ref, *new_ref;
 	git_config *config;
-	git_buf buf = GIT_BUF_INIT;
-	char *original_remote, *original_merge;
+	git_buf original_remote = GIT_BUF_INIT,
+	        original_merge = GIT_BUF_INIT;
 	const char *str;
 
 	cl_git_pass(git_repository_config_snapshot(&config, repo));
 
-	cl_git_pass(git_config_get_string_buf(&buf, config, "branch.master.remote"));
-	original_remote = git_buf_detach(&buf);
-	cl_git_pass(git_config_get_string_buf(&buf, config, "branch.master.merge"));
-	original_merge  = git_buf_detach(&buf);
+	cl_git_pass(git_config_get_string_buf(&original_remote, config, "branch.master.remote"));
+	cl_git_pass(git_config_get_string_buf(&original_merge, config, "branch.master.merge"));
 	git_config_free(config);
 
 	cl_git_pass(git_reference_lookup(&original_ref, repo, "refs/heads/br2"));
@@ -88,9 +86,9 @@ void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_coll
 
 	cl_git_pass(git_repository_config_snapshot(&config, repo));
 	cl_git_pass(git_config_get_string(&str, config, "branch.master.remote"));
-	cl_assert_equal_s(original_remote, str);
+	cl_assert_equal_s(original_remote.ptr, str);
 	cl_git_pass(git_config_get_string(&str, config, "branch.master.merge"));
-	cl_assert_equal_s(original_merge,  str);
+	cl_assert_equal_s(original_merge.ptr, str);
 	git_config_free(config);
 
 	cl_assert_equal_i(GIT_EEXISTS,
@@ -100,9 +98,9 @@ void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_coll
 
 	cl_git_pass(git_repository_config_snapshot(&config, repo));
 	cl_git_pass(git_config_get_string(&str, config, "branch.master.remote"));
-	cl_assert_equal_s(original_remote, str);
+	cl_assert_equal_s(original_remote.ptr, str);
 	cl_git_pass(git_config_get_string(&str, config, "branch.master.merge"));
-	cl_assert_equal_s(original_merge,  str);
+	cl_assert_equal_s(original_merge.ptr, str);
 	git_config_free(config);
 
 	git_reference_free(original_ref);
@@ -115,11 +113,12 @@ void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_coll
 
 	cl_git_pass(git_repository_config_snapshot(&config, repo));
 	cl_git_pass(git_config_get_string(&str, config, "branch.master.remote"));
-	cl_assert_equal_s(original_remote, str);
+	cl_assert_equal_s(original_remote.ptr, str);
 	cl_git_pass(git_config_get_string(&str, config, "branch.master.merge"));
-	cl_assert_equal_s(original_merge,  str);
+	cl_assert_equal_s(original_merge.ptr, str);
 
-	git__free(original_remote); git__free(original_merge);
+	git_buf_dispose(&original_remote);
+	git_buf_dispose(&original_merge);
 	git_reference_free(original_ref);
 	git_config_free(config);
 }

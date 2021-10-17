@@ -161,7 +161,7 @@ static int attr_cache_lookup(
 	git_attr_file_source *source)
 {
 	int error = 0;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	const char *wd = git_repository_workdir(repo);
 	const char *filename;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
@@ -170,9 +170,9 @@ static int attr_cache_lookup(
 
 	/* join base and path as needed */
 	if (source->base != NULL && git_path_root(source->filename) < 0) {
-		git_buf *p = attr_session ? &attr_session->tmp : &path;
+		git_str *p = attr_session ? &attr_session->tmp : &path;
 
-		if (git_buf_joinpath(p, source->base, source->filename) < 0 ||
+		if (git_str_joinpath(p, source->base, source->filename) < 0 ||
 		    git_path_validate_workdir_buf(repo, p) < 0)
 			return -1;
 
@@ -203,7 +203,7 @@ cleanup:
 	*out_file  = file;
 	*out_entry = entry;
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	return error;
 }
 
@@ -281,7 +281,7 @@ bool git_attr_cache__is_cached(
 static int attr_cache__lookup_path(
 	char **out, git_config *cfg, const char *key, const char *fallback)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	int error;
 	git_config_entry *entry = NULL;
 
@@ -296,17 +296,17 @@ static int attr_cache__lookup_path(
 		/* expand leading ~/ as needed */
 		if (cfgval && cfgval[0] == '~' && cfgval[1] == '/') {
 			if (! (error = git_sysdir_expand_global_file(&buf, &cfgval[2])))
-				*out = git_buf_detach(&buf);
+				*out = git_str_detach(&buf);
 		} else if (cfgval) {
 			*out = git__strdup(cfgval);
 		}
 	}
 	else if (!git_sysdir_find_xdg_file(&buf, fallback)) {
-		*out = git_buf_detach(&buf);
+		*out = git_str_detach(&buf);
 	}
 
 	git_config_entry_free(entry);
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	return error;
 }

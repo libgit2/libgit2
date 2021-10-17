@@ -7,18 +7,20 @@
 
 #include "common.h"
 
-#include "git2/object.h"
-#include "git2/sys/odb_backend.h"
-#include "git2/sys/mempack.h"
+#include "buf.h"
 #include "futils.h"
 #include "hash.h"
 #include "odb.h"
 #include "array.h"
 #include "oidmap.h"
+#include "pack-objects.h"
 
 #include "git2/odb_backend.h"
+#include "git2/object.h"
 #include "git2/types.h"
 #include "git2/pack.h"
+#include "git2/sys/odb_backend.h"
+#include "git2/sys/mempack.h"
 
 struct memobject {
 	git_oid oid;
@@ -100,7 +102,10 @@ static int impl__read_header(size_t *len_p, git_object_t *type_p, git_odb_backen
 	return 0;
 }
 
-int git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_backend *_backend)
+static int git_mempack__dump(
+	git_str *pack,
+	git_repository *repo,
+	git_odb_backend *_backend)
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
 	git_packbuilder *packbuilder;
@@ -120,11 +125,19 @@ int git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_backend *_back
 			goto cleanup;
 	}
 
-	err = git_packbuilder_write_buf(pack, packbuilder);
+	err = git_packbuilder__write_buf(pack, packbuilder);
 
 cleanup:
 	git_packbuilder_free(packbuilder);
 	return err;
+}
+
+int git_mempack_dump(
+	git_buf *pack,
+	git_repository *repo,
+	git_odb_backend *_backend)
+{
+	GIT_BUF_WRAP_PRIVATE(pack, git_mempack__dump, repo, _backend);
 }
 
 int git_mempack_reset(git_odb_backend *_backend)

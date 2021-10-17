@@ -143,7 +143,7 @@ int git_transport_register(
 	git_transport_cb cb,
 	void *param)
 {
-	git_buf prefix = GIT_BUF_INIT;
+	git_str prefix = GIT_STR_INIT;
 	transport_definition *d, *definition = NULL;
 	size_t i;
 	int error = 0;
@@ -151,7 +151,7 @@ int git_transport_register(
 	GIT_ASSERT_ARG(scheme);
 	GIT_ASSERT_ARG(cb);
 
-	if ((error = git_buf_printf(&prefix, "%s://", scheme)) < 0)
+	if ((error = git_str_printf(&prefix, "%s://", scheme)) < 0)
 		goto on_error;
 
 	git_vector_foreach(&custom_transports, i, d) {
@@ -164,7 +164,7 @@ int git_transport_register(
 	definition = git__calloc(1, sizeof(transport_definition));
 	GIT_ERROR_CHECK_ALLOC(definition);
 
-	definition->prefix = git_buf_detach(&prefix);
+	definition->prefix = git_str_detach(&prefix);
 	definition->fn = cb;
 	definition->param = param;
 
@@ -174,21 +174,21 @@ int git_transport_register(
 	return 0;
 
 on_error:
-	git_buf_dispose(&prefix);
+	git_str_dispose(&prefix);
 	git__free(definition);
 	return error;
 }
 
 int git_transport_unregister(const char *scheme)
 {
-	git_buf prefix = GIT_BUF_INIT;
+	git_str prefix = GIT_STR_INIT;
 	transport_definition *d;
 	size_t i;
 	int error = 0;
 
 	GIT_ASSERT_ARG(scheme);
 
-	if ((error = git_buf_printf(&prefix, "%s://", scheme)) < 0)
+	if ((error = git_str_printf(&prefix, "%s://", scheme)) < 0)
 		goto done;
 
 	git_vector_foreach(&custom_transports, i, d) {
@@ -210,7 +210,7 @@ int git_transport_unregister(const char *scheme)
 	error = GIT_ENOTFOUND;
 
 done:
-	git_buf_dispose(&prefix);
+	git_str_dispose(&prefix);
 	return error;
 }
 

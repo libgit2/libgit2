@@ -7,12 +7,10 @@
 
 #include "common.h"
 
-#include "git2.h"
-#include "buffer.h"
 #include "netops.h"
-#include "git2/sys/transport.h"
 #include "stream.h"
 #include "streams/socket.h"
+#include "git2/sys/transport.h"
 
 #define OWNING_SUBTRANSPORT(s) ((git_subtransport *)(s)->parent.subtransport)
 
@@ -39,7 +37,7 @@ typedef struct {
  *
  * For example: 0035git-upload-pack /libgit2/libgit2\0host=github.com\0
  */
-static int gen_proto(git_buf *request, const char *cmd, const char *url)
+static int gen_proto(git_str *request, const char *cmd, const char *url)
 {
 	char *delim, *repo;
 	char host[] = "host=";
@@ -61,13 +59,13 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 
 	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 1;
 
-	git_buf_grow(request, len);
-	git_buf_printf(request, "%04x%s %s%c%s",
+	git_str_grow(request, len);
+	git_str_printf(request, "%04x%s %s%c%s",
 		(unsigned int)(len & 0x0FFFF), cmd, repo, 0, host);
-	git_buf_put(request, url, delim - url);
-	git_buf_putc(request, '\0');
+	git_str_put(request, url, delim - url);
+	git_str_putc(request, '\0');
 
-	if (git_buf_oom(request))
+	if (git_str_oom(request))
 		return -1;
 
 	return 0;
@@ -75,7 +73,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 
 static int send_command(git_proto_stream *s)
 {
-	git_buf request = GIT_BUF_INIT;
+	git_str request = GIT_STR_INIT;
 	int error;
 
 	if ((error = gen_proto(&request, s->cmd, s->url)) < 0)
@@ -87,7 +85,7 @@ static int send_command(git_proto_stream *s)
 	s->sent_command = 1;
 
 cleanup:
-	git_buf_dispose(&request);
+	git_str_dispose(&request);
 	return error;
 }
 

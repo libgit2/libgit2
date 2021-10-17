@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/sys/filter.h"
 #include "crlf.h"
-#include "buffer.h"
 
 static git_repository *g_repo = NULL;
 

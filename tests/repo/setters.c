@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/sys/repository.h"
 
-#include "buffer.h"
 #include "posix.h"
 #include "util.h"
 #include "path.h"
@@ -47,20 +46,20 @@ void test_repo_setters__setting_a_workdir_creates_a_gitlink(void)
 {
 	git_config *cfg;
 	git_buf buf = GIT_BUF_INIT;
-	git_buf content = GIT_BUF_INIT;
+	git_str content = GIT_STR_INIT;
 
 	cl_git_pass(git_repository_set_workdir(repo, "./new_workdir", true));
 
 	cl_assert(git_path_isfile("./new_workdir/.git"));
 
 	cl_git_pass(git_futils_readbuffer(&content, "./new_workdir/.git"));
-	cl_assert(git__prefixcmp(git_buf_cstr(&content), "gitdir: ") == 0);
-	cl_assert(git__suffixcmp(git_buf_cstr(&content), "testrepo.git/") == 0);
-	git_buf_dispose(&content);
+	cl_assert(git__prefixcmp(git_str_cstr(&content), "gitdir: ") == 0);
+	cl_assert(git__suffixcmp(git_str_cstr(&content), "testrepo.git/") == 0);
+	git_str_dispose(&content);
 
 	cl_git_pass(git_repository_config(&cfg, repo));
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.worktree"));
-	cl_assert(git__suffixcmp(git_buf_cstr(&buf), "new_workdir/") == 0);
+	cl_assert(git__suffixcmp(buf.ptr, "new_workdir/") == 0);
 
 	git_buf_dispose(&buf);
 	git_config_free(cfg);
@@ -81,7 +80,7 @@ void test_repo_setters__setting_a_new_index_on_a_repo_which_has_already_loaded_o
 
 	git_index_free(new_index);
 
-	/* 
+	/*
 	 * Ensure the cleanup method won't try to free the repo as it's already been taken care of
 	 */
 	repo = NULL;
@@ -102,7 +101,7 @@ void test_repo_setters__setting_a_new_odb_on_a_repo_which_already_loaded_one_pro
 
 	git_odb_free(new_odb);
 
-	/* 
+	/*
 	 * Ensure the cleanup method won't try to free the repo as it's already been taken care of
 	 */
 	repo = NULL;

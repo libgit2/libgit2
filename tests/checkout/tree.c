@@ -3,7 +3,6 @@
 
 #include "git2/checkout.h"
 #include "repository.h"
-#include "buffer.h"
 #include "futils.h"
 
 static git_repository *g_repo;
@@ -519,7 +518,7 @@ void assert_conflict(
 	git_index *index;
 	git_object *hack_tree;
 	git_reference *branch, *head;
-	git_buf file_path = GIT_BUF_INIT;
+	git_str file_path = GIT_STR_INIT;
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
@@ -549,9 +548,9 @@ void assert_conflict(
 	g_object = NULL;
 
 	/* Create a conflicting file */
-	cl_git_pass(git_buf_joinpath(&file_path, "./testrepo", entry_path));
-	cl_git_mkfile(git_buf_cstr(&file_path), new_content);
-	git_buf_dispose(&file_path);
+	cl_git_pass(git_str_joinpath(&file_path, "./testrepo", entry_path));
+	cl_git_mkfile(git_str_cstr(&file_path), new_content);
+	git_str_dispose(&file_path);
 
 	/* Trying to checkout the original commit */
 	cl_git_pass(git_revparse_single(&g_object, g_repo, commit_sha));
@@ -1037,17 +1036,17 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 
 mode_t read_filemode(const char *path)
 {
-	git_buf fullpath = GIT_BUF_INIT;
+	git_str fullpath = GIT_STR_INIT;
 	struct stat st;
 	mode_t result;
 
-	git_buf_joinpath(&fullpath, "testrepo", path);
+	git_str_joinpath(&fullpath, "testrepo", path);
 	cl_must_pass(p_stat(fullpath.ptr, &st));
 
 	result = GIT_PERMS_IS_EXEC(st.st_mode) ?
 		GIT_FILEMODE_BLOB_EXECUTABLE : GIT_FILEMODE_BLOB;
 
-	git_buf_dispose(&fullpath);
+	git_str_dispose(&fullpath);
 
 	return result;
 }
@@ -1317,7 +1316,7 @@ void test_checkout_tree__caches_attributes_during_checkout(void)
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
-	git_buf ident1 = GIT_BUF_INIT, ident2 = GIT_BUF_INIT;
+	git_str ident1 = GIT_STR_INIT, ident2 = GIT_STR_INIT;
 	char *ident_paths[] = { "ident1.txt", "ident2.txt" };
 
 	opts.progress_cb = update_attr_callback;
@@ -1346,8 +1345,8 @@ void test_checkout_tree__caches_attributes_during_checkout(void)
 	cl_assert_equal_strn(ident1.ptr, "# $Id: ", 7);
 	cl_assert_equal_strn(ident2.ptr, "# $Id: ", 7);
 
-	git_buf_dispose(&ident1);
-	git_buf_dispose(&ident2);
+	git_str_dispose(&ident1);
+	git_str_dispose(&ident2);
 	git_object_free(obj);
 }
 
@@ -1679,6 +1678,6 @@ void test_checkout_tree__dry_run(void)
 
 	/* check that notify callback was invoked */
 	cl_assert_equal_i(ct.n_updates, 2);
-	
+
 	git_object_free(obj);
 }

@@ -14,7 +14,6 @@
 #include "utf-conv.h"
 #include "repository.h"
 #include "reparse.h"
-#include "buffer.h"
 #include <errno.h>
 #include <io.h>
 #include <fcntl.h>
@@ -415,7 +414,7 @@ int p_readlink(const char *path, char *buf, size_t bufsiz)
 
 static bool target_is_dir(const char *target, const char *path)
 {
-	git_buf resolved = GIT_BUF_INIT;
+	git_str resolved = GIT_STR_INIT;
 	git_win32_path resolved_w;
 	bool isdir = true;
 
@@ -429,7 +428,7 @@ static bool target_is_dir(const char *target, const char *path)
 	isdir = GetFileAttributesW(resolved_w) & FILE_ATTRIBUTE_DIRECTORY;
 
 out:
-	git_buf_dispose(&resolved);
+	git_str_dispose(&resolved);
 	return isdir;
 }
 
@@ -1003,7 +1002,7 @@ ssize_t p_pread(int fd, void *data, size_t size, off64_t offset)
 	/* Fail if the final offset would have overflowed to match POSIX semantics. */
 	if (!git__is_ssizet(size) || git__add_int64_overflow(&final_offset, offset, (int64_t)size)) {
 		errno = EINVAL;
-		return -1;	
+		return -1;
 	}
 
 	/*
@@ -1038,7 +1037,7 @@ ssize_t p_pwrite(int fd, const void *data, size_t size, off64_t offset)
 	/* Fail if the final offset would have overflowed to match POSIX semantics. */
 	if (!git__is_ssizet(size) || git__add_int64_overflow(&final_offset, offset, (int64_t)size)) {
 		errno = EINVAL;
-		return -1;	
+		return -1;
 	}
 
 	/*

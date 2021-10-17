@@ -8,7 +8,6 @@
 #ifndef INCLUDE_transports_http_h__
 #define INCLUDE_transports_http_h__
 
-#include "buffer.h"
 #include "settings.h"
 #include "httpclient.h"
 
@@ -16,14 +15,14 @@
 
 extern bool git_http__expect_continue;
 
-GIT_INLINE(int) git_http__user_agent(git_buf *buf)
+GIT_INLINE(int) git_http__user_agent(git_str *buf)
 {
 	const char *ua = git_libgit2__user_agent();
 
 	if (!ua)
 		ua = "libgit2 " LIBGIT2_VERSION;
 
-	return git_buf_printf(buf, "git/2.0 (%s)", ua);
+	return git_str_printf(buf, "git/2.0 (%s)", ua);
 }
 
 #endif

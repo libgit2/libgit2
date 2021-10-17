@@ -121,7 +121,7 @@ void git_sortedcache_wunlock(git_sortedcache *sc);
  * @return 0 if up-to-date, 1 if out-of-date, <0 on error
  */
 GIT_WARN_UNUSED_RESULT int git_sortedcache_lockandload(
-	git_sortedcache *sc, git_buf *buf);
+	git_sortedcache *sc, git_str *buf);
 
 /* Refresh file timestamp after write completes
  * You should already be holding the write lock when you call this.

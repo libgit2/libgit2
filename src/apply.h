@@ -11,10 +11,10 @@
 
 #include "git2/patch.h"
 #include "git2/apply.h"
-#include "buffer.h"
+#include "str.h"
 
 extern int git_apply__patch(
-	git_buf *out,
+	git_str *out,
 	char **filename,
 	unsigned int *mode,
 	const char *source,

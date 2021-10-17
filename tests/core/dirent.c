@@ -9,7 +9,7 @@ typedef struct name_data {
 typedef struct walk_data {
 	char *sub;		/* sub-directory name */
 	name_data *names; /* name state data	*/
-	git_buf path;
+	git_str path;
 } walk_data;
 
 
@@ -27,7 +27,7 @@ static void setup(walk_data *d)
 	if (strcmp(d->sub, ".") != 0)
 		cl_must_pass(p_mkdir(d->sub, 0777));
 
-	cl_git_pass(git_buf_sets(&d->path, d->sub));
+	cl_git_pass(git_str_sets(&d->path, d->sub));
 
 	state_loc = d;
 
@@ -55,7 +55,7 @@ static void dirent_cleanup__cb(void *_d)
 
 	cl_must_pass(p_rmdir(top_dir));
 
-	git_buf_dispose(&d->path);
+	git_str_dispose(&d->path);
 }
 
 static void check_counts(walk_data *d)
@@ -81,7 +81,7 @@ static int update_count(name_data *data, const char *name)
 	return GIT_ERROR;
 }
 
-static int one_entry(void *state, git_buf *path)
+static int one_entry(void *state, git_str *path)
 {
 	walk_data *d = (walk_data *) state;
 
@@ -104,7 +104,7 @@ static name_data dot_names[] = {
 static walk_data dot = {
 	".",
 	dot_names,
-	GIT_BUF_INIT
+	GIT_STR_INIT
 };
 
 /* make sure that the '.' folder is not traversed */
@@ -128,7 +128,7 @@ static name_data sub_names[] = {
 static walk_data sub = {
 	"sub",
 	sub_names,
-	GIT_BUF_INIT
+	GIT_STR_INIT
 };
 
 /* traverse a subfolder */
@@ -146,7 +146,7 @@ void test_core_dirent__traverse_subfolder(void)
 static walk_data sub_slash = {
 	"sub/",
 	sub_names,
-	GIT_BUF_INIT
+	GIT_STR_INIT
 };
 
 /* traverse a slash-terminated subfolder */
@@ -167,7 +167,7 @@ static name_data empty_names[] = {
 static walk_data empty = {
 	"empty",
 	empty_names,
-	GIT_BUF_INIT
+	GIT_STR_INIT
 };
 
 /* make sure that empty folders are not traversed */
@@ -195,7 +195,7 @@ static name_data odd_names[] = {
 static walk_data odd = {
 	"odd",
 	odd_names,
-	GIT_BUF_INIT
+	GIT_STR_INIT
 };
 
 /* make sure that strange looking filenames ('..c') are traversed */

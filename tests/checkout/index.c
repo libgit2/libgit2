@@ -8,7 +8,7 @@
 #include "repo/repo_helpers.h"
 
 static git_repository *g_repo;
-static git_buf g_global_path = GIT_BUF_INIT;
+static git_str g_global_path = GIT_STR_INIT;
 
 void test_checkout_index__initialize(void)
 {
@@ -33,7 +33,7 @@ void test_checkout_index__cleanup(void)
 {
 	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL,
 		g_global_path.ptr);
-	git_buf_dispose(&g_global_path);
+	git_str_dispose(&g_global_path);
 
 	cl_git_sandbox_cleanup();
 
@@ -203,14 +203,14 @@ void test_checkout_index__honor_coreautocrlf_setting_set_to_true(void)
 
 static void populate_symlink_workdir(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	git_repository *repo;
 	git_remote *origin;
 	git_object *target;
 
 	const char *url = git_repository_path(g_repo);
 
-	cl_git_pass(git_buf_joinpath(&path, clar_sandbox_path(), "symlink.git"));
+	cl_git_pass(git_str_joinpath(&path, clar_sandbox_path(), "symlink.git"));
 	cl_git_pass(git_repository_init(&repo, path.ptr, true));
 	cl_git_pass(git_repository_set_workdir(repo, "symlink", 1));
 
@@ -226,7 +226,7 @@ static void populate_symlink_workdir(void)
 
 	git_object_free(target);
 	git_repository_free(repo);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 void test_checkout_index__honor_coresymlinks_default_true(void)
@@ -808,7 +808,7 @@ void test_checkout_index__writes_conflict_file(void)
 {
 	git_index *index;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	git_buf conflicting_buf = GIT_BUF_INIT;
+	git_str conflicting_buf = GIT_STR_INIT;
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
@@ -824,7 +824,7 @@ void test_checkout_index__writes_conflict_file(void)
 		"=======\n"
 		"this file is changed in branch and master\n"
 		">>>>>>> theirs\n") == 0);
-	git_buf_dispose(&conflicting_buf);
+	git_str_dispose(&conflicting_buf);
 
 	git_index_free(index);
 }
@@ -855,7 +855,7 @@ void test_checkout_index__conflicts_honor_coreautocrlf(void)
 #ifdef GIT_WIN32
 	git_index *index;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	git_buf conflicting_buf = GIT_BUF_INIT;
+	git_str conflicting_buf = GIT_STR_INIT;
 
 	cl_git_pass(p_unlink("./testrepo/.gitattributes"));
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
@@ -874,7 +874,7 @@ void test_checkout_index__conflicts_honor_coreautocrlf(void)
 		"=======\r\n"
 		"this file is changed in branch and master\r\n"
 		">>>>>>> theirs\r\n") == 0);
-	git_buf_dispose(&conflicting_buf);
+	git_str_dispose(&conflicting_buf);
 
 	git_index_free(index);
 #endif

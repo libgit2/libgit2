@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/repository.h"
 #include "git2/merge.h"
-#include "buffer.h"
 #include "merge.h"
 #include "../merge_helpers.h"
 #include "../conflict_data.h"
@@ -126,7 +125,7 @@ void test_merge_workdir_simple__automerge(void)
 {
 	git_index *index;
 	const git_index_entry *entry;
-	git_buf automergeable_buf = GIT_BUF_INIT;
+	git_str automergeable_buf = GIT_STR_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		ADDED_IN_MASTER_INDEX_ENTRY,
@@ -155,7 +154,7 @@ void test_merge_workdir_simple__automerge(void)
 	cl_git_pass(git_futils_readbuffer(&automergeable_buf,
 		TEST_REPO_PATH "/automergeable.txt"));
 	cl_assert(strcmp(automergeable_buf.ptr, AUTOMERGEABLE_MERGED_FILE) == 0);
-	git_buf_dispose(&automergeable_buf);
+	git_str_dispose(&automergeable_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
@@ -202,7 +201,7 @@ void test_merge_workdir_simple__automerge_crlf(void)
 #ifdef GIT_WIN32
 	git_index *index;
 	const git_index_entry *entry;
-	git_buf automergeable_buf = GIT_BUF_INIT;
+	git_str automergeable_buf = GIT_STR_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		ADDED_IN_MASTER_INDEX_ENTRY,
@@ -230,7 +229,7 @@ void test_merge_workdir_simple__automerge_crlf(void)
 	cl_git_pass(git_futils_readbuffer(&automergeable_buf,
 		TEST_REPO_PATH "/automergeable.txt"));
 	cl_assert(strcmp(automergeable_buf.ptr, AUTOMERGEABLE_MERGED_FILE_CRLF) == 0);
-	git_buf_dispose(&automergeable_buf);
+	git_str_dispose(&automergeable_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
@@ -246,7 +245,7 @@ void test_merge_workdir_simple__automerge_crlf(void)
 
 void test_merge_workdir_simple__mergefile(void)
 {
-	git_buf conflicting_buf = GIT_BUF_INIT, mergemsg_buf = GIT_BUF_INIT;
+	git_str conflicting_buf = GIT_STR_INIT, mergemsg_buf = GIT_STR_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		ADDED_IN_MASTER_INDEX_ENTRY,
@@ -276,13 +275,13 @@ void test_merge_workdir_simple__mergefile(void)
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_MERGE_FILE) == 0);
 	cl_git_pass(git_futils_readbuffer(&mergemsg_buf,
 		TEST_REPO_PATH "/.git/MERGE_MSG"));
-	cl_assert(strcmp(git_buf_cstr(&mergemsg_buf),
+	cl_assert(strcmp(git_str_cstr(&mergemsg_buf),
 		"Merge commit '7cb63eed597130ba4abb87b3e544b85021905520'\n" \
 		"\n" \
 		"Conflicts:\n" \
 		"\tconflicting.txt\n") == 0);
-	git_buf_dispose(&conflicting_buf);
-	git_buf_dispose(&mergemsg_buf);
+	git_str_dispose(&conflicting_buf);
+	git_str_dispose(&mergemsg_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
@@ -290,7 +289,7 @@ void test_merge_workdir_simple__mergefile(void)
 
 void test_merge_workdir_simple__diff3(void)
 {
-	git_buf conflicting_buf = GIT_BUF_INIT;
+	git_str conflicting_buf = GIT_STR_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		ADDED_IN_MASTER_INDEX_ENTRY,
@@ -318,7 +317,7 @@ void test_merge_workdir_simple__diff3(void)
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_DIFF3_FILE) == 0);
-	git_buf_dispose(&conflicting_buf);
+	git_str_dispose(&conflicting_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
@@ -326,7 +325,7 @@ void test_merge_workdir_simple__diff3(void)
 
 void test_merge_workdir_simple__union(void)
 {
-	git_buf conflicting_buf = GIT_BUF_INIT;
+	git_str conflicting_buf = GIT_STR_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		ADDED_IN_MASTER_INDEX_ENTRY,
@@ -353,7 +352,7 @@ void test_merge_workdir_simple__union(void)
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_UNION_FILE) == 0);
-	git_buf_dispose(&conflicting_buf);
+	git_str_dispose(&conflicting_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 6));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 4));
@@ -361,7 +360,7 @@ void test_merge_workdir_simple__union(void)
 
 void test_merge_workdir_simple__gitattributes_union(void)
 {
-	git_buf conflicting_buf = GIT_BUF_INIT;
+	git_str conflicting_buf = GIT_STR_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		ADDED_IN_MASTER_INDEX_ENTRY,
@@ -389,7 +388,7 @@ void test_merge_workdir_simple__gitattributes_union(void)
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_UNION_FILE) == 0);
-	git_buf_dispose(&conflicting_buf);
+	git_str_dispose(&conflicting_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 6));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 4));
@@ -398,7 +397,7 @@ void test_merge_workdir_simple__gitattributes_union(void)
 void test_merge_workdir_simple__diff3_from_config(void)
 {
 	git_config *config;
-	git_buf conflicting_buf = GIT_BUF_INIT;
+	git_str conflicting_buf = GIT_STR_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		ADDED_IN_MASTER_INDEX_ENTRY,
@@ -429,7 +428,7 @@ void test_merge_workdir_simple__diff3_from_config(void)
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_DIFF3_FILE) == 0);
-	git_buf_dispose(&conflicting_buf);
+	git_str_dispose(&conflicting_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
@@ -440,7 +439,7 @@ void test_merge_workdir_simple__diff3_from_config(void)
 void test_merge_workdir_simple__merge_overrides_config(void)
 {
 	git_config *config;
-	git_buf conflicting_buf = GIT_BUF_INIT;
+	git_str conflicting_buf = GIT_STR_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		ADDED_IN_MASTER_INDEX_ENTRY,
@@ -471,7 +470,7 @@ void test_merge_workdir_simple__merge_overrides_config(void)
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_MERGE_FILE) == 0);
-	git_buf_dispose(&conflicting_buf);
+	git_str_dispose(&conflicting_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));

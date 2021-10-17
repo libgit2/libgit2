@@ -22,7 +22,7 @@ void test_config_configlevel__adding_the_same_level_twice_returns_EEXISTS(void)
 void test_config_configlevel__can_replace_a_config_file_at_an_existing_level(void)
 {
 	git_config *cfg;
-	git_buf buf = {0};
+	git_buf buf = GIT_BUF_INIT;
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config18"),

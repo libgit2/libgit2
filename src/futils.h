@@ -21,13 +21,13 @@
  *
  * Read whole files into an in-memory buffer for processing
  */
-extern int git_futils_readbuffer(git_buf *obj, const char *path);
+extern int git_futils_readbuffer(git_str *obj, const char *path);
 extern int git_futils_readbuffer_updated(
-	git_buf *obj,
+	git_str *obj,
 	const char *path,
 	unsigned char checksum[GIT_HASH_SHA1_SIZE],
 	int *updated);
-extern int git_futils_readbuffer_fd(git_buf *obj, git_file fd, size_t len);
+extern int git_futils_readbuffer_fd(git_str *obj, git_file fd, size_t len);
 
 /* Additional constants for `git_futils_writebuffer`'s `open_flags`.  We
  * support these internally and they will be removed before the `open` call.
@@ -37,7 +37,7 @@ extern int git_futils_readbuffer_fd(git_buf *obj, git_file fd, size_t len);
 #endif
 
 extern int git_futils_writebuffer(
-	const git_buf *buf, const char *path, int open_flags, mode_t mode);
+	const git_str *buf, const char *path, int open_flags, mode_t mode);
 
 /**
  * File utils
@@ -177,7 +177,7 @@ extern int git_futils_rmdir_r(const char *path, const char *base, uint32_t flags
  * Writes the filename into path_out.
  * @return On success, an open file descriptor, else an error code < 0.
  */
-extern int git_futils_mktmp(git_buf *path_out, const char *filename, mode_t mode);
+extern int git_futils_mktmp(git_str *path_out, const char *filename, mode_t mode);
 
 /**
  * Move a file on the filesystem, create the

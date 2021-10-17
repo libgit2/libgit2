@@ -1,7 +1,6 @@
 #include "clar.h"
 #include "clar_libgit2.h"
 
-#include "buffer.h"
 #include "futils.h"
 #include "git2/revert.h"
 
@@ -66,7 +65,7 @@ void test_revert_workdir__conflicts(void)
 	git_reference *head_ref;
 	git_commit *head, *commit;
 	git_oid revert_oid;
-	git_buf conflicting_buf = GIT_BUF_INIT, mergemsg_buf = GIT_BUF_INIT;
+	git_str conflicting_buf = GIT_STR_INIT, mergemsg_buf = GIT_STR_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "7731926a337c4eaba1e2187d90ebfa0a93659382", 1, "file1.txt" },
@@ -126,8 +125,8 @@ void test_revert_workdir__conflicts(void)
 	git_commit_free(commit);
 	git_commit_free(head);
 	git_reference_free(head_ref);
-	git_buf_dispose(&mergemsg_buf);
-	git_buf_dispose(&conflicting_buf);
+	git_str_dispose(&mergemsg_buf);
+	git_str_dispose(&conflicting_buf);
 }
 
 /* git reset --hard 39467716290f6df775a91cdb9a4eb39295018145
@@ -308,7 +307,7 @@ void test_revert_workdir__again_after_edit(void)
  */
 void test_revert_workdir__again_after_edit_two(void)
 {
-	git_buf diff_buf = GIT_BUF_INIT;
+	git_str diff_buf = GIT_STR_INIT;
 	git_config *config;
 	git_oid head_commit_oid, revert_commit_oid;
 	git_commit *head_commit, *revert_commit;
@@ -350,7 +349,7 @@ void test_revert_workdir__again_after_edit_two(void)
 	git_commit_free(revert_commit);
 	git_commit_free(head_commit);
 	git_config_free(config);
-	git_buf_dispose(&diff_buf);
+	git_str_dispose(&diff_buf);
 }
 
 /* git reset --hard 72333f47d4e83616630ff3b0ffe4c0faebcc3c45

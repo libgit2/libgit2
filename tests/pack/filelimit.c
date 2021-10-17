@@ -34,12 +34,12 @@ void test_pack_filelimit__initialize_unlimited(void)
 
 void test_pack_filelimit__cleanup(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_MWINDOW_FILE_LIMIT, original_mwindow_file_limit));
 
-	cl_git_pass(git_buf_joinpath(&path, clar_sandbox_path(), "repo.git"));
+	cl_git_pass(git_str_joinpath(&path, clar_sandbox_path(), "repo.git"));
 	cl_fixture_cleanup(path.ptr);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 /*
@@ -54,7 +54,7 @@ void create_packfile_commit(
 		size_t commit_index,
 		size_t commit_count)
 {
-	git_buf file_contents = GIT_BUF_INIT;
+	git_str file_contents = GIT_STR_INIT;
 	git_treebuilder *treebuilder;
 	git_packbuilder *packbuilder;
 	git_signature *s;
@@ -67,7 +67,7 @@ void create_packfile_commit(
 	cl_git_pass(git_blob_create_from_buffer(&oid, repo, "", 0));
 	cl_git_pass(git_treebuilder_insert(NULL, treebuilder, "README.md", &oid, 0100644));
 
-	cl_git_pass(git_buf_printf(&file_contents, "Commit %zd/%zd", commit_index, commit_count));
+	cl_git_pass(git_str_printf(&file_contents, "Commit %zd/%zd", commit_index, commit_count));
 	cl_git_pass(git_blob_create_from_buffer(&oid, repo, file_contents.ptr, file_contents.size));
 	cl_git_pass(git_treebuilder_insert(NULL, treebuilder, "file.txt", &oid, 0100644));
 
@@ -82,7 +82,7 @@ void create_packfile_commit(
 
 	cl_git_pass(git_oid_cpy(out_commit_id, &commit_id));
 
-	git_buf_dispose(&file_contents);
+	git_str_dispose(&file_contents);
 	git_treebuilder_free(treebuilder);
 	git_packbuilder_free(packbuilder);
 	git_signature_free(s);
@@ -90,7 +90,7 @@ void create_packfile_commit(
 
 void test_pack_filelimit__open_repo_with_multiple_packfiles(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	git_mwindow_ctl *ctl = &git_mwindow__mem_ctl;
 	git_repository *repo;
 	git_revwalk *walk;
@@ -103,7 +103,7 @@ void test_pack_filelimit__open_repo_with_multiple_packfiles(void)
 	 * Create a repository and populate it with 16 commits, each in its own
 	 * packfile.
 	 */
-	cl_git_pass(git_buf_joinpath(&path, clar_sandbox_path(), "repo.git"));
+	cl_git_pass(git_str_joinpath(&path, clar_sandbox_path(), "repo.git"));
 	cl_git_pass(git_repository_init(&repo, path.ptr, true));
 	for (i = 0; i < commit_count; ++i) {
 		create_packfile_commit(repo, &id, parent_id, i + 1, commit_count);
@@ -130,7 +130,7 @@ void test_pack_filelimit__open_repo_with_multiple_packfiles(void)
 
 	cl_assert_equal_i(expected_open_mwindow_files, open_windows);
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	git_revwalk_free(walk);
 	git_repository_free(repo);
 }

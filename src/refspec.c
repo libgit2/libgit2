@@ -7,8 +7,7 @@
 
 #include "refspec.h"
 
-#include "git2/errors.h"
-
+#include "buf.h"
 #include "refs.h"
 #include "util.h"
 #include "vector.h"
@@ -243,16 +242,12 @@ int git_refspec_dst_matches(const git_refspec *refspec, const char *refname)
 }
 
 static int refspec_transform(
-	git_buf *out, const char *from, const char *to, const char *name)
+	git_str *out, const char *from, const char *to, const char *name)
 {
 	const char *from_star, *to_star;
 	size_t replacement_len, star_offset;
-	int error;
 
-	if ((error = git_buf_sanitize(out)) < 0)
-		return error;
-
-	git_buf_clear(out);
+	git_str_clear(out);
 
 	/*
 	 * There are two parts to each side of a refspec, the bit
@@ -269,28 +264,28 @@ static int refspec_transform(
 	star_offset = from_star - from;
 
 	/* the first half is copied over */
-	git_buf_put(out, to, to_star - to);
+	git_str_put(out, to, to_star - to);
 
 	/*
 	 * Copy over the name, but exclude the trailing part in "from" starting
 	 * after the glob
 	 */
 	replacement_len = strlen(name + star_offset) - strlen(from_star + 1);
-	git_buf_put(out, name + star_offset, replacement_len);
+	git_str_put(out, name + star_offset, replacement_len);
 
-	return git_buf_puts(out, to_star + 1);
+	return git_str_puts(out, to_star + 1);
 }
 
 int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *name)
 {
-	int error;
+	GIT_BUF_WRAP_PRIVATE(out, git_refspec__transform, spec, name);
+}
 
+int git_refspec__transform(git_str *out, const git_refspec *spec, const char *name)
+{
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(spec);
 	GIT_ASSERT_ARG(name);
-
-	if ((error = git_buf_sanitize(out)) < 0)
-		return error;
 
 	if (!git_refspec_src_matches(spec, name)) {
 		git_error_set(GIT_ERROR_INVALID, "ref '%s' doesn't match the source", name);
@@ -298,21 +293,21 @@ int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *nam
 	}
 
 	if (!spec->pattern)
-		return git_buf_puts(out, spec->dst ? spec->dst : "");
+		return git_str_puts(out, spec->dst ? spec->dst : "");
 
 	return refspec_transform(out, spec->src, spec->dst, name);
 }
 
 int git_refspec_rtransform(git_buf *out, const git_refspec *spec, const char *name)
 {
-	int error;
+	GIT_BUF_WRAP_PRIVATE(out, git_refspec__rtransform, spec, name);
+}
 
+int git_refspec__rtransform(git_str *out, const git_refspec *spec, const char *name)
+{
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(spec);
 	GIT_ASSERT_ARG(name);
-
-	if ((error = git_buf_sanitize(out)) < 0)
-		return error;
 
 	if (!git_refspec_dst_matches(spec, name)) {
 		git_error_set(GIT_ERROR_INVALID, "ref '%s' doesn't match the destination", name);
@@ -320,21 +315,21 @@ int git_refspec_rtransform(git_buf *out, const git_refspec *spec, const char *na
 	}
 
 	if (!spec->pattern)
-		return git_buf_puts(out, spec->src);
+		return git_str_puts(out, spec->src);
 
 	return refspec_transform(out, spec->dst, spec->src, name);
 }
 
-int git_refspec__serialize(git_buf *out, const git_refspec *refspec)
+int git_refspec__serialize(git_str *out, const git_refspec *refspec)
 {
 	if (refspec->force)
-		git_buf_putc(out, '+');
+		git_str_putc(out, '+');
 
-	git_buf_printf(out, "%s:%s",
+	git_str_printf(out, "%s:%s",
 		refspec->src != NULL ? refspec->src : "",
 		refspec->dst != NULL ? refspec->dst : "");
 
-	return git_buf_oom(out) == false;
+	return git_str_oom(out) == false;
 }
 
 int git_refspec_is_wildcard(const git_refspec *spec)
@@ -354,7 +349,7 @@ git_direction git_refspec_direction(const git_refspec *spec)
 
 int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	size_t j, pos;
 	git_remote_head key;
 	git_refspec *cur;
@@ -382,14 +377,14 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 	/* shorthand on the lhs */
 	if (git__prefixcmp(spec->src, GIT_REFS_DIR)) {
 		for (j = 0; formatters[j]; j++) {
-			git_buf_clear(&buf);
-			git_buf_printf(&buf, formatters[j], spec->src);
-			GIT_ERROR_CHECK_ALLOC_BUF(&buf);
+			git_str_clear(&buf);
+			git_str_printf(&buf, formatters[j], spec->src);
+			GIT_ERROR_CHECK_ALLOC_STR(&buf);
 
-			key.name = (char *) git_buf_cstr(&buf);
+			key.name = (char *) git_str_cstr(&buf);
 			if (!git_vector_search(&pos, refs, &key)) {
 				/* we found something to match the shorthand, set src to that */
-				cur->src = git_buf_detach(&buf);
+				cur->src = git_str_detach(&buf);
 			}
 		}
 	}
@@ -403,18 +398,18 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 	if (spec->dst && git__prefixcmp(spec->dst, GIT_REFS_DIR)) {
 		/* if it starts with "remotes" then we just prepend "refs/" */
 		if (!git__prefixcmp(spec->dst, "remotes/")) {
-			git_buf_puts(&buf, GIT_REFS_DIR);
+			git_str_puts(&buf, GIT_REFS_DIR);
 		} else {
-			git_buf_puts(&buf, GIT_REFS_HEADS_DIR);
+			git_str_puts(&buf, GIT_REFS_HEADS_DIR);
 		}
 
-		git_buf_puts(&buf, spec->dst);
-		GIT_ERROR_CHECK_ALLOC_BUF(&buf);
+		git_str_puts(&buf, spec->dst);
+		GIT_ERROR_CHECK_ALLOC_STR(&buf);
 
-		cur->dst = git_buf_detach(&buf);
+		cur->dst = git_str_detach(&buf);
 	}
 
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	if (cur->dst == NULL && spec->dst != NULL) {
 		cur->dst = git__strdup(spec->dst);

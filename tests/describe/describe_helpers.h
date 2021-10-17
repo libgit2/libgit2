@@ -1,5 +1,4 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
 
 extern void assert_describe(
 	const char *expected_output,

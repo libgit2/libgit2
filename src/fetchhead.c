@@ -10,7 +10,7 @@
 #include "git2/types.h"
 #include "git2/oid.h"
 
-#include "buffer.h"
+#include "str.h"
 #include "futils.h"
 #include "filebuf.h"
 #include "refs.h"
@@ -44,7 +44,7 @@ static char *sanitized_remote_url(const char *remote_url)
 	int error;
 
 	if (git_net_url_parse(&url, remote_url) == 0) {
-		git_buf buf = GIT_BUF_INIT;
+		git_str buf = GIT_STR_INIT;
 
 		git__free(url.username);
 		git__free(url.password);
@@ -53,7 +53,7 @@ static char *sanitized_remote_url(const char *remote_url)
 		if ((error = git_net_url_fmt(&buf, &url)) < 0)
 			goto fallback;
 
-		sanitized = git_buf_detach(&buf);
+		sanitized = git_str_detach(&buf);
 	}
 
 fallback:
@@ -143,22 +143,22 @@ static int fetchhead_ref_write(
 int git_fetchhead_write(git_repository *repo, git_vector *fetchhead_refs)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	unsigned int i;
 	git_fetchhead_ref *fetchhead_ref;
 
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(fetchhead_refs);
 
-	if (git_buf_joinpath(&path, repo->gitdir, GIT_FETCH_HEAD_FILE) < 0)
+	if (git_str_joinpath(&path, repo->gitdir, GIT_FETCH_HEAD_FILE) < 0)
 		return -1;
 
 	if (git_filebuf_open(&file, path.ptr, GIT_FILEBUF_APPEND, GIT_REFS_FILE_MODE) < 0) {
-		git_buf_dispose(&path);
+		git_str_dispose(&path);
 		return -1;
 	}
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	git_vector_sort(fetchhead_refs);
 
@@ -171,7 +171,7 @@ int git_fetchhead_write(git_repository *repo, git_vector *fetchhead_refs)
 static int fetchhead_ref_parse(
 	git_oid *oid,
 	unsigned int *is_merge,
-	git_buf *ref_name,
+	git_str *ref_name,
 	const char **remote_url,
 	char *line,
 	size_t line_num)
@@ -259,12 +259,12 @@ static int fetchhead_ref_parse(
 		*remote_url = desc;
 	}
 
-	git_buf_clear(ref_name);
+	git_str_clear(ref_name);
 
 	if (type)
-		git_buf_join(ref_name, '/', type, name);
+		git_str_join(ref_name, '/', type, name);
 	else if(name)
-		git_buf_puts(ref_name, name);
+		git_str_puts(ref_name, name);
 
 	return error;
 }
@@ -273,7 +273,7 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 	git_repository_fetchhead_foreach_cb cb,
 	void *payload)
 {
-	git_buf path = GIT_BUF_INIT, file = GIT_BUF_INIT, name = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT, file = GIT_STR_INIT, name = GIT_STR_INIT;
 	const char *ref_name;
 	git_oid oid;
 	const char *remote_url;
@@ -285,10 +285,10 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(cb);
 
-	if (git_buf_joinpath(&path, repo->gitdir, GIT_FETCH_HEAD_FILE) < 0)
+	if (git_str_joinpath(&path, repo->gitdir, GIT_FETCH_HEAD_FILE) < 0)
 		return -1;
 
-	if ((error = git_futils_readbuffer(&file, git_buf_cstr(&path))) < 0)
+	if ((error = git_futils_readbuffer(&file, git_str_cstr(&path))) < 0)
 		goto done;
 
 	buffer = file.ptr;
@@ -300,8 +300,8 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 				&oid, &is_merge, &name, &remote_url, line, line_num)) < 0)
 			goto done;
 
-		if (git_buf_len(&name) > 0)
-			ref_name = git_buf_cstr(&name);
+		if (git_str_len(&name) > 0)
+			ref_name = git_str_cstr(&name);
 		else
 			ref_name = NULL;
 
@@ -319,9 +319,9 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 	}
 
 done:
-	git_buf_dispose(&file);
-	git_buf_dispose(&path);
-	git_buf_dispose(&name);
+	git_str_dispose(&file);
+	git_str_dispose(&path);
+	git_str_dispose(&name);
 
 	return error;
 }

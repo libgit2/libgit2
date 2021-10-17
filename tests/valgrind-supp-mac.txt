@@ -3,9 +3,9 @@
    Memcheck:Leak
    ...
    fun:git__realloc
-   fun:git_buf_try_grow
-   fun:git_buf_grow
-   fun:git_buf_vprintf
+   fun:git_str_try_grow
+   fun:git_str_grow
+   fun:git_str_vprintf
    fun:git_error_set
 }
 {

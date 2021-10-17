@@ -12,7 +12,7 @@
 #include "git2.h"
 #include "git2/sys/mempack.h"
 #include "common.h"
-#include "buffer.h"
+#include "str.h"
 
 static git_odb *odb = NULL;
 static git_odb_backend *mempack = NULL;
@@ -53,7 +53,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
 	git_indexer_progress stats = {0, 0};
 	git_indexer *indexer = NULL;
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	git_oid oid;
 	bool append_hash = false;
 
@@ -99,19 +99,19 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	if (git_indexer_commit(indexer, &stats) < 0)
 		goto cleanup;
 
-	if (git_buf_printf(&path, "pack-%s.idx", git_oid_tostr_s(git_indexer_hash(indexer))) < 0)
+	if (git_str_printf(&path, "pack-%s.idx", git_oid_tostr_s(git_indexer_hash(indexer))) < 0)
 		goto cleanup;
-	p_unlink(git_buf_cstr(&path));
+	p_unlink(git_str_cstr(&path));
 
-	git_buf_clear(&path);
+	git_str_clear(&path);
 
-	if (git_buf_printf(&path, "pack-%s.pack", git_oid_tostr_s(git_indexer_hash(indexer))) < 0)
+	if (git_str_printf(&path, "pack-%s.pack", git_oid_tostr_s(git_indexer_hash(indexer))) < 0)
 		goto cleanup;
-	p_unlink(git_buf_cstr(&path));
+	p_unlink(git_str_cstr(&path));
 
 cleanup:
 	git_mempack_reset(mempack);
 	git_indexer_free(indexer);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	return 0;
 }

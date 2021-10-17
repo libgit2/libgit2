@@ -137,12 +137,12 @@ git_filter *create_compress_filter(void)
 
 static void writefile(const char *filename, size_t numchunks)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	char buf[CHUNKSIZE];
 	size_t i = 0, j = 0;
 	int fd;
 
-	cl_git_pass(git_buf_joinpath(&path, "empty_standard_repo", filename));
+	cl_git_pass(git_str_joinpath(&path, "empty_standard_repo", filename));
 
 	fd = p_open(path.ptr, O_RDWR|O_CREAT, 0666);
 	cl_assert(fd >= 0);
@@ -156,7 +156,7 @@ static void writefile(const char *filename, size_t numchunks)
 	}
 	p_close(fd);
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }
 
 static void test_stream(size_t numchunks)

@@ -445,15 +445,15 @@ cpxtDQQMGYFpXK/71stq\n\
 
 	cl_git_pass(git_commit_header_field(&buf, commit, "tree"));
 	cl_assert_equal_s("6b79e22d69bf46e289df0345a14ca059dfc9bdf6", buf.ptr);
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 
 	cl_git_pass(git_commit_header_field(&buf, commit, "parent"));
 	cl_assert_equal_s("34734e478d6cf50c27c9d69026d93974d052c454", buf.ptr);
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 
 	cl_git_pass(git_commit_header_field(&buf, commit, "gpgsig"));
 	cl_assert_equal_s(gpgsig, buf.ptr);
-	git_buf_clear(&buf);
+	git_buf_dispose(&buf);
 
 	cl_git_fail_with(GIT_ENOTFOUND, git_commit_header_field(&buf, commit, "awesomeness"));
 	cl_git_fail_with(GIT_ENOTFOUND, git_commit_header_field(&buf, commit, "par"));
@@ -513,7 +513,6 @@ committer Some User <someuser@gmail.com> 1454537944 -0700\n\
 \n\
 corrupt signature\n";
 
-
 	cl_git_pass(git_repository_odb__weakptr(&odb, g_repo));
 	cl_git_pass(git_odb_write(&commit_id, odb, passing_commit_cases[4], strlen(passing_commit_cases[4]), GIT_OBJECT_COMMIT));
 
@@ -521,12 +520,15 @@ corrupt signature\n";
 	cl_assert_equal_s(gpgsig, signature.ptr);
 	cl_assert_equal_s(data, signed_data.ptr);
 
-	git_buf_clear(&signature);
-	git_buf_clear(&signed_data);
+	git_buf_dispose(&signature);
+	git_buf_dispose(&signed_data);
 
 	cl_git_pass(git_commit_extract_signature(&signature, &signed_data, g_repo, &commit_id, "gpgsig"));
 	cl_assert_equal_s(gpgsig, signature.ptr);
 	cl_assert_equal_s(data, signed_data.ptr);
+
+	git_buf_dispose(&signature);
+	git_buf_dispose(&signed_data);
 
 	/* Try to parse a tree */
 	cl_git_pass(git_oid_fromstr(&commit_id, "45dd856fdd4d89b884c340ba0e047752d9b085d6"));
@@ -539,15 +541,11 @@ corrupt signature\n";
 	cl_assert_equal_i(GIT_ERROR_OBJECT, git_error_last()->klass);
 
 	/* Parse the commit with a single-line signature */
-	git_buf_clear(&signature);
-	git_buf_clear(&signed_data);
 	cl_git_pass(git_odb_write(&commit_id, odb, oneline_signature, strlen(oneline_signature), GIT_OBJECT_COMMIT));
 	cl_git_pass(git_commit_extract_signature(&signature, &signed_data, g_repo, &commit_id, NULL));
 	cl_assert_equal_s("bad", signature.ptr);
 	cl_assert_equal_s(oneline_data, signed_data.ptr);
 
-
 	git_buf_dispose(&signature);
 	git_buf_dispose(&signed_data);
-
 }

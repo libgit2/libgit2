@@ -1,5 +1,4 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
 #include "posix.h"
 #include "index.h"
 
@@ -36,10 +35,10 @@ void test_index_filemodes__read(void)
 static void replace_file_with_mode(
 	const char *filename, const char *backup, unsigned int create_mode)
 {
-	git_buf path = GIT_BUF_INIT, content = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT, content = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_joinpath(&path, "filemodes", filename));
-	cl_git_pass(git_buf_printf(&content, "%s as %08u (%d)",
+	cl_git_pass(git_str_joinpath(&path, "filemodes", filename));
+	cl_git_pass(git_str_printf(&content, "%s as %08u (%d)",
 		filename, create_mode, rand()));
 
 	cl_git_pass(p_rename(path.ptr, backup));
@@ -47,8 +46,8 @@ static void replace_file_with_mode(
 		path.ptr, content.ptr, content.size,
 		O_WRONLY|O_CREAT|O_TRUNC, create_mode);
 
-	git_buf_dispose(&path);
-	git_buf_dispose(&content);
+	git_str_dispose(&path);
+	git_str_dispose(&content);
 }
 
 #define add_and_check_mode(I,F,X) add_and_check_mode_(I,F,X,__FILE__,__func__,__LINE__)

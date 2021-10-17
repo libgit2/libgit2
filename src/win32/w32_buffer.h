@@ -8,13 +8,12 @@
 #define INCLUDE_win32_w32_buffer_h__
 
 #include "common.h"
-
-#include "../buffer.h"
+#include "str.h"
 
 /**
  * Convert a wide character string to UTF-8 and append the results to the
  * buffer.
  */
-int git_buf_put_w(git_buf *buf, const wchar_t *string_w, size_t len_w);
+int git_str_put_w(git_str *buf, const wchar_t *string_w, size_t len_w);
 
 #endif

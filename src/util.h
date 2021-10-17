@@ -7,15 +7,11 @@
 #ifndef INCLUDE_util_h__
 #define INCLUDE_util_h__
 
-#include "common.h"
-
 #ifndef GIT_WIN32
 # include <ctype.h>
 #endif
 
-#include "git2/buffer.h"
-
-#include "buffer.h"
+#include "str.h"
 #include "common.h"
 #include "strnlen.h"
 #include "thread.h"
@@ -402,7 +398,7 @@ GIT_INLINE(double) git__timer(void)
 
 #endif
 
-extern int git__getenv(git_buf *out, const char *name);
+extern int git__getenv(git_str *out, const char *name);
 
 extern int git__online_cpus(void);
 

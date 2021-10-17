@@ -117,13 +117,13 @@ int git_attr_file__load(
 	git_tree *tree = NULL;
 	git_tree_entry *tree_entry = NULL;
 	git_blob *blob = NULL;
-	git_buf content = GIT_BUF_INIT;
+	git_str content = GIT_STR_INIT;
 	const char *content_str;
 	git_attr_file *file;
 	struct stat st;
 	bool nonexistent = false;
 	int bom_offset;
-	git_buf_bom_t bom;
+	git_str_bom_t bom;
 	git_oid id;
 	git_object_size_t blobsize;
 
@@ -143,7 +143,7 @@ int git_attr_file__load(
 		blobsize = git_blob_rawsize(blob);
 
 		GIT_ERROR_CHECK_BLOBSIZE(blobsize);
-		git_buf_put(&content, git_blob_rawcontent(blob), (size_t)blobsize);
+		git_str_put(&content, git_blob_rawcontent(blob), (size_t)blobsize);
 		break;
 	}
 	case GIT_ATTR_FILE_SOURCE_FILE: {
@@ -198,7 +198,7 @@ int git_attr_file__load(
 		blobsize = git_blob_rawsize(blob);
 
 		GIT_ERROR_CHECK_BLOBSIZE(blobsize);
-		if ((error = git_buf_put(&content,
+		if ((error = git_str_put(&content,
 			git_blob_rawcontent(blob), (size_t)blobsize)) < 0)
 			goto cleanup;
 
@@ -213,10 +213,10 @@ int git_attr_file__load(
 		goto cleanup;
 
 	/* advance over a UTF8 BOM */
-	content_str = git_buf_cstr(&content);
-	bom_offset = git_buf_detect_bom(&bom, &content);
+	content_str = git_str_cstr(&content);
+	bom_offset = git_str_detect_bom(&bom, &content);
 
-	if (bom == GIT_BUF_BOM_UTF8)
+	if (bom == GIT_STR_BOM_UTF8)
 		content_str += bom_offset;
 
 	/* store the key of the attr_reader; don't bother with cache
@@ -250,7 +250,7 @@ cleanup:
 	git_tree_entry_free(tree_entry);
 	git_tree_free(tree);
 	git_commit_free(commit);
-	git_buf_dispose(&content);
+	git_str_dispose(&content);
 
 	return error;
 }
@@ -435,7 +435,7 @@ int git_attr_file__lookup_one(
 
 int git_attr_file__load_standalone(git_attr_file **out, const char *path)
 {
-	git_buf content = GIT_BUF_INIT;
+	git_str content = GIT_STR_INIT;
 	git_attr_file_source source = { GIT_ATTR_FILE_SOURCE_FILE };
 	git_attr_file *file = NULL;
 	int error;
@@ -457,7 +457,7 @@ int git_attr_file__load_standalone(git_attr_file **out, const char *path)
 out:
 	if (error < 0)
 		git_attr_file__free(file);
-	git_buf_dispose(&content);
+	git_str_dispose(&content);
 
 	return error;
 }
@@ -558,7 +558,7 @@ int git_attr_path__init(
 	ssize_t root;
 
 	/* build full path as best we can */
-	git_buf_init(&info->full, 0);
+	git_str_init(&info->full, 0);
 
 	if (git_path_join_unrooted(&info->full, path, base, &root) < 0)
 		return -1;
@@ -605,7 +605,7 @@ int git_attr_path__init(
 
 void git_attr_path__free(git_attr_path *info)
 {
-	git_buf_dispose(&info->full);
+	git_str_dispose(&info->full);
 	info->path = NULL;
 	info->basename = NULL;
 }
@@ -1020,8 +1020,8 @@ void git_attr_session__free(git_attr_session *session)
 	if (!session)
 		return;
 
-	git_buf_dispose(&session->sysdir);
-	git_buf_dispose(&session->tmp);
+	git_str_dispose(&session->sysdir);
+	git_str_dispose(&session->tmp);
 
 	memset(session, 0, sizeof(git_attr_session));
 }

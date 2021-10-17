@@ -25,10 +25,10 @@ static int write_revert_head(
 	const char *commit_oidstr)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
-	git_buf file_path = GIT_BUF_INIT;
+	git_str file_path = GIT_STR_INIT;
 	int error = 0;
 
-	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_REVERT_HEAD_FILE)) >= 0 &&
+	if ((error = git_str_joinpath(&file_path, repo->gitdir, GIT_REVERT_HEAD_FILE)) >= 0 &&
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_REVERT_FILE_MODE)) >= 0 &&
 		(error = git_filebuf_printf(&file, "%s\n", commit_oidstr)) >= 0)
 		error = git_filebuf_commit(&file);
@@ -36,7 +36,7 @@ static int write_revert_head(
 	if (error < 0)
 		git_filebuf_cleanup(&file);
 
-	git_buf_dispose(&file_path);
+	git_str_dispose(&file_path);
 
 	return error;
 }
@@ -47,10 +47,10 @@ static int write_merge_msg(
 	const char *commit_msgline)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
-	git_buf file_path = GIT_BUF_INIT;
+	git_str file_path = GIT_STR_INIT;
 	int error = 0;
 
-	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_MERGE_MSG_FILE)) < 0 ||
+	if ((error = git_str_joinpath(&file_path, repo->gitdir, GIT_MERGE_MSG_FILE)) < 0 ||
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_REVERT_FILE_MODE)) < 0 ||
 		(error = git_filebuf_printf(&file, "Revert \"%s\"\n\nThis reverts commit %s.\n",
 		commit_msgline, commit_oidstr)) < 0)
@@ -62,7 +62,7 @@ cleanup:
 	if (error < 0)
 		git_filebuf_cleanup(&file);
 
-	git_buf_dispose(&file_path);
+	git_str_dispose(&file_path);
 
 	return error;
 }
@@ -178,7 +178,7 @@ int git_revert(
 	git_commit *our_commit = NULL;
 	char commit_oidstr[GIT_OID_HEXSZ + 1];
 	const char *commit_msg;
-	git_buf their_label = GIT_BUF_INIT;
+	git_str their_label = GIT_STR_INIT;
 	git_index *index = NULL;
 	git_indexwriter indexwriter = GIT_INDEXWRITER_INIT;
 	int error;
@@ -199,8 +199,8 @@ int git_revert(
 		goto on_error;
 	}
 
-	if ((error = git_buf_printf(&their_label, "parent of %.7s... %s", commit_oidstr, commit_msg)) < 0 ||
-		(error = revert_normalize_opts(repo, &opts, given_opts, git_buf_cstr(&their_label))) < 0 ||
+	if ((error = git_str_printf(&their_label, "parent of %.7s... %s", commit_oidstr, commit_msg)) < 0 ||
+		(error = revert_normalize_opts(repo, &opts, given_opts, git_str_cstr(&their_label))) < 0 ||
 		(error = git_indexwriter_init_for_operation(&indexwriter, repo, &opts.checkout_opts.checkout_strategy)) < 0 ||
 		(error = write_revert_head(repo, commit_oidstr)) < 0 ||
 		(error = write_merge_msg(repo, commit_oidstr, commit_msg)) < 0 ||
@@ -223,7 +223,7 @@ done:
 	git_index_free(index);
 	git_commit_free(our_commit);
 	git_reference_free(our_ref);
-	git_buf_dispose(&their_label);
+	git_str_dispose(&their_label);
 
 	return error;
 }

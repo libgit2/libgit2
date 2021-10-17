@@ -13,25 +13,25 @@ void make_head_unborn(git_repository* repo, const char *target)
 
 void delete_head(git_repository* repo)
 {
-	git_buf head_path = GIT_BUF_INIT;
+	git_str head_path = GIT_STR_INIT;
 
-	cl_git_pass(git_buf_joinpath(&head_path, git_repository_path(repo), GIT_HEAD_FILE));
-	cl_git_pass(p_unlink(git_buf_cstr(&head_path)));
+	cl_git_pass(git_str_joinpath(&head_path, git_repository_path(repo), GIT_HEAD_FILE));
+	cl_git_pass(p_unlink(git_str_cstr(&head_path)));
 
-	git_buf_dispose(&head_path);
+	git_str_dispose(&head_path);
 }
 
 void create_tmp_global_config(const char *dirname, const char *key, const char *val)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	git_config *config;
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH,
 		GIT_CONFIG_LEVEL_GLOBAL, dirname));
 	cl_must_pass(p_mkdir(dirname, 0777));
-	cl_git_pass(git_buf_joinpath(&path, dirname, ".gitconfig"));
+	cl_git_pass(git_str_joinpath(&path, dirname, ".gitconfig"));
 	cl_git_pass(git_config_open_ondisk(&config, path.ptr));
 	cl_git_pass(git_config_set_string(config, key, val));
 	git_config_free(config);
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 }

@@ -22,15 +22,15 @@ void test_apply_fromdiff__cleanup(void)
 }
 
 static int apply_gitbuf(
-	const git_buf *old,
+	const git_str *old,
 	const char *oldname,
-	const git_buf *new,
+	const git_str *new,
 	const char *newname,
 	const char *patch_expected,
 	const git_diff_options *diff_opts)
 {
 	git_patch *patch;
-	git_buf result = GIT_BUF_INIT;
+	git_str result = GIT_STR_INIT;
 	git_buf patchbuf = GIT_BUF_INIT;
 	char *filename;
 	unsigned int mode;
@@ -62,7 +62,7 @@ static int apply_gitbuf(
 	}
 
 	git__free(filename);
-	git_buf_dispose(&result);
+	git_str_dispose(&result);
 	git_buf_dispose(&patchbuf);
 	git_patch_free(patch);
 
@@ -77,7 +77,7 @@ static int apply_buf(
 	const char *patch_expected,
 	const git_diff_options *diff_opts)
 {
-	git_buf o = GIT_BUF_INIT, n = GIT_BUF_INIT,
+	git_str o = GIT_STR_INIT, n = GIT_STR_INIT,
 		*optr = NULL, *nptr = NULL;
 
 	if (old) {
@@ -275,7 +275,7 @@ void test_apply_fromdiff__no_change(void)
 
 void test_apply_fromdiff__binary_add(void)
 {
-	git_buf newfile = GIT_BUF_INIT;
+	git_str newfile = GIT_STR_INIT;
 
 	newfile.ptr = FILE_BINARY_DELTA_MODIFIED;
 	newfile.size = FILE_BINARY_DELTA_MODIFIED_LEN;
@@ -288,7 +288,7 @@ void test_apply_fromdiff__binary_add(void)
 
 void test_apply_fromdiff__binary_no_change(void)
 {
-	git_buf original = GIT_BUF_INIT;
+	git_str original = GIT_STR_INIT;
 
 	original.ptr = FILE_BINARY_DELTA_ORIGINAL;
 	original.size = FILE_BINARY_DELTA_ORIGINAL_LEN;
@@ -301,7 +301,7 @@ void test_apply_fromdiff__binary_no_change(void)
 
 void test_apply_fromdiff__binary_change_delta(void)
 {
-	git_buf original = GIT_BUF_INIT, modified = GIT_BUF_INIT;
+	git_str original = GIT_STR_INIT, modified = GIT_STR_INIT;
 
 	original.ptr = FILE_BINARY_DELTA_ORIGINAL;
 	original.size = FILE_BINARY_DELTA_ORIGINAL_LEN;
@@ -317,7 +317,7 @@ void test_apply_fromdiff__binary_change_delta(void)
 
 void test_apply_fromdiff__binary_change_literal(void)
 {
-	git_buf original = GIT_BUF_INIT, modified = GIT_BUF_INIT;
+	git_str original = GIT_STR_INIT, modified = GIT_STR_INIT;
 
 	original.ptr = FILE_BINARY_LITERAL_ORIGINAL;
 	original.size = FILE_BINARY_LITERAL_ORIGINAL_LEN;
@@ -333,7 +333,7 @@ void test_apply_fromdiff__binary_change_literal(void)
 
 void test_apply_fromdiff__binary_delete(void)
 {
-	git_buf original = GIT_BUF_INIT;
+	git_str original = GIT_STR_INIT;
 
 	original.ptr = FILE_BINARY_DELTA_MODIFIED;
 	original.size = FILE_BINARY_DELTA_MODIFIED_LEN;
@@ -346,7 +346,7 @@ void test_apply_fromdiff__binary_delete(void)
 
 void test_apply_fromdiff__patching_correctly_truncates_source(void)
 {
-	git_buf original = GIT_BUF_INIT, patched = GIT_BUF_INIT;
+	git_str original = GIT_STR_INIT, patched = GIT_STR_INIT;
 	git_patch *patch;
 	unsigned int mode;
 	char *path;
@@ -371,8 +371,8 @@ void test_apply_fromdiff__patching_correctly_truncates_source(void)
 	cl_git_pass(git_apply__patch(&patched, &path, &mode,
 				     "foo\nbar\n", 7, patch, NULL));
 
-	git_buf_dispose(&original);
-	git_buf_dispose(&patched);
+	git_str_dispose(&original);
+	git_str_dispose(&patched);
 	git_patch_free(patch);
 	git__free(path);
 }

@@ -3,7 +3,7 @@
 #include "futils.h"
 #include <ctype.h>
 
-static git_buf path = GIT_BUF_INIT;
+static git_str path = GIT_STR_INIT;
 
 void test_repo_config__initialize(void)
 {
@@ -11,7 +11,7 @@ void test_repo_config__initialize(void)
 	cl_git_pass(cl_rename(
 		"empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
-	git_buf_clear(&path);
+	git_str_clear(&path);
 
 	cl_must_pass(p_mkdir("alternate", 0777));
 	cl_git_pass(git_path_prettify(&path, "alternate", NULL));
@@ -21,7 +21,7 @@ void test_repo_config__cleanup(void)
 {
 	cl_sandbox_set_search_path_defaults();
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	cl_git_pass(
 		git_futils_rmdir_r("alternate", NULL, GIT_RMDIR_REMOVE_FILES));
@@ -60,7 +60,7 @@ void test_repo_config__can_open_missing_global_with_separators(void)
 	git_repository *repo;
 	git_config *config, *global;
 
-	cl_git_pass(git_buf_printf(
+	cl_git_pass(git_str_printf(
 		&path, "%c%s", GIT_PATH_LIST_SEPARATOR, "dummy"));
 
 	cl_git_pass(git_libgit2_opts(
@@ -70,7 +70,7 @@ void test_repo_config__can_open_missing_global_with_separators(void)
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, path.ptr));
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
 	cl_git_pass(git_repository_config(&config, repo));
@@ -115,7 +115,7 @@ void test_repo_config__read_with_no_configs_at_all(void)
 	cl_sandbox_set_search_path_defaults();
 
 	cl_must_pass(p_mkdir("alternate/1", 0777));
-	cl_git_pass(git_buf_joinpath(&path, path.ptr, "1"));
+	cl_git_pass(git_str_joinpath(&path, path.ptr, "1"));
 	cl_git_rewritefile("alternate/1/gitconfig", "[core]\n\tabbrev = 10\n");
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, path.ptr));

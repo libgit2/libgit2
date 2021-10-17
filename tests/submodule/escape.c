@@ -33,17 +33,17 @@ void test_submodule_escape__from_gitdir(void)
 {
 	int foundit;
 	git_submodule *sm;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	unsigned int sm_location;
 
 	g_repo = setup_fixture_submodule_simple();
 
-	cl_git_pass(git_buf_joinpath(&buf, git_repository_workdir(g_repo), ".gitmodules"));
+	cl_git_pass(git_str_joinpath(&buf, git_repository_workdir(g_repo), ".gitmodules"));
 	cl_git_rewritefile(buf.ptr,
 			   "[submodule \"" EVIL_SM_NAME "\"]\n"
 			   "    path = testrepo\n"
 			   "    url = ../testrepo.git\n");
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	/* Find it all the different ways we know about it */
 	foundit = 0;
@@ -67,17 +67,17 @@ void test_submodule_escape__from_gitdir_windows(void)
 {
 	int foundit;
 	git_submodule *sm;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	unsigned int sm_location;
 
 	g_repo = setup_fixture_submodule_simple();
 
-	cl_git_pass(git_buf_joinpath(&buf, git_repository_workdir(g_repo), ".gitmodules"));
+	cl_git_pass(git_str_joinpath(&buf, git_repository_workdir(g_repo), ".gitmodules"));
 	cl_git_rewritefile(buf.ptr,
 			   "[submodule \"" EVIL_SM_NAME_WINDOWS "\"]\n"
 			   "    path = testrepo\n"
 			   "    url = ../testrepo.git\n");
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 
 	/* Find it all the different ways we know about it */
 	foundit = 0;

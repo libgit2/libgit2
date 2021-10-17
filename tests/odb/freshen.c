@@ -19,7 +19,7 @@ void test_odb_freshen__cleanup(void)
 
 static void set_time_wayback(struct stat *out, const char *fn)
 {
-	git_buf fullpath = GIT_BUF_INIT;
+	git_str fullpath = GIT_STR_INIT;
 	struct p_timeval old[2];
 
 	old[0].tv_sec = 1234567890;
@@ -27,11 +27,11 @@ static void set_time_wayback(struct stat *out, const char *fn)
 	old[1].tv_sec = 1234567890;
 	old[1].tv_usec = 0;
 
-	git_buf_joinpath(&fullpath, "testrepo.git/objects", fn);
+	git_str_joinpath(&fullpath, "testrepo.git/objects", fn);
 
-	cl_must_pass(p_utimes(git_buf_cstr(&fullpath), old));
-	cl_must_pass(p_lstat(git_buf_cstr(&fullpath), out));
-	git_buf_dispose(&fullpath);
+	cl_must_pass(p_utimes(git_str_cstr(&fullpath), old));
+	cl_must_pass(p_lstat(git_str_cstr(&fullpath), out));
+	git_str_dispose(&fullpath);
 }
 
 #define LOOSE_STR     "my new file\n"

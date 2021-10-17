@@ -56,7 +56,7 @@ void test_object_raw_hash__hash_buffer_in_single_call(void)
 void test_object_raw_hash__hash_vector(void)
 {
 	git_oid id1, id2;
-	git_buf_vec vec[2];
+	git_str_vec vec[2];
 
 	cl_git_pass(git_oid_fromstr(&id1, hello_id));
 

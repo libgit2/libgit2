@@ -65,7 +65,7 @@ void test_rebase_submodule__init_untracked(void)
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
-	git_buf untracked_path = GIT_BUF_INIT;
+	git_str untracked_path = GIT_STR_INIT;
 	FILE *fp;
 	git_submodule *submodule;
 
@@ -78,11 +78,11 @@ void test_rebase_submodule__init_untracked(void)
 	cl_git_pass(git_submodule_lookup(&submodule, repo, "my-submodule"));
 	cl_git_pass(git_submodule_update(submodule, 1, NULL));
 
-	git_buf_printf(&untracked_path, "%s/my-submodule/untracked", git_repository_workdir(repo));
-	fp = fopen(git_buf_cstr(&untracked_path), "w");
+	git_str_printf(&untracked_path, "%s/my-submodule/untracked", git_repository_workdir(repo));
+	fp = fopen(git_str_cstr(&untracked_path), "w");
 	fprintf(fp, "An untracked file in a submodule should not block a rebase\n");
 	fclose(fp);
-	git_buf_dispose(&untracked_path);
+	git_str_dispose(&untracked_path);
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
 
