@@ -3,7 +3,7 @@ FIND_PACKAGE(PythonInterp)
 
 IF(NOT PYTHONINTERP_FOUND)
   MESSAGE(FATAL_ERROR "Could not find a python interpeter, which is needed to build the tests. "
-    "Make sure python is available, or pass -DBUILD_CLAR=OFF to skip building the tests")
+    "Make sure python is available, or pass -DBUILD_TESTS=OFF to skip building the tests")
 ENDIF()
 
 SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/resources/")
@@ -39,26 +39,26 @@ SET_SOURCE_FILES_PROPERTIES(
 INCLUDE_DIRECTORIES(${LIBGIT2_INCLUDES})
 INCLUDE_DIRECTORIES(SYSTEM ${LIBGIT2_SYSTEM_INCLUDES})
 
-ADD_EXECUTABLE(libgit2_clar ${SRC_CLAR} ${SRC_TEST} ${LIBGIT2_OBJECTS})
+ADD_EXECUTABLE(libgit2_tests ${SRC_CLAR} ${SRC_TEST} ${LIBGIT2_OBJECTS})
 
-SET_TARGET_PROPERTIES(libgit2_clar PROPERTIES C_STANDARD 90)
-SET_TARGET_PROPERTIES(libgit2_clar PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
+SET_TARGET_PROPERTIES(libgit2_tests PROPERTIES C_STANDARD 90)
+SET_TARGET_PROPERTIES(libgit2_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
 
-TARGET_INCLUDE_DIRECTORIES(libgit2_clar PRIVATE ../src PUBLIC ../include)
-TARGET_LINK_LIBRARIES(libgit2_clar ${LIBGIT2_LIBS})
-IDE_SPLIT_SOURCES(libgit2_clar)
+TARGET_INCLUDE_DIRECTORIES(libgit2_tests PRIVATE ../src PUBLIC ../include)
+TARGET_LINK_LIBRARIES(libgit2_tests ${LIBGIT2_LIBS})
+IDE_SPLIT_SOURCES(libgit2_tests)
 
 IF (MSVC_IDE)
 	# Precompiled headers
-	SET_TARGET_PROPERTIES(libgit2_clar PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
+	SET_TARGET_PROPERTIES(libgit2_tests PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
 	SET_SOURCE_FILES_PROPERTIES("precompiled.c" COMPILE_FLAGS "/Ycprecompiled.h")
 ENDIF ()
 
 FUNCTION(ADD_CLAR_TEST name)
 	IF (NOT USE_LEAK_CHECKER STREQUAL "OFF")
-		ADD_TEST(${name} "${libgit2_SOURCE_DIR}/script/${USE_LEAK_CHECKER}.sh" "${libgit2_BINARY_DIR}/libgit2_clar" ${ARGN})
+		ADD_TEST(${name} "${libgit2_SOURCE_DIR}/script/${USE_LEAK_CHECKER}.sh" "${libgit2_BINARY_DIR}/libgit2_tests" ${ARGN})
 	ELSE()
-		ADD_TEST(${name} "${libgit2_BINARY_DIR}/libgit2_clar" ${ARGN})
+		ADD_TEST(${name} "${libgit2_BINARY_DIR}/libgit2_tests" ${ARGN})
 	ENDIF()
 ENDFUNCTION(ADD_CLAR_TEST)
 

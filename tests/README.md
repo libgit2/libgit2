@@ -11,7 +11,7 @@ https://github.com/vmg/clar
 
 * Make sure you actually build the tests by setting:
 
-        cmake -DBUILD_CLAR=ON build/
+        cmake -DBUILD_TESTS=ON build/
 
 * Test:
 
@@ -32,7 +32,7 @@ These are automatically run as part of CI, but if you want to check locally:
 Uses [`valgrind`](http://www.valgrind.org/):
 
 ```console
-$ cmake -DBUILD_CLAR=ON -DVALGRIND=ON ..
+$ cmake -DBUILD_TESTS=ON -DVALGRIND=ON ..
 $ cmake --build .
 $ valgrind --leak-check=full --show-reachable=yes --num-callers=50 --suppressions=../libgit2_clar.supp \
   ./libgit2_clar
