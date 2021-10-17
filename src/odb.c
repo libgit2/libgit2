@@ -136,7 +136,7 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 	vec[1].data = obj->data;
 	vec[1].len = obj->len;
 
-	return git_hash_vec(id, vec, 2);
+	return git_hash_vec(id->id, vec, 2, GIT_HASH_ALGORITHM_SHA1);
 }
 
 
@@ -210,7 +210,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_object_t type)
 		return -1;
 	}
 
-	if ((error = git_hash_ctx_init(&ctx)) < 0)
+	if ((error = git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA1)) < 0)
 		return error;
 
 	if ((error = git_odb__format_object_header(&hdr_len, hdr,
@@ -237,7 +237,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_object_t type)
 		goto done;
 	}
 
-	error = git_hash_final(out, &ctx);
+	error = git_hash_final(out->id, &ctx);
 
 done:
 	git_hash_ctx_cleanup(&ctx);
@@ -1561,7 +1561,7 @@ int git_odb_open_wstream(
 	ctx = git__malloc(sizeof(git_hash_ctx));
 	GIT_ERROR_CHECK_ALLOC(ctx);
 
-	if ((error = git_hash_ctx_init(ctx)) < 0 ||
+	if ((error = git_hash_ctx_init(ctx, GIT_HASH_ALGORITHM_SHA1)) < 0 ||
 		(error = hash_header(ctx, size, type)) < 0)
 		goto done;
 
@@ -1607,7 +1607,7 @@ int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
 		return git_odb_stream__invalid_length(stream,
 			"stream_finalize_write()");
 
-	git_hash_final(out, stream->hash_ctx);
+	git_hash_final(out->id, stream->hash_ctx);
 
 	if (git_odb__freshen(stream->backend->odb, out))
 		return 0;

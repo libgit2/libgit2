@@ -141,7 +141,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	pb->repo = repo;
 	pb->nr_threads = 1; /* do not spawn any thread by default */
 
-	if (git_hash_ctx_init(&pb->ctx) < 0 ||
+	if (git_hash_ctx_init(&pb->ctx, GIT_HASH_ALGORITHM_SHA1) < 0 ||
 		git_zstream_init(&pb->zstream, GIT_ZSTREAM_DEFLATE) < 0 ||
 		git_repository_odb(&pb->odb, repo) < 0 ||
 		packbuilder_config(pb) < 0)
@@ -664,7 +664,7 @@ static int write_pack(git_packbuilder *pb,
 		pb->nr_remaining -= pb->nr_written;
 	} while (pb->nr_remaining && i < pb->nr_objects);
 
-	if ((error = git_hash_final(&entry_oid, &pb->ctx)) < 0)
+	if ((error = git_hash_final(entry_oid.id, &pb->ctx)) < 0)
 		goto done;
 
 	error = write_cb(entry_oid.id, GIT_OID_RAWSZ, cb_data);

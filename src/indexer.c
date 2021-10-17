@@ -152,8 +152,8 @@ int git_indexer_new(
 	idx->mode = mode ? mode : GIT_PACK_FILE_MODE;
 	git_buf_init(&idx->entry_data, 0);
 
-	if ((error = git_hash_ctx_init(&idx->hash_ctx)) < 0 ||
-	    (error = git_hash_ctx_init(&idx->trailer)) < 0 ||
+	if ((error = git_hash_ctx_init(&idx->hash_ctx, GIT_HASH_ALGORITHM_SHA1)) < 0 ||
+	    (error = git_hash_ctx_init(&idx->trailer, GIT_HASH_ALGORITHM_SHA1)) < 0 ||
 	    (error = git_oidmap_new(&idx->expected_oids)) < 0)
 		goto cleanup;
 
@@ -426,7 +426,7 @@ static int store_object(git_indexer *idx)
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
 	GIT_ERROR_CHECK_ALLOC(pentry);
 
-	if (git_hash_final(&oid, &idx->hash_ctx)) {
+	if (git_hash_final(oid.id, &idx->hash_ctx)) {
 		git__free(pentry);
 		goto on_error;
 	}
@@ -1183,7 +1183,7 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 	git_oid_fromraw(&file_hash, packfile_trailer);
 	git_mwindow_close(&w);
 
-	git_hash_final(&trailer_hash, &idx->trailer);
+	git_hash_final(trailer_hash.id, &idx->trailer);
 	if (git_oid_cmp(&file_hash, &trailer_hash)) {
 		git_error_set(GIT_ERROR_INDEXER, "packfile trailer mismatch");
 		return -1;
@@ -1204,7 +1204,7 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 		if (update_header_and_rehash(idx, stats) < 0)
 			return -1;
 
-		git_hash_final(&trailer_hash, &idx->trailer);
+		git_hash_final(trailer_hash.id, &idx->trailer);
 		write_at(idx, &trailer_hash, idx->pack->mwf.size - GIT_OID_RAWSZ, GIT_OID_RAWSZ);
 	}
 

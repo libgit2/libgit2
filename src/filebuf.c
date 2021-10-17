@@ -305,7 +305,7 @@ int git_filebuf_open_withsize(git_filebuf *file, const char *path, int flags, mo
 	if (flags & GIT_FILEBUF_HASH_CONTENTS) {
 		file->compute_digest = 1;
 
-		if (git_hash_ctx_init(&file->digest) < 0)
+		if (git_hash_ctx_init(&file->digest, GIT_HASH_ALGORITHM_SHA1) < 0)
 			goto cleanup;
 	}
 
@@ -397,7 +397,7 @@ int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 	if (verify_last_error(file) < 0)
 		return -1;
 
-	git_hash_final(oid, &file->digest);
+	git_hash_final(oid->id, &file->digest);
 	git_hash_ctx_cleanup(&file->digest);
 	file->compute_digest = 0;
 

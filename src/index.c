@@ -2648,7 +2648,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 	/* Precalculate the SHA1 of the files's contents -- we'll match it to
 	 * the provided SHA1 in the footer */
-	git_hash_buf(&checksum_calculated, buffer, buffer_size - INDEX_FOOTER_SIZE);
+	git_hash_buf(checksum_calculated.id, buffer, buffer_size - INDEX_FOOTER_SIZE, GIT_HASH_ALGORITHM_SHA1);
 
 	/* Parse header */
 	if ((error = read_header(&header, buffer)) < 0)

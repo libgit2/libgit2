@@ -1023,7 +1023,7 @@ static int loose_backend__readstream(
 	hash_ctx = git__malloc(sizeof(git_hash_ctx));
 	GIT_ERROR_CHECK_ALLOC(hash_ctx);
 
-	if ((error = git_hash_ctx_init(hash_ctx)) < 0 ||
+	if ((error = git_hash_ctx_init(hash_ctx, GIT_HASH_ALGORITHM_SHA1)) < 0 ||
 		(error = git_futils_mmap_ro_file(&stream->map, object_path.ptr)) < 0 ||
 		(error = git_zstream_init(&stream->zstream, GIT_ZSTREAM_INFLATE)) < 0)
 		goto done;

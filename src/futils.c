@@ -177,13 +177,16 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 }
 
 int git_futils_readbuffer_updated(
-	git_buf *out, const char *path, git_oid *checksum, int *updated)
+	git_buf *out,
+	const char *path,
+	unsigned char checksum[GIT_HASH_SHA1_SIZE],
+	int *updated)
 {
 	int error;
 	git_file fd;
 	struct stat st;
 	git_buf buf = GIT_BUF_INIT;
-	git_oid checksum_new;
+	unsigned char checksum_new[GIT_HASH_SHA1_SIZE];
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(path && *path);
@@ -216,7 +219,7 @@ int git_futils_readbuffer_updated(
 	p_close(fd);
 
 	if (checksum) {
-		if ((error = git_hash_buf(&checksum_new, buf.ptr, buf.size)) < 0) {
+		if ((error = git_hash_buf(checksum_new, buf.ptr, buf.size, GIT_HASH_ALGORITHM_SHA1)) < 0) {
 			git_buf_dispose(&buf);
 			return error;
 		}
@@ -224,7 +227,7 @@ int git_futils_readbuffer_updated(
 		/*
 		 * If we were given a checksum, we only want to use it if it's different
 		 */
-		if (!git_oid__cmp(checksum, &checksum_new)) {
+		if (!memcmp(checksum, checksum_new, GIT_HASH_SHA1_SIZE)) {
 			git_buf_dispose(&buf);
 			if (updated)
 				*updated = 0;
@@ -232,7 +235,7 @@ int git_futils_readbuffer_updated(
 			return 0;
 		}
 
-		git_oid_cpy(checksum, &checksum_new);
+		memcpy(checksum, checksum_new, GIT_HASH_SHA1_SIZE);
 	}
 
 	/*

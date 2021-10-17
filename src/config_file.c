@@ -144,7 +144,7 @@ static int config_file_is_modified(int *modified, config_file *file)
 	if ((error = git_futils_readbuffer(&buf, file->path)) < 0)
 		goto out;
 
-	if ((error = git_hash_buf(&hash, buf.ptr, buf.size)) < 0)
+	if ((error = git_hash_buf(hash.id, buf.ptr, buf.size, GIT_HASH_ALGORITHM_SHA1)) < 0)
 		goto out;
 
 	if (!git_oid_equal(&hash, &file->checksum)) {
@@ -869,7 +869,7 @@ static int config_file_read(
 		goto out;
 
 	git_futils_filestamp_set_from_stat(&file->stamp, &st);
-	if ((error = git_hash_buf(&file->checksum, contents.ptr, contents.size)) < 0)
+	if ((error = git_hash_buf(file->checksum.id, contents.ptr, contents.size, GIT_HASH_ALGORITHM_SHA1)) < 0)
 		goto out;
 
 	if ((error = config_file_read_buffer(entries, repo, file, level, depth,

@@ -212,7 +212,7 @@ int git_midx_parse(
 		return midx_error("wrong index size");
 	git_oid_cpy(&idx->checksum, (git_oid *)(data + trailer_offset));
 
-	if (git_hash_buf(&idx_checksum, data, (size_t)trailer_offset) < 0)
+	if (git_hash_buf(idx_checksum.id, data, (size_t)trailer_offset, GIT_HASH_ALGORITHM_SHA1) < 0)
 		return midx_error("could not calculate signature");
 	if (!git_oid_equal(&idx_checksum, &idx->checksum))
 		return midx_error("index signature mismatch");
@@ -668,7 +668,7 @@ static int midx_write(
 	hash_cb_data.cb_data = cb_data;
 	hash_cb_data.ctx = &ctx;
 
-	error = git_hash_ctx_init(&ctx);
+	error = git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA1);
 	if (error < 0)
 		return error;
 	cb_data = &hash_cb_data;
@@ -819,7 +819,7 @@ static int midx_write(
 		goto cleanup;
 
 	/* Finalize the checksum and write the trailer. */
-	error = git_hash_final(&idx_checksum, &ctx);
+	error = git_hash_final(idx_checksum.id, &ctx);
 	if (error < 0)
 		goto cleanup;
 	error = write_cb((const char *)&idx_checksum, sizeof(idx_checksum), cb_data);

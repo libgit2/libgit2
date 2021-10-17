@@ -13,7 +13,7 @@ void test_core_sha1__cleanup(void)
 	cl_fixture_cleanup(FIXTURE_DIR);
 }
 
-static int sha1_file(git_oid *oid, const char *filename)
+static int sha1_file(git_oid *out, const char *filename)
 {
 	git_hash_ctx ctx;
 	char buf[2048];
@@ -23,7 +23,7 @@ static int sha1_file(git_oid *oid, const char *filename)
 	fd = p_open(filename, O_RDONLY);
 	cl_assert(fd >= 0);
 
-	cl_git_pass(git_hash_ctx_init(&ctx));
+	cl_git_pass(git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA1));
 
 	while ((read_len = p_read(fd, buf, 2048)) > 0)
 		cl_git_pass(git_hash_update(&ctx, buf, (size_t)read_len));
@@ -31,7 +31,7 @@ static int sha1_file(git_oid *oid, const char *filename)
 	cl_assert_equal_i(0, read_len);
 	p_close(fd);
 
-	ret = git_hash_final(oid, &ctx);
+	ret = git_hash_final(out->id, &ctx);
 	git_hash_ctx_cleanup(&ctx);
 
 	return ret;

@@ -107,7 +107,7 @@ void test_odb_largefiles__streamread(void)
 	cl_assert_equal_sz(LARGEFILE_SIZE, len);
 	cl_assert_equal_i(GIT_OBJECT_BLOB, type);
 
-	cl_git_pass(git_hash_ctx_init(&hash));
+	cl_git_pass(git_hash_ctx_init(&hash, GIT_HASH_ALGORITHM_SHA1));
 	cl_git_pass(git_odb__format_object_header(&hdr_len, hdr, sizeof(hdr), len, type));
 
 	cl_git_pass(git_hash_update(&hash, hdr, hdr_len));
@@ -119,7 +119,7 @@ void test_odb_largefiles__streamread(void)
 
 	cl_assert_equal_sz(LARGEFILE_SIZE, total);
 
-	git_hash_final(&read_oid, &hash);
+	git_hash_final(read_oid.id, &hash);
 
 	cl_assert_equal_oid(&oid, &read_oid);
 
