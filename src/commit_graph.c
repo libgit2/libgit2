@@ -1075,7 +1075,7 @@ static int commit_graph_write(
 		commit_time = (uint64_t)packed_commit->commit_time;
 		if (generation > GIT_COMMIT_GRAPH_GENERATION_NUMBER_MAX)
 			generation = GIT_COMMIT_GRAPH_GENERATION_NUMBER_MAX;
-		word = ntohl((uint32_t)((generation << 2) | ((commit_time >> 32ull) & 0x3ull)));
+		word = ntohl((uint32_t)((generation << 2) | ((commit_time >> UINT64_C(32)) & UINT64_C(0x3))));
 		error = git_str_put(&commit_data, (const char *)&word, sizeof(word));
 		if (error < 0)
 			goto cleanup;
