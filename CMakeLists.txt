@@ -1,142 +1,141 @@
 # CMake build script for the libgit2 project
-#
-# Building (out of source build):
-# > mkdir build && cd build
-# > cmake .. [-DSETTINGS=VALUE]
-# > cmake --build .
-#
-# Testing:
-# > ctest -V
-#
-# Install:
-# > cmake --build . --target install
+# See `README.md` for build instructions.
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.5.1)
 
 project(libgit2 VERSION "1.3.0" LANGUAGES C)
 
 # Add find modules to the path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${libgit2_SOURCE_DIR}/cmake/")
 
-INCLUDE(CheckLibraryExists)
-INCLUDE(CheckFunctionExists)
-INCLUDE(CheckSymbolExists)
-INCLUDE(CheckStructHasMember)
-INCLUDE(CheckPrototypeDefinition) # Added in CMake 3.0
-INCLUDE(AddCFlagIfSupported)
-INCLUDE(FindPkgLibraries)
-INCLUDE(FindThreads)
-INCLUDE(FindStatNsec)
-INCLUDE(Findfutimens)
-INCLUDE(GNUInstallDirs)
-INCLUDE(IdeSplitSources)
-INCLUDE(FeatureSummary)
-INCLUDE(EnableWarnings)
+# Modules
 
+include(CheckLibraryExists)
+include(CheckFunctionExists)
+include(CheckSymbolExists)
+include(CheckStructHasMember)
+include(CheckPrototypeDefinition)
+include(AddCFlagIfSupported)
+include(FindPkgLibraries)
+include(FindThreads)
+include(FindStatNsec)
+include(Findfutimens)
+include(GNUInstallDirs)
+include(IdeSplitSources)
+include(FeatureSummary)
+include(EnableWarnings)
+
+#
 # Build options
 #
-OPTION(SONAME				"Set the (SO)VERSION of the target"			 ON)
-OPTION(BUILD_SHARED_LIBS		"Build Shared Library (OFF for Static)"			 ON)
-OPTION(THREADSAFE			"Build libgit2 as threadsafe"				 ON)
-OPTION(BUILD_TESTS			"Build Tests using the Clar suite"			 ON)
-OPTION(BUILD_EXAMPLES			"Build library usage example apps"			OFF)
-OPTION(BUILD_FUZZERS			"Build the fuzz targets"				OFF)
-OPTION(ENABLE_TRACE			"Enables tracing support"				ON)
-OPTION(LIBGIT2_FILENAME			"Name of the produced binary"				OFF)
-OPTION(USE_SSH				"Link with libssh2 to enable SSH support"		 ON)
-OPTION(USE_HTTPS			"Enable HTTPS support. Can be set to a specific backend" ON)
-OPTION(USE_SHA1				"Enable SHA1. Can be set to CollisionDetection(ON)/HTTPS/Generic" ON)
-OPTION(USE_GSSAPI			"Link with libgssapi for SPNEGO auth"			OFF)
-OPTION(USE_STANDALONE_FUZZERS		"Enable standalone fuzzers (compatible with gcc)"	OFF)
-OPTION(USE_LEAK_CHECKER			"Run tests with leak checker"				OFF)
-OPTION(DEBUG_POOL			"Enable debug pool allocator"				OFF)
-OPTION(DEBUG_STRICT_ALLOC		"Enable strict allocator behavior"			OFF)
-OPTION(DEBUG_STRICT_OPEN		"Enable path validation in open"			OFF)
-OPTION(ENABLE_WERROR			"Enable compilation with -Werror"			OFF)
-OPTION(USE_BUNDLED_ZLIB    		"Use the bundled version of zlib. Can be set to one of Bundled(ON)/Chromium. The Chromium option requires a x86_64 processor with SSE4.2 and CLMUL"			OFF)
-   SET(USE_HTTP_PARSER			"" CACHE STRING "Specifies the HTTP Parser implementation; either system or builtin.")
-OPTION(DEPRECATE_HARD			"Do not include deprecated functions in the library"	OFF)
-   SET(REGEX_BACKEND			"" CACHE STRING "Regular expression implementation. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
 
-IF (UNIX)
-	IF (NOT USE_HTTPS)
-	    OPTION(USE_NTLMCLIENT		"Enable NTLM support on Unix."				OFF )
-	ELSE()
-	    OPTION(USE_NTLMCLIENT		"Enable NTLM support on Unix."				ON )
-	ENDIF()
-ENDIF()
+# Optional subsystems
+option(THREADSAFE              "Build libgit2 as threadsafe"                            ON)
+option(BUILD_SHARED_LIBS       "Build Shared Library (OFF for Static)"                  ON)
+option(BUILD_TESTS             "Build Tests using the Clar suite"                       ON)
+option(BUILD_EXAMPLES          "Build library usage example apps"                      OFF)
+option(BUILD_FUZZERS           "Build the fuzz targets"                                OFF)
 
-IF (UNIX AND NOT APPLE)
-	OPTION(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"				OFF)
-ENDIF()
+# Backend selection
+option(USE_SSH                 "Link with libssh2 to enable SSH support"                ON)
+option(USE_HTTPS               "Enable HTTPS support. Can be set to a specific backend" ON)
+option(USE_SHA1                "Enable SHA1. Can be set to CollisionDetection(ON)/HTTPS/Generic" ON)
+option(USE_GSSAPI              "Link with libgssapi for SPNEGO auth"      OFF)
+   set(USE_HTTP_PARSER         "" CACHE STRING "Specifies the HTTP Parser implementation; either system or builtin.")
+   set(REGEX_BACKEND           "" CACHE STRING "Regular expression implementation. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
+option(USE_BUNDLED_ZLIB        "Use the bundled version of zlib. Can be set to one of Bundled(ON)/Chromium. The Chromium option requires a x86_64 processor with SSE4.2 and CLMUL" OFF)
 
-IF (APPLE)
-	OPTION(USE_ICONV		"Link with and use iconv library"			 ON)
-ENDIF()
+# Debugging options
+option(USE_LEAK_CHECKER        "Run tests with leak checker"                           OFF)
+option(USE_STANDALONE_FUZZERS  "Enable standalone fuzzers (compatible with gcc)"       OFF)
+option(DEBUG_POOL              "Enable debug pool allocator"                           OFF)
+option(DEBUG_STRICT_ALLOC      "Enable strict allocator behavior"                      OFF)
+option(DEBUG_STRICT_OPEN       "Enable path validation in open"                        OFF)
 
-IF(MSVC)
+# Output options
+option(SONAME                  "Set the (SO)VERSION of the target"                      ON)
+option(LIBGIT2_FILENAME        "Name of the produced binary"                           OFF)
+option(DEPRECATE_HARD          "Do not include deprecated functions in the library"	   OFF)
+
+# Compilation options
+option(ENABLE_WERROR           "Enable compilation with -Werror"                       OFF)
+
+if(UNIX)
+	# NTLM client requires crypto libraries from the system HTTPS stack
+	if(NOT USE_HTTPS)
+	    option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                          OFF)
+	else()
+	    option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                           ON)
+	endif()
+
+	option(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"                     OFF)
+endif()
+
+if(APPLE)
+	option(USE_ICONV           "Link with and use iconv library"                        ON)
+endif()
+
+if(MSVC)
 	# This option must match the settings used in your program, in particular if you
 	# are linking statically
-	OPTION(STATIC_CRT		"Link the static CRT libraries"		 		 ON)
+	option(STATIC_CRT          "Link the static CRT libraries"                          ON)
 
 	# If you want to embed a copy of libssh2 into libgit2, pass a
 	# path to libssh2
-	OPTION(EMBED_SSH_PATH		"Path to libssh2 to embed (Windows)"			OFF)
-ENDIF()
+	option(EMBED_SSH_PATH      "Path to libssh2 to embed (Windows)"                    OFF)
 
+	# Enable leak checking using the debugging C runtime.
+	option(WIN32_LEAKCHECK     "Enable leak reporting via crtdbg"                      OFF)
+endif()
 
-IF(WIN32)
+if(WIN32)
 	# By default, libgit2 is built with WinHTTP.  To use the built-in
 	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
-	OPTION(WINHTTP			"Use Win32 WinHTTP routines"				 ON)
-ENDIF()
+	option(WINHTTP             "Use Win32 WinHTTP routines"                             ON)
+endif()
 
-IF(MSVC)
-	# Enable leak checking using the debugging C runtime.
-	OPTION(WIN32_LEAKCHECK		"Enable leak reporting via crtdbg"			OFF)
-ENDIF()
 
-IF (DEPRECATE_HARD)
-	ADD_DEFINITIONS(-DGIT_DEPRECATE_HARD)
-ENDIF()
+#
+# Compiler / linker flags
+#
+
+if(DEPRECATE_HARD)
+	add_definitions(-DGIT_DEPRECATE_HARD)
+endif()
 
 # Platform specific compilation flags
-IF (MSVC)
-	IF (STDCALL)
-		MESSAGE(FATAL_ERROR "The STDCALL option is no longer supported; libgit2 is now always built as a cdecl library.  If you're using PInvoke, please add the CallingConventions.Cdecl attribute for support.")
-	ENDIF()
+if(MSVC)
+	add_definitions(-D_SCL_SECURE_NO_WARNINGS)
+	add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
+	add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
 
-	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
-	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
-	ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
-
-	STRING(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+	string(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
 	# /GF - String pooling
 	# /MP - Parallel build
-	SET(CMAKE_C_FLAGS "/GF /MP /nologo ${CMAKE_C_FLAGS}")
+	set(CMAKE_C_FLAGS "/GF /MP /nologo ${CMAKE_C_FLAGS}")
 
 	# /Gd - explicitly set cdecl calling convention
-	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gd")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gd")
 
-	IF (NOT (MSVC_VERSION LESS 1900))
+	if(NOT (MSVC_VERSION LESS 1900))
 		# /guard:cf - Enable Control Flow Guard
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /guard:cf")
-	ENDIF()
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /guard:cf")
+	endif()
 
-	IF (STATIC_CRT)
-		SET(CRT_FLAG_DEBUG "/MTd")
-		SET(CRT_FLAG_RELEASE "/MT")
-	ELSE()
-		SET(CRT_FLAG_DEBUG "/MDd")
-		SET(CRT_FLAG_RELEASE "/MD")
-	ENDIF()
+	if(STATIC_CRT)
+		set(CRT_FLAG_DEBUG "/MTd")
+		set(CRT_FLAG_RELEASE "/MT")
+	else()
+		set(CRT_FLAG_DEBUG "/MDd")
+		set(CRT_FLAG_RELEASE "/MD")
+	endif()
 
-	IF (WIN32_LEAKCHECK)
-		SET(GIT_WIN32_LEAKCHECK 1)
-		SET(CRT_FLAG_DEBUG "${CRT_FLAG_DEBUG}")
-		SET(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES} Dbghelp.lib")
-	ENDIF()
+	if(WIN32_LEAKCHECK)
+		set(GIT_WIN32_LEAKCHECK 1)
+		set(CRT_FLAG_DEBUG "${CRT_FLAG_DEBUG}")
+		set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES} Dbghelp.lib")
+	endif()
 
 	# /Zi - Create debugging information
 	# /Od - Disable optimization
@@ -144,7 +143,7 @@ IF (MSVC)
 	# /MTd - Statically link the multithreaded debug version of the CRT
 	# /MDd - Dynamically link the multithreaded debug version of the CRT
 	# /RTC1 - Run time checks
-	SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Zi /Od /D_DEBUG /RTC1 ${CRT_FLAG_DEBUG}")
+	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Zi /Od /D_DEBUG /RTC1 ${CRT_FLAG_DEBUG}")
 
 	# /DNDEBUG - Disables asserts
 	# /MT - Statically link the multithreaded release version of the CRT
@@ -153,76 +152,80 @@ IF (MSVC)
 	# /Oy - Enable frame pointer omission (FPO) (otherwise CMake will automatically turn it off)
 	# /GL - Link time code generation (whole program optimization)
 	# /Gy - Function-level linking
-	SET(CMAKE_C_FLAGS_RELEASE "/DNDEBUG /O2 /Oy /GL /Gy ${CRT_FLAG_RELEASE}")
+	set(CMAKE_C_FLAGS_RELEASE "/DNDEBUG /O2 /Oy /GL /Gy ${CRT_FLAG_RELEASE}")
 
 	# /Oy- - Disable frame pointer omission (FPO)
-	SET(CMAKE_C_FLAGS_RELWITHDEBINFO "/DNDEBUG /Zi /O2 /Oy- /GL /Gy ${CRT_FLAG_RELEASE}")
+	set(CMAKE_C_FLAGS_RELWITHDEBINFO "/DNDEBUG /Zi /O2 /Oy- /GL /Gy ${CRT_FLAG_RELEASE}")
 
 	# /O1 - Optimize for size
-	SET(CMAKE_C_FLAGS_MINSIZEREL "/DNDEBUG /O1 /Oy /GL /Gy ${CRT_FLAG_RELEASE}")
+	set(CMAKE_C_FLAGS_MINSIZEREL "/DNDEBUG /O1 /Oy /GL /Gy ${CRT_FLAG_RELEASE}")
 
 	# /IGNORE:4221 - Ignore empty compilation units
-	SET(CMAKE_STATIC_LINKER_FLAGS "/IGNORE:4221")
+	set(CMAKE_STATIC_LINKER_FLAGS "/IGNORE:4221")
 
 	# /DYNAMICBASE - Address space load randomization (ASLR)
 	# /NXCOMPAT - Data execution prevention (DEP)
 	# /LARGEADDRESSAWARE - >2GB user address space on x86
 	# /VERSION - Embed version information in PE header
-	SET(CMAKE_EXE_LINKER_FLAGS "/DYNAMICBASE /NXCOMPAT /LARGEADDRESSAWARE /VERSION:${libgit2_VERSION_MAJOR}.${libgit2_VERSION_MINOR}")
+	set(CMAKE_EXE_LINKER_FLAGS "/DYNAMICBASE /NXCOMPAT /LARGEADDRESSAWARE /VERSION:${libgit2_VERSION_MAJOR}.${libgit2_VERSION_MINOR}")
 
-	IF (NOT (MSVC_VERSION LESS 1900))
+	if(NOT (MSVC_VERSION LESS 1900))
 		# /GUARD:CF - Enable Control Flow Guard
-		SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /GUARD:CF")
-	ENDIF()
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /GUARD:CF")
+	endif()
 
 	# /DEBUG - Create a PDB
 	# /LTCG - Link time code generation (whole program optimization)
 	# /OPT:REF /OPT:ICF - Fold out duplicate code at link step
 	# /INCREMENTAL:NO - Required to use /LTCG
 	# /DEBUGTYPE:cv,fixup - Additional data embedded in the PDB (requires /INCREMENTAL:NO, so not on for Debug)
-	SET(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG")
-	SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "/RELEASE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
-	SET(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "/DEBUG /RELEASE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO /DEBUGTYPE:cv,fixup")
-	SET(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "/RELEASE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
+	set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG")
+	set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/RELEASE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
+	set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "/DEBUG /RELEASE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO /DEBUGTYPE:cv,fixup")
+	set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "/RELEASE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
 
 	# Same linker settings for DLL as EXE
-	SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
-	SET(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
-	SET(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
-	SET(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}")
-	SET(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "${CMAKE_EXE_LINKER_FLAGS_MINSIZEREL}")
-ELSE ()
-	IF (ENABLE_REPRODUCIBLE_BUILDS)
-		SET(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>")
-		SET(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> Dq  <TARGET> <LINK_FLAGS> <OBJECTS>")
-		SET(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>")
-	ENDIF()
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+	set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+	set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
+	set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}")
+	set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "${CMAKE_EXE_LINKER_FLAGS_MINSIZEREL}")
+else()
+	if(ENABLE_REPRODUCIBLE_BUILDS)
+		set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>")
+		set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> Dq  <TARGET> <LINK_FLAGS> <OBJECTS>")
+		set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>")
+	endif()
 
-	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE ${CMAKE_C_FLAGS}")
+	if(NOT BUILD_SHARED_LIBS)
+		set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+	endif()
 
-	ENABLE_WARNINGS(all)
-	ENABLE_WARNINGS(extra)
+	set(CMAKE_C_FLAGS "-D_GNU_SOURCE ${CMAKE_C_FLAGS}")
 
-	IF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-		SET(CMAKE_C_FLAGS "-D_POSIX_C_SOURCE=200112L -D__EXTENSIONS__ -D_POSIX_PTHREAD_SEMANTICS ${CMAKE_C_FLAGS}")
-	ENDIF()
+	enable_warnings(all)
+	enable_warnings(extra)
 
-	SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -D_DEBUG -O0")
+	if(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
+		set(CMAKE_C_FLAGS "-D_POSIX_C_SOURCE=200112L -D__EXTENSIONS__ -D_POSIX_PTHREAD_SEMANTICS ${CMAKE_C_FLAGS}")
+	endif()
 
-	IF (MINGW OR MSYS) # MinGW and MSYS always do PIC and complain if we tell them to
-		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
-	ELSEIF (BUILD_SHARED_LIBS)
-		ADD_C_FLAG_IF_SUPPORTED(-fvisibility=hidden)
+	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -D_DEBUG -O0")
 
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-	ENDIF ()
+	if(MINGW OR MSYS) # MinGW and MSYS always do PIC and complain if we tell them to
+		string(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
+	elseif(BUILD_SHARED_LIBS)
+		add_c_flag_IF_SUPPORTED(-fvisibility=hidden)
 
-	IF (MINGW)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+	endif()
+
+	if(MINGW)
 		# MinGW >= 3.14 uses the C99-style stdio functions
 		# automatically, but forks like mingw-w64 still want
 		# us to define this in order to use them
-		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
-	ENDIF ()
+		add_definitions(-D__USE_MINGW_ANSI_STDIO=1)
+	endif()
 
 	enable_warnings(documentation)
 	disable_warnings(documentation-deprecated-sync)
@@ -247,60 +250,59 @@ ELSE ()
 		enable_warnings(format)
 		enable_warnings(format-security)
 	endif()
-ENDIF()
+endif()
 
 # Ensure that MinGW provides the correct header files.
-IF (WIN32 AND NOT CYGWIN)
-	ADD_DEFINITIONS(-DWIN32 -D_WIN32_WINNT=0x0600)
-ENDIF()
+if(WIN32 AND NOT CYGWIN)
+	add_definitions(-DWIN32 -D_WIN32_WINNT=0x0600)
+endif()
 
-IF( NOT CMAKE_CONFIGURATION_TYPES )
+if(NOT CMAKE_CONFIGURATION_TYPES)
 	# Build Debug by default
-	IF (NOT CMAKE_BUILD_TYPE)
-		SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
-	ENDIF ()
-ELSE()
+	if(NOT CMAKE_BUILD_TYPE)
+		set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+	endif()
+else()
 	# Using a multi-configuration generator eg MSVC or Xcode
 	# that uses CMAKE_CONFIGURATION_TYPES and not CMAKE_BUILD_TYPE
-ENDIF()
+endif()
 
 IF(BUILD_FUZZERS AND NOT USE_STANDALONE_FUZZERS)
 	# The actual sanitizer link target will be added when linking the fuzz
 	# targets.
-	SET(CMAKE_REQUIRED_FLAGS "-fsanitize=fuzzer-no-link")
-	ADD_C_FLAG(-fsanitize=fuzzer-no-link)
-	UNSET(CMAKE_REQUIRED_FLAGS)
-ENDIF ()
+	set(CMAKE_REQUIRED_FLAGS "-fsanitize=fuzzer-no-link")
+	add_c_flag(-fsanitize=fuzzer-no-link)
+	unset(CMAKE_REQUIRED_FLAGS)
+endif()
 
-ADD_SUBDIRECTORY(src)
+#
+# Subdirectories
+#
 
-# Tests
-IF (NOT MSVC)
-   IF (NOT BUILD_SHARED_LIBS)
-       SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-   ENDIF()
-ENDIF ()
+add_subdirectory(src)
 
-IF (BUILD_TESTS)
-	ENABLE_TESTING()
-	ADD_SUBDIRECTORY(tests)
-ENDIF ()
+if(BUILD_TESTS)
+	enable_testing()
+	add_subdirectory(tests)
+endif()
 
-IF (BUILD_EXAMPLES)
-	ADD_SUBDIRECTORY(examples)
-ENDIF ()
+if(BUILD_EXAMPLES)
+	add_subdirectory(examples)
+endif()
 
-IF(BUILD_FUZZERS)
-	IF(NOT USE_STANDALONE_FUZZERS)
-		IF(BUILD_EXAMPLES)
-			MESSAGE(FATAL_ERROR "Cannot build the fuzzer targets and the examples together")
-		ENDIF()
-		IF(BUILD_TESTS)
-			MESSAGE(FATAL_ERROR "Cannot build the fuzzer targets and the tests together")
-		ENDIF()
-	ENDIF()
-	ADD_SUBDIRECTORY(fuzzers)
-ENDIF()
+if(BUILD_FUZZERS)
+	if(NOT USE_STANDALONE_FUZZERS)
+		if(BUILD_EXAMPLES)
+			message(FATAL_ERROR "Cannot build the fuzzer targets and the examples together")
+		endif()
+		if(BUILD_TESTS)
+			message(FATAL_ERROR "Cannot build the fuzzer targets and the tests together")
+		endif()
+	endif()
+	add_subdirectory(fuzzers)
+endif()
 
-FEATURE_SUMMARY(WHAT ENABLED_FEATURES DESCRIPTION "Enabled features:")
-FEATURE_SUMMARY(WHAT DISABLED_FEATURES DESCRIPTION "Disabled features:")
+# Summary
+
+feature_summary(WHAT ENABLED_FEATURES DESCRIPTION "Enabled features:")
+feature_summary(WHAT DISABLED_FEATURES DESCRIPTION "Disabled features:")

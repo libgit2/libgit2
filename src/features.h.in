@@ -5,7 +5,6 @@
 #cmakedefine GIT_DEBUG_STRICT_ALLOC 1
 #cmakedefine GIT_DEBUG_STRICT_OPEN 1
 
-#cmakedefine GIT_TRACE 1
 #cmakedefine GIT_THREADS 1
 #cmakedefine GIT_WIN32_LEAKCHECK 1
 
