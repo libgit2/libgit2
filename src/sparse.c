@@ -97,6 +97,18 @@ static int parse_sparse_file(
 	return error;
 }
 
+int git_sparse_file__init(
+        git_repository *repo,
+        git_sparse *sparse,
+        git_buf *infopath) {
+    int error = 0;
+    git_attr_file_source source = { GIT_ATTR_FILE_SOURCE_FILE, infopath->ptr, GIT_SPARSE_CHECKOUT_FILE, NULL };
+
+    error = git_attr_cache__get(&sparse->sparse, repo, NULL, &source, parse_sparse_file, false);
+
+    return error;
+}
+
 int git_sparse__init(
  git_repository *repo,
  git_sparse *sparse)
@@ -124,8 +136,7 @@ int git_sparse__init(
 		error = 0;
 	}
 	
-	if ((error = git_attr_cache__get(&sparse->sparse, repo, NULL, GIT_ATTR_FILE__FROM_FILE,
-		 infopath.ptr, GIT_SPARSE_CHECKOUT_FILE, parse_sparse_file, false)) < 0) {
+	if ((error = git_sparse_file__init(repo, sparse, &infopath)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto cleanup;
 		error = 0;

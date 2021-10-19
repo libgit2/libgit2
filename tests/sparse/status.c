@@ -76,7 +76,7 @@ void test_sparse_status__0(void)
 
 	/* confirm that sparse-checkout file is cached */
 	cl_assert(git_attr_cache__is_cached(
-		g_repo, GIT_ATTR_FILE__FROM_FILE, ".git/info/sparse-checkout"));
+		g_repo, GIT_ATTR_FILE_SOURCE_FILE, ".git/info/sparse-checkout"));
 }
 
 static const char* paths[] = {

@@ -1114,7 +1114,7 @@ int git_attr__does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *ma
 	size_t i;
 	git_attr_fnmatch *rule;
 	char *path;
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	
 	*out = 0;
 	
@@ -1124,12 +1124,12 @@ int git_attr__does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *ma
 	
 	/* path of the file relative to the workdir, so we match the rules in subdirs */
 	if (match->containing_dir) {
-		git_buf_puts(&buf, match->containing_dir);
+		git_str_puts(&buf, match->containing_dir);
 	}
-	if (git_buf_puts(&buf, match->pattern) < 0)
+	if (git_str_puts(&buf, match->pattern) < 0)
 		return -1;
 	
-	path = git_buf_detach(&buf);
+	path = git_str_detach(&buf);
 	
 	git_vector_foreach(rules, i, rule) {
 		if (!(rule->flags & GIT_ATTR_FNMATCH_HASWILD)) {
@@ -1142,16 +1142,16 @@ int git_attr__does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *ma
 				continue;
 		}
 		
-		git_buf_clear(&buf);
+		git_str_clear(&buf);
 		if (rule->containing_dir)
-			git_buf_puts(&buf, rule->containing_dir);
-		git_buf_puts(&buf, rule->pattern);
+			git_str_puts(&buf, rule->containing_dir);
+		git_str_puts(&buf, rule->pattern);
 		
-		if (git_buf_oom(&buf))
+		if (git_str_oom(&buf))
 			goto out;
 		
 		/* if we found a match, we want to keep this rule */
-		if ((wildmatch(git_buf_cstr(&buf), path, wildmatch_flags)) == WM_MATCH) {
+		if ((wildmatch(git_str_cstr(&buf), path, wildmatch_flags)) == WM_MATCH) {
 			*out = 1;
 			error = 0;
 			goto out;
