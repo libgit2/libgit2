@@ -1079,7 +1079,7 @@ static int commit_graph_write(
 		error = git_str_put(&commit_data, (const char *)&word, sizeof(word));
 		if (error < 0)
 			goto cleanup;
-		word = ntohl((uint32_t)(commit_time & 0xffffffffull));
+		word = ntohl((uint32_t)(commit_time & UINT64_C(0xffffffff)));
 		error = git_str_put(&commit_data, (const char *)&word, sizeof(word));
 		if (error < 0)
 			goto cleanup;
