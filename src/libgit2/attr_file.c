@@ -1162,6 +1162,6 @@ int git_attr__does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *ma
 	
 out:
 	git__free(path);
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	return error;
 }
