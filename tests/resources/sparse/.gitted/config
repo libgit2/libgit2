@@ -5,4 +5,3 @@
 	logallrefupdates = true
 	ignorecase = true
 	precomposeunicode = true
-	sparseCheckout = true
