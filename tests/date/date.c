@@ -13,3 +13,10 @@ void test_date_date__overflow(void)
    cl_assert(d2038 < d2039);
 #endif
 }
+
+void test_date_date__invalid_date(void)
+{
+   git_time_t d;
+   cl_git_fail(git__date_parse(&d, ""));
+   cl_git_fail(git__date_parse(&d, "NEITHER_INTEGER_NOR_DATETIME"));
+}

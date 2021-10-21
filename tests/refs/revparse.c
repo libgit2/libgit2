@@ -460,6 +460,19 @@ void test_refs_revparse__date(void)
 	test_object("with-empty-log@{2 days ago}", NULL);
 }
 
+void test_refs_revparse__invalid_date(void)
+{
+	/*
+	 * $ git rev-parse HEAD@{} --
+	 * fatal: bad revision 'HEAD@{}'
+	 *
+	 * $ git rev-parse HEAD@{NEITHER_INTEGER_NOR_DATETIME} --
+	 * fatal: bad revision 'HEAD@{NEITHER_INTEGER_NOR_DATETIME}'
+	 */
+	test_object("HEAD@{}", NULL);
+	test_object("HEAD@{NEITHER_INTEGER_NOR_DATETIME}", NULL);
+}
+
 void test_refs_revparse__colon(void)
 {
 	assert_invalid_single_spec(":/");
