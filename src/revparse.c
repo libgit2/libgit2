@@ -207,7 +207,7 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, size_t ide
 {
 	git_reflog *reflog;
 	size_t numentries;
-	const git_reflog_entry *entry;
+	const git_reflog_entry *entry = NULL;
 	bool search_by_pos = (identifier <= 100000000);
 
 	if (git_reflog_read(&reflog, git_reference_owner(ref), git_reference_name(ref)) < 0)
@@ -236,8 +236,12 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, size_t ide
 			break;
 		}
 
-		if (i == numentries)
-			goto notfound;
+		if (i == numentries) {
+			if (entry == NULL)
+				goto notfound;
+
+			git_oid_cpy(oid, git_reflog_entry_id_new(entry));
+		}
 	}
 
 	git_reflog_free(reflog);
