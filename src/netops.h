@@ -42,7 +42,7 @@ typedef struct gitno_buffer {
 /* Flags to gitno_connect */
 enum {
 	/* Attempt to create an SSL connection. */
-	GITNO_CONNECT_SSL = 1,
+	GITNO_CONNECT_SSL = 1
 };
 
 /**

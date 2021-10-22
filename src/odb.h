@@ -53,7 +53,7 @@ struct git_odb {
 };
 
 typedef enum {
-	GIT_ODB_CAP_FROM_OWNER = -1,
+	GIT_ODB_CAP_FROM_OWNER = -1
 } git_odb_cap_t;
 
 /*

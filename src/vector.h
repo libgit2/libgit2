@@ -13,7 +13,7 @@ typedef int (*git_vector_cmp)(const void *, const void *);
 
 enum {
 	GIT_VECTOR_SORTED = (1u << 0),
-	GIT_VECTOR_FLAG_MAX = (1u << 1),
+	GIT_VECTOR_FLAG_MAX = (1u << 1)
 };
 
 typedef struct git_vector {

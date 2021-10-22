@@ -15,7 +15,7 @@
 
 typedef enum {
 	GIT_ANNOTATED_COMMIT_REAL = 1,
-	GIT_ANNOTATED_COMMIT_VIRTUAL = 2,
+	GIT_ANNOTATED_COMMIT_VIRTUAL = 2
 } git_annotated_commit_t;
 
 /**

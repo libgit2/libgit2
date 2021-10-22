@@ -96,7 +96,7 @@ typedef enum {
 	GIT_MKDIR_SKIP_LAST2 = 32,
 	GIT_MKDIR_VERIFY_DIR = 64,
 	GIT_MKDIR_REMOVE_FILES = 128,
-	GIT_MKDIR_REMOVE_SYMLINKS = 256,
+	GIT_MKDIR_REMOVE_SYMLINKS = 256
 } git_futils_mkdir_flags;
 
 struct git_futils_mkdir_perfdata
@@ -159,7 +159,7 @@ typedef enum {
 	GIT_RMDIR_SKIP_NONEMPTY   = (1 << 1),
 	GIT_RMDIR_EMPTY_PARENTS   = (1 << 2),
 	GIT_RMDIR_REMOVE_BLOCKERS = (1 << 3),
-	GIT_RMDIR_SKIP_ROOT       = (1 << 4),
+	GIT_RMDIR_SKIP_ROOT       = (1 << 4)
 } git_futils_rmdir_flags;
 
 /**
@@ -224,7 +224,7 @@ typedef enum {
 	GIT_CPDIR_OVERWRITE         = (1u << 3),
 	GIT_CPDIR_CHMOD_DIRS        = (1u << 4),
 	GIT_CPDIR_SIMPLE_TO_MODE    = (1u << 5),
-	GIT_CPDIR_LINK_FILES        = (1u << 6),
+	GIT_CPDIR_LINK_FILES        = (1u << 6)
 } git_futils_cpdir_flags;
 
 /**

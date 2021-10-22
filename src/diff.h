@@ -26,7 +26,7 @@
 typedef enum {
 	GIT_DIFF_TYPE_UNKNOWN = 0,
 	GIT_DIFF_TYPE_GENERATED = 1,
-	GIT_DIFF_TYPE_PARSED = 2,
+	GIT_DIFF_TYPE_PARSED = 2
 } git_diff_origin_t;
 
 struct git_diff {

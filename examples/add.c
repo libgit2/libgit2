@@ -28,7 +28,7 @@
 
 enum index_mode {
 	INDEX_NONE,
-	INDEX_ADD,
+	INDEX_ADD
 };
 
 struct index_options {

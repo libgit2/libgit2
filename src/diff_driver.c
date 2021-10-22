@@ -21,7 +21,7 @@ typedef enum {
 	DIFF_DRIVER_AUTO = 0,
 	DIFF_DRIVER_BINARY = 1,
 	DIFF_DRIVER_TEXT = 2,
-	DIFF_DRIVER_PATTERNLIST = 3,
+	DIFF_DRIVER_PATTERNLIST = 3
 } git_diff_driver_t;
 
 typedef struct {

@@ -21,7 +21,7 @@ enum {
 	GIT_PATCH_GENERATED_DIFFABLE = (1 << 3),
 	/* the difference between the two sides has been computed */
 	GIT_PATCH_GENERATED_DIFFED = (1 << 4),
-	GIT_PATCH_GENERATED_FLATTENED = (1 << 5),
+	GIT_PATCH_GENERATED_FLATTENED = (1 << 5)
 };
 
 struct git_patch_generated {

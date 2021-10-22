@@ -15,7 +15,7 @@
 
 typedef enum {
 	GIT_ZSTREAM_INFLATE,
-	GIT_ZSTREAM_DEFLATE,
+	GIT_ZSTREAM_DEFLATE
 } git_zstream_t;
 
 typedef struct {

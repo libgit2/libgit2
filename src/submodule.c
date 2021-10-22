@@ -61,7 +61,7 @@ enum {
 };
 enum {
 	GITMODULES_EXISTING = 0,
-	GITMODULES_CREATE = 1,
+	GITMODULES_CREATE = 1
 };
 
 static int submodule_alloc(git_submodule **out, git_repository *repo, const char *name);

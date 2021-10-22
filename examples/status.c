@@ -38,7 +38,7 @@ enum {
 	FORMAT_DEFAULT   = 0,
 	FORMAT_LONG      = 1,
 	FORMAT_SHORT     = 2,
-	FORMAT_PORCELAIN = 3,
+	FORMAT_PORCELAIN = 3
 };
 
 #define MAX_PATHSPEC 8

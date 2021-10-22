@@ -27,7 +27,7 @@ enum subcmd {
 	subcmd_remove,
 	subcmd_rename,
 	subcmd_seturl,
-	subcmd_show,
+	subcmd_show
 };
 
 struct remote_opts {

@@ -382,7 +382,7 @@ typedef enum {
 	STATE_RENAME,
 	STATE_COPY,
 
-	STATE_END,
+	STATE_END
 } parse_header_state;
 
 typedef struct {

@@ -118,14 +118,14 @@ typedef enum {
 	/* core.fsyncObjectFiles */
 	GIT_FSYNCOBJECTFILES_DEFAULT = GIT_CONFIGMAP_FALSE,
 	/* core.longpaths */
-	GIT_LONGPATHS_DEFAULT = GIT_CONFIGMAP_FALSE,
+	GIT_LONGPATHS_DEFAULT = GIT_CONFIGMAP_FALSE
 } git_configmap_value;
 
 /* internal repository init flags */
 enum {
 	GIT_REPOSITORY_INIT__HAS_DOTGIT = (1u << 16),
 	GIT_REPOSITORY_INIT__NATURAL_WD = (1u << 17),
-	GIT_REPOSITORY_INIT__IS_REINIT  = (1u << 18),
+	GIT_REPOSITORY_INIT__IS_REINIT  = (1u << 18)
 };
 
 /** Internal structure for repository object */

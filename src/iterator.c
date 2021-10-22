@@ -293,7 +293,7 @@ typedef enum {
 	ITERATOR_PATHLIST_IS_FILE = 1,
 	ITERATOR_PATHLIST_IS_DIR = 2,
 	ITERATOR_PATHLIST_IS_PARENT = 3,
-	ITERATOR_PATHLIST_FULL = 4,
+	ITERATOR_PATHLIST_FULL = 4
 } iterator_pathlist_search_t;
 
 static iterator_pathlist_search_t iterator_pathlist_search(

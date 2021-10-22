@@ -53,7 +53,7 @@ typedef enum {
 	GIT_REBASE_NONE = 0,
 	GIT_REBASE_APPLY = 1,
 	GIT_REBASE_MERGE = 2,
-	GIT_REBASE_INTERACTIVE = 3,
+	GIT_REBASE_INTERACTIVE = 3
 } git_rebase_t;
 
 struct git_rebase {
