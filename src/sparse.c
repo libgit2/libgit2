@@ -270,7 +270,7 @@ int git_sparse_checkout_set(
         git_repository *repo)
 {
     int err = 0;
-    int is_enabled;
+    int is_enabled = false;
     git_config *cfg;
     git_sparse sparse;
 
