@@ -240,6 +240,9 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, size_t ide
 			if (entry == NULL)
 				goto notfound;
 
+			/*
+			 * TODO: emit a warning (log for 'branch' only goes back to ...)
+			 */
 			git_oid_cpy(oid, git_reflog_entry_id_new(entry));
 		}
 	}
