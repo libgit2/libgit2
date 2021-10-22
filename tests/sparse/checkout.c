@@ -2,6 +2,7 @@
 #include "futils.h"
 #include "sparse.h"
 #include "git2/checkout.h"
+#include "patterns.h"
 
 static git_repository *g_repo = NULL;
 
@@ -70,7 +71,9 @@ void test_sparse_checkout__skips_sparse_files(void)
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	checkout_payload payload;
 	g_repo = cl_git_sandbox_init("sparse");
-	
+
+    cl_git_pass(git_sparse_checkout_set(&default_patterns, g_repo));
+
 	memset(&payload, 0, sizeof(payload));
 	setup_options(&opts, (void*) &payload);
 	
@@ -86,12 +89,16 @@ void test_sparse_checkout__skips_sparse_files(void)
 
 void test_sparse_checkout__checksout_files(void)
 {
+	const char* pattern_strings[] = { "/a/" };
+	git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
+
 	git_object* object;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	checkout_payload payload;
 	g_repo = cl_git_sandbox_init("sparse");
-	
-	cl_git_append2file("sparse/.git/info/sparse-checkout", "\n/a/\n");
+
+    cl_git_pass(git_sparse_checkout_set(&default_patterns, g_repo));
+	cl_git_pass(git_sparse_checkout_add(&patterns, g_repo));
 	
 	memset(&payload, 0, sizeof(payload));
 	setup_options(&opts, (void*) &payload);
@@ -112,13 +119,16 @@ void test_sparse_checkout__checksout_files(void)
 
 void test_sparse_checkout__checksout_all_files(void)
 {
+    const char *pattern_strings[] = { "/*" };
+    git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
+
 	git_object* object;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	checkout_payload payload;
 	g_repo = cl_git_sandbox_init("sparse");
-	
-	cl_git_rewritefile("sparse/.git/info/sparse-checkout", "\n/*\n");
-	
+
+    cl_git_pass(git_sparse_checkout_set(&patterns, g_repo));
+
 	memset(&payload, 0, sizeof(payload));
 	setup_options(&opts, (void*) &payload);
 	
@@ -138,14 +148,17 @@ void test_sparse_checkout__checksout_all_files(void)
 
 void test_sparse_checkout__updates_index(void)
 {
+	const char *pattern_strings[] = { "/*" };
+	git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
+
 	git_object* object;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_index_iterator* iterator;
 	git_index* index;
 	const git_index_entry *entry;
 	g_repo = cl_git_sandbox_init("sparse");
-	
-	cl_git_rewritefile("sparse/.git/info/sparse-checkout", "\n/*\n");
+
+	cl_git_pass(git_sparse_checkout_set(&patterns, g_repo));
 	
 	setup_options(&opts, NULL);
 	
@@ -169,8 +182,10 @@ void test_sparse_checkout__keeps_sparse_files(void)
 	checkout_payload payload;
 	git_config *cfg;
 	g_repo = cl_git_sandbox_init("sparse");
-	
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+
+    cl_git_pass(git_sparse_checkout_set(&default_patterns, g_repo));
+
+    cl_git_pass(git_repository_config(&cfg, g_repo));
 	cl_git_pass(git_config_set_bool(cfg, "core.sparseCheckout", 0));
 	cl_git_pass(git_revparse_single(&object, g_repo, "HEAD"));
 	
@@ -205,8 +220,8 @@ void test_sparse_checkout__removes_sparse_files(void)
 	checkout_payload payload;
 	git_config *cfg;
 	g_repo = cl_git_sandbox_init("sparse");
-	
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+
+    cl_git_pass(git_repository_config(&cfg, g_repo));
 	cl_git_pass(git_config_set_bool(cfg, "core.sparseCheckout", 0));
 	cl_git_pass(git_revparse_single(&object, g_repo, "HEAD"));
 	
@@ -243,8 +258,10 @@ void test_sparse_checkout__checkout_index_sparse(void)
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	checkout_payload payload;
 	g_repo = cl_git_sandbox_init("sparse");
-	
-	memset(&payload, 0, sizeof(payload));
+
+    cl_git_pass(git_sparse_checkout_set(&default_patterns, g_repo));
+
+    memset(&payload, 0, sizeof(payload));
 	setup_options(&opts, (void*) &payload);
 	
 	cl_git_pass(git_repository_index(&index, g_repo));

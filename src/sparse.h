@@ -32,4 +32,7 @@ extern int git_sparse__lookup(int* checkout, git_sparse* sparse, const char* pat
 
 extern void git_sparse__free(git_sparse *sparse);
 
+int git_strarray__to_vector(git_vector *dest, git_strarray *src);
+int git_vector__to_strarray(git_strarray *dest, git_vector *src);
+
 #endif

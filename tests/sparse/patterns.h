@@ -1,4 +1,4 @@
 #include "util.h"
 
-const char *default__patterns[] = { "/*", "!/*/" };
-const git_strarray g_default_patterns = { default__patterns, ARRAY_SIZE(default__patterns) };
+const char *default_pattern__strings[] = { "/*", "!/*/" };
+const git_strarray default_patterns = {default_pattern__strings, ARRAY_SIZE(default_pattern__strings) };

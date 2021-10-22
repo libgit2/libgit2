@@ -18,10 +18,22 @@ typedef struct {
      * Set to zero (false) to consider sparse-checkout patterns as
      * full patterns, or non-zero for cone patterns.
      */
-    int cone;
+    /* int cone; */
 } git_sparse_checkout_init_options;
 
-#define GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT { false };
+#define GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT { };
+
+/**
+ * Fill a list with all the patterns in the sparse-checkout file
+ *
+ * @param patterns Pointer to a git_strarray structure where
+ *		the patterns will be stored
+ * @param repo Repository where to find the sparse-checkout file
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_sparse_checkout_list(
+        git_strarray *patterns,
+        git_repository *repo);
 
 /**
  * Enable the core.sparseCheckout setting. If the sparse-checkout
@@ -57,6 +69,31 @@ GIT_EXTERN(int) git_sparse_checkout_init(
 GIT_EXTERN(int) git_sparse_checkout_set(
         git_strarray *patterns,
         git_repository *repo);
+
+/**
+ * Update the sparse-checkout file to include additional patterns.
+ * When core.sparseCheckoutCone is enabled, the given patterns are
+ * interpreted as directory names as in git_sparse_checkout_set.
+ *
+ * @param patterns Pointer to a git_strarray structure where
+ *      the patterns to set can be found
+ * @param repo Repository where to find the sparse-checkout file
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_sparse_checkout_add(
+        git_strarray *patterns,
+        git_repository *repo);
+
+/**
+ * Disable the core.sparseCheckout config setting, and restore the
+ * working directory to include all files. Leaves the sparse-checkout
+ * file intact so a later git sparse-checkout init command may return
+ * the working directory to the same state.
+ *
+ * @param repo Repository where to find the sparse-checkout file
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_sparse_checkout_disable(git_repository *repo);
 
 /**
  * Test if the sparse-checkout rules apply to a given path.
