@@ -66,8 +66,6 @@ GIT_EXTERN(int) git_sparse_checkout_set(
 
 /**
  * Update the sparse-checkout file to include additional patterns.
- * When core.sparseCheckoutCone is enabled, the given patterns are
- * interpreted as directory names as in git_sparse_checkout_set.
  *
  * @param patterns Pointer to a git_strarray structure where
  *      the patterns to set can be found
@@ -92,14 +90,15 @@ GIT_EXTERN(int) git_sparse_checkout_disable(git_repository *repo);
 /**
  * Test if the sparse-checkout rules apply to a given path.
  *
- * This function checks the sparse-checkout rules to see if they would apply to the
- * given path. This indicates if the path would be included on checkout.
+ * This function checks the sparse-checkout rules to see if they would apply
+ * to the given path. This indicates if the path would be included on checkout.
  *
- * @param checkout boolean returning 1 if the sparse-checkout rules apply (the file will be checked out), 0 if they do not
- * @param repo a repository object
+ * @param checkout boolean returning 1 if the sparse-checkout rules apply
+ * 		(the file will be checked out), 0 if they do not
+ * @param repo Repository where to find the sparse-checkout file
  * @param path the path to check sparse-checkout rules for, relative to the repo's workdir.
- * @return 0 if sparse-checkout rules could be processed for the path (regardless
- *         of whether it exists or not), or an error < 0 if they could not.
+ * @return 0 if sparse-checkout rules could be processed for the path
+ * 		(regardless of whether it exists or not), or an error < 0 if they could not.
  */
 GIT_EXTERN(int) git_sparse_check_path(
 	int *checkout,
