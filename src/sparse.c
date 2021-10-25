@@ -269,14 +269,48 @@ done:
     return error;
 }
 
+int git_sparse_checkout__set(
+		git_vector *patterns,
+		git_sparse *sparse)
+{
+	int error = 0;
+	size_t i = 0;
+	const char *pattern;
+
+	git_str content = GIT_STR_INIT;
+
+	GIT_ASSERT_ARG(patterns);
+	GIT_ASSERT_ARG(sparse);
+
+	git_vector_foreach(patterns, i, pattern) {
+		git_str_join(&content, '\n', git_str_cstr(&content), pattern);
+	}
+
+	if ((error = git_futils_truncate(sparse->sparse->entry->fullpath, 0777)) < 0)
+		goto done;
+
+	if ((error = git_futils_writebuffer(&content, sparse->sparse->entry->fullpath, O_WRONLY, 0644)) < 0)
+		goto done;
+
+	done:
+	git_str_dispose(&content);
+
+	return error;
+}
+
 int git_sparse_checkout_init(git_sparse_checkout_init_options *opts, git_repository *repo) {
 
     int error = 0;
     git_config *cfg;
     git_sparse sparse;
+	git_vector default_patterns = GIT_VECTOR_INIT;
 
     GIT_ASSERT_ARG(opts);
     GIT_ASSERT_ARG(repo);
+
+	/* Default patterns that match every file in the root directory and no other directories */
+	git_vector_insert(&default_patterns, "/*");
+	git_vector_insert(&default_patterns, "!/*/");
 
     if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
         return error;
@@ -287,38 +321,12 @@ int git_sparse_checkout_init(git_sparse_checkout_init_options *opts, git_reposit
     if ((error = git_sparse__init(repo, &sparse)) < 0)
         goto cleanup;
 
+	if ((error = git_sparse_checkout__set(&default_patterns, &sparse)) < 0)
+		goto cleanup;
+
 cleanup:
     git_config_free(cfg);
     git_sparse__free(&sparse);
-    return error;
-}
-
-int git_sparse_checkout__set(
-        git_vector *patterns,
-        git_sparse *sparse)
-{
-    int error = 0;
-    size_t i = 0;
-    const char *pattern;
-
-    git_str content = GIT_STR_INIT;
-
-    GIT_ASSERT_ARG(patterns);
-    GIT_ASSERT_ARG(sparse);
-
-    git_vector_foreach(patterns, i, pattern) {
-        git_str_join(&content, '\n', git_str_cstr(&content), pattern);
-    }
-
-    if ((error = git_futils_truncate(sparse->sparse->entry->fullpath, 0777)) < 0)
-        goto done;
-
-    if ((error = git_futils_writebuffer(&content, sparse->sparse->entry->fullpath, O_WRONLY, 0644)) < 0)
-        goto done;
-
-done:
-    git_str_dispose(&content);
-
     return error;
 }
 
@@ -515,18 +523,6 @@ int git_strarray__to_vector(git_vector *dest, git_strarray *src) {
         if ((error = git_vector_insert(dest, src->strings[i])) < 0)
             return error;
     }
-
-    return error;
-}
-
-int git_vector__to_strarray(git_strarray *dest, git_vector *src) {
-    int error = 0;
-    size_t i = 0;
-
-    GIT_ASSERT_ARG(dest);
-    GIT_ASSERT_ARG(src);
-
-    dest->strings = (char **) git_vector_detach(&dest->count, NULL, src);
 
     return error;
 }

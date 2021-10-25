@@ -1,6 +1,4 @@
-
 #include <clar_libgit2.h>
-#include "sparse_helpers.h"
 
 static git_repository *g_repo = NULL;
 
@@ -20,9 +18,10 @@ void test_sparse_list__lists_all_patterns(void)
 
 	char *default_pattern__strings[] = { "/*", "!/*/" };
 	git_strarray default_patterns = {default_pattern__strings, ARRAY_SIZE(default_pattern__strings) };
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 
 	g_repo = cl_git_sandbox_init("sparse");
-	cl_git_pass(git_sparse_checkout_set(&default_patterns, g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
 	cl_git_pass(git_sparse_checkout_list(&patterns, g_repo));
 	for (i = 0; i < patterns.count; i++) {

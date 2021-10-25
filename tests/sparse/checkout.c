@@ -2,7 +2,6 @@
 #include "futils.h"
 #include "sparse.h"
 #include "git2/checkout.h"
-#include "sparse_helpers.h"
 
 static git_repository *g_repo = NULL;
 
@@ -70,9 +69,10 @@ void test_sparse_checkout__skips_sparse_files(void)
 	git_object* object;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	checkout_payload payload;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
 	memset(&payload, 0, sizeof(payload));
 	setup_options(&opts, (void*) &payload);
@@ -95,9 +95,10 @@ void test_sparse_checkout__checksout_files(void)
 	git_object* object;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	checkout_payload payload;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 	cl_git_pass(git_sparse_checkout_add(&patterns, g_repo));
 	
 	memset(&payload, 0, sizeof(payload));
@@ -181,9 +182,10 @@ void test_sparse_checkout__keeps_sparse_files(void)
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	checkout_payload payload;
 	git_config *cfg;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
     cl_git_pass(git_repository_config(&cfg, g_repo));
 	cl_git_pass(git_config_set_bool(cfg, "core.sparseCheckout", 0));
@@ -257,9 +259,10 @@ void test_sparse_checkout__checkout_index_sparse(void)
 	git_index* index;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	checkout_payload payload;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
     memset(&payload, 0, sizeof(payload));
 	setup_options(&opts, (void*) &payload);

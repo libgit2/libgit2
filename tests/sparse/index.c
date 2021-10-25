@@ -2,7 +2,6 @@
 #include "futils.h"
 #include "sparse.h"
 #include "index.h"
-#include "sparse_helpers.h"
 
 static git_repository *g_repo = NULL;
 
@@ -19,9 +18,10 @@ void test_sparse_index__add_bypath(void)
 {
 	git_index* index;
 	const git_index_entry* entry;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 	
@@ -37,9 +37,10 @@ void test_sparse_index__add_bypath_sparse(void)
 {
 	git_index* index;
 	const git_index_entry* entry;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 	
@@ -56,9 +57,10 @@ void test_sparse_index__add_bypath_disabled_sparse(void)
 {
 	git_index* index;
 	const git_index_entry* entry;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 	cl_git_pass(git_sparse_checkout_disable(g_repo));
 
 	cl_git_pass(git_repository_index(&index, g_repo));
@@ -76,9 +78,10 @@ void test_sparse_index__add_all(void)
 {
 	git_index* index;
 	const git_index_entry* entry;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 	
@@ -95,8 +98,9 @@ void test_sparse_index__add_all_sparse(void)
 	git_index* index;
 	const git_index_entry* entry;
 	g_repo = cl_git_sandbox_init("sparse");
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 	
@@ -114,8 +118,9 @@ void test_sparse_index__add_all_disabled_sparse(void)
 	git_index* index;
 	const git_index_entry* entry;
 	g_repo = cl_git_sandbox_init("sparse");
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 	cl_git_pass(git_sparse_checkout_disable(g_repo));
 	
 	cl_git_pass(git_repository_index(&index, g_repo));
@@ -141,10 +146,11 @@ void test_sparse_index__read_tree_sets_skip_worktree(void)
 		"a/file4",
 		NULL
 	};
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 	{
 		char *pattern_strings[] = { "/a/" };
 		git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
@@ -174,10 +180,11 @@ void test_sparse_index__read_tree_sets_skip_worktree_disabled(void)
 	git_oid tree_id;
 	git_index_iterator* iterator;
 	const git_index_entry *entry;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 	cl_git_pass(git_sparse_checkout_disable(g_repo));
 
 	git_oid_fromstr(&tree_id, "466cd582210eceaec48d949c7adaa0ceb2042db6");

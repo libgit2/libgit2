@@ -33,7 +33,7 @@ void test_sparse_init__enables_sparse_checkout(void)
 	cl_assert_(git_path_exists(path), path);
 
 	cl_git_pass(git_futils_readbuffer(&content, path));
-	cl_assert_equal_s_(git_str_cstr(&content), "", "git_sparse_checkout_init shoiuld init an empty file");
+	cl_assert_(strlen(git_str_cstr(&content)) > 1,"git_sparse_checkout_init should not init an empty file");
 
 	git_config_free(config);
 }

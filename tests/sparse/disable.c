@@ -2,7 +2,6 @@
 #include <path.h>
 #include <clar_libgit2.h>
 #include <futils.h>
-#include "sparse_helpers.h"
 
 static git_repository *g_repo = NULL;
 
@@ -19,11 +18,11 @@ void test_sparse_disable__disables_sparse_checkout(void)
 {
 	git_config *config;
 	int b;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 
-	git_sparse_checkout_init_options opts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_init(&opts, g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 	cl_git_pass(git_sparse_checkout_disable(g_repo));
 
 	cl_git_pass(git_repository_config(&config, g_repo));
@@ -39,11 +38,12 @@ void test_sparse_disable__leaves_sparse_checkout_file_intact(void)
 
 	git_str before_content = GIT_STR_INIT;
 	git_str after_content = GIT_STR_INIT;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 
 	path = "sparse/.git/info/sparse-checkout";
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 	cl_git_pass(git_futils_readbuffer(&before_content, path));
 
 	cl_git_pass(git_sparse_checkout_disable(g_repo));
