@@ -303,6 +303,22 @@ char *git__strtok(char **end, const char *sep)
 	return NULL;
 }
 
+char *git__strtok_(char **end, const char *sep, ...)
+{
+	char* res;
+	va_list seps;
+
+	va_start(seps, sep);
+
+	res = git__strtok(end, va_arg(seps, const char*));
+	if (res)
+		return res;
+
+	va_end(seps);
+
+	return NULL;
+}
+
 /* Similar to strtok, but does not collapse repeated tokens. */
 char *git__strsep(char **end, const char *sep)
 {

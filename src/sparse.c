@@ -221,9 +221,8 @@ int git_sparse_checkout__list(
         git_sparse *sparse)
 {
     int error = 0;
-    size_t i = 0;
     git_str data = GIT_STR_INIT;
-    const char *scan;
+    char *scan, *buf;
 
     GIT_ASSERT_ARG(patterns);
     GIT_ASSERT_ARG(sparse);
@@ -231,9 +230,12 @@ int git_sparse_checkout__list(
     if ((error = git_futils_readbuffer(&data, sparse->sparse->entry->fullpath)) < 0)
         return error;
 
-    scan = data.ptr;
+    scan = (char *)git_str_cstr(&data);
     while (!error && *scan) {
-		/* Todo: Take each line from the sparse-checkout file and insert it into the patterns vector */
+
+		buf = git__strtok_(&scan, "\r\n", "\n", "\0");
+		if (buf)
+			error = git_vector_insert(patterns, buf);
     }
 
     return error;
