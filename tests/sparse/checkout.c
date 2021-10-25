@@ -2,7 +2,7 @@
 #include "futils.h"
 #include "sparse.h"
 #include "git2/checkout.h"
-#include "patterns.h"
+#include "sparse_helpers.h"
 
 static git_repository *g_repo = NULL;
 
@@ -72,7 +72,7 @@ void test_sparse_checkout__skips_sparse_files(void)
 	checkout_payload payload;
 	g_repo = cl_git_sandbox_init("sparse");
 
-    cl_git_pass(git_sparse_checkout_set(&default_patterns, g_repo));
+	cl_git_pass(git_sparse_checkout_set_default(g_repo));
 
 	memset(&payload, 0, sizeof(payload));
 	setup_options(&opts, (void*) &payload);
@@ -97,7 +97,7 @@ void test_sparse_checkout__checksout_files(void)
 	checkout_payload payload;
 	g_repo = cl_git_sandbox_init("sparse");
 
-    cl_git_pass(git_sparse_checkout_set(&default_patterns, g_repo));
+	cl_git_pass(git_sparse_checkout_set_default(g_repo));
 	cl_git_pass(git_sparse_checkout_add(&patterns, g_repo));
 	
 	memset(&payload, 0, sizeof(payload));
@@ -183,7 +183,7 @@ void test_sparse_checkout__keeps_sparse_files(void)
 	git_config *cfg;
 	g_repo = cl_git_sandbox_init("sparse");
 
-    cl_git_pass(git_sparse_checkout_set(&default_patterns, g_repo));
+	cl_git_pass(git_sparse_checkout_set_default(g_repo));
 
     cl_git_pass(git_repository_config(&cfg, g_repo));
 	cl_git_pass(git_config_set_bool(cfg, "core.sparseCheckout", 0));
@@ -259,7 +259,7 @@ void test_sparse_checkout__checkout_index_sparse(void)
 	checkout_payload payload;
 	g_repo = cl_git_sandbox_init("sparse");
 
-    cl_git_pass(git_sparse_checkout_set(&default_patterns, g_repo));
+	cl_git_pass(git_sparse_checkout_set_default(g_repo));
 
     memset(&payload, 0, sizeof(payload));
 	setup_options(&opts, (void*) &payload);

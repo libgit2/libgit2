@@ -30,7 +30,8 @@ void test_sparse_set__enables_sparse_checkout(void)
     cl_git_pass(git_sparse_checkout_set(&patterns, g_repo));
 
     cl_git_pass(git_repository_config(&config, g_repo));
-    cl_assert_(git_config_get_bool(&b, config, "core.sparseCheckout"), "sparse checkout should be enabled");
+	cl_git_pass(git_config_get_bool(&b, config, "core.sparseCheckout"));
+    cl_assert_(&b, "sparse checkout should be enabled");
     cl_assert_(git_path_exists(path), path);
 
     git_config_free(config);
