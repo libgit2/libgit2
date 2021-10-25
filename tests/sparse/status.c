@@ -106,6 +106,9 @@ void test_sparse_status__disabled(void)
 {
 	const char** path;
 	g_repo = cl_git_sandbox_init("sparse");
+
+	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_disable(g_repo));
 	
 	for (path = paths; *path != NULL; path++)
 		assert_is_checkout(*path);

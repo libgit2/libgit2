@@ -89,7 +89,7 @@ void test_sparse_checkout__skips_sparse_files(void)
 
 void test_sparse_checkout__checksout_files(void)
 {
-	const char* pattern_strings[] = { "/a/" };
+	char* pattern_strings[] = { "/a/" };
 	git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
 
 	git_object* object;
@@ -119,7 +119,7 @@ void test_sparse_checkout__checksout_files(void)
 
 void test_sparse_checkout__checksout_all_files(void)
 {
-    const char *pattern_strings[] = { "/*" };
+    char *pattern_strings[] = { "/*" };
     git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
 
 	git_object* object;
@@ -148,7 +148,7 @@ void test_sparse_checkout__checksout_all_files(void)
 
 void test_sparse_checkout__updates_index(void)
 {
-	const char *pattern_strings[] = { "/*" };
+	char *pattern_strings[] = { "/*" };
 	git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
 
 	git_object* object;

@@ -57,7 +57,10 @@ void test_sparse_index__add_bypath_disabled_sparse(void)
 	git_index* index;
 	const git_index_entry* entry;
 	g_repo = cl_git_sandbox_init("sparse");
-	
+
+	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_disable(g_repo));
+
 	cl_git_pass(git_repository_index(&index, g_repo));
 	
 	cl_must_pass(git_futils_mkdir("sparse/a", 0777, 0));
@@ -111,6 +114,9 @@ void test_sparse_index__add_all_disabled_sparse(void)
 	git_index* index;
 	const git_index_entry* entry;
 	g_repo = cl_git_sandbox_init("sparse");
+
+	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_disable(g_repo));
 	
 	cl_git_pass(git_repository_index(&index, g_repo));
 	
@@ -139,8 +145,12 @@ void test_sparse_index__read_tree_sets_skip_worktree(void)
 	g_repo = cl_git_sandbox_init("sparse");
 
 	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	{
+		char *pattern_strings[] = { "/a/" };
+		git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
+		cl_git_pass(git_sparse_checkout_add(&patterns, g_repo));
+	}
 
-	cl_git_append2file("sparse/.git/info/sparse-checkout", "\n/a/\n");
 	git_oid_fromstr(&tree_id, "466cd582210eceaec48d949c7adaa0ceb2042db6");
 	
 	cl_git_pass(git_repository_index(&index, g_repo));
@@ -167,6 +177,9 @@ void test_sparse_index__read_tree_sets_skip_worktree_disabled(void)
 	
 	g_repo = cl_git_sandbox_init("sparse");
 
+	cl_git_pass(git_sparse_checkout_set_default(g_repo));
+	cl_git_pass(git_sparse_checkout_disable(g_repo));
+
 	git_oid_fromstr(&tree_id, "466cd582210eceaec48d949c7adaa0ceb2042db6");
 	
 	cl_git_pass(git_repository_index(&index, g_repo));
@@ -192,11 +205,13 @@ void test_sparse_index__read_tree_sets_skip_worktree_all_sparse(void)
 	const git_index_entry *entry;
 	
 	g_repo = cl_git_sandbox_init("sparse");
-
-	cl_git_pass(git_sparse_checkout_set_default(g_repo));
-
 	git_oid_fromstr(&tree_id, "466cd582210eceaec48d949c7adaa0ceb2042db6");
-	cl_git_rewritefile("sparse/.git/info/sparse-checkout", "\n!/*\n");
+
+	{
+		char *pattern_strings[] = { "!/*" };
+		git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
+		cl_git_pass(git_sparse_checkout_set(&patterns, g_repo));
+	}
 	
 	cl_git_pass(git_repository_index(&index, g_repo));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
