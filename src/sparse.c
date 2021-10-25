@@ -105,6 +105,7 @@ static int parse_sparse_file(
 }
 
 int git_sparse_attr_file__init(
+		int *file_exists,
         git_repository *repo,
         git_sparse *sparse,
         git_str *infopath)
@@ -113,13 +114,12 @@ int git_sparse_attr_file__init(
     const char *filename = GIT_SPARSE_CHECKOUT_FILE;
     git_attr_file_source source = { GIT_ATTR_FILE_SOURCE_FILE, git_str_cstr(infopath), filename, NULL };
     git_str filepath = GIT_STR_INIT;
-    bool fileExists;
 
     git_str_joinpath(&filepath, infopath->ptr, filename);
 
     /* Don't overwrite any existing sparse-checkout file */
-    fileExists = git_path_exists(git_str_cstr(&filepath));
-    if (!fileExists) {
+	*file_exists = git_path_exists(git_str_cstr(&filepath));
+    if (!*file_exists) {
         if ((error = git_futils_creat_withpath(git_str_cstr(&filepath), 0777, 0666)) < 0)
             return error;
     }
@@ -130,6 +130,16 @@ int git_sparse_attr_file__init(
 }
 
 int git_sparse__init(
+		git_repository *repo,
+		git_sparse *sparse)
+{
+	int b = false;
+	int error = git_sparse__init_(&b, repo, sparse);
+	return error;
+}
+
+int git_sparse__init_(
+		int *file_exists,
         git_repository *repo,
         git_sparse *sparse)
 {
@@ -156,7 +166,7 @@ int git_sparse__init(
         error = 0;
     }
 
-    if ((error = git_sparse_attr_file__init(repo, sparse, &infopath)) < 0) {
+    if ((error = git_sparse_attr_file__init(file_exists, repo, sparse, &infopath)) < 0) {
         if (error != GIT_ENOTFOUND)
             goto cleanup;
         error = 0;
@@ -244,6 +254,7 @@ int git_sparse_checkout__list(
 int git_sparse_checkout_list(git_strarray *patterns, git_repository *repo) {
 
     int error = 0;
+	int b;
     git_sparse sparse;
     git_vector patternlist;
 
@@ -292,7 +303,7 @@ int git_sparse_checkout__set(
 	if ((error = git_futils_writebuffer(&content, sparse->sparse->entry->fullpath, O_WRONLY, 0644)) < 0)
 		goto done;
 
-	done:
+done:
 	git_str_dispose(&content);
 
 	return error;
@@ -303,14 +314,11 @@ int git_sparse_checkout_init(git_sparse_checkout_init_options *opts, git_reposit
     int error = 0;
     git_config *cfg;
     git_sparse sparse;
+	int file_exists = false;
 	git_vector default_patterns = GIT_VECTOR_INIT;
 
     GIT_ASSERT_ARG(opts);
     GIT_ASSERT_ARG(repo);
-
-	/* Default patterns that match every file in the root directory and no other directories */
-	git_vector_insert(&default_patterns, "/*");
-	git_vector_insert(&default_patterns, "!/*/");
 
     if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
         return error;
@@ -318,11 +326,18 @@ int git_sparse_checkout_init(git_sparse_checkout_init_options *opts, git_reposit
     if ((error = git_config_set_bool(cfg, "core.sparseCheckout", true)) < 0)
         return error;
 
-    if ((error = git_sparse__init(repo, &sparse)) < 0)
+    if ((error = git_sparse__init_(&file_exists, repo, &sparse)) < 0)
         goto cleanup;
 
-	if ((error = git_sparse_checkout__set(&default_patterns, &sparse)) < 0)
-		goto cleanup;
+	if (!file_exists) {
+
+		/* Default patterns that match every file in the root directory and no other directories */
+		git_vector_insert(&default_patterns, "/*");
+		git_vector_insert(&default_patterns, "!/*/");
+
+		if ((error = git_sparse_checkout__set(&default_patterns, &sparse)) < 0)
+			goto cleanup;
+	}
 
 cleanup:
     git_config_free(cfg);

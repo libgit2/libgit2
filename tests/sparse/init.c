@@ -49,3 +49,24 @@ void test_sparse_init__writes_sparse_checkout_file(void)
     cl_git_pass(git_sparse_checkout_init(&opts, g_repo));
     cl_assert_(git_path_exists(path), path);
 }
+
+void test_sparse_init__does_not_overwrite_existing_file(void)
+{
+	size_t i = 0;
+	char *initial_pattern_strings[] = { "foo", "bar", "biz", "baz" };
+	git_strarray initial_patterns = { initial_pattern_strings, ARRAY_SIZE(initial_pattern_strings) };
+	git_strarray found_patterns = { 0 };
+
+	git_sparse_checkout_init_options opts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
+
+	g_repo = cl_git_sandbox_init("sparse");
+
+	cl_git_pass(git_sparse_checkout_set(&initial_patterns, g_repo));
+	cl_git_pass(git_sparse_checkout_disable(g_repo));
+	cl_git_pass(git_sparse_checkout_init(&opts, g_repo));
+
+	cl_git_pass(git_sparse_checkout_list(&found_patterns, g_repo));
+	for (i = 0; i < found_patterns.count; i++) {
+		cl_assert_equal_s(found_patterns.strings[i], initial_patterns.strings[i]);
+	}
+}

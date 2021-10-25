@@ -26,6 +26,7 @@ enum {
 	GIT_SPARSE_CHECKOUT = 1,
 };
 
+extern int git_sparse__init_(int *file_exists, git_repository *repo, git_sparse *ign);
 extern int git_sparse__init(git_repository *repo, git_sparse *ign);
 
 extern int git_sparse__lookup(int* checkout, git_sparse* sparse, const char* pathname, git_dir_flag dir_flag);
