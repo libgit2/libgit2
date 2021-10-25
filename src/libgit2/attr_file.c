@@ -1060,16 +1060,16 @@ static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
 	int (*cmp)(const char *, const char *, size_t);
 	git_attr_fnmatch *longer, *shorter;
 	char *p;
-	
+
 	if ((rule->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0
-			|| (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0)
+		|| (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0)
 		return false;
-	
+
 	if (neg->flags & GIT_ATTR_FNMATCH_ICASE)
 		cmp = git__strncasecmp;
 	else
 		cmp = git__strncmp;
-	
+
 	/* If lengths match we need to have an exact match */
 	if (rule->length == neg->length) {
 		return cmp(rule->pattern, neg->pattern, rule->length) == 0;
@@ -1080,18 +1080,18 @@ static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
 		shorter = neg;
 		longer = rule;
 	}
-	
+
 	/* Otherwise, we need to check if the shorter
 	 * rule is a basename only (that is, it contains
 	 * no path separator) and, if so, if it
 	 * matches the tail of the longer rule */
 	p = longer->pattern + longer->length - shorter->length;
-	
+
 	if (p[-1] != '/')
 		return false;
 	if (memchr(shorter->pattern, '/', shorter->length) != NULL)
 		return false;
-	
+
 	return cmp(p, shorter->pattern, shorter->length) == 0;
 }
 
@@ -1110,27 +1110,27 @@ static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
  */
 int git_attr__does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match)
 {
-	int error = 0, wildmatch_flags;
+	int error = 0, wildmatch_flags, effective_flags;
 	size_t i;
 	git_attr_fnmatch *rule;
 	char *path;
 	git_str buf = GIT_STR_INIT;
-	
+
 	*out = 0;
-	
+
 	wildmatch_flags = WM_PATHNAME;
 	if (match->flags & GIT_ATTR_FNMATCH_ICASE)
 		wildmatch_flags |= WM_CASEFOLD;
-	
+
 	/* path of the file relative to the workdir, so we match the rules in subdirs */
 	if (match->containing_dir) {
 		git_str_puts(&buf, match->containing_dir);
 	}
 	if (git_str_puts(&buf, match->pattern) < 0)
 		return -1;
-	
+
 	path = git_str_detach(&buf);
-	
+
 	git_vector_foreach(rules, i, rule) {
 		if (!(rule->flags & GIT_ATTR_FNMATCH_HASWILD)) {
 			if (does_negate_pattern(rule, match)) {
@@ -1141,26 +1141,35 @@ int git_attr__does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *ma
 			else
 				continue;
 		}
-		
+
 		git_str_clear(&buf);
 		if (rule->containing_dir)
 			git_str_puts(&buf, rule->containing_dir);
 		git_str_puts(&buf, rule->pattern);
-		
+
 		if (git_str_oom(&buf))
 			goto out;
-		
+
+		/*
+		 * if rule isn't for full path we match without PATHNAME flag
+		 * as lines like *.txt should match something like dir/test.txt
+		 * requiring * to also match /
+		 */
+		effective_flags = wildmatch_flags;
+		if (!(rule->flags & GIT_ATTR_FNMATCH_FULLPATH))
+			effective_flags &= ~WM_PATHNAME;
+
 		/* if we found a match, we want to keep this rule */
-		if ((wildmatch(git_str_cstr(&buf), path, wildmatch_flags)) == WM_MATCH) {
+		if ((wildmatch(git_str_cstr(&buf), path, effective_flags)) == WM_MATCH) {
 			*out = 1;
 			error = 0;
 			goto out;
 		}
 	}
-	
+
 	error = 0;
-	
-out:
+
+	out:
 	git__free(path);
 	git_str_dispose(&buf);
 	return error;
