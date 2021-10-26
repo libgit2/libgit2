@@ -254,7 +254,6 @@ int git_sparse_checkout__list(
 int git_sparse_checkout_list(git_strarray *patterns, git_repository *repo) {
 
     int error = 0;
-	int b;
     git_sparse sparse;
     git_vector patternlist;
 

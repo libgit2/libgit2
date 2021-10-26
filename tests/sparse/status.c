@@ -68,9 +68,9 @@ struct test_case{ \
 void test_sparse_status__0(void)
 {
 	define_test_cases
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
-	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
 	git_attr_cache_flush(g_repo);

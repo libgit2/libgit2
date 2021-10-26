@@ -97,8 +97,8 @@ void test_sparse_index__add_all_sparse(void)
 {
 	git_index* index;
 	const git_index_entry* entry;
-	g_repo = cl_git_sandbox_init("sparse");
 	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
+	g_repo = cl_git_sandbox_init("sparse");
 
 	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
@@ -117,8 +117,8 @@ void test_sparse_index__add_all_disabled_sparse(void)
 {
 	git_index* index;
 	const git_index_entry* entry;
-	g_repo = cl_git_sandbox_init("sparse");
 	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
+	g_repo = cl_git_sandbox_init("sparse");
 
 	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 	cl_git_pass(git_sparse_checkout_disable(g_repo));
