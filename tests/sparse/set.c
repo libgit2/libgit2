@@ -37,7 +37,7 @@ void test_sparse_set__enables_sparse_checkout(void)
     git_config_free(config);
 }
 
-void test_sparse_set__sets_sparse_checkout_file(void)
+void test_sparse_set__rewrites_sparse_checkout_file(void)
 {
     const char *path;
     git_str after_content = GIT_STR_INIT;
