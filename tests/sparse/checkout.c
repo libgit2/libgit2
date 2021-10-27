@@ -84,6 +84,9 @@ void test_sparse_checkout__skips_sparse_files(void)
 	cl_assert_equal_i(payload.perfdata.mkdir_calls, 0);
 	cl_assert_equal_i(payload.perfdata.chmod_calls, 0);
 	cl_assert_equal_i(payload.perfdata.stat_calls, 0);
+
+	cl_assert(git_path_exists("sparse/file1"));
+
 	git_object_free(object);
 }
 
@@ -114,7 +117,9 @@ void test_sparse_checkout__checksout_files(void)
 	cl_assert_equal_i(payload.perfdata.mkdir_calls, 1);
 	cl_assert_equal_i(payload.perfdata.stat_calls, 5);
 	cl_assert_equal_i(payload.perfdata.chmod_calls, 0);
-	
+
+	cl_assert(git_path_exists("sparse/a/file3"));
+
 	git_object_free(object);
 }
 
@@ -143,7 +148,13 @@ void test_sparse_checkout__checksout_all_files(void)
 	cl_assert_equal_i(payload.perfdata.mkdir_calls, 4);
 	cl_assert_equal_i(payload.perfdata.stat_calls, 22);
 	cl_assert_equal_i(payload.perfdata.chmod_calls, 0);
-	
+
+	cl_assert(git_path_exists("sparse/file1"));
+	cl_assert(git_path_exists("sparse/a/file3"));
+	cl_assert(git_path_exists("sparse/b/file5"));
+	cl_assert(git_path_exists("sparse/b/c/file7"));
+	cl_assert(git_path_exists("sparse/b/d/file9"));
+
 	git_object_free(object);
 }
 
@@ -178,17 +189,18 @@ void test_sparse_checkout__updates_index(void)
 
 void test_sparse_checkout__keeps_sparse_files(void)
 {
+	char *pattern_strings[] = { "/*" };
+	git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
+
 	git_object* object;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	checkout_payload payload;
-	git_config *cfg;
 	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
 	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
+	cl_git_pass(git_sparse_checkout_disable(g_repo));
 
-    cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_bool(cfg, "core.sparseCheckout", 0));
 	cl_git_pass(git_revparse_single(&object, g_repo, "HEAD"));
 	
 	memset(&payload, 0, sizeof(payload));
@@ -197,9 +209,8 @@ void test_sparse_checkout__keeps_sparse_files(void)
 
 	cl_assert_equal_i(payload.count, 9 + 9);
 	cl_assert_equal_i(payload.why, GIT_CHECKOUT_NOTIFY_DIRTY | GIT_CHECKOUT_NOTIFY_UPDATED);
-	
-	cl_git_pass(git_config_set_bool(cfg, "core.sparseCheckout", 1));
-	cl_git_rewritefile("sparse/.git/info/sparse-checkout", "\n/*\n");
+
+	cl_git_pass(git_sparse_checkout_set(&patterns, g_repo));
 
 	memset(&payload, 0, sizeof(payload));
 	setup_options(&opts, &payload);
@@ -210,9 +221,10 @@ void test_sparse_checkout__keeps_sparse_files(void)
 	cl_assert_equal_i(payload.perfdata.mkdir_calls, 0);
 	cl_assert_equal_i(payload.perfdata.stat_calls, 0);
 	cl_assert_equal_i(payload.perfdata.chmod_calls, 0);
+
+	cl_assert(git_path_exists("sparse/file1"));
 	
 	git_object_free(object);
-	git_config_free(cfg);
 }
 
 void test_sparse_checkout__removes_sparse_files(void)
@@ -220,11 +232,9 @@ void test_sparse_checkout__removes_sparse_files(void)
 	git_object* object;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	checkout_payload payload;
-	git_config *cfg;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
-    cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_bool(cfg, "core.sparseCheckout", 0));
 	cl_git_pass(git_revparse_single(&object, g_repo, "HEAD"));
 	
 	memset(&payload, 0, sizeof(payload));
@@ -233,9 +243,8 @@ void test_sparse_checkout__removes_sparse_files(void)
 	
 	cl_assert_equal_i(payload.count, 9 + 9);
 	cl_assert_equal_i(payload.why, GIT_CHECKOUT_NOTIFY_DIRTY | GIT_CHECKOUT_NOTIFY_UPDATED);
-	
-	cl_git_pass(git_config_set_bool(cfg, "core.sparseCheckout", 1));
-	cl_git_rewritefile("sparse/.git/info/sparse-checkout", "\n/*\n!/*/");
+
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 	
 	memset(&payload, 0, sizeof(payload));
 	setup_options(&opts, &payload);
@@ -247,9 +256,12 @@ void test_sparse_checkout__removes_sparse_files(void)
 	cl_assert_equal_i(payload.perfdata.mkdir_calls, 0);
 	cl_assert_equal_i(payload.perfdata.stat_calls, 0);
 	cl_assert_equal_i(payload.perfdata.chmod_calls, 0);
+
+	cl_assert_equal_b(git_path_exists("sparse/file1"), true);
+	cl_assert_equal_b(git_path_exists("sparse/a/file3"), false);
+	cl_assert_equal_b(git_path_exists("sparse/b/file5"), false);
 	
 	git_object_free(object);
-	git_config_free(cfg);
 }
 
 /* matches core git behavior: git checkout-index copies all files from the index
