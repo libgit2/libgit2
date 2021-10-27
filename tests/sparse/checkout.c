@@ -212,17 +212,9 @@ void test_sparse_checkout__keeps_sparse_files(void)
 
 	cl_git_pass(git_sparse_checkout_set(&patterns, g_repo));
 
-	memset(&payload, 0, sizeof(payload));
-	setup_options(&opts, &payload);
-	cl_git_pass(git_checkout_tree(g_repo, object, &opts));
-	
-	cl_assert_equal_i(payload.count, 0);
-	cl_assert_equal_i(payload.why, GIT_CHECKOUT_NOTIFY_NONE);
-	cl_assert_equal_i(payload.perfdata.mkdir_calls, 0);
-	cl_assert_equal_i(payload.perfdata.stat_calls, 0);
-	cl_assert_equal_i(payload.perfdata.chmod_calls, 0);
-
-	cl_assert(git_path_exists("sparse/file1"));
+	cl_assert_equal_b(git_path_exists("sparse/file1"), true);
+	cl_assert_equal_b(git_path_exists("sparse/a/file3"), false);
+	cl_assert_equal_b(git_path_exists("sparse/b/file5"), false);
 	
 	git_object_free(object);
 }
@@ -245,22 +237,11 @@ void test_sparse_checkout__removes_sparse_files(void)
 	cl_assert_equal_i(payload.why, GIT_CHECKOUT_NOTIFY_DIRTY | GIT_CHECKOUT_NOTIFY_UPDATED);
 
 	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
-	
-	memset(&payload, 0, sizeof(payload));
-	setup_options(&opts, &payload);
-	opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_SPARSE_FILES;
-	cl_git_pass(git_checkout_tree(g_repo, object, &opts));
-	
-	cl_assert_equal_i(payload.count, 9);
-	cl_assert_equal_i(payload.why, GIT_CHECKOUT_NOTIFY_DIRTY);
-	cl_assert_equal_i(payload.perfdata.mkdir_calls, 0);
-	cl_assert_equal_i(payload.perfdata.stat_calls, 0);
-	cl_assert_equal_i(payload.perfdata.chmod_calls, 0);
 
 	cl_assert_equal_b(git_path_exists("sparse/file1"), true);
 	cl_assert_equal_b(git_path_exists("sparse/a/file3"), false);
 	cl_assert_equal_b(git_path_exists("sparse/b/file5"), false);
-	
+
 	git_object_free(object);
 }
 

@@ -76,6 +76,8 @@ GIT_EXTERN(int) git_sparse_checkout_add(
         git_strarray *patterns,
         git_repository *repo);
 
+GIT_EXTERN(int) git_sparse_checkout_reapply(git_repository *repo);
+
 /**
  * Disable the core.sparseCheckout config setting, and restore the
  * working directory to include all files. Leaves the sparse-checkout

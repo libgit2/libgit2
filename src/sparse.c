@@ -10,6 +10,7 @@
 #include "git2/sparse.h"
 #include "config.h"
 #include "filebuf.h"
+#include "index.h"
 
 static bool sparse_lookup_in_rules(
         int *checkout,
@@ -107,25 +108,34 @@ static int parse_sparse_file(
 int git_sparse_attr_file__init(
 		int *file_exists,
         git_repository *repo,
-        git_sparse *sparse,
-        git_str *infopath)
+        git_sparse *sparse)
 {
     int error = 0;
+	git_str infopath = GIT_STR_INIT;
     const char *filename = GIT_SPARSE_CHECKOUT_FILE;
-    git_attr_file_source source = { GIT_ATTR_FILE_SOURCE_FILE, git_str_cstr(infopath), filename, NULL };
-    git_str filepath = GIT_STR_INIT;
 
-    git_str_joinpath(&filepath, infopath->ptr, filename);
+	if ((error = git_repository__item_path(&infopath, repo, GIT_REPOSITORY_ITEM_INFO)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			goto done;
+		error = 0;
+	}
+
+	git_attr_file_source source = { GIT_ATTR_FILE_SOURCE_FILE, git_str_cstr(&infopath), filename, NULL };
+	git_str filepath = GIT_STR_INIT;
+
+    git_str_joinpath(&filepath, infopath.ptr, filename);
 
     /* Don't overwrite any existing sparse-checkout file */
 	*file_exists = git_path_exists(git_str_cstr(&filepath));
     if (!*file_exists) {
         if ((error = git_futils_creat_withpath(git_str_cstr(&filepath), 0777, 0666)) < 0)
-            return error;
+			goto done;
     }
 
     error = git_attr_cache__get(&sparse->sparse, repo, NULL, &source, parse_sparse_file, false);
 
+done:
+	git_str_dispose(&infopath);
     return error;
 }
 
@@ -144,7 +154,6 @@ int git_sparse__init_(
         git_sparse *sparse)
 {
 	int error = 0;
-	git_str infopath = GIT_STR_INIT;
 	
 	assert(repo && sparse);
 	
@@ -158,22 +167,14 @@ int git_sparse__init_(
 	
 	if ((error = git_attr_cache__init(repo)) < 0)
 		goto cleanup;
-	
-	/* load .git/info/sparse_checkout if possible */
-    if ((error = git_repository__item_path(&infopath, repo, GIT_REPOSITORY_ITEM_INFO)) < 0) {
-        if (error != GIT_ENOTFOUND)
-            goto cleanup;
-        error = 0;
-    }
 
-    if ((error = git_sparse_attr_file__init(file_exists, repo, sparse, &infopath)) < 0) {
+    if ((error = git_sparse_attr_file__init(file_exists, repo, sparse)) < 0) {
         if (error != GIT_ENOTFOUND)
             goto cleanup;
         error = 0;
     }
 	
 cleanup:
-	git_str_dispose(&infopath);
 	if (error < 0)
 		git_sparse__free(sparse);
 	
@@ -189,7 +190,7 @@ int git_sparse__lookup(
 	git_attr_path path;
 	const char *workdir;
 	int error;
-	
+
 	assert(checkout && pathname && sparse);
 	
 	*checkout = GIT_SPARSE_CHECKOUT;
@@ -279,14 +280,90 @@ done:
     return error;
 }
 
+int git_sparse_checkout__reapply(git_repository *repo, git_sparse *sparse)
+{
+	int error = 0;
+	git_index *index;
+	size_t i = 0;
+	git_index_entry *entry;
+	git_vector sparse_entries;
+	const char *workdir = repo->workdir;
+
+	if ((error = git_repository_index(&index, repo)) < 0)
+		goto done;
+
+	if ((error = git_vector_init(&sparse_entries, 0, NULL)) < 0)
+		goto done;
+
+	/*
+	 * Collect directories that have gone out of scope, but also
+	 * exist on disk
+	 */
+	git_vector_foreach(&index->entries, i, entry)
+	{
+		int is_submodule = false;
+		int has_conflict = false;
+		unsigned int status_flags;
+		int checkout = GIT_SPARSE_CHECKOUT;
+		git_str fullpath = GIT_STR_INIT;
+
+		/* Don't touch submodules */
+		is_submodule = S_ISGITLINK(entry->mode);
+		if (is_submodule)
+			continue;
+
+		/* Don't touch files with conflicts */
+		has_conflict = GIT_INDEX_ENTRY_STAGE(entry) > 0;
+		if (has_conflict)
+			continue;
+
+		/* Don't touch files that aren't current */
+		if ((error = git_status_file(&status_flags, repo, entry->path)) < 0)
+			goto done;
+		if (status_flags != GIT_STATUS_CURRENT)
+			continue;
+
+		if ((error = git_str_joinpath(&fullpath, repo->workdir, entry->path)) < 0)
+			goto done;
+
+		if (git_sparse__lookup(&checkout, sparse, entry->path, GIT_DIR_FLAG_FALSE) == 0 &&
+			checkout == GIT_SPARSE_NOCHECKOUT)
+		{
+			entry->flags_extended = GIT_INDEX_ENTRY_SKIP_WORKTREE;
+
+			if (!git_path_exists(git_str_cstr(&fullpath)))
+				continue;
+
+			if ((error = git_vector_insert(&sparse_entries, entry)) < 0)
+				goto done;
+		}
+	}
+
+	/* Remove sparse directories */
+	git_vector_foreach(&sparse_entries, i, entry)
+	{
+		if ((error = git_futils_rmdir_r(entry->path, workdir, GIT_RMDIR_REMOVE_FILES | GIT_RMDIR_EMPTY_PARENTS)) < 0)
+			goto done;
+	}
+
+	error = git_index_write(index);
+
+	done:
+	git_index_free(index);
+	git_vector_free(&sparse_entries);
+	return error;
+}
+
+
 int git_sparse_checkout__set(
 		git_vector *patterns,
+		git_repository *repo,
 		git_sparse *sparse)
 {
 	int error = 0;
+	int b;
 	size_t i = 0;
 	const char *pattern;
-
 	git_str content = GIT_STR_INIT;
 
 	GIT_ASSERT_ARG(patterns);
@@ -300,6 +377,11 @@ int git_sparse_checkout__set(
 		goto done;
 
 	if ((error = git_futils_writebuffer(&content, sparse->sparse->entry->fullpath, O_WRONLY, 0644)) < 0)
+		goto done;
+
+	/* Refresh the rules in the sparse info */
+	git_vector_clear(&sparse->sparse->rules);
+	if ((error = git_sparse_attr_file__init(&b, repo, sparse)) < 0)
 		goto done;
 
 done:
@@ -334,9 +416,12 @@ int git_sparse_checkout_init(git_sparse_checkout_init_options *opts, git_reposit
 		git_vector_insert(&default_patterns, "/*");
 		git_vector_insert(&default_patterns, "!/*/");
 
-		if ((error = git_sparse_checkout__set(&default_patterns, &sparse)) < 0)
+		if ((error = git_sparse_checkout__set(&default_patterns, repo, &sparse)) < 0)
 			goto cleanup;
 	}
+
+	if ((error = git_sparse_checkout__reapply(repo, &sparse)) < 0)
+		goto cleanup;
 
 cleanup:
     git_config_free(cfg);
@@ -379,8 +464,11 @@ int git_sparse_checkout_set(
         git_vector_insert(&patternlist, patterns->strings[i]);
     }
 
-    if ((err = git_sparse_checkout__set(&patternlist, &sparse)) < 0)
+    if ((err = git_sparse_checkout__set(&patternlist, repo, &sparse)) < 0)
         goto done;
+
+	if ((err = git_sparse_checkout__reapply(repo, &sparse)) < 0)
+		goto done;
 
 done:
     git_config_free(cfg);
@@ -390,10 +478,24 @@ done:
     return err;
 }
 
+int git_sparse_checkout__restore_wd(
+		git_repository *repo,
+		git_sparse *sparse)
+{
+	/* Todo:
+	 * 	1. Un-set the GIT_INDEX_ENTRY_SKIP_WORKTREE flag
+	 * 		on all entries that would've been affected by
+	 * 		the sparse-checkout rules
+	 * 	2. Restore said file to the working directory
+	 */
+	return 0;
+}
+
 int git_sparse_checkout_disable(git_repository *repo)
 {
     int error = 0;
     git_config *cfg;
+	git_sparse sparse;
 
     GIT_ASSERT_ARG(repo);
 
@@ -403,7 +505,11 @@ int git_sparse_checkout_disable(git_repository *repo)
     if ((error = git_config_set_bool(cfg, "core.sparseCheckout", false)) < 0)
         goto done;
 
-    /* Todo: restore working directory */
+	if ((error = git_sparse__init(repo, &sparse)) < 0)
+		goto done;
+
+	if ((error = git_sparse_checkout__restore_wd(repo, &sparse)) < 0)
+		goto done;
 
 done:
     git_config_free(cfg);
@@ -411,9 +517,9 @@ done:
     return error;
 }
 
-
 int git_sparse_checkout__add(
         git_vector *patterns,
+		git_repository *repo,
         git_sparse *sparse)
 {
     int error = 0;
@@ -442,7 +548,7 @@ int git_sparse_checkout__add(
         git_vector_insert(&new_patterns, pattern);
     }
 
-    if ((error = git_sparse_checkout__set(&new_patterns, sparse)) < 0)
+    if ((error = git_sparse_checkout__set(&new_patterns, repo, sparse)) < 0)
         goto done;
 
 done:
@@ -482,7 +588,7 @@ int git_sparse_checkout_add(
     if ((err = git_strarray__to_vector(&patternlist, patterns)))
         goto done;
 
-    if ((err = git_sparse_checkout__add(&patternlist, &sparse)) < 0)
+    if ((err = git_sparse_checkout__add(&patternlist, repo, &sparse)) < 0)
         goto done;
 
 done:
@@ -491,6 +597,22 @@ done:
     git_vector_free(&patternlist);
 
     return err;
+}
+
+int git_sparse_checkout_reapply(git_repository *repo) {
+
+	int error = 0;
+	git_sparse sparse;
+
+	if ((error = git_sparse__init(repo, &sparse)) < 0)
+		return error;
+
+	if ((error = git_sparse_checkout__reapply(repo, &sparse)) < 0)
+		goto done;
+
+done:
+	git_sparse__free(&sparse);
+	return error;
 }
 
 int git_sparse_check_path(
