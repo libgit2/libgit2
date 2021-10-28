@@ -1,6 +1,6 @@
 # This function splits the sources files up into their appropriate
 # subdirectories.  This is especially useful for IDEs like Xcode and
-# Visual Studio, so that you can navigate into the libgit2_clar project,
+# Visual Studio, so that you can navigate into the libgit2_tests project,
 # and see the folders within the tests folder (instead of just seeing all
 # source and tests in a single folder.)
 FUNCTION(IDE_SPLIT_SOURCES target)

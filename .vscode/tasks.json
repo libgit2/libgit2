@@ -16,7 +16,7 @@
       {
         "label": "Run Tests",
         "type": "shell",
-        "command": "build/libgit2_clar -v",
+        "command": "build/libgit2_tests -v",
         "group": "test",
         "presentation": {
           "reveal": "always",

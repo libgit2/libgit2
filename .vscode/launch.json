@@ -8,7 +8,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/libgit2_clar",
+            "program": "${workspaceFolder}/build/libgit2_tests",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
