@@ -32,15 +32,15 @@ void test_sparse_blah__do_it(void)
 	error = git_repository_init(&repo, workdir, false);
 
 	// Init sparse checkout for the octopus dir
-	char *pattern_strings[] = { ".octopus/ina/" };
-	git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
-	git_sparse_checkout_set(&patterns, repo);
-	git_sparse_checkout_disable(repo);
-
-	// Checkout
-	git_checkout_options coopts;
-	git_checkout_options_init(&coopts, 1);
-	git_checkout_head(repo, &coopts);
-
-	git_repository_free(repo);
+//	char *pattern_strings[] = { ".octopus/ina/" };
+//	git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
+//	git_sparse_checkout_set(&patterns, repo);
+//	git_sparse_checkout_disable(repo);
+//
+//	// Checkout
+//	git_checkout_options coopts;
+//	git_checkout_options_init(&coopts, 1);
+//	git_checkout_head(repo, &coopts);
+//
+//	git_repository_free(repo);
 }

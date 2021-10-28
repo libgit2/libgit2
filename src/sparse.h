@@ -29,10 +29,15 @@ enum {
 extern int git_sparse__init_(int *file_exists, git_repository *repo, git_sparse *ign);
 extern int git_sparse__init(git_repository *repo, git_sparse *ign);
 
-extern int git_sparse__lookup(int* checkout, git_sparse* sparse, const char* pathname, git_dir_flag dir_flag);
+extern int git_sparse__lookup(
+		int* checkout,
+		git_sparse *sparse,
+		const char* pathname,
+		git_dir_flag dir_flag);
 
 extern void git_sparse__free(git_sparse *sparse);
 
 int git_strarray__to_vector(git_vector *dest, git_strarray *src);
+int git_strarray__from_vector(git_strarray *dest, git_vector *src);
 
 #endif
