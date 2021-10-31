@@ -194,7 +194,7 @@ void test_online_clone__can_checkout_a_cloned_repo(void)
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 
 	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
-	cl_assert_equal_i(true, git_path_isfile(git_str_cstr(&path)));
+	cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&path)));
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
@@ -930,11 +930,11 @@ void test_online_clone__proxy_cred_callback_after_failed_url_creds(void)
 void test_online_clone__azurerepos(void)
 {
 	cl_git_pass(git_clone(&g_repo, "https://libgit2@dev.azure.com/libgit2/test/_git/test", "./foo", &g_options));
-	cl_assert(git_path_exists("./foo/master.txt"));
+	cl_assert(git_fs_path_exists("./foo/master.txt"));
 }
 
 void test_online_clone__path_whitespace(void)
 {
 	cl_git_pass(git_clone(&g_repo, "https://libgit2@dev.azure.com/libgit2/test/_git/spaces%20in%20the%20name", "./foo", &g_options));
-	cl_assert(git_path_exists("./foo/master.txt"));
+	cl_assert(git_fs_path_exists("./foo/master.txt"));
 }

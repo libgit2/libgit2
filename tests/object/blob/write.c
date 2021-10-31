@@ -42,7 +42,7 @@ void test_object_blob_write__can_create_a_blob_in_a_standard_repo_from_a_absolut
 	repo = cl_git_sandbox_init(WORKDIR);
 
 	cl_must_pass(p_mkdir(ELSEWHERE, 0777));
-	cl_must_pass(git_path_prettify_dir(&full_path, ELSEWHERE, NULL));
+	cl_must_pass(git_fs_path_prettify_dir(&full_path, ELSEWHERE, NULL));
 	cl_must_pass(git_str_puts(&full_path, "test.txt"));
 
 	assert_blob_creation(ELSEWHERE "/test.txt", git_str_cstr(&full_path), &git_blob_create_from_disk);
@@ -58,7 +58,7 @@ void test_object_blob_write__can_create_a_blob_in_a_bare_repo_from_a_absolute_fi
 	repo = cl_git_sandbox_init(BARE_REPO);
 
 	cl_must_pass(p_mkdir(ELSEWHERE, 0777));
-	cl_must_pass(git_path_prettify_dir(&full_path, ELSEWHERE, NULL));
+	cl_must_pass(git_fs_path_prettify_dir(&full_path, ELSEWHERE, NULL));
 	cl_must_pass(git_str_puts(&full_path, "test.txt"));
 
 	assert_blob_creation(ELSEWHERE "/test.txt", git_str_cstr(&full_path), &git_blob_create_from_disk);

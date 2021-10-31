@@ -13,7 +13,7 @@
 
 #include "diff.h"
 #include "diff_generate.h"
-#include "path.h"
+#include "fs_path.h"
 #include "futils.h"
 #include "config.h"
 
@@ -481,7 +481,7 @@ static int similarity_sig(
 			return error;
 
 		/* if path is not a regular file, just skip this item */
-		if (!git_path_isfile(info->data.ptr))
+		if (!git_fs_path_isfile(info->data.ptr))
 			return 0;
 
 		/* TODO: apply wd-to-odb filters to file data if necessary */

@@ -67,7 +67,7 @@ void test_worktree_submodule__resolve_relative_url(void)
 	git_worktree *wt;
 
 	cl_git_pass(git_futils_mkdir("subdir", 0755, GIT_MKDIR_PATH));
-	cl_git_pass(git_path_prettify_dir(&wt_path, "subdir", NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&wt_path, "subdir", NULL));
 	cl_git_pass(git_str_joinpath(&wt_path, wt_path.ptr, "wt"));
 
 	/* Open child repository, which is a submodule */

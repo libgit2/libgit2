@@ -48,15 +48,15 @@ static bool test_file_contents(const char *filename, const char *expected)
 {
 	git_str file_path_buf = GIT_STR_INIT, file_buf = GIT_STR_INIT;
 	bool equals;
-	
+
 	git_str_joinpath(&file_path_buf, git_repository_path(repo), filename);
-	
+
 	cl_git_pass(git_futils_readbuffer(&file_buf, file_path_buf.ptr));
 	equals = (strcmp(file_buf.ptr, expected) == 0);
 
 	git_str_dispose(&file_path_buf);
 	git_str_dispose(&file_buf);
-	
+
 	return equals;
 }
 
@@ -77,13 +77,13 @@ void test_merge_workdir_setup__one_branch(void)
 	git_oid our_oid;
 	git_reference *octo1_ref;
 	git_annotated_commit *our_head, *their_heads[1];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
-	
+
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
-	
+
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_annotated_commit **)their_heads, 1));
 
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n"));
@@ -92,7 +92,7 @@ void test_merge_workdir_setup__one_branch(void)
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branch '" OCTO1_BRANCH "'\n"));
 
 	git_reference_free(octo1_ref);
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 }
@@ -103,10 +103,10 @@ void test_merge_workdir_setup__one_oid(void)
 	git_oid our_oid;
 	git_oid octo1_oid;
 	git_annotated_commit *our_head, *their_heads[1];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
-	
+
 	cl_git_pass(git_oid_fromstr(&octo1_oid, OCTO1_OID));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &octo1_oid));
 
@@ -128,10 +128,10 @@ void test_merge_workdir_setup__two_branches(void)
 	git_reference *octo1_ref;
 	git_reference *octo2_ref;
 	git_annotated_commit *our_head, *their_heads[2];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
-	
+
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
 
@@ -139,15 +139,15 @@ void test_merge_workdir_setup__two_branches(void)
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[1], repo, octo2_ref));
 
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_annotated_commit **)their_heads, 2));
-	
+
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n" OCTO2_OID "\n"));
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branches '" OCTO1_BRANCH "' and '" OCTO2_BRANCH "'\n"));
-	
+
 	git_reference_free(octo1_ref);
 	git_reference_free(octo2_ref);
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 	git_annotated_commit_free(their_heads[1]);
@@ -161,13 +161,13 @@ void test_merge_workdir_setup__three_branches(void)
 	git_reference *octo2_ref;
 	git_reference *octo3_ref;
 	git_annotated_commit *our_head, *their_heads[3];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
-	
+
 	cl_git_pass(git_reference_lookup(&octo2_ref, repo, GIT_REFS_HEADS_DIR OCTO2_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[1], repo, octo2_ref));
 
@@ -180,7 +180,7 @@ void test_merge_workdir_setup__three_branches(void)
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branches '" OCTO1_BRANCH "', '" OCTO2_BRANCH "' and '" OCTO3_BRANCH "'\n"));
-	
+
 	git_reference_free(octo1_ref);
 	git_reference_free(octo2_ref);
 	git_reference_free(octo3_ref);
@@ -199,13 +199,13 @@ void test_merge_workdir_setup__three_oids(void)
 	git_oid octo2_oid;
 	git_oid octo3_oid;
 	git_annotated_commit *our_head, *their_heads[3];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_oid_fromstr(&octo1_oid, OCTO1_OID));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &octo1_oid));
-	
+
 	cl_git_pass(git_oid_fromstr(&octo2_oid, OCTO2_OID));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[1], repo, &octo2_oid));
 
@@ -218,7 +218,7 @@ void test_merge_workdir_setup__three_oids(void)
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge commit '" OCTO1_OID "'; commit '" OCTO2_OID "'; commit '" OCTO3_OID "'\n"));
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 	git_annotated_commit_free(their_heads[1]);
@@ -232,7 +232,7 @@ void test_merge_workdir_setup__branches_and_oids_1(void)
 	git_reference *octo1_ref;
 	git_oid octo2_oid;
 	git_annotated_commit *our_head, *their_heads[2];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
 
@@ -248,7 +248,7 @@ void test_merge_workdir_setup__branches_and_oids_1(void)
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branch '" OCTO1_BRANCH "'; commit '" OCTO2_OID "'\n"));
-	
+
 	git_reference_free(octo1_ref);
 
 	git_annotated_commit_free(our_head);
@@ -271,23 +271,23 @@ void test_merge_workdir_setup__branches_and_oids_2(void)
 
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
-	
+
 	cl_git_pass(git_oid_fromstr(&octo2_oid, OCTO2_OID));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[1], repo, &octo2_oid));
 
 	cl_git_pass(git_reference_lookup(&octo3_ref, repo, GIT_REFS_HEADS_DIR OCTO3_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[2], repo, octo3_ref));
-	
+
 	cl_git_pass(git_oid_fromstr(&octo4_oid, OCTO4_OID));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[3], repo, &octo4_oid));
-	
+
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_annotated_commit **)their_heads, 4));
 
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n" OCTO2_OID "\n" OCTO3_OID "\n" OCTO4_OID "\n"));
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branches '" OCTO1_BRANCH "' and '" OCTO3_BRANCH "'; commit '" OCTO2_OID "'; commit '" OCTO4_OID "'\n"));
-	
+
 	git_reference_free(octo1_ref);
 	git_reference_free(octo3_ref);
 
@@ -307,7 +307,7 @@ void test_merge_workdir_setup__branches_and_oids_3(void)
 	git_oid octo3_oid;
 	git_reference *octo4_ref;
 	git_annotated_commit *our_head, *their_heads[4];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
 
@@ -319,17 +319,17 @@ void test_merge_workdir_setup__branches_and_oids_3(void)
 
 	cl_git_pass(git_oid_fromstr(&octo3_oid, OCTO3_OID));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[2], repo, &octo3_oid));
-	
+
 	cl_git_pass(git_reference_lookup(&octo4_ref, repo, GIT_REFS_HEADS_DIR OCTO4_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[3], repo, octo4_ref));
-	
+
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_annotated_commit **)their_heads, 4));
 
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n" OCTO2_OID "\n" OCTO3_OID "\n" OCTO4_OID "\n"));
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge commit '" OCTO1_OID "'; branches '" OCTO2_BRANCH "' and '" OCTO4_BRANCH "'; commit '" OCTO3_OID "'\n"));
-	
+
 	git_reference_free(octo2_ref);
 	git_reference_free(octo4_ref);
 
@@ -350,19 +350,19 @@ void test_merge_workdir_setup__branches_and_oids_4(void)
 	git_reference *octo4_ref;
 	git_reference *octo5_ref;
 	git_annotated_commit *our_head, *their_heads[5];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
-	
+
 	cl_git_pass(git_oid_fromstr(&octo1_oid, OCTO1_OID));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &octo1_oid));
-	
+
 	cl_git_pass(git_reference_lookup(&octo2_ref, repo, GIT_REFS_HEADS_DIR OCTO2_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[1], repo, octo2_ref));
-	
+
 	cl_git_pass(git_oid_fromstr(&octo3_oid, OCTO3_OID));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[2], repo, &octo3_oid));
-	
+
 	cl_git_pass(git_reference_lookup(&octo4_ref, repo, GIT_REFS_HEADS_DIR OCTO4_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[3], repo, octo4_ref));
 
@@ -375,7 +375,7 @@ void test_merge_workdir_setup__branches_and_oids_4(void)
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge commit '" OCTO1_OID "'; branches '" OCTO2_BRANCH "', '" OCTO4_BRANCH "' and '" OCTO5_BRANCH "'; commit '" OCTO3_OID "'\n"));
-	
+
 	git_reference_free(octo2_ref);
 	git_reference_free(octo4_ref);
 	git_reference_free(octo5_ref);
@@ -396,30 +396,30 @@ void test_merge_workdir_setup__three_same_branches(void)
 	git_reference *octo1_2_ref;
 	git_reference *octo1_3_ref;
 	git_annotated_commit *our_head, *their_heads[3];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
-	
+
 	cl_git_pass(git_reference_lookup(&octo1_1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_1_ref));
-	
+
 	cl_git_pass(git_reference_lookup(&octo1_2_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[1], repo, octo1_2_ref));
-	
+
 	cl_git_pass(git_reference_lookup(&octo1_3_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[2], repo, octo1_3_ref));
-	
+
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_annotated_commit **)their_heads, 3));
 
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n" OCTO1_OID "\n" OCTO1_OID "\n"));
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branches '" OCTO1_BRANCH "', '" OCTO1_BRANCH "' and '" OCTO1_BRANCH "'\n"));
-	
+
 	git_reference_free(octo1_1_ref);
 	git_reference_free(octo1_2_ref);
 	git_reference_free(octo1_3_ref);
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 	git_annotated_commit_free(their_heads[1]);
@@ -434,26 +434,26 @@ void test_merge_workdir_setup__three_same_oids(void)
 	git_oid octo1_2_oid;
 	git_oid octo1_3_oid;
 	git_annotated_commit *our_head, *their_heads[3];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
-	
+
 	cl_git_pass(git_oid_fromstr(&octo1_1_oid, OCTO1_OID));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &octo1_1_oid));
-	
+
 	cl_git_pass(git_oid_fromstr(&octo1_2_oid, OCTO1_OID));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[1], repo, &octo1_2_oid));
-	
+
 	cl_git_pass(git_oid_fromstr(&octo1_3_oid, OCTO1_OID));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[2], repo, &octo1_3_oid));
-	
+
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_annotated_commit **)their_heads, 3));
-	
+
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n" OCTO1_OID "\n" OCTO1_OID "\n"));
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge commit '" OCTO1_OID "'; commit '" OCTO1_OID "'; commit '" OCTO1_OID "'\n"));
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 	git_annotated_commit_free(their_heads[1]);
@@ -473,7 +473,7 @@ static int create_remote_tracking_branch(const char *branch_name, const char *oi
 		(error = git_str_puts(&remotes_path, GIT_REFS_REMOTES_DIR)) < 0)
 		goto done;
 
-	if (!git_path_exists(git_str_cstr(&remotes_path)) &&
+	if (!git_fs_path_exists(git_str_cstr(&remotes_path)) &&
 		(error = p_mkdir(git_str_cstr(&remotes_path), 0777)) < 0)
 		goto done;
 
@@ -481,7 +481,7 @@ static int create_remote_tracking_branch(const char *branch_name, const char *oi
 		(error = git_str_puts(&origin_path, "origin")) < 0)
 		goto done;
 
-	if (!git_path_exists(git_str_cstr(&origin_path)) &&
+	if (!git_fs_path_exists(git_str_cstr(&origin_path)) &&
 		(error = p_mkdir(git_str_cstr(&origin_path), 0777)) < 0)
 		goto done;
 
@@ -514,10 +514,10 @@ void test_merge_workdir_setup__remote_tracking_one_branch(void)
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
-	
+
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_REMOTES_DIR "origin/" OCTO1_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
-	
+
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_annotated_commit **)their_heads, 1));
 
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n"));
@@ -526,7 +526,7 @@ void test_merge_workdir_setup__remote_tracking_one_branch(void)
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge remote-tracking branch 'refs/remotes/origin/" OCTO1_BRANCH "'\n"));
 
 	git_reference_free(octo1_ref);
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 }
@@ -544,7 +544,7 @@ void test_merge_workdir_setup__remote_tracking_two_branches(void)
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
-	
+
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_REMOTES_DIR "origin/" OCTO1_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
 
@@ -552,15 +552,15 @@ void test_merge_workdir_setup__remote_tracking_two_branches(void)
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[1], repo, octo2_ref));
 
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_annotated_commit **)their_heads, 2));
-	
+
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n" OCTO2_OID "\n"));
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge remote-tracking branches 'refs/remotes/origin/" OCTO1_BRANCH "' and 'refs/remotes/origin/" OCTO2_BRANCH "'\n"));
-	
+
 	git_reference_free(octo1_ref);
 	git_reference_free(octo2_ref);
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 	git_annotated_commit_free(their_heads[1]);
@@ -578,13 +578,13 @@ void test_merge_workdir_setup__remote_tracking_three_branches(void)
 	cl_git_pass(create_remote_tracking_branch(OCTO1_BRANCH, OCTO1_OID));
 	cl_git_pass(create_remote_tracking_branch(OCTO2_BRANCH, OCTO2_OID));
 	cl_git_pass(create_remote_tracking_branch(OCTO3_BRANCH, OCTO3_OID));
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_REMOTES_DIR "origin/" OCTO1_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
-	
+
 	cl_git_pass(git_reference_lookup(&octo2_ref, repo, GIT_REFS_REMOTES_DIR "origin/" OCTO2_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[1], repo, octo2_ref));
 
@@ -597,7 +597,7 @@ void test_merge_workdir_setup__remote_tracking_three_branches(void)
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge remote-tracking branches 'refs/remotes/origin/" OCTO1_BRANCH "', 'refs/remotes/origin/" OCTO2_BRANCH "' and 'refs/remotes/origin/" OCTO3_BRANCH "'\n"));
-	
+
 	git_reference_free(octo1_ref);
 	git_reference_free(octo2_ref);
 	git_reference_free(octo3_ref);
@@ -628,15 +628,15 @@ void test_merge_workdir_setup__normal_branch_and_remote_tracking_branch(void)
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[1], repo, octo2_ref));
 
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_annotated_commit **)their_heads, 2));
-	
+
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n" OCTO2_OID "\n"));
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branch '" OCTO1_BRANCH "', remote-tracking branch 'refs/remotes/origin/" OCTO2_BRANCH "'\n"));
-	
+
 	git_reference_free(octo1_ref);
 	git_reference_free(octo2_ref);
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 	git_annotated_commit_free(their_heads[1]);
@@ -654,7 +654,7 @@ void test_merge_workdir_setup__remote_tracking_branch_and_normal_branch(void)
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
-	
+
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_REMOTES_DIR "origin/" OCTO1_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
 
@@ -662,15 +662,15 @@ void test_merge_workdir_setup__remote_tracking_branch_and_normal_branch(void)
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[1], repo, octo2_ref));
 
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_annotated_commit **)their_heads, 2));
-	
+
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n" OCTO2_OID "\n"));
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branch '" OCTO2_BRANCH "', remote-tracking branch 'refs/remotes/origin/" OCTO1_BRANCH "'\n"));
-	
+
 	git_reference_free(octo1_ref);
 	git_reference_free(octo2_ref);
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 	git_annotated_commit_free(their_heads[1]);
@@ -691,7 +691,7 @@ void test_merge_workdir_setup__two_remote_tracking_branch_and_two_normal_branche
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
-	
+
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
 
@@ -705,17 +705,17 @@ void test_merge_workdir_setup__two_remote_tracking_branch_and_two_normal_branche
 	cl_git_pass(git_annotated_commit_from_ref(&their_heads[3], repo, octo4_ref));
 
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_annotated_commit **)their_heads, 4));
-	
+
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n" OCTO2_OID "\n" OCTO3_OID "\n" OCTO4_OID "\n"));
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branches '" OCTO1_BRANCH "' and '" OCTO3_BRANCH "', remote-tracking branches 'refs/remotes/origin/" OCTO2_BRANCH "' and 'refs/remotes/origin/" OCTO4_BRANCH "'\n"));
-	
+
 	git_reference_free(octo1_ref);
 	git_reference_free(octo2_ref);
 	git_reference_free(octo3_ref);
 	git_reference_free(octo4_ref);
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 	git_annotated_commit_free(their_heads[1]);
@@ -735,14 +735,14 @@ void test_merge_workdir_setup__pull_one(void)
 
 	cl_git_pass(git_oid_fromstr(&octo1_1_oid, OCTO1_OID));
 	cl_git_pass(git_annotated_commit_from_fetchhead(&their_heads[0], repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH, "http://remote.url/repo.git", &octo1_1_oid));
-	
+
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_annotated_commit **)their_heads, 1));
-	
+
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n"));
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branch 'octo1' of http://remote.url/repo.git\n"));
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 }
@@ -754,7 +754,7 @@ void test_merge_workdir_setup__pull_two(void)
 	git_oid octo1_oid;
 	git_oid octo2_oid;
 	git_annotated_commit *our_head, *their_heads[2];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
 
@@ -770,7 +770,7 @@ void test_merge_workdir_setup__pull_two(void)
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branches '" OCTO1_BRANCH "' and '" OCTO2_BRANCH "' of http://remote.url/repo.git\n"));
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 	git_annotated_commit_free(their_heads[1]);
@@ -784,7 +784,7 @@ void test_merge_workdir_setup__pull_three(void)
 	git_oid octo2_oid;
 	git_oid octo3_oid;
 	git_annotated_commit *our_head, *their_heads[3];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
 
@@ -803,7 +803,7 @@ void test_merge_workdir_setup__pull_three(void)
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branches '" OCTO1_BRANCH "', '" OCTO2_BRANCH "' and '" OCTO3_BRANCH "' of http://remote.url/repo.git\n"));
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 	git_annotated_commit_free(their_heads[1]);
@@ -817,7 +817,7 @@ void test_merge_workdir_setup__three_remotes(void)
 	git_oid octo2_oid;
 	git_oid octo3_oid;
 	git_annotated_commit *our_head, *their_heads[3];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
 
@@ -836,7 +836,7 @@ void test_merge_workdir_setup__three_remotes(void)
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branch '" OCTO1_BRANCH "' of http://remote.first/repo.git, branch '" OCTO2_BRANCH "' of http://remote.second/repo.git, branch '" OCTO3_BRANCH "' of http://remote.third/repo.git\n"));
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 	git_annotated_commit_free(their_heads[1]);
@@ -851,7 +851,7 @@ void test_merge_workdir_setup__two_remotes(void)
 	git_oid octo3_oid;
 	git_oid octo4_oid;
 	git_annotated_commit *our_head, *their_heads[4];
-	
+
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
 
@@ -873,7 +873,7 @@ void test_merge_workdir_setup__two_remotes(void)
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
 	cl_assert(test_file_contents(GIT_MERGE_MODE_FILE, "no-ff"));
 	cl_assert(test_file_contents(GIT_MERGE_MSG_FILE, "Merge branches '" OCTO1_BRANCH "' and '" OCTO3_BRANCH "' of http://remote.first/repo.git, branches '" OCTO2_BRANCH "' and '" OCTO4_BRANCH "' of http://remote.second/repo.git\n"));
-	
+
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 	git_annotated_commit_free(their_heads[1]);
@@ -1036,9 +1036,9 @@ void test_merge_workdir_setup__removed_after_failure(void)
 	cl_git_fail(git_merge(
 		repo, (const git_annotated_commit **)&their_heads[0], 1, NULL, NULL));
 
-	cl_assert(!git_path_exists("merge-resolve/.git/" GIT_MERGE_HEAD_FILE));
-	cl_assert(!git_path_exists("merge-resolve/.git/" GIT_MERGE_MODE_FILE));
-	cl_assert(!git_path_exists("merge-resolve/.git/" GIT_MERGE_MSG_FILE));
+	cl_assert(!git_fs_path_exists("merge-resolve/.git/" GIT_MERGE_HEAD_FILE));
+	cl_assert(!git_fs_path_exists("merge-resolve/.git/" GIT_MERGE_MODE_FILE));
+	cl_assert(!git_fs_path_exists("merge-resolve/.git/" GIT_MERGE_MSG_FILE));
 
 	git_reference_free(octo1_ref);
 
@@ -1061,7 +1061,7 @@ void test_merge_workdir_setup__unlocked_after_success(void)
 	cl_git_pass(git_merge(
 		repo, (const git_annotated_commit **)&their_heads[0], 1, NULL, NULL));
 
-	cl_assert(!git_path_exists("merge-resolve/.git/index.lock"));
+	cl_assert(!git_fs_path_exists("merge-resolve/.git/index.lock"));
 
 	git_reference_free(octo1_ref);
 
@@ -1087,7 +1087,7 @@ void test_merge_workdir_setup__unlocked_after_conflict(void)
 	cl_git_fail(git_merge(
 		repo, (const git_annotated_commit **)&their_heads[0], 1, NULL, NULL));
 
-	cl_assert(!git_path_exists("merge-resolve/.git/index.lock"));
+	cl_assert(!git_fs_path_exists("merge-resolve/.git/index.lock"));
 
 	git_reference_free(octo1_ref);
 

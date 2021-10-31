@@ -57,7 +57,7 @@ static wchar_t *path__skip_server(wchar_t *path)
 	wchar_t *c;
 
 	for (c = path; *c; c++) {
-		if (git_path_is_dirsep(*c))
+		if (git_fs_path_is_dirsep(*c))
 			return c + 1;
 	}
 
@@ -71,9 +71,9 @@ static wchar_t *path__skip_prefix(wchar_t *path)
 
 		if (wcsncmp(path, L"UNC\\", 4) == 0)
 			path = path__skip_server(path + 4);
-		else if (git_path_is_absolute(path))
+		else if (git_fs_path_is_absolute(path))
 			path += PATH__ABSOLUTE_LEN;
-	} else if (git_path_is_absolute(path)) {
+	} else if (git_fs_path_is_absolute(path)) {
 		path += PATH__ABSOLUTE_LEN;
 	} else if (path__is_unc(path)) {
 		path = path__skip_server(path + 2);
@@ -204,7 +204,7 @@ int git_win32_path_from_utf8(git_win32_path out, const char *src)
 	dest += PATH__NT_NAMESPACE_LEN;
 
 	/* See if this is an absolute path (beginning with a drive letter) */
-	if (git_path_is_absolute(src)) {
+	if (git_fs_path_is_absolute(src)) {
 		if (git__utf8_to_16(dest, GIT_WIN_PATH_MAX, src) < 0)
 			goto on_error;
 	}
@@ -228,7 +228,7 @@ int git_win32_path_from_utf8(git_win32_path out, const char *src)
 		if (path__cwd(dest, GIT_WIN_PATH_MAX) < 0)
 			goto on_error;
 
-		if (!git_path_is_absolute(dest)) {
+		if (!git_fs_path_is_absolute(dest)) {
 			errno = ENOENT;
 			goto on_error;
 		}
@@ -266,7 +266,7 @@ int git_win32_path_relative_from_utf8(git_win32_path out, const char *src)
 	int len;
 
 	/* Handle absolute paths */
-	if (git_path_is_absolute(src) ||
+	if (git_fs_path_is_absolute(src) ||
 	    path__is_nt_namespace(src) ||
 	    path__is_unc(src) ||
 	    path__startswith_slash(src)) {
@@ -305,7 +305,7 @@ int git_win32_path_to_utf8(git_win32_utf8_path dest, const wchar_t *src)
 	if ((len = git__utf16_to_8(out, GIT_WIN_PATH_UTF8, src)) < 0)
 		return len;
 
-	git_path_mkposix(dest);
+	git_fs_path_mkposix(dest);
 
 	return len;
 }

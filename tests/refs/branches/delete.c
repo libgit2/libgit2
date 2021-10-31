@@ -173,13 +173,13 @@ void test_refs_branches_delete__removes_empty_folders(void)
 	cl_git_pass(git_str_joinpath(&ref_folder, commondir, "refs/heads/some/deep"));
 	cl_git_pass(git_str_join3(&reflog_folder, '/', commondir, GIT_REFLOG_DIR, "refs/heads/some/deep"));
 
-	cl_assert(git_path_exists(git_str_cstr(&ref_folder)) == true);
-	cl_assert(git_path_exists(git_str_cstr(&reflog_folder)) == true);
+	cl_assert(git_fs_path_exists(git_str_cstr(&ref_folder)) == true);
+	cl_assert(git_fs_path_exists(git_str_cstr(&reflog_folder)) == true);
 
 	cl_git_pass(git_branch_delete(branch));
 
-	cl_assert(git_path_exists(git_str_cstr(&ref_folder)) == false);
-	cl_assert(git_path_exists(git_str_cstr(&reflog_folder)) == false);
+	cl_assert(git_fs_path_exists(git_str_cstr(&ref_folder)) == false);
+	cl_assert(git_fs_path_exists(git_str_cstr(&reflog_folder)) == false);
 
 	git_reference_free(branch);
 	git_str_dispose(&ref_folder);

@@ -504,7 +504,7 @@ void test_merge_workdir_simple__checkout_ours(void)
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
 
-	cl_assert(git_path_exists(TEST_REPO_PATH "/conflicting.txt"));
+	cl_assert(git_fs_path_exists(TEST_REPO_PATH "/conflicting.txt"));
 }
 
 void test_merge_workdir_simple__favor_ours(void)

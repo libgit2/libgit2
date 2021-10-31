@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Running %s against %s\n", argv[0], argv[1]);
 	LLVMFuzzerInitialize(&argc, &argv);
 
-	if (git_path_dirload(&corpus_files, argv[1], 0, 0x0) < 0) {
+	if (git_fs_path_dirload(&corpus_files, argv[1], 0, 0x0) < 0) {
 		fprintf(stderr, "Failed to scan corpus directory '%s': %s\n",
 			argv[1], git_error_last()->message);
 		error = -1;

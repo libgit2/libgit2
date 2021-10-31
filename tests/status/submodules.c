@@ -36,9 +36,9 @@ void test_status_submodules__0(void)
 
 	g_repo = setup_fixture_submodules();
 
-	cl_assert(git_path_isdir("submodules/.git"));
-	cl_assert(git_path_isdir("submodules/testrepo/.git"));
-	cl_assert(git_path_isfile("submodules/.gitmodules"));
+	cl_assert(git_fs_path_isdir("submodules/.git"));
+	cl_assert(git_fs_path_isdir("submodules/testrepo/.git"));
+	cl_assert(git_fs_path_isfile("submodules/.gitmodules"));
 
 	cl_git_pass(
 		git_status_foreach(g_repo, cb_status__count, &counts)
@@ -89,9 +89,9 @@ void test_status_submodules__1(void)
 
 	g_repo = setup_fixture_submodules();
 
-	cl_assert(git_path_isdir("submodules/.git"));
-	cl_assert(git_path_isdir("submodules/testrepo/.git"));
-	cl_assert(git_path_isfile("submodules/.gitmodules"));
+	cl_assert(git_fs_path_isdir("submodules/.git"));
+	cl_assert(git_fs_path_isdir("submodules/testrepo/.git"));
+	cl_assert(git_fs_path_isfile("submodules/.gitmodules"));
 
 	status_counts_init(counts, expected_files, expected_status);
 

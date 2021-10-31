@@ -283,7 +283,7 @@ void test_attr_repo__bare_repo_with_index(void)
 	git_index_free(index);
 
 	cl_must_pass(p_unlink("attr/.gitattributes"));
-	cl_assert(!git_path_exists("attr/.gitattributes"));
+	cl_assert(!git_fs_path_exists("attr/.gitattributes"));
 
 	cl_git_pass(git_repository_set_bare(g_repo));
 

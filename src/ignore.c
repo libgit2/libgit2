@@ -10,7 +10,7 @@
 #include "git2/ignore.h"
 #include "common.h"
 #include "attrcache.h"
-#include "path.h"
+#include "fs_path.h"
 #include "config.h"
 #include "wildmatch.h"
 
@@ -181,7 +181,7 @@ static int parse_ignore_file(
 
 	/* if subdir file path, convert context for file paths */
 	if (attrs->entry &&
-		git_path_root(attrs->entry->path) < 0 &&
+		git_fs_path_root(attrs->entry->path) < 0 &&
 		!git__suffixcmp(attrs->entry->path, "/" GIT_IGNORE_FILE))
 		context = attrs->entry->path;
 
@@ -313,21 +313,21 @@ int git_ignore__for_path(
 		goto cleanup;
 
 	/* given a unrooted path in a non-bare repo, resolve it */
-	if (workdir && git_path_root(path) < 0) {
+	if (workdir && git_fs_path_root(path) < 0) {
 		git_str local = GIT_STR_INIT;
 
-		if ((error = git_path_dirname_r(&local, path)) < 0 ||
-		    (error = git_path_resolve_relative(&local, 0)) < 0 ||
-		    (error = git_path_to_dir(&local)) < 0 ||
+		if ((error = git_fs_path_dirname_r(&local, path)) < 0 ||
+		    (error = git_fs_path_resolve_relative(&local, 0)) < 0 ||
+		    (error = git_fs_path_to_dir(&local)) < 0 ||
 		    (error = git_str_joinpath(&ignores->dir, workdir, local.ptr)) < 0 ||
-		    (error = git_path_validate_workdir_buf(repo, &ignores->dir)) < 0) {
+		    (error = git_fs_path_validate_workdir_buf(repo, &ignores->dir)) < 0) {
 			/* Nothing, we just want to stop on the first error */
 		}
 
 		git_str_dispose(&local);
 	} else {
 		if (!(error = git_str_joinpath(&ignores->dir, path, "")))
-		    error = git_path_validate_filesystem(ignores->dir.ptr, ignores->dir.size);
+		    error = git_fs_path_validate_filesystem(ignores->dir.ptr, ignores->dir.size);
 	}
 
 	if (error < 0)
@@ -342,7 +342,7 @@ int git_ignore__for_path(
 
 	/* load .gitignore up the path */
 	if (workdir != NULL) {
-		error = git_path_walk_up(
+		error = git_fs_path_walk_up(
 			&ignores->dir, workdir, push_one_ignore, ignores);
 		if (error < 0)
 			goto cleanup;
@@ -410,7 +410,7 @@ int git_ignore__pop_dir(git_ignores *ign)
 
 	if (--ign->depth > 0) {
 		git_str_rtruncate_at_char(&ign->dir, '/');
-		git_path_to_dir(&ign->dir);
+		git_fs_path_to_dir(&ign->dir);
 	}
 
 	return 0;
@@ -629,7 +629,7 @@ int git_ignore__check_pathspec_for_exact_ignores(
 			break;
 
 		/* is there a file on disk that matches this exactly? */
-		if (!git_path_isfile(path.ptr))
+		if (!git_fs_path_isfile(path.ptr))
 			continue;
 
 		/* is that file ignored? */

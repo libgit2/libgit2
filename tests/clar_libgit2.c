@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "posix.h"
-#include "path.h"
+#include "fs_path.h"
 #include "git2/sys/repository.h"
 
 void cl_git_report_failure(
@@ -281,7 +281,7 @@ const char* cl_git_path_url(const char *path)
 	git_str path_buf = GIT_STR_INIT;
 	git_str url_buf = GIT_STR_INIT;
 
-	cl_git_pass(git_path_prettify_dir(&path_buf, path, NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&path_buf, path, NULL));
 	cl_git_pass(git_str_puts(&url_buf, "file://"));
 
 #ifdef GIT_WIN32
@@ -336,9 +336,9 @@ const char *cl_git_sandbox_path(int is_dir, ...)
 	}
 	va_end(arg);
 
-	cl_git_pass(git_path_prettify(&buf, buf.ptr, NULL));
+	cl_git_pass(git_fs_path_prettify(&buf, buf.ptr, NULL));
 	if (is_dir)
-		git_path_to_dir(&buf);
+		git_fs_path_to_dir(&buf);
 
 	/* make sure we won't truncate */
 	cl_assert(git_str_len(&buf) < sizeof(_temp));
@@ -359,8 +359,8 @@ static int remove_placeholders_recurs(void *_data, git_str *path)
 	remove_data *data = (remove_data *)_data;
 	size_t pathlen;
 
-	if (git_path_isdir(path->ptr) == true)
-		return git_path_direach(path, 0, remove_placeholders_recurs, data);
+	if (git_fs_path_isdir(path->ptr) == true)
+		return git_fs_path_direach(path, 0, remove_placeholders_recurs, data);
 
 	pathlen = path->size;
 
@@ -382,7 +382,7 @@ int cl_git_remove_placeholders(const char *directory_path, const char *filename)
 	remove_data data;
 	git_str buffer = GIT_STR_INIT;
 
-	if (git_path_isdir(directory_path) == false)
+	if (git_fs_path_isdir(directory_path) == false)
 		return -1;
 
 	if (git_str_sets(&buffer, directory_path) < 0)
@@ -570,9 +570,9 @@ void cl_fake_home(void)
 
 	cl_set_cleanup(cl_fake_home_cleanup, NULL);
 
-	if (!git_path_exists("home"))
+	if (!git_fs_path_exists("home"))
 		cl_must_pass(p_mkdir("home", 0777));
-	cl_git_pass(git_path_prettify(&path, "home", NULL));
+	cl_git_pass(git_fs_path_prettify(&path, "home", NULL));
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
 	git_str_dispose(&path);
@@ -584,7 +584,7 @@ void cl_sandbox_set_search_path_defaults(void)
 
 	git_str_joinpath(&path, clar_sandbox_path(), "__config");
 
-	if (!git_path_exists(path.ptr))
+	if (!git_fs_path_exists(path.ptr))
 		cl_must_pass(p_mkdir(path.ptr, 0777));
 
 	git_libgit2_opts(

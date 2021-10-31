@@ -66,7 +66,7 @@ void test_online_customcert__file(void)
 {
 #if (GIT_OPENSSL || GIT_MBEDTLS)
 	cl_git_pass(git_clone(&g_repo, CUSTOM_CERT_ONE_URL, "./cloned", NULL));
-	cl_assert(git_path_exists("./cloned/master.txt"));
+	cl_assert(git_fs_path_exists("./cloned/master.txt"));
 #endif
 }
 
@@ -74,6 +74,6 @@ void test_online_customcert__path(void)
 {
 #if (GIT_OPENSSL || GIT_MBEDTLS)
 	cl_git_pass(git_clone(&g_repo, CUSTOM_CERT_TWO_URL, "./cloned", NULL));
-	cl_assert(git_path_exists("./cloned/master.txt"));
+	cl_assert(git_fs_path_exists("./cloned/master.txt"));
 #endif
 }

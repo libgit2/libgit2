@@ -13,6 +13,7 @@
 #include "futils.h"
 #include "tree-cache.h"
 #include "index.h"
+#include "path.h"
 
 #define DEFAULT_TREE_SIZE 16
 #define MAX_FILEMODE_BYTES 6
@@ -55,7 +56,7 @@ static int valid_entry_name(git_repository *repo, const char *filename)
 {
 	return *filename != '\0' &&
 		git_path_validate(repo, filename, 0,
-		GIT_PATH_REJECT_TRAVERSAL | GIT_PATH_REJECT_DOT_GIT | GIT_PATH_REJECT_SLASH);
+		GIT_FS_PATH_REJECT_TRAVERSAL | GIT_PATH_REJECT_DOT_GIT | GIT_FS_PATH_REJECT_SLASH);
 }
 
 static int entry_sort_cmp(const void *a, const void *b)
@@ -63,7 +64,7 @@ static int entry_sort_cmp(const void *a, const void *b)
 	const git_tree_entry *e1 = (const git_tree_entry *)a;
 	const git_tree_entry *e2 = (const git_tree_entry *)b;
 
-	return git_path_cmp(
+	return git_fs_path_cmp(
 		e1->filename, e1->filename_len, git_tree_entry__is_tree(e1),
 		e2->filename, e2->filename_len, git_tree_entry__is_tree(e2),
 		git__strncmp);
@@ -1171,7 +1172,7 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 
 		/* Figure out how much we need to change from the previous tree */
 		if (last_update)
-			common_prefix = git_path_common_dirlen(last_update->path, update->path);
+			common_prefix = git_fs_path_common_dirlen(last_update->path, update->path);
 
 		/*
 		 * The entries are sorted, so when we find we're no
@@ -1233,7 +1234,7 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 			{
 				/* Make sure we're replacing something of the same type */
 				tree_stack_entry *last = git_array_last(stack);
-				char *basename = git_path_basename(update->path);
+				char *basename = git_fs_path_basename(update->path);
 				const git_tree_entry *e = git_treebuilder_get(last->bld, basename);
 				if (e && git_tree_entry_type(e) != git_object__type_from_filemode(update->filemode)) {
 					git__free(basename);
@@ -1252,7 +1253,7 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 			case GIT_TREE_UPDATE_REMOVE:
 			{
 				tree_stack_entry *last = git_array_last(stack);
-				char *basename = git_path_basename(update->path);
+				char *basename = git_fs_path_basename(update->path);
 				error = git_treebuilder_remove(last->bld, basename);
 				git__free(basename);
 				break;

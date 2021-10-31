@@ -87,7 +87,7 @@ static int object_file_name(
 		return -1;
 
 	git_str_set(name, be->objects_dir, be->objects_dirlen);
-	git_path_to_dir(name);
+	git_fs_path_to_dir(name);
 
 	/* loose object filename: aa/aaa... (41 bytes) */
 	git_oid_pathfmt(name->ptr + name->size, id);
@@ -452,7 +452,7 @@ static int locate_object(
 {
 	int error = object_file_name(object_location, backend, oid);
 
-	if (!error && !git_path_exists(object_location->ptr))
+	if (!error && !git_fs_path_exists(object_location->ptr))
 		return GIT_ENOTFOUND;
 
 	return error;
@@ -467,7 +467,7 @@ static int fn_locate_object_short_oid(void *state, git_str *pathbuf) {
 		return 0;
 	}
 
-	if (git_path_isdir(pathbuf->ptr) == false) {
+	if (git_fs_path_isdir(pathbuf->ptr) == false) {
 		/* We are already in the directory matching the 2 first hex characters,
 		 * compare the first ncmp characters of the oids */
 		if (!memcmp(sstate->short_oid + 2,
@@ -509,7 +509,7 @@ static int locate_object_short_oid(
 		return -1;
 
 	git_str_set(object_location, objects_dir, dir_len);
-	git_path_to_dir(object_location);
+	git_fs_path_to_dir(object_location);
 
 	/* save adjusted position at end of dir so it can be restored later */
 	dir_len = git_str_len(object_location);
@@ -523,7 +523,7 @@ static int locate_object_short_oid(
 	object_location->ptr[object_location->size - 1] = '/';
 
 	/* Check that directory exists */
-	if (git_path_isdir(object_location->ptr) == false)
+	if (git_fs_path_isdir(object_location->ptr) == false)
 		return git_odb__error_notfound("no matching loose object for prefix",
 			short_oid, len);
 
@@ -532,7 +532,7 @@ static int locate_object_short_oid(
 	state.found = 0;
 
 	/* Explore directory to find a unique object matching short_oid */
-	error = git_path_direach(
+	error = git_fs_path_direach(
 		object_location, 0, fn_locate_object_short_oid, &state);
 	if (error < 0 && error != GIT_EAMBIGUOUS)
 		return error;
@@ -753,10 +753,10 @@ static int foreach_cb(void *_state, git_str *path)
 	struct foreach_state *state = (struct foreach_state *) _state;
 
 	/* non-dir is some stray file, ignore it */
-	if (!git_path_isdir(git_str_cstr(path)))
+	if (!git_fs_path_isdir(git_str_cstr(path)))
 		return 0;
 
-	return git_path_direach(path, 0, foreach_object_dir_cb, state);
+	return git_fs_path_direach(path, 0, foreach_object_dir_cb, state);
 }
 
 static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb cb, void *data)
@@ -773,7 +773,7 @@ static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb 
 	objects_dir = backend->objects_dir;
 
 	git_str_sets(&buf, objects_dir);
-	git_path_to_dir(&buf);
+	git_fs_path_to_dir(&buf);
 	if (git_str_oom(&buf))
 		return -1;
 
@@ -782,7 +782,7 @@ static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb 
 	state.data = data;
 	state.dir_len = git_str_len(&buf);
 
-	error = git_path_direach(&buf, 0, foreach_cb, &state);
+	error = git_fs_path_direach(&buf, 0, foreach_cb, &state);
 
 	git_str_dispose(&buf);
 

@@ -19,7 +19,7 @@
 #include "remote.h"
 #include "futils.h"
 #include "refs.h"
-#include "path.h"
+#include "fs_path.h"
 #include "repository.h"
 #include "odb.h"
 
@@ -333,7 +333,7 @@ static int create_and_configure_origin(
 	void *payload = options->remote_cb_payload;
 
 	/* If the path exists and is a dir, the url should be the absolute path */
-	if (git_path_root(url) < 0 && git_path_exists(url) && git_path_isdir(url)) {
+	if (git_fs_path_root(url) < 0 && git_fs_path_exists(url) && git_fs_path_isdir(url)) {
 		if (p_realpath(url, buf) == NULL)
 			return -1;
 
@@ -433,8 +433,8 @@ int git_clone__should_clone_local(const char *url_or_path, git_clone_local_t loc
 	if (local == GIT_CLONE_NO_LOCAL)
 		return 0;
 
-	if ((is_url = git_path_is_local_file_url(url_or_path)) != 0) {
-		if (git_path_fromurl(&fromurl, url_or_path) < 0) {
+	if ((is_url = git_fs_path_is_local_file_url(url_or_path)) != 0) {
+		if (git_fs_path_fromurl(&fromurl, url_or_path) < 0) {
 			is_local = -1;
 			goto done;
 		}
@@ -443,7 +443,7 @@ int git_clone__should_clone_local(const char *url_or_path, git_clone_local_t loc
 	}
 
 	is_local = (!is_url || local != GIT_CLONE_LOCAL_AUTO) &&
-		git_path_isdir(path);
+		git_fs_path_isdir(path);
 
 done:
 	git_str_dispose(&fromurl);
@@ -474,14 +474,14 @@ static int git__clone(
 	GIT_ERROR_CHECK_VERSION(&options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
 
 	/* Only clone to a new directory or an empty directory */
-	if (git_path_exists(local_path) && !use_existing && !git_path_is_empty_dir(local_path)) {
+	if (git_fs_path_exists(local_path) && !use_existing && !git_fs_path_is_empty_dir(local_path)) {
 		git_error_set(GIT_ERROR_INVALID,
 			"'%s' exists and is not an empty directory", local_path);
 		return GIT_EEXISTS;
 	}
 
 	/* Only remove the root directory on failure if we create it */
-	if (git_path_exists(local_path))
+	if (git_fs_path_exists(local_path))
 		rmdir_flags |= GIT_RMDIR_SKIP_ROOT;
 
 	if (options.repository_cb)
@@ -602,7 +602,7 @@ static int clone_local_into(git_repository *repo, git_remote *remote, const git_
 	 * repo, if it's not rooted, the path should be relative to
 	 * the repository's worktree/gitdir.
 	 */
-	if ((error = git_path_from_url_or_path(&src_path, git_remote_url(remote))) < 0)
+	if ((error = git_fs_path_from_url_or_path(&src_path, git_remote_url(remote))) < 0)
 		return error;
 
 	/* Copy .git/objects/ from the source to the target */

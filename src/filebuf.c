@@ -43,7 +43,7 @@ static int verify_last_error(git_filebuf *file)
 
 static int lock_file(git_filebuf *file, int flags, mode_t mode)
 {
-	if (git_path_exists(file->path_lock) == true) {
+	if (git_fs_path_exists(file->path_lock) == true) {
 		git_error_clear(); /* actual OS error code just confuses */
 		git_error_set(GIT_ERROR_OS,
 			"failed to lock file '%s' for writing", file->path_lock);
@@ -63,7 +63,7 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 
 	file->fd_is_open = true;
 
-	if ((flags & GIT_FILEBUF_APPEND) && git_path_exists(file->path_original) == true) {
+	if ((flags & GIT_FILEBUF_APPEND) && git_fs_path_exists(file->path_original) == true) {
 		git_file source;
 		char buffer[FILEIO_BUFSIZE];
 		ssize_t read_bytes;
@@ -103,7 +103,7 @@ void git_filebuf_cleanup(git_filebuf *file)
 	if (file->fd_is_open && file->fd >= 0)
 		p_close(file->fd);
 
-	if (file->created_lock && !file->did_rename && file->path_lock && git_path_exists(file->path_lock))
+	if (file->created_lock && !file->did_rename && file->path_lock && git_fs_path_exists(file->path_lock))
 		p_unlink(file->path_lock);
 
 	if (file->compute_digest) {
@@ -241,20 +241,20 @@ static int resolve_symlink(git_str *out, const char *path)
 		target.ptr[ret] = '\0';
 		target.size = ret;
 
-		root = git_path_root(target.ptr);
+		root = git_fs_path_root(target.ptr);
 		if (root >= 0) {
 			if ((error = git_str_sets(&curpath, target.ptr)) < 0)
 				goto cleanup;
 		} else {
 			git_str dir = GIT_STR_INIT;
 
-			if ((error = git_path_dirname_r(&dir, curpath.ptr)) < 0)
+			if ((error = git_fs_path_dirname_r(&dir, curpath.ptr)) < 0)
 				goto cleanup;
 
 			git_str_swap(&curpath, &dir);
 			git_str_dispose(&dir);
 
-			if ((error = git_path_apply_relative(&curpath, target.ptr)) < 0)
+			if ((error = git_fs_path_apply_relative(&curpath, target.ptr)) < 0)
 				goto cleanup;
 		}
 	}
@@ -366,7 +366,7 @@ int git_filebuf_open_withsize(git_filebuf *file, const char *path, int flags, mo
 		memcpy(file->path_lock, file->path_original, path_len);
 		memcpy(file->path_lock + path_len, GIT_FILELOCK_EXTENSION, GIT_FILELOCK_EXTLENGTH);
 
-		if (git_path_isdir(file->path_original)) {
+		if (git_fs_path_isdir(file->path_original)) {
 			git_error_set(GIT_ERROR_FILESYSTEM, "path '%s' is a directory", file->path_original);
 			error = GIT_EDIRECTORY;
 			goto cleanup;

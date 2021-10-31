@@ -103,7 +103,7 @@ void test_core_env__0(void)
 			continue;
 		}
 
-		cl_git_pass(git_path_prettify(&path, *val, NULL));
+		cl_git_pass(git_fs_path_prettify(&path, *val, NULL));
 
 		/* vary testfile name in each directory so accidentally leaving
 		 * an environment variable set from a previous iteration won't
@@ -137,7 +137,7 @@ void test_core_env__0(void)
 		cl_git_pass(git_sysdir_find_global_file(&found, testfile));
 
 		{
-			int root = git_path_root(path.ptr);
+			int root = git_fs_path_root(path.ptr);
 			char old;
 
 			if (root >= 0) {
@@ -270,7 +270,7 @@ void test_core_env__2(void)
 			continue;
 		}
 
-		cl_git_pass(git_path_prettify(&path, *val, NULL));
+		cl_git_pass(git_fs_path_prettify(&path, *val, NULL));
 
 		/* vary testfile name so any sloppiness is resetting variables or
 		 * deleting files won't accidentally make a test pass.

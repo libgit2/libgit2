@@ -12,7 +12,7 @@
 #include "git2/net.h"
 #include "git2/transport.h"
 #include "git2/sys/transport.h"
-#include "path.h"
+#include "fs_path.h"
 
 typedef struct transport_definition {
 	char *prefix;
@@ -82,7 +82,7 @@ static int transport_find_fn(
 	 * to a directory and if so assume local path, else assume SSH */
 
 	/* Check to see if the path points to a file on the local file system */
-	if (!definition && git_path_exists(url) && git_path_isdir(url))
+	if (!definition && git_fs_path_exists(url) && git_fs_path_isdir(url))
 		definition = &local_transport_definition;
 #endif
 
@@ -98,7 +98,7 @@ static int transport_find_fn(
 
 #ifndef GIT_WIN32
 	/* Check to see if the path points to a file on the local file system */
-	if (!definition && git_path_exists(url) && git_path_isdir(url))
+	if (!definition && git_fs_path_exists(url) && git_fs_path_isdir(url))
 		definition = &local_transport_definition;
 #endif
 

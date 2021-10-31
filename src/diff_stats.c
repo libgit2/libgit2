@@ -70,7 +70,7 @@ static int diff_file_stats_full_to_buf(
 
 		padding = stats->max_name - strlen(old_path) - strlen(new_path);
 
-		if ((common_dirlen = git_path_common_dirlen(old_path, new_path)) &&
+		if ((common_dirlen = git_fs_path_common_dirlen(old_path, new_path)) &&
 		    common_dirlen <= INT_MAX) {
 			error = git_str_printf(out, " %.*s{%s"DIFF_RENAME_FILE_SEPARATOR"%s}",
 					       (int) common_dirlen, old_path,

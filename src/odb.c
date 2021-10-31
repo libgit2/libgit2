@@ -277,7 +277,7 @@ int git_odb__hashlink(git_oid *out, const char *path)
 	int size;
 	int result;
 
-	if (git_path_lstat(path, &st) < 0)
+	if (git_fs_path_lstat(path, &st) < 0)
 		return -1;
 
 	if (!git__is_int(st.st_size) || (int)st.st_size < 0) {
@@ -649,7 +649,7 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 	if (git_str_joinpath(&alternates_path, objects_dir, GIT_ALTERNATES_FILE) < 0)
 		return -1;
 
-	if (git_path_exists(alternates_path.ptr) == false) {
+	if (git_fs_path_exists(alternates_path.ptr) == false) {
 		git_str_dispose(&alternates_path);
 		return 0;
 	}

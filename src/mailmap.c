@@ -9,7 +9,7 @@
 
 #include "common.h"
 #include "config.h"
-#include "path.h"
+#include "fs_path.h"
 #include "repository.h"
 #include "signature.h"
 #include "git2/config.h"
@@ -327,11 +327,11 @@ static int mailmap_add_file_ondisk(
 	git_str content = GIT_STR_INIT;
 	int error;
 
-	error = git_path_join_unrooted(&fullpath, path, base, NULL);
+	error = git_fs_path_join_unrooted(&fullpath, path, base, NULL);
 	if (error < 0)
 		goto cleanup;
 
-	error = git_path_validate_workdir_buf(repo, &fullpath);
+	error = git_fs_path_validate_workdir_buf(repo, &fullpath);
 	if (error < 0)
 		goto cleanup;
 

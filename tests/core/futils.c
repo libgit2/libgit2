@@ -68,7 +68,7 @@ void test_core_futils__write_hidden_file(void)
 
 void test_core_futils__recursive_rmdir_keeps_symlink_targets(void)
 {
-	if (!git_path_supports_symlinks(clar_sandbox_path()))
+	if (!git_fs_path_supports_symlinks(clar_sandbox_path()))
 		cl_skip();
 
 	cl_git_pass(git_futils_mkdir_r("a/b", 0777));
@@ -80,8 +80,8 @@ void test_core_futils__recursive_rmdir_keeps_symlink_targets(void)
 
 	cl_git_pass(git_futils_rmdir_r("a", NULL, GIT_RMDIR_REMOVE_FILES));
 
-	cl_assert(git_path_exists("dir-target"));
-	cl_assert(git_path_exists("file-target"));
+	cl_assert(git_fs_path_exists("dir-target"));
+	cl_assert(git_fs_path_exists("file-target"));
 
 	cl_must_pass(p_unlink("dir-target/file"));
 	cl_must_pass(p_rmdir("dir-target"));

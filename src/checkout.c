@@ -27,10 +27,11 @@
 #include "diff_generate.h"
 #include "pathspec.h"
 #include "diff_xdiff.h"
-#include "path.h"
+#include "fs_path.h"
 #include "attr.h"
 #include "pool.h"
 #include "strmap.h"
+#include "path.h"
 
 /* See docs/checkout-internals.md for more information */
 
@@ -328,7 +329,7 @@ static int checkout_target_fullpath(
 	if (path && git_str_puts(&data->target_path, path) < 0)
 		return -1;
 
-	if (git_path_validate_workdir_buf(data->repo, &data->target_path) < 0)
+	if (git_fs_path_validate_workdir_buf(data->repo, &data->target_path) < 0)
 		return -1;
 
 	*out = &data->target_path;
@@ -347,7 +348,7 @@ static bool wd_item_is_removable(
 	if (checkout_target_fullpath(&full, data, wd->path) < 0)
 		return false;
 
-	return !full || !git_path_contains(full, DOT_GIT);
+	return !full || !git_fs_path_contains(full, DOT_GIT);
 }
 
 static int checkout_queue_remove(checkout_data *data, const char *path)
@@ -481,7 +482,7 @@ static bool checkout_is_empty_dir(checkout_data *data, const char *path)
 	if (checkout_target_fullpath(&fullpath, data, path) < 0)
 		return false;
 
-	return git_path_is_empty_dir(fullpath->ptr);
+	return git_fs_path_is_empty_dir(fullpath->ptr);
 }
 
 static int checkout_action_with_wd(
@@ -1201,12 +1202,12 @@ static int checkout_conflicts_mark_directoryfile(
 				goto done;
 			}
 
-			prefixed = git_path_equal_or_prefixed(path, entry->path, NULL);
+			prefixed = git_fs_path_equal_or_prefixed(path, entry->path, NULL);
 
-			if (prefixed == GIT_PATH_EQUAL)
+			if (prefixed == GIT_FS_PATH_EQUAL)
 				continue;
 
-			if (prefixed == GIT_PATH_PREFIX)
+			if (prefixed == GIT_FS_PATH_PREFIX)
 				conflict->directoryfile = 1;
 
 			break;
@@ -1949,7 +1950,7 @@ static int checkout_path_suffixed(git_str *path, const char *suffix)
 
 	path_len = git_str_len(path);
 
-	while (git_path_exists(git_str_cstr(path)) && i < INT_MAX) {
+	while (git_fs_path_exists(git_str_cstr(path)) && i < INT_MAX) {
 		git_str_truncate(path, path_len);
 
 		if ((error = git_str_putc(path, '_')) < 0 ||
@@ -2034,7 +2035,7 @@ static int checkout_merge_path(
 	int error = 0;
 
 	if ((error = git_str_joinpath(out, data->opts.target_directory, result->path)) < 0 ||
-	    (error = git_path_validate_workdir_buf(data->repo, out)) < 0)
+	    (error = git_fs_path_validate_workdir_buf(data->repo, out)) < 0)
 		return error;
 
 	/* Most conflicts simply use the filename in the index */
@@ -2337,10 +2338,10 @@ static int validate_target_directory(checkout_data *data)
 {
 	int error;
 
-	if ((error = git_path_validate_workdir(data->repo, data->opts.target_directory)) < 0)
+	if ((error = git_fs_path_validate_workdir(data->repo, data->opts.target_directory)) < 0)
 		return error;
 
-	if (git_path_isdir(data->opts.target_directory))
+	if (git_fs_path_isdir(data->opts.target_directory))
 		return 0;
 
 	error = checkout_mkdir(data, data->opts.target_directory, NULL,
@@ -2507,7 +2508,7 @@ static int checkout_data_init(
 	    (error = git_vector_init(&data->remove_conflicts, 0, NULL)) < 0 ||
 	    (error = git_vector_init(&data->update_conflicts, 0, NULL)) < 0 ||
 	    (error = git_str_puts(&data->target_path, data->opts.target_directory)) < 0 ||
-	    (error = git_path_to_dir(&data->target_path)) < 0 ||
+	    (error = git_fs_path_to_dir(&data->target_path)) < 0 ||
 	    (error = git_strmap_new(&data->mkdir_map)) < 0)
 		goto cleanup;
 

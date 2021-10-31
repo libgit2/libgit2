@@ -24,11 +24,11 @@ void test_repo_env__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
 
-	if (git_path_isdir("attr"))
+	if (git_fs_path_isdir("attr"))
 		git_futils_rmdir_r("attr", NULL, GIT_RMDIR_REMOVE_FILES);
-	if (git_path_isdir("testrepo.git"))
+	if (git_fs_path_isdir("testrepo.git"))
 		git_futils_rmdir_r("testrepo.git", NULL, GIT_RMDIR_REMOVE_FILES);
-	if (git_path_isdir("peeled.git"))
+	if (git_fs_path_isdir("peeled.git"))
 		git_futils_rmdir_r("peeled.git", NULL, GIT_RMDIR_REMOVE_FILES);
 
 	clear_git_env();
@@ -81,7 +81,7 @@ static void env_cd_(
 	const char *file, const char *func, int line)
 {
 	git_str cwd_buf = GIT_STR_INIT;
-	cl_git_pass(git_path_prettify_dir(&cwd_buf, ".", NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&cwd_buf, ".", NULL));
 	cl_must_pass(p_chdir(path));
 	passfail_(NULL, file, func, line);
 	cl_must_pass(p_chdir(git_str_cstr(&cwd_buf)));
@@ -141,7 +141,7 @@ void test_repo_env__open(void)
 	cl_fixture_sandbox("peeled.git");
 	cl_git_pass(p_rename("attr/.gitted", "attr/.git"));
 
-	cl_git_pass(git_path_prettify_dir(&repo_dir_buf, "attr", NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&repo_dir_buf, "attr", NULL));
 	repo_dir = git_str_cstr(&repo_dir_buf);
 
 	/* GIT_DIR that doesn't exist */

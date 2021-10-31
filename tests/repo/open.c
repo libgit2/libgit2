@@ -8,7 +8,7 @@ void test_repo_open__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
 
-	if (git_path_isdir("alternate"))
+	if (git_fs_path_isdir("alternate"))
 		git_futils_rmdir_r("alternate", NULL, GIT_RMDIR_REMOVE_FILES);
 }
 
@@ -147,7 +147,7 @@ void test_repo_open__with_symlinked_config(void)
 	cl_git_pass(git_futils_mkdir_r("home", 0777));
 	cl_git_mkfile("home/.gitconfig.linked", "[global]\ntest = 4567\n");
 	cl_must_pass(symlink(".gitconfig.linked", "home/.gitconfig"));
-	cl_git_pass(git_path_prettify(&path, "home", NULL));
+	cl_git_pass(git_fs_path_prettify(&path, "home", NULL));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
@@ -191,7 +191,7 @@ void test_repo_open__from_git_new_workdir(void)
 
 	for (scan = links; *scan != NULL; scan++) {
 		git_str_joinpath(&link_tgt, "empty_standard_repo/.git", *scan);
-		if (git_path_exists(link_tgt.ptr)) {
+		if (git_fs_path_exists(link_tgt.ptr)) {
 			git_str_joinpath(&link_tgt, "../../empty_standard_repo/.git", *scan);
 			git_str_joinpath(&link, "alternate/.git", *scan);
 			if (strchr(*scan, '/'))
@@ -201,7 +201,7 @@ void test_repo_open__from_git_new_workdir(void)
 	}
 	for (scan = copies; *scan != NULL; scan++) {
 		git_str_joinpath(&link_tgt, "empty_standard_repo/.git", *scan);
-		if (git_path_exists(link_tgt.ptr)) {
+		if (git_fs_path_exists(link_tgt.ptr)) {
 			git_str_joinpath(&link, "alternate/.git", *scan);
 			cl_git_pass(git_futils_readbuffer(&body, link_tgt.ptr));
 
@@ -381,7 +381,7 @@ void test_repo_open__no_config(void)
 
 	/* isolate from system level configs */
 	cl_must_pass(p_mkdir("alternate", 0777));
-	cl_git_pass(git_path_prettify(&path, "alternate", NULL));
+	cl_git_pass(git_fs_path_prettify(&path, "alternate", NULL));
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
 	cl_git_pass(git_libgit2_opts(

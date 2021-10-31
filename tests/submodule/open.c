@@ -27,9 +27,9 @@ static void assert_sm_valid(git_repository *parent, git_repository *child, const
 
 	/* assert working directory */
 	cl_git_pass(git_str_joinpath(&expected, git_repository_workdir(parent), sm_name));
-	cl_git_pass(git_path_prettify_dir(&expected, expected.ptr, NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&expected, expected.ptr, NULL));
 	cl_git_pass(git_str_sets(&actual, git_repository_workdir(child)));
-	cl_git_pass(git_path_prettify_dir(&actual, actual.ptr, NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&actual, actual.ptr, NULL));
 	cl_assert_equal_s(expected.ptr, actual.ptr);
 
 	git_str_clear(&expected);
@@ -38,14 +38,14 @@ static void assert_sm_valid(git_repository *parent, git_repository *child, const
 	/* assert common directory */
 	cl_git_pass(git_str_joinpath(&expected, git_repository_commondir(parent), "modules"));
 	cl_git_pass(git_str_joinpath(&expected, expected.ptr, sm_name));
-	cl_git_pass(git_path_prettify_dir(&expected, expected.ptr, NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&expected, expected.ptr, NULL));
 	cl_git_pass(git_str_sets(&actual, git_repository_commondir(child)));
-	cl_git_pass(git_path_prettify_dir(&actual, actual.ptr, NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&actual, actual.ptr, NULL));
 	cl_assert_equal_s(expected.ptr, actual.ptr);
 
 	/* assert git directory */
 	cl_git_pass(git_str_sets(&actual, git_repository_path(child)));
-	cl_git_pass(git_path_prettify_dir(&actual, actual.ptr, NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&actual, actual.ptr, NULL));
 	cl_assert_equal_s(expected.ptr, actual.ptr);
 
 	git_str_dispose(&expected);

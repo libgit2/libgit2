@@ -44,7 +44,7 @@ static int win32_path_to_8(git_str *dest, const wchar_t *src)
 	}
 
 	/* Convert backslashes to forward slashes */
-	git_path_mkposix(utf8_path);
+	git_fs_path_mkposix(utf8_path);
 
 	return git_str_sets(dest, utf8_path);
 }

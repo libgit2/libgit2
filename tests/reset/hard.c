@@ -79,7 +79,7 @@ void test_reset_hard__resetting_reverts_modified_files(void)
 			cl_git_pass(git_futils_readbuffer(&content, path.ptr));
 			cl_assert(strequal_ignore_eol(after[i], content.ptr));
 		} else {
-			cl_assert(!git_path_exists(path.ptr));
+			cl_assert(!git_fs_path_exists(path.ptr));
 		}
 	}
 
@@ -154,7 +154,7 @@ void test_reset_hard__resetting_reverts_unmerged(void)
 		cl_git_pass(git_revparse_single(&target, repo, "26a125e"));
 		cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL));
 
-		cl_assert(git_path_exists("status/conflicting_file") == 0);
+		cl_assert(git_fs_path_exists("status/conflicting_file") == 0);
 
 		git_object_free(target);
 		target = NULL;
@@ -185,11 +185,11 @@ void test_reset_hard__cleans_up_merge(void)
 	cl_git_pass(git_revparse_single(&target, repo, "0017bd4"));
 	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL));
 
-	cl_assert(!git_path_exists(git_str_cstr(&merge_head_path)));
-	cl_assert(!git_path_exists(git_str_cstr(&merge_msg_path)));
-	cl_assert(!git_path_exists(git_str_cstr(&merge_mode_path)));
+	cl_assert(!git_fs_path_exists(git_str_cstr(&merge_head_path)));
+	cl_assert(!git_fs_path_exists(git_str_cstr(&merge_msg_path)));
+	cl_assert(!git_fs_path_exists(git_str_cstr(&merge_mode_path)));
 
-	cl_assert(git_path_exists(git_str_cstr(&orig_head_path)));
+	cl_assert(git_fs_path_exists(git_str_cstr(&orig_head_path)));
 	cl_git_pass(p_unlink(git_str_cstr(&orig_head_path)));
 
 	git_str_dispose(&merge_head_path);

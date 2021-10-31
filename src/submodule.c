@@ -16,11 +16,12 @@
 #include "repository.h"
 #include "tree.h"
 #include "iterator.h"
-#include "path.h"
+#include "fs_path.h"
 #include "str.h"
 #include "index.h"
 #include "worktree.h"
 #include "clone.h"
+#include "path.h"
 
 #include "git2/config.h"
 #include "git2/sys/config.h"
@@ -149,7 +150,7 @@ static int is_path_occupied(bool *occupied, git_repository *repo, const char *pa
 	if ((error = git_str_sets(&dir, path)) < 0)
 		goto out;
 
-	if ((error = git_path_to_dir(&dir)) < 0)
+	if ((error = git_fs_path_to_dir(&dir)) < 0)
 		goto out;
 
 	if ((error = git_index_find_prefix(NULL, index, dir.ptr)) != GIT_ENOTFOUND) {
@@ -385,10 +386,10 @@ int git_submodule__lookup_with_cache(
 			if (git_str_join3(&path, '/',
 			                  git_repository_workdir(repo),
 					  name, DOT_GIT) < 0 ||
-			    git_path_validate_workdir_buf(NULL, &path) < 0)
+			    git_fs_path_validate_workdir_buf(NULL, &path) < 0)
 				return -1;
 
-			if (git_path_exists(path.ptr))
+			if (git_fs_path_exists(path.ptr))
 				error = GIT_EEXISTS;
 
 			git_str_dispose(&path);
@@ -412,17 +413,17 @@ int git_submodule_name_is_valid(git_repository *repo, const char *name, int flag
 	int error, isvalid;
 
 	if (flags == 0)
-		flags = GIT_PATH_REJECT_FILESYSTEM_DEFAULTS;
+		flags = GIT_FS_PATH_REJECT_FILESYSTEM_DEFAULTS;
 
 	/* Avoid allocating a new string if we can avoid it */
 	if (strchr(name, '\\') != NULL) {
-		if ((error = git_path_normalize_slashes(&buf, name)) < 0)
+		if ((error = git_fs_path_normalize_slashes(&buf, name)) < 0)
 			return error;
 	} else {
 		git_str_attach_notowned(&buf, name, strlen(name));
 	}
 
-	isvalid =  git_path_validate(repo, buf.ptr, 0, flags);
+	isvalid = git_path_validate(repo, buf.ptr, 0, flags);
 	git_str_dispose(&buf);
 
 	return isvalid;
@@ -743,16 +744,16 @@ static int git_submodule__resolve_url(
 
 	/* We do this in all platforms in case someone on Windows created the .gitmodules */
 	if (strchr(url, '\\')) {
-		if ((error = git_path_normalize_slashes(&normalized, url)) < 0)
+		if ((error = git_fs_path_normalize_slashes(&normalized, url)) < 0)
 			return error;
 
 		url = normalized.ptr;
 	}
 
 
-	if (git_path_is_relative(url)) {
+	if (git_fs_path_is_relative(url)) {
 		if (!(error = get_url_base(out, repo)))
-			error = git_path_apply_relative(out, url);
+			error = git_fs_path_apply_relative(out, url);
 	} else if (strchr(url, ':') != NULL || url[0] == '/') {
 		error = git_str_sets(out, url);
 	} else {
@@ -805,7 +806,7 @@ int git_submodule_add_setup(
 	if (git__prefixcmp(path, git_repository_workdir(repo)) == 0)
 		path += strlen(git_repository_workdir(repo));
 
-	if (git_path_root(path) >= 0) {
+	if (git_fs_path_root(path) >= 0) {
 		git_error_set(GIT_ERROR_SUBMODULE, "submodule path must be a relative path");
 		error = -1;
 		goto cleanup;
@@ -846,8 +847,8 @@ int git_submodule_add_setup(
 	/* if the repo does not already exist, then init a new repo and add it.
 	 * Otherwise, just add the existing repo.
 	 */
-	if (!(git_path_exists(name.ptr) &&
-		git_path_contains(&name, DOT_GIT))) {
+	if (!(git_fs_path_exists(name.ptr) &&
+		git_fs_path_contains(&name, DOT_GIT))) {
 
 		/* resolve the actual URL to use */
 		if ((error = git_submodule__resolve_url(&real_url, repo, url)) < 0)
@@ -1568,13 +1569,13 @@ static int git_submodule__open(
 			sm->flags |= GIT_SUBMODULE_STATUS__WD_OID_VALID;
 		else
 			git_error_clear();
-	} else if (git_path_exists(path.ptr)) {
+	} else if (git_fs_path_exists(path.ptr)) {
 		sm->flags |= GIT_SUBMODULE_STATUS__WD_SCANNED |
 			GIT_SUBMODULE_STATUS_IN_WD;
 	} else {
 		git_str_rtruncate_at_char(&path, '/'); /* remove "/.git" */
 
-		if (git_path_isdir(path.ptr))
+		if (git_fs_path_isdir(path.ptr))
 			sm->flags |= GIT_SUBMODULE_STATUS__WD_SCANNED;
 	}
 
@@ -2105,10 +2106,10 @@ static int submodule_load_from_wd_lite(git_submodule *sm)
 	if (git_repository_workdir_path(&path, sm->repo, sm->path) < 0)
 		return -1;
 
-	if (git_path_isdir(path.ptr))
+	if (git_fs_path_isdir(path.ptr))
 		sm->flags |= GIT_SUBMODULE_STATUS__WD_SCANNED;
 
-	if (git_path_contains(&path, DOT_GIT))
+	if (git_fs_path_contains(&path, DOT_GIT))
 		sm->flags |= GIT_SUBMODULE_STATUS_IN_WD;
 
 	git_str_dispose(&path);
@@ -2160,7 +2161,7 @@ static git_config_backend *open_gitmodules(
 		if (git_repository_workdir_path(&path, repo, GIT_MODULES_FILE) != 0)
 			return NULL;
 
-		if (okay_to_create || git_path_isfile(path.ptr)) {
+		if (okay_to_create || git_fs_path_isfile(path.ptr)) {
 			/* git_config_backend_from_file should only fail if OOM */
 			if (git_config_backend_from_file(&mods, path.ptr) < 0)
 				mods = NULL;

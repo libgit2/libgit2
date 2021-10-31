@@ -9,7 +9,7 @@
 
 #include "runtime.h"
 #include "str.h"
-#include "path.h"
+#include "fs_path.h"
 #include <ctype.h>
 #if GIT_WIN32
 #include "win32/findfile.h"
@@ -291,7 +291,7 @@ static int git_sysdir_find_in_dirlist(
 		if (name)
 			GIT_ERROR_CHECK_ERROR(git_str_joinpath(path, path->ptr, name));
 
-		if (git_path_exists(path->ptr))
+		if (git_fs_path_exists(path->ptr))
 			return 0;
 	}
 

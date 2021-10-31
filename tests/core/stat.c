@@ -102,7 +102,7 @@ void test_core_stat__root(void)
 	int root_len;
 	struct stat st;
 
-	root_len = git_path_root(sandbox);
+	root_len = git_fs_path_root(sandbox);
 	cl_assert(root_len >= 0);
 
 	git_str_set(&root, sandbox, root_len+1);
