@@ -64,6 +64,33 @@ void test_path_core__isvalid_standard(void)
 	cl_assert_equal_b(true, git_fs_path_is_valid("foo/bar/.file", 0));
 }
 
+/* Ensure that `is_valid_str` only reads str->size bytes */
+void test_path_core__isvalid_standard_str(void)
+{
+	git_str str = GIT_STR_INIT_CONST("foo/bar//zap", 0);
+
+	str.size = 0;
+	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, 0));
+
+	str.size = 3;
+	cl_assert_equal_b(true, git_fs_path_is_valid_str(&str, 0));
+
+	str.size = 4;
+	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, 0));
+
+	str.size = 5;
+	cl_assert_equal_b(true, git_fs_path_is_valid_str(&str, 0));
+
+	str.size = 7;
+	cl_assert_equal_b(true, git_fs_path_is_valid_str(&str, 0));
+
+	str.size = 8;
+	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, 0));
+
+	str.size = strlen(str.ptr);
+	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, 0));
+}
+
 void test_path_core__isvalid_empty_dir_component(void)
 {
 	cl_assert_equal_b(false, git_fs_path_is_valid("foo//bar", 0));

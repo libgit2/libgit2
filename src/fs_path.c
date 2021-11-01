@@ -1634,16 +1634,17 @@ static bool validate_component(
 	return true;
 }
 
-bool git_fs_path_is_valid_ext(
-	const char *path,
+bool git_fs_path_is_valid_str_ext(
+	const git_str *path,
 	unsigned int flags,
 	bool (*validate_char_cb)(char ch, void *payload),
 	bool (*validate_component_cb)(const char *component, size_t len, void *payload),
 	void *payload)
 {
 	const char *start, *c;
+	size_t len = 0;
 
-	for (start = c = path; *c; c++) {
+	for (start = c = path->ptr; *c && len < path->size; c++, len++) {
 		if (!validate_char(*c, flags))
 			return false;
 
@@ -1663,6 +1664,15 @@ bool git_fs_path_is_valid_ext(
 		start = c + 1;
 	}
 
+	/*
+	 * We want to support paths specified as either `const char *`
+	 * or `git_str *`; we pass size as `SIZE_MAX` when we use a
+	 * `const char *` to avoid a `strlen`.  Ensure that we didn't
+	 * have a NUL in the buffer if there was a non-SIZE_MAX length.
+	 */
+	if (path->size != SIZE_MAX && len != path->size)
+		return false;
+
 	if (!validate_component(start, (c - start), flags))
 		return false;
 
@@ -1671,11 +1681,6 @@ bool git_fs_path_is_valid_ext(
 		return false;
 
 	return true;
-}
-
-bool git_fs_path_is_valid(const char *path, unsigned int flags)
-{
-	return git_fs_path_is_valid_ext(path, flags, NULL, NULL, NULL);
 }
 
 #ifdef GIT_WIN32

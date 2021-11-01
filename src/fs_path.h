@@ -621,24 +621,54 @@ extern int git_fs_path_from_url_or_path(git_str *local_path_out, const char *url
 #endif
 
 /**
+ * Validate a filesystem path; with custom callbacks per-character and
+ * per-path component.
+ */
+extern bool git_fs_path_is_valid_str_ext(
+	const git_str *path,
+	unsigned int flags,
+	bool (*validate_char_cb)(char ch, void *payload),
+	bool (*validate_component_cb)(const char *component, size_t len, void *payload),
+	void *payload);
+
+GIT_INLINE(bool) git_fs_path_is_valid_ext(
+	const char *path,
+	unsigned int flags,
+	bool (*validate_char_cb)(char ch, void *payload),
+	bool (*validate_component_cb)(const char *component, size_t len, void *payload),
+	void *payload)
+{
+	const git_str str = GIT_STR_INIT_CONST(path, SIZE_MAX);
+	return git_fs_path_is_valid_str_ext(
+		&str,
+		flags,
+		validate_char_cb,
+		validate_component_cb,
+		payload);
+}
+
+/**
  * Validate a filesystem path.  This ensures that the given path is legal
  * and does not contain any "unsafe" components like path traversal ('.'
  * or '..'), characters that are inappropriate for lesser filesystems
  * (trailing ' ' or ':' characters), or filenames ("component names")
  * that are not supported ('AUX', 'COM1").
  */
-extern bool git_fs_path_is_valid(const char *path, unsigned int flags);
-
-/**
- * Validate a filesystem path; with custom callbacks per-character and
- * per-path component.
- */
-extern bool git_fs_path_is_valid_ext(
+GIT_INLINE(bool) git_fs_path_is_valid(
 	const char *path,
-	unsigned int flags,
-	bool (*validate_char_cb)(char ch, void *payload),
-	bool (*validate_component_cb)(const char *component, size_t len, void *payload),
-	void *payload);
+	unsigned int flags)
+{
+	const git_str str = GIT_STR_INIT_CONST(path, SIZE_MAX);
+	return git_fs_path_is_valid_str_ext(&str, flags, NULL, NULL, NULL);
+}
+
+/** Validate a filesystem path in a `git_str`. */
+GIT_INLINE(bool) git_fs_path_is_valid_str(
+	const git_str *path,
+	unsigned int flags)
+{
+	return git_fs_path_is_valid_str_ext(path, flags, NULL, NULL, NULL);
+}
 
 /**
  * Validate an on-disk path, taking into account that it will have a
