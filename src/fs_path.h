@@ -627,13 +627,13 @@ extern int git_fs_path_from_url_or_path(git_str *local_path_out, const char *url
  * (trailing ' ' or ':' characters), or filenames ("component names")
  * that are not supported ('AUX', 'COM1").
  */
-extern bool git_fs_path_validate(const char *path, unsigned int flags);
+extern bool git_fs_path_is_valid(const char *path, unsigned int flags);
 
 /**
  * Validate a filesystem path; with custom callbacks per-character and
  * per-path component.
  */
-extern bool git_fs_path_validate_ext(
+extern bool git_fs_path_is_valid_ext(
 	const char *path,
 	unsigned int flags,
 	bool (*validate_char_cb)(char ch, void *payload),

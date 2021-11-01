@@ -1634,7 +1634,7 @@ static bool validate_component(
 	return true;
 }
 
-bool git_fs_path_validate_ext(
+bool git_fs_path_is_valid_ext(
 	const char *path,
 	unsigned int flags,
 	bool (*validate_char_cb)(char ch, void *payload),
@@ -1673,9 +1673,9 @@ bool git_fs_path_validate_ext(
 	return true;
 }
 
-bool git_fs_path_validate(const char *path, unsigned int flags)
+bool git_fs_path_is_valid(const char *path, unsigned int flags)
 {
-	return git_fs_path_validate_ext(path, flags, NULL, NULL, NULL);
+	return git_fs_path_is_valid_ext(path, flags, NULL, NULL, NULL);
 }
 
 #ifdef GIT_WIN32
