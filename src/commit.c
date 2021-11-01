@@ -563,6 +563,10 @@ const char *git_commit_summary(git_commit *commit)
 					space = msg;
 					space_contains_newline = false;
 				}
+
+                if(space_contains_newline && next_character == '\n')
+                    break;
+
 				space_contains_newline |= next_character == '\n';
 			}
 			/* the next character is non-space */
