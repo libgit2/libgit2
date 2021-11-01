@@ -154,6 +154,7 @@ void test_commit_commit__summary(void)
 	assert_commit_summary(" Spaces around newlines are collapsed", "  \n  Spaces around newlines  \n  are  \n  collapsed  \n  ");
 	assert_commit_summary(" Trailing newlines are" , "  \n  Trailing newlines  \n  are  \n\n  collapsed  \n  ");
 	assert_commit_summary(" Trailing spaces are stripped", "  \n  Trailing spaces \n  are stripped \n\n  \n \t ");
+    assert_commit_summary("whitespaces between characters are ignored", "whitespaces between characters are ignored\n    \nsecond paragraph");
 	assert_commit_summary("", "");
 	assert_commit_summary("", " ");
 	assert_commit_summary("", "\n");
