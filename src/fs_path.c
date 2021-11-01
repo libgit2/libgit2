@@ -1599,7 +1599,7 @@ static bool validate_component(
 	unsigned int flags)
 {
 	if (len == 0)
-		return false;
+		return !(flags & GIT_FS_PATH_REJECT_EMPTY_COMPONENT);
 
 	if ((flags & GIT_FS_PATH_REJECT_TRAVERSAL) &&
 	    len == 1 && component[0] == '.')
@@ -1643,6 +1643,9 @@ bool git_fs_path_is_valid_str_ext(
 {
 	const char *start, *c;
 	size_t len = 0;
+
+	if (!flags)
+		return true;
 
 	for (start = c = path->ptr; *c && len < path->size; c++, len++) {
 		if (!validate_char(*c, flags))

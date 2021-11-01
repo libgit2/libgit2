@@ -591,7 +591,8 @@ extern bool git_fs_path_is_local_file_url(const char *file_url);
 extern int git_fs_path_from_url_or_path(git_str *local_path_out, const char *url_or_path);
 
 /* Flags to determine path validity in `git_fs_path_isvalid` */
-#define GIT_FS_PATH_REJECT_TRAVERSAL          (1 << 0)
+#define GIT_FS_PATH_REJECT_EMPTY_COMPONENT    (1 << 0)
+#define GIT_FS_PATH_REJECT_TRAVERSAL          (1 << 1)
 #define GIT_FS_PATH_REJECT_SLASH              (1 << 2)
 #define GIT_FS_PATH_REJECT_BACKSLASH          (1 << 3)
 #define GIT_FS_PATH_REJECT_TRAILING_DOT       (1 << 4)
@@ -608,6 +609,7 @@ extern int git_fs_path_from_url_or_path(git_str *local_path_out, const char *url
  */
 #ifdef GIT_WIN32
 # define GIT_FS_PATH_REJECT_FILESYSTEM_DEFAULTS \
+	GIT_FS_PATH_REJECT_EMPTY_COMPONENT | \
 	GIT_FS_PATH_REJECT_TRAVERSAL | \
 	GIT_FS_PATH_REJECT_BACKSLASH | \
 	GIT_FS_PATH_REJECT_TRAILING_DOT | \
@@ -617,6 +619,7 @@ extern int git_fs_path_from_url_or_path(git_str *local_path_out, const char *url
 	GIT_FS_PATH_REJECT_NT_CHARS
 #else
 # define GIT_FS_PATH_REJECT_FILESYSTEM_DEFAULTS \
+	GIT_FS_PATH_REJECT_EMPTY_COMPONENT | \
 	GIT_FS_PATH_REJECT_TRAVERSAL
 #endif
 

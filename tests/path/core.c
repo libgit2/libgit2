@@ -68,41 +68,58 @@ void test_path_core__isvalid_standard(void)
 void test_path_core__isvalid_standard_str(void)
 {
 	git_str str = GIT_STR_INIT_CONST("foo/bar//zap", 0);
+	unsigned int flags = GIT_FS_PATH_REJECT_EMPTY_COMPONENT;
 
 	str.size = 0;
-	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, 0));
+	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, flags));
 
 	str.size = 3;
-	cl_assert_equal_b(true, git_fs_path_is_valid_str(&str, 0));
+	cl_assert_equal_b(true, git_fs_path_is_valid_str(&str, flags));
 
 	str.size = 4;
-	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, 0));
+	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, flags));
 
 	str.size = 5;
-	cl_assert_equal_b(true, git_fs_path_is_valid_str(&str, 0));
+	cl_assert_equal_b(true, git_fs_path_is_valid_str(&str, flags));
 
 	str.size = 7;
-	cl_assert_equal_b(true, git_fs_path_is_valid_str(&str, 0));
+	cl_assert_equal_b(true, git_fs_path_is_valid_str(&str, flags));
 
 	str.size = 8;
-	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, 0));
+	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, flags));
 
 	str.size = strlen(str.ptr);
-	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, 0));
+	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, flags));
 }
 
 void test_path_core__isvalid_empty_dir_component(void)
 {
-	cl_assert_equal_b(false, git_fs_path_is_valid("foo//bar", 0));
+	unsigned int flags = GIT_FS_PATH_REJECT_EMPTY_COMPONENT;
+
+	/* empty component */
+	cl_assert_equal_b(true, git_fs_path_is_valid("foo//bar", 0));
 
 	/* leading slash */
-	cl_assert_equal_b(false, git_fs_path_is_valid("/", 0));
-	cl_assert_equal_b(false, git_fs_path_is_valid("/foo", 0));
-	cl_assert_equal_b(false, git_fs_path_is_valid("/foo/bar", 0));
+	cl_assert_equal_b(true, git_fs_path_is_valid("/", 0));
+	cl_assert_equal_b(true, git_fs_path_is_valid("/foo", 0));
+	cl_assert_equal_b(true, git_fs_path_is_valid("/foo/bar", 0));
 
 	/* trailing slash */
-	cl_assert_equal_b(false, git_fs_path_is_valid("foo/", 0));
-	cl_assert_equal_b(false, git_fs_path_is_valid("foo/bar/", 0));
+	cl_assert_equal_b(true, git_fs_path_is_valid("foo/", 0));
+	cl_assert_equal_b(true, git_fs_path_is_valid("foo/bar/", 0));
+
+
+	/* empty component */
+	cl_assert_equal_b(false, git_fs_path_is_valid("foo//bar", flags));
+
+	/* leading slash */
+	cl_assert_equal_b(false, git_fs_path_is_valid("/", flags));
+	cl_assert_equal_b(false, git_fs_path_is_valid("/foo", flags));
+	cl_assert_equal_b(false, git_fs_path_is_valid("/foo/bar", flags));
+
+	/* trailing slash */
+	cl_assert_equal_b(false, git_fs_path_is_valid("foo/", flags));
+	cl_assert_equal_b(false, git_fs_path_is_valid("foo/bar/", flags));
 }
 
 void test_path_core__isvalid_dot_and_dotdot(void)
