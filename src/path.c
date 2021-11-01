@@ -285,6 +285,28 @@ GIT_INLINE(unsigned int) dotgit_flags(
 	return flags;
 }
 
+GIT_INLINE(unsigned int) length_flags(
+	git_repository *repo,
+	unsigned int flags)
+{
+#ifdef GIT_WIN32
+	int allow = 0;
+
+	if (repo &&
+	    git_repository__configmap_lookup(&allow, repo, GIT_CONFIGMAP_LONGPATHS) < 0)
+		allow = 0;
+
+	if (allow)
+		flags &= ~GIT_FS_PATH_REJECT_LONG_PATHS;
+
+#else
+	GIT_UNUSED(repo);
+	flags &= ~GIT_FS_PATH_REJECT_LONG_PATHS;
+#endif
+
+	return flags;
+}
+
 bool git_path_str_is_valid(
 	git_repository *repo,
 	const git_str *path,
@@ -296,6 +318,10 @@ bool git_path_str_is_valid(
 	/* Upgrade the ".git" checks based on platform */
 	if ((flags & GIT_PATH_REJECT_DOT_GIT))
 		flags = dotgit_flags(repo, flags);
+
+	/* Update the length checks based on platform */
+	if ((flags & GIT_FS_PATH_REJECT_LONG_PATHS))
+		flags = length_flags(repo, flags);
 
 	data.repo = repo;
 	data.file_mode = file_mode;
