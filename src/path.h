@@ -25,7 +25,7 @@
 #define GIT_PATH_REJECT_INDEX_DEFAULTS \
 	GIT_FS_PATH_REJECT_TRAVERSAL | GIT_PATH_REJECT_DOT_GIT
 
-extern bool git_path_validate(
+extern bool git_path_is_valid(
 	git_repository *repo,
 	const char *path,
 	uint16_t file_mode,

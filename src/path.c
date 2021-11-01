@@ -285,7 +285,7 @@ GIT_INLINE(unsigned int) dotgit_flags(
 	return flags;
 }
 
-bool git_path_validate(
+bool git_path_is_valid(
 	git_repository *repo,
 	const char *path,
 	uint16_t file_mode,
