@@ -1634,11 +1634,25 @@ static bool validate_component(
 	return true;
 }
 
+#ifdef GIT_WIN32
+GIT_INLINE(bool) validate_length(
+	const char *path,
+	size_t len,
+	size_t utf8_char_len)
+{
+	GIT_UNUSED(path);
+	GIT_UNUSED(len);
+
+	return (utf8_char_len <= MAX_PATH);
+}
+#endif
+
 bool git_fs_path_is_valid_str_ext(
 	const git_str *path,
 	unsigned int flags,
 	bool (*validate_char_cb)(char ch, void *payload),
 	bool (*validate_component_cb)(const char *component, size_t len, void *payload),
+	bool (*validate_length_cb)(const char *path, size_t len, size_t utf8_char_len),
 	void *payload)
 {
 	const char *start, *c;
@@ -1682,6 +1696,21 @@ bool git_fs_path_is_valid_str_ext(
 	if (validate_component_cb &&
 	    !validate_component_cb(start, (c - start), payload))
 		return false;
+
+#ifdef GIT_WIN32
+	if ((flags & GIT_FS_PATH_REJECT_LONG_PATHS) != 0) {
+		size_t utf8_len = git_utf8_char_length(path->ptr, len);
+
+		if (!validate_length(path->ptr, len, utf8_len))
+			return false;
+
+		if (validate_length_cb &&
+		    !validate_length_cb(path->ptr, len, utf8_len))
+			return false;
+	}
+#else
+	GIT_UNUSED(validate_length_cb);
+#endif
 
 	return true;
 }

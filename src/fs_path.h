@@ -600,8 +600,9 @@ extern int git_fs_path_from_url_or_path(git_str *local_path_out, const char *url
 #define GIT_FS_PATH_REJECT_TRAILING_COLON     (1 << 6)
 #define GIT_FS_PATH_REJECT_DOS_PATHS          (1 << 7)
 #define GIT_FS_PATH_REJECT_NT_CHARS           (1 << 8)
+#define GIT_FS_PATH_REJECT_LONG_PATHS         (1 << 9)
 
-#define GIT_FS_PATH_REJECT_MAX                (1 << 8)
+#define GIT_FS_PATH_REJECT_MAX                (1 << 9)
 
 /* Default path safety for writing files to disk: since we use the
  * Win32 "File Namespace" APIs ("\\?\") we need to protect from
@@ -632,6 +633,7 @@ extern bool git_fs_path_is_valid_str_ext(
 	unsigned int flags,
 	bool (*validate_char_cb)(char ch, void *payload),
 	bool (*validate_component_cb)(const char *component, size_t len, void *payload),
+	bool (*validate_length_cb)(const char *component, size_t len, size_t utf8_char_len),
 	void *payload);
 
 GIT_INLINE(bool) git_fs_path_is_valid_ext(
@@ -639,6 +641,7 @@ GIT_INLINE(bool) git_fs_path_is_valid_ext(
 	unsigned int flags,
 	bool (*validate_char_cb)(char ch, void *payload),
 	bool (*validate_component_cb)(const char *component, size_t len, void *payload),
+	bool (*validate_length_cb)(const char *component, size_t len, size_t utf8_char_len),
 	void *payload)
 {
 	const git_str str = GIT_STR_INIT_CONST(path, SIZE_MAX);
@@ -647,6 +650,7 @@ GIT_INLINE(bool) git_fs_path_is_valid_ext(
 		flags,
 		validate_char_cb,
 		validate_component_cb,
+		validate_length_cb,
 		payload);
 }
 
@@ -662,7 +666,7 @@ GIT_INLINE(bool) git_fs_path_is_valid(
 	unsigned int flags)
 {
 	const git_str str = GIT_STR_INIT_CONST(path, SIZE_MAX);
-	return git_fs_path_is_valid_str_ext(&str, flags, NULL, NULL, NULL);
+	return git_fs_path_is_valid_str_ext(&str, flags, NULL, NULL, NULL, NULL);
 }
 
 /** Validate a filesystem path in a `git_str`. */
@@ -670,7 +674,7 @@ GIT_INLINE(bool) git_fs_path_is_valid_str(
 	const git_str *path,
 	unsigned int flags)
 {
-	return git_fs_path_is_valid_str_ext(path, flags, NULL, NULL, NULL);
+	return git_fs_path_is_valid_str_ext(path, flags, NULL, NULL, NULL, NULL);
 }
 
 /**

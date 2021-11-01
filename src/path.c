@@ -301,7 +301,7 @@ bool git_path_is_valid(
 	data.file_mode = file_mode;
 	data.flags = flags;
 
-	return git_fs_path_is_valid_ext(path, flags, NULL, validate_repo_component, &data);
+	return git_fs_path_is_valid_ext(path, flags, NULL, validate_repo_component, NULL, &data);
 }
 
 static const struct {
