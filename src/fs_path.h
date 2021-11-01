@@ -628,7 +628,7 @@ extern int git_fs_path_from_url_or_path(git_str *local_path_out, const char *url
  * Validate a filesystem path; with custom callbacks per-character and
  * per-path component.
  */
-extern bool git_fs_path_is_valid_str_ext(
+extern bool git_fs_path_str_is_valid_ext(
 	const git_str *path,
 	unsigned int flags,
 	bool (*validate_char_cb)(char ch, void *payload),
@@ -645,7 +645,7 @@ GIT_INLINE(bool) git_fs_path_is_valid_ext(
 	void *payload)
 {
 	const git_str str = GIT_STR_INIT_CONST(path, SIZE_MAX);
-	return git_fs_path_is_valid_str_ext(
+	return git_fs_path_str_is_valid_ext(
 		&str,
 		flags,
 		validate_char_cb,
@@ -666,15 +666,15 @@ GIT_INLINE(bool) git_fs_path_is_valid(
 	unsigned int flags)
 {
 	const git_str str = GIT_STR_INIT_CONST(path, SIZE_MAX);
-	return git_fs_path_is_valid_str_ext(&str, flags, NULL, NULL, NULL, NULL);
+	return git_fs_path_str_is_valid_ext(&str, flags, NULL, NULL, NULL, NULL);
 }
 
 /** Validate a filesystem path in a `git_str`. */
-GIT_INLINE(bool) git_fs_path_is_valid_str(
+GIT_INLINE(bool) git_fs_path_str_is_valid(
 	const git_str *path,
 	unsigned int flags)
 {
-	return git_fs_path_is_valid_str_ext(path, flags, NULL, NULL, NULL, NULL);
+	return git_fs_path_str_is_valid_ext(path, flags, NULL, NULL, NULL, NULL);
 }
 
 /**

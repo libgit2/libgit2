@@ -25,10 +25,20 @@
 #define GIT_PATH_REJECT_INDEX_DEFAULTS \
 	GIT_FS_PATH_REJECT_TRAVERSAL | GIT_PATH_REJECT_DOT_GIT
 
-extern bool git_path_is_valid(
+extern bool git_path_str_is_valid(
+	git_repository *repo,
+	const git_str *path,
+	uint16_t file_mode,
+	unsigned int flags);
+
+GIT_INLINE(bool) git_path_is_valid(
 	git_repository *repo,
 	const char *path,
 	uint16_t file_mode,
-	unsigned int flags);
+	unsigned int flags)
+{
+	git_str str = GIT_STR_INIT_CONST(path, SIZE_MAX);
+	return git_path_str_is_valid(repo, &str, file_mode, flags);
+}
 
 #endif

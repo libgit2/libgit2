@@ -285,9 +285,9 @@ GIT_INLINE(unsigned int) dotgit_flags(
 	return flags;
 }
 
-bool git_path_is_valid(
+bool git_path_str_is_valid(
 	git_repository *repo,
-	const char *path,
+	const git_str *path,
 	uint16_t file_mode,
 	unsigned int flags)
 {
@@ -301,7 +301,7 @@ bool git_path_is_valid(
 	data.file_mode = file_mode;
 	data.flags = flags;
 
-	return git_fs_path_is_valid_ext(path, flags, NULL, validate_repo_component, NULL, &data);
+	return git_fs_path_str_is_valid_ext(path, flags, NULL, validate_repo_component, NULL, &data);
 }
 
 static const struct {

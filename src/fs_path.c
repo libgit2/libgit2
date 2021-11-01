@@ -1647,7 +1647,7 @@ GIT_INLINE(bool) validate_length(
 }
 #endif
 
-bool git_fs_path_is_valid_str_ext(
+bool git_fs_path_str_is_valid_ext(
 	const git_str *path,
 	unsigned int flags,
 	bool (*validate_char_cb)(char ch, void *payload),

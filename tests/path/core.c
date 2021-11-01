@@ -71,25 +71,25 @@ void test_path_core__isvalid_standard_str(void)
 	unsigned int flags = GIT_FS_PATH_REJECT_EMPTY_COMPONENT;
 
 	str.size = 0;
-	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, flags));
+	cl_assert_equal_b(false, git_fs_path_str_is_valid(&str, flags));
 
 	str.size = 3;
-	cl_assert_equal_b(true, git_fs_path_is_valid_str(&str, flags));
+	cl_assert_equal_b(true, git_fs_path_str_is_valid(&str, flags));
 
 	str.size = 4;
-	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, flags));
+	cl_assert_equal_b(false, git_fs_path_str_is_valid(&str, flags));
 
 	str.size = 5;
-	cl_assert_equal_b(true, git_fs_path_is_valid_str(&str, flags));
+	cl_assert_equal_b(true, git_fs_path_str_is_valid(&str, flags));
 
 	str.size = 7;
-	cl_assert_equal_b(true, git_fs_path_is_valid_str(&str, flags));
+	cl_assert_equal_b(true, git_fs_path_str_is_valid(&str, flags));
 
 	str.size = 8;
-	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, flags));
+	cl_assert_equal_b(false, git_fs_path_str_is_valid(&str, flags));
 
 	str.size = strlen(str.ptr);
-	cl_assert_equal_b(false, git_fs_path_is_valid_str(&str, flags));
+	cl_assert_equal_b(false, git_fs_path_str_is_valid(&str, flags));
 }
 
 void test_path_core__isvalid_empty_dir_component(void)
