@@ -240,8 +240,8 @@ GIT_INLINE(int) validate_repo_path(git_str *path)
 		CONST_STRLEN("objects/pack/pack-.pack.lock") +
 		GIT_OID_HEXSZ;
 
-	return git_fs_path_validate_filesystem_with_suffix(
-		path->ptr, path->size, suffix_len);
+	return git_fs_path_validate_str_length_with_suffix(
+		path, suffix_len);
 }
 
 /*

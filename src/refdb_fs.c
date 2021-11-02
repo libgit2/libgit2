@@ -77,7 +77,7 @@ GIT_INLINE(int) loose_path(
 	if (git_str_joinpath(out, base, refname) < 0)
 		return -1;
 
-	return git_fs_path_validate_filesystem_with_suffix(out->ptr, out->size,
+	return git_fs_path_validate_str_length_with_suffix(out,
 		CONST_STRLEN(".lock"));
 }
 

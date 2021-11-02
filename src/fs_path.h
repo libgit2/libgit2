@@ -677,6 +677,10 @@ GIT_INLINE(bool) git_fs_path_str_is_valid(
 	return git_fs_path_str_is_valid_ext(path, flags, NULL, NULL, NULL, NULL);
 }
 
+extern int git_fs_path_validate_str_length_with_suffix(
+	git_str *path,
+	size_t suffix_len);
+
 /**
  * Validate an on-disk path, taking into account that it will have a
  * suffix appended (eg, `.lock`).

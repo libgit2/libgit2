@@ -1715,6 +1715,29 @@ bool git_fs_path_str_is_valid_ext(
 	return true;
 }
 
+int git_fs_path_validate_str_length_with_suffix(
+	git_str *path,
+	size_t suffix_len)
+{
+#ifdef GIT_WIN32
+	size_t utf8_len = git_utf8_char_length(path->ptr, path->size);
+	size_t total_len;
+
+	if (GIT_ADD_SIZET_OVERFLOW(&total_len, utf8_len, suffix_len) ||
+	    total_len > MAX_PATH) {
+
+		git_error_set(GIT_ERROR_FILESYSTEM, "path too long: '%.*s'",
+			(int)path->size, path->ptr);
+		return -1;
+	}
+#else
+	GIT_UNUSED(path);
+	GIT_UNUSED(suffix_len);
+#endif
+
+	return 0;
+}
+
 #ifdef GIT_WIN32
 GIT_INLINE(bool) should_validate_longpaths(git_repository *repo)
 {
