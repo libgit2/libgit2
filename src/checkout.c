@@ -329,7 +329,7 @@ static int checkout_target_fullpath(
 	if (path && git_str_puts(&data->target_path, path) < 0)
 		return -1;
 
-	if (git_fs_path_validate_workdir_buf(data->repo, &data->target_path) < 0)
+	if (git_path_validate_str_length(data->repo, &data->target_path) < 0)
 		return -1;
 
 	*out = &data->target_path;
@@ -2035,7 +2035,7 @@ static int checkout_merge_path(
 	int error = 0;
 
 	if ((error = git_str_joinpath(out, data->opts.target_directory, result->path)) < 0 ||
-	    (error = git_fs_path_validate_workdir_buf(data->repo, out)) < 0)
+	    (error = git_path_validate_str_length(data->repo, out)) < 0)
 		return error;
 
 	/* Most conflicts simply use the filename in the index */
@@ -2338,7 +2338,7 @@ static int validate_target_directory(checkout_data *data)
 {
 	int error;
 
-	if ((error = git_fs_path_validate_workdir(data->repo, data->opts.target_directory)) < 0)
+	if ((error = git_path_validate_length(data->repo, data->opts.target_directory)) < 0)
 		return error;
 
 	if (git_fs_path_isdir(data->opts.target_directory))

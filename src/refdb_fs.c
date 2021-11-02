@@ -1362,7 +1362,7 @@ static int refdb_fs_backend__prune_refs(
 				git_str_cstr(&relative_path));
 
 		if (!error)
-			error = git_fs_path_validate_filesystem(base_path.ptr, base_path.size);
+			error = git_path_validate_str_length(NULL, &base_path);
 
 		if (error < 0)
 			goto cleanup;

@@ -32,7 +32,7 @@
 #include "annotated_commit.h"
 #include "submodule.h"
 #include "worktree.h"
-
+#include "path.h"
 #include "strmap.h"
 
 #ifdef GIT_WIN32
@@ -2662,7 +2662,7 @@ int git_repository_workdir_path(
 	}
 
 	if (!(error = git_str_joinpath(out, repo->workdir, path)))
-		error = git_fs_path_validate_workdir_buf(repo, out);
+		error = git_path_validate_str_length(repo, out);
 
 	return error;
 }
@@ -2858,7 +2858,7 @@ int git_repository_hashfile(
 	GIT_ASSERT_ARG(repo);
 
 	if ((error = git_fs_path_join_unrooted(&full_path, path, workdir, NULL)) < 0 ||
-	    (error = git_fs_path_validate_workdir_buf(repo, &full_path)) < 0)
+	    (error = git_path_validate_str_length(repo, &full_path)) < 0)
 		return error;
 
 	/*

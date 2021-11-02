@@ -9,6 +9,7 @@
 
 #include "tree.h"
 #include "index.h"
+#include "path.h"
 
 #define GIT_ITERATOR_FIRST_ACCESS   (1 << 15)
 #define GIT_ITERATOR_HONOR_IGNORES  (1 << 16)
@@ -1279,7 +1280,7 @@ static int filesystem_iterator_entry_hash(
 			iter->base.repo, entry->path, GIT_OBJECT_BLOB, NULL);
 
 	if (!(error = git_str_joinpath(&fullpath, iter->root, entry->path)) &&
-	    !(error = git_fs_path_validate_workdir_buf(iter->base.repo, &fullpath)))
+	    !(error = git_path_validate_str_length(iter->base.repo, &fullpath)))
 		error = git_odb_hashfile(&entry->id, fullpath.ptr, GIT_OBJECT_BLOB);
 
 	git_str_dispose(&fullpath);
@@ -1361,7 +1362,7 @@ static int filesystem_iterator_frame_push(
 		git_str_puts(&root, iter->root);
 
 	if (git_str_oom(&root) ||
-	    git_fs_path_validate_workdir_buf(iter->base.repo, &root) < 0) {
+	    git_path_validate_str_length(iter->base.repo, &root) < 0) {
 		error = -1;
 		goto done;
 	}
@@ -1389,10 +1390,16 @@ static int filesystem_iterator_frame_push(
 
 	while ((error = git_fs_path_diriter_next(&diriter)) == 0) {
 		iterator_pathlist_search_t pathlist_match = ITERATOR_PATHLIST_FULL;
+		git_str path_str = GIT_STR_INIT;
 		bool dir_expected = false;
 
-		if ((error = git_fs_path_diriter_fullpath(&path, &path_len, &diriter)) < 0 ||
-		    (error = git_fs_path_validate_workdir_with_len(iter->base.repo, path, path_len)) < 0)
+		if ((error = git_fs_path_diriter_fullpath(&path, &path_len, &diriter)) < 0)
+			goto done;
+
+		path_str.ptr = (char *)path;
+		path_str.size = path_len;
+
+		if ((error = git_path_validate_str_length(iter->base.repo, &path_str)) < 0)
 			goto done;
 
 		GIT_ASSERT(path_len > iter->root_len);
@@ -1565,7 +1572,7 @@ static int filesystem_iterator_is_dir(
 	}
 
 	if ((error = git_str_joinpath(&fullpath, iter->root, entry->path)) < 0 ||
-	    (error = git_fs_path_validate_workdir_buf(iter->base.repo, &fullpath)) < 0 ||
+	    (error = git_path_validate_str_length(iter->base.repo, &fullpath)) < 0 ||
 	    (error = p_stat(fullpath.ptr, &st)) < 0)
 		goto done;
 

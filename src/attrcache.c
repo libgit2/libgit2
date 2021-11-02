@@ -12,6 +12,7 @@
 #include "config.h"
 #include "sysdir.h"
 #include "ignore.h"
+#include "path.h"
 
 GIT_INLINE(int) attr_cache_lock(git_attr_cache *cache)
 {
@@ -43,6 +44,7 @@ int git_attr_cache__alloc_file_entry(
 	const char *path,
 	git_pool *pool)
 {
+	git_str fullpath_str = GIT_STR_INIT;
 	size_t baselen = 0, pathlen = strlen(path);
 	size_t cachesize = sizeof(git_attr_file_entry) + pathlen + 1;
 	git_attr_file_entry *ce;
@@ -66,7 +68,10 @@ int git_attr_cache__alloc_file_entry(
 	}
 	memcpy(&ce->fullpath[baselen], path, pathlen);
 
-	if (git_fs_path_validate_workdir_with_len(repo, ce->fullpath, pathlen + baselen) < 0)
+	fullpath_str.ptr = ce->fullpath;
+	fullpath_str.size = pathlen + baselen;
+
+	if (git_path_validate_str_length(repo, &fullpath_str) < 0)
 		return -1;
 
 	ce->path = &ce->fullpath[baselen];
@@ -173,7 +178,7 @@ static int attr_cache_lookup(
 		git_str *p = attr_session ? &attr_session->tmp : &path;
 
 		if (git_str_joinpath(p, source->base, source->filename) < 0 ||
-		    git_fs_path_validate_workdir_buf(repo, p) < 0)
+		    git_path_validate_str_length(repo, p) < 0)
 			return -1;
 
 		filename = p->ptr;

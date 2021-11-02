@@ -16,6 +16,7 @@
 #include "git2/revparse.h"
 #include "blob.h"
 #include "parse.h"
+#include "path.h"
 
 #define MM_FILE ".mailmap"
 #define MM_FILE_CONFIG "mailmap.file"
@@ -331,7 +332,7 @@ static int mailmap_add_file_ondisk(
 	if (error < 0)
 		goto cleanup;
 
-	error = git_fs_path_validate_workdir_buf(repo, &fullpath);
+	error = git_path_validate_str_length(repo, &fullpath);
 	if (error < 0)
 		goto cleanup;
 

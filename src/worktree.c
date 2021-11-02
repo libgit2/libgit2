@@ -9,6 +9,7 @@
 
 #include "buf.h"
 #include "repository.h"
+#include "path.h"
 
 #include "git2/branch.h"
 #include "git2/commit.h"
@@ -136,7 +137,7 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 		goto out;
 	}
 
-	if ((error = git_fs_path_validate_workdir(NULL, dir)) < 0)
+	if ((error = git_path_validate_length(NULL, dir)) < 0)
 		goto out;
 
 	if ((wt = git__calloc(1, sizeof(*wt))) == NULL) {

@@ -13,6 +13,7 @@
 #include "fs_path.h"
 #include "config.h"
 #include "wildmatch.h"
+#include "path.h"
 
 #define GIT_IGNORE_INTERNAL		"[internal]exclude"
 
@@ -320,14 +321,14 @@ int git_ignore__for_path(
 		    (error = git_fs_path_resolve_relative(&local, 0)) < 0 ||
 		    (error = git_fs_path_to_dir(&local)) < 0 ||
 		    (error = git_str_joinpath(&ignores->dir, workdir, local.ptr)) < 0 ||
-		    (error = git_fs_path_validate_workdir_buf(repo, &ignores->dir)) < 0) {
+		    (error = git_path_validate_str_length(repo, &ignores->dir)) < 0) {
 			/* Nothing, we just want to stop on the first error */
 		}
 
 		git_str_dispose(&local);
 	} else {
 		if (!(error = git_str_joinpath(&ignores->dir, path, "")))
-		    error = git_fs_path_validate_filesystem(ignores->dir.ptr, ignores->dir.size);
+		    error = git_path_validate_str_length(NULL, &ignores->dir);
 	}
 
 	if (error < 0)
