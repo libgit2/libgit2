@@ -1738,52 +1738,6 @@ int git_fs_path_validate_str_length_with_suffix(
 	return 0;
 }
 
-#ifdef GIT_WIN32
-GIT_INLINE(bool) should_validate_longpaths(git_repository *repo)
-{
-	int longpaths = 0;
-
-	if (repo &&
-	    git_repository__configmap_lookup(&longpaths, repo, GIT_CONFIGMAP_LONGPATHS) < 0)
-		longpaths = 0;
-
-	return (longpaths == 0);
-}
-
-#else
-
-GIT_INLINE(bool) should_validate_longpaths(git_repository *repo)
-{
-	GIT_UNUSED(repo);
-
-	return false;
-}
-#endif
-
-int git_fs_path_validate_workdir(git_repository *repo, const char *path)
-{
-	if (should_validate_longpaths(repo))
-		return git_fs_path_validate_filesystem(path, strlen(path));
-
-	return 0;
-}
-
-int git_fs_path_validate_workdir_with_len(
-	git_repository *repo,
-	const char *path,
-	size_t path_len)
-{
-	if (should_validate_longpaths(repo))
-		return git_fs_path_validate_filesystem(path, path_len);
-
-	return 0;
-}
-
-int git_fs_path_validate_workdir_buf(git_repository *repo, git_str *path)
-{
-	return git_fs_path_validate_workdir_with_len(repo, path->ptr, path->size);
-}
-
 int git_fs_path_normalize_slashes(git_str *out, const char *path)
 {
 	int error;
