@@ -2032,9 +2032,15 @@ static int repo_init_structure(
 		git_str_dispose(&template_buf);
 		git_config_free(cfg);
 
+		/* If tdir does not exist, then do not error out. This matches the
+		 * behaviour of git(1), which just prints a warning and continues.
+		 * TODO: issue warning when warning API is available.
+		 * `git` prints to stderr: 'warning: templates not found in /path/to/tdir'
+		 */
 		if (error < 0) {
-			if (!default_template)
+			if (!default_template && error != GIT_ENOTFOUND) {
 				return error;
+			}
 
 			/* if template was default, ignore error and use internal */
 			git_error_clear();
