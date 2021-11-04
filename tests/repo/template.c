@@ -293,3 +293,13 @@ void test_repo_template__empty_template_path(void)
 
 	setup_repo("foo", &opts);
 }
+
+void test_repo_template__nonexistent_template_path(void)
+{
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
+	opts.template_path = "/tmp/path/that/does/not/exist/for/libgit2/test";
+
+	setup_repo("bar", &opts);
+}
