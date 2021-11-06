@@ -2,6 +2,10 @@ add_library(git2internal OBJECT)
 set_target_properties(git2internal PROPERTIES C_STANDARD 90)
 
 
+if(DEPRECATE_HARD)
+        add_definitions(-DGIT_DEPRECATE_HARD)
+endif()
+
 if(DEBUG_POOL)
 	set(GIT_DEBUG_POOL 1)
 endif()

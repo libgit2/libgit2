@@ -103,10 +103,6 @@ include(DefaultCFlags)
 # Compiler / linker flags
 #
 
-if(DEPRECATE_HARD)
-	add_definitions(-DGIT_DEPRECATE_HARD)
-endif()
-
 if(NOT CMAKE_CONFIGURATION_TYPES)
 	# Build Debug by default
 	if(NOT CMAKE_BUILD_TYPE)
