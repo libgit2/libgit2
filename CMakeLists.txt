@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.5.1)
 project(libgit2 VERSION "1.3.0" LANGUAGES C)
 
 # Add find modules to the path
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${libgit2_SOURCE_DIR}/cmake/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${libgit2_SOURCE_DIR}/cmake")
 
 # Modules
 
@@ -30,11 +30,14 @@ include(EnableWarnings)
 #
 
 # Optional subsystems
-option(THREADSAFE              "Build libgit2 as threadsafe"                            ON)
 option(BUILD_SHARED_LIBS       "Build Shared Library (OFF for Static)"                  ON)
 option(BUILD_TESTS             "Build Tests using the Clar suite"                       ON)
 option(BUILD_EXAMPLES          "Build library usage example apps"                      OFF)
 option(BUILD_FUZZERS           "Build the fuzz targets"                                OFF)
+
+# Suggested functionality that may not be available on a per-platform basis
+option(USE_THREADS             "Use threads for parallel processing when possible"      ON)
+option(USE_NSEC                "Support nanosecond precision file mtimes and ctimes"    ON)
 
 # Backend selection
 option(USE_SSH                 "Link with libssh2 to enable SSH support"                ON)
@@ -55,7 +58,7 @@ option(DEBUG_STRICT_OPEN       "Enable path validation in open"                 
 # Output options
 option(SONAME                  "Set the (SO)VERSION of the target"                      ON)
 option(LIBGIT2_FILENAME        "Name of the produced binary"                           OFF)
-option(DEPRECATE_HARD          "Do not include deprecated functions in the library"	   OFF)
+option(DEPRECATE_HARD          "Do not include deprecated functions in the library"    OFF)
 
 # Compilation options
 option(ENABLE_WERROR           "Enable compilation with -Werror"                       OFF)
@@ -63,35 +66,35 @@ option(ENABLE_WERROR           "Enable compilation with -Werror"                
 if(UNIX)
 	# NTLM client requires crypto libraries from the system HTTPS stack
 	if(NOT USE_HTTPS)
-	    option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                          OFF)
+		option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                  OFF)
 	else()
-	    option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                           ON)
+		option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                   ON)
 	endif()
 
-	option(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"                     OFF)
+	option(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"                 OFF)
 endif()
 
 if(APPLE)
-	option(USE_ICONV           "Link with and use iconv library"                        ON)
+	option(USE_ICONV           "Link with and use iconv library"                    ON)
 endif()
 
 if(MSVC)
 	# This option must match the settings used in your program, in particular if you
 	# are linking statically
-	option(STATIC_CRT          "Link the static CRT libraries"                          ON)
+	option(STATIC_CRT          "Link the static CRT libraries"                      ON)
 
 	# If you want to embed a copy of libssh2 into libgit2, pass a
 	# path to libssh2
-	option(EMBED_SSH_PATH      "Path to libssh2 to embed (Windows)"                    OFF)
+	option(EMBED_SSH_PATH      "Path to libssh2 to embed (Windows)"                OFF)
 
 	# Enable leak checking using the debugging C runtime.
-	option(WIN32_LEAKCHECK     "Enable leak reporting via crtdbg"                      OFF)
+	option(WIN32_LEAKCHECK     "Enable leak reporting via crtdbg"                  OFF)
 endif()
 
 if(WIN32)
 	# By default, libgit2 is built with WinHTTP.  To use the built-in
 	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
-	option(WINHTTP             "Use Win32 WinHTTP routines"                             ON)
+	option(WINHTTP             "Use Win32 WinHTTP routines"                         ON)
 endif()
 
 

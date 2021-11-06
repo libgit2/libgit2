@@ -81,11 +81,11 @@ if(NEED_LIBRT)
 	list(APPEND LIBGIT2_PC_LIBS "-lrt")
 endif()
 
-if(THREADSAFE)
+if(USE_THREADS)
 	list(APPEND LIBGIT2_LIBS ${CMAKE_THREAD_LIBS_INIT})
 	list(APPEND LIBGIT2_PC_LIBS ${CMAKE_THREAD_LIBS_INIT})
 endif()
-add_feature_info(threadsafe THREADSAFE "threadsafe support")
+add_feature_info(threadsafe USE_THREADS "threadsafe support")
 
 
 if(WIN32 AND EMBED_SSH_PATH)
@@ -277,7 +277,7 @@ endif()
 add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
 
 
-if(THREADSAFE)
+if(USE_THREADS)
 	if(NOT WIN32)
 		find_package(Threads REQUIRED)
 	endif()
