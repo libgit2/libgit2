@@ -80,6 +80,10 @@ if(WIN32)
 	option(USE_WINHTTP         "Use Win32 WinHTTP routines"                         ON)
 endif()
 
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif()
+
 
 # Modules
 
@@ -99,19 +103,6 @@ include(FeatureSummary)
 include(EnableWarnings)
 include(DefaultCFlags)
 
-#
-# Compiler / linker flags
-#
-
-if(NOT CMAKE_CONFIGURATION_TYPES)
-	# Build Debug by default
-	if(NOT CMAKE_BUILD_TYPE)
-		set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
-	endif()
-else()
-	# Using a multi-configuration generator eg MSVC or Xcode
-	# that uses CMAKE_CONFIGURATION_TYPES and not CMAKE_BUILD_TYPE
-endif()
 
 #
 # Subdirectories
@@ -134,6 +125,7 @@ if(BUILD_FUZZERS)
 	endif()
 	add_subdirectory(fuzzers)
 endif()
+
 
 # Summary
 
