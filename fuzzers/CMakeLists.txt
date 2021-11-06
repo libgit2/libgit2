@@ -3,7 +3,10 @@ include_directories(${LIBGIT2_INCLUDES})
 include_directories(SYSTEM ${LIBGIT2_SYSTEM_INCLUDES})
 
 if(BUILD_FUZZERS AND NOT USE_STANDALONE_FUZZERS)
+	set(CMAKE_REQUIRED_FLAGS "-fsanitize=fuzzer-no-link")
 	add_c_flag(-fsanitize=fuzzer)
+	add_c_flag(-fsanitize=fuzzer-no-link)
+	unset(CMAKE_REQUIRED_FLAGS)
 endif()
 
 file(GLOB SRC_FUZZ RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *_fuzzer.c)

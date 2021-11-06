@@ -113,14 +113,6 @@ else()
 	# that uses CMAKE_CONFIGURATION_TYPES and not CMAKE_BUILD_TYPE
 endif()
 
-IF(BUILD_FUZZERS AND NOT USE_STANDALONE_FUZZERS)
-	# The actual sanitizer link target will be added when linking the fuzz
-	# targets.
-	set(CMAKE_REQUIRED_FLAGS "-fsanitize=fuzzer-no-link")
-	add_c_flag(-fsanitize=fuzzer-no-link)
-	unset(CMAKE_REQUIRED_FLAGS)
-endif()
-
 #
 # Subdirectories
 #
@@ -137,13 +129,8 @@ if(BUILD_EXAMPLES)
 endif()
 
 if(BUILD_FUZZERS)
-	if(NOT USE_STANDALONE_FUZZERS)
-		if(BUILD_EXAMPLES)
-			message(FATAL_ERROR "Cannot build the fuzzer targets and the examples together")
-		endif()
-		if(BUILD_TESTS)
-			message(FATAL_ERROR "Cannot build the fuzzer targets and the tests together")
-		endif()
+	if((BUILD_TESTS OR BUILD_EXAMPLES) AND NOT USE_STANDALONE_FUZZERS)
+		message(FATAL_ERROR "Cannot build the fuzzer and the tests or examples together")
 	endif()
 	add_subdirectory(fuzzers)
 endif()
