@@ -30,7 +30,7 @@ typedef enum {
 	 * exist. When using this flag, you may wish to manually call
 	 * `git_odb_refresh` before processing a batch of objects.
 	 */
-	GIT_ODB_LOOKUP_NO_REFRESH = (1 << 0),
+	GIT_ODB_LOOKUP_NO_REFRESH = (1 << 0)
 } git_odb_lookup_flags_t;
 
 /**
