@@ -29,10 +29,10 @@ void test_odb_backend_multiple__initialize(void)
 	_obj = NULL;
 	_repo = cl_git_sandbox_init("testrepo.git");
 
-	cl_git_pass(build_fake_backend(&backend, _objects_filled));
+	cl_git_pass(build_fake_backend(&backend, _objects_filled, false));
 	_fake_filled = (fake_backend *)backend;
 
-	cl_git_pass(build_fake_backend(&backend, _objects_empty));
+	cl_git_pass(build_fake_backend(&backend, _objects_empty, false));
 	_fake_empty = (fake_backend *)backend;
 }
 
