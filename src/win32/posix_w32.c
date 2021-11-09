@@ -9,10 +9,9 @@
 
 #include "../posix.h"
 #include "../futils.h"
-#include "path.h"
+#include "fs_path.h"
 #include "path_w32.h"
 #include "utf-conv.h"
-#include "repository.h"
 #include "reparse.h"
 #include <errno.h>
 #include <io.h>

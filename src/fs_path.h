@@ -12,6 +12,7 @@
 #include "posix.h"
 #include "str.h"
 #include "vector.h"
+#include "utf8.h"
 
 #include "git2/sys/path.h"
 

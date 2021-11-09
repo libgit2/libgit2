@@ -9,7 +9,7 @@
 
 #include "path_w32.h"
 #include "utf-conv.h"
-#include "path.h"
+#include "fs_path.h"
 
 #define REG_MSYSGIT_INSTALL_LOCAL L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
 
