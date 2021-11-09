@@ -300,4 +300,4 @@ jobs:
     - name: Push documentation branch
       working-directory: source
       run: git push origin gh-pages
-      if: github.event_name != 'pull_request' && github.repository == 'libgit2/libgit2'
+      if: github.event_name == 'push' && github.repository == 'libgit2/libgit2'
