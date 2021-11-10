@@ -50,22 +50,13 @@ add_feature_info(futimens GIT_USE_FUTIMENS "futimens support")
 
 check_prototype_definition(qsort_r
 	"void qsort_r(void *base, size_t nmemb, size_t size, void *thunk, int (*compar)(void *, const void *, const void *))"
-	"" "stdlib.h" HAVE_QSORT_R_BSD)
-if(HAVE_QSORT_R_BSD)
-	target_compile_definitions(git2internal PRIVATE HAVE_QSORT_R_BSD)
-endif()
+	"" "stdlib.h" GIT_QSORT_R_BSD)
 
 check_prototype_definition(qsort_r
 	"void qsort_r(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *, void *), void *arg)"
-	"" "stdlib.h" HAVE_QSORT_R_GNU)
-if(HAVE_QSORT_R_GNU)
-	target_compile_definitions(git2internal PRIVATE HAVE_QSORT_R_GNU)
-endif()
+	"" "stdlib.h" GIT_QSORT_R_GNU)
 
-check_function_exists(qsort_s HAVE_QSORT_S)
-if(HAVE_QSORT_S)
-	target_compile_definitions(git2internal PRIVATE HAVE_QSORT_S)
-endif()
+check_function_exists(qsort_s GIT_QSORT_S)
 
 # Find required dependencies
 
