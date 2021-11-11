@@ -110,7 +110,7 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 	return ret;
 }
 
-void print_usage(void)
+static void print_usage(void)
 {
 	fprintf(stderr, "usage: add [options] [--] file-spec [file-spec] [...]\n\n");
 	fprintf(stderr, "\t-n, --dry-run    dry run\n");
