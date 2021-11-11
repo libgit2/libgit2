@@ -9,7 +9,7 @@
  * and then print a variety of patch files.
  */
 
-void patch_print_from_patchfile(const char *data, size_t len)
+static void patch_print_from_patchfile(const char *data, size_t len)
 {
 	git_patch *patch;
 	git_buf buf = GIT_BUF_INIT;

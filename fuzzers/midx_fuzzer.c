@@ -16,6 +16,8 @@
 #include "hash.h"
 #include "midx.h"
 
+#include "standalone_driver.h"
+
 int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
 	GIT_UNUSED(argc);

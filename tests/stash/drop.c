@@ -140,7 +140,7 @@ void test_stash_drop__dropping_the_last_entry_removes_the_stash(void)
 		git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE), GIT_ENOTFOUND);
 }
 
-void retrieve_top_stash_id(git_oid *out)
+static void retrieve_top_stash_id(git_oid *out)
 {
 	git_object *top_stash;
 

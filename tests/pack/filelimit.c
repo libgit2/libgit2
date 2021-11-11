@@ -47,7 +47,7 @@ void test_pack_filelimit__cleanup(void)
  * (README.md) has the same content in all commits, but the second one
  * (file.txt) has a different content in each commit.
  */
-void create_packfile_commit(
+static void create_packfile_commit(
 		git_repository *repo,
 		git_oid *out_commit_id,
 		git_oid *parent_id,

@@ -938,7 +938,7 @@ struct rename_expected
 	size_t idx;
 };
 
-int test_names_expected(const git_diff_delta *delta, float progress, void *p)
+static int test_names_expected(const git_diff_delta *delta, float progress, void *p)
 {
 	struct rename_expected *expected = p;
 

@@ -108,7 +108,7 @@ void test_network_fetchlocal__prune(void)
 	git_repository_free(repo);
 }
 
-int update_tips_fail_on_call(const char *ref, const git_oid *old, const git_oid *new, void *data)
+static int update_tips_fail_on_call(const char *ref, const git_oid *old, const git_oid *new, void *data)
 {
 	GIT_UNUSED(ref);
 	GIT_UNUSED(old);
@@ -119,7 +119,7 @@ int update_tips_fail_on_call(const char *ref, const git_oid *old, const git_oid 
 	return 0;
 }
 
-void assert_ref_exists(git_repository *repo, const char *name)
+static void assert_ref_exists(git_repository *repo, const char *name)
 {
 	git_reference *ref;
 

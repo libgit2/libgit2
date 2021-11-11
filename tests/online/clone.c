@@ -361,7 +361,7 @@ void test_online_clone__cred_callback_called_again_on_auth_failure(void)
 	cl_assert_equal_i(3, counter);
 }
 
-int cred_default(
+static int cred_default(
 	git_credential **cred,
 	const char *url,
 	const char *user_from_url,
@@ -618,7 +618,7 @@ void test_online_clone__ssh_cannot_change_username(void)
 	cl_git_fail(git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }
 
-int ssh_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
+static int ssh_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
 {
 	git_cert_hostkey *key;
 	git_oid expected = {{0}}, actual = {{0}};

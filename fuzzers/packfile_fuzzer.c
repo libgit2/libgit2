@@ -14,6 +14,8 @@
 #include "common.h"
 #include "str.h"
 
+#include "standalone_driver.h"
+
 static git_odb *odb = NULL;
 static git_odb_backend *mempack = NULL;
 

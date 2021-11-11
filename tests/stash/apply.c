@@ -316,7 +316,7 @@ struct seen_paths {
 	bool when;
 };
 
-int checkout_notify(
+static int checkout_notify(
 	git_checkout_notify_t why,
 	const char *path,
 	const git_diff_file *baseline,
@@ -368,7 +368,7 @@ void test_stash_apply__executes_notify_cb(void)
 	cl_assert_equal_b(true, seen_paths.when);
 }
 
-int progress_cb(
+static int progress_cb(
 	git_stash_apply_progress_t progress,
 	void *payload)
 {
@@ -393,7 +393,7 @@ void test_stash_apply__calls_progress_cb(void)
 	cl_assert_equal_i(progress, GIT_STASH_APPLY_PROGRESS_DONE);
 }
 
-int aborting_progress_cb(
+static int aborting_progress_cb(
 	git_stash_apply_progress_t progress,
 	void *payload)
 {

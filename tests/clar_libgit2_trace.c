@@ -150,7 +150,7 @@ static cl_perf_timer s_timer_run = CL_PERF_TIMER_INIT;
  */
 static cl_perf_timer s_timer_test = CL_PERF_TIMER_INIT;
 
-void _cl_trace_cb__event_handler(
+static void _cl_trace_cb__event_handler(
 	cl_trace_event ev,
 	const char *suite_name,
 	const char *test_name,

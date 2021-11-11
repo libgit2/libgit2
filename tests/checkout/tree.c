@@ -509,7 +509,7 @@ void test_checkout_tree__can_disable_pattern_match(void)
 	cl_assert(git_fs_path_isfile("testrepo/branch_file.txt"));
 }
 
-void assert_conflict(
+static void assert_conflict(
 	const char *entry_path,
 	const char *new_content,
 	const char *parent_sha,
@@ -1034,7 +1034,8 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 	git_index_free(index);
 }
 
-mode_t read_filemode(const char *path)
+#ifndef GIT_WIN32
+static mode_t read_filemode(const char *path)
 {
 	git_str fullpath = GIT_STR_INIT;
 	struct stat st;
@@ -1050,6 +1051,7 @@ mode_t read_filemode(const char *path)
 
 	return result;
 }
+#endif
 
 void test_checkout_tree__filemode_preserved_in_workdir(void)
 {
@@ -1267,7 +1269,7 @@ void test_checkout_tree__case_changing_rename(void)
 	git_commit_free(master_commit);
 }
 
-void perfdata_cb(const git_checkout_perfdata *in, void *payload)
+static void perfdata_cb(const git_checkout_perfdata *in, void *payload)
 {
 	memcpy(payload, in, sizeof(git_checkout_perfdata));
 }
@@ -1296,7 +1298,7 @@ void test_checkout_tree__can_collect_perfdata(void)
 	git_object_free(obj);
 }
 
-void update_attr_callback(
+static void update_attr_callback(
 	const char *path,
 	size_t completed_steps,
 	size_t total_steps,

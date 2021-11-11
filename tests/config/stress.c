@@ -39,7 +39,7 @@ void test_config_stress__dont_break_on_invalid_input(void)
 	git_config_free(config);
 }
 
-void assert_config_value(git_config *config, const char *key, const char *value)
+static void assert_config_value(git_config *config, const char *key, const char *value)
 {
 	git_buf_dispose(&buf);
 	cl_git_pass(git_config_get_string_buf(&buf, config, key));

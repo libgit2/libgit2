@@ -55,19 +55,19 @@ struct buf_writestream {
 	git_str buf;
 };
 
-int buf_writestream_write(git_writestream *s, const char *buf, size_t len)
+static int buf_writestream_write(git_writestream *s, const char *buf, size_t len)
 {
 	struct buf_writestream *stream = (struct buf_writestream *)s;
 	return git_str_put(&stream->buf, buf, len);
 }
 
-int buf_writestream_close(git_writestream *s)
+static int buf_writestream_close(git_writestream *s)
 {
 	GIT_UNUSED(s);
 	return 0;
 }
 
-void buf_writestream_free(git_writestream *s)
+static void buf_writestream_free(git_writestream *s)
 {
 	struct buf_writestream *stream = (struct buf_writestream *)s;
 	git_str_dispose(&stream->buf);

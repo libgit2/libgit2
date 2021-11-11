@@ -43,7 +43,7 @@ void test_status_worktree__whole_repository(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
-void assert_show(
+static void assert_show(
 	const int entry_counts,
 	const char *entry_paths[],
 	const unsigned int entry_statuses[],

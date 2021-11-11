@@ -328,7 +328,7 @@ int merge_test_reuc(git_index *index, const struct merge_reuc_entry expected[], 
 	return 1;
 }
 
-int dircount(void *payload, git_str *pathbuf)
+static int dircount(void *payload, git_str *pathbuf)
 {
 	size_t *entries = payload;
 	size_t len = git_str_len(pathbuf);

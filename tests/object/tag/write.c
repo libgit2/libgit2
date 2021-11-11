@@ -221,7 +221,7 @@ void test_object_tag_write__deleting_with_an_invalid_name_returns_EINVALIDSPEC(v
 	cl_assert_equal_i(GIT_EINVALIDSPEC, git_tag_delete(g_repo, "Inv@{id"));
 }
 
-void create_annotation(git_oid *tag_id, const char *name)
+static void create_annotation(git_oid *tag_id, const char *name)
 {
 	git_object *target;
 	git_oid target_id;

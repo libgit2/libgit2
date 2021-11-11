@@ -3,6 +3,7 @@
 #include "common.h"
 #include "util.h"
 #include "path.h"
+#include "ref_helpers.h"
 
 int reference_is_packed(git_reference *ref)
 {
