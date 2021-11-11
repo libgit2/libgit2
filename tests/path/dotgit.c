@@ -120,7 +120,7 @@ void test_path_dotgit__dotgit_modules_symlink(void)
 	cl_assert_equal_b(false, git_path_is_valid(NULL, ".gitmodules . .::$DATA", S_IFLNK, GIT_PATH_REJECT_DOT_GIT_NTFS));
 }
 
-void test_core_path__git_fs_path_is_file(void)
+void test_path_dotgit__git_fs_path_is_file(void)
 {
 	cl_git_fail(git_path_is_gitfile("blob", 4, -1, GIT_PATH_FS_HFS));
 	cl_git_pass(git_path_is_gitfile("blob", 4, GIT_PATH_GITFILE_GITIGNORE, GIT_PATH_FS_HFS));

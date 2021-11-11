@@ -408,7 +408,7 @@ static bool found_master;
 static bool found_haacked;
 static bool find_master_haacked_called;
 
-int find_master_haacked(const char *ref_name, const char *remote_url, const git_oid *oid, unsigned int is_merge, void *payload)
+static int find_master_haacked(const char *ref_name, const char *remote_url, const git_oid *oid, unsigned int is_merge, void *payload)
 {
 	GIT_UNUSED(remote_url);
 	GIT_UNUSED(oid);
@@ -466,7 +466,7 @@ struct prefix_count {
 	int expected;
 };
 
-int count_refs(const char *ref_name, const char *remote_url, const git_oid *oid, unsigned int is_merge, void *payload)
+static int count_refs(const char *ref_name, const char *remote_url, const git_oid *oid, unsigned int is_merge, void *payload)
 {
 	int i;
 	struct prefix_count *prefix_counts = (struct prefix_count *) payload;

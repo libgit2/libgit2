@@ -128,7 +128,7 @@ git_filter *create_reverse_filter(const char *attrs)
 	return filter;
 }
 
-int erroneous_filter_stream(
+static int erroneous_filter_stream(
 	git_writestream **out,
 	git_filter *self,
 	void **payload,

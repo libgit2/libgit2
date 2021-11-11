@@ -109,7 +109,7 @@ void test_clone_nonetwork__fail_with_already_existing_but_non_empty_directory(vo
 	cl_git_fail(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 }
 
-int custom_origin_name_remote_create(
+static int custom_origin_name_remote_create(
 	git_remote **out,
 	git_repository *repo,
 	const char *name,

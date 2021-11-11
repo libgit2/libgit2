@@ -128,7 +128,7 @@ void test_submodule_modify__sync(void)
 	git_submodule_free(sm3);
 }
 
-void assert_ignore_change(git_submodule_ignore_t ignore)
+static void assert_ignore_change(git_submodule_ignore_t ignore)
 {
 	git_submodule *sm;
 
@@ -146,7 +146,7 @@ void test_submodule_modify__set_ignore(void)
 	assert_ignore_change(GIT_SUBMODULE_IGNORE_ALL);
 }
 
-void assert_update_change(git_submodule_update_t update)
+static void assert_update_change(git_submodule_update_t update)
 {
 	git_submodule *sm;
 
@@ -164,7 +164,7 @@ void test_submodule_modify__set_update(void)
 	assert_update_change(GIT_SUBMODULE_UPDATE_CHECKOUT);
 }
 
-void assert_recurse_change(git_submodule_recurse_t recurse)
+static void assert_recurse_change(git_submodule_recurse_t recurse)
 {
 	git_submodule *sm;
 

@@ -17,7 +17,7 @@ void test_diff_binary__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void test_patch(
+static void test_patch(
 	const char *one,
 	const char *two,
 	const git_diff_options *opts,

@@ -320,7 +320,7 @@ void test_diff_tree__checks_options_version(void)
 	err = git_error_last();
 }
 
-void process_tree_to_tree_diffing(
+static void process_tree_to_tree_diffing(
 	const char *old_commit,
 	const char *new_commit)
 {

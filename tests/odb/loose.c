@@ -187,7 +187,7 @@ void test_odb_loose__read_header(void)
 	test_read_header(&some);
 }
 
-void test_write_object_permission(
+static void test_write_object_permission(
 	mode_t dir_mode, mode_t file_mode,
 	mode_t expected_dir_mode, mode_t expected_file_mode)
 {

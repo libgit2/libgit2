@@ -86,7 +86,7 @@ committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n";
 	git_rebase_free(rebase);
 }
 
-int create_cb_signed_gpg(
+static int create_cb_signed_gpg(
 	git_oid *out,
 	const git_signature *author,
 	const git_signature *committer,

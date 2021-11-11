@@ -29,7 +29,7 @@ void test_network_remote_push__cleanup(void)
 	cl_fixture_cleanup("dummy.git");
 }
 
-int negotiation_cb(const git_push_update **updates, size_t len, void *payload)
+static int negotiation_cb(const git_push_update **updates, size_t len, void *payload)
 {
 	const git_push_update *expected = payload;
 
@@ -69,7 +69,7 @@ void test_network_remote_push__delete_notification(void)
 
 }
 
-void create_dummy_commit(git_reference **out, git_repository *repo)
+static void create_dummy_commit(git_reference **out, git_repository *repo)
 {
 	git_index *index;
 	git_oid tree_id, commit_id;
