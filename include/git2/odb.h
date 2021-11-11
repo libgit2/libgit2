@@ -22,6 +22,17 @@
  */
 GIT_BEGIN_DECL
 
+/** Flags controlling the behavior of ODB lookup operations */
+typedef enum {
+	/**
+	 * Don't call `git_odb_refresh` if the lookup fails. Useful when doing
+	 * a batch of lookup operations for objects that may legitimately not
+	 * exist. When using this flag, you may wish to manually call
+	 * `git_odb_refresh` before processing a batch of objects.
+	 */
+	GIT_ODB_LOOKUP_NO_REFRESH = (1 << 0)
+} git_odb_lookup_flags_t;
+
 /**
  * Function type for callbacks from git_odb_foreach.
  */
@@ -154,6 +165,17 @@ GIT_EXTERN(int) git_odb_read_header(size_t *len_out, git_object_t *type_out, git
  * @return 1 if the object was found, 0 otherwise
  */
 GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
+
+/**
+ * Determine if the given object can be found in the object database, with
+ * extended options.
+ *
+ * @param db database to be searched for the given object.
+ * @param id the object to search for.
+ * @param flags flags affecting the lookup (see `git_odb_lookup_flags_t`)
+ * @return 1 if the object was found, 0 otherwise
+ */
+GIT_EXTERN(int) git_odb_exists_ext(git_odb *db, const git_oid *id, unsigned int flags);
 
 /**
  * Determine if an object can be found in the object database by an

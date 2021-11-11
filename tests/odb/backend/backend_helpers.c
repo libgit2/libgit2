@@ -123,6 +123,18 @@ static int fake_backend__read_prefix(
 	return 0;
 }
 
+static int fake_backend__refresh(git_odb_backend *backend)
+{
+	fake_backend *fake;
+
+	fake = (fake_backend *)backend;
+
+	fake->refresh_calls++;
+
+	return 0;
+}
+
+
 static void fake_backend__free(git_odb_backend *_backend)
 {
 	fake_backend *backend;
@@ -134,7 +146,8 @@ static void fake_backend__free(git_odb_backend *_backend)
 
 int build_fake_backend(
 	git_odb_backend **out,
-	const fake_object *objects)
+	const fake_object *objects,
+	bool support_refresh)
 {
 	fake_backend *backend;
 
@@ -143,12 +156,12 @@ int build_fake_backend(
 
 	backend->parent.version = GIT_ODB_BACKEND_VERSION;
 
-	backend->parent.refresh = NULL;
 	backend->objects = objects;
 
 	backend->parent.read = fake_backend__read;
 	backend->parent.read_prefix = fake_backend__read_prefix;
 	backend->parent.read_header = fake_backend__read_header;
+	backend->parent.refresh = support_refresh ? fake_backend__refresh : NULL;
 	backend->parent.exists = fake_backend__exists;
 	backend->parent.exists_prefix = fake_backend__exists_prefix;
 	backend->parent.free = &fake_backend__free;

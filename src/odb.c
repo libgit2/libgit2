@@ -883,6 +883,11 @@ int git_odb__freshen(git_odb *db, const git_oid *id)
 
 int git_odb_exists(git_odb *db, const git_oid *id)
 {
+    return git_odb_exists_ext(db, id, 0);
+}
+
+int git_odb_exists_ext(git_odb *db, const git_oid *id, unsigned int flags)
+{
 	git_odb_object *object;
 
 	GIT_ASSERT_ARG(db);
@@ -899,7 +904,7 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 	if (odb_exists_1(db, id, false))
 		return 1;
 
-	if (!git_odb_refresh(db))
+	if (!(flags & GIT_ODB_LOOKUP_NO_REFRESH) && !git_odb_refresh(db))
 		return odb_exists_1(db, id, true);
 
 	/* Failed to refresh, hence not found */
