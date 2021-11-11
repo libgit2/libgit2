@@ -30,7 +30,7 @@
 
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
 static int lookup_remote_prune_config(git_remote *remote, git_config *config, const char *name);
-char *apply_insteadof(git_config *config, const char *url, int direction, int *matched);
+char *apply_insteadof(bool *matched, git_config *config, const char *url, int direction);
 
 static int add_refspec_to(git_vector *vector, const char *string, bool is_fetch)
 {
@@ -212,7 +212,7 @@ int git_remote_create_with_opts(git_remote **out, const char *url, const git_rem
 	const git_remote_create_options dummy_opts = GIT_REMOTE_CREATE_OPTIONS_INIT;
 	char *tmp;
 	int error = -1;
-	int matched;
+	bool matched;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(url);
@@ -247,8 +247,8 @@ int git_remote_create_with_opts(git_remote **out, const char *url, const git_rem
 		goto on_error;
 
 	if (opts->repository && !(opts->flags & GIT_REMOTE_CREATE_SKIP_INSTEADOF)) {
-		remote->url = apply_insteadof(config_ro, canonical_url.ptr, GIT_DIRECTION_FETCH, &matched);
-		tmp = apply_insteadof(config_ro, canonical_url.ptr, GIT_DIRECTION_PUSH, &matched);
+		remote->url = apply_insteadof(&matched, config_ro, canonical_url.ptr, GIT_DIRECTION_FETCH);
+		tmp = apply_insteadof(&matched, config_ro, canonical_url.ptr, GIT_DIRECTION_PUSH);
 		if (matched) {
 			remote->pushurl = tmp;
 			GIT_ERROR_CHECK_ALLOC(remote->pushurl);
@@ -466,7 +466,7 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 	const char *val;
 	char *tmp;
 	int error = 0;
-	int matched;
+	bool matched;
 	git_config *config;
 	struct refspec_cb_data data = { NULL };
 	bool optional_setting_found = false, found;
@@ -507,9 +507,9 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 	remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
 
 	if (found && strlen(val) > 0) {
-		remote->url = apply_insteadof(config, val, GIT_DIRECTION_FETCH, &matched);
+		remote->url = apply_insteadof(&matched, config, val, GIT_DIRECTION_FETCH);
 		GIT_ERROR_CHECK_ALLOC(remote->url);
-		tmp = apply_insteadof(config, val, GIT_DIRECTION_PUSH, &matched);
+		tmp = apply_insteadof(&matched, config, val, GIT_DIRECTION_PUSH);
 		if (matched) {
 			remote->pushurl = tmp;
 			GIT_ERROR_CHECK_ALLOC(remote->pushurl);
@@ -535,7 +535,7 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 		if (remote->pushurl) {
 			git__free(remote->pushurl);
 		}
-		remote->pushurl = apply_insteadof(config, val, GIT_DIRECTION_FETCH, &matched);
+		remote->pushurl = apply_insteadof(&matched, config, val, GIT_DIRECTION_FETCH);
 		GIT_ERROR_CHECK_ALLOC(remote->pushurl);
 	}
 
@@ -2736,7 +2736,7 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 #define SUFFIX_FETCH "insteadof"
 #define SUFFIX_PUSH "pushinsteadof"
 
-char *apply_insteadof(git_config *config, const char *url, int direction, int *matched)
+char *apply_insteadof(bool *matched, git_config *config, const char *url, int direction)
 {
 	size_t match_length, prefix_length, suffix_length;
 	char *replacement = NULL;
