@@ -25,7 +25,7 @@ if(MSVC_IDE)
 endif()
 
 add_custom_command(
-	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clar.suite
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clar.suite ${CMAKE_CURRENT_BINARY_DIR}/clar_suite.h
 	COMMAND ${PYTHON_EXECUTABLE} generate.py -o "${CMAKE_CURRENT_BINARY_DIR}" -f -xonline -xstress -xperf .
 	DEPENDS ${SRC_TEST}
 	WORKING_DIRECTORY ${CLAR_PATH}
@@ -47,6 +47,14 @@ set_target_properties(libgit2_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit
 target_include_directories(libgit2_tests PRIVATE ../src PUBLIC ../include)
 target_link_libraries(libgit2_tests ${LIBGIT2_LIBS})
 ide_split_sources(libgit2_tests)
+
+#
+# Old versions of gcc require us to declare our test functions; don't do
+# this on newer compilers to avoid unnecessary recompilation.
+#
+if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
+	add_definitions(-include \"clar_suite.h\")
+endif()
 
 if(MSVC_IDE)
 	# Precompiled headers
