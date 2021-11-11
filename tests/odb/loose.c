@@ -228,7 +228,7 @@ void test_odb_loose__permissions_standard(void)
 	test_write_object_permission(0, 0, GIT_OBJECT_DIR_MODE, GIT_OBJECT_FILE_MODE);
 }
 
-void test_odb_loose_permissions_readonly(void)
+void test_odb_loose__permissions_readonly(void)
 {
 	test_write_object_permission(0777, 0444, 0777, 0444);
 }

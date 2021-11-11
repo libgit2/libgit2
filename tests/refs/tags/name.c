@@ -7,7 +7,7 @@ static int name_is_valid(const char *name)
 	return valid;
 }
 
-void test_refs_tags_is_name_valid(void)
+void test_refs_tags_name__is_name_valid(void)
 {
 	cl_assert_equal_i(true, name_is_valid("sometag"));
 	cl_assert_equal_i(true, name_is_valid("test/sometag"));
