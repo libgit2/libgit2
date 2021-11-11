@@ -11,8 +11,7 @@
 #include "futils.h"
 #include "path.h"
 
-extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
-extern int LLVMFuzzerInitialize(int *argc, char ***argv);
+#include "standalone_driver.h"
 
 static int run_one_file(const char *filename)
 {

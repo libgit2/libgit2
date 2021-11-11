@@ -10,6 +10,8 @@
 #include "git2.h"
 #include "config_backend.h"
 
+#include "standalone_driver.h"
+
 #define UNUSED(x) (void)(x)
 
 int foreach_cb(const git_config_entry *entry, void *payload)

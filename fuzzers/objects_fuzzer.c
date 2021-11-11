@@ -10,6 +10,8 @@
 #include "git2.h"
 #include "object.h"
 
+#include "standalone_driver.h"
+
 #define UNUSED(x) (void)(x)
 
 int LLVMFuzzerInitialize(int *argc, char ***argv)

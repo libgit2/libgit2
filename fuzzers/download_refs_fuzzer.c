@@ -15,6 +15,8 @@
 #include "git2/sys/transport.h"
 #include "futils.h"
 
+#include "standalone_driver.h"
+
 #define UNUSED(x) (void)(x)
 
 struct fuzzer_buffer {
