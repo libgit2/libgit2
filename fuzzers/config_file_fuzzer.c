@@ -14,7 +14,7 @@
 
 #define UNUSED(x) (void)(x)
 
-int foreach_cb(const git_config_entry *entry, void *payload)
+static int foreach_cb(const git_config_entry *entry, void *payload)
 {
 	UNUSED(entry);
 	UNUSED(payload);
