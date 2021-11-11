@@ -605,7 +605,7 @@ int git_diff__oid_for_entry(
 		diff->base.perf.stat_calls++;
 
 		if (p_stat(full_path.ptr, &st) < 0) {
-			error = git_path_set_error(errno, entry.path, "stat");
+			error = git_fs_path_set_error(errno, entry.path, "stat");
 			git_str_dispose(&full_path);
 			return error;
 		}
@@ -1026,7 +1026,7 @@ static int handle_unmatched_new_item(
 			git_str *full = NULL;
 			if (git_iterator_current_workdir_path(&full, info->new_iter) < 0)
 				return -1;
-			if (full && git_path_contains(full, DOT_GIT)) {
+			if (full && git_fs_path_contains(full, DOT_GIT)) {
 				/* TODO: warning if not a valid git repository */
 				recurse_into_dir = false;
 			}

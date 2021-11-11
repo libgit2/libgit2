@@ -10,7 +10,7 @@
 #include "pack-objects.h"
 #include "refs.h"
 #include "posix.h"
-#include "path.h"
+#include "fs_path.h"
 #include "repository.h"
 #include "odb.h"
 #include "push.h"
@@ -226,7 +226,7 @@ static int local_connect(
 	t->flags = flags;
 
 	/* 'url' may be a url or path; convert to a path */
-	if ((error = git_path_from_url_or_path(&buf, url)) < 0) {
+	if ((error = git_fs_path_from_url_or_path(&buf, url)) < 0) {
 		git_str_dispose(&buf);
 		return error;
 	}
@@ -352,7 +352,7 @@ static int local_push(
 	GIT_UNUSED(cbs);
 
 	/* 'push->remote->url' may be a url or path; convert to a path */
-	if ((error = git_path_from_url_or_path(&buf, push->remote->url)) < 0) {
+	if ((error = git_fs_path_from_url_or_path(&buf, push->remote->url)) < 0) {
 		git_str_dispose(&buf);
 		return error;
 	}

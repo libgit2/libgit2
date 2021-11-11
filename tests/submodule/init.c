@@ -20,7 +20,7 @@ void test_submodule_init__absolute_url(void)
 
 	g_repo = setup_fixture_submodule_simple();
 
-	cl_assert(git_path_dirname_r(&absolute_url, git_repository_workdir(g_repo)) > 0);
+	cl_assert(git_fs_path_dirname_r(&absolute_url, git_repository_workdir(g_repo)) > 0);
 	cl_git_pass(git_str_joinpath(&absolute_url, absolute_url.ptr, "testrepo.git"));
 
 	/* write the absolute url to the .gitmodules file*/
@@ -53,7 +53,7 @@ void test_submodule_init__relative_url(void)
 
 	g_repo = setup_fixture_submodule_simple();
 
-	cl_assert(git_path_dirname_r(&absolute_url, git_repository_workdir(g_repo)) > 0);
+	cl_assert(git_fs_path_dirname_r(&absolute_url, git_repository_workdir(g_repo)) > 0);
 	cl_git_pass(git_str_joinpath(&absolute_url, absolute_url.ptr, "testrepo.git"));
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));
@@ -91,7 +91,7 @@ void test_submodule_init__relative_url_detached_head(void)
 
 	cl_git_pass(git_repository_set_head_detached(g_repo, git_commit_id((git_commit *)head_commit)));
 
-	cl_assert(git_path_dirname_r(&absolute_url, git_repository_workdir(g_repo)) > 0);
+	cl_assert(git_fs_path_dirname_r(&absolute_url, git_repository_workdir(g_repo)) > 0);
 	cl_git_pass(git_str_joinpath(&absolute_url, absolute_url.ptr, "testrepo.git"));
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));

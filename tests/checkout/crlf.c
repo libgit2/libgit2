@@ -17,7 +17,7 @@ static int unlink_file(void *payload, git_str *path)
 {
 	char *fn;
 
-	cl_assert(fn = git_path_basename(path->ptr));
+	cl_assert(fn = git_fs_path_basename(path->ptr));
 
 	GIT_UNUSED(payload);
 
@@ -39,7 +39,7 @@ void test_checkout_crlf__initialize(void)
 	 * check out over it.
 	 */
 	cl_git_pass(git_str_puts(&reponame, "crlf"));
-	cl_git_pass(git_path_direach(&reponame, 0, unlink_file, NULL));
+	cl_git_pass(git_fs_path_direach(&reponame, 0, unlink_file, NULL));
 
 	if (GIT_EOL_NATIVE == GIT_EOL_CRLF)
 		systype = "windows";
@@ -76,7 +76,7 @@ static int compare_file(void *payload, git_str *actual_path)
 	int cmp_git, cmp_gitattributes;
 	char *basename;
 
-	basename = git_path_basename(actual_path->ptr);
+	basename = git_fs_path_basename(actual_path->ptr);
 	cmp_git = strcmp(basename, ".git");
 	cmp_gitattributes = strcmp(basename, ".gitattributes");
 
@@ -87,8 +87,8 @@ static int compare_file(void *payload, git_str *actual_path)
 
 	cl_git_pass(git_str_joinpath(&expected_path, cd->dirname, basename));
 
-	if (!git_path_isfile(expected_path.ptr) ||
-		!git_path_isfile(actual_path->ptr))
+	if (!git_fs_path_isfile(expected_path.ptr) ||
+		!git_fs_path_isfile(actual_path->ptr))
 		goto done;
 
 	if (git_futils_readbuffer(&actual_contents, actual_path->ptr) < 0 ||
@@ -107,7 +107,7 @@ done:
 	if (failed) {
 		git_str details = GIT_STR_INIT;
 		git_str_printf(&details, "filename=%s, system=%s, autocrlf=%s, attrs={%s}",
-			git_path_basename(actual_path->ptr), systype, cd->autocrlf, cd->attrs);
+			git_fs_path_basename(actual_path->ptr), systype, cd->autocrlf, cd->attrs);
 		clar__fail(__FILE__, __func__, __LINE__,
 			"checked out contents did not match expected", details.ptr, 0);
 		git_str_dispose(&details);
@@ -166,7 +166,7 @@ static void test_checkout(const char *autocrlf, const char *attrs)
 	cl_git_pass(git_checkout_head(g_repo, &opts));
 
 	compare_data.dirname = sandboxname.ptr;
-	cl_git_pass(git_path_direach(&reponame, 0, compare_file, &compare_data));
+	cl_git_pass(git_fs_path_direach(&reponame, 0, compare_file, &compare_data));
 
 	cl_fixture_cleanup(expected_fixture.ptr);
 	git_str_dispose(&expected_fixture);
@@ -187,9 +187,9 @@ static void empty_workdir(const char *name)
 	size_t i;
 	const char *fn;
 
-	cl_git_pass(git_path_dirload(&contents, name, 0, 0));
+	cl_git_pass(git_fs_path_dirload(&contents, name, 0, 0));
 	git_vector_foreach(&contents, i, fn) {
-		cl_assert(basename = git_path_basename(fn));
+		cl_assert(basename = git_fs_path_basename(fn));
 		cmp = strncasecmp(basename, ".git", 4);
 
 		git__free(basename);

@@ -50,7 +50,7 @@ void test_repo_setters__setting_a_workdir_creates_a_gitlink(void)
 
 	cl_git_pass(git_repository_set_workdir(repo, "./new_workdir", true));
 
-	cl_assert(git_path_isfile("./new_workdir/.git"));
+	cl_assert(git_fs_path_isfile("./new_workdir/.git"));
 
 	cl_git_pass(git_futils_readbuffer(&content, "./new_workdir/.git"));
 	cl_assert(git__prefixcmp(git_str_cstr(&content), "gitdir: ") == 0);

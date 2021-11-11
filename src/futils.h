@@ -11,7 +11,7 @@
 
 #include "map.h"
 #include "posix.h"
-#include "path.h"
+#include "fs_path.h"
 #include "pool.h"
 #include "strmap.h"
 #include "hash.h"

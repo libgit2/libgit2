@@ -6,17 +6,17 @@ void test_config_global__initialize(void)
 	git_str path = GIT_STR_INIT;
 
 	cl_git_pass(git_futils_mkdir_r("home", 0777));
-	cl_git_pass(git_path_prettify(&path, "home", NULL));
+	cl_git_pass(git_fs_path_prettify(&path, "home", NULL));
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
 
 	cl_git_pass(git_futils_mkdir_r("xdg/git", 0777));
-	cl_git_pass(git_path_prettify(&path, "xdg/git", NULL));
+	cl_git_pass(git_fs_path_prettify(&path, "xdg/git", NULL));
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, path.ptr));
 
 	cl_git_pass(git_futils_mkdir_r("etc", 0777));
-	cl_git_pass(git_path_prettify(&path, "etc", NULL));
+	cl_git_pass(git_fs_path_prettify(&path, "etc", NULL));
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, path.ptr));
 
@@ -141,7 +141,7 @@ void test_config_global__open_programdata(void)
 	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH,
 		GIT_CONFIG_LEVEL_PROGRAMDATA, &dir_path));
 
-	if (!git_path_isdir(dir_path.ptr))
+	if (!git_fs_path_isdir(dir_path.ptr))
 		cl_git_pass(p_mkdir(dir_path.ptr, 0777));
 
 	cl_git_pass(git_str_joinpath(&config_path, dir_path.ptr, "config"));

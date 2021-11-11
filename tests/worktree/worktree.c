@@ -330,7 +330,7 @@ void test_worktree_worktree__init_existing_path(void)
 	for (i = 0; i < ARRAY_SIZE(wtfiles); i++) {
 		cl_git_pass(git_str_joinpath(&path,
 			    fixture.worktree->gitdir, wtfiles[i]));
-		cl_assert(!git_path_exists(path.ptr));
+		cl_assert(!git_fs_path_exists(path.ptr));
 	}
 
 	git_str_dispose(&path);
@@ -351,9 +351,9 @@ void test_worktree_worktree__init_submodule(void)
 	cl_git_pass(git_worktree_add(&worktree, sm, "repo-worktree", path.ptr, NULL));
 	cl_git_pass(git_repository_open_from_worktree(&wt, worktree));
 
-	cl_git_pass(git_path_prettify_dir(&path, path.ptr, NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&path, path.ptr, NULL));
 	cl_assert_equal_s(path.ptr, wt->workdir);
-	cl_git_pass(git_path_prettify_dir(&path, sm->commondir, NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&path, sm->commondir, NULL));
 	cl_assert_equal_s(sm->commondir, wt->commondir);
 
 	cl_git_pass(git_str_joinpath(&path, sm->gitdir, "worktrees/repo-worktree/"));
@@ -560,8 +560,8 @@ void test_worktree_worktree__prune_gitdir_only(void)
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 	cl_git_pass(git_worktree_prune(wt, &opts));
 
-	cl_assert(!git_path_exists(wt->gitdir_path));
-	cl_assert(git_path_exists(wt->gitlink_path));
+	cl_assert(!git_fs_path_exists(wt->gitdir_path));
+	cl_assert(git_fs_path_exists(wt->gitlink_path));
 
 	git_worktree_free(wt);
 }
@@ -576,8 +576,8 @@ void test_worktree_worktree__prune_worktree(void)
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 	cl_git_pass(git_worktree_prune(wt, &opts));
 
-	cl_assert(!git_path_exists(wt->gitdir_path));
-	cl_assert(!git_path_exists(wt->gitlink_path));
+	cl_assert(!git_fs_path_exists(wt->gitdir_path));
+	cl_assert(!git_fs_path_exists(wt->gitlink_path));
 
 	git_worktree_free(wt);
 }

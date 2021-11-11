@@ -38,7 +38,7 @@ static void test_checkout_passes(const char *refname, const char *filename)
 		GIT_CHECKOUT_DONT_UPDATE_INDEX;
 
 	cl_git_pass(git_checkout_tree(repo, (const git_object *)commit, &opts));
-	cl_assert(!git_path_exists(path.ptr));
+	cl_assert(!git_fs_path_exists(path.ptr));
 
 	git_commit_free(commit);
 	git_str_dispose(&path);
@@ -59,7 +59,7 @@ static void test_checkout_fails(const char *refname, const char *filename)
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_fail(git_checkout_tree(repo, (const git_object *)commit, &opts));
-	cl_assert(!git_path_exists(path.ptr));
+	cl_assert(!git_fs_path_exists(path.ptr));
 
 	git_commit_free(commit);
 	git_str_dispose(&path);
@@ -246,7 +246,7 @@ void test_checkout_nasty__only_looks_like_a_git_shortname(void)
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_pass(git_checkout_tree(repo, (const git_object *)commit, &opts));
-	cl_assert(git_path_exists("nasty/git~3/foobar"));
+	cl_assert(git_fs_path_exists("nasty/git~3/foobar"));
 
 	git_commit_free(commit);
 #endif

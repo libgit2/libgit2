@@ -9,6 +9,7 @@
 
 #include "buf.h"
 #include "repository.h"
+#include "path.h"
 
 #include "git2/branch.h"
 #include "git2/commit.h"
@@ -22,9 +23,9 @@ static bool is_worktree_dir(const char *dir)
 	if (git_str_sets(&buf, dir) < 0)
 		return -1;
 
-	error = git_path_contains_file(&buf, "commondir")
-		&& git_path_contains_file(&buf, "gitdir")
-		&& git_path_contains_file(&buf, "HEAD");
+	error = git_fs_path_contains_file(&buf, "commondir")
+		&& git_fs_path_contains_file(&buf, "gitdir")
+		&& git_fs_path_contains_file(&buf, "HEAD");
 
 	git_str_dispose(&buf);
 	return error;
@@ -46,9 +47,9 @@ int git_worktree_list(git_strarray *wts, git_repository *repo)
 
 	if ((error = git_str_joinpath(&path, repo->commondir, "worktrees/")) < 0)
 		goto exit;
-	if (!git_path_exists(path.ptr) || git_path_is_empty_dir(path.ptr))
+	if (!git_fs_path_exists(path.ptr) || git_fs_path_is_empty_dir(path.ptr))
 		goto exit;
-	if ((error = git_path_dirload(&worktrees, path.ptr, path.size, 0x0)) < 0)
+	if ((error = git_fs_path_dirload(&worktrees, path.ptr, path.size, 0x0)) < 0)
 		goto exit;
 
 	len = path.size;
@@ -86,12 +87,12 @@ char *git_worktree__read_link(const char *base, const char *file)
 
 	git_str_rtrim(&buf);
 
-	if (!git_path_is_relative(buf.ptr))
+	if (!git_fs_path_is_relative(buf.ptr))
 		return git_str_detach(&buf);
 
 	if (git_str_sets(&path, base) < 0)
 		goto err;
-	if (git_path_apply_relative(&path, buf.ptr) < 0)
+	if (git_fs_path_apply_relative(&path, buf.ptr) < 0)
 		goto err;
 	git_str_dispose(&buf);
 
@@ -136,7 +137,7 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 		goto out;
 	}
 
-	if ((error = git_path_validate_workdir(NULL, dir)) < 0)
+	if ((error = git_path_validate_length(NULL, dir)) < 0)
 		goto out;
 
 	if ((wt = git__calloc(1, sizeof(*wt))) == NULL) {
@@ -148,12 +149,12 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 	    (wt->commondir_path = git_worktree__read_link(dir, "commondir")) == NULL ||
 	    (wt->gitlink_path = git_worktree__read_link(dir, "gitdir")) == NULL ||
 	    (parent && (wt->parent_path = git__strdup(parent)) == NULL) ||
-	    (wt->worktree_path = git_path_dirname(wt->gitlink_path)) == NULL) {
+	    (wt->worktree_path = git_fs_path_dirname(wt->gitlink_path)) == NULL) {
 		error = -1;
 		goto out;
 	}
 
-	if ((error = git_path_prettify_dir(&gitdir, dir, NULL)) < 0)
+	if ((error = git_fs_path_prettify_dir(&gitdir, dir, NULL)) < 0)
 		goto out;
 	wt->gitdir_path = git_str_detach(&gitdir);
 
@@ -214,11 +215,11 @@ int git_worktree_open_from_repository(git_worktree **out, git_repository *repo)
 	gitdir = git_repository_path(repo);
 	commondir = git_repository_commondir(repo);
 
-	if ((error = git_path_prettify_dir(&parent, "..", commondir)) < 0)
+	if ((error = git_fs_path_prettify_dir(&parent, "..", commondir)) < 0)
 		goto out;
 
 	/* The name is defined by the last component in '.git/worktree/%s' */
-	name = git_path_basename(gitdir);
+	name = git_fs_path_basename(gitdir);
 
 	if ((error = open_worktree_dir(out, parent.ptr, gitdir, name)) < 0)
 		goto out;
@@ -255,21 +256,21 @@ int git_worktree_validate(const git_worktree *wt)
 		return GIT_ERROR;
 	}
 
-	if (wt->parent_path && !git_path_exists(wt->parent_path)) {
+	if (wt->parent_path && !git_fs_path_exists(wt->parent_path)) {
 		git_error_set(GIT_ERROR_WORKTREE,
 			"worktree parent directory ('%s') does not exist ",
 			wt->parent_path);
 		return GIT_ERROR;
 	}
 
-	if (!git_path_exists(wt->commondir_path)) {
+	if (!git_fs_path_exists(wt->commondir_path)) {
 		git_error_set(GIT_ERROR_WORKTREE,
 			"worktree common directory ('%s') does not exist ",
 			wt->commondir_path);
 		return GIT_ERROR;
 	}
 
-	if (!git_path_exists(wt->worktree_path)) {
+	if (!git_fs_path_exists(wt->worktree_path)) {
 		git_error_set(GIT_ERROR_WORKTREE,
 			"worktree directory '%s' does not exist",
 			wt->worktree_path);
@@ -337,20 +338,20 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	/* Create gitdir directory ".git/worktrees/<name>" */
 	if ((err = git_str_joinpath(&gitdir, repo->commondir, "worktrees")) < 0)
 		goto out;
-	if (!git_path_exists(gitdir.ptr))
+	if (!git_fs_path_exists(gitdir.ptr))
 		if ((err = git_futils_mkdir(gitdir.ptr, 0755, GIT_MKDIR_EXCL)) < 0)
 			goto out;
 	if ((err = git_str_joinpath(&gitdir, gitdir.ptr, name)) < 0)
 		goto out;
 	if ((err = git_futils_mkdir(gitdir.ptr, 0755, GIT_MKDIR_EXCL)) < 0)
 		goto out;
-	if ((err = git_path_prettify_dir(&gitdir, gitdir.ptr, NULL)) < 0)
+	if ((err = git_fs_path_prettify_dir(&gitdir, gitdir.ptr, NULL)) < 0)
 		goto out;
 
 	/* Create worktree work dir */
 	if ((err = git_futils_mkdir(worktree, 0755, GIT_MKDIR_EXCL)) < 0)
 		goto out;
-	if ((err = git_path_prettify_dir(&wddir, worktree, NULL)) < 0)
+	if ((err = git_fs_path_prettify_dir(&wddir, worktree, NULL)) < 0)
 		goto out;
 
 	if (wtopts.lock) {
@@ -375,7 +376,7 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 		goto out;
 
 	/* Create gitdir files */
-	if ((err = git_path_prettify_dir(&buf, repo->commondir, NULL) < 0)
+	if ((err = git_fs_path_prettify_dir(&buf, repo->commondir, NULL) < 0)
 	    || (err = git_str_putc(&buf, '\n')) < 0
 	    || (err = write_wtfile(gitdir.ptr, "commondir", &buf)) < 0)
 		goto out;
@@ -494,7 +495,7 @@ static int git_worktree__is_locked(git_str *reason, const git_worktree *wt)
 
 	if ((error = git_str_joinpath(&path, wt->gitdir_path, "locked")) < 0)
 		goto out;
-	locked = git_path_exists(path.ptr);
+	locked = git_fs_path_exists(path.ptr);
 	if (locked && reason &&
 	    (error = git_futils_readbuffer(reason, path.ptr)) < 0)
 		goto out;
@@ -614,7 +615,7 @@ int git_worktree_prune(git_worktree *wt,
 	/* Delete gitdir in parent repository */
 	if ((err = git_str_join3(&path, '/', wt->commondir_path, "worktrees", wt->name)) < 0)
 		goto out;
-	if (!git_path_exists(path.ptr))
+	if (!git_fs_path_exists(path.ptr))
 	{
 		git_error_set(GIT_ERROR_WORKTREE, "worktree gitdir '%s' does not exist", path.ptr);
 		err = -1;
@@ -626,15 +627,15 @@ int git_worktree_prune(git_worktree *wt,
 	/* Skip deletion of the actual working tree if it does
 	 * not exist or deletion was not requested */
 	if ((popts.flags & GIT_WORKTREE_PRUNE_WORKING_TREE) == 0 ||
-		!git_path_exists(wt->gitlink_path))
+		!git_fs_path_exists(wt->gitlink_path))
 	{
 		goto out;
 	}
 
-	if ((wtpath = git_path_dirname(wt->gitlink_path)) == NULL)
+	if ((wtpath = git_fs_path_dirname(wt->gitlink_path)) == NULL)
 		goto out;
 	git_str_attach(&path, wtpath, 0);
-	if (!git_path_exists(path.ptr))
+	if (!git_fs_path_exists(path.ptr))
 	{
 		git_error_set(GIT_ERROR_WORKTREE, "working tree '%s' does not exist", path.ptr);
 		err = -1;

@@ -329,13 +329,13 @@ static void create_fake_stash_reference_and_reflog(git_repository *repo)
 
 	git_str_joinpath(&log_path, git_repository_path(repo), "logs/refs/fakestash");
 
-	cl_assert_equal_i(false, git_path_isfile(git_str_cstr(&log_path)));
+	cl_assert_equal_i(false, git_fs_path_isfile(git_str_cstr(&log_path)));
 
 	cl_git_pass(git_reference_lookup(&master, repo, "refs/heads/master"));
 	cl_git_pass(git_reference_rename(&new_master, master, "refs/fakestash", 0, NULL));
 	git_reference_free(master);
 
-	cl_assert_equal_i(true, git_path_isfile(git_str_cstr(&log_path)));
+	cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&log_path)));
 
 	git_str_dispose(&log_path);
 	git_reference_free(new_master);

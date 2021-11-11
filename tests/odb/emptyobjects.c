@@ -28,7 +28,7 @@ void test_odb_emptyobjects__blob_notfound(void)
 	cl_git_fail_with(GIT_ENOTFOUND, git_blob_lookup(&blob, g_repo, &id));
 
 	cl_git_pass(git_odb_write(&written_id, g_odb, "", 0, GIT_OBJECT_BLOB));
-	cl_assert(git_path_exists(TEST_REPO_PATH "/objects/e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391"));
+	cl_assert(git_fs_path_exists(TEST_REPO_PATH "/objects/e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391"));
 }
 
 void test_odb_emptyobjects__read_tree(void)

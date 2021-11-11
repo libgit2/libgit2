@@ -14,7 +14,7 @@
 #include "hash.h"
 #include "odb.h"
 #include "pack.h"
-#include "path.h"
+#include "fs_path.h"
 #include "repository.h"
 #include "str.h"
 
@@ -502,7 +502,7 @@ int git_midx_writer_new(
 		git__free(w);
 		return -1;
 	}
-	git_path_squash_slashes(&w->pack_dir);
+	git_fs_path_squash_slashes(&w->pack_dir);
 
 	if (git_vector_init(&w->packs, 0, packfile__cmp) < 0) {
 		git_str_dispose(&w->pack_dir);
@@ -537,7 +537,7 @@ int git_midx_writer_add(
 	int error;
 	struct git_pack_file *p;
 
-	error = git_path_prettify(&idx_path_buf, idx_path, git_str_cstr(&w->pack_dir));
+	error = git_fs_path_prettify(&idx_path_buf, idx_path, git_str_cstr(&w->pack_dir));
 	if (error < 0)
 		return error;
 
@@ -687,7 +687,7 @@ static int midx_write(
 		error = git_str_sets(&relative_index, p->pack_name);
 		if (error < 0)
 			goto cleanup;
-		error = git_path_make_relative(&relative_index, git_str_cstr(&w->pack_dir));
+		error = git_fs_path_make_relative(&relative_index, git_str_cstr(&w->pack_dir));
 		if (error < 0) {
 			git_str_dispose(&relative_index);
 			goto cleanup;

@@ -53,7 +53,7 @@ static int add_and_check_file(void *payload, git_str *actual_path)
 	git_blob *blob;
 	bool failed = true;
 
-	basename = git_path_basename(actual_path->ptr);
+	basename = git_fs_path_basename(actual_path->ptr);
 
 	if (!strcmp(basename, ".git") || !strcmp(basename, ".gitattributes")) {
 		failed = false;
@@ -65,7 +65,7 @@ static int add_and_check_file(void *payload, git_str *actual_path)
 	cl_git_pass(git_str_puts(&expected_path_fail, expected_path.ptr));
 	cl_git_pass(git_str_puts(&expected_path_fail, ".fail"));
 
-	if (git_path_isfile(expected_path.ptr)) {
+	if (git_fs_path_isfile(expected_path.ptr)) {
 		cl_git_pass(git_index_add_bypath(g_index, basename));
 
 		cl_assert(entry = git_index_get_bypath(g_index, basename, 0));
@@ -77,7 +77,7 @@ static int add_and_check_file(void *payload, git_str *actual_path)
 			goto done;
 
 		git_blob_free(blob);
-	} else if (git_path_isfile(expected_path_fail.ptr)) {
+	} else if (git_fs_path_isfile(expected_path_fail.ptr)) {
 		cl_git_pass(git_futils_readbuffer(&expected_contents, expected_path_fail.ptr));
 		git_str_rtrim(&expected_contents);
 
@@ -161,7 +161,7 @@ static void test_add_index(const char *safecrlf, const char *autocrlf, const cha
 	cl_fixture_sandbox(expected_fixture.ptr);
 
 	compare_data.dirname = sandboxname.ptr;
-	cl_git_pass(git_path_direach(&reponame, 0, add_and_check_file, &compare_data));
+	cl_git_pass(git_fs_path_direach(&reponame, 0, add_and_check_file, &compare_data));
 
 	cl_fixture_cleanup(expected_fixture.ptr);
 	git_str_dispose(&expected_fixture);
@@ -179,9 +179,9 @@ static void set_up_workingdir(const char *name)
 	size_t i;
 	const char *fn;
 
-	git_path_dirload(&contents, name, 0, 0);
+	git_fs_path_dirload(&contents, name, 0, 0);
 	git_vector_foreach(&contents, i, fn) {
-		char *basename = git_path_basename(fn);
+		char *basename = git_fs_path_basename(fn);
 		bool skip = strncasecmp(basename, ".git", 4) == 0 && strlen(basename) == 4;
 
 		git__free(basename);
@@ -193,9 +193,9 @@ static void set_up_workingdir(const char *name)
 	git_vector_free_deep(&contents);
 
 	/* copy input files */
-	git_path_dirload(&contents, cl_fixture("crlf"), 0, 0);
+	git_fs_path_dirload(&contents, cl_fixture("crlf"), 0, 0);
 	git_vector_foreach(&contents, i, fn) {
-		char *basename = git_path_basename(fn);
+		char *basename = git_fs_path_basename(fn);
 		git_str dest_filename = GIT_STR_INIT;
 
 		if (strcmp(basename, ".gitted") &&

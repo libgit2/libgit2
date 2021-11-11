@@ -227,7 +227,7 @@ void test_checkout_conflict__ignored(void)
 
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 
-	cl_assert(!git_path_exists(TEST_REPO_PATH "/conflicting.txt"));
+	cl_assert(!git_fs_path_exists(TEST_REPO_PATH "/conflicting.txt"));
 }
 
 void test_checkout_conflict__ours(void)
@@ -1030,15 +1030,15 @@ void test_checkout_conflict__update_only(void)
 	ensure_workdir_contents("automergeable.txt", AUTOMERGEABLE_MERGED_FILE);
 	ensure_workdir("directory_file-two/file", 0100644, CONFLICTING_OURS_OID);
 
-	cl_assert(!git_path_exists("merge-resolve/modify-delete"));
-	cl_assert(!git_path_exists("merge-resolve/test-one.txt"));
-	cl_assert(!git_path_exists("merge-resolve/test-one-side-one.txt"));
-	cl_assert(!git_path_exists("merge-resolve/test-one-side-two.txt"));
-	cl_assert(!git_path_exists("merge-resolve/test-one.txt~ours"));
-	cl_assert(!git_path_exists("merge-resolve/test-one.txt~theirs"));
-	cl_assert(!git_path_exists("merge-resolve/directory_file-one/file"));
-	cl_assert(!git_path_exists("merge-resolve/directory_file-one~ours"));
-	cl_assert(!git_path_exists("merge-resolve/directory_file-two~theirs"));
+	cl_assert(!git_fs_path_exists("merge-resolve/modify-delete"));
+	cl_assert(!git_fs_path_exists("merge-resolve/test-one.txt"));
+	cl_assert(!git_fs_path_exists("merge-resolve/test-one-side-one.txt"));
+	cl_assert(!git_fs_path_exists("merge-resolve/test-one-side-two.txt"));
+	cl_assert(!git_fs_path_exists("merge-resolve/test-one.txt~ours"));
+	cl_assert(!git_fs_path_exists("merge-resolve/test-one.txt~theirs"));
+	cl_assert(!git_fs_path_exists("merge-resolve/directory_file-one/file"));
+	cl_assert(!git_fs_path_exists("merge-resolve/directory_file-one~ours"));
+	cl_assert(!git_fs_path_exists("merge-resolve/directory_file-two~theirs"));
 }
 
 void test_checkout_conflict__path_filters(void)
@@ -1076,9 +1076,9 @@ void test_checkout_conflict__path_filters(void)
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 
 	ensure_workdir_contents("conflicting-1.txt", CONFLICTING_DIFF3_FILE);
-	cl_assert(!git_path_exists("merge-resolve/conflicting-2.txt"));
+	cl_assert(!git_fs_path_exists("merge-resolve/conflicting-2.txt"));
 	ensure_workdir_contents("conflicting-3.txt", AUTOMERGEABLE_MERGED_FILE);
-	cl_assert(!git_path_exists("merge-resolve/conflicting-4.txt"));
+	cl_assert(!git_fs_path_exists("merge-resolve/conflicting-4.txt"));
 }
 
 static void collect_progress(

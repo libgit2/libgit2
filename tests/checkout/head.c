@@ -43,7 +43,7 @@ void test_checkout_head__with_index_only_tree(void)
 	cl_git_pass(git_index_add_bypath(index, "newdir/newfile.txt"));
 	cl_git_pass(git_index_write(index));
 
-	cl_assert(git_path_isfile("testrepo/newdir/newfile.txt"));
+	cl_assert(git_fs_path_isfile("testrepo/newdir/newfile.txt"));
 	cl_assert(git_index_get_bypath(index, "newdir/newfile.txt", 0) != NULL);
 
 	git_index_free(index);
@@ -55,7 +55,7 @@ void test_checkout_head__with_index_only_tree(void)
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
-	cl_assert(!git_path_isfile("testrepo/newdir/newfile.txt"));
+	cl_assert(!git_fs_path_isfile("testrepo/newdir/newfile.txt"));
 	cl_assert(git_index_get_bypath(index, "newdir/newfile.txt", 0) == NULL);
 
 	git_index_free(index);
@@ -79,8 +79,8 @@ void test_checkout_head__do_not_remove_untracked_file(void)
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 	cl_git_pass(git_checkout_head(g_repo, &opts));
 
-	cl_assert(!git_path_isfile("testrepo/tracked/tracked"));
-	cl_assert(git_path_isfile("testrepo/tracked/untracked"));
+	cl_assert(!git_fs_path_isfile("testrepo/tracked/tracked"));
+	cl_assert(git_fs_path_isfile("testrepo/tracked/untracked"));
 }
 
 void test_checkout_head__do_not_remove_untracked_file_in_subdir(void)
@@ -104,9 +104,9 @@ void test_checkout_head__do_not_remove_untracked_file_in_subdir(void)
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 	cl_git_pass(git_checkout_head(g_repo, &opts));
 
-	cl_assert(!git_path_isfile("testrepo/tracked/tracked"));
-	cl_assert(!git_path_isfile("testrepo/tracked/subdir/tracked"));
-	cl_assert(git_path_isfile("testrepo/tracked/subdir/untracked"));
+	cl_assert(!git_fs_path_isfile("testrepo/tracked/tracked"));
+	cl_assert(!git_fs_path_isfile("testrepo/tracked/subdir/tracked"));
+	cl_assert(git_fs_path_isfile("testrepo/tracked/subdir/untracked"));
 }
 
 void test_checkout_head__do_remove_untracked_paths(void)
@@ -131,8 +131,8 @@ void test_checkout_head__do_remove_untracked_paths(void)
 	opts.paths.count = 1;
 	cl_git_pass(git_checkout_head(g_repo, &opts));
 
-	cl_assert(git_path_isfile("testrepo/tracked/tracked"));
-	cl_assert(!git_path_isfile("testrepo/tracked/untracked"));
+	cl_assert(git_fs_path_isfile("testrepo/tracked/tracked"));
+	cl_assert(!git_fs_path_isfile("testrepo/tracked/untracked"));
 }
 
 void test_checkout_head__do_remove_tracked_subdir(void)
@@ -158,9 +158,9 @@ void test_checkout_head__do_remove_tracked_subdir(void)
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 	cl_git_pass(git_checkout_head(g_repo, &opts));
 
-	cl_assert(!git_path_isdir("testrepo/subdir/tracked"));
-	cl_assert(!git_path_isfile("testrepo/subdir/tracked-file"));
-	cl_assert(git_path_isfile("testrepo/subdir/untracked-file"));
+	cl_assert(!git_fs_path_isdir("testrepo/subdir/tracked"));
+	cl_assert(!git_fs_path_isfile("testrepo/subdir/tracked-file"));
+	cl_assert(git_fs_path_isfile("testrepo/subdir/untracked-file"));
 }
 
 void test_checkout_head__typechange_workdir(void)

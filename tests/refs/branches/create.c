@@ -145,7 +145,7 @@ void test_refs_branches_create__can_create_branch_with_unicode(void)
 	const char *expected[] = { nfc, nfd, emoji };
 	unsigned int i;
 	bool fs_decompose_unicode =
-		git_path_does_fs_decompose_unicode(git_repository_path(repo));
+		git_fs_path_does_decompose_unicode(git_repository_path(repo));
 
 	retrieve_known_commit(&target, repo);
 

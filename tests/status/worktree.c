@@ -109,7 +109,7 @@ static int remove_file_cb(void *data, git_str *file)
 	if (git__suffixcmp(filename, ".git") == 0)
 		return 0;
 
-	if (git_path_isdir(filename))
+	if (git_fs_path_isdir(filename))
 		cl_git_pass(git_futils_rmdir_r(filename, NULL, GIT_RMDIR_REMOVE_FILES));
 	else
 		cl_git_pass(p_unlink(git_str_cstr(file)));
@@ -126,7 +126,7 @@ void test_status_worktree__purged_worktree(void)
 
 	/* first purge the contents of the worktree */
 	cl_git_pass(git_str_sets(&workdir, git_repository_workdir(repo)));
-	cl_git_pass(git_path_direach(&workdir, 0, remove_file_cb, NULL));
+	cl_git_pass(git_fs_path_direach(&workdir, 0, remove_file_cb, NULL));
 	git_str_dispose(&workdir);
 
 	/* now get status */
@@ -374,7 +374,7 @@ void test_status_worktree__issue_592(void)
 	repo = cl_git_sandbox_init("issue_592");
 	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(repo), "l.txt"));
 	cl_git_pass(p_unlink(git_str_cstr(&path)));
-	cl_assert(!git_path_exists("issue_592/l.txt"));
+	cl_assert(!git_fs_path_exists("issue_592/l.txt"));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "l.txt"));
 
@@ -389,7 +389,7 @@ void test_status_worktree__issue_592_2(void)
 	repo = cl_git_sandbox_init("issue_592");
 	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(repo), "c/a.txt"));
 	cl_git_pass(p_unlink(git_str_cstr(&path)));
-	cl_assert(!git_path_exists("issue_592/c/a.txt"));
+	cl_assert(!git_fs_path_exists("issue_592/c/a.txt"));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "c/a.txt"));
 
@@ -405,7 +405,7 @@ void test_status_worktree__issue_592_3(void)
 
 	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(repo), "c"));
 	cl_git_pass(git_futils_rmdir_r(git_str_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
-	cl_assert(!git_path_exists("issue_592/c/a.txt"));
+	cl_assert(!git_fs_path_exists("issue_592/c/a.txt"));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "c/a.txt"));
 

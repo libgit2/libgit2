@@ -16,7 +16,7 @@ int reference_is_packed(git_reference *ref)
 		git_reference_name(ref)) < 0)
 		return -1;
 
-	packed = !git_path_isfile(ref_path.ptr);
+	packed = !git_fs_path_isfile(ref_path.ptr);
 
 	git_str_dispose(&ref_path);
 

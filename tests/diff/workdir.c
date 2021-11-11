@@ -1252,7 +1252,7 @@ void test_diff_workdir__can_diff_empty_file(void)
 	/* empty contents of file */
 
 	cl_git_rewritefile("attr_index/README.txt", "");
-	cl_git_pass(git_path_lstat("attr_index/README.txt", &st));
+	cl_git_pass(git_fs_path_lstat("attr_index/README.txt", &st));
 	cl_assert_equal_i(0, (int)st.st_size);
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
@@ -1265,7 +1265,7 @@ void test_diff_workdir__can_diff_empty_file(void)
 	/* remove a file altogether */
 
 	cl_git_pass(p_unlink("attr_index/README.txt"));
-	cl_assert(!git_path_exists("attr_index/README.txt"));
+	cl_assert(!git_fs_path_exists("attr_index/README.txt"));
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
 	cl_assert_equal_i(3, (int)git_diff_num_deltas(diff));
@@ -1759,7 +1759,7 @@ static int touch_file(void *payload, git_str *path)
 	struct p_timeval times[2];
 
 	GIT_UNUSED(payload);
-	if (git_path_isdir(path->ptr))
+	if (git_fs_path_isdir(path->ptr))
 		return 0;
 
 	cl_must_pass(p_stat(path->ptr, &st));
@@ -1805,7 +1805,7 @@ void test_diff_workdir__can_update_index(void)
 	{
 		git_str path = GIT_STR_INIT;
 		cl_git_pass(git_str_sets(&path, "status"));
-		cl_git_pass(git_path_direach(&path, 0, touch_file, NULL));
+		cl_git_pass(git_fs_path_direach(&path, 0, touch_file, NULL));
 		git_str_dispose(&path);
 	}
 
@@ -2040,7 +2040,7 @@ void test_diff_workdir__only_writes_index_when_necessary(void)
 
 	/* touch all the files so stat times are different */
 	cl_git_pass(git_str_sets(&path, "status"));
-	cl_git_pass(git_path_direach(&path, 0, touch_file, NULL));
+	cl_git_pass(git_fs_path_direach(&path, 0, touch_file, NULL));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	git_diff_free(diff);

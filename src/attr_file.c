@@ -345,7 +345,7 @@ int git_attr_file__parse_buffer(
 	int error = 0;
 
 	/* If subdir file path, convert context for file paths */
-	if (attrs->entry && git_path_root(attrs->entry->path) < 0 &&
+	if (attrs->entry && git_fs_path_root(attrs->entry->path) < 0 &&
 	    !git__suffixcmp(attrs->entry->path, "/" GIT_ATTR_FILE))
 		context = attrs->entry->path;
 
@@ -560,7 +560,7 @@ int git_attr_path__init(
 	/* build full path as best we can */
 	git_str_init(&info->full, 0);
 
-	if (git_path_join_unrooted(&info->full, path, base, &root) < 0)
+	if (git_fs_path_join_unrooted(&info->full, path, base, &root) < 0)
 		return -1;
 
 	info->path = info->full.ptr + root;
@@ -596,7 +596,7 @@ int git_attr_path__init(
 
 	case GIT_DIR_FLAG_UNKNOWN:
 	default:
-		info->is_dir = (int)git_path_isdir(info->full.ptr);
+		info->is_dir = (int)git_fs_path_isdir(info->full.ptr);
 		break;
 	}
 

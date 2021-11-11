@@ -7,7 +7,7 @@
 
 #include "posix.h"
 
-#include "path.h"
+#include "fs_path.h"
 #include <stdio.h>
 #include <ctype.h>
 
@@ -144,8 +144,8 @@ int p_getcwd(char *buffer_out, size_t size)
 	if (cwd_buffer == NULL)
 		return -1;
 
-	git_path_mkposix(buffer_out);
-	git_path_string_to_dir(buffer_out, size); /* append trailing slash */
+	git_fs_path_mkposix(buffer_out);
+	git_fs_path_string_to_dir(buffer_out, size); /* append trailing slash */
 
 	return 0;
 }

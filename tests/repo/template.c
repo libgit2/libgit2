@@ -56,10 +56,10 @@ static void assert_hooks_match(
 	struct stat expected_st, st;
 
 	cl_git_pass(git_str_joinpath(&expected, template_dir, hook_path));
-	cl_git_pass(git_path_lstat(expected.ptr, &expected_st));
+	cl_git_pass(git_fs_path_lstat(expected.ptr, &expected_st));
 
 	cl_git_pass(git_str_joinpath(&actual, repo_dir, hook_path));
-	cl_git_pass(git_path_lstat(actual.ptr, &st));
+	cl_git_pass(git_fs_path_lstat(actual.ptr, &st));
 
 	cl_assert(expected_st.st_size == st.st_size);
 
@@ -88,7 +88,7 @@ static void assert_mode_seems_okay(
 	struct stat st;
 
 	cl_git_pass(git_str_joinpath(&full, base, path));
-	cl_git_pass(git_path_lstat(full.ptr, &st));
+	cl_git_pass(git_fs_path_lstat(full.ptr, &st));
 	git_str_dispose(&full);
 
 	if (!core_filemode) {

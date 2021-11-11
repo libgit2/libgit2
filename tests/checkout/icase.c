@@ -50,8 +50,8 @@ static char *get_filename(const char *in)
 	DIR *dir;
 	struct dirent *de;
 
-	cl_assert(search_dirname = git_path_dirname(in));
-	cl_assert(search_filename = git_path_basename(in));
+	cl_assert(search_dirname = git_fs_path_dirname(in));
+	cl_assert(search_filename = git_fs_path_basename(in));
 
 	cl_assert(dir = opendir(search_dirname));
 
@@ -134,7 +134,7 @@ void test_checkout_icase__refuses_to_overwrite_links_for_files(void)
 
 	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
 
-	cl_assert(!git_path_exists("tmp"));
+	cl_assert(!git_fs_path_exists("tmp"));
 	assert_name_is("testrepo/BRANCH_FILE.txt");
 }
 
@@ -146,7 +146,7 @@ void test_checkout_icase__overwrites_links_for_files_when_forced(void)
 
 	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
 
-	cl_assert(!git_path_exists("tmp"));
+	cl_assert(!git_fs_path_exists("tmp"));
 	assert_name_is("testrepo/new.txt");
 }
 
@@ -159,7 +159,7 @@ void test_checkout_icase__overwrites_empty_folders_for_files(void)
 	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
 
 	assert_name_is("testrepo/new.txt");
-	cl_assert(!git_path_isdir("testrepo/new.txt"));
+	cl_assert(!git_fs_path_isdir("testrepo/new.txt"));
 }
 
 void test_checkout_icase__refuses_to_overwrite_populated_folders_for_files(void)
@@ -173,7 +173,7 @@ void test_checkout_icase__refuses_to_overwrite_populated_folders_for_files(void)
 	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
 
 	assert_name_is("testrepo/BRANCH_FILE.txt");
-	cl_assert(git_path_isdir("testrepo/BRANCH_FILE.txt"));
+	cl_assert(git_fs_path_isdir("testrepo/BRANCH_FILE.txt"));
 }
 
 void test_checkout_icase__overwrites_folders_for_files_when_forced(void)
@@ -187,7 +187,7 @@ void test_checkout_icase__overwrites_folders_for_files_when_forced(void)
 	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
 
 	assert_name_is("testrepo/new.txt");
-	cl_assert(!git_path_isdir("testrepo/new.txt"));
+	cl_assert(!git_fs_path_isdir("testrepo/new.txt"));
 }
 
 void test_checkout_icase__refuses_to_overwrite_files_for_folders(void)
@@ -199,7 +199,7 @@ void test_checkout_icase__refuses_to_overwrite_files_for_folders(void)
 
 	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
 	assert_name_is("testrepo/A");
-	cl_assert(!git_path_isdir("testrepo/A"));
+	cl_assert(!git_fs_path_isdir("testrepo/A"));
 }
 
 void test_checkout_icase__overwrites_files_for_folders_when_forced(void)
@@ -211,7 +211,7 @@ void test_checkout_icase__overwrites_files_for_folders_when_forced(void)
 
 	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
 	assert_name_is("testrepo/a");
-	cl_assert(git_path_isdir("testrepo/a"));
+	cl_assert(git_fs_path_isdir("testrepo/a"));
 }
 
 void test_checkout_icase__refuses_to_overwrite_links_for_folders(void)
@@ -222,7 +222,7 @@ void test_checkout_icase__refuses_to_overwrite_links_for_folders(void)
 
 	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
 
-	cl_assert(!git_path_exists("b.txt"));
+	cl_assert(!git_fs_path_exists("b.txt"));
 	assert_name_is("testrepo/A");
 }
 
@@ -234,7 +234,7 @@ void test_checkout_icase__overwrites_links_for_folders_when_forced(void)
 
 	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
 
-	cl_assert(!git_path_exists("b.txt"));
+	cl_assert(!git_fs_path_exists("b.txt"));
 	assert_name_is("testrepo/a");
 }
 

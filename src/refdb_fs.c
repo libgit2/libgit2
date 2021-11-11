@@ -18,6 +18,7 @@
 #include "sortedcache.h"
 #include "signature.h"
 #include "wildmatch.h"
+#include "path.h"
 
 #include <git2/tag.h>
 #include <git2/object.h>
@@ -76,7 +77,7 @@ GIT_INLINE(int) loose_path(
 	if (git_str_joinpath(out, base, refname) < 0)
 		return -1;
 
-	return git_path_validate_filesystem_with_suffix(out->ptr, out->size,
+	return git_fs_path_validate_str_length_with_suffix(out,
 		CONST_STRLEN(".lock"));
 }
 
@@ -307,8 +308,8 @@ static int _dirent_loose_load(void *payload, git_str *full_path)
 	if (git__suffixcmp(full_path->ptr, ".lock") == 0)
 		return 0;
 
-	if (git_path_isdir(full_path->ptr)) {
-		int error = git_path_direach(
+	if (git_fs_path_isdir(full_path->ptr)) {
+		int error = git_fs_path_direach(
 			full_path, backend->direach_flags, _dirent_loose_load, backend);
 		/* Race with the filesystem, ignore it */
 		if (error == GIT_ENOTFOUND) {
@@ -343,7 +344,7 @@ static int packed_loadloose(refdb_fs_backend *backend)
 	 * This will overwrite any old packed entries with their
 	 * updated loose versions
 	 */
-	error = git_path_direach(
+	error = git_fs_path_direach(
 		&refs_path, backend->direach_flags, _dirent_loose_load, backend);
 
 	git_str_dispose(&refs_path);
@@ -367,7 +368,7 @@ static int refdb_fs_backend__exists(
 	if ((error = loose_path(&ref_path, backend->gitpath, ref_name)) < 0)
 		goto out;
 
-	if (git_path_isfile(ref_path.ptr)) {
+	if (git_fs_path_isfile(ref_path.ptr)) {
 		*exists = 1;
 		goto out;
 	}
@@ -817,7 +818,7 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 	GIT_ASSERT_ARG(backend);
 	GIT_ASSERT_ARG(name);
 
-	if (!git_path_validate(backend->repo, name, 0, GIT_PATH_REJECT_FILESYSTEM_DEFAULTS)) {
+	if (!git_path_is_valid(backend->repo, name, 0, GIT_FS_PATH_REJECT_FILESYSTEM_DEFAULTS)) {
 		git_error_set(GIT_ERROR_INVALID, "invalid reference name '%s'", name);
 		return GIT_EINVALIDSPEC;
 	}
@@ -1344,10 +1345,10 @@ static int refdb_fs_backend__prune_refs(
 	if ((error = git_str_sets(&relative_path, ref_name)) < 0)
 		goto cleanup;
 
-	git_path_squash_slashes(&relative_path);
-	if ((commonlen = git_path_common_dirlen("refs/heads/", git_str_cstr(&relative_path))) == strlen("refs/heads/") ||
-		(commonlen = git_path_common_dirlen("refs/tags/", git_str_cstr(&relative_path))) == strlen("refs/tags/") ||
-		(commonlen = git_path_common_dirlen("refs/remotes/", git_str_cstr(&relative_path))) == strlen("refs/remotes/")) {
+	git_fs_path_squash_slashes(&relative_path);
+	if ((commonlen = git_fs_path_common_dirlen("refs/heads/", git_str_cstr(&relative_path))) == strlen("refs/heads/") ||
+		(commonlen = git_fs_path_common_dirlen("refs/tags/", git_str_cstr(&relative_path))) == strlen("refs/tags/") ||
+		(commonlen = git_fs_path_common_dirlen("refs/remotes/", git_str_cstr(&relative_path))) == strlen("refs/remotes/")) {
 
 		git_str_truncate(&relative_path, commonlen);
 
@@ -1361,7 +1362,7 @@ static int refdb_fs_backend__prune_refs(
 				git_str_cstr(&relative_path));
 
 		if (!error)
-			error = git_path_validate_filesystem(base_path.ptr, base_path.size);
+			error = git_path_validate_str_length(NULL, &base_path);
 
 		if (error < 0)
 			goto cleanup;
@@ -1741,7 +1742,7 @@ static int has_reflog(git_repository *repo, const char *name)
 	if (reflog_path(&path, repo, name) < 0)
 		goto cleanup;
 
-	ret = git_path_isfile(git_str_cstr(&path));
+	ret = git_fs_path_isfile(git_str_cstr(&path));
 
 cleanup:
 	git_str_dispose(&path);
@@ -1856,7 +1857,7 @@ static int lock_reflog(git_filebuf *file, refdb_fs_backend *backend, const char 
 
 	repo = backend->repo;
 
-	if (!git_path_validate(backend->repo, refname, 0, GIT_PATH_REJECT_FILESYSTEM_DEFAULTS)) {
+	if (!git_path_is_valid(backend->repo, refname, 0, GIT_FS_PATH_REJECT_FILESYSTEM_DEFAULTS)) {
 		git_error_set(GIT_ERROR_INVALID, "invalid reference name '%s'", refname);
 		return GIT_EINVALIDSPEC;
 	}
@@ -1864,7 +1865,7 @@ static int lock_reflog(git_filebuf *file, refdb_fs_backend *backend, const char 
 	if (reflog_path(&log_path, repo, refname) < 0)
 		return -1;
 
-	if (!git_path_isfile(git_str_cstr(&log_path))) {
+	if (!git_fs_path_isfile(git_str_cstr(&log_path))) {
 		git_error_set(GIT_ERROR_INVALID,
 			"log file for reference '%s' doesn't exist", refname);
 		error = -1;
@@ -1973,11 +1974,11 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	/* If the new branch matches part of the namespace of a previously deleted branch,
 	 * there maybe an obsolete/unused directory (or directory hierarchy) in the way.
 	 */
-	if (git_path_isdir(git_str_cstr(&path))) {
+	if (git_fs_path_isdir(git_str_cstr(&path))) {
 		if ((error = git_futils_rmdir_r(git_str_cstr(&path), NULL, GIT_RMDIR_SKIP_NONEMPTY)) < 0) {
 			if (error == GIT_ENOTFOUND)
 				error = 0;
-		} else if (git_path_isdir(git_str_cstr(&path))) {
+		} else if (git_fs_path_isdir(git_str_cstr(&path))) {
 			git_error_set(GIT_ERROR_REFERENCE, "cannot create reflog at '%s', there are reflogs beneath that folder",
 				ref->name);
 			error = GIT_EDIRECTORY;
@@ -2031,7 +2032,7 @@ static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_
 	if ((error = loose_path(&new_path, git_str_cstr(&temp_path), git_str_cstr(&normalized))) < 0)
 		return error;
 
-	if (!git_path_exists(git_str_cstr(&old_path))) {
+	if (!git_fs_path_exists(git_str_cstr(&old_path))) {
 		error = GIT_ENOTFOUND;
 		goto cleanup;
 	}
@@ -2059,7 +2060,7 @@ static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_
 		goto cleanup;
 	}
 
-	if (git_path_isdir(git_str_cstr(&new_path)) &&
+	if (git_fs_path_isdir(git_str_cstr(&new_path)) &&
 		(git_futils_rmdir_r(git_str_cstr(&new_path), NULL, GIT_RMDIR_SKIP_NONEMPTY) < 0)) {
 		error = -1;
 		goto cleanup;
@@ -2096,7 +2097,7 @@ static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name
 	if ((error = reflog_path(&path, backend->repo, name)) < 0)
 		goto out;
 
-	if (!git_path_exists(path.ptr))
+	if (!git_fs_path_exists(path.ptr))
 		goto out;
 
 	if ((error = p_unlink(path.ptr)) < 0)
@@ -2150,11 +2151,11 @@ int git_refdb_backend_fs(
 
 	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_IGNORECASE) && t) {
 		backend->iterator_flags |= GIT_ITERATOR_IGNORE_CASE;
-		backend->direach_flags  |= GIT_PATH_DIR_IGNORE_CASE;
+		backend->direach_flags  |= GIT_FS_PATH_DIR_IGNORE_CASE;
 	}
 	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_PRECOMPOSE) && t) {
 		backend->iterator_flags |= GIT_ITERATOR_PRECOMPOSE_UNICODE;
-		backend->direach_flags  |= GIT_PATH_DIR_PRECOMPOSE_UNICODE;
+		backend->direach_flags  |= GIT_FS_PATH_DIR_PRECOMPOSE_UNICODE;
 	}
 	if ((!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_FSYNCOBJECTFILES) && t) ||
 		git_repository__fsync_gitdir)

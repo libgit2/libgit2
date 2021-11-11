@@ -283,7 +283,7 @@ void test_iterator_index__case_folding(void)
 	int fs_is_ci = 0;
 
 	cl_git_pass(git_str_joinpath(&path, cl_fixture("icase"), ".gitted/CoNfIg"));
-	fs_is_ci = git_path_exists(path.ptr);
+	fs_is_ci = git_fs_path_exists(path.ptr);
 	git_str_dispose(&path);
 
 	index_iterator_test(

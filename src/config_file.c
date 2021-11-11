@@ -108,7 +108,7 @@ static int config_file_open(git_config_backend *cfg, git_config_level_t level, c
 	if ((res = git_config_entries_new(&b->entries)) < 0)
 		return res;
 
-	if (!git_path_exists(b->file.path))
+	if (!git_fs_path_exists(b->file.path))
 		return 0;
 
 	/*
@@ -529,7 +529,7 @@ static int included_path(git_str *out, const char *dir, const char *path)
 	if (path[0] == '~' && path[1] == '/')
 		return git_sysdir_expand_global_file(out, &path[1]);
 
-	return git_path_join_unrooted(out, path, dir, NULL);
+	return git_fs_path_join_unrooted(out, path, dir, NULL);
 }
 
 /* Escape the values to write them to the file */
@@ -574,7 +574,7 @@ static int parse_include(config_file_parse_data *parse_data, const char *file)
 	if (!file)
 		return 0;
 
-	if ((result = git_path_dirname_r(&path, parse_data->file->path)) < 0)
+	if ((result = git_fs_path_dirname_r(&path, parse_data->file->path)) < 0)
 		return result;
 
 	dir = git_str_detach(&path);
@@ -611,17 +611,17 @@ static int do_match_gitdir(
 	git_str pattern = GIT_STR_INIT, gitdir = GIT_STR_INIT;
 	int error;
 
-	if (condition[0] == '.' && git_path_is_dirsep(condition[1])) {
-		git_path_dirname_r(&pattern, cfg_file);
+	if (condition[0] == '.' && git_fs_path_is_dirsep(condition[1])) {
+		git_fs_path_dirname_r(&pattern, cfg_file);
 		git_str_joinpath(&pattern, pattern.ptr, condition + 2);
-	} else if (condition[0] == '~' && git_path_is_dirsep(condition[1]))
+	} else if (condition[0] == '~' && git_fs_path_is_dirsep(condition[1]))
 		git_sysdir_expand_global_file(&pattern, condition + 1);
-	else if (!git_path_is_absolute(condition))
+	else if (!git_fs_path_is_absolute(condition))
 		git_str_joinpath(&pattern, "**", condition);
 	else
 		git_str_sets(&pattern, condition);
 
-	if (git_path_is_dirsep(condition[strlen(condition) - 1]))
+	if (git_fs_path_is_dirsep(condition[strlen(condition) - 1]))
 		git_str_puts(&pattern, "**");
 
 	if (git_str_oom(&pattern)) {
@@ -632,7 +632,7 @@ static int do_match_gitdir(
 	if ((error = git_repository__item_path(&gitdir, repo, GIT_REPOSITORY_ITEM_GITDIR)) < 0)
 		goto out;
 
-	if (git_path_is_dirsep(gitdir.ptr[gitdir.size - 1]))
+	if (git_fs_path_is_dirsep(gitdir.ptr[gitdir.size - 1]))
 		git_str_truncate(&gitdir, gitdir.size - 1);
 
 	*matches = wildmatch(pattern.ptr, gitdir.ptr,
@@ -699,7 +699,7 @@ static int conditional_match_onbranch(
 	 */
 	if ((error = git_str_sets(&buf, condition)) < 0)
 		goto out;
-	if (git_path_is_dirsep(condition[strlen(condition) - 1]) &&
+	if (git_fs_path_is_dirsep(condition[strlen(condition) - 1]) &&
 	    (error = git_str_puts(&buf, "**")) < 0)
 		goto out;
 
@@ -861,7 +861,7 @@ static int config_file_read(
 	int error;
 
 	if (p_stat(file->path, &st) < 0) {
-		error = git_path_set_error(errno, file->path, "stat");
+		error = git_fs_path_set_error(errno, file->path, "stat");
 		goto out;
 	}
 
