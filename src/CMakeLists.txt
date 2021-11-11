@@ -98,7 +98,7 @@ if(WIN32 AND EMBED_SSH_PATH)
 	set(GIT_SSH 1)
 endif()
 
-if(WIN32 AND WINHTTP)
+if(WIN32 AND USE_WINHTTP)
 	set(GIT_WINHTTP 1)
 
 	# Since MinGW does not come with headers or an import library for winhttp,
