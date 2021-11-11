@@ -110,21 +110,6 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 	return ret;
 }
 
-void init_array(git_strarray *array, int argc, char **argv)
-{
-	unsigned int i;
-
-	array->count = argc;
-	array->strings = calloc(array->count, sizeof(char *));
-	assert(array->strings != NULL);
-
-	for (i = 0; i < array->count; i++) {
-		array->strings[i] = argv[i];
-	}
-
-	return;
-}
-
 void print_usage(void)
 {
 	fprintf(stderr, "usage: add [options] [--] file-spec [file-spec] [...]\n\n");
