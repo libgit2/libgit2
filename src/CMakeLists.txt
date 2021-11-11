@@ -41,8 +41,6 @@ set(LIBGIT2_INCLUDES
 set(LIBGIT2_SYSTEM_INCLUDES "")
 set(LIBGIT2_LIBS "")
 
-enable_warnings(missing-declarations)
-
 if(HAVE_FUTIMENS)
 	set(GIT_USE_FUTIMENS 1)
 endif ()
