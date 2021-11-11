@@ -65,4 +65,8 @@ int merge_test_reuc(git_index *index, const struct merge_reuc_entry expected[], 
 
 int merge_test_workdir(git_repository *repo, const struct merge_index_entry expected[], size_t expected_len);
 
+void merge__dump_names(git_index *index);
+void merge__dump_index_entries(git_vector *index_entries);
+void merge__dump_reuc(git_index *index);
+
 #endif

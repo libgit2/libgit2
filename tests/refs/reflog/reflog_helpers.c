@@ -2,8 +2,9 @@
 
 #include "repository.h"
 #include "reflog.h"
+#include "reflog_helpers.h"
 
-static int reflog_entry_tostr(git_str *out, const git_reflog_entry *entry)
+int reflog_entry_tostr(git_str *out, const git_reflog_entry *entry)
 {
 	char old_oid[GIT_OID_HEXSZ], new_oid[GIT_OID_HEXSZ];
 

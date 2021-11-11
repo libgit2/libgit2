@@ -2,6 +2,7 @@
 #include "posix.h"
 #include "filter.h"
 #include "git2/sys/filter.h"
+#include "custom_helpers.h"
 
 #define VERY_SECURE_ENCRYPTION(b) ((b) ^ 0xff)
 
