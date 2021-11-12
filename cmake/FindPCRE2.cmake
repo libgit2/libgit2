@@ -19,7 +19,10 @@
 FIND_PATH(PCRE2_INCLUDE_DIR NAMES pcre2posix.h)
 
 # Look for the library.
-FIND_LIBRARY(PCRE2_LIBRARY NAMES pcre2-8)
+FIND_LIBRARY(PCRE2_LIBRARY_RELEASE NAMES pcre2-8)
+FIND_LIBRARY(PCRE2_LIBRARY_DEBUG NAMES pcre2-8d)
+INCLUDE(SelectLibraryConfigurations)
+select_library_configurations(PCRE2)
 
 # Handle the QUIETLY and REQUIRED arguments and set PCRE2_FOUND to TRUE if all listed variables are TRUE.
 INCLUDE(FindPackageHandleStandardArgs)
