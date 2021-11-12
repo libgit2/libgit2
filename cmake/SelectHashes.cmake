@@ -3,10 +3,10 @@
 include(SanitizeBool)
 
 # USE_SHA1=CollisionDetection(ON)/HTTPS/Generic/OFF
-
 sanitizebool(USE_SHA1)
+
 if(USE_SHA1 STREQUAL ON)
-	set(USE_SHA1 "CollisionDetection")
+	SET(USE_SHA1 "CollisionDetection")
 elseif(USE_SHA1 STREQUAL "HTTPS")
 	if(USE_HTTPS STREQUAL "SecureTransport")
 		set(USE_SHA1 "CommonCrypto")

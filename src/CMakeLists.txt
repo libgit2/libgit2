@@ -38,8 +38,6 @@ set(LIBGIT2_INCLUDES
 	"${CMAKE_CURRENT_BINARY_DIR}"
 	"${libgit2_SOURCE_DIR}/src"
 	"${libgit2_SOURCE_DIR}/include")
-set(LIBGIT2_SYSTEM_INCLUDES "")
-set(LIBGIT2_LIBS "")
 
 if(HAVE_FUTIMENS)
 	set(GIT_USE_FUTIMENS 1)
@@ -59,23 +57,23 @@ check_function_exists(qsort_s GIT_QSORT_S)
 # Find required dependencies
 
 if(WIN32)
-	list(APPEND LIBGIT2_LIBS ws2_32)
+	list(APPEND LIBGIT2_SYSTEM_LIBS ws2_32)
 elseif(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-	list(APPEND LIBGIT2_LIBS socket nsl)
+	list(APPEND LIBGIT2_SYSTEM_LIBS socket nsl)
 	list(APPEND LIBGIT2_PC_LIBS "-lsocket" "-lnsl")
 elseif(CMAKE_SYSTEM_NAME MATCHES "Haiku")
-	list(APPEND LIBGIT2_LIBS network)
+	list(APPEND LIBGIT2_SYSTEM_LIBS network)
 	list(APPEND LIBGIT2_PC_LIBS "-lnetwork")
 endif()
 
 check_library_exists(rt clock_gettime "time.h" NEED_LIBRT)
 if(NEED_LIBRT)
-	list(APPEND LIBGIT2_LIBS rt)
+	list(APPEND LIBGIT2_SYSTEM_LIBS rt)
 	list(APPEND LIBGIT2_PC_LIBS "-lrt")
 endif()
 
 if(USE_THREADS)
-	list(APPEND LIBGIT2_LIBS ${CMAKE_THREAD_LIBS_INIT})
+	list(APPEND LIBGIT2_SYSTEM_LIBS ${CMAKE_THREAD_LIBS_INIT})
 	list(APPEND LIBGIT2_PC_LIBS ${CMAKE_THREAD_LIBS_INIT})
 endif()
 add_feature_info(threadsafe USE_THREADS "threadsafe support")
@@ -105,8 +103,8 @@ target_sources(git2internal PRIVATE ${SRC_SHA1})
 if(USE_NTLMCLIENT)
 	set(GIT_NTLM 1)
 	add_subdirectory("${libgit2_SOURCE_DIR}/deps/ntlmclient" "${libgit2_BINARY_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
+	list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${libgit2_SOURCE_DIR}/deps/ntlmclient")
+	list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
 endif()
 add_feature_info(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
 
@@ -121,7 +119,7 @@ endif()
 if(ICONV_FOUND)
 	set(GIT_USE_ICONV 1)
 	list(APPEND LIBGIT2_SYSTEM_INCLUDES ${ICONV_INCLUDE_DIR})
-	list(APPEND LIBGIT2_LIBS ${ICONV_LIBRARIES})
+	list(APPEND LIBGIT2_SYSTEM_LIBS ${ICONV_LIBRARIES})
 	list(APPEND LIBGIT2_PC_LIBS ${ICONV_LIBRARIES})
 endif()
 add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
@@ -210,15 +208,17 @@ endif()
 configure_file(features.h.in git2/sys/features.h)
 
 ide_split_sources(git2internal)
-list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:git2internal>)
+list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:git2internal> ${LIBGIT2_DEPENDENCY_OBJECTS})
 
-target_include_directories(git2internal PRIVATE ${LIBGIT2_INCLUDES} PUBLIC ${libgit2_SOURCE_DIR}/include)
+target_include_directories(git2internal PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${libgit2_SOURCE_DIR}/include)
 target_include_directories(git2internal SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
 
-set(LIBGIT2_OBJECTS ${LIBGIT2_OBJECTS} PARENT_SCOPE)
 set(LIBGIT2_INCLUDES ${LIBGIT2_INCLUDES} PARENT_SCOPE)
+set(LIBGIT2_OBJECTS ${LIBGIT2_OBJECTS} PARENT_SCOPE)
+set(LIBGIT2_DEPENDENCY_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES} PARENT_SCOPE)
+set(LIBGIT2_DEPENDENCY_OBJECTS ${LIBGIT2_DEPENDENCY_OBJECTS} PARENT_SCOPE)
 set(LIBGIT2_SYSTEM_INCLUDES ${LIBGIT2_SYSTEM_INCLUDES} PARENT_SCOPE)
-set(LIBGIT2_LIBS ${LIBGIT2_LIBS} PARENT_SCOPE)
+set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 
 if(XCODE_VERSION)
 	# This is required for Xcode to actually link the libgit2 library
@@ -229,7 +229,7 @@ endif()
 
 # Compile and link libgit2
 add_library(git2 ${WIN_RC} ${LIBGIT2_OBJECTS})
-target_link_libraries(git2 ${LIBGIT2_LIBS})
+target_link_libraries(git2 ${LIBGIT2_SYSTEM_LIBS})
 
 set_target_properties(git2 PROPERTIES C_STANDARD 90)
 set_target_properties(git2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})

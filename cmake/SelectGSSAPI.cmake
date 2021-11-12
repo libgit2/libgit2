@@ -26,7 +26,7 @@ if(USE_GSSAPI)
 			message(FATAL_ERROR "Asked for GSS.framework backend, but it wasn't found")
 		endif()
 
-		list(APPEND LIBGIT2_LIBS ${GSSFRAMEWORK_LIBRARIES})
+		list(APPEND LIBGIT2_SYSTEM_LIBS ${GSSFRAMEWORK_LIBRARIES})
 
 		set(GIT_GSSFRAMEWORK 1)
 		add_feature_info(SPNEGO GIT_GSSFRAMEWORK "SPNEGO authentication support (${USE_GSSAPI})")
@@ -35,7 +35,7 @@ if(USE_GSSAPI)
 			message(FATAL_ERROR "Asked for gssapi GSS backend, but it wasn't found")
 		endif()
 
-		list(APPEND LIBGIT2_LIBS ${GSSAPI_LIBRARIES})
+		list(APPEND LIBGIT2_SYSTEM_LIBS ${GSSAPI_LIBRARIES})
 
 		set(GIT_GSSAPI 1)
 		add_feature_info(SPNEGO GIT_GSSAPI "SPNEGO authentication support (${USE_GSSAPI})")
