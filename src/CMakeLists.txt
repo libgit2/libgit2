@@ -97,6 +97,21 @@ include(SelectSSH)
 include(SelectWinHTTP)
 include(SelectZlib)
 
+
+if(USE_SHA1 STREQUAL "CollisionDetection")
+	file(GLOB SRC_SHA1 hash/sha1/collisiondetect.* hash/sha1/sha1dc/*)
+elseif(USE_SHA1 STREQUAL "OpenSSL")
+	file(GLOB SRC_SHA1 hash/sha1/openssl.*)
+elseif(USE_SHA1 STREQUAL "CommonCrypto")
+	file(GLOB SRC_SHA1 hash/sha1/common_crypto.*)
+elseif(USE_SHA1 STREQUAL "mbedTLS")
+	file(GLOB SRC_SHA1 hash/sha1/mbedtls.*)
+elseif(USE_SHA1 STREQUAL "Win32")
+	file(GLOB SRC_SHA1 hash/sha1/win32.*)
+elseif(USE_SHA1 STREQUAL "Generic")
+	file(GLOB SRC_SHA1 hash/sha1/generic.*)
+endif()
+list(APPEND SRC_SHA1 "hash/sha1.h")
 target_sources(git2internal PRIVATE ${SRC_SHA1})
 
 # Optional external dependency: ntlmclient
