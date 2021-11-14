@@ -12,7 +12,6 @@
 
 #include "posix.h"
 #include "str.h"
-#include "http_parser.h"
 #include "runtime.h"
 
 int gitno_recv(gitno_buffer *buf)

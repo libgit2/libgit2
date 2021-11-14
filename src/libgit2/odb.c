@@ -198,7 +198,7 @@ void git_odb_object_free(git_odb_object *object)
 int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_object_t type)
 {
 	size_t hdr_len;
-	char hdr[64], buffer[FILEIO_BUFSIZE];
+	char hdr[64], buffer[GIT_BUFSIZE_FILEIO];
 	git_hash_ctx ctx;
 	ssize_t read_len = 0;
 	int error = 0;

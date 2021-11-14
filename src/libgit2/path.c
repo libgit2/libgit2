@@ -9,6 +9,7 @@
 
 #include "repository.h"
 #include "fs_path.h"
+#include "utf8.h"
 
 typedef struct {
 	git_repository *repo;
