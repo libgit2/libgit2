@@ -180,7 +180,7 @@ GIT_INLINE(volatile void *) git_atomic__swap(
 #if defined(GIT_WIN32)
 	return InterlockedExchangePointer(ptr, newval);
 #elif defined(GIT_BUILTIN_ATOMIC)
-	void * volatile foundval = NULL;
+	void * foundval = NULL;
 	__atomic_exchange(ptr, &newval, &foundval, __ATOMIC_SEQ_CST);
 	return foundval;
 #elif defined(GIT_BUILTIN_SYNC)
