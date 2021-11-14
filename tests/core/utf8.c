@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "utf8.h"
 
 void test_core_utf8__char_length(void)
 {
