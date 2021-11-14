@@ -16,7 +16,7 @@ add_definitions(-D_FILE_OFFSET_BITS=64)
 # Ensure that we do not use deprecated functions internally
 add_definitions(-DGIT_DEPRECATE_HARD)
 
-include_directories(${CLAR_PATH} ${libgit2_BINARY_DIR}/src)
+set(TEST_INCLUDES "${CLAR_PATH}" "${CMAKE_CURRENT_BINARY_DIR}")
 file(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/*/*.h)
 set(SRC_CLAR "main.c" "clar_libgit2.c" "clar_libgit2_trace.c" "clar_libgit2_timer.c" "clar.c")
 
@@ -30,22 +30,20 @@ add_custom_command(
 	DEPENDS ${SRC_TEST}
 	WORKING_DIRECTORY ${CLAR_PATH}
 )
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set_source_files_properties(
 	${CLAR_PATH}/clar.c
 	PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clar.suite)
-
-include_directories(${LIBGIT2_INCLUDES})
-include_directories(SYSTEM ${LIBGIT2_SYSTEM_INCLUDES})
 
 add_executable(libgit2_tests ${SRC_CLAR} ${SRC_TEST} ${LIBGIT2_OBJECTS})
 
 set_target_properties(libgit2_tests PROPERTIES C_STANDARD 90)
 set_target_properties(libgit2_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
 
-target_include_directories(libgit2_tests PRIVATE ../src PUBLIC ../include)
-target_link_libraries(libgit2_tests ${LIBGIT2_LIBS})
+target_include_directories(libgit2_tests PRIVATE ${TEST_INCLUDES} ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
+target_include_directories(libgit2_tests SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
+target_link_libraries(libgit2_tests ${LIBGIT2_SYSTEM_LIBS})
+
 ide_split_sources(libgit2_tests)
 
 #
