@@ -1085,7 +1085,7 @@ int git_filter_list_stream_file(
 	const char *path,
 	git_writestream *target)
 {
-	char buf[FILTERIO_BUFSIZE];
+	char buf[GIT_BUFSIZE_FILTERIO];
 	git_str abspath = GIT_STR_INIT;
 	const char *base = repo ? git_repository_workdir(repo) : NULL;
 	git_vector filter_streams = GIT_VECTOR_INIT;

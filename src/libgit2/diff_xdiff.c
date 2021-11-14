@@ -11,6 +11,7 @@
 #include "diff.h"
 #include "diff_driver.h"
 #include "patch_generate.h"
+#include "utf8.h"
 
 static int git_xdiff_scan_int(const char **str, int *value)
 {
