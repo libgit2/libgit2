@@ -1,9 +1,9 @@
 # libgit2: the shared library: this CMakeLists.txt compiles the core
 # git library functionality.
 
-add_library(git2internal OBJECT)
-set_target_properties(git2internal PROPERTIES C_STANDARD 90)
-set_target_properties(git2internal PROPERTIES C_EXTENSIONS OFF)
+add_library(libgit2 OBJECT)
+set_target_properties(libgit2 PROPERTIES C_STANDARD 90)
+set_target_properties(libgit2 PROPERTIES C_EXTENSIONS OFF)
 
 include(PkgBuildConfig)
 
@@ -16,177 +16,27 @@ set(LIBGIT2_INCLUDES
 if(WIN32 AND EMBED_SSH_PATH)
 	file(GLOB SRC_SSH "${EMBED_SSH_PATH}/src/*.c")
 	list(SORT SRC_SSH)
-	target_sources(git2internal PRIVATE ${SRC_SSH})
+	target_sources(libgit2 PRIVATE ${SRC_SSH})
 
 	list(APPEND LIBGIT2_SYSTEM_INCLUDES "${EMBED_SSH_PATH}/include")
 	file(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
 	set(GIT_SSH 1)
 endif()
 
-<<<<<<< HEAD
-include(SelectHTTPSBackend)
-include(SelectHashes)
-include(SelectHTTPParser)
-include(SelectRegex)
-include(SelectSSH)
-include(SelectWinHTTP)
-include(SelectZlib)
-
-
-if(USE_SHA1 STREQUAL "CollisionDetection")
-	file(GLOB SRC_SHA1 hash/sha1/collisiondetect.* hash/sha1/sha1dc/*)
-elseif(USE_SHA1 STREQUAL "OpenSSL")
-	file(GLOB SRC_SHA1 hash/sha1/openssl.*)
-elseif(USE_SHA1 STREQUAL "CommonCrypto")
-	file(GLOB SRC_SHA1 hash/sha1/common_crypto.*)
-elseif(USE_SHA1 STREQUAL "mbedTLS")
-	file(GLOB SRC_SHA1 hash/sha1/mbedtls.*)
-elseif(USE_SHA1 STREQUAL "Win32")
-	file(GLOB SRC_SHA1 hash/sha1/win32.*)
-elseif(USE_SHA1 STREQUAL "Generic")
-	file(GLOB SRC_SHA1 hash/sha1/generic.*)
-endif()
-list(APPEND SRC_SHA1 "hash/sha1.h")
-target_sources(git2internal PRIVATE ${SRC_SHA1})
-
-# Optional external dependency: ntlmclient
-if(USE_NTLMCLIENT)
-	set(GIT_NTLM 1)
-	add_subdirectory("${PROJECT_SOURCE_DIR}/deps/ntlmclient" "${PROJECT_BINARY_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
-endif()
-add_feature_info(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
-
-# Optional external dependency: GSSAPI
-
-include(SelectGSSAPI)
-
-# Optional external dependency: iconv
-if(USE_ICONV)
-	find_package(Iconv)
-endif()
-if(ICONV_FOUND)
-	set(GIT_USE_ICONV 1)
-	list(APPEND LIBGIT2_SYSTEM_INCLUDES ${ICONV_INCLUDE_DIR})
-	list(APPEND LIBGIT2_SYSTEM_LIBS ${ICONV_LIBRARIES})
-	list(APPEND LIBGIT2_PC_LIBS ${ICONV_LIBRARIES})
-endif()
-add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
-
-
-if(USE_THREADS)
-	if(NOT WIN32)
-		find_package(Threads REQUIRED)
-	endif()
-
-	set(GIT_THREADS 1)
-endif()
-
-if(USE_NSEC)
-	set(GIT_USE_NSEC 1)
-endif()
-
-if(HAVE_STRUCT_STAT_ST_MTIM)
-	set(GIT_USE_STAT_MTIM 1)
-elseif(HAVE_STRUCT_STAT_ST_MTIMESPEC)
-	set(GIT_USE_STAT_MTIMESPEC 1)
-elseif(HAVE_STRUCT_STAT_ST_MTIME_NSEC)
-	set(GIT_USE_STAT_MTIME_NSEC 1)
-endif()
-
-target_compile_definitions(git2internal PRIVATE _FILE_OFFSET_BITS=64)
-
-||||||| parent of a930dafb4 (refactor: make util an object library)
-include(SelectHTTPSBackend)
-include(SelectHashes)
-include(SelectHTTPParser)
-include(SelectRegex)
-include(SelectSSH)
-include(SelectWinHTTP)
-include(SelectZlib)
-
-
-if(USE_SHA1 STREQUAL "CollisionDetection")
-	file(GLOB SRC_SHA1 hash/sha1/collisiondetect.* hash/sha1/sha1dc/*)
-elseif(USE_SHA1 STREQUAL "OpenSSL")
-	file(GLOB SRC_SHA1 hash/sha1/openssl.*)
-elseif(USE_SHA1 STREQUAL "CommonCrypto")
-	file(GLOB SRC_SHA1 hash/sha1/common_crypto.*)
-elseif(USE_SHA1 STREQUAL "mbedTLS")
-	file(GLOB SRC_SHA1 hash/sha1/mbedtls.*)
-elseif(USE_SHA1 STREQUAL "Win32")
-	file(GLOB SRC_SHA1 hash/sha1/win32.*)
-elseif(USE_SHA1 STREQUAL "Generic")
-	file(GLOB SRC_SHA1 hash/sha1/generic.*)
-endif()
-list(APPEND SRC_SHA1 "hash/sha1.h")
-target_sources(git2internal PRIVATE ${SRC_SHA1})
-
-# Optional external dependency: ntlmclient
-if(USE_NTLMCLIENT)
-	set(GIT_NTLM 1)
-	add_subdirectory("${PROJECT_SOURCE_DIR}/deps/ntlmclient" "${PROJECT_BINARY_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
-endif()
-add_feature_info(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
-
-# Optional external dependency: GSSAPI
-
-include(SelectGSSAPI)
-
-# Optional external dependency: iconv
-if(USE_ICONV)
-	find_package(Iconv)
-endif()
-if(ICONV_FOUND)
-	set(GIT_USE_ICONV 1)
-	list(APPEND LIBGIT2_SYSTEM_INCLUDES ${ICONV_INCLUDE_DIR})
-	list(APPEND LIBGIT2_SYSTEM_LIBS ${ICONV_LIBRARIES})
-	list(APPEND LIBGIT2_PC_LIBS ${ICONV_LIBRARIES})
-endif()
-add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
-
-
-if(USE_THREADS)
-	if(NOT WIN32)
-		find_package(Threads REQUIRED)
-	endif()
-
-	set(GIT_THREADS 1)
-endif()
-
-if(USE_NSEC)
-	set(GIT_USE_NSEC 1)
-endif()
-
-if(HAVE_STRUCT_STAT_ST_MTIM)
-	set(GIT_USE_STAT_MTIM 1)
-elseif(HAVE_STRUCT_STAT_ST_MTIMESPEC)
-	set(GIT_USE_STAT_MTIMESPEC 1)
-elseif(HAVE_STRUCT_STAT_ST_MTIME_NSEC)
-	set(GIT_USE_STAT_MTIME_NSEC 1)
-endif()
-
-target_compile_definitions(git2internal PRIVATE _FILE_OFFSET_BITS=64)
-
-=======
->>>>>>> a930dafb4 (refactor: make util an object library)
 # Collect sourcefiles
 file(GLOB SRC_H
 	"${PROJECT_SOURCE_DIR}/include/git2.h"
 	"${PROJECT_SOURCE_DIR}/include/git2/*.h"
 	"${PROJECT_SOURCE_DIR}/include/git2/sys/*.h")
 list(SORT SRC_H)
-target_sources(git2internal PRIVATE ${SRC_H})
+target_sources(libgit2 PRIVATE ${SRC_H})
 
 file(GLOB SRC_GIT2 *.c *.h
 	streams/*.c streams/*.h
 	transports/*.c transports/*.h
 	xdiff/*.c xdiff/*.h)
 list(SORT SRC_GIT2)
-target_sources(git2internal PRIVATE ${SRC_GIT2})
+target_sources(libgit2 PRIVATE ${SRC_GIT2})
 
 if(WIN32 AND NOT CYGWIN)
 	# Add resource information on Windows
@@ -198,9 +48,9 @@ if(APPLE)
 	set_source_files_properties(streams/stransport.c PROPERTIES COMPILE_FLAGS -Wno-deprecated)
 endif()
 
-# the xdiff dependency is not (yet) warning-free, disable warnings as
-# errors for the xdiff sources until we've sorted them out
- if(MSVC)
+# the xdiff dependency is not (yet) warning-free, disable warnings
+# as errors for the xdiff sources until we've sorted them out
+if(MSVC)
 	set_source_files_properties(xdiff/xdiffi.c PROPERTIES COMPILE_FLAGS -WX-)
 	set_source_files_properties(xdiff/xemit.c PROPERTIES COMPILE_FLAGS -WX-)
 	set_source_files_properties(xdiff/xhistogram.c PROPERTIES COMPILE_FLAGS -WX-)
@@ -213,13 +63,13 @@ else()
 	set_source_files_properties(xdiff/xhistogram.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
 	set_source_files_properties(xdiff/xutils.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
 	set_source_files_properties(xdiff/xpatience.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
- endif()
+endif()
 
-ide_split_sources(git2internal)
-list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:util> $<TARGET_OBJECTS:git2internal> ${LIBGIT2_DEPENDENCY_OBJECTS})
+ide_split_sources(libgit2)
+list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:util> $<TARGET_OBJECTS:libgit2> ${LIBGIT2_DEPENDENCY_OBJECTS})
 
-target_include_directories(git2internal PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(git2internal SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
+target_include_directories(libgit2 PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(libgit2 SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
 
 set(LIBGIT2_INCLUDES ${LIBGIT2_INCLUDES} PARENT_SCOPE)
 set(LIBGIT2_OBJECTS ${LIBGIT2_OBJECTS} PARENT_SCOPE)
@@ -228,31 +78,34 @@ set(LIBGIT2_DEPENDENCY_OBJECTS ${LIBGIT2_DEPENDENCY_OBJECTS} PARENT_SCOPE)
 set(LIBGIT2_SYSTEM_INCLUDES ${LIBGIT2_SYSTEM_INCLUDES} PARENT_SCOPE)
 set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 
+#
 # Compile and link libgit2
-add_library(git2 ${SRC_RC} ${LIBGIT2_OBJECTS})
-target_link_libraries(git2 ${LIBGIT2_SYSTEM_LIBS})
+#
 
-set_target_properties(git2 PROPERTIES C_STANDARD 90)
-set_target_properties(git2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-set_target_properties(git2 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-set_target_properties(git2 PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+add_library(libgit2package ${SRC_RC} ${LIBGIT2_OBJECTS})
+target_link_libraries(libgit2package ${LIBGIT2_SYSTEM_LIBS})
+
+set_target_properties(libgit2package PROPERTIES C_STANDARD 90)
+set_target_properties(libgit2package PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+set_target_properties(libgit2package PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 # Workaround for Cmake bug #0011240 (see http://public.kitware.com/Bug/view.php?id=11240)
 # Win64+MSVC+static libs = linker error
 if(MSVC AND GIT_ARCH_64 AND NOT BUILD_SHARED_LIBS)
-	set_target_properties(git2 PROPERTIES STATIC_LIBRARY_FLAGS "/MACHINE:x64")
+	set_target_properties(libgit2package PROPERTIES STATIC_LIBRARY_FLAGS "/MACHINE:x64")
 endif()
 
-ide_split_sources(git2)
+ide_split_sources(libgit2package)
 
 if(SONAME)
-	set_target_properties(git2 PROPERTIES VERSION ${libgit2_VERSION})
-	set_target_properties(git2 PROPERTIES SOVERSION "${libgit2_VERSION_MAJOR}.${libgit2_VERSION_MINOR}")
+	set_target_properties(libgit2package PROPERTIES VERSION ${libgit2_VERSION})
+	set_target_properties(libgit2package PROPERTIES SOVERSION "${libgit2_VERSION_MAJOR}.${libgit2_VERSION_MINOR}")
 	if(LIBGIT2_FILENAME)
-		target_compile_definitions(git2 PRIVATE LIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
-		set_target_properties(git2 PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
+		target_compile_definitions(libgit2package PRIVATE LIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
+		set_target_properties(libgit2package PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
 	elseif(DEFINED LIBGIT2_PREFIX)
-		set_target_properties(git2 PROPERTIES PREFIX "${LIBGIT2_PREFIX}")
+		set_target_properties(libgit2package PROPERTIES PREFIX "${LIBGIT2_PREFIX}")
 	endif()
 endif()
 
@@ -261,20 +114,18 @@ pkg_build_config(NAME libgit2
 	DESCRIPTION "The git library, take 2"
 	LIBS_SELF git2
 	PRIVATE_LIBS ${LIBGIT2_PC_LIBS}
-	REQUIRES ${LIBGIT2_PC_REQUIRES}
-)
+	REQUIRES ${LIBGIT2_PC_REQUIRES})
 
 if(MSVC_IDE)
 	# Precompiled headers
-	set_target_properties(git2 PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
+	set_target_properties(libgit2package PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
 	set_source_files_properties(win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
 endif()
 
 # Install
-install(TARGETS git2
+install(TARGETS libgit2package
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/git2 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES ${PROJECT_SOURCE_DIR}/include/git2.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
