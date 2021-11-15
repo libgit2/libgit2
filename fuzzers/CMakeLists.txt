@@ -1,3 +1,5 @@
+# fuzzers: libFuzzer and standalone fuzzing utilities
+
 if(BUILD_FUZZERS AND NOT USE_STANDALONE_FUZZERS)
 	set(CMAKE_REQUIRED_FLAGS "-fsanitize=fuzzer-no-link")
 	add_c_flag(-fsanitize=fuzzer)

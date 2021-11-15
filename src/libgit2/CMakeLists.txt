@@ -1,3 +1,6 @@
+# libgit2: the shared library: this CMakeLists.txt compiles the core
+# git library functionality.
+
 add_library(git2internal OBJECT)
 set_target_properties(git2internal PROPERTIES C_STANDARD 90)
 set_target_properties(git2internal PROPERTIES C_EXTENSIONS OFF)
