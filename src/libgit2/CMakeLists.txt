@@ -228,13 +228,6 @@ set(LIBGIT2_DEPENDENCY_OBJECTS ${LIBGIT2_DEPENDENCY_OBJECTS} PARENT_SCOPE)
 set(LIBGIT2_SYSTEM_INCLUDES ${LIBGIT2_SYSTEM_INCLUDES} PARENT_SCOPE)
 set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 
-if(XCODE_VERSION)
-	# This is required for Xcode to actually link the libgit2 library
-	# when using only object libraries.
-	file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.c "")
-	list(APPEND LIBGIT2_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/dummy.c)
-endif()
-
 # Compile and link libgit2
 add_library(git2 ${SRC_RC} ${LIBGIT2_OBJECTS})
 target_link_libraries(git2 ${LIBGIT2_SYSTEM_LIBS})
