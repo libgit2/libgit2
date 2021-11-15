@@ -1,5 +1,8 @@
-# CMake build script for the libgit2 project
+# libgit2: the cross-platform, linkable library implementation of git.
 # See `README.md` for build instructions.
+#
+# This top-level CMakeLists.txt sets up configuration options and
+# determines which subprojects to build.
 
 cmake_minimum_required(VERSION 3.5.1)
 

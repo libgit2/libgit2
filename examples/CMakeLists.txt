@@ -1,3 +1,5 @@
+# examples: code usage examples of libgit2
+
 file(GLOB SRC_EXAMPLES *.c *.h)
 
 add_executable(lg2 ${SRC_EXAMPLES})
