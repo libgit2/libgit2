@@ -1,7 +1,7 @@
 # CMake build script for the libgit2 project
 # See `README.md` for build instructions.
 
-cmake_minimum_required(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.15.0)
 
 project(libgit2 VERSION "1.3.0" LANGUAGES C)
 
