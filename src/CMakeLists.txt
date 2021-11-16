@@ -1,5 +1,5 @@
-add_library(git2internal OBJECT)
-set_target_properties(git2internal PROPERTIES C_STANDARD 90)
+add_library(git2)
+set_target_properties(git2 PROPERTIES C_STANDARD 90)
 
 
 if(DEPRECATE_HARD)
@@ -82,7 +82,7 @@ add_feature_info(threadsafe USE_THREADS "threadsafe support")
 if(WIN32 AND EMBED_SSH_PATH)
 	file(GLOB SRC_SSH "${EMBED_SSH_PATH}/src/*.c")
 	list(SORT SRC_SSH)
-	target_sources(git2internal PRIVATE ${SRC_SSH})
+	target_sources(git2 PRIVATE ${SRC_SSH})
 
 	list(APPEND LIBGIT2_SYSTEM_INCLUDES "${EMBED_SSH_PATH}/include")
 	file(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
@@ -112,7 +112,7 @@ elseif(USE_SHA1 STREQUAL "Generic")
 	file(GLOB SRC_SHA1 hash/sha1/generic.*)
 endif()
 list(APPEND SRC_SHA1 "hash/sha1.h")
-target_sources(git2internal PRIVATE ${SRC_SHA1})
+target_sources(git2 PRIVATE ${SRC_SHA1})
 
 # Optional external dependency: ntlmclient
 if(USE_NTLMCLIENT)
@@ -160,7 +160,7 @@ elseif(HAVE_STRUCT_STAT_ST_MTIME_NSEC)
 	set(GIT_USE_STAT_MTIME_NSEC 1)
 endif()
 
-target_compile_definitions(git2internal PRIVATE _FILE_OFFSET_BITS=64)
+target_compile_definitions(git2 PRIVATE _FILE_OFFSET_BITS=64)
 
 # Collect sourcefiles
 file(GLOB SRC_H
@@ -168,25 +168,26 @@ file(GLOB SRC_H
 	"${libgit2_SOURCE_DIR}/include/git2/*.h"
 	"${libgit2_SOURCE_DIR}/include/git2/sys/*.h")
 list(SORT SRC_H)
-target_sources(git2internal PRIVATE ${SRC_H})
+target_sources(git2 PRIVATE ${SRC_H})
 
 # On Windows use specific platform sources
 if(WIN32 AND NOT CYGWIN)
 	set(WIN_RC "win32/git2.rc")
+	target_sources(git2 PRIVATE ${WIN_RC})
 
 	file(GLOB SRC_OS win32/*.c win32/*.h)
 	list(SORT SRC_OS)
-	target_sources(git2internal PRIVATE ${SRC_OS})
+	target_sources(git2 PRIVATE ${SRC_OS})
 elseif(AMIGA)
-	target_compile_definitions(git2internal PRIVATE NO_ADDRINFO NO_READDIR_R NO_MMAP)
+	target_compile_definitions(git2 PRIVATE NO_ADDRINFO NO_READDIR_R NO_MMAP)
 else()
 	file(GLOB SRC_OS unix/*.c unix/*.h)
 	list(SORT SRC_OS)
-	target_sources(git2internal PRIVATE ${SRC_OS})
+	target_sources(git2 PRIVATE ${SRC_OS})
 endif()
 
 if(USE_LEAK_CHECKER STREQUAL "valgrind")
-	target_compile_definitions(git2internal PRIVATE VALGRIND)
+	target_compile_definitions(git2 PRIVATE VALGRIND)
 endif()
 
 file(GLOB SRC_GIT2 *.c *.h
@@ -195,7 +196,7 @@ file(GLOB SRC_GIT2 *.c *.h
 	transports/*.c transports/*.h
 	xdiff/*.c xdiff/*.h)
 list(SORT SRC_GIT2)
-target_sources(git2internal PRIVATE ${SRC_GIT2})
+target_sources(git2 PRIVATE ${SRC_GIT2})
 
 if(APPLE)
 	# The old Secure Transport API has been deprecated in macOS 10.15.
@@ -222,11 +223,13 @@ endif()
 
 configure_file(features.h.in git2/sys/features.h)
 
-ide_split_sources(git2internal)
-list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:git2internal> ${LIBGIT2_DEPENDENCY_OBJECTS})
+ide_split_sources(git2)
+list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:git2> ${LIBGIT2_DEPENDENCY_OBJECTS})
 
-target_include_directories(git2internal PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${libgit2_SOURCE_DIR}/include)
-target_include_directories(git2internal SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
+target_include_directories(git2 PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${libgit2_SOURCE_DIR}/include)
+target_include_directories(git2 SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
+
+target_sources(git2 PRIVATE ${LIBGIT2_DEPENDENCY_OBJECTS})
 
 set(LIBGIT2_INCLUDES ${LIBGIT2_INCLUDES} PARENT_SCOPE)
 set(LIBGIT2_OBJECTS ${LIBGIT2_OBJECTS} PARENT_SCOPE)
@@ -235,18 +238,9 @@ set(LIBGIT2_DEPENDENCY_OBJECTS ${LIBGIT2_DEPENDENCY_OBJECTS} PARENT_SCOPE)
 set(LIBGIT2_SYSTEM_INCLUDES ${LIBGIT2_SYSTEM_INCLUDES} PARENT_SCOPE)
 set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 
-if(XCODE_VERSION)
-	# This is required for Xcode to actually link the libgit2 library
-	# when using only object libraries.
-	file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.c "")
-	list(APPEND LIBGIT2_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/dummy.c)
-endif()
-
 # Compile and link libgit2
-add_library(git2 ${WIN_RC} ${LIBGIT2_OBJECTS})
 target_link_libraries(git2 ${LIBGIT2_SYSTEM_LIBS})
 
-set_target_properties(git2 PROPERTIES C_STANDARD 90)
 set_target_properties(git2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
 set_target_properties(git2 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
 set_target_properties(git2 PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
