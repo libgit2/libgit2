@@ -5,7 +5,6 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         bzip2 \
         clang \
-        cmake \
         curl \
         gcc \
         git \
@@ -28,7 +27,17 @@ RUN apt-get update && \
         && \
     rm -rf /var/lib/apt/lists/*
 
-FROM apt AS mbedtls
+FROM apt AS cmake
+RUN cd /tmp && \
+    curl -L https://github.com/Kitware/CMake/releases/download/v3.15.5/cmake-3.15.5.tar.gz | tar -xz && \
+    cd cmake-3.15.5 && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf cmake-3.15.5
+
+FROM cmake AS mbedtls
 RUN cd /tmp && \
     curl --location --silent --show-error https://tls.mbed.org/download/mbedtls-2.16.2-apache.tgz | \
     tar -xz && \
