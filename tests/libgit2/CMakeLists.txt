@@ -8,8 +8,9 @@ if(NOT PYTHONINTERP_FOUND)
 	                     "Make sure python is available, or pass -DBUILD_TESTS=OFF to skip building the tests")
 ENDIF()
 
+set(CLAR_PATH "${PROJECT_SOURCE_DIR}/tests/clar")
 set(CLAR_FIXTURES "${PROJECT_SOURCE_DIR}/tests/resources/")
-set(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+set(TEST_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
 add_definitions(-DCLAR_TMPDIR=\"libgit2_tests\")
 add_definitions(-DCLAR_WIN32_LONGPATHS)
@@ -18,19 +19,19 @@ add_definitions(-D_FILE_OFFSET_BITS=64)
 # Ensure that we do not use deprecated functions internally
 add_definitions(-DGIT_DEPRECATE_HARD)
 
-set(TEST_INCLUDES "${CLAR_PATH}" "${CMAKE_CURRENT_BINARY_DIR}")
-file(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/*/*.h)
-set(SRC_CLAR "main.c" "clar_libgit2.c" "clar_libgit2_trace.c" "clar_libgit2_timer.c" "clar.c")
+set(TEST_INCLUDES "${CLAR_PATH}" "${TEST_PATH}" "${CMAKE_CURRENT_BINARY_DIR}")
+file(GLOB_RECURSE SRC_TEST ${TEST_PATH}/*/*.c ${TEST_PATH}/*/*.h)
+file(GLOB_RECURSE SRC_CLAR ${CLAR_PATH}/*.c ${CLAR_PATH}/*.h)
 
 if(MSVC_IDE)
-	list(APPEND SRC_CLAR "precompiled.c")
+	list(APPEND SRC_TEST "precompiled.c")
 endif()
 
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clar.suite ${CMAKE_CURRENT_BINARY_DIR}/clar_suite.h
-	COMMAND ${PYTHON_EXECUTABLE} generate.py -o "${CMAKE_CURRENT_BINARY_DIR}" -f -xonline -xstress -xperf .
+	COMMAND ${PYTHON_EXECUTABLE} ${CLAR_PATH}/generate.py -o "${CMAKE_CURRENT_BINARY_DIR}" -f -xonline -xstress -xperf .
 	DEPENDS ${SRC_TEST}
-	WORKING_DIRECTORY ${CLAR_PATH}
+	WORKING_DIRECTORY ${TEST_PATH}
 )
 
 set_source_files_properties(

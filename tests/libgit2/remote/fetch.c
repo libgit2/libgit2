@@ -1,4 +1,4 @@
-#include "../clar_libgit2.h"
+#include "clar_libgit2.h"
 
 #include "remote.h"
 #include "repository.h"
@@ -82,9 +82,9 @@ static void do_time_travelling_fetch(git_oid *commit1id, git_oid *commit2id,
 		cl_git_pass(git_treebuilder_write(&empty_tree_id, tb));
 		cl_git_pass(git_tree_lookup(&empty_tree, repo1, &empty_tree_id));
 		cl_git_pass(git_signature_default(&sig, repo1));
-		cl_git_pass(git_commit_create(commit1id, repo1, REPO1_REFNAME, sig, 
+		cl_git_pass(git_commit_create(commit1id, repo1, REPO1_REFNAME, sig,
 					sig, NULL, "one", empty_tree, 0, NULL));
-		cl_git_pass(git_commit_create_v(commit2id, repo1, REPO1_REFNAME, sig, 
+		cl_git_pass(git_commit_create_v(commit2id, repo1, REPO1_REFNAME, sig,
 					sig, NULL, "two", empty_tree, 1, commit1id));
 
 		git_tree_free(empty_tree);
@@ -118,7 +118,7 @@ static void do_time_travelling_fetch(git_oid *commit1id, git_oid *commit2id,
 		git_reference *ref;
 		git_reference *ref2;
 		cl_git_pass(git_reference_lookup(&ref, repo1, REPO1_REFNAME));
-		cl_git_pass(git_reference_set_target(&ref2, ref, commit1id, 
+		cl_git_pass(git_reference_set_target(&ref2, ref, commit1id,
 					"rollback"));
 		git_reference_free(ref);
 		git_reference_free(ref2);
