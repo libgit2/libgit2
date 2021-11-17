@@ -2,9 +2,11 @@
 
 These are the unit and integration tests for the libgit2 projects.
 
-* `libgit2`
+* `clar`  
+  This is [clar](https://github.com/clar-test/clar) the common test framework.
+* `libgit2`  
   These tests exercise the core git functionality in libgit2 itself.
-* `resources`
+* `resources`  
   These are the resources for the tests, including files and git
   repositories.
 
