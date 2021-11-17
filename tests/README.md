@@ -12,6 +12,8 @@ These are the unit and integration tests for the libgit2 projects.
 * `resources`  
   These are the resources for the tests, including files and git
   repositories.
+* `util`  
+  These are tests of the common utility library.
 
 ## Writing tests for libgit2
 
