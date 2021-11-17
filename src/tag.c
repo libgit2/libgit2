@@ -539,6 +539,8 @@ int git_tag_name_is_valid(int *valid, const char *name)
 
 	GIT_ASSERT(valid);
 
+	*valid = 0;
+
 	/*
 	 * Discourage tag name starting with dash,
 	 * https://github.com/git/git/commit/4f0accd638b8d2
