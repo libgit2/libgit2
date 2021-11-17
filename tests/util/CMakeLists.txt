@@ -62,14 +62,7 @@ if(MSVC_IDE)
 	set_source_files_properties("precompiled.c" COMPILE_FLAGS "/Ycprecompiled.h")
 endif()
 
-function(ADD_CLAR_TEST name)
-	if(NOT USE_LEAK_CHECKER STREQUAL "OFF")
-		add_test(${name} "${libgit2_SOURCE_DIR}/script/${USE_LEAK_CHECKER}.sh" "${libgit2_BINARY_DIR}/util_tests" ${ARGN})
-	else()
-		add_test(${name} "${libgit2_BINARY_DIR}/util_tests" ${ARGN})
-	endif()
-endfunction(ADD_CLAR_TEST)
-
 enable_testing()
 
-add_clar_test(util -v)
+include(AddClarTest)
+add_clar_test(util_tests util -v)
