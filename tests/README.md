@@ -4,6 +4,9 @@ These are the unit and integration tests for the libgit2 projects.
 
 * `clar`  
   This is [clar](https://github.com/clar-test/clar) the common test framework.
+* `headertest`  
+  This is a simple project that ensures that our public headers are
+  compatible with extremely strict compilation options.
 * `libgit2`  
   These tests exercise the core git functionality in libgit2 itself.
 * `resources`  
