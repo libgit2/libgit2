@@ -1,33 +1,49 @@
-Writing Clar tests for libgit2
-==============================
+# libgit2 tests
 
-For information on the Clar testing framework and a detailed introduction
-please visit:
+These are the unit and integration tests for the libgit2 projects.
 
-https://github.com/vmg/clar
+* `libgit2`
+  These tests exercise the core git functionality in libgit2 itself.
+* `resources`
+  These are the resources for the tests, including files and git
+  repositories.
 
+## Writing tests for libgit2
 
-* Write your modules and tests. Use good, meaningful names.
+libgit2 uses the [clar test framework](http://github.com/clar-test/clar), a
+C testing framework.
 
-* Make sure you actually build the tests by setting:
+The best resources for learning clar are [clar itself](https://github.com/clar-test/clar)
+and the existing tests within libgit2.  In general:
 
-        cmake -DBUILD_TESTS=ON build/
+* If you place a `.c` file into a test directory, it is eligible to contain
+test cases.
+* The function name for your test is important; test function names begin
+  with `test_`, followed by the folder path (underscore separated), two
+  underscores as a delimiter, then the test name.  For example, a file
+  `merge/analysis.c` may contain a test `uptodate`:
 
-* Test:
+  ```
+  void test_merge_analysis__uptodate(void)
+  {
+    ...
+  }
+  ```
 
-        ./build/libgit2_tests
+* You can run an individual test by passing `-s` to the test runner.  Tests
+  are referred to by their function names; for example, the function
+  `test_merge_analysis__uptodate` is referred to as `merge::analysis::uptodate`.
+  To run only that function you can use the `-s` option on the test runner:
 
-* Make sure everything is fine.
+  ```
+  libgit2_tests -smerge::analysis::uptodate
+  ```
 
-* Send your pull request. That's it.
-
-
-Memory leak checks
-------------------
+## Memory leak checking
 
 These are automatically run as part of CI, but if you want to check locally:
 
-#### Linux
+### Linux
 
 Uses [`valgrind`](http://www.valgrind.org/):
 
@@ -38,11 +54,21 @@ $ valgrind --leak-check=full --show-reachable=yes --num-callers=50 --suppression
   ./libgit2_tests
 ```
 
-#### macOS
+### macOS
 
 Uses [`leaks`](https://developer.apple.com/library/archive/documentation/Performance/Conceptual/ManagingMemory/Articles/FindingLeaks.html), which requires XCode installed:
 
 ```console
 $ MallocStackLogging=1 MallocScribble=1 MallocLogFile=/dev/null CLAR_AT_EXIT="leaks -quiet \$PPID" \
   ./libgit2_tests
+```
+
+### Windows
+
+Build with the `WIN32_LEAKCHECK` option:
+
+```console
+$ cmake -DBUILD_TESTS=ON -DWIN32_LEAKCHECK=ON ..
+$ cmake --build .
+$ ./libgit2_tests
 ```
