@@ -156,10 +156,6 @@ fi
 
 # Run the tests that do not require network connectivity.
 
-if [ -z "$SKIP_UTILITY_TESTS" ]; then
-	run_test util
-fi
-
 if [ -z "$SKIP_OFFLINE_TESTS" ]; then
 	echo ""
 	echo "##############################################################################"
