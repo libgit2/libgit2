@@ -119,16 +119,16 @@ typedef struct {
 } git_pkt_unpack;
 
 typedef struct transport_smart_caps {
-	int common:1,
-		ofs_delta:1,
-		multi_ack: 1,
-		multi_ack_detailed: 1,
-		side_band:1,
-		side_band_64k:1,
-		include_tag:1,
-		delete_refs:1,
-		report_status:1,
-		thin_pack:1;
+	unsigned int common:1,
+	             ofs_delta:1,
+	             multi_ack:1,
+	             multi_ack_detailed:1,
+	             side_band:1,
+	             side_band_64k:1,
+	             include_tag:1,
+	             delete_refs:1,
+	             report_status:1,
+	             thin_pack:1;
 } transport_smart_caps;
 
 typedef int (*packetsize_cb)(size_t received, void *payload);

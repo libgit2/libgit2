@@ -46,10 +46,10 @@ typedef struct git_pobject {
 	size_t delta_size;
 	size_t z_delta_size;
 
-	int written:1,
-	    recursing:1,
-	    tagged:1,
-	    filled:1;
+	unsigned int written:1,
+	             recursing:1,
+	             tagged:1,
+	             filled:1;
 } git_pobject;
 
 struct git_packbuilder {
