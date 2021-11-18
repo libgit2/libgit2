@@ -5,36 +5,33 @@
 void test_date_rfc2822__format_rfc2822_no_offset(void)
 {
 	git_time t = {1397031663, 0};
-	char buf[GIT_DATE_RFC2822_SZ];
+	git_str buf = GIT_STR_INIT;
 
-	cl_git_pass(git_date_rfc2822_fmt(buf, sizeof(buf), &t));
-	cl_assert(strcmp(buf, "Wed, 9 Apr 2014 08:21:03 +0000") == 0);
+	cl_git_pass(git_date_rfc2822_fmt(&buf, t.time, t.offset));
+	cl_assert_equal_s("Wed, 9 Apr 2014 08:21:03 +0000", buf.ptr);
+
+	git_str_dispose(&buf);
 }
 
 void test_date_rfc2822__format_rfc2822_positive_offset(void)
 {
 	git_time t = {1397031663, 120};
-	char buf[GIT_DATE_RFC2822_SZ];
+	git_str buf = GIT_STR_INIT;
 
-	cl_git_pass(git_date_rfc2822_fmt(buf, sizeof(buf), &t));
-	cl_assert(strcmp(buf, "Wed, 9 Apr 2014 10:21:03 +0200") == 0);
+	cl_git_pass(git_date_rfc2822_fmt(&buf, t.time, t.offset));
+	cl_assert_equal_s("Wed, 9 Apr 2014 10:21:03 +0200", buf.ptr);
+
+	git_str_dispose(&buf);
 }
 
 void test_date_rfc2822__format_rfc2822_negative_offset(void)
 {
 	git_time t = {1397031663, -120};
-	char buf[GIT_DATE_RFC2822_SZ];
+	git_str buf = GIT_STR_INIT;
 
-	cl_git_pass(git_date_rfc2822_fmt(buf, sizeof(buf), &t));
-	cl_assert(strcmp(buf, "Wed, 9 Apr 2014 06:21:03 -0200") == 0);
-}
+	cl_git_pass(git_date_rfc2822_fmt(&buf, t.time, t.offset));
+	cl_assert_equal_s("Wed, 9 Apr 2014 06:21:03 -0200", buf.ptr);
 
-void test_date_rfc2822__format_rfc2822_buffer_too_small(void)
-{
-	/* "Wed, 10 Apr 2014 08:21:03 +0000" */
-	git_time t = {1397031663 + 86400, 0};
-	char buf[GIT_DATE_RFC2822_SZ-1];
-
-	cl_git_fail(git_date_rfc2822_fmt(buf, sizeof(buf), &t));
+	git_str_dispose(&buf);
 }
 

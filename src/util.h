@@ -37,8 +37,6 @@
 # define GIT_CONTAINER_OF(ptr, type, member) (type *)(ptr)
 #endif
 
-#define GIT_DATE_RFC2822_SZ  32
-
 /**
  * Return the length of a constant string.
  * We are aware that `strlen` performs the same task and is usually

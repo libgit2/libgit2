@@ -23,11 +23,11 @@ extern int git_date_parse(git_time_t *out, const char *date);
 /*
  * Format a git_time as a RFC2822 string
  *
- * @param out buffer to store formatted date; a '\\0' terminator will automatically be added.
- * @param len size of the buffer; should be atleast `GIT_DATE_RFC2822_SZ` in size;
- * @param date the date to be formatted
+ * @param out buffer to store formatted date
+ * @param time the time to be formatted
+ * @param offset the timezone offset
  * @return 0 if successful; -1 on error
  */
-extern int git_date_rfc2822_fmt(char *out, size_t len, const git_time *date);
+extern int git_date_rfc2822_fmt(git_str *out, git_time_t time, int offset);
 
 #endif
