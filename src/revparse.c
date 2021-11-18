@@ -11,6 +11,7 @@
 #include "tree.h"
 #include "refdb.h"
 #include "regexp.h"
+#include "date.h"
 
 #include "git2.h"
 
@@ -344,7 +345,7 @@ static int handle_at_syntax(git_object **out, git_reference **ref, const char *s
 		goto cleanup;
 	}
 
-	if (git__date_parse(&timestamp, curly_braces_content) < 0)
+	if (git_date_parse(&timestamp, curly_braces_content) < 0)
 		goto cleanup;
 
 	error = retrieve_revobject_from_reflog(out, ref, repo, git_str_cstr(&identifier), (size_t)timestamp);

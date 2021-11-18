@@ -12,6 +12,7 @@
 #include "diff_generate.h"
 #include "diff_stats.h"
 #include "patch.h"
+#include "date.h"
 
 #include "git2/email.h"
 #include "git2/patch.h"
@@ -123,7 +124,7 @@ static int append_header(
 	if ((error = git_oid_fmt(id, commit_id)) < 0 ||
 	    (error = git_str_printf(out, "From %.*s %s\n", GIT_OID_HEXSZ, id, EMAIL_TIMESTAMP)) < 0 ||
 	    (error = git_str_printf(out, "From: %s <%s>\n", author->name, author->email)) < 0 ||
-	    (error = git__date_rfc2822_fmt(date, sizeof(date), &author->when)) < 0 ||
+	    (error = git_date_rfc2822_fmt(date, sizeof(date), &author->when)) < 0 ||
 	    (error = git_str_printf(out, "Date: %s\n", date)) < 0 ||
 	    (error = append_subject(out, patch_idx, patch_count, summary, opts)) < 0)
 		return error;

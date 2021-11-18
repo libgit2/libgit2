@@ -857,7 +857,7 @@ static git_time_t approxidate_str(const char *date,
 	return update_tm(&tm, &now, 0);
 }
 
-int git__date_parse(git_time_t *out, const char *date)
+int git_date_parse(git_time_t *out, const char *date)
 {
 	time_t time_sec;
 	git_time_t timestamp;
@@ -875,7 +875,7 @@ int git__date_parse(git_time_t *out, const char *date)
    return error_ret;
 }
 
-int git__date_rfc2822_fmt(char *out, size_t len, const git_time *date)
+int git_date_rfc2822_fmt(char *out, size_t len, const git_time *date)
 {
 	int written;
 	struct tm gmt;
