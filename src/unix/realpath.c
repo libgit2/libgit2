@@ -7,8 +7,6 @@
 
 #include "common.h"
 
-#include "git2/common.h"
-
 #ifndef GIT_WIN32
 
 #include <limits.h>

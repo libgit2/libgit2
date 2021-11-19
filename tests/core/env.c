@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "futils.h"
 #include "sysdir.h"
-#include "path.h"
 
 #ifdef GIT_WIN32
 #define NUM_VARS 5

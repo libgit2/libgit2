@@ -14,8 +14,6 @@
 #include "vector.h"
 #include "utf8.h"
 
-#include "git2/sys/path.h"
-
 /**
  * Path manipulation utils
  *

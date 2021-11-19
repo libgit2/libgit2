@@ -10,7 +10,6 @@
 
 #include "common.h"
 
-#include "git2/oid.h"
 #include "hash/sha1.h"
 
 typedef struct {

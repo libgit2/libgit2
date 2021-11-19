@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "futils.h"
-#include "path.h"
 #include "posix.h"
 
 static void cleanup_basic_dirs(void *ref)
