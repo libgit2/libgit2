@@ -87,7 +87,7 @@ int git_filebuf_open_withsize(git_filebuf *file, const char *path, int flags, mo
 int git_filebuf_commit(git_filebuf *lock);
 int git_filebuf_commit_at(git_filebuf *lock, const char *path);
 void git_filebuf_cleanup(git_filebuf *lock);
-int git_filebuf_hash(git_oid *oid, git_filebuf *file);
+int git_filebuf_hash(unsigned char *out, git_filebuf *file);
 int git_filebuf_flush(git_filebuf *file);
 int git_filebuf_stats(time_t *mtime, size_t *size, git_filebuf *file);
 
