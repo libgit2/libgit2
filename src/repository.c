@@ -2038,9 +2038,8 @@ static int repo_init_structure(
 		 * `git` prints to stderr: 'warning: templates not found in /path/to/tdir'
 		 */
 		if (error < 0) {
-			if (!default_template && error != GIT_ENOTFOUND) {
+			if (!default_template && error != GIT_ENOTFOUND)
 				return error;
-			}
 
 			/* if template was default, ignore error and use internal */
 			git_error_clear();
