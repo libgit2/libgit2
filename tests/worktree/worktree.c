@@ -311,6 +311,7 @@ void test_worktree_worktree__add_no_checkout(void)
 
 	git_str_dispose(&path);
 	git_worktree_free(wt);
+	git_index_free(index);
 	git_repository_free(wtrepo);
 }
 
