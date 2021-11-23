@@ -26,7 +26,7 @@ typedef enum {
 	GIT_CRLF_TEXT_CRLF,
 	GIT_CRLF_AUTO,
 	GIT_CRLF_AUTO_INPUT,
-	GIT_CRLF_AUTO_CRLF,
+	GIT_CRLF_AUTO_CRLF
 } git_crlf_t;
 
 struct crlf_attrs {

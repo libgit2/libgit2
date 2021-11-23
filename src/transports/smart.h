@@ -46,7 +46,7 @@ typedef enum {
 	GIT_PKT_PROGRESS,
 	GIT_PKT_OK,
 	GIT_PKT_NG,
-	GIT_PKT_UNPACK,
+	GIT_PKT_UNPACK
 } git_pkt_type;
 
 /* Used for multi_ack and multi_ack_detailed */

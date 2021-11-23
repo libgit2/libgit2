@@ -34,7 +34,7 @@ typedef enum {
 	GIT_EMAIL_CREATE_ALWAYS_NUMBER = (1u << 1),
 
 	/** Do not perform rename or similarity detection. */
-	GIT_EMAIL_CREATE_NO_RENAMES = (1u << 2),
+	GIT_EMAIL_CREATE_NO_RENAMES = (1u << 2)
 } git_email_create_flags_t;
 
 /**

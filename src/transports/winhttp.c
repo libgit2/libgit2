@@ -99,7 +99,7 @@ typedef enum {
 	GIT_WINHTTP_AUTH_BASIC = 1,
 	GIT_WINHTTP_AUTH_NTLM = 2,
 	GIT_WINHTTP_AUTH_NEGOTIATE = 4,
-	GIT_WINHTTP_AUTH_DIGEST = 8,
+	GIT_WINHTTP_AUTH_DIGEST = 8
 } winhttp_authmechanism_t;
 
 typedef struct {

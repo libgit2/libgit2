@@ -56,9 +56,9 @@ void test_checkout_index__can_create_missing_files(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/new.txt"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/README"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/branch_file.txt"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/new.txt"));
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_RECREATE_MISSING;
 
@@ -77,7 +77,7 @@ void test_checkout_index__can_remove_untracked_files(void)
 	cl_git_mkfile("./testrepo/dir/one", "one\n");
 	cl_git_mkfile("./testrepo/dir/subdir/two", "two\n");
 
-	cl_assert_equal_i(true, git_path_isdir("./testrepo/dir/subdir/subsubdir"));
+	cl_assert_equal_i(true, git_fs_path_isdir("./testrepo/dir/subdir/subsubdir"));
 
 	opts.checkout_strategy =
 		GIT_CHECKOUT_SAFE |
@@ -86,7 +86,7 @@ void test_checkout_index__can_remove_untracked_files(void)
 
 	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
 
-	cl_assert_equal_i(false, git_path_isdir("./testrepo/dir"));
+	cl_assert_equal_i(false, git_fs_path_isdir("./testrepo/dir"));
 }
 
 void test_checkout_index__can_disable_pathspec_match(void)
@@ -152,15 +152,15 @@ void test_checkout_index__honor_the_specified_pathspecs(void)
 	opts.paths.strings = entries;
 	opts.paths.count = 1;
 
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/new.txt"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/README"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/branch_file.txt"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/new.txt"));
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_RECREATE_MISSING;
 
 	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
 
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/README"));
 	check_file_contents("./testrepo/branch_file.txt", "hi\nbye!\n");
 	check_file_contents("./testrepo/new.txt", "my new file\n");
 }
@@ -236,7 +236,7 @@ void test_checkout_index__honor_coresymlinks_default_true(void)
 
 	cl_must_pass(p_mkdir("symlink", 0777));
 
-	if (!git_path_supports_symlinks("symlink/test"))
+	if (!git_fs_path_supports_symlinks("symlink/test"))
 		cl_skip();
 
 #ifdef GIT_WIN32
@@ -269,7 +269,7 @@ void test_checkout_index__honor_coresymlinks_default_false(void)
 	 * supports symlinks.  Bail entirely on POSIX platforms that
 	 * do support symlinks.
 	 */
-	if (git_path_supports_symlinks("symlink/test"))
+	if (git_fs_path_supports_symlinks("symlink/test"))
 		cl_skip();
 #endif
 
@@ -281,7 +281,7 @@ void test_checkout_index__coresymlinks_set_to_true_fails_when_unsupported(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	if (git_path_supports_symlinks("testrepo/test")) {
+	if (git_fs_path_supports_symlinks("testrepo/test")) {
 		cl_skip();
 	}
 
@@ -297,7 +297,7 @@ void test_checkout_index__honor_coresymlinks_setting_set_to_true(void)
 	char link_data[GIT_PATH_MAX];
 	size_t link_size = GIT_PATH_MAX;
 
-	if (!git_path_supports_symlinks("testrepo/test")) {
+	if (!git_fs_path_supports_symlinks("testrepo/test")) {
 		cl_skip();
 	}
 
@@ -578,8 +578,8 @@ void test_checkout_index__can_overcome_name_clashes(void)
 	cl_git_pass(p_mkdir("./testrepo/path0", 0777));
 	cl_git_mkfile("./testrepo/path0/file0", "content\r\n");
 
-	cl_assert(git_path_isfile("./testrepo/path1"));
-	cl_assert(git_path_isfile("./testrepo/path0/file0"));
+	cl_assert(git_fs_path_isfile("./testrepo/path1"));
+	cl_assert(git_fs_path_isfile("./testrepo/path0/file0"));
 
 	opts.checkout_strategy =
 		GIT_CHECKOUT_SAFE |
@@ -587,14 +587,14 @@ void test_checkout_index__can_overcome_name_clashes(void)
 		GIT_CHECKOUT_ALLOW_CONFLICTS;
 	cl_git_pass(git_checkout_index(g_repo, index, &opts));
 
-	cl_assert(git_path_isfile("./testrepo/path1"));
-	cl_assert(git_path_isfile("./testrepo/path0/file0"));
+	cl_assert(git_fs_path_isfile("./testrepo/path1"));
+	cl_assert(git_fs_path_isfile("./testrepo/path0/file0"));
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 	cl_git_pass(git_checkout_index(g_repo, index, &opts));
 
-	cl_assert(git_path_isfile("./testrepo/path0"));
-	cl_assert(git_path_isfile("./testrepo/path1/file1"));
+	cl_assert(git_fs_path_isfile("./testrepo/path0"));
+	cl_assert(git_fs_path_isfile("./testrepo/path1/file1"));
 
 	git_index_free(index);
 }
@@ -622,9 +622,9 @@ void test_checkout_index__can_update_prefixed_files(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/new.txt"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/README"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/branch_file.txt"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/new.txt"));
 
 	cl_git_mkfile("./testrepo/READ", "content\n");
 	cl_git_mkfile("./testrepo/README.after", "content\n");
@@ -647,10 +647,10 @@ void test_checkout_index__can_update_prefixed_files(void)
 	check_file_contents_nocr("./testrepo/branch_file.txt", "hi\nbye!\n");
 	check_file_contents_nocr("./testrepo/new.txt", "my new file\n");
 
-	cl_assert(!git_path_exists("testrepo/READ"));
-	cl_assert(!git_path_exists("testrepo/README.after"));
-	cl_assert(!git_path_exists("testrepo/branch_file"));
-	cl_assert(!git_path_exists("testrepo/branch_file.txt.after"));
+	cl_assert(!git_fs_path_exists("testrepo/READ"));
+	cl_assert(!git_fs_path_exists("testrepo/README.after"));
+	cl_assert(!git_fs_path_exists("testrepo/branch_file"));
+	cl_assert(!git_fs_path_exists("testrepo/branch_file.txt.after"));
 }
 
 void test_checkout_index__can_checkout_a_newly_initialized_repository(void)
@@ -688,7 +688,7 @@ void test_checkout_index__target_directory(void)
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE |
 		GIT_CHECKOUT_RECREATE_MISSING;
 	opts.target_directory = "alternative";
-	cl_assert(!git_path_isdir("alternative"));
+	cl_assert(!git_fs_path_isdir("alternative"));
 
 	opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
 	opts.notify_cb = checkout_count_callback;
@@ -741,7 +741,7 @@ void test_checkout_index__target_directory_from_bare(void)
 	cl_git_fail(git_checkout_index(g_repo, NULL, &opts));
 
 	opts.target_directory = "alternative";
-	cl_assert(!git_path_isdir("alternative"));
+	cl_assert(!git_fs_path_isdir("alternative"));
 
 	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
 
@@ -765,9 +765,9 @@ void test_checkout_index__can_get_repo_from_index(void)
 	git_index *index;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));
-	cl_assert_equal_i(false, git_path_isfile("./testrepo/new.txt"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/README"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/branch_file.txt"));
+	cl_assert_equal_i(false, git_fs_path_isfile("./testrepo/new.txt"));
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_RECREATE_MISSING;
 

@@ -132,13 +132,6 @@ void git_str_dispose(git_str *buf)
 	git_str_init(buf, 0);
 }
 
-#ifndef GIT_DEPRECATE_HARD
-void git_str_free(git_str *buf)
-{
-	git_str_dispose(buf);
-}
-#endif
-
 void git_str_clear(git_str *buf)
 {
 	buf->size = 0;

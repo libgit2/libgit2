@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "path.h"
+#include "fs_path.h"
 
 static git_buf buf = GIT_BUF_INIT;
 
@@ -705,11 +705,11 @@ void test_config_read__path(void)
 	git_str expected_path = GIT_STR_INIT;
 
 	cl_git_pass(p_mkdir("fakehome", 0777));
-	cl_git_pass(git_path_prettify(&home_path, "fakehome", NULL));
+	cl_git_pass(git_fs_path_prettify(&home_path, "fakehome", NULL));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &old_path));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, home_path.ptr));
 	cl_git_mkfile("./testconfig", "[some]\n path = ~/somefile");
-	cl_git_pass(git_path_join_unrooted(&expected_path, "somefile", home_path.ptr, NULL));
+	cl_git_pass(git_fs_path_join_unrooted(&expected_path, "somefile", home_path.ptr, NULL));
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
 	cl_git_pass(git_config_get_path(&path, cfg, "some.path"));
@@ -717,7 +717,7 @@ void test_config_read__path(void)
 	git_buf_dispose(&path);
 
 	cl_git_mkfile("./testconfig", "[some]\n path = ~/");
-	cl_git_pass(git_path_join_unrooted(&expected_path, "", home_path.ptr, NULL));
+	cl_git_pass(git_fs_path_join_unrooted(&expected_path, "", home_path.ptr, NULL));
 
 	cl_git_pass(git_config_get_path(&path, cfg, "some.path"));
 	cl_assert_equal_s(expected_path.ptr, path.ptr);

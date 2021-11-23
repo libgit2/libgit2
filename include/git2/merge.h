@@ -91,7 +91,7 @@ typedef enum {
 	 * instead simply use the first base.  This flag provides a similar
 	 * merge base to `git-merge-resolve`.
 	 */
-	GIT_MERGE_NO_RECURSIVE = (1 << 3),
+	GIT_MERGE_NO_RECURSIVE = (1 << 3)
 } git_merge_flag_t;
 
 /**
@@ -127,7 +127,7 @@ typedef enum {
 	 * which has the result of combining both files.  The index will not
 	 * record a conflict.
 	 */
-	GIT_MERGE_FILE_FAVOR_UNION = 3,
+	GIT_MERGE_FILE_FAVOR_UNION = 3
 } git_merge_file_favor_t;
 
 /**
@@ -159,7 +159,7 @@ typedef enum {
 	GIT_MERGE_FILE_DIFF_PATIENCE = (1 << 6),
 
 	/** Take extra time to find minimal diff */
-	GIT_MERGE_FILE_DIFF_MINIMAL = (1 << 7),
+	GIT_MERGE_FILE_DIFF_MINIMAL = (1 << 7)
 } git_merge_file_flag_t;
 
 #define GIT_MERGE_CONFLICT_MARKER_SIZE	7
@@ -341,7 +341,7 @@ typedef enum {
 	 * a valid commit.  No merge can be performed, but the caller may wish
 	 * to simply set HEAD to the target commit(s).
 	 */
-	GIT_MERGE_ANALYSIS_UNBORN = (1 << 3),
+	GIT_MERGE_ANALYSIS_UNBORN = (1 << 3)
 } git_merge_analysis_t;
 
 /**
@@ -364,7 +364,7 @@ typedef enum {
 	 * There is a `merge.ff=only` configuration setting, suggesting that
 	 * the user only wants fast-forward merges.
 	 */
-	GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY = (1 << 1),
+	GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY = (1 << 1)
 } git_merge_preference_t;
 
 /**

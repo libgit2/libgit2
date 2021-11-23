@@ -2,7 +2,7 @@
 
 #include "repository.h"
 
-void assert_shorthand(git_repository *repo, const char *refname, const char *shorthand)
+static void assert_shorthand(git_repository *repo, const char *refname, const char *shorthand)
 {
 	git_reference *ref;
 

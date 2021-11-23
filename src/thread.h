@@ -12,7 +12,7 @@
 #if defined(__clang__)
 
 # if (__clang_major__ < 3 || (__clang_major__ == 3 && __clang_minor__ < 1))
-#  error Atomic primitives do not exist on this version of clang; configure libgit2 with -DTHREADSAFE=OFF
+#  error Atomic primitives do not exist on this version of clang; configure libgit2 with -DUSE_THREADS=OFF
 # else
 #  define GIT_BUILTIN_ATOMIC
 # endif
@@ -20,7 +20,7 @@
 #elif defined(__GNUC__)
 
 # if (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 1))
-#  error Atomic primitives do not exist on this version of gcc; configure libgit2 with -DTHREADSAFE=OFF
+#  error Atomic primitives do not exist on this version of gcc; configure libgit2 with -DUSE_THREADS=OFF
 # elif (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7))
 #  define GIT_BUILTIN_ATOMIC
 # else
@@ -180,7 +180,7 @@ GIT_INLINE(volatile void *) git_atomic__swap(
 #if defined(GIT_WIN32)
 	return InterlockedExchangePointer(ptr, newval);
 #elif defined(GIT_BUILTIN_ATOMIC)
-	void * volatile foundval = NULL;
+	void * foundval = NULL;
 	__atomic_exchange(ptr, &newval, &foundval, __ATOMIC_SEQ_CST);
 	return foundval;
 #elif defined(GIT_BUILTIN_SYNC)

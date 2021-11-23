@@ -56,10 +56,10 @@ static void assert_hooks_match(
 	struct stat expected_st, st;
 
 	cl_git_pass(git_str_joinpath(&expected, template_dir, hook_path));
-	cl_git_pass(git_path_lstat(expected.ptr, &expected_st));
+	cl_git_pass(git_fs_path_lstat(expected.ptr, &expected_st));
 
 	cl_git_pass(git_str_joinpath(&actual, repo_dir, hook_path));
-	cl_git_pass(git_path_lstat(actual.ptr, &st));
+	cl_git_pass(git_fs_path_lstat(actual.ptr, &st));
 
 	cl_assert(expected_st.st_size == st.st_size);
 
@@ -88,7 +88,7 @@ static void assert_mode_seems_okay(
 	struct stat st;
 
 	cl_git_pass(git_str_joinpath(&full, base, path));
-	cl_git_pass(git_path_lstat(full.ptr, &st));
+	cl_git_pass(git_fs_path_lstat(full.ptr, &st));
 	git_str_dispose(&full);
 
 	if (!core_filemode) {
@@ -292,4 +292,14 @@ void test_repo_template__empty_template_path(void)
 	opts.template_path = "";
 
 	setup_repo("foo", &opts);
+}
+
+void test_repo_template__nonexistent_template_path(void)
+{
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
+	opts.template_path = "/tmp/path/that/does/not/exist/for/libgit2/test";
+
+	setup_repo("bar", &opts);
 }

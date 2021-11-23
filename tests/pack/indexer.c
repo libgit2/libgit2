@@ -289,7 +289,7 @@ static int find_tmp_file_recurs(void *opaque, git_str *path)
 		return error;
 
 	if (S_ISDIR(st.st_mode))
-		return git_path_direach(path, 0, find_tmp_file_recurs, opaque);
+		return git_fs_path_direach(path, 0, find_tmp_file_recurs, opaque);
 
 	/* This is the template that's used in git_futils_mktmp. */
 	if (strstr(git_str_cstr(path), "_git2_") != NULL)

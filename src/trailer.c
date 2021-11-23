@@ -286,7 +286,7 @@ enum trailer_state {
 	S_VALUE = 4,
 	S_VALUE_NL = 5,
 	S_VALUE_END = 6,
-	S_IGNORE = 7,
+	S_IGNORE = 7
 };
 
 #define NEXT(st) { state = (st); ptr++; continue; }

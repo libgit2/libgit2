@@ -10,7 +10,7 @@ void updated_tip_free(updated_tip *t)
 	git__free(t);
 }
 
-void push_status_free(push_status *s)
+static void push_status_free(push_status *s)
 {
 	git__free(s->ref);
 	git__free(s->msg);

@@ -524,7 +524,7 @@ static int pack_backend__refresh(git_odb_backend *backend_)
 
 	/* reload all packs */
 	git_str_sets(&path, backend->pack_folder);
-	error = git_path_direach(&path, 0, packfile_load__cb, backend);
+	error = git_fs_path_direach(&path, 0, packfile_load__cb, backend);
 
 	git_str_dispose(&path);
 	git_vector_sort(&backend->packs);
@@ -750,7 +750,7 @@ static int get_idx_path(
 	size_t path_len;
 	int error;
 
-	error = git_path_prettify(idx_path, p->pack_name, backend->pack_folder);
+	error = git_fs_path_prettify(idx_path, p->pack_name, backend->pack_folder);
 	if (error < 0)
 		return error;
 	path_len = git_str_len(idx_path);
@@ -902,7 +902,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 		return -1;
 
 	if (!(error = git_str_joinpath(&path, objects_dir, "pack")) &&
-		git_path_isdir(git_str_cstr(&path)))
+		git_fs_path_isdir(git_str_cstr(&path)))
 	{
 		backend->pack_folder = git_str_detach(&path);
 		error = pack_backend__refresh((git_odb_backend *)backend);

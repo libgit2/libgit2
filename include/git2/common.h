@@ -147,7 +147,7 @@ typedef enum {
    * If set, libgit2 was built with support for sub-second resolution in file
    * modification times.
    */
-	GIT_FEATURE_NSEC	= (1 << 3),
+	GIT_FEATURE_NSEC	= (1 << 3)
 } git_feature_t;
 
 /**

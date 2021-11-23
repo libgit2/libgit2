@@ -386,7 +386,7 @@ typedef int GIT_CALLBACK(git_treewalk_cb)(
 /** Tree traversal modes */
 typedef enum {
 	GIT_TREEWALK_PRE = 0, /* Pre-order */
-	GIT_TREEWALK_POST = 1, /* Post-order */
+	GIT_TREEWALK_POST = 1 /* Post-order */
 } git_treewalk_mode;
 
 /**
@@ -428,7 +428,7 @@ typedef enum {
 	/** Update or insert an entry at the specified path */
 	GIT_TREE_UPDATE_UPSERT,
 	/** Remove an entry from the specified path */
-	GIT_TREE_UPDATE_REMOVE,
+	GIT_TREE_UPDATE_REMOVE
 } git_tree_update_t;
 
 /**

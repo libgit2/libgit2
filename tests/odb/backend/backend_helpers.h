@@ -13,10 +13,12 @@ typedef struct {
 	int read_calls;
 	int read_header_calls;
 	int read_prefix_calls;
+	int refresh_calls;
 
 	const fake_object *objects;
 } fake_backend;
 
 int build_fake_backend(
 	git_odb_backend **out,
-	const fake_object *objects);
+	const fake_object *objects,
+	bool support_refresh);

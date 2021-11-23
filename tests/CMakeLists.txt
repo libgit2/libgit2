@@ -16,7 +16,7 @@ add_definitions(-D_FILE_OFFSET_BITS=64)
 # Ensure that we do not use deprecated functions internally
 add_definitions(-DGIT_DEPRECATE_HARD)
 
-include_directories(${CLAR_PATH} ${libgit2_BINARY_DIR}/src)
+set(TEST_INCLUDES "${CLAR_PATH}" "${CMAKE_CURRENT_BINARY_DIR}")
 file(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/*/*.h)
 set(SRC_CLAR "main.c" "clar_libgit2.c" "clar_libgit2_trace.c" "clar_libgit2_timer.c" "clar.c")
 
@@ -25,28 +25,34 @@ if(MSVC_IDE)
 endif()
 
 add_custom_command(
-	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clar.suite
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clar.suite ${CMAKE_CURRENT_BINARY_DIR}/clar_suite.h
 	COMMAND ${PYTHON_EXECUTABLE} generate.py -o "${CMAKE_CURRENT_BINARY_DIR}" -f -xonline -xstress -xperf .
 	DEPENDS ${SRC_TEST}
 	WORKING_DIRECTORY ${CLAR_PATH}
 )
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set_source_files_properties(
 	${CLAR_PATH}/clar.c
 	PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clar.suite)
-
-include_directories(${LIBGIT2_INCLUDES})
-include_directories(SYSTEM ${LIBGIT2_SYSTEM_INCLUDES})
 
 add_executable(libgit2_tests ${SRC_CLAR} ${SRC_TEST} ${LIBGIT2_OBJECTS})
 
 set_target_properties(libgit2_tests PROPERTIES C_STANDARD 90)
 set_target_properties(libgit2_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
 
-target_include_directories(libgit2_tests PRIVATE ../src PUBLIC ../include)
-target_link_libraries(libgit2_tests ${LIBGIT2_LIBS})
+target_include_directories(libgit2_tests PRIVATE ${TEST_INCLUDES} ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
+target_include_directories(libgit2_tests SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
+target_link_libraries(libgit2_tests ${LIBGIT2_SYSTEM_LIBS})
+
 ide_split_sources(libgit2_tests)
+
+#
+# Old versions of gcc require us to declare our test functions; don't do
+# this on newer compilers to avoid unnecessary recompilation.
+#
+if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
+	target_compile_options(libgit2_tests PRIVATE -include "clar_suite.h")
+endif()
 
 if(MSVC_IDE)
 	# Precompiled headers
@@ -71,3 +77,20 @@ add_clar_test(ssh                 -v -sonline::push -sonline::clone::ssh_cert -s
 add_clar_test(proxy               -v -sonline::clone::proxy)
 add_clar_test(auth_clone          -v -sonline::clone::cred)
 add_clar_test(auth_clone_and_push -v -sonline::clone::push -sonline::push)
+
+#
+# Header file validation project: ensure that we do not publish any sloppy
+# definitions in our headers and that a consumer can include <git2.dll>
+# even when they have aggressive C90 warnings enabled.
+#
+
+add_executable(headertest headertest.c)
+set_target_properties(headertest PROPERTIES C_STANDARD 90)
+set_target_properties(headertest PROPERTIES C_EXTENSIONS OFF)
+target_include_directories(headertest PRIVATE ${LIBGIT2_INCLUDES})
+
+if (MSVC)
+	target_compile_options(headertest PUBLIC /W4 /WX)
+else()
+	target_compile_options(headertest PUBLIC -Wall -Wextra -pedantic -Werror)
+endif()

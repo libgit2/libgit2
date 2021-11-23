@@ -33,7 +33,7 @@ static void ensure_repository_discover(const char *start_path,
 
 	git_str_attach(&resolved, p_realpath(expected_path, NULL), 0);
 	cl_assert(resolved.size > 0);
-	cl_git_pass(git_path_to_dir(&resolved));
+	cl_git_pass(git_fs_path_to_dir(&resolved));
 	cl_git_pass(git_repository_discover(&found_path, start_path, 1, ceiling_dirs));
 
 	cl_assert_equal_s(found_path.ptr, resolved.ptr);
@@ -47,7 +47,7 @@ static void write_file(const char *path, const char *content)
 	git_file file;
 	int error;
 
-	if (git_path_exists(path)) {
+	if (git_fs_path_exists(path)) {
 		cl_git_pass(p_unlink(path));
 	}
 
@@ -65,7 +65,7 @@ static void append_ceiling_dir(git_str *ceiling_dirs, const char *path)
 	git_str pretty_path = GIT_STR_INIT;
 	char ceiling_separator[2] = { GIT_PATH_LIST_SEPARATOR, '\0' };
 
-	cl_git_pass(git_path_prettify_dir(&pretty_path, path, NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&pretty_path, path, NULL));
 
 	if (ceiling_dirs->size > 0)
 		git_str_puts(ceiling_dirs, ceiling_separator);

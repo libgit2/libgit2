@@ -1198,7 +1198,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 
 		if (!git_disable_pack_keep_file_checks) {
 			memcpy(p->pack_name + root_len, ".keep", sizeof(".keep"));
-			if (git_path_exists(p->pack_name) == true)
+			if (git_fs_path_exists(p->pack_name) == true)
 				p->pack_keep = 1;
 		}
 

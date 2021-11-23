@@ -185,7 +185,7 @@ typedef enum {
 	/* Prune working tree even if it is locked */
 	GIT_WORKTREE_PRUNE_LOCKED = 1u << 1,
 	/* Prune checked out working tree */
-	GIT_WORKTREE_PRUNE_WORKING_TREE = 1u << 2,
+	GIT_WORKTREE_PRUNE_WORKING_TREE = 1u << 2
 } git_worktree_prune_t;
 
 /**

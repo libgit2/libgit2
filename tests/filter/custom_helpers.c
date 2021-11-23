@@ -2,6 +2,7 @@
 #include "posix.h"
 #include "filter.h"
 #include "git2/sys/filter.h"
+#include "custom_helpers.h"
 
 #define VERY_SECURE_ENCRYPTION(b) ((b) ^ 0xff)
 
@@ -128,7 +129,7 @@ git_filter *create_reverse_filter(const char *attrs)
 	return filter;
 }
 
-int erroneous_filter_stream(
+static int erroneous_filter_stream(
 	git_writestream **out,
 	git_filter *self,
 	void **payload,

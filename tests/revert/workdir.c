@@ -111,7 +111,7 @@ void test_revert_workdir__conflicts(void)
 		"File one\n" \
 		">>>>>>> parent of 72333f4... automergeable changes\n") == 0);
 
-	cl_assert(git_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
+	cl_assert(git_fs_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
 	cl_git_pass(git_futils_readbuffer(&mergemsg_buf,
 		TEST_REPO_PATH "/.git/MERGE_MSG"));
 	cl_assert(strcmp(mergemsg_buf.ptr,
@@ -498,8 +498,8 @@ void test_revert_workdir__nonmerge_fails_mainline_specified(void)
 
 	opts.mainline = 1;
 	cl_must_fail(git_revert(repo, commit, &opts));
-	cl_assert(!git_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
-	cl_assert(!git_path_exists(TEST_REPO_PATH "/.git/REVERT_HEAD"));
+	cl_assert(!git_fs_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
+	cl_assert(!git_fs_path_exists(TEST_REPO_PATH "/.git/REVERT_HEAD"));
 
 	git_reference_free(head);
 	git_commit_free(commit);
@@ -517,8 +517,8 @@ void test_revert_workdir__merge_fails_without_mainline_specified(void)
 	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
 
 	cl_must_fail(git_revert(repo, head, NULL));
-	cl_assert(!git_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
-	cl_assert(!git_path_exists(TEST_REPO_PATH "/.git/REVERT_HEAD"));
+	cl_assert(!git_fs_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
+	cl_assert(!git_fs_path_exists(TEST_REPO_PATH "/.git/REVERT_HEAD"));
 
 	git_commit_free(head);
 }

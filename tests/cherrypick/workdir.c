@@ -71,8 +71,8 @@ void test_cherrypick_workdir__automerge(void)
 		cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
 		cl_git_pass(git_cherrypick(repo, commit, NULL));
 
-		cl_assert(git_path_exists(TEST_REPO_PATH "/.git/CHERRY_PICK_HEAD"));
-		cl_assert(git_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
+		cl_assert(git_fs_path_exists(TEST_REPO_PATH "/.git/CHERRY_PICK_HEAD"));
+		cl_assert(git_fs_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
 
 		cl_git_pass(git_index_write_tree(&cherrypicked_tree_oid, repo_index));
 		cl_git_pass(git_tree_lookup(&cherrypicked_tree, repo, &cherrypicked_tree_oid));
@@ -114,7 +114,7 @@ void test_cherrypick_workdir__empty_result(void)
 
 	/* Create an untracked file that should not conflict */
 	cl_git_mkfile(TEST_REPO_PATH "/file4.txt", "");
-	cl_assert(git_path_exists(TEST_REPO_PATH "/file4.txt"));
+	cl_assert(git_fs_path_exists(TEST_REPO_PATH "/file4.txt"));
 
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
 	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
@@ -160,8 +160,8 @@ void test_cherrypick_workdir__conflicts(void)
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
 	cl_git_pass(git_cherrypick(repo, commit, NULL));
 
-	cl_assert(git_path_exists(TEST_REPO_PATH "/.git/CHERRY_PICK_HEAD"));
-	cl_assert(git_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
+	cl_assert(git_fs_path_exists(TEST_REPO_PATH "/.git/CHERRY_PICK_HEAD"));
+	cl_assert(git_fs_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 7));
 
@@ -373,8 +373,8 @@ void test_cherrypick_workdir__nonmerge_fails_mainline_specified(void)
 
 	opts.mainline = 1;
 	cl_must_fail(git_cherrypick(repo, commit, &opts));
-	cl_assert(!git_path_exists(TEST_REPO_PATH "/.git/CHERRY_PICK_HEAD"));
-	cl_assert(!git_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
+	cl_assert(!git_fs_path_exists(TEST_REPO_PATH "/.git/CHERRY_PICK_HEAD"));
+	cl_assert(!git_fs_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
 
 	git_reference_free(head);
 	git_commit_free(commit);
@@ -396,8 +396,8 @@ void test_cherrypick_workdir__merge_fails_without_mainline_specified(void)
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
 
 	cl_must_fail(git_cherrypick(repo, commit, NULL));
-	cl_assert(!git_path_exists(TEST_REPO_PATH "/.git/CHERRY_PICK_HEAD"));
-	cl_assert(!git_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
+	cl_assert(!git_fs_path_exists(TEST_REPO_PATH "/.git/CHERRY_PICK_HEAD"));
+	cl_assert(!git_fs_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
 
 	git_commit_free(commit);
 	git_commit_free(head);

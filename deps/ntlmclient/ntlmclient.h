@@ -32,7 +32,7 @@ typedef enum {
 	/**
 	 * The input provided to the function is missing or invalid.
 	 */
-	NTLM_CLIENT_ERROR_INVALID_INPUT = -2,
+	NTLM_CLIENT_ERROR_INVALID_INPUT = -2
 } ntlm_error_code;
 
 /*
@@ -98,7 +98,7 @@ typedef enum {
 	 * its idea of its hostname in the challenge message.  You may
 	 * then set the authentication target based on it.
 	 */
-	NTLM_CLIENT_DISABLE_REQUEST_TARGET = (1 << 4),
+	NTLM_CLIENT_DISABLE_REQUEST_TARGET = (1 << 4)
 } ntlm_client_flags;
 
 

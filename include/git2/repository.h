@@ -141,7 +141,7 @@ typedef enum {
 	 * `git_repository_open_ext` with this flag will error out if either
 	 * $GIT_WORK_TREE or $GIT_COMMON_DIR is set.
 	 */
-	GIT_REPOSITORY_OPEN_FROM_ENV  = (1 << 4),
+	GIT_REPOSITORY_OPEN_FROM_ENV  = (1 << 4)
 } git_repository_open_flag_t;
 
 /**
@@ -267,7 +267,7 @@ typedef enum {
 	 * If an alternate workdir is specified, use relative paths for the gitdir
 	 * and core.worktree.
 	 */
-	GIT_REPOSITORY_INIT_RELATIVE_GITLINK  = (1u << 6),
+	GIT_REPOSITORY_INIT_RELATIVE_GITLINK  = (1u << 6)
 } git_repository_init_flag_t;
 
 /**
@@ -292,7 +292,7 @@ typedef enum {
 	/**
 	 * Use "--shared=all" behavior, adding world readability.
 	 */
-	GIT_REPOSITORY_INIT_SHARED_ALL   = 0002777,
+	GIT_REPOSITORY_INIT_SHARED_ALL   = 0002777
 } git_repository_init_mode_t;
 
 /**
@@ -876,7 +876,7 @@ typedef enum {
 	GIT_REPOSITORY_STATE_REBASE_INTERACTIVE,
 	GIT_REPOSITORY_STATE_REBASE_MERGE,
 	GIT_REPOSITORY_STATE_APPLY_MAILBOX,
-	GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE,
+	GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE
 } git_repository_state_t;
 
 /**

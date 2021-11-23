@@ -37,26 +37,26 @@ static void push_three_states(void)
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_add_bypath(index, "zero.txt"));
 	cl_repo_commit_from_index(NULL, repo, signature, 0, "Initial commit");
-	cl_assert(git_path_exists("stash/zero.txt"));
+	cl_assert(git_fs_path_exists("stash/zero.txt"));
 	git_index_free(index);
 
 	cl_git_mkfile("stash/one.txt", "content\n");
 	cl_git_pass(git_stash_save(
 		&oid, repo, signature, "First", GIT_STASH_INCLUDE_UNTRACKED));
-	cl_assert(!git_path_exists("stash/one.txt"));
-	cl_assert(git_path_exists("stash/zero.txt"));
+	cl_assert(!git_fs_path_exists("stash/one.txt"));
+	cl_assert(git_fs_path_exists("stash/zero.txt"));
 
 	cl_git_mkfile("stash/two.txt", "content\n");
 	cl_git_pass(git_stash_save(
 		&oid, repo, signature, "Second", GIT_STASH_INCLUDE_UNTRACKED));
-	cl_assert(!git_path_exists("stash/two.txt"));
-	cl_assert(git_path_exists("stash/zero.txt"));
+	cl_assert(!git_fs_path_exists("stash/two.txt"));
+	cl_assert(git_fs_path_exists("stash/zero.txt"));
 
 	cl_git_mkfile("stash/three.txt", "content\n");
 	cl_git_pass(git_stash_save(
 		&oid, repo, signature, "Third", GIT_STASH_INCLUDE_UNTRACKED));
-	cl_assert(!git_path_exists("stash/three.txt"));
-	cl_assert(git_path_exists("stash/zero.txt"));
+	cl_assert(!git_fs_path_exists("stash/three.txt"));
+	cl_assert(git_fs_path_exists("stash/zero.txt"));
 }
 
 void test_stash_drop__cannot_drop_a_non_existing_stashed_state(void)
@@ -140,7 +140,7 @@ void test_stash_drop__dropping_the_last_entry_removes_the_stash(void)
 		git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE), GIT_ENOTFOUND);
 }
 
-void retrieve_top_stash_id(git_oid *out)
+static void retrieve_top_stash_id(git_oid *out)
 {
 	git_object *top_stash;
 

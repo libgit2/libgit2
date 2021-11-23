@@ -257,7 +257,7 @@ void test_ignore_path__skip_gitignore_directory(void)
 {
 	cl_git_rewritefile("attr/.git/info/exclude", "/NewFolder\n/NewFolder/NewFolder");
 	cl_must_pass(p_unlink("attr/.gitignore"));
-	cl_assert(!git_path_exists("attr/.gitignore"));
+	cl_assert(!git_fs_path_exists("attr/.gitignore"));
 	p_mkdir("attr/.gitignore", 0777);
 	cl_git_mkfile("attr/.gitignore/garbage.txt", "new_file\n");
 
@@ -270,7 +270,7 @@ void test_ignore_path__skip_gitignore_directory(void)
 void test_ignore_path__subdirectory_gitignore(void)
 {
 	cl_must_pass(p_unlink("attr/.gitignore"));
-	cl_assert(!git_path_exists("attr/.gitignore"));
+	cl_assert(!git_fs_path_exists("attr/.gitignore"));
 	cl_git_mkfile(
 		"attr/.gitignore",
 		"file1\n");

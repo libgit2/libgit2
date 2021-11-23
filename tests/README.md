@@ -15,7 +15,7 @@ https://github.com/vmg/clar
 
 * Test:
 
-        ./build/libgit2_clar
+        ./build/libgit2_tests
 
 * Make sure everything is fine.
 
@@ -34,8 +34,8 @@ Uses [`valgrind`](http://www.valgrind.org/):
 ```console
 $ cmake -DBUILD_TESTS=ON -DVALGRIND=ON ..
 $ cmake --build .
-$ valgrind --leak-check=full --show-reachable=yes --num-callers=50 --suppressions=../libgit2_clar.supp \
-  ./libgit2_clar
+$ valgrind --leak-check=full --show-reachable=yes --num-callers=50 --suppressions=../libgit2_tests.supp \
+  ./libgit2_tests
 ```
 
 #### macOS
@@ -44,5 +44,5 @@ Uses [`leaks`](https://developer.apple.com/library/archive/documentation/Perform
 
 ```console
 $ MallocStackLogging=1 MallocScribble=1 MallocLogFile=/dev/null CLAR_AT_EXIT="leaks -quiet \$PPID" \
-  ./libgit2_clar
+  ./libgit2_tests
 ```

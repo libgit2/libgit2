@@ -12,6 +12,7 @@
 #include "diff_generate.h"
 #include "diff_stats.h"
 #include "patch.h"
+#include "date.h"
 
 #include "git2/email.h"
 #include "git2/patch.h"
@@ -72,6 +73,19 @@ static int append_prefix(
 	return git_str_oom(out) ? -1 : 0;
 }
 
+static int append_date(
+	git_str *out,
+	const git_time *date)
+{
+	int error;
+
+	if ((error = git_str_printf(out, "Date: ")) == 0 &&
+	    (error = git_date_rfc2822_fmt(out, date->time, date->offset)) == 0)
+	    error = git_str_putc(out, '\n');
+
+	return error;
+}
+
 static int append_subject(
 	git_str *out,
 	size_t patch_idx,
@@ -117,14 +131,12 @@ static int append_header(
 	git_email_create_options *opts)
 {
 	char id[GIT_OID_HEXSZ];
-	char date[GIT_DATE_RFC2822_SZ];
 	int error;
 
 	if ((error = git_oid_fmt(id, commit_id)) < 0 ||
 	    (error = git_str_printf(out, "From %.*s %s\n", GIT_OID_HEXSZ, id, EMAIL_TIMESTAMP)) < 0 ||
 	    (error = git_str_printf(out, "From: %s <%s>\n", author->name, author->email)) < 0 ||
-	    (error = git__date_rfc2822_fmt(date, sizeof(date), &author->when)) < 0 ||
-	    (error = git_str_printf(out, "Date: %s\n", date)) < 0 ||
+	    (error = append_date(out, &author->when)) < 0 ||
 	    (error = append_subject(out, patch_idx, patch_count, summary, opts)) < 0)
 		return error;
 

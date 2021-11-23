@@ -147,7 +147,7 @@ void test_core_posix__utimes(void)
 
 void test_core_posix__unlink_removes_symlink(void)
 {
-	if (!git_path_supports_symlinks(clar_sandbox_path()))
+	if (!git_fs_path_supports_symlinks(clar_sandbox_path()))
 		clar__skip();
 
 	cl_git_mkfile("file", "Dummy file.");
@@ -159,8 +159,8 @@ void test_core_posix__unlink_removes_symlink(void)
 	cl_must_pass(p_unlink("file-symlink"));
 	cl_must_pass(p_unlink("dir-symlink"));
 
-	cl_assert(git_path_exists("file"));
-	cl_assert(git_path_exists("dir"));
+	cl_assert(git_fs_path_exists("file"));
+	cl_assert(git_fs_path_exists("dir"));
 
 	cl_must_pass(p_unlink("file"));
 	cl_must_pass(p_rmdir("dir"));
@@ -170,7 +170,7 @@ void test_core_posix__symlink_resolves_to_correct_type(void)
 {
 	git_str contents = GIT_STR_INIT;
 
-	if (!git_path_supports_symlinks(clar_sandbox_path()))
+	if (!git_fs_path_supports_symlinks(clar_sandbox_path()))
 		clar__skip();
 
 	cl_must_pass(git_futils_mkdir("dir", 0777, 0));
@@ -194,7 +194,7 @@ void test_core_posix__relative_symlink(void)
 {
 	git_str contents = GIT_STR_INIT;
 
-	if (!git_path_supports_symlinks(clar_sandbox_path()))
+	if (!git_fs_path_supports_symlinks(clar_sandbox_path()))
 		clar__skip();
 
 	cl_must_pass(git_futils_mkdir("dir", 0777, 0));
@@ -214,7 +214,7 @@ void test_core_posix__symlink_to_file_across_dirs(void)
 {
 	git_str contents = GIT_STR_INIT;
 
-	if (!git_path_supports_symlinks(clar_sandbox_path()))
+	if (!git_fs_path_supports_symlinks(clar_sandbox_path()))
 		clar__skip();
 
 	/*

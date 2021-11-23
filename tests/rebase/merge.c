@@ -729,7 +729,7 @@ void test_rebase_merge__copy_notes_disabled_in_config(void)
 	test_copy_note(NULL, 0);
 }
 
-void rebase_checkout_progress_cb(
+static void rebase_checkout_progress_cb(
 	const char *path,
 	size_t completed_steps,
 	size_t total_steps,

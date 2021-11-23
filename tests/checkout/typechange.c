@@ -76,12 +76,12 @@ void test_checkout_typechange__cleanup(void)
 
 static void assert_file_exists(const char *path)
 {
-	cl_assert_(git_path_isfile(path), path);
+	cl_assert_(git_fs_path_isfile(path), path);
 }
 
 static void assert_dir_exists(const char *path)
 {
-	cl_assert_(git_path_isdir(path), path);
+	cl_assert_(git_fs_path_isdir(path), path);
 }
 
 static void assert_workdir_matches_tree(
@@ -126,7 +126,7 @@ static void assert_workdir_matches_tree(
 				/* because of cross-platform, don't confirm exec bit yet */
 				break;
 			case GIT_FILEMODE_LINK:
-				cl_assert_(git_path_exists(path.ptr), path.ptr);
+				cl_assert_(git_fs_path_exists(path.ptr), path.ptr);
 				/* because of cross-platform, don't confirm link yet */
 				break;
 			default:
@@ -163,19 +163,19 @@ void test_checkout_typechange__checkout_typechanges_safe(void)
 		git_object_free(obj);
 
 		if (!g_typechange_empty[i]) {
-			cl_assert(git_path_isdir("typechanges"));
-			cl_assert(git_path_exists("typechanges/a"));
-			cl_assert(git_path_exists("typechanges/b"));
-			cl_assert(git_path_exists("typechanges/c"));
-			cl_assert(git_path_exists("typechanges/d"));
-			cl_assert(git_path_exists("typechanges/e"));
+			cl_assert(git_fs_path_isdir("typechanges"));
+			cl_assert(git_fs_path_exists("typechanges/a"));
+			cl_assert(git_fs_path_exists("typechanges/b"));
+			cl_assert(git_fs_path_exists("typechanges/c"));
+			cl_assert(git_fs_path_exists("typechanges/d"));
+			cl_assert(git_fs_path_exists("typechanges/e"));
 		} else {
-			cl_assert(git_path_isdir("typechanges"));
-			cl_assert(!git_path_exists("typechanges/a"));
-			cl_assert(!git_path_exists("typechanges/b"));
-			cl_assert(!git_path_exists("typechanges/c"));
-			cl_assert(!git_path_exists("typechanges/d"));
-			cl_assert(!git_path_exists("typechanges/e"));
+			cl_assert(git_fs_path_isdir("typechanges"));
+			cl_assert(!git_fs_path_exists("typechanges/a"));
+			cl_assert(!git_fs_path_exists("typechanges/b"));
+			cl_assert(!git_fs_path_exists("typechanges/c"));
+			cl_assert(!git_fs_path_exists("typechanges/d"));
+			cl_assert(!git_fs_path_exists("typechanges/e"));
 		}
 	}
 }
@@ -293,12 +293,12 @@ void test_checkout_typechange__checkout_with_conflicts(void)
 			GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;
 		memset(&cts, 0, sizeof(cts));
 
-		cl_assert(git_path_exists("typechanges/untracked"));
+		cl_assert(git_fs_path_exists("typechanges/untracked"));
 
 		cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 		cl_assert_equal_i(0, cts.conflicts);
 
-		cl_assert(!git_path_exists("typechanges/untracked"));
+		cl_assert(!git_fs_path_exists("typechanges/untracked"));
 
 		cl_git_pass(
 			git_repository_set_head_detached(g_repo, git_object_id(obj)));

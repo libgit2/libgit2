@@ -73,7 +73,7 @@ typedef enum {
 	GIT_BLAME_USE_MAILMAP = (1<<5),
 
 	/** Ignore whitespace differences */
-	GIT_BLAME_IGNORE_WHITESPACE = (1<<6),
+	GIT_BLAME_IGNORE_WHITESPACE = (1<<6)
 } git_blame_flag_t;
 
 /**

@@ -111,7 +111,7 @@ void test_commit_commit__create_initial_commit_parent_not_current(void)
 	git_signature_free(s);
 }
 
-void assert_commit_summary(const char *expected, const char *given)
+static void assert_commit_summary(const char *expected, const char *given)
 {
 	git_commit *dummy;
 
@@ -123,7 +123,7 @@ void assert_commit_summary(const char *expected, const char *given)
 	git_commit__free(dummy);
 }
 
-void assert_commit_body(const char *expected, const char *given)
+static void assert_commit_body(const char *expected, const char *given)
 {
 	git_commit *dummy;
 

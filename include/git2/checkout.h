@@ -190,7 +190,7 @@ typedef enum {
 	/** Recursively checkout submodules with same options (NOT IMPLEMENTED) */
 	GIT_CHECKOUT_UPDATE_SUBMODULES = (1u << 16),
 	/** Recursively checkout submodules if HEAD moved in super repo (NOT IMPLEMENTED) */
-	GIT_CHECKOUT_UPDATE_SUBMODULES_IF_CHANGED = (1u << 17),
+	GIT_CHECKOUT_UPDATE_SUBMODULES_IF_CHANGED = (1u << 17)
 
 } git_checkout_strategy_t;
 

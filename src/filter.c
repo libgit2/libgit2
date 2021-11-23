@@ -18,6 +18,7 @@
 #include "blob.h"
 #include "attr_file.h"
 #include "array.h"
+#include "path.h"
 
 struct git_filter_source {
 	git_repository    *repo;
@@ -1094,8 +1095,8 @@ int git_filter_list_stream_file(
 
 	if ((error = stream_list_init(
 			&stream_start, &filter_streams, filters, target)) < 0 ||
-	    (error = git_path_join_unrooted(&abspath, path, base, NULL)) < 0 ||
-	    (error = git_path_validate_workdir_buf(repo, &abspath)) < 0)
+	    (error = git_fs_path_join_unrooted(&abspath, path, base, NULL)) < 0 ||
+	    (error = git_path_validate_str_length(repo, &abspath)) < 0)
 		goto done;
 
 	initialized = 1;

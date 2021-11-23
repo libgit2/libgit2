@@ -328,7 +328,7 @@ int merge_test_reuc(git_index *index, const struct merge_reuc_entry expected[], 
 	return 1;
 }
 
-int dircount(void *payload, git_str *pathbuf)
+static int dircount(void *payload, git_str *pathbuf)
 {
 	size_t *entries = payload;
 	size_t len = git_str_len(pathbuf);
@@ -346,7 +346,7 @@ int merge_test_workdir(git_repository *repo, const struct merge_index_entry expe
 	git_str wd = GIT_STR_INIT;
 
 	git_str_puts(&wd, repo->workdir);
-	git_path_direach(&wd, 0, dircount, &actual_len);
+	git_fs_path_direach(&wd, 0, dircount, &actual_len);
 
 	if (actual_len != expected_len)
 		return 0;

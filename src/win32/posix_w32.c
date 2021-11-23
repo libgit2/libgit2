@@ -9,10 +9,9 @@
 
 #include "../posix.h"
 #include "../futils.h"
-#include "path.h"
+#include "fs_path.h"
 #include "path_w32.h"
 #include "utf-conv.h"
-#include "repository.h"
 #include "reparse.h"
 #include <errno.h>
 #include <io.h>
@@ -418,10 +417,10 @@ static bool target_is_dir(const char *target, const char *path)
 	git_win32_path resolved_w;
 	bool isdir = true;
 
-	if (git_path_is_absolute(target))
+	if (git_fs_path_is_absolute(target))
 		git_win32_path_from_utf8(resolved_w, target);
-	else if (git_path_dirname_r(&resolved, path) < 0 ||
-		 git_path_apply_relative(&resolved, target) < 0 ||
+	else if (git_fs_path_dirname_r(&resolved, path) < 0 ||
+		 git_fs_path_apply_relative(&resolved, target) < 0 ||
 		 git_win32_path_from_utf8(resolved_w, resolved.ptr) < 0)
 		goto out;
 
@@ -661,7 +660,7 @@ int p_getcwd(char *buffer_out, size_t size)
 		return -1;
 	}
 
-	git_path_mkposix(buffer_out);
+	git_fs_path_mkposix(buffer_out);
 	return 0;
 }
 
@@ -821,7 +820,7 @@ char *p_realpath(const char *orig_path, char *buffer)
 	if (git_win32_path_to_utf8(buffer, buffer_w) < 0)
 		return NULL;
 
-	git_path_mkposix(buffer);
+	git_fs_path_mkposix(buffer);
 
 	return buffer;
 }

@@ -152,7 +152,7 @@ typedef enum {
 	 * No commit will be cherry-picked.  The client should run the given
 	 * command and (if successful) continue.
 	 */
-	GIT_REBASE_OPERATION_EXEC,
+	GIT_REBASE_OPERATION_EXEC
 } git_rebase_operation_t;
 
 #define GIT_REBASE_OPTIONS_VERSION 1

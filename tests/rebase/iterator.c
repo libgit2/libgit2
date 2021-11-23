@@ -47,7 +47,7 @@ static void test_operations(git_rebase *rebase, size_t expected_current)
 	}
 }
 
-void test_iterator(bool inmemory)
+static void test_iterator(bool inmemory)
 {
 	git_rebase *rebase;
 	git_rebase_options opts = GIT_REBASE_OPTIONS_INIT;

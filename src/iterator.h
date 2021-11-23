@@ -21,7 +21,7 @@ typedef enum {
 	GIT_ITERATOR_TREE = 1,
 	GIT_ITERATOR_INDEX = 2,
 	GIT_ITERATOR_WORKDIR = 3,
-	GIT_ITERATOR_FS = 4,
+	GIT_ITERATOR_FS = 4
 } git_iterator_t;
 
 typedef enum {
@@ -42,7 +42,7 @@ typedef enum {
 	/** descend into symlinked directories */
 	GIT_ITERATOR_DESCEND_SYMLINKS = (1u << 7),
 	/** hash files in workdir or filesystem iterators */
-	GIT_ITERATOR_INCLUDE_HASH = (1u << 8),
+	GIT_ITERATOR_INCLUDE_HASH = (1u << 8)
 } git_iterator_flag_t;
 
 typedef enum {

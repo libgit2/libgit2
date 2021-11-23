@@ -629,7 +629,7 @@ static int collect_attr_files(
 	const char *workdir = git_repository_workdir(repo);
 	attr_walk_up_info info = { NULL };
 
-	GIT_ASSERT(!git_path_is_absolute(path));
+	GIT_ASSERT(!git_fs_path_is_absolute(path));
 
 	if ((error = attr_setup(repo, attr_session, opts)) < 0)
 		return error;
@@ -637,10 +637,10 @@ static int collect_attr_files(
 	/* Resolve path in a non-bare repo */
 	if (workdir != NULL) {
 		if (!(error = git_repository_workdir_path(&dir, repo, path)))
-			error = git_path_find_dir(&dir);
+			error = git_fs_path_find_dir(&dir);
 	}
 	else {
-		error = git_path_dirname_r(&dir, path);
+		error = git_fs_path_dirname_r(&dir, path);
 	}
 
 	if (error < 0)
@@ -670,7 +670,7 @@ static int collect_attr_files(
 	if (!strcmp(dir.ptr, "."))
 		error = push_one_attr(&info, "");
 	else
-		error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
+		error = git_fs_path_walk_up(&dir, workdir, push_one_attr, &info);
 
 	if (error < 0)
 		goto cleanup;

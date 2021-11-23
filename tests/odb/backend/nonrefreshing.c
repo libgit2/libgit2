@@ -23,7 +23,7 @@ static void setup_repository_and_backend(void)
 
 	_repo = cl_git_sandbox_init("testrepo.git");
 
-	cl_git_pass(build_fake_backend(&backend, _objects));
+	cl_git_pass(build_fake_backend(&backend, _objects, false));
 
 	cl_git_pass(git_repository_odb__weakptr(&odb, _repo));
 	cl_git_pass(git_odb_add_backend(odb, backend, 10));

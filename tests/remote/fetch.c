@@ -62,7 +62,7 @@ void test_remote_fetch__cleanup(void) {
  * @param force     Whether to use a spec with '+' prefixed to force the refs
  *                  to update
  */
-void do_time_travelling_fetch(git_oid *commit1id, git_oid *commit2id,
+static void do_time_travelling_fetch(git_oid *commit1id, git_oid *commit2id,
 		bool force) {
 	char *refspec_strs = {
 		force ? FORCE_FETCHSPEC : NON_FORCE_FETCHSPEC,

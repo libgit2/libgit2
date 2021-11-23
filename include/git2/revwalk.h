@@ -49,7 +49,7 @@ typedef enum {
 	 * order; this sorting mode can be combined with
 	 * any of the above.
 	 */
-	GIT_SORT_REVERSE = 1 << 2,
+	GIT_SORT_REVERSE = 1 << 2
 } git_sort_t;
 
 /**

@@ -194,7 +194,7 @@ void test_online_clone__can_checkout_a_cloned_repo(void)
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 
 	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
-	cl_assert_equal_i(true, git_path_isfile(git_str_cstr(&path)));
+	cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&path)));
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
@@ -361,7 +361,7 @@ void test_online_clone__cred_callback_called_again_on_auth_failure(void)
 	cl_assert_equal_i(3, counter);
 }
 
-int cred_default(
+static int cred_default(
 	git_credential **cred,
 	const char *url,
 	const char *user_from_url,
@@ -618,7 +618,7 @@ void test_online_clone__ssh_cannot_change_username(void)
 	cl_git_fail(git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }
 
-int ssh_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
+static int ssh_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
 {
 	git_cert_hostkey *key;
 	git_oid expected = {{0}}, actual = {{0}};
@@ -930,11 +930,11 @@ void test_online_clone__proxy_cred_callback_after_failed_url_creds(void)
 void test_online_clone__azurerepos(void)
 {
 	cl_git_pass(git_clone(&g_repo, "https://libgit2@dev.azure.com/libgit2/test/_git/test", "./foo", &g_options));
-	cl_assert(git_path_exists("./foo/master.txt"));
+	cl_assert(git_fs_path_exists("./foo/master.txt"));
 }
 
 void test_online_clone__path_whitespace(void)
 {
 	cl_git_pass(git_clone(&g_repo, "https://libgit2@dev.azure.com/libgit2/test/_git/spaces%20in%20the%20name", "./foo", &g_options));
-	cl_assert(git_path_exists("./foo/master.txt"));
+	cl_assert(git_fs_path_exists("./foo/master.txt"));
 }

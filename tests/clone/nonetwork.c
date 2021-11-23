@@ -51,10 +51,10 @@ void test_clone_nonetwork__bad_urls(void)
 {
 	/* Clone should clean up the mess if the URL isn't a git repository */
 	cl_git_fail(git_clone(&g_repo, "not_a_repo", "./foo", &g_options));
-	cl_assert(!git_path_exists("./foo"));
+	cl_assert(!git_fs_path_exists("./foo"));
 	g_options.bare = true;
 	cl_git_fail(git_clone(&g_repo, "not_a_repo", "./foo", &g_options));
-	cl_assert(!git_path_exists("./foo"));
+	cl_assert(!git_fs_path_exists("./foo"));
 
 	cl_git_fail(git_clone(&g_repo, "git://example.com:asdf", "./foo", &g_options));
 	cl_git_fail(git_clone(&g_repo, "https://example.com:asdf/foo", "./foo", &g_options));
@@ -70,12 +70,12 @@ void test_clone_nonetwork__do_not_clean_existing_directory(void)
 	 * Should clean up entries it creates. */
 	p_mkdir("./foo", GIT_DIR_MODE);
 	cl_git_fail(git_clone(&g_repo, "not_a_repo", "./foo", &g_options));
-	cl_assert(git_path_is_empty_dir("./foo"));
+	cl_assert(git_fs_path_is_empty_dir("./foo"));
 
 	/* Try again with a bare repository. */
 	g_options.bare = true;
 	cl_git_fail(git_clone(&g_repo, "not_a_repo", "./foo", &g_options));
-	cl_assert(git_path_is_empty_dir("./foo"));
+	cl_assert(git_fs_path_is_empty_dir("./foo"));
 }
 
 void test_clone_nonetwork__local(void)
@@ -109,7 +109,7 @@ void test_clone_nonetwork__fail_with_already_existing_but_non_empty_directory(vo
 	cl_git_fail(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 }
 
-int custom_origin_name_remote_create(
+static int custom_origin_name_remote_create(
 	git_remote **out,
 	git_repository *repo,
 	const char *name,
@@ -151,7 +151,7 @@ void test_clone_nonetwork__can_prevent_the_checkout_of_a_standard_repo(void)
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
 	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
-	cl_assert_equal_i(false, git_path_isfile(git_str_cstr(&path)));
+	cl_assert_equal_i(false, git_fs_path_isfile(git_str_cstr(&path)));
 
 	git_str_dispose(&path);
 }
@@ -168,7 +168,7 @@ void test_clone_nonetwork__can_checkout_given_branch(void)
 	cl_git_pass(git_repository_head(&g_ref, g_repo));
 	cl_assert_equal_s(git_reference_name(g_ref), "refs/heads/test");
 
-	cl_assert(git_path_exists("foo/readme.txt"));
+	cl_assert(git_fs_path_exists("foo/readme.txt"));
 
 	cl_git_pass(git_reference_lookup(&remote_head, g_repo, "refs/remotes/origin/HEAD"));
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(remote_head));
@@ -196,7 +196,7 @@ void test_clone_nonetwork__can_cancel_clone_in_fetch(void)
 		-54321);
 
 	cl_assert(!g_repo);
-	cl_assert(!git_path_exists("foo/readme.txt"));
+	cl_assert(!git_fs_path_exists("foo/readme.txt"));
 }
 
 static int clone_cancel_checkout_cb(
@@ -227,7 +227,7 @@ void test_clone_nonetwork__can_cancel_clone_in_checkout(void)
 		-12345);
 
 	cl_assert(!g_repo);
-	cl_assert(!git_path_exists("foo/readme.txt"));
+	cl_assert(!git_fs_path_exists("foo/readme.txt"));
 }
 
 void test_clone_nonetwork__can_detached_head(void)

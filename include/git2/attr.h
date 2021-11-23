@@ -83,7 +83,7 @@ typedef enum {
 	GIT_ATTR_VALUE_UNSPECIFIED = 0, /**< The attribute has been left unspecified */
 	GIT_ATTR_VALUE_TRUE,   /**< The attribute has been set */
 	GIT_ATTR_VALUE_FALSE,  /**< The attribute has been unset */
-	GIT_ATTR_VALUE_STRING, /**< This attribute has a value */
+	GIT_ATTR_VALUE_STRING  /**< This attribute has a value */
 } git_attr_value_t;
 
 /**

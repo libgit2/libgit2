@@ -48,7 +48,7 @@ typedef enum {
 	GIT_STATUS_WT_UNREADABLE    = (1u << 12),
 
 	GIT_STATUS_IGNORED          = (1u << 14),
-	GIT_STATUS_CONFLICTED       = (1u << 15),
+	GIT_STATUS_CONFLICTED       = (1u << 15)
 } git_status_t;
 
 /**
@@ -87,7 +87,7 @@ typedef enum {
 	 * Only gives status based on index to working directory comparison,
 	 * not comparing the index to the HEAD.
 	 */
-	GIT_STATUS_SHOW_WORKDIR_ONLY = 2,
+	GIT_STATUS_SHOW_WORKDIR_ONLY = 2
 } git_status_show_t;
 
 /**
@@ -204,7 +204,7 @@ typedef enum {
 	 * Unreadable files will be detected and given the status
 	 * untracked instead of unreadable.
 	 */
-	GIT_STATUS_OPT_INCLUDE_UNREADABLE_AS_UNTRACKED  = (1u << 15),
+	GIT_STATUS_OPT_INCLUDE_UNREADABLE_AS_UNTRACKED  = (1u << 15)
 } git_status_opt_t;
 
 #define GIT_STATUS_OPT_DEFAULTS \

@@ -23,7 +23,7 @@
 typedef enum {
 	TRANSACTION_NONE,
 	TRANSACTION_REFS,
-	TRANSACTION_CONFIG,
+	TRANSACTION_CONFIG
 } transaction_t;
 
 typedef struct {

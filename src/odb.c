@@ -277,7 +277,7 @@ int git_odb__hashlink(git_oid *out, const char *path)
 	int size;
 	int result;
 
-	if (git_path_lstat(path, &st) < 0)
+	if (git_fs_path_lstat(path, &st) < 0)
 		return -1;
 
 	if (!git__is_int(st.st_size) || (int)st.st_size < 0) {
@@ -649,7 +649,7 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 	if (git_str_joinpath(&alternates_path, objects_dir, GIT_ALTERNATES_FILE) < 0)
 		return -1;
 
-	if (git_path_exists(alternates_path.ptr) == false) {
+	if (git_fs_path_exists(alternates_path.ptr) == false) {
 		git_str_dispose(&alternates_path);
 		return 0;
 	}
@@ -883,6 +883,11 @@ int git_odb__freshen(git_odb *db, const git_oid *id)
 
 int git_odb_exists(git_odb *db, const git_oid *id)
 {
+    return git_odb_exists_ext(db, id, 0);
+}
+
+int git_odb_exists_ext(git_odb *db, const git_oid *id, unsigned int flags)
+{
 	git_odb_object *object;
 
 	GIT_ASSERT_ARG(db);
@@ -899,7 +904,7 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 	if (odb_exists_1(db, id, false))
 		return 1;
 
-	if (!git_odb_refresh(db))
+	if (!(flags & GIT_ODB_LOOKUP_NO_REFRESH) && !git_odb_refresh(db))
 		return odb_exists_1(db, id, true);
 
 	/* Failed to refresh, hence not found */

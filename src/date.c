@@ -13,6 +13,7 @@
 #include "util.h"
 #include "cache.h"
 #include "posix.h"
+#include "date.h"
 
 #include <ctype.h>
 #include <time.h>
@@ -857,7 +858,7 @@ static git_time_t approxidate_str(const char *date,
 	return update_tm(&tm, &now, 0);
 }
 
-int git__date_parse(git_time_t *out, const char *date)
+int git_date_parse(git_time_t *out, const char *date)
 {
 	time_t time_sec;
 	git_time_t timestamp;
@@ -875,31 +876,24 @@ int git__date_parse(git_time_t *out, const char *date)
 	return error_ret;
 }
 
-int git__date_rfc2822_fmt(char *out, size_t len, const git_time *date)
+int git_date_rfc2822_fmt(git_str *out, git_time_t time, int offset)
 {
-	int written;
-	struct tm gmt;
 	time_t t;
+	struct tm gmt;
 
 	GIT_ASSERT_ARG(out);
-	GIT_ASSERT_ARG(date);
 
-	t = (time_t) (date->time + date->offset * 60);
+	t = (time_t) (time + offset * 60);
 
-	if (p_gmtime_r (&t, &gmt) == NULL)
+	if (p_gmtime_r(&t, &gmt) == NULL)
 		return -1;
 
-	written = p_snprintf(out, len, "%.3s, %u %.3s %.4u %02u:%02u:%02u %+03d%02d",
+	return git_str_printf(out, "%.3s, %u %.3s %.4u %02u:%02u:%02u %+03d%02d",
 		weekday_names[gmt.tm_wday],
 		gmt.tm_mday,
 		month_names[gmt.tm_mon],
 		gmt.tm_year + 1900,
 		gmt.tm_hour, gmt.tm_min, gmt.tm_sec,
-		date->offset / 60, date->offset % 60);
-
-	if (written < 0 || (written > (int) len - 1))
-		return -1;
-
-	return 0;
+		offset / 60, offset % 60);
 }
 

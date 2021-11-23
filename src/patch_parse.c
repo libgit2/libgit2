@@ -10,7 +10,7 @@
 #include "git2/patch.h"
 #include "patch.h"
 #include "diff_parse.h"
-#include "path.h"
+#include "fs_path.h"
 
 typedef struct {
 	git_patch base;
@@ -80,7 +80,7 @@ static int parse_header_path_buf(git_str *path, git_patch_parse_ctx *ctx, size_t
 	    (error = git_str_unquote(path)) < 0)
 		return error;
 
-	git_path_squash_slashes(path);
+	git_fs_path_squash_slashes(path);
 
 	if (!path->size)
 		return git_parse_err("patch contains empty path at line %"PRIuZ,
@@ -382,7 +382,7 @@ typedef enum {
 	STATE_RENAME,
 	STATE_COPY,
 
-	STATE_END,
+	STATE_END
 } parse_header_state;
 
 typedef struct {

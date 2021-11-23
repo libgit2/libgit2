@@ -40,7 +40,7 @@ void test_remote_httpproxy__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void assert_proxy_is(const char *expected)
+static void assert_proxy_is(const char *expected)
 {
 	git_remote *remote;
 	char *proxy;
@@ -57,7 +57,7 @@ void assert_proxy_is(const char *expected)
 	git__free(proxy);
 }
 
-void assert_config_match(const char *config, const char *expected)
+static void assert_config_match(const char *config, const char *expected)
 {
 	git_remote *remote;
 	char *proxy;
@@ -106,7 +106,7 @@ void test_remote_httpproxy__config_empty_overrides(void)
 	assert_config_match("remote.lg2.proxy", "");
 }
 
-void assert_global_config_match(const char *config, const char *expected)
+static void assert_global_config_match(const char *config, const char *expected)
 {
 	git_remote *remote;
 	char *proxy;

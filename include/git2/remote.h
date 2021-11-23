@@ -49,7 +49,7 @@ typedef enum {
 	GIT_REMOTE_CREATE_SKIP_INSTEADOF = (1 << 0),
 
 	/** Don't build a fetchspec from the name if none is set */
-	GIT_REMOTE_CREATE_SKIP_DEFAULT_FETCHSPEC = (1 << 1),
+	GIT_REMOTE_CREATE_SKIP_DEFAULT_FETCHSPEC = (1 << 1)
 } git_remote_create_flags;
 
 /**
@@ -443,7 +443,7 @@ GIT_EXTERN(int) git_remote_list(git_strarray *out, git_repository *repo);
 typedef enum git_remote_completion_t {
 	GIT_REMOTE_COMPLETION_DOWNLOAD,
 	GIT_REMOTE_COMPLETION_INDEXING,
-	GIT_REMOTE_COMPLETION_ERROR,
+	GIT_REMOTE_COMPLETION_ERROR
 } git_remote_completion_t;
 
 /** Push network progress notification function */
@@ -665,7 +665,7 @@ typedef enum {
 	/**
 	 * Force pruning off
 	 */
-	GIT_FETCH_NO_PRUNE,
+	GIT_FETCH_NO_PRUNE
 } git_fetch_prune_t;
 
 /**
@@ -690,7 +690,7 @@ typedef enum {
 	/**
 	 * Ask for the all the tags.
 	 */
-	GIT_REMOTE_DOWNLOAD_TAGS_ALL,
+	GIT_REMOTE_DOWNLOAD_TAGS_ALL
 } git_remote_autotag_option_t;
 
 /**

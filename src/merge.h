@@ -29,12 +29,12 @@
 /** Internal merge flags. */
 enum {
 	/** The merge is for a virtual base in a recursive merge. */
-	GIT_MERGE__VIRTUAL_BASE = (1 << 31),
+	GIT_MERGE__VIRTUAL_BASE = (1 << 31)
 };
 
 enum {
 	/** Accept the conflict file, staging it as the merge result. */
-	GIT_MERGE_FILE_FAVOR__CONFLICTED = 4,
+	GIT_MERGE_FILE_FAVOR__CONFLICTED = 4
 };
 
 
@@ -83,7 +83,7 @@ typedef enum {
 	GIT_MERGE_DIFF_DIRECTORY_FILE = (1 << 10),
 
 	/* The child of a folder that is in a directory/file conflict. */
-	GIT_MERGE_DIFF_DF_CHILD = (1 << 11),
+	GIT_MERGE_DIFF_DF_CHILD = (1 << 11)
 } git_merge_diff_t;
 
 typedef struct {

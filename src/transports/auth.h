@@ -15,7 +15,7 @@
 typedef enum {
 	GIT_HTTP_AUTH_BASIC = 1,
 	GIT_HTTP_AUTH_NEGOTIATE = 2,
-	GIT_HTTP_AUTH_NTLM = 4,
+	GIT_HTTP_AUTH_NTLM = 4
 } git_http_auth_t;
 
 typedef struct git_http_auth_context git_http_auth_context;

@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "futils.h"
+#include "fs_path.h"
 
 static void
 check_dirname(const char *A, const char *B)
@@ -7,11 +8,11 @@ check_dirname(const char *A, const char *B)
 	git_str dir = GIT_STR_INIT;
 	char *dir2;
 
-	cl_assert(git_path_dirname_r(&dir, A) >= 0);
+	cl_assert(git_fs_path_dirname_r(&dir, A) >= 0);
 	cl_assert_equal_s(B, dir.ptr);
 	git_str_dispose(&dir);
 
-	cl_assert((dir2 = git_path_dirname(A)) != NULL);
+	cl_assert((dir2 = git_fs_path_dirname(A)) != NULL);
 	cl_assert_equal_s(B, dir2);
 	git__free(dir2);
 }
@@ -22,11 +23,11 @@ check_basename(const char *A, const char *B)
 	git_str base = GIT_STR_INIT;
 	char *base2;
 
-	cl_assert(git_path_basename_r(&base, A) >= 0);
+	cl_assert(git_fs_path_basename_r(&base, A) >= 0);
 	cl_assert_equal_s(B, base.ptr);
 	git_str_dispose(&base);
 
-	cl_assert((base2 = git_path_basename(A)) != NULL);
+	cl_assert((base2 = git_fs_path_basename(A)) != NULL);
 	cl_assert_equal_s(B, base2);
 	git__free(base2);
 }
@@ -175,7 +176,7 @@ check_path_to_dir(
 	git_str tgt = GIT_STR_INIT;
 
 	git_str_sets(&tgt, path);
-	cl_git_pass(git_path_to_dir(&tgt));
+	cl_git_pass(git_fs_path_to_dir(&tgt));
 	cl_assert_equal_s(expected, tgt.ptr);
 
 	git_str_dispose(&tgt);
@@ -193,7 +194,7 @@ check_string_to_dir(
 
 	strncpy(buf, path, len + 2);
 
-	git_path_string_to_dir(buf, maxlen);
+	git_fs_path_string_to_dir(buf, maxlen);
 
 	cl_assert_equal_s(expected, buf);
 
@@ -294,10 +295,10 @@ static void check_fromurl(const char *expected_result, const char *input, int sh
 	assert(should_fail || expected_result);
 
 	if (!should_fail) {
-		cl_git_pass(git_path_fromurl(&buf, input));
+		cl_git_pass(git_fs_path_fromurl(&buf, input));
 		cl_assert_equal_s(expected_result, git_str_cstr(&buf));
 	} else
-		cl_git_fail(git_path_fromurl(&buf, input));
+		cl_git_fail(git_fs_path_fromurl(&buf, input));
 
 	git_str_dispose(&buf);
 }
@@ -402,7 +403,7 @@ void test_core_path__11_walkup(void)
 
 		info.expect_idx = i;
 		cl_git_pass(
-			git_path_walk_up(&p, root[j], check_one_walkup_step, &info)
+			git_fs_path_walk_up(&p, root[j], check_one_walkup_step, &info)
 		);
 
 		cl_assert_equal_s(p.ptr, expect[i]);
@@ -439,7 +440,7 @@ void test_core_path__11a_walkup_cancel(void)
 
 		cl_assert_equal_i(
 			CANCEL_VALUE,
-			git_path_walk_up(&p, root[j], check_one_walkup_step, &info)
+			git_fs_path_walk_up(&p, root[j], check_one_walkup_step, &info)
 		);
 
 		/* skip to next run of expectations */
@@ -451,16 +452,16 @@ void test_core_path__11a_walkup_cancel(void)
 
 void test_core_path__12_offset_to_path_root(void)
 {
-	cl_assert(git_path_root("non/rooted/path") == -1);
-	cl_assert(git_path_root("/rooted/path") == 0);
+	cl_assert(git_fs_path_root("non/rooted/path") == -1);
+	cl_assert(git_fs_path_root("/rooted/path") == 0);
 
 #ifdef GIT_WIN32
 	/* Windows specific tests */
-	cl_assert(git_path_root("C:non/rooted/path") == -1);
-	cl_assert(git_path_root("C:/rooted/path") == 2);
-	cl_assert(git_path_root("//computername/sharefolder/resource") == 14);
-	cl_assert(git_path_root("//computername/sharefolder") == 14);
-	cl_assert(git_path_root("//computername") == -1);
+	cl_assert(git_fs_path_root("C:non/rooted/path") == -1);
+	cl_assert(git_fs_path_root("C:/rooted/path") == 2);
+	cl_assert(git_fs_path_root("//computername/sharefolder/resource") == 14);
+	cl_assert(git_fs_path_root("//computername/sharefolder") == 14);
+	cl_assert(git_fs_path_root("//computername") == -1);
 #endif
 }
 
@@ -470,9 +471,9 @@ void test_core_path__13_cannot_prettify_a_non_existing_file(void)
 {
 	git_str p = GIT_STR_INIT;
 
-	cl_assert_equal_b(git_path_exists(NON_EXISTING_FILEPATH), false);
-	cl_assert_equal_i(GIT_ENOTFOUND, git_path_prettify(&p, NON_EXISTING_FILEPATH, NULL));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_path_prettify(&p, NON_EXISTING_FILEPATH "/so-do-i", NULL));
+	cl_assert_equal_b(git_fs_path_exists(NON_EXISTING_FILEPATH), false);
+	cl_assert_equal_i(GIT_ENOTFOUND, git_fs_path_prettify(&p, NON_EXISTING_FILEPATH, NULL));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_fs_path_prettify(&p, NON_EXISTING_FILEPATH "/so-do-i", NULL));
 
 	git_str_dispose(&p);
 }
@@ -483,57 +484,57 @@ void test_core_path__14_apply_relative(void)
 
 	cl_git_pass(git_str_sets(&p, "/this/is/a/base"));
 
-	cl_git_pass(git_path_apply_relative(&p, "../test"));
+	cl_git_pass(git_fs_path_apply_relative(&p, "../test"));
 	cl_assert_equal_s("/this/is/a/test", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, "../../the/./end"));
+	cl_git_pass(git_fs_path_apply_relative(&p, "../../the/./end"));
 	cl_assert_equal_s("/this/is/the/end", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, "./of/this/../the/string"));
+	cl_git_pass(git_fs_path_apply_relative(&p, "./of/this/../the/string"));
 	cl_assert_equal_s("/this/is/the/end/of/the/string", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, "../../../../../.."));
+	cl_git_pass(git_fs_path_apply_relative(&p, "../../../../../.."));
 	cl_assert_equal_s("/this/", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, "../"));
+	cl_git_pass(git_fs_path_apply_relative(&p, "../"));
 	cl_assert_equal_s("/", p.ptr);
 
-	cl_git_fail(git_path_apply_relative(&p, "../../.."));
+	cl_git_fail(git_fs_path_apply_relative(&p, "../../.."));
 
 
 	cl_git_pass(git_str_sets(&p, "d:/another/test"));
 
-	cl_git_pass(git_path_apply_relative(&p, "../.."));
+	cl_git_pass(git_fs_path_apply_relative(&p, "../.."));
 	cl_assert_equal_s("d:/", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, "from/here/to/../and/./back/."));
+	cl_git_pass(git_fs_path_apply_relative(&p, "from/here/to/../and/./back/."));
 	cl_assert_equal_s("d:/from/here/and/back/", p.ptr);
 
 
 	cl_git_pass(git_str_sets(&p, "https://my.url.com/test.git"));
 
-	cl_git_pass(git_path_apply_relative(&p, "../another.git"));
+	cl_git_pass(git_fs_path_apply_relative(&p, "../another.git"));
 	cl_assert_equal_s("https://my.url.com/another.git", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, "../full/path/url.patch"));
+	cl_git_pass(git_fs_path_apply_relative(&p, "../full/path/url.patch"));
 	cl_assert_equal_s("https://my.url.com/full/path/url.patch", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, ".."));
+	cl_git_pass(git_fs_path_apply_relative(&p, ".."));
 	cl_assert_equal_s("https://my.url.com/full/path/", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, "../../../"));
+	cl_git_pass(git_fs_path_apply_relative(&p, "../../../"));
 	cl_assert_equal_s("https://", p.ptr);
 
 
 	cl_git_pass(git_str_sets(&p, "../../this/is/relative"));
 
-	cl_git_pass(git_path_apply_relative(&p, "../../preserves/the/prefix"));
+	cl_git_pass(git_fs_path_apply_relative(&p, "../../preserves/the/prefix"));
 	cl_assert_equal_s("../../this/preserves/the/prefix", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, "../../../../that"));
+	cl_git_pass(git_fs_path_apply_relative(&p, "../../../../that"));
 	cl_assert_equal_s("../../that", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, "../there"));
+	cl_git_pass(git_fs_path_apply_relative(&p, "../there"));
 	cl_assert_equal_s("../../there", p.ptr);
 	git_str_dispose(&p);
 }
@@ -542,7 +543,7 @@ static void assert_resolve_relative(
 	git_str *buf, const char *expected, const char *path)
 {
 	cl_git_pass(git_str_sets(buf, path));
-	cl_git_pass(git_path_resolve_relative(buf, 0));
+	cl_git_pass(git_fs_path_resolve_relative(buf, 0));
 	cl_assert_equal_s(expected, buf->ptr);
 }
 
@@ -596,22 +597,22 @@ void test_core_path__15_resolve_relative(void)
 	assert_resolve_relative(&buf, "../d", "a/b/../../../c/../d");
 
 	cl_git_pass(git_str_sets(&buf, "/.."));
-	cl_git_fail(git_path_resolve_relative(&buf, 0));
+	cl_git_fail(git_fs_path_resolve_relative(&buf, 0));
 
 	cl_git_pass(git_str_sets(&buf, "/./.."));
-	cl_git_fail(git_path_resolve_relative(&buf, 0));
+	cl_git_fail(git_fs_path_resolve_relative(&buf, 0));
 
 	cl_git_pass(git_str_sets(&buf, "/.//.."));
-	cl_git_fail(git_path_resolve_relative(&buf, 0));
+	cl_git_fail(git_fs_path_resolve_relative(&buf, 0));
 
 	cl_git_pass(git_str_sets(&buf, "/../."));
-	cl_git_fail(git_path_resolve_relative(&buf, 0));
+	cl_git_fail(git_fs_path_resolve_relative(&buf, 0));
 
 	cl_git_pass(git_str_sets(&buf, "/../.././../a"));
-	cl_git_fail(git_path_resolve_relative(&buf, 0));
+	cl_git_fail(git_fs_path_resolve_relative(&buf, 0));
 
 	cl_git_pass(git_str_sets(&buf, "////.."));
-	cl_git_fail(git_path_resolve_relative(&buf, 0));
+	cl_git_fail(git_fs_path_resolve_relative(&buf, 0));
 
 	/* things that start with Windows network paths */
 #ifdef GIT_WIN32
@@ -620,7 +621,7 @@ void test_core_path__15_resolve_relative(void)
 	assert_resolve_relative(&buf, "//a/b/c", "//a/Q/../b/x/y/../../c");
 
 	cl_git_pass(git_str_sets(&buf, "//a/b/../.."));
-	cl_git_fail(git_path_resolve_relative(&buf, 0));
+	cl_git_fail(git_fs_path_resolve_relative(&buf, 0));
 #else
 	assert_resolve_relative(&buf, "/a/b/c", "//a/b/c");
 	assert_resolve_relative(&buf, "/a/", "//a/b/..");
@@ -632,7 +633,7 @@ void test_core_path__15_resolve_relative(void)
 }
 
 #define assert_common_dirlen(i, p, q) \
-	cl_assert_equal_i((i), git_path_common_dirlen((p), (q)));
+	cl_assert_equal_i((i), git_fs_path_common_dirlen((p), (q)));
 
 void test_core_path__16_resolve_relative(void)
 {
@@ -649,13 +650,4 @@ void test_core_path__16_resolve_relative(void)
 
 	assert_common_dirlen(6, "a/b/c/foo.txt", "a/b/c/d/e/bar.txt");
 	assert_common_dirlen(7, "/a/b/c/foo.txt", "/a/b/c/d/e/bar.txt");
-}
-
-void test_core_path__git_path_is_file(void)
-{
-	cl_git_fail(git_path_is_gitfile("blob", 4, -1, GIT_PATH_FS_HFS));
-	cl_git_pass(git_path_is_gitfile("blob", 4, GIT_PATH_GITFILE_GITIGNORE, GIT_PATH_FS_HFS));
-	cl_git_pass(git_path_is_gitfile("blob", 4, GIT_PATH_GITFILE_GITMODULES, GIT_PATH_FS_HFS));
-	cl_git_pass(git_path_is_gitfile("blob", 4, GIT_PATH_GITFILE_GITATTRIBUTES, GIT_PATH_FS_HFS));
-	cl_git_fail(git_path_is_gitfile("blob", 4, 3, GIT_PATH_FS_HFS));
 }

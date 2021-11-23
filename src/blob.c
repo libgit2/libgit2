@@ -205,7 +205,7 @@ int git_blob__create_from_paths(
 		content_path = path.ptr;
 	}
 
-	if ((error = git_path_lstat(content_path, &st)) < 0 ||
+	if ((error = git_fs_path_lstat(content_path, &st)) < 0 ||
 		(error = git_repository_odb(&odb, repo)) < 0)
 		goto done;
 
@@ -280,7 +280,7 @@ int git_blob_create_from_disk(
 	git_str full_path = GIT_STR_INIT;
 	const char *workdir, *hintpath = NULL;
 
-	if ((error = git_path_prettify(&full_path, path, NULL)) < 0) {
+	if ((error = git_fs_path_prettify(&full_path, path, NULL)) < 0) {
 		git_str_dispose(&full_path);
 		return error;
 	}

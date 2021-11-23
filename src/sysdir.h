@@ -74,7 +74,7 @@ typedef enum {
 	GIT_SYSDIR_XDG    = 2,
 	GIT_SYSDIR_PROGRAMDATA = 3,
 	GIT_SYSDIR_TEMPLATE = 4,
-	GIT_SYSDIR__MAX   = 5,
+	GIT_SYSDIR__MAX   = 5
 } git_sysdir_t;
 
 /**

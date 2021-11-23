@@ -47,7 +47,7 @@ static void ensure_repository_init(
 {
 	const char *workdir;
 
-	cl_assert(!git_path_isdir(working_directory));
+	cl_assert(!git_fs_path_isdir(working_directory));
 
 	cl_git_pass(git_repository_init(&g_repo, working_directory, is_bare));
 
@@ -103,7 +103,7 @@ void test_repo_init__bare_repo_escaping_current_workdir(void)
 	git_str path_repository = GIT_STR_INIT;
 	git_str path_current_workdir = GIT_STR_INIT;
 
-	cl_git_pass(git_path_prettify_dir(&path_current_workdir, ".", NULL));
+	cl_git_pass(git_fs_path_prettify_dir(&path_current_workdir, ".", NULL));
 
 	cl_git_pass(git_str_joinpath(&path_repository, git_str_cstr(&path_current_workdir), "a/b/c"));
 	cl_git_pass(git_futils_mkdir_r(git_str_cstr(&path_repository), GIT_DIR_MODE));
@@ -176,15 +176,15 @@ void test_repo_init__additional_templates(void)
 
 	cl_git_pass(
 		git_str_joinpath(&path, git_repository_path(g_repo), "description"));
-	cl_assert(git_path_isfile(git_str_cstr(&path)));
+	cl_assert(git_fs_path_isfile(git_str_cstr(&path)));
 
 	cl_git_pass(
 		git_str_joinpath(&path, git_repository_path(g_repo), "info/exclude"));
-	cl_assert(git_path_isfile(git_str_cstr(&path)));
+	cl_assert(git_fs_path_isfile(git_str_cstr(&path)));
 
 	cl_git_pass(
 		git_str_joinpath(&path, git_repository_path(g_repo), "hooks"));
-	cl_assert(git_path_isdir(git_str_cstr(&path)));
+	cl_assert(git_fs_path_isdir(git_str_cstr(&path)));
 	/* won't confirm specific contents of hooks dir since it may vary */
 
 	git_str_dispose(&path);
@@ -257,7 +257,7 @@ void test_repo_init__symlinks_win32_enabled_by_global_config(void)
 	git_config *config, *repo_config;
 	int val;
 
-	if (!git_path_supports_symlinks("link"))
+	if (!git_fs_path_supports_symlinks("link"))
 		cl_skip();
 
 	create_tmp_global_config("tmp_global_config", "core.symlinks", "true");
@@ -303,7 +303,7 @@ void test_repo_init__symlinks_posix_detected(void)
 	cl_skip();
 #else
 	assert_config_entry_on_init(
-	    "core.symlinks", git_path_supports_symlinks("link") ? GIT_ENOTFOUND : false);
+	    "core.symlinks", git_fs_path_supports_symlinks("link") ? GIT_ENOTFOUND : false);
 #endif
 }
 
@@ -418,12 +418,12 @@ void test_repo_init__extended_1(void)
 
 	cl_assert(!git__suffixcmp(git_repository_workdir(g_repo), "/c_wd/"));
 	cl_assert(!git__suffixcmp(git_repository_path(g_repo), "/c.git/"));
-	cl_assert(git_path_isfile("root/b/c_wd/.git"));
+	cl_assert(git_fs_path_isfile("root/b/c_wd/.git"));
 	cl_assert(!git_repository_is_bare(g_repo));
 	/* repo will not be counted as empty because we set head to "development" */
 	cl_assert(!git_repository_is_empty(g_repo));
 
-	cl_git_pass(git_path_lstat(git_repository_path(g_repo), &st));
+	cl_git_pass(git_fs_path_lstat(git_repository_path(g_repo), &st));
 	cl_assert(S_ISDIR(st.st_mode));
 	if (cl_is_chmod_supported())
 		cl_assert((S_ISGID & st.st_mode) == S_ISGID);
@@ -482,7 +482,7 @@ void test_repo_init__relative_gitdir_2(void)
 	git_str dot_git_content = GIT_STR_INIT;
 	git_str full_path = GIT_STR_INIT;
 
-	cl_git_pass(git_path_prettify(&full_path, ".", NULL));
+	cl_git_pass(git_fs_path_prettify(&full_path, ".", NULL));
 	cl_git_pass(git_str_joinpath(&full_path, full_path.ptr, "root/b/c_wd"));
 
 	opts.workdir_path = full_path.ptr;
@@ -604,16 +604,16 @@ void test_repo_init__at_filesystem_root(void)
 	if (!cl_is_env_set("GITTEST_INVASIVE_FS_STRUCTURE"))
 		cl_skip();
 
-	root_len = git_path_root(sandbox);
+	root_len = git_fs_path_root(sandbox);
 	cl_assert(root_len >= 0);
 
 	git_str_put(&root, sandbox, root_len+1);
 	git_str_joinpath(&root, root.ptr, "libgit2_test_dir");
 
-	cl_assert(!git_path_exists(root.ptr));
+	cl_assert(!git_fs_path_exists(root.ptr));
 
 	cl_git_pass(git_repository_init(&repo, root.ptr, 0));
-	cl_assert(git_path_isdir(root.ptr));
+	cl_assert(git_fs_path_isdir(root.ptr));
 	cl_git_pass(git_futils_rmdir_r(root.ptr, NULL, GIT_RMDIR_REMOVE_FILES));
 
 	git_str_dispose(&root);

@@ -53,7 +53,7 @@ typedef enum {
 	GIT_REBASE_NONE = 0,
 	GIT_REBASE_APPLY = 1,
 	GIT_REBASE_MERGE = 2,
-	GIT_REBASE_INTERACTIVE = 3,
+	GIT_REBASE_INTERACTIVE = 3
 } git_rebase_t;
 
 struct git_rebase {
@@ -97,7 +97,7 @@ static int rebase_state_type(
 	if (git_str_joinpath(&path, repo->gitdir, REBASE_APPLY_DIR) < 0)
 		return -1;
 
-	if (git_path_isdir(git_str_cstr(&path))) {
+	if (git_fs_path_isdir(git_str_cstr(&path))) {
 		type = GIT_REBASE_APPLY;
 		goto done;
 	}
@@ -106,7 +106,7 @@ static int rebase_state_type(
 	if (git_str_joinpath(&path, repo->gitdir, REBASE_MERGE_DIR) < 0)
 		return -1;
 
-	if (git_path_isdir(git_str_cstr(&path))) {
+	if (git_fs_path_isdir(git_str_cstr(&path))) {
 		type = GIT_REBASE_MERGE;
 		goto done;
 	}
@@ -340,7 +340,7 @@ int git_rebase_open(
 	if ((error = git_str_joinpath(&path, path.ptr, ORIG_HEAD_FILE)) < 0)
 		goto done;
 
-	if (!git_path_isfile(path.ptr)) {
+	if (!git_fs_path_isfile(path.ptr)) {
 		/* Previous versions of git.git used 'head' here; support that. */
 		git_str_truncate(&path, state_path_len);
 
@@ -404,7 +404,7 @@ static int rebase_cleanup(git_rebase *rebase)
 	if (!rebase || rebase->inmemory)
 		return 0;
 
-	return git_path_isdir(rebase->state_path) ?
+	return git_fs_path_isdir(rebase->state_path) ?
 		git_futils_rmdir_r(rebase->state_path, NULL, GIT_RMDIR_REMOVE_FILES) :
 		0;
 }

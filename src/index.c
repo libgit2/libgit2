@@ -20,6 +20,7 @@
 #include "idxmap.h"
 #include "diff.h"
 #include "varint.h"
+#include "path.h"
 
 #include "git2/odb.h"
 #include "git2/oid.h"
@@ -420,7 +421,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 			goto fail;
 
 		/* Check if index file is stored on disk already */
-		if (git_path_exists(index->index_file_path) == true)
+		if (git_fs_path_exists(index->index_file_path) == true)
 			index->on_disk = 1;
 	}
 
@@ -648,7 +649,7 @@ int git_index_read(git_index *index, int force)
 		return create_index_error(-1,
 			"failed to read index: The index is in-memory only");
 
-	index->on_disk = git_path_exists(index->index_file_path);
+	index->on_disk = git_fs_path_exists(index->index_file_path);
 
 	if (!index->on_disk) {
 		if (force && (error = git_index_clear(index)) < 0)
@@ -944,7 +945,7 @@ static int index_entry_create(
 	if (st)
 		mode = st->st_mode;
 
-	if (!git_path_validate(repo, path, mode, path_valid_flags)) {
+	if (!git_path_is_valid(repo, path, mode, path_valid_flags)) {
 		git_error_set(GIT_ERROR_INDEX, "invalid path: '%s'", path);
 		return -1;
 	}
@@ -991,7 +992,7 @@ static int index_entry_init(
 	if (git_repository_workdir_path(&path, repo, rel_path) < 0)
 		return -1;
 
-	error = git_path_lstat(path.ptr, &st);
+	error = git_fs_path_lstat(path.ptr, &st);
 	git_str_dispose(&path);
 
 	if (error < 0)
@@ -1728,7 +1729,7 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 	git_index_entry *entry;
 
 	if (!(error = git_str_sets(&pfx, dir)) &&
-		!(error = git_path_to_dir(&pfx)))
+		!(error = git_fs_path_to_dir(&pfx)))
 		index_find(&pos, index, pfx.ptr, pfx.size, GIT_INDEX_STAGE_ANY);
 
 	while (!error) {
@@ -3385,7 +3386,7 @@ enum {
 	INDEX_ACTION_NONE = 0,
 	INDEX_ACTION_UPDATE = 1,
 	INDEX_ACTION_REMOVE = 2,
-	INDEX_ACTION_ADDALL = 3,
+	INDEX_ACTION_ADDALL = 3
 };
 
 int git_index_add_all(

@@ -94,7 +94,7 @@ typedef enum {
 	 * Do not split commit-graph files. The other split strategy-related option
 	 * fields are ignored.
 	 */
-	GIT_COMMIT_GRAPH_SPLIT_STRATEGY_SINGLE_FILE = 0,
+	GIT_COMMIT_GRAPH_SPLIT_STRATEGY_SINGLE_FILE = 0
 } git_commit_graph_split_strategy_t;
 
 /**

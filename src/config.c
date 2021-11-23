@@ -1177,7 +1177,7 @@ int git_config__find_programdata(git_str *path)
 	if (ret != GIT_OK)
 		return ret;
 
-	return git_path_validate_system_file_ownership(path->ptr);
+	return git_fs_path_validate_system_file_ownership(path->ptr);
 }
 
 int git_config__global_location(git_str *buf)

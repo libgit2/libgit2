@@ -103,7 +103,7 @@ static int note_list_create_cb(
 	return 0;
 }
 
-void assert_notes_seen(struct note_create_payload payload[], size_t n)
+static void assert_notes_seen(struct note_create_payload payload[], size_t n)
 {
 	size_t seen = 0, i;
 

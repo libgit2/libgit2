@@ -11,6 +11,8 @@
 #include "patch.h"
 #include "patch_parse.h"
 
+#include "standalone_driver.h"
+
 #define UNUSED(x) (void)(x)
 
 int LLVMFuzzerInitialize(int *argc, char ***argv)

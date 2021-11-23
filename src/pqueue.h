@@ -15,7 +15,7 @@ typedef git_vector git_pqueue;
 
 enum {
 	/* flag meaning: don't grow heap, keep highest values only */
-	GIT_PQUEUE_FIXED_SIZE = (GIT_VECTOR_FLAG_MAX << 1),
+	GIT_PQUEUE_FIXED_SIZE = (GIT_VECTOR_FLAG_MAX << 1)
 };
 
 /**

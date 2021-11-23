@@ -18,7 +18,7 @@ enum {
 	GIT_DIFFCAPS_IGNORE_STAT      = (1 << 1), /* use stat? */
 	GIT_DIFFCAPS_TRUST_MODE_BITS  = (1 << 2), /* use st_mode? */
 	GIT_DIFFCAPS_TRUST_CTIME      = (1 << 3), /* use st_ctime? */
-	GIT_DIFFCAPS_USE_DEV          = (1 << 4), /* use st_dev? */
+	GIT_DIFFCAPS_USE_DEV          = (1 << 4)  /* use st_dev? */
 };
 
 #define DIFF_FLAGS_KNOWN_BINARY (GIT_DIFF_FLAG_BINARY|GIT_DIFF_FLAG_NOT_BINARY)
@@ -36,7 +36,7 @@ enum {
 	GIT_DIFF_FLAG__TO_SPLIT   = (1 << 17), /* split entry during rename det. */
 	GIT_DIFF_FLAG__IS_RENAME_TARGET = (1 << 18),
 	GIT_DIFF_FLAG__IS_RENAME_SOURCE = (1 << 19),
-	GIT_DIFF_FLAG__HAS_SELF_SIMILARITY = (1 << 20),
+	GIT_DIFF_FLAG__HAS_SELF_SIMILARITY = (1 << 20)
 };
 
 #define GIT_DIFF_FLAG__CLEAR_INTERNAL(F) (F) = ((F) & 0x00FFFF)

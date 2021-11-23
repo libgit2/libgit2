@@ -65,7 +65,7 @@ void rewrite_gitmodules(const char *workdir)
 			continue;
 		}
 
-		git_path_prettify(&path, path.ptr, NULL);
+		git_fs_path_prettify(&path, path.ptr, NULL);
 		git_str_putc(&path, '\n');
 		cl_assert(!git_str_oom(&path));
 

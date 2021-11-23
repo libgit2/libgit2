@@ -14,7 +14,7 @@ void test_core_filebuf__0(void)
 	cl_must_pass(p_close(fd));
 
 	cl_git_fail(git_filebuf_open(&file, test, 0, 0666));
-	cl_assert(git_path_exists(testlock));
+	cl_assert(git_fs_path_exists(testlock));
 
 	cl_must_pass(p_unlink(testlock));
 }
@@ -142,14 +142,14 @@ void test_core_filebuf__rename_error(void)
 
 	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
 
-	cl_assert_equal_i(true, git_path_exists(test_lock));
+	cl_assert_equal_i(true, git_fs_path_exists(test_lock));
 
 	cl_git_fail(git_filebuf_commit(&file));
 	p_close(fd);
 
 	git_filebuf_cleanup(&file);
 
-	cl_assert_equal_i(false, git_path_exists(test_lock));
+	cl_assert_equal_i(false, git_fs_path_exists(test_lock));
 }
 
 void test_core_filebuf__symlink_follow(void)
@@ -157,7 +157,7 @@ void test_core_filebuf__symlink_follow(void)
 	git_filebuf file = GIT_FILEBUF_INIT;
 	const char *dir = "linkdir", *source = "linkdir/link";
 
-	if (!git_path_supports_symlinks(clar_sandbox_path()))
+	if (!git_fs_path_supports_symlinks(clar_sandbox_path()))
 		cl_skip();
 
 	cl_git_pass(p_mkdir(dir, 0777));
@@ -166,10 +166,10 @@ void test_core_filebuf__symlink_follow(void)
 	cl_git_pass(git_filebuf_open(&file, source, 0, 0666));
 	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
 
-	cl_assert_equal_i(true, git_path_exists("linkdir/target.lock"));
+	cl_assert_equal_i(true, git_fs_path_exists("linkdir/target.lock"));
 
 	cl_git_pass(git_filebuf_commit(&file));
-	cl_assert_equal_i(true, git_path_exists("linkdir/target"));
+	cl_assert_equal_i(true, git_fs_path_exists("linkdir/target"));
 
 	git_filebuf_cleanup(&file);
 
@@ -177,10 +177,10 @@ void test_core_filebuf__symlink_follow(void)
 	cl_git_pass(git_filebuf_open(&file, source, 0, 0666));
 	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
 
-	cl_assert_equal_i(true, git_path_exists("linkdir/target.lock"));
+	cl_assert_equal_i(true, git_fs_path_exists("linkdir/target.lock"));
 
 	cl_git_pass(git_filebuf_commit(&file));
-	cl_assert_equal_i(true, git_path_exists("linkdir/target"));
+	cl_assert_equal_i(true, git_fs_path_exists("linkdir/target"));
 
 	git_filebuf_cleanup(&file);
 	cl_git_pass(git_futils_rmdir_r(dir, NULL, GIT_RMDIR_REMOVE_FILES));
@@ -191,7 +191,7 @@ void test_core_filebuf__symlink_follow_absolute_paths(void)
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_str source = GIT_STR_INIT, target = GIT_STR_INIT;
 
-	if (!git_path_supports_symlinks(clar_sandbox_path()))
+	if (!git_fs_path_supports_symlinks(clar_sandbox_path()))
 		cl_skip();
 
 	cl_git_pass(git_str_joinpath(&source, clar_sandbox_path(), "linkdir/link"));
@@ -202,10 +202,10 @@ void test_core_filebuf__symlink_follow_absolute_paths(void)
 	cl_git_pass(git_filebuf_open(&file, source.ptr, 0, 0666));
 	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
 
-	cl_assert_equal_i(true, git_path_exists("linkdir/target.lock"));
+	cl_assert_equal_i(true, git_fs_path_exists("linkdir/target.lock"));
 
 	cl_git_pass(git_filebuf_commit(&file));
-	cl_assert_equal_i(true, git_path_exists("linkdir/target"));
+	cl_assert_equal_i(true, git_fs_path_exists("linkdir/target"));
 
 	git_filebuf_cleanup(&file);
 	git_str_dispose(&source);
@@ -219,7 +219,7 @@ void test_core_filebuf__symlink_depth(void)
 	git_filebuf file = GIT_FILEBUF_INIT;
 	const char *dir = "linkdir", *source = "linkdir/link";
 
-	if (!git_path_supports_symlinks(clar_sandbox_path()))
+	if (!git_fs_path_supports_symlinks(clar_sandbox_path()))
 		cl_skip();
 
 	cl_git_pass(p_mkdir(dir, 0777));

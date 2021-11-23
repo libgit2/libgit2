@@ -170,7 +170,7 @@ typedef enum {
 	/** Include the necessary deflate / delta information so that `git-apply`
 	 *  can apply given diff information to binary files.
 	 */
-	GIT_DIFF_SHOW_BINARY = (1u << 30),
+	GIT_DIFF_SHOW_BINARY = (1u << 30)
 } git_diff_option_t;
 
 /**
@@ -207,7 +207,7 @@ typedef enum {
 	GIT_DIFF_FLAG_BINARY     = (1u << 0), /**< file(s) treated as binary data */
 	GIT_DIFF_FLAG_NOT_BINARY = (1u << 1), /**< file(s) treated as text data */
 	GIT_DIFF_FLAG_VALID_ID   = (1u << 2), /**< `id` value is known correct */
-	GIT_DIFF_FLAG_EXISTS     = (1u << 3), /**< file exists at this side of the delta */
+	GIT_DIFF_FLAG_EXISTS     = (1u << 3)  /**< file exists at this side of the delta */
 } git_diff_flag_t;
 
 /**
@@ -231,7 +231,7 @@ typedef enum {
 	GIT_DELTA_UNTRACKED = 7,   /**< entry is untracked item in workdir */
 	GIT_DELTA_TYPECHANGE = 8,  /**< type of entry changed between old and new */
 	GIT_DELTA_UNREADABLE = 9,  /**< entry is unreadable */
-	GIT_DELTA_CONFLICTED = 10, /**< entry in the index is conflicted */
+	GIT_DELTA_CONFLICTED = 10  /**< entry in the index is conflicted */
 } git_delta_t;
 
 /**
@@ -497,7 +497,7 @@ typedef enum {
 	GIT_DIFF_BINARY_LITERAL,
 
 	/** The binary data is the delta from one side to the other. */
-	GIT_DIFF_BINARY_DELTA,
+	GIT_DIFF_BINARY_DELTA
 } git_diff_binary_t;
 
 /** The contents of one of the files in a binary diff. */
@@ -706,7 +706,7 @@ typedef enum {
 	 * GIT_DIFF_INCLUDE_UNMODIFIED flag.  If you do not want UNMODIFIED
 	 * records in the final result, pass this flag to have them removed.
 	 */
-	GIT_DIFF_FIND_REMOVE_UNMODIFIED = (1u << 16),
+	GIT_DIFF_FIND_REMOVE_UNMODIFIED = (1u << 16)
 } git_diff_find_t;
 
 /**
@@ -1107,7 +1107,7 @@ typedef enum {
 	GIT_DIFF_FORMAT_RAW          = 3u, /**< like git diff --raw */
 	GIT_DIFF_FORMAT_NAME_ONLY    = 4u, /**< like git diff --name-only */
 	GIT_DIFF_FORMAT_NAME_STATUS  = 5u, /**< like git diff --name-status */
-	GIT_DIFF_FORMAT_PATCH_ID     = 6u, /**< git diff as used by git patch-id */
+	GIT_DIFF_FORMAT_PATCH_ID     = 6u  /**< git diff as used by git patch-id */
 } git_diff_format_t;
 
 /**
@@ -1311,7 +1311,7 @@ typedef enum {
 	GIT_DIFF_STATS_NUMBER = (1u << 2),
 
 	/** Extended header information such as creations, renames and mode changes, equivalent of `--summary` */
-	GIT_DIFF_STATS_INCLUDE_SUMMARY = (1u << 3),
+	GIT_DIFF_STATS_INCLUDE_SUMMARY = (1u << 3)
 } git_diff_stats_format_t;
 
 /**

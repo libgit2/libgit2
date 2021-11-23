@@ -39,8 +39,8 @@ static void streaming_write(git_oid *oid, git_odb *odb, git_rawobj *raw)
 
 static void check_object_files(object_data *d)
 {
-   cl_assert(git_path_exists(d->dir));
-   cl_assert(git_path_exists(d->file));
+   cl_assert(git_fs_path_exists(d->dir));
+   cl_assert(git_fs_path_exists(d->file));
 }
 
 static void cmp_objects(git_rawobj *o1, git_rawobj *o2)

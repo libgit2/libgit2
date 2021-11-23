@@ -30,7 +30,7 @@ void test_config_stress__dont_break_on_invalid_input(void)
 {
 	git_config *config;
 
-	cl_assert(git_path_exists(TEST_CONFIG));
+	cl_assert(git_fs_path_exists(TEST_CONFIG));
 	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
 
 	cl_git_pass(git_config_get_string_buf(&buf, config, "color.ui"));
@@ -39,7 +39,7 @@ void test_config_stress__dont_break_on_invalid_input(void)
 	git_config_free(config);
 }
 
-void assert_config_value(git_config *config, const char *key, const char *value)
+static void assert_config_value(git_config *config, const char *key, const char *value)
 {
 	git_buf_dispose(&buf);
 	cl_git_pass(git_config_get_string_buf(&buf, config, key));
@@ -72,7 +72,7 @@ void test_config_stress__escape_subsection_names(void)
 {
 	git_config *config;
 
-	cl_assert(git_path_exists("git-test-config"));
+	cl_assert(git_fs_path_exists("git-test-config"));
 	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
 
 	cl_git_pass(git_config_set_string(config, "some.sec\\tion.other", "foo"));
@@ -90,7 +90,7 @@ void test_config_stress__trailing_backslash(void)
 	git_config *config;
 	const char *path =  "C:\\iam\\some\\windows\\path\\";
 
-	cl_assert(git_path_exists("git-test-config"));
+	cl_assert(git_fs_path_exists("git-test-config"));
 	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
 	cl_git_pass(git_config_set_string(config, "windows.path", path));
 	git_config_free(config);
