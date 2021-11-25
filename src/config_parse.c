@@ -36,7 +36,7 @@ static int strip_comments(char *line, int in_quotes)
 	char *ptr;
 
 	for (ptr = line; *ptr; ++ptr) {
-		if (ptr[0] == '"' && ptr > line && ptr[-1] != '\\')
+		if (ptr[0] == '"' && ((ptr > line && ptr[-1] != '\\') || ptr == line))
 			quote_count++;
 
 		if ((ptr[0] == ';' || ptr[0] == '#') &&
