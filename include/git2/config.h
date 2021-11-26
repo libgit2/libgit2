@@ -73,7 +73,7 @@ typedef struct git_config_entry {
 /**
  * Free a config entry
  */
-GIT_EXTERN(void) git_config_entry_free(git_config_entry *);
+GIT_EXTERN(void) git_config_entry_free(git_config_entry *entry);
 
 /**
  * A config enumeration callback
