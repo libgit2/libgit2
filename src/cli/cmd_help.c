@@ -45,7 +45,7 @@ static int print_commands(void)
 	printf("These are the %s commands available:\n\n", PROGRAM_NAME);
 
 	for (cmd = cli_cmds; cmd->name; cmd++)
-		printf("   %-8s  %s\n", cmd->name, cmd->desc);
+		printf("   %-11s  %s\n", cmd->name, cmd->desc);
 
 	printf("\nSee '%s help <command>' for more information on a specific command.\n", PROGRAM_NAME);
 
@@ -54,6 +54,8 @@ static int print_commands(void)
 
 int cmd_help(int argc, char **argv)
 {
+	char *fake_args[2];
+	const cli_cmd_spec *cmd;
 	cli_opt invalid_opt;
 
 	if (cli_opt_parse(&invalid_opt, opts, argv + 1, argc - 1))
@@ -67,11 +69,18 @@ int cmd_help(int argc, char **argv)
 	if (!command)
 		return print_commands();
 
-	/* If the user asks for help with the help command */
-	if (strcmp(command, "help") == 0)
-		return print_help();
+	/*
+	 * If we were asked for help for a command (eg, `help <command>`),
+	 * delegate back to that command's `--help` option.  This lets
+	 * commands own their help.  Emulate the command-line arguments
+	 * that would invoke `<command> --help` and invoke that command.
+	 */
+	fake_args[0] = command;
+	fake_args[1] = "--help";
 
-        fprintf(stderr, "%s: '%s' is not a %s command. See '%s help'.\n",
-            PROGRAM_NAME, command, PROGRAM_NAME, PROGRAM_NAME);
-	return CLI_EXIT_ERROR;
+	if ((cmd = cli_cmd_spec_byname(command)) == NULL)
+		return cli_error("'%s' is not a %s command. See '%s help'.",
+		                command, PROGRAM_NAME, PROGRAM_NAME);
+
+	return cmd->fn(2, fake_args);
 }
