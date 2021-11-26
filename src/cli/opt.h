@@ -10,7 +10,7 @@
  * This file was produced by using the `rename.pl` script included with
  * adopt.  The command-line specified was:
  *
- * ./rename.pl cli_opt --filename=opt --include=cli.h --inline=GIT_INLINE --header-guard=CLI_opt_h__ --lowercase-status
+ * ./rename.pl cli_opt --filename=opt --include=cli.h --inline=GIT_INLINE --header-guard=CLI_opt_h__ --lowercase-status --without-usage
  */
 
 #ifndef CLI_opt_h__
@@ -277,18 +277,5 @@ int cli_opt_status_fprint(
 	FILE *file,
 	const char *command,
 	const cli_opt *opt);
-
-/**
- * Prints usage information to the given file handle.
- *
- * @param file The file to print information to
- * @param command The name of the command to use when printing
- * @param specs The specifications allowed by the command
- * @return 0 on success, -1 on failure
- */
-int cli_opt_usage_fprint(
-	FILE *file,
-	const char *command,
-	const cli_opt_spec specs[]);
 
 #endif /* CLI_opt_h__ */
