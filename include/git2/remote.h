@@ -300,6 +300,7 @@ GIT_EXTERN(int) git_remote_add_fetch(git_repository *repo, const char *remote, c
  *
  * @param array pointer to the array in which to store the strings
  * @param remote the remote to query
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_remote_get_fetch_refspecs(git_strarray *array, const git_remote *remote);
 
@@ -324,6 +325,7 @@ GIT_EXTERN(int) git_remote_add_push(git_repository *repo, const char *remote, co
  *
  * @param array pointer to the array in which to store the strings
  * @param remote the remote to query
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_remote_get_push_refspecs(git_strarray *array, const git_remote *remote);
 
@@ -899,6 +901,7 @@ GIT_EXTERN(int) git_remote_prune(git_remote *remote, const git_remote_callbacks 
  * @param refspecs the refspecs to use for pushing. If NULL or an empty
  *                 array, the configured refspecs will be used
  * @param opts options to use for this push
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_remote_push(git_remote *remote,
 				const git_strarray *refspecs,

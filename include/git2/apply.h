@@ -32,6 +32,8 @@ GIT_BEGIN_DECL
  *
  * @param delta The delta to be applied
  * @param payload User-specified payload
+ * @return 0 if the delta is applied, < 0 if the apply process will be aborted
+ *	or > 0 if the delta will not be applied.
  */
 typedef int GIT_CALLBACK(git_apply_delta_cb)(
 	const git_diff_delta *delta,
@@ -48,6 +50,8 @@ typedef int GIT_CALLBACK(git_apply_delta_cb)(
  *
  * @param hunk The hunk to be applied
  * @param payload User-specified payload
+ * @return 0 if the hunk is applied, < 0 if the apply process will be aborted
+ *	or > 0 if the hunk will not be applied.
  */
 typedef int GIT_CALLBACK(git_apply_hunk_cb)(
 	const git_diff_hunk *hunk,

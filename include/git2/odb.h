@@ -345,6 +345,11 @@ GIT_EXTERN(int) git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stre
  * Read from an odb stream
  *
  * Most backends don't implement streaming reads
+ *
+ * @param stream the stream
+ * @param buffer the buffer where to store the readed data.
+ * @param len the buffer's length
+ * @return 0 if the read succeeded, error code otherwise
  */
 GIT_EXTERN(int) git_odb_stream_read(git_odb_stream *stream, char *buffer, size_t len);
 
@@ -405,6 +410,7 @@ GIT_EXTERN(int) git_odb_open_rstream(
  * Be aware that this is called inline with network and indexing operations,
  * so performance may be affected.
  * @param progress_payload payload for the progress callback
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_odb_write_pack(
 	git_odb_writepack **out,
@@ -422,6 +428,7 @@ GIT_EXTERN(int) git_odb_write_pack(
  * exist).
  *
  * @param db object database where the `multi-pack-index` file will be written.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_odb_write_multi_pack_index(
 	git_odb *db);

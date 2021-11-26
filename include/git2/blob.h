@@ -302,6 +302,7 @@ GIT_EXTERN(int) git_blob_data_is_binary(const char *data, size_t len);
  *
  * @param out Pointer to store the copy of the object
  * @param source Original object to copy
+ * @return 0.
  */
 GIT_EXTERN(int) git_blob_dup(git_blob **out, git_blob *source);
 

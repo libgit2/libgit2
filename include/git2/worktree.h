@@ -52,6 +52,7 @@ GIT_EXTERN(int) git_worktree_lookup(git_worktree **out, git_repository *repo, co
  *
  * @param out Out-pointer for the newly allocated worktree
  * @param repo Repository to look up worktree for
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_worktree_open_from_repository(git_worktree **out, git_repository *repo);
 
@@ -237,6 +238,10 @@ GIT_EXTERN(int) git_worktree_prune_options_init(
  * If the worktree is not valid and not locked or if the above
  * flags have been passed in, this function will return a
  * positive value.
+ *
+ * @param wt Worktree to check.
+ * @param opts The prunable options.
+ * @return 1 if the worktree is prunable, 0 otherwise, or an error code.
  */
 GIT_EXTERN(int) git_worktree_is_prunable(git_worktree *wt,
 	git_worktree_prune_options *opts);

@@ -673,6 +673,9 @@ GIT_EXTERN(int) git_repository_message(git_buf *out, git_repository *repo);
  * Remove git's prepared message.
  *
  * Remove the message that `git_repository_message` retrieves.
+ *
+ * @param repo Repository to remove prepared message from.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_repository_message_remove(git_repository *repo);
 
@@ -928,6 +931,7 @@ GIT_EXTERN(int) git_repository_is_shallow(git_repository *repo);
  * @param name where to store the pointer to the name
  * @param email where to store the pointer to the email
  * @param repo the repository
+ * @return 0
  */
 GIT_EXTERN(int) git_repository_ident(const char **name, const char **email, const git_repository *repo);
 
@@ -941,6 +945,7 @@ GIT_EXTERN(int) git_repository_ident(const char **name, const char **email, cons
  * @param repo the repository to configure
  * @param name the name to use for the reflog entries
  * @param email the email to use for the reflog entries
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_repository_set_ident(git_repository *repo, const char *name, const char *email);
 

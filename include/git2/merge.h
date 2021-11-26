@@ -372,6 +372,7 @@ typedef enum {
  * merging them into the HEAD of the repository.
  *
  * @param analysis_out analysis enumeration that the result is written into
+ * @param preference_out One of the `git_merge_preference_t` flag.
  * @param repo the repository to merge
  * @param their_heads the heads to merge into
  * @param their_heads_len the number of heads to merge
@@ -389,6 +390,7 @@ GIT_EXTERN(int) git_merge_analysis(
  * merging them into a reference.
  *
  * @param analysis_out analysis enumeration that the result is written into
+ * @param preference_out One of the `git_merge_preference_t` flag.
  * @param repo the repository to merge
  * @param our_ref the reference to perform the analysis from
  * @param their_heads the heads to merge into

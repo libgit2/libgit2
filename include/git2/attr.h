@@ -177,6 +177,7 @@ typedef struct {
  *             not have to exist, but if it does not, then it will be
  *             treated as a plain file (not a directory).
  * @param name The name of the attribute to look up.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_attr_get(
 	const char **value_out,
@@ -199,6 +200,7 @@ GIT_EXTERN(int) git_attr_get(
  *             not have to exist, but if it does not, then it will be
  *             treated as a plain file (not a directory).
  * @param name The name of the attribute to look up.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_attr_get_ext(
 	const char **value_out,
@@ -235,6 +237,7 @@ GIT_EXTERN(int) git_attr_get_ext(
  *             it will be treated as a plain file (i.e. not a directory).
  * @param num_attr The number of attributes being looked up
  * @param names An array of num_attr strings containing attribute names.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_attr_get_many(
 	const char **values_out,
@@ -259,6 +262,7 @@ GIT_EXTERN(int) git_attr_get_many(
  *             it will be treated as a plain file (i.e. not a directory).
  * @param num_attr The number of attributes being looked up
  * @param names An array of num_attr strings containing attribute names.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_attr_get_many_ext(
 	const char **values_out,
@@ -349,6 +353,11 @@ GIT_EXTERN(int) git_attr_cache_flush(
  * macro, you would call:
  *
  *     git_attr_add_macro(repo, "binary", "-diff -crlf");
+ *
+ * @param repo The repository where to add the macro.
+ * @param name The name of the macro.
+ * @param values The value for the macro.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_attr_add_macro(
 	git_repository *repo,

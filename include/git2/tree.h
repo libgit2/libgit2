@@ -418,6 +418,7 @@ GIT_EXTERN(int) git_tree_walk(
  *
  * @param out Pointer to store the copy of the tree
  * @param source Original tree to copy
+ * @return 0
  */
 GIT_EXTERN(int) git_tree_dup(git_tree **out, git_tree *source);
 

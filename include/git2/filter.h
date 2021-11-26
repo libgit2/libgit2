@@ -196,6 +196,7 @@ GIT_EXTERN(int) git_filter_list_apply_to_buffer(
  * @param repo the repository in which to perform the filtering
  * @param path the path of the file to filter, a relative path will be
  * taken as relative to the workdir
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_filter_list_apply_to_file(
 	git_buf *out,
@@ -209,6 +210,7 @@ GIT_EXTERN(int) git_filter_list_apply_to_file(
  * @param out buffer into which to store the filtered file
  * @param filters the list of filters to apply
  * @param blob the blob to filter
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_filter_list_apply_to_blob(
 	git_buf *out,
@@ -222,6 +224,7 @@ GIT_EXTERN(int) git_filter_list_apply_to_blob(
  * @param buffer the buffer to filter
  * @param len the size of the buffer
  * @param target the stream into which the data will be written
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_filter_list_stream_buffer(
 	git_filter_list *filters,
@@ -237,6 +240,7 @@ GIT_EXTERN(int) git_filter_list_stream_buffer(
  * @param path the path of the file to filter, a relative path will be
  * taken as relative to the workdir
  * @param target the stream into which the data will be written
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_filter_list_stream_file(
 	git_filter_list *filters,
@@ -250,6 +254,7 @@ GIT_EXTERN(int) git_filter_list_stream_file(
  * @param filters the list of filters to apply
  * @param blob the blob to filter
  * @param target the stream into which the data will be written
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_filter_list_stream_blob(
 	git_filter_list *filters,

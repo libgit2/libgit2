@@ -203,6 +203,9 @@ typedef struct git_blame git_blame;
 
 /**
  * Gets the number of hunks that exist in the blame structure.
+ *
+ * @param blame The blame structure to query.
+ * @return The number of hunks.
  */
 GIT_EXTERN(uint32_t) git_blame_get_hunk_count(git_blame *blame);
 

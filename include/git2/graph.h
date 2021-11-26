@@ -33,6 +33,7 @@ GIT_BEGIN_DECL
  * @param repo the repository where the commits exist
  * @param local the commit for local
  * @param upstream the commit for upstream
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo, const git_oid *local, const git_oid *upstream);
 
