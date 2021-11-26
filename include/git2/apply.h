@@ -89,6 +89,16 @@ typedef struct {
 #define GIT_APPLY_OPTIONS_VERSION 1
 #define GIT_APPLY_OPTIONS_INIT {GIT_APPLY_OPTIONS_VERSION}
 
+/**
+ * Initialize git_apply_options structure
+ *
+ * Initialize a `git_apply_options` with default values. Equivalent to creating
+ * an instance with GIT_APPLY_OPTIONS_INIT.
+ *
+ * @param opts The `git_apply_options` struct to initialize.
+ * @param version The struct version; pass `GIT_APPLY_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
 GIT_EXTERN(int) git_apply_options_init(git_apply_options *opts, unsigned int version);
 
 /**
