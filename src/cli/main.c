@@ -28,7 +28,8 @@ const cli_opt_spec cli_common_opts[] = {
 };
 
 const cli_cmd_spec cli_cmds[] = {
-	{ "help", cmd_help, "Display help information" },
+	{ "cat-file", cmd_cat_file, "Display an object in the repository" },
+	{ "help",     cmd_help,     "Display help information" },
 	{ NULL }
 };
 
