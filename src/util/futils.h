@@ -27,6 +27,7 @@ extern int git_futils_readbuffer_updated(
 	const char *path,
 	unsigned char checksum[GIT_HASH_SHA1_SIZE],
 	int *updated);
+extern int git_futils_readbuffer_fd_full(git_str *obj, git_file fd);
 extern int git_futils_readbuffer_fd(git_str *obj, git_file fd, size_t len);
 
 /* Additional constants for `git_futils_writebuffer`'s `open_flags`.  We
