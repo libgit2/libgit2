@@ -179,6 +179,42 @@ int git_futils_readbuffer_fd(git_str *buf, git_file fd, size_t len)
 	return 0;
 }
 
+int git_futils_readbuffer_fd_full(git_str *buf, git_file fd)
+{
+	static size_t blocksize = 10240;
+	size_t alloc_len = 0, total_size = 0;
+	ssize_t read_size = 0;
+
+	git_str_clear(buf);
+
+	while (true) {
+		GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, blocksize);
+
+		if (git_str_grow(buf, alloc_len) < 0)
+			return -1;
+
+		/* p_read loops internally to read blocksize bytes */
+		read_size = p_read(fd, buf->ptr, blocksize);
+
+		if (read_size < 0) {
+			git_error_set(GIT_ERROR_OS, "failed to read descriptor");
+			git_str_dispose(buf);
+			return -1;
+		}
+
+		total_size += read_size;
+
+		if ((size_t)read_size < blocksize) {
+			break;
+		}
+	}
+
+	buf->ptr[total_size] = '\0';
+	buf->size = total_size;
+
+	return 0;
+}
+
 int git_futils_readbuffer_updated(
 	git_str *out,
 	const char *path,
