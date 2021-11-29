@@ -567,3 +567,35 @@ bool git_object__is_valid(
 
 	return true;
 }
+
+int git_object_rawcontent_is_valid(
+	int *valid,
+	const char *buf,
+	size_t len,
+	git_object_t type)
+{
+	git_object *obj = NULL;
+	int error;
+
+	GIT_ASSERT_ARG(valid);
+	GIT_ASSERT_ARG(buf);
+
+	/* Blobs are always valid; don't bother parsing. */
+	if (type == GIT_OBJECT_BLOB) {
+		*valid = 1;
+		return 0;
+	}
+
+	error = git_object__from_raw(&obj, buf, len, type);
+	git_object_free(obj);
+
+	if (error == 0) {
+		*valid = 1;
+		return 0;
+	} else if (error == GIT_EINVALID) {
+		*valid = 0;
+		return 0;
+	}
+
+	return error;
+}
