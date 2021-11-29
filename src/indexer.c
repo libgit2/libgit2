@@ -340,7 +340,7 @@ static int check_object_connectivity(git_indexer *idx, const git_rawobj *obj)
 {
 	git_object *object;
 	git_oid *expected;
-	int error;
+	int error = 0;
 
 	if (obj->type != GIT_OBJECT_BLOB &&
 	    obj->type != GIT_OBJECT_TREE &&
@@ -348,8 +348,14 @@ static int check_object_connectivity(git_indexer *idx, const git_rawobj *obj)
 	    obj->type != GIT_OBJECT_TAG)
 		return 0;
 
-	if ((error = git_object__from_raw(&object, obj->data, obj->len, obj->type)) < 0)
+	if (git_object__from_raw(&object, obj->data, obj->len, obj->type) < 0) {
+		/*
+		 * parse_raw returns EINVALID on invalid data; downgrade
+		 * that to a normal -1 error code.
+		 */
+		error = -1;
 		goto out;
+	}
 
 	if ((expected = git_oidmap_get(idx->expected_oids, &object->cached.oid)) != NULL) {
 		git_oidmap_delete(idx->expected_oids, &object->cached.oid);

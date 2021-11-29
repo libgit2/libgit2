@@ -62,7 +62,7 @@ const char *git_tag_message(const git_tag *t)
 static int tag_error(const char *str)
 {
 	git_error_set(GIT_ERROR_TAG, "failed to parse tag: %s", str);
-	return -1;
+	return GIT_EINVALID;
 }
 
 static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
@@ -73,6 +73,7 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	size_t text_len, alloc_len;
 	const char *search;
 	unsigned int i;
+	int error;
 
 	if (git_oid__parse(&tag->target, &buffer, buffer_end, "object ") < 0)
 		return tag_error("object field invalid");
@@ -130,8 +131,8 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 		tag->tagger = git__malloc(sizeof(git_signature));
 		GIT_ERROR_CHECK_ALLOC(tag->tagger);
 
-		if (git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ", '\n') < 0)
-			return -1;
+		if ((error = git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ", '\n')) < 0)
+			return error;
 	}
 
 	tag->message = NULL;

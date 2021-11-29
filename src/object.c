@@ -144,12 +144,17 @@ int git_object__from_odb_object(
 	def = &git_objects_table[odb_obj->cached.type];
 	GIT_ASSERT(def->free && def->parse);
 
-	if ((error = def->parse(object, odb_obj)) < 0)
+	if ((error = def->parse(object, odb_obj)) < 0) {
+		/*
+		 * parse returns EINVALID on invalid data; downgrade
+		 * that to a normal -1 error code.
+		 */
 		def->free(object);
-	else
-		*object_out = git_cache_store_parsed(&repo->objects, object);
+		return -1;
+	}
 
-	return error;
+	*object_out = git_cache_store_parsed(&repo->objects, object);
+	return 0;
 }
 
 void git_object__free(void *obj)

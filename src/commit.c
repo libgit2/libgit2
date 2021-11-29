@@ -395,6 +395,7 @@ static int commit_parse(git_commit *commit, const char *data, size_t size, unsig
 	git_oid parent_id;
 	size_t header_len;
 	git_signature dummy_sig;
+	int error;
 
 	GIT_ASSERT_ARG(commit);
 	GIT_ASSERT_ARG(data);
@@ -431,14 +432,14 @@ static int commit_parse(git_commit *commit, const char *data, size_t size, unsig
 		commit->author = git__malloc(sizeof(git_signature));
 		GIT_ERROR_CHECK_ALLOC(commit->author);
 
-		if (git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n') < 0)
-			return -1;
+		if ((error = git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n')) < 0)
+			return error;
 	}
 
 	/* Some tools create multiple author fields, ignore the extra ones */
 	while (!git__prefixncmp(buffer, buffer_end - buffer, "author ")) {
-		if (git_signature__parse(&dummy_sig, &buffer, buffer_end, "author ", '\n') < 0)
-			return -1;
+		if ((error = git_signature__parse(&dummy_sig, &buffer, buffer_end, "author ", '\n')) < 0)
+			return error;
 
 		git__free(dummy_sig.name);
 		git__free(dummy_sig.email);
@@ -448,8 +449,8 @@ static int commit_parse(git_commit *commit, const char *data, size_t size, unsig
 	commit->committer = git__malloc(sizeof(git_signature));
 	GIT_ERROR_CHECK_ALLOC(commit->committer);
 
-	if (git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n') < 0)
-		return -1;
+	if ((error = git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n')) < 0)
+		return error;
 
 	if (flags & GIT_COMMIT_PARSE_QUICK)
 		return 0;
@@ -493,7 +494,7 @@ static int commit_parse(git_commit *commit, const char *data, size_t size, unsig
 
 bad_buffer:
 	git_error_set(GIT_ERROR_OBJECT, "failed to parse bad commit object");
-	return -1;
+	return GIT_EINVALID;
 }
 
 int git_commit__parse_raw(void *commit, const char *data, size_t size)
@@ -971,8 +972,10 @@ int git_commit_create_with_signature(
 	/* The first step is to verify that all the tree and parents exist */
 	parsed = git__calloc(1, sizeof(git_commit));
 	GIT_ERROR_CHECK_ALLOC(parsed);
-	if ((error = commit_parse(parsed, commit_content, strlen(commit_content), 0)) < 0)
+	if (commit_parse(parsed, commit_content, strlen(commit_content), 0) < 0) {
+		error = -1;
 		goto cleanup;
+	}
 
 	if ((error = validate_tree_and_parents(&parents, repo, &parsed->tree_id, commit_parent_from_commit, parsed, NULL, true)) < 0)
 		goto cleanup;
