@@ -9,7 +9,6 @@
 #include "netops.h"
 
 #include <ctype.h>
-#include "git2/errors.h"
 
 #include "posix.h"
 #include "str.h"

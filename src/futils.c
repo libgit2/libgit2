@@ -15,6 +15,8 @@
 #include "win32/findfile.h"
 #endif
 
+#define GIT_FILEMODE_DEFAULT 0100666
+
 int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 {
 	return git_futils_mkdir(
@@ -256,7 +258,7 @@ int git_futils_readbuffer(git_str *buf, const char *path)
 }
 
 int git_futils_writebuffer(
-	const git_str *buf,	const char *path, int flags, mode_t mode)
+	const git_str *buf, const char *path, int flags, mode_t mode)
 {
 	int fd, do_fsync = 0, error = 0;
 
@@ -269,7 +271,7 @@ int git_futils_writebuffer(
 	flags &= ~O_FSYNC;
 
 	if (!mode)
-		mode = GIT_FILEMODE_BLOB;
+		mode = GIT_FILEMODE_DEFAULT;
 
 	if ((fd = p_open(path, flags, mode)) < 0) {
 		git_error_set(GIT_ERROR_OS, "could not open '%s' for writing", path);

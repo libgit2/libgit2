@@ -4,9 +4,9 @@ if(WIN32 AND USE_WINHTTP)
 	# Since MinGW does not come with headers or an import library for winhttp,
 	# we have to include a private header and generate our own import library
 	if(MINGW)
-		add_subdirectory("${libgit2_SOURCE_DIR}/deps/winhttp" "${libgit2_BINARY_DIR}/deps/winhttp")
+		add_subdirectory("${CMAKE_SOURCE_DIR}/deps/winhttp" "${CMAKE_BINARY_DIR}/deps/winhttp")
 		list(APPEND LIBGIT2_SYSTEM_LIBS winhttp)
-		list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${libgit2_SOURCE_DIR}/deps/winhttp")
+		list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${CMAKE_SOURCE_DIR}/deps/winhttp")
 	else()
 		list(APPEND LIBGIT2_SYSTEM_LIBS "winhttp")
 		list(APPEND LIBGIT2_PC_LIBS "-lwinhttp")

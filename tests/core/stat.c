@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "futils.h"
-#include "path.h"
 #include "posix.h"
 
 void test_core_stat__initialize(void)

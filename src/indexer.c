@@ -1289,7 +1289,7 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 		goto on_error;
 
 	/* Write out the hash of the idx */
-	if (git_filebuf_hash(&trailer_hash, &index_file) < 0)
+	if (git_filebuf_hash(trailer_hash.id, &index_file) < 0)
 		goto on_error;
 
 	git_filebuf_write(&index_file, &trailer_hash, sizeof(git_oid));

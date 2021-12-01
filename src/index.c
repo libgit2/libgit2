@@ -3080,7 +3080,7 @@ static int write_index(git_oid *checksum, git_index *index, git_filebuf *file)
 		return -1;
 
 	/* get out the hash for all the contents we've appended to the file */
-	git_filebuf_hash(&hash_final, file);
+	git_filebuf_hash(hash_final.id, file);
 	git_oid_cpy(checksum, &hash_final);
 
 	/* write it at the end of the file */

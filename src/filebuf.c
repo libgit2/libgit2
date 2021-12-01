@@ -386,9 +386,9 @@ cleanup:
 	return error;
 }
 
-int git_filebuf_hash(git_oid *oid, git_filebuf *file)
+int git_filebuf_hash(unsigned char *out, git_filebuf *file)
 {
-	GIT_ASSERT_ARG(oid);
+	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(file);
 	GIT_ASSERT_ARG(file->compute_digest);
 
@@ -397,7 +397,7 @@ int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 	if (verify_last_error(file) < 0)
 		return -1;
 
-	git_hash_final(oid->id, &file->digest);
+	git_hash_final(out, &file->digest);
 	git_hash_ctx_cleanup(&file->digest);
 	file->compute_digest = 0;
 

@@ -11,7 +11,6 @@
 #endif
 
 #include "util.h"
-#include "cache.h"
 #include "posix.h"
 #include "date.h"
 
