@@ -71,7 +71,7 @@ GIT_EXTERN(int) git_signature_default(git_signature **out, git_repository *repo)
  *
  * @param out new signature
  * @param buf signature string
- * @return 0 on success, or an error code
+ * @return 0 on success, GIT_EINVALID if the signature is not parseable, or an error code
  */
 GIT_EXTERN(int) git_signature_from_buffer(git_signature **out, const char *buf);
 

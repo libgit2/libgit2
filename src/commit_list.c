@@ -124,16 +124,15 @@ static int commit_quick_parse(
 {
 	git_oid *parent_oid;
 	git_commit *commit;
-	int error;
 	size_t i;
 
 	commit = git__calloc(1, sizeof(*commit));
 	GIT_ERROR_CHECK_ALLOC(commit);
 	commit->object.repo = walk->repo;
 
-	if ((error = git_commit__parse_ext(commit, obj, GIT_COMMIT_PARSE_QUICK)) < 0) {
+	if (git_commit__parse_ext(commit, obj, GIT_COMMIT_PARSE_QUICK) < 0) {
 		git__free(commit);
-		return error;
+		return -1;
 	}
 
 	if (!git__is_uint16(git_array_size(commit->parent_ids))) {

@@ -23,6 +23,12 @@ void git_signature_free(git_signature *sig)
 	git__free(sig);
 }
 
+static int signature_parse_error(const char *msg)
+{
+	git_error_set(GIT_ERROR_INVALID, "failed to parse signature - %s", msg);
+	return GIT_EINVALID;
+}
+
 static int signature_error(const char *msg)
 {
 	git_error_set(GIT_ERROR_INVALID, "failed to parse signature - %s", msg);
@@ -206,13 +212,13 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 	if (ender &&
 		(buffer_end = memchr(buffer, ender, buffer_end - buffer)) == NULL)
-		return signature_error("no newline given");
+		return signature_parse_error("no newline given");
 
 	if (header) {
 		const size_t header_len = strlen(header);
 
 		if (buffer + header_len >= buffer_end || memcmp(buffer, header, header_len) != 0)
-			return signature_error("expected prefix doesn't match actual");
+			return signature_parse_error("expected prefix doesn't match actual");
 
 		buffer += header_len;
 	}
@@ -221,7 +227,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	email_end = git__memrchr(buffer, '>', buffer_end - buffer);
 
 	if (!email_start || !email_end || email_end <= email_start)
-		return signature_error("malformed e-mail");
+		return signature_parse_error("malformed e-mail");
 
 	email_start += 1;
 	sig->name = extract_trimmed(buffer, email_start - buffer - 1);
@@ -237,7 +243,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 			git__free(sig->name);
 			git__free(sig->email);
 			sig->name = sig->email = NULL;
-			return signature_error("invalid Unix timestamp");
+			return signature_parse_error("invalid Unix timestamp");
 		}
 
 		/* do we have a timezone? */

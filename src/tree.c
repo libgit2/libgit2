@@ -351,13 +351,24 @@ size_t git_treebuilder_entrycount(git_treebuilder *bld)
 	return git_strmap_size(bld->map);
 }
 
-static int tree_error(const char *str, const char *path)
+GIT_INLINE(void) set_error(const char *str, const char *path)
 {
 	if (path)
 		git_error_set(GIT_ERROR_TREE, "%s - %s", str, path);
 	else
 		git_error_set(GIT_ERROR_TREE, "%s", str);
+}
+
+static int tree_error(const char *str, const char *path)
+{
+	set_error(str, path);
 	return -1;
+}
+
+static int tree_parse_error(const char *str, const char *path)
+{
+	set_error(str, path);
+	return GIT_EINVALID;
 }
 
 static int parse_mode(uint16_t *mode_out, const char *buffer, size_t buffer_len, const char **buffer_out)
@@ -399,19 +410,19 @@ int git_tree__parse_raw(void *_tree, const char *data, size_t size)
 		uint16_t attr;
 
 		if (parse_mode(&attr, buffer, buffer_end - buffer, &buffer) < 0 || !buffer)
-			return tree_error("failed to parse tree: can't parse filemode", NULL);
+			return tree_parse_error("failed to parse tree: can't parse filemode", NULL);
 
 		if (buffer >= buffer_end || (*buffer++) != ' ')
-			return tree_error("failed to parse tree: missing space after filemode", NULL);
+			return tree_parse_error("failed to parse tree: missing space after filemode", NULL);
 
 		if ((nul = memchr(buffer, 0, buffer_end - buffer)) == NULL)
-			return tree_error("failed to parse tree: object is corrupted", NULL);
+			return tree_parse_error("failed to parse tree: object is corrupted", NULL);
 
 		if ((filename_len = nul - buffer) == 0 || filename_len > UINT16_MAX)
-			return tree_error("failed to parse tree: can't parse filename", NULL);
+			return tree_parse_error("failed to parse tree: can't parse filename", NULL);
 
 		if ((buffer_end - (nul + 1)) < GIT_OID_RAWSZ)
-			return tree_error("failed to parse tree: can't parse OID", NULL);
+			return tree_parse_error("failed to parse tree: can't parse OID", NULL);
 
 		/* Allocate the entry */
 		{
@@ -434,16 +445,15 @@ int git_tree__parse_raw(void *_tree, const char *data, size_t size)
 int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 {
 	git_tree *tree = _tree;
+	const char *data = git_odb_object_data(odb_obj);
+	size_t size = git_odb_object_size(odb_obj);
+	int error;
 
-	if ((git_tree__parse_raw(tree,
-	    git_odb_object_data(odb_obj),
-	    git_odb_object_size(odb_obj))) < 0)
-		return -1;
+	if ((error = git_tree__parse_raw(tree, data, size)) < 0 ||
+	    (error = git_odb_object_dup(&tree->odb_obj, odb_obj)) < 0)
+		return error;
 
-	if (git_odb_object_dup(&tree->odb_obj, odb_obj) < 0)
-		return -1;
-
-	return 0;
+	return error;
 }
 
 static size_t find_next_dir(const char *dirname, git_index *index, size_t start)
