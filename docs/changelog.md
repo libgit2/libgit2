@@ -6,6 +6,7 @@ This is release v1.3.0, "Zugunruhe".  This release includes only minor new featu
 ## New Features
 * Support custom git extensions by @ethomson in https://github.com/libgit2/libgit2/pull/6031
 * Introduce `git_email_create`; deprecate `git_diff_format_email` by @ethomson in https://github.com/libgit2/libgit2/pull/6061
+* Add blame progress callback
 
 ## Deprecated APIs
 * `git_oidarray_free` is deprecated; callers should use `git_oidarray_dispose`
