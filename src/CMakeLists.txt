@@ -36,8 +36,8 @@ set(LIBGIT2_PC_LIBS "")
 
 set(LIBGIT2_INCLUDES
 	"${CMAKE_CURRENT_BINARY_DIR}"
-	"${CMAKE_SOURCE_DIR}/src"
-	"${CMAKE_SOURCE_DIR}/include")
+	"${PROJECT_SOURCE_DIR}/src"
+	"${PROJECT_SOURCE_DIR}/include")
 
 if(HAVE_FUTIMENS)
 	set(GIT_USE_FUTIMENS 1)
@@ -117,8 +117,8 @@ target_sources(git2internal PRIVATE ${SRC_SHA1})
 # Optional external dependency: ntlmclient
 if(USE_NTLMCLIENT)
 	set(GIT_NTLM 1)
-	add_subdirectory("${CMAKE_SOURCE_DIR}/deps/ntlmclient" "${CMAKE_BINARY_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${CMAKE_SOURCE_DIR}/deps/ntlmclient")
+	add_subdirectory("${PROJECT_SOURCE_DIR}/deps/ntlmclient" "${PROJECT_SOURCE_DIR}/deps/ntlmclient")
+	list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/ntlmclient")
 	list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
 endif()
 add_feature_info(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
@@ -164,9 +164,9 @@ target_compile_definitions(git2internal PRIVATE _FILE_OFFSET_BITS=64)
 
 # Collect sourcefiles
 file(GLOB SRC_H
-	"${CMAKE_SOURCE_DIR}/include/git2.h"
-	"${CMAKE_SOURCE_DIR}/include/git2/*.h"
-	"${CMAKE_SOURCE_DIR}/include/git2/sys/*.h")
+	"${PROJECT_SOURCE_DIR}/include/git2.h"
+	"${PROJECT_SOURCE_DIR}/include/git2/*.h"
+	"${PROJECT_SOURCE_DIR}/include/git2/sys/*.h")
 list(SORT SRC_H)
 target_sources(git2internal PRIVATE ${SRC_H})
 
