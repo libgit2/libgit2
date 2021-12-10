@@ -404,6 +404,15 @@ int git_blob_is_binary(const git_blob *blob)
 	return git_str_is_binary(&content);
 }
 
+int git_blob_data_is_binary(const char *str, size_t len)
+{
+	git_str content = GIT_STR_INIT;
+
+	git_str_attach_notowned(&content, str, len);
+
+	return git_str_is_binary(&content);
+}
+
 int git_blob_filter_options_init(
 	git_blob_filter_options *opts,
 	unsigned int version)

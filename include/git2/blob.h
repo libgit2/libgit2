@@ -285,6 +285,18 @@ GIT_EXTERN(int) git_blob_create_from_buffer(
 GIT_EXTERN(int) git_blob_is_binary(const git_blob *blob);
 
 /**
+ * Determine if the given content is most certainly binary or not;
+ * this is the same mechanism used by `git_blob_is_binary` but only
+ * looking at raw data.
+ *
+ * @param data The blob data which content should be analyzed
+ * @param len The length of the data
+ * @return 1 if the content of the blob is detected
+ * as binary; 0 otherwise.
+ */
+GIT_EXTERN(int) git_blob_data_is_binary(const char *data, size_t len);
+
+/**
  * Create an in-memory copy of a blob. The copy must be explicitly
  * free'd or it will leak.
  *
