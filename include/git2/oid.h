@@ -19,6 +19,11 @@
  */
 GIT_BEGIN_DECL
 
+/** The type of object id, currently only SHA1. */
+typedef enum {
+	GIT_OID_SHA1 = 1   /**< SHA1 */
+} git_oid_t;
+
 /** Size (in bytes) of a raw/binary oid */
 #define GIT_OID_SHA1_SIZE 20
 
