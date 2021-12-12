@@ -50,6 +50,7 @@
 
 #cmakedefine GIT_SHA256_BUILTIN 1
 #cmakedefine GIT_SHA256_COMMON_CRYPTO 1
+#cmakedefine GIT_SHA256_MBEDTLS 1
 
 #cmakedefine GIT_RAND_GETENTROPY 1
 

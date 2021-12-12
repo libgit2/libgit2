@@ -10,10 +10,20 @@
 
 #include "hash/sha.h"
 
-#include <mbedtls/sha1.h>
+#ifdef GIT_SHA1_MBEDTLS
+# include <mbedtls/sha1.h>
 
 struct git_hash_sha1_ctx {
     mbedtls_sha1_context c;
 };
+#endif
+
+#ifdef GIT_SHA256_MBEDTLS
+# include <mbedtls/sha256.h>
+
+struct git_hash_sha256_ctx {
+    mbedtls_sha256_context c;
+};
+#endif
 
 #endif /* INCLUDE_hash_sha1_mbedtls_h__ */
