@@ -5,23 +5,25 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_sha1_h__
-#define INCLUDE_hash_sha1_h__
+#ifndef INCLUDE_hash_sha_h__
+#define INCLUDE_hash_sha_h__
 
 #include "git2_util.h"
 
 typedef struct git_hash_sha1_ctx git_hash_sha1_ctx;
 
 #if defined(GIT_SHA1_COMMON_CRYPTO)
-# include "sha1/common_crypto.h"
+# include "common_crypto.h"
 #elif defined(GIT_SHA1_OPENSSL)
-# include "sha1/openssl.h"
+# include "openssl.h"
 #elif defined(GIT_SHA1_WIN32)
-# include "sha1/win32.h"
+# include "win32.h"
 #elif defined(GIT_SHA1_MBEDTLS)
-# include "sha1/mbedtls.h"
+# include "mbedtls.h"
+#elif defined(GIT_SHA1_COLLISIONDETECT)
+# include "collisiondetect.h"
 #else
-# include "sha1/collisiondetect.h"
+# error "unknown sha1 implementation"
 #endif
 
 #define GIT_HASH_SHA1_SIZE 20

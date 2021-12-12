@@ -5,10 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_sha1_openssl_h__
-#define INCLUDE_hash_sha1_openssl_h__
+#ifndef INCLUDE_hash_openssl_h__
+#define INCLUDE_hash_openssl_h__
 
-#include "hash/sha1.h"
+#include "hash/sha.h"
 
 #include <openssl/sha.h>
 

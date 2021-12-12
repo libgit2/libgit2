@@ -10,7 +10,7 @@
 
 #include "git2_util.h"
 
-#include "hash/sha1.h"
+#include "hash/sha.h"
 
 typedef struct {
 	void *data;

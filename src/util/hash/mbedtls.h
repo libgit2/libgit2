@@ -5,15 +5,15 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_sha1_collisiondetect_h__
-#define INCLUDE_hash_sha1_collisiondetect_h__
+#ifndef INCLUDE_hash_mbedtls_h__
+#define INCLUDE_hash_mbedtls_h__
 
-#include "hash/sha1.h"
+#include "hash/sha.h"
 
-#include "sha1dc/sha1.h"
+#include <mbedtls/sha1.h>
 
 struct git_hash_sha1_ctx {
-	SHA1_CTX c;
+    mbedtls_sha1_context c;
 };
 
-#endif
+#endif /* INCLUDE_hash_sha1_mbedtls_h__ */

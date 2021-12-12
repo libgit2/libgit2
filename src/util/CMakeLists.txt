@@ -9,7 +9,7 @@ set(UTIL_INCLUDES
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include")
 
-file(GLOB UTIL_SRC *.c *.h allocators/*.c allocators/*.h hash/sha1.h)
+file(GLOB UTIL_SRC *.c *.h allocators/*.c allocators/*.h hash.h)
 list(SORT UTIL_SRC)
 
 #
@@ -29,18 +29,18 @@ endif()
 #
 
 if(USE_SHA1 STREQUAL "CollisionDetection")
-	file(GLOB UTIL_SRC_HASH hash/sha1/collisiondetect.* hash/sha1/sha1dc/*)
+	file(GLOB UTIL_SRC_HASH hash/collisiondetect.* hash/sha1dc/*)
 	target_compile_definitions(util PRIVATE SHA1DC_NO_STANDARD_INCLUDES=1)
         target_compile_definitions(util PRIVATE SHA1DC_CUSTOM_INCLUDE_SHA1_C=\"git2_util.h\")
         target_compile_definitions(util PRIVATE SHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C=\"git2_util.h\")
 elseif(USE_SHA1 STREQUAL "OpenSSL")
-	file(GLOB UTIL_SRC_HASH hash/sha1/openssl.*)
+	file(GLOB UTIL_SRC_HASH hash/openssl.*)
 elseif(USE_SHA1 STREQUAL "CommonCrypto")
-	file(GLOB UTIL_SRC_HASH hash/sha1/common_crypto.*)
+	file(GLOB UTIL_SRC_HASH hash/common_crypto.*)
 elseif(USE_SHA1 STREQUAL "mbedTLS")
-	file(GLOB UTIL_SRC_HASH hash/sha1/mbedtls.*)
+	file(GLOB UTIL_SRC_HASH hash/mbedtls.*)
 elseif(USE_SHA1 STREQUAL "Win32")
-	file(GLOB UTIL_SRC_HASH hash/sha1/win32.*)
+	file(GLOB UTIL_SRC_HASH hash/win32.*)
 else()
 	message(FATAL_ERROR "Asked for unknown SHA1 backend: ${USE_SHA1}")
 endif()
