@@ -30,7 +30,7 @@ option(USE_NSEC                "Support nanosecond precision file mtimes and cti
 option(USE_SSH                 "Link with libssh2 to enable SSH support"               OFF)
 option(USE_HTTPS               "Enable HTTPS support. Can be set to a specific backend" ON)
 option(USE_SHA1                "Enable SHA1. Can be set to CollisionDetection(ON)/HTTPS" ON)
-option(USE_SHA256              "Enable SHA256." ON)
+option(USE_SHA256              "Enable SHA256. Can be set to HTTPS/Builtin" ON)
 option(USE_GSSAPI              "Link with libgssapi for SPNEGO auth"      OFF)
    set(USE_HTTP_PARSER         "" CACHE STRING "Specifies the HTTP Parser implementation; either system or builtin.")
    set(REGEX_BACKEND           "" CACHE STRING "Regular expression implementation. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")

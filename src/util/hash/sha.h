@@ -13,24 +13,28 @@
 typedef struct git_hash_sha1_ctx git_hash_sha1_ctx;
 typedef struct git_hash_sha256_ctx git_hash_sha256_ctx;
 
-#if defined(GIT_SHA1_COMMON_CRYPTO)
+#if defined(GIT_SHA1_COMMON_CRYPTO) || defined(GIT_SHA256_COMMON_CRYPTO)
 # include "common_crypto.h"
-#elif defined(GIT_SHA1_OPENSSL)
+#endif
+
+#if defined(GIT_SHA1_OPENSSL) || defined(GIT_SHA1_COMMON_CRYPTO)
 # include "openssl.h"
-#elif defined(GIT_SHA1_WIN32)
+#endif
+
+#if defined(GIT_SHA1_WIN32) || defined(GIT_SHA256_WIN32)
 # include "win32.h"
-#elif defined(GIT_SHA1_MBEDTLS)
+#endif
+
+#if defined(GIT_SHA1_MBEDTLS) || defined(GIT_SHA256_MBEDTLS)
 # include "mbedtls.h"
-#elif defined(GIT_SHA1_COLLISIONDETECT)
+#endif
+
+#if defined(GIT_SHA1_COLLISIONDETECT)
 # include "collisiondetect.h"
-#else
-# error "unknown sha1 implementation"
 #endif
 
 #if defined(GIT_SHA256_BUILTIN)
 # include "builtin.h"
-#else
-# error "unknown sha256 implementation"
 #endif
 
 /*

@@ -47,7 +47,14 @@ endif()
 
 list(SORT UTIL_SRC_SHA1)
 
-file(GLOB UTIL_SRC_SHA256 hash/builtin.* hash/rfc6234/*)
+if(USE_SHA256 STREQUAL "Builtin")
+	file(GLOB UTIL_SRC_SHA256 hash/builtin.* hash/rfc6234/*)
+elseif(USE_SHA256 STREQUAL "CommonCrypto")
+	file(GLOB UTIL_SRC_SHA256 hash/common_crypto.*)
+else()
+	message(FATAL_ERROR "Asked for unknown SHA256 backend: ${USE_SHA256}")
+endif()
+
 list(SORT UTIL_SRC_SHA256)
 
 #
