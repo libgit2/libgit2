@@ -42,7 +42,7 @@ elseif(USE_SHA1 STREQUAL "mbedTLS")
 	list(APPEND LIBGIT2_PC_LIBS ${MBEDTLS_LIBRARIES})
 elseif(USE_SHA1 STREQUAL "Win32")
 	set(GIT_SHA1_WIN32 1)
-elseif(NOT (USE_SHA1 STREQUAL "Generic"))
+else()
 	message(FATAL_ERROR "Asked for unknown SHA1 backend: ${USE_SHA1}")
 endif()
 

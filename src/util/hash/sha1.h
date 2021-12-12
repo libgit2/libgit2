@@ -12,9 +12,7 @@
 
 typedef struct git_hash_sha1_ctx git_hash_sha1_ctx;
 
-#if defined(GIT_SHA1_COLLISIONDETECT)
-# include "sha1/collisiondetect.h"
-#elif defined(GIT_SHA1_COMMON_CRYPTO)
+#if defined(GIT_SHA1_COMMON_CRYPTO)
 # include "sha1/common_crypto.h"
 #elif defined(GIT_SHA1_OPENSSL)
 # include "sha1/openssl.h"
@@ -23,7 +21,7 @@ typedef struct git_hash_sha1_ctx git_hash_sha1_ctx;
 #elif defined(GIT_SHA1_MBEDTLS)
 # include "sha1/mbedtls.h"
 #else
-# include "sha1/generic.h"
+# include "sha1/collisiondetect.h"
 #endif
 
 #define GIT_HASH_SHA1_SIZE 20
