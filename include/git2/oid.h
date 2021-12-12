@@ -26,9 +26,11 @@ typedef enum {
 
 /** Size (in bytes) of a raw/binary oid */
 #define GIT_OID_SHA1_SIZE 20
+#define GIT_OID_MAX_SIZE  GIT_OID_SHA1_SIZE
 
 /** Size (in bytes) of a hex formatted oid */
 #define GIT_OID_SHA1_HEXSIZE (GIT_OID_SHA1_SIZE * 2)
+#define GIT_OID_MAX_HEXSIZE   GIT_OID_SHA1_HEXSIZE
 
 /** Minimum length (in number of hex characters,
  * i.e. packets of 4 bits) of an oid prefix */
