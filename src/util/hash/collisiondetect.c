@@ -40,7 +40,7 @@ int git_hash_sha1_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 {
 	GIT_ASSERT_ARG(ctx);
 	if (SHA1DCFinal(out, &ctx->c)) {
-		git_error_set(GIT_ERROR_SHA1, "SHA1 collision attack detected");
+		git_error_set(GIT_ERROR_SHA, "SHA1 collision attack detected");
 		return -1;
 	}
 

@@ -35,7 +35,7 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 
 	/* Only use CNG on Windows 2008 / Vista SP1  or better (Windows 6.0 SP1) */
 	if (!git_has_win32_version(6, 0, 1)) {
-		git_error_set(GIT_ERROR_SHA1, "CryptoNG is not supported on this platform");
+		git_error_set(GIT_ERROR_SHA, "CryptoNG is not supported on this platform");
 		return -1;
 	}
 
@@ -45,7 +45,7 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 		StringCchCat(dll_path, MAX_PATH, "\\") < 0 ||
 		StringCchCat(dll_path, MAX_PATH, GIT_HASH_CNG_DLL_NAME) < 0 ||
 		(hash_prov.prov.cng.dll = LoadLibrary(dll_path)) == NULL) {
-		git_error_set(GIT_ERROR_SHA1, "CryptoNG library could not be loaded");
+		git_error_set(GIT_ERROR_SHA, "CryptoNG library could not be loaded");
 		return -1;
 	}
 
