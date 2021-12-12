@@ -46,10 +46,7 @@ typedef struct {
 typedef struct loose_backend {
 	git_odb_backend parent;
 
-	int object_zlib_level; /** loose object zlib compression level. */
-	int fsync_object_files; /** loose object file fsync flag. */
-	mode_t object_file_mode;
-	mode_t object_dir_mode;
+	git_odb_backend_loose_options options;
 
 	size_t objects_dirlen;
 	char objects_dir[GIT_FLEX_ARRAY];
@@ -100,7 +97,9 @@ static int object_file_name(
 static int object_mkdir(const git_str *name, const loose_backend *be)
 {
 	return git_futils_mkdir_relative(
-		name->ptr + be->objects_dirlen, be->objects_dir, be->object_dir_mode,
+		name->ptr + be->objects_dirlen,
+		be->objects_dir,
+		be->options.dir_mode,
 		GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST | GIT_MKDIR_VERIFY_DIR, NULL);
 }
 
@@ -827,9 +826,10 @@ static void loose_backend__writestream_free(git_odb_stream *_stream)
 static int filebuf_flags(loose_backend *backend)
 {
 	int flags = GIT_FILEBUF_TEMPORARY |
-		(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT);
+		(backend->options.compression_level << GIT_FILEBUF_DEFLATE_SHIFT);
 
-	if (backend->fsync_object_files || git_repository__fsync_gitdir)
+	if ((backend->options.flags & GIT_ODB_BACKEND_LOOSE_FSYNC) ||
+	    git_repository__fsync_gitdir)
 		flags |= GIT_FILEBUF_FSYNC;
 
 	return flags;
@@ -865,7 +865,7 @@ static int loose_backend__writestream(git_odb_stream **stream_out, git_odb_backe
 
 	if (git_str_joinpath(&tmp_path, backend->objects_dir, "tmp_object") < 0 ||
 		git_filebuf_open(&stream->fbuf, tmp_path.ptr, filebuf_flags(backend),
-			backend->object_file_mode) < 0 ||
+			backend->options.file_mode) < 0 ||
 		stream->stream.write((git_odb_stream *)stream, hdr, hdrlen) < 0)
 	{
 		git_filebuf_cleanup(&stream->fbuf);
@@ -1083,7 +1083,7 @@ static int loose_backend__write(git_odb_backend *_backend, const git_oid *oid, c
 
 	if (git_str_joinpath(&final_path, backend->objects_dir, "tmp_object") < 0 ||
 		git_filebuf_open(&fbuf, final_path.ptr, filebuf_flags(backend),
-			backend->object_file_mode) < 0)
+			backend->options.file_mode) < 0)
 	{
 		error = -1;
 		goto cleanup;
@@ -1126,13 +1126,31 @@ static void loose_backend__free(git_odb_backend *_backend)
 	git__free(_backend);
 }
 
+static void normalize_options(
+	git_odb_backend_loose_options *opts,
+	const git_odb_backend_loose_options *given_opts)
+{
+	git_odb_backend_loose_options init = GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT;
+
+	if (given_opts)
+		memcpy(opts, given_opts, sizeof(git_odb_backend_loose_options));
+	else
+		memcpy(opts, &init, sizeof(git_odb_backend_loose_options));
+
+	if (opts->compression_level < 0)
+		opts->compression_level = Z_BEST_SPEED;
+
+	if (opts->dir_mode == 0)
+		opts->dir_mode = GIT_OBJECT_DIR_MODE;
+
+	if (opts->file_mode == 0)
+		opts->file_mode = GIT_OBJECT_FILE_MODE;
+}
+
 int git_odb_backend_loose(
 	git_odb_backend **backend_out,
 	const char *objects_dir,
-	int compression_level,
-	int do_fsync,
-	unsigned int dir_mode,
-	unsigned int file_mode)
+	git_odb_backend_loose_options *opts)
 {
 	loose_backend *backend;
 	size_t objects_dirlen, alloclen;
@@ -1150,22 +1168,11 @@ int git_odb_backend_loose(
 	backend->parent.version = GIT_ODB_BACKEND_VERSION;
 	backend->objects_dirlen = objects_dirlen;
 	memcpy(backend->objects_dir, objects_dir, objects_dirlen);
+
 	if (backend->objects_dir[backend->objects_dirlen - 1] != '/')
 		backend->objects_dir[backend->objects_dirlen++] = '/';
 
-	if (compression_level < 0)
-		compression_level = Z_BEST_SPEED;
-
-	if (dir_mode == 0)
-		dir_mode = GIT_OBJECT_DIR_MODE;
-
-	if (file_mode == 0)
-		file_mode = GIT_OBJECT_FILE_MODE;
-
-	backend->object_zlib_level = compression_level;
-	backend->fsync_object_files = do_fsync;
-	backend->object_dir_mode = dir_mode;
-	backend->object_file_mode = file_mode;
+	normalize_options(&backend->options, opts);
 
 	backend->parent.read = &loose_backend__read;
 	backend->parent.write = &loose_backend__write;

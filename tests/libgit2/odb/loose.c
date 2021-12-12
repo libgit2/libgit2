@@ -196,6 +196,7 @@ static void test_write_object_permission(
 	git_oid oid;
 	struct stat statbuf;
 	mode_t mask, os_mask;
+	git_odb_backend_loose_options opts = GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT;
 
 	/* Windows does not return group/user bits from stat,
 	* files are never executable.
@@ -209,8 +210,11 @@ static void test_write_object_permission(
 	mask = p_umask(0);
 	p_umask(mask);
 
+	opts.dir_mode = dir_mode;
+	opts.file_mode = file_mode;
+
 	cl_git_pass(git_odb_new(&odb, NULL));
-	cl_git_pass(git_odb_backend_loose(&backend, "test-objects", -1, 0, dir_mode, file_mode));
+	cl_git_pass(git_odb_backend_loose(&backend, "test-objects", &opts));
 	cl_git_pass(git_odb_add_backend(odb, backend, 1));
 	cl_git_pass(git_odb_write(&oid, odb, "Test data\n", 10, GIT_OBJECT_BLOB));
 
@@ -243,9 +247,16 @@ static void write_object_to_loose_odb(int fsync)
 	git_odb *odb;
 	git_odb_backend *backend;
 	git_oid oid;
+	git_odb_backend_loose_options opts = GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT;
+
+	if (fsync)
+		opts.flags |= GIT_ODB_BACKEND_LOOSE_FSYNC;
+
+	opts.dir_mode = 0777;
+	opts.file_mode = 0666;
 
 	cl_git_pass(git_odb_new(&odb, NULL));
-	cl_git_pass(git_odb_backend_loose(&backend, "test-objects", -1, fsync, 0777, 0666));
+	cl_git_pass(git_odb_backend_loose(&backend, "test-objects", &opts));
 	cl_git_pass(git_odb_add_backend(odb, backend, 1));
 	cl_git_pass(git_odb_write(&oid, odb, "Test data\n", 10, GIT_OBJECT_BLOB));
 	git_odb_free(odb);

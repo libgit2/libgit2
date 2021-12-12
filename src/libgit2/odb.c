@@ -625,6 +625,7 @@ int git_odb__add_default_backends(
 	struct stat st;
 	ino_t inode;
 	git_odb_backend *loose, *packed;
+	git_odb_backend_loose_options loose_opts = GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT;
 
 	/* TODO: inodes are not really relevant on Win32, so we need to find
 	 * a cross-platform workaround for this */
@@ -659,8 +660,11 @@ int git_odb__add_default_backends(
 	git_mutex_unlock(&db->lock);
 #endif
 
+	if (db->do_fsync)
+		loose_opts.flags |= GIT_ODB_BACKEND_LOOSE_FSYNC;
+
 	/* add the loose object backend */
-	if (git_odb_backend_loose(&loose, objects_dir, -1, db->do_fsync, 0, 0) < 0 ||
+	if (git_odb_backend_loose(&loose, objects_dir, &loose_opts) < 0 ||
 		add_backend_internal(db, loose, git_odb__loose_priority, as_alternates, inode) < 0)
 		return -1;
 

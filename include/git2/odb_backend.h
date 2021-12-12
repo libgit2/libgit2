@@ -34,25 +34,55 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **out, const char *objects_dir);
 
+typedef enum {
+	GIT_ODB_BACKEND_LOOSE_FSYNC = (1 << 0)
+} git_odb_backend_loose_flag_t;
+
+/** Options for configuring a loose object backend. */
+typedef struct {
+	unsigned int version; /**< version for the struct */
+
+	/** A combination of the `git_odb_backend_loose_flag_t` types. */
+	uint32_t flags;
+
+	/**
+	 * zlib compression level to use (0-9), where 1 is the fastest
+	 * at the expense of larger files, and 9 produces the best
+	 * compression at the expense of speed.  0 indicates that no
+	 * compression should be performed.  -1 is the default (currently
+	 * optimizing for speed).
+	 */
+	int compression_level;
+
+	/** Permissions to use creating a directory or 0 for defaults */
+	unsigned int dir_mode;
+
+	/** Permissions to use creating a file or 0 for defaults */
+	unsigned int file_mode;
+} git_odb_backend_loose_options;
+
+/* The current version of the diff options structure */
+#define GIT_ODB_BACKEND_LOOSE_OPTIONS_VERSION 1
+
+/* Stack initializer for diff options.  Alternatively use
+ * `git_diff_options_init` programmatic initialization.
+ */
+#define GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT \
+	{ GIT_ODB_BACKEND_LOOSE_OPTIONS_VERSION, 0, -1 }
+
 /**
  * Create a backend for loose objects
  *
  * @param out location to store the odb backend pointer
  * @param objects_dir the Git repository's objects directory
- * @param compression_level zlib compression level to use
- * @param do_fsync whether to do an fsync() after writing
- * @param dir_mode permissions to use creating a directory or 0 for defaults
- * @param file_mode permissions to use creating a file or 0 for defaults
+ * @param opts options for the loose object backend or NULL
  *
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_backend_loose(
 	git_odb_backend **out,
 	const char *objects_dir,
-	int compression_level,
-	int do_fsync,
-	unsigned int dir_mode,
-	unsigned int file_mode);
+	git_odb_backend_loose_options *opts);
 
 /**
  * Create a backend out of a single packfile
