@@ -48,6 +48,8 @@
 #cmakedefine GIT_SHA1_OPENSSL 1
 #cmakedefine GIT_SHA1_MBEDTLS 1
 
+#cmakedefine GIT_SHA256_BUILTIN 1
+
 #cmakedefine GIT_RAND_GETENTROPY 1
 
 #endif

@@ -19,12 +19,14 @@ typedef struct {
 
 typedef enum {
 	GIT_HASH_ALGORITHM_NONE = 0,
-	GIT_HASH_ALGORITHM_SHA1
+	GIT_HASH_ALGORITHM_SHA1,
+	GIT_HASH_ALGORITHM_SHA256
 } git_hash_algorithm_t;
 
 typedef struct git_hash_ctx {
 	union {
 		git_hash_sha1_ctx sha1;
+		git_hash_sha256_ctx sha256;
 	} ctx;
 	git_hash_algorithm_t algorithm;
 } git_hash_ctx;

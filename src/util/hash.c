@@ -9,7 +9,11 @@
 
 int git_hash_global_init(void)
 {
-	return git_hash_sha1_global_init();
+	if (git_hash_sha1_global_init() < 0 ||
+	    git_hash_sha256_global_init() < 0)
+		return -1;
+
+	return 0;
 }
 
 int git_hash_ctx_init(git_hash_ctx *ctx, git_hash_algorithm_t algorithm)
@@ -19,6 +23,9 @@ int git_hash_ctx_init(git_hash_ctx *ctx, git_hash_algorithm_t algorithm)
 	switch (algorithm) {
 	case GIT_HASH_ALGORITHM_SHA1:
 		error = git_hash_sha1_ctx_init(&ctx->ctx.sha1);
+		break;
+	case GIT_HASH_ALGORITHM_SHA256:
+		error = git_hash_sha256_ctx_init(&ctx->ctx.sha256);
 		break;
 	default:
 		git_error_set(GIT_ERROR_INTERNAL, "unknown hash algorithm");
@@ -35,6 +42,9 @@ void git_hash_ctx_cleanup(git_hash_ctx *ctx)
 	case GIT_HASH_ALGORITHM_SHA1:
 		git_hash_sha1_ctx_cleanup(&ctx->ctx.sha1);
 		return;
+	case GIT_HASH_ALGORITHM_SHA256:
+		git_hash_sha256_ctx_cleanup(&ctx->ctx.sha256);
+		return;
 	default:
 		/* unreachable */ ;
 	}
@@ -45,6 +55,8 @@ int git_hash_init(git_hash_ctx *ctx)
 	switch (ctx->algorithm) {
 	case GIT_HASH_ALGORITHM_SHA1:
 		return git_hash_sha1_init(&ctx->ctx.sha1);
+	case GIT_HASH_ALGORITHM_SHA256:
+		return git_hash_sha256_init(&ctx->ctx.sha256);
 	default:
 		/* unreachable */ ;
 	}
@@ -58,6 +70,8 @@ int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 	switch (ctx->algorithm) {
 	case GIT_HASH_ALGORITHM_SHA1:
 		return git_hash_sha1_update(&ctx->ctx.sha1, data, len);
+	case GIT_HASH_ALGORITHM_SHA256:
+		return git_hash_sha256_update(&ctx->ctx.sha256, data, len);
 	default:
 		/* unreachable */ ;
 	}
@@ -71,6 +85,8 @@ int git_hash_final(unsigned char *out, git_hash_ctx *ctx)
 	switch (ctx->algorithm) {
 	case GIT_HASH_ALGORITHM_SHA1:
 		return git_hash_sha1_final(out, &ctx->ctx.sha1);
+	case GIT_HASH_ALGORITHM_SHA256:
+		return git_hash_sha256_final(out, &ctx->ctx.sha256);
 	default:
 		/* unreachable */ ;
 	}

@@ -11,6 +11,7 @@
 #include "git2_util.h"
 
 typedef struct git_hash_sha1_ctx git_hash_sha1_ctx;
+typedef struct git_hash_sha256_ctx git_hash_sha256_ctx;
 
 #if defined(GIT_SHA1_COMMON_CRYPTO)
 # include "common_crypto.h"
@@ -26,6 +27,16 @@ typedef struct git_hash_sha1_ctx git_hash_sha1_ctx;
 # error "unknown sha1 implementation"
 #endif
 
+#if defined(GIT_SHA256_BUILTIN)
+# include "builtin.h"
+#else
+# error "unknown sha256 implementation"
+#endif
+
+/*
+ * SHA1
+ */
+
 #define GIT_HASH_SHA1_SIZE 20
 
 int git_hash_sha1_global_init(void);
@@ -36,5 +47,20 @@ void git_hash_sha1_ctx_cleanup(git_hash_sha1_ctx *ctx);
 int git_hash_sha1_init(git_hash_sha1_ctx *c);
 int git_hash_sha1_update(git_hash_sha1_ctx *c, const void *data, size_t len);
 int git_hash_sha1_final(unsigned char *out, git_hash_sha1_ctx *c);
+
+/*
+ * SHA256
+ */
+
+#define GIT_HASH_SHA256_SIZE 32
+
+int git_hash_sha256_global_init(void);
+
+int git_hash_sha256_ctx_init(git_hash_sha256_ctx *ctx);
+void git_hash_sha256_ctx_cleanup(git_hash_sha256_ctx *ctx);
+
+int git_hash_sha256_init(git_hash_sha256_ctx *c);
+int git_hash_sha256_update(git_hash_sha256_ctx *c, const void *data, size_t len);
+int git_hash_sha256_final(unsigned char *out, git_hash_sha256_ctx *c);
 
 #endif

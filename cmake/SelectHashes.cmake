@@ -4,6 +4,7 @@ include(SanitizeBool)
 
 # USE_SHA1=CollisionDetection(ON)/HTTPS/Generic/OFF
 sanitizebool(USE_SHA1)
+sanitizebool(USE_SHA256)
 
 if(USE_SHA1 STREQUAL ON)
 	SET(USE_SHA1 "CollisionDetection")
@@ -46,4 +47,15 @@ else()
 	message(FATAL_ERROR "Asked for unknown SHA1 backend: ${USE_SHA1}")
 endif()
 
-add_feature_info(SHA ON "using ${USE_SHA1}")
+if(USE_SHA256 STREQUAL ON)
+	SET(USE_SHA256 "Builtin")
+endif()
+
+if(USE_SHA256 STREQUAL "Builtin")
+	set(GIT_SHA256_BUILTIN 1)
+else()
+	message(FATAL_ERROR "Asked for unknown SHA256 backend: ${USE_SHA256}")
+endif()
+
+add_feature_info(SHA1 ON "using ${USE_SHA1}")
+add_feature_info(SHA256 ON "using ${USE_SHA256}")
