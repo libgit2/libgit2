@@ -12,8 +12,16 @@
 
 #include <openssl/sha.h>
 
+#ifdef GIT_SHA1_OPENSSL
 struct git_hash_sha1_ctx {
 	SHA_CTX c;
 };
+#endif
+
+#ifdef GIT_SHA256_OPENSSL
+struct git_hash_sha256_ctx {
+	SHA256_CTX c;
+};
+#endif
 
 #endif
