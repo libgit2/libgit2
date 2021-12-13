@@ -38,6 +38,13 @@ typedef struct {
 	} ctx;
 } git_hash_win32_ctx;
 
+/*
+ * Gets/sets the current hash provider (cng or cryptoapi).  This is only
+ * for testing purposes.
+ */
+git_hash_win32_provider_t git_hash_win32_provider(void);
+int git_hash_win32_set_provider(git_hash_win32_provider_t provider);
+
 #ifdef GIT_SHA1_WIN32
 struct git_hash_sha1_ctx {
 	git_hash_win32_ctx win32;

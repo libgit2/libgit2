@@ -3,13 +3,25 @@
 
 #define FIXTURE_DIR "sha1"
 
-void test_core_sha256__initialize(void)
+#ifdef GIT_SHA256_WIN32
+static git_hash_win32_provider_t orig_provider;
+#endif
+
+void test_sha256__initialize(void)
 {
+#ifdef GIT_SHA256_WIN32
+	orig_provider = git_hash_win32_provider();
+#endif
+
 	cl_fixture_sandbox(FIXTURE_DIR);
 }
 
-void test_core_sha256__cleanup(void)
+void test_sha256__cleanup(void)
 {
+#ifdef GIT_SHA256_WIN32
+	git_hash_win32_set_provider(orig_provider);
+#endif
+
 	cl_fixture_cleanup(FIXTURE_DIR);
 }
 
@@ -37,7 +49,7 @@ static int sha256_file(unsigned char *out, const char *filename)
 	return ret;
 }
 
-void test_core_sha256__empty(void)
+void test_sha256__empty(void)
 {
 	unsigned char expected[GIT_HASH_SHA256_SIZE] = {
 		0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14,
@@ -51,7 +63,7 @@ void test_core_sha256__empty(void)
 	cl_assert_equal_i(0, memcmp(expected, actual, GIT_HASH_SHA256_SIZE));
 }
 
-void test_core_sha256__hello(void)
+void test_sha256__hello(void)
 {
 	unsigned char expected[GIT_HASH_SHA256_SIZE] = {
 		0xaa, 0x32, 0x7f, 0xae, 0x5c, 0x91, 0x58, 0x3a,
@@ -65,7 +77,7 @@ void test_core_sha256__hello(void)
 	cl_assert_equal_i(0, memcmp(expected, actual, GIT_HASH_SHA256_SIZE));
 }
 
-void test_core_sha256__pdf(void)
+void test_sha256__pdf(void)
 {
 	unsigned char expected[GIT_HASH_SHA256_SIZE] = {
 		0x2b, 0xb7, 0x87, 0xa7, 0x3e, 0x37, 0x35, 0x2f,
@@ -79,3 +91,23 @@ void test_core_sha256__pdf(void)
 	cl_assert_equal_i(0, memcmp(expected, actual, GIT_HASH_SHA256_SIZE));
 }
 
+void test_sha256__win32_providers(void)
+{
+#ifdef GIT_SHA256_WIN32
+	unsigned char expected[GIT_HASH_SHA256_SIZE] = {
+		0x2b, 0xb7, 0x87, 0xa7, 0x3e, 0x37, 0x35, 0x2f,
+		0x92, 0x38, 0x3a, 0xbe, 0x7e, 0x29, 0x02, 0x93,
+		0x6d, 0x10, 0x59, 0xad, 0x9f, 0x1b, 0xa6, 0xda,
+		0xaa, 0x9c, 0x1e, 0x58, 0xee, 0x69, 0x70, 0xd0
+	};
+	unsigned char actual[GIT_HASH_SHA256_SIZE];
+
+	git_hash_win32_set_provider(GIT_HASH_WIN32_CRYPTOAPI);
+	cl_git_pass(sha256_file(actual, FIXTURE_DIR "/shattered-1.pdf"));
+	cl_assert_equal_i(0, memcmp(expected, actual, GIT_HASH_SHA256_SIZE));
+
+	git_hash_win32_set_provider(GIT_HASH_WIN32_CNG);
+	cl_git_pass(sha256_file(actual, FIXTURE_DIR "/shattered-1.pdf"));
+	cl_assert_equal_i(0, memcmp(expected, actual, GIT_HASH_SHA256_SIZE));
+#endif
+}

@@ -239,6 +239,27 @@ static int hash_provider_init(void)
 	return error;
 }
 
+git_hash_win32_provider_t git_hash_win32_provider(void)
+{
+	return hash_provider.type;
+}
+
+int git_hash_win32_set_provider(git_hash_win32_provider_t provider)
+{
+	if (provider == hash_provider.type)
+		return 0;
+
+	hash_provider_shutdown();
+
+	if (provider == GIT_HASH_WIN32_CNG)
+		return cng_provider_init();
+	else if (provider == GIT_HASH_WIN32_CRYPTOAPI)
+		return cryptoapi_provider_init();
+
+	git_error_set(GIT_ERROR_SHA, "unsupported win32 provider");
+	return -1;
+}
+
 /* CryptoAPI: available in Windows XP and newer */
 
 GIT_INLINE(int) hash_cryptoapi_init(git_hash_win32_ctx *ctx)
