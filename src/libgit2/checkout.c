@@ -2575,8 +2575,9 @@ int git_checkout_iterator(
 		GIT_DIFF_INCLUDE_TYPECHANGE |
 		GIT_DIFF_INCLUDE_TYPECHANGE_TREES |
 		GIT_DIFF_SKIP_BINARY_CHECK |
-		GIT_DIFF_INCLUDE_CASECHANGE |
-		GIT_DIFF_SKIP_SPARSE_FILES;
+		GIT_DIFF_INCLUDE_CASECHANGE;
+	diff_opts.skip_sparse_files = 1;
+
 	if (data.opts.checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
 		diff_opts.flags |= GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	if (data.opts.paths.count > 0)

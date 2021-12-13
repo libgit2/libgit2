@@ -170,11 +170,7 @@ typedef enum {
 	/** Include the necessary deflate / delta information so that `git-apply`
 	 *  can apply given diff information to binary files.
 	 */
-	GIT_DIFF_SHOW_BINARY = (1u << 30),
-	
-	/** Skip files in the diff that are excluded by the `sparse-checkout` file.
-	 */
-	GIT_DIFF_SKIP_SPARSE_FILES = (1u << 31),
+	GIT_DIFF_SHOW_BINARY = (1u << 30)
 } git_diff_option_t;
 
 /**
@@ -385,6 +381,11 @@ typedef struct {
 	 * Defaults to GIT_DIFF_NORMAL
 	 */
 	uint32_t flags;
+
+	/** Skip files in the diff that are excluded by the `sparse-checkout` file.
+	 * Set to 1 to skip sparse files, 0 otherwise
+	 */
+	int skip_sparse_files;
 
 	/* options controlling which files are in the diff */
 
