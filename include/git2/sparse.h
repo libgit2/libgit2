@@ -13,6 +13,7 @@
 GIT_BEGIN_DECL
 
 typedef struct {
+	unsigned int version; /**< The version */
 
     /**
      * Set to zero (false) to consider sparse-checkout patterns as
@@ -21,7 +22,8 @@ typedef struct {
     /* int cone; */
 } git_sparse_checkout_init_options;
 
-#define GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT { };
+#define GIT_SPARSE_CHECKOUT_INIT_OPTIONS_VERSION 1
+#define GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT {GIT_SPARSE_CHECKOUT_INIT_OPTIONS_VERSION};
 
 /**
  * Fill a list with all the patterns in the sparse-checkout file
