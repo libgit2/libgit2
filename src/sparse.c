@@ -122,7 +122,10 @@ int git_sparse_attr_file__init(
 		error = 0;
 	}
 
-    git_str_joinpath(&filepath, infopath.ptr, filename);
+	source.base = git_str_cstr(&infopath);
+	source.filename = filename;
+
+	git_str_joinpath(&filepath, infopath.ptr, filename);
 
     /* Don't overwrite any existing sparse-checkout file */
 	*file_exists = git_fs_path_exists(git_str_cstr(&filepath));
