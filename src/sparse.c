@@ -113,15 +113,14 @@ int git_sparse_attr_file__init(
     int error = 0;
 	git_str infopath = GIT_STR_INIT;
     const char *filename = GIT_SPARSE_CHECKOUT_FILE;
+	git_attr_file_source source = { GIT_ATTR_FILE_SOURCE_FILE, git_str_cstr(&infopath), filename, NULL };
+	git_str filepath = GIT_STR_INIT;
 
 	if ((error = git_repository__item_path(&infopath, repo, GIT_REPOSITORY_ITEM_INFO)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto done;
 		error = 0;
 	}
-
-	git_attr_file_source source = { GIT_ATTR_FILE_SOURCE_FILE, git_str_cstr(&infopath), filename, NULL };
-	git_str filepath = GIT_STR_INIT;
 
     git_str_joinpath(&filepath, infopath.ptr, filename);
 
@@ -510,7 +509,7 @@ int git_sparse_checkout__restore_wd(git_repository *repo)
 	 * 	1. Un-set the GIT_INDEX_ENTRY_SKIP_WORKTREE flag
 	 * 		on all entries that would've been affected by
 	 * 		the sparse-checkout rules
-	 * 	2. Run reapply with /* as the pattern
+	 * 	2. Run reapply with a pattern that includes everything
 	 */
 
 	int error = 0;
