@@ -138,13 +138,13 @@ GIT_INLINE(int) cng_provider_init(void)
 	}
 
 	/* Load the function addresses */
-	if ((hash_provider.provider.cng.open_algorithm_provider = (cng_open_algorithm_provider_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptOpenAlgorithmProvider")) == NULL ||
-		(hash_provider.provider.cng.get_property = (cng_get_property_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptGetProperty")) == NULL ||
-		(hash_provider.provider.cng.create_hash = (cng_create_hash_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptCreateHash")) == NULL ||
-		(hash_provider.provider.cng.finish_hash = (cng_finish_hash_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptFinishHash")) == NULL ||
-		(hash_provider.provider.cng.hash_data = (cng_hash_data_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptHashData")) == NULL ||
-		(hash_provider.provider.cng.destroy_hash = (cng_destroy_hash_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptDestroyHash")) == NULL ||
-		(hash_provider.provider.cng.close_algorithm_provider = (cng_close_algorithm_provider_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptCloseAlgorithmProvider")) == NULL) {
+	if ((hash_provider.provider.cng.open_algorithm_provider = (cng_open_algorithm_provider_fn)((void *)GetProcAddress(hash_provider.provider.cng.dll, "BCryptOpenAlgorithmProvider"))) == NULL ||
+		(hash_provider.provider.cng.get_property = (cng_get_property_fn)((void *)GetProcAddress(hash_provider.provider.cng.dll, "BCryptGetProperty"))) == NULL ||
+		(hash_provider.provider.cng.create_hash = (cng_create_hash_fn)((void *)GetProcAddress(hash_provider.provider.cng.dll, "BCryptCreateHash"))) == NULL ||
+		(hash_provider.provider.cng.finish_hash = (cng_finish_hash_fn)((void *)GetProcAddress(hash_provider.provider.cng.dll, "BCryptFinishHash"))) == NULL ||
+		(hash_provider.provider.cng.hash_data = (cng_hash_data_fn)((void *)GetProcAddress(hash_provider.provider.cng.dll, "BCryptHashData"))) == NULL ||
+		(hash_provider.provider.cng.destroy_hash = (cng_destroy_hash_fn)((void *)GetProcAddress(hash_provider.provider.cng.dll, "BCryptDestroyHash"))) == NULL ||
+		(hash_provider.provider.cng.close_algorithm_provider = (cng_close_algorithm_provider_fn)((void *)GetProcAddress(hash_provider.provider.cng.dll, "BCryptCloseAlgorithmProvider"))) == NULL) {
 		FreeLibrary(hash_provider.provider.cng.dll);
 
 		git_error_set(GIT_ERROR_OS, "CryptoNG functions could not be loaded");
