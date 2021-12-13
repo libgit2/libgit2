@@ -125,7 +125,7 @@ int git_sparse_attr_file__init(
     git_str_joinpath(&filepath, infopath.ptr, filename);
 
     /* Don't overwrite any existing sparse-checkout file */
-	*file_exists = git_path_exists(git_str_cstr(&filepath));
+	*file_exists = git_fs_path_exists(git_str_cstr(&filepath));
     if (!*file_exists) {
         if ((error = git_futils_creat_withpath(git_str_cstr(&filepath), 0777, 0666)) < 0)
 			goto done;
@@ -333,7 +333,7 @@ int git_sparse_checkout__reapply(git_repository *repo, git_sparse *sparse)
 		{
 			entry->flags_extended |= GIT_INDEX_ENTRY_SKIP_WORKTREE;
 
-			if (!git_path_exists(git_str_cstr(&fullpath)))
+			if (!git_fs_path_exists(git_str_cstr(&fullpath)))
 				continue;
 
 			if ((error = git_futils_rmdir_r(entry->path, workdir, GIT_RMDIR_REMOVE_FILES | GIT_RMDIR_EMPTY_PARENTS)) < 0)
