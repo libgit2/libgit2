@@ -289,6 +289,7 @@ int git_sparse_checkout__reapply(git_repository *repo, git_sparse *sparse)
 	size_t i = 0;
 	git_index_entry *entry;
 	git_vector paths_to_checkout;
+	git_checkout_options copts;
 	const char *workdir = repo->workdir;
 
 	if ((error = git_repository_index(&index, repo)) < 0)
@@ -342,11 +343,10 @@ int git_sparse_checkout__reapply(git_repository *repo, git_sparse *sparse)
 		else
 		{
 			entry->flags_extended &= ~GIT_INDEX_ENTRY_SKIP_WORKTREE;
-			git_vector_insert(&paths_to_checkout, entry->path);
+			git_vector_insert(&paths_to_checkout, (void*) entry->path);
 		}
 	}
 
-	git_checkout_options copts;
 	if ((error = git_checkout_options_init(&copts, GIT_CHECKOUT_OPTIONS_VERSION)) < 0)
 		goto done;
 
@@ -354,8 +354,6 @@ int git_sparse_checkout__reapply(git_repository *repo, git_sparse *sparse)
 		goto done;
 
 	copts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_RECREATE_MISSING;
-
-	/* Todo: For some reason, this isn't checking out */
 	if ((error = git_checkout_index(repo, index, &copts)) < 0)
 		goto done;
 
@@ -364,9 +362,9 @@ int git_sparse_checkout__reapply(git_repository *repo, git_sparse *sparse)
 done:
 	git_index_free(index);
 	git_vector_free(&paths_to_checkout);
+
 	return error;
 }
-
 
 int git_sparse_checkout__set(
 		git_vector *patterns,
@@ -654,6 +652,9 @@ int git_sparse_checkout_add(
     if ((err = git_sparse_checkout__add(&patternlist, repo, &sparse)) < 0)
         goto done;
 
+	if ((err = git_sparse_checkout__reapply(repo, &sparse)) < 0)
+		goto done;
+
 done:
     git_config_free(cfg);
     git_sparse__free(&sparse);
@@ -670,7 +671,7 @@ int git_sparse_checkout_reapply(git_repository *repo) {
 	if ((error = git_sparse__init(repo, &sparse)) < 0)
 		return error;
 
-	if ((error = git_sparse_checkout__reapply(repo, &sparse.sparse->rules)) < 0)
+	if ((error = git_sparse_checkout__reapply(repo, &sparse)) < 0)
 		goto done;
 
 done:

@@ -60,3 +60,16 @@ void test_sparse_set__rewrites_sparse_checkout_file(void)
 
     cl_assert_equal_s_(git_str_cstr(&after_content), expected_string, "git_sparse_checkout_set should overwrite existing patterns in the sparse-checkout file");
 }
+
+void test_sparse_set__applies_sparsity(void)
+{
+	char* pattern_strings[] = { "/a/" };
+	git_strarray patterns = { pattern_strings, ARRAY_SIZE(pattern_strings) };
+
+	g_repo = cl_git_sandbox_init("sparse");
+
+	cl_git_pass(git_sparse_checkout_set(&patterns, g_repo));
+
+	cl_assert_equal_b(git_path_exists("sparse/file1"), false);
+	cl_assert(git_path_exists("sparse/a/file3"));
+}

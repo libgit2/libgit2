@@ -50,6 +50,25 @@ void test_sparse_init__writes_sparse_checkout_file(void)
     cl_assert_(git_path_exists(path), path);
 }
 
+void test_sparse_init__sets_default_patterns(void)
+{
+	size_t i = 0;
+	char *default_pattern_strings[] = { "/*", "!/*/" };
+	git_strarray default_patterns = { default_pattern_strings, ARRAY_SIZE(default_pattern_strings) };
+	git_strarray found_patterns = { 0 };
+
+	git_sparse_checkout_init_options opts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
+
+	g_repo = cl_git_sandbox_init("sparse");
+
+	cl_git_pass(git_sparse_checkout_init(&opts, g_repo));
+
+	cl_git_pass(git_sparse_checkout_list(&found_patterns, g_repo));
+	for (i = 0; i < found_patterns.count; i++) {
+		cl_assert_equal_s(found_patterns.strings[i], default_patterns.strings[i]);
+	}
+}
+
 void test_sparse_init__does_not_overwrite_existing_file(void)
 {
 	size_t i = 0;
@@ -69,4 +88,24 @@ void test_sparse_init__does_not_overwrite_existing_file(void)
 	for (i = 0; i < found_patterns.count; i++) {
 		cl_assert_equal_s(found_patterns.strings[i], initial_patterns.strings[i]);
 	}
+}
+
+void test_sparse_init__applies_sparsity(void)
+{
+	git_object* object;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
+
+	g_repo = cl_git_sandbox_init("sparse");
+
+	cl_git_pass(git_revparse_single(&object, g_repo, "HEAD"));
+	cl_git_pass(git_checkout_tree(g_repo, object, &opts));
+
+	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
+
+	cl_assert(git_path_exists("sparse/file1"));
+	cl_assert_equal_b(git_path_exists("sparse/a/file3"), false);
+	cl_assert_equal_b(git_path_exists("sparse/b/file5"), false);
+	cl_assert_equal_b(git_path_exists("sparse/b/c/file7"), false);
+	cl_assert_equal_b(git_path_exists("sparse/b/d/file9"), false);
 }
