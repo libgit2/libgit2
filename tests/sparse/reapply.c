@@ -27,14 +27,14 @@ void test_sparse_reapply__updates_working_directory(void)
 
 	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
-	cl_assert(git_path_exists("sparse/file1"));
-	cl_assert_equal_b(git_path_exists("sparse/a/file3"), false);
+	cl_assert(git_fs_path_exists("sparse/file1"));
+	cl_assert_equal_b(git_fs_path_exists("sparse/a/file3"), false);
 
 	rewrite_sparse_checkout_file();
 	cl_git_pass(git_sparse_checkout_reapply(g_repo));
 
-	cl_assert_equal_b(git_path_exists("sparse/file1"), false);
-	cl_assert(git_path_exists("sparse/a/file3"));
+	cl_assert_equal_b(git_fs_path_exists("sparse/file1"), false);
+	cl_assert(git_fs_path_exists("sparse/a/file3"));
 }
 
 void test_sparse_reapply__leaves_modified_files_intact(void)
@@ -44,8 +44,8 @@ void test_sparse_reapply__leaves_modified_files_intact(void)
 
 	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
-	cl_assert(git_path_exists("sparse/file1"));
-	cl_assert_equal_b(git_path_exists("sparse/a/file3"), false);
+	cl_assert(git_fs_path_exists("sparse/file1"));
+	cl_assert_equal_b(git_fs_path_exists("sparse/a/file3"), false);
 
 	/* Modify one of the checked out files */
 	cl_git_rewritefile("sparse/file1", "what's up?");
@@ -53,8 +53,8 @@ void test_sparse_reapply__leaves_modified_files_intact(void)
 	rewrite_sparse_checkout_file();
 	cl_git_pass(git_sparse_checkout_reapply(g_repo));
 
-	cl_assert(git_path_exists("sparse/file1"));
-	cl_assert(git_path_exists("sparse/a/file3"));
+	cl_assert(git_fs_path_exists("sparse/file1"));
+	cl_assert(git_fs_path_exists("sparse/a/file3"));
 }
 
 void test_sparse_reapply__leaves_submodules_intact(void)
@@ -68,14 +68,14 @@ void test_sparse_reapply__leaves_submodules_intact(void)
 	cl_git_pass(git_submodule_add_setup(&sm, g_repo, "../TestGitRepository", "TestGitRepository", 1));
 	git_submodule_free(sm);
 
-	cl_assert(git_path_exists("sparse/file1"));
-	cl_assert(git_path_exists("sparse/TestGitRepository/.git"));
-	cl_assert_equal_b(git_path_exists("sparse/a/file3"), false);
+	cl_assert(git_fs_path_exists("sparse/file1"));
+	cl_assert(git_fs_path_exists("sparse/TestGitRepository/.git"));
+	cl_assert_equal_b(git_fs_path_exists("sparse/a/file3"), false);
 
 	rewrite_sparse_checkout_file();
 	cl_git_pass(git_sparse_checkout_reapply(g_repo));
 
-	cl_assert_equal_b(git_path_exists("sparse/file1"), false);
-	cl_assert(git_path_exists("sparse/a/file3"));
-	cl_assert(git_path_exists("sparse/TestGitRepository/.git"));
+	cl_assert_equal_b(git_fs_path_exists("sparse/file1"), false);
+	cl_assert(git_fs_path_exists("sparse/a/file3"));
+	cl_assert(git_fs_path_exists("sparse/TestGitRepository/.git"));
 }

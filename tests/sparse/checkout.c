@@ -52,10 +52,10 @@ void test_sparse_checkout__skips_sparse_files(void)
 	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
 	checkout_head();
-	cl_assert_equal_b(git_path_exists("sparse/a/file3"), false);
-	cl_assert_equal_b(git_path_exists("sparse/b/file5"), false);
-	cl_assert_equal_b(git_path_exists("sparse/b/c/file7"), false);
-	cl_assert_equal_b(git_path_exists("sparse/b/d/file9"), false);
+	cl_assert_equal_b(git_fs_path_exists("sparse/a/file3"), false);
+	cl_assert_equal_b(git_fs_path_exists("sparse/b/file5"), false);
+	cl_assert_equal_b(git_fs_path_exists("sparse/b/c/file7"), false);
+	cl_assert_equal_b(git_fs_path_exists("sparse/b/d/file9"), false);
 }
 
 void test_sparse_checkout__checksout_files(void)
@@ -72,8 +72,8 @@ void test_sparse_checkout__checksout_files(void)
 	cl_git_pass(git_sparse_checkout_add(&patterns, g_repo));
 
 	checkout_head();
-	cl_assert(git_path_exists("sparse/file1"));
-	cl_assert(git_path_exists("sparse/a/file3"));
+	cl_assert(git_fs_path_exists("sparse/file1"));
+	cl_assert(git_fs_path_exists("sparse/a/file3"));
 }
 
 void test_sparse_checkout__checksout_all_files(void)
@@ -88,11 +88,11 @@ void test_sparse_checkout__checksout_all_files(void)
     cl_git_pass(git_sparse_checkout_set(&patterns, g_repo));
 
 	checkout_head();
-	cl_assert(git_path_exists("sparse/file1"));
-	cl_assert(git_path_exists("sparse/a/file3"));
-	cl_assert(git_path_exists("sparse/b/file5"));
-	cl_assert(git_path_exists("sparse/b/c/file7"));
-	cl_assert(git_path_exists("sparse/b/d/file9"));
+	cl_assert(git_fs_path_exists("sparse/file1"));
+	cl_assert(git_fs_path_exists("sparse/a/file3"));
+	cl_assert(git_fs_path_exists("sparse/b/file5"));
+	cl_assert(git_fs_path_exists("sparse/b/c/file7"));
+	cl_assert(git_fs_path_exists("sparse/b/d/file9"));
 }
 
 void test_sparse_checkout__updates_index(void)
