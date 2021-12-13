@@ -382,11 +382,6 @@ typedef struct {
 	 */
 	uint32_t flags;
 
-	/** Skip files in the diff that are excluded by the `sparse-checkout` file.
-	 * Set to 1 to skip sparse files, 0 otherwise
-	 */
-	int skip_sparse_files;
-
 	/* options controlling which files are in the diff */
 
 	/** Overrides the submodule ignore setting for all submodules in the diff. */
@@ -450,6 +445,11 @@ typedef struct {
 	 * Defaults to "b".
 	 */
 	const char *new_prefix;
+
+	/** Skip files in the diff that are excluded by the `sparse-checkout` file.
+	 * Set to 1 to skip sparse files, 0 otherwise
+	 */
+	int skip_sparse_files;
 } git_diff_options;
 
 /* The current version of the diff options structure */
