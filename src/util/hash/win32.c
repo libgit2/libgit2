@@ -15,7 +15,8 @@
 #define GIT_HASH_CNG_DLL_NAME           "bcrypt.dll"
 
 /* BCRYPT_SHA1_ALGORITHM */
-#define GIT_HASH_CNG_HASH_TYPE          L"SHA1"
+#define GIT_HASH_CNG_SHA1_TYPE          L"SHA1"
+#define GIT_HASH_CNG_SHA256_TYPE        L"SHA256"
 
 /* BCRYPT_OBJECT_LENGTH */
 #define GIT_HASH_CNG_HASH_OBJECT_LEN    L"ObjectLength"
@@ -23,12 +24,99 @@
 /* BCRYPT_HASH_REUSEABLE_FLAGS */
 #define GIT_HASH_CNG_HASH_REUSABLE      0x00000020
 
-static git_hash_prov hash_prov = {0};
+/* Definitions */
+
+/* CryptoAPI is available for hashing on Windows XP and newer.  */
+struct cryptoapi_provider {
+	HCRYPTPROV handle;
+};
+
+/*
+ * CNG (bcrypt.dll) is significantly more performant than CryptoAPI and is
+ * preferred, however it is only available on Windows 2008 and newer and
+ * must therefore be dynamically loaded, and we must inline constants that
+ * would not exist when building in pre-Windows 2008 environments.
+ */
+
+/* Function declarations for CNG */
+typedef NTSTATUS (WINAPI *cng_open_algorithm_provider_fn)(
+	HANDLE /* BCRYPT_ALG_HANDLE */ *phAlgorithm,
+	LPCWSTR pszAlgId,
+	LPCWSTR pszImplementation,
+	DWORD dwFlags);
+
+typedef NTSTATUS (WINAPI *cng_get_property_fn)(
+	HANDLE /* BCRYPT_HANDLE */ hObject,
+	LPCWSTR pszProperty,
+	PUCHAR pbOutput,
+	ULONG cbOutput,
+	ULONG *pcbResult,
+	ULONG dwFlags);
+
+typedef NTSTATUS (WINAPI *cng_create_hash_fn)(
+	HANDLE /* BCRYPT_ALG_HANDLE */ hAlgorithm,
+	HANDLE /* BCRYPT_HASH_HANDLE */ *phHash,
+	PUCHAR pbHashObject, ULONG cbHashObject,
+	PUCHAR pbSecret,
+	ULONG cbSecret,
+	ULONG dwFlags);
+
+typedef NTSTATUS (WINAPI *cng_finish_hash_fn)(
+	HANDLE /* BCRYPT_HASH_HANDLE */ hHash,
+	PUCHAR pbOutput,
+	ULONG cbOutput,
+	ULONG dwFlags);
+
+typedef NTSTATUS (WINAPI *cng_hash_data_fn)(
+	HANDLE /* BCRYPT_HASH_HANDLE */ hHash,
+	PUCHAR pbInput,
+	ULONG cbInput,
+	ULONG dwFlags);
+
+typedef NTSTATUS (WINAPI *cng_destroy_hash_fn)(
+	HANDLE /* BCRYPT_HASH_HANDLE */ hHash);
+
+typedef NTSTATUS (WINAPI *cng_close_algorithm_provider_fn)(
+	HANDLE /* BCRYPT_ALG_HANDLE */ hAlgorithm,
+	ULONG dwFlags);
+
+struct cng_provider {
+	/* DLL for CNG */
+	HINSTANCE dll;
+
+	/* Function pointers for CNG */
+	cng_open_algorithm_provider_fn open_algorithm_provider;
+	cng_get_property_fn get_property;
+	cng_create_hash_fn create_hash;
+	cng_finish_hash_fn finish_hash;
+	cng_hash_data_fn hash_data;
+	cng_destroy_hash_fn destroy_hash;
+	cng_close_algorithm_provider_fn close_algorithm_provider;
+
+	HANDLE /* BCRYPT_ALG_HANDLE */ sha1_handle;
+	DWORD sha1_object_size;
+
+	HANDLE /* BCRYPT_ALG_HANDLE */ sha256_handle;
+	DWORD sha256_object_size;
+};
+
+typedef struct {
+	git_hash_win32_provider_t type;
+
+	union {
+		struct cryptoapi_provider cryptoapi;
+		struct cng_provider cng;
+	} provider;
+} hash_win32_provider;
+
+/* Hash provider definition */
+
+static hash_win32_provider hash_provider = {0};
 
 /* Hash initialization */
 
 /* Initialize CNG, if available */
-GIT_INLINE(int) hash_cng_prov_init(void)
+GIT_INLINE(int) cng_provider_init(void)
 {
 	char dll_path[MAX_PATH];
 	DWORD dll_path_len, size_len;
@@ -44,113 +132,121 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 		dll_path_len > MAX_PATH ||
 		StringCchCat(dll_path, MAX_PATH, "\\") < 0 ||
 		StringCchCat(dll_path, MAX_PATH, GIT_HASH_CNG_DLL_NAME) < 0 ||
-		(hash_prov.prov.cng.dll = LoadLibrary(dll_path)) == NULL) {
+		(hash_provider.provider.cng.dll = LoadLibrary(dll_path)) == NULL) {
 		git_error_set(GIT_ERROR_SHA, "CryptoNG library could not be loaded");
 		return -1;
 	}
 
 	/* Load the function addresses */
-	if ((hash_prov.prov.cng.open_algorithm_provider = (hash_win32_cng_open_algorithm_provider_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptOpenAlgorithmProvider")) == NULL ||
-		(hash_prov.prov.cng.get_property = (hash_win32_cng_get_property_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptGetProperty")) == NULL ||
-		(hash_prov.prov.cng.create_hash = (hash_win32_cng_create_hash_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptCreateHash")) == NULL ||
-		(hash_prov.prov.cng.finish_hash = (hash_win32_cng_finish_hash_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptFinishHash")) == NULL ||
-		(hash_prov.prov.cng.hash_data = (hash_win32_cng_hash_data_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptHashData")) == NULL ||
-		(hash_prov.prov.cng.destroy_hash = (hash_win32_cng_destroy_hash_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptDestroyHash")) == NULL ||
-		(hash_prov.prov.cng.close_algorithm_provider = (hash_win32_cng_close_algorithm_provider_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptCloseAlgorithmProvider")) == NULL) {
-		FreeLibrary(hash_prov.prov.cng.dll);
+	if ((hash_provider.provider.cng.open_algorithm_provider = (cng_open_algorithm_provider_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptOpenAlgorithmProvider")) == NULL ||
+		(hash_provider.provider.cng.get_property = (cng_get_property_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptGetProperty")) == NULL ||
+		(hash_provider.provider.cng.create_hash = (cng_create_hash_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptCreateHash")) == NULL ||
+		(hash_provider.provider.cng.finish_hash = (cng_finish_hash_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptFinishHash")) == NULL ||
+		(hash_provider.provider.cng.hash_data = (cng_hash_data_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptHashData")) == NULL ||
+		(hash_provider.provider.cng.destroy_hash = (cng_destroy_hash_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptDestroyHash")) == NULL ||
+		(hash_provider.provider.cng.close_algorithm_provider = (cng_close_algorithm_provider_fn)GetProcAddress(hash_provider.provider.cng.dll, "BCryptCloseAlgorithmProvider")) == NULL) {
+		FreeLibrary(hash_provider.provider.cng.dll);
 
 		git_error_set(GIT_ERROR_OS, "CryptoNG functions could not be loaded");
 		return -1;
 	}
 
 	/* Load the SHA1 algorithm */
-	if (hash_prov.prov.cng.open_algorithm_provider(&hash_prov.prov.cng.handle, GIT_HASH_CNG_HASH_TYPE, NULL, GIT_HASH_CNG_HASH_REUSABLE) < 0) {
-		FreeLibrary(hash_prov.prov.cng.dll);
-
+	if (hash_provider.provider.cng.open_algorithm_provider(&hash_provider.provider.cng.sha1_handle, GIT_HASH_CNG_SHA1_TYPE, NULL, GIT_HASH_CNG_HASH_REUSABLE) < 0 ||
+	    hash_provider.provider.cng.get_property(hash_provider.provider.cng.sha1_handle, GIT_HASH_CNG_HASH_OBJECT_LEN, (PBYTE)&hash_provider.provider.cng.sha1_object_size, sizeof(DWORD), &size_len, 0) < 0) {
 		git_error_set(GIT_ERROR_OS, "algorithm provider could not be initialized");
-		return -1;
+		goto on_error;
 	}
 
-	/* Get storage space for the hash object */
-	if (hash_prov.prov.cng.get_property(hash_prov.prov.cng.handle, GIT_HASH_CNG_HASH_OBJECT_LEN, (PBYTE)&hash_prov.prov.cng.hash_object_size, sizeof(DWORD), &size_len, 0) < 0) {
-		hash_prov.prov.cng.close_algorithm_provider(hash_prov.prov.cng.handle, 0);
-		FreeLibrary(hash_prov.prov.cng.dll);
-
-		git_error_set(GIT_ERROR_OS, "algorithm handle could not be found");
-		return -1;
+	/* Load the SHA256 algorithm */
+	if (hash_provider.provider.cng.open_algorithm_provider(&hash_provider.provider.cng.sha256_handle, GIT_HASH_CNG_SHA256_TYPE, NULL, GIT_HASH_CNG_HASH_REUSABLE) < 0 ||
+	    hash_provider.provider.cng.get_property(hash_provider.provider.cng.sha256_handle, GIT_HASH_CNG_HASH_OBJECT_LEN, (PBYTE)&hash_provider.provider.cng.sha256_object_size, sizeof(DWORD), &size_len, 0) < 0) {
+		git_error_set(GIT_ERROR_OS, "algorithm provider could not be initialized");
+		goto on_error;
 	}
 
-	hash_prov.type = CNG;
+	hash_provider.type = GIT_HASH_WIN32_CNG;
 	return 0;
+
+on_error:
+	if (hash_provider.provider.cng.sha1_handle)
+		hash_provider.provider.cng.close_algorithm_provider(hash_provider.provider.cng.sha1_handle, 0);
+
+	if (hash_provider.provider.cng.sha256_handle)
+		hash_provider.provider.cng.close_algorithm_provider(hash_provider.provider.cng.sha256_handle, 0);
+
+	if (hash_provider.provider.cng.dll)
+		FreeLibrary(hash_provider.provider.cng.dll);
+
+	return -1;
 }
 
-GIT_INLINE(void) hash_cng_prov_shutdown(void)
+GIT_INLINE(void) cng_provider_shutdown(void)
 {
-	hash_prov.prov.cng.close_algorithm_provider(hash_prov.prov.cng.handle, 0);
-	FreeLibrary(hash_prov.prov.cng.dll);
+	if (hash_provider.type == GIT_HASH_WIN32_INVALID)
+		return;
 
-	hash_prov.type = INVALID;
+	hash_provider.provider.cng.close_algorithm_provider(hash_provider.provider.cng.sha1_handle, 0);
+	hash_provider.provider.cng.close_algorithm_provider(hash_provider.provider.cng.sha256_handle, 0);
+	FreeLibrary(hash_provider.provider.cng.dll);
+
+	hash_provider.type = GIT_HASH_WIN32_INVALID;
 }
 
 /* Initialize CryptoAPI */
-GIT_INLINE(int) hash_cryptoapi_prov_init()
+GIT_INLINE(int) cryptoapi_provider_init(void)
 {
-	if (!CryptAcquireContext(&hash_prov.prov.cryptoapi.handle, NULL, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
+	if (!CryptAcquireContext(&hash_provider.provider.cryptoapi.handle, NULL, 0, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) {
 		git_error_set(GIT_ERROR_OS, "legacy hash context could not be started");
 		return -1;
 	}
 
-	hash_prov.type = CRYPTOAPI;
+	hash_provider.type = GIT_HASH_WIN32_CRYPTOAPI;
 	return 0;
 }
 
-GIT_INLINE(void) hash_cryptoapi_prov_shutdown(void)
+GIT_INLINE(void) cryptoapi_provider_shutdown(void)
 {
-	CryptReleaseContext(hash_prov.prov.cryptoapi.handle, 0);
+	if (hash_provider.type == GIT_HASH_WIN32_INVALID)
+		return;
 
-	hash_prov.type = INVALID;
+	CryptReleaseContext(hash_provider.provider.cryptoapi.handle, 0);
+
+	hash_provider.type = GIT_HASH_WIN32_INVALID;
 }
 
-static void sha1_shutdown(void)
+static void hash_provider_shutdown(void)
 {
-	if (hash_prov.type == CNG)
-		hash_cng_prov_shutdown();
-	else if(hash_prov.type == CRYPTOAPI)
-		hash_cryptoapi_prov_shutdown();
+	if (hash_provider.type == GIT_HASH_WIN32_CNG)
+		cng_provider_shutdown();
+	else if (hash_provider.type == GIT_HASH_WIN32_CRYPTOAPI)
+		cryptoapi_provider_shutdown();
 }
 
-int git_hash_sha1_global_init(void)
+static int hash_provider_init(void)
 {
 	int error = 0;
 
-	if (hash_prov.type != INVALID)
+	if (hash_provider.type != GIT_HASH_WIN32_INVALID)
 		return 0;
 
-	if ((error = hash_cng_prov_init()) < 0)
-		error = hash_cryptoapi_prov_init();
+	if ((error = cng_provider_init()) < 0)
+		error = cryptoapi_provider_init();
 
 	if (!error)
-		error = git_runtime_shutdown_register(sha1_shutdown);
+		error = git_runtime_shutdown_register(hash_provider_shutdown);
 
 	return error;
 }
 
 /* CryptoAPI: available in Windows XP and newer */
 
-GIT_INLINE(int) hash_ctx_cryptoapi_init(git_hash_sha1_ctx *ctx)
-{
-	ctx->type = CRYPTOAPI;
-	ctx->prov = &hash_prov;
-
-	return git_hash_sha1_init(ctx);
-}
-
-GIT_INLINE(int) hash_cryptoapi_init(git_hash_sha1_ctx *ctx)
+GIT_INLINE(int) hash_cryptoapi_init(git_hash_win32_ctx *ctx)
 {
 	if (ctx->ctx.cryptoapi.valid)
 		CryptDestroyHash(ctx->ctx.cryptoapi.hash_handle);
 
-	if (!CryptCreateHash(ctx->prov->prov.cryptoapi.handle, CALG_SHA1, 0, 0, &ctx->ctx.cryptoapi.hash_handle)) {
+	if (!CryptCreateHash(hash_provider.provider.cryptoapi.handle, ctx->algorithm, 0, 0, &ctx->ctx.cryptoapi.hash_handle)) {
 		ctx->ctx.cryptoapi.valid = 0;
 		git_error_set(GIT_ERROR_OS, "legacy hash implementation could not be created");
 		return -1;
@@ -160,7 +256,7 @@ GIT_INLINE(int) hash_cryptoapi_init(git_hash_sha1_ctx *ctx)
 	return 0;
 }
 
-GIT_INLINE(int) hash_cryptoapi_update(git_hash_sha1_ctx *ctx, const void *_data, size_t len)
+GIT_INLINE(int) hash_cryptoapi_update(git_hash_win32_ctx *ctx, const void *_data, size_t len)
 {
 	const BYTE *data = (BYTE *)_data;
 
@@ -181,9 +277,9 @@ GIT_INLINE(int) hash_cryptoapi_update(git_hash_sha1_ctx *ctx, const void *_data,
 	return 0;
 }
 
-GIT_INLINE(int) hash_cryptoapi_final(unsigned char *out, git_hash_sha1_ctx *ctx)
+GIT_INLINE(int) hash_cryptoapi_final(unsigned char *out, git_hash_win32_ctx *ctx)
 {
-	DWORD len = GIT_HASH_SHA1_SIZE;
+	DWORD len = ctx->algorithm == CALG_SHA_256 ? GIT_HASH_SHA256_SIZE : GIT_HASH_SHA1_SIZE;
 	int error = 0;
 
 	GIT_ASSERT(ctx->ctx.cryptoapi.valid);
@@ -199,41 +295,68 @@ GIT_INLINE(int) hash_cryptoapi_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 	return error;
 }
 
-GIT_INLINE(void) hash_ctx_cryptoapi_cleanup(git_hash_sha1_ctx *ctx)
+GIT_INLINE(void) hash_ctx_cryptoapi_cleanup(git_hash_win32_ctx *ctx)
 {
 	if (ctx->ctx.cryptoapi.valid)
 		CryptDestroyHash(ctx->ctx.cryptoapi.hash_handle);
 }
 
+GIT_INLINE(int) hash_sha1_cryptoapi_ctx_init_init(git_hash_win32_ctx *ctx)
+{
+	ctx->algorithm = CALG_SHA1;
+	return hash_cryptoapi_init(ctx);
+}
+
+GIT_INLINE(int) hash_sha256_cryptoapi_ctx_init(git_hash_win32_ctx *ctx)
+{
+	ctx->algorithm = CALG_SHA_256;
+	return hash_cryptoapi_init(ctx);
+}
+
 /* CNG: Available in Windows Server 2008 and newer */
 
-GIT_INLINE(int) hash_ctx_cng_init(git_hash_sha1_ctx *ctx)
+GIT_INLINE(int) hash_sha1_cng_ctx_init(git_hash_win32_ctx *ctx)
 {
-	if ((ctx->ctx.cng.hash_object = git__malloc(hash_prov.prov.cng.hash_object_size)) == NULL)
+	if ((ctx->ctx.cng.hash_object = git__malloc(hash_provider.provider.cng.sha1_object_size)) == NULL)
 		return -1;
 
-	if (hash_prov.prov.cng.create_hash(hash_prov.prov.cng.handle, &ctx->ctx.cng.hash_handle, ctx->ctx.cng.hash_object, hash_prov.prov.cng.hash_object_size, NULL, 0, 0) < 0) {
+	if (hash_provider.provider.cng.create_hash(hash_provider.provider.cng.sha1_handle, &ctx->ctx.cng.hash_handle, ctx->ctx.cng.hash_object, hash_provider.provider.cng.sha1_object_size, NULL, 0, 0) < 0) {
 		git__free(ctx->ctx.cng.hash_object);
 
-		git_error_set(GIT_ERROR_OS, "hash implementation could not be created");
+		git_error_set(GIT_ERROR_OS, "sha1 implementation could not be created");
 		return -1;
 	}
 
-	ctx->type = CNG;
-	ctx->prov = &hash_prov;
-
+	ctx->algorithm = CALG_SHA1;
 	return 0;
 }
 
-GIT_INLINE(int) hash_cng_init(git_hash_sha1_ctx *ctx)
+GIT_INLINE(int) hash_sha256_cng_ctx_init(git_hash_win32_ctx *ctx)
 {
-	BYTE hash[GIT_OID_RAWSZ];
+	if ((ctx->ctx.cng.hash_object = git__malloc(hash_provider.provider.cng.sha256_object_size)) == NULL)
+		return -1;
+
+	if (hash_provider.provider.cng.create_hash(hash_provider.provider.cng.sha256_handle, &ctx->ctx.cng.hash_handle, ctx->ctx.cng.hash_object, hash_provider.provider.cng.sha256_object_size, NULL, 0, 0) < 0) {
+		git__free(ctx->ctx.cng.hash_object);
+
+		git_error_set(GIT_ERROR_OS, "sha256 implementation could not be created");
+		return -1;
+	}
+
+	ctx->algorithm = CALG_SHA_256;
+	return 0;
+}
+
+GIT_INLINE(int) hash_cng_init(git_hash_win32_ctx *ctx)
+{
+	BYTE hash[GIT_HASH_SHA256_SIZE];
+	ULONG size = ctx->algorithm == CALG_SHA_256 ? GIT_HASH_SHA256_SIZE : GIT_HASH_SHA1_SIZE;
 
 	if (!ctx->ctx.cng.updated)
 		return 0;
 
 	/* CNG needs to be finished to restart */
-	if (ctx->prov->prov.cng.finish_hash(ctx->ctx.cng.hash_handle, hash, GIT_OID_RAWSZ, 0) < 0) {
+	if (hash_provider.provider.cng.finish_hash(ctx->ctx.cng.hash_handle, hash, size, 0) < 0) {
 		git_error_set(GIT_ERROR_OS, "hash implementation could not be finished");
 		return -1;
 	}
@@ -243,14 +366,14 @@ GIT_INLINE(int) hash_cng_init(git_hash_sha1_ctx *ctx)
 	return 0;
 }
 
-GIT_INLINE(int) hash_cng_update(git_hash_sha1_ctx *ctx, const void *_data, size_t len)
+GIT_INLINE(int) hash_cng_update(git_hash_win32_ctx *ctx, const void *_data, size_t len)
 {
 	PBYTE data = (PBYTE)_data;
 
 	while (len > 0) {
 		ULONG chunk = (len > ULONG_MAX) ? ULONG_MAX : (ULONG)len;
 
-		if (ctx->prov->prov.cng.hash_data(ctx->ctx.cng.hash_handle, data, chunk, 0) < 0) {
+		if (hash_provider.provider.cng.hash_data(ctx->ctx.cng.hash_handle, data, chunk, 0) < 0) {
 			git_error_set(GIT_ERROR_OS, "hash could not be updated");
 			return -1;
 		}
@@ -262,9 +385,11 @@ GIT_INLINE(int) hash_cng_update(git_hash_sha1_ctx *ctx, const void *_data, size_
 	return 0;
 }
 
-GIT_INLINE(int) hash_cng_final(unsigned char *out, git_hash_sha1_ctx *ctx)
+GIT_INLINE(int) hash_cng_final(unsigned char *out, git_hash_win32_ctx *ctx)
 {
-	if (ctx->prov->prov.cng.finish_hash(ctx->ctx.cng.hash_handle, out, GIT_HASH_SHA1_SIZE, 0) < 0) {
+	ULONG size = ctx->algorithm == CALG_SHA_256 ? GIT_HASH_SHA256_SIZE : GIT_HASH_SHA1_SIZE;
+
+	if (hash_provider.provider.cng.finish_hash(ctx->ctx.cng.hash_handle, out, size, 0) < 0) {
 		git_error_set(GIT_ERROR_OS, "hash could not be finished");
 		return -1;
 	}
@@ -274,60 +399,130 @@ GIT_INLINE(int) hash_cng_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 	return 0;
 }
 
-GIT_INLINE(void) hash_ctx_cng_cleanup(git_hash_sha1_ctx *ctx)
+GIT_INLINE(void) hash_ctx_cng_cleanup(git_hash_win32_ctx *ctx)
 {
-	ctx->prov->prov.cng.destroy_hash(ctx->ctx.cng.hash_handle);
+	hash_provider.provider.cng.destroy_hash(ctx->ctx.cng.hash_handle);
 	git__free(ctx->ctx.cng.hash_object);
 }
 
 /* Indirection between CryptoAPI and CNG */
 
+GIT_INLINE(int) hash_sha1_win32_ctx_init(git_hash_win32_ctx *ctx)
+{
+	GIT_ASSERT_ARG(hash_provider.type);
+
+	memset(ctx, 0x0, sizeof(git_hash_win32_ctx));
+	return (hash_provider.type == GIT_HASH_WIN32_CNG) ? hash_sha1_cng_ctx_init(ctx) : hash_sha1_cryptoapi_ctx_init_init(ctx);
+}
+
+GIT_INLINE(int) hash_sha256_win32_ctx_init(git_hash_win32_ctx *ctx)
+{
+	GIT_ASSERT_ARG(hash_provider.type);
+
+	memset(ctx, 0x0, sizeof(git_hash_win32_ctx));
+	return (hash_provider.type == GIT_HASH_WIN32_CNG) ? hash_sha256_cng_ctx_init(ctx) : hash_sha256_cryptoapi_ctx_init(ctx);
+}
+
+GIT_INLINE(int) hash_win32_init(git_hash_win32_ctx *ctx)
+{
+	return (hash_provider.type == GIT_HASH_WIN32_CNG) ? hash_cng_init(ctx) : hash_cryptoapi_init(ctx);
+}
+
+GIT_INLINE(int) hash_win32_update(git_hash_win32_ctx *ctx, const void *data, size_t len)
+{
+	return (hash_provider.type == GIT_HASH_WIN32_CNG) ? hash_cng_update(ctx, data, len) : hash_cryptoapi_update(ctx, data, len);
+}
+
+GIT_INLINE(int) hash_win32_final(unsigned char *out, git_hash_win32_ctx *ctx)
+{
+	GIT_ASSERT_ARG(ctx);
+	return (hash_provider.type == GIT_HASH_WIN32_CNG) ? hash_cng_final(out, ctx) : hash_cryptoapi_final(out, ctx);
+}
+
+GIT_INLINE(void) hash_win32_cleanup(git_hash_win32_ctx *ctx)
+{
+	if (hash_provider.type == GIT_HASH_WIN32_CNG)
+		hash_ctx_cng_cleanup(ctx);
+	else if(hash_provider.type == GIT_HASH_WIN32_CRYPTOAPI)
+		hash_ctx_cryptoapi_cleanup(ctx);
+}
+
+#ifdef GIT_SHA1_WIN32
+
+int git_hash_sha1_global_init(void)
+{
+	return hash_provider_init();
+}
+
 int git_hash_sha1_ctx_init(git_hash_sha1_ctx *ctx)
 {
-	int error = 0;
-
 	GIT_ASSERT_ARG(ctx);
-
-	/*
-	 * When compiled with GIT_THREADS, the global hash_prov data is
-	 * initialized with git_libgit2_init.  Otherwise, it must be initialized
-	 * at first use.
-	 */
-	if (hash_prov.type == INVALID && (error = git_hash_sha1_global_init()) < 0)
-		return error;
-
-	memset(ctx, 0x0, sizeof(git_hash_sha1_ctx));
-
-	return (hash_prov.type == CNG) ? hash_ctx_cng_init(ctx) : hash_ctx_cryptoapi_init(ctx);
+	return hash_sha1_win32_ctx_init(&ctx->win32);
 }
 
 int git_hash_sha1_init(git_hash_sha1_ctx *ctx)
 {
 	GIT_ASSERT_ARG(ctx);
-	GIT_ASSERT_ARG(ctx->type);
-	return (ctx->type == CNG) ? hash_cng_init(ctx) : hash_cryptoapi_init(ctx);
+	return hash_win32_init(&ctx->win32);
 }
 
 int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 {
 	GIT_ASSERT_ARG(ctx);
-	GIT_ASSERT_ARG(ctx->type);
-	return (ctx->type == CNG) ? hash_cng_update(ctx, data, len) : hash_cryptoapi_update(ctx, data, len);
+	return hash_win32_update(&ctx->win32, data, len);
 }
 
 int git_hash_sha1_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 {
 	GIT_ASSERT_ARG(ctx);
-	GIT_ASSERT_ARG(ctx->type);
-	return (ctx->type == CNG) ? hash_cng_final(out, ctx) : hash_cryptoapi_final(out, ctx);
+	return hash_win32_final(out, &ctx->win32);
 }
 
 void git_hash_sha1_ctx_cleanup(git_hash_sha1_ctx *ctx)
 {
 	if (!ctx)
 		return;
-	else if (ctx->type == CNG)
-		hash_ctx_cng_cleanup(ctx);
-	else if(ctx->type == CRYPTOAPI)
-		hash_ctx_cryptoapi_cleanup(ctx);
+	hash_win32_cleanup(&ctx->win32);
 }
+
+#endif
+
+#ifdef GIT_SHA256_WIN32
+
+int git_hash_sha256_global_init(void)
+{
+	return hash_provider_init();
+}
+
+int git_hash_sha256_ctx_init(git_hash_sha256_ctx *ctx)
+{
+	GIT_ASSERT_ARG(ctx);
+	return hash_sha256_win32_ctx_init(&ctx->win32);
+}
+
+int git_hash_sha256_init(git_hash_sha256_ctx *ctx)
+{
+	GIT_ASSERT_ARG(ctx);
+	return hash_win32_init(&ctx->win32);
+}
+
+int git_hash_sha256_update(git_hash_sha256_ctx *ctx, const void *data, size_t len)
+{
+	GIT_ASSERT_ARG(ctx);
+	return hash_win32_update(&ctx->win32, data, len);
+}
+
+int git_hash_sha256_final(unsigned char *out, git_hash_sha256_ctx *ctx)
+{
+	GIT_ASSERT_ARG(ctx);
+	return hash_win32_final(out, &ctx->win32);
+}
+
+void git_hash_sha256_ctx_cleanup(git_hash_sha256_ctx *ctx)
+{
+	if (!ctx)
+		return;
+	hash_win32_cleanup(&ctx->win32);
+}
+
+#endif
