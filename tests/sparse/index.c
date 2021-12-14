@@ -233,4 +233,3 @@ void test_sparse_index__read_tree_sets_skip_worktree_all_sparse(void)
 	git_index_iterator_free(iterator);
 	git_index_free(index);
 }
-

@@ -32,7 +32,7 @@ void test_sparse_set__enables_sparse_checkout(void)
     cl_git_pass(git_repository_config(&config, g_repo));
 	cl_git_pass(git_config_get_bool(&b, config, "core.sparseCheckout"));
     cl_assert_(b, "sparse checkout should be enabled");
-    cl_assert_(git_fs_path_exists(path), path);
+    cl_assert_equal_b(git_fs_path_exists(path), true);
 
     git_config_free(config);
 }
@@ -71,5 +71,5 @@ void test_sparse_set__applies_sparsity(void)
 	cl_git_pass(git_sparse_checkout_set(&patterns, g_repo));
 
 	cl_assert_equal_b(git_fs_path_exists("sparse/file1"), false);
-	cl_assert(git_fs_path_exists("sparse/a/file3"));
+	cl_assert_equal_b(git_fs_path_exists("sparse/a/file3"), true);
 }

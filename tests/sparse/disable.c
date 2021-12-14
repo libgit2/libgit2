@@ -49,7 +49,7 @@ void test_sparse_disable__leaves_sparse_checkout_file_intact(void)
 	cl_git_pass(git_sparse_checkout_disable(g_repo));
 	cl_git_pass(git_futils_readbuffer(&after_content, path));
 
-	cl_assert_(git_fs_path_exists(path), path);
+	cl_assert_equal_b(git_fs_path_exists(path), true);
 	cl_assert_equal_s_(git_str_cstr(&before_content), git_str_cstr(&after_content), "git_sparse_checkout_disable should not modify or remove the sparse-checkout file");
 }
 
@@ -61,9 +61,9 @@ void test_sparse_disable__restores_working_directory(void)
 	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 	cl_git_pass(git_sparse_checkout_disable(g_repo));
 
-	cl_assert(git_fs_path_exists("sparse/file1"));
-	cl_assert(git_fs_path_exists("sparse/a/file3"));
-	cl_assert(git_fs_path_exists("sparse/b/file5"));
-	cl_assert(git_fs_path_exists("sparse/b/c/file7"));
-	cl_assert(git_fs_path_exists("sparse/b/d/file9"));
+	cl_assert_equal_b(git_fs_path_exists("sparse/file1"), true);
+	cl_assert_equal_b(git_fs_path_exists("sparse/a/file3"), true);
+	cl_assert_equal_b(git_fs_path_exists("sparse/b/file5"), true);
+	cl_assert_equal_b(git_fs_path_exists("sparse/b/c/file7"), true);
+	cl_assert_equal_b(git_fs_path_exists("sparse/b/d/file9"), true);
 }

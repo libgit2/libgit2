@@ -15,14 +15,11 @@ void test_sparse_init__cleanup(void)
 
 void test_sparse_init__enables_sparse_checkout(void)
 {
-	const char *path;
 	git_config *config;
 	int b;
 
-	git_str content = GIT_STR_INIT;
 	git_sparse_checkout_init_options opts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 
-	path = "sparse/.git/info/sparse-checkout";
 	g_repo = cl_git_sandbox_init("sparse");
 
 	cl_git_pass(git_sparse_checkout_init(&opts, g_repo));
@@ -30,10 +27,6 @@ void test_sparse_init__enables_sparse_checkout(void)
 	cl_git_pass(git_repository_config(&config, g_repo));
 	cl_git_pass(git_config_get_bool(&b, config, "core.sparseCheckout"));
 	cl_assert_(b, "sparse checkout should be enabled");
-	cl_assert_(git_fs_path_exists(path), path);
-
-	cl_git_pass(git_futils_readbuffer(&content, path));
-	cl_assert_(strlen(git_str_cstr(&content)) > 1,"git_sparse_checkout_init should not init an empty file");
 
 	git_config_free(config);
 }
@@ -41,13 +34,17 @@ void test_sparse_init__enables_sparse_checkout(void)
 void test_sparse_init__writes_sparse_checkout_file(void)
 {
     const char *path;
+	git_str content = GIT_STR_INIT;
     git_sparse_checkout_init_options opts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 
     path = "sparse/.git/info/sparse-checkout";
     g_repo = cl_git_sandbox_init("sparse");
 
     cl_git_pass(git_sparse_checkout_init(&opts, g_repo));
-    cl_assert_(git_fs_path_exists(path), path);
+    cl_assert_equal_b(git_fs_path_exists(path), true);
+
+	cl_git_pass(git_futils_readbuffer(&content, path));
+	cl_assert_(strlen(git_str_cstr(&content)) > 1,"git_sparse_checkout_init should not init an empty file");
 }
 
 void test_sparse_init__sets_default_patterns(void)
@@ -103,7 +100,7 @@ void test_sparse_init__applies_sparsity(void)
 
 	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
 
-	cl_assert(git_fs_path_exists("sparse/file1"));
+	cl_assert_equal_b(git_fs_path_exists("sparse/file1"), true);
 	cl_assert_equal_b(git_fs_path_exists("sparse/a/file3"), false);
 	cl_assert_equal_b(git_fs_path_exists("sparse/b/file5"), false);
 	cl_assert_equal_b(git_fs_path_exists("sparse/b/c/file7"), false);
