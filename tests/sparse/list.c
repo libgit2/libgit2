@@ -21,7 +21,7 @@ void test_sparse_list__lists_all_patterns(void)
 	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 
 	g_repo = cl_git_sandbox_init("sparse");
-	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
+	cl_git_pass(git_sparse_checkout_init(g_repo, &scopts));
 
 	cl_git_pass(git_sparse_checkout_list(&patterns, g_repo));
 	for (i = 0; i < patterns.count; i++) {

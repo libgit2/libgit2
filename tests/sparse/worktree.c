@@ -28,7 +28,7 @@ void test_sparse_worktree__honours_sparsity(void)
 	cl_git_pass(git_worktree_add(&wt, g_repo, "sparse-worktree", path.ptr, &opts));
 	cl_git_pass(git_repository_open(&wt_repo, path.ptr));
 
-	cl_git_pass(git_sparse_checkout_init(&scopts, wt_repo));
+	cl_git_pass(git_sparse_checkout_init(wt_repo, &scopts));
 
 	cl_assert_equal_b(git_fs_path_exists("sparse-worktree/file1"), true);
 	cl_assert_equal_b(git_fs_path_exists("sparse-worktree/a/file3"), false);
@@ -64,13 +64,13 @@ void test_sparse_worktree__honours_sparsity_on_different_worktrees(void)
 	cl_git_pass(git_worktree_add(&wt2, g_repo, "sparse-worktree-2", path2.ptr, &opts));
 	cl_git_pass(git_repository_open(&wt_repo2, path2.ptr));
 
-	cl_git_pass(git_sparse_checkout_set(&patterns1, wt_repo1));
+	cl_git_pass(git_sparse_checkout_set(wt_repo1, &patterns1));
 
 	cl_assert_equal_b(git_fs_path_exists("sparse-worktree-1/file1"), false);
 	cl_assert_equal_b(git_fs_path_exists("sparse-worktree-1/a/file3"), true);
 	cl_assert_equal_b(git_fs_path_exists("sparse-worktree-1/b/file5"), false);
 
-	cl_git_pass(git_sparse_checkout_set(&patterns2, wt_repo2));
+	cl_git_pass(git_sparse_checkout_set(wt_repo2, &patterns2));
 
 	cl_assert_equal_b(git_fs_path_exists("sparse-worktree-2/file1"), false);
 	cl_assert_equal_b(git_fs_path_exists("sparse-worktree-2/a/file3"), false);

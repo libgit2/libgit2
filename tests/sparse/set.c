@@ -27,7 +27,7 @@ void test_sparse_set__enables_sparse_checkout(void)
     path = "sparse/.git/info/sparse-checkout";
     g_repo = cl_git_sandbox_init("sparse");
 
-    cl_git_pass(git_sparse_checkout_set(&patterns, g_repo));
+    cl_git_pass(git_sparse_checkout_set(g_repo, &patterns));
 
     cl_git_pass(git_repository_config(&config, g_repo));
 	cl_git_pass(git_config_get_bool(&b, config, "core.sparseCheckout"));
@@ -53,9 +53,9 @@ void test_sparse_set__rewrites_sparse_checkout_file(void)
 
     g_repo = cl_git_sandbox_init("sparse");
 
-    cl_git_pass(git_sparse_checkout_set(&initial_patterns, g_repo));
+    cl_git_pass(git_sparse_checkout_set(g_repo, &initial_patterns));
 
-    cl_git_pass(git_sparse_checkout_set(&after_patterns, g_repo));
+    cl_git_pass(git_sparse_checkout_set(g_repo, &after_patterns));
     cl_git_pass(git_futils_readbuffer(&after_content, path));
 
     cl_assert_equal_s_(git_str_cstr(&after_content), expected_string, "git_sparse_checkout_set should overwrite existing patterns in the sparse-checkout file");
@@ -68,7 +68,7 @@ void test_sparse_set__applies_sparsity(void)
 
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set(&patterns, g_repo));
+	cl_git_pass(git_sparse_checkout_set(g_repo, &patterns));
 
 	cl_assert_equal_b(git_fs_path_exists("sparse/file1"), false);
 	cl_assert_equal_b(git_fs_path_exists("sparse/a/file3"), true);

@@ -29,8 +29,8 @@ void test_sparse_add__appends_to_patterns(void)
 
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_init(&opts, g_repo));
-	cl_git_pass(git_sparse_checkout_add(&patterns, g_repo));
+	cl_git_pass(git_sparse_checkout_init(g_repo, &opts));
+	cl_git_pass(git_sparse_checkout_add(g_repo, &patterns));
 
 	cl_git_pass(git_sparse_checkout_list(&found_patterns, g_repo));
 	for (i = 0; i < found_patterns.count; i++) {
@@ -47,8 +47,8 @@ void test_sparse_add__applies_sparsity(void)
 
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_init(&opts, g_repo));
-	cl_git_pass(git_sparse_checkout_add(&patterns, g_repo));
+	cl_git_pass(git_sparse_checkout_init(g_repo, &opts));
+	cl_git_pass(git_sparse_checkout_add(g_repo, &patterns));
 
 	cl_assert_equal_b(git_fs_path_exists("sparse/a/file3"), true);
 }

@@ -22,7 +22,7 @@ void test_sparse_init__enables_sparse_checkout(void)
 
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_init(&opts, g_repo));
+	cl_git_pass(git_sparse_checkout_init(g_repo, &opts));
 
 	cl_git_pass(git_repository_config(&config, g_repo));
 	cl_git_pass(git_config_get_bool(&b, config, "core.sparseCheckout"));
@@ -40,7 +40,7 @@ void test_sparse_init__writes_sparse_checkout_file(void)
     path = "sparse/.git/info/sparse-checkout";
     g_repo = cl_git_sandbox_init("sparse");
 
-    cl_git_pass(git_sparse_checkout_init(&opts, g_repo));
+    cl_git_pass(git_sparse_checkout_init(g_repo, &opts));
     cl_assert_equal_b(git_fs_path_exists(path), true);
 
 	cl_git_pass(git_futils_readbuffer(&content, path));
@@ -58,7 +58,7 @@ void test_sparse_init__sets_default_patterns(void)
 
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_init(&opts, g_repo));
+	cl_git_pass(git_sparse_checkout_init(g_repo, &opts));
 
 	cl_git_pass(git_sparse_checkout_list(&found_patterns, g_repo));
 	for (i = 0; i < found_patterns.count; i++) {
@@ -77,9 +77,9 @@ void test_sparse_init__does_not_overwrite_existing_file(void)
 
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_set(&initial_patterns, g_repo));
+	cl_git_pass(git_sparse_checkout_set(g_repo, &initial_patterns));
 	cl_git_pass(git_sparse_checkout_disable(g_repo));
-	cl_git_pass(git_sparse_checkout_init(&opts, g_repo));
+	cl_git_pass(git_sparse_checkout_init(g_repo, &opts));
 
 	cl_git_pass(git_sparse_checkout_list(&found_patterns, g_repo));
 	for (i = 0; i < found_patterns.count; i++) {
@@ -98,7 +98,7 @@ void test_sparse_init__applies_sparsity(void)
 	cl_git_pass(git_revparse_single(&object, g_repo, "HEAD"));
 	cl_git_pass(git_checkout_tree(g_repo, object, &opts));
 
-	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
+	cl_git_pass(git_sparse_checkout_init(g_repo, &scopts));
 
 	cl_assert_equal_b(git_fs_path_exists("sparse/file1"), true);
 	cl_assert_equal_b(git_fs_path_exists("sparse/a/file3"), false);

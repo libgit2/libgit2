@@ -42,14 +42,14 @@ GIT_EXTERN(int) git_sparse_checkout_list(
  * file does not exist, then populate it with patterns that match
  * every file in the root directory and no other directories.
  *
+ * @param repo Repository where to find the sparse-checkout file
  * @param opts The `git_sparse_checkout_init_options` when
  *      initializing the sparse-checkout file
- * @param repo Repository where to find the sparse-checkout file
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_sparse_checkout_init(
-        git_sparse_checkout_init_options *opts,
-        git_repository *repo);
+        git_repository *repo,
+		git_sparse_checkout_init_options *opts);
 
 /**
  * Write a set of patterns to the sparse-checkout file.
@@ -57,26 +57,26 @@ GIT_EXTERN(int) git_sparse_checkout_init(
  * Enable the core.sparseCheckout config setting if it is not
  * already enabled.
  *
+ * @param repo Repository where to find the sparse-checkout file
  * @param patterns Pointer to a git_strarray structure where
  *      the patterns to set can be found
- * @param repo Repository where to find the sparse-checkout file
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_sparse_checkout_set(
-        git_strarray *patterns,
-        git_repository *repo);
+        git_repository *repo,
+        git_strarray *patterns);
 
 /**
  * Update the sparse-checkout file to include additional patterns.
  *
+ * @param repo Repository where to find the sparse-checkout file
  * @param patterns Pointer to a git_strarray structure where
  *      the patterns to set can be found
- * @param repo Repository where to find the sparse-checkout file
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_sparse_checkout_add(
-        git_strarray *patterns,
-        git_repository *repo);
+        git_repository *repo,
+        git_strarray *patterns);
 
 GIT_EXTERN(int) git_sparse_checkout_reapply(git_repository *repo);
 

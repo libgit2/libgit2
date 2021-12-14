@@ -22,7 +22,7 @@ void test_sparse_disable__disables_sparse_checkout(void)
 
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
+	cl_git_pass(git_sparse_checkout_init(g_repo, &scopts));
 	cl_git_pass(git_sparse_checkout_disable(g_repo));
 
 	cl_git_pass(git_repository_config(&config, g_repo));
@@ -43,7 +43,7 @@ void test_sparse_disable__leaves_sparse_checkout_file_intact(void)
 	path = "sparse/.git/info/sparse-checkout";
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
+	cl_git_pass(git_sparse_checkout_init(g_repo, &scopts));
 	cl_git_pass(git_futils_readbuffer(&before_content, path));
 
 	cl_git_pass(git_sparse_checkout_disable(g_repo));
@@ -58,7 +58,7 @@ void test_sparse_disable__restores_working_directory(void)
 	git_sparse_checkout_init_options scopts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
 	g_repo = cl_git_sandbox_init("sparse");
 
-	cl_git_pass(git_sparse_checkout_init(&scopts, g_repo));
+	cl_git_pass(git_sparse_checkout_init(g_repo, &scopts));
 	cl_git_pass(git_sparse_checkout_disable(g_repo));
 
 	cl_assert_equal_b(git_fs_path_exists("sparse/file1"), true);

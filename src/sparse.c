@@ -12,6 +12,31 @@
 #include "filebuf.h"
 #include "index.h"
 
+int git_strarray__to_vector(git_vector *dest, git_strarray *src) {
+	size_t i;
+	int error = 0;
+
+	GIT_ASSERT_ARG(dest);
+	GIT_ASSERT_ARG(src);
+
+	for (i = 0; i < src->count; i++) {
+		if ((error = git_vector_insert(dest, src->strings[i])) < 0)
+			return error;
+	}
+
+	return error;
+}
+
+int git_strarray__from_vector(git_strarray *dest, git_vector *src) {
+
+	GIT_ASSERT_ARG(dest);
+	GIT_ASSERT_ARG(src);
+
+	dest->strings = (char **) git_vector_detach(&dest->count, NULL, src);
+
+	return 0;
+}
+
 static bool sparse_lookup_in_rules(
         int *checkout,
         git_attr_file *file,
@@ -105,7 +130,7 @@ static int parse_sparse_file(
 	return error;
 }
 
-int git_sparse_attr_file__init(
+int git_sparse_attr_file__init_(
 		int *file_exists,
         git_repository *repo,
         git_sparse *sparse)
@@ -141,12 +166,12 @@ done:
     return error;
 }
 
-int git_sparse__init(
+int git_sparse_attr_file__init(
 		git_repository *repo,
 		git_sparse *sparse)
 {
 	int b = false;
-	int error = git_sparse__init_(&b, repo, sparse);
+	int error = git_sparse_attr_file__init_(&b, repo, sparse);
 	return error;
 }
 
@@ -170,7 +195,7 @@ int git_sparse__init_(
 	if ((error = git_attr_cache__init(repo)) < 0)
 		goto cleanup;
 
-    if ((error = git_sparse_attr_file__init(file_exists, repo, sparse)) < 0) {
+    if ((error = git_sparse_attr_file__init_(file_exists, repo, sparse)) < 0) {
         if (error != GIT_ENOTFOUND)
             goto cleanup;
         error = 0;
@@ -180,6 +205,15 @@ cleanup:
 	if (error < 0)
 		git_sparse__free(sparse);
 	
+	return error;
+}
+
+int git_sparse__init(
+		git_repository *repo,
+		git_sparse *sparse)
+{
+	int b = false;
+	int error = git_sparse__init_(&b, repo, sparse);
 	return error;
 }
 
@@ -300,10 +334,6 @@ int git_sparse_checkout__reapply(git_repository *repo, git_sparse *sparse)
 	if ((error = git_vector_init(&paths_to_checkout, 0, NULL)) < 0)
 		goto done;
 
-	/*
-	 * Collect directories that have gone out of scope, but also
-	 * exist on disk
-	 */
 	git_vector_foreach(&index->entries, i, entry)
 	{
 		int is_submodule = false;
@@ -373,14 +403,10 @@ int git_sparse_checkout__set(
 		git_repository *repo,
 		git_sparse *sparse)
 {
-	int error = 0;
-	int b;
-	size_t i = 0;
+	int error;
+	size_t i;
 	const char *pattern;
 	git_str content = GIT_STR_INIT;
-
-	GIT_ASSERT_ARG(patterns);
-	GIT_ASSERT_ARG(sparse);
 
 	git_vector_foreach(patterns, i, pattern) {
 		git_str_join(&content, '\n', git_str_cstr(&content), pattern);
@@ -394,7 +420,7 @@ int git_sparse_checkout__set(
 
 	/* Refresh the rules in the sparse info */
 	git_vector_clear(&sparse->sparse->rules);
-	if ((error = git_sparse_attr_file__init(&b, repo, sparse)) < 0)
+	if ((error = git_sparse_attr_file__init(repo, sparse)) < 0)
 		goto done;
 
 done:
@@ -403,14 +429,13 @@ done:
 	return error;
 }
 
-int git_sparse_checkout__enable(git_sparse_checkout_init_options *opts, git_repository *repo)
+int git_sparse_checkout__enable(git_repository *repo, git_sparse_checkout_init_options *opts)
 {
 	int error = 0;
 	git_config *cfg;
 
 	/* Can be used once cone mode is supported */
 	GIT_UNUSED(opts);
-	GIT_ASSERT_ARG(repo);
 
 	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
 		return error;
@@ -423,17 +448,17 @@ done:
 	return error;
 }
 
-int git_sparse_checkout_init(git_sparse_checkout_init_options *opts, git_repository *repo)
+int git_sparse_checkout_init(git_repository *repo, git_sparse_checkout_init_options *opts)
 {
     int error = 0;
     git_sparse sparse;
 	int file_exists = false;
 	git_vector default_patterns = GIT_VECTOR_INIT;
 
-    GIT_ASSERT_ARG(opts);
     GIT_ASSERT_ARG(repo);
+    GIT_ASSERT_ARG(opts);
 
-    if ((error = git_sparse_checkout__enable(opts, repo)) < 0)
+    if ((error = git_sparse_checkout__enable(repo, opts)) < 0)
 		return error;
 
     if ((error = git_sparse__init_(&file_exists, repo, &sparse)) < 0)
@@ -458,44 +483,41 @@ cleanup:
 }
 
 int git_sparse_checkout_set(
-        git_strarray *patterns,
-        git_repository *repo)
+        git_repository *repo,
+        git_strarray *patterns)
 {
-    int err = 0;
-    int is_enabled = false;
+    int error;
     git_config *cfg;
     git_sparse sparse;
 
     size_t i = 0;
     git_vector patternlist;
 
-    if ((err = git_repository_config(&cfg, repo)) < 0)
+	git_sparse_checkout_init_options opts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
+
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(patterns);
+
+    if ((error = git_repository_config(&cfg, repo)) < 0)
         goto done;
 
-    err = git_config_get_bool(&is_enabled, cfg, "core.sparseCheckout");
-    if (err < 0 && err != GIT_ENOTFOUND)
+	if ((error = git_sparse_checkout__enable(repo, &opts) < 0))
+		goto done;
+
+    if ((error = git_sparse__init(repo, &sparse)) < 0)
         goto done;
 
-    if (!is_enabled) {
-        git_sparse_checkout_init_options opts = GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT;
-        if ((err = git_sparse_checkout__enable(&opts, repo) < 0))
-            goto done;
-    }
-
-    if ((err = git_sparse__init(repo, &sparse)) < 0)
-        goto done;
-
-    if ((err = git_vector_init(&patternlist, 0, NULL)) < 0)
+    if ((error = git_vector_init(&patternlist, 0, NULL)) < 0)
         goto done;
 
     for (i = 0; i < patterns->count; i++) {
         git_vector_insert(&patternlist, patterns->strings[i]);
     }
 
-    if ((err = git_sparse_checkout__set(&patternlist, repo, &sparse)) < 0)
+    if ((error = git_sparse_checkout__set(&patternlist, repo, &sparse)) < 0)
         goto done;
 
-	if ((err = git_sparse_checkout__reapply(repo, &sparse)) < 0)
+	if ((error = git_sparse_checkout__reapply(repo, &sparse)) < 0)
 		goto done;
 
 done:
@@ -503,18 +525,11 @@ done:
     git_sparse__free(&sparse);
     git_vector_free(&patternlist);
 
-    return err;
+    return error;
 }
 
 int git_sparse_checkout__restore_wd(git_repository *repo)
 {
-	/* Todo:
-	 * 	1. Un-set the GIT_INDEX_ENTRY_SKIP_WORKTREE flag
-	 * 		on all entries that would've been affected by
-	 * 		the sparse-checkout rules
-	 * 	2. Run reapply with a pattern that includes everything
-	 */
-
 	int error = 0;
 	git_sparse sparse;
 	git_vector old_patterns, patterns = GIT_VECTOR_INIT;
@@ -558,7 +573,6 @@ int git_sparse_checkout_disable(git_repository *repo)
 {
     int error = 0;
     git_config *cfg;
-	git_sparse sparse;
 
     GIT_ASSERT_ARG(repo);
 
@@ -567,9 +581,6 @@ int git_sparse_checkout_disable(git_repository *repo)
 
     if ((error = git_config_set_bool(cfg, "core.sparseCheckout", false)) < 0)
         goto done;
-
-	if ((error = git_sparse__init(repo, &sparse)) < 0)
-		goto done;
 
 	if ((error = git_sparse_checkout__restore_wd(repo)) < 0)
 		goto done;
@@ -581,8 +592,8 @@ done:
 }
 
 int git_sparse_checkout__add(
-        git_vector *patterns,
 		git_repository *repo,
+        git_vector *patterns,
         git_sparse *sparse)
 {
     int error = 0;
@@ -590,9 +601,6 @@ int git_sparse_checkout__add(
     git_vector existing_patterns;
     git_vector new_patterns;
     char* pattern;
-
-    GIT_ASSERT_ARG(patterns);
-    GIT_ASSERT_ARG(sparse);
 
     if ((error = git_vector_init(&existing_patterns, 0, NULL)) < 0)
         goto done;
@@ -622,39 +630,42 @@ done:
 }
 
 int git_sparse_checkout_add(
-        git_strarray *patterns,
-        git_repository *repo)
+        git_repository *repo,
+        git_strarray *patterns)
 {
-    int err = 0;
+    int error;
     int is_enabled = false;
     git_config *cfg;
     git_sparse sparse;
     git_vector patternlist;
 
-    if ((err = git_repository_config__weakptr(&cfg, repo)) < 0)
-        return err;
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(patterns);
 
-    err = git_config_get_bool(&is_enabled, cfg, "core.sparseCheckout");
-    if (err < 0 && err != GIT_ENOTFOUND)
+    if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
+        return error;
+
+	error = git_config_get_bool(&is_enabled, cfg, "core.sparseCheckout");
+    if (error < 0 && error != GIT_ENOTFOUND)
         goto done;
 
     /* Todo: verify what git does when adding and sparse-checkout isn't enabled */
     if (!is_enabled)
         goto done;
 
-    if ((err = git_sparse__init(repo, &sparse)) < 0)
+    if ((error = git_sparse__init(repo, &sparse)) < 0)
         goto done;
 
-    if ((err = git_vector_init(&patternlist, 0, NULL)))
+    if ((error = git_vector_init(&patternlist, 0, NULL)))
         goto done;
 
-    if ((err = git_strarray__to_vector(&patternlist, patterns)))
+    if ((error = git_strarray__to_vector(&patternlist, patterns)))
         goto done;
 
-    if ((err = git_sparse_checkout__add(&patternlist, repo, &sparse)) < 0)
+    if ((error = git_sparse_checkout__add(repo, &patternlist,  &sparse)) < 0)
         goto done;
 
-	if ((err = git_sparse_checkout__reapply(repo, &sparse)) < 0)
+	if ((error = git_sparse_checkout__reapply(repo, &sparse)) < 0)
 		goto done;
 
 done:
@@ -662,13 +673,14 @@ done:
     git_sparse__free(&sparse);
     git_vector_free(&patternlist);
 
-    return err;
+    return error;
 }
 
 int git_sparse_checkout_reapply(git_repository *repo) {
-
-	int error = 0;
+	int error;
 	git_sparse sparse;
+
+	GIT_ASSERT_ARG(repo);
 
 	if ((error = git_sparse__init(repo, &sparse)) < 0)
 		return error;
@@ -691,7 +703,9 @@ int git_sparse_check_path(
     git_sparse sparse;
     git_dir_flag dir_flag = GIT_DIR_FLAG_FALSE;
 
-    assert(repo && checkout && pathname);
+    GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(checkout);
+	GIT_ASSERT_ARG(pathname);
 
     *checkout = GIT_SPARSE_CHECKOUT;
 
@@ -712,29 +726,4 @@ int git_sparse_check_path(
     cleanup:
     git_sparse__free(&sparse);
     return error;
-}
-
-int git_strarray__to_vector(git_vector *dest, git_strarray *src) {
-    int error = 0;
-    size_t i = 0;
-
-    GIT_ASSERT_ARG(dest);
-    GIT_ASSERT_ARG(src);
-
-    for (i = 0; i < src->count; i++) {
-        if ((error = git_vector_insert(dest, src->strings[i])) < 0)
-            return error;
-    }
-
-    return error;
-}
-
-int git_strarray__from_vector(git_strarray *dest, git_vector *src) {
-
-	GIT_ASSERT_ARG(dest);
-	GIT_ASSERT_ARG(src);
-
-	dest->strings = (char **) git_vector_detach(&dest->count, NULL, src);
-
-	return 0;
 }
