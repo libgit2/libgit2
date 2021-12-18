@@ -1190,7 +1190,7 @@ replay:
 
 			if (!git__prefixcmp_icase(location8, prefix_https)) {
 				/* Upgrade to secure connection; disconnect and start over */
-				if (git_net_url_apply_redirect(&t->server.url, location8, s->service_url) < 0) {
+				if (git_net_url_apply_redirect(&t->server.url, location8, false, s->service_url) < 0) {
 					git__free(location8);
 					return -1;
 				}

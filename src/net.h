@@ -46,6 +46,7 @@ extern bool git_net_url_is_ipv6(git_net_url *url);
 extern int git_net_url_apply_redirect(
 	git_net_url *url,
 	const char *redirect_location,
+	bool allow_offsite,
 	const char *service_suffix);
 
 /** Swaps the contents of one URL for another.  */

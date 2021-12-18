@@ -233,7 +233,7 @@ static int handle_response(
 			return -1;
 		}
 
-		if (git_net_url_apply_redirect(&transport->server.url, response->location, stream->service->url) < 0) {
+		if (git_net_url_apply_redirect(&transport->server.url, response->location, false, stream->service->url) < 0) {
 			return -1;
 		}
 

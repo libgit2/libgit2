@@ -315,6 +315,7 @@ static void remove_service_suffix(
 int git_net_url_apply_redirect(
 	git_net_url *url,
 	const char *redirect_location,
+	bool allow_offsite,
 	const char *service_suffix)
 {
 	git_net_url tmp = GIT_NET_URL_INIT;
@@ -339,8 +340,8 @@ int git_net_url_apply_redirect(
 		/* Validate that this is a legal redirection */
 
 		if (original->scheme &&
-			strcmp(original->scheme, tmp.scheme) != 0 &&
-			strcmp(tmp.scheme, "https") != 0) {
+		    strcmp(original->scheme, tmp.scheme) != 0 &&
+		    strcmp(tmp.scheme, "https") != 0) {
 			git_error_set(GIT_ERROR_NET, "cannot redirect from '%s' to '%s'",
 				original->scheme, tmp.scheme);
 
@@ -349,6 +350,7 @@ int git_net_url_apply_redirect(
 		}
 
 		if (original->host &&
+		    !allow_offsite &&
 		    git__strcasecmp(original->host, tmp.host) != 0) {
 			git_error_set(GIT_ERROR_NET, "cannot redirect from '%s' to '%s'",
 				original->host, tmp.host);
