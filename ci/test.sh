@@ -102,7 +102,7 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 fi
 
 if [ -z "$SKIP_NTLM_TESTS" ]; then
-	curl --location --silent --show-error https://github.com/ethomson/poxygit/releases/download/v0.4.0/poxygit-0.4.0.jar >poxygit.jar
+	curl --location --silent --show-error https://github.com/ethomson/poxygit/releases/download/v0.5.1/poxygit-0.5.1.jar >poxygit.jar
 
 	echo ""
 	echo "Starting HTTP server..."
