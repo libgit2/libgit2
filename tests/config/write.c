@@ -8,6 +8,7 @@ void test_config_write__initialize(void)
 	cl_fixture_sandbox("config/config9");
 	cl_fixture_sandbox("config/config15");
 	cl_fixture_sandbox("config/config17");
+	cl_fixture_sandbox("config/config22");
 }
 
 void test_config_write__cleanup(void)
@@ -15,6 +16,7 @@ void test_config_write__cleanup(void)
 	cl_fixture_cleanup("config9");
 	cl_fixture_cleanup("config15");
 	cl_fixture_cleanup("config17");
+	cl_fixture_cleanup("config22");
 }
 
 void test_config_write__replace_value(void)
@@ -740,6 +742,23 @@ void test_config_write__preserve_case(void)
 	cl_git_pass(git_futils_readbuffer(&result, filename));
 	cl_assert_equal_s(expected, result.ptr);
 	git_str_dispose(&result);
+
+	git_config_free(cfg);
+}
+
+void test_config_write__write_config_file_with_multi_line_value(void)
+{
+	git_config* cfg;
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "config22"));
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "alias.m"));
+	cl_assert_equal_s("cmd ;; ;; bar", buf.ptr);
+	cl_git_pass(git_config_set_string(cfg, "sOMe.ThInG", "foo"));
+	git_buf_dispose(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "alias.m"));
+	cl_assert_equal_s("cmd ;; ;; bar", buf.ptr);
+	git_buf_dispose(&buf);
 
 	git_config_free(cfg);
 }

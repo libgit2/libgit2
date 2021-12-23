@@ -36,7 +36,7 @@ static int strip_comments(char *line, int in_quotes)
 	char *ptr;
 
 	for (ptr = line; *ptr; ++ptr) {
-		if (ptr[0] == '"' && ptr > line && ptr[-1] != '\\')
+		if (ptr[0] == '"' && ((ptr > line && ptr[-1] != '\\') || ptr == line))
 			quote_count++;
 
 		if ((ptr[0] == ';' || ptr[0] == '#') &&
@@ -325,7 +325,7 @@ done:
 	return 0;
 }
 
-static int parse_multiline_variable(git_config_parser *reader, git_str *value, int in_quotes)
+static int parse_multiline_variable(git_config_parser *reader, git_str *value, int in_quotes, size_t *line_len)
 {
 	int quote_count;
 	bool multiline = true;
@@ -338,6 +338,10 @@ static int parse_multiline_variable(git_config_parser *reader, git_str *value, i
 		git_parse_advance_line(&reader->ctx);
 		line = git__strndup(reader->ctx.line, reader->ctx.line_len);
 		GIT_ERROR_CHECK_ALLOC(line);
+		if (GIT_ADD_SIZET_OVERFLOW(line_len, *line_len, reader->ctx.line_len)) {
+			error = -1;
+			goto out;
+		}
 
 		/*
 		 * We've reached the end of the file, there is no continuation.
@@ -415,7 +419,7 @@ static int parse_name(
 	return 0;
 }
 
-static int parse_variable(git_config_parser *reader, char **var_name, char **var_value)
+static int parse_variable(git_config_parser *reader, char **var_name, char **var_value, size_t *line_len)
 {
 	const char *value_start = NULL;
 	char *line = NULL, *name = NULL, *value = NULL;
@@ -449,7 +453,7 @@ static int parse_variable(git_config_parser *reader, char **var_name, char **var
 			git_str_attach(&multi_value, value, 0);
 			value = NULL;
 
-			if (parse_multiline_variable(reader, &multi_value, quote_count % 2) < 0 ||
+			if (parse_multiline_variable(reader, &multi_value, quote_count % 2, line_len) < 0 ||
 			    git_str_oom(&multi_value)) {
 				error = -1;
 				git_str_dispose(&multi_value);
@@ -554,7 +558,7 @@ int git_config_parse(
 			break;
 
 		default: /* assume variable declaration */
-			if ((result = parse_variable(parser, &var_name, &var_value)) == 0 && on_variable) {
+			if ((result = parse_variable(parser, &var_name, &var_value, &line_len)) == 0 && on_variable) {
 				result = on_variable(parser, current_section, var_name, var_value, line_start, line_len, payload);
 				git__free(var_name);
 				git__free(var_value);

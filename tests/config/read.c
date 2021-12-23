@@ -209,6 +209,21 @@ void test_config_read__symbol_headers(void)
 {
 	git_config *cfg;
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config20")));
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "valid.[subsection].something"));
+	cl_assert_equal_s("a", buf.ptr);
+	git_buf_dispose(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "sec.[subsec]/child.parent"));
+	cl_assert_equal_s("grand", buf.ptr);
+	git_buf_dispose(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "sec2.[subsec2]/child2.type"));
+	cl_assert_equal_s("dvcs", buf.ptr);
+	git_buf_dispose(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "sec3.escape\"quote.vcs"));
+	cl_assert_equal_s("git", buf.ptr);
+	git_buf_dispose(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "sec4.escaping\\slash.lib"));
+	cl_assert_equal_s("git2", buf.ptr);
+	git_buf_dispose(&buf);
 	git_config_free(cfg);
 }
 
@@ -216,6 +231,19 @@ void test_config_read__multiline_multiple_quoted_comment_chars(void)
 {
 	git_config *cfg;
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config21")));
+	git_config_free(cfg);
+}
+
+void test_config_read__multiline_multiple_quoted_quote_at_beginning_of_line(void)
+{
+	git_config* cfg;
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config22")));
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "alias.m"));
+	cl_assert_equal_s("cmd ;; ;; bar", buf.ptr);
+	git_buf_dispose(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "alias.m2"));
+	cl_assert_equal_s("'; ; something '", buf.ptr);
+	git_buf_dispose(&buf);
 	git_config_free(cfg);
 }
 
