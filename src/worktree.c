@@ -304,15 +304,12 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	git_reference *ref = NULL, *head = NULL;
 	git_commit *commit = NULL;
 	git_repository *wt = NULL;
-	git_checkout_options coopts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_checkout_options coopts;
 	git_worktree_add_options wtopts = GIT_WORKTREE_ADD_OPTIONS_INIT;
 	int err;
 
 	GIT_ERROR_CHECK_VERSION(
 		opts, GIT_WORKTREE_ADD_OPTIONS_VERSION, "git_worktree_add_options");
-
-	if (opts)
-		memcpy(&wtopts, opts, sizeof(wtopts));
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(repo);
@@ -320,6 +317,11 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	GIT_ASSERT_ARG(worktree);
 
 	*out = NULL;
+
+	if (opts)
+		memcpy(&wtopts, opts, sizeof(wtopts));
+
+	memcpy(&coopts, &wtopts.checkout_options, sizeof(coopts));
 
 	if (wtopts.ref) {
 		if (!git_reference_is_branch(wtopts.ref)) {
@@ -405,7 +407,6 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 		goto out;
 
 	/* Checkout worktree's HEAD */
-	coopts.checkout_strategy = GIT_CHECKOUT_FORCE;
 	if ((err = git_checkout_head(wt, &coopts)) < 0)
 		goto out;
 
