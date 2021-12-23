@@ -90,7 +90,7 @@ typedef struct git_worktree_add_options {
 	/**
 	 * Options for the checkout.
 	 */
-	git_checkout_options checkout_opts;
+	git_checkout_options checkout_options;
 } git_worktree_add_options;
 
 #define GIT_WORKTREE_ADD_OPTIONS_VERSION 1

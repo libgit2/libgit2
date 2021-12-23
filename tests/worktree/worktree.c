@@ -300,7 +300,7 @@ void test_worktree_worktree__add_no_checkout(void)
 	git_str path = GIT_STR_INIT;
 	git_worktree_add_options opts = GIT_WORKTREE_ADD_OPTIONS_INIT;
 
-	opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
+	opts.checkout_options.checkout_strategy = GIT_CHECKOUT_NONE;
 
 	cl_git_pass(git_str_joinpath(&path, fixture.repo->workdir, "../worktree-no-checkout"));
 	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-no-checkout", path.ptr, &opts));
