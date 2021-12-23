@@ -36,8 +36,8 @@ set(LIBGIT2_PC_LIBS "")
 
 set(LIBGIT2_INCLUDES
 	"${CMAKE_CURRENT_BINARY_DIR}"
-	"${CMAKE_SOURCE_DIR}/src"
-	"${CMAKE_SOURCE_DIR}/include")
+	"${PROJECT_SOURCE_DIR}/src"
+	"${PROJECT_SOURCE_DIR}/include")
 
 if(HAVE_FUTIMENS)
 	set(GIT_USE_FUTIMENS 1)
@@ -117,8 +117,8 @@ target_sources(git2internal PRIVATE ${SRC_SHA1})
 # Optional external dependency: ntlmclient
 if(USE_NTLMCLIENT)
 	set(GIT_NTLM 1)
-	add_subdirectory("${CMAKE_SOURCE_DIR}/deps/ntlmclient" "${CMAKE_BINARY_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${CMAKE_SOURCE_DIR}/deps/ntlmclient")
+	add_subdirectory("${PROJECT_SOURCE_DIR}/deps/ntlmclient" "${PROJECT_BINARY_DIR}/deps/ntlmclient")
+	list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/ntlmclient")
 	list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
 endif()
 add_feature_info(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
@@ -164,9 +164,9 @@ target_compile_definitions(git2internal PRIVATE _FILE_OFFSET_BITS=64)
 
 # Collect sourcefiles
 file(GLOB SRC_H
-	"${CMAKE_SOURCE_DIR}/include/git2.h"
-	"${CMAKE_SOURCE_DIR}/include/git2/*.h"
-	"${CMAKE_SOURCE_DIR}/include/git2/sys/*.h")
+	"${PROJECT_SOURCE_DIR}/include/git2.h"
+	"${PROJECT_SOURCE_DIR}/include/git2/*.h"
+	"${PROJECT_SOURCE_DIR}/include/git2/sys/*.h")
 list(SORT SRC_H)
 target_sources(git2internal PRIVATE ${SRC_H})
 
@@ -225,7 +225,7 @@ configure_file(features.h.in git2/sys/features.h)
 ide_split_sources(git2internal)
 list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:git2internal> ${LIBGIT2_DEPENDENCY_OBJECTS})
 
-target_include_directories(git2internal PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(git2internal PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(git2internal SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
 
 set(LIBGIT2_INCLUDES ${LIBGIT2_INCLUDES} PARENT_SCOPE)
@@ -247,9 +247,9 @@ add_library(git2 ${WIN_RC} ${LIBGIT2_OBJECTS})
 target_link_libraries(git2 ${LIBGIT2_SYSTEM_LIBS})
 
 set_target_properties(git2 PROPERTIES C_STANDARD 90)
-set_target_properties(git2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set_target_properties(git2 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set_target_properties(git2 PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set_target_properties(git2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+set_target_properties(git2 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+set_target_properties(git2 PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 # Workaround for Cmake bug #0011240 (see http://public.kitware.com/Bug/view.php?id=11240)
 # Win64+MSVC+static libs = linker error
@@ -290,5 +290,5 @@ install(TARGETS git2
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/git2 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(FILES ${CMAKE_SOURCE_DIR}/include/git2.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/git2 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES ${PROJECT_SOURCE_DIR}/include/git2.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

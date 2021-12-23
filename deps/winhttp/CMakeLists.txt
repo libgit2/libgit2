@@ -3,7 +3,7 @@ if(NOT DLLTOOL)
 	message(FATAL_ERROR "Could not find dlltool command")
 endif()
 
-set(LIBWINHTTP_PATH "${CMAKE_BINARY_DIR}/deps/winhttp")
+set(LIBWINHTTP_PATH "${PROJECT_BINARY_DIR}/deps/winhttp")
 set(LIBWINHTTP_PATH ${LIBWINHTTP_PATH} PARENT_SCOPE)
 file(MAKE_DIRECTORY ${LIBWINHTTP_PATH})
 
