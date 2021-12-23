@@ -508,7 +508,7 @@ void test_fetchhead_nonetwork__create_with_multiple_refspecs(void)
 		int i;
 		struct prefix_count prefix_counts[] = {
 			{"refs/notes/", 0, 1},
-			{"refs/heads/", 0, 12},
+			{"refs/heads/", 0, 13},
 			{"refs/tags/", 0, 7},
 			{NULL, 0, 0},
 		};

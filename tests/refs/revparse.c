@@ -399,7 +399,7 @@ void test_refs_revparse__date(void)
 	 * a65fedf HEAD@{1335806603 -0900}: commit:
 	 * be3563a HEAD@{1335806563 -0700}: clone: from /Users/ben/src/libgit2/tests/resour
 	 */
-	test_object("HEAD@{10 years ago}", NULL);
+	test_object("HEAD@{10 years ago}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 
 	test_object("HEAD@{1 second}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("HEAD@{1 second ago}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
@@ -417,11 +417,12 @@ void test_refs_revparse__date(void)
 
 
 	/*
-	 * $ git reflog -1 "master@{2012-04-30 17:22:42 +0000}"
-	 * warning: Log for 'master' only goes back to Mon, 30 Apr 2012 09:22:43 -0800.
+	 * $ git rev-parse "master@{2012-04-30 17:22:42 +0000}"
+	 * warning: log for 'master' only goes back to Mon, 30 Apr 2012 09:22:43 -0800
+	 * be3563ae3f795b2b4353bcce3a527ad0a4f7f644
 	 */
-	test_object("master@{2012-04-30 17:22:42 +0000}", NULL);
-	test_object("master@{2012-04-30 09:22:42 -0800}", NULL);
+	test_object("master@{2012-04-30 17:22:42 +0000}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	test_object("master@{2012-04-30 09:22:42 -0800}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 
 	/*
 	 * $ git reflog -1 "master@{2012-04-30 17:22:43 +0000}"
@@ -451,6 +452,25 @@ void test_refs_revparse__date(void)
 	 */
 	test_object("master@{1335806603}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("master@{1335806602}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+
+	/*
+	 * $ git rev-parse "with-empty-log@{2 days ago}" --
+	 * fatal: log for refs/heads/with-empty-log is empty
+	 */
+	test_object("with-empty-log@{2 days ago}", NULL);
+}
+
+void test_refs_revparse__invalid_date(void)
+{
+	/*
+	 * $ git rev-parse HEAD@{} --
+	 * fatal: bad revision 'HEAD@{}'
+	 *
+	 * $ git rev-parse HEAD@{NEITHER_INTEGER_NOR_DATETIME} --
+	 * fatal: bad revision 'HEAD@{NEITHER_INTEGER_NOR_DATETIME}'
+	 */
+	test_object("HEAD@{}", NULL);
+	test_object("HEAD@{NEITHER_INTEGER_NOR_DATETIME}", NULL);
 }
 
 void test_refs_revparse__colon(void)

@@ -48,7 +48,7 @@ static void assert_retrieval(unsigned int flags, unsigned int expected_count)
 
 void test_refs_branches_iterator__retrieve_all_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_ALL, 14);
+	assert_retrieval(GIT_BRANCH_ALL, 15);
 }
 
 void test_refs_branches_iterator__retrieve_remote_branches(void)
@@ -58,7 +58,7 @@ void test_refs_branches_iterator__retrieve_remote_branches(void)
 
 void test_refs_branches_iterator__retrieve_local_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_LOCAL, 12);
+	assert_retrieval(GIT_BRANCH_LOCAL, 13);
 }
 
 struct expectations {

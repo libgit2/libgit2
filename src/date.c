@@ -853,7 +853,7 @@ static git_time_t approxidate_str(const char *date,
 	}
 	pending_number(&tm, &number);
 	if (!touched)
-		*error_ret = 1;
+		*error_ret = -1;
 	return update_tm(&tm, &now, 0);
 }
 
@@ -872,7 +872,7 @@ int git_date_parse(git_time_t *out, const char *date)
 		return -1;
 
 	*out = approxidate_str(date, time_sec, &error_ret);
-   return error_ret;
+	return error_ret;
 }
 
 int git_date_rfc2822_fmt(git_str *out, git_time_t time, int offset)
