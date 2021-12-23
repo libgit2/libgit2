@@ -604,10 +604,26 @@ void test_diff_blob__can_correctly_detect_a_binary_blob_as_binary(void)
 	cl_assert_equal_i(true, git_blob_is_binary(alien));
 }
 
+void test_diff_blob__can_correctly_detect_binary_blob_data_as_binary(void)
+{
+	/* alien.png */
+	const char *content = git_blob_rawcontent(alien);
+	size_t len = (size_t)git_blob_rawsize(alien);
+	cl_assert_equal_i(true, git_blob_data_is_binary(content, len));
+}
+
 void test_diff_blob__can_correctly_detect_a_textual_blob_as_non_binary(void)
 {
 	/* tests/resources/attr/root_test4.txt */
 	cl_assert_equal_i(false, git_blob_is_binary(d));
+}
+
+void test_diff_blob__can_correctly_detect_textual_blob_data_as_non_binary(void)
+{
+	/* tests/resources/attr/root_test4.txt */
+	const char *content = git_blob_rawcontent(d);
+	size_t len = (size_t)git_blob_rawsize(d);
+	cl_assert_equal_i(false, git_blob_data_is_binary(content, len));
 }
 
 /*
