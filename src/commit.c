@@ -547,7 +547,7 @@ const char *git_commit_message(const git_commit *commit)
 const char *git_commit_summary(git_commit *commit)
 {
 	git_str summary = GIT_STR_INIT;
-	const char *msg, *space;
+	const char *msg, *space, *next;
 	bool space_contains_newline = false;
 
 	GIT_ASSERT_ARG_WITH_RETVAL(commit, NULL);
@@ -556,10 +556,21 @@ const char *git_commit_summary(git_commit *commit)
 		for (msg = git_commit_message(commit), space = NULL; *msg; ++msg) {
 			char next_character = msg[0];
 			/* stop processing at the end of the first paragraph */
-			if (next_character == '\n' && (!msg[1] || msg[1] == '\n'))
-				break;
+			if (next_character == '\n') {
+				if (!msg[1])
+					break;
+				if (msg[1] == '\n')
+					break;
+				/* stop processing if next line contains only whitespace */
+				next = msg + 1;
+				while (*next && git__isspace_nonlf(*next)) {
+					++next;
+				}
+				if (!*next || *next == '\n') 
+					break;
+			}
 			/* record the beginning of contiguous whitespace runs */
-			else if (git__isspace(next_character)) {
+			if (git__isspace(next_character)) {
 				if(space == NULL) {
 					space = msg;
 					space_contains_newline = false;
