@@ -29,11 +29,13 @@ static int push_status_ref_cmp(const void *a, const void *b)
 	return strcmp(push_status_a->ref, push_status_b->ref);
 }
 
-int git_push_new(git_push **out, git_remote *remote)
+int git_push_new(git_push **out, git_remote *remote, const git_push_options *opts)
 {
 	git_push *p;
 
 	*out = NULL;
+
+	GIT_ERROR_CHECK_VERSION(opts, GIT_PUSH_OPTIONS_VERSION, "git_push_options");
 
 	p = git__calloc(1, sizeof(*p));
 	GIT_ERROR_CHECK_ALLOC(p);
@@ -41,7 +43,12 @@ int git_push_new(git_push **out, git_remote *remote)
 	p->repo = remote->repo;
 	p->remote = remote;
 	p->report_status = 1;
-	p->pb_parallelism = 1;
+	p->pb_parallelism = opts ? opts->pb_parallelism : 1;
+
+	if (opts) {
+		GIT_ERROR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+		memcpy(&p->callbacks, &opts->callbacks, sizeof(git_remote_callbacks));
+	}
 
 	if (git_vector_init(&p->specs, 0, push_spec_rref_cmp) < 0) {
 		git__free(p);
@@ -62,20 +69,6 @@ int git_push_new(git_push **out, git_remote *remote)
 	}
 
 	*out = p;
-	return 0;
-}
-
-int git_push_set_options(git_push *push, const git_push_options *opts)
-{
-	if (!push || !opts)
-		return -1;
-
-	GIT_ERROR_CHECK_VERSION(opts, GIT_PUSH_OPTIONS_VERSION, "git_push_options");
-
-	push->pb_parallelism = opts->pb_parallelism;
-	push->connection.custom_headers = &opts->custom_headers;
-	push->connection.proxy = &opts->proxy_opts;
-
 	return 0;
 }
 
@@ -411,10 +404,11 @@ static int calculate_work(git_push *push)
 	return 0;
 }
 
-static int do_push(git_push *push, const git_remote_callbacks *callbacks)
+static int do_push(git_push *push)
 {
 	int error = 0;
 	git_transport *transport = push->remote->transport;
+	git_remote_callbacks *callbacks = &push->callbacks;
 
 	if (!transport->push) {
 		git_error_set(GIT_ERROR_NET, "remote transport doesn't support push");
@@ -446,7 +440,7 @@ static int do_push(git_push *push, const git_remote_callbacks *callbacks)
 	    goto on_error;
 
 	if ((error = queue_objects(push)) < 0 ||
-	    (error = transport->push(transport, push, callbacks)) < 0)
+	    (error = transport->push(transport, push)) < 0)
 		goto on_error;
 
 on_error:
@@ -472,7 +466,7 @@ static int filter_refs(git_remote *remote)
 	return 0;
 }
 
-int git_push_finish(git_push *push, const git_remote_callbacks *callbacks)
+int git_push_finish(git_push *push)
 {
 	int error;
 
@@ -482,7 +476,7 @@ int git_push_finish(git_push *push, const git_remote_callbacks *callbacks)
 	}
 
 	if ((error = filter_refs(push->remote)) < 0 ||
-	    (error = do_push(push, callbacks)) < 0)
+	    (error = do_push(push)) < 0)
 		return error;
 
 	if (!push->unpack_ok) {

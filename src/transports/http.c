@@ -174,6 +174,7 @@ GIT_INLINE(int) handle_remote_auth(
 	git_http_response *response)
 {
 	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+	git_remote_connect_options *connect_opts = &transport->owner->connect_opts;
 
 	if (response->server_auth_credtypes == 0) {
 		git_error_set(GIT_ERROR_HTTP, "server requires authentication that we do not support");
@@ -187,8 +188,8 @@ GIT_INLINE(int) handle_remote_auth(
 		transport->owner->url,
 		response->server_auth_schemetypes,
 		response->server_auth_credtypes,
-		transport->owner->cred_acquire_cb,
-		transport->owner->cred_acquire_payload);
+		connect_opts->callbacks.credentials,
+		connect_opts->callbacks.payload);
 }
 
 GIT_INLINE(int) handle_proxy_auth(
@@ -196,6 +197,7 @@ GIT_INLINE(int) handle_proxy_auth(
 	git_http_response *response)
 {
 	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+	git_remote_connect_options *connect_opts = &transport->owner->connect_opts;
 
 	if (response->proxy_auth_credtypes == 0) {
 		git_error_set(GIT_ERROR_HTTP, "proxy requires authentication that we do not support");
@@ -206,11 +208,11 @@ GIT_INLINE(int) handle_proxy_auth(
 	return handle_auth(
 		&transport->proxy,
 		SERVER_TYPE_PROXY,
-		transport->owner->proxy.url,
+		connect_opts->proxy_opts.url,
 		response->server_auth_schemetypes,
 		response->proxy_auth_credtypes,
-		transport->owner->proxy.credentials,
-		transport->owner->proxy.payload);
+		connect_opts->proxy_opts.credentials,
+		connect_opts->proxy_opts.payload);
 }
 
 
@@ -286,6 +288,7 @@ static int lookup_proxy(
 	bool *out_use,
 	http_subtransport *transport)
 {
+	git_remote_connect_options *connect_opts = &transport->owner->connect_opts;
 	const char *proxy;
 	git_remote *remote;
 	char *config = NULL;
@@ -294,9 +297,9 @@ static int lookup_proxy(
 	*out_use = false;
 	git_net_url_dispose(&transport->proxy.url);
 
-	switch (transport->owner->proxy.type) {
+	switch (connect_opts->proxy_opts.type) {
 	case GIT_PROXY_SPECIFIED:
-		proxy = transport->owner->proxy.url;
+		proxy = connect_opts->proxy_opts.url;
 		break;
 
 	case GIT_PROXY_AUTO:
@@ -345,7 +348,7 @@ static int generate_request(
 	request->credentials = transport->server.cred;
 	request->proxy = use_proxy ? &transport->proxy.url : NULL;
 	request->proxy_credentials = transport->proxy.cred;
-	request->custom_headers = &transport->owner->custom_headers;
+	request->custom_headers = &transport->owner->connect_opts.custom_headers;
 
 	if (stream->service->method == GIT_HTTP_METHOD_POST) {
 		request->chunked = stream->service->chunked;
@@ -633,6 +636,7 @@ static int http_action(
 	git_smart_service_t action)
 {
 	http_subtransport *transport = GIT_CONTAINER_OF(t, http_subtransport, parent);
+	git_remote_connect_options *connect_opts = &transport->owner->connect_opts;
 	http_stream *stream;
 	const http_service *service;
 	int error;
@@ -664,10 +668,10 @@ static int http_action(
 	if (!transport->http_client) {
 		git_http_client_options opts = {0};
 
-		opts.server_certificate_check_cb = transport->owner->certificate_check_cb;
-		opts.server_certificate_check_payload = transport->owner->message_cb_payload;
-		opts.proxy_certificate_check_cb = transport->owner->proxy.certificate_check;
-		opts.proxy_certificate_check_payload = transport->owner->proxy.payload;
+		opts.server_certificate_check_cb = connect_opts->callbacks.certificate_check;
+		opts.server_certificate_check_payload = connect_opts->callbacks.payload;
+		opts.proxy_certificate_check_cb = connect_opts->proxy_opts.certificate_check;
+		opts.proxy_certificate_check_payload = connect_opts->proxy_opts.payload;
 
 		if (git_http_client_new(&transport->http_client, &opts) < 0)
 			return -1;
