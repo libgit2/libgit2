@@ -579,9 +579,8 @@ static const char *end_of_record(const char *p, const char *end)
 	while (1) {
 		size_t sz = end - p;
 		p = memchr(p, '\n', sz);
-		if (!p) {
+		if (!p)
 			return end;
-		}
 		++p;
 		if (p < end && p[0] == '^')
 			++p;
