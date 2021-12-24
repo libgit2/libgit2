@@ -476,9 +476,10 @@ int git_push_finish(git_push *push, const git_remote_callbacks *callbacks)
 {
 	int error;
 
-	if (!git_remote_connected(push->remote) &&
-	    (error = git_remote__connect(push->remote, GIT_DIRECTION_PUSH, callbacks, &push->connection)) < 0)
-		return error;
+	if (!git_remote_connected(push->remote)) {
+		git_error_set(GIT_ERROR_NET, "remote is disconnected");
+		return -1;
+	}
 
 	if ((error = filter_refs(push->remote)) < 0 ||
 	    (error = do_push(push, callbacks)) < 0)
