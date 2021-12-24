@@ -605,9 +605,8 @@ cmp_record_to_refname(const char *rec, size_t data_end, const char *ref_name)
 	data_end -= GIT_OID_HEXSZ + 1;
 
 	end = memchr(rec, '\n', data_end);
-	if (end) {
+	if (end)
 		data_end = end - rec;
-	}
 
 	cmp_val = memcmp(rec, ref_name, min(ref_len, data_end));
 
