@@ -556,7 +556,7 @@ static int packed_map_check(refdb_fs_backend *backend)
 static const char *start_of_record(const char *buf, const char *p)
 {
 	const char *nl = p;
-	while (1) {
+	while (true) {
 		nl = git__memrchr(buf, '\n', nl - buf);
 		if (!nl)
 			return buf;
