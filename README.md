@@ -392,8 +392,6 @@ Here are the bindings to libgit2 that are currently available:
     * Git-Raw <https://github.com/jacquesg/p5-Git-Raw>
 * PHP
     * php-git <https://github.com/libgit2/php-git>
-* PowerShell
-    * PSGit <https://github.com/PoshCode/PSGit>
 * Python
     * pygit2 <https://github.com/libgit2/pygit2>
 * R
