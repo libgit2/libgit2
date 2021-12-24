@@ -654,9 +654,8 @@ static int packed_lookup(
 	if ((error = packed_map_check(backend)) < 0)
 		return error;
 
-	if (!backend->sorted) {
+	if (!backend->sorted)
 		return packed_unsorted_lookup(out, backend, ref_name);
-	}
 
 	left = backend->packed_refs_map.data;
 	right = data_end = ((const char *)backend->packed_refs_map.data) +
