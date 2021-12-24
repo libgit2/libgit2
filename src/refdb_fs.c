@@ -610,9 +610,8 @@ cmp_record_to_refname(const char *rec, size_t data_end, const char *ref_name)
 
 	cmp_val = memcmp(rec, ref_name, min(ref_len, data_end));
 
-	if (cmp_val == 0 && data_end != ref_len) {
+	if (cmp_val == 0 && data_end != ref_len)
 		return (data_end > ref_len) ? 1 : -1;
-	}
 	return cmp_val;
 }
 
