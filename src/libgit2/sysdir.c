@@ -20,12 +20,8 @@
 
 static int git_sysdir_guess_programdata_dirs(git_str *out)
 {
-#ifdef GIT_WIN32
-	return git_win32__find_programdata_dirs(out);
-#else
 	git_str_clear(out);
 	return 0;
-#endif
 }
 
 static int git_sysdir_guess_system_dirs(git_str *out)
