@@ -70,6 +70,46 @@ static wchar_t *win32_walkpath(wchar_t *path, wchar_t *buf, size_t buflen)
 	return (path != base) ? path : NULL;
 }
 
+static int win32_find_git_for_windows_architecture_root(_findfile_path *root_path, const wchar_t *subdir)
+{
+	/* Git for Windows >= 2 comes with a special architecture root (mingw64 and mingw32)
+	 * under which the "share" folder is located, check which we need (none is also ok) */
+
+	static const wchar_t *architecture_roots[4] = {
+		L"", // starting with Git 2.24 the etc folder is directly in the root folder
+		L"mingw64\\",
+		L"mingw32\\",
+		NULL,
+	};
+
+	const wchar_t **roots = architecture_roots;
+	for (; *roots != NULL; ++roots) {
+		git_win32_path tmp_root;
+		DWORD subdir_len;
+		if (wcscpy(tmp_root, root_path->path) &&
+			root_path->len + wcslen(*roots) <= MAX_PATH &&
+			wcscat(tmp_root, *roots) &&
+			!_waccess(tmp_root, F_OK)) {
+			wcscpy(root_path->path, tmp_root);
+			root_path->len += (DWORD)wcslen(*roots);
+
+			subdir_len = (DWORD)wcslen(subdir);
+			if (root_path->len + subdir_len >= MAX_PATH)
+				break;
+
+			// append subdir and check whether it exists for the Git installation
+			wcscat(tmp_root, subdir);
+			if (!_waccess(tmp_root, F_OK)) {
+				wcscpy(root_path->path, tmp_root);
+				root_path->len += subdir_len;
+				break;
+			}
+		}
+	}
+
+	return 0;
+}
+
 static int win32_find_git_in_path(git_str *buf, const wchar_t *gitexe, const wchar_t *subdir)
 {
 	wchar_t *env = _wgetenv(L"PATH"), lastch;
@@ -94,11 +134,13 @@ static int win32_find_git_in_path(git_str *buf, const wchar_t *gitexe, const wch
 		wcscpy(&root.path[root.len], gitexe);
 
 		if (!_waccess(root.path, F_OK)) {
-			/* replace "bin\\" or "cmd\\" of a Git for Windows installation with subdir OR append path */
+			/* check whether we found a Git for Windows installation and do some path adjustments OR just append subdir */
 			if ((root.len > 5 && wcscmp(root.path - 4, L"cmd\\")) || wcscmp(root.path - 4, L"bin\\")) {
-				if (root.len - 4 + wcslen(subdir) >= MAX_PATH)
+				/* strip "bin" or "cmd" and try to find architecture root for appending subdir */
+				root.len -= 4;
+				root.path[root.len] = L'\0';
+				if (win32_find_git_for_windows_architecture_root(&root, subdir))
 					continue;
-				wcscpy(&root.path[root.len - 4], subdir);
 			} else {
 				if (root.len + wcslen(subdir) >= MAX_PATH)
 					continue;
@@ -123,22 +165,21 @@ static int win32_find_git_in_registry(
 
 	if (!RegOpenKeyExW(hive, key, 0, KEY_READ, &hKey)) {
 		DWORD dwType, cbData;
-		git_win32_path path;
+		_findfile_path path;
 
 		/* Ensure that the buffer is big enough to have the suffix attached
 		 * after we receive the result. */
 		cbData = (DWORD)(sizeof(path) - wcslen(subdir) * sizeof(wchar_t));
 
 		/* InstallLocation points to the root of the git directory */
-		if (!RegQueryValueExW(hKey, L"InstallLocation", NULL, &dwType, (LPBYTE)path, &cbData) &&
+		if (!RegQueryValueExW(hKey, L"InstallLocation", NULL, &dwType, (LPBYTE)path.path, &cbData) &&
 			dwType == REG_SZ) {
-
-			/* Append the suffix */
-			wcscat(path, subdir);
+			path.len = cbData;
 
 			/* Convert to UTF-8, with forward slashes, and output the path
 			 * to the provided buffer */
-			if (!win32_path_to_8(buf, path))
+			if (!win32_find_git_for_windows_architecture_root(&path, subdir) &&
+				!win32_path_to_8(buf, path.path))
 				error = 0;
 		}
 
