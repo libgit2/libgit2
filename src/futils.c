@@ -26,7 +26,7 @@ int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 
 int git_futils_mktmp(git_str *path_out, const char *filename, mode_t mode)
 {
-	int fd;
+	int fd, r;
 	mode_t mask;
 
 	p_umask(mask = p_umask(0));
@@ -43,7 +43,12 @@ int git_futils_mktmp(git_str *path_out, const char *filename, mode_t mode)
 		return -1;
 	}
 
-	if (p_chmod(path_out->ptr, (mode & ~mask))) {
+#ifdef GIT_WIN32
+	r = p_chmod(path_out->ptr, (mode & ~mask));
+#else
+	r = p_fchmod(fd, (mode & ~mask));
+#endif
+	if (r != 0) {
 		git_error_set(GIT_ERROR_OS,
 			"failed to set permissions on file '%s'", path_out->ptr);
 		return -1;

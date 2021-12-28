@@ -73,8 +73,10 @@ GIT_INLINE(int) p_fsync(int fd)
  */
 #ifdef __ANDROID__
 # define p_chmod(p,m) 0
+# define p_fchmod(fd,m) 0
 #else
 # define p_chmod(p,m) chmod(p, m)
+# define p_fchmod(fd,m) fchmod(fd, m)
 #endif
 
 /* see win32/posix.h for explanation about why this exists */
