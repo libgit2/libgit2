@@ -720,22 +720,23 @@ void test_status_renames__precomposed_unicode_toggle_is_rename(void)
 
 void test_status_renames__case_insensitive_h2i_and_i2wc(void)
 {
-    git_status_list *statuslist;
-    git_status_options opts = GIT_STATUS_OPTIONS_INIT;
-    
-    struct status_entry expected[] = {
-        { GIT_STATUS_INDEX_RENAMED | GIT_STATUS_WT_MODIFIED, "file.txt", "file-renamed.txt" },
-        { GIT_STATUS_INDEX_DELETED, "Wow.txt", "Wow.txt" }
-    };
+	git_status_list *statuslist;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
-    cl_git_sandbox_cleanup();
-    g_repo = cl_git_sandbox_init("case-insensitive-rename");
-    
-    opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;
-    opts.flags |= GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR;
-    opts.flags |= GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX;
+	struct status_entry expected[] = {
+		{ GIT_STATUS_INDEX_RENAMED | GIT_STATUS_WT_MODIFIED, "file.txt", "file-renamed.txt" },
+		{ GIT_STATUS_INDEX_DELETED, "Wow.txt", "Wow.txt" }
+	};
 
-    cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
-    check_status(statuslist, expected, 2);
-    git_status_list_free(statuslist);
+	cl_git_sandbox_cleanup();
+	g_repo = cl_git_sandbox_init("case-insensitive-rename");
+
+	opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;
+	opts.flags |= GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR;
+	opts.flags |= GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX;
+	opts.flags |= GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY;
+
+	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
+	check_status(statuslist, expected, 2);
+	git_status_list_free(statuslist);
 }
