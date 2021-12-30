@@ -375,7 +375,7 @@ static int apply_splits_and_deletes(
 	size_t i;
 	git_diff_delta *delta;
 
-	if (git_vector_init(&onto, expected_size, git_diff_delta__cmp) < 0)
+	if (git_vector_init(&onto, expected_size, diff->deltas._cmp) < 0)
 		return -1;
 
 	/* build new delta list without TO_DELETE and splitting TO_SPLIT */
