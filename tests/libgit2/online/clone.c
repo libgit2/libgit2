@@ -7,6 +7,7 @@
 #include "refs.h"
 
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
+#define LIVE_REPO_AS_DIR "http:/github.com/libgit2/TestGitRepository"
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
 #define BB_REPO_URL "https://libgit2-test@bitbucket.org/libgit2-test/testgitrepository.git"
 #define BB_REPO_URL_WITH_PASS "https://libgit2-test:YT77Ppm2nq8w4TYjGS8U@bitbucket.org/libgit2-test/testgitrepository.git"
@@ -115,6 +116,16 @@ void test_online_clone__initialize(void)
 
 	if (_remote_expectcontinue)
 		git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 1);
+
+#if !defined(GIT_WIN32)
+	/*
+	 * On system that allows ':' in filenames "http://path" can be misinterpreted
+	 * as the local path "http:/path".
+	 * Create a local non-repository path that looks like LIVE_REPO_URL to make
+	 * sure we can handle cloning despite this directory being around.
+	 */
+	git_futils_mkdir_r(LIVE_REPO_AS_DIR, 0777);
+#endif
 }
 
 void test_online_clone__cleanup(void)
@@ -126,6 +137,10 @@ void test_online_clone__cleanup(void)
 	cl_fixture_cleanup("./foo");
 	cl_fixture_cleanup("./initial");
 	cl_fixture_cleanup("./subsequent");
+
+#if !defined(GIT_WIN32)
+	cl_fixture_cleanup("http:");
+#endif
 
 	git__free(_remote_url);
 	git__free(_remote_user);
