@@ -291,7 +291,7 @@ static int queue_objects(git_push *push)
 		if (git_oid_equal(&spec->loid, &spec->roid))
 			continue; /* up-to-date */
 
-		if (git_odb_read_header(&size, &type, push->repo->_odb, &spec->loid) < 0)
+		if ((error = git_odb_read_header(&size, &type, push->repo->_odb, &spec->loid)) < 0)
 			goto on_error;
 
 		if (type == GIT_OBJECT_TAG) {
@@ -301,19 +301,19 @@ static int queue_objects(git_push *push)
 				goto on_error;
 
 			if (git_object_type(target) == GIT_OBJECT_COMMIT) {
-				if (git_revwalk_push(rw, git_object_id(target)) < 0) {
+				if ((error = git_revwalk_push(rw, git_object_id(target))) < 0) {
 					git_object_free(target);
 					goto on_error;
 				}
 			} else {
-				if (git_packbuilder_insert(
-					push->pb, git_object_id(target), NULL) < 0) {
+				if ((error = git_packbuilder_insert(
+					push->pb, git_object_id(target), NULL)) < 0) {
 					git_object_free(target);
 					goto on_error;
 				}
 			}
 			git_object_free(target);
-		} else if (git_revwalk_push(rw, &spec->loid) < 0)
+		} else if ((error = git_revwalk_push(rw, &spec->loid)) < 0)
 			goto on_error;
 
 		if (!spec->refspec.force) {

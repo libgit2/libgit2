@@ -1088,7 +1088,7 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 	if (ls_to_vector(&refs, remote) < 0)
 		return -1;
 
-	if ((git_vector_init(&specs, 0, NULL)) < 0)
+	if ((error = git_vector_init(&specs, 0, NULL)) < 0)
 		goto on_error;
 
 	remote->passed_refspecs = 0;

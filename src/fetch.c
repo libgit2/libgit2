@@ -87,10 +87,10 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 			goto cleanup;
 	}
 
-	if (git_repository_odb__weakptr(&odb, remote->repo) < 0)
+	if ((error = git_repository_odb__weakptr(&odb, remote->repo)) < 0)
 		goto cleanup;
 
-	if (git_remote_ls((const git_remote_head ***)&heads, &heads_len, remote) < 0)
+	if ((error = git_remote_ls((const git_remote_head ***)&heads, &heads_len, remote)) < 0)
 		goto cleanup;
 
 	for (i = 0; i < heads_len; i++) {
