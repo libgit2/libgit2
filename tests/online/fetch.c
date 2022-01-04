@@ -7,15 +7,19 @@ static char *_remote_proxy_scheme = NULL;
 static char *_remote_proxy_host = NULL;
 static char *_remote_proxy_user = NULL;
 static char *_remote_proxy_pass = NULL;
+static char *_remote_redirect_initial = NULL;
+static char *_remote_redirect_subsequent = NULL;
 
 void test_online_fetch__initialize(void)
 {
 	cl_git_pass(git_repository_init(&_repo, "./fetch", 0));
 
-    _remote_proxy_scheme = cl_getenv("GITTEST_REMOTE_PROXY_SCHEME");
-    _remote_proxy_host = cl_getenv("GITTEST_REMOTE_PROXY_HOST");
-    _remote_proxy_user = cl_getenv("GITTEST_REMOTE_PROXY_USER");
-    _remote_proxy_pass = cl_getenv("GITTEST_REMOTE_PROXY_PASS");
+	_remote_proxy_scheme = cl_getenv("GITTEST_REMOTE_PROXY_SCHEME");
+	_remote_proxy_host = cl_getenv("GITTEST_REMOTE_PROXY_HOST");
+	_remote_proxy_user = cl_getenv("GITTEST_REMOTE_PROXY_USER");
+	_remote_proxy_pass = cl_getenv("GITTEST_REMOTE_PROXY_PASS");
+	_remote_redirect_initial = cl_getenv("GITTEST_REMOTE_REDIRECT_INITIAL");
+	_remote_redirect_subsequent = cl_getenv("GITTEST_REMOTE_REDIRECT_SUBSEQUENT");
 }
 
 void test_online_fetch__cleanup(void)
@@ -24,11 +28,14 @@ void test_online_fetch__cleanup(void)
 	_repo = NULL;
 
 	cl_fixture_cleanup("./fetch");
+	cl_fixture_cleanup("./redirected");
 
-    git__free(_remote_proxy_scheme);
-    git__free(_remote_proxy_host);
-    git__free(_remote_proxy_user);
-    git__free(_remote_proxy_pass);
+	git__free(_remote_proxy_scheme);
+	git__free(_remote_proxy_host);
+	git__free(_remote_proxy_user);
+	git__free(_remote_proxy_pass);
+	git__free(_remote_redirect_initial);
+	git__free(_remote_redirect_subsequent);
 }
 
 static int update_tips(const char *refname, const git_oid *a, const git_oid *b, void *data)
@@ -246,4 +253,45 @@ void test_online_fetch__proxy(void)
 
     git_remote_free(remote);
     git_str_dispose(&url);
+}
+
+static int do_redirected_fetch(const char *url, const char *name, const char *config)
+{
+	git_repository *repo;
+	git_remote *remote;
+	int error;
+
+	cl_git_pass(git_repository_init(&repo, "./redirected", 0));
+	cl_fixture_cleanup(name);
+
+	if (config)
+		cl_repo_set_string(repo, "http.followRedirects", config);
+
+	cl_git_pass(git_remote_create(&remote, repo, name, url));
+	error = git_remote_fetch(remote, NULL, NULL, NULL);
+
+	git_remote_free(remote);
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("./redirected");
+
+	return error;
+}
+
+void test_online_fetch__redirect_config(void)
+{
+	if (!_remote_redirect_initial || !_remote_redirect_subsequent)
+		cl_skip();
+
+	/* config defaults */
+	cl_git_pass(do_redirected_fetch(_remote_redirect_initial, "initial", NULL));
+	cl_git_fail(do_redirected_fetch(_remote_redirect_subsequent, "subsequent", NULL));
+
+	/* redirect=initial */
+	cl_git_pass(do_redirected_fetch(_remote_redirect_initial, "initial", "initial"));
+	cl_git_fail(do_redirected_fetch(_remote_redirect_subsequent, "subsequent", "initial"));
+
+	/* redirect=false */
+	cl_git_fail(do_redirected_fetch(_remote_redirect_initial, "initial", "false"));
+	cl_git_fail(do_redirected_fetch(_remote_redirect_subsequent, "subsequent", "false"));
 }
