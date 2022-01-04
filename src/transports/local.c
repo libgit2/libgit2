@@ -209,7 +209,7 @@ static int local_connect(
 	if (t->connected)
 		return 0;
 
-	if (git_remote_connect_options_normalize(&t->connect_opts, connect_opts) < 0)
+	if (git_remote_connect_options_normalize(&t->connect_opts, t->owner->repo, connect_opts) < 0)
 		return -1;
 
 	free_heads(&t->refs);
@@ -253,7 +253,7 @@ static int local_set_connect_opts(
 		return -1;
 	}
 
-	return git_remote_connect_options_normalize(&t->connect_opts, connect_opts);
+	return git_remote_connect_options_normalize(&t->connect_opts, t->owner->repo, connect_opts);
 }
 
 static int local_ls(const git_remote_head ***out, size_t *size, git_transport *transport)

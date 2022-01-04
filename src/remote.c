@@ -858,25 +858,70 @@ static int validate_custom_headers(const git_strarray *custom_headers)
 	return 0;
 }
 
-int git_remote_connect_options_normalize(
-	git_remote_connect_options *dst,
-	const git_remote_connect_options *src)
+static int lookup_redirect_config(
+	git_remote_redirect_t *out,
+	git_repository *repo)
 {
-	git_remote_connect_options_dispose(dst);
+	git_config *config;
+	const char *value;
+	int bool_value, error = 0;
 
-	if (!src) {
-		git_remote_connect_options_init(dst, GIT_REMOTE_CONNECT_OPTIONS_VERSION);
+	if (!repo) {
+		*out = GIT_REMOTE_REDIRECT_INITIAL;
 		return 0;
 	}
 
-	GIT_ERROR_CHECK_VERSION(src, GIT_REMOTE_CONNECT_OPTIONS_VERSION, "git_remote_connect_options");
-	GIT_ERROR_CHECK_VERSION(&src->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
-	GIT_ERROR_CHECK_VERSION(&src->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
+	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
+		goto done;
 
-	if (validate_custom_headers(&src->custom_headers))
-		return -1;
+	if ((error = git_config_get_string(&value, config, "http.followRedirects")) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			*out = GIT_REMOTE_REDIRECT_INITIAL;
+			error = 0;
+		}
 
-	return git_remote_connect_options_dup(dst, src);
+		goto done;
+	}
+
+	if (git_config_parse_bool(&bool_value, value) == 0) {
+		*out = bool_value ? GIT_REMOTE_REDIRECT_ALL :
+		                    GIT_REMOTE_REDIRECT_NONE;
+	} else if (strcasecmp(value, "initial") == 0) {
+		*out = GIT_REMOTE_REDIRECT_INITIAL;
+	} else {
+		git_error_set(GIT_ERROR_CONFIG, "invalid configuration setting '%s' for 'http.followRedirects'", value);
+		error = -1;
+	}
+
+done:
+	git_config_free(config);
+	return error;
+}
+
+int git_remote_connect_options_normalize(
+	git_remote_connect_options *dst,
+	git_repository *repo,
+	const git_remote_connect_options *src)
+{
+	git_remote_connect_options_dispose(dst);
+	git_remote_connect_options_init(dst, GIT_REMOTE_CONNECT_OPTIONS_VERSION);
+
+	if (src) {
+		GIT_ERROR_CHECK_VERSION(src, GIT_REMOTE_CONNECT_OPTIONS_VERSION, "git_remote_connect_options");
+		GIT_ERROR_CHECK_VERSION(&src->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+		GIT_ERROR_CHECK_VERSION(&src->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
+
+		if (validate_custom_headers(&src->custom_headers) < 0 ||
+		    git_remote_connect_options_dup(dst, src) < 0)
+			return -1;
+	}
+
+	if (dst->follow_redirects == 0) {
+		if (lookup_redirect_config(&dst->follow_redirects, repo) < 0)
+			return -1;
+	}
+
+	return 0;
 }
 
 int git_remote_connect_ext(
@@ -1176,11 +1221,12 @@ static int ls_to_vector(git_vector *out, git_remote *remote)
 
 GIT_INLINE(int) connect_opts_from_fetch_opts(
 	git_remote_connect_options *out,
+	git_remote *remote,
 	const git_fetch_options *fetch_opts)
 {
 	git_remote_connect_options tmp = GIT_REMOTE_CONNECT_OPTIONS_INIT;
 	copy_opts(&tmp, fetch_opts);
-	return git_remote_connect_options_normalize(out, &tmp);
+	return git_remote_connect_options_normalize(out, remote->repo, &tmp);
 }
 
 static int connect_or_reset_options(
@@ -1270,7 +1316,7 @@ int git_remote_download(
 		return -1;
 	}
 
-	if (connect_opts_from_fetch_opts(&connect_opts, opts) < 0)
+	if (connect_opts_from_fetch_opts(&connect_opts, remote, opts) < 0)
 		return -1;
 
 	if ((error = connect_or_reset_options(remote, GIT_DIRECTION_FETCH, &connect_opts)) < 0)
@@ -1298,7 +1344,7 @@ int git_remote_fetch(
 		return -1;
 	}
 
-	if (connect_opts_from_fetch_opts(&connect_opts, opts) < 0)
+	if (connect_opts_from_fetch_opts(&connect_opts, remote, opts) < 0)
 		return -1;
 
 	if ((error = connect_or_reset_options(remote, GIT_DIRECTION_FETCH, &connect_opts)) < 0)
@@ -2771,11 +2817,12 @@ done:
 
 GIT_INLINE(int) connect_opts_from_push_opts(
 	git_remote_connect_options *out,
+	git_remote *remote,
 	const git_push_options *push_opts)
 {
 	git_remote_connect_options tmp = GIT_REMOTE_CONNECT_OPTIONS_INIT;
 	copy_opts(&tmp, push_opts);
-	return git_remote_connect_options_normalize(out, &tmp);
+	return git_remote_connect_options_normalize(out, remote->repo, &tmp);
 }
 
 int git_remote_upload(
@@ -2796,7 +2843,7 @@ int git_remote_upload(
 		return -1;
 	}
 
-	if ((error = connect_opts_from_push_opts(&connect_opts, opts)) < 0)
+	if ((error = connect_opts_from_push_opts(&connect_opts, remote, opts)) < 0)
 		goto cleanup;
 
 	if ((error = connect_or_reset_options(remote, GIT_DIRECTION_PUSH, &connect_opts)) < 0)
@@ -2857,7 +2904,7 @@ int git_remote_push(
 		return -1;
 	}
 
-	if (connect_opts_from_push_opts(&connect_opts, opts) < 0)
+	if (connect_opts_from_push_opts(&connect_opts, remote, opts) < 0)
 		return -1;
 
 	if ((error = git_remote_upload(remote, refspecs, opts)) < 0)

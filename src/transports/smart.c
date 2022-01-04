@@ -125,7 +125,7 @@ static int git_smart__connect(
 	if (git_smart__reset_stream(t, true) < 0)
 		return -1;
 
-	if (git_remote_connect_options_normalize(&t->connect_opts, connect_opts) < 0)
+	if (git_remote_connect_options_normalize(&t->connect_opts, t->owner->repo, connect_opts) < 0)
 		return -1;
 
 	t->url = git__strdup(url);
@@ -223,7 +223,7 @@ static int git_smart__set_connect_opts(
 		return -1;
 	}
 
-	return git_remote_connect_options_normalize(&t->connect_opts, opts);
+	return git_remote_connect_options_normalize(&t->connect_opts, t->owner->repo, opts);
 }
 
 static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transport *transport)

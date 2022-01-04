@@ -50,6 +50,7 @@ int git_remote_connect_options_dup(
 	const git_remote_connect_options *src);
 int git_remote_connect_options_normalize(
 	git_remote_connect_options *dst,
+	git_repository *repo,
 	const git_remote_connect_options *src);
 void git_remote_connect_options_dispose(git_remote_connect_options *opts);
 
