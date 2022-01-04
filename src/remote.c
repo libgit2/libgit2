@@ -1171,6 +1171,7 @@ static int ls_to_vector(git_vector *out, git_remote *remote)
 		(out)->callbacks = (in)->callbacks; \
 		(out)->proxy_opts = (in)->proxy_opts; \
 		(out)->custom_headers = (in)->custom_headers; \
+		(out)->follow_redirects = (in)->follow_redirects; \
 	}
 
 GIT_INLINE(int) connect_opts_from_fetch_opts(

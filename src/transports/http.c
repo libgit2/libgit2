@@ -38,7 +38,8 @@ typedef struct {
 	const char *url;
 	const char *request_type;
 	const char *response_type;
-	unsigned chunked : 1;
+	unsigned int initial : 1,
+	             chunked : 1;
 } http_service;
 
 typedef struct {
@@ -70,24 +71,28 @@ static const http_service upload_pack_ls_service = {
 	GIT_HTTP_METHOD_GET, "/info/refs?service=git-upload-pack",
 	NULL,
 	"application/x-git-upload-pack-advertisement",
+	1,
 	0
 };
 static const http_service upload_pack_service = {
 	GIT_HTTP_METHOD_POST, "/git-upload-pack",
 	"application/x-git-upload-pack-request",
 	"application/x-git-upload-pack-result",
+	0,
 	0
 };
 static const http_service receive_pack_ls_service = {
 	GIT_HTTP_METHOD_GET, "/info/refs?service=git-receive-pack",
 	NULL,
 	"application/x-git-receive-pack-advertisement",
+	1,
 	0
 };
 static const http_service receive_pack_service = {
 	GIT_HTTP_METHOD_POST, "/git-receive-pack",
 	"application/x-git-receive-pack-request",
 	"application/x-git-receive-pack-result",
+	0,
 	1
 };
 
@@ -215,6 +220,19 @@ GIT_INLINE(int) handle_proxy_auth(
 		connect_opts->proxy_opts.payload);
 }
 
+static bool allow_redirect(http_stream *stream)
+{
+	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+
+	switch (transport->owner->connect_opts.follow_redirects) {
+	case GIT_REMOTE_REDIRECT_INITIAL:
+		return (stream->service->initial == 1);
+	case GIT_REMOTE_REDIRECT_ALL:
+		return true;
+	default:
+		return false;
+	}
+}
 
 static int handle_response(
 	bool *complete,
@@ -233,7 +251,7 @@ static int handle_response(
 			return -1;
 		}
 
-		if (git_net_url_apply_redirect(&transport->server.url, response->location, false, stream->service->url) < 0) {
+		if (git_net_url_apply_redirect(&transport->server.url, response->location, allow_redirect(stream), stream->service->url) < 0) {
 			return -1;
 		}
 

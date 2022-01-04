@@ -1189,8 +1189,10 @@ replay:
 			winhttp_stream_close(s);
 
 			if (!git__prefixcmp_icase(location8, prefix_https)) {
+				bool follow = (t->owner->connect_opts.follow_redirects != GIT_REMOTE_REDIRECT_NONE);
+
 				/* Upgrade to secure connection; disconnect and start over */
-				if (git_net_url_apply_redirect(&t->server.url, location8, false, s->service_url) < 0) {
+				if (git_net_url_apply_redirect(&t->server.url, location8, follow, s->service_url) < 0) {
 					git__free(location8);
 					return -1;
 				}

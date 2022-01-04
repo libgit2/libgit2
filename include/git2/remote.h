@@ -42,6 +42,30 @@ GIT_EXTERN(int) git_remote_create(
 		const char *url);
 
 /**
+ * Remote redirection settings; whether redirects to another host
+ * are permitted.  By default, git will follow a redirect on the
+ * initial request (`/info/refs`), but not subsequent requests.
+ */
+typedef enum {
+	/**
+	 * Do not follow any off-site redirects at any stage of
+	 * the fetch or push.
+	 */
+	GIT_REMOTE_REDIRECT_NONE = (1 << 0),
+
+	/**
+	 * Allow off-site redirects only upon the initial request.
+	 * This is the default.
+	 */
+	GIT_REMOTE_REDIRECT_INITIAL = (1 << 1),
+
+	/**
+	 * Allow redirects at any stage in the fetch or push.
+	 */
+	GIT_REMOTE_REDIRECT_ALL = (1 << 2)
+} git_remote_redirect_t;
+
+/**
  * Remote creation options flags
  */
 typedef enum {
@@ -718,6 +742,13 @@ typedef struct {
 	git_proxy_options proxy_opts;
 
 	/**
+	 * Whether to allow off-site redirects.  If this is not
+	 * specified, the `http.followRedirects` configuration setting
+	 * will be consulted.
+	 */
+	git_remote_redirect_t follow_redirects;
+
+	/**
 	 * Extra headers for this fetch operation
 	 */
 	git_strarray custom_headers;
@@ -769,6 +800,13 @@ typedef struct {
 	git_proxy_options proxy_opts;
 
 	/**
+	 * Whether to allow off-site redirects.  If this is not
+	 * specified, the `http.followRedirects` configuration setting
+	 * will be consulted.
+	 */
+	git_remote_redirect_t follow_redirects;
+
+	/**
 	 * Extra headers for this push operation
 	 */
 	git_strarray custom_headers;
@@ -806,6 +844,13 @@ typedef struct {
 
 	/** HTTP Proxy settings */
 	git_proxy_options proxy_opts;
+
+	/**
+	 * Whether to allow off-site redirects.  If this is not
+	 * specified, the `http.followRedirects` configuration setting
+	 * will be consulted.
+	 */
+	git_remote_redirect_t follow_redirects;
 
 	/** Extra HTTP headers to use in this connection */
 	git_strarray custom_headers;

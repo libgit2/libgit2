@@ -101,7 +101,7 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	java -jar poxyproxy.jar --address 127.0.0.1 --port 8090 --credentials foo:bar --auth-type ntlm --quiet &
 fi
 
-if [ -z "$SKIP_NTLM_TESTS" ]; then
+if [ -z "$SKIP_NTLM_TESTS" -o -z "$SKIP_ONLINE_TESTS" ]; then
 	curl --location --silent --show-error https://github.com/ethomson/poxygit/releases/download/v0.5.1/poxygit-0.5.1.jar >poxygit.jar
 
 	echo ""
@@ -188,7 +188,11 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	echo "## Running (online) tests"
 	echo "##############################################################################"
 
+	export GITTEST_REMOTE_REDIRECT_INITIAL="http://localhost:9000/initial-redirect/libgit2/TestGitRepository"
+	export GITTEST_REMOTE_REDIRECT_SUBSEQUENT="http://localhost:9000/subsequent-redirect/libgit2/TestGitRepository"
 	run_test online
+	unset GITTEST_REMOTE_REDIRECT_INITIAL
+	unset GITTEST_REMOTE_REDIRECT_SUBSEQUENT
 
 	# Run the online tests that immutably change global state separately
 	# to avoid polluting the test environment.
