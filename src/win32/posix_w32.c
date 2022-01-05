@@ -441,7 +441,7 @@ int p_symlink(const char *target, const char *path)
 	 * not want to use `git_win32_path_from_utf8` for converting the target,
 	 * as that function will automatically pre-pend the current working
 	 * directory in case the path is not absolute. As Git will instead use
-	 * relative symlinks, this is not someting we want.
+	 * relative symlinks, this is not something we want.
 	 */
 	if (git_win32_path_from_utf8(path_w, path) < 0 ||
 	    git_win32_path_relative_from_utf8(target_w, target) < 0)

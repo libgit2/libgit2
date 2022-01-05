@@ -115,7 +115,7 @@ struct pack_writepack {
  *     | OID can be found. If we can find the offset to that SHA1 inside of the
  *     | index, that means the object is contained inside of the packfile and
  *     | we can stop searching. Before returning, we verify that the
- *     | packfile behing the index we are searching still exists on disk.
+ *     | packfile behind the index we are searching still exists on disk.
  *     |
  *     |-# pack_entry_find_offset
  *       | Mmap the actual index file to disk if it hasn't been opened

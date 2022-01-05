@@ -3027,19 +3027,19 @@ cleanup:
 
 int git_repository_set_head_detached(
 	git_repository *repo,
-	const git_oid *commitish)
+	const git_oid *committish)
 {
-	return detach(repo, commitish, NULL);
+	return detach(repo, committish, NULL);
 }
 
 int git_repository_set_head_detached_from_annotated(
 	git_repository *repo,
-	const git_annotated_commit *commitish)
+	const git_annotated_commit *committish)
 {
 	GIT_ASSERT_ARG(repo);
-	GIT_ASSERT_ARG(commitish);
+	GIT_ASSERT_ARG(committish);
 
-	return detach(repo, git_annotated_commit_id(commitish), commitish->description);
+	return detach(repo, git_annotated_commit_id(committish), committish->description);
 }
 
 int git_repository_detach_head(git_repository *repo)

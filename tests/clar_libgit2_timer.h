@@ -3,7 +3,7 @@
 
 struct cl_perf_timer
 {
-	/* cummulative running time across all start..stop intervals */
+	/* cumulative running time across all start..stop intervals */
 	double sum;
 
 	/* value of last start..stop interval */
@@ -27,7 +27,7 @@ void cl_perf_timer__stop(cl_perf_timer *t);
 double cl_perf_timer__last(const cl_perf_timer *t);
 
 /**
- * return cummulative running time across all start..stop
+ * return cumulative running time across all start..stop
  * intervals in seconds.
  */
 double cl_perf_timer__sum(const cl_perf_timer *t);

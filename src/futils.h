@@ -231,10 +231,10 @@ typedef enum {
  * Copy a directory tree.
  *
  * This copies directories and files from one root to another.  You can
- * pass a combinationof GIT_CPDIR flags as defined above.
+ * pass a combination of GIT_CPDIR flags as defined above.
  *
  * If you pass the CHMOD flag, then the dirmode will be applied to all
- * directories that are created during the copy, overiding the natural
+ * directories that are created during the copy, overriding the natural
  * permissions.  If you do not pass the CHMOD flag, then the dirmode
  * will actually be copied from the source files and the `dirmode` arg
  * will be ignored.

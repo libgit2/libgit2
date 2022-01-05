@@ -473,7 +473,7 @@ int git_mwindow_file_register(git_mwindow_file *mwf)
 				git_mwindow_find_lru_file_locked(&lru_file) == 0) {
 			if ((error = git_vector_insert(&closed_files, lru_file)) < 0) {
 				/*
-				 * Exceeding the file limit seems preferrable to being open to
+				 * Exceeding the file limit seems preferable to being open to
 				 * data races that can end up corrupting the heap.
 				 */
 				break;

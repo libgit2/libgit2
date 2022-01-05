@@ -605,7 +605,7 @@ static int write_tree(
 
 	/*
 	 * This loop is unfortunate, but necessary. The index doesn't have
-	 * any directores, so we need to handle that manually, and we
+	 * any directories, so we need to handle that manually, and we
 	 * need to keep track of the current position.
 	 */
 	for (i = start; i < entries; ++i) {

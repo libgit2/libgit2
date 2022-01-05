@@ -868,7 +868,7 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 			continue;
 		}
 
-		/* Skipt it if we don't know it */
+		/* Skip it if we don't know it */
 		ptr = strchr(ptr, ',');
 	}
 

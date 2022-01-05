@@ -5,7 +5,7 @@
 #  GSSAPI_ROOT_DIR - Set this variable to the root installation of GSSAPI
 #
 # Read-Only variables:
-#  GSSAPI_FLAVOR_MIT - set to TURE if MIT Kerberos has been found
+#  GSSAPI_FLAVOR_MIT - set to TRUE if MIT Kerberos has been found
 #  GSSAPI_FLAVOR_HEIMDAL - set to TRUE if Heimdal Kerberos has been found
 #  GSSAPI_FOUND - system has GSSAPI
 #  GSSAPI_INCLUDE_DIR - the GSSAPI include directory

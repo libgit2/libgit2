@@ -269,7 +269,7 @@ void test_path_win32__8dot3_name(void)
 	cl_assert_equal_s("WINDOWS", (shortname = git_win32_path_8dot3_name("C:\\WINDOWS")));
 	git__free(shortname);
 
-	/* Create some predictible short names */
+	/* Create some predictable short names */
 	cl_must_pass(p_mkdir(".foo", 0777));
 	cl_assert_equal_s("FOO~1", (shortname = git_win32_path_8dot3_name(".foo")));
 	git__free(shortname);

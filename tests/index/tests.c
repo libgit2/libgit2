@@ -200,14 +200,14 @@ void test_index_tests__write(void)
 
 void test_index_tests__sort0(void)
 {
-	/* sort the entires in an index */
+	/* sort the entries in an index */
 
    /*
    * TODO: This no longer applies:
    * index sorting in Git uses some specific changes to the way
    * directories are sorted.
    *
-   * We need to specificially check for this by creating a new
+   * We need to specifically check for this by creating a new
    * index, adding entries in random order and then
    * checking for consistency
    */
@@ -215,7 +215,7 @@ void test_index_tests__sort0(void)
 
 void test_index_tests__sort1(void)
 {
-   /* sort the entires in an empty index */
+   /* sort the entries in an empty index */
    git_index *index;
 
    cl_git_pass(git_index_open(&index, "fake-index"));
@@ -242,7 +242,7 @@ void test_index_tests__add(void)
 
 	cl_set_cleanup(&cleanup_myrepo, NULL);
 
-	/* Intialize a new repository */
+	/* Initialize a new repository */
 	cl_git_pass(git_repository_init(&repo, "./myrepo", 0));
 
 	/* Ensure we're the only guy in the room */
@@ -293,7 +293,7 @@ void test_index_tests__add_frombuffer(void)
 
 	cl_set_cleanup(&cleanup_myrepo, NULL);
 
-	/* Intialize a new repository */
+	/* Initialize a new repository */
 	cl_git_pass(git_repository_init(&repo, "./myrepo", 0));
 
 	/* Ensure we're the only guy in the room */
@@ -435,7 +435,7 @@ void test_index_tests__add_frombuffer_reset_entry(void)
 
 	cl_set_cleanup(&cleanup_myrepo, NULL);
 
-	/* Intialize a new repository */
+	/* Initialize a new repository */
 	cl_git_pass(git_repository_init(&repo, "./myrepo", 0));
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_futils_mkpath2file("myrepo/test.txt", 0777));

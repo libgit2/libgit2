@@ -80,4 +80,4 @@ and run it against our description file with the tip of `main` checked out.
 
     cm doc api.docurium
 
-It will start up a few proceses and write out the results as a new commit onto the `gh-pages` branch. That can be pushed to GitHub to update what will show up on our documentation reference site.
+It will start up a few processes and write out the results as a new commit onto the `gh-pages` branch. That can be pushed to GitHub to update what will show up on our documentation reference site.

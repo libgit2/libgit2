@@ -236,7 +236,7 @@ typedef struct git_refspec git_refspec;
 
 /**
  * Git's idea of a remote repository. A remote can be anonymous (in
- * which case it does not have backing configuration entires).
+ * which case it does not have backing configuration entries).
  */
 typedef struct git_remote git_remote;
 

@@ -646,7 +646,7 @@ static int collect_attr_files(
 	if (error < 0)
 		goto cleanup;
 
-	/* in precendence order highest to lowest:
+	/* in precedence order highest to lowest:
 	 * - $GIT_DIR/info/attributes
 	 * - path components with .gitattributes
 	 * - config core.attributesfile

@@ -963,7 +963,7 @@ static int checkout_conflicts_load(checkout_data *data, git_iterator *workdir, g
 {
 	git_index *index;
 
-	/* Only write conficts from sources that have them: indexes. */
+	/* Only write conflicts from sources that have them: indexes. */
 	if ((index = git_iterator_index(data->target)) == NULL)
 		return 0;
 

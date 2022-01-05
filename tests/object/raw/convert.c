@@ -38,7 +38,7 @@ void test_object_raw_convert__succeed_on_oid_to_string_conversion(void)
 		cl_assert(*(str+i) == '\0');
 		/* must not touch bytes past end of string */
 		cl_assert(*(str+(i+1)) == 'Z');
-		/* i == n-1 charaters of string */
+		/* i == n-1 characters of string */
 		cl_git_pass(strncmp(exp, out, i));
 	}
 

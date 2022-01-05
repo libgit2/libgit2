@@ -893,7 +893,7 @@ GIT_EXTERN(int) git_remote_prune(git_remote *remote, const git_remote_callbacks 
 /**
  * Perform a push
  *
- * Peform all the steps from a push.
+ * Perform all the steps from a push.
  *
  * @param remote the remote to push to
  * @param refspecs the refspecs to use for pushing. If NULL or an empty

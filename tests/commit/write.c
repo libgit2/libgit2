@@ -155,7 +155,7 @@ void test_commit_write__root(void)
 	cl_git_pass(git_signature_new(&committer, committer_name, committer_email, 123456789, 60));
 	cl_git_pass(git_signature_new(&author, committer_name, committer_email, 987654321, 90));
 
-	/* First we need to update HEAD so it points to our non-existant branch */
+	/* First we need to update HEAD so it points to our non-existent branch */
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_assert(git_reference_type(head) == GIT_REFERENCE_SYMBOLIC);
 	head_old = git__strdup(git_reference_symbolic_target(head));

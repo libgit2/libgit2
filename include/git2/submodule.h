@@ -181,7 +181,7 @@ GIT_EXTERN(int) git_submodule_update_options_init(
  * @param submodule Submodule object
  * @param init If the submodule is not initialized, setting this flag to true
  *        will initialize the submodule before updating. Otherwise, this will
- *        return an error if attempting to update an uninitialzed repository.
+ *        return an error if attempting to update an uninitialized repository.
  *        but setting this to true forces them to be updated.
  * @param options configuration options for the update.  If NULL, the
  *        function works as though GIT_SUBMODULE_UPDATE_OPTIONS_INIT was passed.

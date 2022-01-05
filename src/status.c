@@ -84,7 +84,7 @@ static unsigned int workdir_delta2status(
 
 		if (!git_oid_equal(&idx2wd->old_file.id, &idx2wd->new_file.id)) {
 			/* if OIDs don't match, we might need to calculate them now to
-			 * discern between RENAMED vs RENAMED+MODIFED
+			 * discern between RENAMED vs RENAMED+MODIFIED
 			 */
 			if (git_oid_is_zero(&idx2wd->old_file.id) &&
 				diff->old_src == GIT_ITERATOR_WORKDIR &&

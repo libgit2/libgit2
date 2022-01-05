@@ -427,7 +427,7 @@ static int add_parents_to_list(git_revwalk *walk, git_commit_list_node *commit, 
 	return 0;
 }
 
-/* How many unintersting commits we want to look at after we run out of interesting ones */
+/* How many uninteresting commits we want to look at after we run out of interesting ones */
 #define SLOP 5
 
 static int still_interesting(git_commit_list *list, int64_t time, int slop)

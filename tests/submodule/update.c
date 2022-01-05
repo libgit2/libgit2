@@ -11,7 +11,7 @@ void test_submodule_update__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void test_submodule_update__unitialized_submodule_no_init(void)
+void test_submodule_update__uninitialized_submodule_no_init(void)
 {
 	git_submodule *sm;
 	git_submodule_update_options update_options = GIT_SUBMODULE_UPDATE_OPTIONS_INIT;
@@ -21,7 +21,7 @@ void test_submodule_update__unitialized_submodule_no_init(void)
 	/* get the submodule */
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));
 
-	/* updating an unitialized repository throws */
+	/* updating an uninitialized repository throws */
 	cl_git_fail_with(
 		GIT_ERROR,
 		git_submodule_update(sm, 0, &update_options));

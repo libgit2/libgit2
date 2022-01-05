@@ -128,7 +128,7 @@ void test_config_multivar__add(void)
 	int n;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config/config11"));
-	cl_git_pass(git_config_set_multivar(cfg, _name, "nonexistant", "git://git.otherplace.org/libgit2"));
+	cl_git_pass(git_config_set_multivar(cfg, _name, "non-existent", "git://git.otherplace.org/libgit2"));
 
 	n = 0;
 	cl_git_pass(git_config_get_multivar_foreach(cfg, _name, NULL, cb, &n));
