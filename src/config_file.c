@@ -740,7 +740,9 @@ static int parse_conditional_include(config_file_parse_data *parse_data, const c
 		return 0;
 
 	condition = git__substrdup(section + CONST_STRLEN("includeIf."),
-				   section_len - CONST_STRLEN("includeIf.") - CONST_STRLEN(".path"));
+		section_len - CONST_STRLEN("includeIf.") - CONST_STRLEN(".path"));
+
+	GIT_ERROR_CHECK_ALLOC(condition);
 
 	for (i = 0; i < ARRAY_SIZE(conditions); i++) {
 		if (git__prefixcmp(condition, conditions[i].prefix))
