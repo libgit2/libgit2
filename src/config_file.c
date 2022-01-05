@@ -724,14 +724,23 @@ static const struct {
 static int parse_conditional_include(config_file_parse_data *parse_data, const char *section, const char *file)
 {
 	char *condition;
-	size_t i;
+	size_t section_len, i;
 	int error = 0, matches;
 
 	if (!parse_data->repo || !file)
 		return 0;
 
-	condition = git__substrdup(section + strlen("includeIf."),
-				   strlen(section) - strlen("includeIf.") - strlen(".path"));
+	section_len = strlen(section);
+
+	/*
+	 * We checked that the string starts with `includeIf.` and ends
+	 * in `.path` to get here.  Make sure it consists of more.
+	 */
+	if (section_len < CONST_STRLEN("includeIf.") + CONST_STRLEN(".path"))
+		return 0;
+
+	condition = git__substrdup(section + CONST_STRLEN("includeIf."),
+				   section_len - CONST_STRLEN("includeIf.") - CONST_STRLEN(".path"));
 
 	for (i = 0; i < ARRAY_SIZE(conditions); i++) {
 		if (git__prefixcmp(condition, conditions[i].prefix))
