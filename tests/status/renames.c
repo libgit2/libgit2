@@ -781,3 +781,65 @@ void test_status_renames__rename_threshold(void)
 
 	git_index_free(index);
 }
+
+void test_status_renames__case_insensitive_h2i_and_i2wc(void)
+{
+	git_status_list *statuslist;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	git_reference *head, *test_branch;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_str path_to_delete = GIT_STR_INIT;
+	git_str path_to_edit = GIT_STR_INIT;
+	git_index *index;
+	git_strarray paths = { NULL, 0 };
+
+	struct status_entry expected[] = {
+		{ GIT_STATUS_INDEX_RENAMED | GIT_STATUS_WT_MODIFIED, "sixserving.txt", "sixserving-renamed.txt" },
+		{ GIT_STATUS_INDEX_DELETED, "Wow.txt", "Wow.txt" }
+	};
+
+
+	// Checkout the correct branch
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
+	cl_git_pass(git_reference_symbolic_set_target(
+		&test_branch, head, "refs/heads/case-insensitive-status", NULL));
+	cl_git_pass(git_checkout_head(g_repo, &checkout_opts));
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+
+	// Rename sixserving.txt, delete Wow.txt, and stage those changes
+	rename_file(g_repo, "sixserving.txt", "sixserving-renamed.txt");
+	cl_git_pass(git_str_joinpath(
+		&path_to_delete, git_repository_workdir(g_repo), "Wow.txt"));
+	cl_git_rmfile(path_to_delete.ptr);
+
+	cl_git_pass(git_index_add_all(index, &paths, GIT_INDEX_ADD_FORCE, NULL, NULL));
+	cl_git_pass(git_index_write(index));
+
+
+	// Change content of sixserving-renamed.txt
+	cl_git_pass(git_str_joinpath(
+		&path_to_edit, git_repository_workdir(g_repo), "sixserving-renamed.txt"));
+	cl_git_append2file(path_to_edit.ptr, "New content\n");
+
+
+	// Run status
+	opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;
+	opts.flags |= GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR;
+	opts.flags |= GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX;
+	opts.flags |= GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY;
+
+	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
+	check_status(statuslist, expected, 2);
+	git_status_list_free(statuslist);
+
+	git_index_free(index);
+
+	git_str_dispose(&path_to_delete);
+	git_str_dispose(&path_to_edit);
+
+	git_reference_free(head);
+	git_reference_free(test_branch);
+}
