@@ -723,7 +723,7 @@ void test_status_renames__rename_threshold(void)
 	git_index *index;
 	git_status_list *statuslist;
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
-	
+
 	_rename_helper(g_repo, "ikeepsix.txt", "newname.txt",
 		"Line 1\n" \
 		"Line 2\n" \
@@ -735,49 +735,49 @@ void test_status_renames__rename_threshold(void)
 		"Line 8\n" \
 		"Line 9\n"
 	);
-	
+
 	opts.flags |= GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR;
 	opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;
-	
+
 	cl_git_pass(git_repository_index(&index, g_repo));
-	
-	// Default threshold
+
+	/* Default threshold */
 	{
 		struct status_entry expected[] = {
 			{ GIT_STATUS_WT_RENAMED | GIT_STATUS_WT_MODIFIED, "ikeepsix.txt", "newname.txt" },
 		};
-		
+
 		cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
 		check_status(statuslist, expected, 1);
 		git_status_list_free(statuslist);
 	}
-	
-	// Threshold set to 90
+
+	/* Threshold set to 90 */
 	{
 		struct status_entry expected[] = {
 			{ GIT_STATUS_WT_DELETED, "ikeepsix.txt", NULL },
 			{ GIT_STATUS_WT_NEW, "newname.txt", NULL }
 		};
-		
+
 		opts.rename_threshold = 90;
-		
+
 		cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
 		check_status(statuslist, expected, 2);
 		git_status_list_free(statuslist);
 	}
-	
-	// Threshold set to 25
+
+	/* Threshold set to 25 */
 	{
 		struct status_entry expected[] = {
 			{ GIT_STATUS_WT_RENAMED | GIT_STATUS_WT_MODIFIED, "ikeepsix.txt", "newname.txt" },
 		};
-		
+
 		opts.rename_threshold = 25;
-		
+
 		cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
 		check_status(statuslist, expected, 1);
 		git_status_list_free(statuslist);
 	}
-	
+
 	git_index_free(index);
 }
