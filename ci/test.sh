@@ -188,9 +188,7 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	echo "## Running (online) tests"
 	echo "##############################################################################"
 
-	export GITTEST_FLAKY_RETRY=5
 	run_test online
-	unset GITTEST_FLAKY_RETRY
 
 	# Run the online tests that immutably change global state separately
 	# to avoid polluting the test environment.
@@ -231,9 +229,7 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	export GITTEST_REMOTE_PROXY_HOST="localhost:8090"
 	export GITTEST_REMOTE_PROXY_USER="foo"
 	export GITTEST_REMOTE_PROXY_PASS="bar"
-	export GITTEST_FLAKY_RETRY=5
 	run_test proxy
-	unset GITTEST_FLAKY_RETRY
 	unset GITTEST_REMOTE_PROXY_HOST
 	unset GITTEST_REMOTE_PROXY_USER
 	unset GITTEST_REMOTE_PROXY_PASS
