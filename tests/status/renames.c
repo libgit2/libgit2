@@ -799,7 +799,7 @@ void test_status_renames__case_insensitive_h2i_and_i2wc(void)
 	};
 
 
-	// Checkout the correct branch
+	/* Checkout the correct branch */
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_git_pass(git_reference_symbolic_set_target(
@@ -809,7 +809,7 @@ void test_status_renames__case_insensitive_h2i_and_i2wc(void)
 	cl_git_pass(git_repository_index(&index, g_repo));
 
 
-	// Rename sixserving.txt, delete Wow.txt, and stage those changes
+	/* Rename sixserving.txt, delete Wow.txt, and stage those changes */
 	rename_file(g_repo, "sixserving.txt", "sixserving-renamed.txt");
 	cl_git_pass(git_str_joinpath(
 		&path_to_delete, git_repository_workdir(g_repo), "Wow.txt"));
@@ -819,13 +819,12 @@ void test_status_renames__case_insensitive_h2i_and_i2wc(void)
 	cl_git_pass(git_index_write(index));
 
 
-	// Change content of sixserving-renamed.txt
+	/* Change content of sixserving-renamed.txt */
 	cl_git_pass(git_str_joinpath(
 		&path_to_edit, git_repository_workdir(g_repo), "sixserving-renamed.txt"));
 	cl_git_append2file(path_to_edit.ptr, "New content\n");
 
-
-	// Run status
+	/* Run status */
 	opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;
 	opts.flags |= GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR;
 	opts.flags |= GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX;
