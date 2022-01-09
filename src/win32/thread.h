@@ -9,6 +9,7 @@
 #define INCLUDE_win32_thread_h__
 
 #include "common.h"
+#include "../custom_tls.h"
 
 #if defined (_MSC_VER)
 #	define GIT_RESTRICT __restrict
@@ -21,6 +22,7 @@ typedef struct {
 	void *(*proc)(void *);
 	void *param;
 	void *result;
+	git_custom_tls tls;
 } git_thread;
 
 typedef CRITICAL_SECTION git_mutex;

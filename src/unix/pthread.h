@@ -8,18 +8,25 @@
 #ifndef INCLUDE_unix_pthread_h__
 #define INCLUDE_unix_pthread_h__
 
+#include "../custom_tls.h"
+
 typedef struct {
 	pthread_t thread;
+	void *(*proc)(void *);
+	void *param;
+	git_custom_tls tls;
 } git_thread;
 
-GIT_INLINE(int) git_threads_global_init(void) { return 0; }
+int git_threads_global_init(void);
 
-#define git_thread_create(git_thread_ptr, start_routine, arg) \
-	pthread_create(&(git_thread_ptr)->thread, NULL, start_routine, arg)
+int git_thread_create(
+	git_thread *thread,
+	void *(*start_routine)(void*),
+	void *arg);
 #define git_thread_join(git_thread_ptr, status) \
 	pthread_join((git_thread_ptr)->thread, status)
 #define git_thread_currentid() ((size_t)(pthread_self()))
-#define git_thread_exit(retval) pthread_exit(retval)
+void git_thread_exit(void *value);
 
 /* Git Mutex */
 #define git_mutex pthread_mutex_t
