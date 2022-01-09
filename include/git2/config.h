@@ -576,7 +576,7 @@ GIT_EXTERN(int) git_config_foreach(
  * `git_config_iterator_free` when done.
  *
  * @param out pointer to store the iterator
- * @param cfg where to ge the variables from
+ * @param cfg where to get the variables from
  * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_iterator_new(git_config_iterator **out, const git_config *cfg);
