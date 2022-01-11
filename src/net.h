@@ -24,8 +24,11 @@ typedef struct git_net_url {
 /** Duplicate a URL */
 extern int git_net_url_dup(git_net_url *out, git_net_url *in);
 
-/** Parses a string containing a URL into a structure.  */
+/** Parses a string containing a URL into a structure. */
 extern int git_net_url_parse(git_net_url *url, const char *str);
+
+/** Parses a string containing an SCP style path into a URL structure. */
+extern int git_net_url_parse_scp(git_net_url *url, const char *str);
 
 /** Appends a path and/or query string to the given URL */
 extern int git_net_url_joinpath(

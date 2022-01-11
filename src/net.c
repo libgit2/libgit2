@@ -192,6 +192,195 @@ done:
 	return error;
 }
 
+static int scp_invalid(const char *message)
+{
+	git_error_set(GIT_ERROR_NET, "invalid scp-style path: %s", message);
+	return GIT_EINVALIDSPEC;
+}
+
+static bool is_ipv6(const char *str)
+{
+	const char *c;
+	size_t colons = 0;
+
+	if (*str++ != '[')
+		return false;
+
+	for (c = str; *c; c++) {
+		if (*c  == ':')
+			colons++;
+
+		if (*c == ']')
+			return (colons > 1);
+
+		if (*c != ':' &&
+		    (*c < '0' || *c > '9') &&
+		    (*c < 'a' || *c > 'f') &&
+		    (*c < 'A' || *c > 'F'))
+			return false;
+	}
+
+	return false;
+}
+
+static bool has_at(const char *str)
+{
+	const char *c;
+
+	for (c = str; *c; c++) {
+		if (*c == '@')
+			return true;
+
+		if (*c == ':')
+			break;
+	}
+
+	return false;
+}
+
+int git_net_url_parse_scp(git_net_url *url, const char *given)
+{
+	const char *default_port = default_port_for_scheme("ssh");
+	const char *c, *user, *host, *port, *path = NULL;
+	size_t user_len = 0, host_len = 0, port_len = 0;
+	unsigned short bracket = 0;
+
+	enum {
+		NONE,
+		USER,
+		HOST_START, HOST, HOST_END,
+		IPV6, IPV6_END,
+		PORT_START, PORT, PORT_END,
+		PATH_START
+	} state = NONE;
+
+	memset(url, 0, sizeof(git_net_url));
+
+	for (c = given; *c && !path; c++) {
+		switch (state) {
+		case NONE:
+			switch (*c) {
+			case '@':
+				return scp_invalid("unexpected '@'");
+			case ':':
+				return scp_invalid("unexpected ':'");
+			case '[':
+				if (is_ipv6(c)) {
+					state = IPV6;
+					host = c;
+				} else if (bracket++ > 1) {
+					return scp_invalid("unexpected '['");
+				}
+				break;
+			default:
+				if (has_at(c)) {
+					state = USER;
+					user = c;
+				} else {
+					state = HOST;
+					host = c;
+				}
+				break;
+			}
+			break;
+
+		case USER:
+			if (*c == '@') {
+				user_len = (c - user);
+				state = HOST_START;
+			}
+			break;
+
+		case HOST_START:
+			state = (*c == '[') ? IPV6 : HOST;
+			host = c;
+			break;
+
+		case HOST:
+			if (*c == ':') {
+				host_len = (c - host);
+				state = bracket ? PORT_START : PATH_START;
+			} else if (*c == ']') {
+				if (bracket-- == 0)
+					return scp_invalid("unexpected ']'");
+
+				host_len = (c - host);
+				state = HOST_END;
+			}
+			break;
+
+		case HOST_END:
+			if (*c != ':')
+				return scp_invalid("unexpected character after hostname");
+			state = PATH_START;
+			break;
+
+		case IPV6:
+			if (*c == ']')
+				state = IPV6_END;
+			break;
+
+		case IPV6_END:
+			if (*c != ':')
+				return scp_invalid("unexpected character after ipv6 address");
+
+			host_len = (c - host);
+			state = bracket ? PORT_START : PATH_START;
+			break;
+
+		case PORT_START:
+			port = c;
+			state = PORT;
+			break;
+
+		case PORT:
+			if (*c == ']') {
+				if (bracket-- == 0)
+					return scp_invalid("unexpected ']'");
+
+				port_len = c - port;
+				state = PORT_END;
+			}
+			break;
+
+		case PORT_END:
+			if (*c != ':')
+				return scp_invalid("unexpected character after ipv6 address");
+
+			state = PATH_START;
+			break;
+
+		case PATH_START:
+			path = c;
+			break;
+
+		default:
+			GIT_ASSERT("unhandled state");
+		}
+	}
+
+	if (!path)
+		return scp_invalid("path is required");
+
+	GIT_ERROR_CHECK_ALLOC(url->scheme = git__strdup("ssh"));
+
+	if (user_len)
+		GIT_ERROR_CHECK_ALLOC(url->username = git__strndup(user, user_len));
+
+	GIT_ASSERT(host_len);
+	GIT_ERROR_CHECK_ALLOC(url->host = git__strndup(host, host_len));
+
+	if (port_len)
+		GIT_ERROR_CHECK_ALLOC(url->port = git__strndup(port, port_len));
+	else
+		GIT_ERROR_CHECK_ALLOC(url->port = git__strdup(default_port));
+
+	GIT_ASSERT(path);
+	GIT_ERROR_CHECK_ALLOC(url->path = git__strdup(path));
+
+	return 0;
+}
+
 int git_net_url_joinpath(
 	git_net_url *out,
 	git_net_url *one,

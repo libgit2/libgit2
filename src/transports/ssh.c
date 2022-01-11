@@ -258,37 +258,6 @@ static int ssh_stream_alloc(
 	return 0;
 }
 
-static int git_ssh_extract_url_parts(
-	git_net_url *urldata,
-	const char *url)
-{
-	char *colon, *at;
-	const char *start;
-
-	colon = strchr(url, ':');
-
-
-	at = strchr(url, '@');
-	if (at) {
-		start = at + 1;
-		urldata->username = git__substrdup(url, at - url);
-		GIT_ERROR_CHECK_ALLOC(urldata->username);
-	} else {
-		start = url;
-		urldata->username = NULL;
-	}
-
-	if (colon == NULL || (colon < start)) {
-		git_error_set(GIT_ERROR_NET, "malformed URL");
-		return -1;
-	}
-
-	urldata->host = git__substrdup(start, colon - start);
-	GIT_ERROR_CHECK_ALLOC(urldata->host);
-
-	return 0;
-}
-
 static int ssh_agent_auth(LIBSSH2_SESSION *session, git_credential_ssh_key *c) {
 	int rc = LIBSSH2_ERROR_NONE;
 
@@ -546,13 +515,8 @@ static int _git_ssh_setup_conn(
 			goto post_extract;
 		}
 	}
-	if ((error = git_ssh_extract_url_parts(&urldata, url)) < 0)
+	if ((error = git_net_url_parse_scp(&urldata, url)) < 0)
 		goto done;
-
-	if (urldata.port == NULL)
-		urldata.port = git__strdup(SSH_DEFAULT_PORT);
-
-	GIT_ERROR_CHECK_ALLOC(urldata.port);
 
 post_extract:
 	if ((error = git_socket_stream_new(&s->io, urldata.host, urldata.port)) < 0 ||
