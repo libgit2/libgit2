@@ -121,12 +121,16 @@
 /**
  * Check a pointer allocation result, returning -1 if it failed.
  */
-#define GIT_ERROR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
+#define GIT_ERROR_CHECK_ALLOC(ptr) do { \
+	if ((ptr) == NULL) { return -1; } \
+	} while(0)
 
 /**
  * Check a string buffer allocation result, returning -1 if it failed.
  */
-#define GIT_ERROR_CHECK_ALLOC_STR(buf) if ((void *)(buf) == NULL || git_str_oom(buf)) { return -1; }
+#define GIT_ERROR_CHECK_ALLOC_STR(buf) do { \
+	if ((void *)(buf) == NULL || git_str_oom(buf)) { return -1; } \
+	} while(0)
 
 /**
  * Check a return value and propagate result if non-zero.
