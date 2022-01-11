@@ -300,18 +300,28 @@ if [ -z "$SKIP_NEGOTIATE_TESTS" -a -n "$GITTEST_NEGOTIATE_PASSWORD" ]; then
 fi
 
 if [ -z "$SKIP_SSH_TESTS" ]; then
-	echo ""
-	echo "Running ssh tests"
-	echo ""
-
-	export GITTEST_REMOTE_URL="ssh://localhost:2222/$SSHD_DIR/test.git"
 	export GITTEST_REMOTE_USER=$USER
 	export GITTEST_REMOTE_SSH_KEY="${HOME}/.ssh/id_rsa"
 	export GITTEST_REMOTE_SSH_PUBKEY="${HOME}/.ssh/id_rsa.pub"
 	export GITTEST_REMOTE_SSH_PASSPHRASE=""
 	export GITTEST_REMOTE_SSH_FINGERPRINT="${SSH_FINGERPRINT}"
+
+	echo ""
+	echo "Running ssh tests"
+	echo ""
+
+	export GITTEST_REMOTE_URL="ssh://localhost:2222/$SSHD_DIR/test.git"
 	run_test ssh
 	unset GITTEST_REMOTE_URL
+
+	echo ""
+	echo "Running ssh tests (scp-style paths)"
+	echo ""
+
+	export GITTEST_REMOTE_URL="[localhost:2222]:$SSHD_DIR/test.git"
+	run_test ssh
+	unset GITTEST_REMOTE_URL
+
 	unset GITTEST_REMOTE_USER
 	unset GITTEST_REMOTE_SSH_KEY
 	unset GITTEST_REMOTE_SSH_PUBKEY
