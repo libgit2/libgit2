@@ -214,12 +214,13 @@ typedef struct git_odb_expand_id {
 
 /**
  * Determine if one or more objects can be found in the object database
- * by their abbreviated object ID and type.  The given array will be
- * updated in place:  for each abbreviated ID that is unique in the
- * database, and of the given type (if specified), the full object ID,
- * object ID length (`GIT_OID_HEXSZ`) and type will be written back to
- * the array.  For IDs that are not found (or are ambiguous), the
- * array entry will be zeroed.
+ * by their abbreviated object ID and type.
+ *
+ * The given array will be updated in place: for each abbreviated ID that is
+ * unique in the database, and of the given type (if specified),
+ * the full object ID, object ID length (`GIT_OID_HEXSZ`) and type will be
+ * written back to the array. For IDs that are not found (or are ambiguous),
+ * the array entry will be zeroed.
  *
  * Note that since this function operates on multiple objects, the
  * underlying database will not be asked to be reloaded if an object is
