@@ -20,6 +20,24 @@
 #define DEFAULT_PORT_GIT   "9418"
 #define DEFAULT_PORT_SSH   "22"
 
+bool git_net_str_is_url(const char *str)
+{
+	const char *c;
+
+	for (c = str; *c; c++) {
+		if (*c == ':' && *(c+1) == '/' && *(c+2) == '/')
+			return true;
+
+		if ((*c < 'a' || *c > 'z') &&
+		    (*c < 'A' || *c > 'Z') &&
+		    (*c < '0' || *c > '9') &&
+		    (*c != '+' && *c != '-' && *c != '.'))
+			break;
+	}
+
+	return false;
+}
+
 static const char *default_port_for_scheme(const char *scheme)
 {
 	if (strcmp(scheme, "http") == 0)
@@ -28,7 +46,9 @@ static const char *default_port_for_scheme(const char *scheme)
 		return DEFAULT_PORT_HTTPS;
 	else if (strcmp(scheme, "git") == 0)
 		return DEFAULT_PORT_GIT;
-	else if (strcmp(scheme, "ssh") == 0)
+	else if (strcmp(scheme, "ssh") == 0 ||
+	         strcmp(scheme, "ssh+git") == 0 ||
+		 strcmp(scheme, "git+ssh") == 0)
 		return DEFAULT_PORT_SSH;
 
 	return NULL;

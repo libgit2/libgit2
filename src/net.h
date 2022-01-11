@@ -21,6 +21,9 @@ typedef struct git_net_url {
 
 #define GIT_NET_URL_INIT { NULL }
 
+/** Is a given string a url? */
+extern bool git_net_str_is_url(const char *str);
+
 /** Duplicate a URL */
 extern int git_net_url_dup(git_net_url *out, git_net_url *in);
 
