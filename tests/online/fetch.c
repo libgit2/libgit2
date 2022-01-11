@@ -67,11 +67,6 @@ static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 	git_remote_free(remote);
 }
 
-void test_online_fetch__default_git(void)
-{
-	do_fetch("git://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 6);
-}
-
 void test_online_fetch__default_http(void)
 {
 	do_fetch("http://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 6);
@@ -84,7 +79,7 @@ void test_online_fetch__default_https(void)
 
 void test_online_fetch__no_tags_git(void)
 {
-	do_fetch("git://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_NONE, 3);
+	do_fetch("https://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_NONE, 3);
 }
 
 void test_online_fetch__no_tags_http(void)
@@ -95,7 +90,7 @@ void test_online_fetch__no_tags_http(void)
 void test_online_fetch__fetch_twice(void)
 {
 	git_remote *remote;
-	cl_git_pass(git_remote_create(&remote, _repo, "test", "git://github.com/libgit2/TestGitRepository.git"));
+	cl_git_pass(git_remote_create(&remote, _repo, "test", "https://github.com/libgit2/TestGitRepository.git"));
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_pass(git_remote_download(remote, NULL, NULL));
     	git_remote_disconnect(remote);
