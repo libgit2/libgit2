@@ -624,9 +624,12 @@ int git_sparse_checkout_add(
     if (error < 0 && error != GIT_ENOTFOUND)
         goto done;
 
-    /* Todo: verify what git does when adding and sparse-checkout isn't enabled */
     if (!is_enabled)
-        goto done;
+	{
+		git_error_set(GIT_ERROR_INVALID, "sparse checkout is not enabled");
+		git_config_free(cfg);
+		return -1;
+	}
 
     if ((error = git_sparse__init(repo, &sparse)) < 0)
         goto done;
@@ -647,8 +650,8 @@ int git_sparse_checkout_add(
 
 done:
     git_config_free(cfg);
-    git_sparse__free(&sparse);
-    git_vector_free(&patternlist);
+	git_sparse__free(&sparse);
+	git_vector_free(&patternlist);
 
     return error;
 }
