@@ -26,18 +26,6 @@ typedef struct {
 #define GIT_SPARSE_CHECKOUT_INIT_OPTIONS_INIT {GIT_SPARSE_CHECKOUT_INIT_OPTIONS_VERSION};
 
 /**
- * Fill a list with all the patterns in the sparse-checkout file
- *
- * @param patterns Pointer to a git_strarray structure where
- *		the patterns will be stored
- * @param repo Repository where to find the sparse-checkout file
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_sparse_checkout_list(
-        git_strarray *patterns,
-        git_repository *repo);
-
-/**
  * Enable the core.sparseCheckout setting. If the sparse-checkout
  * file does not exist, then populate it with patterns that match
  * every file in the root directory and no other directories.
@@ -48,8 +36,20 @@ GIT_EXTERN(int) git_sparse_checkout_list(
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_sparse_checkout_init(
-        git_repository *repo,
+		git_repository *repo,
 		git_sparse_checkout_init_options *opts);
+
+/**
+ * Fill a list with all the patterns in the sparse-checkout file
+ *
+ * @param patterns Pointer to a git_strarray structure where
+ *		the patterns will be stored
+ * @param repo Repository where to find the sparse-checkout file
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_sparse_checkout_list(
+        git_strarray *patterns,
+        git_repository *repo);
 
 /**
  * Write a set of patterns to the sparse-checkout file.

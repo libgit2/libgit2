@@ -28,12 +28,12 @@ enum {
 
 extern int git_sparse__init(git_repository *repo, git_sparse *ign);
 
+extern void git_sparse__free(git_sparse *sparse);
+
 extern int git_sparse__lookup(
 		int* checkout,
 		git_sparse *sparse,
 		const char* pathname,
 		git_dir_flag dir_flag);
-
-extern void git_sparse__free(git_sparse *sparse);
 
 #endif

@@ -12,31 +12,6 @@
 #include "filebuf.h"
 #include "index.h"
 
-int git_strarray__to_vector(git_vector *dest, git_strarray *src) {
-	size_t i;
-	int error = 0;
-
-	GIT_ASSERT_ARG(dest);
-	GIT_ASSERT_ARG(src);
-
-	for (i = 0; i < src->count; i++) {
-		if ((error = git_vector_insert(dest, src->strings[i])) < 0)
-			return error;
-	}
-
-	return error;
-}
-
-int git_strarray__from_vector(git_strarray *dest, git_vector *src) {
-
-	GIT_ASSERT_ARG(dest);
-	GIT_ASSERT_ARG(src);
-
-	dest->strings = (char **) git_vector_detach(&dest->count, NULL, src);
-
-	return 0;
-}
-
 static bool sparse_lookup_in_rules(
         int *checkout,
         git_attr_file *file,
@@ -382,8 +357,7 @@ int git_sparse_checkout__reapply(git_repository *repo, git_sparse *sparse)
 	if ((error = git_checkout_options_init(&copts, GIT_CHECKOUT_OPTIONS_VERSION)) < 0)
 		goto done;
 
-	if ((error = git_strarray__from_vector(&copts.paths, &paths_to_checkout)) < 0)
-		goto done;
+	copts.paths.strings = (char**) git_vector_detach(&copts.paths.count, NULL, &paths_to_checkout);
 
 	copts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_RECREATE_MISSING;
 	if ((error = git_checkout_index(repo, index, &copts)) < 0)
@@ -638,6 +612,7 @@ int git_sparse_checkout_add(
     git_config *cfg;
     git_sparse sparse;
     git_vector patternlist;
+	size_t i;
 
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(patterns);
@@ -659,8 +634,10 @@ int git_sparse_checkout_add(
     if ((error = git_vector_init(&patternlist, 0, NULL)))
         goto done;
 
-    if ((error = git_strarray__to_vector(&patternlist, patterns)))
-        goto done;
+	for (i = 0; i < patterns->count; i++) {
+		if ((error = git_vector_insert(&patternlist, patterns->strings[i])) < 0)
+			return error;
+	}
 
     if ((error = git_sparse_checkout__add(repo, &patternlist,  &sparse)) < 0)
         goto done;
