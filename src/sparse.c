@@ -116,7 +116,7 @@ int git_sparse_attr_file__init_(
 	git_attr_file_source source = { GIT_ATTR_FILE_SOURCE_FILE, git_str_cstr(&infopath), filename, NULL };
 	git_str filepath = GIT_STR_INIT;
 
-	if ((error = git_repository__item_path(&infopath, repo, GIT_REPOSITORY_ITEM_INFO)) < 0) {
+	if ((error = git_str_joinpath(&infopath, repo->gitdir, "info")) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto done;
 		error = 0;
