@@ -67,6 +67,7 @@ typedef struct refdb_fs_backend {
 	int fsync;
 	git_map packed_refs_map;
 	git_mutex prlock; /* protect packed_refs_map */
+	git_futils_filestamp packed_refs_stamp;
 	bool sorted;
 } refdb_fs_backend;
 
@@ -495,6 +496,7 @@ static void packed_map_free(refdb_fs_backend *backend)
 #endif
 		backend->packed_refs_map.data = NULL;
 		backend->packed_refs_map.len = 0;
+		git_futils_filestamp_set(&backend->packed_refs_stamp, NULL);
 	}
 }
 
@@ -507,10 +509,13 @@ static int packed_map_check(refdb_fs_backend *backend)
 	if ((error = git_mutex_lock(&backend->prlock)) < 0)
 		return error;
 
-	if (backend->packed_refs_map.data) {
+	if (backend->packed_refs_map.data &&
+	    !git_futils_filestamp_check(
+	            &backend->packed_refs_stamp, backend->refcache->path)) {
 		git_mutex_unlock(&backend->prlock);
 		return error;
 	}
+	packed_map_free(backend);
 
 	fd = git_futils_open_ro(backend->refcache->path);
 	if (fd < 0) {
@@ -534,6 +539,8 @@ static int packed_map_check(refdb_fs_backend *backend)
 		git_mutex_unlock(&backend->prlock);
 		return 0;
 	}
+
+	git_futils_filestamp_set_from_stat(&backend->packed_refs_stamp, &st);
 
 #ifdef GIT_WIN32
 	/* on windows, we copy the entire file into memory rather than using
