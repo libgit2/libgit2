@@ -485,6 +485,19 @@ static char *packed_set_peeling_mode(
 	return data;
 }
 
+static void packed_map_free(refdb_fs_backend *backend)
+{
+	if (backend->packed_refs_map.data) {
+#ifdef GIT_WIN32
+		git__free(backend->packed_refs_map.data);
+#else
+		git_futils_mmap_free(&backend->packed_refs_map);
+#endif
+		backend->packed_refs_map.data = NULL;
+		backend->packed_refs_map.len = 0;
+	}
+}
+
 static int packed_map_check(refdb_fs_backend *backend)
 {
 	int error = 0;
@@ -522,7 +535,23 @@ static int packed_map_check(refdb_fs_backend *backend)
 		return 0;
 	}
 
+#ifdef GIT_WIN32
+	/* on windows, we copy the entire file into memory rather than using
+	 * mmap() because using mmap() on windows also locks the file and this
+	 * map is long-lived. */
+	backend->packed_refs_map.len = (size_t)st.st_size;
+	backend->packed_refs_map.data =
+	        git__malloc(backend->packed_refs_map.len);
+	GIT_ERROR_CHECK_ALLOC(backend->packed_refs_map.data);
+	{
+		ssize_t bytesread =
+		        p_read(fd, backend->packed_refs_map.data,
+		               backend->packed_refs_map.len);
+		error = (bytesread == (ssize_t)backend->packed_refs_map.len) ?  0 : -1;
+	}
+#else
 	error = git_futils_mmap_ro(&backend->packed_refs_map, fd, 0, (size_t)st.st_size);
+#endif
 	p_close(fd);
 	if (error < 0) {
 		git_mutex_unlock(&backend->prlock);
@@ -1302,10 +1331,7 @@ static int packed_write(refdb_fs_backend *backend)
 		return error;
 	}
 
-	if (backend->packed_refs_map.data) {
-		git_futils_mmap_free(&backend->packed_refs_map);
-		backend->packed_refs_map.data = NULL;
-	}
+	packed_map_free(backend);
 
 	git_mutex_unlock(&backend->prlock);
 
@@ -1798,10 +1824,7 @@ static void refdb_fs_backend__free(git_refdb_backend *_backend)
 	git_sortedcache_free(backend->refcache);
 
 	git_mutex_lock(&backend->prlock);
-	if (backend->packed_refs_map.data) {
-		git_futils_mmap_free(&backend->packed_refs_map);
-		backend->packed_refs_map.data = NULL;
-	}
+	packed_map_free(backend);
 	git_mutex_unlock(&backend->prlock);
 	git_mutex_free(&backend->prlock);
 
