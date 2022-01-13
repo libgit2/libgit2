@@ -483,11 +483,7 @@ static char *packed_set_peeling_mode(
 			backend->peeling_mode = PEELING_STANDARD;
 		}
 
-		if (git__memmem(data, eol - data, sorted, strlen(sorted))) {
-			backend->sorted = true;
-		} else {
-			backend->sorted = false;
-		}
+		backend->sorted = git__memmem(data, eol - data, sorted, strlen(sorted));
 
 		return eol + 1;
 	}
