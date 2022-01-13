@@ -83,7 +83,7 @@ echo "##########################################################################
 if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	echo "Starting git daemon..."
 	GITDAEMON_DIR=`mktemp -d ${TMPDIR}/gitdaemon.XXXXXXXX`
-	git init --bare "${GITDAEMON_DIR}/test.git"
+	git init --bare "${GITDAEMON_DIR}/test.git" >/dev/null
 	git daemon --listen=localhost --export-all --enable=receive-pack --base-path="${GITDAEMON_DIR}" "${GITDAEMON_DIR}" 2>/dev/null &
 	GITDAEMON_PID=$!
 	disown $GITDAEMON_PID
@@ -112,10 +112,11 @@ if [ -z "$SKIP_NTLM_TESTS" -o -z "$SKIP_ONLINE_TESTS" ]; then
 fi
 
 if [ -z "$SKIP_SSH_TESTS" ]; then
+	echo ""
 	echo "Starting ssh daemon..."
 	HOME=`mktemp -d ${TMPDIR}/home.XXXXXXXX`
 	SSHD_DIR=`mktemp -d ${TMPDIR}/sshd.XXXXXXXX`
-	git init --bare "${SSHD_DIR}/test.git"
+	git init --bare "${SSHD_DIR}/test.git" >/dev/null
 	cat >"${SSHD_DIR}/sshd_config" <<-EOF
 	Port 2222
 	ListenAddress 0.0.0.0
