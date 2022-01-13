@@ -500,9 +500,8 @@ static int packed_map_check(refdb_fs_backend *backend)
 	git_file fd = -1;
 	struct stat st;
 
-	if ((error = git_mutex_lock(&backend->prlock)) < 0) {
+	if ((error = git_mutex_lock(&backend->prlock)) < 0)
 		return error;
-	}
 
 	if (backend->packed_refs_map.data) {
 		git_mutex_unlock(&backend->prlock);
