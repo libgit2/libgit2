@@ -651,7 +651,7 @@ static int packed_lookup(
 		return packed_unsorted_lookup(out, backend, ref_name);
 
 	left = backend->packed_refs_map.data;
-	right = data_end = ((const char *)backend->packed_refs_map.data) +
+	right = data_end = backend->packed_refs_map.data +
 	                   backend->packed_refs_map.len;
 
 	while (left < right && *left == '#') {
