@@ -138,7 +138,7 @@ static int packed_reload(refdb_fs_backend *backend)
 
 	GIT_UNUSED(git_sortedcache_clear(backend->refcache, false));
 
-	scan = (char *)packedrefs.ptr;
+	scan = packedrefs.ptr;
 	eof  = scan + packedrefs.size;
 
 	scan = packed_set_peeling_mode(scan, packedrefs.size, backend);
