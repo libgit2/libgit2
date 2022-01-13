@@ -460,10 +460,6 @@ static char *packed_set_peeling_mode(
 	char *eol;
 	backend->peeling_mode = PEELING_NONE;
 
-	if (data_sz == 0 || *data != '#') {
-		return data;
-	}
-
 	if (git__prefixncmp(data, data_sz, traits_header) == 0) {
 		size_t hdr_sz = strlen(traits_header);
 		const char *sorted = " sorted ";
