@@ -141,7 +141,7 @@ static int packed_reload(refdb_fs_backend *backend)
 	scan = (char *)packedrefs.ptr;
 	eof  = scan + packedrefs.size;
 
-	scan = (char *)packed_set_peeling_mode(scan, packedrefs.size, backend);
+	scan = packed_set_peeling_mode(scan, packedrefs.size, backend);
 	if (!scan) {
 		goto parse_failed;
 	}
