@@ -457,7 +457,7 @@ static char *packed_set_peeling_mode(
         refdb_fs_backend *backend)
 {
 	static const char *traits_header = "# pack-refs with:";
-	const char *eol;
+	char *eol;
 	backend->peeling_mode = PEELING_NONE;
 
 	if (data_sz == 0 || *data != '#') {
