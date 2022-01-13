@@ -71,7 +71,7 @@ typedef struct refdb_fs_backend {
 } refdb_fs_backend;
 
 static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name);
-static const char * packed_set_peeling_mode(const char *data, size_t data_sz, refdb_fs_backend *backend);
+static char *packed_set_peeling_mode(char *data, size_t data_sz, refdb_fs_backend *backend);
 
 GIT_INLINE(int) loose_path(
 	git_str *out,
