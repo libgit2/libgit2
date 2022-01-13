@@ -479,7 +479,7 @@ static char *packed_set_peeling_mode(
 		else if (git__memmem(data, eol - data, peeled, strlen(peeled)))
 			backend->peeling_mode = PEELING_STANDARD;
 
-		backend->sorted = git__memmem(data, eol - data, sorted, strlen(sorted));
+		backend->sorted = NULL != git__memmem(data, eol - data, sorted, strlen(sorted));
 
 		return eol + 1;
 	}
@@ -683,7 +683,7 @@ static int packed_lookup(
 		return packed_unsorted_lookup(out, backend, ref_name);
 
 	left = backend->packed_refs_map.data;
-	right = data_end = backend->packed_refs_map.data +
+	right = data_end = (const char *) backend->packed_refs_map.data +
 	                   backend->packed_refs_map.len;
 
 	while (left < right && *left == '#') {
