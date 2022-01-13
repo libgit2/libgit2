@@ -477,11 +477,10 @@ static char *packed_set_peeling_mode(
 		if (!eol)
 			return NULL;
 
-		if (git__memmem(data, eol - data, fully_peeled, strlen(fully_peeled))) {
+		if (git__memmem(data, eol - data, fully_peeled, strlen(fully_peeled)))
 			backend->peeling_mode = PEELING_FULL;
-		} else if (git__memmem(data, eol - data, peeled, strlen(peeled))) {
+		else if (git__memmem(data, eol - data, peeled, strlen(peeled)))
 			backend->peeling_mode = PEELING_STANDARD;
-		}
 
 		backend->sorted = git__memmem(data, eol - data, sorted, strlen(sorted));
 
