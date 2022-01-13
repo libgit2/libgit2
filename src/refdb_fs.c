@@ -452,8 +452,8 @@ static int ref_error_notfound(const char *name)
 	return GIT_ENOTFOUND;
 }
 
-static const char *packed_set_peeling_mode(
-        const char *data,
+static char *packed_set_peeling_mode(
+        char *data,
         size_t data_sz,
         refdb_fs_backend *backend)
 {
