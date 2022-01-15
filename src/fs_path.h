@@ -743,4 +743,10 @@ bool git_fs_path_supports_symlinks(const char *dir);
  */
 int git_fs_path_validate_system_file_ownership(const char *path);
 
+/**
+ * Search the current PATH for the given executable, returning the full
+ * path if it is found.
+ */
+int git_fs_path_find_executable(git_str *fullpath, const char *executable);
+
 #endif

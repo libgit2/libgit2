@@ -2,6 +2,20 @@
 #include "futils.h"
 #include "fs_path.h"
 
+static char *path_save;
+
+void test_core_path__initialize(void)
+{
+	path_save = cl_getenv("PATH");
+}
+
+void test_core_path__cleanup(void)
+{
+	cl_setenv("PATH", path_save);
+	git__free(path_save);
+	path_save = NULL;
+}
+
 static void
 check_dirname(const char *A, const char *B)
 {
@@ -60,6 +74,20 @@ check_joinpath_n(
 	git_str_dispose(&joined_path);
 }
 
+static void check_setenv(const char* name, const char* value)
+{
+    char* check;
+
+    cl_git_pass(cl_setenv(name, value));
+    check = cl_getenv(name);
+
+    if (value)
+	cl_assert_equal_s(value, check);
+    else
+	cl_assert(check == NULL);
+
+    git__free(check);
+}
 
 /* get the dirname of a path */
 void test_core_path__00_dirname(void)
@@ -650,4 +678,62 @@ void test_core_path__16_resolve_relative(void)
 
 	assert_common_dirlen(6, "a/b/c/foo.txt", "a/b/c/d/e/bar.txt");
 	assert_common_dirlen(7, "/a/b/c/foo.txt", "/a/b/c/d/e/bar.txt");
+}
+
+static void fix_path(git_str *s)
+{
+#ifndef GIT_WIN32
+	GIT_UNUSED(s);
+#else
+	char* c;
+
+	for (c = s->ptr; *c; c++) {
+		if (*c == '/')
+			*c = '\\';
+	}
+#endif
+}
+
+void test_core_path__find_exe_in_path(void)
+{
+	char *orig_path;
+	git_str sandbox_path = GIT_STR_INIT;
+	git_str new_path = GIT_STR_INIT, full_path = GIT_STR_INIT,
+	        dummy_path = GIT_STR_INIT;
+
+#ifdef GIT_WIN32
+	static const char *bogus_path_1 = "c:\\does\\not\\exist\\";
+	static const char *bogus_path_2 = "e:\\non\\existent";
+#else
+	static const char *bogus_path_1 = "/this/path/does/not/exist/";
+	static const char *bogus_path_2 = "/non/existent";
+#endif
+
+	orig_path = cl_getenv("PATH");
+
+	git_str_puts(&sandbox_path, clar_sandbox_path());
+	git_str_joinpath(&dummy_path, sandbox_path.ptr, "dummmmmmmy_libgit2_file");
+	cl_git_rewritefile(dummy_path.ptr, "this is a dummy file");
+
+	fix_path(&sandbox_path);
+	fix_path(&dummy_path);
+
+	cl_git_pass(git_str_printf(&new_path, "%s%c%s%c%s%c%s",
+		bogus_path_1, GIT_PATH_LIST_SEPARATOR,
+		orig_path, GIT_PATH_LIST_SEPARATOR,
+		sandbox_path.ptr, GIT_PATH_LIST_SEPARATOR,
+		bogus_path_2));
+
+	check_setenv("PATH", new_path.ptr);
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_fs_path_find_executable(&full_path, "this_file_does_not_exist"));
+	cl_git_pass(git_fs_path_find_executable(&full_path, "dummmmmmmy_libgit2_file"));
+
+	cl_assert_equal_s(full_path.ptr, dummy_path.ptr);
+
+	git_str_dispose(&full_path);
+	git_str_dispose(&new_path);
+	git_str_dispose(&dummy_path);
+	git_str_dispose(&sandbox_path);
+	git__free(orig_path);
 }
