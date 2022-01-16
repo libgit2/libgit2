@@ -105,4 +105,9 @@ extern int git_sysdir_get(const git_str **out, git_sysdir_t which);
  */
 extern int git_sysdir_set(git_sysdir_t which, const char *paths);
 
+/**
+ * Reset search paths for global/system/xdg files.
+ */
+extern int git_sysdir_reset(void);
+
 #endif
