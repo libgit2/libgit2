@@ -112,12 +112,26 @@ static int win32_find_git_for_windows_architecture_root(_findfile_path *root_pat
 
 static int win32_find_git_in_path(git_str *buf, const wchar_t *gitexe, const wchar_t *subdir)
 {
-	wchar_t *env = _wgetenv(L"PATH"), lastch;
+	wchar_t *path, *env, lastch;
 	_findfile_path root;
 	size_t gitexe_len = wcslen(gitexe);
+	DWORD len;
+	bool found = false;
 
-	if (!env)
-		return -1;
+	len = GetEnvironmentVariableW(L"PATH", NULL, 0);
+
+	if (len < 0)
+	    return -1;
+
+	path = git__malloc(len * sizeof(wchar_t));
+	GIT_ERROR_CHECK_ALLOC(path);
+
+	len = GetEnvironmentVariableW(L"PATH", path, len);
+
+	if (len < 0)
+	    return -1;
+
+	env = path;
 
 	while ((env = win32_walkpath(env, root.path, MAX_PATH-1)) && *root.path) {
 		root.len = (DWORD)wcslen(root.path);
@@ -148,11 +162,13 @@ static int win32_find_git_in_path(git_str *buf, const wchar_t *gitexe, const wch
 			}
 
 			win32_path_to_8(buf, root.path);
-			return 0;
+			found = true;
+			break;
 		}
 	}
 
-	return GIT_ENOTFOUND;
+	git__free(path);
+	return found ? 0 : GIT_ENOTFOUND;
 }
 
 static int win32_find_git_in_registry(
@@ -214,37 +230,47 @@ static int win32_find_existing_dirs(
 	return (git_str_oom(out) ? -1 : 0);
 }
 
-int git_win32__find_system_dirs(git_str *out, const wchar_t *subdir)
+int git_win32__find_system_dir_in_path(git_str *out, const wchar_t *subdir)
 {
-	git_str buf = GIT_STR_INIT;
+    /* directories where git.exe & git.cmd are found */
+    if (win32_find_git_in_path(out, L"git.exe", subdir) == 0)
+	return 0;
 
-	/* directories where git.exe & git.cmd are found */
-	if (!win32_find_git_in_path(&buf, L"git.exe", subdir) && buf.size)
-		git_str_set(out, buf.ptr, buf.size);
-	else
-		git_str_clear(out);
+    return win32_find_git_in_path(out, L"git.cmd", subdir);
+}
 
-	if (!win32_find_git_in_path(&buf, L"git.cmd", subdir) && buf.size)
-		git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
+static int git_win32__find_system_dir_in_registry(git_str *out, const wchar_t *subdir)
+{
+    git_str buf = GIT_STR_INIT;
 
-	/* directories where git is installed according to registry */
-	if (!win32_find_git_in_registry(
-			&buf, HKEY_CURRENT_USER, REG_MSYSGIT_INSTALL_LOCAL, subdir) && buf.size)
-		git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
+    /* directories where git is installed according to registry */
+    if (!win32_find_git_in_registry(
+	&buf, HKEY_CURRENT_USER, REG_MSYSGIT_INSTALL_LOCAL, subdir) && buf.size)
+	git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
 #ifdef GIT_ARCH_64
-	if (!win32_find_git_in_registry(
-			&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL_LOCAL, subdir) && buf.size)
-		git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
+    if (!win32_find_git_in_registry(
+	&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL_LOCAL, subdir) && buf.size)
+	git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 #endif
 
-	if (!win32_find_git_in_registry(
-			&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL, subdir) && buf.size)
-		git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
+    if (!win32_find_git_in_registry(
+	&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL, subdir) && buf.size)
+	git_str_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
-	git_str_dispose(&buf);
+    git_str_dispose(&buf);
 
-	return (git_str_oom(out) ? -1 : 0);
+    return (git_str_oom(out) ? -1 : 0);
+}
+
+int git_win32__find_system_dirs(git_str *out, const wchar_t *subdir)
+{
+	int error;
+
+	if ((error = git_win32__find_system_dir_in_path(out, subdir)) == 0)
+	    error = git_win32__find_system_dir_in_registry(out, subdir);
+
+	return error;
 }
 
 int git_win32__find_global_dirs(git_str *out)
