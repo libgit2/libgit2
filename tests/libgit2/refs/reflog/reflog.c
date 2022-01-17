@@ -52,7 +52,7 @@ static void assert_appends(const git_signature *committer, const git_oid *oid)
 
 	/* The first one was the creation of the branch */
 	entry = git_reflog_entry_byindex(reflog, 2);
-	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) == 0);
+	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_SHA1_HEXZERO) == 0);
 
 	entry = git_reflog_entry_byindex(reflog, 1);
 	assert_signature(committer, entry->committer);

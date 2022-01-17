@@ -2192,7 +2192,7 @@ success:
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_oid *old, const git_oid *new, const git_signature *who, const char *message)
 {
 	int error, is_symbolic, open_flags;
-	git_oid old_id = {{0}}, new_id = {{0}};
+	git_oid old_id = GIT_OID_SHA1_ZERO, new_id = GIT_OID_SHA1_ZERO;
 	git_str buf = GIT_STR_INIT, path = GIT_STR_INIT;
 	git_repository *repo = backend->repo;
 

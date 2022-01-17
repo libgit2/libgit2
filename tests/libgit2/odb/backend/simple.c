@@ -237,7 +237,7 @@ void test_odb_backend_simple__null_oid_is_ignored(void)
 		{ "0000000000000000000000000000000000000000", "null oid content" },
 		{ NULL, NULL }
 	};
-	git_oid null_oid = {{0}};
+	git_oid null_oid = GIT_OID_SHA1_ZERO;
 	git_odb_object *obj;
 
 	setup_backend(objs);

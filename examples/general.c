@@ -679,7 +679,7 @@ static void reference_listing(git_repository *repo)
 
 	for (i = 0; i < ref_list.count; ++i) {
 		git_reference *ref;
-		char oid_hex[GIT_OID_SHA1_HEXSIZE+1] = GIT_OID_HEX_ZERO;
+		char oid_hex[GIT_OID_SHA1_HEXSIZE+1] = GIT_OID_SHA1_HEXZERO;
 		const char *refname;
 
 		refname = ref_list.strings[i];

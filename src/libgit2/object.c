@@ -230,7 +230,7 @@ int git_object_lookup_prefix(
 			error = git_odb_read(&odb_obj, odb, id);
 		}
 	} else {
-		git_oid short_oid = {{ 0 }};
+		git_oid short_oid = GIT_OID_SHA1_ZERO;
 
 		git_oid__cpy_prefix(&short_oid, id, len);
 
@@ -502,7 +502,7 @@ static int git_object__short_id(git_str *out, const git_object *obj)
 {
 	git_repository *repo;
 	int len = GIT_ABBREV_DEFAULT, error;
-	git_oid id = {{0}};
+	git_oid id = GIT_OID_SHA1_ZERO;
 	git_odb *odb;
 
 	GIT_ASSERT_ARG(out);

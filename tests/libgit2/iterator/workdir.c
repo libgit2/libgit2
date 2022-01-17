@@ -1481,7 +1481,7 @@ void test_iterator_workdir__hash_when_requested(void)
 	git_iterator *iter;
 	const git_index_entry *entry;
 	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
-	git_oid expected_id = {{0}};
+	git_oid expected_id = GIT_OID_SHA1_ZERO;
 	size_t i;
 
 	struct merge_index_entry expected[] = {

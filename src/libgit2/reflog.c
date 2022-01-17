@@ -104,7 +104,7 @@ int git_reflog_append(git_reflog *reflog, const git_oid *new_oid, const git_sign
 	previous = git_reflog_entry_byindex(reflog, 0);
 
 	if (previous == NULL)
-		git_oid_fromstr(&entry->oid_old, GIT_OID_HEX_ZERO);
+		git_oid_fromstr(&entry->oid_old, GIT_OID_SHA1_HEXZERO);
 	else
 		git_oid_cpy(&entry->oid_old, &previous->oid_cur);
 
@@ -219,7 +219,7 @@ int git_reflog_drop(git_reflog *reflog, size_t idx, int rewrite_previous_entry)
 	/* If the oldest entry has just been removed... */
 	if (idx == entrycount - 1) {
 		/* ...clear the oid_old member of the "new" oldest entry */
-		if (git_oid_fromstr(&entry->oid_old, GIT_OID_HEX_ZERO) < 0)
+		if (git_oid_fromstr(&entry->oid_old, GIT_OID_SHA1_HEXZERO) < 0)
 			return -1;
 
 		return 0;

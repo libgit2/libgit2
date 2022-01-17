@@ -914,7 +914,7 @@ static int odb_exists_prefix_1(git_oid *out, git_odb *db,
 {
 	size_t i;
 	int error = GIT_ENOTFOUND, num_found = 0;
-	git_oid last_found = {{0}}, found;
+	git_oid last_found = GIT_OID_SHA1_ZERO, found;
 
 	if ((error = git_mutex_lock(&db->lock)) < 0) {
 		git_error_set(GIT_ERROR_ODB, "failed to acquire the odb lock");
@@ -965,7 +965,7 @@ int git_odb_exists_prefix(
 	git_oid *out, git_odb *db, const git_oid *short_id, size_t len)
 {
 	int error;
-	git_oid key = {{0}};
+	git_oid key = GIT_OID_SHA1_ZERO;
 
 	GIT_ASSERT_ARG(db);
 	GIT_ASSERT_ARG(short_id);
@@ -1305,7 +1305,7 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 {
 	size_t i;
 	int error = 0;
-	git_oid found_full_oid = {{0}};
+	git_oid found_full_oid = GIT_OID_SHA1_ZERO;
 	git_rawobj raw = {0};
 	void *data = NULL;
 	bool found = false;
@@ -1391,7 +1391,7 @@ out:
 int git_odb_read_prefix(
 	git_odb_object **out, git_odb *db, const git_oid *short_id, size_t len)
 {
-	git_oid key = {{0}};
+	git_oid key = GIT_OID_SHA1_ZERO;
 	int error;
 
 	GIT_ASSERT_ARG(out);

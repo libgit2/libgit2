@@ -1622,7 +1622,7 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 	const git_refspec *spec;
 	const char *refname;
 	int error;
-	git_oid zero_id = {{ 0 }};
+	git_oid zero_id = GIT_OID_SHA1_ZERO;
 
 	if (callbacks)
 		GIT_ERROR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");

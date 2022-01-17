@@ -93,9 +93,9 @@ void test_core_oidmap__get_fails_with_nonexisting_key(void)
 void test_core_oidmap__setting_oid_persists(void)
 {
 	git_oid oids[] = {
-	    {{ 0x01 }},
-	    {{ 0x02 }},
-	    {{ 0x03 }}
+	    { { 0x01 }},
+	    { { 0x02 }},
+	    { { 0x03 }}
 	};
 
 	cl_git_pass(git_oidmap_set(g_map, &oids[0], "one"));
@@ -110,9 +110,9 @@ void test_core_oidmap__setting_oid_persists(void)
 void test_core_oidmap__setting_existing_key_updates(void)
 {
 	git_oid oids[] = {
-	    {{ 0x01 }},
-	    {{ 0x02 }},
-	    {{ 0x03 }}
+	    { { 0x01 }},
+	    { { 0x02 }},
+	    { { 0x03 }}
 	};
 
 	cl_git_pass(git_oidmap_set(g_map, &oids[0], "one"));

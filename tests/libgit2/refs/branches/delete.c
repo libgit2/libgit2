@@ -119,7 +119,7 @@ void test_refs_branches_delete__removes_reflog(void)
 {
 	git_reference *branch;
 	git_reflog *log;
-	git_oid oidzero = {{0}};
+	git_oid oidzero = GIT_OID_SHA1_ZERO;
 	git_signature *sig;
 
 	/* Ensure the reflog has at least one entry */
@@ -150,7 +150,7 @@ void test_refs_branches_delete__removes_empty_folders(void)
 	git_reference *branch;
 
 	git_reflog *log;
-	git_oid oidzero = {{0}};
+	git_oid oidzero = GIT_OID_SHA1_ZERO;
 	git_signature *sig;
 
 	git_str ref_folder = GIT_STR_INIT;

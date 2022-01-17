@@ -1061,7 +1061,7 @@ static int index_entry_similarity_calc(
 	const git_merge_options *opts)
 {
 	git_blob *blob;
-	git_diff_file diff_file = {{{0}}};
+	git_diff_file diff_file = { GIT_OID_SHA1_ZERO };
 	git_object_size_t blobsize;
 	int error;
 

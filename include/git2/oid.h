@@ -36,6 +36,16 @@ typedef struct git_oid {
 } git_oid;
 
 /**
+ * The binary representation of the null object ID.
+ */
+#define GIT_OID_SHA1_ZERO { { 0 } }
+
+/**
+ * The string representation of the null object ID.
+ */
+#define GIT_OID_SHA1_HEXZERO "0000000000000000000000000000000000000000"
+
+/**
  * Parse a hex formatted object id into a git_oid.
  *
  * @param out oid structure the result is written into.

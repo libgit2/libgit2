@@ -629,7 +629,7 @@ void test_online_clone__ssh_cannot_change_username(void)
 static int ssh_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
 {
 	git_cert_hostkey *key;
-	git_oid expected = {{0}}, actual = {{0}};
+	git_oid expected = GIT_OID_SHA1_ZERO, actual = GIT_OID_SHA1_ZERO;
 
 	GIT_UNUSED(valid);
 	GIT_UNUSED(payload);

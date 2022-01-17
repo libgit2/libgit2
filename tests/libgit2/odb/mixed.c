@@ -186,7 +186,7 @@ static void assert_found_objects(git_odb_expand_id *ids)
 	num = ARRAY_SIZE(expand_id_test_data);
 
 	for (i = 0; i < num; i++) {
-		git_oid expected_id = {{0}};
+		git_oid expected_id = GIT_OID_SHA1_ZERO;
 		size_t expected_len = 0;
 		git_object_t expected_type = 0;
 
@@ -204,7 +204,7 @@ static void assert_found_objects(git_odb_expand_id *ids)
 
 static void assert_notfound_objects(git_odb_expand_id *ids)
 {
-	git_oid expected_id = {{0}};
+	git_oid expected_id = GIT_OID_SHA1_ZERO;
 	size_t num, i;
 
 	num = ARRAY_SIZE(expand_id_test_data);

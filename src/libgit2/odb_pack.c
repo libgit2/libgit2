@@ -307,7 +307,7 @@ static int pack_entry_find_prefix(
 {
 	int error;
 	size_t i;
-	git_oid found_full_oid = {{0}};
+	git_oid found_full_oid = GIT_OID_SHA1_ZERO;
 	bool found = false;
 	struct git_pack_file *last_found = backend->last_found, *p;
 	git_midx_entry midx_entry;

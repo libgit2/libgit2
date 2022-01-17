@@ -264,7 +264,7 @@ void test_refs_reflog_messages__creating_a_direct_reference(void)
 	cl_assert_equal_sz(1, git_reflog_entrycount(reflog));
 
 	entry = git_reflog_entry_byindex(reflog, 0);
-	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) == 0);
+	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_SHA1_HEXZERO) == 0);
 	cl_assert_equal_oid(&id, &entry->oid_cur);
 	cl_assert_equal_s(message, entry->msg);
 
@@ -352,7 +352,7 @@ void test_refs_reflog_messages__creating_branches_default_messages(void)
 
 	cl_git_pass(git_str_printf(&buf, "branch: Created from %s", git_oid_tostr_s(git_commit_id(target))));
 	cl_reflog_check_entry(g_repo, "refs/heads/" NEW_BRANCH_NAME, 0,
-		GIT_OID_HEX_ZERO,
+		GIT_OID_SHA1_HEXZERO,
 		git_oid_tostr_s(git_commit_id(target)),
 		g_email, git_str_cstr(&buf));
 
@@ -362,7 +362,7 @@ void test_refs_reflog_messages__creating_branches_default_messages(void)
 	cl_git_pass(git_branch_create_from_annotated(&branch2, g_repo, NEW_BRANCH_NAME, annotated, true));
 
 	cl_reflog_check_entry(g_repo, "refs/heads/" NEW_BRANCH_NAME, 0,
-		GIT_OID_HEX_ZERO,
+		GIT_OID_SHA1_HEXZERO,
 		git_oid_tostr_s(git_commit_id(target)),
 		g_email, "branch: Created from e90810b8df3");
 
