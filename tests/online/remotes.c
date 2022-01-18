@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 
-#define URL "git://github.com/libgit2/TestGitRepository"
+#define URL "https://github.com/libgit2/TestGitRepository"
 #define REFSPEC "refs/heads/first-merge:refs/remotes/origin/first-merge"
 
 static int remote_single_branch(git_remote **out, git_repository *repo, const char *name, const char *url, void *payload)
