@@ -336,6 +336,9 @@ int git_status_list_new(
 			GIT_DIFF_FIND_RENAMES_FROM_REWRITES |
 			GIT_DIFF_BREAK_REWRITES_FOR_RENAMES_ONLY;
 
+	if (opts != NULL && opts->rename_threshold != 0)
+		findopt.rename_threshold = opts->rename_threshold;
+
 	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY) {
 		if ((error = git_diff_tree_to_index(
 				&status->head2idx, repo, head, index, &diffopt)) < 0)

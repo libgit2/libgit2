@@ -148,3 +148,28 @@ void test_config_conditionals__onbranch(void)
 	assert_condition_includes("onbranch", "dir*", false);
 	assert_condition_includes("onbranch", "dir/*", false);
 }
+
+void test_config_conditionals__empty(void)
+{
+	git_buf value = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
+	git_config *cfg;
+
+	cl_git_pass(git_str_puts(&buf, "[includeIf]\n"));
+	cl_git_pass(git_str_puts(&buf, "path = other\n"));
+
+	cl_git_mkfile("empty_standard_repo/.git/config", buf.ptr);
+	cl_git_mkfile("empty_standard_repo/.git/other", "[foo]\nbar=baz\n");
+	_repo = cl_git_sandbox_reopen();
+
+	git_str_dispose(&buf);
+
+	cl_git_pass(git_repository_config(&cfg, _repo));
+
+	cl_git_fail_with(GIT_ENOTFOUND,
+		git_config_get_string_buf(&value, cfg, "foo.bar"));
+
+	git_str_dispose(&buf);
+	git_buf_dispose(&value);
+	git_config_free(cfg);
+}

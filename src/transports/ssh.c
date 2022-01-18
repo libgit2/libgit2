@@ -441,11 +441,15 @@ static int request_creds(git_credential **out, ssh_subtransport *t, const char *
 	int error, no_callback = 0;
 	git_credential *cred = NULL;
 
-	if (!t->owner->cred_acquire_cb) {
+	if (!t->owner->connect_opts.callbacks.credentials) {
 		no_callback = 1;
 	} else {
-		error = t->owner->cred_acquire_cb(&cred, t->owner->url, user, auth_methods,
-						  t->owner->cred_acquire_payload);
+		error = t->owner->connect_opts.callbacks.credentials(
+			&cred,
+			t->owner->url,
+			user,
+			auth_methods,
+			t->owner->connect_opts.callbacks.payload);
 
 		if (error == GIT_PASSTHROUGH) {
 			no_callback = 1;
@@ -558,7 +562,7 @@ post_extract:
 	if ((error = _git_ssh_session_create(&session, s->io)) < 0)
 		goto done;
 
-	if (t->owner->certificate_check_cb != NULL) {
+	if (t->owner->connect_opts.callbacks.certificate_check != NULL) {
 		git_cert_hostkey cert = {{ 0 }}, *cert_ptr;
 		const char *key;
 		size_t cert_len;
@@ -632,7 +636,11 @@ post_extract:
 
 		cert_ptr = &cert;
 
-		error = t->owner->certificate_check_cb((git_cert *) cert_ptr, 0, urldata.host, t->owner->message_cb_payload);
+		error = t->owner->connect_opts.callbacks.certificate_check(
+			(git_cert *)cert_ptr,
+			0,
+			urldata.host,
+			t->owner->connect_opts.callbacks.payload);
 
 		if (error < 0 && error != GIT_PASSTHROUGH) {
 			if (!git_error_last())

@@ -41,7 +41,7 @@ struct git_push {
 
 	/* options */
 	unsigned pb_parallelism;
-	git_remote_connection_opts connection;
+	git_remote_callbacks callbacks;
 };
 
 /**
@@ -56,22 +56,11 @@ void git_push_status_free(push_status *status);
  *
  * @param out New push object
  * @param remote Remote instance
+ * @param opts Push options or NULL
  *
  * @return 0 or an error code
  */
-int git_push_new(git_push **out, git_remote *remote);
-
-/**
- * Set options on a push object
- *
- * @param push The push object
- * @param opts The options to set on the push object
- *
- * @return 0 or an error code
- */
-int git_push_set_options(
-	git_push *push,
-	const git_push_options *opts);
+int git_push_new(git_push **out, git_remote *remote, const git_push_options *opts);
 
 /**
  * Add a refspec to be pushed
@@ -104,11 +93,10 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks);
  * order to find out which updates were accepted or rejected.
  *
  * @param push The push object
- * @param callbacks the callbacks to use for this connection
  *
  * @return 0 or an error code
  */
-int git_push_finish(git_push *push, const git_remote_callbacks *callbacks);
+int git_push_finish(git_push *push);
 
 /**
  * Invoke callback `cb' on each status entry

@@ -64,10 +64,10 @@ struct git_rebase {
 	git_rebase_t type;
 	char *state_path;
 
-	int head_detached : 1,
-		inmemory : 1,
-		quiet : 1,
-		started : 1;
+	unsigned int head_detached:1,
+	             inmemory:1,
+	             quiet:1,
+	             started:1;
 
 	git_array_t(git_rebase_operation) operations;
 	size_t current;

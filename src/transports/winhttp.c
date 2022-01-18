@@ -293,14 +293,14 @@ static int certificate_check(winhttp_stream *s, int valid)
 	git_cert_x509 cert;
 
 	/* If there is no override, we should fail if WinHTTP doesn't think it's fine */
-	if (t->owner->certificate_check_cb == NULL && !valid) {
+	if (t->owner->connect_opts.callbacks.certificate_check == NULL && !valid) {
 		if (!git_error_last())
 			git_error_set(GIT_ERROR_HTTP, "unknown certificate check failure");
 
 		return GIT_ECERTIFICATE;
 	}
 
-	if (t->owner->certificate_check_cb == NULL || git__strcmp(t->server.url.scheme, "https") != 0)
+	if (t->owner->connect_opts.callbacks.certificate_check == NULL || git__strcmp(t->server.url.scheme, "https") != 0)
 		return 0;
 
 	if (!WinHttpQueryOption(s->request, WINHTTP_OPTION_SERVER_CERT_CONTEXT, &cert_ctx, &cert_ctx_size)) {
@@ -312,7 +312,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 	cert.parent.cert_type = GIT_CERT_X509;
 	cert.data = cert_ctx->pbCertEncoded;
 	cert.len = cert_ctx->cbCertEncoded;
-	error = t->owner->certificate_check_cb((git_cert *) &cert, valid, t->server.url.host, t->owner->message_cb_payload);
+	error = t->owner->connect_opts.callbacks.certificate_check((git_cert *) &cert, valid, t->server.url.host, t->owner->connect_opts.callbacks.payload);
 	CertFreeCertificateContext(cert_ctx);
 
 	if (error == GIT_PASSTHROUGH)
@@ -426,7 +426,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		goto on_error;
 	}
 
-	proxy_opts = &t->owner->proxy;
+	proxy_opts = &t->owner->connect_opts.proxy_opts;
 	if (proxy_opts->type == GIT_PROXY_AUTO) {
 		/* Set proxy if necessary */
 		if (git_remote__http_proxy(&proxy_url, t->owner->owner, &t->server.url) < 0)
@@ -560,10 +560,10 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		}
 	}
 
-	for (i = 0; i < t->owner->custom_headers.count; i++) {
-		if (t->owner->custom_headers.strings[i]) {
+	for (i = 0; i < t->owner->connect_opts.custom_headers.count; i++) {
+		if (t->owner->connect_opts.custom_headers.strings[i]) {
 			git_str_clear(&buf);
-			git_str_puts(&buf, t->owner->custom_headers.strings[i]);
+			git_str_puts(&buf, t->owner->connect_opts.custom_headers.strings[i]);
 			if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_str_cstr(&buf)) < 0) {
 				git_error_set(GIT_ERROR_OS, "failed to convert custom header to wide characters");
 				goto on_error;
@@ -575,14 +575,6 @@ static int winhttp_stream_connect(winhttp_stream *s)
 				goto on_error;
 			}
 		}
-	}
-
-	/* If requested, disable certificate validation */
-	if (strcmp(t->server.url.scheme, "https") == 0) {
-		int flags;
-
-		if (t->owner->parent.read_flags(&t->owner->parent, &flags) < 0)
-			goto on_error;
 	}
 
 	if ((error = apply_credentials(s->request, &t->server.url, WINHTTP_AUTH_TARGET_SERVER, t->server.cred, t->server.auth_mechanisms)) < 0)
@@ -1197,8 +1189,10 @@ replay:
 			winhttp_stream_close(s);
 
 			if (!git__prefixcmp_icase(location8, prefix_https)) {
+				bool follow = (t->owner->connect_opts.follow_redirects != GIT_REMOTE_REDIRECT_NONE);
+
 				/* Upgrade to secure connection; disconnect and start over */
-				if (git_net_url_apply_redirect(&t->server.url, location8, s->service_url) < 0) {
+				if (git_net_url_apply_redirect(&t->server.url, location8, follow, s->service_url) < 0) {
 					git__free(location8);
 					return -1;
 				}
@@ -1218,8 +1212,8 @@ replay:
 			int error = acquire_credentials(s->request,
 				&t->server,
 				t->owner->url,
-				t->owner->cred_acquire_cb,
-				t->owner->cred_acquire_payload);
+				t->owner->connect_opts.callbacks.credentials,
+				t->owner->connect_opts.callbacks.payload);
 
 			if (error < 0) {
 				return error;
@@ -1231,9 +1225,9 @@ replay:
 		} else if (status_code == HTTP_STATUS_PROXY_AUTH_REQ) {
 			int error = acquire_credentials(s->request,
 				&t->proxy,
-				t->owner->proxy.url,
-				t->owner->proxy.credentials,
-				t->owner->proxy.payload);
+				t->owner->connect_opts.proxy_opts.url,
+				t->owner->connect_opts.proxy_opts.credentials,
+				t->owner->connect_opts.proxy_opts.payload);
 
 			if (error < 0) {
 				return error;

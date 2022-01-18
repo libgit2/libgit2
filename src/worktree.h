@@ -31,7 +31,7 @@ struct git_worktree {
 	/* Path to the parent's working directory */
 	char *parent_path;
 
-	int locked:1;
+	unsigned int locked:1;
 };
 
 char *git_worktree__read_link(const char *base, const char *file);

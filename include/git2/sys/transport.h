@@ -24,30 +24,8 @@
 
 GIT_BEGIN_DECL
 
-/**
- * Flags to pass to transport
- *
- * Currently unused.
- */
-typedef enum {
-	GIT_TRANSPORTFLAGS_NONE = 0
-} git_transport_flags_t;
-
 struct git_transport {
 	unsigned int version; /**< The struct version */
-
-	/** Set progress and error callbacks */
-	int GIT_CALLBACK(set_callbacks)(
-		git_transport *transport,
-		git_transport_message_cb progress_cb,
-		git_transport_message_cb error_cb,
-		git_transport_certificate_check_cb certificate_check_cb,
-		void *payload);
-
-	/** Set custom headers for HTTP requests */
-	int GIT_CALLBACK(set_custom_headers)(
-		git_transport *transport,
-		const git_strarray *custom_headers);
 
 	/**
 	 * Connect the transport to the remote repository, using the given
@@ -56,11 +34,17 @@ struct git_transport {
 	int GIT_CALLBACK(connect)(
 		git_transport *transport,
 		const char *url,
-		git_credential_acquire_cb cred_acquire_cb,
-		void *cred_acquire_payload,
-		const git_proxy_options *proxy_opts,
 		int direction,
-		int flags);
+		const git_remote_connect_options *connect_opts);
+
+	/**
+	 * Resets the connect options for the given transport.  This
+	 * is useful for updating settings or callbacks for an already
+	 * connected transport.
+	 */
+	int GIT_CALLBACK(set_connect_opts)(
+		git_transport *transport,
+		const git_remote_connect_options *connect_opts);
 
 	/**
 	 * Get the list of available references in the remote repository.
@@ -75,7 +59,9 @@ struct git_transport {
 		git_transport *transport);
 
 	/** Executes the push whose context is in the git_push object. */
-	int GIT_CALLBACK(push)(git_transport *transport, git_push *push, const git_remote_callbacks *callbacks);
+	int GIT_CALLBACK(push)(
+		git_transport *transport,
+		git_push *push);
 
 	/**
 	 * Negotiate a fetch with the remote repository.
@@ -99,15 +85,10 @@ struct git_transport {
 	int GIT_CALLBACK(download_pack)(
 		git_transport *transport,
 		git_repository *repo,
-		git_indexer_progress *stats,
-		git_indexer_progress_cb progress_cb,
-		void *progress_payload);
+		git_indexer_progress *stats);
 
 	/** Checks to see if the transport is connected */
 	int GIT_CALLBACK(is_connected)(git_transport *transport);
-
-	/** Reads the flags value previously passed into connect() */
-	int GIT_CALLBACK(read_flags)(git_transport *transport, int *flags);
 
 	/** Cancels any outstanding transport operation */
 	void GIT_CALLBACK(cancel)(git_transport *transport);
