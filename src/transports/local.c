@@ -34,12 +34,9 @@ typedef struct {
 	git_remote *owner;
 	char *url;
 	int direction;
-	int flags;
 	git_atomic32 cancelled;
 	git_repository *repo;
-	git_transport_message_cb progress_cb;
-	git_transport_message_cb error_cb;
-	void *message_cb_payload;
+	git_remote_connect_options connect_opts;
 	git_vector refs;
 	unsigned connected : 1,
 		have_refs : 1;
@@ -200,30 +197,26 @@ on_error:
 static int local_connect(
 	git_transport *transport,
 	const char *url,
-	git_credential_acquire_cb cred_acquire_cb,
-	void *cred_acquire_payload,
-	const git_proxy_options *proxy,
-	int direction, int flags)
+	int direction,
+	const git_remote_connect_options *connect_opts)
 {
 	git_repository *repo;
 	int error;
-	transport_local *t = (transport_local *) transport;
+	transport_local *t = (transport_local *)transport;
 	const char *path;
 	git_str buf = GIT_STR_INIT;
 
-	GIT_UNUSED(cred_acquire_cb);
-	GIT_UNUSED(cred_acquire_payload);
-	GIT_UNUSED(proxy);
-
 	if (t->connected)
 		return 0;
+
+	if (git_remote_connect_options_normalize(&t->connect_opts, t->owner->repo, connect_opts) < 0)
+		return -1;
 
 	free_heads(&t->refs);
 
 	t->url = git__strdup(url);
 	GIT_ERROR_CHECK_ALLOC(t->url);
 	t->direction = direction;
-	t->flags = flags;
 
 	/* 'url' may be a url or path; convert to a path */
 	if ((error = git_fs_path_from_url_or_path(&buf, url)) < 0) {
@@ -247,6 +240,20 @@ static int local_connect(
 	t->connected = 1;
 
 	return 0;
+}
+
+static int local_set_connect_opts(
+	git_transport *transport,
+	const git_remote_connect_options *connect_opts)
+{
+	transport_local *t = (transport_local *)transport;
+
+	if (!t->connected) {
+		git_error_set(GIT_ERROR_NET, "cannot reconfigure a transport that is not connected");
+		return -1;
+	}
+
+	return git_remote_connect_options_normalize(&t->connect_opts, t->owner->repo, connect_opts);
 }
 
 static int local_ls(const git_remote_head ***out, size_t *size, git_transport *transport)
@@ -337,10 +344,10 @@ static int transfer_to_push_transfer(const git_indexer_progress *stats, void *pa
 
 static int local_push(
 	git_transport *transport,
-	git_push *push,
-	const git_remote_callbacks *cbs)
+	git_push *push)
 {
 	transport_local *t = (transport_local *)transport;
+	git_remote_callbacks *cbs = &t->connect_opts.callbacks;
 	git_repository *remote_repo = NULL;
 	push_spec *spec;
 	char *url = NULL;
@@ -348,8 +355,6 @@ static int local_push(
 	git_str buf = GIT_STR_INIT, odb_path = GIT_STR_INIT;
 	int error;
 	size_t j;
-
-	GIT_UNUSED(cbs);
 
 	/* 'push->remote->url' may be a url or path; convert to a path */
 	if ((error = git_fs_path_from_url_or_path(&buf, push->remote->url)) < 0) {
@@ -440,12 +445,11 @@ static int local_push(
 	}
 
 	if (push->specs.length) {
-		int flags = t->flags;
 		url = git__strdup(t->url);
 
 		if (!url || t->parent.close(&t->parent) < 0 ||
 			t->parent.connect(&t->parent, url,
-			NULL, NULL, NULL, GIT_DIRECTION_PUSH, flags))
+			GIT_DIRECTION_PUSH, NULL))
 			goto on_error;
 	}
 
@@ -482,7 +486,7 @@ static int local_counting(int stage, unsigned int current, unsigned int total, v
 	transport_local *t = payload;
 	int error;
 
-	if (!t->progress_cb)
+	if (!t->connect_opts.callbacks.sideband_progress)
 		return 0;
 
 	if (stage == GIT_PACKBUILDER_ADDING_OBJECTS) {
@@ -500,9 +504,19 @@ static int local_counting(int stage, unsigned int current, unsigned int total, v
 	if (git_str_oom(&progress_info))
 		return -1;
 
-	error = t->progress_cb(git_str_cstr(&progress_info), (int)git_str_len(&progress_info), t->message_cb_payload);
-	git_str_dispose(&progress_info);
+	if (progress_info.size > INT_MAX) {
+		git_error_set(GIT_ERROR_NET, "remote sent overly large progress data");
+		git_str_dispose(&progress_info);
+		return -1;
+	}
 
+
+	error = t->connect_opts.callbacks.sideband_progress(
+		progress_info.ptr,
+		(int)progress_info.size,
+		t->connect_opts.callbacks.payload);
+
+	git_str_dispose(&progress_info);
 	return error;
 }
 
@@ -532,9 +546,7 @@ static int foreach_reference_cb(git_reference *reference, void *payload)
 static int local_download_pack(
 		git_transport *transport,
 		git_repository *repo,
-		git_indexer_progress *stats,
-		git_indexer_progress_cb progress_cb,
-		void *progress_payload)
+		git_indexer_progress *stats)
 {
 	transport_local *t = (transport_local*)transport;
 	git_revwalk *walk = NULL;
@@ -545,9 +557,11 @@ static int local_download_pack(
 	git_odb_writepack *writepack = NULL;
 	git_odb *odb = NULL;
 	git_str progress_info = GIT_STR_INIT;
+	foreach_data data = {0};
 
 	if ((error = git_revwalk_new(&walk, t->repo)) < 0)
 		goto cleanup;
+
 	git_revwalk_sorting(walk, GIT_SORT_TIME);
 
 	if ((error = git_packbuilder_new(&pack, t->repo)) < 0)
@@ -583,44 +597,56 @@ static int local_download_pack(
 	if ((error = git_packbuilder_insert_walk(pack, walk)))
 		goto cleanup;
 
-	if ((error = git_str_printf(&progress_info, counting_objects_fmt, git_packbuilder_object_count(pack))) < 0)
-		goto cleanup;
-
-	if (t->progress_cb &&
-	    (error = t->progress_cb(git_str_cstr(&progress_info), (int)git_str_len(&progress_info), t->message_cb_payload)) < 0)
-		goto cleanup;
+	if (t->connect_opts.callbacks.sideband_progress) {
+		if ((error = git_str_printf(
+				&progress_info,
+				counting_objects_fmt,
+				git_packbuilder_object_count(pack))) < 0 ||
+		    (error = t->connect_opts.callbacks.sideband_progress(
+				progress_info.ptr,
+				(int)progress_info.size,
+				t->connect_opts.callbacks.payload)) < 0)
+			goto cleanup;
+	}
 
 	/* Walk the objects, building a packfile */
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
 		goto cleanup;
 
 	/* One last one with the newline */
-	git_str_clear(&progress_info);
-	git_str_printf(&progress_info, counting_objects_fmt, git_packbuilder_object_count(pack));
-	if ((error = git_str_putc(&progress_info, '\n')) < 0)
-		goto cleanup;
+	if (t->connect_opts.callbacks.sideband_progress) {
+		git_str_clear(&progress_info);
 
-	if (t->progress_cb &&
-	    (error = t->progress_cb(git_str_cstr(&progress_info), (int)git_str_len(&progress_info), t->message_cb_payload)) < 0)
-		goto cleanup;
+		if ((error = git_str_printf(
+				&progress_info,
+				counting_objects_fmt,
+				git_packbuilder_object_count(pack))) < 0 ||
+		    (error = git_str_putc(&progress_info, '\n')) < 0 ||
+		    (error = t->connect_opts.callbacks.sideband_progress(
+				progress_info.ptr,
+				(int)progress_info.size,
+				t->connect_opts.callbacks.payload)) < 0)
+			goto cleanup;
+	}
 
-	if ((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) != 0)
+	if ((error = git_odb_write_pack(
+			&writepack,
+			odb,
+			t->connect_opts.callbacks.transfer_progress,
+			t->connect_opts.callbacks.payload)) < 0)
 		goto cleanup;
 
 	/* Write the data to the ODB */
-	{
-		foreach_data data = {0};
-		data.stats = stats;
-		data.progress_cb = progress_cb;
-		data.progress_payload = progress_payload;
-		data.writepack = writepack;
+	data.stats = stats;
+	data.progress_cb = t->connect_opts.callbacks.transfer_progress;
+	data.progress_payload = t->connect_opts.callbacks.payload;
+	data.writepack = writepack;
 
-		/* autodetect */
-		git_packbuilder_set_threads(pack, 0);
+	/* autodetect */
+	git_packbuilder_set_threads(pack, 0);
 
-		if ((error = git_packbuilder_foreach(pack, foreach_cb, &data)) != 0)
-			goto cleanup;
-	}
+	if ((error = git_packbuilder_foreach(pack, foreach_cb, &data)) != 0)
+		goto cleanup;
 
 	error = writepack->commit(writepack, stats);
 
@@ -632,38 +658,11 @@ cleanup:
 	return error;
 }
 
-static int local_set_callbacks(
-	git_transport *transport,
-	git_transport_message_cb progress_cb,
-	git_transport_message_cb error_cb,
-	git_transport_certificate_check_cb certificate_check_cb,
-	void *message_cb_payload)
-{
-	transport_local *t = (transport_local *)transport;
-
-	GIT_UNUSED(certificate_check_cb);
-
-	t->progress_cb = progress_cb;
-	t->error_cb = error_cb;
-	t->message_cb_payload = message_cb_payload;
-
-	return 0;
-}
-
 static int local_is_connected(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
 
 	return t->connected;
-}
-
-static int local_read_flags(git_transport *transport, int *flags)
-{
-	transport_local *t = (transport_local *)transport;
-
-	*flags = t->flags;
-
-	return 0;
 }
 
 static void local_cancel(git_transport *transport)
@@ -720,8 +719,8 @@ int git_transport_local(git_transport **out, git_remote *owner, void *param)
 	GIT_ERROR_CHECK_ALLOC(t);
 
 	t->parent.version = GIT_TRANSPORT_VERSION;
-	t->parent.set_callbacks = local_set_callbacks;
 	t->parent.connect = local_connect;
+	t->parent.set_connect_opts = local_set_connect_opts;
 	t->parent.negotiate_fetch = local_negotiate_fetch;
 	t->parent.download_pack = local_download_pack;
 	t->parent.push = local_push;
@@ -729,7 +728,6 @@ int git_transport_local(git_transport **out, git_remote *owner, void *param)
 	t->parent.free = local_free;
 	t->parent.ls = local_ls;
 	t->parent.is_connected = local_is_connected;
-	t->parent.read_flags = local_read_flags;
 	t->parent.cancel = local_cancel;
 
 	if ((error = git_vector_init(&t->refs, 0, NULL)) < 0) {

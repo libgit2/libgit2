@@ -512,9 +512,7 @@ static int network_packetsize(size_t received, void *payload)
 int git_smart__download_pack(
 	git_transport *transport,
 	git_repository *repo,
-	git_indexer_progress *stats,
-	git_indexer_progress_cb progress_cb,
-	void *progress_payload)
+	git_indexer_progress *stats)
 {
 	transport_smart *t = (transport_smart *)transport;
 	gitno_buffer *buf = &t->buffer;
@@ -522,6 +520,10 @@ int git_smart__download_pack(
 	struct git_odb_writepack *writepack = NULL;
 	int error = 0;
 	struct network_packetsize_payload npp = {0};
+
+	// TODO
+	git_indexer_progress_cb progress_cb = t->connect_opts.callbacks.transfer_progress;
+	void *progress_payload = t->connect_opts.callbacks.payload;
 
 	memset(stats, 0, sizeof(git_indexer_progress));
 
@@ -568,7 +570,7 @@ int git_smart__download_pack(
 				git_error_clear();
 				error = GIT_EUSER;
 			} else if (pkt->type == GIT_PKT_PROGRESS) {
-				if (t->progress_cb) {
+				if (t->connect_opts.callbacks.sideband_progress) {
 					git_pkt_progress *p = (git_pkt_progress *) pkt;
 
 					if (p->len > INT_MAX) {
@@ -577,7 +579,7 @@ int git_smart__download_pack(
 						goto done;
 					}
 
-					error = t->progress_cb(p->data, (int)p->len, t->message_cb_payload);
+					error = t->connect_opts.callbacks.sideband_progress(p->data, (int)p->len, t->connect_opts.callbacks.payload);
 				}
 			} else if (pkt->type == GIT_PKT_DATA) {
 				git_pkt_data *p = (git_pkt_data *) pkt;
@@ -811,7 +813,7 @@ static int parse_report(transport_smart *transport, git_push *push)
 				error = -1;
 				break;
 			case GIT_PKT_PROGRESS:
-				if (transport->progress_cb) {
+				if (transport->connect_opts.callbacks.sideband_progress) {
 					git_pkt_progress *p = (git_pkt_progress *) pkt;
 
 					if (p->len > INT_MAX) {
@@ -820,7 +822,7 @@ static int parse_report(transport_smart *transport, git_push *push)
 						goto done;
 					}
 
-					error = transport->progress_cb(p->data, (int)p->len, transport->message_cb_payload);
+					error = transport->connect_opts.callbacks.sideband_progress(p->data, (int)p->len, transport->connect_opts.callbacks.payload);
 				}
 				break;
 			default:
@@ -987,9 +989,10 @@ static int stream_thunk(void *buf, size_t size, void *data)
 	return error;
 }
 
-int git_smart__push(git_transport *transport, git_push *push, const git_remote_callbacks *cbs)
+int git_smart__push(git_transport *transport, git_push *push)
 {
 	transport_smart *t = (transport_smart *)transport;
+	git_remote_callbacks *cbs = &t->connect_opts.callbacks;
 	struct push_packbuilder_payload packbuilder_payload = {0};
 	git_str pktline = GIT_STR_INIT;
 	int error = 0, need_pack = 0;

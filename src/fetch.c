@@ -87,10 +87,10 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 			goto cleanup;
 	}
 
-	if (git_repository_odb__weakptr(&odb, remote->repo) < 0)
+	if ((error = git_repository_odb__weakptr(&odb, remote->repo)) < 0)
 		goto cleanup;
 
-	if (git_remote_ls((const git_remote_head ***)&heads, &heads_len, remote) < 0)
+	if ((error = git_remote_ls((const git_remote_head ***)&heads, &heads_len, remote)) < 0)
 		goto cleanup;
 
 	for (i = 0; i < heads_len; i++) {
@@ -134,21 +134,14 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 		remote->refs.length);
 }
 
-int git_fetch_download_pack(git_remote *remote, const git_remote_callbacks *callbacks)
+int git_fetch_download_pack(git_remote *remote)
 {
 	git_transport *t = remote->transport;
-	git_indexer_progress_cb progress = NULL;
-	void *payload = NULL;
 
 	if (!remote->need_pack)
 		return 0;
 
-	if (callbacks) {
-		progress = callbacks->transfer_progress;
-		payload  = callbacks->payload;
-	}
-
-	return t->download_pack(t, remote->repo, &remote->stats, progress, payload);
+	return t->download_pack(t, remote->repo, &remote->stats);
 }
 
 int git_fetch_options_init(git_fetch_options *opts, unsigned int version)

@@ -56,101 +56,6 @@ GIT_INLINE(int) git_smart__reset_stream(transport_smart *t, bool close_subtransp
 	return 0;
 }
 
-static int git_smart__set_callbacks(
-	git_transport *transport,
-	git_transport_message_cb progress_cb,
-	git_transport_message_cb error_cb,
-	git_transport_certificate_check_cb certificate_check_cb,
-	void *message_cb_payload)
-{
-	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
-
-	t->progress_cb = progress_cb;
-	t->error_cb = error_cb;
-	t->certificate_check_cb = certificate_check_cb;
-	t->message_cb_payload = message_cb_payload;
-
-	return 0;
-}
-
-static size_t http_header_name_length(const char *http_header)
-{
-	const char *colon = strchr(http_header, ':');
-	if (!colon)
-		return 0;
-	return colon - http_header;
-}
-
-static bool is_malformed_http_header(const char *http_header)
-{
-	const char *c;
-	size_t name_len;
-
-	/* Disallow \r and \n */
-	c = strchr(http_header, '\r');
-	if (c)
-		return true;
-	c = strchr(http_header, '\n');
-	if (c)
-		return true;
-
-	/* Require a header name followed by : */
-	name_len = http_header_name_length(http_header);
-	if (name_len < 1)
-		return true;
-
-	return false;
-}
-
-static char *forbidden_custom_headers[] = {
-	"User-Agent",
-	"Host",
-	"Accept",
-	"Content-Type",
-	"Transfer-Encoding",
-	"Content-Length",
-};
-
-static bool is_forbidden_custom_header(const char *custom_header)
-{
-	unsigned long i;
-	size_t name_len = http_header_name_length(custom_header);
-
-	/* Disallow headers that we set */
-	for (i = 0; i < ARRAY_SIZE(forbidden_custom_headers); i++)
-		if (strncmp(forbidden_custom_headers[i], custom_header, name_len) == 0)
-			return true;
-
-	return false;
-}
-
-static int git_smart__set_custom_headers(
-	git_transport *transport,
-	const git_strarray *custom_headers)
-{
-	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
-	size_t i;
-
-	if (t->custom_headers.count)
-		git_strarray_dispose(&t->custom_headers);
-
-	if (!custom_headers)
-		return 0;
-
-	for (i = 0; i < custom_headers->count; i++) {
-		if (is_malformed_http_header(custom_headers->strings[i])) {
-			git_error_set(GIT_ERROR_INVALID, "custom HTTP header '%s' is malformed", custom_headers->strings[i]);
-			return -1;
-		}
-		if (is_forbidden_custom_header(custom_headers->strings[i])) {
-			git_error_set(GIT_ERROR_INVALID, "custom HTTP header '%s' is already set by libgit2", custom_headers->strings[i]);
-			return -1;
-		}
-	}
-
-	return git_strarray_copy(&t->custom_headers, custom_headers);
-}
-
 int git_smart__update_heads(transport_smart *t, git_vector *symrefs)
 {
 	size_t i;
@@ -206,11 +111,8 @@ static void free_symrefs(git_vector *symrefs)
 static int git_smart__connect(
 	git_transport *transport,
 	const char *url,
-	git_credential_acquire_cb cred_acquire_cb,
-	void *cred_acquire_payload,
-	const git_proxy_options *proxy,
 	int direction,
-	int flags)
+	const git_remote_connect_options *connect_opts)
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 	git_smart_subtransport_stream *stream;
@@ -223,24 +125,19 @@ static int git_smart__connect(
 	if (git_smart__reset_stream(t, true) < 0)
 		return -1;
 
+	if (git_remote_connect_options_normalize(&t->connect_opts, t->owner->repo, connect_opts) < 0)
+		return -1;
+
 	t->url = git__strdup(url);
 	GIT_ERROR_CHECK_ALLOC(t->url);
 
-	git_proxy_options_clear(&t->proxy);
-
-	if (git_proxy_options_dup(&t->proxy, proxy) < 0)
-		return -1;
-
 	t->direction = direction;
-	t->flags = flags;
-	t->cred_acquire_cb = cred_acquire_cb;
-	t->cred_acquire_payload = cred_acquire_payload;
 
-	if (GIT_DIRECTION_FETCH == t->direction)
+	if (GIT_DIRECTION_FETCH == t->direction) {
 		service = GIT_SERVICE_UPLOADPACK_LS;
-	else if (GIT_DIRECTION_PUSH == t->direction)
+	} else if (GIT_DIRECTION_PUSH == t->direction) {
 		service = GIT_SERVICE_RECEIVEPACK_LS;
-	else {
+	} else {
 		git_error_set(GIT_ERROR_NET, "invalid direction");
 		return -1;
 	}
@@ -313,6 +210,20 @@ cleanup:
 	free_symrefs(&symrefs);
 
 	return error;
+}
+
+static int git_smart__set_connect_opts(
+	git_transport *transport,
+	const git_remote_connect_options *opts)
+{
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
+
+	if (!t->connected) {
+		git_error_set(GIT_ERROR_NET, "cannot reconfigure a transport that is not connected");
+		return -1;
+	}
+
+	return git_remote_connect_options_normalize(&t->connect_opts, t->owner->repo, opts);
 }
 
 static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transport *transport)
@@ -401,15 +312,6 @@ static int git_smart__is_connected(git_transport *transport)
 	return t->connected;
 }
 
-static int git_smart__read_flags(git_transport *transport, int *flags)
-{
-	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
-
-	*flags = t->flags;
-
-	return 0;
-}
-
 static int git_smart__close(git_transport *transport)
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
@@ -465,9 +367,8 @@ static void git_smart__free(git_transport *transport)
 		git_pkt_free(p);
 
 	git_vector_free(refs);
-	git__free((char *)t->proxy.url);
 
-	git_strarray_dispose(&t->custom_headers);
+	git_remote_connect_options_dispose(&t->connect_opts);
 
 	git__free(t);
 }
@@ -482,34 +383,30 @@ static int ref_name_cmp(const void *a, const void *b)
 int git_transport_smart_certificate_check(git_transport *transport, git_cert *cert, int valid, const char *hostname)
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
+	git_remote_connect_options *connect_opts = &t->connect_opts;
 
 	GIT_ASSERT_ARG(transport);
 	GIT_ASSERT_ARG(cert);
 	GIT_ASSERT_ARG(hostname);
 
-	if (!t->certificate_check_cb)
+	if (!connect_opts->callbacks.certificate_check)
 		return GIT_PASSTHROUGH;
 
-	return t->certificate_check_cb(cert, valid, hostname, t->message_cb_payload);
+	return connect_opts->callbacks.certificate_check(cert, valid, hostname, connect_opts->callbacks.payload);
 }
 
 int git_transport_smart_credentials(git_credential **out, git_transport *transport, const char *user, int methods)
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
+	git_remote_connect_options *connect_opts = &t->connect_opts;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(transport);
 
-	if (!t->cred_acquire_cb)
+	if (!connect_opts->callbacks.credentials)
 		return GIT_PASSTHROUGH;
 
-	return t->cred_acquire_cb(out, t->url, user, methods, t->cred_acquire_payload);
-}
-
-int git_transport_smart_proxy_options(git_proxy_options *out, git_transport *transport)
-{
-	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
-	return git_proxy_options_dup(out, &t->proxy);
+	return connect_opts->callbacks.credentials(out, t->url, user, methods, connect_opts->callbacks.payload);
 }
 
 int git_transport_smart(git_transport **out, git_remote *owner, void *param)
@@ -524,9 +421,8 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	GIT_ERROR_CHECK_ALLOC(t);
 
 	t->parent.version = GIT_TRANSPORT_VERSION;
-	t->parent.set_callbacks = git_smart__set_callbacks;
-	t->parent.set_custom_headers = git_smart__set_custom_headers;
 	t->parent.connect = git_smart__connect;
+	t->parent.set_connect_opts = git_smart__set_connect_opts;
 	t->parent.close = git_smart__close;
 	t->parent.free = git_smart__free;
 	t->parent.negotiate_fetch = git_smart__negotiate_fetch;
@@ -534,7 +430,6 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	t->parent.push = git_smart__push;
 	t->parent.ls = git_smart__ls;
 	t->parent.is_connected = git_smart__is_connected;
-	t->parent.read_flags = git_smart__read_flags;
 	t->parent.cancel = git_smart__cancel;
 
 	t->owner = owner;

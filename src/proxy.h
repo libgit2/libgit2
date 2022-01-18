@@ -12,6 +12,6 @@
 #include "git2/proxy.h"
 
 extern int git_proxy_options_dup(git_proxy_options *tgt, const git_proxy_options *src);
-extern void git_proxy_options_clear(git_proxy_options *opts);
+extern void git_proxy_options_dispose(git_proxy_options *opts);
 
 #endif

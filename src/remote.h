@@ -37,15 +37,6 @@ struct git_remote {
 	int passed_refspecs;
 };
 
-typedef struct git_remote_connection_opts {
-	const git_strarray *custom_headers;
-	const git_proxy_options *proxy;
-} git_remote_connection_opts;
-
-#define GIT_REMOTE_CONNECTION_OPTIONS_INIT { NULL, NULL }
-
-int git_remote__connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_remote_connection_opts *conn);
-
 int git_remote__urlfordirection(git_str *url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks);
 int git_remote__http_proxy(char **out, git_remote *remote, git_net_url *url);
 
@@ -53,5 +44,14 @@ git_refspec *git_remote__matching_refspec(git_remote *remote, const char *refnam
 git_refspec *git_remote__matching_dst_refspec(git_remote *remote, const char *refname);
 
 int git_remote__default_branch(git_str *out, git_remote *remote);
+
+int git_remote_connect_options_dup(
+	git_remote_connect_options *dst,
+	const git_remote_connect_options *src);
+int git_remote_connect_options_normalize(
+	git_remote_connect_options *dst,
+	git_repository *repo,
+	const git_remote_connect_options *src);
+void git_remote_connect_options_dispose(git_remote_connect_options *opts);
 
 #endif

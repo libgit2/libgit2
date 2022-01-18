@@ -83,7 +83,7 @@ echo "##########################################################################
 if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	echo "Starting git daemon..."
 	GITDAEMON_DIR=`mktemp -d ${TMPDIR}/gitdaemon.XXXXXXXX`
-	git init --bare "${GITDAEMON_DIR}/test.git"
+	git init --bare "${GITDAEMON_DIR}/test.git" >/dev/null
 	git daemon --listen=localhost --export-all --enable=receive-pack --base-path="${GITDAEMON_DIR}" "${GITDAEMON_DIR}" 2>/dev/null &
 	GITDAEMON_PID=$!
 	disown $GITDAEMON_PID
@@ -101,8 +101,8 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	java -jar poxyproxy.jar --address 127.0.0.1 --port 8090 --credentials foo:bar --auth-type ntlm --quiet &
 fi
 
-if [ -z "$SKIP_NTLM_TESTS" ]; then
-	curl --location --silent --show-error https://github.com/ethomson/poxygit/releases/download/v0.4.0/poxygit-0.4.0.jar >poxygit.jar
+if [ -z "$SKIP_NTLM_TESTS" -o -z "$SKIP_ONLINE_TESTS" ]; then
+	curl --location --silent --show-error https://github.com/ethomson/poxygit/releases/download/v0.5.1/poxygit-0.5.1.jar >poxygit.jar
 
 	echo ""
 	echo "Starting HTTP server..."
@@ -112,10 +112,11 @@ if [ -z "$SKIP_NTLM_TESTS" ]; then
 fi
 
 if [ -z "$SKIP_SSH_TESTS" ]; then
+	echo ""
 	echo "Starting ssh daemon..."
 	HOME=`mktemp -d ${TMPDIR}/home.XXXXXXXX`
 	SSHD_DIR=`mktemp -d ${TMPDIR}/sshd.XXXXXXXX`
-	git init --bare "${SSHD_DIR}/test.git"
+	git init --bare "${SSHD_DIR}/test.git" >/dev/null
 	cat >"${SSHD_DIR}/sshd_config" <<-EOF
 	Port 2222
 	ListenAddress 0.0.0.0
@@ -188,9 +189,11 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	echo "## Running (online) tests"
 	echo "##############################################################################"
 
-	export GITTEST_FLAKY_RETRY=5
+	export GITTEST_REMOTE_REDIRECT_INITIAL="http://localhost:9000/initial-redirect/libgit2/TestGitRepository"
+	export GITTEST_REMOTE_REDIRECT_SUBSEQUENT="http://localhost:9000/subsequent-redirect/libgit2/TestGitRepository"
 	run_test online
-	unset GITTEST_FLAKY_RETRY
+	unset GITTEST_REMOTE_REDIRECT_INITIAL
+	unset GITTEST_REMOTE_REDIRECT_SUBSEQUENT
 
 	# Run the online tests that immutably change global state separately
 	# to avoid polluting the test environment.
@@ -231,9 +234,7 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	export GITTEST_REMOTE_PROXY_HOST="localhost:8090"
 	export GITTEST_REMOTE_PROXY_USER="foo"
 	export GITTEST_REMOTE_PROXY_PASS="bar"
-	export GITTEST_FLAKY_RETRY=5
 	run_test proxy
-	unset GITTEST_FLAKY_RETRY
 	unset GITTEST_REMOTE_PROXY_HOST
 	unset GITTEST_REMOTE_PROXY_USER
 	unset GITTEST_REMOTE_PROXY_PASS
