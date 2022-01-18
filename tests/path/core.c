@@ -290,7 +290,7 @@ void test_path_core__validate_workdir(void)
 
 #ifdef GIT_WIN32
 	/*
-	 * In the absense of a repo configuration, 259 character paths
+	 * In the absence of a repo configuration, 259 character paths
 	 * succeed. >= 260 character paths fail.
 	 */
 	cl_must_pass(git_path_validate_length(NULL, "C:\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\aaaaaaaaa\\ok.txt"));

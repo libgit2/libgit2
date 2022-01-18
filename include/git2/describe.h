@@ -152,7 +152,7 @@ GIT_EXTERN(int) git_describe_commit(
  * Describe a commit
  *
  * Perform the describe operation on the current commit and the
- * worktree. After peforming describe on HEAD, a status is run and the
+ * worktree. After performing describe on HEAD, a status is run and the
  * description is considered to be dirty if there are.
  *
  * @param out pointer to store the result. You must free this once

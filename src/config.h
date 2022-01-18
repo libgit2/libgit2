@@ -96,7 +96,7 @@ int git_config_lookup_map_enum(git_configmap_t *type_out,
 /**
  * Unlock the backend with the highest priority
  *
- * Unlocking will allow other writers to updat the configuration
+ * Unlocking will allow other writers to update the configuration
  * file. Optionally, any changes performed since the lock will be
  * applied to the configuration.
  *

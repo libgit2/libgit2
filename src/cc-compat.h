@@ -75,7 +75,7 @@
 #	define PRIdZ "zd"
 #endif
 
-/* Micosoft Visual C/C++ */
+/* Microsoft Visual C/C++ */
 #if defined(_MSC_VER)
 /* disable "deprecated function" warnings */
 #	pragma warning ( disable : 4996 )

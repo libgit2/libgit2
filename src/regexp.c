@@ -45,7 +45,7 @@ int git_regexp_search(const git_regexp *r, const char *string, size_t nmatches, 
 	int error;
 	size_t i;
 
-	/* The ovec array always needs to be a mutiple of three */
+	/* The ovec array always needs to be a multiple of three */
 	if (nmatches <= ARRAY_SIZE(static_ovec) / 3)
 		ovec = static_ovec;
 	else

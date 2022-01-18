@@ -375,7 +375,7 @@ void test_diff_rename__not_exact_match(void)
 	/* git diff -M -C --find-copies-harder --break-rewrites \
 	 *          1c068dee5790ef1580cfc4cd670915b48d790084 \
 	 *          19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13
-	 * with ignore_space whitespace comparision
+	 * with ignore_space whitespace comparison
 	 */
 	cl_git_pass(git_diff_tree_to_tree(
 		&diff, g_repo, old_tree, new_tree, &diffopts));

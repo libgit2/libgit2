@@ -41,7 +41,7 @@ GIT_INLINE(int) path__cwd(wchar_t *path, int size)
 	}
 
 	/* The Win32 APIs may return "\\?\" once you've used it first.
-	 * But it may not.  What a gloriously predictible API!
+	 * But it may not.  What a gloriously predictable API!
 	 */
 	if (wcsncmp(path, PATH__NT_NAMESPACE, PATH__NT_NAMESPACE_LEN))
 		return len;

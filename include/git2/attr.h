@@ -344,7 +344,7 @@ GIT_EXTERN(int) git_attr_cache_flush(
  * Add a macro definition.
  *
  * Macros will automatically be loaded from the top level `.gitattributes`
- * file of the repository (plus the build-in "binary" macro).  This
+ * file of the repository (plus the built-in "binary" macro).  This
  * function allows you to add others.  For example, to add the default
  * macro, you would call:
  *

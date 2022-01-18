@@ -353,7 +353,7 @@ static int parse_header_start(git_patch_parsed *patch, git_patch_parse_ctx *ctx)
 	 * We cannot expect to be able to always parse paths correctly at this
 	 * point. Due to the possibility of unquoted names, whitespaces in
 	 * filenames and custom prefixes we have to allow that, though, and just
-	 * proceeed here. We then hope for the "---" and "+++" lines to fix that
+	 * proceed here. We then hope for the "---" and "+++" lines to fix that
 	 * for us.
 	 */
 	if (!git_parse_ctx_contains(&ctx->parse_ctx, "\n", 1) &&

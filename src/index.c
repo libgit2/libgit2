@@ -3499,7 +3499,7 @@ static int index_apply_to_wd_diff(git_index *index, int action, const git_strarr
 	}
 
 	/*
-	 * We do the matching ourselves intead of passing the list to
+	 * We do the matching ourselves instead of passing the list to
 	 * diff because we want to tell the callback which one
 	 * matched, which we do not know if we ask diff to filter for us.
 	 */

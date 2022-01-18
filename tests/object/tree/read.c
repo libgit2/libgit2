@@ -21,7 +21,7 @@ void test_object_tree_read__cleanup(void)
 
 void test_object_tree_read__loaded(void)
 {
-	/* acces randomly the entries on a loaded tree */
+	/* access randomly the entries on a loaded tree */
 	git_oid id;
 	git_tree *tree;
 

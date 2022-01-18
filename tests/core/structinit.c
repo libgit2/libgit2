@@ -67,7 +67,7 @@ void test_core_structinit__compare(void)
 	 * which is not guaranteed to be initialized to anything sane at all.
 	 *
 	 * Assume most compilers, in a debug build, will clear that memory for
-	 * us or set it to sentinal markers.  Etc.
+	 * us or set it to sentinel markers.  Etc.
 	 */
 #if !defined(DEBUG) && !defined(_DEBUG)
 	clar__skip();

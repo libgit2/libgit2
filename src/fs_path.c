@@ -136,7 +136,7 @@ Exit:
 
 /*
  * Determine if the path is a Windows prefix and, if so, returns
- * its actual lentgh. If it is not a prefix, returns -1.
+ * its actual length. If it is not a prefix, returns -1.
  */
 static int win32_prefix_length(const char *path, int len)
 {

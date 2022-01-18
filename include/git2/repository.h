@@ -808,19 +808,19 @@ GIT_EXTERN(int) git_repository_set_head(
  * If the provided committish cannot be found in the repository, the HEAD
  * is unaltered and GIT_ENOTFOUND is returned.
  *
- * If the provided commitish cannot be peeled into a commit, the HEAD
+ * If the provided committish cannot be peeled into a commit, the HEAD
  * is unaltered and -1 is returned.
  *
  * Otherwise, the HEAD will eventually be detached and will directly point to
  * the peeled Commit.
  *
  * @param repo Repository pointer
- * @param commitish Object id of the Commit the HEAD should point to
+ * @param committish Object id of the Commit the HEAD should point to
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_set_head_detached(
 	git_repository *repo,
-	const git_oid *commitish);
+	const git_oid *committish);
 
 /**
  * Make the repository HEAD directly point to the Commit.
@@ -836,7 +836,7 @@ GIT_EXTERN(int) git_repository_set_head_detached(
  */
 GIT_EXTERN(int) git_repository_set_head_detached_from_annotated(
 	git_repository *repo,
-	const git_annotated_commit *commitish);
+	const git_annotated_commit *committish);
 
 /**
  * Detach the HEAD.
@@ -846,7 +846,7 @@ GIT_EXTERN(int) git_repository_set_head_detached_from_annotated(
  * If the HEAD is already detached and points to a Tag, the HEAD is
  * updated into making it point to the peeled Commit, and 0 is returned.
  *
- * If the HEAD is already detached and points to a non commitish, the HEAD is
+ * If the HEAD is already detached and points to a non committish, the HEAD is
  * unaltered, and -1 is returned.
  *
  * Otherwise, the HEAD will be detached and point to the peeled Commit.

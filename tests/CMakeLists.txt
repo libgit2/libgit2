@@ -2,7 +2,7 @@ set(Python_ADDITIONAL_VERSIONS 3 2.7)
 find_package(PythonInterp)
 
 if(NOT PYTHONINTERP_FOUND)
-	message(FATAL_ERROR "Could not find a python interpeter, which is needed to build the tests. "
+	message(FATAL_ERROR "Could not find a python interpreter, which is needed to build the tests. "
 	                     "Make sure python is available, or pass -DBUILD_TESTS=OFF to skip building the tests")
 ENDIF()
 

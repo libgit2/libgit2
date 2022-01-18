@@ -707,7 +707,7 @@ int git_branch_set_upstream(git_reference *branch, const char *branch_name)
 	if (error < 0)
 		goto on_error;
 
-	/* Update the upsteam branch config with the new name */
+	/* Update the upstream branch config with the new name */
 	if (git_str_printf(&key, "branch.%s.remote", shortname) < 0)
 		goto on_error;
 

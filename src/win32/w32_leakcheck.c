@@ -199,7 +199,7 @@ int git_win32_leakcheck_stack(
 	return 0;
 }
 
-/* Strack tracing */
+/* Stack tracing */
 
 #define STACKTRACE_UID_LEN (15)
 

@@ -66,7 +66,7 @@ void test_checkout_tree__can_checkout_and_remove_directory(void)
 {
 	cl_assert_equal_i(false, git_fs_path_isdir("./testrepo/ab/"));
 
-	/* Checkout brach "subtrees" and update HEAD, so that HEAD matches the
+	/* Checkout branch "subtrees" and update HEAD, so that HEAD matches the
 	 * current working tree
 	 */
 	cl_git_pass(git_revparse_single(&g_object, g_repo, "subtrees"));
@@ -81,7 +81,7 @@ void test_checkout_tree__can_checkout_and_remove_directory(void)
 	git_object_free(g_object);
 	g_object = NULL;
 
-	/* Checkout brach "master" and update HEAD, so that HEAD matches the
+	/* Checkout branch "master" and update HEAD, so that HEAD matches the
 	 * current working tree
 	 */
 	cl_git_pass(git_revparse_single(&g_object, g_repo, "master"));
@@ -537,7 +537,7 @@ static void assert_conflict(
 	g_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
 
-	/* Hack-ishy workaound to ensure *all* the index entries
+	/* Hack-ishy workaround to ensure *all* the index entries
 	 * match the content of the tree
 	 */
 	cl_git_pass(git_object_peel(&hack_tree, g_object, GIT_OBJECT_TREE));
