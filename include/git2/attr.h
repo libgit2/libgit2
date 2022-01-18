@@ -354,7 +354,7 @@ GIT_EXTERN(int) git_attr_cache_flush(
  *
  *     git_attr_add_macro(repo, "binary", "-diff -crlf");
  *
- * @param repo The repository where to add the macro.
+ * @param repo The repository to add the macro in.
  * @param name The name of the macro.
  * @param values The value for the macro.
  * @return 0 or an error code.

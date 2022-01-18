@@ -348,7 +348,7 @@ GIT_EXTERN(int) git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stre
  * Most backends don't implement streaming reads
  *
  * @param stream the stream
- * @param buffer the buffer where to store the readed data.
+ * @param buffer a user-allocated buffer to store the data in.
  * @param len the buffer's length
  * @return 0 if the read succeeded, error code otherwise
  */

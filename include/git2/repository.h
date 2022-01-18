@@ -931,7 +931,7 @@ GIT_EXTERN(int) git_repository_is_shallow(git_repository *repo);
  * @param name where to store the pointer to the name
  * @param email where to store the pointer to the email
  * @param repo the repository
- * @return 0
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_ident(const char **name, const char **email, const git_repository *repo);
 

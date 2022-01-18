@@ -249,7 +249,7 @@ GIT_EXTERN(int) git_revwalk_push_range(git_revwalk *walk, const char *range);
  *
  * No parents other than the first for each commit will be enqueued.
  *
- * @param walk The revisionwlaker.
+ * @param walk The revision walker.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_simplify_first_parent(git_revwalk *walk);
@@ -278,7 +278,7 @@ GIT_EXTERN(git_repository *) git_revwalk_repository(git_revwalk *walk);
  *
  * @param commit_id oid of Commit
  * @param payload User-specified pointer to data to be passed as data payload
- * @return non-zero to hide the commmit and it parrent.
+ * @return non-zero to hide the commmit and it parent.
  */
 typedef int GIT_CALLBACK(git_revwalk_hide_cb)(
 	const git_oid *commit_id,

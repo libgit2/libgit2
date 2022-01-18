@@ -34,7 +34,7 @@ GIT_BEGIN_DECL
  *
  * @param out Pointer where to store the underlying reference.
  *
- * @param repo the repository where to create the branch.
+ * @param repo the repository to create the branch in.
  *
  * @param branch_name Name for the branch; this name is
  * validated for consistency. It should also not conflict with

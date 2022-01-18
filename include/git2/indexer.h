@@ -136,8 +136,7 @@ GIT_EXTERN(int) git_indexer_commit(git_indexer *idx, git_indexer_progress *stats
  * names. This is only correct after the index has been finalized.
  *
  * @param idx the indexer instance
- * @return the packfile's hash. In casewhere the index has not been finalized,
- *	it will be zeroed out.
+ * @return the packfile's hash
  */
 GIT_EXTERN(const git_oid *) git_indexer_hash(const git_indexer *idx);
 

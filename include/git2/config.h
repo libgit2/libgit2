@@ -426,7 +426,7 @@ GIT_EXTERN(int) git_config_get_string_buf(git_buf *out, const git_config *cfg, c
  * interested in. Use NULL to indicate all
  * @param callback the function to be called on each value of the variable
  * @param payload opaque pointer to pass to the callback
- * @return non-zero to terminate the iteration.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_get_multivar_foreach(const git_config *cfg, const char *name, const char *regexp, git_config_foreach_cb callback, void *payload);
 
@@ -442,7 +442,7 @@ GIT_EXTERN(int) git_config_get_multivar_foreach(const git_config *cfg, const cha
  * @param name the variable's name
  * @param regexp regular expression to filter which variables we're
  * interested in. Use NULL to indicate all
- * @return non-zero to terminate the iteration.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_multivar_iterator_new(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp);
 
@@ -750,7 +750,7 @@ GIT_EXTERN(int) git_config_parse_path(git_buf *out, const char *value);
  * @param regexp regular expression to match against config names (can be NULL)
  * @param callback the function to call on each variable
  * @param payload the data to pass to the callback
- * @return non-zero to terminate the iteration.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_backend_foreach_match(
 	git_config_backend *backend,

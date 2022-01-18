@@ -329,7 +329,7 @@ GIT_EXTERN(int) git_rebase_next(
  *
  * @param index The result index of the last operation.
  * @param rebase The in-progress rebase.
- * @return 0
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_rebase_inmemory_index(
 	git_index **index,

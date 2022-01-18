@@ -479,7 +479,7 @@ GIT_EXTERN(int) git_commit_create_buffer(
  * to the commit and write it into the given repository.
  *
  * @param out the resulting commit id
- * @param repo the repository where to create the commit.
+ * @param repo the repository to create the commit in.
  * @param commit_content the content of the unsigned commit object
  * @param signature the signature to add to the commit. Leave `NULL`
  * to create a commit without adding a signature field.
