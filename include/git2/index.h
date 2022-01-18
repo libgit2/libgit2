@@ -491,6 +491,7 @@ GIT_EXTERN(int) git_index_entry_is_conflict(const git_index_entry *entry);
  *
  * @param iterator_out The newly created iterator
  * @param index The index to iterate
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_index_iterator_new(
 	git_index_iterator **iterator_out,
@@ -787,6 +788,7 @@ GIT_EXTERN(int) git_index_conflict_cleanup(git_index *index);
 /**
  * Determine if the index contains entries representing file conflicts.
  *
+ * @param index An existing index object.
  * @return 1 if at least one conflict is found, 0 otherwise.
  */
 GIT_EXTERN(int) git_index_has_conflicts(const git_index *index);
@@ -811,6 +813,7 @@ GIT_EXTERN(int) git_index_conflict_iterator_new(
  * @param ancestor_out Pointer to store the ancestor side of the conflict
  * @param our_out Pointer to store our side of the conflict
  * @param their_out Pointer to store their side of the conflict
+ * @param iterator The conflict iterator.
  * @return 0 (no error), GIT_ITEROVER (iteration is done) or an error code
  *         (negative value)
  */

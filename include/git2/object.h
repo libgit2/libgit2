@@ -221,6 +221,7 @@ GIT_EXTERN(int) git_object_peel(
  *
  * @param dest Pointer to store the copy of the object
  * @param source Original object to copy
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_object_dup(git_object **dest, git_object *source);
 

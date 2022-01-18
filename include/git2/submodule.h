@@ -229,6 +229,7 @@ GIT_EXTERN(int) git_submodule_lookup(
  *
  * @param out Pointer to store the copy of the submodule.
  * @param source Original submodule to copy.
+ * @return 0
  */
 GIT_EXTERN(int) git_submodule_dup(git_submodule **out, git_submodule *source);
 
@@ -320,6 +321,7 @@ GIT_EXTERN(int) git_submodule_clone(
  * (but doesn't actually do the commit).
  *
  * @param submodule The submodule to finish adding.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_submodule_add_finalize(git_submodule *submodule);
 
@@ -589,6 +591,9 @@ GIT_EXTERN(int) git_submodule_repo_init(
  * submodule config, acting like "git submodule sync".  This is useful if
  * you have altered the URL for the submodule (or it has been altered by a
  * fetch of upstream changes) and you need to update your local repo.
+ *
+ * @param submodule The submodule to copy.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_submodule_sync(git_submodule *submodule);
 

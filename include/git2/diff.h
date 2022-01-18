@@ -831,6 +831,7 @@ GIT_EXTERN(void) git_diff_free(git_diff *diff);
  * @param old_tree A git_tree object to diff from, or NULL for empty tree.
  * @param new_tree A git_tree object to diff to, or NULL for empty tree.
  * @param opts Structure with options to influence diff or NULL for defaults.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_diff_tree_to_tree(
 	git_diff **diff,
@@ -857,6 +858,7 @@ GIT_EXTERN(int) git_diff_tree_to_tree(
  * @param old_tree A git_tree object to diff from, or NULL for empty tree.
  * @param index The index to diff with; repo index used if NULL.
  * @param opts Structure with options to influence diff or NULL for defaults.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_diff_tree_to_index(
 	git_diff **diff,
@@ -884,6 +886,7 @@ GIT_EXTERN(int) git_diff_tree_to_index(
  * @param repo The repository.
  * @param index The index to diff from; repo index used if NULL.
  * @param opts Structure with options to influence diff or NULL for defaults.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_diff_index_to_workdir(
 	git_diff **diff,
@@ -913,6 +916,7 @@ GIT_EXTERN(int) git_diff_index_to_workdir(
  * @param repo The repository containing the tree.
  * @param old_tree A git_tree object to diff from, or NULL for empty tree.
  * @param opts Structure with options to influence diff or NULL for defaults.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_diff_tree_to_workdir(
 	git_diff **diff,
@@ -932,6 +936,7 @@ GIT_EXTERN(int) git_diff_tree_to_workdir(
  * @param repo The repository containing the tree.
  * @param old_tree A git_tree object to diff from, or NULL for empty tree.
  * @param opts Structure with options to influence diff or NULL for defaults.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_diff_tree_to_workdir_with_index(
 	git_diff **diff,
@@ -950,6 +955,7 @@ GIT_EXTERN(int) git_diff_tree_to_workdir_with_index(
  * @param old_index A git_index object to diff from.
  * @param new_index A git_index object to diff to.
  * @param opts Structure with options to influence diff or NULL for defaults.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_diff_index_to_index(
 	git_diff **diff,
@@ -970,6 +976,7 @@ GIT_EXTERN(int) git_diff_index_to_index(
  *
  * @param onto Diff to merge into.
  * @param from Diff to merge.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_diff_merge(
 	git_diff *onto,

@@ -98,6 +98,7 @@ GIT_EXTERN(int) git_indexer_options_init(
  * will be returned if there are bases missing)
  * @param opts Optional structure containing additional options. See
  * `git_indexer_options` above.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_indexer_new(
 		git_indexer **out,
@@ -113,6 +114,7 @@ GIT_EXTERN(int) git_indexer_new(
  * @param data the data to add
  * @param size the size of the data in bytes
  * @param stats stat storage
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_indexer_append(git_indexer *idx, const void *data, size_t size, git_indexer_progress *stats);
 
@@ -122,6 +124,8 @@ GIT_EXTERN(int) git_indexer_append(git_indexer *idx, const void *data, size_t si
  * Resolve any pending deltas and write out the index file
  *
  * @param idx the indexer
+ * @param stats Stat storage.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_indexer_commit(git_indexer *idx, git_indexer_progress *stats);
 
@@ -132,6 +136,7 @@ GIT_EXTERN(int) git_indexer_commit(git_indexer *idx, git_indexer_progress *stats
  * names. This is only correct after the index has been finalized.
  *
  * @param idx the indexer instance
+ * @return the packfile's hash
  */
 GIT_EXTERN(const git_oid *) git_indexer_hash(const git_indexer *idx);
 

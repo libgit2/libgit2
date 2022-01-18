@@ -214,12 +214,13 @@ typedef struct git_odb_expand_id {
 
 /**
  * Determine if one or more objects can be found in the object database
- * by their abbreviated object ID and type.  The given array will be
- * updated in place:  for each abbreviated ID that is unique in the
- * database, and of the given type (if specified), the full object ID,
- * object ID length (`GIT_OID_HEXSZ`) and type will be written back to
- * the array.  For IDs that are not found (or are ambiguous), the
- * array entry will be zeroed.
+ * by their abbreviated object ID and type.
+ *
+ * The given array will be updated in place: for each abbreviated ID that is
+ * unique in the database, and of the given type (if specified),
+ * the full object ID, object ID length (`GIT_OID_HEXSZ`) and type will be
+ * written back to the array. For IDs that are not found (or are ambiguous),
+ * the array entry will be zeroed.
  *
  * Note that since this function operates on multiple objects, the
  * underlying database will not be asked to be reloaded if an object is
@@ -345,6 +346,11 @@ GIT_EXTERN(int) git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stre
  * Read from an odb stream
  *
  * Most backends don't implement streaming reads
+ *
+ * @param stream the stream
+ * @param buffer a user-allocated buffer to store the data in.
+ * @param len the buffer's length
+ * @return 0 if the read succeeded, error code otherwise
  */
 GIT_EXTERN(int) git_odb_stream_read(git_odb_stream *stream, char *buffer, size_t len);
 
@@ -405,6 +411,7 @@ GIT_EXTERN(int) git_odb_open_rstream(
  * Be aware that this is called inline with network and indexing operations,
  * so performance may be affected.
  * @param progress_payload payload for the progress callback
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_odb_write_pack(
 	git_odb_writepack **out,
@@ -422,6 +429,7 @@ GIT_EXTERN(int) git_odb_write_pack(
  * exist).
  *
  * @param db object database where the `multi-pack-index` file will be written.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_odb_write_multi_pack_index(
 	git_odb *db);

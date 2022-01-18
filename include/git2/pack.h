@@ -148,6 +148,7 @@ GIT_EXTERN(int) git_packbuilder_insert_recur(git_packbuilder *pb, const git_oid 
  *
  * @param buf Buffer where to write the packfile
  * @param pb The packbuilder
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb);
 
@@ -176,6 +177,7 @@ GIT_EXTERN(int) git_packbuilder_write(
 * names. This is only correct after the packfile has been written.
 *
 * @param pb The packbuilder object
+ * @return 0 or an error code
 */
 GIT_EXTERN(const git_oid *) git_packbuilder_hash(git_packbuilder *pb);
 
