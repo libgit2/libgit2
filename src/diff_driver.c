@@ -51,11 +51,9 @@ struct git_diff_driver_registry {
 
 #define FORCE_DIFFABLE (GIT_DIFF_FORCE_TEXT | GIT_DIFF_FORCE_BINARY)
 
-static git_diff_driver global_drivers[3] = {
-	{ DIFF_DRIVER_AUTO,   0, 0, },
-	{ DIFF_DRIVER_BINARY, GIT_DIFF_FORCE_BINARY, 0 },
-	{ DIFF_DRIVER_TEXT,   GIT_DIFF_FORCE_TEXT, 0 },
-};
+static git_diff_driver diff_driver_auto =   { DIFF_DRIVER_AUTO,   0, 0 };
+static git_diff_driver diff_driver_binary = { DIFF_DRIVER_BINARY, GIT_DIFF_FORCE_BINARY, 0 };
+static git_diff_driver diff_driver_text =   { DIFF_DRIVER_TEXT,   GIT_DIFF_FORCE_TEXT, 0 };
 
 git_diff_driver_registry *git_diff_driver_registry_new(void)
 {
@@ -266,7 +264,7 @@ static int git_diff_driver_load(
 	switch (git_config__get_bool_force(cfg, name.ptr, -1)) {
 	case true:
 		/* if diff.<driver>.binary is true, just return the binary driver */
-		*out = &global_drivers[DIFF_DRIVER_BINARY];
+		*out = &diff_driver_binary;
 		goto done;
 	case false:
 		/* if diff.<driver>.binary is false, force binary checks off */
@@ -374,9 +372,9 @@ int git_diff_driver_lookup(
 	else if (GIT_ATTR_IS_UNSPECIFIED(values[0]))
 		/* just use the auto value */;
 	else if (GIT_ATTR_IS_FALSE(values[0]))
-		*out = &global_drivers[DIFF_DRIVER_BINARY];
+		*out = &diff_driver_binary;
 	else if (GIT_ATTR_IS_TRUE(values[0]))
-		*out = &global_drivers[DIFF_DRIVER_TEXT];
+		*out = &diff_driver_text;
 
 	/* otherwise look for driver information in config and build driver */
 	else if ((error = git_diff_driver_load(out, repo, values[0])) < 0) {
@@ -387,7 +385,7 @@ int git_diff_driver_lookup(
 	}
 
 	if (!*out)
-		*out = &global_drivers[DIFF_DRIVER_AUTO];
+		*out = &diff_driver_auto;
 
 	return error;
 }
