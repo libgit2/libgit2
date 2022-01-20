@@ -1,5 +1,6 @@
 add_library(git2internal OBJECT)
 set_target_properties(git2internal PROPERTIES C_STANDARD 90)
+set_target_properties(git2internal PROPERTIES C_EXTENSIONS OFF)
 
 
 if(DEPRECATE_HARD)
