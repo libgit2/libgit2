@@ -31,7 +31,7 @@ static int git_sysdir_guess_programdata_dirs(git_str *out)
 static int git_sysdir_guess_system_dirs(git_str *out)
 {
 #ifdef GIT_WIN32
-	return git_win32__find_system_dirs(out, L"etc\\");
+	return git_win32__find_system_dirs(out, "etc");
 #else
 	return git_str_sets(out, "/etc");
 #endif
@@ -154,7 +154,7 @@ static int git_sysdir_guess_xdg_dirs(git_str *out)
 static int git_sysdir_guess_template_dirs(git_str *out)
 {
 #ifdef GIT_WIN32
-	return git_win32__find_system_dirs(out, L"share\\git-core\\templates");
+	return git_win32__find_system_dirs(out, "share/git-core/templates");
 #else
 	return git_str_sets(out, "/usr/share/git-core/templates");
 #endif
@@ -189,7 +189,23 @@ int git_sysdir_global_init(void)
 	for (i = 0; !error && i < ARRAY_SIZE(git_sysdir__dirs); i++)
 		error = git_sysdir__dirs[i].guess(&git_sysdir__dirs[i].buf);
 
+	if (error)
+		return error;
+
 	return git_runtime_shutdown_register(git_sysdir_global_shutdown);
+}
+
+int git_sysdir_reset(void)
+{
+	size_t i;
+	int error = 0;
+
+	for (i = 0; !error && i < ARRAY_SIZE(git_sysdir__dirs); ++i) {
+		git_str_dispose(&git_sysdir__dirs[i].buf);
+		error = git_sysdir__dirs[i].guess(&git_sysdir__dirs[i].buf);
+	}
+
+	return error;
 }
 
 static int git_sysdir_check_selector(git_sysdir_t which)
