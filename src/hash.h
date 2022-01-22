@@ -41,4 +41,6 @@ int git_hash_final(unsigned char *out, git_hash_ctx *c);
 int git_hash_buf(unsigned char *out, const void *data, size_t len, git_hash_algorithm_t algorithm);
 int git_hash_vec(unsigned char *out, git_str_vec *vec, size_t n, git_hash_algorithm_t algorithm);
 
+int git_hash_fmt(char *out, unsigned char *hash, size_t hash_len);
+
 #endif
