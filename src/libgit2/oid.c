@@ -187,8 +187,7 @@ int git_oid_fromraw(git_oid *out, const unsigned char *raw)
 
 int git_oid_cpy(git_oid *out, const git_oid *src)
 {
-	memcpy(out->id, src->id, sizeof(out->id));
-	return 0;
+	return git_oid_raw_cpy(out->id, src->id);
 }
 
 int git_oid_cmp(const git_oid *a, const git_oid *b)

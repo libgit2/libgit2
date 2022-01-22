@@ -55,6 +55,14 @@ GIT_INLINE(int) git_oid_raw_cmp(
 	return memcmp(sha1, sha2, GIT_OID_RAWSZ);
 }
 
+GIT_INLINE(int) git_oid_raw_cpy(
+	unsigned char *dst,
+	const unsigned char *src)
+{
+	memcpy(dst, src, GIT_OID_RAWSZ);
+	return 0;
+}
+
 /*
  * Compare two oid structures.
  *
