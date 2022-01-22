@@ -201,7 +201,8 @@ int git_commit_graph_file_parse(
 	struct git_commit_graph_chunk *last_chunk;
 	uint32_t i;
 	off64_t last_chunk_offset, chunk_offset, trailer_offset;
-	git_oid cgraph_checksum = {{0}};
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	size_t checksum_size;
 	int error;
 	struct git_commit_graph_chunk chunk_oid_fanout = {0}, chunk_oid_lookup = {0},
 				      chunk_commit_data = {0}, chunk_extra_edge_list = {0},
@@ -227,13 +228,15 @@ int git_commit_graph_file_parse(
 	 */
 	last_chunk_offset = sizeof(struct git_commit_graph_header) + (1 + hdr->chunks) * 12;
 	trailer_offset = size - GIT_OID_RAWSZ;
+	checksum_size = GIT_HASH_SHA1_SIZE;
+
 	if (trailer_offset < last_chunk_offset)
 		return commit_graph_error("wrong commit-graph size");
-	git_oid_cpy(&file->checksum, (git_oid *)(data + trailer_offset));
+	memcpy(file->checksum, (data + trailer_offset), checksum_size);
 
-	if (git_hash_buf(cgraph_checksum.id, data, (size_t)trailer_offset, GIT_HASH_ALGORITHM_SHA1) < 0)
+	if (git_hash_buf(checksum, data, (size_t)trailer_offset, GIT_HASH_ALGORITHM_SHA1) < 0)
 		return commit_graph_error("could not calculate signature");
-	if (!git_oid_equal(&cgraph_checksum, &file->checksum))
+	if (memcmp(checksum, file->checksum, checksum_size) != 0)
 		return commit_graph_error("index signature mismatch");
 
 	chunk_hdr = data + sizeof(struct git_commit_graph_header);
@@ -476,7 +479,8 @@ bool git_commit_graph_file_needs_refresh(const git_commit_graph_file *file, cons
 	git_file fd = -1;
 	struct stat st;
 	ssize_t bytes_read;
-	git_oid cgraph_checksum = {{0}};
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	size_t checksum_size = GIT_HASH_SHA1_SIZE;
 
 	/* TODO: properly open the file without access time using O_NOATIME */
 	fd = git_futils_open_ro(path);
@@ -494,12 +498,12 @@ bool git_commit_graph_file_needs_refresh(const git_commit_graph_file *file, cons
 		return true;
 	}
 
-	bytes_read = p_pread(fd, cgraph_checksum.id, GIT_OID_RAWSZ, st.st_size - GIT_OID_RAWSZ);
+	bytes_read = p_pread(fd, checksum, checksum_size, st.st_size - checksum_size);
 	p_close(fd);
-	if (bytes_read != GIT_OID_RAWSZ)
+	if (bytes_read != (ssize_t)checksum_size)
 		return true;
 
-	return !git_oid_equal(&cgraph_checksum, &file->checksum);
+	return (memcmp(checksum, file->checksum, checksum_size) != 0);
 }
 
 int git_commit_graph_entry_find(
@@ -974,7 +978,8 @@ static int commit_graph_write(
 	off64_t offset;
 	git_str oid_lookup = GIT_STR_INIT, commit_data = GIT_STR_INIT,
 		extra_edge_list = GIT_STR_INIT;
-	git_oid cgraph_checksum = {{0}};
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	size_t checksum_size;
 	git_hash_ctx ctx;
 	struct commit_graph_write_hash_context hash_cb_data = {0};
 
@@ -987,6 +992,7 @@ static int commit_graph_write(
 	hash_cb_data.cb_data = cb_data;
 	hash_cb_data.ctx = &ctx;
 
+	checksum_size = GIT_HASH_SHA1_SIZE;
 	error = git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA1);
 	if (error < 0)
 		return error;
@@ -1133,10 +1139,10 @@ static int commit_graph_write(
 		goto cleanup;
 
 	/* Finalize the checksum and write the trailer. */
-	error = git_hash_final(cgraph_checksum.id, &ctx);
+	error = git_hash_final(checksum, &ctx);
 	if (error < 0)
 		goto cleanup;
-	error = write_cb((const char *)&cgraph_checksum, sizeof(cgraph_checksum), cb_data);
+	error = write_cb((char *)checksum, checksum_size, cb_data);
 	if (error < 0)
 		goto cleanup;
 
