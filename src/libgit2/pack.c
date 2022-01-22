@@ -1001,13 +1001,14 @@ int get_delta_base(
 		base_offset = delta_obj_offset - unsigned_base_offset;
 		*curpos += used;
 	} else if (type == GIT_OBJECT_REF_DELTA) {
+		git_oid base_oid;
+		git_oid_fromraw(&base_oid, base_info);
+
 		/* If we have the cooperative cache, search in it first */
 		if (p->has_cache) {
 			struct git_pack_entry *entry;
-			git_oid oid;
 
-			git_oid_fromraw(&oid, base_info);
-			if ((entry = git_oidmap_get(p->idx_cache, &oid)) != NULL) {
+			if ((entry = git_oidmap_get(p->idx_cache, &base_oid)) != NULL) {
 				if (entry->offset == 0)
 					return packfile_error("delta offset is zero");
 
@@ -1024,7 +1025,7 @@ int get_delta_base(
 		}
 
 		/* The base entry _must_ be in the same pack */
-		if (pack_entry_find_offset(&base_offset, &unused, p, (git_oid *)base_info, GIT_OID_HEXSZ) < 0)
+		if (pack_entry_find_offset(&base_offset, &unused, p, &base_oid, GIT_OID_HEXSZ) < 0)
 			return packfile_error("base entry delta is not in the same pack");
 		*curpos += 20;
 	} else
@@ -1082,7 +1083,7 @@ static int packfile_open_locked(struct git_pack_file *p)
 {
 	struct stat st;
 	struct git_pack_header hdr;
-	git_oid sha1;
+	unsigned char sha1[GIT_OID_RAWSZ];
 	unsigned char *idx_sha1;
 
 	if (pack_index_open_locked(p) < 0)
@@ -1130,12 +1131,12 @@ static int packfile_open_locked(struct git_pack_file *p)
 
 	/* Verify the pack matches its index. */
 	if (p->num_objects != ntohl(hdr.hdr_entries) ||
-		p_pread(p->mwf.fd, sha1.id, GIT_OID_RAWSZ, p->mwf.size - GIT_OID_RAWSZ) < 0)
+	    p_pread(p->mwf.fd, sha1, GIT_OID_RAWSZ, p->mwf.size - GIT_OID_RAWSZ) < 0)
 		goto cleanup;
 
 	idx_sha1 = ((unsigned char *)p->index_map.data) + p->index_map.len - 40;
 
-	if (git_oid__cmp(&sha1, (git_oid *)idx_sha1) != 0)
+	if (git_oid_raw_cmp(sha1, idx_sha1) != 0)
 		goto cleanup;
 
 	if (git_mwindow_file_register(&p->mwf) < 0)
@@ -1340,10 +1341,14 @@ int git_pack_foreach_entry(
 		}
 
 		git_vector_free(&offsets);
-		p->oids = (git_oid **)git_vector_detach(NULL, NULL, &oids);
+		p->oids = (unsigned char **)git_vector_detach(NULL, NULL, &oids);
 	}
 
-	/* We need to copy the OIDs to another array before we relinquish the lock to avoid races. */
+	/*
+	 * We need to copy the OIDs to another array before we
+	 * relinquish the lock to avoid races.  We can also take
+	 * this opportunity to put them into normal form.
+	 */
 	git_array_init_to_size(oids, p->num_objects);
 	if (!oids.ptr) {
 		git_mutex_unlock(&p->lock);
@@ -1357,7 +1362,7 @@ int git_pack_foreach_entry(
 			git_array_clear(oids);
 			GIT_ERROR_CHECK_ALLOC(oid);
 		}
-		git_oid_cpy(oid, p->oids[i]);
+		git_oid_fromraw(oid, p->oids[i]);
 	}
 
 	git_mutex_unlock(&p->lock);
@@ -1380,7 +1385,7 @@ int git_pack_foreach_entry_offset(
 {
 	const unsigned char *index;
 	off64_t current_offset;
-	const git_oid *current_oid;
+	git_oid current_oid;
 	uint32_t i;
 	int error = 0;
 
@@ -1422,8 +1427,9 @@ int git_pack_foreach_entry_offset(
 				current_offset = (((off64_t)ntohl(*((uint32_t *)(large_offset_ptr + 0)))) << 32) |
 						ntohl(*((uint32_t *)(large_offset_ptr + 4)));
 			}
-			current_oid = (const git_oid *)(index + 20 * i);
-			if ((error = cb(current_oid, current_offset, data)) != 0) {
+
+			git_oid_fromraw(&current_oid, (index + 20 * i));
+			if ((error = cb(&current_oid, current_offset, data)) != 0) {
 				error = git_error_set_after_callback(error);
 				goto cleanup;
 			}
@@ -1431,8 +1437,8 @@ int git_pack_foreach_entry_offset(
 	} else {
 		for (i = 0; i < p->num_objects; i++) {
 			current_offset = ntohl(*(const uint32_t *)(index + 24 * i));
-			current_oid = (const git_oid *)(index + 24 * i + 4);
-			if ((error = cb(current_oid, current_offset, data)) != 0) {
+			git_oid_fromraw(&current_oid, (index + 24 * i + 4));
+			if ((error = cb(&current_oid, current_offset, data)) != 0) {
 				error = git_error_set_after_callback(error);
 				goto cleanup;
 			}
@@ -1530,7 +1536,7 @@ static int pack_entry_find_offset(
 		if (pos < (int)p->num_objects) {
 			current = index + pos * stride;
 
-			if (!git_oid_ncmp(short_oid, (const git_oid *)current, len))
+			if (!git_oid_raw_ncmp(short_oid->id, current, len))
 				found = 1;
 		}
 	}
@@ -1539,7 +1545,7 @@ static int pack_entry_find_offset(
 		/* Check for ambiguousity */
 		const unsigned char *next = current + stride;
 
-		if (!git_oid_ncmp(short_oid, (const git_oid *)next, len)) {
+		if (!git_oid_raw_ncmp(short_oid->id, next, len)) {
 			found = 2;
 		}
 	}
