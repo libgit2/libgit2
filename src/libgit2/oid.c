@@ -203,25 +203,7 @@ int git_oid_equal(const git_oid *a, const git_oid *b)
 
 int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, size_t len)
 {
-	const unsigned char *a = oid_a->id;
-	const unsigned char *b = oid_b->id;
-
-	if (len > GIT_OID_HEXSZ)
-		len = GIT_OID_HEXSZ;
-
-	while (len > 1) {
-		if (*a != *b)
-			return 1;
-		a++;
-		b++;
-		len -= 2;
-	};
-
-	if (len)
-		if ((*a ^ *b) & 0xf0)
-			return 1;
-
-	return 0;
+	return git_oid_raw_ncmp(oid_a->id, oid_b->id, len);
 }
 
 int git_oid_strcmp(const git_oid *oid_a, const char *str)
