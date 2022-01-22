@@ -19,7 +19,7 @@ __KHASH_TYPE(oid, const git_oid *, void *)
 GIT_INLINE(khint_t) git_oidmap_hash(const git_oid *oid)
 {
 	khint_t h;
-	memcpy(&h, oid, sizeof(khint_t));
+	memcpy(&h, oid->id, sizeof(khint_t));
 	return h;
 }
 
