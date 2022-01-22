@@ -55,7 +55,8 @@ struct git_indexer {
 	git_vector deltas;
 	unsigned int fanout[256];
 	git_hash_ctx hash_ctx;
-	git_oid hash;
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	char name[(GIT_HASH_SHA1_SIZE * 2) + 1];
 	git_indexer_progress_cb progress_cb;
 	void *progress_payload;
 	char objbuf[8*1024];
@@ -76,9 +77,16 @@ struct delta_info {
 	off64_t delta_off;
 };
 
+#ifndef GIT_DEPRECATE_HARD
 const git_oid *git_indexer_hash(const git_indexer *idx)
 {
-	return &idx->hash;
+	return (git_oid *)idx->checksum;
+}
+#endif
+
+const char *git_indexer_name(const git_indexer *idx)
+{
+	return idx->name;
 }
 
 static int parse_header(struct git_pack_header *hdr, struct git_pack_file *pack)
@@ -897,8 +905,7 @@ static int index_path(git_str *path, git_indexer *idx, const char *suffix)
 
 	git_str_truncate(path, slash);
 	git_str_puts(path, prefix);
-	git_oid_fmt(path->ptr + git_str_len(path), &idx->hash);
-	path->size += GIT_OID_HEXSZ;
+	git_str_puts(path, idx->name);
 	git_str_puts(path, suffix);
 
 	return git_str_oom(path) ? -1 : 0;
@@ -919,12 +926,13 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	git_odb_object *obj = NULL;
 	struct entry *entry = NULL;
 	struct git_pack_entry *pentry = NULL;
-	git_oid foo = {{0}};
+	unsigned char empty_checksum[GIT_HASH_SHA1_SIZE] = {0};
 	unsigned char hdr[64];
 	git_str buf = GIT_STR_INIT;
 	off64_t entry_start;
 	const void *data;
 	size_t len, hdr_len;
+	size_t checksum_size = GIT_HASH_SHA1_SIZE;
 	int error;
 
 	if ((error = seek_back_trailer(idx)) < 0)
@@ -966,7 +974,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 
 	/* Write a fake trailer so the pack functions play ball */
 
-	if ((error = append_to_pack(idx, &foo, GIT_OID_RAWSZ)) < 0)
+	if ((error = append_to_pack(idx, empty_checksum, checksum_size)) < 0)
 		goto cleanup;
 
 	idx->pack->mwf.size += GIT_OID_RAWSZ;
@@ -1160,9 +1168,11 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 	struct git_pack_idx_header hdr;
 	git_str filename = GIT_STR_INIT;
 	struct entry *entry;
-	git_oid trailer_hash, file_hash;
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
 	git_filebuf index_file = {0};
 	void *packfile_trailer;
+	size_t checksum_size = GIT_HASH_SHA1_SIZE;
+	bool mismatch;
 
 	if (!idx->parsed_header) {
 		git_error_set(GIT_ERROR_INDEXER, "incomplete pack header");
@@ -1170,27 +1180,27 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 	}
 
 	/* Test for this before resolve_deltas(), as it plays with idx->off */
-	if (idx->off + 20 < idx->pack->mwf.size) {
+	if (idx->off + (ssize_t)checksum_size < idx->pack->mwf.size) {
 		git_error_set(GIT_ERROR_INDEXER, "unexpected data at the end of the pack");
 		return -1;
 	}
-	if (idx->off + 20 > idx->pack->mwf.size) {
+	if (idx->off + (ssize_t)checksum_size > idx->pack->mwf.size) {
 		git_error_set(GIT_ERROR_INDEXER, "missing trailer at the end of the pack");
 		return -1;
 	}
 
-	packfile_trailer = git_mwindow_open(&idx->pack->mwf, &w, idx->pack->mwf.size - GIT_OID_RAWSZ, GIT_OID_RAWSZ, &left);
+	packfile_trailer = git_mwindow_open(&idx->pack->mwf, &w, idx->pack->mwf.size - checksum_size, checksum_size, &left);
 	if (packfile_trailer == NULL) {
 		git_mwindow_close(&w);
 		goto on_error;
 	}
 
 	/* Compare the packfile trailer as it was sent to us and what we calculated */
-	git_oid_fromraw(&file_hash, packfile_trailer);
+	git_hash_final(checksum, &idx->trailer);
+	mismatch = !!memcmp(checksum, packfile_trailer, checksum_size);
 	git_mwindow_close(&w);
 
-	git_hash_final(trailer_hash.id, &idx->trailer);
-	if (git_oid_cmp(&file_hash, &trailer_hash)) {
+	if (mismatch) {
 		git_error_set(GIT_ERROR_INDEXER, "packfile trailer mismatch");
 		return -1;
 	}
@@ -1210,8 +1220,8 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 		if (update_header_and_rehash(idx, stats) < 0)
 			return -1;
 
-		git_hash_final(trailer_hash.id, &idx->trailer);
-		write_at(idx, &trailer_hash, idx->pack->mwf.size - GIT_OID_RAWSZ, GIT_OID_RAWSZ);
+		git_hash_final(checksum, &idx->trailer);
+		write_at(idx, checksum, idx->pack->mwf.size - checksum_size, checksum_size);
 	}
 
 	/*
@@ -1230,7 +1240,9 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 
 	/* Use the trailer hash as the pack file name to ensure
 	 * files with different contents have different names */
-	git_oid_cpy(&idx->hash, &trailer_hash);
+	memcpy(idx->checksum, checksum, checksum_size);
+	if (git_hash_fmt(idx->name, checksum, checksum_size) < 0)
+		return -1;
 
 	git_str_sets(&filename, idx->pack->pack_name);
 	git_str_shorten(&filename, strlen("pack"));
@@ -1291,14 +1303,14 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 	}
 
 	/* Write out the packfile trailer to the index */
-	if (git_filebuf_write(&index_file, &trailer_hash, GIT_OID_RAWSZ) < 0)
+	if (git_filebuf_write(&index_file, checksum, checksum_size) < 0)
 		goto on_error;
 
 	/* Write out the hash of the idx */
-	if (git_filebuf_hash(trailer_hash.id, &index_file) < 0)
+	if (git_filebuf_hash(checksum, &index_file) < 0)
 		goto on_error;
 
-	git_filebuf_write(&index_file, &trailer_hash, sizeof(git_oid));
+	git_filebuf_write(&index_file, checksum, checksum_size);
 
 	/* Figure out what the final name should be */
 	if (index_path(&filename, idx, ".idx") < 0)
