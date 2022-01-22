@@ -147,10 +147,10 @@ static int commit_graph_parse_oid_lookup(
 	if (chunk_oid_lookup->length != file->num_commits * GIT_OID_RAWSZ)
 		return commit_graph_error("OID Lookup chunk has wrong length");
 
-	file->oid_lookup = oid = (git_oid *)(data + chunk_oid_lookup->offset);
+	file->oid_lookup = oid = (git_oid_raw *)(data + chunk_oid_lookup->offset);
 	prev_oid = &zero_oid;
 	for (i = 0; i < file->num_commits; ++i, ++oid) {
-		if (git_oid_cmp(prev_oid, oid) >= 0)
+		if (git_oid_raw_cmp(prev_oid, oid) >= 0)
 			return commit_graph_error("OID Lookup index is non-monotonic");
 		prev_oid = oid;
 	}

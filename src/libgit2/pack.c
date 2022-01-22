@@ -1451,7 +1451,7 @@ int git_pack__lookup_sha1(const void *oid_lookup_table, size_t stride, unsigned 
 
 	while (lo < hi) {
 		unsigned mi = (lo + hi) / 2;
-		int cmp = git_oid__hashcmp(base + mi * stride, oid_prefix);
+		int cmp = git_oid_raw_cmp(base + mi * stride, oid_prefix);
 
 		if (!cmp)
 			return mi;
