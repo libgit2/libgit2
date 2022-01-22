@@ -263,7 +263,7 @@ static void write_tree(git_str *out, git_tree_cache *tree)
 	git_str_printf(out, "%s%c%"PRIdZ" %"PRIuZ"\n", tree->name, 0, tree->entry_count, tree->children_count);
 
 	if (tree->entry_count != -1)
-		git_str_put(out, (const char *) &tree->oid, GIT_OID_RAWSZ);
+		git_str_put(out, (char *)&tree->oid.id, GIT_OID_RAWSZ);
 
 	for (i = 0; i < tree->children_count; i++)
 		write_tree(out, tree->children[i]);
