@@ -1269,7 +1269,7 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 
 	/* Write out the object names (SHA-1 hashes) */
 	git_vector_foreach(&idx->objects, i, entry) {
-		git_filebuf_write(&index_file, &entry->oid, sizeof(git_oid));
+		git_filebuf_write(&index_file, &entry->oid.id, GIT_OID_RAWSZ);
 	}
 
 	/* Write out the CRC32 values */
