@@ -36,7 +36,7 @@ typedef struct git_commit_graph_file {
 	uint32_t num_commits;
 
 	/* The OID Lookup table. */
-	git_oid *oid_lookup;
+	unsigned char *oid_lookup;
 
 	/*
 	 * The Commit Data table. Each entry contains the OID of the commit followed

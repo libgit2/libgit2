@@ -138,7 +138,7 @@ static int commit_graph_parse_oid_lookup(
 		struct git_commit_graph_chunk *chunk_oid_lookup)
 {
 	uint32_t i;
-	git_oid *oid, *prev_oid, zero_oid = {{0}};
+	unsigned char *oid, *prev_oid, zero_oid[GIT_OID_RAWSZ] = {0};
 
 	if (chunk_oid_lookup->offset == 0)
 		return commit_graph_error("missing OID Lookup chunk");
@@ -147,9 +147,9 @@ static int commit_graph_parse_oid_lookup(
 	if (chunk_oid_lookup->length != file->num_commits * GIT_OID_RAWSZ)
 		return commit_graph_error("OID Lookup chunk has wrong length");
 
-	file->oid_lookup = oid = (git_oid_raw *)(data + chunk_oid_lookup->offset);
-	prev_oid = &zero_oid;
-	for (i = 0; i < file->num_commits; ++i, ++oid) {
+	file->oid_lookup = oid = (unsigned char *)(data + chunk_oid_lookup->offset);
+	prev_oid = zero_oid;
+	for (i = 0; i < file->num_commits; ++i, oid += GIT_OID_RAWSZ) {
 		if (git_oid_raw_cmp(prev_oid, oid) >= 0)
 			return commit_graph_error("OID Lookup index is non-monotonic");
 		prev_oid = oid;
@@ -437,7 +437,7 @@ static int git_commit_graph_entry_get_byindex(
 	}
 
 	commit_data = file->commit_data + pos * (GIT_OID_RAWSZ + 4 * sizeof(uint32_t));
-	git_oid_cpy(&e->tree_oid, (const git_oid *)commit_data);
+	git_oid_fromraw(&e->tree_oid, commit_data);
 	e->parent_indices[0] = ntohl(*((uint32_t *)(commit_data + GIT_OID_RAWSZ)));
 	e->parent_indices[1] = ntohl(
 			*((uint32_t *)(commit_data + GIT_OID_RAWSZ + sizeof(uint32_t))));
@@ -470,7 +470,8 @@ static int git_commit_graph_entry_get_byindex(
 			e->parent_count++;
 		}
 	}
-	git_oid_cpy(&e->sha1, &file->oid_lookup[pos]);
+
+	git_oid_fromraw(&e->sha1, &file->oid_lookup[pos * GIT_OID_RAWSZ]);
 	return 0;
 }
 
@@ -514,7 +515,7 @@ int git_commit_graph_entry_find(
 {
 	int pos, found = 0;
 	uint32_t hi, lo;
-	const git_oid *current = NULL;
+	const unsigned char *current = NULL;
 
 	GIT_ASSERT_ARG(e);
 	GIT_ASSERT_ARG(file);
@@ -528,26 +529,25 @@ int git_commit_graph_entry_find(
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */
 		found = 1;
-		current = file->oid_lookup + pos;
+		current = file->oid_lookup + (pos * GIT_OID_RAWSZ);
 	} else {
 		/* No object was found */
 		/* pos refers to the object with the "closest" oid to short_oid */
 		pos = -1 - pos;
 		if (pos < (int)file->num_commits) {
-			current = file->oid_lookup + pos;
+			current = file->oid_lookup + (pos * GIT_OID_RAWSZ);
 
-			if (!git_oid_ncmp(short_oid, current, len))
+			if (!git_oid_raw_ncmp(short_oid->id, current, len))
 				found = 1;
 		}
 	}
 
 	if (found && len != GIT_OID_HEXSZ && pos + 1 < (int)file->num_commits) {
 		/* Check for ambiguousity */
-		const git_oid *next = current + 1;
+		const unsigned char *next = current + GIT_OID_RAWSZ;
 
-		if (!git_oid_ncmp(short_oid, next, len)) {
+		if (!git_oid_raw_ncmp(short_oid->id, next, len))
 			found = 2;
-		}
 	}
 
 	if (!found)
@@ -1019,7 +1019,9 @@ static int commit_graph_write(
 	/* Fill the OID Lookup table. */
 	git_vector_foreach (&w->commits, i, packed_commit) {
 		error = git_str_put(&oid_lookup,
-			(const char *)&packed_commit->sha1, sizeof(git_oid));
+			(const char *)&packed_commit->sha1.id,
+			GIT_OID_RAWSZ);
+
 		if (error < 0)
 			goto cleanup;
 	}
@@ -1034,8 +1036,9 @@ static int commit_graph_write(
 		unsigned int parentcount = (unsigned int)git_array_size(packed_commit->parents);
 
 		error = git_str_put(&commit_data,
-				(const char *)&packed_commit->tree_oid,
-				sizeof(git_oid));
+			(const char *)&packed_commit->tree_oid.id,
+			GIT_OID_RAWSZ);
+
 		if (error < 0)
 			goto cleanup;
 
