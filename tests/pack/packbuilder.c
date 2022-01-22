@@ -138,16 +138,12 @@ void test_pack_packbuilder__create_pack(void)
 	cl_assert_equal_s(hex, "5d410bdf97cf896f9007681b92868471d636954b");
 }
 
-void test_pack_packbuilder__get_hash(void)
+void test_pack_packbuilder__get_name(void)
 {
-	char hex[GIT_OID_HEXSZ+1]; hex[GIT_OID_HEXSZ] = '\0';
-
 	seed_packbuilder();
 
 	cl_git_pass(git_packbuilder_write(_packbuilder, ".", 0, NULL, NULL));
-	git_oid_fmt(hex, git_packbuilder_hash(_packbuilder));
-
-	cl_assert_equal_s(hex, "7f5fa362c664d68ba7221259be1cbd187434b2f0");
+	cl_assert_equal_s("7f5fa362c664d68ba7221259be1cbd187434b2f0", git_packbuilder_name(_packbuilder));
 }
 
 void test_pack_packbuilder__write_default_path(void)

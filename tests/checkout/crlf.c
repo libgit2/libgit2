@@ -239,10 +239,10 @@ void test_checkout_crlf__autocrlf_false_index_size_is_unfiltered_size(void)
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 
-	git_repository_index(&index, g_repo);
+	cl_git_pass(git_repository_index(&index, g_repo));
 	tick_index(index);
 
-	git_checkout_head(g_repo, &opts);
+	cl_git_pass(git_checkout_head(g_repo, &opts));
 
 	cl_assert((entry = git_index_get_bypath(index, "all-lf", 0)) != NULL);
 	cl_assert(entry->file_size == strlen(ALL_LF_TEXT_RAW));

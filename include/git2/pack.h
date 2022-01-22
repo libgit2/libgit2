@@ -170,16 +170,30 @@ GIT_EXTERN(int) git_packbuilder_write(
 	git_indexer_progress_cb progress_cb,
 	void *progress_cb_payload);
 
+#ifndef GIT_DEPRECATE_HARD
 /**
-* Get the packfile's hash
-*
-* A packfile's name is derived from the sorted hashing of all object
-* names. This is only correct after the packfile has been written.
-*
-* @param pb The packbuilder object
+ * Get the packfile's hash
+ *
+ * A packfile's name is derived from the sorted hashing of all object
+ * names. This is only correct after the packfile has been written.
+ *
+ * @deprecated use git_packbuilder_name
+ * @param pb The packbuilder object
  * @return 0 or an error code
-*/
+ */
 GIT_EXTERN(const git_oid *) git_packbuilder_hash(git_packbuilder *pb);
+#endif
+
+/**
+ * Get the unique name for the resulting packfile.
+ *
+ * The packfile's name is derived from the packfile's content.
+ * This is only correct after the packfile has been written.
+ *
+ * @param pb the packbuilder instance
+ * @return a NUL terminated string for the packfile name
+ */
+GIT_EXTERN(const char *) git_packbuilder_name(git_packbuilder *pb);
 
 /**
  * Callback used to iterate over packed objects
