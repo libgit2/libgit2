@@ -296,6 +296,7 @@ GIT_EXTERN(int) git_index_write(git_index *index);
  */
 GIT_EXTERN(const char *) git_index_path(const git_index *index);
 
+#ifndef GIT_DEPRECATE_HARD
 /**
  * Get the checksum of the index
  *
@@ -303,10 +304,12 @@ GIT_EXTERN(const char *) git_index_path(const git_index *index);
  * last 20 bytes which are the checksum itself). In cases where the
  * index does not exist on-disk, it will be zeroed out.
  *
+ * @deprecated this function is deprecated with no replacement
  * @param index an existing index object
  * @return a pointer to the checksum of the index
  */
 GIT_EXTERN(const git_oid *) git_index_checksum(git_index *index);
+#endif
 
 /**
  * Read a tree into the index file with stats
