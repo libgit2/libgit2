@@ -6,7 +6,7 @@
 #include "commit_graph.h"
 #include "futils.h"
 
-void test_graph_commit_graph__parse(void)
+void test_graph_commitgraph__parse(void)
 {
 	git_repository *repo;
 	struct git_commit_graph_file *file;
@@ -50,7 +50,7 @@ void test_graph_commit_graph__parse(void)
 	git_str_dispose(&commit_graph_path);
 }
 
-void test_graph_commit_graph__parse_octopus_merge(void)
+void test_graph_commitgraph__parse_octopus_merge(void)
 {
 	git_repository *repo;
 	struct git_commit_graph_file *file;
@@ -91,7 +91,7 @@ void test_graph_commit_graph__parse_octopus_merge(void)
 	git_str_dispose(&commit_graph_path);
 }
 
-void test_graph_commit_graph__writer(void)
+void test_graph_commitgraph__writer(void)
 {
 	git_repository *repo;
 	git_commit_graph_writer *w = NULL;
