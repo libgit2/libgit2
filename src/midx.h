@@ -51,7 +51,7 @@ typedef struct git_midx_file {
 	size_t num_object_large_offsets;
 
 	/* The trailer of the file. Contains the SHA1-checksum of the whole file. */
-	git_oid checksum;
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
 
 	/* something like ".git/objects/pack/multi-pack-index". */
 	git_str filename;
