@@ -142,7 +142,7 @@ static void oid_parsing(git_oid *oid)
 	 * this throughout the example for storing the value of the current SHA
 	 * key we're working with.
 	 */
-	git_oid_fromstr(oid, hex);
+	git_oid_fromstr(oid, hex, GIT_OID_SHA1);
 
 	/*
 	 * Once we've converted the string into the oid value, we can get the raw
@@ -287,9 +287,9 @@ static void commit_writing(git_repository *repo)
 	 * parents.  Here we're creating oid objects to create the commit with,
 	 * but you can also use
 	 */
-	git_oid_fromstr(&tree_id, "f60079018b664e4e79329a7ef9559c8d9e0378d1");
+	git_oid_fromstr(&tree_id, "f60079018b664e4e79329a7ef9559c8d9e0378d1", GIT_OID_SHA1);
 	git_tree_lookup(&tree, repo, &tree_id);
-	git_oid_fromstr(&parent_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+	git_oid_fromstr(&parent_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
 	git_commit_lookup(&parent, repo, &parent_id);
 
 	/**
@@ -353,7 +353,7 @@ static void commit_parsing(git_repository *repo)
 
 	printf("\n*Commit Parsing*\n");
 
-	git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479");
+	git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479", GIT_OID_SHA1);
 
 	error = git_commit_lookup(&commit, repo, &oid);
 	check_error(error, "looking up commit");
@@ -422,7 +422,7 @@ static void tag_parsing(git_repository *repo)
 	 * We create an oid for the tag object if we know the SHA and look it up
 	 * the same way that we would a commit (or any other object).
 	 */
-	git_oid_fromstr(&oid, "b25fa35b38051e4ae45d4222e795f9df2e43f1d1");
+	git_oid_fromstr(&oid, "b25fa35b38051e4ae45d4222e795f9df2e43f1d1", GIT_OID_SHA1);
 
 	error = git_tag_lookup(&tag, repo, &oid);
 	check_error(error, "looking up tag");
@@ -470,7 +470,7 @@ static void tree_parsing(git_repository *repo)
 	/**
 	 * Create the oid and lookup the tree object just like the other objects.
 	 */
-	git_oid_fromstr(&oid, "f60079018b664e4e79329a7ef9559c8d9e0378d1");
+	git_oid_fromstr(&oid, "f60079018b664e4e79329a7ef9559c8d9e0378d1", GIT_OID_SHA1);
 	git_tree_lookup(&tree, repo, &oid);
 
 	/**
@@ -524,7 +524,7 @@ static void blob_parsing(git_repository *repo)
 
 	printf("\n*Blob Parsing*\n");
 
-	git_oid_fromstr(&oid, "1385f264afb75a56a5bec74243be9b367ba4ca08");
+	git_oid_fromstr(&oid, "1385f264afb75a56a5bec74243be9b367ba4ca08", GIT_OID_SHA1);
 	git_blob_lookup(&blob, repo, &oid);
 
 	/**
@@ -566,7 +566,7 @@ static void revwalking(git_repository *repo)
 
 	printf("\n*Revwalking*\n");
 
-	git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+	git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
 
 	/**
 	 * To use the revwalker, create a new walker, tell it how you want to sort

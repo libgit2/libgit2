@@ -174,7 +174,7 @@ static int parse_header_oid(
 	}
 
 	if (len < GIT_OID_MINPREFIXLEN || len > GIT_OID_SHA1_HEXSIZE ||
-		git_oid_fromstrn(oid, ctx->parse_ctx.line, len) < 0)
+		git_oid_fromstrn(oid, ctx->parse_ctx.line, len, GIT_OID_SHA1) < 0)
 		return git_parse_err("invalid hex formatted object id at line %"PRIuZ,
 			ctx->parse_ctx.line_num);
 
@@ -1065,12 +1065,12 @@ static int check_patch(git_patch_parsed *patch)
 		return git_parse_err("patch with no hunks");
 
 	if (delta->status == GIT_DELTA_ADDED) {
-		memset(&delta->old_file.id, 0x0, sizeof(git_oid));
+		git_oid_clear(&delta->old_file.id, GIT_OID_SHA1);
 		delta->old_file.id_abbrev = 0;
 	}
 
 	if (delta->status == GIT_DELTA_DELETED) {
-		memset(&delta->new_file.id, 0x0, sizeof(git_oid));
+		git_oid_clear(&delta->new_file.id, GIT_OID_SHA1);
 		delta->new_file.id_abbrev = 0;
 	}
 

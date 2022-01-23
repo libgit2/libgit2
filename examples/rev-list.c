@@ -140,7 +140,7 @@ static int revwalk_parse_revs(git_repository *repo, git_revwalk *walk, struct ar
 			if (push_spec(repo, walk, curr, hide) == 0)
 				continue;
 
-			if ((error = git_oid_fromstr(&oid, curr)))
+			if ((error = git_oid_fromstr(&oid, curr, GIT_OID_SHA1)))
 				return error;
 			if ((error = push_commit(walk, &oid, hide)))
 				return error;

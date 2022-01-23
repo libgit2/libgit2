@@ -17,7 +17,7 @@ void test_graph_reachable_from_any__initialize(void)
 
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
 
-	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
 	git_commit_free(commit);

@@ -32,13 +32,13 @@ void test_revwalk_simplify__first_parent(void)
 	int i, error;
 
 	for (i = 0; i < 4; i++) {
-		git_oid_fromstr(&expected[i], expected_str[i]);
+		git_oid_fromstr(&expected[i], expected_str[i], GIT_OID_SHA1);
 	}
 
 	repo = cl_git_sandbox_init("testrepo.git");
 	cl_git_pass(git_revwalk_new(&walk, repo));
 
-	git_oid_fromstr(&id, commit_head);
+	git_oid_fromstr(&id, commit_head, GIT_OID_SHA1);
 	cl_git_pass(git_revwalk_push(walk, &id));
 	git_revwalk_sorting(walk, GIT_SORT_TOPOLOGICAL);
 	git_revwalk_simplify_first_parent(walk);

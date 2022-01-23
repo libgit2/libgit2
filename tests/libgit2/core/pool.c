@@ -22,12 +22,12 @@ void test_core_pool__oid(void)
 
 		for (j = 0; j < 8; j++)
 			oid_hex[j] = to_hex[(i >> (4 * j)) & 0x0f];
-		cl_git_pass(git_oid_fromstr(oid, oid_hex));
+		cl_git_pass(git_oid_fromstr(oid, oid_hex, GIT_OID_SHA1));
 	}
 
 #ifndef GIT_DEBUG_POOL
 	/* with fixed page size, allocation must end up with these values */
-	cl_assert_equal_i(sizeof(void *) == 8 ? 55 : 45, git_pool__open_pages(&p));
+	cl_assert_equal_i(sizeof(void *) == 8 ? 90 : 82, git_pool__open_pages(&p));
 #endif
 	git_pool_clear(&p);
 }

@@ -57,7 +57,7 @@ void test_commit_parse__header(void)
 		const char *line_end = line + strlen(line);
 
 		cl_git_pass(git_object__parse_oid_header(&oid,
-			&line, line_end, testcase->header));
+			&line, line_end, testcase->header, GIT_OID_SHA1));
 		cl_assert(line == line_end);
 	}
 
@@ -67,7 +67,7 @@ void test_commit_parse__header(void)
 		const char *line_end = line + strlen(line);
 
 		cl_git_fail(git_object__parse_oid_header(&oid,
-			&line, line_end, testcase->header));
+			&line, line_end, testcase->header, GIT_OID_SHA1));
 	}
 }
 
@@ -343,7 +343,7 @@ void test_commit_parse__details0(void) {
 		unsigned int parents, p;
 		git_commit *parent = NULL, *old_parent = NULL;
 
-		git_oid_fromstr(&id, commit_ids[i]);
+		git_oid_fromstr(&id, commit_ids[i], GIT_OID_SHA1);
 
 		cl_git_pass(git_commit_lookup(&commit, g_repo, &id));
 
@@ -533,7 +533,7 @@ corrupt signature\n";
 	git_buf_dispose(&signed_data);
 
 	/* Try to parse a tree */
-	cl_git_pass(git_oid_fromstr(&commit_id, "45dd856fdd4d89b884c340ba0e047752d9b085d6"));
+	cl_git_pass(git_oid_fromstr(&commit_id, "45dd856fdd4d89b884c340ba0e047752d9b085d6", GIT_OID_SHA1));
 	cl_git_fail_with(GIT_ENOTFOUND, git_commit_extract_signature(&signature, &signed_data, g_repo, &commit_id, NULL));
 	cl_assert_equal_i(GIT_ERROR_INVALID, git_error_last()->klass);
 

@@ -36,7 +36,7 @@ static int insert_sequential_oids(
 		p_snprintf(numbuf, sizeof(numbuf), "%u", (unsigned int)i);
 		git_hash_buf(hashbuf, numbuf, strlen(numbuf), GIT_HASH_ALGORITHM_SHA1);
 
-		git_oid_fromraw(&oid, hashbuf);
+		git_oid_fromraw(&oid, hashbuf, GIT_OID_SHA1);
 
 		oids[i] = git__malloc(GIT_OID_SHA1_HEXSIZE + 1);
 		cl_assert(oids[i]);

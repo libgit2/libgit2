@@ -49,7 +49,7 @@ void test_index_read_index__maintains_stat_cache(void)
 	/* add a new entry that will not have stat data */
 	memset(&new_entry, 0, sizeof(git_index_entry));
 	new_entry.path = "Hello";
-	git_oid_fromstr(&new_entry.id, "0123456789012345678901234567890123456789");
+	git_oid_fromstr(&new_entry.id, "0123456789012345678901234567890123456789", GIT_OID_SHA1);
 	new_entry.file_size = 1234;
 	new_entry.mode = 0100644;
 	cl_git_pass(git_index_add(new_index, &new_entry));
@@ -79,7 +79,7 @@ static bool roundtrip_with_read_index(const char *tree_idstr)
 	git_tree *tree;
 	git_index *tree_index;
 
-	cl_git_pass(git_oid_fromstr(&tree_id, tree_idstr));
+	cl_git_pass(git_oid_fromstr(&tree_id, tree_idstr, GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, _repo, &tree_id));
 	cl_git_pass(git_index_new(&tree_index));
 	cl_git_pass(git_index_read_tree(tree_index, tree));
@@ -111,7 +111,7 @@ void test_index_read_index__read_and_writes(void)
 	git_tree *tree;
 	git_index *tree_index, *new_index;
 
-	cl_git_pass(git_oid_fromstr(&tree_id, "ae90f12eea699729ed24555e40b9fd669da12a12"));
+	cl_git_pass(git_oid_fromstr(&tree_id, "ae90f12eea699729ed24555e40b9fd669da12a12", GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, _repo, &tree_id));
 	cl_git_pass(git_index_new(&tree_index));
 	cl_git_pass(git_index_read_tree(tree_index, tree));
@@ -148,17 +148,17 @@ static void add_conflicts(git_index *index, const char *filename)
 	ancestor_entry.path = filename;
 	ancestor_entry.mode = 0100644;
 	GIT_INDEX_ENTRY_STAGE_SET(&ancestor_entry, 1);
-	git_oid_fromstr(&ancestor_entry.id, ancestor_ids[conflict_idx]);
+	git_oid_fromstr(&ancestor_entry.id, ancestor_ids[conflict_idx], GIT_OID_SHA1);
 
 	our_entry.path = filename;
 	our_entry.mode = 0100644;
 	GIT_INDEX_ENTRY_STAGE_SET(&our_entry, 2);
-	git_oid_fromstr(&our_entry.id, our_ids[conflict_idx]);
+	git_oid_fromstr(&our_entry.id, our_ids[conflict_idx], GIT_OID_SHA1);
 
 	their_entry.path = filename;
 	their_entry.mode = 0100644;
 	GIT_INDEX_ENTRY_STAGE_SET(&ancestor_entry, 2);
-	git_oid_fromstr(&their_entry.id, their_ids[conflict_idx]);
+	git_oid_fromstr(&their_entry.id, their_ids[conflict_idx], GIT_OID_SHA1);
 
 	cl_git_pass(git_index_conflict_add(index, &ancestor_entry,
 		&our_entry, &their_entry));
@@ -172,7 +172,7 @@ void test_index_read_index__handles_conflicts(void)
 	git_index_conflict_iterator *conflict_iterator;
 	const git_index_entry *ancestor, *ours, *theirs;
 
-	cl_git_pass(git_oid_fromstr(&tree_id, "ae90f12eea699729ed24555e40b9fd669da12a12"));
+	cl_git_pass(git_oid_fromstr(&tree_id, "ae90f12eea699729ed24555e40b9fd669da12a12", GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, _repo, &tree_id));
 	cl_git_pass(git_index_new(&index));
 	cl_git_pass(git_index_new(&new_index));

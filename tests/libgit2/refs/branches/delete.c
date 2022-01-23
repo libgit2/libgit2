@@ -14,7 +14,7 @@ void test_refs_branches_delete__initialize(void)
 
 	repo = cl_git_sandbox_init("testrepo.git");
 
-	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
+	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1));
 	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL));
 }
 
@@ -157,7 +157,7 @@ void test_refs_branches_delete__removes_empty_folders(void)
 	git_str reflog_folder = GIT_STR_INIT;
 
 	/* Create a new branch with a nested name */
-	cl_git_pass(git_oid_fromstr(&commit_id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
+	cl_git_pass(git_oid_fromstr(&commit_id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
 	cl_git_pass(git_branch_create(&branch, repo, "some/deep/ref", commit, 0));
 	git_commit_free(commit);

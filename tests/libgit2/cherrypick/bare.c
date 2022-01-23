@@ -32,10 +32,10 @@ void test_cherrypick_bare__automerge(void)
 		{ 0100644, "df6b290e0bd6a89b01d69f66687e8abf385283ca", 0, "file3.txt" },
 	};
 
-	git_oid_fromstr(&head_oid, "d3d77487660ee3c0194ee01dc5eaf478782b1c7e");
+	git_oid_fromstr(&head_oid, "d3d77487660ee3c0194ee01dc5eaf478782b1c7e", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
 
-	git_oid_fromstr(&cherry_oid, "cfc4f0999a8367568e049af4f72e452d40828a15");
+	git_oid_fromstr(&cherry_oid, "cfc4f0999a8367568e049af4f72e452d40828a15", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
 
 	cl_git_pass(git_cherrypick_commit(&index, repo, commit, head, 0, NULL));
@@ -62,10 +62,10 @@ void test_cherrypick_bare__conflicts(void)
 		{ 0100644, "e233b9ed408a95e9d4b65fec7fc34943a556deb2", 3, "file3.txt" },
 	};
 
-	git_oid_fromstr(&head_oid, "bafbf6912c09505ac60575cd43d3f2aba3bd84d8");
+	git_oid_fromstr(&head_oid, "bafbf6912c09505ac60575cd43d3f2aba3bd84d8", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
 
-	git_oid_fromstr(&cherry_oid, "e9b63f3655b2ad80c0ff587389b5a9589a3a7110");
+	git_oid_fromstr(&cherry_oid, "e9b63f3655b2ad80c0ff587389b5a9589a3a7110", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
 
 	cl_git_pass(git_cherrypick_commit(&index, repo, commit, head, 0, NULL));
@@ -89,10 +89,10 @@ void test_cherrypick_bare__orphan(void)
 		{ 0100644, "9ccb9bf50c011fd58dcbaa65df917bf79539717f", 0, "orphan.txt" },
 	};
 
-	git_oid_fromstr(&head_oid, "d3d77487660ee3c0194ee01dc5eaf478782b1c7e");
+	git_oid_fromstr(&head_oid, "d3d77487660ee3c0194ee01dc5eaf478782b1c7e", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
 
-	git_oid_fromstr(&cherry_oid, "74f06b5bfec6d33d7264f73606b57a7c0b963819");
+	git_oid_fromstr(&cherry_oid, "74f06b5bfec6d33d7264f73606b57a7c0b963819", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
 
 	cl_git_pass(git_cherrypick_commit(&index, repo, commit, head, 0, NULL));

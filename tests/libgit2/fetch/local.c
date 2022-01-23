@@ -26,7 +26,7 @@ void test_fetch_local__defaults(void)
 		cl_fixture("testrepo.git")));
 	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
 
-	git_oid_fromstr(&expected_id, "258f0e2a959a364e40ed6603d5d44fbb24765b10");
+	git_oid_fromstr(&expected_id, "258f0e2a959a364e40ed6603d5d44fbb24765b10", GIT_OID_SHA1);
 
 	cl_git_pass(git_revparse_single(&obj, repo, "refs/remotes/test/haacked"));
 	cl_assert_equal_oid(&expected_id, git_object_id(obj));
@@ -47,7 +47,7 @@ void test_fetch_local__reachable_commit(void)
 	refspecs.strings = &refspec;
 	refspecs.count = 1;
 
-	git_oid_fromstr(&expected_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+	git_oid_fromstr(&expected_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
 
 	cl_git_pass(git_remote_create(&remote, repo, "test",
 		cl_fixture("testrepo.git")));

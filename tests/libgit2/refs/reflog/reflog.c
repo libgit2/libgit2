@@ -80,7 +80,7 @@ void test_refs_reflog_reflog__append_then_read(void)
 	git_reflog *reflog;
 
 	/* Create a new branch pointing at the HEAD */
-	git_oid_fromstr(&oid, current_master_tip);
+	git_oid_fromstr(&oid, current_master_tip, GIT_OID_SHA1);
 	cl_git_pass(git_reference_create(&ref, g_repo, new_ref, &oid, 0, NULL));
 	git_reference_free(ref);
 
@@ -147,7 +147,7 @@ void test_refs_reflog_reflog__removes_empty_reflog_dir(void)
 	git_oid id;
 
 	/* Create a new branch pointing at the HEAD */
-	git_oid_fromstr(&id, current_master_tip);
+	git_oid_fromstr(&id, current_master_tip, GIT_OID_SHA1);
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/new-dir/new-head", &id, 0, NULL));
 
 	git_str_joinpath(&log_path, git_repository_path(g_repo), GIT_REFLOG_DIR);
@@ -159,7 +159,7 @@ void test_refs_reflog_reflog__removes_empty_reflog_dir(void)
 	git_reference_free(ref);
 
 	/* new ref creation should succeed since new-dir is empty */
-	git_oid_fromstr(&id, current_master_tip);
+	git_oid_fromstr(&id, current_master_tip, GIT_OID_SHA1);
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/new-dir", &id, 0, NULL));
 	git_reference_free(ref);
 
@@ -173,7 +173,7 @@ void test_refs_reflog_reflog__fails_gracefully_on_nonempty_reflog_dir(void)
 	git_oid id;
 
 	/* Create a new branch pointing at the HEAD */
-	git_oid_fromstr(&id, current_master_tip);
+	git_oid_fromstr(&id, current_master_tip, GIT_OID_SHA1);
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/new-dir/new-head", &id, 0, NULL));
 	git_reference_free(ref);
 
@@ -186,7 +186,7 @@ void test_refs_reflog_reflog__fails_gracefully_on_nonempty_reflog_dir(void)
 	cl_must_pass(p_unlink("testrepo.git/refs/heads/new-dir/new-head"));
 
 	/* new ref creation should fail since new-dir contains reflogs still */
-	git_oid_fromstr(&id, current_master_tip);
+	git_oid_fromstr(&id, current_master_tip, GIT_OID_SHA1);
 	cl_git_fail_with(GIT_EDIRECTORY, git_reference_create(&ref, g_repo, "refs/heads/new-dir", &id, 0, NULL));
 	git_reference_free(ref);
 
@@ -235,7 +235,7 @@ void test_refs_reflog_reflog__reading_a_reflog_with_invalid_format_succeeds(void
 	char *star;
 
 	/* Create a new branch. */
-	cl_git_pass(git_oid_fromstr(&id, current_master_tip));
+	cl_git_pass(git_oid_fromstr(&id, current_master_tip, GIT_OID_SHA1));
 	cl_git_pass(git_reference_create(&ref, g_repo, refname, &id, 1, refmessage));
 
 	/*
@@ -298,7 +298,7 @@ void test_refs_reflog_reflog__write_only_std_locations(void)
 	git_reference *ref;
 	git_oid id;
 
-	git_oid_fromstr(&id, current_master_tip);
+	git_oid_fromstr(&id, current_master_tip, GIT_OID_SHA1);
 
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/foo", &id, 1, NULL));
 	git_reference_free(ref);
@@ -318,7 +318,7 @@ void test_refs_reflog_reflog__write_when_explicitly_active(void)
 	git_reference *ref;
 	git_oid id;
 
-	git_oid_fromstr(&id, current_master_tip);
+	git_oid_fromstr(&id, current_master_tip, GIT_OID_SHA1);
 	git_reference_ensure_log(g_repo, "refs/tags/foo");
 
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/tags/foo", &id, 1, NULL));
@@ -338,7 +338,7 @@ void test_refs_reflog_reflog__append_to_HEAD_when_changing_current_branch(void)
 	git_reflog_free(log);
 
 	/* Move it back */
-	git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1);
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/master", &id, 1, NULL));
 	git_reference_free(ref);
 
@@ -390,7 +390,7 @@ static void assert_no_reflog_update(void)
 	git_reflog_free(log);
 
 	/* Move it back */
-	git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1);
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/master", &id, 1, NULL));
 	git_reference_free(ref);
 
@@ -431,7 +431,7 @@ void test_refs_reflog_reflog__logallrefupdates_bare_set_always(void)
 	cl_git_pass(git_config_set_string(config, "core.logallrefupdates", "always"));
 	git_config_free(config);
 
-	git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1);
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/bork", &id, 1, "message"));
 
 	cl_git_pass(git_reflog_read(&log, g_repo, "refs/bork"));

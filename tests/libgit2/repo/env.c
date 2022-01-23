@@ -95,9 +95,9 @@ static void env_check_objects_(bool a, bool t, bool p, const char *file, const c
 	git_repository *repo;
 	git_oid oid_a, oid_t, oid_p;
 	git_object *object;
-	cl_git_pass(git_oid_fromstr(&oid_a, "45141a79a77842c59a63229403220a4e4be74e3d"));
-	cl_git_pass(git_oid_fromstr(&oid_t, "1385f264afb75a56a5bec74243be9b367ba4ca08"));
-	cl_git_pass(git_oid_fromstr(&oid_p, "0df1a5865c8abfc09f1f2182e6a31be550e99f07"));
+	cl_git_pass(git_oid_fromstr(&oid_a, "45141a79a77842c59a63229403220a4e4be74e3d", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&oid_t, "1385f264afb75a56a5bec74243be9b367ba4ca08", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&oid_p, "0df1a5865c8abfc09f1f2182e6a31be550e99f07", GIT_OID_SHA1));
 	cl_git_expect(git_repository_open_ext(&repo, "attr", GIT_REPOSITORY_OPEN_FROM_ENV, NULL), 0, file, func, line);
 
 	if (a) {

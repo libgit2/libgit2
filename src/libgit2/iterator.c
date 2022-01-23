@@ -1529,6 +1529,8 @@ static void filesystem_iterator_set_current(
 
 	if (iter->base.flags & GIT_ITERATOR_INCLUDE_HASH)
 		git_oid_cpy(&iter->entry.id, &entry->id);
+	else
+		git_oid_clear(&iter->entry.id, GIT_OID_SHA1);
 
 	iter->entry.path = entry->path;
 

@@ -545,7 +545,7 @@ static int locate_object_short_oid(
 		return git_odb__error_ambiguous("multiple matches in loose objects");
 
 	/* Convert obtained hex formatted oid to raw */
-	error = git_oid_fromstr(res_oid, (char *)state.res_oid);
+	error = git_oid_fromstr(res_oid, (char *)state.res_oid, GIT_OID_SHA1);
 	if (error)
 		return error;
 
@@ -732,6 +732,8 @@ GIT_INLINE(int) filename_to_oid(git_oid *oid, const char *ptr)
 
 		oid->id[1 + i/2] = (unsigned char) v;
 	}
+
+	oid->type = GIT_OID_SHA1;
 
 	return 0;
 }

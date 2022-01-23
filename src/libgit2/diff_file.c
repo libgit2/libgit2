@@ -144,6 +144,7 @@ int git_diff_file_content__init_from_src(
 
 	if (!src->blob && !src->buf) {
 		fc->flags |= GIT_DIFF_FLAG__NO_DATA;
+		git_oid_clear(&fc->file->id, GIT_OID_SHA1);
 	} else {
 		fc->flags |= GIT_DIFF_FLAG__LOADED;
 		fc->file->flags |= GIT_DIFF_FLAG_VALID_ID;

@@ -11,7 +11,7 @@ git_tree *resolve_commit_oid_to_tree(
 	git_object *obj = NULL;
 	git_tree *tree = NULL;
 
-	if (git_oid_fromstrn(&oid, partial_oid, len) == 0)
+	if (git_oid_fromstrn(&oid, partial_oid, len, GIT_OID_SHA1) == 0)
 		cl_git_pass(git_object_lookup_prefix(&obj, repo, &oid, len, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_object_peel((git_object **) &tree, obj, GIT_OBJECT_TREE));

@@ -38,9 +38,9 @@ void test_index_reuc__add(void)
 	git_oid ancestor_oid, our_oid, their_oid;
 	const git_index_reuc_entry *reuc;
 
-	git_oid_fromstr(&ancestor_oid, ONE_ANCESTOR_OID);
-	git_oid_fromstr(&our_oid, ONE_OUR_OID);
-	git_oid_fromstr(&their_oid, ONE_THEIR_OID);
+	git_oid_fromstr(&ancestor_oid, ONE_ANCESTOR_OID, GIT_OID_SHA1);
+	git_oid_fromstr(&our_oid, ONE_OUR_OID, GIT_OID_SHA1);
+	git_oid_fromstr(&their_oid, ONE_THEIR_OID, GIT_OID_SHA1);
 
 	cl_git_pass(git_index_reuc_add(repo_index, "newfile.txt",
 		0100644, &ancestor_oid,
@@ -66,8 +66,8 @@ void test_index_reuc__add_no_ancestor(void)
 	const git_index_reuc_entry *reuc;
 
 	memset(&ancestor_oid, 0x0, sizeof(git_oid));
-	git_oid_fromstr(&our_oid, ONE_OUR_OID);
-	git_oid_fromstr(&their_oid, ONE_THEIR_OID);
+	git_oid_fromstr(&our_oid, ONE_OUR_OID, GIT_OID_SHA1);
+	git_oid_fromstr(&their_oid, ONE_THEIR_OID, GIT_OID_SHA1);
 
 	cl_git_pass(git_index_reuc_add(repo_index, "newfile.txt",
 		0, NULL,
@@ -100,11 +100,11 @@ void test_index_reuc__read_bypath(void)
 	cl_assert(reuc->mode[0] == 0100644);
 	cl_assert(reuc->mode[1] == 0100644);
 	cl_assert(reuc->mode[2] == 0100644);
-	git_oid_fromstr(&oid, TWO_ANCESTOR_OID);
+	git_oid_fromstr(&oid, TWO_ANCESTOR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[0], &oid);
-	git_oid_fromstr(&oid, TWO_OUR_OID);
+	git_oid_fromstr(&oid, TWO_OUR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[1], &oid);
-	git_oid_fromstr(&oid, TWO_THEIR_OID);
+	git_oid_fromstr(&oid, TWO_THEIR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[2], &oid);
 
 	cl_assert(reuc = git_index_reuc_get_bypath(repo_index, "one.txt"));
@@ -113,11 +113,11 @@ void test_index_reuc__read_bypath(void)
 	cl_assert(reuc->mode[0] == 0100644);
 	cl_assert(reuc->mode[1] == 0100644);
 	cl_assert(reuc->mode[2] == 0100644);
-	git_oid_fromstr(&oid, ONE_ANCESTOR_OID);
+	git_oid_fromstr(&oid, ONE_ANCESTOR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[0], &oid);
-	git_oid_fromstr(&oid, ONE_OUR_OID);
+	git_oid_fromstr(&oid, ONE_OUR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[1], &oid);
-	git_oid_fromstr(&oid, ONE_THEIR_OID);
+	git_oid_fromstr(&oid, ONE_THEIR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[2], &oid);
 }
 
@@ -145,11 +145,11 @@ void test_index_reuc__ignore_case(void)
 	cl_assert(reuc->mode[0] == 0100644);
 	cl_assert(reuc->mode[1] == 0100644);
 	cl_assert(reuc->mode[2] == 0100644);
-	git_oid_fromstr(&oid, TWO_ANCESTOR_OID);
+	git_oid_fromstr(&oid, TWO_ANCESTOR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[0], &oid);
-	git_oid_fromstr(&oid, TWO_OUR_OID);
+	git_oid_fromstr(&oid, TWO_OUR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[1], &oid);
-	git_oid_fromstr(&oid, TWO_THEIR_OID);
+	git_oid_fromstr(&oid, TWO_THEIR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[2], &oid);
 }
 
@@ -166,11 +166,11 @@ void test_index_reuc__read_byindex(void)
 	cl_assert(reuc->mode[0] == 0100644);
 	cl_assert(reuc->mode[1] == 0100644);
 	cl_assert(reuc->mode[2] == 0100644);
-	git_oid_fromstr(&oid, ONE_ANCESTOR_OID);
+	git_oid_fromstr(&oid, ONE_ANCESTOR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[0], &oid);
-	git_oid_fromstr(&oid, ONE_OUR_OID);
+	git_oid_fromstr(&oid, ONE_OUR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[1], &oid);
-	git_oid_fromstr(&oid, ONE_THEIR_OID);
+	git_oid_fromstr(&oid, ONE_THEIR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[2], &oid);
 
 	cl_assert(reuc = git_index_reuc_get_byindex(repo_index, 1));
@@ -179,11 +179,11 @@ void test_index_reuc__read_byindex(void)
 	cl_assert(reuc->mode[0] == 0100644);
 	cl_assert(reuc->mode[1] == 0100644);
 	cl_assert(reuc->mode[2] == 0100644);
-	git_oid_fromstr(&oid, TWO_ANCESTOR_OID);
+	git_oid_fromstr(&oid, TWO_ANCESTOR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[0], &oid);
-	git_oid_fromstr(&oid, TWO_OUR_OID);
+	git_oid_fromstr(&oid, TWO_OUR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[1], &oid);
-	git_oid_fromstr(&oid, TWO_THEIR_OID);
+	git_oid_fromstr(&oid, TWO_THEIR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[2], &oid);
 }
 
@@ -200,9 +200,9 @@ void test_index_reuc__updates_existing(void)
 	index_caps |= GIT_INDEX_CAPABILITY_IGNORE_CASE;
 	cl_git_pass(git_index_set_caps(repo_index, index_caps));
 
-	git_oid_fromstr(&ancestor_oid, TWO_ANCESTOR_OID);
-	git_oid_fromstr(&our_oid, TWO_OUR_OID);
-	git_oid_fromstr(&their_oid, TWO_THEIR_OID);
+	git_oid_fromstr(&ancestor_oid, TWO_ANCESTOR_OID, GIT_OID_SHA1);
+	git_oid_fromstr(&our_oid, TWO_OUR_OID, GIT_OID_SHA1);
+	git_oid_fromstr(&their_oid, TWO_THEIR_OID, GIT_OID_SHA1);
 
 	cl_git_pass(git_index_reuc_add(repo_index, "two.txt",
 		0100644, &ancestor_oid,
@@ -219,11 +219,11 @@ void test_index_reuc__updates_existing(void)
 	cl_assert(reuc = git_index_reuc_get_byindex(repo_index, 0));
 
 	cl_assert_equal_s("TWO.txt", reuc->path);
-	git_oid_fromstr(&oid, TWO_OUR_OID);
+	git_oid_fromstr(&oid, TWO_OUR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[0], &oid);
-	git_oid_fromstr(&oid, TWO_THEIR_OID);
+	git_oid_fromstr(&oid, TWO_THEIR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[1], &oid);
-	git_oid_fromstr(&oid, TWO_ANCESTOR_OID);
+	git_oid_fromstr(&oid, TWO_ANCESTOR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[2], &oid);
 }
 
@@ -245,11 +245,11 @@ void test_index_reuc__remove(void)
 	cl_assert(reuc->mode[0] == 0100644);
 	cl_assert(reuc->mode[1] == 0100644);
 	cl_assert(reuc->mode[2] == 0100644);
-	git_oid_fromstr(&oid, TWO_ANCESTOR_OID);
+	git_oid_fromstr(&oid, TWO_ANCESTOR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[0], &oid);
-	git_oid_fromstr(&oid, TWO_OUR_OID);
+	git_oid_fromstr(&oid, TWO_OUR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[1], &oid);
-	git_oid_fromstr(&oid, TWO_THEIR_OID);
+	git_oid_fromstr(&oid, TWO_THEIR_OID, GIT_OID_SHA1);
 	cl_assert_equal_oid(&reuc->oid[2], &oid);
 }
 
@@ -261,18 +261,18 @@ void test_index_reuc__write(void)
 	git_index_clear(repo_index);
 
 	/* Write out of order to ensure sorting is correct */
-	git_oid_fromstr(&ancestor_oid, TWO_ANCESTOR_OID);
-	git_oid_fromstr(&our_oid, TWO_OUR_OID);
-	git_oid_fromstr(&their_oid, TWO_THEIR_OID);
+	git_oid_fromstr(&ancestor_oid, TWO_ANCESTOR_OID, GIT_OID_SHA1);
+	git_oid_fromstr(&our_oid, TWO_OUR_OID, GIT_OID_SHA1);
+	git_oid_fromstr(&their_oid, TWO_THEIR_OID, GIT_OID_SHA1);
 
 	cl_git_pass(git_index_reuc_add(repo_index, "two.txt",
 		0100644, &ancestor_oid,
 		0100644, &our_oid,
 		0100644, &their_oid));
 
-	git_oid_fromstr(&ancestor_oid, ONE_ANCESTOR_OID);
-	git_oid_fromstr(&our_oid, ONE_OUR_OID);
-	git_oid_fromstr(&their_oid, ONE_THEIR_OID);
+	git_oid_fromstr(&ancestor_oid, ONE_ANCESTOR_OID, GIT_OID_SHA1);
+	git_oid_fromstr(&our_oid, ONE_OUR_OID, GIT_OID_SHA1);
+	git_oid_fromstr(&their_oid, ONE_THEIR_OID, GIT_OID_SHA1);
 
 	cl_git_pass(git_index_reuc_add(repo_index, "one.txt",
 		0100644, &ancestor_oid,

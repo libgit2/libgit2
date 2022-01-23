@@ -17,7 +17,7 @@ void test_status_single__hash_single_file(void)
 	git_oid expected_id, actual_id;
 
 	/* initialization */
-	git_oid_fromstr(&expected_id, file_hash);
+	git_oid_fromstr(&expected_id, file_hash, GIT_OID_SHA1);
 	cl_git_mkfile(file_name, file_contents);
 	cl_set_cleanup(&cleanup__remove_file, (void *)file_name);
 
@@ -35,7 +35,7 @@ void test_status_single__hash_single_empty_file(void)
 	git_oid expected_id, actual_id;
 
 	/* initialization */
-	git_oid_fromstr(&expected_id, file_hash);
+	git_oid_fromstr(&expected_id, file_hash, GIT_OID_SHA1);
 	cl_git_mkfile(file_name, file_contents);
 	cl_set_cleanup(&cleanup__remove_file, (void *)file_name);
 

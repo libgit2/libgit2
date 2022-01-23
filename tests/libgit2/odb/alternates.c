@@ -52,7 +52,7 @@ void test_odb_alternates__chained(void)
 
 	/* Now load B and see if we can find an object from testrepo.git */
 	cl_git_pass(git_repository_open(&repo, paths[1]));
-	git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 	git_commit_free(commit);
 	git_repository_free(repo);
@@ -74,7 +74,7 @@ void test_odb_alternates__long_chain(void)
 
 	/* Now load the last one and see if we can find an object from testrepo.git */
 	cl_git_pass(git_repository_open(&repo, paths[ARRAY_SIZE(paths)-1]));
-	git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1);
 	cl_git_fail(git_commit_lookup(&commit, repo, &oid));
 	git_repository_free(repo);
 }

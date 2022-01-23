@@ -134,6 +134,7 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 	vec[1].data = obj->data;
 	vec[1].len = obj->len;
 
+	id->type = GIT_OID_SHA1;
 	return git_hash_vec(id->id, vec, 2, GIT_HASH_ALGORITHM_SHA1);
 }
 
@@ -236,6 +237,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_object_t type)
 	}
 
 	error = git_hash_final(out->id, &ctx);
+	out->type = GIT_OID_SHA1;
 
 done:
 	git_hash_ctx_cleanup(&ctx);
@@ -914,7 +916,7 @@ static int odb_exists_prefix_1(git_oid *out, git_odb *db,
 {
 	size_t i;
 	int error = GIT_ENOTFOUND, num_found = 0;
-	git_oid last_found = GIT_OID_SHA1_ZERO, found;
+	git_oid last_found = GIT_OID_NONE, found;
 
 	if ((error = git_mutex_lock(&db->lock)) < 0) {
 		git_error_set(GIT_ERROR_ODB, "failed to acquire the odb lock");
@@ -965,7 +967,7 @@ int git_odb_exists_prefix(
 	git_oid *out, git_odb *db, const git_oid *short_id, size_t len)
 {
 	int error;
-	git_oid key = GIT_OID_SHA1_ZERO;
+	git_oid key = GIT_OID_NONE;
 
 	GIT_ASSERT_ARG(db);
 	GIT_ASSERT_ARG(short_id);
@@ -1049,7 +1051,7 @@ int git_odb_expand_ids(
 		/* the object is missing or ambiguous */
 		case GIT_ENOTFOUND:
 		case GIT_EAMBIGUOUS:
-			memset(&query->id, 0, sizeof(git_oid));
+			git_oid_clear(&query->id, GIT_OID_SHA1);
 			query->length = 0;
 			query->type = 0;
 			break;
@@ -1305,7 +1307,7 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 {
 	size_t i;
 	int error = 0;
-	git_oid found_full_oid = GIT_OID_SHA1_ZERO;
+	git_oid found_full_oid = GIT_OID_NONE;
 	git_rawobj raw = {0};
 	void *data = NULL;
 	bool found = false;
@@ -1391,7 +1393,8 @@ out:
 int git_odb_read_prefix(
 	git_odb_object **out, git_odb *db, const git_oid *short_id, size_t len)
 {
-	git_oid key = GIT_OID_SHA1_ZERO;
+	git_oid key = GIT_OID_NONE;
+	size_t hex_size;
 	int error;
 
 	GIT_ASSERT_ARG(out);
@@ -1611,6 +1614,7 @@ int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
 			"stream_finalize_write()");
 
 	git_hash_final(out->id, stream->hash_ctx);
+	out->type = GIT_OID_SHA1;
 
 	if (git_odb__freshen(stream->backend->odb, out))
 		return 0;

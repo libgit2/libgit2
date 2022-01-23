@@ -34,13 +34,13 @@ void test_odb_backend_mempack__write_succeeds(void)
 
 void test_odb_backend_mempack__read_of_missing_object_fails(void)
 {
-	cl_git_pass(git_oid_fromstr(&_oid, "f6ea0495187600e7b2288c8ac19c5886383a4633"));
+	cl_git_pass(git_oid_fromstr(&_oid, "f6ea0495187600e7b2288c8ac19c5886383a4633", GIT_OID_SHA1));
 	cl_git_fail_with(GIT_ENOTFOUND, git_odb_read(&_obj, _odb, &_oid));
 }
 
 void test_odb_backend_mempack__exists_of_missing_object_fails(void)
 {
-	cl_git_pass(git_oid_fromstr(&_oid, "f6ea0495187600e7b2288c8ac19c5886383a4633"));
+	cl_git_pass(git_oid_fromstr(&_oid, "f6ea0495187600e7b2288c8ac19c5886383a4633", GIT_OID_SHA1));
 	cl_assert(git_odb_exists(_odb, &_oid) == 0);
 }
 

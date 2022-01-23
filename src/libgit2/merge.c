@@ -617,7 +617,7 @@ int git_repository_mergehead_foreach(
 			goto cleanup;
 		}
 
-		if ((error = git_oid_fromstr(&oid, line)) < 0)
+		if ((error = git_oid_fromstr(&oid, line, GIT_OID_SHA1)) < 0)
 			goto cleanup;
 
 		if ((error = cb(&oid, payload)) != 0) {

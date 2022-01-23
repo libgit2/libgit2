@@ -35,8 +35,8 @@ void test_apply_tree__one(void)
 		{ 0100644, "a7b066537e6be7109abfe4ff97b675d4e077da20", 0, "veal.txt" },
 	};
 
-	git_oid_fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707");
-	git_oid_fromstr(&b_oid, "7c7bf85e978f1d18c0566f702d2cb7766b9c8d4f");
+	git_oid_fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1);
+	git_oid_fromstr(&b_oid, "7c7bf85e978f1d18c0566f702d2cb7766b9c8d4f", GIT_OID_SHA1);
 
 	cl_git_pass(git_commit_lookup(&a_commit, repo, &a_oid));
 	cl_git_pass(git_commit_lookup(&b_commit, repo, &b_oid));
@@ -75,7 +75,7 @@ void test_apply_tree__adds_file(void)
 		{ 0100644, "94d2c01087f48213bd157222d54edfefd77c9bba", 0, "veal.txt" },
 	};
 
-	git_oid_fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+	git_oid_fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1);
 
 	cl_git_pass(git_commit_lookup(&a_commit, repo, &a_oid));
 

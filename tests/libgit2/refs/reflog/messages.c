@@ -87,7 +87,7 @@ void test_refs_reflog_messages__detaching_writes_reflog(void)
 	const char *msg;
 
 	msg = "checkout: moving from master to e90810b8df3e80c413d903f631643c716887138d";
-	git_oid_fromstr(&id, "e90810b8df3e80c413d903f631643c716887138d");
+	git_oid_fromstr(&id, "e90810b8df3e80c413d903f631643c716887138d", GIT_OID_SHA1);
 	cl_git_pass(git_repository_set_head_detached(g_repo, &id));
 	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
@@ -109,7 +109,7 @@ void test_refs_reflog_messages__orphan_branch_does_not_count(void)
 
 	/* Have something known */
 	msg = "checkout: moving from master to e90810b8df3e80c413d903f631643c716887138d";
-	git_oid_fromstr(&id, "e90810b8df3e80c413d903f631643c716887138d");
+	git_oid_fromstr(&id, "e90810b8df3e80c413d903f631643c716887138d", GIT_OID_SHA1);
 	cl_git_pass(git_repository_set_head_detached(g_repo, &id));
 	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
@@ -280,7 +280,7 @@ void test_refs_reflog_messages__newline_gets_replaced(void)
 	git_oid oid;
 
 	cl_git_pass(git_signature_now(&signature, "me", "foo@example.com"));
-	cl_git_pass(git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
+	cl_git_pass(git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1));
 
 	cl_git_pass(git_reflog_read(&reflog, g_repo, "HEAD"));
 	cl_assert_equal_sz(7, git_reflog_entrycount(reflog));

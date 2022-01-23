@@ -33,7 +33,7 @@ static void create_note(git_oid *note_oid, const char *canonical_namespace, cons
 {
 	git_oid oid;
 
-	cl_git_pass(git_oid_fromstr(&oid, target_sha));
+	cl_git_pass(git_oid_fromstr(&oid, target_sha, GIT_OID_SHA1));
 	cl_git_pass(git_note_create(note_oid, _repo, canonical_namespace, _sig, _sig, &oid, message, 0));
 }
 
@@ -60,10 +60,10 @@ static int note_list_cb(
 
 	cl_assert(*count < EXPECTATIONS_COUNT);
 
-	cl_git_pass(git_oid_fromstr(&expected_note_oid, list_expectations[*count].note_sha));
+	cl_git_pass(git_oid_fromstr(&expected_note_oid, list_expectations[*count].note_sha, GIT_OID_SHA1));
 	cl_assert_equal_oid(&expected_note_oid, blob_id);
 
-	cl_git_pass(git_oid_fromstr(&expected_target_oid, list_expectations[*count].annotated_object_sha));
+	cl_git_pass(git_oid_fromstr(&expected_target_oid, list_expectations[*count].annotated_object_sha, GIT_OID_SHA1));
 	cl_assert_equal_oid(&expected_target_oid, annotated_obj_id);
 
 	(*count)++;
@@ -85,12 +85,12 @@ static int note_list_create_cb(
 	size_t i;
 
 	for (i = 0; notes[i].note_oid != NULL; i++) {
-		cl_git_pass(git_oid_fromstr(&expected_note_oid, notes[i].note_oid));
+		cl_git_pass(git_oid_fromstr(&expected_note_oid, notes[i].note_oid, GIT_OID_SHA1));
 
 		if (git_oid_cmp(&expected_note_oid, blob_oid) != 0)
 			continue;
 
-		cl_git_pass(git_oid_fromstr(&expected_target_oid, notes[i].object_oid));
+		cl_git_pass(git_oid_fromstr(&expected_target_oid, notes[i].object_oid, GIT_OID_SHA1));
 
 		if (git_oid_cmp(&expected_target_oid, annotated_obj_id) != 0)
 			continue;
@@ -140,7 +140,7 @@ void test_notes_notes__can_create_a_note_from_commit(void)
 		{ NULL, NULL, 0 }
 	};
 
-	cl_git_pass(git_oid_fromstr(&oid, can_create_a_note_from_commit[0].object_oid));
+	cl_git_pass(git_oid_fromstr(&oid, can_create_a_note_from_commit[0].object_oid, GIT_OID_SHA1));
 
 	cl_git_pass(git_note_commit_create(&notes_commit_out, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 1));
 
@@ -169,11 +169,11 @@ void test_notes_notes__can_create_a_note_from_commit_given_an_existing_commit(vo
 		{ NULL, NULL, 0 }
 	};
 
-	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", GIT_OID_SHA1));
 
 	cl_git_pass(git_note_commit_create(&notes_commit_out, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 0));
 
-	cl_git_pass(git_oid_fromstr(&oid, "9fd738e8f7967c078dceed8190330fc8648ee56a"));
+	cl_git_pass(git_oid_fromstr(&oid, "9fd738e8f7967c078dceed8190330fc8648ee56a", GIT_OID_SHA1));
 
 	git_commit_lookup(&existing_notes_commit, _repo, &notes_commit_out);
 
@@ -274,7 +274,7 @@ void test_notes_notes__inserting_a_note_without_passing_a_namespace_uses_the_def
 	git_note *note, *default_namespace_note;
 	git_buf default_ref = GIT_BUF_INIT;
 
-	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
+	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125", GIT_OID_SHA1));
 	cl_git_pass(git_note_default_ref(&default_ref, _repo));
 
 	create_note(&note_oid, NULL, "08b041783f40edfe12bb406c9c9a8a040177c125", "hello world\n");
@@ -295,7 +295,7 @@ void test_notes_notes__can_insert_a_note_with_a_custom_namespace(void)
 	git_oid note_oid, target_oid;
 	git_note *note;
 
-	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
+	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125", GIT_OID_SHA1));
 
 	create_note(&note_oid, "refs/notes/some/namespace", "08b041783f40edfe12bb406c9c9a8a040177c125", "hello world on a custom namespace\n");
 
@@ -315,7 +315,7 @@ void test_notes_notes__creating_a_note_on_a_target_which_already_has_one_returns
 	int error;
 	git_oid note_oid, target_oid;
 
-	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
+	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125", GIT_OID_SHA1));
 
 	create_note(&note_oid, NULL, "08b041783f40edfe12bb406c9c9a8a040177c125", "hello world\n");
 	error = git_note_create(&note_oid, _repo, NULL, _sig, _sig, &target_oid, "hello world\n", 0);
@@ -334,7 +334,7 @@ void test_notes_notes__creating_a_note_on_a_target_can_overwrite_existing_note(v
 	git_oid note_oid, target_oid;
 	git_note *note, *namespace_note;
 
-	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
+	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125", GIT_OID_SHA1));
 
 	create_note(&note_oid, NULL, "08b041783f40edfe12bb406c9c9a8a040177c125", "hello old world\n");
 	cl_git_pass(git_note_create(&note_oid, _repo, NULL, _sig, _sig, &target_oid, "hello new world\n", 1));
@@ -381,7 +381,7 @@ void test_notes_notes__can_read_a_note(void)
 
 	create_note(&note_oid, "refs/notes/i-can-see-dead-notes", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", "I decorate 4a20\n");
 
-	cl_git_pass(git_oid_fromstr(&target_oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+	cl_git_pass(git_oid_fromstr(&target_oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", GIT_OID_SHA1));
 
 	cl_git_pass(git_note_read(&note, _repo, "refs/notes/i-can-see-dead-notes", &target_oid));
 
@@ -397,7 +397,7 @@ void test_notes_notes__can_read_a_note_from_a_commit(void)
 	git_commit *notes_commit;
 	git_note *note;
 
-	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", GIT_OID_SHA1));
 	cl_git_pass(git_note_commit_create(&notes_commit_oid, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 1));
 	cl_git_pass(git_commit_lookup(&notes_commit, _repo, &notes_commit_oid));
 	cl_assert(notes_commit);
@@ -416,7 +416,7 @@ void test_notes_notes__attempt_to_read_a_note_from_a_commit_with_no_note_fails(v
 	git_commit *notes_commit;
 	git_note *note;
 
-	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", GIT_OID_SHA1));
 
 	cl_git_pass(git_note_commit_create(&notes_commit_oid, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 1));
 
@@ -450,7 +450,7 @@ void test_notes_notes__can_insert_a_note_in_an_existing_fanout(void)
 	git_oid note_oid, target_oid;
 	git_note *_note;
 
-	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
+	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125", GIT_OID_SHA1));
 
 	for (i = 0; i <  MESSAGES_COUNT; i++) {
 		cl_git_pass(git_note_create(&note_oid, _repo, "refs/notes/fanout", _sig, _sig, &target_oid, messages[i], 0));
@@ -470,10 +470,10 @@ void test_notes_notes__can_read_a_note_in_an_existing_fanout(void)
 	git_oid note_oid, target_oid;
 	git_note *note;
 
-	cl_git_pass(git_oid_fromstr(&target_oid, "8496071c1b46c854b31185ea97743be6a8774479"));
+	cl_git_pass(git_oid_fromstr(&target_oid, "8496071c1b46c854b31185ea97743be6a8774479", GIT_OID_SHA1));
 	cl_git_pass(git_note_read(&note, _repo, "refs/notes/fanout", &target_oid));
 
-	cl_git_pass(git_oid_fromstr(&note_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
+	cl_git_pass(git_oid_fromstr(&note_oid, "08b041783f40edfe12bb406c9c9a8a040177c125", GIT_OID_SHA1));
 	cl_assert_equal_oid(git_note_id(note), &note_oid);
 
 	git_note_free(note);
@@ -487,7 +487,7 @@ void test_notes_notes__can_remove_a_note(void)
 
 	create_note(&note_oid, "refs/notes/i-can-see-dead-notes", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", "I decorate 4a20\n");
 
-	cl_git_pass(git_oid_fromstr(&target_oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+	cl_git_pass(git_oid_fromstr(&target_oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", GIT_OID_SHA1));
 	cl_git_pass(git_note_remove(_repo, "refs/notes/i-can-see-dead-notes", _sig, _sig, &target_oid));
 
 	cl_git_fail(git_note_read(&note, _repo, "refs/notes/i-can-see-dead-notes", &target_oid));
@@ -501,7 +501,7 @@ void test_notes_notes__can_remove_a_note_from_commit(void)
 	git_commit *existing_notes_commit;
 	git_reference *ref;
 
-	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", GIT_OID_SHA1));
 
 	cl_git_pass(git_note_commit_create(&notes_commit_oid, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 0));
 
@@ -528,7 +528,7 @@ void test_notes_notes__can_remove_a_note_in_an_existing_fanout(void)
 	git_oid target_oid;
 	git_note *note;
 
-	cl_git_pass(git_oid_fromstr(&target_oid, "8496071c1b46c854b31185ea97743be6a8774479"));
+	cl_git_pass(git_oid_fromstr(&target_oid, "8496071c1b46c854b31185ea97743be6a8774479", GIT_OID_SHA1));
 	cl_git_pass(git_note_remove(_repo, "refs/notes/fanout", _sig, _sig, &target_oid));
 
 	cl_git_fail(git_note_read(&note, _repo, "refs/notes/fanout", &target_oid));
@@ -539,7 +539,7 @@ void test_notes_notes__removing_a_note_which_doesnt_exists_returns_ENOTFOUND(voi
 	int error;
 	git_oid target_oid;
 
-	cl_git_pass(git_oid_fromstr(&target_oid, "8496071c1b46c854b31185ea97743be6a8774479"));
+	cl_git_pass(git_oid_fromstr(&target_oid, "8496071c1b46c854b31185ea97743be6a8774479", GIT_OID_SHA1));
 	cl_git_pass(git_note_remove(_repo, "refs/notes/fanout", _sig, _sig, &target_oid));
 
 	error = git_note_remove(_repo, "refs/notes/fanout", _sig, _sig, &target_oid);
@@ -628,8 +628,8 @@ void test_notes_notes__iterate_from_commit(void)
 	};
 	int i, err;
 
-	cl_git_pass(git_oid_fromstr(&(oids[0]), "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
-	cl_git_pass(git_oid_fromstr(&(oids[1]), "c47800c7266a2be04c571c04d5a6614691ea99bd"));
+	cl_git_pass(git_oid_fromstr(&(oids[0]), "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&(oids[1]), "c47800c7266a2be04c571c04d5a6614691ea99bd", GIT_OID_SHA1));
 
 	cl_git_pass(git_note_commit_create(&notes_commit_oids[0], NULL, _repo, NULL, _sig, _sig, &(oids[0]), note_message[0], 0));
 

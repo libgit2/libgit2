@@ -20,13 +20,13 @@ void test_odb_mixed__dup_oid(void) {
 	git_oid oid;
 	git_odb_object *obj;
 
-	cl_git_pass(git_oid_fromstr(&oid, hex));
+	cl_git_pass(git_oid_fromstr(&oid, hex, GIT_OID_SHA1));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, GIT_OID_SHA1_HEXSIZE));
 	git_odb_object_free(obj);
 
 	cl_git_pass(git_odb_exists_prefix(NULL, _odb, &oid, GIT_OID_SHA1_HEXSIZE));
 
-	cl_git_pass(git_oid_fromstrn(&oid, short_hex, sizeof(short_hex) - 1));
+	cl_git_pass(git_oid_fromstrn(&oid, short_hex, sizeof(short_hex) - 1, GIT_OID_SHA1));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, sizeof(short_hex) - 1));
 	git_odb_object_free(obj);
 
@@ -48,63 +48,63 @@ void test_odb_mixed__dup_oid_prefix_0(void) {
 	/* ambiguous in the same pack file */
 
 	strncpy(hex, "dea509d0", sizeof(hex));
-	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
+	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex), GIT_OID_SHA1));
 	cl_assert_equal_i(
 		GIT_EAMBIGUOUS, git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
 	cl_assert_equal_i(
 		GIT_EAMBIGUOUS, git_odb_exists_prefix(&found, _odb, &oid, strlen(hex)));
 
 	strncpy(hex, "dea509d09", sizeof(hex));
-	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
+	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex), GIT_OID_SHA1));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
 	cl_git_pass(git_odb_exists_prefix(&found, _odb, &oid, strlen(hex)));
 	cl_assert_equal_oid(&found, git_odb_object_id(obj));
 	git_odb_object_free(obj);
 
 	strncpy(hex, "dea509d0b", sizeof(hex));
-	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
+	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex), GIT_OID_SHA1));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
 	git_odb_object_free(obj);
 
 	/* ambiguous in different pack files */
 
 	strncpy(hex, "81b5bff5", sizeof(hex));
-	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
+	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex), GIT_OID_SHA1));
 	cl_assert_equal_i(
 		GIT_EAMBIGUOUS, git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
 	cl_assert_equal_i(
 		GIT_EAMBIGUOUS, git_odb_exists_prefix(&found, _odb, &oid, strlen(hex)));
 
 	strncpy(hex, "81b5bff5b", sizeof(hex));
-	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
+	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex), GIT_OID_SHA1));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
 	cl_git_pass(git_odb_exists_prefix(&found, _odb, &oid, strlen(hex)));
 	cl_assert_equal_oid(&found, git_odb_object_id(obj));
 	git_odb_object_free(obj);
 
 	strncpy(hex, "81b5bff5f", sizeof(hex));
-	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
+	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex), GIT_OID_SHA1));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
 	git_odb_object_free(obj);
 
 	/* ambiguous in pack file and loose */
 
 	strncpy(hex, "0ddeaded", sizeof(hex));
-	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
+	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex), GIT_OID_SHA1));
 	cl_assert_equal_i(
 		GIT_EAMBIGUOUS, git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
 	cl_assert_equal_i(
 		GIT_EAMBIGUOUS, git_odb_exists_prefix(&found, _odb, &oid, strlen(hex)));
 
 	strncpy(hex, "0ddeaded9", sizeof(hex));
-	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
+	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex), GIT_OID_SHA1));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
 	cl_git_pass(git_odb_exists_prefix(&found, _odb, &oid, strlen(hex)));
 	cl_assert_equal_oid(&found, git_odb_object_id(obj));
 	git_odb_object_free(obj);
 
 	strncpy(hex, "0ddeadede", sizeof(hex));
-	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
+	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex), GIT_OID_SHA1));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
 	git_odb_object_free(obj);
 }
@@ -170,7 +170,7 @@ static void setup_prefix_query(
 
 		size_t len = strlen(expand_id_test_data[i].lookup_id);
 
-		git_oid_fromstrn(&id->id, expand_id_test_data[i].lookup_id, len);
+		git_oid_fromstrn(&id->id, expand_id_test_data[i].lookup_id, len, GIT_OID_SHA1);
 		id->length = (unsigned short)len;
 		id->type = expand_id_test_data[i].expected_type;
 	}
@@ -191,7 +191,7 @@ static void assert_found_objects(git_odb_expand_id *ids)
 		git_object_t expected_type = 0;
 
 		if (expand_id_test_data[i].expected_id) {
-			git_oid_fromstr(&expected_id, expand_id_test_data[i].expected_id);
+			git_oid_fromstr(&expected_id, expand_id_test_data[i].expected_id, GIT_OID_SHA1);
 			expected_len = GIT_OID_SHA1_HEXSIZE;
 			expected_type = expand_id_test_data[i].expected_type;
 		}

@@ -114,7 +114,7 @@ static int read_tree_internal(git_tree_cache **out,
 		if (buffer + GIT_OID_SHA1_SIZE > buffer_end)
 			goto corrupted;
 
-		git_oid_fromraw(&tree->oid, (const unsigned char *)buffer);
+		git_oid_fromraw(&tree->oid, (const unsigned char *)buffer, GIT_OID_SHA1);
 		buffer += GIT_OID_SHA1_SIZE;
 	}
 

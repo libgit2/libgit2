@@ -11,6 +11,8 @@
 
 #include "git2/oid.h"
 
+#define GIT_OID_NONE { 0, { 0 } }
+
 extern const git_oid git_oid__empty_blob_sha1;
 extern const git_oid git_oid__empty_tree_sha1;
 
@@ -50,8 +52,8 @@ GIT_INLINE(int) git_oid_raw_ncmp(
 	const unsigned char *sha2,
 	size_t len)
 {
-	if (len > GIT_OID_SHA1_HEXSIZE)
-		len = GIT_OID_SHA1_HEXSIZE;
+	if (len > GIT_OID_MAX_HEXSIZE)
+		len = GIT_OID_MAX_HEXSIZE;
 
 	while (len > 1) {
 		if (*sha1 != *sha2)
@@ -70,16 +72,18 @@ GIT_INLINE(int) git_oid_raw_ncmp(
 
 GIT_INLINE(int) git_oid_raw_cmp(
 	const unsigned char *sha1,
-	const unsigned char *sha2)
+	const unsigned char *sha2,
+	size_t size)
 {
-	return memcmp(sha1, sha2, GIT_OID_SHA1_SIZE);
+	return memcmp(sha1, sha2, size);
 }
 
 GIT_INLINE(int) git_oid_raw_cpy(
 	unsigned char *dst,
-	const unsigned char *src)
+	const unsigned char *src,
+	size_t size)
 {
-	memcpy(dst, src, GIT_OID_SHA1_SIZE);
+	memcpy(dst, src, size);
 	return 0;
 }
 
@@ -92,7 +96,10 @@ GIT_INLINE(int) git_oid_raw_cpy(
  */
 GIT_INLINE(int) git_oid__cmp(const git_oid *a, const git_oid *b)
 {
-	return git_oid_raw_cmp(a->id, b->id);
+	if (a->type != b->type)
+		return a->type - b->type;
+
+	return git_oid_raw_cmp(a->id, b->id, git_oid_size(a->type));
 }
 
 GIT_INLINE(void) git_oid__cpy_prefix(
@@ -104,7 +111,7 @@ GIT_INLINE(void) git_oid__cpy_prefix(
 		out->id[len / 2] &= 0xF0;
 }
 
-GIT_INLINE(bool) git_oid__is_hexstr(const char *str)
+GIT_INLINE(bool) git_oid__is_hexstr(const char *str, git_oid_t type)
 {
 	size_t i;
 
@@ -113,7 +120,13 @@ GIT_INLINE(bool) git_oid__is_hexstr(const char *str)
 			return false;
 	}
 
-	return (i == GIT_OID_SHA1_HEXSIZE);
+	return (i == git_oid_hexsize(type));
+}
+
+GIT_INLINE(void) git_oid_clear(git_oid *out, git_oid_t type)
+{
+	memset(out->id, 0, git_oid_size(type));
+	out->type = type;
 }
 
 #endif

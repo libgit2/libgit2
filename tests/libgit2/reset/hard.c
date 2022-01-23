@@ -122,9 +122,9 @@ static void unmerged_index_init(git_index *index, int entries)
 	int write_theirs = 4;
 	git_oid ancestor, ours, theirs;
 
-	git_oid_fromstr(&ancestor, "452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
-	git_oid_fromstr(&ours, "32504b727382542f9f089e24fddac5e78533e96c");
-	git_oid_fromstr(&theirs, "061d42a44cacde5726057b67558821d95db96f19");
+	git_oid_fromstr(&ancestor, "452e4244b5d083ddf0460acf1ecc74db9dcfa11a", GIT_OID_SHA1);
+	git_oid_fromstr(&ours, "32504b727382542f9f089e24fddac5e78533e96c", GIT_OID_SHA1);
+	git_oid_fromstr(&theirs, "061d42a44cacde5726057b67558821d95db96f19", GIT_OID_SHA1);
 
 	cl_git_rewritefile("status/conflicting_file", "conflicting file\n");
 

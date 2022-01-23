@@ -13,9 +13,9 @@ void test_object_raw_compare__succeed_on_copy_oid(void)
 		0xa8, 0xbd, 0x74, 0xf5, 0xe0,
 	};
 	memset(&b, 0, sizeof(b));
-	git_oid_fromraw(&a, exp);
+	git_oid_fromraw(&a, exp, GIT_OID_SHA1);
 	git_oid_cpy(&b, &a);
-	cl_git_pass(memcmp(a.id, exp, sizeof(a.id)));
+	cl_git_pass(memcmp(a.id, exp, GIT_OID_SHA1_SIZE));
 }
 
 void test_object_raw_compare__succeed_on_oid_comparison_lesser(void)
@@ -33,8 +33,8 @@ void test_object_raw_compare__succeed_on_oid_comparison_lesser(void)
 		0xb7, 0x75, 0x21, 0x3c, 0x23,
 		0xa8, 0xbd, 0x74, 0xf5, 0xf0,
 	};
-	git_oid_fromraw(&a, a_in);
-	git_oid_fromraw(&b, b_in);
+	git_oid_fromraw(&a, a_in, GIT_OID_SHA1);
+	git_oid_fromraw(&b, b_in, GIT_OID_SHA1);
 	cl_assert(git_oid_cmp(&a, &b) < 0);
 }
 
@@ -47,8 +47,8 @@ void test_object_raw_compare__succeed_on_oid_comparison_equal(void)
 		0xb7, 0x75, 0x21, 0x3c, 0x23,
 		0xa8, 0xbd, 0x74, 0xf5, 0xe0,
 	};
-	git_oid_fromraw(&a, a_in);
-	git_oid_fromraw(&b, a_in);
+	git_oid_fromraw(&a, a_in, GIT_OID_SHA1);
+	git_oid_fromraw(&b, a_in, GIT_OID_SHA1);
 	cl_assert(git_oid_cmp(&a, &b) == 0);
 }
 
@@ -67,8 +67,8 @@ void test_object_raw_compare__succeed_on_oid_comparison_greater(void)
 		0xb7, 0x75, 0x21, 0x3c, 0x23,
 		0xa8, 0xbd, 0x74, 0xf5, 0xd0,
 	};
-	git_oid_fromraw(&a, a_in);
-	git_oid_fromraw(&b, b_in);
+	git_oid_fromraw(&a, a_in, GIT_OID_SHA1);
+	git_oid_fromraw(&b, b_in, GIT_OID_SHA1);
 	cl_assert(git_oid_cmp(&a, &b) > 0);
 }
 
@@ -78,7 +78,7 @@ void test_object_raw_compare__compare_fmt_oids(void)
 	git_oid in;
 	char out[GIT_OID_SHA1_HEXSIZE + 1];
 
-	cl_git_pass(git_oid_fromstr(&in, exp));
+	cl_git_pass(git_oid_fromstr(&in, exp, GIT_OID_SHA1));
 
 	/* Format doesn't touch the last byte */
 	out[GIT_OID_SHA1_HEXSIZE] = 'Z';
@@ -96,7 +96,7 @@ void test_object_raw_compare__compare_static_oids(void)
 	git_oid in;
 	char *out;
 
-	cl_git_pass(git_oid_fromstr(&in, exp));
+	cl_git_pass(git_oid_fromstr(&in, exp, GIT_OID_SHA1));
 
 	out = git_oid_tostr_s(&in);
 	cl_assert(out);
@@ -110,7 +110,7 @@ void test_object_raw_compare__compare_pathfmt_oids(void)
 	git_oid in;
 	char out[GIT_OID_SHA1_HEXSIZE + 2];
 
-	cl_git_pass(git_oid_fromstr(&in, exp1));
+	cl_git_pass(git_oid_fromstr(&in, exp1, GIT_OID_SHA1));
 
 	/* Format doesn't touch the last byte */
 	out[GIT_OID_SHA1_HEXSIZE + 1] = 'Z';

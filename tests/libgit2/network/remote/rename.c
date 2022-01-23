@@ -170,7 +170,7 @@ void test_network_remote_rename__overwrite_ref_in_target(void)
 	git_branch_iterator *iter;
 	git_strarray problems = {0};
 
-	cl_git_pass(git_oid_fromstr(&id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
+	cl_git_pass(git_oid_fromstr(&id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1));
 	cl_git_pass(git_reference_create(&ref, _repo, "refs/remotes/renamed/master", &id, 1, NULL));
 	git_reference_free(ref);
 

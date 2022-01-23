@@ -521,6 +521,7 @@ static int git_object__short_id(git_str *out, const git_object *obj)
 		memcpy(&id.id, &obj->cached.oid.id, (len + 1) / 2);
 		if (len & 1)
 			id.id[len / 2] &= 0xf0;
+		id.type = GIT_OID_SHA1;
 
 		error = git_odb_exists_prefix(NULL, odb, &id, len);
 		if (error != GIT_EAMBIGUOUS)
@@ -605,7 +606,8 @@ int git_object__parse_oid_header(
 	git_oid *oid,
 	const char **buffer_out,
 	const char *buffer_end,
-	const char *header)
+	const char *header,
+	git_oid_t oid_type)
 {
 	const size_t sha_len = GIT_OID_SHA1_HEXSIZE;
 	const size_t header_len = strlen(header);
@@ -621,7 +623,7 @@ int git_object__parse_oid_header(
 	if (buffer[header_len + sha_len] != '\n')
 		return -1;
 
-	if (git_oid_fromstr(oid, buffer + header_len) < 0)
+	if (git_oid_fromstr(oid, buffer + header_len, oid_type) < 0)
 		return -1;
 
 	*buffer_out = buffer + (header_len + sha_len + 1);
@@ -634,11 +636,17 @@ int git_object__write_oid_header(
 	const char *header,
 	const git_oid *oid)
 {
-	char hex_oid[GIT_OID_SHA1_HEXSIZE];
+	size_t hex_size = git_oid_hexsize(oid->type);
+	char hex_oid[GIT_OID_MAX_HEXSIZE];
+
+	if (!hex_size) {
+		git_error_set(GIT_ERROR_INVALID, "unknown type");
+		return -1;
+	}
 
 	git_oid_fmt(hex_oid, oid);
 	git_str_puts(buf, header);
-	git_str_put(buf, hex_oid, GIT_OID_SHA1_HEXSIZE);
+	git_str_put(buf, hex_oid, hex_size);
 	git_str_putc(buf, '\n');
 
 	return git_str_oom(buf) ? -1 : 0;

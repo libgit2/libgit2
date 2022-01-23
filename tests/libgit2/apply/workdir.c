@@ -12,7 +12,7 @@ void test_apply_workdir__initialize(void)
 
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
 
-	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
 	git_commit_free(commit);
@@ -42,8 +42,8 @@ void test_apply_workdir__generated_diff(void)
 	size_t workdir_expected_cnt = sizeof(workdir_expected) /
 		sizeof(struct merge_index_entry);
 
-	git_oid_fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707");
-	git_oid_fromstr(&b_oid, "7c7bf85e978f1d18c0566f702d2cb7766b9c8d4f"); cl_git_pass(git_commit_lookup(&a_commit, repo, &a_oid));
+	git_oid_fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1);
+	git_oid_fromstr(&b_oid, "7c7bf85e978f1d18c0566f702d2cb7766b9c8d4f", GIT_OID_SHA1); cl_git_pass(git_commit_lookup(&a_commit, repo, &a_oid));
 	cl_git_pass(git_commit_lookup(&b_commit, repo, &b_oid));
 
 	cl_git_pass(git_commit_tree(&a_tree, a_commit));
@@ -171,7 +171,7 @@ void test_apply_workdir__modified_index_with_unmodified_workdir_is_ok(void)
 
 	idx_entry.mode = 0100644;
 	idx_entry.path = "veal.txt";
-	cl_git_pass(git_oid_fromstr(&idx_entry.id, "ffb36e513f5fdf8a6ba850a20142676a2ac4807d"));
+	cl_git_pass(git_oid_fromstr(&idx_entry.id, "ffb36e513f5fdf8a6ba850a20142676a2ac4807d", GIT_OID_SHA1));
 
 	cl_git_pass(git_index_add(index, &idx_entry));
 	cl_git_pass(git_index_remove(index, "asparagus.txt", 0));

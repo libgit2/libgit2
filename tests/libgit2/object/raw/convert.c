@@ -11,7 +11,7 @@ void test_object_raw_convert__succeed_on_oid_to_string_conversion(void)
 	char *str;
 	int i;
 
-	cl_git_pass(git_oid_fromstr(&in, exp));
+	cl_git_pass(git_oid_fromstr(&in, exp, GIT_OID_SHA1));
 
 	/* NULL buffer pointer, returns static empty string */
 	str = git_oid_tostr(NULL, sizeof(out), &in);
@@ -55,7 +55,7 @@ void test_object_raw_convert__succeed_on_oid_to_string_conversion_big(void)
 	char big[GIT_OID_SHA1_HEXSIZE + 1 + 3]; /* note + 4 => big buffer */
 	char *str;
 
-	cl_git_pass(git_oid_fromstr(&in, exp));
+	cl_git_pass(git_oid_fromstr(&in, exp, GIT_OID_SHA1));
 
 	/* place some tail material */
 	big[GIT_OID_SHA1_HEXSIZE+0] = 'W'; /* should be '\0' afterwards */
@@ -88,7 +88,7 @@ void test_object_raw_convert__convert_oid_partially(void)
 	git_oid in;
 	char big[GIT_OID_SHA1_HEXSIZE + 1 + 3]; /* note + 4 => big buffer */
 
-	cl_git_pass(git_oid_fromstr(&in, exp));
+	cl_git_pass(git_oid_fromstr(&in, exp, GIT_OID_SHA1));
 
 	git_oid_nfmt(big, sizeof(big), &in);
 	cl_assert_equal_s(exp, big);

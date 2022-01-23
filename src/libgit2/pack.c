@@ -1002,7 +1002,7 @@ int get_delta_base(
 		*curpos += used;
 	} else if (type == GIT_OBJECT_REF_DELTA) {
 		git_oid base_oid;
-		git_oid_fromraw(&base_oid, base_info);
+		git_oid_fromraw(&base_oid, base_info, GIT_OID_SHA1);
 
 		/* If we have the cooperative cache, search in it first */
 		if (p->has_cache) {
@@ -1136,7 +1136,7 @@ static int packfile_open_locked(struct git_pack_file *p)
 
 	idx_sha1 = ((unsigned char *)p->index_map.data) + p->index_map.len - 40;
 
-	if (git_oid_raw_cmp(sha1, idx_sha1) != 0)
+	if (git_oid_raw_cmp(sha1, idx_sha1, GIT_OID_SHA1_SIZE) != 0)
 		goto cleanup;
 
 	if (git_mwindow_file_register(&p->mwf) < 0)
@@ -1362,7 +1362,7 @@ int git_pack_foreach_entry(
 			git_array_clear(oids);
 			GIT_ERROR_CHECK_ALLOC(oid);
 		}
-		git_oid_fromraw(oid, p->oids[i]);
+		git_oid_fromraw(oid, p->oids[i], GIT_OID_SHA1);
 	}
 
 	git_mutex_unlock(&p->lock);
@@ -1428,7 +1428,7 @@ int git_pack_foreach_entry_offset(
 						ntohl(*((uint32_t *)(large_offset_ptr + 4)));
 			}
 
-			git_oid_fromraw(&current_oid, (index + 20 * i));
+			git_oid_fromraw(&current_oid, (index + 20 * i), GIT_OID_SHA1);
 			if ((error = cb(&current_oid, current_offset, data)) != 0) {
 				error = git_error_set_after_callback(error);
 				goto cleanup;
@@ -1437,7 +1437,7 @@ int git_pack_foreach_entry_offset(
 	} else {
 		for (i = 0; i < p->num_objects; i++) {
 			current_offset = ntohl(*(const uint32_t *)(index + 24 * i));
-			git_oid_fromraw(&current_oid, (index + 24 * i + 4));
+			git_oid_fromraw(&current_oid, (index + 24 * i + 4), GIT_OID_SHA1);
 			if ((error = cb(&current_oid, current_offset, data)) != 0) {
 				error = git_error_set_after_callback(error);
 				goto cleanup;
@@ -1457,7 +1457,7 @@ int git_pack__lookup_sha1(const void *oid_lookup_table, size_t stride, unsigned 
 
 	while (lo < hi) {
 		unsigned mi = (lo + hi) / 2;
-		int cmp = git_oid_raw_cmp(base + mi * stride, oid_prefix);
+		int cmp = git_oid_raw_cmp(base + mi * stride, oid_prefix, GIT_OID_SHA1_SIZE);
 
 		if (!cmp)
 			return mi;
@@ -1566,7 +1566,7 @@ static int pack_entry_find_offset(
 	}
 
 	*offset_out = offset;
-	git_oid_fromraw(found_oid, current);
+	git_oid_fromraw(found_oid, current, GIT_OID_SHA1);
 
 #ifdef INDEX_DEBUG_LOOKUP
 	{

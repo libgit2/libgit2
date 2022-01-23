@@ -9,7 +9,7 @@ void test_commit_parent__initialize(void)
 
 	cl_git_pass(git_repository_open(&_repo, cl_fixture("testrepo.git")));
 
-	git_oid_fromstr(&oid, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	git_oid_fromstr(&oid, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, _repo, &oid));
 }
 

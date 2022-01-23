@@ -425,7 +425,7 @@ int git_tree__parse_raw(void *_tree, const char *data, size_t size)
 			entry->attr = attr;
 			entry->filename_len = (uint16_t)filename_len;
 			entry->filename = buffer;
-			git_oid_fromraw(&entry->oid, ((unsigned char *) buffer + filename_len + 1));
+			git_oid_fromraw(&entry->oid, ((unsigned char *) buffer + filename_len + 1), GIT_OID_SHA1);
 		}
 
 		buffer += filename_len + 1;

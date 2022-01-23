@@ -94,7 +94,7 @@ static int merge_branch(void)
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	int error;
 
-	cl_git_pass(git_oid_fromstr(&their_oids[0], MERGE_BRANCH_OID));
+	cl_git_pass(git_oid_fromstr(&their_oids[0], MERGE_BRANCH_OID, GIT_OID_SHA1));
 	cl_git_pass(git_annotated_commit_lookup(&their_head, repo, &their_oids[0]));
 
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;

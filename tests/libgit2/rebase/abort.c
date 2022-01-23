@@ -128,8 +128,8 @@ void test_rebase_abort__merge_by_id(void)
 	git_oid branch_id, onto_id;
 	git_annotated_commit *branch_head, *onto_head;
 
-	cl_git_pass(git_oid_fromstr(&branch_id, "b146bd7608eac53d9bf9e1a6963543588b555c64"));
-	cl_git_pass(git_oid_fromstr(&onto_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00"));
+	cl_git_pass(git_oid_fromstr(&branch_id, "b146bd7608eac53d9bf9e1a6963543588b555c64", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&onto_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00", GIT_OID_SHA1));
 
 	cl_git_pass(git_annotated_commit_lookup(&branch_head, repo, &branch_id));
 	cl_git_pass(git_annotated_commit_lookup(&onto_head, repo, &onto_id));
@@ -170,8 +170,8 @@ void test_rebase_abort__merge_by_id_immediately_after_init(void)
 	git_oid branch_id, onto_id;
 	git_annotated_commit *branch_head, *onto_head;
 
-	cl_git_pass(git_oid_fromstr(&branch_id, "b146bd7608eac53d9bf9e1a6963543588b555c64"));
-	cl_git_pass(git_oid_fromstr(&onto_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00"));
+	cl_git_pass(git_oid_fromstr(&branch_id, "b146bd7608eac53d9bf9e1a6963543588b555c64", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&onto_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00", GIT_OID_SHA1));
 
 	cl_git_pass(git_annotated_commit_lookup(&branch_head, repo, &branch_id));
 	cl_git_pass(git_annotated_commit_lookup(&onto_head, repo, &onto_id));
@@ -195,8 +195,8 @@ void test_rebase_abort__detached_head(void)
 	git_signature *signature;
 	git_annotated_commit *branch_head, *onto_head;
 
-	git_oid_fromstr(&branch_id, "b146bd7608eac53d9bf9e1a6963543588b555c64");
-    git_oid_fromstr(&onto_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00");
+	git_oid_fromstr(&branch_id, "b146bd7608eac53d9bf9e1a6963543588b555c64", GIT_OID_SHA1);
+    git_oid_fromstr(&onto_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00", GIT_OID_SHA1);
 
 	cl_git_pass(git_annotated_commit_lookup(&branch_head, repo, &branch_id));
 	cl_git_pass(git_annotated_commit_lookup(&onto_head, repo, &onto_id));

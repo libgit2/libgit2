@@ -99,7 +99,7 @@ static void merge_simple_branch(int merge_file_favor, int addl_checkout_strategy
 	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_SIMPLE_OID));
+	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_SIMPLE_OID, GIT_OID_SHA1));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &their_oids[0]));
 
 	merge_opts.file_favor = merge_file_favor;
@@ -180,14 +180,14 @@ void test_merge_workdir_simple__index_reload(void)
 	cl_git_pass(git_index_read(repo_index, 0));
 
 	entry.mode = GIT_FILEMODE_BLOB;
-	cl_git_pass(git_oid_fromstr(&entry.id, "11deab00b2d3a6f5a3073988ac050c2d7b6655e2"));
+	cl_git_pass(git_oid_fromstr(&entry.id, "11deab00b2d3a6f5a3073988ac050c2d7b6655e2", GIT_OID_SHA1));
 	entry.path = "automergeable.txt";
 	cl_git_pass(git_index_add(repo_index, &entry));
 
 	cl_git_pass(git_index_add_bypath(tmp_index, "automergeable.txt"));
 	cl_git_pass(git_index_write(tmp_index));
 
-	cl_git_pass(git_oid_fromstr(&their_oid, THEIRS_SIMPLE_OID));
+	cl_git_pass(git_oid_fromstr(&their_oid, THEIRS_SIMPLE_OID, GIT_OID_SHA1));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &their_oid));
 	cl_git_pass(git_merge(repo, (const git_annotated_commit **)their_heads, 1, NULL, NULL));
 
@@ -669,7 +669,7 @@ void test_merge_workdir_simple__directory_file(void)
 	cl_git_pass(git_commit_lookup(&head_commit, repo, &head_commit_id));
 	cl_git_pass(git_reset(repo, (git_object *)head_commit, GIT_RESET_HARD, NULL));
 
-	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_DIRECTORY_FILE));
+	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_DIRECTORY_FILE, GIT_OID_SHA1));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &their_oids[0]));
 
 	merge_opts.file_favor = 0;
@@ -700,7 +700,7 @@ void test_merge_workdir_simple__unrelated(void)
 		{ 0100644, "c8f06f2e3bb2964174677e91f0abead0e43c9e5d", 0, "unchanged.txt" },
 	};
 
-	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_UNRELATED_PARENT));
+	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_UNRELATED_PARENT, GIT_OID_SHA1));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &their_oids[0]));
 
 	merge_opts.file_favor = 0;
@@ -731,7 +731,7 @@ void test_merge_workdir_simple__unrelated_with_conflicts(void)
 		{ 0100644, "c8f06f2e3bb2964174677e91f0abead0e43c9e5d", 0, "unchanged.txt" },
 	};
 
-	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_UNRELATED_OID));
+	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_UNRELATED_OID, GIT_OID_SHA1));
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &their_oids[0]));
 
 	merge_opts.file_favor = 0;
@@ -755,8 +755,8 @@ void test_merge_workdir_simple__binary(void)
 		{ 0100644, "836b8b82b26cab22eaaed8820877c76d6c8bca19", 3, "binary" },
 	};
 
-	cl_git_pass(git_oid_fromstr(&our_oid, "cc338e4710c9b257106b8d16d82f86458d5beaf1"));
-	cl_git_pass(git_oid_fromstr(&their_oid, "ad01aebfdf2ac13145efafe3f9fcf798882f1730"));
+	cl_git_pass(git_oid_fromstr(&our_oid, "cc338e4710c9b257106b8d16d82f86458d5beaf1", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&their_oid, "ad01aebfdf2ac13145efafe3f9fcf798882f1730", GIT_OID_SHA1));
 
 	cl_git_pass(git_commit_lookup(&our_commit, repo, &our_oid));
 	cl_git_pass(git_reset(repo, (git_object *)our_commit, GIT_RESET_HARD, NULL));
@@ -770,7 +770,7 @@ void test_merge_workdir_simple__binary(void)
 	cl_git_pass(git_index_add_bypath(repo_index, "binary"));
 	cl_assert((binary_entry = git_index_get_bypath(repo_index, "binary", 0)) != NULL);
 
-	cl_git_pass(git_oid_fromstr(&our_file_oid, "23ed141a6ae1e798b2f721afedbe947c119111ba"));
+	cl_git_pass(git_oid_fromstr(&our_file_oid, "23ed141a6ae1e798b2f721afedbe947c119111ba", GIT_OID_SHA1));
 	cl_assert(git_oid_cmp(&binary_entry->id, &our_file_oid) == 0);
 
 	git_annotated_commit_free(their_head);

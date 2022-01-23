@@ -127,7 +127,7 @@ static int midx_parse_oid_lookup(
 	idx->oid_lookup = oid = (unsigned char *)(data + chunk_oid_lookup->offset);
 	prev_oid = zero_oid;
 	for (i = 0; i < idx->num_objects; ++i, oid += GIT_OID_SHA1_SIZE) {
-		if (git_oid_raw_cmp(prev_oid, oid) >= 0)
+		if (git_oid_raw_cmp(prev_oid, oid, GIT_OID_SHA1_SIZE) >= 0)
 			return midx_error("OID Lookup index is non-monotonic");
 		prev_oid = oid;
 	}
@@ -443,7 +443,7 @@ int git_midx_entry_find(
 		return midx_error("invalid index into the packfile names table");
 	e->pack_index = pack_index;
 	e->offset = offset;
-	git_oid_fromraw(&e->sha1, current);
+	git_oid_fromraw(&e->sha1, current, GIT_OID_SHA1);
 	return 0;
 }
 
@@ -459,7 +459,7 @@ int git_midx_foreach_entry(
 	GIT_ASSERT_ARG(idx);
 
 	for (i = 0; i < idx->num_objects; ++i) {
-		if ((error = git_oid_fromraw(&oid, &idx->oid_lookup[i * GIT_OID_SHA1_SIZE])) < 0)
+		if ((error = git_oid_fromraw(&oid, &idx->oid_lookup[i * GIT_OID_SHA1_SIZE], GIT_OID_SHA1)) < 0)
 			return error;
 
 		if ((error = cb(&oid, data)) != 0)

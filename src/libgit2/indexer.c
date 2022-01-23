@@ -444,6 +444,8 @@ static int store_object(git_indexer *idx)
 		git__free(pentry);
 		goto on_error;
 	}
+	oid.type = GIT_OID_SHA1;
+
 	entry_size = idx->off - entry_start;
 	if (entry_start > UINT31_MAX) {
 		entry->offset = UINT32_MAX;
@@ -1046,7 +1048,7 @@ static int fix_thin_pack(git_indexer *idx, git_indexer_progress *stats)
 		return -1;
 	}
 
-	git_oid_fromraw(&base, base_info);
+	git_oid_fromraw(&base, base_info, GIT_OID_SHA1);
 	git_mwindow_close(&w);
 
 	if (has_entry(idx, &base))

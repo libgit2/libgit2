@@ -150,7 +150,7 @@ static int commit_graph_parse_oid_lookup(
 	file->oid_lookup = oid = (unsigned char *)(data + chunk_oid_lookup->offset);
 	prev_oid = zero_oid;
 	for (i = 0; i < file->num_commits; ++i, oid += GIT_OID_SHA1_SIZE) {
-		if (git_oid_raw_cmp(prev_oid, oid) >= 0)
+		if (git_oid_raw_cmp(prev_oid, oid, GIT_OID_SHA1_SIZE) >= 0)
 			return commit_graph_error("OID Lookup index is non-monotonic");
 		prev_oid = oid;
 	}
@@ -437,7 +437,7 @@ static int git_commit_graph_entry_get_byindex(
 	}
 
 	commit_data = file->commit_data + pos * (GIT_OID_SHA1_SIZE + 4 * sizeof(uint32_t));
-	git_oid_fromraw(&e->tree_oid, commit_data);
+	git_oid_fromraw(&e->tree_oid, commit_data, GIT_OID_SHA1);
 	e->parent_indices[0] = ntohl(*((uint32_t *)(commit_data + GIT_OID_SHA1_SIZE)));
 	e->parent_indices[1] = ntohl(
 			*((uint32_t *)(commit_data + GIT_OID_SHA1_SIZE + sizeof(uint32_t))));
@@ -471,7 +471,7 @@ static int git_commit_graph_entry_get_byindex(
 		}
 	}
 
-	git_oid_fromraw(&e->sha1, &file->oid_lookup[pos * GIT_OID_SHA1_SIZE]);
+	git_oid_fromraw(&e->sha1, &file->oid_lookup[pos * GIT_OID_SHA1_SIZE], GIT_OID_SHA1);
 	return 0;
 }
 

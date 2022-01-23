@@ -61,6 +61,9 @@ static git_diff_delta *diff_delta__alloc(
 	}
 	delta->status = status;
 
+	git_oid_clear(&delta->old_file.id, GIT_OID_SHA1);
+	git_oid_clear(&delta->new_file.id, GIT_OID_SHA1);
+
 	return delta;
 }
 
@@ -188,11 +191,13 @@ static int diff_delta__from_one(
 		delta->old_file.size = entry->file_size;
 		delta->old_file.flags |= GIT_DIFF_FLAG_EXISTS;
 		git_oid_cpy(&delta->old_file.id, &entry->id);
+		git_oid_clear(&delta->new_file.id, GIT_OID_SHA1);
 		delta->old_file.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 	} else /* ADDED, IGNORED, UNTRACKED */ {
 		delta->new_file.mode = entry->mode;
 		delta->new_file.size = entry->file_size;
 		delta->new_file.flags |= GIT_DIFF_FLAG_EXISTS;
+		git_oid_clear(&delta->old_file.id, GIT_OID_SHA1);
 		git_oid_cpy(&delta->new_file.id, &entry->id);
 		delta->new_file.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 	}
@@ -598,6 +603,7 @@ int git_diff__oid_for_file(
 	entry.mode = mode;
 	entry.file_size = (uint32_t)size;
 	entry.path = (char *)path;
+	git_oid_clear(&entry.id, GIT_OID_SHA1);
 
 	return git_diff__oid_for_entry(out, diff, &entry, mode, NULL);
 }
@@ -618,7 +624,7 @@ int git_diff__oid_for_entry(
 	GIT_ASSERT(d->type == GIT_DIFF_TYPE_GENERATED);
 	diff = (git_diff_generated *)d;
 
-	memset(out, 0, sizeof(*out));
+	git_oid_clear(out, GIT_OID_SHA1);
 
 	if (git_repository_workdir_path(&full_path, diff->base.repo, entry.path) < 0)
 		return -1;
@@ -778,7 +784,7 @@ static int maybe_modified(
 	git_diff_generated *diff,
 	diff_in_progress *info)
 {
-	git_oid noid;
+	git_oid noid = GIT_OID_SHA1_ZERO;
 	git_delta_t status = GIT_DELTA_MODIFIED;
 	const git_index_entry *oitem = info->oitem;
 	const git_index_entry *nitem = info->nitem;
@@ -791,8 +797,6 @@ static int maybe_modified(
 
 	if (!diff_pathspec_match(&matched_pathspec, diff, oitem))
 		return 0;
-
-	memset(&noid, 0, sizeof(noid));
 
 	/* on platforms with no symlinks, preserve mode of existing symlinks */
 	if (S_ISLNK(omode) && S_ISREG(nmode) && new_is_workdir &&

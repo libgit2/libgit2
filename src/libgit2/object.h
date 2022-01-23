@@ -49,7 +49,8 @@ int git_object__parse_oid_header(
 	git_oid *oid,
 	const char **buffer_out,
 	const char *buffer_end,
-	const char *header);
+	const char *header,
+	git_oid_t oid_type);
 
 int git_object__write_oid_header(
 	git_str *buf,

@@ -33,7 +33,7 @@ void perf__do_merge(const char *fixture,
 	cl_git_pass(git_clone(&g_repo, fixture, test_name, &clone_opts));
 	perf__timer__stop(&t_clone);
 	
-	git_oid_fromstr(&oid_a, id_a);
+	git_oid_fromstr(&oid_a, id_a, GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit_a, g_repo, &oid_a));
 	cl_git_pass(git_branch_create(&ref_branch_a, g_repo,
 								  "A", commit_a,
@@ -45,7 +45,7 @@ void perf__do_merge(const char *fixture,
 
 	cl_git_pass(git_repository_set_head(g_repo, git_reference_name(ref_branch_a)));
 
-	git_oid_fromstr(&oid_b, id_b);
+	git_oid_fromstr(&oid_b, id_b, GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit_b, g_repo, &oid_b));
 	cl_git_pass(git_branch_create(&ref_branch_b, g_repo,
 								  "B", commit_b,

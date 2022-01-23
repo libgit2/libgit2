@@ -91,7 +91,7 @@ void test_object_cache__cache_counts(void)
 	for (i = 0; g_data[i].sha != NULL; ++i) {
 		int count = (int)git_cache_size(&g_repo->objects);
 
-		cl_git_pass(git_oid_fromstr(&oid, g_data[i].sha));
+		cl_git_pass(git_oid_fromstr(&oid, g_data[i].sha, GIT_OID_SHA1));
 
 		/* alternate between loading raw and parsed objects */
 		if ((i & 1) == 0) {
@@ -118,7 +118,7 @@ void test_object_cache__cache_counts(void)
 	for (i = 0; g_data[i].sha != NULL; ++i) {
 		int count = (int)git_cache_size(&g_repo->objects);
 
-		cl_git_pass(git_oid_fromstr(&oid, g_data[i].sha));
+		cl_git_pass(git_oid_fromstr(&oid, g_data[i].sha, GIT_OID_SHA1));
 		cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 		cl_assert(g_data[i].type == git_object_type(obj));
 		git_object_free(obj);
@@ -136,14 +136,14 @@ static void *cache_parsed(void *arg)
 	git_object *obj;
 
 	for (i = ((int *)arg)[1]; g_data[i].sha != NULL; i += 2) {
-		cl_git_pass(git_oid_fromstr(&oid, g_data[i].sha));
+		cl_git_pass(git_oid_fromstr(&oid, g_data[i].sha, GIT_OID_SHA1));
 		cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 		cl_assert(g_data[i].type == git_object_type(obj));
 		git_object_free(obj);
 	}
 
 	for (i = 0; i < ((int *)arg)[1]; i += 2) {
-		cl_git_pass(git_oid_fromstr(&oid, g_data[i].sha));
+		cl_git_pass(git_oid_fromstr(&oid, g_data[i].sha, GIT_OID_SHA1));
 		cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 		cl_assert(g_data[i].type == git_object_type(obj));
 		git_object_free(obj);
@@ -162,14 +162,14 @@ static void *cache_raw(void *arg)
 	cl_git_pass(git_repository_odb(&odb, g_repo));
 
 	for (i = ((int *)arg)[1]; g_data[i].sha != NULL; i += 2) {
-		cl_git_pass(git_oid_fromstr(&oid, g_data[i].sha));
+		cl_git_pass(git_oid_fromstr(&oid, g_data[i].sha, GIT_OID_SHA1));
 		cl_git_pass(git_odb_read(&odb_obj, odb, &oid));
 		cl_assert(g_data[i].type == git_odb_object_type(odb_obj));
 		git_odb_object_free(odb_obj);
 	}
 
 	for (i = 0; i < ((int *)arg)[1]; i += 2) {
-		cl_git_pass(git_oid_fromstr(&oid, g_data[i].sha));
+		cl_git_pass(git_oid_fromstr(&oid, g_data[i].sha, GIT_OID_SHA1));
 		cl_git_pass(git_odb_read(&odb_obj, odb, &oid));
 		cl_assert(g_data[i].type == git_odb_object_type(odb_obj));
 		git_odb_object_free(odb_obj);
@@ -234,7 +234,7 @@ static void *cache_quick(void *arg)
 	git_oid oid;
 	git_object *obj;
 
-	cl_git_pass(git_oid_fromstr(&oid, g_data[4].sha));
+	cl_git_pass(git_oid_fromstr(&oid, g_data[4].sha, GIT_OID_SHA1));
 	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 	cl_assert(g_data[4].type == git_object_type(obj));
 	git_object_free(obj);

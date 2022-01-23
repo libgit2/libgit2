@@ -25,9 +25,9 @@ void test_revwalk_mergebase__single1(void)
 	git_oid result, one, two, expected;
 	size_t ahead, behind;
 
-	cl_git_pass(git_oid_fromstr(&one, "c47800c7266a2be04c571c04d5a6614691ea99bd "));
-	cl_git_pass(git_oid_fromstr(&two, "9fd738e8f7967c078dceed8190330fc8648ee56a"));
-	cl_git_pass(git_oid_fromstr(&expected, "5b5b025afb0b4c913b4c338a42934a3863bf3644"));
+	cl_git_pass(git_oid_fromstr(&one, "c47800c7266a2be04c571c04d5a6614691ea99bd ", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&two, "9fd738e8f7967c078dceed8190330fc8648ee56a", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&expected, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1));
 
 	cl_git_pass(git_merge_base(&result, _repo, &one, &two));
 	cl_assert_equal_oid(&expected, &result);
@@ -46,9 +46,9 @@ void test_revwalk_mergebase__single2(void)
 	git_oid result, one, two, expected;
 	size_t ahead, behind;
 
-	cl_git_pass(git_oid_fromstr(&one, "763d71aadf09a7951596c9746c024e7eece7c7af"));
-	cl_git_pass(git_oid_fromstr(&two, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
-	cl_git_pass(git_oid_fromstr(&expected, "c47800c7266a2be04c571c04d5a6614691ea99bd"));
+	cl_git_pass(git_oid_fromstr(&one, "763d71aadf09a7951596c9746c024e7eece7c7af", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&two, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&expected, "c47800c7266a2be04c571c04d5a6614691ea99bd", GIT_OID_SHA1));
 
 	cl_git_pass(git_merge_base(&result, _repo, &one, &two));
 	cl_assert_equal_oid(&expected, &result);
@@ -67,9 +67,9 @@ void test_revwalk_mergebase__merged_branch(void)
 	git_oid result, one, two, expected;
 	size_t ahead, behind;
 
-	cl_git_pass(git_oid_fromstr(&one, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
-	cl_git_pass(git_oid_fromstr(&two, "9fd738e8f7967c078dceed8190330fc8648ee56a"));
-	cl_git_pass(git_oid_fromstr(&expected, "9fd738e8f7967c078dceed8190330fc8648ee56a"));
+	cl_git_pass(git_oid_fromstr(&one, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&two, "9fd738e8f7967c078dceed8190330fc8648ee56a", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&expected, "9fd738e8f7967c078dceed8190330fc8648ee56a", GIT_OID_SHA1));
 
 	cl_git_pass(git_merge_base(&result, _repo, &one, &two));
 	cl_assert_equal_oid(&expected, &result);
@@ -91,8 +91,8 @@ void test_revwalk_mergebase__two_way_merge(void)
 	git_oid one, two;
 	size_t ahead, behind;
 
-	cl_git_pass(git_oid_fromstr(&one, "9b219343610c88a1187c996d0dc58330b55cee28"));
-	cl_git_pass(git_oid_fromstr(&two, "a953a018c5b10b20c86e69fef55ebc8ad4c5a417"));
+	cl_git_pass(git_oid_fromstr(&one, "9b219343610c88a1187c996d0dc58330b55cee28", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&two, "a953a018c5b10b20c86e69fef55ebc8ad4c5a417", GIT_OID_SHA1));
 	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, _repo2, &one, &two));
 
 	cl_assert_equal_sz(ahead,  8);
@@ -110,8 +110,8 @@ void test_revwalk_mergebase__no_common_ancestor_returns_ENOTFOUND(void)
 	size_t ahead, behind;
 	int error;
 
-	cl_git_pass(git_oid_fromstr(&one, "763d71aadf09a7951596c9746c024e7eece7c7af"));
-	cl_git_pass(git_oid_fromstr(&two, "e90810b8df3e80c413d903f631643c716887138d"));
+	cl_git_pass(git_oid_fromstr(&one, "763d71aadf09a7951596c9746c024e7eece7c7af", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&two, "e90810b8df3e80c413d903f631643c716887138d", GIT_OID_SHA1));
 
 	error = git_merge_base(&result, _repo, &one, &two);
 	cl_git_fail(error);
@@ -127,9 +127,9 @@ void test_revwalk_mergebase__prefer_youngest_merge_base(void)
 {
 	git_oid result, one, two, expected;
 
-	cl_git_pass(git_oid_fromstr(&one, "a4a7dce85cf63874e984719f4fdd239f5145052f"));
-	cl_git_pass(git_oid_fromstr(&two, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
-	cl_git_pass(git_oid_fromstr(&expected, "c47800c7266a2be04c571c04d5a6614691ea99bd"));
+	cl_git_pass(git_oid_fromstr(&one, "a4a7dce85cf63874e984719f4fdd239f5145052f", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&two, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&expected, "c47800c7266a2be04c571c04d5a6614691ea99bd", GIT_OID_SHA1));
 
 	cl_git_pass(git_merge_base(&result, _repo, &one, &two));
 	cl_assert_equal_oid(&expected, &result);
@@ -140,10 +140,10 @@ void test_revwalk_mergebase__multiple_merge_bases(void)
 	git_oid one, two, expected1, expected2;
 	git_oidarray result = {NULL, 0};
 
-	cl_git_pass(git_oid_fromstr(&one, "a4a7dce85cf63874e984719f4fdd239f5145052f"));
-	cl_git_pass(git_oid_fromstr(&two, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
-	cl_git_pass(git_oid_fromstr(&expected1, "c47800c7266a2be04c571c04d5a6614691ea99bd"));
-	cl_git_pass(git_oid_fromstr(&expected2, "9fd738e8f7967c078dceed8190330fc8648ee56a"));
+	cl_git_pass(git_oid_fromstr(&one, "a4a7dce85cf63874e984719f4fdd239f5145052f", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&two, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&expected1, "c47800c7266a2be04c571c04d5a6614691ea99bd", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&expected2, "9fd738e8f7967c078dceed8190330fc8648ee56a", GIT_OID_SHA1));
 
 	cl_git_pass(git_merge_bases(&result, _repo, &one, &two));
 	cl_assert_equal_i(2, result.count);
@@ -160,10 +160,10 @@ void test_revwalk_mergebase__multiple_merge_bases_many_commits(void)
 
 	git_oid *input = git__malloc(sizeof(git_oid) * 2);
 
-	cl_git_pass(git_oid_fromstr(&input[0], "a4a7dce85cf63874e984719f4fdd239f5145052f"));
-	cl_git_pass(git_oid_fromstr(&input[1], "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
-	cl_git_pass(git_oid_fromstr(&expected1, "c47800c7266a2be04c571c04d5a6614691ea99bd"));
-	cl_git_pass(git_oid_fromstr(&expected2, "9fd738e8f7967c078dceed8190330fc8648ee56a"));
+	cl_git_pass(git_oid_fromstr(&input[0], "a4a7dce85cf63874e984719f4fdd239f5145052f", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&input[1], "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&expected1, "c47800c7266a2be04c571c04d5a6614691ea99bd", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&expected2, "9fd738e8f7967c078dceed8190330fc8648ee56a", GIT_OID_SHA1));
 
 	cl_git_pass(git_merge_bases_many(&result, _repo, 2, input));
 	cl_assert_equal_i(2, result.count);
@@ -178,8 +178,8 @@ void test_revwalk_mergebase__no_off_by_one_missing(void)
 {
 	git_oid result, one, two;
 
-	cl_git_pass(git_oid_fromstr(&one, "1a443023183e3f2bfbef8ac923cd81c1018a18fd"));
-	cl_git_pass(git_oid_fromstr(&two, "9f13f7d0a9402c681f91dc590cf7b5470e6a77d2"));
+	cl_git_pass(git_oid_fromstr(&one, "1a443023183e3f2bfbef8ac923cd81c1018a18fd", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&two, "9f13f7d0a9402c681f91dc590cf7b5470e6a77d2", GIT_OID_SHA1));
 	cl_git_pass(git_merge_base(&result, _repo, &one, &two));
 }
 
@@ -201,7 +201,7 @@ static void assert_mergebase_many(const char *expected_sha, int count, ...)
 
 	for (i = 0; i < count; ++i) {
 		partial_oid = va_arg(ap, char *);
-		cl_git_pass(git_oid_fromstrn(&oid, partial_oid, strlen(partial_oid)));
+		cl_git_pass(git_oid_fromstrn(&oid, partial_oid, strlen(partial_oid), GIT_OID_SHA1));
 
 		cl_git_pass(git_object_lookup_prefix(&object, _repo, &oid, strlen(partial_oid), GIT_OBJECT_COMMIT));
 		git_oid_cpy(&oids[i], git_object_id(object));
@@ -214,7 +214,7 @@ static void assert_mergebase_many(const char *expected_sha, int count, ...)
 		cl_assert_equal_i(GIT_ENOTFOUND, git_merge_base_many(&oid, _repo, count, oids));
 	else {
 		cl_git_pass(git_merge_base_many(&oid, _repo, count, oids));
-		cl_git_pass(git_oid_fromstr(&expected, expected_sha));
+		cl_git_pass(git_oid_fromstr(&expected, expected_sha, GIT_OID_SHA1));
 
 		cl_assert_equal_oid(&expected, &oid);
 	}
@@ -265,7 +265,7 @@ static void assert_mergebase_octopus(const char *expected_sha, int count, ...)
 
 	for (i = 0; i < count; ++i) {
 		partial_oid = va_arg(ap, char *);
-		cl_git_pass(git_oid_fromstrn(&oid, partial_oid, strlen(partial_oid)));
+		cl_git_pass(git_oid_fromstrn(&oid, partial_oid, strlen(partial_oid), GIT_OID_SHA1));
 
 		cl_git_pass(git_object_lookup_prefix(&object, _repo, &oid, strlen(partial_oid), GIT_OBJECT_COMMIT));
 		git_oid_cpy(&oids[i], git_object_id(object));
@@ -278,7 +278,7 @@ static void assert_mergebase_octopus(const char *expected_sha, int count, ...)
 		cl_assert_equal_i(GIT_ENOTFOUND, git_merge_base_octopus(&oid, _repo, count, oids));
 	else {
 		cl_git_pass(git_merge_base_octopus(&oid, _repo, count, oids));
-		cl_git_pass(git_oid_fromstr(&expected, expected_sha));
+		cl_git_pass(git_oid_fromstr(&expected, expected_sha, GIT_OID_SHA1));
 
 		cl_assert_equal_oid(&expected, &oid);
 	}
@@ -501,9 +501,9 @@ void test_revwalk_mergebase__remove_redundant(void)
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("redundant.git")));
 
-	cl_git_pass(git_oid_fromstr(&one, "d89137c93ba1ee749214ff4ce52ae9137bc833f9"));
-	cl_git_pass(git_oid_fromstr(&two, "91f4b95df4a59504a9813ba66912562931d990e3"));
-	cl_git_pass(git_oid_fromstr(&base, "6cb1f2352d974e1c5a776093017e8772416ac97a"));
+	cl_git_pass(git_oid_fromstr(&one, "d89137c93ba1ee749214ff4ce52ae9137bc833f9", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&two, "91f4b95df4a59504a9813ba66912562931d990e3", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&base, "6cb1f2352d974e1c5a776093017e8772416ac97a", GIT_OID_SHA1));
 
 	cl_git_pass(git_merge_bases(&result, repo, &one, &two));
 	cl_assert_equal_i(1, result.count);

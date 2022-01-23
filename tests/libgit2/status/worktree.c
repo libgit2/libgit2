@@ -516,17 +516,20 @@ void test_status_worktree__conflict_with_diff3(void)
 	ancestor_entry.path = "modified_file";
 	ancestor_entry.mode = 0100644;
 	git_oid_fromstr(&ancestor_entry.id,
-		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a",
+		GIT_OID_SHA1);
 
 	our_entry.path = "modified_file";
 	our_entry.mode = 0100644;
 	git_oid_fromstr(&our_entry.id,
-		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a",
+		GIT_OID_SHA1);
 
 	their_entry.path = "modified_file";
 	their_entry.mode = 0100644;
 	git_oid_fromstr(&their_entry.id,
-		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a",
+		GIT_OID_SHA1);
 
 	cl_git_pass(git_status_file(&status, repo, "modified_file"));
 	cl_assert_equal_i(GIT_STATUS_WT_MODIFIED, status);
@@ -712,17 +715,20 @@ void test_status_worktree__conflicted_item(void)
 	ancestor_entry.mode = 0100644;
 	ancestor_entry.path = "modified_file";
 	git_oid_fromstr(&ancestor_entry.id,
-		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a",
+		GIT_OID_SHA1);
 
 	our_entry.mode = 0100644;
 	our_entry.path = "modified_file";
 	git_oid_fromstr(&our_entry.id,
-		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a",
+		GIT_OID_SHA1);
 
 	their_entry.mode = 0100644;
 	their_entry.path = "modified_file";
 	git_oid_fromstr(&their_entry.id,
-		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a",
+		GIT_OID_SHA1);
 
 	cl_git_pass(git_status_file(&status, repo, "modified_file"));
 	cl_assert_equal_i(GIT_STATUS_WT_MODIFIED, status);
@@ -748,7 +754,7 @@ void test_status_worktree__conflict_has_no_oid(void)
 
 	entry.mode = 0100644;
 	entry.path = "modified_file";
-	git_oid_fromstr(&entry.id, "452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+	git_oid_fromstr(&entry.id, "452e4244b5d083ddf0460acf1ecc74db9dcfa11a", GIT_OID_SHA1);
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_conflict_add(index, &entry, &entry, &entry));

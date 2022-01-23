@@ -381,6 +381,7 @@ int git_diff_patchid(git_oid *out, git_diff *diff, git_diff_patchid_options *opt
 	if ((error = (flush_hunk(&args.result, &args.ctx))) < 0)
 		goto out;
 
+	args.result.type = GIT_OID_SHA1;
 	git_oid_cpy(out, &args.result);
 
 out:

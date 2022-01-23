@@ -185,9 +185,9 @@ static void do_conflicted_diff(diff_expects *exp, unsigned long flags)
 	ancestor.path = ours.path = theirs.path = "staged_changes";
 	ancestor.mode = ours.mode = theirs.mode = GIT_FILEMODE_BLOB;
 
-	git_oid_fromstr(&ancestor.id, "d427e0b2e138501a3d15cc376077a3631e15bd46");
-	git_oid_fromstr(&ours.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf");
-	git_oid_fromstr(&theirs.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863");
+	git_oid_fromstr(&ancestor.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
+	git_oid_fromstr(&ours.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf", GIT_OID_SHA1);
+	git_oid_fromstr(&theirs.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", GIT_OID_SHA1);
 
 	cl_git_pass(git_index_conflict_add(index, &ancestor, &ours, &theirs));
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, a, index, &opts));
@@ -255,7 +255,7 @@ void test_diff_index__not_in_head_conflicted(void)
 
 	theirs.path = "file_not_in_head";
 	theirs.mode = GIT_FILEMODE_BLOB;
-	git_oid_fromstr(&theirs.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863");
+	git_oid_fromstr(&theirs.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", GIT_OID_SHA1);
 	cl_git_pass(git_index_conflict_add(index, NULL, NULL, &theirs));
 
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, a, index, NULL));

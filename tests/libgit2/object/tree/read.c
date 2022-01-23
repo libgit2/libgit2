@@ -25,7 +25,7 @@ void test_object_tree_read__loaded(void)
 	git_oid id;
 	git_tree *tree;
 
-	git_oid_fromstr(&id, tree_oid);
+	git_oid_fromstr(&id, tree_oid, GIT_OID_SHA1);
 
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 
@@ -48,7 +48,7 @@ void test_object_tree_read__two(void)
 	const git_tree_entry *entry;
 	git_object *obj;
 
-	git_oid_fromstr(&id, tree_oid);
+	git_oid_fromstr(&id, tree_oid, GIT_OID_SHA1);
 
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 

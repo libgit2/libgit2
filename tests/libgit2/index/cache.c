@@ -26,7 +26,7 @@ void test_index_cache__write_extension_at_root(void)
 
 	cl_git_pass(git_index_open(&index, index_file));
 	cl_assert(index->tree == NULL);
-	cl_git_pass(git_oid_fromstr(&id, tree_id_str));
+	cl_git_pass(git_oid_fromstr(&id, tree_id_str, GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 	cl_git_pass(git_index_read_tree(index, tree));
 	git_tree_free(tree);
@@ -58,7 +58,7 @@ void test_index_cache__write_extension_invalidated_root(void)
 
 	cl_git_pass(git_index_open(&index, index_file));
 	cl_assert(index->tree == NULL);
-	cl_git_pass(git_oid_fromstr(&id, tree_id_str));
+	cl_git_pass(git_oid_fromstr(&id, tree_id_str, GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 	cl_git_pass(git_index_read_tree(index, tree));
 	git_tree_free(tree);
@@ -98,7 +98,7 @@ void test_index_cache__read_tree_no_children(void)
 
 	cl_git_pass(git_index_new(&index));
 	cl_assert(index->tree == NULL);
-	cl_git_pass(git_oid_fromstr(&id, "45dd856fdd4d89b884c340ba0e047752d9b085d6"));
+	cl_git_pass(git_oid_fromstr(&id, "45dd856fdd4d89b884c340ba0e047752d9b085d6", GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 	cl_git_pass(git_index_read_tree(index, tree));
 	git_tree_free(tree);
@@ -111,7 +111,7 @@ void test_index_cache__read_tree_no_children(void)
 	memset(&entry, 0x0, sizeof(git_index_entry));
 	entry.path = "new.txt";
 	entry.mode = GIT_FILEMODE_BLOB;
-	git_oid_fromstr(&entry.id, "d4bcc68acd4410bf836a39f20afb2c2ece09584e");
+	git_oid_fromstr(&entry.id, "d4bcc68acd4410bf836a39f20afb2c2ece09584e", GIT_OID_SHA1);
 
 	cl_git_pass(git_index_add(index, &entry));
 	cl_assert_equal_i(-1, index->tree->entry_count);
@@ -132,7 +132,7 @@ void test_index_cache__two_levels(void)
 
 	memset(&entry, 0x0, sizeof(entry));
 	entry.mode = GIT_FILEMODE_BLOB;
-	cl_git_pass(git_oid_fromstr(&entry.id, "a8233120f6ad708f843d861ce2b7228ec4e3dec6"));
+	cl_git_pass(git_oid_fromstr(&entry.id, "a8233120f6ad708f843d861ce2b7228ec4e3dec6", GIT_OID_SHA1));
 	entry.path = "top-level.txt";
 	cl_git_pass(git_index_add(index, &entry));
 
@@ -156,7 +156,7 @@ void test_index_cache__two_levels(void)
 	cl_assert(git_tree_cache_get(index->tree, "subdir"));
 
 	entry.path = "top-level.txt";
-	cl_git_pass(git_oid_fromstr(&entry.id, "3697d64be941a53d4ae8f6a271e4e3fa56b022cc"));
+	cl_git_pass(git_oid_fromstr(&entry.id, "3697d64be941a53d4ae8f6a271e4e3fa56b022cc", GIT_OID_SHA1));
 	cl_git_pass(git_index_add(index, &entry));
 
 	/* writ out the index after we invalidate the root */
@@ -191,7 +191,7 @@ void test_index_cache__read_tree_children(void)
 	memset(&entry, 0x0, sizeof(git_index_entry));
 	entry.path = "top-level";
 	entry.mode = GIT_FILEMODE_BLOB;
-	git_oid_fromstr(&entry.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf");
+	git_oid_fromstr(&entry.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf", GIT_OID_SHA1);
 	cl_git_pass(git_index_add(index, &entry));
 
 
@@ -217,7 +217,7 @@ void test_index_cache__read_tree_children(void)
 
 	/* override with a slightly different id, also dummy */
 	entry.path = "subdir/some-file";
-	git_oid_fromstr(&entry.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf");
+	git_oid_fromstr(&entry.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf", GIT_OID_SHA1);
 	cl_git_pass(git_index_add(index, &entry));
 
 	cl_assert_equal_i(-1, index->tree->entry_count);

@@ -53,7 +53,7 @@ void cl_reflog_check_entry_(git_repository *repo, const char *reflog, size_t idx
 			git_object_free(obj);
 		} else {
 			git_oid *oid = git__calloc(1, sizeof(*oid));
-			git_oid_fromstr(oid, old_spec);
+			git_oid_fromstr(oid, old_spec, GIT_OID_SHA1);
 			if (git_oid_cmp(oid, git_reflog_entry_id_old(entry)) != 0) {
 				git_object__write_oid_header(&result, "\tOld OID: \"", oid);
 				git_object__write_oid_header(&result, "\" != \"", git_reflog_entry_id_old(entry));
@@ -73,7 +73,7 @@ void cl_reflog_check_entry_(git_repository *repo, const char *reflog, size_t idx
 			git_object_free(obj);
 		} else {
 			git_oid *oid = git__calloc(1, sizeof(*oid));
-			git_oid_fromstr(oid, new_spec);
+			git_oid_fromstr(oid, new_spec, GIT_OID_SHA1);
 			if (git_oid_cmp(oid, git_reflog_entry_id_new(entry)) != 0) {
 				git_object__write_oid_header(&result, "\tNew OID: \"", oid);
 				git_object__write_oid_header(&result, "\" != \"", git_reflog_entry_id_new(entry));

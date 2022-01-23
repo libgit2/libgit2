@@ -37,7 +37,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	git_commit_graph_entry e;
 	git_str commit_graph_buf = GIT_STR_INIT;
 	unsigned char hash[GIT_HASH_SHA1_SIZE];
-	git_oid oid = {{0}};
+	git_oid oid = GIT_OID_NONE;
 	bool append_hash = false;
 
 	if (size < 4)

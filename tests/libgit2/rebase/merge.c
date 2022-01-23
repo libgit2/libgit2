@@ -46,8 +46,8 @@ void test_rebase_merge__next(void)
 	git_oid pick_id, file1_id;
 	git_oid master_id, beef_id;
 
-	git_oid_fromstr(&master_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00");
-	git_oid_fromstr(&beef_id, "b146bd7608eac53d9bf9e1a6963543588b555c64");
+	git_oid_fromstr(&master_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00", GIT_OID_SHA1);
+	git_oid_fromstr(&beef_id, "b146bd7608eac53d9bf9e1a6963543588b555c64", GIT_OID_SHA1);
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
@@ -65,7 +65,7 @@ void test_rebase_merge__next(void)
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 
-	git_oid_fromstr(&pick_id, "da9c51a23d02d931a486f45ad18cda05cf5d2b94");
+	git_oid_fromstr(&pick_id, "da9c51a23d02d931a486f45ad18cda05cf5d2b94", GIT_OID_SHA1);
 
 	cl_assert_equal_i(GIT_REBASE_OPERATION_PICK, rebase_operation->type);
 	cl_assert_equal_oid(&pick_id, &rebase_operation->id);
@@ -78,7 +78,7 @@ void test_rebase_merge__next(void)
 
 	cl_assert_equal_s("beef.txt", status_entry->head_to_index->new_file.path);
 
-	git_oid_fromstr(&file1_id, "8d95ea62e621f1d38d230d9e7d206e41096d76af");
+	git_oid_fromstr(&file1_id, "8d95ea62e621f1d38d230d9e7d206e41096d76af", GIT_OID_SHA1);
 	cl_assert_equal_oid(&file1_id, &status_entry->head_to_index->new_file.id);
 
 	git_status_list_free(status_list);
@@ -129,7 +129,7 @@ void test_rebase_merge__next_with_conflicts(void)
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 
-	git_oid_fromstr(&pick_id, "33f915f9e4dbd9f4b24430e48731a59b45b15500");
+	git_oid_fromstr(&pick_id, "33f915f9e4dbd9f4b24430e48731a59b45b15500", GIT_OID_SHA1);
 
 	cl_assert_equal_i(GIT_REBASE_OPERATION_PICK, rebase_operation->type);
 	cl_assert_equal_oid(&pick_id, &rebase_operation->id);
@@ -230,11 +230,11 @@ void test_rebase_merge__commit(void)
 
 	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
 
-	git_oid_fromstr(&parent_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00");
+	git_oid_fromstr(&parent_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00", GIT_OID_SHA1);
 	cl_assert_equal_i(1, git_commit_parentcount(commit));
 	cl_assert_equal_oid(&parent_id, git_commit_parent_id(commit, 0));
 
-	git_oid_fromstr(&tree_id, "4461379789c777d2a6c1f2ee0e9d6c86731b9992");
+	git_oid_fromstr(&tree_id, "4461379789c777d2a6c1f2ee0e9d6c86731b9992", GIT_OID_SHA1);
 	cl_assert_equal_oid(&tree_id, git_commit_tree_id(commit));
 
 	cl_assert_equal_s(NULL, git_commit_message_encoding(commit));
@@ -275,8 +275,8 @@ void test_rebase_merge__commit_with_id(void)
 	git_reflog *reflog;
 	const git_reflog_entry *reflog_entry;
 
-	cl_git_pass(git_oid_fromstr(&branch_id, "b146bd7608eac53d9bf9e1a6963543588b555c64"));
-	cl_git_pass(git_oid_fromstr(&upstream_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00"));
+	cl_git_pass(git_oid_fromstr(&branch_id, "b146bd7608eac53d9bf9e1a6963543588b555c64", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&upstream_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00", GIT_OID_SHA1));
 
 	cl_git_pass(git_annotated_commit_lookup(&branch_head, repo, &branch_id));
 	cl_git_pass(git_annotated_commit_lookup(&upstream_head, repo, &upstream_id));
@@ -289,11 +289,11 @@ void test_rebase_merge__commit_with_id(void)
 
 	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
 
-	git_oid_fromstr(&parent_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00");
+	git_oid_fromstr(&parent_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00", GIT_OID_SHA1);
 	cl_assert_equal_i(1, git_commit_parentcount(commit));
 	cl_assert_equal_oid(&parent_id, git_commit_parent_id(commit, 0));
 
-	git_oid_fromstr(&tree_id, "4461379789c777d2a6c1f2ee0e9d6c86731b9992");
+	git_oid_fromstr(&tree_id, "4461379789c777d2a6c1f2ee0e9d6c86731b9992", GIT_OID_SHA1);
 	cl_assert_equal_oid(&tree_id, git_commit_tree_id(commit));
 
 	cl_assert_equal_s(NULL, git_commit_message_encoding(commit));
@@ -551,8 +551,8 @@ void test_rebase_merge__finish_with_ids(void)
 	const git_reflog_entry *reflog_entry;
 	int error;
 
-	cl_git_pass(git_oid_fromstr(&branch_id, "d616d97082eb7bb2dc6f180a7cca940993b7a56f"));
-	cl_git_pass(git_oid_fromstr(&upstream_id, "f87d14a4a236582a0278a916340a793714256864"));
+	cl_git_pass(git_oid_fromstr(&branch_id, "d616d97082eb7bb2dc6f180a7cca940993b7a56f", GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&upstream_id, "f87d14a4a236582a0278a916340a793714256864", GIT_OID_SHA1));
 
 	cl_git_pass(git_annotated_commit_lookup(&branch_head, repo, &branch_id));
 	cl_git_pass(git_annotated_commit_lookup(&upstream_head, repo, &upstream_id));
@@ -627,7 +627,7 @@ void test_rebase_merge__no_common_ancestor(void)
 
 	cl_git_pass(git_rebase_finish(rebase, signature));
 
-	git_oid_fromstr(&expected_final_id, "71e7ee8d4fe7d8bf0d107355197e0a953dfdb7f3");
+	git_oid_fromstr(&expected_final_id, "71e7ee8d4fe7d8bf0d107355197e0a953dfdb7f3", GIT_OID_SHA1);
 	cl_assert_equal_oid(&expected_final_id, &commit_id);
 
 	git_annotated_commit_free(branch_head);
@@ -823,7 +823,7 @@ void test_rebase_merge__with_directories(void)
 	git_oid commit_id, tree_id;
 	git_commit *commit;
 
-	git_oid_fromstr(&tree_id, "a4d6d9c3d57308fd8e320cf2525bae8f1adafa57");
+	git_oid_fromstr(&tree_id, "a4d6d9c3d57308fd8e320cf2525bae8f1adafa57", GIT_OID_SHA1);
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/deep_gravy"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));

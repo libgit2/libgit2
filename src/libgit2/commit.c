@@ -411,7 +411,8 @@ static int commit_parse(git_commit *commit, const char *data, size_t size, unsig
 	/* The tree is always the first field */
 	if (!(flags & GIT_COMMIT_PARSE_QUICK)) {
 		if (git_object__parse_oid_header(&commit->tree_id,
-				&buffer, buffer_end, "tree ") < 0)
+				&buffer, buffer_end, "tree ",
+				GIT_OID_SHA1) < 0)
 			goto bad_buffer;
 	} else {
 		size_t tree_len = strlen("tree ") + GIT_OID_SHA1_HEXSIZE + 1;
@@ -425,7 +426,8 @@ static int commit_parse(git_commit *commit, const char *data, size_t size, unsig
 	 */
 
 	while (git_object__parse_oid_header(&parent_id,
-			&buffer, buffer_end, "parent ") == 0) {
+			&buffer, buffer_end, "parent ",
+			GIT_OID_SHA1) == 0) {
 		git_oid *new_id = git_array_alloc(commit->parent_ids);
 		GIT_ERROR_CHECK_ALLOC(new_id);
 

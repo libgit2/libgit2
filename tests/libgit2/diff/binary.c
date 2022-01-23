@@ -31,12 +31,12 @@ static void test_patch(
 	git_patch *patch;
 	git_buf actual = GIT_BUF_INIT;
 
-	cl_git_pass(git_oid_fromstr(&id_one, one));
+	cl_git_pass(git_oid_fromstr(&id_one, one, GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit_one, repo, &id_one));
 	cl_git_pass(git_commit_tree(&tree_one, commit_one));
 
 	if (two) {
-		cl_git_pass(git_oid_fromstr(&id_two, two));
+		cl_git_pass(git_oid_fromstr(&id_two, two, GIT_OID_SHA1));
 		cl_git_pass(git_commit_lookup(&commit_two, repo, &id_two));
 		cl_git_pass(git_commit_tree(&tree_two, commit_two));
 	} else {
@@ -289,7 +289,7 @@ void test_diff_binary__empty_for_no_diff(void)
 
 	repo = cl_git_sandbox_init("renames");
 
-	cl_git_pass(git_oid_fromstr(&id, "19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13"));
+	cl_git_pass(git_oid_fromstr(&id, "19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, repo, &id));
 	cl_git_pass(git_commit_tree(&tree, commit));
 
@@ -510,8 +510,8 @@ void test_diff_binary__blob_to_blob(void)
 	cl_git_pass(git_index_add_bypath(index, "untimely.txt"));
 	cl_git_pass(git_index_write(index));
 
-	git_oid_fromstr(&old_id, "9a69d960ae94b060f56c2a8702545e2bb1abb935");
-	git_oid_fromstr(&new_id, "1111d4f11f4b35bf6759e0fb714fe09731ef0840");
+	git_oid_fromstr(&old_id, "9a69d960ae94b060f56c2a8702545e2bb1abb935", GIT_OID_SHA1);
+	git_oid_fromstr(&new_id, "1111d4f11f4b35bf6759e0fb714fe09731ef0840", GIT_OID_SHA1);
 
 	cl_git_pass(git_blob_lookup(&old_blob, repo, &old_id));
 	cl_git_pass(git_blob_lookup(&new_blob, repo, &new_id));
