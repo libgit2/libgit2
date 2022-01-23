@@ -600,3 +600,31 @@ int git_object_rawcontent_is_valid(
 
 	return error;
 }
+
+int git_object__parse_oid_header(
+	git_oid *oid,
+	const char **buffer_out,
+	const char *buffer_end,
+	const char *header)
+{
+	const size_t sha_len = GIT_OID_SHA1_HEXSIZE;
+	const size_t header_len = strlen(header);
+
+	const char *buffer = *buffer_out;
+
+	if (buffer + (header_len + sha_len + 1) > buffer_end)
+		return -1;
+
+	if (memcmp(buffer, header, header_len) != 0)
+		return -1;
+
+	if (buffer[header_len + sha_len] != '\n')
+		return -1;
+
+	if (git_oid_fromstr(oid, buffer + header_len) < 0)
+		return -1;
+
+	*buffer_out = buffer + (header_len + sha_len + 1);
+
+	return 0;
+}

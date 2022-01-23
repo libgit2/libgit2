@@ -45,7 +45,11 @@ int git_object__resolve_to_type(git_object **obj, git_object_t type);
 
 git_object_t git_object_stringn2type(const char *str, size_t len);
 
-int git_oid__parse(git_oid *oid, const char **buffer_out, const char *buffer_end, const char *header);
+int git_object__parse_oid_header(
+	git_oid *oid,
+	const char **buffer_out,
+	const char *buffer_end,
+	const char *header);
 
 void git_oid__writebuf(git_str *buf, const char *header, const git_oid *oid);
 

@@ -143,32 +143,6 @@ char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
 	return out;
 }
 
-int git_oid__parse(
-	git_oid *oid, const char **buffer_out,
-	const char *buffer_end, const char *header)
-{
-	const size_t sha_len = GIT_OID_SHA1_HEXSIZE;
-	const size_t header_len = strlen(header);
-
-	const char *buffer = *buffer_out;
-
-	if (buffer + (header_len + sha_len + 1) > buffer_end)
-		return -1;
-
-	if (memcmp(buffer, header, header_len) != 0)
-		return -1;
-
-	if (buffer[header_len + sha_len] != '\n')
-		return -1;
-
-	if (git_oid_fromstr(oid, buffer + header_len) < 0)
-		return -1;
-
-	*buffer_out = buffer + (header_len + sha_len + 1);
-
-	return 0;
-}
-
 void git_oid__writebuf(git_str *buf, const char *header, const git_oid *oid)
 {
 	char hex_oid[GIT_OID_SHA1_HEXSIZE];
