@@ -171,7 +171,7 @@ GIT_INLINE(int) rebase_readoid(
 	if ((error = rebase_readfile(str_out, state_path, filename)) < 0)
 		return error;
 
-	if (str_out->size != GIT_OID_HEXSZ || git_oid_fromstr(out, str_out->ptr) < 0) {
+	if (str_out->size != GIT_OID_SHA1_HEXSIZE || git_oid_fromstr(out, str_out->ptr) < 0) {
 		git_error_set(GIT_ERROR_REBASE, "the file '%s' contains an invalid object ID", filename);
 		return -1;
 	}
@@ -442,7 +442,7 @@ static const char *rebase_onto_name(const git_annotated_commit *onto)
 static int rebase_setupfiles_merge(git_rebase *rebase)
 {
 	git_str commit_filename = GIT_STR_INIT;
-	char id_str[GIT_OID_HEXSZ];
+	char id_str[GIT_OID_SHA1_HEXSIZE];
 	git_rebase_operation *operation;
 	size_t i;
 	int error = 0;
@@ -460,7 +460,7 @@ static int rebase_setupfiles_merge(git_rebase *rebase)
 		git_oid_fmt(id_str, &operation->id);
 
 		if ((error = rebase_setupfile(rebase, commit_filename.ptr, 0,
-				"%.*s\n", GIT_OID_HEXSZ, id_str)) < 0)
+				"%.*s\n", GIT_OID_SHA1_HEXSIZE, id_str)) < 0)
 			goto done;
 	}
 
@@ -471,7 +471,7 @@ done:
 
 static int rebase_setupfiles(git_rebase *rebase)
 {
-	char onto[GIT_OID_HEXSZ], orig_head[GIT_OID_HEXSZ];
+	char onto[GIT_OID_SHA1_HEXSIZE], orig_head[GIT_OID_SHA1_HEXSIZE];
 	const char *orig_head_name;
 
 	git_oid_fmt(onto, &rebase->onto_id);
@@ -487,8 +487,8 @@ static int rebase_setupfiles(git_rebase *rebase)
 
 	if (git_repository__set_orig_head(rebase->repo, &rebase->orig_head_id) < 0 ||
 		rebase_setupfile(rebase, HEAD_NAME_FILE, 0, "%s\n", orig_head_name) < 0 ||
-		rebase_setupfile(rebase, ONTO_FILE, 0, "%.*s\n", GIT_OID_HEXSZ, onto) < 0 ||
-		rebase_setupfile(rebase, ORIG_HEAD_FILE, 0, "%.*s\n", GIT_OID_HEXSZ, orig_head) < 0 ||
+		rebase_setupfile(rebase, ONTO_FILE, 0, "%.*s\n", GIT_OID_SHA1_HEXSIZE, onto) < 0 ||
+		rebase_setupfile(rebase, ORIG_HEAD_FILE, 0, "%.*s\n", GIT_OID_SHA1_HEXSIZE, orig_head) < 0 ||
 		rebase_setupfile(rebase, QUIET_FILE, 0, rebase->quiet ? "t\n" : "\n") < 0)
 		return -1;
 
@@ -803,7 +803,7 @@ static int rebase_next_merge(
 	git_indexwriter indexwriter = GIT_INDEXWRITER_INIT;
 	git_rebase_operation *operation;
 	git_checkout_options checkout_opts;
-	char current_idstr[GIT_OID_HEXSZ];
+	char current_idstr[GIT_OID_SHA1_HEXSIZE];
 	unsigned int parent_count;
 	int error;
 
@@ -832,7 +832,7 @@ static int rebase_next_merge(
 
 	if ((error = git_indexwriter_init_for_operation(&indexwriter, rebase->repo, &checkout_opts.checkout_strategy)) < 0 ||
 		(error = rebase_setupfile(rebase, MSGNUM_FILE, 0, "%" PRIuZ "\n", rebase->current+1)) < 0 ||
-		(error = rebase_setupfile(rebase, CURRENT_FILE, 0, "%.*s\n", GIT_OID_HEXSZ, current_idstr)) < 0 ||
+		(error = rebase_setupfile(rebase, CURRENT_FILE, 0, "%.*s\n", GIT_OID_SHA1_HEXSIZE, current_idstr)) < 0 ||
 		(error = git_merge_trees(&index, rebase->repo, parent_tree, head_tree, current_tree, &rebase->options.merge_options)) < 0 ||
 		(error = git_merge__check_result(rebase->repo, index)) < 0 ||
 		(error = git_checkout_index(rebase->repo, index, &checkout_opts)) < 0 ||
@@ -1092,7 +1092,7 @@ static int rebase_commit_merge(
 	git_reference *head = NULL;
 	git_commit *head_commit = NULL, *commit = NULL;
 	git_index *index = NULL;
-	char old_idstr[GIT_OID_HEXSZ], new_idstr[GIT_OID_HEXSZ];
+	char old_idstr[GIT_OID_SHA1_HEXSIZE], new_idstr[GIT_OID_SHA1_HEXSIZE];
 	int error;
 
 	operation = git_array_get(rebase->operations, rebase->current);
@@ -1112,7 +1112,7 @@ static int rebase_commit_merge(
 	git_oid_fmt(new_idstr, git_commit_id(commit));
 
 	if ((error = rebase_setupfile(rebase, REWRITTEN_FILE, O_CREAT|O_WRONLY|O_APPEND,
-		"%.*s %.*s\n", GIT_OID_HEXSZ, old_idstr, GIT_OID_HEXSZ, new_idstr)) < 0)
+		"%.*s %.*s\n", GIT_OID_SHA1_HEXSIZE, old_idstr, GIT_OID_SHA1_HEXSIZE, new_idstr)) < 0)
 		goto done;
 
 	git_oid_cpy(commit_id, git_commit_id(commit));
@@ -1331,8 +1331,8 @@ static int rebase_copy_notes(
 		tostr = end+1;
 		*end = '\0';
 
-		if (strlen(fromstr) != GIT_OID_HEXSZ ||
-			strlen(tostr) != GIT_OID_HEXSZ ||
+		if (strlen(fromstr) != GIT_OID_SHA1_HEXSIZE ||
+			strlen(tostr) != GIT_OID_SHA1_HEXSIZE ||
 			git_oid_fromstr(&from, fromstr) < 0 ||
 			git_oid_fromstr(&to, tostr) < 0)
 			goto on_error;
@@ -1362,14 +1362,14 @@ static int return_to_orig_head(git_rebase *rebase)
 	git_reference *terminal_ref = NULL, *branch_ref = NULL, *head_ref = NULL;
 	git_commit *terminal_commit = NULL;
 	git_str branch_msg = GIT_STR_INIT, head_msg = GIT_STR_INIT;
-	char onto[GIT_OID_HEXSZ];
+	char onto[GIT_OID_SHA1_HEXSIZE];
 	int error = 0;
 
 	git_oid_fmt(onto, &rebase->onto_id);
 
 	if ((error = git_str_printf(&branch_msg,
 			"rebase finished: %s onto %.*s",
-			rebase->orig_head_name, GIT_OID_HEXSZ, onto)) == 0 &&
+			rebase->orig_head_name, GIT_OID_SHA1_HEXSIZE, onto)) == 0 &&
 		(error = git_str_printf(&head_msg,
 			"rebase finished: returning to %s",
 			rebase->orig_head_name)) == 0 &&

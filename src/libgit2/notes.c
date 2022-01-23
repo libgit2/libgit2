@@ -460,7 +460,7 @@ int git_note_commit_read(
 {
 	int error;
 	git_tree *tree = NULL;
-	char target[GIT_OID_HEXSZ + 1];
+	char target[GIT_OID_SHA1_HEXSIZE + 1];
 
 	git_oid_tostr(target, sizeof(target), oid);
 
@@ -507,7 +507,7 @@ int git_note_commit_create(
 {
 	int error;
 	git_tree *tree = NULL;
-	char target[GIT_OID_HEXSZ + 1];
+	char target[GIT_OID_SHA1_HEXSIZE + 1];
 
 	git_oid_tostr(target, sizeof(target), oid);
 
@@ -578,7 +578,7 @@ int git_note_commit_remove(
 {
 	int error;
 	git_tree *tree = NULL;
-	char target[GIT_OID_HEXSZ + 1];
+	char target[GIT_OID_SHA1_HEXSIZE + 1];
 
 	git_oid_tostr(target, sizeof(target), oid);
 
@@ -698,7 +698,7 @@ static int process_entry_path(
 	buf.ptr[j] = '\0';
 	buf.size = j;
 
-	if (j != GIT_OID_HEXSZ) {
+	if (j != GIT_OID_SHA1_HEXSIZE) {
 		/* This is not a note entry */
 		goto cleanup;
 	}

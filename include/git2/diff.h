@@ -274,7 +274,7 @@ typedef struct {
 
 	/**
 	 * Represents the known length of the `id` field, when
-	 * converted to a hex string.  It is generally `GIT_OID_HEXSZ`, unless this
+	 * converted to a hex string.  It is generally `GIT_OID_SHA1_HEXSIZE`, unless this
 	 * delta was created from reading a patch file, in which case it may be
 	 * abbreviated to something reasonable, like 7 characters.
 	 */

@@ -74,7 +74,7 @@ struct entry_short {
 	uint32_t uid;
 	uint32_t gid;
 	uint32_t file_size;
-	unsigned char oid[GIT_OID_RAWSZ];
+	unsigned char oid[GIT_OID_SHA1_SIZE];
 	uint16_t flags;
 	char path[1]; /* arbitrary length */
 };
@@ -88,7 +88,7 @@ struct entry_long {
 	uint32_t uid;
 	uint32_t gid;
 	uint32_t file_size;
-	unsigned char oid[GIT_OID_RAWSZ];
+	unsigned char oid[GIT_OID_SHA1_SIZE];
 	uint16_t flags;
 	uint16_t flags_extended;
 	char path[1]; /* arbitrary length */
@@ -2968,7 +2968,7 @@ static int create_reuc_extension_data(git_str *reuc_buf, git_index_reuc_entry *r
 	}
 
 	for (i = 0; i < 3; i++) {
-		if (reuc->mode[i] && (error = git_str_put(reuc_buf, (char *)&reuc->oid[i].id, GIT_OID_RAWSZ)) < 0)
+		if (reuc->mode[i] && (error = git_str_put(reuc_buf, (char *)&reuc->oid[i].id, GIT_OID_SHA1_SIZE)) < 0)
 			return error;
 	}
 

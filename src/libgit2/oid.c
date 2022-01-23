@@ -39,10 +39,10 @@ int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 	if (!length)
 		return oid_error_invalid("too short");
 
-	if (length > GIT_OID_HEXSZ)
+	if (length > GIT_OID_SHA1_HEXSIZE)
 		return oid_error_invalid("too long");
 
-	memset(out->id, 0, GIT_OID_RAWSZ);
+	memset(out->id, 0, GIT_OID_SHA1_SIZE);
 
 	for (p = 0; p < length; p++) {
 		v = git__fromhex(str[p]);
@@ -62,7 +62,7 @@ int git_oid_fromstrp(git_oid *out, const char *str)
 
 int git_oid_fromstr(git_oid *out, const char *str)
 {
-	return git_oid_fromstrn(out, str, GIT_OID_HEXSZ);
+	return git_oid_fromstrn(out, str, GIT_OID_SHA1_HEXSIZE);
 }
 
 GIT_INLINE(char) *fmt_one(char *str, unsigned int val)
@@ -80,9 +80,9 @@ int git_oid_nfmt(char *str, size_t n, const git_oid *oid)
 		memset(str, 0, n);
 		return 0;
 	}
-	if (n > GIT_OID_HEXSZ) {
-		memset(&str[GIT_OID_HEXSZ], 0, n - GIT_OID_HEXSZ);
-		n = GIT_OID_HEXSZ;
+	if (n > GIT_OID_SHA1_HEXSIZE) {
+		memset(&str[GIT_OID_SHA1_HEXSIZE], 0, n - GIT_OID_SHA1_HEXSIZE);
+		n = GIT_OID_SHA1_HEXSIZE;
 	}
 
 	max_i = n / 2;
@@ -98,7 +98,7 @@ int git_oid_nfmt(char *str, size_t n, const git_oid *oid)
 
 int git_oid_fmt(char *str, const git_oid *oid)
 {
-	return git_oid_nfmt(str, GIT_OID_HEXSZ, oid);
+	return git_oid_nfmt(str, GIT_OID_SHA1_HEXSIZE, oid);
 }
 
 int git_oid_pathfmt(char *str, const git_oid *oid)
@@ -116,16 +116,16 @@ int git_oid_pathfmt(char *str, const git_oid *oid)
 char *git_oid_tostr_s(const git_oid *oid)
 {
 	char *str = GIT_THREADSTATE->oid_fmt;
-	git_oid_nfmt(str, GIT_OID_HEXSZ + 1, oid);
+	git_oid_nfmt(str, GIT_OID_SHA1_HEXSIZE + 1, oid);
 	return str;
 }
 
 char *git_oid_allocfmt(const git_oid *oid)
 {
-	char *str = git__malloc(GIT_OID_HEXSZ + 1);
+	char *str = git__malloc(GIT_OID_SHA1_HEXSIZE + 1);
 	if (!str)
 		return NULL;
-	git_oid_nfmt(str, GIT_OID_HEXSZ + 1, oid);
+	git_oid_nfmt(str, GIT_OID_SHA1_HEXSIZE + 1, oid);
 	return str;
 }
 
@@ -134,8 +134,8 @@ char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
 	if (!out || n == 0)
 		return "";
 
-	if (n > GIT_OID_HEXSZ + 1)
-		n = GIT_OID_HEXSZ + 1;
+	if (n > GIT_OID_SHA1_HEXSIZE + 1)
+		n = GIT_OID_SHA1_HEXSIZE + 1;
 
 	git_oid_nfmt(out, n - 1, oid); /* allow room for terminating NUL */
 	out[n - 1] = '\0';
@@ -147,7 +147,7 @@ int git_oid__parse(
 	git_oid *oid, const char **buffer_out,
 	const char *buffer_end, const char *header)
 {
-	const size_t sha_len = GIT_OID_HEXSZ;
+	const size_t sha_len = GIT_OID_SHA1_HEXSIZE;
 	const size_t header_len = strlen(header);
 
 	const char *buffer = *buffer_out;
@@ -171,11 +171,11 @@ int git_oid__parse(
 
 void git_oid__writebuf(git_str *buf, const char *header, const git_oid *oid)
 {
-	char hex_oid[GIT_OID_HEXSZ];
+	char hex_oid[GIT_OID_SHA1_HEXSIZE];
 
 	git_oid_fmt(hex_oid, oid);
 	git_str_puts(buf, header);
-	git_str_put(buf, hex_oid, GIT_OID_HEXSZ);
+	git_str_put(buf, hex_oid, GIT_OID_SHA1_HEXSIZE);
 	git_str_putc(buf, '\n');
 }
 
@@ -211,7 +211,7 @@ int git_oid_strcmp(const git_oid *oid_a, const char *str)
 	unsigned char strval;
 	int hexval;
 
-	for (a = oid_a->id; *str && (a - oid_a->id) < GIT_OID_RAWSZ; ++a) {
+	for (a = oid_a->id; *str && (a - oid_a->id) < GIT_OID_SHA1_SIZE; ++a) {
 		if ((hexval = git__fromhex(*str++)) < 0)
 			return -1;
 		strval = (unsigned char)(hexval << 4);
@@ -236,7 +236,7 @@ int git_oid_is_zero(const git_oid *oid_a)
 {
 	const unsigned char *a = oid_a->id;
 	unsigned int i;
-	for (i = 0; i < GIT_OID_RAWSZ; ++i, ++a)
+	for (i = 0; i < GIT_OID_SHA1_SIZE; ++i, ++a)
 		if (*a != 0)
 			return 0;
 	return 1;
@@ -393,7 +393,7 @@ int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid)
 	idx = 0;
 	is_leaf = false;
 
-	for (i = 0; i < GIT_OID_HEXSZ; ++i) {
+	for (i = 0; i < GIT_OID_SHA1_HEXSIZE; ++i) {
 		int c = git__fromhex(text_oid[i]);
 		trie_node *node;
 

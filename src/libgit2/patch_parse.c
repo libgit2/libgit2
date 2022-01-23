@@ -168,12 +168,12 @@ static int parse_header_oid(
 {
 	size_t len;
 
-	for (len = 0; len < ctx->parse_ctx.line_len && len < GIT_OID_HEXSZ; len++) {
+	for (len = 0; len < ctx->parse_ctx.line_len && len < GIT_OID_SHA1_HEXSIZE; len++) {
 		if (!git__isxdigit(ctx->parse_ctx.line[len]))
 			break;
 	}
 
-	if (len < GIT_OID_MINPREFIXLEN || len > GIT_OID_HEXSZ ||
+	if (len < GIT_OID_MINPREFIXLEN || len > GIT_OID_SHA1_HEXSIZE ||
 		git_oid_fromstrn(oid, ctx->parse_ctx.line, len) < 0)
 		return git_parse_err("invalid hex formatted object id at line %"PRIuZ,
 			ctx->parse_ctx.line_num);

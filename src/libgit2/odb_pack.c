@@ -177,7 +177,7 @@ static int pack_entry_find(struct git_pack_entry *e,
  * a prefix of an identifier.
  * Sets GIT_EAMBIGUOUS if short oid is ambiguous.
  * This method assumes that len is between
- * GIT_OID_MINPREFIXLEN and GIT_OID_HEXSZ.
+ * GIT_OID_MINPREFIXLEN and GIT_OID_SHA1_HEXSIZE.
  */
 static int pack_entry_find_prefix(
 	struct git_pack_entry *e,
@@ -273,7 +273,7 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 	size_t i;
 
 	if (backend->midx &&
-		git_midx_entry_find(&midx_entry, backend->midx, oid, GIT_OID_HEXSZ) == 0 &&
+		git_midx_entry_find(&midx_entry, backend->midx, oid, GIT_OID_SHA1_HEXSIZE) == 0 &&
 		midx_entry.pack_index < git_vector_length(&backend->midx_packs)) {
 		e->offset = midx_entry.offset;
 		git_oid_cpy(&e->sha1, &midx_entry.sha1);
@@ -282,21 +282,21 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 	}
 
 	if (last_found &&
-		git_pack_entry_find(e, last_found, oid, GIT_OID_HEXSZ) == 0)
+		git_pack_entry_find(e, last_found, oid, GIT_OID_SHA1_HEXSIZE) == 0)
 		return 0;
 
 	git_vector_foreach(&backend->packs, i, p) {
 		if (p == last_found)
 			continue;
 
-		if (git_pack_entry_find(e, p, oid, GIT_OID_HEXSZ) == 0) {
+		if (git_pack_entry_find(e, p, oid, GIT_OID_SHA1_HEXSIZE) == 0) {
 			backend->last_found = p;
 			return 0;
 		}
 	}
 
 	return git_odb__error_notfound(
-		"failed to find pack entry", oid, GIT_OID_HEXSZ);
+		"failed to find pack entry", oid, GIT_OID_SHA1_HEXSIZE);
 }
 
 static int pack_entry_find_prefix(
@@ -605,7 +605,7 @@ static int pack_backend__read_prefix(
 	if (len < GIT_OID_MINPREFIXLEN)
 		error = git_odb__error_ambiguous("prefix length too short");
 
-	else if (len >= GIT_OID_HEXSZ) {
+	else if (len >= GIT_OID_SHA1_HEXSIZE) {
 		/* We can fall back to regular read method */
 		error = pack_backend__read(buffer_p, len_p, type_p, backend, short_oid);
 		if (!error)

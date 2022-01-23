@@ -347,8 +347,8 @@ static int write_object(
 		goto done;
 
 	if (type == GIT_OBJECT_REF_DELTA) {
-		if ((error = write_cb(po->delta->id.id, GIT_OID_RAWSZ, cb_data)) < 0 ||
-			(error = git_hash_update(&pb->ctx, po->delta->id.id, GIT_OID_RAWSZ)) < 0)
+		if ((error = write_cb(po->delta->id.id, GIT_OID_SHA1_SIZE, cb_data)) < 0 ||
+			(error = git_hash_update(&pb->ctx, po->delta->id.id, GIT_OID_SHA1_SIZE)) < 0)
 			goto done;
 	}
 
@@ -668,7 +668,7 @@ static int write_pack(git_packbuilder *pb,
 	if ((error = git_hash_final(entry_oid.id, &pb->ctx)) < 0)
 		goto done;
 
-	error = write_cb(entry_oid.id, GIT_OID_RAWSZ, cb_data);
+	error = write_cb(entry_oid.id, GIT_OID_SHA1_SIZE, cb_data);
 
 done:
 	/* if callback cancelled writing, we must still free delta_data */

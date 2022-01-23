@@ -708,7 +708,7 @@ void test_repo_init__defaultbranch_config_empty(void)
 void test_repo_init__longpath(void)
 {
 #ifdef GIT_WIN32
-	size_t padding = CONST_STRLEN("objects/pack/pack-.pack.lock") + GIT_OID_HEXSZ;
+	size_t padding = CONST_STRLEN("objects/pack/pack-.pack.lock") + GIT_OID_SHA1_HEXSIZE;
 	size_t max, i;
 	git_str path = GIT_STR_INIT;
 	git_repository *one = NULL, *two = NULL;

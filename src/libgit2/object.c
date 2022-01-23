@@ -193,10 +193,10 @@ int git_object_lookup_prefix(
 	if (error < 0)
 		return error;
 
-	if (len > GIT_OID_HEXSZ)
-		len = GIT_OID_HEXSZ;
+	if (len > GIT_OID_SHA1_HEXSIZE)
+		len = GIT_OID_SHA1_HEXSIZE;
 
-	if (len == GIT_OID_HEXSZ) {
+	if (len == GIT_OID_SHA1_HEXSIZE) {
 		git_cached_obj *cached = NULL;
 
 		/* We want to match the full id : we can first look up in the cache,
@@ -234,7 +234,7 @@ int git_object_lookup_prefix(
 
 		git_oid__cpy_prefix(&short_oid, id, len);
 
-		/* If len < GIT_OID_HEXSZ (a strict short oid was given), we have
+		/* If len < GIT_OID_SHA1_HEXSIZE (a strict short oid was given), we have
 		 * 2 options :
 		 * - We always search in the cache first. If we find that short oid is
 		 *	ambiguous, we can stop. But in all the other cases, we must then
@@ -259,7 +259,7 @@ int git_object_lookup_prefix(
 }
 
 int git_object_lookup(git_object **object_out, git_repository *repo, const git_oid *id, git_object_t type) {
-	return git_object_lookup_prefix(object_out, repo, id, GIT_OID_HEXSZ, type);
+	return git_object_lookup_prefix(object_out, repo, id, GIT_OID_SHA1_HEXSIZE, type);
 }
 
 void git_object_free(git_object *object)
@@ -358,12 +358,12 @@ static int dereference_object(git_object **dereferenced, git_object *obj)
 static int peel_error(int error, const git_oid *oid, git_object_t type)
 {
 	const char *type_name;
-	char hex_oid[GIT_OID_HEXSZ + 1];
+	char hex_oid[GIT_OID_SHA1_HEXSIZE + 1];
 
 	type_name = git_object_type2string(type);
 
 	git_oid_fmt(hex_oid, oid);
-	hex_oid[GIT_OID_HEXSZ] = '\0';
+	hex_oid[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	git_error_set(GIT_ERROR_OBJECT, "the git_object of id '%s' can not be "
 		"successfully peeled into a %s (git_object_t=%i).", hex_oid, type_name, type);
@@ -516,7 +516,7 @@ static int git_object__short_id(git_str *out, const git_object *obj)
 	if ((error = git_repository_odb(&odb, repo)) < 0)
 		return error;
 
-	while (len < GIT_OID_HEXSZ) {
+	while (len < GIT_OID_SHA1_HEXSIZE) {
 		/* set up short oid */
 		memcpy(&id.id, &obj->cached.oid.id, (len + 1) / 2);
 		if (len & 1)

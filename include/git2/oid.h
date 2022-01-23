@@ -20,10 +20,10 @@
 GIT_BEGIN_DECL
 
 /** Size (in bytes) of a raw/binary oid */
-#define GIT_OID_RAWSZ 20
+#define GIT_OID_SHA1_SIZE 20
 
 /** Size (in bytes) of a hex formatted oid */
-#define GIT_OID_HEXSZ (GIT_OID_RAWSZ * 2)
+#define GIT_OID_SHA1_HEXSIZE (GIT_OID_SHA1_SIZE * 2)
 
 /** Minimum length (in number of hex characters,
  * i.e. packets of 4 bits) of an oid prefix */
@@ -32,7 +32,7 @@ GIT_BEGIN_DECL
 /** Unique identity of any object (commit, tree, blob, tag). */
 typedef struct git_oid {
 	/** raw binary formatted id */
-	unsigned char id[GIT_OID_RAWSZ];
+	unsigned char id[GIT_OID_SHA1_SIZE];
 } git_oid;
 
 /**
@@ -94,7 +94,7 @@ GIT_EXTERN(int) git_oid_fmt(char *out, const git_oid *id);
  * Format a git_oid into a partial hex string.
  *
  * @param out output hex string; you say how many bytes to write.
- *		If the number of bytes is > GIT_OID_HEXSZ, extra bytes
+ *		If the number of bytes is > GIT_OID_SHA1_HEXSIZE, extra bytes
  *		will be zeroed; if not, a '\0' terminator is NOT added.
  * @param n number of characters to write into out string
  * @param id oid structure to format.
@@ -134,7 +134,7 @@ GIT_EXTERN(char *) git_oid_tostr_s(const git_oid *oid);
 /**
  * Format a git_oid into a buffer as a hex format c-string.
  *
- * If the buffer is smaller than GIT_OID_HEXSZ+1, then the resulting
+ * If the buffer is smaller than GIT_OID_SHA1_HEXSIZE+1, then the resulting
  * oid c-string will be truncated to n-1 characters (but will still be
  * NUL-byte terminated).
  *

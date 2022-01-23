@@ -76,17 +76,17 @@ void test_object_raw_compare__compare_fmt_oids(void)
 {
 	const char *exp = "16a0123456789abcdef4b775213c23a8bd74f5e0";
 	git_oid in;
-	char out[GIT_OID_HEXSZ + 1];
+	char out[GIT_OID_SHA1_HEXSIZE + 1];
 
 	cl_git_pass(git_oid_fromstr(&in, exp));
 
 	/* Format doesn't touch the last byte */
-	out[GIT_OID_HEXSZ] = 'Z';
+	out[GIT_OID_SHA1_HEXSIZE] = 'Z';
 	git_oid_fmt(out, &in);
-	cl_assert(out[GIT_OID_HEXSZ] == 'Z');
+	cl_assert(out[GIT_OID_SHA1_HEXSIZE] == 'Z');
 
 	/* Format produced the right result */
-	out[GIT_OID_HEXSZ] = '\0';
+	out[GIT_OID_SHA1_HEXSIZE] = '\0';
 	cl_assert_equal_s(exp, out);
 }
 
@@ -108,16 +108,16 @@ void test_object_raw_compare__compare_pathfmt_oids(void)
 	const char *exp1 = "16a0123456789abcdef4b775213c23a8bd74f5e0";
 	const char *exp2 = "16/a0123456789abcdef4b775213c23a8bd74f5e0";
 	git_oid in;
-	char out[GIT_OID_HEXSZ + 2];
+	char out[GIT_OID_SHA1_HEXSIZE + 2];
 
 	cl_git_pass(git_oid_fromstr(&in, exp1));
 
 	/* Format doesn't touch the last byte */
-	out[GIT_OID_HEXSZ + 1] = 'Z';
+	out[GIT_OID_SHA1_HEXSIZE + 1] = 'Z';
 	git_oid_pathfmt(out, &in);
-	cl_assert(out[GIT_OID_HEXSZ + 1] == 'Z');
+	cl_assert(out[GIT_OID_SHA1_HEXSIZE + 1] == 'Z');
 
 	/* Format produced the right result */
-	out[GIT_OID_HEXSZ + 1] = '\0';
+	out[GIT_OID_SHA1_HEXSIZE + 1] = '\0';
 	cl_assert_equal_s(exp2, out);
 }

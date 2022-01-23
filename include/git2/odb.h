@@ -117,7 +117,7 @@ GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *i
  * This method queries all available ODB backends
  * trying to match the 'len' first hexadecimal
  * characters of the 'short_id'.
- * The remaining (GIT_OID_HEXSZ-len)*4 bits of
+ * The remaining (GIT_OID_SHA1_HEXSIZE-len)*4 bits of
  * 'short_id' must be 0s.
  * 'len' must be at least GIT_OID_MINPREFIXLEN,
  * and the prefix must be long enough to identify
@@ -218,7 +218,7 @@ typedef struct git_odb_expand_id {
  *
  * The given array will be updated in place: for each abbreviated ID that is
  * unique in the database, and of the given type (if specified),
- * the full object ID, object ID length (`GIT_OID_HEXSZ`) and type will be
+ * the full object ID, object ID length (`GIT_OID_SHA1_HEXSIZE`) and type will be
  * written back to the array. For IDs that are not found (or are ambiguous),
  * the array entry will be zeroed.
  *

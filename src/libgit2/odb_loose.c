@@ -60,11 +60,11 @@ typedef struct loose_backend {
  */
 typedef struct {
 	size_t dir_len;
-	unsigned char short_oid[GIT_OID_HEXSZ]; /* hex formatted oid to match */
+	unsigned char short_oid[GIT_OID_SHA1_HEXSIZE]; /* hex formatted oid to match */
 	size_t short_oid_len;
 	int found;				/* number of matching
 						 * objects already found */
-	unsigned char res_oid[GIT_OID_HEXSZ];	/* hex formatted oid of
+	unsigned char res_oid[GIT_OID_SHA1_HEXSIZE];	/* hex formatted oid of
 						 * the object found */
 } loose_locate_object_state;
 
@@ -81,7 +81,7 @@ static int object_file_name(
 	size_t alloclen;
 
 	/* expand length for object root + 40 hex sha1 chars + 2 * '/' + '\0' */
-	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, be->objects_dirlen, GIT_OID_HEXSZ);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, be->objects_dirlen, GIT_OID_SHA1_HEXSIZE);
 	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, alloclen, 3);
 	if (git_str_grow(name, alloclen) < 0)
 		return -1;
@@ -91,7 +91,7 @@ static int object_file_name(
 
 	/* loose object filename: aa/aaa... (41 bytes) */
 	git_oid_pathfmt(name->ptr + name->size, id);
-	name->size += GIT_OID_HEXSZ + 1;
+	name->size += GIT_OID_SHA1_HEXSIZE + 1;
 	name->ptr[name->size] = '\0';
 
 	return 0;
@@ -462,7 +462,7 @@ static int locate_object(
 static int fn_locate_object_short_oid(void *state, git_str *pathbuf) {
 	loose_locate_object_state *sstate = (loose_locate_object_state *)state;
 
-	if (git_str_len(pathbuf) - sstate->dir_len != GIT_OID_HEXSZ - 2) {
+	if (git_str_len(pathbuf) - sstate->dir_len != GIT_OID_SHA1_HEXSIZE - 2) {
 		/* Entry cannot be an object. Continue to next entry */
 		return 0;
 	}
@@ -477,7 +477,7 @@ static int fn_locate_object_short_oid(void *state, git_str *pathbuf) {
 			if (!sstate->found) {
 				sstate->res_oid[0] = sstate->short_oid[0];
 				sstate->res_oid[1] = sstate->short_oid[1];
-				memcpy(sstate->res_oid+2, pathbuf->ptr+sstate->dir_len, GIT_OID_HEXSZ-2);
+				memcpy(sstate->res_oid+2, pathbuf->ptr+sstate->dir_len, GIT_OID_SHA1_HEXSIZE-2);
 			}
 			sstate->found++;
 		}
@@ -503,7 +503,7 @@ static int locate_object_short_oid(
 	int error;
 
 	/* prealloc memory for OBJ_DIR/xx/xx..38x..xx */
-	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, dir_len, GIT_OID_HEXSZ);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, dir_len, GIT_OID_SHA1_HEXSIZE);
 	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 3);
 	if (git_str_grow(object_location, alloc_len) < 0)
 		return -1;
@@ -550,7 +550,7 @@ static int locate_object_short_oid(
 		return error;
 
 	/* Update the location according to the oid obtained */
-	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, dir_len, GIT_OID_HEXSZ);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, dir_len, GIT_OID_SHA1_HEXSIZE);
 	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
 
 	git_str_truncate(object_location, dir_len);
@@ -559,7 +559,7 @@ static int locate_object_short_oid(
 
 	git_oid_pathfmt(object_location->ptr + dir_len, res_oid);
 
-	object_location->size += GIT_OID_HEXSZ + 1;
+	object_location->size += GIT_OID_SHA1_HEXSIZE + 1;
 	object_location->ptr[object_location->size] = '\0';
 
 	return 0;
@@ -595,7 +595,7 @@ static int loose_backend__read_header(size_t *len_p, git_object_t *type_p, git_o
 
 	if (locate_object(&object_path, (loose_backend *)backend, oid) < 0) {
 		error = git_odb__error_notfound("no matching loose object",
-			oid, GIT_OID_HEXSZ);
+			oid, GIT_OID_SHA1_HEXSIZE);
 	} else if ((error = read_header_loose(&raw, &object_path)) == 0) {
 		*len_p = raw.len;
 		*type_p = raw.type;
@@ -617,7 +617,7 @@ static int loose_backend__read(void **buffer_p, size_t *len_p, git_object_t *typ
 
 	if (locate_object(&object_path, (loose_backend *)backend, oid) < 0) {
 		error = git_odb__error_notfound("no matching loose object",
-			oid, GIT_OID_HEXSZ);
+			oid, GIT_OID_SHA1_HEXSIZE);
 	} else if ((error = read_loose(&raw, &object_path)) == 0) {
 		*buffer_p = raw.data;
 		*len_p = raw.len;
@@ -640,9 +640,9 @@ static int loose_backend__read_prefix(
 {
 	int error = 0;
 
-	GIT_ASSERT_ARG(len >= GIT_OID_MINPREFIXLEN && len <= GIT_OID_HEXSZ);
+	GIT_ASSERT_ARG(len >= GIT_OID_MINPREFIXLEN && len <= GIT_OID_SHA1_HEXSIZE);
 
-	if (len == GIT_OID_HEXSZ) {
+	if (len == GIT_OID_SHA1_HEXSIZE) {
 		/* We can fall back to regular read method */
 		error = loose_backend__read(buffer_p, len_p, type_p, backend, short_oid);
 		if (!error)
@@ -711,7 +711,7 @@ struct foreach_state {
 GIT_INLINE(int) filename_to_oid(git_oid *oid, const char *ptr)
 {
 	int v, i = 0;
-	if (strlen(ptr) != GIT_OID_HEXSZ+1)
+	if (strlen(ptr) != GIT_OID_SHA1_HEXSIZE+1)
 		return -1;
 
 	if (ptr[2] != '/') {
@@ -1013,7 +1013,7 @@ static int loose_backend__readstream(
 
 	if (locate_object(&object_path, backend, oid) < 0) {
 		error = git_odb__error_notfound("no matching loose object",
-			oid, GIT_OID_HEXSZ);
+			oid, GIT_OID_SHA1_HEXSIZE);
 		goto done;
 	}
 

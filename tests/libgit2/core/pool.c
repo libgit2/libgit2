@@ -7,7 +7,7 @@ static char to_hex[] = "0123456789abcdef";
 void test_core_pool__oid(void)
 {
 	git_pool p;
-	char oid_hex[GIT_OID_HEXSZ];
+	char oid_hex[GIT_OID_SHA1_HEXSIZE];
 	git_oid *oid;
 	int i, j;
 

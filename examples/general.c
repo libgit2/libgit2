@@ -129,7 +129,7 @@ int lg2_general(git_repository *repo, int argc, char** argv)
  */
 static void oid_parsing(git_oid *oid)
 {
-	char out[GIT_OID_HEXSZ+1];
+	char out[GIT_OID_SHA1_HEXSIZE+1];
 	char hex[] = "4a202b346bb0fb0db7eff3cffeb3c70babbd2045";
 
 	printf("*Hex to Raw*\n");
@@ -152,7 +152,7 @@ static void oid_parsing(git_oid *oid)
 	 * char hex value.
 	 */
 	printf("\n*Raw to Hex*\n");
-	out[GIT_OID_HEXSZ] = '\0';
+	out[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	/**
 	 * If you have a oid, you can easily get the hex value of the SHA as well.
@@ -173,7 +173,7 @@ static void oid_parsing(git_oid *oid)
  */
 static void object_database(git_repository *repo, git_oid *oid)
 {
-	char oid_hex[GIT_OID_HEXSZ+1] = { 0 };
+	char oid_hex[GIT_OID_SHA1_HEXSIZE+1] = { 0 };
 	const unsigned char *data;
 	const char *str_type;
 	int error;
@@ -266,7 +266,7 @@ static void commit_writing(git_repository *repo)
 	git_tree *tree;
 	git_commit *parent;
 	git_signature *author, *committer;
-	char oid_hex[GIT_OID_HEXSZ+1] = { 0 };
+	char oid_hex[GIT_OID_SHA1_HEXSIZE+1] = { 0 };
 
 	printf("\n*Commit Writing*\n");
 
@@ -345,7 +345,7 @@ static void commit_parsing(git_repository *repo)
 	const git_signature *author, *cmtter;
 	git_commit *commit, *parent;
 	git_oid oid;
-	char oid_hex[GIT_OID_HEXSZ+1];
+	char oid_hex[GIT_OID_SHA1_HEXSIZE+1];
 	const char *message;
 	unsigned int parents, p;
 	int error;
@@ -679,7 +679,7 @@ static void reference_listing(git_repository *repo)
 
 	for (i = 0; i < ref_list.count; ++i) {
 		git_reference *ref;
-		char oid_hex[GIT_OID_HEXSZ+1] = GIT_OID_HEX_ZERO;
+		char oid_hex[GIT_OID_SHA1_HEXSIZE+1] = GIT_OID_HEX_ZERO;
 		const char *refname;
 
 		refname = ref_list.strings[i];

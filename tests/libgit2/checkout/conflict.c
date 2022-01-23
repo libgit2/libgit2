@@ -49,7 +49,7 @@ static git_index *g_index;
 
 struct checkout_index_entry {
 	uint16_t mode;
-	char oid_str[GIT_OID_HEXSZ+1];
+	char oid_str[GIT_OID_SHA1_HEXSIZE+1];
 	int stage;
 	char path[128];
 };

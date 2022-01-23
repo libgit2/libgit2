@@ -29,7 +29,7 @@ static int maybe_sha(git_object **out, git_repository *repo, const char *spec)
 {
 	size_t speclen = strlen(spec);
 
-	if (speclen != GIT_OID_HEXSZ)
+	if (speclen != GIT_OID_SHA1_HEXSIZE)
 		return GIT_ENOTFOUND;
 
 	return maybe_sha_or_abbrev(out, repo, spec, speclen);
@@ -110,7 +110,7 @@ static int revparse_lookup_object(
 	if (error != GIT_ENOTFOUND)
 		return error;
 
-	if ((strlen(spec) < GIT_OID_HEXSZ) &&
+	if ((strlen(spec) < GIT_OID_SHA1_HEXSIZE) &&
 		((error = maybe_abbrev(object_out, repo, spec)) != GIT_ENOTFOUND))
 			return error;
 

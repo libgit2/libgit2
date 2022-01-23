@@ -103,11 +103,11 @@ int git_parse_advance_digit(int64_t *out, git_parse_ctx *ctx, int base)
 
 int git_parse_advance_oid(git_oid *out, git_parse_ctx *ctx)
 {
-	if (ctx->line_len < GIT_OID_HEXSZ)
+	if (ctx->line_len < GIT_OID_SHA1_HEXSIZE)
 		return -1;
-	if ((git_oid_fromstrn(out, ctx->line, GIT_OID_HEXSZ)) < 0)
+	if ((git_oid_fromstrn(out, ctx->line, GIT_OID_SHA1_HEXSIZE)) < 0)
 		return -1;
-	git_parse_advance_chars(ctx, GIT_OID_HEXSZ);
+	git_parse_advance_chars(ctx, GIT_OID_SHA1_HEXSIZE);
 	return 0;
 }
 

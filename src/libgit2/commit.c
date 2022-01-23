@@ -411,7 +411,7 @@ static int commit_parse(git_commit *commit, const char *data, size_t size, unsig
 	    if (git_oid__parse(&commit->tree_id, &buffer, buffer_end, "tree ") < 0)
 			goto bad_buffer;
 	} else {
-		size_t tree_len = strlen("tree ") + GIT_OID_HEXSZ + 1;
+		size_t tree_len = strlen("tree ") + GIT_OID_SHA1_HEXSIZE + 1;
 		if (buffer + tree_len > buffer_end)
 			goto bad_buffer;
 		buffer += tree_len;

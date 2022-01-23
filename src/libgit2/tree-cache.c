@@ -111,11 +111,11 @@ static int read_tree_internal(git_tree_cache **out,
 	/* The SHA1 is only there if it's not invalidated */
 	if (tree->entry_count >= 0) {
 		/* 160-bit SHA-1 for this tree and it's children */
-		if (buffer + GIT_OID_RAWSZ > buffer_end)
+		if (buffer + GIT_OID_SHA1_SIZE > buffer_end)
 			goto corrupted;
 
 		git_oid_fromraw(&tree->oid, (const unsigned char *)buffer);
-		buffer += GIT_OID_RAWSZ;
+		buffer += GIT_OID_SHA1_SIZE;
 	}
 
 	/* Parse children: */
@@ -263,7 +263,7 @@ static void write_tree(git_str *out, git_tree_cache *tree)
 	git_str_printf(out, "%s%c%"PRIdZ" %"PRIuZ"\n", tree->name, 0, tree->entry_count, tree->children_count);
 
 	if (tree->entry_count != -1)
-		git_str_put(out, (char *)&tree->oid.id, GIT_OID_RAWSZ);
+		git_str_put(out, (char *)&tree->oid.id, GIT_OID_SHA1_SIZE);
 
 	for (i = 0; i < tree->children_count; i++)
 		write_tree(out, tree->children[i]);

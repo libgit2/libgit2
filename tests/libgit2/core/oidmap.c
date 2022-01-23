@@ -17,7 +17,7 @@ void test_core_oidmap__initialize(void)
 
 		test_oids[i].extra = i;
 
-		for (j = 0; j < GIT_OID_RAWSZ / 4; ++j) {
+		for (j = 0; j < GIT_OID_SHA1_SIZE / 4; ++j) {
 			test_oids[i].oid.id[j * 4    ] = (unsigned char)modi;
 			test_oids[i].oid.id[j * 4 + 1] = (unsigned char)(modi >> 8);
 			test_oids[i].oid.id[j * 4 + 2] = (unsigned char)(modi >> 16);

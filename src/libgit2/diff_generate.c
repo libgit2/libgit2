@@ -188,13 +188,13 @@ static int diff_delta__from_one(
 		delta->old_file.size = entry->file_size;
 		delta->old_file.flags |= GIT_DIFF_FLAG_EXISTS;
 		git_oid_cpy(&delta->old_file.id, &entry->id);
-		delta->old_file.id_abbrev = GIT_OID_HEXSZ;
+		delta->old_file.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 	} else /* ADDED, IGNORED, UNTRACKED */ {
 		delta->new_file.mode = entry->mode;
 		delta->new_file.size = entry->file_size;
 		delta->new_file.flags |= GIT_DIFF_FLAG_EXISTS;
 		git_oid_cpy(&delta->new_file.id, &entry->id);
-		delta->new_file.id_abbrev = GIT_OID_HEXSZ;
+		delta->new_file.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 	}
 
 	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
@@ -249,14 +249,14 @@ static int diff_delta__from_two(
 		delta->old_file.size = old_entry->file_size;
 		delta->old_file.mode = old_mode;
 		git_oid_cpy(&delta->old_file.id, old_id);
-		delta->old_file.id_abbrev = GIT_OID_HEXSZ;
+		delta->old_file.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 		delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID |
 			GIT_DIFF_FLAG_EXISTS;
 	}
 
 	if (!git_index_entry_is_conflict(new_entry)) {
 		git_oid_cpy(&delta->new_file.id, new_id);
-		delta->new_file.id_abbrev = GIT_OID_HEXSZ;
+		delta->new_file.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 		delta->new_file.size = new_entry->file_size;
 		delta->new_file.mode = new_mode;
 		delta->old_file.flags |= GIT_DIFF_FLAG_EXISTS;
@@ -1695,11 +1695,11 @@ int git_diff__commit(
 	*out = NULL;
 
 	if ((parents = git_commit_parentcount(commit)) > 1) {
-		char commit_oidstr[GIT_OID_HEXSZ + 1];
+		char commit_oidstr[GIT_OID_SHA1_HEXSIZE + 1];
 
 		error = -1;
 		git_error_set(GIT_ERROR_INVALID, "commit %s is a merge commit",
-			git_oid_tostr(commit_oidstr, GIT_OID_HEXSZ + 1, git_commit_id(commit)));
+			git_oid_tostr(commit_oidstr, GIT_OID_SHA1_HEXSIZE + 1, git_commit_id(commit)));
 		goto on_error;
 	}
 

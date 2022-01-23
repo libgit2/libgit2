@@ -240,7 +240,7 @@ GIT_INLINE(int) validate_repo_path(git_str *path)
 	 */
 	static size_t suffix_len =
 		CONST_STRLEN("objects/pack/pack-.pack.lock") +
-		GIT_OID_HEXSZ;
+		GIT_OID_SHA1_HEXSIZE;
 
 	return git_fs_path_validate_str_length_with_suffix(
 		path, suffix_len);
@@ -2866,14 +2866,14 @@ int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_str file_path = GIT_STR_INIT;
-	char orig_head_str[GIT_OID_HEXSZ];
+	char orig_head_str[GIT_OID_SHA1_HEXSIZE];
 	int error = 0;
 
 	git_oid_fmt(orig_head_str, orig_head);
 
 	if ((error = git_str_joinpath(&file_path, repo->gitdir, GIT_ORIG_HEAD_FILE)) == 0 &&
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_MERGE_FILE_MODE)) == 0 &&
-		(error = git_filebuf_printf(&file, "%.*s\n", GIT_OID_HEXSZ, orig_head_str)) == 0)
+		(error = git_filebuf_printf(&file, "%.*s\n", GIT_OID_SHA1_HEXSIZE, orig_head_str)) == 0)
 		error = git_filebuf_commit(&file);
 
 	if (error < 0)

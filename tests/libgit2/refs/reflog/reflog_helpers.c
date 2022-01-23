@@ -6,12 +6,12 @@
 
 int reflog_entry_tostr(git_str *out, const git_reflog_entry *entry)
 {
-	char old_oid[GIT_OID_HEXSZ], new_oid[GIT_OID_HEXSZ];
+	char old_oid[GIT_OID_SHA1_HEXSIZE], new_oid[GIT_OID_SHA1_HEXSIZE];
 
 	assert(out && entry);
 
-	git_oid_tostr((char *)&old_oid, GIT_OID_HEXSZ, git_reflog_entry_id_old(entry));
-	git_oid_tostr((char *)&new_oid, GIT_OID_HEXSZ, git_reflog_entry_id_new(entry));
+	git_oid_tostr((char *)&old_oid, GIT_OID_SHA1_HEXSIZE, git_reflog_entry_id_old(entry));
+	git_oid_tostr((char *)&new_oid, GIT_OID_SHA1_HEXSIZE, git_reflog_entry_id_new(entry));
 
 	return git_str_printf(out, "%s %s %s %s", old_oid, new_oid, "somesig", git_reflog_entry_message(entry));
 }

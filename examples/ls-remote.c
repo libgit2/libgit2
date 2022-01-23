@@ -34,7 +34,7 @@ static int use_remote(git_repository *repo, char *name)
 		goto cleanup;
 
 	for (i = 0; i < refs_len; i++) {
-		char oid[GIT_OID_HEXSZ + 1] = {0};
+		char oid[GIT_OID_SHA1_HEXSIZE + 1] = {0};
 		git_oid_fmt(oid, &refs[i]->oid);
 		printf("%s\t%s\n", oid, refs[i]->name);
 	}

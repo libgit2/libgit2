@@ -68,7 +68,7 @@ struct git_indexer {
 	git_odb *odb;
 
 	/* Fields for calculating the packfile trailer (hash of everything before it) */
-	char inbuf[GIT_OID_RAWSZ];
+	char inbuf[GIT_OID_SHA1_SIZE];
 	size_t inbuf_len;
 	git_hash_ctx trailer;
 };
@@ -272,7 +272,7 @@ static int advance_delta_offset(git_indexer *idx, git_object_t type)
 	GIT_ASSERT_ARG(type == GIT_OBJECT_REF_DELTA || type == GIT_OBJECT_OFS_DELTA);
 
 	if (type == GIT_OBJECT_REF_DELTA) {
-		idx->off += GIT_OID_RAWSZ;
+		idx->off += GIT_OID_SHA1_SIZE;
 	} else {
 		off64_t base_off;
 		int error = get_delta_base(&base_off, idx->pack, &w, &idx->off, type, idx->entry_start);
@@ -587,25 +587,25 @@ static void hash_partially(git_indexer *idx, const uint8_t *data, size_t size)
 		return;
 
 	/* Easy case, dump the buffer and the data minus the last 20 bytes */
-	if (size >= GIT_OID_RAWSZ) {
+	if (size >= GIT_OID_SHA1_SIZE) {
 		git_hash_update(&idx->trailer, idx->inbuf, idx->inbuf_len);
-		git_hash_update(&idx->trailer, data, size - GIT_OID_RAWSZ);
+		git_hash_update(&idx->trailer, data, size - GIT_OID_SHA1_SIZE);
 
-		data += size - GIT_OID_RAWSZ;
-		memcpy(idx->inbuf, data, GIT_OID_RAWSZ);
-		idx->inbuf_len = GIT_OID_RAWSZ;
+		data += size - GIT_OID_SHA1_SIZE;
+		memcpy(idx->inbuf, data, GIT_OID_SHA1_SIZE);
+		idx->inbuf_len = GIT_OID_SHA1_SIZE;
 		return;
 	}
 
 	/* We can just append */
-	if (idx->inbuf_len + size <= GIT_OID_RAWSZ) {
+	if (idx->inbuf_len + size <= GIT_OID_SHA1_SIZE) {
 		memcpy(idx->inbuf + idx->inbuf_len, data, size);
 		idx->inbuf_len += size;
 		return;
 	}
 
 	/* We need to partially drain the buffer and then append */
-	to_keep   = GIT_OID_RAWSZ - size;
+	to_keep   = GIT_OID_SHA1_SIZE - size;
 	to_expell = idx->inbuf_len - to_keep;
 
 	git_hash_update(&idx->trailer, idx->inbuf, to_expell);
@@ -900,7 +900,7 @@ static int index_path(git_str *path, git_indexer *idx, const char *suffix)
 		slash--;
 
 	if (git_str_grow(path, slash + 1 + strlen(prefix) +
-					 GIT_OID_HEXSZ + strlen(suffix) + 1) < 0)
+					 GIT_OID_SHA1_HEXSIZE + strlen(suffix) + 1) < 0)
 		return -1;
 
 	git_str_truncate(path, slash);
@@ -917,7 +917,7 @@ static int index_path(git_str *path, git_indexer *idx, const char *suffix)
  */
 static int seek_back_trailer(git_indexer *idx)
 {
-	idx->pack->mwf.size -= GIT_OID_RAWSZ;
+	idx->pack->mwf.size -= GIT_OID_SHA1_SIZE;
 	return git_mwindow_free_all(&idx->pack->mwf);
 }
 
@@ -977,7 +977,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	if ((error = append_to_pack(idx, empty_checksum, checksum_size)) < 0)
 		goto cleanup;
 
-	idx->pack->mwf.size += GIT_OID_RAWSZ;
+	idx->pack->mwf.size += GIT_OID_SHA1_SIZE;
 
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
 	GIT_ERROR_CHECK_ALLOC(pentry);
@@ -1040,7 +1040,7 @@ static int fix_thin_pack(git_indexer *idx, git_indexer_progress *stats)
 	}
 
 	/* curpos now points to the base information, which is an OID */
-	base_info = git_mwindow_open(&idx->pack->mwf, &w, curpos, GIT_OID_RAWSZ, &left);
+	base_info = git_mwindow_open(&idx->pack->mwf, &w, curpos, GIT_OID_SHA1_SIZE, &left);
 	if (base_info == NULL) {
 		git_error_set(GIT_ERROR_INDEXER, "failed to map delta information");
 		return -1;
@@ -1269,7 +1269,7 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 
 	/* Write out the object names (SHA-1 hashes) */
 	git_vector_foreach(&idx->objects, i, entry) {
-		git_filebuf_write(&index_file, &entry->oid.id, GIT_OID_RAWSZ);
+		git_filebuf_write(&index_file, &entry->oid.id, GIT_OID_SHA1_SIZE);
 	}
 
 	/* Write out the CRC32 values */

@@ -123,9 +123,9 @@ int git_branch_create(
 	const git_commit *commit,
 	int force)
 {
-	char commit_id[GIT_OID_HEXSZ + 1];
+	char commit_id[GIT_OID_SHA1_HEXSIZE + 1];
 
-	git_oid_tostr(commit_id, GIT_OID_HEXSZ + 1, git_commit_id(commit));
+	git_oid_tostr(commit_id, GIT_OID_SHA1_HEXSIZE + 1, git_commit_id(commit));
 	return create_branch(ref_out, repository, branch_name, commit, commit_id, force);
 }
 

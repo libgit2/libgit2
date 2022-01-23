@@ -17,7 +17,7 @@ void test_object_raw_short__oid_shortener_no_duplicates(void)
 	git_oid_shorten_add(os, "16a0123456789abcdef4b775213c23a8bd74f5e0");
 	min_len = git_oid_shorten_add(os, "ce08fe4884650f067bd5703b6a59a8b3b3c99a09");
 
-	cl_assert(min_len == GIT_OID_HEXSZ + 1);
+	cl_assert(min_len == GIT_OID_SHA1_HEXSIZE + 1);
 
 	git_oid_shorten_free(os);
 }
@@ -38,9 +38,9 @@ static int insert_sequential_oids(
 
 		git_oid_fromraw(&oid, hashbuf);
 
-		oids[i] = git__malloc(GIT_OID_HEXSZ + 1);
+		oids[i] = git__malloc(GIT_OID_SHA1_HEXSIZE + 1);
 		cl_assert(oids[i]);
-		git_oid_nfmt(oids[i], GIT_OID_HEXSZ + 1, &oid);
+		git_oid_nfmt(oids[i], GIT_OID_SHA1_HEXSIZE + 1, &oid);
 
 		min_len = git_oid_shorten_add(os, oids[i]);
 

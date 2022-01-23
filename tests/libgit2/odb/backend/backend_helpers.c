@@ -34,7 +34,7 @@ static int fake_backend__exists(git_odb_backend *backend, const git_oid *oid)
 
 	fake->exists_calls++;
 
-	return search_object(NULL, fake, oid, GIT_OID_HEXSZ) == GIT_OK;
+	return search_object(NULL, fake, oid, GIT_OID_SHA1_HEXSIZE) == GIT_OK;
 }
 
 static int fake_backend__exists_prefix(
@@ -69,7 +69,7 @@ static int fake_backend__read(
 
 	fake->read_calls++;
 
-	if ((error = search_object(&obj, fake, oid, GIT_OID_HEXSZ)) < 0)
+	if ((error = search_object(&obj, fake, oid, GIT_OID_SHA1_HEXSIZE)) < 0)
 		return error;
 
 	*len_p = strlen(obj->content);
@@ -91,7 +91,7 @@ static int fake_backend__read_header(
 
 	fake->read_header_calls++;
 
-	if ((error = search_object(&obj, fake, oid, GIT_OID_HEXSZ)) < 0)
+	if ((error = search_object(&obj, fake, oid, GIT_OID_SHA1_HEXSIZE)) < 0)
 		return error;
 
 	*len_p = strlen(obj->content);

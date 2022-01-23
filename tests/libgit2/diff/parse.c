@@ -151,7 +151,7 @@ static void test_tree_to_tree_computed_to_parsed(
 
 	repo = cl_git_sandbox_init(sandbox);
 
-	opts.id_abbrev = GIT_OID_HEXSZ;
+	opts.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 	opts.flags = GIT_DIFF_SHOW_BINARY | diff_flags;
 	findopts.flags = find_flags;
 

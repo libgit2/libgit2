@@ -973,7 +973,7 @@ int git_odb_exists_prefix(
 	if (len < GIT_OID_MINPREFIXLEN)
 		return git_odb__error_ambiguous("prefix length too short");
 
-	if (len >= GIT_OID_HEXSZ) {
+	if (len >= GIT_OID_SHA1_HEXSIZE) {
 		if (git_odb_exists(db, short_id)) {
 			if (out)
 				git_oid_cpy(out, short_id);
@@ -1015,13 +1015,13 @@ int git_odb_expand_ids(
 			query->type = GIT_OBJECT_ANY;
 
 		/* if we have a short OID, expand it first */
-		if (query->length >= GIT_OID_MINPREFIXLEN && query->length < GIT_OID_HEXSZ) {
+		if (query->length >= GIT_OID_MINPREFIXLEN && query->length < GIT_OID_SHA1_HEXSIZE) {
 			git_oid actual_id;
 
 			error = odb_exists_prefix_1(&actual_id, db, &query->id, query->length, false);
 			if (!error) {
 				git_oid_cpy(&query->id, &actual_id);
-				query->length = GIT_OID_HEXSZ;
+				query->length = GIT_OID_SHA1_HEXSIZE;
 			}
 		}
 
@@ -1029,7 +1029,7 @@ int git_odb_expand_ids(
 		 * now we ought to have a 40-char OID, either because we've expanded it
 		 * or because the user passed a full OID. Ensure its type is right.
 		 */
-		if (query->length >= GIT_OID_HEXSZ) {
+		if (query->length >= GIT_OID_SHA1_HEXSIZE) {
 			git_object_t actual_type;
 
 			error = odb_otype_fast(&actual_type, db, &query->id);
@@ -1157,7 +1157,7 @@ int git_odb__read_header_or_object(
 		error = odb_read_header_1(len_p, type_p, db, id, true);
 
 	if (error == GIT_ENOTFOUND)
-		return git_odb__error_notfound("cannot read header for", id, GIT_OID_HEXSZ);
+		return git_odb__error_notfound("cannot read header for", id, GIT_OID_SHA1_HEXSIZE);
 
 	/* we found the header; return early */
 	if (!error)
@@ -1268,7 +1268,7 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 		error = odb_read_1(out, db, id, true);
 
 	if (error == GIT_ENOTFOUND)
-		return git_odb__error_notfound("no match for id", id, GIT_OID_HEXSZ);
+		return git_odb__error_notfound("no match for id", id, GIT_OID_SHA1_HEXSIZE);
 
 	return error;
 }
@@ -1400,10 +1400,10 @@ int git_odb_read_prefix(
 	if (len < GIT_OID_MINPREFIXLEN)
 		return git_odb__error_ambiguous("prefix length too short");
 
-	if (len > GIT_OID_HEXSZ)
-		len = GIT_OID_HEXSZ;
+	if (len > GIT_OID_SHA1_HEXSIZE)
+		len = GIT_OID_SHA1_HEXSIZE;
 
-	if (len == GIT_OID_HEXSZ) {
+	if (len == GIT_OID_SHA1_HEXSIZE) {
 		*out = git_cache_get_raw(odb_cache(db), short_id);
 		if (*out != NULL)
 			return 0;
@@ -1786,7 +1786,7 @@ int git_odb_refresh(struct git_odb *db)
 
 int git_odb__error_mismatch(const git_oid *expected, const git_oid *actual)
 {
-	char expected_oid[GIT_OID_HEXSZ + 1], actual_oid[GIT_OID_HEXSZ + 1];
+	char expected_oid[GIT_OID_SHA1_HEXSIZE + 1], actual_oid[GIT_OID_SHA1_HEXSIZE + 1];
 
 	git_oid_tostr(expected_oid, sizeof(expected_oid), expected);
 	git_oid_tostr(actual_oid, sizeof(actual_oid), actual);
@@ -1801,7 +1801,7 @@ int git_odb__error_notfound(
 	const char *message, const git_oid *oid, size_t oid_len)
 {
 	if (oid != NULL) {
-		char oid_str[GIT_OID_HEXSZ + 1];
+		char oid_str[GIT_OID_SHA1_HEXSIZE + 1];
 		git_oid_tostr(oid_str, oid_len+1, oid);
 		git_error_set(GIT_ERROR_ODB, "object not found - %s (%.*s)",
 			message, (int) oid_len, oid_str);

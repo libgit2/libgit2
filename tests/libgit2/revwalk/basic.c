@@ -50,12 +50,12 @@ static const int result_bytes = 24;
 static int get_commit_index(git_oid *raw_oid)
 {
 	int i;
-	char oid[GIT_OID_HEXSZ];
+	char oid[GIT_OID_SHA1_HEXSIZE];
 
 	git_oid_fmt(oid, raw_oid);
 
 	for (i = 0; i < commit_count; ++i)
-		if (memcmp(oid, commit_ids[i], GIT_OID_HEXSZ) == 0)
+		if (memcmp(oid, commit_ids[i], GIT_OID_SHA1_HEXSIZE) == 0)
 			return i;
 
 	return -1;
@@ -75,9 +75,9 @@ static int test_walk_only(git_revwalk *walk,
 	while (git_revwalk_next(&oid, walk) == 0) {
 		result_array[i++] = get_commit_index(&oid);
 		/*{
-			char str[GIT_OID_HEXSZ+1];
+			char str[GIT_OID_SHA1_HEXSIZE+1];
 			git_oid_fmt(str, &oid);
-			str[GIT_OID_HEXSZ] = 0;
+			str[GIT_OID_SHA1_HEXSIZE] = 0;
 			printf("  %d) %s\n", i, str);
 		}*/
 	}

@@ -100,7 +100,7 @@ void test_diff_binary__add(void)
 		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY;
-	opts.id_abbrev = GIT_OID_HEXSZ;
+	opts.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 
 	repo = cl_git_sandbox_init("diff_format_email");
 	test_patch(
@@ -183,7 +183,7 @@ void test_diff_binary__delete(void)
 		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY;
-	opts.id_abbrev = GIT_OID_HEXSZ;
+	opts.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 
 	repo = cl_git_sandbox_init("diff_format_email");
 	test_patch(
@@ -215,7 +215,7 @@ void test_diff_binary__delta(void)
 		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
-	opts.id_abbrev = GIT_OID_HEXSZ;
+	opts.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 
 	repo = cl_git_sandbox_init("renames");
 	cl_git_pass(git_repository_index(&index, repo));
@@ -257,7 +257,7 @@ void test_diff_binary__delta_append(void)
 		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
-	opts.id_abbrev = GIT_OID_HEXSZ;
+	opts.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 
 	repo = cl_git_sandbox_init("renames");
 	cl_git_pass(git_repository_index(&index, repo));
@@ -285,7 +285,7 @@ void test_diff_binary__empty_for_no_diff(void)
 	git_str actual = GIT_STR_INIT;
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
-	opts.id_abbrev = GIT_OID_HEXSZ;
+	opts.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 
 	repo = cl_git_sandbox_init("renames");
 
@@ -323,7 +323,7 @@ void test_diff_binary__index_to_workdir(void)
 		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
-	opts.id_abbrev = GIT_OID_HEXSZ;
+	opts.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 
 	repo = cl_git_sandbox_init("renames");
 	cl_git_pass(git_repository_index(&index, repo));
@@ -389,7 +389,7 @@ void test_diff_binary__print_patch_from_diff(void)
 		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
-	opts.id_abbrev = GIT_OID_HEXSZ;
+	opts.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 
 	repo = cl_git_sandbox_init("renames");
 	cl_git_pass(git_repository_index(&index, repo));
@@ -501,7 +501,7 @@ void test_diff_binary__blob_to_blob(void)
 	struct diff_data diff_data = {0};
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
-	opts.id_abbrev = GIT_OID_HEXSZ;
+	opts.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 
 	repo = cl_git_sandbox_init("renames");
 	cl_git_pass(git_repository_index__weakptr(&index, repo));

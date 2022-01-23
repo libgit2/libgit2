@@ -7,7 +7,7 @@
 static void ensure_patch_validity(git_patch *patch)
 {
 	const git_diff_delta *delta;
-	char idstr[GIT_OID_HEXSZ+1] = {0};
+	char idstr[GIT_OID_SHA1_HEXSIZE+1] = {0};
 
 	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
 	cl_assert_equal_i(2, delta->nfiles);

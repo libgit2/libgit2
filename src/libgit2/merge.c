@@ -611,7 +611,7 @@ int git_repository_mergehead_foreach(
 	buffer = merge_head_file.ptr;
 
 	while ((line = git__strsep(&buffer, "\n")) != NULL) {
-		if (strlen(line) != GIT_OID_HEXSZ) {
+		if (strlen(line) != GIT_OID_SHA1_HEXSIZE) {
 			git_error_set(GIT_ERROR_INVALID, "unable to parse OID - invalid length");
 			error = -1;
 			goto cleanup;

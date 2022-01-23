@@ -164,7 +164,7 @@ void test_network_remote_rename__renaming_a_remote_moves_the_underlying_referenc
 void test_network_remote_rename__overwrite_ref_in_target(void)
 {
 	git_oid id;
-	char idstr[GIT_OID_HEXSZ + 1] = {0};
+	char idstr[GIT_OID_SHA1_HEXSIZE + 1] = {0};
 	git_reference *ref;
 	git_branch_t btype;
 	git_branch_iterator *iter;
@@ -206,7 +206,7 @@ void test_network_remote_rename__symref_head(void)
 	git_branch_t btype;
 	git_branch_iterator *iter;
 	git_strarray problems = {0};
-	char idstr[GIT_OID_HEXSZ + 1] = {0};
+	char idstr[GIT_OID_SHA1_HEXSIZE + 1] = {0};
 	git_vector refs;
 
 	cl_git_pass(git_reference_symbolic_create(&ref, _repo, "refs/remotes/test/HEAD", "refs/remotes/test/master", 0, NULL));

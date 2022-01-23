@@ -53,10 +53,10 @@ static int ack_pkt(git_pkt **out, const char *line, size_t len)
 	line += 4;
 	len -= 4;
 
-	if (len < GIT_OID_HEXSZ || git_oid_fromstr(&pkt->oid, line) < 0)
+	if (len < GIT_OID_SHA1_HEXSIZE || git_oid_fromstr(&pkt->oid, line) < 0)
 		goto out_err;
-	line += GIT_OID_HEXSZ;
-	len -= GIT_OID_HEXSZ;
+	line += GIT_OID_SHA1_HEXSIZE;
+	len -= GIT_OID_SHA1_HEXSIZE;
 
 	if (len && line[0] == ' ') {
 		line++;
@@ -222,10 +222,10 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 	GIT_ERROR_CHECK_ALLOC(pkt);
 	pkt->type = GIT_PKT_REF;
 
-	if (len < GIT_OID_HEXSZ || git_oid_fromstr(&pkt->head.oid, line) < 0)
+	if (len < GIT_OID_SHA1_HEXSIZE || git_oid_fromstr(&pkt->head.oid, line) < 0)
 		goto out_err;
-	line += GIT_OID_HEXSZ;
-	len -= GIT_OID_HEXSZ;
+	line += GIT_OID_SHA1_HEXSIZE;
+	len -= GIT_OID_SHA1_HEXSIZE;
 
 	if (git__prefixncmp(line, len, " "))
 		goto out_err;
@@ -530,7 +530,7 @@ int git_pkt_buffer_flush(git_str *buf)
 static int buffer_want_with_caps(const git_remote_head *head, transport_smart_caps *caps, git_str *buf)
 {
 	git_str str = GIT_STR_INIT;
-	char oid[GIT_OID_HEXSZ +1] = {0};
+	char oid[GIT_OID_SHA1_HEXSIZE +1] = {0};
 	size_t len;
 
 	/* Prefer multi_ack_detailed */
@@ -557,7 +557,7 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 	if (git_str_oom(&str))
 		return -1;
 
-	len = strlen("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ +
+	len = strlen("XXXXwant ") + GIT_OID_SHA1_HEXSIZE + 1 /* NUL */ +
 		 git_str_len(&str) + 1 /* LF */;
 
 	if (len > 0xffff) {
@@ -605,7 +605,7 @@ int git_pkt_buffer_wants(
 	}
 
 	for (; i < count; ++i) {
-		char oid[GIT_OID_HEXSZ];
+		char oid[GIT_OID_SHA1_HEXSIZE];
 
 		head = refs[i];
 		if (head->local)
@@ -613,7 +613,7 @@ int git_pkt_buffer_wants(
 
 		git_oid_fmt(oid, &head->oid);
 		git_str_put(buf, pkt_want_prefix, strlen(pkt_want_prefix));
-		git_str_put(buf, oid, GIT_OID_HEXSZ);
+		git_str_put(buf, oid, GIT_OID_SHA1_HEXSIZE);
 		git_str_putc(buf, '\n');
 		if (git_str_oom(buf))
 			return -1;
@@ -624,7 +624,7 @@ int git_pkt_buffer_wants(
 
 int git_pkt_buffer_have(git_oid *oid, git_str *buf)
 {
-	char oidhex[GIT_OID_HEXSZ + 1];
+	char oidhex[GIT_OID_SHA1_HEXSIZE + 1];
 
 	memset(oidhex, 0x0, sizeof(oidhex));
 	git_oid_fmt(oidhex, oid);

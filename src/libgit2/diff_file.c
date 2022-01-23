@@ -153,7 +153,7 @@ int git_diff_file_content__init_from_src(
 			git_blob_dup((git_blob **)&fc->blob, (git_blob *) src->blob);
 			fc->file->size = git_blob_rawsize(src->blob);
 			git_oid_cpy(&fc->file->id, git_blob_id(src->blob));
-			fc->file->id_abbrev = GIT_OID_HEXSZ;
+			fc->file->id_abbrev = GIT_OID_SHA1_HEXSIZE;
 
 			fc->map.len  = (size_t)fc->file->size;
 			fc->map.data = (char *)git_blob_rawcontent(src->blob);
@@ -164,7 +164,7 @@ int git_diff_file_content__init_from_src(
 			if ((error = git_odb_hash(&fc->file->id, src->buf, src->buflen, GIT_OBJECT_BLOB)) < 0)
 				return error;
 			fc->file->size = src->buflen;
-			fc->file->id_abbrev = GIT_OID_HEXSZ;
+			fc->file->id_abbrev = GIT_OID_SHA1_HEXSIZE;
 
 			fc->map.len  = src->buflen;
 			fc->map.data = (char *)src->buf;
@@ -177,7 +177,7 @@ int git_diff_file_content__init_from_src(
 static int diff_file_content_commit_to_str(
 	git_diff_file_content *fc, bool check_status)
 {
-	char oid[GIT_OID_HEXSZ+1];
+	char oid[GIT_OID_SHA1_HEXSIZE+1];
 	git_str content = GIT_STR_INIT;
 	const char *status = "";
 

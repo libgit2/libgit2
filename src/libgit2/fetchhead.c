@@ -105,7 +105,7 @@ static int fetchhead_ref_write(
 	git_filebuf *file,
 	git_fetchhead_ref *fetchhead_ref)
 {
-	char oid[GIT_OID_HEXSZ + 1];
+	char oid[GIT_OID_SHA1_HEXSIZE + 1];
 	const char *type, *name;
 	int head = 0;
 
@@ -113,7 +113,7 @@ static int fetchhead_ref_write(
 	GIT_ASSERT_ARG(fetchhead_ref);
 
 	git_oid_fmt(oid, &fetchhead_ref->oid);
-	oid[GIT_OID_HEXSZ] = '\0';
+	oid[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	if (git__prefixcmp(fetchhead_ref->ref_name, GIT_REFS_HEADS_DIR) == 0) {
 		type = "branch ";
@@ -196,7 +196,7 @@ static int fetchhead_ref_parse(
 		*is_merge = 1;
 	}
 
-	if (strlen(oid_str) != GIT_OID_HEXSZ) {
+	if (strlen(oid_str) != GIT_OID_SHA1_HEXSIZE) {
 		git_error_set(GIT_ERROR_FETCHHEAD,
 			"invalid object ID in FETCH_HEAD line %"PRIuZ, line_num);
 		return -1;

@@ -1271,7 +1271,7 @@ static int filesystem_iterator_entry_hash(
 	int error;
 
 	if (S_ISDIR(entry->st.st_mode)) {
-		memset(&entry->id, 0, GIT_OID_RAWSZ);
+		memset(&entry->id, 0, GIT_OID_SHA1_SIZE);
 		return 0;
 	}
 

@@ -89,7 +89,7 @@ static git_tree_entry *alloc_entry(const char *filename, size_t filename_len, co
 
 	if (GIT_ADD_SIZET_OVERFLOW(&tree_len, sizeof(git_tree_entry), filename_len) ||
 	    GIT_ADD_SIZET_OVERFLOW(&tree_len, tree_len, 1) ||
-	    GIT_ADD_SIZET_OVERFLOW(&tree_len, tree_len, GIT_OID_RAWSZ))
+	    GIT_ADD_SIZET_OVERFLOW(&tree_len, tree_len, GIT_OID_SHA1_SIZE))
 		return NULL;
 
 	entry = git__calloc(1, tree_len);
@@ -414,7 +414,7 @@ int git_tree__parse_raw(void *_tree, const char *data, size_t size)
 		if ((filename_len = nul - buffer) == 0 || filename_len > UINT16_MAX)
 			return tree_parse_error("failed to parse tree: can't parse filename", NULL);
 
-		if ((buffer_end - (nul + 1)) < GIT_OID_RAWSZ)
+		if ((buffer_end - (nul + 1)) < GIT_OID_SHA1_SIZE)
 			return tree_parse_error("failed to parse tree: can't parse OID", NULL);
 
 		/* Allocate the entry */
@@ -429,7 +429,7 @@ int git_tree__parse_raw(void *_tree, const char *data, size_t size)
 		}
 
 		buffer += filename_len + 1;
-		buffer += GIT_OID_RAWSZ;
+		buffer += GIT_OID_SHA1_SIZE;
 	}
 
 	return 0;
@@ -529,7 +529,7 @@ static int git_treebuilder__write_with_buffer(
 
 		git_str_printf(buf, "%o ", entry->attr);
 		git_str_put(buf, entry->filename, entry->filename_len + 1);
-		git_str_put(buf, (char *)entry->oid.id, GIT_OID_RAWSZ);
+		git_str_put(buf, (char *)entry->oid.id, GIT_OID_SHA1_SIZE);
 
 		if (git_str_oom(buf)) {
 			error = -1;
