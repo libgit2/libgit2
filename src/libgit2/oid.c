@@ -22,8 +22,6 @@ const git_oid git_oid__empty_tree_sha1 =
 	  { 0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60,
 	    0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04 }};
 
-static char to_hex[] = "0123456789abcdef";
-
 static int oid_error_invalid(const char *msg)
 {
 	git_error_set(GIT_ERROR_INVALID, "unable to parse OID - %s", msg);
@@ -75,16 +73,9 @@ int git_oid_fromstr(git_oid *out, const char *str, git_oid_t type)
 	return git_oid_fromstrn(out, str, git_oid_hexsize(type), type);
 }
 
-GIT_INLINE(char) *fmt_one(char *str, unsigned int val)
-{
-	*str++ = to_hex[val >> 4];
-	*str++ = to_hex[val & 0xf];
-	return str;
-}
-
 int git_oid_nfmt(char *str, size_t n, const git_oid *oid)
 {
-	size_t hex_size, i, max_i;
+	size_t hex_size;
 
 	if (!oid) {
 		memset(str, 0, n);
@@ -99,14 +90,7 @@ int git_oid_nfmt(char *str, size_t n, const git_oid *oid)
 		n = hex_size;
 	}
 
-	max_i = n / 2;
-
-	for (i = 0; i < max_i; i++)
-		str = fmt_one(str, oid->id[i]);
-
-	if (n & 1)
-		*str++ = to_hex[oid->id[i] >> 4];
-
+	git_oid_fmt_substr(str, oid, 0, n);
 	return 0;
 }
 
@@ -117,16 +101,14 @@ int git_oid_fmt(char *str, const git_oid *oid)
 
 int git_oid_pathfmt(char *str, const git_oid *oid)
 {
-	size_t size, i;
+	size_t hex_size;
 
-	if (!(size = git_oid_size(oid->type)))
+	if (!(hex_size = git_oid_hexsize(oid->type)))
 		return oid_error_invalid("unknown type");
 
-	str = fmt_one(str, oid->id[0]);
-	*str++ = '/';
-	for (i = 1; i < size; i++)
-		str = fmt_one(str, oid->id[i]);
-
+	git_oid_fmt_substr(str, oid, 0, 2);
+	str[2] = '/';
+	git_oid_fmt_substr(&str[3], oid, 2, (hex_size - 2));
 	return 0;
 }
 

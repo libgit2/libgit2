@@ -64,6 +64,35 @@ GIT_INLINE(git_hash_algorithm_t) git_oid_algorithm(git_oid_t type)
  */
 char *git_oid_allocfmt(const git_oid *id);
 
+/**
+ * Format the requested nibbles of an object id.
+ *
+ * @param str the string to write into
+ * @param oid the oid structure to format
+ * @param start the starting number of nibbles
+ * @param count the number of nibbles to format
+ */
+GIT_INLINE(void) git_oid_fmt_substr(
+	char *str,
+	const git_oid *oid,
+	size_t start,
+	size_t count)
+{
+	static char hex[] = "0123456789abcdef";
+	size_t i, end = start + count, min = start / 2, max = end / 2;
+
+	if (start & 1)
+		*str++ = hex[oid->id[min++] & 0x0f];
+
+	for (i = min; i < max; i++) {
+		*str++ = hex[oid->id[i] >> 4];
+		*str++ = hex[oid->id[i] & 0x0f];
+	}
+
+	if (end & 1)
+		*str++ = hex[oid->id[i] >> 4];
+}
+
 GIT_INLINE(int) git_oid_raw_ncmp(
 	const unsigned char *sha1,
 	const unsigned char *sha2,
