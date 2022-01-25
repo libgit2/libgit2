@@ -9,5 +9,5 @@ void test_object_raw_size__validate_oid_size(void)
 
 	cl_assert(20 == GIT_OID_SHA1_SIZE);
 	cl_assert(40 == GIT_OID_SHA1_HEXSIZE);
-	cl_assert(sizeof(out.id) == GIT_OID_SHA1_SIZE);
+	cl_assert(sizeof(out.id) == GIT_OID_MAX_SIZE);
 }

@@ -1,73 +1,147 @@
 #include "clar_libgit2.h"
 #include "oid.h"
 
-static git_oid id;
-static git_oid idp;
-static git_oid idm;
-const char *str_oid = "ae90f12eea699729ed24555e40b9fd669da12a12";
-const char *str_oid_p = "ae90f12eea699729ed";
-const char *str_oid_m = "ae90f12eea699729ed24555e40b9fd669da12a12THIS IS EXTRA TEXT THAT SHOULD GET IGNORED";
+static git_oid id_sha1;
+static git_oid idp_sha1;
+static git_oid idm_sha1;
+
+const char *str_oid_sha1 = "ae90f12eea699729ed24555e40b9fd669da12a12";
+const char *str_oid_sha1_p = "ae90f12eea699729ed";
+const char *str_oid_sha1_m = "ae90f12eea699729ed24555e40b9fd669da12a12THIS IS EXTRA TEXT THAT SHOULD GET IGNORED";
+
+static git_oid id_sha256;
+static git_oid idp_sha256;
+static git_oid idm_sha256;
+
+const char *str_oid_sha256 = "d3e63d2f2e43d1fee23a74bf19a0ede156cba2d1bd602eba13de433cea1bb512";
+const char *str_oid_sha256_p = "d3e63d2f2e43d1fee2";
+const char *str_oid_sha256_m = "d3e63d2f2e43d1fee23a74bf19a0ede156cba2d1bd602eba13de433cea1bb512 GARBAGE EXTRA TEXT AT THE END";
 
 void test_core_oid__initialize(void)
 {
-	cl_git_pass(git_oid_fromstr(&id, str_oid, GIT_OID_SHA1));
-	cl_git_pass(git_oid_fromstrp(&idp, str_oid_p, GIT_OID_SHA1));
-	cl_git_fail(git_oid_fromstrp(&idm, str_oid_m, GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstr(&id_sha1, str_oid_sha1, GIT_OID_SHA1));
+	cl_git_pass(git_oid_fromstrp(&idp_sha1, str_oid_sha1_p, GIT_OID_SHA1));
+	cl_git_fail(git_oid_fromstrp(&idm_sha1, str_oid_sha1_m, GIT_OID_SHA1));
+
+	cl_git_pass(git_oid_fromstr(&id_sha256, str_oid_sha256, GIT_OID_SHA256));
+	cl_git_pass(git_oid_fromstrp(&idp_sha256, str_oid_sha256_p, GIT_OID_SHA256));
+	cl_git_fail(git_oid_fromstrp(&idm_sha256, str_oid_sha256_m, GIT_OID_SHA256));
 }
 
-void test_core_oid__streq(void)
+void test_core_oid__streq_sha1(void)
 {
-	cl_assert_equal_i(0, git_oid_streq(&id, str_oid));
-	cl_assert_equal_i(-1, git_oid_streq(&id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
+	cl_assert_equal_i(0, git_oid_streq(&id_sha1, str_oid_sha1));
+	cl_assert_equal_i(-1, git_oid_streq(&id_sha1, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
 
-	cl_assert_equal_i(-1, git_oid_streq(&id, "deadbeef"));
-	cl_assert_equal_i(-1, git_oid_streq(&id, "I'm not an oid.... :)"));
+	cl_assert_equal_i(-1, git_oid_streq(&id_sha1, "deadbeef"));
+	cl_assert_equal_i(-1, git_oid_streq(&id_sha1, "I'm not an oid.... :)"));
 
-	cl_assert_equal_i(0, git_oid_streq(&idp, "ae90f12eea699729ed0000000000000000000000"));
-	cl_assert_equal_i(0, git_oid_streq(&idp, "ae90f12eea699729ed"));
-	cl_assert_equal_i(-1, git_oid_streq(&idp, "ae90f12eea699729ed1"));
-	cl_assert_equal_i(-1, git_oid_streq(&idp, "ae90f12eea699729ec"));
-	cl_assert_equal_i(-1, git_oid_streq(&idp, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
+	cl_assert_equal_i(0, git_oid_streq(&idp_sha1, "ae90f12eea699729ed0000000000000000000000"));
+	cl_assert_equal_i(0, git_oid_streq(&idp_sha1, "ae90f12eea699729ed"));
+	cl_assert_equal_i(-1, git_oid_streq(&idp_sha1, "ae90f12eea699729ed1"));
+	cl_assert_equal_i(-1, git_oid_streq(&idp_sha1, "ae90f12eea699729ec"));
+	cl_assert_equal_i(-1, git_oid_streq(&idp_sha1, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
 
-	cl_assert_equal_i(-1, git_oid_streq(&idp, "deadbeef"));
-	cl_assert_equal_i(-1, git_oid_streq(&idp, "I'm not an oid.... :)"));
+	cl_assert_equal_i(-1, git_oid_streq(&idp_sha1, "deadbeef"));
+	cl_assert_equal_i(-1, git_oid_streq(&idp_sha1, "I'm not an oid.... :)"));
 }
 
-void test_core_oid__strcmp(void)
+void test_core_oid__streq_sha256(void)
 {
-	cl_assert_equal_i(0, git_oid_strcmp(&id, str_oid));
-	cl_assert(git_oid_strcmp(&id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef") < 0);
+	cl_assert_equal_i(0, git_oid_streq(&id_sha256, str_oid_sha256));
+	cl_assert_equal_i(-1, git_oid_streq(&id_sha256, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
 
-	cl_assert(git_oid_strcmp(&id, "deadbeef") < 0);
-	cl_assert_equal_i(-1, git_oid_strcmp(&id, "I'm not an oid.... :)"));
+	cl_assert_equal_i(-1, git_oid_streq(&id_sha256, "deadbeef"));
+	cl_assert_equal_i(-1, git_oid_streq(&id_sha256, "I'm not an oid.... :)"));
 
-	cl_assert_equal_i(0, git_oid_strcmp(&idp, "ae90f12eea699729ed0000000000000000000000"));
-	cl_assert_equal_i(0, git_oid_strcmp(&idp, "ae90f12eea699729ed"));
-	cl_assert(git_oid_strcmp(&idp, "ae90f12eea699729ed1") < 0);
-	cl_assert(git_oid_strcmp(&idp, "ae90f12eea699729ec") > 0);
-	cl_assert(git_oid_strcmp(&idp, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef") < 0);
+	cl_assert_equal_i(0, git_oid_streq(&idp_sha256, "d3e63d2f2e43d1fee20000000000000000000000000000000000000000000000"));
+	cl_assert_equal_i(0, git_oid_streq(&idp_sha256, "d3e63d2f2e43d1fee2"));
+	cl_assert_equal_i(-1, git_oid_streq(&idp_sha1, "d3e63d2f2e43d1fee21"));
+	cl_assert_equal_i(-1, git_oid_streq(&idp_sha1, "d3e63d2f2e43d1fee1"));
+	cl_assert_equal_i(-1, git_oid_streq(&idp_sha256, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
 
-	cl_assert(git_oid_strcmp(&idp, "deadbeef") < 0);
-	cl_assert_equal_i(-1, git_oid_strcmp(&idp, "I'm not an oid.... :)"));
+	cl_assert_equal_i(-1, git_oid_streq(&idp_sha1, "deadbeef"));
+	cl_assert_equal_i(-1, git_oid_streq(&idp_sha1, "I'm not an oid.... :)"));
 }
 
-void test_core_oid__ncmp(void)
+void test_core_oid__strcmp_sha1(void)
 {
-	cl_assert(!git_oid_ncmp(&id, &idp, 0));
-	cl_assert(!git_oid_ncmp(&id, &idp, 1));
-	cl_assert(!git_oid_ncmp(&id, &idp, 2));
-	cl_assert(!git_oid_ncmp(&id, &idp, 17));
-	cl_assert(!git_oid_ncmp(&id, &idp, 18));
-	cl_assert(git_oid_ncmp(&id, &idp, 19));
-	cl_assert(git_oid_ncmp(&id, &idp, 40));
-	cl_assert(git_oid_ncmp(&id, &idp, 41));
-	cl_assert(git_oid_ncmp(&id, &idp, 42));
+	cl_assert_equal_i(0, git_oid_strcmp(&id_sha1, str_oid_sha1));
+	cl_assert(git_oid_strcmp(&id_sha1, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef") < 0);
 
-	cl_assert(!git_oid_ncmp(&id, &id, 0));
-	cl_assert(!git_oid_ncmp(&id, &id, 1));
-	cl_assert(!git_oid_ncmp(&id, &id, 39));
-	cl_assert(!git_oid_ncmp(&id, &id, 40));
-	cl_assert(!git_oid_ncmp(&id, &id, 41));
+	cl_assert(git_oid_strcmp(&id_sha1, "deadbeef") < 0);
+	cl_assert_equal_i(-1, git_oid_strcmp(&id_sha1, "I'm not an oid.... :)"));
+
+	cl_assert_equal_i(0, git_oid_strcmp(&idp_sha1, "ae90f12eea699729ed0000000000000000000000"));
+	cl_assert_equal_i(0, git_oid_strcmp(&idp_sha1, "ae90f12eea699729ed"));
+	cl_assert(git_oid_strcmp(&idp_sha1, "ae90f12eea699729ed1") < 0);
+	cl_assert(git_oid_strcmp(&idp_sha1, "ae90f12eea699729ec") > 0);
+	cl_assert(git_oid_strcmp(&idp_sha1, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef") < 0);
+
+	cl_assert(git_oid_strcmp(&idp_sha1, "deadbeef") < 0);
+	cl_assert_equal_i(-1, git_oid_strcmp(&idp_sha1, "I'm not an oid.... :)"));
+}
+
+void test_core_oid__strcmp_sha256(void)
+{
+	cl_assert_equal_i(0, git_oid_strcmp(&id_sha256, str_oid_sha256));
+	cl_assert(git_oid_strcmp(&id_sha256, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef") < 0);
+
+	cl_assert(git_oid_strcmp(&id_sha256, "deadbeef") < 0);
+	cl_assert_equal_i(-1, git_oid_strcmp(&id_sha256, "I'm not an oid.... :)"));
+
+	cl_assert_equal_i(0, git_oid_strcmp(&idp_sha256, "d3e63d2f2e43d1fee20000000000000000000000"));
+	cl_assert_equal_i(0, git_oid_strcmp(&idp_sha256, "d3e63d2f2e43d1fee2"));
+	cl_assert(git_oid_strcmp(&idp_sha256, "d3e63d2f2e43d1fee21") < 0);
+	cl_assert(git_oid_strcmp(&idp_sha256, "d3e63d2f2e43d1fee1") > 0);
+	cl_assert(git_oid_strcmp(&idp_sha256, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef") < 0);
+
+	cl_assert(git_oid_strcmp(&idp_sha256, "deadbeef") < 0);
+	cl_assert_equal_i(-1, git_oid_strcmp(&idp_sha256, "I'm not an oid.... :)"));
+}
+
+void test_core_oid__ncmp_sha1(void)
+{
+	cl_assert(!git_oid_ncmp(&id_sha1, &idp_sha1, 0));
+	cl_assert(!git_oid_ncmp(&id_sha1, &idp_sha1, 1));
+	cl_assert(!git_oid_ncmp(&id_sha1, &idp_sha1, 2));
+	cl_assert(!git_oid_ncmp(&id_sha1, &idp_sha1, 17));
+	cl_assert(!git_oid_ncmp(&id_sha1, &idp_sha1, 18));
+	cl_assert(git_oid_ncmp(&id_sha1, &idp_sha1, 19));
+	cl_assert(git_oid_ncmp(&id_sha1, &idp_sha1, 40));
+	cl_assert(git_oid_ncmp(&id_sha1, &idp_sha1, 41));
+	cl_assert(git_oid_ncmp(&id_sha1, &idp_sha1, 42));
+
+	cl_assert(!git_oid_ncmp(&id_sha1, &id_sha1, 0));
+	cl_assert(!git_oid_ncmp(&id_sha1, &id_sha1, 1));
+	cl_assert(!git_oid_ncmp(&id_sha1, &id_sha1, 39));
+	cl_assert(!git_oid_ncmp(&id_sha1, &id_sha1, 40));
+	cl_assert(!git_oid_ncmp(&id_sha1, &id_sha1, 41));
+}
+
+void test_core_oid__ncmp_sha256(void)
+{
+	cl_assert(!git_oid_ncmp(&id_sha256, &idp_sha256, 0));
+	cl_assert(!git_oid_ncmp(&id_sha256, &idp_sha256, 1));
+	cl_assert(!git_oid_ncmp(&id_sha256, &idp_sha256, 2));
+	cl_assert(!git_oid_ncmp(&id_sha256, &idp_sha256, 17));
+	cl_assert(!git_oid_ncmp(&id_sha256, &idp_sha256, 18));
+	cl_assert(git_oid_ncmp(&id_sha256, &idp_sha256, 19));
+	cl_assert(git_oid_ncmp(&id_sha256, &idp_sha256, 40));
+	cl_assert(git_oid_ncmp(&id_sha256, &idp_sha256, 41));
+	cl_assert(git_oid_ncmp(&id_sha256, &idp_sha256, 42));
+	cl_assert(git_oid_ncmp(&id_sha256, &idp_sha256, 63));
+	cl_assert(git_oid_ncmp(&id_sha256, &idp_sha256, 64));
+	cl_assert(git_oid_ncmp(&id_sha256, &idp_sha256, 65));
+
+	cl_assert(!git_oid_ncmp(&id_sha256, &id_sha256, 0));
+	cl_assert(!git_oid_ncmp(&id_sha256, &id_sha256, 1));
+	cl_assert(!git_oid_ncmp(&id_sha256, &id_sha256, 39));
+	cl_assert(!git_oid_ncmp(&id_sha256, &id_sha256, 40));
+	cl_assert(!git_oid_ncmp(&id_sha256, &id_sha256, 41));
+	cl_assert(!git_oid_ncmp(&id_sha256, &id_sha256, 63));
+	cl_assert(!git_oid_ncmp(&id_sha256, &id_sha256, 64));
+	cl_assert(!git_oid_ncmp(&id_sha256, &id_sha256, 65));
 }
 
 void test_core_oid__is_hexstr(void)

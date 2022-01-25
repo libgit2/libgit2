@@ -21,6 +21,8 @@ GIT_INLINE(size_t) git_oid_size(git_oid_t type)
 	switch (type) {
 	case GIT_OID_SHA1:
 		return GIT_OID_SHA1_SIZE;
+	case GIT_OID_SHA256:
+		return GIT_OID_SHA256_SIZE;
 	}
 
 	return 0;
@@ -31,6 +33,8 @@ GIT_INLINE(size_t) git_oid_hexsize(git_oid_t type)
 	switch (type) {
 	case GIT_OID_SHA1:
 		return GIT_OID_SHA1_HEXSIZE;
+	case GIT_OID_SHA256:
+		return GIT_OID_SHA256_HEXSIZE;
 	}
 
 	return 0;
