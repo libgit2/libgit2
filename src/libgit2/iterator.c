@@ -1281,7 +1281,7 @@ static int filesystem_iterator_entry_hash(
 
 	if (!(error = git_str_joinpath(&fullpath, iter->root, entry->path)) &&
 	    !(error = git_path_validate_str_length(iter->base.repo, &fullpath)))
-		error = git_odb_hashfile(&entry->id, fullpath.ptr, GIT_OBJECT_BLOB);
+		error = git_odb_hashfile(&entry->id, fullpath.ptr, GIT_OBJECT_BLOB, GIT_OID_SHA1);
 
 	git_str_dispose(&fullpath);
 	return error;

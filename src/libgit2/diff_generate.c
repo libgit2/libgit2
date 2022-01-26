@@ -660,7 +660,7 @@ int git_diff__oid_for_entry(
 			git_error_clear();
 		}
 	} else if (S_ISLNK(mode)) {
-		error = git_odb__hashlink(out, full_path.ptr);
+		error = git_odb__hashlink(out, full_path.ptr, GIT_OID_SHA1);
 		diff->base.perf.oid_calculations++;
 	} else if (!git__is_sizet(entry.file_size)) {
 		git_error_set(GIT_ERROR_NOMEMORY, "file size overflow (for 32-bits) on '%s'",
@@ -675,7 +675,8 @@ int git_diff__oid_for_entry(
 			error = fd;
 		else {
 			error = git_odb__hashfd_filtered(
-				out, fd, (size_t)entry.file_size, GIT_OBJECT_BLOB, fl);
+				out, fd, (size_t)entry.file_size,
+				GIT_OBJECT_BLOB, GIT_OID_SHA1, fl);
 			p_close(fd);
 			diff->base.perf.oid_calculations++;
 		}

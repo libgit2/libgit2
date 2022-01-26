@@ -90,7 +90,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	if (git_indexer_append(indexer, data, size, &stats) < 0)
 		goto cleanup;
 	if (append_hash) {
-		if (git_odb_hash(&oid, data, size, GIT_OBJECT_BLOB) < 0) {
+		if (git_odb_hash(&oid, data, size, GIT_OBJECT_BLOB, GIT_OID_SHA1) < 0) {
 			fprintf(stderr, "Failed to compute the SHA1 hash\n");
 			abort();
 		}

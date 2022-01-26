@@ -435,18 +435,24 @@ GIT_EXTERN(int) git_odb_write_multi_pack_index(
 	git_odb *db);
 
 /**
- * Determine the object-ID (sha1 hash) of a data buffer
+ * Determine the object-ID (sha1 or sha256 hash) of a data buffer
  *
- * The resulting SHA-1 OID will be the identifier for the data
- * buffer as if the data buffer it were to written to the ODB.
+ * The resulting OID will be the identifier for the data buffer as if
+ * the data buffer it were to written to the ODB.
  *
  * @param out the resulting object-ID.
  * @param data data to hash
  * @param len size of the data
- * @param type of the data to hash
+ * @param object_type of the data to hash
+ * @param oid_type the oid type to hash to
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_odb_hash(git_oid *out, const void *data, size_t len, git_object_t type);
+GIT_EXTERN(int) git_odb_hash(
+	git_oid *out,
+	const void *data,
+	size_t len,
+	git_object_t object_type,
+	git_oid_t oid_type);
 
 /**
  * Read a file from disk and fill a git_oid with the object id
@@ -458,10 +464,15 @@ GIT_EXTERN(int) git_odb_hash(git_oid *out, const void *data, size_t len, git_obj
  *
  * @param out oid structure the result is written into.
  * @param path file to read and determine object id for
- * @param type the type of the object that will be hashed
+ * @param object_type of the data to hash
+ * @param oid_type the oid type to hash to
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_odb_hashfile(git_oid *out, const char *path, git_object_t type);
+GIT_EXTERN(int) git_odb_hashfile(
+	git_oid *out,
+	const char *path,
+	git_object_t object_type,
+	git_oid_t oid_type);
 
 /**
  * Create a copy of an odb_object

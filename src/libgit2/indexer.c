@@ -546,7 +546,7 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, off64_t entry_start)
 	entry = git__calloc(1, sizeof(*entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
 
-	if (git_odb__hashobj(&oid, obj) < 0) {
+	if (git_odb__hashobj(&oid, obj, GIT_OID_SHA1) < 0) {
 		git_error_set(GIT_ERROR_INDEXER, "failed to hash object");
 		goto on_error;
 	}

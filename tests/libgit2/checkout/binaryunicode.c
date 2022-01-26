@@ -36,12 +36,12 @@ static void execute_test(void)
 
 	/* Verify that the lenna.jpg file was checked out correctly */
 	cl_git_pass(git_oid_fromstr(&check, "8ab005d890fe53f65eda14b23672f60d9f4ec5a1", GIT_OID_SHA1));
-	cl_git_pass(git_odb_hashfile(&oid, "binaryunicode/lenna.jpg", GIT_OBJECT_BLOB));
+	cl_git_pass(git_odb_hashfile(&oid, "binaryunicode/lenna.jpg", GIT_OBJECT_BLOB, GIT_OID_SHA1));
 	cl_assert_equal_oid(&oid, &check);
 
 	/* Verify that the text file was checked out correctly */
 	cl_git_pass(git_oid_fromstr(&check, "965b223880dd4249e2c66a0cc0b4cffe1dc40f5a", GIT_OID_SHA1));
-	cl_git_pass(git_odb_hashfile(&oid, "binaryunicode/utf16_withbom_noeol_crlf.txt", GIT_OBJECT_BLOB));
+	cl_git_pass(git_odb_hashfile(&oid, "binaryunicode/utf16_withbom_noeol_crlf.txt", GIT_OBJECT_BLOB, GIT_OID_SHA1));
 	cl_assert_equal_oid(&oid, &check);
 }
 

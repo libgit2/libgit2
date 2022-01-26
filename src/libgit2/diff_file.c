@@ -162,7 +162,7 @@ int git_diff_file_content__init_from_src(
 			fc->flags |= GIT_DIFF_FLAG__FREE_BLOB;
 		} else {
 			int error;
-			if ((error = git_odb_hash(&fc->file->id, src->buf, src->buflen, GIT_OBJECT_BLOB)) < 0)
+			if ((error = git_odb_hash(&fc->file->id, src->buf, src->buflen, GIT_OBJECT_BLOB, GIT_OID_SHA1)) < 0)
 				return error;
 			fc->file->size = src->buflen;
 			fc->file->id_abbrev = GIT_OID_SHA1_HEXSIZE;
@@ -412,7 +412,8 @@ static int diff_file_content_load_workdir(
 	/* once data is loaded, update OID if we didn't have it previously */
 	if (!error && (fc->file->flags & GIT_DIFF_FLAG_VALID_ID) == 0) {
 		error = git_odb_hash(
-			&fc->file->id, fc->map.data, fc->map.len, GIT_OBJECT_BLOB);
+			&fc->file->id, fc->map.data, fc->map.len,
+			GIT_OBJECT_BLOB, GIT_OID_SHA1);
 		fc->file->flags |= GIT_DIFF_FLAG_VALID_ID;
 	}
 

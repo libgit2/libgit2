@@ -72,7 +72,7 @@ int git_odb__add_default_backends(
  * Hash a git_rawobj internally.
  * The `git_rawobj` is supposed to be previously initialized
  */
-int git_odb__hashobj(git_oid *id, git_rawobj *obj);
+int git_odb__hashobj(git_oid *id, git_rawobj *obj, git_oid_t oid_type);
 
 /*
  * Format the object header such as it would appear in the on-disk object
@@ -89,14 +89,24 @@ int git_odb__format_object_header(size_t *out_len, char *hdr, size_t hdr_size, g
  * The fd is never closed, not even on error. It must be opened and closed
  * by the caller
  */
-int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_object_t type);
+int git_odb__hashfd(
+	git_oid *out,
+	git_file fd,
+	size_t size,
+	git_object_t object_type,
+	git_oid_t oid_type);
 
 /*
  * Hash an open file descriptor applying an array of filters
  * Acts just like git_odb__hashfd with the addition of filters...
  */
 int git_odb__hashfd_filtered(
-	git_oid *out, git_file fd, size_t len, git_object_t type, git_filter_list *fl);
+	git_oid *out,
+	git_file fd,
+	size_t len,
+	git_object_t object_type,
+	git_oid_t oid_type,
+	git_filter_list *fl);
 
 /*
  * Hash a `path`, assuming it could be a POSIX symlink: if the path is a
@@ -106,7 +116,7 @@ int git_odb__hashfd_filtered(
  * The hash type for this call is always `GIT_OBJECT_BLOB` because
  * symlinks may only point to blobs.
  */
-int git_odb__hashlink(git_oid *out, const char *path);
+int git_odb__hashlink(git_oid *out, const char *path, git_oid_t oid_type);
 
 /**
  * Generate a GIT_EMISMATCH error for the ODB.

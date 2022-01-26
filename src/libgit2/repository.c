@@ -2986,7 +2986,7 @@ int git_repository_hashfile(
 		goto cleanup;
 	}
 
-	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, fl);
+	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, GIT_OID_SHA1, fl);
 
 cleanup:
 	if (fd >= 0)

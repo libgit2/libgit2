@@ -8,11 +8,11 @@
 
 static void hash_object_pass(git_oid *oid, git_rawobj *obj)
 {
-	cl_git_pass(git_odb_hash(oid, obj->data, obj->len, obj->type));
+	cl_git_pass(git_odb_hash(oid, obj->data, obj->len, obj->type, GIT_OID_SHA1));
 }
 static void hash_object_fail(git_oid *oid, git_rawobj *obj)
 {
-	cl_git_fail(git_odb_hash(oid, obj->data, obj->len, obj->type));
+	cl_git_fail(git_odb_hash(oid, obj->data, obj->len, obj->type, GIT_OID_SHA1));
 }
 
 static char *hello_id = "22596363b3de40b06f981fb85d82312e8c0ed511";

@@ -21,7 +21,6 @@
 
 bool git_object__strict_input_validation = true;
 
-extern int git_odb_hash(git_oid *out, const void *data, size_t len, git_object_t type);
 size_t git_object__size(git_object_t type);
 
 typedef struct {
@@ -87,7 +86,7 @@ int git_object__from_raw(
 	GIT_ERROR_CHECK_ALLOC(object);
 	object->cached.flags = GIT_CACHE_STORE_PARSED;
 	object->cached.type = type;
-	if ((error = git_odb_hash(&object->cached.oid, data, size, type)) < 0)
+	if ((error = git_odb_hash(&object->cached.oid, data, size, type, GIT_OID_SHA1)) < 0)
 		return error;
 
 	/* Parse raw object data */
