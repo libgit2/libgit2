@@ -10,6 +10,7 @@
 #include "common.h"
 
 #include "git2/oid.h"
+#include "hash.h"
 
 #define GIT_OID_NONE { 0, { 0 } }
 
@@ -35,6 +36,18 @@ GIT_INLINE(size_t) git_oid_hexsize(git_oid_t type)
 		return GIT_OID_SHA1_HEXSIZE;
 	case GIT_OID_SHA256:
 		return GIT_OID_SHA256_HEXSIZE;
+	}
+
+	return 0;
+}
+
+GIT_INLINE(git_hash_algorithm_t) git_oid_algorithm(git_oid_t type)
+{
+	switch (type) {
+	case GIT_OID_SHA1:
+		return GIT_HASH_ALGORITHM_SHA1;
+	case GIT_OID_SHA256:
+		return GIT_HASH_ALGORITHM_SHA256;
 	}
 
 	return 0;
