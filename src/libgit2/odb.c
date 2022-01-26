@@ -663,6 +663,8 @@ int git_odb__add_default_backends(
 	if (db->do_fsync)
 		loose_opts.flags |= GIT_ODB_BACKEND_LOOSE_FSYNC;
 
+	loose_opts.oid_type = db->options.oid_type;
+
 	/* add the loose object backend */
 	if (git_odb_backend_loose(&loose, objects_dir, &loose_opts) < 0 ||
 		add_backend_internal(db, loose, git_odb__loose_priority, as_alternates, inode) < 0)

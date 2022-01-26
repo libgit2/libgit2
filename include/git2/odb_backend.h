@@ -59,13 +59,19 @@ typedef struct {
 
 	/** Permissions to use creating a file or 0 for defaults */
 	unsigned int file_mode;
+
+	/**
+	 * Type of object IDs to use for this object database, or
+	 * 0 for default (currently SHA1).
+	 */
+	git_oid_t oid_type;
 } git_odb_backend_loose_options;
 
 /* The current version of the diff options structure */
 #define GIT_ODB_BACKEND_LOOSE_OPTIONS_VERSION 1
 
-/* Stack initializer for diff options.  Alternatively use
- * `git_diff_options_init` programmatic initialization.
+/* Stack initializer for odb loose backend options.  Alternatively use
+ * `git_odb_backend_loose_options_init` programmatic initialization.
  */
 #define GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT \
 	{ GIT_ODB_BACKEND_LOOSE_OPTIONS_VERSION, 0, -1 }

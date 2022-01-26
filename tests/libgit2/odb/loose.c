@@ -34,24 +34,27 @@ static void cmp_objects(git_rawobj *o, object_data *d)
 
 static void test_read_object(object_data *data)
 {
-    git_oid id;
-    git_odb_object *obj;
+	git_oid id;
+	git_odb_object *obj;
 	git_odb *odb;
 	git_rawobj tmp;
+	git_odb_options opts = GIT_ODB_OPTIONS_INIT;
 
-    write_object_files(data);
+	opts.oid_type = data->id_type;
 
-    cl_git_pass(git_odb_open(&odb, "test-objects", NULL));
-    cl_git_pass(git_oid_fromstr(&id, data->id, GIT_OID_SHA1));
-    cl_git_pass(git_odb_read(&obj, odb, &id));
+	write_object_files(data);
+
+	cl_git_pass(git_odb_open(&odb, "test-objects", &opts));
+	cl_git_pass(git_oid_fromstr(&id, data->id, data->id_type));
+	cl_git_pass(git_odb_read(&obj, odb, &id));
 
 	tmp.data = obj->buffer;
 	tmp.len = obj->cached.size;
 	tmp.type = obj->cached.type;
 
-    cmp_objects(&tmp, data);
+	cmp_objects(&tmp, data);
 
-    git_odb_object_free(obj);
+	git_odb_object_free(obj);
 	git_odb_free(odb);
 }
 
@@ -61,11 +64,14 @@ static void test_read_header(object_data *data)
 	git_odb *odb;
 	size_t len;
 	git_object_t type;
+	git_odb_options opts = GIT_ODB_OPTIONS_INIT;
+
+	opts.oid_type = data->id_type;
 
 	write_object_files(data);
 
-	cl_git_pass(git_odb_open(&odb, "test-objects", NULL));
-	cl_git_pass(git_oid_fromstr(&id, data->id, GIT_OID_SHA1));
+	cl_git_pass(git_odb_open(&odb, "test-objects", &opts));
+	cl_git_pass(git_oid_fromstr(&id, data->id, data->id_type));
 	cl_git_pass(git_odb_read_header(&len, &type, odb, &id));
 
 	cl_assert_equal_sz(data->dlen, len);
@@ -83,11 +89,14 @@ static void test_readstream_object(object_data *data, size_t blocksize)
 	char buf[2048], *ptr = buf;
 	size_t remain;
 	int ret;
+	git_odb_options opts = GIT_ODB_OPTIONS_INIT;
+
+	opts.oid_type = data->id_type;
 
 	write_object_files(data);
 
-	cl_git_pass(git_odb_open(&odb, "test-objects", NULL));
-	cl_git_pass(git_oid_fromstr(&id, data->id, GIT_OID_SHA1));
+	cl_git_pass(git_odb_open(&odb, "test-objects", &opts));
+	cl_git_pass(git_oid_fromstr(&id, data->id, data->id_type));
 	cl_git_pass(git_odb_open_rstream(&stream, &tmp.len, &tmp.type, odb, &id));
 
 	remain = tmp.len;
@@ -124,7 +133,7 @@ void test_odb_loose__cleanup(void)
 	cl_fixture_cleanup("test-objects");
 }
 
-void test_odb_loose__exists(void)
+void test_odb_loose__exists_sha1(void)
 {
 	git_oid id, id2;
 	git_odb *odb;
@@ -149,7 +158,35 @@ void test_odb_loose__exists(void)
 	git_odb_free(odb);
 }
 
-void test_odb_loose__simple_reads(void)
+void test_odb_loose__exists_sha256(void)
+{
+	git_oid id, id2;
+	git_odb *odb;
+	git_odb_options odb_opts = GIT_ODB_OPTIONS_INIT;
+
+	odb_opts.oid_type = GIT_OID_SHA256;
+
+	write_object_files(&one_sha256);
+	cl_git_pass(git_odb_open(&odb, "test-objects", &odb_opts));
+
+	cl_git_pass(git_oid_fromstr(&id, one_sha256.id, GIT_OID_SHA256));
+	cl_assert(git_odb_exists(odb, &id));
+
+	cl_git_pass(git_oid_fromstrp(&id, "4c0d52d1", GIT_OID_SHA256));
+	cl_git_pass(git_odb_exists_prefix(&id2, odb, &id, 8));
+	cl_assert_equal_i(0, git_oid_streq(&id2, one_sha256.id));
+
+	/* Test for a missing object */
+	cl_git_pass(git_oid_fromstr(&id, "4c0d52d180c61d01ce1a91dec5ee58f0cbe65fd59433aea803ab927965493faa", GIT_OID_SHA256));
+	cl_assert(!git_odb_exists(odb, &id));
+
+	cl_git_pass(git_oid_fromstrp(&id, "4c0d52da", GIT_OID_SHA256));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_odb_exists_prefix(&id2, odb, &id, 8));
+
+	git_odb_free(odb);
+}
+
+void test_odb_loose__simple_reads_sha1(void)
 {
 	test_read_object(&commit);
 	test_read_object(&tree);
@@ -160,7 +197,18 @@ void test_odb_loose__simple_reads(void)
 	test_read_object(&some);
 }
 
-void test_odb_loose__streaming_reads(void)
+void test_odb_loose__simple_reads_sha256(void)
+{
+	test_read_object(&commit_sha256);
+	test_read_object(&tree_sha256);
+	test_read_object(&tag_sha256);
+	test_read_object(&zero_sha256);
+	test_read_object(&one_sha256);
+	test_read_object(&two_sha256);
+	test_read_object(&some_sha256);
+}
+
+void test_odb_loose__streaming_reads_sha1(void)
 {
 	size_t blocksizes[] = { 1, 2, 4, 16, 99, 1024, 123456789 };
 	size_t i;
@@ -176,7 +224,23 @@ void test_odb_loose__streaming_reads(void)
 	}
 }
 
-void test_odb_loose__read_header(void)
+void test_odb_loose__streaming_reads_sha256(void)
+{
+	size_t blocksizes[] = { 1, 2, 4, 16, 99, 1024, 123456789 };
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(blocksizes); i++) {
+		test_readstream_object(&commit_sha256, blocksizes[i]);
+		test_readstream_object(&tree_sha256, blocksizes[i]);
+		test_readstream_object(&tag_sha256, blocksizes[i]);
+		test_readstream_object(&zero_sha256, blocksizes[i]);
+		test_readstream_object(&one_sha256, blocksizes[i]);
+		test_readstream_object(&two_sha256, blocksizes[i]);
+		test_readstream_object(&some_sha256, blocksizes[i]);
+	}
+}
+
+void test_odb_loose__read_header_sha1(void)
 {
 	test_read_header(&commit);
 	test_read_header(&tree);
@@ -185,6 +249,17 @@ void test_odb_loose__read_header(void)
 	test_read_header(&one);
 	test_read_header(&two);
 	test_read_header(&some);
+}
+
+void test_odb_loose__read_header_sha256(void)
+{
+	test_read_header(&commit_sha256);
+	test_read_header(&tree_sha256);
+	test_read_header(&tag_sha256);
+	test_read_header(&zero_sha256);
+	test_read_header(&one_sha256);
+	test_read_header(&two_sha256);
+	test_read_header(&some_sha256);
 }
 
 static void test_write_object_permission(
