@@ -25,6 +25,9 @@ typedef enum {
 	GIT_OID_SHA256 = 2 /**< SHA256 */
 } git_oid_t;
 
+/** SHA1 is currently libgit2's default oid type. */
+#define GIT_OID_DEFAULT         GIT_OID_SHA1
+
 /** Size (in bytes) of a raw/binary oid */
 #define GIT_OID_SHA1_SIZE       20
 #define GIT_OID_SHA256_SIZE     32
