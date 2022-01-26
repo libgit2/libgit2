@@ -87,6 +87,8 @@ struct git_odb_stream {
 	unsigned int mode;
 	void *hash_ctx;
 
+	git_oid_t oid_type;
+
 	git_object_size_t declared_size;
 	git_object_size_t received_bytes;
 

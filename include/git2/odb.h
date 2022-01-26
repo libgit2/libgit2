@@ -41,6 +41,12 @@ typedef int GIT_CALLBACK(git_odb_foreach_cb)(const git_oid *id, void *payload);
 /** Options for configuring a loose object backend. */
 typedef struct {
 	unsigned int version; /**< version for the struct */
+
+	/**
+	 * Type of object IDs to use for this object database, or
+	 * 0 for default (currently SHA1).
+	 */
+	git_oid_t oid_type;
 } git_odb_options;
 
 /* The current version of the diff options structure */

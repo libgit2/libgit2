@@ -122,6 +122,7 @@ GIT_INLINE(int) git_oid__cmp(const git_oid *a, const git_oid *b)
 GIT_INLINE(void) git_oid__cpy_prefix(
 	git_oid *out, const git_oid *id, size_t len)
 {
+	out->type = id->type;
 	memcpy(&out->id, id->id, (len + 1) / 2);
 
 	if (len & 1)
