@@ -46,6 +46,7 @@ struct git_odb_object {
 struct git_odb {
 	git_refcount rc;
 	git_mutex lock;  /* protects backends */
+	git_odb_options options;
 	git_vector backends;
 	git_cache own_cache;
 	git_commit_graph *cgraph;

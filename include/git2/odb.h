@@ -38,6 +38,19 @@ typedef enum {
  */
 typedef int GIT_CALLBACK(git_odb_foreach_cb)(const git_oid *id, void *payload);
 
+/** Options for configuring a loose object backend. */
+typedef struct {
+	unsigned int version; /**< version for the struct */
+} git_odb_options;
+
+/* The current version of the diff options structure */
+#define GIT_ODB_OPTIONS_VERSION 1
+
+/* Stack initializer for odb options.  Alternatively use
+ * `git_odb_options_init` programmatic initialization.
+ */
+#define GIT_ODB_OPTIONS_INIT { GIT_ODB_OPTIONS_VERSION }
+
 /**
  * Create a new object database with no backends.
  *
@@ -46,9 +59,10 @@ typedef int GIT_CALLBACK(git_odb_foreach_cb)(const git_oid *id, void *payload);
  *
  * @param out location to store the database pointer, if opened.
  *			Set to NULL if the open failed.
+ * @param opts the options for this object database or NULL for defaults
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_odb_new(git_odb **out);
+GIT_EXTERN(int) git_odb_new(git_odb **out, const git_odb_options *opts);
 
 /**
  * Create a new object database and automatically add
@@ -64,9 +78,13 @@ GIT_EXTERN(int) git_odb_new(git_odb **out);
  * @param out location to store the database pointer, if opened.
  *			Set to NULL if the open failed.
  * @param objects_dir path of the backends' "objects" directory.
+ * @param opts the options for this object database or NULL for defaults
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
+GIT_EXTERN(int) git_odb_open(
+	git_odb **out,
+	const char *objects_dir,
+	const git_odb_options *opts);
 
 /**
  * Add an on-disk alternate to an existing Object DB.

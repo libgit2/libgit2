@@ -41,7 +41,7 @@ static void test_read_object(object_data *data)
 
     write_object_files(data);
 
-    cl_git_pass(git_odb_open(&odb, "test-objects"));
+    cl_git_pass(git_odb_open(&odb, "test-objects", NULL));
     cl_git_pass(git_oid_fromstr(&id, data->id, GIT_OID_SHA1));
     cl_git_pass(git_odb_read(&obj, odb, &id));
 
@@ -64,7 +64,7 @@ static void test_read_header(object_data *data)
 
 	write_object_files(data);
 
-	cl_git_pass(git_odb_open(&odb, "test-objects"));
+	cl_git_pass(git_odb_open(&odb, "test-objects", NULL));
 	cl_git_pass(git_oid_fromstr(&id, data->id, GIT_OID_SHA1));
 	cl_git_pass(git_odb_read_header(&len, &type, odb, &id));
 
@@ -86,7 +86,7 @@ static void test_readstream_object(object_data *data, size_t blocksize)
 
 	write_object_files(data);
 
-	cl_git_pass(git_odb_open(&odb, "test-objects"));
+	cl_git_pass(git_odb_open(&odb, "test-objects", NULL));
 	cl_git_pass(git_oid_fromstr(&id, data->id, GIT_OID_SHA1));
 	cl_git_pass(git_odb_open_rstream(&stream, &tmp.len, &tmp.type, odb, &id));
 
@@ -130,7 +130,7 @@ void test_odb_loose__exists(void)
 	git_odb *odb;
 
 	write_object_files(&one);
-	cl_git_pass(git_odb_open(&odb, "test-objects"));
+	cl_git_pass(git_odb_open(&odb, "test-objects", NULL));
 
 	cl_git_pass(git_oid_fromstr(&id, one.id, GIT_OID_SHA1));
 	cl_assert(git_odb_exists(odb, &id));
@@ -209,7 +209,7 @@ static void test_write_object_permission(
 	mask = p_umask(0);
 	p_umask(mask);
 
-	cl_git_pass(git_odb_new(&odb));
+	cl_git_pass(git_odb_new(&odb, NULL));
 	cl_git_pass(git_odb_backend_loose(&backend, "test-objects", -1, 0, dir_mode, file_mode));
 	cl_git_pass(git_odb_add_backend(odb, backend, 1));
 	cl_git_pass(git_odb_write(&oid, odb, "Test data\n", 10, GIT_OBJECT_BLOB));
@@ -244,7 +244,7 @@ static void write_object_to_loose_odb(int fsync)
 	git_odb_backend *backend;
 	git_oid oid;
 
-	cl_git_pass(git_odb_new(&odb));
+	cl_git_pass(git_odb_new(&odb, NULL));
 	cl_git_pass(git_odb_backend_loose(&backend, "test-objects", -1, fsync, 0777, 0666));
 	cl_git_pass(git_odb_add_backend(odb, backend, 1));
 	cl_git_pass(git_odb_write(&oid, odb, "Test data\n", 10, GIT_OBJECT_BLOB));

@@ -475,10 +475,24 @@ static int backend_sort_cmp(const void *a, const void *b)
 	return (backend_b->priority - backend_a->priority);
 }
 
-int git_odb_new(git_odb **out)
+static void normalize_options(
+	git_odb_options *opts,
+	const git_odb_options *given_opts)
+{
+	git_odb_options init = GIT_ODB_OPTIONS_INIT;
+
+	if (given_opts)
+		memcpy(opts, given_opts, sizeof(git_odb_options));
+	else
+		memcpy(opts, &init, sizeof(git_odb_options));
+}
+
+int git_odb_new(git_odb **out, const git_odb_options *opts)
 {
 	git_odb *db = git__calloc(1, sizeof(*db));
 	GIT_ERROR_CHECK_ALLOC(db);
+
+	normalize_options(&db->options, opts);
 
 	if (git_mutex_init(&db->lock) < 0) {
 		git__free(db);
@@ -740,7 +754,10 @@ int git_odb_set_commit_graph(git_odb *odb, git_commit_graph *cgraph)
 	return error;
 }
 
-int git_odb_open(git_odb **out, const char *objects_dir)
+int git_odb_open(
+	git_odb **out,
+	const char *objects_dir,
+	const git_odb_options *opts)
 {
 	git_odb *db;
 
@@ -749,7 +766,7 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 
 	*out = NULL;
 
-	if (git_odb_new(&db) < 0)
+	if (git_odb_new(&db, opts) < 0)
 		return -1;
 
 	if (git_odb__add_default_backends(db, objects_dir, 0, 0) < 0) {

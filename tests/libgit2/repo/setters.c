@@ -90,7 +90,7 @@ void test_repo_setters__setting_a_new_odb_on_a_repo_which_already_loaded_one_pro
 {
 	git_odb *new_odb;
 
-	cl_git_pass(git_odb_open(&new_odb, "./testrepo.git/objects"));
+	cl_git_pass(git_odb_open(&new_odb, "./testrepo.git/objects", NULL));
 	cl_assert(((git_refcount *)new_odb)->refcount.val == 1);
 
 	git_repository_set_odb(repo, new_odb);

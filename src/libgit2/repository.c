@@ -790,7 +790,7 @@ static int _git_repository_open_ext_from_env(
 	else if (error < 0)
 		goto error;
 	else {
-		error = git_odb_open(&odb, git_str_cstr(&object_dir_buf));
+		error = git_odb_open(&odb, git_str_cstr(&object_dir_buf), NULL);
 		if (error < 0)
 			goto error;
 	}
@@ -1217,7 +1217,7 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 
 		if ((error = git_repository__item_path(&odb_path, repo,
 				GIT_REPOSITORY_ITEM_OBJECTS)) < 0 ||
-			(error = git_odb_new(&odb)) < 0)
+			(error = git_odb_new(&odb, NULL)) < 0)
 			return error;
 
 		GIT_REFCOUNT_OWN(odb, repo);

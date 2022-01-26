@@ -66,7 +66,7 @@ void test_body(object_data *d, git_rawobj *o)
    git_rawobj tmp;
 
    make_odb_dir();
-   cl_git_pass(git_odb_open(&db, odb_dir));
+   cl_git_pass(git_odb_open(&db, odb_dir, NULL));
    cl_git_pass(git_oid_fromstr(&id1, d->id, GIT_OID_SHA1));
 
    streaming_write(&id2, db, o);

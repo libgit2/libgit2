@@ -6,7 +6,7 @@ static git_odb *_odb;
 
 void test_odb_packed__initialize(void)
 {
-    cl_git_pass(git_odb_open(&_odb, cl_fixture("testrepo.git/objects")));
+    cl_git_pass(git_odb_open(&_odb, cl_fixture("testrepo.git/objects"), NULL));
 }
 
 void test_odb_packed__cleanup(void)

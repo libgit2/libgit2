@@ -36,7 +36,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 		fprintf(stderr, "Failed to limit maximum pack object count\n");
 		abort();
 	}
-	if (git_odb_new(&odb) < 0) {
+	if (git_odb_new(&odb, NULL) < 0) {
 		fprintf(stderr, "Failed to create the odb\n");
 		abort();
 	}

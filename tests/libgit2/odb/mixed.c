@@ -5,7 +5,7 @@ static git_odb *_odb;
 
 void test_odb_mixed__initialize(void)
 {
-	cl_git_pass(git_odb_open(&_odb, cl_fixture("duplicate.git/objects")));
+	cl_git_pass(git_odb_open(&_odb, cl_fixture("duplicate.git/objects"), NULL));
 }
 
 void test_odb_mixed__cleanup(void)
