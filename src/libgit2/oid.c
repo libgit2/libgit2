@@ -143,16 +143,6 @@ char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
 	return out;
 }
 
-void git_oid__writebuf(git_str *buf, const char *header, const git_oid *oid)
-{
-	char hex_oid[GIT_OID_SHA1_HEXSIZE];
-
-	git_oid_fmt(hex_oid, oid);
-	git_str_puts(buf, header);
-	git_str_put(buf, hex_oid, GIT_OID_SHA1_HEXSIZE);
-	git_str_putc(buf, '\n');
-}
-
 int git_oid_fromraw(git_oid *out, const unsigned char *raw)
 {
 	memcpy(out->id, raw, sizeof(out->id));

@@ -628,3 +628,18 @@ int git_object__parse_oid_header(
 
 	return 0;
 }
+
+int git_object__write_oid_header(
+	git_str *buf,
+	const char *header,
+	const git_oid *oid)
+{
+	char hex_oid[GIT_OID_SHA1_HEXSIZE];
+
+	git_oid_fmt(hex_oid, oid);
+	git_str_puts(buf, header);
+	git_str_put(buf, hex_oid, GIT_OID_SHA1_HEXSIZE);
+	git_str_putc(buf, '\n');
+
+	return git_str_oom(buf) ? -1 : 0;
+}

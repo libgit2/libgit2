@@ -51,7 +51,10 @@ int git_object__parse_oid_header(
 	const char *buffer_end,
 	const char *header);
 
-void git_oid__writebuf(git_str *buf, const char *header, const git_oid *oid);
+int git_object__write_oid_header(
+	git_str *buf,
+	const char *header,
+	const git_oid *oid);
 
 bool git_object__is_valid(
 	git_repository *repo, const git_oid *id, git_object_t expected_type);

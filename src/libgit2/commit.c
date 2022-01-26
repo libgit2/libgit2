@@ -56,11 +56,13 @@ static int git_commit__create_buffer_internal(
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(tree);
 
-	git_oid__writebuf(out, "tree ", tree);
+	if (git_object__write_oid_header(out, "tree ", tree) < 0)
+		goto on_error;
 
 	for (i = 0; i < git_array_size(*parents); i++) {
 		parent = git_array_get(*parents, i);
-		git_oid__writebuf(out, "parent ", parent);
+		if (git_object__write_oid_header(out, "parent ", parent) < 0)
+			goto on_error;
 	}
 
 	git_signature__writebuf(out, "author ", author);

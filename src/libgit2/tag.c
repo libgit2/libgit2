@@ -221,7 +221,9 @@ static int write_tag_annotation(
 	git_str tag = GIT_STR_INIT;
 	git_odb *odb;
 
-	git_oid__writebuf(&tag, "object ", git_object_id(target));
+	if (git_object__write_oid_header(&tag, "object ", git_object_id(target)) < 0)
+		goto on_error;
+
 	git_str_printf(&tag, "type %s\n", git_object_type2string(git_object_type(target)));
 	git_str_printf(&tag, "tag %s\n", tag_name);
 	git_signature__writebuf(&tag, "tagger ", tagger);

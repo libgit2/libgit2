@@ -46,8 +46,8 @@ void cl_reflog_check_entry_(git_repository *repo, const char *reflog, size_t idx
 		git_object *obj = NULL;
 		if (git_revparse_single(&obj, repo, old_spec) == GIT_OK) {
 			if (git_oid_cmp(git_object_id(obj), git_reflog_entry_id_old(entry)) != 0) {
-				git_oid__writebuf(&result, "\tOld OID: \"", git_object_id(obj));
-				git_oid__writebuf(&result, "\" != \"", git_reflog_entry_id_old(entry));
+				git_object__write_oid_header(&result, "\tOld OID: \"", git_object_id(obj));
+				git_object__write_oid_header(&result, "\" != \"", git_reflog_entry_id_old(entry));
 				git_str_puts(&result, "\"\n");
 			}
 			git_object_free(obj);
@@ -55,8 +55,8 @@ void cl_reflog_check_entry_(git_repository *repo, const char *reflog, size_t idx
 			git_oid *oid = git__calloc(1, sizeof(*oid));
 			git_oid_fromstr(oid, old_spec);
 			if (git_oid_cmp(oid, git_reflog_entry_id_old(entry)) != 0) {
-				git_oid__writebuf(&result, "\tOld OID: \"", oid);
-				git_oid__writebuf(&result, "\" != \"", git_reflog_entry_id_old(entry));
+				git_object__write_oid_header(&result, "\tOld OID: \"", oid);
+				git_object__write_oid_header(&result, "\" != \"", git_reflog_entry_id_old(entry));
 				git_str_puts(&result, "\"\n");
 			}
 			git__free(oid);
@@ -66,8 +66,8 @@ void cl_reflog_check_entry_(git_repository *repo, const char *reflog, size_t idx
 		git_object *obj = NULL;
 		if (git_revparse_single(&obj, repo, new_spec) == GIT_OK) {
 			if (git_oid_cmp(git_object_id(obj), git_reflog_entry_id_new(entry)) != 0) {
-				git_oid__writebuf(&result, "\tNew OID: \"", git_object_id(obj));
-				git_oid__writebuf(&result, "\" != \"", git_reflog_entry_id_new(entry));
+				git_object__write_oid_header(&result, "\tNew OID: \"", git_object_id(obj));
+				git_object__write_oid_header(&result, "\" != \"", git_reflog_entry_id_new(entry));
 				git_str_puts(&result, "\"\n");
 			}
 			git_object_free(obj);
@@ -75,8 +75,8 @@ void cl_reflog_check_entry_(git_repository *repo, const char *reflog, size_t idx
 			git_oid *oid = git__calloc(1, sizeof(*oid));
 			git_oid_fromstr(oid, new_spec);
 			if (git_oid_cmp(oid, git_reflog_entry_id_new(entry)) != 0) {
-				git_oid__writebuf(&result, "\tNew OID: \"", oid);
-				git_oid__writebuf(&result, "\" != \"", git_reflog_entry_id_new(entry));
+				git_object__write_oid_header(&result, "\tNew OID: \"", oid);
+				git_object__write_oid_header(&result, "\" != \"", git_reflog_entry_id_new(entry));
 				git_str_puts(&result, "\"\n");
 			}
 			git__free(oid);
