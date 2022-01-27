@@ -136,13 +136,30 @@ GIT_INLINE(void) clar__assert_equal_oid(
 	const char *file, const char *func, int line, const char *desc,
 	const git_oid *one, const git_oid *two)
 {
-	if (git_oid_cmp(one, two)) {
-		char err[] = "\"........................................\" != \"........................................\"";
 
+	if (git_oid_equal(one, two))
+		return;
+
+	if (one->type != two->type) {
+		char err[64];
+
+		snprintf(err, 64, "different oid types: %d vs %d", one->type, two->type);
+		clar__fail(file, func, line, desc, err, 1);
+	} else if (one->type == GIT_OID_SHA1) {
+		char err[] = "\"........................................\" != \"........................................\"";
 		git_oid_fmt(&err[1], one);
 		git_oid_fmt(&err[47], two);
 
 		clar__fail(file, func, line, desc, err, 1);
+	} else if (one->type == GIT_OID_SHA256) {
+		char err[] = "\"................................................................\" != \"................................................................\"";
+
+		git_oid_fmt(&err[1], one);
+		git_oid_fmt(&err[71], one);
+
+		clar__fail(file, func, line, desc, err, 1);
+	} else {
+		clar__fail(file, func, line, desc, "unknown oid types", 1);
 	}
 }
 
