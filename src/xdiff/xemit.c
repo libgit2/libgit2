@@ -31,7 +31,7 @@ static long xdl_get_rec(xdfile_t *xdf, long ri, char const **rec) {
 
 
 static int xdl_emit_record(xdfile_t *xdf, long ri, char const *pre, xdemitcb_t *ecb) {
-	long size, psize = (long)strlen(pre);
+	long size, psize = strlen(pre);
 	char const *rec;
 
 	size = xdl_get_rec(xdf, ri, &rec);
@@ -81,7 +81,7 @@ xdchange_t *xdl_get_hunk(xdchange_t **xscr, xdemitconf_t const *xecfg)
 		} else if (distance < max_ignorable && xch->ignore) {
 			ignored += xch->chg2;
 		} else if (lxch != xchp &&
-			   xch->i1 + ignored - (lxch->i1 + lxch->chg1) > (unsigned long)max_common) {
+			   xch->i1 + ignored - (lxch->i1 + lxch->chg1) > max_common) {
 			break;
 		} else if (!xch->ignore) {
 			lxch = xch;
@@ -97,8 +97,6 @@ xdchange_t *xdl_get_hunk(xdchange_t **xscr, xdemitconf_t const *xecfg)
 
 static long def_ff(const char *rec, long len, char *buf, long sz, void *priv)
 {
-	(void)priv;
-
 	if (len > 0 &&
 			(isalpha((unsigned char)*rec) || /* identifier? */
 			 *rec == '_' || /* also identifier? */
@@ -174,10 +172,12 @@ int xdl_emit_diff(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 	struct func_line func_line = { 0 };
 
 	for (xch = xscr; xch; xch = xche->next) {
+		xdchange_t *xchp = xch;
 		xche = xdl_get_hunk(&xch, xecfg);
 		if (!xch)
 			break;
 
+pre_context_calculation:
 		s1 = XDL_MAX(xch->i1 - xecfg->ctxlen, 0);
 		s2 = XDL_MAX(xch->i2 - xecfg->ctxlen, 0);
 
@@ -212,8 +212,23 @@ int xdl_emit_diff(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 			if (fs1 < 0)
 				fs1 = 0;
 			if (fs1 < s1) {
-				s2 -= s1 - fs1;
+				s2 = XDL_MAX(s2 - (s1 - fs1), 0);
 				s1 = fs1;
+
+				/*
+				 * Did we extend context upwards into an
+				 * ignored change?
+				 */
+				while (xchp != xch &&
+				       xchp->i1 + xchp->chg1 <= s1 &&
+				       xchp->i2 + xchp->chg2 <= s2)
+					xchp = xchp->next;
+
+				/* If so, show it after all. */
+				if (xchp != xch) {
+					xch = xchp;
+					goto pre_context_calculation;
+				}
 			}
 		}
 
@@ -234,7 +249,7 @@ int xdl_emit_diff(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 			if (fe1 < 0)
 				fe1 = xe->xdf1.nrec;
 			if (fe1 > e1) {
-				e2 += fe1 - e1;
+				e2 = XDL_MIN(e2 + (fe1 - e1), xe->xdf2.nrec);
 				e1 = fe1;
 			}
 
@@ -263,7 +278,8 @@ int xdl_emit_diff(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 				      s1 - 1, funclineprev);
 			funclineprev = s1 - 1;
 		}
-		if (xdl_emit_hunk_hdr(s1 + 1, e1 - s1, s2 + 1, e2 - s2,
+		if (!(xecfg->flags & XDL_EMIT_NO_HUNK_HDR) &&
+		    xdl_emit_hunk_hdr(s1 + 1, e1 - s1, s2 + 1, e2 - s2,
 				      func_line.buf, func_line.len, ecb) < 0)
 			return -1;
 

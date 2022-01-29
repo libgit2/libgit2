@@ -218,14 +218,9 @@ static int git_xdiff(git_patch_generated_output *output, git_patch_generated *pa
 	 * updates are needed to xo->params.flags
 	 */
 
-	git_patch_generated_old_data(&info.xd_old_data.ptr, &info.xd_old_data.size, patch);
-	git_patch_generated_new_data(&info.xd_new_data.ptr, &info.xd_new_data.size, patch);
-
-	if (info.xd_old_data.size > GIT_XDIFF_MAX_SIZE ||
-		info.xd_new_data.size > GIT_XDIFF_MAX_SIZE) {
-		git_error_set(GIT_ERROR_INVALID, "files too large for diff");
+	if (git_patch_generated_old_data(&info.xd_old_data.ptr, &info.xd_old_data.size, patch) < 0 ||
+	    git_patch_generated_new_data(&info.xd_new_data.ptr, &info.xd_new_data.size, patch) < 0)
 		return -1;
-	}
 
 	xdl_diff(&info.xd_old_data, &info.xd_new_data,
 		&xo->params, &xo->config, &xo->callback);
@@ -261,5 +256,5 @@ void git_xdiff_init(git_xdiff_output *xo, const git_diff_options *opts)
 	if (flags & GIT_DIFF_IGNORE_BLANK_LINES)
 		xo->params.flags |= XDF_IGNORE_BLANK_LINES;
 
-	xo->callback.outf = git_xdiff_cb;
+	xo->callback.out_line = git_xdiff_cb;
 }

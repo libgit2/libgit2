@@ -86,22 +86,30 @@ static int merge_file__xdiff(
 
 	memset(&xmparam, 0x0, sizeof(xmparam_t));
 
+	if (ours->size > LONG_MAX ||
+	    theirs->size > LONG_MAX ||
+	    (ancestor && ancestor->size > LONG_MAX)) {
+		git_error_set(GIT_ERROR_MERGE, "failed to merge files");
+		error = -1;
+		goto done;
+	}
+
 	if (ancestor) {
 		xmparam.ancestor = (options.ancestor_label) ?
 			options.ancestor_label : ancestor->path;
 		ancestor_mmfile.ptr = (char *)ancestor->ptr;
-		ancestor_mmfile.size = ancestor->size;
+		ancestor_mmfile.size = (long)ancestor->size;
 	}
 
 	xmparam.file1 = (options.our_label) ?
 		options.our_label : ours->path;
 	our_mmfile.ptr = (char *)ours->ptr;
-	our_mmfile.size = ours->size;
+	our_mmfile.size = (long)ours->size;
 
 	xmparam.file2 = (options.their_label) ?
 		options.their_label : theirs->path;
 	their_mmfile.ptr = (char *)theirs->ptr;
-	their_mmfile.size = theirs->size;
+	their_mmfile.size = (long)theirs->size;
 
 	if (options.favor == GIT_MERGE_FILE_FAVOR_OURS)
 		xmparam.favor = XDL_MERGE_FAVOR_OURS;

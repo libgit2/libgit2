@@ -206,7 +206,17 @@ endif()
 # errors for the xdiff sources until we've sorted them out
 if(MSVC)
 	set_source_files_properties(xdiff/xdiffi.c PROPERTIES COMPILE_FLAGS -WX-)
+	set_source_files_properties(xdiff/xemit.c PROPERTIES COMPILE_FLAGS -WX-)
+	set_source_files_properties(xdiff/xhistogram.c PROPERTIES COMPILE_FLAGS -WX-)
+	set_source_files_properties(xdiff/xmerge.c PROPERTIES COMPILE_FLAGS -WX-)
 	set_source_files_properties(xdiff/xutils.c PROPERTIES COMPILE_FLAGS -WX-)
+	set_source_files_properties(xdiff/xpatience.c PROPERTIES COMPILE_FLAGS -WX-)
+else()
+	set_source_files_properties(xdiff/xdiffi.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare -Wno-unused-parameter")
+	set_source_files_properties(xdiff/xemit.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare -Wno-unused-parameter")
+	set_source_files_properties(xdiff/xhistogram.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
+	set_source_files_properties(xdiff/xutils.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
+	set_source_files_properties(xdiff/xpatience.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
 endif()
 
 # Determine architecture of the machine

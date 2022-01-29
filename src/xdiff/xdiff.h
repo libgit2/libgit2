@@ -23,6 +23,8 @@
 #if !defined(XDIFF_H)
 #define XDIFF_H
 
+#include "git-xdiff.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* #ifdef __cplusplus */
@@ -50,15 +52,8 @@ extern "C" {
 
 /* xdemitconf_t.flags */
 #define XDL_EMIT_FUNCNAMES (1 << 0)
+#define XDL_EMIT_NO_HUNK_HDR (1 << 1)
 #define XDL_EMIT_FUNCCONTEXT (1 << 2)
-
-#define XDL_MMB_READONLY (1 << 0)
-
-#define XDL_MMF_ATOMIC (1 << 0)
-
-#define XDL_BDOP_INS 1
-#define XDL_BDOP_CPY 2
-#define XDL_BDOP_INSB 3
 
 /* merge simplification levels */
 #define XDL_MERGE_MINIMAL 0
@@ -73,19 +68,24 @@ extern "C" {
 
 /* merge output styles */
 #define XDL_MERGE_DIFF3 1
+#define XDL_MERGE_ZEALOUS_DIFF3 2
 
 typedef struct s_mmfile {
 	char *ptr;
-	size_t size;
+	long size;
 } mmfile_t;
 
 typedef struct s_mmbuffer {
 	char *ptr;
-	size_t size;
+	long size;
 } mmbuffer_t;
 
 typedef struct s_xpparam {
 	unsigned long flags;
+
+	/* -I<regex> */
+	xdl_regex_t **ignore_regex;
+	size_t ignore_regex_nr;
 
 	/* See Documentation/diff-options.txt. */
 	char **anchors;
@@ -94,7 +94,11 @@ typedef struct s_xpparam {
 
 typedef struct s_xdemitcb {
 	void *priv;
-	int (*outf)(void *, mmbuffer_t *, int);
+	int (*out_hunk)(void *,
+			long old_begin, long old_nr,
+			long new_begin, long new_nr,
+			const char *func, long funclen);
+	int (*out_line)(void *, mmbuffer_t *, int);
 } xdemitcb_t;
 
 typedef long (*find_func_t)(const char *line, long line_len, char *buffer, long buffer_size, void *priv);
@@ -116,10 +120,6 @@ typedef struct s_bdiffparam {
 	long bsize;
 } bdiffparam_t;
 
-
-#define xdl_malloc(x) git__malloc(x)
-#define xdl_free(ptr) git__free(ptr)
-#define xdl_realloc(ptr,x) git__realloc(ptr,x)
 
 void *xdl_mmfile_first(mmfile_t *mmf, long *size);
 long xdl_mmfile_size(mmfile_t *mmf);
