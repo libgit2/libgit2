@@ -1061,3 +1061,70 @@ void test_diff_blob__can_compare_buffer_to_buffer(void)
 		diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expected));
 	assert_one_modified(4, 9, 0, 5, 4, &expected);
 }
+
+#define EMPTY_DIFF "diff --git a/file b/file\n" \
+	"index 92dfa21..d5a68b2 100644\n" \
+	"--- a/file\n" \
+	"+++ b/file\n"
+
+#define NOT_EMPTY_DIFF \
+	"diff --git a/file b/file\n" \
+	"index 92dfa21..d5a68b2 100644\n" \
+	"--- a/file\n" \
+	"+++ b/file\n" \
+	"@@ -5 +5 @@ d\n" \
+	"-e\n" \
+	"+E\n"
+
+void test_diff_blob__patch_with_ignore_regexp(void)
+{
+	git_patch *p;
+	git_buf buf = GIT_BUF_INIT;
+	const char *a = "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\n";
+	const char *b = "a\nb\nc\nd\nE\nf\ng\nh\ni\nj\n";
+	const char *ignore_lower = "e";
+	const char *ignore_upper = "E";
+	const char *ignore_both[] = { ignore_lower, ignore_upper };
+	const char *ignore_match = "^(e|E)$";
+
+	opts.interhunk_lines = 0;
+	opts.context_lines = 0;
+	opts.ignore_regexp = ignore_both;
+	opts.ignore_regexp_count = 2;
+
+	/* match both e and E */
+	cl_git_pass(git_patch_from_buffers(&p, a, strlen(a), NULL,
+		b, strlen(b), NULL, &opts));
+
+	cl_git_pass(git_patch_to_buf(&buf, p));
+	cl_assert_equal_s(EMPTY_DIFF, buf.ptr);
+
+	git_patch_free(p);
+	git_buf_dispose(&buf);
+
+	/* match ^(e|E)$ */
+	opts.ignore_regexp = &ignore_match;
+	opts.ignore_regexp_count = 1;
+
+	cl_git_pass(git_patch_from_buffers(&p, a, strlen(a), NULL,
+		b, strlen(b), NULL, &opts));
+
+	cl_git_pass(git_patch_to_buf(&buf, p));
+	cl_assert_equal_s(EMPTY_DIFF, buf.ptr);
+
+	git_patch_free(p);
+	git_buf_dispose(&buf);
+
+	/* matching only E does not match preimage */
+	opts.ignore_regexp = &ignore_upper;
+	opts.ignore_regexp_count = 1;
+
+	cl_git_pass(git_patch_from_buffers(&p, a, strlen(a), NULL,
+		b, strlen(b), NULL, &opts));
+
+	cl_git_pass(git_patch_to_buf(&buf, p));
+	cl_assert_equal_s(NOT_EMPTY_DIFF, buf.ptr);
+
+	git_patch_free(p);
+	git_buf_dispose(&buf);
+}

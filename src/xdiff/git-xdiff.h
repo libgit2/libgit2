@@ -29,14 +29,9 @@ GIT_INLINE(int) xdl_regexec_buf(
 	const xdl_regex_t *preg, const char *buf, size_t size,
 	size_t nmatch, xdl_regmatch_t pmatch[], int eflags)
 {
-	GIT_UNUSED(preg);
-	GIT_UNUSED(buf);
-	GIT_UNUSED(size);
-	GIT_UNUSED(nmatch);
-	GIT_UNUSED(pmatch);
-	GIT_UNUSED(eflags);
-	GIT_ASSERT("not implemented");
-	return -1;
+	GIT_ASSERT(nmatch > 0 && pmatch && eflags == 0);
+
+	return git_regexp_search_n(preg, buf, size, nmatch, pmatch);
 }
 
 #endif

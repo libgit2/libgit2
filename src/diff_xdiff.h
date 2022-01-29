@@ -30,6 +30,7 @@ typedef struct {
 	xdemitcb_t   callback;
 } git_xdiff_output;
 
-void git_xdiff_init(git_xdiff_output *xo, const git_diff_options *opts);
+int git_xdiff_init(git_xdiff_output *xo, const git_diff_options *opts);
+void git_xdiff_dispose(git_xdiff_output *xo);
 
 #endif

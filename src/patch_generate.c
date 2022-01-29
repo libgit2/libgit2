@@ -540,13 +540,16 @@ static int diff_from_sources(
 	memset(&xo, 0, sizeof(xo));
 	diff_output_init(
 		&xo.output, opts, file_cb, binary_cb, hunk_cb, data_cb, payload);
-	git_xdiff_init(&xo, opts);
+
+	if ((error = git_xdiff_init(&xo, opts)) < 0)
+		return error;
 
 	memset(&pd, 0, sizeof(pd));
 
 	error = patch_generated_from_sources(&pd, &xo, oldsrc, newsrc, opts);
 
 	git_patch_free(&pd.patch.base);
+	git_xdiff_dispose(&xo);
 
 	return error;
 }
@@ -570,13 +573,16 @@ static int patch_from_sources(
 
 	memset(&xo, 0, sizeof(xo));
 	diff_output_to_patch(&xo.output, &pd->patch);
-	git_xdiff_init(&xo, opts);
+
+	if ((error = git_xdiff_init(&xo, opts)) < 0)
+		return error;
 
 	if (!(error = patch_generated_from_sources(pd, &xo, oldsrc, newsrc, opts)))
 		*out = (git_patch *)pd;
 	else
 		git_patch_free((git_patch *)pd);
 
+	git_xdiff_dispose(&xo);
 	return error;
 }
 
@@ -724,7 +730,9 @@ int git_patch_generated_from_diff(
 
 	memset(&xo, 0, sizeof(xo));
 	diff_output_to_patch(&xo.output, patch);
-	git_xdiff_init(&xo, &diff->opts);
+
+	if ((error = git_xdiff_init(&xo, &diff->opts)) < 0)
+		return error;
 
 	error = patch_generated_invoke_file_callback(patch, &xo.output);
 
@@ -741,6 +749,7 @@ int git_patch_generated_from_diff(
 	else
 		*patch_ptr = &patch->base;
 
+	git_xdiff_dispose(&xo);
 	return error;
 }
 

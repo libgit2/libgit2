@@ -62,7 +62,7 @@ int git_regexp_compile(git_regexp *r, const char *pattern, int flags);
 /**
  * Free memory associated with the regular expression
  *
- * @param r The regular expression structure to dispose.
+ e @param r The regular expression structure to dispose.
  */
 void git_regexp_dispose(git_regexp *r);
 

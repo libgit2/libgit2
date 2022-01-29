@@ -230,9 +230,12 @@ static int git_xdiff(git_patch_generated_output *output, git_patch_generated *pa
 	return xo->output.error;
 }
 
-void git_xdiff_init(git_xdiff_output *xo, const git_diff_options *opts)
+int git_xdiff_init(git_xdiff_output *xo, const git_diff_options *opts)
 {
+	git_regexp **regexen;
 	uint32_t flags = opts ? opts->flags : 0;
+	int regexp_flags = GIT_REGEXP_EXTENDED | GIT_REGEXP_NEWLINE;
+	size_t i;
 
 	xo->output.diff_cb = git_xdiff;
 
@@ -256,5 +259,42 @@ void git_xdiff_init(git_xdiff_output *xo, const git_diff_options *opts)
 	if (flags & GIT_DIFF_IGNORE_BLANK_LINES)
 		xo->params.flags |= XDF_IGNORE_BLANK_LINES;
 
+	if (opts && opts->ignore_regexp_count) {
+		regexen = git__calloc(opts->ignore_regexp_count, sizeof(git_regexp *));
+		GIT_ERROR_CHECK_ALLOC(regexen);
+
+		xo->params.ignore_regex = regexen;
+		xo->params.ignore_regex_nr = opts->ignore_regexp_count;
+
+		for (i = 0; i < opts->ignore_regexp_count; i++) {
+			regexen[i] = git__malloc(sizeof(git_regexp));
+			GIT_ERROR_CHECK_ALLOC(regexen[i]);
+
+			if (git_regexp_compile(regexen[i],
+					opts->ignore_regexp[i],
+					regexp_flags) < 0) {
+				git_error_set(GIT_ERROR_INVALID, "could not compile regular expression");
+				git_xdiff_dispose(xo);
+				return -1;
+			}
+		}
+	}
+
 	xo->callback.out_line = git_xdiff_cb;
+
+	return 0;
+}
+
+void git_xdiff_dispose(git_xdiff_output *xo)
+{
+	size_t i;
+
+	for (i = 0; i < xo->params.ignore_regex_nr; i++) {
+		if (xo->params.ignore_regex[i]) {
+			git_regexp_dispose(xo->params.ignore_regex[i]);
+			git__free(xo->params.ignore_regex[i]);
+		}
+	}
+
+	git__free(xo->params.ignore_regex);
 }

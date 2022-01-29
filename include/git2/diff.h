@@ -444,6 +444,13 @@ typedef struct {
 	 * Defaults to "b".
 	 */
 	const char *new_prefix;
+
+	/**
+	 * Ignore lines matching the given regular expression(s); both
+	 * the preimage and postimage lines must match.
+	 */
+	const char **ignore_regexp;
+	size_t ignore_regexp_count;
 } git_diff_options;
 
 /* The current version of the diff options structure */
