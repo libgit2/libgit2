@@ -84,6 +84,7 @@ int git_regexp_match(const git_regexp *r, const char *string);
  *
  * @param r Compiled regular expression.
  * @param string String to match against the regular expression.
+ * @param string_len length of string
  * @param nmatches Number of @git_regmatch structures provided by
  *                 the user.
  * @param matches Pointer to an array of @git_regmatch structures.
@@ -92,6 +93,31 @@ int git_regexp_match(const git_regexp *r, const char *string);
  *         GIT_EINVALIDSPEC if the regular expression matching
  *         was invalid.
  */
-int git_regexp_search(const git_regexp *r, const char *string, size_t nmatches, git_regmatch *matches);
+int git_regexp_search_n(const git_regexp *r, const char *string, size_t string_len, size_t nmatches, git_regmatch *matches);
+
+/**
+ * Search for matches inside of a given string.
+ *
+ * Given a regular expression with capturing groups, this
+ * function will populate provided @git_regmatch structures with
+ * offsets for each of the given matches. Non-matching groups
+ * will have start and end values of the respective @git_regmatch
+ * structure set to -1.
+ *
+ * @param r Compiled regular expression.
+ * @param string String to match against the regular expression.
+ * @param nmatches Number of @git_regmatch structures provided by
+ *                 the user.
+ * @param matches Pointer to an array of @git_regmatch structures.
+ * @return 0 if the string matches, a negative error code
+ *         otherwise. GIT_ENOTFOUND if no match was found,
+ *         GIT_EINVALIDSPEC if the regular expression matching
+ *         was invalid.
+ */
+int git_regexp_search(
+	const git_regexp *r,
+	const char *string,
+	size_t nmatches,
+	git_regmatch *matches);
 
 #endif

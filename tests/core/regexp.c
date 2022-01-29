@@ -123,7 +123,7 @@ void test_core_regexp__simple_search_matches(void)
 void test_core_regexp__case_insensitive_search_matches(void)
 {
 	cl_git_pass(git_regexp_compile(&regex, "a", GIT_REGEXP_ICASE));
-	cl_git_pass(git_regexp_search(&regex, "A", 0, NULL));
+	cl_git_pass(git_regexp_search_n(&regex, "A", 1, 0, NULL));
 }
 
 void test_core_regexp__nonmatching_search_returns_error(void)
@@ -137,7 +137,7 @@ void test_core_regexp__search_finds_complete_match(void)
 	git_regmatch matches[1];
 
 	cl_git_pass(git_regexp_compile(&regex, "abc", 0));
-	cl_git_pass(git_regexp_search(&regex, "abc", 1, matches));
+	cl_git_pass(git_regexp_search_n(&regex, "abc", 3, 1, matches));
 	cl_assert_equal_i(matches[0].start, 0);
 	cl_assert_equal_i(matches[0].end, 3);
 }
@@ -161,7 +161,7 @@ void test_core_regexp__search_finds_empty_group(void)
 	git_regmatch matches[3];
 
 	cl_git_pass(git_regexp_compile(&regex, "(a*)(b*)c", 0));
-	cl_git_pass(git_regexp_search(&regex, "ac", 3, matches));
+	cl_git_pass(git_regexp_search_n(&regex, "ac", 2, 3, matches));
 	cl_assert_equal_i(matches[0].start, 0);
 	cl_assert_equal_i(matches[0].end, 2);
 	cl_assert_equal_i(matches[1].start, 0);
@@ -187,7 +187,7 @@ void test_core_regexp__search_skips_nonmatching_group(void)
 	git_regmatch matches[4];
 
 	cl_git_pass(git_regexp_compile(&regex, "(a)(b)?(c)", 0));
-	cl_git_pass(git_regexp_search(&regex, "ac", 4, matches));
+	cl_git_pass(git_regexp_search_n(&regex, "ac", 2, 4, matches));
 	cl_assert_equal_i(matches[0].start, 0);
 	cl_assert_equal_i(matches[0].end, 2);
 	cl_assert_equal_i(matches[1].start, 0);
@@ -210,4 +210,19 @@ void test_core_regexp__search_initializes_trailing_nonmatching_groups(void)
 	cl_assert_equal_i(matches[1].end, 1);
 	cl_assert_equal_i(matches[2].start, -1);
 	cl_assert_equal_i(matches[2].end, -1);
+}
+
+void test_core_regexp__search_n_respects_length(void)
+{
+	git_regmatch matches[1];
+
+	cl_git_pass(git_regexp_compile(&regex, "abc", 0));
+	cl_git_pass(git_regexp_search(&regex, "abcdefg", 1, matches));
+	cl_assert_equal_i(matches[0].start, 0);
+	cl_assert_equal_i(matches[0].end, 3);
+
+	git_regexp_dispose(&regex);
+
+	cl_git_pass(git_regexp_compile(&regex, "abc", 0));
+	cl_git_fail(git_regexp_search_n(&regex, "abcdefg", 2, 1, matches));
 }

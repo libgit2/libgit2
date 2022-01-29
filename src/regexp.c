@@ -39,11 +39,30 @@ int git_regexp_match(const git_regexp *r, const char *string)
 	return 0;
 }
 
-int git_regexp_search(const git_regexp *r, const char *string, size_t nmatches, git_regmatch *matches)
+int git_regexp_search(
+	const git_regexp *r,
+	const char *string,
+	size_t nmatches,
+	git_regmatch *matches)
+{
+	return git_regexp_search_n(r, string, strlen(string), nmatches, matches);
+}
+
+int git_regexp_search_n(
+	const git_regexp *r,
+	const char *string,
+	size_t string_len,
+	size_t nmatches,
+	git_regmatch *matches)
 {
 	int static_ovec[9] = {0}, *ovec;
 	int error;
 	size_t i;
+
+	if (string_len > INT_MAX) {
+		git_error_set(GIT_ERROR_REGEX, "regex too long");
+		return -1;
+	}
 
 	/* The ovec array always needs to be a multiple of three */
 	if (nmatches <= ARRAY_SIZE(static_ovec) / 3)
@@ -52,7 +71,7 @@ int git_regexp_search(const git_regexp *r, const char *string, size_t nmatches, 
 		ovec = git__calloc(nmatches * 3, sizeof(*ovec));
 	GIT_ERROR_CHECK_ALLOC(ovec);
 
-	if ((error = pcre_exec(*r, NULL, string, (int) strlen(string), 0, 0, ovec, (int) nmatches * 3)) < 0)
+	if ((error = pcre_exec(*r, NULL, string, (int)string_len, 0, 0, ovec, (int) nmatches * 3)) < 0)
 		goto out;
 
 	if (error == 0)
@@ -116,7 +135,21 @@ int git_regexp_match(const git_regexp *r, const char *string)
 	return 0;
 }
 
-int git_regexp_search(const git_regexp *r, const char *string, size_t nmatches, git_regmatch *matches)
+int git_regexp_search(
+	const git_regexp *r,
+	const char *string,
+	size_t nmatches,
+	git_regmatch *matches)
+{
+	return git_regexp_search_n(r, string, strlen(string), nmatches, matches);
+}
+
+int git_regexp_search_n(
+	const git_regexp *r,
+	const char *string,
+	size_t string_len,
+	size_t nmatches,
+	git_regmatch *matches)
 {
 	pcre2_match_data *data = NULL;
 	PCRE2_SIZE *ovec;
@@ -128,7 +161,7 @@ int git_regexp_search(const git_regexp *r, const char *string, size_t nmatches, 
 		goto out;
 	}
 
-	if ((error = pcre2_match(*r, (const unsigned char *) string, strlen(string),
+	if ((error = pcre2_match(*r, (unsigned char *) string, string_len,
 			     0, 0, data, NULL)) < 0)
 		goto out;
 
@@ -151,6 +184,10 @@ out:
 }
 
 #elif defined(GIT_REGEX_REGCOMP) || defined(GIT_REGEX_REGCOMP_L)
+
+# ifndef REG_STARTEND
+#  error REG_STARTEND is required for system regexec support
+# endif
 
 #if defined(GIT_REGEX_REGCOMP_L)
 # include <xlocale.h>
@@ -191,31 +228,90 @@ int git_regexp_match(const git_regexp *r, const char *string)
 	return 0;
 }
 
-int git_regexp_search(const git_regexp *r, const char *string, size_t nmatches, git_regmatch *matches)
+static int regexp_search(
+	const git_regexp *r,
+	const char *string,
+	size_t string_len,
+	size_t nmatches,
+	regmatch_t *matches)
 {
-	regmatch_t static_m[3], *m;
+	GIT_UNUSED(string_len);
+	return regexec(r, string, nmatches, matches, 0);
+}
+
+static int regexp_search_n(
+	const git_regexp *r,
+	const char *string,
+	size_t string_len,
+	size_t nmatches,
+	regmatch_t *matches)
+{
+#ifdef REG_STARTEND
+	matches[0].rm_so = 0;
+	matches[0].rm_eo = string_len;
+
+	return regexec(r, string, nmatches, matches, REG_STARTEND);
+#else
+	char *s = git__strndup(string, string_len);
+	int error = regexec(r, s, nmatches, matches, 0);
+	git__free(s);
+
+	return error;
+#endif
+}
+
+static int regexp_search_common(
+	const git_regexp *r,
+	const char *string,
+	size_t string_len,
+	size_t nmatches,
+	git_regmatch *matches,
+	int (*cb)(const git_regexp *, const char *, size_t, size_t, regmatch_t *))
+{
+	regmatch_t static_m[3], *dynamic_m = NULL, *m;
 	int error;
 	size_t i;
 
-	if (nmatches <= ARRAY_SIZE(static_m))
+	if (nmatches <= ARRAY_SIZE(static_m)) {
 		m = static_m;
-	else
-		m = git__calloc(nmatches, sizeof(*m));
+	} else {
+		m = dynamic_m = git__calloc(nmatches, sizeof(*m));
+		GIT_ERROR_CHECK_ALLOC(dynamic_m);
+	}
 
-	if ((error = regexec(r, string, nmatches, m, 0)) != 0)
-		goto out;
+	if ((error = cb(r, string, string_len, nmatches, m)) < 0)
+		goto done;
 
 	for (i = 0; i < nmatches; i++) {
 		matches[i].start = (m[i].rm_so < 0) ? -1 : m[i].rm_so;
 		matches[i].end = (m[i].rm_eo < 0) ? -1 : m[i].rm_eo;
 	}
 
-out:
-	if (nmatches > ARRAY_SIZE(static_m))
-		git__free(m);
+done:
+	git__free(dynamic_m);
+
 	if (error)
 		return (error == REG_NOMATCH) ? GIT_ENOTFOUND : GIT_EINVALIDSPEC;
 	return 0;
+}
+
+int git_regexp_search(
+	const git_regexp *r,
+	const char *string,
+	size_t nmatches,
+	git_regmatch *matches)
+{
+	return regexp_search_common(r, string, 0, nmatches, matches, regexp_search);
+}
+
+int git_regexp_search_n(
+	const git_regexp *r,
+	const char *string,
+	size_t string_len,
+	size_t nmatches,
+	git_regmatch *matches)
+{
+	return regexp_search_common(r, string, string_len, nmatches, matches, regexp_search_n);
 }
 
 #endif

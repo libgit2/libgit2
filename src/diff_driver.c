@@ -454,7 +454,7 @@ static int diff_context_line__pattern_match(
 	for (i = 0; i < maxi; ++i) {
 		git_diff_driver_pattern *pat = git_array_get(driver->fn_patterns, i);
 
-		if (!git_regexp_search(&pat->re, line->ptr, 2, pmatch)) {
+		if (!git_regexp_search_n(&pat->re, line->ptr, line->size, 2, pmatch)) {
 			if (pat->flags & REG_NEGATE)
 				return false;
 
