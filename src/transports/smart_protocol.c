@@ -521,7 +521,6 @@ int git_smart__download_pack(
 	int error = 0;
 	struct network_packetsize_payload npp = {0};
 
-	// TODO
 	git_indexer_progress_cb progress_cb = t->connect_opts.callbacks.transfer_progress;
 	void *progress_payload = t->connect_opts.callbacks.payload;
 
