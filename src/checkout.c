@@ -2070,6 +2070,9 @@ static int checkout_write_merge(
 	if (data->opts.checkout_strategy & GIT_CHECKOUT_CONFLICT_STYLE_DIFF3)
 		opts.flags |= GIT_MERGE_FILE_STYLE_DIFF3;
 
+	if (data->opts.checkout_strategy & GIT_CHECKOUT_CONFLICT_STYLE_ZDIFF3)
+		opts.flags |= GIT_MERGE_FILE_STYLE_ZDIFF3;
+
 	opts.ancestor_label = data->opts.ancestor_label ?
 		data->opts.ancestor_label : "ancestor";
 	opts.our_label = data->opts.our_label ?
@@ -2493,6 +2496,8 @@ static int checkout_data_init(
 			data->opts.checkout_strategy |= GIT_CHECKOUT_CONFLICT_STYLE_MERGE;
 		else if (strcmp(conflict_style->value, "diff3") == 0)
 			data->opts.checkout_strategy |= GIT_CHECKOUT_CONFLICT_STYLE_DIFF3;
+		else if (strcmp(conflict_style->value, "zdiff3") == 0)
+			data->opts.checkout_strategy |= GIT_CHECKOUT_CONFLICT_STYLE_ZDIFF3;
 		else {
 			git_error_set(GIT_ERROR_CHECKOUT, "unknown style '%s' given for 'merge.conflictstyle'",
 				conflict_style->value);

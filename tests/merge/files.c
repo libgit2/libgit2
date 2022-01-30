@@ -424,3 +424,42 @@ void test_merge_files__crlf_conflict_markers_for_crlf_files(void)
 	cl_assert(memcmp(expected_diff3, result.ptr, expected_len) == 0);
 	git_merge_file_result_free(&result);
 }
+
+void test_merge_files__conflicts_in_zdiff3(void)
+{
+	git_merge_file_input ancestor = GIT_MERGE_FILE_INPUT_INIT,
+		ours = GIT_MERGE_FILE_INPUT_INIT,
+		theirs = GIT_MERGE_FILE_INPUT_INIT;
+	git_merge_file_options opts = GIT_MERGE_FILE_OPTIONS_INIT;
+	git_merge_file_result result = {0};
+
+	const char *expected_zdiff3 =
+		"1,\nfoo,\nbar,\n" \
+		"<<<<<<< file.txt\n" \
+		"||||||| file.txt\n# add more here\n" \
+		"=======\nquux,\nwoot,\n" \
+		">>>>>>> file.txt\nbaz,\n3,\n";
+	size_t expected_zdiff3_len = strlen(expected_zdiff3);
+
+	ancestor.ptr = "1,\n# add more here\n3,\n";
+	ancestor.size = strlen(ancestor.ptr);
+	ancestor.path = "file.txt";
+	ancestor.mode = 0100644;
+
+	ours.ptr = "1,\nfoo,\nbar,\nbaz,\n3,\n";
+	ours.size = strlen(ours.ptr);
+	ours.path = "file.txt";
+	ours.mode = 0100644;
+
+	theirs.ptr = "1,\nfoo,\nbar,\nquux,\nwoot,\nbaz,\n3,\n";
+	theirs.size = strlen(theirs.ptr);
+	theirs.path = "file.txt";
+	theirs.mode = 0100644;
+
+	opts.flags |= GIT_MERGE_FILE_STYLE_ZDIFF3;
+	cl_git_pass(git_merge_file(&result, &ancestor, &ours, &theirs, &opts));
+	cl_assert_equal_i(0, result.automergeable);
+	cl_assert_equal_i(expected_zdiff3_len, result.len);
+	cl_assert(memcmp(expected_zdiff3, result.ptr, expected_zdiff3_len) == 0);
+	git_merge_file_result_free(&result);
+}

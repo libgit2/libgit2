@@ -123,6 +123,8 @@ static int merge_file__xdiff(
 
 	if (options.flags & GIT_MERGE_FILE_STYLE_DIFF3)
 		xmparam.style = XDL_MERGE_DIFF3;
+	if (options.flags & GIT_MERGE_FILE_STYLE_ZDIFF3)
+		xmparam.style = XDL_MERGE_ZEALOUS_DIFF3;
 
 	if (options.flags & GIT_MERGE_FILE_IGNORE_WHITESPACE)
 		xmparam.xpp.flags |= XDF_IGNORE_WHITESPACE;

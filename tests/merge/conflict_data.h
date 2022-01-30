@@ -36,6 +36,15 @@
 	"this file is changed in branch and master\n" \
 	">>>>>>> 7cb63eed597130ba4abb87b3e544b85021905520\n"
 
+#define CONFLICTING_ZDIFF3_FILE \
+	"<<<<<<< HEAD\n" \
+	"this file is changed in master and branch\n" \
+	"||||||| initial\n" \
+	"this file is a conflict\n" \
+	"=======\n" \
+	"this file is changed in branch and master\n" \
+	">>>>>>> 7cb63eed597130ba4abb87b3e544b85021905520\n"
+
 #define CONFLICTING_UNION_FILE \
 	"this file is changed in master and branch\n" \
 	"this file is changed in branch and master\n"
