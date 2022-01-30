@@ -30,7 +30,13 @@ typedef regex_t git_regexp;
 /** Options supported by @git_regexp_compile. */
 typedef enum {
 	/** Enable case-insensitive matching */
-	GIT_REGEXP_ICASE = (1 << 0)
+	GIT_REGEXP_ICASE = (1 << 0),
+
+	/** Enable extended matching */
+	GIT_REGEXP_EXTENDED = (1 << 1),
+
+	/** Newline matching */
+	GIT_REGEXP_NEWLINE = (1 << 2)
 } git_regexp_flags_t;
 
 /** Structure containing information about regular expression matching groups */

@@ -16,6 +16,8 @@ int git_regexp_compile(git_regexp *r, const char *pattern, int flags)
 
 	if (flags & GIT_REGEXP_ICASE)
 		cflags |= PCRE_CASELESS;
+	if (flags & GIT_REGEXP_NEWLINE)
+		cflags |= PCRE_MULTILINE;
 
 	if ((*r = pcre_compile(pattern, cflags, &error, &erroffset, NULL)) == NULL) {
 		git_error_set_str(GIT_ERROR_REGEX, error);
@@ -102,6 +104,8 @@ int git_regexp_compile(git_regexp *r, const char *pattern, int flags)
 
 	if (flags & GIT_REGEXP_ICASE)
 		cflags |= PCRE2_CASELESS;
+	if (flags & GIT_REGEXP_NEWLINE)
+		cflags |= PCRE2_MULTILINE;
 
 	if ((*r = pcre2_compile((const unsigned char *) pattern, PCRE2_ZERO_TERMINATED,
 				cflags, &error, &erroff, NULL)) == NULL) {
@@ -200,6 +204,10 @@ int git_regexp_compile(git_regexp *r, const char *pattern, int flags)
 
 	if (flags & GIT_REGEXP_ICASE)
 		cflags |= REG_ICASE;
+	if (flags & GIT_REGEXP_EXTENDED)
+		cflags |= REG_EXTENDED;
+	if (flags & GIT_REGEXP_NEWLINE)
+		cflags |= REG_NEWLINE;
 
 # if defined(GIT_REGEX_REGCOMP)
 	if ((error = regcomp(r, pattern, cflags)) != 0)
