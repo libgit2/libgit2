@@ -65,9 +65,14 @@ typedef struct refdb_fs_backend {
 	git_iterator_flag_t iterator_flags;
 	uint32_t direach_flags;
 	int fsync;
+	git_map packed_refs_map;
+	git_mutex prlock; /* protect packed_refs_map */
+	git_futils_filestamp packed_refs_stamp;
+	bool sorted;
 } refdb_fs_backend;
 
 static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name);
+static char *packed_set_peeling_mode(char *data, size_t data_sz, refdb_fs_backend *backend);
 
 GIT_INLINE(int) loose_path(
 	git_str *out,
@@ -134,31 +139,12 @@ static int packed_reload(refdb_fs_backend *backend)
 
 	GIT_UNUSED(git_sortedcache_clear(backend->refcache, false));
 
-	scan = (char *)packedrefs.ptr;
+	scan = packedrefs.ptr;
 	eof  = scan + packedrefs.size;
 
-	backend->peeling_mode = PEELING_NONE;
-
-	if (*scan == '#') {
-		static const char *traits_header = "# pack-refs with: ";
-
-		if (git__prefixcmp(scan, traits_header) == 0) {
-			scan += strlen(traits_header);
-			eol = strchr(scan, '\n');
-
-			if (!eol)
-				goto parse_failed;
-			*eol = '\0';
-
-			if (strstr(scan, " fully-peeled ") != NULL) {
-				backend->peeling_mode = PEELING_FULL;
-			} else if (strstr(scan, " peeled ") != NULL) {
-				backend->peeling_mode = PEELING_STANDARD;
-			}
-
-			scan = eol + 1;
-		}
-	}
+	scan = packed_set_peeling_mode(scan, packedrefs.size, backend);
+	if (!scan)
+		goto parse_failed;
 
 	while (scan < eof && *scan == '#') {
 		if (!(eol = strchr(scan, '\n')))
@@ -466,10 +452,198 @@ static int ref_error_notfound(const char *name)
 	return GIT_ENOTFOUND;
 }
 
-static int packed_lookup(
-	git_reference **out,
-	refdb_fs_backend *backend,
-	const char *ref_name)
+static char *packed_set_peeling_mode(
+        char *data,
+        size_t data_sz,
+        refdb_fs_backend *backend)
+{
+	static const char *traits_header = "# pack-refs with:";
+	char *eol;
+	backend->peeling_mode = PEELING_NONE;
+
+	if (git__prefixncmp(data, data_sz, traits_header) == 0) {
+		size_t hdr_sz = strlen(traits_header);
+		const char *sorted = " sorted ";
+		const char *peeled = " peeled ";
+		const char *fully_peeled = " fully-peeled ";
+		data += hdr_sz;
+		data_sz -= hdr_sz;
+
+		eol = memchr(data, '\n', data_sz);
+
+		if (!eol)
+			return NULL;
+
+		if (git__memmem(data, eol - data, fully_peeled, strlen(fully_peeled)))
+			backend->peeling_mode = PEELING_FULL;
+		else if (git__memmem(data, eol - data, peeled, strlen(peeled)))
+			backend->peeling_mode = PEELING_STANDARD;
+
+		backend->sorted = NULL != git__memmem(data, eol - data, sorted, strlen(sorted));
+
+		return eol + 1;
+	}
+	return data;
+}
+
+static void packed_map_free(refdb_fs_backend *backend)
+{
+	if (backend->packed_refs_map.data) {
+#ifdef GIT_WIN32
+		git__free(backend->packed_refs_map.data);
+#else
+		git_futils_mmap_free(&backend->packed_refs_map);
+#endif
+		backend->packed_refs_map.data = NULL;
+		backend->packed_refs_map.len = 0;
+		git_futils_filestamp_set(&backend->packed_refs_stamp, NULL);
+	}
+}
+
+static int packed_map_check(refdb_fs_backend *backend)
+{
+	int error = 0;
+	git_file fd = -1;
+	struct stat st;
+
+	if ((error = git_mutex_lock(&backend->prlock)) < 0)
+		return error;
+
+	if (backend->packed_refs_map.data &&
+	    !git_futils_filestamp_check(
+	            &backend->packed_refs_stamp, backend->refcache->path)) {
+		git_mutex_unlock(&backend->prlock);
+		return error;
+	}
+	packed_map_free(backend);
+
+	fd = git_futils_open_ro(backend->refcache->path);
+	if (fd < 0) {
+		git_mutex_unlock(&backend->prlock);
+		if (fd == GIT_ENOTFOUND) {
+			git_error_clear();
+			return 0;
+		}
+		return fd;
+	}
+
+	if (p_fstat(fd, &st) < 0) {
+		p_close(fd);
+		git_mutex_unlock(&backend->prlock);
+		git_error_set(GIT_ERROR_OS, "unable to stat packed-refs '%s'", backend->refcache->path);
+		return -1;
+	}
+
+	if (st.st_size == 0) {
+		p_close(fd);
+		git_mutex_unlock(&backend->prlock);
+		return 0;
+	}
+
+	git_futils_filestamp_set_from_stat(&backend->packed_refs_stamp, &st);
+
+#ifdef GIT_WIN32
+	/* on windows, we copy the entire file into memory rather than using
+	 * mmap() because using mmap() on windows also locks the file and this
+	 * map is long-lived. */
+	backend->packed_refs_map.len = (size_t)st.st_size;
+	backend->packed_refs_map.data =
+	        git__malloc(backend->packed_refs_map.len);
+	GIT_ERROR_CHECK_ALLOC(backend->packed_refs_map.data);
+	{
+		ssize_t bytesread =
+		        p_read(fd, backend->packed_refs_map.data,
+		               backend->packed_refs_map.len);
+		error = (bytesread == (ssize_t)backend->packed_refs_map.len) ?  0 : -1;
+	}
+#else
+	error = git_futils_mmap_ro(&backend->packed_refs_map, fd, 0, (size_t)st.st_size);
+#endif
+	p_close(fd);
+	if (error < 0) {
+		git_mutex_unlock(&backend->prlock);
+		return error;
+	}
+
+	packed_set_peeling_mode(
+	        backend->packed_refs_map.data, backend->packed_refs_map.len,
+	        backend);
+
+	git_mutex_unlock(&backend->prlock);
+	return error;
+}
+
+/*
+ * Find beginning of packed-ref record pointed to by p.
+ *   buf - a lower-bound pointer to some memory buffer
+ *   p - an upper-bound pointer to the same memory buffer
+ */
+static const char *start_of_record(const char *buf, const char *p)
+{
+	const char *nl = p;
+	while (true) {
+		nl = git__memrchr(buf, '\n', nl - buf);
+		if (!nl)
+			return buf;
+
+		if (nl[1] == '^' && nl > buf)
+			--nl;
+		else
+			break;
+	};
+	return nl + 1;
+}
+
+/*
+ * Find end of packed-ref record pointed to by p.
+ *   end - an upper-bound pointer to some memory buffer
+ *   p - a lower-bound pointer to the same memory buffer
+ */
+static const char *end_of_record(const char *p, const char *end)
+{
+	while (1) {
+		size_t sz = end - p;
+		p = memchr(p, '\n', sz);
+		if (!p)
+			return end;
+		++p;
+		if (p < end && p[0] == '^')
+			++p;
+		else
+			break;
+	}
+	return p;
+}
+
+static int
+cmp_record_to_refname(const char *rec, size_t data_end, const char *ref_name)
+{
+	const size_t ref_len = strlen(ref_name);
+	int cmp_val;
+	const char *end;
+
+	rec += GIT_OID_HEXSZ + 1; /* <oid> + space */
+	if (data_end < GIT_OID_HEXSZ + 3) {
+		/* an incomplete (corrupt) record is treated as less than ref_name */
+		return -1;
+	}
+	data_end -= GIT_OID_HEXSZ + 1;
+
+	end = memchr(rec, '\n', data_end);
+	if (end)
+		data_end = end - rec;
+
+	cmp_val = memcmp(rec, ref_name, min(ref_len, data_end));
+
+	if (cmp_val == 0 && data_end != ref_len)
+		return (data_end > ref_len) ? 1 : -1;
+	return cmp_val;
+}
+
+static int packed_unsorted_lookup(
+        git_reference **out,
+        refdb_fs_backend *backend,
+        const char *ref_name)
 {
 	int error = 0;
 	struct packref *entry;
@@ -494,6 +668,85 @@ static int packed_lookup(
 	return error;
 }
 
+static int packed_lookup(
+        git_reference **out,
+        refdb_fs_backend *backend,
+        const char *ref_name)
+{
+	int error = 0;
+	const char *left, *right, *data_end;
+
+	if ((error = packed_map_check(backend)) < 0)
+		return error;
+
+	if (!backend->sorted)
+		return packed_unsorted_lookup(out, backend, ref_name);
+
+	left = backend->packed_refs_map.data;
+	right = data_end = (const char *) backend->packed_refs_map.data +
+	                   backend->packed_refs_map.len;
+
+	while (left < right && *left == '#') {
+		if (!(left = memchr(left, '\n', data_end - left)))
+			goto parse_failed;
+		left++;
+	}
+
+	while (left < right) {
+		const char *mid, *rec;
+		int compare;
+
+		mid = left + (right - left) / 2;
+		rec = start_of_record(left, mid);
+		compare = cmp_record_to_refname(rec, data_end - rec, ref_name);
+
+		if (compare < 0) {
+			left = end_of_record(mid, right);
+		} else if (compare > 0) {
+			right = rec;
+		} else {
+			const char *eol;
+			git_oid oid, peel, *peel_ptr = NULL;
+
+			if (data_end - rec < GIT_OID_HEXSZ ||
+			    git_oid_fromstr(&oid, rec) < 0) {
+				goto parse_failed;
+			}
+			rec += GIT_OID_HEXSZ + 1;
+			if (!(eol = memchr(rec, '\n', data_end - rec))) {
+				goto parse_failed;
+			}
+
+			/* look for optional "^<OID>\n" */
+
+			if (eol + 1 < data_end) {
+				rec = eol + 1;
+
+				if (*rec == '^') {
+					rec++;
+					if (data_end - rec < GIT_OID_HEXSZ ||
+						git_oid_fromstr(&peel, rec) < 0) {
+						goto parse_failed;
+					}
+					peel_ptr = &peel;
+				}
+			}
+
+			*out = git_reference__alloc(ref_name, &oid, peel_ptr);
+			if (!*out) {
+				return -1;
+			}
+
+			return 0;
+		}
+	}
+	return GIT_ENOTFOUND;
+
+parse_failed:
+	git_error_set(GIT_ERROR_REFERENCE, "corrupted packed references file");
+	return -1;
+}
+
 static int refdb_fs_backend__lookup(
 	git_reference **out,
 	git_refdb_backend *_backend,
@@ -513,7 +766,6 @@ static int refdb_fs_backend__lookup(
 		git_error_clear();
 		error = packed_lookup(out, backend, ref_name);
 	}
-
 	return error;
 }
 
@@ -1081,6 +1333,15 @@ static int packed_write(refdb_fs_backend *backend)
 	int error, open_flags = 0;
 	size_t i;
 
+	/* take lock and close up packed-refs mmap if open */
+	if ((error = git_mutex_lock(&backend->prlock)) < 0) {
+		return error;
+	}
+
+	packed_map_free(backend);
+
+	git_mutex_unlock(&backend->prlock);
+
 	/* lock the cache to updates while we do this */
 	if ((error = git_sortedcache_wlock(refcache)) < 0)
 		return error;
@@ -1568,6 +1829,12 @@ static void refdb_fs_backend__free(git_refdb_backend *_backend)
 		return;
 
 	git_sortedcache_free(backend->refcache);
+
+	git_mutex_lock(&backend->prlock);
+	packed_map_free(backend);
+	git_mutex_unlock(&backend->prlock);
+	git_mutex_free(&backend->prlock);
+
 	git__free(backend->gitpath);
 	git__free(backend->commonpath);
 	git__free(backend);
@@ -2121,6 +2388,11 @@ int git_refdb_backend_fs(
 
 	backend = git__calloc(1, sizeof(refdb_fs_backend));
 	GIT_ERROR_CHECK_ALLOC(backend);
+	if (git_mutex_init(&backend->prlock) < 0) {
+		git__free(backend);
+		return -1;
+	}
+
 
 	if (git_refdb_init_backend(&backend->parent, GIT_REFDB_BACKEND_VERSION) < 0)
 		goto fail;
@@ -2183,6 +2455,7 @@ int git_refdb_backend_fs(
 	return 0;
 
 fail:
+	git_mutex_free(&backend->prlock);
 	git_str_dispose(&gitpath);
 	git__free(backend->gitpath);
 	git__free(backend->commonpath);

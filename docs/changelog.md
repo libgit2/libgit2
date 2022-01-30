@@ -1963,3 +1963,8 @@ v0.22
   functions. This is not something which we can know to do. A
   last-resort convenience function is provided in sys/openssl.h,
   `git_openssl_set_locking()` which can be used to set the locking.
+
+* `git_reference_*()` functions use mmap() + binary search for packed
+  refs lookups when using the fs backend. Previously all entries were
+  read into a hashtable, which could be slow for repositories with a
+  large number of refs.
