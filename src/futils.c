@@ -26,30 +26,32 @@ int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 
 int git_futils_mktmp(git_str *path_out, const char *filename, mode_t mode)
 {
+	const int open_flags = O_RDWR | O_CREAT | O_EXCL | O_BINARY | O_CLOEXEC;
+	/* TMP_MAX is unrelated to mktemp but should provide a reasonable amount */
+	unsigned int tries = TMP_MAX;
 	int fd;
-	mode_t mask;
 
-	p_umask(mask = p_umask(0));
+	while (tries--) {
+		git_str_sets(path_out, filename);
+		git_str_puts(path_out, "_git2_XXXXXX");
 
-	git_str_sets(path_out, filename);
-	git_str_puts(path_out, "_git2_XXXXXX");
+		if (git_str_oom(path_out))
+			return -1;
 
-	if (git_str_oom(path_out))
-		return -1;
+		/* Using mktemp is safe when we open with O_CREAT | O_EXCL */
+		p_mktemp(path_out->ptr);
+		/* mktemp sets template to empty string on failure */
+		if (path_out->ptr[0] == '\0')
+			break;
 
-	if ((fd = p_mkstemp(path_out->ptr)) < 0) {
-		git_error_set(GIT_ERROR_OS,
-			"failed to create temporary file '%s'", path_out->ptr);
-		return -1;
+		if ((fd = p_open(path_out->ptr, open_flags, mode)) >= 0)
+			return fd;
 	}
 
-	if (p_chmod(path_out->ptr, (mode & ~mask))) {
-		git_error_set(GIT_ERROR_OS,
-			"failed to set permissions on file '%s'", path_out->ptr);
-		return -1;
-	}
-
-	return fd;
+	git_error_set(GIT_ERROR_OS,
+		"failed to create temporary file '%s'", path_out->ptr);
+	git_str_dispose(path_out);
+	return -1;
 }
 
 int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode_t mode)

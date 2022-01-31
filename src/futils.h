@@ -173,8 +173,16 @@ typedef enum {
 extern int git_futils_rmdir_r(const char *path, const char *base, uint32_t flags);
 
 /**
- * Create and open a temporary file with a `_git2_` suffix.
- * Writes the filename into path_out.
+ * Create and open a temporary file with a `_git2_` suffix in a
+ * protected directory; the file created will created will honor
+ * the current `umask`.  Writes the filename into path_out.
+ *
+ * This function is *NOT* suitable for use in temporary directories
+ * that are world writable.  It uses `mktemp` (for portability) and
+ * many `mktemp` implementations use weak random characters.  It
+ * should only be assumed to be suitable for atomically writing
+ * a new file in a directory that you control.
+ *
  * @return On success, an open file descriptor, else an error code < 0.
  */
 extern int git_futils_mktmp(git_str *path_out, const char *filename, mode_t mode);
