@@ -799,6 +799,9 @@ static int revparse(
 				if (temp_object != NULL)
 					base_rev = temp_object;
 				break;
+			} else if (spec[pos+1] == '\0') {
+				spec = "HEAD";
+				break;
 			}
 			/* fall through */
 
