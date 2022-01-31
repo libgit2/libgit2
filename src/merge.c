@@ -3126,7 +3126,7 @@ int git_merge__append_conflicts_to_merge_msg(
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_APPEND, GIT_MERGE_FILE_MODE)) < 0)
 		goto cleanup;
 
-	git_filebuf_printf(&file, "\nConflicts:\n");
+	git_filebuf_printf(&file, "\n#Conflicts:\n");
 
 	for (i = 0; i < git_index_entrycount(index); i++) {
 		const git_index_entry *e = git_index_get_byindex(index, i);
@@ -3135,7 +3135,7 @@ int git_merge__append_conflicts_to_merge_msg(
 			continue;
 
 		if (last == NULL || strcmp(e->path, last) != 0)
-			git_filebuf_printf(&file, "\t%s\n", e->path);
+			git_filebuf_printf(&file, "#\t%s\n", e->path);
 
 		last = e->path;
 	}

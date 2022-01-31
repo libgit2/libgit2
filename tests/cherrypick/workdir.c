@@ -170,9 +170,9 @@ void test_cherrypick_workdir__conflicts(void)
 	cl_assert(strcmp(git_str_cstr(&mergemsg_buf),
 		"Change all files\n" \
 		"\n" \
-		"Conflicts:\n" \
-		"\tfile2.txt\n" \
-		"\tfile3.txt\n") == 0);
+		"#Conflicts:\n" \
+		"#\tfile2.txt\n" \
+		"#\tfile3.txt\n") == 0);
 
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/file2.txt"));
@@ -352,10 +352,10 @@ void test_cherrypick_workdir__both_renamed(void)
 	cl_assert(strcmp(git_str_cstr(&mergemsg_buf),
 		"Renamed file3.txt -> file3.txt.renamed\n" \
 		"\n" \
-		"Conflicts:\n" \
-		"\tfile3.txt\n" \
-		"\tfile3.txt.renamed\n" \
-		"\tfile3.txt.renamed_on_branch\n") == 0);
+		"#Conflicts:\n" \
+		"#\tfile3.txt\n" \
+		"#\tfile3.txt.renamed\n" \
+		"#\tfile3.txt.renamed_on_branch\n") == 0);
 
 	git_str_dispose(&mergemsg_buf);
 	git_commit_free(commit);
