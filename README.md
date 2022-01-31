@@ -301,6 +301,8 @@ compiler and linker. These flags are rarely used but can be useful for
 - `CMAKE_FIND_ROOT_PATH`: Override the search path for libraries
 - `ZLIB_LIBRARY`, `OPENSSL_SSL_LIBRARY` AND `OPENSSL_CRYPTO_LIBRARY`:
 Tell CMake where to find those specific libraries
+- `LINK_WITH_STATIC_LIBRARIES`: Link only with static versions of
+system libraries
 
 MacOS X
 -------
