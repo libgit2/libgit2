@@ -15,11 +15,10 @@ jobs:
   # targets and their details.  Then we build either in a docker container
   # (Linux) or on the actual hosts (macOS, Windows).
   build:
-    name: Build
     strategy:
       matrix:
         platform:
-        - # Xenial, GCC, OpenSSL
+        - name: Linux (Xenial, GCC, OpenSSL)
           container:
             name: xenial
           env:
@@ -27,7 +26,7 @@ jobs:
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
           os: ubuntu-latest
-        - # Xenial, GCC, mbedTLS
+        - name: "Linux (Xenial, GCC, mbedTLS)"
           container:
             name: xenial
           env:
@@ -35,7 +34,7 @@ jobs:
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
           os: ubuntu-latest
-        - # Xenial, Clang, OpenSSL
+        - name: "Linux (Xenial, Clang, OpenSSL)"
           container:
             name: xenial
           env:
@@ -43,7 +42,7 @@ jobs:
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
           os: ubuntu-latest
-        - # Xenial, Clang, mbedTLS
+        - name: "Linux (Xenial, Clang, mbedTLS)"
           container:
             name: xenial
           env:
@@ -51,7 +50,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
           os: ubuntu-latest
-        - # Xenial, GCC, thread-free
+        - name: "Linux (no threads)"
           container:
             name: xenial
           env:
@@ -59,7 +58,7 @@ jobs:
             CMAKE_OPTIONS: -DTHREADSAFE=OFF -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
           os: ubuntu-latest
-        - # Xenial, Clang, OpenSSL (dynamically loaded)
+        - name: "Linux (dynamically-loaded OpenSSL)"
           container:
             name: xenial
           env:
@@ -67,7 +66,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
           os: ubuntu-latest
-        - # Focal, Clang 10, mbedTLS, MemorySanitizer
+        - name: "Linux (MemorySanitizer)"
           container:
             name: focal
           env:
@@ -80,7 +79,7 @@ jobs:
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
           os: ubuntu-latest
-        - # Focal, Clang 10, OpenSSL, UndefinedBehaviorSanitizer
+        - name: "Linux (UndefinedBehaviorSanitizer)"
           container:
             name: focal
           env:
@@ -92,7 +91,7 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
           os: ubuntu-latest
-        - # Focal, Clang 10, OpenSSL, ThreadSanitizer
+        - name: "Linux (ThreadSanitizer)"
           container:
             name: focal
           env:
@@ -105,7 +104,7 @@ jobs:
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
           os: ubuntu-latest
-        - # Focal, Clang 10, mmap emulation (NO_MMAP)
+        - name: "Linux (no mmap)"
           container:
             name: focal
           env:
@@ -116,7 +115,7 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
           os: ubuntu-latest
-        - # CentOS 7
+        - name: "Linux (CentOS 7)"
           container:
             name: centos7
           env:
@@ -124,7 +123,7 @@ jobs:
             PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
           os: ubuntu-latest
-        - # CentOS 7, OpenSSL (dynamically loaded)
+        - name: "Linux (CentOS 7, dynamically-loaded OpenSSL)"
           container:
             name: centos7
           env:
@@ -132,7 +131,7 @@ jobs:
             PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
           os: ubuntu-latest
-        - # CentOS 8
+        - name: "Linux (CentOS 8)"
           container:
             name: centos8
           env:
@@ -141,7 +140,7 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             SKIP_SSH_TESTS: true
           os: ubuntu-latest
-        - # CentOS 8, OpenSSL (dynamically loaded)
+        - name: "Linux (CentOS 8, dynamically-loaded OpenSSL)"
           container:
             name: centos8
           env:
@@ -150,7 +149,7 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             SKIP_SSH_TESTS: true
           os: ubuntu-latest
-        - # macOS
+        - name: "macOS"
           os: macos-10.15
           env:
             CC: clang
@@ -159,7 +158,7 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
           setup-script: osx
-        - # Windows amd64 Visual Studio
+        - name: "Windows (amd64, Visual Studio)"
           os: windows-2019
           env:
             ARCH: amd64
@@ -167,7 +166,7 @@ jobs:
             CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - # Windows amd64 Visual Studio (NO_MMAP)
+        - name: "Windows (no mmap)"
           os: windows-2019
           env:
             ARCH: amd64
@@ -176,7 +175,7 @@ jobs:
             CMAKE_OPTIONS: -A x64 -DDEPRECATE_HARD=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - # Windows x86 Visual Studio
+        - name: "Windows (x86, Visual Studio)"
           os: windows-2019
           env:
             ARCH: x86
@@ -184,7 +183,7 @@ jobs:
             CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - # Windows amd64 mingw
+        - name: "Windows (amd64, mingw)"
           os: windows-2019
           setup-script: mingw
           env:
@@ -195,7 +194,7 @@ jobs:
             BUILD_PATH: D:\Temp\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - # Windows x86 mingw
+        - name: "Windows (x86, mingw)"
           os: windows-2019
           setup-script: mingw
           env:
@@ -206,7 +205,7 @@ jobs:
             BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - # Bionic, GCC, OpenSSL (dynamically loaded)
+        - name: "Linux (Bionic, GCC, dynamically-loaded OpenSSL)"
           container:
             name: bionic
             dockerfile: bionic
@@ -216,7 +215,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
           os: ubuntu-latest
-        - # Bionic, x86, Clang, OpenSSL
+        - name: "Linux (x86, Bionic, Clang, OpenSSL)"
           container:
             name: bionic-x86
             dockerfile: bionic
@@ -227,7 +226,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
           os: ubuntu-latest
-        - # Bionic, x86, GCC, OpenSSL
+        - name: "Linux (x86, Bionic, GCC, OpenSSL)"
           container:
             name: bionic-x86
             dockerfile: bionic
@@ -237,7 +236,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
           os: ubuntu-latest
-        - # Bionic, arm32, GCC, OpenSSL
+        - name: "Linux (arm32, Bionic, GCC, OpenSSL)"
           container:
             name: bionic-arm32
             dockerfile: bionic
@@ -249,7 +248,7 @@ jobs:
             RUN_INVASIVE_TESTS: true
             SKIP_PROXY_TESTS: true
           os: ubuntu-latest
-        - # Bionic, arm64, GCC, OpenSSL
+        - name: "Linux (arm64, Bionic, GCC, OpenSSL)"
           container:
             name: bionic-arm64
             dockerfile: bionic
@@ -262,6 +261,7 @@ jobs:
             SKIP_PROXY_TESTS: true
           os: ubuntu-latest
       fail-fast: false
+    name: "Build ${{ matrix.platform.name }}"
     env: ${{ matrix.platform.env }}
     runs-on: ${{ matrix.platform.os }}
     steps:
