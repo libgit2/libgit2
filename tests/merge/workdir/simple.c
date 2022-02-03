@@ -278,8 +278,8 @@ void test_merge_workdir_simple__mergefile(void)
 	cl_assert(strcmp(git_str_cstr(&mergemsg_buf),
 		"Merge commit '7cb63eed597130ba4abb87b3e544b85021905520'\n" \
 		"\n" \
-		"Conflicts:\n" \
-		"\tconflicting.txt\n") == 0);
+		"#Conflicts:\n" \
+		"#\tconflicting.txt\n") == 0);
 	git_str_dispose(&conflicting_buf);
 	git_str_dispose(&mergemsg_buf);
 

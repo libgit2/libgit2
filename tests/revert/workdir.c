@@ -119,8 +119,8 @@ void test_revert_workdir__conflicts(void)
 		"\n" \
 		"This reverts commit 72333f47d4e83616630ff3b0ffe4c0faebcc3c45.\n"
 		"\n" \
-		"Conflicts:\n" \
-		"\tfile1.txt\n") == 0);
+		"#Conflicts:\n" \
+		"#\tfile1.txt\n") == 0);
 
 	git_commit_free(commit);
 	git_commit_free(head);
