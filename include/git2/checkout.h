@@ -182,7 +182,10 @@ typedef enum {
 	 * notifications; don't update the working directory or index.
 	 */
 	GIT_CHECKOUT_DRY_RUN = (1u << 24),
-	
+
+	/** Include common ancestor data in zdiff3 format for conflicts */
+	GIT_CHECKOUT_CONFLICT_STYLE_ZDIFF3 = (1u << 25),
+
 	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
 	 */

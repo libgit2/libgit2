@@ -323,6 +323,42 @@ void test_merge_workdir_simple__diff3(void)
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
 }
 
+void test_merge_workdir_simple__zdiff3(void)
+{
+	git_str conflicting_buf = GIT_STR_INIT;
+
+	struct merge_index_entry merge_index_entries[] = {
+		ADDED_IN_MASTER_INDEX_ENTRY,
+		AUTOMERGEABLE_INDEX_ENTRY,
+		CHANGED_IN_BRANCH_INDEX_ENTRY,
+		CHANGED_IN_MASTER_INDEX_ENTRY,
+
+		{ 0100644, "d427e0b2e138501a3d15cc376077a3631e15bd46", 1, "conflicting.txt" },
+		{ 0100644, "4e886e602529caa9ab11d71f86634bd1b6e0de10", 2, "conflicting.txt" },
+		{ 0100644, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", 3, "conflicting.txt" },
+
+		UNCHANGED_INDEX_ENTRY,
+	};
+
+	struct merge_reuc_entry merge_reuc_entries[] = {
+		AUTOMERGEABLE_REUC_ENTRY,
+		REMOVED_IN_BRANCH_REUC_ENTRY,
+		REMOVED_IN_MASTER_REUC_ENTRY
+	};
+
+	set_core_autocrlf_to(repo, false);
+
+	merge_simple_branch(0, GIT_CHECKOUT_CONFLICT_STYLE_ZDIFF3);
+
+	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
+		TEST_REPO_PATH "/conflicting.txt"));
+	cl_assert_equal_s(CONFLICTING_ZDIFF3_FILE, conflicting_buf.ptr);
+	git_str_dispose(&conflicting_buf);
+
+	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
+	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
+}
+
 void test_merge_workdir_simple__union(void)
 {
 	git_str conflicting_buf = GIT_STR_INIT;
@@ -428,6 +464,48 @@ void test_merge_workdir_simple__diff3_from_config(void)
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_DIFF3_FILE) == 0);
+	git_str_dispose(&conflicting_buf);
+
+	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
+	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
+
+	git_config_free(config);
+}
+
+void test_merge_workdir_simple__zdiff3_from_config(void)
+{
+	git_config *config;
+	git_str conflicting_buf = GIT_STR_INIT;
+
+	struct merge_index_entry merge_index_entries[] = {
+		ADDED_IN_MASTER_INDEX_ENTRY,
+		AUTOMERGEABLE_INDEX_ENTRY,
+		CHANGED_IN_BRANCH_INDEX_ENTRY,
+		CHANGED_IN_MASTER_INDEX_ENTRY,
+
+		{ 0100644, "d427e0b2e138501a3d15cc376077a3631e15bd46", 1, "conflicting.txt" },
+		{ 0100644, "4e886e602529caa9ab11d71f86634bd1b6e0de10", 2, "conflicting.txt" },
+		{ 0100644, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", 3, "conflicting.txt" },
+
+		UNCHANGED_INDEX_ENTRY,
+	};
+
+	struct merge_reuc_entry merge_reuc_entries[] = {
+		AUTOMERGEABLE_REUC_ENTRY,
+		REMOVED_IN_BRANCH_REUC_ENTRY,
+		REMOVED_IN_MASTER_REUC_ENTRY
+	};
+
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_string(config, "merge.conflictstyle", "zdiff3"));
+
+	set_core_autocrlf_to(repo, false);
+
+	merge_simple_branch(0, 0);
+
+	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
+		TEST_REPO_PATH "/conflicting.txt"));
+	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_ZDIFF3_FILE) == 0);
 	git_str_dispose(&conflicting_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));

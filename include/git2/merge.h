@@ -159,7 +159,10 @@ typedef enum {
 	GIT_MERGE_FILE_DIFF_PATIENCE = (1 << 6),
 
 	/** Take extra time to find minimal diff */
-	GIT_MERGE_FILE_DIFF_MINIMAL = (1 << 7)
+	GIT_MERGE_FILE_DIFF_MINIMAL = (1 << 7),
+
+	/** Create zdiff3 ("zealous diff3")-style files */
+	GIT_MERGE_FILE_STYLE_ZDIFF3 = (1 << 8)
 } git_merge_file_flag_t;
 
 #define GIT_MERGE_CONFLICT_MARKER_SIZE	7

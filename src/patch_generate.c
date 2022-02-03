@@ -750,18 +750,34 @@ git_diff_driver *git_patch_generated_driver(git_patch_generated *patch)
 	return patch->ofile.driver;
 }
 
-void git_patch_generated_old_data(
-	char **ptr, size_t *len, git_patch_generated *patch)
+int git_patch_generated_old_data(
+	char **ptr, long *len, git_patch_generated *patch)
 {
+	if (patch->ofile.map.len > LONG_MAX ||
+	    patch->ofile.map.len > GIT_XDIFF_MAX_SIZE) {
+		git_error_set(GIT_ERROR_INVALID, "files too large for diff");
+		return -1;
+	}
+
 	*ptr = patch->ofile.map.data;
-	*len = patch->ofile.map.len;
+	*len = (long)patch->ofile.map.len;
+
+	return 0;
 }
 
-void git_patch_generated_new_data(
-	char **ptr, size_t *len, git_patch_generated *patch)
+int git_patch_generated_new_data(
+	char **ptr, long *len, git_patch_generated *patch)
 {
+	if (patch->ofile.map.len > LONG_MAX ||
+	    patch->ofile.map.len > GIT_XDIFF_MAX_SIZE) {
+		git_error_set(GIT_ERROR_INVALID, "files too large for diff");
+		return -1;
+	}
+
 	*ptr = patch->nfile.map.data;
-	*len = patch->nfile.map.len;
+	*len = (long)patch->nfile.map.len;
+
+	return 0;
 }
 
 static int patch_generated_file_cb(
