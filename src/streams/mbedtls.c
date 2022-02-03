@@ -23,12 +23,14 @@
 #endif
 
 /* Work around C90-conformance issues */
-#if defined(_MSC_VER)
-# define inline __inline
-#elif defined(__GNUC__)
-# define inline __inline__
-#else
-# define inline
+#if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
+# if defined(_MSC_VER)
+#  define inline __inline
+# elif defined(__GNUC__)
+#  define inline __inline__
+# else
+#  define inline
+# endif
 #endif
 
 #include <mbedtls/config.h>
