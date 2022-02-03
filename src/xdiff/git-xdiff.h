@@ -16,6 +16,17 @@
 
 #include "regexp.h"
 
+/* Work around C90-conformance issues */
+#if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
+# if defined(_MSC_VER)
+#  define inline __inline
+# elif defined(__GNUC__)
+#  define inline __inline__
+# else
+#  define inline
+# endif
+#endif
+
 #define xdl_malloc(x) git__malloc(x)
 #define xdl_free(ptr) git__free(ptr)
 #define xdl_realloc(ptr, x) git__realloc(ptr, x)
