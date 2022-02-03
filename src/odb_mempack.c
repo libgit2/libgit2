@@ -31,6 +31,7 @@ struct memobject {
 
 struct memory_packer_db {
 	git_odb_backend parent;
+	uint32_t flags;
 	git_oidmap *objects;
 	git_array_t(struct memobject *) commits;
 };
@@ -56,7 +57,7 @@ static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void
 	if (git_oidmap_set(db->objects, &obj->oid, obj) < 0)
 		return -1;
 
-	if (type == GIT_OBJECT_COMMIT) {
+	if (db->flags & GIT_MEMPACK_GROUP_BY_COMMIT && type == GIT_OBJECT_COMMIT) {
 		struct memobject **store = git_array_alloc(db->commits);
 		GIT_ERROR_CHECK_ALLOC(store);
 		*store = obj;
@@ -102,28 +103,46 @@ static int impl__read_header(size_t *len_p, git_object_t *type_p, git_odb_backen
 	return 0;
 }
 
-static int git_mempack__dump(
-	git_str *pack,
-	git_repository *repo,
-	git_odb_backend *_backend)
+static int git_mempack__dump_to_packbuilder(git_packbuilder *packbuilder, git_odb_backend *_backend)
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
-	git_packbuilder *packbuilder;
-	uint32_t i;
 	int err = -1;
 
-	if (git_packbuilder_new(&packbuilder, repo) < 0)
-		return -1;
+	if (db->flags & GIT_MEMPACK_GROUP_BY_COMMIT) {
+		uint32_t i;
+		for (i = 0; i < db->commits.size; ++i) {
+			struct memobject *commit = db->commits.ptr[i];
+
+			err = git_packbuilder_insert_commit(packbuilder, &commit->oid);
+			if (err < 0)
+				return err;
+		}
+	} else {
+		const git_oid *oid;
+		size_t iter = 0;
+		while (git_oidmap_iterate(NULL, db->objects, &iter, &oid) == 0) {
+			err = git_packbuilder_insert(packbuilder, oid, NULL);
+			if (err < 0)
+				return err;
+		}
+	}
+	return 0;
+}
+
+static int git_mempack__dump(git_str *pack, git_repository *repo, git_odb_backend *backend)
+{
+	git_packbuilder *packbuilder;
+	int err = -1;
+
+	err = git_packbuilder_new(&packbuilder, repo);
+	if (err < 0)
+		return err;
 
 	git_packbuilder_set_threads(packbuilder, 0);
 
-	for (i = 0; i < db->commits.size; ++i) {
-		struct memobject *commit = db->commits.ptr[i];
-
-		err = git_packbuilder_insert_commit(packbuilder, &commit->oid);
-		if (err < 0)
-			goto cleanup;
-	}
+	err = git_mempack__dump_to_packbuilder(packbuilder, backend);
+	if (err < 0)
+		goto cleanup;
 
 	err = git_packbuilder__write_buf(pack, packbuilder);
 
@@ -138,6 +157,39 @@ int git_mempack_dump(
 	git_odb_backend *_backend)
 {
 	GIT_BUF_WRAP_PRIVATE(pack, git_mempack__dump, repo, _backend);
+}
+
+static int git_mempack__dump_to_pack_dir(git_str *filename, git_repository *repo, git_odb_backend *backend)
+{
+	git_str path = GIT_STR_INIT;
+	git_packbuilder *packbuilder;
+	int err = -1;
+
+	err = git_packbuilder_new(&packbuilder, repo);
+	if (err < 0)
+		return err;
+
+	git_packbuilder_set_threads(packbuilder, 0);
+
+	err = git_mempack__dump_to_packbuilder(packbuilder, backend);
+	if (err < 0)
+		goto cleanup;
+
+	err = git_packbuilder_write(packbuilder, NULL, 0, NULL, NULL);
+	if (err < 0)
+		goto cleanup;
+
+	err = git_str_printf(filename, "pack-%s.pack", git_packbuilder_name(packbuilder));
+
+	cleanup:
+	git_packbuilder_free(packbuilder);
+	git_str_dispose(&path);
+	return err;
+}
+
+int git_mempack_dump_to_pack_dir(git_buf *filename, git_repository *repo, git_odb_backend *backend)
+{
+	GIT_BUF_WRAP_PRIVATE(filename, git_mempack__dump_to_pack_dir, repo, backend);
 }
 
 int git_mempack_reset(git_odb_backend *_backend)
@@ -167,12 +219,19 @@ static void impl__free(git_odb_backend *_backend)
 
 int git_mempack_new(git_odb_backend **out)
 {
+	return git_mempack_new_ext(out, GIT_MEMPACK_DEFAULT);
+}
+
+int git_mempack_new_ext(git_odb_backend **out, unsigned int flags)
+{
 	struct memory_packer_db *db;
 
 	GIT_ASSERT_ARG(out);
 
 	db = git__calloc(1, sizeof(struct memory_packer_db));
 	GIT_ERROR_CHECK_ALLOC(db);
+
+	db->flags = flags;
 
 	if (git_oidmap_new(&db->objects) < 0)
 		return -1;

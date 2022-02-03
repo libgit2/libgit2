@@ -22,6 +22,18 @@
  */
 GIT_BEGIN_DECL
 
+/** Flags for new mempack backends */
+typedef enum {
+    /**
+     * When dumping, dump all commits that have been written to the backend, along with all objects that
+     * those commits reference. (As opposed to simply dumping all objects that have been written).
+     */
+    GIT_MEMPACK_GROUP_BY_COMMIT = (1u << 0),
+
+    /** Default mempack backend flags. */
+    GIT_MEMPACK_DEFAULT = GIT_MEMPACK_GROUP_BY_COMMIT
+} git_mempack_flag_t;
+
 /**
  * Instantiate a new mempack backend.
  *
@@ -45,6 +57,29 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_mempack_new(git_odb_backend **out);
 
 /**
+ * Instantiate a new mempack backend.
+ *
+ * The backend must be added to an existing ODB with the highest
+ * priority.
+ *
+ *     git_mempack_new(&mempacker);
+ *     git_repository_odb(&odb, repository);
+ *     git_odb_add_backend(odb, mempacker, 999);
+ *
+ * Once the backend has been loaded, all writes to the ODB will
+ * instead be queued in memory, and can be finalized with
+ * `git_mempack_dump`.
+ *
+ * Subsequent reads will also be served from the in-memory store
+ * to ensure consistency, until the memory store is dumped.
+ *
+ * @param out Pointer where to store the ODB backend
+ * @param flags A combination of GIT_MEMPACK options.
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_mempack_new_ext(git_odb_backend **out, unsigned int flags);
+
+/**
  * Dump all the queued in-memory writes to a packfile.
  *
  * The contents of the packfile will be stored in the given buffer.
@@ -66,6 +101,27 @@ GIT_EXTERN(int) git_mempack_new(git_odb_backend **out);
  * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_backend *backend);
+
+/**
+ * Dump all the queued in-memory writes to a packfile on disk.
+ *
+ * The contents of the packfile will be written to a packfile in
+ * the default location (a filename based on the hash of the
+ * contents in the pack directory that is in the object directory.)
+ *
+ * Once the generated packfile is available to the repository,
+ * call `git_mempack_reset` to cleanup the memory store.
+ *
+ * Calling `git_mempack_reset` before the packfile has been
+ * written to disk will result in an inconsistent repository
+ * (the objects in the memory store won't be accessible).
+ *
+ * @param filename Outputs the filename of the written packfile.
+ * @param repo The active repository where the backend is loaded
+ * @param backend The mempack backend
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_mempack_dump_to_pack_dir(git_buf *filename, git_repository *repo, git_odb_backend *backend);
 
 /**
  * Reset the memory packer by clearing all the queued objects.
