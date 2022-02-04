@@ -19,12 +19,16 @@
 
 #define GIT_IGNORE_DEFAULT_RULES ".\n..\n.git\n"
 
-static int parse_ignore_file(
-	git_repository *repo, git_attr_file *attrs, const char *data, bool allow_macros)
+int parse_ignore_file(
+	git_repository *repo,
+	git_attr_file *attrs,
+	const char *data,
+	const char *context,
+	bool allow_macros)
 {
 	int error = 0;
 	int ignore_case = false;
-	const char *scan = data, *context = NULL;
+	const char *scan = data;
 	git_attr_fnmatch *match = NULL;
 
 	GIT_UNUSED(allow_macros);
@@ -32,14 +36,8 @@ static int parse_ignore_file(
 	if (git_repository__configmap_lookup(&ignore_case, repo, GIT_CONFIGMAP_IGNORECASE) < 0)
 		git_error_clear();
 
-	/* if subdir file path, convert context for file paths */
-	if (attrs->entry &&
-		git_fs_path_root(attrs->entry->path) < 0 &&
-		!git__suffixcmp(attrs->entry->path, "/" GIT_IGNORE_FILE))
-		context = attrs->entry->path;
-
-	if (git_mutex_lock(&attrs->lock) < 0) {
-		git_error_set(GIT_ERROR_OS, "failed to lock ignore file");
+	if (git_mutex_lock(&attrs->lock)) {
+		git_error_set(GIT_ERROR_OS, "failed to lock %s file", attrs->source.filename);
 		return -1;
 	}
 
@@ -51,8 +49,7 @@ static int parse_ignore_file(
 			break;
 		}
 
-		match->flags =
-		    GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
+		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
 
 		if (!(error = git_attr_fnmatch__parse(
 			match, &attrs->pool, context, &scan)))
@@ -71,7 +68,7 @@ static int parse_ignore_file(
 			 * do not optimize away these rules, though.
 			 * */
 			if (match->flags & GIT_ATTR_FNMATCH_NEGATIVE
-			    && !(match->flags & GIT_ATTR_FNMATCH_HASWILD))
+				&& !(match->flags & GIT_ATTR_FNMATCH_HASWILD))
 				error = git_attr__does_negate_rule(&valid_rule, &attrs->rules, match);
 
 			if (!error && valid_rule)
@@ -94,6 +91,25 @@ static int parse_ignore_file(
 	return error;
 }
 
+static int git_ignore__parse_ignore_file(
+	git_repository *repo,
+	git_attr_file *attrs,
+	const char *data,
+	bool allow_macros)
+{
+	const char *context = NULL;
+
+	GIT_UNUSED(allow_macros);
+
+	/* if subdir file path, convert context for file paths */
+	if (attrs->entry &&
+		git_fs_path_root(attrs->entry->path) < 0 &&
+		!git__suffixcmp(attrs->entry->path, "/" GIT_IGNORE_FILE))
+		context = attrs->entry->path;
+
+	return parse_ignore_file(repo, attrs, data, context, allow_macros);
+}
+
 static int push_ignore_file(
 	git_ignores *ignores,
 	git_vector *which_list,
@@ -104,7 +120,7 @@ static int push_ignore_file(
 	git_attr_file *file = NULL;
 	int error = 0;
 
-	error = git_attr_cache__get(&file, ignores->repo, NULL, &source, parse_ignore_file, false);
+	error = git_attr_cache__get(&file, ignores->repo, NULL, &source, git_ignore__parse_ignore_file, false);
 
 	if (error < 0)
 		return error;
@@ -136,7 +152,7 @@ static int get_internal_ignores(git_attr_file **out, git_repository *repo)
 
 	/* if internal rules list is empty, insert default rules */
 	if (!error && !(*out)->rules.length)
-		error = parse_ignore_file(repo, *out, GIT_IGNORE_DEFAULT_RULES, false);
+		error = git_ignore__parse_ignore_file(repo, *out, GIT_IGNORE_DEFAULT_RULES, false);
 
 	return error;
 }
@@ -356,7 +372,7 @@ int git_ignore_add_rule(git_repository *repo, const char *rules)
 	if ((error = get_internal_ignores(&ign_internal, repo)) < 0)
 		return error;
 
-	error = parse_ignore_file(repo, ign_internal, rules, false);
+	error = git_ignore__parse_ignore_file(repo, ign_internal, rules, false);
 	git_attr_file__free(ign_internal);
 
 	return error;
@@ -371,7 +387,7 @@ int git_ignore_clear_internal_rules(git_repository *repo)
 		return error;
 
 	if (!(error = git_attr_file__clear_rules(ign_internal, true)))
-		error = parse_ignore_file(
+		error = git_ignore__parse_ignore_file(
 				repo, ign_internal, GIT_IGNORE_DEFAULT_RULES, false);
 
 	git_attr_file__free(ign_internal);

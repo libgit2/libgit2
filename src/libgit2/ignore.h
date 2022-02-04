@@ -62,4 +62,11 @@ extern int git_ignore__lookup(int *out, git_ignores *ign, const char *path, git_
 extern int git_ignore__check_pathspec_for_exact_ignores(
 	git_repository *repo, git_vector *pathspec, bool no_fnmatch);
 
+int parse_ignore_file(
+	git_repository *repo,
+	git_attr_file *attrs,
+	const char *data,
+	const char *context,
+	bool allow_macros);
+
 #endif
