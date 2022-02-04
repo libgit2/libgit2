@@ -3153,9 +3153,9 @@ static int read_tree_cb(
 	git_str_dispose(&path);
 	
 	if (data->sparse) {
-		int checkout = GIT_SPARSE_CHECKOUT;
-		if (git_sparse__lookup(&checkout, data->sparse, entry->path, GIT_DIR_FLAG_FALSE) == 0 &&
-				checkout == GIT_SPARSE_NOCHECKOUT)
+		git_sparse_status status = GIT_SPARSE_CHECKOUT;
+		if (git_sparse__lookup(&status, data->sparse, entry->path, GIT_DIR_FLAG_FALSE) == 0 &&
+				status == GIT_SPARSE_NOCHECKOUT)
 			entry->flags_extended = GIT_INDEX_ENTRY_SKIP_WORKTREE;
 	}
 

@@ -193,7 +193,7 @@ int git_sparse__init(
 }
 
 int git_sparse__lookup(
-        int* checkout,
+        git_sparse_status* status,
         git_sparse *sparse,
         const char* pathname,
         git_dir_flag dir_flag)
@@ -202,21 +202,21 @@ int git_sparse__lookup(
 	const char *workdir;
 	int error;
 
-	GIT_ASSERT_ARG(checkout);
+	GIT_ASSERT_ARG(status);
 	GIT_ASSERT_ARG(sparse);
 	GIT_ASSERT_ARG(pathname);
 
-	*checkout = GIT_SPARSE_CHECKOUT;
+	*status = GIT_SPARSE_CHECKOUT;
 
 	workdir = git_repository_workdir(sparse->repo);
 	if ((error = git_attr_path__init(&path, pathname, workdir, dir_flag)))
 		return -1;
 	
 	/* No match -> no checkout */
-	*checkout = GIT_SPARSE_NOCHECKOUT;
+	*status = GIT_SPARSE_NOCHECKOUT;
 	
 	while (1) {
-		if (sparse_lookup_in_rules(checkout, sparse->sparse, &path))
+		if (sparse_lookup_in_rules(status, sparse->sparse, &path))
 			goto cleanup;
 		
 		/* move up one directory */

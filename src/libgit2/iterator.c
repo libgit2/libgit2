@@ -446,7 +446,7 @@ typedef struct {
 	git_vector similar_trees;
 	git_array_t(git_str) similar_paths;
 	
-	int sparse_checkout;
+	git_sparse_status sparse_status;
 } tree_iterator_frame;
 
 typedef struct {
@@ -461,7 +461,7 @@ typedef struct {
 	git_pool entry_pool;
 	
 	git_sparse sparse;
-	int current_sparse_checkout;
+	git_sparse_status current_sparse_status;
 } tree_iterator;
 
 GIT_INLINE(tree_iterator_frame *) tree_iterator_parent_frame(
@@ -661,13 +661,13 @@ GIT_INLINE(int) tree_iterator_frame_push_neighbors(
 GIT_INLINE(void) tree_iterator_frame_handle_sparse_checkout(
 	tree_iterator *iter, tree_iterator_entry *entry, tree_iterator_frame *parent_frame, tree_iterator_frame *frame)
 {
-	if (git_sparse__lookup(&frame->sparse_checkout,
+	if (git_sparse__lookup(&frame->sparse_status,
 		  &iter->sparse, entry->tree_entry->filename, GIT_DIR_FLAG_TRUE) < 0) {
 		git_error_clear();
-		frame->sparse_checkout = GIT_SPARSE_NOTFOUND;
-	} else if (frame->sparse_checkout <= GIT_SPARSE_NOTFOUND) {
-		/* inherit sparse_checkout from parent if no rule specified */
-		frame->sparse_checkout = parent_frame->sparse_checkout;
+		frame->sparse_status = GIT_SPARSE_NOTFOUND;
+	} else if (frame->sparse_status <= GIT_SPARSE_NOTFOUND) {
+		/* inherit sparse_status from parent if no rule specified */
+		frame->sparse_status = parent_frame->sparse_status;
 	}
 }
 
@@ -763,7 +763,7 @@ static void tree_iterator_set_current(
 
 	iter->entry.mode = tree_entry->attr;
 	iter->entry.path = iter->entry_path.ptr;
-	iter->current_sparse_checkout = GIT_SPARSE_UNCHECKED;
+	iter->current_sparse_status = GIT_SPARSE_UNCHECKED;
 	git_oid_cpy(&iter->entry.id, tree_entry->oid);
 }
 
@@ -1812,26 +1812,26 @@ static void tree_iterator_update_sparse_checkout(tree_iterator *iter)
 	tree_iterator_frame *frame;
 	git_dir_flag dir_flag = entry_dir_flag(&iter->entry);
 
-	if (git_sparse__lookup(&iter->current_sparse_checkout,
+	if (git_sparse__lookup(&iter->current_sparse_status,
 		  &iter->sparse, iter->entry.path, dir_flag) < 0) {
 		git_error_clear();
-		iter->current_sparse_checkout = GIT_SPARSE_NOTFOUND;
+		iter->current_sparse_status = GIT_SPARSE_NOTFOUND;
 	}
 
 	/* use sparse checkout from containing frame stack */
-	if (iter->current_sparse_checkout <= GIT_SPARSE_NOTFOUND) {
+	if (iter->current_sparse_status <= GIT_SPARSE_NOTFOUND) {
 		frame = tree_iterator_current_frame(iter);
-		iter->current_sparse_checkout = frame->sparse_checkout;
+		iter->current_sparse_status = frame->sparse_status;
 	}
 }
 
 GIT_INLINE(bool) tree_iterator_current_skip_checkout(
 	tree_iterator *iter)
 {
-	if (iter->current_sparse_checkout == GIT_SPARSE_UNCHECKED)
+	if (iter->current_sparse_status == GIT_SPARSE_UNCHECKED)
 		tree_iterator_update_sparse_checkout(iter);
 	
-	return (iter->current_sparse_checkout == GIT_SPARSE_NOCHECKOUT);
+	return (iter->current_sparse_status == GIT_SPARSE_NOCHECKOUT);
 }
 
 bool git_iterator_current_skip_checkout(git_iterator *i)

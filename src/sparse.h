@@ -19,19 +19,19 @@ typedef struct {
 	int ignore_case;
 } git_sparse;
 
-enum {
+typedef enum {
 	GIT_SPARSE_UNCHECKED = -2,
 	GIT_SPARSE_NOTFOUND = -1,
 	GIT_SPARSE_NOCHECKOUT = 0,
 	GIT_SPARSE_CHECKOUT = 1,
-};
+} git_sparse_status;
 
 extern int git_sparse__init(git_repository *repo, git_sparse *ign);
 
 extern void git_sparse__free(git_sparse *sparse);
 
 extern int git_sparse__lookup(
-		int* checkout,
+		git_sparse_status* checkout,
 		git_sparse *sparse,
 		const char* pathname,
 		git_dir_flag dir_flag);
