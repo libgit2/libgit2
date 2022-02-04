@@ -257,7 +257,7 @@ int git_sparse_checkout__list(
     scan = (char *)git_str_cstr(&data);
     while (!error && *scan) {
 
-		buf = git__strtok_(&scan, "\r\n", "\n", "\0");
+		buf = git__strtok(&scan, "\r\n");
 		if (buf)
 			error = git_vector_insert(patterns, buf);
     }

@@ -78,7 +78,6 @@ extern uint32_t git__hash(const void *key, int len, uint32_t seed);
 #endif
 
 extern char *git__strtok(char **end, const char *sep);
-extern char *git__strtok_(char **end, const char *sep, ...);
 extern char *git__strsep(char **end, const char *sep);
 
 extern void git__strntolower(char *str, size_t len);
