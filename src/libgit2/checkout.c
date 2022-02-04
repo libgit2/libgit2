@@ -390,6 +390,8 @@ static int checkout_action_wd_only(
 
 		if (wd->mode != GIT_FILEMODE_TREE) {
 			if (!error) { /* found by git_index__find_pos call */
+
+				/* Sparse checkout will set the SKIP_WORKTREE bit if a file should be skipped */
 				const git_index_entry *e = git_index_get_byindex(data->index, pos);
 				if (e == NULL ||
 						(e->flags_extended & GIT_INDEX_ENTRY_SKIP_WORKTREE) == 0 ||
