@@ -42,10 +42,11 @@ static int parse_sparse_file(
 {
 	int error = 0;
 	int ignore_case = false;
-	const char *scan = data;
+	const char *scan = data, *context = NULL;
 	git_attr_fnmatch *match = NULL;
+
 	GIT_UNUSED(allow_macros);
-	
+
 	if (git_repository__configmap_lookup(&ignore_case, repo, GIT_CONFIGMAP_IGNORECASE) < 0)
 		git_error_clear();
 	
@@ -53,28 +54,28 @@ static int parse_sparse_file(
 		git_error_set(GIT_ERROR_OS, "failed to lock sparse-checkout file");
 		return -1;
 	}
-	
+
 	while (!error && *scan) {
 		int valid_rule = 1;
-		
+
 		if (!match && !(match = git__calloc(1, sizeof(*match)))) {
 			error = -1;
 			break;
 		}
-		
+
 		match->flags =
-		GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
-		
+				GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
+
 		if (!(error = git_attr_fnmatch__parse(
-			match, &attrs->pool, NULL, &scan)))
+				match, &attrs->pool, context, &scan)))
 		{
 			match->flags |= GIT_ATTR_FNMATCH_IGNORE;
-			
+
 			if (ignore_case)
 				match->flags |= GIT_ATTR_FNMATCH_ICASE;
-			
+
 			scan = git__next_line(scan);
-			
+
 			/*
 			 * If a negative match doesn't actually do anything,
 			 * throw it away. As we cannot always verify whether a
@@ -82,26 +83,26 @@ static int parse_sparse_file(
 			 * do not optimize away these rules, though.
 			 * */
 			if (match->flags & GIT_ATTR_FNMATCH_NEGATIVE
-					&& !(match->flags & GIT_ATTR_FNMATCH_HASWILD))
+				&& !(match->flags & GIT_ATTR_FNMATCH_HASWILD))
 				error = git_attr__does_negate_rule(&valid_rule, &attrs->rules, match);
-			
+
 			if (!error && valid_rule)
 				error = git_vector_insert(&attrs->rules, match);
 		}
-		
+
 		if (error != 0 || !valid_rule) {
 			match->pattern = NULL;
-			
+
 			if (error == GIT_ENOTFOUND)
 				error = 0;
 		} else {
 			match = NULL; /* vector now "owns" the match */
 		}
 	}
-	
+
 	git_mutex_unlock(&attrs->lock);
 	git__free(match);
-	
+
 	return error;
 }
 
