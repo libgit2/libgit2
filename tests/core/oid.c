@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "oid.h"
 
 static git_oid id;
 static git_oid idp;
@@ -67,4 +68,12 @@ void test_core_oid__ncmp(void)
 	cl_assert(!git_oid_ncmp(&id, &id, 39));
 	cl_assert(!git_oid_ncmp(&id, &id, 40));
 	cl_assert(!git_oid_ncmp(&id, &id, 41));
+}
+
+void test_core_oid__is_hexstr(void)
+{
+	cl_assert(git_oid__is_hexstr("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
+	cl_assert(!git_oid__is_hexstr("deadbeefdeadbeef"));
+	cl_assert(!git_oid__is_hexstr("zeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
+	cl_assert(!git_oid__is_hexstr("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef1"));
 }
