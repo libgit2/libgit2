@@ -1871,7 +1871,7 @@ static int update_tips_for_spec(
 	const char *log_message)
 {
 	git_refspec tagspec;
-	git_remote_head *head;
+	git_remote_head *head, oid_head;
 	git_vector update_heads;
 	int error = 0;
 	size_t i;
@@ -1885,8 +1885,24 @@ static int update_tips_for_spec(
 	if (git_vector_init(&update_heads, 16, NULL) < 0)
 		return -1;
 
+	/* Update tips based on the remote heads */
 	git_vector_foreach(refs, i, head) {
 		if (update_one_tip(&update_heads, remote, spec, head, &tagspec, tagopt, log_message, callbacks) < 0)
+			goto on_error;
+	}
+
+	/* Handle specified oid sources */
+	if (git_oid__is_hexstr(spec->src)) {
+		git_oid id;
+
+		if ((error = git_oid_fromstr(&id, spec->src)) < 0 ||
+		    (error = update_ref(remote, spec->dst, &id, log_message, callbacks)) < 0)
+			goto on_error;
+
+		git_oid_cpy(&oid_head.oid, &id);
+		oid_head.name = spec->src;
+
+		if ((error = git_vector_insert(&update_heads, &oid_head)) < 0)
 			goto on_error;
 	}
 
@@ -2107,6 +2123,17 @@ int git_remote_disconnect(git_remote *remote)
 	return 0;
 }
 
+static void free_heads(git_vector *heads)
+{
+	git_remote_head *head;
+	size_t i;
+
+	git_vector_foreach(heads, i, head) {
+		git__free(head->name);
+		git__free(head);
+	}
+}
+
 void git_remote_free(git_remote *remote)
 {
 	if (remote == NULL)
@@ -2129,6 +2156,9 @@ void git_remote_free(git_remote *remote)
 
 	free_refspecs(&remote->passive_refspecs);
 	git_vector_free(&remote->passive_refspecs);
+
+	free_heads(&remote->local_heads);
+	git_vector_free(&remote->local_heads);
 
 	git_push_free(remote->push);
 	git__free(remote->url);

@@ -11,6 +11,7 @@
 #include "git2/refs.h"
 #include "git2/revwalk.h"
 #include "git2/transport.h"
+#include "git2/sys/remote.h"
 
 #include "remote.h"
 #include "refspec.h"
@@ -19,7 +20,7 @@
 #include "repository.h"
 #include "refs.h"
 
-static int maybe_want(git_remote *remote, git_remote_head *head, git_odb *odb, git_refspec *tagspec, git_remote_autotag_option_t tagopt)
+static int maybe_want(git_remote *remote, git_remote_head *head, git_refspec *tagspec, git_remote_autotag_option_t tagopt)
 {
 	int match = 0, valid;
 
@@ -44,23 +45,57 @@ static int maybe_want(git_remote *remote, git_remote_head *head, git_odb *odb, g
 	if (!match)
 		return 0;
 
-	/* If we have the object, mark it so we don't ask for it */
-	if (git_odb_exists(odb, &head->oid)) {
-		head->local = 1;
-	}
-	else
-		remote->need_pack = 1;
-
 	return git_vector_insert(&remote->refs, head);
+}
+
+static int mark_local(git_remote *remote)
+{
+	git_remote_head *head;
+	git_odb *odb;
+	size_t i;
+
+	if (git_repository_odb__weakptr(&odb, remote->repo) < 0)
+		return -1;
+
+	git_vector_foreach(&remote->refs, i, head) {
+		/* If we have the object, mark it so we don't ask for it */
+		if (git_odb_exists(odb, &head->oid))
+			head->local = 1;
+		else
+			remote->need_pack = 1;
+	}
+
+	return 0;
+}
+
+static int maybe_want_oid(git_remote *remote, git_refspec *spec)
+{
+	git_remote_head *oid_head;
+
+	oid_head = git__calloc(1, sizeof(git_remote_head));
+	GIT_ERROR_CHECK_ALLOC(oid_head);
+
+	git_oid_fromstr(&oid_head->oid, spec->src);
+	oid_head->name = git__strdup(spec->dst);
+	GIT_ERROR_CHECK_ALLOC(oid_head->name);
+
+	if (git_vector_insert(&remote->local_heads, oid_head) < 0 ||
+	    git_vector_insert(&remote->refs, oid_head) < 0)
+		return -1;
+
+	return 0;
 }
 
 static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 {
 	git_remote_head **heads;
-	git_refspec tagspec, head;
+	git_refspec tagspec, head, *spec;
 	int error = 0;
 	git_odb *odb;
 	size_t i, heads_len;
+	unsigned int remote_caps;
+	unsigned int oid_mask = GIT_REMOTE_CAPABILITY_TIP_OID |
+	                        GIT_REMOTE_CAPABILITY_REACHABLE_OID;
 	git_remote_autotag_option_t tagopt = remote->download_tags;
 
 	if (opts && opts->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED)
@@ -90,13 +125,32 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 	if ((error = git_repository_odb__weakptr(&odb, remote->repo)) < 0)
 		goto cleanup;
 
-	if ((error = git_remote_ls((const git_remote_head ***)&heads, &heads_len, remote)) < 0)
+	if ((error = git_remote_ls((const git_remote_head ***)&heads, &heads_len, remote)) < 0 ||
+	    (error = git_remote_capabilities(&remote_caps, remote)) < 0)
 		goto cleanup;
 
+	/* Handle remote heads */
 	for (i = 0; i < heads_len; i++) {
-		if ((error = maybe_want(remote, heads[i], odb, &tagspec, tagopt)) < 0)
-			break;
+		if ((error = maybe_want(remote, heads[i], &tagspec, tagopt)) < 0)
+			goto cleanup;
 	}
+
+	/* Handle explicitly specified OID specs */
+	git_vector_foreach(&remote->active_refspecs, i, spec) {
+		if (!git_oid__is_hexstr(spec->src))
+			continue;
+
+		if (!(remote_caps & oid_mask)) {
+			git_error_set(GIT_ERROR_INVALID, "cannot fetch a specific object from the remote repository");
+			error = -1;
+			goto cleanup;
+		}
+
+		if ((error = maybe_want_oid(remote, spec)) < 0)
+			goto cleanup;
+	}
+
+	error = mark_local(remote);
 
 cleanup:
 	git_refspec__dispose(&tagspec);
@@ -115,10 +169,8 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 
 	remote->need_pack = 0;
 
-	if (filter_wants(remote, opts) < 0) {
-		git_error_set(GIT_ERROR_NET, "failed to filter the reference list for wants");
+	if (filter_wants(remote, opts) < 0)
 		return -1;
-	}
 
 	/* Don't try to negotiate when we don't want anything */
 	if (!remote->need_pack)

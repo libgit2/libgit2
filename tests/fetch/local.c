@@ -34,3 +34,34 @@ void test_fetch_local__defaults(void)
 	git_object_free(obj);
 	git_remote_free(remote);
 }
+
+void test_fetch_local__reachable_commit(void)
+{
+	git_remote *remote;
+	git_strarray refspecs;
+	git_object *obj;
+	git_oid expected_id;
+	git_str fetchhead = GIT_STR_INIT;
+	char *refspec = "+5b5b025afb0b4c913b4c338a42934a3863bf3644:refs/success";
+
+	refspecs.strings = &refspec;
+	refspecs.count = 1;
+
+	git_oid_fromstr(&expected_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+
+	cl_git_pass(git_remote_create(&remote, repo, "test",
+		cl_fixture("testrepo.git")));
+	cl_git_pass(git_remote_fetch(remote, &refspecs, NULL, NULL));
+
+	cl_git_pass(git_revparse_single(&obj, repo, "refs/success"));
+	cl_assert_equal_oid(&expected_id, git_object_id(obj));
+
+	cl_git_pass(git_futils_readbuffer(&fetchhead, "./fetch/.git/FETCH_HEAD"));
+	cl_assert_equal_strn(fetchhead.ptr,
+		"5b5b025afb0b4c913b4c338a42934a3863bf3644\t\t'5b5b025afb0b4c913b4c338a42934a3863bf3644' of ",
+		strlen("5b5b025afb0b4c913b4c338a42934a3863bf3644\t\t'5b5b025afb0b4c913b4c338a42934a3863bf3644' of "));
+
+	git_str_dispose(&fetchhead);
+	git_object_free(obj);
+	git_remote_free(remote);
+}

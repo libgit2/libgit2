@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "futils.h"
 
 static git_repository *_repo;
 static int counter;
@@ -289,4 +290,34 @@ void test_online_fetch__redirect_config(void)
 	/* redirect=false */
 	cl_git_fail(do_redirected_fetch(_remote_redirect_initial, "initial", "false"));
 	cl_git_fail(do_redirected_fetch(_remote_redirect_subsequent, "subsequent", "false"));
+}
+
+void test_online_fetch__reachable_commit(void)
+{
+	git_remote *remote;
+	git_strarray refspecs;
+	git_object *obj;
+	git_oid expected_id;
+	git_str fetchhead = GIT_STR_INIT;
+	char *refspec = "+2c349335b7f797072cf729c4f3bb0914ecb6dec9:refs/success";
+
+	refspecs.strings = &refspec;
+	refspecs.count = 1;
+
+	git_oid_fromstr(&expected_id, "2c349335b7f797072cf729c4f3bb0914ecb6dec9");
+
+	cl_git_pass(git_remote_create(&remote, _repo, "test",
+		"https://github.com/libgit2/TestGitRepository"));
+	cl_git_pass(git_remote_fetch(remote, &refspecs, NULL, NULL));
+
+	cl_git_pass(git_revparse_single(&obj, _repo, "refs/success"));
+	cl_assert_equal_oid(&expected_id, git_object_id(obj));
+
+	cl_git_pass(git_futils_readbuffer(&fetchhead, "./fetch/.git/FETCH_HEAD"));
+	cl_assert_equal_s(fetchhead.ptr,
+		"2c349335b7f797072cf729c4f3bb0914ecb6dec9\t\t'2c349335b7f797072cf729c4f3bb0914ecb6dec9' of https://github.com/libgit2/TestGitRepository\n");
+
+	git_str_dispose(&fetchhead);
+	git_object_free(obj);
+	git_remote_free(remote);
 }
