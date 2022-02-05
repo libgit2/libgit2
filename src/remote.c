@@ -1702,6 +1702,42 @@ cleanup:
 	return error;
 }
 
+static int update_ref(
+	const git_remote *remote,
+	const char *ref_name,
+	git_oid *id,
+	const char *msg,
+	const git_remote_callbacks *callbacks)
+{
+	git_reference *ref;
+	git_oid old_id;
+	int error;
+
+	error = git_reference_name_to_id(&old_id, remote->repo, ref_name);
+
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return error;
+	else if (error == 0 && git_oid_equal(&old_id, id))
+		return 0;
+
+	/* If we did find a current reference, make sure we haven't lost a race */
+	if (error)
+		error = git_reference_create(&ref, remote->repo, ref_name, id, true, msg);
+	else
+		error = git_reference_create_matching(&ref, remote->repo, ref_name, id, true, &old_id, msg);
+
+	git_reference_free(ref);
+
+	if (error < 0)
+		return error;
+
+	if (callbacks && callbacks->update_tips &&
+	    (error = callbacks->update_tips(ref_name, &old_id, id, callbacks->payload)) < 0)
+		return error;
+
+	return 0;
+}
+
 static int update_tips_for_spec(
 		git_remote *remote,
 		const git_remote_callbacks *callbacks,
@@ -1908,14 +1944,12 @@ static int opportunistic_updates(const git_remote *remote, const git_remote_call
 	size_t i, j, k;
 	git_refspec *spec;
 	git_remote_head *head;
-	git_reference *ref;
 	git_str refname = GIT_STR_INIT;
 	int error = 0;
 
 	i = j = k = 0;
 
 	while ((error = next_head(remote, refs, &spec, &head, &i, &j, &k)) == 0) {
-		git_oid old = {{ 0 }};
 		/*
 		 * If we got here, there is a refspec which was used
 		 * for fetching which matches the source of one of the
@@ -1925,29 +1959,9 @@ static int opportunistic_updates(const git_remote *remote, const git_remote_call
 		 */
 
 		git_str_clear(&refname);
-		if ((error = git_refspec__transform(&refname, spec, head->name)) < 0)
+		if ((error = git_refspec__transform(&refname, spec, head->name)) < 0 ||
+		    (error = update_ref(remote, refname.ptr, &head->oid, msg, callbacks)) < 0)
 			goto cleanup;
-
-		error = git_reference_name_to_id(&old, remote->repo, refname.ptr);
-		if (error < 0 && error != GIT_ENOTFOUND)
-			goto cleanup;
-
-		if (!git_oid_cmp(&old, &head->oid))
-			continue;
-
-		/* If we did find a current reference, make sure we haven't lost a race */
-		if (error)
-			error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, true, msg);
-		else
-			error = git_reference_create_matching(&ref, remote->repo, refname.ptr, &head->oid, true, &old, msg);
-		git_reference_free(ref);
-		if (error < 0)
-			goto cleanup;
-
-		if (callbacks && callbacks->update_tips != NULL) {
-			if (callbacks->update_tips(refname.ptr, &old, &head->oid, callbacks->payload) < 0)
-				goto cleanup;
-		}
 	}
 
 	if (error == GIT_ITEROVER)
@@ -2018,7 +2032,7 @@ int git_remote_update_tips(
 			goto out;
 	}
 
-	/* Only try to do opportunistic updates if the refpec lists differ. */
+	/* Only try to do opportunistic updates if the refspec lists differ. */
 	if (remote->passed_refspecs)
 		error = opportunistic_updates(remote, callbacks, &refs, reflog_message);
 
