@@ -1852,7 +1852,8 @@ static int check_repositoryformatversion(int *version, git_config *config)
 
 static const char *builtin_extensions[] = {
 	"noop",
-	"objectformat"
+	"objectformat",
+	"worktreeconfig",
 };
 
 static git_vector user_extensions = { 0, git__strcmp_cb };
