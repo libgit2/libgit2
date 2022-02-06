@@ -1012,6 +1012,20 @@ int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote
 	return remote->transport->ls(out, size, remote->transport);
 }
 
+int git_remote_capabilities(unsigned int *out, git_remote *remote)
+{
+	GIT_ASSERT_ARG(remote);
+
+	*out = 0;
+
+	if (!remote->transport) {
+		git_error_set(GIT_ERROR_NET, "this remote has never connected");
+		return -1;
+	}
+
+	return remote->transport->capabilities(out, remote->transport);
+}
+
 static int lookup_config(char **out, git_config *cfg, const char *name)
 {
 	git_config_entry *ce = NULL;

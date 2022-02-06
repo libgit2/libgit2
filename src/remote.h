@@ -54,4 +54,6 @@ int git_remote_connect_options_normalize(
 	const git_remote_connect_options *src);
 void git_remote_connect_options_dispose(git_remote_connect_options *opts);
 
+int git_remote_capabilities(unsigned int *out, git_remote *remote);
+
 #endif
