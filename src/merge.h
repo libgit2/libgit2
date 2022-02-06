@@ -34,7 +34,7 @@ enum {
 
 enum {
 	/** Accept the conflict file, staging it as the merge result. */
-	GIT_MERGE_FILE_FAVOR__CONFLICTED = 4
+	GIT_MERGE_FILE__CONFLICTED = (1 << 30)
 };
 
 

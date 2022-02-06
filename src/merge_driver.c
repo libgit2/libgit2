@@ -93,7 +93,7 @@ int git_merge_driver__builtin_apply(
 		goto done;
 
 	if (!result.automergeable &&
-		!(file_opts.flags & GIT_MERGE_FILE_FAVOR__CONFLICTED)) {
+		!(file_opts.flags & GIT_MERGE_FILE__CONFLICTED)) {
 		error = GIT_EMERGECONFLICT;
 		goto done;
 	}
