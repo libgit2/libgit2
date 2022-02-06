@@ -19,13 +19,14 @@
 #include "regexp.h"
 #include "sysdir.h"
 #include "wildmatch.h"
+#include "hash.h"
 
 /* Max depth for [include] directives */
 #define MAX_INCLUDE_DEPTH 10
 
 typedef struct config_file {
 	git_futils_filestamp stamp;
-	git_oid checksum;
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
 	char *path;
 	git_array_t(struct config_file) includes;
 } config_file;
@@ -132,7 +133,7 @@ static int config_file_is_modified(int *modified, config_file *file)
 {
 	config_file *include;
 	git_str buf = GIT_STR_INIT;
-	git_oid hash;
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
 	uint32_t i;
 	int error = 0;
 
@@ -144,10 +145,10 @@ static int config_file_is_modified(int *modified, config_file *file)
 	if ((error = git_futils_readbuffer(&buf, file->path)) < 0)
 		goto out;
 
-	if ((error = git_hash_buf(hash.id, buf.ptr, buf.size, GIT_HASH_ALGORITHM_SHA1)) < 0)
+	if ((error = git_hash_buf(checksum, buf.ptr, buf.size, GIT_HASH_ALGORITHM_SHA1)) < 0)
 		goto out;
 
-	if (!git_oid_equal(&hash, &file->checksum)) {
+	if (memcmp(checksum, file->checksum, GIT_HASH_SHA1_SIZE) != 0) {
 		*modified = 1;
 		goto out;
 	}
@@ -880,7 +881,7 @@ static int config_file_read(
 		goto out;
 
 	git_futils_filestamp_set_from_stat(&file->stamp, &st);
-	if ((error = git_hash_buf(file->checksum.id, contents.ptr, contents.size, GIT_HASH_ALGORITHM_SHA1)) < 0)
+	if ((error = git_hash_buf(file->checksum, contents.ptr, contents.size, GIT_HASH_ALGORITHM_SHA1)) < 0)
 		goto out;
 
 	if ((error = config_file_read_buffer(entries, repo, file, level, depth,

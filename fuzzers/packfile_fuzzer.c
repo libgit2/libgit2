@@ -101,13 +101,13 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	if (git_indexer_commit(indexer, &stats) < 0)
 		goto cleanup;
 
-	if (git_str_printf(&path, "pack-%s.idx", git_oid_tostr_s(git_indexer_hash(indexer))) < 0)
+	if (git_str_printf(&path, "pack-%s.idx", git_indexer_name(indexer)) < 0)
 		goto cleanup;
 	p_unlink(git_str_cstr(&path));
 
 	git_str_clear(&path);
 
-	if (git_str_printf(&path, "pack-%s.pack", git_oid_tostr_s(git_indexer_hash(indexer))) < 0)
+	if (git_str_printf(&path, "pack-%s.pack", git_indexer_name(indexer)) < 0)
 		goto cleanup;
 	p_unlink(git_str_cstr(&path));
 

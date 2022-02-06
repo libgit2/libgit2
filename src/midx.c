@@ -178,7 +178,8 @@ int git_midx_parse(
 	struct git_midx_chunk *last_chunk;
 	uint32_t i;
 	off64_t last_chunk_offset, chunk_offset, trailer_offset;
-	git_oid idx_checksum = {{0}};
+	size_t checksum_size;
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
 	int error;
 	struct git_midx_chunk chunk_packfile_names = {0},
 					 chunk_oid_fanout = {0},
@@ -208,14 +209,17 @@ int git_midx_parse(
 	last_chunk_offset =
 			sizeof(struct git_midx_header) +
 			(1 + hdr->chunks) * 12;
-	trailer_offset = size - GIT_OID_RAWSZ;
+
+	checksum_size = GIT_HASH_SHA1_SIZE;
+	trailer_offset = size - checksum_size;
+
 	if (trailer_offset < last_chunk_offset)
 		return midx_error("wrong index size");
-	git_oid_cpy(&idx->checksum, (git_oid *)(data + trailer_offset));
+	memcpy(idx->checksum, data + trailer_offset, checksum_size);
 
-	if (git_hash_buf(idx_checksum.id, data, (size_t)trailer_offset, GIT_HASH_ALGORITHM_SHA1) < 0)
+	if (git_hash_buf(checksum, data, (size_t)trailer_offset, GIT_HASH_ALGORITHM_SHA1) < 0)
 		return midx_error("could not calculate signature");
-	if (!git_oid_equal(&idx_checksum, &idx->checksum))
+	if (memcmp(checksum, idx->checksum, checksum_size) != 0)
 		return midx_error("index signature mismatch");
 
 	chunk_hdr = data + sizeof(struct git_midx_header);
@@ -341,7 +345,8 @@ bool git_midx_needs_refresh(
 	git_file fd = -1;
 	struct stat st;
 	ssize_t bytes_read;
-	git_oid idx_checksum = {{0}};
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	size_t checksum_size;
 
 	/* TODO: properly open the file without access time using O_NOATIME */
 	fd = git_futils_open_ro(path);
@@ -360,13 +365,14 @@ bool git_midx_needs_refresh(
 		return true;
 	}
 
-	bytes_read = p_pread(fd, &idx_checksum, GIT_OID_RAWSZ, st.st_size - GIT_OID_RAWSZ);
+	checksum_size = GIT_HASH_SHA1_SIZE;
+	bytes_read = p_pread(fd, checksum, checksum_size, st.st_size - GIT_OID_RAWSZ);
 	p_close(fd);
 
-	if (bytes_read != GIT_OID_RAWSZ)
+	if (bytes_read != (ssize_t)checksum_size)
 		return true;
 
-	return !git_oid_equal(&idx_checksum, &idx->checksum);
+	return (memcmp(checksum, idx->checksum, checksum_size) != 0);
 }
 
 int git_midx_entry_find(
@@ -653,7 +659,8 @@ static int midx_write(
 		oid_lookup = GIT_STR_INIT,
 		object_offsets = GIT_STR_INIT,
 		object_large_offsets = GIT_STR_INIT;
-	git_oid idx_checksum = {{0}};
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	size_t checksum_size;
 	git_midx_entry *entry;
 	object_entry_array_t object_entries_array = GIT_ARRAY_INIT;
 	git_vector object_entries = GIT_VECTOR_INIT;
@@ -669,6 +676,7 @@ static int midx_write(
 	hash_cb_data.cb_data = cb_data;
 	hash_cb_data.ctx = &ctx;
 
+	checksum_size = GIT_HASH_SHA1_SIZE;
 	error = git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA1);
 	if (error < 0)
 		return error;
@@ -820,10 +828,10 @@ static int midx_write(
 		goto cleanup;
 
 	/* Finalize the checksum and write the trailer. */
-	error = git_hash_final(idx_checksum.id, &ctx);
+	error = git_hash_final(checksum, &ctx);
 	if (error < 0)
 		goto cleanup;
-	error = write_cb((const char *)&idx_checksum, sizeof(idx_checksum), cb_data);
+	error = write_cb((char *)checksum, checksum_size, cb_data);
 	if (error < 0)
 		goto cleanup;
 

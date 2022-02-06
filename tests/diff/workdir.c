@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "diff_helpers.h"
 #include "repository.h"
+#include "index.h"
 #include "git2/sys/diff.h"
 #include "../checkout/checkout_helpers.h"
 
@@ -2004,7 +2005,9 @@ void test_diff_workdir__only_writes_index_when_necessary(void)
 	git_diff *diff = NULL;
 	git_reference *head;
 	git_object *head_object;
-	git_oid initial, first, second;
+	unsigned char initial[GIT_HASH_SHA1_SIZE],
+	              first[GIT_HASH_SHA1_SIZE],
+	              second[GIT_HASH_SHA1_SIZE];
 	git_str path = GIT_STR_INIT;
 	struct stat st;
 	struct p_timeval times[2];
@@ -2019,7 +2022,7 @@ void test_diff_workdir__only_writes_index_when_necessary(void)
 
 	cl_git_pass(git_reset(g_repo, head_object, GIT_RESET_HARD, NULL));
 
-	git_oid_cpy(&initial, git_index_checksum(index));
+	memcpy(initial, git_index__checksum(index), GIT_HASH_SHA1_SIZE);
 
 	/* update the index timestamp to avoid raciness */
 	cl_must_pass(p_stat("status/.git/index", &st));
@@ -2035,8 +2038,8 @@ void test_diff_workdir__only_writes_index_when_necessary(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	git_diff_free(diff);
 
-	git_oid_cpy(&first, git_index_checksum(index));
-	cl_assert(!git_oid_equal(&initial, &first));
+	memcpy(first, git_index__checksum(index), GIT_HASH_SHA1_SIZE);
+	cl_assert(memcmp(initial, first, GIT_HASH_SHA1_SIZE) != 0);
 
 	/* touch all the files so stat times are different */
 	cl_git_pass(git_str_sets(&path, "status"));
@@ -2046,8 +2049,8 @@ void test_diff_workdir__only_writes_index_when_necessary(void)
 	git_diff_free(diff);
 
 	/* ensure the second diff did update the index */
-	git_oid_cpy(&second, git_index_checksum(index));
-	cl_assert(!git_oid_equal(&first, &second));
+	memcpy(second, git_index__checksum(index), GIT_HASH_SHA1_SIZE);
+	cl_assert(memcmp(first, second, GIT_HASH_SHA1_SIZE) != 0);
 
 	git_str_dispose(&path);
 	git_object_free(head_object);

@@ -27,7 +27,7 @@ struct git_index {
 
 	char *index_file_path;
 	git_futils_filestamp stamp;
-	git_oid checksum;   /* checksum at the end of the file */
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
 
 	git_vector entries;
 	git_idxmap *entries_map;
@@ -133,10 +133,13 @@ extern unsigned int git_index__create_mode(unsigned int mode);
 
 GIT_INLINE(const git_futils_filestamp *) git_index__filestamp(git_index *index)
 {
-   return &index->stamp;
+	return &index->stamp;
 }
 
-extern int git_index__changed_relative_to(git_index *index, const git_oid *checksum);
+GIT_INLINE(unsigned char *) git_index__checksum(git_index *index)
+{
+	return index->checksum;
+}
 
 /* Copy the current entries vector *and* increment the index refcount.
  * Call `git_index__release_snapshot` when done.

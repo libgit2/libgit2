@@ -5,6 +5,7 @@
 #include "iterator.h"
 #include "vector.h"
 #include "posix.h"
+#include "hash.h"
 
 static git_repository *_repo;
 static git_revwalk *_revwalker;
@@ -98,8 +99,8 @@ void test_pack_packbuilder__create_pack(void)
 	git_indexer_progress stats;
 	git_str buf = GIT_STR_INIT, path = GIT_STR_INIT;
 	git_hash_ctx ctx;
-	git_oid hash;
-	char hex[GIT_OID_HEXSZ+1]; hex[GIT_OID_HEXSZ] = '\0';
+	unsigned char hash[GIT_HASH_SHA1_SIZE];
+	char hex[(GIT_HASH_SHA1_SIZE * 2) + 1];
 
 	seed_packbuilder();
 
@@ -107,8 +108,7 @@ void test_pack_packbuilder__create_pack(void)
 	cl_git_pass(git_packbuilder_foreach(_packbuilder, feed_indexer, &stats));
 	cl_git_pass(git_indexer_commit(_indexer, &stats));
 
-	git_oid_fmt(hex, git_indexer_hash(_indexer));
-	git_str_printf(&path, "pack-%s.pack", hex);
+	git_str_printf(&path, "pack-%s.pack", git_indexer_name(_indexer));
 
 	/*
 	 * By default, packfiles are created with only one thread.
@@ -128,27 +128,22 @@ void test_pack_packbuilder__create_pack(void)
 
 	cl_git_pass(git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA1));
 	cl_git_pass(git_hash_update(&ctx, buf.ptr, buf.size));
-	cl_git_pass(git_hash_final(hash.id, &ctx));
+	cl_git_pass(git_hash_final(hash, &ctx));
 	git_hash_ctx_cleanup(&ctx);
 
 	git_str_dispose(&path);
 	git_str_dispose(&buf);
 
-	git_oid_fmt(hex, &hash);
-
+	git_hash_fmt(hex, hash, GIT_HASH_SHA1_SIZE);
 	cl_assert_equal_s(hex, "5d410bdf97cf896f9007681b92868471d636954b");
 }
 
-void test_pack_packbuilder__get_hash(void)
+void test_pack_packbuilder__get_name(void)
 {
-	char hex[GIT_OID_HEXSZ+1]; hex[GIT_OID_HEXSZ] = '\0';
-
 	seed_packbuilder();
 
 	cl_git_pass(git_packbuilder_write(_packbuilder, ".", 0, NULL, NULL));
-	git_oid_fmt(hex, git_packbuilder_hash(_packbuilder));
-
-	cl_assert_equal_s(hex, "7f5fa362c664d68ba7221259be1cbd187434b2f0");
+	cl_assert_equal_s("7f5fa362c664d68ba7221259be1cbd187434b2f0", git_packbuilder_name(_packbuilder));
 }
 
 void test_pack_packbuilder__write_default_path(void)

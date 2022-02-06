@@ -169,8 +169,7 @@ void test_pack_indexer__fix_thin(void)
 	cl_assert_equal_i(stats.indexed_objects, 2);
 	cl_assert_equal_i(stats.local_objects, 1);
 
-	git_oid_fromstr(&should_id, "fefdb2d740a3a6b6c03a0c7d6ce431c6d5810e13");
-	cl_assert_equal_oid(&should_id, git_indexer_hash(idx));
+	cl_assert_equal_s("fefdb2d740a3a6b6c03a0c7d6ce431c6d5810e13", git_indexer_name(idx));
 
 	git_indexer_free(idx);
 	git_odb_free(odb);

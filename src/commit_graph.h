@@ -15,6 +15,8 @@
 
 #include "map.h"
 #include "vector.h"
+#include "oid.h"
+#include "hash.h"
 
 /**
  * A commit-graph file.
@@ -55,7 +57,7 @@ typedef struct git_commit_graph_file {
 	size_t num_extra_edge_list;
 
 	/* The trailer of the file. Contains the SHA1-checksum of the whole file. */
-	git_oid checksum;
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
 } git_commit_graph_file;
 
 /**
