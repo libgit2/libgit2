@@ -1822,7 +1822,8 @@ static int update_one_tip(
 	if (error < 0 && error != GIT_ENOTFOUND)
 		goto done;
 
-	if (!spec->force &&
+	if (!(error || error == GIT_ENOTFOUND) &&
+	    !spec->force &&
 	    !git_graph_descendant_of(remote->repo, &head->oid, &old)) {
 		error = 0;
 		goto done;
@@ -1856,6 +1857,7 @@ static int update_one_tip(
 
 done:
 	git_reference_free(ref);
+	git_str_dispose(&refname);
 	return error;
 }
 
