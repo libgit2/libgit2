@@ -48,9 +48,13 @@ typedef enum {
 	 */
 	GIT_CONFIG_LEVEL_LOCAL = 5,
 
+	/** Worktree specific configuration file; $GIT_DIR/config.worktree
+	 */
+	GIT_CONFIG_LEVEL_WORKTREE = 6,
+
 	/** Application specific configuration file; freely defined by applications
 	 */
-	GIT_CONFIG_LEVEL_APP = 6,
+	GIT_CONFIG_LEVEL_APP = 7,
 
 	/** Represents the highest level available config file (i.e. the most
 	 * specific config file available that actually is loaded)
