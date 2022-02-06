@@ -226,6 +226,14 @@ static int git_smart__set_connect_opts(
 	return git_remote_connect_options_normalize(&t->connect_opts, t->owner->repo, opts);
 }
 
+static int git_smart__capabilities(unsigned int *capabilities, git_transport *transport)
+{
+	GIT_UNUSED(transport);
+
+	*capabilities = 0;
+	return 0;
+}
+
 static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transport *transport)
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
@@ -423,6 +431,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	t->parent.version = GIT_TRANSPORT_VERSION;
 	t->parent.connect = git_smart__connect;
 	t->parent.set_connect_opts = git_smart__set_connect_opts;
+	t->parent.capabilities = git_smart__capabilities;
 	t->parent.close = git_smart__close;
 	t->parent.free = git_smart__free;
 	t->parent.negotiate_fetch = git_smart__negotiate_fetch;
