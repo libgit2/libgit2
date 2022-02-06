@@ -58,6 +58,7 @@ static const struct {
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "packed-refs", false },
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "remotes", true },
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "config", false },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "config.worktree", false },
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "info", true },
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "hooks", true },
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "logs", true },
@@ -1291,6 +1292,12 @@ static int load_config(
 		return error;
 
 	if (repo) {
+		if ((error = git_repository__item_path(&config_path, repo, GIT_REPOSITORY_ITEM_WORKTREE_CONFIG)) == 0)
+			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_WORKTREE, repo, 0);
+
+		if (error && error != GIT_ENOTFOUND)
+			goto on_error;
+
 		if ((error = git_repository__item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
 			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
 
