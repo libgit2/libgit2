@@ -91,7 +91,10 @@ typedef enum {
 	 * instead simply use the first base.  This flag provides a similar
 	 * merge base to `git-merge-resolve`.
 	 */
-	GIT_MERGE_NO_RECURSIVE = (1 << 3)
+	GIT_MERGE_NO_RECURSIVE = (1 << 3),
+
+	/* This flag is reserved for internal library use */
+	GIT_MERGE__INTERNAL_FLAG = (1 << 30)
 } git_merge_flag_t;
 
 /**
@@ -162,7 +165,10 @@ typedef enum {
 	GIT_MERGE_FILE_DIFF_MINIMAL = (1 << 7),
 
 	/** Create zdiff3 ("zealous diff3")-style files */
-	GIT_MERGE_FILE_STYLE_ZDIFF3 = (1 << 8)
+	GIT_MERGE_FILE_STYLE_ZDIFF3 = (1 << 8),
+
+	/* This flag is reserved for internal library use */
+	GIT_MERGE_FILE__INTERNAL_FLAG = (1 << 30)
 } git_merge_file_flag_t;
 
 #define GIT_MERGE_CONFLICT_MARKER_SIZE	7

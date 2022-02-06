@@ -27,15 +27,12 @@
 
 
 /** Internal merge flags. */
-enum {
-	/** The merge is for a virtual base in a recursive merge. */
-	GIT_MERGE__VIRTUAL_BASE = (1 << 31)
-};
 
-enum {
-	/** Accept the conflict file, staging it as the merge result. */
-	GIT_MERGE_FILE__CONFLICTED = (1 << 30)
-};
+/** The merge is for a virtual base in a recursive merge. */
+#define GIT_MERGE__VIRTUAL_BASE (GIT_MERGE__INTERNAL_FLAG)
+
+/** Accept the conflict file, staging it as the merge result. */
+#define GIT_MERGE_FILE__CONFLICTED (GIT_MERGE_FILE__INTERNAL_FLAG)
 
 
 /** Types of changes when files are merged from branch to branch. */
