@@ -30,6 +30,8 @@
 #define GIT_CAP_REPORT_STATUS "report-status"
 #define GIT_CAP_THIN_PACK "thin-pack"
 #define GIT_CAP_SYMREF "symref"
+#define GIT_CAP_WANT_TIP_SHA1 "allow-tip-sha1-in-want"
+#define GIT_CAP_WANT_REACHABLE_SHA1 "allow-reachable-sha1-in-want"
 
 extern bool git_smart__ofs_delta_enabled;
 
@@ -128,7 +130,9 @@ typedef struct transport_smart_caps {
 	             include_tag:1,
 	             delete_refs:1,
 	             report_status:1,
-	             thin_pack:1;
+	             thin_pack:1,
+	             want_tip_sha1:1,
+	             want_reachable_sha1:1;
 } transport_smart_caps;
 
 typedef int (*packetsize_cb)(size_t received, void *payload);

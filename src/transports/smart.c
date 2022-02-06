@@ -8,6 +8,7 @@
 #include "smart.h"
 
 #include "git2.h"
+#include "git2/sys/remote.h"
 #include "refs.h"
 #include "refspec.h"
 #include "proxy.h"
@@ -228,9 +229,16 @@ static int git_smart__set_connect_opts(
 
 static int git_smart__capabilities(unsigned int *capabilities, git_transport *transport)
 {
-	GIT_UNUSED(transport);
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
 	*capabilities = 0;
+
+	if (t->caps.want_tip_sha1)
+		*capabilities |= GIT_REMOTE_CAPABILITY_TIP_OID;
+
+	if (t->caps.want_reachable_sha1)
+		*capabilities |= GIT_REMOTE_CAPABILITY_REACHABLE_OID;
+
 	return 0;
 }
 

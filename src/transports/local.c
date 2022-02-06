@@ -28,6 +28,7 @@
 #include "git2/pack.h"
 #include "git2/commit.h"
 #include "git2/revparse.h"
+#include "git2/sys/remote.h"
 
 typedef struct {
 	git_transport parent;
@@ -260,7 +261,8 @@ static int local_capabilities(unsigned int *capabilities, git_transport *transpo
 {
 	GIT_UNUSED(transport);
 
-	*capabilities = 0;
+	*capabilities = GIT_REMOTE_CAPABILITY_TIP_OID |
+	                GIT_REMOTE_CAPABILITY_REACHABLE_OID;
 	return 0;
 }
 
