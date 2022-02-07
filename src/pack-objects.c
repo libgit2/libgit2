@@ -1308,7 +1308,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 #define ll_find_deltas(pb, l, ls, w, d) find_deltas(pb, l, &ls, w, d)
 #endif
 
-static int prepare_pack(git_packbuilder *pb)
+int prepare_pack(git_packbuilder *pb)
 {
 	git_pobject **delta_list;
 	size_t i, n = 0;

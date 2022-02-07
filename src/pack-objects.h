@@ -97,5 +97,7 @@ struct git_packbuilder {
 };
 
 int git_packbuilder__write_buf(git_str *buf, git_packbuilder *pb);
+int prepare_pack(git_packbuilder *pb);
+
 
 #endif
