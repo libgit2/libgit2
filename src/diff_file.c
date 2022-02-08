@@ -328,15 +328,24 @@ static int diff_file_content_load_workdir_file(
 	git_filter_list *fl = NULL;
 	git_file fd = git_futils_open_ro(git_str_cstr(path));
 	git_str raw = GIT_STR_INIT;
+	git_object_size_t new_file_size = 0;
 
 	if (fd < 0)
 		return fd;
 
-	if (!fc->file->size)
-	    error = git_futils_filesize(&fc->file->size, fd);
+	error = git_futils_filesize(&new_file_size, fd);
 
-	if (error < 0 || !fc->file->size)
+	if (error < 0 || !new_file_size)
 		goto cleanup;
+
+	/* if file size doesn't match cached value, abort */
+	if (fc->file->size && fc->file->size != new_file_size)
+	{
+		error = -1;
+		goto cleanup;
+	}
+
+	fc->file->size = new_file_size;
 
 	if ((diff_opts->flags & GIT_DIFF_SHOW_BINARY) == 0 &&
 		diff_file_content_binary_by_size(fc))
