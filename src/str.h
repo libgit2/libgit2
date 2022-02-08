@@ -217,6 +217,9 @@ int git_str_cmp(const git_str *a, const git_str *b);
 int git_str_quote(git_str *str);
 int git_str_unquote(git_str *str);
 
+/* Write data as a hex string */
+int git_str_encode_hexstr(git_str *str, const char *data, size_t len);
+
 /* Write data as base64 encoded in string buffer */
 int git_str_encode_base64(git_str *str, const char *data, size_t len);
 /* Decode the given bas64 and write the result to the string buffer */
