@@ -131,7 +131,6 @@ extern ssize_t p_pwrite(int fd, const void *data, size_t size, off64_t offset);
 
 #define p_close(fd) close(fd)
 #define p_umask(m) umask(m)
-#define p_mktemp(p) mktemp(p)
 
 extern int p_open(const char *path, int flags, ...);
 extern int p_creat(const char *path, mode_t mode);

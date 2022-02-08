@@ -42,7 +42,6 @@ extern int p_inet_pton(int af, const char *src, void* dst);
 
 extern int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr);
 extern int p_snprintf(char *buffer, size_t count, const char *format, ...) GIT_FORMAT_PRINTF(3, 4);
-extern int p_mkstemp(char *tmp_path);
 extern int p_chdir(const char *path);
 extern int p_chmod(const char *path, mode_t mode);
 extern int p_rmdir(const char *path);
