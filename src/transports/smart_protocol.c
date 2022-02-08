@@ -1035,7 +1035,7 @@ int git_smart__push(git_transport *transport, git_push *push, const git_remote_c
 	}
 
 	/* prepare pack before sending pack header to avoid timeouts */
-	if (need_pack && ((error = prepare_pack(push->pb))) < 0)
+	if (need_pack && ((error = git_packbuilder__prepare(push->pb))) < 0)
 		goto done;
 
 	if ((error = git_smart__get_push_stream(t, &packbuilder_payload.stream)) < 0 ||
