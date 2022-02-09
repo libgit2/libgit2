@@ -335,12 +335,12 @@ static int diff_file_content_load_workdir_file(
 
 	error = git_futils_filesize(&new_file_size, fd);
 
-	if (error < 0 || !new_file_size)
+	if (error < 0)
 		goto cleanup;
 
 	/* if file size doesn't match cached value, abort */
-	if (fc->file->size && fc->file->size != new_file_size)
-	{
+	if (fc->file->size && fc->file->size != new_file_size) {
+		git_error_set(GIT_ERROR_FILESYSTEM, "file changed before we could read it");
 		error = -1;
 		goto cleanup;
 	}
