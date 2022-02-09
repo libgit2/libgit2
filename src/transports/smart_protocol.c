@@ -1036,6 +1036,10 @@ int git_smart__push(git_transport *transport, git_push *push)
 		}
 	}
 
+	/* prepare pack before sending pack header to avoid timeouts */
+	if (need_pack && ((error = git_packbuilder__prepare(push->pb))) < 0)
+		goto done;
+
 	if ((error = git_smart__get_push_stream(t, &packbuilder_payload.stream)) < 0 ||
 		(error = gen_pktline(&pktline, push)) < 0 ||
 		(error = packbuilder_payload.stream->write(packbuilder_payload.stream, git_str_cstr(&pktline), git_str_len(&pktline))) < 0)
