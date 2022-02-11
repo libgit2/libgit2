@@ -11,6 +11,7 @@
 
 #include "git2/oid.h"
 
+extern const git_oid git_oid__empty_blob_sha1;
 extern const git_oid git_oid__empty_tree_sha1;
 
 /**
