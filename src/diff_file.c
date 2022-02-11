@@ -338,14 +338,14 @@ static int diff_file_content_load_workdir_file(
 	if (error < 0)
 		goto cleanup;
 
-	/* if file size doesn't match cached value, abort */
-	if (fc->file->size && fc->file->size != new_file_size) {
+	if (!(fc->file->flags & GIT_DIFF_FLAG_VALID_SIZE)) {
+		fc->file->size = new_file_size;
+		fc->file->flags |= GIT_DIFF_FLAG_VALID_SIZE;
+	} else if (fc->file->size != new_file_size) {
 		git_error_set(GIT_ERROR_FILESYSTEM, "file changed before we could read it");
 		error = -1;
 		goto cleanup;
 	}
-
-	fc->file->size = new_file_size;
 
 	if ((diff_opts->flags & GIT_DIFF_SHOW_BINARY) == 0 &&
 		diff_file_content_binary_by_size(fc))
