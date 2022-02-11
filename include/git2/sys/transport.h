@@ -47,6 +47,16 @@ struct git_transport {
 		const git_remote_connect_options *connect_opts);
 
 	/**
+	 * Gets the capabilities for this remote repository.
+	 *
+	 * This function may be called after a successful call to
+	 * `connect()`.
+	 */
+	int GIT_CALLBACK(capabilities)(
+		unsigned int *capabilities,
+		git_transport *transport);
+
+	/**
 	 * Get the list of available references in the remote repository.
 	 *
 	 * This function may be called after a successful call to

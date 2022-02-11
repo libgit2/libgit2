@@ -1012,6 +1012,20 @@ int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote
 	return remote->transport->ls(out, size, remote->transport);
 }
 
+int git_remote_capabilities(unsigned int *out, git_remote *remote)
+{
+	GIT_ASSERT_ARG(remote);
+
+	*out = 0;
+
+	if (!remote->transport) {
+		git_error_set(GIT_ERROR_NET, "this remote has never connected");
+		return -1;
+	}
+
+	return remote->transport->capabilities(out, remote->transport);
+}
+
 static int lookup_config(char **out, git_config *cfg, const char *name)
 {
 	git_config_entry *ce = NULL;
@@ -1702,29 +1716,167 @@ cleanup:
 	return error;
 }
 
-static int update_tips_for_spec(
-		git_remote *remote,
-		const git_remote_callbacks *callbacks,
-		int update_fetchhead,
-		git_remote_autotag_option_t tagopt,
-		git_refspec *spec,
-		git_vector *refs,
-		const char *log_message)
+static int update_ref(
+	const git_remote *remote,
+	const char *ref_name,
+	git_oid *id,
+	const char *msg,
+	const git_remote_callbacks *callbacks)
 {
-	int error = 0, autotag, valid;
-	unsigned int i = 0;
-	git_str refname = GIT_STR_INIT;
-	git_oid old;
-	git_odb *odb;
-	git_remote_head *head;
 	git_reference *ref;
+	git_oid old_id;
+	int error;
+
+	error = git_reference_name_to_id(&old_id, remote->repo, ref_name);
+
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return error;
+	else if (error == 0 && git_oid_equal(&old_id, id))
+		return 0;
+
+	/* If we did find a current reference, make sure we haven't lost a race */
+	if (error)
+		error = git_reference_create(&ref, remote->repo, ref_name, id, true, msg);
+	else
+		error = git_reference_create_matching(&ref, remote->repo, ref_name, id, true, &old_id, msg);
+
+	git_reference_free(ref);
+
+	if (error < 0)
+		return error;
+
+	if (callbacks && callbacks->update_tips &&
+	    (error = callbacks->update_tips(ref_name, &old_id, id, callbacks->payload)) < 0)
+		return error;
+
+	return 0;
+}
+
+static int update_one_tip(
+	git_vector *update_heads,
+	git_remote *remote,
+	git_refspec *spec,
+	git_remote_head *head,
+	git_refspec *tagspec,
+	git_remote_autotag_option_t tagopt,
+	const char *log_message,
+	const git_remote_callbacks *callbacks)
+{
+	git_odb *odb;
+	git_str refname = GIT_STR_INIT;
+	git_reference *ref = NULL;
+	bool autotag = false;
+	git_oid old;
+	int valid;
+	int error;
+
+	if ((error = git_repository_odb__weakptr(&odb, remote->repo)) < 0)
+		goto done;
+
+	/* Ignore malformed ref names (which also saves us from tag^{} */
+	if ((error = git_reference_name_is_valid(&valid, head->name)) < 0)
+		goto done;
+
+	if (!valid)
+		goto done;
+
+	/* If we have a tag, see if the auto-follow rules say to update it */
+	if (git_refspec_src_matches(tagspec, head->name)) {
+		if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_AUTO)
+			autotag = true;
+
+		if (tagopt != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
+			if (git_str_puts(&refname, head->name) < 0)
+				goto done;
+		}
+	}
+
+	/* If we didn't want to auto-follow the tag, check if the refspec matches */
+	if (!autotag && git_refspec_src_matches(spec, head->name)) {
+		if (spec->dst) {
+			if ((error = git_refspec__transform(&refname, spec, head->name)) < 0)
+				goto done;
+		} else {
+			/*
+			 * no rhs means store it in FETCH_HEAD, even if we don't
+			 * update anything else.
+			 */
+			error = git_vector_insert(update_heads, head);
+			goto done;
+		}
+	}
+
+	/* If we still don't have a refname, we don't want it */
+	if (git_str_len(&refname) == 0)
+		goto done;
+
+	/* In autotag mode, only create tags for objects already in db */
+	if (autotag && !git_odb_exists(odb, &head->oid))
+		goto done;
+
+	if (!autotag && (error = git_vector_insert(update_heads, head)) < 0)
+		goto done;
+
+	error = git_reference_name_to_id(&old, remote->repo, refname.ptr);
+
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto done;
+
+	if (!(error || error == GIT_ENOTFOUND) &&
+	    !spec->force &&
+	    !git_graph_descendant_of(remote->repo, &head->oid, &old)) {
+		error = 0;
+		goto done;
+	}
+
+	if (error == GIT_ENOTFOUND) {
+		memset(&old, 0, GIT_OID_RAWSZ);
+		error = 0;
+
+		if (autotag && (error = git_vector_insert(update_heads, head)) < 0)
+			goto done;
+	}
+
+	if (!git_oid__cmp(&old, &head->oid))
+		goto done;
+
+	/* In autotag mode, don't overwrite any locally-existing tags */
+	error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag,
+			log_message);
+
+	if (error < 0) {
+		if (error == GIT_EEXISTS)
+			error = 0;
+
+		goto done;
+	}
+
+	if (callbacks && callbacks->update_tips != NULL &&
+	    callbacks->update_tips(refname.ptr, &old, &head->oid, callbacks->payload) < 0)
+		git_error_set_after_callback_function(error, "git_remote_fetch");
+
+done:
+	git_reference_free(ref);
+	git_str_dispose(&refname);
+	return error;
+}
+
+static int update_tips_for_spec(
+	git_remote *remote,
+	const git_remote_callbacks *callbacks,
+	int update_fetchhead,
+	git_remote_autotag_option_t tagopt,
+	git_refspec *spec,
+	git_vector *refs,
+	const char *log_message)
+{
 	git_refspec tagspec;
+	git_remote_head *head, oid_head;
 	git_vector update_heads;
+	int error = 0;
+	size_t i;
 
 	GIT_ASSERT_ARG(remote);
-
-	if (git_repository_odb__weakptr(&odb, remote->repo) < 0)
-		return -1;
 
 	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
 		return -1;
@@ -1733,110 +1885,38 @@ static int update_tips_for_spec(
 	if (git_vector_init(&update_heads, 16, NULL) < 0)
 		return -1;
 
-	for (; i < refs->length; ++i) {
-		head = git_vector_get(refs, i);
-		autotag = 0;
-		git_str_clear(&refname);
+	/* Update tips based on the remote heads */
+	git_vector_foreach(refs, i, head) {
+		if (update_one_tip(&update_heads, remote, spec, head, &tagspec, tagopt, log_message, callbacks) < 0)
+			goto on_error;
+	}
 
-		/* Ignore malformed ref names (which also saves us from tag^{} */
-		if (git_reference_name_is_valid(&valid, head->name) < 0)
+	/* Handle specified oid sources */
+	if (git_oid__is_hexstr(spec->src)) {
+		git_oid id;
+
+		if ((error = git_oid_fromstr(&id, spec->src)) < 0 ||
+		    (error = update_ref(remote, spec->dst, &id, log_message, callbacks)) < 0)
 			goto on_error;
 
-		if (!valid)
-			continue;
+		git_oid_cpy(&oid_head.oid, &id);
+		oid_head.name = spec->src;
 
-		/* If we have a tag, see if the auto-follow rules say to update it */
-		if (git_refspec_src_matches(&tagspec, head->name)) {
-			if (tagopt != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
-
-				if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_AUTO)
-					autotag = 1;
-
-				git_str_clear(&refname);
-				if (git_str_puts(&refname, head->name) < 0)
-					goto on_error;
-			}
-		}
-
-		/* If we didn't want to auto-follow the tag, check if the refspec matches */
-		if (!autotag && git_refspec_src_matches(spec, head->name)) {
-			if (spec->dst) {
-				if (git_refspec__transform(&refname, spec, head->name) < 0)
-					goto on_error;
-			} else {
-				/*
-				 * no rhs mans store it in FETCH_HEAD, even if we don't
-				 update anything else.
-				 */
-				if ((error = git_vector_insert(&update_heads, head)) < 0)
-					goto on_error;
-
-				continue;
-			}
-		}
-
-		/* If we still don't have a refname, we don't want it */
-		if (git_str_len(&refname) == 0) {
-			continue;
-		}
-
-		/* In autotag mode, only create tags for objects already in db */
-		if (autotag && !git_odb_exists(odb, &head->oid))
-			continue;
-
-		if (!autotag && git_vector_insert(&update_heads, head) < 0)
+		if ((error = git_vector_insert(&update_heads, &oid_head)) < 0)
 			goto on_error;
-
-		error = git_reference_name_to_id(&old, remote->repo, refname.ptr);
-		if (error < 0 && error != GIT_ENOTFOUND)
-			goto on_error;
-
-		if (!(error || error == GIT_ENOTFOUND)
-				&& !spec->force
-				&& !git_graph_descendant_of(remote->repo, &head->oid, &old))
-			continue;
-
-		if (error == GIT_ENOTFOUND) {
-			memset(&old, 0, GIT_OID_RAWSZ);
-
-			if (autotag && git_vector_insert(&update_heads, head) < 0)
-				goto on_error;
-		}
-
-		if (!git_oid__cmp(&old, &head->oid))
-			continue;
-
-		/* In autotag mode, don't overwrite any locally-existing tags */
-		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag,
-				log_message);
-
-		if (error == GIT_EEXISTS)
-			continue;
-
-		if (error < 0)
-			goto on_error;
-
-		git_reference_free(ref);
-
-		if (callbacks && callbacks->update_tips != NULL) {
-			if (callbacks->update_tips(refname.ptr, &old, &head->oid, callbacks->payload) < 0)
-				goto on_error;
-		}
 	}
 
 	if (update_fetchhead &&
 	    (error = git_remote_write_fetchhead(remote, spec, &update_heads)) < 0)
 		goto on_error;
 
-	git_vector_free(&update_heads);
 	git_refspec__dispose(&tagspec);
-	git_str_dispose(&refname);
+	git_vector_free(&update_heads);
 	return 0;
 
 on_error:
-	git_vector_free(&update_heads);
 	git_refspec__dispose(&tagspec);
-	git_str_dispose(&refname);
+	git_vector_free(&update_heads);
 	return -1;
 
 }
@@ -1902,20 +1982,22 @@ static int next_head(const git_remote *remote, git_vector *refs,
 	return GIT_ITEROVER;
 }
 
-static int opportunistic_updates(const git_remote *remote, const git_remote_callbacks *callbacks,
-				 git_vector *refs, const char *msg)
+static int opportunistic_updates(
+	const git_remote *remote,
+	const git_remote_callbacks *callbacks,
+	 git_vector *refs,
+	 const char *msg)
 {
 	size_t i, j, k;
 	git_refspec *spec;
 	git_remote_head *head;
-	git_reference *ref;
 	git_str refname = GIT_STR_INIT;
 	int error = 0;
 
 	i = j = k = 0;
 
+	/* Handle refspecs matching remote heads */
 	while ((error = next_head(remote, refs, &spec, &head, &i, &j, &k)) == 0) {
-		git_oid old = {{ 0 }};
 		/*
 		 * If we got here, there is a refspec which was used
 		 * for fetching which matches the source of one of the
@@ -1925,33 +2007,15 @@ static int opportunistic_updates(const git_remote *remote, const git_remote_call
 		 */
 
 		git_str_clear(&refname);
-		if ((error = git_refspec__transform(&refname, spec, head->name)) < 0)
+		if ((error = git_refspec__transform(&refname, spec, head->name)) < 0 ||
+		    (error = update_ref(remote, refname.ptr, &head->oid, msg, callbacks)) < 0)
 			goto cleanup;
-
-		error = git_reference_name_to_id(&old, remote->repo, refname.ptr);
-		if (error < 0 && error != GIT_ENOTFOUND)
-			goto cleanup;
-
-		if (!git_oid_cmp(&old, &head->oid))
-			continue;
-
-		/* If we did find a current reference, make sure we haven't lost a race */
-		if (error)
-			error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, true, msg);
-		else
-			error = git_reference_create_matching(&ref, remote->repo, refname.ptr, &head->oid, true, &old, msg);
-		git_reference_free(ref);
-		if (error < 0)
-			goto cleanup;
-
-		if (callbacks && callbacks->update_tips != NULL) {
-			if (callbacks->update_tips(refname.ptr, &old, &head->oid, callbacks->payload) < 0)
-				goto cleanup;
-		}
 	}
 
-	if (error == GIT_ITEROVER)
-		error = 0;
+	if (error != GIT_ITEROVER)
+		goto cleanup;
+
+	error = 0;
 
 cleanup:
 	git_str_dispose(&refname);
@@ -2018,7 +2082,7 @@ int git_remote_update_tips(
 			goto out;
 	}
 
-	/* Only try to do opportunistic updates if the refpec lists differ. */
+	/* Only try to do opportunistic updates if the refspec lists differ. */
 	if (remote->passed_refspecs)
 		error = opportunistic_updates(remote, callbacks, &refs, reflog_message);
 
@@ -2059,6 +2123,17 @@ int git_remote_disconnect(git_remote *remote)
 	return 0;
 }
 
+static void free_heads(git_vector *heads)
+{
+	git_remote_head *head;
+	size_t i;
+
+	git_vector_foreach(heads, i, head) {
+		git__free(head->name);
+		git__free(head);
+	}
+}
+
 void git_remote_free(git_remote *remote)
 {
 	if (remote == NULL)
@@ -2081,6 +2156,9 @@ void git_remote_free(git_remote *remote)
 
 	free_refspecs(&remote->passive_refspecs);
 	git_vector_free(&remote->passive_refspecs);
+
+	free_heads(&remote->local_heads);
+	git_vector_free(&remote->local_heads);
 
 	git_push_free(remote->push);
 	git__free(remote->url);

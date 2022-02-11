@@ -48,4 +48,16 @@ GIT_INLINE(void) git_oid__cpy_prefix(
 		out->id[len / 2] &= 0xF0;
 }
 
+GIT_INLINE(bool) git_oid__is_hexstr(const char *str)
+{
+	size_t i;
+
+	for (i = 0; str[i] != '\0'; i++) {
+		if (git__fromhex(str[i]) < 0)
+			return false;
+	}
+
+	return (i == GIT_OID_HEXSZ);
+}
+
 #endif

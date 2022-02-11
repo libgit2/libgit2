@@ -28,6 +28,7 @@
 #include "git2/pack.h"
 #include "git2/commit.h"
 #include "git2/revparse.h"
+#include "git2/sys/remote.h"
 
 typedef struct {
 	git_transport parent;
@@ -254,6 +255,15 @@ static int local_set_connect_opts(
 	}
 
 	return git_remote_connect_options_normalize(&t->connect_opts, t->owner->repo, connect_opts);
+}
+
+static int local_capabilities(unsigned int *capabilities, git_transport *transport)
+{
+	GIT_UNUSED(transport);
+
+	*capabilities = GIT_REMOTE_CAPABILITY_TIP_OID |
+	                GIT_REMOTE_CAPABILITY_REACHABLE_OID;
+	return 0;
 }
 
 static int local_ls(const git_remote_head ***out, size_t *size, git_transport *transport)
@@ -721,6 +731,7 @@ int git_transport_local(git_transport **out, git_remote *owner, void *param)
 	t->parent.version = GIT_TRANSPORT_VERSION;
 	t->parent.connect = local_connect;
 	t->parent.set_connect_opts = local_set_connect_opts;
+	t->parent.capabilities = local_capabilities;
 	t->parent.negotiate_fetch = local_negotiate_fetch;
 	t->parent.download_pack = local_download_pack;
 	t->parent.push = local_push;

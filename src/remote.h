@@ -27,6 +27,7 @@ struct git_remote {
 	git_vector refspecs;
 	git_vector active_refspecs;
 	git_vector passive_refspecs;
+	git_vector local_heads;
 	git_transport *transport;
 	git_repository *repo;
 	git_push *push;
@@ -53,5 +54,7 @@ int git_remote_connect_options_normalize(
 	git_repository *repo,
 	const git_remote_connect_options *src);
 void git_remote_connect_options_dispose(git_remote_connect_options *opts);
+
+int git_remote_capabilities(unsigned int *out, git_remote *remote);
 
 #endif
