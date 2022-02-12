@@ -93,8 +93,13 @@ typedef enum {
 	 */
 	GIT_MERGE_NO_RECURSIVE = (1 << 3),
 
-	/* This flag is reserved for internal library use */
-	GIT_MERGE__INTERNAL_FLAG = (1 << 30)
+	/**
+	 * Treat this merge as if it is to produce the virtual base
+	 * of a recursive merge.  This will ensure that there are
+	 * no conflicts, any conflicting regions will keep conflict
+	 * markers in the merge result.
+	 */
+	GIT_MERGE_VIRTUAL_BASE = (1 << 4)
 } git_merge_flag_t;
 
 /**
@@ -167,8 +172,12 @@ typedef enum {
 	/** Create zdiff3 ("zealous diff3")-style files */
 	GIT_MERGE_FILE_STYLE_ZDIFF3 = (1 << 8),
 
-	/* This flag is reserved for internal library use */
-	GIT_MERGE_FILE__INTERNAL_FLAG = (1 << 30)
+	/**
+	 * Do not produce file conflicts when common regions have
+	 * changed; keep the conflict markers in the file and accept
+	 * that as the merge result.
+	 */
+	GIT_MERGE_FILE_ACCEPT_CONFLICTS = (1 << 9)
 } git_merge_file_flag_t;
 
 #define GIT_MERGE_CONFLICT_MARKER_SIZE	7
