@@ -11,6 +11,8 @@
 
 #include "git2/oid.h"
 
+extern const git_oid git_oid__empty_tree_sha1;
+
 /**
  * Format a git_oid into a newly allocated c-string.
  *
