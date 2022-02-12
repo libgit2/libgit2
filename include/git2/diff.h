@@ -207,7 +207,8 @@ typedef enum {
 	GIT_DIFF_FLAG_BINARY     = (1u << 0), /**< file(s) treated as binary data */
 	GIT_DIFF_FLAG_NOT_BINARY = (1u << 1), /**< file(s) treated as text data */
 	GIT_DIFF_FLAG_VALID_ID   = (1u << 2), /**< `id` value is known correct */
-	GIT_DIFF_FLAG_EXISTS     = (1u << 3)  /**< file exists at this side of the delta */
+	GIT_DIFF_FLAG_EXISTS     = (1u << 3), /**< file exists at this side of the delta */
+	GIT_DIFF_FLAG_VALID_SIZE = (1u << 4)  /**< file size value is known correct */
 } git_diff_flag_t;
 
 /**

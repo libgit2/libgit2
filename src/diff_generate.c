@@ -117,6 +117,26 @@ static bool diff_pathspec_match(
 		matched_pathspec, NULL);
 }
 
+static void diff_delta__flag_known_size(git_diff_file *file)
+{
+	/*
+	 * If we don't know the ID, that can only come from the workdir
+	 * iterator, which means we *do* know the file size.  This is a
+	 * leaky abstraction, but alas.  Otherwise, we test against the
+	 * empty blob id.
+	 */
+	if (file->size ||
+	    !(file->flags & GIT_DIFF_FLAG_VALID_ID) ||
+	    git_oid_equal(&file->id, &git_oid__empty_blob_sha1))
+		file->flags |= GIT_DIFF_FLAG_VALID_SIZE;
+}
+
+static void diff_delta__flag_known_sizes(git_diff_delta *delta)
+{
+	diff_delta__flag_known_size(&delta->old_file);
+	diff_delta__flag_known_size(&delta->new_file);
+}
+
 static int diff_delta__from_one(
 	git_diff_generated *diff,
 	git_delta_t status,
@@ -182,6 +202,8 @@ static int diff_delta__from_one(
 	if (has_old || !git_oid_is_zero(&delta->new_file.id))
 		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
+	diff_delta__flag_known_sizes(delta);
+
 	return diff_insert_delta(diff, delta, matched_pathspec);
 }
 
@@ -243,6 +265,8 @@ static int diff_delta__from_two(
 		if (!git_oid_is_zero(&new_entry->id))
 			delta->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 	}
+
+	diff_delta__flag_known_sizes(delta);
 
 	return diff_insert_delta(diff, delta, matched_pathspec);
 }

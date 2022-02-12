@@ -16,6 +16,7 @@
 #include "filter.h"
 #include "repository.h"
 #include "blob.h"
+#include "oid.h"
 
 #include "git2/odb_backend.h"
 #include "git2/oid.h"
@@ -58,10 +59,7 @@ static int error_null_oid(int error, const char *message);
 
 static git_object_t odb_hardcoded_type(const git_oid *id)
 {
-	static git_oid empty_tree = {{ 0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60,
-					   0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04 }};
-
-	if (!git_oid_cmp(id, &empty_tree))
+	if (!git_oid_cmp(id, &git_oid__empty_tree_sha1))
 		return GIT_OBJECT_TREE;
 
 	return GIT_OBJECT_INVALID;

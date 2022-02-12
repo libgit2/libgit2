@@ -460,7 +460,8 @@ static int similarity_init(
 	info->blob = NULL;
 	git_str_init(&info->data, 0);
 
-	if (info->file->size > 0 || info->src == GIT_ITERATOR_WORKDIR)
+	if ((info->file->flags & GIT_DIFF_FLAG_VALID_SIZE) ||
+	    info->src == GIT_ITERATOR_WORKDIR)
 		return 0;
 
 	return git_diff_file__resolve_zero_size(

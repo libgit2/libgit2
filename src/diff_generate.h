@@ -119,8 +119,10 @@ GIT_INLINE(int) git_diff_file__resolve_zero_size(
 
 	git_odb_free(odb);
 
-	if (!error)
+	if (!error) {
 		file->size = (git_object_size_t)len;
+		file->flags |= GIT_DIFF_FLAG_VALID_SIZE;
+	}
 
 	return error;
 }
