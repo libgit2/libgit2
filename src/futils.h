@@ -177,11 +177,12 @@ extern int git_futils_rmdir_r(const char *path, const char *base, uint32_t flags
  * protected directory; the file created will created will honor
  * the current `umask`.  Writes the filename into path_out.
  *
- * This function is *NOT* suitable for use in temporary directories
- * that are world writable.  It uses `mktemp` (for portability) and
- * many `mktemp` implementations use weak random characters.  It
- * should only be assumed to be suitable for atomically writing
- * a new file in a directory that you control.
+ * This function uses a high-quality PRNG seeded by the system's
+ * entropy pool _where available_ and falls back to a simple seed
+ * (time plus system information) when not.  This is suitable for
+ * writing within a protected directory, but the system's safe
+ * temporary file creation functions should be preferred where
+ * available when writing into world-writable (temp) directories.
  *
  * @return On success, an open file descriptor, else an error code < 0.
  */

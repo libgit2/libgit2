@@ -55,6 +55,8 @@ check_prototype_definition(qsort_r
 
 check_function_exists(qsort_s GIT_QSORT_S)
 
+check_function_exists(getentropy GIT_RAND_GETENTROPY)
+
 # Find required dependencies
 
 if(WIN32)

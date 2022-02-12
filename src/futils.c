@@ -10,6 +10,8 @@
 #include "runtime.h"
 #include "strmap.h"
 #include "hash.h"
+#include "rand.h"
+
 #include <ctype.h>
 #if GIT_WIN32
 #include "win32/findfile.h"
@@ -27,23 +29,20 @@ int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 int git_futils_mktmp(git_str *path_out, const char *filename, mode_t mode)
 {
 	const int open_flags = O_RDWR | O_CREAT | O_EXCL | O_BINARY | O_CLOEXEC;
-	/* TMP_MAX is unrelated to mktemp but should provide a reasonable amount */
-	unsigned int tries = TMP_MAX;
+	unsigned int tries = 32;
 	int fd;
 
 	while (tries--) {
+		uint64_t rand = git_rand_next();
+
 		git_str_sets(path_out, filename);
-		git_str_puts(path_out, "_git2_XXXXXX");
+		git_str_puts(path_out, "_git2_");
+		git_str_encode_hexstr(path_out, (void *)&rand, sizeof(uint64_t));
 
 		if (git_str_oom(path_out))
 			return -1;
 
-		/* Using mktemp is safe when we open with O_CREAT | O_EXCL */
-		p_mktemp(path_out->ptr);
-		/* mktemp sets template to empty string on failure */
-		if (path_out->ptr[0] == '\0')
-			break;
-
+		/* Note that we open with O_CREAT | O_EXCL */
 		if ((fd = p_open(path_out->ptr, open_flags, mode)) >= 0)
 			return fd;
 	}

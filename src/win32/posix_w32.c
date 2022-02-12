@@ -860,20 +860,6 @@ int p_snprintf(char *buffer, size_t count, const char *format, ...)
 	return r;
 }
 
-/* TODO: wut? */
-int p_mkstemp(char *tmp_path)
-{
-#if defined(_MSC_VER) && _MSC_VER >= 1500
-	if (_mktemp_s(tmp_path, strlen(tmp_path) + 1) != 0)
-		return -1;
-#else
-	if (_mktemp(tmp_path) == NULL)
-		return -1;
-#endif
-
-	return p_open(tmp_path, O_RDWR | O_CREAT | O_EXCL, 0744); /* -V536 */
-}
-
 int p_access(const char *path, mode_t mode)
 {
 	git_win32_path buf;

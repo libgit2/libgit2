@@ -20,6 +20,7 @@
 #include "mwindow.h"
 #include "object.h"
 #include "odb.h"
+#include "rand.h"
 #include "refs.h"
 #include "runtime.h"
 #include "sysdir.h"
@@ -70,6 +71,7 @@ int git_libgit2_init(void)
 		git_allocator_global_init,
 		git_threadstate_global_init,
 		git_threads_global_init,
+		git_rand_global_init,
 		git_hash_global_init,
 		git_sysdir_global_init,
 		git_filter_global_init,
