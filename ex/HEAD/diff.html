@@ -486,7 +486,7 @@ are not supported in this example</p>
         <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">diff_print_stats</span><span class="p">(</span><span class="n">git_diff</span> <span class="o">*</span><span class="n">diff</span><span class="p">,</span> <span class="k">struct</span> <span class="n">diff_options</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_diff_stats</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
-  <span class="n">git_buf</span> <span class="n">b</span> <span class="o">=</span> <span class="n">GIT_BUF_INIT</span><span class="p">;</span>
+  <span class="n">git_buf</span> <span class="n">b</span> <span class="o">=</span> <span class="n">GIT_BUF_INIT_CONST</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
   <span class="n">git_diff_stats_format_t</span> <span class="n">format</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
   <span class="n">check_lg2</span><span class="p">(</span>
