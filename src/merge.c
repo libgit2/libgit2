@@ -2116,11 +2116,11 @@ int git_merge__iterators(
 	file_opts.flags = opts.file_flags;
 
 	/* use the git-inspired labels when virtual base building */
-	if (opts.flags & GIT_MERGE__VIRTUAL_BASE) {
+	if (opts.flags & GIT_MERGE_VIRTUAL_BASE) {
 		file_opts.ancestor_label = "merged common ancestors";
 		file_opts.our_label = "Temporary merge branch 1";
 		file_opts.their_label = "Temporary merge branch 2";
-		file_opts.flags |= GIT_MERGE_FILE_FAVOR__CONFLICTED;
+		file_opts.flags |= GIT_MERGE_FILE_ACCEPT_CONFLICTS;
 		file_opts.marker_size = GIT_MERGE_CONFLICT_MARKER_SIZE + 2;
 	}
 
@@ -2280,7 +2280,7 @@ static int create_virtual_base(
 		memcpy(&virtual_opts, opts, sizeof(git_merge_options));
 
 	virtual_opts.flags &= ~GIT_MERGE_FAIL_ON_CONFLICT;
-	virtual_opts.flags |= GIT_MERGE__VIRTUAL_BASE;
+	virtual_opts.flags |= GIT_MERGE_VIRTUAL_BASE;
 
 	if ((merge_annotated_commits(&index, NULL, repo, one, two,
 			recursion_level + 1, &virtual_opts)) < 0)

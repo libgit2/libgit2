@@ -25,19 +25,6 @@
 #define GIT_MERGE_DEFAULT_RENAME_THRESHOLD	50
 #define GIT_MERGE_DEFAULT_TARGET_LIMIT		1000
 
-
-/** Internal merge flags. */
-enum {
-	/** The merge is for a virtual base in a recursive merge. */
-	GIT_MERGE__VIRTUAL_BASE = (1 << 31)
-};
-
-enum {
-	/** Accept the conflict file, staging it as the merge result. */
-	GIT_MERGE_FILE_FAVOR__CONFLICTED = 4
-};
-
-
 /** Types of changes when files are merged from branch to branch. */
 typedef enum {
 	/* No conflict - a change only occurs in one branch. */
