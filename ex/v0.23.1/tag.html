@@ -244,10 +244,10 @@ all of the use cases.</p>
       <td class=code>
         <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">print_tag</span><span class="p">(</span><span class="n">git_tag</span> <span class="o">*</span><span class="n">tag</span><span class="p">,</span> <span class="k">const</span> <span class="n">tag_state</span> <span class="o">*</span><span class="n">state</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%-16s&quot;</span><span class="p">,</span> <span class="n"><a name="git_tag_name-20" class="fnlink" href="../../#v0.23.1/group/tag/git_tag_name">git_tag_name</a></span><span class="p">(</span><span class="n">tag</span><span class="p">));</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%-16s&quot;</span><span class="p">,</span> <span class="n"><a name="git_tag_name-18" class="fnlink" href="../../#v0.23.1/group/tag/git_tag_name">git_tag_name</a></span><span class="p">(</span><span class="n">tag</span><span class="p">));</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">num_lines</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">msg</span> <span class="o">=</span> <span class="n"><a name="git_tag_message-21" class="fnlink" href="../../#v0.23.1/group/tag/git_tag_message">git_tag_message</a></span><span class="p">(</span><span class="n">tag</span><span class="p">);</span>
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">msg</span> <span class="o">=</span> <span class="n"><a name="git_tag_message-19" class="fnlink" href="../../#v0.23.1/group/tag/git_tag_message">git_tag_message</a></span><span class="p">(</span><span class="n">tag</span><span class="p">);</span>
     <span class="n">print_list_lines</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">state</span><span class="p">);</span>
   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
@@ -304,7 +304,7 @@ all of the use cases.</p>
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">;</span>
   <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span><span class="p">;</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-13" class="fnlink" href="../../#v0.23.1/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-11" class="fnlink" href="../../#v0.23.1/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
       <span class="s">&quot;Failed to lookup rev&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
 
   <span class="k">switch</span> <span class="p">(</span><span class="n"><a name="git_object_type-6" class="fnlink" href="../../#v0.23.1/group/object/git_object_type">git_object_type</a></span><span class="p">(</span><span class="n">obj</span><span class="p">))</span> <span class="p">{</span>
@@ -328,14 +328,14 @@ all of the use cases.</p>
   <span class="n">git_strarray</span> <span class="n">tag_names</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
   <span class="kt">size_t</span> <span class="n">i</span><span class="p">;</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tag_list_match-25" class="fnlink" href="../../#v0.23.1/group/tag/git_tag_list_match">git_tag_list_match</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tag_names</span><span class="p">,</span> <span class="n">pattern</span> <span class="o">?</span> <span class="nl">pattern</span> <span class="p">:</span> <span class="s">&quot;*&quot;</span><span class="p">,</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tag_list_match-23" class="fnlink" href="../../#v0.23.1/group/tag/git_tag_list_match">git_tag_list_match</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tag_names</span><span class="p">,</span> <span class="n">pattern</span> <span class="o">?</span> <span class="nl">pattern</span> <span class="p">:</span> <span class="s">&quot;*&quot;</span><span class="p">,</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">),</span>
       <span class="s">&quot;Unable to get list of tags&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="k">for</span><span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">tag_names</span><span class="p">.</span><span class="n">count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">each_tag</span><span class="p">(</span><span class="n">tag_names</span><span class="p">.</span><span class="n">strings</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">state</span><span class="p">);</span>
   <span class="p">}</span>
 
-  <span class="n"><a name="git_strarray_free-19" class="fnlink" href="../../#v0.23.1/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tag_names</span><span class="p">);</span>
+  <span class="n"><a name="git_strarray_free-17" class="fnlink" href="../../#v0.23.1/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tag_names</span><span class="p">);</span>
 <span class="p">}</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">action_delete_tag</span><span class="p">(</span><span class="n">tag_state</span> <span class="o">*</span><span class="n">state</span><span class="p">)</span>
@@ -346,13 +346,13 @@ all of the use cases.</p>
 
   <span class="n">check</span><span class="p">(</span><span class="o">!</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">,</span> <span class="s">&quot;Name required&quot;</span><span class="p">);</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-14" class="fnlink" href="../../#v0.23.1/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-12" class="fnlink" href="../../#v0.23.1/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">),</span>
       <span class="s">&quot;Failed to lookup rev&quot;</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">);</span>
 
   <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_object_short_id-5" class="fnlink" href="../../#v0.23.1/group/object/git_object_short_id">git_object_short_id</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">abbrev_oid</span><span class="p">,</span> <span class="n">obj</span><span class="p">),</span>
       <span class="s">&quot;Unable to get abbreviated OID&quot;</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">);</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tag_delete-24" class="fnlink" href="../../#v0.23.1/group/tag/git_tag_delete">git_tag_delete</a></span><span class="p">(</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tag_delete-22" class="fnlink" href="../../#v0.23.1/group/tag/git_tag_delete">git_tag_delete</a></span><span class="p">(</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">),</span>
       <span class="s">&quot;Unable to delete tag&quot;</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">);</span>
 
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Deleted tag &#39;%s&#39; (was %s)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">,</span> <span class="n">abbrev_oid</span><span class="p">.</span><span class="n">ptr</span><span class="p">);</span>
@@ -374,10 +374,10 @@ all of the use cases.</p>
 
   <span class="n">check</span><span class="p">(</span><span class="o">!</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">target</span><span class="p">,</span> <span class="s">&quot;Target required&quot;</span><span class="p">);</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-15" class="fnlink" href="../../#v0.23.1/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">target</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">target</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-13" class="fnlink" href="../../#v0.23.1/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">target</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">target</span><span class="p">),</span>
       <span class="s">&quot;Unable to resolve spec&quot;</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">target</span><span class="p">);</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tag_create_lightweight-23" class="fnlink" href="../../#v0.23.1/group/tag/git_tag_create_lightweight">git_tag_create_lightweight</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">,</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tag_create_lightweight-21" class="fnlink" href="../../#v0.23.1/group/tag/git_tag_create_lightweight">git_tag_create_lightweight</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">,</span>
         <span class="n">target</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">force</span><span class="p">),</span> <span class="s">&quot;Unable to create tag&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="n"><a name="git_object_free-9" class="fnlink" href="../../#v0.23.1/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">target</span><span class="p">);</span>
@@ -396,17 +396,17 @@ all of the use cases.</p>
 
   <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">target</span><span class="p">)</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">target</span> <span class="o">=</span> <span class="s">&quot;HEAD&quot;</span><span class="p">;</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-16" class="fnlink" href="../../#v0.23.1/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">target</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">target</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-14" class="fnlink" href="../../#v0.23.1/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">target</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">target</span><span class="p">),</span>
       <span class="s">&quot;Unable to resolve spec&quot;</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">target</span><span class="p">);</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_signature_default-17" class="fnlink" href="../../#v0.23.1/group/signature/git_signature_default">git_signature_default</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tagger</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_signature_default-15" class="fnlink" href="../../#v0.23.1/group/signature/git_signature_default">git_signature_default</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tagger</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span>
       <span class="s">&quot;Unable to create signature&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tag_create-22" class="fnlink" href="../../#v0.23.1/group/tag/git_tag_create">git_tag_create</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">,</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tag_create-20" class="fnlink" href="../../#v0.23.1/group/tag/git_tag_create">git_tag_create</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">tag_name</span><span class="p">,</span>
         <span class="n">target</span><span class="p">,</span> <span class="n">tagger</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">,</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">force</span><span class="p">),</span> <span class="s">&quot;Unable to create tag&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="n"><a name="git_object_free-10" class="fnlink" href="../../#v0.23.1/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">target</span><span class="p">);</span>
-  <span class="n"><a name="git_signature_free-18" class="fnlink" href="../../#v0.23.1/group/signature/git_signature_free">git_signature_free</a></span><span class="p">(</span><span class="n">tagger</span><span class="p">);</span>
+  <span class="n"><a name="git_signature_free-16" class="fnlink" href="../../#v0.23.1/group/signature/git_signature_free">git_signature_free</a></span><span class="p">(</span><span class="n">tagger</span><span class="p">);</span>
 <span class="p">}</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">print_usage</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
@@ -492,7 +492,7 @@ all of the use cases.</p>
 
   <span class="n"><a name="git_libgit2_init-3" class="fnlink" href="../../#v0.23.1/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-11" class="fnlink" href="../../#v0.23.1/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n">git_repository_open_ext</span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
       <span class="s">&quot;Could not open repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="n">tag_options_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="p">);</span>
@@ -502,7 +502,7 @@ all of the use cases.</p>
   <span class="n">state</span><span class="p">.</span><span class="n">opts</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">;</span>
   <span class="n">action</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">);</span>
 
-  <span class="n"><a name="git_repository_free-12" class="fnlink" href="../../#v0.23.1/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+  <span class="n">git_repository_free</span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
   <span class="n"><a name="git_libgit2_shutdown-4" class="fnlink" href="../../#v0.23.1/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
