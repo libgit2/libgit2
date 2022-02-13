@@ -15,6 +15,6 @@ changelog:
   - title: Documentation improvements
     labels:
     - documentation
-  - title: Other Changes
+  - title: Other changes
     labels:
       - '*'
