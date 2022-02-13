@@ -1,3 +1,96 @@
+v1.4
+----
+
+This is release v1.4.0, "Fisematenten".  This release includes several new features and bugfixes, improves compatibility with git, and begins preparation for SHA256 support in a future release.
+
+## What's Changed
+### New features
+* diff: update rename limit to 1000 to match git's behavior by @ethomson in https://github.com/libgit2/libgit2/pull/6092
+* odb: support checking for object existence without refresh by @joshtriplett in https://github.com/libgit2/libgit2/pull/6107
+* object: provide a low-level mechanism to validate whether a raw object is valid (`git_object_rawcontent_is_valid`) by @ethomson in https://github.com/libgit2/libgit2/pull/6128
+* blob: provide a function to identify binary content by @ethomson in https://github.com/libgit2/libgit2/pull/6142
+* status: add `rename_threshold` to `git_status_options`. by @arroz in https://github.com/libgit2/libgit2/pull/6158
+* remote: support `http.followRedirects` (`false` and `initial`) and follow initial redirects by default by @ethomson in https://github.com/libgit2/libgit2/pull/6175
+* remote: support scp style paths with ports (`[git@github.com:22]:libgit2/libgit2`) by @ethomson in https://github.com/libgit2/libgit2/pull/6167
+* win32: update git for windows configuration file location compatibility by @csware in https://github.com/libgit2/libgit2/pull/6151 and @ethomson in https://github.com/libgit2/libgit2/pull/6180
+* refs: speed up packed reference lookups when packed refs are sorted by @ccstolley in https://github.com/libgit2/libgit2/pull/6138
+* merge: support zdiff3 conflict styles by @ethomson in https://github.com/libgit2/libgit2/pull/6195
+* remote: support fetching by object id (using "+oid:ref" refspec syntax) by @ethomson in https://github.com/libgit2/libgit2/pull/6203
+* merge: callers can specify virtual-base building behavior and to optionally accept conflict markers as a resolution by @boretrk in https://github.com/libgit2/libgit2/pull/6204
+
+### Bug fixes
+* Fix a gcc 11 warning in src/threadstate.c by @lhchavez in https://github.com/libgit2/libgit2/pull/6115
+* Fix a gcc 11 warning in src/thread.h by @lhchavez in https://github.com/libgit2/libgit2/pull/6116
+* cmake: re-enable WinHTTP by @ethomson in https://github.com/libgit2/libgit2/pull/6120
+* Fix repo init when template dir is non-existent by @ammgws in https://github.com/libgit2/libgit2/pull/6106
+* cmake: use project-specific root variable instead of CMAKE_SOURCE_DIR by @Qix- in https://github.com/libgit2/libgit2/pull/6146
+* Better revparse compatibility for at time notation by @yoichi in https://github.com/libgit2/libgit2/pull/6095
+* remotes: fix insteadOf/pushInsteadOf handling by @mkhl in https://github.com/libgit2/libgit2/pull/6101
+* git_commit_summary: ignore lines with spaces by @stforek in https://github.com/libgit2/libgit2/pull/6125
+* Config parsing by @csware in https://github.com/libgit2/libgit2/pull/6124
+* config: handle empty conditional in includeIf by @ethomson in https://github.com/libgit2/libgit2/pull/6165
+* #6154 git_status_list_new case insensitive fix by @arroz in https://github.com/libgit2/libgit2/pull/6159
+* futils_mktmp: don't use umask by @boretrk in https://github.com/libgit2/libgit2/pull/6178
+* revparse: support bare '@' by @ethomson in https://github.com/libgit2/libgit2/pull/6196
+* odb: check for write failures by @ethomson in https://github.com/libgit2/libgit2/pull/6206
+* push: Prepare pack before sending pack header. by @ccstolley in https://github.com/libgit2/libgit2/pull/6205
+* mktmp: improve our temp file creation by @ethomson in https://github.com/libgit2/libgit2/pull/6207
+* diff_file: fix crash if size of diffed file changes in workdir by @jorio in https://github.com/libgit2/libgit2/pull/6208
+* merge: comment conflicts lines in MERGE_MSG by @ethomson in https://github.com/libgit2/libgit2/pull/6197
+* Fix crashes in example programs on Windows (sprintf_s not compatible with snprintf) by @apnadkarni in https://github.com/libgit2/libgit2/pull/6212
+
+### Code cleanups
+* Introduce `git_remote_connect_options` by @ethomson in https://github.com/libgit2/libgit2/pull/6161
+* hash: separate hashes and git_oid by @ethomson in https://github.com/libgit2/libgit2/pull/6082
+* `git_buf`: now a public-only API (`git_str` is our internal API) by @ethomson in https://github.com/libgit2/libgit2/pull/6078
+* cmake: cleanups and consistency by @ethomson in https://github.com/libgit2/libgit2/pull/6084
+* path: refactor utility path functions by @ethomson in https://github.com/libgit2/libgit2/pull/6104
+* str: git_str_free is never a function by @ethomson in https://github.com/libgit2/libgit2/pull/6111
+* cmake refactorings by @ethomson in https://github.com/libgit2/libgit2/pull/6112
+* Add missing-declarations warning globally by @ethomson in https://github.com/libgit2/libgit2/pull/6113
+* cmake: further refactorings by @ethomson in https://github.com/libgit2/libgit2/pull/6114
+* tag: set validity to 0 by default by @ethomson in https://github.com/libgit2/libgit2/pull/6119
+* util: minor cleanup and refactoring to the date class by @ethomson in https://github.com/libgit2/libgit2/pull/6121
+* Minor code cleanups by @ethomson in https://github.com/libgit2/libgit2/pull/6122
+* Fix a long long that crept past by @NattyNarwhal in https://github.com/libgit2/libgit2/pull/6094
+* remote: refactor insteadof application by @ethomson in https://github.com/libgit2/libgit2/pull/6147
+* ntmlclient: fix linking with libressl by @boretrk in https://github.com/libgit2/libgit2/pull/6157
+* c99: change single bit flags to unsigned by @boretrk in https://github.com/libgit2/libgit2/pull/6179
+* Fix typos by @rex4539 in https://github.com/libgit2/libgit2/pull/6164
+* diff_driver: split global_drivers array into separate elements by @boretrk in https://github.com/libgit2/libgit2/pull/6184
+* cmake: disable some gnu extensions by @boretrk in https://github.com/libgit2/libgit2/pull/6185
+* Disabling setting `CMAKE_FIND_LIBRARY_SUFFIXES` on Apple platforms. by @arroz in https://github.com/libgit2/libgit2/pull/6153
+* C90: add inline macro to xdiff and mbedtls by @boretrk in https://github.com/libgit2/libgit2/pull/6200
+* SHA256: early preparation by @ethomson in https://github.com/libgit2/libgit2/pull/6192
+
+### CI improvements
+* tests: rename test runner to `libgit2_tests`, build option to `BUILD_TESTS`. by @ethomson in https://github.com/libgit2/libgit2/pull/6083
+* ci: only update docs on push by @ethomson in https://github.com/libgit2/libgit2/pull/6108
+* Pedantic header test by @boretrk in https://github.com/libgit2/libgit2/pull/6086
+* ci: build with ssh on nightly by @ethomson in https://github.com/libgit2/libgit2/pull/6148
+* ci: improve the name in CI runs by @ethomson in https://github.com/libgit2/libgit2/pull/6198
+
+### Documentation improvements
+* Document that `git_odb` is thread-safe by @joshtriplett in https://github.com/libgit2/libgit2/pull/6109
+* Improve documentation by @punkymaniac in https://github.com/libgit2/libgit2/pull/6168
+
+### Other changes
+* libgit2_clar is now libgit2_tests by @mkhl in https://github.com/libgit2/libgit2/pull/6100
+* Remove PSGit from Language Bindings section of README by @cestrand in https://github.com/libgit2/libgit2/pull/6150
+* COPYING: remove regex copyright, add PCRE copyright by @ethomson in https://github.com/libgit2/libgit2/pull/6187
+* meta: add a release configuration file by @ethomson in https://github.com/libgit2/libgit2/pull/6211
+
+## New Contributors
+* @mkhl made their first contribution in https://github.com/libgit2/libgit2/pull/6100
+* @ammgws made their first contribution in https://github.com/libgit2/libgit2/pull/6106
+* @yoichi made their first contribution in https://github.com/libgit2/libgit2/pull/6095
+* @stforek made their first contribution in https://github.com/libgit2/libgit2/pull/6125
+* @cestrand made their first contribution in https://github.com/libgit2/libgit2/pull/6150
+* @rex4539 made their first contribution in https://github.com/libgit2/libgit2/pull/6164
+* @jorio made their first contribution in https://github.com/libgit2/libgit2/pull/6208
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.3.0...v1.4.0
+
 v1.3
 ----
 
