@@ -1,6 +1,6 @@
 # Optional external dependency: http-parser
 if(USE_HTTP_PARSER STREQUAL "system")
-	find_package(HTTP_Parser)
+	find_package(HTTPParser)
 
 	if(HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
 		list(APPEND LIBGIT2_SYSTEM_INCLUDES ${HTTP_PARSER_INCLUDE_DIRS})
