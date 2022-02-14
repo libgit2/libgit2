@@ -7,12 +7,13 @@
 #ifndef INCLUDE_git_version_h__
 #define INCLUDE_git_version_h__
 
-#define LIBGIT2_VERSION "1.4.0"
-#define LIBGIT2_VER_MAJOR 1
-#define LIBGIT2_VER_MINOR 4
-#define LIBGIT2_VER_REVISION 0
-#define LIBGIT2_VER_PATCH 0
+#define LIBGIT2_VERSION        "1.5.0-alpha"
+#define LIBGIT2_VER_MAJOR      1
+#define LIBGIT2_VER_MINOR      5
+#define LIBGIT2_VER_REVISION   0
+#define LIBGIT2_VER_PATCH      0
+#define LIBGIT2_VER_PRERELEASE "alpha"
 
-#define LIBGIT2_SOVERSION "1.4"
+#define LIBGIT2_SOVERSION      "1.5"
 
 #endif
