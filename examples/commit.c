@@ -65,17 +65,34 @@ int lg2_commit(git_repository *repo, int argc, char **argv)
 	
 	check_lg2(git_signature_default(&signature, repo), "Error creating signature", NULL);
 	
-	check_lg2(git_commit_create_v(
-		&commit_oid,
-		repo,
-		"HEAD",
-		signature,
-		signature,
-		NULL,
-		comment,
-		tree,
-		parent ? 1 : 0, parent), "Error creating commit", NULL);
-
+	if (git_repository_state(repo) == GIT_REPOSITORY_STATE_MERGE) {
+		git_object * mergehead = NULL;
+		git_reference * mergeheadref = NULL;
+	
+		check_lg2(git_revparse_ext(&mergehead, &mergeheadref, repo, "MERGE_HEAD"), "Error looking up MERGE_HEAD", NULL);
+		check_lg2(git_commit_create_v(
+					&commit_oid,
+					repo,
+					"HEAD",
+					signature,
+					signature,
+					NULL,
+					comment,
+					tree,
+					2, parent, mergehead), "Error creating commit", NULL);
+		git_repository_state_cleanup(repo);
+	} else {
+		check_lg2(git_commit_create_v(
+			&commit_oid,
+			repo,
+			"HEAD",
+			signature,
+			signature,
+			NULL,
+			comment,
+			tree,
+			parent ? 1 : 0, parent), "Error creating commit", NULL);
+	}
 	git_index_free(index);
 	git_signature_free(signature);
 	git_tree_free(tree);	
