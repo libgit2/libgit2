@@ -11,9 +11,8 @@
 #include "common.h"
 
 /*
- * Set the error message for this thread, formatting as needed.
+ * `vprintf`-style formatting for the error message for this thread.
  */
-void git_error_set(int error_class, const char *fmt, ...) GIT_FORMAT_PRINTF(2, 3);
 void git_error_vset(int error_class, const char *fmt, va_list ap);
 
 /**
