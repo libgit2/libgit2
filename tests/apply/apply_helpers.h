@@ -68,6 +68,16 @@
 	"+This is a new file!\n" \
 	"+Added by a patch.\n"
 
+#define DIFF_DUPLICATE_FILE \
+	"diff --git a/veal.txt b/veal.txt\n" \
+	"new file mode 100644\n" \
+	"index 0000000..6370543\n" \
+	"--- /dev/null\n" \
+	"+++ b/veal.txt\n" \
+	"@@ -0,0 +1,2 @@\n" \
+	"+This is a duplicate file!\n" \
+	"+It should not be added.\n"
+
 #define DIFF_EXECUTABLE_FILE \
 	"diff --git a/beef.txt b/beef.txt\n" \
 	"old mode 100644\n" \
