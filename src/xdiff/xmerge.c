@@ -88,7 +88,7 @@ static int xdl_cleanup_merge(xdmerge_t *c)
 		if (c->mode == 0)
 			count++;
 		next_c = c->next;
-		free(c);
+		xdl_free(c);
 	}
 	return count;
 }
@@ -456,7 +456,7 @@ static void xdl_merge_two_conflicts(xdmerge_t *m)
 	m->chg1 = next_m->i1 + next_m->chg1 - m->i1;
 	m->chg2 = next_m->i2 + next_m->chg2 - m->i2;
 	m->next = next_m->next;
-	free(next_m);
+	xdl_free(next_m);
 }
 
 /*
