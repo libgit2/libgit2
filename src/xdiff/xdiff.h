@@ -23,11 +23,11 @@
 #if !defined(XDIFF_H)
 #define XDIFF_H
 
-#include "git-xdiff.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* #ifdef __cplusplus */
+
+#include "git-xdiff.h"
 
 /* xpparm_t.flags */
 #define XDF_NEED_MINIMAL (1 << 0)
