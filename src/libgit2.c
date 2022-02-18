@@ -107,6 +107,11 @@ int git_libgit2_version(int *major, int *minor, int *rev)
 	return 0;
 }
 
+const char *git_libgit2_prerelease(void)
+{
+	return LIBGIT2_VER_PRERELEASE;
+}
+
 int git_libgit2_features(void)
 {
 	return 0

@@ -122,6 +122,17 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_libgit2_version(int *major, int *minor, int *rev);
 
 /**
+ * Return the prerelease state of the libgit2 library currently being
+ * used.  For nightly builds during active development, this will be
+ * "alpha".  Releases may have a "beta" or release candidate ("rc1",
+ * "rc2", etc) prerelease.  For a final release, this function returns
+ * NULL.
+ *
+ * @return the name of the prerelease state or NULL
+ */
+GIT_EXTERN(const char *) git_libgit2_prerelease(void);
+
+/**
  * Combinations of these values describe the features with which libgit2
  * was compiled
  */
