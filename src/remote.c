@@ -1852,7 +1852,7 @@ static int update_one_tip(
 	}
 
 	if (callbacks && callbacks->update_tips != NULL &&
-	    callbacks->update_tips(refname.ptr, &old, &head->oid, callbacks->payload) < 0)
+	    (error = callbacks->update_tips(refname.ptr, &old, &head->oid, callbacks->payload)) < 0)
 		git_error_set_after_callback_function(error, "git_remote_fetch");
 
 done:
