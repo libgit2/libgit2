@@ -326,3 +326,13 @@ void test_win32_systemdir__prefers_path_to_registry(void)
 	git_config_free(cfg);
 #endif
 }
+
+void test_win32_systemdir__no_git_installed(void)
+{
+#ifdef GIT_WIN32
+	git_str out = GIT_STR_INIT;
+
+	cl_git_pass(git_win32__find_system_dirs(&out, "etc"));
+	cl_assert_equal_s(out.ptr, "");
+#endif
+}
