@@ -222,7 +222,7 @@ int git_win32__find_system_dirs(git_str *out, const char *subdir)
 	has_regdir = (find_sysdir_in_registry(regdir) == 0);
 
 	if (!has_pathdir && !has_regdir)
-		return GIT_ENOTFOUND;
+		return 0;
 
 	/*
 	 * Usually the git in the path is the same git in the registry,
