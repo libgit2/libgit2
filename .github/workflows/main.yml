@@ -214,7 +214,7 @@ jobs:
         path: source
         fetch-depth: 0
     - name: Set up build environment
-      run: source/ci/setup-${{ matrix.platform.setup-script }}.sh
+      run: source/ci/setup-${{ matrix.platform.setup-script }}-build.sh
       shell: bash
       if: matrix.platform.setup-script != ''
     - name: Setup QEMU
