@@ -509,3 +509,44 @@ void test_network_fetchlocal__prune_load_fetch_prune_config(void)
 	git_remote_free(origin);
 	git_repository_free(repo);
 }
+
+static int update_tips_error(const char *ref, const git_oid *old, const git_oid *new, void *data)
+{
+	int *callcount = (int *) data;
+
+	GIT_UNUSED(ref);
+	GIT_UNUSED(old);
+	GIT_UNUSED(new);
+
+	(*callcount)++;
+
+	return -1;
+}
+
+void test_network_fetchlocal__update_tips_error_is_propagated(void)
+{
+	git_repository *repo;
+	git_reference_iterator *iterator;
+	git_reference *ref;
+	git_remote *remote;
+	git_fetch_options options = GIT_FETCH_OPTIONS_INIT;
+	int callcount = 0;
+
+	cl_git_pass(git_repository_init(&repo, "foo.git", true));
+	cl_set_cleanup(cleanup_local_repo, "foo.git");
+
+	cl_git_pass(git_remote_create_with_fetchspec(&remote, repo, "origin", cl_git_fixture_url("testrepo.git"), "+refs/heads/*:refs/remotes/update-tips/*"));
+
+	options.callbacks.update_tips = update_tips_error;
+	options.callbacks.payload = &callcount;
+
+	cl_git_fail(git_remote_fetch(remote, NULL, &options, NULL));
+	cl_assert_equal_i(1, callcount);
+
+	cl_git_pass(git_reference_iterator_glob_new(&iterator, repo, "refs/remotes/update-tips/**/"));
+	cl_assert_equal_i(GIT_ITEROVER, git_reference_next(&ref, iterator));
+
+	git_reference_iterator_free(iterator);
+	git_remote_free(remote);
+	git_repository_free(repo);
+}
