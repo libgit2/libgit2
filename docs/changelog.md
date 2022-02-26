@@ -1,3 +1,20 @@
+v1.4.2
+------
+
+This is a bugfix release with the following changes:
+
+* remote: do store the update_tips callback error value by @carlosmn in https://github.com/libgit2/libgit2/pull/6226
+* win32: `find_system_dirs` does not return `GIT_ENOTFOUND` by @ethomson in https://github.com/libgit2/libgit2/pull/6228
+
+v1.4.1
+------
+
+This is a bugfix release with the following changes:
+
+* xdiff: use xdl_free not free by @ethomson
+* cmake: Fix package name for system http-parser by @mgorny
+* Free parent and ref in lg2_commit before returning by @apnadkarni
+
 v1.4
 ----
 
