@@ -1,5 +1,8 @@
-# CMake build script for the libgit2 project
+# libgit2: the cross-platform, linkable library implementation of git.
 # See `README.md` for build instructions.
+#
+# This top-level CMakeLists.txt sets up configuration options and
+# determines which subprojects to build.
 
 cmake_minimum_required(VERSION 3.5.1)
 
@@ -15,6 +18,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 # Optional subsystems
 option(BUILD_SHARED_LIBS       "Build Shared Library (OFF for Static)"                  ON)
 option(BUILD_TESTS             "Build Tests using the Clar suite"                       ON)
+option(BUILD_CLI               "Build the command-line interface"                       ON)
 option(BUILD_EXAMPLES          "Build library usage example apps"                      OFF)
 option(BUILD_FUZZERS           "Build the fuzz targets"                                OFF)
 
