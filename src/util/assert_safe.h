@@ -24,6 +24,8 @@
 
 # define GIT_ASSERT_WITH_RETVAL(expr, fail) assert(expr)
 # define GIT_ASSERT_ARG_WITH_RETVAL(expr, fail) assert(expr)
+
+# define GIT_ASSERT_WITH_CLEANUP(expr, cleanup) assert(expr)
 #else
 
 /** Internal consistency check to stop the function. */
@@ -50,6 +52,20 @@
 		if (!(expr)) { \
 			git_error_set(code, "%s: '%s'", msg, #expr); \
 			return fail; \
+		} \
+	} while(0)
+
+/**
+ * Go to to the given label on assertion failures; useful when you have
+ * taken a lock or otherwise need to release a resource.
+ */
+# define GIT_ASSERT_WITH_CLEANUP(expr, cleanup) \
+	GIT_ASSERT__WITH_CLEANUP(expr, GIT_ERROR_INTERNAL, "unrecoverable internal error", cleanup)
+
+# define GIT_ASSERT__WITH_CLEANUP(expr, code, msg, cleanup) do { \
+		if (!(expr)) { \
+			git_error_set(code, "%s: '%s'", msg, #expr); \
+			cleanup; \
 		} \
 	} while(0)
 
