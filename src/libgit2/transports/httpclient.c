@@ -395,7 +395,7 @@ static int on_body(http_parser *parser, const char *buf, size_t len)
 	size_t max_len;
 
 	/* Saw data when we expected not to (eg, in consume_response_body) */
-	if (ctx->output_buf == NULL && ctx->output_size == 0) {
+	if (ctx->output_buf == NULL || ctx->output_size == 0) {
 		ctx->parse_status = PARSE_STATUS_NO_OUTPUT;
 		return 0;
 	}
