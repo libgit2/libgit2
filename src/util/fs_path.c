@@ -109,7 +109,7 @@ int git_fs_path_basename_r(git_str *buffer, const char *path)
 	/* Empty or NULL string gets treated as "." */
 	if (path == NULL || *path == '\0') {
 		startp = ".";
-		len		= 1;
+		len = 1;
 		goto Exit;
 	}
 
@@ -121,7 +121,7 @@ int git_fs_path_basename_r(git_str *buffer, const char *path)
 	/* All slashes becomes "/" */
 	if (endp == path && *endp == '/') {
 		startp = "/";
-		len	= 1;
+		len = 1;
 		goto Exit;
 	}
 
@@ -193,8 +193,7 @@ int git_fs_path_dirname_r(git_str *buffer, const char *path)
 
 	if (endp - path + 1 > INT_MAX) {
 		git_error_set(GIT_ERROR_INVALID, "path too long");
-		len = -1;
-		goto Exit;
+		return -1;
 	}
 
 	if ((len = win32_prefix_length(path, (int)(endp - path + 1))) > 0) {
@@ -219,8 +218,7 @@ int git_fs_path_dirname_r(git_str *buffer, const char *path)
 
 	if (endp - path + 1 > INT_MAX) {
 		git_error_set(GIT_ERROR_INVALID, "path too long");
-		len = -1;
-		goto Exit;
+		return -1;
 	}
 
 	if ((len = win32_prefix_length(path, (int)(endp - path + 1))) > 0) {
