@@ -250,6 +250,7 @@ int git_object_lookup_prefix(
 	if (error < 0)
 		return error;
 
+	GIT_ASSERT(odb_obj);
 	error = git_object__from_odb_object(object_out, repo, odb_obj, type);
 
 	git_odb_object_free(odb_obj);
