@@ -189,7 +189,7 @@ typedef enum {
 	*/
 	GIT_CHECKOUT_NONE = (1u << 30),
 
-	/**
+	/*
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
 	 */
 
