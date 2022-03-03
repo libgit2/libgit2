@@ -131,6 +131,14 @@ if(BUILD_FUZZERS)
 endif()
 
 
+# Export for people who use us as a dependency
+
+if(NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
+	set(LIBGIT2_DEPENDENCY_OBJECTS ${LIBGIT2_DEPENDENCY_OBJECTS} PARENT_SCOPE)
+	set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
+endif()
+
+
 # Summary
 
 feature_summary(WHAT ENABLED_FEATURES DESCRIPTION "Enabled features:")
