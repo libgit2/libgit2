@@ -1361,7 +1361,11 @@ static int packed_write(refdb_fs_backend *backend)
 
 	for (i = 0; i < git_sortedcache_entrycount(refcache); ++i) {
 		struct packref *ref = git_sortedcache_entry(refcache, i);
-		GIT_ASSERT(ref);
+
+		GIT_ASSERT_WITH_CLEANUP(ref, {
+			error = -1;
+			goto fail;
+		});
 
 		if ((error = packed_find_peel(backend, ref)) < 0)
 			goto fail;

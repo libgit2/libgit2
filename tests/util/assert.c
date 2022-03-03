@@ -36,6 +36,21 @@ static const char *bad_returns_string(void)
 	return hello_world;
 }
 
+static int has_cleanup(void)
+{
+	int error = 42;
+
+	GIT_ASSERT_WITH_CLEANUP(1 + 1 == 3, {
+		error = 99;
+		goto foobar;
+	});
+
+	return 0;
+
+foobar:
+	return error;
+}
+
 void test_assert__argument(void)
 {
 	cl_git_fail(dummy_fn(NULL));
@@ -88,6 +103,14 @@ void test_assert__internal(void)
 	cl_assert_equal_s("unrecoverable internal error: '1 + 1 == 3'", git_error_last()->message);
 
 	cl_assert_equal_p(NULL, bad_returns_string());
+	cl_assert(git_error_last());
+	cl_assert_equal_i(GIT_ERROR_INTERNAL, git_error_last()->klass);
+	cl_assert_equal_s("unrecoverable internal error: '1 + 1 == 3'", git_error_last()->message);
+}
+
+void test_assert__with_cleanup(void)
+{
+	cl_git_fail_with(99, has_cleanup());
 	cl_assert(git_error_last());
 	cl_assert_equal_i(GIT_ERROR_INTERNAL, git_error_last()->klass);
 	cl_assert_equal_s("unrecoverable internal error: '1 + 1 == 3'", git_error_last()->message);
