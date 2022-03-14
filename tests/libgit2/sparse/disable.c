@@ -1,7 +1,7 @@
 
-#include <path.h>
+#include "path.h"
 #include <clar_libgit2.h>
-#include <futils.h>
+#include "futils.h"
 
 static git_repository *g_repo = NULL;
 
