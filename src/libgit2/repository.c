@@ -1462,6 +1462,7 @@ static int check_valid_extension(const git_config_entry *entry, void *payload)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(builtin_extensions); i++) {
+		git_str_clear(&cfg);
 		extension = builtin_extensions[i];
 
 		if ((error = git_str_printf(&cfg, "extensions.%s", extension)) < 0)
