@@ -106,7 +106,13 @@ GIT_INLINE(int) getseed(uint64_t *seed)
 		return -1;
 	}
 
+# if defined(GIT_RAND_GETLOADAVG)
 	getloadavg(loadavg, 3);
+# else
+	loadavg[0] = drand48();
+	loadavg[1] = drand48();
+	loadavg[2] = drand48();
+# endif
 
 	*seed = 0;
 	*seed |= ((uint64_t)tv.tv_usec << 40);
