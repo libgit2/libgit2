@@ -5,15 +5,15 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_sha1_generic_h__
-#define INCLUDE_hash_sha1_generic_h__
+#ifndef INCLUDE_hash_builtin_h__
+#define INCLUDE_hash_builtin_h__
 
-#include "hash/sha1.h"
+#include "hash/sha.h"
 
-struct git_hash_sha1_ctx {
-	uint64_t size;
-	unsigned int H[5];
-	unsigned int W[16];
+#include "rfc6234/sha.h"
+
+struct git_hash_sha256_ctx {
+	SHA256Context c;
 };
 
 #endif

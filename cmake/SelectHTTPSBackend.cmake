@@ -64,7 +64,7 @@ if(USE_HTTPS)
 
 		if(NOT CERT_LOCATION)
 			message(STATUS "Auto-detecting default certificates location")
-			if(CMAKE_SYSTEM_NAME MATCHES Darwin)
+			if(EXISTS "/usr/local/opt/openssl/bin/openssl")
 				# Check for an Homebrew installation
 				set(OPENSSL_CMD "/usr/local/opt/openssl/bin/openssl")
 			else()

@@ -3,13 +3,25 @@
 
 #define FIXTURE_DIR "sha1"
 
+#ifdef GIT_SHA1_WIN32
+static git_hash_win32_provider_t orig_provider;
+#endif
+
 void test_sha1__initialize(void)
 {
+#ifdef GIT_SHA1_WIN32
+	orig_provider = git_hash_win32_provider();
+#endif
+
 	cl_fixture_sandbox(FIXTURE_DIR);
 }
 
 void test_sha1__cleanup(void)
 {
+#ifdef GIT_SHA1_WIN32
+	git_hash_win32_set_provider(orig_provider);
+#endif
+
 	cl_fixture_cleanup(FIXTURE_DIR);
 }
 
@@ -68,3 +80,21 @@ void test_sha1__detect_collision_attack(void)
 #endif
 }
 
+void test_sha1__win32_providers(void)
+{
+#ifdef GIT_SHA1_WIN32
+	unsigned char expected[GIT_HASH_SHA1_SIZE] = {
+		0x38, 0x76, 0x2c, 0xf7, 0xf5, 0x59, 0x34, 0xb3, 0x4d, 0x17,
+		0x9a, 0xe6, 0xa4, 0xc8, 0x0c, 0xad, 0xcc, 0xbb, 0x7f, 0x0a
+	};
+	unsigned char actual[GIT_HASH_SHA1_SIZE];
+
+	git_hash_win32_set_provider(GIT_HASH_WIN32_CRYPTOAPI);
+	cl_git_pass(sha1_file(actual, FIXTURE_DIR "/shattered-1.pdf"));
+	cl_assert_equal_i(0, memcmp(expected, actual, GIT_HASH_SHA1_SIZE));
+
+	git_hash_win32_set_provider(GIT_HASH_WIN32_CNG);
+	cl_git_pass(sha1_file(actual, FIXTURE_DIR "/shattered-1.pdf"));
+	cl_assert_equal_i(0, memcmp(expected, actual, GIT_HASH_SHA1_SIZE));
+#endif
+}

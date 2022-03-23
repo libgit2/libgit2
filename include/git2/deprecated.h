@@ -436,6 +436,8 @@ GIT_EXTERN(int) git_diff_format_email_options_init(
 #define GITERR_WORKTREE GIT_ERROR_WORKTREE
 #define GITERR_SHA1 GIT_ERROR_SHA1
 
+#define GIT_ERROR_SHA1 GIT_ERROR_SHA
+
 /**
  * Return the last `git_error` object that was generated for the
  * current thread.  This is an alias of `git_error_last` and is
