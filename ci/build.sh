@@ -59,7 +59,7 @@ echo "##########################################################################
 echo "## Configuring build environment"
 echo "##############################################################################"
 
-echo cmake -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON -G \"${CMAKE_GENERATOR}\" ${CMAKE_OPTIONS} -S \"${SOURCE_DIR}\"
+echo "${CMAKE}" -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON -G \"${CMAKE_GENERATOR}\" ${CMAKE_OPTIONS} -S \"${SOURCE_DIR}\"
 env PATH="${BUILD_PATH}" "${CMAKE}" -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON -G "${CMAKE_GENERATOR}" ${CMAKE_OPTIONS} -S "${SOURCE_DIR}"
 
 echo ""
@@ -69,10 +69,11 @@ echo "##########################################################################
 
 # Determine parallelism; newer cmake supports `--build --parallel` but
 # we cannot yet rely on that.
-if [ "${CMAKE_GENERATOR}" = "Unix Makefiles" -a "${CORES}" != "" ]; then
+if [ "${CMAKE_GENERATOR}" = "Unix Makefiles" -a "${CORES}" != "" -a "${CMAKE_BUILD_OPTIONS}" = "" ]; then
 	BUILDER=(make -j ${CORES})
 else
-	BUILDER=("${CMAKE}" --build .)
+	BUILDER=("${CMAKE}" --build . ${CMAKE_BUILD_OPTIONS})
 fi
 
+echo "${BUILDER[@]}"
 env PATH="${BUILD_PATH}" "${BUILDER[@]}"
