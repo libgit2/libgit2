@@ -1,7 +1,13 @@
 add_library(git2internal OBJECT)
 set_target_properties(git2internal PROPERTIES C_STANDARD 90)
-set_target_properties(git2internal PROPERTIES C_EXTENSIONS OFF)
 
+# Embedded libssh require compiler extensions (gnu90, not c90) because it
+# uses the "inline" keyword
+if(WIN32 AND EMBED_SSH_PATH)
+	set_target_properties(git2internal PROPERTIES C_EXTENSIONS ON)
+else()
+	set_target_properties(git2internal PROPERTIES C_EXTENSIONS OFF)
+endif()
 
 if(DEPRECATE_HARD)
         add_definitions(-DGIT_DEPRECATE_HARD)
@@ -88,6 +94,8 @@ if(WIN32 AND EMBED_SSH_PATH)
 	target_sources(git2internal PRIVATE ${SRC_SSH})
 
 	list(APPEND LIBGIT2_SYSTEM_INCLUDES "${EMBED_SSH_PATH}/include")
+        list(APPEND LIBGIT2_SYSTEM_LIBS "crypt32" "bcrypt")
+        list(APPEND LIBGIT2_PC_LIBS "-lcrypt32" "-lbcrypt")
 	file(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
 	set(GIT_SSH 1)
 endif()
@@ -96,7 +104,9 @@ include(SelectHTTPSBackend)
 include(SelectHashes)
 include(SelectHTTPParser)
 include(SelectRegex)
-include(SelectSSH)
+if(NOT (WIN32 AND EMBED_SSH_PATH))
+	include(SelectSSH)
+endif()
 include(SelectWinHTTP)
 include(SelectZlib)
 
