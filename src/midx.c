@@ -225,8 +225,13 @@ int git_midx_parse(
 	chunk_hdr = data + sizeof(struct git_midx_header);
 	last_chunk = NULL;
 	for (i = 0; i < hdr->chunks; ++i, chunk_hdr += 12) {
-		chunk_offset = ((off64_t)ntohl(*((uint32_t *)(chunk_hdr + 4)))) << 32 |
-				((off64_t)ntohl(*((uint32_t *)(chunk_hdr + 8))));
+		uint32_t chunk_id = ntohl(*((uint32_t *)(chunk_hdr + 0)));
+		uint64_t high_offset = ((uint64_t)ntohl(*((uint32_t *)(chunk_hdr + 4)))) & 0xffffffffu;
+		uint64_t low_offset = ((uint64_t)ntohl(*((uint32_t *)(chunk_hdr + 8)))) & 0xffffffffu;
+
+		if (high_offset >= INT32_MAX)
+			return midx_error("chunk offset out of range");
+		chunk_offset = (off64_t)(high_offset << 32 | low_offset);
 		if (chunk_offset < last_chunk_offset)
 			return midx_error("chunks are non-monotonic");
 		if (chunk_offset >= trailer_offset)
@@ -235,7 +240,7 @@ int git_midx_parse(
 			last_chunk->length = (size_t)(chunk_offset - last_chunk_offset);
 		last_chunk_offset = chunk_offset;
 
-		switch (ntohl(*((uint32_t *)(chunk_hdr + 0)))) {
+		switch (chunk_id) {
 		case MIDX_PACKFILE_NAMES_ID:
 			chunk_packfile_names.offset = last_chunk_offset;
 			last_chunk = &chunk_packfile_names;
