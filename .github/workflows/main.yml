@@ -248,6 +248,7 @@ jobs:
               -e CMAKE_GENERATOR \
               -e CMAKE_OPTIONS \
               -e GITTEST_NEGOTIATE_PASSWORD \
+              -e GITTEST_FLAKY_STAT \
               -e PKG_CONFIG_PATH \
               -e SKIP_NEGOTIATE_TESTS \
               -e SKIP_SSH_TESTS \
