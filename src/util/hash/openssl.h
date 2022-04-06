@@ -10,7 +10,25 @@
 
 #include "hash/sha.h"
 
-#include <openssl/sha.h>
+#ifndef GIT_OPENSSL_DYNAMIC
+# include <openssl/sha.h>
+#else
+
+typedef struct {
+	unsigned int h0, h1, h2, h3, h4;
+	unsigned int Nl, Nh;
+	unsigned int data[16];
+	unsigned int num;
+} SHA_CTX;
+
+typedef struct {
+	unsigned int h[8];
+	unsigned int Nl, Nh;
+	unsigned int data[16];
+	unsigned int num, md_len;
+} SHA256_CTX;
+
+#endif
 
 #ifdef GIT_SHA1_OPENSSL
 struct git_hash_sha1_ctx {
