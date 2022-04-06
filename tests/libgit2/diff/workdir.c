@@ -1237,7 +1237,6 @@ void test_diff_workdir__can_diff_empty_file(void)
 	git_diff *diff;
 	git_tree *tree;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	struct stat st;
 	git_patch *patch;
 
 	g_repo = cl_git_sandbox_init("attr_index");
@@ -1251,10 +1250,15 @@ void test_diff_workdir__can_diff_empty_file(void)
 	git_diff_free(diff);
 
 	/* empty contents of file */
-
 	cl_git_rewritefile("attr_index/README.txt", "");
-	cl_git_pass(git_fs_path_lstat("attr_index/README.txt", &st));
-	cl_assert_equal_i(0, (int)st.st_size);
+
+#if !defined(__arm__) || !defined(GIT_ARCH_32)
+	{
+		struct stat st;
+		cl_git_pass(git_fs_path_lstat("attr_index/README.txt", &st));
+		cl_assert(st.st_size == 0);
+	}
+#endif
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
 	cl_assert_equal_i(3, (int)git_diff_num_deltas(diff));
