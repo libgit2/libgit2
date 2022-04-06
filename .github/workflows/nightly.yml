@@ -247,6 +247,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
             SKIP_PROXY_TESTS: true
+            GITTEST_FLAKY_STAT: true
           os: ubuntu-latest
         - name: "Linux (arm64, Bionic, GCC, OpenSSL)"
           container:
@@ -305,6 +306,7 @@ jobs:
               -e CMAKE_GENERATOR \
               -e CMAKE_OPTIONS \
               -e GITTEST_NEGOTIATE_PASSWORD \
+              -e GITTEST_FLAKY_STAT \
               -e PKG_CONFIG_PATH \
               -e SKIP_NEGOTIATE_TESTS \
               -e SKIP_SSH_TESTS \
