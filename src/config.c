@@ -1118,16 +1118,20 @@ int git_config_find_system(git_buf *path)
 int git_config_find_programdata(git_buf *path)
 {
 	int ret;
+	bool is_safe;
 
-	if ((ret = git_buf_sanitize(path)) < 0)
+	if ((ret = git_buf_sanitize(path)) < 0 ||
+	    (ret = git_sysdir_find_programdata_file(path,
+	       GIT_CONFIG_FILENAME_PROGRAMDATA)) < 0 ||
+	    (ret = git_path_owner_is_system_or_current_user(&is_safe, path->ptr)) < 0)
 		return ret;
 
-	ret = git_sysdir_find_programdata_file(path,
-					       GIT_CONFIG_FILENAME_PROGRAMDATA);
-	if (ret != GIT_OK)
-		return ret;
+	if (!is_safe) {
+		git_error_set(GIT_ERROR_CONFIG, "programdata path has invalid ownership");
+		return -1;
+	}
 
-	return git_path_validate_system_file_ownership(path->ptr);
+	return 0;
 }
 
 int git_config__global_location(git_buf *buf)

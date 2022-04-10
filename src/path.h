@@ -723,15 +723,21 @@ int git_path_normalize_slashes(git_buf *out, const char *path);
 bool git_path_supports_symlinks(const char *dir);
 
 /**
- * Validate a system file's ownership
- *
  * Verify that the file in question is owned by an administrator or system
- * account, or at least by the current user.
- *
- * This function returns 0 if successful. If the file is not owned by any of
- * these, or any other if there have been problems determining the file
- * ownership, it returns -1.
+ * account.
  */
-int git_path_validate_system_file_ownership(const char *path);
+int git_path_owner_is_system(bool *out, const char *path);
+
+/**
+ * Verify that the file in question is owned by the current user;
+ */
+
+int git_path_owner_is_current_user(bool *out, const char *path);
+
+/**
+ * Verify that the file in question is owned by an administrator or system
+ * account _or_ the current user;
+ */
+int git_path_owner_is_system_or_current_user(bool *out, const char *path);
 
 #endif
