@@ -737,3 +737,28 @@ void test_core_path__find_exe_in_path(void)
 	git_str_dispose(&sandbox_path);
 	git__free(orig_path);
 }
+
+void test_core_path__validate_current_user_ownership(void)
+{
+	bool is_cur;
+
+	cl_must_pass(p_mkdir("testdir", 0777));
+	cl_git_pass(git_fs_path_owner_is_current_user(&is_cur, "testdir"));
+	cl_assert_equal_i(is_cur, 1);
+
+	cl_git_rewritefile("testfile", "This is a test file.");
+	cl_git_pass(git_fs_path_owner_is_current_user(&is_cur, "testfile"));
+	cl_assert_equal_i(is_cur, 1);
+
+#ifdef GIT_WIN32
+	cl_git_pass(git_fs_path_owner_is_current_user(&is_cur, "C:\\"));
+	cl_assert_equal_i(is_cur, 0);
+
+	cl_git_fail(git_fs_path_owner_is_current_user(&is_cur, "c:\\path\\does\\not\\exist"));
+#else
+	cl_git_pass(git_fs_path_owner_is_current_user(&is_cur, "/"));
+	cl_assert_equal_i(is_cur, 0);
+
+	cl_git_fail(git_fs_path_owner_is_current_user(&is_cur, "/path/does/not/exist"));
+#endif
+}
