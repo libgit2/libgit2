@@ -316,10 +316,9 @@ static int diff_print_oid_range(
 static int diff_delta_format_path(
 	git_str *out, const char *prefix, const char *filename)
 {
-	if (!filename)
-	{
+	if (!filename) {
 		/* don't prefix "/dev/null" */
-		return git_str_puts(out, "/dev/null");
+ 		return git_str_puts(out, "/dev/null");
 	}
 
 	if (git_str_joinpath(out, prefix, filename) < 0)
