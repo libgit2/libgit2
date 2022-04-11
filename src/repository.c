@@ -64,6 +64,7 @@ static const struct {
 
 static int check_repositoryformatversion(int *version, git_config *config);
 static int check_extensions(git_config *config, int version);
+static int load_global_config(git_config **config);
 
 #define GIT_COMMONDIR_FILE "commondir"
 #define GIT_GITDIR_FILE "gitdir"
@@ -482,21 +483,61 @@ static int read_gitfile(git_buf *path_out, const char *file_path)
 	return error;
 }
 
+typedef struct {
+	const char *repo_path;
+	git_buf tmp;
+	bool is_safe;
+} validate_ownership_data;
+
+static int validate_ownership_cb(const git_config_entry *entry, void *payload)
+{
+	validate_ownership_data *data = payload;
+
+	if (strcmp(entry->value, "") == 0)
+		data->is_safe = false;
+
+	if (git_path_prettify_dir(&data->tmp, entry->value, NULL) == 0 &&
+	    strcmp(data->tmp.ptr, data->repo_path) == 0)
+		data->is_safe = true;
+
+	return 0;
+}
+
 static int validate_ownership(const char *repo_path)
 {
+	git_config *config = NULL;
+	validate_ownership_data data = { repo_path, GIT_BUF_INIT, false };
 	bool is_safe;
 	int error;
 
-	if ((error = git_path_owner_is_current_user(&is_safe, repo_path)) < 0)
-		return (error == GIT_ENOTFOUND) ? 0 : error;
+	if ((error = git_path_owner_is_current_user(&is_safe, repo_path)) < 0) {
+		if (error == GIT_ENOTFOUND)
+			error = 0;
 
-	if (is_safe)
-		return 0;
+		goto done;
+	}
+
+	if (is_safe) {
+		error = 0;
+		goto done;
+	}
+
+	if (load_global_config(&config) == 0) {
+		error = git_config_get_multivar_foreach(config, "safe.directory", NULL, validate_ownership_cb, &data);
+
+		if (!error && data.is_safe)
+			goto done;
+	}
 
 	git_error_set(GIT_ERROR_CONFIG,
 		"repository path '%s' is not owned by current user",
 		repo_path);
-	return GIT_EOWNER;
+	error = GIT_EOWNER;
+
+done:
+	git_config_free(config);
+	git_buf_dispose(&data.tmp);
+	return error;
 }
 
 static int find_repo(
