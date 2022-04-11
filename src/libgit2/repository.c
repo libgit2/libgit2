@@ -483,6 +483,23 @@ static int read_gitfile(git_str *path_out, const char *file_path)
 	return error;
 }
 
+static int validate_ownership(const char *repo_path)
+{
+	bool is_safe;
+	int error;
+
+	if ((error = git_fs_path_owner_is_current_user(&is_safe, repo_path)) < 0)
+		return (error == GIT_ENOTFOUND) ? 0 : error;
+
+	if (is_safe)
+		return 0;
+
+	git_error_set(GIT_ERROR_CONFIG,
+		"repository path '%s' is not owned by current user",
+		repo_path);
+	return GIT_EOWNER;
+}
+
 static int find_repo(
 	git_str *gitdir_path,
 	git_str *workdir_path,
@@ -856,6 +873,7 @@ int git_repository_open_ext(
 		gitlink = GIT_STR_INIT, commondir = GIT_STR_INIT;
 	git_repository *repo = NULL;
 	git_config *config = NULL;
+	const char *validation_path;
 	int version = 0;
 
 	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV)
@@ -904,15 +922,22 @@ int git_repository_open_ext(
 	if ((error = check_extensions(config, version)) < 0)
 		goto cleanup;
 
-	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
+	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0) {
 		repo->is_bare = 1;
-	else {
-
+	} else {
 		if (config &&
 		    ((error = load_config_data(repo, config)) < 0 ||
 		     (error = load_workdir(repo, config, &workdir)) < 0))
 			goto cleanup;
 	}
+
+	/*
+	 * Ensure that the git directory is owned by the current user.
+	 */
+	validation_path = repo->is_bare ? repo->gitdir : repo->workdir;
+
+	if ((error = validate_ownership(validation_path)) < 0)
+		goto cleanup;
 
 cleanup:
 	git_str_dispose(&gitdir);
