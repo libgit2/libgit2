@@ -1634,13 +1634,40 @@ static bool is_filesystem_case_insensitive(const char *gitdir_path)
 	return is_insensitive;
 }
 
-static bool are_symlinks_supported(const char *wd_path)
+/*
+ * Return a configuration object with only the global and system
+ * configurations; no repository-level configuration.
+ */
+static int load_global_config(git_config **config)
 {
-	git_config *config = NULL;
 	git_buf global_buf = GIT_BUF_INIT;
 	git_buf xdg_buf = GIT_BUF_INIT;
 	git_buf system_buf = GIT_BUF_INIT;
 	git_buf programdata_buf = GIT_BUF_INIT;
+	int error;
+
+	git_config_find_global(&global_buf);
+	git_config_find_xdg(&xdg_buf);
+	git_config_find_system(&system_buf);
+	git_config_find_programdata(&programdata_buf);
+
+	error = load_config(config, NULL,
+	                    path_unless_empty(&global_buf),
+	                    path_unless_empty(&xdg_buf),
+	                    path_unless_empty(&system_buf),
+	                    path_unless_empty(&programdata_buf));
+
+	git_buf_dispose(&global_buf);
+	git_buf_dispose(&xdg_buf);
+	git_buf_dispose(&system_buf);
+	git_buf_dispose(&programdata_buf);
+
+	return error;
+}
+
+static bool are_symlinks_supported(const char *wd_path)
+{
+	git_config *config = NULL;
 	int symlinks = 0;
 
 	/*
@@ -1651,19 +1678,9 @@ static bool are_symlinks_supported(const char *wd_path)
 	 * _not_ set, then we do not test or enable symlink support.
 	 */
 #ifdef GIT_WIN32
-	git_config_find_global(&global_buf);
-	git_config_find_xdg(&xdg_buf);
-	git_config_find_system(&system_buf);
-	git_config_find_programdata(&programdata_buf);
-
-	if (load_config(&config, NULL,
-	    path_unless_empty(&global_buf),
-	    path_unless_empty(&xdg_buf),
-	    path_unless_empty(&system_buf),
-	    path_unless_empty(&programdata_buf)) < 0)
-		goto done;
-
-	if (git_config_get_bool(&symlinks, config, "core.symlinks") < 0 || !symlinks)
+	if (load_global_config(&config) < 0 ||
+	    git_config_get_bool(&symlinks, config, "core.symlinks") < 0 ||
+	    !symlinks)
 		goto done;
 #endif
 
@@ -1671,10 +1688,6 @@ static bool are_symlinks_supported(const char *wd_path)
 		goto done;
 
 done:
-	git_buf_dispose(&global_buf);
-	git_buf_dispose(&xdg_buf);
-	git_buf_dispose(&system_buf);
-	git_buf_dispose(&programdata_buf);
 	git_config_free(config);
 	return symlinks != 0;
 }
