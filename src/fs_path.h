@@ -731,6 +731,20 @@ int git_fs_path_normalize_slashes(git_str *out, const char *path);
 
 bool git_fs_path_supports_symlinks(const char *dir);
 
+typedef enum {
+	GIT_FS_PATH_MOCK_OWNER_NONE = 0, /* do filesystem lookups as normal */
+	GIT_FS_PATH_MOCK_OWNER_SYSTEM = 1,
+	GIT_FS_PATH_MOCK_OWNER_CURRENT_USER = 2,
+	GIT_FS_PATH_MOCK_OWNER_OTHER = 3
+} git_fs_path__mock_owner_t;
+
+/**
+ * Sets the mock ownership for files; subsequent calls to
+ * `git_fs_path_owner_is_*` functions will return this data until cleared
+ * with `GIT_FS_PATH_MOCK_OWNER_NONE`.
+ */
+void git_fs_path__set_owner(git_fs_path__mock_owner_t owner);
+
 /**
  * Verify that the file in question is owned by an administrator or system
  * account.
