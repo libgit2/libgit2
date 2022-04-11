@@ -7,9 +7,12 @@
 void test_repo_open__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
+	cl_fixture_cleanup("empty_standard_repo");
 
 	if (git_path_isdir("alternate"))
 		git_futils_rmdir_r("alternate", NULL, GIT_RMDIR_REMOVE_FILES);
+
+	git_path__set_owner(GIT_PATH_MOCK_OWNER_NONE);
 }
 
 void test_repo_open__bare_empty_repo(void)
@@ -453,3 +456,35 @@ void test_repo_open__force_bare(void)
 	git_repository_free(barerepo);
 }
 
+void test_repo_open__validates_dir_ownership(void)
+{
+	git_repository *repo;
+
+	cl_fixture_sandbox("empty_standard_repo");
+	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
+
+	/* When the current user owns the repo config, that's acceptable */
+	git_path__set_owner(GIT_PATH_MOCK_OWNER_CURRENT_USER);
+	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
+	git_repository_free(repo);
+
+	/* When the system user owns the repo config, fail */
+	git_path__set_owner(GIT_PATH_MOCK_OWNER_SYSTEM);
+	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
+
+	/* When an unknown user owns the repo config, fail */
+	git_path__set_owner(GIT_PATH_MOCK_OWNER_OTHER);
+	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
+}
+
+void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
+{
+	git_repository *repo;
+
+	cl_fixture_sandbox("empty_standard_repo");
+	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
+
+	git_path__set_owner(GIT_PATH_MOCK_OWNER_OTHER);
+	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
+
+}
