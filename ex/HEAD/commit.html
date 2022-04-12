@@ -113,10 +113,10 @@ simulate <code>git commit</code> with the commit message argument.</p>
 
   <span class="n">git_oid</span> <span class="n">commit_oid</span><span class="p">,</span><span class="n">tree_oid</span><span class="p">;</span>
   <span class="n">git_tree</span> <span class="o">*</span><span class="n">tree</span><span class="p">;</span>
-  <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">;</span>	
+  <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">;</span>
   <span class="n">git_object</span> <span class="o">*</span><span class="n">parent</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="n">git_reference</span> <span class="o">*</span><span class="n">ref</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-  <span class="n">git_signature</span> <span class="o">*</span><span class="n">signature</span><span class="p">;</span>	
+  <span class="n">git_signature</span> <span class="o">*</span><span class="n">signature</span><span class="p">;</span>
 
   <span class="cm">/* Validate args */</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">3</span> <span class="o">||</span> <span class="n">strcmp</span><span class="p">(</span><span class="n">opt</span><span class="p">,</span> <span class="s">&quot;-m&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
@@ -124,7 +124,7 @@ simulate <code>git commit</code> with the commit message argument.</p>
     <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
   <span class="p">}</span>
 
-  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_revparse_ext-7" class="fnlink" href="../../#HEAD/group/revparse/git_revparse_ext">git_revparse_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="s">&quot;HEAD&quot;</span><span class="p">);</span>
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_revparse_ext-9" class="fnlink" href="../../#HEAD/group/revparse/git_revparse_ext">git_revparse_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="s">&quot;HEAD&quot;</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">==</span> <span class="n">GIT_ENOTFOUND</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;HEAD not found. Creating first commit</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
     <span class="n">error</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
@@ -134,14 +134,14 @@ simulate <code>git commit</code> with the commit message argument.</p>
     <span class="k">else</span> <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ERROR %d: no detailed info</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>
   <span class="p">}</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_index-6" class="fnlink" href="../../#HEAD/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;Could not open repository index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_index-8" class="fnlink" href="../../#HEAD/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;Could not open repository index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
   <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_index_write_tree-5" class="fnlink" href="../../#HEAD/group/index/git_index_write_tree">git_index_write_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree_oid</span><span class="p">,</span> <span class="n">index</span><span class="p">),</span> <span class="s">&quot;Could not write tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);;</span>
   <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_index_write-4" class="fnlink" href="../../#HEAD/group/index/git_index_write">git_index_write</a></span><span class="p">(</span><span class="n">index</span><span class="p">),</span> <span class="s">&quot;Could not write index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);;</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tree_lookup-10" class="fnlink" href="../../#HEAD/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_oid</span><span class="p">),</span> <span class="s">&quot;Error looking up tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-  
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_signature_default-8" class="fnlink" href="../../#HEAD/group/signature/git_signature_default">git_signature_default</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">signature</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;Error creating signature&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-  
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tree_lookup-12" class="fnlink" href="../../#HEAD/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_oid</span><span class="p">),</span> <span class="s">&quot;Error looking up tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_signature_default-10" class="fnlink" href="../../#HEAD/group/signature/git_signature_default">git_signature_default</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">signature</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;Error creating signature&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
   <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_commit_create_v-1" class="fnlink" href="../../#HEAD/group/commit/git_commit_create_v">git_commit_create_v</a></span><span class="p">(</span>
     <span class="o">&amp;</span><span class="n">commit_oid</span><span class="p">,</span>
     <span class="n">repo</span><span class="p">,</span>
@@ -154,8 +154,10 @@ simulate <code>git commit</code> with the commit message argument.</p>
     <span class="n">parent</span> <span class="o">?</span> <span class="mi">1</span> <span class="o">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">parent</span><span class="p">),</span> <span class="s">&quot;Error creating commit&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="n"><a name="git_index_free-3" class="fnlink" href="../../#HEAD/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
-  <span class="n"><a name="git_signature_free-9" class="fnlink" href="../../#HEAD/group/signature/git_signature_free">git_signature_free</a></span><span class="p">(</span><span class="n">signature</span><span class="p">);</span>
-  <span class="n"><a name="git_tree_free-11" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">tree</span><span class="p">);</span>	
+  <span class="n"><a name="git_signature_free-11" class="fnlink" href="../../#HEAD/group/signature/git_signature_free">git_signature_free</a></span><span class="p">(</span><span class="n">signature</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_free-13" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">tree</span><span class="p">);</span>
+  <span class="n"><a name="git_object_free-6" class="fnlink" href="../../#HEAD/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">parent</span><span class="p">);</span>
+  <span class="n"><a name="git_reference_free-7" class="fnlink" href="../../#HEAD/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">ref</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
