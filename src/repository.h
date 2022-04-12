@@ -34,6 +34,7 @@
 #define GIT_DIR_SHORTNAME "GIT~1"
 
 extern bool git_repository__fsync_gitdir;
+extern bool git_repository__validate_ownership;
 
 /** Cvar cache identifiers */
 typedef enum {
