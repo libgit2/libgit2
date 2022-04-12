@@ -3,11 +3,13 @@
 #include "sysdir.h"
 #include <ctype.h>
 
+static int validate_ownership = 0;
 static git_buf config_path = GIT_BUF_INIT;
 
 void test_repo_open__initialize(void)
 {
 	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &config_path));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_OWNER_VALIDATION, &validate_ownership));
 }
 
 void test_repo_open__cleanup(void)
@@ -23,6 +25,8 @@ void test_repo_open__cleanup(void)
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, config_path.ptr));
 	git_buf_dispose(&config_path);
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, validate_ownership));
 }
 
 void test_repo_open__bare_empty_repo(void)
@@ -470,6 +474,8 @@ void test_repo_open__validates_dir_ownership(void)
 {
 	git_repository *repo;
 
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
+
 	cl_fixture_sandbox("empty_standard_repo");
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
@@ -493,6 +499,8 @@ void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
 	git_str config_path = GIT_STR_INIT,
 	        config_filename = GIT_STR_INIT,
 	        config_data = GIT_STR_INIT;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
 
 	cl_fixture_sandbox("empty_standard_repo");
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
@@ -536,6 +544,8 @@ void test_repo_open__can_reset_safe_directory_list(void)
 	git_str config_path = GIT_STR_INIT,
 	        config_filename = GIT_STR_INIT,
 	        config_data = GIT_STR_INIT;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
 
 	cl_fixture_sandbox("empty_standard_repo");
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));

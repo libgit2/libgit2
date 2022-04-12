@@ -222,6 +222,7 @@ void cl_fake_home(void);
 void cl_fake_home_cleanup(void *);
 
 void cl_sandbox_set_search_path_defaults(void);
+void cl_sandbox_disable_ownership_validation(void);
 
 #ifdef GIT_WIN32
 # define cl_msleep(x) Sleep(x)
