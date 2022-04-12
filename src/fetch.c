@@ -76,8 +76,11 @@ static int maybe_want_oid(git_remote *remote, git_refspec *spec)
 	GIT_ERROR_CHECK_ALLOC(oid_head);
 
 	git_oid_fromstr(&oid_head->oid, spec->src);
-	oid_head->name = git__strdup(spec->dst);
-	GIT_ERROR_CHECK_ALLOC(oid_head->name);
+
+	if (spec->dst) {
+		oid_head->name = git__strdup(spec->dst);
+		GIT_ERROR_CHECK_ALLOC(oid_head->name);
+	}
 
 	if (git_vector_insert(&remote->local_heads, oid_head) < 0 ||
 	    git_vector_insert(&remote->refs, oid_head) < 0)

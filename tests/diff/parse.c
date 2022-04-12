@@ -431,6 +431,32 @@ void test_diff_parse__new_file_with_space(void)
 	git_diff_free(diff);
 }
 
+void test_diff_parse__new_file_with_space_and_regenerate_patch(void)
+{
+	const char *content = PATCH_ORIGINAL_NEW_FILE_WITH_SPACE;
+	git_diff *diff = NULL;
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_diff_from_buffer(&diff, content, strlen(content)));
+	cl_git_pass(git_diff_to_buf(&buf, diff, GIT_DIFF_FORMAT_PATCH));
+
+	git_buf_dispose(&buf);
+	git_diff_free(diff);
+}
+
+void test_diff_parse__delete_file_with_space_and_regenerate_patch(void)
+{
+	const char *content = PATCH_DELETE_FILE_WITH_SPACE;
+	git_diff *diff = NULL;
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_diff_from_buffer(&diff, content, strlen(content)));
+	cl_git_pass(git_diff_to_buf(&buf, diff, GIT_DIFF_FORMAT_PATCH));
+
+	git_buf_dispose(&buf);
+	git_diff_free(diff);
+}
+
 void test_diff_parse__crlf(void)
 {
 	const char *text = PATCH_CRLF;
