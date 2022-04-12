@@ -26,6 +26,7 @@ int main(int argc, char *argv[])
 
 	cl_global_trace_register();
 	cl_sandbox_set_search_path_defaults();
+	cl_sandbox_disable_ownership_validation();
 
 	/* Run the test suite */
 	res = clar_test_run();

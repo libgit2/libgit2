@@ -39,6 +39,7 @@
 # include "win32/w32_util.h"
 #endif
 
+bool git_repository__validate_ownership = true;
 bool git_repository__fsync_gitdir = false;
 
 static const struct {
@@ -65,6 +66,7 @@ static const struct {
 
 static int check_repositoryformatversion(int *version, git_config *config);
 static int check_extensions(git_config *config, int version);
+static int load_global_config(git_config **config);
 
 #define GIT_COMMONDIR_FILE "commondir"
 #define GIT_GITDIR_FILE "gitdir"
@@ -483,6 +485,63 @@ static int read_gitfile(git_str *path_out, const char *file_path)
 	return error;
 }
 
+typedef struct {
+	const char *repo_path;
+	git_str tmp;
+	bool is_safe;
+} validate_ownership_data;
+
+static int validate_ownership_cb(const git_config_entry *entry, void *payload)
+{
+	validate_ownership_data *data = payload;
+
+	if (strcmp(entry->value, "") == 0)
+		data->is_safe = false;
+
+	if (git_fs_path_prettify_dir(&data->tmp, entry->value, NULL) == 0 &&
+	    strcmp(data->tmp.ptr, data->repo_path) == 0)
+		data->is_safe = true;
+
+	return 0;
+}
+
+static int validate_ownership(const char *repo_path)
+{
+	git_config *config = NULL;
+	validate_ownership_data data = { repo_path, GIT_STR_INIT, false };
+	bool is_safe;
+	int error;
+
+	if ((error = git_fs_path_owner_is_current_user(&is_safe, repo_path)) < 0) {
+		if (error == GIT_ENOTFOUND)
+			error = 0;
+
+		goto done;
+	}
+
+	if (is_safe) {
+		error = 0;
+		goto done;
+	}
+
+	if (load_global_config(&config) == 0) {
+		error = git_config_get_multivar_foreach(config, "safe.directory", NULL, validate_ownership_cb, &data);
+
+		if (!error && data.is_safe)
+			goto done;
+	}
+
+	git_error_set(GIT_ERROR_CONFIG,
+		"repository path '%s' is not owned by current user",
+		repo_path);
+	error = GIT_EOWNER;
+
+done:
+	git_config_free(config);
+	git_str_dispose(&data.tmp);
+	return error;
+}
+
 static int find_repo(
 	git_str *gitdir_path,
 	git_str *workdir_path,
@@ -856,6 +915,7 @@ int git_repository_open_ext(
 		gitlink = GIT_STR_INIT, commondir = GIT_STR_INIT;
 	git_repository *repo = NULL;
 	git_config *config = NULL;
+	const char *validation_path;
 	int version = 0;
 
 	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV)
@@ -904,15 +964,23 @@ int git_repository_open_ext(
 	if ((error = check_extensions(config, version)) < 0)
 		goto cleanup;
 
-	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
+	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0) {
 		repo->is_bare = 1;
-	else {
-
+	} else {
 		if (config &&
 		    ((error = load_config_data(repo, config)) < 0 ||
 		     (error = load_workdir(repo, config, &workdir)) < 0))
 			goto cleanup;
 	}
+
+	/*
+	 * Ensure that the git directory is owned by the current user.
+	 */
+	validation_path = repo->is_bare ? repo->gitdir : repo->workdir;
+
+	if (git_repository__validate_ownership &&
+	    (error = validate_ownership(validation_path)) < 0)
+		goto cleanup;
 
 cleanup:
 	git_str_dispose(&gitdir);
@@ -1606,13 +1674,40 @@ static bool is_filesystem_case_insensitive(const char *gitdir_path)
 	return is_insensitive;
 }
 
-static bool are_symlinks_supported(const char *wd_path)
+/*
+ * Return a configuration object with only the global and system
+ * configurations; no repository-level configuration.
+ */
+static int load_global_config(git_config **config)
 {
-	git_config *config = NULL;
 	git_str global_buf = GIT_STR_INIT;
 	git_str xdg_buf = GIT_STR_INIT;
 	git_str system_buf = GIT_STR_INIT;
 	git_str programdata_buf = GIT_STR_INIT;
+	int error;
+
+	git_config__find_global(&global_buf);
+	git_config__find_xdg(&xdg_buf);
+	git_config__find_system(&system_buf);
+	git_config__find_programdata(&programdata_buf);
+
+	error = load_config(config, NULL,
+	                    path_unless_empty(&global_buf),
+	                    path_unless_empty(&xdg_buf),
+	                    path_unless_empty(&system_buf),
+	                    path_unless_empty(&programdata_buf));
+
+	git_str_dispose(&global_buf);
+	git_str_dispose(&xdg_buf);
+	git_str_dispose(&system_buf);
+	git_str_dispose(&programdata_buf);
+
+	return error;
+}
+
+static bool are_symlinks_supported(const char *wd_path)
+{
+	git_config *config = NULL;
 	int symlinks = 0;
 
 	/*
@@ -1623,19 +1718,9 @@ static bool are_symlinks_supported(const char *wd_path)
 	 * _not_ set, then we do not test or enable symlink support.
 	 */
 #ifdef GIT_WIN32
-	git_config__find_global(&global_buf);
-	git_config__find_xdg(&xdg_buf);
-	git_config__find_system(&system_buf);
-	git_config__find_programdata(&programdata_buf);
-
-	if (load_config(&config, NULL,
-	    path_unless_empty(&global_buf),
-	    path_unless_empty(&xdg_buf),
-	    path_unless_empty(&system_buf),
-	    path_unless_empty(&programdata_buf)) < 0)
-		goto done;
-
-	if (git_config_get_bool(&symlinks, config, "core.symlinks") < 0 || !symlinks)
+	if (load_global_config(&config) < 0 ||
+	    git_config_get_bool(&symlinks, config, "core.symlinks") < 0 ||
+	    !symlinks)
 		goto done;
 #endif
 
@@ -1643,10 +1728,6 @@ static bool are_symlinks_supported(const char *wd_path)
 		goto done;
 
 done:
-	git_str_dispose(&global_buf);
-	git_str_dispose(&xdg_buf);
-	git_str_dispose(&system_buf);
-	git_str_dispose(&programdata_buf);
 	git_config_free(config);
 	return symlinks != 0;
 }

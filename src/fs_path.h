@@ -731,17 +731,37 @@ int git_fs_path_normalize_slashes(git_str *out, const char *path);
 
 bool git_fs_path_supports_symlinks(const char *dir);
 
+typedef enum {
+	GIT_FS_PATH_MOCK_OWNER_NONE = 0, /* do filesystem lookups as normal */
+	GIT_FS_PATH_MOCK_OWNER_SYSTEM = 1,
+	GIT_FS_PATH_MOCK_OWNER_CURRENT_USER = 2,
+	GIT_FS_PATH_MOCK_OWNER_OTHER = 3
+} git_fs_path__mock_owner_t;
+
 /**
- * Validate a system file's ownership
- *
- * Verify that the file in question is owned by an administrator or system
- * account, or at least by the current user.
- *
- * This function returns 0 if successful. If the file is not owned by any of
- * these, or any other if there have been problems determining the file
- * ownership, it returns -1.
+ * Sets the mock ownership for files; subsequent calls to
+ * `git_fs_path_owner_is_*` functions will return this data until cleared
+ * with `GIT_FS_PATH_MOCK_OWNER_NONE`.
  */
-int git_fs_path_validate_system_file_ownership(const char *path);
+void git_fs_path__set_owner(git_fs_path__mock_owner_t owner);
+
+/**
+ * Verify that the file in question is owned by an administrator or system
+ * account.
+ */
+int git_fs_path_owner_is_system(bool *out, const char *path);
+
+/**
+ * Verify that the file in question is owned by the current user;
+ */
+
+int git_fs_path_owner_is_current_user(bool *out, const char *path);
+
+/**
+ * Verify that the file in question is owned by an administrator or system
+ * account _or_ the current user;
+ */
+int git_fs_path_owner_is_system_or_current_user(bool *out, const char *path);
 
 /**
  * Search the current PATH for the given executable, returning the full
