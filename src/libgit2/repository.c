@@ -39,6 +39,7 @@
 # include "win32/w32_util.h"
 #endif
 
+bool git_repository__validate_ownership = true;
 bool git_repository__fsync_gitdir = false;
 
 static const struct {
@@ -977,7 +978,8 @@ int git_repository_open_ext(
 	 */
 	validation_path = repo->is_bare ? repo->gitdir : repo->workdir;
 
-	if ((error = validate_ownership(validation_path)) < 0)
+	if (git_repository__validate_ownership &&
+	    (error = validate_ownership(validation_path)) < 0)
 		goto cleanup;
 
 cleanup:
