@@ -1,3 +1,18 @@
+v1.3.1
+------
+
+🔒 This is a security release to provide compatibility with git's changes to address [CVE 2022-24765](https://github.blog/2022-04-12-git-security-vulnerability-announced/).
+
+**libgit2 is not directly affected** by this vulnerability, because libgit2 does not directly invoke any executable. But we are providing these changes as a security release for any users that use libgit2 for repository discovery and then _also_ use git on that repository. In this release, we will now validate that the user opening the repository is the same user that owns the on-disk repository. This is to match git's behavior.
+
+In addition, we are providing several correctness fixes where invalid input can lead to a crash. These may prevent possible denial of service attacks. At this time there are not known exploits to these issues.
+
+Full list of changes:
+
+* Validate repository directory ownership (v1.3) by @ethomson in https://github.com/libgit2/libgit2/pull/6268
+
+All users of the v1.3 release line are recommended to upgrade.
+
 v1.3
 ----
 
