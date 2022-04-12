@@ -28,7 +28,6 @@ void test_repo_config__cleanup(void)
 	cl_assert(!git_fs_path_isdir("alternate"));
 
 	cl_fixture_cleanup("empty_standard_repo");
-
 }
 
 void test_repo_config__can_open_global_when_there_is_no_file(void)
