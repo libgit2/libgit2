@@ -390,6 +390,14 @@ int git_libgit2_opts(int key, ...)
 		}
 		break;
 
+	case GIT_OPT_GET_OWNER_VALIDATION:
+		*(va_arg(ap, int *)) = git_repository__validate_ownership;
+		break;
+
+	case GIT_OPT_SET_OWNER_VALIDATION:
+		git_repository__validate_ownership = (va_arg(ap, int) != 0);
+		break;
+
 	default:
 		git_error_set(GIT_ERROR_INVALID, "invalid option key");
 		error = -1;

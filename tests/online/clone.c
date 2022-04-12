@@ -8,9 +8,9 @@
 
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
-#define BB_REPO_URL "https://libgit3@bitbucket.org/libgit2/testgitrepository.git"
-#define BB_REPO_URL_WITH_PASS "https://libgit3:libgit3@bitbucket.org/libgit2/testgitrepository.git"
-#define BB_REPO_URL_WITH_WRONG_PASS "https://libgit3:wrong@bitbucket.org/libgit2/testgitrepository.git"
+#define BB_REPO_URL "https://libgit2-test@bitbucket.org/libgit2-test/testgitrepository.git"
+#define BB_REPO_URL_WITH_PASS "https://libgit2-test:YT77Ppm2nq8w4TYjGS8U@bitbucket.org/libgit2-test/testgitrepository.git"
+#define BB_REPO_URL_WITH_WRONG_PASS "https://libgit2-test:wrong@bitbucket.org/libgit2-test/testgitrepository.git"
 #define GOOGLESOURCE_REPO_URL "https://chromium.googlesource.com/external/github.com/sergi/go-diff"
 
 #define SSH_REPO_URL "ssh://github.com/libgit2/TestGitRepository"
@@ -405,7 +405,7 @@ void test_online_clone__credentials(void)
 
 void test_online_clone__credentials_via_custom_headers(void)
 {
-	const char *creds = "libgit3:libgit3";
+	const char *creds = "libgit2-test:YT77Ppm2nq8w4TYjGS8U";
 	git_buf auth = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_puts(&auth, "Authorization: Basic "));
@@ -413,7 +413,7 @@ void test_online_clone__credentials_via_custom_headers(void)
 	g_options.fetch_opts.custom_headers.count = 1;
 	g_options.fetch_opts.custom_headers.strings = &auth.ptr;
 
-	cl_git_pass(git_clone(&g_repo, "https://bitbucket.org/libgit2/testgitrepository.git", "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, "https://bitbucket.org/libgit2-test/testgitrepository.git", "./foo", &g_options));
 
 	git_buf_dispose(&auth);
 }
@@ -421,7 +421,7 @@ void test_online_clone__credentials_via_custom_headers(void)
 void test_online_clone__bitbucket_style(void)
 {
 	git_credential_userpass_payload user_pass = {
-		"libgit3", "libgit3"
+		"libgit2-test", "YT77Ppm2nq8w4TYjGS8U"
 	};
 
 	g_options.fetch_opts.callbacks.credentials = git_credential_userpass;
@@ -435,7 +435,7 @@ void test_online_clone__bitbucket_style(void)
 void test_online_clone__bitbucket_uses_creds_in_url(void)
 {
 	git_credential_userpass_payload user_pass = {
-		"libgit2", "wrong"
+		"libgit2-test", "wrong"
 	};
 
 	g_options.fetch_opts.callbacks.credentials = git_credential_userpass;
@@ -453,7 +453,7 @@ void test_online_clone__bitbucket_uses_creds_in_url(void)
 void test_online_clone__bitbucket_falls_back_to_specified_creds(void)
 {
 	git_credential_userpass_payload user_pass = {
-		"libgit2", "libgit2"
+		"libgit2-test", "libgit2"
 	};
 
 	g_options.fetch_opts.callbacks.credentials = git_credential_userpass;

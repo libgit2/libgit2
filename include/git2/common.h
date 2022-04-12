@@ -211,7 +211,9 @@ typedef enum {
 	GIT_OPT_SET_ODB_PACKED_PRIORITY,
 	GIT_OPT_SET_ODB_LOOSE_PRIORITY,
 	GIT_OPT_GET_EXTENSIONS,
-	GIT_OPT_SET_EXTENSIONS
+	GIT_OPT_SET_EXTENSIONS,
+	GIT_OPT_GET_OWNER_VALIDATION,
+	GIT_OPT_SET_OWNER_VALIDATION
 } git_libgit2_opt_t;
 
 /**
@@ -448,6 +450,14 @@ typedef enum {
  *      > { "!noop", "newext" } indicates that the caller does not want
  *      > to support repositories with the `noop` extension but does want
  *      > to support repositories with the `newext` extension.
+ *
+ *   opts(GIT_OPT_GET_OWNER_VALIDATION, int *enabled)
+ *      > Gets the owner validation setting for repository
+ *      > directories.
+ *
+ *   opts(GIT_OPT_SET_OWNER_VALIDATION, int enabled)
+ *      > Set that repository directories should be owned by the current
+ *      > user. The default is to validate ownership.
  *
  * @param option Option key
  * @param ... value to set the option

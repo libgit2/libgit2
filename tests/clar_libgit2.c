@@ -603,6 +603,11 @@ void cl_sandbox_set_search_path_defaults(void)
 	git_buf_dispose(&path);
 }
 
+void cl_sandbox_disable_ownership_validation(void)
+{
+	git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 0);
+}
+
 #ifdef GIT_WIN32
 bool cl_sandbox_supports_8dot3(void)
 {

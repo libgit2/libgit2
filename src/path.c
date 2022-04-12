@@ -2024,78 +2024,237 @@ done:
 	return supported;
 }
 
-int git_path_validate_system_file_ownership(const char *path)
-{
-#ifndef GIT_WIN32
-	GIT_UNUSED(path);
-	return GIT_OK;
-#else
-	git_win32_path buf;
-	PSID owner_sid;
-	PSECURITY_DESCRIPTOR descriptor = NULL;
-	HANDLE token;
-	TOKEN_USER *info = NULL;
-	DWORD err, len;
-	int ret;
+static git_path__mock_owner_t mock_owner = GIT_PATH_MOCK_OWNER_NONE;
 
-	if (git_win32_path_from_utf8(buf, path) < 0)
+void git_path__set_owner(git_path__mock_owner_t owner)
+{
+	mock_owner = owner;
+}
+
+#ifdef GIT_WIN32
+static PSID *sid_dup(PSID sid)
+{
+	DWORD len;
+	PSID dup;
+
+	len = GetLengthSid(sid);
+
+	if ((dup = git__malloc(len)) == NULL)
+		return NULL;
+
+	if (!CopySid(len, dup, sid)) {
+		git_error_set(GIT_ERROR_OS, "could not duplicate sid");
+		git__free(dup);
+		return NULL;
+	}
+
+	return dup;
+}
+
+static int current_user_sid(PSID *out)
+{
+	TOKEN_USER *info = NULL;
+	HANDLE token = NULL;
+	DWORD len = 0;
+	int error = -1;
+
+	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+		git_error_set(GIT_ERROR_OS, "could not lookup process information");
+		goto done;
+	}
+
+	if (GetTokenInformation(token, TokenUser, NULL, 0, &len) ||
+		GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+		git_error_set(GIT_ERROR_OS, "could not lookup token metadata");
+		goto done;
+	}
+
+	info = git__malloc(len);
+	GIT_ERROR_CHECK_ALLOC(info);
+
+	if (!GetTokenInformation(token, TokenUser, info, len, &len)) {
+		git_error_set(GIT_ERROR_OS, "could not lookup current user");
+		goto done;
+	}
+
+	if ((*out = sid_dup(info->User.Sid)))
+		error = 0;
+
+done:
+	if (token)
+		CloseHandle(token);
+
+	git__free(info);
+	return error;
+}
+
+static int file_owner_sid(PSID *out, const char *path)
+{
+	git_win32_path path_w32;
+	PSECURITY_DESCRIPTOR descriptor = NULL;
+	PSID owner_sid;
+	DWORD ret;
+	int error = -1;
+
+	if (git_win32_path_from_utf8(path_w32, path) < 0)
 		return -1;
 
-	err = GetNamedSecurityInfoW(buf, SE_FILE_OBJECT,
-				    OWNER_SECURITY_INFORMATION |
-					    DACL_SECURITY_INFORMATION,
-				    &owner_sid, NULL, NULL, NULL, &descriptor);
+	ret = GetNamedSecurityInfoW(path_w32, SE_FILE_OBJECT,
+		OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
+		&owner_sid, NULL, NULL, NULL, &descriptor);
 
-	if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) {
-		ret = GIT_ENOTFOUND;
-		goto cleanup;
-	}
-
-	if (err != ERROR_SUCCESS) {
+	if (ret == ERROR_FILE_NOT_FOUND || ret == ERROR_PATH_NOT_FOUND)
+		error = GIT_ENOTFOUND;
+	else if (ret != ERROR_SUCCESS)
 		git_error_set(GIT_ERROR_OS, "failed to get security information");
-		ret = GIT_ERROR;
-		goto cleanup;
-	}
+	else if (!IsValidSid(owner_sid))
+		git_error_set(GIT_ERROR_OS, "file owner is not valid");
+	else if ((*out = sid_dup(owner_sid)))
+		error = 0;
 
-	if (!IsValidSid(owner_sid)) {
-		git_error_set(GIT_ERROR_INVALID, "programdata configuration file owner is unknown");
-		ret = GIT_ERROR;
-		goto cleanup;
-	}
-
-	if (IsWellKnownSid(owner_sid, WinBuiltinAdministratorsSid) ||
-	    IsWellKnownSid(owner_sid, WinLocalSystemSid)) {
-		ret = GIT_OK;
-		goto cleanup;
-	}
-
-	/* Obtain current user's SID */
-	if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token) &&
-	    !GetTokenInformation(token, TokenUser, NULL, 0, &len)) {
-		info = git__malloc(len);
-		GIT_ERROR_CHECK_ALLOC(info);
-		if (!GetTokenInformation(token, TokenUser, info, len, &len)) {
-			git__free(info);
-			info = NULL;
-		}
-	}
-
-	/*
-	 * If the file is owned by the same account that is running the current
-	 * process, it's okay to read from that file.
-	 */
-	if (info && EqualSid(owner_sid, info->User.Sid))
-		ret = GIT_OK;
-	else {
-		git_error_set(GIT_ERROR_INVALID, "programdata configuration file owner is not valid");
-		ret = GIT_ERROR;
-	}
-	git__free(info);
-
-cleanup:
 	if (descriptor)
 		LocalFree(descriptor);
 
-	return ret;
-#endif
+	return error;
 }
+
+int git_path_owner_is_current_user(bool *out, const char *path)
+{
+	PSID owner_sid = NULL, user_sid = NULL;
+	int error = -1;
+
+	if (mock_owner) {
+		*out = (mock_owner == GIT_PATH_MOCK_OWNER_CURRENT_USER);
+		return 0;
+	}
+
+	if ((error = file_owner_sid(&owner_sid, path)) < 0 ||
+	    (error = current_user_sid(&user_sid)) < 0)
+		goto done;
+
+	*out = EqualSid(owner_sid, user_sid);
+	error = 0;
+
+done:
+	git__free(owner_sid);
+	git__free(user_sid);
+	return error;
+}
+
+int git_path_owner_is_system(bool *out, const char *path)
+{
+	PSID owner_sid;
+
+	if (mock_owner) {
+		*out = (mock_owner == GIT_PATH_MOCK_OWNER_SYSTEM);
+		return 0;
+	}
+
+	if (file_owner_sid(&owner_sid, path) < 0)
+		return -1;
+
+	*out = IsWellKnownSid(owner_sid, WinBuiltinAdministratorsSid) ||
+	       IsWellKnownSid(owner_sid, WinLocalSystemSid);
+
+	git__free(owner_sid);
+	return 0;
+}
+
+int git_path_owner_is_system_or_current_user(bool *out, const char *path)
+{
+	PSID owner_sid = NULL, user_sid = NULL;
+	int error = -1;
+
+	if (mock_owner) {
+		*out = (mock_owner == GIT_PATH_MOCK_OWNER_SYSTEM ||
+		        mock_owner == GIT_PATH_MOCK_OWNER_CURRENT_USER);
+		return 0;
+	}
+
+	if (file_owner_sid(&owner_sid, path) < 0)
+		goto done;
+
+	if (IsWellKnownSid(owner_sid, WinBuiltinAdministratorsSid) ||
+	    IsWellKnownSid(owner_sid, WinLocalSystemSid)) {
+		*out = 1;
+		error = 0;
+		goto done;
+	}
+
+	if (current_user_sid(&user_sid) < 0)
+		goto done;
+
+	*out = EqualSid(owner_sid, user_sid);
+	error = 0;
+
+done:
+	git__free(owner_sid);
+	git__free(user_sid);
+	return error;
+}
+
+#else
+
+static int path_owner_is(bool *out, const char *path, uid_t *uids, size_t uids_len)
+{
+	struct stat st;
+	size_t i;
+
+	*out = false;
+
+	if (p_lstat(path, &st) != 0) {
+		if (errno == ENOENT)
+			return GIT_ENOTFOUND;
+
+		git_error_set(GIT_ERROR_OS, "could not stat '%s'", path);
+		return -1;
+	}
+
+	for (i = 0; i < uids_len; i++) {
+		if (uids[i] == st.st_uid) {
+			*out = true;
+			break;
+		}
+	}
+
+	return 0;
+}
+
+int git_path_owner_is_current_user(bool *out, const char *path)
+{
+	uid_t userid = geteuid();
+
+	if (mock_owner) {
+		*out = (mock_owner == GIT_PATH_MOCK_OWNER_CURRENT_USER);
+		return 0;
+	}
+
+	return path_owner_is(out, path, &userid, 1);
+}
+
+int git_path_owner_is_system(bool *out, const char *path)
+{
+	uid_t userid = 0;
+
+	if (mock_owner) {
+		*out = (mock_owner == GIT_PATH_MOCK_OWNER_SYSTEM);
+		return 0;
+	}
+
+	return path_owner_is(out, path, &userid, 1);
+}
+
+int git_path_owner_is_system_or_current_user(bool *out, const char *path)
+{
+	uid_t userids[2] = { geteuid(), 0 };
+
+	if (mock_owner) {
+		*out = (mock_owner == GIT_PATH_MOCK_OWNER_SYSTEM ||
+		        mock_owner == GIT_PATH_MOCK_OWNER_CURRENT_USER);
+		return 0;
+	}
+
+	return path_owner_is(out, path, userids, 2);
+}
+
+#endif
