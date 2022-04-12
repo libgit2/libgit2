@@ -1,3 +1,23 @@
+v1.4.3
+------
+
+🔒 This is a security release to provide compatibility with git's changes to address [CVE 2022-24765](https://github.blog/2022-04-12-git-security-vulnerability-announced/).
+
+**libgit2 is not directly affected** by this vulnerability, because libgit2 does not directly invoke any executable. But we are providing these changes as a security release for any users that use libgit2 for repository discovery and then _also_ use git on that repository. In this release, we will now validate that the user opening the repository is the same user that owns the on-disk repository. This is to match git's behavior.
+
+In addition, we are providing several correctness fixes where invalid input can lead to a crash. These may prevent possible denial of service attacks. At this time there are not known exploits to these issues.
+
+Full list of changes:
+
+* Validate repository directory ownership (v1.4) by @ethomson in https://github.com/libgit2/libgit2/pull/6267
+* midx: Fix an undefined behavior (left-shift signed overflow) by @lhchavez in https://github.com/libgit2/libgit2/pull/6260
+* fetch: support OID refspec without dst by @ethomson in https://github.com/libgit2/libgit2/pull/6251
+* Fix crash when regenerating a patch with unquoted spaces in filename by @jorio in https://github.com/libgit2/libgit2/pull/6244
+
+All users of the v1.4 release line are recommended to upgrade.
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.4.2...v1.4.3
+
 v1.4.2
 ------
 
