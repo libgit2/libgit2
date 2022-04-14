@@ -698,8 +698,7 @@ int git_describe_commit(
 		goto cleanup;
 
 cleanup:
-	if (commit != NULL)
-		git_commit_free(commit);
+	git_commit_free(commit);
 
 	git_oidmap_foreach_value(data.names, name, {
 		git_tag_free(name->tag);
