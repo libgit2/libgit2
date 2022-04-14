@@ -7,7 +7,7 @@ struct url_pattern {
 	bool matches;
 };
 
-void test_network_url_pattern__single(void)
+void test_url_pattern__single(void)
 {
 	git_net_url url;
 	size_t i;
@@ -53,7 +53,7 @@ void test_network_url_pattern__single(void)
 	}
 }
 
-void test_network_url_pattern__list(void)
+void test_url_pattern__list(void)
 {
 	git_net_url url;
 	size_t i;
