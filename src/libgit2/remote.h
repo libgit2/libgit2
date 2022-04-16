@@ -11,6 +11,7 @@
 
 #include "git2/remote.h"
 #include "git2/transport.h"
+#include "git2/sys/remote.h"
 #include "git2/sys/transport.h"
 
 #include "refspec.h"
@@ -53,7 +54,6 @@ int git_remote_connect_options_normalize(
 	git_remote_connect_options *dst,
 	git_repository *repo,
 	const git_remote_connect_options *src);
-void git_remote_connect_options_dispose(git_remote_connect_options *opts);
 
 int git_remote_capabilities(unsigned int *out, git_remote *remote);
 
