@@ -15,6 +15,7 @@ typedef struct git_net_url {
 	char *port;
 	char *path;
 	char *query;
+	char *fragment;
 	char *username;
 	char *password;
 } git_net_url;
