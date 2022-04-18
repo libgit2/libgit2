@@ -652,7 +652,7 @@ int git_describe_commit(
 {
 	struct get_name_data data;
 	struct commit_name *name;
-	git_commit *commit;
+	git_commit *commit = NULL;
 	int error = -1;
 	git_describe_options normalized;
 
