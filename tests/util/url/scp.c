@@ -314,8 +314,4 @@ void test_url_scp__invalid_addresses(void)
 		"[git@[fe80::dcad:beff:fe00:0001]:42:/resource"));
 	cl_git_fail_with(GIT_EINVALIDSPEC, git_net_url_parse_scp(&conndata,
 		"[git@[fe80::dcad:beff:fe00:0001:42]:/resource"));
-
-	/* Invalid character inside address */
-	cl_git_fail_with(GIT_EINVALIDSPEC, git_net_url_parse(&conndata,
-		"[fe8o::dcad:beff:fe00:0001]:/resource"));
 }
