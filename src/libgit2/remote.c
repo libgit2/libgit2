@@ -1830,7 +1830,7 @@ static int update_one_tip(
 	}
 
 	if (error == GIT_ENOTFOUND) {
-		memset(&old, 0, GIT_OID_RAWSZ);
+		memset(&old, 0, sizeof(git_oid));
 		error = 0;
 
 		if (autotag && (error = git_vector_insert(update_heads, head)) < 0)

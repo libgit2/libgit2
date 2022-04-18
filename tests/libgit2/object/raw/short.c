@@ -28,12 +28,15 @@ static int insert_sequential_oids(
 	int i, min_len = 0;
 	char numbuf[16];
 	git_oid oid;
+	unsigned char hashbuf[GIT_HASH_SHA1_SIZE];
 	char **oids = git__calloc(n, sizeof(char *));
 	cl_assert(oids != NULL);
 
 	for (i = 0; i < n; ++i) {
 		p_snprintf(numbuf, sizeof(numbuf), "%u", (unsigned int)i);
-		git_hash_buf(oid.id, numbuf, strlen(numbuf), GIT_HASH_ALGORITHM_SHA1);
+		git_hash_buf(hashbuf, numbuf, strlen(numbuf), GIT_HASH_ALGORITHM_SHA1);
+
+		git_oid_fromraw(&oid, hashbuf);
 
 		oids[i] = git__malloc(GIT_OID_HEXSZ + 1);
 		cl_assert(oids[i]);

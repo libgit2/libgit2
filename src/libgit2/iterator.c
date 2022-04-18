@@ -613,7 +613,7 @@ GIT_INLINE(int) tree_iterator_frame_push_neighbors(
 			break;
 
 		if ((error = git_tree_lookup(&tree,
-			iter->base.repo, entry->tree_entry->oid)) < 0)
+			iter->base.repo, &entry->tree_entry->oid)) < 0)
 			break;
 
 		if (git_vector_insert(&parent_frame->similar_trees, tree) < 0)
@@ -659,7 +659,7 @@ GIT_INLINE(int) tree_iterator_frame_push(
 	int error;
 
 	if ((error = git_tree_lookup(&tree,
-			iter->base.repo, entry->tree_entry->oid)) < 0 ||
+			iter->base.repo, &entry->tree_entry->oid)) < 0 ||
 		(error = tree_iterator_frame_init(iter, tree, entry)) < 0)
 		goto done;
 
@@ -740,7 +740,7 @@ static void tree_iterator_set_current(
 
 	iter->entry.mode = tree_entry->attr;
 	iter->entry.path = iter->entry_path.ptr;
-	git_oid_cpy(&iter->entry.id, tree_entry->oid);
+	git_oid_cpy(&iter->entry.id, &tree_entry->oid);
 }
 
 static int tree_iterator_advance(const git_index_entry **out, git_iterator *i)

@@ -268,7 +268,7 @@ static void check_tree_entry(
 
 	cl_git_pass(git_iterator_current_tree_entry(&te, i));
 	cl_assert(te);
-	cl_assert(git_oid_streq(te->oid, oid) == 0);
+	cl_assert(git_oid_streq(&te->oid, oid) == 0);
 
 	cl_git_pass(git_iterator_current(&ie, i));
 

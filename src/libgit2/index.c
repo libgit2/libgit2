@@ -74,7 +74,7 @@ struct entry_short {
 	uint32_t uid;
 	uint32_t gid;
 	uint32_t file_size;
-	git_oid oid;
+	unsigned char oid[GIT_OID_RAWSZ];
 	uint16_t flags;
 	char path[1]; /* arbitrary length */
 };
@@ -88,7 +88,7 @@ struct entry_long {
 	uint32_t uid;
 	uint32_t gid;
 	uint32_t file_size;
-	git_oid oid;
+	unsigned char oid[GIT_OID_RAWSZ];
 	uint16_t flags;
 	uint16_t flags_extended;
 	char path[1]; /* arbitrary length */
@@ -2480,8 +2480,10 @@ static int read_entry(
 	entry.uid = ntohl(source.uid);
 	entry.gid = ntohl(source.gid);
 	entry.file_size = ntohl(source.file_size);
-	git_oid_cpy(&entry.id, &source.oid);
 	entry.flags = ntohs(source.flags);
+
+	if (git_oid_fromraw(&entry.id, source.oid) < 0)
+		return -1;
 
 	if (entry.flags & GIT_INDEX_ENTRY_EXTENDED) {
 		uint16_t flags_raw;
@@ -2803,9 +2805,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 	ondisk.uid = htonl(entry->uid);
 	ondisk.gid = htonl(entry->gid);
 	ondisk.file_size = htonl((uint32_t)entry->file_size);
-
-	git_oid_cpy(&ondisk.oid, &entry->id);
-
+	git_oid_raw_cpy(ondisk.oid, entry->id.id);
 	ondisk.flags = htons(entry->flags);
 
 	if (entry->flags & GIT_INDEX_ENTRY_EXTENDED) {

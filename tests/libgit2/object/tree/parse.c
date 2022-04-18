@@ -40,7 +40,7 @@ static void assert_tree_parses(const char *data, size_t datalen,
 		cl_assert(entry = git_tree_entry_byname(tree, expected->filename));
 		cl_assert_equal_s(expected->filename, entry->filename);
 		cl_assert_equal_i(expected->attr, entry->attr);
-		cl_assert_equal_oid(&oid, entry->oid);
+		cl_assert_equal_oid(&oid, &entry->oid);
 	}
 
 	git_object_free(&tree->object);

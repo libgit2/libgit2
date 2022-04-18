@@ -68,7 +68,7 @@ static void seed_packbuilder(void)
 	cl_git_pass(git_revwalk_push_ref(_revwalker, "HEAD"));
 
 	while (git_revwalk_next(&oid, _revwalker) == 0) {
-		o = git__malloc(GIT_OID_RAWSZ);
+		o = git__malloc(sizeof(git_oid));
 		cl_assert(o != NULL);
 		git_oid_cpy(o, &oid);
 		cl_git_pass(git_vector_insert(&_commits, o));
