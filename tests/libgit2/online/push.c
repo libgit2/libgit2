@@ -20,6 +20,8 @@ static char *_remote_ssh_passphrase = NULL;
 static char *_remote_default = NULL;
 static char *_remote_expectcontinue = NULL;
 
+static char *_remote_push_options_result = NULL;
+
 static int cred_acquire_cb(git_credential **,	const char *, const char *, unsigned int, void *);
 
 static git_remote *_remote;
@@ -367,6 +369,7 @@ void test_online_push__initialize(void)
 	_remote_ssh_passphrase = cl_getenv("GITTEST_REMOTE_SSH_PASSPHRASE");
 	_remote_default = cl_getenv("GITTEST_REMOTE_DEFAULT");
 	_remote_expectcontinue = cl_getenv("GITTEST_REMOTE_EXPECTCONTINUE");
+	_remote_push_options_result = cl_getenv("GITTEST_PUSH_OPTION_RESULT");
 	_remote = NULL;
 
 	/* Skip the test if we're missing the remote URL */
@@ -472,7 +475,8 @@ static void do_push(
 	const char *refspecs[], size_t refspecs_len,
 	push_status expected_statuses[], size_t expected_statuses_len,
 	expected_ref expected_refs[], size_t expected_refs_len,
-	int expected_ret, int check_progress_cb, int check_update_tips_cb)
+	int expected_ret, int check_progress_cb, int check_update_tips_cb,
+	git_strarray push_arguments)
 {
 	git_push_options opts = GIT_PUSH_OPTIONS_INIT;
 	size_t i;
@@ -483,6 +487,9 @@ static void do_push(
 	if (_remote) {
 		/* Auto-detect the number of threads to use */
 		opts.pb_parallelism = 0;
+
+		if(push_arguments.count != 0)
+			opts.arguments = push_arguments;
 
 		memcpy(&opts.callbacks, &_record_cbs, sizeof(git_remote_callbacks));
 		data = opts.callbacks.payload;
@@ -530,10 +537,34 @@ static void do_push(
 
 }
 
+static void read_push_options_file(char **buffer, long* push_options_result_size)
+{
+	FILE* fp = fopen(_remote_push_options_result, "r");
+	if (fp == NULL){
+		cl_fail("Failed to open push options file");
+		return;
+	}
+
+	fseek(fp, 0, SEEK_END);
+	*push_options_result_size = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+
+	*buffer = (char*)malloc(*push_options_result_size);
+	if (*buffer == NULL) {
+		fclose(fp);
+		cl_fail("Failed to allocate push options file buffer");
+		return;
+	}
+
+	fread(*buffer, *push_options_result_size, 1, fp);
+	fclose(fp);
+}
+
 /* Call push_finish() without ever calling git_push_add_refspec() */
 void test_online_push__noop(void)
 {
-	do_push(NULL, 0, NULL, 0, NULL, 0, 0, 0, 1);
+	git_strarray push_options = { 0 };
+	do_push(NULL, 0, NULL, 0, NULL, 0, 0, 0, 1, push_options);
 }
 
 void test_online_push__b1(void)
@@ -541,9 +572,10 @@ void test_online_push__b1(void)
 	const char *specs[] = { "refs/heads/b1:refs/heads/b1" };
 	push_status exp_stats[] = { { "refs/heads/b1", 1 } };
 	expected_ref exp_refs[] = { { "refs/heads/b1", &_oid_b1 } };
+	git_strarray push_options = { 0 };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
 }
 
 void test_online_push__b2(void)
@@ -551,9 +583,10 @@ void test_online_push__b2(void)
 	const char *specs[] = { "refs/heads/b2:refs/heads/b2" };
 	push_status exp_stats[] = { { "refs/heads/b2", 1 } };
 	expected_ref exp_refs[] = { { "refs/heads/b2", &_oid_b2 } };
+	git_strarray push_options = { 0 };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
 }
 
 void test_online_push__b3(void)
@@ -561,9 +594,10 @@ void test_online_push__b3(void)
 	const char *specs[] = { "refs/heads/b3:refs/heads/b3" };
 	push_status exp_stats[] = { { "refs/heads/b3", 1 } };
 	expected_ref exp_refs[] = { { "refs/heads/b3", &_oid_b3 } };
+	git_strarray push_options = { 0 };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
 }
 
 void test_online_push__b4(void)
@@ -571,9 +605,10 @@ void test_online_push__b4(void)
 	const char *specs[] = { "refs/heads/b4:refs/heads/b4" };
 	push_status exp_stats[] = { { "refs/heads/b4", 1 } };
 	expected_ref exp_refs[] = { { "refs/heads/b4", &_oid_b4 } };
+	git_strarray push_options = { 0 };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
 }
 
 void test_online_push__b5(void)
@@ -581,15 +616,17 @@ void test_online_push__b5(void)
 	const char *specs[] = { "refs/heads/b5:refs/heads/b5" };
 	push_status exp_stats[] = { { "refs/heads/b5", 1 } };
 	expected_ref exp_refs[] = { { "refs/heads/b5", &_oid_b5 } };
+	git_strarray push_options = { 0 };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
 }
 
 void test_online_push__b5_cancel(void)
 {
 	const char *specs[] = { "refs/heads/b5:refs/heads/b5" };
-	do_push(specs, ARRAY_SIZE(specs), NULL, 0, NULL, 0, GIT_EUSER, 1, 1);
+	git_strarray push_options = { 0 };
+	do_push(specs, ARRAY_SIZE(specs), NULL, 0, NULL, 0, GIT_EUSER, 1, 1, push_options);
 }
 
 void test_online_push__multi(void)
@@ -618,9 +655,10 @@ void test_online_push__multi(void)
 		{ "refs/heads/b4", &_oid_b4 },
 		{ "refs/heads/b5", &_oid_b5 }
 	};
+	git_strarray push_options = { 0 };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
 
 	cl_git_pass(git_reflog_read(&log, _repo, "refs/remotes/test/b1"));
 	entry = git_reflog_entry_byindex(log, 0);
@@ -645,12 +683,14 @@ void test_online_push__implicit_tgt(void)
 	{ "refs/heads/b2", &_oid_b2 }
 	};
 
+	git_strarray push_options = { 0 };
 	do_push(specs1, ARRAY_SIZE(specs1),
 		exp_stats1, ARRAY_SIZE(exp_stats1),
-		exp_refs1, ARRAY_SIZE(exp_refs1), 0, 1, 1);
+		exp_refs1, ARRAY_SIZE(exp_refs1), 0, 1, 1, push_options);
+
 	do_push(specs2, ARRAY_SIZE(specs2),
 		exp_stats2, ARRAY_SIZE(exp_stats2),
-		exp_refs2, ARRAY_SIZE(exp_refs2), 0, 0, 0);
+		exp_refs2, ARRAY_SIZE(exp_refs2), 0, 0, 0, push_options);
 }
 
 void test_online_push__fast_fwd(void)
@@ -670,21 +710,22 @@ void test_online_push__fast_fwd(void)
 	/* Force should have no effect on a fast forward push */
 	const char *specs_ff_force[] = { "+refs/heads/b6:refs/heads/b1" };
 
+	git_strarray push_options = { 0 };
 	do_push(specs_init, ARRAY_SIZE(specs_init),
 		exp_stats_init, ARRAY_SIZE(exp_stats_init),
-		exp_refs_init, ARRAY_SIZE(exp_refs_init), 0, 1, 1);
+		exp_refs_init, ARRAY_SIZE(exp_refs_init), 0, 1, 1, push_options);
 
 	do_push(specs_ff, ARRAY_SIZE(specs_ff),
 		exp_stats_ff, ARRAY_SIZE(exp_stats_ff),
-		exp_refs_ff, ARRAY_SIZE(exp_refs_ff), 0, 0, 0);
+		exp_refs_ff, ARRAY_SIZE(exp_refs_ff), 0, 0, 0, push_options);
 
 	do_push(specs_reset, ARRAY_SIZE(specs_reset),
 		exp_stats_init, ARRAY_SIZE(exp_stats_init),
-		exp_refs_init, ARRAY_SIZE(exp_refs_init), 0, 0, 0);
+		exp_refs_init, ARRAY_SIZE(exp_refs_init), 0, 0, 0, push_options);
 
 	do_push(specs_ff_force, ARRAY_SIZE(specs_ff_force),
 		exp_stats_ff, ARRAY_SIZE(exp_stats_ff),
-		exp_refs_ff, ARRAY_SIZE(exp_refs_ff), 0, 0, 0);
+		exp_refs_ff, ARRAY_SIZE(exp_refs_ff), 0, 0, 0, push_options);
 }
 
 void test_online_push__tag_commit(void)
@@ -692,9 +733,10 @@ void test_online_push__tag_commit(void)
 	const char *specs[] = { "refs/tags/tag-commit:refs/tags/tag-commit" };
 	push_status exp_stats[] = { { "refs/tags/tag-commit", 1 } };
 	expected_ref exp_refs[] = { { "refs/tags/tag-commit", &_tag_commit } };
+	git_strarray push_options = { 0 };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
 }
 
 void test_online_push__tag_tree(void)
@@ -702,9 +744,10 @@ void test_online_push__tag_tree(void)
 	const char *specs[] = { "refs/tags/tag-tree:refs/tags/tag-tree" };
 	push_status exp_stats[] = { { "refs/tags/tag-tree", 1 } };
 	expected_ref exp_refs[] = { { "refs/tags/tag-tree", &_tag_tree } };
+	git_strarray push_options = { 0 };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
 }
 
 void test_online_push__tag_blob(void)
@@ -712,9 +755,10 @@ void test_online_push__tag_blob(void)
 	const char *specs[] = { "refs/tags/tag-blob:refs/tags/tag-blob" };
 	push_status exp_stats[] = { { "refs/tags/tag-blob", 1 } };
 	expected_ref exp_refs[] = { { "refs/tags/tag-blob", &_tag_blob } };
+	git_strarray push_options = { 0 };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
 }
 
 void test_online_push__tag_lightweight(void)
@@ -722,9 +766,10 @@ void test_online_push__tag_lightweight(void)
 	const char *specs[] = { "refs/tags/tag-lightweight:refs/tags/tag-lightweight" };
 	push_status exp_stats[] = { { "refs/tags/tag-lightweight", 1 } };
 	expected_ref exp_refs[] = { { "refs/tags/tag-lightweight", &_tag_lightweight } };
+	git_strarray push_options = { 0 };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
 }
 
 void test_online_push__tag_to_tag(void)
@@ -732,9 +777,10 @@ void test_online_push__tag_to_tag(void)
 	const char *specs[] = { "refs/tags/tag-tag:refs/tags/tag-tag" };
 	push_status exp_stats[] = { { "refs/tags/tag-tag", 1 } };
 	expected_ref exp_refs[] = { { "refs/tags/tag-tag", &_tag_tag } };
+	git_strarray push_options = { 0 };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 0, 0);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 0, 0, push_options);
 }
 
 void test_online_push__force(void)
@@ -749,19 +795,72 @@ void test_online_push__force(void)
 	push_status exp_stats2_force[] = { { "refs/heads/tgt", 1 } };
 	expected_ref exp_refs2_force[] = { { "refs/heads/tgt", &_oid_b4 } };
 
+	git_strarray push_options = { 0 };
 	do_push(specs1, ARRAY_SIZE(specs1),
 		exp_stats1, ARRAY_SIZE(exp_stats1),
-		exp_refs1, ARRAY_SIZE(exp_refs1), 0, 1, 1);
+		exp_refs1, ARRAY_SIZE(exp_refs1), 0, 1, 1, push_options);
 
 	do_push(specs2, ARRAY_SIZE(specs2),
 		NULL, 0,
-		exp_refs1, ARRAY_SIZE(exp_refs1), GIT_ENONFASTFORWARD, 0, 0);
+		exp_refs1, ARRAY_SIZE(exp_refs1), GIT_ENONFASTFORWARD, 0, 0, push_options);
 
 	/* Non-fast-forward update with force should pass. */
 	record_callbacks_data_clear(&_record_cbs_data);
 	do_push(specs2_force, ARRAY_SIZE(specs2_force),
 		exp_stats2_force, ARRAY_SIZE(exp_stats2_force),
-		exp_refs2_force, ARRAY_SIZE(exp_refs2_force), 0, 1, 1);
+		exp_refs2_force, ARRAY_SIZE(exp_refs2_force), 0, 1, 1, push_options);
+}
+
+static void push_option_test(git_strarray push_options, const char *expected_option)
+{
+	const char *specs[] = { "refs/heads/b1:refs/heads/b1" };
+	push_status exp_stats[] = { { "refs/heads/b1", 1 } };
+	expected_ref exp_refs[] = { { "refs/heads/b1", &_oid_b1 } };
+	char *push_options_result = NULL;
+	long push_options_result_size = 0;
+	long expected_option_size = strlen(expected_option);
+
+	do_push(specs, ARRAY_SIZE(specs),
+		exp_stats, ARRAY_SIZE(exp_stats),
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
+
+	read_push_options_file(&push_options_result, &push_options_result_size);
+
+	cl_assert_equal_strn(expected_option, push_options_result,
+		expected_option_size < push_options_result_size ? expected_option_size : push_options_result_size);
+}
+
+void test_online_push__options(void)
+{
+	char *push_options_string_args_test_1[1] = { "test_string" };
+	git_strarray push_options_test_1 = { push_options_string_args_test_1, 1 };
+
+	char *push_options_string_args_test_2[2] = { "test_string", "another arg?" };
+	git_strarray push_options_test_2 = { push_options_string_args_test_2, 2 };
+
+	char *push_options_string_args_test_3[1] = { "👨🏿‍💻 but can it do unicode? 🇺🇦" };
+	git_strarray push_options_test_3 = { push_options_string_args_test_3, 1 };
+
+	int i;
+
+	char *buffer = (char*)malloc(10000);
+
+	char *push_options_string_args_test_4[1] = { buffer };
+	git_strarray push_options_test_4 = { push_options_string_args_test_4, 1 };
+
+	char *push_options_string_args_test_5[3] = { "\0", "\0", "\0" };
+	git_strarray push_options_test_5 = { push_options_string_args_test_5, 3 };
+
+	for (i = 0; i < 10000; i ++) {
+		buffer[i] = 'a';
+	}
+	buffer[5000] = '\0';
+
+	push_option_test(push_options_test_1, "test_string");
+	push_option_test(push_options_test_2, "test_stringanother arg?");
+	push_option_test(push_options_test_3, "👨🏿‍💻 but can it do unicode? 🇺🇦");
+	push_option_test(push_options_test_4, buffer);
+	push_option_test(push_options_test_5, "\0\0\0");
 }
 
 void test_online_push__delete(void)
@@ -790,9 +889,10 @@ void test_online_push__delete(void)
 	/* Force has no effect for delete. */
 	const char *specs_delete_force[] = { "+:refs/heads/tgt1" };
 
+	git_strarray push_options = { 0 };
 	do_push(specs1, ARRAY_SIZE(specs1),
 		exp_stats1, ARRAY_SIZE(exp_stats1),
-		exp_refs1, ARRAY_SIZE(exp_refs1), 0, 1, 1);
+		exp_refs1, ARRAY_SIZE(exp_refs1), 0, 1, 1, push_options);
 
 	/* When deleting a non-existent branch, the git client sends zero for both
 	 * the old and new commit id.  This should succeed on the server with the
@@ -802,23 +902,25 @@ void test_online_push__delete(void)
 	 */
 	do_push(specs_del_fake, ARRAY_SIZE(specs_del_fake),
 		exp_stats_fake, 1,
-		exp_refs1, ARRAY_SIZE(exp_refs1), 0, 0, 0);
+		exp_refs1, ARRAY_SIZE(exp_refs1), 0, 0, 0, push_options);
+	
 	do_push(specs_del_fake_force, ARRAY_SIZE(specs_del_fake_force),
 		exp_stats_fake, 1,
-		exp_refs1, ARRAY_SIZE(exp_refs1), 0, 0, 0);
+		exp_refs1, ARRAY_SIZE(exp_refs1), 0, 0, 0, push_options);
 
 	/* Delete one of the pushed branches. */
 	do_push(specs_delete, ARRAY_SIZE(specs_delete),
 		exp_stats_delete, ARRAY_SIZE(exp_stats_delete),
-		exp_refs_delete, ARRAY_SIZE(exp_refs_delete), 0, 0, 0);
+		exp_refs_delete, ARRAY_SIZE(exp_refs_delete), 0, 0, 0, push_options);
 
 	/* Re-push branches and retry delete with force. */
 	do_push(specs1, ARRAY_SIZE(specs1),
 		exp_stats1, ARRAY_SIZE(exp_stats1),
-		exp_refs1, ARRAY_SIZE(exp_refs1), 0, 0, 0);
+		exp_refs1, ARRAY_SIZE(exp_refs1), 0, 0, 0, push_options);
+	
 	do_push(specs_delete_force, ARRAY_SIZE(specs_delete_force),
 		exp_stats_delete, ARRAY_SIZE(exp_stats_delete),
-		exp_refs_delete, ARRAY_SIZE(exp_refs_delete), 0, 0, 0);
+		exp_refs_delete, ARRAY_SIZE(exp_refs_delete), 0, 0, 0, push_options);
 }
 
 void test_online_push__bad_refspecs(void)
@@ -845,15 +947,17 @@ void test_online_push__expressions(void)
 	const char *specs_left_expr[] = { "refs/heads/b2~1:refs/heads/b2" };
 
 	/* TODO: Find a more precise way of checking errors than a exit code of -1. */
+	git_strarray push_options = { 0 };
 	do_push(specs_left_expr, ARRAY_SIZE(specs_left_expr),
 		NULL, 0,
-		NULL, 0, -1, 0, 0);
+		NULL, 0, -1, 0, 0, push_options);
 }
 
 void test_online_push__notes(void)
 {
 	git_oid note_oid, *target_oid, expected_oid;
 	git_signature *signature;
+	git_strarray push_options = { 0 };
 	const char *specs[] = { "refs/notes/commits:refs/notes/commits" };
 	push_status exp_stats[] = { { "refs/notes/commits", 1 } };
 	expected_ref exp_refs[] = { { "refs/notes/commits", &expected_oid } };
@@ -869,13 +973,13 @@ void test_online_push__notes(void)
 
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
 
 	/* And make sure to delete the note */
 
 	do_push(specs_del, ARRAY_SIZE(specs_del),
 		exp_stats, 1,
-		NULL, 0, 0, 0, 0);
+		NULL, 0, 0, 0, 0, push_options);
 
 	git_signature_free(signature);
 }
@@ -885,6 +989,7 @@ void test_online_push__configured(void)
 	git_oid note_oid, *target_oid, expected_oid;
 	git_signature *signature;
 	git_remote *old_remote;
+	git_strarray push_options = { 0 };
 	const char *specs[] = { "refs/notes/commits:refs/notes/commits" };
 	push_status exp_stats[] = { { "refs/notes/commits", 1 } };
 	expected_ref exp_refs[] = { { "refs/notes/commits", &expected_oid } };
@@ -905,13 +1010,13 @@ void test_online_push__configured(void)
 
 	do_push(NULL, 0,
 		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1, push_options);
 
 	/* And make sure to delete the note */
 
 	do_push(specs_del, ARRAY_SIZE(specs_del),
 		exp_stats, 1,
-		NULL, 0, 0, 0, 0);
+		NULL, 0, 0, 0, 0, push_options);
 
 	git_signature_free(signature);
 }
