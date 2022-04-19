@@ -545,6 +545,9 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 	else if (caps->side_band)
 		git_str_printf(&str, "%s ", GIT_CAP_SIDE_BAND);
 
+	if (caps->push_arguments)
+		git_str_puts(&str, GIT_CAP_PUSH_ARGUMENTS " ");
+
 	if (caps->include_tag)
 		git_str_puts(&str, GIT_CAP_INCLUDE_TAG " ");
 

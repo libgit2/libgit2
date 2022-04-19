@@ -812,9 +812,14 @@ typedef struct {
 	 * Extra headers for this push operation
 	 */
 	git_strarray custom_headers;
+
+	/**
+	 * Push options to pass to git server hooks
+	 */
+	git_strarray arguments;
 } git_push_options;
 
-#define GIT_PUSH_OPTIONS_VERSION 1
+#define GIT_PUSH_OPTIONS_VERSION 2
 #define GIT_PUSH_OPTIONS_INIT { GIT_PUSH_OPTIONS_VERSION, 1, GIT_REMOTE_CALLBACKS_INIT, GIT_PROXY_OPTIONS_INIT }
 
 /**

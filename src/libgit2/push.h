@@ -42,6 +42,7 @@ struct git_push {
 	/* options */
 	unsigned pb_parallelism;
 	git_remote_callbacks callbacks;
+	git_strarray *arguments;
 };
 
 /**
