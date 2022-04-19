@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  docker-registry: docker.pkg.github.com
+  docker-registry: ghcr.io
   docker-config-path: source/ci/docker
 
 jobs:

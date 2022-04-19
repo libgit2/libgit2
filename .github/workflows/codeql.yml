@@ -6,7 +6,7 @@ on:
     - cron: '21 3 * * 1'
 
 env:
-  docker-registry: docker.pkg.github.com
+  docker-registry: ghcr.io
 
 jobs:
   analyze:
