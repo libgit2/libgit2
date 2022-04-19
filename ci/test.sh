@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -ex
 
 if [ -n "$SKIP_TESTS" ]; then
 	exit 0
@@ -106,7 +106,15 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	echo "Starting git daemon (standard)..."
 	GIT_STANDARD_DIR=`mktemp -d ${TMPDIR}/git_standard.XXXXXXXX`
 	git init --bare "${GIT_STANDARD_DIR}/test.git" >/dev/null
+	git config --file "${GIT_STANDARD_DIR}/test.git/config" receive.advertisePushOptions true
+	for f in $(ls ${SOURCE_DIR}/ci/hooks)
+	do
+		sed "s=%file%=${TMPDIR}/push-option-result-git-daemon=g" "${SOURCE_DIR}/ci/hooks/$f" > "${GIT_STANDARD_DIR}/test.git/hooks/${f}"
+		chmod +x "$GIT_STANDARD_DIR/test.git/hooks/${f}"
+	done
+
 	git daemon --listen=localhost --export-all --enable=receive-pack --base-path="${GIT_STANDARD_DIR}" "${GIT_STANDARD_DIR}" 2>/dev/null &
+
 	GIT_STANDARD_PID=$!
 
 	echo "Starting git daemon (namespace)..."
@@ -134,6 +142,14 @@ if [ -z "$SKIP_NTLM_TESTS" -o -z "$SKIP_ONLINE_TESTS" ]; then
 	echo "Starting HTTP server..."
 	HTTP_DIR=`mktemp -d ${TMPDIR}/http.XXXXXXXX`
 	git init --bare "${HTTP_DIR}/test.git"
+	git config --file "${HTTP_DIR}/test.git/config" receive.advertisePushOptions true
+
+	for f in $(ls ${SOURCE_DIR}/ci/hooks)
+	do
+		sed "s=%file%=${TMPDIR}/push-option-result-git-ntlm=g" "${SOURCE_DIR}/ci/hooks/$f" > "${HTTP_DIR}/test.git/hooks/${f}"
+		chmod +x "$HTTP_DIR/test.git/hooks/${f}"
+	done
+
 	java -jar poxygit.jar --address 127.0.0.1 --port 9000 --credentials foo:baz --quiet "${HTTP_DIR}" &
 	HTTP_PID=$!
 fi
@@ -143,6 +159,14 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	HOME=`mktemp -d ${TMPDIR}/home.XXXXXXXX`
 	SSHD_DIR=`mktemp -d ${TMPDIR}/sshd.XXXXXXXX`
 	git init --bare "${SSHD_DIR}/test.git" >/dev/null
+	git config --file "${SSHD_DIR}/test.git/config" receive.advertisePushOptions true
+
+	for f in $(ls ${SOURCE_DIR}/ci/hooks)
+	do
+		sed "s=%file%=${TMPDIR}/push-option-result-git-ssh=g" "${SOURCE_DIR}/ci/hooks/$f" > "${SSHD_DIR}/test.git/hooks/${f}"
+		chmod +x "$SSHD_DIR/test.git/hooks/${f}"
+	done
+
 	cat >"${SSHD_DIR}/sshd_config" <<-EOF
 	Port 2222
 	ListenAddress 0.0.0.0
@@ -243,8 +267,12 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	echo "Running gitdaemon (standard) tests"
 	echo ""
 
+	if [[ "$RUN_PUSH_OPTONS_TESTS" = "true " ]]; then
+		export GITTEST_PUSH_OPTION_RESULT="${TMPDIR}/push-option-result-git-daemon"
+	fi
 	export GITTEST_REMOTE_URL="git://localhost/test.git"
 	run_test gitdaemon
+	unset GITTEST_PUSH_OPTION_RESULT
 	unset GITTEST_REMOTE_URL
 
 	echo ""
@@ -289,10 +317,14 @@ if [ -z "$SKIP_NTLM_TESTS" ]; then
 	echo "Running NTLM tests (IIS emulation)"
 	echo ""
 
+	if [[ "$RUN_PUSH_OPTONS_TESTS" = "true " ]]; then
+		export GITTEST_PUSH_OPTION_RESULT="${TMPDIR}/push-option-result-git-ntlm"
+	fi
 	export GITTEST_REMOTE_URL="http://localhost:9000/ntlm/test.git"
 	export GITTEST_REMOTE_USER="foo"
 	export GITTEST_REMOTE_PASS="baz"
 	run_test auth_clone_and_push
+	unset GITTEST_PUSH_OPTION_RESULT
 	unset GITTEST_REMOTE_URL
 	unset GITTEST_REMOTE_USER
 	unset GITTEST_REMOTE_PASS
@@ -301,10 +333,14 @@ if [ -z "$SKIP_NTLM_TESTS" ]; then
 	echo "Running NTLM tests (Apache emulation)"
 	echo ""
 
+	if [[ "$RUN_PUSH_OPTONS_TESTS" == "true " ]]; then
+		export GITTEST_PUSH_OPTION_RESULT="${TMPDIR}/push-option-result-git-ntlm"
+	fi
 	export GITTEST_REMOTE_URL="http://localhost:9000/broken-ntlm/test.git"
 	export GITTEST_REMOTE_USER="foo"
 	export GITTEST_REMOTE_PASS="baz"
 	run_test auth_clone_and_push
+	unset GITTEST_PUSH_OPTION_RESULT
 	unset GITTEST_REMOTE_URL
 	unset GITTEST_REMOTE_USER
 	unset GITTEST_REMOTE_PASS
@@ -354,16 +390,24 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	echo "Running ssh tests"
 	echo ""
 
+	if [[ "$RUN_PUSH_OPTONS_TESTS" == "true " ]]; then
+		export GITTEST_PUSH_OPTION_RESULT="${TMPDIR}/push-option-result-ssh"
+	fi
 	export GITTEST_REMOTE_URL="ssh://localhost:2222/$SSHD_DIR/test.git"
 	run_test ssh
+	unset GITTEST_PUSH_OPTION_RESULT
 	unset GITTEST_REMOTE_URL
 
 	echo ""
 	echo "Running ssh tests (scp-style paths)"
 	echo ""
 
+	if [[ "$RUN_PUSH_OPTONS_TESTS" == "true " ]]; then
+		export GITTEST_PUSH_OPTION_RESULT="${TMPDIR}/push-option-result-ssh"
+	fi
 	export GITTEST_REMOTE_URL="[localhost:2222]:$SSHD_DIR/test.git"
 	run_test ssh
+	unset GITTEST_PUSH_OPTION_RESULT
 	unset GITTEST_REMOTE_URL
 
 	unset GITTEST_REMOTE_USER
