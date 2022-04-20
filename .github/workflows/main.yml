@@ -237,10 +237,12 @@ jobs:
         export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
 
         if [ -n "${{ matrix.platform.container.name }}" ]; then
+          mkdir build
           docker run \
               --rm \
               --user libgit2:libgit2 \
               -v "$(pwd)/source:/home/libgit2/source" \
+              -v "$(pwd)/build:/home/libgit2/build" \
               -w /home/libgit2 \
               -e ASAN_SYMBOLIZER_PATH \
               -e CC \
@@ -255,9 +257,10 @@ jobs:
               -e TSAN_OPTIONS \
               -e UBSAN_OPTIONS \
               ${{ env.docker-registry-container-sha }} \
-              /bin/bash -c "mkdir build && cd build && ../source/ci/build.sh && ../source/ci/test.sh"
+              /bin/bash -c "cd build && ../source/ci/build.sh && ../source/ci/test.sh"
         else
-          mkdir build && cd build
+          mkdir build
+          cd build
           ../source/ci/build.sh
           ../source/ci/test.sh
         fi
