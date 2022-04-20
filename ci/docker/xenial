@@ -60,7 +60,13 @@ RUN cd /tmp && \
     rm -rf valgrind-3.15.0
 
 FROM valgrind AS adduser
-RUN useradd --shell /bin/bash libgit2 --create-home
+ARG UID=""
+ARG GID=""
+RUN if [ "${UID}" != "" ]; then USER_ARG="--uid ${UID}"; fi && \
+    if [ "${GID}" != "" ]; then GROUP_ARG="--gid ${GID}"; fi && \
+    groupadd ${GROUP_ARG} libgit2 && \
+    useradd ${USER_ARG} --gid libgit2 --shell /bin/bash --create-home libgit2
+
 
 FROM adduser AS configure
 RUN mkdir /var/run/sshd

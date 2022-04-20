@@ -69,7 +69,7 @@ jobs:
         if [ "${{ matrix.container.base }}" != "" ]; then
           BASE_ARG="--build-arg BASE=${{ matrix.container.base }}"
         fi
-        docker build -t ${{ env.docker-registry-container-sha }} ${BASE_ARG} -f ${{ env.dockerfile }} .
+        docker build -t ${{ env.docker-registry-container-sha }} --build-arg UID=$(id -u) --build-arg GID=$(id -g) ${BASE_ARG} -f ${{ env.dockerfile }} .
         docker tag ${{ env.docker-registry-container-sha }} ${{ env.docker-registry-container-latest }}
         docker push ${{ env.docker-registry-container-sha }}
         docker push ${{ env.docker-registry-container-latest }}
