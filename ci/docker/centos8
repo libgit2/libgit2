@@ -1,6 +1,10 @@
 ARG BASE=centos:8
 
-FROM ${BASE} AS yum
+FROM ${BASE} AS stream
+RUN dnf -y --disablerepo '*' --enablerepo=extras swap centos-linux-repos centos-stream-repos && \
+    dnf -y distro-sync
+
+FROM stream AS yum
 RUN yum install -y \
 	which \
 	bzip2 \
