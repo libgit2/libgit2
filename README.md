@@ -407,6 +407,8 @@ Here are the bindings to libgit2 that are currently available:
     * SwiftGit2 <https://github.com/SwiftGit2/SwiftGit2>
 * Vala
     * libgit2.vapi <https://github.com/apmasell/vapis/blob/master/libgit2.vapi>
+* Zig
+    * zig-libgit2 <https://github.com/leecannon/zig-libgit2>
 
 If you start another language binding to libgit2, please let us know so
 we can add it to the list.
