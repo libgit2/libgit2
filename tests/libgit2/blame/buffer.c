@@ -427,9 +427,10 @@ int blame_progress(const git_oid *suspect, void *payload)
 	cl_assert_equal_i(3.1416, *((double*)payload));
 
 	/* abort after the third suspect */
-	if (counter < 3)
-		return 0;
-	return -123;
+	if (counter >= 3)
+		return -123;
+
+	return 0;
 }
 
 /*!
