@@ -432,6 +432,10 @@ int blame_progress(const git_oid *suspect, void *payload)
 	return -123;
 }
 
+/*!
+ * \brief test_blame_buffer__abort_loading_blame
+ * Abort loading blame after a few suspects
+ */
 void test_blame_buffer__abort_loading_blame(void)
 {
 	git_blame_options opts;
