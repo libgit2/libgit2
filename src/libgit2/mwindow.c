@@ -240,9 +240,7 @@ static bool git_mwindow_scan_recently_used(
 		 * store it in the output parameter. If lru_window is NULL,
 		 * it's the first loop, so store it as well.
 		 */
-		if (!lru_window ||
-				(comparison_sign == GIT_MWINDOW__LRU && lru_window->last_used > w->last_used) ||
-				(comparison_sign == GIT_MWINDOW__MRU && lru_window->last_used < w->last_used)) {
+		if (!lru_window || (comparison_sign * w->last_used) > lru_window->last_used) {
 			lru_window = w;
 			lru_last = w_last;
 			found = true;
