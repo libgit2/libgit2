@@ -399,7 +399,7 @@ void test_refs_revparse__date(void)
 	 * a65fedf HEAD@{1335806603 -0900}: commit:
 	 * be3563a HEAD@{1335806563 -0700}: clone: from /Users/ben/src/libgit2/tests/resour
 	 */
-	test_object("HEAD@{10 years ago}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	test_object("HEAD@{11 years ago}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 
 	test_object("HEAD@{1 second}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("HEAD@{1 second ago}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
