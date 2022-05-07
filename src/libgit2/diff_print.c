@@ -422,10 +422,19 @@ int git_diff_delta__format_file_header(
 	if (!id_strlen)
 		id_strlen = GIT_ABBREV_DEFAULT;
 
+	/*
+	 Additional layer of protection against NULL pathnames in addition to the
+	 fix in 'patch_parse.c:check_filenames()' that prevents any of the sides
+	 from having a NULL pathname.
+	 */
 	if ((error = diff_delta_format_path(
-			&old_path, oldpfx, delta->old_file.path)) < 0 ||
+			&old_path,
+			oldpfx,
+			!delta->old_file.path ? delta->new_file.path : delta->old_file.path)) < 0 ||
 		(error = diff_delta_format_path(
-			&new_path, newpfx, delta->new_file.path)) < 0)
+			&new_path,
+			newpfx,
+			!delta->new_file.path ? delta->old_file.path : delta->new_file.path)) < 0)
 		goto done;
 
 	git_str_clear(out);

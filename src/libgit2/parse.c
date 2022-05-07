@@ -31,6 +31,30 @@ void git_parse_ctx_clear(git_parse_ctx *ctx)
 	ctx->content = "";
 }
 
+long git_parse_unescaped_char_offset_in_line(
+	git_parse_ctx *ctx,
+	char char_to_search_for)
+{
+	return git_parse_unescaped_char_offset_in_str(
+		ctx->line,
+		ctx->line_len,
+		char_to_search_for);
+}
+
+long git_parse_unescaped_char_offset_in_str(const char *base, size_t len, char char_to_search_for)
+{
+	bool after_escaping_backslash = false;
+	long offset;
+
+	for (offset = 0; (size_t)offset < len; offset++) {
+		if (!after_escaping_backslash && base[offset] == char_to_search_for) {
+			return offset;
+		}
+		after_escaping_backslash = (!after_escaping_backslash && base[offset] == '\\');
+	}
+	return -1;
+}
+
 void git_parse_advance_line(git_parse_ctx *ctx)
 {
 	ctx->line += ctx->line_len;
