@@ -422,7 +422,7 @@ GIT_EXTERN(int) git_remote_stop(git_remote *remote);
  * @param remote the remote to disconnect from
  * @return 0 on success, or an error code
  */
-GIT_EXTERN(int) git_remote_disconnect(git_remote *remote);
+GIT_EXTERN(int) git_remote_disconnect(git_remote *remote, const git_remote_callbacks *cb);
 
 /**
  * Free the memory associated with a remote
@@ -644,6 +644,17 @@ struct git_remote_callbacks {
 	 */
 	git_url_resolve_cb resolve_url;
 #endif
+
+
+	/**
+	 * Called after successful connection to `remote`.
+	 */
+    int GIT_CALLBACK(about_to_connect)(git_remote *remote, void *payload);
+
+	/**
+	 * Called before disconnection from `remote`.
+	 */
+    int GIT_CALLBACK(about_to_disconnect)(git_remote *remote, void *payload);
 };
 
 #define GIT_REMOTE_CALLBACKS_VERSION 1
