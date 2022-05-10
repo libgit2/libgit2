@@ -97,6 +97,39 @@ void test_network_remote_remotes__remote_ready(void)
 	git_str_dispose(&url);
 }
 
+static int connected_callback_call_counter = 0;
+static int about_to_disconnect_callback_call_counter = 0;
+static void connected_callback(git_remote *remote, void *payload)
+{
+    connected_callback_call_counter ++;
+    cl_assert_equal_p(remote, _remote);
+    cl_assert_equal_s(payload, "payload");
+}
+
+static void about_to_disconnect_callback(git_remote *remote, void *payload)
+{
+    about_to_disconnect_callback_call_counter ++;
+    cl_assert_equal_p(remote, _remote);
+    cl_assert_equal_s(payload, "payload");
+}
+
+void test_network_remote_remotes__connected_disconnected(void)
+{
+    git_remote_connect_options opts = GIT_REMOTE_CONNECT_OPTIONS_INIT;
+    opts.callbacks.connected = connected_callback;
+    opts.callbacks.about_to_disconnect = about_to_disconnect_callback;
+    opts.callbacks.payload = "payload";
+
+    cl_assert_equal_s(git_remote_name(_remote), "test");
+    cl_assert_equal_s(git_remote_url(_remote), "git://github.com/libgit2/libgit2");
+    cl_assert(git_remote_pushurl(_remote) == NULL);
+
+    cl_git_pass(git_remote_connect_ext(_remote, GIT_DIRECTION_FETCH, &opts));
+
+    cl_assert_equal_i(connected_callback_call_counter, 1); // check that called only once
+    cl_assert_equal_i(about_to_disconnect_callback_call_counter, 1); // check that called only once
+}
+
 #ifndef GIT_DEPRECATE_HARD
 static int urlresolve_callback(git_buf *url_resolved, const char *url, int direction, void *payload)
 {
