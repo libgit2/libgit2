@@ -483,9 +483,11 @@ static void about_to_disconnect_callback(git_remote *remote, void *payload)
 void test_submodule_update__abort_update(void)
 {
     git_submodule *sm;
+	char* payload = "payload";
     git_submodule_update_options update_options = GIT_SUBMODULE_UPDATE_OPTIONS_INIT;
     update_options.fetch_opts.callbacks.connected = connected_callback;
     update_options.fetch_opts.callbacks.about_to_disconnect = about_to_disconnect_callback;
+	update_options.fetch_opts.callbacks.payload = payload;
     unsigned int submodule_status;
 
     g_repo = setup_fixture_submodule_simple();
