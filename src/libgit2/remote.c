@@ -1391,7 +1391,7 @@ int git_remote_fetch(
 	error = git_remote__download(remote, refspecs, opts);
 
 	/* We don't need to be connected anymore */
-	git_remote_disconnect(remote, &opts->callbacks);
+    git_remote_disconnect(remote, opts ? &opts->callbacks : NULL);
 
 	/* If the download failed, return the error */
 	if (error != 0)
