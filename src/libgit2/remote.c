@@ -963,8 +963,8 @@ int git_remote_connect_ext(
 	if ((error = t->connect(t, url.ptr, direction, &opts)) != 0)
 		goto on_error;
 
-    if (given_opts && given_opts->callbacks.about_to_connect)
-        given_opts->callbacks.about_to_connect(remote, given_opts->callbacks.payload);
+    if (given_opts && given_opts->callbacks.connected)
+        given_opts->callbacks.connected(remote, given_opts->callbacks.payload);
 
 	remote->transport = t;
 

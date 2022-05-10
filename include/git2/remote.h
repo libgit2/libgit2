@@ -564,6 +564,23 @@ typedef int GIT_CALLBACK(git_url_resolve_cb)(git_buf *url_resolved, const char *
 typedef int GIT_CALLBACK(git_remote_ready_cb)(git_remote *remote, int direction, void *payload);
 
 /**
+ * Called after successful connection to `remote`.
+ *
+ * @param remote The remote to be connected
+ * @param payload Payload provided by caller
+ * @return 0 on success, or an error. The return value of the function is ignored.
+ */
+typedef int GIT_CALLBACK(git_remote_connected_cb)(git_remote *remote, void *payload);
+
+/**
+ * Called before disconnection from `remote`.
+ * @param remote The remote to be connected
+ * @param payload Payload provided by caller
+ * @return 0 on success, or an error. The return value of the function is ignored.
+ */
+typedef int GIT_CALLBACK(git_remote_about_to_disconnect_cb)(git_remote *remote, void *payload);
+
+/**
  * The callback settings structure
  *
  * Set the callbacks to be called by the remote when informing the user
@@ -696,15 +713,15 @@ struct git_remote_callbacks {
 		git_refspec *spec,
 		void *data);
 
-	/**
-	 * Called after successful connection to `remote`.
-	 */
-    int GIT_CALLBACK(about_to_connect)(git_remote *remote, void *payload);
+    /**
+     * Called after successful connection to `remote`.
+     */
+    git_remote_connected_cb connected;
 
-	/**
-	 * Called before disconnection from `remote`.
-	 */
-    int GIT_CALLBACK(about_to_disconnect)(git_remote *remote, void *payload);
+    /**
+     * Called before disconnection from `remote`.
+     */
+    git_remote_about_to_disconnect_cb about_to_disconnect;
 };
 
 /** Current version for the `git_remote_callbacks_options` structure */
