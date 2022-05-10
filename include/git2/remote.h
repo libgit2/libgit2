@@ -568,17 +568,15 @@ typedef int GIT_CALLBACK(git_remote_ready_cb)(git_remote *remote, int direction,
  *
  * @param remote The remote to be connected
  * @param payload Payload provided by caller
- * @return 0 on success, or an error. The return value of the function is ignored.
  */
-typedef int GIT_CALLBACK(git_remote_connected_cb)(git_remote *remote, void *payload);
+typedef void GIT_CALLBACK(git_remote_connected_cb)(git_remote *remote, void *payload);
 
 /**
  * Called before disconnection from `remote`.
  * @param remote The remote to be connected
  * @param payload Payload provided by caller
- * @return 0 on success, or an error. The return value of the function is ignored.
  */
-typedef int GIT_CALLBACK(git_remote_about_to_disconnect_cb)(git_remote *remote, void *payload);
+typedef void GIT_CALLBACK(git_remote_about_to_disconnect_cb)(git_remote *remote, void *payload);
 
 /**
  * The callback settings structure
