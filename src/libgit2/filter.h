@@ -20,6 +20,7 @@ typedef struct {
 	git_filter_options options;
 	git_attr_session *attr_session;
 	git_str *temp_buf;
+	git_strarray *disabled_filters;
 } git_filter_session;
 
 #define GIT_FILTER_SESSION_INIT {GIT_FILTER_OPTIONS_INIT, 0}

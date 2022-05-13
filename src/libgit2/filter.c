@@ -516,6 +516,8 @@ int git_filter_list__load(
 	git_filter_session *filter_session)
 {
 	int error = 0;
+	int i;
+	int disabled_filter_found;
 	git_filter_list *fl = NULL;
 	git_filter_source src = { 0 };
 	git_filter_entry *fe;
@@ -542,6 +544,19 @@ int git_filter_list__load(
 
 		if (!fdef || !fdef->filter)
 			continue;
+
+		if (filter_session->disabled_filters) {
+			disabled_filter_found = 0;
+			for (i = 0; i < filter_session->disabled_filters->count; ++i) {
+				char *filter = filter_session->disabled_filters->strings[i];
+				if (!strcmp(filter, fdef->filter_name)) {
+					disabled_filter_found = 1;
+					break;
+				}
+			}
+			if (disabled_filter_found)
+				continue;
+		}
 
 		if (fdef->nattrs > 0) {
 			error = filter_list_check_attributes(

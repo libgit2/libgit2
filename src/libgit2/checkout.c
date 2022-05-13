@@ -1538,6 +1538,7 @@ static int blob_content_to_file(
 
 	filter_session.attr_session = &data->attr_session;
 	filter_session.temp_buf = &data->tmp;
+	filter_session.disabled_filters = &data->opts.disabled_filters;
 
 	if (!data->opts.disable_filters &&
 		(error = git_filter_list__load(
@@ -2119,6 +2120,7 @@ static int checkout_write_merge(
 
 		filter_session.attr_session = &data->attr_session;
 		filter_session.temp_buf = &data->tmp;
+		filter_session.disabled_filters = &data->opts.disabled_filters;
 
 		if ((error = git_filter_list__load(
 				&fl, data->repo, NULL, result.path,

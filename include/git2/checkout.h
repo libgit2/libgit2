@@ -342,6 +342,8 @@ typedef struct git_checkout_options {
 
 	/** Payload passed to perfdata_cb */
 	void *perfdata_payload;
+
+	git_strarray disabled_filters; /**< don’t apply these specific filters */
 } git_checkout_options;
 
 #define GIT_CHECKOUT_OPTIONS_VERSION 1
