@@ -902,6 +902,16 @@ static int buffered_stream_close(git_writestream *s)
 
 	GIT_ASSERT_ARG(buffered_stream);
 
+#ifndef GIT_DEPRECATE_HARD
+	if(buffered_stream->write_fn == NULL) {
+		error = buffered_stream->legacy_write_fn(
+			buffered_stream->filter,
+			buffered_stream->payload,
+			(git_buf *)buffered_stream->output,
+			(git_buf *)&buffered_stream->input,
+			buffered_stream->source);
+	} else
+#endif
 	error = buffered_stream->write_fn(
 		buffered_stream->filter,
 		buffered_stream->payload,
