@@ -279,9 +279,23 @@ jobs:
       shell: bash
     - name: Upload test results
       uses: actions/upload-artifact@v3
+      if: success() || failure()
       with:
-        name: test_results_${{ matrix.platform.id }}
+        name: test-results-${{ matrix.platform.id }}
         path: build/results_*.xml
+
+  test_results:
+    name: Test results
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download test results
+      uses: actions/download-artifact@v3
+    - name: Generate test summary
+      uses: test-summary/action@v1
+      with:
+        paths: 'test-results-*/*.xml'
+
 
   # Generate documentation using docurium.  We'll upload the documentation
   # as a build artifact so that it can be reviewed as part of a pull
@@ -291,6 +305,7 @@ jobs:
   documentation:
     name: Generate documentation
     needs: [ containers ]
+    if: success() || failure()
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
