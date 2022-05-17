@@ -240,7 +240,7 @@ jobs:
           mkdir build
           docker run \
               --rm \
-              --user libgit2:libgit2 \
+              --user "$(id -u):$(id -g)" \
               -v "$(pwd)/source:/home/libgit2/source" \
               -v "$(pwd)/build:/home/libgit2/build" \
               -w /home/libgit2 \
