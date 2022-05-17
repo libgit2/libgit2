@@ -85,6 +85,7 @@ jobs:
       matrix:
         platform:
         - name: "Linux (Xenial, GCC, OpenSSL)"
+          id: xenial-gcc-openssl
           container:
             name: xenial
           env:
@@ -93,6 +94,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
           os: ubuntu-latest
         - name: Linux (Xenial, GCC, mbedTLS)
+          id: xenial-gcc-mbedtls
           container:
             name: xenial
           env:
@@ -101,6 +103,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
           os: ubuntu-latest
         - name: "Linux (Xenial, Clang, OpenSSL)"
+          id: xenial-clang-openssl
           container:
             name: xenial
           env:
@@ -109,6 +112,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
           os: ubuntu-latest
         - name: "Linux (Xenial, Clang, mbedTLS)"
+          id: xenial-clang-mbedtls
           container:
             name: xenial
           env:
@@ -117,6 +121,7 @@ jobs:
             CMAKE_GENERATOR: Ninja
           os: ubuntu-latest
         - name: "Linux (MemorySanitizer)"
+          id: memorysanitizer
           container:
             name: focal
           env:
@@ -130,6 +135,7 @@ jobs:
             UBSAN_OPTIONS: print_stacktrace=1
           os: ubuntu-latest
         - name: "Linux (UndefinedBehaviorSanitizer)"
+          id: ubsanitizer
           container:
             name: focal
           env:
@@ -143,6 +149,7 @@ jobs:
             UBSAN_OPTIONS: print_stacktrace=1
           os: ubuntu-latest
         - name: "Linux (ThreadSanitizer)"
+          id: threadsanitizer
           container:
             name: focal
           env:
@@ -157,6 +164,7 @@ jobs:
             TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
           os: ubuntu-latest
         - name: "macOS"
+          id: macos
           os: macos-10.15
           env:
             CC: clang
@@ -166,6 +174,7 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
           setup-script: osx
         - name: "Windows (amd64, Visual Studio)"
+          id: windows-amd64-vs
           os: windows-2019
           env:
             ARCH: amd64
@@ -174,6 +183,7 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (x86, Visual Studio)"
+          id: windows-x86-vs
           os: windows-2019
           env:
             ARCH: x86
@@ -182,6 +192,7 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (amd64, mingw)"
+          id: windows-amd64-mingw
           os: windows-2019
           setup-script: mingw
           env:
@@ -193,6 +204,7 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (x86, mingw)"
+          id: windows-x86-mingw
           os: windows-2019
           setup-script: mingw
           env:
@@ -265,6 +277,11 @@ jobs:
           ../source/ci/test.sh
         fi
       shell: bash
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test_results_${{ matrix.platform.id }}
+        path: build/results_*.xml
 
   # Generate documentation using docurium.  We'll upload the documentation
   # as a build artifact so that it can be reviewed as part of a pull
