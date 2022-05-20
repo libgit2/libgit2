@@ -432,7 +432,7 @@ int git_midx_entry_find(
 	object_offset = idx->object_offsets + pos * 8;
 	offset = ntohl(*((uint32_t *)(object_offset + 4)));
 	if (idx->object_large_offsets && offset & 0x80000000) {
-		uint32_t object_large_offsets_pos = offset & 0x7fffffff;
+		uint32_t object_large_offsets_pos = (uint32_t) (offset ^ 0x80000000);
 		const unsigned char *object_large_offsets_index = idx->object_large_offsets;
 
 		/* Make sure we're not being sent out of bounds */
