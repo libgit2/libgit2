@@ -1634,7 +1634,7 @@ static int refdb_fs_backend__prune_refs(
 
 		error = git_futils_rmdir_r(ref_name + commonlen,
 			git_str_cstr(&base_path),
-			GIT_RMDIR_EMPTY_PARENTS | GIT_RMDIR_SKIP_ROOT);
+			GIT_RMDIR_EMPTY_PARENTS | GIT_RMDIR_SKIP_ROOT | GIT_RMDIR_REMOVE_FILES);
 
 		if (error == GIT_ENOTFOUND)
 			error = 0;

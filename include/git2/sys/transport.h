@@ -8,6 +8,10 @@
 #ifndef INCLUDE_sys_git_transport_h
 #define INCLUDE_sys_git_transport_h
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "git2/net.h"
 #include "git2/remote.h"
 #include "git2/transport.h"
@@ -388,11 +392,11 @@ typedef struct git_smart_subtransport_definition {
  * @param owner The smart transport to own this subtransport
  * @return 0 or an error code
  */
+
 GIT_EXTERN(int) git_smart_subtransport_http(
 	git_smart_subtransport **out,
 	git_transport *owner,
 	void *param);
-
 /**
  * Create an instance of the git subtransport.
  *
@@ -419,4 +423,8 @@ GIT_EXTERN(int) git_smart_subtransport_ssh(
 
 /** @} */
 GIT_END_DECL
+
+#ifdef __cplusplus
+}
+#endif
 #endif
