@@ -392,6 +392,8 @@ Here are the bindings to libgit2 that are currently available:
     * parrot-libgit2 <https://github.com/letolabs/parrot-libgit2>
 * Perl
     * Git-Raw <https://github.com/jacquesg/p5-Git-Raw>
+* Pharo Smalltalk
+    * libgit2-pharo-bindings <https://github.com/pharo-vcs/libgit2-pharo-bindings>
 * PHP
     * php-git <https://github.com/libgit2/php-git>
 * Python
