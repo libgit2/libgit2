@@ -24,20 +24,23 @@ static char *bye_text = "bye world\n";
 void test_object_raw_hash__hash_by_blocks(void)
 {
 	git_hash_ctx ctx;
+	unsigned char hash[GIT_HASH_SHA1_SIZE];
 	git_oid id1, id2;
 
 	cl_git_pass(git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA1));
 
 	/* should already be init'd */
 	cl_git_pass(git_hash_update(&ctx, hello_text, strlen(hello_text)));
-	cl_git_pass(git_hash_final(id2.id, &ctx));
+	cl_git_pass(git_hash_final(hash, &ctx));
+	cl_git_pass(git_oid_fromraw(&id2, hash));
 	cl_git_pass(git_oid_fromstr(&id1, hello_id));
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 
 	/* reinit should permit reuse */
 	cl_git_pass(git_hash_init(&ctx));
 	cl_git_pass(git_hash_update(&ctx, bye_text, strlen(bye_text)));
-	cl_git_pass(git_hash_final(id2.id, &ctx));
+	cl_git_pass(git_hash_final(hash, &ctx));
+	cl_git_pass(git_oid_fromraw(&id2, hash));
 	cl_git_pass(git_oid_fromstr(&id1, bye_id));
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 
@@ -47,9 +50,11 @@ void test_object_raw_hash__hash_by_blocks(void)
 void test_object_raw_hash__hash_buffer_in_single_call(void)
 {
 	git_oid id1, id2;
+	unsigned char hash[GIT_HASH_SHA1_SIZE];
 
 	cl_git_pass(git_oid_fromstr(&id1, hello_id));
-	git_hash_buf(id2.id, hello_text, strlen(hello_text), GIT_HASH_ALGORITHM_SHA1);
+	cl_git_pass(git_hash_buf(hash, hello_text, strlen(hello_text), GIT_HASH_ALGORITHM_SHA1));
+	cl_git_pass(git_oid_fromraw(&id2, hash));
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
 

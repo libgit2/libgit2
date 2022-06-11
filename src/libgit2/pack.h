@@ -19,6 +19,7 @@
 #include "offmap.h"
 #include "oidmap.h"
 #include "zstream.h"
+#include "oid.h"
 
 /**
  * Function type for callbacks from git_pack_foreach_entry_offset.
@@ -104,7 +105,7 @@ struct git_pack_file {
 	git_time_t mtime;
 	unsigned pack_local:1, pack_keep:1, has_cache:1;
 	git_oidmap *idx_cache;
-	git_oid **oids;
+	unsigned char **oids;
 
 	git_pack_cache bases; /* delta base cache */
 

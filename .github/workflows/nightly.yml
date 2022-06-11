@@ -7,7 +7,7 @@ on:
   - cron: '15 1 * * *'
 
 env:
-  docker-registry: docker.pkg.github.com
+  docker-registry: ghcr.io
   docker-config-path: source/ci/docker
 
 jobs:

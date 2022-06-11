@@ -392,6 +392,8 @@ Here are the bindings to libgit2 that are currently available:
     * parrot-libgit2 <https://github.com/letolabs/parrot-libgit2>
 * Perl
     * Git-Raw <https://github.com/jacquesg/p5-Git-Raw>
+* Pharo Smalltalk
+    * libgit2-pharo-bindings <https://github.com/pharo-vcs/libgit2-pharo-bindings>
 * PHP
     * php-git <https://github.com/libgit2/php-git>
 * Python
@@ -405,6 +407,8 @@ Here are the bindings to libgit2 that are currently available:
     * git2-rs <https://github.com/rust-lang/git2-rs>
 * Swift
     * SwiftGit2 <https://github.com/SwiftGit2/SwiftGit2>
+* Tcl
+    * lg2 <https://github.com/apnadkarni/tcl-libgit2>
 * Vala
     * libgit2.vapi <https://github.com/apmasell/vapis/blob/master/libgit2.vapi>
 

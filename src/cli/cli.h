@@ -15,5 +15,6 @@
 #include "error.h"
 #include "opt.h"
 #include "opt_usage.h"
+#include "sighandler.h"
 
 #endif /* CLI_cli_h__ */
