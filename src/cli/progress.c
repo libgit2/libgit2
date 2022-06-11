@@ -295,7 +295,7 @@ void cli_progress_checkout(
 	}
 
 	progress_printf(progress, false,
-		"Checking out files: %3d%% (%lu/%lu)%s\r",
+		"Checking out files: %3d%% (%" PRIuZ "/%" PRIuZ ")%s\r",
 		percent(completed_steps, total_steps),
 		completed_steps, total_steps,
 		done ? ", done." : "");
