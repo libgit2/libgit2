@@ -37,8 +37,12 @@ DOCKER_REGISTRY_CONTAINER_SHA="${DOCKER_REGISTRY_CONTAINER}:${DOCKER_SHA}"
 echo "docker-registry-container-sha=${DOCKER_REGISTRY_CONTAINER_SHA}" >> $GITHUB_ENV
 echo "docker-registry-container-latest=${DOCKER_REGISTRY_CONTAINER}:latest" >> $GITHUB_ENV
 
+echo "::: logging in to ${DOCKER_REGISTRY} as ${GITHUB_ACTOR}"
+
 exists="true"
 docker login https://${DOCKER_REGISTRY} -u ${GITHUB_ACTOR} -p ${GITHUB_TOKEN} || exists="false"
+
+echo "::: pulling ${DOCKER_REGISTRY_CONTAINER_SHA}"
 
 if [ "${exists}" != "false" ]; then
 	docker pull ${DOCKER_REGISTRY_CONTAINER_SHA} || exists="false"
