@@ -280,7 +280,7 @@ GIT_EXTERN(int) git_transport_smart_proxy_options(git_proxy_options *out, git_tr
  * @param out options struct to fill
  * @param transport the transport to extract the data from.
  */
-GIT_EXTERN(int) git_transport_smart_remote_connect_options(
+GIT_EXTERN(int) git_transport_remote_connect_options(
 		git_remote_connect_options *out,
 		git_transport *transport);
 

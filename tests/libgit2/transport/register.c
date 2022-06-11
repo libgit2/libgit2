@@ -134,7 +134,7 @@ static int custom_subtransport__action(
 	GIT_UNUSED(url);
 	GIT_UNUSED(action);
 
-	ret = git_transport_smart_remote_connect_options(&opts, t->owner);
+	ret = git_transport_remote_connect_options(&opts, t->owner);
 
 	/* increase the counter once if this function was called at all and once more if the URL matches. */
 	(*t->called)++;

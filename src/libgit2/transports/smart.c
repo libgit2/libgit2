@@ -425,7 +425,7 @@ int git_transport_smart_credentials(git_credential **out, git_transport *transpo
 	return connect_opts->callbacks.credentials(out, t->url, user, methods, connect_opts->callbacks.payload);
 }
 
-int git_transport_smart_remote_connect_options(
+int git_transport_remote_connect_options(
 		git_remote_connect_options *out,
 		git_transport *transport)
 {

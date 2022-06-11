@@ -30,6 +30,8 @@ typedef enum {
 
 /**
  * Disposes libgit2-initialized fields from a git_remote_connect_options.
+ * This should only be used for git_remote_connect_options returned by
+ * git_transport_remote_connect_options.
  *
  * Note that this does not free the `git_remote_connect_options` itself, just
  * the memory pointed to by it.
