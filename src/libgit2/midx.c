@@ -179,7 +179,6 @@ int git_midx_parse(
 	uint32_t i;
 	off64_t last_chunk_offset, chunk_offset, trailer_offset;
 	size_t checksum_size;
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
 	int error;
 	struct git_midx_chunk chunk_packfile_names = {0},
 					 chunk_oid_fanout = {0},
@@ -216,11 +215,6 @@ int git_midx_parse(
 	if (trailer_offset < last_chunk_offset)
 		return midx_error("wrong index size");
 	memcpy(idx->checksum, data + trailer_offset, checksum_size);
-
-	if (git_hash_buf(checksum, data, (size_t)trailer_offset, GIT_HASH_ALGORITHM_SHA1) < 0)
-		return midx_error("could not calculate signature");
-	if (memcmp(checksum, idx->checksum, checksum_size) != 0)
-		return midx_error("index signature mismatch");
 
 	chunk_hdr = data + sizeof(struct git_midx_header);
 	last_chunk = NULL;
