@@ -186,13 +186,16 @@ int git_mwindow_free_all(git_mwindow_file *mwf)
 }
 
 /*
- * Check if a window 'win' contains the address 'offset'
+ * Check if a window 'win' contains both the address 'offset' and 'extra'.
+ *
+ * 'extra' is the size of the hash we're using as we always want to make sure
+ * that it's contained.
  */
-int git_mwindow_contains(git_mwindow *win, off64_t offset)
+int git_mwindow_contains(git_mwindow *win, off64_t offset, off64_t extra)
 {
 	off64_t win_off = win->offset;
 	return win_off <= offset
-		&& offset <= (off64_t)(win_off + win->window_map.len);
+		&& (offset + extra) <= (off64_t)(win_off + win->window_map.len);
 }
 
 #define GIT_MWINDOW__LRU -1
@@ -237,9 +240,7 @@ static bool git_mwindow_scan_recently_used(
 		 * store it in the output parameter. If lru_window is NULL,
 		 * it's the first loop, so store it as well.
 		 */
-		if (!lru_window ||
-				(comparison_sign == GIT_MWINDOW__LRU && lru_window->last_used > w->last_used) ||
-				(comparison_sign == GIT_MWINDOW__MRU && lru_window->last_used < w->last_used)) {
+		if (!lru_window || (comparison_sign * w->last_used) > lru_window->last_used) {
 			lru_window = w;
 			lru_last = w_last;
 			found = true;
@@ -406,14 +407,13 @@ unsigned char *git_mwindow_open(
 		return NULL;
 	}
 
-	if (!w || !(git_mwindow_contains(w, offset) && git_mwindow_contains(w, offset + extra))) {
+	if (!w || !(git_mwindow_contains(w, offset, extra))) {
 		if (w) {
 			w->inuse_cnt--;
 		}
 
 		for (w = mwf->windows; w; w = w->next) {
-			if (git_mwindow_contains(w, offset) &&
-				git_mwindow_contains(w, offset + extra))
+			if (git_mwindow_contains(w, offset, extra))
 				break;
 		}
 
