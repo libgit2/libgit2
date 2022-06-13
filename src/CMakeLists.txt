@@ -68,6 +68,10 @@ check_prototype_definition(qsort_r
 
 check_function_exists(qsort_s GIT_QSORT_S)
 
+# random / entropy data
+
+check_function_exists(getentropy GIT_RAND_GETENTROPY)
+
 # determine architecture of the machine
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
