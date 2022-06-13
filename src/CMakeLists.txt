@@ -120,8 +120,8 @@ if(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Haiku")
-	list(APPEND LIBGIT2_SYSTEM_LIBS network)
-	list(APPEND LIBGIT2_PC_LIBS "-lnetwork")
+	list(APPEND LIBGIT2_SYSTEM_LIBS gnu network)
+	list(APPEND LIBGIT2_PC_LIBS "-lgnu -lnetwork")
 endif()
 
 if(AMIGA)
