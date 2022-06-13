@@ -57,5 +57,6 @@
 #cmakedefine GIT_SHA256_MBEDTLS 1
 
 #cmakedefine GIT_RAND_GETENTROPY 1
+#cmakedefine GIT_RAND_GETLOADAVG 1
 
 #endif
