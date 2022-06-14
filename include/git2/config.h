@@ -449,8 +449,8 @@ GIT_EXTERN(int) git_config_multivar_iterator_new(git_config_iterator **out, cons
 /**
  * Return the current entry and advance the iterator
  *
- * The pointers returned by this function are valid until the iterator
- * is freed.
+ * The pointers returned by this function are valid until the next call
+ * to `git_config_next` or until the iterator is freed.
  *
  * @param entry pointer to store the entry
  * @param iter the iterator
