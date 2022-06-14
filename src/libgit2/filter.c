@@ -903,12 +903,20 @@ static int buffered_stream_close(git_writestream *s)
 	GIT_ASSERT_ARG(buffered_stream);
 
 #ifndef GIT_DEPRECATE_HARD
-	if(buffered_stream->write_fn == NULL) {
+	if (buffered_stream->write_fn == NULL) {
+		 git_buf legacy_output = GIT_BUF_INIT,
+		         legacy_input = GIT_BUF_INIT;
+
+		 legacy_output.ptr = buffered_stream->output->ptr;
+		 legacy_output.size = buffered_stream->output->size;
+		 legacy_input.ptr = buffered_stream->input.ptr;
+		 legacy_input.size = buffered_stream->input.size;
+
 		error = buffered_stream->legacy_write_fn(
 			buffered_stream->filter,
 			buffered_stream->payload,
-			(git_buf *)buffered_stream->output,
-			(git_buf *)&buffered_stream->input,
+			&legacy_output,
+			&legacy_input,
 			buffered_stream->source);
 	} else
 #endif
