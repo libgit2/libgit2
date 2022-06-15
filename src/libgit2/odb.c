@@ -140,7 +140,10 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj, git_oid_t oid_type)
 	vec[1].data = obj->data;
 	vec[1].len = obj->len;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 	id->type = oid_type;
+#endif
+
 	return git_hash_vec(id->id, vec, 2, algorithm);
 }
 
@@ -254,7 +257,10 @@ int git_odb__hashfd(
 	}
 
 	error = git_hash_final(out->id, &ctx);
+
+#ifdef GIT_EXPERIMENTAL_SHA256
 	out->type = oid_type;
+#endif
 
 done:
 	git_hash_ctx_cleanup(&ctx);
@@ -1332,7 +1338,7 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 		error = odb_read_1(out, db, id, true);
 
 	if (error == GIT_ENOTFOUND)
-		return git_odb__error_notfound("no match for id", id, git_oid_hexsize(id->type));
+		return git_odb__error_notfound("no match for id", id, git_oid_hexsize(git_oid_type(id)));
 
 	return error;
 }
@@ -1679,7 +1685,10 @@ int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
 			"stream_finalize_write()");
 
 	git_hash_final(out->id, stream->hash_ctx);
+
+#ifdef GIT_EXPERIMENTAL_SHA256
 	out->type = stream->oid_type;
+#endif
 
 	if (git_odb__freshen(stream->backend->odb, out))
 		return 0;
@@ -1858,8 +1867,8 @@ int git_odb__error_mismatch(const git_oid *expected, const git_oid *actual)
 	char expected_oid[GIT_OID_MAX_HEXSIZE + 1],
 	     actual_oid[GIT_OID_MAX_HEXSIZE + 1];
 
-	git_oid_tostr(expected_oid, git_oid_hexsize(expected->type) + 1, expected);
-	git_oid_tostr(actual_oid, git_oid_hexsize(actual->type) + 1, actual);
+	git_oid_tostr(expected_oid, git_oid_hexsize(git_oid_type(expected)) + 1, expected);
+	git_oid_tostr(actual_oid, git_oid_hexsize(git_oid_type(actual)) + 1, actual);
 
 	git_error_set(GIT_ERROR_ODB, "object hash mismatch - expected %s but got %s",
 		expected_oid, actual_oid);

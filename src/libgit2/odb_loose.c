@@ -737,7 +737,9 @@ GIT_INLINE(int) filename_to_oid(struct loose_backend *backend, git_oid *oid, con
 		oid->id[1 + i/2] = (unsigned char) v;
 	}
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 	oid->type = backend->options.oid_type;
+#endif
 
 	return 0;
 }

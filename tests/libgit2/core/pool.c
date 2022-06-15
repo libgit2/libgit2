@@ -27,7 +27,12 @@ void test_core_pool__oid(void)
 
 #ifndef GIT_DEBUG_POOL
 	/* with fixed page size, allocation must end up with these values */
+
+# ifdef GIT_EXPERIMENTAL_SHA256
 	cl_assert_equal_i(sizeof(void *) == 8 ? 90 : 82, git_pool__open_pages(&p));
+# else
+	cl_assert_equal_i(sizeof(void *) == 8 ? 55 : 45, git_pool__open_pages(&p));
+# endif
 #endif
 	git_pool_clear(&p);
 }

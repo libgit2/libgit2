@@ -520,7 +520,10 @@ static int git_object__short_id(git_str *out, const git_object *obj)
 		memcpy(&id.id, &obj->cached.oid.id, (len + 1) / 2);
 		if (len & 1)
 			id.id[len / 2] &= 0xf0;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
 		id.type = GIT_OID_SHA1;
+#endif
 
 		error = git_odb_exists_prefix(NULL, odb, &id, len);
 		if (error != GIT_EAMBIGUOUS)
@@ -635,7 +638,7 @@ int git_object__write_oid_header(
 	const char *header,
 	const git_oid *oid)
 {
-	size_t hex_size = git_oid_hexsize(oid->type);
+	size_t hex_size = git_oid_hexsize(git_oid_type(oid));
 	char hex_oid[GIT_OID_MAX_HEXSIZE];
 
 	if (!hex_size) {

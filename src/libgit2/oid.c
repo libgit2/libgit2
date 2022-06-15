@@ -14,13 +14,13 @@
 #include <limits.h>
 
 const git_oid git_oid__empty_blob_sha1 =
-	{ GIT_OID_SHA1,
+	GIT_OID_INIT(GIT_OID_SHA1,
 	  { 0xe6, 0x9d, 0xe2, 0x9b, 0xb2, 0xd1, 0xd6, 0x43, 0x4b, 0x8b,
-	    0x29, 0xae, 0x77, 0x5a, 0xd8, 0xc2, 0xe4, 0x8c, 0x53, 0x91 }};
+	    0x29, 0xae, 0x77, 0x5a, 0xd8, 0xc2, 0xe4, 0x8c, 0x53, 0x91 });
 const git_oid git_oid__empty_tree_sha1 =
-	{ GIT_OID_SHA1,
+	GIT_OID_INIT(GIT_OID_SHA1,
 	  { 0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60,
-	    0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04 }};
+	    0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04 });
 
 static int oid_error_invalid(const char *msg)
 {
@@ -49,7 +49,9 @@ int git_oid_fromstrn(
 	if (length > git_oid_hexsize(type))
 		return oid_error_invalid("too long");
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 	out->type = type;
+#endif
 	memset(out->id, 0, size);
 
 	for (p = 0; p < length; p++) {
@@ -82,7 +84,7 @@ int git_oid_nfmt(char *str, size_t n, const git_oid *oid)
 		return 0;
 	}
 
-	if (!(hex_size = git_oid_hexsize(oid->type)))
+	if (!(hex_size = git_oid_hexsize(git_oid_type(oid))))
 		return oid_error_invalid("unknown type");
 
 	if (n > hex_size) {
@@ -96,14 +98,14 @@ int git_oid_nfmt(char *str, size_t n, const git_oid *oid)
 
 int git_oid_fmt(char *str, const git_oid *oid)
 {
-	return git_oid_nfmt(str, git_oid_hexsize(oid->type), oid);
+	return git_oid_nfmt(str, git_oid_hexsize(git_oid_type(oid)), oid);
 }
 
 int git_oid_pathfmt(char *str, const git_oid *oid)
 {
 	size_t hex_size;
 
-	if (!(hex_size = git_oid_hexsize(oid->type)))
+	if (!(hex_size = git_oid_hexsize(git_oid_type(oid))))
 		return oid_error_invalid("unknown type");
 
 	git_oid_fmt_substr(str, oid, 0, 2);
@@ -115,13 +117,13 @@ int git_oid_pathfmt(char *str, const git_oid *oid)
 char *git_oid_tostr_s(const git_oid *oid)
 {
 	char *str = GIT_THREADSTATE->oid_fmt;
-	git_oid_nfmt(str, git_oid_hexsize(oid->type) + 1, oid);
+	git_oid_nfmt(str, git_oid_hexsize(git_oid_type(oid)) + 1, oid);
 	return str;
 }
 
 char *git_oid_allocfmt(const git_oid *oid)
 {
-	size_t hex_size = git_oid_hexsize(oid->type);
+	size_t hex_size = git_oid_hexsize(git_oid_type(oid));
 	char *str = git__malloc(hex_size + 1);
 
 	if (!hex_size || !str)
@@ -142,7 +144,7 @@ char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
 	if (!out || n == 0)
 		return "";
 
-	hex_size = oid ? git_oid_hexsize(oid->type) : 0;
+	hex_size = oid ? git_oid_hexsize(git_oid_type(oid)) : 0;
 
 	if (n > hex_size + 1)
 		n = hex_size + 1;
@@ -160,7 +162,9 @@ int git_oid_fromraw(git_oid *out, const unsigned char *raw, git_oid_t type)
 	if (!(size = git_oid_size(type)))
 		return oid_error_invalid("unknown type");
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 	out->type = type;
+#endif
 	memcpy(out->id, raw, size);
 	return 0;
 }
@@ -169,10 +173,13 @@ int git_oid_cpy(git_oid *out, const git_oid *src)
 {
 	size_t size;
 
-	if (!(size = git_oid_size(src->type)))
+	if (!(size = git_oid_size(git_oid_type(src))))
 		return oid_error_invalid("unknown type");
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 	out->type = src->type;
+#endif
+
 	return git_oid_raw_cpy(out->id, src->id, size);
 }
 
@@ -188,8 +195,10 @@ int git_oid_equal(const git_oid *a, const git_oid *b)
 
 int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, size_t len)
 {
+#ifdef GIT_EXPERIMENTAL_SHA256
 	if (oid_a->type != oid_b->type)
 		return oid_a->type - oid_b->type;
+#endif
 
 	return git_oid_raw_ncmp(oid_a->id, oid_b->id, len);
 }
@@ -198,7 +207,7 @@ int git_oid_strcmp(const git_oid *oid_a, const char *str)
 {
 	const unsigned char *a;
 	unsigned char strval;
-	long size = (long)git_oid_size(oid_a->type);
+	long size = (long)git_oid_size(git_oid_type(oid_a));
 	int hexval;
 
 	for (a = oid_a->id; *str && (a - oid_a->id) < size; ++a) {
@@ -225,12 +234,14 @@ int git_oid_streq(const git_oid *oid_a, const char *str)
 int git_oid_is_zero(const git_oid *oid_a)
 {
 	const unsigned char *a = oid_a->id;
-	size_t size = git_oid_size(oid_a->type), i;
+	size_t size = git_oid_size(git_oid_type(oid_a)), i;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 	if (!oid_a->type)
 		return 1;
 	else if (!size)
 		return 0;
+#endif
 
 	for (i = 0; i < size; ++i, ++a)
 		if (*a != 0)

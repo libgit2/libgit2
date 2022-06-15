@@ -35,6 +35,7 @@ static object_data one = {
     sizeof(one_data),
 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 static object_data one_sha256 = {
     one_bytes,
     sizeof(one_bytes),
@@ -46,6 +47,7 @@ static object_data one_sha256 = {
     one_data,
     sizeof(one_data),
 };
+#endif
 
 
 /*
@@ -84,6 +86,7 @@ static unsigned char commit_bytes[] = {
     0x1f, 0x78, 0x35,
 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 static unsigned char commit_bytes_sha256[] = {
     0x78, 0x01, 0x85, 0x90, 0xc1, 0x4e, 0xc3, 0x30,
     0x0c, 0x86, 0x39, 0xe7, 0x29, 0x7c, 0x87, 0x4e,
@@ -117,6 +120,7 @@ static unsigned char commit_bytes_sha256[] = {
     0x22, 0x98, 0x42, 0x6d, 0xcf, 0x7f, 0xbf, 0x83,
     0x7d, 0x03, 0x6d, 0x1e, 0x7e, 0xa9
 };
+#endif
 
 static unsigned char commit_data[] = {
     0x74, 0x72, 0x65, 0x65, 0x20, 0x64, 0x66, 0x66,
@@ -166,6 +170,7 @@ static unsigned char commit_data[] = {
     0x3e, 0x0a,
 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 static unsigned char commit_data_sha256[] = {
     0x74, 0x72, 0x65, 0x65, 0x20, 0x33, 0x34, 0x61,
     0x34, 0x38, 0x35, 0x34, 0x62, 0x35, 0x34, 0x32,
@@ -216,6 +221,7 @@ static unsigned char commit_data_sha256[] = {
     0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d,
     0x3e, 0x0a
 };
+#endif
 
 static object_data commit = {
     commit_bytes,
@@ -229,6 +235,7 @@ static object_data commit = {
     sizeof(commit_data),
 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 static object_data commit_sha256 = {
     commit_bytes_sha256,
     sizeof(commit_bytes_sha256),
@@ -240,6 +247,7 @@ static object_data commit_sha256 = {
     commit_data_sha256,
     sizeof(commit_data_sha256),
 };
+#endif
 
 /*
  * tree == dff2da90b254e1beb889d1f1f1288be1803782df (sha1)
@@ -284,6 +292,7 @@ static unsigned char tree_data[] = {
     0xd8, 0xc2, 0xe4, 0x8c, 0x53, 0x91,
 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 static unsigned char tree_bytes_sha256[] = {
     0x78, 0x01, 0x2b, 0x29, 0x4a, 0x4d, 0x55, 0x30,
     0x32, 0x32, 0x66, 0x30, 0x34, 0x30, 0x30, 0x33,
@@ -346,6 +355,7 @@ static unsigned char tree_data_sha256[] = {
     0xa7, 0xcd, 0x2a, 0xc9, 0xb4, 0x4a, 0xda, 0xf7,
     0xed, 0x3e, 0xdc, 0x0d, 0x08, 0xdd, 0x78
 };
+#endif
 
 static object_data tree = {
     tree_bytes,
@@ -359,6 +369,7 @@ static object_data tree = {
     sizeof(tree_data),
 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 static object_data tree_sha256 = {
     tree_bytes_sha256,
     sizeof(tree_bytes_sha256),
@@ -370,6 +381,7 @@ static object_data tree_sha256 = {
     tree_data_sha256,
     sizeof(tree_data_sha256),
 };
+#endif
 
 /*
  * tag == 09d373e1dfdc16b129ceec6dd649739911541e05 (sha1)
@@ -422,6 +434,7 @@ static unsigned char tag_data[] = {
     0x2e, 0x30, 0x2e, 0x31, 0x0a,
 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 static unsigned char tag_bytes_sha256[] = {
     0x78, 0x01, 0x55, 0x8f, 0xd1, 0x4e, 0x84, 0x30,
     0x10, 0x45, 0x7d, 0xee, 0x57, 0xcc, 0xbb, 0x2e,
@@ -509,6 +522,7 @@ static unsigned char tag_data_sha256[] = {
     0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d,
     0x3e, 0x0a
 };
+#endif
 
 static object_data tag = {
     tag_bytes,
@@ -522,6 +536,7 @@ static object_data tag = {
     sizeof(tag_data),
 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 static object_data tag_sha256 = {
     tag_bytes_sha256,
     sizeof(tag_bytes_sha256),
@@ -533,6 +548,7 @@ static object_data tag_sha256 = {
     tag_data_sha256,
     sizeof(tag_data_sha256),
 };
+#endif
 
 /*
  * zero == e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 (sha1)
@@ -559,6 +575,7 @@ static object_data zero = {
     0,
 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 static object_data zero_sha256 = {
     zero_bytes,
     sizeof(zero_bytes),
@@ -570,6 +587,7 @@ static object_data zero_sha256 = {
     zero_data,
     0,
 };
+#endif
 
 /*
  * two == 78981922613b2afb6025042ff6bd878ac1994e85 (sha1)
@@ -597,6 +615,7 @@ static object_data two = {
     sizeof(two_data),
 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 static object_data two_sha256 = {
     two_bytes,
     sizeof(two_bytes),
@@ -608,6 +627,7 @@ static object_data two_sha256 = {
     two_data,
     sizeof(two_data),
 };
+#endif
 
 /*
  * some == fd8430bc864cfcd5f10e5590f8a447e01b942bfe (sha1)
@@ -858,6 +878,7 @@ static object_data some = {
     sizeof(some_data),
 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 static object_data some_sha256 = {
     some_bytes,
     sizeof(some_bytes),
@@ -869,3 +890,4 @@ static object_data some_sha256 = {
     some_data,
     sizeof(some_data),
 };
+#endif

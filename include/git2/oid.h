@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "types.h"
+#include "experimental.h"
 
 /**
  * @file git2/oid.h
@@ -21,22 +22,74 @@ GIT_BEGIN_DECL
 
 /** The type of object id. */
 typedef enum {
+
+#ifdef GIT_EXPERIMENTAL_SHA256
 	GIT_OID_SHA1 = 1,  /**< SHA1 */
 	GIT_OID_SHA256 = 2 /**< SHA256 */
+#else
+	GIT_OID_SHA1 = 1   /**< SHA1 */
+#endif
+
 } git_oid_t;
+
+/*
+ * SHA1 is currently the only supported object ID type.
+ */
 
 /** SHA1 is currently libgit2's default oid type. */
 #define GIT_OID_DEFAULT         GIT_OID_SHA1
 
-/** Size (in bytes) of a raw/binary oid */
+/** Size (in bytes) of a raw/binary sha1 oid */
 #define GIT_OID_SHA1_SIZE       20
-#define GIT_OID_SHA256_SIZE     32
-#define GIT_OID_MAX_SIZE        GIT_OID_SHA256_SIZE
-
-/** Size (in bytes) of a hex formatted oid */
+/** Size (in bytes) of a hex formatted sha1 oid */
 #define GIT_OID_SHA1_HEXSIZE   (GIT_OID_SHA1_SIZE * 2)
-#define GIT_OID_SHA256_HEXSIZE (GIT_OID_SHA256_SIZE * 2)
-#define GIT_OID_MAX_HEXSIZE     GIT_OID_SHA256_HEXSIZE
+
+/**
+ * The binary representation of the null sha1 object ID.
+ */
+#ifndef GIT_EXPERIMENTAL_SHA256
+# define GIT_OID_SHA1_ZERO   { { 0 } }
+#else
+# define GIT_OID_SHA1_ZERO   { GIT_OID_SHA1, { 0 } }
+#endif
+
+/**
+ * The string representation of the null sha1 object ID.
+ */
+#define GIT_OID_SHA1_HEXZERO   "0000000000000000000000000000000000000000"
+
+/*
+ * Experimental SHA256 support is a breaking change to the API.
+ * This exists for application compatibility testing.
+ */
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+
+/** Size (in bytes) of a raw/binary sha256 oid */
+# define GIT_OID_SHA256_SIZE     32
+/** Size (in bytes) of a hex formatted sha256 oid */
+# define GIT_OID_SHA256_HEXSIZE (GIT_OID_SHA256_SIZE * 2)
+
+/**
+ * The binary representation of the null sha256 object ID.
+ */
+# define GIT_OID_SHA256_ZERO { GIT_OID_SHA256, { 0 } }
+
+/**
+ * The string representation of the null sha256 object ID.
+ */
+# define GIT_OID_SHA256_HEXZERO "0000000000000000000000000000000000000000000000000000000000000000"
+
+#endif
+
+/* Maximum possible object ID size in raw / hex string format. */
+#ifndef GIT_EXPERIMENTAL_SHA256
+# define GIT_OID_MAX_SIZE        GIT_OID_SHA1_SIZE
+# define GIT_OID_MAX_HEXSIZE     GIT_OID_SHA1_HEXSIZE
+#else
+# define GIT_OID_MAX_SIZE        GIT_OID_SHA256_SIZE
+# define GIT_OID_MAX_HEXSIZE     GIT_OID_SHA256_HEXSIZE
+#endif
 
 /** Minimum length (in number of hex characters,
  * i.e. packets of 4 bits) of an oid prefix */
@@ -44,24 +97,15 @@ typedef enum {
 
 /** Unique identity of any object (commit, tree, blob, tag). */
 typedef struct git_oid {
+
+#ifdef GIT_EXPERIMENTAL_SHA256
 	/** type of object id */
 	unsigned char type;
+#endif
 
 	/** raw binary formatted id */
 	unsigned char id[GIT_OID_MAX_SIZE];
 } git_oid;
-
-/**
- * The binary representation of the null object ID.
- */
-#define GIT_OID_SHA1_ZERO   { GIT_OID_SHA1,   { 0 } }
-#define GIT_OID_SHA256_ZERO { GIT_OID_SHA256, { 0 } }
-
-/**
- * The string representation of the null object ID.
- */
-#define GIT_OID_SHA1_HEXZERO   "0000000000000000000000000000000000000000"
-#define GIT_OID_SHA256_HEXZERO "0000000000000000000000000000000000000000000000000000000000000000"
 
 /**
  * Parse a hex formatted object id into a git_oid.

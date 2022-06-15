@@ -777,6 +777,12 @@ typedef git_trace_cb git_trace_callback;
  */
 /**@{*/
 
+#ifndef GIT_EXPERIMENTAL_SHA256
+# define GIT_OID_RAWSZ    GIT_OID_SHA1_SIZE
+# define GIT_OID_HEXSZ    GIT_OID_SHA1_HEXSIZE
+# define GIT_OID_HEX_ZERO GIT_OID_SHA1_HEXZERO
+#endif
+
 GIT_EXTERN(int) git_oid_iszero(const git_oid *id);
 
 /**@}*/

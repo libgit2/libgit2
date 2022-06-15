@@ -444,7 +444,10 @@ static int store_object(git_indexer *idx)
 		git__free(pentry);
 		goto on_error;
 	}
+
+#ifdef GIT_EXPERIMENTAL_SHA256
 	oid.type = GIT_OID_SHA1;
+#endif
 
 	entry_size = idx->off - entry_start;
 	if (entry_start > UINT31_MAX) {
