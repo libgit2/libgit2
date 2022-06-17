@@ -104,7 +104,8 @@ static int url_parse_authority(
 	const char **password_start, size_t *password_len,
 	const char **host_start, size_t *host_len,
 	const char **port_start, size_t *port_len,
-	const char *authority_start, size_t len)
+	const char *authority_start, size_t len,
+	const char *scheme_start, size_t scheme_len)
 {
 	const char *c, *hostport_end, *host_end = NULL,
 	           *userpass_end, *user_end = NULL;
@@ -194,6 +195,10 @@ static int url_parse_authority(
 			return url_invalid("malformed hostname");
 
 		case USERPASS:
+			if (*c == '@' &&
+			    strncasecmp(scheme_start, "ssh", scheme_len))
+				return url_invalid("malformed hostname");
+
 			if (*c == ':') {
 				*password_start = c + 1;
 				*password_len = userpass_end - *password_start;
@@ -307,7 +312,8 @@ int git_net_url_parse(git_net_url *url, const char *given)
 					&password_start,&password_len,
 					&host_start, &host_len,
 					&port_start, &port_len,
-					authority_start, (c - authority_start))) < 0)
+					authority_start, (c - authority_start),
+					scheme_start, scheme_len)) < 0)
 				goto done;
 
 			/* fall through */
@@ -365,7 +371,8 @@ int git_net_url_parse(git_net_url *url, const char *given)
 				&password_start,&password_len,
 				&host_start, &host_len,
 				&port_start, &port_len,
-				authority_start, (c - authority_start))) < 0)
+				authority_start, (c - authority_start),
+				scheme_start, scheme_len)) < 0)
 			goto done;
 		break;
 	case PATH_START:

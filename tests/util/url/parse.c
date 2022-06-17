@@ -749,6 +749,11 @@ void test_url_parse__empty_path_with_empty_authority(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
+void test_url_parse__http_follows_the_rfc(void)
+{
+	cl_git_fail(git_net_url_parse(&conndata, "https://my.email.address@gmail.com@source.developers.google.com:4433/p/my-project/r/my-repository"));
+}
+
 void test_url_parse__ssh_from_terrible_google_rfc_violating_products(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "ssh://my.email.address@gmail.com@source.developers.google.com:2022/p/my-project/r/my-repository"));
