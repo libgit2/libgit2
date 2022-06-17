@@ -130,6 +130,19 @@ void test_stash_save__can_keep_index(void)
 	assert_status(repo, "just.ignore", GIT_STATUS_IGNORED);
 }
 
+void test_stash_save__can_keep_all(void)
+{
+	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_KEEP_ALL));
+	
+	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "how", GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "who", GIT_STATUS_WT_MODIFIED);
+	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
+	assert_status(repo, "where", GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_NEW);
+	assert_status(repo, "just.ignore", GIT_STATUS_IGNORED);
+}
+
 static void assert_commit_message_contains(const char *revision, const char *fragment)
 {
 	git_commit *commit;
@@ -487,4 +500,28 @@ void test_stash_save__deleted_in_index_modified_in_workdir(void)
 	assert_blob_oid("stash@{0}^2:who", NULL);
 
 	git_index_free(index);
+}
+
+void test_stash_save__option_paths(void)
+{
+	git_stash_save_options options = GIT_STASH_SAVE_OPTIONS_INIT;
+	char *paths[2] = { "who", "where" };
+
+	options.paths = (git_strarray){
+		paths,
+		2
+	};
+	options.stasher = signature;
+	
+	cl_git_pass(git_stash_save_with_opts(&stash_tip_oid, repo, &options));
+
+	assert_blob_oid("refs/stash:who", "a0400d4954659306a976567af43125a0b1aa8595");
+	assert_blob_oid("refs/stash:where", "e3d6434ec12eb76af8dfa843a64ba6ab91014a0b");
+
+	assert_blob_oid("refs/stash:what", "ce013625030ba8dba906f756967f9e9ca394464a");
+	assert_blob_oid("refs/stash:how", "ac790413e2d7a26c3767e78c57bb28716686eebc");
+	assert_blob_oid("refs/stash:when", NULL);
+	assert_blob_oid("refs/stash:why", NULL);
+	assert_blob_oid("refs/stash:.gitignore", "ac4d88de61733173d9959e4b77c69b9f17a00980");
+	assert_blob_oid("refs/stash:just.ignore", NULL);
 }
