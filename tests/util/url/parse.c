@@ -555,3 +555,15 @@ void test_url_parse__ipv6_invalid_addresses(void)
 	/* Invalid character inside address */
 	cl_git_fail_with(GIT_EINVALIDSPEC, git_net_url_parse(&conndata, "http://[fe8o::dcad:beff:fe00:0001]/resource"));
 }
+
+void test_url_parse__spaces_in_the_name(void)
+{
+	cl_git_pass(git_net_url_parse(&conndata, "https://libgit2@dev.azure.com/libgit2/test/_git/spaces%20in%20the%20name"));
+	cl_assert_equal_s(conndata.scheme, "https");
+	cl_assert_equal_s(conndata.host, "dev.azure.com");
+	cl_assert_equal_s(conndata.port, "443");
+	cl_assert_equal_s(conndata.path, "/libgit2/test/_git/spaces%20in%20the%20name");
+	cl_assert_equal_s(conndata.username, "libgit2");
+	cl_assert_equal_p(conndata.password, NULL);
+	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+}
