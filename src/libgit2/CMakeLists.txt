@@ -8,7 +8,7 @@ set_target_properties(libgit2 PROPERTIES C_EXTENSIONS OFF)
 include(PkgBuildConfig)
 
 set(LIBGIT2_INCLUDES
-	"${PROJECT_BINARY_DIR}/src"
+	"${PROJECT_BINARY_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/src/libgit2"
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include")

@@ -4,8 +4,10 @@ add_library(util OBJECT)
 set_target_properties(util PROPERTIES C_STANDARD 90)
 set_target_properties(util PROPERTIES C_EXTENSIONS OFF)
 
+configure_file(git2_features.h.in git2_features.h)
+
 set(UTIL_INCLUDES
-	"${PROJECT_BINARY_DIR}/src"
+	"${PROJECT_BINARY_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include")
 

@@ -171,12 +171,6 @@ endif()
 add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
 
 #
-# Configure support
-#
-
-configure_file(features.h.in git2/sys/features.h)
-
-#
 # Include child projects
 #
 
