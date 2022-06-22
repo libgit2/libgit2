@@ -893,6 +893,17 @@ static int buffered_stream_write(
 	return git_str_put(&buffered_stream->input, buffer, len);
 }
 
+#ifndef GIT_DEPRECATE_HARD
+# define BUF_TO_STRUCT(b, s) \
+	(b)->ptr = (s)->ptr; \
+	(b)->size = (s)->size;  \
+	(b)->reserved = (s)->asize;
+# define STRUCT_TO_BUF(s, b) \
+	(s)->ptr = (b)->ptr; \
+	(s)->size = (b)->size; \
+	(s)->asize = (b)->reserved;
+#endif
+
 static int buffered_stream_close(git_writestream *s)
 {
 	struct buffered_stream *buffered_stream = (struct buffered_stream *)s;
@@ -907,12 +918,8 @@ static int buffered_stream_close(git_writestream *s)
 		git_buf legacy_output = GIT_BUF_INIT,
 		        legacy_input = GIT_BUF_INIT;
 
-		legacy_output.ptr = buffered_stream->output->ptr;
-		legacy_output.size = buffered_stream->output->size;
-		legacy_output.reserved = buffered_stream->output->asize;
-		legacy_input.ptr = buffered_stream->input.ptr;
-		legacy_input.size = buffered_stream->input.size;
-		legacy_input.reserved = buffered_stream->input.asize;
+		BUF_TO_STRUCT(&legacy_output, buffered_stream->output);
+		BUF_TO_STRUCT(&legacy_input, &buffered_stream->input);
 
 		error = buffered_stream->legacy_write_fn(
 			buffered_stream->filter,
@@ -920,6 +927,9 @@ static int buffered_stream_close(git_writestream *s)
 			&legacy_output,
 			&legacy_input,
 			buffered_stream->source);
+
+		STRUCT_TO_BUF(buffered_stream->output, &legacy_output);
+		STRUCT_TO_BUF(&buffered_stream->input, &legacy_input);
 	} else
 #endif
 	error = buffered_stream->write_fn(
