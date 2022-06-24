@@ -53,7 +53,7 @@ static int diff_file_stats_full_to_buf(
 	const git_diff_stats *stats,
 	size_t width)
 {
-	const char *old_path = NULL, *new_path = NULL;
+	const char *old_path = NULL, *new_path = NULL, *adddel_path = NULL;
 	size_t padding;
 	git_object_size_t old_size, new_size;
 
@@ -62,7 +62,7 @@ static int diff_file_stats_full_to_buf(
 	old_size = delta->old_file.size;
 	new_size = delta->new_file.size;
 
-	if (strcmp(old_path, new_path) != 0) {
+	if (old_path && new_path && strcmp(old_path, new_path) != 0) {
 		size_t common_dirlen;
 		int error;
 
@@ -82,10 +82,11 @@ static int diff_file_stats_full_to_buf(
 		if (error < 0)
 			goto on_error;
 	} else {
-		if (git_buf_printf(out, " %s", old_path) < 0)
+		adddel_path = new_path ? new_path : old_path;
+		if (git_buf_printf(out, " %s", adddel_path) < 0)
 			goto on_error;
 
-		padding = stats->max_name - strlen(old_path);
+		padding = stats->max_name - strlen(adddel_path);
 
 		if (stats->renames > 0)
 			padding += strlen(DIFF_RENAME_FILE_SEPARATOR);
@@ -182,7 +183,8 @@ int git_diff_get_stats(
 	git_diff_stats *stats = NULL;
 	int error = 0;
 
-	assert(out && diff);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(diff);
 
 	stats = git__calloc(1, sizeof(git_diff_stats));
 	GIT_ERROR_CHECK_ALLOC(stats);
@@ -211,7 +213,7 @@ int git_diff_get_stats(
 
 		/* TODO ugh */
 		namelen = strlen(delta->new_file.path);
-		if (strcmp(delta->old_file.path, delta->new_file.path) != 0) {
+		if (delta->old_file.path && strcmp(delta->old_file.path, delta->new_file.path) != 0) {
 			namelen += strlen(delta->old_file.path);
 			stats->renames++;
 		}
@@ -250,7 +252,7 @@ int git_diff_get_stats(
 size_t git_diff_stats_files_changed(
 	const git_diff_stats *stats)
 {
-	assert(stats);
+	GIT_ASSERT_ARG(stats);
 
 	return stats->files_changed;
 }
@@ -258,7 +260,7 @@ size_t git_diff_stats_files_changed(
 size_t git_diff_stats_insertions(
 	const git_diff_stats *stats)
 {
-	assert(stats);
+	GIT_ASSERT_ARG(stats);
 
 	return stats->insertions;
 }
@@ -266,7 +268,7 @@ size_t git_diff_stats_insertions(
 size_t git_diff_stats_deletions(
 	const git_diff_stats *stats)
 {
-	assert(stats);
+	GIT_ASSERT_ARG(stats);
 
 	return stats->deletions;
 }
@@ -281,7 +283,8 @@ int git_diff_stats_to_buf(
 	size_t i;
 	const git_diff_delta *delta;
 
-	assert(out && stats);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(stats);
 
 	if (format & GIT_DIFF_STATS_NUMBER) {
 		for (i = 0; i < stats->files_changed; ++i) {

@@ -474,6 +474,15 @@
 	"-asparagus which had been laid by, boil it until these last articles are\n" \
 	"-sufficiently done, thicken with flour, butter and milk, and serve it up.\n"
 
+#define DIFF_ADD_INVALID_FILENAME \
+	"diff --git a/.git/hello_world.txt b/.git/hello_world.txt\n" \
+	"new file mode 100644\n" \
+	"index 0000000..f75ba05\n" \
+	"--- /dev/null\n" \
+	"+++ b/.git/hello_world.txt\n" \
+	"@@ -0,0 +1 @@\n" \
+	"+Hello, world.\n"
+
 void validate_apply_workdir(
 	git_repository *repo,
 	struct merge_index_entry *workdir_entries,

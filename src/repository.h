@@ -53,6 +53,7 @@ typedef enum {
 	GIT_CONFIGMAP_PROTECTHFS,       /* core.protectHFS */
 	GIT_CONFIGMAP_PROTECTNTFS,      /* core.protectNTFS */
 	GIT_CONFIGMAP_FSYNCOBJECTFILES, /* core.fsyncObjectFiles */
+	GIT_CONFIGMAP_LONGPATHS,        /* core.longpaths */
 	GIT_CONFIGMAP_CACHE_MAX
 } git_configmap_item;
 
@@ -118,6 +119,8 @@ typedef enum {
 	GIT_PROTECTNTFS_DEFAULT = GIT_CONFIGMAP_TRUE,
 	/* core.fsyncObjectFiles */
 	GIT_FSYNCOBJECTFILES_DEFAULT = GIT_CONFIGMAP_FALSE,
+	/* core.longpaths */
+	GIT_LONGPATHS_DEFAULT = GIT_CONFIGMAP_FALSE,
 } git_configmap_value;
 
 /* internal repository init flags */
@@ -157,9 +160,9 @@ struct git_repository {
 	git_grafts *grafts;
 	git_grafts *shallow_grafts;
 
-	git_atomic attr_session_key;
+	git_atomic32 attr_session_key;
 
-	git_configmap_value configmap_cache[GIT_CONFIGMAP_CACHE_MAX];
+	intptr_t configmap_cache[GIT_CONFIGMAP_CACHE_MAX];
 	git_strmap *submodule_cache;
 };
 
@@ -171,34 +174,11 @@ GIT_INLINE(git_attr_cache *) git_repository_attr_cache(git_repository *repo)
 int git_repository_head_tree(git_tree **tree, git_repository *repo);
 int git_repository_create_head(const char *git_dir, const char *ref_name);
 
-/*
- * Called for each HEAD.
- *
- * Can return either 0, causing the iteration over HEADs to
- * continue, or a non-0 value causing the iteration to abort. The
- * return value is passed back to the caller of
- * `git_repository_foreach_head`
- */
-typedef int (*git_repository_foreach_head_cb)(git_repository *repo, const char *path, void *payload);
+typedef int (*git_repository_foreach_worktree_cb)(git_repository *, void *);
 
-enum {
-	/* Skip enumeration of the main repository HEAD */
-	GIT_REPOSITORY_FOREACH_HEAD_SKIP_REPO      = (1u << 0),
-	/* Skip enumeration of worktree HEADs */
-	GIT_REPOSITORY_FOREACH_HEAD_SKIP_WORKTREES = (1u << 1),
-};
-
-/*
- * Iterate over repository and all worktree HEADs.
- *
- * This function will be called for the repository HEAD and for
- * all HEADS of linked worktrees. For each HEAD, the callback is
- * executed with the given payload. The return value equals the
- * return value of the last executed callback function.
- */
-int git_repository_foreach_head(git_repository *repo,
-				git_repository_foreach_head_cb cb,
-				int flags, void *payload);
+int git_repository_foreach_worktree(git_repository *repo,
+				    git_repository_foreach_worktree_cb cb,
+				    void *payload);
 
 /*
  * Weak pointers to repository internals.
@@ -261,5 +241,23 @@ extern size_t git_repository__reserved_names_posix_len;
  */
 bool git_repository__reserved_names(
 	git_buf **out, size_t *outlen, git_repository *repo, bool include_ntfs);
+
+/*
+ * The default branch for the repository; the `init.defaultBranch`
+ * configuration option, if set, or `master` if it is not.
+ */
+int git_repository_initialbranch(git_buf *out, git_repository *repo);
+
+/*
+ * Given a relative `path`, this makes it absolute based on the
+ * repository's working directory.  This will perform validation
+ * to ensure that the path is not longer than MAX_PATH on Windows
+ * (unless `core.longpaths` is set in the repo config).
+ */
+int git_repository_workdir_path(git_buf *out, git_repository *repo, const char *path);
+
+int git_repository__extensions(char ***out, size_t *out_len);
+int git_repository__set_extensions(const char **extensions, size_t len);
+void git_repository__free_extensions(void);
 
 #endif

@@ -59,7 +59,7 @@ static bool hunk_starts_at_or_after_line(git_blame_hunk *hunk, size_t line)
 	return line <= hunk->final_start_line_number;
 }
 
-static git_blame_hunk* new_hunk(
+static git_blame_hunk *new_hunk(
 		size_t start,
 		size_t lines,
 		size_t orig_start,
@@ -76,7 +76,15 @@ static git_blame_hunk* new_hunk(
 	return hunk;
 }
 
-static git_blame_hunk* dup_hunk(git_blame_hunk *hunk)
+static void free_hunk(git_blame_hunk *hunk)
+{
+	git__free((void*)hunk->orig_path);
+	git_signature_free(hunk->final_signature);
+	git_signature_free(hunk->orig_signature);
+	git__free(hunk);
+}
+
+static git_blame_hunk *dup_hunk(git_blame_hunk *hunk)
 {
 	git_blame_hunk *newhunk = new_hunk(
 			hunk->final_start_line_number,
@@ -90,17 +98,14 @@ static git_blame_hunk* dup_hunk(git_blame_hunk *hunk)
 	git_oid_cpy(&newhunk->orig_commit_id, &hunk->orig_commit_id);
 	git_oid_cpy(&newhunk->final_commit_id, &hunk->final_commit_id);
 	newhunk->boundary = hunk->boundary;
-	git_signature_dup(&newhunk->final_signature, hunk->final_signature);
-	git_signature_dup(&newhunk->orig_signature, hunk->orig_signature);
-	return newhunk;
-}
 
-static void free_hunk(git_blame_hunk *hunk)
-{
-	git__free((void*)hunk->orig_path);
-	git_signature_free(hunk->final_signature);
-	git_signature_free(hunk->orig_signature);
-	git__free(hunk);
+	if (git_signature_dup(&newhunk->final_signature, hunk->final_signature) < 0 ||
+		git_signature_dup(&newhunk->orig_signature, hunk->orig_signature) < 0) {
+		free_hunk(newhunk);
+		return NULL;
+	}
+
+	return newhunk;
 }
 
 /* Starting with the hunk that includes start_line, shift all following hunks'
@@ -117,7 +122,7 @@ static void shift_hunks_by(git_vector *v, size_t start_line, int shift_by)
 	}
 }
 
-git_blame* git_blame__alloc(
+git_blame *git_blame__alloc(
 	git_repository *repo,
 	git_blame_options opts,
 	const char *path)
@@ -171,20 +176,21 @@ void git_blame_free(git_blame *blame)
 
 uint32_t git_blame_get_hunk_count(git_blame *blame)
 {
-	assert(blame);
+	GIT_ASSERT_ARG(blame);
 	return (uint32_t)blame->hunks.length;
 }
 
 const git_blame_hunk *git_blame_get_hunk_byindex(git_blame *blame, uint32_t index)
 {
-	assert(blame);
+	GIT_ASSERT_ARG_WITH_RETVAL(blame, NULL);
 	return (git_blame_hunk*)git_vector_get(&blame->hunks, index);
 }
 
 const git_blame_hunk *git_blame_get_hunk_byline(git_blame *blame, size_t lineno)
 {
 	size_t i, new_lineno = lineno;
-	assert(blame);
+
+	GIT_ASSERT_ARG_WITH_RETVAL(blame, NULL);
 
 	if (!git_vector_bsearch2(&i, &blame->hunks, hunk_byfinalline_search_cmp, &new_lineno)) {
 		return git_blame_get_hunk_byindex(blame, (uint32_t)i);
@@ -293,7 +299,7 @@ static int index_blob_lines(git_blame *blame)
     return blame->num_lines;
 }
 
-static git_blame_hunk* hunk_from_entry(git_blame__entry *e, git_blame *blame)
+static git_blame_hunk *hunk_from_entry(git_blame__entry *e, git_blame *blame)
 {
 	git_blame_hunk *h = new_hunk(
 			e->lno+1, e->num_lines, e->s_lno+1, e->suspect->path);
@@ -388,7 +394,10 @@ int git_blame_file(
 	git_blame_options normOptions = GIT_BLAME_OPTIONS_INIT;
 	git_blame *blame = NULL;
 
-	assert(out && repo && path);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(path);
+
 	if ((error = normalize_options(&normOptions, options, repo)) < 0)
 		goto on_error;
 
@@ -509,7 +518,9 @@ int git_blame_buffer(
 
 	diffopts.context_lines = 0;
 
-	assert(out && reference && buffer && buffer_len);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(reference);
+	GIT_ASSERT_ARG(buffer && buffer_len);
 
 	blame = git_blame__alloc(reference->repository, reference->options, reference->path);
 	GIT_ERROR_CHECK_ALLOC(blame);

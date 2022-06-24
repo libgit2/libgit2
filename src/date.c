@@ -204,7 +204,7 @@ static int is_date(int year, int month, int day, struct tm *now_tm, time_t now, 
 	if (month > 0 && month < 13 && day > 0 && day < 32) {
 		struct tm check = *tm;
 		struct tm *r = (now_tm ? &check : tm);
-		time_t specified;
+		git_time_t specified;
 
 		r->tm_mon = month - 1;
 		r->tm_mday = day;
@@ -722,7 +722,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 	while (tl->type) {
 		size_t len = strlen(tl->type);
 		if (match_string(date, tl->type) >= len-1) {
-			update_tm(tm, now, tl->length * *num);
+			update_tm(tm, now, tl->length * (unsigned long)*num);
 			*num = 0;
 			*touched = 1;
 			return end;
@@ -881,7 +881,8 @@ int git__date_rfc2822_fmt(char *out, size_t len, const git_time *date)
 	struct tm gmt;
 	time_t t;
 
-	assert(out && date);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(date);
 
 	t = (time_t) (date->time + date->offset * 60);
 

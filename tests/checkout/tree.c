@@ -917,7 +917,7 @@ void test_checkout_tree__extremely_long_file_name(void)
 {
 	/* A utf-8 string with 83 characters, but 249 bytes. */
 	const char *longname = "\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97\xe5\x8f\x97";
-	char path[1024];
+	char path[1024] = {0};
 
 	g_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 	cl_git_pass(git_revparse_single(&g_object, g_repo, "long-file-name"));
@@ -1635,4 +1635,50 @@ void test_checkout_tree__no_index_refresh(void)
 
 	modify_index_and_checkout_tree(&opts);
 	assert_status_entrycount(g_repo, 0);
+}
+
+void test_checkout_tree__dry_run(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_oid oid;
+	git_object *obj = NULL;
+	checkout_counts ct;
+
+	/* first let's get things into a known state - by checkout out the HEAD */
+
+	assert_on_branch(g_repo, "master");
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	cl_assert(!git_path_isdir("testrepo/a"));
+
+	check_file_contents_nocr("testrepo/branch_file.txt", "hi\nbye!\n");
+
+	/* now checkout branch but with dry run enabled */
+
+	memset(&ct, 0, sizeof(ct));
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DRY_RUN;
+	opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+	opts.notify_cb = checkout_count_callback;
+	opts.notify_payload = &ct;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/dir"));
+
+	assert_on_branch(g_repo, "dir");
+
+	/* these normally would have been created and updated, but with
+	 * DRY_RUN they will be unchanged.
+	 */
+	cl_assert(!git_path_isdir("testrepo/a"));
+	check_file_contents_nocr("testrepo/branch_file.txt", "hi\nbye!\n");
+
+	/* check that notify callback was invoked */
+	cl_assert_equal_i(ct.n_updates, 2);
+	
+	git_object_free(obj);
 }

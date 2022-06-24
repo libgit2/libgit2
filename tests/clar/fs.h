@@ -8,6 +8,12 @@
 
 #ifdef _WIN32
 
+#ifdef CLAR_WIN32_LONGPATHS
+# define CLAR_MAX_PATH 4096
+#else
+# define CLAR_MAX_PATH MAX_PATH
+#endif
+
 #define RM_RETRY_COUNT	5
 #define RM_RETRY_DELAY	10
 
@@ -48,21 +54,48 @@ fs_rmdir_rmdir(WCHAR *_wpath)
 	return 0;
 }
 
+static void translate_path(WCHAR *path, size_t path_size)
+{
+    size_t path_len, i;
+
+    if (wcsncmp(path, L"\\\\?\\", 4) == 0)
+	return;
+
+    path_len = wcslen(path);
+    cl_assert(path_size > path_len + 4);
+
+    for (i = path_len; i > 0; i--) {
+	WCHAR c = path[i - 1];
+
+	if (c == L'/')
+	    path[i + 3] = L'\\';
+	else
+	    path[i + 3] = path[i - 1];
+    }
+
+    path[0] = L'\\';
+    path[1] = L'\\';
+    path[2] = L'?';
+    path[3] = L'\\';
+    path[path_len + 4] = L'\0';
+}
+
 static void
 fs_rmdir_helper(WCHAR *_wsource)
 {
-	WCHAR buffer[MAX_PATH];
+	WCHAR buffer[CLAR_MAX_PATH];
 	HANDLE find_handle;
 	WIN32_FIND_DATAW find_data;
 	size_t buffer_prefix_len;
 
 	/* Set up the buffer and capture the length */
-	wcscpy_s(buffer, MAX_PATH, _wsource);
-	wcscat_s(buffer, MAX_PATH, L"\\");
+	wcscpy_s(buffer, CLAR_MAX_PATH, _wsource);
+	translate_path(buffer, CLAR_MAX_PATH);
+	wcscat_s(buffer, CLAR_MAX_PATH, L"\\");
 	buffer_prefix_len = wcslen(buffer);
 
 	/* FindFirstFile needs a wildcard to match multiple items */
-	wcscat_s(buffer, MAX_PATH, L"*");
+	wcscat_s(buffer, CLAR_MAX_PATH, L"*");
 	find_handle = FindFirstFileW(buffer, &find_data);
 	cl_assert(INVALID_HANDLE_VALUE != find_handle);
 
@@ -72,7 +105,7 @@ fs_rmdir_helper(WCHAR *_wsource)
 		if (fs__dotordotdot(find_data.cFileName))
 			continue;
 
-		wcscpy_s(buffer + buffer_prefix_len, MAX_PATH - buffer_prefix_len, find_data.cFileName);
+		wcscpy_s(buffer + buffer_prefix_len, CLAR_MAX_PATH - buffer_prefix_len, find_data.cFileName);
 
 		if (FILE_ATTRIBUTE_DIRECTORY & find_data.dwFileAttributes)
 			fs_rmdir_helper(buffer);
@@ -123,7 +156,7 @@ fs_rm_wait(WCHAR *_wpath)
 static void
 fs_rm(const char *_source)
 {
-	WCHAR wsource[MAX_PATH];
+	WCHAR wsource[CLAR_MAX_PATH];
 	DWORD attrs;
 
 	/* The input path is UTF-8. Convert it to wide characters
@@ -133,7 +166,9 @@ fs_rm(const char *_source)
 				_source,
 				-1, /* Indicates NULL termination */
 				wsource,
-				MAX_PATH));
+				CLAR_MAX_PATH));
+
+	translate_path(wsource, CLAR_MAX_PATH);
 
 	/* Does the item exist? If not, we have no work to do */
 	attrs = GetFileAttributesW(wsource);
@@ -158,21 +193,23 @@ fs_rm(const char *_source)
 static void
 fs_copydir_helper(WCHAR *_wsource, WCHAR *_wdest)
 {
-	WCHAR buf_source[MAX_PATH], buf_dest[MAX_PATH];
+	WCHAR buf_source[CLAR_MAX_PATH], buf_dest[CLAR_MAX_PATH];
 	HANDLE find_handle;
 	WIN32_FIND_DATAW find_data;
 	size_t buf_source_prefix_len, buf_dest_prefix_len;
 
-	wcscpy_s(buf_source, MAX_PATH, _wsource);
-	wcscat_s(buf_source, MAX_PATH, L"\\");
+	wcscpy_s(buf_source, CLAR_MAX_PATH, _wsource);
+	wcscat_s(buf_source, CLAR_MAX_PATH, L"\\");
+	translate_path(buf_source, CLAR_MAX_PATH);
 	buf_source_prefix_len = wcslen(buf_source);
 
-	wcscpy_s(buf_dest, MAX_PATH, _wdest);
-	wcscat_s(buf_dest, MAX_PATH, L"\\");
+	wcscpy_s(buf_dest, CLAR_MAX_PATH, _wdest);
+	wcscat_s(buf_dest, CLAR_MAX_PATH, L"\\");
+	translate_path(buf_dest, CLAR_MAX_PATH);
 	buf_dest_prefix_len = wcslen(buf_dest);
 
 	/* Get an enumerator for the items in the source. */
-	wcscat_s(buf_source, MAX_PATH, L"*");
+	wcscat_s(buf_source, CLAR_MAX_PATH, L"*");
 	find_handle = FindFirstFileW(buf_source, &find_data);
 	cl_assert(INVALID_HANDLE_VALUE != find_handle);
 
@@ -185,8 +222,8 @@ fs_copydir_helper(WCHAR *_wsource, WCHAR *_wdest)
 		if (fs__dotordotdot(find_data.cFileName))
 			continue;
 
-		wcscpy_s(buf_source + buf_source_prefix_len, MAX_PATH - buf_source_prefix_len, find_data.cFileName);
-		wcscpy_s(buf_dest + buf_dest_prefix_len, MAX_PATH - buf_dest_prefix_len, find_data.cFileName);
+		wcscpy_s(buf_source + buf_source_prefix_len, CLAR_MAX_PATH - buf_source_prefix_len, find_data.cFileName);
+		wcscpy_s(buf_dest + buf_dest_prefix_len, CLAR_MAX_PATH - buf_dest_prefix_len, find_data.cFileName);
 
 		if (FILE_ATTRIBUTE_DIRECTORY & find_data.dwFileAttributes)
 			fs_copydir_helper(buf_source, buf_dest);
@@ -205,7 +242,7 @@ fs_copydir_helper(WCHAR *_wsource, WCHAR *_wdest)
 static void
 fs_copy(const char *_source, const char *_dest)
 {
-	WCHAR wsource[MAX_PATH], wdest[MAX_PATH];
+	WCHAR wsource[CLAR_MAX_PATH], wdest[CLAR_MAX_PATH];
 	DWORD source_attrs, dest_attrs;
 	HANDLE find_handle;
 	WIN32_FIND_DATAW find_data;
@@ -217,14 +254,17 @@ fs_copy(const char *_source, const char *_dest)
 				_source,
 				-1,
 				wsource,
-				MAX_PATH));
+				CLAR_MAX_PATH));
 
 	cl_assert(MultiByteToWideChar(CP_UTF8,
 				MB_ERR_INVALID_CHARS,
 				_dest,
 				-1,
 				wdest,
-				MAX_PATH));
+				CLAR_MAX_PATH));
+
+	translate_path(wsource, CLAR_MAX_PATH);
+	translate_path(wdest, CLAR_MAX_PATH);
 
 	/* Check the source for existence */
 	source_attrs = GetFileAttributesW(wsource);
@@ -238,8 +278,8 @@ fs_copy(const char *_source, const char *_dest)
 		 * Use FindFirstFile to parse the path */
 		find_handle = FindFirstFileW(wsource, &find_data);
 		cl_assert(INVALID_HANDLE_VALUE != find_handle);
-		wcscat_s(wdest, MAX_PATH, L"\\");
-		wcscat_s(wdest, MAX_PATH, find_data.cFileName);
+		wcscat_s(wdest, CLAR_MAX_PATH, L"\\");
+		wcscat_s(wdest, CLAR_MAX_PATH, find_data.cFileName);
 		FindClose(find_handle);
 
 		/* Check the new target for existence */
@@ -273,7 +313,7 @@ cl_fs_cleanup(void)
 # include <sys/sendfile.h>
 #endif
 
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__)
 # include <copyfile.h>
 #endif
 
@@ -356,7 +396,7 @@ fs_copyfile_helper(const char *source, size_t source_len, const char *dest, int 
 	cl_must_pass((in = open(source, O_RDONLY)));
 	cl_must_pass((out = open(dest, O_WRONLY|O_CREAT|O_TRUNC, dest_mode)));
 
-#if USE_FCOPYFILE && (defined(__APPLE__) || defined(__FreeBSD__))
+#if USE_FCOPYFILE && defined(__APPLE__)
 	((void)(source_len)); /* unused */
 	cl_must_pass(fcopyfile(in, out, 0, COPYFILE_DATA));
 #elif USE_SENDFILE && defined(__linux__)
@@ -396,7 +436,7 @@ static void
 fs_copy(const char *source, const char *_dest)
 {
 	char *dbuf = NULL;
-	const char *dest;
+	const char *dest = NULL;
 	struct stat source_st, dest_st;
 
 	cl_must_pass_(lstat(source, &source_st), "Failed to stat copy source");

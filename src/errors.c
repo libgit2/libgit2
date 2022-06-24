@@ -7,9 +7,10 @@
 
 #include "common.h"
 
-#include "global.h"
+#include "threadstate.h"
 #include "posix.h"
 #include "buffer.h"
+#include "libgit2.h"
 
 /********************************************
  * New error handling
@@ -20,20 +21,25 @@ static git_error g_git_oom_error = {
 	GIT_ERROR_NOMEMORY
 };
 
+static git_error g_git_uninitialized_error = {
+	"libgit2 has not been initialized; you must call git_libgit2_init",
+	GIT_ERROR_INVALID
+};
+
 static void set_error_from_buffer(int error_class)
 {
-	git_error *error = &GIT_GLOBAL->error_t;
-	git_buf *buf = &GIT_GLOBAL->error_buf;
+	git_error *error = &GIT_THREADSTATE->error_t;
+	git_buf *buf = &GIT_THREADSTATE->error_buf;
 
 	error->message = buf->ptr;
 	error->klass = error_class;
 
-	GIT_GLOBAL->last_error = error;
+	GIT_THREADSTATE->last_error = error;
 }
 
 static void set_error(int error_class, char *string)
 {
-	git_buf *buf = &GIT_GLOBAL->error_buf;
+	git_buf *buf = &GIT_THREADSTATE->error_buf;
 
 	git_buf_clear(buf);
 	if (string) {
@@ -46,7 +52,7 @@ static void set_error(int error_class, char *string)
 
 void git_error_set_oom(void)
 {
-	GIT_GLOBAL->last_error = &g_git_oom_error;
+	GIT_THREADSTATE->last_error = &g_git_oom_error;
 }
 
 void git_error_set(int error_class, const char *fmt, ...)
@@ -64,7 +70,7 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 	DWORD win32_error_code = (error_class == GIT_ERROR_OS) ? GetLastError() : 0;
 #endif
 	int error_code = (error_class == GIT_ERROR_OS) ? errno : 0;
-	git_buf *buf = &GIT_GLOBAL->error_buf;
+	git_buf *buf = &GIT_THREADSTATE->error_buf;
 
 	git_buf_clear(buf);
 	if (fmt) {
@@ -97,14 +103,9 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 
 int git_error_set_str(int error_class, const char *string)
 {
-	git_buf *buf = &GIT_GLOBAL->error_buf;
+	git_buf *buf = &GIT_THREADSTATE->error_buf;
 
-	assert(string);
-
-	if (!string) {
-		git_error_set(GIT_ERROR_INVALID, "unspecified caller error");
-		return -1;
-	}
+	GIT_ASSERT_ARG(string);
 
 	git_buf_clear(buf);
 	git_buf_puts(buf, string);
@@ -118,9 +119,9 @@ int git_error_set_str(int error_class, const char *string)
 
 void git_error_clear(void)
 {
-	if (GIT_GLOBAL->last_error != NULL) {
+	if (GIT_THREADSTATE->last_error != NULL) {
 		set_error(0, NULL);
-		GIT_GLOBAL->last_error = NULL;
+		GIT_THREADSTATE->last_error = NULL;
 	}
 
 	errno = 0;
@@ -131,13 +132,17 @@ void git_error_clear(void)
 
 const git_error *git_error_last(void)
 {
-	return GIT_GLOBAL->last_error;
+	/* If the library is not initialized, return a static error. */
+	if (!git_libgit2_init_count())
+		return &g_git_uninitialized_error;
+
+	return GIT_THREADSTATE->last_error;
 }
 
 int git_error_state_capture(git_error_state *state, int error_code)
 {
-	git_error *error = GIT_GLOBAL->last_error;
-	git_buf *error_buf = &GIT_GLOBAL->error_buf;
+	git_error *error = GIT_THREADSTATE->last_error;
+	git_buf *error_buf = &GIT_THREADSTATE->error_buf;
 
 	memset(state, 0, sizeof(git_error_state));
 

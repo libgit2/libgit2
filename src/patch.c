@@ -65,7 +65,7 @@ size_t git_patch_size(
 {
 	size_t out;
 
-	assert(patch);
+	GIT_ASSERT_ARG(patch);
 
 	out = patch->content_size;
 
@@ -129,13 +129,13 @@ int git_patch_line_stats(
 
 const git_diff_delta *git_patch_get_delta(const git_patch *patch)
 {
-	assert(patch);
+	GIT_ASSERT_ARG_WITH_RETVAL(patch, NULL);
 	return patch->delta;
 }
 
 size_t git_patch_num_hunks(const git_patch *patch)
 {
-	assert(patch);
+	GIT_ASSERT_ARG(patch);
 	return git_array_size(patch->hunks);
 }
 
@@ -152,7 +152,7 @@ int git_patch_get_hunk(
 	size_t hunk_idx)
 {
 	git_patch_hunk *hunk;
-	assert(patch);
+	GIT_ASSERT_ARG(patch);
 
 	hunk = git_array_get(patch->hunks, hunk_idx);
 
@@ -170,7 +170,7 @@ int git_patch_get_hunk(
 int git_patch_num_lines_in_hunk(const git_patch *patch, size_t hunk_idx)
 {
 	git_patch_hunk *hunk;
-	assert(patch);
+	GIT_ASSERT_ARG(patch);
 
 	if (!(hunk = git_array_get(patch->hunks, hunk_idx)))
 		return patch_error_outofrange("hunk");
@@ -186,7 +186,7 @@ int git_patch_get_line_in_hunk(
 	git_patch_hunk *hunk;
 	git_diff_line *line;
 
-	assert(patch);
+	GIT_ASSERT_ARG(patch);
 
 	if (!(hunk = git_array_get(patch->hunks, hunk_idx))) {
 		if (out) *out = NULL;
@@ -204,9 +204,16 @@ int git_patch_get_line_in_hunk(
 	return 0;
 }
 
+git_repository *git_patch_owner(const git_patch *patch)
+{
+	return patch->repo;
+}
+
 int git_patch_from_diff(git_patch **out, git_diff *diff, size_t idx)
 {
-	assert(out && diff && diff->patch_fn);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(diff);
+	GIT_ASSERT_ARG(diff->patch_fn);
 	return diff->patch_fn(out, diff, idx);
 }
 

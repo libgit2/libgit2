@@ -89,6 +89,12 @@
 #define EAFNOSUPPORT (INT_MAX-1)
 #endif
 
+/* Compiler independent macro to handle signal interrpted system calls */
+#define HANDLE_EINTR(result, x) do {					\
+		result = (x);						\
+	} while (result == -1 && errno == EINTR);
+
+
 /* Provide a 64-bit size for offsets. */
 
 #if defined(_MSC_VER)
@@ -118,6 +124,9 @@ typedef int git_file;
 
 extern ssize_t p_read(git_file fd, void *buf, size_t cnt);
 extern int p_write(git_file fd, const void *buf, size_t cnt);
+
+extern ssize_t p_pread(int fd, void *data, size_t size, off64_t offset);
+extern ssize_t p_pwrite(int fd, const void *data, size_t size, off64_t offset);
 
 #define p_close(fd) close(fd)
 #define p_umask(m) umask(m)

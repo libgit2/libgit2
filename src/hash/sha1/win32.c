@@ -7,7 +7,7 @@
 
 #include "win32.h"
 
-#include "global.h"
+#include "runtime.h"
 
 #include <wincrypt.h>
 #include <strsafe.h>
@@ -129,7 +129,8 @@ int git_hash_sha1_global_init(void)
 	if ((error = hash_cng_prov_init()) < 0)
 		error = hash_cryptoapi_prov_init();
 
-	git__on_shutdown(sha1_shutdown);
+	if (!error)
+		error = git_runtime_shutdown_register(sha1_shutdown);
 
 	return error;
 }
@@ -163,7 +164,7 @@ GIT_INLINE(int) hash_cryptoapi_update(git_hash_sha1_ctx *ctx, const void *_data,
 {
 	const BYTE *data = (BYTE *)_data;
 
-	assert(ctx->ctx.cryptoapi.valid);
+	GIT_ASSERT(ctx->ctx.cryptoapi.valid);
 
 	while (len > 0) {
 		DWORD chunk = (len > MAXDWORD) ? MAXDWORD : (DWORD)len;
@@ -185,7 +186,7 @@ GIT_INLINE(int) hash_cryptoapi_final(git_oid *out, git_hash_sha1_ctx *ctx)
 	DWORD len = 20;
 	int error = 0;
 
-	assert(ctx->ctx.cryptoapi.valid);
+	GIT_ASSERT(ctx->ctx.cryptoapi.valid);
 
 	if (!CryptGetHashParam(ctx->ctx.cryptoapi.hash_handle, HP_HASHVAL, out->id, &len, 0)) {
 		git_error_set(GIT_ERROR_OS, "legacy hash data could not be finished");
@@ -285,7 +286,7 @@ int git_hash_sha1_ctx_init(git_hash_sha1_ctx *ctx)
 {
 	int error = 0;
 
-	assert(ctx);
+	GIT_ASSERT_ARG(ctx);
 
 	/*
 	 * When compiled with GIT_THREADS, the global hash_prov data is
@@ -302,27 +303,30 @@ int git_hash_sha1_ctx_init(git_hash_sha1_ctx *ctx)
 
 int git_hash_sha1_init(git_hash_sha1_ctx *ctx)
 {
-	assert(ctx && ctx->type);
+	GIT_ASSERT_ARG(ctx);
+	GIT_ASSERT_ARG(ctx->type);
 	return (ctx->type == CNG) ? hash_cng_init(ctx) : hash_cryptoapi_init(ctx);
 }
 
 int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 {
-	assert(ctx && ctx->type);
+	GIT_ASSERT_ARG(ctx);
+	GIT_ASSERT_ARG(ctx->type);
 	return (ctx->type == CNG) ? hash_cng_update(ctx, data, len) : hash_cryptoapi_update(ctx, data, len);
 }
 
 int git_hash_sha1_final(git_oid *out, git_hash_sha1_ctx *ctx)
 {
-	assert(ctx && ctx->type);
+	GIT_ASSERT_ARG(ctx);
+	GIT_ASSERT_ARG(ctx->type);
 	return (ctx->type == CNG) ? hash_cng_final(out, ctx) : hash_cryptoapi_final(out, ctx);
 }
 
 void git_hash_sha1_ctx_cleanup(git_hash_sha1_ctx *ctx)
 {
-	assert(ctx);
-
-	if (ctx->type == CNG)
+	if (!ctx)
+		return;
+	else if (ctx->type == CNG)
 		hash_ctx_cng_cleanup(ctx);
 	else if(ctx->type == CRYPTOAPI)
 		hash_ctx_cryptoapi_cleanup(ctx);

@@ -212,7 +212,8 @@ GIT_EXTERN(const char *) git_remote_name(const git_remote *remote);
  * Get the remote's url
  *
  * If url.*.insteadOf has been configured for this URL, it will
- * return the modified URL.
+ * return the modified URL.  If `git_remote_set_instance_pushurl`
+ * has been called for this remote, then that URL will be returned.
  *
  * @param remote the remote
  * @return a pointer to the url
@@ -220,10 +221,11 @@ GIT_EXTERN(const char *) git_remote_name(const git_remote *remote);
 GIT_EXTERN(const char *) git_remote_url(const git_remote *remote);
 
 /**
- * Get the remote's url for pushing
+ * Get the remote's url for pushing.
  *
  * If url.*.pushInsteadOf has been configured for this URL, it
- * will return the modified URL.
+ * will return the modified URL.  If `git_remote_set_instance_pushurl`
+ * has been called for this remote, then that URL will be returned.
  *
  * @param remote the remote
  * @return a pointer to the url or NULL if no special url for pushing is set
@@ -241,7 +243,7 @@ GIT_EXTERN(const char *) git_remote_pushurl(const git_remote *remote);
  * @param url the url to set
  * @return 0 or an error value
  */
-GIT_EXTERN(int) git_remote_set_url(git_repository *repo, const char *remote, const char* url);
+GIT_EXTERN(int) git_remote_set_url(git_repository *repo, const char *remote, const char *url);
 
 /**
  * Set the remote's url for pushing in the configuration.
@@ -253,8 +255,29 @@ GIT_EXTERN(int) git_remote_set_url(git_repository *repo, const char *remote, con
  * @param repo the repository in which to perform the change
  * @param remote the remote's name
  * @param url the url to set
+ * @return 0, or an error code
  */
-GIT_EXTERN(int) git_remote_set_pushurl(git_repository *repo, const char *remote, const char* url);
+GIT_EXTERN(int) git_remote_set_pushurl(git_repository *repo, const char *remote, const char *url);
+
+/**
+ * Set the url for this particular url instance.  The URL in the
+ * configuration will be ignored, and will not be changed.
+ *
+ * @param remote the remote's name
+ * @param url the url to set
+ * @return 0 or an error value
+ */
+GIT_EXTERN(int) git_remote_set_instance_url(git_remote *remote, const char *url);
+
+/**
+ * Set the push url for this particular url instance.  The URL in the
+ * configuration will be ignored, and will not be changed.
+ *
+ * @param remote the remote's name
+ * @param url the url to set
+ * @return 0 or an error value
+ */
+GIT_EXTERN(int) git_remote_set_instance_pushurl(git_remote *remote, const char *url);
 
 /**
  * Add a fetch refspec to the remote's configuration
@@ -428,7 +451,7 @@ typedef int GIT_CALLBACK(git_push_transfer_progress_cb)(
 	unsigned int current,
 	unsigned int total,
 	size_t bytes,
-	void* payload);
+	void *payload);
 
 /**
  * Represents an update which will be performed on the remote during push
@@ -476,6 +499,7 @@ typedef int GIT_CALLBACK(git_push_negotiation)(const git_push_update **updates, 
  */
 typedef int GIT_CALLBACK(git_push_update_reference_cb)(const char *refname, const char *status, void *data);
 
+#ifndef GIT_DEPRECATE_HARD
 /**
  * Callback to resolve URLs before connecting to remote
  *
@@ -487,8 +511,22 @@ typedef int GIT_CALLBACK(git_push_update_reference_cb)(const char *refname, cons
  * @param direction GIT_DIRECTION_FETCH or GIT_DIRECTION_PUSH
  * @param payload Payload provided by the caller
  * @return 0 on success, GIT_PASSTHROUGH or an error
+ * @deprecated Use `git_remote_set_instance_url`
  */
 typedef int GIT_CALLBACK(git_url_resolve_cb)(git_buf *url_resolved, const char *url, int direction, void *payload);
+#endif
+
+/**
+ * Callback invoked immediately before we attempt to connect to the
+ * given url.  Callers may change the URL before the connection by
+ * calling `git_remote_set_instance_url` in the callback.
+ *
+ * @param remote The remote to be connected
+ * @param direction GIT_DIRECTION_FETCH or GIT_DIRECTION_PUSH
+ * @param payload Payload provided by the caller
+ * @return 0 on success, or an error
+ */
+typedef int GIT_CALLBACK(git_remote_ready_cb)(git_remote *remote, int direction, void *payload);
 
 /**
  * The callback settings structure
@@ -575,16 +613,28 @@ struct git_remote_callbacks {
 	git_transport_cb transport;
 
 	/**
+	 * Callback when the remote is ready to connect.
+	 */
+	git_remote_ready_cb remote_ready;
+
+	/**
 	 * This will be passed to each of the callbacks in this struct
 	 * as the last parameter.
 	 */
 	void *payload;
 
+#ifdef GIT_DEPRECATE_HARD
+	void *reserved;
+#else
 	/**
 	 * Resolve URL before connecting to remote.
 	 * The returned URL will be used to connect to the remote instead.
+	 *
+	 * This callback is deprecated; users should use
+	 * git_remote_ready_cb and configure the instance URL instead.
 	 */
 	git_url_resolve_cb resolve_url;
+#endif
 };
 
 #define GIT_REMOTE_CALLBACKS_VERSION 1
@@ -876,8 +926,10 @@ GIT_EXTERN(git_remote_autotag_option_t) git_remote_autotag(const git_remote *rem
  * @param repo the repository in which to make the change
  * @param remote the name of the remote
  * @param value the new value to take.
+ * @return 0, or an error code.
  */
 GIT_EXTERN(int) git_remote_set_autotag(git_repository *repo, const char *remote, git_remote_autotag_option_t value);
+
 /**
  * Retrieve the ref-prune setting
  *
@@ -915,10 +967,11 @@ GIT_EXTERN(int) git_remote_rename(
 /**
  * Ensure the remote name is well-formed.
  *
+ * @param valid output pointer to set with validity of given remote name
  * @param remote_name name to be checked.
- * @return 1 if the reference name is acceptable; 0 if it isn't
+ * @return 0 on success or an error code
  */
-GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
+GIT_EXTERN(int) git_remote_name_is_valid(int *valid, const char *remote_name);
 
 /**
 * Delete an existing persisted remote.
@@ -943,7 +996,7 @@ GIT_EXTERN(int) git_remote_delete(git_repository *repo, const char *name);
  *
  * This function must only be called after connecting.
  *
- * @param out the buffern in which to store the reference name
+ * @param out the buffer in which to store the reference name
  * @param remote the remote
  * @return 0, GIT_ENOTFOUND if the remote does not have any references
  * or none of them point to HEAD's commit, or an error message.

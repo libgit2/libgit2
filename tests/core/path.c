@@ -32,15 +32,6 @@ check_basename(const char *A, const char *B)
 }
 
 static void
-check_topdir(const char *A, const char *B)
-{
-	const char *dir;
-
-	cl_assert((dir = git_path_topdir(A)) != NULL);
-	cl_assert_equal_s(B, dir);
-}
-
-static void
 check_joinpath(const char *path_a, const char *path_b, const char *expected_path)
 {
 	git_buf joined_path = GIT_BUF_INIT;
@@ -117,23 +108,6 @@ void test_core_path__01_basename(void)
 
 	check_basename(REP16("/abc"), "abc");
 	check_basename(REP1024("/abc"), "abc");
-}
-
-/* get the latest component in a path */
-void test_core_path__02_topdir(void)
-{
-	check_topdir(".git/", ".git/");
-	check_topdir("/.git/", ".git/");
-	check_topdir("usr/local/.git/", ".git/");
-	check_topdir("./.git/", ".git/");
-	check_topdir("/usr/.git/", ".git/");
-	check_topdir("/", "/");
-	check_topdir("a/", "a/");
-
-	cl_assert(git_path_topdir("/usr/.git") == NULL);
-	cl_assert(git_path_topdir(".") == NULL);
-	cl_assert(git_path_topdir("") == NULL);
-	cl_assert(git_path_topdir("a") == NULL);
 }
 
 /* properly join path components */
@@ -285,7 +259,7 @@ void test_core_path__08_self_join(void)
 	cl_git_pass(git_buf_joinpath(&path, path.ptr + 4, "somethinglongenoughtorealloc"));
 	cl_assert_equal_s(path.ptr, "/baz/somethinglongenoughtorealloc");
 	cl_assert(asize < path.asize);
-	
+
 	git_buf_dispose(&path);
 }
 

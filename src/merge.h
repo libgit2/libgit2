@@ -129,7 +129,8 @@ int git_merge__bases_many(
 	git_commit_list **out,
 	git_revwalk *walk,
 	git_commit_list_node *one,
-	git_vector *twos);
+	git_vector *twos,
+	uint32_t minimum_generation);
 
 /*
  * Three-way tree differencing

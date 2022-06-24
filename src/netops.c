@@ -13,7 +13,7 @@
 #include "posix.h"
 #include "buffer.h"
 #include "http_parser.h"
-#include "global.h"
+#include "runtime.h"
 
 int gitno_recv(gitno_buffer *buf)
 {
@@ -61,18 +61,20 @@ void gitno_buffer_setup_fromstream(git_stream *st, gitno_buffer *buf, char *data
 }
 
 /* Consume up to ptr and move the rest of the buffer to the beginning */
-void gitno_consume(gitno_buffer *buf, const char *ptr)
+int gitno_consume(gitno_buffer *buf, const char *ptr)
 {
 	size_t consumed;
 
-	assert(ptr - buf->data >= 0);
-	assert(ptr - buf->data <= (int) buf->len);
+	GIT_ASSERT(ptr - buf->data >= 0);
+	GIT_ASSERT(ptr - buf->data <= (int) buf->len);
 
 	consumed = ptr - buf->data;
 
 	memmove(buf->data, ptr, buf->offset - consumed);
 	memset(buf->data + buf->offset, 0x0, buf->len - buf->offset);
 	buf->offset -= consumed;
+
+	return 0;
 }
 
 /* Consume const bytes and move the rest of the buffer to the beginning */

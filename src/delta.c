@@ -256,7 +256,7 @@ void git_delta_index_free(git_delta_index *index)
 
 size_t git_delta_index_size(git_delta_index *index)
 {
-	assert(index);
+	GIT_ASSERT_ARG(index);
 
 	return index->memsize;
 }

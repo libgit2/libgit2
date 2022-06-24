@@ -21,30 +21,27 @@ struct git_pool_page {
 
 static void *pool_alloc_page(git_pool *pool, size_t size);
 
-static size_t pool_system_page_size(void)
+#ifndef GIT_DEBUG_POOL
+
+static size_t system_page_size = 0;
+
+int git_pool_global_init(void)
 {
-	static size_t size = 0;
-
-	if (!size) {
-		size_t page_size;
-		if (git__page_size(&page_size) < 0)
-			page_size = 4096;
-		/* allow space for malloc overhead */
-		size = (page_size - (2 * sizeof(void *)) - sizeof(git_pool_page));
-	}
-
-	return size;
+	if (git__page_size(&system_page_size) < 0)
+		system_page_size = 4096;
+	/* allow space for malloc overhead */
+	system_page_size -= (2 * sizeof(void *)) + sizeof(git_pool_page);
+	return 0;
 }
 
-#ifndef GIT_DEBUG_POOL
 int git_pool_init(git_pool *pool, size_t item_size)
 {
-	assert(pool);
-	assert(item_size >= 1);
+	GIT_ASSERT_ARG(pool);
+	GIT_ASSERT_ARG(item_size >= 1);
 
 	memset(pool, 0, sizeof(git_pool));
 	pool->item_size = item_size;
-	pool->page_size = pool_system_page_size();
+	pool->page_size = system_page_size;
 
 	return 0;
 }
@@ -114,6 +111,11 @@ bool git_pool__ptr_in_pool(git_pool *pool, void *ptr)
 
 #else
 
+int git_pool_global_init(void)
+{
+	return 0;
+}
+
 static int git_pool__ptr_cmp(const void * a, const void * b)
 {
 	if(a > b) {
@@ -129,8 +131,8 @@ static int git_pool__ptr_cmp(const void * a, const void * b)
 
 int git_pool_init(git_pool *pool, size_t item_size)
 {
-	assert(pool);
-	assert(item_size >= 1);
+	GIT_ASSERT_ARG(pool);
+	GIT_ASSERT_ARG(item_size >= 1);
 
 	memset(pool, 0, sizeof(git_pool));
 	pool->item_size = item_size;
@@ -203,7 +205,9 @@ char *git_pool_strndup(git_pool *pool, const char *str, size_t n)
 {
 	char *ptr = NULL;
 
-	assert(pool && str && pool->item_size == sizeof(char));
+	GIT_ASSERT_ARG_WITH_RETVAL(pool, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(str, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(pool->item_size == sizeof(char), NULL);
 
 	if (n == SIZE_MAX)
 		return NULL;
@@ -218,7 +222,10 @@ char *git_pool_strndup(git_pool *pool, const char *str, size_t n)
 
 char *git_pool_strdup(git_pool *pool, const char *str)
 {
-	assert(pool && str && pool->item_size == sizeof(char));
+	GIT_ASSERT_ARG_WITH_RETVAL(pool, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(str, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(pool->item_size == sizeof(char), NULL);
+
 	return git_pool_strndup(pool, str, strlen(str));
 }
 
@@ -232,7 +239,8 @@ char *git_pool_strcat(git_pool *pool, const char *a, const char *b)
 	void *ptr;
 	size_t len_a, len_b, total;
 
-	assert(pool && pool->item_size == sizeof(char));
+	GIT_ASSERT_ARG_WITH_RETVAL(pool, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(pool->item_size == sizeof(char), NULL);
 
 	len_a = a ? strlen(a) : 0;
 	len_b = b ? strlen(b) : 0;

@@ -1,3 +1,4 @@
+SET(Python_ADDITIONAL_VERSIONS 3 2.7)
 FIND_PACKAGE(PythonInterp)
 
 IF(NOT PYTHONINTERP_FOUND)
@@ -9,6 +10,7 @@ SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/resources/")
 SET(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 ADD_DEFINITIONS(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
 ADD_DEFINITIONS(-DCLAR_TMPDIR=\"libgit2_tests\")
+ADD_DEFINITIONS(-DCLAR_WIN32_LONGPATHS)
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
 # Ensure that we do not use deprecated functions internally
@@ -62,7 +64,8 @@ ENDFUNCTION(ADD_CLAR_TEST)
 
 ADD_CLAR_TEST(offline             -v -xonline)
 ADD_CLAR_TEST(invasive            -v -score::ftruncate -sfilter::stream::bigfile -sodb::largefiles -siterator::workdir::filesystem_gunk -srepo::init -srepo::init::at_filesystem_root)
-ADD_CLAR_TEST(online              -v -sonline)
+ADD_CLAR_TEST(online              -v -sonline -xonline::customcert)
+ADD_CLAR_TEST(online_customcert   -v -sonline::customcert)
 ADD_CLAR_TEST(gitdaemon           -v -sonline::push)
 ADD_CLAR_TEST(ssh                 -v -sonline::push -sonline::clone::ssh_cert -sonline::clone::ssh_with_paths -sonline::clone::path_whitespace_ssh)
 ADD_CLAR_TEST(proxy               -v -sonline::clone::proxy)

@@ -158,11 +158,6 @@ static void oid_parsing(git_oid *oid)
 	 * If you have a oid, you can easily get the hex value of the SHA as well.
 	 */
 	git_oid_fmt(out, oid);
-
-	/**
-	 * If you have a oid, you can easily get the hex value of the SHA as well.
-	 */
-	git_oid_fmt(out, oid);
 	printf("SHA hex string: %s\n", out);
 }
 
@@ -713,7 +708,7 @@ static void reference_listing(git_repository *repo)
 /**
  * ### Config Files
  *
- * The [config API][config] allows you to list and updatee config values
+ * The [config API][config] allows you to list and update config values
  * in any of the accessible config file locations (system, global, local).
  *
  * [config]: http://libgit2.github.com/libgit2/#HEAD/group/config

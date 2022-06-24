@@ -14,7 +14,7 @@
 
 #include "common.h"
 
-/* Define the printf format specifer to use for size_t output */
+/* Define the printf format specifier to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #	define PRIuZ "Iu"
 #	define PRIxZ "Ix"

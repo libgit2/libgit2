@@ -150,7 +150,7 @@ void test_revwalk_mergebase__multiple_merge_bases(void)
 	cl_assert_equal_oid(&expected1, &result.ids[0]);
 	cl_assert_equal_oid(&expected2, &result.ids[1]);
 
-	git_oidarray_free(&result);
+	git_oidarray_dispose(&result);
 }
 
 void test_revwalk_mergebase__multiple_merge_bases_many_commits(void)
@@ -170,7 +170,7 @@ void test_revwalk_mergebase__multiple_merge_bases_many_commits(void)
 	cl_assert_equal_oid(&expected1, &result.ids[0]);
 	cl_assert_equal_oid(&expected2, &result.ids[1]);
 
-	git_oidarray_free(&result);
+	git_oidarray_dispose(&result);
 	git__free(input);
 }
 
@@ -186,7 +186,7 @@ void test_revwalk_mergebase__no_off_by_one_missing(void)
 static void assert_mergebase_many(const char *expected_sha, int count, ...)
 {
 	va_list ap;
-	int i; 
+	int i;
 	git_oid *oids;
 	git_oid oid, expected;
 	char *partial_oid;
@@ -376,9 +376,9 @@ void test_revwalk_mergebase__octopus_merge_branch(void)
  * * commit 8496071c1b46c854b31185ea97743be6a8774479
  *   Author: Scott Chacon <schacon@gmail.com>
  *   Date:   Sat May 8 16:13:06 2010 -0700
- * 
+ *
  *       testing
- * 
+ *
  * * commit 41bc8c69075bbdb46c5c6f0566cc8cc5b46e8bd9
  * | Author: Scott Chacon <schacon@gmail.com>
  * | Date:   Tue May 11 13:40:41 2010 -0700
@@ -388,7 +388,7 @@ void test_revwalk_mergebase__octopus_merge_branch(void)
  * * commit 5001298e0c09ad9c34e4249bc5801c75e9754fa5
  *   Author: Scott Chacon <schacon@gmail.com>
  *   Date:   Tue May 11 13:40:23 2010 -0700
- * 
+ *
  *       packed commit one
  */
 
@@ -398,94 +398,94 @@ void test_revwalk_mergebase__octopus_merge_branch(void)
  * |\  Merge: c37a783 2224e19
  * | | Author: Scott J. Goldman <scottjg@github.com>
  * | | Date:   Tue Nov 27 20:31:04 2012 -0800
- * | | 
+ * | |
  * | |     Merge branch 'first-branch' into second-branch
- * | |   
+ * | |
  * | * commit 2224e191514cb4bd8c566d80dac22dfcb1e9bb83
  * | | Author: Scott J. Goldman <scottjg@github.com>
  * | | Date:   Tue Nov 27 20:28:51 2012 -0800
- * | | 
+ * | |
  * | |     j
- * | |   
+ * | |
  * | * commit a41a49f8f5cd9b6cb14a076bf8394881ed0b4d19
  * | | Author: Scott J. Goldman <scottjg@github.com>
  * | | Date:   Tue Nov 27 20:28:39 2012 -0800
- * | | 
+ * | |
  * | |     i
- * | |   
+ * | |
  * | * commit 82bf9a1a10a4b25c1f14c9607b60970705e92545
  * | | Author: Scott J. Goldman <scottjg@github.com>
  * | | Date:   Tue Nov 27 20:28:28 2012 -0800
- * | | 
+ * | |
  * | |     h
- * | |   
+ * | |
  * * | commit c37a783c20d92ac92362a78a32860f7eebf938ef
  * | | Author: Scott J. Goldman <scottjg@github.com>
  * | | Date:   Tue Nov 27 20:30:57 2012 -0800
- * | | 
+ * | |
  * | |     n
- * | |   
+ * | |
  * * | commit 8b82fb1794cb1c8c7f172ec730a4c2db0ae3e650
  * | | Author: Scott J. Goldman <scottjg@github.com>
  * | | Date:   Tue Nov 27 20:30:43 2012 -0800
- * | | 
+ * | |
  * | |     m
- * | |   
+ * | |
  * * | commit 6ab5d28acbf3c3bdff276f7ccfdf29c1520e542f
  * | | Author: Scott J. Goldman <scottjg@github.com>
  * | | Date:   Tue Nov 27 20:30:38 2012 -0800
- * | | 
+ * | |
  * | |     l
- * | |   
+ * | |
  * * | commit 7b8c336c45fc6895c1c60827260fe5d798e5d247
  * | | Author: Scott J. Goldman <scottjg@github.com>
  * | | Date:   Tue Nov 27 20:30:24 2012 -0800
- * | | 
+ * | |
  * | |     k
- * | |     
+ * | |
  * | | * commit 1c30b88f5f3ee66d78df6520a7de9e89b890818b
  * | | | Author: Scott J. Goldman <scottjg@github.com>
  * | | | Date:   Tue Nov 27 20:28:10 2012 -0800
- * | | | 
+ * | | |
  * | | |     e
- * | | |    
+ * | | |
  * | | * commit 42b7311aa626e712891940c1ec5d5cba201946a4
  * | | | Author: Scott J. Goldman <scottjg@github.com>
  * | | | Date:   Tue Nov 27 20:28:06 2012 -0800
- * | | | 
+ * | | |
  * | | |     d
- * | | |      
+ * | | |
  * | | *   commit a953a018c5b10b20c86e69fef55ebc8ad4c5a417
  * | | |\  Merge: bd1732c cdf97fd
  * | | |/  Author: Scott J. Goldman <scottjg@github.com>
  * | |/|   Date:   Tue Nov 27 20:26:43 2012 -0800
- * | | |   
+ * | | |
  * | | |       Merge branch 'first-branch'
- * | | |    
+ * | | |
  * | * | commit cdf97fd3bb48eb3827638bb33d208f5fd32d0aa6
  * | | | Author: Scott J. Goldman <scottjg@github.com>
  * | | | Date:   Tue Nov 27 20:24:46 2012 -0800
- * | | | 
+ * | | |
  * | | |     g
- * | | |    
+ * | | |
  * | * | commit ef0488f0b722f0be8bcb90a7730ac7efafd1d694
  * | | | Author: Scott J. Goldman <scottjg@github.com>
  * | | | Date:   Tue Nov 27 20:24:39 2012 -0800
- * | | | 
+ * | | |
  * | | |     f
- * | | |    
+ * | | |
  * | | * commit bd1732c43c68d712ad09e1d872b9be6d4b9efdc4
  * | |/  Author: Scott J. Goldman <scottjg@github.com>
  * | |   Date:   Tue Nov 27 17:43:58 2012 -0800
- * | |   
+ * | |
  * | |       c
- * | |   
+ * | |
  * | * commit 0c8a3f1f3d5f421cf83048c7c73ee3b55a5e0f29
  * |/  Author: Scott J. Goldman <scottjg@github.com>
  * |   Date:   Tue Nov 27 17:43:48 2012 -0800
- * |   
+ * |
  * |       b
- * |  
+ * |
  * * commit 1f4c0311a24b63f6fc209a59a1e404942d4a5006
  *   Author: Scott J. Goldman <scottjg@github.com>
  *   Date:   Tue Nov 27 17:43:41 2012 -0800
@@ -509,6 +509,6 @@ void test_revwalk_mergebase__remove_redundant(void)
 	cl_assert_equal_i(1, result.count);
 	cl_assert_equal_oid(&base, &result.ids[0]);
 
-	git_oidarray_free(&result);
+	git_oidarray_dispose(&result);
 	git_repository_free(repo);
 }

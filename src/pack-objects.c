@@ -12,7 +12,7 @@
 #include "iterator.h"
 #include "netops.h"
 #include "pack.h"
-#include "thread-utils.h"
+#include "thread.h"
 #include "tree.h"
 #include "util.h"
 #include "revwalk.h"
@@ -48,18 +48,10 @@ struct walk_object {
 };
 
 #ifdef GIT_THREADS
-
-#define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) do { \
-		int result = git_mutex_##op(&(pb)->mtx); \
-		assert(!result); \
-		GIT_UNUSED(result); \
-	} while (0)
-
+# define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) git_mutex_##op(&(pb)->mtx)
 #else
-
-#define GIT_PACKBUILDER__MUTEX_OP(pb,mtx,op) GIT_UNUSED(pb)
-
-#endif /* GIT_THREADS */
+# define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) git__noop()
+#endif
 
 #define git_packbuilder__cache_lock(pb) GIT_PACKBUILDER__MUTEX_OP(pb, cache_mutex, lock)
 #define git_packbuilder__cache_unlock(pb) GIT_PACKBUILDER__MUTEX_OP(pb, cache_mutex, unlock)
@@ -177,13 +169,13 @@ on_error:
 
 unsigned int git_packbuilder_set_threads(git_packbuilder *pb, unsigned int n)
 {
-	assert(pb);
+	GIT_ASSERT_ARG(pb);
 
 #ifdef GIT_THREADS
 	pb->nr_threads = n;
 #else
 	GIT_UNUSED(n);
-	assert(1 == pb->nr_threads);
+	GIT_ASSERT(pb->nr_threads == 1);
 #endif
 
 	return pb->nr_threads;
@@ -211,7 +203,8 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	size_t newsize;
 	int ret;
 
-	assert(pb && oid);
+	GIT_ASSERT_ARG(pb);
+	GIT_ASSERT_ARG(oid);
 
 	/* If the object already exists in the hash table, then we don't
 	 * have any work to do */
@@ -258,7 +251,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		double current_time = git__timer();
 		double elapsed = current_time - pb->last_progress_report_time;
 
-		if (elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
+		if (elapsed < 0 || elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			pb->last_progress_report_time = current_time;
 
 			ret = pb->progress_cb(
@@ -347,10 +340,9 @@ static int write_object(
 	}
 
 	/* Write header */
-	hdr_len = git_packfile__object_header(hdr, data_len, type);
-
-	if ((error = write_cb(hdr, hdr_len, cb_data)) < 0 ||
-		(error = git_hash_update(&pb->ctx, hdr, hdr_len)) < 0)
+	if ((error = git_packfile__object_header(&hdr_len, hdr, data_len, type)) < 0 ||
+	    (error = write_cb(hdr, hdr_len, cb_data)) < 0 ||
+	    (error = git_hash_update(&pb->ctx, hdr, hdr_len)) < 0)
 		goto done;
 
 	if (type == GIT_OBJECT_REF_DELTA) {
@@ -525,13 +517,18 @@ static int cb_tag_foreach(const char *name, git_oid *oid, void *data)
 	return 0;
 }
 
-static git_pobject **compute_write_order(git_packbuilder *pb)
+static int compute_write_order(git_pobject ***out, git_packbuilder *pb)
 {
 	size_t i, wo_end, last_untagged;
 	git_pobject **wo;
 
+	*out = NULL;
+
+	if (!pb->nr_objects)
+		return 0;
+
 	if ((wo = git__mallocarray(pb->nr_objects, sizeof(*wo))) == NULL)
-		return NULL;
+		return -1;
 
 	for (i = 0; i < pb->nr_objects; i++) {
 		git_pobject *po = pb->object_list + i;
@@ -560,7 +557,7 @@ static git_pobject **compute_write_order(git_packbuilder *pb)
 	 */
 	if (git_tag_foreach(pb->repo, &cb_tag_foreach, pb) < 0) {
 		git__free(wo);
-		return NULL;
+		return -1;
 	}
 
 	/*
@@ -617,10 +614,11 @@ static git_pobject **compute_write_order(git_packbuilder *pb)
 	if (wo_end != pb->nr_objects) {
 		git__free(wo);
 		git_error_set(GIT_ERROR_INVALID, "invalid write order");
-		return NULL;
+		return -1;
 	}
 
-	return wo;
+	*out = wo;
+	return 0;
 }
 
 static int write_pack(git_packbuilder *pb,
@@ -633,15 +631,15 @@ static int write_pack(git_packbuilder *pb,
 	struct git_pack_header ph;
 	git_oid entry_oid;
 	size_t i = 0;
-	int error = 0;
+	int error;
 
-	write_order = compute_write_order(pb);
-	if (write_order == NULL)
-		return -1;
+	if ((error = compute_write_order(&write_order, pb)) < 0)
+		return error;
 
 	if (!git__is_uint32(pb->nr_objects)) {
 		git_error_set(GIT_ERROR_INVALID, "too many objects");
-		return -1;
+		error = -1;
+		goto done;
 	}
 
 	/* Write pack header */
@@ -852,10 +850,11 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		}
 	}
 
-	git_packbuilder__cache_lock(pb);
+	GIT_ASSERT(git_packbuilder__cache_lock(pb) == 0);
+
 	if (trg_object->delta_data) {
 		git__free(trg_object->delta_data);
-		assert(pb->delta_cache_size >= trg_object->delta_size);
+		GIT_ASSERT(pb->delta_cache_size >= trg_object->delta_size);
 		pb->delta_cache_size -= trg_object->delta_size;
 		trg_object->delta_data = NULL;
 	}
@@ -863,7 +862,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		bool overflow = git__add_sizet_overflow(
 			&pb->delta_cache_size, pb->delta_cache_size, delta_size);
 
-		git_packbuilder__cache_unlock(pb);
+		GIT_ASSERT(git_packbuilder__cache_unlock(pb) == 0);
 
 		if (overflow) {
 			git__free(delta_buf);
@@ -874,7 +873,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		GIT_ERROR_CHECK_ALLOC(trg_object->delta_data);
 	} else {
 		/* create delta when writing the pack */
-		git_packbuilder__cache_unlock(pb);
+		GIT_ASSERT(git_packbuilder__cache_unlock(pb) == 0);
 		git__free(delta_buf);
 	}
 
@@ -929,7 +928,7 @@ static int report_delta_progress(
 		double current_time = git__timer();
 		double elapsed = current_time - pb->last_progress_report_time;
 
-		if (force || elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
+		if (force || elapsed < 0 || elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			pb->last_progress_report_time = current_time;
 
 			ret = pb->progress_cb(
@@ -962,9 +961,9 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 		struct unpacked *n = array + idx;
 		size_t max_depth, j, best_base = SIZE_MAX;
 
-		git_packbuilder__progress_lock(pb);
+		GIT_ASSERT(git_packbuilder__progress_lock(pb) == 0);
 		if (!*list_size) {
-			git_packbuilder__progress_unlock(pb);
+			GIT_ASSERT(git_packbuilder__progress_unlock(pb) == 0);
 			break;
 		}
 
@@ -973,7 +972,7 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 
 		po = *list++;
 		(*list_size)--;
-		git_packbuilder__progress_unlock(pb);
+		GIT_ASSERT(git_packbuilder__progress_unlock(pb) == 0);
 
 		mem_usage -= free_unpacked(n);
 		n->object = po;
@@ -1048,10 +1047,10 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 			po->z_delta_size = zbuf.size;
 			git_buf_clear(&zbuf);
 
-			git_packbuilder__cache_lock(pb);
+			GIT_ASSERT(git_packbuilder__cache_lock(pb) == 0);
 			pb->delta_cache_size -= po->delta_size;
 			pb->delta_cache_size += po->z_delta_size;
-			git_packbuilder__cache_unlock(pb);
+			GIT_ASSERT(git_packbuilder__cache_unlock(pb) == 0);
 		}
 
 		/*
@@ -1129,10 +1128,10 @@ static void *threaded_find_deltas(void *arg)
 			; /* TODO */
 		}
 
-		git_packbuilder__progress_lock(me->pb);
+		GIT_ASSERT_WITH_RETVAL(git_packbuilder__progress_lock(me->pb) == 0, NULL);
 		me->working = 0;
 		git_cond_signal(&me->pb->progress_cond);
-		git_packbuilder__progress_unlock(me->pb);
+		GIT_ASSERT_WITH_RETVAL(git_packbuilder__progress_unlock(me->pb) == 0, NULL);
 
 		if (git_mutex_lock(&me->mutex)) {
 			git_error_set(GIT_ERROR_THREAD, "unable to lock packfile condition mutex");
@@ -1165,7 +1164,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 	int ret, active_threads = 0;
 
 	if (!pb->nr_threads)
-		pb->nr_threads = git_online_cpus();
+		pb->nr_threads = git__online_cpus();
 
 	if (pb->nr_threads <= 1) {
 		find_deltas(pb, list, &list_size, window, depth);
@@ -1237,7 +1236,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		 * 'working' flag from 1 -> 0. This indicates that it is
 		 * ready to receive more work using our work-stealing
 		 * algorithm. */
-		git_packbuilder__progress_lock(pb);
+		GIT_ASSERT(git_packbuilder__progress_lock(pb) == 0);
 		for (;;) {
 			for (i = 0; !target && i < pb->nr_threads; i++)
 				if (!p[i].working)
@@ -1280,7 +1279,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		target->list_size = sub_size;
 		target->remaining = sub_size;
 		target->working = 1;
-		git_packbuilder__progress_unlock(pb);
+		GIT_ASSERT(git_packbuilder__progress_unlock(pb) == 0);
 
 		if (git_mutex_lock(&target->mutex)) {
 			git_error_set(GIT_ERROR_THREAD, "unable to lock packfile condition mutex");
@@ -1363,8 +1362,13 @@ int git_packbuilder_foreach(git_packbuilder *pb, int (*cb)(void *buf, size_t siz
 
 int git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb)
 {
+	int error;
+
+	if ((error = git_buf_sanitize(buf)) < 0)
+		return error;
+
 	PREPARE_PACK;
-	git_buf_sanitize(buf);
+
 	return write_pack(pb, &write_pack_buf, buf);
 }
 
@@ -1486,7 +1490,8 @@ int git_packbuilder_insert_recur(git_packbuilder *pb, const git_oid *id, const c
 	git_object *obj;
 	int error;
 
-	assert(pb && id);
+	GIT_ASSERT_ARG(pb);
+	GIT_ASSERT_ARG(id);
 
 	if ((error = git_object_lookup(&obj, pb->repo, id, GIT_OBJECT_ANY)) < 0)
 		return error;
@@ -1727,7 +1732,8 @@ int git_packbuilder_insert_walk(git_packbuilder *pb, git_revwalk *walk)
 	git_oid id;
 	struct walk_object *obj;
 
-	assert(pb && walk);
+	GIT_ASSERT_ARG(pb);
+	GIT_ASSERT_ARG(walk);
 
 	if ((error = mark_edges_uninteresting(pb, walk->user_input)) < 0)
 		return error;

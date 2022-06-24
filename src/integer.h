@@ -43,10 +43,10 @@ GIT_INLINE(int) git__is_ulong(int64_t p)
 }
 
 /** @return true if p fits into the range of an int */
-GIT_INLINE(int) git__is_int(long long p)
+GIT_INLINE(int) git__is_int(int64_t p)
 {
 	int r = (int)p;
-	return p == (long long)r;
+	return p == (int64_t)r;
 }
 
 /* Use clang/gcc compiler intrinsics whenever possible */
@@ -77,6 +77,15 @@ GIT_INLINE(int) git__is_int(long long p)
 # define git__sub_int_overflow(out, one, two) \
     __builtin_ssub_overflow(one, two, out)
 
+# define git__add_int64_overflow(out, one, two) \
+    __builtin_add_overflow(one, two, out)
+
+/* clang on 32-bit systems produces an undefined reference to `__mulodi4`. */
+# if !defined(__clang__) || !defined(GIT_ARCH_32)
+#  define git__multiply_int64_overflow(out, one, two) \
+     __builtin_mul_overflow(one, two, out)
+# endif
+
 /* Use Microsoft's safe integer handling functions where available */
 #elif defined(_MSC_VER)
 
@@ -87,10 +96,16 @@ GIT_INLINE(int) git__is_int(long long p)
     (SizeTAdd(one, two, out) != S_OK)
 # define git__multiply_sizet_overflow(out, one, two) \
     (SizeTMult(one, two, out) != S_OK)
+
 #define git__add_int_overflow(out, one, two) \
     (IntAdd(one, two, out) != S_OK)
 #define git__sub_int_overflow(out, one, two) \
     (IntSub(one, two, out) != S_OK)
+
+#define git__add_int64_overflow(out, one, two) \
+    (LongLongAdd(one, two, out) != S_OK)
+#define git__multiply_int64_overflow(out, one, two) \
+    (LongLongMult(one, two, out) != S_OK)
 
 #else
 
@@ -136,6 +151,68 @@ GIT_INLINE(bool) git__sub_int_overflow(int *out, int one, int two)
 	return false;
 }
 
+GIT_INLINE(bool) git__add_int64_overflow(int64_t *out, int64_t one, int64_t two)
+{
+	if ((two > 0 && one > (INT64_MAX - two)) ||
+	    (two < 0 && one < (INT64_MIN - two)))
+		return true;
+	*out = one + two;
+	return false;
+}
+
+#endif
+
+/* If we could not provide an intrinsic implementation for this, provide a (slow) fallback. */
+#if !defined(git__multiply_int64_overflow)
+GIT_INLINE(bool) git__multiply_int64_overflow(int64_t *out, int64_t one, int64_t two)
+{
+	/*
+	 * Detects whether `INT64_MAX < (one * two) || INT64_MIN > (one * two)`,
+	 * without incurring in undefined behavior. That is done by performing the
+	 * comparison with a division instead of a multiplication, which translates
+	 * to `INT64_MAX / one < two || INT64_MIN / one > two`. Some caveats:
+	 *
+	 * - The comparison sign is inverted when both sides of the inequality are
+	 *   multiplied/divided by a negative number, so if `one < 0` the comparison
+	 *   needs to be flipped.
+	 * - `INT64_MAX / -1` itself overflows (or traps), so that case should be
+	 *   avoided.
+	 * - Since the overflow flag is defined as the discrepance between the result
+	 *   of performing the multiplication in a signed integer at twice the width
+	 *   of the operands, and the truncated+sign-extended version of that same
+	 *   result, there are four cases where the result is the opposite of what
+	 *   would be expected:
+	 *   * `INT64_MIN * -1` / `-1 * INT64_MIN`
+	 *   * `INT64_MIN * 1 / `1 * INT64_MIN`
+	 */
+	if (one && two) {
+		if (one > 0 && two > 0) {
+			if (INT64_MAX / one < two)
+				return true;
+		} else if (one < 0 && two < 0) {
+			if ((one == -1 && two == INT64_MIN) ||
+				  (two == -1 && one == INT64_MIN)) {
+				*out = INT64_MIN;
+				return false;
+			}
+			if (INT64_MAX / one > two)
+				return true;
+		} else if (one > 0 && two < 0) {
+			if ((one == 1 && two == INT64_MIN) ||
+			    (INT64_MIN / one > two))
+				return true;
+		} else if (one == -1) {
+			if (INT64_MIN / two > one)
+				return true;
+		} else {
+			if ((one == INT64_MIN && two == 1) ||
+			    (INT64_MIN / one < two))
+				return true;
+		}
+	}
+	*out = one * two;
+	return false;
+}
 #endif
 
 #endif

@@ -24,7 +24,7 @@ void git_hash_sha1_ctx_cleanup(git_hash_sha1_ctx *ctx)
 
 int git_hash_sha1_init(git_hash_sha1_ctx *ctx)
 {
-	assert(ctx);
+	GIT_ASSERT_ARG(ctx);
 
 	if (SHA1_Init(&ctx->c) != 1) {
 		git_error_set(GIT_ERROR_SHA1, "hash_openssl: failed to initialize hash context");
@@ -36,7 +36,7 @@ int git_hash_sha1_init(git_hash_sha1_ctx *ctx)
 
 int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 {
-	assert(ctx);
+	GIT_ASSERT_ARG(ctx);
 
 	if (SHA1_Update(&ctx->c, data, len) != 1) {
 		git_error_set(GIT_ERROR_SHA1, "hash_openssl: failed to update hash");
@@ -48,7 +48,7 @@ int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 
 int git_hash_sha1_final(git_oid *out, git_hash_sha1_ctx *ctx)
 {
-	assert(ctx);
+	GIT_ASSERT_ARG(ctx);
 
 	if (SHA1_Final(out->id, &ctx->c) != 1) {
 		git_error_set(GIT_ERROR_SHA1, "hash_openssl: failed to finalize hash");

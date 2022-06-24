@@ -95,7 +95,7 @@ static int diff_print_info_init_frompatch(
 	git_diff_line_cb cb,
 	void *payload)
 {
-	assert(patch);
+	GIT_ASSERT_ARG(patch);
 
 	memset(pi, 0, sizeof(diff_print_info));
 
@@ -764,8 +764,14 @@ int git_diff_print_callback__to_file_handle(
 /* print a git_diff to a git_buf */
 int git_diff_to_buf(git_buf *out, git_diff *diff, git_diff_format_t format)
 {
-	assert(out && diff);
-	git_buf_sanitize(out);
+	int error;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(diff);
+
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
+
 	return git_diff_print(diff, format, git_diff_print_callback__to_buf, out);
 }
 
@@ -779,7 +785,8 @@ int git_patch_print(
 	diff_print_info pi;
 	int error;
 
-	assert(patch && print_cb);
+	GIT_ASSERT_ARG(patch);
+	GIT_ASSERT_ARG(print_cb);
 
 	if ((error = diff_print_info_init_frompatch(&pi, &temp, patch,
 						    GIT_DIFF_FORMAT_PATCH, print_cb, payload)) < 0)
@@ -799,7 +806,13 @@ out:
 /* print a git_patch to a git_buf */
 int git_patch_to_buf(git_buf *out, git_patch *patch)
 {
-	assert(out && patch);
-	git_buf_sanitize(out);
+	int error;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(patch);
+
+	if ((error = git_buf_sanitize(out)) < 0)
+		return error;
+
 	return git_patch_print(patch, git_diff_print_callback__to_buf, out);
 }

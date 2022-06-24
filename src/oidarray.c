@@ -10,7 +10,7 @@
 #include "git2/oidarray.h"
 #include "array.h"
 
-void git_oidarray_free(git_oidarray *arr)
+void git_oidarray_dispose(git_oidarray *arr)
 {
 	git__free(arr->ids);
 }
@@ -32,3 +32,12 @@ void git_oidarray__reverse(git_oidarray *arr)
 		git_oid_cpy(&arr->ids[(arr->count-1)-i], &tmp);
 	}
 }
+
+#ifndef GIT_DEPRECATE_HARD
+
+void git_oidarray_free(git_oidarray *arr)
+{
+	git_oidarray_dispose(arr);
+}
+
+#endif

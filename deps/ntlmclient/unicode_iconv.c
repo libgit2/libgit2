@@ -16,43 +16,23 @@
 #include "ntlm.h"
 #include "compat.h"
 
-struct ntlm_unicode_ctx {
-	ntlm_client *ntlm;
-	iconv_t utf8_to_16;
-	iconv_t utf16_to_8;
-};
-
-ntlm_unicode_ctx *ntlm_unicode_ctx_init(ntlm_client *ntlm)
-{
-	ntlm_unicode_ctx *ctx;
-
-	if ((ctx = calloc(1, sizeof(ntlm_unicode_ctx))) == NULL)
-		return NULL;
-
-	ctx->ntlm = ntlm;
-	ctx->utf8_to_16 = (iconv_t)-1;
-	ctx->utf16_to_8 = (iconv_t)-1;
-
-	return ctx;
-}
-
 typedef enum {
 	unicode_iconv_utf8_to_16,
 	unicode_iconv_utf16_to_8
 } unicode_iconv_encoding_direction;
 
-static inline bool unicode_iconv_init(ntlm_unicode_ctx *ctx)
+bool ntlm_unicode_init(ntlm_client *ntlm)
 {
-	if (ctx->utf8_to_16 != (iconv_t)-1 || ctx->utf16_to_8 != (iconv_t)-1)
-		return true;
+	ntlm->unicode_ctx.utf8_to_16 = iconv_open("UTF-16LE", "UTF-8");
+	ntlm->unicode_ctx.utf16_to_8 = iconv_open("UTF-8", "UTF-16LE");
 
-	if ((ctx->utf8_to_16 = iconv_open("UTF-16LE", "UTF-8")) == (iconv_t)-1 ||
-		(ctx->utf16_to_8 = iconv_open("UTF-8", "UTF-16LE")) == (iconv_t)-1) {
+	if (ntlm->unicode_ctx.utf8_to_16 == (iconv_t)-1 ||
+	    ntlm->unicode_ctx.utf16_to_8 == (iconv_t)-1) {
 		if (errno == EINVAL)
-			ntlm_client_set_errmsg(ctx->ntlm,
+			ntlm_client_set_errmsg(ntlm,
 				"iconv does not support UTF8 <-> UTF16 conversion");
 		else
-			ntlm_client_set_errmsg(ctx->ntlm, strerror(errno));
+			ntlm_client_set_errmsg(ntlm, strerror(errno));
 
 		return false;
 	}
@@ -63,7 +43,7 @@ static inline bool unicode_iconv_init(ntlm_unicode_ctx *ctx)
 static inline bool unicode_iconv_encoding_convert(
 	char **converted,
 	size_t *converted_len,
-	ntlm_unicode_ctx *ctx,
+	ntlm_client *ntlm,
 	const char *string,
 	size_t string_len,
 	unicode_iconv_encoding_direction direction)
@@ -75,9 +55,6 @@ static inline bool unicode_iconv_encoding_convert(
 	*converted = NULL;
 	*converted_len = 0;
 
-	if (!unicode_iconv_init(ctx))
-		return false;
-
 	/*
 	 * When translating UTF8 to UTF16, these strings are only used
 	 * internally, and we obey the given length, so we can simply
@@ -86,11 +63,11 @@ static inline bool unicode_iconv_encoding_convert(
 	 * terminate and expect an extra byte for UTF8, two for UTF16.
 	 */
 	if (direction == unicode_iconv_utf8_to_16) {
-		converter = ctx->utf8_to_16;
+		converter = ntlm->unicode_ctx.utf8_to_16;
 		out_size = (string_len * 2) + 2;
 		nul_size = 2;
 	} else {
-		converter = ctx->utf16_to_8;
+		converter = ntlm->unicode_ctx.utf16_to_8;
 		out_size = (string_len / 2) + 1;
 		nul_size = 1;
 	}
@@ -99,7 +76,7 @@ static inline bool unicode_iconv_encoding_convert(
 	out_size = (out_size + 7) & ~7;
 
 	if ((out = malloc(out_size)) == NULL) {
-		ntlm_client_set_errmsg(ctx->ntlm, "out of memory");
+		ntlm_client_set_errmsg(ntlm, "out of memory");
 		return false;
 	}
 
@@ -117,7 +94,7 @@ static inline bool unicode_iconv_encoding_convert(
 			break;
 
 		if (ret == (size_t)-1 && errno != E2BIG) {
-			ntlm_client_set_errmsg(ctx->ntlm, strerror(errno));
+			ntlm_client_set_errmsg(ntlm, strerror(errno));
 			goto on_error;
 		}
 
@@ -125,13 +102,12 @@ static inline bool unicode_iconv_encoding_convert(
 		out_size = ((((out_size << 1) - (out_size >> 1)) + 7) & ~7);
 
 		if (out_size > NTLM_UNICODE_MAX_LEN) {
-			ntlm_client_set_errmsg(ctx->ntlm,
-				"unicode conversion too large");
+			ntlm_client_set_errmsg(ntlm, "unicode conversion too large");
 			goto on_error;
 		}
 
 		if ((new_out = realloc(out, out_size)) == NULL) {
-			ntlm_client_set_errmsg(ctx->ntlm, "out of memory");
+			ntlm_client_set_errmsg(ntlm, "out of memory");
 			goto on_error;
 		}
 
@@ -139,7 +115,7 @@ static inline bool unicode_iconv_encoding_convert(
 	}
 
 	if (in_start_len != 0) {
-		ntlm_client_set_errmsg(ctx->ntlm,
+		ntlm_client_set_errmsg(ntlm,
 			"invalid unicode string; trailing data remains");
 		goto on_error;
 	}
@@ -165,37 +141,37 @@ on_error:
 bool ntlm_unicode_utf8_to_16(
 	char **converted,
 	size_t *converted_len,
-	ntlm_unicode_ctx *ctx,
+	ntlm_client *ntlm,
 	const char *string,
 	size_t string_len)
 {
 	return unicode_iconv_encoding_convert(
-		converted, converted_len, ctx, string, string_len,
+		converted, converted_len, ntlm, string, string_len,
 		unicode_iconv_utf8_to_16);
 }
 
 bool ntlm_unicode_utf16_to_8(
 	char **converted,
 	size_t *converted_len,
-	ntlm_unicode_ctx *ctx,
+	ntlm_client *ntlm,
 	const char *string,
 	size_t string_len)
 {
 	return unicode_iconv_encoding_convert(
-		converted, converted_len, ctx, string, string_len,
+		converted, converted_len, ntlm, string, string_len,
 		unicode_iconv_utf16_to_8);
 }
 
-void ntlm_unicode_ctx_free(ntlm_unicode_ctx *ctx)
+void ntlm_unicode_shutdown(ntlm_client *ntlm)
 {
-	if (!ctx)
-		return;
+	if (ntlm->unicode_ctx.utf16_to_8 != (iconv_t)0 &&
+	    ntlm->unicode_ctx.utf16_to_8 != (iconv_t)-1)
+		iconv_close(ntlm->unicode_ctx.utf16_to_8);
 
-	if (ctx->utf16_to_8 != (iconv_t)-1)
-		iconv_close(ctx->utf16_to_8);
+	if (ntlm->unicode_ctx.utf8_to_16 != (iconv_t)0 &&
+	    ntlm->unicode_ctx.utf8_to_16 != (iconv_t)-1)
+		iconv_close(ntlm->unicode_ctx.utf8_to_16);
 
-	if (ctx->utf8_to_16 != (iconv_t)-1)
-		iconv_close(ctx->utf8_to_16);
-
-	free(ctx);
+	ntlm->unicode_ctx.utf8_to_16 = (iconv_t)-1;
+	ntlm->unicode_ctx.utf16_to_8 = (iconv_t)-1;
 }

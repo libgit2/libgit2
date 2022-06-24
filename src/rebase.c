@@ -186,8 +186,8 @@ static git_rebase_operation *rebase_operation_alloc(
 {
 	git_rebase_operation *operation;
 
-	assert((type == GIT_REBASE_OPERATION_EXEC) == !id);
-	assert((type == GIT_REBASE_OPERATION_EXEC) == !!exec);
+	GIT_ASSERT_WITH_RETVAL((type == GIT_REBASE_OPERATION_EXEC) == !id, NULL);
+	GIT_ASSERT_WITH_RETVAL((type == GIT_REBASE_OPERATION_EXEC) == !!exec, NULL);
 
 	if ((operation = git_array_alloc(rebase->operations)) == NULL)
 		return NULL;
@@ -301,7 +301,7 @@ int git_rebase_open(
 	size_t state_path_len;
 	int error;
 
-	assert(repo);
+	GIT_ASSERT_ARG(repo);
 
 	if ((error = rebase_check_versions(given_opts)) < 0)
 		return error;
@@ -701,7 +701,8 @@ int git_rebase_init(
 	bool inmemory = (given_opts && given_opts->inmemory);
 	int error;
 
-	assert(repo && (upstream || onto));
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(upstream || onto);
 
 	*out = NULL;
 
@@ -912,7 +913,8 @@ int git_rebase_next(
 {
 	int error;
 
-	assert(out && rebase);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(rebase);
 
 	if ((error = rebase_movenext(rebase)) < 0)
 		return error;
@@ -931,13 +933,63 @@ int git_rebase_inmemory_index(
 	git_index **out,
 	git_rebase *rebase)
 {
-	assert(out && rebase && rebase->index);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(rebase);
+	GIT_ASSERT_ARG(rebase->index);
 
 	GIT_REFCOUNT_INC(rebase->index);
 	*out = rebase->index;
 
 	return 0;
 }
+
+#ifndef GIT_DEPRECATE_HARD
+static int create_signed(
+	git_oid *out,
+	git_rebase *rebase,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	git_tree *tree,
+	size_t parent_count,
+	const git_commit **parents)
+{
+	git_buf commit_content = GIT_BUF_INIT,
+	        commit_signature = GIT_BUF_INIT,
+	        signature_field = GIT_BUF_INIT;
+	int error;
+
+	git_error_clear();
+
+	if ((error = git_commit_create_buffer(&commit_content,
+		rebase->repo, author, committer, message_encoding,
+		message, tree, parent_count, parents)) < 0)
+		goto done;
+
+	error = rebase->options.signing_cb(&commit_signature,
+		&signature_field, commit_content.ptr,
+		rebase->options.payload);
+
+	if (error) {
+		if (error != GIT_PASSTHROUGH)
+			git_error_set_after_callback_function(error, "signing_cb");
+
+		goto done;
+	}
+
+	error = git_commit_create_with_signature(out, rebase->repo,
+		commit_content.ptr,
+		commit_signature.size > 0 ? commit_signature.ptr : NULL,
+		signature_field.size > 0 ? signature_field.ptr : NULL);
+
+done:
+	git_buf_dispose(&commit_signature);
+	git_buf_dispose(&signature_field);
+	git_buf_dispose(&commit_content);
+	return error;
+}
+#endif
 
 static int rebase_commit__create(
 	git_commit **out,
@@ -953,10 +1005,6 @@ static int rebase_commit__create(
 	git_commit *current_commit = NULL, *commit = NULL;
 	git_tree *parent_tree = NULL, *tree = NULL;
 	git_oid tree_id, commit_id;
-	git_buf commit_content = GIT_BUF_INIT, commit_signature = GIT_BUF_INIT,
-		signature_field = GIT_BUF_INIT;
-	const char *signature_field_string = NULL,
-		*commit_signature_string = NULL;
 	int error;
 
 	operation = git_array_get(rebase->operations, rebase->current);
@@ -987,37 +1035,32 @@ static int rebase_commit__create(
 		message = git_commit_message(current_commit);
 	}
 
-	if ((error = git_commit_create_buffer(&commit_content, rebase->repo, author, committer,
-			message_encoding, message, tree, 1, (const git_commit **)&parent_commit)) < 0)
-		goto done;
+	git_error_clear();
+	error = GIT_PASSTHROUGH;
 
-	if (rebase->options.signing_cb) {
-		git_error_clear();
-		error = git_error_set_after_callback_function(rebase->options.signing_cb(
-			&commit_signature, &signature_field, git_buf_cstr(&commit_content),
-			rebase->options.payload), "commit signing_cb failed");
-		if (error == GIT_PASSTHROUGH) {
-			git_buf_dispose(&commit_signature);
-			git_buf_dispose(&signature_field);
-			git_error_clear();
-			error = GIT_OK;
-		} else if (error < 0)
-			goto done;
+	if (rebase->options.commit_create_cb) {
+		error = rebase->options.commit_create_cb(&commit_id,
+			author, committer, message_encoding, message,
+			tree, 1, (const git_commit **)&parent_commit,
+			rebase->options.payload);
+
+		git_error_set_after_callback_function(error,
+			"commit_create_cb");
 	}
-
-	if (git_buf_is_allocated(&commit_signature)) {
-		assert(git_buf_contains_nul(&commit_signature));
-		commit_signature_string = git_buf_cstr(&commit_signature);
+#ifndef GIT_DEPRECATE_HARD
+	else if (rebase->options.signing_cb) {
+		error = create_signed(&commit_id, rebase, author,
+			committer, message_encoding, message, tree,
+			1, (const git_commit **)&parent_commit);
 	}
+#endif
 
-	if (git_buf_is_allocated(&signature_field)) {
-		assert(git_buf_contains_nul(&signature_field));
-		signature_field_string = git_buf_cstr(&signature_field);
-	}
+	if (error == GIT_PASSTHROUGH)
+		error = git_commit_create(&commit_id, rebase->repo, NULL,
+			author, committer, message_encoding, message,
+			tree, 1, (const git_commit **)&parent_commit);
 
-	if ((error = git_commit_create_with_signature(&commit_id, rebase->repo,
-			git_buf_cstr(&commit_content), commit_signature_string,
-			signature_field_string)))
+	if (error)
 		goto done;
 
 	if ((error = git_commit_lookup(&commit, rebase->repo, &commit_id)) < 0)
@@ -1029,9 +1072,6 @@ done:
 	if (error < 0)
 		git_commit_free(commit);
 
-	git_buf_dispose(&commit_signature);
-	git_buf_dispose(&signature_field);
-	git_buf_dispose(&commit_content);
 	git_commit_free(current_commit);
 	git_tree_free(parent_tree);
 	git_tree_free(tree);
@@ -1055,7 +1095,7 @@ static int rebase_commit_merge(
 	int error;
 
 	operation = git_array_get(rebase->operations, rebase->current);
-	assert(operation);
+	GIT_ASSERT(operation);
 
 	if ((error = rebase_ensure_not_dirty(rebase->repo, false, true, GIT_EUNMERGED)) < 0 ||
 		(error = git_repository_head(&head, rebase->repo)) < 0 ||
@@ -1095,9 +1135,9 @@ static int rebase_commit_inmemory(
 	git_commit *commit = NULL;
 	int error = 0;
 
-	assert(rebase->index);
-	assert(rebase->last_commit);
-	assert(rebase->current < rebase->operations.size);
+	GIT_ASSERT_ARG(rebase->index);
+	GIT_ASSERT_ARG(rebase->last_commit);
+	GIT_ASSERT_ARG(rebase->current < rebase->operations.size);
 
 	if ((error = rebase_commit__create(&commit, rebase, rebase->index,
 		rebase->last_commit, author, committer, message_encoding, message)) < 0)
@@ -1125,7 +1165,8 @@ int git_rebase_commit(
 {
 	int error;
 
-	assert(rebase && committer);
+	GIT_ASSERT_ARG(rebase);
+	GIT_ASSERT_ARG(committer);
 
 	if (rebase->inmemory)
 		error = rebase_commit_inmemory(
@@ -1145,7 +1186,7 @@ int git_rebase_abort(git_rebase *rebase)
 	git_commit *orig_head_commit = NULL;
 	int error;
 
-	assert(rebase);
+	GIT_ASSERT_ARG(rebase);
 
 	if (rebase->inmemory)
 		return 0;
@@ -1358,7 +1399,7 @@ int git_rebase_finish(
 {
 	int error = 0;
 
-	assert(rebase);
+	GIT_ASSERT_ARG(rebase);
 
 	if (rebase->inmemory)
 		return 0;
@@ -1373,14 +1414,17 @@ int git_rebase_finish(
 }
 
 const char *git_rebase_orig_head_name(git_rebase *rebase) {
+	GIT_ASSERT_ARG_WITH_RETVAL(rebase, NULL);
 	return rebase->orig_head_name;
 }
 
 const git_oid *git_rebase_orig_head_id(git_rebase *rebase) {
+	GIT_ASSERT_ARG_WITH_RETVAL(rebase, NULL);
 	return &rebase->orig_head_id;
 }
 
 const char *git_rebase_onto_name(git_rebase *rebase) {
+	GIT_ASSERT_ARG_WITH_RETVAL(rebase, NULL);
 	return rebase->onto_name;
 }
 
@@ -1390,21 +1434,21 @@ const git_oid *git_rebase_onto_id(git_rebase *rebase) {
 
 size_t git_rebase_operation_entrycount(git_rebase *rebase)
 {
-	assert(rebase);
+	GIT_ASSERT_ARG_WITH_RETVAL(rebase, 0);
 
 	return git_array_size(rebase->operations);
 }
 
 size_t git_rebase_operation_current(git_rebase *rebase)
 {
-	assert(rebase);
+	GIT_ASSERT_ARG_WITH_RETVAL(rebase, 0);
 
 	return rebase->started ? rebase->current : GIT_REBASE_NO_OPERATION;
 }
 
 git_rebase_operation *git_rebase_operation_byindex(git_rebase *rebase, size_t idx)
 {
-	assert(rebase);
+	GIT_ASSERT_ARG_WITH_RETVAL(rebase, NULL);
 
 	return git_array_get(rebase->operations, idx);
 }

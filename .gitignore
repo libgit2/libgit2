@@ -1,7 +1,8 @@
-build/
+/build/
 .DS_Store
 *~
 .*.swp
-tags
+/tags
 CMakeSettings.json
 .vs
+.idea

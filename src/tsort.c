@@ -29,8 +29,6 @@ static int binsearch(
 	int l, c, r;
 	void *lx, *cx;
 
-	assert(size > 0);
-
 	l = 0;
 	r = (int)size - 1;
 	c = r >> 1;

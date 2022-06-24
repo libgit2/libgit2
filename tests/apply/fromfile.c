@@ -5,7 +5,6 @@
 #include "patch.h"
 #include "patch_parse.h"
 #include "repository.h"
-#include "buf_text.h"
 
 #include "../patch/patch_common.h"
 

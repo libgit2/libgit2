@@ -107,6 +107,29 @@ void test_diff_parse__no_extended_headers(void)
 	git_diff_free(diff);
 }
 
+void test_diff_parse__add_delete_no_index(void)
+{
+	const char *content =
+	    "diff --git a/file.txt b/file.txt\n"
+	    "new file mode 100644\n"
+	    "--- /dev/null\n"
+	    "+++ b/file.txt\n"
+	    "@@ -0,0 +1,2 @@\n"
+	    "+one\n"
+	    "+two\n"
+	    "diff --git a/otherfile.txt b/otherfile.txt\n"
+	    "deleted file mode 100644\n"
+	    "--- a/otherfile.txt\n"
+	    "+++ /dev/null\n"
+	    "@@ -1,1 +0,0 @@\n"
+	    "-three\n";
+	git_diff *diff;
+
+	cl_git_pass(git_diff_from_buffer(
+		&diff, content, strlen(content)));
+	git_diff_free(diff);
+}
+
 void test_diff_parse__invalid_patches_fails(void)
 {
 	test_parse_invalid_diff(PATCH_CORRUPT_MISSING_NEW_FILE);

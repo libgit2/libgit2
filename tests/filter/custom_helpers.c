@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "posix.h"
 #include "filter.h"
-#include "buf_text.h"
 #include "git2/sys/filter.h"
 
 #define VERY_SECURE_ENCRYPTION(b) ((b) ^ 0xff)
@@ -38,6 +37,17 @@ int bitflip_filter_apply(
 	return 0;
 }
 
+static int bitflip_filter_stream(
+	git_writestream **out,
+	git_filter *self,
+	void **payload,
+	const git_filter_source *src,
+	git_writestream *next)
+{
+	return git_filter_buffered_stream_new(out,
+		self, bitflip_filter_apply, NULL, payload, src, next);
+}
+
 static void bitflip_filter_free(git_filter *f)
 {
 	git__free(f);
@@ -51,7 +61,7 @@ git_filter *create_bitflip_filter(void)
 	filter->version = GIT_FILTER_VERSION;
 	filter->attributes = "+bitflip";
 	filter->shutdown = bitflip_filter_free;
-	filter->apply = bitflip_filter_apply;
+	filter->stream = bitflip_filter_stream;
 
 	return filter;
 }
@@ -89,6 +99,17 @@ int reverse_filter_apply(
 	return 0;
 }
 
+static int reverse_filter_stream(
+	git_writestream **out,
+	git_filter *self,
+	void **payload,
+	const git_filter_source *src,
+	git_writestream *next)
+{
+	return git_filter_buffered_stream_new(out,
+		self, reverse_filter_apply, NULL, payload, src, next);
+}
+
 static void reverse_filter_free(git_filter *f)
 {
 	git__free(f);
@@ -102,7 +123,7 @@ git_filter *create_reverse_filter(const char *attrs)
 	filter->version = GIT_FILTER_VERSION;
 	filter->attributes = attrs;
 	filter->shutdown = reverse_filter_free;
-	filter->apply = reverse_filter_apply;
+	filter->stream = reverse_filter_stream;
 
 	return filter;
 }

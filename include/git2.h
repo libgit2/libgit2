@@ -26,6 +26,7 @@
 #include "git2/deprecated.h"
 #include "git2/describe.h"
 #include "git2/diff.h"
+#include "git2/email.h"
 #include "git2/errors.h"
 #include "git2/filter.h"
 #include "git2/global.h"

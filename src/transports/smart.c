@@ -18,7 +18,7 @@ static int git_smart__recv_cb(gitno_buffer *buf)
 	size_t old_len, bytes_read;
 	int error;
 
-	assert(t->current_stream);
+	GIT_ASSERT(t->current_stream);
 
 	old_len = buf->offset;
 
@@ -30,7 +30,7 @@ static int git_smart__recv_cb(gitno_buffer *buf)
 	if (t->packetsize_cb && !t->cancelled.val) {
 		error = t->packetsize_cb(bytes_read, t->packetsize_payload);
 		if (error) {
-			git_atomic_set(&t->cancelled, 1);
+			git_atomic32_set(&t->cancelled, 1);
 			return GIT_EUSER;
 		}
 	}
@@ -226,6 +226,8 @@ static int git_smart__connect(
 	t->url = git__strdup(url);
 	GIT_ERROR_CHECK_ALLOC(t->url);
 
+	git_proxy_options_clear(&t->proxy);
+
 	if (git_proxy_options_dup(&t->proxy, proxy) < 0)
 		return -1;
 
@@ -346,7 +348,7 @@ int git_smart__negotiation_step(git_transport *transport, void *data, size_t len
 		return error;
 
 	/* If this is a stateful implementation, the stream we get back should be the same */
-	assert(t->rpc || t->current_stream == stream);
+	GIT_ASSERT(t->rpc || t->current_stream == stream);
 
 	/* Save off the current stream (i.e. socket) that we are working with */
 	t->current_stream = stream;
@@ -375,7 +377,7 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 		return error;
 
 	/* If this is a stateful implementation, the stream we get back should be the same */
-	assert(t->rpc || t->current_stream == *stream);
+	GIT_ASSERT(t->rpc || t->current_stream == *stream);
 
 	/* Save off the current stream (i.e. socket) that we are working with */
 	t->current_stream = *stream;
@@ -389,7 +391,7 @@ static void git_smart__cancel(git_transport *transport)
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
-	git_atomic_set(&t->cancelled, 1);
+	git_atomic32_set(&t->cancelled, 1);
 }
 
 static int git_smart__is_connected(git_transport *transport)
@@ -481,7 +483,9 @@ int git_transport_smart_certificate_check(git_transport *transport, git_cert *ce
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
-	assert(transport && cert && hostname);
+	GIT_ASSERT_ARG(transport);
+	GIT_ASSERT_ARG(cert);
+	GIT_ASSERT_ARG(hostname);
 
 	if (!t->certificate_check_cb)
 		return GIT_PASSTHROUGH;
@@ -493,7 +497,8 @@ int git_transport_smart_credentials(git_credential **out, git_transport *transpo
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
-	assert(out && transport);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(transport);
 
 	if (!t->cred_acquire_cb)
 		return GIT_PASSTHROUGH;

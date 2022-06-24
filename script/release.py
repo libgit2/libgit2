@@ -40,6 +40,15 @@ def verify_version(version):
         'SOVERSION':    [ '"{}.{}"'.format(version.major, version.minor), None ],
     }
 
+    # Parse CMakeLists
+    with open('CMakeLists.txt') as f:
+        for line in f.readlines():
+            if line.startswith('project(libgit2 VERSION "{}"'.format(version)):
+                break
+        else:
+            raise Error("cmake: invalid project definition")
+
+    # Parse version.h
     with open('include/git2/version.h') as f:
         lines = f.readlines()
 

@@ -22,6 +22,7 @@ typedef struct git_mwindow {
 } git_mwindow;
 
 typedef struct git_mwindow_file {
+	git_mutex lock; /* protects updates to fd */
 	git_mwindow *windows;
 	int fd;
 	off64_t size;
@@ -38,8 +39,7 @@ typedef struct git_mwindow_ctl {
 } git_mwindow_ctl;
 
 int git_mwindow_contains(git_mwindow *win, off64_t offset);
-void git_mwindow_free_all(git_mwindow_file *mwf); /* locks */
-void git_mwindow_free_all_locked(git_mwindow_file *mwf); /* run under lock */
+int git_mwindow_free_all(git_mwindow_file *mwf); /* locks */
 unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor, off64_t offset, size_t extra, unsigned int *left);
 int git_mwindow_file_register(git_mwindow_file *mwf);
 void git_mwindow_file_deregister(git_mwindow_file *mwf);
@@ -49,6 +49,6 @@ extern int git_mwindow_global_init(void);
 
 struct git_pack_file; /* just declaration to avoid cyclical includes */
 int git_mwindow_get_pack(struct git_pack_file **out, const char *path);
-void git_mwindow_put_pack(struct git_pack_file *pack);
+int git_mwindow_put_pack(struct git_pack_file *pack);
 
 #endif

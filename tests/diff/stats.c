@@ -298,9 +298,8 @@ void test_diff_stats__binary(void)
 {
 	git_buf buf = GIT_BUF_INIT;
 	const char *stat =
-	" binary.bin | Bin 3 -> 0 bytes\n"
+	" binary.bin | Bin 3 -> 5 bytes\n"
 	" 1 file changed, 0 insertions(+), 0 deletions(-)\n";
-	/* TODO: Actually 0 bytes here should be 5!. Seems like we don't load the new content for binary files? */
 
 	diff_stats_from_commit_oid(
 		&_stats, "8d7523f6fcb2404257889abe0d96f093d9f524f9", false);
@@ -342,4 +341,39 @@ void test_diff_stats__mode_change(void)
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL | GIT_DIFF_STATS_INCLUDE_SUMMARY, 0));
 	cl_assert_equal_s(stat, git_buf_cstr(&buf));
 	git_buf_dispose(&buf);
+}
+
+void test_diff_stats__new_file(void)
+{
+	git_diff *diff;
+	git_buf buf = GIT_BUF_INIT;
+
+	const char *input =
+	"---\n"
+	" Gurjeet Singh | 1 +\n"
+	" 1 file changed, 1 insertion(+)\n"
+	" create mode 100644 Gurjeet Singh\n"
+	"\n"
+	"diff --git a/Gurjeet Singh b/Gurjeet Singh\n"
+	"new file mode 100644\n"
+	"index 0000000..6d0ecfd\n"
+	"--- /dev/null\n"
+	"+++ b/Gurjeet Singh	\n"
+	"@@ -0,0 +1 @@\n"
+	"+I'm about to try git send-email\n"
+	"-- \n"
+	"2.21.0\n";
+
+	const char *stat =
+	" Gurjeet Singh | 1 +\n"
+	" 1 file changed, 1 insertion(+)\n"
+	" create mode 100644 Gurjeet Singh\n";
+
+	cl_git_pass(git_diff_from_buffer(&diff, input, strlen(input)));
+	cl_git_pass(git_diff_get_stats(&_stats, diff));
+	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL | GIT_DIFF_STATS_INCLUDE_SUMMARY, 0));
+	cl_assert_equal_s(stat, git_buf_cstr(&buf));
+
+	git_buf_dispose(&buf);
+	git_diff_free(diff);
 }

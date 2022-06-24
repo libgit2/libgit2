@@ -275,7 +275,7 @@ const char* cl_git_fixture_url(const char *fixturename)
 
 const char* cl_git_path_url(const char *path)
 {
-	static char url[4096];
+	static char url[4096 + 1];
 
 	const char *in_buf;
 	git_buf path_buf = GIT_BUF_INIT;
@@ -311,9 +311,10 @@ const char* cl_git_path_url(const char *path)
 		in_buf++;
 	}
 
-	cl_assert(url_buf.size < 4096);
+	cl_assert(url_buf.size < sizeof(url) - 1);
 
-	strncpy(url, git_buf_cstr(&url_buf), 4096);
+	strncpy(url, git_buf_cstr(&url_buf), sizeof(url) - 1);
+	url[sizeof(url) - 1] = '\0';
 	git_buf_dispose(&url_buf);
 	git_buf_dispose(&path_buf);
 	return url;

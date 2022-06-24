@@ -64,7 +64,9 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 			continue;
 		}
 
-		gitno_consume(buf, line_end);
+		if (gitno_consume(buf, line_end) < 0)
+			return -1;
+
 		if (pkt->type == GIT_PKT_ERR) {
 			git_error_set(GIT_ERROR_NET, "remote error: %s", ((git_pkt_err *)pkt)->error);
 			git__free(pkt);
@@ -236,7 +238,9 @@ static int recv_pkt(git_pkt **out_pkt, git_pkt_type *out_type, gitno_buffer *buf
 		}
 	} while (error);
 
-	gitno_consume(buf, line_end);
+	if (gitno_consume(buf, line_end) < 0)
+		return -1;
+
 	if (out_type != NULL)
 		*out_type = pkt->type;
 	if (out_pkt != NULL)
@@ -531,7 +535,7 @@ int git_smart__download_pack(
 		/* We might have something in the buffer already from negotiate_fetch */
 		if (t->buffer.offset > 0 && !t->cancelled.val)
 			if (t->packetsize_cb(t->buffer.offset, t->packetsize_payload))
-				git_atomic_set(&t->cancelled, 1);
+				git_atomic32_set(&t->cancelled, 1);
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
@@ -791,7 +795,8 @@ static int parse_report(transport_smart *transport, git_push *push)
 			continue;
 		}
 
-		gitno_consume(buf, line_end);
+		if (gitno_consume(buf, line_end) < 0)
+			return -1;
 
 		error = 0;
 
@@ -970,9 +975,10 @@ static int stream_thunk(void *buf, size_t size, void *data)
 
 	if (payload->cb) {
 		double current_time = git__timer();
+		double elapsed = current_time - payload->last_progress_report_time;
 		payload->last_bytes += size;
 
-		if ((current_time - payload->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
+		if (elapsed < 0 || elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			payload->last_progress_report_time = current_time;
 			error = payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload);
 		}

@@ -62,10 +62,22 @@ GIT_INLINE(int) p_fsync(int fd)
 #define p_snprintf snprintf
 #define p_mkstemp(p) mkstemp(p)
 #define p_chdir(p) chdir(p)
-#define p_chmod(p,m) chmod(p, m)
 #define p_rmdir(p) rmdir(p)
 #define p_access(p,m) access(p,m)
 #define p_ftruncate(fd, sz) ftruncate(fd, sz)
+
+/*
+ * Pre-Android 5 did not implement a virtual filesystem atop FAT
+ * partitions for Unix permissions, which causes chmod to fail. However,
+ * Unix permissions have no effect on Android anyway as file permissions
+ * are not actually managed this way, so treating it as a no-op across
+ * all Android is safe.
+ */
+#ifdef __ANDROID__
+# define p_chmod(p,m) 0
+#else
+# define p_chmod(p,m) chmod(p, m)
+#endif
 
 /* see win32/posix.h for explanation about why this exists */
 #define p_lstat_posixly(p,b) lstat(p,b)
@@ -88,5 +100,8 @@ GIT_INLINE(int) p_futimes(int f, const struct p_timeval t[2])
 #else
 # define p_futimes futimes
 #endif
+
+#define p_pread(f, d, s, o) pread(f, d, s, o)
+#define p_pwrite(f, d, s, o) pwrite(f, d, s, o)
 
 #endif

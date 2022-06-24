@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <assert.h>
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
@@ -23,6 +22,18 @@
 #include "crypt.h"
 #include "compat.h"
 #include "util.h"
+
+#define NTLM_ASSERT_ARG(expr) do { \
+		if (!(expr)) \
+			return NTLM_CLIENT_ERROR_INVALID_INPUT; \
+	} while(0)
+
+#define NTLM_ASSERT(ntlm, expr) do { \
+		if (!(expr)) { \
+			ntlm_client_set_errmsg(ntlm, "internal error: " #expr); \
+			return -1; \
+		} \
+	} while(0)
 
 unsigned char ntlm_client_signature[] = NTLM_SIGNATURE;
 
@@ -47,23 +58,24 @@ ntlm_client *ntlm_client_init(ntlm_client_flags flags)
 {
 	ntlm_client *ntlm = NULL;
 
-	if ((ntlm = malloc(sizeof(ntlm_client))) == NULL)
+	if ((ntlm = calloc(1, sizeof(ntlm_client))) == NULL)
 		return NULL;
-
-	memset(ntlm, 0, sizeof(ntlm_client));
 
 	ntlm->flags = flags;
 
-	if ((ntlm->hmac_ctx = ntlm_hmac_ctx_init()) == NULL ||
-		(ntlm->unicode_ctx = ntlm_unicode_ctx_init(ntlm)) == NULL) {
-		ntlm_hmac_ctx_free(ntlm->hmac_ctx);
-		ntlm_unicode_ctx_free(ntlm->unicode_ctx);
-		free(ntlm);
-		return NULL;
-	}
-
 	return ntlm;
 }
+
+#define ENSURE_INITIALIZED(ntlm) \
+	do { \
+		if (!(ntlm)->unicode_initialized) \
+			(ntlm)->unicode_initialized = ntlm_unicode_init((ntlm)); \
+		if (!(ntlm)->crypt_initialized) \
+			(ntlm)->crypt_initialized = ntlm_crypt_init((ntlm)); \
+		if (!(ntlm)->unicode_initialized || \
+		    !(ntlm)->crypt_initialized) \
+			return -1; \
+	} while(0)
 
 void ntlm_client_set_errmsg(ntlm_client *ntlm, const char *errmsg)
 {
@@ -73,7 +85,9 @@ void ntlm_client_set_errmsg(ntlm_client *ntlm, const char *errmsg)
 
 const char *ntlm_client_errmsg(ntlm_client *ntlm)
 {
-	assert(ntlm);
+	if (!ntlm)
+		return "internal error";
+
 	return ntlm->errmsg ? ntlm->errmsg : "no error";
 }
 
@@ -83,7 +97,7 @@ int ntlm_client_set_version(
 	uint8_t minor,
 	uint16_t build)
 {
-	assert(ntlm);
+	NTLM_ASSERT_ARG(ntlm);
 
 	ntlm->host_version.major = major;
 	ntlm->host_version.minor = minor;
@@ -95,20 +109,25 @@ int ntlm_client_set_version(
 	return 0;
 }
 
+#define reset(ptr) do { free(ptr); ptr = NULL; } while(0)
+
+static void free_hostname(ntlm_client *ntlm)
+{
+	reset(ntlm->hostname);
+	reset(ntlm->hostdomain);
+	reset(ntlm->hostname_utf16);
+	ntlm->hostname_utf16_len = 0;
+}
+
 int ntlm_client_set_hostname(
 	ntlm_client *ntlm,
 	const char *hostname,
 	const char *domain)
 {
-	assert(ntlm);
+	NTLM_ASSERT_ARG(ntlm);
+	ENSURE_INITIALIZED(ntlm);
 
-	free(ntlm->hostname);
-	free(ntlm->hostdomain);
-	free(ntlm->hostname_utf16);
-
-	ntlm->hostname = NULL;
-	ntlm->hostdomain = NULL;
-	ntlm->hostname_utf16 = NULL;
+	free_hostname(ntlm);
 
 	if (hostname && (ntlm->hostname = strdup(hostname)) == NULL) {
 		ntlm_client_set_errmsg(ntlm, "out of memory");
@@ -123,7 +142,7 @@ int ntlm_client_set_hostname(
 	if (hostname && supports_unicode(ntlm) && !ntlm_unicode_utf8_to_16(
 			&ntlm->hostname_utf16,
 			&ntlm->hostname_utf16_len,
-			ntlm->unicode_ctx,
+			ntlm,
 			hostname,
 			strlen(hostname)))
 		return -1;
@@ -134,30 +153,25 @@ int ntlm_client_set_hostname(
 static void free_credentials(ntlm_client *ntlm)
 {
 	if (ntlm->password)
-		memzero(ntlm->password, strlen(ntlm->password));
+		ntlm_memzero(ntlm->password, strlen(ntlm->password));
 
 	if (ntlm->password_utf16)
-		memzero(ntlm->password_utf16, ntlm->password_utf16_len);
+		ntlm_memzero(ntlm->password_utf16, ntlm->password_utf16_len);
 
-	free(ntlm->username);
-	free(ntlm->username_upper);
-	free(ntlm->userdomain);
-	free(ntlm->password);
+	reset(ntlm->username);
+	reset(ntlm->username_upper);
+	reset(ntlm->userdomain);
+	reset(ntlm->password);
 
-	free(ntlm->username_utf16);
-	free(ntlm->username_upper_utf16);
-	free(ntlm->userdomain_utf16);
-	free(ntlm->password_utf16);
+	reset(ntlm->username_utf16);
+	reset(ntlm->username_upper_utf16);
+	reset(ntlm->userdomain_utf16);
+	reset(ntlm->password_utf16);
 
-	ntlm->username = NULL;
-	ntlm->username_upper = NULL;
-	ntlm->userdomain = NULL;
-	ntlm->password = NULL;
-
-	ntlm->username_utf16 = NULL;
-	ntlm->username_upper_utf16 = NULL;
-	ntlm->userdomain_utf16 = NULL;
-	ntlm->password_utf16 = NULL;
+	ntlm->username_utf16_len = 0;
+	ntlm->username_upper_utf16_len = 0;
+	ntlm->userdomain_utf16_len = 0;
+	ntlm->password_utf16_len = 0;
 }
 
 int ntlm_client_set_credentials(
@@ -166,7 +180,8 @@ int ntlm_client_set_credentials(
 	const char *domain,
 	const char *password)
 {
-	assert(ntlm);
+	NTLM_ASSERT_ARG(ntlm);
+	ENSURE_INITIALIZED(ntlm);
 
 	free_credentials(ntlm);
 
@@ -187,7 +202,7 @@ int ntlm_client_set_credentials(
 		if (!ntlm_unicode_utf8_to_16(
 				&ntlm->username_utf16,
 				&ntlm->username_utf16_len,
-				ntlm->unicode_ctx,
+				ntlm,
 				ntlm->username,
 				strlen(ntlm->username)))
 			return -1;
@@ -195,7 +210,7 @@ int ntlm_client_set_credentials(
 		if (!ntlm_unicode_utf8_to_16(
 				&ntlm->username_upper_utf16,
 				&ntlm->username_upper_utf16_len,
-				ntlm->unicode_ctx,
+				ntlm,
 				ntlm->username_upper,
 				strlen(ntlm->username_upper)))
 			return -1;
@@ -204,7 +219,7 @@ int ntlm_client_set_credentials(
 	if (domain && supports_unicode(ntlm) && !ntlm_unicode_utf8_to_16(
 			&ntlm->userdomain_utf16,
 			&ntlm->userdomain_utf16_len,
-			ntlm->unicode_ctx,
+			ntlm,
 			ntlm->userdomain,
 			strlen(ntlm->userdomain)))
 		return -1;
@@ -214,7 +229,8 @@ int ntlm_client_set_credentials(
 
 int ntlm_client_set_target(ntlm_client *ntlm, const char *target)
 {
-	assert(ntlm);
+	NTLM_ASSERT_ARG(ntlm);
+	ENSURE_INITIALIZED(ntlm);
 
 	free(ntlm->target);
 	free(ntlm->target_utf16);
@@ -231,7 +247,7 @@ int ntlm_client_set_target(ntlm_client *ntlm, const char *target)
 		if (supports_unicode(ntlm) && !ntlm_unicode_utf8_to_16(
 				&ntlm->target_utf16,
 				&ntlm->target_utf16_len,
-				ntlm->unicode_ctx,
+				ntlm,
 				ntlm->target,
 				strlen(ntlm->target)))
 			return -1;
@@ -242,14 +258,16 @@ int ntlm_client_set_target(ntlm_client *ntlm, const char *target)
 
 int ntlm_client_set_nonce(ntlm_client *ntlm, uint64_t nonce)
 {
-	assert(ntlm);
+	NTLM_ASSERT_ARG(ntlm);
+
 	ntlm->nonce = nonce;
 	return 0;
 }
 
 int ntlm_client_set_timestamp(ntlm_client *ntlm, uint64_t timestamp)
 {
-	assert(ntlm);
+	NTLM_ASSERT_ARG(ntlm);
+
 	ntlm->timestamp = timestamp;
 	return 0;
 }
@@ -260,6 +278,9 @@ static inline bool write_buf(
 	const unsigned char *buf,
 	size_t len)
 {
+	if (!len)
+		return true;
+
 	if (out->len - out->pos < len) {
 		ntlm_client_set_errmsg(ntlm, "out of buffer space");
 		return false;
@@ -474,7 +495,7 @@ static inline bool read_string_unicode(
 	size_t out_len;
 	int ret = ntlm_unicode_utf16_to_8(out,
 		&out_len,
-		ntlm->unicode_ctx,
+		ntlm,
 		(char *)&message->buf[message->pos],
 		string_len);
 
@@ -592,7 +613,9 @@ int ntlm_client_negotiate(
 	size_t hostname_offset = 0;
 	uint32_t flags = 0;
 
-	assert(out && out_len && ntlm);
+	NTLM_ASSERT_ARG(out);
+	NTLM_ASSERT_ARG(out_len);
+	NTLM_ASSERT_ARG(ntlm);
 
 	*out = NULL;
 	*out_len = 0;
@@ -648,12 +671,10 @@ int ntlm_client_negotiate(
 		return -1;
 	}
 
-	if ((ntlm->negotiate.buf = malloc(ntlm->negotiate.len)) == NULL) {
+	if ((ntlm->negotiate.buf = calloc(1, ntlm->negotiate.len)) == NULL) {
 		ntlm_client_set_errmsg(ntlm, "out of memory");
 		return -1;
 	}
-
-	memset(ntlm->negotiate.buf, 0, ntlm->negotiate.len);
 
 	if (!write_buf(ntlm, &ntlm->negotiate,
 			ntlm_client_signature, sizeof(ntlm_client_signature)) ||
@@ -677,20 +698,22 @@ int ntlm_client_negotiate(
 		return -1;
 
 	if (hostname_len > 0) {
-		assert(hostname_offset == ntlm->negotiate.pos);
+		NTLM_ASSERT(ntlm, hostname_offset == ntlm->negotiate.pos);
+
 		if (!write_buf(ntlm, &ntlm->negotiate,
 			(const unsigned char *)ntlm->hostname, hostname_len))
 			return -1;
 	}
 
 	if (domain_len > 0) {
-		assert(domain_offset == ntlm->negotiate.pos);
+		NTLM_ASSERT(ntlm, domain_offset == ntlm->negotiate.pos);
+
 		if (!write_buf(ntlm, &ntlm->negotiate,
 			(const unsigned char *)ntlm->hostdomain, domain_len))
 			return -1;
 	}
 
-	assert(ntlm->negotiate.pos == ntlm->negotiate.len);
+	NTLM_ASSERT(ntlm, ntlm->negotiate.pos == ntlm->negotiate.len);
 
 	ntlm->state = NTLM_STATE_CHALLENGE;
 
@@ -712,7 +735,10 @@ int ntlm_client_set_challenge(
 	uint32_t name_offset, info_offset = 0;
 	bool unicode, has_target_info = false;
 
-	assert(ntlm && (challenge_msg || !challenge_msg_len));
+	NTLM_ASSERT_ARG(ntlm);
+	NTLM_ASSERT_ARG(challenge_msg || !challenge_msg_len);
+
+	ENSURE_INITIALIZED(ntlm);
 
 	if (ntlm->state != NTLM_STATE_NEGOTIATE &&
 		ntlm->state != NTLM_STATE_CHALLENGE) {
@@ -941,6 +967,7 @@ static void des_key_from_password(
 
 static inline bool generate_lm_hash(
 	ntlm_des_block out[2],
+	ntlm_client *ntlm,
 	const char *password)
 {
 	/* LM encrypts this known plaintext using the password as a key */
@@ -969,8 +996,8 @@ static inline bool generate_lm_hash(
 	des_key_from_password(&key1, keystr1, keystr1_len);
 	des_key_from_password(&key2, keystr2, keystr2_len);
 
-	return ntlm_des_encrypt(&out[0], &plaintext, &key1) &&
-		ntlm_des_encrypt(&out[1], &plaintext, &key2);
+	return ntlm_des_encrypt(&out[0], ntlm, &plaintext, &key1) &&
+		ntlm_des_encrypt(&out[1], ntlm, &plaintext, &key2);
 }
 
 static void des_keys_from_lm_hash(ntlm_des_block out[3], ntlm_des_block lm_hash[2])
@@ -995,16 +1022,16 @@ static bool generate_lm_response(ntlm_client *ntlm)
 	ntlm_des_block *challenge = (ntlm_des_block *)&ntlm->challenge.nonce;
 
 	/* Generate the LM hash from the password */
-	if (!generate_lm_hash(lm_hash, ntlm->password))
+	if (!generate_lm_hash(lm_hash, ntlm, ntlm->password))
 		return false;
 
 	/* Convert that LM hash to three DES keys */
 	des_keys_from_lm_hash(key, lm_hash);
 
 	/* Finally, encrypt the challenge with each of these keys */
-	if (!ntlm_des_encrypt(&lm_response[0], challenge, &key[0]) ||
-		!ntlm_des_encrypt(&lm_response[1], challenge, &key[1]) ||
-		!ntlm_des_encrypt(&lm_response[2], challenge, &key[2]))
+	if (!ntlm_des_encrypt(&lm_response[0], ntlm, challenge, &key[0]) ||
+		!ntlm_des_encrypt(&lm_response[1], ntlm, challenge, &key[1]) ||
+		!ntlm_des_encrypt(&lm_response[2], ntlm, challenge, &key[2]))
 		return false;
 
 	memcpy(&ntlm->lm_response[0], lm_response[0], 8);
@@ -1023,12 +1050,13 @@ static bool generate_ntlm_hash(
 	if (ntlm->password && !ntlm_unicode_utf8_to_16(
 			&ntlm->password_utf16,
 			&ntlm->password_utf16_len,
-			ntlm->unicode_ctx,
+			ntlm,
 			ntlm->password,
 			strlen(ntlm->password)))
 		return false;
 
 	return ntlm_md4_digest(out,
+		ntlm,
 		(const unsigned char *)ntlm->password_utf16,
 		ntlm->password_utf16_len);
 }
@@ -1049,9 +1077,9 @@ static bool generate_ntlm_response(ntlm_client *ntlm)
 	des_key_from_password(&key[2], &ntlm_hash[14], 2);
 
 	/* Finally, encrypt the challenge with each of these keys */
-	if (!ntlm_des_encrypt(&ntlm_response[0], challenge, &key[0]) ||
-		!ntlm_des_encrypt(&ntlm_response[1], challenge, &key[1]) ||
-		!ntlm_des_encrypt(&ntlm_response[2], challenge, &key[2]))
+	if (!ntlm_des_encrypt(&ntlm_response[0], ntlm, challenge, &key[0]) ||
+		!ntlm_des_encrypt(&ntlm_response[1], ntlm, challenge, &key[1]) ||
+		!ntlm_des_encrypt(&ntlm_response[2], ntlm, challenge, &key[2]))
 		return false;
 
 	memcpy(&ntlm->ntlm_response[0], ntlm_response[0], 8);
@@ -1082,16 +1110,15 @@ static bool generate_ntlm2_hash(
 		target_len = ntlm->target_utf16_len;
 	}
 
-	if (!ntlm_hmac_ctx_reset(ntlm->hmac_ctx) ||
-		!ntlm_hmac_md5_init(ntlm->hmac_ctx, ntlm_hash, sizeof(ntlm_hash)) ||
-		!ntlm_hmac_md5_update(ntlm->hmac_ctx, username, username_len) ||
-		!ntlm_hmac_md5_update(ntlm->hmac_ctx, target, target_len) ||
-		!ntlm_hmac_md5_final(out, &out_len, ntlm->hmac_ctx)) {
+	if (!ntlm_hmac_md5_init(ntlm, ntlm_hash, sizeof(ntlm_hash)) ||
+		!ntlm_hmac_md5_update(ntlm, username, username_len) ||
+		!ntlm_hmac_md5_update(ntlm, target, target_len) ||
+		!ntlm_hmac_md5_final(out, &out_len, ntlm)) {
 		ntlm_client_set_errmsg(ntlm, "failed to create HMAC-MD5");
 		return false;
 	}
 
-	assert(out_len == NTLM_NTLM2_HASH_LEN);
+	NTLM_ASSERT(ntlm, out_len == NTLM_NTLM2_HASH_LEN);
 	return true;
 }
 
@@ -1104,43 +1131,36 @@ static bool generate_ntlm2_challengehash(
 {
 	size_t out_len = 16;
 
-	if (!ntlm_hmac_ctx_reset(ntlm->hmac_ctx) ||
-		!ntlm_hmac_md5_init(ntlm->hmac_ctx,
-			ntlm2_hash, NTLM_NTLM2_HASH_LEN) ||
-		!ntlm_hmac_md5_update(ntlm->hmac_ctx,
-			(const unsigned char *)&ntlm->challenge.nonce, 8) ||
-		!ntlm_hmac_md5_update(ntlm->hmac_ctx, blob, blob_len) ||
-		!ntlm_hmac_md5_final(out, &out_len, ntlm->hmac_ctx)) {
+	if (!ntlm_hmac_md5_init(ntlm, ntlm2_hash, NTLM_NTLM2_HASH_LEN) ||
+		!ntlm_hmac_md5_update(ntlm, (const unsigned char *)&ntlm->challenge.nonce, 8) ||
+		!ntlm_hmac_md5_update(ntlm, blob, blob_len) ||
+		!ntlm_hmac_md5_final(out, &out_len, ntlm)) {
 		ntlm_client_set_errmsg(ntlm, "failed to create HMAC-MD5");
 		return false;
 	}
 
-	assert(out_len == 16);
+	NTLM_ASSERT(ntlm, out_len == 16);
 	return true;
 }
 
 static bool generate_lm2_response(ntlm_client *ntlm,
 	unsigned char ntlm2_hash[NTLM_NTLM2_HASH_LEN])
 {
-	unsigned char lm2_challengehash[16];
+	unsigned char lm2_challengehash[16] = {0};
 	size_t lm2_len = 16;
 	uint64_t local_nonce;
 
-	local_nonce = htonll(ntlm->nonce);
+	local_nonce = ntlm_htonll(ntlm->nonce);
 
-	if (!ntlm_hmac_ctx_reset(ntlm->hmac_ctx) ||
-		!ntlm_hmac_md5_init(ntlm->hmac_ctx,
-			ntlm2_hash, NTLM_NTLM2_HASH_LEN) ||
-		!ntlm_hmac_md5_update(ntlm->hmac_ctx,
-			(const unsigned char *)&ntlm->challenge.nonce, 8) ||
-		!ntlm_hmac_md5_update(ntlm->hmac_ctx,
-			(const unsigned char *)&local_nonce, 8) ||
-		!ntlm_hmac_md5_final(lm2_challengehash, &lm2_len, ntlm->hmac_ctx)) {
+	if (!ntlm_hmac_md5_init(ntlm, ntlm2_hash, NTLM_NTLM2_HASH_LEN) ||
+		!ntlm_hmac_md5_update(ntlm, (const unsigned char *)&ntlm->challenge.nonce, 8) ||
+		!ntlm_hmac_md5_update(ntlm, (const unsigned char *)&local_nonce, 8) ||
+		!ntlm_hmac_md5_final(lm2_challengehash, &lm2_len, ntlm)) {
 		ntlm_client_set_errmsg(ntlm, "failed to create HMAC-MD5");
 		return false;
 	}
 
-	assert(lm2_len == 16);
+	NTLM_ASSERT(ntlm, lm2_len == 16);
 
 	memcpy(&ntlm->lm_response[0], lm2_challengehash, 16);
 	memcpy(&ntlm->lm_response[16], &local_nonce, 8);
@@ -1164,7 +1184,7 @@ static bool generate_nonce(ntlm_client *ntlm)
 	if (ntlm->nonce)
 		return true;
 
-	if (!ntlm_random_bytes(ntlm, buf, 8))
+	if (!ntlm_random_bytes(buf, ntlm, 8))
 		return false;
 
 	memcpy(&ntlm->nonce, buf, sizeof(uint64_t));
@@ -1177,7 +1197,7 @@ static bool generate_ntlm2_response(ntlm_client *ntlm)
 	uint32_t signature;
 	uint64_t timestamp, nonce;
 	unsigned char ntlm2_hash[NTLM_NTLM2_HASH_LEN];
-	unsigned char challengehash[16];
+	unsigned char challengehash[16] = {0};
 	unsigned char *blob;
 
 	if (!generate_timestamp(ntlm) ||
@@ -1198,8 +1218,8 @@ static bool generate_ntlm2_response(ntlm_client *ntlm)
 
 	/* the blob's integer values are in network byte order */
 	signature = htonl(0x01010000);
-	timestamp = htonll(ntlm->timestamp);
-	nonce = htonll(ntlm->nonce);
+	timestamp = ntlm_htonll(ntlm->timestamp);
+	nonce = ntlm_htonll(ntlm->nonce);
 
 	/* construct the blob */
 	memcpy(&blob[0], &signature, 4);
@@ -1234,7 +1254,11 @@ int ntlm_client_response(
 	uint32_t flags = 0;
 	bool unicode;
 
-	assert(out && out_len && ntlm);
+	NTLM_ASSERT_ARG(out);
+	NTLM_ASSERT_ARG(out_len);
+	NTLM_ASSERT_ARG(ntlm);
+
+	ENSURE_INITIALIZED(ntlm);
 
 	*out = NULL;
 	*out_len = 0;
@@ -1334,12 +1358,10 @@ int ntlm_client_response(
 		return -1;
 	}
 
-	if ((ntlm->response.buf = malloc(ntlm->response.len)) == NULL) {
+	if ((ntlm->response.buf = calloc(1, ntlm->response.len)) == NULL) {
 		ntlm_client_set_errmsg(ntlm, "out of memory");
 		return -1;
 	}
-
-	memset(ntlm->response.buf, 0, ntlm->response.len);
 
 	if (!write_buf(ntlm, &ntlm->response,
 			ntlm_client_signature, sizeof(ntlm_client_signature)) ||
@@ -1359,7 +1381,7 @@ int ntlm_client_response(
 		!write_buf(ntlm, &ntlm->response, session, session_len))
 		return -1;
 
-	assert(ntlm->response.pos == ntlm->response.len);
+	NTLM_ASSERT(ntlm, ntlm->response.pos == ntlm->response.len);
 
 	ntlm->state = NTLM_STATE_COMPLETE;
 
@@ -1371,41 +1393,48 @@ int ntlm_client_response(
 
 void ntlm_client_reset(ntlm_client *ntlm)
 {
-	ntlm_client_flags flags;
-	ntlm_hmac_ctx *hmac_ctx;
-	ntlm_unicode_ctx *unicode_ctx;
+	if (!ntlm)
+		return;
 
-	assert(ntlm);
+	ntlm->state = NTLM_STATE_NEGOTIATE;
 
-	free(ntlm->negotiate.buf);
+	free_hostname(ntlm);
+
+	memset(&ntlm->host_version, 0, sizeof(ntlm_version));
+
+	reset(ntlm->target);
+	reset(ntlm->target_utf16);
+	ntlm->target_utf16_len = 0;
+
+	free_credentials(ntlm);
+
+	ntlm->nonce = 0;
+	ntlm->timestamp = 0;
+
+	memset(ntlm->lm_response, 0, NTLM_LM_RESPONSE_LEN);
+	ntlm->lm_response_len = 0;
+
+	memset(ntlm->ntlm_response, 0, NTLM_NTLM_RESPONSE_LEN);
+	ntlm->ntlm_response_len = 0;
+
+	reset(ntlm->ntlm2_response);
+	ntlm->ntlm2_response_len = 0;
+
+	reset(ntlm->negotiate.buf);
+	ntlm->negotiate.pos = 0;
+	ntlm->negotiate.len = 0;
+
+	reset(ntlm->response.buf);
+	ntlm->response.pos = 0;
+	ntlm->response.len = 0;
+
 	free(ntlm->challenge.target_info);
 	free(ntlm->challenge.target);
 	free(ntlm->challenge.target_domain);
 	free(ntlm->challenge.target_domain_dns);
 	free(ntlm->challenge.target_server);
 	free(ntlm->challenge.target_server_dns);
-	free(ntlm->response.buf);
-
-	free(ntlm->hostname);
-	free(ntlm->hostname_utf16);
-	free(ntlm->hostdomain);
-
-	free(ntlm->target);
-	free(ntlm->target_utf16);
-
-	free(ntlm->ntlm2_response);
-
-	free_credentials(ntlm);
-
-	flags = ntlm->flags;
-	hmac_ctx = ntlm->hmac_ctx;
-	unicode_ctx = ntlm->unicode_ctx;
-
-	memset(ntlm, 0, sizeof(struct ntlm_client));
-
-	ntlm->flags = flags;
-	ntlm->hmac_ctx = hmac_ctx;
-	ntlm->unicode_ctx = unicode_ctx;
+	memset(&ntlm->challenge, 0, sizeof(ntlm_challenge));
 }
 
 void ntlm_client_free(ntlm_client *ntlm)
@@ -1413,10 +1442,10 @@ void ntlm_client_free(ntlm_client *ntlm)
 	if (!ntlm)
 		return;
 
-	ntlm_client_reset(ntlm);
+	ntlm_crypt_shutdown(ntlm);
+	ntlm_unicode_shutdown(ntlm);
 
-	ntlm_hmac_ctx_free(ntlm->hmac_ctx);
-	ntlm_unicode_ctx_free(ntlm->unicode_ctx);
+	ntlm_client_reset(ntlm);
 
 	free(ntlm);
 }

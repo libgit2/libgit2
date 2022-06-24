@@ -13,6 +13,11 @@
 # include "win32/utf-conv.h"
 # include "win32/w32_buffer.h"
 
+# ifndef WIN32_LEAN_AND_MEAN
+#  define WIN32_LEAN_AND_MEAN
+# endif
+# include <windows.h>
+
 # ifdef HAVE_QSORT_S
 #  include <search.h>
 # endif
@@ -22,11 +27,15 @@
 # include <Shlwapi.h>
 #endif
 
+#if defined(hpux) || defined(__hpux) || defined(_hpux)
+# include <sys/pstat.h>
+#endif
+
 int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
 {
 	const char *p;
-	int64_t n, nn;
-	int c, ovfl, v, neg, ndig;
+	int64_t n, nn, v;
+	int c, ovfl, neg, ndig;
 
 	p = nptr;
 	neg = 0;
@@ -101,19 +110,11 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 		if (v >= base)
 			break;
 		v = neg ? -v : v;
-		if (n > INT64_MAX / base || n < INT64_MIN / base) {
+		if (git__multiply_int64_overflow(&nn, n, base) || git__add_int64_overflow(&n, nn, v)) {
 			ovfl = 1;
 			/* Keep on iterating until the end of this number */
 			continue;
 		}
-		nn = n * base;
-		if ((v > 0 && nn > INT64_MAX - v) ||
-		    (v < 0 && nn < INT64_MIN - v)) {
-			ovfl = 1;
-			/* Keep on iterating until the end of this number */
-			continue;
-		}
-		n = nn + v;
 	}
 
 Return:
@@ -678,7 +679,7 @@ typedef struct {
 	void *payload;
 } git__qsort_r_glue;
 
-static int GIT_STDLIB_CALL git__qsort_r_glue_cmp(
+static int GIT_LIBGIT2_CALL git__qsort_r_glue_cmp(
 	void *payload, const void *a, const void *b)
 {
 	git__qsort_r_glue *glue = payload;
@@ -733,123 +734,6 @@ void git__qsort_r(
 #endif
 }
 
-/*
- * git__utf8_iterate is taken from the utf8proc project,
- * http://www.public-software-group.org/utf8proc
- *
- * Copyright (c) 2009 Public Software Group e. V., Berlin, Germany
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the ""Software""),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- */
-
-static const int8_t utf8proc_utf8class[256] = {
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-	3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static int util_utf8_charlen(const uint8_t *str, size_t str_len)
-{
-	size_t length, i;
-
-	length = utf8proc_utf8class[str[0]];
-	if (!length)
-		return -1;
-
-	if (str_len > 0 && length > str_len)
-		return -1;
-
-	for (i = 1; i < length; i++) {
-		if ((str[i] & 0xC0) != 0x80)
-			return -1;
-	}
-
-	return (int)length;
-}
-
-int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst)
-{
-	int length;
-	int32_t uc = -1;
-
-	*dst = -1;
-	length = util_utf8_charlen(str, str_len);
-	if (length < 0)
-		return -1;
-
-	switch (length) {
-		case 1:
-			uc = str[0];
-			break;
-		case 2:
-			uc = ((str[0] & 0x1F) <<  6) + (str[1] & 0x3F);
-			if (uc < 0x80) uc = -1;
-			break;
-		case 3:
-			uc = ((str[0] & 0x0F) << 12) + ((str[1] & 0x3F) <<  6)
-				+ (str[2] & 0x3F);
-			if (uc < 0x800 || (uc >= 0xD800 && uc < 0xE000) ||
-					(uc >= 0xFDD0 && uc < 0xFDF0)) uc = -1;
-			break;
-		case 4:
-			uc = ((str[0] & 0x07) << 18) + ((str[1] & 0x3F) << 12)
-				+ ((str[2] & 0x3F) <<  6) + (str[3] & 0x3F);
-			if (uc < 0x10000 || uc >= 0x110000) uc = -1;
-			break;
-	}
-
-	if (uc < 0 || ((uc & 0xFFFF) >= 0xFFFE))
-		return -1;
-
-	*dst = uc;
-	return length;
-}
-
-size_t git__utf8_valid_buf_length(const uint8_t *str, size_t str_len)
-{
-	size_t offset = 0;
-
-	while (offset < str_len) {
-		int length = util_utf8_charlen(str + offset, str_len - offset);
-
-		if (length < 0)
-			break;
-
-		offset += length;
-	}
-
-	return offset;
-}
-
 #ifdef GIT_WIN32
 int git__getenv(git_buf *out, const char *name)
 {
@@ -871,7 +755,7 @@ int git__getenv(git_buf *out, const char *name)
 
 	if (value_len)
 		error = git_buf_put_w(out, wide_value, value_len);
-	else if (GetLastError() == ERROR_ENVVAR_NOT_FOUND)
+	else if (GetLastError() == ERROR_SUCCESS || GetLastError() == ERROR_ENVVAR_NOT_FOUND)
 		error = GIT_ENOTFOUND;
 	else
 		git_error_set(GIT_ERROR_OS, "could not read environment variable '%s'", name);
@@ -893,3 +777,43 @@ int git__getenv(git_buf *out, const char *name)
 	return git_buf_puts(out, val);
 }
 #endif
+
+/*
+ * By doing this in two steps we can at least get
+ * the function to be somewhat coherent, even
+ * with this disgusting nest of #ifdefs.
+ */
+#ifndef _SC_NPROCESSORS_ONLN
+#	ifdef _SC_NPROC_ONLN
+#		define _SC_NPROCESSORS_ONLN _SC_NPROC_ONLN
+#	elif defined _SC_CRAY_NCPU
+#		define _SC_NPROCESSORS_ONLN _SC_CRAY_NCPU
+#	endif
+#endif
+
+int git__online_cpus(void)
+{
+#ifdef _SC_NPROCESSORS_ONLN
+	long ncpus;
+#endif
+
+#ifdef _WIN32
+	SYSTEM_INFO info;
+	GetSystemInfo(&info);
+
+	if ((int)info.dwNumberOfProcessors > 0)
+		return (int)info.dwNumberOfProcessors;
+#elif defined(hpux) || defined(__hpux) || defined(_hpux)
+	struct pst_dynamic psd;
+
+	if (!pstat_getdynamic(&psd, sizeof(psd), (size_t)1, 0))
+		return (int)psd.psd_proc_cnt;
+#endif
+
+#ifdef _SC_NPROCESSORS_ONLN
+	if ((ncpus = (long)sysconf(_SC_NPROCESSORS_ONLN)) > 0)
+		return (int)ncpus;
+#endif
+
+	return 1;
+}

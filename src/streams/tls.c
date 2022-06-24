@@ -8,7 +8,6 @@
 #include "git2/errors.h"
 
 #include "common.h"
-#include "global.h"
 #include "streams/registry.h"
 #include "streams/tls.h"
 #include "streams/mbedtls.h"
@@ -21,7 +20,9 @@ int git_tls_stream_new(git_stream **out, const char *host, const char *port)
 	git_stream_registration custom = {0};
 	int error;
 
-	assert(out && host && port);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(host);
+	GIT_ASSERT_ARG(port);
 
 	if ((error = git_stream_registry_lookup(&custom, GIT_STREAM_TLS)) == 0) {
 		init = custom.init;
@@ -50,7 +51,8 @@ int git_tls_stream_wrap(git_stream **out, git_stream *in, const char *host)
 	int (*wrap)(git_stream **, git_stream *, const char *) = NULL;
 	git_stream_registration custom = {0};
 
-	assert(out && in);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(in);
 
 	if (git_stream_registry_lookup(&custom, GIT_STREAM_TLS) == 0) {
 		wrap = custom.wrap;

@@ -35,7 +35,7 @@ typedef struct {
 	} native;
 } git_rwlock;
 
-int git_threads_init(void);
+int git_threads_global_init(void);
 
 int git_thread_create(git_thread *GIT_RESTRICT,
 	void *(*) (void *),

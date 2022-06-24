@@ -15,6 +15,7 @@
 
 #include "refspec.h"
 #include "vector.h"
+#include "net.h"
 
 #define GIT_REMOTE_ORIGIN "origin"
 
@@ -46,7 +47,7 @@ typedef struct git_remote_connection_opts {
 int git_remote__connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_remote_connection_opts *conn);
 
 int git_remote__urlfordirection(git_buf *url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks);
-int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_url);
+int git_remote__http_proxy(char **out, git_remote *remote, git_net_url *url);
 
 git_refspec *git_remote__matching_refspec(git_remote *remote, const char *refname);
 git_refspec *git_remote__matching_dst_refspec(git_remote *remote, const char *refname);

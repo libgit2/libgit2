@@ -133,6 +133,9 @@ typedef enum {
 	 */
 	GIT_DIFF_INDENT_HEURISTIC = (1u << 18),
 
+	/** Ignore blank lines */
+	GIT_DIFF_IGNORE_BLANK_LINES = (1u << 19),
+
 	/** Treat all files as text, disabling binary attributes & detection */
 	GIT_DIFF_FORCE_TEXT = (1u << 20),
 	/** Treat all files as binary, disabling text diffs */
@@ -237,32 +240,43 @@ typedef enum {
  * Although this is called a "file", it could represent a file, a symbolic
  * link, a submodule commit id, or even a tree (although that only if you
  * are tracking type changes or ignored/untracked directories).
- *
- * The `id` is the `git_oid` of the item.  If the entry represents an
- * absent side of a diff (e.g. the `old_file` of a `GIT_DELTA_ADDED` delta),
- * then the oid will be zeroes.
- *
- * `path` is the NUL-terminated path to the entry relative to the working
- * directory of the repository.
- *
- * `size` is the size of the entry in bytes.
- *
- * `flags` is a combination of the `git_diff_flag_t` types
- *
- * `mode` is, roughly, the stat() `st_mode` value for the item.  This will
- * be restricted to one of the `git_filemode_t` values.
- *
- * The `id_abbrev` represents the known length of the `id` field, when
- * converted to a hex string.  It is generally `GIT_OID_HEXSZ`, unless this
- * delta was created from reading a patch file, in which case it may be
- * abbreviated to something reasonable, like 7 characters.
  */
 typedef struct {
+	/**
+	 * The `git_oid` of the item.  If the entry represents an
+	 * absent side of a diff (e.g. the `old_file` of a `GIT_DELTA_ADDED` delta),
+	 * then the oid will be zeroes.
+	 */
 	git_oid            id;
+
+	/**
+	 * The NUL-terminated path to the entry relative to the working
+	 * directory of the repository.
+	 */
 	const char        *path;
+
+	/**
+	 * The size of the entry in bytes.
+	 */
 	git_object_size_t  size;
+
+	/**
+	 * A combination of the `git_diff_flag_t` types
+	 */
 	uint32_t           flags;
+
+	/**
+	 * Roughly, the stat() `st_mode` value for the item.  This will
+	 * be restricted to one of the `git_filemode_t` values.
+	 */
 	uint16_t           mode;
+
+	/**
+	 * Represents the known length of the `id` field, when
+	 * converted to a hex string.  It is generally `GIT_OID_HEXSZ`, unless this
+	 * delta was created from reading a patch file, in which case it may be
+	 * abbreviated to something reasonable, like 7 characters.
+	 */
 	uint16_t           id_abbrev;
 } git_diff_file;
 
@@ -998,7 +1012,7 @@ GIT_EXTERN(size_t) git_diff_num_deltas(const git_diff *diff);
 /**
  * Query how many diff deltas are there in a diff filtered by type.
  *
- * This works just like `git_diff_entrycount()` with an extra parameter
+ * This works just like `git_diff_num_deltas()` with an extra parameter
  * that is a `git_delta_t` and returns just the count of how many deltas
  * match that particular type.
  *
@@ -1360,99 +1374,6 @@ GIT_EXTERN(int) git_diff_stats_to_buf(
  * cannot be used after free.
  */
 GIT_EXTERN(void) git_diff_stats_free(git_diff_stats *stats);
-
-/**
- * Formatting options for diff e-mail generation
- */
-typedef enum {
-	/** Normal patch, the default */
-	GIT_DIFF_FORMAT_EMAIL_NONE = 0,
-
-	/** Don't insert "[PATCH]" in the subject header*/
-	GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER = (1 << 0),
-
-} git_diff_format_email_flags_t;
-
-/**
- * Options for controlling the formatting of the generated e-mail.
- */
-typedef struct {
-	unsigned int version;
-
-	/** see `git_diff_format_email_flags_t` above */
-	uint32_t flags;
-
-	/** This patch number */
-	size_t patch_no;
-
-	/** Total number of patches in this series */
-	size_t total_patches;
-
-	/** id to use for the commit */
-	const git_oid *id;
-
-	/** Summary of the change */
-	const char *summary;
-
-	/** Commit message's body */
-	const char *body;
-
-	/** Author of the change */
-	const git_signature *author;
-} git_diff_format_email_options;
-
-#define GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION 1
-#define GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT {GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION, 0, 1, 1, NULL, NULL, NULL, NULL}
-
-/**
- * Create an e-mail ready patch from a diff.
- *
- * @param out buffer to store the e-mail patch in
- * @param diff containing the commit
- * @param opts structure with options to influence content and formatting.
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_diff_format_email(
-	git_buf *out,
-	git_diff *diff,
-	const git_diff_format_email_options *opts);
-
-/**
- * Create an e-mail ready patch for a commit.
- *
- * Does not support creating patches for merge commits (yet).
- *
- * @param out buffer to store the e-mail patch in
- * @param repo containing the commit
- * @param commit pointer to up commit
- * @param patch_no patch number of the commit
- * @param total_patches total number of patches in the patch set
- * @param flags determines the formatting of the e-mail
- * @param diff_opts structure with options to influence diff or NULL for defaults.
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_diff_commit_as_email(
-	git_buf *out,
-	git_repository *repo,
-	git_commit *commit,
-	size_t patch_no,
-	size_t total_patches,
-	uint32_t flags,
-	const git_diff_options *diff_opts);
-
-/**
- * Initialize git_diff_format_email_options structure
- *
- * Initializes a `git_diff_format_email_options` with default values. Equivalent
- * to creating an instance with GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT.
- *
- * @param opts The `git_blame_options` struct to initialize.
- * @param version The struct version; pass `GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION`.
- * @return Zero on success; -1 on failure.
- */
-GIT_EXTERN(int) git_diff_format_email_options_init(
-	git_diff_format_email_options *opts,
-	unsigned int version);
 
 /**
  * Patch ID options structure

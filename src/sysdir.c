@@ -7,7 +7,7 @@
 
 #include "sysdir.h"
 
-#include "global.h"
+#include "runtime.h"
 #include "buffer.h"
 #include "path.h"
 #include <ctype.h>
@@ -45,7 +45,7 @@ static int get_passwd_home(git_buf *out, uid_t uid)
 	long buflen;
 	int error;
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 
 	if ((buflen = sysconf(_SC_GETPW_R_SIZE_MAX)) == -1)
 		buflen = 1024;
@@ -189,9 +189,7 @@ int git_sysdir_global_init(void)
 	for (i = 0; !error && i < ARRAY_SIZE(git_sysdir__dirs); i++)
 		error = git_sysdir__dirs[i].guess(&git_sysdir__dirs[i].buf);
 
-	git__on_shutdown(git_sysdir_global_shutdown);
-
-	return error;
+	return git_runtime_shutdown_register(git_sysdir_global_shutdown);
 }
 
 static int git_sysdir_check_selector(git_sysdir_t which)
@@ -206,7 +204,7 @@ static int git_sysdir_check_selector(git_sysdir_t which)
 
 int git_sysdir_get(const git_buf **out, git_sysdir_t which)
 {
-	assert(out);
+	GIT_ASSERT_ARG(out);
 
 	*out = NULL;
 
@@ -298,8 +296,11 @@ static int git_sysdir_find_in_dirlist(
 	}
 
 done:
+	if (name)
+		git_error_set(GIT_ERROR_OS, "the %s file '%s' doesn't exist", label, name);
+	else
+		git_error_set(GIT_ERROR_OS, "the %s directory doesn't exist", label);
 	git_buf_dispose(path);
-	git_error_set(GIT_ERROR_OS, "the %s file '%s' doesn't exist", label, name);
 	return GIT_ENOTFOUND;
 }
 

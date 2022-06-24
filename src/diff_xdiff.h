@@ -16,7 +16,7 @@
 /* xdiff cannot cope with large files.  these files should not be passed to
  * xdiff.  callers should treat these large files as binary.
  */
-#define GIT_XDIFF_MAX_SIZE (1024LL * 1024 * 1023)
+#define GIT_XDIFF_MAX_SIZE (INT64_C(1024) * 1024 * 1023)
 
 /* A git_xdiff_output is a git_patch_generate_output with extra fields
  * necessary to use libxdiff.  Calling git_xdiff_init() will set the diff_cb

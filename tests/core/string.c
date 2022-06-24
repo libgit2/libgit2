@@ -123,3 +123,14 @@ void test_core_string__strcasecmp(void)
 	cl_assert(git__strcasecmp("et", "e\342\202\254ghi=") < 0);
 	cl_assert(git__strcasecmp("\303\215", "\303\255") < 0);
 }
+
+void test_core_string__strlcmp(void)
+{
+	const char foo[3] = { 'f', 'o', 'o' };
+
+	cl_assert(git__strlcmp("foo", "foo", 3) == 0);
+	cl_assert(git__strlcmp("foo", foo, 3) == 0);
+	cl_assert(git__strlcmp("foo", "foobar", 3) == 0);
+	cl_assert(git__strlcmp("foobar", "foo", 3) > 0);
+	cl_assert(git__strlcmp("foo", "foobar", 6) < 0);
+}

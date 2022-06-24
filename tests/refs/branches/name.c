@@ -43,3 +43,20 @@ void test_refs_branches_name__error_when_ref_is_no_branch(void)
 	cl_git_pass(git_reference_lookup(&ref,repo,"refs/notes/fanout"));
 	cl_git_fail(git_branch_name(&name,ref));
 }
+
+static int name_is_valid(const char *name)
+{
+	int valid;
+	cl_git_pass(git_branch_name_is_valid(&valid, name));
+	return valid;
+}
+
+void test_refs_branches_is_name_valid(void)
+{
+	cl_assert_equal_i(true, name_is_valid("master"));
+	cl_assert_equal_i(true, name_is_valid("test/master"));
+
+	cl_assert_equal_i(false, name_is_valid(""));
+	cl_assert_equal_i(false, name_is_valid("HEAD"));
+	cl_assert_equal_i(false, name_is_valid("-dash"));
+}

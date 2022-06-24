@@ -429,7 +429,7 @@ static int paths_on_dup(void **old, void *new)
 	return -1;
 }
 
-static git_blame__origin* find_origin(
+static git_blame__origin *find_origin(
 		git_blame *blame,
 		git_commit *parent,
 		git_blame__origin *origin)

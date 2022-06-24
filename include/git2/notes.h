@@ -84,8 +84,8 @@ GIT_EXTERN(void) git_note_iterator_free(git_note_iterator *it);
  *         (negative value)
  */
 GIT_EXTERN(int) git_note_next(
-	git_oid* note_id,
-	git_oid* annotated_id,
+	git_oid *note_id,
+	git_oid *annotated_id,
 	git_note_iterator *it);
 
 

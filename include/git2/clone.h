@@ -133,7 +133,7 @@ typedef struct git_clone_options {
 	 * The name of the branch to checkout. NULL means use the
 	 * remote's default branch.
 	 */
-	const char* checkout_branch;
+	const char *checkout_branch;
 
 	/**
 	 * A callback used to create the new repository into which to

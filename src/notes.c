@@ -407,31 +407,33 @@ cleanup:
 	return error;
 }
 
-static int note_get_default_ref(char **out, git_repository *repo)
+static int note_get_default_ref(git_buf *out, git_repository *repo)
 {
 	git_config *cfg;
-	int ret = git_repository_config__weakptr(&cfg, repo);
+	int error;
 
-	*out = (ret != 0) ? NULL : git_config__get_string_force(
-		cfg, "core.notesref", GIT_NOTES_DEFAULT_REF);
+	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
+		return error;
 
-	return ret;
+	error = git_config_get_string_buf(out, cfg, "core.notesref");
+
+	if (error == GIT_ENOTFOUND)
+		error = git_buf_puts(out, GIT_NOTES_DEFAULT_REF);
+
+	return error;
 }
 
-static int normalize_namespace(char **out, git_repository *repo, const char *notes_ref)
+static int normalize_namespace(git_buf *out, git_repository *repo, const char *notes_ref)
 {
-	if (notes_ref) {
-		*out = git__strdup(notes_ref);
-		GIT_ERROR_CHECK_ALLOC(*out);
-		return 0;
-	}
+	if (notes_ref)
+		return git_buf_puts(out, notes_ref);
 
 	return note_get_default_ref(out, repo);
 }
 
 static int retrieve_note_commit(
 	git_commit **commit_out,
-	char **notes_ref_out,
+	git_buf *notes_ref_out,
 	git_repository *repo,
 	const char *notes_ref)
 {
@@ -441,7 +443,7 @@ static int retrieve_note_commit(
 	if ((error = normalize_namespace(notes_ref_out, repo, notes_ref)) < 0)
 		return error;
 
-	if ((error = git_reference_name_to_id(&oid, repo, *notes_ref_out)) < 0)
+	if ((error = git_reference_name_to_id(&oid, repo, notes_ref_out->ptr)) < 0)
 		return error;
 
 	if (git_commit_lookup(commit_out, repo, &oid) < 0)
@@ -476,7 +478,7 @@ int git_note_read(git_note **out, git_repository *repo,
 		  const char *notes_ref_in, const git_oid *oid)
 {
 	int error;
-	char *notes_ref = NULL;
+	git_buf notes_ref = GIT_BUF_INIT;
 	git_commit *commit = NULL;
 
 	error = retrieve_note_commit(&commit, &notes_ref, repo, notes_ref_in);
@@ -487,7 +489,7 @@ int git_note_read(git_note **out, git_repository *repo,
 	error = git_note_commit_read(out, repo, commit, oid);
 
 cleanup:
-	git__free(notes_ref);
+	git_buf_dispose(&notes_ref);
 	git_commit_free(commit);
 	return error;
 }
@@ -534,7 +536,7 @@ int git_note_create(
 	int allow_note_overwrite)
 {
 	int error;
-	char *notes_ref = NULL;
+	git_buf notes_ref = GIT_BUF_INIT;
 	git_commit *existing_notes_commit = NULL;
 	git_reference *ref = NULL;
 	git_oid notes_blob_oid, notes_commit_oid;
@@ -553,14 +555,14 @@ int git_note_create(
 	if (error < 0)
 		goto cleanup;
 
-	error = git_reference_create(&ref, repo, notes_ref,
+	error = git_reference_create(&ref, repo, notes_ref.ptr,
 				&notes_commit_oid, 1, NULL);
 
 	if (out != NULL)
 		git_oid_cpy(out, &notes_blob_oid);
 
 cleanup:
-	git__free(notes_ref);
+	git_buf_dispose(&notes_ref);
 	git_commit_free(existing_notes_commit);
 	git_reference_free(ref);
 	return error;
@@ -596,7 +598,7 @@ int git_note_remove(git_repository *repo, const char *notes_ref_in,
 		const git_oid *oid)
 {
 	int error;
-	char *notes_ref_target = NULL;
+	git_buf notes_ref_target = GIT_BUF_INIT;
 	git_commit *existing_notes_commit = NULL;
 	git_oid new_notes_commit;
 	git_reference *notes_ref = NULL;
@@ -612,11 +614,11 @@ int git_note_remove(git_repository *repo, const char *notes_ref_in,
 	if (error < 0)
 		goto cleanup;
 
-	error = git_reference_create(&notes_ref, repo, notes_ref_target,
+	error = git_reference_create(&notes_ref, repo, notes_ref_target.ptr,
 			&new_notes_commit, 1, NULL);
 
 cleanup:
-	git__free(notes_ref_target);
+	git_buf_dispose(&notes_ref_target);
 	git_reference_free(notes_ref);
 	git_commit_free(existing_notes_commit);
 	return error;
@@ -624,41 +626,39 @@ cleanup:
 
 int git_note_default_ref(git_buf *out, git_repository *repo)
 {
-	char *default_ref;
 	int error;
 
-	assert(out && repo);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
 
-	git_buf_sanitize(out);
+	if ((error = git_buf_sanitize(out)) < 0 ||
+	    (error = note_get_default_ref(out, repo)) < 0)
+		git_buf_dispose(out);
 
-	if ((error = note_get_default_ref(&default_ref, repo)) < 0)
-		return error;
-
-	git_buf_attach(out, default_ref, strlen(default_ref));
-	return 0;
+	return error;
 }
 
 const git_signature *git_note_committer(const git_note *note)
 {
-	assert(note);
+	GIT_ASSERT_ARG_WITH_RETVAL(note, NULL);
 	return note->committer;
 }
 
 const git_signature *git_note_author(const git_note *note)
 {
-	assert(note);
+	GIT_ASSERT_ARG_WITH_RETVAL(note, NULL);
 	return note->author;
 }
 
-const char * git_note_message(const git_note *note)
+const char *git_note_message(const git_note *note)
 {
-	assert(note);
+	GIT_ASSERT_ARG_WITH_RETVAL(note, NULL);
 	return note->message;
 }
 
-const git_oid * git_note_id(const git_note *note)
+const git_oid *git_note_id(const git_note *note)
 {
-	assert(note);
+	GIT_ASSERT_ARG_WITH_RETVAL(note, NULL);
 	return &note->id;
 }
 
@@ -674,7 +674,7 @@ void git_note_free(git_note *note)
 }
 
 static int process_entry_path(
-	const char* entry_path,
+	const char *entry_path,
 	git_oid *annotated_object_id)
 {
 	int error = 0;
@@ -780,7 +780,7 @@ int git_note_iterator_new(
 {
 	int error;
 	git_commit *commit = NULL;
-	char *notes_ref;
+	git_buf notes_ref = GIT_BUF_INIT;
 
 	error = retrieve_note_commit(&commit, &notes_ref, repo, notes_ref_in);
 	if (error < 0)
@@ -789,15 +789,15 @@ int git_note_iterator_new(
 	error = git_note_commit_iterator_new(it, commit);
 
 cleanup:
-	git__free(notes_ref);
+	git_buf_dispose(&notes_ref);
 	git_commit_free(commit);
 
 	return error;
 }
 
 int git_note_next(
-	git_oid* note_id,
-	git_oid* annotated_id,
+	git_oid *note_id,
+	git_oid *annotated_id,
 	git_note_iterator *it)
 {
 	int error;

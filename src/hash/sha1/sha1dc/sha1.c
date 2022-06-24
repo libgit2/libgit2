@@ -10,9 +10,7 @@
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef __unix__
 #include <sys/types.h> /* make sure macros like _BIG_ENDIAN visible */
-#endif
 #endif
 
 #ifdef SHA1DC_CUSTOM_INCLUDE_SHA1_C
@@ -1712,7 +1710,7 @@ static void sha1_recompression_step(uint32_t step, uint32_t ihvin[5], uint32_t i
 
 
 
-static void sha1_process(SHA1_CTX* ctx, const uint32_t block[16])
+static void sha1_process(SHA1_CTX *ctx, const uint32_t block[16])
 {
 	unsigned i, j;
 	uint32_t ubc_dv_mask[DVMASKSIZE] = { 0xFFFFFFFF };
@@ -1764,7 +1762,7 @@ static void sha1_process(SHA1_CTX* ctx, const uint32_t block[16])
 	}
 }
 
-void SHA1DCInit(SHA1_CTX* ctx)
+void SHA1DCInit(SHA1_CTX *ctx)
 {
 	ctx->total = 0;
 	ctx->ihv[0] = 0x67452301;
@@ -1780,7 +1778,7 @@ void SHA1DCInit(SHA1_CTX* ctx)
 	ctx->callback = NULL;
 }
 
-void SHA1DCSetSafeHash(SHA1_CTX* ctx, int safehash)
+void SHA1DCSetSafeHash(SHA1_CTX *ctx, int safehash)
 {
 	if (safehash)
 		ctx->safe_hash = 1;
@@ -1789,7 +1787,7 @@ void SHA1DCSetSafeHash(SHA1_CTX* ctx, int safehash)
 }
 
 
-void SHA1DCSetUseUBC(SHA1_CTX* ctx, int ubc_check)
+void SHA1DCSetUseUBC(SHA1_CTX *ctx, int ubc_check)
 {
 	if (ubc_check)
 		ctx->ubc_check = 1;
@@ -1797,7 +1795,7 @@ void SHA1DCSetUseUBC(SHA1_CTX* ctx, int ubc_check)
 		ctx->ubc_check = 0;
 }
 
-void SHA1DCSetUseDetectColl(SHA1_CTX* ctx, int detect_coll)
+void SHA1DCSetUseDetectColl(SHA1_CTX *ctx, int detect_coll)
 {
 	if (detect_coll)
 		ctx->detect_coll = 1;
@@ -1805,7 +1803,7 @@ void SHA1DCSetUseDetectColl(SHA1_CTX* ctx, int detect_coll)
 		ctx->detect_coll = 0;
 }
 
-void SHA1DCSetDetectReducedRoundCollision(SHA1_CTX* ctx, int reduced_round_coll)
+void SHA1DCSetDetectReducedRoundCollision(SHA1_CTX *ctx, int reduced_round_coll)
 {
 	if (reduced_round_coll)
 		ctx->reduced_round_coll = 1;
@@ -1813,12 +1811,12 @@ void SHA1DCSetDetectReducedRoundCollision(SHA1_CTX* ctx, int reduced_round_coll)
 		ctx->reduced_round_coll = 0;
 }
 
-void SHA1DCSetCallback(SHA1_CTX* ctx, collision_block_callback callback)
+void SHA1DCSetCallback(SHA1_CTX *ctx, collision_block_callback callback)
 {
 	ctx->callback = callback;
 }
 
-void SHA1DCUpdate(SHA1_CTX* ctx, const char* buf, size_t len)
+void SHA1DCUpdate(SHA1_CTX *ctx, const char *buf, size_t len)
 {
 	unsigned left, fill;
 

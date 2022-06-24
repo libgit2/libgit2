@@ -12,7 +12,7 @@
 int git_regexp_compile(git_regexp *r, const char *pattern, int flags)
 {
 	int erroffset, cflags = 0;
-	const char *error;
+	const char *error = NULL;
 
 	if (flags & GIT_REGEXP_ICASE)
 		cflags |= PCRE_CASELESS;
@@ -41,7 +41,7 @@ int git_regexp_match(const git_regexp *r, const char *string)
 
 int git_regexp_search(const git_regexp *r, const char *string, size_t nmatches, git_regmatch *matches)
 {
-	int static_ovec[9], *ovec;
+	int static_ovec[9] = {0}, *ovec;
 	int error;
 	size_t i;
 

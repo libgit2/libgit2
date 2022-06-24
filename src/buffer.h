@@ -17,11 +17,33 @@
  * } git_buf;
  */
 
+typedef enum {
+	GIT_BUF_BOM_NONE = 0,
+	GIT_BUF_BOM_UTF8 = 1,
+	GIT_BUF_BOM_UTF16_LE = 2,
+	GIT_BUF_BOM_UTF16_BE = 3,
+	GIT_BUF_BOM_UTF32_LE = 4,
+	GIT_BUF_BOM_UTF32_BE = 5
+} git_buf_bom_t;
+
+typedef struct {
+	git_buf_bom_t bom; /* BOM found at head of text */
+	unsigned int nul, cr, lf, crlf; /* NUL, CR, LF and CRLF counts */
+	unsigned int printable, nonprintable; /* These are just approximations! */
+} git_buf_text_stats;
+
 extern char git_buf__initbuf[];
 extern char git_buf__oom[];
 
 /* Use to initialize buffer structure when git_buf is on stack */
 #define GIT_BUF_INIT { git_buf__initbuf, 0, 0 }
+
+/**
+ * Static initializer for git_buf from static buffer
+ */
+#ifdef GIT_DEPRECATE_HARD
+# define GIT_BUF_INIT_CONST(STR,LEN) { (char *)(STR), 0, (size_t)(LEN) }
+#endif
 
 GIT_INLINE(bool) git_buf_is_allocated(const git_buf *buf)
 {
@@ -35,6 +57,33 @@ GIT_INLINE(bool) git_buf_is_allocated(const git_buf *buf)
  * initialization.
  */
 extern int git_buf_init(git_buf *buf, size_t initial_size);
+
+#ifdef GIT_DEPRECATE_HARD
+
+/**
+ * Resize the buffer allocation to make more space.
+ *
+ * This will attempt to grow the buffer to accommodate the target size.
+ *
+ * If the buffer refers to memory that was not allocated by libgit2 (i.e.
+ * the `asize` field is zero), then `ptr` will be replaced with a newly
+ * allocated block of data.  Be careful so that memory allocated by the
+ * caller is not lost.  As a special variant, if you pass `target_size` as
+ * 0 and the memory is not allocated by libgit2, this will allocate a new
+ * buffer of size `size` and copy the external data into it.
+ *
+ * Currently, this will never shrink a buffer, only expand it.
+ *
+ * If the allocation fails, this will return an error and the buffer will be
+ * marked as invalid for future operations, invaliding the contents.
+ *
+ * @param buffer The buffer to be resized; may or may not be allocated yet
+ * @param target_size The desired available size
+ * @return 0 on success, -1 on allocation failure
+ */
+int git_buf_grow(git_buf *buffer, size_t target_size);
+
+#endif
 
 /**
  * Resize the buffer allocation to make more space.
@@ -69,7 +118,7 @@ extern int git_buf_try_grow(
  * git_buf__initbuf. If a buffer with a non-NULL ptr is passed in, this method
  * assures that the buffer is '\0'-terminated.
  */
-extern void git_buf_sanitize(git_buf *buf);
+extern int git_buf_sanitize(git_buf *buf);
 
 extern void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
 extern char *git_buf_detach(git_buf *buf);
@@ -105,6 +154,11 @@ GIT_INLINE(bool) git_buf_oom(const git_buf *buf)
  * return code of these functions and call them in a series then just call
  * git_buf_oom at the end.
  */
+
+#ifdef GIT_DEPRECATE_HARD
+int git_buf_set(git_buf *buffer, const void *data, size_t datalen);
+#endif
+
 int git_buf_sets(git_buf *buf, const char *string);
 int git_buf_putc(git_buf *buf, char c);
 int git_buf_putcn(git_buf *buf, char c, size_t len);
@@ -117,6 +171,7 @@ void git_buf_consume_bytes(git_buf *buf, size_t len);
 void git_buf_consume(git_buf *buf, const char *end);
 void git_buf_truncate(git_buf *buf, size_t len);
 void git_buf_shorten(git_buf *buf, size_t amount);
+void git_buf_truncate_at_char(git_buf *buf, char separator);
 void git_buf_rtruncate_at_char(git_buf *path, char separator);
 
 /** General join with separator */
@@ -145,7 +200,7 @@ GIT_INLINE(size_t) git_buf_len(const git_buf *buf)
 	return buf->size;
 }
 
-void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf);
+int git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf);
 
 #define git_buf_PUTS(buf, str) git_buf_put(buf, str, sizeof(str) - 1)
 
@@ -218,5 +273,102 @@ int git_buf_splice(
 	size_t nb_to_remove,
 	const char *data,
 	size_t nb_to_insert);
+
+/**
+ * Append string to buffer, prefixing each character from `esc_chars` with
+ * `esc_with` string.
+ *
+ * @param buf Buffer to append data to
+ * @param string String to escape and append
+ * @param esc_chars Characters to be escaped
+ * @param esc_with String to insert in from of each found character
+ * @return 0 on success, <0 on failure (probably allocation problem)
+ */
+extern int git_buf_puts_escaped(
+	git_buf *buf,
+	const char *string,
+	const char *esc_chars,
+	const char *esc_with);
+
+/**
+ * Append string escaping characters that are regex special
+ */
+GIT_INLINE(int) git_buf_puts_escape_regex(git_buf *buf, const char *string)
+{
+	return git_buf_puts_escaped(buf, string, "^.[]$()|*+?{}\\", "\\");
+}
+
+/**
+ * Unescape all characters in a buffer in place
+ *
+ * I.e. remove backslashes
+ */
+extern void git_buf_unescape(git_buf *buf);
+
+/**
+ * Replace all \r\n with \n.
+ *
+ * @return 0 on success, -1 on memory error
+ */
+extern int git_buf_crlf_to_lf(git_buf *tgt, const git_buf *src);
+
+/**
+ * Replace all \n with \r\n. Does not modify existing \r\n.
+ *
+ * @return 0 on success, -1 on memory error
+ */
+extern int git_buf_lf_to_crlf(git_buf *tgt, const git_buf *src);
+
+/**
+ * Fill buffer with the common prefix of a array of strings
+ *
+ * Buffer will be set to empty if there is no common prefix
+ */
+extern int git_buf_common_prefix(git_buf *buf, char *const *const strings, size_t count);
+
+/**
+ * Check if a buffer begins with a UTF BOM
+ *
+ * @param bom Set to the type of BOM detected or GIT_BOM_NONE
+ * @param buf Buffer in which to check the first bytes for a BOM
+ * @return Number of bytes of BOM data (or 0 if no BOM found)
+ */
+extern int git_buf_detect_bom(git_buf_bom_t *bom, const git_buf *buf);
+
+/**
+ * Gather stats for a piece of text
+ *
+ * Fill the `stats` structure with counts of unreadable characters, carriage
+ * returns, etc, so it can be used in heuristics.  This automatically skips
+ * a trailing EOF (\032 character).  Also it will look for a BOM at the
+ * start of the text and can be told to skip that as well.
+ *
+ * @param stats Structure to be filled in
+ * @param buf Text to process
+ * @param skip_bom Exclude leading BOM from stats if true
+ * @return Does the buffer heuristically look like binary data
+ */
+extern bool git_buf_gather_text_stats(
+	git_buf_text_stats *stats, const git_buf *buf, bool skip_bom);
+
+#ifdef GIT_DEPRECATE_HARD
+
+/**
+* Check quickly if buffer looks like it contains binary data
+*
+* @param buf Buffer to check
+* @return 1 if buffer looks like non-text data
+*/
+int git_buf_is_binary(const git_buf *buf);
+
+/**
+* Check quickly if buffer contains a NUL byte
+*
+* @param buf Buffer to check
+* @return 1 if buffer contains a NUL byte
+*/
+int git_buf_contains_nul(const git_buf *buf);
+
+#endif
 
 #endif

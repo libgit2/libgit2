@@ -82,9 +82,11 @@ static int download_tags_value(git_remote *remote, git_config *cfg)
 
 static int ensure_remote_name_is_valid(const char *name)
 {
-	int error = 0;
+	int valid, error;
 
-	if (!git_remote_is_valid_name(name)) {
+	error = git_remote_name_is_valid(&valid, name);
+
+	if (!error && !valid) {
 		git_error_set(
 			GIT_ERROR_CONFIG,
 			"'%s' is not a valid remote name.", name ? name : "(null)");
@@ -110,12 +112,8 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
 		return error;
 
-	if ((error = git_refspec__parse(&spec, refspec, fetch)) < 0) {
-		if (git_error_last()->klass != GIT_ERROR_NOMEMORY)
-			error = GIT_EINVALIDSPEC;
-
+	if ((error = git_refspec__parse(&spec, refspec, fetch)) < 0)
 		return error;
-	}
 
 	git_refspec__dispose(&spec);
 
@@ -123,7 +121,7 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 		return error;
 
 	/*
-	 * "$^" is a unmatcheable regexp: it will not match anything at all, so
+	 * "$^" is an unmatchable regexp: it will not match anything at all, so
 	 * all values will be considered new and we will not replace any
 	 * present value.
 	 */
@@ -212,7 +210,8 @@ int git_remote_create_with_opts(git_remote **out, const char *url, const git_rem
 	const git_remote_create_options dummy_opts = GIT_REMOTE_CREATE_OPTIONS_INIT;
 	int error = -1;
 
-	assert(out && url);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(url);
 
 	if (!opts) {
 		opts = &dummy_opts;
@@ -461,7 +460,9 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 	struct refspec_cb_data data = { NULL };
 	bool optional_setting_found = false, found;
 
-	assert(out && repo && name);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
 
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
 		return error;
@@ -583,20 +584,36 @@ static int lookup_remote_prune_config(git_remote *remote, git_config *config, co
 
 const char *git_remote_name(const git_remote *remote)
 {
-	assert(remote);
+	GIT_ASSERT_ARG_WITH_RETVAL(remote, NULL);
 	return remote->name;
 }
 
 git_repository *git_remote_owner(const git_remote *remote)
 {
-	assert(remote);
+	GIT_ASSERT_ARG_WITH_RETVAL(remote, NULL);
 	return remote->repo;
 }
 
 const char *git_remote_url(const git_remote *remote)
 {
-	assert(remote);
+	GIT_ASSERT_ARG_WITH_RETVAL(remote, NULL);
 	return remote->url;
+}
+
+int git_remote_set_instance_url(git_remote *remote, const char *url)
+{
+	char *tmp;
+
+	GIT_ASSERT_ARG(remote);
+	GIT_ASSERT_ARG(url);
+
+	if ((tmp = git__strdup(url)) == NULL)
+		return -1;
+
+	git__free(remote->url);
+	remote->url = tmp;
+
+	return 0;
 }
 
 static int set_url(git_repository *repo, const char *remote, const char *pattern, const char *url)
@@ -605,7 +622,8 @@ static int set_url(git_repository *repo, const char *remote, const char *pattern
 	git_buf buf = GIT_BUF_INIT, canonical_url = GIT_BUF_INIT;
 	int error;
 
-	assert(repo && remote);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(remote);
 
 	if ((error = ensure_remote_name_is_valid(remote)) < 0)
 		return error;
@@ -639,44 +657,84 @@ int git_remote_set_url(git_repository *repo, const char *remote, const char *url
 
 const char *git_remote_pushurl(const git_remote *remote)
 {
-	assert(remote);
+	GIT_ASSERT_ARG_WITH_RETVAL(remote, NULL);
 	return remote->pushurl;
 }
 
-int git_remote_set_pushurl(git_repository *repo, const char *remote, const char* url)
+int git_remote_set_instance_pushurl(git_remote *remote, const char *url)
+{
+	char *tmp;
+
+	GIT_ASSERT_ARG(remote);
+	GIT_ASSERT_ARG(url);
+
+	if ((tmp = git__strdup(url)) == NULL)
+		return -1;
+
+	git__free(remote->pushurl);
+	remote->pushurl = tmp;
+
+	return 0;
+}
+
+int git_remote_set_pushurl(git_repository *repo, const char *remote, const char *url)
 {
 	return set_url(repo, remote, CONFIG_PUSHURL_FMT, url);
 }
 
-static int resolve_url(git_buf *resolved_url, const char *url, int direction, const git_remote_callbacks *callbacks)
+static int resolve_url(
+	git_buf *resolved_url,
+	const char *url,
+	int direction,
+	const git_remote_callbacks *callbacks)
 {
-	int status;
+#ifdef GIT_DEPRECATE_HARD
+	GIT_UNUSED(direction);
+	GIT_UNUSED(callbacks);
+#else
+	int status, error;
 
 	if (callbacks && callbacks->resolve_url) {
 		git_buf_clear(resolved_url);
 		status = callbacks->resolve_url(resolved_url, url, direction, callbacks->payload);
 		if (status != GIT_PASSTHROUGH) {
 			git_error_set_after_callback_function(status, "git_resolve_url_cb");
-			git_buf_sanitize(resolved_url);
+
+			if ((error = git_buf_sanitize(resolved_url)) < 0)
+				return error;
+
 			return status;
 		}
 	}
+#endif
 
 	return git_buf_sets(resolved_url, url);
 }
 
-int git_remote__urlfordirection(git_buf *url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks)
+int git_remote__urlfordirection(
+	git_buf *url_out,
+	struct git_remote *remote,
+	int direction,
+	const git_remote_callbacks *callbacks)
 {
 	const char *url = NULL;
 
-	assert(remote);
-	assert(direction == GIT_DIRECTION_FETCH || direction == GIT_DIRECTION_PUSH);
+	GIT_ASSERT_ARG(remote);
+	GIT_ASSERT_ARG(direction == GIT_DIRECTION_FETCH || direction == GIT_DIRECTION_PUSH);
 
-	if (direction == GIT_DIRECTION_FETCH) {
-		url = remote->url;
-	} else if (direction == GIT_DIRECTION_PUSH) {
-		url = remote->pushurl ? remote->pushurl : remote->url;
+	if (callbacks && callbacks->remote_ready) {
+		int status = callbacks->remote_ready(remote, direction, callbacks->payload);
+
+		if (status != 0 && status != GIT_PASSTHROUGH) {
+			git_error_set_after_callback_function(status, "git_remote_ready_cb");
+			return status;
+		}
 	}
+
+	if (direction == GIT_DIRECTION_FETCH)
+		url = remote->url;
+	else if (direction == GIT_DIRECTION_PUSH)
+		url = remote->pushurl ? remote->pushurl : remote->url;
 
 	if (!url) {
 		git_error_set(GIT_ERROR_INVALID,
@@ -685,6 +743,7 @@ int git_remote__urlfordirection(git_buf *url_out, struct git_remote *remote, int
 			direction == GIT_DIRECTION_FETCH ? "fetch" : "push");
 		return GIT_EINVALID;
 	}
+
 	return resolve_url(url_out, url, direction, callbacks);
 }
 
@@ -715,7 +774,7 @@ int git_remote__connect(git_remote *remote, git_direction direction, const git_r
 	git_credential_acquire_cb credentials = NULL;
 	git_transport_cb transport = NULL;
 
-	assert(remote);
+	GIT_ASSERT_ARG(remote);
 
 	if (callbacks) {
 		GIT_ERROR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
@@ -780,7 +839,7 @@ int git_remote_connect(git_remote *remote, git_direction direction, const git_re
 
 int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote)
 {
-	assert(remote);
+	GIT_ASSERT_ARG(remote);
 
 	if (!remote->transport) {
 		git_error_set(GIT_ERROR_NET, "this remote has never connected");
@@ -790,75 +849,147 @@ int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote
 	return remote->transport->ls(out, size, remote->transport);
 }
 
-int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_url)
+static int lookup_config(char **out, git_config *cfg, const char *name)
 {
-	git_config *cfg;
 	git_config_entry *ce = NULL;
-	git_buf val = GIT_BUF_INIT;
 	int error;
 
-	assert(remote);
-
-	if (!proxy_url || !remote->repo)
-		return -1;
-
-	*proxy_url = NULL;
-
-	if ((error = git_repository_config__weakptr(&cfg, remote->repo)) < 0)
-		return error;
-
-	/* Go through the possible sources for proxy configuration, from most specific
-	 * to least specific. */
-
-	/* remote.<name>.proxy config setting */
-	if (remote->name && remote->name[0]) {
-		git_buf buf = GIT_BUF_INIT;
-
-		if ((error = git_buf_printf(&buf, "remote.%s.proxy", remote->name)) < 0)
-			return error;
-
-		error = git_config__lookup_entry(&ce, cfg, git_buf_cstr(&buf), false);
-		git_buf_dispose(&buf);
-
-		if (error < 0)
-			return error;
-
-		if (ce && ce->value) {
-			*proxy_url = git__strdup(ce->value);
-			goto found;
-		}
-	}
-
-	/* http.proxy config setting */
-	if ((error = git_config__lookup_entry(&ce, cfg, "http.proxy", false)) < 0)
+	if ((error = git_config__lookup_entry(&ce, cfg, name, false)) < 0)
 		return error;
 
 	if (ce && ce->value) {
-		*proxy_url = git__strdup(ce->value);
-		goto found;
+		*out = git__strdup(ce->value);
+		GIT_ERROR_CHECK_ALLOC(*out);
+	} else {
+		error = GIT_ENOTFOUND;
 	}
 
+	git_config_entry_free(ce);
+	return error;
+}
+
+static void url_config_trim(git_net_url *url)
+{
+	size_t len = strlen(url->path);
+
+	if (url->path[len - 1] == '/') {
+		len--;
+	} else {
+		while (len && url->path[len - 1] != '/')
+			len--;
+	}
+
+	url->path[len] = '\0';
+}
+
+static int http_proxy_config(char **out, git_remote *remote, git_net_url *url)
+{
+	git_config *cfg = NULL;
+	git_buf buf = GIT_BUF_INIT;
+	git_net_url lookup_url = GIT_NET_URL_INIT;
+	int error;
+
+	if ((error = git_net_url_dup(&lookup_url, url)) < 0)
+		goto done;
+
+	if (remote->repo) {
+		if ((error = git_repository_config(&cfg, remote->repo)) < 0)
+			goto done;
+	} else {
+		if ((error = git_config_open_default(&cfg)) < 0)
+			goto done;
+	}
+
+	/* remote.<name>.proxy config setting */
+	if (remote->name && remote->name[0]) {
+		git_buf_clear(&buf);
+
+		if ((error = git_buf_printf(&buf, "remote.%s.proxy", remote->name)) < 0 ||
+		    (error = lookup_config(out, cfg, buf.ptr)) != GIT_ENOTFOUND)
+			goto done;
+	}
+
+	while (true) {
+		git_buf_clear(&buf);
+
+		if ((error = git_buf_puts(&buf, "http.")) < 0 ||
+		    (error = git_net_url_fmt(&buf, &lookup_url)) < 0 ||
+		    (error = git_buf_puts(&buf, ".proxy")) < 0 ||
+		    (error = lookup_config(out, cfg, buf.ptr)) != GIT_ENOTFOUND)
+			goto done;
+
+		if (! lookup_url.path[0])
+			break;
+
+		url_config_trim(&lookup_url);
+	}
+
+	git_buf_clear(&buf);
+
+	error = lookup_config(out, cfg, "http.proxy");
+
+done:
+	git_config_free(cfg);
+	git_buf_dispose(&buf);
+	git_net_url_dispose(&lookup_url);
+	return error;
+}
+
+static int http_proxy_env(char **out, git_remote *remote, git_net_url *url)
+{
+	git_buf proxy_env = GIT_BUF_INIT, no_proxy_env = GIT_BUF_INIT;
+	bool use_ssl = (strcmp(url->scheme, "https") == 0);
+	int error;
+
+	GIT_UNUSED(remote);
+
 	/* http_proxy / https_proxy environment variables */
-	error = git__getenv(&val, use_ssl ? "https_proxy" : "http_proxy");
+	error = git__getenv(&proxy_env, use_ssl ? "https_proxy" : "http_proxy");
 
 	/* try uppercase environment variables */
 	if (error == GIT_ENOTFOUND)
-		error = git__getenv(&val, use_ssl ? "HTTPS_PROXY" : "HTTP_PROXY");
+		error = git__getenv(&proxy_env, use_ssl ? "HTTPS_PROXY" : "HTTP_PROXY");
 
-	if (error < 0) {
-		if (error == GIT_ENOTFOUND) {
-			git_error_clear();
-			error = 0;
-		}
+	if (error)
+		goto done;
 
+	/* no_proxy/NO_PROXY environment variables */
+	error = git__getenv(&no_proxy_env, "no_proxy");
+
+	if (error == GIT_ENOTFOUND)
+		error = git__getenv(&no_proxy_env, "NO_PROXY");
+
+	if (error && error != GIT_ENOTFOUND)
+		goto done;
+
+	if (!git_net_url_matches_pattern_list(url, no_proxy_env.ptr))
+		*out = git_buf_detach(&proxy_env);
+	else
+		error = GIT_ENOTFOUND;
+
+done:
+	git_buf_dispose(&proxy_env);
+	git_buf_dispose(&no_proxy_env);
+	return error;
+}
+
+int git_remote__http_proxy(char **out, git_remote *remote, git_net_url *url)
+{
+	int error;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(remote);
+
+	*out = NULL;
+
+	/*
+	 * Go through the possible sources for proxy configuration,
+	 * Examine the various git config options first, then
+	 * consult environment variables.
+	 */
+	if ((error = http_proxy_config(out, remote, url)) != GIT_ENOTFOUND ||
+	    (error = http_proxy_env(out, remote, url)) != GIT_ENOTFOUND)
 		return error;
-	}
-
-	*proxy_url = git_buf_detach(&val);
-
-found:
-	GIT_ERROR_CHECK_ALLOC(*proxy_url);
-	git_config_entry_free(ce);
 
 	return 0;
 }
@@ -926,7 +1057,7 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 	const git_strarray *custom_headers = NULL;
 	const git_proxy_options *proxy = NULL;
 
-	assert(remote);
+	GIT_ASSERT_ARG(remote);
 
 	if (!remote->repo) {
 		git_error_set(GIT_ERROR_INVALID, "cannot download detached remote");
@@ -1065,7 +1196,8 @@ static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *upda
 	unsigned int i;
 	git_remote_head *remote_ref;
 
-	assert(update_heads && fetchspec_src);
+	GIT_ASSERT_ARG(update_heads);
+	GIT_ASSERT_ARG(fetchspec_src);
 
 	*out = NULL;
 
@@ -1119,7 +1251,9 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 	const char *ref_name;
 	int error = 0, update;
 
-	assert(out && spec && ref);
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(spec);
+	GIT_ASSERT_ARG(ref);
 
 	*out = NULL;
 
@@ -1131,6 +1265,16 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 		error = 0;
 	} else {
 		ref_name = git_reference_name(resolved_ref);
+	}
+
+	/*
+	 * The ref name may be unresolvable - perhaps it's pointing to
+	 * something invalid.  In this case, there is no remote head for
+	 * this ref.
+	 */
+	if (!ref_name) {
+		error = 0;
+		goto cleanup;
 	}
 
 	if ((error = ref_to_update(&update, &remote_name, remote, spec, ref_name)) < 0)
@@ -1156,7 +1300,7 @@ static int git_remote_write_fetchhead(git_remote *remote, git_refspec *spec, git
 	unsigned int i = 0;
 	int error = 0;
 
-	assert(remote);
+	GIT_ASSERT_ARG(remote);
 
 	/* no heads, nothing to do */
 	if (update_heads->length == 0)
@@ -1299,7 +1443,7 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 			if (error == GIT_ENOTFOUND)
 				continue;
 
-			/* if we did find a source, remove it from the candiates */
+			/* If we did find a source, remove it from the candidates. */
 			if ((error = git_vector_set((void **) &src_name, &candidates, i, NULL)) < 0)
 				goto cleanup;
 
@@ -1362,7 +1506,7 @@ static int update_tips_for_spec(
 		git_vector *refs,
 		const char *log_message)
 {
-	int error = 0, autotag;
+	int error = 0, autotag, valid;
 	unsigned int i = 0;
 	git_buf refname = GIT_BUF_INIT;
 	git_oid old;
@@ -1372,7 +1516,7 @@ static int update_tips_for_spec(
 	git_refspec tagspec;
 	git_vector update_heads;
 
-	assert(remote);
+	GIT_ASSERT_ARG(remote);
 
 	if (git_repository_odb__weakptr(&odb, remote->repo) < 0)
 		return -1;
@@ -1390,7 +1534,10 @@ static int update_tips_for_spec(
 		git_buf_clear(&refname);
 
 		/* Ignore malformed ref names (which also saves us from tag^{} */
-		if (!git_reference_is_valid_name(head->name))
+		if (git_reference_name_is_valid(&valid, head->name) < 0)
+			goto on_error;
+
+		if (!valid)
 			continue;
 
 		/* If we have a tag, see if the auto-follow rules say to update it */
@@ -1438,6 +1585,11 @@ static int update_tips_for_spec(
 		error = git_reference_name_to_id(&old, remote->repo, refname.ptr);
 		if (error < 0 && error != GIT_ENOTFOUND)
 			goto on_error;
+
+		if (!(error || error == GIT_ENOTFOUND)
+				&& !spec->force
+				&& !git_graph_descendant_of(remote->repo, &head->oid, &old))
+			continue;
 
 		if (error == GIT_ENOTFOUND) {
 			memset(&old, 0, GIT_OID_RAWSZ);
@@ -1499,6 +1651,7 @@ static int next_head(const git_remote *remote, git_vector *refs,
 	git_remote_head *head;
 	git_refspec *spec, *passive_spec;
 	size_t i, j, k;
+	int valid;
 
 	active = &remote->active_refspecs;
 	passive = &remote->passive_refspecs;
@@ -1510,7 +1663,10 @@ static int next_head(const git_remote *remote, git_vector *refs,
 	for (; i < refs->length; i++) {
 		head = git_vector_get(refs, i);
 
-		if (!git_reference_is_valid_name(head->name))
+		if (git_reference_name_is_valid(&valid, head->name) < 0)
+			return -1;
+
+		if (!valid)
 			continue;
 
 		for (; j < active->length; j++) {
@@ -1657,7 +1813,7 @@ int git_remote_update_tips(
 			goto out;
 	}
 
-	/* only try to do opportunisitic updates if the refpec lists differ */
+	/* Only try to do opportunistic updates if the refpec lists differ. */
 	if (remote->passed_refspecs)
 		error = opportunistic_updates(remote, callbacks, &refs, reflog_message);
 
@@ -1669,7 +1825,7 @@ out:
 
 int git_remote_connected(const git_remote *remote)
 {
-	assert(remote);
+	GIT_ASSERT_ARG(remote);
 
 	if (!remote->transport || !remote->transport->is_connected)
 		return 0;
@@ -1680,7 +1836,7 @@ int git_remote_connected(const git_remote *remote)
 
 int git_remote_stop(git_remote *remote)
 {
-	assert(remote);
+	GIT_ASSERT_ARG(remote);
 
 	if (remote->transport && remote->transport->cancel)
 		remote->transport->cancel(remote->transport);
@@ -1690,7 +1846,7 @@ int git_remote_stop(git_remote *remote)
 
 int git_remote_disconnect(git_remote *remote)
 {
-	assert(remote);
+	GIT_ASSERT_ARG(remote);
 
 	if (git_remote_connected(remote))
 		remote->transport->close(remote->transport);
@@ -1776,7 +1932,7 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 
 const git_indexer_progress *git_remote_stats(git_remote *remote)
 {
-	assert(remote);
+	GIT_ASSERT_ARG_WITH_RETVAL(remote, NULL);
 	return &remote->stats;
 }
 
@@ -1791,7 +1947,7 @@ int git_remote_set_autotag(git_repository *repo, const char *remote, git_remote_
 	git_config *config;
 	int error;
 
-	assert(repo && remote);
+	GIT_ASSERT_ARG(repo && remote);
 
 	if ((error = ensure_remote_name_is_valid(remote)) < 0)
 		return error;
@@ -2055,7 +2211,7 @@ int git_remote_rename(git_strarray *out, git_repository *repo, const char *name,
 	git_vector problem_refspecs = GIT_VECTOR_INIT;
 	git_remote *remote = NULL;
 
-	assert(out && repo && name && new_name);
+	GIT_ASSERT_ARG(out && repo && name && new_name);
 
 	if ((error = git_remote_lookup(&remote, repo, name)) < 0)
 		return error;
@@ -2089,24 +2245,34 @@ cleanup:
 	return error;
 }
 
-int git_remote_is_valid_name(
-	const char *remote_name)
+int git_remote_name_is_valid(int *valid, const char *remote_name)
 {
 	git_buf buf = GIT_BUF_INIT;
-	git_refspec refspec;
-	int error = -1;
+	git_refspec refspec = {0};
+	int error;
+
+	GIT_ASSERT(valid);
+
+	*valid = 0;
 
 	if (!remote_name || *remote_name == '\0')
 		return 0;
 
-	git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", remote_name);
+	if ((error = git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", remote_name)) < 0)
+		goto done;
+
 	error = git_refspec__parse(&refspec, git_buf_cstr(&buf), true);
 
+	if (!error)
+		*valid = 1;
+	else if (error == GIT_EINVALIDSPEC)
+		error = 0;
+
+done:
 	git_buf_dispose(&buf);
 	git_refspec__dispose(&refspec);
 
-	git_error_clear();
-	return error == 0;
+	return error;
 }
 
 git_refspec *git_remote__matching_refspec(git_remote *remote, const char *refname)
@@ -2221,7 +2387,7 @@ static const char *name_offset(size_t *len_out, const char *name)
 	prefix_len = strlen("remote.");
 	dot = strchr(name + prefix_len, '.');
 
-	assert(dot);
+	GIT_ASSERT_ARG_WITH_RETVAL(dot, NULL);
 
 	*len_out = dot - name - prefix_len;
 	return name + prefix_len;
@@ -2251,10 +2417,13 @@ static int remove_branch_config_related_entries(
 		if (strcmp(remote_name, entry->value))
 			continue;
 
-		branch = name_offset(&branch_len, entry->name);
+		if ((branch = name_offset(&branch_len, entry->name)) == NULL) {
+			error = -1;
+			break;
+		}
 
 		git_buf_clear(&buf);
-		if (git_buf_printf(&buf, "branch.%.*s.merge", (int)branch_len, branch) < 0)
+		if ((error = git_buf_printf(&buf, "branch.%.*s.merge", (int)branch_len, branch)) < 0)
 			break;
 
 		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0) {
@@ -2264,7 +2433,7 @@ static int remove_branch_config_related_entries(
 		}
 
 		git_buf_clear(&buf);
-		if (git_buf_printf(&buf, "branch.%.*s.remote", (int)branch_len, branch) < 0)
+		if ((error = git_buf_printf(&buf, "branch.%.*s.remote", (int)branch_len, branch)) < 0)
 			break;
 
 		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0) {
@@ -2359,7 +2528,8 @@ int git_remote_delete(git_repository *repo, const char *name)
 {
 	int error;
 
-	assert(repo && name);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(name);
 
 	if ((error = remove_branch_config_related_entries(repo, name)) < 0 ||
 	    (error = remove_remote_tracking(repo, name)) < 0 ||
@@ -2375,29 +2545,37 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 	const git_remote_head *guess = NULL;
 	const git_oid *head_id;
 	size_t heads_len, i;
+	git_buf local_default = GIT_BUF_INIT;
 	int error;
 
-	assert(out);
+	GIT_ASSERT_ARG(out);
 
 	if ((error = git_remote_ls(&heads, &heads_len, remote)) < 0)
+		goto done;
+
+	if (heads_len == 0 || strcmp(heads[0]->name, GIT_HEAD_FILE)) {
+		error = GIT_ENOTFOUND;
+		goto done;
+	}
+
+	if ((error = git_buf_sanitize(out)) < 0)
 		return error;
 
-	if (heads_len == 0)
-		return GIT_ENOTFOUND;
-
-	if (strcmp(heads[0]->name, GIT_HEAD_FILE))
-		return GIT_ENOTFOUND;
-
-	git_buf_sanitize(out);
 	/* the first one must be HEAD so if that has the symref info, we're done */
-	if (heads[0]->symref_target)
-		return git_buf_puts(out, heads[0]->symref_target);
+	if (heads[0]->symref_target) {
+		error = git_buf_puts(out, heads[0]->symref_target);
+		goto done;
+	}
 
 	/*
 	 * If there's no symref information, we have to look over them
-	 * and guess. We return the first match unless the master
-	 * branch is a candidate. Then we return the master branch.
+	 * and guess. We return the first match unless the default
+	 * branch is a candidate. Then we return the default branch.
 	 */
+
+	if ((error = git_repository_initialbranch(&local_default, remote->repo)) < 0)
+		goto done;
+
 	head_id = &heads[0]->oid;
 
 	for (i = 1; i < heads_len; i++) {
@@ -2412,16 +2590,22 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 			continue;
 		}
 
-		if (!git__strcmp(GIT_REFS_HEADS_MASTER_FILE, heads[i]->name)) {
+		if (!git__strcmp(local_default.ptr, heads[i]->name)) {
 			guess = heads[i];
 			break;
 		}
 	}
 
-	if (!guess)
-		return GIT_ENOTFOUND;
+	if (!guess) {
+		error = GIT_ENOTFOUND;
+		goto done;
+	}
 
-	return git_buf_puts(out, guess->name);
+	error = git_buf_puts(out, guess->name);
+
+done:
+	git_buf_dispose(&local_default);
+	return error;
 }
 
 int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts)
@@ -2433,7 +2617,7 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 	const git_remote_callbacks *cbs = NULL;
 	git_remote_connection_opts conn = GIT_REMOTE_CONNECTION_OPTIONS_INIT;
 
-	assert(remote);
+	GIT_ASSERT_ARG(remote);
 
 	if (!remote->repo) {
 		git_error_set(GIT_ERROR_INVALID, "cannot download detached remote");
@@ -2499,7 +2683,7 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 	const git_strarray *custom_headers = NULL;
 	const git_proxy_options *proxy = NULL;
 
-	assert(remote);
+	GIT_ASSERT_ARG(remote);
 
 	if (!remote->repo) {
 		git_error_set(GIT_ERROR_INVALID, "cannot download detached remote");
@@ -2513,8 +2697,6 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 		GIT_ERROR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
 		proxy = &opts->proxy_opts;
 	}
-
-	assert(remote);
 
 	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, proxy, custom_headers)) < 0)
 		return error;
@@ -2542,9 +2724,9 @@ char *apply_insteadof(git_config *config, const char *url, int direction)
 	git_config_entry *entry;
 	git_config_iterator *iter;
 
-	assert(config);
-	assert(url);
-	assert(direction == GIT_DIRECTION_FETCH || direction == GIT_DIRECTION_PUSH);
+	GIT_ASSERT_ARG_WITH_RETVAL(config, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(url, NULL);
+	GIT_ASSERT_ARG_WITH_RETVAL(direction == GIT_DIRECTION_FETCH || direction == GIT_DIRECTION_PUSH, NULL);
 
 	/* Add 1 to prefix/suffix length due to the additional escaped dot */
 	prefix_length = strlen(PREFIX) + 1;
@@ -2592,3 +2774,17 @@ char *apply_insteadof(git_config *config, const char *url, int direction)
 
 	return result.ptr;
 }
+
+/* Deprecated functions */
+
+#ifndef GIT_DEPRECATE_HARD
+
+int git_remote_is_valid_name(const char *remote_name)
+{
+	int valid = 0;
+
+	git_remote_name_is_valid(&valid, remote_name);
+	return valid;
+}
+
+#endif

@@ -9,7 +9,6 @@
 
 #include "git2/pathspec.h"
 #include "git2/diff.h"
-#include "buf_text.h"
 #include "attr_file.h"
 #include "iterator.h"
 #include "repository.h"
@@ -25,7 +24,7 @@ char *git_pathspec_prefix(const git_strarray *pathspec)
 	const char *scan;
 
 	if (!pathspec || !pathspec->count ||
-		git_buf_text_common_prefix(&prefix, pathspec) < 0)
+		git_buf_common_prefix(&prefix, pathspec->strings, pathspec->count) < 0)
 		return NULL;
 
 	/* diff prefix will only be leading non-wildcards */
@@ -41,7 +40,7 @@ char *git_pathspec_prefix(const git_strarray *pathspec)
 		return NULL;
 	}
 
-	git_buf_text_unescape(&prefix);
+	git_buf_unescape(&prefix);
 
 	return git_buf_detach(&prefix);
 }
@@ -289,7 +288,8 @@ int git_pathspec_matches_path(
 	bool no_fnmatch = (flags & GIT_PATHSPEC_NO_GLOB) != 0;
 	bool casefold =  (flags & GIT_PATHSPEC_IGNORE_CASE) != 0;
 
-	assert(ps && path);
+	GIT_ASSERT_ARG(ps);
+	GIT_ASSERT_ARG(path);
 
 	return (0 != git_pathspec__match(
 		&ps->pathspec, path, no_fnmatch, casefold, NULL, NULL));
@@ -526,7 +526,7 @@ int git_pathspec_match_workdir(
 	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error = 0;
 
-	assert(repo);
+	GIT_ASSERT_ARG(repo);
 
 	iter_opts.flags = pathspec_match_iter_flags(flags);
 
@@ -548,7 +548,7 @@ int git_pathspec_match_index(
 	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error = 0;
 
-	assert(index);
+	GIT_ASSERT_ARG(index);
 
 	iter_opts.flags = pathspec_match_iter_flags(flags);
 
@@ -570,7 +570,7 @@ int git_pathspec_match_tree(
 	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error = 0;
 
-	assert(tree);
+	GIT_ASSERT_ARG(tree);
 
 	iter_opts.flags = pathspec_match_iter_flags(flags);
 
@@ -598,7 +598,7 @@ int git_pathspec_match_diff(
 	const git_diff_delta *delta, **match;
 	git_bitvec used_patterns;
 
-	assert(diff);
+	GIT_ASSERT_ARG(diff);
 
 	if (git_bitvec_init(&used_patterns, patterns->length) < 0)
 		return -1;

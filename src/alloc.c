@@ -6,16 +6,29 @@
  */
 
 #include "alloc.h"
+#include "runtime.h"
 
+#include "allocators/failalloc.h"
 #include "allocators/stdalloc.h"
-#include "allocators/win32_crtdbg.h"
+#include "allocators/win32_leakcheck.h"
 
-git_allocator git__allocator;
+/* Fail any allocation until git_libgit2_init is called. */
+git_allocator git__allocator = {
+	git_failalloc_malloc,
+	git_failalloc_calloc,
+	git_failalloc_strdup,
+	git_failalloc_strndup,
+	git_failalloc_substrdup,
+	git_failalloc_realloc,
+	git_failalloc_reallocarray,
+	git_failalloc_mallocarray,
+	git_failalloc_free
+};
 
 static int setup_default_allocator(void)
 {
-#if defined(GIT_MSVC_CRTDBG)
-	return git_win32_crtdbg_init_allocator(&git__allocator);
+#if defined(GIT_WIN32_LEAKCHECK)
+	return git_win32_leakcheck_init_allocator(&git__allocator);
 #else
 	return git_stdalloc_init_allocator(&git__allocator);
 #endif
@@ -24,10 +37,10 @@ static int setup_default_allocator(void)
 int git_allocator_global_init(void)
 {
 	/*
-	 * We don't want to overwrite any allocator which has been set before
-	 * the init function is called.
+	 * We don't want to overwrite any allocator which has been set
+	 * before the init function is called.
 	 */
-	if (git__allocator.gmalloc != NULL)
+	if (git__allocator.gmalloc != git_failalloc_malloc)
 		return 0;
 
 	return setup_default_allocator();
