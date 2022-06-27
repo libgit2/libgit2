@@ -926,7 +926,7 @@ int git_repository_open_ext(
 	if ((error = check_extensions(config, version)) < 0)
 		goto cleanup;
 
-	if ((error = load_grafts(repo)) < 0)
+	if (GIT_OPT_ENABLE_SHALLOW && (error = load_grafts(repo)) < 0)
 		goto cleanup;
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
