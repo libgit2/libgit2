@@ -7,6 +7,16 @@
 static git_repository *g_repo;
 static git_oid g_shallow_oid;
 
+void test_grafts_shallow__set_feature_flag(void)
+{
+    cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SHALLOW, 1));
+}
+
+void test_grafts_shallow__unset_feature_flag(void)
+{
+    cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SHALLOW, 0));
+}
+
 void test_grafts_shallow__initialize(void)
 {
 	cl_git_pass(git_oid_fromstr(&g_shallow_oid, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
