@@ -211,7 +211,8 @@ typedef enum {
 	GIT_OPT_SET_ODB_PACKED_PRIORITY,
 	GIT_OPT_SET_ODB_LOOSE_PRIORITY,
 	GIT_OPT_GET_EXTENSIONS,
-	GIT_OPT_SET_EXTENSIONS
+	GIT_OPT_SET_EXTENSIONS,
+	GIT_OPT_ENABLE_SHALLOW
 } git_libgit2_opt_t;
 
 /**
@@ -448,6 +449,9 @@ typedef enum {
  *      > { "!noop", "newext" } indicates that the caller does not want
  *      > to support repositories with the `noop` extension but does want
  *      > to support repositories with the `newext` extension.
+ *	
+ * 	 opts(GIT_OPT_ENABLE_SHALLOW, int enabled)
+ *		> Enable or disable shallow clone support completely.
  *
  * @param option Option key
  * @param ... value to set the option

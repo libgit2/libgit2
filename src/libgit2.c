@@ -390,6 +390,10 @@ int git_libgit2_opts(int key, ...)
 		}
 		break;
 
+	case GIT_OPT_ENABLE_SHALLOW:
+		git_cache__enabled = (va_arg(ap, int) != 0);
+		break;
+
 	default:
 		git_error_set(GIT_ERROR_INVALID, "invalid option key");
 		error = -1;
