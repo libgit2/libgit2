@@ -19,6 +19,8 @@ typedef struct {
 
 typedef struct git_grafts git_grafts;
 
+extern bool git_shallow__enabled;
+
 int git_grafts_new(git_grafts **out);
 int git_grafts_from_file(git_grafts **out, const char *path);
 void git_grafts_free(git_grafts *grafts);

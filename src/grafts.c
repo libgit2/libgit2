@@ -11,6 +11,8 @@
 #include "oidarray.h"
 #include "parse.h"
 
+bool git_cache__enabled = true;
+
 struct git_grafts {
 	/* Map of `git_commit_graft`s */
 	git_oidmap *commits;
