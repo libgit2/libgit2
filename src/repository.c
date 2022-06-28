@@ -1315,7 +1315,7 @@ int git_repository_set_index(git_repository *repo, git_index *index)
 
 int git_repository_grafts__weakptr(git_grafts **out, git_repository *repo)
 {
-	assert(out && repo && repo->shallow_grafts);
+	assert(out && repo && repo->grafts);
 	*out = repo->grafts;
 	return 0;
 }
