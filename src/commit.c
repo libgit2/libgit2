@@ -502,31 +502,29 @@ int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, unsigned 
 {
 
 	int error;
-	
 	if ((error = commit_parse(commit, git_odb_object_data(odb_obj),
 				  git_odb_object_size(odb_obj), flags)) < 0)
 		return error;
 
-	if (GIT_OPT_ENABLE_SHALLOW) {
+	if (!git_shallow__enabled)
+		return 0;
 
-		git_repository *repo = git_object_owner((git_object *)commit);
-		git_commit_graft *graft;
+	git_repository *repo = git_object_owner((git_object *)commit);
+	git_commit_graft *graft;
 
-		/* Perform necessary grafts */
-		if (git_grafts_get(&graft, repo->grafts, git_odb_object_id(odb_obj)) == 0 ||
-			git_grafts_get(&graft, repo->shallow_grafts, git_odb_object_id(odb_obj)) == 0) {
-			size_t idx;
-			git_oid *oid;
-			git_array_clear(commit->parent_ids);
-			git_array_init_to_size(commit->parent_ids, git_array_size(graft->parents));
-			git_array_foreach(graft->parents, idx, oid) {
-				git_oid *id = git_array_alloc(commit->parent_ids);
-				GIT_ERROR_CHECK_ALLOC(id);
+	/* Perform necessary grafts */
+	if (git_grafts_get(&graft, repo->grafts, git_odb_object_id(odb_obj)) == 0 ||
+		git_grafts_get(&graft, repo->shallow_grafts, git_odb_object_id(odb_obj)) == 0) {
+		size_t idx;
+		git_oid *oid;
+		git_array_clear(commit->parent_ids);
+		git_array_init_to_size(commit->parent_ids, git_array_size(graft->parents));
+		git_array_foreach(graft->parents, idx, oid) {
+			git_oid *id = git_array_alloc(commit->parent_ids);
+			GIT_ERROR_CHECK_ALLOC(id);
 
-				git_oid_cpy(id, oid);
-			}
+			git_oid_cpy(id, oid);
 		}
-
 	}
 	
 	return 0;
