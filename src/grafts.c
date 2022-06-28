@@ -11,7 +11,7 @@
 #include "oidarray.h"
 #include "parse.h"
 
-bool git_shallow__enabled = true;
+bool git_shallow__enabled = false;
 
 struct git_grafts {
 	/* Map of `git_commit_graft`s */
