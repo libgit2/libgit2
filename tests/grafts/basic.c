@@ -7,6 +7,7 @@ static git_repository *g_repo;
 
 void test_grafts_basic__initialize(void)
 {
+	git_libgit2_opts(GIT_OPT_ENABLE_SHALLOW, 1);
 	g_repo = cl_git_sandbox_init("grafted.git");
 }
 

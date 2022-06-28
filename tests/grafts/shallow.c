@@ -19,6 +19,7 @@ void test_grafts_shallow__unset_feature_flag(void)
 
 void test_grafts_shallow__initialize(void)
 {
+	git_libgit2_opts(GIT_OPT_ENABLE_SHALLOW, 1);
 	cl_git_pass(git_oid_fromstr(&g_shallow_oid, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
 }
 
