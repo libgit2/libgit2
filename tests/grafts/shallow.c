@@ -25,6 +25,7 @@ void test_grafts_shallow__initialize(void)
 
 void test_grafts_shallow__cleanup(void)
 {
+	git_libgit2_opts(GIT_OPT_ENABLE_SHALLOW, 0);
 	cl_git_sandbox_cleanup();
 }
 

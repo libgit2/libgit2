@@ -13,6 +13,7 @@ void test_grafts_basic__initialize(void)
 
 void test_grafts_basic__cleanup(void)
 {
+	git_libgit2_opts(GIT_OPT_ENABLE_SHALLOW, 0);
 	cl_git_sandbox_cleanup();
 }
 
