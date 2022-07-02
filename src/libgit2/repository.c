@@ -512,7 +512,7 @@ static int validate_ownership(const char *repo_path)
 	bool is_safe;
 	int error;
 
-	if ((error = git_fs_path_owner_is_system_or_current_user(&is_safe, repo_path)) < 0) {
+	if ((error = git_fs_path_owner_is_current_user(&is_safe, repo_path)) < 0) {
 		if (error == GIT_ENOTFOUND)
 			error = 0;
 

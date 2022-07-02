@@ -484,10 +484,9 @@ void test_repo_open__validates_dir_ownership(void)
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
 	git_repository_free(repo);
 
-	/* When the system user owns the repo config, also acceptable */
+	/* When the system user owns the repo config, fail */
 	git_fs_path__set_owner(GIT_FS_PATH_MOCK_OWNER_SYSTEM);
-	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
-	git_repository_free(repo);
+	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
 
 	/* When an unknown user owns the repo config, fail */
 	git_fs_path__set_owner(GIT_FS_PATH_MOCK_OWNER_OTHER);
