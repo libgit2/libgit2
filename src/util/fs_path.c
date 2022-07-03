@@ -1785,9 +1785,9 @@ done:
 	return supported;
 }
 
-static git_fs_path__mock_owner_t mock_owner = GIT_FS_PATH_MOCK_OWNER_NONE;
+static git_fs_path_owner_t mock_owner = GIT_FS_PATH_OWNER_NONE;
 
-void git_fs_path__set_owner(git_fs_path__mock_owner_t owner)
+void git_fs_path__set_owner(git_fs_path_owner_t owner)
 {
 	mock_owner = owner;
 }
@@ -1885,7 +1885,7 @@ int git_fs_path_owner_is_current_user(bool *out, const char *path)
 	int error = -1;
 
 	if (mock_owner) {
-		*out = (mock_owner == GIT_FS_PATH_MOCK_OWNER_CURRENT_USER);
+		*out = (mock_owner == GIT_FS_PATH_OWNER_CURRENT_USER);
 		return 0;
 	}
 
@@ -1907,7 +1907,7 @@ int git_fs_path_owner_is_system(bool *out, const char *path)
 	PSID owner_sid;
 
 	if (mock_owner) {
-		*out = (mock_owner == GIT_FS_PATH_MOCK_OWNER_SYSTEM);
+		*out = (mock_owner == GIT_FS_PATH_OWNER_ADMINISTRATOR);
 		return 0;
 	}
 
@@ -1927,8 +1927,8 @@ int git_fs_path_owner_is_system_or_current_user(bool *out, const char *path)
 	int error = -1;
 
 	if (mock_owner) {
-		*out = (mock_owner == GIT_FS_PATH_MOCK_OWNER_SYSTEM ||
-		        mock_owner == GIT_FS_PATH_MOCK_OWNER_CURRENT_USER);
+		*out = (mock_owner == GIT_FS_PATH_OWNER_ADMINISTRATOR ||
+		        mock_owner == GIT_FS_PATH_OWNER_CURRENT_USER);
 		return 0;
 	}
 
@@ -1986,7 +1986,7 @@ int git_fs_path_owner_is_current_user(bool *out, const char *path)
 	uid_t userid = geteuid();
 
 	if (mock_owner) {
-		*out = (mock_owner == GIT_FS_PATH_MOCK_OWNER_CURRENT_USER);
+		*out = (mock_owner == GIT_FS_PATH_OWNER_CURRENT_USER);
 		return 0;
 	}
 
@@ -1998,7 +1998,7 @@ int git_fs_path_owner_is_system(bool *out, const char *path)
 	uid_t userid = 0;
 
 	if (mock_owner) {
-		*out = (mock_owner == GIT_FS_PATH_MOCK_OWNER_SYSTEM);
+		*out = (mock_owner == GIT_FS_PATH_OWNER_ADMINISTRATOR);
 		return 0;
 	}
 
@@ -2010,8 +2010,8 @@ int git_fs_path_owner_is_system_or_current_user(bool *out, const char *path)
 	uid_t userids[2] = { geteuid(), 0 };
 
 	if (mock_owner) {
-		*out = (mock_owner == GIT_FS_PATH_MOCK_OWNER_SYSTEM ||
-		        mock_owner == GIT_FS_PATH_MOCK_OWNER_CURRENT_USER);
+		*out = (mock_owner == GIT_FS_PATH_OWNER_ADMINISTRATOR ||
+		        mock_owner == GIT_FS_PATH_OWNER_CURRENT_USER);
 		return 0;
 	}
 
