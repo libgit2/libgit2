@@ -10,6 +10,9 @@ env:
   docker-registry: ghcr.io
   docker-config-path: source/ci/docker
 
+permissions:
+  contents: read
+
 jobs:
   # Run our nightly builds.  We build a matrix with the various build
   # targets and their details.  Then we build either in a docker container
