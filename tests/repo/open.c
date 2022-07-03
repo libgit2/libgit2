@@ -22,7 +22,7 @@ void test_repo_open__cleanup(void)
 	if (git_path_isdir("alternate"))
 		git_futils_rmdir_r("alternate", NULL, GIT_RMDIR_REMOVE_FILES);
 
-	git_path__set_owner(GIT_PATH_MOCK_OWNER_NONE);
+	git_path__set_owner(GIT_PATH_OWNER_NONE);
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, config_path.ptr));
 	git_buf_dispose(&config_path);
@@ -481,16 +481,16 @@ void test_repo_open__validates_dir_ownership(void)
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
 	/* When the current user owns the repo config, that's acceptable */
-	git_path__set_owner(GIT_PATH_MOCK_OWNER_CURRENT_USER);
+	git_path__set_owner(GIT_PATH_OWNER_CURRENT_USER);
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
 	git_repository_free(repo);
 
 	/* When the system user owns the repo config, fail */
-	git_path__set_owner(GIT_PATH_MOCK_OWNER_SYSTEM);
+	git_path__set_owner(GIT_PATH_OWNER_ADMINISTRATOR);
 	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
 
 	/* When an unknown user owns the repo config, fail */
-	git_path__set_owner(GIT_PATH_MOCK_OWNER_OTHER);
+	git_path__set_owner(GIT_PATH_OWNER_OTHER);
 	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
 }
 
@@ -503,16 +503,16 @@ void test_repo_open__validates_bare_repo_ownership(void)
 	cl_fixture_sandbox("testrepo.git");
 
 	/* When the current user owns the repo config, that's acceptable */
-	git_fs_path__set_owner(GIT_FS_PATH_MOCK_OWNER_CURRENT_USER);
+	git_path__set_owner(GIT_PATH_OWNER_CURRENT_USER);
 	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
 	git_repository_free(repo);
 
 	/* When the system user owns the repo config, fail */
-	git_fs_path__set_owner(GIT_FS_PATH_MOCK_OWNER_SYSTEM);
+	git_path__set_owner(GIT_PATH_OWNER_ADMINISTRATOR);
 	cl_git_fail(git_repository_open(&repo, "testrepo.git"));
 
 	/* When an unknown user owns the repo config, fail */
-	git_fs_path__set_owner(GIT_FS_PATH_MOCK_OWNER_OTHER);
+	git_path__set_owner(GIT_PATH_OWNER_OTHER);
 	cl_git_fail(git_repository_open(&repo, "testrepo.git"));
 }
 
@@ -528,7 +528,7 @@ void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
 	cl_fixture_sandbox("empty_standard_repo");
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
-	git_path__set_owner(GIT_PATH_MOCK_OWNER_OTHER);
+	git_path__set_owner(GIT_PATH_OWNER_OTHER);
 	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
 
 	/* Add safe.directory options to the global configuration */
@@ -564,25 +564,25 @@ void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
 void test_repo_open__can_allowlist_bare_gitdir(void)
 {
 	git_repository *repo;
-	git_str config_path = GIT_STR_INIT,
-	        config_filename = GIT_STR_INIT,
-	        config_data = GIT_STR_INIT;
+	git_buf config_path = GIT_BUF_INIT,
+	        config_filename = GIT_BUF_INIT,
+	        config_data = GIT_BUF_INIT;
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
 
 	cl_fixture_sandbox("testrepo.git");
 
-	git_fs_path__set_owner(GIT_FS_PATH_MOCK_OWNER_OTHER);
+	git_path__set_owner(GIT_PATH_OWNER_OTHER);
 	cl_git_fail(git_repository_open(&repo, "testrepo.git"));
 
 	/* Add safe.directory options to the global configuration */
-	git_str_joinpath(&config_path, clar_sandbox_path(), "__global_config");
+	git_buf_joinpath(&config_path, clar_sandbox_path(), "__global_config");
 	cl_must_pass(p_mkdir(config_path.ptr, 0777));
 	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, config_path.ptr);
 
-	git_str_joinpath(&config_filename, config_path.ptr, ".gitconfig");
+	git_buf_joinpath(&config_filename, config_path.ptr, ".gitconfig");
 
-	git_str_printf(&config_data,
+	git_buf_printf(&config_data,
 		"[foo]\n" \
 		"\tbar = Foobar\n" \
 		"\tbaz = Baz!\n" \
@@ -600,9 +600,9 @@ void test_repo_open__can_allowlist_bare_gitdir(void)
 	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
 	git_repository_free(repo);
 
-	git_str_dispose(&config_path);
-	git_str_dispose(&config_filename);
-	git_str_dispose(&config_data);
+	git_buf_dispose(&config_path);
+	git_buf_dispose(&config_filename);
+	git_buf_dispose(&config_data);
 }
 
 void test_repo_open__can_reset_safe_directory_list(void)
@@ -617,7 +617,7 @@ void test_repo_open__can_reset_safe_directory_list(void)
 	cl_fixture_sandbox("empty_standard_repo");
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
-	git_path__set_owner(GIT_PATH_MOCK_OWNER_OTHER);
+	git_path__set_owner(GIT_PATH_OWNER_OTHER);
 	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
 
 	/* Add safe.directory options to the global configuration */
