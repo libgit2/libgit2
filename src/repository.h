@@ -242,6 +242,9 @@ extern size_t git_repository__reserved_names_posix_len;
 bool git_repository__reserved_names(
 	git_buf **out, size_t *outlen, git_repository *repo, bool include_ntfs);
 
+int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo);
+int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t roots);
+
 /*
  * The default branch for the repository; the `init.defaultBranch`
  * configuration option, if set, or `master` if it is not.
