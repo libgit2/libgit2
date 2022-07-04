@@ -731,15 +731,8 @@ typedef enum {
 	/** The file must be owned by the system account. */
 	GIT_PATH_OWNER_ADMINISTRATOR = (1 << 1),
 
-	/**
-	 * The file may be owned by a system account if the current
-	 * user is in an administrator group. Windows only; this is
-	 * a noop on non-Windows systems.
-	 */
-	GIT_PATH_OWNER_CURRENT_USER_IS_ADMINISTRATOR = (1 << 2),
-
 	/** The file may be owned by another user. */
-	GIT_PATH_OWNER_OTHER = (1 << 4)
+	GIT_PATH_OWNER_OTHER = (1 << 2)
 } git_path_owner_t;
 
 /**
@@ -748,6 +741,12 @@ typedef enum {
  * cleared with `GIT_FS_PATH_OWNER_NONE`.
  */
 void git_path__set_owner(git_path_owner_t owner);
+
+/** Verify that the file in question is owned by the given owner. */
+int git_path_owner_is(
+	bool *out,
+	const char *path,
+	git_path_owner_t owner_type);
 
 /**
  * Verify that the file in question is owned by an administrator or system
@@ -760,11 +759,5 @@ int git_path_owner_is_system(bool *out, const char *path);
  */
 
 int git_path_owner_is_current_user(bool *out, const char *path);
-
-/**
- * Verify that the file in question is owned by an administrator or system
- * account _or_ the current user;
- */
-int git_path_owner_is_system_or_current_user(bool *out, const char *path);
 
 #endif

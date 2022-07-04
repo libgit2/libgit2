@@ -1117,13 +1117,16 @@ int git_config_find_system(git_buf *path)
 
 int git_config_find_programdata(git_buf *path)
 {
-	int ret;
+	git_path_owner_t owner_level =
+		GIT_PATH_OWNER_CURRENT_USER |
+		GIT_PATH_OWNER_ADMINISTRATOR;
 	bool is_safe;
+	int ret;
 
 	if ((ret = git_buf_sanitize(path)) < 0 ||
 	    (ret = git_sysdir_find_programdata_file(path,
 	       GIT_CONFIG_FILENAME_PROGRAMDATA)) < 0 ||
-	    (ret = git_path_owner_is_system_or_current_user(&is_safe, path->ptr)) < 0)
+	    (ret = git_path_owner_is(&is_safe, path->ptr, owner_level)) < 0)
 		return ret;
 
 	if (!is_safe) {
