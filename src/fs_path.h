@@ -740,8 +740,15 @@ typedef enum {
 	/** The file must be owned by the system account. */
 	GIT_FS_PATH_OWNER_ADMINISTRATOR = (1 << 1),
 
+	/**
+	 * The file may be owned by a system account if the current
+	 * user is in an administrator group. Windows only; this is
+	 * a noop on non-Windows systems.
+	 */
+	GIT_FS_PATH_USER_IS_ADMINISTRATOR = (1 << 2),
+
 	/** The file may be owned by another user. */
-	GIT_FS_PATH_OWNER_OTHER = (1 << 2)
+	GIT_FS_PATH_OWNER_OTHER = (1 << 3)
 } git_fs_path_owner_t;
 
 /**
