@@ -489,6 +489,13 @@ void test_repo_open__validates_dir_ownership(void)
 	git_path__set_owner(GIT_PATH_OWNER_ADMINISTRATOR);
 	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
 
+#ifdef GIT_WIN32
+	/* When the user is an administrator, succeed on Windows. */
+	git_path__set_owner(GIT_PATH_USER_IS_ADMINISTRATOR);
+	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
+	git_repository_free(repo);
+#endif
+
 	/* When an unknown user owns the repo config, fail */
 	git_path__set_owner(GIT_PATH_OWNER_OTHER);
 	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
@@ -510,6 +517,13 @@ void test_repo_open__validates_bare_repo_ownership(void)
 	/* When the system user owns the repo config, fail */
 	git_path__set_owner(GIT_PATH_OWNER_ADMINISTRATOR);
 	cl_git_fail(git_repository_open(&repo, "testrepo.git"));
+
+#ifdef GIT_WIN32
+	/* When the user is an administrator, succeed on Windows. */
+	git_path__set_owner(GIT_PATH_USER_IS_ADMINISTRATOR);
+	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
+	git_repository_free(repo);
+#endif
 
 	/* When an unknown user owns the repo config, fail */
 	git_path__set_owner(GIT_PATH_OWNER_OTHER);
