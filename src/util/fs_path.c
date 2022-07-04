@@ -1885,6 +1885,7 @@ int git_fs_path_owner_is(
 	git_fs_path_owner_t owner_type)
 {
 	PSID owner_sid = NULL, user_sid = NULL;
+	BOOL is_admin, admin_owned;
 	int error;
 
 	if (mock_owner) {
@@ -1905,12 +1906,22 @@ int git_fs_path_owner_is(
 		}
 	}
 
-	if ((owner_type & GIT_FS_PATH_OWNER_ADMINISTRATOR) != 0) {
-		if (IsWellKnownSid(owner_sid, WinBuiltinAdministratorsSid) ||
-		    IsWellKnownSid(owner_sid, WinLocalSystemSid)) {
-			*out = true;
-			goto done;
-		}
+	admin_owned =
+		IsWellKnownSid(owner_sid, WinBuiltinAdministratorsSid) ||
+		IsWellKnownSid(owner_sid, WinLocalSystemSid);
+
+	if (admin_owned &&
+	    (owner_type & GIT_FS_PATH_OWNER_ADMINISTRATOR) != 0) {
+		*out = true;
+		goto done;
+	}
+
+	if (admin_owned &&
+	    (owner_type & GIT_FS_PATH_USER_IS_ADMINISTRATOR) != 0 &&
+	    CheckTokenMembership(NULL, owner_sid, &is_admin) &&
+	    is_admin) {
+		*out = true;
+		goto done;
 	}
 
 	*out = false;
@@ -1962,6 +1973,7 @@ int git_fs_path_owner_is(
 
 	return 0;
 }
+
 #endif
 
 int git_fs_path_owner_is_current_user(bool *out, const char *path)
