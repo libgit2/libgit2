@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "futils.h"
+#include "repository.h"
 
 void test_clone_shallow__initialize(void)
 {
@@ -33,7 +34,7 @@ void test_clone_shallow__clone_depth(void)
 
 	cl_assert_equal_b(true, git_repository_is_shallow(repo));
 
-	cl_git_pass(git_repository_shallow_roots(&roots, repo));
+	cl_git_pass(git_repository__shallow_roots(&roots, repo));
 	cl_assert_equal_i(1, roots.count);
 	cl_assert_equal_s("83834a7afdaa1a1260568567f6ad90020389f664", git_oid_tostr_s(&roots.ids[0]));
 
