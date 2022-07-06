@@ -2173,27 +2173,36 @@ done:
 
 #else
 
+static int sudo_uid_lookup(uid_t *out)
+{
+	git_buf uid_str = GIT_BUF_INIT;
+	int64_t uid;
+	int error;
+
+	if ((error = git__getenv(&uid_str, "SUDO_UID")) == 0 &&
+	    (error = git__strntol64(&uid, uid_str.ptr, uid_str.size, NULL, 10)) == 0 &&
+	    uid == (int64_t)((uid_t)uid)) {
+		*out = (uid_t)uid;
+	}
+
+	git_buf_dispose(&uid_str);
+	return error;
+}
+
 int git_path_owner_is(
 	bool *out,
 	const char *path,
 	git_path_owner_t owner_type)
 {
-	uid_t uids[2] = { 0 };
-	size_t uid_count = 0, i;
 	struct stat st;
+	uid_t euid, sudo_uid;
 
 	if (mock_owner) {
 		*out = ((mock_owner & owner_type) != 0);
 		return 0;
 	}
 
-	if (owner_type & GIT_PATH_OWNER_CURRENT_USER)
-		uids[uid_count++] = geteuid();
-
-	if (owner_type & GIT_PATH_OWNER_ADMINISTRATOR)
-		uids[uid_count++] = 0;
-
-	*out = false;
+	euid = geteuid();
 
 	if (p_lstat(path, &st) != 0) {
 		if (errno == ENOENT)
@@ -2203,13 +2212,27 @@ int git_path_owner_is(
 		return -1;
 	}
 
-	for (i = 0; i < uid_count; i++) {
-		if (uids[i] == st.st_uid) {
-			*out = true;
-			break;
-		}
+	if ((owner_type & GIT_PATH_OWNER_CURRENT_USER) != 0 &&
+	    st.st_uid == euid) {
+		*out = true;
+		return 0;
 	}
 
+	if ((owner_type & GIT_PATH_OWNER_ADMINISTRATOR) != 0 &&
+	    st.st_uid == 0) {
+		*out = true;
+		return 0;
+	}
+
+	if ((owner_type & GIT_PATH_OWNER_RUNNING_SUDO) != 0 &&
+	    euid == 0 &&
+	    sudo_uid_lookup(&sudo_uid) == 0 &&
+	    st.st_uid == sudo_uid) {
+		*out = true;
+		return 0;
+	}
+
+	*out = false;
 	return 0;
 }
 
