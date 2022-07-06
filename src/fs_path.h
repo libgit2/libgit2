@@ -747,8 +747,13 @@ typedef enum {
 	 */
 	GIT_FS_PATH_USER_IS_ADMINISTRATOR = (1 << 2),
 
+	/**
+	 * The file is owned by the current user, who is running `sudo`.
+	 */
+	GIT_FS_PATH_OWNER_RUNNING_SUDO = (1 << 3),
+
 	/** The file may be owned by another user. */
-	GIT_FS_PATH_OWNER_OTHER = (1 << 3)
+	GIT_FS_PATH_OWNER_OTHER = (1 << 4)
 } git_fs_path_owner_t;
 
 /**
