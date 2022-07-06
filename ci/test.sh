@@ -158,10 +158,18 @@ fi
 if [ -z "$SKIP_OFFLINE_TESTS" ]; then
 	echo ""
 	echo "##############################################################################"
-	echo "## Running (offline) tests"
+	echo "## Running core tests"
 	echo "##############################################################################"
 
+	echo ""
+	echo "Running libgit2 integration (offline) tests"
+	echo ""
 	run_test offline
+
+	echo ""
+	echo "Running utility tests"
+	echo ""
+	run_test util
 fi
 
 if [ -n "$RUN_INVASIVE_TESTS" ]; then
@@ -185,7 +193,7 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 
 	echo ""
 	echo "##############################################################################"
-	echo "## Running (online) tests"
+	echo "## Running networking (online) tests"
 	echo "##############################################################################"
 
 	export GITTEST_FLAKY_RETRY=5
@@ -195,9 +203,9 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	# Run the online tests that immutably change global state separately
 	# to avoid polluting the test environment.
 	echo ""
-	echo "##############################################################################"
-	echo "## Running (online_customcert) tests"
-	echo "##############################################################################"
+	echo "Running custom certificate (online_customcert) tests"
+	echo ""
+
 	run_test online_customcert
 fi
 
