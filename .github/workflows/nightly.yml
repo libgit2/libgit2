@@ -348,3 +348,32 @@ jobs:
       run: source/ci/coverity.sh
       env:
         COVERITY_TOKEN: ${{ secrets.coverity_token }}
+
+  codeql:
+    # Only run scheduled workflows on the main repository; prevents people
+    # from using build minutes on their forks.
+    if: github.repository == 'libgit2/libgit2'
+
+    name: CodeQL
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: 'cpp'
+
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
+        cmake --build .
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1
