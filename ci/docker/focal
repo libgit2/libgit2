@@ -32,9 +32,9 @@ RUN apt-get update && \
 
 FROM apt AS mbedtls
 RUN cd /tmp && \
-    curl --location --silent --show-error https://tls.mbed.org/download/mbedtls-2.16.2-apache.tgz | \
+    curl --location --silent --show-error https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/mbedtls-2.16.2.tar.gz | \
         tar -xz && \
-    cd mbedtls-2.16.2 && \
+    cd mbedtls-mbedtls-2.16.2 && \
     scripts/config.pl unset MBEDTLS_AESNI_C && \
     scripts/config.pl set MBEDTLS_MD4_C 1 && \
     mkdir build build-msan && \
@@ -45,7 +45,7 @@ RUN cd /tmp && \
     CC=clang-10 CFLAGS="-fPIC" cmake -G Ninja -DENABLE_PROGRAMS=OFF -DENABLE_TESTING=OFF -DUSE_SHARED_MBEDTLS_LIBRARY=ON -DUSE_STATIC_MBEDTLS_LIBRARY=OFF -DCMAKE_BUILD_TYPE=MemSanDbg -DCMAKE_INSTALL_PREFIX=/usr/local/msan .. && \
     ninja install && \
     cd .. && \
-    rm -rf mbedtls-2.16.2
+    rm -rf mbedtls-mbedtls-2.16.2
 
 FROM mbedtls AS libssh2
 RUN cd /tmp && \
