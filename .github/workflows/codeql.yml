@@ -10,6 +10,10 @@ env:
 
 jobs:
   analyze:
+    # Only run scheduled workflows on the main repository; prevents people
+    # from using build minutes on their forks.
+    if: github.repository == 'libgit2/libgit2'
+
     name: Analyze
     runs-on: ubuntu-latest
 
@@ -30,7 +34,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
-        cmake --build .        
+        cmake --build .
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1

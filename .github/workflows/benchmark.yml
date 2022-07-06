@@ -11,6 +11,10 @@ jobs:
   # targets and their details.  Then we build either in a docker container
   # (Linux) or on the actual hosts (macOS, Windows).
   build:
+    # Only run scheduled workflows on the main repository; prevents people
+    # from using build minutes on their forks.
+    if: github.repository == 'libgit2/libgit2'
+
     strategy:
       matrix:
         platform:
