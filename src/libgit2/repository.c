@@ -531,7 +531,8 @@ static int validate_ownership_path(bool *is_safe, const char *path)
 {
 	git_fs_path_owner_t owner_level =
 		GIT_FS_PATH_OWNER_CURRENT_USER |
-		GIT_FS_PATH_USER_IS_ADMINISTRATOR;
+		GIT_FS_PATH_USER_IS_ADMINISTRATOR |
+		GIT_FS_PATH_OWNER_RUNNING_SUDO;
 	int error = 0;
 
 	if (path)
