@@ -114,6 +114,9 @@ local z_crc_t x2nmodp OF((z_off64_t n, unsigned k));
   instruction, if one is available. This assumes that word_t is either 32 bits
   or 64 bits.
  */
+
+local z_word_t byte_swap(z_word_t word);
+
 local z_word_t byte_swap(word)
     z_word_t word;
 {
@@ -709,6 +712,9 @@ unsigned long ZEXPORT crc32_z(crc, buf, len)
 
 #ifdef W
 
+local z_crc_t crc_word(z_word_t data);
+local z_word_t crc_word_big(z_word_t data);
+
 /*
   Return the CRC of the W bytes in the word_t data, taking the
   least-significant byte of the word as the first byte of data, without any pre
@@ -1107,7 +1113,7 @@ uLong ZEXPORT crc32_combine_gen(len2)
 }
 
 /* ========================================================================= */
-uLong crc32_combine_op(crc1, crc2, op)
+uLong ZEXPORT crc32_combine_op(crc1, crc2, op)
     uLong crc1;
     uLong crc2;
     uLong op;
