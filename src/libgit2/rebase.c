@@ -35,6 +35,7 @@
 #define ONTO_FILE           "onto"
 #define ONTO_NAME_FILE      "onto_name"
 #define QUIET_FILE          "quiet"
+#define INTERACTIVE_FILE    "interactive"
 
 #define MSGNUM_FILE         "msgnum"
 #define END_FILE            "end"
@@ -92,6 +93,7 @@ static int rebase_state_type(
 	git_repository *repo)
 {
 	git_str path = GIT_STR_INIT;
+	git_str interactive_path = GIT_STR_INIT;
 	git_rebase_t type = GIT_REBASE_NONE;
 
 	if (git_str_joinpath(&path, repo->gitdir, REBASE_APPLY_DIR) < 0)
@@ -107,7 +109,14 @@ static int rebase_state_type(
 		return -1;
 
 	if (git_fs_path_isdir(git_str_cstr(&path))) {
-		type = GIT_REBASE_MERGE;
+		if (git_str_joinpath(&interactive_path, path.ptr, INTERACTIVE_FILE) < 0)
+			return -1;
+
+		if (git_fs_path_isfile(interactive_path.ptr))
+			type = GIT_REBASE_INTERACTIVE;
+		else
+			type = GIT_REBASE_MERGE;
+
 		goto done;
 	}
 
@@ -118,6 +127,7 @@ done:
 		*path_out = git_str_detach(&path);
 
 	git_str_dispose(&path);
+	git_str_dispose(&interactive_path);
 
 	return 0;
 }
