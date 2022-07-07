@@ -1137,7 +1137,7 @@ int git_config__find_global(git_str *path)
 
 int git_config_find_xdg(git_buf *path)
 {
-	GIT_BUF_WRAP_PRIVATE(path, git_sysdir_find_global_file, GIT_CONFIG_FILENAME_XDG);
+	GIT_BUF_WRAP_PRIVATE(path, git_sysdir_find_xdg_file, GIT_CONFIG_FILENAME_XDG);
 }
 
 int git_config__find_xdg(git_str *path)
@@ -1147,7 +1147,7 @@ int git_config__find_xdg(git_str *path)
 
 int git_config_find_system(git_buf *path)
 {
-	GIT_BUF_WRAP_PRIVATE(path, git_sysdir_find_global_file, GIT_CONFIG_FILENAME_SYSTEM);
+	GIT_BUF_WRAP_PRIVATE(path, git_sysdir_find_system_file, GIT_CONFIG_FILENAME_SYSTEM);
 }
 
 int git_config__find_system(git_str *path)
