@@ -2377,11 +2377,11 @@ static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name
 	if ((error = reflog_path(&path, backend->repo, name)) < 0)
 		goto out;
 
-    /*
-     * If a reference was moved downwards, eg refs/heads/br2 -> refs/heads/br2/new-name,
-     * refs/heads/br2 does exist but it's a directory. That's a valid situation.
-     * Proceed only if it's a file.
-     */
+	/*
+	 * If a reference was moved downwards, eg refs/heads/br2 -> refs/heads/br2/new-name,
+	 * refs/heads/br2 does exist but it's a directory. That's a valid situation.
+	 * Proceed only if it's a file.
+	 */
 	if (!git_fs_path_isfile(path.ptr))
 		goto out;
 
