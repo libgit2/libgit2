@@ -111,11 +111,12 @@ static int rebase_state_type(
 	if (git_fs_path_isdir(git_str_cstr(&path))) {
 		if (git_str_joinpath(&interactive_path, path.ptr, INTERACTIVE_FILE) < 0)
 			return -1;
-		if (git_fs_path_isfile(interactive_path.ptr)) {
+
+		if (git_fs_path_isfile(interactive_path.ptr))
 			type = GIT_REBASE_INTERACTIVE;
-		} else {
+		else
 			type = GIT_REBASE_MERGE;
-		}
+
 		goto done;
 	}
 
