@@ -1769,6 +1769,15 @@ static int refdb_fs_backend__rename(
 		(error = refdb_fs_backend__lookup(&old, _backend, old_name)) < 0)
 		return error;
 
+	/* Try to rename the refog; it's ok if the old doesn't exist */
+	/* Must be done before calling refdb_fs_backend__delete, otherwise */
+	/* the reflog is deleted before being renamed. */
+	error = refdb_reflog_fs__rename(_backend, old_name, new_name);
+	if ((error != 0) && (error != GIT_ENOTFOUND)) {
+		git_reference_free(old);
+		return error;
+	}
+
 	if ((error = refdb_fs_backend__delete(_backend, old_name, NULL, NULL)) < 0) {
 		git_reference_free(old);
 		return error;
@@ -1785,10 +1794,7 @@ static int refdb_fs_backend__rename(
 		return error;
 	}
 
-	/* Try to rename the refog; it's ok if the old doesn't exist */
-	error = refdb_reflog_fs__rename(_backend, old_name, new_name);
-	if (((error == 0) || (error == GIT_ENOTFOUND)) &&
-	    ((error = reflog_append(backend, new, git_reference_target(new), NULL, who, message)) < 0)) {
+	if ((error = reflog_append(backend, new, git_reference_target(new), NULL, who, message)) < 0) {
 		git_reference_free(new);
 		git_filebuf_cleanup(&file);
 		return error;
@@ -2368,7 +2374,12 @@ static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name
 	if ((error = reflog_path(&path, backend->repo, name)) < 0)
 		goto out;
 
-	if (!git_fs_path_exists(path.ptr))
+    /*
+     * If a reference was moved downwards, eg refs/heads/br2 -> refs/heads/br2/new-name,
+     * refs/heads/br2 does exist but it's a directory. That's a valid situation.
+     * Proceed only if it's a file.
+     */
+	if (!git_fs_path_isfile(path.ptr))
 		goto out;
 
 	if ((error = p_unlink(path.ptr)) < 0)
