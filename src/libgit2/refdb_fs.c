@@ -1779,17 +1779,20 @@ static int refdb_fs_backend__rename(
 	}
 
 	if ((error = refdb_fs_backend__delete(_backend, old_name, NULL, NULL)) < 0) {
+		refdb_reflog_fs__rename(_backend, new_name, old_name);
 		git_reference_free(old);
 		return error;
 	}
 
 	new = git_reference__realloc(&old, new_name);
 	if (!new) {
+		refdb_reflog_fs__rename(_backend, new_name, old_name);
 		git_reference_free(old);
 		return -1;
 	}
 
 	if ((error = loose_lock(&file, backend, new->name)) < 0) {
+		refdb_reflog_fs__rename(_backend, new_name, old_name);
 		git_reference_free(new);
 		return error;
 	}
