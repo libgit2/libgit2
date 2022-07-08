@@ -179,7 +179,8 @@ int git_indexer_new(
 	if (fd < 0)
 		goto cleanup;
 
-	error = git_packfile_alloc(&idx->pack, git_str_cstr(&tmp_path));
+	/* TODO: SHA256 */
+	error = git_packfile_alloc(&idx->pack, git_str_cstr(&tmp_path), 0);
 	git_str_dispose(&tmp_path);
 
 	if (error < 0)
@@ -468,16 +469,16 @@ static int store_object(git_indexer *idx)
 			goto on_error;
 	}
 
-	git_oid_cpy(&pentry->sha1, &oid);
+	git_oid_cpy(&pentry->id, &oid);
 	pentry->offset = entry_start;
 
-	if (git_oidmap_exists(idx->pack->idx_cache, &pentry->sha1)) {
-		git_error_set(GIT_ERROR_INDEXER, "duplicate object %s found in pack", git_oid_tostr_s(&pentry->sha1));
+	if (git_oidmap_exists(idx->pack->idx_cache, &pentry->id)) {
+		git_error_set(GIT_ERROR_INDEXER, "duplicate object %s found in pack", git_oid_tostr_s(&pentry->id));
 		git__free(pentry);
 		goto on_error;
 	}
 
-	if ((error = git_oidmap_set(idx->pack->idx_cache, &pentry->sha1, pentry)) < 0) {
+	if ((error = git_oidmap_set(idx->pack->idx_cache, &pentry->id, pentry)) < 0) {
 		git__free(pentry);
 		git_error_set_oom();
 		goto on_error;
@@ -522,8 +523,8 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 
 	pentry->offset = entry_start;
 
-	if (git_oidmap_exists(idx->pack->idx_cache, &pentry->sha1) ||
-	    git_oidmap_set(idx->pack->idx_cache, &pentry->sha1, pentry) < 0) {
+	if (git_oidmap_exists(idx->pack->idx_cache, &pentry->id) ||
+	    git_oidmap_set(idx->pack->idx_cache, &pentry->id, pentry) < 0) {
 		git_error_set(GIT_ERROR_INDEXER, "cannot insert object into pack");
 		return -1;
 	}
@@ -557,7 +558,7 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, off64_t entry_start)
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
 	GIT_ERROR_CHECK_ALLOC(pentry);
 
-	git_oid_cpy(&pentry->sha1, &oid);
+	git_oid_cpy(&pentry->id, &oid);
 	git_oid_cpy(&entry->oid, &oid);
 	entry->crc = crc32(0L, Z_NULL, 0);
 
@@ -987,7 +988,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
 	GIT_ERROR_CHECK_ALLOC(pentry);
 
-	git_oid_cpy(&pentry->sha1, id);
+	git_oid_cpy(&pentry->id, id);
 	git_oid_cpy(&entry->oid, id);
 	idx->off = entry_start + hdr_len + len;
 
