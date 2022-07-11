@@ -258,3 +258,19 @@ void test_object_tag_write__creating_an_annotation_does_not_create_a_reference(v
 	create_annotation(&tag_id, "new_tag");
 	cl_git_fail_with(git_reference_lookup(&tag_ref, g_repo, "refs/tags/new_tag"), GIT_ENOTFOUND);
 }
+
+void test_object_tag_write__error_when_create_tag_with_invalid_name(void)
+{
+	git_oid target_id, tag_id;
+	git_signature *tagger;
+	git_object *target;
+
+	git_oid_fromstr(&target_id, tagged_commit);
+	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJECT_COMMIT));
+	cl_git_pass(git_signature_new(&tagger, tagger_name, tagger_email, 123456789, 60));
+
+	cl_git_fail(
+		git_tag_create(&tag_id, g_repo,
+		  "-dash", target, tagger, tagger_message, 0)
+	);
+}
