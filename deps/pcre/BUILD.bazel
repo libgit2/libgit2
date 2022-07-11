@@ -1,0 +1,23 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//:__subpackages__"])
+
+cc_library(
+    name = "pcre",
+    srcs = glob(["*.c"]),
+    hdrs = glob(["*.h"]),
+    defines = [
+        "SUPPORT_PCRE8=1",
+        "LINK_SIZE=2",
+        "PARENS_NEST_LIMIT=250",
+        "MATCH_LIMIT=10000000",
+        "MATCH_LIMIT_RECURSION=MATCH_LIMIT",
+        "NEWLINE=10",
+        "NO_RECURSE=1",
+        "POSIX_MALLOC_THRESHOLD=10",
+        "BSR_ANYCRLF=0",
+        "MAX_NAME_SIZE=32",
+        "MAX_NAME_COUNT=10000",
+    ],
+    strip_include_prefix = ".",
+)

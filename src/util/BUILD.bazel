@@ -1,0 +1,56 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//src:__subpackages__"])
+
+cc_library(
+    name = "util",
+    srcs = glob([
+        "*.c",
+        "*.h",
+        "allocators/*.c",
+        "allocators/*.h",
+    ]) + select({
+        "@platforms//os:windows": glob([
+            "win32/*.c",
+            "win32/*.h",
+        ]),
+        "//conditions:default": glob([
+            "unix/*.c",
+            "unix/*.h",
+        ]),
+    }) + ["hash/sha.h"] + select({
+        "//:sha1_collision_detection": [
+            "hash/collisiondetect.c",
+            "hash/collisiondetect.h",
+            "hash/sha1dc/sha1.c",
+            "hash/sha1dc/sha1.h",
+            "hash/sha1dc/ubc_check.c",
+            "hash/sha1dc/ubc_check.h",
+        ],
+    }) + select({
+        "//:sha256_builtin": [
+            "hash/builtin.c",
+            "hash/builtin.h",
+            "hash/rfc6234/sha.h",
+            "hash/rfc6234/sha224-256.c",
+        ],
+    }),
+    hdrs = glob(["*.h"]),
+    defines = [
+        "GIT_THREADS=1",
+    ],
+    includes = ["."],
+    linkopts = select({
+        "//:regex_builtin": ["-lpcre"],
+        "//:regex_pcre": ["-lpcre"],
+    }),
+    strip_include_prefix = ".",
+    deps = [
+        "//:headers",
+        "//deps/http-parser",
+        "@zlib",
+    ] + select({
+        "//:regex_builtin": ["//deps/pcre"],
+        "//:regex_pcre": ["//deps/pcre"],
+    }),
+)

@@ -1,0 +1,126 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+constraint_setting(
+    name = "regex",
+    default_constraint_value = ":regex_builtin",
+)
+
+constraint_value(
+    name = "regex_builtin",
+    constraint_setting = ":regex",
+)
+
+constraint_value(
+    name = "regex_pcre",
+    constraint_setting = ":regex",
+)
+
+constraint_value(
+    name = "regex_pcre2",
+    constraint_setting = ":regex",
+)
+
+constraint_value(
+    name = "regex_regcomp",
+    constraint_setting = ":regex",
+)
+
+constraint_value(
+    name = "regex_regcomp_l",
+    constraint_setting = ":regex",
+)
+
+constraint_setting(
+    name = "sha1",
+    default_constraint_value = ":sha1_collision_detection",
+)
+
+constraint_value(
+    name = "sha1_common_crypto",
+    constraint_setting = ":sha1",
+)
+
+constraint_value(
+    name = "sha1_openssl",
+    constraint_setting = ":sha1",
+)
+
+constraint_value(
+    name = "sha1_win32",
+    constraint_setting = ":sha1",
+)
+
+constraint_value(
+    name = "sha1_mbedtls",
+    constraint_setting = ":sha1",
+)
+
+constraint_value(
+    name = "sha1_collision_detection",
+    constraint_setting = ":sha1",
+)
+
+constraint_setting(
+    name = "sha256",
+    default_constraint_value = ":sha256_builtin",
+)
+
+constraint_value(
+    name = "sha256_builtin",
+    constraint_setting = ":sha256",
+)
+
+constraint_value(
+    name = "sha256_common_crypto",
+    constraint_setting = ":sha256",
+)
+
+constraint_value(
+    name = "sha256_openssl",
+    constraint_setting = ":sha256",
+)
+
+constraint_value(
+    name = "sha256_win32",
+    constraint_setting = ":sha256",
+)
+
+constraint_value(
+    name = "sha256_mbedtls",
+    constraint_setting = ":sha256",
+)
+
+cc_library(
+    name = "headers",
+    hdrs = glob(["include/**/*.h"]),
+    defines = ["LIBGIT2_NO_FEATURES_H="] + select({
+        "@platforms//cpu:x86_64": ["GIT_ARCH_64=1"],
+        "@platforms//cpu:x86_32": ["GIT_ARCH_32=1"],
+    }) + select({
+        ":regex_builtin": ["GIT_REGEX_BUILTIN=1"],
+        ":regex_pcre": ["GIT_REGEX_PCRE=1"],
+        ":regex_pcre2": ["GIT_REGEX_PCRE2=1"],
+        ":regex_regcomp": ["GIT_REGEX_REGCOMP=1"],
+        ":regex_regcomp_l": ["GIT_REGEX_REGCOMP_L=1"],
+    }) + select({
+        ":sha1_common_crypto": ["GIT_SHA1_COMMON_CRYPTO=1"],
+        ":sha1_openssl": ["GIT_SHA1_OPENSSL=1"],
+        ":sha1_win32": ["GIT_SHA1_WIN32=1"],
+        ":sha1_mbedtls": ["GIT_SHA1_MBEDTLS=1"],
+        ":sha1_collision_detection": ["GIT_SHA1_COLLISIONDETECT=1"],
+    }) + select({
+        ":sha256_builtin": ["GIT_SHA256_BUILTIN=1"],
+        ":sha256_common_crypto": ["GIT_SHA256_COMMON_CRYPTO=1"],
+        ":sha256_openssl": ["GIT_SHA256_OPENSSL=1"],
+        ":sha256_win32": ["GIT_SHA256_WIN32=1"],
+        ":sha256_mbedtls": ["GIT_SHA256_MBEDTLS=1"],
+    }),
+    strip_include_prefix = "include",
+)
+
+alias(
+    name = "libgit2",
+    actual = "//src/libgit2",
+)
