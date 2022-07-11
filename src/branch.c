@@ -52,6 +52,11 @@ static int not_a_local_branch(const char *reference_name)
 	return -1;
 }
 
+static bool branch_name_follows_pattern(const char *branch_name)
+{
+	return branch_name[0] != '-' && git__strcmp(branch_name, "HEAD");
+}
+
 static int create_branch(
 	git_reference **ref_out,
 	git_repository *repository,
@@ -72,7 +77,7 @@ static int create_branch(
 	GIT_ASSERT_ARG(ref_out);
 	GIT_ASSERT_ARG(git_commit_owner(commit) == repository);
 
-	if (!git__strcmp(branch_name, "HEAD")) {
+	if (!branch_name_follows_pattern(branch_name)) {
 		git_error_set(GIT_ERROR_REFERENCE, "'HEAD' is not a valid branch name");
 		error = -1;
 		goto cleanup;
@@ -762,7 +767,7 @@ int git_branch_name_is_valid(int *valid, const char *name)
 	 * and discourage HEAD as branch name,
 	 * https://github.com/git/git/commit/a625b092cc5994
 	 */
-	if (!name || name[0] == '-' || !git__strcmp(name, "HEAD"))
+	if (!name || !branch_name_follows_pattern(name))
 		goto done;
 
 	if ((error = git_buf_puts(&ref_name, GIT_REFS_HEADS_DIR)) < 0 ||
