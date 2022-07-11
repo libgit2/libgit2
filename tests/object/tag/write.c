@@ -273,4 +273,7 @@ void test_object_tag_write__error_when_create_tag_with_invalid_name(void)
 		git_tag_create(&tag_id, g_repo,
 		  "-dash", target, tagger, tagger_message, 0)
 	);
+
+	git_object_free(target);
+	git_signature_free(tagger);
 }
