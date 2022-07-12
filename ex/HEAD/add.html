@@ -101,7 +101,7 @@ on files passed as its parameters.</p>
       <td class=code>
         <div class='highlight'><pre><span class="k">enum</span> <span class="n">index_mode</span> <span class="p">{</span>
   <span class="n">INDEX_NONE</span><span class="p">,</span>
-  <span class="n">INDEX_ADD</span>
+  <span class="n">INDEX_ADD</span><span class="p">,</span>
 <span class="p">};</span>
 
 <span class="k">struct</span> <span class="n">index_options</span> <span class="p">{</span>
@@ -183,7 +183,22 @@ on files passed as its parameters.</p>
   <span class="k">return</span> <span class="n">ret</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">print_usage</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="kt">void</span> <span class="nf">init_array</span><span class="p">(</span><span class="n">git_strarray</span> <span class="o">*</span><span class="n">array</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+
+  <span class="n">array</span><span class="o">-&gt;</span><span class="n">count</span> <span class="o">=</span> <span class="n">argc</span><span class="p">;</span>
+  <span class="n">array</span><span class="o">-&gt;</span><span class="n">strings</span> <span class="o">=</span> <span class="n">calloc</span><span class="p">(</span><span class="n">array</span><span class="o">-&gt;</span><span class="n">count</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">));</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">array</span><span class="o">-&gt;</span><span class="n">strings</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">array</span><span class="o">-&gt;</span><span class="n">count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">array</span><span class="o">-&gt;</span><span class="n">strings</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">print_usage</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: add [options] [--] file-spec [file-spec] [...]</span><span class="se">\n\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\t</span><span class="s">-n, --dry-run    dry run</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
