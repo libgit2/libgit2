@@ -86,7 +86,7 @@ typedef struct git_index_entry {
  */
 typedef enum {
 	GIT_INDEX_ENTRY_EXTENDED  = (0x4000),
-	GIT_INDEX_ENTRY_VALID     = (0x8000),
+	GIT_INDEX_ENTRY_VALID     = (0x8000)
 } git_index_entry_flag_t;
 
 #define GIT_INDEX_ENTRY_STAGE(E) \
@@ -119,7 +119,7 @@ typedef enum {
 
 	GIT_INDEX_ENTRY_EXTENDED_FLAGS =  (GIT_INDEX_ENTRY_INTENT_TO_ADD | GIT_INDEX_ENTRY_SKIP_WORKTREE),
 
-	GIT_INDEX_ENTRY_UPTODATE       =  (1 << 2),
+	GIT_INDEX_ENTRY_UPTODATE       =  (1 << 2)
 } git_index_entry_extended_flag_t;
 
 /** Capabilities of system that affect index actions. */
@@ -127,7 +127,7 @@ typedef enum {
 	GIT_INDEX_CAPABILITY_IGNORE_CASE = 1,
 	GIT_INDEX_CAPABILITY_NO_FILEMODE = 2,
 	GIT_INDEX_CAPABILITY_NO_SYMLINKS = 4,
-	GIT_INDEX_CAPABILITY_FROM_OWNER  = -1,
+	GIT_INDEX_CAPABILITY_FROM_OWNER  = -1
 } git_index_capability_t;
 
 
@@ -140,7 +140,7 @@ typedef enum {
 	GIT_INDEX_ADD_DEFAULT = 0,
 	GIT_INDEX_ADD_FORCE = (1u << 0),
 	GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH = (1u << 1),
-	GIT_INDEX_ADD_CHECK_PATHSPEC = (1u << 2),
+	GIT_INDEX_ADD_CHECK_PATHSPEC = (1u << 2)
 } git_index_add_option_t;
 
 /** Git index stage states */
@@ -163,7 +163,7 @@ typedef enum {
 	GIT_INDEX_STAGE_OURS = 2,
 
 	/** The "theirs" side of a conflict. */
-	GIT_INDEX_STAGE_THEIRS = 3,
+	GIT_INDEX_STAGE_THEIRS = 3
 } git_index_stage_t;
 
 /**
@@ -296,6 +296,7 @@ GIT_EXTERN(int) git_index_write(git_index *index);
  */
 GIT_EXTERN(const char *) git_index_path(const git_index *index);
 
+#ifndef GIT_DEPRECATE_HARD
 /**
  * Get the checksum of the index
  *
@@ -303,10 +304,12 @@ GIT_EXTERN(const char *) git_index_path(const git_index *index);
  * last 20 bytes which are the checksum itself). In cases where the
  * index does not exist on-disk, it will be zeroed out.
  *
+ * @deprecated this function is deprecated with no replacement
  * @param index an existing index object
  * @return a pointer to the checksum of the index
  */
 GIT_EXTERN(const git_oid *) git_index_checksum(git_index *index);
+#endif
 
 /**
  * Read a tree into the index file with stats
@@ -491,6 +494,7 @@ GIT_EXTERN(int) git_index_entry_is_conflict(const git_index_entry *entry);
  *
  * @param iterator_out The newly created iterator
  * @param index The index to iterate
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_index_iterator_new(
 	git_index_iterator **iterator_out,
@@ -787,6 +791,7 @@ GIT_EXTERN(int) git_index_conflict_cleanup(git_index *index);
 /**
  * Determine if the index contains entries representing file conflicts.
  *
+ * @param index An existing index object.
  * @return 1 if at least one conflict is found, 0 otherwise.
  */
 GIT_EXTERN(int) git_index_has_conflicts(const git_index *index);
@@ -811,6 +816,7 @@ GIT_EXTERN(int) git_index_conflict_iterator_new(
  * @param ancestor_out Pointer to store the ancestor side of the conflict
  * @param our_out Pointer to store our side of the conflict
  * @param their_out Pointer to store their side of the conflict
+ * @param iterator The conflict iterator.
  * @return 0 (no error), GIT_ITEROVER (iteration is done) or an error code
  *         (negative value)
  */

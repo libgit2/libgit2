@@ -75,7 +75,7 @@ typedef enum {
 	 *
 	 * @see git_credential_ssh_key_memory_new
 	 */
-	GIT_CREDENTIAL_SSH_MEMORY = (1u << 6),
+	GIT_CREDENTIAL_SSH_MEMORY = (1u << 6)
 } git_credential_t;
 
 /**
@@ -254,6 +254,7 @@ typedef void GIT_CALLBACK(git_credential_ssh_interactive_cb)(
  * Create a new ssh keyboard-interactive based credential object.
  * The supplied credential parameter will be internally duplicated.
  *
+ * @param out The newly created credential object.
  * @param username Username to use to authenticate.
  * @param prompt_callback The callback method used for prompts.
  * @param payload Additional data to pass to the callback.

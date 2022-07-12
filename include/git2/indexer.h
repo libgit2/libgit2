@@ -98,6 +98,7 @@ GIT_EXTERN(int) git_indexer_options_init(
  * will be returned if there are bases missing)
  * @param opts Optional structure containing additional options. See
  * `git_indexer_options` above.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_indexer_new(
 		git_indexer **out,
@@ -113,6 +114,7 @@ GIT_EXTERN(int) git_indexer_new(
  * @param data the data to add
  * @param size the size of the data in bytes
  * @param stats stat storage
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_indexer_append(git_indexer *idx, const void *data, size_t size, git_indexer_progress *stats);
 
@@ -122,18 +124,35 @@ GIT_EXTERN(int) git_indexer_append(git_indexer *idx, const void *data, size_t si
  * Resolve any pending deltas and write out the index file
  *
  * @param idx the indexer
+ * @param stats Stat storage.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_indexer_commit(git_indexer *idx, git_indexer_progress *stats);
 
+#ifndef GIT_DEPRECATE_HARD
 /**
  * Get the packfile's hash
  *
  * A packfile's name is derived from the sorted hashing of all object
  * names. This is only correct after the index has been finalized.
  *
+ * @deprecated use git_indexer_name
  * @param idx the indexer instance
+ * @return the packfile's hash
  */
 GIT_EXTERN(const git_oid *) git_indexer_hash(const git_indexer *idx);
+#endif
+
+/**
+ * Get the unique name for the resulting packfile.
+ *
+ * The packfile's name is derived from the packfile's content.
+ * This is only correct after the index has been finalized.
+ *
+ * @param idx the indexer instance
+ * @return a NUL terminated string for the packfile name
+ */
+GIT_EXTERN(const char *) git_indexer_name(const git_indexer *idx);
 
 /**
  * Free the indexer and its resources

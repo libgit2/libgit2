@@ -930,10 +930,10 @@ const char *ntlm_client_target_domain_dns(ntlm_client *ntlm)
 }
 
 #define EVEN_PARITY(a) \
-	(!!((a) & 0x01ll) ^ !!((a) & 0x02ll) ^ \
-	 !!((a) & 0x04ll) ^ !!((a) & 0x08ll) ^ \
-	 !!((a) & 0x10ll) ^ !!((a) & 0x20ll) ^ \
-	 !!((a) & 0x40ll) ^ !!((a) & 0x80ll))
+	(!!((a) & INT64_C(0x01)) ^ !!((a) & INT64_C(0x02)) ^ \
+	 !!((a) & INT64_C(0x04)) ^ !!((a) & INT64_C(0x08)) ^ \
+	 !!((a) & INT64_C(0x10)) ^ !!((a) & INT64_C(0x20)) ^ \
+	 !!((a) & INT64_C(0x40)) ^ !!((a) & INT64_C(0x80)))
 
 static void generate_odd_parity(ntlm_des_block *block)
 {

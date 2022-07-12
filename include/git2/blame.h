@@ -73,7 +73,7 @@ typedef enum {
 	GIT_BLAME_USE_MAILMAP = (1<<5),
 
 	/** Ignore whitespace differences */
-	GIT_BLAME_IGNORE_WHITESPACE = (1<<6),
+	GIT_BLAME_IGNORE_WHITESPACE = (1<<6)
 } git_blame_flag_t;
 
 /**
@@ -203,6 +203,9 @@ typedef struct git_blame git_blame;
 
 /**
  * Gets the number of hunks that exist in the blame structure.
+ *
+ * @param blame The blame structure to query.
+ * @return The number of hunks.
  */
 GIT_EXTERN(uint32_t) git_blame_get_hunk_count(git_blame *blame);
 

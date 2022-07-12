@@ -78,7 +78,7 @@ typedef enum {
 	GIT_OBJECT_BLOB =      3, /**< A file revision object. */
 	GIT_OBJECT_TAG =       4, /**< An annotated tag object. */
 	GIT_OBJECT_OFS_DELTA = 6, /**< A delta, base is given by an offset. */
-	GIT_OBJECT_REF_DELTA = 7, /**< A delta, base is given by object id. */
+	GIT_OBJECT_REF_DELTA = 7  /**< A delta, base is given by object id. */
 } git_object_t;
 
 /** An open object database handle. */
@@ -208,14 +208,14 @@ typedef enum {
 	GIT_REFERENCE_INVALID  = 0, /**< Invalid reference */
 	GIT_REFERENCE_DIRECT   = 1, /**< A reference that points at an object id */
 	GIT_REFERENCE_SYMBOLIC = 2, /**< A reference that points at another reference */
-	GIT_REFERENCE_ALL      = GIT_REFERENCE_DIRECT | GIT_REFERENCE_SYMBOLIC,
+	GIT_REFERENCE_ALL      = GIT_REFERENCE_DIRECT | GIT_REFERENCE_SYMBOLIC
 } git_reference_t;
 
 /** Basic type of any Git branch. */
 typedef enum {
 	GIT_BRANCH_LOCAL = 1,
 	GIT_BRANCH_REMOTE = 2,
-	GIT_BRANCH_ALL = GIT_BRANCH_LOCAL|GIT_BRANCH_REMOTE,
+	GIT_BRANCH_ALL = GIT_BRANCH_LOCAL|GIT_BRANCH_REMOTE
 } git_branch_t;
 
 /** Valid modes for index and tree entries. */
@@ -225,7 +225,7 @@ typedef enum {
 	GIT_FILEMODE_BLOB                = 0100644,
 	GIT_FILEMODE_BLOB_EXECUTABLE     = 0100755,
 	GIT_FILEMODE_LINK                = 0120000,
-	GIT_FILEMODE_COMMIT              = 0160000,
+	GIT_FILEMODE_COMMIT              = 0160000
 } git_filemode_t;
 
 /**
@@ -236,7 +236,7 @@ typedef struct git_refspec git_refspec;
 
 /**
  * Git's idea of a remote repository. A remote can be anonymous (in
- * which case it does not have backing configuration entires).
+ * which case it does not have backing configuration entries).
  */
 typedef struct git_remote git_remote;
 
@@ -334,7 +334,7 @@ typedef enum {
 	GIT_SUBMODULE_IGNORE_NONE      = 1,  /**< any change or untracked == dirty */
 	GIT_SUBMODULE_IGNORE_UNTRACKED = 2,  /**< dirty if tracked files change */
 	GIT_SUBMODULE_IGNORE_DIRTY     = 3,  /**< only dirty if HEAD moved */
-	GIT_SUBMODULE_IGNORE_ALL       = 4,  /**< never dirty */
+	GIT_SUBMODULE_IGNORE_ALL       = 4   /**< never dirty */
 } git_submodule_ignore_t;
 
 /**
@@ -350,7 +350,7 @@ typedef enum {
 typedef enum {
 	GIT_SUBMODULE_RECURSE_NO = 0,
 	GIT_SUBMODULE_RECURSE_YES = 1,
-	GIT_SUBMODULE_RECURSE_ONDEMAND = 2,
+	GIT_SUBMODULE_RECURSE_ONDEMAND = 2
 } git_submodule_recurse_t;
 
 typedef struct git_writestream git_writestream;

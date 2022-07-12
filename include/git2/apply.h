@@ -32,6 +32,8 @@ GIT_BEGIN_DECL
  *
  * @param delta The delta to be applied
  * @param payload User-specified payload
+ * @return 0 if the delta is applied, < 0 if the apply process will be aborted
+ *	or > 0 if the delta will not be applied.
  */
 typedef int GIT_CALLBACK(git_apply_delta_cb)(
 	const git_diff_delta *delta,
@@ -48,6 +50,8 @@ typedef int GIT_CALLBACK(git_apply_delta_cb)(
  *
  * @param hunk The hunk to be applied
  * @param payload User-specified payload
+ * @return 0 if the hunk is applied, < 0 if the apply process will be aborted
+ *	or > 0 if the hunk will not be applied.
  */
 typedef int GIT_CALLBACK(git_apply_hunk_cb)(
 	const git_diff_hunk *hunk,
@@ -59,7 +63,7 @@ typedef enum {
 	 * Don't actually make changes, just test that the patch applies.
 	 * This is the equivalent of `git apply --check`.
 	 */
-	GIT_APPLY_CHECK = (1 << 0),
+	GIT_APPLY_CHECK = (1 << 0)
 } git_apply_flags_t;
 
 /**
@@ -89,6 +93,16 @@ typedef struct {
 #define GIT_APPLY_OPTIONS_VERSION 1
 #define GIT_APPLY_OPTIONS_INIT {GIT_APPLY_OPTIONS_VERSION}
 
+/**
+ * Initialize git_apply_options structure
+ *
+ * Initialize a `git_apply_options` with default values. Equivalent to creating
+ * an instance with GIT_APPLY_OPTIONS_INIT.
+ *
+ * @param opts The `git_apply_options` struct to initialize.
+ * @param version The struct version; pass `GIT_APPLY_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
 GIT_EXTERN(int) git_apply_options_init(git_apply_options *opts, unsigned int version);
 
 /**
@@ -127,7 +141,7 @@ typedef enum {
 	 * Apply the patch to both the working directory and the index.
 	 * This is the equivalent of `git apply --index`.
 	 */
-	GIT_APPLY_LOCATION_BOTH = 2,
+	GIT_APPLY_LOCATION_BOTH = 2
 } git_apply_location_t;
 
 /**

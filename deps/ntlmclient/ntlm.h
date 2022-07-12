@@ -30,7 +30,7 @@ typedef enum {
 	NTLM_STATE_CHALLENGE = 1,
 	NTLM_STATE_RESPONSE = 2,
 	NTLM_STATE_ERROR = 3,
-	NTLM_STATE_COMPLETE = 4,
+	NTLM_STATE_COMPLETE = 4
 } ntlm_state;
 
 typedef struct {
@@ -122,7 +122,7 @@ struct ntlm_client {
 };
 
 typedef enum {
-	NTLM_ENABLE_HOSTVERSION = (1 << 31),
+	NTLM_ENABLE_HOSTVERSION = (1 << 31)
 } ntlm_client_internal_flags;
 
 typedef enum {
@@ -130,7 +130,7 @@ typedef enum {
 	NTLM_TARGET_INFO_SERVER = 1,
 	NTLM_TARGET_INFO_DOMAIN = 2,
 	NTLM_TARGET_INFO_SERVER_DNS = 3,
-	NTLM_TARGET_INFO_DOMAIN_DNS = 4,
+	NTLM_TARGET_INFO_DOMAIN_DNS = 4
 } ntlm_target_info_type_t;
 
 typedef enum {
@@ -168,7 +168,7 @@ typedef enum {
 	NTLM_NEGOTIATE_TARGET_INFO = 0x00800000,
 
 	/* Version information should be provided */
-	NTLM_NEGOTIATE_VERSION = 0x01000000,
+	NTLM_NEGOTIATE_VERSION = 0x01000000
 } ntlm_negotiate_t;
 
 extern int ntlm_client_set_nonce(ntlm_client *ntlm, uint64_t nonce);

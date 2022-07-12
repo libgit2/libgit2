@@ -85,7 +85,7 @@ typedef enum {
 	GIT_SUBMODULE_STATUS_WD_MODIFIED       = (1u << 10),
 	GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED = (1u << 11),
 	GIT_SUBMODULE_STATUS_WD_WD_MODIFIED    = (1u << 12),
-	GIT_SUBMODULE_STATUS_WD_UNTRACKED      = (1u << 13),
+	GIT_SUBMODULE_STATUS_WD_UNTRACKED      = (1u << 13)
 } git_submodule_status_t;
 
 #define GIT_SUBMODULE_STATUS__IN_FLAGS		0x000Fu
@@ -181,7 +181,7 @@ GIT_EXTERN(int) git_submodule_update_options_init(
  * @param submodule Submodule object
  * @param init If the submodule is not initialized, setting this flag to true
  *        will initialize the submodule before updating. Otherwise, this will
- *        return an error if attempting to update an uninitialzed repository.
+ *        return an error if attempting to update an uninitialized repository.
  *        but setting this to true forces them to be updated.
  * @param options configuration options for the update.  If NULL, the
  *        function works as though GIT_SUBMODULE_UPDATE_OPTIONS_INIT was passed.
@@ -229,6 +229,7 @@ GIT_EXTERN(int) git_submodule_lookup(
  *
  * @param out Pointer to store the copy of the submodule.
  * @param source Original submodule to copy.
+ * @return 0
  */
 GIT_EXTERN(int) git_submodule_dup(git_submodule **out, git_submodule *source);
 
@@ -320,6 +321,7 @@ GIT_EXTERN(int) git_submodule_clone(
  * (but doesn't actually do the commit).
  *
  * @param submodule The submodule to finish adding.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_submodule_add_finalize(git_submodule *submodule);
 
@@ -589,6 +591,9 @@ GIT_EXTERN(int) git_submodule_repo_init(
  * submodule config, acting like "git submodule sync".  This is useful if
  * you have altered the URL for the submodule (or it has been altered by a
  * fetch of upstream changes) and you need to update your local repo.
+ *
+ * @param submodule The submodule to copy.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_submodule_sync(git_submodule *submodule);
 

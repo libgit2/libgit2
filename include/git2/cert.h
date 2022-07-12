@@ -44,7 +44,7 @@ typedef enum git_cert_t {
 	 * information about the certificate. This is used when using
 	 * curl.
 	 */
-	GIT_CERT_STRARRAY,
+	GIT_CERT_STRARRAY
 } git_cert_t;
 
 /**
@@ -82,7 +82,7 @@ typedef enum {
 	/** SHA-256 is available */
 	GIT_CERT_SSH_SHA256 = (1 << 2),
 	/** Raw hostkey is available */
-	GIT_CERT_SSH_RAW = (1 << 3),
+	GIT_CERT_SSH_RAW = (1 << 3)
 } git_cert_ssh_t;
 
 typedef enum {

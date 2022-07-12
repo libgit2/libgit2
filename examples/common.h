@@ -45,7 +45,7 @@
 #endif
 
 #ifdef _MSC_VER
-#define snprintf sprintf_s
+#define snprintf _snprintf
 #define strcasecmp strcmpi
 #endif
 

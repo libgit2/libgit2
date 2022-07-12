@@ -55,7 +55,7 @@ typedef enum {
 	/** Represents the highest level available config file (i.e. the most
 	 * specific config file available that actually is loaded)
 	 */
-	GIT_CONFIG_HIGHEST_LEVEL = -1,
+	GIT_CONFIG_HIGHEST_LEVEL = -1
 } git_config_level_t;
 
 /**
@@ -72,14 +72,17 @@ typedef struct git_config_entry {
 
 /**
  * Free a config entry
+ *
+ * @param entry The entry to free.
  */
-GIT_EXTERN(void) git_config_entry_free(git_config_entry *);
+GIT_EXTERN(void) git_config_entry_free(git_config_entry *entry);
 
 /**
  * A config enumeration callback
  *
  * @param entry the entry currently being enumerated
  * @param payload a user-specified pointer
+ * @return non-zero to terminate the iteration.
  */
 typedef int GIT_CALLBACK(git_config_foreach_cb)(const git_config_entry *entry, void *payload);
 
@@ -119,7 +122,7 @@ typedef struct {
  * global configuration file.
  *
  * This method will not guess the path to the xdg compatible
- * config file (.config/git/config).
+ * config file (`.config/git/config`).
  *
  * @param out Pointer to a user-allocated git_buf in which to store the path
  * @return 0 if a global configuration file has been found. Its path will be stored in `out`.
@@ -146,8 +149,8 @@ GIT_EXTERN(int) git_config_find_xdg(git_buf *out);
 /**
  * Locate the path to the system configuration file
  *
- * If /etc/gitconfig doesn't exist, it will look for
- * %PROGRAMFILES%\Git\etc\gitconfig.
+ * If `/etc/gitconfig` doesn't exist, it will look for
+ * `%PROGRAMFILES%\Git\etc\gitconfig`.
  *
  * @param out Pointer to a user-allocated git_buf in which to store the path
  * @return 0 if a system configuration file has been
@@ -158,7 +161,7 @@ GIT_EXTERN(int) git_config_find_system(git_buf *out);
 /**
  * Locate the path to the configuration file in ProgramData
  *
- * Look for the file in %PROGRAMDATA%\Git\config used by portable git.
+ * Look for the file in `%PROGRAMDATA%\Git\config` used by portable git.
  *
  * @param out Pointer to a user-allocated git_buf in which to store the path
  * @return 0 if a ProgramData configuration file has been
@@ -269,6 +272,7 @@ GIT_EXTERN(int) git_config_open_level(
  *
  * @param out pointer in which to store the config object
  * @param config the config object in which to look
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_open_global(git_config **out, git_config *config);
 
@@ -422,6 +426,7 @@ GIT_EXTERN(int) git_config_get_string_buf(git_buf *out, const git_config *cfg, c
  * interested in. Use NULL to indicate all
  * @param callback the function to be called on each value of the variable
  * @param payload opaque pointer to pass to the callback
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_get_multivar_foreach(const git_config *cfg, const char *name, const char *regexp, git_config_foreach_cb callback, void *payload);
 
@@ -437,14 +442,15 @@ GIT_EXTERN(int) git_config_get_multivar_foreach(const git_config *cfg, const cha
  * @param name the variable's name
  * @param regexp regular expression to filter which variables we're
  * interested in. Use NULL to indicate all
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_multivar_iterator_new(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp);
 
 /**
  * Return the current entry and advance the iterator
  *
- * The pointers returned by this function are valid until the iterator
- * is freed.
+ * The pointers returned by this function are valid until the next call
+ * to `git_config_next` or until the iterator is freed.
  *
  * @param entry pointer to store the entry
  * @param iter the iterator
@@ -515,6 +521,7 @@ GIT_EXTERN(int) git_config_set_string(git_config *cfg, const char *name, const c
  * @param name the variable's name
  * @param regexp a regular expression to indicate which values to replace
  * @param value the new value.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_set_multivar(git_config *cfg, const char *name, const char *regexp, const char *value);
 
@@ -524,6 +531,7 @@ GIT_EXTERN(int) git_config_set_multivar(git_config *cfg, const char *name, const
  *
  * @param cfg the configuration
  * @param name the variable to delete
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_delete_entry(git_config *cfg, const char *name);
 
@@ -568,7 +576,8 @@ GIT_EXTERN(int) git_config_foreach(
  * `git_config_iterator_free` when done.
  *
  * @param out pointer to store the iterator
- * @param cfg where to ge the variables from
+ * @param cfg where to get the variables from
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_iterator_new(git_config_iterator **out, const git_config *cfg);
 
@@ -585,6 +594,7 @@ GIT_EXTERN(int) git_config_iterator_new(git_config_iterator **out, const git_con
  * @param out pointer to store the iterator
  * @param cfg where to ge the variables from
  * @param regexp regular expression to match the names
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_iterator_glob_new(git_config_iterator **out, const git_config *cfg, const char *regexp);
 
@@ -662,6 +672,7 @@ GIT_EXTERN(int) git_config_get_mapped(
  * @param maps array of `git_configmap` objects specifying the possible mappings
  * @param map_n number of mapping objects in `maps`
  * @param value value to parse
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_lookup_map_value(
 	int *out,
@@ -678,6 +689,7 @@ GIT_EXTERN(int) git_config_lookup_map_value(
  *
  * @param out place to store the result of the parsing
  * @param value value to parse
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_parse_bool(int *out, const char *value);
 
@@ -690,6 +702,7 @@ GIT_EXTERN(int) git_config_parse_bool(int *out, const char *value);
  *
  * @param out place to store the result of the parsing
  * @param value value to parse
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_parse_int32(int32_t *out, const char *value);
 
@@ -702,6 +715,7 @@ GIT_EXTERN(int) git_config_parse_int32(int32_t *out, const char *value);
  *
  * @param out place to store the result of the parsing
  * @param value value to parse
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_parse_int64(int64_t *out, const char *value);
 
@@ -717,6 +731,7 @@ GIT_EXTERN(int) git_config_parse_int64(int64_t *out, const char *value);
  *
  * @param out placae to store the result of parsing
  * @param value the path to evaluate
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_parse_path(git_buf *out, const char *value);
 
@@ -735,6 +750,7 @@ GIT_EXTERN(int) git_config_parse_path(git_buf *out, const char *value);
  * @param regexp regular expression to match against config names (can be NULL)
  * @param callback the function to call on each variable
  * @param payload the data to pass to the callback
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_backend_foreach_match(
 	git_config_backend *backend,

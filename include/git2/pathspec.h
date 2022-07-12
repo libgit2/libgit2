@@ -69,7 +69,7 @@ typedef enum {
 	 * just test if there were any matches at all or in combination with
 	 * GIT_PATHSPEC_FIND_FAILURES to validate a pathspec.
 	 */
-	GIT_PATHSPEC_FAILURES_ONLY  = (1u << 5),
+	GIT_PATHSPEC_FAILURES_ONLY  = (1u << 5)
 } git_pathspec_flag_t;
 
 /**

@@ -122,6 +122,17 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_libgit2_version(int *major, int *minor, int *rev);
 
 /**
+ * Return the prerelease state of the libgit2 library currently being
+ * used.  For nightly builds during active development, this will be
+ * "alpha".  Releases may have a "beta" or release candidate ("rc1",
+ * "rc2", etc) prerelease.  For a final release, this function returns
+ * NULL.
+ *
+ * @return the name of the prerelease state or NULL
+ */
+GIT_EXTERN(const char *) git_libgit2_prerelease(void);
+
+/**
  * Combinations of these values describe the features with which libgit2
  * was compiled
  */
@@ -147,7 +158,7 @@ typedef enum {
    * If set, libgit2 was built with support for sub-second resolution in file
    * modification times.
    */
-	GIT_FEATURE_NSEC	= (1 << 3),
+	GIT_FEATURE_NSEC	= (1 << 3)
 } git_feature_t;
 
 /**
@@ -167,6 +178,9 @@ typedef enum {
  * - GIT_FEATURE_SSH
  *   Libgit2 supports the SSH protocol for network operations. This requires
  *   the libssh2 library to be found when compiling libgit2
+ *
+ * - GIT_FEATURE_NSEC
+ *   Libgit2 supports the sub-second resolution in file modification times.
  */
 GIT_EXTERN(int) git_libgit2_features(void);
 
@@ -211,7 +225,9 @@ typedef enum {
 	GIT_OPT_SET_ODB_PACKED_PRIORITY,
 	GIT_OPT_SET_ODB_LOOSE_PRIORITY,
 	GIT_OPT_GET_EXTENSIONS,
-	GIT_OPT_SET_EXTENSIONS
+	GIT_OPT_SET_EXTENSIONS,
+	GIT_OPT_GET_OWNER_VALIDATION,
+	GIT_OPT_SET_OWNER_VALIDATION
 } git_libgit2_opt_t;
 
 /**
@@ -448,6 +464,14 @@ typedef enum {
  *      > { "!noop", "newext" } indicates that the caller does not want
  *      > to support repositories with the `noop` extension but does want
  *      > to support repositories with the `newext` extension.
+ *
+ *   opts(GIT_OPT_GET_OWNER_VALIDATION, int *enabled)
+ *      > Gets the owner validation setting for repository
+ *      > directories.
+ *
+ *   opts(GIT_OPT_SET_OWNER_VALIDATION, int enabled)
+ *      > Set that repository directories should be owned by the current
+ *      > user. The default is to validate ownership.
  *
  * @param option Option key
  * @param ... value to set the option

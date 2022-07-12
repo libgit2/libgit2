@@ -57,7 +57,7 @@ GIT_EXTERN(int) git_reference_name_to_id(
 /**
  * Lookup a reference by DWIMing its short name
  *
- * Apply the git precendence rules to the given shorthand to determine
+ * Apply the git precedence rules to the given shorthand to determine
  * which reference the user is referring to.
  *
  * @param out pointer in which to store the reference
@@ -686,7 +686,7 @@ typedef enum {
 	 * so the `ONELEVEL` naming rules aren't enforced and 'master'
 	 * becomes a valid name.
 	 */
-	GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND = (1u << 2),
+	GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND = (1u << 2)
 } git_reference_format_t;
 
 /**

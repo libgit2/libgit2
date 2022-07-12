@@ -31,7 +31,7 @@ GIT_BEGIN_DECL
  * git_reflog_free().
  *
  * @param out pointer to reflog
- * @param repo the repostiory
+ * @param repo the repository
  * @param name reference to look up
  * @return 0 or an error code
  */

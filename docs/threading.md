@@ -21,6 +21,9 @@ There are some objects which are read-only/immutable and are thus safe
 to share across threads, such as references and configuration
 snapshots.
 
+The `git_odb` object uses locking internally, and is thread-safe to use from
+multiple threads simultaneously.
+
 Error messages
 --------------
 

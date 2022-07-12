@@ -152,7 +152,7 @@ typedef enum {
 	 * No commit will be cherry-picked.  The client should run the given
 	 * command and (if successful) continue.
 	 */
-	GIT_REBASE_OPERATION_EXEC,
+	GIT_REBASE_OPERATION_EXEC
 } git_rebase_operation_t;
 
 #define GIT_REBASE_OPTIONS_VERSION 1
@@ -242,6 +242,7 @@ GIT_EXTERN(int) git_rebase_open(
 /**
  * Gets the original `HEAD` ref name for merge rebases.
  *
+ * @param rebase The in-progress rebase.
  * @return The original `HEAD` ref name
  */
 GIT_EXTERN(const char *) git_rebase_orig_head_name(git_rebase *rebase);
@@ -249,6 +250,7 @@ GIT_EXTERN(const char *) git_rebase_orig_head_name(git_rebase *rebase);
 /**
  * Gets the original `HEAD` id for merge rebases.
  *
+ * @param rebase The in-progress rebase.
  * @return The original `HEAD` id
  */
 GIT_EXTERN(const git_oid *) git_rebase_orig_head_id(git_rebase *rebase);
@@ -256,6 +258,7 @@ GIT_EXTERN(const git_oid *) git_rebase_orig_head_id(git_rebase *rebase);
 /**
  * Gets the `onto` ref name for merge rebases.
  *
+ * @param rebase The in-progress rebase.
  * @return The `onto` ref name
  */
 GIT_EXTERN(const char *) git_rebase_onto_name(git_rebase *rebase);
@@ -263,6 +266,7 @@ GIT_EXTERN(const char *) git_rebase_onto_name(git_rebase *rebase);
 /**
  * Gets the `onto` id for merge rebases.
  *
+ * @param rebase The in-progress rebase.
  * @return The `onto` id
  */
 GIT_EXTERN(const git_oid *) git_rebase_onto_id(git_rebase *rebase);
@@ -322,6 +326,10 @@ GIT_EXTERN(int) git_rebase_next(
  * This is only applicable for in-memory rebases; for rebases within
  * a working directory, the changes were applied to the repository's
  * index.
+ *
+ * @param index The result index of the last operation.
+ * @param rebase The in-progress rebase.
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_rebase_inmemory_index(
 	git_index **index,

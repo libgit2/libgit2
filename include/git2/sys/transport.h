@@ -9,10 +9,11 @@
 #define INCLUDE_sys_git_transport_h
 
 #include "git2/net.h"
+#include "git2/proxy.h"
+#include "git2/remote.h"
+#include "git2/strarray.h"
 #include "git2/transport.h"
 #include "git2/types.h"
-#include "git2/strarray.h"
-#include "git2/proxy.h"
 
 /**
  * @file git2/sys/transport.h
@@ -24,30 +25,8 @@
 
 GIT_BEGIN_DECL
 
-/**
- * Flags to pass to transport
- *
- * Currently unused.
- */
-typedef enum {
-	GIT_TRANSPORTFLAGS_NONE = 0,
-} git_transport_flags_t;
-
 struct git_transport {
 	unsigned int version; /**< The struct version */
-
-	/** Set progress and error callbacks */
-	int GIT_CALLBACK(set_callbacks)(
-		git_transport *transport,
-		git_transport_message_cb progress_cb,
-		git_transport_message_cb error_cb,
-		git_transport_certificate_check_cb certificate_check_cb,
-		void *payload);
-
-	/** Set custom headers for HTTP requests */
-	int GIT_CALLBACK(set_custom_headers)(
-		git_transport *transport,
-		const git_strarray *custom_headers);
 
 	/**
 	 * Connect the transport to the remote repository, using the given
@@ -56,11 +35,27 @@ struct git_transport {
 	int GIT_CALLBACK(connect)(
 		git_transport *transport,
 		const char *url,
-		git_credential_acquire_cb cred_acquire_cb,
-		void *cred_acquire_payload,
-		const git_proxy_options *proxy_opts,
 		int direction,
-		int flags);
+		const git_remote_connect_options *connect_opts);
+
+	/**
+	 * Resets the connect options for the given transport.  This
+	 * is useful for updating settings or callbacks for an already
+	 * connected transport.
+	 */
+	int GIT_CALLBACK(set_connect_opts)(
+		git_transport *transport,
+		const git_remote_connect_options *connect_opts);
+
+	/**
+	 * Gets the capabilities for this remote repository.
+	 *
+	 * This function may be called after a successful call to
+	 * `connect()`.
+	 */
+	int GIT_CALLBACK(capabilities)(
+		unsigned int *capabilities,
+		git_transport *transport);
 
 	/**
 	 * Get the list of available references in the remote repository.
@@ -75,7 +70,9 @@ struct git_transport {
 		git_transport *transport);
 
 	/** Executes the push whose context is in the git_push object. */
-	int GIT_CALLBACK(push)(git_transport *transport, git_push *push, const git_remote_callbacks *callbacks);
+	int GIT_CALLBACK(push)(
+		git_transport *transport,
+		git_push *push);
 
 	/**
 	 * Negotiate a fetch with the remote repository.
@@ -99,15 +96,10 @@ struct git_transport {
 	int GIT_CALLBACK(download_pack)(
 		git_transport *transport,
 		git_repository *repo,
-		git_indexer_progress *stats,
-		git_indexer_progress_cb progress_cb,
-		void *progress_payload);
+		git_indexer_progress *stats);
 
 	/** Checks to see if the transport is connected */
 	int GIT_CALLBACK(is_connected)(git_transport *transport);
-
-	/** Reads the flags value previously passed into connect() */
-	int GIT_CALLBACK(read_flags)(git_transport *transport, int *flags);
 
 	/** Cancels any outstanding transport operation */
 	void GIT_CALLBACK(cancel)(git_transport *transport);
@@ -270,14 +262,17 @@ GIT_EXTERN(int) git_transport_smart_certificate_check(git_transport *transport, 
 GIT_EXTERN(int) git_transport_smart_credentials(git_credential **out, git_transport *transport, const char *user, int methods);
 
 /**
- * Get a copy of the proxy options
+ * Get a copy of the remote connect options
  *
- * The url is copied and must be freed by the caller.
+ * All data is copied and must be freed by the caller by calling
+ * `git_remote_connect_options_dispose`.
  *
  * @param out options struct to fill
  * @param transport the transport to extract the data from.
  */
-GIT_EXTERN(int) git_transport_smart_proxy_options(git_proxy_options *out, git_transport *transport);
+GIT_EXTERN(int) git_transport_remote_connect_options(
+		git_remote_connect_options *out,
+		git_transport *transport);
 
 /*
  *** End of base transport interface ***
@@ -289,7 +284,7 @@ typedef enum {
 	GIT_SERVICE_UPLOADPACK_LS = 1,
 	GIT_SERVICE_UPLOADPACK = 2,
 	GIT_SERVICE_RECEIVEPACK_LS = 3,
-	GIT_SERVICE_RECEIVEPACK = 4,
+	GIT_SERVICE_RECEIVEPACK = 4
 } git_smart_service_t;
 
 typedef struct git_smart_subtransport git_smart_subtransport;

@@ -255,7 +255,7 @@ GIT_EXTERN(int) git_treebuilder_new(
 	git_treebuilder **out, git_repository *repo, const git_tree *source);
 
 /**
- * Clear all the entires in the builder
+ * Clear all the entries in the builder
  *
  * @param bld Builder to clear
  * @return 0 on success; error code otherwise
@@ -386,7 +386,7 @@ typedef int GIT_CALLBACK(git_treewalk_cb)(
 /** Tree traversal modes */
 typedef enum {
 	GIT_TREEWALK_PRE = 0, /* Pre-order */
-	GIT_TREEWALK_POST = 1, /* Post-order */
+	GIT_TREEWALK_POST = 1 /* Post-order */
 } git_treewalk_mode;
 
 /**
@@ -418,6 +418,7 @@ GIT_EXTERN(int) git_tree_walk(
  *
  * @param out Pointer to store the copy of the tree
  * @param source Original tree to copy
+ * @return 0
  */
 GIT_EXTERN(int) git_tree_dup(git_tree **out, git_tree *source);
 
@@ -428,7 +429,7 @@ typedef enum {
 	/** Update or insert an entry at the specified path */
 	GIT_TREE_UPDATE_UPSERT,
 	/** Remove an entry from the specified path */
-	GIT_TREE_UPDATE_REMOVE,
+	GIT_TREE_UPDATE_REMOVE
 } git_tree_update_t;
 
 /**

@@ -313,7 +313,7 @@ typedef enum {
 	GIT_DIFF_FORMAT_EMAIL_NONE = 0,
 
 	/** Don't insert "[PATCH]" in the subject header*/
-	GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER = (1 << 0),
+	GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER = (1 << 0)
 
 } git_diff_format_email_flags_t;
 
@@ -435,6 +435,8 @@ GIT_EXTERN(int) git_diff_format_email_options_init(
 #define GITERR_PATCH GIT_ERROR_PATCH
 #define GITERR_WORKTREE GIT_ERROR_WORKTREE
 #define GITERR_SHA1 GIT_ERROR_SHA1
+
+#define GIT_ERROR_SHA1 GIT_ERROR_SHA
 
 /**
  * Return the last `git_error` object that was generated for the

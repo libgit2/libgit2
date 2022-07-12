@@ -6,40 +6,40 @@
 # ICONV_LIBRARIES - Link these to use Iconv
 #
 
-IF(ICONV_INCLUDE_DIR AND ICONV_LIBRARIES)
+if(ICONV_INCLUDE_DIR AND ICONV_LIBRARIES)
 	# Already in cache, be silent
-	SET(ICONV_FIND_QUIETLY TRUE)
-ENDIF()
+	set(ICONV_FIND_QUIETLY TRUE)
+endif()
 
-FIND_PATH(ICONV_INCLUDE_DIR iconv.h)
-CHECK_FUNCTION_EXISTS(iconv_open libc_has_iconv)
-FIND_LIBRARY(iconv_lib NAMES iconv libiconv libiconv-2 c)
+find_path(ICONV_INCLUDE_DIR iconv.h)
+check_function_exists(iconv_open libc_has_iconv)
+find_library(iconv_lib NAMES iconv libiconv libiconv-2 c)
 
-IF(ICONV_INCLUDE_DIR AND libc_has_iconv)
-	SET(ICONV_FOUND TRUE)
-	SET(ICONV_LIBRARIES "")
-	IF(NOT ICONV_FIND_QUIETLY)
-		MESSAGE(STATUS "Found Iconv: provided by libc")
-	ENDIF(NOT ICONV_FIND_QUIETLY)
-ELSEIF(ICONV_INCLUDE_DIR AND iconv_lib)
-	SET(ICONV_FOUND TRUE)
+if(ICONV_INCLUDE_DIR AND libc_has_iconv)
+	set(ICONV_FOUND TRUE)
+	set(ICONV_LIBRARIES "")
+	if(NOT ICONV_FIND_QUIETLY)
+		message(STATUS "Found Iconv: provided by libc")
+	endif(NOT ICONV_FIND_QUIETLY)
+elseif(ICONV_INCLUDE_DIR AND iconv_lib)
+	set(ICONV_FOUND TRUE)
 	# split iconv into -L and -l linker options, so we can
 	# set them for pkg-config
-	GET_FILENAME_COMPONENT(iconv_path ${iconv_lib} PATH)
-	GET_FILENAME_COMPONENT(iconv_name ${iconv_lib} NAME_WE)
-	STRING(REGEX REPLACE "^lib" "" iconv_name ${iconv_name})
-	SET(ICONV_LIBRARIES "-L${iconv_path} -l${iconv_name}")
+	get_filename_component(iconv_path ${iconv_lib} PATH)
+	get_filename_component(iconv_name ${iconv_lib} NAME_WE)
+	string(REGEX REPLACE "^lib" "" iconv_name ${iconv_name})
+	set(ICONV_LIBRARIES "-L${iconv_path} -l${iconv_name}")
 
-	IF(NOT ICONV_FIND_QUIETLY)
-		MESSAGE(STATUS "Found Iconv: ${ICONV_LIBRARIES}")
-	ENDIF(NOT ICONV_FIND_QUIETLY)
-ELSE()
-	IF(Iconv_FIND_REQUIRED)
-		MESSAGE(FATAL_ERROR "Could not find Iconv")
-	ENDIF(Iconv_FIND_REQUIRED)
-ENDIF()
+	if(NOT ICONV_FIND_QUIETLY)
+		message(STATUS "Found Iconv: ${ICONV_LIBRARIES}")
+	endif()
+else()
+	if(Iconv_FIND_REQUIRED)
+		message(FATAL_ERROR "Could not find Iconv")
+	endif(Iconv_FIND_REQUIRED)
+endif()
 
-MARK_AS_ADVANCED(
+mark_as_advanced(
 	ICONV_INCLUDE_DIR
 	ICONV_LIBRARIES
 )
