@@ -1,3 +1,18 @@
+v1.3.2
+------
+
+🔒 This is a security release with multiple changes.
+
+* This provides compatibility with git's changes to address CVE 2022-29187. As a follow up to [CVE 2022-24765](https://github.blog/2022-04-12-git-security-vulnerability-announced/), now not only is the working directory of a non-bare repository examined for its ownership, but the `.git` directory and the `.git` file (if present) are also examined for their ownership.
+
+* A fix for compatibility with git's (new) behavior for CVE 2022-24765 allows users on POSIX systems to access a git repository that is owned by them when they are running in `sudo`.
+
+* A fix for further compatibility with git's (existing) behavior for CVE 2022-24765 allows users on Windows to access a git repository that is owned by the Administrator when running with escalated privileges (using `runas Administrator`).
+
+* The bundled zlib is updated to v1.2.12, as prior versions had memory corruption bugs. It is not known that there is a security vulnerability in libgit2 based on these bugs, but we are updating to be cautious.
+
+All users of the v1.3 release line are recommended to upgrade.
+
 v1.3.1
 ------
 
