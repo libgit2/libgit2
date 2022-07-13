@@ -244,7 +244,7 @@ on_error:
 	return -1;
 }
 
-static bool tag_name_follows_pattern(const char *tag_name)
+static bool tag_name_is_valid(const char *tag_name)
 {
 	/*
 	 * Discourage tag name starting with dash,
@@ -278,7 +278,7 @@ static int git_tag_create__internal(
 		return -1;
 	}
 
-	if (!tag_name_follows_pattern(tag_name)) {
+	if (!tag_name_is_valid(tag_name)) {
 		git_error_set(GIT_ERROR_TAG, "'%s' is not a valid tag name", tag_name);
 		return -1;
 	}
@@ -554,7 +554,7 @@ int git_tag_name_is_valid(int *valid, const char *name)
 
 	GIT_ASSERT(valid);
 
-	if (!name || !tag_name_follows_pattern(name))
+	if (!name || !tag_name_is_valid(name))
 		goto done;
 
 	if ((error = git_str_puts(&ref_name, GIT_REFS_TAGS_DIR)) < 0 ||

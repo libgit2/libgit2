@@ -53,7 +53,7 @@ static int not_a_local_branch(const char *reference_name)
 	return -1;
 }
 
-static bool branch_name_follows_pattern(const char *branch_name)
+static bool branch_name_is_valid(const char *branch_name)
 {
 	/*
 	 * Discourage branch name starting with dash,
@@ -84,7 +84,7 @@ static int create_branch(
 	GIT_ASSERT_ARG(ref_out);
 	GIT_ASSERT_ARG(git_commit_owner(commit) == repository);
 
-	if (!branch_name_follows_pattern(branch_name)) {
+	if (!branch_name_is_valid(branch_name)) {
 		git_error_set(GIT_ERROR_REFERENCE, "'%s' is not a valid branch name", branch_name);
 		error = -1;
 		goto cleanup;
@@ -808,7 +808,7 @@ int git_branch_name_is_valid(int *valid, const char *name)
 
 	*valid = 0;
 
-	if (!name || !branch_name_follows_pattern(name))
+	if (!name || !branch_name_is_valid(name))
 		goto done;
 
 	if ((error = git_str_puts(&ref_name, GIT_REFS_HEADS_DIR)) < 0 ||
