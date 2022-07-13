@@ -196,7 +196,7 @@ static int stash_to_index(
 static int stash_update_index_from_paths(
 	git_repository *repo,
 	git_index *index,
-	git_strarray *paths)
+	const git_strarray *paths)
 {
 	unsigned int status_flags;
 	size_t i, error = 0;
@@ -420,7 +420,7 @@ static int build_stash_commit_from_tree(
 	git_commit *i_commit,
 	git_commit *b_commit,
 	git_commit *u_commit,
-	git_tree *tree)
+	const git_tree *tree)
 {
 	const git_commit *parents[] = {	NULL, NULL, NULL };
 
@@ -613,7 +613,7 @@ static int has_changes_cb(const char *path, unsigned int status, void *payload) 
 static int ensure_there_are_changes_to_stash_paths(
 	git_repository *repo,
 	uint32_t flags,
-	git_strarray *paths)
+	const git_strarray *paths)
 {
 	int error;
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
@@ -674,7 +674,7 @@ int git_stash_save(
 }
 
 int git_stash_save_with_opts(
-	git_oid *out, git_repository *repo, git_stash_save_options *opts)
+	git_oid *out, git_repository *repo, const git_stash_save_options *opts)
 {
 	git_index *index = NULL, *paths_index = NULL;
 	git_commit *b_commit = NULL, *i_commit = NULL, *u_commit = NULL;

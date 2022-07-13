@@ -133,7 +133,9 @@ GIT_EXTERN(int) git_stash_save_options_init(
  * or error code.
  */
 GIT_EXTERN(int) git_stash_save_with_opts(
-	git_oid *out, git_repository *repo, git_stash_save_options *opts);
+	git_oid *out,
+	git_repository *repo,
+	const git_stash_save_options *opts);
 
 /** Stash application flags. */
 typedef enum {
