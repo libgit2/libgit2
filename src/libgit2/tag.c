@@ -554,6 +554,8 @@ int git_tag_name_is_valid(int *valid, const char *name)
 
 	GIT_ASSERT(valid);
 
+	*valid = 0;
+
 	if (!name || !tag_name_is_valid(name))
 		goto done;
 
