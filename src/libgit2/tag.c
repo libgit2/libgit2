@@ -244,6 +244,15 @@ on_error:
 	return -1;
 }
 
+static bool tag_name_is_valid(const char *tag_name)
+{
+	/*
+	 * Discourage tag name starting with dash,
+	 * https://github.com/git/git/commit/4f0accd638b8d2
+	 */
+	return tag_name[0] != '-';
+}
+
 static int git_tag_create__internal(
 		git_oid *oid,
 		git_repository *repo,
@@ -266,6 +275,11 @@ static int git_tag_create__internal(
 
 	if (git_object_owner(target) != repo) {
 		git_error_set(GIT_ERROR_INVALID, "the given target does not belong to this repository");
+		return -1;
+	}
+
+	if (!tag_name_is_valid(tag_name)) {
+		git_error_set(GIT_ERROR_TAG, "'%s' is not a valid tag name", tag_name);
 		return -1;
 	}
 
@@ -542,11 +556,7 @@ int git_tag_name_is_valid(int *valid, const char *name)
 
 	*valid = 0;
 
-	/*
-	 * Discourage tag name starting with dash,
-	 * https://github.com/git/git/commit/4f0accd638b8d2
-	 */
-	if (!name || name[0] == '-')
+	if (!name || !tag_name_is_valid(name))
 		goto done;
 
 	if ((error = git_str_puts(&ref_name, GIT_REFS_TAGS_DIR)) < 0 ||
