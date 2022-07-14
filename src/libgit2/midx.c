@@ -443,7 +443,7 @@ int git_midx_entry_find(
 		return midx_error("invalid index into the packfile names table");
 	e->pack_index = pack_index;
 	e->offset = offset;
-	git_oid_fromraw(&e->sha1, current, GIT_OID_SHA1);
+	git_oid__fromraw(&e->sha1, current, GIT_OID_SHA1);
 	return 0;
 }
 
@@ -459,7 +459,7 @@ int git_midx_foreach_entry(
 	GIT_ASSERT_ARG(idx);
 
 	for (i = 0; i < idx->num_objects; ++i) {
-		if ((error = git_oid_fromraw(&oid, &idx->oid_lookup[i * GIT_OID_SHA1_SIZE], GIT_OID_SHA1)) < 0)
+		if ((error = git_oid__fromraw(&oid, &idx->oid_lookup[i * GIT_OID_SHA1_SIZE], GIT_OID_SHA1)) < 0)
 			return error;
 
 		if ((error = cb(&oid, data)) != 0)

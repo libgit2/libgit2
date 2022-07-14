@@ -13,6 +13,7 @@
 #include "git2/transport.h"
 #include "git2/sys/remote.h"
 
+#include "oid.h"
 #include "remote.h"
 #include "refspec.h"
 #include "pack.h"
@@ -75,7 +76,7 @@ static int maybe_want_oid(git_remote *remote, git_refspec *spec)
 	oid_head = git__calloc(1, sizeof(git_remote_head));
 	GIT_ERROR_CHECK_ALLOC(oid_head);
 
-	git_oid_fromstr(&oid_head->oid, spec->src, GIT_OID_SHA1);
+	git_oid__fromstr(&oid_head->oid, spec->src, GIT_OID_SHA1);
 
 	if (spec->dst) {
 		oid_head->name = git__strdup(spec->dst);

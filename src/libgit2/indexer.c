@@ -1051,7 +1051,7 @@ static int fix_thin_pack(git_indexer *idx, git_indexer_progress *stats)
 		return -1;
 	}
 
-	git_oid_fromraw(&base, base_info, GIT_OID_SHA1);
+	git_oid__fromraw(&base, base_info, GIT_OID_SHA1);
 	git_mwindow_close(&w);
 
 	if (has_entry(idx, &base))

@@ -122,7 +122,11 @@ typedef struct git_oid {
  * @param type the type of object id
  * @return 0 or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
 GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str, git_oid_t type);
+#else
+GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str);
+#endif
 
 /**
  * Parse a hex formatted NUL-terminated string into a git_oid.
@@ -132,7 +136,11 @@ GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str, git_oid_t type);
  * @param type the type of object id
  * @return 0 or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
 GIT_EXTERN(int) git_oid_fromstrp(git_oid *out, const char *str, git_oid_t type);
+#else
+GIT_EXTERN(int) git_oid_fromstrp(git_oid *out, const char *str);
+#endif
 
 /**
  * Parse N characters of a hex formatted object id into a git_oid.
@@ -146,7 +154,11 @@ GIT_EXTERN(int) git_oid_fromstrp(git_oid *out, const char *str, git_oid_t type);
  * @param type the type of object id
  * @return 0 or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
 GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length, git_oid_t type);
+#else
+GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length);
+#endif
 
 /**
  * Copy an already raw oid into a git_oid structure.
@@ -155,7 +167,11 @@ GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length, g
  * @param raw the raw input bytes to be copied.
  * @return 0 on success or error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
 GIT_EXTERN(int) git_oid_fromraw(git_oid *out, const unsigned char *raw, git_oid_t type);
+#else
+GIT_EXTERN(int) git_oid_fromraw(git_oid *out, const unsigned char *raw);
+#endif
 
 /**
  * Format a git_oid into a hex string.
