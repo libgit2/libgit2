@@ -664,6 +664,9 @@ int git_stash_save(
 	uint32_t flags)
 {
 	git_stash_save_options opts = GIT_STASH_SAVE_OPTIONS_INIT;
+	
+	GIT_ASSERT_ARG(stasher);
+	
 	opts.stasher = stasher;
 	opts.message = message;
 	opts.flags = flags;
@@ -678,10 +681,15 @@ int git_stash_save_with_opts(
 	git_str msg = GIT_STR_INIT;
 	git_tree *tree = NULL;
 	git_reference *head = NULL;
+	bool has_paths = false;
+
 	int error;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(opts && opts->stasher);
+
+	has_paths = opts->paths.count > 0;
 
 	if ((error = git_repository__ensure_not_bare(repo, "stash save")) < 0)
 		return error;
@@ -689,10 +697,10 @@ int git_stash_save_with_opts(
 	if ((error = retrieve_base_commit_and_message(&b_commit, &msg, repo)) < 0)
 		goto cleanup;
 
-	if (opts->paths.count == 0 &&
+	if (!has_paths &&
 		  (error = ensure_there_are_changes_to_stash(repo, opts->flags)) < 0)
 		goto cleanup;
-	else if (opts->paths.count > 0 &&
+	else if (has_paths &&
 		  (error = ensure_there_are_changes_to_stash_paths(
 			  repo, opts->flags, &opts->paths)) < 0)
 		goto cleanup;
@@ -712,7 +720,7 @@ int git_stash_save_with_opts(
 	if ((error = prepare_worktree_commit_message(&msg, opts->message)) < 0)
 		goto cleanup;
 
-	if (opts->paths.count == 0) {
+	if (!has_paths) {
 		if ((error = commit_worktree(out, repo, opts->stasher, git_str_cstr(&msg),
 					     i_commit, b_commit, u_commit)) < 0)
 			goto cleanup;
@@ -753,9 +761,12 @@ cleanup:
 	git_commit_free(b_commit);
 	git_commit_free(u_commit);
 	git_tree_free(tree);
-	git_reference_free(head);
-	git_index_free(index);
-	git_index_free(paths_index);
+	
+	if (has_paths) {
+		git_reference_free(head);
+		git_index_free(index);
+		git_index_free(paths_index);
+	}
 
 	return error;
 }
