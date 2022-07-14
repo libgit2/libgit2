@@ -484,9 +484,13 @@ void test_online_clone__bitbucket_falls_back_to_specified_creds(void)
 
 void test_online_clone__googlesource(void)
 {
+#ifdef __APPLE__
+	cl_skip();
+#else
 	cl_git_pass(git_clone(&g_repo, GOOGLESOURCE_REPO_URL, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;
 	cl_fixture_cleanup("./foo");
+#endif
 }
 
 static int cancel_at_half(const git_indexer_progress *stats, void *payload)
