@@ -86,7 +86,7 @@ int git_object__from_raw(
 	GIT_ERROR_CHECK_ALLOC(object);
 	object->cached.flags = GIT_CACHE_STORE_PARSED;
 	object->cached.type = type;
-	if ((error = git_odb_hash(&object->cached.oid, data, size, type, GIT_OID_SHA1)) < 0)
+	if ((error = git_odb__hash(&object->cached.oid, data, size, type, GIT_OID_SHA1)) < 0)
 		return error;
 
 	/* Parse raw object data */
@@ -625,7 +625,7 @@ int git_object__parse_oid_header(
 	if (buffer[header_len + sha_len] != '\n')
 		return -1;
 
-	if (git_oid_fromstr(oid, buffer + header_len, oid_type) < 0)
+	if (git_oid__fromstr(oid, buffer + header_len, oid_type) < 0)
 		return -1;
 
 	*buffer_out = buffer + (header_len + sha_len + 1);

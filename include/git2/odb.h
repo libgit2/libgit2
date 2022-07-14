@@ -68,7 +68,11 @@ typedef struct {
  * @param opts the options for this object database or NULL for defaults
  * @return 0 or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
 GIT_EXTERN(int) git_odb_new(git_odb **out, const git_odb_options *opts);
+#else
+GIT_EXTERN(int) git_odb_new(git_odb **out);
+#endif
 
 /**
  * Create a new object database and automatically add
@@ -87,10 +91,14 @@ GIT_EXTERN(int) git_odb_new(git_odb **out, const git_odb_options *opts);
  * @param opts the options for this object database or NULL for defaults
  * @return 0 or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
 GIT_EXTERN(int) git_odb_open(
 	git_odb **out,
 	const char *objects_dir,
 	const git_odb_options *opts);
+#else
+GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
+#endif
 
 /**
  * Add an on-disk alternate to an existing Object DB.
@@ -471,12 +479,16 @@ GIT_EXTERN(int) git_odb_write_multi_pack_index(
  * @param oid_type the oid type to hash to
  * @return 0 or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
 GIT_EXTERN(int) git_odb_hash(
 	git_oid *out,
 	const void *data,
 	size_t len,
 	git_object_t object_type,
 	git_oid_t oid_type);
+#else
+GIT_EXTERN(int) git_odb_hash(git_oid *out, const void *data, size_t len, git_object_t type);
+#endif
 
 /**
  * Read a file from disk and fill a git_oid with the object id
@@ -492,11 +504,15 @@ GIT_EXTERN(int) git_odb_hash(
  * @param oid_type the oid type to hash to
  * @return 0 or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
 GIT_EXTERN(int) git_odb_hashfile(
 	git_oid *out,
 	const char *path,
 	git_object_t object_type,
 	git_oid_t oid_type);
+#else
+GIT_EXTERN(int) git_odb_hashfile(git_oid *out, const char *path, git_object_t type);
+#endif
 
 /**
  * Create a copy of an odb_object

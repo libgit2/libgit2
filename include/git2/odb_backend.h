@@ -85,10 +85,20 @@ typedef struct {
  *
  * @return 0 or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
 GIT_EXTERN(int) git_odb_backend_loose(
 	git_odb_backend **out,
 	const char *objects_dir,
 	git_odb_backend_loose_options *opts);
+#else
+GIT_EXTERN(int) git_odb_backend_loose(
+	git_odb_backend **out,
+	const char *objects_dir,
+	int compression_level,
+	int do_fsync,
+	unsigned int dir_mode,
+	unsigned int file_mode);
+#endif
 
 /**
  * Create a backend out of a single packfile

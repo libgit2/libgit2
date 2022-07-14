@@ -28,7 +28,7 @@ static int oid_error_invalid(const char *msg)
 	return -1;
 }
 
-int git_oid_fromstrn(
+int git_oid__fromstrn(
 	git_oid *out,
 	const char *str,
 	size_t length,
@@ -65,6 +65,26 @@ int git_oid_fromstrn(
 	return 0;
 }
 
+int git_oid__fromstrp(git_oid *out, const char *str, git_oid_t type)
+{
+	return git_oid__fromstrn(out, str, strlen(str), type);
+}
+
+int git_oid__fromstr(git_oid *out, const char *str, git_oid_t type)
+{
+	return git_oid__fromstrn(out, str, git_oid_hexsize(type), type);
+}
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+int git_oid_fromstrn(
+	git_oid *out,
+	const char *str,
+	size_t length,
+	git_oid_t type)
+{
+	return git_oid__fromstrn(out, str, length, type);
+}
+
 int git_oid_fromstrp(git_oid *out, const char *str, git_oid_t type)
 {
 	return git_oid_fromstrn(out, str, strlen(str), type);
@@ -74,6 +94,25 @@ int git_oid_fromstr(git_oid *out, const char *str, git_oid_t type)
 {
 	return git_oid_fromstrn(out, str, git_oid_hexsize(type), type);
 }
+#else
+int git_oid_fromstrn(
+	git_oid *out,
+	const char *str,
+	size_t length)
+{
+	return git_oid__fromstrn(out, str, length, GIT_OID_SHA1);
+}
+
+int git_oid_fromstrp(git_oid *out, const char *str)
+{
+	return git_oid__fromstrn(out, str, strlen(str), GIT_OID_SHA1);
+}
+
+int git_oid_fromstr(git_oid *out, const char *str)
+{
+	return git_oid__fromstrn(out, str, GIT_OID_SHA1_HEXSIZE, GIT_OID_SHA1);
+}
+#endif
 
 int git_oid_nfmt(char *str, size_t n, const git_oid *oid)
 {
@@ -155,7 +194,7 @@ char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
 	return out;
 }
 
-int git_oid_fromraw(git_oid *out, const unsigned char *raw, git_oid_t type)
+int git_oid__fromraw(git_oid *out, const unsigned char *raw, git_oid_t type)
 {
 	size_t size;
 
@@ -168,6 +207,18 @@ int git_oid_fromraw(git_oid *out, const unsigned char *raw, git_oid_t type)
 	memcpy(out->id, raw, size);
 	return 0;
 }
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+int git_oid_fromraw(git_oid *out, const unsigned char *raw, git_oid_t type)
+{
+	return git_oid__fromraw(out, raw, type);
+}
+#else
+int git_oid_fromraw(git_oid *out, const unsigned char *raw)
+{
+	return git_oid__fromraw(out, raw, GIT_OID_SHA1);
+}
+#endif
 
 int git_oid_cpy(git_oid *out, const git_oid *src)
 {

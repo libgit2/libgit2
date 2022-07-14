@@ -2359,7 +2359,7 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 				return index_error_invalid("reading reuc entry oid");
 			}
 
-			if (git_oid_fromraw(&lost->oid[i], (const unsigned char *) buffer, GIT_OID_SHA1) < 0)
+			if (git_oid__fromraw(&lost->oid[i], (const unsigned char *) buffer, GIT_OID_SHA1) < 0)
 				return -1;
 
 			size -= GIT_OID_SHA1_SIZE;
@@ -2484,7 +2484,7 @@ static int read_entry(
 	entry.file_size = ntohl(source.file_size);
 	entry.flags = ntohs(source.flags);
 
-	if (git_oid_fromraw(&entry.id, source.oid, GIT_OID_SHA1) < 0)
+	if (git_oid__fromraw(&entry.id, source.oid, GIT_OID_SHA1) < 0)
 		return -1;
 
 	if (entry.flags & GIT_INDEX_ENTRY_EXTENDED) {

@@ -64,8 +64,13 @@ static int hash_buf(git_odb *odb, git_str *buf, git_object_t type)
 		if (git_odb_write(&oid, odb, buf->ptr, buf->size, type) < 0)
 			return cli_error_git();
 	} else {
+#ifdef GIT_EXPERIMENTAL_SHA256
 		if (git_odb_hash(&oid, buf->ptr, buf->size, type, GIT_OID_SHA1) < 0)
 			return cli_error_git();
+#else
+		if (git_odb_hash(&oid, buf->ptr, buf->size, type) < 0)
+			return cli_error_git();
+#endif
 	}
 
 	if (printf("%s\n", git_oid_tostr_s(&oid)) < 0)

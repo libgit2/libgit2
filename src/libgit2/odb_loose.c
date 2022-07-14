@@ -552,7 +552,7 @@ static int locate_object_short_oid(
 		return git_odb__error_ambiguous("multiple matches in loose objects");
 
 	/* Convert obtained hex formatted oid to raw */
-	error = git_oid_fromstr(res_oid, (char *)state.res_oid, backend->options.oid_type);
+	error = git_oid__fromstr(res_oid, (char *)state.res_oid, backend->options.oid_type);
 	if (error)
 		return error;
 
@@ -1161,7 +1161,7 @@ static void normalize_options(
 		opts->oid_type = GIT_OID_DEFAULT;
 }
 
-int git_odb_backend_loose(
+int git_odb__backend_loose(
 	git_odb_backend **backend_out,
 	const char *objects_dir,
 	git_odb_backend_loose_options *opts)

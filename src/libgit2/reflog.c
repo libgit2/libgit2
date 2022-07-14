@@ -104,7 +104,7 @@ int git_reflog_append(git_reflog *reflog, const git_oid *new_oid, const git_sign
 	previous = git_reflog_entry_byindex(reflog, 0);
 
 	if (previous == NULL)
-		git_oid_fromstr(&entry->oid_old, GIT_OID_SHA1_HEXZERO, GIT_OID_SHA1);
+		git_oid__fromstr(&entry->oid_old, GIT_OID_SHA1_HEXZERO, GIT_OID_SHA1);
 	else
 		git_oid_cpy(&entry->oid_old, &previous->oid_cur);
 

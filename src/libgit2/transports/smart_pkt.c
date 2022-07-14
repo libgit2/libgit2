@@ -12,6 +12,7 @@
 #include "netops.h"
 #include "posix.h"
 #include "str.h"
+#include "oid.h"
 
 #include "git2/types.h"
 #include "git2/errors.h"
@@ -54,7 +55,7 @@ static int ack_pkt(git_pkt **out, const char *line, size_t len)
 	len -= 4;
 
 	if (len < GIT_OID_SHA1_HEXSIZE ||
-	    git_oid_fromstr(&pkt->oid, line, GIT_OID_SHA1) < 0)
+	    git_oid__fromstr(&pkt->oid, line, GIT_OID_SHA1) < 0)
 		goto out_err;
 	line += GIT_OID_SHA1_HEXSIZE;
 	len -= GIT_OID_SHA1_HEXSIZE;
@@ -224,7 +225,7 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 	pkt->type = GIT_PKT_REF;
 
 	if (len < GIT_OID_SHA1_HEXSIZE ||
-	    git_oid_fromstr(&pkt->head.oid, line, GIT_OID_SHA1) < 0)
+	    git_oid__fromstr(&pkt->head.oid, line, GIT_OID_SHA1) < 0)
 		goto out_err;
 	line += GIT_OID_SHA1_HEXSIZE;
 	len -= GIT_OID_SHA1_HEXSIZE;
