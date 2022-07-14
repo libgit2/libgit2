@@ -19,7 +19,7 @@ static void assert_tag_parses(const char *data, size_t datalen,
 
 	if (expected_oid) {
 		git_oid oid;
-		cl_git_pass(git_oid_fromstr(&oid, expected_oid));
+		cl_git_pass(git_oid_fromstr(&oid, expected_oid, GIT_OID_SHA1));
 		cl_assert_equal_oid(&oid, &tag->target);
 	}
 

@@ -126,7 +126,7 @@ void test_refs_iterator__empty(void)
 	git_reference *ref;
 	git_repository *empty;
 
-	cl_git_pass(git_odb_new(&odb));
+	cl_git_pass(git_odb_new(&odb, NULL));
 	cl_git_pass(git_repository_wrap_odb(&empty, odb));
 
 	cl_git_pass(git_reference_iterator_new(&iter, empty));

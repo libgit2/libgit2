@@ -33,8 +33,8 @@ static void setup_repository_and_backend(void)
 
 void test_odb_backend_refreshing__initialize(void)
 {
-	git_oid_fromstr(&_nonexisting_oid, NONEXISTING_HASH);
-	git_oid_fromstr(&_existing_oid, EXISTING_HASH);
+	git_oid_fromstr(&_nonexisting_oid, NONEXISTING_HASH, GIT_OID_SHA1);
+	git_oid_fromstr(&_existing_oid, EXISTING_HASH, GIT_OID_SHA1);
 	setup_repository_and_backend();
 }
 

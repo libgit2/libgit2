@@ -1622,7 +1622,7 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 	const git_refspec *spec;
 	const char *refname;
 	int error;
-	git_oid zero_id = {{ 0 }};
+	git_oid zero_id = GIT_OID_SHA1_ZERO;
 
 	if (callbacks)
 		GIT_ERROR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
@@ -1830,7 +1830,7 @@ static int update_one_tip(
 	}
 
 	if (error == GIT_ENOTFOUND) {
-		memset(&old, 0, sizeof(git_oid));
+		git_oid_clear(&old, GIT_OID_SHA1);
 		error = 0;
 
 		if (autotag && (error = git_vector_insert(update_heads, head)) < 0)
@@ -1892,10 +1892,10 @@ static int update_tips_for_spec(
 	}
 
 	/* Handle specified oid sources */
-	if (git_oid__is_hexstr(spec->src)) {
+	if (git_oid__is_hexstr(spec->src, GIT_OID_SHA1)) {
 		git_oid id;
 
-		if ((error = git_oid_fromstr(&id, spec->src)) < 0)
+		if ((error = git_oid_fromstr(&id, spec->src, GIT_OID_SHA1)) < 0)
 			goto on_error;
 
 		if (spec->dst &&

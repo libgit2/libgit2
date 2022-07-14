@@ -21,7 +21,7 @@ void test_object_tree_attributes__ensure_correctness_of_attributes_on_insertion(
 	git_treebuilder *builder;
 	git_oid oid;
 
-	cl_git_pass(git_oid_fromstr(&oid, blob_oid));
+	cl_git_pass(git_oid_fromstr(&oid, blob_oid, GIT_OID_SHA1));
 
 	cl_git_pass(git_treebuilder_new(&builder, repo, NULL));
 
@@ -39,7 +39,7 @@ void test_object_tree_attributes__group_writable_tree_entries_created_with_an_an
 	const git_tree_entry *entry;
 
 
-	cl_git_pass(git_oid_fromstr(&tid, tree_oid));
+	cl_git_pass(git_oid_fromstr(&tid, tree_oid, GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, repo, &tid));
 
 	entry = git_tree_entry_byname(tree, "old_mode.txt");
@@ -56,7 +56,7 @@ void test_object_tree_attributes__treebuilder_reject_invalid_filemode(void)
 	git_oid bid;
 	const git_tree_entry *entry;
 
-	cl_git_pass(git_oid_fromstr(&bid, blob_oid));
+	cl_git_pass(git_oid_fromstr(&bid, blob_oid, GIT_OID_SHA1));
 	cl_git_pass(git_treebuilder_new(&builder, repo, NULL));
 
 	cl_git_fail(git_treebuilder_insert(
@@ -76,7 +76,7 @@ void test_object_tree_attributes__normalize_attributes_when_creating_a_tree_from
 	git_tree *tree;
 	const git_tree_entry *entry;
 
-	cl_git_pass(git_oid_fromstr(&tid, tree_oid));
+	cl_git_pass(git_oid_fromstr(&tid, tree_oid, GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, repo, &tid));
 
 	cl_git_pass(git_treebuilder_new(&builder, repo, tree));
@@ -107,7 +107,7 @@ void test_object_tree_attributes__normalize_600(void)
 	git_tree *tree;
 	const git_tree_entry *entry;
 
-	git_oid_fromstr(&id, "0810fb7818088ff5ac41ee49199b51473b1bd6c7");
+	git_oid_fromstr(&id, "0810fb7818088ff5ac41ee49199b51473b1bd6c7", GIT_OID_SHA1);
 	cl_git_pass(git_tree_lookup(&tree, repo, &id));
 
 	entry = git_tree_entry_byname(tree, "ListaTeste.xml");

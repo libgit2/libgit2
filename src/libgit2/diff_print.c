@@ -53,8 +53,8 @@ static int diff_print_info_init__common(
 			return -1;
 	}
 
-	if (pi->id_strlen > GIT_OID_HEXSZ)
-		pi->id_strlen = GIT_OID_HEXSZ;
+	if (pi->id_strlen > GIT_OID_SHA1_HEXSIZE)
+		pi->id_strlen = GIT_OID_SHA1_HEXSIZE;
 
 	memset(&pi->line, 0, sizeof(pi->line));
 	pi->line.old_lineno = -1;
@@ -212,7 +212,7 @@ static int diff_print_one_raw(
 	git_str *out = pi->buf;
 	int id_abbrev;
 	char code = git_diff_status_char(delta->status);
-	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
+	char start_oid[GIT_OID_SHA1_HEXSIZE+1], end_oid[GIT_OID_SHA1_HEXSIZE+1];
 
 	GIT_UNUSED(progress);
 
@@ -235,7 +235,7 @@ static int diff_print_one_raw(
 	git_oid_tostr(end_oid, pi->id_strlen + 1, &delta->new_file.id);
 
 	git_str_printf(
-		out, (pi->id_strlen <= GIT_OID_HEXSZ) ?
+		out, (pi->id_strlen <= GIT_OID_SHA1_HEXSIZE) ?
 			":%06o %06o %s... %s... %c" : ":%06o %06o %s %s %c",
 		delta->old_file.mode, delta->new_file.mode, start_oid, end_oid, code);
 
@@ -273,7 +273,7 @@ static int diff_print_oid_range(
 	git_str *out, const git_diff_delta *delta, int id_strlen,
 	bool print_index)
 {
-	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
+	char start_oid[GIT_OID_SHA1_HEXSIZE+1], end_oid[GIT_OID_SHA1_HEXSIZE+1];
 
 	if (delta->old_file.mode &&
 			id_strlen > delta->old_file.id_abbrev) {

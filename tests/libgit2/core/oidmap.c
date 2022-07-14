@@ -17,7 +17,7 @@ void test_core_oidmap__initialize(void)
 
 		test_oids[i].extra = i;
 
-		for (j = 0; j < GIT_OID_RAWSZ / 4; ++j) {
+		for (j = 0; j < GIT_OID_SHA1_SIZE / 4; ++j) {
 			test_oids[i].oid.id[j * 4    ] = (unsigned char)modi;
 			test_oids[i].oid.id[j * 4 + 1] = (unsigned char)(modi >> 8);
 			test_oids[i].oid.id[j * 4 + 2] = (unsigned char)(modi >> 16);
@@ -28,6 +28,9 @@ void test_core_oidmap__initialize(void)
 		test_oids[i].oid.id[ 9] = (unsigned char)(i >> 8);
 		test_oids[i].oid.id[10] = (unsigned char)(i >> 16);
 		test_oids[i].oid.id[11] = (unsigned char)(i >> 24);
+#ifdef GIT_EXPERIMENTAL_SHA256
+		test_oids[i].oid.type = GIT_OID_SHA1;
+#endif
 	}
 
 	cl_git_pass(git_oidmap_new(&g_map));
@@ -93,9 +96,9 @@ void test_core_oidmap__get_fails_with_nonexisting_key(void)
 void test_core_oidmap__setting_oid_persists(void)
 {
 	git_oid oids[] = {
-	    {{ 0x01 }},
-	    {{ 0x02 }},
-	    {{ 0x03 }}
+		GIT_OID_INIT(GIT_OID_SHA1, { 0x01 }),
+		GIT_OID_INIT(GIT_OID_SHA1, { 0x02 }),
+		GIT_OID_INIT(GIT_OID_SHA1, { 0x03 })
 	};
 
 	cl_git_pass(git_oidmap_set(g_map, &oids[0], "one"));
@@ -110,9 +113,9 @@ void test_core_oidmap__setting_oid_persists(void)
 void test_core_oidmap__setting_existing_key_updates(void)
 {
 	git_oid oids[] = {
-	    {{ 0x01 }},
-	    {{ 0x02 }},
-	    {{ 0x03 }}
+		GIT_OID_INIT(GIT_OID_SHA1, { 0x01 }),
+		GIT_OID_INIT(GIT_OID_SHA1, { 0x02 }),
+		GIT_OID_INIT(GIT_OID_SHA1, { 0x03 })
 	};
 
 	cl_git_pass(git_oidmap_set(g_map, &oids[0], "one"));

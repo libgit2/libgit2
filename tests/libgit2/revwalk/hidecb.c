@@ -32,10 +32,10 @@ void test_revwalk_hidecb__initialize(void)
 	int i;
 
 	cl_git_pass(git_repository_open(&_repo, cl_fixture("testrepo.git")));
-	cl_git_pass(git_oid_fromstr(&_head_id, commit_head));
+	cl_git_pass(git_oid_fromstr(&_head_id, commit_head, GIT_OID_SHA1));
 
 	for (i = 0; i < commit_count; i++)
-		cl_git_pass(git_oid_fromstr(&commit_ids[i], commit_strs[i]));
+		cl_git_pass(git_oid_fromstr(&commit_ids[i], commit_strs[i], GIT_OID_SHA1));
 
 }
 

@@ -8,7 +8,9 @@ set_target_properties(libgit2 PROPERTIES C_EXTENSIONS OFF)
 include(PkgBuildConfig)
 
 set(LIBGIT2_INCLUDES
-	"${PROJECT_BINARY_DIR}/src"
+	"${PROJECT_BINARY_DIR}/src/util"
+	"${PROJECT_BINARY_DIR}/include"
+	"${PROJECT_BINARY_DIR}/include/git2"
 	"${PROJECT_SOURCE_DIR}/src/libgit2"
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include")
@@ -109,7 +111,7 @@ if(SONAME)
 	endif()
 endif()
 
-pkg_build_config(NAME libgit2
+pkg_build_config(NAME "${LIBGIT2_FILENAME}"
 	VERSION ${libgit2_VERSION}
 	DESCRIPTION "The git library, take 2"
 	LIBS_SELF git2
@@ -122,10 +124,26 @@ if(MSVC_IDE)
 	set_source_files_properties(win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
 endif()
 
+# support experimental features and functionality
+
+configure_file(experimental.h.in "${PROJECT_BINARY_DIR}/include/git2/experimental.h")
+
+# translate filenames in the git2.h so that they match the install directory
+# (allows for side-by-side installs of libgit2 and libgit2-experimental.)
+
+FILE(READ "${PROJECT_SOURCE_DIR}/include/git2.h" LIBGIT2_INCLUDE)
+STRING(REGEX REPLACE "#include \"git2\/" "#include \"${LIBGIT2_FILENAME}/" LIBGIT2_INCLUDE "${LIBGIT2_INCLUDE}")
+FILE(WRITE "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}.h" ${LIBGIT2_INCLUDE})
+
 # Install
+
 install(TARGETS libgit2package
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/git2 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(FILES ${PROJECT_SOURCE_DIR}/include/git2.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/git2/
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${LIBGIT2_FILENAME}")
+install(FILES ${PROJECT_BINARY_DIR}/include/git2/experimental.h
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${LIBGIT2_FILENAME}")
+install(FILES "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}.h"
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

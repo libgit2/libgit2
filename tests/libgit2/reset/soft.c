@@ -53,11 +53,11 @@ void test_reset_soft__can_reset_the_detached_Head_to_the_specified_commit(void)
 void test_reset_soft__resetting_to_the_commit_pointed_at_by_the_Head_does_not_change_the_target_of_the_Head(void)
 {
 	git_oid oid;
-	char raw_head_oid[GIT_OID_HEXSZ + 1];
+	char raw_head_oid[GIT_OID_SHA1_HEXSIZE + 1];
 
 	cl_git_pass(git_reference_name_to_id(&oid, repo, "HEAD"));
 	git_oid_fmt(raw_head_oid, &oid);
-	raw_head_oid[GIT_OID_HEXSZ] = '\0';
+	raw_head_oid[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	cl_git_pass(git_revparse_single(&target, repo, raw_head_oid));
 

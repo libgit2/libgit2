@@ -364,6 +364,7 @@ static int insert_delete_side_of_split(
 	memset(&deleted->new_file, 0, sizeof(deleted->new_file));
 	deleted->new_file.path = deleted->old_file.path;
 	deleted->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
+	git_oid_clear(&deleted->new_file.id, GIT_OID_SHA1);
 
 	return git_vector_insert(onto, deleted);
 }
@@ -397,6 +398,7 @@ static int apply_splits_and_deletes(
 			memset(&delta->old_file, 0, sizeof(delta->old_file));
 			delta->old_file.path = delta->new_file.path;
 			delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
+			git_oid_clear(&delta->old_file.id, GIT_OID_SHA1);
 		}
 
 		/* clean up delta before inserting into new list */
@@ -995,6 +997,7 @@ find_best_matches:
 				memset(&src->new_file, 0, sizeof(src->new_file));
 				src->new_file.path = src->old_file.path;
 				src->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
+				git_oid_clear(&src->new_file.id, GIT_OID_SHA1);
 
 				num_updates++;
 
@@ -1020,6 +1023,7 @@ find_best_matches:
 				memset(&src->old_file, 0, sizeof(src->old_file));
 				src->old_file.path = src->new_file.path;
 				src->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
+				git_oid_clear(&src->old_file.id, GIT_OID_SHA1);
 
 				src->flags &= ~GIT_DIFF_FLAG__TO_SPLIT;
 				num_rewrites--;

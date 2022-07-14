@@ -68,7 +68,7 @@ static void assert_ack_parses(const char *line, const char *expected_oid, enum g
 	git_pkt_ack *pkt;
 	git_oid oid;
 
-	cl_git_pass(git_oid_fromstr(&oid, expected_oid));
+	cl_git_pass(git_oid_fromstr(&oid, expected_oid, GIT_OID_SHA1));
 
 	cl_git_pass(git_pkt_parse_line((git_pkt **) &pkt, &endptr, line, linelen));
 	cl_assert_equal_i(pkt->type, GIT_PKT_ACK);
@@ -154,7 +154,7 @@ static void assert_ref_parses_(const char *line, size_t linelen, const char *exp
 	git_pkt_ref *pkt;
 	git_oid oid;
 
-	cl_git_pass(git_oid_fromstr(&oid, expected_oid));
+	cl_git_pass(git_oid_fromstr(&oid, expected_oid, GIT_OID_SHA1));
 
 	cl_git_pass(git_pkt_parse_line((git_pkt **) &pkt, &endptr, line, linelen));
 	cl_assert_equal_i(pkt->type, GIT_PKT_REF);

@@ -30,42 +30,48 @@ static void populate_fetchhead(git_vector *out, git_repository *repo)
 	git_oid oid;
 
 	cl_git_pass(git_oid_fromstr(&oid,
-		"49322bb17d3acc9146f98c97d078513228bbf3c0"));
+		"49322bb17d3acc9146f98c97d078513228bbf3c0",
+		GIT_OID_SHA1));
 	cl_git_pass(git_fetchhead_ref_create(&fetchhead_ref, &oid, 1,
 		"refs/heads/master",
 		"https://github.com/libgit2/TestGitRepository"));
 	cl_git_pass(git_vector_insert(out, fetchhead_ref));
 
 	cl_git_pass(git_oid_fromstr(&oid,
-		"0966a434eb1a025db6b71485ab63a3bfbea520b6"));
+		"0966a434eb1a025db6b71485ab63a3bfbea520b6",
+		GIT_OID_SHA1));
 	cl_git_pass(git_fetchhead_ref_create(&fetchhead_ref, &oid, 0,
 		"refs/heads/first-merge",
 		"https://github.com/libgit2/TestGitRepository"));
 	cl_git_pass(git_vector_insert(out, fetchhead_ref));
 
 	cl_git_pass(git_oid_fromstr(&oid,
-		"42e4e7c5e507e113ebbb7801b16b52cf867b7ce1"));
+		"42e4e7c5e507e113ebbb7801b16b52cf867b7ce1",
+		GIT_OID_SHA1));
 	cl_git_pass(git_fetchhead_ref_create(&fetchhead_ref, &oid, 0,
 		"refs/heads/no-parent",
 		"https://github.com/libgit2/TestGitRepository"));
 	cl_git_pass(git_vector_insert(out, fetchhead_ref));
 
 	cl_git_pass(git_oid_fromstr(&oid,
-		"d96c4e80345534eccee5ac7b07fc7603b56124cb"));
+		"d96c4e80345534eccee5ac7b07fc7603b56124cb",
+		GIT_OID_SHA1));
 	cl_git_pass(git_fetchhead_ref_create(&fetchhead_ref, &oid, 0,
 		"refs/tags/annotated_tag",
 		"https://github.com/libgit2/TestGitRepository"));
 	cl_git_pass(git_vector_insert(out, fetchhead_ref));
 
 	cl_git_pass(git_oid_fromstr(&oid,
-		"55a1a760df4b86a02094a904dfa511deb5655905"));
+		"55a1a760df4b86a02094a904dfa511deb5655905",
+		GIT_OID_SHA1));
 	cl_git_pass(git_fetchhead_ref_create(&fetchhead_ref, &oid, 0,
 		"refs/tags/blob",
 		"https://github.com/libgit2/TestGitRepository"));
 	cl_git_pass(git_vector_insert(out, fetchhead_ref));
 
 	cl_git_pass(git_oid_fromstr(&oid,
-		"8f50ba15d49353813cc6e20298002c0d17b0a9ee"));
+		"8f50ba15d49353813cc6e20298002c0d17b0a9ee",
+		GIT_OID_SHA1));
 	cl_git_pass(git_fetchhead_ref_create(&fetchhead_ref, &oid, 0,
 		"refs/tags/commit_tree",
 		"https://github.com/libgit2/TestGitRepository"));
@@ -170,7 +176,7 @@ static int read_old_style_cb(const char *name, const char *url,
 
 	GIT_UNUSED(payload);
 
-	git_oid_fromstr(&expected, "49322bb17d3acc9146f98c97d078513228bbf3c0");
+	git_oid_fromstr(&expected, "49322bb17d3acc9146f98c97d078513228bbf3c0", GIT_OID_SHA1);
 
 	cl_assert(name == NULL);
 	cl_assert(url == NULL);
@@ -197,7 +203,7 @@ static int read_type_missing(const char *ref_name, const char *remote_url,
 
 	GIT_UNUSED(payload);
 
-	git_oid_fromstr(&expected, "49322bb17d3acc9146f98c97d078513228bbf3c0");
+	git_oid_fromstr(&expected, "49322bb17d3acc9146f98c97d078513228bbf3c0", GIT_OID_SHA1);
 
 	cl_assert_equal_s("name", ref_name);
 	cl_assert_equal_s("remote_url", remote_url);
@@ -224,7 +230,7 @@ static int read_name_missing(const char *ref_name, const char *remote_url,
 
 	GIT_UNUSED(payload);
 
-	git_oid_fromstr(&expected, "49322bb17d3acc9146f98c97d078513228bbf3c0");
+	git_oid_fromstr(&expected, "49322bb17d3acc9146f98c97d078513228bbf3c0", GIT_OID_SHA1);
 
 	cl_assert(ref_name == NULL);
 	cl_assert_equal_s("remote_url", remote_url);
@@ -528,13 +534,13 @@ void test_fetchhead_nonetwork__credentials_are_stripped(void)
 	git_fetchhead_ref *ref;
 	git_oid oid;
 
-	cl_git_pass(git_oid_fromstr(&oid, "49322bb17d3acc9146f98c97d078513228bbf3c0"));
+	cl_git_pass(git_oid_fromstr(&oid, "49322bb17d3acc9146f98c97d078513228bbf3c0", GIT_OID_SHA1));
 	cl_git_pass(git_fetchhead_ref_create(&ref, &oid, 0,
 		"refs/tags/commit_tree", "http://foo:bar@github.com/libgit2/TestGitRepository"));
 	cl_assert_equal_s(ref->remote_url, "http://github.com/libgit2/TestGitRepository");
 	git_fetchhead_ref_free(ref);
 
-	cl_git_pass(git_oid_fromstr(&oid, "49322bb17d3acc9146f98c97d078513228bbf3c0"));
+	cl_git_pass(git_oid_fromstr(&oid, "49322bb17d3acc9146f98c97d078513228bbf3c0", GIT_OID_SHA1));
 	cl_git_pass(git_fetchhead_ref_create(&ref, &oid, 0,
 		"refs/tags/commit_tree", "https://foo:bar@github.com/libgit2/TestGitRepository"));
 	cl_assert_equal_s(ref->remote_url, "https://github.com/libgit2/TestGitRepository");

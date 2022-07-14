@@ -6,7 +6,7 @@
 
 struct merge_index_entry {
 	uint16_t mode;
-	char oid_str[GIT_OID_HEXSZ+1];
+	char oid_str[GIT_OID_SHA1_HEXSIZE+1];
 	int stage;
 	char path[128];
 };
@@ -27,9 +27,9 @@ struct merge_reuc_entry {
 	unsigned int ancestor_mode;
 	unsigned int our_mode;
 	unsigned int their_mode;
-	char ancestor_oid_str[GIT_OID_HEXSZ+1];
-	char our_oid_str[GIT_OID_HEXSZ+1];
-	char their_oid_str[GIT_OID_HEXSZ+1];
+	char ancestor_oid_str[GIT_OID_SHA1_HEXSIZE+1];
+	char our_oid_str[GIT_OID_SHA1_HEXSIZE+1];
+	char their_oid_str[GIT_OID_SHA1_HEXSIZE+1];
 };
 
 struct merge_index_conflict_data {

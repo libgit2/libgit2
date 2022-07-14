@@ -18,7 +18,7 @@ void test_pack_sharing__open_two_repos(void)
 	cl_git_pass(git_repository_open(&repo1, cl_fixture("testrepo.git")));
 	cl_git_pass(git_repository_open(&repo2, cl_fixture("testrepo.git")));
 
-	git_oid_fromstr(&id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	git_oid_fromstr(&id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1);
 
 	cl_git_pass(git_object_lookup(&obj1, repo1, &id, GIT_OBJECT_ANY));
 	cl_git_pass(git_object_lookup(&obj2, repo2, &id, GIT_OBJECT_ANY));

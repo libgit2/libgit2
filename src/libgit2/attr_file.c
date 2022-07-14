@@ -135,7 +135,7 @@ int git_attr_file__load(
 		break;
 	case GIT_ATTR_FILE_SOURCE_INDEX: {
 		if ((error = attr_file_oid_from_index(&id, repo, entry->path)) < 0 ||
-			(error = git_blob_lookup(&blob, repo, &id)) < 0)
+		    (error = git_blob_lookup(&blob, repo, &id)) < 0)
 			return error;
 
 		/* Do not assume that data straight from the ODB is NULL-terminated;

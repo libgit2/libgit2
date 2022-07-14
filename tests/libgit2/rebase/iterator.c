@@ -30,11 +30,11 @@ static void test_operations(git_rebase *rebase, size_t expected_current)
 	git_oid expected_oid[5];
 	git_rebase_operation *operation;
 
-	git_oid_fromstr(&expected_oid[0], "da9c51a23d02d931a486f45ad18cda05cf5d2b94");
-	git_oid_fromstr(&expected_oid[1], "8d1f13f93c4995760ac07d129246ac1ff64c0be9");
-	git_oid_fromstr(&expected_oid[2], "3069cc907e6294623e5917ef6de663928c1febfb");
-	git_oid_fromstr(&expected_oid[3], "588e5d2f04d49707fe4aab865e1deacaf7ef6787");
-	git_oid_fromstr(&expected_oid[4], "b146bd7608eac53d9bf9e1a6963543588b555c64");
+	git_oid_fromstr(&expected_oid[0], "da9c51a23d02d931a486f45ad18cda05cf5d2b94", GIT_OID_SHA1);
+	git_oid_fromstr(&expected_oid[1], "8d1f13f93c4995760ac07d129246ac1ff64c0be9", GIT_OID_SHA1);
+	git_oid_fromstr(&expected_oid[2], "3069cc907e6294623e5917ef6de663928c1febfb", GIT_OID_SHA1);
+	git_oid_fromstr(&expected_oid[3], "588e5d2f04d49707fe4aab865e1deacaf7ef6787", GIT_OID_SHA1);
+	git_oid_fromstr(&expected_oid[4], "b146bd7608eac53d9bf9e1a6963543588b555c64", GIT_OID_SHA1);
 
 	cl_assert_equal_i(expected_count, git_rebase_operation_entrycount(rebase));
 	cl_assert_equal_i(expected_current, git_rebase_operation_current(rebase));
@@ -78,7 +78,7 @@ static void test_iterator(bool inmemory)
 		NULL, NULL));
 	test_operations(rebase, 0);
 
-	git_oid_fromstr(&expected_id, "776e4c48922799f903f03f5f6e51da8b01e4cce0");
+	git_oid_fromstr(&expected_id, "776e4c48922799f903f03f5f6e51da8b01e4cce0", GIT_OID_SHA1);
 	cl_assert_equal_oid(&expected_id, &commit_id);
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
@@ -86,7 +86,7 @@ static void test_iterator(bool inmemory)
 		NULL, NULL));
 	test_operations(rebase, 1);
 
-	git_oid_fromstr(&expected_id, "ba1f9b4fd5cf8151f7818be2111cc0869f1eb95a");
+	git_oid_fromstr(&expected_id, "ba1f9b4fd5cf8151f7818be2111cc0869f1eb95a", GIT_OID_SHA1);
 	cl_assert_equal_oid(&expected_id, &commit_id);
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
@@ -94,7 +94,7 @@ static void test_iterator(bool inmemory)
 		NULL, NULL));
 	test_operations(rebase, 2);
 
-	git_oid_fromstr(&expected_id, "948b12fe18b84f756223a61bece4c307787cd5d4");
+	git_oid_fromstr(&expected_id, "948b12fe18b84f756223a61bece4c307787cd5d4", GIT_OID_SHA1);
 	cl_assert_equal_oid(&expected_id, &commit_id);
 
 	if (!inmemory) {
@@ -107,7 +107,7 @@ static void test_iterator(bool inmemory)
 		NULL, NULL));
 	test_operations(rebase, 3);
 
-	git_oid_fromstr(&expected_id, "d9d5d59d72c9968687f9462578d79878cd80e781");
+	git_oid_fromstr(&expected_id, "d9d5d59d72c9968687f9462578d79878cd80e781", GIT_OID_SHA1);
 	cl_assert_equal_oid(&expected_id, &commit_id);
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
@@ -115,7 +115,7 @@ static void test_iterator(bool inmemory)
 		NULL, NULL));
 	test_operations(rebase, 4);
 
-	git_oid_fromstr(&expected_id, "9cf383c0a125d89e742c5dec58ed277dd07588b3");
+	git_oid_fromstr(&expected_id, "9cf383c0a125d89e742c5dec58ed277dd07588b3", GIT_OID_SHA1);
 	cl_assert_equal_oid(&expected_id, &commit_id);
 
 	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));

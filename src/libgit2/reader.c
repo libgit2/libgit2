@@ -125,7 +125,7 @@ static int workdir_reader_read(
 		goto done;
 
 	if (out_id || reader->index) {
-		if ((error = git_odb_hash(&id, out->ptr, out->size, GIT_OBJECT_BLOB)) < 0)
+		if ((error = git_odb_hash(&id, out->ptr, out->size, GIT_OBJECT_BLOB, GIT_OID_SHA1)) < 0)
 			goto done;
 	}
 

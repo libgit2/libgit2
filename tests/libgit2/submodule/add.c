@@ -139,7 +139,7 @@ static void test_add_entry(
 {
 	git_index_entry entry = {{0}};
 
-	cl_git_pass(git_oid_fromstr(&entry.id, idstr));
+	cl_git_pass(git_oid_fromstr(&entry.id, idstr, GIT_OID_SHA1));
 
 	entry.path = path;
 	entry.mode = mode;

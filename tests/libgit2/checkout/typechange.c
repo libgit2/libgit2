@@ -319,7 +319,7 @@ void test_checkout_typechange__status_char(void)
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	char expected[8] = {'M', 'M', 'R', 'T', 'D', 'R', 'A', 'R'};
 
-	git_oid_fromstr(&oid, "9b19edf33a03a0c59cdfc113bfa5c06179bf9b1a");
+	git_oid_fromstr(&oid, "9b19edf33a03a0c59cdfc113bfa5c06179bf9b1a", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &oid));
 	diffopts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE;
 	cl_git_pass(git_diff__commit(&diff, g_repo, commit, &diffopts));

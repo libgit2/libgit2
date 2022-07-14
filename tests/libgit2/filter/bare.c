@@ -140,7 +140,7 @@ void test_filter_bare__from_specific_commit_one(void)
 
 	opts.flags |= GIT_BLOB_FILTER_NO_SYSTEM_ATTRIBUTES;
 	opts.flags |= GIT_BLOB_FILTER_ATTRIBUTES_FROM_COMMIT;
-	cl_git_pass(git_oid_fromstr(&opts.attr_commit_id, "b8986fec0f7bde90f78ac72706e782d82f24f2f0"));
+	cl_git_pass(git_oid_fromstr(&opts.attr_commit_id, "b8986fec0f7bde90f78ac72706e782d82f24f2f0", GIT_OID_SHA1));
 
 	cl_git_pass(git_revparse_single(
 		(git_object **)&blob, g_repo, "055c872")); /* ident */
@@ -165,7 +165,7 @@ void test_filter_bare__from_specific_commit_with_no_attributes_file(void)
 
 	opts.flags |= GIT_BLOB_FILTER_NO_SYSTEM_ATTRIBUTES;
 	opts.flags |= GIT_BLOB_FILTER_ATTRIBUTES_FROM_COMMIT;
-	cl_git_pass(git_oid_fromstr(&opts.attr_commit_id, "5afb6a14a864e30787857dd92af837e8cdd2cb1b"));
+	cl_git_pass(git_oid_fromstr(&opts.attr_commit_id, "5afb6a14a864e30787857dd92af837e8cdd2cb1b", GIT_OID_SHA1));
 
 	cl_git_pass(git_revparse_single(
 		(git_object **)&blob, g_repo, "799770d")); /* all-lf */

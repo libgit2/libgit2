@@ -72,6 +72,8 @@ static git_blame_hunk *new_hunk(
 	hunk->final_start_line_number = start;
 	hunk->orig_start_line_number = orig_start;
 	hunk->orig_path = path ? git__strdup(path) : NULL;
+	git_oid_clear(&hunk->orig_commit_id, GIT_OID_SHA1);
+	git_oid_clear(&hunk->final_commit_id, GIT_OID_SHA1);
 
 	return hunk;
 }

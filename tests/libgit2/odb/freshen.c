@@ -43,7 +43,7 @@ void test_odb_freshen__loose_blob(void)
 	git_oid expected_id, id;
 	struct stat before, after;
 
-	cl_git_pass(git_oid_fromstr(&expected_id, LOOSE_BLOB_ID));
+	cl_git_pass(git_oid_fromstr(&expected_id, LOOSE_BLOB_ID, GIT_OID_SHA1));
 	set_time_wayback(&before, LOOSE_BLOB_FN);
 
 	/* make sure we freshen a blob */
@@ -64,7 +64,7 @@ void test_odb_freshen__readonly_object(void)
 	git_oid expected_id, id;
 	struct stat before, after;
 
-	cl_git_pass(git_oid_fromstr(&expected_id, UNIQUE_BLOB_ID));
+	cl_git_pass(git_oid_fromstr(&expected_id, UNIQUE_BLOB_ID, GIT_OID_SHA1));
 
 	cl_git_pass(git_blob_create_from_buffer(&id, repo, UNIQUE_STR, CONST_STRLEN(UNIQUE_STR)));
 	cl_assert_equal_oid(&expected_id, &id);
@@ -89,7 +89,7 @@ void test_odb_freshen__loose_tree(void)
 	git_tree *tree;
 	struct stat before, after;
 
-	cl_git_pass(git_oid_fromstr(&expected_id, LOOSE_TREE_ID));
+	cl_git_pass(git_oid_fromstr(&expected_id, LOOSE_TREE_ID, GIT_OID_SHA1));
 	set_time_wayback(&before, LOOSE_TREE_FN);
 
 	cl_git_pass(git_tree_lookup(&tree, repo, &expected_id));
@@ -113,11 +113,11 @@ void test_odb_freshen__tree_during_commit(void)
 	git_signature *signature;
 	struct stat before, after;
 
-	cl_git_pass(git_oid_fromstr(&tree_id, LOOSE_TREE_ID));
+	cl_git_pass(git_oid_fromstr(&tree_id, LOOSE_TREE_ID, GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, repo, &tree_id));
 	set_time_wayback(&before, LOOSE_TREE_FN);
 
-	cl_git_pass(git_oid_fromstr(&parent_id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
+	cl_git_pass(git_oid_fromstr(&parent_id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&parent, repo, &parent_id));
 
 	cl_git_pass(git_signature_new(&signature,
@@ -147,7 +147,7 @@ void test_odb_freshen__packed_object(void)
 	struct stat before, after;
 	struct p_timeval old_times[2];
 
-	cl_git_pass(git_oid_fromstr(&expected_id, PACKED_ID));
+	cl_git_pass(git_oid_fromstr(&expected_id, PACKED_ID, GIT_OID_SHA1));
 
 	old_times[0].tv_sec = 1234567890;
 	old_times[0].tv_usec = 0;

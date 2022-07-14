@@ -120,49 +120,6 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
           os: ubuntu-latest
-        - name: "Linux (MemorySanitizer)"
-          id: memorysanitizer
-          container:
-            name: focal
-          env:
-            CC: clang-10
-            CFLAGS: -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local/msan -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
-            CMAKE_GENERATOR: Ninja
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
-            UBSAN_OPTIONS: print_stacktrace=1
-          os: ubuntu-latest
-        - name: "Linux (UndefinedBehaviorSanitizer)"
-          id: ubsanitizer
-          container:
-            name: focal
-          env:
-            CC: clang-10
-            CFLAGS: -fsanitize=undefined,nullability -fno-sanitize-recover=undefined,nullability -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
-            CMAKE_GENERATOR: Ninja
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
-            UBSAN_OPTIONS: print_stacktrace=1
-          os: ubuntu-latest
-        - name: "Linux (ThreadSanitizer)"
-          id: threadsanitizer
-          container:
-            name: focal
-          env:
-            CC: clang-10
-            CFLAGS: -fsanitize=thread -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
-            CMAKE_GENERATOR: Ninja
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
-            UBSAN_OPTIONS: print_stacktrace=1
-            TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
-          os: ubuntu-latest
         - name: "macOS"
           id: macos
           os: macos-10.15
@@ -213,6 +170,81 @@ jobs:
             CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
             BUILD_TEMP: D:\Temp
             BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+
+        # Sanitizers
+        - name: "Sanitizer (Memory)"
+          id: memorysanitizer
+          container:
+            name: focal
+          env:
+            CC: clang-10
+            CFLAGS: -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local/msan -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
+            CMAKE_GENERATOR: Ninja
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
+            UBSAN_OPTIONS: print_stacktrace=1
+          os: ubuntu-latest
+        - name: "Sanitizer (UndefinedBehavior)"
+          id: ubsanitizer
+          container:
+            name: focal
+          env:
+            CC: clang-10
+            CFLAGS: -fsanitize=undefined,nullability -fno-sanitize-recover=undefined,nullability -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
+            CMAKE_GENERATOR: Ninja
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
+            UBSAN_OPTIONS: print_stacktrace=1
+          os: ubuntu-latest
+        - name: "Sanitizer (Thread)"
+          id: threadsanitizer
+          container:
+            name: focal
+          env:
+            CC: clang-10
+            CFLAGS: -fsanitize=thread -fno-optimize-sibling-calls -fno-omit-frame-pointer
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
+            CMAKE_GENERATOR: Ninja
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
+            UBSAN_OPTIONS: print_stacktrace=1
+            TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
+          os: ubuntu-latest
+
+        # Experimental: SHA256 support
+        - name: "Linux (SHA256, Xenial, Clang, OpenSSL)"
+          id: xenial-clang-openssl
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+          os: ubuntu-latest
+        - name: "macOS (SHA256)"
+          id: macos
+          os: macos-10.15
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
+            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+          setup-script: osx
+        - name: "Windows (SHA256, amd64, Visual Studio)"
+          id: windows-amd64-vs
+          os: windows-2019
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
       fail-fast: false

@@ -40,7 +40,7 @@ static int annotated_commit_init(
 		goto done;
 
 	git_oid_fmt(annotated_commit->id_str, git_commit_id(commit));
-	annotated_commit->id_str[GIT_OID_HEXSZ] = '\0';
+	annotated_commit->id_str[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	if (!description)
 		description = annotated_commit->id_str;

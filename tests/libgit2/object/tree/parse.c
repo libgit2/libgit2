@@ -35,7 +35,7 @@ static void assert_tree_parses(const char *data, size_t datalen,
 		const git_tree_entry *entry;
 		git_oid oid;
 
-		cl_git_pass(git_oid_fromstr(&oid, expected->oid));
+		cl_git_pass(git_oid_fromstr(&oid, expected->oid, GIT_OID_SHA1));
 
 		cl_assert(entry = git_tree_entry_byname(tree, expected->filename));
 		cl_assert_equal_s(expected->filename, entry->filename);

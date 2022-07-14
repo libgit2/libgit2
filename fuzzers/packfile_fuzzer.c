@@ -36,7 +36,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 		fprintf(stderr, "Failed to limit maximum pack object count\n");
 		abort();
 	}
-	if (git_odb_new(&odb) < 0) {
+	if (git_odb_new(&odb, NULL) < 0) {
 		fprintf(stderr, "Failed to create the odb\n");
 		abort();
 	}
@@ -90,11 +90,11 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	if (git_indexer_append(indexer, data, size, &stats) < 0)
 		goto cleanup;
 	if (append_hash) {
-		if (git_odb_hash(&oid, data, size, GIT_OBJECT_BLOB) < 0) {
+		if (git_odb_hash(&oid, data, size, GIT_OBJECT_BLOB, GIT_OID_SHA1) < 0) {
 			fprintf(stderr, "Failed to compute the SHA1 hash\n");
 			abort();
 		}
-		if (git_indexer_append(indexer, &oid.id, GIT_OID_RAWSZ, &stats) < 0) {
+		if (git_indexer_append(indexer, &oid.id, GIT_OID_SHA1_SIZE, &stats) < 0) {
 			goto cleanup;
 		}
 	}
