@@ -231,7 +231,7 @@ and work tree locations, here we assume they are in the normal places.</p>
       <td class=code>
         <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">oid_parsing</span><span class="p">(</span><span class="n">git_oid</span> <span class="o">*</span><span class="n">oid</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="kt">char</span> <span class="n">out</span><span class="p">[</span><span class="n">GIT_OID_SHA1_HEXSIZE</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
+  <span class="kt">char</span> <span class="n">out</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
   <span class="kt">char</span> <span class="n">hex</span><span class="p">[]</span> <span class="o">=</span> <span class="s">&quot;4a202b346bb0fb0db7eff3cffeb3c70babbd2045&quot;</span><span class="p">;</span>
 
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;*Hex to Raw*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span></pre></div>
@@ -250,7 +250,7 @@ this throughout the example for storing the value of the current SHA
 key we&#39;re working with.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-48" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="n">hex</span><span class="p">,</span> <span class="n">GIT_OID_SHA1</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-48" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="n">hex</span><span class="p">);</span>
 
   <span class="cm">/*</span>
 <span class="cm">   * Once we&#39;ve converted the string into the oid value, we can get the raw</span>
@@ -260,7 +260,7 @@ key we&#39;re working with.</p>
 <span class="cm">   * char hex value.</span>
 <span class="cm">   */</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Raw to Hex*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
-  <span class="n">out</span><span class="p">[</span><span class="n">GIT_OID_SHA1_HEXSIZE</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span></pre></div>
+  <span class="n">out</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span></pre></div>
       </td>
     </tr>
     <tr id='section-10'>
@@ -291,7 +291,7 @@ repository.</p>
       <td class=code>
         <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">object_database</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">git_oid</span> <span class="o">*</span><span class="n">oid</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="kt">char</span> <span class="n">oid_hex</span><span class="p">[</span><span class="n">GIT_OID_SHA1_HEXSIZE</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">0</span> <span class="p">};</span>
+  <span class="kt">char</span> <span class="n">oid_hex</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">0</span> <span class="p">};</span>
   <span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">char</span> <span class="o">*</span><span class="n">data</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">str_type</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
@@ -440,7 +440,7 @@ docs</a>.</p>
   <span class="n">git_tree</span> <span class="o">*</span><span class="n">tree</span><span class="p">;</span>
   <span class="n">git_commit</span> <span class="o">*</span><span class="n">parent</span><span class="p">;</span>
   <span class="n">git_signature</span> <span class="o">*</span><span class="n">author</span><span class="p">,</span> <span class="o">*</span><span class="n">committer</span><span class="p">;</span>
-  <span class="kt">char</span> <span class="n">oid_hex</span><span class="p">[</span><span class="n">GIT_OID_SHA1_HEXSIZE</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">0</span> <span class="p">};</span>
+  <span class="kt">char</span> <span class="n">oid_hex</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">0</span> <span class="p">};</span>
 
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Commit Writing*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span></pre></div>
       </td>
@@ -473,9 +473,9 @@ parents.  Here we&#39;re creating oid objects to create the commit with,
 but you can also use</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-49" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree_id</span><span class="p">,</span> <span class="s">&quot;f60079018b664e4e79329a7ef9559c8d9e0378d1&quot;</span><span class="p">,</span> <span class="n">GIT_OID_SHA1</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-49" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree_id</span><span class="p">,</span> <span class="s">&quot;f60079018b664e4e79329a7ef9559c8d9e0378d1&quot;</span><span class="p">);</span>
   <span class="n"><a name="git_tree_lookup-89" class="fnlink" href="../../#HEAD/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_id</span><span class="p">);</span>
-  <span class="n"><a name="git_oid_fromstr-50" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent_id</span><span class="p">,</span> <span class="s">&quot;5b5b025afb0b4c913b4c338a42934a3863bf3644&quot;</span><span class="p">,</span> <span class="n">GIT_OID_SHA1</span><span class="p">);</span>
+  <span class="n"><a name="git_oid_fromstr-50" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent_id</span><span class="p">,</span> <span class="s">&quot;5b5b025afb0b4c913b4c338a42934a3863bf3644&quot;</span><span class="p">);</span>
   <span class="n"><a name="git_commit_lookup-6" class="fnlink" href="../../#HEAD/group/commit/git_commit_lookup">git_commit_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">parent_id</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -560,7 +560,7 @@ data in the commit - the author (name, email, datetime), committer
   <span class="k">const</span> <span class="n">git_signature</span> <span class="o">*</span><span class="n">author</span><span class="p">,</span> <span class="o">*</span><span class="n">cmtter</span><span class="p">;</span>
   <span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">,</span> <span class="o">*</span><span class="n">parent</span><span class="p">;</span>
   <span class="n">git_oid</span> <span class="n">oid</span><span class="p">;</span>
-  <span class="kt">char</span> <span class="n">oid_hex</span><span class="p">[</span><span class="n">GIT_OID_SHA1_HEXSIZE</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
+  <span class="kt">char</span> <span class="n">oid_hex</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">message</span><span class="p">;</span>
   <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">parents</span><span class="p">,</span> <span class="n">p</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
@@ -568,7 +568,7 @@ data in the commit - the author (name, email, datetime), committer
 
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Commit Parsing*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
 
-  <span class="n"><a name="git_oid_fromstr-51" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;8496071c1b46c854b31185ea97743be6a8774479&quot;</span><span class="p">,</span> <span class="n">GIT_OID_SHA1</span><span class="p">);</span>
+  <span class="n"><a name="git_oid_fromstr-51" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;8496071c1b46c854b31185ea97743be6a8774479&quot;</span><span class="p">);</span>
 
   <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_commit_lookup-7" class="fnlink" href="../../#HEAD/group/commit/git_commit_lookup">git_commit_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span>
   <span class="n">check_error</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s">&quot;looking up commit&quot;</span><span class="p">);</span></pre></div>
@@ -665,7 +665,7 @@ methods, since the objects themselves are very similar.</p>
 the same way that we would a commit (or any other object).</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-52" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;b25fa35b38051e4ae45d4222e795f9df2e43f1d1&quot;</span><span class="p">,</span> <span class="n">GIT_OID_SHA1</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-52" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;b25fa35b38051e4ae45d4222e795f9df2e43f1d1&quot;</span><span class="p">);</span>
 
   <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_tag_lookup-83" class="fnlink" href="../../#HEAD/group/tag/git_tag_lookup">git_tag_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tag</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span>
   <span class="n">check_error</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s">&quot;looking up tag&quot;</span><span class="p">);</span></pre></div>
@@ -735,7 +735,7 @@ tree entries.</p>
         <p>Create the oid and lookup the tree object just like the other objects.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-53" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;f60079018b664e4e79329a7ef9559c8d9e0378d1&quot;</span><span class="p">,</span> <span class="n">GIT_OID_SHA1</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-53" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;f60079018b664e4e79329a7ef9559c8d9e0378d1&quot;</span><span class="p">);</span>
   <span class="n"><a name="git_tree_lookup-90" class="fnlink" href="../../#HEAD/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -817,7 +817,7 @@ don&#39;t have to do all those steps yourself.</p>
 
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Blob Parsing*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
 
-  <span class="n"><a name="git_oid_fromstr-54" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;1385f264afb75a56a5bec74243be9b367ba4ca08&quot;</span><span class="p">,</span> <span class="n">GIT_OID_SHA1</span><span class="p">);</span>
+  <span class="n"><a name="git_oid_fromstr-54" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;1385f264afb75a56a5bec74243be9b367ba4ca08&quot;</span><span class="p">);</span>
   <span class="n"><a name="git_blob_lookup-1" class="fnlink" href="../../#HEAD/group/blob/git_blob_lookup">git_blob_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blob</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -875,7 +875,7 @@ can allow you to create <code>git log</code> type functionality.</p>
 
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Revwalking*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
 
-  <span class="n"><a name="git_oid_fromstr-55" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;5b5b025afb0b4c913b4c338a42934a3863bf3644&quot;</span><span class="p">,</span> <span class="n">GIT_OID_SHA1</span><span class="p">);</span></pre></div>
+  <span class="n"><a name="git_oid_fromstr-55" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;5b5b025afb0b4c913b4c338a42934a3863bf3644&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-46'>
@@ -1032,7 +1032,7 @@ one at a time and resolve them to the SHA, then print both values out.</p>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">ref_list</span><span class="p">.</span><span class="n">count</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">git_reference</span> <span class="o">*</span><span class="n">ref</span><span class="p">;</span>
-    <span class="kt">char</span> <span class="n">oid_hex</span><span class="p">[</span><span class="n">GIT_OID_SHA1_HEXSIZE</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">GIT_OID_SHA1_HEXZERO</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="n">oid_hex</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">GIT_OID_HEX_ZERO</span><span class="p">;</span>
     <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">refname</span><span class="p">;</span>
 
     <span class="n">refname</span> <span class="o">=</span> <span class="n">ref_list</span><span class="p">.</span><span class="n">strings</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
