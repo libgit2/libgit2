@@ -15,7 +15,9 @@ See <http://creativecommons.org/publicdomain/zero/1.0/>. */
 #endif
 
 static uint64_t state[4];
+#if defined(GIT_THREADS)
 static git_mutex state_lock;
+#endif
 
 typedef union {
 	double f;
