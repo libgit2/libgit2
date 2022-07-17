@@ -81,9 +81,11 @@ int lg2_log(git_repository *repo, int argc, char *argv[])
 	git_commit *commit = NULL;
 	git_pathspec *ps = NULL;
 
+	memset(&s, 0, sizeof(s));
+
 	/** Parse arguments and set up revwalker. */
-	last_arg = parse_options(&s, &opt, argc, argv);
 	s.repo = repo;
+	last_arg = parse_options(&s, &opt, argc, argv);
 
 	diffopts.pathspec.strings = &argv[last_arg];
 	diffopts.pathspec.count	  = argc - last_arg;
@@ -407,8 +409,6 @@ static int parse_options(
 	struct log_state *s, struct log_options *opt, int argc, char **argv)
 {
 	struct args_info args = ARGS_INFO_INIT;
-
-	memset(s, 0, sizeof(*s));
 	s->sorting = GIT_SORT_TIME;
 
 	memset(opt, 0, sizeof(*opt));
