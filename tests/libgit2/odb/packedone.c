@@ -6,7 +6,7 @@
 
 static git_odb *_odb;
 
-void test_odb_packed_one__initialize(void)
+void test_odb_packedone__initialize(void)
 {
 	git_odb_backend *backend = NULL;
 
@@ -15,13 +15,13 @@ void test_odb_packed_one__initialize(void)
 	cl_git_pass(git_odb_add_backend(_odb, backend, 1));
 }
 
-void test_odb_packed_one__cleanup(void)
+void test_odb_packedone__cleanup(void)
 {
 	git_odb_free(_odb);
 	_odb = NULL;
 }
 
-void test_odb_packed_one__mass_read(void)
+void test_odb_packedone__mass_read(void)
 {
 	unsigned int i;
 
@@ -37,7 +37,7 @@ void test_odb_packed_one__mass_read(void)
 	}
 }
 
-void test_odb_packed_one__read_header_0(void)
+void test_odb_packedone__read_header_0(void)
 {
 	unsigned int i;
 
