@@ -13,6 +13,7 @@
 #include "cache.h"
 #include "common.h"
 #include "filter.h"
+#include "grafts.h"
 #include "hash.h"
 #include "index.h"
 #include "merge_driver.h"
@@ -412,6 +413,8 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_SET_OWNER_VALIDATION:
 		git_repository__validate_ownership = (va_arg(ap, int) != 0);
+	case GIT_OPT_ENABLE_SHALLOW:
+		git_shallow__enabled = (va_arg(ap, int) != 0);
 		break;
 
 	default:

@@ -22,6 +22,7 @@
 #include "object.h"
 #include "array.h"
 #include "oidarray.h"
+#include "grafts.h"
 
 void git_commit__free(void *_commit)
 {
@@ -417,10 +418,6 @@ static int commit_parse(git_commit *commit, const char *data, size_t size, unsig
 		buffer += tree_len;
 	}
 
-	/*
-	 * TODO: commit grafts!
-	 */
-
 	while (git_oid__parse(&parent_id, &buffer, buffer_end, "parent ") == 0) {
 		git_oid *new_id = git_array_alloc(commit->parent_ids);
 		GIT_ERROR_CHECK_ALLOC(new_id);
@@ -504,7 +501,34 @@ int git_commit__parse_raw(void *commit, const char *data, size_t size)
 
 int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, unsigned int flags)
 {
-	return commit_parse(commit, git_odb_object_data(odb_obj), git_odb_object_size(odb_obj), flags);
+
+	int error;
+	if ((error = commit_parse(commit, git_odb_object_data(odb_obj),
+				  git_odb_object_size(odb_obj), flags)) < 0)
+		return error;
+
+	if (!git_shallow__enabled)
+		return 0;
+
+	git_repository *repo = git_object_owner((git_object *)commit);
+	git_commit_graft *graft;
+
+	/* Perform necessary grafts */
+	if (git_grafts_get(&graft, repo->grafts, git_odb_object_id(odb_obj)) == 0 ||
+		git_grafts_get(&graft, repo->shallow_grafts, git_odb_object_id(odb_obj)) == 0) {
+		size_t idx;
+		git_oid *oid;
+		git_array_clear(commit->parent_ids);
+		git_array_init_to_size(commit->parent_ids, git_array_size(graft->parents));
+		git_array_foreach(graft->parents, idx, oid) {
+			git_oid *id = git_array_alloc(commit->parent_ids);
+			GIT_ERROR_CHECK_ALLOC(id);
+
+			git_oid_cpy(id, oid);
+		}
+	}
+	
+	return 0;
 }
 
 int git_commit__parse(void *_commit, git_odb_object *odb_obj)

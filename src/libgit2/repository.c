@@ -15,6 +15,7 @@
 #include "buf.h"
 #include "common.h"
 #include "commit.h"
+#include "grafts.h"
 #include "tag.h"
 #include "blob.h"
 #include "futils.h"
@@ -150,6 +151,8 @@ int git_repository__cleanup(git_repository *repo)
 	git_repository_submodule_cache_clear(repo);
 	git_cache_clear(&repo->objects);
 	git_attr_cache_flush(repo);
+	git_grafts_free(repo->grafts);
+	git_grafts_free(repo->shallow_grafts);
 
 	set_config(repo, NULL);
 	set_index(repo, NULL);
@@ -727,6 +730,27 @@ out:
 	return error;
 }
 
+static int load_grafts(git_repository *repo)
+{
+	git_buf path = GIT_BUF_INIT;
+	int error;
+
+	if ((error = git_repository_item_path(&path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
+	    (error = git_buf_joinpath(&path, path.ptr, "grafts")) < 0 ||
+	    (error = git_grafts_from_file(&repo->grafts, path.ptr)) < 0)
+		goto error;
+
+	git_buf_clear(&path);
+
+	if ((error = git_buf_joinpath(&path, repo->gitdir, "shallow")) < 0 ||
+	    (error = git_grafts_from_file(&repo->shallow_grafts, path.ptr)) < 0)
+		goto error;
+
+error:
+	git_buf_dispose(&path);
+	return error;
+}
+
 int git_repository_open_bare(
 	git_repository **repo_ptr,
 	const char *bare_path)
@@ -1014,6 +1038,9 @@ int git_repository_open_ext(
 		goto cleanup;
 
 	if ((error = check_extensions(config, version)) < 0)
+		goto cleanup;
+
+	if (git_shallow__enabled && (error = load_grafts(repo)) < 0)
 		goto cleanup;
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0) {
@@ -1399,6 +1426,20 @@ int git_repository_set_index(git_repository *repo, git_index *index)
 {
 	GIT_ASSERT_ARG(repo);
 	set_index(repo, index);
+	return 0;
+}
+
+int git_repository_grafts__weakptr(git_grafts **out, git_repository *repo)
+{
+	assert(out && repo && repo->grafts);
+	*out = repo->grafts;
+	return 0;
+}
+
+int git_repository_shallow_grafts__weakptr(git_grafts **out, git_repository *repo)
+{
+	assert(out && repo && repo->shallow_grafts);
+	*out = repo->shallow_grafts;
 	return 0;
 }
 

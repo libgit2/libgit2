@@ -228,6 +228,7 @@ typedef enum {
 	GIT_OPT_SET_EXTENSIONS,
 	GIT_OPT_GET_OWNER_VALIDATION,
 	GIT_OPT_SET_OWNER_VALIDATION
+	GIT_OPT_ENABLE_SHALLOW
 } git_libgit2_opt_t;
 
 /**
@@ -464,6 +465,9 @@ typedef enum {
  *      > { "!noop", "newext" } indicates that the caller does not want
  *      > to support repositories with the `noop` extension but does want
  *      > to support repositories with the `newext` extension.
+ *	
+ * 	 opts(GIT_OPT_ENABLE_SHALLOW, int enabled)
+ *		> Enable or disable shallow clone support completely.
  *
  *   opts(GIT_OPT_GET_OWNER_VALIDATION, int *enabled)
  *      > Gets the owner validation setting for repository
