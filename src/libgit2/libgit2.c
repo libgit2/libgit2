@@ -413,6 +413,8 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_SET_OWNER_VALIDATION:
 		git_repository__validate_ownership = (va_arg(ap, int) != 0);
+		break;
+
 	case GIT_OPT_ENABLE_SHALLOW:
 		git_shallow__enabled = (va_arg(ap, int) != 0);
 		break;

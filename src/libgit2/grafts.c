@@ -85,7 +85,7 @@ void git_grafts_clear(git_grafts *grafts)
 
 int git_grafts_refresh(git_grafts *grafts)
 {
-	git_buf contents = GIT_BUF_INIT;
+	git_str contents = GIT_STR_INIT;
 	int error, updated = 0;
 
 	assert(grafts);
@@ -94,7 +94,7 @@ int git_grafts_refresh(git_grafts *grafts)
 		return 0;
 
 	error = git_futils_readbuffer_updated(&contents, grafts->path,
-					      &grafts->path_checksum, &updated);
+					      (grafts->path_checksum).id, &updated);
 	if (error < 0 || error == GIT_ENOTFOUND || !updated) {
 		if (error == GIT_ENOTFOUND) {
 			git_grafts_clear(grafts);
@@ -107,7 +107,7 @@ int git_grafts_refresh(git_grafts *grafts)
 		goto cleanup;
 
 cleanup:
-	git_buf_dispose(&contents);
+	git_str_dispose(&contents);
 	return error;
 }
 

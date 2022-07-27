@@ -501,17 +501,16 @@ int git_commit__parse_raw(void *commit, const char *data, size_t size)
 
 int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, unsigned int flags)
 {
-
+	git_repository *repo = git_object_owner((git_object *)commit);
+	git_commit_graft *graft;
 	int error;
+	
 	if ((error = commit_parse(commit, git_odb_object_data(odb_obj),
 				  git_odb_object_size(odb_obj), flags)) < 0)
 		return error;
 
 	if (!git_shallow__enabled)
 		return 0;
-
-	git_repository *repo = git_object_owner((git_object *)commit);
-	git_commit_graft *graft;
 
 	/* Perform necessary grafts */
 	if (git_grafts_get(&graft, repo->grafts, git_odb_object_id(odb_obj)) == 0 ||
