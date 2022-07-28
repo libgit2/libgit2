@@ -25,7 +25,6 @@
 #include "submodule.h"
 #include "diff_driver.h"
 #include "grafts.h"
-#include "oidarray.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
