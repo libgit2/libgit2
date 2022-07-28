@@ -735,6 +735,13 @@ static int load_grafts(git_repository *repo)
 	git_str path = GIT_STR_INIT;
 	int error;
 
+	if ((error = git_repository__item_path(&path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
+	    (error = git_str_joinpath(&path, path.ptr, "grafts")) < 0 ||
+	    (error = git_grafts_from_file(&repo->grafts, path.ptr)) < 0)
+		goto error;
+
+	git_str_clear(&path);
+
 	if ((error = git_str_joinpath(&path, repo->gitdir, "shallow")) < 0 ||
 	    (error = git_grafts_from_file(&repo->shallow_grafts, path.ptr)) < 0)
 		goto error;
