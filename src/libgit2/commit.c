@@ -499,7 +499,7 @@ int git_commit__parse_raw(void *commit, const char *data, size_t size)
 	return commit_parse(commit, data, size, 0);
 }
 
-static int assign_parents_from_graft(git_commit *commit, git_commit_graft *graft) {
+static int assign_commit_parents_from_graft(git_commit *commit, git_commit_graft *graft) {
 	size_t idx;
 	git_oid *oid;
 
@@ -533,7 +533,7 @@ int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, unsigned 
 		git_grafts_get(&graft, repo->shallow_grafts, git_odb_object_id(odb_obj)) != 0)
 		return 0;
 
-	return assign_parents_from_graft(commit, graft);
+	return assign_commit_parents_from_graft(commit, graft);
 }
 
 int git_commit__parse(void *_commit, git_odb_object *odb_obj)
