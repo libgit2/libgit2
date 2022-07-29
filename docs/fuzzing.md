@@ -19,7 +19,7 @@ automated fuzz testing. libFuzzer only works with clang.
    and [`leak`/`address,leak`](https://clang.llvm.org/docs/LeakSanitizer.html).
 3. Create the cmake build environment and configure the build with the
    sanitizer chosen: `CC=/usr/bin/clang-6.0 CFLAGS="-fsanitize=address" cmake
-   -DBUILD_CLAR=OFF -DBUILD_FUZZERS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ..`.
+   -DBUILD_TESTS=OFF -DBUILD_FUZZERS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ..`.
    Note that building the fuzzer targets is incompatible with the
    tests and examples.
 4. Build libgit2: `cmake --build .`

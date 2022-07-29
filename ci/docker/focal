@@ -1,4 +1,5 @@
 ARG BASE=ubuntu:focal
+
 FROM ${BASE} AS apt
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -31,9 +32,9 @@ RUN apt-get update && \
 
 FROM apt AS mbedtls
 RUN cd /tmp && \
-    curl --location --silent --show-error https://tls.mbed.org/download/mbedtls-2.16.2-apache.tgz | \
+    curl --location --silent --show-error https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/mbedtls-2.16.2.tar.gz | \
         tar -xz && \
-    cd mbedtls-2.16.2 && \
+    cd mbedtls-mbedtls-2.16.2 && \
     scripts/config.pl unset MBEDTLS_AESNI_C && \
     scripts/config.pl set MBEDTLS_MD4_C 1 && \
     mkdir build build-msan && \
@@ -44,12 +45,11 @@ RUN cd /tmp && \
     CC=clang-10 CFLAGS="-fPIC" cmake -G Ninja -DENABLE_PROGRAMS=OFF -DENABLE_TESTING=OFF -DUSE_SHARED_MBEDTLS_LIBRARY=ON -DUSE_STATIC_MBEDTLS_LIBRARY=OFF -DCMAKE_BUILD_TYPE=MemSanDbg -DCMAKE_INSTALL_PREFIX=/usr/local/msan .. && \
     ninja install && \
     cd .. && \
-    rm -rf mbedtls-2.16.2
+    rm -rf mbedtls-mbedtls-2.16.2
 
 FROM mbedtls AS libssh2
 RUN cd /tmp && \
-    curl --insecure --location --silent --show-error https://www.libssh2.org/download/libssh2-1.9.0.tar.gz | \
-        tar -xz && \
+    curl --location --silent --show-error https://www.libssh2.org/download/libssh2-1.9.0.tar.gz | tar -xz && \
     cd libssh2-1.9.0 && \
     mkdir build build-msan && \
     cd build && \
@@ -72,9 +72,14 @@ RUN cd /tmp && \
     cd .. && \
     rm -rf valgrind-3.15.0
 
-FROM valgrind AS configure
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod a+x /usr/local/bin/entrypoint.sh
-RUN mkdir /var/run/sshd
+FROM valgrind AS adduser
+ARG UID=""
+ARG GID=""
+RUN if [ "${UID}" != "" ]; then USER_ARG="--uid ${UID}"; fi && \
+    if [ "${GID}" != "" ]; then GROUP_ARG="--gid ${GID}"; fi && \
+    groupadd ${GROUP_ARG} libgit2 && \
+    useradd ${USER_ARG} --gid libgit2 --shell /bin/bash --create-home libgit2
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+FROM adduser AS configure
+RUN mkdir /var/run/sshd

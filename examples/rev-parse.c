@@ -65,7 +65,7 @@ static void parse_opts(struct parse_state *ps, int argc, char *argv[])
 static int parse_revision(git_repository *repo, struct parse_state *ps)
 {
 	git_revspec rs;
-	char str[GIT_OID_HEXSZ + 1];
+	char str[GIT_OID_SHA1_HEXSIZE + 1];
 
 	check_lg2(git_revparse(&rs, repo, ps->spec), "Could not parse", ps->spec);
 

@@ -479,6 +479,7 @@ GIT_EXTERN(int) git_commit_create_buffer(
  * to the commit and write it into the given repository.
  *
  * @param out the resulting commit id
+ * @param repo the repository to create the commit in.
  * @param commit_content the content of the unsigned commit object
  * @param signature the signature to add to the commit. Leave `NULL`
  * to create a commit without adding a signature field.
@@ -499,29 +500,46 @@ GIT_EXTERN(int) git_commit_create_with_signature(
  *
  * @param out Pointer to store the copy of the commit
  * @param source Original commit to copy
+ * @return 0
  */
 GIT_EXTERN(int) git_commit_dup(git_commit **out, git_commit *source);
 
 /**
- * Commit signing callback.
+ * Commit creation callback: used when a function is going to create
+ * commits (for example, in `git_rebase_commit`) to allow callers to
+ * override the commit creation behavior.  For example, users may
+ * wish to sign commits by providing this information to
+ * `git_commit_create_buffer`, signing that buffer, then calling
+ * `git_commit_create_with_signature`.  The resultant commit id
+ * should be set in the `out` object id parameter.
  *
- * The callback will be called with the commit content, giving a user an
- * opportunity to sign the commit content. The signature_field
- * buf may be left empty to specify the default field "gpgsig".
- *
- * Signatures can take the form of any string, and can be created on an arbitrary
- * header field. Signatures are most commonly used for verifying authorship of a
- * commit using GPG or a similar cryptographically secure signing algorithm.
- * See https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work for more
- * details.
- *
- * When the callback:
- * - returns GIT_PASSTHROUGH, no signature will be added to the commit.
- * - returns < 0, commit creation will be aborted.
- * - returns GIT_OK, the signature parameter is expected to be filled.
+ * @param out pointer that this callback will populate with the object
+ *            id of the commit that is created
+ * @param author the author name and time of the commit
+ * @param committer the committer name and time of the commit
+ * @param message_encoding the encoding of the given message, or NULL
+ *                         to assume UTF8
+ * @param message the commit message
+ * @param tree the tree to be committed
+ * @param parent_count the number of parents for this commit
+ * @param parents the commit parents
+ * @param payload the payload pointer in the rebase options
+ * @return 0 if this callback has created the commit and populated the out
+ *         parameter, GIT_PASSTHROUGH if the callback has not created a
+ *         commit and wants the calling function to create the commit as
+ *         if no callback had been specified, any other value to stop
+ *         and return a failure
  */
-typedef int (*git_commit_signing_cb)(
-	git_buf *signature, git_buf *signature_field, const char *commit_content, void *payload);
+typedef int (*git_commit_create_cb)(
+	git_oid *out,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	const git_commit *parents[],
+	void *payload);
 
 /** @} */
 GIT_END_DECL

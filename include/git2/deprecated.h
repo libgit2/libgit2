@@ -18,6 +18,7 @@
 #include "describe.h"
 #include "diff.h"
 #include "errors.h"
+#include "filter.h"
 #include "index.h"
 #include "indexer.h"
 #include "merge.h"
@@ -119,6 +120,66 @@ GIT_EXTERN(int) git_blob_filtered_content(
 
 /**@}*/
 
+/** @name Deprecated Filter Functions
+ *
+ * These functions are retained for backward compatibility.  The
+ * newer versions of these functions should be preferred in all
+ * new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/** Deprecated in favor of `git_filter_list_stream_buffer`.
+ *
+ * @deprecated Use git_filter_list_stream_buffer
+ * @see Use git_filter_list_stream_buffer
+ */
+GIT_EXTERN(int) git_filter_list_stream_data(
+	git_filter_list *filters,
+	git_buf *data,
+	git_writestream *target);
+
+/** Deprecated in favor of `git_filter_list_apply_to_buffer`.
+ *
+ * @deprecated Use git_filter_list_apply_to_buffer
+ * @see Use git_filter_list_apply_to_buffer
+ */
+GIT_EXTERN(int) git_filter_list_apply_to_data(
+	git_buf *out,
+	git_filter_list *filters,
+	git_buf *in);
+
+/**@}*/
+
+/** @name Deprecated Tree Functions
+ *
+ * These functions are retained for backward compatibility.  The
+ * newer versions of these functions and values should be preferred
+ * in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Write the contents of the tree builder as a tree object.
+ * This is an alias of `git_treebuilder_write` and is preserved
+ * for backward compatibility.
+ *
+ * This function is deprecated, but there is no plan to remove this
+ * function at this time.
+ *
+ * @deprecated Use git_treebuilder_write
+ * @see git_treebuilder_write
+ */
+GIT_EXTERN(int) git_treebuilder_write_with_buffer(
+	git_oid *oid, git_treebuilder *bld, git_buf *tree);
+
+/**@}*/
+
 /** @name Deprecated Buffer Functions
  *
  * These functions and enumeration values are retained for backward
@@ -129,6 +190,61 @@ GIT_EXTERN(int) git_blob_filtered_content(
  * this time.
  */
 /**@{*/
+
+/**
+ * Static initializer for git_buf from static buffer
+ */
+#define GIT_BUF_INIT_CONST(STR,LEN) { (char *)(STR), 0, (size_t)(LEN) }
+
+/**
+ * Resize the buffer allocation to make more space.
+ *
+ * This will attempt to grow the buffer to accommodate the target size.
+ *
+ * If the buffer refers to memory that was not allocated by libgit2 (i.e.
+ * the `asize` field is zero), then `ptr` will be replaced with a newly
+ * allocated block of data.  Be careful so that memory allocated by the
+ * caller is not lost.  As a special variant, if you pass `target_size` as
+ * 0 and the memory is not allocated by libgit2, this will allocate a new
+ * buffer of size `size` and copy the external data into it.
+ *
+ * Currently, this will never shrink a buffer, only expand it.
+ *
+ * If the allocation fails, this will return an error and the buffer will be
+ * marked as invalid for future operations, invaliding the contents.
+ *
+ * @param buffer The buffer to be resized; may or may not be allocated yet
+ * @param target_size The desired available size
+ * @return 0 on success, -1 on allocation failure
+ */
+GIT_EXTERN(int) git_buf_grow(git_buf *buffer, size_t target_size);
+
+/**
+ * Set buffer to a copy of some raw data.
+ *
+ * @param buffer The buffer to set
+ * @param data The data to copy into the buffer
+ * @param datalen The length of the data to copy into the buffer
+ * @return 0 on success, -1 on allocation failure
+ */
+GIT_EXTERN(int) git_buf_set(
+	git_buf *buffer, const void *data, size_t datalen);
+
+/**
+* Check quickly if buffer looks like it contains binary data
+*
+* @param buf Buffer to check
+* @return 1 if buffer looks like non-text data
+*/
+GIT_EXTERN(int) git_buf_is_binary(const git_buf *buf);
+
+/**
+* Check quickly if buffer contains a NUL byte
+*
+* @param buf Buffer to check
+* @return 1 if buffer contains a NUL byte
+*/
+GIT_EXTERN(int) git_buf_contains_nul(const git_buf *buf);
 
 /**
  * Free the memory referred to by the git_buf.  This is an alias of
@@ -144,6 +260,27 @@ GIT_EXTERN(void) git_buf_free(git_buf *buffer);
 
 /**@}*/
 
+/** @name Deprecated Commit Definitions
+ */
+/**@{*/
+
+/**
+ * Provide a commit signature during commit creation.
+ *
+ * Callers should instead define a `git_commit_create_cb` that
+ * generates a commit buffer using `git_commit_create_buffer`, sign
+ * that buffer and call `git_commit_create_with_signature`.
+ *
+ * @deprecated use a `git_commit_create_cb` instead
+ */
+typedef int (*git_commit_signing_cb)(
+	git_buf *signature,
+	git_buf *signature_field,
+	const char *commit_content,
+	void *payload);
+
+/**@}*/
+
 /** @name Deprecated Config Functions and Constants
  */
 /**@{*/
@@ -154,6 +291,102 @@ GIT_EXTERN(void) git_buf_free(git_buf *buffer);
 #define GIT_CVAR_STRING GIT_CONFIGMAP_STRING
 
 typedef git_configmap git_cvar_map;
+
+/**@}*/
+
+/** @name Deprecated Diff Functions and Constants
+ *
+ * These functions and enumeration values are retained for backward
+ * compatibility.  The newer versions of these functions and values
+ * should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Formatting options for diff e-mail generation
+ */
+typedef enum {
+	/** Normal patch, the default */
+	GIT_DIFF_FORMAT_EMAIL_NONE = 0,
+
+	/** Don't insert "[PATCH]" in the subject header*/
+	GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER = (1 << 0)
+
+} git_diff_format_email_flags_t;
+
+/**
+ * Options for controlling the formatting of the generated e-mail.
+ */
+typedef struct {
+	unsigned int version;
+
+	/** see `git_diff_format_email_flags_t` above */
+	uint32_t flags;
+
+	/** This patch number */
+	size_t patch_no;
+
+	/** Total number of patches in this series */
+	size_t total_patches;
+
+	/** id to use for the commit */
+	const git_oid *id;
+
+	/** Summary of the change */
+	const char *summary;
+
+	/** Commit message's body */
+	const char *body;
+
+	/** Author of the change */
+	const git_signature *author;
+} git_diff_format_email_options;
+
+#define GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION 1
+#define GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT {GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION, 0, 1, 1, NULL, NULL, NULL, NULL}
+
+/**
+ * Create an e-mail ready patch from a diff.
+ *
+ * @deprecated git_email_create_from_diff
+ * @see git_email_create_from_diff
+ */
+GIT_EXTERN(int) git_diff_format_email(
+	git_buf *out,
+	git_diff *diff,
+	const git_diff_format_email_options *opts);
+
+/**
+ * Create an e-mail ready patch for a commit.
+ *
+ * @deprecated git_email_create_from_commit
+ * @see git_email_create_from_commit
+ */
+GIT_EXTERN(int) git_diff_commit_as_email(
+	git_buf *out,
+	git_repository *repo,
+	git_commit *commit,
+	size_t patch_no,
+	size_t total_patches,
+	uint32_t flags,
+	const git_diff_options *diff_opts);
+
+/**
+ * Initialize git_diff_format_email_options structure
+ *
+ * Initializes a `git_diff_format_email_options` with default values. Equivalent
+ * to creating an instance with GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT.
+ *
+ * @param opts The `git_blame_options` struct to initialize.
+ * @param version The struct version; pass `GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_diff_format_email_options_init(
+	git_diff_format_email_options *opts,
+	unsigned int version);
 
 /**@}*/
 
@@ -202,6 +435,8 @@ typedef git_configmap git_cvar_map;
 #define GITERR_PATCH GIT_ERROR_PATCH
 #define GITERR_WORKTREE GIT_ERROR_WORKTREE
 #define GITERR_SHA1 GIT_ERROR_SHA1
+
+#define GIT_ERROR_SHA1 GIT_ERROR_SHA
 
 /**
  * Return the last `git_error` object that was generated for the
@@ -542,7 +777,37 @@ typedef git_trace_cb git_trace_callback;
  */
 /**@{*/
 
+#ifndef GIT_EXPERIMENTAL_SHA256
+# define GIT_OID_RAWSZ    GIT_OID_SHA1_SIZE
+# define GIT_OID_HEXSZ    GIT_OID_SHA1_HEXSIZE
+# define GIT_OID_HEX_ZERO GIT_OID_SHA1_HEXZERO
+#endif
+
 GIT_EXTERN(int) git_oid_iszero(const git_oid *id);
+
+/**@}*/
+
+/** @name Deprecated OID Array Functions
+ *
+ * These types are retained for backward compatibility.  The newer
+ * versions of these values should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Free the memory referred to by the git_oidarray.  This is an alias of
+ * `git_oidarray_dispose` and is preserved for backward compatibility.
+ *
+ * This function is deprecated, but there is no plan to remove this
+ * function at this time.
+ *
+ * @deprecated Use git_oidarray_dispose
+ * @see git_oidarray_dispose
+ */
+GIT_EXTERN(void) git_oidarray_free(git_oidarray *array);
 
 /**@}*/
 

@@ -44,7 +44,7 @@ typedef enum {
 	 * All ignored files are also stashed and then cleaned up from
 	 * the working directory
 	 */
-	GIT_STASH_INCLUDE_IGNORED = (1 << 2),
+	GIT_STASH_INCLUDE_IGNORED = (1 << 2)
 } git_stash_flags;
 
 /**
@@ -78,7 +78,7 @@ typedef enum {
 	/* Try to reinstate not only the working tree's changes,
 	 * but also the index's changes.
 	 */
-	GIT_STASH_APPLY_REINSTATE_INDEX = (1 << 0),
+	GIT_STASH_APPLY_REINSTATE_INDEX = (1 << 0)
 } git_stash_apply_flags;
 
 /** Stash apply progression states */
@@ -104,7 +104,7 @@ typedef enum {
 	GIT_STASH_APPLY_PROGRESS_CHECKOUT_MODIFIED,
 
 	/** The stash was applied successfully. */
-	GIT_STASH_APPLY_PROGRESS_DONE,
+	GIT_STASH_APPLY_PROGRESS_DONE
 } git_stash_apply_progress_t;
 
 /**
@@ -200,7 +200,7 @@ GIT_EXTERN(int) git_stash_apply(
  */
 typedef int GIT_CALLBACK(git_stash_cb)(
 	size_t index,
-	const char* message,
+	const char *message,
 	const git_oid *stash_id,
 	void *payload);
 

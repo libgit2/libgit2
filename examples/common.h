@@ -36,7 +36,7 @@
 #endif
 
 #ifndef PRIuZ
-/* Define the printf format specifer to use for size_t output */
+/* Define the printf format specifier to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #	define PRIuZ "Iu"
 #else
@@ -45,7 +45,7 @@
 #endif
 
 #ifdef _MSC_VER
-#define snprintf sprintf_s
+#define snprintf _snprintf
 #define strcasecmp strcmpi
 #endif
 

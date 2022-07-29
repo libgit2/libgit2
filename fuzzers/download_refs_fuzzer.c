@@ -15,6 +15,8 @@
 #include "git2/sys/transport.h"
 #include "futils.h"
 
+#include "standalone_driver.h"
+
 #define UNUSED(x) (void)(x)
 
 struct fuzzer_buffer {
@@ -130,7 +132,7 @@ static int fuzzer_subtransport_new(
 	return 0;
 }
 
-int fuzzer_subtransport_cb(
+static int fuzzer_subtransport_cb(
 	git_smart_subtransport **out,
 	git_transport *owner,
 	void *payload)
@@ -145,7 +147,7 @@ int fuzzer_subtransport_cb(
 	return 0;
 }
 
-int fuzzer_transport_cb(git_transport **out, git_remote *owner, void *param)
+static int fuzzer_transport_cb(git_transport **out, git_remote *owner, void *param)
 {
 	git_smart_subtransport_definition def = {
 		fuzzer_subtransport_cb,
@@ -155,7 +157,7 @@ int fuzzer_transport_cb(git_transport **out, git_remote *owner, void *param)
 	return git_transport_smart(out, owner, &def);
 }
 
-void fuzzer_git_abort(const char *op)
+static void fuzzer_git_abort(const char *op)
 {
 	const git_error *err = git_error_last();
 	fprintf(stderr, "unexpected libgit error: %s: %s\n",

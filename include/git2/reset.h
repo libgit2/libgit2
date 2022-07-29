@@ -26,7 +26,7 @@ GIT_BEGIN_DECL
 typedef enum {
 	GIT_RESET_SOFT  = 1, /**< Move the head to the given commit */
 	GIT_RESET_MIXED = 2, /**< SOFT plus reset index to the commit */
-	GIT_RESET_HARD  = 3, /**< MIXED plus changes in working tree discarded */
+	GIT_RESET_HARD  = 3  /**< MIXED plus changes in working tree discarded */
 } git_reset_t;
 
 /**
@@ -48,7 +48,7 @@ typedef enum {
  *
  * @param target Committish to which the Head should be moved to. This object
  * must belong to the given `repo` and can either be a git_commit or a
- * git_tag. When a git_tag is being passed, it should be dereferencable
+ * git_tag. When a git_tag is being passed, it should be dereferenceable
  * to a git_commit which oid will be used as the target of the branch.
  *
  * @param reset_type Kind of reset operation to perform.

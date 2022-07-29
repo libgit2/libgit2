@@ -42,14 +42,14 @@ typedef enum {
 	GIT_ECONFLICT       = -13,	/**< Checkout conflicts prevented operation */
 	GIT_ELOCKED         = -14,	/**< Lock file prevented operation */
 	GIT_EMODIFIED       = -15,	/**< Reference value does not match expected */
-	GIT_EAUTH           = -16,      /**< Authentication error */
-	GIT_ECERTIFICATE    = -17,      /**< Server certificate is invalid */
+	GIT_EAUTH           = -16,	/**< Authentication error */
+	GIT_ECERTIFICATE    = -17,	/**< Server certificate is invalid */
 	GIT_EAPPLIED        = -18,	/**< Patch/merge has already been applied */
-	GIT_EPEEL           = -19,      /**< The requested peel operation is not possible */
-	GIT_EEOF            = -20,      /**< Unexpected EOF */
-	GIT_EINVALID        = -21,      /**< Invalid operation or input */
+	GIT_EPEEL           = -19,	/**< The requested peel operation is not possible */
+	GIT_EEOF            = -20,	/**< Unexpected EOF */
+	GIT_EINVALID        = -21,	/**< Invalid operation or input */
 	GIT_EUNCOMMITTED    = -22,	/**< Uncommitted changes in index prevented operation */
-	GIT_EDIRECTORY      = -23,      /**< The operation is not valid for a directory */
+	GIT_EDIRECTORY      = -23,	/**< The operation is not valid for a directory */
 	GIT_EMERGECONFLICT  = -24,	/**< A merge conflict exists and cannot continue */
 
 	GIT_PASSTHROUGH     = -30,	/**< A user-configured callback refused to act */
@@ -58,6 +58,7 @@ typedef enum {
 	GIT_EMISMATCH       = -33,	/**< Hashsum mismatch in object */
 	GIT_EINDEXDIRTY     = -34,	/**< Unsaved changes in the index would be overwritten */
 	GIT_EAPPLYFAIL      = -35,	/**< Patch application failed */
+	GIT_EOWNER          = -36	/**< The object is not owned by the current user */
 } git_error_code;
 
 /**
@@ -106,7 +107,7 @@ typedef enum {
 	GIT_ERROR_FILESYSTEM,
 	GIT_ERROR_PATCH,
 	GIT_ERROR_WORKTREE,
-	GIT_ERROR_SHA1,
+	GIT_ERROR_SHA,
 	GIT_ERROR_HTTP,
 	GIT_ERROR_INTERNAL
 } git_error_t;
@@ -130,7 +131,8 @@ GIT_EXTERN(const git_error *) git_error_last(void);
 GIT_EXTERN(void) git_error_clear(void);
 
 /**
- * Set the error message string for this thread.
+ * Set the error message string for this thread, using `printf`-style
+ * formatting.
  *
  * This function is public so that custom ODB backends and the like can
  * relay an error message through libgit2.  Most regular users of libgit2
@@ -143,7 +145,20 @@ GIT_EXTERN(void) git_error_clear(void);
  *
  * @param error_class One of the `git_error_t` enum above describing the
  *                    general subsystem that is responsible for the error.
- * @param string The formatted error message to keep
+ * @param fmt The `printf`-style format string; subsequent arguments must
+ *            be the arguments for the format string.
+ */
+GIT_EXTERN(void) git_error_set(int error_class, const char *fmt, ...)
+                 GIT_FORMAT_PRINTF(2, 3);
+
+/**
+ * Set the error message string for this thread.  This function is like
+ * `git_error_set` but takes a static string instead of a `printf`-style
+ * format.
+ *
+ * @param error_class One of the `git_error_t` enum above describing the
+ *                    general subsystem that is responsible for the error.
+ * @param string The error message to keep
  * @return 0 on success or -1 on failure
  */
 GIT_EXTERN(int) git_error_set_str(int error_class, const char *string);

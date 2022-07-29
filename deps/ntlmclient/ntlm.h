@@ -14,6 +14,8 @@
 #include "crypt.h"
 #include "compat.h"
 
+#define NTLM_UNUSED(x) ((void)(x))
+
 #define NTLM_LM_RESPONSE_LEN 24
 #define NTLM_NTLM_RESPONSE_LEN 24
 #define NTLM_NTLM_HASH_LEN 16
@@ -28,7 +30,7 @@ typedef enum {
 	NTLM_STATE_CHALLENGE = 1,
 	NTLM_STATE_RESPONSE = 2,
 	NTLM_STATE_ERROR = 3,
-	NTLM_STATE_COMPLETE = 4,
+	NTLM_STATE_COMPLETE = 4
 } ntlm_state;
 
 typedef struct {
@@ -66,9 +68,11 @@ struct ntlm_client {
 
 	ntlm_state state;
 
-	/* crypto contexts */
-	ntlm_hmac_ctx *hmac_ctx;
-	ntlm_unicode_ctx *unicode_ctx;
+	/* subsystem contexts */
+	ntlm_crypt_ctx crypt_ctx;
+	ntlm_unicode_ctx unicode_ctx;
+	int crypt_initialized : 1,
+	    unicode_initialized : 1;
 
 	/* error message as set by the library */
 	const char *errmsg;
@@ -85,23 +89,23 @@ struct ntlm_client {
 	char *password;
 
 	/* strings as converted to utf16 */
+	char *hostname_utf16;
 	char *target_utf16;
 	char *username_utf16;
 	char *username_upper_utf16;
 	char *userdomain_utf16;
-	char *hostname_utf16;
 	char *password_utf16;
+
+	size_t hostname_utf16_len;
+	size_t username_utf16_len;
+	size_t username_upper_utf16_len;
+	size_t userdomain_utf16_len;
+	size_t password_utf16_len;
+	size_t target_utf16_len;
 
 	/* timestamp and nonce; only for debugging */
 	uint64_t nonce;
 	uint64_t timestamp;
-
-	size_t username_utf16_len;
-	size_t username_upper_utf16_len;
-	size_t userdomain_utf16_len;
-	size_t hostname_utf16_len;
-	size_t password_utf16_len;
-	size_t target_utf16_len;
 
 	unsigned char lm_response[NTLM_LM_RESPONSE_LEN];
 	size_t lm_response_len;
@@ -118,7 +122,7 @@ struct ntlm_client {
 };
 
 typedef enum {
-	NTLM_ENABLE_HOSTVERSION = (1 << 31),
+	NTLM_ENABLE_HOSTVERSION = (1 << 31)
 } ntlm_client_internal_flags;
 
 typedef enum {
@@ -126,7 +130,7 @@ typedef enum {
 	NTLM_TARGET_INFO_SERVER = 1,
 	NTLM_TARGET_INFO_DOMAIN = 2,
 	NTLM_TARGET_INFO_SERVER_DNS = 3,
-	NTLM_TARGET_INFO_DOMAIN_DNS = 4,
+	NTLM_TARGET_INFO_DOMAIN_DNS = 4
 } ntlm_target_info_type_t;
 
 typedef enum {
@@ -164,7 +168,7 @@ typedef enum {
 	NTLM_NEGOTIATE_TARGET_INFO = 0x00800000,
 
 	/* Version information should be provided */
-	NTLM_NEGOTIATE_VERSION = 0x01000000,
+	NTLM_NEGOTIATE_VERSION = 0x01000000
 } ntlm_negotiate_t;
 
 extern int ntlm_client_set_nonce(ntlm_client *ntlm, uint64_t nonce);

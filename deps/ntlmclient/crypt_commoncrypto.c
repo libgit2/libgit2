@@ -18,9 +18,15 @@
 #include "ntlm.h"
 #include "crypt.h"
 
+bool ntlm_crypt_init(ntlm_client *ntlm)
+{
+	memset(&ntlm->crypt_ctx, 0, sizeof(ntlm_crypt_ctx));
+	return true;
+}
+
 bool ntlm_random_bytes(
-	ntlm_client *ntlm,
 	unsigned char *out,
+	ntlm_client *ntlm,
 	size_t len)
 {
 	int fd, ret;
@@ -49,10 +55,13 @@ bool ntlm_random_bytes(
 
 bool ntlm_des_encrypt(
 	ntlm_des_block *out,
+	ntlm_client *ntlm,
 	ntlm_des_block *plaintext,
 	ntlm_des_block *key)
 {
 	size_t written;
+
+	NTLM_UNUSED(ntlm);
 
 	CCCryptorStatus result = CCCrypt(kCCEncrypt,
 		kCCAlgorithmDES, kCCOptionECBMode,
@@ -65,56 +74,47 @@ bool ntlm_des_encrypt(
 
 bool ntlm_md4_digest(
 	unsigned char out[CRYPT_MD4_DIGESTSIZE],
+	ntlm_client *ntlm,
 	const unsigned char *in,
 	size_t in_len)
 {
+	NTLM_UNUSED(ntlm);
 	return !!CC_MD4(in, in_len, out);
 }
 
-ntlm_hmac_ctx *ntlm_hmac_ctx_init(void)
-{
-	return calloc(1, sizeof(ntlm_hmac_ctx));
-}
-
-bool ntlm_hmac_ctx_reset(ntlm_hmac_ctx *ctx)
-{
-	memset(ctx, 0, sizeof(ntlm_hmac_ctx));
-	return true;
-}
-
 bool ntlm_hmac_md5_init(
-	ntlm_hmac_ctx *ctx,
+	ntlm_client *ntlm,
 	const unsigned char *key,
 	size_t key_len)
 {
-	CCHmacInit(&ctx->native, kCCHmacAlgMD5, key, key_len);
+	CCHmacInit(&ntlm->crypt_ctx.hmac, kCCHmacAlgMD5, key, key_len);
 	return true;
 }
 
 bool ntlm_hmac_md5_update(
-	ntlm_hmac_ctx *ctx,
+	ntlm_client *ntlm,
 	const unsigned char *data,
 	size_t data_len)
 {
-	CCHmacUpdate(&ctx->native, data, data_len);
+	CCHmacUpdate(&ntlm->crypt_ctx.hmac, data, data_len);
 	return true;
 }
 
 bool ntlm_hmac_md5_final(
 	unsigned char *out,
 	size_t *out_len,
-	ntlm_hmac_ctx *ctx)
+	ntlm_client *ntlm)
 {
 	if (*out_len < CRYPT_MD5_DIGESTSIZE)
 		return false;
 
-	CCHmacFinal(&ctx->native, out);
+	CCHmacFinal(&ntlm->crypt_ctx.hmac, out);
 
 	*out_len = CRYPT_MD5_DIGESTSIZE;
 	return true;
 }
 
-void ntlm_hmac_ctx_free(ntlm_hmac_ctx *ctx)
+void ntlm_crypt_shutdown(ntlm_client *ntlm)
 {
-	free(ctx);
+	NTLM_UNUSED(ntlm);
 }

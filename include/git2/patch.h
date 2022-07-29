@@ -139,17 +139,25 @@ GIT_EXTERN(int) git_patch_from_buffers(
 
 /**
  * Free a git_patch object.
+ *
+ * @param patch The patch to free.
  */
 GIT_EXTERN(void) git_patch_free(git_patch *patch);
 
 /**
  * Get the delta associated with a patch.  This delta points to internal
  * data and you do not have to release it when you are done with it.
+ *
+ * @param patch The patch in which to get the delta.
+ * @return The delta associated with the patch.
  */
 GIT_EXTERN(const git_diff_delta *) git_patch_get_delta(const git_patch *patch);
 
 /**
  * Get the number of hunks in a patch
+ *
+ * @param patch The patch in which to get the number of hunks.
+ * @return The number of hunks of the patch.
  */
 GIT_EXTERN(size_t) git_patch_num_hunks(const git_patch *patch);
 

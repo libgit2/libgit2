@@ -92,6 +92,14 @@ typedef enum {
 	 * merge base to `git-merge-resolve`.
 	 */
 	GIT_MERGE_NO_RECURSIVE = (1 << 3),
+
+	/**
+	 * Treat this merge as if it is to produce the virtual base
+	 * of a recursive merge.  This will ensure that there are
+	 * no conflicts, any conflicting regions will keep conflict
+	 * markers in the merge result.
+	 */
+	GIT_MERGE_VIRTUAL_BASE = (1 << 4)
 } git_merge_flag_t;
 
 /**
@@ -127,7 +135,7 @@ typedef enum {
 	 * which has the result of combining both files.  The index will not
 	 * record a conflict.
 	 */
-	GIT_MERGE_FILE_FAVOR_UNION = 3,
+	GIT_MERGE_FILE_FAVOR_UNION = 3
 } git_merge_file_favor_t;
 
 /**
@@ -160,6 +168,16 @@ typedef enum {
 
 	/** Take extra time to find minimal diff */
 	GIT_MERGE_FILE_DIFF_MINIMAL = (1 << 7),
+
+	/** Create zdiff3 ("zealous diff3")-style files */
+	GIT_MERGE_FILE_STYLE_ZDIFF3 = (1 << 8),
+
+	/**
+	 * Do not produce file conflicts when common regions have
+	 * changed; keep the conflict markers in the file and accept
+	 * that as the merge result.
+	 */
+	GIT_MERGE_FILE_ACCEPT_CONFLICTS = (1 << 9)
 } git_merge_file_flag_t;
 
 #define GIT_MERGE_CONFLICT_MARKER_SIZE	7
@@ -341,7 +359,7 @@ typedef enum {
 	 * a valid commit.  No merge can be performed, but the caller may wish
 	 * to simply set HEAD to the target commit(s).
 	 */
-	GIT_MERGE_ANALYSIS_UNBORN = (1 << 3),
+	GIT_MERGE_ANALYSIS_UNBORN = (1 << 3)
 } git_merge_analysis_t;
 
 /**
@@ -364,7 +382,7 @@ typedef enum {
 	 * There is a `merge.ff=only` configuration setting, suggesting that
 	 * the user only wants fast-forward merges.
 	 */
-	GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY = (1 << 1),
+	GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY = (1 << 1)
 } git_merge_preference_t;
 
 /**
@@ -372,6 +390,7 @@ typedef enum {
  * merging them into the HEAD of the repository.
  *
  * @param analysis_out analysis enumeration that the result is written into
+ * @param preference_out One of the `git_merge_preference_t` flag.
  * @param repo the repository to merge
  * @param their_heads the heads to merge into
  * @param their_heads_len the number of heads to merge
@@ -389,6 +408,7 @@ GIT_EXTERN(int) git_merge_analysis(
  * merging them into a reference.
  *
  * @param analysis_out analysis enumeration that the result is written into
+ * @param preference_out One of the `git_merge_preference_t` flag.
  * @param repo the repository to merge
  * @param our_ref the reference to perform the analysis from
  * @param their_heads the heads to merge into
@@ -583,7 +603,7 @@ GIT_EXTERN(int) git_merge_commits(
  * completes, resolve any conflicts and prepare a commit.
  *
  * For compatibility with git, the repository is put into a merging
- * state. Once the commit is done (or if the uses wishes to abort),
+ * state. Once the commit is done (or if the user wishes to abort),
  * you should clear this state by calling
  * `git_repository_state_cleanup()`.
  *

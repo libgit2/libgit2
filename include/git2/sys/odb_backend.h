@@ -36,7 +36,7 @@ struct git_odb_backend {
 		void **, size_t *, git_object_t *, git_odb_backend *, const git_oid *);
 
 	/* To find a unique object given a prefix of its oid.  The oid given
-	 * must be so that the remaining (GIT_OID_HEXSZ - len)*4 bits are 0s.
+	 * must be so that the remaining (GIT_OID_SHA1_HEXSIZE - len)*4 bits are 0s.
 	 */
 	int GIT_CALLBACK(read_prefix)(
 		git_oid *, void **, size_t *, git_object_t *,
@@ -69,11 +69,8 @@ struct git_odb_backend {
 	 * If the backend implements a refreshing mechanism, it should be exposed
 	 * through this endpoint. Each call to `git_odb_refresh()` will invoke it.
 	 *
-	 * However, the backend implementation should try to stay up-to-date as much
-	 * as possible by itself as libgit2 will not automatically invoke
-	 * `git_odb_refresh()`. For instance, a potential strategy for the backend
-	 * implementation to achieve this could be to internally invoke this
-	 * endpoint on failed lookups (ie. `exists()`, `read()`, `read_header()`).
+	 * The odb layer will automatically call this when needed on failed
+	 * lookups (ie. `exists()`, `read()`, `read_header()`).
 	 */
 	int GIT_CALLBACK(refresh)(git_odb_backend *);
 
@@ -83,6 +80,13 @@ struct git_odb_backend {
 	int GIT_CALLBACK(writepack)(
 		git_odb_writepack **, git_odb_backend *, git_odb *odb,
 		git_indexer_progress_cb progress_cb, void *progress_payload);
+
+	/**
+	 * If the backend supports pack files, this will create a
+	 * `multi-pack-index` file which will contain an index of all objects
+	 * across all the `.pack` files.
+	 */
+	int GIT_CALLBACK(writemidx)(git_odb_backend *);
 
 	/**
 	 * "Freshens" an already existing object, updating its last-used

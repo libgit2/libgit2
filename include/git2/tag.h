@@ -362,6 +362,7 @@ GIT_EXTERN(int) git_tag_peel(
  *
  * @param out Pointer to store the copy of the tag
  * @param source Original tag to copy
+ * @return 0
  */
 GIT_EXTERN(int) git_tag_dup(git_tag **out, git_tag *source);
 

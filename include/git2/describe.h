@@ -30,7 +30,7 @@ GIT_BEGIN_DECL
 typedef enum {
 	GIT_DESCRIBE_DEFAULT,
 	GIT_DESCRIBE_TAGS,
-	GIT_DESCRIBE_ALL,
+	GIT_DESCRIBE_ALL
 } git_describe_strategy_t;
 
 /**
@@ -142,6 +142,7 @@ typedef struct git_describe_result git_describe_result;
  * you're done with it.
  * @param committish a committish to describe
  * @param opts the lookup options (or NULL for defaults)
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_describe_commit(
 	git_describe_result **result,
@@ -152,13 +153,14 @@ GIT_EXTERN(int) git_describe_commit(
  * Describe a commit
  *
  * Perform the describe operation on the current commit and the
- * worktree. After peforming describe on HEAD, a status is run and the
+ * worktree. After performing describe on HEAD, a status is run and the
  * description is considered to be dirty if there are.
  *
  * @param out pointer to store the result. You must free this once
  * you're done with it.
  * @param repo the repository in which to perform the describe
  * @param opts the lookup options (or NULL for defaults)
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_describe_workdir(
 	git_describe_result **out,
@@ -172,6 +174,7 @@ GIT_EXTERN(int) git_describe_workdir(
  * @param result the result from `git_describe_commit()` or
  * `git_describe_workdir()`.
  * @param opts the formatting options (or NULL for defaults)
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_describe_format(
 	git_buf *out,
@@ -180,6 +183,8 @@ GIT_EXTERN(int) git_describe_format(
 
 /**
  * Free the describe result.
+ *
+ * @param result The result to free.
  */
 GIT_EXTERN(void) git_describe_result_free(git_describe_result *result);
 

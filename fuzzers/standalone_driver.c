@@ -11,12 +11,11 @@
 #include "futils.h"
 #include "path.h"
 
-extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
-extern int LLVMFuzzerInitialize(int *argc, char ***argv);
+#include "standalone_driver.h"
 
 static int run_one_file(const char *filename)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_str buf = GIT_STR_INIT;
 	int error = 0;
 
 	if (git_futils_readbuffer(&buf, filename) < 0) {
@@ -27,7 +26,7 @@ static int run_one_file(const char *filename)
 
 	LLVMFuzzerTestOneInput((const unsigned char *)buf.ptr, buf.size);
 exit:
-	git_buf_dispose(&buf);
+	git_str_dispose(&buf);
 	return error;
 }
 
@@ -52,7 +51,7 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Running %s against %s\n", argv[0], argv[1]);
 	LLVMFuzzerInitialize(&argc, &argv);
 
-	if (git_path_dirload(&corpus_files, argv[1], 0, 0x0) < 0) {
+	if (git_fs_path_dirload(&corpus_files, argv[1], 0, 0x0) < 0) {
 		fprintf(stderr, "Failed to scan corpus directory '%s': %s\n",
 			argv[1], git_error_last()->message);
 		error = -1;
