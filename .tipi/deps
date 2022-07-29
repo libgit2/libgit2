@@ -1,7 +1,7 @@
 {   
    "u":true
    ,"packages": ["libgit2"]
-   ,"targets": ["libgit2::git2"]
+   ,"targets": ["libgit2::libgit2package"]
    ,"nxxm/libssh2":{"u":true, "packages": ["Libssh2"],"targets": ["Libssh2::libssh2"],"@":"feature/tipi-support"}
    ,"platform" : [ "ZLIB::+zlib","OpenSSL::+SSL", "OpenSSL::+Crypto" ]
    ,"platform:linux-cxx17" : [ "ZLIB::+zlib","OpenSSL::+SSL", "OpenSSL::+Crypto","target::dl" ]
