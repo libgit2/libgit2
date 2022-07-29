@@ -1,0 +1,2 @@
+# For ligbit2
+set(USE_SSH OFF CACHE BOOL "no ssh" FORCE)
