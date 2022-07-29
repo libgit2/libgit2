@@ -29,7 +29,7 @@ void test_clone_shallow__clone_depth_one(void)
 	git_revwalk *walk;
 	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
 	git_oid oid;
-	roots;
+	git_oidarray roots;
 	size_t num_commits = 0;
 	int error = 0;
 

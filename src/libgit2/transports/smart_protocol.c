@@ -375,10 +375,8 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		while ((error = recv_pkt((git_pkt **)&pkt, NULL, buf)) == 0) {
 
 			if (pkt->type == GIT_PKT_SHALLOW) {
-				printf("shallow %s\n", git_oid_tostr_s(&pkt->oid));
 				git_shallowarray_add(wants->shallow_roots, &pkt->oid);
 			} else if (pkt->type == GIT_PKT_UNSHALLOW) {
-				printf("unshallow %s\n", git_oid_tostr_s(&pkt->oid));
 				git_shallowarray_remove(wants->shallow_roots, &pkt->oid);
 			} else if (pkt->type == GIT_PKT_FLUSH) {
 				/* Server is done, stop processing shallow oids */
