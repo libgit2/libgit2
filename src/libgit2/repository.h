@@ -24,6 +24,7 @@
 #include "attrcache.h"
 #include "submodule.h"
 #include "diff_driver.h"
+#include "grafts.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
@@ -156,6 +157,9 @@ struct git_repository {
 
 	unsigned int lru_counter;
 
+	git_grafts *grafts;
+	git_grafts *shallow_grafts;
+
 	git_atomic32 attr_session_key;
 
 	intptr_t configmap_cache[GIT_CONFIGMAP_CACHE_MAX];
@@ -187,6 +191,8 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo);
 int git_repository_odb__weakptr(git_odb **out, git_repository *repo);
 int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo);
 int git_repository_index__weakptr(git_index **out, git_repository *repo);
+int git_repository_grafts__weakptr(git_grafts **out, git_repository *repo);
+int git_repository_shallow_grafts__weakptr(git_grafts **out, git_repository *repo);
 
 /*
  * Configuration map cache
