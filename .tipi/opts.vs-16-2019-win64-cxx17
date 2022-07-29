@@ -1,0 +1,16 @@
+add_compile_definitions(
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN
+    _WIN32_WINNT=0x0A00 # We have to set the windows version targeted
+    WINVER=0x0A00 # We have to set the windows version targeted
+)
+
+add_compile_options(
+     /bigobj
+)
+
+set(USE_SSH ON CACHE BOOL "ssh" FORCE)
+set(USE_HTTPS ON CACHE BOOL "ssl" FORCE)
+
+set(BUILD_CLAR OFF CACHE BOOL "no test" FORCE)
+set(STATIC_CRT OFF CACHE BOOL "no crt" FORCE)
