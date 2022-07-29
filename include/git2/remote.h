@@ -744,6 +744,11 @@ typedef struct {
 	git_proxy_options proxy_opts;
 
 	/**
+	 * Depth of the fetch to perform
+	 */
+	int depth;
+
+	/**
 	 * Whether to allow off-site redirects.  If this is not
 	 * specified, the `http.followRedirects` configuration setting
 	 * will be consulted.
@@ -754,16 +759,11 @@ typedef struct {
 	 * Extra headers for this fetch operation
 	 */
 	git_strarray custom_headers;
-
-	/**
-	 * Depth of the fetch to perform
-	 */
-	int depth;
 } git_fetch_options;
 
 #define GIT_FETCH_OPTIONS_VERSION 1
 #define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT, GIT_FETCH_PRUNE_UNSPECIFIED, 1, \
-				 GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, GIT_PROXY_OPTIONS_INIT, { NULL }, -1 }
+				 GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, GIT_PROXY_OPTIONS_INIT, -1 }
 
 /**
  * Initialize git_fetch_options structure
