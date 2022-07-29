@@ -41,7 +41,7 @@ struct git_annotated_commit {
 	const char *ref_name;
 	const char *remote_url;
 
-	char id_str[GIT_OID_HEXSZ+1];
+	char id_str[GIT_OID_SHA1_HEXSIZE+1];
 };
 
 extern int git_annotated_commit_from_head(git_annotated_commit **out,

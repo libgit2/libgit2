@@ -63,7 +63,7 @@ void test_refs_delete__packed_only(void)
 	git_oid id;
 	const char *new_ref = "refs/heads/new_ref";
 
-	git_oid_fromstr(&id, current_master_tip);
+	git_oid__fromstr(&id, current_master_tip, GIT_OID_SHA1);
 
 	/* Create and write the new object id reference */
 	cl_git_pass(git_reference_create(&ref, g_repo, new_ref, &id, 0, NULL));

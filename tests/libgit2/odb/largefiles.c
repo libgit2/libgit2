@@ -57,7 +57,7 @@ void test_odb_largefiles__write_from_memory(void)
 	for (i = 0; i < (3041*126103); i++)
 		cl_git_pass(git_str_puts(&buf, "Hello, world.\n"));
 
-	git_oid_fromstr(&expected, "3fb56989cca483b21ba7cb0a6edb229d10e1c26c");
+	git_oid__fromstr(&expected, "3fb56989cca483b21ba7cb0a6edb229d10e1c26c", GIT_OID_SHA1);
 	cl_git_pass(git_odb_write(&oid, odb, buf.ptr, buf.size, GIT_OBJECT_BLOB));
 
 	cl_assert_equal_oid(&expected, &oid);
@@ -75,7 +75,7 @@ void test_odb_largefiles__streamwrite(void)
 		!cl_is_env_set("GITTEST_SLOW"))
 		cl_skip();
 
-	git_oid_fromstr(&expected, "3fb56989cca483b21ba7cb0a6edb229d10e1c26c");
+	git_oid__fromstr(&expected, "3fb56989cca483b21ba7cb0a6edb229d10e1c26c", GIT_OID_SHA1);
 	writefile(&oid);
 
 	cl_assert_equal_oid(&expected, &oid);

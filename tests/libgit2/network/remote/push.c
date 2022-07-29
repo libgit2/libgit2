@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/sys/commit.h"
+#include "oid.h"
 
 static git_remote *_remote;
 static git_repository *_repo, *_dummy;
@@ -57,7 +58,7 @@ void test_network_remote_push__delete_notification(void)
 
 	expected.src_refname = "";
 	expected.dst_refname = "refs/heads/master";
-	memset(&expected.dst, 0, sizeof(git_oid));
+	git_oid_clear(&expected.dst, GIT_OID_SHA1);
 	git_oid_cpy(&expected.src, git_reference_target(ref));
 
 	opts.callbacks.push_negotiation = negotiation_cb;
@@ -102,7 +103,7 @@ void test_network_remote_push__create_notification(void)
 	expected.src_refname = "refs/heads/empty-tree";
 	expected.dst_refname = "refs/heads/empty-tree";
 	git_oid_cpy(&expected.dst, git_reference_target(ref));
-	memset(&expected.src, 0, sizeof(git_oid));
+	git_oid_clear(&expected.src, GIT_OID_SHA1);
 
 	opts.callbacks.push_negotiation = negotiation_cb;
 	opts.callbacks.payload = &expected;

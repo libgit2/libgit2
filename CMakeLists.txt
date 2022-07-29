@@ -15,6 +15,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 # Build options
 #
 
+# Experimental features
+option(EXPERIMENTAL_SHA256     "Enable experimental SHA256 support (for R&D/testing)"  OFF)
+
 # Optional subsystems
 option(BUILD_SHARED_LIBS       "Build Shared Library (OFF for Static)"                  ON)
 option(BUILD_TESTS             "Build Tests using the Clar suite"                       ON)
@@ -107,6 +110,7 @@ include(IdeSplitSources)
 include(FeatureSummary)
 include(EnableWarnings)
 include(DefaultCFlags)
+include(ExperimentalFeatures)
 
 
 #

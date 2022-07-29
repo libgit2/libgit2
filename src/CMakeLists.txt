@@ -70,7 +70,11 @@ check_function_exists(qsort_s GIT_QSORT_S)
 
 # random / entropy data
 
-check_function_exists(getentropy GIT_RAND_GETENTROPY)
+# The flag has been unset to prevent issues
+# related to Linux GLIBC version dependency
+
+# check_function_exists(getentropy GIT_RAND_GETENTROPY)
+unset(GIT_RAND_GETENTROPY)
 check_function_exists(getloadavg GIT_RAND_GETLOADAVG)
 
 # determine architecture of the machine
@@ -169,12 +173,6 @@ if(ICONV_FOUND)
 	list(APPEND LIBGIT2_PC_LIBS ${ICONV_LIBRARIES})
 endif()
 add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
-
-#
-# Configure support
-#
-
-configure_file(features.h.in git2/sys/features.h)
 
 #
 # Include child projects

@@ -36,7 +36,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	git_midx_entry e;
 	git_str midx_buf = GIT_STR_INIT;
 	unsigned char hash[GIT_HASH_SHA1_SIZE];
-	git_oid oid = {{0}};
+	git_oid oid = GIT_OID_NONE;
 	bool append_hash = false;
 
 	if (size < 4)
@@ -61,7 +61,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		memcpy(midx_buf.ptr, data, size);
 		memcpy(midx_buf.ptr + size, hash, GIT_HASH_SHA1_SIZE);
 
-		memcpy(oid.id, hash, GIT_OID_RAWSZ);
+		memcpy(oid.id, hash, GIT_OID_SHA1_SIZE);
 	} else {
 		git_str_attach_notowned(&midx_buf, (char *)data, size);
 	}
@@ -70,7 +70,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		goto cleanup;
 
 	/* Search for any oid, just to exercise that codepath. */
-	if (git_midx_entry_find(&e, &idx, &oid, GIT_OID_HEXSZ) < 0)
+	if (git_midx_entry_find(&e, &idx, &oid, GIT_OID_SHA1_HEXSIZE) < 0)
 		goto cleanup;
 
 cleanup:

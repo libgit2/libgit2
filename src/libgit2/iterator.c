@@ -1271,7 +1271,7 @@ static int filesystem_iterator_entry_hash(
 	int error;
 
 	if (S_ISDIR(entry->st.st_mode)) {
-		memset(&entry->id, 0, GIT_OID_RAWSZ);
+		memset(&entry->id, 0, GIT_OID_SHA1_SIZE);
 		return 0;
 	}
 
@@ -1281,7 +1281,7 @@ static int filesystem_iterator_entry_hash(
 
 	if (!(error = git_str_joinpath(&fullpath, iter->root, entry->path)) &&
 	    !(error = git_path_validate_str_length(iter->base.repo, &fullpath)))
-		error = git_odb_hashfile(&entry->id, fullpath.ptr, GIT_OBJECT_BLOB);
+		error = git_odb__hashfile(&entry->id, fullpath.ptr, GIT_OBJECT_BLOB, GIT_OID_SHA1);
 
 	git_str_dispose(&fullpath);
 	return error;
@@ -1529,6 +1529,8 @@ static void filesystem_iterator_set_current(
 
 	if (iter->base.flags & GIT_ITERATOR_INCLUDE_HASH)
 		git_oid_cpy(&iter->entry.id, &entry->id);
+	else
+		git_oid_clear(&iter->entry.id, GIT_OID_SHA1);
 
 	iter->entry.path = entry->path;
 

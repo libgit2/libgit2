@@ -75,7 +75,8 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	unsigned int i;
 	int error;
 
-	if (git_oid__parse(&tag->target, &buffer, buffer_end, "object ") < 0)
+	if (git_object__parse_oid_header(&tag->target,
+			&buffer, buffer_end, "object ", GIT_OID_SHA1) < 0)
 		return tag_error("object field invalid");
 
 	if (buffer + 5 >= buffer_end)
@@ -220,7 +221,9 @@ static int write_tag_annotation(
 	git_str tag = GIT_STR_INIT;
 	git_odb *odb;
 
-	git_oid__writebuf(&tag, "object ", git_object_id(target));
+	if (git_object__write_oid_header(&tag, "object ", git_object_id(target)) < 0)
+		goto on_error;
+
 	git_str_printf(&tag, "type %s\n", git_object_type2string(git_object_type(target)));
 	git_str_printf(&tag, "tag %s\n", tag_name);
 	git_signature__writebuf(&tag, "tagger ", tagger);

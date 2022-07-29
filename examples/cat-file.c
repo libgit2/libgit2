@@ -49,7 +49,7 @@ static void show_blob(const git_blob *blob)
 static void show_tree(const git_tree *tree)
 {
 	size_t i, max_i = (int)git_tree_entrycount(tree);
-	char oidstr[GIT_OID_HEXSZ + 1];
+	char oidstr[GIT_OID_SHA1_HEXSIZE + 1];
 	const git_tree_entry *te;
 
 	for (i = 0; i < max_i; ++i) {
@@ -70,7 +70,7 @@ static void show_tree(const git_tree *tree)
 static void show_commit(const git_commit *commit)
 {
 	unsigned int i, max_i;
-	char oidstr[GIT_OID_HEXSZ + 1];
+	char oidstr[GIT_OID_SHA1_HEXSIZE + 1];
 
 	git_oid_tostr(oidstr, sizeof(oidstr), git_commit_tree_id(commit));
 	printf("tree %s\n", oidstr);
@@ -90,7 +90,7 @@ static void show_commit(const git_commit *commit)
 
 static void show_tag(const git_tag *tag)
 {
-	char oidstr[GIT_OID_HEXSZ + 1];
+	char oidstr[GIT_OID_SHA1_HEXSIZE + 1];
 
 	git_oid_tostr(oidstr, sizeof(oidstr), git_tag_target_id(tag));;
 	printf("object %s\n", oidstr);
@@ -125,7 +125,7 @@ int lg2_cat_file(git_repository *repo, int argc, char *argv[])
 {
 	struct catfile_options o = { ".", NULL, 0, 0 };
 	git_object *obj = NULL;
-	char oidstr[GIT_OID_HEXSZ + 1];
+	char oidstr[GIT_OID_SHA1_HEXSIZE + 1];
 
 	parse_opts(&o, argc, argv);
 
@@ -133,7 +133,7 @@ int lg2_cat_file(git_repository *repo, int argc, char *argv[])
 			"Could not resolve", o.rev);
 
 	if (o.verbose) {
-		char oidstr[GIT_OID_HEXSZ + 1];
+		char oidstr[GIT_OID_SHA1_HEXSIZE + 1];
 		git_oid_tostr(oidstr, sizeof(oidstr), git_object_id(obj));
 
 		printf("%s %s\n--\n",

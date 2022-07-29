@@ -5,7 +5,7 @@ static int show_ref(git_reference *ref, void *data)
 {
 	git_repository *repo = data;
 	git_reference *resolved = NULL;
-	char hex[GIT_OID_HEXSZ+1];
+	char hex[GIT_OID_SHA1_HEXSIZE+1];
 	const git_oid *oid;
 	git_object *obj;
 	
@@ -16,7 +16,7 @@ static int show_ref(git_reference *ref, void *data)
 	
 	oid = git_reference_target(resolved ? resolved : ref);
 	git_oid_fmt(hex, oid);
-	hex[GIT_OID_HEXSZ] = 0;
+	hex[GIT_OID_SHA1_HEXSIZE] = 0;
 	check_lg2(git_object_lookup(&obj, repo, oid, GIT_OBJECT_ANY),
 			  "Unable to lookup object", hex);
 	

@@ -53,7 +53,7 @@ void test_refs_basic__longpaths(void)
 	git_reference *one = NULL, *two = NULL;
 	git_oid id;
 
-	cl_git_pass(git_oid_fromstr(&id, "099fabac3a9ea935598528c27f866e34089c2eff"));
+	cl_git_pass(git_oid__fromstr(&id, "099fabac3a9ea935598528c27f866e34089c2eff", GIT_OID_SHA1));
 
 	base = git_repository_path(g_repo);
 	base_len = git_utf8_char_length(base, strlen(base));

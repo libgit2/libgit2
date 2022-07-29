@@ -26,10 +26,10 @@ void test_commit_commit__create_unexisting_update_ref(void)
 	git_signature *s;
 	git_reference *ref;
 
-	git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	git_oid__fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, _repo, &oid));
 
-	git_oid_fromstr(&oid, "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
+	git_oid__fromstr(&oid, "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162", GIT_OID_SHA1);
 	cl_git_pass(git_tree_lookup(&tree, _repo, &oid));
 
 	cl_git_pass(git_signature_now(&s, "alice", "alice@example.com"));
@@ -59,10 +59,10 @@ void test_commit_commit__create_initial_commit(void)
 	git_signature *s;
 	git_reference *ref;
 
-	git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	git_oid__fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, _repo, &oid));
 
-	git_oid_fromstr(&oid, "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
+	git_oid__fromstr(&oid, "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162", GIT_OID_SHA1);
 	cl_git_pass(git_tree_lookup(&tree, _repo, &oid));
 
 	cl_git_pass(git_signature_now(&s, "alice", "alice@example.com"));
@@ -89,10 +89,10 @@ void test_commit_commit__create_initial_commit_parent_not_current(void)
 	git_commit *commit;
 	git_signature *s;
 
-	git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	git_oid__fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, _repo, &oid));
 
-	git_oid_fromstr(&oid, "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
+	git_oid__fromstr(&oid, "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162", GIT_OID_SHA1);
 	cl_git_pass(git_tree_lookup(&tree, _repo, &oid));
 
 	cl_git_pass(git_signature_now(&s, "alice", "alice@example.com"));

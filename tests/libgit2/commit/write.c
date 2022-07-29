@@ -51,10 +51,10 @@ void test_commit_write__from_memory(void)
    git_commit *parent;
    git_tree *tree;
 
-   git_oid_fromstr(&tree_id, tree_id_str);
+   git_oid__fromstr(&tree_id, tree_id_str, GIT_OID_SHA1);
    cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
 
-   git_oid_fromstr(&parent_id, parent_id_str);
+   git_oid__fromstr(&parent_id, parent_id_str, GIT_OID_SHA1);
    cl_git_pass(git_commit_lookup(&parent, g_repo, &parent_id));
 
    /* create signatures */
@@ -107,14 +107,14 @@ void test_commit_write__into_buf(void)
 	git_oid parent_id;
 	git_buf commit = GIT_BUF_INIT;
 
-	git_oid_fromstr(&tree_id, tree_id_str);
+	git_oid__fromstr(&tree_id, tree_id_str, GIT_OID_SHA1);
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
 
 	/* create signatures */
 	cl_git_pass(git_signature_new(&committer, committer_name, committer_email, 123456789, 60));
 	cl_git_pass(git_signature_new(&author, committer_name, committer_email, 987654321, 90));
 
-	git_oid_fromstr(&parent_id, parent_id_str);
+	git_oid__fromstr(&parent_id, parent_id_str, GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&parent, g_repo, &parent_id));
 
 	cl_git_pass(git_commit_create_buffer(&commit, g_repo, author, committer,
@@ -148,7 +148,7 @@ void test_commit_write__root(void)
 	git_reflog *log;
 	const git_reflog_entry *entry;
 
-	git_oid_fromstr(&tree_id, tree_id_str);
+	git_oid__fromstr(&tree_id, tree_id_str, GIT_OID_SHA1);
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
 
 	/* create signatures */
@@ -242,34 +242,34 @@ void test_commit_write__can_write_invalid_objects(void)
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 0));
 
 	/* this is a valid tree and parent */
-	git_oid_fromstr(&tree_id, tree_id_str);
-	git_oid_fromstr(&parent_id, parent_id_str);
+	git_oid__fromstr(&tree_id, tree_id_str, GIT_OID_SHA1);
+	git_oid__fromstr(&parent_id, parent_id_str, GIT_OID_SHA1);
 
-	git_oid_fromstr(&expected_id, "c8571bbec3a72c4bcad31648902e5a453f1adece");
+	git_oid__fromstr(&expected_id, "c8571bbec3a72c4bcad31648902e5a453f1adece", GIT_OID_SHA1);
 	cl_git_pass(create_commit_from_ids(&commit_id, &tree_id, &parent_id));
 	cl_assert_equal_oid(&expected_id, &commit_id);
 
 	/* this is a wholly invented tree id */
-	git_oid_fromstr(&tree_id, "1234567890123456789012345678901234567890");
-	git_oid_fromstr(&parent_id, parent_id_str);
+	git_oid__fromstr(&tree_id, "1234567890123456789012345678901234567890", GIT_OID_SHA1);
+	git_oid__fromstr(&parent_id, parent_id_str, GIT_OID_SHA1);
 
-	git_oid_fromstr(&expected_id, "996008340b8e68d69bf3c28d7c57fb7ec3c8e202");
+	git_oid__fromstr(&expected_id, "996008340b8e68d69bf3c28d7c57fb7ec3c8e202", GIT_OID_SHA1);
 	cl_git_pass(create_commit_from_ids(&commit_id, &tree_id, &parent_id));
 	cl_assert_equal_oid(&expected_id, &commit_id);
 
 	/* this is a wholly invented parent id */
-	git_oid_fromstr(&tree_id, tree_id_str);
-	git_oid_fromstr(&parent_id, "1234567890123456789012345678901234567890");
+	git_oid__fromstr(&tree_id, tree_id_str, GIT_OID_SHA1);
+	git_oid__fromstr(&parent_id, "1234567890123456789012345678901234567890", GIT_OID_SHA1);
 
-	git_oid_fromstr(&expected_id, "d78f660cab89d9791ca6714b57978bf2a7e709fd");
+	git_oid__fromstr(&expected_id, "d78f660cab89d9791ca6714b57978bf2a7e709fd", GIT_OID_SHA1);
 	cl_git_pass(create_commit_from_ids(&commit_id, &tree_id, &parent_id));
 	cl_assert_equal_oid(&expected_id, &commit_id);
 
 	/* these are legitimate objects, but of the wrong type */
-	git_oid_fromstr(&tree_id, parent_id_str);
-	git_oid_fromstr(&parent_id, tree_id_str);
+	git_oid__fromstr(&tree_id, parent_id_str, GIT_OID_SHA1);
+	git_oid__fromstr(&parent_id, tree_id_str, GIT_OID_SHA1);
 
-	git_oid_fromstr(&expected_id, "5d80c07414e3f18792949699dfcacadf7748f361");
+	git_oid__fromstr(&expected_id, "5d80c07414e3f18792949699dfcacadf7748f361", GIT_OID_SHA1);
 	cl_git_pass(create_commit_from_ids(&commit_id, &tree_id, &parent_id));
 	cl_assert_equal_oid(&expected_id, &commit_id);
 }
@@ -279,23 +279,23 @@ void test_commit_write__can_validate_objects(void)
 	git_oid tree_id, parent_id, commit_id;
 
 	/* this is a valid tree and parent */
-	git_oid_fromstr(&tree_id, tree_id_str);
-	git_oid_fromstr(&parent_id, parent_id_str);
+	git_oid__fromstr(&tree_id, tree_id_str, GIT_OID_SHA1);
+	git_oid__fromstr(&parent_id, parent_id_str, GIT_OID_SHA1);
 	cl_git_pass(create_commit_from_ids(&commit_id, &tree_id, &parent_id));
 
 	/* this is a wholly invented tree id */
-	git_oid_fromstr(&tree_id, "1234567890123456789012345678901234567890");
-	git_oid_fromstr(&parent_id, parent_id_str);
+	git_oid__fromstr(&tree_id, "1234567890123456789012345678901234567890", GIT_OID_SHA1);
+	git_oid__fromstr(&parent_id, parent_id_str, GIT_OID_SHA1);
 	cl_git_fail(create_commit_from_ids(&commit_id, &tree_id, &parent_id));
 
 	/* this is a wholly invented parent id */
-	git_oid_fromstr(&tree_id, tree_id_str);
-	git_oid_fromstr(&parent_id, "1234567890123456789012345678901234567890");
+	git_oid__fromstr(&tree_id, tree_id_str, GIT_OID_SHA1);
+	git_oid__fromstr(&parent_id, "1234567890123456789012345678901234567890", GIT_OID_SHA1);
 	cl_git_fail(create_commit_from_ids(&commit_id, &tree_id, &parent_id));
 
 	/* these are legitimate objects, but of the wrong type */
-	git_oid_fromstr(&tree_id, parent_id_str);
-	git_oid_fromstr(&parent_id, tree_id_str);
+	git_oid__fromstr(&tree_id, parent_id_str, GIT_OID_SHA1);
+	git_oid__fromstr(&parent_id, tree_id_str, GIT_OID_SHA1);
 	cl_git_fail(create_commit_from_ids(&commit_id, &tree_id, &parent_id));
 }
 

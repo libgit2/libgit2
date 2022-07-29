@@ -29,9 +29,9 @@ void test_object_tree_write__from_memory(void)
 	git_tree *tree;
 	git_oid id, bid, rid, id2;
 
-	git_oid_fromstr(&id, first_tree);
-	git_oid_fromstr(&id2, second_tree);
-	git_oid_fromstr(&bid, blob_oid);
+	git_oid__fromstr(&id, first_tree, GIT_OID_SHA1);
+	git_oid__fromstr(&id2, second_tree, GIT_OID_SHA1);
+	git_oid__fromstr(&bid, blob_oid, GIT_OID_SHA1);
 
 	/* create a second tree from first tree using `git_treebuilder_insert`
 	 * on REPOSITORY_FOLDER.
@@ -71,10 +71,10 @@ void test_object_tree_write__subtree(void)
 	git_oid id, bid, subtree_id, id2, id3;
 	git_oid id_hiearar;
 
-	git_oid_fromstr(&id, first_tree);
-	git_oid_fromstr(&id2, second_tree);
-	git_oid_fromstr(&id3, third_tree);
-	git_oid_fromstr(&bid, blob_oid);
+	git_oid__fromstr(&id, first_tree, GIT_OID_SHA1);
+	git_oid__fromstr(&id2, second_tree, GIT_OID_SHA1);
+	git_oid__fromstr(&id3, third_tree, GIT_OID_SHA1);
+	git_oid__fromstr(&bid, blob_oid, GIT_OID_SHA1);
 
 	/* create subtree */
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
@@ -135,8 +135,8 @@ void test_object_tree_write__sorted_subtrees(void)
 
 	git_oid bid, tid, tree_oid;
 
-	cl_git_pass(git_oid_fromstr(&bid, blob_oid));
-	cl_git_pass(git_oid_fromstr(&tid, first_tree));
+	cl_git_pass(git_oid__fromstr(&bid, blob_oid, GIT_OID_SHA1));
+	cl_git_pass(git_oid__fromstr(&tid, first_tree, GIT_OID_SHA1));
 
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
@@ -195,7 +195,7 @@ void test_object_tree_write__removing_and_re_adding_in_treebuilder(void)
 	git_oid entry_oid, tree_oid;
 	git_tree *tree;
 
-	cl_git_pass(git_oid_fromstr(&entry_oid, blob_oid));
+	cl_git_pass(git_oid__fromstr(&entry_oid, blob_oid, GIT_OID_SHA1));
 
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
@@ -286,7 +286,7 @@ void test_object_tree_write__filtering(void)
 	git_oid entry_oid, tree_oid;
 	git_tree *tree;
 
-	git_oid_fromstr(&entry_oid, blob_oid);
+	git_oid__fromstr(&entry_oid, blob_oid, GIT_OID_SHA1);
 
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
@@ -348,7 +348,7 @@ void test_object_tree_write__cruel_paths(void)
 	int count = 0, i, j;
 	git_tree_entry *te;
 
-	git_oid_fromstr(&bid, blob_oid);
+	git_oid__fromstr(&bid, blob_oid, GIT_OID_SHA1);
 
 	/* create tree */
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
@@ -411,7 +411,7 @@ void test_object_tree_write__protect_filesystems(void)
 	git_treebuilder *builder;
 	git_oid bid;
 
-	cl_git_pass(git_oid_fromstr(&bid, "fa49b077972391ad58037050f2a75f74e3671e92"));
+	cl_git_pass(git_oid__fromstr(&bid, "fa49b077972391ad58037050f2a75f74e3671e92", GIT_OID_SHA1));
 
 	/* Ensure that (by default) we can write objects with funny names on
 	 * platforms that are not affected.
@@ -460,12 +460,14 @@ static void test_invalid_objects(bool should_allow_invalid)
 		 "Expected function call to fail: " #expr), \
 		NULL, 1)
 
-	cl_git_pass(git_oid_fromstr(&valid_blob_id, blob_oid));
-	cl_git_pass(git_oid_fromstr(&invalid_blob_id,
-		"1234567890123456789012345678901234567890"));
-	cl_git_pass(git_oid_fromstr(&valid_tree_id, first_tree));
-	cl_git_pass(git_oid_fromstr(&invalid_tree_id,
-		"0000000000111111111122222222223333333333"));
+	cl_git_pass(git_oid__fromstr(&valid_blob_id, blob_oid, GIT_OID_SHA1));
+	cl_git_pass(git_oid__fromstr(&invalid_blob_id,
+		"1234567890123456789012345678901234567890",
+		GIT_OID_SHA1));
+	cl_git_pass(git_oid__fromstr(&valid_tree_id, first_tree, GIT_OID_SHA1));
+	cl_git_pass(git_oid__fromstr(&invalid_tree_id,
+		"0000000000111111111122222222223333333333",
+		GIT_OID_SHA1));
 
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
@@ -495,7 +497,7 @@ static void test_inserting_submodule(void)
 	git_treebuilder *bld;
 	git_oid sm_id;
 
-	cl_git_pass(git_oid_fromstr(&sm_id, "da39a3ee5e6b4b0d3255bfef95601890afd80709"));
+	cl_git_pass(git_oid__fromstr(&sm_id, "da39a3ee5e6b4b0d3255bfef95601890afd80709", GIT_OID_SHA1));
 	cl_git_pass(git_treebuilder_new(&bld, g_repo, NULL));
 	cl_git_pass(git_treebuilder_insert(NULL, bld, "sm", &sm_id, GIT_FILEMODE_COMMIT));
 	git_treebuilder_free(bld);
@@ -516,7 +518,7 @@ void test_object_tree_write__object_validity(void)
 void test_object_tree_write__invalid_null_oid(void)
 {
 	git_treebuilder *bld;
-	git_oid null_oid = {{0}};
+	git_oid null_oid = GIT_OID_SHA1_ZERO;
 
 	cl_git_pass(git_treebuilder_new(&bld, g_repo, NULL));
 	cl_git_fail(git_treebuilder_insert(NULL, bld, "null_oid_file", &null_oid, GIT_FILEMODE_BLOB));

@@ -9,7 +9,7 @@ static int search_object(const fake_object **out, fake_backend *fake, const git_
 	while (obj && obj->oid) {
 		git_oid current_oid;
 
-		git_oid_fromstr(&current_oid, obj->oid);
+		git_oid__fromstr(&current_oid, obj->oid, GIT_OID_SHA1);
 
 		if (git_oid_ncmp(&current_oid, oid, len) == 0) {
 			if (found)
@@ -34,7 +34,7 @@ static int fake_backend__exists(git_odb_backend *backend, const git_oid *oid)
 
 	fake->exists_calls++;
 
-	return search_object(NULL, fake, oid, GIT_OID_HEXSZ) == GIT_OK;
+	return search_object(NULL, fake, oid, GIT_OID_SHA1_HEXSIZE) == GIT_OK;
 }
 
 static int fake_backend__exists_prefix(
@@ -52,7 +52,7 @@ static int fake_backend__exists_prefix(
 		return error;
 
 	if (out)
-		git_oid_fromstr(out, obj->oid);
+		git_oid__fromstr(out, obj->oid, GIT_OID_SHA1);
 
 	return 0;
 }
@@ -69,7 +69,7 @@ static int fake_backend__read(
 
 	fake->read_calls++;
 
-	if ((error = search_object(&obj, fake, oid, GIT_OID_HEXSZ)) < 0)
+	if ((error = search_object(&obj, fake, oid, GIT_OID_SHA1_HEXSIZE)) < 0)
 		return error;
 
 	*len_p = strlen(obj->content);
@@ -91,7 +91,7 @@ static int fake_backend__read_header(
 
 	fake->read_header_calls++;
 
-	if ((error = search_object(&obj, fake, oid, GIT_OID_HEXSZ)) < 0)
+	if ((error = search_object(&obj, fake, oid, GIT_OID_SHA1_HEXSIZE)) < 0)
 		return error;
 
 	*len_p = strlen(obj->content);
@@ -115,7 +115,7 @@ static int fake_backend__read_prefix(
 	if ((error = search_object(&obj, fake, short_oid, len)) < 0)
 		return error;
 
-	git_oid_fromstr(out_oid, obj->oid);
+	git_oid__fromstr(out_oid, obj->oid, GIT_OID_SHA1);
 	*len_p = strlen(obj->content);
 	*buffer_p = git__strdup(obj->content);
 	*type_p = GIT_OBJECT_BLOB;

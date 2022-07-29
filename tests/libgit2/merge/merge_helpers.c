@@ -165,7 +165,7 @@ static int index_entry_eq_merge_index_entry(const struct merge_index_entry *expe
 	bool test_oid;
 
 	if (strlen(expected->oid_str) != 0) {
-		cl_git_pass(git_oid_fromstr(&expected_oid, expected->oid_str));
+		cl_git_pass(git_oid__fromstr(&expected_oid, expected->oid_str, GIT_OID_SHA1));
 		test_oid = 1;
 	} else
 		test_oid = 0;
@@ -304,21 +304,21 @@ int merge_test_reuc(git_index *index, const struct merge_reuc_entry expected[], 
 			return 0;
 
 		if (expected[i].ancestor_mode > 0) {
-			cl_git_pass(git_oid_fromstr(&expected_oid, expected[i].ancestor_oid_str));
+			cl_git_pass(git_oid__fromstr(&expected_oid, expected[i].ancestor_oid_str, GIT_OID_SHA1));
 
 			if (git_oid_cmp(&reuc_entry->oid[0], &expected_oid) != 0)
 				return 0;
 		}
 
 		if (expected[i].our_mode > 0) {
-			cl_git_pass(git_oid_fromstr(&expected_oid, expected[i].our_oid_str));
+			cl_git_pass(git_oid__fromstr(&expected_oid, expected[i].our_oid_str, GIT_OID_SHA1));
 
 			if (git_oid_cmp(&reuc_entry->oid[1], &expected_oid) != 0)
 				return 0;
 		}
 
 		if (expected[i].their_mode > 0) {
-			cl_git_pass(git_oid_fromstr(&expected_oid, expected[i].their_oid_str));
+			cl_git_pass(git_oid__fromstr(&expected_oid, expected[i].their_oid_str, GIT_OID_SHA1));
 
 			if (git_oid_cmp(&reuc_entry->oid[2], &expected_oid) != 0)
 				return 0;
@@ -353,7 +353,7 @@ int merge_test_workdir(git_repository *repo, const struct merge_index_entry expe
 
 	for (i = 0; i < expected_len; i++) {
 		git_blob_create_from_workdir(&actual_oid, repo, expected[i].path);
-		git_oid_fromstr(&expected_oid, expected[i].oid_str);
+		git_oid__fromstr(&expected_oid, expected[i].oid_str, GIT_OID_SHA1);
 
 		if (git_oid_cmp(&actual_oid, &expected_oid) != 0)
 			return 0;

@@ -32,9 +32,9 @@ void test_object_tag_read__parse(void)
 	git_commit *commit;
 	git_oid id1, id2, id_commit;
 
-	git_oid_fromstr(&id1, tag1_id);
-	git_oid_fromstr(&id2, tag2_id);
-	git_oid_fromstr(&id_commit, tagged_commit);
+	git_oid__fromstr(&id1, tag1_id, GIT_OID_SHA1);
+	git_oid__fromstr(&id2, tag2_id, GIT_OID_SHA1);
+	git_oid__fromstr(&id_commit, tagged_commit, GIT_OID_SHA1);
 
 	cl_git_pass(git_tag_lookup(&tag1, g_repo, &id1));
 
@@ -67,8 +67,8 @@ void test_object_tag_read__parse_without_tagger(void)
 	/* TODO: This is a little messy */
 	cl_git_pass(git_repository_open(&bad_tag_repo, cl_fixture("bad_tag.git")));
 
-	git_oid_fromstr(&id, bad_tag_id);
-	git_oid_fromstr(&id_commit, badly_tagged_commit);
+	git_oid__fromstr(&id, bad_tag_id, GIT_OID_SHA1);
+	git_oid__fromstr(&id_commit, badly_tagged_commit, GIT_OID_SHA1);
 
 	cl_git_pass(git_tag_lookup(&bad_tag, bad_tag_repo, &id));
 	cl_assert(bad_tag != NULL);
@@ -99,8 +99,8 @@ void test_object_tag_read__parse_without_message(void)
 	/* TODO: This is a little messy */
 	cl_git_pass(git_repository_open(&short_tag_repo, cl_fixture("short_tag.git")));
 
-	git_oid_fromstr(&id, short_tag_id);
-	git_oid_fromstr(&id_commit, short_tagged_commit);
+	git_oid__fromstr(&id, short_tag_id, GIT_OID_SHA1);
+	git_oid__fromstr(&id_commit, short_tagged_commit, GIT_OID_SHA1);
 
 	cl_git_pass(git_tag_lookup(&short_tag, short_tag_repo, &id));
 	cl_assert(short_tag != NULL);
@@ -127,7 +127,7 @@ void test_object_tag_read__without_tagger_nor_message(void)
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 
-	cl_git_pass(git_oid_fromstr(&id, taggerless));
+	cl_git_pass(git_oid__fromstr(&id, taggerless, GIT_OID_SHA1));
 
 	cl_git_pass(git_tag_lookup(&tag, repo, &id));
 

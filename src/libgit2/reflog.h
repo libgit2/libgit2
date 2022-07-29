@@ -16,7 +16,7 @@
 #define GIT_REFLOG_DIR_MODE 0777
 #define GIT_REFLOG_FILE_MODE 0666
 
-#define GIT_REFLOG_SIZE_MIN (2*GIT_OID_HEXSZ+2+17)
+#define GIT_REFLOG_SIZE_MIN (2*GIT_OID_SHA1_HEXSIZE+2+17)
 
 struct git_reflog_entry {
 	git_oid oid_old;

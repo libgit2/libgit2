@@ -49,7 +49,7 @@ static git_index *g_index;
 
 struct checkout_index_entry {
 	uint16_t mode;
-	char oid_str[GIT_OID_HEXSZ+1];
+	char oid_str[GIT_OID_SHA1_HEXSIZE+1];
 	int stage;
 	char path[128];
 };
@@ -104,7 +104,7 @@ static void create_index(struct checkout_index_entry *entries, size_t entries_le
 
 		entry.mode = entries[i].mode;
 		GIT_INDEX_ENTRY_STAGE_SET(&entry, entries[i].stage);
-		git_oid_fromstr(&entry.id, entries[i].oid_str);
+		git_oid__fromstr(&entry.id, entries[i].oid_str, GIT_OID_SHA1);
 		entry.path = entries[i].path;
 
 		cl_git_pass(git_index_add(g_index, &entry));
@@ -155,7 +155,7 @@ static void ensure_workdir_oid(const char *path, const char *oid_str)
 {
 	git_oid expected, actual;
 
-	cl_git_pass(git_oid_fromstr(&expected, oid_str));
+	cl_git_pass(git_oid__fromstr(&expected, oid_str, GIT_OID_SHA1));
 	cl_git_pass(git_repository_hashfile(&actual, g_repo, path, GIT_OBJECT_BLOB, NULL));
 	cl_assert_equal_oid(&expected, &actual);
 }

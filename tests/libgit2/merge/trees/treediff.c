@@ -61,9 +61,9 @@ static void test_find_differences(
 	opts.metric->similarity = git_diff_find_similar__calc_similarity;
 	opts.metric->payload = (void *)GIT_HASHSIG_SMART_WHITESPACE;
 
-	cl_git_pass(git_oid_fromstr(&ancestor_oid, ancestor_oidstr));
-	cl_git_pass(git_oid_fromstr(&ours_oid, ours_oidstr));
-	cl_git_pass(git_oid_fromstr(&theirs_oid, theirs_oidstr));
+	cl_git_pass(git_oid__fromstr(&ancestor_oid, ancestor_oidstr, GIT_OID_SHA1));
+	cl_git_pass(git_oid__fromstr(&ours_oid, ours_oidstr, GIT_OID_SHA1));
+	cl_git_pass(git_oid__fromstr(&theirs_oid, theirs_oidstr, GIT_OID_SHA1));
 
 	cl_git_pass(git_tree_lookup(&ancestor_tree, repo, &ancestor_oid));
 	cl_git_pass(git_tree_lookup(&ours_tree, repo, &ours_oid));

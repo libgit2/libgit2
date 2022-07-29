@@ -107,10 +107,10 @@ static int revert_state_cleanup(git_repository *repo)
 
 static int revert_seterr(git_commit *commit, const char *fmt)
 {
-	char commit_oidstr[GIT_OID_HEXSZ + 1];
+	char commit_oidstr[GIT_OID_SHA1_HEXSIZE + 1];
 
 	git_oid_fmt(commit_oidstr, git_commit_id(commit));
-	commit_oidstr[GIT_OID_HEXSZ] = '\0';
+	commit_oidstr[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	git_error_set(GIT_ERROR_REVERT, fmt, commit_oidstr);
 
@@ -176,7 +176,7 @@ int git_revert(
 	git_revert_options opts;
 	git_reference *our_ref = NULL;
 	git_commit *our_commit = NULL;
-	char commit_oidstr[GIT_OID_HEXSZ + 1];
+	char commit_oidstr[GIT_OID_SHA1_HEXSIZE + 1];
 	const char *commit_msg;
 	git_str their_label = GIT_STR_INIT;
 	git_index *index = NULL;
@@ -192,7 +192,7 @@ int git_revert(
 		return error;
 
 	git_oid_fmt(commit_oidstr, git_commit_id(commit));
-	commit_oidstr[GIT_OID_HEXSZ] = '\0';
+	commit_oidstr[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	if ((commit_msg = git_commit_summary(commit)) == NULL) {
 		error = -1;

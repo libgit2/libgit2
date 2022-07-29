@@ -86,6 +86,8 @@ git_reference *git_reference__alloc(
 
 	if (peel != NULL)
 		git_oid_cpy(&ref->peel, peel);
+	else
+		git_oid_clear(&ref->peel, GIT_OID_SHA1);
 
 	return ref;
 }

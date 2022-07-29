@@ -643,12 +643,12 @@ static int gen_pktline(git_str *buf, git_push *push)
 {
 	push_spec *spec;
 	size_t i, len;
-	char old_id[GIT_OID_HEXSZ+1], new_id[GIT_OID_HEXSZ+1];
+	char old_id[GIT_OID_SHA1_HEXSIZE+1], new_id[GIT_OID_SHA1_HEXSIZE+1];
 
-	old_id[GIT_OID_HEXSZ] = '\0'; new_id[GIT_OID_HEXSZ] = '\0';
+	old_id[GIT_OID_SHA1_HEXSIZE] = '\0'; new_id[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	git_vector_foreach(&push->specs, i, spec) {
-		len = 2*GIT_OID_HEXSZ + 7 + strlen(spec->refspec.dst);
+		len = 2*GIT_OID_SHA1_HEXSIZE + 7 + strlen(spec->refspec.dst);
 
 		if (i == 0) {
 			++len; /* '\0' */
@@ -1020,7 +1020,7 @@ int git_smart__push(git_transport *transport, git_push *push)
 #ifdef PUSH_DEBUG
 {
 	git_remote_head *head;
-	char hex[GIT_OID_HEXSZ+1]; hex[GIT_OID_HEXSZ] = '\0';
+	char hex[GIT_OID_SHA1_HEXSIZE+1]; hex[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	git_vector_foreach(&push->remote->refs, i, head) {
 		git_oid_fmt(hex, &head->oid);
