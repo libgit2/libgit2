@@ -675,7 +675,7 @@ int git_pkt_buffer_wants(
 	/* Tell the server about our shallow objects */
 	for (i = 0; i < git_shallowarray_count(wants->shallow_roots); i++) {
 		char oid[GIT_OID_HEXSZ];
-		git_buf shallow_buf = GIT_BUF_INIT;
+		git_str shallow_buf = GIT_STR_INIT;
 
 		git_oid_fmt(oid, git_shallowarray_get(wants->shallow_roots, i));
 		git_str_puts(&shallow_buf, "shallow ");
@@ -689,7 +689,7 @@ int git_pkt_buffer_wants(
 	}
 
 	if (wants->depth > 0) {
-		git_buf deepen_buf = GIT_BUF_INIT;
+		git_str deepen_buf = GIT_STR_INIT;
 
 		git_str_printf(&deepen_buf, "deepen %d\n", wants->depth);
 		git_str_printf(buf,"%04x%s", (unsigned int)git_str_len(&deepen_buf) + 4, git_str_cstr(&deepen_buf));

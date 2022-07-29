@@ -3341,12 +3341,20 @@ int git_repository_state_cleanup(git_repository *repo)
 }
 
 int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo) {
-	int error =0;
-	if (!repo->shallow_grafts)
-		load_grafts(repo);
+	int error = 0;
 
-	git_grafts_refresh(repo->shallow_grafts);
-	return git_grafts_get_oids(out, repo->shallow_grafts);
+	if (!repo->shallow_grafts && (error = load_grafts(repo)) < 0)
+		return error;
+
+	if ((error = git_grafts_refresh(repo->shallow_grafts)) < 0) {
+		return error;
+	}
+
+	if ((error = git_grafts_get_oids(out, repo->shallow_grafts)) < 0) {
+		return error;
+	}
+
+	return 0;
 }
 
 int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t roots)

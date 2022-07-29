@@ -202,8 +202,6 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 int git_fetch_download_pack(git_remote *remote)
 {
 	git_transport *t = remote->transport;
-	git_indexer_progress_cb progress = NULL;
-	void *payload = NULL;
 	int error;
 
 	if (!remote->need_pack)

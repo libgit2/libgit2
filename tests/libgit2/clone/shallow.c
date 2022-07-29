@@ -24,21 +24,21 @@ static int remote_single_branch(git_remote **out, git_repository *repo, const ch
 
 void test_clone_shallow__clone_depth_one(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	git_repository *repo;
 	git_revwalk *walk;
 	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
 	git_oid oid;
-	git_oidarray roots;
+	roots;
 	size_t num_commits = 0;
 	int error = 0;
 
 	clone_opts.fetch_opts.depth = 1;
 	clone_opts.remote_cb = remote_single_branch;
 
-	git_buf_joinpath(&path, clar_sandbox_path(), "shallowclone_1");
+	git_str_joinpath(&path, clar_sandbox_path(), "shallowclone_1");
 
-	cl_git_pass(git_clone(&repo, "https://github.com/libgit2/TestGitRepository", git_buf_cstr(&path), &clone_opts));
+	cl_git_pass(git_clone(&repo, "https://github.com/libgit2/TestGitRepository", git_str_cstr(&path), &clone_opts));
 
 	cl_assert_equal_b(true, git_repository_is_shallow(repo));
 
@@ -57,14 +57,14 @@ void test_clone_shallow__clone_depth_one(void)
 	cl_assert_equal_i(num_commits, 1);
 	cl_assert_equal_i(error, GIT_ITEROVER);
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	git_revwalk_free(walk);
 	git_repository_free(repo);
 }
 
 void test_clone_shallow__clone_depth_five(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_str path = GIT_STR_INIT;
 	git_repository *repo;
 	git_revwalk *walk;
 	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
@@ -76,9 +76,9 @@ void test_clone_shallow__clone_depth_five(void)
 	clone_opts.fetch_opts.depth = 5;
 	clone_opts.remote_cb = remote_single_branch;
 
-	git_buf_joinpath(&path, clar_sandbox_path(), "shallowclone_5");
+	git_str_joinpath(&path, clar_sandbox_path(), "shallowclone_5");
 
-	cl_git_pass(git_clone(&repo, "https://github.com/libgit2/TestGitRepository", git_buf_cstr(&path), &clone_opts));
+	cl_git_pass(git_clone(&repo, "https://github.com/libgit2/TestGitRepository", git_str_cstr(&path), &clone_opts));
 
 	cl_assert_equal_b(true, git_repository_is_shallow(repo));
 
@@ -99,7 +99,7 @@ void test_clone_shallow__clone_depth_five(void)
 	cl_assert_equal_i(num_commits, 13);
 	cl_assert_equal_i(error, GIT_ITEROVER);
 
-	git_buf_dispose(&path);
+	git_str_dispose(&path);
 	git_revwalk_free(walk);
 	git_repository_free(repo);
 }
