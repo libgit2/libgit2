@@ -282,7 +282,7 @@ static int update_head_to_branch(
 			reflog_message)) < 0)
 		goto cleanup;
 
-	if ((retcode = git_remote__default_branch(&default_branch, remote)) < 0)
+	if (git_remote__default_branch(&default_branch, remote) < 0)
 		goto cleanup;
 
 	if (!git_remote__matching_refspec(remote, git_str_cstr(&default_branch)))
