@@ -694,6 +694,8 @@ int git_pkt_buffer_wants(
 		git_str_printf(&deepen_buf, "deepen %d\n", wants->depth);
 		git_str_printf(buf,"%04x%s", (unsigned int)git_str_len(&deepen_buf) + 4, git_str_cstr(&deepen_buf));
 
+		git_str_dispose(&deepen_buf);
+		
 		if (git_str_oom(buf))
 			return -1;
 	}

@@ -385,7 +385,11 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 				git_error_set(GIT_ERROR_NET, "Unexpected pkt type");
 				goto on_error;
 			}
+
+			git_pkt_free((git_pkt *) pkt);
 		}
+
+		git_pkt_free((git_pkt *) pkt);
 
 		if (error < 0) {
 			goto on_error;
