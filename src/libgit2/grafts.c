@@ -43,6 +43,9 @@ int git_grafts_from_file(git_grafts **out, const char *path)
 	git_grafts *grafts = NULL;
 	int error;
 
+	if (*out)
+		return git_grafts_refresh(*out);
+
 	if ((error = git_grafts_new(&grafts)) < 0)
 		goto error;
 

@@ -3346,13 +3346,11 @@ int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo) {
 	if (!repo->shallow_grafts && (error = load_grafts(repo)) < 0)
 		return error;
 
-	if ((error = git_grafts_refresh(repo->shallow_grafts)) < 0) {
+	if ((error = git_grafts_refresh(repo->shallow_grafts)) < 0)
 		return error;
-	}
 
-	if ((error = git_grafts_get_oids(out, repo->shallow_grafts)) < 0) {
+	if ((error = git_grafts_get_oids(out, repo->shallow_grafts)) < 0)
 		return error;
-	}
 
 	return 0;
 }
