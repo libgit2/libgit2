@@ -389,7 +389,7 @@ static int checkout_branch(git_repository *repo, git_remote *remote, const git_c
 	return error;
 }
 
-static int git_fetch_is_shallow(git_fetch_options *opts)
+static int git_fetch_is_shallow(const git_fetch_options *opts)
 {
 	return opts->depth > 0;
 }
