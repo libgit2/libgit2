@@ -203,4 +203,6 @@ struct git_shallowarray {
 	git_array_oid_t array;
 };
 
+void git_shallowarray_free(git_shallowarray *array);
+
 #endif

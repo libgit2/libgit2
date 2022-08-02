@@ -510,3 +510,9 @@ int git_shallowarray_remove(git_shallowarray *array, git_oid *oid)
 	/* no git_array_remove… meh */
 	return -1;
 }
+
+void git_shallowarray_free(git_shallowarray *array)
+{
+	git_array_clear(array->array);
+	git__free(array);
+}
