@@ -3380,6 +3380,8 @@ int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t ro
 
 	git_filebuf_commit(&file);
 
+	git_str_dispose(&path);
+
 	if (load_grafts(repo) < 0)
 		return -1;
 
