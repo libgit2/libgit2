@@ -389,6 +389,11 @@ static int checkout_branch(git_repository *repo, git_remote *remote, const git_c
 	return error;
 }
 
+static int git_fetch_is_shallow(git_fetch_options *opts)
+{
+	return opts->depth > 0;
+}
+
 static int clone_into(git_repository *repo, git_remote *_remote, const git_fetch_options *opts, const git_checkout_options *co_opts, const char *branch)
 {
 	int error;
@@ -409,8 +414,10 @@ static int clone_into(git_repository *repo, git_remote *_remote, const git_fetch
 
 	memcpy(&fetch_opts, opts, sizeof(git_fetch_options));
 	fetch_opts.update_fetchhead = 0;
-	if (fetch_opts.depth == -1)
+
+	if (!git_fetch_is_shallow(opts))
 		fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+		
 	git_str_printf(&reflog_message, "clone: from %s", git_remote_url(remote));
 
 	if ((error = git_remote_fetch(remote, NULL, &fetch_opts, git_str_cstr(&reflog_message))) != 0)

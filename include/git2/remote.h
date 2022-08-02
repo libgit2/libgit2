@@ -744,7 +744,9 @@ typedef struct {
 	git_proxy_options proxy_opts;
 
 	/**
-	 * Depth of the fetch to perform
+	 * Depth of the fetch to perform, has to be a positive integer.
+	 *
+	 * The default is -1, which will fetch the full history.
 	 */
 	int depth;
 
