@@ -17,7 +17,8 @@
 #define DEFAULT_PORT_HTTP  "80"
 #define DEFAULT_PORT_HTTPS "443"
 #define DEFAULT_PORT_GIT   "9418"
-#define DEFAULT_PORT_SSH   "22"
+
+#define DEFAULT_PORT_SSH "443"
 
 bool git_net_str_is_url(const char *str)
 {

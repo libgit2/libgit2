@@ -454,7 +454,9 @@ static int _git_ssh_session_create(
 	return 0;
 }
 
-#define SSH_DEFAULT_PORT "22"
+
+#define SSH_DEFAULT_PORT "443"
+
 
 static int _git_ssh_setup_conn(
 	ssh_subtransport *t,
