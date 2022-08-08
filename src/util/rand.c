@@ -14,6 +14,10 @@ See <http://creativecommons.org/publicdomain/zero/1.0/>. */
 # include <sys/random.h>
 #endif
 
+#if defined(GIT_WIN32)
+#include <wincrypt.h>
+#endif
+
 static uint64_t state[4];
 static git_mutex state_lock;
 
