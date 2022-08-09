@@ -684,6 +684,8 @@ int git_pkt_buffer_wants(
 
 		git_str_printf(buf, "%04x%s", (unsigned int)git_str_len(&shallow_buf) + 4, git_str_cstr(&shallow_buf));
 
+		git_str_dispose(&shallow_buf);
+
 		if (git_str_oom(buf))
 			return -1;
 	}
