@@ -3366,10 +3366,10 @@ int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t ro
 	assert(repo);
 
 	if ((error = git_str_joinpath(&path, repo->gitdir, "shallow")) < 0)
-		return error;
+		goto on_error;
 
 	if ((error = git_filebuf_open(&file, git_str_cstr(&path), GIT_FILEBUF_HASH_CONTENTS, 0666)) < 0)
-		return error;
+		goto on_error;
 
 	git_array_foreach(roots, idx, oid) {
 		git_filebuf_write(&file, git_oid_tostr_s(oid), GIT_OID_HEXSZ);
@@ -3378,12 +3378,19 @@ int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t ro
 
 	git_filebuf_commit(&file);
 
+	if ((error = load_grafts(repo)) < 0) {
+		error = -1;
+		goto on_error;
+	}
+
+	if (git_array_size(roots) == 0) {
+		remove(path.ptr);
+	}
+
+on_error:
 	git_str_dispose(&path);
 
-	if (load_grafts(repo) < 0)
-		return -1;
-
-	return 0;
+	return error;
 }
 
 int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)

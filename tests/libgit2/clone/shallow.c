@@ -131,3 +131,44 @@ void test_clone_shallow__clone_depth_five(void)
 	git_revwalk_free(walk);
 	git_repository_free(repo);
 }
+
+void test_clone_shallow__unshallow(void)
+{
+	git_str path = GIT_STR_INIT;
+	git_repository *repo;
+	git_revwalk *walk;
+	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
+	git_fetch_options fetch_opts = GIT_FETCH_OPTIONS_INIT;
+	git_remote *origin = NULL;
+	git_oid oid;
+	size_t num_commits = 0;
+	int error = 0;
+
+	clone_opts.fetch_opts.depth = 5;
+	clone_opts.remote_cb = remote_single_branch;
+
+	git_str_joinpath(&path, clar_sandbox_path(), "unshallow");
+	cl_git_pass(git_clone(&repo, "https://github.com/libgit2/TestGitRepository", git_str_cstr(&path), &clone_opts));
+	cl_assert_equal_b(true, git_repository_is_shallow(repo));
+
+	fetch_opts.unshallow = 1;
+	cl_git_pass(git_remote_lookup(&origin, repo, "origin"));
+
+	cl_git_pass(git_remote_fetch(origin, NULL, &fetch_opts, NULL));
+	cl_assert_equal_b(false, git_repository_is_shallow(repo));
+
+	git_revwalk_new(&walk, repo);
+	git_revwalk_push_head(walk);
+
+	while ((error = git_revwalk_next(&oid, walk)) == GIT_OK) {
+		num_commits++;
+	}
+
+	cl_assert_equal_i(num_commits, 21);
+	cl_assert_equal_i(error, GIT_ITEROVER);
+
+	git_remote_free(origin);
+	git_str_dispose(&path);
+	git_revwalk_free(walk);
+	git_repository_free(repo);
+}

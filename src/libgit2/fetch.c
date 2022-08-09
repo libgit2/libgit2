@@ -61,7 +61,7 @@ static int mark_local(git_remote *remote)
 
 	git_vector_foreach(&remote->refs, i, head) {
 		/* If we have the object, mark it so we don't ask for it */
-		if (git_odb_exists(odb, &head->oid))
+		if (remote->nego.depth != INT_MAX && git_odb_exists(odb, &head->oid))
 			head->local = 1;
 		else
 			remote->need_pack = 1;
@@ -173,6 +173,7 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	git_transport *t = remote->transport;
 
 	remote->need_pack = 0;
+	remote->nego.depth = opts->unshallow ? INT_MAX : opts->depth;
 
 	if (filter_wants(remote, opts) < 0)
 		return -1;
@@ -181,13 +182,17 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	if (!remote->need_pack)
 		return 0;
 
+	if (opts->unshallow && opts->depth > 0) {
+		git_error_set(GIT_ERROR_INVALID, "options '--depth' and '--unshallow' cannot be used together");
+		return -1;
+	}
+
 	/*
 	 * Now we have everything set up so we can start tell the
 	 * server what we want and what we have.
 	 */
 	remote->nego.refs = (const git_remote_head * const *)remote->refs.contents;
 	remote->nego.count = remote->refs.length;
-	remote->nego.depth = opts->depth;
 	remote->nego.shallow_roots = git__malloc(sizeof(git_shallowarray));
 
 	git_array_init(remote->nego.shallow_roots->array);

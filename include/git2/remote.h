@@ -751,6 +751,13 @@ typedef struct {
 	int depth;
 
 	/**
+	 * Unshallow flag of the fetch to perform.
+	 *
+	 * The default is 0, which means the flag is off.
+	 */
+	int unshallow;
+
+	/**
 	 * Whether to allow off-site redirects.  If this is not
 	 * specified, the `http.followRedirects` configuration setting
 	 * will be consulted.
@@ -765,7 +772,7 @@ typedef struct {
 
 #define GIT_FETCH_OPTIONS_VERSION 1
 #define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT, GIT_FETCH_PRUNE_UNSPECIFIED, 1, \
-				 GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, GIT_PROXY_OPTIONS_INIT, -1 }
+				 GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, GIT_PROXY_OPTIONS_INIT, -1, 0 }
 
 /**
  * Initialize git_fetch_options structure
