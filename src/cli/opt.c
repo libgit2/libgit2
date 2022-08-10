@@ -23,7 +23,7 @@
 #include "opt.h"
 
 #ifdef _WIN32
-# include <Windows.h>
+# include <windows.h>
 #else
 # include <fcntl.h>
 # include <sys/ioctl.h>
