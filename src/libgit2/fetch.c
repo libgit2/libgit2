@@ -60,7 +60,9 @@ static int mark_local(git_remote *remote)
 		return -1;
 
 	git_vector_foreach(&remote->refs, i, head) {
-		/* If we have the object, mark it so we don't ask for it */
+		/* If we have the object, mark it so we don't ask for it.
+			However if we are unshallowing, we need to ask for it 
+			even though the head exists locally. */
 		if (remote->nego.depth != INT_MAX && git_odb_exists(odb, &head->oid))
 			head->local = 1;
 		else
