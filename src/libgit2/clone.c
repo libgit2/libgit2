@@ -409,7 +409,10 @@ static int clone_into(git_repository *repo, git_remote *_remote, const git_fetch
 
 	memcpy(&fetch_opts, opts, sizeof(git_fetch_options));
 	fetch_opts.update_fetchhead = 0;
-	fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+
+	if (opts->depth <= 0)
+		fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+		
 	git_str_printf(&reflog_message, "clone: from %s", git_remote_url(remote));
 
 	if ((error = git_remote_fetch(remote, NULL, &fetch_opts, git_str_cstr(&reflog_message))) != 0)

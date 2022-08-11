@@ -43,6 +43,9 @@ int git_grafts_from_file(git_grafts **out, const char *path)
 	git_grafts *grafts = NULL;
 	int error;
 
+	if (*out)
+		return git_grafts_refresh(*out);
+
 	if ((error = git_grafts_new(&grafts)) < 0)
 		goto error;
 
@@ -220,9 +223,8 @@ int git_grafts_get(git_commit_graft **out, git_grafts *grafts, const git_oid *oi
 	return 0;
 }
 
-int git_grafts_get_oids(git_oidarray *out, git_grafts *grafts)
+int git_grafts_get_oids(git_array_oid_t *out, git_grafts *grafts)
 {
-	git_array_oid_t oids = GIT_ARRAY_INIT;
 	const git_oid *oid;
 	size_t i = 0;
 	int error;
@@ -230,12 +232,10 @@ int git_grafts_get_oids(git_oidarray *out, git_grafts *grafts)
 	assert(out && grafts);
 
 	while ((error = git_oidmap_iterate(NULL, grafts->commits, &i, &oid)) == 0) {
-		git_oid *cpy = git_array_alloc(oids);
+		git_oid *cpy = git_array_alloc(*out);
 		GIT_ERROR_CHECK_ALLOC(cpy);
 		git_oid_cpy(cpy, oid);
 	}
-
-	git_oidarray__from_array(out, &oids);
 
 	return 0;
 }

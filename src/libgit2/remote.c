@@ -22,6 +22,7 @@
 #include "git2/types.h"
 #include "git2/oid.h"
 #include "git2/net.h"
+#include "transports/smart.h"
 
 #define CONFIG_URL_FMT "remote.%s.url"
 #define CONFIG_PUSHURL_FMT "remote.%s.pushurl"
@@ -2147,6 +2148,11 @@ void git_remote_free(git_remote *remote)
 
 		remote->transport->free(remote->transport);
 		remote->transport = NULL;
+	}
+
+	if (remote->nego.shallow_roots) {
+		git_array_clear(remote->nego.shallow_roots->array);
+		git__free(remote->nego.shallow_roots);
 	}
 
 	git_vector_free(&remote->refs);
