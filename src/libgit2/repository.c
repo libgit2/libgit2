@@ -3393,20 +3393,6 @@ on_error:
 	return error;
 }
 
-int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
-{
-	int ret;
-	git_array_oid_t array = GIT_ARRAY_INIT;
-
-	assert(out);
-
-	ret = git_repository__shallow_roots(&array, repo);
-
-	git_oidarray__from_array(out, &array);
-
-	return ret;
-}
-
 int git_repository_is_shallow(git_repository *repo)
 {
 	git_str path = GIT_STR_INIT;

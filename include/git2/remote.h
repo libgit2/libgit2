@@ -751,7 +751,7 @@ typedef struct {
 	int depth;
 
 	/**
-	 * Unshallow flag of the fetch to perform.
+	 * Convert a shallow repository to a full repository.
 	 *
 	 * The default is 0, which means the flag is off.
 	 */
