@@ -422,7 +422,7 @@ static int commit_parse(git_commit *commit, const char *data, size_t size, unsig
 		buffer += tree_len;
 	}
 
-	while (git_oid__parse(&parent_id, &buffer, buffer_end, "parent ") == 0) {
+	while (git_object__parse_oid_header(&parent_id, &buffer, buffer_end, "parent ", GIT_OID_SHA1) == 0) {
 		git_oid *new_id = git_array_alloc(commit->parent_ids);
 		GIT_ERROR_CHECK_ALLOC(new_id);
 

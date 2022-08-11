@@ -20,6 +20,7 @@
 #include "netops.h"
 #include "repository.h"
 #include "refs.h"
+#include "transports/smart.h"
 
 static int maybe_want(git_remote *remote, git_remote_head *head, git_refspec *tagspec, git_remote_autotag_option_t tagopt)
 {
@@ -59,8 +60,10 @@ static int mark_local(git_remote *remote)
 		return -1;
 
 	git_vector_foreach(&remote->refs, i, head) {
-		/* If we have the object, mark it so we don't ask for it */
-		if (git_odb_exists(odb, &head->oid))
+		/* If we have the object, mark it so we don't ask for it.
+			However if we are unshallowing, we need to ask for it 
+			even though the head exists locally. */
+		if (remote->nego.depth != INT_MAX && git_odb_exists(odb, &head->oid))
 			head->local = 1;
 		else
 			remote->need_pack = 1;
@@ -172,6 +175,7 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	git_transport *t = remote->transport;
 
 	remote->need_pack = 0;
+	remote->nego.depth = opts->unshallow ? INT_MAX : opts->depth;
 
 	if (filter_wants(remote, opts) < 0)
 		return -1;
@@ -180,24 +184,43 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	if (!remote->need_pack)
 		return 0;
 
+	if (opts->unshallow && opts->depth > 0) {
+		git_error_set(GIT_ERROR_INVALID, "options '--depth' and '--unshallow' cannot be used together");
+		return -1;
+	}
+
 	/*
 	 * Now we have everything set up so we can start tell the
 	 * server what we want and what we have.
 	 */
+	remote->nego.refs = (const git_remote_head * const *)remote->refs.contents;
+	remote->nego.count = remote->refs.length;
+	remote->nego.shallow_roots = git__malloc(sizeof(git_shallowarray));
+
+	git_array_init(remote->nego.shallow_roots->array);
+
+	git_repository__shallow_roots(&remote->nego.shallow_roots->array, remote->repo);
+
 	return t->negotiate_fetch(t,
 		remote->repo,
-		(const git_remote_head * const *)remote->refs.contents,
-		remote->refs.length);
+		&remote->nego);
 }
 
 int git_fetch_download_pack(git_remote *remote)
 {
 	git_transport *t = remote->transport;
+	int error;
 
 	if (!remote->need_pack)
 		return 0;
 
-	return t->download_pack(t, remote->repo, &remote->stats);
+	if ((error = t->download_pack(t, remote->repo, &remote->stats)) < 0)
+		return error;
+
+	if ((error = git_repository__shallow_roots_write(remote->repo, remote->nego.shallow_roots->array)) < 0)
+		return error;
+
+	return 0;
 }
 
 int git_fetch_options_init(git_fetch_options *opts, unsigned int version)

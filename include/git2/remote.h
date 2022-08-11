@@ -744,6 +744,20 @@ typedef struct {
 	git_proxy_options proxy_opts;
 
 	/**
+	 * Depth of the fetch to perform, has to be a positive integer.
+	 *
+	 * The default is -1, which will fetch the full history.
+	 */
+	int depth;
+
+	/**
+	 * Convert a shallow repository to a full repository.
+	 *
+	 * The default is 0, which means the flag is off.
+	 */
+	int unshallow;
+
+	/**
 	 * Whether to allow off-site redirects.  If this is not
 	 * specified, the `http.followRedirects` configuration setting
 	 * will be consulted.
@@ -758,7 +772,7 @@ typedef struct {
 
 #define GIT_FETCH_OPTIONS_VERSION 1
 #define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT, GIT_FETCH_PRUNE_UNSPECIFIED, 1, \
-				 GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, GIT_PROXY_OPTIONS_INIT }
+				 GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, GIT_PROXY_OPTIONS_INIT, -1, 0 }
 
 /**
  * Initialize git_fetch_options structure
