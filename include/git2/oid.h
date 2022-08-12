@@ -9,7 +9,9 @@
 
 #include "common.h"
 #include "types.h"
-#include "experimental.h"
+#ifndef LIBGIT2_NO_EXPERIMENTAL_H
+# include "experimental.h"
+#endif
 
 /**
  * @file git2/oid.h

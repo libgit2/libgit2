@@ -28,7 +28,9 @@
 #include "git2/diff.h"
 #include "git2/email.h"
 #include "git2/errors.h"
-#include "git2/experimental.h"
+#ifndef LIBGIT2_NO_EXPERIMENTAL_H
+# include "git2/experimental.h"
+#endif
 #include "git2/filter.h"
 #include "git2/global.h"
 #include "git2/graph.h"
