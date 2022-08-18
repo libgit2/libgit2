@@ -853,6 +853,8 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 		git_str_truncate(&path, ref_prefix_len);
 		git_str_puts(&path, entry->path);
 		ref_name = git_str_cstr(&path);
+		if (git_repository_is_worktree(backend->repo) == 1 && is_per_worktree_ref(ref_name))
+			continue;
 
 		if (git__suffixcmp(ref_name, ".lock") == 0 ||
 			(iter->glob && wildmatch(iter->glob, ref_name, 0) != 0))
@@ -863,6 +865,49 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 			error = -1;
 		else
 			error = git_vector_insert(&iter->loose, ref_dup);
+	}
+
+	if (!error && git_repository_is_worktree(backend->repo) == 1) {
+		git_iterator_free(fsit);
+		git_str_clear(&path);
+		if ((error = git_str_puts(&path, backend->gitpath)) < 0 ||
+		    (error = git_str_put(&path, ref_prefix, ref_prefix_len)) < 0 ||
+		    !git_fs_path_exists(git_str_cstr(&path))) {
+			git_str_dispose(&path);
+			return error;
+		}
+
+		if ((error = git_iterator_for_filesystem(
+		             &fsit, path.ptr, &fsit_opts)) < 0) {
+			git_str_dispose(&path);
+			return (iter->glob && error == GIT_ENOTFOUND) ? 0 : error;
+		}
+
+		error = git_str_sets(&path, ref_prefix);
+
+		while (!error && !git_iterator_advance(&entry, fsit)) {
+			const char *ref_name;
+			char *ref_dup;
+
+			git_str_truncate(&path, ref_prefix_len);
+			git_str_puts(&path, entry->path);
+			ref_name = git_str_cstr(&path);
+
+			if (!is_per_worktree_ref(ref_name))
+				continue;
+
+			if (git__suffixcmp(ref_name, ".lock") == 0 ||
+			    (iter->glob &&
+			     wildmatch(iter->glob, ref_name, 0) != 0))
+				continue;
+
+			ref_dup = git_pool_strdup(&iter->pool, ref_name);
+			if (!ref_dup)
+				error = -1;
+			else
+				error = git_vector_insert(
+				        &iter->loose, ref_dup);
+		}
 	}
 
 	git_iterator_free(fsit);
