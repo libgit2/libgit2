@@ -403,7 +403,9 @@ static const char *loose_parse_symbolic(git_str *file_content)
 static bool is_per_worktree_ref(const char *ref_name)
 {
 	return git__prefixcmp(ref_name, "refs/") != 0 ||
-	    git__prefixcmp(ref_name, "refs/bisect/") == 0;
+	       git__prefixcmp(ref_name, "refs/bisect/") == 0 ||
+	       git__prefixcmp(ref_name, "refs/worktree/") == 0 ||
+	       git__prefixcmp(ref_name, "refs/rewritten/") == 0;
 }
 
 static int loose_lookup(
