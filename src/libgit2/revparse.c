@@ -268,7 +268,11 @@ static int retrieve_revobject_from_reflog(git_object **out, git_reference **base
 	int error = -1;
 
 	if (*base_ref == NULL) {
-		if ((error = git_reference_dwim(&ref, repo, identifier)) < 0)
+		if (position > 0 &&
+		    (!strcmp(identifier, "HEAD"))) {
+			if ((error = git_reference_lookup(&ref, repo, "HEAD")) < 0)
+				return error;
+		} else if ((error = git_reference_dwim(&ref, repo, identifier)) < 0)
 			return error;
 	} else {
 		ref = *base_ref;
