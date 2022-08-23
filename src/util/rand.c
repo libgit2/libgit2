@@ -23,6 +23,8 @@ typedef union {
 } bits;
 
 #if defined(GIT_WIN32)
+#include <windows.h>
+#include <wincrypt.h>
 GIT_INLINE(int) getseed(uint64_t *seed)
 {
 	HCRYPTPROV provider;

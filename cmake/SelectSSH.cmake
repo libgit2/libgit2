@@ -1,16 +1,12 @@
 # Optional external dependency: libssh2
 if(USE_SSH)
-	find_pkglibraries(LIBSSH2 libssh2)
-	if(NOT LIBSSH2_FOUND)
 		find_package(Libssh2 CONFIG REQUIRED)
 		set(LIBSSH2_INCLUDE_DIRS ${LIBSSH2_INCLUDE_DIR})
 		get_filename_component(LIBSSH2_LIBRARY_DIRS "${LIBSSH2_LIBRARY}" DIRECTORY)
 		set(LIBSSH2_LIBRARIES ${LIBSSH2_LIBRARY})
 		set(LIBSSH2_LDFLAGS "-lssh2")
-	endif()
 
 find_package(Libssh2 CONFIG REQUIRED)
-
 	if(NOT Libssh2_FOUND)
 		message(FATAL_ERROR "LIBSSH2 not found. Set CMAKE_PREFIX_PATH if it is installed outside of the default search path.")
 	endif()
