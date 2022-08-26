@@ -1,8 +1,9 @@
 include(SanitizeBool)
 
+
 # We try to find any packages our backends might use
 hunter_add_package(OpenSSL COMPONENTS )
-find_package(OpenSSL)
+find_package(OpenSSL REQUIRED)
 find_package(mbedTLS)
 if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
 	find_package(Security)
@@ -29,6 +30,7 @@ if(USE_HTTPS)
 		endif()
 	endif()
 
+
 	# Check that we can find what's required for the selected backend
 	if(USE_HTTPS STREQUAL "SecureTransport")
 		if(NOT COREFOUNDATION_FOUND)
@@ -48,21 +50,63 @@ if(USE_HTTPS)
 
 		list(APPEND LIBGIT2_PC_LIBS ${COREFOUNDATION_LDFLAGS} ${SECURITY_LDFLAGS})
 	elseif(USE_HTTPS STREQUAL "OpenSSL")
+
 		if(NOT OPENSSL_FOUND)
 			message(FATAL_ERROR "Asked for OpenSSL TLS backend, but it wasn't found")
 		endif()
 
 		set(GIT_OPENSSL 1)
 		list(APPEND LIBGIT2_SYSTEM_INCLUDES ${OPENSSL_INCLUDE_DIR})
+		list(APPEND LIBGIT2_INCLUDES ${OPENSSL_INCLUDE_DIR})
 		list(APPEND LIBGIT2_SYSTEM_LIBS ${OPENSSL_LIBRARIES})
 		list(APPEND LIBGIT2_LIBS ${OPENSSL_LIBRARIES})
 		list(APPEND LIBGIT2_PC_LIBS ${OPENSSL_LDFLAGS})
 		list(APPEND LIBGIT2_PC_REQUIRES "openssl")
+
+		if(NOT CERT_LOCATION)
+			message(STATUS "Auto-detecting default certificates location")
+			if(EXISTS "/usr/local/opt/openssl/bin/openssl")
+				# Check for an Homebrew installation
+				set(OPENSSL_CMD "/usr/local/opt/openssl/bin/openssl")
+			else()
+				if(WIN32)
+				set(OPENSSL_CMD "openssl.exe")
+				else()
+				set(OPENSSL_CMD "openssl")
+				endif()			
+			endif()
+			execute_process(COMMAND ${OPENSSL_CMD} version -d OUTPUT_VARIABLE OPENSSL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+			if(OPENSSL_DIR)
+				string(REGEX REPLACE "^OPENSSLDIR: \"(.*)\"$" "\\1/" OPENSSL_DIR ${OPENSSL_DIR})
+				set(OPENSSL_CA_LOCATIONS
+					"ca-bundle.pem"             # OpenSUSE Leap 42.1
+					"cert.pem"                  # Ubuntu 14.04, FreeBSD
+					"certs/ca-certificates.crt" # Ubuntu 16.04
+					"certs/ca.pem"              # Debian 7
+				)
+				foreach(SUFFIX IN LISTS OPENSSL_CA_LOCATIONS)
+					set(LOC "${OPENSSL_DIR}${SUFFIX}")
+					if(NOT CERT_LOCATION AND EXISTS "${OPENSSL_DIR}${SUFFIX}")
+						set(CERT_LOCATION ${LOC})
+					endif()
+				endforeach()
+			else()
+				message(FATAL_ERROR "Unable to find OpenSSL executable. Please provide default certificate location via CERT_LOCATION")
+			endif()
+		endif()
+
+		if(CERT_LOCATION)
+			if(NOT EXISTS ${CERT_LOCATION})
+				message(FATAL_ERROR "Cannot use CERT_LOCATION=${CERT_LOCATION} as it doesn't exist")
+			endif()
+			add_feature_info(CERT_LOCATION ON "using certificates from ${CERT_LOCATION}")
+			add_definitions(-DGIT_DEFAULT_CERT_LOCATION="${CERT_LOCATION}")
+		endif()
 	elseif(USE_HTTPS STREQUAL "mbedTLS")
 		if(NOT MBEDTLS_FOUND)
 			message(FATAL_ERROR "Asked for mbedTLS backend, but it wasn't found")
 		endif()
-
+		
 		if(NOT CERT_LOCATION)
 			message(STATUS "Auto-detecting default certificates location")
 			if(EXISTS "/usr/local/opt/openssl/bin/openssl")
