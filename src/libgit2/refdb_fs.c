@@ -1769,49 +1769,41 @@ static int refdb_fs_backend__rename(
 		(error = refdb_fs_backend__lookup(&old, _backend, old_name)) < 0)
 		return error;
 
-	/* Try to rename the refog; it's ok if the old doesn't exist */
-	/* Must be done before calling refdb_fs_backend__delete, otherwise */
-	/* the reflog is deleted before being renamed. */
-	error = refdb_reflog_fs__rename(_backend, old_name, new_name);
-	if ((error != 0) && (error != GIT_ENOTFOUND)) {
-		git_reference_free(old);
-		return error;
-	}
-
-	if ((error = refdb_fs_backend__delete(_backend, old_name, NULL, NULL)) < 0) {
-		refdb_reflog_fs__rename(_backend, new_name, old_name);
+	if ((error = loose_lock(&file, backend, old->name)) < 0) {
 		git_reference_free(old);
 		return error;
 	}
 
 	new = git_reference__realloc(&old, new_name);
 	if (!new) {
-		refdb_reflog_fs__rename(_backend, new_name, old_name);
 		git_reference_free(old);
+		git_filebuf_cleanup(&file);
 		return -1;
 	}
 
-	if ((error = loose_lock(&file, backend, new->name)) < 0) {
-		refdb_reflog_fs__rename(_backend, new_name, old_name);
-		git_reference_free(new);
-		return error;
-	}
-
-	if ((error = reflog_append(backend, new, git_reference_target(new), NULL, who, message)) < 0) {
+	if ((error = refdb_fs_backend__delete_tail(_backend, &file, old_name, NULL, NULL)) < 0) {
 		git_reference_free(new);
 		git_filebuf_cleanup(&file);
 		return error;
 	}
 
-	if (error < 0) {
+	if ((error = loose_lock(&file, backend, new_name)) < 0) {
+		git_reference_free(old);
+		return error;
+	}
+
+	/* Try to rename the refog; it's ok if the old doesn't exist */
+	error = refdb_reflog_fs__rename(_backend, old_name, new_name);
+	if (((error == 0) || (error == GIT_ENOTFOUND)) &&
+		((error = reflog_append(backend, new, git_reference_target(new), NULL, who, message)) < 0)) {
 		git_reference_free(new);
 		git_filebuf_cleanup(&file);
 		return error;
 	}
-
 
 	if ((error = loose_commit(&file, new)) < 0 || out == NULL) {
 		git_reference_free(new);
+		git_filebuf_cleanup(&file);
 		return error;
 	}
 
