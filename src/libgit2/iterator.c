@@ -764,7 +764,7 @@ static void tree_iterator_set_current(
 	iter->entry.mode = tree_entry->attr;
 	iter->entry.path = iter->entry_path.ptr;
 	iter->current_sparse_status = GIT_SPARSE_UNCHECKED;
-	git_oid_cpy(&iter->entry.id, tree_entry->oid);
+	git_oid_cpy(&iter->entry.id, &tree_entry->oid);
 }
 
 static int tree_iterator_advance(const git_index_entry **out, git_iterator *i)
