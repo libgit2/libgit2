@@ -1788,7 +1788,7 @@ static int refdb_fs_backend__rename(
 	}
 
 	if ((error = loose_lock(&file, backend, new_name)) < 0) {
-		git_reference_free(old);
+		git_reference_free(new);
 		return error;
 	}
 
