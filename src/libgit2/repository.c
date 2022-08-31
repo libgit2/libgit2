@@ -3372,7 +3372,7 @@ int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t ro
 		goto on_error;
 
 	git_array_foreach(roots, idx, oid) {
-		git_filebuf_write(&file, git_oid_tostr_s(oid), GIT_OID_HEXSZ);
+		git_filebuf_write(&file, git_oid_tostr_s(oid), GIT_OID_SHA1_HEXSIZE);
 		git_filebuf_write(&file, "\n", 1);
 	}
 

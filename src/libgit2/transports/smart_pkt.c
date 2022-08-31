@@ -377,10 +377,10 @@ static int shallow_pkt(git_pkt **out, const char *line, size_t len)
 	line += 7;
 	len -= 7;
 
-	if (len >= GIT_OID_HEXSZ) {
+	if (len >= GIT_OID_SHA1_HEXSIZE) {
 		git_oid_fromstr(&pkt->oid, line + 1);
-		line += GIT_OID_HEXSZ + 1;
-		len -= GIT_OID_HEXSZ + 1;
+		line += GIT_OID_SHA1_HEXSIZE + 1;
+		len -= GIT_OID_SHA1_HEXSIZE + 1;
 	}
 
 	*out = (git_pkt *) pkt;
@@ -399,10 +399,10 @@ static int unshallow_pkt(git_pkt **out, const char *line, size_t len)
 	line += 9;
 	len -= 9;
 
-	if (len >= GIT_OID_HEXSZ) {
+	if (len >= GIT_OID_SHA1_HEXSIZE) {
 		git_oid_fromstr(&pkt->oid, line + 1);
-		line += GIT_OID_HEXSZ + 1;
-		len -= GIT_OID_HEXSZ + 1;
+		line += GIT_OID_SHA1_HEXSIZE + 1;
+		len -= GIT_OID_SHA1_HEXSIZE + 1;
 	}
 
 	*out = (git_pkt *) pkt;
@@ -674,12 +674,12 @@ int git_pkt_buffer_wants(
 
 	/* Tell the server about our shallow objects */
 	for (i = 0; i < git_shallowarray_count(wants->shallow_roots); i++) {
-		char oid[GIT_OID_HEXSZ];
+		char oid[GIT_OID_SHA1_HEXSIZE];
 		git_str shallow_buf = GIT_STR_INIT;
 
 		git_oid_fmt(oid, git_shallowarray_get(wants->shallow_roots, i));
 		git_str_puts(&shallow_buf, "shallow ");
-		git_str_put(&shallow_buf, oid, GIT_OID_HEXSZ);
+		git_str_put(&shallow_buf, oid, GIT_OID_SHA1_HEXSIZE);
 		git_str_putc(&shallow_buf, '\n');
 
 		git_str_printf(buf, "%04x%s", (unsigned int)git_str_len(&shallow_buf) + 4, git_str_cstr(&shallow_buf));
