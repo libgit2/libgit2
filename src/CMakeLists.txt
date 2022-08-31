@@ -70,11 +70,6 @@ check_function_exists(qsort_s GIT_QSORT_S)
 
 # random / entropy data
 
-# The flag has been unset to prevent issues
-# related to Linux GLIBC version dependency
-
-# check_function_exists(getentropy GIT_RAND_GETENTROPY)
-unset(GIT_RAND_GETENTROPY)
 check_function_exists(getloadavg GIT_RAND_GETLOADAVG)
 
 # determine architecture of the machine
