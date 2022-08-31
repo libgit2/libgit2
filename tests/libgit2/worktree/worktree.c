@@ -120,7 +120,7 @@ void test_worktree_worktree__lookup_nonexistent_worktree(void)
 {
 	git_worktree *wt;
 
-	cl_git_fail(git_worktree_lookup(&wt, fixture.repo, "nonexistent"));
+	cl_git_fail_with(GIT_ENOTFOUND, git_worktree_lookup(&wt, fixture.repo, "nonexistent"));
 	cl_assert_equal_p(wt, NULL);
 }
 
