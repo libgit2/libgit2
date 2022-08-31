@@ -133,7 +133,7 @@ int git_grafts_parse(git_grafts *grafts, const char *content, size_t contentlen)
 		const char *line_start = parser.line, *line_end = parser.line + parser.line_len;
 		git_oid graft_oid;
 
-		if ((error = git_oid_fromstrn(&graft_oid, line_start, GIT_OID_SHA1_HEXSIZE)) < 0) {
+		if ((error = git_oid__fromstrn(&graft_oid, line_start, GIT_OID_SHA1_HEXSIZE, GIT_OID_SHA1)) < 0) {
 			git_error_set(GIT_ERROR_GRAFTS, "invalid graft OID at line %" PRIuZ, parser.line_num);
 			goto error;
 		}
@@ -143,7 +143,7 @@ int git_grafts_parse(git_grafts *grafts, const char *content, size_t contentlen)
 			git_oid *id = git_array_alloc(parents);
 			GIT_ERROR_CHECK_ALLOC(id);
 
-			if ((error = git_oid_fromstrn(id, ++line_start, GIT_OID_SHA1_HEXSIZE)) < 0) {
+			if ((error = git_oid__fromstrn(id, ++line_start, GIT_OID_SHA1_HEXSIZE, GIT_OID_SHA1)) < 0) {
 				git_error_set(GIT_ERROR_GRAFTS, "invalid parent OID at line %" PRIuZ, parser.line_num);
 				goto error;
 			}

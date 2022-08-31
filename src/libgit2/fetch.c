@@ -21,6 +21,7 @@
 #include "repository.h"
 #include "refs.h"
 #include "transports/smart.h"
+#include <limits.h>
 
 static int maybe_want(git_remote *remote, git_remote_head *head, git_refspec *tagspec, git_remote_autotag_option_t tagopt)
 {
@@ -175,7 +176,8 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	git_transport *t = remote->transport;
 
 	remote->need_pack = 0;
-	remote->nego.depth = opts->unshallow ? INT_MAX : opts->depth;
+
+	remote->nego.depth = (opts && !opts->unshallow) ? opts->depth : INT_MAX;
 
 	if (filter_wants(remote, opts) < 0)
 		return -1;
@@ -184,7 +186,7 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	if (!remote->need_pack)
 		return 0;
 
-	if (opts->unshallow && opts->depth > 0) {
+	if (opts && opts->unshallow && opts->depth > 0) {
 		git_error_set(GIT_ERROR_INVALID, "options '--depth' and '--unshallow' cannot be used together");
 		return -1;
 	}
