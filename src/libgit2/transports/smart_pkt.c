@@ -378,7 +378,7 @@ static int shallow_pkt(git_pkt **out, const char *line, size_t len)
 	len -= 7;
 
 	if (len >= GIT_OID_SHA1_HEXSIZE) {
-		git_oid_fromstr(&pkt->oid, line + 1);
+		git_oid__fromstr(&pkt->oid, line + 1, GIT_OID_SHA1);
 		line += GIT_OID_SHA1_HEXSIZE + 1;
 		len -= GIT_OID_SHA1_HEXSIZE + 1;
 	}
@@ -400,7 +400,7 @@ static int unshallow_pkt(git_pkt **out, const char *line, size_t len)
 	len -= 9;
 
 	if (len >= GIT_OID_SHA1_HEXSIZE) {
-		git_oid_fromstr(&pkt->oid, line + 1);
+		git_oid__fromstr(&pkt->oid, line + 1, GIT_OID_SHA1);
 		line += GIT_OID_SHA1_HEXSIZE + 1;
 		len -= GIT_OID_SHA1_HEXSIZE + 1;
 	}
