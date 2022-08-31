@@ -8,6 +8,7 @@
 #include "grafts.h"
 
 #include "futils.h"
+#include "oid.h"
 #include "oidarray.h"
 #include "parse.h"
 
