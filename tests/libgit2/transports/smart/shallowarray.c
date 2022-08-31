@@ -19,9 +19,9 @@ void test_transports_smart_shallowarray__add_and_remove_oid_from_shallowarray(vo
     git_shallowarray *shallow_roots = git__malloc(sizeof(git_shallowarray));
     git_array_init(shallow_roots->array);
 
-    git_oid_fromstr(&oid_0_obj, oid_0);
-    git_oid_fromstr(&oid_1_obj, oid_1);
-    git_oid_fromstr(&oid_2_obj, oid_2);
+    git_oid__fromstr(&oid_0_obj, oid_0, GIT_OID_SHA1);
+    git_oid__fromstr(&oid_1_obj, oid_1, GIT_OID_SHA1);
+    git_oid__fromstr(&oid_2_obj, oid_2, GIT_OID_SHA1);
 
     git_shallowarray_add(shallow_roots, &oid_0_obj);
     git_shallowarray_add(shallow_roots, &oid_1_obj);
