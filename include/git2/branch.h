@@ -129,8 +129,8 @@ GIT_EXTERN(void) git_branch_iterator_free(git_branch_iterator *iter);
  * See `git_tag_create()` for rules about valid names.
  *
  * Note that if the move succeeds, the old reference object will not
- + be valid anymore, and should be freed immediately by the user using
- + `git_reference_free()`.
+ * be valid anymore, and should be freed immediately by the user using
+ * `git_reference_free()`.
  *
  * @param out New reference object for the updated name.
  *

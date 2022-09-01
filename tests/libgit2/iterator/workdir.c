@@ -1481,7 +1481,7 @@ void test_iterator_workdir__hash_when_requested(void)
 	git_iterator *iter;
 	const git_index_entry *entry;
 	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
-	git_oid expected_id = {{0}};
+	git_oid expected_id = GIT_OID_SHA1_ZERO;
 	size_t i;
 
 	struct merge_index_entry expected[] = {
@@ -1514,7 +1514,7 @@ void test_iterator_workdir__hash_when_requested(void)
 	for (i = 0; i < sizeof(expected) / sizeof(struct merge_index_entry); i++) {
 		cl_git_pass(git_iterator_advance(&entry, iter));
 
-		cl_git_pass(git_oid_fromstr(&expected_id, expected[i].oid_str));
+		cl_git_pass(git_oid__fromstr(&expected_id, expected[i].oid_str, GIT_OID_SHA1));
 		cl_assert_equal_oid(&expected_id, &entry->id);
 		cl_assert_equal_s(expected[i].path, entry->path);
 	}

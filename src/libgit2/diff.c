@@ -290,7 +290,7 @@ static int flush_hunk(git_oid *result, git_hash_ctx *ctx)
 	    (error = git_hash_init(ctx)) < 0)
 		return error;
 
-	for (i = 0; i < GIT_OID_RAWSZ; i++) {
+	for (i = 0; i < GIT_OID_SHA1_SIZE; i++) {
 		carry += result->id[i] + hash.id[i];
 		result->id[i] = (unsigned char)carry;
 		carry >>= 8;
@@ -380,6 +380,10 @@ int git_diff_patchid(git_oid *out, git_diff *diff, git_diff_patchid_options *opt
 
 	if ((error = (flush_hunk(&args.result, &args.ctx))) < 0)
 		goto out;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	args.result.type = GIT_OID_SHA1;
+#endif
 
 	git_oid_cpy(out, &args.result);
 

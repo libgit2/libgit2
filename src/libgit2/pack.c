@@ -32,7 +32,7 @@ static int packfile_unpack_compressed(
  * Throws GIT_EAMBIGUOUSOIDPREFIX if short oid
  * is ambiguous within the pack.
  * This method assumes that len is between
- * GIT_OID_MINPREFIXLEN and GIT_OID_HEXSZ.
+ * GIT_OID_MINPREFIXLEN and GIT_OID_SHA1_HEXSIZE.
  */
 static int pack_entry_find_offset(
 		off64_t *offset_out,
@@ -1002,7 +1002,7 @@ int get_delta_base(
 		*curpos += used;
 	} else if (type == GIT_OBJECT_REF_DELTA) {
 		git_oid base_oid;
-		git_oid_fromraw(&base_oid, base_info);
+		git_oid__fromraw(&base_oid, base_info, GIT_OID_SHA1);
 
 		/* If we have the cooperative cache, search in it first */
 		if (p->has_cache) {
@@ -1025,7 +1025,7 @@ int get_delta_base(
 		}
 
 		/* The base entry _must_ be in the same pack */
-		if (pack_entry_find_offset(&base_offset, &unused, p, &base_oid, GIT_OID_HEXSZ) < 0)
+		if (pack_entry_find_offset(&base_offset, &unused, p, &base_oid, GIT_OID_SHA1_HEXSIZE) < 0)
 			return packfile_error("base entry delta is not in the same pack");
 		*curpos += 20;
 	} else
@@ -1083,7 +1083,7 @@ static int packfile_open_locked(struct git_pack_file *p)
 {
 	struct stat st;
 	struct git_pack_header hdr;
-	unsigned char sha1[GIT_OID_RAWSZ];
+	unsigned char sha1[GIT_OID_SHA1_SIZE];
 	unsigned char *idx_sha1;
 
 	if (pack_index_open_locked(p) < 0)
@@ -1131,12 +1131,12 @@ static int packfile_open_locked(struct git_pack_file *p)
 
 	/* Verify the pack matches its index. */
 	if (p->num_objects != ntohl(hdr.hdr_entries) ||
-	    p_pread(p->mwf.fd, sha1, GIT_OID_RAWSZ, p->mwf.size - GIT_OID_RAWSZ) < 0)
+	    p_pread(p->mwf.fd, sha1, GIT_OID_SHA1_SIZE, p->mwf.size - GIT_OID_SHA1_SIZE) < 0)
 		goto cleanup;
 
 	idx_sha1 = ((unsigned char *)p->index_map.data) + p->index_map.len - 40;
 
-	if (git_oid_raw_cmp(sha1, idx_sha1) != 0)
+	if (git_oid_raw_cmp(sha1, idx_sha1, GIT_OID_SHA1_SIZE) != 0)
 		goto cleanup;
 
 	if (git_mwindow_file_register(&p->mwf) < 0)
@@ -1362,7 +1362,7 @@ int git_pack_foreach_entry(
 			git_array_clear(oids);
 			GIT_ERROR_CHECK_ALLOC(oid);
 		}
-		git_oid_fromraw(oid, p->oids[i]);
+		git_oid__fromraw(oid, p->oids[i], GIT_OID_SHA1);
 	}
 
 	git_mutex_unlock(&p->lock);
@@ -1428,7 +1428,7 @@ int git_pack_foreach_entry_offset(
 						ntohl(*((uint32_t *)(large_offset_ptr + 4)));
 			}
 
-			git_oid_fromraw(&current_oid, (index + 20 * i));
+			git_oid__fromraw(&current_oid, (index + 20 * i), GIT_OID_SHA1);
 			if ((error = cb(&current_oid, current_offset, data)) != 0) {
 				error = git_error_set_after_callback(error);
 				goto cleanup;
@@ -1437,7 +1437,7 @@ int git_pack_foreach_entry_offset(
 	} else {
 		for (i = 0; i < p->num_objects; i++) {
 			current_offset = ntohl(*(const uint32_t *)(index + 24 * i));
-			git_oid_fromraw(&current_oid, (index + 24 * i + 4));
+			git_oid__fromraw(&current_oid, (index + 24 * i + 4), GIT_OID_SHA1);
 			if ((error = cb(&current_oid, current_offset, data)) != 0) {
 				error = git_error_set_after_callback(error);
 				goto cleanup;
@@ -1457,7 +1457,7 @@ int git_pack__lookup_sha1(const void *oid_lookup_table, size_t stride, unsigned 
 
 	while (lo < hi) {
 		unsigned mi = (lo + hi) / 2;
-		int cmp = git_oid_raw_cmp(base + mi * stride, oid_prefix);
+		int cmp = git_oid_raw_cmp(base + mi * stride, oid_prefix, GIT_OID_SHA1_SIZE);
 
 		if (!cmp)
 			return mi;
@@ -1541,7 +1541,7 @@ static int pack_entry_find_offset(
 		}
 	}
 
-	if (found && len != GIT_OID_HEXSZ && pos + 1 < (int)p->num_objects) {
+	if (found && len != GIT_OID_SHA1_HEXSIZE && pos + 1 < (int)p->num_objects) {
 		/* Check for ambiguousity */
 		const unsigned char *next = current + stride;
 
@@ -1566,13 +1566,13 @@ static int pack_entry_find_offset(
 	}
 
 	*offset_out = offset;
-	git_oid_fromraw(found_oid, current);
+	git_oid__fromraw(found_oid, current, GIT_OID_SHA1);
 
 #ifdef INDEX_DEBUG_LOOKUP
 	{
-		unsigned char hex_sha1[GIT_OID_HEXSZ + 1];
+		unsigned char hex_sha1[GIT_OID_SHA1_HEXSIZE + 1];
 		git_oid_fmt(hex_sha1, found_oid);
-		hex_sha1[GIT_OID_HEXSZ] = '\0';
+		hex_sha1[GIT_OID_SHA1_HEXSIZE] = '\0';
 		printf("found lo=%d %s\n", lo, hex_sha1);
 	}
 #endif
@@ -1594,7 +1594,7 @@ int git_pack_entry_find(
 
 	GIT_ASSERT_ARG(p);
 
-	if (len == GIT_OID_HEXSZ && p->num_bad_objects) {
+	if (len == GIT_OID_SHA1_HEXSIZE && p->num_bad_objects) {
 		unsigned i;
 		for (i = 0; i < p->num_bad_objects; i++)
 			if (git_oid__cmp(short_oid, &p->bad_object_sha1[i]) == 0)

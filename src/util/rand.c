@@ -106,8 +106,6 @@ GIT_INLINE(int) getseed(uint64_t *seed)
 		return -1;
 	}
 
-	getloadavg(loadavg, 3);
-
 	*seed = 0;
 	*seed |= ((uint64_t)tv.tv_usec << 40);
 	*seed |= ((uint64_t)tv.tv_sec);
@@ -119,9 +117,15 @@ GIT_INLINE(int) getseed(uint64_t *seed)
 	*seed ^= ((uint64_t)getuid() << 8);
 	*seed ^= ((uint64_t)getgid());
 
+# if defined(GIT_RAND_GETLOADAVG)
+	getloadavg(loadavg, 3);
+
 	convert.f = loadavg[0]; *seed ^= (convert.d >> 36);
 	convert.f = loadavg[1]; *seed ^= (convert.d);
 	convert.f = loadavg[2]; *seed ^= (convert.d >> 16);
+# else
+	GIT_UNUSED(loadavg[0]);
+# endif
 
 	convert.f = git__timer(); *seed ^= (convert.d);
 

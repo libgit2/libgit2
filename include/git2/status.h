@@ -227,13 +227,16 @@ typedef struct {
 
 	/**
 	 * The `show` value is one of the `git_status_show_t` constants that
-	 * control which files to scan and in what order.
+	 * control which files to scan and in what order. The default is
+	 * `GIT_STATUS_SHOW_INDEX_AND_WORKDIR`.
 	 */
 	git_status_show_t show;
 
 	/**
 	 * The `flags` value is an OR'ed combination of the
-	 * `git_status_opt_t` values above.
+	 * `git_status_opt_t` values above. The default is
+	 * `GIT_STATUS_OPT_DEFAULTS`, which matches git's default
+	 * behavior.
 	 */
 	unsigned int      flags;
 

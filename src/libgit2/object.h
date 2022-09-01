@@ -45,9 +45,17 @@ int git_object__resolve_to_type(git_object **obj, git_object_t type);
 
 git_object_t git_object_stringn2type(const char *str, size_t len);
 
-int git_oid__parse(git_oid *oid, const char **buffer_out, const char *buffer_end, const char *header);
+int git_object__parse_oid_header(
+	git_oid *oid,
+	const char **buffer_out,
+	const char *buffer_end,
+	const char *header,
+	git_oid_t oid_type);
 
-void git_oid__writebuf(git_str *buf, const char *header, const git_oid *oid);
+int git_object__write_oid_header(
+	git_str *buf,
+	const char *header,
+	const git_oid *oid);
 
 bool git_object__is_valid(
 	git_repository *repo, const git_oid *id, git_object_t expected_type);

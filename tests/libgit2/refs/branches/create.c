@@ -277,3 +277,11 @@ void test_refs_branches_create__name_vs_namespace_fail(void)
 		branch = NULL;
 	}
 }
+
+void test_refs_branches_create__error_when_create_branch_with_invalid_name(void)
+{
+	retrieve_known_commit(&target, repo);
+
+	cl_git_fail(git_branch_create(&branch, repo, "HEAD", target, 0));
+	cl_git_fail(git_branch_create(&branch, repo, "-dash", target, 0));
+}

@@ -1,5 +1,7 @@
 set(CLI_INCLUDES
-	"${libgit2_BINARY_DIR}/src"
+	"${libgit2_BINARY_DIR}/src/util"
+	"${libgit2_BINARY_DIR}/include"
+	"${libgit2_BINARY_DIR}/include/git2"
 	"${libgit2_SOURCE_DIR}/src/util"
 	"${libgit2_SOURCE_DIR}/src/cli"
 	"${libgit2_SOURCE_DIR}/include")
@@ -39,6 +41,7 @@ target_link_libraries(git2_cli ${CLI_LIBGIT2_LIBRARY} ${LIBGIT2_SYSTEM_LIBS})
 
 set_target_properties(git2_cli PROPERTIES C_STANDARD 90)
 set_target_properties(git2_cli PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
+set_target_properties(git2_cli PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
 
 ide_split_sources(git2_cli)
 

@@ -1,3 +1,80 @@
+v1.5
+----
+
+This is release v1.5.0, "Stubentiger". This release adds the basis for an experimental CLI, continues preparing for SHA256 support, adds a benchmarking utility, and has numerous new features and bugfixes.
+
+## What's Changed
+### New features
+* The beginnings of a git-compatible CLI for testing and benchmarking by @ethomson in https://github.com/libgit2/libgit2/pull/6133
+* Add `clone` support to the CLI @ethomson in https://github.com/libgit2/libgit2/pull/6274
+* A benchmarking suite to compare libgit2 functionality against git by @ethomson in https://github.com/libgit2/libgit2/pull/6235
+* SHA256: add a SHA256 implementation backend by @ethomson in https://github.com/libgit2/libgit2/pull/6144
+* SHA256: support dynamically loaded openssl by @ethomson in https://github.com/libgit2/libgit2/pull/6258
+* Transport: introduce `git_transport_smart_remote_connect_options` by @lhchavez in https://github.com/libgit2/libgit2/pull/6278
+### Bug fixes
+* Free parent and ref in lg2_commit before returning. by @apnadkarni in https://github.com/libgit2/libgit2/pull/6219
+* xdiff: use xdl_free not free by @ethomson in https://github.com/libgit2/libgit2/pull/6223
+* remote: do store the update_tips callback error value by @carlosmn in https://github.com/libgit2/libgit2/pull/6226
+* win32: `find_system_dirs` does not return `GIT_ENOTFOUND` by @ethomson in https://github.com/libgit2/libgit2/pull/6228
+* Some minor fixes for issues discovered by coverity by @ethomson in https://github.com/libgit2/libgit2/pull/6238
+* Fix a string concatenation bug when validating extensions by @bierbaum in https://github.com/libgit2/libgit2/pull/6246
+* fetch: support OID refspec without dst by @ethomson in https://github.com/libgit2/libgit2/pull/6251
+* Fix crash when regenerating a patch with unquoted spaces in filename by @jorio in https://github.com/libgit2/libgit2/pull/6244
+* midx: Fix an undefined behavior (left-shift signed overflow) by @lhchavez in https://github.com/libgit2/libgit2/pull/6260
+* Validate repository directory ownership by @ethomson in https://github.com/libgit2/libgit2/pull/6266
+* midx: fix large offset table check. by @ccstolley in https://github.com/libgit2/libgit2/pull/6309
+* midx: do not verify the checksum on load by @carlosmn in https://github.com/libgit2/libgit2/pull/6291
+* revparse: Remove error-prone, redundant test by @dongcarl in https://github.com/libgit2/libgit2/pull/6299
+* refs: fix missing error message by @zawata in https://github.com/libgit2/libgit2/pull/6305
+* CLI: progress updates by @ethomson in https://github.com/libgit2/libgit2/pull/6319
+* A couple of simplications around mwindow by @carlosmn in https://github.com/libgit2/libgit2/pull/6288
+* config: update config entry iteration lifecycle by @ethomson in https://github.com/libgit2/libgit2/pull/6320
+* repo: allow administrator to own the configuration by @ethomson in https://github.com/libgit2/libgit2/pull/6321
+* filter: Fix Segfault by @zawata in https://github.com/libgit2/libgit2/pull/6303
+* ntlmclient: LibreSSL 3.5 removed HMAC_CTX_cleanup by @vishwin in https://github.com/libgit2/libgit2/pull/6340
+* Fix internal git_sysdir_find* function usage within public git_config_find* functions by @kcsaul in https://github.com/libgit2/libgit2/pull/6335
+* fix interactive rebase detect. by @i-tengfei in https://github.com/libgit2/libgit2/pull/6334
+* cmake: drop posix dependency from pcre* detection by @jpalus in https://github.com/libgit2/libgit2/pull/6333
+* Fix erroneously lax configuration ownership checks by @ethomson in https://github.com/libgit2/libgit2/pull/6341
+* pack: don't pretend we support pack files v3 by @ethomson in https://github.com/libgit2/libgit2/pull/6347
+* Fix creation of branches and tags with invalid names by @lya001 in https://github.com/libgit2/libgit2/pull/6348
+### Security fixes
+* Fixes for CVE 2022-29187 by @ethomson in https://github.com/libgit2/libgit2/pull/6349
+* zlib: update bundled zlib to v1.2.12 by @ethomson in https://github.com/libgit2/libgit2/pull/6350
+### Code cleanups
+* sha256: refactoring in preparation for sha256 by @ethomson in https://github.com/libgit2/libgit2/pull/6265
+* remote: Delete a now-inexistent API declaration by @lhchavez in https://github.com/libgit2/libgit2/pull/6276
+* Fix missing include by @cschlack in https://github.com/libgit2/libgit2/pull/6277
+### Build and CI improvements
+* meta: show build status for v1.3 and v1.4 branches by @ethomson in https://github.com/libgit2/libgit2/pull/6216
+* cmake: Fix package name for system http-parser by @mgorny in https://github.com/libgit2/libgit2/pull/6217
+* meta: update version number to v1.5.0-alpha by @ethomson in https://github.com/libgit2/libgit2/pull/6220
+* cmake: export libraries needed to compile against libgit2 by @ethomson in https://github.com/libgit2/libgit2/pull/6239
+* clone: update bitbucket tests by @ethomson in https://github.com/libgit2/libgit2/pull/6252
+* diff: don't stat empty file on arm32 (flaky test) by @ethomson in https://github.com/libgit2/libgit2/pull/6259
+* tests: support flaky stat by @ethomson in https://github.com/libgit2/libgit2/pull/6262
+* Include test results data in CI by @ethomson in https://github.com/libgit2/libgit2/pull/6306
+* Add a .clang-format with our style by @ethomson in https://github.com/libgit2/libgit2/pull/6023
+* CI: limits actions scheduled workflows to the main repo by @ethomson in https://github.com/libgit2/libgit2/pull/6342
+* ci: update dockerfiles for mbedTLS new url by @ethomson in https://github.com/libgit2/libgit2/pull/6343
+### Documentation improvements
+* Add Pharo to language bindings by @theseion in https://github.com/libgit2/libgit2/pull/6310
+* Add link to Tcl bindings for libgit2 by @apnadkarni in https://github.com/libgit2/libgit2/pull/6318
+* fix couple of typos by @SkinnyMind in https://github.com/libgit2/libgit2/pull/6287
+* update documentation for default status options by @ethomson in https://github.com/libgit2/libgit2/pull/6322
+
+## New Contributors
+* @bierbaum made their first contribution in https://github.com/libgit2/libgit2/pull/6246
+* @dongcarl made their first contribution in https://github.com/libgit2/libgit2/pull/6299
+* @SkinnyMind made their first contribution in https://github.com/libgit2/libgit2/pull/6287
+* @zawata made their first contribution in https://github.com/libgit2/libgit2/pull/6305
+* @vishwin made their first contribution in https://github.com/libgit2/libgit2/pull/6340
+* @i-tengfei made their first contribution in https://github.com/libgit2/libgit2/pull/6334
+* @jpalus made their first contribution in https://github.com/libgit2/libgit2/pull/6333
+* @lya001 made their first contribution in https://github.com/libgit2/libgit2/pull/6348
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.4.0...v1.5.0
+
 v1.4
 ----
 

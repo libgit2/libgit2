@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "repository.h"
+#include "odb.h"
 #include "git2/sys/repository.h"
 
 static git_repository *_repo;
@@ -12,7 +13,7 @@ void test_odb_backend_nobackend__initialize(void)
 
 	cl_git_pass(git_repository_new(&_repo));
 	cl_git_pass(git_config_new(&config));
-	cl_git_pass(git_odb_new(&odb));
+	cl_git_pass(git_odb__new(&odb, NULL));
 	cl_git_pass(git_refdb_new(&refdb, _repo));
 
 	git_repository_set_config(_repo, config);

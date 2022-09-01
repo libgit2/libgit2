@@ -59,7 +59,7 @@ static const unsigned int corrupt_thin_pack_len = 67;
  * Packfile with a missing trailer.
  */
 static const unsigned char missing_trailer_pack[] = {
-  0x50, 0x41, 0x43, 0x4b, 0x00, 0x00, 0x00, 0x03, 0x00, 0x50, 0xf4, 0x3b,
+  0x50, 0x41, 0x43, 0x4b, 0x00, 0x00, 0x00, 0x02, 0x00, 0x50, 0xf4, 0x3b,
 };
 static const unsigned int missing_trailer_pack_len = 12;
 
@@ -68,7 +68,7 @@ static const unsigned int missing_trailer_pack_len = 12;
  * the stream reader.
  */
 static const unsigned char leaky_pack[] = {
-	0x50, 0x41, 0x43, 0x4b, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x03,
+	0x50, 0x41, 0x43, 0x4b, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03,
 	0xf4, 0xbd, 0x51, 0x51, 0x51, 0x51, 0x51, 0x72, 0x65, 0x41, 0x4b, 0x63,
 	0x5f, 0x64, 0x65, 0x70, 0x74, 0x68, 0xbd, 0x41, 0x4b
 };
@@ -157,7 +157,7 @@ void test_pack_indexer__fix_thin(void)
 
 	/* Store the missing base into your ODB so the indexer can fix the pack */
 	cl_git_pass(git_odb_write(&id, odb, base_obj, base_obj_len, GIT_OBJECT_BLOB));
-	git_oid_fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18");
+	git_oid__fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18", GIT_OID_SHA1);
 	cl_assert_equal_oid(&should_id, &id);
 
 	cl_git_pass(git_indexer_new(&idx, ".", 0, odb, NULL));
@@ -222,7 +222,7 @@ void test_pack_indexer__corrupt_length(void)
 
 	/* Store the missing base into your ODB so the indexer can fix the pack */
 	cl_git_pass(git_odb_write(&id, odb, base_obj, base_obj_len, GIT_OBJECT_BLOB));
-	git_oid_fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18");
+	git_oid__fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18", GIT_OID_SHA1);
 	cl_assert_equal_oid(&should_id, &id);
 
 	cl_git_pass(git_indexer_new(&idx, ".", 0, odb, NULL));

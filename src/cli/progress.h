@@ -40,6 +40,10 @@ typedef struct {
 	git_str sideband;
 	git_str onscreen;
 	git_str deferred;
+
+	/* Last update about throughput */
+	double throughput_update;
+	double throughput_bytes;
 } cli_progress;
 
 #define CLI_PROGRESS_INIT { 0 }

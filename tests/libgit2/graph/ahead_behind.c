@@ -10,7 +10,7 @@ void test_graph_ahead_behind__initialize(void)
 	git_oid oid;
 	cl_git_pass(git_repository_open(&_repo, cl_fixture("testrepo.git")));
 
-	cl_git_pass(git_oid_fromstr(&oid, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
+	cl_git_pass(git_oid__fromstr(&oid, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, _repo, &oid));
 }
 
@@ -29,8 +29,8 @@ void test_graph_ahead_behind__returns_correct_result(void)
 	git_oid oid2;
 	git_commit *other;
 
-	cl_git_pass(git_oid_fromstr(&oid, "e90810b8df3e80c413d903f631643c716887138d"));
-	cl_git_pass(git_oid_fromstr(&oid2, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
+	cl_git_pass(git_oid__fromstr(&oid, "e90810b8df3e80c413d903f631643c716887138d", GIT_OID_SHA1));
+	cl_git_pass(git_oid__fromstr(&oid2, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1));
 	
 	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, _repo, &oid, &oid2));
 	cl_assert_equal_sz(2, ahead);

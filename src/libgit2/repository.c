@@ -240,7 +240,7 @@ GIT_INLINE(int) validate_repo_path(git_str *path)
 	 */
 	static size_t suffix_len =
 		CONST_STRLEN("objects/pack/pack-.pack.lock") +
-		GIT_OID_HEXSZ;
+		GIT_OID_SHA1_HEXSIZE;
 
 	return git_fs_path_validate_str_length_with_suffix(
 		path, suffix_len);
@@ -488,7 +488,7 @@ static int read_gitfile(git_str *path_out, const char *file_path)
 typedef struct {
 	const char *repo_path;
 	git_str tmp;
-	bool is_safe;
+	bool *is_safe;
 } validate_ownership_data;
 
 static int validate_ownership_cb(const git_config_entry *entry, void *payload)
@@ -496,49 +496,102 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 	validate_ownership_data *data = payload;
 
 	if (strcmp(entry->value, "") == 0)
-		data->is_safe = false;
+		*data->is_safe = false;
 
 	if (git_fs_path_prettify_dir(&data->tmp, entry->value, NULL) == 0 &&
 	    strcmp(data->tmp.ptr, data->repo_path) == 0)
-		data->is_safe = true;
+		*data->is_safe = true;
 
 	return 0;
 }
 
-static int validate_ownership(const char *repo_path)
+static int validate_ownership_config(bool *is_safe, const char *path)
 {
-	git_config *config = NULL;
-	validate_ownership_data data = { repo_path, GIT_STR_INIT, false };
-	bool is_safe;
+	validate_ownership_data ownership_data = {
+		path, GIT_STR_INIT, is_safe
+	};
+	git_config *config;
 	int error;
 
-	if ((error = git_fs_path_owner_is_current_user(&is_safe, repo_path)) < 0) {
-		if (error == GIT_ENOTFOUND)
-			error = 0;
+	if (load_global_config(&config) != 0)
+		return 0;
 
-		goto done;
-	}
+	error = git_config_get_multivar_foreach(config,
+		"safe.directory", NULL,
+		validate_ownership_cb,
+		&ownership_data);
 
-	if (is_safe) {
+	git_config_free(config);
+	git_str_dispose(&ownership_data.tmp);
+
+	return error;
+}
+
+static int validate_ownership_path(bool *is_safe, const char *path)
+{
+	git_fs_path_owner_t owner_level =
+		GIT_FS_PATH_OWNER_CURRENT_USER |
+		GIT_FS_PATH_USER_IS_ADMINISTRATOR |
+		GIT_FS_PATH_OWNER_RUNNING_SUDO;
+	int error = 0;
+
+	if (path)
+		error = git_fs_path_owner_is(is_safe, path, owner_level);
+
+	if (error == GIT_ENOTFOUND) {
+		*is_safe = true;
 		error = 0;
-		goto done;
 	}
 
-	if (load_global_config(&config) == 0) {
-		error = git_config_get_multivar_foreach(config, "safe.directory", NULL, validate_ownership_cb, &data);
+	return error;
+}
 
-		if (!error && data.is_safe)
+static int validate_ownership(git_repository *repo)
+{
+	const char *validation_paths[3] = { NULL }, *path;
+	size_t validation_len = 0, i;
+	bool is_safe = false;
+	int error = 0;
+
+	/*
+	 * If there's a worktree, validate the permissions to it *and*
+	 * the git directory, and use the worktree as the configuration
+	 * key for allowlisting the directory. In a bare setup, only
+	 * look at the gitdir and use that as the allowlist. So we
+	 * examine all `validation_paths` but use only the first as
+	 * the configuration lookup.
+	 */
+
+	if (repo->workdir)
+		validation_paths[validation_len++] = repo->workdir;
+
+	if (repo->gitlink)
+		validation_paths[validation_len++] = repo->gitlink;
+
+	validation_paths[validation_len++] = repo->gitdir;
+
+	for (i = 0; i < validation_len; i++) {
+		path = validation_paths[i];
+
+		if ((error = validate_ownership_path(&is_safe, path)) < 0)
 			goto done;
+
+		if (!is_safe)
+			break;
 	}
 
-	git_error_set(GIT_ERROR_CONFIG,
-		"repository path '%s' is not owned by current user",
-		repo_path);
-	error = GIT_EOWNER;
+	if (is_safe ||
+	    (error = validate_ownership_config(&is_safe, validation_paths[0])) < 0)
+		goto done;
+
+	if (!is_safe) {
+		git_error_set(GIT_ERROR_CONFIG,
+			"repository path '%s' is not owned by current user",
+			path);
+		error = GIT_EOWNER;
+	}
 
 done:
-	git_config_free(config);
-	git_str_dispose(&data.tmp);
 	return error;
 }
 
@@ -790,7 +843,7 @@ static int _git_repository_open_ext_from_env(
 	else if (error < 0)
 		goto error;
 	else {
-		error = git_odb_open(&odb, git_str_cstr(&object_dir_buf));
+		error = git_odb__open(&odb, git_str_cstr(&object_dir_buf), NULL);
 		if (error < 0)
 			goto error;
 	}
@@ -915,7 +968,6 @@ int git_repository_open_ext(
 		gitlink = GIT_STR_INIT, commondir = GIT_STR_INIT;
 	git_repository *repo = NULL;
 	git_config *config = NULL;
-	const char *validation_path;
 	int version = 0;
 
 	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV)
@@ -974,12 +1026,11 @@ int git_repository_open_ext(
 	}
 
 	/*
-	 * Ensure that the git directory is owned by the current user.
+	 * Ensure that the git directory and worktree are
+	 * owned by the current user.
 	 */
-	validation_path = repo->is_bare ? repo->gitdir : repo->workdir;
-
 	if (git_repository__validate_ownership &&
-	    (error = validate_ownership(validation_path)) < 0)
+	    (error = validate_ownership(repo)) < 0)
 		goto cleanup;
 
 cleanup:
@@ -1217,7 +1268,7 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 
 		if ((error = git_repository__item_path(&odb_path, repo,
 				GIT_REPOSITORY_ITEM_OBJECTS)) < 0 ||
-			(error = git_odb_new(&odb)) < 0)
+			(error = git_odb__new(&odb, NULL)) < 0)
 			return error;
 
 		GIT_REFCOUNT_OWN(odb, repo);
@@ -2866,14 +2917,14 @@ int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_str file_path = GIT_STR_INIT;
-	char orig_head_str[GIT_OID_HEXSZ];
+	char orig_head_str[GIT_OID_SHA1_HEXSIZE];
 	int error = 0;
 
 	git_oid_fmt(orig_head_str, orig_head);
 
 	if ((error = git_str_joinpath(&file_path, repo->gitdir, GIT_ORIG_HEAD_FILE)) == 0 &&
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_MERGE_FILE_MODE)) == 0 &&
-		(error = git_filebuf_printf(&file, "%.*s\n", GIT_OID_HEXSZ, orig_head_str)) == 0)
+		(error = git_filebuf_printf(&file, "%.*s\n", GIT_OID_SHA1_HEXSIZE, orig_head_str)) == 0)
 		error = git_filebuf_commit(&file);
 
 	if (error < 0)
@@ -2986,7 +3037,7 @@ int git_repository_hashfile(
 		goto cleanup;
 	}
 
-	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, fl);
+	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, GIT_OID_SHA1, fl);
 
 cleanup:
 	if (fd >= 0)

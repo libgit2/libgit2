@@ -12,7 +12,13 @@
 #include "progress.h"
 #include "error.h"
 
-#define PROGRESS_UPDATE_TIME 0.05
+/*
+ * Show updates to the percentage and number of objects received
+ * separately from the throughput to give an accurate progress while
+ * avoiding too much noise on the screen.
+ */
+#define PROGRESS_UPDATE_TIME 0.10
+#define THROUGHPUT_UPDATE_TIME 1.00
 
 #define is_nl(c) ((c) == '\r' || (c) == '\n')
 
@@ -200,11 +206,20 @@ static int fetch_receiving(
 	else
 		now = git__timer();
 
-	recv_len = (double)stats->received_bytes;
+	if (progress->throughput_update &&
+	    now - progress->throughput_update < THROUGHPUT_UPDATE_TIME) {
+		elapsed = progress->throughput_update -
+		          progress->action_start;
+		recv_len = progress->throughput_bytes;
+	} else {
+		elapsed = now - progress->action_start;
+		recv_len = (double)stats->received_bytes;
 
-	elapsed = now - progress->action_start;
+		progress->throughput_update = now;
+		progress->throughput_bytes = recv_len;
+	}
+
 	rate = elapsed ? recv_len / elapsed : 0;
-	done = (stats->received_objects == stats->total_objects);
 
 	while (recv_len > 1024 && recv_units[recv_unit_idx+1]) {
 		recv_len /= 1024;
@@ -295,7 +310,7 @@ void cli_progress_checkout(
 	}
 
 	progress_printf(progress, false,
-		"Checking out files: %3d%% (%lu/%lu)%s\r",
+		"Checking out files: %3d%% (%" PRIuZ "/%" PRIuZ ")%s\r",
 		percent(completed_steps, total_steps),
 		completed_steps, total_steps,
 		done ? ", done." : "");

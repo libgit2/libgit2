@@ -74,7 +74,7 @@ struct entry_short {
 	uint32_t uid;
 	uint32_t gid;
 	uint32_t file_size;
-	unsigned char oid[GIT_OID_RAWSZ];
+	unsigned char oid[GIT_OID_SHA1_SIZE];
 	uint16_t flags;
 	char path[1]; /* arbitrary length */
 };
@@ -88,7 +88,7 @@ struct entry_long {
 	uint32_t uid;
 	uint32_t gid;
 	uint32_t file_size;
-	unsigned char oid[GIT_OID_RAWSZ];
+	unsigned char oid[GIT_OID_SHA1_SIZE];
 	uint16_t flags;
 	uint16_t flags_extended;
 	char path[1]; /* arbitrary length */
@@ -2354,14 +2354,16 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 		for (i = 0; i < 3; i++) {
 			if (!lost->mode[i])
 				continue;
-			if (size < 20) {
+			if (size < GIT_OID_SHA1_SIZE) {
 				index_entry_reuc_free(lost);
 				return index_error_invalid("reading reuc entry oid");
 			}
 
-			git_oid_fromraw(&lost->oid[i], (const unsigned char *) buffer);
-			size -= 20;
-			buffer += 20;
+			if (git_oid__fromraw(&lost->oid[i], (const unsigned char *) buffer, GIT_OID_SHA1) < 0)
+				return -1;
+
+			size -= GIT_OID_SHA1_SIZE;
+			buffer += GIT_OID_SHA1_SIZE;
 		}
 
 		/* entry was read successfully - insert into reuc vector */
@@ -2482,7 +2484,7 @@ static int read_entry(
 	entry.file_size = ntohl(source.file_size);
 	entry.flags = ntohs(source.flags);
 
-	if (git_oid_fromraw(&entry.id, source.oid) < 0)
+	if (git_oid__fromraw(&entry.id, source.oid, GIT_OID_SHA1) < 0)
 		return -1;
 
 	if (entry.flags & GIT_INDEX_ENTRY_EXTENDED) {
@@ -2805,7 +2807,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 	ondisk.uid = htonl(entry->uid);
 	ondisk.gid = htonl(entry->gid);
 	ondisk.file_size = htonl((uint32_t)entry->file_size);
-	git_oid_raw_cpy(ondisk.oid, entry->id.id);
+	git_oid_raw_cpy(ondisk.oid, entry->id.id, GIT_OID_SHA1_SIZE);
 	ondisk.flags = htons(entry->flags);
 
 	if (entry->flags & GIT_INDEX_ENTRY_EXTENDED) {
@@ -2968,7 +2970,7 @@ static int create_reuc_extension_data(git_str *reuc_buf, git_index_reuc_entry *r
 	}
 
 	for (i = 0; i < 3; i++) {
-		if (reuc->mode[i] && (error = git_str_put(reuc_buf, (char *)&reuc->oid[i].id, GIT_OID_RAWSZ)) < 0)
+		if (reuc->mode[i] && (error = git_str_put(reuc_buf, (char *)&reuc->oid[i].id, GIT_OID_SHA1_SIZE)) < 0)
 			return error;
 	}
 

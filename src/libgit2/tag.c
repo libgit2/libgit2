@@ -75,7 +75,8 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	unsigned int i;
 	int error;
 
-	if (git_oid__parse(&tag->target, &buffer, buffer_end, "object ") < 0)
+	if (git_object__parse_oid_header(&tag->target,
+			&buffer, buffer_end, "object ", GIT_OID_SHA1) < 0)
 		return tag_error("object field invalid");
 
 	if (buffer + 5 >= buffer_end)
@@ -220,7 +221,9 @@ static int write_tag_annotation(
 	git_str tag = GIT_STR_INIT;
 	git_odb *odb;
 
-	git_oid__writebuf(&tag, "object ", git_object_id(target));
+	if (git_object__write_oid_header(&tag, "object ", git_object_id(target)) < 0)
+		goto on_error;
+
 	git_str_printf(&tag, "type %s\n", git_object_type2string(git_object_type(target)));
 	git_str_printf(&tag, "tag %s\n", tag_name);
 	git_signature__writebuf(&tag, "tagger ", tagger);
@@ -242,6 +245,15 @@ on_error:
 	git_str_dispose(&tag);
 	git_error_set(GIT_ERROR_OBJECT, "failed to create tag annotation");
 	return -1;
+}
+
+static bool tag_name_is_valid(const char *tag_name)
+{
+	/*
+	 * Discourage tag name starting with dash,
+	 * https://github.com/git/git/commit/4f0accd638b8d2
+	 */
+	return tag_name[0] != '-';
 }
 
 static int git_tag_create__internal(
@@ -266,6 +278,11 @@ static int git_tag_create__internal(
 
 	if (git_object_owner(target) != repo) {
 		git_error_set(GIT_ERROR_INVALID, "the given target does not belong to this repository");
+		return -1;
+	}
+
+	if (!tag_name_is_valid(tag_name)) {
+		git_error_set(GIT_ERROR_TAG, "'%s' is not a valid tag name", tag_name);
 		return -1;
 	}
 
@@ -542,11 +559,7 @@ int git_tag_name_is_valid(int *valid, const char *name)
 
 	*valid = 0;
 
-	/*
-	 * Discourage tag name starting with dash,
-	 * https://github.com/git/git/commit/4f0accd638b8d2
-	 */
-	if (!name || name[0] == '-')
+	if (!name || !tag_name_is_valid(name))
 		goto done;
 
 	if ((error = git_str_puts(&ref_name, GIT_REFS_TAGS_DIR)) < 0 ||

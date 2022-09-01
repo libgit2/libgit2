@@ -16,12 +16,13 @@ void test_repo_open__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
 	cl_fixture_cleanup("empty_standard_repo");
+	cl_fixture_cleanup("testrepo.git");
 	cl_fixture_cleanup("__global_config");
 
 	if (git_fs_path_isdir("alternate"))
 		git_futils_rmdir_r("alternate", NULL, GIT_RMDIR_REMOVE_FILES);
 
-	git_fs_path__set_owner(GIT_FS_PATH_MOCK_OWNER_NONE);
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_NONE);
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, config_path.ptr));
 	git_buf_dispose(&config_path);
@@ -480,17 +481,53 @@ void test_repo_open__validates_dir_ownership(void)
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
 	/* When the current user owns the repo config, that's acceptable */
-	git_fs_path__set_owner(GIT_FS_PATH_MOCK_OWNER_CURRENT_USER);
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_CURRENT_USER);
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
 	git_repository_free(repo);
 
 	/* When the system user owns the repo config, fail */
-	git_fs_path__set_owner(GIT_FS_PATH_MOCK_OWNER_SYSTEM);
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_ADMINISTRATOR);
 	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
 
+#ifdef GIT_WIN32
+	/* When the user is an administrator, succeed on Windows. */
+	git_fs_path__set_owner(GIT_FS_PATH_USER_IS_ADMINISTRATOR);
+	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
+	git_repository_free(repo);
+#endif
+
 	/* When an unknown user owns the repo config, fail */
-	git_fs_path__set_owner(GIT_FS_PATH_MOCK_OWNER_OTHER);
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
 	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
+}
+
+void test_repo_open__validates_bare_repo_ownership(void)
+{
+	git_repository *repo;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
+
+	cl_fixture_sandbox("testrepo.git");
+
+	/* When the current user owns the repo config, that's acceptable */
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_CURRENT_USER);
+	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
+	git_repository_free(repo);
+
+	/* When the system user owns the repo config, fail */
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_ADMINISTRATOR);
+	cl_git_fail(git_repository_open(&repo, "testrepo.git"));
+
+#ifdef GIT_WIN32
+	/* When the user is an administrator, succeed on Windows. */
+	git_fs_path__set_owner(GIT_FS_PATH_USER_IS_ADMINISTRATOR);
+	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
+	git_repository_free(repo);
+#endif
+
+	/* When an unknown user owns the repo config, fail */
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
+	cl_git_fail(git_repository_open(&repo, "testrepo.git"));
 }
 
 void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
@@ -505,7 +542,7 @@ void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
 	cl_fixture_sandbox("empty_standard_repo");
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
-	git_fs_path__set_owner(GIT_FS_PATH_MOCK_OWNER_OTHER);
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
 	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
 
 	/* Add safe.directory options to the global configuration */
@@ -538,6 +575,50 @@ void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
 	git_str_dispose(&config_data);
 }
 
+void test_repo_open__can_allowlist_bare_gitdir(void)
+{
+	git_repository *repo;
+	git_str config_path = GIT_STR_INIT,
+	        config_filename = GIT_STR_INIT,
+	        config_data = GIT_STR_INIT;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
+
+	cl_fixture_sandbox("testrepo.git");
+
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
+	cl_git_fail(git_repository_open(&repo, "testrepo.git"));
+
+	/* Add safe.directory options to the global configuration */
+	git_str_joinpath(&config_path, clar_sandbox_path(), "__global_config");
+	cl_must_pass(p_mkdir(config_path.ptr, 0777));
+	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, config_path.ptr);
+
+	git_str_joinpath(&config_filename, config_path.ptr, ".gitconfig");
+
+	git_str_printf(&config_data,
+		"[foo]\n" \
+		"\tbar = Foobar\n" \
+		"\tbaz = Baz!\n" \
+		"[safe]\n" \
+		"\tdirectory = /non/existent/path\n" \
+		"\tdirectory = /\n" \
+		"\tdirectory = c:\\\\temp\n" \
+		"\tdirectory = %s/%s\n" \
+		"\tdirectory = /tmp\n" \
+		"[bar]\n" \
+		"\tfoo = barfoo\n",
+		clar_sandbox_path(), "testrepo.git");
+	cl_git_rewritefile(config_filename.ptr, config_data.ptr);
+
+	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
+	git_repository_free(repo);
+
+	git_str_dispose(&config_path);
+	git_str_dispose(&config_filename);
+	git_str_dispose(&config_data);
+}
+
 void test_repo_open__can_reset_safe_directory_list(void)
 {
 	git_repository *repo;
@@ -550,7 +631,7 @@ void test_repo_open__can_reset_safe_directory_list(void)
 	cl_fixture_sandbox("empty_standard_repo");
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
-	git_fs_path__set_owner(GIT_FS_PATH_MOCK_OWNER_OTHER);
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
 	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
 
 	/* Add safe.directory options to the global configuration */

@@ -74,7 +74,7 @@ void test_rebase_inmemory__can_resolve_conflicts(void)
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 
-	git_oid_fromstr(&pick_id, "33f915f9e4dbd9f4b24430e48731a59b45b15500");
+	git_oid__fromstr(&pick_id, "33f915f9e4dbd9f4b24430e48731a59b45b15500", GIT_OID_SHA1);
 
 	cl_assert_equal_i(GIT_REBASE_OPERATION_PICK, rebase_operation->type);
 	cl_assert_equal_oid(&pick_id, &rebase_operation->id);
@@ -95,14 +95,14 @@ void test_rebase_inmemory__can_resolve_conflicts(void)
 	/* ensure that we can work with the in-memory index to resolve the conflict */
 	resolution.path = "asparagus.txt";
 	resolution.mode = GIT_FILEMODE_BLOB;
-	git_oid_fromstr(&resolution.id, "414dfc71ead79c07acd4ea47fecf91f289afc4b9");
+	git_oid__fromstr(&resolution.id, "414dfc71ead79c07acd4ea47fecf91f289afc4b9", GIT_OID_SHA1);
 	cl_git_pass(git_index_conflict_remove(rebase_index, "asparagus.txt"));
 	cl_git_pass(git_index_add(rebase_index, &resolution));
 
 	/* and finally create a commit for the resolved rebase operation */
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature, NULL, NULL));
 
-	cl_git_pass(git_oid_fromstr(&expected_commit_id, "db7af47222181e548810da2ab5fec0e9357c5637"));
+	cl_git_pass(git_oid__fromstr(&expected_commit_id, "db7af47222181e548810da2ab5fec0e9357c5637", GIT_OID_SHA1));
 	cl_assert_equal_oid(&commit_id, &expected_commit_id);
 
 	git_status_list_free(status_list);
@@ -156,7 +156,7 @@ void test_rebase_inmemory__no_common_ancestor(void)
 
 	cl_git_pass(git_rebase_finish(rebase, signature));
 
-	git_oid_fromstr(&expected_final_id, "71e7ee8d4fe7d8bf0d107355197e0a953dfdb7f3");
+	git_oid__fromstr(&expected_final_id, "71e7ee8d4fe7d8bf0d107355197e0a953dfdb7f3", GIT_OID_SHA1);
 	cl_assert_equal_oid(&expected_final_id, &commit_id);
 
 	git_annotated_commit_free(branch_head);
@@ -178,7 +178,7 @@ void test_rebase_inmemory__with_directories(void)
 
 	opts.inmemory = true;
 
-	git_oid_fromstr(&tree_id, "a4d6d9c3d57308fd8e320cf2525bae8f1adafa57");
+	git_oid__fromstr(&tree_id, "a4d6d9c3d57308fd8e320cf2525bae8f1adafa57", GIT_OID_SHA1);
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/deep_gravy"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));

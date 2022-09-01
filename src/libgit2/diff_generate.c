@@ -61,6 +61,9 @@ static git_diff_delta *diff_delta__alloc(
 	}
 	delta->status = status;
 
+	git_oid_clear(&delta->old_file.id, GIT_OID_SHA1);
+	git_oid_clear(&delta->new_file.id, GIT_OID_SHA1);
+
 	return delta;
 }
 
@@ -188,13 +191,15 @@ static int diff_delta__from_one(
 		delta->old_file.size = entry->file_size;
 		delta->old_file.flags |= GIT_DIFF_FLAG_EXISTS;
 		git_oid_cpy(&delta->old_file.id, &entry->id);
-		delta->old_file.id_abbrev = GIT_OID_HEXSZ;
+		git_oid_clear(&delta->new_file.id, GIT_OID_SHA1);
+		delta->old_file.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 	} else /* ADDED, IGNORED, UNTRACKED */ {
 		delta->new_file.mode = entry->mode;
 		delta->new_file.size = entry->file_size;
 		delta->new_file.flags |= GIT_DIFF_FLAG_EXISTS;
+		git_oid_clear(&delta->old_file.id, GIT_OID_SHA1);
 		git_oid_cpy(&delta->new_file.id, &entry->id);
-		delta->new_file.id_abbrev = GIT_OID_HEXSZ;
+		delta->new_file.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 	}
 
 	if (!has_old || !git_oid_is_zero(&delta->old_file.id))
@@ -250,7 +255,7 @@ static int diff_delta__from_two(
 		delta->old_file.size = old_entry->file_size;
 		delta->old_file.mode = old_mode;
 		git_oid_cpy(&delta->old_file.id, old_id);
-		delta->old_file.id_abbrev = GIT_OID_HEXSZ;
+		delta->old_file.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 		delta->old_file.flags |= GIT_DIFF_FLAG_EXISTS;
 
 		if (!git_oid_is_zero(&old_entry->id))
@@ -259,7 +264,7 @@ static int diff_delta__from_two(
 
 	if (!git_index_entry_is_conflict(new_entry)) {
 		git_oid_cpy(&delta->new_file.id, new_id);
-		delta->new_file.id_abbrev = GIT_OID_HEXSZ;
+		delta->new_file.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 		delta->new_file.size = new_entry->file_size;
 		delta->new_file.mode = new_mode;
 		delta->old_file.flags |= GIT_DIFF_FLAG_EXISTS;
@@ -601,6 +606,7 @@ int git_diff__oid_for_file(
 	entry.mode = mode;
 	entry.file_size = (uint32_t)size;
 	entry.path = (char *)path;
+	git_oid_clear(&entry.id, GIT_OID_SHA1);
 
 	return git_diff__oid_for_entry(out, diff, &entry, mode, NULL);
 }
@@ -621,7 +627,7 @@ int git_diff__oid_for_entry(
 	GIT_ASSERT(d->type == GIT_DIFF_TYPE_GENERATED);
 	diff = (git_diff_generated *)d;
 
-	memset(out, 0, sizeof(*out));
+	git_oid_clear(out, GIT_OID_SHA1);
 
 	if (git_repository_workdir_path(&full_path, diff->base.repo, entry.path) < 0)
 		return -1;
@@ -657,7 +663,7 @@ int git_diff__oid_for_entry(
 			git_error_clear();
 		}
 	} else if (S_ISLNK(mode)) {
-		error = git_odb__hashlink(out, full_path.ptr);
+		error = git_odb__hashlink(out, full_path.ptr, GIT_OID_SHA1);
 		diff->base.perf.oid_calculations++;
 	} else if (!git__is_sizet(entry.file_size)) {
 		git_error_set(GIT_ERROR_NOMEMORY, "file size overflow (for 32-bits) on '%s'",
@@ -672,7 +678,8 @@ int git_diff__oid_for_entry(
 			error = fd;
 		else {
 			error = git_odb__hashfd_filtered(
-				out, fd, (size_t)entry.file_size, GIT_OBJECT_BLOB, fl);
+				out, fd, (size_t)entry.file_size,
+				GIT_OBJECT_BLOB, GIT_OID_SHA1, fl);
 			p_close(fd);
 			diff->base.perf.oid_calculations++;
 		}
@@ -781,7 +788,7 @@ static int maybe_modified(
 	git_diff_generated *diff,
 	diff_in_progress *info)
 {
-	git_oid noid;
+	git_oid noid = GIT_OID_SHA1_ZERO;
 	git_delta_t status = GIT_DELTA_MODIFIED;
 	const git_index_entry *oitem = info->oitem;
 	const git_index_entry *nitem = info->nitem;
@@ -794,8 +801,6 @@ static int maybe_modified(
 
 	if (!diff_pathspec_match(&matched_pathspec, diff, oitem))
 		return 0;
-
-	memset(&noid, 0, sizeof(noid));
 
 	/* on platforms with no symlinks, preserve mode of existing symlinks */
 	if (S_ISLNK(omode) && S_ISREG(nmode) && new_is_workdir &&
@@ -1698,11 +1703,11 @@ int git_diff__commit(
 	*out = NULL;
 
 	if ((parents = git_commit_parentcount(commit)) > 1) {
-		char commit_oidstr[GIT_OID_HEXSZ + 1];
+		char commit_oidstr[GIT_OID_SHA1_HEXSIZE + 1];
 
 		error = -1;
 		git_error_set(GIT_ERROR_INVALID, "commit %s is a merge commit",
-			git_oid_tostr(commit_oidstr, GIT_OID_HEXSZ + 1, git_commit_id(commit)));
+			git_oid_tostr(commit_oidstr, GIT_OID_SHA1_HEXSIZE + 1, git_commit_id(commit)));
 		goto on_error;
 	}
 

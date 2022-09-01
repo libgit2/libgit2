@@ -9,11 +9,11 @@
 #define INCLUDE_sys_git_transport_h
 
 #include "git2/net.h"
+#include "git2/proxy.h"
 #include "git2/remote.h"
+#include "git2/strarray.h"
 #include "git2/transport.h"
 #include "git2/types.h"
-#include "git2/strarray.h"
-#include "git2/proxy.h"
 
 /**
  * @file git2/sys/transport.h
@@ -260,6 +260,19 @@ GIT_EXTERN(int) git_transport_smart_certificate_check(git_transport *transport, 
  *         callback was set), or < 0 for an error
  */
 GIT_EXTERN(int) git_transport_smart_credentials(git_credential **out, git_transport *transport, const char *user, int methods);
+
+/**
+ * Get a copy of the remote connect options
+ *
+ * All data is copied and must be freed by the caller by calling
+ * `git_remote_connect_options_dispose`.
+ *
+ * @param out options struct to fill
+ * @param transport the transport to extract the data from.
+ */
+GIT_EXTERN(int) git_transport_remote_connect_options(
+		git_remote_connect_options *out,
+		git_transport *transport);
 
 /*
  *** End of base transport interface ***

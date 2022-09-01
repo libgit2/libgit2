@@ -20,8 +20,8 @@ int lg2_show_index(git_repository *repo, int argc, char **argv)
 	size_t i, ecount;
 	char *dir = ".";
 	size_t dirlen;
-	char out[GIT_OID_HEXSZ+1];
-	out[GIT_OID_HEXSZ] = '\0';
+	char out[GIT_OID_SHA1_HEXSIZE+1];
+	out[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	if (argc > 2)
 		fatal("usage: showindex [<repo-dir>]", NULL);

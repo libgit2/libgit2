@@ -36,7 +36,7 @@ void test_revert_rename__automerge(void)
   cl_git_pass(git_repository_head(&head_ref, repo));
   cl_git_pass(git_reference_peel((git_object **)&head_commit, head_ref, GIT_OBJECT_COMMIT));
 
-  cl_git_pass(git_oid_fromstr(&revert_oid, "7b4d7c3789b3581973c04087cb774c3c3576de2f"));
+  cl_git_pass(git_oid__fromstr(&revert_oid, "7b4d7c3789b3581973c04087cb774c3c3576de2f", GIT_OID_SHA1));
   cl_git_pass(git_commit_lookup(&revert_commit, repo, &revert_oid));
 
   cl_git_pass(git_revert_commit(&index, repo, revert_commit, head_commit, 0, NULL));

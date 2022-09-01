@@ -399,8 +399,6 @@ void test_refs_revparse__date(void)
 	 * a65fedf HEAD@{1335806603 -0900}: commit:
 	 * be3563a HEAD@{1335806563 -0700}: clone: from /Users/ben/src/libgit2/tests/resour
 	 */
-	test_object("HEAD@{11 years ago}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
-
 	test_object("HEAD@{1 second}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("HEAD@{1 second ago}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("HEAD@{2 days ago}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
@@ -654,7 +652,7 @@ void test_refs_revparse__try_to_retrieve_branch_before_described_tag(void)
 	git_repository *repo;
 	git_reference *branch;
 	git_object *target;
-	char sha[GIT_OID_HEXSZ + 1];
+	char sha[GIT_OID_SHA1_HEXSIZE + 1];
 
 	repo = cl_git_sandbox_init("testrepo.git");
 
@@ -663,7 +661,7 @@ void test_refs_revparse__try_to_retrieve_branch_before_described_tag(void)
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD~3"));
 	cl_git_pass(git_branch_create(&branch, repo, "blah-7-gc47800c", (git_commit *)target, 0));
 
-	git_oid_tostr(sha, GIT_OID_HEXSZ + 1, git_object_id(target));
+	git_oid_tostr(sha, GIT_OID_SHA1_HEXSIZE + 1, git_object_id(target));
 
 	test_object_inrepo("blah-7-gc47800c", sha, repo);
 
@@ -692,7 +690,7 @@ void test_refs_revparse__try_to_retrieve_sha_before_branch(void)
 	git_repository *repo;
 	git_reference *branch;
 	git_object *target;
-	char sha[GIT_OID_HEXSZ + 1];
+	char sha[GIT_OID_SHA1_HEXSIZE + 1];
 
 	repo = cl_git_sandbox_init("testrepo.git");
 
@@ -701,7 +699,7 @@ void test_refs_revparse__try_to_retrieve_sha_before_branch(void)
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD~3"));
 	cl_git_pass(git_branch_create(&branch, repo, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", (git_commit *)target, 0));
 
-	git_oid_tostr(sha, GIT_OID_HEXSZ + 1, git_object_id(target));
+	git_oid_tostr(sha, GIT_OID_SHA1_HEXSIZE + 1, git_object_id(target));
 
 	test_object_inrepo("a65fedf39aefe402d3bb6e24df4d4f5fe4547750", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
 	test_object_inrepo("heads/a65fedf39aefe402d3bb6e24df4d4f5fe4547750", sha, repo);
@@ -728,7 +726,7 @@ void test_refs_revparse__try_to_retrieve_branch_before_abbrev_sha(void)
 	git_repository *repo;
 	git_reference *branch;
 	git_object *target;
-	char sha[GIT_OID_HEXSZ + 1];
+	char sha[GIT_OID_SHA1_HEXSIZE + 1];
 
 	repo = cl_git_sandbox_init("testrepo.git");
 
@@ -737,7 +735,7 @@ void test_refs_revparse__try_to_retrieve_branch_before_abbrev_sha(void)
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD~3"));
 	cl_git_pass(git_branch_create(&branch, repo, "c47800", (git_commit *)target, 0));
 
-	git_oid_tostr(sha, GIT_OID_HEXSZ + 1, git_object_id(target));
+	git_oid_tostr(sha, GIT_OID_SHA1_HEXSIZE + 1, git_object_id(target));
 
 	test_object_inrepo("c47800", sha, repo);
 

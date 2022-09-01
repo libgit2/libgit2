@@ -37,7 +37,7 @@ void test_win32_forbidden__can_add_forbidden_filename_with_entry(void)
 
 	entry.path = "aux";
 	entry.mode = GIT_FILEMODE_BLOB;
-	git_oid_fromstr(&entry.id, "da623abd956bb2fd8052c708c7ed43f05d192d37");
+	git_oid__fromstr(&entry.id, "da623abd956bb2fd8052c708c7ed43f05d192d37", GIT_OID_SHA1);
 
 	cl_git_pass(git_index_add(index, &entry));
 
@@ -53,7 +53,7 @@ void test_win32_forbidden__cannot_add_dot_git_even_with_entry(void)
 
 	entry.path = "foo/.git";
 	entry.mode = GIT_FILEMODE_BLOB;
-	git_oid_fromstr(&entry.id, "da623abd956bb2fd8052c708c7ed43f05d192d37");
+	git_oid__fromstr(&entry.id, "da623abd956bb2fd8052c708c7ed43f05d192d37", GIT_OID_SHA1);
 
 	cl_git_fail(git_index_add(index, &entry));
 

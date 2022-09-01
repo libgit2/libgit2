@@ -368,7 +368,7 @@ static int find_unique_abbrev_size(
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
 		return error;
 
-	while (size < GIT_OID_HEXSZ) {
+	while (size < GIT_OID_SHA1_HEXSIZE) {
 		if ((error = git_odb_exists_prefix(&dummy, odb, oid_in, size)) == 0) {
 			*out = (int) size;
 			return 0;
@@ -383,7 +383,7 @@ static int find_unique_abbrev_size(
 	}
 
 	/* If we didn't find any shorter prefix, we have to do the whole thing */
-	*out = GIT_OID_HEXSZ;
+	*out = GIT_OID_SHA1_HEXSIZE;
 
 	return 0;
 }
@@ -397,7 +397,7 @@ static int show_suffix(
 {
 	int error, size = 0;
 
-	char hex_oid[GIT_OID_HEXSZ];
+	char hex_oid[GIT_OID_SHA1_HEXSIZE];
 
 	if ((error = find_unique_abbrev_size(&size, repo, id, abbrev_size)) < 0)
 		return error;
@@ -414,7 +414,7 @@ static int show_suffix(
 #define MAX_CANDIDATES_TAGS FLAG_BITS - 1
 
 static int describe_not_found(const git_oid *oid, const char *message_format) {
-	char oid_str[GIT_OID_HEXSZ + 1];
+	char oid_str[GIT_OID_SHA1_HEXSIZE + 1];
 	git_oid_tostr(oid_str, sizeof(oid_str), oid);
 
 	git_error_set(GIT_ERROR_DESCRIBE, message_format, oid_str);
@@ -525,7 +525,7 @@ static int describe(
 		if (annotated_cnt && (git_pqueue_size(&list) == 0)) {
 			/*
 			if (debug) {
-				char oid_str[GIT_OID_HEXSZ + 1];
+				char oid_str[GIT_OID_SHA1_HEXSIZE + 1];
 				git_oid_tostr(oid_str, sizeof(oid_str), &c->oid);
 
 				fprintf(stderr, "finished search at %s\n", oid_str);
@@ -592,7 +592,7 @@ static int describe(
 			"head", "lightweight", "annotated",
 		};
 
-		char oid_str[GIT_OID_HEXSZ + 1];
+		char oid_str[GIT_OID_SHA1_HEXSIZE + 1];
 
 		if (debug) {
 			for (cur_match = 0; cur_match < match_cnt; cur_match++) {
@@ -816,7 +816,7 @@ static int git_describe__format(
 
 	/* If we didn't find *any* tags, we fall back to the commit's id */
 	if (result->fallback_to_id) {
-		char hex_oid[GIT_OID_HEXSZ + 1] = {0};
+		char hex_oid[GIT_OID_SHA1_HEXSIZE + 1] = {0};
 		int size = 0;
 
 		if ((error = find_unique_abbrev_size(

@@ -11,7 +11,7 @@ void test_object_tree_frompath__initialize(void)
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 	cl_assert(repo != NULL);
 
-	cl_git_pass(git_oid_fromstr(&id, tree_with_subtrees_oid));
+	cl_git_pass(git_oid__fromstr(&id, tree_with_subtrees_oid, GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, repo, &id));
 	cl_assert(tree != NULL);
 }

@@ -1785,9 +1785,9 @@ done:
 	return supported;
 }
 
-static git_fs_path__mock_owner_t mock_owner = GIT_FS_PATH_MOCK_OWNER_NONE;
+static git_fs_path_owner_t mock_owner = GIT_FS_PATH_OWNER_NONE;
 
-void git_fs_path__set_owner(git_fs_path__mock_owner_t owner)
+void git_fs_path__set_owner(git_fs_path_owner_t owner)
 {
 	mock_owner = owner;
 }
@@ -1879,74 +1879,52 @@ static int file_owner_sid(PSID *out, const char *path)
 	return error;
 }
 
-int git_fs_path_owner_is_current_user(bool *out, const char *path)
+int git_fs_path_owner_is(
+	bool *out,
+	const char *path,
+	git_fs_path_owner_t owner_type)
 {
 	PSID owner_sid = NULL, user_sid = NULL;
-	int error = -1;
+	BOOL is_admin, admin_owned;
+	int error;
 
 	if (mock_owner) {
-		*out = (mock_owner == GIT_FS_PATH_MOCK_OWNER_CURRENT_USER);
+		*out = ((mock_owner & owner_type) != 0);
 		return 0;
 	}
 
-	if ((error = file_owner_sid(&owner_sid, path)) < 0 ||
-	    (error = current_user_sid(&user_sid)) < 0)
+	if ((error = file_owner_sid(&owner_sid, path)) < 0)
 		goto done;
 
-	*out = EqualSid(owner_sid, user_sid);
-	error = 0;
+	if ((owner_type & GIT_FS_PATH_OWNER_CURRENT_USER) != 0) {
+		if ((error = current_user_sid(&user_sid)) < 0)
+			goto done;
 
-done:
-	git__free(owner_sid);
-	git__free(user_sid);
-	return error;
-}
-
-int git_fs_path_owner_is_system(bool *out, const char *path)
-{
-	PSID owner_sid;
-
-	if (mock_owner) {
-		*out = (mock_owner == GIT_FS_PATH_MOCK_OWNER_SYSTEM);
-		return 0;
+		if (EqualSid(owner_sid, user_sid)) {
+			*out = true;
+			goto done;
+		}
 	}
 
-	if (file_owner_sid(&owner_sid, path) < 0)
-		return -1;
+	admin_owned =
+		IsWellKnownSid(owner_sid, WinBuiltinAdministratorsSid) ||
+		IsWellKnownSid(owner_sid, WinLocalSystemSid);
 
-	*out = IsWellKnownSid(owner_sid, WinBuiltinAdministratorsSid) ||
-	       IsWellKnownSid(owner_sid, WinLocalSystemSid);
-
-	git__free(owner_sid);
-	return 0;
-}
-
-int git_fs_path_owner_is_system_or_current_user(bool *out, const char *path)
-{
-	PSID owner_sid = NULL, user_sid = NULL;
-	int error = -1;
-
-	if (mock_owner) {
-		*out = (mock_owner == GIT_FS_PATH_MOCK_OWNER_SYSTEM ||
-		        mock_owner == GIT_FS_PATH_MOCK_OWNER_CURRENT_USER);
-		return 0;
-	}
-
-	if (file_owner_sid(&owner_sid, path) < 0)
-		goto done;
-
-	if (IsWellKnownSid(owner_sid, WinBuiltinAdministratorsSid) ||
-	    IsWellKnownSid(owner_sid, WinLocalSystemSid)) {
-		*out = 1;
-		error = 0;
+	if (admin_owned &&
+	    (owner_type & GIT_FS_PATH_OWNER_ADMINISTRATOR) != 0) {
+		*out = true;
 		goto done;
 	}
 
-	if (current_user_sid(&user_sid) < 0)
+	if (admin_owned &&
+	    (owner_type & GIT_FS_PATH_USER_IS_ADMINISTRATOR) != 0 &&
+	    CheckTokenMembership(NULL, owner_sid, &is_admin) &&
+	    is_admin) {
+		*out = true;
 		goto done;
+	}
 
-	*out = EqualSid(owner_sid, user_sid);
-	error = 0;
+	*out = false;
 
 done:
 	git__free(owner_sid);
@@ -1956,12 +1934,36 @@ done:
 
 #else
 
-static int fs_path_owner_is(bool *out, const char *path, uid_t *uids, size_t uids_len)
+static int sudo_uid_lookup(uid_t *out)
+{
+	git_str uid_str = GIT_STR_INIT;
+	int64_t uid;
+	int error;
+
+	if ((error = git__getenv(&uid_str, "SUDO_UID")) == 0 &&
+	    (error = git__strntol64(&uid, uid_str.ptr, uid_str.size, NULL, 10)) == 0 &&
+	    uid == (int64_t)((uid_t)uid)) {
+		*out = (uid_t)uid;
+	}
+
+	git_str_dispose(&uid_str);
+	return error;
+}
+
+int git_fs_path_owner_is(
+	bool *out,
+	const char *path,
+	git_fs_path_owner_t owner_type)
 {
 	struct stat st;
-	size_t i;
+	uid_t euid, sudo_uid;
 
-	*out = false;
+	if (mock_owner) {
+		*out = ((mock_owner & owner_type) != 0);
+		return 0;
+	}
+
+	euid = geteuid();
 
 	if (p_lstat(path, &st) != 0) {
 		if (errno == ENOENT)
@@ -1971,54 +1973,41 @@ static int fs_path_owner_is(bool *out, const char *path, uid_t *uids, size_t uid
 		return -1;
 	}
 
-	for (i = 0; i < uids_len; i++) {
-		if (uids[i] == st.st_uid) {
-			*out = true;
-			break;
-		}
-	}
-
-	return 0;
-}
-
-int git_fs_path_owner_is_current_user(bool *out, const char *path)
-{
-	uid_t userid = geteuid();
-
-	if (mock_owner) {
-		*out = (mock_owner == GIT_FS_PATH_MOCK_OWNER_CURRENT_USER);
+	if ((owner_type & GIT_FS_PATH_OWNER_CURRENT_USER) != 0 &&
+	    st.st_uid == euid) {
+		*out = true;
 		return 0;
 	}
 
-	return fs_path_owner_is(out, path, &userid, 1);
+	if ((owner_type & GIT_FS_PATH_OWNER_ADMINISTRATOR) != 0 &&
+	    st.st_uid == 0) {
+		*out = true;
+		return 0;
+	}
+
+	if ((owner_type & GIT_FS_PATH_OWNER_RUNNING_SUDO) != 0 &&
+	    euid == 0 &&
+	    sudo_uid_lookup(&sudo_uid) == 0 &&
+	    st.st_uid == sudo_uid) {
+		*out = true;
+		return 0;
+	}
+
+	*out = false;
+	return 0;
+}
+
+#endif
+
+int git_fs_path_owner_is_current_user(bool *out, const char *path)
+{
+	return git_fs_path_owner_is(out, path, GIT_FS_PATH_OWNER_CURRENT_USER);
 }
 
 int git_fs_path_owner_is_system(bool *out, const char *path)
 {
-	uid_t userid = 0;
-
-	if (mock_owner) {
-		*out = (mock_owner == GIT_FS_PATH_MOCK_OWNER_SYSTEM);
-		return 0;
-	}
-
-	return fs_path_owner_is(out, path, &userid, 1);
+	return git_fs_path_owner_is(out, path, GIT_FS_PATH_OWNER_ADMINISTRATOR);
 }
-
-int git_fs_path_owner_is_system_or_current_user(bool *out, const char *path)
-{
-	uid_t userids[2] = { geteuid(), 0 };
-
-	if (mock_owner) {
-		*out = (mock_owner == GIT_FS_PATH_MOCK_OWNER_SYSTEM ||
-		        mock_owner == GIT_FS_PATH_MOCK_OWNER_CURRENT_USER);
-		return 0;
-	}
-
-	return fs_path_owner_is(out, path, userids, 2);
-}
-
-#endif
 
 int git_fs_path_find_executable(git_str *fullpath, const char *executable)
 {

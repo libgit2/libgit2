@@ -15,17 +15,17 @@ static int progress_cb(const char *str, int len, void *data)
  */
 static int update_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
 {
-	char a_str[GIT_OID_HEXSZ+1], b_str[GIT_OID_HEXSZ+1];
+	char a_str[GIT_OID_SHA1_HEXSIZE+1], b_str[GIT_OID_SHA1_HEXSIZE+1];
 	(void)data;
 
 	git_oid_fmt(b_str, b);
-	b_str[GIT_OID_HEXSZ] = '\0';
+	b_str[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	if (git_oid_is_zero(a)) {
 		printf("[new]     %.20s %s\n", b_str, refname);
 	} else {
 		git_oid_fmt(a_str, a);
-		a_str[GIT_OID_HEXSZ] = '\0';
+		a_str[GIT_OID_SHA1_HEXSIZE] = '\0';
 		printf("[updated] %.10s..%.10s %s\n", a_str, b_str, refname);
 	}
 

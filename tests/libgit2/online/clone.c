@@ -484,9 +484,13 @@ void test_online_clone__bitbucket_falls_back_to_specified_creds(void)
 
 void test_online_clone__googlesource(void)
 {
+#ifdef __APPLE__
+	cl_skip();
+#else
 	cl_git_pass(git_clone(&g_repo, GOOGLESOURCE_REPO_URL, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;
 	cl_fixture_cleanup("./foo");
+#endif
 }
 
 static int cancel_at_half(const git_indexer_progress *stats, void *payload)
@@ -629,14 +633,14 @@ void test_online_clone__ssh_cannot_change_username(void)
 static int ssh_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
 {
 	git_cert_hostkey *key;
-	git_oid expected = {{0}}, actual = {{0}};
+	git_oid expected = GIT_OID_SHA1_ZERO, actual = GIT_OID_SHA1_ZERO;
 
 	GIT_UNUSED(valid);
 	GIT_UNUSED(payload);
 
 	cl_assert(_remote_ssh_fingerprint);
 
-	cl_git_pass(git_oid_fromstrp(&expected, _remote_ssh_fingerprint));
+	cl_git_pass(git_oid__fromstrp(&expected, _remote_ssh_fingerprint, GIT_OID_SHA1));
 	cl_assert_equal_i(GIT_CERT_HOSTKEY_LIBSSH2, cert->cert_type);
 	key = (git_cert_hostkey *) cert;
 

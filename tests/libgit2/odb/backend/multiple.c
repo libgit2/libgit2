@@ -24,7 +24,7 @@ void test_odb_backend_multiple__initialize(void)
 {
 	git_odb_backend *backend;
 
-	git_oid_fromstr(&_existing_oid, EXISTING_HASH);
+	git_oid__fromstr(&_existing_oid, EXISTING_HASH, GIT_OID_SHA1);
 
 	_obj = NULL;
 	_repo = cl_git_sandbox_init("testrepo.git");

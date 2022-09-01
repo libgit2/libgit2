@@ -64,9 +64,9 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	 * 100644 blob 9daeafb9864cf43055ae93beb0afd6c7d144bfa4    test.txt
 	 */
 
-	cl_git_pass(git_oid_fromstr(&expected_commit_oid, "1fe3126578fc4eca68c193e4a3a0a14a0704624d"));
-	cl_git_pass(git_oid_fromstr(&expected_tree_oid, "2b297e643c551e76cfa1f93810c50811382f9117"));
-	cl_git_pass(git_oid_fromstr(&expected_blob_oid, "9daeafb9864cf43055ae93beb0afd6c7d144bfa4"));
+	cl_git_pass(git_oid__fromstr(&expected_commit_oid, "1fe3126578fc4eca68c193e4a3a0a14a0704624d", GIT_OID_SHA1));
+	cl_git_pass(git_oid__fromstr(&expected_tree_oid, "2b297e643c551e76cfa1f93810c50811382f9117", GIT_OID_SHA1));
+	cl_git_pass(git_oid__fromstr(&expected_blob_oid, "9daeafb9864cf43055ae93beb0afd6c7d144bfa4", GIT_OID_SHA1));
 
 	/*
 	 * Add a new file to the index

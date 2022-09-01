@@ -49,7 +49,7 @@ void test_odb_backend_simple__read_of_object_succeeds(void)
 
 	setup_backend(objs);
 
-	cl_git_pass(git_oid_fromstr(&_oid, objs[0].oid));
+	cl_git_pass(git_oid__fromstr(&_oid, objs[0].oid, GIT_OID_SHA1));
 	cl_git_pass(git_odb_read(&_obj, _odb, &_oid));
 
 	assert_object_contains(_obj, objs[0].content);
@@ -64,7 +64,7 @@ void test_odb_backend_simple__read_of_nonexisting_object_fails(void)
 
 	setup_backend(objs);
 
-	cl_git_pass(git_oid_fromstr(&_oid, "f6ea0495187600e7b2288c8ac19c5886383a4633"));
+	cl_git_pass(git_oid__fromstr(&_oid, "f6ea0495187600e7b2288c8ac19c5886383a4633", GIT_OID_SHA1));
 	cl_git_fail_with(GIT_ENOTFOUND, git_odb_read(&_obj, _odb, &_oid));
 }
 
@@ -77,7 +77,7 @@ void test_odb_backend_simple__read_with_hash_mismatch_fails(void)
 
 	setup_backend(objs);
 
-	cl_git_pass(git_oid_fromstr(&_oid, objs[0].oid));
+	cl_git_pass(git_oid__fromstr(&_oid, objs[0].oid, GIT_OID_SHA1));
 	cl_git_fail_with(GIT_EMISMATCH, git_odb_read(&_obj, _odb, &_oid));
 }
 
@@ -89,7 +89,7 @@ void test_odb_backend_simple__read_with_hash_mismatch_succeeds_without_verificat
 	};
 
 	setup_backend(objs);
-	cl_git_pass(git_oid_fromstr(&_oid, objs[0].oid));
+	cl_git_pass(git_oid__fromstr(&_oid, objs[0].oid, GIT_OID_SHA1));
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION, 0));
 	cl_git_pass(git_odb_read(&_obj, _odb, &_oid));
@@ -106,7 +106,7 @@ void test_odb_backend_simple__read_prefix_succeeds(void)
 
 	setup_backend(objs);
 
-	cl_git_pass(git_oid_fromstr(&_oid, "f6ea0495187600e7b2288c8ac19c5886383a4632"));
+	cl_git_pass(git_oid__fromstr(&_oid, "f6ea0495187600e7b2288c8ac19c5886383a4632", GIT_OID_SHA1));
 	cl_git_pass(git_odb_read(&_obj, _odb, &_oid));
 
 	assert_object_contains(_obj, objs[0].content);
@@ -122,7 +122,7 @@ void test_odb_backend_simple__read_prefix_of_nonexisting_object_fails(void)
 
 	setup_backend(objs);
 
-	cl_git_pass(git_oid_fromstrn(&_oid, hash, strlen(hash)));
+	cl_git_pass(git_oid__fromstrn(&_oid, hash, strlen(hash), GIT_OID_SHA1));
 	cl_git_fail_with(GIT_ENOTFOUND, git_odb_read(&_obj, _odb, &_oid));
 }
 
@@ -136,7 +136,7 @@ void test_odb_backend_simple__read_with_ambiguous_prefix_fails(void)
 
 	setup_backend(objs);
 
-	cl_git_pass(git_oid_fromstr(&_oid, objs[0].oid));
+	cl_git_pass(git_oid__fromstr(&_oid, objs[0].oid, GIT_OID_SHA1));
 	cl_git_fail_with(GIT_EAMBIGUOUS, git_odb_read_prefix(&_obj, _odb, &_oid, 7));
 }
 
@@ -150,7 +150,7 @@ void test_odb_backend_simple__read_with_highly_ambiguous_prefix(void)
 
 	setup_backend(objs);
 
-	cl_git_pass(git_oid_fromstr(&_oid, objs[0].oid));
+	cl_git_pass(git_oid__fromstr(&_oid, objs[0].oid, GIT_OID_SHA1));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION, 0));
 	cl_git_fail_with(GIT_EAMBIGUOUS, git_odb_read_prefix(&_obj, _odb, &_oid, 39));
 	cl_git_pass(git_odb_read_prefix(&_obj, _odb, &_oid, 40));
@@ -166,7 +166,7 @@ void test_odb_backend_simple__exists_succeeds(void)
 
 	setup_backend(objs);
 
-	cl_git_pass(git_oid_fromstr(&_oid, objs[0].oid));
+	cl_git_pass(git_oid__fromstr(&_oid, objs[0].oid, GIT_OID_SHA1));
 	cl_assert(git_odb_exists(_odb, &_oid));
 }
 
@@ -179,7 +179,7 @@ void test_odb_backend_simple__exists_fails_for_nonexisting_object(void)
 
 	setup_backend(objs);
 
-	cl_git_pass(git_oid_fromstr(&_oid, "f6ea0495187600e7b2288c8ac19c5886383a4633"));
+	cl_git_pass(git_oid__fromstr(&_oid, "f6ea0495187600e7b2288c8ac19c5886383a4633", GIT_OID_SHA1));
 	cl_assert(git_odb_exists(_odb, &_oid) == 0);
 }
 
@@ -194,7 +194,7 @@ void test_odb_backend_simple__exists_prefix_succeeds(void)
 
 	setup_backend(objs);
 
-	cl_git_pass(git_oid_fromstr(&_oid, objs[0].oid));
+	cl_git_pass(git_oid__fromstr(&_oid, objs[0].oid, GIT_OID_SHA1));
 	cl_git_pass(git_odb_exists_prefix(&found, _odb, &_oid, 12));
 	cl_assert(git_oid_equal(&found, &_oid));
 }
@@ -209,7 +209,7 @@ void test_odb_backend_simple__exists_with_ambiguous_prefix_fails(void)
 
 	setup_backend(objs);
 
-	cl_git_pass(git_oid_fromstr(&_oid, objs[0].oid));
+	cl_git_pass(git_oid__fromstr(&_oid, objs[0].oid, GIT_OID_SHA1));
 	cl_git_fail_with(GIT_EAMBIGUOUS, git_odb_exists_prefix(NULL, _odb, &_oid, 7));
 }
 
@@ -224,7 +224,7 @@ void test_odb_backend_simple__exists_with_highly_ambiguous_prefix(void)
 
 	setup_backend(objs);
 
-	cl_git_pass(git_oid_fromstr(&_oid, objs[0].oid));
+	cl_git_pass(git_oid__fromstr(&_oid, objs[0].oid, GIT_OID_SHA1));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION, 0));
 	cl_git_fail_with(GIT_EAMBIGUOUS, git_odb_exists_prefix(&found, _odb, &_oid, 39));
 	cl_git_pass(git_odb_exists_prefix(&found, _odb, &_oid, 40));
@@ -237,7 +237,7 @@ void test_odb_backend_simple__null_oid_is_ignored(void)
 		{ "0000000000000000000000000000000000000000", "null oid content" },
 		{ NULL, NULL }
 	};
-	git_oid null_oid = {{0}};
+	git_oid null_oid = GIT_OID_SHA1_ZERO;
 	git_odb_object *obj;
 
 	setup_backend(objs);

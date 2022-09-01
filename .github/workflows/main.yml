@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  docker-registry: docker.pkg.github.com
+  docker-registry: ghcr.io
   docker-config-path: source/ci/docker
 
 jobs:
@@ -69,7 +69,7 @@ jobs:
         if [ "${{ matrix.container.base }}" != "" ]; then
           BASE_ARG="--build-arg BASE=${{ matrix.container.base }}"
         fi
-        docker build -t ${{ env.docker-registry-container-sha }} ${BASE_ARG} -f ${{ env.dockerfile }} .
+        docker build -t ${{ env.docker-registry-container-sha }} --build-arg UID=$(id -u) --build-arg GID=$(id -g) ${BASE_ARG} -f ${{ env.dockerfile }} .
         docker tag ${{ env.docker-registry-container-sha }} ${{ env.docker-registry-container-latest }}
         docker push ${{ env.docker-registry-container-sha }}
         docker push ${{ env.docker-registry-container-latest }}
@@ -85,6 +85,7 @@ jobs:
       matrix:
         platform:
         - name: "Linux (Xenial, GCC, OpenSSL)"
+          id: xenial-gcc-openssl
           container:
             name: xenial
           env:
@@ -93,6 +94,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
           os: ubuntu-latest
         - name: Linux (Xenial, GCC, mbedTLS)
+          id: xenial-gcc-mbedtls
           container:
             name: xenial
           env:
@@ -101,6 +103,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
           os: ubuntu-latest
         - name: "Linux (Xenial, Clang, OpenSSL)"
+          id: xenial-clang-openssl
           container:
             name: xenial
           env:
@@ -109,6 +112,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
           os: ubuntu-latest
         - name: "Linux (Xenial, Clang, mbedTLS)"
+          id: xenial-clang-mbedtls
           container:
             name: xenial
           env:
@@ -116,7 +120,62 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
           os: ubuntu-latest
-        - name: "Linux (MemorySanitizer)"
+        - name: "macOS"
+          id: macos
+          os: macos-10.15
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
+            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+          setup-script: osx
+        - name: "Windows (amd64, Visual Studio)"
+          id: windows-amd64-vs
+          os: windows-2019
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (x86, Visual Studio)"
+          id: windows-x86-vs
+          os: windows-2019
+          env:
+            ARCH: x86
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (amd64, mingw)"
+          id: windows-amd64-mingw
+          os: windows-2019
+          setup-script: mingw
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: MinGW Makefiles
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
+            BUILD_TEMP: D:\Temp
+            BUILD_PATH: D:\Temp\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (x86, mingw)"
+          id: windows-x86-mingw
+          os: windows-2019
+          setup-script: mingw
+          env:
+            ARCH: x86
+            CMAKE_GENERATOR: MinGW Makefiles
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
+            BUILD_TEMP: D:\Temp
+            BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+
+        # Sanitizers
+        - name: "Sanitizer (Memory)"
+          id: memorysanitizer
           container:
             name: focal
           env:
@@ -129,7 +188,8 @@ jobs:
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
           os: ubuntu-latest
-        - name: "Linux (UndefinedBehaviorSanitizer)"
+        - name: "Sanitizer (UndefinedBehavior)"
+          id: ubsanitizer
           container:
             name: focal
           env:
@@ -142,7 +202,8 @@ jobs:
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
           os: ubuntu-latest
-        - name: "Linux (ThreadSanitizer)"
+        - name: "Sanitizer (Thread)"
+          id: threadsanitizer
           container:
             name: focal
           env:
@@ -156,51 +217,34 @@ jobs:
             UBSAN_OPTIONS: print_stacktrace=1
             TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
           os: ubuntu-latest
-        - name: "macOS"
+
+        # Experimental: SHA256 support
+        - name: "Linux (SHA256, Xenial, Clang, OpenSSL)"
+          id: xenial-clang-openssl
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+          os: ubuntu-latest
+        - name: "macOS (SHA256)"
+          id: macos
           os: macos-10.15
           env:
             CC: clang
-            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
           setup-script: osx
-        - name: "Windows (amd64, Visual Studio)"
+        - name: "Windows (SHA256, amd64, Visual Studio)"
+          id: windows-amd64-vs
           os: windows-2019
           env:
             ARCH: amd64
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (x86, Visual Studio)"
-          os: windows-2019
-          env:
-            ARCH: x86
-            CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (amd64, mingw)"
-          os: windows-2019
-          setup-script: mingw
-          env:
-            ARCH: amd64
-            CMAKE_GENERATOR: MinGW Makefiles
-            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
-            BUILD_TEMP: D:\Temp
-            BUILD_PATH: D:\Temp\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (x86, mingw)"
-          os: windows-2019
-          setup-script: mingw
-          env:
-            ARCH: x86
-            CMAKE_GENERATOR: MinGW Makefiles
-            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
-            BUILD_TEMP: D:\Temp
-            BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
       fail-fast: false
@@ -229,7 +273,11 @@ jobs:
       working-directory: ${{ env.docker-config-path }}
       if: matrix.platform.container.name != ''
     - name: Create container
-      run: docker build -t ${{ env.docker-registry-container-sha }} -f ${{ env.dockerfile }} .
+      run: |
+        if [ "${{ matrix.container.base }}" != "" ]; then
+          BASE_ARG="--build-arg BASE=${{ matrix.container.base }}"
+        fi
+        docker build -t ${{ env.docker-registry-container-sha }} --build-arg UID=$(id -u) --build-arg GID=$(id -g) ${BASE_ARG} -f ${{ env.dockerfile }} .
       working-directory: ${{ env.docker-config-path }}
       if: matrix.platform.container.name != '' && env.docker-container-exists != 'true'
     - name: Build and test
@@ -237,10 +285,12 @@ jobs:
         export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
 
         if [ -n "${{ matrix.platform.container.name }}" ]; then
+          mkdir build
           docker run \
               --rm \
-              --user libgit2:libgit2 \
+              --user "$(id -u):$(id -g)" \
               -v "$(pwd)/source:/home/libgit2/source" \
+              -v "$(pwd)/build:/home/libgit2/build" \
               -w /home/libgit2 \
               -e ASAN_SYMBOLIZER_PATH \
               -e CC \
@@ -255,13 +305,33 @@ jobs:
               -e TSAN_OPTIONS \
               -e UBSAN_OPTIONS \
               ${{ env.docker-registry-container-sha }} \
-              /bin/bash -c "mkdir build && cd build && ../source/ci/build.sh && ../source/ci/test.sh"
+              /bin/bash -c "cd build && ../source/ci/build.sh && ../source/ci/test.sh"
         else
-          mkdir build && cd build
+          mkdir build
+          cd build
           ../source/ci/build.sh
           ../source/ci/test.sh
         fi
       shell: bash
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: success() || failure()
+      with:
+        name: test-results-${{ matrix.platform.id }}
+        path: build/results_*.xml
+
+  test_results:
+    name: Test results
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download test results
+      uses: actions/download-artifact@v3
+    - name: Generate test summary
+      uses: test-summary/action@v1
+      with:
+        paths: 'test-results-*/*.xml'
+
 
   # Generate documentation using docurium.  We'll upload the documentation
   # as a build artifact so that it can be reviewed as part of a pull
@@ -271,6 +341,7 @@ jobs:
   documentation:
     name: Generate documentation
     needs: [ containers ]
+    if: success() || failure()
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository

@@ -5,6 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "parse.h"
+#include "oid.h"
 
 int git_parse_ctx_init(git_parse_ctx *ctx, const char *content, size_t content_len)
 {
@@ -103,11 +104,11 @@ int git_parse_advance_digit(int64_t *out, git_parse_ctx *ctx, int base)
 
 int git_parse_advance_oid(git_oid *out, git_parse_ctx *ctx)
 {
-	if (ctx->line_len < GIT_OID_HEXSZ)
+	if (ctx->line_len < GIT_OID_SHA1_HEXSIZE)
 		return -1;
-	if ((git_oid_fromstrn(out, ctx->line, GIT_OID_HEXSZ)) < 0)
+	if ((git_oid__fromstrn(out, ctx->line, GIT_OID_SHA1_HEXSIZE, GIT_OID_SHA1)) < 0)
 		return -1;
-	git_parse_advance_chars(ctx, GIT_OID_HEXSZ);
+	git_parse_advance_chars(ctx, GIT_OID_SHA1_HEXSIZE);
 	return 0;
 }
 

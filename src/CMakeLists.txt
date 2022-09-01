@@ -68,6 +68,11 @@ check_prototype_definition(qsort_r
 
 check_function_exists(qsort_s GIT_QSORT_S)
 
+# random / entropy data
+
+check_function_exists(getentropy GIT_RAND_GETENTROPY)
+check_function_exists(getloadavg GIT_RAND_GETLOADAVG)
+
 # determine architecture of the machine
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -116,8 +121,8 @@ if(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Haiku")
-	list(APPEND LIBGIT2_SYSTEM_LIBS network)
-	list(APPEND LIBGIT2_PC_LIBS "-lnetwork")
+	list(APPEND LIBGIT2_SYSTEM_LIBS gnu network)
+	list(APPEND LIBGIT2_PC_LIBS "-lgnu -lnetwork")
 endif()
 
 if(AMIGA)
@@ -164,12 +169,6 @@ if(ICONV_FOUND)
 	list(APPEND LIBGIT2_PC_LIBS ${ICONV_LIBRARIES})
 endif()
 add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
-
-#
-# Configure support
-#
-
-configure_file(features.h.in git2/sys/features.h)
 
 #
 # Include child projects

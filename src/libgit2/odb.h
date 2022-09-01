@@ -10,6 +10,7 @@
 #include "common.h"
 
 #include "git2/odb.h"
+#include "git2/odb_backend.h"
 #include "git2/oid.h"
 #include "git2/types.h"
 #include "git2/sys/commit_graph.h"
@@ -46,6 +47,7 @@ struct git_odb_object {
 struct git_odb {
 	git_refcount rc;
 	git_mutex lock;  /* protects backends */
+	git_odb_options options;
 	git_vector backends;
 	git_cache own_cache;
 	git_commit_graph *cgraph;
@@ -72,7 +74,7 @@ int git_odb__add_default_backends(
  * Hash a git_rawobj internally.
  * The `git_rawobj` is supposed to be previously initialized
  */
-int git_odb__hashobj(git_oid *id, git_rawobj *obj);
+int git_odb__hashobj(git_oid *id, git_rawobj *obj, git_oid_t oid_type);
 
 /*
  * Format the object header such as it would appear in the on-disk object
@@ -89,14 +91,24 @@ int git_odb__format_object_header(size_t *out_len, char *hdr, size_t hdr_size, g
  * The fd is never closed, not even on error. It must be opened and closed
  * by the caller
  */
-int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_object_t type);
+int git_odb__hashfd(
+	git_oid *out,
+	git_file fd,
+	size_t size,
+	git_object_t object_type,
+	git_oid_t oid_type);
 
 /*
  * Hash an open file descriptor applying an array of filters
  * Acts just like git_odb__hashfd with the addition of filters...
  */
 int git_odb__hashfd_filtered(
-	git_oid *out, git_file fd, size_t len, git_object_t type, git_filter_list *fl);
+	git_oid *out,
+	git_file fd,
+	size_t len,
+	git_object_t object_type,
+	git_oid_t oid_type,
+	git_filter_list *fl);
 
 /*
  * Hash a `path`, assuming it could be a POSIX symlink: if the path is a
@@ -106,7 +118,7 @@ int git_odb__hashfd_filtered(
  * The hash type for this call is always `GIT_OBJECT_BLOB` because
  * symlinks may only point to blobs.
  */
-int git_odb__hashlink(git_oid *out, const char *path);
+int git_odb__hashlink(git_oid *out, const char *path, git_oid_t oid_type);
 
 /**
  * Generate a GIT_EMISMATCH error for the ODB.
@@ -145,5 +157,32 @@ int git_odb__freshen(git_odb *db, const git_oid *id);
 
 /* fully free the object; internal method, DO NOT EXPORT */
 void git_odb_object__free(void *object);
+
+/* SHA256 support */
+
+int git_odb__new(git_odb **out, const git_odb_options *opts);
+
+int git_odb__open(
+	git_odb **out,
+	const char *objects_dir,
+	const git_odb_options *opts);
+
+int git_odb__hash(
+	git_oid *out,
+	const void *data,
+	size_t len,
+	git_object_t object_type,
+	git_oid_t oid_type);
+
+int git_odb__hashfile(
+	git_oid *out,
+	const char *path,
+	git_object_t object_type,
+	git_oid_t oid_type);
+
+GIT_EXTERN(int) git_odb__backend_loose(
+	git_odb_backend **out,
+	const char *objects_dir,
+	git_odb_backend_loose_options *opts);
 
 #endif

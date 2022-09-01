@@ -70,7 +70,7 @@ void test_refs_reflog_drop__can_drop_the_oldest_entry(void)
 	cl_assert_equal_sz(entrycount - 1, git_reflog_entrycount(g_reflog));
 
 	entry = git_reflog_entry_byindex(g_reflog, entrycount - 2);
-	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) != 0);
+	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_SHA1_HEXZERO) != 0);
 }
 
 void test_refs_reflog_drop__can_drop_the_oldest_entry_and_rewrite_the_log_history(void)
@@ -83,7 +83,7 @@ void test_refs_reflog_drop__can_drop_the_oldest_entry_and_rewrite_the_log_histor
 	cl_assert_equal_sz(entrycount - 1, git_reflog_entrycount(g_reflog));
 
 	entry = git_reflog_entry_byindex(g_reflog, entrycount - 2);
-	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) == 0);
+	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_SHA1_HEXZERO) == 0);
 }
 
 void test_refs_reflog_drop__can_drop_all_the_entries(void)

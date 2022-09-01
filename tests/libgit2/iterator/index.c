@@ -52,7 +52,7 @@ static void index_iterator_test(
 
 		if (expected_oids != NULL) {
 			git_oid oid;
-			cl_git_pass(git_oid_fromstr(&oid, expected_oids[count]));
+			cl_git_pass(git_oid__fromstr(&oid, expected_oids[count], GIT_OID_SHA1));
 			cl_assert_equal_oid(&oid, &entry->id);
 		}
 
@@ -999,7 +999,7 @@ static void create_paths(git_index *index, const char *root, int depth)
 			memset(&entry, 0, sizeof(git_index_entry));
 			entry.path = fullpath.ptr;
 			entry.mode = GIT_FILEMODE_BLOB;
-			git_oid_fromstr(&entry.id, "d44e18fb93b7107b5cd1b95d601591d77869a1b6");
+			git_oid__fromstr(&entry.id, "d44e18fb93b7107b5cd1b95d601591d77869a1b6", GIT_OID_SHA1);
 
 			cl_git_pass(git_index_add(index, &entry));
 		} else if (depth > 0) {
@@ -1296,17 +1296,17 @@ static void add_conflict(
 
 	ancestor.path = ancestor_path;
 	ancestor.mode = GIT_FILEMODE_BLOB;
-	git_oid_fromstr(&ancestor.id, "d44e18fb93b7107b5cd1b95d601591d77869a1b6");
+	git_oid__fromstr(&ancestor.id, "d44e18fb93b7107b5cd1b95d601591d77869a1b6", GIT_OID_SHA1);
 	GIT_INDEX_ENTRY_STAGE_SET(&ancestor, 1);
 
 	ours.path = our_path;
 	ours.mode = GIT_FILEMODE_BLOB;
-	git_oid_fromstr(&ours.id, "d44e18fb93b7107b5cd1b95d601591d77869a1b6");
+	git_oid__fromstr(&ours.id, "d44e18fb93b7107b5cd1b95d601591d77869a1b6", GIT_OID_SHA1);
 	GIT_INDEX_ENTRY_STAGE_SET(&ours, 2);
 
 	theirs.path = their_path;
 	theirs.mode = GIT_FILEMODE_BLOB;
-	git_oid_fromstr(&theirs.id, "d44e18fb93b7107b5cd1b95d601591d77869a1b6");
+	git_oid__fromstr(&theirs.id, "d44e18fb93b7107b5cd1b95d601591d77869a1b6", GIT_OID_SHA1);
 	GIT_INDEX_ENTRY_STAGE_SET(&theirs, 3);
 
 	cl_git_pass(git_index_conflict_add(index, &ancestor, &ours, &theirs));

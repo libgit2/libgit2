@@ -172,7 +172,7 @@ int git_commit_list_parse(git_revwalk *walk, git_commit_list_node *commit)
 	if (cgraph_file) {
 		git_commit_graph_entry e;
 
-		error = git_commit_graph_entry_find(&e, cgraph_file, &commit->oid, GIT_OID_RAWSZ);
+		error = git_commit_graph_entry_find(&e, cgraph_file, &commit->oid, GIT_OID_SHA1_SIZE);
 		if (error == 0 && git__is_uint16(e.parent_count)) {
 			size_t i;
 			commit->generation = (uint32_t)e.generation;

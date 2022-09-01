@@ -45,7 +45,7 @@ static void tree_checker(
 	cl_assert_equal_i(1, (int)git_tree_entrycount(tree));
 	entry = git_tree_entry_byindex(tree, 0);
 
-	cl_git_pass(git_oid_fromstr(&oid, expected_sha));
+	cl_git_pass(git_oid__fromstr(&oid, expected_sha, GIT_OID_SHA1));
 
 	cl_assert_equal_i(0, git_oid_cmp(&oid, git_tree_entry_id(entry)));
 	cl_assert_equal_i(expected_filemode, git_tree_entry_filemode(entry));
@@ -70,15 +70,17 @@ static void two_blobs(git_treebuilder *bld)
 	git_oid oid;
 	const git_tree_entry *entry;
 
-	cl_git_pass(git_oid_fromstr(&oid,
-		"a8233120f6ad708f843d861ce2b7228ec4e3dec6"));	/* blob oid (README) */
+	cl_git_pass(git_oid__fromstr(&oid,
+		"a8233120f6ad708f843d861ce2b7228ec4e3dec6",
+		GIT_OID_SHA1));	/* blob oid (README) */
 
 	cl_git_pass(git_treebuilder_insert(
 		&entry,	bld, "duplicate", &oid,
 		GIT_FILEMODE_BLOB));
 
-	cl_git_pass(git_oid_fromstr(&oid,
-		"a71586c1dfe8a71c6cbf6c129f404c5642ff31bd"));	/* blob oid (new.txt) */
+	cl_git_pass(git_oid__fromstr(&oid,
+		"a71586c1dfe8a71c6cbf6c129f404c5642ff31bd",
+		GIT_OID_SHA1));	/* blob oid (new.txt) */
 
 	cl_git_pass(git_treebuilder_insert(
 		&entry,	bld, "duplicate", &oid,
@@ -90,15 +92,17 @@ static void one_blob_and_one_tree(git_treebuilder *bld)
 	git_oid oid;
 	const git_tree_entry *entry;
 
-	cl_git_pass(git_oid_fromstr(&oid,
-		"a8233120f6ad708f843d861ce2b7228ec4e3dec6"));	/* blob oid (README) */
+	cl_git_pass(git_oid__fromstr(&oid,
+		"a8233120f6ad708f843d861ce2b7228ec4e3dec6",
+		GIT_OID_SHA1));	/* blob oid (README) */
 
 	cl_git_pass(git_treebuilder_insert(
 		&entry,	bld, "duplicate", &oid,
 		GIT_FILEMODE_BLOB));
 
-	cl_git_pass(git_oid_fromstr(&oid,
-		"4e0883eeeeebc1fb1735161cea82f7cb5fab7e63"));	/* tree oid (a) */
+	cl_git_pass(git_oid__fromstr(&oid,
+		"4e0883eeeeebc1fb1735161cea82f7cb5fab7e63",
+		GIT_OID_SHA1));	/* tree oid (a) */
 
 	cl_git_pass(git_treebuilder_insert(
 		&entry,	bld, "duplicate", &oid,
@@ -127,17 +131,17 @@ static void add_fake_conflicts(git_index *index)
 	ancestor_entry.path = "duplicate";
 	ancestor_entry.mode = GIT_FILEMODE_BLOB;
 	GIT_INDEX_ENTRY_STAGE_SET(&ancestor_entry, 1);
-	git_oid_fromstr(&ancestor_entry.id, "a8233120f6ad708f843d861ce2b7228ec4e3dec6");
+	git_oid__fromstr(&ancestor_entry.id, "a8233120f6ad708f843d861ce2b7228ec4e3dec6", GIT_OID_SHA1);
 
 	our_entry.path = "duplicate";
 	our_entry.mode = GIT_FILEMODE_BLOB;
 	GIT_INDEX_ENTRY_STAGE_SET(&our_entry, 2);
-	git_oid_fromstr(&our_entry.id, "45b983be36b73c0788dc9cbcb76cbb80fc7bb057");
+	git_oid__fromstr(&our_entry.id, "45b983be36b73c0788dc9cbcb76cbb80fc7bb057", GIT_OID_SHA1);
 
 	their_entry.path = "duplicate";
 	their_entry.mode = GIT_FILEMODE_BLOB;
 	GIT_INDEX_ENTRY_STAGE_SET(&their_entry, 3);
-	git_oid_fromstr(&their_entry.id, "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd");
+	git_oid__fromstr(&their_entry.id, "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd", GIT_OID_SHA1);
 
 	cl_git_pass(git_index_conflict_add(index, &ancestor_entry, &our_entry, &their_entry));
 }

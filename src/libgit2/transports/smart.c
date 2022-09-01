@@ -425,6 +425,18 @@ int git_transport_smart_credentials(git_credential **out, git_transport *transpo
 	return connect_opts->callbacks.credentials(out, t->url, user, methods, connect_opts->callbacks.payload);
 }
 
+int git_transport_remote_connect_options(
+		git_remote_connect_options *out,
+		git_transport *transport)
+{
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(transport);
+
+	return git_remote_connect_options_dup(out, &t->connect_opts);
+}
+
 int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 {
 	transport_smart *t;
