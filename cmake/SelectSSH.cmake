@@ -1,9 +1,9 @@
 # Optional external dependency: libssh2
 if(USE_SSH)
 		find_package(Libssh2 CONFIG REQUIRED)
-		set(LIBSSH2_INCLUDE_DIRS ${LIBSSH2_INCLUDE_DIR})
+    get_target_property(LIBSSH2_INCLUDE_DIRS Libssh2::libssh2 INTERFACE_INCLUDE_DIRECTORIES)
 		get_filename_component(LIBSSH2_LIBRARY_DIRS "${LIBSSH2_LIBRARY}" DIRECTORY)
-		set(LIBSSH2_LIBRARIES ${LIBSSH2_LIBRARY})
+		set(LIBSSH2_LIBRARIES Libssh2::libssh2)
 		set(LIBSSH2_LDFLAGS "-lssh2")
 
 find_package(Libssh2 CONFIG REQUIRED)
