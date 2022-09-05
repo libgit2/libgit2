@@ -296,6 +296,8 @@ void test_clone_nonetwork__clone_tag_to_tree(void)
 	cl_git_pass(git_tree_entry_bypath(&tentry, tree, file_path));
 	git_tree_entry_free(tentry);
 	git_tree_free(tree);
+
+	cl_fixture_cleanup("testrepo.git");
 }
 
 static void assert_correct_reflog(const char *name)

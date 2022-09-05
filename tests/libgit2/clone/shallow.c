@@ -10,7 +10,7 @@ void test_clone_shallow__initialize(void)
 void test_clone_shallow__cleanup(void)
 {
 	git_libgit2_opts(GIT_OPT_ENABLE_SHALLOW, 0);
-	cl_git_sandbox_cleanup();
+	/*cl_git_sandbox_cleanup();*/
 }
 
 static int remote_single_branch(git_remote **out, git_repository *repo, const char *name, const char *url, void *payload)
