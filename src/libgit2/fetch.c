@@ -219,10 +219,10 @@ int git_fetch_download_pack(git_remote *remote)
 	if (!remote->need_pack)
 		return 0;
 
-	if ((error = t->download_pack(t, remote->repo, &remote->stats)) < 0)
+	if ((error = t->download_pack(t, remote->repo, &remote->stats)) != 0)
 		return error;
 
-	if ((error = git_repository__shallow_roots_write(remote->repo, remote->nego.shallow_roots->array)) < 0)
+	if ((error = git_repository__shallow_roots_write(remote->repo, remote->nego.shallow_roots->array)) != 0)
 		return error;
 
 	return 0;
