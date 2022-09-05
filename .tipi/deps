@@ -1,11 +1,34 @@
-{   
-   "u":true
-   ,"packages": ["libgit2"]
-   ,"targets": ["libgit2::libgit2package"]
-   ,"nxxm/libssh2":{"u":true, "packages": ["Libssh2"],"targets": ["Libssh2::libssh2"],"@":"feature/tipi-support"}
-   ,"platform" : [ "ZLIB::+zlib","OpenSSL::+SSL", "OpenSSL::+Crypto" ]
-   ,"platform:linux-cxx17" : [ "ZLIB::+zlib","OpenSSL::+SSL", "OpenSSL::+Crypto","target::dl" ]
-   ,"platform:linux" : [ "ZLIB::+zlib","OpenSSL::+SSL", "OpenSSL::+Crypto","target::dl" ]
-   ,"platform:vs-16-2019-win64-cxx17" : [ "ZLIB::+zlib","OpenSSL::+SSL", "OpenSSL::+Crypto", "target::crypt32" ]
-
- }
+{
+  "u": true,
+  "packages": [ "libgit2" ],
+  "targets": [ "libgit2::libgit2package" ],
+  "nxxm/libssh2": {
+    "@": "feature/tipified-libssh2",
+    "u": true,
+    "packages": [ "Libssh2" ],
+    "targets": [ "Libssh2::libssh2" ]
+  },
+  "platform": [
+    "ZLIB::+zlib",
+    "OpenSSL::+SSL",
+    "OpenSSL::+Crypto"
+  ],
+  "platform:linux-cxx17": [
+    "ZLIB::+zlib",
+    "OpenSSL::+SSL",
+    "OpenSSL::+Crypto",
+    "target::dl"
+  ],
+  "platform:linux": [
+    "ZLIB::+zlib",
+    "OpenSSL::+SSL",
+    "OpenSSL::+Crypto",
+    "target::dl"
+  ],
+  "platform:vs-16-2019-win64-cxx17": [
+    "ZLIB::+zlib",
+    "OpenSSL::+SSL",
+    "OpenSSL::+Crypto",
+    "target::crypt32"
+  ]
+}
