@@ -36,6 +36,7 @@ add_feature_info(debugopen GIT_DEBUG_STRICT_OPEN "path validation in open")
 # Optional feature enablement
 #
 
+include(SelectZlib)
 include(SelectGSSAPI)
 include(SelectHTTPSBackend)
 include(SelectHashes)
@@ -43,7 +44,6 @@ include(SelectHTTPParser)
 include(SelectRegex)
 include(SelectSSH)
 include(SelectWinHTTP)
-include(SelectZlib)
 
 #
 # Platform support
