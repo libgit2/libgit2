@@ -21,7 +21,6 @@
 #include "repository.h"
 #include "refs.h"
 #include "transports/smart.h"
-#include <limits.h>
 
 static int maybe_want(git_remote *remote, git_remote_head *head, git_refspec *tagspec, git_remote_autotag_option_t tagopt)
 {
