@@ -497,7 +497,7 @@ int git_shallowarray_add(git_shallowarray *array, git_oid *oid)
 {
 	size_t oid_index;
 
-	if (git_array_search(&oid_index, array->array, (git_array_compare_cb)git_oid_cmp, &oid) < 0) {
+	if (git_array_search(&oid_index, array->array, (git_array_compare_cb)git_oid_cmp, oid) < 0) {
 		git_oid *tmp = git_array_alloc(array->array);
 		GIT_ERROR_CHECK_ALLOC(tmp);
 
