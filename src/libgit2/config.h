@@ -29,8 +29,9 @@ struct git_config {
 
 extern int git_config__global_location(git_str *buf);
 
-extern int git_config__find_global(git_str *path);
-extern int git_config__find_xdg(git_str *path);
+extern int git_config__find_global_and_xdg(
+	git_str *global_buf,
+	git_str *xdg_buf);
 extern int git_config__find_system(git_str *path);
 extern int git_config__find_programdata(git_str *path);
 

@@ -1191,8 +1191,7 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		git_str programdata_buf = GIT_STR_INIT;
 		git_config *config;
 
-		git_config__find_global(&global_buf);
-		git_config__find_xdg(&xdg_buf);
+		git_config__find_global_and_xdg(&global_buf, &xdg_buf);
 		git_config__find_system(&system_buf);
 		git_config__find_programdata(&programdata_buf);
 
@@ -1732,14 +1731,14 @@ static bool is_filesystem_case_insensitive(const char *gitdir_path)
  */
 static int load_global_config(git_config **config)
 {
+	git_str global_buf_from_env = GIT_STR_INIT;
 	git_str global_buf = GIT_STR_INIT;
 	git_str xdg_buf = GIT_STR_INIT;
 	git_str system_buf = GIT_STR_INIT;
 	git_str programdata_buf = GIT_STR_INIT;
 	int error;
 
-	git_config__find_global(&global_buf);
-	git_config__find_xdg(&xdg_buf);
+	git_config__find_global_and_xdg(&global_buf, &xdg_buf);
 	git_config__find_system(&system_buf);
 	git_config__find_programdata(&programdata_buf);
 

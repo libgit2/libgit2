@@ -1145,6 +1145,24 @@ int git_config__find_xdg(git_str *path)
 	return git_sysdir_find_xdg_file(path, GIT_CONFIG_FILENAME_XDG);
 }
 
+int git_config__find_global_and_xdg(
+	git_str *global_buf,
+	git_str *xdg_buf) {
+	int error;
+	error = git__getenv(global_buf, "GIT_CONFIG_GLOBAL");
+
+	/* Only read the $HOME/.gitconfig or $XDG_CONFIG_HOME/git/config files if
+	GIT_CONFIG_GLOBAL is not set, per
+	https://git-scm.com/docs/git#Documentation/git.txt-codeGITCONFIGGLOBALcode */
+	if (error == GIT_ENOTFOUND) {
+		git_error_clear();
+		git_config__find_global(global_buf);
+		git_config__find_xdg(xdg_buf);
+		return 0;
+	}
+	return error;
+}
+
 int git_config_find_system(git_buf *path)
 {
 	GIT_BUF_WRAP_PRIVATE(path, git_sysdir_find_system_file, GIT_CONFIG_FILENAME_SYSTEM);

@@ -156,6 +156,31 @@ void test_repo_config__read_with_no_configs_at_all(void)
 	cl_assert_equal_i(30, val);
 	git_repository_free(repo);
 
+	/* with GIT_CONFIG_GLOBAL environment variable */
+
+	cl_must_pass(p_mkdir("alternate/4", 0777));
+	path.ptr[path.size - 1] = '4';
+	cl_git_rewritefile("alternate/4/.gitconfig_env_var", "[core]\n\tabbrev = 40\n");
+	cl_setenv("GIT_CONFIG_GLOBAL", "alternate/4/.gitconfig_env_var");
+	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
+	git_repository__configmap_lookup_cache_clear(repo);
+	val = -1;
+	cl_git_pass(git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_ABBREV));
+	cl_assert_equal_i(40, val);
+	git_repository_free(repo);
+
+	cl_setenv("GIT_CONFIG_GLOBAL", "alternate/4/.gitconfig_does_not_exist");
+	cl_assert(!git_fs_path_isfile("alternate/4/.gitconfig_does_not_exist"));
+	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
+	git_repository__configmap_lookup_cache_clear(repo);
+	val = -1;
+	cl_git_pass(git_repository__configmap_lookup(&val, repo, GIT_CONFIGMAP_ABBREV));
+	/* config values revert to default */
+	cl_assert_equal_i(10, val);
+	git_repository_free(repo);
+
+	cl_setenv("GIT_CONFIG_GLOBAL", NULL);
+
 	/* with all configs */
 
 	cl_git_rewritefile("empty_standard_repo/.git/config", "[core]\n\tabbrev = 40\n");
