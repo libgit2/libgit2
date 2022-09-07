@@ -221,6 +221,23 @@ static bool checkout_is_workdir_modified(
 	    wditem->file_size == ie->file_size &&
 	    !is_filemode_changed(wditem->mode, ie->mode, data->respect_filemode)) {
 
+		#ifdef GIT_WIN32
+		/*
+		 * force recreate all links ... on windows... 
+		 * this is required because CreateSymbolicLinkW() does slightly
+		 * misbehave when used with non-existing targets which yields it to create
+		 * an NTFS "Directory-type" symlink even if SYMBOLIC_LINK_FLAG_DIRECTORY is *not*
+		 * set. Thus we happened to hit a case where libgit doesn't notice that if
+		 * has to recreate the link because it has the "wrong type".
+		 * 
+		 * POSIX symlinks are not subject to this bug IMO thus no need for it on
+		 * other platforms
+		 */
+		if(S_ISLNK(wditem->mode) && S_ISLNK(newitem->mode)) {
+			return true;
+		}
+		#endif
+
 		/* The workdir is modified iff the index entry is modified */
 		return !is_workdir_base_or_new(&ie->id, baseitem, newitem) ||
 			is_filemode_changed(baseitem->mode, ie->mode, data->respect_filemode);
