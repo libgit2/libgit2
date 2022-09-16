@@ -21,6 +21,7 @@ static git_clone_options g_options;
 static char *_remote_url = NULL;
 static char *_remote_user = NULL;
 static char *_remote_pass = NULL;
+static char *_remote_branch = NULL;
 static char *_remote_sslnoverify = NULL;
 static char *_remote_ssh_pubkey = NULL;
 static char *_remote_ssh_privkey = NULL;
@@ -69,6 +70,7 @@ void test_online_clone__initialize(void)
 	_remote_url = cl_getenv("GITTEST_REMOTE_URL");
 	_remote_user = cl_getenv("GITTEST_REMOTE_USER");
 	_remote_pass = cl_getenv("GITTEST_REMOTE_PASS");
+	_remote_branch = cl_getenv("GITTEST_REMOTE_BRANCH");
 	_remote_sslnoverify = cl_getenv("GITTEST_REMOTE_SSL_NOVERIFY");
 	_remote_ssh_pubkey = cl_getenv("GITTEST_REMOTE_SSH_PUBKEY");
 	_remote_ssh_privkey = cl_getenv("GITTEST_REMOTE_SSH_KEY");
@@ -102,6 +104,7 @@ void test_online_clone__cleanup(void)
 	git__free(_remote_url);
 	git__free(_remote_user);
 	git__free(_remote_pass);
+	git__free(_remote_branch);
 	git__free(_remote_sslnoverify);
 	git__free(_remote_ssh_pubkey);
 	git__free(_remote_ssh_privkey);
@@ -1022,6 +1025,26 @@ void test_online_clone__namespace_bare(void)
 	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
+
+	git_reference_free(head);
+}
+
+void test_online_clone__namespace_with_specified_branch(void)
+{
+	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
+	git_reference *head;
+
+	if (!_remote_url || !_remote_branch)
+		cl_skip();
+
+	options.checkout_branch = _remote_branch;
+
+	cl_git_pass(git_clone(&g_repo, _remote_url, "./namespaced", &options));
+
+	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
+	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
+	cl_assert_equal_strn("refs/heads/", git_reference_symbolic_target(head), 11);
+	cl_assert_equal_s(_remote_branch, git_reference_symbolic_target(head) + 11);
 
 	git_reference_free(head);
 }

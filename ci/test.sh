@@ -252,8 +252,10 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	echo ""
 
 	export GITTEST_REMOTE_URL="git://localhost:9419/namespace.git"
+	export GITTEST_REMOTE_BRANCH="four"
 	run_test gitdaemon_namespace
 	unset GITTEST_REMOTE_URL
+	unset GITTEST_REMOTE_BRANCH
 fi
 
 if [ -z "$SKIP_PROXY_TESTS" ]; then
