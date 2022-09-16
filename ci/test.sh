@@ -22,9 +22,14 @@ CONTINUE_ON_FAILURE=0
 cleanup() {
 	echo "Cleaning up..."
 
-	if [ ! -z "$GITDAEMON_PID" ]; then
-		echo "Stopping git daemon..."
-		kill $GITDAEMON_PID
+	if [ ! -z "$GIT_STANDARD_PID" ]; then
+		echo "Stopping git daemon (standard)..."
+		kill $GIT_STANDARD_PID
+	fi
+
+	if [ ! -z "$GIT_NAMESPACE_PID" ]; then
+		echo "Stopping git daemon (namespace)..."
+		kill $GIT_NAMESPACE_PID
 	fi
 
 	if [ ! -z "$PROXY_BASIC_PID" ]; then
@@ -98,11 +103,17 @@ echo "##########################################################################
 echo ""
 
 if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
-	echo "Starting git daemon..."
-	GITDAEMON_DIR=`mktemp -d ${TMPDIR}/gitdaemon.XXXXXXXX`
-	git init --bare "${GITDAEMON_DIR}/test.git" >/dev/null
-	git daemon --listen=localhost --export-all --enable=receive-pack --base-path="${GITDAEMON_DIR}" "${GITDAEMON_DIR}" 2>/dev/null &
-	GITDAEMON_PID=$!
+	echo "Starting git daemon (standard)..."
+	GIT_STANDARD_DIR=`mktemp -d ${TMPDIR}/git_standard.XXXXXXXX`
+	git init --bare "${GIT_STANDARD_DIR}/test.git" >/dev/null
+	git daemon --listen=localhost --export-all --enable=receive-pack --base-path="${GIT_STANDARD_DIR}" "${GIT_STANDARD_DIR}" 2>/dev/null &
+	GIT_STANDARD_PID=$!
+
+	echo "Starting git daemon (namespace)..."
+	GIT_NAMESPACE_DIR=`mktemp -d ${TMPDIR}/git_namespace.XXXXXXXX`
+	cp -R "${SOURCE_DIR}/tests/resources/namespace.git" "${GIT_NAMESPACE_DIR}/namespace.git"
+	GIT_NAMESPACE="name1" git daemon --listen=localhost --port=9419 --export-all --enable=receive-pack --base-path="${GIT_NAMESPACE_DIR}" "${GIT_NAMESPACE_DIR}" &
+	GIT_NAMESPACE_PID=$!
 fi
 
 if [ -z "$SKIP_PROXY_TESTS" ]; then
@@ -229,11 +240,19 @@ fi
 
 if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	echo ""
-	echo "Running gitdaemon tests"
+	echo "Running gitdaemon (standard) tests"
 	echo ""
 
 	export GITTEST_REMOTE_URL="git://localhost/test.git"
 	run_test gitdaemon
+	unset GITTEST_REMOTE_URL
+
+	echo ""
+	echo "Running gitdaemon (namespace) tests"
+	echo ""
+
+	export GITTEST_REMOTE_URL="git://localhost:9419/namespace.git"
+	run_test gitdaemon_namespace
 	unset GITTEST_REMOTE_URL
 fi
 

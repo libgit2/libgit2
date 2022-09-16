@@ -1006,3 +1006,22 @@ void test_online_clone__redirect_initial_fails_for_subsequent(void)
 
 	cl_git_fail(git_clone(&g_repo, _remote_redirect_subsequent, "./fail", &options));
 }
+
+void test_online_clone__namespace_bare(void)
+{
+	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
+	git_reference *head;
+
+	if (!_remote_url)
+		cl_skip();
+
+	options.bare = true;
+
+	cl_git_pass(git_clone(&g_repo, _remote_url, "./namespaced.git", &options));
+
+	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
+	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
+	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
+
+	git_reference_free(head);
+}
