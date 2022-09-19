@@ -15,7 +15,7 @@ See <http://creativecommons.org/publicdomain/zero/1.0/>. */
 #endif
 
 #if defined(GIT_WIN32)
-#include <wincrypt.h>
+# include <wincrypt.h>
 #endif
 
 static uint64_t state[4];
