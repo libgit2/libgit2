@@ -108,11 +108,11 @@ int git_regexp_match(const git_regexp *r, const char *string)
 	data = pcre2_match_data_create(1, NULL);
 	GIT_ERROR_CHECK_ALLOC(data);
 
-	if ((error = pcre2_match(*r, (const unsigned char *) string, strlen(string),
-			 0, 0, data, NULL)) < 0)
+	error = pcre2_match(*r, (const unsigned char *) string, strlen(string), 0, 0, data, NULL);
+	pcre2_match_data_free(data);
+	if (error < 0)
 		return (error == PCRE2_ERROR_NOMATCH) ? GIT_ENOTFOUND : GIT_EINVALIDSPEC;
 
-	pcre2_match_data_free(data);
 	return 0;
 }
 
