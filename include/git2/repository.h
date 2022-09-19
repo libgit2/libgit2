@@ -949,6 +949,14 @@ GIT_EXTERN(int) git_repository_ident(const char **name, const char **email, cons
  */
 GIT_EXTERN(int) git_repository_set_ident(git_repository *repo, const char *name, const char *email);
 
+/**
+ * Gets the object type used by this repository.
+ *
+ * @param repo the repository
+ * @return the object id type
+ */
+GIT_EXTERN(git_oid_t) git_repository_oid_type(git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif
