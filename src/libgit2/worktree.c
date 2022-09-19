@@ -187,6 +187,11 @@ int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *na
 	if ((error = git_str_join3(&path, '/', repo->commondir, "worktrees", name)) < 0)
 		goto out;
 
+	if (!git_fs_path_isdir(path.ptr)) {
+		error = GIT_ENOTFOUND;
+		goto out;
+	}
+
 	if ((error = (open_worktree_dir(out, git_repository_workdir(repo), path.ptr, name))) < 0)
 		goto out;
 
