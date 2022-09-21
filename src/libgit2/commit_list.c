@@ -124,13 +124,17 @@ static int commit_quick_parse(
 {
 	git_oid *parent_oid;
 	git_commit *commit;
+	git_commit__parse_options parse_opts = {
+		GIT_OID_SHA1,
+		GIT_COMMIT_PARSE_QUICK
+	};
 	size_t i;
 
 	commit = git__calloc(1, sizeof(*commit));
 	GIT_ERROR_CHECK_ALLOC(commit);
 	commit->object.repo = walk->repo;
 
-	if (git_commit__parse_ext(commit, obj, GIT_COMMIT_PARSE_QUICK) < 0) {
+	if (git_commit__parse_ext(commit, obj, &parse_opts) < 0) {
 		git__free(commit);
 		return -1;
 	}

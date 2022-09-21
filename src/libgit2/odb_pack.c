@@ -718,6 +718,7 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	struct pack_backend *backend;
 	struct pack_writepack *writepack;
+	int error;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(_backend);
@@ -732,11 +733,20 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 	writepack = git__calloc(1, sizeof(struct pack_writepack));
 	GIT_ERROR_CHECK_ALLOC(writepack);
 
-	if (git_indexer_new(&writepack->indexer,
-		backend->pack_folder, 0, odb, &opts) < 0) {
-		git__free(writepack);
+#ifdef GIT_EXPERIMENTAL_SHA256
+	opts.odb = odb;
+
+	error = git_indexer_new(&writepack->indexer,
+		backend->pack_folder,
+		backend->opts.oid_type,
+		&opts);
+#else
+	error = git_indexer_new(&writepack->indexer,
+		backend->pack_folder, 0, odb, &opts);
+#endif
+
+	if (error < 0)
 		return -1;
-	}
 
 	writepack->parent.backend = _backend;
 	writepack->parent.append = pack_backend__writepack_append;

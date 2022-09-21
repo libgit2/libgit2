@@ -27,8 +27,8 @@ typedef struct {
 	const char	*str;	/* type name string */
 	size_t		size;	/* size in bytes of the object structure */
 
-	int  (*parse)(void *self, git_odb_object *obj);
-	int  (*parse_raw)(void *self, const char *data, size_t size);
+	int  (*parse)(void *self, git_odb_object *obj, git_oid_t oid_type);
+	int  (*parse_raw)(void *self, const char *data, size_t size, git_oid_t oid_type);
 	void (*free)(void *self);
 } git_object_def;
 
@@ -60,7 +60,8 @@ int git_object__from_raw(
 	git_object **object_out,
 	const char *data,
 	size_t size,
-	git_object_t type)
+	git_object_t object_type,
+	git_oid_t oid_type)
 {
 	git_object_def *def;
 	git_object *object;
@@ -71,12 +72,15 @@ int git_object__from_raw(
 	*object_out = NULL;
 
 	/* Validate type match */
-	if (type != GIT_OBJECT_BLOB && type != GIT_OBJECT_TREE && type != GIT_OBJECT_COMMIT && type != GIT_OBJECT_TAG) {
+	if (object_type != GIT_OBJECT_BLOB &&
+	    object_type != GIT_OBJECT_TREE &&
+	    object_type != GIT_OBJECT_COMMIT &&
+	    object_type != GIT_OBJECT_TAG) {
 		git_error_set(GIT_ERROR_INVALID, "the requested type is invalid");
 		return GIT_ENOTFOUND;
 	}
 
-	if ((object_size = git_object__size(type)) == 0) {
+	if ((object_size = git_object__size(object_type)) == 0) {
 		git_error_set(GIT_ERROR_INVALID, "the requested type is invalid");
 		return GIT_ENOTFOUND;
 	}
@@ -85,15 +89,15 @@ int git_object__from_raw(
 	object = git__calloc(1, object_size);
 	GIT_ERROR_CHECK_ALLOC(object);
 	object->cached.flags = GIT_CACHE_STORE_PARSED;
-	object->cached.type = type;
-	if ((error = git_odb__hash(&object->cached.oid, data, size, type, GIT_OID_SHA1)) < 0)
+	object->cached.type = object_type;
+	if ((error = git_odb__hash(&object->cached.oid, data, size, object_type, oid_type)) < 0)
 		return error;
 
 	/* Parse raw object data */
-	def = &git_objects_table[type];
+	def = &git_objects_table[object_type];
 	GIT_ASSERT(def->free && def->parse_raw);
 
-	if ((error = def->parse_raw(object, data, size)) < 0) {
+	if ((error = def->parse_raw(object, data, size, oid_type)) < 0) {
 		def->free(object);
 		return error;
 	}
@@ -143,7 +147,7 @@ int git_object__from_odb_object(
 	def = &git_objects_table[odb_obj->cached.type];
 	GIT_ASSERT(def->free && def->parse);
 
-	if ((error = def->parse(object, odb_obj)) < 0) {
+	if ((error = def->parse(object, odb_obj, repo->oid_type)) < 0) {
 		/*
 		 * parse returns EINVALID on invalid data; downgrade
 		 * that to a normal -1 error code.
@@ -357,12 +361,11 @@ static int dereference_object(git_object **dereferenced, git_object *obj)
 static int peel_error(int error, const git_oid *oid, git_object_t type)
 {
 	const char *type_name;
-	char hex_oid[GIT_OID_SHA1_HEXSIZE + 1];
+	char hex_oid[GIT_OID_MAX_HEXSIZE + 1];
 
 	type_name = git_object_type2string(type);
 
-	git_oid_fmt(hex_oid, oid);
-	hex_oid[GIT_OID_SHA1_HEXSIZE] = '\0';
+	git_oid_nfmt(hex_oid, GIT_OID_MAX_HEXSIZE + 1, oid);
 
 	git_error_set(GIT_ERROR_OBJECT, "the git_object of id '%s' can not be "
 		"successfully peeled into a %s (git_object_t=%i).", hex_oid, type_name, type);
@@ -576,21 +579,29 @@ int git_object_rawcontent_is_valid(
 	int *valid,
 	const char *buf,
 	size_t len,
-	git_object_t type)
+	git_object_t object_type
+#ifdef GIT_EXPERIMENTAL_SHA256
+	, git_oid_t oid_type
+#endif
+	)
 {
 	git_object *obj = NULL;
 	int error;
+
+#ifndef GIT_EXPERIMENTAL_SHA256
+	git_oid_t oid_type = GIT_OID_SHA1;
+#endif
 
 	GIT_ASSERT_ARG(valid);
 	GIT_ASSERT_ARG(buf);
 
 	/* Blobs are always valid; don't bother parsing. */
-	if (type == GIT_OBJECT_BLOB) {
+	if (object_type == GIT_OBJECT_BLOB) {
 		*valid = 1;
 		return 0;
 	}
 
-	error = git_object__from_raw(&obj, buf, len, type);
+	error = git_object__from_raw(&obj, buf, len, object_type, oid_type);
 	git_object_free(obj);
 
 	if (error == 0) {
@@ -611,7 +622,7 @@ int git_object__parse_oid_header(
 	const char *header,
 	git_oid_t oid_type)
 {
-	const size_t sha_len = GIT_OID_SHA1_HEXSIZE;
+	const size_t sha_len = git_oid_hexsize(oid_type);
 	const size_t header_len = strlen(header);
 
 	const char *buffer = *buffer_out;

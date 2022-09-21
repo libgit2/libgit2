@@ -1278,11 +1278,14 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 	*out = git_atomic_load(repo->_odb);
 	if (*out == NULL) {
 		git_str odb_path = GIT_STR_INIT;
+		git_odb_options odb_opts = GIT_ODB_OPTIONS_INIT;
 		git_odb *odb;
+
+		odb_opts.oid_type = repo->oid_type;
 
 		if ((error = git_repository__item_path(&odb_path, repo,
 				GIT_REPOSITORY_ITEM_OBJECTS)) < 0 ||
-			(error = git_odb__new(&odb, NULL)) < 0)
+			(error = git_odb__new(&odb, &odb_opts)) < 0)
 			return error;
 
 		GIT_REFCOUNT_OWN(odb, repo);

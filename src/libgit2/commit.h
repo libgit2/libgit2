@@ -33,6 +33,16 @@ struct git_commit {
 	char *body;
 };
 
+typedef struct {
+	git_oid_t oid_type;
+	unsigned int flags;
+} git_commit__parse_options;
+
+typedef enum {
+	/** Only parse parents and committer info */
+	GIT_COMMIT_PARSE_QUICK = (1 << 0)
+} git_commit__parse_flags;
+
 int git_commit__header_field(
 	git_str *out,
 	const git_commit *commit,
@@ -56,14 +66,22 @@ int git_commit__create_buffer(
 	size_t parent_count,
 	const git_commit *parents[]);
 
+int git_commit__parse(
+	void *commit,
+	git_odb_object *obj,
+	git_oid_t oid_type);
+
+int git_commit__parse_raw(
+	void *commit,
+	const char *data,
+	size_t size,
+	git_oid_t oid_type);
+
+int git_commit__parse_ext(
+	git_commit *commit,
+	git_odb_object *odb_obj,
+	git_commit__parse_options *parse_opts);
+
 void git_commit__free(void *commit);
-int git_commit__parse(void *commit, git_odb_object *obj);
-int git_commit__parse_raw(void *commit, const char *data, size_t size);
-
-typedef enum {
-	GIT_COMMIT_PARSE_QUICK = (1 << 0) /**< Only parse parents and committer info */
-} git_commit__parse_flags;
-
-int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, unsigned int flags);
 
 #endif
