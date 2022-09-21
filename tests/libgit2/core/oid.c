@@ -52,7 +52,9 @@ void test_core_oid__streq_sha1(void)
 
 void test_core_oid__streq_sha256(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
+#ifndef GIT_EXPERIMENTAL_SHA256
+	cl_skip();
+#else
 	cl_assert_equal_i(0, git_oid_streq(&id_sha256, str_oid_sha256));
 	cl_assert_equal_i(-1, git_oid_streq(&id_sha256, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
 
@@ -90,7 +92,9 @@ void test_core_oid__strcmp_sha1(void)
 
 void test_core_oid__strcmp_sha256(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
+#ifndef GIT_EXPERIMENTAL_SHA256
+	cl_skip();
+#else
 	cl_assert_equal_i(0, git_oid_strcmp(&id_sha256, str_oid_sha256));
 	cl_assert(git_oid_strcmp(&id_sha256, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef") < 0);
 
@@ -129,7 +133,9 @@ void test_core_oid__ncmp_sha1(void)
 
 void test_core_oid__ncmp_sha256(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
+#ifndef GIT_EXPERIMENTAL_SHA256
+	cl_skip();
+#else
 	cl_assert(!git_oid_ncmp(&id_sha256, &idp_sha256, 0));
 	cl_assert(!git_oid_ncmp(&id_sha256, &idp_sha256, 1));
 	cl_assert(!git_oid_ncmp(&id_sha256, &idp_sha256, 2));
