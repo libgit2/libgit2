@@ -9,6 +9,7 @@
 
 #include "git2_util.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <time.h>
@@ -104,8 +105,6 @@ typedef __int64 off64_t;
 typedef __haiku_std_int64 off64_t;
 #elif defined(__APPLE__)
 typedef __int64_t off64_t;
-#elif defined(_AIX)
-typedef long long off64_t;
 #else
 typedef int64_t off64_t;
 #endif
