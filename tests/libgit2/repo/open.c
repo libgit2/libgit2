@@ -487,7 +487,7 @@ void test_repo_open__validates_dir_ownership(void)
 
 	/* When the system user owns the repo config, fail */
 	git_fs_path__set_owner(GIT_FS_PATH_OWNER_ADMINISTRATOR);
-	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "empty_standard_repo"));
 
 #ifdef GIT_WIN32
 	/* When the user is an administrator, succeed on Windows. */
@@ -498,7 +498,7 @@ void test_repo_open__validates_dir_ownership(void)
 
 	/* When an unknown user owns the repo config, fail */
 	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
-	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "empty_standard_repo"));
 }
 
 void test_repo_open__validates_bare_repo_ownership(void)
@@ -516,7 +516,7 @@ void test_repo_open__validates_bare_repo_ownership(void)
 
 	/* When the system user owns the repo config, fail */
 	git_fs_path__set_owner(GIT_FS_PATH_OWNER_ADMINISTRATOR);
-	cl_git_fail(git_repository_open(&repo, "testrepo.git"));
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "testrepo.git"));
 
 #ifdef GIT_WIN32
 	/* When the user is an administrator, succeed on Windows. */
@@ -527,7 +527,7 @@ void test_repo_open__validates_bare_repo_ownership(void)
 
 	/* When an unknown user owns the repo config, fail */
 	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
-	cl_git_fail(git_repository_open(&repo, "testrepo.git"));
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "testrepo.git"));
 }
 
 void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
@@ -543,7 +543,7 @@ void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
 	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
-	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "empty_standard_repo"));
 
 	/* Add safe.directory options to the global configuration */
 	git_str_joinpath(&config_path, clar_sandbox_path(), "__global_config");
@@ -587,7 +587,7 @@ void test_repo_open__can_allowlist_bare_gitdir(void)
 	cl_fixture_sandbox("testrepo.git");
 
 	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
-	cl_git_fail(git_repository_open(&repo, "testrepo.git"));
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "testrepo.git"));
 
 	/* Add safe.directory options to the global configuration */
 	git_str_joinpath(&config_path, clar_sandbox_path(), "__global_config");
@@ -632,7 +632,7 @@ void test_repo_open__can_reset_safe_directory_list(void)
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
 	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
-	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "empty_standard_repo"));
 
 	/* Add safe.directory options to the global configuration */
 	git_str_joinpath(&config_path, clar_sandbox_path(), "__global_config");
@@ -656,7 +656,7 @@ void test_repo_open__can_reset_safe_directory_list(void)
 		clar_sandbox_path(), "empty_standard_repo");
 	cl_git_rewritefile(config_filename.ptr, config_data.ptr);
 
-	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "empty_standard_repo"));
 
 	/* The blank resets tmp and allows subsequent declarations to succeed */
 
