@@ -655,6 +655,7 @@ static int http_action(
 {
 	http_subtransport *transport = GIT_CONTAINER_OF(t, http_subtransport, parent);
 	git_remote_connect_options *connect_opts = &transport->owner->connect_opts;
+	git_http_client_options opts = {0};
 	http_stream *stream;
 	const http_service *service;
 	int error;
@@ -683,14 +684,14 @@ static int http_action(
 	stream = git__calloc(sizeof(http_stream), 1);
 	GIT_ERROR_CHECK_ALLOC(stream);
 
-	if (!transport->http_client) {
-		git_http_client_options opts = {0};
+	opts.server_certificate_check_cb = connect_opts->callbacks.certificate_check;
+	opts.server_certificate_check_payload = connect_opts->callbacks.payload;
+	opts.proxy_certificate_check_cb = connect_opts->proxy_opts.certificate_check;
+	opts.proxy_certificate_check_payload = connect_opts->proxy_opts.payload;
 
-		opts.server_certificate_check_cb = connect_opts->callbacks.certificate_check;
-		opts.server_certificate_check_payload = connect_opts->callbacks.payload;
-		opts.proxy_certificate_check_cb = connect_opts->proxy_opts.certificate_check;
-		opts.proxy_certificate_check_payload = connect_opts->proxy_opts.payload;
-
+	if (transport->http_client) {
+		git_http_client_set_options(transport->http_client, &opts);
+	} else {
 		if (git_http_client_new(&transport->http_client, &opts) < 0)
 			return -1;
 	}
