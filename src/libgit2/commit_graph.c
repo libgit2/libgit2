@@ -17,6 +17,7 @@
 #include "pack.h"
 #include "repository.h"
 #include "revwalk.h"
+#include "chunk_format.h"
 
 #define GIT_COMMIT_GRAPH_MISSING_PARENT 0x70000000
 #define GIT_COMMIT_GRAPH_GENERATION_NUMBER_MAX 0x3FFFFFFF
@@ -98,8 +99,6 @@ cleanup:
 	packed_commit_free(p);
 	return NULL;
 }
-
-typedef int (*commit_graph_write_cb)(const char *buf, size_t size, void *cb_data);
 
 static int commit_graph_error(const char *message)
 {
@@ -904,36 +903,6 @@ cleanup:
 	return error;
 }
 
-static int write_offset(off64_t offset, commit_graph_write_cb write_cb, void *cb_data)
-{
-	int error;
-	uint32_t word;
-
-	word = htonl((uint32_t)((offset >> 32) & 0xffffffffu));
-	error = write_cb((const char *)&word, sizeof(word), cb_data);
-	if (error < 0)
-		return error;
-	word = htonl((uint32_t)((offset >> 0) & 0xffffffffu));
-	error = write_cb((const char *)&word, sizeof(word), cb_data);
-	if (error < 0)
-		return error;
-
-	return 0;
-}
-
-static int write_chunk_header(
-		int chunk_id,
-		off64_t offset,
-		commit_graph_write_cb write_cb,
-		void *cb_data)
-{
-	uint32_t word = htonl(chunk_id);
-	int error = write_cb((const char *)&word, sizeof(word), cb_data);
-	if (error < 0)
-		return error;
-	return write_offset(offset, write_cb, cb_data);
-}
-
 static int commit_graph_write_buf(const char *buf, size_t size, void *data)
 {
 	git_str *b = (git_str *)data;
@@ -941,7 +910,7 @@ static int commit_graph_write_buf(const char *buf, size_t size, void *data)
 }
 
 struct commit_graph_write_hash_context {
-	commit_graph_write_cb write_cb;
+	chunk_format_write_cb write_cb;
 	void *cb_data;
 	git_hash_ctx *ctx;
 };
@@ -965,7 +934,7 @@ static void packed_commit_free_dup(void *packed_commit)
 
 static int commit_graph_write(
 		git_commit_graph_writer *w,
-		commit_graph_write_cb write_cb,
+		chunk_format_write_cb write_cb,
 		void *cb_data)
 {
 	int error = 0;

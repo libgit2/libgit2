@@ -17,6 +17,7 @@
 #include "fs_path.h"
 #include "repository.h"
 #include "str.h"
+#include "chunk_format.h"
 
 #define MIDX_SIGNATURE 0x4d494458 /* "MIDX" */
 #define MIDX_VERSION 1
@@ -40,8 +41,6 @@ struct git_midx_chunk {
 	off64_t offset;
 	size_t length;
 };
-
-typedef int (*midx_write_cb)(const char *buf, size_t size, void *cb_data);
 
 static int midx_error(const char *message)
 {
@@ -592,34 +591,6 @@ static int object_entry__cmp(const void *a_, const void *b_)
 	return git_oid_cmp(&a->sha1, &b->sha1);
 }
 
-static int write_offset(off64_t offset, midx_write_cb write_cb, void *cb_data)
-{
-	int error;
-	uint32_t word;
-
-	word = htonl((uint32_t)((offset >> 32) & 0xffffffffu));
-	error = write_cb((const char *)&word, sizeof(word), cb_data);
-	if (error < 0)
-		return error;
-	word = htonl((uint32_t)((offset >> 0) & 0xffffffffu));
-	error = write_cb((const char *)&word, sizeof(word), cb_data);
-	if (error < 0)
-		return error;
-
-	return 0;
-}
-
-static int write_chunk_header(int chunk_id, off64_t offset, midx_write_cb write_cb, void *cb_data)
-{
-	uint32_t word = htonl(chunk_id);
-	int error = write_cb((const char *)&word, sizeof(word), cb_data);
-	if (error < 0)
-		return error;
-	return write_offset(offset, write_cb, cb_data);
-
-	return 0;
-}
-
 static int midx_write_buf(const char *buf, size_t size, void *data)
 {
 	git_str *b = (git_str *)data;
@@ -627,7 +598,7 @@ static int midx_write_buf(const char *buf, size_t size, void *data)
 }
 
 struct midx_write_hash_context {
-	midx_write_cb write_cb;
+	chunk_format_write_cb write_cb;
 	void *cb_data;
 	git_hash_ctx *ctx;
 };
@@ -646,7 +617,7 @@ static int midx_write_hash(const char *buf, size_t size, void *data)
 
 static int midx_write(
 		git_midx_writer *w,
-		midx_write_cb write_cb,
+		chunk_format_write_cb write_cb,
 		void *cb_data)
 {
 	int error = 0;
