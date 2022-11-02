@@ -421,15 +421,119 @@ static int request_creds(git_credential **out, ssh_subtransport *t, const char *
 	return 0;
 }
 
+#define KNOWN_HOSTS_FILE ".ssh/known_hosts"
+
+/*
+ * Load the known_hosts file.
+ *
+ * Returns success but leaves the output NULL if we couldn't find the file.
+ */
+static int load_known_hosts(LIBSSH2_KNOWNHOSTS **hosts, LIBSSH2_SESSION *session)
+{
+	git_str path = GIT_STR_INIT, home = GIT_STR_INIT;
+	LIBSSH2_KNOWNHOSTS *known_hosts = NULL;
+	int error;
+
+	GIT_ASSERT_ARG(hosts);
+
+	if ((error = git__getenv(&home, "HOME")) < 0)
+		return error;
+
+	if ((error = git_str_joinpath(&path, git_str_cstr(&home), KNOWN_HOSTS_FILE)) < 0)
+		goto out;
+
+	if ((known_hosts = libssh2_knownhost_init(session)) == NULL) {
+		ssh_error(session, "error initializing known hosts");
+		error = -1;
+		goto out;
+	}
+
+	/*
+	 * Try to read the file and consider not finding it as not trusting the
+	 * host rather than an error.
+	 */
+	error = libssh2_knownhost_readfile(known_hosts, git_str_cstr(&path), LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+	if (error == LIBSSH2_ERROR_FILE)
+		error = 0;
+	if (error < 0)
+		ssh_error(session, "error reading known_hosts");
+
+out:
+	*hosts = known_hosts;
+
+	git_str_clear(&home);
+	git_str_clear(&path);
+
+	return error;
+}
+
+static const char *hostkey_type_to_string(int type)
+{
+	switch (type) {
+	case LIBSSH2_KNOWNHOST_KEY_SSHRSA:
+		return "ssh-rsa";
+	case LIBSSH2_KNOWNHOST_KEY_SSHDSS:
+		return "ssh-dss";
+#ifdef LIBSSH2_KNOWNHOST_KEY_ECDSA_256
+	case LIBSSH2_KNOWNHOST_KEY_ECDSA_256:
+		return "ecdsa-sha2-nistp256";
+	case LIBSSH2_KNOWNHOST_KEY_ECDSA_384:
+		return "ecdsa-sha2-nistp384";
+	case LIBSSH2_KNOWNHOST_KEY_ECDSA_521:
+		return "ecdsa-sha2-nistp521";
+#endif
+#ifdef LIBSSH2_KNOWNHOST_KEY_ED25519
+	case LIBSSH2_KNOWNHOST_KEY_ED25519:
+		return "ssh-ed25519";
+#endif
+	}
+
+	return NULL;
+}
+
+/*
+ * We figure out what kind of key we want to ask the remote for by trying to
+ * look it up with a nonsense key and using that mismatch to figure out what key
+ * we do have stored for the host.
+ *
+ * Returns the string to pass to libssh2_session_method_pref or NULL if we were
+ * unable to find anything or an error happened.
+ */
+static const char *find_hostkey_preference(LIBSSH2_KNOWNHOSTS *known_hosts, const char *hostname, int port)
+{
+	struct libssh2_knownhost *host = NULL;
+	/* Specify no key type so we don't filter on that */
+	int type = LIBSSH2_KNOWNHOST_TYPE_PLAIN | LIBSSH2_KNOWNHOST_KEYENC_RAW;
+	const char key = '\0';
+	int error;
+
+	/*
+	 * In case of mismatch, we can find the type of key from known_hosts in
+	 * the returned host's information as it means that an entry was found
+	 * but our nonsense key obviously didn't match.
+	 */
+	error = libssh2_knownhost_checkp(known_hosts, hostname, port, &key, 1, type, &host);
+	if (error == LIBSSH2_KNOWNHOST_CHECK_MISMATCH)
+		return hostkey_type_to_string(host->typemask & LIBSSH2_KNOWNHOST_KEY_MASK);
+
+	return NULL;
+}
+
 static int _git_ssh_session_create(
 	LIBSSH2_SESSION **session,
+	LIBSSH2_KNOWNHOSTS **hosts,
+	const char *hostname,
+	int port,
 	git_stream *io)
 {
 	int rc = 0;
 	LIBSSH2_SESSION *s;
+	LIBSSH2_KNOWNHOSTS *known_hosts;
 	git_socket_stream *socket = GIT_CONTAINER_OF(io, git_socket_stream, parent);
+	const char *keytype = NULL;
 
 	GIT_ASSERT_ARG(session);
+	GIT_ASSERT_ARG(hosts);
 
 	s = libssh2_session_init();
 	if (!s) {
@@ -437,22 +541,45 @@ static int _git_ssh_session_create(
 		return -1;
 	}
 
+	if ((rc = load_known_hosts(&known_hosts, s)) < 0) {
+		ssh_error(s, "error loading known_hosts");
+		libssh2_session_free(s);
+		return -1;
+	}
+
+	if ((keytype = find_hostkey_preference(known_hosts, hostname, port)) != NULL) {
+		do {
+			rc = libssh2_session_method_pref(s, LIBSSH2_METHOD_HOSTKEY, keytype);
+		} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+		if (rc != LIBSSH2_ERROR_NONE) {
+			ssh_error(s, "failed to set hostkey preference");
+			goto on_error;
+		}
+	}
+
+
 	do {
 		rc = libssh2_session_handshake(s, socket->s);
 	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 
 	if (rc != LIBSSH2_ERROR_NONE) {
 		ssh_error(s, "failed to start SSH session");
-		libssh2_session_free(s);
-		return -1;
+		goto on_error;
 	}
 
 	libssh2_session_set_blocking(s, 1);
 
 	*session = s;
+	*hosts = known_hosts;
 
 	return 0;
+
+on_error:
+	libssh2_knownhost_free(known_hosts);
+	libssh2_session_free(s);
+	return -1;
 }
+
 
 /*
  * Returns the typemask argument to pass to libssh2_knownhost_check{,p} based on
@@ -491,8 +618,6 @@ static int fingerprint_type_mask(int keytype)
 	return mask;
 }
 
-#define KNOWN_HOSTS_FILE ".ssh/known_hosts"
-
 /*
  * Check the host against the user's known_hosts file.
  *
@@ -500,61 +625,27 @@ static int fingerprint_type_mask(int keytype)
  */
 static int check_against_known_hosts(
 	LIBSSH2_SESSION *session,
+	LIBSSH2_KNOWNHOSTS *known_hosts,
 	const char *hostname,
 	int port,
 	const char *key,
 	size_t key_len,
 	int key_type)
 {
-	int error, check, typemask, ret = 0;
-	git_str path = GIT_STR_INIT, home = GIT_STR_INIT;
-	LIBSSH2_KNOWNHOSTS *known_hosts = NULL;
+	int check, typemask, ret = 0;
 	struct libssh2_knownhost *host = NULL;
 
-	if ((error = git__getenv(&home, "HOME")) < 0) {
-		return error;
-	}
-
-	if ((error = git_str_joinpath(&path, git_str_cstr(&home), KNOWN_HOSTS_FILE)) < 0) {
-		ret = error;
-		goto out;
-	}
-
-	if ((known_hosts = libssh2_knownhost_init(session)) == NULL) {
-		ssh_error(session, "error initializing known hosts");
-		ret = -1;
-		goto out;
-	}
-
-	/*
-	 * Try to read the file and consider not finding it as not trusting the
-	 * host rather than an error.
-	 */
-	error = libssh2_knownhost_readfile(known_hosts, git_str_cstr(&path), LIBSSH2_KNOWNHOST_FILE_OPENSSH);
-	if (error == LIBSSH2_ERROR_FILE) {
-		ret = 0;
-		goto out;
-	}
-	if (error < 0) {
-		ssh_error(session, "error reading known_hosts");
-		ret = -1;
-		goto out;
-	}
+	if (known_hosts == NULL)
+		return 0;
 
 	typemask = fingerprint_type_mask(key_type);
 	check = libssh2_knownhost_checkp(known_hosts, hostname, port, key, key_len, typemask, &host);
 	if (check == LIBSSH2_KNOWNHOST_CHECK_FAILURE) {
 		ssh_error(session, "error checking for known host");
-		ret = -1;
-		goto out;
+		return -1;
 	}
 
 	ret = check == LIBSSH2_KNOWNHOST_CHECK_MATCH ? 1 : 0;
-
-out:
-	libssh2_knownhost_free(known_hosts);
-	git_str_clear(&path);
-	git_str_clear(&home);
 
 	return ret;
 }
@@ -567,26 +658,23 @@ out:
  */
 static int check_certificate(
 	LIBSSH2_SESSION *session,
+	LIBSSH2_KNOWNHOSTS *known_hosts,
 	git_transport_certificate_check_cb check_cb,
 	void *check_cb_payload,
 	const char *host,
-	const char *portstr)
+	int port)
 {
 	git_cert_hostkey cert = {{ 0 }};
 	const char *key;
 	size_t cert_len;
-	int cert_type, port, cert_valid = 0, error = 0;
+	int cert_type, cert_valid = 0, error = 0;
 
 	if ((key = libssh2_session_hostkey(session, &cert_len, &cert_type)) == NULL) {
 		ssh_error(session, "failed to retrieve hostkey");
 		return -1;
 	}
 
-	/* Try to parse the port as a number, if we can't then fall back to default */
-	if (git__strntol32(&port, portstr, strlen(portstr), NULL, 10) < 0)
-		port = -1;
-
-	if ((cert_valid = check_against_known_hosts(session, host, port, key, cert_len, cert_type)) < 0)
+	if ((cert_valid = check_against_known_hosts(session, known_hosts, host, port, key, cert_len, cert_type)) < 0)
 		return -1;
 
 	cert.parent.cert_type = GIT_CERT_HOSTKEY_LIBSSH2;
@@ -682,11 +770,12 @@ static int _git_ssh_setup_conn(
 	const char *cmd,
 	git_smart_subtransport_stream **stream)
 {
-	int auth_methods, error = 0;
+	int auth_methods, error = 0, port;
 	ssh_stream *s;
 	git_credential *cred = NULL;
 	LIBSSH2_SESSION *session=NULL;
 	LIBSSH2_CHANNEL *channel=NULL;
+	LIBSSH2_KNOWNHOSTS *known_hosts = NULL;
 
 	t->current_stream = NULL;
 
@@ -710,10 +799,19 @@ static int _git_ssh_setup_conn(
 	    (error = git_stream_connect(s->io)) < 0)
 		goto done;
 
-	if ((error = _git_ssh_session_create(&session, s->io)) < 0)
+	/*
+	 * Try to parse the port as a number, if we can't then fall back to
+	 * default. It would be nice if we could get the port that was resolved
+	 * as part of the stream connection, but that's not something that's
+	 * exposed.
+	 */
+	if (git__strntol32(&port, s->url.port, strlen(s->url.port), NULL, 10) < 0)
+		port = -1;
+
+	if ((error = _git_ssh_session_create(&session, &known_hosts, s->url.host, port, s->io)) < 0)
 		goto done;
 
-	if ((error = check_certificate(session, t->owner->connect_opts.callbacks.certificate_check, t->owner->connect_opts.callbacks.payload, s->url.host, s->url.port)) < 0)
+	if ((error = check_certificate(session, known_hosts, t->owner->connect_opts.callbacks.certificate_check, t->owner->connect_opts.callbacks.payload, s->url.host, port)) < 0)
 		goto done;
 
 	/* we need the username to ask for auth methods */
@@ -786,6 +884,8 @@ done:
 	if (error < 0) {
 		ssh_stream_free(*stream);
 
+		if (known_hosts)
+			libssh2_knownhost_free(known_hosts);
 		if (session)
 			libssh2_session_free(session);
 	}
