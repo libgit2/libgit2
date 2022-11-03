@@ -299,8 +299,10 @@ static int git_tag_create__internal(
 	}
 
 	if (create_tag_annotation) {
-		if (write_tag_annotation(oid, repo, tag_name, target, tagger, message) < 0)
+		if (write_tag_annotation(oid, repo, tag_name, target, tagger, message) < 0) {
+			git_str_dispose(&ref_name);
 			return -1;
+		}
 	} else
 		git_oid_cpy(oid, git_object_id(target));
 
