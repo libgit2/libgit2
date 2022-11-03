@@ -404,8 +404,10 @@ int git_tag_create_from_buffer(git_oid *oid, git_repository *repo, const char *b
 
 	/* write the buffer */
 	if ((error = git_odb_open_wstream(
-			&stream, odb, strlen(buffer), GIT_OBJECT_TAG)) < 0)
+			&stream, odb, strlen(buffer), GIT_OBJECT_TAG)) < 0) {
+		git_str_dispose(&ref_name);
 		return error;
+	}
 
 	if (!(error = git_odb_stream_write(stream, buffer, strlen(buffer))))
 		error = git_odb_stream_finalize_write(oid, stream);
