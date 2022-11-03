@@ -121,8 +121,12 @@ int git_revwalk__push_ref(git_revwalk *walk, const char *refname, const git_revw
 {
 	git_oid oid;
 
-	if (git_reference_name_to_id(&oid, walk->repo, refname) < 0)
+	int error = git_reference_name_to_id(&oid, walk->repo, refname);
+	if (opts->from_glob && (error == GIT_ENOTFOUND || error == GIT_EINVALIDSPEC || error == GIT_EPEEL)) {
+		return 0;
+	} else if (error < 0) {
 		return -1;
+	}
 
 	return git_revwalk__push_commit(walk, &oid, opts);
 }
