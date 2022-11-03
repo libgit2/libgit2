@@ -397,6 +397,7 @@ int git_tag_create_from_buffer(git_oid *oid, git_repository *repo, const char *b
 	/** Ensure the tag name doesn't conflict with an already existing
 	 *	reference unless overwriting has explicitly been requested **/
 	if (error == 0 && !allow_ref_overwrite) {
+		git_str_dispose(&ref_name);
 		git_error_set(GIT_ERROR_TAG, "tag already exists");
 		return GIT_EEXISTS;
 	}
