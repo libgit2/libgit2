@@ -200,7 +200,7 @@ int git_commit_graph_file_parse(
 	const unsigned char *chunk_hdr;
 	struct git_commit_graph_chunk *last_chunk;
 	uint32_t i;
-	off64_t last_chunk_offset, chunk_offset, trailer_offset;
+	uint64_t last_chunk_offset, chunk_offset, trailer_offset;
 	size_t checksum_size;
 	int error;
 	struct git_commit_graph_chunk chunk_oid_fanout = {0}, chunk_oid_lookup = {0},
@@ -236,8 +236,8 @@ int git_commit_graph_file_parse(
 	chunk_hdr = data + sizeof(struct git_commit_graph_header);
 	last_chunk = NULL;
 	for (i = 0; i < hdr->chunks; ++i, chunk_hdr += 12) {
-		chunk_offset = ((off64_t)ntohl(*((uint32_t *)(chunk_hdr + 4)))) << 32
-				| ((off64_t)ntohl(*((uint32_t *)(chunk_hdr + 8))));
+		chunk_offset = ((uint64_t)ntohl(*((uint32_t *)(chunk_hdr + 4)))) << 32
+				| ((uint64_t)ntohl(*((uint32_t *)(chunk_hdr + 8))));
 		if (chunk_offset < last_chunk_offset)
 			return commit_graph_error("chunks are non-monotonic");
 		if (chunk_offset >= trailer_offset)
