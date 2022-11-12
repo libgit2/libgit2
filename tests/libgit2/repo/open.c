@@ -543,7 +543,7 @@ void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
 	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
-	cl_git_fail(git_repository_open(&repo, "empty_standard_repo"));
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "empty_standard_repo"));
 
 	/* Add safe.directory options to the global configuration */
 	git_str_joinpath(&config_path, clar_sandbox_path(), "__global_config");

@@ -580,9 +580,13 @@ static int validate_ownership(git_repository *repo)
 			break;
 	}
 
-	if (is_safe ||
-	    (error = validate_ownership_config(&is_safe, validation_paths[0])) < 0)
+	if (is_safe)
 		goto done;
+
+	error = validate_ownership_config(&is_safe, validation_paths[0]);
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto done;
+	error = 0;
 
 	if (!is_safe) {
 		git_error_set(GIT_ERROR_CONFIG,
