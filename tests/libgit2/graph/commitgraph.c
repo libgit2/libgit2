@@ -124,3 +124,44 @@ void test_graph_commitgraph__writer(void)
 	git_commit_graph_writer_free(w);
 	git_repository_free(repo);
 }
+
+void test_graph_commitgraph__validate(void)
+{
+	git_repository *repo;
+	struct git_commit_graph *cgraph;
+	git_str objects_dir = GIT_STR_INIT;
+
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+	cl_git_pass(git_str_joinpath(&objects_dir, git_repository_path(repo), "objects"));
+
+	/* git_commit_graph_open() calls git_commit_graph_validate() */
+	cl_git_pass(git_commit_graph_open(&cgraph, git_str_cstr(&objects_dir)));
+
+	git_commit_graph_free(cgraph);
+	git_str_dispose(&objects_dir);
+	git_repository_free(repo);
+}
+
+void test_graph_commitgraph__validate_corrupt(void)
+{
+	git_repository *repo;
+	struct git_commit_graph *cgraph;
+	int fd = -1;
+
+	cl_fixture_sandbox("testrepo.git");
+	cl_git_pass(git_repository_open(&repo, cl_git_sandbox_path(1, "testrepo.git", NULL)));
+
+	/* corrupt commit graph checksum at the end of the file */
+	cl_assert((fd = p_open(cl_git_sandbox_path(0, "testrepo.git", "objects", "info", "commit-graph", NULL), O_WRONLY)) > 0);
+	cl_assert(p_lseek(fd, -5, SEEK_END) > 0);
+	cl_must_pass(p_write(fd, "\0\0", 2));
+	cl_must_pass(p_close(fd));
+
+	/* git_commit_graph_open() calls git_commit_graph_validate() */
+	cl_git_fail(git_commit_graph_open(&cgraph, cl_git_sandbox_path(1, "testrepo.git", "objects", NULL)));
+
+	git_commit_graph_free(cgraph);
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("testrepo.git");
+}
