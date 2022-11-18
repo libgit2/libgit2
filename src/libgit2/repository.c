@@ -521,6 +521,9 @@ static int validate_ownership_config(bool *is_safe, const char *path)
 		validate_ownership_cb,
 		&ownership_data);
 
+	if (error == GIT_ENOTFOUND)
+		error = 0;
+
 	git_config_free(config);
 	git_str_dispose(&ownership_data.tmp);
 
