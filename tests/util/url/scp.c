@@ -3,19 +3,19 @@
 
 static git_net_url conndata;
 
-void test_network_url_scp__initialize(void)
+void test_url_scp__initialize(void)
 {
 	memset(&conndata, 0, sizeof(conndata));
 }
 
-void test_network_url_scp__cleanup(void)
+void test_url_scp__cleanup(void)
 {
 	git_net_url_dispose(&conndata);
 }
 
 /* Hostname */
 
-void test_network_url_scp__hostname_trivial(void)
+void test_url_scp__hostname_trivial(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "example.com:/resource"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -27,7 +27,7 @@ void test_network_url_scp__hostname_trivial(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__hostname_bracketed(void)
+void test_url_scp__hostname_bracketed(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "[example.com]:/resource"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -39,7 +39,7 @@ void test_network_url_scp__hostname_bracketed(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__hostname_root(void)
+void test_url_scp__hostname_root(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "example.com:/"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -51,7 +51,7 @@ void test_network_url_scp__hostname_root(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__hostname_user(void)
+void test_url_scp__hostname_user(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "git@example.com:/resource"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -63,7 +63,7 @@ void test_network_url_scp__hostname_user(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__hostname_user_bracketed(void)
+void test_url_scp__hostname_user_bracketed(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "[git@example.com]:/resource"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -75,7 +75,7 @@ void test_network_url_scp__hostname_user_bracketed(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__hostname_port(void)
+void test_url_scp__hostname_port(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "[example.com:42]:/resource"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -87,7 +87,7 @@ void test_network_url_scp__hostname_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_url_scp__hostname_user_port(void)
+void test_url_scp__hostname_user_port(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "[git@example.com:42]:/resource"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -99,7 +99,7 @@ void test_network_url_scp__hostname_user_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_url_scp__ipv4_trivial(void)
+void test_url_scp__ipv4_trivial(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "192.168.99.88:/resource/a/b/c"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -111,7 +111,7 @@ void test_network_url_scp__ipv4_trivial(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__ipv4_bracketed(void)
+void test_url_scp__ipv4_bracketed(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "[192.168.99.88]:/resource/a/b/c"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -123,7 +123,7 @@ void test_network_url_scp__ipv4_bracketed(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__ipv4_user(void)
+void test_url_scp__ipv4_user(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "git@192.168.99.88:/resource/a/b/c"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -135,7 +135,7 @@ void test_network_url_scp__ipv4_user(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__ipv4_port(void)
+void test_url_scp__ipv4_port(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "[192.168.99.88:1111]:/resource/a/b/c"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -147,7 +147,7 @@ void test_network_url_scp__ipv4_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_url_scp__ipv4_user_port(void)
+void test_url_scp__ipv4_user_port(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "[git@192.168.99.88:1111]:/resource/a/b/c"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -159,7 +159,7 @@ void test_network_url_scp__ipv4_user_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_url_scp__ipv6_trivial(void)
+void test_url_scp__ipv6_trivial(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "[fe80::dcad:beff:fe00:0001]:/resource/foo"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -171,7 +171,7 @@ void test_network_url_scp__ipv6_trivial(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__ipv6_user(void)
+void test_url_scp__ipv6_user(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "git@[fe80::dcad:beff:fe00:0001]:/resource/foo"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -183,7 +183,7 @@ void test_network_url_scp__ipv6_user(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__ipv6_port(void)
+void test_url_scp__ipv6_port(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "[[fe80::dcad:beff:fe00:0001]:99]:/resource/foo"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -195,7 +195,7 @@ void test_network_url_scp__ipv6_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_url_scp__ipv6_user_port(void)
+void test_url_scp__ipv6_user_port(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "[git@[fe80::dcad:beff:fe00:0001]:99]:/resource/foo"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -207,7 +207,7 @@ void test_network_url_scp__ipv6_user_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
 }
 
-void test_network_url_scp__hexhost_and_port(void)
+void test_url_scp__hexhost_and_port(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "[fe:22]:/resource/foo"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -219,7 +219,7 @@ void test_network_url_scp__hexhost_and_port(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__malformed_ipv6_one(void)
+void test_url_scp__malformed_ipv6_one(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "fe80::dcad:beff:fe00:0001]:/resource"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -231,7 +231,7 @@ void test_network_url_scp__malformed_ipv6_one(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__malformed_ipv6_two(void)
+void test_url_scp__malformed_ipv6_two(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "[fe80::dcad:beff:fe00:0001]:42]:/resource"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -243,7 +243,7 @@ void test_network_url_scp__malformed_ipv6_two(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__malformed_ipv6_with_user(void)
+void test_url_scp__malformed_ipv6_with_user(void)
 {
 	cl_git_pass(git_net_url_parse_scp(&conndata, "git@[fe80::dcad:beff:fe00:0001]:42]:/resource"));
 	cl_assert_equal_s(conndata.scheme, "ssh");
@@ -255,7 +255,7 @@ void test_network_url_scp__malformed_ipv6_with_user(void)
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
 }
 
-void test_network_url_scp__invalid_addresses(void)
+void test_url_scp__invalid_addresses(void)
 {
 	/* Path is required */
 	cl_git_fail_with(GIT_EINVALIDSPEC, git_net_url_parse_scp(&conndata,
@@ -314,8 +314,4 @@ void test_network_url_scp__invalid_addresses(void)
 		"[git@[fe80::dcad:beff:fe00:0001]:42:/resource"));
 	cl_git_fail_with(GIT_EINVALIDSPEC, git_net_url_parse_scp(&conndata,
 		"[git@[fe80::dcad:beff:fe00:0001:42]:/resource"));
-
-	/* Invalid character inside address */
-	cl_git_fail_with(GIT_EINVALIDSPEC, git_net_url_parse(&conndata,
-		"[fe8o::dcad:beff:fe00:0001]:/resource"));
 }

@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "net.h"
 
-void test_network_url_valid__test(void)
+void test_url_valid__test(void)
 {
 	cl_assert(git_net_str_is_url("http://example.com/"));
 	cl_assert(git_net_str_is_url("file://localhost/tmp/foo/"));
