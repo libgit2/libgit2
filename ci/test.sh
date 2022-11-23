@@ -32,6 +32,11 @@ cleanup() {
 		kill $GIT_NAMESPACE_PID
 	fi
 
+	if [ ! -z "$GIT_SHA256_PID" ]; then
+		echo "Stopping git daemon (sha256)..."
+		kill $GIT_SHA256_PID
+	fi
+
 	if [ ! -z "$PROXY_BASIC_PID" ]; then
 		echo "Stopping proxy (Basic)..."
 		kill $PROXY_BASIC_PID
@@ -114,6 +119,12 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	cp -R "${SOURCE_DIR}/tests/resources/namespace.git" "${GIT_NAMESPACE_DIR}/namespace.git"
 	GIT_NAMESPACE="name1" git daemon --listen=localhost --port=9419 --export-all --enable=receive-pack --base-path="${GIT_NAMESPACE_DIR}" "${GIT_NAMESPACE_DIR}" &
 	GIT_NAMESPACE_PID=$!
+
+	echo "Starting git daemon (sha256)..."
+	GIT_SHA256_DIR=`mktemp -d ${TMPDIR}/git_sha256.XXXXXXXX`
+	cp -R "${SOURCE_DIR}/tests/resources/testrepo_256.git" "${GIT_SHA256_DIR}/testrepo_256.git"
+	git daemon --listen=localhost --port=9420 --export-all --enable=receive-pack --base-path="${GIT_SHA256_DIR}" "${GIT_SHA256_DIR}" &
+	GIT_SHA256_PID=$!
 fi
 
 if [ -z "$SKIP_PROXY_TESTS" ]; then
@@ -261,6 +272,14 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	run_test gitdaemon_namespace
 	unset GITTEST_REMOTE_URL
 	unset GITTEST_REMOTE_BRANCH
+
+	echo ""
+	echo "Running gitdaemon (sha256) tests"
+	echo ""
+
+	export GITTEST_REMOTE_URL="git://localhost:9420/testrepo_256.git"
+	run_test gitdaemon_sha256
+	unset GITTEST_REMOTE_URL
 fi
 
 if [ -z "$SKIP_PROXY_TESTS" ]; then

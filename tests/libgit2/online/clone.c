@@ -1058,3 +1058,22 @@ void test_online_clone__namespace_with_specified_branch(void)
 
 	git_reference_free(head);
 }
+
+void test_online_clone__sha256(void)
+{
+#ifndef GIT_EXPERIMENTAL_SHA256
+	cl_skip();
+#else
+	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
+	git_reference *head;
+
+	if (!_remote_url)
+		cl_skip();
+
+	cl_git_pass(git_clone(&g_repo, _remote_url, "./sha256", &options));
+	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
+	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
+
+	git_reference_free(head);
+#endif
+}

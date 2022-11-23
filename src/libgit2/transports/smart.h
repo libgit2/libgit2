@@ -182,7 +182,12 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 int git_smart__update_heads(transport_smart *t, git_vector *symrefs);
 
 /* smart_pkt.c */
-int git_pkt_parse_line(git_pkt **head, const char **endptr, const char *line, size_t linelen);
+typedef struct {
+	git_oid_t oid_type;
+	int seen_capabilities: 1;
+} git_pkt_parse_data;
+
+int git_pkt_parse_line(git_pkt **head, const char **endptr, const char *line, size_t linelen, git_pkt_parse_data *data);
 int git_pkt_buffer_flush(git_str *buf);
 int git_pkt_send_flush(GIT_SOCKET s);
 int git_pkt_buffer_done(git_str *buf);
