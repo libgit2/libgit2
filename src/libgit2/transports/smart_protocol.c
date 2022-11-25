@@ -207,13 +207,13 @@ int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vec
 
 		if (!git__prefixcmp(ptr, GIT_CAP_WANT_TIP_SHA1)) {
 			caps->common = caps->want_tip_sha1 = 1;
-			ptr += strlen(GIT_CAP_DELETE_REFS);
+			ptr += strlen(GIT_CAP_WANT_TIP_SHA1);
 			continue;
 		}
 
 		if (!git__prefixcmp(ptr, GIT_CAP_WANT_REACHABLE_SHA1)) {
 			caps->common = caps->want_reachable_sha1 = 1;
-			ptr += strlen(GIT_CAP_DELETE_REFS);
+			ptr += strlen(GIT_CAP_WANT_REACHABLE_SHA1);
 			continue;
 		}
 
