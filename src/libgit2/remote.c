@@ -2958,6 +2958,13 @@ int git_remote_upload(
 		}
 	}
 
+	if (opts && opts->push_options.count > 0)
+		for (i = 0; i < opts->push_options.count; ++i) {
+			if ((error = git_vector_insert(&push->push_options, git__strdup(opts->push_options.strings[i]))) < 0) {
+				goto cleanup;
+			}
+		}
+
 	if ((error = git_push_finish(push)) < 0)
 		goto cleanup;
 

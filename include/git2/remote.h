@@ -812,6 +812,11 @@ typedef struct {
 	 * Extra headers for this push operation
 	 */
 	git_strarray custom_headers;
+
+	/**
+	 * Push options
+	 */
+	git_strarray push_options;
 } git_push_options;
 
 #define GIT_PUSH_OPTIONS_VERSION 1
