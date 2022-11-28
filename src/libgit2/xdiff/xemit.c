@@ -22,7 +22,7 @@
 
 #include "xinclude.h"
 
-static long xdl_get_rec(xdfile_t *xdf, long ri, char const **rec) {
+static long git_xdl_get_rec(xdfile_t *xdf, long ri, char const **rec) {
 
 	*rec = xdf->recs[ri]->ptr;
 
@@ -30,12 +30,12 @@ static long xdl_get_rec(xdfile_t *xdf, long ri, char const **rec) {
 }
 
 
-static int xdl_emit_record(xdfile_t *xdf, long ri, char const *pre, xdemitcb_t *ecb) {
+static int git_xdl_emit_record(xdfile_t *xdf, long ri, char const *pre, xdemitcb_t *ecb) {
 	long size, psize = strlen(pre);
 	char const *rec;
 
-	size = xdl_get_rec(xdf, ri, &rec);
-	if (xdl_emit_diffrec(rec, size, pre, psize, ecb) < 0) {
+	size = git_xdl_get_rec(xdf, ri, &rec);
+	if (git_xdl_emit_diffrec(rec, size, pre, psize, ecb) < 0) {
 
 		return -1;
 	}
@@ -49,7 +49,7 @@ static int xdl_emit_record(xdfile_t *xdf, long ri, char const *pre, xdemitcb_t *
  * inside the differential hunk according to the specified configuration.
  * Also advance xscr if the first changes must be discarded.
  */
-xdchange_t *xdl_get_hunk(xdchange_t **xscr, xdemitconf_t const *xecfg)
+xdchange_t *git_xdl_get_hunk(xdchange_t **xscr, xdemitconf_t const *xecfg)
 {
 	xdchange_t *xch, *xchp, *lxch;
 	long max_common = 2 * xecfg->ctxlen + xecfg->interhunkctxlen;
@@ -115,7 +115,7 @@ static long match_func_rec(xdfile_t *xdf, xdemitconf_t const *xecfg, long ri,
 			   char *buf, long sz)
 {
 	const char *rec;
-	long len = xdl_get_rec(xdf, ri, &rec);
+	long len = git_xdl_get_rec(xdf, ri, &rec);
 	if (!xecfg->find_func)
 		return def_ff(rec, len, buf, sz, xecfg->find_func_priv);
 	return xecfg->find_func(rec, len, buf, sz, xecfg->find_func_priv);
@@ -155,7 +155,7 @@ static long get_func_line(xdfenv_t *xe, xdemitconf_t const *xecfg,
 static int is_empty_rec(xdfile_t *xdf, long ri)
 {
 	const char *rec;
-	long len = xdl_get_rec(xdf, ri, &rec);
+	long len = git_xdl_get_rec(xdf, ri, &rec);
 
 	while (len > 0 && XDL_ISSPACE(*rec)) {
 		rec++;
@@ -164,7 +164,7 @@ static int is_empty_rec(xdfile_t *xdf, long ri)
 	return !len;
 }
 
-int xdl_emit_diff(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
+int git_xdl_emit_diff(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 		  xdemitconf_t const *xecfg) {
 	long s1, s2, e1, e2, lctx;
 	xdchange_t *xch, *xche;
@@ -173,7 +173,7 @@ int xdl_emit_diff(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 
 	for (xch = xscr; xch; xch = xche->next) {
 		xdchange_t *xchp = xch;
-		xche = xdl_get_hunk(&xch, xecfg);
+		xche = git_xdl_get_hunk(&xch, xecfg);
 		if (!xch)
 			break;
 
@@ -279,7 +279,7 @@ pre_context_calculation:
 			funclineprev = s1 - 1;
 		}
 		if (!(xecfg->flags & XDL_EMIT_NO_HUNK_HDR) &&
-		    xdl_emit_hunk_hdr(s1 + 1, e1 - s1, s2 + 1, e2 - s2,
+		    git_xdl_emit_hunk_hdr(s1 + 1, e1 - s1, s2 + 1, e2 - s2,
 				      func_line.buf, func_line.len, ecb) < 0)
 			return -1;
 
@@ -287,7 +287,7 @@ pre_context_calculation:
 		 * Emit pre-context.
 		 */
 		for (; s2 < xch->i2; s2++)
-			if (xdl_emit_record(&xe->xdf2, s2, " ", ecb) < 0)
+			if (git_xdl_emit_record(&xe->xdf2, s2, " ", ecb) < 0)
 				return -1;
 
 		for (s1 = xch->i1, s2 = xch->i2;; xch = xch->next) {
@@ -295,21 +295,21 @@ pre_context_calculation:
 			 * Merge previous with current change atom.
 			 */
 			for (; s1 < xch->i1 && s2 < xch->i2; s1++, s2++)
-				if (xdl_emit_record(&xe->xdf2, s2, " ", ecb) < 0)
+				if (git_xdl_emit_record(&xe->xdf2, s2, " ", ecb) < 0)
 					return -1;
 
 			/*
 			 * Removes lines from the first file.
 			 */
 			for (s1 = xch->i1; s1 < xch->i1 + xch->chg1; s1++)
-				if (xdl_emit_record(&xe->xdf1, s1, "-", ecb) < 0)
+				if (git_xdl_emit_record(&xe->xdf1, s1, "-", ecb) < 0)
 					return -1;
 
 			/*
 			 * Adds lines from the second file.
 			 */
 			for (s2 = xch->i2; s2 < xch->i2 + xch->chg2; s2++)
-				if (xdl_emit_record(&xe->xdf2, s2, "+", ecb) < 0)
+				if (git_xdl_emit_record(&xe->xdf2, s2, "+", ecb) < 0)
 					return -1;
 
 			if (xch == xche)
@@ -322,7 +322,7 @@ pre_context_calculation:
 		 * Emit post-context.
 		 */
 		for (s2 = xche->i2 + xche->chg2; s2 < e2; s2++)
-			if (xdl_emit_record(&xe->xdf2, s2, " ", ecb) < 0)
+			if (git_xdl_emit_record(&xe->xdf2, s2, " ", ecb) < 0)
 				return -1;
 	}
 

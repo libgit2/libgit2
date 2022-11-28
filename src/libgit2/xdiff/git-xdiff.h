@@ -27,18 +27,18 @@
 # endif
 #endif
 
-#define xdl_malloc(x) git__malloc(x)
-#define xdl_free(ptr) git__free(ptr)
-#define xdl_realloc(ptr, x) git__realloc(ptr, x)
+#define git_xdl_malloc(x) git__malloc(x)
+#define git_xdl_free(ptr) git__free(ptr)
+#define git_xdl_realloc(ptr, x) git__realloc(ptr, x)
 
 #define XDL_BUG(msg) GIT_ASSERT(msg)
 
-#define xdl_regex_t git_regexp
-#define xdl_regmatch_t git_regmatch
+#define git_xdl_regex_t git_regexp
+#define git_xdl_regmatch_t git_regmatch
 
-GIT_INLINE(int) xdl_regexec_buf(
-	const xdl_regex_t *preg, const char *buf, size_t size,
-	size_t nmatch, xdl_regmatch_t pmatch[], int eflags)
+GIT_INLINE(int) git_xdl_regexec_buf(
+	const git_xdl_regex_t *preg, const char *buf, size_t size,
+	size_t nmatch, git_xdl_regmatch_t pmatch[], int eflags)
 {
 	GIT_UNUSED(preg);
 	GIT_UNUSED(buf);

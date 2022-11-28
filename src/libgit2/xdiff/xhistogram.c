@@ -138,7 +138,7 @@ static int scanA(struct histindex *index, int line1, int count1)
 		 * This is the first time we have ever seen this particular
 		 * element in the sequence. Construct a new chain for it.
 		 */
-		if (!(rec = xdl_cha_alloc(&index->rcha)))
+		if (!(rec = git_xdl_cha_alloc(&index->rcha)))
 			return -1;
 		rec->ptr = ptr;
 		rec->cnt = 1;
@@ -234,16 +234,16 @@ static int fall_back_to_classic_diff(xpparam_t const *xpp, xdfenv_t *env,
 	memset(&xpparam, 0, sizeof(xpparam));
 	xpparam.flags = xpp->flags & ~XDF_DIFF_ALGORITHM_MASK;
 
-	return xdl_fall_back_diff(env, &xpparam,
+	return git_xdl_fall_back_diff(env, &xpparam,
 				  line1, count1, line2, count2);
 }
 
 static inline void free_index(struct histindex *index)
 {
-	xdl_free(index->records);
-	xdl_free(index->line_map);
-	xdl_free(index->next_ptrs);
-	xdl_cha_free(&index->rcha);
+	git_xdl_free(index->records);
+	git_xdl_free(index->line_map);
+	git_xdl_free(index->next_ptrs);
+	git_xdl_cha_free(&index->rcha);
 }
 
 static int find_lcs(xpparam_t const *xpp, xdfenv_t *env,
@@ -261,30 +261,30 @@ static int find_lcs(xpparam_t const *xpp, xdfenv_t *env,
 
 	index.records = NULL;
 	index.line_map = NULL;
-	/* in case of early xdl_cha_free() */
+	/* in case of early git_xdl_cha_free() */
 	index.rcha.head = NULL;
 
-	index.table_bits = xdl_hashbits(count1);
+	index.table_bits = git_xdl_hashbits(count1);
 	sz = index.records_size = 1 << index.table_bits;
 	sz *= sizeof(struct record *);
-	if (!(index.records = (struct record **) xdl_malloc(sz)))
+	if (!(index.records = (struct record **) git_xdl_malloc(sz)))
 		goto cleanup;
 	memset(index.records, 0, sz);
 
 	sz = index.line_map_size = count1;
 	sz *= sizeof(struct record *);
-	if (!(index.line_map = (struct record **) xdl_malloc(sz)))
+	if (!(index.line_map = (struct record **) git_xdl_malloc(sz)))
 		goto cleanup;
 	memset(index.line_map, 0, sz);
 
 	sz = index.line_map_size;
 	sz *= sizeof(unsigned int);
-	if (!(index.next_ptrs = (unsigned int *) xdl_malloc(sz)))
+	if (!(index.next_ptrs = (unsigned int *) git_xdl_malloc(sz)))
 		goto cleanup;
 	memset(index.next_ptrs, 0, sz);
 
-	/* lines / 4 + 1 comes from xprepare.c:xdl_prepare_ctx() */
-	if (xdl_cha_init(&index.rcha, sizeof(struct record), count1 / 4 + 1) < 0)
+	/* lines / 4 + 1 comes from xprepare.c:git_xdl_prepare_ctx() */
+	if (git_xdl_cha_init(&index.rcha, sizeof(struct record), count1 / 4 + 1) < 0)
 		goto cleanup;
 
 	index.ptr_shift = line1;
@@ -369,10 +369,10 @@ out:
 	return result;
 }
 
-int xdl_do_histogram_diff(mmfile_t *file1, mmfile_t *file2,
+int git_xdl_do_histogram_diff(mmfile_t *file1, mmfile_t *file2,
 	xpparam_t const *xpp, xdfenv_t *env)
 {
-	if (xdl_prepare_env(file1, file2, xpp, env) < 0)
+	if (git_xdl_prepare_env(file1, file2, xpp, env) < 0)
 		return -1;
 
 	return histogram_diff(xpp, env,

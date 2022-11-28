@@ -84,7 +84,7 @@ typedef struct s_xpparam {
 	unsigned long flags;
 
 	/* -I<regex> */
-	xdl_regex_t **ignore_regex;
+	git_xdl_regex_t **ignore_regex;
 	size_t ignore_regex_nr;
 
 	/* See Documentation/diff-options.txt. */
@@ -103,7 +103,7 @@ typedef struct s_xdemitcb {
 
 typedef long (*find_func_t)(const char *line, long line_len, char *buffer, long buffer_size, void *priv);
 
-typedef int (*xdl_emit_hunk_consume_func_t)(long start_a, long count_a,
+typedef int (*git_xdl_emit_hunk_consume_func_t)(long start_a, long count_a,
 					    long start_b, long count_b,
 					    void *cb_data);
 
@@ -113,7 +113,7 @@ typedef struct s_xdemitconf {
 	unsigned long flags;
 	find_func_t find_func;
 	void *find_func_priv;
-	xdl_emit_hunk_consume_func_t hunk_func;
+	git_xdl_emit_hunk_consume_func_t hunk_func;
 } xdemitconf_t;
 
 typedef struct s_bdiffparam {
@@ -121,10 +121,10 @@ typedef struct s_bdiffparam {
 } bdiffparam_t;
 
 
-void *xdl_mmfile_first(mmfile_t *mmf, long *size);
-long xdl_mmfile_size(mmfile_t *mmf);
+void *git_xdl_mmfile_first(mmfile_t *mmf, long *size);
+long git_xdl_mmfile_size(mmfile_t *mmf);
 
-int xdl_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
+int git_xdl_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	     xdemitconf_t const *xecfg, xdemitcb_t *ecb);
 
 typedef struct s_xmparam {
@@ -140,7 +140,7 @@ typedef struct s_xmparam {
 
 #define DEFAULT_CONFLICT_MARKER_SIZE 7
 
-int xdl_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
+int git_xdl_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
 		xmparam_t const *xmp, mmbuffer_t *result);
 
 #ifdef __cplusplus

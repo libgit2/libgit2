@@ -77,7 +77,7 @@ static int merge_file__xdiff(
 	mmbuffer_t mmbuffer;
 	git_merge_file_options options = GIT_MERGE_FILE_OPTIONS_INIT;
 	const char *path;
-	int xdl_result;
+	int git_xdl_result;
 	int error = 0;
 
 	memset(out, 0x0, sizeof(git_merge_file_result));
@@ -141,7 +141,7 @@ static int merge_file__xdiff(
 
 	xmparam.marker_size = options.marker_size;
 
-	if ((xdl_result = xdl_merge(&ancestor_mmfile, &our_mmfile,
+	if ((git_xdl_result = git_xdl_merge(&ancestor_mmfile, &our_mmfile,
 		&their_mmfile, &xmparam, &mmbuffer)) < 0) {
 		git_error_set(GIT_ERROR_MERGE, "failed to merge files");
 		error = -1;
@@ -158,7 +158,7 @@ static int merge_file__xdiff(
 		goto done;
 	}
 
-	out->automergeable = (xdl_result == 0);
+	out->automergeable = (git_xdl_result == 0);
 	out->ptr = (const char *)mmbuffer.ptr;
 	out->len = mmbuffer.size;
 	out->mode = git_merge_file__best_mode(

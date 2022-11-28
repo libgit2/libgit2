@@ -385,7 +385,7 @@ static int diff_hunks(mmfile_t file_a, mmfile_t file_b, void *cb_data, git_blame
 		return -1;
 	}
 
-	return xdl_diff(&file_a, &file_b, &xpp, &xecfg, &ecb);
+	return git_xdl_diff(&file_a, &file_b, &xpp, &xecfg, &ecb);
 }
 
 static void fill_origin_blob(git_blame__origin *o, mmfile_t *file)

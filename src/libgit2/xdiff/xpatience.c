@@ -92,8 +92,8 @@ static void insert_record(xpparam_t const *xpp, int line, struct hashmap *map,
 		map->env->xdf1.recs : map->env->xdf2.recs;
 	xrecord_t *record = records[line - 1];
 	/*
-	 * After xdl_prepare_env() (or more precisely, due to
-	 * xdl_classify_record()), the "ha" member of the records (AKA lines)
+	 * After git_xdl_prepare_env() (or more precisely, due to
+	 * git_xdl_classify_record()), the "ha" member of the records (AKA lines)
 	 * is _not_ the hash anymore, but a linearized version of it.  In
 	 * other words, the "ha" member is guaranteed to start with 0 and
 	 * the second record's ha can only be 0 or 1, etc.
@@ -137,7 +137,7 @@ static void insert_record(xpparam_t const *xpp, int line, struct hashmap *map,
  * parts, as previously non-unique lines can become unique when being
  * restricted to a smaller part of the files.
  *
- * It is assumed that env has been prepared using xdl_prepare().
+ * It is assumed that env has been prepared using git_xdl_prepare().
  */
 static int fill_hashmap(mmfile_t *file1, mmfile_t *file2,
 		xpparam_t const *xpp, xdfenv_t *env,
@@ -152,7 +152,7 @@ static int fill_hashmap(mmfile_t *file1, mmfile_t *file2,
 	/* We know exactly how large we want the hash map */
 	result->alloc = count1 * 2;
 	result->entries = (struct entry *)
-		xdl_malloc(result->alloc * sizeof(struct entry));
+		git_xdl_malloc(result->alloc * sizeof(struct entry));
 	if (!result->entries)
 		return -1;
 	memset(result->entries, 0, result->alloc * sizeof(struct entry));
@@ -200,7 +200,7 @@ static int binary_search(struct entry **sequence, int longest,
  */
 static struct entry *find_longest_common_sequence(struct hashmap *map)
 {
-	struct entry **sequence = xdl_malloc(map->nr * sizeof(struct entry *));
+	struct entry **sequence = git_xdl_malloc(map->nr * sizeof(struct entry *));
 	int longest = 0, i;
 	struct entry *entry;
 
@@ -230,7 +230,7 @@ static struct entry *find_longest_common_sequence(struct hashmap *map)
 
 	/* No common unique lines were found */
 	if (!longest) {
-		xdl_free(sequence);
+		git_xdl_free(sequence);
 		return NULL;
 	}
 
@@ -241,7 +241,7 @@ static struct entry *find_longest_common_sequence(struct hashmap *map)
 		entry->previous->next = entry;
 		entry = entry->previous;
 	}
-	xdl_free(sequence);
+	git_xdl_free(sequence);
 	return entry;
 }
 
@@ -314,15 +314,15 @@ static int fall_back_to_classic_diff(struct hashmap *map,
 	memset(&xpp, 0, sizeof(xpp));
 	xpp.flags = map->xpp->flags & ~XDF_DIFF_ALGORITHM_MASK;
 
-	return xdl_fall_back_diff(map->env, &xpp,
+	return git_xdl_fall_back_diff(map->env, &xpp,
 				  line1, count1, line2, count2);
 }
 
 /*
  * Recursively find the longest common sequence of unique lines,
- * and if none was found, ask xdl_do_diff() to do the job.
+ * and if none was found, ask git_xdl_do_diff() to do the job.
  *
- * This function assumes that env was prepared with xdl_prepare_env().
+ * This function assumes that env was prepared with git_xdl_prepare_env().
  */
 static int patience_diff(mmfile_t *file1, mmfile_t *file2,
 		xpparam_t const *xpp, xdfenv_t *env,
@@ -354,7 +354,7 @@ static int patience_diff(mmfile_t *file1, mmfile_t *file2,
 			env->xdf1.rchg[line1++ - 1] = 1;
 		while(count2--)
 			env->xdf2.rchg[line2++ - 1] = 1;
-		xdl_free(map.entries);
+		git_xdl_free(map.entries);
 		return 0;
 	}
 
@@ -366,17 +366,17 @@ static int patience_diff(mmfile_t *file1, mmfile_t *file2,
 		result = fall_back_to_classic_diff(&map,
 			line1, count1, line2, count2);
 
-	xdl_free(map.entries);
+	git_xdl_free(map.entries);
 	return result;
 }
 
-int xdl_do_patience_diff(mmfile_t *file1, mmfile_t *file2,
+int git_xdl_do_patience_diff(mmfile_t *file1, mmfile_t *file2,
 		xpparam_t const *xpp, xdfenv_t *env)
 {
-	if (xdl_prepare_env(file1, file2, xpp, env) < 0)
+	if (git_xdl_prepare_env(file1, file2, xpp, env) < 0)
 		return -1;
 
-	/* environment is cleaned up in xdl_diff() */
+	/* environment is cleaned up in git_xdl_diff() */
 	return patience_diff(file1, file2, xpp, env,
 			1, env->xdf1.nrec, 1, env->xdf2.nrec);
 }

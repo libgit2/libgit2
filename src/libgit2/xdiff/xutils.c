@@ -23,7 +23,7 @@
 #include "xinclude.h"
 
 
-long xdl_bogosqrt(long n) {
+long git_xdl_bogosqrt(long n) {
 	long i;
 
 	/*
@@ -36,7 +36,7 @@ long xdl_bogosqrt(long n) {
 }
 
 
-int xdl_emit_diffrec(char const *rec, long size, char const *pre, long psize,
+int git_xdl_emit_diffrec(char const *rec, long size, char const *pre, long psize,
 		     xdemitcb_t *ecb) {
 	int i = 2;
 	mmbuffer_t mb[3];
@@ -58,20 +58,20 @@ int xdl_emit_diffrec(char const *rec, long size, char const *pre, long psize,
 	return 0;
 }
 
-void *xdl_mmfile_first(mmfile_t *mmf, long *size)
+void *git_xdl_mmfile_first(mmfile_t *mmf, long *size)
 {
 	*size = mmf->size;
 	return mmf->ptr;
 }
 
 
-long xdl_mmfile_size(mmfile_t *mmf)
+long git_xdl_mmfile_size(mmfile_t *mmf)
 {
 	return mmf->size;
 }
 
 
-int xdl_cha_init(chastore_t *cha, long isize, long icount) {
+int git_xdl_cha_init(chastore_t *cha, long isize, long icount) {
 
 	cha->head = cha->tail = NULL;
 	cha->isize = isize;
@@ -83,22 +83,22 @@ int xdl_cha_init(chastore_t *cha, long isize, long icount) {
 }
 
 
-void xdl_cha_free(chastore_t *cha) {
+void git_xdl_cha_free(chastore_t *cha) {
 	chanode_t *cur, *tmp;
 
 	for (cur = cha->head; (tmp = cur) != NULL;) {
 		cur = cur->next;
-		xdl_free(tmp);
+		git_xdl_free(tmp);
 	}
 }
 
 
-void *xdl_cha_alloc(chastore_t *cha) {
+void *git_xdl_cha_alloc(chastore_t *cha) {
 	chanode_t *ancur;
 	void *data;
 
 	if (!(ancur = cha->ancur) || ancur->icurr == cha->nsize) {
-		if (!(ancur = (chanode_t *) xdl_malloc(sizeof(chanode_t) + cha->nsize))) {
+		if (!(ancur = (chanode_t *) git_xdl_malloc(sizeof(chanode_t) + cha->nsize))) {
 
 			return NULL;
 		}
@@ -118,11 +118,11 @@ void *xdl_cha_alloc(chastore_t *cha) {
 	return data;
 }
 
-long xdl_guess_lines(mmfile_t *mf, long sample) {
+long git_xdl_guess_lines(mmfile_t *mf, long sample) {
 	long nl = 0, size, tsize = 0;
 	char const *data, *cur, *top;
 
-	if ((cur = data = xdl_mmfile_first(mf, &size)) != NULL) {
+	if ((cur = data = git_xdl_mmfile_first(mf, &size)) != NULL) {
 		for (top = data + size; nl < sample && cur < top; ) {
 			nl++;
 			if (!(cur = memchr(cur, '\n', top - cur)))
@@ -134,12 +134,12 @@ long xdl_guess_lines(mmfile_t *mf, long sample) {
 	}
 
 	if (nl && tsize)
-		nl = xdl_mmfile_size(mf) / (tsize / nl);
+		nl = git_xdl_mmfile_size(mf) / (tsize / nl);
 
 	return nl + 1;
 }
 
-int xdl_blankline(const char *line, long size, long flags)
+int git_xdl_blankline(const char *line, long size, long flags)
 {
 	long i;
 
@@ -170,7 +170,7 @@ static int ends_with_optional_cr(const char *l, long s, long i)
 	return 0;
 }
 
-int xdl_recmatch(const char *l1, long s1, const char *l2, long s2, long flags)
+int git_xdl_recmatch(const char *l1, long s1, const char *l2, long s2, long flags)
 {
 	int i1, i2;
 
@@ -249,7 +249,7 @@ int xdl_recmatch(const char *l1, long s1, const char *l2, long s2, long flags)
 	return 1;
 }
 
-static unsigned long xdl_hash_record_with_whitespace(char const **data,
+static unsigned long git_xdl_hash_record_with_whitespace(char const **data,
 		char const *top, long flags) {
 	unsigned long ha = 5381;
 	char const *ptr = *data;
@@ -294,12 +294,12 @@ static unsigned long xdl_hash_record_with_whitespace(char const **data,
 	return ha;
 }
 
-unsigned long xdl_hash_record(char const **data, char const *top, long flags) {
+unsigned long git_xdl_hash_record(char const **data, char const *top, long flags) {
 	unsigned long ha = 5381;
 	char const *ptr = *data;
 
 	if (flags & XDF_WHITESPACE_FLAGS)
-		return xdl_hash_record_with_whitespace(data, top, flags);
+		return git_xdl_hash_record_with_whitespace(data, top, flags);
 
 	for (; ptr < top && *ptr != '\n'; ptr++) {
 		ha += (ha << 5);
@@ -310,7 +310,7 @@ unsigned long xdl_hash_record(char const **data, char const *top, long flags) {
 	return ha;
 }
 
-unsigned int xdl_hashbits(unsigned int size) {
+unsigned int git_xdl_hashbits(unsigned int size) {
 	unsigned int val = 1, bits = 0;
 
 	for (; val < size && bits < CHAR_BIT * sizeof(unsigned int); val <<= 1, bits++);
@@ -318,7 +318,7 @@ unsigned int xdl_hashbits(unsigned int size) {
 }
 
 
-int xdl_num_out(char *out, long val) {
+int git_xdl_num_out(char *out, long val) {
 	char *ptr, *str = out;
 	char buf[32];
 
@@ -340,7 +340,7 @@ int xdl_num_out(char *out, long val) {
 	return str - out;
 }
 
-static int xdl_format_hunk_hdr(long s1, long c1, long s2, long c2,
+static int git_xdl_format_hunk_hdr(long s1, long c1, long s2, long c2,
 			       const char *func, long funclen,
 			       xdemitcb_t *ecb) {
 	int nb = 0;
@@ -350,25 +350,25 @@ static int xdl_format_hunk_hdr(long s1, long c1, long s2, long c2,
 	memcpy(buf, "@@ -", 4);
 	nb += 4;
 
-	nb += xdl_num_out(buf + nb, c1 ? s1: s1 - 1);
+	nb += git_xdl_num_out(buf + nb, c1 ? s1: s1 - 1);
 
 	if (c1 != 1) {
 		memcpy(buf + nb, ",", 1);
 		nb += 1;
 
-		nb += xdl_num_out(buf + nb, c1);
+		nb += git_xdl_num_out(buf + nb, c1);
 	}
 
 	memcpy(buf + nb, " +", 2);
 	nb += 2;
 
-	nb += xdl_num_out(buf + nb, c2 ? s2: s2 - 1);
+	nb += git_xdl_num_out(buf + nb, c2 ? s2: s2 - 1);
 
 	if (c2 != 1) {
 		memcpy(buf + nb, ",", 1);
 		nb += 1;
 
-		nb += xdl_num_out(buf + nb, c2);
+		nb += git_xdl_num_out(buf + nb, c2);
 	}
 
 	memcpy(buf + nb, " @@", 3);
@@ -389,11 +389,11 @@ static int xdl_format_hunk_hdr(long s1, long c1, long s2, long c2,
 	return 0;
 }
 
-int xdl_emit_hunk_hdr(long s1, long c1, long s2, long c2,
+int git_xdl_emit_hunk_hdr(long s1, long c1, long s2, long c2,
 		      const char *func, long funclen,
 		      xdemitcb_t *ecb) {
 	if (!ecb->out_hunk)
-		return xdl_format_hunk_hdr(s1, c1, s2, c2, func, funclen, ecb);
+		return git_xdl_format_hunk_hdr(s1, c1, s2, c2, func, funclen, ecb);
 	if (ecb->out_hunk(ecb->priv,
 			  c1 ? s1 : s1 - 1, c1,
 			  c2 ? s2 : s2 - 1, c2,
@@ -402,7 +402,7 @@ int xdl_emit_hunk_hdr(long s1, long c1, long s2, long c2,
 	return 0;
 }
 
-int xdl_fall_back_diff(xdfenv_t *diff_env, xpparam_t const *xpp,
+int git_xdl_fall_back_diff(xdfenv_t *diff_env, xpparam_t const *xpp,
 		int line1, int count1, int line2, int count2)
 {
 	/*
@@ -422,13 +422,13 @@ int xdl_fall_back_diff(xdfenv_t *diff_env, xpparam_t const *xpp,
 	subfile2.ptr = (char *)diff_env->xdf2.recs[line2 - 1]->ptr;
 	subfile2.size = diff_env->xdf2.recs[line2 + count2 - 2]->ptr +
 		diff_env->xdf2.recs[line2 + count2 - 2]->size - subfile2.ptr;
-	if (xdl_do_diff(&subfile1, &subfile2, xpp, &env) < 0)
+	if (git_xdl_do_diff(&subfile1, &subfile2, xpp, &env) < 0)
 		return -1;
 
 	memcpy(diff_env->xdf1.rchg + line1 - 1, env.xdf1.rchg, count1);
 	memcpy(diff_env->xdf2.rchg + line2 - 1, env.xdf2.rchg, count2);
 
-	xdl_free_env(&env);
+	git_xdl_free_env(&env);
 
 	return 0;
 }

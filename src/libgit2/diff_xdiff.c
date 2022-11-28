@@ -223,7 +223,7 @@ static int git_xdiff(git_patch_generated_output *output, git_patch_generated *pa
 	    git_patch_generated_new_data(&info.xd_new_data.ptr, &info.xd_new_data.size, patch) < 0)
 		return -1;
 
-	xdl_diff(&info.xd_old_data, &info.xd_new_data,
+	git_xdl_diff(&info.xd_old_data, &info.xd_new_data,
 		&xo->params, &xo->config, &xo->callback);
 
 	git_diff_find_context_clear(&findctxt);

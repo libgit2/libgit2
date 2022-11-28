@@ -47,7 +47,7 @@ typedef struct s_xdmerge {
 	long chg0;
 } xdmerge_t;
 
-static int xdl_append_merge(xdmerge_t **merge, int mode,
+static int git_xdl_append_merge(xdmerge_t **merge, int mode,
 			    long i0, long chg0,
 			    long i1, long chg1,
 			    long i2, long chg2)
@@ -60,7 +60,7 @@ static int xdl_append_merge(xdmerge_t **merge, int mode,
 		m->chg1 = i1 + chg1 - m->i1;
 		m->chg2 = i2 + chg2 - m->i2;
 	} else {
-		m = xdl_malloc(sizeof(xdmerge_t));
+		m = git_xdl_malloc(sizeof(xdmerge_t));
 		if (!m)
 			return -1;
 		m->next = NULL;
@@ -78,7 +78,7 @@ static int xdl_append_merge(xdmerge_t **merge, int mode,
 	return 0;
 }
 
-static int xdl_cleanup_merge(xdmerge_t *c)
+static int git_xdl_cleanup_merge(xdmerge_t *c)
 {
 	int count = 0;
 	xdmerge_t *next_c;
@@ -88,12 +88,12 @@ static int xdl_cleanup_merge(xdmerge_t *c)
 		if (c->mode == 0)
 			count++;
 		next_c = c->next;
-		xdl_free(c);
+		git_xdl_free(c);
 	}
 	return count;
 }
 
-static int xdl_merge_cmp_lines(xdfenv_t *xe1, int i1, xdfenv_t *xe2, int i2,
+static int git_xdl_merge_cmp_lines(xdfenv_t *xe1, int i1, xdfenv_t *xe2, int i2,
 		int line_count, long flags)
 {
 	int i;
@@ -101,7 +101,7 @@ static int xdl_merge_cmp_lines(xdfenv_t *xe1, int i1, xdfenv_t *xe2, int i2,
 	xrecord_t **rec2 = xe2->xdf2.recs + i2;
 
 	for (i = 0; i < line_count; i++) {
-		int result = xdl_recmatch(rec1[i]->ptr, rec1[i]->size,
+		int result = git_xdl_recmatch(rec1[i]->ptr, rec1[i]->size,
 			rec2[i]->ptr, rec2[i]->size, flags);
 		if (!result)
 			return -1;
@@ -109,7 +109,7 @@ static int xdl_merge_cmp_lines(xdfenv_t *xe1, int i1, xdfenv_t *xe2, int i2,
 	return 0;
 }
 
-static int xdl_recs_copy_0(int use_orig, xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
+static int git_xdl_recs_copy_0(int use_orig, xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
 {
 	xrecord_t **recs;
 	int size = 0;
@@ -139,14 +139,14 @@ static int xdl_recs_copy_0(int use_orig, xdfenv_t *xe, int i, int count, int nee
 	return size;
 }
 
-static int xdl_recs_copy(xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
+static int git_xdl_recs_copy(xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
 {
-	return xdl_recs_copy_0(0, xe, i, count, needs_cr, add_nl, dest);
+	return git_xdl_recs_copy_0(0, xe, i, count, needs_cr, add_nl, dest);
 }
 
-static int xdl_orig_copy(xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
+static int git_xdl_orig_copy(xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
 {
-	return xdl_recs_copy_0(1, xe, i, count, needs_cr, add_nl, dest);
+	return git_xdl_recs_copy_0(1, xe, i, count, needs_cr, add_nl, dest);
 }
 
 /*
@@ -208,7 +208,7 @@ static int fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 		marker_size = DEFAULT_CONFLICT_MARKER_SIZE;
 
 	/* Before conflicting part */
-	size += xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
+	size += git_xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
 			      dest ? dest + size : NULL);
 
 	if (!dest) {
@@ -227,7 +227,7 @@ static int fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 	}
 
 	/* Postimage from side #1 */
-	size += xdl_recs_copy(xe1, m->i1, m->chg1, needs_cr, 1,
+	size += git_xdl_recs_copy(xe1, m->i1, m->chg1, needs_cr, 1,
 			      dest ? dest + size : NULL);
 
 	if (style == XDL_MERGE_DIFF3 || style == XDL_MERGE_ZEALOUS_DIFF3) {
@@ -246,7 +246,7 @@ static int fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 				dest[size++] = '\r';
 			dest[size++] = '\n';
 		}
-		size += xdl_orig_copy(xe1, m->i0, m->chg0, needs_cr, 1,
+		size += git_xdl_orig_copy(xe1, m->i0, m->chg0, needs_cr, 1,
 				      dest ? dest + size : NULL);
 	}
 
@@ -261,7 +261,7 @@ static int fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 	}
 
 	/* Postimage from side #2 */
-	size += xdl_recs_copy(xe2, m->i2, m->chg2, needs_cr, 1,
+	size += git_xdl_recs_copy(xe2, m->i2, m->chg2, needs_cr, 1,
 			      dest ? dest + size : NULL);
 	if (!dest) {
 		size += marker_size + 1 + needs_cr + marker2_size;
@@ -280,7 +280,7 @@ static int fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 	return size;
 }
 
-static int xdl_fill_merge_buffer(xdfenv_t *xe1, const char *name1,
+static int git_xdl_fill_merge_buffer(xdfenv_t *xe1, const char *name1,
 				 xdfenv_t *xe2, const char *name2,
 				 const char *ancestor_name,
 				 int favor,
@@ -300,38 +300,38 @@ static int xdl_fill_merge_buffer(xdfenv_t *xe1, const char *name1,
 						  marker_size);
 		else if (m->mode & 3) {
 			/* Before conflicting part */
-			size += xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
+			size += git_xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
 					      dest ? dest + size : NULL);
 			/* Postimage from side #1 */
 			if (m->mode & 1) {
 				int needs_cr = is_cr_needed(xe1, xe2, m);
 
-				size += xdl_recs_copy(xe1, m->i1, m->chg1, needs_cr, (m->mode & 2),
+				size += git_xdl_recs_copy(xe1, m->i1, m->chg1, needs_cr, (m->mode & 2),
 						      dest ? dest + size : NULL);
 			}
 			/* Postimage from side #2 */
 			if (m->mode & 2)
-				size += xdl_recs_copy(xe2, m->i2, m->chg2, 0, 0,
+				size += git_xdl_recs_copy(xe2, m->i2, m->chg2, 0, 0,
 						      dest ? dest + size : NULL);
 		} else
 			continue;
 		i = m->i1 + m->chg1;
 	}
-	size += xdl_recs_copy(xe1, i, xe1->xdf2.nrec - i, 0, 0,
+	size += git_xdl_recs_copy(xe1, i, xe1->xdf2.nrec - i, 0, 0,
 			      dest ? dest + size : NULL);
 	return size;
 }
 
 static int recmatch(xrecord_t *rec1, xrecord_t *rec2, unsigned long flags)
 {
-	return xdl_recmatch(rec1->ptr, rec1->size,
+	return git_xdl_recmatch(rec1->ptr, rec1->size,
 			    rec2->ptr, rec2->size, flags);
 }
 
 /*
  * Remove any common lines from the beginning and end of the conflicted region.
  */
-static void xdl_refine_zdiff3_conflicts(xdfenv_t *xe1, xdfenv_t *xe2, xdmerge_t *m,
+static void git_xdl_refine_zdiff3_conflicts(xdfenv_t *xe1, xdfenv_t *xe2, xdmerge_t *m,
 		xpparam_t const *xpp)
 {
 	xrecord_t **rec1 = xe1->xdf2.recs, **rec2 = xe2->xdf2.recs;
@@ -360,7 +360,7 @@ static void xdl_refine_zdiff3_conflicts(xdfenv_t *xe1, xdfenv_t *xe2, xdmerge_t 
  * Sometimes, changes are not quite identical, but differ in only a few
  * lines. Try hard to show only these few lines as conflicting.
  */
-static int xdl_refine_conflicts(xdfenv_t *xe1, xdfenv_t *xe2, xdmerge_t *m,
+static int git_xdl_refine_conflicts(xdfenv_t *xe1, xdfenv_t *xe2, xdmerge_t *m,
 		xpparam_t const *xpp)
 {
 	for (; m; m = m->next) {
@@ -387,17 +387,17 @@ static int xdl_refine_conflicts(xdfenv_t *xe1, xdfenv_t *xe2, xdmerge_t *m,
 		t2.ptr = (char *)xe2->xdf2.recs[m->i2]->ptr;
 		t2.size = xe2->xdf2.recs[m->i2 + m->chg2 - 1]->ptr
 			+ xe2->xdf2.recs[m->i2 + m->chg2 - 1]->size - t2.ptr;
-		if (xdl_do_diff(&t1, &t2, xpp, &xe) < 0)
+		if (git_xdl_do_diff(&t1, &t2, xpp, &xe) < 0)
 			return -1;
-		if (xdl_change_compact(&xe.xdf1, &xe.xdf2, xpp->flags) < 0 ||
-		    xdl_change_compact(&xe.xdf2, &xe.xdf1, xpp->flags) < 0 ||
-		    xdl_build_script(&xe, &xscr) < 0) {
-			xdl_free_env(&xe);
+		if (git_xdl_change_compact(&xe.xdf1, &xe.xdf2, xpp->flags) < 0 ||
+		    git_xdl_change_compact(&xe.xdf2, &xe.xdf1, xpp->flags) < 0 ||
+		    git_xdl_build_script(&xe, &xscr) < 0) {
+			git_xdl_free_env(&xe);
 			return -1;
 		}
 		if (!xscr) {
 			/* If this happens, the changes are identical. */
-			xdl_free_env(&xe);
+			git_xdl_free_env(&xe);
 			m->mode = 4;
 			continue;
 		}
@@ -407,10 +407,10 @@ static int xdl_refine_conflicts(xdfenv_t *xe1, xdfenv_t *xe2, xdmerge_t *m,
 		m->i2 = xscr->i2 + i2;
 		m->chg2 = xscr->chg2;
 		while (xscr->next) {
-			xdmerge_t *m2 = xdl_malloc(sizeof(xdmerge_t));
+			xdmerge_t *m2 = git_xdl_malloc(sizeof(xdmerge_t));
 			if (!m2) {
-				xdl_free_env(&xe);
-				xdl_free_script(x);
+				git_xdl_free_env(&xe);
+				git_xdl_free_script(x);
 				return -1;
 			}
 			xscr = xscr->next;
@@ -423,8 +423,8 @@ static int xdl_refine_conflicts(xdfenv_t *xe1, xdfenv_t *xe2, xdmerge_t *m,
 			m->i2 = xscr->i2 + i2;
 			m->chg2 = xscr->chg2;
 		}
-		xdl_free_env(&xe);
-		xdl_free_script(x);
+		git_xdl_free_env(&xe);
+		git_xdl_free_script(x);
 	}
 	return 0;
 }
@@ -450,13 +450,13 @@ static int lines_contain_alnum(xdfenv_t *xe, int i, int chg)
  * This function merges m and m->next, marking everything between those hunks
  * as conflicting, too.
  */
-static void xdl_merge_two_conflicts(xdmerge_t *m)
+static void git_xdl_merge_two_conflicts(xdmerge_t *m)
 {
 	xdmerge_t *next_m = m->next;
 	m->chg1 = next_m->i1 + next_m->chg1 - m->i1;
 	m->chg2 = next_m->i2 + next_m->chg2 - m->i2;
 	m->next = next_m->next;
-	xdl_free(next_m);
+	git_xdl_free(next_m);
 }
 
 /*
@@ -464,7 +464,7 @@ static void xdl_merge_two_conflicts(xdmerge_t *m)
  * it appears simpler -- because it takes up less (or as many) lines --
  * if the lines are moved into the conflicts.
  */
-static int xdl_simplify_non_conflicts(xdfenv_t *xe1, xdmerge_t *m,
+static int git_xdl_simplify_non_conflicts(xdfenv_t *xe1, xdmerge_t *m,
 				      int simplify_if_no_alnum)
 {
 	int result = 0;
@@ -488,7 +488,7 @@ static int xdl_simplify_non_conflicts(xdfenv_t *xe1, xdmerge_t *m,
 			m = next_m;
 		} else {
 			result++;
-			xdl_merge_two_conflicts(m);
+			git_xdl_merge_two_conflicts(m);
 		}
 	}
 }
@@ -502,7 +502,7 @@ static int xdl_simplify_non_conflicts(xdfenv_t *xe1, xdmerge_t *m,
  *
  * returns < 0 on error, == 0 for no conflicts, else number of conflicts
  */
-static int xdl_do_merge(xdfenv_t *xe1, xdchange_t *xscr1,
+static int git_xdl_do_merge(xdfenv_t *xe1, xdchange_t *xscr1,
 		xdfenv_t *xe2, xdchange_t *xscr2,
 		xmparam_t const *xmp, mmbuffer_t *result)
 {
@@ -552,9 +552,9 @@ static int xdl_do_merge(xdfenv_t *xe1, xdchange_t *xscr1,
 			chg0 = xscr1->chg1;
 			chg1 = xscr1->chg2;
 			chg2 = xscr1->chg1;
-			if (xdl_append_merge(&c, 1,
+			if (git_xdl_append_merge(&c, 1,
 					     i0, chg0, i1, chg1, i2, chg2)) {
-				xdl_cleanup_merge(changes);
+				git_xdl_cleanup_merge(changes);
 				return -1;
 			}
 			xscr1 = xscr1->next;
@@ -567,9 +567,9 @@ static int xdl_do_merge(xdfenv_t *xe1, xdchange_t *xscr1,
 			chg0 = xscr2->chg1;
 			chg1 = xscr2->chg1;
 			chg2 = xscr2->chg2;
-			if (xdl_append_merge(&c, 2,
+			if (git_xdl_append_merge(&c, 2,
 					     i0, chg0, i1, chg1, i2, chg2)) {
-				xdl_cleanup_merge(changes);
+				git_xdl_cleanup_merge(changes);
 				return -1;
 			}
 			xscr2 = xscr2->next;
@@ -578,7 +578,7 @@ static int xdl_do_merge(xdfenv_t *xe1, xdchange_t *xscr1,
 		if (level == XDL_MERGE_MINIMAL || xscr1->i1 != xscr2->i1 ||
 				xscr1->chg1 != xscr2->chg1 ||
 				xscr1->chg2 != xscr2->chg2 ||
-				xdl_merge_cmp_lines(xe1, xscr1->i2,
+				git_xdl_merge_cmp_lines(xe1, xscr1->i2,
 					xe2, xscr2->i2,
 					xscr1->chg2, xpp->flags)) {
 			/* conflict */
@@ -602,9 +602,9 @@ static int xdl_do_merge(xdfenv_t *xe1, xdchange_t *xscr1,
 				chg1 -= ffo;
 			} else
 				chg2 += ffo;
-			if (xdl_append_merge(&c, 0,
+			if (git_xdl_append_merge(&c, 0,
 					     i0, chg0, i1, chg1, i2, chg2)) {
-				xdl_cleanup_merge(changes);
+				git_xdl_cleanup_merge(changes);
 				return -1;
 			}
 		}
@@ -626,9 +626,9 @@ static int xdl_do_merge(xdfenv_t *xe1, xdchange_t *xscr1,
 		chg0 = xscr1->chg1;
 		chg1 = xscr1->chg2;
 		chg2 = xscr1->chg1;
-		if (xdl_append_merge(&c, 1,
+		if (git_xdl_append_merge(&c, 1,
 				     i0, chg0, i1, chg1, i2, chg2)) {
-			xdl_cleanup_merge(changes);
+			git_xdl_cleanup_merge(changes);
 			return -1;
 		}
 		xscr1 = xscr1->next;
@@ -642,9 +642,9 @@ static int xdl_do_merge(xdfenv_t *xe1, xdchange_t *xscr1,
 		chg0 = xscr2->chg1;
 		chg1 = xscr2->chg1;
 		chg2 = xscr2->chg2;
-		if (xdl_append_merge(&c, 2,
+		if (git_xdl_append_merge(&c, 2,
 				     i0, chg0, i1, chg1, i2, chg2)) {
-			xdl_cleanup_merge(changes);
+			git_xdl_cleanup_merge(changes);
 			return -1;
 		}
 		xscr2 = xscr2->next;
@@ -653,35 +653,35 @@ static int xdl_do_merge(xdfenv_t *xe1, xdchange_t *xscr1,
 		changes = c;
 	/* refine conflicts */
 	if (style == XDL_MERGE_ZEALOUS_DIFF3) {
-		xdl_refine_zdiff3_conflicts(xe1, xe2, changes, xpp);
+		git_xdl_refine_zdiff3_conflicts(xe1, xe2, changes, xpp);
 	} else if (XDL_MERGE_ZEALOUS <= level &&
-		   (xdl_refine_conflicts(xe1, xe2, changes, xpp) < 0 ||
-		    xdl_simplify_non_conflicts(xe1, changes,
+		   (git_xdl_refine_conflicts(xe1, xe2, changes, xpp) < 0 ||
+		    git_xdl_simplify_non_conflicts(xe1, changes,
 					       XDL_MERGE_ZEALOUS < level) < 0)) {
-		xdl_cleanup_merge(changes);
+		git_xdl_cleanup_merge(changes);
 		return -1;
 	}
 	/* output */
 	if (result) {
 		int marker_size = xmp->marker_size;
-		int size = xdl_fill_merge_buffer(xe1, name1, xe2, name2,
+		int size = git_xdl_fill_merge_buffer(xe1, name1, xe2, name2,
 						 ancestor_name,
 						 favor, changes, NULL, style,
 						 marker_size);
-		result->ptr = xdl_malloc(size);
+		result->ptr = git_xdl_malloc(size);
 		if (!result->ptr) {
-			xdl_cleanup_merge(changes);
+			git_xdl_cleanup_merge(changes);
 			return -1;
 		}
 		result->size = size;
-		xdl_fill_merge_buffer(xe1, name1, xe2, name2,
+		git_xdl_fill_merge_buffer(xe1, name1, xe2, name2,
 				      ancestor_name, favor, changes,
 				      result->ptr, style, marker_size);
 	}
-	return xdl_cleanup_merge(changes);
+	return git_xdl_cleanup_merge(changes);
 }
 
-int xdl_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
+int git_xdl_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
 		xmparam_t const *xmp, mmbuffer_t *result)
 {
 	xdchange_t *xscr1, *xscr2;
@@ -692,46 +692,46 @@ int xdl_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
 	result->ptr = NULL;
 	result->size = 0;
 
-	if (xdl_do_diff(orig, mf1, xpp, &xe1) < 0) {
+	if (git_xdl_do_diff(orig, mf1, xpp, &xe1) < 0) {
 		return -1;
 	}
-	if (xdl_do_diff(orig, mf2, xpp, &xe2) < 0) {
-		xdl_free_env(&xe1);
+	if (git_xdl_do_diff(orig, mf2, xpp, &xe2) < 0) {
+		git_xdl_free_env(&xe1);
 		return -1;
 	}
-	if (xdl_change_compact(&xe1.xdf1, &xe1.xdf2, xpp->flags) < 0 ||
-	    xdl_change_compact(&xe1.xdf2, &xe1.xdf1, xpp->flags) < 0 ||
-	    xdl_build_script(&xe1, &xscr1) < 0) {
-		xdl_free_env(&xe1);
+	if (git_xdl_change_compact(&xe1.xdf1, &xe1.xdf2, xpp->flags) < 0 ||
+	    git_xdl_change_compact(&xe1.xdf2, &xe1.xdf1, xpp->flags) < 0 ||
+	    git_xdl_build_script(&xe1, &xscr1) < 0) {
+		git_xdl_free_env(&xe1);
 		return -1;
 	}
-	if (xdl_change_compact(&xe2.xdf1, &xe2.xdf2, xpp->flags) < 0 ||
-	    xdl_change_compact(&xe2.xdf2, &xe2.xdf1, xpp->flags) < 0 ||
-	    xdl_build_script(&xe2, &xscr2) < 0) {
-		xdl_free_script(xscr1);
-		xdl_free_env(&xe1);
-		xdl_free_env(&xe2);
+	if (git_xdl_change_compact(&xe2.xdf1, &xe2.xdf2, xpp->flags) < 0 ||
+	    git_xdl_change_compact(&xe2.xdf2, &xe2.xdf1, xpp->flags) < 0 ||
+	    git_xdl_build_script(&xe2, &xscr2) < 0) {
+		git_xdl_free_script(xscr1);
+		git_xdl_free_env(&xe1);
+		git_xdl_free_env(&xe2);
 		return -1;
 	}
 	status = 0;
 	if (!xscr1) {
-		result->ptr = xdl_malloc(mf2->size);
+		result->ptr = git_xdl_malloc(mf2->size);
 		memcpy(result->ptr, mf2->ptr, mf2->size);
 		result->size = mf2->size;
 	} else if (!xscr2) {
-		result->ptr = xdl_malloc(mf1->size);
+		result->ptr = git_xdl_malloc(mf1->size);
 		memcpy(result->ptr, mf1->ptr, mf1->size);
 		result->size = mf1->size;
 	} else {
-		status = xdl_do_merge(&xe1, xscr1,
+		status = git_xdl_do_merge(&xe1, xscr1,
 				      &xe2, xscr2,
 				      xmp, result);
 	}
-	xdl_free_script(xscr1);
-	xdl_free_script(xscr2);
+	git_xdl_free_script(xscr1);
+	git_xdl_free_script(xscr2);
 
-	xdl_free_env(&xe1);
-	xdl_free_env(&xe2);
+	git_xdl_free_env(&xe1);
+	git_xdl_free_env(&xe2);
 
 	return status;
 }

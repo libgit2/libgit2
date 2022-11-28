@@ -42,7 +42,7 @@ typedef struct s_xdpsplit {
  * using this algorithm, so a little bit of heuristic is needed to cut the
  * search and to return a suboptimal point.
  */
-static long xdl_split(unsigned long const *ha1, long off1, long lim1,
+static long git_xdl_split(unsigned long const *ha1, long off1, long lim1,
 		      unsigned long const *ha2, long off2, long lim2,
 		      long *kvdf, long *kvdb, int need_min, xdpsplit_t *spl,
 		      xdalgoenv_t *xenv) {
@@ -253,7 +253,7 @@ static long xdl_split(unsigned long const *ha1, long off1, long lim1,
  * sub-boxes by calling the box splitting function. Note that the real job
  * (marking changed lines) is done in the two boundary reaching checks.
  */
-int xdl_recs_cmp(diffdata_t *dd1, long off1, long lim1,
+int git_xdl_recs_cmp(diffdata_t *dd1, long off1, long lim1,
 		 diffdata_t *dd2, long off2, long lim2,
 		 long *kvdf, long *kvdb, int need_min, xdalgoenv_t *xenv) {
 	unsigned long const *ha1 = dd1->ha, *ha2 = dd2->ha;
@@ -287,7 +287,7 @@ int xdl_recs_cmp(diffdata_t *dd1, long off1, long lim1,
 		/*
 		 * Divide ...
 		 */
-		if (xdl_split(ha1, off1, lim1, ha2, off2, lim2, kvdf, kvdb,
+		if (git_xdl_split(ha1, off1, lim1, ha2, off2, lim2, kvdf, kvdb,
 			      need_min, &spl, xenv) < 0) {
 
 			return -1;
@@ -296,9 +296,9 @@ int xdl_recs_cmp(diffdata_t *dd1, long off1, long lim1,
 		/*
 		 * ... et Impera.
 		 */
-		if (xdl_recs_cmp(dd1, off1, spl.i1, dd2, off2, spl.i2,
+		if (git_xdl_recs_cmp(dd1, off1, spl.i1, dd2, off2, spl.i2,
 				 kvdf, kvdb, spl.min_lo, xenv) < 0 ||
-		    xdl_recs_cmp(dd1, spl.i1, lim1, dd2, spl.i2, lim2,
+		    git_xdl_recs_cmp(dd1, spl.i1, lim1, dd2, spl.i2, lim2,
 				 kvdf, kvdb, spl.min_hi, xenv) < 0) {
 
 			return -1;
@@ -309,7 +309,7 @@ int xdl_recs_cmp(diffdata_t *dd1, long off1, long lim1,
 }
 
 
-int xdl_do_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
+int git_xdl_do_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 		xdfenv_t *xe) {
 	long ndiags;
 	long *kvd, *kvdf, *kvdb;
@@ -317,12 +317,12 @@ int xdl_do_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	diffdata_t dd1, dd2;
 
 	if (XDF_DIFF_ALG(xpp->flags) == XDF_PATIENCE_DIFF)
-		return xdl_do_patience_diff(mf1, mf2, xpp, xe);
+		return git_xdl_do_patience_diff(mf1, mf2, xpp, xe);
 
 	if (XDF_DIFF_ALG(xpp->flags) == XDF_HISTOGRAM_DIFF)
-		return xdl_do_histogram_diff(mf1, mf2, xpp, xe);
+		return git_xdl_do_histogram_diff(mf1, mf2, xpp, xe);
 
-	if (xdl_prepare_env(mf1, mf2, xpp, xe) < 0) {
+	if (git_xdl_prepare_env(mf1, mf2, xpp, xe) < 0) {
 
 		return -1;
 	}
@@ -334,9 +334,9 @@ int xdl_do_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	 * One is to store the forward path and one to store the backward path.
 	 */
 	ndiags = xe->xdf1.nreff + xe->xdf2.nreff + 3;
-	if (!(kvd = (long *) xdl_malloc((2 * ndiags + 2) * sizeof(long)))) {
+	if (!(kvd = (long *) git_xdl_malloc((2 * ndiags + 2) * sizeof(long)))) {
 
-		xdl_free_env(xe);
+		git_xdl_free_env(xe);
 		return -1;
 	}
 	kvdf = kvd;
@@ -344,7 +344,7 @@ int xdl_do_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	kvdf += xe->xdf2.nreff + 1;
 	kvdb += xe->xdf2.nreff + 1;
 
-	xenv.mxcost = xdl_bogosqrt(ndiags);
+	xenv.mxcost = git_xdl_bogosqrt(ndiags);
 	if (xenv.mxcost < XDL_MAX_COST_MIN)
 		xenv.mxcost = XDL_MAX_COST_MIN;
 	xenv.snake_cnt = XDL_SNAKE_CNT;
@@ -359,24 +359,24 @@ int xdl_do_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	dd2.rchg = xe->xdf2.rchg;
 	dd2.rindex = xe->xdf2.rindex;
 
-	if (xdl_recs_cmp(&dd1, 0, dd1.nrec, &dd2, 0, dd2.nrec,
+	if (git_xdl_recs_cmp(&dd1, 0, dd1.nrec, &dd2, 0, dd2.nrec,
 			 kvdf, kvdb, (xpp->flags & XDF_NEED_MINIMAL) != 0, &xenv) < 0) {
 
-		xdl_free(kvd);
-		xdl_free_env(xe);
+		git_xdl_free(kvd);
+		git_xdl_free_env(xe);
 		return -1;
 	}
 
-	xdl_free(kvd);
+	git_xdl_free(kvd);
 
 	return 0;
 }
 
 
-static xdchange_t *xdl_add_change(xdchange_t *xscr, long i1, long i2, long chg1, long chg2) {
+static xdchange_t *git_xdl_add_change(xdchange_t *xscr, long i1, long i2, long chg1, long chg2) {
 	xdchange_t *xch;
 
-	if (!(xch = (xdchange_t *) xdl_malloc(sizeof(xdchange_t))))
+	if (!(xch = (xdchange_t *) git_xdl_malloc(sizeof(xdchange_t))))
 		return NULL;
 
 	xch->next = xscr;
@@ -798,7 +798,7 @@ static int group_slide_up(xdfile_t *xdf, struct xdlgroup *g)
  * This also helps in finding joinable change groups and reducing the diff
  * size.
  */
-int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, long flags) {
+int git_xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, long flags) {
 	struct xdlgroup g, go;
 	long earliest_end, end_matching_other;
 	long groupsize;
@@ -937,7 +937,7 @@ int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, long flags) {
 }
 
 
-int xdl_build_script(xdfenv_t *xe, xdchange_t **xscr) {
+int git_xdl_build_script(xdfenv_t *xe, xdchange_t **xscr) {
 	xdchange_t *cscr = NULL, *xch;
 	char *rchg1 = xe->xdf1.rchg, *rchg2 = xe->xdf2.rchg;
 	long i1, i2, l1, l2;
@@ -950,8 +950,8 @@ int xdl_build_script(xdfenv_t *xe, xdchange_t **xscr) {
 			for (l1 = i1; rchg1[i1 - 1]; i1--);
 			for (l2 = i2; rchg2[i2 - 1]; i2--);
 
-			if (!(xch = xdl_add_change(cscr, i1, i2, l1 - i1, l2 - i2))) {
-				xdl_free_script(cscr);
+			if (!(xch = git_xdl_add_change(cscr, i1, i2, l1 - i1, l2 - i2))) {
+				git_xdl_free_script(cscr);
 				return -1;
 			}
 			cscr = xch;
@@ -963,22 +963,22 @@ int xdl_build_script(xdfenv_t *xe, xdchange_t **xscr) {
 }
 
 
-void xdl_free_script(xdchange_t *xscr) {
+void git_xdl_free_script(xdchange_t *xscr) {
 	xdchange_t *xch;
 
 	while ((xch = xscr) != NULL) {
 		xscr = xscr->next;
-		xdl_free(xch);
+		git_xdl_free(xch);
 	}
 }
 
-static int xdl_call_hunk_func(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
+static int git_xdl_call_hunk_func(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 			      xdemitconf_t const *xecfg)
 {
 	xdchange_t *xch, *xche;
 
 	for (xch = xscr; xch; xch = xche->next) {
-		xche = xdl_get_hunk(&xch, xecfg);
+		xche = git_xdl_get_hunk(&xch, xecfg);
 		if (!xch)
 			break;
 		if (xecfg->hunk_func(xch->i1, xche->i1 + xche->chg1 - xch->i1,
@@ -989,7 +989,7 @@ static int xdl_call_hunk_func(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 	return 0;
 }
 
-static void xdl_mark_ignorable_lines(xdchange_t *xscr, xdfenv_t *xe, long flags)
+static void git_xdl_mark_ignorable_lines(xdchange_t *xscr, xdfenv_t *xe, long flags)
 {
 	xdchange_t *xch;
 
@@ -1000,29 +1000,29 @@ static void xdl_mark_ignorable_lines(xdchange_t *xscr, xdfenv_t *xe, long flags)
 
 		rec = &xe->xdf1.recs[xch->i1];
 		for (i = 0; i < xch->chg1 && ignore; i++)
-			ignore = xdl_blankline(rec[i]->ptr, rec[i]->size, flags);
+			ignore = git_xdl_blankline(rec[i]->ptr, rec[i]->size, flags);
 
 		rec = &xe->xdf2.recs[xch->i2];
 		for (i = 0; i < xch->chg2 && ignore; i++)
-			ignore = xdl_blankline(rec[i]->ptr, rec[i]->size, flags);
+			ignore = git_xdl_blankline(rec[i]->ptr, rec[i]->size, flags);
 
 		xch->ignore = ignore;
 	}
 }
 
 static int record_matches_regex(xrecord_t *rec, xpparam_t const *xpp) {
-	xdl_regmatch_t regmatch;
+	git_xdl_regmatch_t regmatch;
 	int i;
 
 	for (i = 0; i < xpp->ignore_regex_nr; i++)
-		if (!xdl_regexec_buf(xpp->ignore_regex[i], rec->ptr, rec->size, 1,
+		if (!git_xdl_regexec_buf(xpp->ignore_regex[i], rec->ptr, rec->size, 1,
 				 &regmatch, 0))
 			return 1;
 
 	return 0;
 }
 
-static void xdl_mark_ignorable_regex(xdchange_t *xscr, const xdfenv_t *xe,
+static void git_xdl_mark_ignorable_regex(xdchange_t *xscr, const xdfenv_t *xe,
 				     xpparam_t const *xpp)
 {
 	xdchange_t *xch;
@@ -1050,39 +1050,39 @@ static void xdl_mark_ignorable_regex(xdchange_t *xscr, const xdfenv_t *xe,
 	}
 }
 
-int xdl_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
+int git_xdl_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	     xdemitconf_t const *xecfg, xdemitcb_t *ecb) {
 	xdchange_t *xscr;
 	xdfenv_t xe;
-	emit_func_t ef = xecfg->hunk_func ? xdl_call_hunk_func : xdl_emit_diff;
+	emit_func_t ef = xecfg->hunk_func ? git_xdl_call_hunk_func : git_xdl_emit_diff;
 
-	if (xdl_do_diff(mf1, mf2, xpp, &xe) < 0) {
+	if (git_xdl_do_diff(mf1, mf2, xpp, &xe) < 0) {
 
 		return -1;
 	}
-	if (xdl_change_compact(&xe.xdf1, &xe.xdf2, xpp->flags) < 0 ||
-	    xdl_change_compact(&xe.xdf2, &xe.xdf1, xpp->flags) < 0 ||
-	    xdl_build_script(&xe, &xscr) < 0) {
+	if (git_xdl_change_compact(&xe.xdf1, &xe.xdf2, xpp->flags) < 0 ||
+	    git_xdl_change_compact(&xe.xdf2, &xe.xdf1, xpp->flags) < 0 ||
+	    git_xdl_build_script(&xe, &xscr) < 0) {
 
-		xdl_free_env(&xe);
+		git_xdl_free_env(&xe);
 		return -1;
 	}
 	if (xscr) {
 		if (xpp->flags & XDF_IGNORE_BLANK_LINES)
-			xdl_mark_ignorable_lines(xscr, &xe, xpp->flags);
+			git_xdl_mark_ignorable_lines(xscr, &xe, xpp->flags);
 
 		if (xpp->ignore_regex)
-			xdl_mark_ignorable_regex(xscr, &xe, xpp);
+			git_xdl_mark_ignorable_regex(xscr, &xe, xpp);
 
 		if (ef(&xe, xscr, ecb, xecfg) < 0) {
 
-			xdl_free_script(xscr);
-			xdl_free_env(&xe);
+			git_xdl_free_script(xscr);
+			git_xdl_free_env(&xe);
 			return -1;
 		}
-		xdl_free_script(xscr);
+		git_xdl_free_script(xscr);
 	}
-	xdl_free_env(&xe);
+	git_xdl_free_env(&xe);
 
 	return 0;
 }
