@@ -40,10 +40,6 @@ cc_library(
         "GIT_THREADS=1",
     ],
     includes = ["."],
-    linkopts = select({
-        "//:regex_builtin": ["-lpcre"],
-        "//:regex_pcre": ["-lpcre"],
-    }),
     strip_include_prefix = ".",
     deps = [
         "//:headers",
