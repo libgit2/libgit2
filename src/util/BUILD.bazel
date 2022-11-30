@@ -35,6 +35,10 @@ cc_library(
             "hash/rfc6234/sha224-256.c",
         ],
     }),
+    linkopts = select({
+	"@platforms//os:windows": ['-DEFAULTLIB:Advapi32'],
+	"//conditions:default": [],
+    }),
     hdrs = glob(["*.h"]),
     defines = [
         "GIT_THREADS=1",
