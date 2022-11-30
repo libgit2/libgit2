@@ -5,5 +5,5 @@ module(
 )
 
 bazel_dep(name = "zlib", version = "1.2.12")
-bazel_dep(name = "rules_cc", version = "0.0.1")
+bazel_dep(name = "rules_cc", version = "0.0.2")
 bazel_dep(name = "platforms", version = "0.0.4")
