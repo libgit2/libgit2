@@ -1,1 +1,1 @@
-common --experimental_enable_bzlmod
+common --enable_bzlmod
