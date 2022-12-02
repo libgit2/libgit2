@@ -32,6 +32,8 @@
 #define GIT_CAP_SYMREF "symref"
 #define GIT_CAP_WANT_TIP_SHA1 "allow-tip-sha1-in-want"
 #define GIT_CAP_WANT_REACHABLE_SHA1 "allow-reachable-sha1-in-want"
+#define GIT_CAP_OBJECT_FORMAT "object-format="
+#define GIT_CAP_AGENT "agent="
 
 extern bool git_smart__ofs_delta_enabled;
 
@@ -133,6 +135,8 @@ typedef struct transport_smart_caps {
 	             thin_pack:1,
 	             want_tip_sha1:1,
 	             want_reachable_sha1:1;
+	char *object_format;
+	char *agent;
 } transport_smart_caps;
 
 typedef int (*packetsize_cb)(size_t received, void *payload);

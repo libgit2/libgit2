@@ -134,9 +134,12 @@ on_invalid:
 	return -1;
 }
 
-int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vector *symrefs)
+int git_smart__detect_caps(
+	git_pkt_ref *pkt,
+	transport_smart_caps *caps,
+	git_vector *symrefs)
 {
-	const char *ptr;
+	const char *ptr, *start;
 
 	/* No refs or capabilities, odd but not a problem */
 	if (pkt == NULL || pkt->capabilities == NULL)
@@ -215,6 +218,28 @@ int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vec
 		if (!git__prefixcmp(ptr, GIT_CAP_WANT_REACHABLE_SHA1)) {
 			caps->common = caps->want_reachable_sha1 = 1;
 			ptr += strlen(GIT_CAP_WANT_REACHABLE_SHA1);
+			continue;
+		}
+
+		if (!git__prefixcmp(ptr, GIT_CAP_OBJECT_FORMAT)) {
+			ptr += strlen(GIT_CAP_OBJECT_FORMAT);
+
+			start = ptr;
+			ptr = strchr(ptr, ' ');
+
+			if ((caps->object_format = git__strndup(start, (ptr - start))) == NULL)
+				return -1;
+			continue;
+		}
+
+		if (!git__prefixcmp(ptr, GIT_CAP_AGENT)) {
+			ptr += strlen(GIT_CAP_AGENT);
+
+			start = ptr;
+			ptr = strchr(ptr, ' ');
+
+			if ((caps->agent = git__strndup(start, (ptr - start))) == NULL)
+				return -1;
 			continue;
 		}
 

@@ -95,7 +95,6 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 	git_remote_head **heads;
 	git_refspec tagspec, head, *spec;
 	int error = 0;
-	git_odb *odb;
 	size_t i, heads_len;
 	unsigned int remote_caps;
 	unsigned int oid_mask = GIT_REMOTE_CAPABILITY_TIP_OID |
@@ -125,9 +124,6 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 		if (error < 0)
 			goto cleanup;
 	}
-
-	if ((error = git_repository_odb__weakptr(&odb, remote->repo)) < 0)
-		goto cleanup;
 
 	if ((error = git_remote_ls((const git_remote_head ***)&heads, &heads_len, remote)) < 0 ||
 	    (error = git_remote_capabilities(&remote_caps, remote)) < 0)

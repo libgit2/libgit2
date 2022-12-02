@@ -56,5 +56,37 @@ int git_remote_connect_options_normalize(
 	const git_remote_connect_options *src);
 
 int git_remote_capabilities(unsigned int *out, git_remote *remote);
+int git_remote_oid_type(git_oid_t *out, git_remote *remote);
+
+
+#define git_remote_connect_options__copy_opts(out, in) \
+	if (in) { \
+		(out)->callbacks = (in)->callbacks; \
+		(out)->proxy_opts = (in)->proxy_opts; \
+		(out)->custom_headers = (in)->custom_headers; \
+		(out)->follow_redirects = (in)->follow_redirects; \
+	}
+
+GIT_INLINE(int) git_remote_connect_options__from_fetch_opts(
+	git_remote_connect_options *out,
+	git_remote *remote,
+	const git_fetch_options *fetch_opts)
+{
+	git_remote_connect_options tmp = GIT_REMOTE_CONNECT_OPTIONS_INIT;
+	git_remote_connect_options__copy_opts(&tmp, fetch_opts);
+	return git_remote_connect_options_normalize(out, remote->repo, &tmp);
+}
+
+GIT_INLINE(int) git_remote_connect_options__from_push_opts(
+	git_remote_connect_options *out,
+	git_remote *remote,
+	const git_push_options *push_opts)
+{
+	git_remote_connect_options tmp = GIT_REMOTE_CONNECT_OPTIONS_INIT;
+	git_remote_connect_options__copy_opts(&tmp, push_opts);
+	return git_remote_connect_options_normalize(out, remote->repo, &tmp);
+}
+
+#undef git_remote_connect_options__copy_opts
 
 #endif

@@ -21,11 +21,14 @@
 
 #include <ctype.h>
 
-#define PKT_LEN_SIZE 4
-static const char pkt_done_str[] = "0009done\n";
-static const char pkt_flush_str[] = "0000";
-static const char pkt_have_prefix[] = "0032have ";
-static const char pkt_want_prefix[] = "0032want ";
+#define PKT_DONE_STR    "0009done\n"
+#define PKT_FLUSH_STR   "0000"
+#define PKT_HAVE_PREFIX "have "
+#define PKT_WANT_PREFIX "want "
+
+#define PKT_LEN_SIZE    4
+#define PKT_MAX_SIZE    0xffff
+#define PKT_MAX_WANTLEN (PKT_LEN_SIZE + CONST_STRLEN(PKT_WANT_PREFIX) + GIT_OID_MAX_HEXSIZE + 1)
 
 static int flush_pkt(git_pkt **out)
 {
@@ -598,16 +601,20 @@ void git_pkt_free(git_pkt *pkt)
 
 int git_pkt_buffer_flush(git_str *buf)
 {
-	return git_str_put(buf, pkt_flush_str, strlen(pkt_flush_str));
+	return git_str_put(buf, PKT_FLUSH_STR, CONST_STRLEN(PKT_FLUSH_STR));
 }
 
-static int buffer_want_with_caps(const git_remote_head *head, transport_smart_caps *caps, git_str *buf)
+static int buffer_want_with_caps(
+	const git_remote_head *head,
+	transport_smart_caps *caps,
+	git_oid_t oid_type,
+	git_str *buf)
 {
 	git_str str = GIT_STR_INIT;
-	char oid[GIT_OID_MAX_HEXSIZE + 1] = {0};
+	char oid[GIT_OID_MAX_HEXSIZE];
 	size_t oid_hexsize, len;
 
-	oid_hexsize = git_oid_hexsize(head->oid.type);
+	oid_hexsize = git_oid_hexsize(oid_type);
 	git_oid_fmt(oid, &head->oid);
 
 	/* Prefer multi_ack_detailed */
@@ -634,18 +641,19 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 	if (git_str_oom(&str))
 		return -1;
 
-	len = strlen("XXXXwant ") + oid_hexsize + 1 /* NUL */ +
-		 git_str_len(&str) + 1 /* LF */;
-
-	if (len > 0xffff) {
+	if (str.size > (PKT_MAX_SIZE - (PKT_MAX_WANTLEN + 1))) {
 		git_error_set(GIT_ERROR_NET,
-			"tried to produce packet with invalid length %" PRIuZ, len);
+			"tried to produce packet with invalid caps length %" PRIuZ, str.size);
 		return -1;
 	}
 
+	len = PKT_LEN_SIZE + CONST_STRLEN(PKT_WANT_PREFIX) +
+	      oid_hexsize + 1 /* NUL */ +
+	      git_str_len(&str) + 1 /* LF */;
+
 	git_str_grow_by(buf, len);
 	git_str_printf(buf,
-		"%04xwant %.*s %s\n", (unsigned int)len,
+		"%04x%s%.*s %s\n", (unsigned int)len, PKT_WANT_PREFIX,
 		(int)oid_hexsize, oid, git_str_cstr(&str));
 	git_str_dispose(&str);
 
@@ -665,8 +673,21 @@ int git_pkt_buffer_wants(
 	transport_smart_caps *caps,
 	git_str *buf)
 {
-	size_t i = 0;
 	const git_remote_head *head;
+	char oid[GIT_OID_MAX_HEXSIZE];
+	git_oid_t oid_type;
+	size_t oid_hexsize, want_len, i = 0;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	oid_type = count > 0 ? refs[0]->oid.type : GIT_OID_SHA1;
+#else
+	oid_type = GIT_OID_SHA1;
+#endif
+
+	oid_hexsize = git_oid_hexsize(oid_type);
+
+	want_len = PKT_LEN_SIZE + CONST_STRLEN(PKT_WANT_PREFIX) +
+	      oid_hexsize + 1 /* LF */;
 
 	if (caps->common) {
 		for (; i < count; ++i) {
@@ -675,15 +696,13 @@ int git_pkt_buffer_wants(
 				break;
 		}
 
-		if (buffer_want_with_caps(refs[i], caps, buf) < 0)
+		if (buffer_want_with_caps(refs[i], caps, oid_type, buf) < 0)
 			return -1;
 
 		i++;
 	}
 
 	for (; i < count; ++i) {
-		char oid[GIT_OID_MAX_HEXSIZE];
-
 		head = refs[i];
 
 		if (head->local)
@@ -691,9 +710,9 @@ int git_pkt_buffer_wants(
 
 		git_oid_fmt(oid, &head->oid);
 
-		git_str_put(buf, pkt_want_prefix, strlen(pkt_want_prefix));
-		git_str_put(buf, oid, git_oid_hexsize(head->oid.type));
-		git_str_putc(buf, '\n');
+		git_str_printf(buf, "%04x%s%.*s\n",
+			(unsigned int)want_len, PKT_WANT_PREFIX,
+			(int)oid_hexsize, oid);
 
 		if (git_str_oom(buf))
 			return -1;
@@ -704,14 +723,27 @@ int git_pkt_buffer_wants(
 
 int git_pkt_buffer_have(git_oid *oid, git_str *buf)
 {
-	char oidhex[GIT_OID_SHA1_HEXSIZE + 1];
+	char oid_str[GIT_OID_MAX_HEXSIZE];
+	git_oid_t oid_type;
+	size_t oid_hexsize, have_len;
 
-	memset(oidhex, 0x0, sizeof(oidhex));
-	git_oid_fmt(oidhex, oid);
-	return git_str_printf(buf, "%s%s\n", pkt_have_prefix, oidhex);
+#ifdef GIT_EXPERIMENTAL_SHA256
+	oid_type = oid->type;
+#else
+	oid_type = GIT_OID_SHA1;
+#endif
+
+	oid_hexsize = git_oid_hexsize(oid_type);
+	have_len = PKT_LEN_SIZE + CONST_STRLEN(PKT_HAVE_PREFIX) +
+	      oid_hexsize + 1 /* LF */;
+
+	git_oid_fmt(oid_str, oid);
+	return git_str_printf(buf, "%04x%s%.*s\n",
+		(unsigned int)have_len, PKT_HAVE_PREFIX,
+		(int)oid_hexsize, oid_str);
 }
 
 int git_pkt_buffer_done(git_str *buf)
 {
-	return git_str_puts(buf, pkt_done_str);
+	return git_str_put(buf, PKT_DONE_STR, CONST_STRLEN(PKT_DONE_STR));
 }

@@ -56,8 +56,8 @@ struct git_indexer {
 	git_vector deltas;
 	unsigned int fanout[256];
 	git_hash_ctx hash_ctx;
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
-	char name[(GIT_HASH_SHA1_SIZE * 2) + 1];
+	unsigned char checksum[GIT_HASH_MAX_SIZE];
+	char name[(GIT_HASH_MAX_SIZE * 2) + 1];
 	git_indexer_progress_cb progress_cb;
 	void *progress_payload;
 	char objbuf[8*1024];
@@ -69,7 +69,7 @@ struct git_indexer {
 	git_odb *odb;
 
 	/* Fields for calculating the packfile trailer (hash of everything before it) */
-	char inbuf[GIT_OID_MAX_SIZE];
+	char inbuf[GIT_HASH_MAX_SIZE];
 	size_t inbuf_len;
 	git_hash_ctx trailer;
 };
@@ -137,6 +137,20 @@ int git_indexer_init_options(git_indexer_options *opts, unsigned int version)
 }
 #endif
 
+GIT_INLINE(git_hash_algorithm_t) indexer_hash_algorithm(git_indexer *idx)
+{
+	switch (idx->oid_type) {
+		case GIT_OID_SHA1:
+			return GIT_HASH_ALGORITHM_SHA1;
+#ifdef GIT_EXPERIMENTAL_SHA256
+		case GIT_OID_SHA256:
+			return GIT_HASH_ALGORITHM_SHA256;
+#endif
+	}
+
+	return GIT_HASH_ALGORITHM_NONE;
+}
+
 static int indexer_new(
 	git_indexer **out,
 	const char *prefix,
@@ -149,6 +163,7 @@ static int indexer_new(
 	git_indexer *idx;
 	git_str path = GIT_STR_INIT, tmp_path = GIT_STR_INIT;
 	static const char suff[] = "/pack";
+	git_hash_algorithm_t checksum_type;
 	int error, fd = -1;
 
 	if (in_opts)
@@ -163,8 +178,10 @@ static int indexer_new(
 	idx->mode = mode ? mode : GIT_PACK_FILE_MODE;
 	git_str_init(&idx->entry_data, 0);
 
-	if ((error = git_hash_ctx_init(&idx->hash_ctx, GIT_HASH_ALGORITHM_SHA1)) < 0 ||
-	    (error = git_hash_ctx_init(&idx->trailer, GIT_HASH_ALGORITHM_SHA1)) < 0 ||
+	checksum_type = indexer_hash_algorithm(idx);
+
+	if ((error = git_hash_ctx_init(&idx->hash_ctx, checksum_type)) < 0 ||
+	    (error = git_hash_ctx_init(&idx->trailer, checksum_type)) < 0 ||
 	    (error = git_oidmap_new(&idx->expected_oids)) < 0)
 		goto cleanup;
 
@@ -182,8 +199,7 @@ static int indexer_new(
 	if (fd < 0)
 		goto cleanup;
 
-	/* TODO: SHA256 */
-	error = git_packfile_alloc(&idx->pack, git_str_cstr(&tmp_path), 0);
+	error = git_packfile_alloc(&idx->pack, git_str_cstr(&tmp_path), oid_type);
 	git_str_dispose(&tmp_path);
 
 	if (error < 0)
@@ -614,7 +630,7 @@ static int do_progress_callback(git_indexer *idx, git_indexer_progress *stats)
 	return 0;
 }
 
-/* Hash everything but the last 20B of input */
+/* Hash everything but the checksum trailer */
 static void hash_partially(git_indexer *idx, const uint8_t *data, size_t size)
 {
 	size_t to_expell, to_keep;
@@ -623,7 +639,10 @@ static void hash_partially(git_indexer *idx, const uint8_t *data, size_t size)
 	if (size == 0)
 		return;
 
-	/* Easy case, dump the buffer and the data minus the last 20 bytes */
+	/*
+	 * Easy case, dump the buffer and the data minus the trailing
+	 * checksum (SHA1 or SHA256).
+	 */
 	if (size >= oid_size) {
 		git_hash_update(&idx->trailer, idx->inbuf, idx->inbuf_len);
 		git_hash_update(&idx->trailer, data, size - oid_size);
@@ -761,12 +780,14 @@ static int read_stream_object(git_indexer *idx, git_indexer_progress *stats)
 {
 	git_packfile_stream *stream = &idx->stream;
 	off64_t entry_start = idx->off;
-	size_t entry_size;
+	size_t oid_size, entry_size;
 	git_object_t type;
 	git_mwindow *w = NULL;
 	int error;
 
-	if (idx->pack->mwf.size <= idx->off + 20)
+	oid_size = git_oid_size(idx->oid_type);
+
+	if (idx->pack->mwf.size <= idx->off + (long long)oid_size)
 		return GIT_EBUFS;
 
 	if (!idx->have_stream) {
@@ -963,14 +984,16 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	git_odb_object *obj = NULL;
 	struct entry *entry = NULL;
 	struct git_pack_entry *pentry = NULL;
-	unsigned char empty_checksum[GIT_HASH_SHA1_SIZE] = {0};
+	unsigned char empty_checksum[GIT_HASH_MAX_SIZE] = {0};
 	unsigned char hdr[64];
 	git_str buf = GIT_STR_INIT;
 	off64_t entry_start;
 	const void *data;
 	size_t len, hdr_len;
-	size_t checksum_size = GIT_HASH_SHA1_SIZE;
+	size_t checksum_size;
 	int error;
+
+	checksum_size = git_hash_size(indexer_hash_algorithm(idx));
 
 	if ((error = seek_back_trailer(idx)) < 0)
 		goto cleanup;
@@ -1205,16 +1228,19 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 	struct git_pack_idx_header hdr;
 	git_str filename = GIT_STR_INIT;
 	struct entry *entry;
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	unsigned char checksum[GIT_HASH_MAX_SIZE];
 	git_filebuf index_file = {0};
 	void *packfile_trailer;
-	size_t checksum_size = GIT_HASH_SHA1_SIZE;
+	size_t checksum_size;
 	bool mismatch;
 
 	if (!idx->parsed_header) {
 		git_error_set(GIT_ERROR_INDEXER, "incomplete pack header");
 		return -1;
 	}
+
+	checksum_size = git_hash_size(indexer_hash_algorithm(idx));
+	GIT_ASSERT(checksum_size);
 
 	/* Test for this before resolve_deltas(), as it plays with idx->off */
 	if (idx->off + (ssize_t)checksum_size < idx->pack->mwf.size) {
