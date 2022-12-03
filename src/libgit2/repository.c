@@ -76,8 +76,8 @@ static int load_objectformat(git_repository *repo, git_config *config);
 
 #define GIT_BRANCH_DEFAULT "master"
 
-#define GIT_REPO_VERSION 0
-#define GIT_REPO_MAX_VERSION 1
+#define GIT_REPO_VERSION_DEFAULT 0
+#define GIT_REPO_VERSION_MAX 1
 
 git_str git_repository__reserved_names_win32[] = {
 	{ DOT_GIT, 0, CONST_STRLEN(DOT_GIT) },
@@ -1016,7 +1016,8 @@ int git_repository_open_ext(
 	if (error < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
 
-	if (config && (error = check_repositoryformatversion(&version, config)) < 0)
+	if (config &&
+	    (error = check_repositoryformatversion(&version, config)) < 0)
 		goto cleanup;
 
 	if ((error = check_extensions(config, version)) < 0)
@@ -1539,6 +1540,7 @@ static int check_repositoryformatversion(int *version, git_config *config)
 	int error;
 
 	error = git_config_get_int32(version, config, "core.repositoryformatversion");
+
 	/* git ignores this if the config variable isn't there */
 	if (error == GIT_ENOTFOUND)
 		return 0;
@@ -1546,10 +1548,15 @@ static int check_repositoryformatversion(int *version, git_config *config)
 	if (error < 0)
 		return -1;
 
-	if (GIT_REPO_MAX_VERSION < *version) {
+	if (*version < 0) {
+		git_error_set(GIT_ERROR_REPOSITORY,
+			"invalid repository version %d", *version);
+	}
+
+	if (GIT_REPO_VERSION_MAX < *version) {
 		git_error_set(GIT_ERROR_REPOSITORY,
 			"unsupported repository version %d; only versions up to %d are supported",
-			*version, GIT_REPO_MAX_VERSION);
+			*version, GIT_REPO_VERSION_MAX);
 		return -1;
 	}
 
@@ -1963,12 +1970,13 @@ static int repo_init_config(
 	git_config *config = NULL;
 	bool is_bare = ((flags & GIT_REPOSITORY_INIT_BARE) != 0);
 	bool is_reinit = ((flags & GIT_REPOSITORY_INIT__IS_REINIT) != 0);
-	int version = 0;
+	int version = GIT_REPO_VERSION_DEFAULT;
 
 	if ((error = repo_local_config(&config, &cfg_path, NULL, repo_dir)) < 0)
 		goto cleanup;
 
-	if (is_reinit && (error = check_repositoryformatversion(&version, config)) < 0)
+	if (is_reinit &&
+	    (error = check_repositoryformatversion(&version, config)) < 0)
 		goto cleanup;
 
 	if ((error = check_extensions(config, version)) < 0)
@@ -1979,7 +1987,7 @@ static int repo_init_config(
 		goto cleanup; } while (0)
 
 	SET_REPO_CONFIG(bool, "core.bare", is_bare);
-	SET_REPO_CONFIG(int32, "core.repositoryformatversion", GIT_REPO_VERSION);
+	SET_REPO_CONFIG(int32, "core.repositoryformatversion", version);
 
 	if ((error = repo_init_fs_configs(
 			config, cfg_path.ptr, repo_dir, work_dir, !is_reinit)) < 0)
