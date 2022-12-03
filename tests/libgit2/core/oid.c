@@ -192,3 +192,22 @@ void test_core_oid__fmt_substr_sha1(void)
 	git_oid_fmt_substr(buf, &id_sha1, 5, 6);
 	cl_assert_equal_s(buf, "12eea6");
 }
+
+void test_core_oid__type_lookup(void)
+{
+	cl_assert_equal_i(GIT_OID_SHA1, git_oid_type_fromstr("sha1"));
+	cl_assert_equal_i(GIT_OID_SHA1, git_oid_type_fromstrn("sha1...", 4));
+	cl_assert_equal_s("sha1", git_oid_type_name(GIT_OID_SHA1));
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_assert_equal_i(GIT_OID_SHA256, git_oid_type_fromstr("sha256"));
+	cl_assert_equal_i(GIT_OID_SHA256, git_oid_type_fromstrn("sha256...", 6));
+	cl_assert_equal_s("sha256", git_oid_type_name(GIT_OID_SHA256));
+#endif
+
+	cl_assert_equal_i(0, git_oid_type_fromstr("sha42"));
+	cl_assert_equal_i(0, git_oid_type_fromstrn("sha1", 3));
+	cl_assert_equal_i(0, git_oid_type_fromstrn("sha1...", 5));
+	cl_assert_equal_s("unknown", git_oid_type_name(0));
+	cl_assert_equal_s("unknown", git_oid_type_name(42));
+}
