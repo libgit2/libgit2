@@ -1648,6 +1648,36 @@ done:
 	return error;
 }
 
+int git_repository__set_objectformat(
+	git_repository *repo,
+	git_oid_t oid_type)
+{
+	git_config *cfg;
+
+	/*
+	 * Older clients do not necessarily understand the
+	 * `objectformat` extension, even when it's set to an
+	 * object format that they understand (SHA1). Do not set
+	 * the objectformat extension unless we're not using the
+	 * default object format.
+	 */
+	if (oid_type == GIT_OID_DEFAULT)
+		return 0;
+
+	if (git_repository_config__weakptr(&cfg, repo) < 0)
+		return -1;
+
+	if (git_config_set_int32(cfg,
+			"core.repositoryformatversion", 1) < 0 ||
+	    git_config_set_string(cfg, "extensions.objectformat",
+			git_oid_type_name(oid_type)) < 0)
+		return -1;
+
+	repo->oid_type = oid_type;
+
+	return 0;
+}
+
 int git_repository__extensions(char ***out, size_t *out_len)
 {
 	git_vector extensions;
