@@ -1674,6 +1674,12 @@ int git_repository__set_objectformat(
 	if (oid_type == GIT_OID_DEFAULT)
 		return 0;
 
+	if (!git_repository_is_empty(repo) && repo->oid_type != oid_type) {
+		git_error_set(GIT_ERROR_REPOSITORY,
+			"cannot change object id type of existing repository");
+		return -1;
+	}
+
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		return -1;
 
@@ -1683,7 +1689,18 @@ int git_repository__set_objectformat(
 			git_oid_type_name(oid_type)) < 0)
 		return -1;
 
-	repo->oid_type = oid_type;
+	/*
+	 * During repo init, we may create some backends with the
+	 * default oid type. Clear them so that we create them with
+	 * the proper oid type.
+	 */
+	if (repo->oid_type != oid_type) {
+		set_index(repo, NULL);
+		set_odb(repo, NULL);
+		set_refdb(repo, NULL);
+
+		repo->oid_type = oid_type;
+	}
 
 	return 0;
 }
