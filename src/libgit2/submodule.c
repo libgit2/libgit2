@@ -1393,7 +1393,7 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 		 */
 		clone_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
 
-		if ((error = git_clone(&sub_repo, submodule_url, sm->path, &clone_options)) < 0 ||
+		if ((error = git_clone__submodule(&sub_repo, submodule_url, sm->path, &clone_options)) < 0 ||
 			(error = git_repository_set_head_detached(sub_repo, git_submodule_index_id(sm))) < 0 ||
 			(error = git_checkout_head(sub_repo, &update_options.checkout_opts)) != 0)
 			goto done;
