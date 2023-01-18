@@ -1,3 +1,14 @@
+v1.5.1
+------
+
+🔒 This is a security release to address CVE-2023-22742: when compiled using the optional, included libssh2 backend, libgit2 fails to verify SSH keys by default.
+
+When using an SSH remote with the optional, included libssh2 backend, libgit2 does not perform certificate checking by default. Prior versions of libgit2 require the caller to set the `certificate_check` field of libgit2's `git_remote_callbacks` structure - if a certificate check callback is not set, libgit2 does not perform any certificate checking. This means that by default - without configuring a certificate check callback, clients will not perform validation on the server SSH keys and may be subject to a man-in-the-middle attack.
+
+The libgit2 security team would like to thank the Julia and Rust security teams for responsibly disclosing this vulnerability and assisting with fixing the vulnerability.
+
+All users of the v1.5 release line are recommended to upgrade.
+
 v1.5
 ----
 
