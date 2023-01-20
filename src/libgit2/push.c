@@ -395,7 +395,7 @@ static int calculate_work(git_push *push)
 				return -1;
 			}
 
-			git_oid_cpy(git_object_id(obj), &spec->loid);
+			git_oid_cpy(&spec->loid, git_object_id(obj));
 			git_object_free(obj);
 		}
 
