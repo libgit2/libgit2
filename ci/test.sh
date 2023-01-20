@@ -144,6 +144,11 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 		echo "[localhost]:2222 $algorithm $key" >>"${HOME}/.ssh/known_hosts"
 	done <"${SSHD_DIR}/id_rsa.pub"
 
+	# Append the github.com keys for the tests that don't override checks.
+	# We ask for ssh-rsa to test that the selection based off of known_hosts
+	# is working.
+	ssh-keyscan -t ssh-rsa github.com >>"${HOME}/.ssh/known_hosts"
+
 	# Get the fingerprint for localhost and remove the colons so we can
 	# parse it as a hex number. Older versions have a different output
 	# format.
