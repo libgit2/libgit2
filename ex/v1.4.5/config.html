@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>config.c</title>
+  <link rel="stylesheet" href="../css.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#v1.4.5">API Docs</a>
+          <a class="source" href="add.html">add.c</a>
+          <a class="source" href="args.html">args.c</a>
+          <a class="source" href="blame.html">blame.c</a>
+          <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="checkout.html">checkout.c</a>
+          <a class="source" href="clone.html">clone.c</a>
+          <a class="source" href="commit.html">commit.c</a>
+          <a class="source" href="common.html">common.c</a>
+          <a class="source" href="config.html">config.c</a>
+          <a class="source" href="describe.html">describe.c</a>
+          <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="fetch.html">fetch.c</a>
+          <a class="source" href="for-each-ref.html">for-each-ref.c</a>
+          <a class="source" href="general.html">general.c</a>
+          <a class="source" href="index-pack.html">index-pack.c</a>
+          <a class="source" href="init.html">init.c</a>
+          <a class="source" href="lg2.html">lg2.c</a>
+          <a class="source" href="log.html">log.c</a>
+          <a class="source" href="ls-files.html">ls-files.c</a>
+          <a class="source" href="ls-remote.html">ls-remote.c</a>
+          <a class="source" href="merge.html">merge.c</a>
+          <a class="source" href="push.html">push.c</a>
+          <a class="source" href="remote.html">remote.c</a>
+          <a class="source" href="rev-list.html">rev-list.c</a>
+          <a class="source" href="rev-parse.html">rev-parse.c</a>
+          <a class="source" href="show-index.html">show-index.c</a>
+          <a class="source" href="stash.html">stash.c</a>
+          <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>config.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
+<span class="cm"> * libgit2 &quot;config&quot; example - shows how to use the config API</span>
+<span class="cm"> *</span>
+<span class="cm"> * Written by the libgit2 contributors</span>
+<span class="cm"> *</span>
+<span class="cm"> * To the extent possible under law, the author(s) have dedicated all copyright</span>
+<span class="cm"> * and related and neighboring rights to this software to the public domain</span>
+<span class="cm"> * worldwide. This software is distributed without any warranty.</span>
+<span class="cm"> *</span>
+<span class="cm"> * You should have received a copy of the CC0 Public Domain Dedication along</span>
+<span class="cm"> * with this software. If not, see</span>
+<span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
+<span class="cm"> */</span>
+
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">config_get</span><span class="p">(</span><span class="n">git_config</span> <span class="o">*</span><span class="n">cfg</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">key</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_config_entry</span> <span class="o">*</span><span class="n">entry</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_config_get_entry-4" class="fnlink" href="../../#v1.4.5/group/config/git_config_get_entry">git_config_get_entry</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">entry</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">!=</span> <span class="n">GIT_ENOTFOUND</span><span class="p">)</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Unable to get configuration: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-6" class="fnlink" href="../../#v1.4.5/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="n">puts</span><span class="p">(</span><span class="n">entry</span><span class="o">-&gt;</span><span class="n">value</span><span class="p">);</span>
+
+  <span class="cm">/* Free the git_config_entry after use with `<a name="git_config_entry_free-1" class="fnlink" href="../../#v1.4.5/group/config/git_config_entry_free">git_config_entry_free</a>()`. */</span>
+  <span class="n"><a name="git_config_entry_free-2" class="fnlink" href="../../#v1.4.5/group/config/git_config_entry_free">git_config_entry_free</a></span><span class="p">(</span><span class="n">entry</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">config_set</span><span class="p">(</span><span class="n">git_config</span> <span class="o">*</span><span class="n">cfg</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">key</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">value</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_config_set_string-5" class="fnlink" href="../../#v1.4.5/group/config/git_config_set_string">git_config_set_string</a></span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Unable to set configuration: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-7" class="fnlink" href="../../#v1.4.5/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">lg2_config</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_config</span> <span class="o">*</span><span class="n">cfg</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_repository_config-9" class="fnlink" href="../../#v1.4.5/group/repository/git_repository_config">git_repository_config</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">,</span> <span class="n">repo</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Unable to obtain repository config: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-8" class="fnlink" href="../../#v1.4.5/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="k">goto</span> <span class="n">out</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="n">config_get</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="n">config_set</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;USAGE: %s config &lt;KEY&gt; [&lt;VALUE&gt;]</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>The configuration file must be freed once it&#39;s no longer
+being used by the user.</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n"><a name="git_config_free-3" class="fnlink" href="../../#v1.4.5/group/config/git_config_free">git_config_free</a></span><span class="p">(</span><span class="n">cfg</span><span class="p">);</span>
+<span class="nl">out</span><span class="p">:</span>
+  <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
