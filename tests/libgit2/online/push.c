@@ -841,13 +841,28 @@ void test_online_push__bad_refspecs(void)
 
 void test_online_push__expressions(void)
 {
-	/* TODO: Expressions in refspecs doesn't actually work yet */
-	const char *specs_left_expr[] = { "refs/heads/b2~1:refs/heads/b2" };
+	const char *specs_left_expr[] = {
+		"refs/heads/b3~1:refs/heads/b2",
+		"b4:refs/heads/b4",
+		"fa38b91f199934685819bea316186d8b008c52a2:refs/heads/b5",
+		"951bbbb:refs/heads/b6"
+	};
+	push_status exp_stats[] = {
+		{ "refs/heads/b2", 1 },
+		{ "refs/heads/b4", 1 },
+		{ "refs/heads/b5", 1 },
+		{ "refs/heads/b6", 1 }
+	};
+	expected_ref exp_refs[] = {
+		{ "refs/heads/b2", &_oid_b2 },
+		{ "refs/heads/b4", &_oid_b4 },
+		{ "refs/heads/b5", &_oid_b5 },
+		{ "refs/heads/b6", &_oid_b6 }
+	};
 
-	/* TODO: Find a more precise way of checking errors than a exit code of -1. */
 	do_push(specs_left_expr, ARRAY_SIZE(specs_left_expr),
-		NULL, 0,
-		NULL, 0, -1, 0, 0);
+		exp_stats, ARRAY_SIZE(exp_stats),
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
 }
 
 void test_online_push__notes(void)
