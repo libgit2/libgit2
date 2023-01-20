@@ -141,7 +141,7 @@
 <span class="k">static</span> <span class="kt">int</span> <span class="nf">parse_revision</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">parse_state</span> <span class="o">*</span><span class="n">ps</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_revspec</span> <span class="n">rs</span><span class="p">;</span>
-  <span class="kt">char</span> <span class="n">str</span><span class="p">[</span><span class="n">GIT_OID_SHA1_HEXSIZE</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
+  <span class="kt">char</span> <span class="n">str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
 
   <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse-14" class="fnlink" href="../../#HEAD/group/revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">rs</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">),</span> <span class="s">&quot;Could not parse&quot;</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">);</span>
 
