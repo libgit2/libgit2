@@ -16,6 +16,7 @@
 #include "netops.h"
 #include "smart.h"
 #include "streams/socket.h"
+#include "sysdir.h"
 
 #include "git2/credential.h"
 #include "git2/sys/credential.h"
@@ -421,7 +422,8 @@ static int request_creds(git_credential **out, ssh_subtransport *t, const char *
 	return 0;
 }
 
-#define KNOWN_HOSTS_FILE ".ssh/known_hosts"
+#define SSH_DIR          ".ssh"
+#define KNOWN_HOSTS_FILE "known_hosts"
 
 /*
  * Load the known_hosts file.
@@ -430,16 +432,14 @@ static int request_creds(git_credential **out, ssh_subtransport *t, const char *
  */
 static int load_known_hosts(LIBSSH2_KNOWNHOSTS **hosts, LIBSSH2_SESSION *session)
 {
-	git_str path = GIT_STR_INIT, home = GIT_STR_INIT;
+	git_str path = GIT_STR_INIT, sshdir = GIT_STR_INIT;
 	LIBSSH2_KNOWNHOSTS *known_hosts = NULL;
 	int error;
 
 	GIT_ASSERT_ARG(hosts);
 
-	if ((error = git__getenv(&home, "HOME")) < 0)
-		return error;
-
-	if ((error = git_str_joinpath(&path, git_str_cstr(&home), KNOWN_HOSTS_FILE)) < 0)
+	if ((error = git_sysdir_expand_homedir_file(&sshdir, SSH_DIR)) < 0 ||
+	    (error = git_str_joinpath(&path, git_str_cstr(&sshdir), KNOWN_HOSTS_FILE)) < 0)
 		goto out;
 
 	if ((known_hosts = libssh2_knownhost_init(session)) == NULL) {
@@ -461,8 +461,8 @@ static int load_known_hosts(LIBSSH2_KNOWNHOSTS **hosts, LIBSSH2_SESSION *session
 out:
 	*hosts = known_hosts;
 
-	git_str_clear(&home);
-	git_str_clear(&path);
+	git_str_dispose(&sshdir);
+	git_str_dispose(&path);
 
 	return error;
 }
