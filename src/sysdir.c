@@ -75,7 +75,7 @@ out:
 }
 #endif
 
-static int git_sysdir_guess_global_dirs(git_str *out)
+static int git_sysdir_guess_home_dirs(git_str *out)
 {
 #ifdef GIT_WIN32
 	return git_win32__find_global_dirs(out);
@@ -112,6 +112,11 @@ static int git_sysdir_guess_global_dirs(git_str *out)
 
 	return error;
 #endif
+}
+
+static int git_sysdir_guess_global_dirs(git_str *out)
+{
+	return git_sysdir_guess_home_dirs(out);
 }
 
 static int git_sysdir_guess_xdg_dirs(git_str *out)
@@ -171,6 +176,7 @@ static struct git_sysdir__dir git_sysdir__dirs[] = {
 	{ GIT_STR_INIT, git_sysdir_guess_xdg_dirs },
 	{ GIT_STR_INIT, git_sysdir_guess_programdata_dirs },
 	{ GIT_STR_INIT, git_sysdir_guess_template_dirs },
+	{ GIT_STR_INIT, git_sysdir_guess_home_dirs }
 };
 
 static void git_sysdir_global_shutdown(void)
@@ -350,11 +356,29 @@ int git_sysdir_find_template_dir(git_str *path)
 		path, NULL, GIT_SYSDIR_TEMPLATE, "template");
 }
 
+int git_sysdir_find_homedir(git_str *path)
+{
+	return git_sysdir_find_in_dirlist(
+		path, NULL, GIT_SYSDIR_HOME, "home directory");
+}
+
 int git_sysdir_expand_global_file(git_str *path, const char *filename)
 {
 	int error;
 
 	if ((error = git_sysdir_find_global_file(path, NULL)) == 0) {
+		if (filename)
+			error = git_str_joinpath(path, path->ptr, filename);
+	}
+
+	return error;
+}
+
+int git_sysdir_expand_homedir_file(git_str *path, const char *filename)
+{
+	int error;
+
+	if ((error = git_sysdir_find_homedir(path)) == 0) {
 		if (filename)
 			error = git_str_joinpath(path, path->ptr, filename);
 	}
