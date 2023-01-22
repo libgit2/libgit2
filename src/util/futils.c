@@ -13,9 +13,6 @@
 #include "rand.h"
 
 #include <ctype.h>
-#if GIT_WIN32
-#include "win32/findfile.h"
-#endif
 
 #define GIT_FILEMODE_DEFAULT 0100666
 
