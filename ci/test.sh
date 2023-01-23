@@ -16,6 +16,9 @@ BUILD_DIR=$(pwd)
 TMPDIR=${TMPDIR:-/tmp}
 USER=${USER:-$(whoami)}
 
+HOME=`mktemp -d ${TMPDIR}/home.XXXXXXXX`
+export CLAR_HOMEDIR=${HOME}
+
 SUCCESS=1
 CONTINUE_ON_FAILURE=0
 
@@ -140,7 +143,6 @@ fi
 
 if [ -z "$SKIP_SSH_TESTS" ]; then
 	echo "Starting SSH server..."
-	HOME=`mktemp -d ${TMPDIR}/home.XXXXXXXX`
 	SSHD_DIR=`mktemp -d ${TMPDIR}/sshd.XXXXXXXX`
 	git init --bare "${SSHD_DIR}/test.git" >/dev/null
 	cat >"${SSHD_DIR}/sshd_config" <<-EOF
