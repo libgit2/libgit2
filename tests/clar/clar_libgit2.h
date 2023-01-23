@@ -249,6 +249,7 @@ void cl_fake_homedir_cleanup(void *);
 void cl_fake_globalconfig(git_str *);
 void cl_fake_globalconfig_cleanup(void *);
 
+void cl_sandbox_set_homedir(const char *);
 void cl_sandbox_set_search_path_defaults(void);
 void cl_sandbox_disable_ownership_validation(void);
 
