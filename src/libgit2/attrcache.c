@@ -300,7 +300,7 @@ static int attr_cache__lookup_path(
 
 		/* expand leading ~/ as needed */
 		if (cfgval && cfgval[0] == '~' && cfgval[1] == '/') {
-			if (! (error = git_sysdir_expand_global_file(&buf, &cfgval[2])))
+			if (! (error = git_sysdir_expand_homedir_file(&buf, &cfgval[2])))
 				*out = git_str_detach(&buf);
 		} else if (cfgval) {
 			*out = git__strdup(cfgval);
