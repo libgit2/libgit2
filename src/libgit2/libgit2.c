@@ -414,6 +414,25 @@ int git_libgit2_opts(int key, ...)
 		git_repository__validate_ownership = (va_arg(ap, int) != 0);
 		break;
 
+	case GIT_OPT_GET_HOMEDIR:
+		{
+			git_buf *out = va_arg(ap, git_buf *);
+			git_str str = GIT_STR_INIT;
+			const git_str *tmp;
+
+			if ((error = git_buf_tostr(&str, out)) < 0 ||
+			    (error = git_sysdir_get(&tmp, GIT_SYSDIR_HOME)) < 0 ||
+			    (error = git_str_put(&str, tmp->ptr, tmp->size)) < 0)
+				break;
+
+			error = git_buf_fromstr(out, &str);
+		}
+		break;
+
+	case GIT_OPT_SET_HOMEDIR:
+		error = git_sysdir_set(GIT_SYSDIR_HOME, va_arg(ap, const char *));
+		break;
+
 	default:
 		git_error_set(GIT_ERROR_INVALID, "invalid option key");
 		error = -1;
