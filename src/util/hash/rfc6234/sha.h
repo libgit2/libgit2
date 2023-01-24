@@ -296,6 +296,7 @@ extern int USHAHashSize(enum SHAversion whichSha);
 extern int USHAHashSizeBits(enum SHAversion whichSha);
 extern const char *USHAHashName(enum SHAversion whichSha);
 
+#if 0
 /*
  * HMAC Keyed-Hashing for Message Authentication, RFC 2104,
  * for all SHAs.
@@ -307,6 +308,7 @@ extern int hmac(SHAversion whichSha, /* which SHA algorithm to use */
     const unsigned char *key,      /* pointer to authentication key */
     int key_len,                   /* length of authentication key */
     uint8_t digest[USHAMaxHashSize]); /* caller digest to fill in */
+#endif
 
 /*
  * HMAC Keyed-Hashing for Message Authentication, RFC 2104,
