@@ -257,6 +257,10 @@ jobs:
     - name: Build and test
       run: |
         export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
+        export GITTEST_GITHUB_SSH_KEY="${{ secrets.GITTEST_GITHUB_SSH_KEY }}"
+        export GITTEST_GITHUB_SSH_PUBKEY="${{ secrets.GITTEST_GITHUB_SSH_PUBKEY }}"
+        export GITTEST_GITHUB_SSH_PASSPHRASE="${{ secrets.GITTEST_GITHUB_SSH_PASSPHRASE }}"
+        export GITTEST_GITHUB_SSH_REMOTE_HOSTKEY="${{ secrets.GITTEST_GITHUB_SSH_REMOTE_HOSTKEY }}"
 
         if [ -n "${{ matrix.platform.container.name }}" ]; then
           mkdir build
