@@ -35,6 +35,11 @@ static char *_remote_expectcontinue = NULL;
 static char *_remote_redirect_initial = NULL;
 static char *_remote_redirect_subsequent = NULL;
 
+static char *_github_ssh_pubkey = NULL;
+static char *_github_ssh_privkey = NULL;
+static char *_github_ssh_passphrase = NULL;
+static char *_github_ssh_remotehostkey = NULL;
+
 static int _orig_proxies_need_reset = 0;
 static char *_orig_http_proxy = NULL;
 static char *_orig_https_proxy = NULL;
@@ -83,6 +88,11 @@ void test_online_clone__initialize(void)
 	_remote_redirect_initial = cl_getenv("GITTEST_REMOTE_REDIRECT_INITIAL");
 	_remote_redirect_subsequent = cl_getenv("GITTEST_REMOTE_REDIRECT_SUBSEQUENT");
 
+	_github_ssh_pubkey = cl_getenv("GITTEST_GITHUB_SSH_PUBKEY");
+	_github_ssh_privkey = cl_getenv("GITTEST_GITHUB_SSH_KEY");
+	_github_ssh_passphrase = cl_getenv("GITTEST_GITHUB_SSH_PASSPHRASE");
+	_github_ssh_remotehostkey = cl_getenv("GITTEST_GITHUB_SSH_REMOTE_HOSTKEY");
+
 	if (_remote_expectcontinue)
 		git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 1);
 
@@ -115,6 +125,11 @@ void test_online_clone__cleanup(void)
 	git__free(_remote_expectcontinue);
 	git__free(_remote_redirect_initial);
 	git__free(_remote_redirect_subsequent);
+
+	git__free(_github_ssh_pubkey);
+	git__free(_github_ssh_privkey);
+	git__free(_github_ssh_passphrase);
+	git__free(_github_ssh_remotehostkey);
 
 	if (_orig_proxies_need_reset) {
 		cl_setenv("HTTP_PROXY", _orig_http_proxy);
@@ -537,6 +552,68 @@ static int check_ssh_auth_methods(git_credential **cred, const char *url, const 
 	return GIT_EUSER;
 }
 
+static int succeed_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
+{
+	GIT_UNUSED(cert);
+	GIT_UNUSED(valid);
+	GIT_UNUSED(payload);
+
+	cl_assert_equal_s("github.com", host);
+
+	return 0;
+}
+
+static int fail_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
+{
+	GIT_UNUSED(cert);
+	GIT_UNUSED(valid);
+	GIT_UNUSED(host);
+	GIT_UNUSED(payload);
+
+	return GIT_ECERTIFICATE;
+}
+
+static int github_credentials(
+	git_credential **cred,
+	const char *url,
+	const char *username_from_url,
+	unsigned int allowed_types,
+	void *data)
+{
+	GIT_UNUSED(url);
+	GIT_UNUSED(username_from_url);
+	GIT_UNUSED(data);
+
+	if ((allowed_types & GIT_CREDENTIAL_USERNAME) != 0) {
+		return git_credential_username_new(cred, "git");
+	}
+
+	cl_assert((allowed_types & GIT_CREDENTIAL_SSH_KEY) != 0);
+
+	return git_credential_ssh_key_memory_new(cred,
+		"git",
+		_github_ssh_pubkey,
+		_github_ssh_privkey,
+		_github_ssh_passphrase);
+}
+
+void test_online_clone__ssh_github(void)
+{
+#if !defined(GIT_SSH) || !defined(GIT_SSH_MEMORY_CREDENTIALS)
+	clar__skip();
+#endif
+
+	if (!_github_ssh_pubkey || !_github_ssh_privkey)
+		clar__skip();
+
+	cl_fake_homedir(NULL);
+
+	g_options.fetch_opts.callbacks.credentials = github_credentials;
+	g_options.fetch_opts.callbacks.certificate_check = succeed_certificate_check;
+
+	cl_git_pass(git_clone(&g_repo, SSH_REPO_URL, "./foo", &g_options));
+}
+
 void test_online_clone__ssh_auth_methods(void)
 {
 	int with_user;
@@ -546,7 +623,7 @@ void test_online_clone__ssh_auth_methods(void)
 #endif
 	g_options.fetch_opts.callbacks.credentials = check_ssh_auth_methods;
 	g_options.fetch_opts.callbacks.payload = &with_user;
-	g_options.fetch_opts.callbacks.certificate_check = NULL;
+	g_options.fetch_opts.callbacks.certificate_check = succeed_certificate_check;
 
 	with_user = 0;
 	cl_git_fail_with(GIT_EUSER,
@@ -555,6 +632,69 @@ void test_online_clone__ssh_auth_methods(void)
 	with_user = 1;
 	cl_git_fail_with(GIT_EUSER,
 		git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
+}
+
+/*
+ * Ensure that the certificate check callback is still called, and
+ * can accept a host key that is not in the known hosts file.
+ */
+void test_online_clone__ssh_certcheck_accepts_unknown(void)
+{
+#if !defined(GIT_SSH) || !defined(GIT_SSH_MEMORY_CREDENTIALS)
+	clar__skip();
+#endif
+
+	if (!_github_ssh_pubkey || !_github_ssh_privkey)
+		clar__skip();
+
+	cl_fake_homedir(NULL);
+
+	g_options.fetch_opts.callbacks.credentials = github_credentials;
+
+	/* Ensure we fail without the certificate check */
+	cl_git_fail_with(GIT_ECERTIFICATE,
+		git_clone(&g_repo, SSH_REPO_URL, "./foo", NULL));
+
+	/* Set the callback to accept the certificate */
+	g_options.fetch_opts.callbacks.certificate_check = succeed_certificate_check;
+
+	cl_git_pass(git_clone(&g_repo, SSH_REPO_URL, "./foo", &g_options));
+}
+
+/*
+ * Ensure that the known hosts file is read and the certificate check
+ * callback is still called after that.
+ */
+void test_online_clone__ssh_certcheck_override_knownhosts(void)
+{
+	git_str knownhostsfile = GIT_STR_INIT;
+
+#if !defined(GIT_SSH) || !defined(GIT_SSH_MEMORY_CREDENTIALS)
+	clar__skip();
+#endif
+
+	if (!_github_ssh_pubkey || !_github_ssh_privkey || !_github_ssh_remotehostkey)
+		clar__skip();
+
+	g_options.fetch_opts.callbacks.credentials = github_credentials;
+
+	cl_fake_homedir(&knownhostsfile);
+	cl_git_pass(git_str_joinpath(&knownhostsfile, knownhostsfile.ptr, ".ssh"));
+	cl_git_pass(p_mkdir(knownhostsfile.ptr, 0777));
+
+	cl_git_pass(git_str_joinpath(&knownhostsfile, knownhostsfile.ptr, "known_hosts"));
+	cl_git_rewritefile(knownhostsfile.ptr, _github_ssh_remotehostkey);
+
+	/* Ensure we succeed without the certificate check */
+	cl_git_pass(git_clone(&g_repo, SSH_REPO_URL, "./foo", &g_options));
+	git_repository_free(g_repo);
+	g_repo = NULL;
+
+	/* Set the callback to reject the certificate */
+	g_options.fetch_opts.callbacks.certificate_check = fail_certificate_check;
+	cl_git_fail_with(GIT_ECERTIFICATE, git_clone(&g_repo, SSH_REPO_URL, "./bar", &g_options));
+
+	git_str_dispose(&knownhostsfile);
 }
 
 static int custom_remote_ssh_with_paths(
@@ -729,16 +869,6 @@ void test_online_clone__ssh_memory_auth(void)
 	cl_git_pass(git_clone(&g_repo, _remote_url, "./foo", &g_options));
 }
 
-static int fail_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
-{
-	GIT_UNUSED(cert);
-	GIT_UNUSED(valid);
-	GIT_UNUSED(host);
-	GIT_UNUSED(payload);
-
-	return GIT_ECERTIFICATE;
-}
-
 void test_online_clone__certificate_invalid(void)
 {
 	g_options.fetch_opts.callbacks.certificate_check = fail_certificate_check;
@@ -750,17 +880,6 @@ void test_online_clone__certificate_invalid(void)
 	cl_git_fail_with(git_clone(&g_repo, "ssh://github.com/libgit2/TestGitRepository", "./foo", &g_options),
 		GIT_ECERTIFICATE);
 #endif
-}
-
-static int succeed_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
-{
-	GIT_UNUSED(cert);
-	GIT_UNUSED(valid);
-	GIT_UNUSED(payload);
-
-	cl_assert_equal_s("github.com", host);
-
-	return 0;
 }
 
 void test_online_clone__certificate_valid(void)
