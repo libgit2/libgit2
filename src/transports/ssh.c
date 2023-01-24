@@ -753,7 +753,7 @@ static int check_certificate(
 		if (error == GIT_PASSTHROUGH) {
 			error = git_error_state_restore(&previous_error);
 		} else if (error < 0 && !git_error_last()) {
-			git_error_set(GIT_ERROR_NET, "user canceled hostkey check");
+			git_error_set(GIT_ERROR_NET, "unknown remote host key");
 		}
 
 		git_error_state_free(&previous_error);
@@ -1009,7 +1009,7 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 
 	/* either error, or the remote accepts NONE auth, which is bizarre, let's punt */
 	if (list == NULL && !libssh2_userauth_authenticated(session)) {
-		ssh_error(session, "Failed to retrieve list of SSH authentication methods");
+		ssh_error(session, "remote rejected authentication");
 		return GIT_EAUTH;
 	}
 
