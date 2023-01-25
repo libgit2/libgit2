@@ -329,7 +329,7 @@ jobs:
     - name: Download test results
       uses: actions/download-artifact@v3
     - name: Generate test summary
-      uses: test-summary/action@v1
+      uses: test-summary/action@v2
       with:
         paths: 'test-results-*/*.xml'
 
