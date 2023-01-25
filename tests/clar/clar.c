@@ -13,7 +13,6 @@
 #include <stdarg.h>
 #include <wchar.h>
 #include <time.h>
-#include <sys/time.h>
 
 /* required for sandboxing */
 #include <sys/types.h>
@@ -251,6 +250,37 @@ clar_report_all(void)
 	}
 }
 
+#ifdef WIN32
+# define clar_time DWORD
+
+static void clar_time_now(clar_time *out)
+{
+	*out = GetTickCount();
+}
+
+static double clar_time_diff(clar_time *start, clar_time *end)
+{
+	return ((double)*end - (double)*start) / 1000;
+}
+#else
+# include <sys/time.h>
+
+# define clar_time struct timeval
+
+static void clar_time_now(clar_time *out)
+{
+	struct timezone tz;
+
+	gettimeofday(out, &tz);
+}
+
+static double clar_time_diff(clar_time *start, clar_time *end)
+{
+	return ((double)end->tv_sec + (double)end->tv_usec / 1.0E6) -
+	       ((double)start->tv_sec + (double)start->tv_usec / 1.0E6);
+}
+#endif
+
 static void
 clar_run_test(
 	const struct clar_suite *suite,
@@ -258,34 +288,32 @@ clar_run_test(
 	const struct clar_func *initialize,
 	const struct clar_func *cleanup)
 {
-	struct timeval start, end;
-	struct timezone tz;
+	clar_time start, end;
 
 	_clar.trampoline_enabled = 1;
 
 	CL_TRACE(CL_TRACE__TEST__BEGIN);
 
+	_clar.last_report->start = time(NULL);
+	clar_time_now(&start);
+
 	if (setjmp(_clar.trampoline) == 0) {
 		if (initialize->ptr != NULL)
 			initialize->ptr();
-
-		_clar.last_report->start = time(NULL);
-		gettimeofday(&start, &tz);
 
 		CL_TRACE(CL_TRACE__TEST__RUN_BEGIN);
 		test->ptr();
 		CL_TRACE(CL_TRACE__TEST__RUN_END);
 	}
 
-	gettimeofday(&end, &tz);
+	clar_time_now(&end);
 
 	_clar.trampoline_enabled = 0;
 
 	if (_clar.last_report->status == CL_TEST_NOTRUN)
 		_clar.last_report->status = CL_TEST_OK;
 
-	_clar.last_report->elapsed = ((double)end.tv_sec + (double)end.tv_usec / 1.0E6) -
-	                             ((double)start.tv_sec + (double)start.tv_usec / 1.0E6);
+	_clar.last_report->elapsed = clar_time_diff(&start, &end);
 
 	if (_clar.local_cleanup != NULL)
 		_clar.local_cleanup(_clar.local_cleanup_payload);
