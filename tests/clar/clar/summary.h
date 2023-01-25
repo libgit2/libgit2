@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 
-int clar_summary_close_tag(
+static int clar_summary_close_tag(
     struct clar_summary *summary, const char *tag, int indent)
 {
 	const char *indt;
@@ -14,12 +14,12 @@ int clar_summary_close_tag(
 	return fprintf(summary->fp, "%s</%s>\n", indt, tag);
 }
 
-int clar_summary_testsuites(struct clar_summary *summary)
+static int clar_summary_testsuites(struct clar_summary *summary)
 {
 	return fprintf(summary->fp, "<testsuites>\n");
 }
 
-int clar_summary_testsuite(struct clar_summary *summary,
+static int clar_summary_testsuite(struct clar_summary *summary,
     int idn, const char *name, time_t timestamp,
     int test_count, int fail_count, int error_count)
 {
@@ -40,7 +40,7 @@ int clar_summary_testsuite(struct clar_summary *summary,
 		       idn, name, iso_dt, test_count, fail_count, error_count);
 }
 
-int clar_summary_testcase(struct clar_summary *summary,
+static int clar_summary_testcase(struct clar_summary *summary,
     const char *name, const char *classname, double elapsed)
 {
 	return fprintf(summary->fp,
@@ -48,7 +48,7 @@ int clar_summary_testcase(struct clar_summary *summary,
 		name, classname, elapsed);
 }
 
-int clar_summary_failure(struct clar_summary *summary,
+static int clar_summary_failure(struct clar_summary *summary,
     const char *type, const char *message, const char *desc)
 {
 	return fprintf(summary->fp,
@@ -56,7 +56,7 @@ int clar_summary_failure(struct clar_summary *summary,
 	    type, message, desc);
 }
 
-int clar_summary_skipped(struct clar_summary *summary)
+static int clar_summary_skipped(struct clar_summary *summary)
 {
 	return fprintf(summary->fp, "\t\t\t<skipped />\n");
 }
