@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 
-static int clar_summary_close_tag(
+int clar_summary_close_tag(
     struct clar_summary *summary, const char *tag, int indent)
 {
 	const char *indt;
@@ -14,14 +14,14 @@ static int clar_summary_close_tag(
 	return fprintf(summary->fp, "%s</%s>\n", indt, tag);
 }
 
-static int clar_summary_testsuites(struct clar_summary *summary)
+int clar_summary_testsuites(struct clar_summary *summary)
 {
 	return fprintf(summary->fp, "<testsuites>\n");
 }
 
-static int clar_summary_testsuite(struct clar_summary *summary,
-    int idn, const char *name, const char *pkg, time_t timestamp,
-    double elapsed, int test_count, int fail_count, int error_count)
+int clar_summary_testsuite(struct clar_summary *summary,
+    int idn, const char *name, time_t timestamp,
+    int test_count, int fail_count, int error_count)
 {
 	struct tm *tm = localtime(&timestamp);
 	char iso_dt[20];
@@ -29,20 +29,18 @@ static int clar_summary_testsuite(struct clar_summary *summary,
 	if (strftime(iso_dt, sizeof(iso_dt), "%Y-%m-%dT%H:%M:%S", tm) == 0)
 		return -1;
 
-	return fprintf(summary->fp, "\t<testsuite "
+	return fprintf(summary->fp, "\t<testsuite"
 		       " id=\"%d\""
 		       " name=\"%s\""
-		       " package=\"%s\""
 		       " hostname=\"localhost\""
 		       " timestamp=\"%s\""
-		       " time=\"%.2f\""
 		       " tests=\"%d\""
 		       " failures=\"%d\""
 		       " errors=\"%d\">\n",
-		       idn, name, pkg, iso_dt, elapsed, test_count, fail_count, error_count);
+		       idn, name, iso_dt, test_count, fail_count, error_count);
 }
 
-static int clar_summary_testcase(struct clar_summary *summary,
+int clar_summary_testcase(struct clar_summary *summary,
     const char *name, const char *classname, double elapsed)
 {
 	return fprintf(summary->fp,
@@ -50,7 +48,7 @@ static int clar_summary_testcase(struct clar_summary *summary,
 		name, classname, elapsed);
 }
 
-static int clar_summary_failure(struct clar_summary *summary,
+int clar_summary_failure(struct clar_summary *summary,
     const char *type, const char *message, const char *desc)
 {
 	return fprintf(summary->fp,
@@ -58,15 +56,23 @@ static int clar_summary_failure(struct clar_summary *summary,
 	    type, message, desc);
 }
 
+int clar_summary_skipped(struct clar_summary *summary)
+{
+	return fprintf(summary->fp, "\t\t\t<skipped />\n");
+}
+
 struct clar_summary *clar_summary_init(const char *filename)
 {
 	struct clar_summary *summary;
 	FILE *fp;
 
-	if ((fp = fopen(filename, "w")) == NULL)
+	if ((fp = fopen(filename, "w")) == NULL) {
+		perror("fopen");
 		return NULL;
+	}
 
 	if ((summary = malloc(sizeof(struct clar_summary))) == NULL) {
+		perror("malloc");
 		fclose(fp);
 		return NULL;
 	}
@@ -90,14 +96,14 @@ int clar_summary_shutdown(struct clar_summary *summary)
 		struct clar_error *error = report->errors;
 
 		if (last_suite == NULL || strcmp(last_suite, report->suite) != 0) {
-			if (clar_summary_testsuite(summary, 0, report->suite, "",
-			    time(NULL), 0, _clar.tests_ran, _clar.total_errors, 0) < 0)
+			if (clar_summary_testsuite(summary, 0, report->suite,
+			    report->start, _clar.tests_ran, _clar.total_errors, 0) < 0)
 				goto on_error;
 		}
 
 		last_suite = report->suite;
 
-		clar_summary_testcase(summary, report->test, "what", 0);
+		clar_summary_testcase(summary, report->test, report->suite, report->elapsed);
 
 		while (error != NULL) {
 			if (clar_summary_failure(summary, "assert",
@@ -106,6 +112,9 @@ int clar_summary_shutdown(struct clar_summary *summary)
 
 			error = error->next;
 		}
+
+		if (report->status == CL_TEST_SKIP)
+			clar_summary_skipped(summary);
 
 		if (clar_summary_close_tag(summary, "testcase", 2) < 0)
 			goto on_error;
