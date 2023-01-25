@@ -12,6 +12,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <wchar.h>
+#include <time.h>
 
 /* required for sandboxing */
 #include <sys/types.h>
@@ -86,6 +87,8 @@
 	typedef struct stat STAT_T;
 #endif
 
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+
 #include "clar.h"
 
 static void fs_rm(const char *_source);
@@ -117,6 +120,8 @@ struct clar_report {
 	const char *suite;
 
 	enum cl_test_status status;
+	time_t start;
+	double elapsed;
 
 	struct clar_error *errors;
 	struct clar_error *last_error;
@@ -145,7 +150,7 @@ static struct {
 
 	int report_errors_only;
 	int exit_on_error;
-	int report_suite_names;
+	int verbosity;
 
 	int write_summary;
 	char *summary_filename;
@@ -186,7 +191,7 @@ struct clar_suite {
 static void clar_print_init(int test_count, int suite_count, const char *suite_names);
 static void clar_print_shutdown(int test_count, int suite_count, int error_count);
 static void clar_print_error(int num, const struct clar_report *report, const struct clar_error *error);
-static void clar_print_ontest(const char *test_name, int test_number, enum cl_test_status failed);
+static void clar_print_ontest(const char *suite_name, const char *test_name, int test_number, enum cl_test_status failed);
 static void clar_print_onsuite(const char *suite_name, int suite_index);
 static void clar_print_onabort(const char *msg, ...);
 
@@ -245,15 +250,52 @@ clar_report_all(void)
 	}
 }
 
+#ifdef WIN32
+# define clar_time DWORD
+
+static void clar_time_now(clar_time *out)
+{
+	*out = GetTickCount();
+}
+
+static double clar_time_diff(clar_time *start, clar_time *end)
+{
+	return ((double)*end - (double)*start) / 1000;
+}
+#else
+# include <sys/time.h>
+
+# define clar_time struct timeval
+
+static void clar_time_now(clar_time *out)
+{
+	struct timezone tz;
+
+	gettimeofday(out, &tz);
+}
+
+static double clar_time_diff(clar_time *start, clar_time *end)
+{
+	return ((double)end->tv_sec + (double)end->tv_usec / 1.0E6) -
+	       ((double)start->tv_sec + (double)start->tv_usec / 1.0E6);
+}
+#endif
+
 static void
 clar_run_test(
+	const struct clar_suite *suite,
 	const struct clar_func *test,
 	const struct clar_func *initialize,
 	const struct clar_func *cleanup)
 {
+	clar_time start, end;
+
 	_clar.trampoline_enabled = 1;
 
 	CL_TRACE(CL_TRACE__TEST__BEGIN);
+
+	_clar.last_report->start = time(NULL);
+	clar_time_now(&start);
 
 	if (setjmp(_clar.trampoline) == 0) {
 		if (initialize->ptr != NULL)
@@ -264,10 +306,14 @@ clar_run_test(
 		CL_TRACE(CL_TRACE__TEST__RUN_END);
 	}
 
+	clar_time_now(&end);
+
 	_clar.trampoline_enabled = 0;
 
 	if (_clar.last_report->status == CL_TEST_NOTRUN)
 		_clar.last_report->status = CL_TEST_OK;
+
+	_clar.last_report->elapsed = clar_time_diff(&start, &end);
 
 	if (_clar.local_cleanup != NULL)
 		_clar.local_cleanup(_clar.local_cleanup_payload);
@@ -286,7 +332,7 @@ clar_run_test(
 	if (_clar.report_errors_only) {
 		clar_report_errors(_clar.last_report);
 	} else {
-		clar_print_ontest(test->name, _clar.tests_ran, _clar.last_report->status);
+		clar_print_ontest(suite->name, test->name, _clar.tests_ran, _clar.last_report->status);
 	}
 }
 
@@ -352,7 +398,7 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 
 		_clar.last_report = report;
 
-		clar_run_test(&test[i], &suite->initialize, &suite->cleanup);
+		clar_run_test(suite, &test[i], &suite->initialize, &suite->cleanup);
 
 		if (_clar.exit_on_error && _clar.total_errors)
 			return;
@@ -427,7 +473,7 @@ clar_parse_args(int argc, char **argv)
 					++found;
 
 					if (!exact)
-						_clar.report_suite_names = 1;
+						_clar.verbosity = MAX(_clar.verbosity, 1);
 
 					switch (action) {
 					case 's': {
@@ -486,13 +532,13 @@ clar_parse_args(int argc, char **argv)
 		}
 
 		case 'v':
-			_clar.report_suite_names = 1;
+			_clar.verbosity++;
 			break;
 
 		case 'r':
 			_clar.write_summary = 1;
 			free(_clar.summary_filename);
-			_clar.summary_filename = strdup(*(argument + 2) ? (argument + 2) : "summary.xml");
+			_clar.summary_filename = *(argument + 2) ? strdup(argument + 2) : NULL;
 			break;
 
 		default:
@@ -504,6 +550,8 @@ clar_parse_args(int argc, char **argv)
 void
 clar_test_init(int argc, char **argv)
 {
+	const char *summary_env;
+
 	if (argc > 1)
 		clar_parse_args(argc, argv);
 
@@ -513,10 +561,14 @@ clar_test_init(int argc, char **argv)
 		""
 	);
 
-	if ((_clar.summary_filename = getenv("CLAR_SUMMARY")) != NULL) {
+	if (!_clar.summary_filename &&
+	    (summary_env = getenv("CLAR_SUMMARY")) != NULL) {
 		_clar.write_summary = 1;
-		_clar.summary_filename = strdup(_clar.summary_filename);
+		_clar.summary_filename = strdup(summary_env);
 	}
+
+	if (_clar.write_summary && !_clar.summary_filename)
+		_clar.summary_filename = strdup("summary.xml");
 
 	if (_clar.write_summary &&
 	    !(_clar.summary = clar_summary_init(_clar.summary_filename))) {
