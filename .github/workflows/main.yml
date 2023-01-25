@@ -323,6 +323,7 @@ jobs:
   test_results:
     name: Test results
     needs: [ build ]
+    if: always()
     runs-on: ubuntu-latest
     steps:
     - name: Download test results
