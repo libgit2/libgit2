@@ -42,9 +42,11 @@ extern int git_sysdir_find_system_file(git_str *path, const char *filename);
 /**
  * Find a "ProgramData" file (i.e. one in %PROGRAMDATA%)
  *
+ * Not used any more with Git >= 2.24, therefore, you should not use this any more.
+ *
  * @param path buffer to write the full path into
  * @param filename name of file to find in the ProgramData directory
- * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
+ * @return 0
  */
 extern int git_sysdir_find_programdata_file(git_str *path, const char *filename);
 

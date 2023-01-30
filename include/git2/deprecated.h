@@ -294,6 +294,18 @@ typedef git_configmap git_cvar_map;
 
 /**@}*/
 
+/**
+ * Locate the path to the configuration file in ProgramData
+ *
+ * Look for the file in `%PROGRAMDATA%\Git\config` used by portable git.
+ *
+ * @param out Pointer to a user-allocated git_buf in which to store the path
+ * @return 0 if a ProgramData configuration file has been
+ *	found. Its path will be stored in `out`.
+ * @deprecated Don't use this any more as this is not supported by Git >= 2.24
+ */
+GIT_EXTERN(int) git_config_find_programdata(git_buf *out);
+
 /** @name Deprecated Diff Functions and Constants
  *
  * These functions and enumeration values are retained for backward
