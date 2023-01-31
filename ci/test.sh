@@ -81,8 +81,18 @@ run_test() {
 
 indent() { sed "s/^/    /"; }
 
+cygfullpath() {
+	result=$(echo "${1}" | tr \; \\n | while read -r element; do
+		if [ "${last}" != "" ]; then echo -n ":"; fi
+		echo -n $(cygpath "${element}")
+		last="${element}"
+	done)
+	if [ "${result}" = "" ]; then exit 1; fi
+	echo "${result}"
+}
+
 if [[ "$(uname -s)" == MINGW* ]]; then
-        BUILD_PATH=$(cygpath "$BUILD_PATH")
+        BUILD_PATH=$(cygfullpath "$BUILD_PATH")
 fi
 
 
