@@ -351,6 +351,15 @@ typedef struct {
 	 * pointing to this URL.
 	 */
 	const char *origin_url;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	/**
+	 *
+	 * Type of object IDs to use for this repository, or 0 for
+	 * default (currently SHA1).
+	 */
+	git_oid_t oid_type;
+#endif
 } git_repository_init_options;
 
 #define GIT_REPOSITORY_INIT_OPTIONS_VERSION 1

@@ -1983,7 +1983,8 @@ static int repo_init_config(
 	const char *repo_dir,
 	const char *work_dir,
 	uint32_t flags,
-	uint32_t mode)
+	uint32_t mode,
+	git_oid_t oid_type)
 {
 	int error = 0;
 	git_str cfg_path = GIT_STR_INIT, worktree_path = GIT_STR_INIT;
@@ -2038,6 +2039,11 @@ static int repo_init_config(
 	else if (mode == GIT_REPOSITORY_INIT_SHARED_ALL) {
 		SET_REPO_CONFIG(int32, "core.sharedrepository", 2);
 		SET_REPO_CONFIG(bool, "receive.denyNonFastforwards", true);
+	}
+
+	if (oid_type != GIT_OID_SHA1) {
+		SET_REPO_CONFIG(int32, "core.repositoryformatversion", 1);
+		SET_REPO_CONFIG(string, "extensions.objectformat", git_oid_type_name(oid_type));
 	}
 
 cleanup:
@@ -2520,6 +2526,7 @@ int git_repository_init_ext(
 		common_path = GIT_STR_INIT;
 	const char *wd;
 	bool is_valid;
+	git_oid_t oid_type = GIT_OID_DEFAULT;
 	int error;
 
 	GIT_ASSERT_ARG(out);
@@ -2527,6 +2534,11 @@ int git_repository_init_ext(
 	GIT_ASSERT_ARG(opts);
 
 	GIT_ERROR_CHECK_VERSION(opts, GIT_REPOSITORY_INIT_OPTIONS_VERSION, "git_repository_init_options");
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	if (opts->oid_type)
+		oid_type = opts->oid_type;
+#endif
 
 	if ((error = repo_init_directories(&repo_path, &wd_path, given_repo, opts)) < 0)
 		goto out;
@@ -2546,13 +2558,13 @@ int git_repository_init_ext(
 
 		opts->flags |= GIT_REPOSITORY_INIT__IS_REINIT;
 
-		if ((error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode)) < 0)
+		if ((error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode, oid_type)) < 0)
 			goto out;
 
 		/* TODO: reinitialize the templates */
 	} else {
 		if ((error = repo_init_structure(repo_path.ptr, wd, opts)) < 0 ||
-		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode)) < 0 ||
+		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode, oid_type)) < 0 ||
 		    (error = repo_init_head(repo_path.ptr, opts->initial_head)) < 0)
 			goto out;
 	}
