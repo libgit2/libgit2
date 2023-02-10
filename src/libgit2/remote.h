@@ -17,6 +17,7 @@
 #include "refspec.h"
 #include "vector.h"
 #include "net.h"
+#include "proxy.h"
 
 #define GIT_REMOTE_ORIGIN "origin"
 
@@ -88,5 +89,12 @@ GIT_INLINE(int) git_remote_connect_options__from_push_opts(
 }
 
 #undef git_remote_connect_options__copy_opts
+
+GIT_INLINE(void) git_remote_connect_options__dispose(
+	git_remote_connect_options *opts)
+{
+	git_proxy_options_dispose(&opts->proxy_opts);
+	git_strarray_dispose(&opts->custom_headers);
+}
 
 #endif

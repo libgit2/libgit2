@@ -447,6 +447,7 @@ static int clone_into(
 
 cleanup:
 	git_remote_free(remote);
+	git_remote_connect_options_dispose(&connect_opts);
 	git_str_dispose(&reflog_message);
 
 	return error;
