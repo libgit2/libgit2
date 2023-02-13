@@ -1232,6 +1232,42 @@ void test_diff_workdir__checks_options_version(void)
 	cl_assert_equal_i(GIT_ERROR_INVALID, err->klass);
 }
 
+void test_diff_workdir__can_diff_empty_untracked_file(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff = NULL;
+	git_patch *patch = NULL;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_mkfile("empty_standard_repo/emptyfile.txt", "");
+
+	opts.context_lines = 3;
+	opts.interhunk_lines = 1;
+	opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED | GIT_DIFF_SHOW_UNTRACKED_CONTENT;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	/* without filters */
+	git_patch_from_diff(&patch, diff, 0);
+	cl_assert(NULL != patch);
+	cl_assert(0 == git_patch_get_delta(patch)->new_file.size);
+	cl_assert(0 == strcmp("emptyfile.txt", git_patch_get_delta(patch)->new_file.path));
+	git_patch_free(patch);
+	patch = NULL;
+
+	/* with a filter */
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);  /* install some filter */
+	git_patch_from_diff(&patch, diff, 0);
+	cl_assert(NULL != patch);
+	cl_assert(0 == git_patch_get_delta(patch)->new_file.size);
+	cl_assert(0 == strcmp("emptyfile.txt", git_patch_get_delta(patch)->new_file.path));
+	git_patch_free(patch);
+	patch = NULL;
+
+	git_diff_free(diff);
+}
+
 void test_diff_workdir__can_diff_empty_file(void)
 {
 	git_diff *diff;
