@@ -395,7 +395,7 @@ Here are the bindings to libgit2 that are currently available:
 * Pharo Smalltalk
     * libgit2-pharo-bindings <https://github.com/pharo-vcs/libgit2-pharo-bindings>
 * PHP
-    * php-git <https://github.com/libgit2/php-git>
+    * php-git2 <https://github.com/RogerGee/php-git2>
 * Python
     * pygit2 <https://github.com/libgit2/pygit2>
 * R
