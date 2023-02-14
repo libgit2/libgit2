@@ -268,11 +268,16 @@ static int retrieve_revobject_from_reflog(git_object **out, git_reference **base
 	int error = -1;
 
 	if (*base_ref == NULL) {
-		if (position > 0 &&
-		    (!strcmp(identifier, "HEAD"))) {
-			if ((error = git_reference_lookup(&ref, repo, "HEAD")) < 0)
-				return error;
-		} else if ((error = git_reference_dwim(&ref, repo, identifier)) < 0)
+		/*
+		 * When HEAD@{n} is specified, do not use dwim, which would resolve the
+		 * reference (to the current branch that HEAD is pointing to).
+		 */
+		if (position > 0 && strcmp(identifier, GIT_HEAD_FILE) == 0)
+			error = git_reference_lookup(&ref, repo, GIT_HEAD_FILE);
+		else
+			error = git_reference_dwim(&ref, repo, identifier);
+
+		if (error < 0)
 			return error;
 	} else {
 		ref = *base_ref;
