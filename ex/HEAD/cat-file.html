@@ -132,7 +132,7 @@
         <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">show_tree</span><span class="p">(</span><span class="k">const</span> <span class="n">git_tree</span> <span class="o">*</span><span class="n">tree</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="kt">size_t</span> <span class="n">i</span><span class="p">,</span> <span class="n">max_i</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n"><a name="git_tree_entrycount-37" class="fnlink" href="../../#HEAD/group/tree/git_tree_entrycount">git_tree_entrycount</a></span><span class="p">(</span><span class="n">tree</span><span class="p">);</span>
-  <span class="kt">char</span> <span class="n">oidstr</span><span class="p">[</span><span class="n">GIT_OID_SHA1_HEXSIZE</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
+  <span class="kt">char</span> <span class="n">oidstr</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
   <span class="k">const</span> <span class="n">git_tree_entry</span> <span class="o">*</span><span class="n">te</span><span class="p">;</span>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">max_i</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
@@ -159,7 +159,7 @@
         <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">show_commit</span><span class="p">(</span><span class="k">const</span> <span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">max_i</span><span class="p">;</span>
-  <span class="kt">char</span> <span class="n">oidstr</span><span class="p">[</span><span class="n">GIT_OID_SHA1_HEXSIZE</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
+  <span class="kt">char</span> <span class="n">oidstr</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
 
   <span class="n"><a name="git_oid_tostr-25" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">oidstr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">oidstr</span><span class="p">),</span> <span class="n"><a name="git_commit_tree_id-7" class="fnlink" href="../../#HEAD/group/commit/git_commit_tree_id">git_commit_tree_id</a></span><span class="p">(</span><span class="n">commit</span><span class="p">));</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;tree %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">oidstr</span><span class="p">);</span>
@@ -179,7 +179,7 @@
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">show_tag</span><span class="p">(</span><span class="k">const</span> <span class="n">git_tag</span> <span class="o">*</span><span class="n">tag</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="kt">char</span> <span class="n">oidstr</span><span class="p">[</span><span class="n">GIT_OID_SHA1_HEXSIZE</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
+  <span class="kt">char</span> <span class="n">oidstr</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
 
   <span class="n"><a name="git_oid_tostr-27" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">oidstr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">oidstr</span><span class="p">),</span> <span class="n"><a name="git_tag_target_id-31" class="fnlink" href="../../#HEAD/group/tag/git_tag_target_id">git_tag_target_id</a></span><span class="p">(</span><span class="n">tag</span><span class="p">));;</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;object %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">oidstr</span><span class="p">);</span>
@@ -221,7 +221,7 @@
 <span class="p">{</span>
   <span class="k">struct</span> <span class="n">catfile_options</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span> <span class="p">};</span>
   <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-  <span class="kt">char</span> <span class="n">oidstr</span><span class="p">[</span><span class="n">GIT_OID_SHA1_HEXSIZE</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
+  <span class="kt">char</span> <span class="n">oidstr</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
 
   <span class="n">parse_opts</span><span class="p">(</span><span class="o">&amp;</span><span class="n">o</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
 
@@ -229,7 +229,7 @@
       <span class="s">&quot;Could not resolve&quot;</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">rev</span><span class="p">);</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">verbose</span><span class="p">)</span> <span class="p">{</span>
-    <span class="kt">char</span> <span class="n">oidstr</span><span class="p">[</span><span class="n">GIT_OID_SHA1_HEXSIZE</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
+    <span class="kt">char</span> <span class="n">oidstr</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
     <span class="n"><a name="git_oid_tostr-28" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">oidstr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">oidstr</span><span class="p">),</span> <span class="n"><a name="git_object_id-10" class="fnlink" href="../../#HEAD/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">obj</span><span class="p">));</span>
 
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s %s</span><span class="se">\n</span><span class="s">--</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
