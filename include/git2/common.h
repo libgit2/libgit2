@@ -222,7 +222,9 @@ typedef enum {
 	GIT_OPT_GET_EXTENSIONS,
 	GIT_OPT_SET_EXTENSIONS,
 	GIT_OPT_GET_OWNER_VALIDATION,
-	GIT_OPT_SET_OWNER_VALIDATION
+	GIT_OPT_SET_OWNER_VALIDATION,
+	GIT_OPT_GET_HOMEDIR,
+	GIT_OPT_SET_HOMEDIR
 } git_libgit2_opt_t;
 
 /**
@@ -467,6 +469,16 @@ typedef enum {
  *   opts(GIT_OPT_SET_OWNER_VALIDATION, int enabled)
  *      > Set that repository directories should be owned by the current
  *      > user. The default is to validate ownership.
+ *
+ *   opts(GIT_OPT_GET_HOMEDIR, git_buf *out)
+ *      > Gets the current user's home directory, as it will be used
+ *      > for file lookups. The path is written to the `out` buffer.
+ *
+ *   opts(GIT_OPT_SET_HOMEDIR, const char *path)
+ *      > Sets the directory used as the current user's home directory,
+ *      > for file lookups.
+ *      >
+ *      > - `path` directory of home directory.
  *
  * @param option Option key
  * @param ... value to set the option

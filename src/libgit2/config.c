@@ -860,7 +860,7 @@ static int git_config__parse_path(git_str *out, const char *value)
 			return -1;
 		}
 
-		return git_sysdir_expand_global_file(out, value[1] ? &value[2] : NULL);
+		return git_sysdir_expand_homedir_file(out, value[1] ? &value[2] : NULL);
 	}
 
 	return git_str_sets(out, value);

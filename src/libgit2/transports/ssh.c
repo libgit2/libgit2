@@ -16,6 +16,7 @@
 #include "netops.h"
 #include "smart.h"
 #include "streams/socket.h"
+#include "sysdir.h"
 
 #include "git2/credential.h"
 #include "git2/sys/credential.h"
@@ -421,7 +422,8 @@ static int request_creds(git_credential **out, ssh_subtransport *t, const char *
 	return 0;
 }
 
-#define KNOWN_HOSTS_FILE ".ssh/known_hosts"
+#define SSH_DIR          ".ssh"
+#define KNOWN_HOSTS_FILE "known_hosts"
 
 /*
  * Load the known_hosts file.
@@ -430,16 +432,14 @@ static int request_creds(git_credential **out, ssh_subtransport *t, const char *
  */
 static int load_known_hosts(LIBSSH2_KNOWNHOSTS **hosts, LIBSSH2_SESSION *session)
 {
-	git_str path = GIT_STR_INIT, home = GIT_STR_INIT;
+	git_str path = GIT_STR_INIT, sshdir = GIT_STR_INIT;
 	LIBSSH2_KNOWNHOSTS *known_hosts = NULL;
 	int error;
 
 	GIT_ASSERT_ARG(hosts);
 
-	if ((error = git__getenv(&home, "HOME")) < 0)
-		return error;
-
-	if ((error = git_str_joinpath(&path, git_str_cstr(&home), KNOWN_HOSTS_FILE)) < 0)
+	if ((error = git_sysdir_expand_homedir_file(&sshdir, SSH_DIR)) < 0 ||
+	    (error = git_str_joinpath(&path, git_str_cstr(&sshdir), KNOWN_HOSTS_FILE)) < 0)
 		goto out;
 
 	if ((known_hosts = libssh2_knownhost_init(session)) == NULL) {
@@ -461,34 +461,32 @@ static int load_known_hosts(LIBSSH2_KNOWNHOSTS **hosts, LIBSSH2_SESSION *session
 out:
 	*hosts = known_hosts;
 
-	git_str_clear(&home);
-	git_str_clear(&path);
+	git_str_dispose(&sshdir);
+	git_str_dispose(&path);
 
 	return error;
 }
 
-static const char *hostkey_type_to_string(int type)
+static void add_hostkey_pref_if_avail(
+	LIBSSH2_KNOWNHOSTS *known_hosts,
+	const char *hostname,
+	int port,
+	git_str *prefs,
+	int type,
+	const char *type_name)
 {
-	switch (type) {
-	case LIBSSH2_KNOWNHOST_KEY_SSHRSA:
-		return "ssh-rsa";
-	case LIBSSH2_KNOWNHOST_KEY_SSHDSS:
-		return "ssh-dss";
-#ifdef LIBSSH2_KNOWNHOST_KEY_ECDSA_256
-	case LIBSSH2_KNOWNHOST_KEY_ECDSA_256:
-		return "ecdsa-sha2-nistp256";
-	case LIBSSH2_KNOWNHOST_KEY_ECDSA_384:
-		return "ecdsa-sha2-nistp384";
-	case LIBSSH2_KNOWNHOST_KEY_ECDSA_521:
-		return "ecdsa-sha2-nistp521";
-#endif
-#ifdef LIBSSH2_KNOWNHOST_KEY_ED25519
-	case LIBSSH2_KNOWNHOST_KEY_ED25519:
-		return "ssh-ed25519";
-#endif
-	}
+	struct libssh2_knownhost *host = NULL;
+	const char key = '\0';
+	int mask = LIBSSH2_KNOWNHOST_TYPE_PLAIN | LIBSSH2_KNOWNHOST_KEYENC_RAW | type;
+	int error;
 
-	return NULL;
+	error = libssh2_knownhost_checkp(known_hosts, hostname, port, &key, 1, mask, &host);
+	if (error == LIBSSH2_KNOWNHOST_CHECK_MISMATCH) {
+		if (git_str_len(prefs) > 0) {
+			git_str_putc(prefs, ',');
+		}
+		git_str_puts(prefs, type_name);
+	}
 }
 
 /*
@@ -496,27 +494,27 @@ static const char *hostkey_type_to_string(int type)
  * look it up with a nonsense key and using that mismatch to figure out what key
  * we do have stored for the host.
  *
- * Returns the string to pass to libssh2_session_method_pref or NULL if we were
- * unable to find anything or an error happened.
+ * Populates prefs with the string to pass to libssh2_session_method_pref.
  */
-static const char *find_hostkey_preference(LIBSSH2_KNOWNHOSTS *known_hosts, const char *hostname, int port)
+static void find_hostkey_preference(
+	LIBSSH2_KNOWNHOSTS *known_hosts,
+	const char *hostname,
+	int port,
+	git_str *prefs)
 {
-	struct libssh2_knownhost *host = NULL;
-	/* Specify no key type so we don't filter on that */
-	int type = LIBSSH2_KNOWNHOST_TYPE_PLAIN | LIBSSH2_KNOWNHOST_KEYENC_RAW;
-	const char key = '\0';
-	int error;
-
 	/*
-	 * In case of mismatch, we can find the type of key from known_hosts in
-	 * the returned host's information as it means that an entry was found
-	 * but our nonsense key obviously didn't match.
+	 * The order here is important as it indicates the priority of what will
+	 * be preferred.
 	 */
-	error = libssh2_knownhost_checkp(known_hosts, hostname, port, &key, 1, type, &host);
-	if (error == LIBSSH2_KNOWNHOST_CHECK_MISMATCH)
-		return hostkey_type_to_string(host->typemask & LIBSSH2_KNOWNHOST_KEY_MASK);
-
-	return NULL;
+#ifdef LIBSSH2_KNOWNHOST_KEY_ED25519
+	add_hostkey_pref_if_avail(known_hosts, hostname, port, prefs, LIBSSH2_KNOWNHOST_KEY_ED25519, "ssh-ed25519");
+#endif
+#ifdef LIBSSH2_KNOWNHOST_KEY_ECDSA_256
+	add_hostkey_pref_if_avail(known_hosts, hostname, port, prefs, LIBSSH2_KNOWNHOST_KEY_ECDSA_256, "ecdsa-sha2-nistp256");
+	add_hostkey_pref_if_avail(known_hosts, hostname, port, prefs, LIBSSH2_KNOWNHOST_KEY_ECDSA_384, "ecdsa-sha2-nistp384");
+	add_hostkey_pref_if_avail(known_hosts, hostname, port, prefs, LIBSSH2_KNOWNHOST_KEY_ECDSA_521, "ecdsa-sha2-nistp521");
+#endif
+	add_hostkey_pref_if_avail(known_hosts, hostname, port, prefs, LIBSSH2_KNOWNHOST_KEY_SSHRSA, "ssh-rsa");
 }
 
 static int _git_ssh_session_create(
@@ -526,11 +524,11 @@ static int _git_ssh_session_create(
 	int port,
 	git_stream *io)
 {
-	int rc = 0;
+	git_socket_stream *socket = GIT_CONTAINER_OF(io, git_socket_stream, parent);
 	LIBSSH2_SESSION *s;
 	LIBSSH2_KNOWNHOSTS *known_hosts;
-	git_socket_stream *socket = GIT_CONTAINER_OF(io, git_socket_stream, parent);
-	const char *keytype = NULL;
+	git_str prefs = GIT_STR_INIT;
+	int rc = 0;
 
 	GIT_ASSERT_ARG(session);
 	GIT_ASSERT_ARG(hosts);
@@ -547,16 +545,17 @@ static int _git_ssh_session_create(
 		return -1;
 	}
 
-	if ((keytype = find_hostkey_preference(known_hosts, hostname, port)) != NULL) {
+	find_hostkey_preference(known_hosts, hostname, port, &prefs);
+	if (git_str_len(&prefs) > 0) {
 		do {
-			rc = libssh2_session_method_pref(s, LIBSSH2_METHOD_HOSTKEY, keytype);
+			rc = libssh2_session_method_pref(s, LIBSSH2_METHOD_HOSTKEY, git_str_cstr(&prefs));
 		} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 		if (rc != LIBSSH2_ERROR_NONE) {
 			ssh_error(s, "failed to set hostkey preference");
 			goto on_error;
 		}
 	}
-
+	git_str_dispose(&prefs);
 
 	do {
 		rc = libssh2_session_handshake(s, socket->s);
@@ -753,7 +752,7 @@ static int check_certificate(
 		if (error == GIT_PASSTHROUGH) {
 			error = git_error_state_restore(&previous_error);
 		} else if (error < 0 && !git_error_last()) {
-			git_error_set(GIT_ERROR_NET, "user canceled hostkey check");
+			git_error_set(GIT_ERROR_NET, "unknown remote host key");
 		}
 
 		git_error_state_free(&previous_error);
@@ -1009,7 +1008,7 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 
 	/* either error, or the remote accepts NONE auth, which is bizarre, let's punt */
 	if (list == NULL && !libssh2_userauth_authenticated(session)) {
-		ssh_error(session, "Failed to retrieve list of SSH authentication methods");
+		ssh_error(session, "remote rejected authentication");
 		return GIT_EAUTH;
 	}
 
