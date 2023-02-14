@@ -1,3 +1,16 @@
+v1.5.2
+------
+
+This is a bugfix release to improve the SSH key handling functionality
+that was introduced in v1.5.1.
+
+* libgit2 can now read the `known_hosts` file on Windows.
+* libgit2 will now examine all keys for a particular host in the
+  `known_hosts` file for matches, to support remote hosts with
+  multiple key types.
+
+All users of the v1.5 release line are recommended to upgrade.
+
 v1.5.1
 ------
 
