@@ -132,7 +132,7 @@ static void assert_global_config_match(const char *config, const char *expected)
 
 void test_remote_httpproxy__config_overrides_detached_remote(void)
 {
-	cl_fake_home();
+	cl_fake_globalconfig();
 
 	assert_global_config_match(NULL, NULL);
 	assert_global_config_match("http.proxy", "http://localhost:1/");
