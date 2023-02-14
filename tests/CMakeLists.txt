@@ -70,7 +70,7 @@ endfunction(ADD_CLAR_TEST)
 
 add_clar_test(offline             -v -xonline)
 add_clar_test(invasive            -v -score::ftruncate -sfilter::stream::bigfile -sodb::largefiles -siterator::workdir::filesystem_gunk -srepo::init -srepo::init::at_filesystem_root)
-add_clar_test(online              -v -sonline -xonline::customcert -xonline::clone::ssh_auth_methods)
+add_clar_test(online              -v -sonline -xonline::customcert)
 add_clar_test(online_customcert   -v -sonline::customcert)
 add_clar_test(gitdaemon           -v -sonline::push)
 add_clar_test(ssh                 -v -sonline::push -sonline::clone::ssh_cert -sonline::clone::ssh_with_paths -sonline::clone::path_whitespace_ssh -sonline::clone::ssh_auth_methods)

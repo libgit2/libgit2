@@ -13,6 +13,8 @@ fi
 
 SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( pwd ) )}
 BUILD_DIR=$(pwd)
+BUILD_PATH=${BUILD_PATH:=$PATH}
+CTEST=$(which ctest)
 TMPDIR=${TMPDIR:-/tmp}
 USER=${USER:-$(whoami)}
 
@@ -52,7 +54,11 @@ run_test() {
 
 		RETURN_CODE=0
 
-		CLAR_SUMMARY="${BUILD_DIR}/results_${1}.xml" ctest -V -R "^${1}$" || RETURN_CODE=$? && true
+		(
+			export PATH="${BUILD_PATH}"
+			export CLAR_SUMMARY="${BUILD_DIR}/results_${1}.xml"
+			"${CTEST}" -V -R "^${1}$"
+		) || RETURN_CODE=$? && true
 
 		if [ "$RETURN_CODE" -eq 0 ]; then
 			FAILED=0
@@ -73,8 +79,30 @@ run_test() {
 	fi
 }
 
+indent() { sed "s/^/    /"; }
+
+cygfullpath() {
+	result=$(echo "${1}" | tr \; \\n | while read -r element; do
+		if [ "${last}" != "" ]; then echo -n ":"; fi
+		echo -n $(cygpath "${element}")
+		last="${element}"
+	done)
+	if [ "${result}" = "" ]; then exit 1; fi
+	echo "${result}"
+}
+
+if [[ "$(uname -s)" == MINGW* ]]; then
+        BUILD_PATH=$(cygfullpath "$BUILD_PATH")
+fi
+
+
 # Configure the test environment; run them early so that we're certain
 # that they're started by the time we need them.
+
+echo "CTest version:"
+env PATH="${BUILD_PATH}" "${CTEST}" --version | head -1 2>&1 | indent
+
+echo ""
 
 echo "##############################################################################"
 echo "## Configuring test environment"
@@ -348,7 +376,7 @@ if [ -z "$SKIP_FUZZERS" ]; then
 	echo "## Running fuzzers"
 	echo "##############################################################################"
 
-	ctest -V -R 'fuzzer'
+	env PATH="${BUILD_PATH}" "${CTEST}" -V -R 'fuzzer'
 fi
 
 cleanup

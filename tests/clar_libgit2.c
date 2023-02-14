@@ -548,31 +548,61 @@ void clar__assert_equal_file(
 		(size_t)expected_bytes, (size_t)total_bytes);
 }
 
-static git_buf _cl_restore_home = GIT_BUF_INIT;
+static git_buf _cl_restore_homedir = GIT_BUF_INIT;
 
-void cl_fake_home_cleanup(void *payload)
+void cl_fake_homedir_cleanup(void *payload)
 {
 	GIT_UNUSED(payload);
 
-	if (_cl_restore_home.ptr) {
+	if (_cl_restore_homedir.ptr) {
 		cl_git_pass(git_libgit2_opts(
-			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, _cl_restore_home.ptr));
-		git_buf_dispose(&_cl_restore_home);
+			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, _cl_restore_homedir.ptr));
+		git_buf_dispose(&_cl_restore_homedir);
 	}
 }
 
-void cl_fake_home(void)
+void cl_fake_homedir(void)
 {
 	git_str path = GIT_STR_INIT;
 
 	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &_cl_restore_home));
+		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &_cl_restore_homedir));
 
-	cl_set_cleanup(cl_fake_home_cleanup, NULL);
+	cl_set_cleanup(cl_fake_homedir_cleanup, NULL);
 
-	if (!git_fs_path_exists("home"))
-		cl_must_pass(p_mkdir("home", 0777));
-	cl_git_pass(git_fs_path_prettify(&path, "home", NULL));
+	if (!git_fs_path_exists("homedir"))
+		cl_must_pass(p_mkdir("homedir", 0777));
+	cl_git_pass(git_fs_path_prettify(&path, "homedir", NULL));
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
+	git_str_dispose(&path);
+}
+
+static git_buf _cl_restore_globalconfig = GIT_BUF_INIT;
+
+void cl_fake_globalconfig_cleanup(void *payload)
+{
+	GIT_UNUSED(payload);
+
+	if (_cl_restore_globalconfig.ptr) {
+		cl_git_pass(git_libgit2_opts(
+			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, _cl_restore_globalconfig.ptr));
+		git_buf_dispose(&_cl_restore_globalconfig);
+	}
+}
+
+void cl_fake_globalconfig(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &_cl_restore_globalconfig));
+
+	cl_set_cleanup(cl_fake_globalconfig_cleanup, NULL);
+
+	if (!git_fs_path_exists("globalconfig"))
+		cl_must_pass(p_mkdir("globalconfig", 0777));
+	cl_git_pass(git_fs_path_prettify(&path, "globalconfig", NULL));
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
 	git_str_dispose(&path);
