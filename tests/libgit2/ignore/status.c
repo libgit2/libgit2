@@ -385,8 +385,8 @@ void test_ignore_status__leading_slash_ignores(void)
 
 	make_test_data(test_repo_1, test_files_1);
 
-	cl_fake_home();
-	cl_git_mkfile("home/.gitignore", "/ignore_me\n");
+	cl_fake_globalconfig();
+	cl_git_mkfile("globalconfig/.gitignore", "/ignore_me\n");
 	{
 		git_config *cfg;
 		cl_git_pass(git_repository_config(&cfg, g_repo));
