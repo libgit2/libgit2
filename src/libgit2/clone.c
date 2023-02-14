@@ -423,7 +423,7 @@ static int clone_into(
 	fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
 
 	if ((error = git_remote_connect_options__from_fetch_opts(&connect_opts, remote, &fetch_opts)) < 0)
-		return error;
+		goto cleanup;
 
 	git_str_printf(&reflog_message, "clone: from %s", git_remote_url(remote));
 
