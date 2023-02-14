@@ -10,8 +10,8 @@
 #ifdef GIT_OPENSSL_DYNAMIC
 # include <dlfcn.h>
 
-int handle_count;
-void *openssl_handle;
+static int handle_count;
+static void *openssl_handle;
 
 static int git_hash_openssl_global_shutdown(void)
 {
@@ -30,7 +30,8 @@ static int git_hash_openssl_global_init(void)
 		    (openssl_handle = dlopen("libssl.1.1.dylib", RTLD_NOW)) == NULL &&
 		    (openssl_handle = dlopen("libssl.so.1.0.0", RTLD_NOW)) == NULL &&
 		    (openssl_handle = dlopen("libssl.1.0.0.dylib", RTLD_NOW)) == NULL &&
-		    (openssl_handle = dlopen("libssl.so.10", RTLD_NOW)) == NULL) {
+		    (openssl_handle = dlopen("libssl.so.10", RTLD_NOW)) == NULL &&
+		    (openssl_handle = dlopen("libssl.so.3", RTLD_NOW)) == NULL) {
 			git_error_set(GIT_ERROR_SSL, "could not load ssl libraries");
 			return -1;
 		}
