@@ -67,6 +67,7 @@ static const struct {
 static int check_repositoryformatversion(int *version, git_config *config);
 static int check_extensions(git_config *config, int version);
 static int load_global_config(git_config **config);
+static int load_objectformat(git_repository *repo, git_config *config);
 
 #define GIT_COMMONDIR_FILE "commondir"
 #define GIT_GITDIR_FILE "gitdir"
@@ -75,8 +76,8 @@ static int load_global_config(git_config **config);
 
 #define GIT_BRANCH_DEFAULT "master"
 
-#define GIT_REPO_VERSION 0
-#define GIT_REPO_MAX_VERSION 1
+#define GIT_REPO_VERSION_DEFAULT 0
+#define GIT_REPO_VERSION_MAX 1
 
 git_str git_repository__reserved_names_win32[] = {
 	{ DOT_GIT, 0, CONST_STRLEN(DOT_GIT) },
@@ -240,7 +241,7 @@ GIT_INLINE(int) validate_repo_path(git_str *path)
 	 */
 	static size_t suffix_len =
 		CONST_STRLEN("objects/pack/pack-.pack.lock") +
-		GIT_OID_SHA1_HEXSIZE;
+		GIT_OID_MAX_HEXSIZE;
 
 	return git_fs_path_validate_str_length_with_suffix(
 		path, suffix_len);
@@ -1015,7 +1016,8 @@ int git_repository_open_ext(
 	if (error < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
 
-	if (config && (error = check_repositoryformatversion(&version, config)) < 0)
+	if (config &&
+	    (error = check_repositoryformatversion(&version, config)) < 0)
 		goto cleanup;
 
 	if ((error = check_extensions(config, version)) < 0)
@@ -1028,6 +1030,13 @@ int git_repository_open_ext(
 		    ((error = load_config_data(repo, config)) < 0 ||
 		     (error = load_workdir(repo, config, &workdir)) < 0))
 			goto cleanup;
+	}
+
+	if (version > 0) {
+		if ((error = load_objectformat(repo, config)) < 0)
+			goto cleanup;
+	} else {
+		repo->oid_type = GIT_OID_SHA1;
 	}
 
 	/*
@@ -1269,11 +1278,14 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 	*out = git_atomic_load(repo->_odb);
 	if (*out == NULL) {
 		git_str odb_path = GIT_STR_INIT;
+		git_odb_options odb_opts = GIT_ODB_OPTIONS_INIT;
 		git_odb *odb;
+
+		odb_opts.oid_type = repo->oid_type;
 
 		if ((error = git_repository__item_path(&odb_path, repo,
 				GIT_REPOSITORY_ITEM_OBJECTS)) < 0 ||
-			(error = git_odb__new(&odb, NULL)) < 0)
+			(error = git_odb__new(&odb, &odb_opts)) < 0)
 			return error;
 
 		GIT_REFCOUNT_OWN(odb, repo);
@@ -1531,6 +1543,7 @@ static int check_repositoryformatversion(int *version, git_config *config)
 	int error;
 
 	error = git_config_get_int32(version, config, "core.repositoryformatversion");
+
 	/* git ignores this if the config variable isn't there */
 	if (error == GIT_ENOTFOUND)
 		return 0;
@@ -1538,10 +1551,15 @@ static int check_repositoryformatversion(int *version, git_config *config)
 	if (error < 0)
 		return -1;
 
-	if (GIT_REPO_MAX_VERSION < *version) {
+	if (*version < 0) {
+		git_error_set(GIT_ERROR_REPOSITORY,
+			"invalid repository version %d", *version);
+	}
+
+	if (GIT_REPO_VERSION_MAX < *version) {
 		git_error_set(GIT_ERROR_REPOSITORY,
 			"unsupported repository version %d; only versions up to %d are supported",
-			*version, GIT_REPO_MAX_VERSION);
+			*version, GIT_REPO_VERSION_MAX);
 		return -1;
 	}
 
@@ -1549,7 +1567,8 @@ static int check_repositoryformatversion(int *version, git_config *config)
 }
 
 static const char *builtin_extensions[] = {
-	"noop"
+	"noop",
+	"objectformat"
 };
 
 static git_vector user_extensions = GIT_VECTOR_INIT;
@@ -1611,6 +1630,79 @@ static int check_extensions(git_config *config, int version)
 		return 0;
 
 	return git_config_foreach_match(config, "^extensions\\.", check_valid_extension, NULL);
+}
+
+static int load_objectformat(git_repository *repo, git_config *config)
+{
+	git_config_entry *entry = NULL;
+	int error;
+
+	if ((error = git_config_get_entry(&entry, config, "extensions.objectformat")) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			repo->oid_type = GIT_OID_SHA1;
+			git_error_clear();
+			error = 0;
+		}
+
+		goto done;
+	}
+
+	if ((repo->oid_type = git_oid_type_fromstr(entry->value)) == 0) {
+		git_error_set(GIT_ERROR_REPOSITORY,
+			"unknown object format '%s'", entry->value);
+		error = GIT_EINVALID;
+	}
+
+done:
+	git_config_entry_free(entry);
+	return error;
+}
+
+int git_repository__set_objectformat(
+	git_repository *repo,
+	git_oid_t oid_type)
+{
+	git_config *cfg;
+
+	/*
+	 * Older clients do not necessarily understand the
+	 * `objectformat` extension, even when it's set to an
+	 * object format that they understand (SHA1). Do not set
+	 * the objectformat extension unless we're not using the
+	 * default object format.
+	 */
+	if (oid_type == GIT_OID_DEFAULT)
+		return 0;
+
+	if (!git_repository_is_empty(repo) && repo->oid_type != oid_type) {
+		git_error_set(GIT_ERROR_REPOSITORY,
+			"cannot change object id type of existing repository");
+		return -1;
+	}
+
+	if (git_repository_config__weakptr(&cfg, repo) < 0)
+		return -1;
+
+	if (git_config_set_int32(cfg,
+			"core.repositoryformatversion", 1) < 0 ||
+	    git_config_set_string(cfg, "extensions.objectformat",
+			git_oid_type_name(oid_type)) < 0)
+		return -1;
+
+	/*
+	 * During repo init, we may create some backends with the
+	 * default oid type. Clear them so that we create them with
+	 * the proper oid type.
+	 */
+	if (repo->oid_type != oid_type) {
+		set_index(repo, NULL);
+		set_odb(repo, NULL);
+		set_refdb(repo, NULL);
+
+		repo->oid_type = oid_type;
+	}
+
+	return 0;
 }
 
 int git_repository__extensions(char ***out, size_t *out_len)
@@ -1891,19 +1983,21 @@ static int repo_init_config(
 	const char *repo_dir,
 	const char *work_dir,
 	uint32_t flags,
-	uint32_t mode)
+	uint32_t mode,
+	git_oid_t oid_type)
 {
 	int error = 0;
 	git_str cfg_path = GIT_STR_INIT, worktree_path = GIT_STR_INIT;
 	git_config *config = NULL;
 	bool is_bare = ((flags & GIT_REPOSITORY_INIT_BARE) != 0);
 	bool is_reinit = ((flags & GIT_REPOSITORY_INIT__IS_REINIT) != 0);
-	int version = 0;
+	int version = GIT_REPO_VERSION_DEFAULT;
 
 	if ((error = repo_local_config(&config, &cfg_path, NULL, repo_dir)) < 0)
 		goto cleanup;
 
-	if (is_reinit && (error = check_repositoryformatversion(&version, config)) < 0)
+	if (is_reinit &&
+	    (error = check_repositoryformatversion(&version, config)) < 0)
 		goto cleanup;
 
 	if ((error = check_extensions(config, version)) < 0)
@@ -1914,7 +2008,7 @@ static int repo_init_config(
 		goto cleanup; } while (0)
 
 	SET_REPO_CONFIG(bool, "core.bare", is_bare);
-	SET_REPO_CONFIG(int32, "core.repositoryformatversion", GIT_REPO_VERSION);
+	SET_REPO_CONFIG(int32, "core.repositoryformatversion", version);
 
 	if ((error = repo_init_fs_configs(
 			config, cfg_path.ptr, repo_dir, work_dir, !is_reinit)) < 0)
@@ -1945,6 +2039,11 @@ static int repo_init_config(
 	else if (mode == GIT_REPOSITORY_INIT_SHARED_ALL) {
 		SET_REPO_CONFIG(int32, "core.sharedrepository", 2);
 		SET_REPO_CONFIG(bool, "receive.denyNonFastforwards", true);
+	}
+
+	if (oid_type != GIT_OID_SHA1) {
+		SET_REPO_CONFIG(int32, "core.repositoryformatversion", 1);
+		SET_REPO_CONFIG(string, "extensions.objectformat", git_oid_type_name(oid_type));
 	}
 
 cleanup:
@@ -2427,6 +2526,7 @@ int git_repository_init_ext(
 		common_path = GIT_STR_INIT;
 	const char *wd;
 	bool is_valid;
+	git_oid_t oid_type = GIT_OID_DEFAULT;
 	int error;
 
 	GIT_ASSERT_ARG(out);
@@ -2434,6 +2534,11 @@ int git_repository_init_ext(
 	GIT_ASSERT_ARG(opts);
 
 	GIT_ERROR_CHECK_VERSION(opts, GIT_REPOSITORY_INIT_OPTIONS_VERSION, "git_repository_init_options");
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	if (opts->oid_type)
+		oid_type = opts->oid_type;
+#endif
 
 	if ((error = repo_init_directories(&repo_path, &wd_path, given_repo, opts)) < 0)
 		goto out;
@@ -2453,13 +2558,13 @@ int git_repository_init_ext(
 
 		opts->flags |= GIT_REPOSITORY_INIT__IS_REINIT;
 
-		if ((error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode)) < 0)
+		if ((error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode, oid_type)) < 0)
 			goto out;
 
 		/* TODO: reinitialize the templates */
 	} else {
 		if ((error = repo_init_structure(repo_path.ptr, wd, opts)) < 0 ||
-		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode)) < 0 ||
+		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode, oid_type)) < 0 ||
 		    (error = repo_init_head(repo_path.ptr, opts->initial_head)) < 0)
 			goto out;
 	}
@@ -2922,14 +3027,14 @@ int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_str file_path = GIT_STR_INIT;
-	char orig_head_str[GIT_OID_SHA1_HEXSIZE];
+	char orig_head_str[GIT_OID_MAX_HEXSIZE];
 	int error = 0;
 
 	git_oid_fmt(orig_head_str, orig_head);
 
 	if ((error = git_str_joinpath(&file_path, repo->gitdir, GIT_ORIG_HEAD_FILE)) == 0 &&
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_MERGE_FILE_MODE)) == 0 &&
-		(error = git_filebuf_printf(&file, "%.*s\n", GIT_OID_SHA1_HEXSIZE, orig_head_str)) == 0)
+		(error = git_filebuf_printf(&file, "%.*s\n", (int)git_oid_hexsize(repo->oid_type), orig_head_str)) == 0)
 		error = git_filebuf_commit(&file);
 
 	if (error < 0)
@@ -3042,7 +3147,7 @@ int git_repository_hashfile(
 		goto cleanup;
 	}
 
-	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, GIT_OID_SHA1, fl);
+	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, repo->oid_type, fl);
 
 cleanup:
 	if (fd >= 0)
@@ -3388,4 +3493,9 @@ int git_repository_submodule_cache_clear(git_repository *repo)
 	error = git_submodule_cache_free(repo->submodule_cache);
 	repo->submodule_cache = NULL;
 	return error;
+}
+
+git_oid_t git_repository_oid_type(git_repository *repo)
+{
+	return repo ? repo->oid_type : 0;
 }

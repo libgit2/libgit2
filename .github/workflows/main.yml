@@ -232,7 +232,7 @@ jobs:
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DEXPERIMENTAL_SHA256=ON
           os: ubuntu-latest
         - name: "macOS (SHA256)"
           id: macos

@@ -538,7 +538,7 @@ int git_commit_graph_entry_find(
 	hi = ntohl(file->oid_fanout[(int)short_oid->id[0]]);
 	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(file->oid_fanout[(int)short_oid->id[0] - 1]));
 
-	pos = git_pack__lookup_sha1(file->oid_lookup, GIT_OID_SHA1_SIZE, lo, hi, short_oid->id);
+	pos = git_pack__lookup_id(file->oid_lookup, GIT_OID_SHA1_SIZE, lo, hi, short_oid->id, GIT_OID_SHA1);
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */
@@ -726,7 +726,8 @@ int git_commit_graph_writer_add_index_file(
 	if (error < 0)
 		goto cleanup;
 
-	error = git_mwindow_get_pack(&p, idx_path);
+	/* TODO: SHA256 */
+	error = git_mwindow_get_pack(&p, idx_path, 0);
 	if (error < 0)
 		goto cleanup;
 

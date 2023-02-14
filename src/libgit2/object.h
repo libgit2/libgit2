@@ -33,7 +33,8 @@ int git_object__from_raw(
 	git_object **object_out,
 	const char *data,
 	size_t size,
-	git_object_t type);
+	git_object_t object_type,
+	git_oid_t oid_type);
 
 int git_object__from_odb_object(
 	git_object **object_out,

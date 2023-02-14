@@ -32,6 +32,8 @@
 #define GIT_CAP_SYMREF "symref"
 #define GIT_CAP_WANT_TIP_SHA1 "allow-tip-sha1-in-want"
 #define GIT_CAP_WANT_REACHABLE_SHA1 "allow-reachable-sha1-in-want"
+#define GIT_CAP_OBJECT_FORMAT "object-format="
+#define GIT_CAP_AGENT "agent="
 
 extern bool git_smart__ofs_delta_enabled;
 
@@ -133,6 +135,8 @@ typedef struct transport_smart_caps {
 	             thin_pack:1,
 	             want_tip_sha1:1,
 	             want_reachable_sha1:1;
+	char *object_format;
+	char *agent;
 } transport_smart_caps;
 
 typedef int (*packetsize_cb)(size_t received, void *payload);
@@ -182,7 +186,12 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 int git_smart__update_heads(transport_smart *t, git_vector *symrefs);
 
 /* smart_pkt.c */
-int git_pkt_parse_line(git_pkt **head, const char **endptr, const char *line, size_t linelen);
+typedef struct {
+	git_oid_t oid_type;
+	int seen_capabilities: 1;
+} git_pkt_parse_data;
+
+int git_pkt_parse_line(git_pkt **head, const char **endptr, const char *line, size_t linelen, git_pkt_parse_data *data);
 int git_pkt_buffer_flush(git_str *buf);
 int git_pkt_send_flush(GIT_SOCKET s);
 int git_pkt_buffer_done(git_str *buf);

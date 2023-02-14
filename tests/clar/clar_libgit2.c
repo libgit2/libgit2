@@ -477,6 +477,25 @@ int cl_repo_get_bool(git_repository *repo, const char *cfg)
 	return val;
 }
 
+void cl_repo_set_int(git_repository *repo, const char *cfg, int value)
+{
+	git_config *config;
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_int32(config, cfg, value));
+	git_config_free(config);
+}
+
+int cl_repo_get_int(git_repository *repo, const char *cfg)
+{
+	int val = 0;
+	git_config *config;
+	cl_git_pass(git_repository_config(&config, repo));
+	if (git_config_get_int32(&val, config, cfg) < 0)
+		git_error_clear();
+	git_config_free(config);
+	return val;
+}
+
 void cl_repo_set_string(git_repository *repo, const char *cfg, const char *value)
 {
 	git_config *config;

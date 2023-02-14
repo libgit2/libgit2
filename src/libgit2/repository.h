@@ -153,6 +153,7 @@ struct git_repository {
 
 	unsigned is_bare:1;
 	unsigned is_worktree:1;
+	git_oid_t oid_type;
 
 	unsigned int lru_counter;
 
@@ -255,5 +256,13 @@ int git_repository_workdir_path(git_str *out, git_repository *repo, const char *
 int git_repository__extensions(char ***out, size_t *out_len);
 int git_repository__set_extensions(const char **extensions, size_t len);
 void git_repository__free_extensions(void);
+
+/*
+ * Set the object format (OID type) for a repository; this will set
+ * both the configuration and the internal value for the oid type.
+ */
+int git_repository__set_objectformat(
+	git_repository *repo,
+	git_oid_t oid_type);
 
 #endif

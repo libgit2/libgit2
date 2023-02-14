@@ -351,6 +351,15 @@ typedef struct {
 	 * pointing to this URL.
 	 */
 	const char *origin_url;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	/**
+	 *
+	 * Type of object IDs to use for this repository, or 0 for
+	 * default (currently SHA1).
+	 */
+	git_oid_t oid_type;
+#endif
 } git_repository_init_options;
 
 #define GIT_REPOSITORY_INIT_OPTIONS_VERSION 1
@@ -948,6 +957,14 @@ GIT_EXTERN(int) git_repository_ident(const char **name, const char **email, cons
  * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_repository_set_ident(git_repository *repo, const char *name, const char *email);
+
+/**
+ * Gets the object type used by this repository.
+ *
+ * @param repo the repository
+ * @return the object id type
+ */
+GIT_EXTERN(git_oid_t) git_repository_oid_type(git_repository *repo);
 
 /** @} */
 GIT_END_DECL
