@@ -15,16 +15,6 @@ set(LIBGIT2_INCLUDES
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include")
 
-if(WIN32 AND EMBED_SSH_PATH)
-	file(GLOB SRC_SSH "${EMBED_SSH_PATH}/src/*.c")
-	list(SORT SRC_SSH)
-	target_sources(libgit2 PRIVATE ${SRC_SSH})
-
-	list(APPEND LIBGIT2_SYSTEM_INCLUDES "${EMBED_SSH_PATH}/include")
-	file(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
-	set(GIT_SSH 1)
-endif()
-
 # Collect sourcefiles
 file(GLOB SRC_H
 	"${PROJECT_SOURCE_DIR}/include/git2.h"
@@ -69,6 +59,7 @@ endif()
 
 ide_split_sources(libgit2)
 list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:util> $<TARGET_OBJECTS:libgit2> ${LIBGIT2_DEPENDENCY_OBJECTS})
+list(APPEND LIBGIT2_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES})
 
 target_include_directories(libgit2 PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(libgit2 SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
@@ -86,6 +77,7 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 
 add_library(libgit2package ${SRC_RC} ${LIBGIT2_OBJECTS})
 target_link_libraries(libgit2package ${LIBGIT2_SYSTEM_LIBS})
+target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
 
 set_target_properties(libgit2package PROPERTIES C_STANDARD 90)
 set_target_properties(libgit2package PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
