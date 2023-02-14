@@ -5,6 +5,7 @@
 #include "remote.h"
 #include "futils.h"
 #include "refs.h"
+#include "sysdir.h"
 
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
@@ -606,7 +607,7 @@ void test_online_clone__ssh_github(void)
 	if (!_github_ssh_pubkey || !_github_ssh_privkey)
 		clar__skip();
 
-	cl_fake_homedir(NULL);
+	cl_fake_homedir();
 
 	g_options.fetch_opts.callbacks.credentials = github_credentials;
 	g_options.fetch_opts.callbacks.certificate_check = succeed_certificate_check;
@@ -647,7 +648,7 @@ void test_online_clone__ssh_certcheck_accepts_unknown(void)
 	if (!_github_ssh_pubkey || !_github_ssh_privkey)
 		clar__skip();
 
-	cl_fake_homedir(NULL);
+	cl_fake_homedir();
 
 	g_options.fetch_opts.callbacks.credentials = github_credentials;
 
@@ -678,7 +679,9 @@ void test_online_clone__ssh_certcheck_override_knownhosts(void)
 
 	g_options.fetch_opts.callbacks.credentials = github_credentials;
 
-	cl_fake_homedir(&knownhostsfile);
+	cl_fake_homedir();
+
+	cl_git_pass(git_sysdir_find_homedir(&knownhostsfile));
 	cl_git_pass(git_str_joinpath(&knownhostsfile, knownhostsfile.ptr, ".ssh"));
 	cl_git_pass(p_mkdir(knownhostsfile.ptr, 0777));
 
