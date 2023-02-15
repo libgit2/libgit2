@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "futils.h"
 #include "sysdir.h"
+#include "warning.h"
 #include <ctype.h>
 
 static int validate_ownership = 0;
@@ -28,6 +29,7 @@ void test_repo_open__cleanup(void)
 	git_buf_dispose(&config_path);
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, validate_ownership));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_WARNING_CALLBACK, NULL, NULL));
 }
 
 void test_repo_open__bare_empty_repo(void)
@@ -873,4 +875,69 @@ void test_repo_open__can_reset_safe_directory_list(void)
 	git_str_dispose(&config_path);
 	git_str_dispose(&config_filename);
 	git_str_dispose(&config_data);
+}
+
+static int warning_ignore_cb(git_warning_t warning_type, void *data, ...)
+{
+	va_list ap;
+	const char *path;
+
+	va_start(ap, data);
+	path = va_arg(ap, const char *);
+
+	if (warning_type != GIT_WARNING_SAFE_DIRECTORY)
+		return GIT_WARNING_CONTINUE;
+
+	cl_assert_equal_i(*((int *)data), 42);
+	cl_assert(strstr(path, "empty_standard_repo") != NULL);
+
+	va_end(ap);
+
+	return GIT_WARNING_IGNORE;
+}
+
+static int warning_fail_cb(git_warning_t warning_type, void *data, ...)
+{
+	va_list ap;
+	const char *path;
+
+	va_start(ap, data);
+	path = va_arg(ap, const char *);
+
+	if (warning_type != GIT_WARNING_SAFE_DIRECTORY)
+		return GIT_WARNING_IGNORE;
+
+	cl_assert_equal_i(*((int *)data), 42);
+	cl_assert(strstr(path, "empty_standard_repo") != NULL);
+
+	va_end(ap);
+
+	return GIT_WARNING_CONTINUE;
+}
+
+void test_repo_open__can_ignore_safedirectory_with_warning_callback(void)
+{
+	git_repository *repo;
+	int data = 42;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
+
+	cl_fixture_sandbox("empty_standard_repo");
+	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
+
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
+
+	/* When there's no warning callback, invalid ownership must fail. */
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_WARNING_CALLBACK, NULL, NULL));
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "empty_standard_repo"));
+
+	/* A warning callback can ignore invalid ownership. */
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_WARNING_CALLBACK, warning_ignore_cb, &data));
+	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
+	git_repository_free(repo);
+
+	/* A warning callback can also enforce libgit2's opinion. */
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_WARNING_CALLBACK, warning_fail_cb, &data));
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "empty_standard_repo"));
+	git_repository_free(repo);
 }

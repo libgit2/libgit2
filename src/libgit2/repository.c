@@ -34,6 +34,7 @@
 #include "submodule.h"
 #include "worktree.h"
 #include "path.h"
+#include "warning.h"
 
 #ifdef GIT_WIN32
 # include "win32/w32_util.h"
@@ -706,7 +707,8 @@ static int validate_ownership(git_repository *repo)
 			&is_safe, validation_paths[0], repo->use_env)) < 0)
 		goto done;
 
-	if (!is_safe) {
+	if (!is_safe &&
+	    git_warning(GIT_WARNING_SAFE_DIRECTORY, path) != GIT_WARNING_IGNORE) {
 		size_t path_len = git_fs_path_is_root(path) ?
 			strlen(path) : git_fs_path_dirlen(path);
 
