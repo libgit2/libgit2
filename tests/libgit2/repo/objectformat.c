@@ -4,8 +4,8 @@
 #include "repository.h"
 #include <ctype.h>
 
-git_repository *repo;
-git_config *config;
+static git_repository *repo;
+static git_config *config;
 
 void test_repo_objectformat__initialize(void)
 {
