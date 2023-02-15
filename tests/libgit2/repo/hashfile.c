@@ -170,3 +170,33 @@ void test_repo_hashfile__filtered_outside_workdir(void)
 	git_str_dispose(&bin);
 	git_str_dispose(&root);
 }
+
+void test_repo_hashfile__safecrlf(void)
+{
+	git_oid a, b;
+	git_str full = GIT_STR_INIT;
+
+	cl_repo_set_bool(_repo, "core.safecrlf", true);
+	cl_git_append2file("status/.gitattributes", "*.txt text eol=lf\n\n");
+
+	/* create some sample content with LF and CRLF in it */
+	cl_git_mkfile("status/testfile_lf.txt", "content\n");
+	cl_git_mkfile("status/testfile_crlf.txt", "content\r\n");
+
+	/* hash of file with correct line endings must match odb hashfile */
+	cl_git_pass(git_odb__hashfile(&a, "status/testfile_lf.txt", GIT_OBJECT_BLOB, GIT_OID_SHA1));
+	cl_git_pass(git_repository_hashfile(&b, _repo, "testfile_lf.txt", GIT_OBJECT_BLOB, NULL));
+	cl_assert_equal_oid(&a, &b);
+
+	/* hash of file with incorrect line endings must NOT match odb hashfile */
+	cl_git_pass(git_odb__hashfile(&a, "status/testfile_crlf.txt", GIT_OBJECT_BLOB, GIT_OID_SHA1));
+	cl_git_pass(git_repository_hashfile(&b, _repo, "testfile_crlf.txt", GIT_OBJECT_BLOB, NULL));
+	cl_assert(git_oid_cmp(&a, &b));
+
+	/* hash of file with incorrect line endings must match odb hashfile with correct line endings */
+	cl_git_pass(git_odb__hashfile(&a, "status/testfile_lf.txt", GIT_OBJECT_BLOB, GIT_OID_SHA1));
+	cl_git_pass(git_repository_hashfile(&b, _repo, "testfile_crlf.txt", GIT_OBJECT_BLOB, NULL));
+	cl_assert_equal_oid(&a, &b);
+
+	git_str_dispose(&full);
+}
