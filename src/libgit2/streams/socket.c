@@ -135,7 +135,8 @@ static ssize_t socket_write(git_stream *stream, const char *data, size_t len, in
 	git_socket_stream *st = (git_socket_stream *) stream;
 	ssize_t written;
 
-	assert(flags == 0);
+	GIT_ASSERT(flags == 0);
+	GIT_UNUSED(flags);
 
 	errno = 0;
 
