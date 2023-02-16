@@ -295,7 +295,7 @@ jobs:
         container: ${{ matrix.platform.container.name }}
         container-version: ${{ env.docker-registry-container-sha }}
     - name: Test
-      uses: .github/workflows/run-build.yml@ethomson/workflow
+      uses: ./.github/actions/run-build
       with:
         command: cd build && ../source/ci/test.sh
         container: ${{ matrix.platform.container.name }}
