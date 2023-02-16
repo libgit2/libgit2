@@ -25,6 +25,7 @@
 #include "merge.h"
 #include "diff.h"
 #include "diff_generate.h"
+#include "strarray.h"
 
 static int create_error(int error, const char *msg)
 {
