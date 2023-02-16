@@ -8,6 +8,7 @@
 #include "util.h"
 
 #include "common.h"
+#include "strarray.h"
 
 int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 {

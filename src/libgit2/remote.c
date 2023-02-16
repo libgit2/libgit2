@@ -17,6 +17,7 @@
 #include "fetchhead.h"
 #include "push.h"
 #include "proxy.h"
+#include "strarray.h"
 
 #include "git2/config.h"
 #include "git2/types.h"
