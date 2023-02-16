@@ -289,13 +289,13 @@ jobs:
     - name: Prepare build
       run: mkdir build
     - name: Build
-      uses: ./.github/actions/run-build
+      uses: ./source/.github/actions/run-build
       with:
         command: cd build && ../source/ci/build.sh
         container: ${{ matrix.platform.container.name }}
         container-version: ${{ env.docker-registry-container-sha }}
     - name: Test
-      uses: ./.github/actions/run-build
+      uses: ./source/.github/actions/run-build
       with:
         command: cd build && ../source/ci/test.sh
         container: ${{ matrix.platform.container.name }}
