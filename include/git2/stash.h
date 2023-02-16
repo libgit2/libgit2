@@ -57,15 +57,10 @@ typedef enum {
  *
  * @param out Object id of the commit containing the stashed state.
  * This commit is also the target of the direct reference refs/stash.
- *
  * @param repo The owning repository.
- *
  * @param stasher The identity of the person performing the stashing.
- *
  * @param message Optional description along with the stashed state.
- *
  * @param flags Flags to control the stashing process. (see GIT_STASH_* above)
- *
  * @return 0 on success, GIT_ENOTFOUND where there's nothing to stash,
  * or error code.
  */
@@ -86,25 +81,21 @@ GIT_EXTERN(int) git_stash_save(
 typedef struct git_stash_save_options {
 	unsigned int version;
 
+	/** Flags to control the stashing process. (see GIT_STASH_* above) */
+	uint32_t flags;
+
 	/** The identity of the person performing the stashing. */
 	const git_signature *stasher;
 
 	/** Optional description along with the stashed state. */
 	const char *message;
 
-	/** Flags to control the stashing process. (see GIT_STASH_* above) */
-	uint32_t flags;
-
 	/** Optional paths that control which files are stashed. */
 	git_strarray paths;
 } git_stash_save_options;
 
 #define GIT_STASH_SAVE_OPTIONS_VERSION 1
-#define GIT_STASH_SAVE_OPTIONS_INIT { \
-	GIT_STASH_SAVE_OPTIONS_VERSION, \
-	NULL, \
-	NULL, \
-	GIT_STASH_DEFAULT }
+#define GIT_STASH_SAVE_OPTIONS_INIT { GIT_STASH_SAVE_OPTIONS_VERSION }
 
 /**
  * Initialize git_stash_save_options structure
@@ -121,14 +112,11 @@ GIT_EXTERN(int) git_stash_save_options_init(
 
 /**
  * Save the local modifications to a new stash, with options.
- * 
+ *
  * @param out Object id of the commit containing the stashed state.
  * This commit is also the target of the direct reference refs/stash.
- *
  * @param repo The owning repository.
- *
  * @param opts The stash options.
- *
  * @return 0 on success, GIT_ENOTFOUND where there's nothing to stash,
  * or error code.
  */
