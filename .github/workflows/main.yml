@@ -286,43 +286,20 @@ jobs:
         docker build -t ${{ env.docker-registry-container-sha }} --build-arg UID=$(id -u) --build-arg GID=$(id -g) ${BASE_ARG} -f ${{ env.dockerfile }} .
       working-directory: ${{ env.docker-config-path }}
       if: matrix.platform.container.name != '' && env.docker-container-exists != 'true'
-    - name: Build and test
-      run: |
-        export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
-        export GITTEST_GITHUB_SSH_KEY="${{ secrets.GITTEST_GITHUB_SSH_KEY }}"
-        export GITTEST_GITHUB_SSH_PUBKEY="${{ secrets.GITTEST_GITHUB_SSH_PUBKEY }}"
-        export GITTEST_GITHUB_SSH_PASSPHRASE="${{ secrets.GITTEST_GITHUB_SSH_PASSPHRASE }}"
-        export GITTEST_GITHUB_SSH_REMOTE_HOSTKEY="${{ secrets.GITTEST_GITHUB_SSH_REMOTE_HOSTKEY }}"
-
-        if [ -n "${{ matrix.platform.container.name }}" ]; then
-          mkdir build
-          docker run \
-              --rm \
-              --user "$(id -u):$(id -g)" \
-              -v "$(pwd)/source:/home/libgit2/source" \
-              -v "$(pwd)/build:/home/libgit2/build" \
-              -w /home/libgit2 \
-              -e ASAN_SYMBOLIZER_PATH \
-              -e CC \
-              -e CFLAGS \
-              -e CMAKE_GENERATOR \
-              -e CMAKE_OPTIONS \
-              -e GITTEST_NEGOTIATE_PASSWORD \
-              -e GITTEST_FLAKY_STAT \
-              -e PKG_CONFIG_PATH \
-              -e SKIP_NEGOTIATE_TESTS \
-              -e SKIP_SSH_TESTS \
-              -e TSAN_OPTIONS \
-              -e UBSAN_OPTIONS \
-              ${{ env.docker-registry-container-sha }} \
-              /bin/bash -c "cd build && ../source/ci/build.sh && ../source/ci/test.sh"
-        else
-          mkdir build
-          cd build
-          ../source/ci/build.sh
-          ../source/ci/test.sh
-        fi
-      shell: bash
+    - name: Prepare build
+      run: mkdir build
+    - name: Build
+      uses: ./.github/actions/run-build
+      with:
+        command: cd build && ../source/ci/build.sh
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
+    - name: Test
+      uses: .github/workflows/run-build.yml@ethomson/workflow
+      with:
+        command: cd build && ../source/ci/test.sh
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
     - name: Upload test results
       uses: actions/upload-artifact@v3
       if: success() || failure()
