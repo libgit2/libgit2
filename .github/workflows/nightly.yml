@@ -324,35 +324,20 @@ jobs:
       run: docker build -t ${{ env.docker-registry-container-sha }} -f ${{ env.dockerfile }} .
       working-directory: ${{ env.docker-config-path }}
       if: matrix.platform.container.name != '' && env.docker-container-exists != 'true'
-    - name: Build and test
-      run: |
-        export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
-
-        if [ -n "${{ matrix.platform.container.name }}" ]; then
-          docker run \
-              --rm \
-              --user libgit2:libgit2 \
-              -v "$(pwd)/source:/home/libgit2/source" \
-              -w /home/libgit2 \
-              -e ASAN_SYMBOLIZER_PATH \
-              -e CC \
-              -e CFLAGS \
-              -e CMAKE_GENERATOR \
-              -e CMAKE_OPTIONS \
-              -e GITTEST_NEGOTIATE_PASSWORD \
-              -e GITTEST_FLAKY_STAT \
-              -e PKG_CONFIG_PATH \
-              -e SKIP_NEGOTIATE_TESTS \
-              -e SKIP_SSH_TESTS \
-              -e TSAN_OPTIONS \
-              ${{ env.docker-registry-container-sha }} \
-              /bin/bash -c "mkdir build && cd build && ../source/ci/build.sh && ../source/ci/test.sh"
-        else
-          mkdir build && cd build
-          ../source/ci/build.sh
-          ../source/ci/test.sh
-        fi
-      shell: bash
+    - name: Prepare build
+      run: mkdir build
+    - name: Build
+      uses: ./source/.github/actions/run-build
+      with:
+        command: cd build && ../source/ci/build.sh
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
+    - name: Test
+      uses: ./source/.github/actions/run-build
+      with:
+        command: cd build && ../source/ci/test.sh
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
 
   coverity:
     # Only run scheduled workflows on the main repository; prevents people
