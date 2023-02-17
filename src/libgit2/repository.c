@@ -1019,7 +1019,6 @@ int git_repository_open_ext(
 		gitlink = GIT_STR_INIT, commondir = GIT_STR_INIT;
 	git_repository *repo = NULL;
 	git_config *config = NULL;
-	int version = 0;
 
 	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV)
 		return _git_repository_open_ext_from_env(repo_ptr, start_path);
