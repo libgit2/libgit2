@@ -733,6 +733,43 @@ out:
 	return error;
 }
 
+static int obtain_config_and_set_oid_type(
+	git_config **config_ptr,
+	git_repository *repo)
+{
+	int error;
+	git_config *config = NULL;
+	int version = 0;
+
+	/*
+	 * We'd like to have the config, but git doesn't particularly
+	 * care if it's not there, so we need to deal with that.
+	 */
+
+	error = git_repository_config_snapshot(&config, repo);
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto out;
+
+	if (config &&
+		(error = check_repositoryformatversion(&version, config)) < 0)
+		goto out;
+
+	if ((error = check_extensions(config, version)) < 0)
+		goto out;
+
+	if (version > 0) {
+		if ((error = load_objectformat(repo, config)) < 0)
+			goto out;
+	} else {
+		repo->oid_type = GIT_OID_SHA1;
+	}
+
+out:
+	*config_ptr = config;
+
+	return error;
+}
+
 int git_repository_open_bare(
 	git_repository **repo_ptr,
 	const char *bare_path)
@@ -741,6 +778,7 @@ int git_repository_open_bare(
 	git_repository *repo = NULL;
 	bool is_valid;
 	int error;
+	git_config *config;
 
 	if ((error = git_fs_path_prettify_dir(&path, bare_path, NULL)) < 0 ||
 	    (error = is_valid_repository_path(&is_valid, &path, &common_path)) < 0)
@@ -766,8 +804,15 @@ int git_repository_open_bare(
 	repo->is_worktree = 0;
 	repo->workdir = NULL;
 
+	if ((error = obtain_config_and_set_oid_type(&config, repo)) < 0)
+		goto cleanup;
+
 	*repo_ptr = repo;
-	return 0;
+
+cleanup:
+	git_config_free(config);
+
+	return error;
 }
 
 static int _git_repository_open_ext_from_env(
@@ -1007,20 +1052,8 @@ int git_repository_open_ext(
 		goto cleanup;
 	repo->is_worktree = is_worktree;
 
-	/*
-	 * We'd like to have the config, but git doesn't particularly
-	 * care if it's not there, so we need to deal with that.
-	 */
-
-	error = git_repository_config_snapshot(&config, repo);
-	if (error < 0 && error != GIT_ENOTFOUND)
-		goto cleanup;
-
-	if (config &&
-	    (error = check_repositoryformatversion(&version, config)) < 0)
-		goto cleanup;
-
-	if ((error = check_extensions(config, version)) < 0)
+	error = obtain_config_and_set_oid_type(&config, repo);
+	if (error < 0)
 		goto cleanup;
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0) {
@@ -1030,13 +1063,6 @@ int git_repository_open_ext(
 		    ((error = load_config_data(repo, config)) < 0 ||
 		     (error = load_workdir(repo, config, &workdir)) < 0))
 			goto cleanup;
-	}
-
-	if (version > 0) {
-		if ((error = load_objectformat(repo, config)) < 0)
-			goto cleanup;
-	} else {
-		repo->oid_type = GIT_OID_SHA1;
 	}
 
 	/*
