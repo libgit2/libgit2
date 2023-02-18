@@ -547,6 +547,9 @@ static int validate_ownership_path(bool *is_safe, const char *path)
 	if (error == GIT_ENOTFOUND) {
 		*is_safe = true;
 		error = 0;
+	} else if (error == GIT_EINVALID) {
+		*is_safe = false;
+		error = 0;
 	}
 
 	return error;
