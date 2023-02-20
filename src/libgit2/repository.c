@@ -496,14 +496,47 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 {
 	validate_ownership_data *data = payload;
 
-	if (strcmp(entry->value, "") == 0)
+	if (strcmp(entry->value, "") == 0) {
 		*data->is_safe = false;
+	} else if (strcmp(entry->value, "*") == 0) {
+		*data->is_safe = true;
+	} else {
+		const char *test_path = entry->value;
 
-	if (strcmp(entry->value, "*") == 0)
-		*data->is_safe = true;
-	else if (git_fs_path_prettify_dir(&data->tmp, entry->value, NULL) == 0 &&
-	    strcmp(data->tmp.ptr, data->repo_path) == 0)
-		*data->is_safe = true;
+#ifdef GIT_WIN32
+		/*
+		 * Git for Windows does some truly bizarre things with
+		 * paths that start with a forward slash; and expects you
+		 * to escape that with `%(prefix)`. This syntax generally
+		 * means to add the prefix that Git was installed to -- eg
+		 * `/usr/local` -- unless it's an absolute path, in which
+		 * case the leading `%(prefix)/` is just removed. And Git
+		 * for Windows expects you to use this syntax for absolute
+		 * Unix-style paths (in "Git Bash" or Windows Subsystem for
+		 * Linux).
+		 *
+		 * Worse, the behavior used to be that a leading `/` was
+		 * not absolute. It would indicate that Git for Windows
+		 * should add the prefix. So `//` is required for absolute
+		 * Unix-style paths. Yes, this is truly horrifying.
+		 *
+		 * Emulate that behavior, I guess, but only for absolute
+		 * paths. We won't deal with the Git install prefix. Also,
+		 * give WSL users an escape hatch where they don't have to
+		 * think about this and can use the literal path that the
+		 * filesystem APIs provide (`//wsl.localhost/...`).
+		 */
+		if (strncmp(test_path, "%(prefix)//", strlen("%(prefix)//")) == 0)
+			test_path += strlen("%(prefix)/");
+		else if (strncmp(test_path, "//", 2) == 0 &&
+		         strncmp(test_path, "//wsl.localhost/", strlen("//wsl.localhost/")) != 0)
+			test_path++;
+#endif
+
+		if (git_fs_path_prettify_dir(&data->tmp, test_path, NULL) == 0 &&
+		    strcmp(data->tmp.ptr, data->repo_path) == 0)
+			*data->is_safe = true;
+	}
 
 	return 0;
 }
