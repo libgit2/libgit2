@@ -1855,7 +1855,7 @@ static int file_owner_sid(PSID *out, const char *path)
 	PSECURITY_DESCRIPTOR descriptor = NULL;
 	PSID owner_sid;
 	DWORD ret;
-	int error = -1;
+	int error = GIT_EINVALID;
 
 	if (git_win32_path_from_utf8(path_w32, path) < 0)
 		return -1;
