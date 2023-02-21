@@ -17,16 +17,16 @@ functionality into your application.  Language bindings like
 [NodeGit](http://nodegit.org) (Node) allow you to build Git tooling
 in your favorite language.
 
-`libgit2` is used to power Git GUI clients like
+`libgit2` is ideal for powering Git GUI clients like
 [GitKraken](https://gitkraken.com/) and [gmaster](https://gmaster.io/)
 and on Git hosting providers like [GitHub](https://github.com/),
 [GitLab](https://gitlab.com/) and
 [Azure DevOps](https://azure.com/devops).
 We perform the merge every time you click "merge pull request".
 
-`libgit2` is licensed under a **very permissive license** (GPLv2 with a special
-Linking Exception).  This basically means that you can link it (unmodified)
-with any kind of software without having to release its source code.
+`libgit2` is under a **very permissive license** (GPLv2 with a special
+Linking Exception) license management.  This basically means that you can link it (unmodified)
+with any kind of software without releasing its source code.
 Additionally, the example code has been released to the public domain (see the
 [separate license](examples/COPYING) for more information).
 
@@ -73,7 +73,7 @@ package managers.  And libgit2 is available in
 distributions.
 
 However, these versions _may_ be outdated and we recommend using the
-latest version if possible.  Thankfully libgit2 is not hard to compile.
+latest version if possible.  Thankfully libgit2 is easy to compile.
 
 Quick Start
 ===========
