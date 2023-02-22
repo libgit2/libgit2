@@ -25,11 +25,11 @@ and on Git hosting providers like [GitHub](https://github.com/),
 We perform the merge every time you click "merge pull request".
 
 `libgit2` is licensed under a **very permissive license** (GPLv2 with a special
-Linking Exception). The GPLv2 requires you to make changes you make _to libgit2
-itself_ available publicly, but the linking exception means that you can link
-libgit2 with your software without it becoming "infected" by the libgit2
-license. Additionally, the example code has been released to the public
-domain (see the [separate license](examples/COPYING) for more information).
+Linking Exception). This means that you can link against the library with any
+kind of software without making that software fall under the GPL.
+Changes to libgit2 would still be covered under its GPL license.
+Additionally, the example code has been released to the public domain (see the
+[separate license](examples/COPYING) for more information).
 
 Table of Contents
 =================
