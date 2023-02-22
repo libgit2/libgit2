@@ -246,8 +246,10 @@ static int ssh_agent_auth(LIBSSH2_SESSION *session, git_credential_ssh_key *c) {
 
 	rc = libssh2_agent_connect(agent);
 
-	if (rc != LIBSSH2_ERROR_NONE)
+	if (rc != LIBSSH2_ERROR_NONE) {
+		rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 		goto shutdown;
+	}
 
 	rc = libssh2_agent_list_identities(agent);
 
