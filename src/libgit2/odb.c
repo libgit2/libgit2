@@ -1704,7 +1704,9 @@ int git_odb_open_wstream(
 	    (error = hash_header(ctx, size, type)) < 0)
 		goto done;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 	(*stream)->oid_type = db->options.oid_type;
+#endif
 	(*stream)->hash_ctx = ctx;
 	(*stream)->declared_size = size;
 	(*stream)->received_bytes = 0;
