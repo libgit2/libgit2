@@ -6,7 +6,6 @@
 static git_repository *repo;
 static git_net_url url = GIT_NET_URL_INIT;
 
-static int orig_proxies_need_reset = 0;
 static char *orig_http_proxy = NULL;
 static char *orig_https_proxy = NULL;
 static char *orig_no_proxy = NULL;
@@ -21,20 +20,25 @@ void test_remote_httpproxy__initialize(void)
 
 	git_remote_free(remote);
 
-	orig_proxies_need_reset = 0;
+	/* Clear everything for a fresh start */
+	orig_http_proxy = cl_getenv("HTTP_PROXY");
+	orig_https_proxy = cl_getenv("HTTPS_PROXY");
+	orig_no_proxy = cl_getenv("NO_PROXY");
+
+	cl_setenv("HTTP_PROXY", NULL);
+	cl_setenv("HTTPS_PROXY", NULL);
+	cl_setenv("NO_PROXY", NULL);
 }
 
 void test_remote_httpproxy__cleanup(void)
 {
-	if (orig_proxies_need_reset) {
-		cl_setenv("HTTP_PROXY", orig_http_proxy);
-		cl_setenv("HTTPS_PROXY", orig_https_proxy);
-		cl_setenv("NO_PROXY", orig_no_proxy);
+	cl_setenv("HTTP_PROXY", orig_http_proxy);
+	cl_setenv("HTTPS_PROXY", orig_https_proxy);
+	cl_setenv("NO_PROXY", orig_no_proxy);
 
-		git__free(orig_http_proxy);
-		git__free(orig_https_proxy);
-		git__free(orig_no_proxy);
-	}
+	git__free(orig_http_proxy);
+	git__free(orig_https_proxy);
+	git__free(orig_no_proxy);
 
 	git_net_url_dispose(&url);
 	cl_git_sandbox_cleanup();
@@ -145,16 +149,6 @@ void test_remote_httpproxy__config_overrides_detached_remote(void)
 
 void test_remote_httpproxy__env(void)
 {
-	orig_http_proxy = cl_getenv("HTTP_PROXY");
-	orig_https_proxy = cl_getenv("HTTPS_PROXY");
-	orig_no_proxy = cl_getenv("NO_PROXY");
-	orig_proxies_need_reset = 1;
-
-	/* Clear everything for a fresh start */
-	cl_setenv("HTTP_PROXY", NULL);
-	cl_setenv("HTTPS_PROXY", NULL);
-	cl_setenv("NO_PROXY", NULL);
-
 	/* HTTP proxy is ignored for HTTPS */
 	cl_setenv("HTTP_PROXY", "http://localhost:9/");
 	assert_proxy_is(NULL);
