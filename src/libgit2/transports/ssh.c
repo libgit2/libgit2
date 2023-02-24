@@ -788,15 +788,8 @@ static int _git_ssh_setup_conn(
 	s->session = NULL;
 	s->channel = NULL;
 
-	if (git_net_str_is_url(url))
-		error = git_net_url_parse(&s->url, url);
-	else
-		error = git_net_url_parse_scp(&s->url, url);
-
-	if (error < 0)
-		goto done;
-
-	if ((error = git_socket_stream_new(&s->io, s->url.host, s->url.port)) < 0 ||
+	if ((error = git_net_url_parse_standard_or_scp(&s->url, url)) < 0 ||
+	    (error = git_socket_stream_new(&s->io, s->url.host, s->url.port)) < 0 ||
 	    (error = git_stream_connect(s->io)) < 0)
 		goto done;
 
@@ -806,8 +799,11 @@ static int _git_ssh_setup_conn(
 	 * as part of the stream connection, but that's not something that's
 	 * exposed.
 	 */
-	if (git__strntol32(&port, s->url.port, strlen(s->url.port), NULL, 10) < 0)
-		port = -1;
+	if (git__strntol32(&port, s->url.port, strlen(s->url.port), NULL, 10) < 0) {
+		git_error_set(GIT_ERROR_NET, "invalid port to ssh: %s", s->url.port);
+		error = -1;
+		goto done;
+	}
 
 	if ((error = _git_ssh_session_create(&session, &known_hosts, s->url.host, port, s->io)) < 0)
 		goto done;
