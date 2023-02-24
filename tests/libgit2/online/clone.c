@@ -787,9 +787,18 @@ static int ssh_certificate_check(git_cert *cert, int valid, const char *host, vo
 {
 	git_cert_hostkey *key;
 	git_oid expected = GIT_OID_SHA1_ZERO, actual = GIT_OID_SHA1_ZERO;
+	git_str expected_host = GIT_STR_INIT;
+	git_net_url parsed_url = GIT_NET_URL_INIT;
 
 	GIT_UNUSED(valid);
 	GIT_UNUSED(payload);
+
+	cl_git_pass(git_net_url_parse_standard_or_scp(&parsed_url, _remote_url));
+	cl_git_pass(git_str_printf(&expected_host, "%s%s%s",
+		parsed_url.host,
+		git_net_url_is_default_port(&parsed_url) ? "" : ":",
+		git_net_url_is_default_port(&parsed_url) ? "" : parsed_url.port));
+	cl_assert_equal_s(expected_host.ptr, host);
 
 	cl_assert(_remote_ssh_fingerprint);
 
@@ -812,7 +821,8 @@ static int ssh_certificate_check(git_cert *cert, int valid, const char *host, vo
 
 	cl_assert(!memcmp(&expected, &actual, 20));
 
-	cl_assert_equal_s("localhost", host);
+	git_net_url_dispose(&parsed_url);
+	git_str_dispose(&expected_host);
 
 	return GIT_EUSER;
 }

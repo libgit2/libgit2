@@ -646,6 +646,13 @@ int git_net_url_parse_scp(git_net_url *url, const char *given)
 	return 0;
 }
 
+int git_net_url_parse_standard_or_scp(git_net_url *url, const char *given)
+{
+	return git_net_str_is_url(given) ?
+	       git_net_url_parse(url, given) :
+	       git_net_url_parse_scp(url, given);
+}
+
 int git_net_url_joinpath(
 	git_net_url *out,
 	git_net_url *one,
