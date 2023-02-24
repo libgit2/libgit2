@@ -5,6 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "ssh_exec.h"
 #include "ssh_libssh2.h"
 
 #include "transports/smart.h"
@@ -16,6 +17,8 @@ int git_smart_subtransport_ssh(
 {
 #ifdef GIT_SSH_LIBSSH2
 	return git_smart_subtransport_ssh_libssh2(out, owner, param);
+#elif GIT_SSH_EXEC
+	return git_smart_subtransport_ssh_exec(out, owner, param);
 #else
 	GIT_UNUSED(out);
 	GIT_UNUSED(owner);

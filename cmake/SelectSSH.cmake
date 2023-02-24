@@ -1,5 +1,9 @@
-# find libssh2
-if(USE_SSH STREQUAL ON OR USE_SSH STREQUAL "libssh2")
+if(USE_SSH STREQUAL "exec")
+	set(GIT_SSH 1)
+	set(GIT_SSH_EXEC 1)
+
+	add_feature_info(SSH ON "using OpenSSH exec support")
+elseif(USE_SSH STREQUAL ON OR USE_SSH STREQUAL "libssh2")
 	find_pkglibraries(LIBSSH2 libssh2)
 
 	if(NOT LIBSSH2_FOUND)
