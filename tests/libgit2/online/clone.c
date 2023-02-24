@@ -675,7 +675,7 @@ void test_online_clone__ssh_auth_methods(void)
  */
 void test_online_clone__ssh_certcheck_accepts_unknown(void)
 {
-#if !defined(GIT_SSH) || !defined(GIT_SSH_MEMORY_CREDENTIALS)
+#if !defined(GIT_SSH_LIBSSH2) || !defined(GIT_SSH_MEMORY_CREDENTIALS)
 	clar__skip();
 #endif
 
@@ -793,7 +793,7 @@ static int cred_foo_bar(git_credential **cred, const char *url, const char *user
 
 void test_online_clone__ssh_cannot_change_username(void)
 {
-#ifndef GIT_SSH
+#ifndef GIT_SSH_LIBSSH2
 	clar__skip();
 #endif
 	g_options.fetch_opts.callbacks.credentials = cred_foo_bar;

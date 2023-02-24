@@ -30,7 +30,8 @@
 #cmakedefine GIT_QSORT_MSC
 
 #cmakedefine GIT_SSH 1
-#cmakedefine GIT_SSH_MEMORY_CREDENTIALS 1
+#cmakedefine GIT_SSH_LIBSSH2 1
+#cmakedefine GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS 1
 
 #cmakedefine GIT_NTLM 1
 #cmakedefine GIT_GSSAPI 1

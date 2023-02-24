@@ -126,10 +126,10 @@ int git_libgit2_features(void)
 #ifdef GIT_HTTPS
 		| GIT_FEATURE_HTTPS
 #endif
-#if defined(GIT_SSH)
+#ifdef GIT_SSH
 		| GIT_FEATURE_SSH
 #endif
-#if defined(GIT_USE_NSEC)
+#ifdef GIT_USE_NSEC
 		| GIT_FEATURE_NSEC
 #endif
 	;

@@ -7,7 +7,7 @@
 
 #include "ssh_libssh2.h"
 
-#ifdef GIT_SSH
+#ifdef GIT_SSH_LIBSSH2
 
 #include <libssh2.h>
 
@@ -342,7 +342,7 @@ static int _git_ssh_authenticate_session(
 				session, c->username, c->prompt_callback);
 			break;
 		}
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
+#ifdef GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS
 		case GIT_CREDENTIAL_SSH_MEMORY: {
 			git_credential_ssh_key *c = (git_credential_ssh_key *)cred;
 
@@ -1020,7 +1020,7 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 		if (!git__prefixcmp(ptr, SSH_AUTH_PUBLICKEY)) {
 			*out |= GIT_CREDENTIAL_SSH_KEY;
 			*out |= GIT_CREDENTIAL_SSH_CUSTOM;
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
+#ifdef GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS
 			*out |= GIT_CREDENTIAL_SSH_MEMORY;
 #endif
 			ptr += strlen(SSH_AUTH_PUBLICKEY);

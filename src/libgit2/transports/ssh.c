@@ -14,7 +14,7 @@ int git_smart_subtransport_ssh(
 	git_transport *owner,
 	void *param)
 {
-#ifdef GIT_SSH
+#ifdef GIT_SSH_LIBSSH2
 	return git_smart_subtransport_ssh_libssh2(out, owner, param);
 #else
 	GIT_UNUSED(out);
@@ -31,7 +31,7 @@ int git_transport_ssh_with_paths(
 	git_remote *owner,
 	void *payload)
 {
-#ifdef GIT_SSH
+#ifdef GIT_SSH_LIBSSH2
 	git_strarray *paths = (git_strarray *) payload;
 	git_transport *transport;
 	transport_smart *smart;
