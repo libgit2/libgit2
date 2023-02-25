@@ -1632,7 +1632,7 @@ static const char *builtin_extensions[] = {
 	"objectformat"
 };
 
-static git_vector user_extensions = GIT_VECTOR_INIT;
+static git_vector user_extensions = { 0, git__strcmp_cb };
 
 static int check_valid_extension(const git_config_entry *entry, void *payload)
 {
@@ -1773,7 +1773,7 @@ int git_repository__extensions(char ***out, size_t *out_len)
 	char *extension;
 	size_t i, j;
 
-	if (git_vector_init(&extensions, 8, NULL) < 0)
+	if (git_vector_init(&extensions, 8, git__strcmp_cb) < 0)
 		return -1;
 
 	for (i = 0; i < ARRAY_SIZE(builtin_extensions); i++) {
@@ -1805,21 +1805,49 @@ int git_repository__extensions(char ***out, size_t *out_len)
 			return -1;
 	}
 
+	git_vector_sort(&extensions);
+
 	*out = (char **)git_vector_detach(out_len, NULL, &extensions);
 	return 0;
+}
+
+static int dup_ext_err(void **old, void *extension)
+{
+	GIT_UNUSED(old);
+	GIT_UNUSED(extension);
+	return GIT_EEXISTS;
 }
 
 int git_repository__set_extensions(const char **extensions, size_t len)
 {
 	char *extension;
-	size_t i;
+	size_t i, j;
+	int error;
 
 	git_repository__free_extensions();
 
 	for (i = 0; i < len; i++) {
-		if ((extension = git__strdup(extensions[i])) == NULL ||
-		    git_vector_insert(&user_extensions, extension) < 0)
+		bool is_builtin = false;
+
+		for (j = 0; j < ARRAY_SIZE(builtin_extensions); j++) {
+			if (strcmp(builtin_extensions[j], extensions[i]) == 0) {
+				is_builtin = true;
+				break;
+			}
+		}
+
+		if (is_builtin)
+			continue;
+
+		if ((extension = git__strdup(extensions[i])) == NULL)
 			return -1;
+
+		if ((error = git_vector_insert_sorted(&user_extensions, extension, dup_ext_err)) < 0) {
+			git__free(extension);
+
+			if (error != GIT_EEXISTS)
+				return -1;
+		}
 	}
 
 	return 0;
