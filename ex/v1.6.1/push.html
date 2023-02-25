@@ -16,7 +16,7 @@
     Jump To &hellip;
     <div id="jump_wrapper">
       <div id="jump_page">
-        <a class="source" href="../../#v1.6.0">API Docs</a>
+        <a class="source" href="../../#v1.6.1">API Docs</a>
           <a class="source" href="add.html">add.c</a>
           <a class="source" href="args.html">args.c</a>
           <a class="source" href="blame.html">blame.c</a>
@@ -131,11 +131,11 @@ simulate <code>git push</code>.</p>
     <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
   <span class="p">}</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_lookup-1" class="fnlink" href="../../#v1.6.0/group/remote/git_remote_lookup">git_remote_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="s">&quot;origin&quot;</span> <span class="p">),</span> <span class="s">&quot;Unable to lookup remote&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_lookup-1" class="fnlink" href="../../#v1.6.1/group/remote/git_remote_lookup">git_remote_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="s">&quot;origin&quot;</span> <span class="p">),</span> <span class="s">&quot;Unable to lookup remote&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
   
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_push_options_init-2" class="fnlink" href="../../#v1.6.0/group/push/git_push_options_init">git_push_options_init</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span> <span class="n">GIT_PUSH_OPTIONS_VERSION</span> <span class="p">),</span> <span class="s">&quot;Error initializing push&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_push_options_init-2" class="fnlink" href="../../#v1.6.1/group/push/git_push_options_init">git_push_options_init</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span> <span class="n">GIT_PUSH_OPTIONS_VERSION</span> <span class="p">),</span> <span class="s">&quot;Error initializing push&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_push-3" class="fnlink" href="../../#v1.6.0/group/remote/git_remote_push">git_remote_push</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">refspecs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">options</span><span class="p">),</span> <span class="s">&quot;Error pushing&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_push-3" class="fnlink" href="../../#v1.6.1/group/remote/git_remote_push">git_remote_push</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">refspecs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">options</span><span class="p">),</span> <span class="s">&quot;Error pushing&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;pushed</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
