@@ -1,7 +1,7 @@
 v1.6
 ----
 
-This is release v1.6.0, "Hubbeliges Krokodil". This release adds experimental SHA256 support and includes many new features and bugfixes.
+This is release v1.6.1, "Hubbeliges Krokodil". This release adds experimental SHA256 support and includes many new features and bugfixes. This release replaces libgit2 v1.6.0, which did not correctly update its version number(s).
 
 ## What's Changed
 
