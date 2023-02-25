@@ -1733,7 +1733,7 @@ static int update_ref(
 	const git_remote_callbacks *callbacks)
 {
 	git_reference *ref;
-	git_oid old_id;
+	git_oid old_id = GIT_OID_SHA1_ZERO;
 	int error;
 
 	error = git_reference_name_to_id(&old_id, remote->repo, ref_name);
