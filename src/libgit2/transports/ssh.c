@@ -651,8 +651,6 @@ static int check_against_known_hosts(
 	return ret;
 }
 
-#define SSH_DEFAULT_PORT 22
-
 /*
  * Perform the check for the session's certificate against known hosts if
  * possible and then ask the user if they have a callback.
@@ -750,16 +748,9 @@ static int check_certificate(
 	if (check_cb != NULL) {
 		git_cert_hostkey *cert_ptr = &cert;
 		git_error_state previous_error = {0};
-		const char *host_ptr = host;
-		git_str host_and_port = GIT_STR_INIT;
-
-		if (port != SSH_DEFAULT_PORT) {
-			git_str_printf(&host_and_port, "%s:%d", host, port);
-			host_ptr = host_and_port.ptr;
-		}
 
 		git_error_state_capture(&previous_error, error);
-		error = check_cb((git_cert *) cert_ptr, cert_valid, host_ptr, check_cb_payload);
+		error = check_cb((git_cert *) cert_ptr, cert_valid, host, check_cb_payload);
 		if (error == GIT_PASSTHROUGH) {
 			error = git_error_state_restore(&previous_error);
 		} else if (error < 0 && !git_error_last()) {
@@ -767,11 +758,12 @@ static int check_certificate(
 		}
 
 		git_error_state_free(&previous_error);
-		git_str_dispose(&host_and_port);
 	}
 
 	return error;
 }
+
+#define SSH_DEFAULT_PORT "22"
 
 static int _git_ssh_setup_conn(
 	ssh_subtransport *t,
