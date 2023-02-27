@@ -2,6 +2,10 @@
 #include "futils.h"
 #include "fs_path.h"
 
+#ifndef GIT_WIN32
+# include <unistd.h>
+#endif
+
 static char *path_save;
 
 void test_path__initialize(void)
@@ -757,7 +761,7 @@ void test_path__validate_current_user_ownership(void)
 	cl_git_fail(git_fs_path_owner_is_current_user(&is_cur, "c:\\path\\does\\not\\exist"));
 #else
 	cl_git_pass(git_fs_path_owner_is_current_user(&is_cur, "/"));
-	cl_assert_equal_i(is_cur, 0);
+	cl_assert_equal_i(is_cur, (geteuid() == 0));
 
 	cl_git_fail(git_fs_path_owner_is_current_user(&is_cur, "/path/does/not/exist"));
 #endif
