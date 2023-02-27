@@ -103,10 +103,10 @@ if(SONAME)
 	endif()
 endif()
 
-pkg_build_config(NAME "${LIBGIT2_FILENAME}"
+pkg_build_config(NAME "lib${LIBGIT2_FILENAME}"
 	VERSION ${libgit2_VERSION}
 	DESCRIPTION "The git library, take 2"
-	LIBS_SELF git2
+	LIBS_SELF ${LIBGIT2_FILENAME}
 	PRIVATE_LIBS ${LIBGIT2_PC_LIBS}
 	REQUIRES ${LIBGIT2_PC_REQUIRES})
 
