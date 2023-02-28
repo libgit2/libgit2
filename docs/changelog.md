@@ -1,3 +1,23 @@
+v1.6.2
+------
+
+## What's Changed
+### Bug fixes
+
+* remote: always populate old id in update tips by @ethomson in https://github.com/libgit2/libgit2/pull/6506
+  The update tips callback would not always be properly provided with an empty (`0000000...`) OID for new refs.
+
+* Revert #6503 by @ethomson in https://github.com/libgit2/libgit2/pull/6511
+  The certificate callback added port information for callbacks in #6503, but the format was ambiguous with IPv6 addresses. Revert this change temporarily.
+
+* Add `git_odb_backend_loose` back by @ethomson in https://github.com/libgit2/libgit2/pull/6512
+  During SHA256 refactoring, the `git_odb_backend_loose` API was accidentally removed. Add it back.
+
+* meta: configure pkg-config .pc correctly by @ethomson in https://github.com/libgit2/libgit2/pull/6514
+  During SHA256 refactoring, the pkg-config `.pc` file was erroneously renamed to `git2` instead of `libgit2`. Repair this.
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.6.1...v1.6.2
+
 v1.6
 ----
 
