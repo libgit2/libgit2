@@ -3397,7 +3397,6 @@ int git_index_add_all(
 {
 	int error;
 	git_repository *repo;
-	git_iterator *wditer = NULL;
 	git_pathspec ps;
 	bool no_fnmatch = (flags & GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH) != 0;
 
@@ -3423,7 +3422,6 @@ int git_index_add_all(
 		git_error_set_after_callback(error);
 
 cleanup:
-	git_iterator_free(wditer);
 	git_pathspec__clear(&ps);
 
 	return error;
