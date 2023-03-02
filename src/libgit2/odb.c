@@ -856,6 +856,25 @@ int git_odb__open(
 	return 0;
 }
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+
+int git_odb_open(
+	git_odb **out,
+	const char *objects_dir,
+	const git_odb_options *opts)
+{
+	return git_odb__open(out, objects_dir, opts);
+}
+
+#else
+
+int git_odb_open(git_odb **out, const char *objects_dir)
+{
+	return git_odb__open(out, objects_dir, NULL);
+}
+
+#endif
+
 int git_odb__set_caps(git_odb *odb, int caps)
 {
 	if (caps == GIT_ODB_CAP_FROM_OWNER) {
