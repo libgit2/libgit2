@@ -441,6 +441,52 @@ void test_index_addall__callback_filtering(void)
 	git_index_free(index);
 }
 
+void test_index_addall__handles_ignored_files_in_directory(void)
+{
+	git_index *index;
+
+	g_repo = cl_git_sandbox_init_new(TEST_DIR);
+
+	cl_git_mkfile(TEST_DIR "/file.foo", "a file");
+	cl_git_mkfile(TEST_DIR "/file.bar", "another file");
+	cl_must_pass(p_mkdir(TEST_DIR "/folder", 0777));
+	cl_git_mkfile(TEST_DIR "/folder/asdf", "yet another file");
+
+	cl_git_mkfile(TEST_DIR "/.gitignore", "folder/\n");
+
+	check_status(g_repo, 0, 0, 0, 3, 0, 0, 1, 0);
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_add_all(index, NULL, 0, NULL, NULL));
+
+	check_status(g_repo, 3, 0, 0, 0, 0, 0, 1, 0);
+
+	git_index_free(index);
+}
+
+void test_index_addall__force_adds_ignored_directories(void)
+{
+	git_index *index;
+
+	g_repo = cl_git_sandbox_init_new(TEST_DIR);
+
+	cl_git_mkfile(TEST_DIR "/file.foo", "a file");
+	cl_git_mkfile(TEST_DIR "/file.bar", "another file");
+	cl_must_pass(p_mkdir(TEST_DIR "/folder", 0777));
+	cl_git_mkfile(TEST_DIR "/folder/asdf", "yet another file");
+
+	cl_git_mkfile(TEST_DIR "/.gitignore", "folder/\n");
+
+	check_status(g_repo, 0, 0, 0, 3, 0, 0, 1, 0);
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_add_all(index, NULL, GIT_INDEX_ADD_FORCE, NULL, NULL));
+
+	check_status(g_repo, 4, 0, 0, 0, 0, 0, 0, 0);
+
+	git_index_free(index);
+}
+
 void test_index_addall__adds_conflicts(void)
 {
 	git_index *index;
