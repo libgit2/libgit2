@@ -145,7 +145,7 @@ void merge__dump_reuc(git_index *index)
 
 	printf ("\nREUC:\n");
 	for (i = 0; i < git_index_reuc_entrycount(index); i++) {
-		reuc = git_index_reuc_get_byindex(index, i);
+		cl_assert(reuc = git_index_reuc_get_byindex(index, i));
 
 		printf("%s ", reuc->path);
 		printf("%o ", reuc->mode[0]);
