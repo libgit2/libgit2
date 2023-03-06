@@ -30,6 +30,7 @@
 #include "streams/registry.h"
 #include "streams/mbedtls.h"
 #include "streams/openssl.h"
+#include "streams/socket.h"
 #include "transports/smart.h"
 #include "transports/http.h"
 #include "transports/ssh.h"
@@ -78,6 +79,7 @@ int git_libgit2_init(void)
 		git_merge_driver_global_init,
 		git_transport_ssh_global_init,
 		git_stream_registry_global_init,
+		git_socket_stream_global_init,
 		git_openssl_stream_global_init,
 		git_mbedtls_stream_global_init,
 		git_mwindow_global_init,
