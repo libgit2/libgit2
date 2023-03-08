@@ -134,10 +134,12 @@ extern int git_sysdir_set(git_sysdir_t which, const char *paths);
  */
 extern int git_sysdir_reset(void);
 
+#ifdef GIT_WIN32
 /** Sets the registry system dir to a mock; for testing.  */
 extern int git_win32__set_registry_system_dir(const wchar_t *mock_sysdir);
 
 /** Find the given system dir; for testing. */
 extern int git_win32__find_system_dirs(git_str *out, const char *subdir);
+#endif
 
 #endif
