@@ -195,7 +195,7 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	 */
 	remote->nego.refs = (const git_remote_head * const *)remote->refs.contents;
 	remote->nego.count = remote->refs.length;
-	remote->nego.shallow_roots = git__malloc(sizeof(git_shallowarray));
+	remote->nego.shallow_roots = git__malloc(sizeof(*remote->nego.shallow_roots));
 
 	git_array_init(remote->nego.shallow_roots->array);
 
