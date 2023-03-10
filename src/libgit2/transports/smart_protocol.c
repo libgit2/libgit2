@@ -32,6 +32,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 	int error, flush = 0, recvd;
 	const char *line_end = NULL;
 	git_pkt *pkt = NULL;
+	git_pkt_parse_data pkt_parse_data = { 0 };
 	size_t i;
 
 	/* Clear existing refs in case git_remote_connect() is called again
@@ -45,7 +46,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 
 	do {
 		if (buf->offset > 0)
-			error = git_pkt_parse_line(&pkt, &line_end, buf->data, buf->offset);
+			error = git_pkt_parse_line(&pkt, &line_end, buf->data, buf->offset, &pkt_parse_data);
 		else
 			error = GIT_EBUFS;
 
@@ -133,9 +134,12 @@ on_invalid:
 	return -1;
 }
 
-int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vector *symrefs)
+int git_smart__detect_caps(
+	git_pkt_ref *pkt,
+	transport_smart_caps *caps,
+	git_vector *symrefs)
 {
-	const char *ptr;
+	const char *ptr, *start;
 
 	/* No refs or capabilities, odd but not a problem */
 	if (pkt == NULL || pkt->capabilities == NULL)
@@ -207,15 +211,38 @@ int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vec
 
 		if (!git__prefixcmp(ptr, GIT_CAP_WANT_TIP_SHA1)) {
 			caps->common = caps->want_tip_sha1 = 1;
-			ptr += strlen(GIT_CAP_DELETE_REFS);
+			ptr += strlen(GIT_CAP_WANT_TIP_SHA1);
 			continue;
 		}
 
 		if (!git__prefixcmp(ptr, GIT_CAP_WANT_REACHABLE_SHA1)) {
 			caps->common = caps->want_reachable_sha1 = 1;
-			ptr += strlen(GIT_CAP_DELETE_REFS);
+			ptr += strlen(GIT_CAP_WANT_REACHABLE_SHA1);
+			continue;
 		}
-		
+
+		if (!git__prefixcmp(ptr, GIT_CAP_OBJECT_FORMAT)) {
+			ptr += strlen(GIT_CAP_OBJECT_FORMAT);
+
+			start = ptr;
+			ptr = strchr(ptr, ' ');
+
+			if ((caps->object_format = git__strndup(start, (ptr - start))) == NULL)
+				return -1;
+			continue;
+		}
+
+		if (!git__prefixcmp(ptr, GIT_CAP_AGENT)) {
+			ptr += strlen(GIT_CAP_AGENT);
+
+			start = ptr;
+			ptr = strchr(ptr, ' ');
+
+			if ((caps->agent = git__strndup(start, (ptr - start))) == NULL)
+				return -1;
+			continue;
+		}
+
 		if (!git__prefixcmp(ptr, GIT_CAP_SHALLOW)) {
 			caps->common = caps->shallow = 1;
 			ptr += strlen(GIT_CAP_SHALLOW);
@@ -233,11 +260,12 @@ static int recv_pkt(git_pkt **out_pkt, git_pkt_type *out_type, gitno_buffer *buf
 {
 	const char *ptr = buf->data, *line_end = ptr;
 	git_pkt *pkt = NULL;
+	git_pkt_parse_data pkt_parse_data = { 0 };
 	int error = 0, ret;
 
 	do {
 		if (buf->offset > 0)
-			error = git_pkt_parse_line(&pkt, &line_end, ptr, buf->offset);
+			error = git_pkt_parse_line(&pkt, &line_end, ptr, buf->offset, &pkt_parse_data);
 		else
 			error = GIT_EBUFS;
 
@@ -779,6 +807,7 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt, git_str *data_pkt_buf)
 {
 	git_pkt *pkt;
+	git_pkt_parse_data pkt_parse_data = { 0 };
 	const char *line, *line_end = NULL;
 	size_t line_len;
 	int error;
@@ -797,7 +826,7 @@ static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt, 
 	}
 
 	while (line_len > 0) {
-		error = git_pkt_parse_line(&pkt, &line_end, line, line_len);
+		error = git_pkt_parse_line(&pkt, &line_end, line, line_len, &pkt_parse_data);
 
 		if (error == GIT_EBUFS) {
 			/* Buffer the data when the inner packet is split
@@ -833,6 +862,7 @@ done:
 static int parse_report(transport_smart *transport, git_push *push)
 {
 	git_pkt *pkt = NULL;
+	git_pkt_parse_data pkt_parse_data = { 0 };
 	const char *line_end = NULL;
 	gitno_buffer *buf = &transport->buffer;
 	int error, recvd;
@@ -841,7 +871,8 @@ static int parse_report(transport_smart *transport, git_push *push)
 	for (;;) {
 		if (buf->offset > 0)
 			error = git_pkt_parse_line(&pkt, &line_end,
-						   buf->data, buf->offset);
+						   buf->data, buf->offset,
+						   &pkt_parse_data);
 		else
 			error = GIT_EBUFS;
 

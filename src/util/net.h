@@ -15,6 +15,7 @@ typedef struct git_net_url {
 	char *port;
 	char *path;
 	char *query;
+	char *fragment;
 	char *username;
 	char *password;
 } git_net_url;
@@ -32,6 +33,12 @@ extern int git_net_url_parse(git_net_url *url, const char *str);
 
 /** Parses a string containing an SCP style path into a URL structure. */
 extern int git_net_url_parse_scp(git_net_url *url, const char *str);
+
+/**
+ * Parses a string containing a standard URL or an SCP style path into
+ * a URL structure.
+ */
+extern int git_net_url_parse_standard_or_scp(git_net_url *url, const char *str);
 
 /** Appends a path and/or query string to the given URL */
 extern int git_net_url_joinpath(

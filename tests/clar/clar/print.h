@@ -36,24 +36,35 @@ static void clar_print_clap_error(int num, const struct clar_report *report, con
 	fflush(stdout);
 }
 
-static void clar_print_clap_ontest(const char *test_name, int test_number, enum cl_test_status status)
+static void clar_print_clap_ontest(const char *suite_name, const char *test_name, int test_number, enum cl_test_status status)
 {
 	(void)test_name;
 	(void)test_number;
 
-	switch(status) {
-	case CL_TEST_OK: printf("."); break;
-	case CL_TEST_FAILURE: printf("F"); break;
-	case CL_TEST_SKIP: printf("S"); break;
-	case CL_TEST_NOTRUN: printf("N"); break;
-	}
+	if (_clar.verbosity > 1) {
+		printf("%s::%s: ", suite_name, test_name);
 
-	fflush(stdout);
+		switch (status) {
+		case CL_TEST_OK: printf("ok\n"); break;
+		case CL_TEST_FAILURE: printf("fail\n"); break;
+		case CL_TEST_SKIP: printf("skipped"); break;
+		case CL_TEST_NOTRUN: printf("notrun"); break;
+		}
+	} else {
+		switch (status) {
+		case CL_TEST_OK: printf("."); break;
+		case CL_TEST_FAILURE: printf("F"); break;
+		case CL_TEST_SKIP: printf("S"); break;
+		case CL_TEST_NOTRUN: printf("N"); break;
+		}
+
+		fflush(stdout);
+	}
 }
 
 static void clar_print_clap_onsuite(const char *suite_name, int suite_index)
 {
-	if (_clar.report_suite_names)
+	if (_clar.verbosity == 1)
 		printf("\n%s", suite_name);
 
 	(void)suite_index;
@@ -102,7 +113,7 @@ static void print_escaped(const char *str)
 	printf("%s", str);
 }
 
-static void clar_print_tap_ontest(const char *test_name, int test_number, enum cl_test_status status)
+static void clar_print_tap_ontest(const char *suite_name, const char *test_name, int test_number, enum cl_test_status status)
 {
 	const struct clar_error *error = _clar.last_report->errors;
 
@@ -111,10 +122,10 @@ static void clar_print_tap_ontest(const char *test_name, int test_number, enum c
 
 	switch(status) {
 	case CL_TEST_OK:
-		printf("ok %d - %s::%s\n", test_number, _clar.active_suite, test_name);
+		printf("ok %d - %s::%s\n", test_number, suite_name, test_name);
 		break;
 	case CL_TEST_FAILURE:
-		printf("not ok %d - %s::%s\n", test_number, _clar.active_suite, test_name);
+		printf("not ok %d - %s::%s\n", test_number, suite_name, test_name);
 
 		printf("    ---\n");
 		printf("    reason: |\n");
@@ -132,7 +143,7 @@ static void clar_print_tap_ontest(const char *test_name, int test_number, enum c
 		break;
 	case CL_TEST_SKIP:
 	case CL_TEST_NOTRUN:
-		printf("ok %d - # SKIP %s::%s\n", test_number, _clar.active_suite, test_name);
+		printf("ok %d - # SKIP %s::%s\n", test_number, suite_name, test_name);
 		break;
 	}
 
@@ -181,9 +192,9 @@ static void clar_print_error(int num, const struct clar_report *report, const st
 	PRINT(error, num, report, error);
 }
 
-static void clar_print_ontest(const char *test_name, int test_number, enum cl_test_status status)
+static void clar_print_ontest(const char *suite_name, const char *test_name, int test_number, enum cl_test_status status)
 {
-	PRINT(ontest, test_name, test_number, status);
+	PRINT(ontest, suite_name, test_name, test_number, status);
 }
 
 static void clar_print_onsuite(const char *suite_name, int suite_index)

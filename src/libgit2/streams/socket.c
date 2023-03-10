@@ -135,9 +135,12 @@ static ssize_t socket_write(git_stream *stream, const char *data, size_t len, in
 	git_socket_stream *st = (git_socket_stream *) stream;
 	ssize_t written;
 
+	GIT_ASSERT(flags == 0);
+	GIT_UNUSED(flags);
+
 	errno = 0;
 
-	if ((written = p_send(st->s, data, len, flags)) < 0) {
+	if ((written = p_send(st->s, data, len, 0)) < 0) {
 		net_set_error("error sending data");
 		return -1;
 	}

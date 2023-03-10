@@ -27,7 +27,7 @@ jobs:
           os: ubuntu-latest
           setup-script: ubuntu
         - name: "macOS"
-          os: macos-10.15
+          os: macos-11
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CLI=ON -DCMAKE_BUILD_TYPE=Release
@@ -50,7 +50,7 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: source
         fetch-depth: 0
@@ -66,9 +66,9 @@ jobs:
     - name: Benchmark
       run: |
         if [[ "$(uname -s)" == MINGW* ]]; then
-          GIT2_CLI="$(cygpath -w $(pwd))\\build\\Release\\git2_cli"
+          GIT2_CLI="$(cygpath -w $(pwd))\\build\\Release\\git2"
         else
-          GIT2_CLI="$(pwd)/build/git2_cli"
+          GIT2_CLI="$(pwd)/build/git2"
         fi
 
         mkdir benchmark && cd benchmark

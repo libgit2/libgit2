@@ -348,6 +348,13 @@ static int diff_file_content_load_workdir_file(
 		goto cleanup;
 	}
 
+	/* if file is empty, don't attempt to mmap or readbuffer */
+	if (fc->file->size == 0) {
+		fc->map.len = 0;
+		fc->map.data = git_str__initstr;
+		goto cleanup;
+	}
+
 	if ((diff_opts->flags & GIT_DIFF_SHOW_BINARY) == 0 &&
 		diff_file_content_binary_by_size(fc))
 		goto cleanup;

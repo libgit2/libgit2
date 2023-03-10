@@ -160,7 +160,9 @@ void test_odb_loose__exists_sha1(void)
 
 void test_odb_loose__exists_sha256(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
+#ifndef GIT_EXPERIMENTAL_SHA256
+	cl_skip();
+#else
 	git_oid id, id2;
 	git_odb *odb;
 	git_odb_options odb_opts = GIT_ODB_OPTIONS_INIT;
@@ -201,7 +203,9 @@ void test_odb_loose__simple_reads_sha1(void)
 
 void test_odb_loose__simple_reads_sha256(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
+#ifndef GIT_EXPERIMENTAL_SHA256
+	cl_skip();
+#else
 	test_read_object(&commit_sha256);
 	test_read_object(&tree_sha256);
 	test_read_object(&tag_sha256);
@@ -230,7 +234,9 @@ void test_odb_loose__streaming_reads_sha1(void)
 
 void test_odb_loose__streaming_reads_sha256(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
+#ifndef GIT_EXPERIMENTAL_SHA256
+	cl_skip();
+#else
 	size_t blocksizes[] = { 1, 2, 4, 16, 99, 1024, 123456789 };
 	size_t i;
 
@@ -259,7 +265,9 @@ void test_odb_loose__read_header_sha1(void)
 
 void test_odb_loose__read_header_sha256(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
+#ifndef GIT_EXPERIMENTAL_SHA256
+	cl_skip();
+#else
 	test_read_header(&commit_sha256);
 	test_read_header(&tree_sha256);
 	test_read_header(&tag_sha256);

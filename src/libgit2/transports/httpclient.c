@@ -1541,6 +1541,15 @@ int git_http_client_new(
 	return 0;
 }
 
+/* Update the options of an existing httpclient instance. */
+void git_http_client_set_options(
+	git_http_client *client,
+	git_http_client_options *opts)
+{
+	if (opts)
+		memcpy(&client->opts, opts, sizeof(git_http_client_options));
+}
+
 GIT_INLINE(void) http_server_close(git_http_server *server)
 {
 	if (server->stream) {

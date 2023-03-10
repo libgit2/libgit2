@@ -4,7 +4,8 @@ set(CLI_INCLUDES
 	"${libgit2_BINARY_DIR}/include/git2"
 	"${libgit2_SOURCE_DIR}/src/util"
 	"${libgit2_SOURCE_DIR}/src/cli"
-	"${libgit2_SOURCE_DIR}/include")
+	"${libgit2_SOURCE_DIR}/include"
+	"${LIBGIT2_DEPENDENCY_INCLUDES}")
 
 if(WIN32 AND NOT CYGWIN)
 	file(GLOB CLI_SRC_OS win32/*.c)

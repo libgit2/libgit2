@@ -67,6 +67,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	git_str path = GIT_STR_INIT;
 	git_oid oid;
 	bool append_hash = false;
+	int error;
 
 	if (size == 0)
 		return 0;
@@ -82,7 +83,13 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		abort();
 	}
 
-	if (git_indexer_new(&indexer, ".", 0, odb, NULL) < 0) {
+#ifdef GIT_EXPERIMENTAL_SHA256
+	error = git_indexer_new(&indexer, ".", GIT_OID_SHA1, NULL);
+#else
+	error = git_indexer_new(&indexer, ".", 0, odb, NULL);
+#endif
+
+	if (error < 0) {
 		fprintf(stderr, "Failed to create the indexer: %s\n",
 			git_error_last()->message);
 		abort();

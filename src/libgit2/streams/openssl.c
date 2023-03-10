@@ -198,7 +198,7 @@ static int openssl_ensure_initialized(void)
 		if ((error = git_openssl_stream_dynamic_init()) == 0)
 			error = openssl_init();
 
-		openssl_initialized = true;
+		openssl_initialized = !error;
 	}
 
 	error |= git_mutex_unlock(&openssl_mutex);

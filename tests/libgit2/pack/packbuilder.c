@@ -104,7 +104,12 @@ void test_pack_packbuilder__create_pack(void)
 
 	seed_packbuilder();
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_indexer_new(&_indexer, ".", GIT_OID_SHA1, NULL));
+#else
 	cl_git_pass(git_indexer_new(&_indexer, ".", 0, NULL, NULL));
+#endif
+
 	cl_git_pass(git_packbuilder_foreach(_packbuilder, feed_indexer, &stats));
 	cl_git_pass(git_indexer_commit(_indexer, &stats));
 
@@ -244,7 +249,13 @@ void test_pack_packbuilder__foreach(void)
 	git_indexer *idx;
 
 	seed_packbuilder();
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_indexer_new(&idx, ".", GIT_OID_SHA1, NULL));
+#else
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
+#endif
+
 	cl_git_pass(git_packbuilder_foreach(_packbuilder, foreach_cb, idx));
 	cl_git_pass(git_indexer_commit(idx, &_stats));
 	git_indexer_free(idx);
@@ -262,7 +273,13 @@ void test_pack_packbuilder__foreach_with_cancel(void)
 	git_indexer *idx;
 
 	seed_packbuilder();
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_indexer_new(&idx, ".", GIT_OID_SHA1, NULL));
+#else
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
+#endif
+
 	cl_git_fail_with(
 		git_packbuilder_foreach(_packbuilder, foreach_cancel_cb, idx), -1111);
 	git_indexer_free(idx);

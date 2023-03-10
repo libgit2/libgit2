@@ -200,8 +200,7 @@ int git_commit_graph_file_parse(
 	const unsigned char *chunk_hdr;
 	struct git_commit_graph_chunk *last_chunk;
 	uint32_t i;
-	off64_t last_chunk_offset, chunk_offset, trailer_offset;
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	uint64_t last_chunk_offset, chunk_offset, trailer_offset;
 	size_t checksum_size;
 	int error;
 	struct git_commit_graph_chunk chunk_oid_fanout = {0}, chunk_oid_lookup = {0},
@@ -234,16 +233,11 @@ int git_commit_graph_file_parse(
 		return commit_graph_error("wrong commit-graph size");
 	memcpy(file->checksum, (data + trailer_offset), checksum_size);
 
-	if (git_hash_buf(checksum, data, (size_t)trailer_offset, GIT_HASH_ALGORITHM_SHA1) < 0)
-		return commit_graph_error("could not calculate signature");
-	if (memcmp(checksum, file->checksum, checksum_size) != 0)
-		return commit_graph_error("index signature mismatch");
-
 	chunk_hdr = data + sizeof(struct git_commit_graph_header);
 	last_chunk = NULL;
 	for (i = 0; i < hdr->chunks; ++i, chunk_hdr += 12) {
-		chunk_offset = ((off64_t)ntohl(*((uint32_t *)(chunk_hdr + 4)))) << 32
-				| ((off64_t)ntohl(*((uint32_t *)(chunk_hdr + 8))));
+		chunk_offset = ((uint64_t)ntohl(*((uint32_t *)(chunk_hdr + 4)))) << 32
+				| ((uint64_t)ntohl(*((uint32_t *)(chunk_hdr + 8))));
 		if (chunk_offset < last_chunk_offset)
 			return commit_graph_error("chunks are non-monotonic");
 		if (chunk_offset >= trailer_offset)
@@ -331,9 +325,29 @@ error:
 	return error;
 }
 
+int git_commit_graph_validate(git_commit_graph *cgraph) {
+	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	size_t checksum_size = GIT_HASH_SHA1_SIZE;
+	size_t trailer_offset = cgraph->file->graph_map.len - checksum_size;
+
+	if (cgraph->file->graph_map.len < checksum_size)
+		return commit_graph_error("map length too small");
+
+	if (git_hash_buf(checksum, cgraph->file->graph_map.data, trailer_offset, GIT_HASH_ALGORITHM_SHA1) < 0)
+		return commit_graph_error("could not calculate signature");
+	if (memcmp(checksum, cgraph->file->checksum, checksum_size) != 0)
+		return commit_graph_error("index signature mismatch");
+
+	return 0;
+}
+
 int git_commit_graph_open(git_commit_graph **cgraph_out, const char *objects_dir)
 {
-	return git_commit_graph_new(cgraph_out, objects_dir, true);
+	int error = git_commit_graph_new(cgraph_out, objects_dir, true);
+	if (!error) {
+		return git_commit_graph_validate(*cgraph_out);
+	}
+	return error;
 }
 
 int git_commit_graph_file_open(git_commit_graph_file **file_out, const char *path)
@@ -524,7 +538,7 @@ int git_commit_graph_entry_find(
 	hi = ntohl(file->oid_fanout[(int)short_oid->id[0]]);
 	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(file->oid_fanout[(int)short_oid->id[0] - 1]));
 
-	pos = git_pack__lookup_sha1(file->oid_lookup, GIT_OID_SHA1_SIZE, lo, hi, short_oid->id);
+	pos = git_pack__lookup_id(file->oid_lookup, GIT_OID_SHA1_SIZE, lo, hi, short_oid->id, GIT_OID_SHA1);
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */
@@ -712,7 +726,8 @@ int git_commit_graph_writer_add_index_file(
 	if (error < 0)
 		goto cleanup;
 
-	error = git_mwindow_get_pack(&p, idx_path);
+	/* TODO: SHA256 */
+	error = git_mwindow_get_pack(&p, idx_path, 0);
 	if (error < 0)
 		goto cleanup;
 

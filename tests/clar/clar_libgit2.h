@@ -231,16 +231,28 @@ void cl_repo_commit_from_index(
 void cl_repo_set_bool(git_repository *repo, const char *cfg, int value);
 int cl_repo_get_bool(git_repository *repo, const char *cfg);
 
+void cl_repo_set_int(git_repository *repo, const char *cfg, int value);
+int cl_repo_get_int(git_repository *repo, const char *cfg);
+
 void cl_repo_set_string(git_repository *repo, const char *cfg, const char *value);
 
-/* set up a fake "home" directory and set libgit2 GLOBAL search path.
- *
- * automatically configures cleanup function to restore the regular search
- * path, although you can call it explicitly if you wish (with NULL).
+/*
+ * set up a fake "home" directory -- automatically configures cleanup
+ * function to restore the home directory, although you can call it
+ * explicitly if you wish (with NULL).
  */
-void cl_fake_home(void);
-void cl_fake_home_cleanup(void *);
+void cl_fake_homedir(git_str *);
+void cl_fake_homedir_cleanup(void *);
 
+/*
+ * set up a fake global configuration directory -- automatically
+ * configures cleanup function to restore the global config
+ * although you can call it explicitly if you wish (with NULL).
+ */
+void cl_fake_globalconfig(git_str *);
+void cl_fake_globalconfig_cleanup(void *);
+
+void cl_sandbox_set_homedir(const char *);
 void cl_sandbox_set_search_path_defaults(void);
 void cl_sandbox_disable_ownership_validation(void);
 

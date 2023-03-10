@@ -154,7 +154,7 @@ jobs:
             SKIP_SSH_TESTS: true
           os: ubuntu-latest
         - name: "macOS"
-          os: macos-10.15
+          os: macos-11
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
@@ -265,13 +265,43 @@ jobs:
             RUN_INVASIVE_TESTS: true
             SKIP_PROXY_TESTS: true
           os: ubuntu-latest
+
+        # Experimental: SHA256 support
+        - name: "Linux (SHA256, Xenial, Clang, OpenSSL)"
+          id: xenial-clang-openssl
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+          os: ubuntu-latest
+        - name: "macOS (SHA256)"
+          id: macos
+          os: macos-10.15
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
+            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+          setup-script: osx
+        - name: "Windows (SHA256, amd64, Visual Studio)"
+          id: windows-amd64-vs
+          os: windows-2019
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
       fail-fast: false
-    name: "Build ${{ matrix.platform.name }}"
     env: ${{ matrix.platform.env }}
     runs-on: ${{ matrix.platform.os }}
+    name: "Build ${{ matrix.platform.name }}"
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: source
         fetch-depth: 0
@@ -333,7 +363,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: source
         fetch-depth: 0
@@ -358,13 +388,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
+      uses: github/codeql-action/init@v2
       with:
         languages: 'cpp'
 
@@ -376,4 +406,4 @@ jobs:
         cmake --build .
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v1
+      uses: github/codeql-action/analyze@v2

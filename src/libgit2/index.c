@@ -3397,7 +3397,6 @@ int git_index_add_all(
 {
 	int error;
 	git_repository *repo;
-	git_iterator *wditer = NULL;
 	git_pathspec ps;
 	bool no_fnmatch = (flags & GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH) != 0;
 
@@ -3423,7 +3422,6 @@ int git_index_add_all(
 		git_error_set_after_callback(error);
 
 cleanup:
-	git_iterator_free(wditer);
 	git_pathspec__clear(&ps);
 
 	return error;
@@ -3511,7 +3509,8 @@ static int index_apply_to_wd_diff(git_index *index, int action, const git_strarr
 			GIT_DIFF_RECURSE_UNTRACKED_DIRS;
 
 		if (flags == GIT_INDEX_ADD_FORCE)
-			opts.flags |= GIT_DIFF_INCLUDE_IGNORED;
+			opts.flags |= GIT_DIFF_INCLUDE_IGNORED |
+			              GIT_DIFF_RECURSE_IGNORED_DIRS;
 	}
 
 	if ((error = git_diff_index_to_workdir(&diff, repo, index, &opts)) < 0)

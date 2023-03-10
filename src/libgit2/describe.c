@@ -8,7 +8,6 @@
 #include "common.h"
 
 #include "git2/describe.h"
-#include "git2/strarray.h"
 #include "git2/diff.h"
 #include "git2/status.h"
 
@@ -19,6 +18,7 @@
 #include "refs.h"
 #include "repository.h"
 #include "revwalk.h"
+#include "strarray.h"
 #include "tag.h"
 #include "vector.h"
 #include "wildmatch.h"

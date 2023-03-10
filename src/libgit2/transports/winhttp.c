@@ -562,18 +562,23 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 	for (i = 0; i < t->owner->connect_opts.custom_headers.count; i++) {
 		if (t->owner->connect_opts.custom_headers.strings[i]) {
+			wchar_t *custom_header_wide = NULL;
+
 			git_str_clear(&buf);
 			git_str_puts(&buf, t->owner->connect_opts.custom_headers.strings[i]);
-			if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_str_cstr(&buf)) < 0) {
-				git_error_set(GIT_ERROR_OS, "failed to convert custom header to wide characters");
+
+			/* Convert header to wide characters */
+			if ((error = git__utf8_to_16_alloc(&custom_header_wide, git_str_cstr(&buf))) < 0)
+				goto on_error;
+
+			if (!WinHttpAddRequestHeaders(s->request, custom_header_wide, (ULONG)-1L,
+				WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE)) {
+				git_error_set(GIT_ERROR_OS, "failed to add a header to the request");
+				git__free(custom_header_wide);
 				goto on_error;
 			}
 
-			if (!WinHttpAddRequestHeaders(s->request, ct, (ULONG)-1L,
-				WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE)) {
-				git_error_set(GIT_ERROR_OS, "failed to add a header to the request");
-				goto on_error;
-			}
+			git__free(custom_header_wide);
 		}
 	}
 

@@ -54,6 +54,12 @@ GIT_INLINE(int) git_smart__reset_stream(transport_smart *t, bool close_subtransp
 			return -1;
 	}
 
+	git__free(t->caps.object_format);
+	t->caps.object_format = NULL;
+
+	git__free(t->caps.agent);
+	t->caps.agent = NULL;
+
 	return 0;
 }
 
@@ -242,6 +248,30 @@ static int git_smart__capabilities(unsigned int *capabilities, git_transport *tr
 	return 0;
 }
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+static int git_smart__oid_type(git_oid_t *out, git_transport *transport)
+{
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
+
+	*out = 0;
+
+	if (t->caps.object_format == NULL) {
+		*out = GIT_OID_DEFAULT;
+	} else {
+		*out = git_oid_type_fromstr(t->caps.object_format);
+
+		if (!*out) {
+			git_error_set(GIT_ERROR_INVALID,
+				"unknown object format '%s'",
+				t->caps.object_format);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+#endif
+
 static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transport *transport)
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
@@ -386,6 +416,8 @@ static void git_smart__free(git_transport *transport)
 
 	git_remote_connect_options_dispose(&t->connect_opts);
 
+	git__free(t->caps.object_format);
+	git__free(t->caps.agent);
 	git__free(t);
 }
 
@@ -452,6 +484,9 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	t->parent.connect = git_smart__connect;
 	t->parent.set_connect_opts = git_smart__set_connect_opts;
 	t->parent.capabilities = git_smart__capabilities;
+#ifdef GIT_EXPERIMENTAL_SHA256
+	t->parent.oid_type = git_smart__oid_type;
+#endif
 	t->parent.close = git_smart__close;
 	t->parent.free = git_smart__free;
 	t->parent.negotiate_fetch = git_smart__negotiate_fetch;

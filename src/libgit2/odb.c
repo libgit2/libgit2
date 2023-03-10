@@ -684,6 +684,7 @@ int git_odb__add_default_backends(
 	ino_t inode;
 	git_odb_backend *loose, *packed;
 	git_odb_backend_loose_options loose_opts = GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT;
+	git_odb_backend_pack_options pack_opts = GIT_ODB_BACKEND_PACK_OPTIONS_INIT;
 
 	/* TODO: inodes are not really relevant on Win32, so we need to find
 	 * a cross-platform workaround for this */
@@ -722,6 +723,7 @@ int git_odb__add_default_backends(
 		loose_opts.flags |= GIT_ODB_BACKEND_LOOSE_FSYNC;
 
 	loose_opts.oid_type = db->options.oid_type;
+	pack_opts.oid_type = db->options.oid_type;
 
 	/* add the loose object backend */
 	if (git_odb__backend_loose(&loose, objects_dir, &loose_opts) < 0 ||
@@ -729,8 +731,17 @@ int git_odb__add_default_backends(
 		return -1;
 
 	/* add the packed file backend */
-	if (git_odb_backend_pack(&packed, objects_dir) < 0 ||
-		add_backend_internal(db, packed, git_odb__packed_priority, as_alternates, inode) < 0)
+#ifdef GIT_EXPERIMENTAL_SHA256
+	if (git_odb_backend_pack(&packed, objects_dir, &pack_opts) < 0)
+		return -1;
+#else
+	GIT_UNUSED(pack_opts);
+
+	if (git_odb_backend_pack(&packed, objects_dir) < 0)
+		return -1;
+#endif
+
+	if (add_backend_internal(db, packed, git_odb__packed_priority, as_alternates, inode) < 0)
 		return -1;
 
 	if (git_mutex_lock(&db->lock) < 0) {
@@ -844,6 +855,25 @@ int git_odb__open(
 	*out = db;
 	return 0;
 }
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+
+int git_odb_open(
+	git_odb **out,
+	const char *objects_dir,
+	const git_odb_options *opts)
+{
+	return git_odb__open(out, objects_dir, opts);
+}
+
+#else
+
+int git_odb_open(git_odb **out, const char *objects_dir)
+{
+	return git_odb__open(out, objects_dir, NULL);
+}
+
+#endif
 
 int git_odb__set_caps(git_odb *odb, int caps)
 {
@@ -1693,7 +1723,9 @@ int git_odb_open_wstream(
 	    (error = hash_header(ctx, size, type)) < 0)
 		goto done;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 	(*stream)->oid_type = db->options.oid_type;
+#endif
 	(*stream)->hash_ctx = ctx;
 	(*stream)->declared_size = size;
 	(*stream)->received_bytes = 0;

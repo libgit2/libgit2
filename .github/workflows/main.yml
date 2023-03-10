@@ -48,7 +48,7 @@ jobs:
     name: "Create container: ${{ matrix.container.name }}"
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: source
         fetch-depth: 0
@@ -122,7 +122,7 @@ jobs:
           os: ubuntu-latest
         - name: "macOS"
           id: macos
-          os: macos-10.15
+          os: macos-11
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
@@ -133,19 +133,25 @@ jobs:
         - name: "Windows (amd64, Visual Studio)"
           id: windows-amd64-vs
           os: windows-2019
+          setup-script: win32
           env:
             ARCH: amd64
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
+            BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
+            BUILD_TEMP: D:\Temp
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (x86, Visual Studio)"
           id: windows-x86-vs
           os: windows-2019
+          setup-script: win32
           env:
             ARCH: x86
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
+            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
+            BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
+            BUILD_TEMP: D:\Temp
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (amd64, mingw)"
@@ -226,11 +232,11 @@ jobs:
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DEXPERIMENTAL_SHA256=ON
           os: ubuntu-latest
         - name: "macOS (SHA256)"
           id: macos
-          os: macos-10.15
+          os: macos-11
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
@@ -253,7 +259,7 @@ jobs:
     name: "Build: ${{ matrix.platform.name }}"
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: source
         fetch-depth: 0
@@ -283,6 +289,10 @@ jobs:
     - name: Build and test
       run: |
         export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
+        export GITTEST_GITHUB_SSH_KEY="${{ secrets.GITTEST_GITHUB_SSH_KEY }}"
+        export GITTEST_GITHUB_SSH_PUBKEY="${{ secrets.GITTEST_GITHUB_SSH_PUBKEY }}"
+        export GITTEST_GITHUB_SSH_PASSPHRASE="${{ secrets.GITTEST_GITHUB_SSH_PASSPHRASE }}"
+        export GITTEST_GITHUB_SSH_REMOTE_HOSTKEY="${{ secrets.GITTEST_GITHUB_SSH_REMOTE_HOSTKEY }}"
 
         if [ -n "${{ matrix.platform.container.name }}" ]; then
           mkdir build
@@ -323,12 +333,13 @@ jobs:
   test_results:
     name: Test results
     needs: [ build ]
+    if: always()
     runs-on: ubuntu-latest
     steps:
     - name: Download test results
       uses: actions/download-artifact@v3
     - name: Generate test summary
-      uses: test-summary/action@v1
+      uses: test-summary/action@v2
       with:
         paths: 'test-results-*/*.xml'
 
@@ -345,7 +356,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: source
         fetch-depth: 0
@@ -364,7 +375,7 @@ jobs:
             cm doc api.docurium
         git checkout gh-pages
         zip --exclude .git/\* --exclude .gitignore --exclude .gitattributes -r api-documentation.zip .
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       name: Upload artifact
       with:
         name: api-documentation

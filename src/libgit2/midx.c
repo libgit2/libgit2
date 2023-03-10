@@ -392,7 +392,7 @@ int git_midx_entry_find(
 	hi = ntohl(idx->oid_fanout[(int)short_oid->id[0]]);
 	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(idx->oid_fanout[(int)short_oid->id[0] - 1]));
 
-	pos = git_pack__lookup_sha1(idx->oid_lookup, GIT_OID_SHA1_SIZE, lo, hi, short_oid->id);
+	pos = git_pack__lookup_id(idx->oid_lookup, GIT_OID_SHA1_SIZE, lo, hi, short_oid->id, GIT_OID_SHA1);
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */
@@ -549,7 +549,8 @@ int git_midx_writer_add(
 	if (error < 0)
 		return error;
 
-	error = git_mwindow_get_pack(&p, git_str_cstr(&idx_path_buf));
+	/* TODO: SHA256 */
+	error = git_mwindow_get_pack(&p, git_str_cstr(&idx_path_buf), 0);
 	git_str_dispose(&idx_path_buf);
 	if (error < 0)
 		return error;

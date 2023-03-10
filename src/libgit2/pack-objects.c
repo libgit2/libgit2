@@ -1407,7 +1407,18 @@ int git_packbuilder_write(
 	opts.progress_cb = progress_cb;
 	opts.progress_cb_payload = progress_cb_payload;
 
-	if ((error = git_indexer_new(&indexer, path, mode, pb->odb, &opts)) < 0)
+	/* TODO: SHA256 */
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	opts.mode = mode;
+	opts.odb = pb->odb;
+
+	error = git_indexer_new(&indexer, path, GIT_OID_SHA1, &opts);
+#else
+	error = git_indexer_new(&indexer, path, mode, pb->odb, &opts);
+#endif
+
+	if (error < 0)
 		goto cleanup;
 
 	if (!git_repository__configmap_lookup(&t, pb->repo, GIT_CONFIGMAP_FSYNCOBJECTFILES) && t)

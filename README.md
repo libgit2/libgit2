@@ -4,8 +4,8 @@ libgit2 - the Git linkable library
 | Build Status | |
 | ------------ | - |
 | **main** branch CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush) |
-| **v1.4 branch** CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?branch=maint%2Fv1.4&event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush+branch%3Amaint%2Fv1.4) |
-| **v1.3 branch** CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?branch=maint%2Fv1.3&event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush+branch%3Amaint%2Fv1.3) |
+| **v1.6 branch** CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?branch=maint%2Fv1.6&event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush+branch%3Amaint%2Fv1.6) |
+| **v1.5 branch** CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?branch=maint%2Fv1.5&event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush+branch%3Amaint%2Fv1.5) |
 | **Nightly** builds | [![Nightly Build](https://github.com/libgit2/libgit2/workflows/Nightly%20Build/badge.svg)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22Nightly+Build%22) [![Coverity Scan Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639) |
 
 `libgit2` is a portable, pure C implementation of the Git core methods
@@ -25,8 +25,9 @@ and on Git hosting providers like [GitHub](https://github.com/),
 We perform the merge every time you click "merge pull request".
 
 `libgit2` is licensed under a **very permissive license** (GPLv2 with a special
-Linking Exception).  This basically means that you can link it (unmodified)
-with any kind of software without having to release its source code.
+Linking Exception). This means that you can link against the library with any
+kind of software without making that software fall under the GPL.
+Changes to libgit2 would still be covered under its GPL license.
 Additionally, the example code has been released to the public domain (see the
 [separate license](examples/COPYING) for more information).
 
@@ -395,7 +396,7 @@ Here are the bindings to libgit2 that are currently available:
 * Pharo Smalltalk
     * libgit2-pharo-bindings <https://github.com/pharo-vcs/libgit2-pharo-bindings>
 * PHP
-    * php-git <https://github.com/libgit2/php-git>
+    * php-git2 <https://github.com/RogerGee/php-git2>
 * Python
     * pygit2 <https://github.com/libgit2/pygit2>
 * R

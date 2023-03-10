@@ -385,11 +385,18 @@ static int calculate_work(git_push *push)
 	git_vector_foreach(&push->specs, i, spec) {
 		if (spec->refspec.src && spec->refspec.src[0]!= '\0') {
 			/* This is a create or update.  Local ref must exist. */
-			if (git_reference_name_to_id(
-					&spec->loid, push->repo, spec->refspec.src) < 0) {
-				git_error_set(GIT_ERROR_REFERENCE, "no such reference '%s'", spec->refspec.src);
+
+			git_object *obj;
+			int error = git_revparse_single(&obj, push->repo, spec->refspec.src);
+
+			if (error < 0) {
+				git_object_free(obj);
+				git_error_set(GIT_ERROR_REFERENCE, "src refspec %s does not match any", spec->refspec.src);
 				return -1;
 			}
+
+			git_oid_cpy(&spec->loid, git_object_id(obj));
+			git_object_free(obj);
 		}
 
 		/* Remote ref may or may not (e.g. during create) already exist. */

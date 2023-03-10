@@ -528,7 +528,7 @@ static int included_path(git_str *out, const char *dir, const char *path)
 {
 	/* From the user's home */
 	if (path[0] == '~' && path[1] == '/')
-		return git_sysdir_expand_global_file(out, &path[1]);
+		return git_sysdir_expand_homedir_file(out, &path[1]);
 
 	return git_fs_path_join_unrooted(out, path, dir, NULL);
 }
@@ -616,7 +616,7 @@ static int do_match_gitdir(
 		git_fs_path_dirname_r(&pattern, cfg_file);
 		git_str_joinpath(&pattern, pattern.ptr, condition + 2);
 	} else if (condition[0] == '~' && git_fs_path_is_dirsep(condition[1]))
-		git_sysdir_expand_global_file(&pattern, condition + 1);
+		git_sysdir_expand_homedir_file(&pattern, condition + 1);
 	else if (!git_fs_path_is_absolute(condition))
 		git_str_joinpath(&pattern, "**", condition);
 	else

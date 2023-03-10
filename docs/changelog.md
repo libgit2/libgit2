@@ -1,3 +1,122 @@
+v1.6.2
+------
+
+## What's Changed
+### Bug fixes
+
+* remote: always populate old id in update tips by @ethomson in https://github.com/libgit2/libgit2/pull/6506
+  The update tips callback would not always be properly provided with an empty (`0000000...`) OID for new refs.
+
+* Revert #6503 by @ethomson in https://github.com/libgit2/libgit2/pull/6511
+  The certificate callback added port information for callbacks in #6503, but the format was ambiguous with IPv6 addresses. Revert this change temporarily.
+
+* Add `git_odb_backend_loose` back by @ethomson in https://github.com/libgit2/libgit2/pull/6512
+  During SHA256 refactoring, the `git_odb_backend_loose` API was accidentally removed. Add it back.
+
+* meta: configure pkg-config .pc correctly by @ethomson in https://github.com/libgit2/libgit2/pull/6514
+  During SHA256 refactoring, the pkg-config `.pc` file was erroneously renamed to `git2` instead of `libgit2`. Repair this.
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.6.1...v1.6.2
+
+v1.6
+----
+
+This is release v1.6.1, "Hubbeliges Krokodil". This release adds experimental SHA256 support and includes many new features and bugfixes. This release replaces libgit2 v1.6.0, which did not correctly update its version number(s).
+
+## What's Changed
+
+### New features
+
+* **Support for bare repositories with SHA256 support (experimental)** by @ethomson in https://github.com/libgit2/libgit2/pull/6191
+   You can configure experimental SHA256 support in libgit2 with `cmake -DEXPERIMENTAL_SHA256=ON` during project setup. This is useful for considering future integrations, work on clients, and work on language bindings. At present, working with bare repositories should largely work, including remote operations. But many pieces of functionality - including working with the index - are not yet supported. As a result, **libgit2 with SHA256 support should not be used in production or released with package distribution.**
+
+* **Support the notion of a home directory separately from global configuration directory** by @ethomson in https://github.com/libgit2/libgit2/pull/6455 and https://github.com/libgit2/libgit2/pull/6456
+  Callers and language bindings can now configure the home directory that libgit2 uses for file lookups (eg, the `.ssh` directory). This configuration is separate from the git global configuration path.
+
+* **stash: partial stash specific files** by @gitkraken-jacobw in https://github.com/libgit2/libgit2/pull/6330
+  A stash can be created with only specific files, using a pathspec. This is similar to the `git stash push` command.
+
+* **push: revparse refspec source, so you can push things that are not refs** by @sven-of-cord in https://github.com/libgit2/libgit2/pull/6362
+  Pushes can be performed using refspecs instead of only references.
+
+* **Support OpenSSL3** by @ethomson in https://github.com/libgit2/libgit2/pull/6464 and https://github.com/libgit2/libgit2/pull/6471
+  OpenSSL 3 is now supported, both when compiled directly and dynamically loaded.
+
+### Bug fixes
+* winhttp: support long custom headers by @kcsaul in https://github.com/libgit2/libgit2/pull/6363
+* Fix memory leak by @csware in https://github.com/libgit2/libgit2/pull/6382
+* Don't fail the whole clone if you can't find a default branch by @torvalds in https://github.com/libgit2/libgit2/pull/6369
+* #6366: When a worktree is missing, return `GIT_ENOTFOUND`. by @arroz in https://github.com/libgit2/libgit2/pull/6395
+* commit-graph: only verify csum on `git_commit_graph_open()`. by @derrickstolee in https://github.com/libgit2/libgit2/pull/6420
+* Ignore missing 'safe.directory' config during ownership checks by @kcsaul in https://github.com/libgit2/libgit2/pull/6408
+* Fix leak in `git_tag_create_from_buffer` by @julianmesa-gitkraken in https://github.com/libgit2/libgit2/pull/6421
+* http: Update httpclient options when reusing an existing connection. by @slackner in https://github.com/libgit2/libgit2/pull/6416
+* Add support for `safe.directory *` by @csware in https://github.com/libgit2/libgit2/pull/6429
+* URL parsing for google-compatible URLs by @ethomson in https://github.com/libgit2/libgit2/pull/6326
+* Fixes #6433: `git_submodule_update` fails to update configured but missing submodule by @tagesuhu in https://github.com/libgit2/libgit2/pull/6434
+* transport: fix capabilities calculation by @russell in https://github.com/libgit2/libgit2/pull/6435
+* push: use resolved oid as the source by @ethomson in https://github.com/libgit2/libgit2/pull/6452
+* Use `git_clone__submodule` to avoid file checks in workdir by @abizjak in https://github.com/libgit2/libgit2/pull/6444
+* #6422: handle dangling symbolic refs gracefully by @arroz in https://github.com/libgit2/libgit2/pull/6423
+* `diff_file`: Fix crash when freeing a patch representing an empty untracked file by @jorio in https://github.com/libgit2/libgit2/pull/6475
+* clone: clean up options on failure by @ethomson in https://github.com/libgit2/libgit2/pull/6479
+* stash: update strarray usage by @ethomson in https://github.com/libgit2/libgit2/pull/6487
+* #6491: Sets `oid_type` on repos open with `git_repository_open_bare` by @arroz in https://github.com/libgit2/libgit2/pull/6492
+* Handle Win32 shares by @ethomson in https://github.com/libgit2/libgit2/pull/6493
+* Make failure to connect to ssh-agent non-fatal by @fxcoudert in https://github.com/libgit2/libgit2/pull/6497
+* odb: don't unconditionally add `oid_type` to stream by @ethomson in https://github.com/libgit2/libgit2/pull/6499
+* Pass hostkey & port to host verify callback by @fxcoudert in https://github.com/libgit2/libgit2/pull/6503
+
+### Code cleanups
+* meta: update version number to v1.6.0-alpha by @ethomson in https://github.com/libgit2/libgit2/pull/6352
+* sha256: indirection for experimental functions by @ethomson in https://github.com/libgit2/libgit2/pull/6354
+* Delete `create.c.bak` by @lrm29 in https://github.com/libgit2/libgit2/pull/6398
+* Support non-cmake builds with an in-tree `experimental.h` by @ethomson in https://github.com/libgit2/libgit2/pull/6405
+
+### Build and CI improvements
+* tests: skip flaky-ass googlesource tests by @ethomson in https://github.com/libgit2/libgit2/pull/6353
+* clar: remove ftrunacte from libgit2 tests by @boretrk in https://github.com/libgit2/libgit2/pull/6357
+* CI Improvements by @ethomson in https://github.com/libgit2/libgit2/pull/6403
+* fix compile on Windows with `-DWIN32_LEAN_AND_MEAN` by @christoph-cullmann in https://github.com/libgit2/libgit2/pull/6373
+* Fixes #6365 : Uppercase windows.h include fails build in case-sensitive OS by @Vinz2008 in https://github.com/libgit2/libgit2/pull/6377
+* ci: update version numbers of actions by @ethomson in https://github.com/libgit2/libgit2/pull/6448
+* thread: avoid warnings when building without threads by @ethomson in https://github.com/libgit2/libgit2/pull/6432
+* src: hide unused hmac() prototype by @0-wiz-0 in https://github.com/libgit2/libgit2/pull/6458
+* tests: update clar test runner by @ethomson in https://github.com/libgit2/libgit2/pull/6459
+* ci: always create test summaries, even on failure by @ethomson in https://github.com/libgit2/libgit2/pull/6460
+* Fix build failure with `-DEMBED_SSH_PATH` by @vicr123 in https://github.com/libgit2/libgit2/pull/6374
+* Define correct `off64_t` for AIX by @bzEq in https://github.com/libgit2/libgit2/pull/6376
+* Fix some warnings in main by @ethomson in https://github.com/libgit2/libgit2/pull/6480
+* strarray: remove deprecated declaration by @ethomson in https://github.com/libgit2/libgit2/pull/6486
+* tests: always unset `HTTP_PROXY` before starting tests by @ethomson in https://github.com/libgit2/libgit2/pull/6498
+
+### Documentation improvements
+* add 2-clause BSD license to COPYING by @martinvonz in https://github.com/libgit2/libgit2/pull/6413
+* Add new PHP bindings project to language bindings section of README.md by @RogerGee in https://github.com/libgit2/libgit2/pull/6473
+* README: clarify the linking exception by @ethomson in https://github.com/libgit2/libgit2/pull/6494
+* Correct the definition of "empty" in the docs for `git_repository_is_empty` by @timrogers in https://github.com/libgit2/libgit2/pull/6500
+
+## New Contributors
+* @christoph-cullmann made their first contribution in https://github.com/libgit2/libgit2/pull/6373
+* @Vinz2008 made their first contribution in https://github.com/libgit2/libgit2/pull/6377
+* @torvalds made their first contribution in https://github.com/libgit2/libgit2/pull/6369
+* @derrickstolee made their first contribution in https://github.com/libgit2/libgit2/pull/6420
+* @julianmesa-gitkraken made their first contribution in https://github.com/libgit2/libgit2/pull/6421
+* @slackner made their first contribution in https://github.com/libgit2/libgit2/pull/6416
+* @martinvonz made their first contribution in https://github.com/libgit2/libgit2/pull/6413
+* @tagesuhu made their first contribution in https://github.com/libgit2/libgit2/pull/6434
+* @russell made their first contribution in https://github.com/libgit2/libgit2/pull/6435
+* @sven-of-cord made their first contribution in https://github.com/libgit2/libgit2/pull/6362
+* @0-wiz-0 made their first contribution in https://github.com/libgit2/libgit2/pull/6458
+* @abizjak made their first contribution in https://github.com/libgit2/libgit2/pull/6444
+* @vicr123 made their first contribution in https://github.com/libgit2/libgit2/pull/6374
+* @bzEq made their first contribution in https://github.com/libgit2/libgit2/pull/6376
+* @gitkraken-jacobw made their first contribution in https://github.com/libgit2/libgit2/pull/6330
+* @fxcoudert made their first contribution in https://github.com/libgit2/libgit2/pull/6497
+* @timrogers made their first contribution in https://github.com/libgit2/libgit2/pull/6500
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.5.0...v1.6.0
+
 v1.5
 ----
 

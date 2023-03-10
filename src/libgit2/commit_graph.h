@@ -106,6 +106,9 @@ struct git_commit_graph {
 /** Create a new commit-graph, optionally opening the underlying file. */
 int git_commit_graph_new(git_commit_graph **cgraph_out, const char *objects_dir, bool open_file);
 
+/** Validate the checksum of a commit graph */
+int git_commit_graph_validate(git_commit_graph *cgraph);
+
 /** Open and validate a commit-graph file. */
 int git_commit_graph_file_open(git_commit_graph_file **file_out, const char *path);
 
