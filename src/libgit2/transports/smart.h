@@ -54,7 +54,7 @@ typedef enum {
 	GIT_PKT_NG,
 	GIT_PKT_UNPACK,
 	GIT_PKT_SHALLOW,
-	GIT_PKT_UNSHALLOW,
+	GIT_PKT_UNSHALLOW
 } git_pkt_type;
 
 /* Used for multi_ack and multi_ack_detailed */
@@ -144,7 +144,7 @@ typedef struct transport_smart_caps {
 	             thin_pack:1,
 	             want_tip_sha1:1,
 	             want_reachable_sha1:1,
-				 shallow:1;
+	             shallow:1;
 	char *object_format;
 	char *agent;
 } transport_smart_caps;
