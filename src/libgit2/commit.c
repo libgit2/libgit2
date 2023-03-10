@@ -517,6 +517,18 @@ int git_commit__parse(
 	return git_commit__parse_ext(commit, odb_obj, &parse_options);
 }
 
+int git_commit__parse_raw(
+	void *commit,
+	const char *data,
+	size_t size,
+	git_oid_t oid_type)
+{
+	git_commit__parse_options parse_options = {0};
+	parse_options.oid_type = oid_type;
+
+	return commit_parse(commit, data, size, &parse_options);
+}
+
 static int assign_commit_parents_from_graft(git_commit *commit, git_commit_graft *graft) {
 	size_t idx;
 	git_oid *oid;
@@ -533,14 +545,17 @@ static int assign_commit_parents_from_graft(git_commit *commit, git_commit_graft
 	return 0;
 }
 
-int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, unsigned int flags)
+int git_commit__parse_ext(
+	git_commit *commit,
+	git_odb_object *odb_obj,
+	git_commit__parse_options *parse_opts)
 {
 	git_repository *repo = git_object_owner((git_object *)commit);
 	git_commit_graft *graft;
 	int error;
 	
 	if ((error = commit_parse(commit, git_odb_object_data(odb_obj),
-				  git_odb_object_size(odb_obj), flags)) < 0)
+				  git_odb_object_size(odb_obj), parse_opts)) < 0)
 		return error;
 
 	if (!git_shallow__enabled)
@@ -552,30 +567,6 @@ int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, unsigned 
 		return 0;
 
 	return assign_commit_parents_from_graft(commit, graft);
-}
-
-int git_commit__parse_raw(
-	void *commit,
-	const char *data,
-	size_t size,
-	git_oid_t oid_type)
-{
-	git_commit__parse_options parse_options = {0};
-	parse_options.oid_type = oid_type;
-
-	return commit_parse(commit, data, size, &parse_options);
-}
-
-int git_commit__parse_ext(
-	git_commit *commit,
-	git_odb_object *odb_obj,
-	git_commit__parse_options *parse_opts)
-{
-	return commit_parse(
-		commit,
-		git_odb_object_data(odb_obj),
-		git_odb_object_size(odb_obj),
-		parse_opts);
 }
 
 #define GIT_COMMIT_GETTER(_rvalue, _name, _return, _invalid) \
