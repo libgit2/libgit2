@@ -25,15 +25,6 @@
 
 GIT_BEGIN_DECL
 
-/**
- * Flags to pass to transport
- *
- * Currently unused.
- */
-typedef enum {
-	GIT_TRANSPORTFLAGS_NONE = 0,
-} git_transport_flags_t;
-
 typedef struct git_shallowarray git_shallowarray;
 
 typedef struct {
