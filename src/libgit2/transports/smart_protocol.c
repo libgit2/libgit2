@@ -359,7 +359,7 @@ static int cap_not_sup_err(const char *cap_name)
 /* Disables server capabilities we're not interested in */
 static int setup_caps(transport_smart_caps *caps, const git_fetch_negotiation *wants)
 {
-	if (wants->depth) {
+	if (wants->depth > 0) {
 		if (!caps->shallow)
 			return cap_not_sup_err(GIT_CAP_SHALLOW);
 	} else {
