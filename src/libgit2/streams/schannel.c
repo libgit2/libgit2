@@ -661,7 +661,7 @@ static int schannel_stream_wrap(
 	st->io = in;
 	st->owned = owned;
 
-	if (git__utf8_to_16_alloc(&st->host_w, host) < 0) {
+	if (git_utf8_to_16_alloc(&st->host_w, host) < 0) {
 		git__free(st);
 		return -1;
 	}

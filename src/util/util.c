@@ -743,7 +743,7 @@ int git__getenv(git_str *out, const char *name)
 
 	git_str_clear(out);
 
-	if (git__utf8_to_16_alloc(&wide_name, name) < 0)
+	if (git_utf8_to_16_alloc(&wide_name, name) < 0)
 		return -1;
 
 	if ((value_len = GetEnvironmentVariableW(wide_name, NULL, 0)) > 0) {
