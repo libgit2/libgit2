@@ -23,7 +23,7 @@ typedef struct {
 	bool complete;
 } http_auth_ntlm_context;
 
-static int ntlm_set_challenge(
+static int ntlmclient_set_challenge(
 	git_http_auth_context *c,
 	const char *challenge)
 {
@@ -40,7 +40,7 @@ static int ntlm_set_challenge(
 	return 0;
 }
 
-static int ntlm_set_credentials(http_auth_ntlm_context *ctx, git_credential *_cred)
+static int ntlmclient_set_credentials(http_auth_ntlm_context *ctx, git_credential *_cred)
 {
 	git_credential_userpass_plaintext *cred;
 	const char *sep, *username;
@@ -76,7 +76,7 @@ done:
 	return error;
 }
 
-static int ntlm_next_token(
+static int ntlmclient_next_token(
 	git_str *buf,
 	git_http_auth_context *c,
 	git_credential *cred)
@@ -104,7 +104,7 @@ static int ntlm_next_token(
 	 */
 	ctx->complete = true;
 
-	if (cred && ntlm_set_credentials(ctx, cred) != 0)
+	if (cred && ntlmclient_set_credentials(ctx, cred) != 0)
 		goto done;
 
 	if (challenge_len < 4) {
@@ -162,7 +162,7 @@ done:
 	return error;
 }
 
-static int ntlm_is_complete(git_http_auth_context *c)
+static int ntlmclient_is_complete(git_http_auth_context *c)
 {
 	http_auth_ntlm_context *ctx = (http_auth_ntlm_context *)c;
 
@@ -170,7 +170,7 @@ static int ntlm_is_complete(git_http_auth_context *c)
 	return (ctx->complete == true);
 }
 
-static void ntlm_context_free(git_http_auth_context *c)
+static void ntlmclient_context_free(git_http_auth_context *c)
 {
 	http_auth_ntlm_context *ctx = (http_auth_ntlm_context *)c;
 
@@ -179,7 +179,7 @@ static void ntlm_context_free(git_http_auth_context *c)
 	git__free(ctx);
 }
 
-static int ntlm_init_context(
+static int ntlmclient_init_context(
 	http_auth_ntlm_context *ctx,
 	const git_net_url *url)
 {
@@ -206,7 +206,7 @@ int git_http_auth_ntlm(
 	ctx = git__calloc(1, sizeof(http_auth_ntlm_context));
 	GIT_ERROR_CHECK_ALLOC(ctx);
 
-	if (ntlm_init_context(ctx, url) < 0) {
+	if (ntlmclient_init_context(ctx, url) < 0) {
 		git__free(ctx);
 		return -1;
 	}
@@ -214,10 +214,10 @@ int git_http_auth_ntlm(
 	ctx->parent.type = GIT_HTTP_AUTH_NTLM;
 	ctx->parent.credtypes = GIT_CREDENTIAL_USERPASS_PLAINTEXT;
 	ctx->parent.connection_affinity = 1;
-	ctx->parent.set_challenge = ntlm_set_challenge;
-	ctx->parent.next_token = ntlm_next_token;
-	ctx->parent.is_complete = ntlm_is_complete;
-	ctx->parent.free = ntlm_context_free;
+	ctx->parent.set_challenge = ntlmclient_set_challenge;
+	ctx->parent.next_token = ntlmclient_next_token;
+	ctx->parent.is_complete = ntlmclient_is_complete;
+	ctx->parent.free = ntlmclient_context_free;
 
 	*out = (git_http_auth_context *)ctx;
 

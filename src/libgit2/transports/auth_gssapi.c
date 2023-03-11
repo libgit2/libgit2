@@ -20,13 +20,13 @@
 #include <krb5.h>
 #endif
 
-static gss_OID_desc negotiate_oid_spnego =
+static gss_OID_desc gssapi_oid_spnego =
 	{ 6, (void *) "\x2b\x06\x01\x05\x05\x02" };
-static gss_OID_desc negotiate_oid_krb5 =
+static gss_OID_desc gssapi_oid_krb5 =
 	{ 9, (void *) "\x2a\x86\x48\x86\xf7\x12\x01\x02\x02" };
 
-static gss_OID negotiate_oids[] =
-	{ &negotiate_oid_spnego, &negotiate_oid_krb5, NULL };
+static gss_OID gssapi_oids[] =
+	{ &gssapi_oid_spnego, &gssapi_oid_krb5, NULL };
 
 typedef struct {
 	git_http_auth_context parent;
@@ -36,9 +36,9 @@ typedef struct {
 	char *challenge;
 	gss_ctx_id_t gss_context;
 	gss_OID oid;
-} http_auth_negotiate_context;
+} http_auth_gssapi_context;
 
-static void negotiate_err_set(
+static void gssapi_err_set(
 	OM_uint32 status_major,
 	OM_uint32 status_minor,
 	const char *message)
@@ -58,11 +58,11 @@ static void negotiate_err_set(
 	}
 }
 
-static int negotiate_set_challenge(
+static int gssapi_set_challenge(
 	git_http_auth_context *c,
 	const char *challenge)
 {
-	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
+	http_auth_gssapi_context *ctx = (http_auth_gssapi_context *)c;
 
 	GIT_ASSERT_ARG(ctx);
 	GIT_ASSERT_ARG(challenge);
@@ -76,7 +76,7 @@ static int negotiate_set_challenge(
 	return 0;
 }
 
-static void negotiate_context_dispose(http_auth_negotiate_context *ctx)
+static void gssapi_context_dispose(http_auth_gssapi_context *ctx)
 {
 	OM_uint32 status_minor;
 
@@ -92,12 +92,12 @@ static void negotiate_context_dispose(http_auth_negotiate_context *ctx)
 	ctx->challenge = NULL;
 }
 
-static int negotiate_next_token(
+static int gssapi_next_token(
 	git_str *buf,
 	git_http_auth_context *c,
 	git_credential *cred)
 {
-	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
+	http_auth_gssapi_context *ctx = (http_auth_gssapi_context *)c;
 	OM_uint32 status_major, status_minor;
 	gss_buffer_desc target_buffer = GSS_C_EMPTY_BUFFER,
 		input_token = GSS_C_EMPTY_BUFFER,
@@ -126,7 +126,7 @@ static int negotiate_next_token(
 		GSS_C_NT_HOSTBASED_SERVICE, &server);
 
 	if (GSS_ERROR(status_major)) {
-		negotiate_err_set(status_major, status_minor,
+		gssapi_err_set(status_major, status_minor,
 			"could not parse principal");
 		error = -1;
 		goto done;
@@ -152,10 +152,10 @@ static int negotiate_next_token(
 		input_token.length = input_buf.size;
 		input_token_ptr = &input_token;
 	} else if (ctx->gss_context != GSS_C_NO_CONTEXT) {
-		negotiate_context_dispose(ctx);
+		gssapi_context_dispose(ctx);
 	}
 
-	mech = &negotiate_oid_spnego;
+	mech = &gssapi_oid_spnego;
 
 	status_major = gss_init_sec_context(
 		&status_minor,
@@ -173,14 +173,14 @@ static int negotiate_next_token(
 		NULL);
 
 	if (GSS_ERROR(status_major)) {
-		negotiate_err_set(status_major, status_minor, "negotiate failure");
+		gssapi_err_set(status_major, status_minor, "negotiate failure");
 		error = -1;
 		goto done;
 	}
 
 	/* This message merely told us auth was complete; we do not respond. */
 	if (status_major == GSS_S_COMPLETE) {
-		negotiate_context_dispose(ctx);
+		gssapi_context_dispose(ctx);
 		ctx->complete = 1;
 		goto done;
 	}
@@ -204,20 +204,20 @@ done:
 	return error;
 }
 
-static int negotiate_is_complete(git_http_auth_context *c)
+static int gssapi_is_complete(git_http_auth_context *c)
 {
-	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
+	http_auth_gssapi_context *ctx = (http_auth_gssapi_context *)c;
 
 	GIT_ASSERT_ARG(ctx);
 
 	return (ctx->complete == 1);
 }
 
-static void negotiate_context_free(git_http_auth_context *c)
+static void gssapi_context_free(git_http_auth_context *c)
 {
-	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
+	http_auth_gssapi_context *ctx = (http_auth_gssapi_context *)c;
 
-	negotiate_context_dispose(ctx);
+	gssapi_context_dispose(ctx);
 
 	ctx->configured = 0;
 	ctx->complete = 0;
@@ -226,8 +226,8 @@ static void negotiate_context_free(git_http_auth_context *c)
 	git__free(ctx);
 }
 
-static int negotiate_init_context(
-	http_auth_negotiate_context *ctx,
+static int gssapi_init_context(
+	http_auth_gssapi_context *ctx,
 	const git_net_url *url)
 {
 	OM_uint32 status_major, status_minor;
@@ -239,13 +239,13 @@ static int negotiate_init_context(
 	status_major = gss_indicate_mechs(&status_minor, &mechanism_list);
 
 	if (GSS_ERROR(status_major)) {
-		negotiate_err_set(status_major, status_minor,
+		gssapi_err_set(status_major, status_minor,
 			"could not query mechanisms");
 		return -1;
 	}
 
 	if (mechanism_list) {
-		for (oid = negotiate_oids; *oid; oid++) {
+		for (oid = gssapi_oids; *oid; oid++) {
 			for (i = 0; i < mechanism_list->count; i++) {
 				item = &mechanism_list->elements[i];
 
@@ -285,14 +285,14 @@ int git_http_auth_negotiate(
 	git_http_auth_context **out,
 	const git_net_url *url)
 {
-	http_auth_negotiate_context *ctx;
+	http_auth_gssapi_context *ctx;
 
 	*out = NULL;
 
-	ctx = git__calloc(1, sizeof(http_auth_negotiate_context));
+	ctx = git__calloc(1, sizeof(http_auth_gssapi_context));
 	GIT_ERROR_CHECK_ALLOC(ctx);
 
-	if (negotiate_init_context(ctx, url) < 0) {
+	if (gssapi_init_context(ctx, url) < 0) {
 		git__free(ctx);
 		return -1;
 	}
@@ -300,10 +300,10 @@ int git_http_auth_negotiate(
 	ctx->parent.type = GIT_HTTP_AUTH_NEGOTIATE;
 	ctx->parent.credtypes = GIT_CREDENTIAL_DEFAULT;
 	ctx->parent.connection_affinity = 1;
-	ctx->parent.set_challenge = negotiate_set_challenge;
-	ctx->parent.next_token = negotiate_next_token;
-	ctx->parent.is_complete = negotiate_is_complete;
-	ctx->parent.free = negotiate_context_free;
+	ctx->parent.set_challenge = gssapi_set_challenge;
+	ctx->parent.next_token = gssapi_next_token;
+	ctx->parent.is_complete = gssapi_is_complete;
+	ctx->parent.free = gssapi_context_free;
 
 	*out = (git_http_auth_context *)ctx;
 

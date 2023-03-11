@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_transports_auth_ntlm_h__
-#define INCLUDE_transports_auth_ntlm_h__
+#ifndef INCLUDE_transports_auth_ntlmclient_h__
+#define INCLUDE_transports_auth_ntlmclient_h__
 
 #include "auth.h"
 
