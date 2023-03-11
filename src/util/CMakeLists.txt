@@ -9,7 +9,6 @@ configure_file(git2_features.h.in git2_features.h)
 set(UTIL_INCLUDES
 	"${PROJECT_BINARY_DIR}/src/util"
 	"${PROJECT_BINARY_DIR}/include"
-	"${PROJECT_BINARY_DIR}/include/git2"
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include")
 

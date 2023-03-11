@@ -10,7 +10,6 @@ include(PkgBuildConfig)
 set(LIBGIT2_INCLUDES
 	"${PROJECT_BINARY_DIR}/src/util"
 	"${PROJECT_BINARY_DIR}/include"
-	"${PROJECT_BINARY_DIR}/include/git2"
 	"${PROJECT_SOURCE_DIR}/src/libgit2"
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include")
