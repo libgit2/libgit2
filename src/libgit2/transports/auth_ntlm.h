@@ -5,15 +5,15 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_transports_auth_ntlmclient_h__
-#define INCLUDE_transports_auth_ntlmclient_h__
+#ifndef INCLUDE_transports_auth_ntlm_h__
+#define INCLUDE_transports_auth_ntlm_h__
 
 #include "auth.h"
 
 /* NTLM requires a full request/challenge/response */
 #define GIT_AUTH_STEPS_NTLM 2
 
-#ifdef GIT_NTLM
+#if defined(GIT_NTLM) || defined(GIT_WIN32)
 
 #if defined(GIT_OPENSSL)
 # define CRYPT_OPENSSL
