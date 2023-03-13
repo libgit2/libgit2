@@ -11,7 +11,6 @@
 #include "types.h"
 #include "oid.h"
 #include "buffer.h"
-#include "oidarray.h"
 
 /**
  * @file git2/repository.h
