@@ -200,8 +200,7 @@ static void pack_index_free(struct git_pack_file *p)
 static int pack_index_check_locked(const char *path, struct git_pack_file *p)
 {
 	struct git_pack_idx_header *hdr;
-	uint32_t version, i, *index;
-	uint64_t nr = 0;
+	uint32_t version, nr = 0, i, *index;
 	void *idx_map;
 	size_t idx_size;
 	struct stat st;
@@ -269,7 +268,7 @@ static int pack_index_check_locked(const char *path, struct git_pack_file *p)
 		 * - 20/32-byte SHA of the packfile
 		 * - 20/32-byte SHA file checksum
 		 */
-		if (idx_size != (4 * 256 + (nr * (p->oid_size + 4)) + (p->oid_size * 2))) {
+		if (idx_size != (4 * 256 + ((uint64_t) nr * (p->oid_size + 4)) + (p->oid_size * 2))) {
 			git_futils_mmap_free(&p->index_map);
 			return packfile_error("index is corrupted");
 		}
@@ -287,7 +286,7 @@ static int pack_index_check_locked(const char *path, struct git_pack_file *p)
 		 * variable sized table containing 8-byte entries
 		 * for offsets larger than 2^31.
 		 */
-		uint64_t min_size = 8 + (4 * 256) + (nr * (p->oid_size + 4 + 4)) + (p->oid_size * 2);
+		uint64_t min_size = 8 + (4 * 256) + ((uint64_t)nr * (p->oid_size + 4 + 4)) + (p->oid_size * 2);
 		uint64_t max_size = min_size;
 
 		if (nr)
