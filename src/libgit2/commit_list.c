@@ -43,13 +43,18 @@ int git_commit_list_time_cmp(const void *a, const void *b)
 	return 0;
 }
 
-git_commit_list *git_commit_list_insert(git_commit_list_node *item, git_commit_list **list_p)
-{
+git_commit_list *git_commit_list_create(git_commit_list_node *item, git_commit_list *next) {
 	git_commit_list *new_list = git__malloc(sizeof(git_commit_list));
 	if (new_list != NULL) {
 		new_list->item = item;
-		new_list->next = *list_p;
+		new_list->next = next;
 	}
+	return new_list;
+}
+
+git_commit_list *git_commit_list_insert(git_commit_list_node *item, git_commit_list **list_p)
+{
+	git_commit_list *new_list = git_commit_list_create(item, *list_p);
 	*list_p = new_list;
 	return new_list;
 }
