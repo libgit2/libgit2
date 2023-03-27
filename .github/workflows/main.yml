@@ -25,40 +25,40 @@ jobs:
     strategy:
       matrix:
         platform:
-        - name: "Linux (Xenial, GCC, OpenSSL)"
+        - name: "Linux (Xenial, GCC, OpenSSL, libssh2)"
           id: xenial-gcc-openssl
           container:
             name: xenial
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
           os: ubuntu-latest
-        - name: Linux (Xenial, GCC, mbedTLS)
+        - name: Linux (Xenial, GCC, mbedTLS, OpenSSH)
           id: xenial-gcc-mbedtls
           container:
             name: xenial
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec
           os: ubuntu-latest
-        - name: "Linux (Xenial, Clang, OpenSSL)"
+        - name: "Linux (Xenial, Clang, OpenSSL, OpenSSH)"
           id: xenial-clang-openssl
           container:
             name: xenial
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec
           os: ubuntu-latest
-        - name: "Linux (Xenial, Clang, mbedTLS)"
+        - name: "Linux (Xenial, Clang, mbedTLS, libssh2)"
           id: xenial-clang-mbedtls
           container:
             name: xenial
           env:
             CC: clang
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
             CMAKE_GENERATOR: Ninja
           os: ubuntu-latest
         - name: "macOS"
