@@ -90,10 +90,12 @@ git_str git_repository__reserved_names_posix[] = {
 };
 size_t git_repository__reserved_names_posix_len = 1;
 
-static void set_odb(git_repository *repo, git_odb *odb)
+static void set_odb(git_repository *repo, git_odb *odb, bool set_owner)
 {
 	if (odb) {
-		GIT_REFCOUNT_OWN(odb, repo);
+		if (set_owner) {
+			GIT_REFCOUNT_OWN(odb, repo);
+		}
 		GIT_REFCOUNT_INC(odb);
 	}
 
@@ -154,7 +156,7 @@ int git_repository__cleanup(git_repository *repo)
 
 	set_config(repo, NULL);
 	set_index(repo, NULL);
-	set_odb(repo, NULL);
+	set_odb(repo, NULL, /*set_owner=*/true);
 	set_refdb(repo, NULL);
 
 	return 0;
@@ -962,7 +964,7 @@ static int _git_repository_open_ext_from_env(
 		goto error;
 
 	if (odb)
-		git_repository_set_odb(repo, odb);
+		git_repository_set_odb(repo, odb, /*set_owner=*/true);
 
 	error = git__getenv(&alts_buf, "GIT_ALTERNATE_OBJECT_DIRECTORIES");
 	if (error == GIT_ENOTFOUND) {
@@ -1168,7 +1170,7 @@ int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)
 	repo = repository_alloc();
 	GIT_ERROR_CHECK_ALLOC(repo);
 
-	git_repository_set_odb(repo, odb);
+	git_repository_set_odb(repo, odb, /*set_owner=*/false);
 	*repo_out = repo;
 
 	return 0;
@@ -1378,12 +1380,12 @@ int git_repository_odb(git_odb **out, git_repository *repo)
 	return 0;
 }
 
-int git_repository_set_odb(git_repository *repo, git_odb *odb)
+int git_repository_set_odb(git_repository *repo, git_odb *odb, bool set_owner)
 {
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(odb);
 
-	set_odb(repo, odb);
+	set_odb(repo, odb, set_owner);
 	return 0;
 }
 

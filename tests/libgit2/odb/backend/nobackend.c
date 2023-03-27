@@ -17,7 +17,7 @@ void test_odb_backend_nobackend__initialize(void)
 	cl_git_pass(git_refdb_new(&refdb, _repo));
 
 	git_repository_set_config(_repo, config);
-	git_repository_set_odb(_repo, odb);
+	git_repository_set_odb(_repo, odb, /*set_owner=*/true);
 	git_repository_set_refdb(_repo, refdb);
 
 	/* The set increases the refcount and we don't want them anymore */

@@ -97,9 +97,10 @@ GIT_EXTERN(int) git_repository_set_config(git_repository *repo, git_config *conf
  *
  * @param repo A repository object
  * @param odb An ODB object
+ * @param set_owner Register repository as owner of ODB
  * @return 0 on success, or an error code
  */
-GIT_EXTERN(int) git_repository_set_odb(git_repository *repo, git_odb *odb);
+GIT_EXTERN(int) git_repository_set_odb(git_repository *repo, git_odb *odb, bool set_owner);
 
 /**
  * Set the Reference Database Backend for this repository

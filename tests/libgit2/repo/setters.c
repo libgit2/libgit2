@@ -94,7 +94,28 @@ void test_repo_setters__setting_a_new_odb_on_a_repo_which_already_loaded_one_pro
 	cl_git_pass(git_odb__open(&new_odb, "./testrepo.git/objects", NULL));
 	cl_assert(((git_refcount *)new_odb)->refcount.val == 1);
 
-	git_repository_set_odb(repo, new_odb);
+	git_repository_set_odb(repo, new_odb, /*set_owner=*/true);
+	cl_assert(((git_refcount *)new_odb)->refcount.val == 2);
+
+	git_repository_free(repo);
+	cl_assert(((git_refcount *)new_odb)->refcount.val == 1);
+
+	git_odb_free(new_odb);
+
+	/*
+	 * Ensure the cleanup method won't try to free the repo as it's already been taken care of
+	 */
+	repo = NULL;
+}
+
+void test_repo_setters__setting_a_new_odb_on_a_non_owner_repo_which_already_loaded_one_properly_honors_the_refcount(void)
+{
+	git_odb *new_odb;
+
+	cl_git_pass(git_odb__open(&new_odb, "./testrepo.git/objects", NULL));
+	cl_assert(((git_refcount *)new_odb)->refcount.val == 1);
+
+	git_repository_set_odb(repo, new_odb, /*set_owner=*/false);
 	cl_assert(((git_refcount *)new_odb)->refcount.val == 2);
 
 	git_repository_free(repo);
