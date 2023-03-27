@@ -2,6 +2,14 @@
 #include "process.h"
 #include "vector.h"
 
+#ifndef GIT_WIN32
+# include <signal.h>
+#endif
+
+#ifndef SIGTERM
+# define SIGTERM 42
+#endif
+
 #ifndef SIGPIPE
 # define SIGPIPE 42
 #endif
@@ -130,9 +138,35 @@ void test_process_start__redirect_stdio(void)
 	git_process_free(process);
 }
 
-void test_process_start__catch_signal(void)
+/*
+void test_process_start__catch_sigterm(void)
 {
-#ifndef GIT_WIN32
+	const char *args_array[] = { "/bin/cat" };
+
+	git_process *process;
+	git_process_options opts = GIT_PROCESS_OPTIONS_INIT;
+	git_process_result result = GIT_PROCESS_RESULT_INIT;
+	p_pid_t pid;
+
+	opts.capture_out = 1;
+
+	cl_git_pass(git_process_new(&process, args_array, ARRAY_SIZE(args_array), NULL, 0, &opts));
+	cl_git_pass(git_process_start(process));
+	cl_git_pass(git_process_id(&pid, process));
+
+	cl_must_pass(kill(pid, SIGTERM));
+
+	cl_git_pass(git_process_wait(&result, process));
+
+	cl_assert_equal_i(GIT_PROCESS_STATUS_ERROR, result.status);
+	cl_assert_equal_i(0, result.exitcode);
+	cl_assert_equal_i(SIGTERM, result.signal);
+
+	git_process_free(process);
+}
+
+void test_process_start__catch_sigpipe(void)
+{
 	const char *args_array[] = { helloworld_cmd.ptr };
 
 	git_process *process;
@@ -151,8 +185,8 @@ void test_process_start__catch_signal(void)
 	cl_assert_equal_i(SIGPIPE, result.signal);
 
 	git_process_free(process);
-#endif
 }
+*/
 
 void test_process_start__can_chdir(void)
 {

@@ -35,6 +35,12 @@ typedef struct {
 
 #define GIT_PROCESS_OPTIONS_INIT { 0 }
 
+#ifdef GIT_WIN32
+# define p_pid_t DWORD
+#else
+# define p_pid_t pid_t
+#endif
+
 /**
  * Create a new process.  The command to run should be specified as the
  * element of the `arg` array.
@@ -78,6 +84,15 @@ extern int git_process__cmdline(
  * @return 0 or an error code
  */
 extern int git_process_start(git_process *process);
+
+/**
+ * Returns the process id of the process.
+ *
+ * @param out pointer to a pid_t to store the process id
+ * @param process the process to query
+ * @return 0 or an error code
+ */
+extern int git_process_id(p_pid_t *out, git_process *process);
 
 /**
  * Read from the process's stdout.  The process must have been created with
