@@ -41,6 +41,7 @@
 #cmakedefine GIT_OPENSSL_DYNAMIC 1
 #cmakedefine GIT_SECURE_TRANSPORT 1
 #cmakedefine GIT_MBEDTLS 1
+#cmakedefine GIT_SCHANNEL 1
 
 #cmakedefine GIT_SHA1_COLLISIONDETECT 1
 #cmakedefine GIT_SHA1_WIN32 1

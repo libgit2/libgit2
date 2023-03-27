@@ -82,12 +82,6 @@ if(MSVC)
 	option(WIN32_LEAKCHECK     "Enable leak reporting via crtdbg"                  OFF)
 endif()
 
-if(WIN32)
-	# By default, libgit2 is built with WinHTTP.  To use the built-in
-	# HTTP transport, invoke CMake with the "-DUSE_WINHTTP=OFF" argument.
-	option(USE_WINHTTP         "Use Win32 WinHTTP routines"                         ON)
-endif()
-
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif()

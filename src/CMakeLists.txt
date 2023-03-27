@@ -42,7 +42,6 @@ include(SelectHashes)
 include(SelectHTTPParser)
 include(SelectRegex)
 include(SelectSSH)
-include(SelectWinHTTP)
 include(SelectZlib)
 
 #

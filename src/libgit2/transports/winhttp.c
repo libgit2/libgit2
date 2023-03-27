@@ -158,10 +158,10 @@ static int apply_userpass_credentials(HINTERNET request, DWORD target, int mecha
 		goto done;
 	}
 
-	if ((error = user_len = git__utf8_to_16_alloc(&user, c->username)) < 0)
+	if ((error = user_len = git_utf8_to_16_alloc(&user, c->username)) < 0)
 		goto done;
 
-	if ((error = pass_len = git__utf8_to_16_alloc(&pass, c->password)) < 0)
+	if ((error = pass_len = git_utf8_to_16_alloc(&pass, c->password)) < 0)
 		goto done;
 
 	if (!WinHttpSetCredentials(request, target, native_scheme, user, pass, NULL)) {
@@ -242,7 +242,7 @@ static int acquire_fallback_cred(
 		HRESULT hCoInitResult;
 
 		/* Convert URL to wide characters */
-		if (git__utf8_to_16_alloc(&wide_url, url) < 0) {
+		if (git_utf8_to_16_alloc(&wide_url, url) < 0) {
 			git_error_set(GIT_ERROR_OS, "failed to convert string to wide form");
 			return -1;
 		}
@@ -397,7 +397,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		return -1;
 
 	/* Convert URL to wide characters */
-	if (git__utf8_to_16_alloc(&s->request_uri, git_str_cstr(&buf)) < 0) {
+	if (git_utf8_to_16_alloc(&s->request_uri, git_str_cstr(&buf)) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to convert string to wide form");
 		goto on_error;
 	}
@@ -473,7 +473,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		}
 
 		/* Convert URL to wide characters */
-		error = git__utf8_to_16_alloc(&proxy_wide, processed_url.ptr);
+		error = git_utf8_to_16_alloc(&proxy_wide, processed_url.ptr);
 		git_str_dispose(&processed_url);
 		if (error < 0)
 			goto on_error;
@@ -531,7 +531,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			s->service) < 0)
 			goto on_error;
 
-		if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_str_cstr(&buf)) < 0) {
+		if (git_utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_str_cstr(&buf)) < 0) {
 			git_error_set(GIT_ERROR_OS, "failed to convert content-type to wide characters");
 			goto on_error;
 		}
@@ -548,7 +548,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			s->service) < 0)
 			goto on_error;
 
-		if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_str_cstr(&buf)) < 0) {
+		if (git_utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_str_cstr(&buf)) < 0) {
 			git_error_set(GIT_ERROR_OS, "failed to convert accept header to wide characters");
 			goto on_error;
 		}
@@ -568,7 +568,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			git_str_puts(&buf, t->owner->connect_opts.custom_headers.strings[i]);
 
 			/* Convert header to wide characters */
-			if ((error = git__utf8_to_16_alloc(&custom_header_wide, git_str_cstr(&buf))) < 0)
+			if ((error = git_utf8_to_16_alloc(&custom_header_wide, git_str_cstr(&buf))) < 0)
 				goto on_error;
 
 			if (!WinHttpAddRequestHeaders(s->request, custom_header_wide, (ULONG)-1L,
@@ -783,7 +783,7 @@ static int winhttp_connect(
 	}
 
 	/* Prepare host */
-	if (git__utf8_to_16_alloc(&wide_host, host) < 0) {
+	if (git_utf8_to_16_alloc(&wide_host, host) < 0) {
 		git_error_set(GIT_ERROR_OS, "unable to convert host to wide characters");
 		goto on_error;
 	}
@@ -792,7 +792,7 @@ static int winhttp_connect(
 	if (git_http__user_agent(&ua) < 0)
 		goto on_error;
 
-	if (git__utf8_to_16_alloc(&wide_ua, git_str_cstr(&ua)) < 0) {
+	if (git_utf8_to_16_alloc(&wide_ua, git_str_cstr(&ua)) < 0) {
 		git_error_set(GIT_ERROR_OS, "unable to convert host to wide characters");
 		goto on_error;
 	}
@@ -1182,7 +1182,7 @@ replay:
 			}
 
 			/* Convert the Location header to UTF-8 */
-			if (git__utf16_to_8_alloc(&location8, location) < 0) {
+			if (git_utf8_from_16_alloc(&location8, location) < 0) {
 				git_error_set(GIT_ERROR_OS, "failed to convert Location header to UTF-8");
 				git__free(location);
 				return -1;
@@ -1254,7 +1254,7 @@ replay:
 		else
 			p_snprintf(expected_content_type_8, MAX_CONTENT_TYPE_LEN, "application/x-git-%s-advertisement", s->service);
 
-		if (git__utf8_to_16(expected_content_type, MAX_CONTENT_TYPE_LEN, expected_content_type_8) < 0) {
+		if (git_utf8_to_16(expected_content_type, MAX_CONTENT_TYPE_LEN, expected_content_type_8) < 0) {
 			git_error_set(GIT_ERROR_OS, "failed to convert expected content-type to wide characters");
 			return -1;
 		}

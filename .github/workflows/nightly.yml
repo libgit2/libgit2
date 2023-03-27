@@ -162,32 +162,39 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
           setup-script: osx
-        - name: "Windows (amd64, Visual Studio)"
+        - name: "Windows (amd64, Visual Studio, WinHTTP)"
           os: windows-2019
           env:
             ARCH: amd64
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_HTTPS=WinHTTP
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (no mmap)"
-          os: windows-2019
-          env:
-            ARCH: amd64
-            CMAKE_GENERATOR: Visual Studio 16 2019
-            CFLAGS: -DNO_MMAP
-            CMAKE_OPTIONS: -A x64 -DDEPRECATE_HARD=ON
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (x86, Visual Studio)"
+        - name: "Windows (x86, Visual Studio, WinHTTP)"
           os: windows-2019
           env:
             ARCH: x86
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
+            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_HTTPS=WinHTTP -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (amd64, mingw)"
+        - name: "Windows (amd64, Visual Studio, Schannel)"
+          os: windows-2019
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (x86, Visual Studio, Schannel)"
+          os: windows-2019
+          env:
+            ARCH: x86
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DUSE_BUNDLED_ZLIB=ON
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (amd64, mingw, WinHTTP)"
           os: windows-2019
           setup-script: mingw
           env:
@@ -198,15 +205,24 @@ jobs:
             BUILD_PATH: D:\Temp\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (x86, mingw)"
+        - name: "Windows (x86, mingw, Schannel)"
           os: windows-2019
           setup-script: mingw
           env:
             ARCH: x86
             CMAKE_GENERATOR: MinGW Makefiles
-            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel
             BUILD_TEMP: D:\Temp
             BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (no mmap)"
+          os: windows-2019
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CFLAGS: -DNO_MMAP
+            CMAKE_OPTIONS: -A x64 -DDEPRECATE_HARD=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - name: "Linux (Bionic, GCC, dynamically-loaded OpenSSL)"

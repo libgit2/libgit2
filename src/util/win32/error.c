@@ -43,7 +43,7 @@ char *git_win32_get_error_message(DWORD error_code)
 		(LPWSTR)&lpMsgBuf, 0, NULL)) {
 		/* Convert the message to UTF-8. If this fails, we will
 		 * return NULL, which is a condition expected by the caller */
-		if (git__utf16_to_8_alloc(&utf8_msg, lpMsgBuf) < 0)
+		if (git_utf8_from_16_alloc(&utf8_msg, lpMsgBuf) < 0)
 			utf8_msg = NULL;
 
 		LocalFree(lpMsgBuf);
