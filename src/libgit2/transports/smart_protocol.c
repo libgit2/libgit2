@@ -511,10 +511,12 @@ static int process_packets(
 		switch (pkt_ack->status) {
 			case GIT_ACK_READY:
 				out->received_ready = 1;
+				/* fall through */
 
 			case GIT_ACK_CONTINUE:
 				out->received_other_than_ack_common = 1;
-
+				/* fall through */
+				
 			case GIT_ACK_COMMON:
 				out->received_specific_ack = 1;
 				break;
