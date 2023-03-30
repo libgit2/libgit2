@@ -271,7 +271,7 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 
 	export GITTEST_REMOTE_REDIRECT_INITIAL="http://localhost:9000/initial-redirect/libgit2/TestGitRepository"
 	export GITTEST_REMOTE_REDIRECT_SUBSEQUENT="http://localhost:9000/subsequent-redirect/libgit2/TestGitRepository"
-	export GITTEST_REMOTE_NOKEEPALIVE="http://localhost:9000/no-keep-alive/libgit2/TestGitRepository"
+	export GITTEST_REMOTE_NOKEEPALIVE="http://localhost:9000/no-keep-alive/test.git"
 	run_test online
 	unset GITTEST_REMOTE_NOKEEPALIVE
 	unset GITTEST_REMOTE_REDIRECT_INITIAL
