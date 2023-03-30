@@ -958,6 +958,7 @@ static int proxy_connect(
 	if (response.status == GIT_HTTP_STATUS_PROXY_AUTHENTICATION_REQUIRED) {
 		save_early_response(client, &response);
 
+		git_error_set(GIT_ERROR_NET, "server closed connection");
 		error = GIT_RETRY;
 		goto done;
 	} else if (response.status != GIT_HTTP_STATUS_OK) {
@@ -1138,6 +1139,21 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 	if (!client->read_buf.size && (read_len = client_read(client)) < 0)
 		return read_len;
 
+	/*
+	 * On our first read after sending the request, if we got an
+	 * EOF _and_ this is a follow-up request on a kept-alive socket
+	 * then the server disconnected either due to timeout or maximum
+	 * number of requests per socket, and we should retry.
+	 */
+	if (client->state == SENT_REQUEST) {
+		if (!read_len && client->request_count > 1) {
+			git_error_set(GIT_ERROR_NET, "server closed connection");
+			return GIT_RETRY;
+		}
+
+		client->state = READING_RESPONSE;
+	}
+
 	parsed_len = http_parser_execute(parser,
 		http_client_parser_settings(),
 		client->read_buf.ptr,
@@ -1271,6 +1287,7 @@ int git_http_client_send_request(
 		goto done;
 
 	client->state = SENT_REQUEST;
+	client->request_count++;
 
 	if (request->expect_continue) {
 		if ((error = git_http_client_read_response(&response, client)) < 0 ||
@@ -1407,17 +1424,16 @@ int git_http_client_read_response(
 		git_vector_free_deep(&client->server.auth_challenges);
 	}
 
-	client->state = READING_RESPONSE;
 	client->keepalive = 0;
 	client->parser.data = &parser_context;
 
 	parser_context.client = client;
 	parser_context.response = response;
 
-	while (client->state == READING_RESPONSE) {
+	do {
 		if ((error = client_read_and_parse(client)) < 0)
 			goto done;
-	}
+	} while(client->state == READING_RESPONSE);
 
 	GIT_ASSERT(client->state == READING_BODY || client->state == DONE);
 
