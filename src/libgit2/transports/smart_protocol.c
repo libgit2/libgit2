@@ -24,10 +24,10 @@
 #define MIN_PROGRESS_UPDATE_INTERVAL 0.5
 
 #define KEEP_ALIVE_ERROR(E, LABEL) \
-if (E == GIT_RETRY && retry < 2) \
-    continue; \
-else {\
-if (E == GIT_RETRY) { \
+if (E != 0) { \
+    if (E == GIT_RETRY && _retry < 2) \
+        continue; \
+    else if (E == GIT_RETRY) { \
         git_error_set(GIT_ERROR_NET, "early EOF"); \
         E = -1; \
     } \
@@ -41,9 +41,10 @@ if (E == GIT_RETRY) { \
  */
 #define RUN_WITH_KEEP_ALIVE(F) \
 { \
-    int retry = 0; \
+    int _retry = 0; \
+    int _max_retries = t->rpc ? 2 : 1; \
     \
-    for (retry = 0; retry < 2; retry++) { \
+    for (_retry = 0; _retry < _max_retries; _retry++) { \
         F \
         break; \
     } \
@@ -482,7 +483,8 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	if (t->rpc && t->common.length > 0) {
 		git_pkt_ack *pkt;
 		unsigned int j;
-
+        
+        git_str_clear(&data);
 		if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 			goto on_error;
 
@@ -517,6 +519,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
         /* Now let's eat up whatever the server gives us */
         if (!t->caps.multi_ack && !t->caps.multi_ack_detailed) {
             error = recv_pkt(NULL, &pkt_type, buf);
+            KEEP_ALIVE_ERROR(error, on_error)
             
             if (!error &&
                 pkt_type != GIT_PKT_ACK &&
@@ -527,6 +530,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
             }
         } else {
             error = wait_while_ack(buf);
+            KEEP_ALIVE_ERROR(error, on_error)
         }
     )
 
