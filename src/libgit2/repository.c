@@ -757,7 +757,7 @@ static int find_repo(
 	/* If we didn't find the repository, and we don't have any other error
 	 * to report, report that. */
 	if (!git_str_len(gitdir_path)) {
-		git_error_set(GIT_ERROR_REPOSITORY, "could not find repository from '%s'", start_path);
+		git_error_set(GIT_ERROR_REPOSITORY, "could not find repository at '%s'", start_path);
 		error = GIT_ENOTFOUND;
 		goto out;
 	}
