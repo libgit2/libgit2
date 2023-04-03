@@ -25,9 +25,9 @@
 
 #define KEEP_ALIVE_ERROR(E, LABEL) \
 if (E != 0) { \
-    if ((E == GIT_RETRY || error == GIT_EEOF) && _retry < 2) \
+    if ((E == GIT_RETRY || E == GIT_EEOF) && _retry < 2) \
         continue; \
-    else if (E == GIT_RETRY || error == GIT_EEOF) { \
+    else if (E == GIT_RETRY || E == GIT_EEOF) { \
         git_error_set(GIT_ERROR_NET, "early EOF"); \
         E = GIT_EEOF; \
     } \
@@ -454,6 +454,8 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
                     }
                 }
             )
+
+            git_str_clear(&data);
         }
 
 		if (t->common.length > 0)
@@ -463,7 +465,6 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			git_pkt_ack *pkt;
 			unsigned int j;
 
-            git_str_clear(&data);
 			if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 				goto on_error;
 
@@ -484,8 +485,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		git_pkt_ack *pkt;
 		unsigned int j;
         
-        git_str_clear(&data);
-		if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
+        if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 			goto on_error;
 
 		git_vector_foreach(&t->common, j, pkt) {
