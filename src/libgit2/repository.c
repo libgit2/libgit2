@@ -191,10 +191,22 @@ void git_repository_free(git_repository *repo)
 }
 
 /* Check if we have a separate commondir (e.g. we have a worktree) */
-static int lookup_commondir(bool *separate, git_str *commondir, git_str *repository_path)
+static int lookup_commondir(
+	bool *separate,
+	git_str *commondir,
+	git_str *repository_path,
+	uint32_t flags)
 {
-	git_str common_link  = GIT_STR_INIT;
+	git_str common_link = GIT_STR_INIT;
 	int error;
+
+	/* Environment variable overrides configuration */
+	if ((flags & GIT_REPOSITORY_OPEN_FROM_ENV)) {
+		error = git__getenv(commondir, "GIT_COMMON_DIR");
+
+		if (!error || error != GIT_ENOTFOUND)
+			goto done;
+	}
 
 	/*
 	 * If there's no commondir file, the repository path is the
@@ -222,12 +234,11 @@ static int lookup_commondir(bool *separate, git_str *commondir, git_str *reposit
 		git_str_swap(commondir, &common_link);
 	}
 
-	git_str_dispose(&common_link);
-
 	/* Make sure the commondir path always has a trailing slash */
 	error = git_fs_path_prettify_dir(commondir, commondir->ptr, NULL);
 
 done:
+	git_str_dispose(&common_link);
 	return error;
 }
 
@@ -252,14 +263,19 @@ GIT_INLINE(int) validate_repo_path(git_str *path)
  *
  * Open a repository object from its path
  */
-static int is_valid_repository_path(bool *out, git_str *repository_path, git_str *common_path)
+static int is_valid_repository_path(
+	bool *out,
+	git_str *repository_path,
+	git_str *common_path,
+	uint32_t flags)
 {
 	bool separate_commondir = false;
 	int error;
 
 	*out = false;
 
-	if ((error = lookup_commondir(&separate_commondir, common_path, repository_path)) < 0)
+	if ((error = lookup_commondir(&separate_commondir,
+			common_path, repository_path, flags)) < 0)
 		return error;
 
 	/* Ensure HEAD file exists */
@@ -742,7 +758,7 @@ static int find_repo_traverse(
 				break;
 
 			if (S_ISDIR(st.st_mode)) {
-				if ((error = is_valid_repository_path(&is_valid, &path, &common_link)) < 0)
+				if ((error = is_valid_repository_path(&is_valid, &path, &common_link, flags)) < 0)
 					goto out;
 
 				if (is_valid) {
@@ -759,7 +775,7 @@ static int find_repo_traverse(
 				}
 			} else if (S_ISREG(st.st_mode) && git__suffixcmp(path.ptr, "/" DOT_GIT) == 0) {
 				if ((error = read_gitfile(&repo_link, path.ptr)) < 0 ||
-				    (error = is_valid_repository_path(&is_valid, &repo_link, &common_link)) < 0)
+				    (error = is_valid_repository_path(&is_valid, &repo_link, &common_link, flags)) < 0)
 					goto out;
 
 				if (is_valid) {
@@ -934,7 +950,7 @@ int git_repository_open_bare(
 	git_config *config;
 
 	if ((error = git_fs_path_prettify_dir(&path, bare_path, NULL)) < 0 ||
-	    (error = is_valid_repository_path(&is_valid, &path, &common_path)) < 0)
+	    (error = is_valid_repository_path(&is_valid, &path, &common_path, 0)) < 0)
 		return error;
 
 	if (!is_valid) {
@@ -2668,7 +2684,7 @@ int git_repository_init_ext(
 
 	wd = (opts->flags & GIT_REPOSITORY_INIT_BARE) ? NULL : git_str_cstr(&wd_path);
 
-	if ((error = is_valid_repository_path(&is_valid, &repo_path, &common_path)) < 0)
+	if ((error = is_valid_repository_path(&is_valid, &repo_path, &common_path, opts->flags)) < 0)
 		goto out;
 
 	if (is_valid) {

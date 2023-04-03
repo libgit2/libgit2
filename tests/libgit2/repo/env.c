@@ -295,3 +295,23 @@ void test_repo_env__work_tree(void)
 	git_repository_free(repo);
 	cl_setenv("GIT_WORK_TREE", NULL);
 }
+
+void test_repo_env__commondir(void)
+{
+	git_repository *repo;
+	const char *test_path;
+
+	cl_fixture_sandbox("attr");
+	cl_git_pass(p_rename("attr/.gitted", "attr/.git"));
+
+	cl_fixture_sandbox("testrepo.git");
+	cl_git_pass(p_rename("testrepo.git", "test_commondir"));
+
+	test_path = cl_git_sandbox_path(1, "test_commondir", NULL);
+
+	cl_setenv("GIT_COMMON_DIR", test_path);
+	cl_git_pass(git_repository_open_ext(&repo, "attr", GIT_REPOSITORY_OPEN_FROM_ENV, NULL));
+	cl_assert_equal_s(test_path, git_repository_commondir(repo));
+	git_repository_free(repo);
+	cl_setenv("GIT_COMMON_DIR", NULL);
+}
