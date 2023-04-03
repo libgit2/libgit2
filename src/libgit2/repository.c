@@ -66,7 +66,7 @@ static const struct {
 
 static int check_repositoryformatversion(int *version, git_config *config);
 static int check_extensions(git_config *config, int version);
-static int load_global_config(git_config **config);
+static int load_global_config(git_config **config, bool use_env);
 static int load_objectformat(git_repository *repo, git_config *config);
 
 #define GIT_COMMONDIR_FILE "commondir"
@@ -586,7 +586,10 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 	return 0;
 }
 
-static int validate_ownership_config(bool *is_safe, const char *path)
+static int validate_ownership_config(
+	bool *is_safe,
+	const char *path,
+	bool use_env)
 {
 	validate_ownership_data ownership_data = {
 		path, GIT_STR_INIT, is_safe
@@ -594,7 +597,7 @@ static int validate_ownership_config(bool *is_safe, const char *path)
 	git_config *config;
 	int error;
 
-	if (load_global_config(&config) != 0)
+	if (load_global_config(&config, use_env) != 0)
 		return 0;
 
 	error = git_config_get_multivar_foreach(config,
@@ -668,7 +671,8 @@ static int validate_ownership(git_repository *repo)
 	}
 
 	if (is_safe ||
-	    (error = validate_ownership_config(&is_safe, validation_paths[0])) < 0)
+	    (error = validate_ownership_config(
+			&is_safe, validation_paths[0], repo->use_env)) < 0)
 		goto done;
 
 	if (!is_safe) {
@@ -1241,32 +1245,81 @@ static const char *path_unless_empty(git_str *buf)
 	return git_str_len(buf) > 0 ? git_str_cstr(buf) : NULL;
 }
 
+GIT_INLINE(int) config_path_system(git_str *out, bool use_env)
+{
+	if (use_env) {
+		git_str no_system_buf = GIT_STR_INIT;
+		int no_system = 0;
+		int error;
+
+		error = git__getenv(&no_system_buf, "GIT_CONFIG_NOSYSTEM");
+
+		if (error && error != GIT_ENOTFOUND)
+			return error;
+
+		error = git_config_parse_bool(&no_system, no_system_buf.ptr);
+		git_str_dispose(&no_system_buf);
+
+		if (no_system)
+			return 0;
+
+		error = git__getenv(out, "GIT_CONFIG_SYSTEM");
+
+		if (error == 0 || error != GIT_ENOTFOUND)
+			return 0;
+	}
+
+	git_config__find_system(out);
+	return 0;
+}
+
+GIT_INLINE(int) config_path_global(git_str *out, bool use_env)
+{
+	if (use_env) {
+		int error = git__getenv(out, "GIT_CONFIG_GLOBAL");
+
+		if (error == 0 || error != GIT_ENOTFOUND)
+			return 0;
+	}
+
+	git_config__find_global(out);
+	return 0;
+}
+
 int git_repository_config__weakptr(git_config **out, git_repository *repo)
 {
 	int error = 0;
 
 	if (repo->_config == NULL) {
+		git_str system_buf = GIT_STR_INIT;
 		git_str global_buf = GIT_STR_INIT;
 		git_str xdg_buf = GIT_STR_INIT;
-		git_str system_buf = GIT_STR_INIT;
 		git_str programdata_buf = GIT_STR_INIT;
+		bool use_env = repo->use_env;
 		git_config *config;
 
-		git_config__find_global(&global_buf);
-		git_config__find_xdg(&xdg_buf);
-		git_config__find_system(&system_buf);
-		git_config__find_programdata(&programdata_buf);
+		if (!(error = config_path_system(&system_buf, use_env)) &&
+		    !(error = config_path_global(&global_buf, use_env))) {
+			git_config__find_xdg(&xdg_buf);
+			git_config__find_programdata(&programdata_buf);
+		}
 
-		/* If there is no global file, open a backend for it anyway */
-		if (git_str_len(&global_buf) == 0)
-			git_config__global_location(&global_buf);
+		if (!error) {
+			/*
+			 * If there is no global file, open a backend
+			 * for it anyway.
+			 */
+			if (git_str_len(&global_buf) == 0)
+				git_config__global_location(&global_buf);
 
-		error = load_config(
-			&config, repo,
-			path_unless_empty(&global_buf),
-			path_unless_empty(&xdg_buf),
-			path_unless_empty(&system_buf),
-			path_unless_empty(&programdata_buf));
+			error = load_config(
+				&config, repo,
+				path_unless_empty(&global_buf),
+				path_unless_empty(&xdg_buf),
+				path_unless_empty(&system_buf),
+				path_unless_empty(&programdata_buf));
+		}
+
 		if (!error) {
 			GIT_REFCOUNT_OWN(config, repo);
 
@@ -1966,7 +2019,7 @@ static bool is_filesystem_case_insensitive(const char *gitdir_path)
  * Return a configuration object with only the global and system
  * configurations; no repository-level configuration.
  */
-static int load_global_config(git_config **config)
+static int load_global_config(git_config **config, bool use_env)
 {
 	git_str global_buf = GIT_STR_INIT;
 	git_str xdg_buf = GIT_STR_INIT;
@@ -1974,16 +2027,17 @@ static int load_global_config(git_config **config)
 	git_str programdata_buf = GIT_STR_INIT;
 	int error;
 
-	git_config__find_global(&global_buf);
-	git_config__find_xdg(&xdg_buf);
-	git_config__find_system(&system_buf);
-	git_config__find_programdata(&programdata_buf);
+	if (!(error = config_path_system(&system_buf, use_env)) &&
+	    !(error = config_path_global(&global_buf, use_env))) {
+		git_config__find_xdg(&xdg_buf);
+		git_config__find_programdata(&programdata_buf);
 
-	error = load_config(config, NULL,
-	                    path_unless_empty(&global_buf),
-	                    path_unless_empty(&xdg_buf),
-	                    path_unless_empty(&system_buf),
-	                    path_unless_empty(&programdata_buf));
+		error = load_config(config, NULL,
+		                    path_unless_empty(&global_buf),
+		                    path_unless_empty(&xdg_buf),
+		                    path_unless_empty(&system_buf),
+		                    path_unless_empty(&programdata_buf));
+	}
 
 	git_str_dispose(&global_buf);
 	git_str_dispose(&xdg_buf);
@@ -1993,7 +2047,7 @@ static int load_global_config(git_config **config)
 	return error;
 }
 
-static bool are_symlinks_supported(const char *wd_path)
+static bool are_symlinks_supported(const char *wd_path, bool use_env)
 {
 	git_config *config = NULL;
 	int symlinks = 0;
@@ -2006,10 +2060,12 @@ static bool are_symlinks_supported(const char *wd_path)
 	 * _not_ set, then we do not test or enable symlink support.
 	 */
 #ifdef GIT_WIN32
-	if (load_global_config(&config) < 0 ||
+	if (load_global_config(&config, use_env) < 0 ||
 	    git_config_get_bool(&symlinks, config, "core.symlinks") < 0 ||
 	    !symlinks)
 		goto done;
+#else
+	GIT_UNUSED(use_env);
 #endif
 
 	if (!(symlinks = git_fs_path_supports_symlinks(wd_path)))
@@ -2082,7 +2138,8 @@ static int repo_init_fs_configs(
 	const char *cfg_path,
 	const char *repo_dir,
 	const char *work_dir,
-	bool update_ignorecase)
+	bool update_ignorecase,
+	bool use_env)
 {
 	int error = 0;
 
@@ -2093,7 +2150,7 @@ static int repo_init_fs_configs(
 			cfg, "core.filemode", is_chmod_supported(cfg_path))) < 0)
 		return error;
 
-	if (!are_symlinks_supported(work_dir)) {
+	if (!are_symlinks_supported(work_dir, use_env)) {
 		if ((error = git_config_set_bool(cfg, "core.symlinks", false)) < 0)
 			return error;
 	} else if (git_config_delete_entry(cfg, "core.symlinks") < 0)
@@ -2130,6 +2187,7 @@ static int repo_init_config(
 	git_config *config = NULL;
 	bool is_bare = ((flags & GIT_REPOSITORY_INIT_BARE) != 0);
 	bool is_reinit = ((flags & GIT_REPOSITORY_INIT__IS_REINIT) != 0);
+	bool use_env = ((flags & GIT_REPOSITORY_OPEN_FROM_ENV) != 0);
 	int version = GIT_REPO_VERSION_DEFAULT;
 
 	if ((error = repo_local_config(&config, &cfg_path, NULL, repo_dir)) < 0)
@@ -2150,7 +2208,8 @@ static int repo_init_config(
 	SET_REPO_CONFIG(int32, "core.repositoryformatversion", version);
 
 	if ((error = repo_init_fs_configs(
-			config, cfg_path.ptr, repo_dir, work_dir, !is_reinit)) < 0)
+			config, cfg_path.ptr, repo_dir, work_dir,
+			!is_reinit, use_env)) < 0)
 		goto cleanup;
 
 	if (!is_bare) {
@@ -2214,8 +2273,8 @@ int git_repository_reinit_filesystem(git_repository *repo, int recurse)
 	const char *repo_dir = git_repository_path(repo);
 
 	if (!(error = repo_local_config(&config, &path, repo, repo_dir)))
-		error = repo_init_fs_configs(
-			config, path.ptr, repo_dir, git_repository_workdir(repo), true);
+		error = repo_init_fs_configs(config, path.ptr, repo_dir,
+			git_repository_workdir(repo), true, repo->use_env);
 
 	git_config_free(config);
 	git_str_dispose(&path);
