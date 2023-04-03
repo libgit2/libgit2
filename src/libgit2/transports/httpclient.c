@@ -1148,7 +1148,7 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 	if (client->state == SENT_REQUEST) {
 		if (!read_len && client->request_count > 1) {
 			git_error_set(GIT_ERROR_NET, "server closed connection");
-			return GIT_RETRY;
+			return GIT_EEOF;
 		}
 
 		client->state = READING_RESPONSE;
@@ -1211,7 +1211,7 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 	/* recv returned 0, the server hung up on us */
 	else if (!parsed_len) {
 		git_error_set(GIT_ERROR_HTTP, "unexpected EOF");
-		return -1;
+		return GIT_EEOF;
 	}
 
 	git_str_consume_bytes(&client->read_buf, parsed_len);

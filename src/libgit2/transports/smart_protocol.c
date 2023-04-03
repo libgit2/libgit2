@@ -25,9 +25,9 @@
 
 #define KEEP_ALIVE_ERROR(E, LABEL) \
 if (E != 0) { \
-    if ((E == GIT_RETRY || E == GIT_EEOF) && _retry < 2) \
+    if (E == GIT_EEOF && _retry < 2) \
         continue; \
-    else if (E == GIT_RETRY || E == GIT_EEOF) { \
+    else if (E == GIT_EEOF) { \
         git_error_set(GIT_ERROR_NET, "early EOF"); \
         E = GIT_EEOF; \
     } \
@@ -39,7 +39,7 @@ if (E != 0) { \
  * connection, the server may drop it, possibly because we took
  * a long time to do the negotiation.
  */
-#define RUN_WITH_KEEP_ALIVE(F) \
+#define RUN_WITH_KEEP_ALIVE(E, F) \
 { \
     int _retry = 0; \
     int _max_retries = t->rpc ? 2 : 1; \
@@ -48,9 +48,9 @@ if (E != 0) { \
         F \
         break; \
     } \
-    if (error == GIT_RETRY || error == GIT_EEOF) { \
+    if (E == GIT_EEOF) { \
         git_error_set(GIT_ERROR_NET, "early EOF"); \
-        error = GIT_EEOF; \
+        E = GIT_EEOF; \
     } \
 }
 
@@ -429,9 +429,9 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 				goto on_error;
             }
             
-            RUN_WITH_KEEP_ALIVE(
+            RUN_WITH_KEEP_ALIVE(error,
                 if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0) {
-                    KEEP_ALIVE_ERROR(error, on_error);
+					KEEP_ALIVE_ERROR(error, on_error);
                 }
                 
                 if (t->caps.multi_ack || t->caps.multi_ack_detailed) {
@@ -511,7 +511,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	git_revwalk_free(walk);
 	walk = NULL;
 
-    RUN_WITH_KEEP_ALIVE(
+    RUN_WITH_KEEP_ALIVE(error,
         if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0) {
             KEEP_ALIVE_ERROR(error, on_error)
         }
@@ -1126,7 +1126,7 @@ int git_smart__push(git_transport *transport, git_push *push)
 	if (need_pack && ((error = git_packbuilder__prepare(push->pb))) < 0)
 		goto done;
 
-	RUN_WITH_KEEP_ALIVE(
+	RUN_WITH_KEEP_ALIVE(error,
 		if ((error = git_smart__get_push_stream(t, &packbuilder_payload.stream)) < 0 ||
 			(error = gen_pktline(&pktline, push)) < 0 ||
 			(error = packbuilder_payload.stream->write(packbuilder_payload.stream, git_str_cstr(&pktline), git_str_len(&pktline))) < 0) {
