@@ -62,7 +62,7 @@ GIT_INLINE(int) git_stream__write_full(git_stream *st, const char *data, size_t 
 	while (total_written < len) {
 		ssize_t written = git_stream_write(st, data + total_written, len - total_written, flags);
 		if (written <= 0)
-			return -1;
+			return (int) written;
 
 		total_written += written;
 	}

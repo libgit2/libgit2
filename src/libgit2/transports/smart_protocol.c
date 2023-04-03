@@ -25,11 +25,11 @@
 
 #define KEEP_ALIVE_ERROR(E, LABEL) \
 if (E != 0) { \
-    if (E == GIT_RETRY && _retry < 2) \
+    if ((E == GIT_RETRY || error == GIT_EEOF) && _retry < 2) \
         continue; \
-    else if (E == GIT_RETRY) { \
+    else if (E == GIT_RETRY || error == GIT_EEOF) { \
         git_error_set(GIT_ERROR_NET, "early EOF"); \
-        E = -1; \
+        E = GIT_EEOF; \
     } \
     goto LABEL; \
 }
@@ -48,9 +48,9 @@ if (E != 0) { \
         F \
         break; \
     } \
-    if (error == GIT_RETRY) { \
+    if (error == GIT_RETRY || error == GIT_EEOF) { \
         git_error_set(GIT_ERROR_NET, "early EOF"); \
-        error = -1; \
+        error = GIT_EEOF; \
     } \
 }
 
@@ -1126,14 +1126,18 @@ int git_smart__push(git_transport *transport, git_push *push)
 	if (need_pack && ((error = git_packbuilder__prepare(push->pb))) < 0)
 		goto done;
 
-	if ((error = git_smart__get_push_stream(t, &packbuilder_payload.stream)) < 0 ||
-		(error = gen_pktline(&pktline, push)) < 0 ||
-		(error = packbuilder_payload.stream->write(packbuilder_payload.stream, git_str_cstr(&pktline), git_str_len(&pktline))) < 0)
-		goto done;
+	RUN_WITH_KEEP_ALIVE(
+		if ((error = git_smart__get_push_stream(t, &packbuilder_payload.stream)) < 0 ||
+			(error = gen_pktline(&pktline, push)) < 0 ||
+			(error = packbuilder_payload.stream->write(packbuilder_payload.stream, git_str_cstr(&pktline), git_str_len(&pktline))) < 0) {
+				KEEP_ALIVE_ERROR(error, done)
+			}
 
-	if (need_pack &&
-		(error = git_packbuilder_foreach(push->pb, &stream_thunk, &packbuilder_payload)) < 0)
-		goto done;
+		if (need_pack &&
+			(error = git_packbuilder_foreach(push->pb, &stream_thunk, &packbuilder_payload)) < 0) {
+				KEEP_ALIVE_ERROR(error, done)
+			}
+	)
 
 	/* If we sent nothing or the server doesn't support report-status, then
 	 * we consider the pack to have been unpacked successfully */

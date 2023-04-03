@@ -123,6 +123,10 @@ static ssize_t socket_write(git_stream *stream, const char *data, size_t len, in
 
 	if ((written = p_send(st->s, data, len, 0)) < 0) {
 		net_set_error("error sending data");
+
+		if (errno == ECONNRESET || errno == EPIPE)
+			return GIT_EEOF;
+
 		return -1;
 	}
 
