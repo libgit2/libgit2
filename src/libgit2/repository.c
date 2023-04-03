@@ -337,19 +337,42 @@ static int load_config_data(git_repository *repo, const git_config *config)
 	return 0;
 }
 
-static int load_workdir(git_repository *repo, git_config *config, git_str *parent_path)
+static int load_workdir(
+	git_repository *repo,
+	git_config *config,
+	git_str *parent_path)
 {
-	int error;
-	git_config_entry *ce;
+	git_config_entry *ce = NULL;
 	git_str worktree = GIT_STR_INIT;
 	git_str path = GIT_STR_INIT;
+	git_str workdir_env = GIT_STR_INIT;
+	const char *value = NULL;
+	int error;
 
 	if (repo->is_bare)
 		return 0;
 
-	if ((error = git_config__lookup_entry(
-			&ce, config, "core.worktree", false)) < 0)
-		return error;
+	/* Environment variables are preferred */
+	if (repo->use_env) {
+		error = git__getenv(&workdir_env, "GIT_WORK_TREE");
+
+		if (error == 0)
+			value = workdir_env.ptr;
+		else if (error == GIT_ENOTFOUND)
+			error = 0;
+		else
+			goto cleanup;
+	}
+
+	/* Examine configuration values if necessary */
+	if (!value) {
+		if ((error = git_config__lookup_entry(&ce, config,
+				"core.worktree", false)) < 0)
+			return error;
+
+		if (ce && ce->value)
+			value = ce->value;
+	}
 
 	if (repo->is_worktree) {
 		char *gitlink = git_worktree__read_link(repo->gitdir, GIT_GITDIR_FILE);
@@ -367,17 +390,21 @@ static int load_workdir(git_repository *repo, git_config *config, git_str *paren
 		}
 
 		repo->workdir = git_str_detach(&worktree);
-	}
-	else if (ce && ce->value) {
-		if ((error = git_fs_path_prettify_dir(
-				&worktree, ce->value, repo->gitdir)) < 0)
+	} else if (value) {
+		if (!*value) {
+			git_error_set(GIT_ERROR_NET, "working directory cannot be set to empty path");
+			error = -1;
+			goto cleanup;
+		}
+
+		if ((error = git_fs_path_prettify_dir(&worktree,
+				value, repo->gitdir)) < 0)
 			goto cleanup;
 
 		repo->workdir = git_str_detach(&worktree);
-	}
-	else if (parent_path && git_fs_path_isdir(parent_path->ptr))
+	} else if (parent_path && git_fs_path_isdir(parent_path->ptr)) {
 		repo->workdir = git_str_detach(parent_path);
-	else {
+	} else {
 		if (git_fs_path_dirname_r(&worktree, repo->gitdir) < 0 ||
 		    git_fs_path_to_dir(&worktree) < 0) {
 			error = -1;
@@ -388,8 +415,10 @@ static int load_workdir(git_repository *repo, git_config *config, git_str *paren
 	}
 
 	GIT_ERROR_CHECK_ALLOC(repo->workdir);
+
 cleanup:
 	git_str_dispose(&path);
+	git_str_dispose(&workdir_env);
 	git_config_entry_free(ce);
 	return error;
 }
