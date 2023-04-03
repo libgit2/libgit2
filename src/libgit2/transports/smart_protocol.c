@@ -1137,14 +1137,15 @@ int git_smart__push(git_transport *transport, git_push *push)
 			(error = git_packbuilder_foreach(push->pb, &stream_thunk, &packbuilder_payload)) < 0) {
 				KEEP_ALIVE_ERROR(error, done)
 			}
-	)
 
-	/* If we sent nothing or the server doesn't support report-status, then
-	 * we consider the pack to have been unpacked successfully */
-	if (!push->specs.length || !push->report_status)
-		push->unpack_ok = 1;
-	else if ((error = parse_report(t, push)) < 0)
-		goto done;
+			/* If we sent nothing or the server doesn't support report-status, then
+			 * we consider the pack to have been unpacked successfully */
+			if (!push->specs.length || !push->report_status)
+				push->unpack_ok = 1;
+			else if ((error = parse_report(t, push)) < 0) {
+				KEEP_ALIVE_ERROR(error, done)
+			}
+	)
 
 	/* If progress is being reported write the final report */
 	if (cbs && cbs->push_transfer_progress) {
