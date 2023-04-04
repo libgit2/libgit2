@@ -335,9 +335,12 @@ static int ssl_set_error(SSL *ssl, int error)
 		git_error_set(GIT_ERROR_SSL, "SSL error: %s", errmsg);
 		break;
 	}
-	case SSL_ERROR_NONE:
-	case SSL_ERROR_ZERO_RETURN:
-	default:
+    case SSL_ERROR_ZERO_RETURN:
+        git_error_set(GIT_ERROR_SSL, "SSL error: received early EOF");
+        return GIT_EEOF;
+        break;
+    case SSL_ERROR_NONE:
+    default:
 		git_error_set(GIT_ERROR_SSL, "SSL error: unknown error");
 		break;
 	}

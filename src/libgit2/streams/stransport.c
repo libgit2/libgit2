@@ -37,6 +37,10 @@ static int stransport_error(OSStatus ret)
 	GIT_UNUSED(message);
 #endif
 
+	if (ret == errSecIO) {
+		return GIT_EEOF;
+	}
+
 	return -1;
 }
 

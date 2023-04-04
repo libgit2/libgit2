@@ -23,6 +23,37 @@
 /* The minimal interval between progress updates (in seconds). */
 #define MIN_PROGRESS_UPDATE_INTERVAL 0.5
 
+#define KEEP_ALIVE_ERROR(E, LABEL) \
+if (E != 0) { \
+    if (E == GIT_EEOF && _retry < 2) \
+        continue; \
+    else if (E == GIT_EEOF) { \
+        git_error_set(GIT_ERROR_NET, "early EOF"); \
+        E = GIT_EEOF; \
+    } \
+    goto LABEL; \
+}
+
+/*
+ * Implement a retry phase for HTTP - if we're in a keep-alive
+ * connection, the server may drop it, possibly because we took
+ * a long time to do the negotiation.
+ */
+#define RUN_WITH_KEEP_ALIVE(E, F) \
+{ \
+    int _retry = 0; \
+    int _max_retries = t->rpc ? 2 : 1; \
+    \
+    for (_retry = 0; _retry < _max_retries; _retry++) { \
+        F \
+        break; \
+    } \
+    if (E == GIT_EEOF) { \
+        git_error_set(GIT_ERROR_NET, "early EOF"); \
+        E = GIT_EEOF; \
+    } \
+}
+
 bool git_smart__ofs_delta_enabled = true;
 
 int git_smart__store_refs(transport_smart *t, int flushes)
@@ -353,7 +384,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	git_revwalk *walk = NULL;
 	int error = -1;
 	git_pkt_type pkt_type;
-	unsigned int i, retry;
+	unsigned int i;
 	git_oid oid;
 
 	if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
@@ -396,30 +427,36 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			if (git_str_oom(&data)) {
 				error = -1;
 				goto on_error;
-			}
+            }
+            
+            RUN_WITH_KEEP_ALIVE(error,
+                if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0) {
+					KEEP_ALIVE_ERROR(error, on_error);
+                }
+                
+                if (t->caps.multi_ack || t->caps.multi_ack_detailed) {
+                    if ((error = store_common(t)) < 0) {
+                        KEEP_ALIVE_ERROR(error, on_error);
+                    }
+                } else {
+                    if ((error = recv_pkt(NULL, &pkt_type, buf)) < 0) {
+                        KEEP_ALIVE_ERROR(error, on_error);
+                    }
+                    
+                    if (pkt_type == GIT_PKT_ACK) {
+                        break;
+                    } else if (pkt_type == GIT_PKT_NAK) {
+                        continue;
+                    } else {
+                        git_error_set(GIT_ERROR_NET, "unexpected pkt type");
+                        error = -1;
+                        goto on_error;
+                    }
+                }
+            )
 
-			if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
-				goto on_error;
-
-			git_str_clear(&data);
-			if (t->caps.multi_ack || t->caps.multi_ack_detailed) {
-				if ((error = store_common(t)) < 0)
-					goto on_error;
-			} else {
-				if ((error = recv_pkt(NULL, &pkt_type, buf)) < 0)
-					goto on_error;
-
-				if (pkt_type == GIT_PKT_ACK) {
-					break;
-				} else if (pkt_type == GIT_PKT_NAK) {
-					continue;
-				} else {
-					git_error_set(GIT_ERROR_NET, "unexpected pkt type");
-					error = -1;
-					goto on_error;
-				}
-			}
-		}
+            git_str_clear(&data);
+        }
 
 		if (t->common.length > 0)
 			break;
@@ -447,8 +484,8 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	if (t->rpc && t->common.length > 0) {
 		git_pkt_ack *pkt;
 		unsigned int j;
-
-		if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
+        
+        if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 			goto on_error;
 
 		git_vector_foreach(&t->common, j, pkt) {
@@ -474,40 +511,28 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	git_revwalk_free(walk);
 	walk = NULL;
 
-	/*
-	 * Implement a retry phase for HTTP - if we're in a keep-alive
-	 * connection, the server may drop it, possibly because we took
-	 * a long time to do the negotiation.
-	 */
-	for (retry = 0; retry < 2; retry++) {
-		if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
-			goto on_error;
-
-		/* Now let's eat up whatever the server gives us */
-		if (!t->caps.multi_ack && !t->caps.multi_ack_detailed) {
-			error = recv_pkt(NULL, &pkt_type, buf);
-
-			if (!error &&
-			    pkt_type != GIT_PKT_ACK &&
-			    pkt_type != GIT_PKT_NAK) {
-				git_error_set(GIT_ERROR_NET, "unexpected pkt type");
-				error = -1;
-				goto on_error;
-			}
-		} else {
-			error = wait_while_ack(buf);
-		}
-
-		if (error == GIT_RETRY)
-			continue;
-		else
-			break;
-	}
-
-	if (error == GIT_RETRY) {
-		git_error_set(GIT_ERROR_NET, "early EOF");
-		error = -1;
-	}
+    RUN_WITH_KEEP_ALIVE(error,
+        if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0) {
+            KEEP_ALIVE_ERROR(error, on_error)
+        }
+        
+        /* Now let's eat up whatever the server gives us */
+        if (!t->caps.multi_ack && !t->caps.multi_ack_detailed) {
+            error = recv_pkt(NULL, &pkt_type, buf);
+            KEEP_ALIVE_ERROR(error, on_error)
+            
+            if (!error &&
+                pkt_type != GIT_PKT_ACK &&
+                pkt_type != GIT_PKT_NAK) {
+                git_error_set(GIT_ERROR_NET, "unexpected pkt type");
+                error = -1;
+                goto on_error;
+            }
+        } else {
+            error = wait_while_ack(buf);
+            KEEP_ALIVE_ERROR(error, on_error)
+        }
+    )
 
 on_error:
 	git_str_dispose(&data);
@@ -1101,21 +1126,26 @@ int git_smart__push(git_transport *transport, git_push *push)
 	if (need_pack && ((error = git_packbuilder__prepare(push->pb))) < 0)
 		goto done;
 
-	if ((error = git_smart__get_push_stream(t, &packbuilder_payload.stream)) < 0 ||
-		(error = gen_pktline(&pktline, push)) < 0 ||
-		(error = packbuilder_payload.stream->write(packbuilder_payload.stream, git_str_cstr(&pktline), git_str_len(&pktline))) < 0)
-		goto done;
+	RUN_WITH_KEEP_ALIVE(error,
+		if ((error = git_smart__get_push_stream(t, &packbuilder_payload.stream)) < 0 ||
+			(error = gen_pktline(&pktline, push)) < 0 ||
+			(error = packbuilder_payload.stream->write(packbuilder_payload.stream, git_str_cstr(&pktline), git_str_len(&pktline))) < 0) {
+				KEEP_ALIVE_ERROR(error, done)
+			}
 
-	if (need_pack &&
-		(error = git_packbuilder_foreach(push->pb, &stream_thunk, &packbuilder_payload)) < 0)
-		goto done;
+		if (need_pack &&
+			(error = git_packbuilder_foreach(push->pb, &stream_thunk, &packbuilder_payload)) < 0) {
+				KEEP_ALIVE_ERROR(error, done)
+			}
 
-	/* If we sent nothing or the server doesn't support report-status, then
-	 * we consider the pack to have been unpacked successfully */
-	if (!push->specs.length || !push->report_status)
-		push->unpack_ok = 1;
-	else if ((error = parse_report(t, push)) < 0)
-		goto done;
+			/* If we sent nothing or the server doesn't support report-status, then
+			 * we consider the pack to have been unpacked successfully */
+			if (!push->specs.length || !push->report_status)
+				push->unpack_ok = 1;
+			else if ((error = parse_report(t, push)) < 0) {
+				KEEP_ALIVE_ERROR(error, done)
+			}
+	)
 
 	/* If progress is being reported write the final report */
 	if (cbs && cbs->push_transfer_progress) {

@@ -123,6 +123,10 @@ static ssize_t socket_write(git_stream *stream, const char *data, size_t len, in
 
 	if ((written = p_send(st->s, data, len, 0)) < 0) {
 		net_set_error("error sending data");
+
+		if (errno == ECONNRESET || errno == EPIPE)
+			return GIT_EEOF;
+
 		return -1;
 	}
 
@@ -134,8 +138,16 @@ static ssize_t socket_read(git_stream *stream, void *data, size_t len)
 	ssize_t ret;
 	git_socket_stream *st = (git_socket_stream *) stream;
 
-	if ((ret = p_recv(st->s, data, len, 0)) < 0)
+	errno = 0;
+
+	if ((ret = p_recv(st->s, data, len, 0)) < 0) {
 		net_set_error("error receiving socket data");
+
+		if (errno == ECONNRESET || errno == EPIPE)
+			return GIT_EEOF;
+
+		return -1;
+	}
 
 	return ret;
 }

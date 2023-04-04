@@ -1148,7 +1148,7 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 	if (client->state == SENT_REQUEST) {
 		if (!read_len && client->request_count > 1) {
 			git_error_set(GIT_ERROR_NET, "server closed connection");
-			return GIT_RETRY;
+			return GIT_EEOF;
 		}
 
 		client->state = READING_RESPONSE;
