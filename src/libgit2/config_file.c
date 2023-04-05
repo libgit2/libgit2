@@ -26,7 +26,7 @@
 
 typedef struct config_file {
 	git_futils_filestamp stamp;
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	unsigned char checksum[GIT_HASH_SHA256_SIZE];
 	char *path;
 	git_array_t(struct config_file) includes;
 } config_file;
@@ -133,7 +133,7 @@ static int config_file_is_modified(int *modified, config_file *file)
 {
 	config_file *include;
 	git_str buf = GIT_STR_INIT;
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	unsigned char checksum[GIT_HASH_SHA256_SIZE];
 	uint32_t i;
 	int error = 0;
 
@@ -145,10 +145,10 @@ static int config_file_is_modified(int *modified, config_file *file)
 	if ((error = git_futils_readbuffer(&buf, file->path)) < 0)
 		goto out;
 
-	if ((error = git_hash_buf(checksum, buf.ptr, buf.size, GIT_HASH_ALGORITHM_SHA1)) < 0)
+	if ((error = git_hash_buf(checksum, buf.ptr, buf.size, GIT_HASH_ALGORITHM_SHA256)) < 0)
 		goto out;
 
-	if (memcmp(checksum, file->checksum, GIT_HASH_SHA1_SIZE) != 0) {
+	if (memcmp(checksum, file->checksum, GIT_HASH_SHA256_SIZE) != 0) {
 		*modified = 1;
 		goto out;
 	}
@@ -881,7 +881,7 @@ static int config_file_read(
 		goto out;
 
 	git_futils_filestamp_set_from_stat(&file->stamp, &st);
-	if ((error = git_hash_buf(file->checksum, contents.ptr, contents.size, GIT_HASH_ALGORITHM_SHA1)) < 0)
+	if ((error = git_hash_buf(file->checksum, contents.ptr, contents.size, GIT_HASH_ALGORITHM_SHA256)) < 0)
 		goto out;
 
 	if ((error = config_file_read_buffer(entries, repo, file, level, depth,
@@ -1129,10 +1129,7 @@ static int config_file_write(
 	git_config_parser parser = GIT_CONFIG_PARSER_INIT;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	struct write_data write_data;
-	int filebuf_hash, error;
-
-	filebuf_hash = git_filebuf_hash_flags(git_oid_algorithm(GIT_OID_SHA1));
-	GIT_ASSERT(filebuf_hash);
+	int error;
 
 	memset(&write_data, 0, sizeof(write_data));
 
@@ -1140,7 +1137,8 @@ static int config_file_write(
 		error = git_str_puts(&contents, git_str_cstr(&cfg->locked_content) == NULL ? "" : git_str_cstr(&cfg->locked_content));
 	} else {
 		if ((error = git_filebuf_open(&file, cfg->file.path,
-				filebuf_hash, GIT_CONFIG_FILE_MODE)) < 0)
+				GIT_FILEBUF_HASH_SHA256,
+				GIT_CONFIG_FILE_MODE)) < 0)
 			goto done;
 
 		/* We need to read in our own config file */
