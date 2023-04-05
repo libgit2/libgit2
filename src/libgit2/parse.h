@@ -50,7 +50,7 @@ int git_parse_advance_expected(
 int git_parse_advance_ws(git_parse_ctx *ctx);
 int git_parse_advance_nl(git_parse_ctx *ctx);
 int git_parse_advance_digit(int64_t *out, git_parse_ctx *ctx, int base);
-int git_parse_advance_oid(git_oid *out, git_parse_ctx *ctx);
+int git_parse_advance_oid(git_oid *out, git_parse_ctx *ctx, git_oid_t oid_type);
 
 enum GIT_PARSE_PEEK_FLAGS {
 	GIT_PARSE_PEEK_SKIP_WHITESPACE = (1 << 0)

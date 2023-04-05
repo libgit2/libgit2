@@ -1949,9 +1949,9 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		entry->committer = git__calloc(1, sizeof(*entry->committer));
 		GIT_ERROR_CHECK_ALLOC(entry->committer);
 
-		if (git_parse_advance_oid(&entry->oid_old, &parser) < 0 ||
+		if (git_parse_advance_oid(&entry->oid_old, &parser, log->oid_type) < 0 ||
 		    git_parse_advance_expected(&parser, " ", 1) < 0 ||
-		    git_parse_advance_oid(&entry->oid_cur, &parser) < 0)
+		    git_parse_advance_oid(&entry->oid_cur, &parser, log->oid_type) < 0)
 			goto next;
 
 		sig = parser.line;
