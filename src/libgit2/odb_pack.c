@@ -309,10 +309,16 @@ static int pack_entry_find_prefix(
 {
 	int error;
 	size_t i;
-	git_oid found_full_oid = GIT_OID_SHA1_ZERO;
+	git_oid found_full_oid;
 	bool found = false;
 	struct git_pack_file *last_found = backend->last_found, *p;
 	git_midx_entry midx_entry;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_oid_clear(&found_full_oid, short_oid->type);
+#else
+	git_oid_clear(&found_full_oid, GIT_OID_SHA1);
+#endif
 
 	if (backend->midx) {
 		error = git_midx_entry_find(&midx_entry, backend->midx, short_oid, len);
