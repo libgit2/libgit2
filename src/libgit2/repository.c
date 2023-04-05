@@ -1547,7 +1547,8 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 		if ((error = repository_index_path(&index_path, repo)) < 0)
 			return error;
 
-		error = git_index_open(&index, index_path.ptr);
+		error = git_index__open(&index, index_path.ptr, repo->oid_type);
+
 		if (!error) {
 			GIT_REFCOUNT_OWN(index, repo);
 

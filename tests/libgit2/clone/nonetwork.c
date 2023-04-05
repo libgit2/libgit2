@@ -5,6 +5,7 @@
 #include "remote.h"
 #include "futils.h"
 #include "repository.h"
+#include "index.h"
 
 #define LIVE_REPO_URL "git://github.com/libgit2/TestGitRepository"
 
@@ -271,7 +272,7 @@ void test_clone_nonetwork__clone_tag_to_tree(void)
 
 	stage = cl_git_sandbox_init("testrepo.git");
 	cl_git_pass(git_repository_odb(&odb, stage));
-	cl_git_pass(git_index_new(&index));
+	cl_git_pass(git_index__new(&index, GIT_OID_SHA1));
 
 	memset(&entry, 0, sizeof(git_index_entry));
 	entry.path = file_path;

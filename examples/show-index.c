@@ -30,7 +30,11 @@ int lg2_show_index(git_repository *repo, int argc, char **argv)
 
 	dirlen = strlen(dir);
 	if (dirlen > 5 && strcmp(dir + dirlen - 5, "index") == 0) {
+#ifdef GIT_EXPERIMENTAL_SHA256
+		check_lg2(git_index_open(&index, dir, GIT_OID_SHA1), "could not open index", dir);
+#else
 		check_lg2(git_index_open(&index, dir), "could not open index", dir);
+#endif
 	} else {
 		check_lg2(git_repository_open_ext(&repo, dir, 0, NULL), "could not open repository", dir);
 		check_lg2(git_repository_index(&index, repo), "could not open repository index", NULL);

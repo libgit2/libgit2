@@ -731,7 +731,7 @@ int git_tree__write_index(
 		return ret;
 
 	/* Read the tree cache into the index */
-	ret = git_tree_cache_read_tree(&index->tree, tree, &index->tree_pool);
+	ret = git_tree_cache_read_tree(&index->tree, tree, index->oid_type, &index->tree_pool);
 	git_tree_free(tree);
 
 	return ret;

@@ -1997,8 +1997,11 @@ static int index_update_reuc(git_index *index, git_merge_diff_list *diff_list)
 	return 0;
 }
 
-static int index_from_diff_list(git_index **out,
-	git_merge_diff_list *diff_list, bool skip_reuc)
+static int index_from_diff_list(
+	git_index **out,
+	git_merge_diff_list *diff_list,
+	git_oid_t oid_type,
+	bool skip_reuc)
 {
 	git_index *index;
 	size_t i;
@@ -2007,7 +2010,7 @@ static int index_from_diff_list(git_index **out,
 
 	*out = NULL;
 
-	if ((error = git_index_new(&index)) < 0)
+	if ((error = git_index__new(&index, oid_type)) < 0)
 		return error;
 
 	if ((error = git_index__fill(index, &diff_list->staged)) < 0)
@@ -2157,7 +2160,7 @@ int git_merge__iterators(
 		}
 	}
 
-	error = index_from_diff_list(out, diff_list,
+	error = index_from_diff_list(out, diff_list, repo->oid_type,
 		(opts.flags & GIT_MERGE_SKIP_REUC));
 
 done:
@@ -2200,8 +2203,8 @@ int git_merge_trees(
 			result = our_tree;
 
 		if (result) {
-			if ((error = git_index_new(out)) == 0)
-    			error = git_index_read_tree(*out, result);
+			if ((error = git_index__new(out, repo->oid_type)) == 0)
+				error = git_index_read_tree(*out, result);
 
 			return error;
 		}

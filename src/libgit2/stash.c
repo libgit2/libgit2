@@ -284,7 +284,7 @@ static int build_untracked_tree(
 	struct stash_update_rules data = {0};
 	int error;
 
-	if ((error = git_index_new(&i_index)) < 0)
+	if ((error = git_index__new(&i_index, repo->oid_type)) < 0)
 		goto cleanup;
 
 	if (flags & GIT_STASH_INCLUDE_UNTRACKED) {
@@ -487,7 +487,7 @@ static int commit_worktree(
 	int error = 0, ignorecase;
 
 	if ((error = git_repository_index(&r_index, repo) < 0) ||
-	    (error = git_index_new(&i_index)) < 0 ||
+	    (error = git_index__new(&i_index, repo->oid_type)) < 0 ||
 	    (error = git_index__fill(i_index, &r_index->entries) < 0) ||
 	    (error = git_repository__configmap_lookup(&ignorecase, repo, GIT_CONFIGMAP_IGNORECASE)) < 0)
 		goto cleanup;
@@ -732,7 +732,7 @@ int git_stash_save_with_opts(
 					     i_commit, b_commit, u_commit)) < 0)
 			goto cleanup;
 	} else {
-		if ((error = git_index_new(&paths_index)) < 0 ||
+		if ((error = git_index__new(&paths_index, repo->oid_type)) < 0 ||
 		    (error = retrieve_head(&head, repo)) < 0 ||
 		    (error = git_reference_peel((git_object**)&tree, head, GIT_OBJECT_TREE)) < 0 ||
 		    (error = git_index_read_tree(paths_index, tree)) < 0 ||
@@ -1003,6 +1003,7 @@ static int stage_new_file(const git_index_entry **entries, void *data)
 
 static int stage_new_files(
 	git_index **out,
+	git_repository *repo,
 	git_tree *parent_tree,
 	git_tree *tree)
 {
@@ -1011,7 +1012,7 @@ static int stage_new_files(
 	git_index *index = NULL;
 	int error;
 
-	if ((error = git_index_new(&index)) < 0 ||
+	if ((error = git_index__new(&index, repo->oid_type)) < 0 ||
 		(error = git_iterator_for_tree(
 			&iterators[0], parent_tree, &iterator_options)) < 0 ||
 		(error = git_iterator_for_tree(
@@ -1095,10 +1096,10 @@ int git_stash_apply(
 	 * previously unstaged contents are staged, not the previously staged.)
 	 */
 	} else if ((opts.flags & GIT_STASH_APPLY_REINSTATE_INDEX) == 0) {
-		if ((error = stage_new_files(
-				&stash_adds, stash_parent_tree, stash_tree)) < 0 ||
-			(error = merge_indexes(
-				&unstashed_index, repo, stash_parent_tree, repo_index, stash_adds)) < 0)
+		if ((error = stage_new_files(&stash_adds, repo,
+				stash_parent_tree, stash_tree)) < 0 ||
+		    (error = merge_indexes(&unstashed_index, repo,
+				stash_parent_tree, repo_index, stash_adds)) < 0)
 			goto cleanup;
 	}
 

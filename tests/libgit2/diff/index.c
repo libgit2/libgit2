@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "diff_helpers.h"
+#include "index.h"
 
 static git_repository *g_repo = NULL;
 
@@ -278,7 +279,7 @@ void test_diff_index__to_index(void)
 	git_diff *diff;
 	diff_expects exp;
 
-	cl_git_pass(git_index_new(&old_index));
+	cl_git_pass(git_index__new(&old_index, GIT_OID_SHA1));
 	old_tree = resolve_commit_oid_to_tree(g_repo, a_commit);
 	cl_git_pass(git_index_read_tree(old_index, old_tree));
 
