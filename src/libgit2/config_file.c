@@ -1116,7 +1116,12 @@ static int write_on_eof(
 /*
  * This is pretty much the parsing, except we write out anything we don't have
  */
-static int config_file_write(config_file_backend *cfg, const char *orig_key, const char *key, const git_regexp *preg, const char *value)
+static int config_file_write(
+	config_file_backend *cfg,
+	const char *orig_key,
+	const char *key,
+	const git_regexp *preg,
+	const char *value)
 
 {
 	char *orig_section = NULL, *section = NULL, *orig_name, *name, *ldot;
@@ -1124,15 +1129,18 @@ static int config_file_write(config_file_backend *cfg, const char *orig_key, con
 	git_config_parser parser = GIT_CONFIG_PARSER_INIT;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	struct write_data write_data;
-	int error;
+	int filebuf_hash, error;
+
+	filebuf_hash = git_filebuf_hash_flags(git_oid_algorithm(GIT_OID_SHA1));
+	GIT_ASSERT(filebuf_hash);
 
 	memset(&write_data, 0, sizeof(write_data));
 
 	if (cfg->locked) {
 		error = git_str_puts(&contents, git_str_cstr(&cfg->locked_content) == NULL ? "" : git_str_cstr(&cfg->locked_content));
 	} else {
-		if ((error = git_filebuf_open(&file, cfg->file.path, GIT_FILEBUF_HASH_CONTENTS,
-					      GIT_CONFIG_FILE_MODE)) < 0)
+		if ((error = git_filebuf_open(&file, cfg->file.path,
+				filebuf_hash, GIT_CONFIG_FILE_MODE)) < 0)
 			goto done;
 
 		/* We need to read in our own config file */
