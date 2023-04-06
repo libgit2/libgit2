@@ -1631,7 +1631,10 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 	const git_refspec *spec;
 	const char *refname;
 	int error;
-	git_oid zero_id = GIT_OID_SHA1_ZERO;
+	git_oid zero_id;
+
+	GIT_ASSERT(remote && remote->repo);
+	git_oid_clear(&zero_id, remote->repo->oid_type);
 
 	if (callbacks)
 		GIT_ERROR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
@@ -1733,8 +1736,11 @@ static int update_ref(
 	const git_remote_callbacks *callbacks)
 {
 	git_reference *ref;
-	git_oid old_id = GIT_OID_SHA1_ZERO;
+	git_oid old_id;
 	int error;
+
+	GIT_ASSERT(remote && remote->repo);
+	git_oid_clear(&old_id, remote->repo->oid_type);
 
 	error = git_reference_name_to_id(&old_id, remote->repo, ref_name);
 
@@ -1778,6 +1784,8 @@ static int update_one_tip(
 	git_oid old;
 	int valid;
 	int error;
+
+	GIT_ASSERT(remote && remote->repo);
 
 	if ((error = git_repository_odb__weakptr(&odb, remote->repo)) < 0)
 		goto done;
@@ -1839,7 +1847,7 @@ static int update_one_tip(
 	}
 
 	if (error == GIT_ENOTFOUND) {
-		git_oid_clear(&old, GIT_OID_SHA1);
+		git_oid_clear(&old, remote->repo->oid_type);
 		error = 0;
 
 		if (autotag && (error = git_vector_insert(update_heads, head)) < 0)
@@ -1885,7 +1893,7 @@ static int update_tips_for_spec(
 	int error = 0;
 	size_t i;
 
-	GIT_ASSERT_ARG(remote);
+	GIT_ASSERT_ARG(remote && remote->repo);
 
 	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
 		return -1;
@@ -1901,10 +1909,10 @@ static int update_tips_for_spec(
 	}
 
 	/* Handle specified oid sources */
-	if (git_oid__is_hexstr(spec->src, GIT_OID_SHA1)) {
+	if (git_oid__is_hexstr(spec->src, remote->repo->oid_type)) {
 		git_oid id;
 
-		if ((error = git_oid__fromstr(&id, spec->src, GIT_OID_SHA1)) < 0)
+		if ((error = git_oid__fromstr(&id, spec->src, remote->repo->oid_type)) < 0)
 			goto on_error;
 
 		if (spec->dst &&
