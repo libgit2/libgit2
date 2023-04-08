@@ -611,13 +611,13 @@ int git_repository_mergehead_foreach(
 	buffer = merge_head_file.ptr;
 
 	while ((line = git__strsep(&buffer, "\n")) != NULL) {
-		if (strlen(line) != GIT_OID_SHA1_HEXSIZE) {
+		if (strlen(line) != git_oid_hexsize(repo->oid_type)) {
 			git_error_set(GIT_ERROR_INVALID, "unable to parse OID - invalid length");
 			error = -1;
 			goto cleanup;
 		}
 
-		if ((error = git_oid__fromstr(&oid, line, GIT_OID_SHA1)) < 0)
+		if ((error = git_oid__fromstr(&oid, line, repo->oid_type)) < 0)
 			goto cleanup;
 
 		if ((error = cb(&oid, payload)) != 0) {
@@ -1061,7 +1061,7 @@ static int index_entry_similarity_calc(
 	const git_merge_options *opts)
 {
 	git_blob *blob;
-	git_diff_file diff_file = { GIT_OID_SHA1_ZERO };
+	git_diff_file diff_file;
 	git_object_size_t blobsize;
 	int error;
 
@@ -1069,6 +1069,8 @@ static int index_entry_similarity_calc(
 		return 0;
 
 	*out = NULL;
+
+	git_oid_clear(&diff_file.id, repo->oid_type);
 
 	if ((error = git_blob_lookup(&blob, repo, &entry->id)) < 0)
 		return error;
