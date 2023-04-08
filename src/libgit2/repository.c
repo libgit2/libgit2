@@ -934,7 +934,7 @@ static int obtain_config_and_set_oid_type(
 		if ((error = load_objectformat(repo, config)) < 0)
 			goto out;
 	} else {
-		repo->oid_type = GIT_OID_SHA1;
+		repo->oid_type = GIT_OID_DEFAULT;
 	}
 
 out:
@@ -1804,7 +1804,7 @@ static int load_objectformat(git_repository *repo, git_config *config)
 
 	if ((error = git_config_get_entry(&entry, config, "extensions.objectformat")) < 0) {
 		if (error == GIT_ENOTFOUND) {
-			repo->oid_type = GIT_OID_SHA1;
+			repo->oid_type = GIT_OID_DEFAULT;
 			git_error_clear();
 			error = 0;
 		}
@@ -2240,7 +2240,7 @@ static int repo_init_config(
 		SET_REPO_CONFIG(bool, "receive.denyNonFastforwards", true);
 	}
 
-	if (oid_type != GIT_OID_SHA1) {
+	if (oid_type != GIT_OID_DEFAULT) {
 		SET_REPO_CONFIG(int32, "core.repositoryformatversion", 1);
 		SET_REPO_CONFIG(string, "extensions.objectformat", git_oid_type_name(oid_type));
 	}
