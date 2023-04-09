@@ -805,7 +805,9 @@ static void refdb_fs_backend__iterator_free(git_reference_iterator *_iter)
 	git__free(iter);
 }
 
-static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
+static int iter_load_loose_paths(
+	refdb_fs_backend *backend,
+	refdb_fs_iter *iter)
 {
 	int error = 0;
 	git_str path = GIT_STR_INIT;
@@ -819,6 +821,7 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 		return 0;
 
 	fsit_opts.flags = backend->iterator_flags;
+	fsit_opts.oid_type = backend->oid_type;
 
 	if (iter->glob) {
 		const char *last_sep = NULL;
