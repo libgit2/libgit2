@@ -29,7 +29,7 @@ static git_smart_subtransport_definition ssh_subtransport_definition = { git_sma
 static transport_definition local_transport_definition = { "file://", git_transport_local, NULL };
 
 static transport_definition transports[] = {
-	{ "git://",   git_transport_smart, &git_subtransport_definition },
+	{ "git://",   git_transport_git,   NULL },
 	{ "http://",  git_transport_smart, &http_subtransport_definition },
 	{ "https://", git_transport_smart, &http_subtransport_definition },
 	{ "file://",  git_transport_local, NULL },
