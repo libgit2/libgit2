@@ -114,6 +114,19 @@ static int handle_sockerr(GIT_SOCKET socket)
 	return -1;
 }
 
+GIT_INLINE(bool) connect_would_block(int error)
+{
+#ifdef GIT_WIN32
+	if (error == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK)
+		return true;
+#endif
+
+	if (error == -1 && errno == EINPROGRESS)
+		return true;
+
+	return false;
+}
+
 static int connect_with_timeout(
 	GIT_SOCKET socket,
 	const struct sockaddr *address,
@@ -128,7 +141,7 @@ static int connect_with_timeout(
 
 	error = connect(socket, address, address_len);
 
-	if (error == 0 || (error == -1 && errno != EINPROGRESS))
+	if (error == 0 || !connect_would_block(error))
 		return error;
 
 	fd.fd = socket;
