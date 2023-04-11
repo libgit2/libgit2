@@ -1218,6 +1218,9 @@ void test_online_clone__sha256(void)
 
 void test_online_clone__connect_timeout_configurable(void)
 {
+#ifdef GIT_WINHTTP
+	cl_skip();
+#else
 	uint64_t start, finish;
 
 	start = git_time_monotonic();
@@ -1229,10 +1232,14 @@ void test_online_clone__connect_timeout_configurable(void)
 	finish = git_time_monotonic();
 
 	cl_assert(finish - start < 1000);
+#endif
 }
 
 void test_online_clone__connect_timeout_default(void)
 {
+#ifdef GIT_WINHTTP
+	cl_skip();
+#else
 	/* This test takes ~ 75 seconds on Unix. */
 	if (!cl_is_env_set("GITTEST_INVASIVE_SPEED"))
 		cl_skip();
@@ -1243,10 +1250,14 @@ void test_online_clone__connect_timeout_default(void)
 	 */
 	cl_git_fail_with(GIT_TIMEOUT, git_clone(&g_repo, "http://www.google.com:8000/", "./refused", NULL));
 	cl_assert(git_error_last() && strstr(git_error_last()->message, "timed out"));
+#endif
 }
 
 void test_online_clone__timeout_configurable_times_out(void)
 {
+#ifdef GIT_WINHTTP
+	cl_skip();
+#else
 	git_repository *failed_repo;
 
 	if (!_remote_speed_timesout)
@@ -1256,14 +1267,19 @@ void test_online_clone__timeout_configurable_times_out(void)
 
 	cl_git_fail_with(GIT_TIMEOUT, git_clone(&failed_repo, _remote_speed_timesout, "./timedout", NULL));
 	cl_assert(git_error_last() && strstr(git_error_last()->message, "timed out"));
+#endif
 }
 
 void test_online_clone__timeout_configurable_succeeds_slowly(void)
 {
+#ifdef GIT_WINHTTP
+	cl_skip();
+#else
 	if (!_remote_speed_slow)
 		cl_skip();
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SERVER_TIMEOUT, 1000));
 
 	cl_git_pass(git_clone(&g_repo, _remote_speed_slow, "./slow-but-successful", NULL));
+#endif
 }
