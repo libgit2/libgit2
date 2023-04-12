@@ -1,3 +1,13 @@
+v1.6.4
+------
+
+## What's Changed
+
+### Bug fixes
+* config: return `GIT_ENOTFOUND` for missing programdata by @ethomson in https://github.com/libgit2/libgit2/pull/6547
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.6.3...v1.6.4
+
 v1.6.3
 ------
 
