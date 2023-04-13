@@ -10,15 +10,6 @@ if(POLICY CMP0025)
    cmake_policy(SET CMP0025 NEW)
  endif()
 
- ##### PLATFORM deps ##### 
-set(HUNTER_ROOT $ENV{HUNTER_ROOT})
- include(HunterGate)
- HunterGate(
-     URL "unused" 
-     SHA1 "unused" 
-)
- ##### PLATFORM deps #####
-
 project(libgit2 VERSION "1.5.0" LANGUAGES C)
 
 ###############

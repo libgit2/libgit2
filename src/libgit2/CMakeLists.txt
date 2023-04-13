@@ -2,7 +2,7 @@
 # git library functionality.
 
 add_library(libgit2 OBJECT)
-set_target_properties(libgit2 PROPERTIES C_STANDARD 90)
+set_target_properties(libgit2 PROPERTIES C_STANDARD 11)
 set_target_properties(libgit2 PROPERTIES C_EXTENSIONS OFF)
 
 include(PkgBuildConfig)
@@ -85,7 +85,7 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 add_library(libgit2package ${SRC_RC} ${LIBGIT2_OBJECTS})
 target_link_libraries(libgit2package  ${LIBGIT2_SYSTEM_LIBS})
 
-set_target_properties(libgit2package PROPERTIES C_STANDARD 90)
+set_target_properties(libgit2package PROPERTIES C_STANDARD 11)
 set_target_properties(libgit2package PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set_target_properties(libgit2package PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})

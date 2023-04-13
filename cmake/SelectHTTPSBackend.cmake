@@ -1,7 +1,6 @@
 include(SanitizeBool)
 
 # We try to find any packages our backends might use
-hunter_add_package(OpenSSL COMPONENTS )
 find_package(OpenSSL)
 find_package(mbedTLS)
 if(CMAKE_SYSTEM_NAME MATCHES "Darwin")

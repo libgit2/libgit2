@@ -17,7 +17,7 @@ foreach(fuzz_target_src ${SRC_FUZZERS})
 		list(APPEND ${fuzz_target_name}_SOURCES "standalone_driver.c")
 	endif()
 	add_executable(${fuzz_target_name} ${${fuzz_target_name}_SOURCES})
-	set_target_properties(${fuzz_target_name} PROPERTIES C_STANDARD 90)
+	set_target_properties(${fuzz_target_name} PROPERTIES C_STANDARD 11)
 
 	target_include_directories(${fuzz_target_name} PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
 	target_include_directories(${fuzz_target_name} SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})

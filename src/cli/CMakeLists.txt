@@ -37,7 +37,7 @@ add_executable(git2_cli ${CLI_SRC_C} ${CLI_SRC_OS} ${CLI_OBJECTS}
 	${LIBGIT2_DEPENDENCY_OBJECTS})
 target_link_libraries(git2_cli ${CLI_LIBGIT2_LIBRARY} ${LIBGIT2_SYSTEM_LIBS})
 
-set_target_properties(git2_cli PROPERTIES C_STANDARD 90)
+set_target_properties(git2_cli PROPERTIES C_STANDARD 11)
 set_target_properties(git2_cli PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
 
 ide_split_sources(git2_cli)
