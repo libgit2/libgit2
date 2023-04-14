@@ -3,7 +3,7 @@
   "packages": [ "libgit2" ],
   "targets": [ "libgit2::libgit2package" ],
   "nxxm/libssh2": {
-    "@": "feature/move-to-native-tipi-deps",
+    "@": ":8d4d33bcd431b458ff5b7fbad5093deac6379621",
     "u": true,
     "packages": [ "Libssh2" ],
     "targets": [ "Libssh2::libssh2" ]
