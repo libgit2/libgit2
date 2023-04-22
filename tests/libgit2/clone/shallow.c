@@ -4,12 +4,10 @@
 
 void test_clone_shallow__initialize(void)
 {
-    cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SHALLOW, 1));
 }
 
 void test_clone_shallow__cleanup(void)
 {
-	git_libgit2_opts(GIT_OPT_ENABLE_SHALLOW, 0);
 }
 
 static int remote_single_branch(git_remote **out, git_repository *repo, const char *name, const char *url, void *payload)

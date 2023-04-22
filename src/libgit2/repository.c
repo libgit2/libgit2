@@ -1099,7 +1099,7 @@ int git_repository_open_ext(
 	if (error < 0)
 		goto cleanup;
 
-	if (git_shallow__enabled && (error = load_grafts(repo)) < 0)
+	if ((error = load_grafts(repo)) < 0)
 		goto cleanup;
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0) {

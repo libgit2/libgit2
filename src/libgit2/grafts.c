@@ -12,8 +12,6 @@
 #include "oidarray.h"
 #include "parse.h"
 
-bool git_shallow__enabled = false;
-
 struct git_grafts {
 	/* Map of `git_commit_graft`s */
 	git_oidmap *commits;
@@ -97,13 +95,13 @@ int git_grafts_refresh(git_grafts *grafts)
 	if (!grafts->path)
 		return 0;
 
-	if ((error = git_futils_readbuffer_updated(&contents, grafts->path, 
+	if ((error = git_futils_readbuffer_updated(&contents, grafts->path,
 				(grafts->path_checksum).id, &updated)) < 0) {
 		if (error == GIT_ENOTFOUND) {
 			git_grafts_clear(grafts);
 			error = 0;
 		}
-		
+
 		goto cleanup;
 	}
 

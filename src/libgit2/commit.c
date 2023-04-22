@@ -553,13 +553,10 @@ int git_commit__parse_ext(
 	git_repository *repo = git_object_owner((git_object *)commit);
 	git_commit_graft *graft;
 	int error;
-	
+
 	if ((error = commit_parse(commit, git_odb_object_data(odb_obj),
 				  git_odb_object_size(odb_obj), parse_opts)) < 0)
 		return error;
-
-	if (!git_shallow__enabled)
-		return 0;
 
 	/* Perform necessary grafts */
 	if (git_grafts_get(&graft, repo->grafts, git_odb_object_id(odb_obj)) != 0 &&

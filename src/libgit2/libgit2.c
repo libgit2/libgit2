@@ -436,10 +436,6 @@ int git_libgit2_opts(int key, ...)
 		error = git_sysdir_set(GIT_SYSDIR_HOME, va_arg(ap, const char *));
 		break;
 
-	case GIT_OPT_ENABLE_SHALLOW:
-		git_shallow__enabled = (va_arg(ap, int) != 0);
-		break;
-
 	default:
 		git_error_set(GIT_ERROR_INVALID, "invalid option key");
 		error = -1;
