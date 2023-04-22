@@ -2,14 +2,6 @@
 #include "futils.h"
 #include "repository.h"
 
-void test_clone_shallow__initialize(void)
-{
-}
-
-void test_clone_shallow__cleanup(void)
-{
-}
-
 static int remote_single_branch(git_remote **out, git_repository *repo, const char *name, const char *url, void *payload)
 {
 	GIT_UNUSED(payload);
@@ -19,7 +11,7 @@ static int remote_single_branch(git_remote **out, git_repository *repo, const ch
 	return 0;
 }
 
-void test_clone_shallow__clone_depth_zero(void)
+void test_online_shallow__clone_depth_zero(void)
 {
 	git_str path = GIT_STR_INIT;
 	git_repository *repo;
@@ -45,7 +37,7 @@ void test_clone_shallow__clone_depth_zero(void)
 	git_repository_free(repo);
 }
 
-void test_clone_shallow__clone_depth_one(void)
+void test_online_shallow__clone_depth_one(void)
 {
 	git_str path = GIT_STR_INIT;
 	git_repository *repo;
@@ -86,7 +78,7 @@ void test_clone_shallow__clone_depth_one(void)
 	git_repository_free(repo);
 }
 
-void test_clone_shallow__clone_depth_five(void)
+void test_online_shallow__clone_depth_five(void)
 {
 	git_str path = GIT_STR_INIT;
 	git_repository *repo;
@@ -129,7 +121,7 @@ void test_clone_shallow__clone_depth_five(void)
 	git_repository_free(repo);
 }
 
-void test_clone_shallow__unshallow(void)
+void test_online_shallow__unshallow(void)
 {
 	git_str path = GIT_STR_INIT;
 	git_repository *repo;
