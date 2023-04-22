@@ -10,22 +10,23 @@
 #include "posix.h"
 #include "netops.h"
 #include "registry.h"
+#include "runtime.h"
 #include "stream.h"
 
 #ifndef _WIN32
-#	include <sys/types.h>
-#	include <sys/socket.h>
-#	include <sys/select.h>
-#	include <sys/time.h>
-#	include <netdb.h>
-#	include <netinet/in.h>
-#       include <arpa/inet.h>
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <sys/select.h>
+# include <sys/time.h>
+# include <netdb.h>
+# include <netinet/in.h>
+# include <arpa/inet.h>
 #else
-#	include <winsock2.h>
-#	include <ws2tcpip.h>
-#	ifdef _MSC_VER
-#		pragma comment(lib, "ws2_32")
-#	endif
+# include <winsock2.h>
+# include <ws2tcpip.h>
+# ifdef _MSC_VER
+#  pragma comment(lib, "ws2_32")
+# endif
 #endif
 
 #ifdef GIT_WIN32
@@ -54,11 +55,8 @@ static int close_socket(GIT_SOCKET s)
 		return 0;
 
 #ifdef GIT_WIN32
-	if (SOCKET_ERROR == closesocket(s))
-		return -1;
-
-	if (0 != WSACleanup()) {
-		git_error_set(GIT_ERROR_OS, "winsock cleanup failed");
+	if (closesocket(s) != 0) {
+		net_set_error("could not close socket");
 		return -1;
 	}
 
@@ -76,23 +74,6 @@ static int socket_connect(git_stream *stream)
 	git_socket_stream *st = (git_socket_stream *) stream;
 	GIT_SOCKET s = INVALID_SOCKET;
 	int ret;
-
-#ifdef GIT_WIN32
-	/* on win32, the WSA context needs to be initialized
-	 * before any socket calls can be performed */
-	WSADATA wsd;
-
-	if (WSAStartup(MAKEWORD(2,2), &wsd) != 0) {
-		git_error_set(GIT_ERROR_OS, "winsock init failed");
-		return -1;
-	}
-
-	if (LOBYTE(wsd.wVersion) != 2 || HIBYTE(wsd.wVersion) != 2) {
-		WSACleanup();
-		git_error_set(GIT_ERROR_OS, "winsock init failed");
-		return -1;
-	}
-#endif
 
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 	hints.ai_socktype = SOCK_STREAM;
@@ -240,3 +221,42 @@ int git_socket_stream_new(
 
 	return init(out, host, port);
 }
+
+#ifdef GIT_WIN32
+
+static void socket_stream_global_shutdown(void)
+{
+	WSACleanup();
+}
+
+int git_socket_stream_global_init(void)
+{
+	WORD winsock_version;
+	WSADATA wsa_data;
+
+	winsock_version = MAKEWORD(2, 2);
+
+	if (WSAStartup(winsock_version, &wsa_data) != 0) {
+		git_error_set(GIT_ERROR_OS, "could not initialize Windows Socket Library");
+		return -1;
+	}
+
+	if (LOBYTE(wsa_data.wVersion) != 2 ||
+	    HIBYTE(wsa_data.wVersion) != 2) {
+		git_error_set(GIT_ERROR_SSL, "Windows Socket Library does not support Winsock 2.2");
+		return -1;
+	}
+
+	return git_runtime_shutdown_register(socket_stream_global_shutdown);
+}
+ 
+#else
+
+#include "stream.h"
+
+int git_socket_stream_global_init(void)
+{
+	return 0;
+}
+
+ #endif

@@ -29,7 +29,11 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_midx_writer_new(
 		git_midx_writer **out,
-		const char *pack_dir);
+		const char *pack_dir
+#ifdef GIT_EXPERIMENTAL_SHA256
+		, git_oid_t oid_type
+#endif
+		);
 
 /**
  * Free the multi-pack-index writer and its resources.

@@ -127,12 +127,18 @@ out:
 
 int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 {
+	git_hash_algorithm_t hash_algorithm;
 	git_packbuilder *pb;
 
 	*out = NULL;
 
 	pb = git__calloc(1, sizeof(*pb));
 	GIT_ERROR_CHECK_ALLOC(pb);
+
+	pb->oid_type = repo->oid_type;
+
+	hash_algorithm = git_oid_algorithm(pb->oid_type);
+	GIT_ASSERT(hash_algorithm);
 
 	if (git_oidmap_new(&pb->object_ix) < 0 ||
 	    git_oidmap_new(&pb->walk_objects) < 0 ||
@@ -142,7 +148,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	pb->repo = repo;
 	pb->nr_threads = 1; /* do not spawn any thread by default */
 
-	if (git_hash_ctx_init(&pb->ctx, GIT_HASH_ALGORITHM_SHA1) < 0 ||
+	if (git_hash_ctx_init(&pb->ctx, hash_algorithm) < 0 ||
 		git_zstream_init(&pb->zstream, GIT_ZSTREAM_DEFLATE) < 0 ||
 		git_repository_odb(&pb->odb, repo) < 0 ||
 		packbuilder_config(pb) < 0)
@@ -315,8 +321,10 @@ static int write_object(
 	git_object_t type;
 	unsigned char hdr[10], *zbuf = NULL;
 	void *data = NULL;
-	size_t hdr_len, zbuf_len = COMPRESS_BUFLEN, data_len;
+	size_t hdr_len, zbuf_len = COMPRESS_BUFLEN, data_len, oid_size;
 	int error;
+
+	oid_size = git_oid_size(pb->oid_type);
 
 	/*
 	 * If we have a delta base, let's use the delta to save space.
@@ -347,8 +355,8 @@ static int write_object(
 		goto done;
 
 	if (type == GIT_OBJECT_REF_DELTA) {
-		if ((error = write_cb(po->delta->id.id, GIT_OID_SHA1_SIZE, cb_data)) < 0 ||
-			(error = git_hash_update(&pb->ctx, po->delta->id.id, GIT_OID_SHA1_SIZE)) < 0)
+		if ((error = write_cb(po->delta->id.id, oid_size, cb_data)) < 0 ||
+		    (error = git_hash_update(&pb->ctx, po->delta->id.id, oid_size)) < 0)
 			goto done;
 	}
 
@@ -668,7 +676,7 @@ static int write_pack(git_packbuilder *pb,
 	if ((error = git_hash_final(entry_oid.id, &pb->ctx)) < 0)
 		goto done;
 
-	error = write_cb(entry_oid.id, GIT_OID_SHA1_SIZE, cb_data);
+	error = write_cb(entry_oid.id, git_oid_size(pb->oid_type), cb_data);
 
 done:
 	/* if callback cancelled writing, we must still free delta_data */

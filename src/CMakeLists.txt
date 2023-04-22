@@ -41,8 +41,8 @@ include(SelectHTTPSBackend)
 include(SelectHashes)
 include(SelectHTTPParser)
 include(SelectRegex)
+include(SelectXdiff)
 include(SelectSSH)
-include(SelectWinHTTP)
 include(SelectZlib)
 
 #

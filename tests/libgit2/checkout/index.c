@@ -4,6 +4,7 @@
 #include "git2/checkout.h"
 #include "futils.h"
 #include "repository.h"
+#include "index.h"
 #include "remote.h"
 #include "repo/repo_helpers.h"
 
@@ -834,7 +835,7 @@ void test_checkout_index__adding_conflict_removes_stage_0(void)
 	git_index *new_index, *index;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	cl_git_pass(git_index_new(&new_index));
+	cl_git_pass(git_index__new(&new_index, GIT_OID_SHA1));
 
 	add_conflict(new_index, "new.txt");
 	cl_git_pass(git_checkout_index(g_repo, new_index, &opts));

@@ -196,6 +196,7 @@ int git_object_lookup_prefix(
 	git_object *object = NULL;
 	git_odb *odb = NULL;
 	git_odb_object *odb_obj = NULL;
+	size_t oid_hexsize;
 	int error = 0;
 
 	GIT_ASSERT_ARG(repo);
@@ -211,10 +212,12 @@ int git_object_lookup_prefix(
 	if (error < 0)
 		return error;
 
-	if (len > GIT_OID_SHA1_HEXSIZE)
-		len = GIT_OID_SHA1_HEXSIZE;
+	oid_hexsize = git_oid_hexsize(repo->oid_type);
 
-	if (len == GIT_OID_SHA1_HEXSIZE) {
+	if (len > oid_hexsize)
+		len = oid_hexsize;
+
+	if (len == oid_hexsize) {
 		git_cached_obj *cached = NULL;
 
 		/* We want to match the full id : we can first look up in the cache,
@@ -248,8 +251,9 @@ int git_object_lookup_prefix(
 			error = git_odb_read(&odb_obj, odb, id);
 		}
 	} else {
-		git_oid short_oid = GIT_OID_SHA1_ZERO;
+		git_oid short_oid;
 
+		git_oid_clear(&short_oid, repo->oid_type);
 		git_oid__cpy_prefix(&short_oid, id, len);
 
 		/* If len < GIT_OID_SHA1_HEXSIZE (a strict short oid was given), we have
@@ -277,7 +281,8 @@ int git_object_lookup_prefix(
 }
 
 int git_object_lookup(git_object **object_out, git_repository *repo, const git_oid *id, git_object_t type) {
-	return git_object_lookup_prefix(object_out, repo, id, GIT_OID_SHA1_HEXSIZE, type);
+	return git_object_lookup_prefix(object_out,
+		repo, id, git_oid_hexsize(repo->oid_type), type);
 }
 
 void git_object_free(git_object *object)
@@ -518,30 +523,35 @@ cleanup:
 static int git_object__short_id(git_str *out, const git_object *obj)
 {
 	git_repository *repo;
-	int len = GIT_ABBREV_DEFAULT, error;
-	git_oid id = GIT_OID_SHA1_ZERO;
+	git_oid id;
 	git_odb *odb;
+	size_t oid_hexsize;
+	int len = GIT_ABBREV_DEFAULT, error;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(obj);
 
 	repo = git_object_owner(obj);
 
+	git_oid_clear(&id, repo->oid_type);
+	oid_hexsize = git_oid_hexsize(repo->oid_type);
+
 	if ((error = git_repository__configmap_lookup(&len, repo, GIT_CONFIGMAP_ABBREV)) < 0)
 		return error;
+
+	if (len < 0 || (size_t)len > oid_hexsize) {
+		git_error_set(GIT_ERROR_CONFIG, "invalid oid abbreviation setting: '%d'", len);
+		return -1;
+	}
 
 	if ((error = git_repository_odb(&odb, repo)) < 0)
 		return error;
 
-	while (len < GIT_OID_SHA1_HEXSIZE) {
+	while ((size_t)len < oid_hexsize) {
 		/* set up short oid */
 		memcpy(&id.id, &obj->cached.oid.id, (len + 1) / 2);
 		if (len & 1)
 			id.id[len / 2] &= 0xf0;
-
-#ifdef GIT_EXPERIMENTAL_SHA256
-		id.type = GIT_OID_SHA1;
-#endif
 
 		error = git_odb_exists_prefix(NULL, odb, &id, len);
 		if (error != GIT_EAMBIGUOUS)

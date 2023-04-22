@@ -3,6 +3,7 @@
 #include "reset_helpers.h"
 #include "path.h"
 #include "futils.h"
+#include "index.h"
 
 static git_repository *repo;
 static git_object *target;
@@ -252,7 +253,7 @@ void test_reset_hard__switch_file_to_dir(void)
 	git_odb_free(odb);
 
 	entry.mode = GIT_FILEMODE_BLOB;
-	cl_git_pass(git_index_new(&idx));
+	cl_git_pass(git_index__new(&idx, GIT_OID_SHA1));
 	cl_git_pass(git_signature_now(&sig, "foo", "bar"));
 
 	/* Create the old tree */

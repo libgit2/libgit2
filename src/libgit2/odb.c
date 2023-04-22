@@ -748,7 +748,8 @@ int git_odb__add_default_backends(
 		git_error_set(GIT_ERROR_ODB, "failed to acquire the odb lock");
 		return -1;
 	}
-	if (!db->cgraph && git_commit_graph_new(&db->cgraph, objects_dir, false) < 0) {
+	if (!db->cgraph &&
+	    git_commit_graph_new(&db->cgraph, objects_dir, false, db->options.oid_type) < 0) {
 		git_mutex_unlock(&db->lock);
 		return -1;
 	}

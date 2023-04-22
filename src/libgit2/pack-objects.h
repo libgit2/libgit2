@@ -56,6 +56,8 @@ struct git_packbuilder {
 	git_repository *repo; /* associated repository */
 	git_odb *odb; /* associated object database */
 
+	git_oid_t oid_type;
+
 	git_hash_ctx ctx;
 	git_zstream zstream;
 

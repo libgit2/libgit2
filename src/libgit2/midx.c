@@ -115,19 +115,20 @@ static int midx_parse_oid_lookup(
 		struct git_midx_chunk *chunk_oid_lookup)
 {
 	uint32_t i;
-	unsigned char *oid, *prev_oid, zero_oid[GIT_OID_SHA1_SIZE] = {0};
+	unsigned char *oid, *prev_oid, zero_oid[GIT_OID_MAX_SIZE] = {0};
+	size_t oid_size = git_oid_size(idx->oid_type);
 
 	if (chunk_oid_lookup->offset == 0)
 		return midx_error("missing OID Lookup chunk");
 	if (chunk_oid_lookup->length == 0)
 		return midx_error("empty OID Lookup chunk");
-	if (chunk_oid_lookup->length != idx->num_objects * GIT_OID_SHA1_SIZE)
+	if (chunk_oid_lookup->length != idx->num_objects * oid_size)
 		return midx_error("OID Lookup chunk has wrong length");
 
 	idx->oid_lookup = oid = (unsigned char *)(data + chunk_oid_lookup->offset);
 	prev_oid = zero_oid;
-	for (i = 0; i < idx->num_objects; ++i, oid += GIT_OID_SHA1_SIZE) {
-		if (git_oid_raw_cmp(prev_oid, oid, GIT_OID_SHA1_SIZE) >= 0)
+	for (i = 0; i < idx->num_objects; ++i, oid += oid_size) {
+		if (git_oid_raw_cmp(prev_oid, oid, oid_size) >= 0)
 			return midx_error("OID Lookup index is non-monotonic");
 		prev_oid = oid;
 	}
@@ -178,7 +179,7 @@ int git_midx_parse(
 	struct git_midx_chunk *last_chunk;
 	uint32_t i;
 	off64_t last_chunk_offset, chunk_offset, trailer_offset;
-	size_t checksum_size;
+	size_t checksum_size, oid_size;
 	int error;
 	struct git_midx_chunk chunk_packfile_names = {0},
 					 chunk_oid_fanout = {0},
@@ -188,7 +189,9 @@ int git_midx_parse(
 
 	GIT_ASSERT_ARG(idx);
 
-	if (size < sizeof(struct git_midx_header) + GIT_OID_SHA1_SIZE)
+	oid_size = git_oid_size(idx->oid_type);
+
+	if (size < sizeof(struct git_midx_header) + oid_size)
 		return midx_error("multi-pack index is too short");
 
 	hdr = ((struct git_midx_header *)data);
@@ -209,7 +212,7 @@ int git_midx_parse(
 			sizeof(struct git_midx_header) +
 			(1 + hdr->chunks) * 12;
 
-	checksum_size = GIT_HASH_SHA1_SIZE;
+	checksum_size = oid_size;
 	trailer_offset = size - checksum_size;
 
 	if (trailer_offset < last_chunk_offset)
@@ -287,14 +290,17 @@ int git_midx_parse(
 }
 
 int git_midx_open(
-		git_midx_file **idx_out,
-		const char *path)
+	git_midx_file **idx_out,
+	const char *path,
+	git_oid_t oid_type)
 {
 	git_midx_file *idx;
 	git_file fd = -1;
 	size_t idx_size;
 	struct stat st;
 	int error;
+
+	GIT_ASSERT_ARG(idx_out && path && oid_type);
 
 	/* TODO: properly open the file without access time using O_NOATIME */
 	fd = git_futils_open_ro(path);
@@ -316,6 +322,8 @@ int git_midx_open(
 
 	idx = git__calloc(1, sizeof(git_midx_file));
 	GIT_ERROR_CHECK_ALLOC(idx);
+
+	idx->oid_type = oid_type;
 
 	error = git_str_sets(&idx->filename, path);
 	if (error < 0)
@@ -344,7 +352,7 @@ bool git_midx_needs_refresh(
 	git_file fd = -1;
 	struct stat st;
 	ssize_t bytes_read;
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	unsigned char checksum[GIT_HASH_MAX_SIZE];
 	size_t checksum_size;
 
 	/* TODO: properly open the file without access time using O_NOATIME */
@@ -364,8 +372,8 @@ bool git_midx_needs_refresh(
 		return true;
 	}
 
-	checksum_size = GIT_HASH_SHA1_SIZE;
-	bytes_read = p_pread(fd, checksum, checksum_size, st.st_size - GIT_OID_SHA1_SIZE);
+	checksum_size = git_oid_size(idx->oid_type);
+	bytes_read = p_pread(fd, checksum, checksum_size, st.st_size - checksum_size);
 	p_close(fd);
 
 	if (bytes_read != (ssize_t)checksum_size)
@@ -381,7 +389,7 @@ int git_midx_entry_find(
 		size_t len)
 {
 	int pos, found = 0;
-	size_t pack_index;
+	size_t pack_index, oid_size, oid_hexsize;
 	uint32_t hi, lo;
 	unsigned char *current = NULL;
 	const unsigned char *object_offset;
@@ -389,30 +397,33 @@ int git_midx_entry_find(
 
 	GIT_ASSERT_ARG(idx);
 
+	oid_size = git_oid_size(idx->oid_type);
+	oid_hexsize = git_oid_hexsize(idx->oid_type);
+
 	hi = ntohl(idx->oid_fanout[(int)short_oid->id[0]]);
 	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(idx->oid_fanout[(int)short_oid->id[0] - 1]));
 
-	pos = git_pack__lookup_id(idx->oid_lookup, GIT_OID_SHA1_SIZE, lo, hi, short_oid->id, GIT_OID_SHA1);
+	pos = git_pack__lookup_id(idx->oid_lookup, oid_size, lo, hi, short_oid->id, idx->oid_type);
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */
 		found = 1;
-		current = idx->oid_lookup + (pos * GIT_OID_SHA1_SIZE);
+		current = idx->oid_lookup + (pos * oid_size);
 	} else {
 		/* No object was found */
 		/* pos refers to the object with the "closest" oid to short_oid */
 		pos = -1 - pos;
 		if (pos < (int)idx->num_objects) {
-			current = idx->oid_lookup + (pos * GIT_OID_SHA1_SIZE);
+			current = idx->oid_lookup + (pos * oid_size);
 
 			if (!git_oid_raw_ncmp(short_oid->id, current, len))
 				found = 1;
 		}
 	}
 
-	if (found && len != GIT_OID_SHA1_HEXSIZE && pos + 1 < (int)idx->num_objects) {
+	if (found && len != oid_hexsize && pos + 1 < (int)idx->num_objects) {
 		/* Check for ambiguousity */
-		const unsigned char *next = current + GIT_OID_SHA1_SIZE;
+		const unsigned char *next = current + oid_size;
 
 		if (!git_oid_raw_ncmp(short_oid->id, next, len))
 			found = 2;
@@ -443,7 +454,7 @@ int git_midx_entry_find(
 		return midx_error("invalid index into the packfile names table");
 	e->pack_index = pack_index;
 	e->offset = offset;
-	git_oid__fromraw(&e->sha1, current, GIT_OID_SHA1);
+	git_oid__fromraw(&e->sha1, current, idx->oid_type);
 	return 0;
 }
 
@@ -453,13 +464,15 @@ int git_midx_foreach_entry(
 		void *data)
 {
 	git_oid oid;
-	size_t i;
+	size_t oid_size, i;
 	int error;
 
 	GIT_ASSERT_ARG(idx);
 
+	oid_size = git_oid_size(idx->oid_type);
+
 	for (i = 0; i < idx->num_objects; ++i) {
-		if ((error = git_oid__fromraw(&oid, &idx->oid_lookup[i * GIT_OID_SHA1_SIZE], GIT_OID_SHA1)) < 0)
+		if ((error = git_oid__fromraw(&oid, &idx->oid_lookup[i * oid_size], idx->oid_type)) < 0)
 			return error;
 
 		if ((error = cb(&oid, data)) != 0)
@@ -501,9 +514,21 @@ static int packfile__cmp(const void *a_, const void *b_)
 
 int git_midx_writer_new(
 		git_midx_writer **out,
-		const char *pack_dir)
+		const char *pack_dir
+#ifdef GIT_EXPERIMENTAL_SHA256
+		, git_oid_t oid_type
+#endif
+		)
 {
-	git_midx_writer *w = git__calloc(1, sizeof(git_midx_writer));
+	git_midx_writer *w;
+
+#ifndef GIT_EXPERIMENTAL_SHA256
+	git_oid_t oid_type = GIT_OID_SHA1;
+#endif
+
+	GIT_ASSERT_ARG(out && pack_dir && oid_type);
+
+	w = git__calloc(1, sizeof(git_midx_writer));
 	GIT_ERROR_CHECK_ALLOC(w);
 
 	if (git_str_sets(&w->pack_dir, pack_dir) < 0) {
@@ -517,6 +542,8 @@ int git_midx_writer_new(
 		git__free(w);
 		return -1;
 	}
+
+	w->oid_type = oid_type;
 
 	*out = w;
 	return 0;
@@ -662,12 +689,13 @@ static int midx_write(
 		oid_lookup = GIT_STR_INIT,
 		object_offsets = GIT_STR_INIT,
 		object_large_offsets = GIT_STR_INIT;
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
-	size_t checksum_size;
+	unsigned char checksum[GIT_HASH_MAX_SIZE];
+	size_t checksum_size, oid_size;
 	git_midx_entry *entry;
 	object_entry_array_t object_entries_array = GIT_ARRAY_INIT;
 	git_vector object_entries = GIT_VECTOR_INIT;
 	git_hash_ctx ctx;
+	git_hash_algorithm_t checksum_type;
 	struct midx_write_hash_context hash_cb_data = {0};
 
 	hdr.signature = htonl(MIDX_SIGNATURE);
@@ -679,10 +707,14 @@ static int midx_write(
 	hash_cb_data.cb_data = cb_data;
 	hash_cb_data.ctx = &ctx;
 
-	checksum_size = GIT_HASH_SHA1_SIZE;
-	error = git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA1);
-	if (error < 0)
+	oid_size = git_oid_size(w->oid_type);
+
+	GIT_ASSERT((checksum_type = git_oid_algorithm(w->oid_type)));
+	checksum_size = git_hash_size(checksum_type);
+
+	if ((error = git_hash_ctx_init(&ctx, checksum_type)) < 0)
 		return error;
+
 	cb_data = &hash_cb_data;
 	write_cb = midx_write_hash;
 
@@ -749,7 +781,9 @@ static int midx_write(
 
 	/* Fill the OID Lookup table. */
 	git_vector_foreach (&object_entries, i, entry) {
-		error = git_str_put(&oid_lookup, (char *)&entry->sha1.id, GIT_OID_SHA1_SIZE);
+		error = git_str_put(&oid_lookup,
+			(char *)&entry->sha1.id, oid_size);
+
 		if (error < 0)
 			goto cleanup;
 	}

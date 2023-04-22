@@ -152,8 +152,9 @@ struct git_repository {
 
 	git_array_t(git_str) reserved_names;
 
-	unsigned is_bare:1;
-	unsigned is_worktree:1;
+	unsigned use_env:1,
+	         is_bare:1,
+	         is_worktree:1;
 	git_oid_t oid_type;
 
 	unsigned int lru_counter;

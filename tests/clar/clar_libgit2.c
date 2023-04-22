@@ -103,10 +103,10 @@ int cl_setenv(const char *name, const char *value)
 {
 	wchar_t *wide_name, *wide_value = NULL;
 
-	cl_assert(git__utf8_to_16_alloc(&wide_name, name) >= 0);
+	cl_assert(git_utf8_to_16_alloc(&wide_name, name) >= 0);
 
 	if (value) {
-		cl_assert(git__utf8_to_16_alloc(&wide_value, value) >= 0);
+		cl_assert(git_utf8_to_16_alloc(&wide_value, value) >= 0);
 		cl_assert(SetEnvironmentVariableW(wide_name, wide_value));
 	} else {
 		/* Windows XP returns 0 (failed) when passing NULL for lpValue when

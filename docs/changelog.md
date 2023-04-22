@@ -1,3 +1,26 @@
+v1.6.3
+------
+
+## What's Changed
+
+### Bug fixes
+
+* odb: restore `git_odb_open` by @ethomson in https://github.com/libgit2/libgit2/pull/6520
+* Ensure that `git_index_add_all` handles ignored directories by @ethomson in https://github.com/libgit2/libgit2/pull/6521
+* pack: use 64 bits for the number of objects by @carlosmn in https://github.com/libgit2/libgit2/pull/6530
+
+### Build and CI improvements
+
+* Remove unused wditer variable by @georgthegreat in https://github.com/libgit2/libgit2/pull/6518
+* fs_path: let root run the ownership tests by @ethomson in https://github.com/libgit2/libgit2/pull/6513
+* sysdir: Do not declare win32 functions on non-win32 platforms by @Batchyx in https://github.com/libgit2/libgit2/pull/6527
+* cmake: don't include `include/git2` by @ethomson in https://github.com/libgit2/libgit2/pull/6529
+
+## New Contributors
+* @georgthegreat made their first contribution in https://github.com/libgit2/libgit2/pull/6518
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.6.2...v1.6.3
+
 v1.6.2
 ------
 

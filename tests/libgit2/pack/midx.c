@@ -16,7 +16,7 @@ void test_pack_midx__parse(void)
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 	cl_git_pass(git_str_joinpath(&midx_path, git_repository_path(repo), "objects/pack/multi-pack-index"));
-	cl_git_pass(git_midx_open(&idx, git_str_cstr(&midx_path)));
+	cl_git_pass(git_midx_open(&idx, git_str_cstr(&midx_path), GIT_OID_SHA1));
 	cl_assert_equal_i(git_midx_needs_refresh(idx, git_str_cstr(&midx_path)), 0);
 
 	cl_git_pass(git_oid__fromstr(&id, "5001298e0c09ad9c34e4249bc5801c75e9754fa5", GIT_OID_SHA1));
@@ -57,7 +57,12 @@ void test_pack_midx__writer(void)
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 
 	cl_git_pass(git_str_joinpath(&path, git_repository_path(repo), "objects/pack"));
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_midx_writer_new(&w, git_str_cstr(&path), GIT_OID_SHA1));
+#else
 	cl_git_pass(git_midx_writer_new(&w, git_str_cstr(&path)));
+#endif
 
 	cl_git_pass(git_midx_writer_add(w, "pack-d7c6adf9f61318f041845b01440d09aa7a91e1b5.idx"));
 	cl_git_pass(git_midx_writer_add(w, "pack-d85f5d483273108c9d8dd0e4728ccf0b2982423a.idx"));

@@ -6,7 +6,7 @@
 
 cmake_minimum_required(VERSION 3.5.1)
 
-project(libgit2 VERSION "1.6.2" LANGUAGES C)
+project(libgit2 VERSION "1.7.0" LANGUAGES C)
 
 # Add find modules to the path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
@@ -36,6 +36,7 @@ option(USE_SHA1                "Enable SHA1. Can be set to CollisionDetection(ON
 option(USE_SHA256              "Enable SHA256. Can be set to HTTPS/Builtin" ON)
 option(USE_GSSAPI              "Link with libgssapi for SPNEGO auth"      OFF)
    set(USE_HTTP_PARSER         "" CACHE STRING "Specifies the HTTP Parser implementation; either system or builtin.")
+#  set(USE_XDIFF               "" CACHE STRING "Specifies the xdiff implementation; either system or builtin.")
    set(REGEX_BACKEND           "" CACHE STRING "Regular expression implementation. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
 option(USE_BUNDLED_ZLIB        "Use the bundled version of zlib. Can be set to one of Bundled(ON)/Chromium. The Chromium option requires a x86_64 processor with SSE4.2 and CLMUL" OFF)
 
@@ -80,12 +81,6 @@ if(MSVC)
 
 	# Enable leak checking using the debugging C runtime.
 	option(WIN32_LEAKCHECK     "Enable leak reporting via crtdbg"                  OFF)
-endif()
-
-if(WIN32)
-	# By default, libgit2 is built with WinHTTP.  To use the built-in
-	# HTTP transport, invoke CMake with the "-DUSE_WINHTTP=OFF" argument.
-	option(USE_WINHTTP         "Use Win32 WinHTTP routines"                         ON)
 endif()
 
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)

@@ -32,8 +32,6 @@ static int index_apply_to_wd_diff(git_index *index, int action, const git_strarr
 				  unsigned int flags,
 				  git_index_matched_path_cb cb, void *payload);
 
-#define minimal_entry_size (offsetof(struct entry_short, path))
-
 static const size_t INDEX_HEADER_SIZE = 12;
 
 static const unsigned int INDEX_VERSION_NUMBER_DEFAULT = 2;
@@ -65,7 +63,7 @@ struct entry_time {
 	uint32_t nanoseconds;
 };
 
-struct entry_short {
+struct entry_common {
 	struct entry_time ctime;
 	struct entry_time mtime;
 	uint32_t dev;
@@ -74,25 +72,35 @@ struct entry_short {
 	uint32_t uid;
 	uint32_t gid;
 	uint32_t file_size;
-	unsigned char oid[GIT_OID_SHA1_SIZE];
-	uint16_t flags;
-	char path[1]; /* arbitrary length */
 };
 
-struct entry_long {
-	struct entry_time ctime;
-	struct entry_time mtime;
-	uint32_t dev;
-	uint32_t ino;
-	uint32_t mode;
-	uint32_t uid;
-	uint32_t gid;
-	uint32_t file_size;
-	unsigned char oid[GIT_OID_SHA1_SIZE];
-	uint16_t flags;
-	uint16_t flags_extended;
-	char path[1]; /* arbitrary length */
-};
+#define entry_short(oid_size)                        \
+	struct {                                     \
+		struct entry_common common;          \
+		unsigned char oid[oid_size];         \
+		uint16_t flags;                      \
+		char path[1]; /* arbitrary length */ \
+	}
+
+#define entry_long(oid_size)                         \
+	struct {                                     \
+		struct entry_common common;          \
+		unsigned char oid[oid_size];         \
+		uint16_t flags;                      \
+		uint16_t flags_extended;             \
+		char path[1]; /* arbitrary length */ \
+	}
+
+typedef entry_short(GIT_OID_SHA1_SIZE) index_entry_short_sha1;
+typedef entry_long(GIT_OID_SHA1_SIZE) index_entry_long_sha1;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+typedef entry_short(GIT_OID_SHA256_SIZE) index_entry_short_sha256;
+typedef entry_long(GIT_OID_SHA256_SIZE) index_entry_long_sha256;
+#endif
+
+#undef entry_short
+#undef entry_long
 
 struct entry_srch_key {
 	const char *path;
@@ -115,12 +123,12 @@ struct reuc_entry_internal {
 bool git_index__enforce_unsaved_safety = false;
 
 /* local declarations */
-static int read_extension(size_t *read_len, git_index *index, const char *buffer, size_t buffer_size);
+static int read_extension(size_t *read_len, git_index *index, size_t checksum_size, const char *buffer, size_t buffer_size);
 static int read_header(struct index_header *dest, const void *buffer);
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size);
 static bool is_index_extended(git_index *index);
-static int write_index(unsigned char checksum[GIT_HASH_SHA1_SIZE], size_t *checksum_size, git_index *index, git_filebuf *file);
+static int write_index(unsigned char checksum[GIT_HASH_MAX_SIZE], size_t *checksum_size, git_index *index, git_filebuf *file);
 
 static void index_entry_free(git_index_entry *entry);
 static void index_entry_reuc_free(git_index_reuc_entry *reuc);
@@ -401,7 +409,10 @@ void git_index__set_ignore_case(git_index *index, bool ignore_case)
 	git_vector_sort(&index->reuc);
 }
 
-int git_index_open(git_index **index_out, const char *index_path)
+int git_index__open(
+	git_index **index_out,
+	const char *index_path,
+	git_oid_t oid_type)
 {
 	git_index *index;
 	int error = -1;
@@ -410,6 +421,8 @@ int git_index_open(git_index **index_out, const char *index_path)
 
 	index = git__calloc(1, sizeof(git_index));
 	GIT_ERROR_CHECK_ALLOC(index);
+
+	index->oid_type = oid_type;
 
 	if (git_pool_init(&index->tree_pool, 1) < 0)
 		goto fail;
@@ -451,10 +464,34 @@ fail:
 	return error;
 }
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+int git_index_open(git_index **index_out, const char *index_path, git_oid_t oid_type)
+{
+	return git_index__open(index_out, index_path, oid_type);
+}
+#else
+int git_index_open(git_index **index_out, const char *index_path)
+{
+	return git_index__open(index_out, index_path, GIT_OID_SHA1);
+}
+#endif
+
+int git_index__new(git_index **out, git_oid_t oid_type)
+{
+	return git_index__open(out, NULL, oid_type);
+}
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+int git_index_new(git_index **out, git_oid_t oid_type)
+{
+	return git_index__new(out, oid_type);
+}
+#else
 int git_index_new(git_index **out)
 {
-	return git_index_open(out, NULL);
+	return git_index__new(out, GIT_OID_SHA1);
 }
+#endif
 
 static void index_free(git_index *index)
 {
@@ -620,8 +657,8 @@ static int compare_checksum(git_index *index)
 {
 	int fd;
 	ssize_t bytes_read;
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
-	size_t checksum_size = GIT_HASH_SHA1_SIZE;
+	unsigned char checksum[GIT_HASH_MAX_SIZE];
+	size_t checksum_size = git_oid_size(index->oid_type);
 
 	if ((fd = p_open(index->index_file_path, O_RDONLY)) < 0)
 		return fd;
@@ -2306,6 +2343,7 @@ static int index_error_invalid(const char *message)
 static int read_reuc(git_index *index, const char *buffer, size_t size)
 {
 	const char *endptr;
+	size_t oid_size = git_oid_size(index->oid_type);
 	size_t len;
 	int i;
 
@@ -2354,16 +2392,16 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 		for (i = 0; i < 3; i++) {
 			if (!lost->mode[i])
 				continue;
-			if (size < GIT_OID_SHA1_SIZE) {
+			if (size < oid_size) {
 				index_entry_reuc_free(lost);
 				return index_error_invalid("reading reuc entry oid");
 			}
 
-			if (git_oid__fromraw(&lost->oid[i], (const unsigned char *) buffer, GIT_OID_SHA1) < 0)
+			if (git_oid__fromraw(&lost->oid[i], (const unsigned char *) buffer, index->oid_type) < 0)
 				return -1;
 
-			size -= GIT_OID_SHA1_SIZE;
-			buffer += GIT_OID_SHA1_SIZE;
+			size -= oid_size;
+			buffer += oid_size;
 		}
 
 		/* entry was read successfully - insert into reuc vector */
@@ -2433,73 +2471,157 @@ out_err:
 	return 0;
 }
 
-static size_t index_entry_size(size_t path_len, size_t varint_len, uint32_t flags)
+GIT_INLINE(size_t) index_entry_path_offset(
+	git_oid_t oid_type,
+	uint32_t flags)
 {
+	if (oid_type == GIT_OID_SHA1)
+		return (flags & GIT_INDEX_ENTRY_EXTENDED) ?
+			offsetof(index_entry_long_sha1, path) :
+			offsetof(index_entry_short_sha1, path);
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	else if (oid_type == GIT_OID_SHA256)
+		return (flags & GIT_INDEX_ENTRY_EXTENDED) ?
+			offsetof(index_entry_long_sha256, path) :
+			offsetof(index_entry_short_sha256, path);
+#endif
+
+	git_error_set(GIT_ERROR_INTERNAL, "invalid oid type");
+	return 0;
+}
+
+GIT_INLINE(size_t) index_entry_flags_offset(git_oid_t oid_type)
+{
+	if (oid_type == GIT_OID_SHA1)
+		return offsetof(index_entry_long_sha1, flags_extended);
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	else if (oid_type == GIT_OID_SHA256)
+		return offsetof(index_entry_long_sha256, flags_extended);
+#endif
+
+	git_error_set(GIT_ERROR_INTERNAL, "invalid oid type");
+	return 0;
+}
+
+static size_t index_entry_size(
+	size_t path_len,
+	size_t varint_len,
+	git_oid_t oid_type,
+	uint32_t flags)
+{
+	size_t offset, size;
+
+	if (!(offset = index_entry_path_offset(oid_type, flags)))
+		return 0;
+
 	if (varint_len) {
-		if (flags & GIT_INDEX_ENTRY_EXTENDED)
-			return offsetof(struct entry_long, path) + path_len + 1 + varint_len;
-		else
-			return offsetof(struct entry_short, path) + path_len + 1 + varint_len;
+		if (GIT_ADD_SIZET_OVERFLOW(&size, offset, path_len) ||
+		    GIT_ADD_SIZET_OVERFLOW(&size, size, 1) ||
+		    GIT_ADD_SIZET_OVERFLOW(&size, size, varint_len))
+			return 0;
 	} else {
-#define entry_size(type,len) ((offsetof(type, path) + (len) + 8) & ~7)
-		if (flags & GIT_INDEX_ENTRY_EXTENDED)
-			return entry_size(struct entry_long, path_len);
-		else
-			return entry_size(struct entry_short, path_len);
-#undef entry_size
+		if (GIT_ADD_SIZET_OVERFLOW(&size, offset, path_len) ||
+		    GIT_ADD_SIZET_OVERFLOW(&size, size, 8))
+			return 0;
+
+		size &= ~7;
 	}
+
+	return size;
 }
 
 static int read_entry(
 	git_index_entry **out,
 	size_t *out_size,
 	git_index *index,
+	size_t checksum_size,
 	const void *buffer,
 	size_t buffer_size,
 	const char *last)
 {
-	size_t path_length, entry_size;
+	size_t path_length, path_offset, entry_size;
 	const char *path_ptr;
-	struct entry_short source;
+	struct entry_common *source_common;
+	index_entry_short_sha1 source_sha1;
+#ifdef GIT_EXPERIMENTAL_SHA256
+	index_entry_short_sha256 source_sha256;
+#endif
 	git_index_entry entry = {{0}};
 	bool compressed = index->version >= INDEX_VERSION_NUMBER_COMP;
 	char *tmp_path = NULL;
-	size_t checksum_size = GIT_HASH_SHA1_SIZE;
+
+	size_t minimal_entry_size = index_entry_path_offset(index->oid_type, 0);
 
 	if (checksum_size + minimal_entry_size > buffer_size)
 		return -1;
 
 	/* buffer is not guaranteed to be aligned */
-	memcpy(&source, buffer, sizeof(struct entry_short));
+	switch (index->oid_type) {
+	case GIT_OID_SHA1:
+		source_common = &source_sha1.common;
+		memcpy(&source_sha1, buffer, sizeof(source_sha1));
+		break;
+#ifdef GIT_EXPERIMENTAL_SHA256
+	case GIT_OID_SHA256:
+		source_common = &source_sha256.common;
+		memcpy(&source_sha256, buffer, sizeof(source_sha256));
+		break;
+#endif
+	default:
+		GIT_ASSERT(!"invalid oid type");
+	}
 
-	entry.ctime.seconds = (git_time_t)ntohl(source.ctime.seconds);
-	entry.ctime.nanoseconds = ntohl(source.ctime.nanoseconds);
-	entry.mtime.seconds = (git_time_t)ntohl(source.mtime.seconds);
-	entry.mtime.nanoseconds = ntohl(source.mtime.nanoseconds);
-	entry.dev = ntohl(source.dev);
-	entry.ino = ntohl(source.ino);
-	entry.mode = ntohl(source.mode);
-	entry.uid = ntohl(source.uid);
-	entry.gid = ntohl(source.gid);
-	entry.file_size = ntohl(source.file_size);
-	entry.flags = ntohs(source.flags);
+	entry.ctime.seconds = (git_time_t)ntohl(source_common->ctime.seconds);
+	entry.ctime.nanoseconds = ntohl(source_common->ctime.nanoseconds);
+	entry.mtime.seconds = (git_time_t)ntohl(source_common->mtime.seconds);
+	entry.mtime.nanoseconds = ntohl(source_common->mtime.nanoseconds);
+	entry.dev = ntohl(source_common->dev);
+	entry.ino = ntohl(source_common->ino);
+	entry.mode = ntohl(source_common->mode);
+	entry.uid = ntohl(source_common->uid);
+	entry.gid = ntohl(source_common->gid);
+	entry.file_size = ntohl(source_common->file_size);
 
-	if (git_oid__fromraw(&entry.id, source.oid, GIT_OID_SHA1) < 0)
+	switch (index->oid_type) {
+	case GIT_OID_SHA1:
+		if (git_oid__fromraw(&entry.id, source_sha1.oid,
+		                     GIT_OID_SHA1) < 0)
+			return -1;
+		entry.flags = ntohs(source_sha1.flags);
+		break;
+#ifdef GIT_EXPERIMENTAL_SHA256
+	case GIT_OID_SHA256:
+		if (git_oid__fromraw(&entry.id, source_sha256.oid,
+		                     GIT_OID_SHA256) < 0)
+			return -1;
+		entry.flags = ntohs(source_sha256.flags);
+		break;
+#endif
+	default:
+		GIT_ASSERT(!"invalid oid type");
+	}
+
+	if (!(path_offset = index_entry_path_offset(index->oid_type, entry.flags)))
 		return -1;
+
 
 	if (entry.flags & GIT_INDEX_ENTRY_EXTENDED) {
 		uint16_t flags_raw;
 		size_t flags_offset;
 
-		flags_offset = offsetof(struct entry_long, flags_extended);
-		memcpy(&flags_raw, (const char *) buffer + flags_offset,
-			sizeof(flags_raw));
+		if (!(flags_offset = index_entry_flags_offset(index->oid_type)))
+			return -1;
+
+		memcpy(&flags_raw, (const char *)buffer + flags_offset, sizeof(flags_raw));
 		flags_raw = ntohs(flags_raw);
 
 		memcpy(&entry.flags_extended, &flags_raw, sizeof(flags_raw));
-		path_ptr = (const char *) buffer + offsetof(struct entry_long, path);
-	} else
-		path_ptr = (const char *) buffer + offsetof(struct entry_short, path);
+		path_ptr = (const char *)buffer + path_offset;
+	} else {
+		path_ptr = (const char *)buffer + path_offset;
+	}
 
 	if (!compressed) {
 		path_length = entry.flags & GIT_INDEX_ENTRY_NAMEMASK;
@@ -2511,12 +2633,12 @@ static int read_entry(
 
 			path_end = memchr(path_ptr, '\0', buffer_size);
 			if (path_end == NULL)
-				return -1;
+				return index_error_invalid("invalid path name");
 
 			path_length = path_end - path_ptr;
 		}
 
-		entry_size = index_entry_size(path_length, 0, entry.flags);
+		entry_size = index_entry_size(path_length, 0, index->oid_type, entry.flags);
 		entry.path = (char *)path_ptr;
 	} else {
 		size_t varint_len, last_len, prefix_len, suffix_len, path_len;
@@ -2542,15 +2664,18 @@ static int read_entry(
 
 		memcpy(tmp_path, last, prefix_len);
 		memcpy(tmp_path + prefix_len, path_ptr + varint_len, suffix_len + 1);
-		entry_size = index_entry_size(suffix_len, varint_len, entry.flags);
+
+		entry_size = index_entry_size(suffix_len, varint_len, index->oid_type, entry.flags);
 		entry.path = tmp_path;
 	}
 
 	if (entry_size == 0)
 		return -1;
 
-	if (checksum_size + entry_size > buffer_size)
+	if (checksum_size + entry_size > buffer_size) {
+		git_error_set(GIT_ERROR_INTERNAL, "invalid index checksum");
 		return -1;
+	}
 
 	if (index_entry_dup(out, index, &entry) < 0) {
 		git__free(tmp_path);
@@ -2579,11 +2704,10 @@ static int read_header(struct index_header *dest, const void *buffer)
 	return 0;
 }
 
-static int read_extension(size_t *read_len, git_index *index, const char *buffer, size_t buffer_size)
+static int read_extension(size_t *read_len, git_index *index, size_t checksum_size, const char *buffer, size_t buffer_size)
 {
 	struct index_extension dest;
 	size_t total_size;
-	size_t checksum_size = GIT_HASH_SHA1_SIZE;
 
 	/* buffer is not guaranteed to be aligned */
 	memcpy(&dest, buffer, sizeof(struct index_extension));
@@ -2602,7 +2726,7 @@ static int read_extension(size_t *read_len, git_index *index, const char *buffer
 	if (dest.signature[0] >= 'A' && dest.signature[0] <= 'Z') {
 		/* tree cache */
 		if (memcmp(dest.signature, INDEX_EXT_TREECACHE_SIG, 4) == 0) {
-			if (git_tree_cache_read(&index->tree, buffer + 8, dest.extension_size, &index->tree_pool) < 0)
+			if (git_tree_cache_read(&index->tree, buffer + 8, dest.extension_size, index->oid_type, &index->tree_pool) < 0)
 				return -1;
 		} else if (memcmp(dest.signature, INDEX_EXT_UNMERGED_SIG, 4) == 0) {
 			if (read_reuc(index, buffer + 8, dest.extension_size) < 0)
@@ -2630,8 +2754,8 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	int error = 0;
 	unsigned int i;
 	struct index_header header = { 0 };
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
-	size_t checksum_size = GIT_HASH_SHA1_SIZE;
+	unsigned char checksum[GIT_HASH_MAX_SIZE];
+	size_t checksum_size = git_hash_size(git_oid_algorithm(index->oid_type));
 	const char *last = NULL;
 	const char *empty = "";
 
@@ -2646,9 +2770,12 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	if (buffer_size < INDEX_HEADER_SIZE + checksum_size)
 		return index_error_invalid("insufficient buffer space");
 
-	/* Precalculate the SHA1 of the files's contents -- we'll match it to
-	 * the provided SHA1 in the footer */
-	git_hash_buf(checksum, buffer, buffer_size - checksum_size, GIT_HASH_ALGORITHM_SHA1);
+	/*
+	 * Precalculate the hash of the files's contents -- we'll match
+	 * it to the provided checksum in the footer.
+	 */
+	git_hash_buf(checksum, buffer, buffer_size - checksum_size,
+		git_oid_algorithm(index->oid_type));
 
 	/* Parse header */
 	if ((error = read_header(&header, buffer)) < 0)
@@ -2670,7 +2797,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 		git_index_entry *entry = NULL;
 		size_t entry_size;
 
-		if ((error = read_entry(&entry, &entry_size, index, buffer, buffer_size, last)) < 0) {
+		if ((error = read_entry(&entry, &entry_size, index, checksum_size, buffer, buffer_size, last)) < 0) {
 			error = index_error_invalid("invalid entry");
 			goto done;
 		}
@@ -2701,7 +2828,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	while (buffer_size > checksum_size) {
 		size_t extension_size;
 
-		if ((error = read_extension(&extension_size, index, buffer, buffer_size)) < 0) {
+		if ((error = read_extension(&extension_size, index, checksum_size, buffer, buffer_size)) < 0) {
 			goto done;
 		}
 
@@ -2714,7 +2841,10 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 		goto done;
 	}
 
-	/* 160-bit SHA-1 over the content of the index file before this checksum. */
+	/*
+	 * SHA-1 or SHA-256 (depending on the repository's object format)
+	 * over the content of the index file before this checksum.
+	 */
 	if (memcmp(checksum, buffer, checksum_size) != 0) {
 		error = index_error_invalid(
 			"calculated checksum does not match expected");
@@ -2754,15 +2884,39 @@ static bool is_index_extended(git_index *index)
 	return (extended > 0);
 }
 
-static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const char *last)
+static int write_disk_entry(
+	git_index *index,
+	git_filebuf *file,
+	git_index_entry *entry,
+	const char *last)
 {
 	void *mem = NULL;
-	struct entry_short ondisk;
-	size_t path_len, disk_size;
+	struct entry_common *ondisk_common;
+	size_t path_len, path_offset, disk_size;
 	int varint_len = 0;
 	char *path;
 	const char *path_start = entry->path;
 	size_t same_len = 0;
+
+	index_entry_short_sha1 ondisk_sha1;
+	index_entry_long_sha1 ondisk_ext_sha1;
+#ifdef GIT_EXPERIMENTAL_SHA256
+	index_entry_short_sha256 ondisk_sha256;
+	index_entry_long_sha256 ondisk_ext_sha256;
+#endif
+
+	switch (index->oid_type) {
+	case GIT_OID_SHA1:
+		ondisk_common = &ondisk_sha1.common;
+		break;
+#ifdef GIT_EXPERIMENTAL_SHA256
+	case GIT_OID_SHA256:
+		ondisk_common = &ondisk_sha256.common;
+		break;
+#endif
+	default:
+		GIT_ASSERT(!"invalid oid type");
+	}
 
 	path_len = ((struct entry_internal *)entry)->pathlen;
 
@@ -2780,9 +2934,9 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 		varint_len = git_encode_varint(NULL, 0, strlen(last) - same_len);
 	}
 
-	disk_size = index_entry_size(path_len, varint_len, entry->flags);
+	disk_size = index_entry_size(path_len, varint_len, index->oid_type, entry->flags);
 
-	if (git_filebuf_reserve(file, &mem, disk_size) < 0)
+	if (!disk_size || git_filebuf_reserve(file, &mem, disk_size) < 0)
 		return -1;
 
 	memset(mem, 0x0, disk_size);
@@ -2797,34 +2951,76 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 	 *
 	 * In 2038 I will be either too dead or too rich to care about this
 	 */
-	ondisk.ctime.seconds = htonl((uint32_t)entry->ctime.seconds);
-	ondisk.mtime.seconds = htonl((uint32_t)entry->mtime.seconds);
-	ondisk.ctime.nanoseconds = htonl(entry->ctime.nanoseconds);
-	ondisk.mtime.nanoseconds = htonl(entry->mtime.nanoseconds);
-	ondisk.dev = htonl(entry->dev);
-	ondisk.ino = htonl(entry->ino);
-	ondisk.mode = htonl(entry->mode);
-	ondisk.uid = htonl(entry->uid);
-	ondisk.gid = htonl(entry->gid);
-	ondisk.file_size = htonl((uint32_t)entry->file_size);
-	git_oid_raw_cpy(ondisk.oid, entry->id.id, GIT_OID_SHA1_SIZE);
-	ondisk.flags = htons(entry->flags);
+	ondisk_common->ctime.seconds = htonl((uint32_t)entry->ctime.seconds);
+	ondisk_common->mtime.seconds = htonl((uint32_t)entry->mtime.seconds);
+	ondisk_common->ctime.nanoseconds = htonl(entry->ctime.nanoseconds);
+	ondisk_common->mtime.nanoseconds = htonl(entry->mtime.nanoseconds);
+	ondisk_common->dev = htonl(entry->dev);
+	ondisk_common->ino = htonl(entry->ino);
+	ondisk_common->mode = htonl(entry->mode);
+	ondisk_common->uid = htonl(entry->uid);
+	ondisk_common->gid = htonl(entry->gid);
+	ondisk_common->file_size = htonl((uint32_t)entry->file_size);
+
+	switch (index->oid_type) {
+	case GIT_OID_SHA1:
+		git_oid_raw_cpy(ondisk_sha1.oid, entry->id.id, GIT_OID_SHA1_SIZE);
+		ondisk_sha1.flags = htons(entry->flags);
+		break;
+#ifdef GIT_EXPERIMENTAL_SHA256
+	case GIT_OID_SHA256:
+		git_oid_raw_cpy(ondisk_sha256.oid, entry->id.id, GIT_OID_SHA256_SIZE);
+		ondisk_sha256.flags = htons(entry->flags);
+		break;
+#endif
+	default:
+		GIT_ASSERT(!"invalid oid type");
+	}
+
+	path_offset = index_entry_path_offset(index->oid_type, entry->flags);
 
 	if (entry->flags & GIT_INDEX_ENTRY_EXTENDED) {
-		const size_t path_offset = offsetof(struct entry_long, path);
-		struct entry_long ondisk_ext;
-		memcpy(&ondisk_ext, &ondisk, sizeof(struct entry_short));
-		ondisk_ext.flags_extended = htons(entry->flags_extended &
+		struct entry_common *ondisk_ext;
+		uint16_t flags_extended = htons(entry->flags_extended &
 			GIT_INDEX_ENTRY_EXTENDED_FLAGS);
-		memcpy(mem, &ondisk_ext, path_offset);
-		path = (char *)mem + path_offset;
-		disk_size -= path_offset;
+
+		switch (index->oid_type) {
+		case GIT_OID_SHA1:
+			memcpy(&ondisk_ext_sha1, &ondisk_sha1,
+				sizeof(index_entry_short_sha1));
+			ondisk_ext_sha1.flags_extended = flags_extended;
+			ondisk_ext = &ondisk_ext_sha1.common;
+			break;
+#ifdef GIT_EXPERIMENTAL_SHA256
+		case GIT_OID_SHA256:
+			memcpy(&ondisk_ext_sha256, &ondisk_sha256,
+				sizeof(index_entry_short_sha256));
+			ondisk_ext_sha256.flags_extended = flags_extended;
+			ondisk_ext = &ondisk_ext_sha256.common;
+			break;
+#endif
+		default:
+			GIT_ASSERT(!"invalid oid type");
+		}
+
+		memcpy(mem, ondisk_ext, path_offset);
 	} else {
-		const size_t path_offset = offsetof(struct entry_short, path);
-		memcpy(mem, &ondisk, path_offset);
-		path = (char *)mem + path_offset;
-		disk_size -= path_offset;
+		switch (index->oid_type) {
+		case GIT_OID_SHA1:
+			memcpy(mem, &ondisk_sha1, path_offset);
+			break;
+#ifdef GIT_EXPERIMENTAL_SHA256
+		case GIT_OID_SHA256:
+			memcpy(mem, &ondisk_sha256, path_offset);
+			break;
+#endif
+		default:
+			GIT_ASSERT(!"invalid oid type");
+		}
 	}
+
+	path = (char *)mem + path_offset;
+	disk_size -= path_offset;
 
 	if (last) {
 		varint_len = git_encode_varint((unsigned char *) path,
@@ -2877,7 +3073,7 @@ static int write_entries(git_index *index, git_filebuf *file)
 		last = "";
 
 	git_vector_foreach(entries, i, entry) {
-		if ((error = write_disk_entry(file, entry, last)) < 0)
+		if ((error = write_disk_entry(index, file, entry, last)) < 0)
 			break;
 		if (index->version >= INDEX_VERSION_NUMBER_COMP)
 			last = entry->path;
@@ -2955,8 +3151,9 @@ done:
 	return error;
 }
 
-static int create_reuc_extension_data(git_str *reuc_buf, git_index_reuc_entry *reuc)
+static int create_reuc_extension_data(git_str *reuc_buf, git_index *index, git_index_reuc_entry *reuc)
 {
+	size_t oid_size = git_oid_size(index->oid_type);
 	int i;
 	int error = 0;
 
@@ -2970,7 +3167,7 @@ static int create_reuc_extension_data(git_str *reuc_buf, git_index_reuc_entry *r
 	}
 
 	for (i = 0; i < 3; i++) {
-		if (reuc->mode[i] && (error = git_str_put(reuc_buf, (char *)&reuc->oid[i].id, GIT_OID_SHA1_SIZE)) < 0)
+		if (reuc->mode[i] && (error = git_str_put(reuc_buf, (char *)&reuc->oid[i].id, oid_size)) < 0)
 			return error;
 	}
 
@@ -2987,7 +3184,7 @@ static int write_reuc_extension(git_index *index, git_filebuf *file)
 	int error = 0;
 
 	git_vector_foreach(out, i, reuc) {
-		if ((error = create_reuc_extension_data(&reuc_buf, reuc)) < 0)
+		if ((error = create_reuc_extension_data(&reuc_buf, index, reuc)) < 0)
 			goto done;
 	}
 
@@ -3036,7 +3233,7 @@ static void clear_uptodate(git_index *index)
 }
 
 static int write_index(
-	unsigned char checksum[GIT_HASH_SHA1_SIZE],
+	unsigned char checksum[GIT_HASH_MAX_SIZE],
 	size_t *checksum_size,
 	git_index *index,
 	git_filebuf *file)
@@ -3048,7 +3245,9 @@ static int write_index(
 	GIT_ASSERT_ARG(index);
 	GIT_ASSERT_ARG(file);
 
-	*checksum_size = GIT_HASH_SHA1_SIZE;
+	GIT_ASSERT(index->oid_type);
+
+	*checksum_size = git_hash_size(git_oid_algorithm(index->oid_type));
 
 	if (index->version <= INDEX_VERSION_NUMBER_EXT)  {
 		is_extended = is_index_extended(index);
@@ -3209,7 +3408,7 @@ cleanup:
 	if (error < 0)
 		return error;
 
-	error = git_tree_cache_read_tree(&index->tree, tree, &index->tree_pool);
+	error = git_tree_cache_read_tree(&index->tree, tree, index->oid_type, &index->tree_pool);
 
 	return error;
 }
@@ -3668,19 +3867,23 @@ int git_indexwriter_init(
 	git_indexwriter *writer,
 	git_index *index)
 {
-	int error;
+	int filebuf_hash, error;
 
 	GIT_REFCOUNT_INC(index);
 
 	writer->index = index;
 
+	filebuf_hash = git_filebuf_hash_flags(git_oid_algorithm(index->oid_type));
+	GIT_ASSERT(filebuf_hash);
+
 	if (!index->index_file_path)
 		return create_index_error(-1,
 			"failed to write index: The index is in-memory only");
 
-	if ((error = git_filebuf_open(
-		&writer->file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS, GIT_INDEX_FILE_MODE)) < 0) {
-
+	if ((error = git_filebuf_open(&writer->file,
+			index->index_file_path,
+			git_filebuf_hash_flags(filebuf_hash),
+			GIT_INDEX_FILE_MODE)) < 0) {
 		if (error == GIT_ELOCKED)
 			git_error_set(GIT_ERROR_INDEX, "the index is locked; this might be due to a concurrent or crashed process");
 
@@ -3712,7 +3915,7 @@ int git_indexwriter_init_for_operation(
 
 int git_indexwriter_commit(git_indexwriter *writer)
 {
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	unsigned char checksum[GIT_HASH_MAX_SIZE];
 	size_t checksum_size;
 	int error;
 

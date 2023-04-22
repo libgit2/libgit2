@@ -16,7 +16,7 @@ void test_graph_commitgraph__parse(void)
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 	cl_git_pass(git_str_joinpath(&commit_graph_path, git_repository_path(repo), "objects/info/commit-graph"));
-	cl_git_pass(git_commit_graph_file_open(&file, git_str_cstr(&commit_graph_path)));
+	cl_git_pass(git_commit_graph_file_open(&file, git_str_cstr(&commit_graph_path), GIT_OID_SHA1));
 	cl_assert_equal_i(git_commit_graph_file_needs_refresh(file, git_str_cstr(&commit_graph_path)), 0);
 
 	cl_git_pass(git_oid__fromstr(&id, "5001298e0c09ad9c34e4249bc5801c75e9754fa5", GIT_OID_SHA1));
@@ -60,7 +60,7 @@ void test_graph_commitgraph__parse_octopus_merge(void)
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("merge-recursive/.gitted")));
 	cl_git_pass(git_str_joinpath(&commit_graph_path, git_repository_path(repo), "objects/info/commit-graph"));
-	cl_git_pass(git_commit_graph_file_open(&file, git_str_cstr(&commit_graph_path)));
+	cl_git_pass(git_commit_graph_file_open(&file, git_str_cstr(&commit_graph_path), GIT_OID_SHA1));
 
 	cl_git_pass(git_oid__fromstr(&id, "d71c24b3b113fd1d1909998c5bfe33b86a65ee03", GIT_OID_SHA1));
 	cl_git_pass(git_commit_graph_entry_find(&e, file, &id, GIT_OID_SHA1_HEXSIZE));
@@ -103,7 +103,12 @@ void test_graph_commitgraph__writer(void)
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 
 	cl_git_pass(git_str_joinpath(&path, git_repository_path(repo), "objects/info"));
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_commit_graph_writer_new(&w, git_str_cstr(&path), GIT_OID_SHA1));
+#else
 	cl_git_pass(git_commit_graph_writer_new(&w, git_str_cstr(&path)));
+#endif
 
 	/* This is equivalent to `git commit-graph write --reachable`. */
 	cl_git_pass(git_revwalk_new(&walk, repo));
@@ -135,7 +140,11 @@ void test_graph_commitgraph__validate(void)
 	cl_git_pass(git_str_joinpath(&objects_dir, git_repository_path(repo), "objects"));
 
 	/* git_commit_graph_open() calls git_commit_graph_validate() */
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_commit_graph_open(&cgraph, git_str_cstr(&objects_dir), GIT_OID_SHA1));
+#else
 	cl_git_pass(git_commit_graph_open(&cgraph, git_str_cstr(&objects_dir)));
+#endif
 
 	git_commit_graph_free(cgraph);
 	git_str_dispose(&objects_dir);
@@ -158,7 +167,11 @@ void test_graph_commitgraph__validate_corrupt(void)
 	cl_must_pass(p_close(fd));
 
 	/* git_commit_graph_open() calls git_commit_graph_validate() */
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_fail(git_commit_graph_open(&cgraph, cl_git_sandbox_path(1, "testrepo.git", "objects", NULL), GIT_OID_SHA1));
+#else
 	cl_git_fail(git_commit_graph_open(&cgraph, cl_git_sandbox_path(1, "testrepo.git", "objects", NULL)));
+#endif
 
 	git_commit_graph_free(cgraph);
 	git_repository_free(repo);

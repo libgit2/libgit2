@@ -580,6 +580,17 @@ static int succeed_certificate_check(git_cert *cert, int valid, const char *host
 	return 0;
 }
 
+static int x509_succeed_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
+{
+	GIT_UNUSED(valid);
+	GIT_UNUSED(payload);
+
+	cl_assert_equal_s("github.com", host);
+	cl_assert_equal_i(GIT_CERT_X509, cert->cert_type);
+
+	return 0;
+}
+
 static int fail_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
 {
 	GIT_UNUSED(cert);
@@ -901,7 +912,7 @@ void test_online_clone__certificate_invalid(void)
 
 void test_online_clone__certificate_valid(void)
 {
-	g_options.fetch_opts.callbacks.certificate_check = succeed_certificate_check;
+	g_options.fetch_opts.callbacks.certificate_check = x509_succeed_certificate_check;
 
 	cl_git_pass(git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }
