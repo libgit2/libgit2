@@ -444,11 +444,15 @@ static int shallow_pkt(git_pkt **out, const char *line, size_t len)
 	GIT_ERROR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_SHALLOW;
-	line += 7;
-	len -= 7;
+
+	if (git__prefixncmp(line, len, "shallow "))
+		goto out_err;
+
+	line += 8;
+	len -= 8;
 
 	if (len >= GIT_OID_SHA1_HEXSIZE) {
-		git_oid__fromstr(&pkt->oid, line + 1, GIT_OID_SHA1);
+		git_oid__fromstr(&pkt->oid, line, GIT_OID_SHA1);
 		line += GIT_OID_SHA1_HEXSIZE + 1;
 		len -= GIT_OID_SHA1_HEXSIZE + 1;
 	}
@@ -456,6 +460,11 @@ static int shallow_pkt(git_pkt **out, const char *line, size_t len)
 	*out = (git_pkt *) pkt;
 
 	return 0;
+
+out_err:
+	git_error_set(GIT_ERROR_NET, "invalid packet line");
+	git__free(pkt);
+	return -1;
 }
 
 static int unshallow_pkt(git_pkt **out, const char *line, size_t len)
@@ -466,11 +475,15 @@ static int unshallow_pkt(git_pkt **out, const char *line, size_t len)
 	GIT_ERROR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_UNSHALLOW;
-	line += 9;
-	len -= 9;
+
+	if (git__prefixncmp(line, len, "unshallow "))
+		goto out_err;
+
+	line += 10;
+	len -= 10;
 
 	if (len >= GIT_OID_SHA1_HEXSIZE) {
-		git_oid__fromstr(&pkt->oid, line + 1, GIT_OID_SHA1);
+		git_oid__fromstr(&pkt->oid, line, GIT_OID_SHA1);
 		line += GIT_OID_SHA1_HEXSIZE + 1;
 		len -= GIT_OID_SHA1_HEXSIZE + 1;
 	}
@@ -478,6 +491,11 @@ static int unshallow_pkt(git_pkt **out, const char *line, size_t len)
 	*out = (git_pkt *) pkt;
 
 	return 0;
+
+out_err:
+	git_error_set(GIT_ERROR_NET, "invalid packet line");
+	git__free(pkt);
+	return -1;
 }
 
 static int parse_len(size_t *out, const char *line, size_t linelen)
