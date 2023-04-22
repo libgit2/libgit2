@@ -3670,13 +3670,14 @@ int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t ro
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_str path = GIT_STR_INIT;
+	char oid_str[GIT_OID_MAX_HEXSIZE + 1];
 	size_t idx;
 	git_oid *oid;
 	int filebuf_hash, error = 0;
 
 	GIT_ASSERT_ARG(repo);
 
-	filebuf_hash = git_filebuf_hash_flags(git_oid_algorithm(GIT_OID_SHA1));
+	filebuf_hash = git_filebuf_hash_flags(git_oid_algorithm(repo->oid_type));
 	GIT_ASSERT(filebuf_hash);
 
 	if ((error = git_str_joinpath(&path, repo->gitdir, "shallow")) < 0)
@@ -3686,7 +3687,8 @@ int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t ro
 		goto on_error;
 
 	git_array_foreach(roots, idx, oid) {
-		git_filebuf_write(&file, git_oid_tostr_s(oid), GIT_OID_SHA1_HEXSIZE);
+		git_oid_tostr(oid_str, sizeof(oid_str), oid);
+		git_filebuf_write(&file, oid_str, git_oid_hexsize(repo->oid_type));
 		git_filebuf_write(&file, "\n", 1);
 	}
 
