@@ -118,8 +118,8 @@ static int parse_refspec(git_push *push, push_spec **spec, const char *str)
 	s = git__calloc(1, sizeof(*s));
 	GIT_ERROR_CHECK_ALLOC(s);
 
-	git_oid_clear(&s->loid, GIT_OID_SHA1);
-	git_oid_clear(&s->roid, GIT_OID_SHA1);
+	git_oid_clear(&s->loid, push->repo->oid_type);
+	git_oid_clear(&s->roid, push->repo->oid_type);
 
 	if (git_refspec__parse(&s->refspec, str, false) < 0) {
 		git_error_set(GIT_ERROR_INVALID, "invalid refspec %s", str);

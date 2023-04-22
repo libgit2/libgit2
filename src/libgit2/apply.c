@@ -19,6 +19,7 @@
 #include "zstream.h"
 #include "reader.h"
 #include "index.h"
+#include "repository.h"
 #include "apply.h"
 
 typedef struct {
@@ -644,7 +645,7 @@ int git_apply_to_tree(
 	 * put the current tree into the postimage as-is - the diff will
 	 * replace any entries contained therein
 	 */
-	if ((error = git_index_new(&postimage)) < 0 ||
+	if ((error = git_index__new(&postimage, repo->oid_type)) < 0 ||
 		(error = git_index_read_tree(postimage, preimage)) < 0 ||
 		(error = git_reader_for_index(&post_reader, repo, postimage)) < 0)
 		goto done;
@@ -851,8 +852,8 @@ int git_apply(
 	 * having the full repo index, so we will limit our checkout
 	 * to only write these files that were affected by the diff.
 	 */
-	if ((error = git_index_new(&preimage)) < 0 ||
-	    (error = git_index_new(&postimage)) < 0 ||
+	if ((error = git_index__new(&preimage, repo->oid_type)) < 0 ||
+	    (error = git_index__new(&postimage, repo->oid_type)) < 0 ||
 	    (error = git_reader_for_index(&post_reader, repo, postimage)) < 0)
 		goto done;
 

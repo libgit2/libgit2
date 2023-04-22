@@ -81,7 +81,7 @@ void test_apply_tree__adds_file(void)
 
 	cl_git_pass(git_commit_tree(&a_tree, a_commit));
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_ADD_FILE, strlen(DIFF_ADD_FILE)));
 
 	cl_git_pass(git_apply_to_tree(&index, repo, a_tree, diff, NULL));

@@ -302,10 +302,15 @@ int git_filebuf_open_withsize(git_filebuf *file, const char *path, int flags, mo
 	}
 
 	/* If we are hashing on-write, allocate a new hash context */
-	if (flags & GIT_FILEBUF_HASH_CONTENTS) {
+	if (flags & GIT_FILEBUF_HASH_SHA1) {
 		file->compute_digest = 1;
 
 		if (git_hash_ctx_init(&file->digest, GIT_HASH_ALGORITHM_SHA1) < 0)
+			goto cleanup;
+	} else if (flags & GIT_FILEBUF_HASH_SHA256) {
+		file->compute_digest = 1;
+
+		if (git_hash_ctx_init(&file->digest, GIT_HASH_ALGORITHM_SHA256) < 0)
 			goto cleanup;
 	}
 

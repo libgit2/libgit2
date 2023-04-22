@@ -81,7 +81,8 @@ static void patch_generated_init_common(git_patch_generated *patch)
 
 static int patch_generated_normalize_options(
 	git_diff_options *out,
-	const git_diff_options *opts)
+	const git_diff_options *opts,
+	git_repository *repo)
 {
 	if (opts) {
 		GIT_ERROR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options");
@@ -89,6 +90,23 @@ static int patch_generated_normalize_options(
 	} else {
 		git_diff_options default_opts = GIT_DIFF_OPTIONS_INIT;
 		memcpy(out, &default_opts, sizeof(git_diff_options));
+	}
+
+	if (repo && opts && opts->oid_type && repo->oid_type != opts->oid_type) {
+		/*
+		 * This limitation feels unnecessary - we should consider
+		 * allowing users to generate diffs with a different object
+		 * ID format than the repository.
+		 */
+		git_error_set(GIT_ERROR_INVALID,
+			"specified object ID type does not match repository object ID type");
+		return -1;
+	} else if (repo) {
+		out->oid_type = repo->oid_type;
+	} else if (opts && opts->oid_type) {
+		out->oid_type = opts->oid_type;
+	} else {
+		out->oid_type = GIT_OID_DEFAULT;
 	}
 
 	out->old_prefix = opts && opts->old_prefix ?
@@ -118,7 +136,7 @@ static int patch_generated_init(
 	patch->delta_index = delta_index;
 
 	if ((error = patch_generated_normalize_options(
-			&patch->base.diff_opts, &diff->opts)) < 0 ||
+			&patch->base.diff_opts, &diff->opts, diff->repo)) < 0 ||
 		(error = git_diff_file_content__init_from_diff(
 			&patch->ofile, diff, patch->base.delta, true)) < 0 ||
 		(error = git_diff_file_content__init_from_diff(
@@ -449,7 +467,7 @@ static int patch_generated_from_sources(
 	git_xdiff_output *xo,
 	git_diff_file_content_src *oldsrc,
 	git_diff_file_content_src *newsrc,
-	const git_diff_options *opts)
+	const git_diff_options *given_opts)
 {
 	int error = 0;
 	git_repository *repo =
@@ -457,11 +475,12 @@ static int patch_generated_from_sources(
 		newsrc->blob ? git_blob_owner(newsrc->blob) : NULL;
 	git_diff_file *lfile = &pd->delta.old_file, *rfile = &pd->delta.new_file;
 	git_diff_file_content *ldata = &pd->patch.ofile, *rdata = &pd->patch.nfile;
+	git_diff_options *opts = &pd->patch.base.diff_opts;
 
-	if ((error = patch_generated_normalize_options(&pd->patch.base.diff_opts, opts)) < 0)
+	if ((error = patch_generated_normalize_options(opts, given_opts, repo)) < 0)
 		return error;
 
-	if (opts && (opts->flags & GIT_DIFF_REVERSE) != 0) {
+	if ((opts->flags & GIT_DIFF_REVERSE) != 0) {
 		void *tmp = lfile; lfile = rfile; rfile = tmp;
 		tmp = ldata; ldata = rdata; rdata = tmp;
 	}
