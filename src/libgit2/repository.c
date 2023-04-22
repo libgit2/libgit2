@@ -1613,14 +1613,16 @@ int git_repository_set_index(git_repository *repo, git_index *index)
 
 int git_repository_grafts__weakptr(git_grafts **out, git_repository *repo)
 {
-	assert(out && repo && repo->grafts);
+	GIT_ASSERT_ARG(out && repo);
+	GIT_ASSERT(repo->grafts);
 	*out = repo->grafts;
 	return 0;
 }
 
 int git_repository_shallow_grafts__weakptr(git_grafts **out, git_repository *repo)
 {
-	assert(out && repo && repo->shallow_grafts);
+	GIT_ASSERT_ARG(out && repo);
+	GIT_ASSERT(repo->shallow_grafts);
 	*out = repo->shallow_grafts;
 	return 0;
 }
@@ -3672,7 +3674,7 @@ int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t ro
 	git_oid *oid;
 	int filebuf_hash, error = 0;
 
-	assert(repo);
+	GIT_ASSERT_ARG(repo);
 
 	filebuf_hash = git_filebuf_hash_flags(git_oid_algorithm(GIT_OID_SHA1));
 	GIT_ASSERT(filebuf_hash);
@@ -3695,9 +3697,8 @@ int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t ro
 		goto on_error;
 	}
 
-	if (git_array_size(roots) == 0) {
+	if (git_array_size(roots) == 0)
 		remove(path.ptr);
-	}
 
 on_error:
 	git_str_dispose(&path);

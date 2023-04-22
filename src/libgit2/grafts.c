@@ -75,7 +75,8 @@ void git_grafts_clear(git_grafts *grafts)
 {
 	git_commit_graft *graft;
 
-	assert(grafts);
+	if (!grafts)
+		return;
 
 	git_oidmap_foreach_value(grafts->commits, graft, {
 		git__free(graft->parents.ptr);
@@ -90,7 +91,7 @@ int git_grafts_refresh(git_grafts *grafts)
 	git_str contents = GIT_STR_INIT;
 	int error, updated = 0;
 
-	assert(grafts);
+	GIT_ASSERT_ARG(grafts);
 
 	if (!grafts->path)
 		return 0;
@@ -168,7 +169,7 @@ int git_grafts_add(git_grafts *grafts, const git_oid *oid, git_array_oid_t paren
 	int error;
 	size_t i;
 
-	assert(grafts && oid);
+	GIT_ASSERT_ARG(grafts && oid);
 
 	graft = git__calloc(1, sizeof(*graft));
 	GIT_ERROR_CHECK_ALLOC(graft);
@@ -200,7 +201,7 @@ int git_grafts_remove(git_grafts *grafts, const git_oid *oid)
 	git_commit_graft *graft;
 	int error;
 
-	assert(grafts && oid);
+	GIT_ASSERT_ARG(grafts && oid);
 
 	if ((graft = git_oidmap_get(grafts->commits, oid)) == NULL)
 		return GIT_ENOTFOUND;
@@ -216,7 +217,7 @@ int git_grafts_remove(git_grafts *grafts, const git_oid *oid)
 
 int git_grafts_get(git_commit_graft **out, git_grafts *grafts, const git_oid *oid)
 {
-	assert(out && grafts && oid);
+	GIT_ASSERT_ARG(out && grafts && oid);
 	if ((*out = git_oidmap_get(grafts->commits, oid)) == NULL)
 		return GIT_ENOTFOUND;
 	return 0;
@@ -228,7 +229,7 @@ int git_grafts_get_oids(git_array_oid_t *out, git_grafts *grafts)
 	size_t i = 0;
 	int error;
 
-	assert(out && grafts);
+	GIT_ASSERT_ARG(out && grafts);
 
 	while ((error = git_oidmap_iterate(NULL, grafts->commits, &i, &oid)) == 0) {
 		git_oid *cpy = git_array_alloc(*out);
