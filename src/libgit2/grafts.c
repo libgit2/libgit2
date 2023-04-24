@@ -119,7 +119,7 @@ cleanup:
 	return error;
 }
 
-int git_grafts_parse(git_grafts *grafts, const char *content, size_t contentlen)
+int git_grafts_parse(git_grafts *grafts, const char *buf, size_t len)
 {
 	git_array_oid_t parents = GIT_ARRAY_INIT;
 	git_parse_ctx parser;
@@ -127,29 +127,26 @@ int git_grafts_parse(git_grafts *grafts, const char *content, size_t contentlen)
 
 	git_grafts_clear(grafts);
 
-	if ((error = git_parse_ctx_init(&parser, content, contentlen)) < 0)
+	if ((error = git_parse_ctx_init(&parser, buf, len)) < 0)
 		goto error;
 
 	for (; parser.remain_len; git_parse_advance_line(&parser)) {
-		const char *line_start = parser.line, *line_end = parser.line + parser.line_len;
 		git_oid graft_oid;
 
-		if ((error = git_oid__fromstrn(&graft_oid, line_start, GIT_OID_SHA1_HEXSIZE, GIT_OID_SHA1)) < 0) {
+		if ((error = git_parse_advance_oid(&graft_oid, &parser, GIT_OID_SHA1)) < 0) {
 			git_error_set(GIT_ERROR_GRAFTS, "invalid graft OID at line %" PRIuZ, parser.line_num);
 			goto error;
 		}
-		line_start += GIT_OID_SHA1_HEXSIZE;
 
-		while (line_start < line_end && *line_start == ' ') {
+		while (parser.line_len && git_parse_advance_expected(&parser, "\n", 1) != 0) {
 			git_oid *id = git_array_alloc(parents);
 			GIT_ERROR_CHECK_ALLOC(id);
 
-			if ((error = git_oid__fromstrn(id, ++line_start, GIT_OID_SHA1_HEXSIZE, GIT_OID_SHA1)) < 0) {
+			if ((error = git_parse_advance_expected(&parser, " ", 1)) < 0 ||
+			    (error = git_parse_advance_oid(id, &parser, GIT_OID_SHA1)) < 0) {
 				git_error_set(GIT_ERROR_GRAFTS, "invalid parent OID at line %" PRIuZ, parser.line_num);
 				goto error;
 			}
-
-			line_start += GIT_OID_SHA1_HEXSIZE;
 		}
 
 		if ((error = git_grafts_add(grafts, &graft_oid, parents)) < 0)
@@ -186,6 +183,7 @@ int git_grafts_add(git_grafts *grafts, const git_oid *oid, git_array_oid_t paren
 
 	if ((error = git_grafts_remove(grafts, &graft->oid)) < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
+
 	if ((error = git_oidmap_set(grafts->commits, &graft->oid, graft)) < 0)
 		goto cleanup;
 
