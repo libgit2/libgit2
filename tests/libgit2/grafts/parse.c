@@ -19,7 +19,7 @@ static git_grafts *grafts;
 
 void test_grafts_parse__initialize(void)
 {
-	cl_git_pass(git_grafts_new(&grafts));
+	cl_git_pass(git_grafts_new(&grafts, GIT_OID_SHA1));
 }
 
 void test_grafts_parse__cleanup(void)

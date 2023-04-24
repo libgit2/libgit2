@@ -16,14 +16,19 @@ struct git_grafts {
 	/* Map of `git_commit_graft`s */
 	git_oidmap *commits;
 
+	/* Type of object IDs */
+	git_oid_t oid_type;
+
 	/* File backing the graft. NULL if it's an in-memory graft */
 	char *path;
 	unsigned char path_checksum[GIT_HASH_SHA256_SIZE];
 };
 
-int git_grafts_new(git_grafts **out)
+int git_grafts_new(git_grafts **out, git_oid_t oid_type)
 {
 	git_grafts *grafts;
+
+	GIT_ASSERT_ARG(out && oid_type);
 
 	grafts = git__calloc(1, sizeof(*grafts));
 	GIT_ERROR_CHECK_ALLOC(grafts);
@@ -33,19 +38,26 @@ int git_grafts_new(git_grafts **out)
 		return -1;
 	}
 
+	grafts->oid_type = oid_type;
+
 	*out = grafts;
 	return 0;
 }
 
-int git_grafts_from_file(git_grafts **out, const char *path)
+int git_grafts_from_file(
+	git_grafts **out,
+	const char *path,
+	git_oid_t oid_type)
 {
 	git_grafts *grafts = NULL;
 	int error;
 
+	GIT_ASSERT_ARG(path && oid_type);
+
 	if (*out)
 		return git_grafts_refresh(*out);
 
-	if ((error = git_grafts_new(&grafts)) < 0)
+	if ((error = git_grafts_new(&grafts, oid_type)) < 0)
 		goto error;
 
 	grafts->path = git__strdup(path);
@@ -133,7 +145,7 @@ int git_grafts_parse(git_grafts *grafts, const char *buf, size_t len)
 	for (; parser.remain_len; git_parse_advance_line(&parser)) {
 		git_oid graft_oid;
 
-		if ((error = git_parse_advance_oid(&graft_oid, &parser, GIT_OID_SHA1)) < 0) {
+		if ((error = git_parse_advance_oid(&graft_oid, &parser, grafts->oid_type)) < 0) {
 			git_error_set(GIT_ERROR_GRAFTS, "invalid graft OID at line %" PRIuZ, parser.line_num);
 			goto error;
 		}
@@ -143,7 +155,7 @@ int git_grafts_parse(git_grafts *grafts, const char *buf, size_t len)
 			GIT_ERROR_CHECK_ALLOC(id);
 
 			if ((error = git_parse_advance_expected(&parser, " ", 1)) < 0 ||
-			    (error = git_parse_advance_oid(id, &parser, GIT_OID_SHA1)) < 0) {
+			    (error = git_parse_advance_oid(id, &parser, grafts->oid_type)) < 0) {
 				git_error_set(GIT_ERROR_GRAFTS, "invalid parent OID at line %" PRIuZ, parser.line_num);
 				goto error;
 			}
