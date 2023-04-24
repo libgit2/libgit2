@@ -18,7 +18,7 @@ struct git_grafts {
 
 	/* File backing the graft. NULL if it's an in-memory graft */
 	char *path;
-	git_oid path_checksum;
+	unsigned char path_checksum[GIT_HASH_SHA256_SIZE];
 };
 
 int git_grafts_new(git_grafts **out)
@@ -97,7 +97,8 @@ int git_grafts_refresh(git_grafts *grafts)
 		return 0;
 
 	if ((error = git_futils_readbuffer_updated(&contents, grafts->path,
-				(grafts->path_checksum).id, &updated)) < 0) {
+				grafts->path_checksum, &updated)) < 0) {
+
 		if (error == GIT_ENOTFOUND) {
 			git_grafts_clear(grafts);
 			error = 0;
