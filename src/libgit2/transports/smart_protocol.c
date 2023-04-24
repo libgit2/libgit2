@@ -256,12 +256,19 @@ int git_smart__detect_caps(
 	return 0;
 }
 
-static int recv_pkt(git_pkt **out_pkt, git_pkt_type *out_type, gitno_buffer *buf)
+static int recv_pkt(
+	git_pkt **out_pkt,
+	git_pkt_type *out_type,
+	transport_smart *t,
+	gitno_buffer *buf)
 {
 	const char *ptr = buf->data, *line_end = ptr;
 	git_pkt *pkt = NULL;
 	git_pkt_parse_data pkt_parse_data = { 0 };
 	int error = 0, ret;
+
+	pkt_parse_data.oid_type = t->owner->repo->oid_type;
+	pkt_parse_data.seen_capabilities = 1;
 
 	do {
 		if (buf->offset > 0)
@@ -303,7 +310,7 @@ static int store_common(transport_smart *t)
 	int error;
 
 	do {
-		if ((error = recv_pkt(&pkt, NULL, buf)) < 0)
+		if ((error = recv_pkt(&pkt, NULL, t, buf)) < 0)
 			return error;
 
 		if (pkt->type != GIT_PKT_ACK) {
@@ -320,7 +327,7 @@ static int store_common(transport_smart *t)
 	return 0;
 }
 
-static int wait_while_ack(gitno_buffer *buf)
+static int wait_while_ack(transport_smart *t, gitno_buffer *buf)
 {
 	int error;
 	git_pkt *pkt = NULL;
@@ -329,7 +336,7 @@ static int wait_while_ack(gitno_buffer *buf)
 	while (1) {
 		git_pkt_free(pkt);
 
-		if ((error = recv_pkt(&pkt, NULL, buf)) < 0)
+		if ((error = recv_pkt(&pkt, NULL, t, buf)) < 0)
 			return error;
 
 		if (pkt->type == GIT_PKT_NAK)
@@ -400,8 +407,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
 			goto on_error;
 
-		while ((error = recv_pkt((git_pkt **)&pkt, NULL, buf)) == 0) {
-
+		while ((error = recv_pkt((git_pkt **)&pkt, NULL, t, buf)) == 0) {
 			if (pkt->type == GIT_PKT_SHALLOW) {
 				git_shallowarray_add(wants->shallow_roots, &pkt->oid);
 			} else if (pkt->type == GIT_PKT_UNSHALLOW) {
@@ -463,7 +469,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 				if ((error = store_common(t)) < 0)
 					goto on_error;
 			} else {
-				if ((error = recv_pkt(NULL, &pkt_type, buf)) < 0)
+				if ((error = recv_pkt(NULL, &pkt_type, t, buf)) < 0)
 					goto on_error;
 
 				if (pkt_type == GIT_PKT_ACK) {
@@ -535,7 +541,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 
 	/* Now let's eat up whatever the server gives us */
 	if (!t->caps.multi_ack && !t->caps.multi_ack_detailed) {
-		if ((error = recv_pkt(NULL, &pkt_type, buf)) < 0)
+		if ((error = recv_pkt(NULL, &pkt_type, t, buf)) < 0)
 			return error;
 
 		if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
@@ -543,7 +549,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			return -1;
 		}
 	} else {
-		error = wait_while_ack(buf);
+		error = wait_while_ack(t, buf);
 	}
 
 	return error;
@@ -659,7 +665,7 @@ int git_smart__download_pack(
 			goto done;
 		}
 
-		if ((error = recv_pkt(&pkt, NULL, buf)) >= 0) {
+		if ((error = recv_pkt(&pkt, NULL, t, buf)) >= 0) {
 			/* Check cancellation after network call */
 			if (t->cancelled.val) {
 				git_error_clear();

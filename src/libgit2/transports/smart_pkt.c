@@ -53,6 +53,8 @@ static int ack_pkt(
 	git_pkt_ack *pkt;
 	size_t oid_hexsize = git_oid_hexsize(data->oid_type);
 
+	GIT_ASSERT(data && data->oid_type);
+
 	pkt = git__calloc(1, sizeof(git_pkt_ack));
 	GIT_ERROR_CHECK_ALLOC(pkt);
 	pkt->type = GIT_PKT_ACK;
@@ -450,6 +452,8 @@ static int shallow_pkt(
 	git_pkt_shallow *pkt;
 	size_t oid_hexsize = git_oid_hexsize(data->oid_type);
 
+	GIT_ASSERT(data && data->oid_type);
+
 	pkt = git__calloc(1, sizeof(git_pkt_shallow));
 	GIT_ERROR_CHECK_ALLOC(pkt);
 
@@ -486,6 +490,8 @@ static int unshallow_pkt(
 {
 	git_pkt_shallow *pkt;
 	size_t oid_hexsize = git_oid_hexsize(data->oid_type);
+
+	GIT_ASSERT(data && data->oid_type);
 
 	pkt = git__calloc(1, sizeof(git_pkt_shallow));
 	GIT_ERROR_CHECK_ALLOC(pkt);
