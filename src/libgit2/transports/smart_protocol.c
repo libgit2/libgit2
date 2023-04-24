@@ -408,26 +408,28 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			goto on_error;
 
 		while ((error = recv_pkt((git_pkt **)&pkt, NULL, t, buf)) == 0) {
+			bool complete = false;
+
 			if (pkt->type == GIT_PKT_SHALLOW) {
 				git_shallowarray_add(wants->shallow_roots, &pkt->oid);
 			} else if (pkt->type == GIT_PKT_UNSHALLOW) {
 				git_shallowarray_remove(wants->shallow_roots, &pkt->oid);
 			} else if (pkt->type == GIT_PKT_FLUSH) {
 				/* Server is done, stop processing shallow oids */
-				break;
+				complete = true;
 			} else {
-				git_error_set(GIT_ERROR_NET, "Unexpected pkt type");
-				goto on_error;
+				git_error_set(GIT_ERROR_NET, "unexpected packet type");
+				error = -1;
 			}
 
 			git_pkt_free((git_pkt *) pkt);
+
+			if (complete || error < 0)
+				break;
 		}
 
-		git_pkt_free((git_pkt *) pkt);
-
-		if (error < 0) {
+		if (error < 0)
 			goto on_error;
-		}
 	}
 	/*
 	 * Our support for ACK extensions is simply to parse them. On
