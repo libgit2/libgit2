@@ -44,7 +44,7 @@ int git_grafts_new(git_grafts **out, git_oid_t oid_type)
 	return 0;
 }
 
-int git_grafts_from_file(
+int git_grafts_open(
 	git_grafts **out,
 	const char *path,
 	git_oid_t oid_type)
@@ -52,10 +52,7 @@ int git_grafts_from_file(
 	git_grafts *grafts = NULL;
 	int error;
 
-	GIT_ASSERT_ARG(path && oid_type);
-
-	if (*out)
-		return git_grafts_refresh(*out);
+	GIT_ASSERT_ARG(out && path && oid_type);
 
 	if ((error = git_grafts_new(&grafts, oid_type)) < 0)
 		goto error;
@@ -67,10 +64,22 @@ int git_grafts_from_file(
 		goto error;
 
 	*out = grafts;
+
 error:
 	if (error < 0)
 		git_grafts_free(grafts);
+
 	return error;
+}
+
+int git_grafts_open_or_refresh(
+	git_grafts **out,
+	const char *path,
+	git_oid_t oid_type)
+{
+	GIT_ASSERT_ARG(out && path && oid_type);
+
+	return *out ? git_grafts_refresh(*out) : git_grafts_open(out, path, oid_type);
 }
 
 void git_grafts_free(git_grafts *grafts)

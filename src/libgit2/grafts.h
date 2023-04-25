@@ -20,7 +20,8 @@ typedef struct {
 typedef struct git_grafts git_grafts;
 
 int git_grafts_new(git_grafts **out, git_oid_t oid_type);
-int git_grafts_from_file(git_grafts **out, const char *path, git_oid_t oid_type);
+int git_grafts_open(git_grafts **out, const char *path, git_oid_t oid_type);
+int git_grafts_open_or_refresh(git_grafts **out, const char *path, git_oid_t oid_type);
 void git_grafts_free(git_grafts *grafts);
 void git_grafts_clear(git_grafts *grafts);
 
