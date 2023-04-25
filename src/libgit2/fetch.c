@@ -172,10 +172,12 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 
 	remote->need_pack = 0;
 
-	if (!opts)
-		remote->nego.depth = -1;
-	else
+	if (opts) {
+		GIT_ASSERT_ARG(opts->unshallow == 0 || opts->depth == 0);
+		GIT_ASSERT_ARG(opts->depth >= 0);
+
 		remote->nego.depth = opts->unshallow ? INT_MAX : opts->depth;
+	}
 
 	if (filter_wants(remote, opts) < 0)
 		return -1;
@@ -183,11 +185,6 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	/* Don't try to negotiate when we don't want anything */
 	if (!remote->need_pack)
 		return 0;
-
-	if (opts && opts->unshallow && opts->depth > 0) {
-		git_error_set(GIT_ERROR_INVALID, "options '--depth' and '--unshallow' cannot be used together");
-		return -1;
-	}
 
 	/*
 	 * Now we have everything set up so we can start tell the

@@ -744,9 +744,9 @@ typedef struct {
 	git_proxy_options proxy_opts;
 
 	/**
-	 * Depth of the fetch to perform. Depth <= 0 fetches the full history.
+	 * Depth of the fetch to perform, or 0 for full history.
 	 *
-	 * The default is -1.
+	 * The default is 0.
 	 */
 	int depth;
 
@@ -772,7 +772,7 @@ typedef struct {
 
 #define GIT_FETCH_OPTIONS_VERSION 1
 #define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT, GIT_FETCH_PRUNE_UNSPECIFIED, 1, \
-				 GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, GIT_PROXY_OPTIONS_INIT, -1, 0 }
+				 GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, GIT_PROXY_OPTIONS_INIT }
 
 /**
  * Initialize git_fetch_options structure
