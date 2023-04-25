@@ -18,7 +18,7 @@
 
 #define COMMAND_NAME "clone"
 
-static char *branch, *remote_path, *local_path;
+static char *branch, *remote_path, *local_path, *depth;
 static int show_help, quiet, checkout = 1, bare;
 static bool local_path_exists;
 static cli_progress progress = CLI_PROGRESS_INIT;
@@ -36,6 +36,8 @@ static const cli_opt_spec opts[] = {
 	  CLI_OPT_USAGE_DEFAULT,   NULL,         "don't create a working directory" },
 	{ CLI_OPT_TYPE_VALUE,     "branch",      'b', &branch,      0,
 	  CLI_OPT_USAGE_DEFAULT,  "name",        "branch to check out" },
+	{ CLI_OPT_TYPE_VALUE,     "depth",       0,   &depth,       0,
+	  CLI_OPT_USAGE_DEFAULT,  "depth",       "commit depth to check out " },
 	{ CLI_OPT_TYPE_LITERAL },
 	{ CLI_OPT_TYPE_ARG,       "repository",   0,  &remote_path, 0,
 	  CLI_OPT_USAGE_REQUIRED, "repository",  "repository path" },
@@ -69,6 +71,22 @@ static char *compute_local_path(const char *orig_path)
 		local_path = git__strdup(slash + 1);
 
 	return local_path;
+}
+
+static int compute_depth(const char *depth)
+{
+	int64_t i;
+	const char *endptr;
+
+	if (!depth)
+		return 0;
+
+	if (git__strntol64(&i, depth, strlen(depth), &endptr, 10) < 0 || i < 0 || i > INT_MAX || *endptr) {
+		fprintf(stderr, "fatal: depth '%s' is not valid.\n", depth);
+		exit(128);
+	}
+
+	return (int)i;
 }
 
 static bool validate_local_path(const char *path)
@@ -127,11 +145,9 @@ int cmd_clone(int argc, char **argv)
 		goto done;
 	}
 
-	if (bare)
-		clone_opts.bare = 1;
-
-	if (branch)
-		clone_opts.checkout_branch = branch;
+	clone_opts.bare = !!bare;
+	clone_opts.checkout_branch = branch;
+	clone_opts.fetch_opts.depth = compute_depth(depth);
 
 	if (!checkout)
 		clone_opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
