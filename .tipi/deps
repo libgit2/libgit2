@@ -3,7 +3,7 @@
   "packages": [ "libgit2" ],
   "targets": [ "libgit2::libgit2package" ],
   "nxxm/libssh2": {
-    "@": ":8d4d33bcd431b458ff5b7fbad5093deac6379621",
+    "@": ":81e3fb0f58a0cbbc57d7acfe5f53f8511583dd6f",
     "u": true,
     "packages": [ "Libssh2" ],
     "targets": [ "Libssh2::libssh2" ]
