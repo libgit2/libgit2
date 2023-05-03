@@ -18,7 +18,7 @@
 # endif
 # include <windows.h>
 
-# ifdef GIT_QSORT_S
+# ifdef GIT_QSORT_S_MSC
 #  include <search.h>
 # endif
 #endif
@@ -673,7 +673,7 @@ size_t git__unescape(char *str)
 	return (pos - str);
 }
 
-#if defined(GIT_QSORT_S) || defined(GIT_QSORT_R_BSD)
+#if defined(GIT_QSORT_S_MSC) || defined(GIT_QSORT_R_BSD)
 typedef struct {
 	git__sort_r_cmp cmp;
 	void *payload;
@@ -690,7 +690,8 @@ static int GIT_LIBGIT2_CALL git__qsort_r_glue_cmp(
 
 #if !defined(GIT_QSORT_R_BSD) && \
 	!defined(GIT_QSORT_R_GNU) && \
-	!defined(GIT_QSORT_S)
+	!defined(GIT_QSORT_S_C11) && \
+	!defined(GIT_QSORT_S_MSC)
 static void swap(uint8_t *a, uint8_t *b, size_t elsize)
 {
 	char tmp[256];
@@ -721,12 +722,14 @@ static void insertsort(
 void git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload)
 {
-#if defined(GIT_QSORT_R_BSD)
+#if defined(GIT_QSORT_R_GNU)
+	qsort_r(els, nel, elsize, cmp, payload);
+#elif defined(GIT_QSORT_S_C11)
+	qsort_s(els, nel, elsize, cmp, payload);
+#elif defined(GIT_QSORT_R_BSD)
 	git__qsort_r_glue glue = { cmp, payload };
 	qsort_r(els, nel, elsize, &glue, git__qsort_r_glue_cmp);
-#elif defined(GIT_QSORT_R_GNU)
-	qsort_r(els, nel, elsize, cmp, payload);
-#elif defined(GIT_QSORT_S)
+#elif defined(GIT_QSORT_S_MSC)
 	git__qsort_r_glue glue = { cmp, payload };
 	qsort_s(els, nel, elsize, git__qsort_r_glue_cmp, &glue);
 #else
