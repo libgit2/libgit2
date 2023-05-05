@@ -190,6 +190,11 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo);
 int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo);
 int git_repository_index__weakptr(git_index **out, git_repository *repo);
 
+int git_repository__wrap_odb(
+	git_repository **out,
+	git_odb *odb,
+	git_oid_t oid_type);
+
 /*
  * Configuration map cache
  *
