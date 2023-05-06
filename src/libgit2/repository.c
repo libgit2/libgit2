@@ -1152,6 +1152,8 @@ int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)
 	repo = repository_alloc();
 	GIT_ERROR_CHECK_ALLOC(repo);
 
+	repo->oid_type = GIT_OID_DEFAULT;
+
 	git_repository_set_odb(repo, odb);
 	*repo_out = repo;
 
