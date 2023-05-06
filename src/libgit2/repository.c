@@ -1145,20 +1145,38 @@ out:
 	return err;
 }
 
-int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)
+int git_repository__wrap_odb(
+	git_repository **out,
+	git_odb *odb,
+	git_oid_t oid_type)
 {
 	git_repository *repo;
 
 	repo = repository_alloc();
 	GIT_ERROR_CHECK_ALLOC(repo);
 
-	repo->oid_type = GIT_OID_DEFAULT;
+	repo->oid_type = oid_type;
 
 	git_repository_set_odb(repo, odb);
-	*repo_out = repo;
+	*out = repo;
 
 	return 0;
 }
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+int git_repository_wrap_odb(
+	git_repository **out,
+	git_odb *odb,
+	git_oid_t oid_type)
+{
+	return git_repository__wrap_odb(out, odb, oid_type);
+}
+#else
+int git_repository_wrap_odb(git_repository **out, git_odb *odb)
+{
+	return git_repository__wrap_odb(out, odb, GIT_OID_DEFAULT);
+}
+#endif
 
 int git_repository_discover(
 	git_buf *out,

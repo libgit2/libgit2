@@ -56,9 +56,19 @@ GIT_EXTERN(int) git_repository_open_from_worktree(git_repository **out, git_work
  *
  * @param out pointer to the repo
  * @param odb the object database to wrap
+ * @param oid_type the oid type of the object database
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_repository_wrap_odb(git_repository **out, git_odb *odb);
+#ifdef GIT_EXPERIMENTAL_SHA256
+GIT_EXTERN(int) git_repository_wrap_odb(
+	git_repository **out,
+	git_odb *odb,
+	git_oid_t oid_type);
+#else
+GIT_EXTERN(int) git_repository_wrap_odb(
+	git_repository **out,
+	git_odb *odb);
+#endif
 
 /**
  * Look for a git repository and copy its path in the given buffer.
@@ -536,7 +546,7 @@ GIT_EXTERN(const char *) git_repository_workdir(const git_repository *repo);
 
 /**
  * Get the path of the shared common directory for this repository.
- * 
+ *
  * If the repository is bare, it is the root directory for the repository.
  * If the repository is a worktree, it is the parent repo's gitdir.
  * Otherwise, it is the gitdir.
