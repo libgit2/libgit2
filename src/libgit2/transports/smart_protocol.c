@@ -353,7 +353,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	git_revwalk *walk = NULL;
 	int error = -1;
 	git_pkt_type pkt_type;
-	unsigned int i;
+	unsigned int i, retry;
 	git_oid oid;
 
 	if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
@@ -470,28 +470,47 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		error = GIT_EUSER;
 		goto on_error;
 	}
-	if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
-		goto on_error;
 
-	git_str_dispose(&data);
 	git_revwalk_free(walk);
+	walk = NULL;
 
-	/* Now let's eat up whatever the server gives us */
-	if (!t->caps.multi_ack && !t->caps.multi_ack_detailed) {
-		if ((error = recv_pkt(NULL, &pkt_type, buf)) < 0)
-			return error;
+	/*
+	 * Implement a retry phase for HTTP - if we're in a keep-alive
+	 * connection, the server may drop it, possibly because we took
+	 * a long time to do the negotiation.
+	 */
+	for (retry = 0; retry < 2; retry++) {
+		if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
+			goto on_error;
 
-		if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
-			git_error_set(GIT_ERROR_NET, "unexpected pkt type");
-			return -1;
+		/* Now let's eat up whatever the server gives us */
+		if (!t->caps.multi_ack && !t->caps.multi_ack_detailed) {
+			error = recv_pkt(NULL, &pkt_type, buf);
+
+			if (!error &&
+			    pkt_type != GIT_PKT_ACK &&
+			    pkt_type != GIT_PKT_NAK) {
+				git_error_set(GIT_ERROR_NET, "unexpected pkt type");
+				error = -1;
+				goto on_error;
+			}
+		} else {
+			error = wait_while_ack(buf);
 		}
-	} else {
-		error = wait_while_ack(buf);
+
+		if (error == GIT_RETRY)
+			continue;
+		else
+			break;
 	}
 
-	return error;
+	if (error == GIT_RETRY) {
+		git_error_set(GIT_ERROR_NET, "early EOF");
+		error = -1;
+	}
 
 on_error:
+	git_str_dispose(&data);
 	git_revwalk_free(walk);
 	git_str_dispose(&data);
 	return error;

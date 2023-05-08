@@ -422,8 +422,10 @@ static int http_stream_read(
 			transport->http_client, &request)) < 0 ||
 		    (error = git_http_client_read_response(
 			    &response, transport->http_client)) < 0 ||
-		    (error = handle_response(&complete, stream, &response, true)) < 0)
-			goto done;
+		    (error = handle_response(&complete, stream, &response, true)) < 0) {
+			if (error != GIT_RETRY)
+				goto done;
+		}
 
 		if (complete)
 			break;
@@ -494,8 +496,10 @@ static int send_probe(http_stream *stream)
 		    (error = git_http_client_send_body(client, probe, len)) < 0 ||
 		    (error = git_http_client_read_response(&response, client)) < 0 ||
 		    (error = git_http_client_skip_body(client)) < 0 ||
-		    (error = handle_response(&complete, stream, &response, true)) < 0)
-			goto done;
+		    (error = handle_response(&complete, stream, &response, true)) < 0) {
+			if (error != GIT_RETRY)
+				goto done;
+		}
 	}
 
 done:
@@ -559,8 +563,10 @@ static int http_stream_write(
 			 * deal with the response somehow.
 			 */
 			if ((error = git_http_client_read_response(&response, transport->http_client)) < 0 ||
-			    (error = handle_response(&complete, stream, &response, true)) < 0)
-			    goto done;
+			    (error = handle_response(&complete, stream, &response, true)) < 0) {
+				if (error != GIT_RETRY)
+					goto done;
+			}
 		} else {
 			stream->state = HTTP_STATE_SENDING_REQUEST;
 		}

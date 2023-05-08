@@ -33,6 +33,7 @@ static char *_remote_proxy_user = NULL;
 static char *_remote_proxy_pass = NULL;
 static char *_remote_proxy_selfsigned = NULL;
 static char *_remote_expectcontinue = NULL;
+static char *_remote_nokeepalive = NULL;
 static char *_remote_redirect_initial = NULL;
 static char *_remote_redirect_subsequent = NULL;
 
@@ -87,6 +88,7 @@ void test_online_clone__initialize(void)
 	_remote_proxy_pass = cl_getenv("GITTEST_REMOTE_PROXY_PASS");
 	_remote_proxy_selfsigned = cl_getenv("GITTEST_REMOTE_PROXY_SELFSIGNED");
 	_remote_expectcontinue = cl_getenv("GITTEST_REMOTE_EXPECTCONTINUE");
+	_remote_nokeepalive = cl_getenv("GITTEST_REMOTE_NOKEEPALIVE");
 	_remote_redirect_initial = cl_getenv("GITTEST_REMOTE_REDIRECT_INITIAL");
 	_remote_redirect_subsequent = cl_getenv("GITTEST_REMOTE_REDIRECT_SUBSEQUENT");
 
@@ -126,6 +128,7 @@ void test_online_clone__cleanup(void)
 	git__free(_remote_proxy_pass);
 	git__free(_remote_proxy_selfsigned);
 	git__free(_remote_expectcontinue);
+	git__free(_remote_nokeepalive);
 	git__free(_remote_redirect_initial);
 	git__free(_remote_redirect_subsequent);
 
@@ -1206,4 +1209,14 @@ void test_online_clone__sha256(void)
 
 	git_reference_free(head);
 #endif
+}
+
+void test_online_clone__closed_connection(void)
+{
+	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
+
+	if (!_remote_nokeepalive)
+		cl_skip();
+
+	cl_git_pass(git_clone(&g_repo, _remote_nokeepalive, "./nokeepalive", &options));
 }
