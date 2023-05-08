@@ -143,7 +143,7 @@ void test_online_shallow__unshallow(void)
 	cl_git_pass(git_clone(&repo, "https://github.com/libgit2/TestGitRepository", git_str_cstr(&path), &clone_opts));
 	cl_assert_equal_b(true, git_repository_is_shallow(repo));
 
-	fetch_opts.unshallow = 1;
+	fetch_opts.depth = GIT_FETCH_DEPTH_UNSHALLOW;
 	cl_git_pass(git_remote_lookup(&origin, repo, "origin"));
 
 	cl_git_pass(git_remote_fetch(origin, NULL, &fetch_opts, NULL));

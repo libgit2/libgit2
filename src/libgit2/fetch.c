@@ -174,10 +174,8 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	remote->need_pack = 0;
 
 	if (opts) {
-		GIT_ASSERT_ARG(opts->unshallow == 0 || opts->depth == 0);
 		GIT_ASSERT_ARG(opts->depth >= 0);
-
-		remote->nego.depth = opts->unshallow ? INT_MAX : opts->depth;
+		remote->nego.depth = opts->depth;
 	}
 
 	if (filter_wants(remote, opts) < 0)
