@@ -320,6 +320,16 @@ static int local_negotiate_fetch(
 	return 0;
 }
 
+static int local_shallow_roots(
+	git_oidarray *out,
+	git_transport *transport)
+{
+	GIT_UNUSED(out);
+	GIT_UNUSED(transport);
+
+	return 0;
+}
+
 static int local_push_update_remote_ref(
 	git_repository *remote_repo,
 	const char *lref,
@@ -745,6 +755,7 @@ int git_transport_local(git_transport **out, git_remote *owner, void *param)
 	t->parent.oid_type = local_oid_type;
 #endif
 	t->parent.negotiate_fetch = local_negotiate_fetch;
+	t->parent.shallow_roots = local_shallow_roots;
 	t->parent.download_pack = local_download_pack;
 	t->parent.push = local_push;
 	t->parent.close = local_close;

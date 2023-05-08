@@ -770,7 +770,7 @@ int git_pkt_buffer_wants(
 	size_t oid_hexsize, want_len, i = 0;
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-	oid_type = wants->count > 0 ? wants->refs[0]->oid.type : GIT_OID_SHA1;
+	oid_type = wants->refs_len > 0 ? wants->refs[0]->oid.type : GIT_OID_SHA1;
 #else
 	oid_type = GIT_OID_SHA1;
 #endif
@@ -781,7 +781,7 @@ int git_pkt_buffer_wants(
 	      oid_hexsize + 1 /* LF */;
 
 	if (caps->common) {
-		for (; i < wants->count; ++i) {
+		for (; i < wants->refs_len; ++i) {
 			head = wants->refs[i];
 			if (!head->local)
 				break;
@@ -793,7 +793,7 @@ int git_pkt_buffer_wants(
 		i++;
 	}
 
-	for (; i < wants->count; ++i) {
+	for (; i < wants->refs_len; ++i) {
 		head = wants->refs[i];
 
 		if (head->local)
@@ -810,12 +810,11 @@ int git_pkt_buffer_wants(
 	}
 
 	/* Tell the server about our shallow objects */
-	for (i = 0; i < git_shallowarray_count(wants->shallow_roots); i++) {
+	for (i = 0; i < wants->shallow_roots_len; i++) {
 		char oid[GIT_OID_MAX_HEXSIZE + 1];
 		git_str shallow_buf = GIT_STR_INIT;
 
-		git_oid_tostr(oid, GIT_OID_MAX_HEXSIZE + 1,
-			git_shallowarray_get(wants->shallow_roots, i));
+		git_oid_tostr(oid, GIT_OID_MAX_HEXSIZE + 1, &wants->shallow_roots[i]);
 		git_str_puts(&shallow_buf, "shallow ");
 		git_str_puts(&shallow_buf, oid);
 		git_str_putc(&shallow_buf, '\n');
@@ -835,7 +834,7 @@ int git_pkt_buffer_wants(
 		git_str_printf(buf,"%04x%s", (unsigned int)git_str_len(&deepen_buf) + 4, git_str_cstr(&deepen_buf));
 
 		git_str_dispose(&deepen_buf);
-		
+
 		if (git_str_oom(buf))
 			return -1;
 	}

@@ -3651,7 +3651,11 @@ int git_repository_state_cleanup(git_repository *repo)
 	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
 }
 
-int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo) {
+int git_repository__shallow_roots(
+	git_oid **out,
+	size_t *out_len,
+	git_repository *repo)
+{
 	int error = 0;
 
 	if (!repo->shallow_grafts && (error = load_grafts(repo)) < 0)
@@ -3660,19 +3664,18 @@ int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo) {
 	if ((error = git_grafts_refresh(repo->shallow_grafts)) < 0)
 		return error;
 
-	if ((error = git_grafts_get_oids(out, repo->shallow_grafts)) < 0)
+	if ((error = git_grafts_oids(out, out_len, repo->shallow_grafts)) < 0)
 		return error;
 
 	return 0;
 }
 
-int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t roots)
+int git_repository__shallow_roots_write(git_repository *repo, git_oidarray *roots)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_str path = GIT_STR_INIT;
 	char oid_str[GIT_OID_MAX_HEXSIZE + 1];
-	size_t idx;
-	git_oid *oid;
+	size_t i;
 	int filebuf_hash, error = 0;
 
 	GIT_ASSERT_ARG(repo);
@@ -3686,8 +3689,8 @@ int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t ro
 	if ((error = git_filebuf_open(&file, git_str_cstr(&path), filebuf_hash, 0666)) < 0)
 		goto on_error;
 
-	git_array_foreach(roots, idx, oid) {
-		git_oid_tostr(oid_str, sizeof(oid_str), oid);
+	for (i = 0; i < roots->count; i++) {
+		git_oid_tostr(oid_str, sizeof(oid_str), &roots->ids[i]);
 		git_filebuf_write(&file, oid_str, git_oid_hexsize(repo->oid_type));
 		git_filebuf_write(&file, "\n", 1);
 	}
@@ -3699,7 +3702,7 @@ int git_repository__shallow_roots_write(git_repository *repo, git_array_oid_t ro
 		goto on_error;
 	}
 
-	if (git_array_size(roots) == 0)
+	if (!roots->count)
 		remove(path.ptr);
 
 on_error:
@@ -3727,6 +3730,7 @@ int git_repository_is_shallow(git_repository *repo)
 
 	if (error < 0)
 		return error;
+
 	return st.st_size == 0 ? 0 : 1;
 }
 

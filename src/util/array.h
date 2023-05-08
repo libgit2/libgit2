@@ -33,6 +33,9 @@
 #define git_array_init_to_size(a, desired) \
 	do { (a).size = 0; (a).asize = desired; (a).ptr = git__calloc(desired, sizeof(*(a).ptr)); } while (0)
 
+#define git_array_dispose(a) \
+	do { git__free((a).ptr); } while (0)
+
 #define git_array_clear(a) \
 	do { git__free((a).ptr); git_array_init(a); } while (0)
 

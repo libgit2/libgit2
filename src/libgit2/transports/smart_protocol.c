@@ -364,7 +364,9 @@ static int cap_not_sup_err(const char *cap_name)
 }
 
 /* Disables server capabilities we're not interested in */
-static int setup_caps(transport_smart_caps *caps, const git_fetch_negotiation *wants)
+static int setup_caps(
+	transport_smart_caps *caps,
+	const git_fetch_negotiation *wants)
 {
 	if (wants->depth > 0) {
 		if (!caps->shallow)
@@ -376,7 +378,27 @@ static int setup_caps(transport_smart_caps *caps, const git_fetch_negotiation *w
 	return 0;
 }
 
-int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, const git_fetch_negotiation *wants)
+static int setup_shallow_roots(
+	git_array_oid_t *out,
+	const git_fetch_negotiation *wants)
+{
+	git_array_clear(*out);
+
+	if (wants->shallow_roots_len > 0) {
+		git_array_init_to_size(*out, wants->shallow_roots_len);
+		GIT_ERROR_CHECK_ALLOC(out->ptr);
+
+		memcpy(out->ptr, wants->shallow_roots,
+		       sizeof(git_oid) * wants->shallow_roots_len);
+	}
+
+	return 0;
+}
+
+int git_smart__negotiate_fetch(
+	git_transport *transport,
+	git_repository *repo,
+	const git_fetch_negotiation *wants)
 {
 	transport_smart *t = (transport_smart *)transport;
 	git_revwalk__push_options opts = GIT_REVWALK__PUSH_OPTIONS_INIT;
@@ -388,7 +410,8 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	unsigned int i;
 	git_oid oid;
 
-	if ((error = setup_caps(&t->caps, wants)) < 0)
+	if ((error = setup_caps(&t->caps, wants)) < 0 ||
+	    (error = setup_shallow_roots(&t->shallow_roots, wants)) < 0)
 		return error;
 
 	if ((error = git_pkt_buffer_wants(wants, &t->caps, &data)) < 0)
@@ -411,9 +434,9 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			bool complete = false;
 
 			if (pkt->type == GIT_PKT_SHALLOW) {
-				git_shallowarray_add(wants->shallow_roots, &pkt->oid);
+				error = git_oidarray__add(&t->shallow_roots, &pkt->oid);
 			} else if (pkt->type == GIT_PKT_UNSHALLOW) {
-				git_shallowarray_remove(wants->shallow_roots, &pkt->oid);
+				git_oidarray__remove(&t->shallow_roots, &pkt->oid);
 			} else if (pkt->type == GIT_PKT_FLUSH) {
 				/* Server is done, stop processing shallow oids */
 				complete = true;
@@ -431,6 +454,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		if (error < 0)
 			goto on_error;
 	}
+
 	/*
 	 * Our support for ACK extensions is simply to parse them. On
 	 * the first ACK we will accept that as enough common
@@ -531,10 +555,11 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		goto on_error;
 
 	if (t->cancelled.val) {
-		git_error_set(GIT_ERROR_NET, "The fetch was cancelled by the user");
+		git_error_set(GIT_ERROR_NET, "the fetch was cancelled");
 		error = GIT_EUSER;
 		goto on_error;
 	}
+
 	if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
 		goto on_error;
 
@@ -560,6 +585,25 @@ on_error:
 	git_revwalk_free(walk);
 	git_str_dispose(&data);
 	return error;
+}
+
+int git_smart__shallow_roots(git_oidarray *out, git_transport *transport)
+{
+	transport_smart *t = (transport_smart *)transport;
+	size_t len;
+
+	GIT_ERROR_CHECK_ALLOC_MULTIPLY(&len, t->shallow_roots.size, sizeof(git_oid));
+
+	out->count = t->shallow_roots.size;
+
+	if (len) {
+		out->ids = git__malloc(len);
+		memcpy(out->ids, t->shallow_roots.ptr, len);
+	} else {
+		out->ids = NULL;
+	}
+
+	return 0;
 }
 
 static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, gitno_buffer *buf, git_indexer_progress *stats)

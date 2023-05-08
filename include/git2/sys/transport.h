@@ -25,12 +25,11 @@
 
 GIT_BEGIN_DECL
 
-typedef struct git_shallowarray git_shallowarray;
-
 typedef struct {
 	const git_remote_head * const *refs;
-	size_t count;
-	git_shallowarray *shallow_roots;
+	size_t refs_len;
+	git_oid *shallow_roots;
+	size_t shallow_roots_len;
 	int depth;
 } git_fetch_negotiation;
 
@@ -106,6 +105,16 @@ struct git_transport {
 		git_transport *transport,
 		git_repository *repo,
 		const git_fetch_negotiation *fetch_data);
+
+	/**
+	 * Return the shallow roots of the remote.
+	 *
+	 * This function may be called after a successful call to
+	 * `negotiate_fetch`.
+	 */
+	int GIT_CALLBACK(shallow_roots)(
+		git_oidarray *out,
+		git_transport *transport);
 
 	/**
 	 * Start downloading the packfile from the remote repository.
@@ -449,11 +458,6 @@ GIT_EXTERN(int) git_smart_subtransport_ssh(
 	git_smart_subtransport **out,
 	git_transport *owner,
 	void *param);
-
-GIT_EXTERN(size_t) git_shallowarray_count(git_shallowarray *array);
-GIT_EXTERN(const git_oid *) git_shallowarray_get(git_shallowarray *array, size_t idx);
-GIT_EXTERN(int) git_shallowarray_add(git_shallowarray *array, git_oid *oid);
-GIT_EXTERN(int) git_shallowarray_remove(git_shallowarray *array, git_oid *oid);
 
 /** @} */
 GIT_END_DECL

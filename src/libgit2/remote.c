@@ -2167,11 +2167,6 @@ void git_remote_free(git_remote *remote)
 		remote->transport = NULL;
 	}
 
-	if (remote->nego.shallow_roots) {
-		git_array_clear(remote->nego.shallow_roots->array);
-		git__free(remote->nego.shallow_roots);
-	}
-
 	git_vector_free(&remote->refs);
 
 	free_refspecs(&remote->refspecs);

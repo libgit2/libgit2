@@ -416,6 +416,8 @@ static void git_smart__free(git_transport *transport)
 
 	git_remote_connect_options_dispose(&t->connect_opts);
 
+	git_array_dispose(t->shallow_roots);
+
 	git__free(t->caps.object_format);
 	git__free(t->caps.agent);
 	git__free(t);
@@ -490,6 +492,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	t->parent.close = git_smart__close;
 	t->parent.free = git_smart__free;
 	t->parent.negotiate_fetch = git_smart__negotiate_fetch;
+	t->parent.shallow_roots = git_smart__shallow_roots;
 	t->parent.download_pack = git_smart__download_pack;
 	t->parent.push = git_smart__push;
 	t->parent.ls = git_smart__ls;
@@ -515,51 +518,5 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	}
 
 	*out = (git_transport *) t;
-	return 0;
-}
-
-size_t git_shallowarray_count(git_shallowarray *array)
-{
-	return git_array_size(array->array);
-}
-
-const git_oid * git_shallowarray_get(git_shallowarray *array, size_t idx)
-{
-	return git_array_get(array->array, idx);
-}
-
-int git_shallowarray_add(git_shallowarray *array, git_oid *oid)
-{
-	size_t oid_index;
-
-	if (git_array_search(&oid_index, array->array, (git_array_compare_cb)git_oid_cmp, oid) < 0) {
-		git_oid *tmp = git_array_alloc(array->array);
-		GIT_ERROR_CHECK_ALLOC(tmp);
-
-		git_oid_cpy(tmp, oid);
-	}
-
-	return 0;
-}
-
-int git_shallowarray_remove(git_shallowarray *array, git_oid *oid)
-{
-	git_array_oid_t new_array = GIT_ARRAY_INIT;
-	git_oid *element;
-	git_oid *tmp;
-	size_t i;
-
-	git_array_foreach(array->array, i, element) {
-		if (git_oid_cmp(oid, element)) {
-			tmp = git_array_alloc(new_array);
-			GIT_ERROR_CHECK_ALLOC(tmp);
-
-			git_oid_cpy(tmp, element);
-		}
-	}
-
-	git_array_clear(array->array);
-	array->array = new_array;
-
 	return 0;
 }

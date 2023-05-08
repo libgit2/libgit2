@@ -163,6 +163,7 @@ typedef struct {
 	git_vector refs;
 	git_vector heads;
 	git_vector common;
+	git_array_oid_t shallow_roots;
 	git_atomic32 cancelled;
 	packetsize_cb packetsize_cb;
 	void *packetsize_payload;
@@ -182,6 +183,8 @@ int git_smart__negotiate_fetch(
 	git_transport *transport,
 	git_repository *repo,
 	const git_fetch_negotiation *wants);
+
+int git_smart__shallow_roots(git_oidarray *out, git_transport *transport);
 
 int git_smart__download_pack(
 	git_transport *transport,
@@ -207,9 +210,5 @@ int git_pkt_buffer_done(git_str *buf);
 int git_pkt_buffer_wants(const git_fetch_negotiation *wants, transport_smart_caps *caps, git_str *buf);
 int git_pkt_buffer_have(git_oid *oid, git_str *buf);
 void git_pkt_free(git_pkt *pkt);
-
-struct git_shallowarray {
-	git_array_oid_t array;
-};
 
 #endif

@@ -243,19 +243,25 @@ int git_grafts_get(git_commit_graft **out, git_grafts *grafts, const git_oid *oi
 	return 0;
 }
 
-int git_grafts_get_oids(git_array_oid_t *out, git_grafts *grafts)
+int git_grafts_oids(git_oid **out, size_t *out_len, git_grafts *grafts)
 {
+	git_array_oid_t array = GIT_ARRAY_INIT;
 	const git_oid *oid;
-	size_t i = 0;
-	int error;
+	size_t existing, i = 0;
 
 	GIT_ASSERT_ARG(out && grafts);
 
-	while ((error = git_oidmap_iterate(NULL, grafts->commits, &i, &oid)) == 0) {
-		git_oid *cpy = git_array_alloc(*out);
+	if ((existing = git_oidmap_size(grafts->commits)) > 0)
+		git_array_init_to_size(array, existing);
+
+	while (git_oidmap_iterate(NULL, grafts->commits, &i, &oid) == 0) {
+		git_oid *cpy = git_array_alloc(array);
 		GIT_ERROR_CHECK_ALLOC(cpy);
 		git_oid_cpy(cpy, oid);
 	}
+
+	*out = array.ptr;
+	*out_len = array.size;
 
 	return 0;
 }

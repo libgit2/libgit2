@@ -61,7 +61,7 @@ static int mark_local(git_remote *remote)
 
 	git_vector_foreach(&remote->refs, i, head) {
 		/* If we have the object, mark it so we don't ask for it.
-		   However if we are unshallowing, we need to ask for it 
+		   However if we are unshallowing, we need to ask for it
 		   even though the head exists locally. */
 		if (remote->nego.depth != INT_MAX && git_odb_exists(odb, &head->oid))
 			head->local = 1;
@@ -169,6 +169,7 @@ cleanup:
 int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 {
 	git_transport *t = remote->transport;
+	int error;
 
 	remote->need_pack = 0;
 
@@ -191,33 +192,39 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	 * server what we want and what we have.
 	 */
 	remote->nego.refs = (const git_remote_head * const *)remote->refs.contents;
-	remote->nego.count = remote->refs.length;
-	remote->nego.shallow_roots = git__malloc(sizeof(*remote->nego.shallow_roots));
+	remote->nego.refs_len = remote->refs.length;
 
-	git_array_init(remote->nego.shallow_roots->array);
+	if (git_repository__shallow_roots(&remote->nego.shallow_roots,
+	                                  &remote->nego.shallow_roots_len,
+	                                  remote->repo) < 0)
+		return -1;
 
-	git_repository__shallow_roots(&remote->nego.shallow_roots->array, remote->repo);
-
-	return t->negotiate_fetch(t,
+	error = t->negotiate_fetch(t,
 		remote->repo,
 		&remote->nego);
+
+	git__free(remote->nego.shallow_roots);
+
+	return error;
 }
 
 int git_fetch_download_pack(git_remote *remote)
 {
+	git_oidarray shallow_roots = { NULL };
 	git_transport *t = remote->transport;
 	int error;
 
 	if (!remote->need_pack)
 		return 0;
 
-	if ((error = t->download_pack(t, remote->repo, &remote->stats)) != 0)
+	if ((error = t->download_pack(t, remote->repo, &remote->stats)) != 0 ||
+	    (error = t->shallow_roots(&shallow_roots, t)) != 0)
 		return error;
 
-	if ((error = git_repository__shallow_roots_write(remote->repo, remote->nego.shallow_roots->array)) != 0)
-		return error;
+	error = git_repository__shallow_roots_write(remote->repo, &shallow_roots);
 
-	return 0;
+	git_oidarray_dispose(&shallow_roots);
+	return error;
 }
 
 int git_fetch_options_init(git_fetch_options *opts, unsigned int version)
