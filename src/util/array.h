@@ -33,6 +33,9 @@
 #define git_array_init_to_size(a, desired) \
 	do { (a).size = 0; (a).asize = desired; (a).ptr = git__calloc(desired, sizeof(*(a).ptr)); } while (0)
 
+#define git_array_dispose(a) \
+	do { git__free((a).ptr); } while (0)
+
 #define git_array_clear(a) \
 	do { git__free((a).ptr); git_array_init(a); } while (0)
 
@@ -85,12 +88,14 @@ on_oom:
 #define git_array_foreach(a, i, element) \
 	for ((i) = 0; (i) < (a).size && ((element) = &(a).ptr[(i)]); (i)++)
 
+typedef int (*git_array_compare_cb)(const void *, const void *);
+
 GIT_INLINE(int) git_array__search(
 	size_t *out,
 	void *array_ptr,
 	size_t item_size,
 	size_t array_len,
-	int (*compare)(const void *, const void *),
+	git_array_compare_cb compare,
 	const void *key)
 {
 	size_t lim;

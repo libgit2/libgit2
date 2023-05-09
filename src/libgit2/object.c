@@ -108,15 +108,13 @@ int git_object__from_raw(
 	return 0;
 }
 
-int git_object__from_odb_object(
+int git_object__init_from_odb_object(
 	git_object **object_out,
 	git_repository *repo,
 	git_odb_object *odb_obj,
 	git_object_t type)
 {
-	int error;
 	size_t object_size;
-	git_object_def *def;
 	git_object *object = NULL;
 
 	GIT_ASSERT_ARG(object_out);
@@ -142,6 +140,23 @@ int git_object__from_odb_object(
 	object->cached.type = odb_obj->cached.type;
 	object->cached.size = odb_obj->cached.size;
 	object->repo = repo;
+
+	*object_out = object;
+	return 0;
+}
+
+int git_object__from_odb_object(
+	git_object **object_out,
+	git_repository *repo,
+	git_odb_object *odb_obj,
+	git_object_t type)
+{
+	int error;
+	git_object_def *def;
+	git_object *object = NULL;
+
+	if ((error = git_object__init_from_odb_object(&object, repo, odb_obj, type)) < 0)
+		return error;
 
 	/* Parse raw object data */
 	def = &git_objects_table[odb_obj->cached.type];

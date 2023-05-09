@@ -420,7 +420,9 @@ static int clone_into(
 
 	memcpy(&fetch_opts, opts, sizeof(git_fetch_options));
 	fetch_opts.update_fetchhead = 0;
-	fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+
+	if (!opts->depth)
+		fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
 
 	if ((error = git_remote_connect_options__from_fetch_opts(&connect_opts, remote, &fetch_opts)) < 0)
 		goto cleanup;

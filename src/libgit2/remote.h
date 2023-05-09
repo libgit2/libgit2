@@ -38,6 +38,7 @@ struct git_remote {
 	git_remote_autotag_option_t download_tags;
 	int prune_refs;
 	int passed_refspecs;
+	git_fetch_negotiation nego;
 };
 
 int git_remote__urlfordirection(git_str *url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks);

@@ -23,6 +23,7 @@
 #include "git2/types.h"
 #include "git2/oid.h"
 #include "git2/net.h"
+#include "transports/smart.h"
 
 #define CONFIG_URL_FMT "remote.%s.url"
 #define CONFIG_PUSHURL_FMT "remote.%s.pushurl"

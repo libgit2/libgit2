@@ -416,6 +416,8 @@ static void git_smart__free(git_transport *transport)
 
 	git_remote_connect_options_dispose(&t->connect_opts);
 
+	git_array_dispose(t->shallow_roots);
+
 	git__free(t->caps.object_format);
 	git__free(t->caps.agent);
 	git__free(t);
@@ -490,6 +492,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	t->parent.close = git_smart__close;
 	t->parent.free = git_smart__free;
 	t->parent.negotiate_fetch = git_smart__negotiate_fetch;
+	t->parent.shallow_roots = git_smart__shallow_roots;
 	t->parent.download_pack = git_smart__download_pack;
 	t->parent.push = git_smart__push;
 	t->parent.ls = git_smart__ls;

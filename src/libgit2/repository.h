@@ -24,6 +24,7 @@
 #include "attrcache.h"
 #include "submodule.h"
 #include "diff_driver.h"
+#include "grafts.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
@@ -158,6 +159,9 @@ struct git_repository {
 
 	unsigned int lru_counter;
 
+	git_grafts *grafts;
+	git_grafts *shallow_grafts;
+
 	git_atomic32 attr_session_key;
 
 	intptr_t configmap_cache[GIT_CONFIGMAP_CACHE_MAX];
@@ -189,6 +193,8 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo);
 int git_repository_odb__weakptr(git_odb **out, git_repository *repo);
 int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo);
 int git_repository_index__weakptr(git_index **out, git_repository *repo);
+int git_repository_grafts__weakptr(git_grafts **out, git_repository *repo);
+int git_repository_shallow_grafts__weakptr(git_grafts **out, git_repository *repo);
 
 int git_repository__wrap_odb(
 	git_repository **out,
@@ -244,6 +250,9 @@ extern size_t git_repository__reserved_names_posix_len;
  */
 bool git_repository__reserved_names(
 	git_str **out, size_t *outlen, git_repository *repo, bool include_ntfs);
+
+int git_repository__shallow_roots(git_oid **out, size_t *out_len, git_repository *repo);
+int git_repository__shallow_roots_write(git_repository *repo, git_oidarray *roots);
 
 /*
  * The default branch for the repository; the `init.defaultBranch`

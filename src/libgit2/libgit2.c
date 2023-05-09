@@ -13,6 +13,7 @@
 #include "cache.h"
 #include "common.h"
 #include "filter.h"
+#include "grafts.h"
 #include "hash.h"
 #include "index.h"
 #include "merge_driver.h"
