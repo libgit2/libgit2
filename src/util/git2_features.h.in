@@ -26,7 +26,8 @@
 
 #cmakedefine GIT_QSORT_R_BSD
 #cmakedefine GIT_QSORT_R_GNU
-#cmakedefine GIT_QSORT_S
+#cmakedefine GIT_QSORT_S_C11
+#cmakedefine GIT_QSORT_S_MSC
 
 #cmakedefine GIT_SSH 1
 #cmakedefine GIT_SSH_MEMORY_CREDENTIALS 1
