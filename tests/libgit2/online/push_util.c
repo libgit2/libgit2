@@ -35,10 +35,12 @@ void record_callbacks_data_clear(record_callbacks_data *data)
 	data->transfer_progress_calls = 0;
 }
 
-int record_update_tips_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
+int record_update_refs_cb(const char *refname, const git_oid *a, const git_oid *b, git_refspec *spec, void *data)
 {
 	updated_tip *t;
 	record_callbacks_data *record_data = (record_callbacks_data *)data;
+
+	GIT_UNUSED(spec);
 
 	cl_assert(t = git__calloc(1, sizeof(*t)));
 
