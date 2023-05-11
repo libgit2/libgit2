@@ -27,11 +27,14 @@
 # endif
 #endif
 
+#define XDL_UNUSED GIT_UNUSED_ARG
+
 #define xdl_malloc(x) git__malloc(x)
+#define xdl_calloc(n, sz) git__calloc(n, sz)
 #define xdl_free(ptr) git__free(ptr)
 #define xdl_realloc(ptr, x) git__realloc(ptr, x)
 
-#define XDL_BUG(msg) GIT_ASSERT(msg)
+#define XDL_BUG(msg) GIT_ASSERT(!msg)
 
 #define xdl_regex_t git_regexp
 #define xdl_regmatch_t git_regmatch
