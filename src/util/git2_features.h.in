@@ -62,6 +62,7 @@
 #cmakedefine GIT_RAND_GETLOADAVG 1
 
 #cmakedefine GIT_IO_POLL 1
+#cmakedefine GIT_IO_WSAPOLL 1
 #cmakedefine GIT_IO_SELECT 1
 
 #endif

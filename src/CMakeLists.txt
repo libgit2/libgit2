@@ -89,8 +89,12 @@ check_function_exists(getloadavg GIT_RAND_GETLOADAVG)
 
 # poll
 
-check_symbol_exists(poll poll.h GIT_IO_POLL)
-check_symbol_exists(select sys/select.h GIT_IO_SELECT)
+if(WIN32)
+	set(GIT_IO_WSAPOLL 1)
+else()
+	check_symbol_exists(poll poll.h GIT_IO_POLL)
+	check_symbol_exists(select sys/select.h GIT_IO_SELECT)
+endif()
 
 # determine architecture of the machine
 

@@ -198,6 +198,9 @@ extern const char *p_gai_strerror(int ret);
 #ifdef GIT_IO_POLL
 # include <poll.h>
 # define p_poll poll
+#elif GIT_IO_WSAPOLL
+# include <winsock2.h>
+# define p_poll WSAPoll
 #else
 # define POLLIN  0x01
 # define POLLPRI 0x02
