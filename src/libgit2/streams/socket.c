@@ -103,7 +103,8 @@ static int handle_sockerr(GIT_SOCKET socket)
 	int sockerr;
 	socklen_t errlen = sizeof(sockerr);
 
-	if (getsockopt(socket, SOL_SOCKET, SO_ERROR, &sockerr, &errlen) < 0)
+	if (getsockopt(socket, SOL_SOCKET, SO_ERROR,
+			(void *)&sockerr, &errlen) < 0)
 		return -1;
 
 	if (sockerr == ETIMEDOUT)
