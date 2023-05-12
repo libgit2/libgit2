@@ -13,7 +13,6 @@
 #include "str.h"
 #include "hash.h"
 #include "oidmap.h"
-#include "netops.h"
 #include "zstream.h"
 #include "pool.h"
 #include "indexer.h"

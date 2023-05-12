@@ -13,7 +13,6 @@
 
 #include "runtime.h"
 #include "net.h"
-#include "netops.h"
 #include "smart.h"
 #include "streams/socket.h"
 #include "sysdir.h"

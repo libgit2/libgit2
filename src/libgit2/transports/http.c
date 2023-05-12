@@ -11,7 +11,6 @@
 
 #include "http_parser.h"
 #include "net.h"
-#include "netops.h"
 #include "remote.h"
 #include "smart.h"
 #include "auth.h"

@@ -11,7 +11,6 @@
 #include "zstream.h"
 #include "delta.h"
 #include "iterator.h"
-#include "netops.h"
 #include "pack.h"
 #include "thread.h"
 #include "tree.h"

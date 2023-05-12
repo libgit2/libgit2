@@ -20,7 +20,6 @@
 #include "stream.h"
 #include "net.h"
 #include "streams/socket.h"
-#include "netops.h"
 #include "git2/transport.h"
 #include "git2/sys/openssl.h"
 
@@ -71,14 +70,14 @@ static void *git_openssl_malloc(size_t bytes, const char *file, int line)
 	GIT_UNUSED(line);
 	return git__calloc(1, bytes);
 }
- 
+
 static void *git_openssl_realloc(void *mem, size_t size, const char *file, int line)
 {
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
 	return git__realloc(mem, size);
 }
- 
+
 static void git_openssl_free(void *mem, const char *file, int line)
 {
 	GIT_UNUSED(file);

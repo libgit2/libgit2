@@ -11,11 +11,13 @@
 
 #include "git2.h"
 #include "vector.h"
-#include "netops.h"
 #include "push.h"
 #include "str.h"
 #include "oidarray.h"
+#include "staticstr.h"
 #include "git2/sys/transport.h"
+
+#define GIT_SMART_BUFFER_SIZE  65536
 
 #define GIT_SIDE_BAND_DATA     1
 #define GIT_SIDE_BAND_PROGRESS 2
@@ -170,8 +172,7 @@ typedef struct {
 	unsigned rpc : 1,
 	         have_refs : 1,
 	         connected : 1;
-	gitno_buffer buffer;
-	char buffer_data[65536];
+	git_staticstr_with_size(GIT_SMART_BUFFER_SIZE) buffer;
 } transport_smart;
 
 /* smart_protocol.c */
@@ -192,6 +193,8 @@ int git_smart__download_pack(
 	git_indexer_progress *stats);
 
 /* smart.c */
+int git_smart__recv(transport_smart *t);
+
 int git_smart__negotiation_step(git_transport *transport, void *data, size_t len);
 int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream **out);
 
