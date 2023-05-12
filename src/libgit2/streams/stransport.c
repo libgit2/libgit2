@@ -161,7 +161,9 @@ static OSStatus write_cb(SSLConnectionRef conn, const void *data, size_t *len)
 
 	if (ret < 0) {
 		st->error = ret;
-		return -36; /* ioErr */
+		return (ret == GIT_TIMEOUT) ?
+		       errSSLNetworkTimeout :
+		       -36 /* ioErr */;
 	}
 
 	return noErr;
@@ -176,8 +178,12 @@ static ssize_t stransport_write(git_stream *stream, const char *data, size_t len
 	GIT_UNUSED(flags);
 
 	data_len = min(len, SSIZE_MAX);
-	if ((ret = SSLWrite(st->ctx, data, data_len, &processed)) != noErr)
+	if ((ret = SSLWrite(st->ctx, data, data_len, &processed)) != noErr) {
+		if (st->error == GIT_TIMEOUT)
+			return GIT_TIMEOUT;
+
 		return stransport_error(ret);
+	}
 
 	GIT_ASSERT(processed < SSIZE_MAX);
 	return (ssize_t)processed;
@@ -207,7 +213,9 @@ static OSStatus read_cb(SSLConnectionRef conn, void *data, size_t *len)
 
 		if (ret < 0) {
 			st->error = ret;
-			error = -36; /* ioErr */
+			error = (ret == GIT_TIMEOUT) ?
+			        errSSLNetworkTimeout :
+			        -36 /* ioErr */;
 			break;
 		} else if (ret == 0) {
 			error = errSSLClosedGraceful;
@@ -228,6 +236,9 @@ static ssize_t stransport_read(git_stream *stream, void *data, size_t len)
 	OSStatus ret;
 
 	if ((ret = SSLRead(st->ctx, data, len, &processed)) != noErr) {
+		if (st->error == GIT_TIMEOUT)
+			return GIT_TIMEOUT;
+
 		return stransport_error(ret);
 	}
 

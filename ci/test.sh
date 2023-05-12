@@ -271,9 +271,13 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 
 	export GITTEST_REMOTE_REDIRECT_INITIAL="http://localhost:9000/initial-redirect/libgit2/TestGitRepository"
 	export GITTEST_REMOTE_REDIRECT_SUBSEQUENT="http://localhost:9000/subsequent-redirect/libgit2/TestGitRepository"
+	export GITTEST_REMOTE_SPEED_SLOW="http://localhost:9000/speed-9600/test.git"
+	export GITTEST_REMOTE_SPEED_TIMESOUT="http://localhost:9000/speed-0.5/test.git"
 	run_test online
 	unset GITTEST_REMOTE_REDIRECT_INITIAL
 	unset GITTEST_REMOTE_REDIRECT_SUBSEQUENT
+	unset GITTEST_REMOTE_SPEED_SLOW
+	unset GITTEST_REMOTE_SPEED_TIMESOUT
 
 	# Run the online tests that immutably change global state separately
 	# to avoid polluting the test environment.

@@ -65,7 +65,7 @@ endif()
 
 include(AddClarTest)
 add_clar_test(libgit2_tests offline             -v -xonline)
-add_clar_test(libgit2_tests invasive            -v -sfilter::stream::bigfile -sodb::largefiles -siterator::workdir::filesystem_gunk -srepo::init -srepo::init::at_filesystem_root)
+add_clar_test(libgit2_tests invasive            -v -sfilter::stream::bigfile -sodb::largefiles -siterator::workdir::filesystem_gunk -srepo::init -srepo::init::at_filesystem_root -sonline::clone::connect_timeout_default)
 add_clar_test(libgit2_tests online              -v -sonline -xonline::customcert)
 add_clar_test(libgit2_tests online_customcert   -v -sonline::customcert)
 add_clar_test(libgit2_tests gitdaemon           -v -sonline::push)
