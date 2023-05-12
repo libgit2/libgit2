@@ -20,7 +20,6 @@
 # include <netdb.h>
 # include <netinet/in.h>
 # include <arpa/inet.h>
-# include <poll.h>
 #else
 # include <winsock2.h>
 # include <ws2tcpip.h>
@@ -135,13 +134,13 @@ static int connect_with_timeout(
 	fd.events = POLLOUT;
 	fd.revents = 0;
 
-	error = poll(&fd, 1, timeout);
+	error = p_poll(&fd, 1, timeout);
 
 	if (error == 0) {
 		return GIT_TIMEOUT;
 	} else if (error != 1) {
 		return -1;
-	} else if ((fd.revents & (POLLHUP | POLLERR))) {
+	} else if ((fd.revents & (POLLPRI | POLLHUP | POLLERR))) {
 		return handle_sockerr(socket);
 	} else if ((fd.revents & POLLOUT) != POLLOUT) {
 		git_error_set(GIT_ERROR_NET,
@@ -236,7 +235,7 @@ static ssize_t socket_write(
 		fd.events = POLLOUT;
 		fd.revents = 0;
 
-		ret = poll(&fd, 1, st->parent.timeout);
+		ret = p_poll(&fd, 1, st->parent.timeout);
 
 		if (ret == 1) {
 			ret = p_send(st->s, data, len, 0);
@@ -272,7 +271,7 @@ static ssize_t socket_read(
 		fd.events = POLLIN;
 		fd.revents = 0;
 
-		ret = poll(&fd, 1, st->parent.timeout);
+		ret = p_poll(&fd, 1, st->parent.timeout);
 
 		if (ret == 1) {
 			ret = p_recv(st->s, data, len, 0);

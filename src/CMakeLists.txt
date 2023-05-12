@@ -87,6 +87,11 @@ check_prototype_definition_safe(qsort_s
 check_function_exists(getentropy GIT_RAND_GETENTROPY)
 check_function_exists(getloadavg GIT_RAND_GETLOADAVG)
 
+# poll
+
+check_symbol_exists(poll poll.h GIT_IO_POLL)
+check_symbol_exists(select sys/select.h GIT_IO_SELECT)
+
 # determine architecture of the machine
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
