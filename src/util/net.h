@@ -9,6 +9,23 @@
 
 #include "git2_util.h"
 
+/*
+ * Hostname handling
+ */
+
+/*
+ * See if a given hostname matches a certificate name pattern, according
+ * to RFC2818 rules (which specifies HTTP over TLS). Mainly, an asterisk
+ * matches anything, but is limited to a single url component.
+ */
+extern bool git_net_hostname_matches_cert(
+	const char *hostname,
+	const char *pattern);
+
+/*
+ * URL handling
+ */
+
 typedef struct git_net_url {
 	char *scheme;
 	char *host;

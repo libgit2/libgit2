@@ -18,6 +18,7 @@
 #include "settings.h"
 #include "posix.h"
 #include "stream.h"
+#include "net.h"
 #include "streams/socket.h"
 #include "netops.h"
 #include "git2/transport.h"
@@ -357,15 +358,10 @@ static int ssl_teardown(SSL *ssl)
 	return ret;
 }
 
-static int check_host_name(const char *name, const char *host)
+static bool check_host_name(const char *host, const char *name)
 {
-	if (!strcasecmp(name, host))
-		return 0;
-
-	if (gitno__match_host(name, host) < 0)
-		return -1;
-
-	return 0;
+	return !strcasecmp(host, name) ||
+	       git_net_hostname_matches_cert(host, name);
 }
 
 static int verify_server_cert(SSL *ssl, const char *host)
@@ -425,10 +421,7 @@ static int verify_server_cert(SSL *ssl, const char *host)
 				if (memchr(name, '\0', namelen))
 					continue;
 
-				if (check_host_name(name, host) < 0)
-					matched = 0;
-				else
-					matched = 1;
+				matched = !!check_host_name(host, name);
 			} else if (type == GEN_IPADD) {
 				/* Here name isn't so much a name but a binary representation of the IP */
 				matched = addr && !!memcmp(name, addr, namelen);
@@ -481,7 +474,7 @@ static int verify_server_cert(SSL *ssl, const char *host)
 			goto cert_fail_name;
 	}
 
-	if (check_host_name((char *)peer_cn, host) < 0)
+	if (!check_host_name(host, (char *)peer_cn))
 		goto cert_fail_name;
 
 	goto cleanup;
