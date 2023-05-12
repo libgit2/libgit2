@@ -30,11 +30,11 @@ typedef struct {
 	cli_progress_t action;
 
 	/* Actions may time themselves (eg fetch) but are not required to */
-	double action_start;
-	double action_finish;
+	uint64_t action_start;
+	uint64_t action_finish;
 
 	/* Last console update, avoid too frequent updates. */
-	double last_update;
+	uint64_t last_update;
 
 	/* Accumulators for partial output and deferred updates. */
 	git_str sideband;
@@ -42,7 +42,7 @@ typedef struct {
 	git_str deferred;
 
 	/* Last update about throughput */
-	double throughput_update;
+	uint64_t throughput_update;
 	double throughput_bytes;
 } cli_progress;
 

@@ -1114,7 +1114,7 @@ struct push_packbuilder_payload
 	git_push_transfer_progress_cb cb;
 	void *cb_payload;
 	size_t last_bytes;
-	double last_progress_report_time;
+	uint64_t last_progress_report_time;
 };
 
 static int stream_thunk(void *buf, size_t size, void *data)
@@ -1126,11 +1126,11 @@ static int stream_thunk(void *buf, size_t size, void *data)
 		return error;
 
 	if (payload->cb) {
-		double current_time = git__timer();
-		double elapsed = current_time - payload->last_progress_report_time;
+		uint64_t current_time = git_time_monotonic();
+		uint64_t elapsed = current_time - payload->last_progress_report_time;
 		payload->last_bytes += size;
 
-		if (elapsed < 0 || elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
+		if (elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			payload->last_progress_report_time = current_time;
 			error = payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload);
 		}
