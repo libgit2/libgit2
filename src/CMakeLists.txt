@@ -58,39 +58,29 @@ add_feature_info(futimens GIT_USE_FUTIMENS "futimens support")
 
 # qsort
 
-# for these tests, temporarily save CMAKE_C_FLAGS and disable warnings about
-# unused functions and parameters, otherwise they will always fail if
-# ENABLE_WERROR is on
-set(SAVED_CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-disable_warnings(unused-function)
-disable_warnings(unused-parameter)
-
 # old-style FreeBSD qsort_r() has the 'context' parameter as the first argument
 # of the comparison function:
-check_prototype_definition(qsort_r
+check_prototype_definition_safe(qsort_r
 	"void (qsort_r)(void *base, size_t nmemb, size_t size, void *context, int (*compar)(void *, const void *, const void *))"
 	"" "stdlib.h" GIT_QSORT_BSD)
 
 # GNU or POSIX qsort_r() has the 'context' parameter as the last argument of the
 # comparison function:
-check_prototype_definition(qsort_r
+check_prototype_definition_safe(qsort_r
 	"void (qsort_r)(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *, void *), void *context)"
 	"" "stdlib.h" GIT_QSORT_GNU)
 
 # C11 qsort_s() has the 'context' parameter as the last argument of the
 # comparison function, and returns an error status:
-check_prototype_definition(qsort_s
+check_prototype_definition_safe(qsort_s
 	"errno_t (qsort_s)(void *base, rsize_t nmemb, rsize_t size, int (*compar)(const void *, const void *, void *), void *context)"
 	"0" "stdlib.h" GIT_QSORT_C11)
 
 # MSC qsort_s() has the 'context' parameter as the first argument of the
 # comparison function, and as the last argument of qsort_s():
-check_prototype_definition(qsort_s
+check_prototype_definition_safe(qsort_s
 	"void (qsort_s)(void *base, size_t num, size_t width, int (*compare )(void *, const void *, const void *), void *context)"
 	"" "stdlib.h" GIT_QSORT_MSC)
-
-# restore CMAKE_C_FLAGS
-set(CMAKE_C_FLAGS "${SAVED_CMAKE_C_FLAGS}")
 
 # random / entropy data
 
