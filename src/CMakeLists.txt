@@ -84,8 +84,8 @@ check_prototype_definition_safe(qsort_s
 
 # random / entropy data
 
-check_function_exists(getentropy GIT_RAND_GETENTROPY)
-check_function_exists(getloadavg GIT_RAND_GETLOADAVG)
+check_symbol_exists(getentropy unistd.h GIT_RAND_GETENTROPY)
+check_symbol_exists(getloadavg stdlib.h GIT_RAND_GETLOADAVG)
 
 # poll
 
