@@ -155,7 +155,13 @@ int git_oid_pathfmt(char *str, const git_oid *oid)
 
 char *git_oid_tostr_s(const git_oid *oid)
 {
-	char *str = GIT_THREADSTATE->oid_fmt;
+	git_threadstate *threadstate = git_threadstate_get();
+	char *str;
+
+	if (!threadstate)
+		return NULL;
+
+	str = threadstate->oid_fmt;
 	git_oid_nfmt(str, git_oid_hexsize(git_oid_type(oid)) + 1, oid);
 	return str;
 }
