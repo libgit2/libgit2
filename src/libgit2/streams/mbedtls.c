@@ -14,7 +14,6 @@
 #include "runtime.h"
 #include "stream.h"
 #include "streams/socket.h"
-#include "netops.h"
 #include "git2/transport.h"
 #include "util.h"
 

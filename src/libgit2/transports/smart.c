@@ -13,30 +13,42 @@
 #include "refspec.h"
 #include "proxy.h"
 
-static int git_smart__recv_cb(gitno_buffer *buf)
+int git_smart__recv(transport_smart *t)
 {
-	transport_smart *t = (transport_smart *) buf->cb_data;
-	size_t old_len, bytes_read;
-	int error;
+	size_t bytes_read;
+	int ret;
 
+	GIT_ASSERT_ARG(t);
 	GIT_ASSERT(t->current_stream);
 
-	old_len = buf->offset;
+	if (git_staticstr_remain(&t->buffer) == 0) {
+		git_error_set(GIT_ERROR_NET, "out of buffer space");
+		return -1;
+	}
 
-	if ((error = t->current_stream->read(t->current_stream, buf->data + buf->offset, buf->len - buf->offset, &bytes_read)) < 0)
-		return error;
+	ret = t->current_stream->read(t->current_stream,
+		git_staticstr_offset(&t->buffer),
+		git_staticstr_remain(&t->buffer),
+		&bytes_read);
 
-	buf->offset += bytes_read;
+	if (ret < 0)
+		return ret;
+
+	GIT_ASSERT(bytes_read <= INT_MAX);
+	GIT_ASSERT(bytes_read <= git_staticstr_remain(&t->buffer));
+
+	git_staticstr_increase(&t->buffer, bytes_read);
 
 	if (t->packetsize_cb && !t->cancelled.val) {
-		error = t->packetsize_cb(bytes_read, t->packetsize_payload);
-		if (error) {
+		ret = t->packetsize_cb(bytes_read, t->packetsize_payload);
+
+		if (ret) {
 			git_atomic32_set(&t->cancelled, 1);
 			return GIT_EUSER;
 		}
 	}
 
-	return (int)(buf->offset - old_len);
+	return (int)bytes_read;
 }
 
 GIT_INLINE(int) git_smart__reset_stream(transport_smart *t, bool close_subtransport)
@@ -154,8 +166,6 @@ static int git_smart__connect(
 
 	/* Save off the current stream (i.e. socket) that we are working with */
 	t->current_stream = stream;
-
-	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
 
 	/* 2 flushes for RPC; 1 for stateful */
 	if ((error = git_smart__store_refs(t, t->rpc ? 2 : 1)) < 0)
@@ -313,8 +323,6 @@ int git_smart__negotiation_step(git_transport *transport, void *data, size_t len
 	if ((error = stream->write(stream, (const char *)data, len)) < 0)
 		return error;
 
-	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
-
 	return 0;
 }
 
@@ -338,8 +346,6 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 
 	/* Save off the current stream (i.e. socket) that we are working with */
 	t->current_stream = *stream;
-
-	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
 
 	return 0;
 }
@@ -502,20 +508,17 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	t->owner = owner;
 	t->rpc = definition->rpc;
 
-	if (git_vector_init(&t->refs, 16, ref_name_cmp) < 0) {
+	if (git_vector_init(&t->refs, 16, ref_name_cmp) < 0 ||
+	    git_vector_init(&t->heads, 16, ref_name_cmp) < 0 ||
+	    definition->callback(&t->wrapped, &t->parent, definition->param) < 0) {
+		git_vector_free(&t->refs);
+		git_vector_free(&t->heads);
+		t->wrapped->free(t->wrapped);
 		git__free(t);
 		return -1;
 	}
 
-	if (git_vector_init(&t->heads, 16, ref_name_cmp) < 0) {
-		git__free(t);
-		return -1;
-	}
-
-	if (definition->callback(&t->wrapped, &t->parent, definition->param) < 0) {
-		git__free(t);
-		return -1;
-	}
+	git_staticstr_init(&t->buffer, GIT_SMART_BUFFER_SIZE);
 
 	*out = (git_transport *) t;
 	return 0;

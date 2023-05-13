@@ -15,10 +15,10 @@
 /*
  * Show updates to the percentage and number of objects received
  * separately from the throughput to give an accurate progress while
- * avoiding too much noise on the screen.
+ * avoiding too much noise on the screen. (In milliseconds.)
  */
-#define PROGRESS_UPDATE_TIME 0.10
-#define THROUGHPUT_UPDATE_TIME 1.00
+#define PROGRESS_UPDATE_TIME    60
+#define THROUGHPUT_UPDATE_TIME 500
 
 #define is_nl(c) ((c) == '\r' || (c) == '\n')
 
@@ -54,7 +54,7 @@ static int progress_write(cli_progress *progress, bool force, git_str *line)
 	bool has_nl;
 	size_t no_nl = no_nl_len(line->ptr, line->size);
 	size_t nl = nl_len(&has_nl, line->ptr + no_nl, line->size - no_nl);
-	double now = git__timer();
+	uint64_t now = git_time_monotonic();
 	size_t i;
 
 	/* Avoid spamming the console with progress updates */
@@ -191,20 +191,21 @@ static int fetch_receiving(
 {
 	char *recv_units[] = { "B", "KiB", "MiB", "GiB", "TiB", NULL };
 	char *rate_units[] = { "B/s", "KiB/s", "MiB/s", "GiB/s", "TiB/s", NULL };
+	uint64_t now, elapsed;
 
-	double now, recv_len, rate, elapsed;
+	double recv_len, rate;
 	size_t recv_unit_idx = 0, rate_unit_idx = 0;
 	bool done = (stats->received_objects == stats->total_objects);
 
 	if (!progress->action_start)
-		progress->action_start = git__timer();
+		progress->action_start = git_time_monotonic();
 
 	if (done && progress->action_finish)
 		now = progress->action_finish;
 	else if (done)
-		progress->action_finish = now = git__timer();
+		progress->action_finish = now = git_time_monotonic();
 	else
-		now = git__timer();
+		now = git_time_monotonic();
 
 	if (progress->throughput_update &&
 	    now - progress->throughput_update < THROUGHPUT_UPDATE_TIME) {

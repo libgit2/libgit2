@@ -9,7 +9,6 @@
 
 #include "smart.h"
 #include "util.h"
-#include "netops.h"
 #include "posix.h"
 #include "str.h"
 #include "oid.h"

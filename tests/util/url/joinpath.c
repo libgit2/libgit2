@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "net.h"
-#include "netops.h"
 
 static git_net_url source, target;
 

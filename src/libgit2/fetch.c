@@ -17,7 +17,6 @@
 #include "remote.h"
 #include "refspec.h"
 #include "pack.h"
-#include "netops.h"
 #include "repository.h"
 #include "refs.h"
 #include "transports/smart.h"

@@ -13,7 +13,6 @@
 #include "str.h"
 #include "hash.h"
 #include "oidmap.h"
-#include "netops.h"
 #include "zstream.h"
 #include "pool.h"
 #include "indexer.h"
@@ -96,7 +95,9 @@ struct git_packbuilder {
 
 	git_packbuilder_progress progress_cb;
 	void *progress_cb_payload;
-	double last_progress_report_time; /* the time progress was last reported */
+
+	/* the time progress was last reported, in millisecond ticks */
+	uint64_t last_progress_report_time;
 
 	bool done;
 };
