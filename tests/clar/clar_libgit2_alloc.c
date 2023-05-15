@@ -73,13 +73,17 @@ static void *cl__realloc(void *ptr, size_t size, const char *file, int line)
 
 	if (p)
 		memcpy(&copybytes, p - sizeof(size_t), sizeof(size_t));
+
 	if (copybytes > size)
 		copybytes = size;
 
 	if ((new = cl__malloc(size, file, line)) == NULL)
 		goto out;
-	memcpy(new, p, copybytes);
-	cl__free(p);
+
+	if (p) {
+		memcpy(new, p, copybytes);
+		cl__free(p);
+	}
 
 out:
 	return new;
