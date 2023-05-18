@@ -908,12 +908,12 @@ void test_online_clone__certificate_invalid(void)
 {
 	g_options.fetch_opts.callbacks.certificate_check = fail_certificate_check;
 
-	cl_git_fail_with(git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options),
-		GIT_ECERTIFICATE);
+	cl_git_fail_with(GIT_ECERTIFICATE,
+		git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 
 #ifdef GIT_SSH
-	cl_git_fail_with(git_clone(&g_repo, "ssh://github.com/libgit2/TestGitRepository", "./foo", &g_options),
-		GIT_ECERTIFICATE);
+	cl_git_fail_with(GIT_ECERTIFICATE,
+		git_clone(&g_repo, "ssh://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 #endif
 }
 
