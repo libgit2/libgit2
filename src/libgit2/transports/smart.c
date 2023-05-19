@@ -370,9 +370,19 @@ static int git_smart__close(git_transport *transport)
 	git_vector *common = &t->common;
 	unsigned int i;
 	git_pkt *p;
+	git_smart_service_t service;
 	int ret;
 	git_smart_subtransport_stream *stream;
 	const char flush[] = "0000";
+
+	if (t->direction == GIT_DIRECTION_FETCH) {
+		service = GIT_SERVICE_UPLOADPACK;
+	} else if (t->direction == GIT_DIRECTION_PUSH) {
+		service = GIT_SERVICE_RECEIVEPACK;
+	} else {
+		git_error_set(GIT_ERROR_NET, "invalid direction");
+		return -1;
+	}
 
 	/*
 	 * If we're still connected at this point and not using RPC,
@@ -380,7 +390,7 @@ static int git_smart__close(git_transport *transport)
 	 * will complain that we disconnected unexpectedly.
 	 */
 	if (t->connected && !t->rpc &&
-	    !t->wrapped->action(&stream, t->wrapped, t->url, GIT_SERVICE_UPLOADPACK)) {
+	    !t->wrapped->action(&stream, t->wrapped, t->url, service)) {
 		t->current_stream->write(t->current_stream, flush, 4);
 	}
 
