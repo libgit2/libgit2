@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <sys/wait.h>
+#include <signal.h>
 #include <git2.h>
 
 #include "git2_util.h"
@@ -387,8 +388,90 @@ ssize_t git_process_read(git_process *process, void *buf, size_t count)
 	return ret;
 }
 
+#ifdef GIT_THREADS
+
+# define signal_state sigset_t
+
+/*
+ * Since signal-handling is process-wide, we cannot simply use
+ * SIG_IGN to avoid SIGPIPE. Instead: http://www.microhowto.info:80/howto/ignore_sigpipe_without_affecting_other_threads_in_a_process.html
+ */
+
+GIT_INLINE(int) disable_signals(sigset_t *saved_mask)
+{
+	sigset_t sigpipe_mask;
+
+	sigemptyset(&sigpipe_mask);
+	sigaddset(&sigpipe_mask, SIGPIPE);
+
+	if (pthread_sigmask(SIG_BLOCK, &sigpipe_mask, saved_mask) < 0) {
+		git_error_set(GIT_ERROR_OS, "could not configure signal mask");
+		return -1;
+	}
+
+	return 0;
+}
+
+GIT_INLINE(int) restore_signals(sigset_t *saved_mask)
+{
+	sigset_t sigpipe_mask, pending;
+	int signal;
+
+	sigemptyset(&sigpipe_mask);
+	sigaddset(&sigpipe_mask, SIGPIPE);
+
+	if (sigpending(&pending) < 0) {
+		git_error_set(GIT_ERROR_OS, "could not examine pending signals");
+		return -1;
+	}
+
+	if (sigismember(&pending, SIGPIPE) == 1 &&
+	    sigwait(&sigpipe_mask, &signal) < 0) {
+		git_error_set(GIT_ERROR_OS, "could not wait for (blocking) signal delivery");
+		return -1;
+	}
+
+	if (pthread_sigmask(SIG_SETMASK, saved_mask, 0) < 0) {
+		git_error_set(GIT_ERROR_OS, "could not configure signal mask");
+		return -1;
+	}
+
+	return 0;
+}
+
+#else
+
+# define signal_state struct sigaction
+
+GIT_INLINE(int) disable_signals(struct sigaction *saved_handler)
+{
+	struct sigaction ign_handler = { 0 };
+
+	ign_handler.sa_handler = SIG_IGN;
+
+	if (sigaction(SIGPIPE, &ign_handler, saved_handler) < 0) {
+		git_error_set(GIT_ERROR_OS, "could not configure signal handler");
+		return -1;
+	}
+
+	return 0;
+}
+
+GIT_INLINE(int) restore_signals(struct sigaction *saved_handler)
+{
+	if (sigaction(SIGPIPE, saved_handler, NULL) < 0) {
+		git_error_set(GIT_ERROR_OS, "could not configure signal handler");
+		return -1;
+	}
+
+	return 0;
+}
+
+#endif
+
 ssize_t git_process_write(git_process *process, const void *buf, size_t count)
 {
+	signal_state saved_signal;
 	ssize_t ret;
 
 	GIT_ASSERT_ARG(process);
@@ -397,12 +480,16 @@ ssize_t git_process_write(git_process *process, const void *buf, size_t count)
 	if (count > SSIZE_MAX)
 		count = SSIZE_MAX;
 
-	if ((ret = write(process->child_in, buf, count)) < 0) {
-		git_error_set(GIT_ERROR_OS, "could not write to child process");
+	if (disable_signals(&saved_signal) < 0)
 		return -1;
-	}
 
-	return ret;
+	if ((ret = write(process->child_in, buf, count)) < 0)
+		git_error_set(GIT_ERROR_OS, "could not write to child process");
+
+	if (restore_signals(&saved_signal) < 0)
+		return -1;
+
+	return (ret < 0) ? -1 : ret;
 }
 
 int git_process_close_in(git_process *process)
