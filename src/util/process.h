@@ -106,6 +106,17 @@ extern int git_process_id(p_pid_t *out, git_process *process);
 extern ssize_t git_process_read(git_process *process, void *buf, size_t count);
 
 /**
+ * Read from the process's stderr.  The process must have been created with
+ * `capture_err` set to true.
+ *
+ * @param process the process to read from
+ * @param buf the buf to read into
+ * @param count maximum number of bytes to read
+ * @return number of bytes read or an error code
+ */
+extern ssize_t git_process_read_err(git_process *process, void *buf, size_t count);
+
+/**
  * Write to the process's stdin.  The process must have been created with
  * `capture_in` set to true.
  *

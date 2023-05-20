@@ -152,7 +152,7 @@ int git_process_new(
 		fd = -1;   \
 	}
 
-static int try_read(size_t *out, int fd, void *buf, size_t len)
+static int try_read_status(size_t *out, int fd, void *buf, size_t len)
 {
 	size_t read_len = 0;
 	int ret = -1;
@@ -179,7 +179,7 @@ static int read_status(int fd)
 	char buffer[status_len], fn[128];
 	int error, fn_error, os_error, fn_len = 0;
 
-	if ((error = try_read(&read_len, fd, buffer, status_len)) < 0)
+	if ((error = try_read_status(&read_len, fd, buffer, status_len)) < 0)
 		return error;
 
 	/* Immediate EOF indicates the exec succeeded. */
@@ -198,7 +198,7 @@ static int read_status(int fd)
 	if (fn_len > 0) {
 		fn_len = min(fn_len, (int)(ARRAY_SIZE(fn) - 1));
 
-		if ((error = try_read(&read_len, fd, fn, fn_len)) < 0)
+		if ((error = try_read_status(&read_len, fd, fn, fn_len)) < 0)
 			return error;
 
 		fn[fn_len] = '\0';
@@ -214,7 +214,7 @@ static int read_status(int fd)
 	return fn_error;
 }
 
-static bool try_write(int fd, const void *buf, size_t len)
+static bool try_write_status(int fd, const void *buf, size_t len)
 {
 	size_t write_len;
 	int ret;
@@ -246,11 +246,11 @@ static void write_status(int fd, const char *fn, int error, int os_error)
 	memcpy(&buffer[sizeof(int) * 2], &fn_len, sizeof(int));
 
 	/* Do our best effort to write all the status. */
-	if (!try_write(fd, buffer, status_len))
+	if (!try_write_status(fd, buffer, status_len))
 		return;
 
 	if (fn_len)
-		try_write(fd, fn, fn_len);
+		try_write_status(fd, fn, fn_len);
 }
 
 int git_process_start(git_process *process)
@@ -370,22 +370,35 @@ int git_process_id(p_pid_t *out, git_process *process)
 	return 0;
 }
 
-ssize_t git_process_read(git_process *process, void *buf, size_t count)
+static ssize_t process_read(int fd, void *buf, size_t count)
 {
 	ssize_t ret;
-
-	GIT_ASSERT_ARG(process);
-	GIT_ASSERT(process->capture_out);
 
 	if (count > SSIZE_MAX)
 		count = SSIZE_MAX;
 
-	if ((ret = read(process->child_out, buf, count)) < 0) {
+	if ((ret = read(fd, buf, count)) < 0) {
 		git_error_set(GIT_ERROR_OS, "could not read from child process");
 		return -1;
 	}
 
 	return ret;
+}
+
+ssize_t git_process_read(git_process *process, void *buf, size_t count)
+{
+	GIT_ASSERT_ARG(process);
+	GIT_ASSERT(process->capture_out);
+
+	return process_read(process->child_out, buf, count);
+}
+
+ssize_t git_process_read_err(git_process *process, void *buf, size_t count)
+{
+	GIT_ASSERT_ARG(process);
+	GIT_ASSERT(process->capture_err);
+
+	return process_read(process->child_err, buf, count);
 }
 
 #ifdef GIT_THREADS
