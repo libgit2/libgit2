@@ -29,7 +29,7 @@ static void retrieve_tag_from_oid(git_tag **tag_out, git_repository *repo, const
 {
 	git_oid oid;
 
-	cl_git_pass(git_oid_fromstr(&oid, sha));
+	cl_git_pass(git_oid__fromstr(&oid, sha, GIT_OID_SHA1));
 	cl_git_pass(git_tag_lookup(tag_out, repo, &oid));
 }
 

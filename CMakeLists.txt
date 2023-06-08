@@ -30,6 +30,9 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake"
 # Build options
 #
 
+# Experimental features
+option(EXPERIMENTAL_SHA256     "Enable experimental SHA256 support (for R&D/testing)"  OFF)
+
 # Optional subsystems
 option(BUILD_SHARED_LIBS       "Build Shared Library (OFF for Static)"                  ON)
 option(BUILD_TESTS             "Build Tests using the Clar suite"                       ON)
@@ -48,6 +51,7 @@ option(USE_SHA1                "Enable SHA1. Can be set to CollisionDetection(ON
 option(USE_SHA256              "Enable SHA256. Can be set to HTTPS/Builtin" ON)
 option(USE_GSSAPI              "Link with libgssapi for SPNEGO auth"      OFF)
    set(USE_HTTP_PARSER         "" CACHE STRING "Specifies the HTTP Parser implementation; either system or builtin.")
+#  set(USE_XDIFF               "" CACHE STRING "Specifies the xdiff implementation; either system or builtin.")
    set(REGEX_BACKEND           "" CACHE STRING "Regular expression implementation. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
 option(USE_BUNDLED_ZLIB        "Use the bundled version of zlib. Can be set to one of Bundled(ON)/Chromium. The Chromium option requires a x86_64 processor with SSE4.2 and CLMUL" OFF)
 
@@ -111,7 +115,7 @@ include(CheckLibraryExists)
 include(CheckFunctionExists)
 include(CheckSymbolExists)
 include(CheckStructHasMember)
-include(CheckPrototypeDefinition)
+include(CheckPrototypeDefinitionSafe)
 include(AddCFlagIfSupported)
 include(FindPkgLibraries)
 include(FindThreads)
@@ -122,6 +126,7 @@ include(IdeSplitSources)
 include(FeatureSummary)
 include(EnableWarnings)
 include(DefaultCFlags)
+include(ExperimentalFeatures)
 
 
 #

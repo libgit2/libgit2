@@ -105,15 +105,14 @@ static int fetchhead_ref_write(
 	git_filebuf *file,
 	git_fetchhead_ref *fetchhead_ref)
 {
-	char oid[GIT_OID_HEXSZ + 1];
+	char oid[GIT_OID_MAX_HEXSIZE + 1];
 	const char *type, *name;
 	int head = 0;
 
 	GIT_ASSERT_ARG(file);
 	GIT_ASSERT_ARG(fetchhead_ref);
 
-	git_oid_fmt(oid, &fetchhead_ref->oid);
-	oid[GIT_OID_HEXSZ] = '\0';
+	git_oid_tostr(oid, GIT_OID_MAX_HEXSIZE + 1, &fetchhead_ref->oid);
 
 	if (git__prefixcmp(fetchhead_ref->ref_name, GIT_REFS_HEADS_DIR) == 0) {
 		type = "branch ";
@@ -174,7 +173,8 @@ static int fetchhead_ref_parse(
 	git_str *ref_name,
 	const char **remote_url,
 	char *line,
-	size_t line_num)
+	size_t line_num,
+	git_oid_t oid_type)
 {
 	char *oid_str, *is_merge_str, *desc, *name = NULL;
 	const char *type = NULL;
@@ -196,13 +196,13 @@ static int fetchhead_ref_parse(
 		*is_merge = 1;
 	}
 
-	if (strlen(oid_str) != GIT_OID_HEXSZ) {
+	if (strlen(oid_str) != git_oid_hexsize(oid_type)) {
 		git_error_set(GIT_ERROR_FETCHHEAD,
 			"invalid object ID in FETCH_HEAD line %"PRIuZ, line_num);
 		return -1;
 	}
 
-	if (git_oid_fromstr(oid, oid_str) < 0) {
+	if (git_oid__fromstr(oid, oid_str, oid_type) < 0) {
 		const git_error *oid_err = git_error_last();
 		const char *err_msg = oid_err ? oid_err->message : "invalid object ID";
 
@@ -269,7 +269,8 @@ static int fetchhead_ref_parse(
 	return error;
 }
 
-int git_repository_fetchhead_foreach(git_repository *repo,
+int git_repository_fetchhead_foreach(
+	git_repository *repo,
 	git_repository_fetchhead_foreach_cb cb,
 	void *payload)
 {
@@ -296,8 +297,9 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 	while ((line = git__strsep(&buffer, "\n")) != NULL) {
 		++line_num;
 
-		if ((error = fetchhead_ref_parse(
-				&oid, &is_merge, &name, &remote_url, line, line_num)) < 0)
+		if ((error = fetchhead_ref_parse(&oid, &is_merge, &name,
+				&remote_url, line, line_num,
+				repo->oid_type)) < 0)
 			goto done;
 
 		if (git_str_len(&name) > 0)

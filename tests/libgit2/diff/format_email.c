@@ -28,7 +28,7 @@ static void assert_email_match(
 	git_diff *diff = NULL;
 	git_buf buf = GIT_BUF_INIT;
 
-	git_oid_fromstr(&oid, oidstr);
+	git_oid__fromstr(&oid, oidstr, GIT_OID_SHA1);
 
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 
@@ -228,7 +228,7 @@ void test_diff_format_email__multiple(void)
 	"\n";
 
 
-	git_oid_fromstr(&oid, "10808fe9c9be5a190c0ba68d1a002233fb363508");
+	git_oid__fromstr(&oid, "10808fe9c9be5a190c0ba68d1a002233fb363508", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 
 	opts.id = git_commit_id(commit);
@@ -245,7 +245,7 @@ void test_diff_format_email__multiple(void)
 	diff = NULL;
 	commit = NULL;
 
-	git_oid_fromstr(&oid, "873806f6f27e631eb0b23e4b56bea2bfac14a373");
+	git_oid__fromstr(&oid, "873806f6f27e631eb0b23e4b56bea2bfac14a373", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 
 	opts.id = git_commit_id(commit);
@@ -324,7 +324,7 @@ void test_diff_format_email__invalid_no(void)
 	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
 	git_buf buf = GIT_BUF_INIT;
 
-	git_oid_fromstr(&oid, "9264b96c6d104d0e07ae33d3007b6a48246c6f92");
+	git_oid__fromstr(&oid, "9264b96c6d104d0e07ae33d3007b6a48246c6f92", GIT_OID_SHA1);
 
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 

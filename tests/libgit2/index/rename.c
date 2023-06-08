@@ -22,7 +22,7 @@ void test_index_rename__single_file(void)
 	cl_git_pass(git_index_add_bypath(index, "lame.name.txt"));
 	cl_assert(git_index_entrycount(index) == 1);
 
-	cl_git_pass(git_oid_fromstr(&expected, "d4fa8600b4f37d7516bef4816ae2c64dbf029e3a"));
+	cl_git_pass(git_oid__fromstr(&expected, "d4fa8600b4f37d7516bef4816ae2c64dbf029e3a", GIT_OID_SHA1));
 
 	cl_assert(!git_index_find(&position, index, "lame.name.txt"));
 

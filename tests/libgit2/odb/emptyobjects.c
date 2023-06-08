@@ -24,7 +24,7 @@ void test_odb_emptyobjects__blob_notfound(void)
 	git_oid id, written_id;
 	git_blob *blob;
 
-	cl_git_pass(git_oid_fromstr(&id, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"));
+	cl_git_pass(git_oid__fromstr(&id, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391", GIT_OID_SHA1));
 	cl_git_fail_with(GIT_ENOTFOUND, git_blob_lookup(&blob, g_repo, &id));
 
 	cl_git_pass(git_odb_write(&written_id, g_odb, "", 0, GIT_OBJECT_BLOB));
@@ -36,7 +36,7 @@ void test_odb_emptyobjects__read_tree(void)
 	git_oid id;
 	git_tree *tree;
 
-	cl_git_pass(git_oid_fromstr(&id, "4b825dc642cb6eb9a060e54bf8d69288fbee4904"));
+	cl_git_pass(git_oid__fromstr(&id, "4b825dc642cb6eb9a060e54bf8d69288fbee4904", GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 	cl_assert_equal_i(GIT_OBJECT_TREE, git_object_type((git_object *) tree));
 	cl_assert_equal_i(0, git_tree_entrycount(tree));
@@ -49,7 +49,7 @@ void test_odb_emptyobjects__read_tree_odb(void)
 	git_oid id;
 	git_odb_object *tree_odb;
 
-	cl_git_pass(git_oid_fromstr(&id, "4b825dc642cb6eb9a060e54bf8d69288fbee4904"));
+	cl_git_pass(git_oid__fromstr(&id, "4b825dc642cb6eb9a060e54bf8d69288fbee4904", GIT_OID_SHA1));
 	cl_git_pass(git_odb_read(&tree_odb, g_odb, &id));
 	cl_assert(git_odb_object_data(tree_odb));
 	cl_assert_equal_s("", git_odb_object_data(tree_odb));

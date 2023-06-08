@@ -19,6 +19,50 @@
 #define DEFAULT_PORT_GIT   "9418"
 #define DEFAULT_PORT_SSH   "22"
 
+bool git_net_hostname_matches_cert(
+	const char *hostname,
+	const char *pattern)
+{
+	for (;;) {
+		char c = git__tolower(*pattern++);
+
+		if (c == '\0')
+			return *hostname ? false : true;
+
+		if (c == '*') {
+			c = *pattern;
+
+			/* '*' at the end matches everything left */
+			if (c == '\0')
+				return true;
+
+			/*
+			 * We've found a pattern, so move towards the
+			 * next matching char. The '.' is handled
+			 * specially because wildcards aren't allowed
+			 * to cross subdomains.
+			 */
+			while(*hostname) {
+				char h = git__tolower(*hostname);
+
+				if (h == c)
+					return git_net_hostname_matches_cert(hostname++, pattern);
+				else if (h == '.')
+					return git_net_hostname_matches_cert(hostname, pattern);
+
+				hostname++;
+			}
+
+			return false;
+		}
+
+		if (c != git__tolower(*hostname++))
+			return false;
+	}
+
+	return false;
+}
+
 bool git_net_str_is_url(const char *str)
 {
 	const char *c;
@@ -93,121 +137,367 @@ int git_net_url_dup(git_net_url *out, git_net_url *in)
 	return 0;
 }
 
+static int url_invalid(const char *message)
+{
+	git_error_set(GIT_ERROR_NET, "invalid url: %s", message);
+	return GIT_EINVALIDSPEC;
+}
+
+static int url_parse_authority(
+	const char **user_start, size_t *user_len,
+	const char **password_start, size_t *password_len,
+	const char **host_start, size_t *host_len,
+	const char **port_start, size_t *port_len,
+	const char *authority_start, size_t len,
+	const char *scheme_start, size_t scheme_len)
+{
+	const char *c, *hostport_end, *host_end = NULL,
+	           *userpass_end, *user_end = NULL;
+
+	enum {
+		HOSTPORT, HOST, IPV6, HOST_END, USERPASS, USER
+	} state = HOSTPORT;
+
+	if (len == 0)
+		return 0;
+
+	/*
+	 * walk the authority backwards so that we can parse google code's
+	 * ssh urls that are not rfc compliant and allow @ in the username
+	 */
+	for (hostport_end = authority_start + len, c = hostport_end - 1;
+	     c >= authority_start && !user_end;
+	     c--) {
+		switch (state) {
+		case HOSTPORT:
+			if (*c == ':') {
+				*port_start = c + 1;
+				*port_len = hostport_end - *port_start;
+				host_end = c;
+				state = HOST;
+				break;
+			}
+
+			/*
+			 * if we've only seen digits then we don't know
+			 * if we're parsing just a host or a host and port.
+			 * if we see a non-digit, then we're in a host,
+			 * otherwise, fall through to possibly match the
+			 * "@" (user/host separator).
+			 */
+
+			if (*c < '0' || *c > '9') {
+				host_end = hostport_end;
+				state = HOST;
+			}
+
+			/* fall through */
+
+		case HOST:
+			if (*c == ']' && host_end == c + 1) {
+				host_end = c;
+				state = IPV6;
+			}
+
+			else if (*c == '@') {
+				*host_start = c + 1;
+				*host_len = host_end ? host_end - *host_start :
+				                       hostport_end - *host_start;
+				userpass_end = c;
+				state = USERPASS;
+			}
+
+			else if (*c == '[' || *c == ']' || *c == ':') {
+				return url_invalid("malformed hostname");
+			}
+
+			break;
+
+		case IPV6:
+			if (*c == '[') {
+				*host_start = c + 1;
+				*host_len = host_end - *host_start;
+				state = HOST_END;
+			}
+
+			else if ((*c < '0' || *c > '9') &&
+			         (*c < 'a' || *c > 'f') &&
+			         (*c < 'A' || *c > 'F') &&
+			         (*c != ':')) {
+				return url_invalid("malformed hostname");
+			}
+
+			break;
+
+		case HOST_END:
+			if (*c == '@') {
+				userpass_end = c;
+				state = USERPASS;
+				break;
+			}
+
+			return url_invalid("malformed hostname");
+
+		case USERPASS:
+			if (*c == '@' &&
+			    strncasecmp(scheme_start, "ssh", scheme_len))
+				return url_invalid("malformed hostname");
+
+			if (*c == ':') {
+				*password_start = c + 1;
+				*password_len = userpass_end - *password_start;
+				user_end = c;
+				state = USER;
+				break;
+			}
+
+			break;
+
+		default:
+			GIT_ASSERT(!"unhandled state");
+		}
+	}
+
+	switch (state) {
+		case HOSTPORT:
+			*host_start = authority_start;
+			*host_len = (hostport_end - *host_start);
+			break;
+		case HOST:
+			*host_start = authority_start;
+			*host_len = (host_end - *host_start);
+			break;
+		case IPV6:
+			return url_invalid("malformed hostname");
+		case HOST_END:
+			break;
+		case USERPASS:
+			*user_start = authority_start;
+			*user_len = (userpass_end - *user_start);
+			break;
+		case USER:
+			*user_start = authority_start;
+			*user_len = (user_end - *user_start);
+			break;
+		default:
+			GIT_ASSERT(!"unhandled state");
+	}
+
+	return 0;
+}
+
 int git_net_url_parse(git_net_url *url, const char *given)
 {
-	struct http_parser_url u = {0};
-	bool has_scheme, has_host, has_port, has_path, has_query, has_userinfo;
-	git_str scheme = GIT_STR_INIT,
-		host = GIT_STR_INIT,
-		port = GIT_STR_INIT,
-		path = GIT_STR_INIT,
-		username = GIT_STR_INIT,
-		password = GIT_STR_INIT,
-		query = GIT_STR_INIT;
-	int error = GIT_EINVALIDSPEC;
+	const char *c, *scheme_start, *authority_start, *user_start,
+	           *password_start, *host_start, *port_start, *path_start,
+	           *query_start, *fragment_start, *default_port;
+	git_str scheme = GIT_STR_INIT, user = GIT_STR_INIT,
+	        password = GIT_STR_INIT, host = GIT_STR_INIT,
+	        port = GIT_STR_INIT, path = GIT_STR_INIT,
+	        query = GIT_STR_INIT, fragment = GIT_STR_INIT;
+	size_t scheme_len = 0, user_len = 0, password_len = 0, host_len = 0,
+	       port_len = 0, path_len = 0, query_len = 0, fragment_len = 0;
+	bool hierarchical = false;
+	int error = 0;
 
-	if (http_parser_parse_url(given, strlen(given), false, &u)) {
-		git_error_set(GIT_ERROR_NET, "malformed URL '%s'", given);
-		goto done;
+	enum {
+		SCHEME,
+		AUTHORITY_START, AUTHORITY,
+		PATH_START, PATH,
+		QUERY,
+		FRAGMENT
+	} state = SCHEME;
+
+	memset(url, 0, sizeof(git_net_url));
+
+	for (c = scheme_start = given; *c; c++) {
+		switch (state) {
+		case SCHEME:
+			if (*c == ':') {
+				scheme_len = (c - scheme_start);
+
+				if (*(c+1) == '/' && *(c+2) == '/') {
+					c += 2;
+					hierarchical = true;
+					state = AUTHORITY_START;
+				} else {
+					state = PATH_START;
+				}
+			} else if ((*c < 'A' || *c > 'Z') &&
+			           (*c < 'a' || *c > 'z') &&
+			           (*c < '0' || *c > '9') &&
+			           (*c != '+' && *c != '-' && *c != '.')) {
+				/*
+				 * an illegal scheme character means that we
+				 * were just given a relative path
+				 */
+				path_start = given;
+				state = PATH;
+				break;
+			}
+			break;
+
+		case AUTHORITY_START:
+			authority_start = c;
+			state = AUTHORITY;
+
+			/* fall through */
+
+		case AUTHORITY:
+			if (*c != '/')
+				break;
+
+			/*
+			 * authority is sufficiently complex that we parse
+			 * it separately
+			 */
+			if ((error = url_parse_authority(
+					&user_start, &user_len,
+					&password_start,&password_len,
+					&host_start, &host_len,
+					&port_start, &port_len,
+					authority_start, (c - authority_start),
+					scheme_start, scheme_len)) < 0)
+				goto done;
+
+			/* fall through */
+
+		case PATH_START:
+			path_start = c;
+			state = PATH;
+			/* fall through */
+
+		case PATH:
+			switch (*c) {
+			case '?':
+				path_len = (c - path_start);
+				query_start = c + 1;
+				state = QUERY;
+				break;
+			case '#':
+				path_len = (c - path_start);
+				fragment_start = c + 1;
+				state = FRAGMENT;
+				break;
+			}
+			break;
+
+		case QUERY:
+			if (*c == '#') {
+				query_len = (c - query_start);
+				fragment_start = c + 1;
+				state = FRAGMENT;
+			}
+			break;
+
+		case FRAGMENT:
+			break;
+
+		default:
+			GIT_ASSERT(!"unhandled state");
+		}
 	}
 
-	has_scheme = !!(u.field_set & (1 << UF_SCHEMA));
-	has_host = !!(u.field_set & (1 << UF_HOST));
-	has_port = !!(u.field_set & (1 << UF_PORT));
-	has_path = !!(u.field_set & (1 << UF_PATH));
-	has_query = !!(u.field_set & (1 << UF_QUERY));
-	has_userinfo = !!(u.field_set & (1 << UF_USERINFO));
-
-	if (has_scheme) {
-		const char *url_scheme = given + u.field_data[UF_SCHEMA].off;
-		size_t url_scheme_len = u.field_data[UF_SCHEMA].len;
-		git_str_put(&scheme, url_scheme, url_scheme_len);
-		git__strntolower(scheme.ptr, scheme.size);
-	} else {
-		git_error_set(GIT_ERROR_NET, "malformed URL '%s'", given);
-		goto done;
-	}
-
-	if (has_host) {
-		const char *url_host = given + u.field_data[UF_HOST].off;
-		size_t url_host_len = u.field_data[UF_HOST].len;
-		git_str_decode_percent(&host, url_host, url_host_len);
-	}
-
-	if (has_port) {
-		const char *url_port = given + u.field_data[UF_PORT].off;
-		size_t url_port_len = u.field_data[UF_PORT].len;
-		git_str_put(&port, url_port, url_port_len);
-	} else {
-		const char *default_port = default_port_for_scheme(scheme.ptr);
-
-		if (default_port == NULL) {
-			git_error_set(GIT_ERROR_NET, "unknown scheme for URL '%s'", given);
+	switch (state) {
+	case SCHEME:
+		/*
+		 * if we never saw a ':' then we were given a relative
+		 * path, not a bare scheme
+		 */
+		path_start = given;
+		path_len = (c - scheme_start);
+		break;
+	case AUTHORITY_START:
+		break;
+	case AUTHORITY:
+		if ((error = url_parse_authority(
+				&user_start, &user_len,
+				&password_start,&password_len,
+				&host_start, &host_len,
+				&port_start, &port_len,
+				authority_start, (c - authority_start),
+				scheme_start, scheme_len)) < 0)
 			goto done;
-		}
-
-		git_str_puts(&port, default_port);
+		break;
+	case PATH_START:
+		break;
+	case PATH:
+		path_len = (c - path_start);
+		break;
+	case QUERY:
+		query_len = (c - query_start);
+		break;
+	case FRAGMENT:
+		fragment_len = (c - fragment_start);
+		break;
+	default:
+		GIT_ASSERT(!"unhandled state");
 	}
 
-	if (has_path) {
-		const char *url_path = given + u.field_data[UF_PATH].off;
-		size_t url_path_len = u.field_data[UF_PATH].len;
-		git_str_put(&path, url_path, url_path_len);
-	} else {
-		git_str_puts(&path, "/");
+	if (scheme_len) {
+		if ((error = git_str_put(&scheme, scheme_start, scheme_len)) < 0)
+			goto done;
+
+		git__strntolower(scheme.ptr, scheme.size);
 	}
 
-	if (has_query) {
-		const char *url_query = given + u.field_data[UF_QUERY].off;
-		size_t url_query_len = u.field_data[UF_QUERY].len;
-		git_str_decode_percent(&query, url_query, url_query_len);
-	}
+	if (user_len &&
+	    (error = git_str_decode_percent(&user, user_start, user_len)) < 0)
+		goto done;
 
-	if (has_userinfo) {
-		const char *url_userinfo = given + u.field_data[UF_USERINFO].off;
-		size_t url_userinfo_len = u.field_data[UF_USERINFO].len;
-		const char *colon = memchr(url_userinfo, ':', url_userinfo_len);
+	if (password_len &&
+	    (error = git_str_decode_percent(&password, password_start, password_len)) < 0)
+		goto done;
 
-		if (colon) {
-			const char *url_username = url_userinfo;
-			size_t url_username_len = colon - url_userinfo;
-			const char *url_password = colon + 1;
-			size_t url_password_len = url_userinfo_len - (url_username_len + 1);
+	if (host_len &&
+	    (error = git_str_decode_percent(&host, host_start, host_len)) < 0)
+		goto done;
 
-			git_str_decode_percent(&username, url_username, url_username_len);
-			git_str_decode_percent(&password, url_password, url_password_len);
-		} else {
-			git_str_decode_percent(&username, url_userinfo, url_userinfo_len);
-		}
-	}
+	if (port_len)
+		error = git_str_put(&port, port_start, port_len);
+	else if (scheme_len && (default_port = default_port_for_scheme(scheme.ptr)) != NULL)
+		error = git_str_puts(&port, default_port);
 
-	if (git_str_oom(&scheme) ||
-	    git_str_oom(&host) ||
-	    git_str_oom(&port) ||
-	    git_str_oom(&path) ||
-	    git_str_oom(&query) ||
-	    git_str_oom(&username) ||
-	    git_str_oom(&password))
-		return -1;
+	if (error < 0)
+		goto done;
+
+	if (path_len)
+		error = git_str_put(&path, path_start, path_len);
+	else if (hierarchical)
+		error = git_str_puts(&path, "/");
+
+	if (error < 0)
+		goto done;
+
+	if (query_len &&
+	    (error = git_str_decode_percent(&query, query_start, query_len)) < 0)
+		goto done;
+
+	if (fragment_len &&
+	    (error = git_str_decode_percent(&fragment, fragment_start, fragment_len)) < 0)
+		goto done;
 
 	url->scheme = git_str_detach(&scheme);
 	url->host = git_str_detach(&host);
 	url->port = git_str_detach(&port);
 	url->path = git_str_detach(&path);
 	url->query = git_str_detach(&query);
-	url->username = git_str_detach(&username);
+	url->fragment = git_str_detach(&fragment);
+	url->username = git_str_detach(&user);
 	url->password = git_str_detach(&password);
 
 	error = 0;
 
 done:
 	git_str_dispose(&scheme);
+	git_str_dispose(&user);
+	git_str_dispose(&password);
 	git_str_dispose(&host);
 	git_str_dispose(&port);
 	git_str_dispose(&path);
 	git_str_dispose(&query);
-	git_str_dispose(&username);
-	git_str_dispose(&password);
+	git_str_dispose(&fragment);
+
 	return error;
 }
 
@@ -374,7 +664,7 @@ int git_net_url_parse_scp(git_net_url *url, const char *given)
 			break;
 
 		default:
-			GIT_ASSERT("unhandled state");
+			GIT_ASSERT(!"unhandled state");
 		}
 	}
 
@@ -398,6 +688,13 @@ int git_net_url_parse_scp(git_net_url *url, const char *given)
 	GIT_ERROR_CHECK_ALLOC(url->path = git__strdup(path));
 
 	return 0;
+}
+
+int git_net_url_parse_standard_or_scp(git_net_url *url, const char *given)
+{
+	return git_net_str_is_url(given) ?
+	       git_net_url_parse(url, given) :
+	       git_net_url_parse_scp(url, given);
 }
 
 int git_net_url_joinpath(
@@ -588,7 +885,7 @@ bool git_net_url_is_default_port(git_net_url *url)
 {
 	const char *default_port;
 
-	if ((default_port = default_port_for_scheme(url->scheme)) != NULL)
+	if (url->scheme && (default_port = default_port_for_scheme(url->scheme)) != NULL)
 		return (strcmp(url->port, default_port) == 0);
 	else
 		return false;
@@ -744,6 +1041,7 @@ void git_net_url_dispose(git_net_url *url)
 	git__free(url->port); url->port = NULL;
 	git__free(url->path); url->path = NULL;
 	git__free(url->query); url->query = NULL;
+	git__free(url->fragment); url->fragment = NULL;
 	git__free(url->username); url->username = NULL;
 	git__free(url->password); url->password = NULL;
 }

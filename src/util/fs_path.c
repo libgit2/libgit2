@@ -1855,7 +1855,7 @@ static int file_owner_sid(PSID *out, const char *path)
 	PSECURITY_DESCRIPTOR descriptor = NULL;
 	PSID owner_sid;
 	DWORD ret;
-	int error = -1;
+	int error = GIT_EINVALID;
 
 	if (git_win32_path_from_utf8(path_w32, path) < 0)
 		return -1;
@@ -2015,7 +2015,7 @@ int git_fs_path_find_executable(git_str *fullpath, const char *executable)
 	git_win32_path fullpath_w, executable_w;
 	int error;
 
-	if (git__utf8_to_16(executable_w, GIT_WIN_PATH_MAX, executable) < 0)
+	if (git_utf8_to_16(executable_w, GIT_WIN_PATH_MAX, executable) < 0)
 		return -1;
 
 	error = git_win32_path_find_executable(fullpath_w, executable_w);

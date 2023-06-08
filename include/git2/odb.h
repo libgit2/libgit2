@@ -38,6 +38,25 @@ typedef enum {
  */
 typedef int GIT_CALLBACK(git_odb_foreach_cb)(const git_oid *id, void *payload);
 
+/** Options for configuring a loose object backend. */
+typedef struct {
+	unsigned int version; /**< version for the struct */
+
+	/**
+	 * Type of object IDs to use for this object database, or
+	 * 0 for default (currently SHA1).
+	 */
+	git_oid_t oid_type;
+} git_odb_options;
+
+/* The current version of the diff options structure */
+#define GIT_ODB_OPTIONS_VERSION 1
+
+/* Stack initializer for odb options.  Alternatively use
+ * `git_odb_options_init` programmatic initialization.
+ */
+#define GIT_ODB_OPTIONS_INIT { GIT_ODB_OPTIONS_VERSION }
+
 /**
  * Create a new object database with no backends.
  *
@@ -46,9 +65,14 @@ typedef int GIT_CALLBACK(git_odb_foreach_cb)(const git_oid *id, void *payload);
  *
  * @param out location to store the database pointer, if opened.
  *			Set to NULL if the open failed.
+ * @param opts the options for this object database or NULL for defaults
  * @return 0 or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
+GIT_EXTERN(int) git_odb_new(git_odb **out, const git_odb_options *opts);
+#else
 GIT_EXTERN(int) git_odb_new(git_odb **out);
+#endif
 
 /**
  * Create a new object database and automatically add
@@ -64,9 +88,17 @@ GIT_EXTERN(int) git_odb_new(git_odb **out);
  * @param out location to store the database pointer, if opened.
  *			Set to NULL if the open failed.
  * @param objects_dir path of the backends' "objects" directory.
+ * @param opts the options for this object database or NULL for defaults
  * @return 0 or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
+GIT_EXTERN(int) git_odb_open(
+	git_odb **out,
+	const char *objects_dir,
+	const git_odb_options *opts);
+#else
 GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
+#endif
 
 /**
  * Add an on-disk alternate to an existing Object DB.
@@ -117,7 +149,7 @@ GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *i
  * This method queries all available ODB backends
  * trying to match the 'len' first hexadecimal
  * characters of the 'short_id'.
- * The remaining (GIT_OID_HEXSZ-len)*4 bits of
+ * The remaining (GIT_OID_SHA1_HEXSIZE-len)*4 bits of
  * 'short_id' must be 0s.
  * 'len' must be at least GIT_OID_MINPREFIXLEN,
  * and the prefix must be long enough to identify
@@ -218,7 +250,7 @@ typedef struct git_odb_expand_id {
  *
  * The given array will be updated in place: for each abbreviated ID that is
  * unique in the database, and of the given type (if specified),
- * the full object ID, object ID length (`GIT_OID_HEXSZ`) and type will be
+ * the full object ID, object ID length (`GIT_OID_SHA1_HEXSIZE`) and type will be
  * written back to the array. For IDs that are not found (or are ambiguous),
  * the array entry will be zeroed.
  *
@@ -435,18 +467,28 @@ GIT_EXTERN(int) git_odb_write_multi_pack_index(
 	git_odb *db);
 
 /**
- * Determine the object-ID (sha1 hash) of a data buffer
+ * Determine the object-ID (sha1 or sha256 hash) of a data buffer
  *
- * The resulting SHA-1 OID will be the identifier for the data
- * buffer as if the data buffer it were to written to the ODB.
+ * The resulting OID will be the identifier for the data buffer as if
+ * the data buffer it were to written to the ODB.
  *
  * @param out the resulting object-ID.
  * @param data data to hash
  * @param len size of the data
- * @param type of the data to hash
+ * @param object_type of the data to hash
+ * @param oid_type the oid type to hash to
  * @return 0 or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
+GIT_EXTERN(int) git_odb_hash(
+	git_oid *out,
+	const void *data,
+	size_t len,
+	git_object_t object_type,
+	git_oid_t oid_type);
+#else
 GIT_EXTERN(int) git_odb_hash(git_oid *out, const void *data, size_t len, git_object_t type);
+#endif
 
 /**
  * Read a file from disk and fill a git_oid with the object id
@@ -458,10 +500,19 @@ GIT_EXTERN(int) git_odb_hash(git_oid *out, const void *data, size_t len, git_obj
  *
  * @param out oid structure the result is written into.
  * @param path file to read and determine object id for
- * @param type the type of the object that will be hashed
+ * @param object_type of the data to hash
+ * @param oid_type the oid type to hash to
  * @return 0 or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
+GIT_EXTERN(int) git_odb_hashfile(
+	git_oid *out,
+	const char *path,
+	git_object_t object_type,
+	git_oid_t oid_type);
+#else
 GIT_EXTERN(int) git_odb_hashfile(git_oid *out, const char *path, git_object_t type);
+#endif
 
 /**
  * Create a copy of an odb_object

@@ -8,7 +8,6 @@
 #include "common.h"
 
 #include "git2/describe.h"
-#include "git2/strarray.h"
 #include "git2/diff.h"
 #include "git2/status.h"
 
@@ -19,6 +18,7 @@
 #include "refs.h"
 #include "repository.h"
 #include "revwalk.h"
+#include "strarray.h"
 #include "tag.h"
 #include "vector.h"
 #include "wildmatch.h"
@@ -363,12 +363,15 @@ static int find_unique_abbrev_size(
 	size_t size = abbreviated_size;
 	git_odb *odb;
 	git_oid dummy;
+	size_t hexsize;
 	int error;
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
 		return error;
 
-	while (size < GIT_OID_HEXSZ) {
+	hexsize = git_oid_hexsize(repo->oid_type);
+
+	while (size < hexsize) {
 		if ((error = git_odb_exists_prefix(&dummy, odb, oid_in, size)) == 0) {
 			*out = (int) size;
 			return 0;
@@ -383,7 +386,7 @@ static int find_unique_abbrev_size(
 	}
 
 	/* If we didn't find any shorter prefix, we have to do the whole thing */
-	*out = GIT_OID_HEXSZ;
+	*out = (int)hexsize;
 
 	return 0;
 }
@@ -397,7 +400,7 @@ static int show_suffix(
 {
 	int error, size = 0;
 
-	char hex_oid[GIT_OID_HEXSZ];
+	char hex_oid[GIT_OID_MAX_HEXSIZE];
 
 	if ((error = find_unique_abbrev_size(&size, repo, id, abbrev_size)) < 0)
 		return error;
@@ -414,7 +417,7 @@ static int show_suffix(
 #define MAX_CANDIDATES_TAGS FLAG_BITS - 1
 
 static int describe_not_found(const git_oid *oid, const char *message_format) {
-	char oid_str[GIT_OID_HEXSZ + 1];
+	char oid_str[GIT_OID_MAX_HEXSIZE + 1];
 	git_oid_tostr(oid_str, sizeof(oid_str), oid);
 
 	git_error_set(GIT_ERROR_DESCRIBE, message_format, oid_str);
@@ -525,7 +528,7 @@ static int describe(
 		if (annotated_cnt && (git_pqueue_size(&list) == 0)) {
 			/*
 			if (debug) {
-				char oid_str[GIT_OID_HEXSZ + 1];
+				char oid_str[GIT_OID_MAX_HEXSIZE + 1];
 				git_oid_tostr(oid_str, sizeof(oid_str), &c->oid);
 
 				fprintf(stderr, "finished search at %s\n", oid_str);
@@ -592,7 +595,7 @@ static int describe(
 			"head", "lightweight", "annotated",
 		};
 
-		char oid_str[GIT_OID_HEXSZ + 1];
+		char oid_str[GIT_OID_MAX_HEXSIZE + 1];
 
 		if (debug) {
 			for (cur_match = 0; cur_match < match_cnt; cur_match++) {
@@ -816,7 +819,7 @@ static int git_describe__format(
 
 	/* If we didn't find *any* tags, we fall back to the commit's id */
 	if (result->fallback_to_id) {
-		char hex_oid[GIT_OID_HEXSZ + 1] = {0};
+		char hex_oid[GIT_OID_MAX_HEXSIZE + 1] = {0};
 		int size = 0;
 
 		if ((error = find_unique_abbrev_size(

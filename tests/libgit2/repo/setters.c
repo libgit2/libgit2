@@ -1,6 +1,8 @@
 #include "clar_libgit2.h"
 #include "git2/sys/repository.h"
 
+#include "index.h"
+#include "odb.h"
 #include "posix.h"
 #include "util.h"
 #include "path.h"
@@ -69,7 +71,7 @@ void test_repo_setters__setting_a_new_index_on_a_repo_which_has_already_loaded_o
 {
 	git_index *new_index;
 
-	cl_git_pass(git_index_open(&new_index, "./my-index"));
+	cl_git_pass(git_index__open(&new_index, "./my-index", GIT_OID_SHA1));
 	cl_assert(((git_refcount *)new_index)->refcount.val == 1);
 
 	git_repository_set_index(repo, new_index);
@@ -90,7 +92,7 @@ void test_repo_setters__setting_a_new_odb_on_a_repo_which_already_loaded_one_pro
 {
 	git_odb *new_odb;
 
-	cl_git_pass(git_odb_open(&new_odb, "./testrepo.git/objects"));
+	cl_git_pass(git_odb__open(&new_odb, "./testrepo.git/objects", NULL));
 	cl_assert(((git_refcount *)new_odb)->refcount.val == 1);
 
 	git_repository_set_odb(repo, new_odb);

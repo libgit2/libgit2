@@ -100,7 +100,12 @@ void test_pack_indexer__out_of_order(void)
 	git_indexer *idx = 0;
 	git_indexer_progress stats = { 0 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_indexer_new(&idx, ".", GIT_OID_SHA1, NULL));
+#else
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
+#endif
+
 	cl_git_pass(git_indexer_append(
 		idx, out_of_order_pack, out_of_order_pack_len, &stats));
 	cl_git_pass(git_indexer_commit(idx, &stats));
@@ -117,7 +122,12 @@ void test_pack_indexer__missing_trailer(void)
 	git_indexer *idx = 0;
 	git_indexer_progress stats = { 0 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_indexer_new(&idx, ".", GIT_OID_SHA1, NULL));
+#else
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
+#endif
+
 	cl_git_pass(git_indexer_append(
 		idx, missing_trailer_pack, missing_trailer_pack_len, &stats));
 	cl_git_fail(git_indexer_commit(idx, &stats));
@@ -133,7 +143,12 @@ void test_pack_indexer__leaky(void)
 	git_indexer *idx = 0;
 	git_indexer_progress stats = { 0 };
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_indexer_new(&idx, ".", GIT_OID_SHA1, NULL));
+#else
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
+#endif
+
 	cl_git_pass(git_indexer_append(
 		idx, leaky_pack, leaky_pack_len, &stats));
 	cl_git_fail(git_indexer_commit(idx, &stats));
@@ -151,16 +166,23 @@ void test_pack_indexer__fix_thin(void)
 	git_repository *repo;
 	git_odb *odb;
 	git_oid id, should_id;
+	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 
 	cl_git_pass(git_repository_init(&repo, "thin.git", true));
 	cl_git_pass(git_repository_odb(&odb, repo));
 
 	/* Store the missing base into your ODB so the indexer can fix the pack */
 	cl_git_pass(git_odb_write(&id, odb, base_obj, base_obj_len, GIT_OBJECT_BLOB));
-	git_oid_fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18");
+	git_oid__fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18", GIT_OID_SHA1);
 	cl_assert_equal_oid(&should_id, &id);
 
-	cl_git_pass(git_indexer_new(&idx, ".", 0, odb, NULL));
+#ifdef GIT_EXPERIMENTAL_SHA256
+	opts.odb = odb;
+	cl_git_pass(git_indexer_new(&idx, ".", GIT_OID_SHA1, &opts));
+#else
+	cl_git_pass(git_indexer_new(&idx, ".", 0, odb, &opts));
+#endif
+
 	cl_git_pass(git_indexer_append(idx, thin_pack, thin_pack_len, &stats));
 	cl_git_pass(git_indexer_commit(idx, &stats));
 
@@ -192,7 +214,12 @@ void test_pack_indexer__fix_thin(void)
 
 		cl_git_pass(p_stat(name, &st));
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+		cl_git_pass(git_indexer_new(&idx, ".", GIT_OID_SHA1, NULL));
+#else
 		cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
+#endif
+
 		read = p_read(fd, buffer, sizeof(buffer));
 		cl_assert(read != -1);
 		p_close(fd);
@@ -216,16 +243,23 @@ void test_pack_indexer__corrupt_length(void)
 	git_repository *repo;
 	git_odb *odb;
 	git_oid id, should_id;
+	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 
 	cl_git_pass(git_repository_init(&repo, "thin.git", true));
 	cl_git_pass(git_repository_odb(&odb, repo));
 
 	/* Store the missing base into your ODB so the indexer can fix the pack */
 	cl_git_pass(git_odb_write(&id, odb, base_obj, base_obj_len, GIT_OBJECT_BLOB));
-	git_oid_fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18");
+	git_oid__fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18", GIT_OID_SHA1);
 	cl_assert_equal_oid(&should_id, &id);
 
-	cl_git_pass(git_indexer_new(&idx, ".", 0, odb, NULL));
+#ifdef GIT_EXPERIMENTAL_SHA256
+	opts.odb = odb;
+	cl_git_pass(git_indexer_new(&idx, ".", GIT_OID_SHA1, &opts));
+#else
+	cl_git_pass(git_indexer_new(&idx, ".", 0, odb, &opts));
+#endif
+
 	cl_git_pass(git_indexer_append(
 		idx, corrupt_thin_pack, corrupt_thin_pack_len, &stats));
 	cl_git_fail(git_indexer_commit(idx, &stats));
@@ -246,7 +280,12 @@ void test_pack_indexer__incomplete_pack_fails_with_strict(void)
 
 	opts.verify = 1;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_indexer_new(&idx, ".", GIT_OID_SHA1, &opts));
+#else
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, &opts));
+#endif
+
 	cl_git_pass(git_indexer_append(
 		idx, incomplete_pack, incomplete_pack_len, &stats));
 	cl_git_fail(git_indexer_commit(idx, &stats));
@@ -266,7 +305,12 @@ void test_pack_indexer__out_of_order_with_connectivity_checks(void)
 
 	opts.verify = 1;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_indexer_new(&idx, ".", GIT_OID_SHA1, &opts));
+#else
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, &opts));
+#endif
+
 	cl_git_pass(git_indexer_append(
 		idx, out_of_order_pack, out_of_order_pack_len, &stats));
 	cl_git_pass(git_indexer_commit(idx, &stats));
@@ -309,7 +353,12 @@ void test_pack_indexer__no_tmp_files(void)
 	git_str_dispose(&path);
 	cl_assert(git_str_len(&first_tmp_file) == 0);
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_indexer_new(&idx, ".", GIT_OID_SHA1, NULL));
+#else
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
+#endif
+
 	git_indexer_free(idx);
 
 	cl_git_pass(git_str_sets(&path, clar_sandbox_path()));

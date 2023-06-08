@@ -1,13 +1,14 @@
 #include "clar_libgit2.h"
 #include "patch/patch_common.h"
+#include "diff_helpers.h"
 
 static void verify_patch_id(const char *diff_content, const char *expected_id)
 {
 	git_oid expected_oid, actual_oid;
 	git_diff *diff;
 
-	cl_git_pass(git_oid_fromstr(&expected_oid, expected_id));
-	cl_git_pass(git_diff_from_buffer(&diff, diff_content, strlen(diff_content)));
+	cl_git_pass(git_oid__fromstr(&expected_oid, expected_id, GIT_OID_SHA1));
+	cl_git_pass(diff_from_buffer(&diff, diff_content, strlen(diff_content)));
 	cl_git_pass(git_diff_patchid(&actual_oid, diff, NULL));
 
 	cl_assert_equal_oid(&expected_oid, &actual_oid);

@@ -282,7 +282,11 @@ static int update_head_to_branch(
 			reflog_message)) < 0)
 		goto cleanup;
 
-	if ((retcode = git_remote__default_branch(&default_branch, remote)) < 0)
+	retcode = git_remote__default_branch(&default_branch, remote);
+
+	if (retcode == GIT_ENOTFOUND)
+		retcode = 0;
+	else if (retcode)
 		goto cleanup;
 
 	if (!git_remote__matching_refspec(remote, git_str_cstr(&default_branch)))
@@ -389,12 +393,19 @@ static int checkout_branch(git_repository *repo, git_remote *remote, const git_c
 	return error;
 }
 
-static int clone_into(git_repository *repo, git_remote *_remote, const git_fetch_options *opts, const git_checkout_options *co_opts, const char *branch)
+static int clone_into(
+	git_repository *repo,
+	git_remote *_remote,
+	const git_fetch_options *opts,
+	const git_checkout_options *co_opts,
+	const char *branch)
 {
 	int error;
 	git_str reflog_message = GIT_STR_INIT;
+	git_remote_connect_options connect_opts = GIT_REMOTE_CONNECT_OPTIONS_INIT;
 	git_fetch_options fetch_opts;
 	git_remote *remote;
+	git_oid_t oid_type;
 
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(_remote);
@@ -409,8 +420,27 @@ static int clone_into(git_repository *repo, git_remote *_remote, const git_fetch
 
 	memcpy(&fetch_opts, opts, sizeof(git_fetch_options));
 	fetch_opts.update_fetchhead = 0;
-	fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+
+	if (!opts->depth)
+		fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+
+	if ((error = git_remote_connect_options__from_fetch_opts(&connect_opts, remote, &fetch_opts)) < 0)
+		goto cleanup;
+
 	git_str_printf(&reflog_message, "clone: from %s", git_remote_url(remote));
+
+	/*
+	 * Connect to the server so that we can identify the remote
+	 * object format.
+	 */
+
+	if ((error = git_remote_connect_ext(remote, GIT_DIRECTION_FETCH,
+			&connect_opts)) < 0)
+		goto cleanup;
+
+	if ((error = git_remote_oid_type(&oid_type, remote)) < 0 ||
+	    (error = git_repository__set_objectformat(repo, oid_type)) < 0)
+		goto cleanup;
 
 	if ((error = git_remote_fetch(remote, NULL, &fetch_opts, git_str_cstr(&reflog_message))) != 0)
 		goto cleanup;
@@ -419,6 +449,7 @@ static int clone_into(git_repository *repo, git_remote *_remote, const git_fetch
 
 cleanup:
 	git_remote_free(remote);
+	git_remote_connect_options_dispose(&connect_opts);
 	git_str_dispose(&reflog_message);
 
 	return error;

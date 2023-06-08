@@ -274,7 +274,7 @@ typedef struct {
 
 	/**
 	 * Represents the known length of the `id` field, when
-	 * converted to a hex string.  It is generally `GIT_OID_HEXSZ`, unless this
+	 * converted to a hex string.  It is generally `GIT_OID_SHA1_HEXSIZE`, unless this
 	 * delta was created from reading a patch file, in which case it may be
 	 * abbreviated to something reasonable, like 7 characters.
 	 */
@@ -420,6 +420,22 @@ typedef struct {
 	 * the hunks will be merged into one. Defaults to 0.
 	 */
 	uint32_t    interhunk_lines;
+
+	/**
+	 * The object ID type to emit in diffs; this is used by functions
+	 * that operate without a repository - namely `git_diff_buffers`,
+	 * or `git_diff_blobs` and `git_diff_blob_to_buffer` when one blob
+	 * is `NULL`.
+	 *
+	 * This may be omitted (set to `0`). If a repository is available,
+	 * the object ID format of the repository will be used. If no
+	 * repository is available then the default is `GIT_OID_SHA`.
+	 *
+	 * If this is specified and a repository is available, then the
+	 * specified `oid_type` must match the repository's object ID
+	 * format.
+	 */
+	git_oid_t   oid_type;
 
 	/**
 	 * The abbreviation length to use when formatting object ids.
@@ -1153,9 +1169,8 @@ GIT_EXTERN(int) git_diff_to_buf(
 
 /**@}*/
 
-
 /*
- * Misc
+ * Low-level file comparison, invoking callbacks per difference.
  */
 
 /**
@@ -1271,6 +1286,25 @@ GIT_EXTERN(int) git_diff_buffers(
 	git_diff_line_cb line_cb,
 	void *payload);
 
+/* Patch file parsing. */
+
+/**
+ * Options for parsing a diff / patch file.
+ */
+typedef struct {
+	unsigned int version;
+	git_oid_t oid_type;
+} git_diff_parse_options;
+
+/* The current version of the diff parse options structure */
+#define GIT_DIFF_PARSE_OPTIONS_VERSION 1
+
+/* Stack initializer for diff parse options.  Alternatively use
+ * `git_diff_parse_options_init` programmatic initialization.
+ */
+#define GIT_DIFF_PARSE_OPTIONS_INIT \
+	{ GIT_DIFF_PARSE_OPTIONS_VERSION, GIT_OID_DEFAULT }
+
 /**
  * Read the contents of a git patch file into a `git_diff` object.
  *
@@ -1293,7 +1327,11 @@ GIT_EXTERN(int) git_diff_buffers(
 GIT_EXTERN(int) git_diff_from_buffer(
 	git_diff **out,
 	const char *content,
-	size_t content_len);
+	size_t content_len
+#ifdef GIT_EXPERIMENTAL_SHA256
+	, git_diff_parse_options *opts
+#endif
+	);
 
 /**
  * This is an opaque structure which is allocated by `git_diff_get_stats`.

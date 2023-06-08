@@ -82,7 +82,7 @@ void test_refs_read__symbolic(void)
 	cl_assert(object != NULL);
 	cl_assert(git_object_type(object) == GIT_OBJECT_COMMIT);
 
-	git_oid_fromstr(&id, current_master_tip);
+	git_oid__fromstr(&id, current_master_tip, GIT_OID_SHA1);
 	cl_assert_equal_oid(&id, git_object_id(object));
 
 	git_object_free(object);
@@ -110,7 +110,7 @@ void test_refs_read__nested_symbolic(void)
 	cl_assert(object != NULL);
 	cl_assert(git_object_type(object) == GIT_OBJECT_COMMIT);
 
-	git_oid_fromstr(&id, current_master_tip);
+	git_oid__fromstr(&id, current_master_tip, GIT_OID_SHA1);
 	cl_assert_equal_oid(&id, git_object_id(object));
 
 	git_object_free(object);

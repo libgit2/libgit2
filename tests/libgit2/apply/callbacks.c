@@ -12,7 +12,7 @@ void test_apply_callbacks__initialize(void)
 
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
 
-	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+	git_oid__fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
 	git_commit_free(commit);
@@ -40,7 +40,7 @@ void test_apply_callbacks__delta_aborts(void)
 
 	opts.delta_cb = delta_abort_cb;
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_MODIFY_TWO_FILES, strlen(DIFF_MODIFY_TWO_FILES)));
 	cl_git_fail_with(-99,
 		git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, &opts));
@@ -79,7 +79,7 @@ void test_apply_callbacks__delta_can_skip(void)
 
 	opts.delta_cb = delta_skip_cb;
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_MODIFY_TWO_FILES, strlen(DIFF_MODIFY_TWO_FILES)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, &opts));
 
@@ -117,7 +117,7 @@ void test_apply_callbacks__hunk_can_skip(void)
 	opts.hunk_cb = hunk_skip_odds_cb;
 	opts.payload = &count;
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_MANY_CHANGES_ONE, strlen(DIFF_MANY_CHANGES_ONE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, &opts));
 

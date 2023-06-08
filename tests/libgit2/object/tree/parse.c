@@ -26,7 +26,7 @@ static void assert_tree_parses(const char *data, size_t datalen,
 
 	if (!datalen)
 		datalen = strlen(data);
-	cl_git_pass(git_object__from_raw((git_object **) &tree, data, datalen, GIT_OBJECT_TREE));
+	cl_git_pass(git_object__from_raw((git_object **) &tree, data, datalen, GIT_OBJECT_TREE, GIT_OID_SHA1));
 
 	cl_assert_equal_i(git_tree_entrycount(tree), expected_nentries);
 
@@ -35,7 +35,7 @@ static void assert_tree_parses(const char *data, size_t datalen,
 		const git_tree_entry *entry;
 		git_oid oid;
 
-		cl_git_pass(git_oid_fromstr(&oid, expected->oid));
+		cl_git_pass(git_oid__fromstr(&oid, expected->oid, GIT_OID_SHA1));
 
 		cl_assert(entry = git_tree_entry_byname(tree, expected->filename));
 		cl_assert_equal_s(expected->filename, entry->filename);
@@ -51,7 +51,7 @@ static void assert_tree_fails(const char *data, size_t datalen)
 	git_object *object;
 	if (!datalen)
 		datalen = strlen(data);
-	cl_git_fail(git_object__from_raw(&object, data, datalen, GIT_OBJECT_TREE));
+	cl_git_fail(git_object__from_raw(&object, data, datalen, GIT_OBJECT_TREE, GIT_OID_SHA1));
 }
 
 void test_object_tree_parse__single_blob_parses(void)

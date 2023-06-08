@@ -12,7 +12,7 @@ void test_apply_check__initialize(void)
 
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
 
-	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+	git_oid__fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
 	git_commit_free(commit);
@@ -32,8 +32,8 @@ void test_apply_check__generate_diff(void)
 	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
 	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
 
-	cl_git_pass(git_oid_fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707"));
-	cl_git_pass(git_oid_fromstr(&b_oid, "7c7bf85e978f1d18c0566f702d2cb7766b9c8d4f"));
+	cl_git_pass(git_oid__fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1));
+	cl_git_pass(git_oid__fromstr(&b_oid, "7c7bf85e978f1d18c0566f702d2cb7766b9c8d4f", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&a_commit, repo, &a_oid));
 	cl_git_pass(git_commit_lookup(&b_commit, repo, &b_oid));
 
@@ -60,7 +60,7 @@ void test_apply_check__parsed_diff(void)
 	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
 
 	opts.flags |= GIT_APPLY_CHECK;
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_MODIFY_TWO_FILES, strlen(DIFF_MODIFY_TWO_FILES)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, &opts));
 
@@ -76,7 +76,7 @@ void test_apply_check__binary(void)
    git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
 
    opts.flags |= GIT_APPLY_CHECK;
-   cl_git_pass(git_diff_from_buffer(&diff,
+   cl_git_pass(diff_from_buffer(&diff,
        DIFF_MODIFY_TWO_FILES_BINARY,
        strlen(DIFF_MODIFY_TWO_FILES_BINARY)));
    cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, &opts));
@@ -112,7 +112,7 @@ void test_apply_check__does_not_apply(void)
 	git_index_free(index);
 
 	opts.flags |= GIT_APPLY_CHECK;
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_fail_with(GIT_EAPPLYFAIL, git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, &opts));
 
 	validate_apply_index(repo, index_expected, index_expected_cnt);

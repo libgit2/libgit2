@@ -12,7 +12,7 @@
 #include "git2.h"
 #include "auth.h"
 
-#if defined(GIT_GSSAPI) || defined(GIT_GSSFRAMEWORK)
+#if defined(GIT_GSSAPI) || defined(GIT_GSSFRAMEWORK) || defined(GIT_WIN32)
 
 extern int git_http_auth_negotiate(
 	git_http_auth_context **out,

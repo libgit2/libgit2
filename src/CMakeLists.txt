@@ -36,14 +36,14 @@ add_feature_info(debugopen GIT_DEBUG_STRICT_OPEN "path validation in open")
 # Optional feature enablement
 #
 
-include(SelectZlib)
 include(SelectGSSAPI)
 include(SelectHTTPSBackend)
 include(SelectHashes)
 include(SelectHTTPParser)
 include(SelectRegex)
+include(SelectXdiff)
 include(SelectSSH)
-include(SelectWinHTTP)
+include(SelectZlib)
 
 #
 # Platform support
@@ -58,20 +58,43 @@ add_feature_info(futimens GIT_USE_FUTIMENS "futimens support")
 
 # qsort
 
-check_prototype_definition(qsort_r
-	"void qsort_r(void *base, size_t nmemb, size_t size, void *thunk, int (*compar)(void *, const void *, const void *))"
-	"" "stdlib.h" GIT_QSORT_R_BSD)
+# old-style FreeBSD qsort_r() has the 'context' parameter as the first argument
+# of the comparison function:
+check_prototype_definition_safe(qsort_r
+	"void (qsort_r)(void *base, size_t nmemb, size_t size, void *context, int (*compar)(void *, const void *, const void *))"
+	"" "stdlib.h" GIT_QSORT_BSD)
 
-check_prototype_definition(qsort_r
-	"void qsort_r(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *, void *), void *arg)"
-	"" "stdlib.h" GIT_QSORT_R_GNU)
+# GNU or POSIX qsort_r() has the 'context' parameter as the last argument of the
+# comparison function:
+check_prototype_definition_safe(qsort_r
+	"void (qsort_r)(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *, void *), void *context)"
+	"" "stdlib.h" GIT_QSORT_GNU)
 
-check_function_exists(qsort_s GIT_QSORT_S)
+# C11 qsort_s() has the 'context' parameter as the last argument of the
+# comparison function, and returns an error status:
+check_prototype_definition_safe(qsort_s
+	"errno_t (qsort_s)(void *base, rsize_t nmemb, rsize_t size, int (*compar)(const void *, const void *, void *), void *context)"
+	"0" "stdlib.h" GIT_QSORT_C11)
+
+# MSC qsort_s() has the 'context' parameter as the first argument of the
+# comparison function, and as the last argument of qsort_s():
+check_prototype_definition_safe(qsort_s
+	"void (qsort_s)(void *base, size_t num, size_t width, int (*compare )(void *, const void *, const void *), void *context)"
+	"" "stdlib.h" GIT_QSORT_MSC)
 
 # random / entropy data
 
-check_function_exists(getentropy GIT_RAND_GETENTROPY)
-check_function_exists(getloadavg GIT_RAND_GETLOADAVG)
+check_symbol_exists(getentropy unistd.h GIT_RAND_GETENTROPY)
+check_symbol_exists(getloadavg stdlib.h GIT_RAND_GETLOADAVG)
+
+# poll
+
+if(WIN32)
+	set(GIT_IO_WSAPOLL 1)
+else()
+	check_symbol_exists(poll poll.h GIT_IO_POLL)
+	check_symbol_exists(select sys/select.h GIT_IO_SELECT)
+endif()
 
 # determine architecture of the machine
 
@@ -169,12 +192,6 @@ if(ICONV_FOUND)
 	list(APPEND LIBGIT2_PC_LIBS ${ICONV_LIBRARIES})
 endif()
 add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
-
-#
-# Configure support
-#
-
-configure_file(features.h.in git2/sys/features.h)
 
 #
 # Include child projects

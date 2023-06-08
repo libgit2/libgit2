@@ -15,21 +15,28 @@
 
 #include "git2.h"
 
-static int maybe_sha_or_abbrev(git_object **out, git_repository *repo, const char *spec, size_t speclen)
+static int maybe_sha_or_abbrev(
+	git_object **out,
+	git_repository *repo,
+	const char *spec,
+	size_t speclen)
 {
 	git_oid oid;
 
-	if (git_oid_fromstrn(&oid, spec, speclen) < 0)
+	if (git_oid__fromstrn(&oid, spec, speclen, repo->oid_type) < 0)
 		return GIT_ENOTFOUND;
 
 	return git_object_lookup_prefix(out, repo, &oid, speclen, GIT_OBJECT_ANY);
 }
 
-static int maybe_sha(git_object **out, git_repository *repo, const char *spec)
+static int maybe_sha(
+	git_object **out,
+	git_repository *repo,
+	const char *spec)
 {
 	size_t speclen = strlen(spec);
 
-	if (speclen != GIT_OID_HEXSZ)
+	if (speclen != git_oid_hexsize(repo->oid_type))
 		return GIT_ENOTFOUND;
 
 	return maybe_sha_or_abbrev(out, repo, spec, speclen);
@@ -110,8 +117,8 @@ static int revparse_lookup_object(
 	if (error != GIT_ENOTFOUND)
 		return error;
 
-	if ((strlen(spec) < GIT_OID_HEXSZ) &&
-		((error = maybe_abbrev(object_out, repo, spec)) != GIT_ENOTFOUND))
+	if ((strlen(spec) < git_oid_hexsize(repo->oid_type)) &&
+	    ((error = maybe_abbrev(object_out, repo, spec)) != GIT_ENOTFOUND))
 			return error;
 
 	if ((error = maybe_describe(object_out, repo, spec)) != GIT_ENOTFOUND)
@@ -268,7 +275,16 @@ static int retrieve_revobject_from_reflog(git_object **out, git_reference **base
 	int error = -1;
 
 	if (*base_ref == NULL) {
-		if ((error = git_reference_dwim(&ref, repo, identifier)) < 0)
+		/*
+		 * When HEAD@{n} is specified, do not use dwim, which would resolve the
+		 * reference (to the current branch that HEAD is pointing to).
+		 */
+		if (position > 0 && strcmp(identifier, GIT_HEAD_FILE) == 0)
+			error = git_reference_lookup(&ref, repo, GIT_HEAD_FILE);
+		else
+			error = git_reference_dwim(&ref, repo, identifier);
+
+		if (error < 0)
 			return error;
 	} else {
 		ref = *base_ref;

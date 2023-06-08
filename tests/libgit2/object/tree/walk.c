@@ -33,7 +33,7 @@ void test_object_tree_walk__0(void)
 	git_tree *tree;
 	int ct;
 
-	git_oid_fromstr(&id, tree_oid);
+	git_oid__fromstr(&id, tree_oid, GIT_OID_SHA1);
 
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 
@@ -77,7 +77,7 @@ void test_object_tree_walk__1(void)
 	git_tree *tree;
 	int ct;
 
-	git_oid_fromstr(&id, tree_oid);
+	git_oid__fromstr(&id, tree_oid, GIT_OID_SHA1);
 
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 
@@ -138,7 +138,7 @@ void test_object_tree_walk__2(void)
 	struct treewalk_skip_data data;
 
 	/* look up a deep tree */
-	git_oid_fromstr(&id, "ae90f12eea699729ed24555e40b9fd669da12a12");
+	git_oid__fromstr(&id, "ae90f12eea699729ed24555e40b9fd669da12a12", GIT_OID_SHA1);
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 
 	memset(&data, 0, sizeof(data));

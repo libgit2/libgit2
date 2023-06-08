@@ -4,8 +4,11 @@ add_library(util OBJECT)
 set_target_properties(util PROPERTIES C_STANDARD 11)
 set_target_properties(util PROPERTIES C_EXTENSIONS OFF)
 
+configure_file(git2_features.h.in git2_features.h)
+
 set(UTIL_INCLUDES
-	"${PROJECT_BINARY_DIR}/src"
+	"${PROJECT_BINARY_DIR}/src/util"
+	"${PROJECT_BINARY_DIR}/include"
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include")
 
@@ -34,6 +37,7 @@ if(USE_SHA1 STREQUAL "CollisionDetection")
         target_compile_definitions(util PRIVATE SHA1DC_CUSTOM_INCLUDE_SHA1_C=\"git2_util.h\")
         target_compile_definitions(util PRIVATE SHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C=\"git2_util.h\")
 elseif(USE_SHA1 STREQUAL "OpenSSL" OR USE_SHA1 STREQUAL "OpenSSL-Dynamic")
+	add_definitions(-DOPENSSL_API_COMPAT=0x10100000L)
 	file(GLOB UTIL_SRC_SHA1 hash/openssl.*)
 elseif(USE_SHA1 STREQUAL "CommonCrypto")
 	file(GLOB UTIL_SRC_SHA1 hash/common_crypto.*)
@@ -50,6 +54,7 @@ list(SORT UTIL_SRC_SHA1)
 if(USE_SHA256 STREQUAL "Builtin")
 	file(GLOB UTIL_SRC_SHA256 hash/builtin.* hash/rfc6234/*)
 elseif(USE_SHA256 STREQUAL "OpenSSL" OR USE_SHA256 STREQUAL "OpenSSL-Dynamic")
+	add_definitions(-DOPENSSL_API_COMPAT=0x10100000L)
 	file(GLOB UTIL_SRC_SHA256 hash/openssl.*)
 elseif(USE_SHA256 STREQUAL "CommonCrypto")
 	file(GLOB UTIL_SRC_SHA256 hash/common_crypto.*)
@@ -72,3 +77,12 @@ ide_split_sources(util)
 
 target_include_directories(util PRIVATE ${UTIL_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${libgit2_SOURCE_DIR}/include)
 target_include_directories(util SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
+
+install(
+	TARGETS libgit2package
+	EXPORT "${targets_export_name}"
+	LIBRARY DESTINATION "lib"
+	ARCHIVE DESTINATION "lib"
+	RUNTIME DESTINATION "bin"
+	INCLUDES DESTINATION "${include_install_dir}"
+)

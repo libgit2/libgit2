@@ -13,12 +13,10 @@ typedef struct {
 	git_error *last_error;
 	git_error error_t;
 	git_str error_buf;
-	char oid_fmt[GIT_OID_HEXSZ+1];
+	char oid_fmt[GIT_OID_MAX_HEXSIZE+1];
 } git_threadstate;
 
 extern int git_threadstate_global_init(void);
 extern git_threadstate *git_threadstate_get(void);
-
-#define GIT_THREADSTATE (git_threadstate_get())
 
 #endif

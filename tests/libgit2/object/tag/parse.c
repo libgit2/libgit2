@@ -14,12 +14,12 @@ static void assert_tag_parses(const char *data, size_t datalen,
 	if (!datalen)
 		datalen = strlen(data);
 
-	cl_git_pass(git_object__from_raw((git_object **) &tag, data, datalen, GIT_OBJECT_TAG));
+	cl_git_pass(git_object__from_raw((git_object **) &tag, data, datalen, GIT_OBJECT_TAG, GIT_OID_SHA1));
 	cl_assert_equal_i(tag->type, GIT_OBJECT_TAG);
 
 	if (expected_oid) {
 		git_oid oid;
-		cl_git_pass(git_oid_fromstr(&oid, expected_oid));
+		cl_git_pass(git_oid__fromstr(&oid, expected_oid, GIT_OID_SHA1));
 		cl_assert_equal_oid(&oid, &tag->target);
 	}
 
@@ -54,7 +54,7 @@ static void assert_tag_fails(const char *data, size_t datalen)
 	git_object *object;
 	if (!datalen)
 		datalen = strlen(data);
-	cl_git_fail(git_object__from_raw(&object, data, datalen, GIT_OBJECT_TAG));
+	cl_git_fail(git_object__from_raw(&object, data, datalen, GIT_OBJECT_TAG, GIT_OID_SHA1));
 }
 
 void test_object_tag_parse__valid_tag_parses(void)

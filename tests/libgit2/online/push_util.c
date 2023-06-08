@@ -2,8 +2,6 @@
 #include "vector.h"
 #include "push_util.h"
 
-const git_oid OID_ZERO = {{ 0 }};
-
 void updated_tip_free(updated_tip *t)
 {
 	git__free(t->name);

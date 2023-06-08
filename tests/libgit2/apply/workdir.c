@@ -12,7 +12,7 @@ void test_apply_workdir__initialize(void)
 
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
 
-	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+	git_oid__fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
 	git_commit_free(commit);
@@ -42,8 +42,8 @@ void test_apply_workdir__generated_diff(void)
 	size_t workdir_expected_cnt = sizeof(workdir_expected) /
 		sizeof(struct merge_index_entry);
 
-	git_oid_fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707");
-	git_oid_fromstr(&b_oid, "7c7bf85e978f1d18c0566f702d2cb7766b9c8d4f"); cl_git_pass(git_commit_lookup(&a_commit, repo, &a_oid));
+	git_oid__fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1);
+	git_oid__fromstr(&b_oid, "7c7bf85e978f1d18c0566f702d2cb7766b9c8d4f", GIT_OID_SHA1); cl_git_pass(git_commit_lookup(&a_commit, repo, &a_oid));
 	cl_git_pass(git_commit_lookup(&b_commit, repo, &b_oid));
 
 	cl_git_pass(git_commit_tree(&a_tree, a_commit));
@@ -77,7 +77,7 @@ void test_apply_workdir__parsed_diff(void)
 	size_t workdir_expected_cnt = sizeof(workdir_expected) /
 	    sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_MODIFY_TWO_FILES, strlen(DIFF_MODIFY_TWO_FILES)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
@@ -101,7 +101,7 @@ void test_apply_workdir__removes_file(void)
 	size_t workdir_expected_cnt = sizeof(workdir_expected) /
 	    sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_DELETE_FILE,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_DELETE_FILE,
 		strlen(DIFF_DELETE_FILE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
@@ -127,7 +127,7 @@ void test_apply_workdir__adds_file(void)
 	size_t workdir_expected_cnt = sizeof(workdir_expected) /
 	    sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_ADD_FILE, strlen(DIFF_ADD_FILE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
@@ -171,13 +171,13 @@ void test_apply_workdir__modified_index_with_unmodified_workdir_is_ok(void)
 
 	idx_entry.mode = 0100644;
 	idx_entry.path = "veal.txt";
-	cl_git_pass(git_oid_fromstr(&idx_entry.id, "ffb36e513f5fdf8a6ba850a20142676a2ac4807d"));
+	cl_git_pass(git_oid__fromstr(&idx_entry.id, "ffb36e513f5fdf8a6ba850a20142676a2ac4807d", GIT_OID_SHA1));
 
 	cl_git_pass(git_index_add(index, &idx_entry));
 	cl_git_pass(git_index_remove(index, "asparagus.txt", 0));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_apply_index(repo, index_expected, index_expected_cnt);
@@ -208,7 +208,7 @@ void test_apply_workdir__application_failure_leaves_workdir_unmodified(void)
 	cl_git_rewritefile("merge-recursive/veal.txt",
 	    "This is a modification.\n");
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_fail_with(GIT_EAPPLYFAIL, git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
@@ -233,7 +233,7 @@ void test_apply_workdir__keeps_nonconflicting_changes(void)
 	cl_git_rmfile("merge-recursive/oyster.txt");
 	cl_git_rewritefile("merge-recursive/gravy.txt", "Hello, world.\n");
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_MODIFY_TWO_FILES, strlen(DIFF_MODIFY_TWO_FILES)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
@@ -268,7 +268,7 @@ void test_apply_workdir__can_apply_nonconflicting_file_changes(void)
 	cl_git_append2file("merge-recursive/asparagus.txt",
 	    "This line is added in the workdir.\n");
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_index_unchanged(repo);
@@ -295,7 +295,7 @@ void test_apply_workdir__change_mode(void)
 	size_t workdir_expected_cnt = sizeof(workdir_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_index_unchanged(repo);
@@ -321,7 +321,7 @@ void test_apply_workdir__apply_many_changes_one(void)
 	size_t workdir_expected_cnt = sizeof(workdir_expected) /
 	    sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_MANY_CHANGES_ONE, strlen(DIFF_MANY_CHANGES_ONE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, &opts));
 
@@ -347,7 +347,7 @@ void test_apply_workdir__apply_many_changes_two(void)
 	size_t workdir_expected_cnt = sizeof(workdir_expected) /
 	    sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_MANY_CHANGES_TWO, strlen(DIFF_MANY_CHANGES_TWO)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, &opts));
 

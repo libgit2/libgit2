@@ -1036,6 +1036,8 @@ typedef struct {
 	git_index *index;
 	git_vector index_snapshot;
 
+	git_oid_t oid_type;
+
 	git_array_t(filesystem_iterator_frame) frames;
 	git_ignores ignores;
 
@@ -1271,7 +1273,7 @@ static int filesystem_iterator_entry_hash(
 	int error;
 
 	if (S_ISDIR(entry->st.st_mode)) {
-		memset(&entry->id, 0, GIT_OID_RAWSZ);
+		memset(&entry->id, 0, git_oid_size(iter->oid_type));
 		return 0;
 	}
 
@@ -1281,7 +1283,7 @@ static int filesystem_iterator_entry_hash(
 
 	if (!(error = git_str_joinpath(&fullpath, iter->root, entry->path)) &&
 	    !(error = git_path_validate_str_length(iter->base.repo, &fullpath)))
-		error = git_odb_hashfile(&entry->id, fullpath.ptr, GIT_OBJECT_BLOB);
+		error = git_odb__hashfile(&entry->id, fullpath.ptr, GIT_OBJECT_BLOB, iter->oid_type);
 
 	git_str_dispose(&fullpath);
 	return error;
@@ -1529,6 +1531,8 @@ static void filesystem_iterator_set_current(
 
 	if (iter->base.flags & GIT_ITERATOR_INCLUDE_HASH)
 		git_oid_cpy(&iter->entry.id, &entry->id);
+	else
+		git_oid_clear(&iter->entry.id, iter->oid_type);
 
 	iter->entry.path = entry->path;
 
@@ -1973,6 +1977,8 @@ static int iterator_for_filesystem(
 		(iterator__flag(&iter->base, PRECOMPOSE_UNICODE) ?
 			GIT_FS_PATH_DIR_PRECOMPOSE_UNICODE : 0);
 
+	iter->oid_type = options->oid_type;
+
 	if ((error = filesystem_iterator_init(iter)) < 0)
 		goto on_error;
 
@@ -1987,10 +1993,15 @@ on_error:
 int git_iterator_for_filesystem(
 	git_iterator **out,
 	const char *root,
-	git_iterator_options *options)
+	git_iterator_options *given_opts)
 {
+	git_iterator_options options = GIT_ITERATOR_OPTIONS_INIT;
+
+	if (given_opts)
+		memcpy(&options, given_opts, sizeof(git_iterator_options));
+
 	return iterator_for_filesystem(out,
-		NULL, root, NULL, NULL, GIT_ITERATOR_FS, options);
+		NULL, root, NULL, NULL, GIT_ITERATOR_FS, &options);
 }
 
 int git_iterator_for_workdir_ext(
@@ -2016,6 +2027,12 @@ int git_iterator_for_workdir_ext(
 
 	options.flags |= GIT_ITERATOR_HONOR_IGNORES |
 		GIT_ITERATOR_IGNORE_DOT_GIT;
+
+	if (!options.oid_type)
+		options.oid_type = repo->oid_type;
+	else if (options.oid_type != repo->oid_type)
+		git_error_set(GIT_ERROR_INVALID,
+			"specified object ID type does not match repository object ID type");
 
 	return iterator_for_filesystem(out,
 		repo, repo_workdir, index, tree, GIT_ITERATOR_WORKDIR, &options);

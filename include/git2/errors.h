@@ -58,7 +58,8 @@ typedef enum {
 	GIT_EMISMATCH       = -33,	/**< Hashsum mismatch in object */
 	GIT_EINDEXDIRTY     = -34,	/**< Unsaved changes in the index would be overwritten */
 	GIT_EAPPLYFAIL      = -35,	/**< Patch application failed */
-	GIT_EOWNER          = -36	/**< The object is not owned by the current user */
+	GIT_EOWNER          = -36,	/**< The object is not owned by the current user */
+	GIT_TIMEOUT         = -37	/**< The operation timed out */
 } git_error_code;
 
 /**
@@ -109,7 +110,8 @@ typedef enum {
 	GIT_ERROR_WORKTREE,
 	GIT_ERROR_SHA,
 	GIT_ERROR_HTTP,
-	GIT_ERROR_INTERNAL
+	GIT_ERROR_INTERNAL,
+	GIT_ERROR_GRAFTS
 } git_error_t;
 
 /**

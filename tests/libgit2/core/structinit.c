@@ -160,6 +160,11 @@ void test_core_structinit__compare(void)
 		git_stash_apply_options, GIT_STASH_APPLY_OPTIONS_VERSION, \
 		GIT_STASH_APPLY_OPTIONS_INIT, git_stash_apply_options_init);
 
+	/* stash save */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_stash_save_options, GIT_STASH_SAVE_OPTIONS_VERSION, \
+		GIT_STASH_SAVE_OPTIONS_INIT, git_stash_save_options_init);
+
 	/* status */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_status_options, GIT_STATUS_OPTIONS_VERSION, \

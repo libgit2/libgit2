@@ -611,13 +611,13 @@ int git_repository_mergehead_foreach(
 	buffer = merge_head_file.ptr;
 
 	while ((line = git__strsep(&buffer, "\n")) != NULL) {
-		if (strlen(line) != GIT_OID_HEXSZ) {
+		if (strlen(line) != git_oid_hexsize(repo->oid_type)) {
 			git_error_set(GIT_ERROR_INVALID, "unable to parse OID - invalid length");
 			error = -1;
 			goto cleanup;
 		}
 
-		if ((error = git_oid_fromstr(&oid, line)) < 0)
+		if ((error = git_oid__fromstr(&oid, line, repo->oid_type)) < 0)
 			goto cleanup;
 
 		if ((error = cb(&oid, payload)) != 0) {
@@ -1061,7 +1061,7 @@ static int index_entry_similarity_calc(
 	const git_merge_options *opts)
 {
 	git_blob *blob;
-	git_diff_file diff_file = {{{0}}};
+	git_diff_file diff_file;
 	git_object_size_t blobsize;
 	int error;
 
@@ -1069,6 +1069,8 @@ static int index_entry_similarity_calc(
 		return 0;
 
 	*out = NULL;
+
+	git_oid_clear(&diff_file.id, repo->oid_type);
 
 	if ((error = git_blob_lookup(&blob, repo, &entry->id)) < 0)
 		return error;
@@ -1997,8 +1999,11 @@ static int index_update_reuc(git_index *index, git_merge_diff_list *diff_list)
 	return 0;
 }
 
-static int index_from_diff_list(git_index **out,
-	git_merge_diff_list *diff_list, bool skip_reuc)
+static int index_from_diff_list(
+	git_index **out,
+	git_merge_diff_list *diff_list,
+	git_oid_t oid_type,
+	bool skip_reuc)
 {
 	git_index *index;
 	size_t i;
@@ -2007,7 +2012,7 @@ static int index_from_diff_list(git_index **out,
 
 	*out = NULL;
 
-	if ((error = git_index_new(&index)) < 0)
+	if ((error = git_index__new(&index, oid_type)) < 0)
 		return error;
 
 	if ((error = git_index__fill(index, &diff_list->staged)) < 0)
@@ -2157,7 +2162,7 @@ int git_merge__iterators(
 		}
 	}
 
-	error = index_from_diff_list(out, diff_list,
+	error = index_from_diff_list(out, diff_list, repo->oid_type,
 		(opts.flags & GIT_MERGE_SKIP_REUC));
 
 done:
@@ -2200,8 +2205,8 @@ int git_merge_trees(
 			result = our_tree;
 
 		if (result) {
-			if ((error = git_index_new(out)) == 0)
-    			error = git_index_read_tree(*out, result);
+			if ((error = git_index__new(out, repo->oid_type)) == 0)
+				error = git_index_read_tree(*out, result);
 
 			return error;
 		}

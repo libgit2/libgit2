@@ -21,15 +21,14 @@
 
 bool git_object__strict_input_validation = true;
 
-extern int git_odb_hash(git_oid *out, const void *data, size_t len, git_object_t type);
 size_t git_object__size(git_object_t type);
 
 typedef struct {
 	const char	*str;	/* type name string */
 	size_t		size;	/* size in bytes of the object structure */
 
-	int  (*parse)(void *self, git_odb_object *obj);
-	int  (*parse_raw)(void *self, const char *data, size_t size);
+	int  (*parse)(void *self, git_odb_object *obj, git_oid_t oid_type);
+	int  (*parse_raw)(void *self, const char *data, size_t size, git_oid_t oid_type);
 	void (*free)(void *self);
 } git_object_def;
 
@@ -61,7 +60,8 @@ int git_object__from_raw(
 	git_object **object_out,
 	const char *data,
 	size_t size,
-	git_object_t type)
+	git_object_t object_type,
+	git_oid_t oid_type)
 {
 	git_object_def *def;
 	git_object *object;
@@ -72,12 +72,15 @@ int git_object__from_raw(
 	*object_out = NULL;
 
 	/* Validate type match */
-	if (type != GIT_OBJECT_BLOB && type != GIT_OBJECT_TREE && type != GIT_OBJECT_COMMIT && type != GIT_OBJECT_TAG) {
+	if (object_type != GIT_OBJECT_BLOB &&
+	    object_type != GIT_OBJECT_TREE &&
+	    object_type != GIT_OBJECT_COMMIT &&
+	    object_type != GIT_OBJECT_TAG) {
 		git_error_set(GIT_ERROR_INVALID, "the requested type is invalid");
 		return GIT_ENOTFOUND;
 	}
 
-	if ((object_size = git_object__size(type)) == 0) {
+	if ((object_size = git_object__size(object_type)) == 0) {
 		git_error_set(GIT_ERROR_INVALID, "the requested type is invalid");
 		return GIT_ENOTFOUND;
 	}
@@ -86,15 +89,15 @@ int git_object__from_raw(
 	object = git__calloc(1, object_size);
 	GIT_ERROR_CHECK_ALLOC(object);
 	object->cached.flags = GIT_CACHE_STORE_PARSED;
-	object->cached.type = type;
-	if ((error = git_odb_hash(&object->cached.oid, data, size, type)) < 0)
+	object->cached.type = object_type;
+	if ((error = git_odb__hash(&object->cached.oid, data, size, object_type, oid_type)) < 0)
 		return error;
 
 	/* Parse raw object data */
-	def = &git_objects_table[type];
+	def = &git_objects_table[object_type];
 	GIT_ASSERT(def->free && def->parse_raw);
 
-	if ((error = def->parse_raw(object, data, size)) < 0) {
+	if ((error = def->parse_raw(object, data, size, oid_type)) < 0) {
 		def->free(object);
 		return error;
 	}
@@ -105,15 +108,13 @@ int git_object__from_raw(
 	return 0;
 }
 
-int git_object__from_odb_object(
+int git_object__init_from_odb_object(
 	git_object **object_out,
 	git_repository *repo,
 	git_odb_object *odb_obj,
 	git_object_t type)
 {
-	int error;
 	size_t object_size;
-	git_object_def *def;
 	git_object *object = NULL;
 
 	GIT_ASSERT_ARG(object_out);
@@ -140,11 +141,28 @@ int git_object__from_odb_object(
 	object->cached.size = odb_obj->cached.size;
 	object->repo = repo;
 
+	*object_out = object;
+	return 0;
+}
+
+int git_object__from_odb_object(
+	git_object **object_out,
+	git_repository *repo,
+	git_odb_object *odb_obj,
+	git_object_t type)
+{
+	int error;
+	git_object_def *def;
+	git_object *object = NULL;
+
+	if ((error = git_object__init_from_odb_object(&object, repo, odb_obj, type)) < 0)
+		return error;
+
 	/* Parse raw object data */
 	def = &git_objects_table[odb_obj->cached.type];
 	GIT_ASSERT(def->free && def->parse);
 
-	if ((error = def->parse(object, odb_obj)) < 0) {
+	if ((error = def->parse(object, odb_obj, repo->oid_type)) < 0) {
 		/*
 		 * parse returns EINVALID on invalid data; downgrade
 		 * that to a normal -1 error code.
@@ -178,6 +196,7 @@ int git_object_lookup_prefix(
 	git_object *object = NULL;
 	git_odb *odb = NULL;
 	git_odb_object *odb_obj = NULL;
+	size_t oid_hexsize;
 	int error = 0;
 
 	GIT_ASSERT_ARG(repo);
@@ -193,10 +212,12 @@ int git_object_lookup_prefix(
 	if (error < 0)
 		return error;
 
-	if (len > GIT_OID_HEXSZ)
-		len = GIT_OID_HEXSZ;
+	oid_hexsize = git_oid_hexsize(repo->oid_type);
 
-	if (len == GIT_OID_HEXSZ) {
+	if (len > oid_hexsize)
+		len = oid_hexsize;
+
+	if (len == oid_hexsize) {
 		git_cached_obj *cached = NULL;
 
 		/* We want to match the full id : we can first look up in the cache,
@@ -230,11 +251,12 @@ int git_object_lookup_prefix(
 			error = git_odb_read(&odb_obj, odb, id);
 		}
 	} else {
-		git_oid short_oid = {{ 0 }};
+		git_oid short_oid;
 
+		git_oid_clear(&short_oid, repo->oid_type);
 		git_oid__cpy_prefix(&short_oid, id, len);
 
-		/* If len < GIT_OID_HEXSZ (a strict short oid was given), we have
+		/* If len < GIT_OID_SHA1_HEXSIZE (a strict short oid was given), we have
 		 * 2 options :
 		 * - We always search in the cache first. If we find that short oid is
 		 *	ambiguous, we can stop. But in all the other cases, we must then
@@ -259,7 +281,8 @@ int git_object_lookup_prefix(
 }
 
 int git_object_lookup(git_object **object_out, git_repository *repo, const git_oid *id, git_object_t type) {
-	return git_object_lookup_prefix(object_out, repo, id, GIT_OID_HEXSZ, type);
+	return git_object_lookup_prefix(object_out,
+		repo, id, git_oid_hexsize(repo->oid_type), type);
 }
 
 void git_object_free(git_object *object)
@@ -358,12 +381,11 @@ static int dereference_object(git_object **dereferenced, git_object *obj)
 static int peel_error(int error, const git_oid *oid, git_object_t type)
 {
 	const char *type_name;
-	char hex_oid[GIT_OID_HEXSZ + 1];
+	char hex_oid[GIT_OID_MAX_HEXSIZE + 1];
 
 	type_name = git_object_type2string(type);
 
-	git_oid_fmt(hex_oid, oid);
-	hex_oid[GIT_OID_HEXSZ] = '\0';
+	git_oid_nfmt(hex_oid, GIT_OID_MAX_HEXSIZE + 1, oid);
 
 	git_error_set(GIT_ERROR_OBJECT, "the git_object of id '%s' can not be "
 		"successfully peeled into a %s (git_object_t=%i).", hex_oid, type_name, type);
@@ -501,22 +523,31 @@ cleanup:
 static int git_object__short_id(git_str *out, const git_object *obj)
 {
 	git_repository *repo;
-	int len = GIT_ABBREV_DEFAULT, error;
-	git_oid id = {{0}};
+	git_oid id;
 	git_odb *odb;
+	size_t oid_hexsize;
+	int len = GIT_ABBREV_DEFAULT, error;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(obj);
 
 	repo = git_object_owner(obj);
 
+	git_oid_clear(&id, repo->oid_type);
+	oid_hexsize = git_oid_hexsize(repo->oid_type);
+
 	if ((error = git_repository__configmap_lookup(&len, repo, GIT_CONFIGMAP_ABBREV)) < 0)
 		return error;
+
+	if (len < 0 || (size_t)len > oid_hexsize) {
+		git_error_set(GIT_ERROR_CONFIG, "invalid oid abbreviation setting: '%d'", len);
+		return -1;
+	}
 
 	if ((error = git_repository_odb(&odb, repo)) < 0)
 		return error;
 
-	while (len < GIT_OID_HEXSZ) {
+	while ((size_t)len < oid_hexsize) {
 		/* set up short oid */
 		memcpy(&id.id, &obj->cached.oid.id, (len + 1) / 2);
 		if (len & 1)
@@ -573,21 +604,29 @@ int git_object_rawcontent_is_valid(
 	int *valid,
 	const char *buf,
 	size_t len,
-	git_object_t type)
+	git_object_t object_type
+#ifdef GIT_EXPERIMENTAL_SHA256
+	, git_oid_t oid_type
+#endif
+	)
 {
 	git_object *obj = NULL;
 	int error;
+
+#ifndef GIT_EXPERIMENTAL_SHA256
+	git_oid_t oid_type = GIT_OID_SHA1;
+#endif
 
 	GIT_ASSERT_ARG(valid);
 	GIT_ASSERT_ARG(buf);
 
 	/* Blobs are always valid; don't bother parsing. */
-	if (type == GIT_OBJECT_BLOB) {
+	if (object_type == GIT_OBJECT_BLOB) {
 		*valid = 1;
 		return 0;
 	}
 
-	error = git_object__from_raw(&obj, buf, len, type);
+	error = git_object__from_raw(&obj, buf, len, object_type, oid_type);
 	git_object_free(obj);
 
 	if (error == 0) {
@@ -599,4 +638,54 @@ int git_object_rawcontent_is_valid(
 	}
 
 	return error;
+}
+
+int git_object__parse_oid_header(
+	git_oid *oid,
+	const char **buffer_out,
+	const char *buffer_end,
+	const char *header,
+	git_oid_t oid_type)
+{
+	const size_t sha_len = git_oid_hexsize(oid_type);
+	const size_t header_len = strlen(header);
+
+	const char *buffer = *buffer_out;
+
+	if (buffer + (header_len + sha_len + 1) > buffer_end)
+		return -1;
+
+	if (memcmp(buffer, header, header_len) != 0)
+		return -1;
+
+	if (buffer[header_len + sha_len] != '\n')
+		return -1;
+
+	if (git_oid__fromstr(oid, buffer + header_len, oid_type) < 0)
+		return -1;
+
+	*buffer_out = buffer + (header_len + sha_len + 1);
+
+	return 0;
+}
+
+int git_object__write_oid_header(
+	git_str *buf,
+	const char *header,
+	const git_oid *oid)
+{
+	size_t hex_size = git_oid_hexsize(git_oid_type(oid));
+	char hex_oid[GIT_OID_MAX_HEXSIZE];
+
+	if (!hex_size) {
+		git_error_set(GIT_ERROR_INVALID, "unknown type");
+		return -1;
+	}
+
+	git_oid_fmt(hex_oid, oid);
+	git_str_puts(buf, header);
+	git_str_put(buf, hex_oid, hex_size);
+	git_str_putc(buf, '\n');
+
+	return git_str_oom(buf) ? -1 : 0;
 }

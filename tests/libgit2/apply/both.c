@@ -12,7 +12,7 @@ void test_apply_both__initialize(void)
 
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
 
-	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+	git_oid__fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
 	git_commit_free(commit);
@@ -42,8 +42,8 @@ void test_apply_both__generated_diff(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	git_oid_fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707");
-	git_oid_fromstr(&b_oid, "7c7bf85e978f1d18c0566f702d2cb7766b9c8d4f");
+	git_oid__fromstr(&a_oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1);
+	git_oid__fromstr(&b_oid, "7c7bf85e978f1d18c0566f702d2cb7766b9c8d4f", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&a_commit, repo, &a_oid));
 	cl_git_pass(git_commit_lookup(&b_commit, repo, &b_oid));
 
@@ -78,7 +78,7 @@ void test_apply_both__parsed_diff(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_MODIFY_TWO_FILES, strlen(DIFF_MODIFY_TWO_FILES)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -102,7 +102,7 @@ void test_apply_both__removes_file(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 	    sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_DELETE_FILE,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_DELETE_FILE,
 		strlen(DIFF_DELETE_FILE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -128,7 +128,7 @@ void test_apply_both__adds_file(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 	    sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_ADD_FILE, strlen(DIFF_ADD_FILE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -161,7 +161,7 @@ void test_apply_both__application_failure_leaves_index_unmodified(void)
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_fail_with(GIT_EAPPLYFAIL, git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
 	validate_apply_index(repo, index_expected, index_expected_cnt);
@@ -192,13 +192,13 @@ void test_apply_both__index_must_match_workdir(void)
 	memset(&idx_entry, 0, sizeof(git_index_entry));
 	idx_entry.mode = 0100644;
 	idx_entry.path = "asparagus.txt";
-	cl_git_pass(git_oid_fromstr(&idx_entry.id, "06d3fefb8726ab1099acc76e02dfb85e034b2538"));
+	cl_git_pass(git_oid__fromstr(&idx_entry.id, "06d3fefb8726ab1099acc76e02dfb85e034b2538", GIT_OID_SHA1));
 	cl_git_pass(git_index_add(index, &idx_entry));
 
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_fail_with(GIT_EAPPLYFAIL, git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
 	git_diff_free(diff);
@@ -214,7 +214,7 @@ void test_apply_both__index_mode_must_match_workdir(void)
 	/* Set a file in the working directory executable. */
 	cl_must_pass(p_chmod("merge-recursive/asparagus.txt", 0755));
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_MODIFY_TWO_FILES,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_MODIFY_TWO_FILES,
 	    strlen(DIFF_MODIFY_TWO_FILES)));
 	cl_git_fail_with(GIT_EAPPLYFAIL, git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -248,7 +248,7 @@ void test_apply_both__application_failure_leaves_workdir_unmodified(void)
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_fail_with(GIT_EAPPLYFAIL, git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
@@ -290,7 +290,7 @@ void test_apply_both__keeps_nonconflicting_changes(void)
 	memset(&idx_entry, 0, sizeof(git_index_entry));
 	idx_entry.mode = 0100644;
 	idx_entry.path = "beef.txt";
-	cl_git_pass(git_oid_fromstr(&idx_entry.id, "898d12687fb35be271c27c795a6b32c8b51da79e"));
+	cl_git_pass(git_oid__fromstr(&idx_entry.id, "898d12687fb35be271c27c795a6b32c8b51da79e", GIT_OID_SHA1));
 	cl_git_pass(git_index_add(index, &idx_entry));
 
 	cl_git_pass(git_index_remove(index, "bouilli.txt", 0));
@@ -301,7 +301,7 @@ void test_apply_both__keeps_nonconflicting_changes(void)
 	cl_git_rmfile("merge-recursive/oyster.txt");
 	cl_git_rewritefile("merge-recursive/gravy.txt", "Hello, world.\n");
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
 	validate_apply_index(repo, index_expected, index_expected_cnt);
@@ -341,7 +341,7 @@ void test_apply_both__can_apply_nonconflicting_file_changes(void)
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
 	validate_apply_index(repo, both_expected, both_expected_cnt);
@@ -386,12 +386,12 @@ void test_apply_both__honors_crlf_attributes(void)
 	cl_git_rmfile("merge-recursive/asparagus.txt");
 	cl_git_rmfile("merge-recursive/veal.txt");
 
-	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+	git_oid__fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
 	git_commit_free(commit);
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
 	validate_apply_index(repo, index_expected, index_expected_cnt);
@@ -415,7 +415,7 @@ void test_apply_both__rename(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_FILE,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_RENAME_FILE,
 		strlen(DIFF_RENAME_FILE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -440,7 +440,7 @@ void test_apply_both__rename_and_modify(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_AND_MODIFY_FILE,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_RENAME_AND_MODIFY_FILE,
 		strlen(DIFF_RENAME_AND_MODIFY_FILE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -465,7 +465,7 @@ void test_apply_both__rename_a_to_b_to_c(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_A_TO_B_TO_C,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_RENAME_A_TO_B_TO_C,
 		strlen(DIFF_RENAME_A_TO_B_TO_C)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -490,7 +490,7 @@ void test_apply_both__rename_a_to_b_to_c_exact(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_A_TO_B_TO_C_EXACT,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_RENAME_A_TO_B_TO_C_EXACT,
 		strlen(DIFF_RENAME_A_TO_B_TO_C_EXACT)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -515,7 +515,7 @@ void test_apply_both__rename_circular(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_CIRCULAR,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_RENAME_CIRCULAR,
 		strlen(DIFF_RENAME_CIRCULAR)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -539,7 +539,7 @@ void test_apply_both__rename_2_to_1(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_2_TO_1,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_RENAME_2_TO_1,
 		strlen(DIFF_RENAME_2_TO_1)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -565,7 +565,7 @@ void test_apply_both__rename_1_to_2(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_1_TO_2,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_RENAME_1_TO_2,
 		strlen(DIFF_RENAME_1_TO_2)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -590,7 +590,7 @@ void test_apply_both__two_deltas_one_file(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_TWO_DELTAS_ONE_FILE,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_TWO_DELTAS_ONE_FILE,
 		strlen(DIFF_TWO_DELTAS_ONE_FILE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -616,7 +616,7 @@ void test_apply_both__two_deltas_one_new_file(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_TWO_DELTAS_ONE_NEW_FILE,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_TWO_DELTAS_ONE_NEW_FILE,
 		strlen(DIFF_TWO_DELTAS_ONE_NEW_FILE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -641,7 +641,7 @@ void test_apply_both__rename_and_modify_deltas(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_AND_MODIFY_DELTAS,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_RENAME_AND_MODIFY_DELTAS,
 		strlen(DIFF_RENAME_AND_MODIFY_DELTAS)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -667,7 +667,7 @@ void test_apply_both__rename_delta_after_modify_delta(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_AFTER_MODIFY,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_RENAME_AFTER_MODIFY,
 		strlen(DIFF_RENAME_AFTER_MODIFY)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -681,7 +681,7 @@ void test_apply_both__cant_rename_after_modify_nonexistent_target_path(void)
 {
 	git_diff *diff;
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_AFTER_MODIFY_TARGET_PATH,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_RENAME_AFTER_MODIFY_TARGET_PATH,
 		strlen(DIFF_RENAME_AFTER_MODIFY_TARGET_PATH)));
 	cl_git_fail(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -692,7 +692,7 @@ void test_apply_both__cant_modify_source_path_after_rename(void)
 {
 	git_diff *diff;
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_AND_MODIFY_SOURCE_PATH,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_RENAME_AND_MODIFY_SOURCE_PATH,
 		strlen(DIFF_RENAME_AND_MODIFY_SOURCE_PATH)));
 	cl_git_fail(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -714,7 +714,7 @@ void test_apply_both__readd_deleted_file(void)
 	size_t both_expected_cnt = sizeof(both_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_DELETE_AND_READD_FILE,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_DELETE_AND_READD_FILE,
 		strlen(DIFF_DELETE_AND_READD_FILE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -728,7 +728,7 @@ void test_apply_both__cant_remove_file_twice(void)
 {
 	git_diff *diff;
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_REMOVE_FILE_TWICE,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_REMOVE_FILE_TWICE,
 		strlen(DIFF_REMOVE_FILE_TWICE)));
 	cl_git_fail(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 
@@ -739,7 +739,7 @@ void test_apply_both__cant_add_invalid_filename(void)
 {
 	git_diff *diff;
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_ADD_INVALID_FILENAME,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_ADD_INVALID_FILENAME,
 		strlen(DIFF_ADD_INVALID_FILENAME)));
 	cl_git_fail(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
 

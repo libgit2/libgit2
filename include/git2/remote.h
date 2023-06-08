@@ -702,6 +702,15 @@ typedef enum {
 	GIT_REMOTE_DOWNLOAD_TAGS_ALL
 } git_remote_autotag_option_t;
 
+/** Constants for fetch depth (shallowness of fetch). */
+typedef enum {
+	/** The fetch is "full" (not shallow). This is the default. */
+	GIT_FETCH_DEPTH_FULL = 0,
+
+	/** The fetch should "unshallow" and fetch missing data. */
+	GIT_FETCH_DEPTH_UNSHALLOW = 2147483647
+} git_fetch_depth_t;
+
 /**
  * Fetch options structure.
  *
@@ -742,6 +751,15 @@ typedef struct {
 	 * Proxy options to use, by default no proxy is used.
 	 */
 	git_proxy_options proxy_opts;
+
+	/**
+	 * Depth of the fetch to perform, or `GIT_FETCH_DEPTH_FULL`
+	 * (or `0`) for full history, or `GIT_FETCH_DEPTH_UNSHALLOW`
+	 * to "unshallow" a shallow repository.
+	 *
+	 * The default is full (`GIT_FETCH_DEPTH_FULL` or `0`).
+	 */
+	int depth;
 
 	/**
 	 * Whether to allow off-site redirects.  If this is not

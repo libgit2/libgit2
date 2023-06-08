@@ -9,12 +9,30 @@
 
 #include "git2_util.h"
 
+/*
+ * Hostname handling
+ */
+
+/*
+ * See if a given hostname matches a certificate name pattern, according
+ * to RFC2818 rules (which specifies HTTP over TLS). Mainly, an asterisk
+ * matches anything, but is limited to a single url component.
+ */
+extern bool git_net_hostname_matches_cert(
+	const char *hostname,
+	const char *pattern);
+
+/*
+ * URL handling
+ */
+
 typedef struct git_net_url {
 	char *scheme;
 	char *host;
 	char *port;
 	char *path;
 	char *query;
+	char *fragment;
 	char *username;
 	char *password;
 } git_net_url;
@@ -32,6 +50,12 @@ extern int git_net_url_parse(git_net_url *url, const char *str);
 
 /** Parses a string containing an SCP style path into a URL structure. */
 extern int git_net_url_parse_scp(git_net_url *url, const char *str);
+
+/**
+ * Parses a string containing a standard URL or an SCP style path into
+ * a URL structure.
+ */
+extern int git_net_url_parse_standard_or_scp(git_net_url *url, const char *str);
 
 /** Appends a path and/or query string to the given URL */
 extern int git_net_url_joinpath(

@@ -130,11 +130,12 @@ static int append_header(
 	const git_signature *author,
 	git_email_create_options *opts)
 {
-	char id[GIT_OID_HEXSZ];
+	char id[GIT_OID_MAX_HEXSIZE + 1];
 	int error;
 
-	if ((error = git_oid_fmt(id, commit_id)) < 0 ||
-	    (error = git_str_printf(out, "From %.*s %s\n", GIT_OID_HEXSZ, id, EMAIL_TIMESTAMP)) < 0 ||
+	git_oid_tostr(id, GIT_OID_MAX_HEXSIZE + 1, commit_id);
+
+	if ((error = git_str_printf(out, "From %s %s\n", id, EMAIL_TIMESTAMP)) < 0 ||
 	    (error = git_str_printf(out, "From: %s <%s>\n", author->name, author->email)) < 0 ||
 	    (error = append_date(out, &author->when)) < 0 ||
 	    (error = append_subject(out, patch_idx, patch_count, summary, opts)) < 0)

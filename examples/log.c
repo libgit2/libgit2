@@ -329,7 +329,7 @@ static void print_time(const git_time *intime, const char *prefix)
 /** Helper to print a commit object. */
 static void print_commit(git_commit *commit, struct log_options *opts)
 {
-	char buf[GIT_OID_HEXSZ + 1];
+	char buf[GIT_OID_SHA1_HEXSIZE + 1];
 	int i, count;
 	const git_signature *sig;
 	const char *scan, *eol;

@@ -19,8 +19,6 @@
 #include "git2/index.h"
 #include "git2/merge.h"
 
-#include "xdiff/xdiff.h"
-
 /* only examine the first 8000 bytes for binaryness.
  * https://github.com/git/git/blob/77bd3ea9f54f1584147b594abc04c26ca516d987/xdiff-interface.c#L197
  */

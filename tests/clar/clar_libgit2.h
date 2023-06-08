@@ -5,6 +5,7 @@
 #include <git2.h>
 #include "common.h"
 #include "posix.h"
+#include "oid.h"
 
 /**
  * Replace for `clar_must_pass` that passes the last library error as the
@@ -136,13 +137,32 @@ GIT_INLINE(void) clar__assert_equal_oid(
 	const char *file, const char *func, int line, const char *desc,
 	const git_oid *one, const git_oid *two)
 {
-	if (git_oid_cmp(one, two)) {
-		char err[] = "\"........................................\" != \"........................................\"";
 
+	if (git_oid_equal(one, two))
+		return;
+
+	if (git_oid_type(one) != git_oid_type(two)) {
+		char err[64];
+
+		snprintf(err, 64, "different oid types: %d vs %d", git_oid_type(one), git_oid_type(two));
+		clar__fail(file, func, line, desc, err, 1);
+	} else if (git_oid_type(one) == GIT_OID_SHA1) {
+		char err[] = "\"........................................\" != \"........................................\"";
 		git_oid_fmt(&err[1], one);
 		git_oid_fmt(&err[47], two);
 
 		clar__fail(file, func, line, desc, err, 1);
+#ifdef GIT_EXPERIMENTAL_SHA256
+	} else if (one->type == GIT_OID_SHA256) {
+		char err[] = "\"................................................................\" != \"................................................................\"";
+
+		git_oid_fmt(&err[1], one);
+		git_oid_fmt(&err[71], one);
+
+		clar__fail(file, func, line, desc, err, 1);
+#endif
+	} else {
+		clar__fail(file, func, line, desc, "unknown oid types", 1);
 	}
 }
 
@@ -211,16 +231,28 @@ void cl_repo_commit_from_index(
 void cl_repo_set_bool(git_repository *repo, const char *cfg, int value);
 int cl_repo_get_bool(git_repository *repo, const char *cfg);
 
+void cl_repo_set_int(git_repository *repo, const char *cfg, int value);
+int cl_repo_get_int(git_repository *repo, const char *cfg);
+
 void cl_repo_set_string(git_repository *repo, const char *cfg, const char *value);
 
-/* set up a fake "home" directory and set libgit2 GLOBAL search path.
- *
- * automatically configures cleanup function to restore the regular search
- * path, although you can call it explicitly if you wish (with NULL).
+/*
+ * set up a fake "home" directory -- automatically configures cleanup
+ * function to restore the home directory, although you can call it
+ * explicitly if you wish (with NULL).
  */
-void cl_fake_home(void);
-void cl_fake_home_cleanup(void *);
+void cl_fake_homedir(git_str *);
+void cl_fake_homedir_cleanup(void *);
 
+/*
+ * set up a fake global configuration directory -- automatically
+ * configures cleanup function to restore the global config
+ * although you can call it explicitly if you wish (with NULL).
+ */
+void cl_fake_globalconfig(git_str *);
+void cl_fake_globalconfig_cleanup(void *);
+
+void cl_sandbox_set_homedir(const char *);
 void cl_sandbox_set_search_path_defaults(void);
 void cl_sandbox_disable_ownership_validation(void);
 

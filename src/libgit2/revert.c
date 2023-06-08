@@ -107,12 +107,10 @@ static int revert_state_cleanup(git_repository *repo)
 
 static int revert_seterr(git_commit *commit, const char *fmt)
 {
-	char commit_oidstr[GIT_OID_HEXSZ + 1];
+	char commit_id[GIT_OID_MAX_HEXSIZE + 1];
 
-	git_oid_fmt(commit_oidstr, git_commit_id(commit));
-	commit_oidstr[GIT_OID_HEXSZ] = '\0';
-
-	git_error_set(GIT_ERROR_REVERT, fmt, commit_oidstr);
+	git_oid_tostr(commit_id, GIT_OID_MAX_HEXSIZE + 1, git_commit_id(commit));
+	git_error_set(GIT_ERROR_REVERT, fmt, commit_id);
 
 	return -1;
 }
@@ -176,7 +174,7 @@ int git_revert(
 	git_revert_options opts;
 	git_reference *our_ref = NULL;
 	git_commit *our_commit = NULL;
-	char commit_oidstr[GIT_OID_HEXSZ + 1];
+	char commit_id[GIT_OID_MAX_HEXSIZE + 1];
 	const char *commit_msg;
 	git_str their_label = GIT_STR_INIT;
 	git_index *index = NULL;
@@ -191,19 +189,18 @@ int git_revert(
 	if ((error = git_repository__ensure_not_bare(repo, "revert")) < 0)
 		return error;
 
-	git_oid_fmt(commit_oidstr, git_commit_id(commit));
-	commit_oidstr[GIT_OID_HEXSZ] = '\0';
+	git_oid_tostr(commit_id, GIT_OID_MAX_HEXSIZE + 1, git_commit_id(commit));
 
 	if ((commit_msg = git_commit_summary(commit)) == NULL) {
 		error = -1;
 		goto on_error;
 	}
 
-	if ((error = git_str_printf(&their_label, "parent of %.7s... %s", commit_oidstr, commit_msg)) < 0 ||
+	if ((error = git_str_printf(&their_label, "parent of %.7s... %s", commit_id, commit_msg)) < 0 ||
 		(error = revert_normalize_opts(repo, &opts, given_opts, git_str_cstr(&their_label))) < 0 ||
 		(error = git_indexwriter_init_for_operation(&indexwriter, repo, &opts.checkout_opts.checkout_strategy)) < 0 ||
-		(error = write_revert_head(repo, commit_oidstr)) < 0 ||
-		(error = write_merge_msg(repo, commit_oidstr, commit_msg)) < 0 ||
+		(error = write_revert_head(repo, commit_id)) < 0 ||
+		(error = write_merge_msg(repo, commit_id, commit_msg)) < 0 ||
 		(error = git_repository_head(&our_ref, repo)) < 0 ||
 		(error = git_reference_peel((git_object **)&our_commit, our_ref, GIT_OBJECT_COMMIT)) < 0 ||
 		(error = git_revert_commit(&index, repo, commit, our_commit, opts.mainline, &opts.merge_opts)) < 0 ||

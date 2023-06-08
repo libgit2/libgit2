@@ -142,27 +142,46 @@ void test_repo_init__reinit_bare_repo(void)
 	cl_git_pass(git_repository_init(&g_repo, "reinit.git", 1));
 }
 
-void test_repo_init__reinit_too_recent_bare_repo(void)
+void test_repo_init__reinit_nondefault_version(void)
 {
 	git_config *config;
+
+	cl_set_cleanup(&cleanup_repository, "reinit.git");
 
 	/* Initialize the repository */
 	cl_git_pass(git_repository_init(&g_repo, "reinit.git", 1));
 	git_repository_config(&config, g_repo);
 
-	/*
-	 * Hack the config of the repository to make it look like it has
-	 * been created by a recenter version of git/libgit2
-	 */
-	cl_git_pass(git_config_set_int32(config, "core.repositoryformatversion", 42));
-
+	/* Set the config to a supported but not default version */
+	cl_repo_set_string(g_repo, "core.repositoryformatversion", "1");
 	git_config_free(config);
 	git_repository_free(g_repo);
 	g_repo = NULL;
 
 	/* Try to reinitialize the repository */
-	cl_git_fail(git_repository_init(&g_repo, "reinit.git", 1));
+	cl_git_pass(git_repository_init(&g_repo, "reinit.git", 1));
+	cl_assert_equal_i(1, cl_repo_get_int(g_repo, "core.repositoryformatversion"));
 
+	cl_fixture_cleanup("reinit.git");
+}
+
+void test_repo_init__reinit_unsupported_version(void)
+{
+	cl_set_cleanup(&cleanup_repository, "reinit.git");
+
+	/* Initialize the repository */
+	cl_git_pass(git_repository_init(&g_repo, "reinit.git", 1));
+
+	/*
+	 * Hack the config of the repository to make it look like it has
+	 * been created by a too new and unsupported version of git/libgit2
+	 */
+	cl_repo_set_string(g_repo, "core.repositoryformatversion", "42");
+	git_repository_free(g_repo);
+	g_repo = NULL;
+
+	/* Try and fail to reinitialize the repository */
+	cl_git_fail(git_repository_init(&g_repo, "reinit.git", 1));
 	cl_fixture_cleanup("reinit.git");
 }
 
@@ -708,7 +727,7 @@ void test_repo_init__defaultbranch_config_empty(void)
 void test_repo_init__longpath(void)
 {
 #ifdef GIT_WIN32
-	size_t padding = CONST_STRLEN("objects/pack/pack-.pack.lock") + GIT_OID_HEXSZ;
+	size_t padding = CONST_STRLEN("objects/pack/pack-.pack.lock") + GIT_OID_MAX_HEXSIZE;
 	size_t max, i;
 	git_str path = GIT_STR_INIT;
 	git_repository *one = NULL, *two = NULL;

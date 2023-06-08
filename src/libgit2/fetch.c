@@ -13,12 +13,13 @@
 #include "git2/transport.h"
 #include "git2/sys/remote.h"
 
+#include "oid.h"
 #include "remote.h"
 #include "refspec.h"
 #include "pack.h"
-#include "netops.h"
 #include "repository.h"
 #include "refs.h"
+#include "transports/smart.h"
 
 static int maybe_want(git_remote *remote, git_remote_head *head, git_refspec *tagspec, git_remote_autotag_option_t tagopt)
 {
@@ -58,8 +59,10 @@ static int mark_local(git_remote *remote)
 		return -1;
 
 	git_vector_foreach(&remote->refs, i, head) {
-		/* If we have the object, mark it so we don't ask for it */
-		if (git_odb_exists(odb, &head->oid))
+		/* If we have the object, mark it so we don't ask for it.
+		   However if we are unshallowing, we need to ask for it
+		   even though the head exists locally. */
+		if (remote->nego.depth != INT_MAX && git_odb_exists(odb, &head->oid))
 			head->local = 1;
 		else
 			remote->need_pack = 1;
@@ -75,7 +78,7 @@ static int maybe_want_oid(git_remote *remote, git_refspec *spec)
 	oid_head = git__calloc(1, sizeof(git_remote_head));
 	GIT_ERROR_CHECK_ALLOC(oid_head);
 
-	git_oid_fromstr(&oid_head->oid, spec->src);
+	git_oid__fromstr(&oid_head->oid, spec->src, remote->repo->oid_type);
 
 	if (spec->dst) {
 		oid_head->name = git__strdup(spec->dst);
@@ -94,7 +97,6 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 	git_remote_head **heads;
 	git_refspec tagspec, head, *spec;
 	int error = 0;
-	git_odb *odb;
 	size_t i, heads_len;
 	unsigned int remote_caps;
 	unsigned int oid_mask = GIT_REMOTE_CAPABILITY_TIP_OID |
@@ -125,9 +127,6 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 			goto cleanup;
 	}
 
-	if ((error = git_repository_odb__weakptr(&odb, remote->repo)) < 0)
-		goto cleanup;
-
 	if ((error = git_remote_ls((const git_remote_head ***)&heads, &heads_len, remote)) < 0 ||
 	    (error = git_remote_capabilities(&remote_caps, remote)) < 0)
 		goto cleanup;
@@ -140,7 +139,7 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 
 	/* Handle explicitly specified OID specs */
 	git_vector_foreach(&remote->active_refspecs, i, spec) {
-		if (!git_oid__is_hexstr(spec->src))
+		if (!git_oid__is_hexstr(spec->src, remote->repo->oid_type))
 			continue;
 
 		if (!(remote_caps & oid_mask)) {
@@ -169,8 +168,14 @@ cleanup:
 int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 {
 	git_transport *t = remote->transport;
+	int error;
 
 	remote->need_pack = 0;
+
+	if (opts) {
+		GIT_ASSERT_ARG(opts->depth >= 0);
+		remote->nego.depth = opts->depth;
+	}
 
 	if (filter_wants(remote, opts) < 0)
 		return -1;
@@ -183,20 +188,40 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	 * Now we have everything set up so we can start tell the
 	 * server what we want and what we have.
 	 */
-	return t->negotiate_fetch(t,
+	remote->nego.refs = (const git_remote_head * const *)remote->refs.contents;
+	remote->nego.refs_len = remote->refs.length;
+
+	if (git_repository__shallow_roots(&remote->nego.shallow_roots,
+	                                  &remote->nego.shallow_roots_len,
+	                                  remote->repo) < 0)
+		return -1;
+
+	error = t->negotiate_fetch(t,
 		remote->repo,
-		(const git_remote_head * const *)remote->refs.contents,
-		remote->refs.length);
+		&remote->nego);
+
+	git__free(remote->nego.shallow_roots);
+
+	return error;
 }
 
 int git_fetch_download_pack(git_remote *remote)
 {
+	git_oidarray shallow_roots = { NULL };
 	git_transport *t = remote->transport;
+	int error;
 
 	if (!remote->need_pack)
 		return 0;
 
-	return t->download_pack(t, remote->repo, &remote->stats);
+	if ((error = t->download_pack(t, remote->repo, &remote->stats)) != 0 ||
+	    (error = t->shallow_roots(&shallow_roots, t)) != 0)
+		return error;
+
+	error = git_repository__shallow_roots_write(remote->repo, &shallow_roots);
+
+	git_oidarray_dispose(&shallow_roots);
+	return error;
 }
 
 int git_fetch_options_init(git_fetch_options *opts, unsigned int version)

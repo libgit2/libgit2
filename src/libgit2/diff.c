@@ -19,8 +19,10 @@
 #include "git2/email.h"
 
 struct patch_id_args {
+	git_diff *diff;
 	git_hash_ctx ctx;
 	git_oid result;
+	git_oid_t oid_type;
 	int first_file;
 };
 
@@ -280,17 +282,19 @@ int git_diff_find_options_init(
 	return 0;
 }
 
-static int flush_hunk(git_oid *result, git_hash_ctx *ctx)
+static int flush_hunk(git_oid *result, struct patch_id_args *args)
 {
+	git_hash_ctx *ctx = &args->ctx;
 	git_oid hash;
 	unsigned short carry = 0;
-	int error, i;
+	size_t i;
+	int error;
 
 	if ((error = git_hash_final(hash.id, ctx)) < 0 ||
 	    (error = git_hash_init(ctx)) < 0)
 		return error;
 
-	for (i = 0; i < GIT_OID_RAWSZ; i++) {
+	for (i = 0; i < git_oid_size(args->oid_type); i++) {
 		carry += result->id[i] + hash.id[i];
 		result->id[i] = (unsigned char)carry;
 		carry >>= 8;
@@ -338,7 +342,7 @@ static int diff_patchid_print_callback_to_buf(
 
 	if (line->origin == GIT_DIFF_LINE_FILE_HDR &&
 	    !args->first_file &&
-	    (error = flush_hunk(&args->result, &args->ctx) < 0))
+	    (error = flush_hunk(&args->result, args) < 0))
 			goto out;
 
 	if ((error = git_hash_update(&args->ctx, buf.ptr, buf.size)) < 0)
@@ -362,14 +366,19 @@ int git_diff_patchid_options_init(git_diff_patchid_options *opts, unsigned int v
 int git_diff_patchid(git_oid *out, git_diff *diff, git_diff_patchid_options *opts)
 {
 	struct patch_id_args args;
+	git_hash_algorithm_t algorithm;
 	int error;
 
 	GIT_ERROR_CHECK_VERSION(
 		opts, GIT_DIFF_PATCHID_OPTIONS_VERSION, "git_diff_patchid_options");
 
+	algorithm = git_oid_algorithm(diff->opts.oid_type);
+
 	memset(&args, 0, sizeof(args));
+	args.diff = diff;
 	args.first_file = 1;
-	if ((error = git_hash_ctx_init(&args.ctx, GIT_HASH_ALGORITHM_SHA1)) < 0)
+	args.oid_type = diff->opts.oid_type;
+	if ((error = git_hash_ctx_init(&args.ctx, algorithm)) < 0)
 		goto out;
 
 	if ((error = git_diff_print(diff,
@@ -378,8 +387,12 @@ int git_diff_patchid(git_oid *out, git_diff *diff, git_diff_patchid_options *opt
 				    &args)) < 0)
 		goto out;
 
-	if ((error = (flush_hunk(&args.result, &args.ctx))) < 0)
+	if ((error = (flush_hunk(&args.result, &args))) < 0)
 		goto out;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	args.result.type = diff->opts.oid_type;
+#endif
 
 	git_oid_cpy(out, &args.result);
 

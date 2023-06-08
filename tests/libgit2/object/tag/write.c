@@ -30,7 +30,7 @@ void test_object_tag_write__basic(void)
 	git_reference *ref_tag;
 	git_object *target;
 
-	git_oid_fromstr(&target_id, tagged_commit);
+	git_oid__fromstr(&target_id, tagged_commit, GIT_OID_SHA1);
 	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJECT_COMMIT));
 
 	/* create signature */
@@ -72,7 +72,7 @@ void test_object_tag_write__overwrite(void)
 	git_signature *tagger;
 	git_object *target;
 
-	git_oid_fromstr(&target_id, tagged_commit);
+	git_oid__fromstr(&target_id, tagged_commit, GIT_OID_SHA1);
 	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJECT_COMMIT));
 
 	/* create signature */
@@ -99,7 +99,7 @@ void test_object_tag_write__replace(void)
 	git_reference *ref_tag;
 	git_object *target;
 
-	git_oid_fromstr(&target_id, tagged_commit);
+	git_oid__fromstr(&target_id, tagged_commit, GIT_OID_SHA1);
 	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJECT_COMMIT));
 
 	cl_git_pass(git_reference_lookup(&ref_tag, g_repo, "refs/tags/e90810b"));
@@ -135,7 +135,7 @@ void test_object_tag_write__lightweight(void)
 	git_reference *ref_tag;
 	git_object *target;
 
-	git_oid_fromstr(&target_id, tagged_commit);
+	git_oid__fromstr(&target_id, tagged_commit, GIT_OID_SHA1);
 	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJECT_COMMIT));
 
 	cl_git_pass(git_tag_create_lightweight(
@@ -163,7 +163,7 @@ void test_object_tag_write__lightweight_over_existing(void)
 	git_oid target_id, object_id, existing_object_id;
 	git_object *target;
 
-	git_oid_fromstr(&target_id, tagged_commit);
+	git_oid__fromstr(&target_id, tagged_commit, GIT_OID_SHA1);
 	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJECT_COMMIT));
 
 	cl_assert_equal_i(GIT_EEXISTS, git_tag_create_lightweight(
@@ -173,7 +173,7 @@ void test_object_tag_write__lightweight_over_existing(void)
                                           target,
                                           0));
 
-	git_oid_fromstr(&existing_object_id, tag2_id);
+	git_oid__fromstr(&existing_object_id, tag2_id, GIT_OID_SHA1);
 	cl_assert(git_oid_cmp(&object_id, &existing_object_id) == 0);
 
 	git_object_free(target);
@@ -197,7 +197,7 @@ void test_object_tag_write__creating_with_an_invalid_name_returns_EINVALIDSPEC(v
 	git_signature *tagger;
 	git_object *target;
 
-	git_oid_fromstr(&target_id, tagged_commit);
+	git_oid__fromstr(&target_id, tagged_commit, GIT_OID_SHA1);
 	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJECT_COMMIT));
 
 	cl_git_pass(git_signature_new(&tagger, tagger_name, tagger_email, 123456789, 60));
@@ -229,7 +229,7 @@ static void create_annotation(git_oid *tag_id, const char *name)
 
 	cl_git_pass(git_signature_new(&tagger, tagger_name, tagger_email, 123456789, 60));
 
-	git_oid_fromstr(&target_id, tagged_commit);
+	git_oid__fromstr(&target_id, tagged_commit, GIT_OID_SHA1);
 	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJECT_COMMIT));
 
 	cl_git_pass(git_tag_annotation_create(tag_id, g_repo, name, target, tagger, "boom!"));
@@ -265,7 +265,7 @@ void test_object_tag_write__error_when_create_tag_with_invalid_name(void)
 	git_signature *tagger;
 	git_object *target;
 
-	git_oid_fromstr(&target_id, tagged_commit);
+	git_oid__fromstr(&target_id, tagged_commit, GIT_OID_SHA1);
 	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_signature_new(&tagger, tagger_name, tagger_email, 123456789, 60));
 

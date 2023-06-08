@@ -71,12 +71,16 @@ const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char 
 	}
 }
 
-static int read_tree_internal(git_tree_cache **out,
-			      const char **buffer_in, const char *buffer_end,
-			      git_pool *pool)
+static int read_tree_internal(
+	git_tree_cache **out,
+	const char **buffer_in,
+	const char *buffer_end,
+	git_oid_t oid_type,
+	git_pool *pool)
 {
 	git_tree_cache *tree = NULL;
 	const char *name_start, *buffer;
+	size_t oid_size = git_oid_size(oid_type);
 	int count;
 
 	buffer = name_start = *buffer_in;
@@ -87,7 +91,7 @@ static int read_tree_internal(git_tree_cache **out,
 	if (++buffer >= buffer_end)
 		goto corrupted;
 
-	if (git_tree_cache_new(&tree, name_start, pool) < 0)
+	if (git_tree_cache_new(&tree, name_start, oid_type, pool) < 0)
 		return -1;
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
@@ -108,14 +112,14 @@ static int read_tree_internal(git_tree_cache **out,
 	if (*buffer != '\n' || ++buffer > buffer_end)
 		goto corrupted;
 
-	/* The SHA1 is only there if it's not invalidated */
+	/* The OID is only there if it's not invalidated */
 	if (tree->entry_count >= 0) {
 		/* 160-bit SHA-1 for this tree and it's children */
-		if (buffer + GIT_OID_RAWSZ > buffer_end)
+		if (buffer + oid_size > buffer_end)
 			goto corrupted;
 
-		git_oid_fromraw(&tree->oid, (const unsigned char *)buffer);
-		buffer += GIT_OID_RAWSZ;
+		git_oid__fromraw(&tree->oid, (const unsigned char *)buffer, oid_type);
+		buffer += oid_size;
 	}
 
 	/* Parse children: */
@@ -130,7 +134,7 @@ static int read_tree_internal(git_tree_cache **out,
 		memset(tree->children, 0x0, bufsize);
 
 		for (i = 0; i < tree->children_count; ++i) {
-			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, pool) < 0)
+			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, oid_type, pool) < 0)
 				goto corrupted;
 		}
 	}
@@ -144,11 +148,16 @@ static int read_tree_internal(git_tree_cache **out,
 	return -1;
 }
 
-int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer_size, git_pool *pool)
+int git_tree_cache_read(
+	git_tree_cache **tree,
+	const char *buffer,
+	size_t buffer_size,
+	git_oid_t oid_type,
+	git_pool *pool)
 {
 	const char *buffer_end = buffer + buffer_size;
 
-	if (read_tree_internal(tree, &buffer, buffer_end, pool) < 0)
+	if (read_tree_internal(tree, &buffer, buffer_end, oid_type, pool) < 0)
 		return -1;
 
 	if (buffer < buffer_end) {
@@ -201,7 +210,7 @@ static int read_tree_recursive(git_tree_cache *cache, const git_tree *tree, git_
 			continue;
 		}
 
-		if ((error = git_tree_cache_new(&cache->children[j], git_tree_entry_name(entry), pool)) < 0)
+		if ((error = git_tree_cache_new(&cache->children[j], git_tree_entry_name(entry), cache->oid_type, pool)) < 0)
 			return error;
 
 		if ((error = git_tree_lookup(&subtree, repo, git_tree_entry_id(entry))) < 0)
@@ -219,12 +228,12 @@ static int read_tree_recursive(git_tree_cache *cache, const git_tree *tree, git_
 	return 0;
 }
 
-int git_tree_cache_read_tree(git_tree_cache **out, const git_tree *tree, git_pool *pool)
+int git_tree_cache_read_tree(git_tree_cache **out, const git_tree *tree, git_oid_t oid_type, git_pool *pool)
 {
 	int error;
 	git_tree_cache *cache;
 
-	if ((error = git_tree_cache_new(&cache, "", pool)) < 0)
+	if ((error = git_tree_cache_new(&cache, "", oid_type, pool)) < 0)
 		return error;
 
 	if ((error = read_tree_recursive(cache, tree, pool)) < 0)
@@ -234,7 +243,7 @@ int git_tree_cache_read_tree(git_tree_cache **out, const git_tree *tree, git_poo
 	return 0;
 }
 
-int git_tree_cache_new(git_tree_cache **out, const char *name, git_pool *pool)
+int git_tree_cache_new(git_tree_cache **out, const char *name, git_oid_t oid_type, git_pool *pool)
 {
 	size_t name_len, alloc_size;
 	git_tree_cache *tree;
@@ -248,6 +257,7 @@ int git_tree_cache_new(git_tree_cache **out, const char *name, git_pool *pool)
 
 	memset(tree, 0x0, sizeof(git_tree_cache));
 	/* NUL-terminated tree name */
+	tree->oid_type = oid_type;
 	tree->namelen = name_len;
 	memcpy(tree->name, name, name_len);
 	tree->name[name_len] = '\0';
@@ -263,7 +273,7 @@ static void write_tree(git_str *out, git_tree_cache *tree)
 	git_str_printf(out, "%s%c%"PRIdZ" %"PRIuZ"\n", tree->name, 0, tree->entry_count, tree->children_count);
 
 	if (tree->entry_count != -1)
-		git_str_put(out, (char *)&tree->oid.id, GIT_OID_RAWSZ);
+		git_str_put(out, (char *)&tree->oid.id, git_oid_size(tree->oid_type));
 
 	for (i = 0; i < tree->children_count; i++)
 		write_tree(out, tree->children[i]);

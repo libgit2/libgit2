@@ -728,14 +728,11 @@ void test_config_read__path(void)
 {
 	git_config *cfg;
 	git_buf path = GIT_BUF_INIT;
-	git_buf old_path = GIT_BUF_INIT;
 	git_str home_path = GIT_STR_INIT;
 	git_str expected_path = GIT_STR_INIT;
 
-	cl_git_pass(p_mkdir("fakehome", 0777));
-	cl_git_pass(git_fs_path_prettify(&home_path, "fakehome", NULL));
-	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &old_path));
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, home_path.ptr));
+	cl_fake_homedir(&home_path);
+
 	cl_git_mkfile("./testconfig", "[some]\n path = ~/somefile");
 	cl_git_pass(git_fs_path_join_unrooted(&expected_path, "somefile", home_path.ptr, NULL));
 
@@ -761,8 +758,6 @@ void test_config_read__path(void)
 	cl_git_mkfile("./testconfig", "[some]\n path = ~user/foo");
 	cl_git_fail(git_config_get_path(&path, cfg, "some.path"));
 
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, old_path.ptr));
-	git_buf_dispose(&old_path);
 	git_str_dispose(&home_path);
 	git_str_dispose(&expected_path);
 	git_config_free(cfg);

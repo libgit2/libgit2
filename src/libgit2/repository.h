@@ -24,6 +24,7 @@
 #include "attrcache.h"
 #include "submodule.h"
 #include "diff_driver.h"
+#include "grafts.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
@@ -151,10 +152,15 @@ struct git_repository {
 
 	git_array_t(git_str) reserved_names;
 
-	unsigned is_bare:1;
-	unsigned is_worktree:1;
+	unsigned use_env:1,
+	         is_bare:1,
+	         is_worktree:1;
+	git_oid_t oid_type;
 
 	unsigned int lru_counter;
+
+	git_grafts *grafts;
+	git_grafts *shallow_grafts;
 
 	git_atomic32 attr_session_key;
 
@@ -187,6 +193,13 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo);
 int git_repository_odb__weakptr(git_odb **out, git_repository *repo);
 int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo);
 int git_repository_index__weakptr(git_index **out, git_repository *repo);
+int git_repository_grafts__weakptr(git_grafts **out, git_repository *repo);
+int git_repository_shallow_grafts__weakptr(git_grafts **out, git_repository *repo);
+
+int git_repository__wrap_odb(
+	git_repository **out,
+	git_odb *odb,
+	git_oid_t oid_type);
 
 /*
  * Configuration map cache
@@ -238,6 +251,9 @@ extern size_t git_repository__reserved_names_posix_len;
 bool git_repository__reserved_names(
 	git_str **out, size_t *outlen, git_repository *repo, bool include_ntfs);
 
+int git_repository__shallow_roots(git_oid **out, size_t *out_len, git_repository *repo);
+int git_repository__shallow_roots_write(git_repository *repo, git_oidarray *roots);
+
 /*
  * The default branch for the repository; the `init.defaultBranch`
  * configuration option, if set, or `master` if it is not.
@@ -255,5 +271,13 @@ int git_repository_workdir_path(git_str *out, git_repository *repo, const char *
 int git_repository__extensions(char ***out, size_t *out_len);
 int git_repository__set_extensions(const char **extensions, size_t len);
 void git_repository__free_extensions(void);
+
+/*
+ * Set the object format (OID type) for a repository; this will set
+ * both the configuration and the internal value for the oid type.
+ */
+int git_repository__set_objectformat(
+	git_repository *repo,
+	git_oid_t oid_type);
 
 #endif

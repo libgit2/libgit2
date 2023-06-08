@@ -19,19 +19,19 @@ void test_diff_parse__nonpatches_fail_with_notfound(void)
 	const char *not_with_both = "Lead.\n" PATCH_NOT_A_PATCH "Trail.\n";
 
 	cl_git_fail_with(GIT_ENOTFOUND,
-		git_diff_from_buffer(&diff,
+		diff_from_buffer(&diff,
 		not,
 		strlen(not)));
 	cl_git_fail_with(GIT_ENOTFOUND,
-		git_diff_from_buffer(&diff,
+		diff_from_buffer(&diff,
 		not_with_leading,
 		strlen(not_with_leading)));
 	cl_git_fail_with(GIT_ENOTFOUND,
-		git_diff_from_buffer(&diff,
+		diff_from_buffer(&diff,
 		not_with_trailing,
 		strlen(not_with_trailing)));
 	cl_git_fail_with(GIT_ENOTFOUND,
-		git_diff_from_buffer(&diff,
+		diff_from_buffer(&diff,
 		not_with_both,
 		strlen(not_with_both)));
 }
@@ -51,7 +51,7 @@ static void test_parse_invalid_diff(const char *invalid_diff)
 	git_str_puts(&buf, PATCH_BINARY_LITERAL);
 
 	cl_git_fail_with(GIT_ERROR,
-		git_diff_from_buffer(&diff, buf.ptr, buf.size));
+		diff_from_buffer(&diff, buf.ptr, buf.size));
 
 	git_str_dispose(&buf);
 }
@@ -72,7 +72,7 @@ void test_diff_parse__exact_rename(void)
 	    "2.9.3\n";
 	git_diff *diff;
 
-	cl_git_pass(git_diff_from_buffer(
+	cl_git_pass(diff_from_buffer(
 		&diff, content, strlen(content)));
 	git_diff_free(diff);
 }
@@ -92,7 +92,7 @@ void test_diff_parse__empty_file(void)
 	    "2.20.1\n";
 	git_diff *diff;
 
-	cl_git_pass(git_diff_from_buffer(
+	cl_git_pass(diff_from_buffer(
 		&diff, content, strlen(content)));
 	git_diff_free(diff);
 }
@@ -102,7 +102,7 @@ void test_diff_parse__no_extended_headers(void)
 	const char *content = PATCH_NO_EXTENDED_HEADERS;
 	git_diff *diff;
 
-	cl_git_pass(git_diff_from_buffer(
+	cl_git_pass(diff_from_buffer(
 		&diff, content, strlen(content)));
 	git_diff_free(diff);
 }
@@ -125,7 +125,7 @@ void test_diff_parse__add_delete_no_index(void)
 	    "-three\n";
 	git_diff *diff;
 
-	cl_git_pass(git_diff_from_buffer(
+	cl_git_pass(diff_from_buffer(
 		&diff, content, strlen(content)));
 	git_diff_free(diff);
 }
@@ -151,7 +151,7 @@ static void test_tree_to_tree_computed_to_parsed(
 
 	repo = cl_git_sandbox_init(sandbox);
 
-	opts.id_abbrev = GIT_OID_HEXSZ;
+	opts.id_abbrev = GIT_OID_SHA1_HEXSIZE;
 	opts.flags = GIT_DIFF_SHOW_BINARY | diff_flags;
 	findopts.flags = find_flags;
 
@@ -166,7 +166,7 @@ static void test_tree_to_tree_computed_to_parsed(
 	cl_git_pass(git_diff_to_buf(&computed_buf,
 		computed, GIT_DIFF_FORMAT_PATCH));
 
-	cl_git_pass(git_diff_from_buffer(&parsed,
+	cl_git_pass(diff_from_buffer(&parsed,
 		computed_buf.ptr, computed_buf.size));
 
 	diff_assert_equal(computed, parsed);
@@ -248,7 +248,7 @@ void test_diff_parse__get_patch_from_diff(void)
 		computed, GIT_DIFF_FORMAT_PATCH));
 	cl_git_pass(git_patch_from_diff(&patch_computed, computed, 0));
 
-	cl_git_pass(git_diff_from_buffer(&parsed,
+	cl_git_pass(diff_from_buffer(&parsed,
 		computed_buf.ptr, computed_buf.size));
 	cl_git_pass(git_patch_from_diff(&patch_parsed, parsed, 0));
 
@@ -292,7 +292,7 @@ void test_diff_parse__foreach_works_with_parsed_patch(void)
 	int called = 0;
 	git_diff *diff;
 
-	cl_git_pass(git_diff_from_buffer(&diff, patch, strlen(patch)));
+	cl_git_pass(diff_from_buffer(&diff, patch, strlen(patch)));
 	cl_git_pass(git_diff_foreach(diff, file_cb, NULL, NULL, NULL, &called));
 	cl_assert_equal_i(called, 1);
 
@@ -312,7 +312,7 @@ void test_diff_parse__parsing_minimal_patch_succeeds(void)
 	git_buf buf = GIT_BUF_INIT;
 	git_diff *diff;
 
-	cl_git_pass(git_diff_from_buffer(&diff, patch, strlen(patch)));
+	cl_git_pass(diff_from_buffer(&diff, patch, strlen(patch)));
 	cl_git_pass(git_diff_to_buf(&buf, diff, GIT_DIFF_FORMAT_PATCH));
 	cl_assert_equal_s(patch, buf.ptr);
 
@@ -330,7 +330,7 @@ void test_diff_parse__patch_roundtrip_succeeds(void)
 	cl_git_pass(git_patch_from_buffers(&patch, buf1, strlen(buf1), "obj1", buf2, strlen(buf2), "obj2", NULL));
 	cl_git_pass(git_patch_to_buf(&patchbuf, patch));
 
-	cl_git_pass(git_diff_from_buffer(&diff, patchbuf.ptr, patchbuf.size));
+	cl_git_pass(diff_from_buffer(&diff, patchbuf.ptr, patchbuf.size));
 	cl_git_pass(git_diff_to_buf(&diffbuf, diff, GIT_DIFF_FORMAT_PATCH));
 
 	cl_assert_equal_s(patchbuf.ptr, diffbuf.ptr);
@@ -372,7 +372,7 @@ void test_diff_parse__issue4672(void)
 	const git_diff_hunk *hunk;
 	size_t n, l = 0;
 
-	cl_git_pass(git_diff_from_buffer(&diff, text, strlen(text)));
+	cl_git_pass(diff_from_buffer(&diff, text, strlen(text)));
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_get_hunk(&hunk, &n, patch, 0));
 
@@ -393,7 +393,7 @@ void test_diff_parse__lineinfo(void)
 	const git_diff_hunk *hunk;
 	size_t n, l = 0;
 
-	cl_git_pass(git_diff_from_buffer(&diff, text, strlen(text)));
+	cl_git_pass(diff_from_buffer(&diff, text, strlen(text)));
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_get_hunk(&hunk, &n, patch, 0));
 
@@ -419,7 +419,7 @@ void test_diff_parse__new_file_with_space(void)
 	git_patch *patch;
 	git_diff *diff;
 
-	cl_git_pass(git_diff_from_buffer(&diff, content, strlen(content)));
+	cl_git_pass(diff_from_buffer(&diff, content, strlen(content)));
 	cl_git_pass(git_patch_from_diff((git_patch **) &patch, diff, 0));
 
 	cl_assert_equal_p(patch->diff_opts.old_prefix, NULL);
@@ -437,7 +437,7 @@ void test_diff_parse__new_file_with_space_and_regenerate_patch(void)
 	git_diff *diff = NULL;
 	git_buf buf = GIT_BUF_INIT;
 
-	cl_git_pass(git_diff_from_buffer(&diff, content, strlen(content)));
+	cl_git_pass(diff_from_buffer(&diff, content, strlen(content)));
 	cl_git_pass(git_diff_to_buf(&buf, diff, GIT_DIFF_FORMAT_PATCH));
 
 	git_buf_dispose(&buf);
@@ -450,7 +450,7 @@ void test_diff_parse__delete_file_with_space_and_regenerate_patch(void)
 	git_diff *diff = NULL;
 	git_buf buf = GIT_BUF_INIT;
 
-	cl_git_pass(git_diff_from_buffer(&diff, content, strlen(content)));
+	cl_git_pass(diff_from_buffer(&diff, content, strlen(content)));
 	cl_git_pass(git_diff_to_buf(&buf, diff, GIT_DIFF_FORMAT_PATCH));
 
 	git_buf_dispose(&buf);
@@ -464,7 +464,7 @@ void test_diff_parse__crlf(void)
 	git_patch *patch;
 	const git_diff_delta *delta;
 
-	cl_git_pass(git_diff_from_buffer(&diff, text, strlen(text)));
+	cl_git_pass(diff_from_buffer(&diff, text, strlen(text)));
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	delta = git_patch_get_delta(patch);
 

@@ -14,12 +14,15 @@ if(USE_HTTPS)
 	if(USE_HTTPS STREQUAL ON)
 		if(SECURITY_FOUND)
 			if(SECURITY_HAS_SSLCREATECONTEXT)
+				set(USE_HTTPS "SecureTransport")
+			else()
+				message(STATUS "Security framework is too old, falling back to OpenSSL")
 				set(USE_HTTPS "OpenSSL")
 			endif()
-		elseif(OPENSSL_FOUND)
-			set(USE_HTTPS "OpenSSL")
 		elseif(USE_WINHTTP)
 			set(USE_HTTPS "WinHTTP")
+		elseif(OPENSSL_FOUND)
+			set(USE_HTTPS "OpenSSL")
 		elseif(MBEDTLS_FOUND)
 			set(USE_HTTPS "mbedTLS")
 		else()
@@ -102,14 +105,31 @@ if(USE_HTTPS)
 		set(GIT_MBEDTLS 1)
 		list(APPEND LIBGIT2_SYSTEM_INCLUDES ${MBEDTLS_INCLUDE_DIR})
 		list(APPEND LIBGIT2_SYSTEM_LIBS ${MBEDTLS_LIBRARIES})
-		list(APPEND LIBGIT2_LIBS ${MBEDTLS_LIBRARIES})
-
 		# mbedTLS has no pkgconfig file, hence we can't require it
 		# https://github.com/ARMmbed/mbedtls/issues/228
 		# For now, pass its link flags as our own
 		list(APPEND LIBGIT2_PC_LIBS ${MBEDTLS_LIBRARIES})
+	elseif(USE_HTTPS STREQUAL "Schannel")
+		set(GIT_SCHANNEL 1)
+
+		list(APPEND LIBGIT2_SYSTEM_LIBS "rpcrt4" "crypt32" "ole32" "secur32")
+		list(APPEND LIBGIT2_PC_LIBS "-lrpcrt4" "-lcrypt32" "-lole32" "-lsecur32")
 	elseif(USE_HTTPS STREQUAL "WinHTTP")
-		# WinHTTP setup was handled in the WinHTTP-specific block above
+		set(GIT_WINHTTP 1)
+
+		# Since MinGW does not come with headers or an import library for winhttp,
+		# we have to include a private header and generate our own import library
+		if(MINGW)
+			add_subdirectory("${PROJECT_SOURCE_DIR}/deps/winhttp" "${PROJECT_BINARY_DIR}/deps/winhttp")
+			list(APPEND LIBGIT2_SYSTEM_LIBS winhttp)
+			list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/winhttp")
+		else()
+			list(APPEND LIBGIT2_SYSTEM_LIBS "winhttp")
+			list(APPEND LIBGIT2_PC_LIBS "-lwinhttp")
+		endif()
+
+		list(APPEND LIBGIT2_SYSTEM_LIBS "rpcrt4" "crypt32" "ole32" "secur32")
+		list(APPEND LIBGIT2_PC_LIBS "-lrpcrt4" "-lcrypt32" "-lole32" "-lsecur32")
 	elseif(USE_HTTPS STREQUAL "OpenSSL-Dynamic")
 		set(GIT_OPENSSL 1)
 		set(GIT_OPENSSL_DYNAMIC 1)

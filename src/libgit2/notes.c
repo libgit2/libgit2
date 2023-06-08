@@ -460,7 +460,7 @@ int git_note_commit_read(
 {
 	int error;
 	git_tree *tree = NULL;
-	char target[GIT_OID_HEXSZ + 1];
+	char target[GIT_OID_MAX_HEXSIZE + 1];
 
 	git_oid_tostr(target, sizeof(target), oid);
 
@@ -507,7 +507,7 @@ int git_note_commit_create(
 {
 	int error;
 	git_tree *tree = NULL;
-	char target[GIT_OID_HEXSZ + 1];
+	char target[GIT_OID_MAX_HEXSIZE + 1];
 
 	git_oid_tostr(target, sizeof(target), oid);
 
@@ -578,7 +578,7 @@ int git_note_commit_remove(
 {
 	int error;
 	git_tree *tree = NULL;
-	char target[GIT_OID_HEXSZ + 1];
+	char target[GIT_OID_MAX_HEXSIZE + 1];
 
 	git_oid_tostr(target, sizeof(target), oid);
 
@@ -665,8 +665,9 @@ void git_note_free(git_note *note)
 }
 
 static int process_entry_path(
-	const char *entry_path,
-	git_oid *annotated_object_id)
+	git_oid *annotated_object_id,
+	git_note_iterator *it,
+	const char *entry_path)
 {
 	int error = 0;
 	size_t i = 0, j = 0, len;
@@ -698,12 +699,12 @@ static int process_entry_path(
 	buf.ptr[j] = '\0';
 	buf.size = j;
 
-	if (j != GIT_OID_HEXSZ) {
+	if (j != git_oid_hexsize(it->repo->oid_type)) {
 		/* This is not a note entry */
 		goto cleanup;
 	}
 
-	error = git_oid_fromstr(annotated_object_id, buf.ptr);
+	error = git_oid__fromstr(annotated_object_id, buf.ptr, it->repo->oid_type);
 
 cleanup:
 	git_str_dispose(&buf);
@@ -799,7 +800,7 @@ int git_note_next(
 
 	git_oid_cpy(note_id, &item->id);
 
-	if ((error = process_entry_path(item->path, annotated_id)) < 0)
+	if ((error = process_entry_path(annotated_id, it, item->path)) < 0)
 		return error;
 
 	if ((error = git_iterator_advance(NULL, it)) < 0 && error != GIT_ITEROVER)

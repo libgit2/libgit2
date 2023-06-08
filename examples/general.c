@@ -129,7 +129,7 @@ int lg2_general(git_repository *repo, int argc, char** argv)
  */
 static void oid_parsing(git_oid *oid)
 {
-	char out[GIT_OID_HEXSZ+1];
+	char out[GIT_OID_SHA1_HEXSIZE+1];
 	char hex[] = "4a202b346bb0fb0db7eff3cffeb3c70babbd2045";
 
 	printf("*Hex to Raw*\n");
@@ -142,7 +142,11 @@ static void oid_parsing(git_oid *oid)
 	 * this throughout the example for storing the value of the current SHA
 	 * key we're working with.
 	 */
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_oid_fromstr(oid, hex, GIT_OID_SHA1);
+#else
 	git_oid_fromstr(oid, hex);
+#endif
 
 	/*
 	 * Once we've converted the string into the oid value, we can get the raw
@@ -152,7 +156,7 @@ static void oid_parsing(git_oid *oid)
 	 * char hex value.
 	 */
 	printf("\n*Raw to Hex*\n");
-	out[GIT_OID_HEXSZ] = '\0';
+	out[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	/**
 	 * If you have a oid, you can easily get the hex value of the SHA as well.
@@ -173,7 +177,7 @@ static void oid_parsing(git_oid *oid)
  */
 static void object_database(git_repository *repo, git_oid *oid)
 {
-	char oid_hex[GIT_OID_HEXSZ+1] = { 0 };
+	char oid_hex[GIT_OID_SHA1_HEXSIZE+1] = { 0 };
 	const unsigned char *data;
 	const char *str_type;
 	int error;
@@ -266,7 +270,7 @@ static void commit_writing(git_repository *repo)
 	git_tree *tree;
 	git_commit *parent;
 	git_signature *author, *committer;
-	char oid_hex[GIT_OID_HEXSZ+1] = { 0 };
+	char oid_hex[GIT_OID_SHA1_HEXSIZE+1] = { 0 };
 
 	printf("\n*Commit Writing*\n");
 
@@ -287,9 +291,14 @@ static void commit_writing(git_repository *repo)
 	 * parents.  Here we're creating oid objects to create the commit with,
 	 * but you can also use
 	 */
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_oid_fromstr(&tree_id, "f60079018b664e4e79329a7ef9559c8d9e0378d1", GIT_OID_SHA1);
+	git_oid_fromstr(&parent_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
+#else
 	git_oid_fromstr(&tree_id, "f60079018b664e4e79329a7ef9559c8d9e0378d1");
-	git_tree_lookup(&tree, repo, &tree_id);
 	git_oid_fromstr(&parent_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+#endif
+	git_tree_lookup(&tree, repo, &tree_id);
 	git_commit_lookup(&parent, repo, &parent_id);
 
 	/**
@@ -345,7 +354,7 @@ static void commit_parsing(git_repository *repo)
 	const git_signature *author, *cmtter;
 	git_commit *commit, *parent;
 	git_oid oid;
-	char oid_hex[GIT_OID_HEXSZ+1];
+	char oid_hex[GIT_OID_SHA1_HEXSIZE+1];
 	const char *message;
 	unsigned int parents, p;
 	int error;
@@ -353,7 +362,11 @@ static void commit_parsing(git_repository *repo)
 
 	printf("\n*Commit Parsing*\n");
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479", GIT_OID_SHA1);
+#else
 	git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479");
+#endif
 
 	error = git_commit_lookup(&commit, repo, &oid);
 	check_error(error, "looking up commit");
@@ -422,7 +435,11 @@ static void tag_parsing(git_repository *repo)
 	 * We create an oid for the tag object if we know the SHA and look it up
 	 * the same way that we would a commit (or any other object).
 	 */
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_oid_fromstr(&oid, "b25fa35b38051e4ae45d4222e795f9df2e43f1d1", GIT_OID_SHA1);
+#else
 	git_oid_fromstr(&oid, "b25fa35b38051e4ae45d4222e795f9df2e43f1d1");
+#endif
 
 	error = git_tag_lookup(&tag, repo, &oid);
 	check_error(error, "looking up tag");
@@ -470,7 +487,11 @@ static void tree_parsing(git_repository *repo)
 	/**
 	 * Create the oid and lookup the tree object just like the other objects.
 	 */
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_oid_fromstr(&oid, "f60079018b664e4e79329a7ef9559c8d9e0378d1", GIT_OID_SHA1);
+#else
 	git_oid_fromstr(&oid, "f60079018b664e4e79329a7ef9559c8d9e0378d1");
+#endif
 	git_tree_lookup(&tree, repo, &oid);
 
 	/**
@@ -524,7 +545,11 @@ static void blob_parsing(git_repository *repo)
 
 	printf("\n*Blob Parsing*\n");
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_oid_fromstr(&oid, "1385f264afb75a56a5bec74243be9b367ba4ca08", GIT_OID_SHA1);
+#else
 	git_oid_fromstr(&oid, "1385f264afb75a56a5bec74243be9b367ba4ca08");
+#endif
 	git_blob_lookup(&blob, repo, &oid);
 
 	/**
@@ -566,7 +591,11 @@ static void revwalking(git_repository *repo)
 
 	printf("\n*Revwalking*\n");
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
+#else
 	git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+#endif
 
 	/**
 	 * To use the revwalker, create a new walker, tell it how you want to sort
@@ -679,7 +708,7 @@ static void reference_listing(git_repository *repo)
 
 	for (i = 0; i < ref_list.count; ++i) {
 		git_reference *ref;
-		char oid_hex[GIT_OID_HEXSZ+1] = GIT_OID_HEX_ZERO;
+		char oid_hex[GIT_OID_SHA1_HEXSIZE+1] = GIT_OID_SHA1_HEXZERO;
 		const char *refname;
 
 		refname = ref_list.strings[i];

@@ -344,18 +344,18 @@ void test_online_push__initialize(void)
 	 * * a78705c3b2725f931d3ee05348d83cc26700f247 (b2, b1) added fold and fold/b.txt
 	 * * 5c0bb3d1b9449d1cc69d7519fd05166f01840915 added a.txt
 	 */
-	git_oid_fromstr(&_oid_b6, "951bbbb90e2259a4c8950db78946784fb53fcbce");
-	git_oid_fromstr(&_oid_b5, "fa38b91f199934685819bea316186d8b008c52a2");
-	git_oid_fromstr(&_oid_b4, "27b7ce66243eb1403862d05f958c002312df173d");
-	git_oid_fromstr(&_oid_b3, "d9b63a88223d8367516f50bd131a5f7349b7f3e4");
-	git_oid_fromstr(&_oid_b2, "a78705c3b2725f931d3ee05348d83cc26700f247");
-	git_oid_fromstr(&_oid_b1, "a78705c3b2725f931d3ee05348d83cc26700f247");
+	git_oid__fromstr(&_oid_b6, "951bbbb90e2259a4c8950db78946784fb53fcbce", GIT_OID_SHA1);
+	git_oid__fromstr(&_oid_b5, "fa38b91f199934685819bea316186d8b008c52a2", GIT_OID_SHA1);
+	git_oid__fromstr(&_oid_b4, "27b7ce66243eb1403862d05f958c002312df173d", GIT_OID_SHA1);
+	git_oid__fromstr(&_oid_b3, "d9b63a88223d8367516f50bd131a5f7349b7f3e4", GIT_OID_SHA1);
+	git_oid__fromstr(&_oid_b2, "a78705c3b2725f931d3ee05348d83cc26700f247", GIT_OID_SHA1);
+	git_oid__fromstr(&_oid_b1, "a78705c3b2725f931d3ee05348d83cc26700f247", GIT_OID_SHA1);
 
-	git_oid_fromstr(&_tag_commit, "805c54522e614f29f70d2413a0470247d8b424ac");
-	git_oid_fromstr(&_tag_tree, "ff83aa4c5e5d28e3bcba2f5c6e2adc61286a4e5e");
-	git_oid_fromstr(&_tag_blob, "b483ae7ba66decee9aee971f501221dea84b1498");
-	git_oid_fromstr(&_tag_lightweight, "951bbbb90e2259a4c8950db78946784fb53fcbce");
-	git_oid_fromstr(&_tag_tag, "eea4f2705eeec2db3813f2430829afce99cd00b5");
+	git_oid__fromstr(&_tag_commit, "805c54522e614f29f70d2413a0470247d8b424ac", GIT_OID_SHA1);
+	git_oid__fromstr(&_tag_tree, "ff83aa4c5e5d28e3bcba2f5c6e2adc61286a4e5e", GIT_OID_SHA1);
+	git_oid__fromstr(&_tag_blob, "b483ae7ba66decee9aee971f501221dea84b1498", GIT_OID_SHA1);
+	git_oid__fromstr(&_tag_lightweight, "951bbbb90e2259a4c8950db78946784fb53fcbce", GIT_OID_SHA1);
+	git_oid__fromstr(&_tag_tag, "eea4f2705eeec2db3813f2430829afce99cd00b5", GIT_OID_SHA1);
 
 	/* Remote URL environment variable must be set.  User and password are optional.  */
 
@@ -841,13 +841,28 @@ void test_online_push__bad_refspecs(void)
 
 void test_online_push__expressions(void)
 {
-	/* TODO: Expressions in refspecs doesn't actually work yet */
-	const char *specs_left_expr[] = { "refs/heads/b2~1:refs/heads/b2" };
+	const char *specs_left_expr[] = {
+		"refs/heads/b3~1:refs/heads/b2",
+		"b4:refs/heads/b4",
+		"fa38b91f199934685819bea316186d8b008c52a2:refs/heads/b5",
+		"951bbbb:refs/heads/b6"
+	};
+	push_status exp_stats[] = {
+		{ "refs/heads/b2", 1 },
+		{ "refs/heads/b4", 1 },
+		{ "refs/heads/b5", 1 },
+		{ "refs/heads/b6", 1 }
+	};
+	expected_ref exp_refs[] = {
+		{ "refs/heads/b2", &_oid_b2 },
+		{ "refs/heads/b4", &_oid_b4 },
+		{ "refs/heads/b5", &_oid_b5 },
+		{ "refs/heads/b6", &_oid_b6 }
+	};
 
-	/* TODO: Find a more precise way of checking errors than a exit code of -1. */
 	do_push(specs_left_expr, ARRAY_SIZE(specs_left_expr),
-		NULL, 0,
-		NULL, 0, -1, 0, 0);
+		exp_stats, ARRAY_SIZE(exp_stats),
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1);
 }
 
 void test_online_push__notes(void)
@@ -859,7 +874,7 @@ void test_online_push__notes(void)
 	expected_ref exp_refs[] = { { "refs/notes/commits", &expected_oid } };
 	const char *specs_del[] = { ":refs/notes/commits" };
 
-	git_oid_fromstr(&expected_oid, "8461a99b27b7043e58ff6e1f5d2cf07d282534fb");
+	git_oid__fromstr(&expected_oid, "8461a99b27b7043e58ff6e1f5d2cf07d282534fb", GIT_OID_SHA1);
 
 	target_oid = &_oid_b6;
 
@@ -890,7 +905,7 @@ void test_online_push__configured(void)
 	expected_ref exp_refs[] = { { "refs/notes/commits", &expected_oid } };
 	const char *specs_del[] = { ":refs/notes/commits" };
 
-	git_oid_fromstr(&expected_oid, "8461a99b27b7043e58ff6e1f5d2cf07d282534fb");
+	git_oid__fromstr(&expected_oid, "8461a99b27b7043e58ff6e1f5d2cf07d282534fb", GIT_OID_SHA1);
 
 	target_oid = &_oid_b6;
 

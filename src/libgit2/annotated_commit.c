@@ -39,8 +39,8 @@ static int annotated_commit_init(
 	if ((error = git_commit_dup(&annotated_commit->commit, commit)) < 0)
 		goto done;
 
-	git_oid_fmt(annotated_commit->id_str, git_commit_id(commit));
-	annotated_commit->id_str[GIT_OID_HEXSZ] = '\0';
+	git_oid_tostr(annotated_commit->id_str, GIT_OID_MAX_HEXSIZE + 1,
+		git_commit_id(commit));
 
 	if (!description)
 		description = annotated_commit->id_str;

@@ -65,7 +65,11 @@ static int tag_error(const char *str)
 	return GIT_EINVALID;
 }
 
-static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
+static int tag_parse(
+	git_tag *tag,
+	const char *buffer,
+	const char *buffer_end,
+	git_oid_t oid_type)
 {
 	static const char *tag_types[] = {
 		NULL, "commit\n", "tree\n", "blob\n", "tag\n"
@@ -75,7 +79,8 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	unsigned int i;
 	int error;
 
-	if (git_oid__parse(&tag->target, &buffer, buffer_end, "object ") < 0)
+	if (git_object__parse_oid_header(&tag->target,
+			&buffer, buffer_end, "object ", oid_type) < 0)
 		return tag_error("object field invalid");
 
 	if (buffer + 5 >= buffer_end)
@@ -160,18 +165,25 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	return 0;
 }
 
-int git_tag__parse_raw(void *_tag, const char *data, size_t size)
+int git_tag__parse_raw(
+	void *_tag,
+	const char *data,
+	size_t size,
+	git_oid_t oid_type)
 {
-	return tag_parse(_tag, data, data + size);
+	return tag_parse(_tag, data, data + size, oid_type);
 }
 
-int git_tag__parse(void *_tag, git_odb_object *odb_obj)
+int git_tag__parse(
+	void *_tag,
+	git_odb_object *odb_obj,
+	git_oid_t oid_type)
 {
 	git_tag *tag = _tag;
 	const char *buffer = git_odb_object_data(odb_obj);
 	const char *buffer_end = buffer + git_odb_object_size(odb_obj);
 
-	return tag_parse(tag, buffer, buffer_end);
+	return tag_parse(tag, buffer, buffer_end, oid_type);
 }
 
 static int retrieve_tag_reference(
@@ -220,7 +232,9 @@ static int write_tag_annotation(
 	git_str tag = GIT_STR_INIT;
 	git_odb *odb;
 
-	git_oid__writebuf(&tag, "object ", git_object_id(target));
+	if (git_object__write_oid_header(&tag, "object ", git_object_id(target)) < 0)
+		goto on_error;
+
 	git_str_printf(&tag, "type %s\n", git_object_type2string(git_object_type(target)));
 	git_str_printf(&tag, "tag %s\n", tag_name);
 	git_signature__writebuf(&tag, "tagger ", tagger);
@@ -296,8 +310,10 @@ static int git_tag_create__internal(
 	}
 
 	if (create_tag_annotation) {
-		if (write_tag_annotation(oid, repo, tag_name, target, tagger, message) < 0)
+		if (write_tag_annotation(oid, repo, tag_name, target, tagger, message) < 0) {
+			git_str_dispose(&ref_name);
 			return -1;
+		}
 	} else
 		git_oid_cpy(oid, git_object_id(target));
 
@@ -369,7 +385,7 @@ int git_tag_create_from_buffer(git_oid *oid, git_repository *repo, const char *b
 		return -1;
 
 	/* validate the buffer */
-	if (tag_parse(&tag, buffer, buffer + strlen(buffer)) < 0)
+	if (tag_parse(&tag, buffer, buffer + strlen(buffer), repo->oid_type) < 0)
 		return -1;
 
 	/* validate the target */
@@ -394,14 +410,17 @@ int git_tag_create_from_buffer(git_oid *oid, git_repository *repo, const char *b
 	/** Ensure the tag name doesn't conflict with an already existing
 	 *	reference unless overwriting has explicitly been requested **/
 	if (error == 0 && !allow_ref_overwrite) {
+		git_str_dispose(&ref_name);
 		git_error_set(GIT_ERROR_TAG, "tag already exists");
 		return GIT_EEXISTS;
 	}
 
 	/* write the buffer */
 	if ((error = git_odb_open_wstream(
-			&stream, odb, strlen(buffer), GIT_OBJECT_TAG)) < 0)
+			&stream, odb, strlen(buffer), GIT_OBJECT_TAG)) < 0) {
+		git_str_dispose(&ref_name);
 		return error;
+	}
 
 	if (!(error = git_odb_stream_write(stream, buffer, strlen(buffer))))
 		error = git_odb_stream_finalize_write(oid, stream);

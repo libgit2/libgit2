@@ -7,11 +7,13 @@ RUN apt-get update && \
         clang \
         cmake \
         curl \
+	gettext \
         gcc \
-        git \
         krb5-user \
         libcurl4-gnutls-dev \
+	libexpat1-dev \
         libgcrypt20-dev \
+	libintl-perl \
         libkrb5-dev \
         libpcre3-dev \
         libssl-dev \
@@ -28,7 +30,17 @@ RUN apt-get update && \
         && \
     rm -rf /var/lib/apt/lists/*
 
-FROM apt AS mbedtls
+FROM apt AS git
+RUN cd /tmp && \
+    curl --location --silent --show-error https://github.com/git/git/archive/refs/tags/v2.39.1.tar.gz | \
+        tar -xz && \
+    cd git-2.39.1 && \
+    make && \
+    make prefix=/usr install && \
+    cd .. && \
+    rm -rf git-2.39.1
+
+FROM git AS mbedtls
 RUN cd /tmp && \
     curl --location --silent --show-error https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/mbedtls-2.16.2.tar.gz | \
         tar -xz && \

@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "posix.h"
 #include "fs_path.h"
+#include "futils.h"
 #include "git2/sys/repository.h"
 
 void cl_git_report_failure(
@@ -102,10 +103,10 @@ int cl_setenv(const char *name, const char *value)
 {
 	wchar_t *wide_name, *wide_value = NULL;
 
-	cl_assert(git__utf8_to_16_alloc(&wide_name, name) >= 0);
+	cl_assert(git_utf8_to_16_alloc(&wide_name, name) >= 0);
 
 	if (value) {
-		cl_assert(git__utf8_to_16_alloc(&wide_value, value) >= 0);
+		cl_assert(git_utf8_to_16_alloc(&wide_value, value) >= 0);
 		cl_assert(SetEnvironmentVariableW(wide_name, wide_value));
 	} else {
 		/* Windows XP returns 0 (failed) when passing NULL for lpValue when
@@ -476,6 +477,25 @@ int cl_repo_get_bool(git_repository *repo, const char *cfg)
 	return val;
 }
 
+void cl_repo_set_int(git_repository *repo, const char *cfg, int value)
+{
+	git_config *config;
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_int32(config, cfg, value));
+	git_config_free(config);
+}
+
+int cl_repo_get_int(git_repository *repo, const char *cfg)
+{
+	int val = 0;
+	git_config *config;
+	cl_git_pass(git_repository_config(&config, repo));
+	if (git_config_get_int32(&val, config, cfg) < 0)
+		git_error_clear();
+	git_config_free(config);
+	return val;
+}
+
 void cl_repo_set_string(git_repository *repo, const char *cfg, const char *value)
 {
 	git_config *config;
@@ -548,33 +568,95 @@ void clar__assert_equal_file(
 		(size_t)expected_bytes, (size_t)total_bytes);
 }
 
-static git_buf _cl_restore_home = GIT_BUF_INIT;
+#define FAKE_HOMEDIR_NAME "cl_fake_home"
 
-void cl_fake_home_cleanup(void *payload)
+static git_buf _cl_restore_homedir = GIT_BUF_INIT;
+
+void cl_fake_homedir_cleanup(void *payload)
 {
 	GIT_UNUSED(payload);
 
-	if (_cl_restore_home.ptr) {
-		cl_git_pass(git_libgit2_opts(
-			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, _cl_restore_home.ptr));
-		git_buf_dispose(&_cl_restore_home);
+	if (_cl_restore_homedir.ptr) {
+		cl_git_pass(git_futils_rmdir_r(FAKE_HOMEDIR_NAME, NULL, GIT_RMDIR_REMOVE_FILES));
+
+		cl_git_pass(git_libgit2_opts(GIT_OPT_SET_HOMEDIR, _cl_restore_homedir.ptr));
+		git_buf_dispose(&_cl_restore_homedir);
 	}
 }
 
-void cl_fake_home(void)
+void cl_fake_homedir(git_str *out)
 {
 	git_str path = GIT_STR_INIT;
 
 	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &_cl_restore_home));
+		GIT_OPT_GET_HOMEDIR, &_cl_restore_homedir));
 
-	cl_set_cleanup(cl_fake_home_cleanup, NULL);
+	cl_set_cleanup(cl_fake_homedir_cleanup, NULL);
 
-	if (!git_fs_path_exists("home"))
-		cl_must_pass(p_mkdir("home", 0777));
-	cl_git_pass(git_fs_path_prettify(&path, "home", NULL));
+	/* TOC/TOU but merely attempts to prevent accidental cleanup. */
+	cl_assert(!git_fs_path_exists(FAKE_HOMEDIR_NAME));
+	cl_must_pass(p_mkdir(FAKE_HOMEDIR_NAME, 0777));
+	cl_git_pass(git_fs_path_prettify(&path, FAKE_HOMEDIR_NAME, NULL));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_HOMEDIR, path.ptr));
+
+	if (out)
+		git_str_swap(out, &path);
+
+	git_str_dispose(&path);
+}
+
+#define FAKE_GLOBALCONFIG_NAME "cl_fake_global"
+
+static git_buf _cl_restore_globalconfig = GIT_BUF_INIT;
+
+void cl_fake_globalconfig_cleanup(void *payload)
+{
+	GIT_UNUSED(payload);
+
+	if (_cl_restore_globalconfig.ptr) {
+		cl_git_pass(git_futils_rmdir_r(FAKE_GLOBALCONFIG_NAME, NULL, GIT_RMDIR_REMOVE_FILES));
+
+		cl_git_pass(git_libgit2_opts(GIT_OPT_SET_HOMEDIR, _cl_restore_globalconfig.ptr));
+		git_buf_dispose(&_cl_restore_globalconfig);
+	}
+}
+
+void cl_fake_globalconfig(git_str *out)
+{
+	git_str path = GIT_STR_INIT;
+
 	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
+		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &_cl_restore_globalconfig));
+
+	cl_set_cleanup(cl_fake_globalconfig_cleanup, NULL);
+
+	/* TOC/TOU but merely attempts to prevent accidental cleanup. */
+	cl_assert(!git_fs_path_exists(FAKE_GLOBALCONFIG_NAME));
+	cl_must_pass(p_mkdir(FAKE_GLOBALCONFIG_NAME, 0777));
+	cl_git_pass(git_fs_path_prettify(&path, FAKE_GLOBALCONFIG_NAME, NULL));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
+
+	if (out)
+		git_str_swap(out, &path);
+
+	git_str_dispose(&path);
+}
+
+void cl_sandbox_set_homedir(const char *home)
+{
+	git_str path = GIT_STR_INIT;
+
+	if (home) {
+		git_libgit2_opts(GIT_OPT_SET_HOMEDIR, home);
+	} else {
+		git_str_joinpath(&path, clar_sandbox_path(), "__home");
+
+		if (!git_fs_path_exists(path.ptr))
+			cl_must_pass(p_mkdir(path.ptr, 0777));
+
+		git_libgit2_opts(GIT_OPT_SET_HOMEDIR, path.ptr);
+	}
+
 	git_str_dispose(&path);
 }
 

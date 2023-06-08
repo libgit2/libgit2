@@ -4,6 +4,7 @@
 #include "git2/checkout.h"
 #include "futils.h"
 #include "repository.h"
+#include "index.h"
 #include "remote.h"
 #include "repo/repo_helpers.h"
 
@@ -791,15 +792,15 @@ static void add_conflict(git_index *index, const char *path)
 	entry.mode = 0100644;
 	entry.path = path;
 
-	git_oid_fromstr(&entry.id, "d427e0b2e138501a3d15cc376077a3631e15bd46");
+	git_oid__fromstr(&entry.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
 	GIT_INDEX_ENTRY_STAGE_SET(&entry, 1);
 	cl_git_pass(git_index_add(index, &entry));
 
-	git_oid_fromstr(&entry.id, "4e886e602529caa9ab11d71f86634bd1b6e0de10");
+	git_oid__fromstr(&entry.id, "4e886e602529caa9ab11d71f86634bd1b6e0de10", GIT_OID_SHA1);
 	GIT_INDEX_ENTRY_STAGE_SET(&entry, 2);
 	cl_git_pass(git_index_add(index, &entry));
 
-	git_oid_fromstr(&entry.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863");
+	git_oid__fromstr(&entry.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", GIT_OID_SHA1);
 	GIT_INDEX_ENTRY_STAGE_SET(&entry, 3);
 	cl_git_pass(git_index_add(index, &entry));
 }
@@ -834,7 +835,7 @@ void test_checkout_index__adding_conflict_removes_stage_0(void)
 	git_index *new_index, *index;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	cl_git_pass(git_index_new(&new_index));
+	cl_git_pass(git_index__new(&new_index, GIT_OID_SHA1));
 
 	add_conflict(new_index, "new.txt");
 	cl_git_pass(git_checkout_index(g_repo, new_index, &opts));

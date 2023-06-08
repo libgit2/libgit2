@@ -11,10 +11,13 @@
 
 #include "git2.h"
 #include "vector.h"
-#include "netops.h"
 #include "push.h"
 #include "str.h"
+#include "oidarray.h"
+#include "staticstr.h"
 #include "git2/sys/transport.h"
+
+#define GIT_SMART_BUFFER_SIZE  65536
 
 #define GIT_SIDE_BAND_DATA     1
 #define GIT_SIDE_BAND_PROGRESS 2
@@ -32,6 +35,9 @@
 #define GIT_CAP_SYMREF "symref"
 #define GIT_CAP_WANT_TIP_SHA1 "allow-tip-sha1-in-want"
 #define GIT_CAP_WANT_REACHABLE_SHA1 "allow-reachable-sha1-in-want"
+#define GIT_CAP_SHALLOW "shallow"
+#define GIT_CAP_OBJECT_FORMAT "object-format="
+#define GIT_CAP_AGENT "agent="
 
 extern bool git_smart__ofs_delta_enabled;
 
@@ -48,7 +54,9 @@ typedef enum {
 	GIT_PKT_PROGRESS,
 	GIT_PKT_OK,
 	GIT_PKT_NG,
-	GIT_PKT_UNPACK
+	GIT_PKT_UNPACK,
+	GIT_PKT_SHALLOW,
+	GIT_PKT_UNSHALLOW
 } git_pkt_type;
 
 /* Used for multi_ack and multi_ack_detailed */
@@ -120,6 +128,11 @@ typedef struct {
 	int unpack_ok;
 } git_pkt_unpack;
 
+typedef struct {
+	git_pkt_type type;
+	git_oid oid;
+} git_pkt_shallow;
+
 typedef struct transport_smart_caps {
 	unsigned int common:1,
 	             ofs_delta:1,
@@ -132,7 +145,10 @@ typedef struct transport_smart_caps {
 	             report_status:1,
 	             thin_pack:1,
 	             want_tip_sha1:1,
-	             want_reachable_sha1:1;
+	             want_reachable_sha1:1,
+	             shallow:1;
+	char *object_format;
+	char *agent;
 } transport_smart_caps;
 
 typedef int (*packetsize_cb)(size_t received, void *payload);
@@ -149,14 +165,14 @@ typedef struct {
 	git_vector refs;
 	git_vector heads;
 	git_vector common;
+	git_array_oid_t shallow_roots;
 	git_atomic32 cancelled;
 	packetsize_cb packetsize_cb;
 	void *packetsize_payload;
 	unsigned rpc : 1,
 	         have_refs : 1,
 	         connected : 1;
-	gitno_buffer buffer;
-	char buffer_data[65536];
+	git_staticstr_with_size(GIT_SMART_BUFFER_SIZE) buffer;
 } transport_smart;
 
 /* smart_protocol.c */
@@ -167,8 +183,9 @@ int git_smart__push(git_transport *transport, git_push *push);
 int git_smart__negotiate_fetch(
 	git_transport *transport,
 	git_repository *repo,
-	const git_remote_head * const *refs,
-	size_t count);
+	const git_fetch_negotiation *wants);
+
+int git_smart__shallow_roots(git_oidarray *out, git_transport *transport);
 
 int git_smart__download_pack(
 	git_transport *transport,
@@ -176,17 +193,24 @@ int git_smart__download_pack(
 	git_indexer_progress *stats);
 
 /* smart.c */
+int git_smart__recv(transport_smart *t);
+
 int git_smart__negotiation_step(git_transport *transport, void *data, size_t len);
 int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream **out);
 
 int git_smart__update_heads(transport_smart *t, git_vector *symrefs);
 
 /* smart_pkt.c */
-int git_pkt_parse_line(git_pkt **head, const char **endptr, const char *line, size_t linelen);
+typedef struct {
+	git_oid_t oid_type;
+	int seen_capabilities: 1;
+} git_pkt_parse_data;
+
+int git_pkt_parse_line(git_pkt **head, const char **endptr, const char *line, size_t linelen, git_pkt_parse_data *data);
 int git_pkt_buffer_flush(git_str *buf);
 int git_pkt_send_flush(GIT_SOCKET s);
 int git_pkt_buffer_done(git_str *buf);
-int git_pkt_buffer_wants(const git_remote_head * const *refs, size_t count, transport_smart_caps *caps, git_str *buf);
+int git_pkt_buffer_wants(const git_fetch_negotiation *wants, transport_smart_caps *caps, git_str *buf);
 int git_pkt_buffer_have(git_oid *oid, git_str *buf);
 void git_pkt_free(git_pkt *pkt);
 

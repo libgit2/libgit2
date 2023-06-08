@@ -301,3 +301,57 @@ int p_munmap(git_map *map)
 }
 
 #endif
+
+#if defined(GIT_IO_POLL) || defined(GIT_IO_WSAPOLL)
+
+/* Handled by posix.h; this test simplifies the final else */
+
+#elif defined(GIT_IO_SELECT)
+
+int p_poll(struct pollfd *fds, unsigned int nfds, int timeout_ms)
+{
+	fd_set read_fds, write_fds, except_fds;
+	struct timeval timeout = { 0, 0 };
+	unsigned int i;
+	int max_fd = -1, ret;
+
+	FD_ZERO(&read_fds);
+	FD_ZERO(&write_fds);
+	FD_ZERO(&except_fds);
+
+	for (i = 0; i < nfds; i++) {
+		if ((fds[i].events & POLLIN))
+			FD_SET(fds[i].fd, &read_fds);
+
+		if ((fds[i].events & POLLOUT))
+			FD_SET(fds[i].fd, &write_fds);
+
+		if ((fds[i].events & POLLPRI))
+			FD_SET(fds[i].fd, &except_fds);
+
+		max_fd = MAX(max_fd, fds[i].fd);
+	}
+
+	if (timeout_ms > 0) {
+		timeout.tv_sec = timeout_ms / 1000;
+		timeout.tv_usec = (timeout_ms % 1000) * 1000;
+	}
+
+	if ((ret = select(max_fd + 1, &read_fds, &write_fds, &except_fds,
+	                  timeout_ms < 0 ? NULL : &timeout)) < 0)
+		goto done;
+
+	for (i = 0; i < nfds; i++) {
+		fds[i].revents = 0 |
+			FD_ISSET(fds[i].fd, &read_fds) ? POLLIN : 0 |
+			FD_ISSET(fds[i].fd, &write_fds) ? POLLOUT : 0 |
+			FD_ISSET(fds[i].fd, &except_fds) ? POLLPRI : 0;
+	}
+
+done:
+	return ret;
+}
+
+#else
+# error no poll compatible implementation
+#endif

@@ -120,7 +120,7 @@ void test_worktree_worktree__lookup_nonexistent_worktree(void)
 {
 	git_worktree *wt;
 
-	cl_git_fail(git_worktree_lookup(&wt, fixture.repo, "nonexistent"));
+	cl_git_fail_with(GIT_ENOTFOUND, git_worktree_lookup(&wt, fixture.repo, "nonexistent"));
 	cl_assert_equal_p(wt, NULL);
 }
 
@@ -642,6 +642,19 @@ void test_worktree_worktree__validate_invalid_worktreedir(void)
 	p_rename("testrepo-worktree", "testrepo-worktree-tmp");
 	cl_git_fail(git_worktree_validate(wt));
 	p_rename("testrepo-worktree-tmp", "testrepo-worktree");
+
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__is_prunable_missing_repo(void)
+{
+	git_worktree *wt;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	p_rename("testrepo", "testrepo-tmp");
+	/* Should not be prunable since the repository moved */
+	cl_assert(!git_worktree_is_prunable(wt, NULL));
+	p_rename("testrepo-tmp", "testrepo");
 
 	git_worktree_free(wt);
 }

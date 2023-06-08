@@ -71,7 +71,11 @@ int git_reflog_write(git_reflog *reflog)
 	return db->backend->reflog_write(db->backend, reflog);
 }
 
-int git_reflog_append(git_reflog *reflog, const git_oid *new_oid, const git_signature *committer, const char *msg)
+int git_reflog_append(
+	git_reflog *reflog,
+	const git_oid *new_oid,
+	const git_signature *committer,
+	const char *msg)
 {
 	const git_reflog_entry *previous;
 	git_reflog_entry *entry;
@@ -104,7 +108,7 @@ int git_reflog_append(git_reflog *reflog, const git_oid *new_oid, const git_sign
 	previous = git_reflog_entry_byindex(reflog, 0);
 
 	if (previous == NULL)
-		git_oid_fromstr(&entry->oid_old, GIT_OID_HEX_ZERO);
+		git_oid_clear(&entry->oid_old, reflog->oid_type);
 	else
 		git_oid_cpy(&entry->oid_old, &previous->oid_cur);
 
@@ -219,9 +223,7 @@ int git_reflog_drop(git_reflog *reflog, size_t idx, int rewrite_previous_entry)
 	/* If the oldest entry has just been removed... */
 	if (idx == entrycount - 1) {
 		/* ...clear the oid_old member of the "new" oldest entry */
-		if (git_oid_fromstr(&entry->oid_old, GIT_OID_HEX_ZERO) < 0)
-			return -1;
-
+		git_oid_clear(&entry->oid_old, reflog->oid_type);
 		return 0;
 	}
 

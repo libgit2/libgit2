@@ -154,7 +154,7 @@ jobs:
             SKIP_SSH_TESTS: true
           os: ubuntu-latest
         - name: "macOS"
-          os: macos-10.15
+          os: macos-11
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
@@ -162,32 +162,39 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
           setup-script: osx
-        - name: "Windows (amd64, Visual Studio)"
+        - name: "Windows (amd64, Visual Studio, WinHTTP)"
           os: windows-2019
           env:
             ARCH: amd64
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_HTTPS=WinHTTP
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (no mmap)"
-          os: windows-2019
-          env:
-            ARCH: amd64
-            CMAKE_GENERATOR: Visual Studio 16 2019
-            CFLAGS: -DNO_MMAP
-            CMAKE_OPTIONS: -A x64 -DDEPRECATE_HARD=ON
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (x86, Visual Studio)"
+        - name: "Windows (x86, Visual Studio, WinHTTP)"
           os: windows-2019
           env:
             ARCH: x86
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
+            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_HTTPS=WinHTTP -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (amd64, mingw)"
+        - name: "Windows (amd64, Visual Studio, Schannel)"
+          os: windows-2019
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (x86, Visual Studio, Schannel)"
+          os: windows-2019
+          env:
+            ARCH: x86
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DUSE_BUNDLED_ZLIB=ON
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (amd64, mingw, WinHTTP)"
           os: windows-2019
           setup-script: mingw
           env:
@@ -198,15 +205,24 @@ jobs:
             BUILD_PATH: D:\Temp\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (x86, mingw)"
+        - name: "Windows (x86, mingw, Schannel)"
           os: windows-2019
           setup-script: mingw
           env:
             ARCH: x86
             CMAKE_GENERATOR: MinGW Makefiles
-            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel
             BUILD_TEMP: D:\Temp
             BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (no mmap)"
+          os: windows-2019
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CFLAGS: -DNO_MMAP
+            CMAKE_OPTIONS: -A x64 -DDEPRECATE_HARD=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - name: "Linux (Bionic, GCC, dynamically-loaded OpenSSL)"
@@ -265,13 +281,43 @@ jobs:
             RUN_INVASIVE_TESTS: true
             SKIP_PROXY_TESTS: true
           os: ubuntu-latest
+
+        # Experimental: SHA256 support
+        - name: "Linux (SHA256, Xenial, Clang, OpenSSL)"
+          id: xenial-clang-openssl
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+          os: ubuntu-latest
+        - name: "macOS (SHA256)"
+          id: macos
+          os: macos-10.15
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
+            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+          setup-script: osx
+        - name: "Windows (SHA256, amd64, Visual Studio)"
+          id: windows-amd64-vs
+          os: windows-2019
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
       fail-fast: false
-    name: "Build ${{ matrix.platform.name }}"
     env: ${{ matrix.platform.env }}
     runs-on: ${{ matrix.platform.os }}
+    name: "Build ${{ matrix.platform.name }}"
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: source
         fetch-depth: 0
@@ -294,35 +340,20 @@ jobs:
       run: docker build -t ${{ env.docker-registry-container-sha }} -f ${{ env.dockerfile }} .
       working-directory: ${{ env.docker-config-path }}
       if: matrix.platform.container.name != '' && env.docker-container-exists != 'true'
-    - name: Build and test
-      run: |
-        export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
-
-        if [ -n "${{ matrix.platform.container.name }}" ]; then
-          docker run \
-              --rm \
-              --user libgit2:libgit2 \
-              -v "$(pwd)/source:/home/libgit2/source" \
-              -w /home/libgit2 \
-              -e ASAN_SYMBOLIZER_PATH \
-              -e CC \
-              -e CFLAGS \
-              -e CMAKE_GENERATOR \
-              -e CMAKE_OPTIONS \
-              -e GITTEST_NEGOTIATE_PASSWORD \
-              -e GITTEST_FLAKY_STAT \
-              -e PKG_CONFIG_PATH \
-              -e SKIP_NEGOTIATE_TESTS \
-              -e SKIP_SSH_TESTS \
-              -e TSAN_OPTIONS \
-              ${{ env.docker-registry-container-sha }} \
-              /bin/bash -c "mkdir build && cd build && ../source/ci/build.sh && ../source/ci/test.sh"
-        else
-          mkdir build && cd build
-          ../source/ci/build.sh
-          ../source/ci/test.sh
-        fi
-      shell: bash
+    - name: Prepare build
+      run: mkdir build
+    - name: Build
+      uses: ./source/.github/actions/run-build
+      with:
+        command: cd build && ../source/ci/build.sh
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
+    - name: Test
+      uses: ./source/.github/actions/run-build
+      with:
+        command: cd build && ../source/ci/test.sh
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
 
   coverity:
     # Only run scheduled workflows on the main repository; prevents people
@@ -333,7 +364,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: source
         fetch-depth: 0
@@ -358,13 +389,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
+      uses: github/codeql-action/init@v2
       with:
         languages: 'cpp'
 
@@ -376,4 +407,4 @@ jobs:
         cmake --build .
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v1
+      uses: github/codeql-action/analyze@v2

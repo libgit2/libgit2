@@ -43,7 +43,7 @@ void test_refs_lookup__oid(void)
 	git_oid tag, expected;
 
 	cl_git_pass(git_reference_name_to_id(&tag, g_repo, "refs/tags/point_to_blob"));
-	cl_git_pass(git_oid_fromstr(&expected, "1385f264afb75a56a5bec74243be9b367ba4ca08"));
+	cl_git_pass(git_oid__fromstr(&expected, "1385f264afb75a56a5bec74243be9b367ba4ca08", GIT_OID_SHA1));
 	cl_assert_equal_oid(&expected, &tag);
 }
 

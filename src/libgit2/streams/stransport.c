@@ -44,6 +44,7 @@ typedef struct {
 	git_stream parent;
 	git_stream *io;
 	int owned;
+	int error;
 	SSLContextRef ctx;
 	CFDataRef der_data;
 	git_cert_x509 cert_info;
@@ -61,7 +62,10 @@ static int stransport_connect(git_stream *stream)
 		return error;
 
 	ret = SSLHandshake(st->ctx);
-	if (ret != errSSLServerAuthCompleted) {
+
+	if (ret != errSSLServerAuthCompleted && st->error != 0)
+		return -1;
+	else if (ret != errSSLServerAuthCompleted) {
 		git_error_set(GIT_ERROR_SSL, "unexpected return value from ssl handshake %d", (int)ret);
 		return -1;
 	}
@@ -147,10 +151,20 @@ static int stransport_set_proxy(
  */
 static OSStatus write_cb(SSLConnectionRef conn, const void *data, size_t *len)
 {
-	git_stream *io = (git_stream *) conn;
+	stransport_stream *st = (stransport_stream *)conn;
+	git_stream *io = st->io;
+	OSStatus ret;
 
-	if (git_stream__write_full(io, data, *len, 0) < 0)
-		return -36; /* "ioErr" from MacErrors.h which is not available on iOS */
+	st->error = 0;
+
+	ret = git_stream__write_full(io, data, *len, 0);
+
+	if (ret < 0) {
+		st->error = ret;
+		return (ret == GIT_TIMEOUT) ?
+		       errSSLNetworkTimeout :
+		       -36 /* ioErr */;
+	}
 
 	return noErr;
 }
@@ -164,8 +178,12 @@ static ssize_t stransport_write(git_stream *stream, const char *data, size_t len
 	GIT_UNUSED(flags);
 
 	data_len = min(len, SSIZE_MAX);
-	if ((ret = SSLWrite(st->ctx, data, data_len, &processed)) != noErr)
+	if ((ret = SSLWrite(st->ctx, data, data_len, &processed)) != noErr) {
+		if (st->error == GIT_TIMEOUT)
+			return GIT_TIMEOUT;
+
 		return stransport_error(ret);
+	}
 
 	GIT_ASSERT(processed < SSIZE_MAX);
 	return (ssize_t)processed;
@@ -182,18 +200,24 @@ static ssize_t stransport_write(git_stream *stream, const char *data, size_t len
  */
 static OSStatus read_cb(SSLConnectionRef conn, void *data, size_t *len)
 {
-	git_stream *io = (git_stream *) conn;
+	stransport_stream *st = (stransport_stream *)conn;
+	git_stream *io = st->io;
 	OSStatus error = noErr;
 	size_t off = 0;
 	ssize_t ret;
 
+	st->error = 0;
+
 	do {
 		ret = git_stream_read(io, data + off, *len - off);
+
 		if (ret < 0) {
-			error = -36; /* "ioErr" from MacErrors.h which is not available on iOS */
+			st->error = ret;
+			error = (ret == GIT_TIMEOUT) ?
+			        errSSLNetworkTimeout :
+			        -36 /* ioErr */;
 			break;
-		}
-		if (ret == 0) {
+		} else if (ret == 0) {
 			error = errSSLClosedGraceful;
 			break;
 		}
@@ -207,12 +231,16 @@ static OSStatus read_cb(SSLConnectionRef conn, void *data, size_t *len)
 
 static ssize_t stransport_read(git_stream *stream, void *data, size_t len)
 {
-	stransport_stream *st = (stransport_stream *) stream;
+	stransport_stream *st = (stransport_stream *)stream;
 	size_t processed;
 	OSStatus ret;
 
-	if ((ret = SSLRead(st->ctx, data, len, &processed)) != noErr)
+	if ((ret = SSLRead(st->ctx, data, len, &processed)) != noErr) {
+		if (st->error == GIT_TIMEOUT)
+			return GIT_TIMEOUT;
+
 		return stransport_error(ret);
+	}
 
 	return processed;
 }
@@ -269,7 +297,7 @@ static int stransport_wrap(
 	}
 
 	if ((ret = SSLSetIOFuncs(st->ctx, read_cb, write_cb)) != noErr ||
-	    (ret = SSLSetConnection(st->ctx, st->io)) != noErr ||
+	    (ret = SSLSetConnection(st->ctx, st)) != noErr ||
 	    (ret = SSLSetSessionOption(st->ctx, kSSLSessionOptionBreakOnServerAuth, true)) != noErr ||
 	    (ret = SSLSetProtocolVersionMin(st->ctx, kTLSProtocol1)) != noErr ||
 	    (ret = SSLSetProtocolVersionMax(st->ctx, kTLSProtocol12)) != noErr ||

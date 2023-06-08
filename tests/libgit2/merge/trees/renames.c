@@ -286,7 +286,7 @@ void test_merge_trees_renames__cache_recomputation(void)
 	void *data;
 	size_t i;
 
-	cl_git_pass(git_oid_fromstr(&blob, "a2d8d1824c68541cca94ffb90f79291eba495921"));
+	cl_git_pass(git_oid__fromstr(&blob, "a2d8d1824c68541cca94ffb90f79291eba495921", GIT_OID_SHA1));
 
 	/*
 	 * Create a 50MB blob that consists of NUL bytes only. It is important

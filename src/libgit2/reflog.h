@@ -16,8 +16,6 @@
 #define GIT_REFLOG_DIR_MODE 0777
 #define GIT_REFLOG_FILE_MODE 0666
 
-#define GIT_REFLOG_SIZE_MIN (2*GIT_OID_HEXSZ+2+17)
-
 struct git_reflog_entry {
 	git_oid oid_old;
 	git_oid oid_cur;
@@ -30,6 +28,7 @@ struct git_reflog_entry {
 struct git_reflog {
 	git_refdb *db;
 	char *ref_name;
+	git_oid_t oid_type;
 	git_vector entries;
 };
 

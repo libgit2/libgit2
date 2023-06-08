@@ -32,7 +32,7 @@ static void assert_peel_generic(
 
 	cl_git_pass(git_reference_peel(&peeled, ref, requested_type));
 
-	cl_git_pass(git_oid_fromstr(&expected_oid, expected_sha));
+	cl_git_pass(git_oid__fromstr(&expected_oid, expected_sha, GIT_OID_SHA1));
 	cl_assert_equal_oid(&expected_oid, git_object_id(peeled));
 
 	cl_assert_equal_i(expected_type, git_object_type(peeled));

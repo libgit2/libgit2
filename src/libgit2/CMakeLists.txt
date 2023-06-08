@@ -8,7 +8,8 @@ set_target_properties(libgit2 PROPERTIES C_EXTENSIONS OFF)
 include(PkgBuildConfig)
 
 set(LIBGIT2_INCLUDES
-	"${PROJECT_BINARY_DIR}/src"
+	"${PROJECT_BINARY_DIR}/src/util"
+	"${PROJECT_BINARY_DIR}/include"
 	"${PROJECT_SOURCE_DIR}/src/libgit2"
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include")
@@ -33,8 +34,7 @@ target_sources(libgit2 PRIVATE ${SRC_H})
 
 file(GLOB SRC_GIT2 *.c *.h
 	streams/*.c streams/*.h
-	transports/*.c transports/*.h
-	xdiff/*.c xdiff/*.h)
+	transports/*.c transports/*.h)
 list(SORT SRC_GIT2)
 target_sources(libgit2 PRIVATE ${SRC_GIT2})
 
@@ -46,23 +46,6 @@ endif()
 if(APPLE)
 	# The old Secure Transport API has been deprecated in macOS 10.15.
 	set_source_files_properties(streams/stransport.c PROPERTIES COMPILE_FLAGS -Wno-deprecated)
-endif()
-
-# the xdiff dependency is not (yet) warning-free, disable warnings
-# as errors for the xdiff sources until we've sorted them out
-if(MSVC)
-	set_source_files_properties(xdiff/xdiffi.c PROPERTIES COMPILE_FLAGS -WX-)
-	set_source_files_properties(xdiff/xemit.c PROPERTIES COMPILE_FLAGS -WX-)
-	set_source_files_properties(xdiff/xhistogram.c PROPERTIES COMPILE_FLAGS -WX-)
-	set_source_files_properties(xdiff/xmerge.c PROPERTIES COMPILE_FLAGS -WX-)
-	set_source_files_properties(xdiff/xutils.c PROPERTIES COMPILE_FLAGS -WX-)
-	set_source_files_properties(xdiff/xpatience.c PROPERTIES COMPILE_FLAGS -WX-)
-else()
-	set_source_files_properties(xdiff/xdiffi.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare -Wno-unused-parameter")
-	set_source_files_properties(xdiff/xemit.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare -Wno-unused-parameter")
-	set_source_files_properties(xdiff/xhistogram.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
-	set_source_files_properties(xdiff/xutils.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
-	set_source_files_properties(xdiff/xpatience.c PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
 endif()
 
 ide_split_sources(libgit2)
@@ -83,7 +66,8 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 #
 
 add_library(libgit2package ${SRC_RC} ${LIBGIT2_OBJECTS})
-target_link_libraries(libgit2package  ${LIBGIT2_SYSTEM_LIBS})
+target_link_libraries(libgit2package ${LIBGIT2_SYSTEM_LIBS})
+target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
 
 set_target_properties(libgit2package PROPERTIES C_STANDARD 11)
 set_target_properties(libgit2package PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -122,26 +106,22 @@ if(MSVC_IDE)
 	set_source_files_properties(win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
 endif()
 
+# support experimental features and functionality
+
+configure_file(experimental.h.in "${PROJECT_BINARY_DIR}/include/git2/experimental.h")
+
+# translate filenames in the git2.h so that they match the install directory
+# (allows for side-by-side installs of libgit2 and libgit2-experimental.)
+
+FILE(READ "${PROJECT_SOURCE_DIR}/include/git2.h" LIBGIT2_INCLUDE)
+STRING(REGEX REPLACE "#include \"git2\/" "#include \"${LIBGIT2_FILENAME}/" LIBGIT2_INCLUDE "${LIBGIT2_INCLUDE}")
+FILE(WRITE "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}.h" ${LIBGIT2_INCLUDE})
+
 # Install
+
 install(TARGETS libgit2package
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/git2 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES ${PROJECT_SOURCE_DIR}/include/git2.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-install(
-	TARGETS libgit2package
-	EXPORT "${targets_export_name}"
-	LIBRARY DESTINATION "lib"
-	ARCHIVE DESTINATION "lib"
-	RUNTIME DESTINATION "bin"
-	INCLUDES DESTINATION "${include_install_dir}"
-)
-		 
-# Install
-#INSTALL(TARGETS git2
-#RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-#LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#)

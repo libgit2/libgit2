@@ -1,6 +1,8 @@
 #include "clar_libgit2.h"
 #include "refs.h"
 #include "vector.h"
+#include "odb.h"
+#include "repository.h"
 
 static git_repository *repo;
 
@@ -126,8 +128,8 @@ void test_refs_iterator__empty(void)
 	git_reference *ref;
 	git_repository *empty;
 
-	cl_git_pass(git_odb_new(&odb));
-	cl_git_pass(git_repository_wrap_odb(&empty, odb));
+	cl_git_pass(git_odb__new(&odb, NULL));
+	cl_git_pass(git_repository__wrap_odb(&empty, odb, GIT_OID_SHA1));
 
 	cl_git_pass(git_reference_iterator_new(&iter, empty));
 	cl_assert_equal_i(GIT_ITEROVER, git_reference_next(&ref, iter));

@@ -42,7 +42,7 @@ static int ident_find_id(
 static int ident_insert_id(
 	git_str *to, const git_str *from, const git_filter_source *src)
 {
-	char oid[GIT_OID_HEXSZ+1];
+	char oid[GIT_OID_MAX_HEXSIZE + 1];
 	const char *id_start, *id_end, *from_end = from->ptr + from->size;
 	size_t need_size;
 
@@ -57,7 +57,7 @@ static int ident_insert_id(
 		return GIT_PASSTHROUGH;
 
 	need_size = (size_t)(id_start - from->ptr) +
-		5 /* "$Id: " */ + GIT_OID_HEXSZ + 2 /* " $" */ +
+		5 /* "$Id: " */ + GIT_OID_MAX_HEXSIZE + 2 /* " $" */ +
 		(size_t)(from_end - id_end);
 
 	if (git_str_grow(to, need_size) < 0)
@@ -65,7 +65,7 @@ static int ident_insert_id(
 
 	git_str_set(to, from->ptr, (size_t)(id_start - from->ptr));
 	git_str_put(to, "$Id: ", 5);
-	git_str_put(to, oid, GIT_OID_HEXSZ);
+	git_str_puts(to, oid);
 	git_str_put(to, " $", 2);
 	git_str_put(to, id_end, (size_t)(from_end - id_end));
 

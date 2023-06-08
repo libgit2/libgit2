@@ -72,6 +72,7 @@ git_reference *git_reference__alloc(
 	const git_oid *oid,
 	const git_oid *peel)
 {
+	git_oid_t oid_type;
 	git_reference *ref;
 
 	GIT_ASSERT_ARG_WITH_RETVAL(name, NULL);
@@ -84,8 +85,16 @@ git_reference *git_reference__alloc(
 	ref->type = GIT_REFERENCE_DIRECT;
 	git_oid_cpy(&ref->target.oid, oid);
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	oid_type = oid->type;
+#else
+	oid_type = GIT_OID_SHA1;
+#endif
+
 	if (peel != NULL)
 		git_oid_cpy(&ref->peel, peel);
+	else
+		git_oid_clear(&ref->peel, oid_type);
 
 	return ref;
 }

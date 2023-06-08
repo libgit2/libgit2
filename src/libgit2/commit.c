@@ -22,6 +22,7 @@
 #include "object.h"
 #include "array.h"
 #include "oidarray.h"
+#include "grafts.h"
 
 void git_commit__free(void *_commit)
 {
@@ -56,11 +57,13 @@ static int git_commit__create_buffer_internal(
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(tree);
 
-	git_oid__writebuf(out, "tree ", tree);
+	if (git_object__write_oid_header(out, "tree ", tree) < 0)
+		goto on_error;
 
 	for (i = 0; i < git_array_size(*parents); i++) {
 		parent = git_array_get(*parents, i);
-		git_oid__writebuf(out, "parent ", parent);
+		if (git_object__write_oid_header(out, "parent ", parent) < 0)
+			goto on_error;
 	}
 
 	git_signature__writebuf(out, "author ", author);
@@ -388,7 +391,11 @@ int git_commit_amend(
 	return error;
 }
 
-static int commit_parse(git_commit *commit, const char *data, size_t size, unsigned int flags)
+static int commit_parse(
+	git_commit *commit,
+	const char *data,
+	size_t size,
+	git_commit__parse_options *opts)
 {
 	const char *buffer_start = data, *buffer;
 	const char *buffer_end = buffer_start + size;
@@ -399,6 +406,7 @@ static int commit_parse(git_commit *commit, const char *data, size_t size, unsig
 
 	GIT_ASSERT_ARG(commit);
 	GIT_ASSERT_ARG(data);
+	GIT_ASSERT_ARG(opts);
 
 	buffer = buffer_start;
 
@@ -407,28 +415,29 @@ static int commit_parse(git_commit *commit, const char *data, size_t size, unsig
 	GIT_ERROR_CHECK_ARRAY(commit->parent_ids);
 
 	/* The tree is always the first field */
-	if (!(flags & GIT_COMMIT_PARSE_QUICK)) {
-	    if (git_oid__parse(&commit->tree_id, &buffer, buffer_end, "tree ") < 0)
+	if (!(opts->flags & GIT_COMMIT_PARSE_QUICK)) {
+		if (git_object__parse_oid_header(&commit->tree_id,
+				&buffer, buffer_end, "tree ",
+				opts->oid_type) < 0)
 			goto bad_buffer;
 	} else {
-		size_t tree_len = strlen("tree ") + GIT_OID_HEXSZ + 1;
+		size_t tree_len = strlen("tree ") + git_oid_hexsize(opts->oid_type) + 1;
+
 		if (buffer + tree_len > buffer_end)
 			goto bad_buffer;
 		buffer += tree_len;
 	}
 
-	/*
-	 * TODO: commit grafts!
-	 */
-
-	while (git_oid__parse(&parent_id, &buffer, buffer_end, "parent ") == 0) {
+	while (git_object__parse_oid_header(&parent_id,
+			&buffer, buffer_end, "parent ",
+			opts->oid_type) == 0) {
 		git_oid *new_id = git_array_alloc(commit->parent_ids);
 		GIT_ERROR_CHECK_ALLOC(new_id);
 
 		git_oid_cpy(new_id, &parent_id);
 	}
 
-	if (!(flags & GIT_COMMIT_PARSE_QUICK)) {
+	if (!opts || !(opts->flags & GIT_COMMIT_PARSE_QUICK)) {
 		commit->author = git__malloc(sizeof(git_signature));
 		GIT_ERROR_CHECK_ALLOC(commit->author);
 
@@ -452,7 +461,7 @@ static int commit_parse(git_commit *commit, const char *data, size_t size, unsig
 	if ((error = git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n')) < 0)
 		return error;
 
-	if (flags & GIT_COMMIT_PARSE_QUICK)
+	if (opts && opts->flags & GIT_COMMIT_PARSE_QUICK)
 		return 0;
 
 	/* Parse add'l header entries */
@@ -497,19 +506,64 @@ bad_buffer:
 	return GIT_EINVALID;
 }
 
-int git_commit__parse_raw(void *commit, const char *data, size_t size)
+int git_commit__parse(
+	void *commit,
+	git_odb_object *odb_obj,
+	git_oid_t oid_type)
 {
-	return commit_parse(commit, data, size, 0);
+	git_commit__parse_options parse_options = {0};
+	parse_options.oid_type = oid_type;
+
+	return git_commit__parse_ext(commit, odb_obj, &parse_options);
 }
 
-int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, unsigned int flags)
+int git_commit__parse_raw(
+	void *commit,
+	const char *data,
+	size_t size,
+	git_oid_t oid_type)
 {
-	return commit_parse(commit, git_odb_object_data(odb_obj), git_odb_object_size(odb_obj), flags);
+	git_commit__parse_options parse_options = {0};
+	parse_options.oid_type = oid_type;
+
+	return commit_parse(commit, data, size, &parse_options);
 }
 
-int git_commit__parse(void *_commit, git_odb_object *odb_obj)
+static int assign_commit_parents_from_graft(git_commit *commit, git_commit_graft *graft) {
+	size_t idx;
+	git_oid *oid;
+
+	git_array_clear(commit->parent_ids);
+	git_array_init_to_size(commit->parent_ids, git_array_size(graft->parents));
+	git_array_foreach(graft->parents, idx, oid) {
+		git_oid *id = git_array_alloc(commit->parent_ids);
+		GIT_ERROR_CHECK_ALLOC(id);
+
+		git_oid_cpy(id, oid);
+	}
+
+	return 0;
+}
+
+int git_commit__parse_ext(
+	git_commit *commit,
+	git_odb_object *odb_obj,
+	git_commit__parse_options *parse_opts)
 {
-	return git_commit__parse_ext(_commit, odb_obj, 0);
+	git_repository *repo = git_object_owner((git_object *)commit);
+	git_commit_graft *graft;
+	int error;
+
+	if ((error = commit_parse(commit, git_odb_object_data(odb_obj),
+				  git_odb_object_size(odb_obj), parse_opts)) < 0)
+		return error;
+
+	/* Perform necessary grafts */
+	if (git_grafts_get(&graft, repo->grafts, git_odb_object_id(odb_obj)) != 0 &&
+		git_grafts_get(&graft, repo->shallow_grafts, git_odb_object_id(odb_obj)) != 0)
+		return 0;
+
+	return assign_commit_parents_from_graft(commit, graft);
 }
 
 #define GIT_COMMIT_GETTER(_rvalue, _name, _return, _invalid) \
@@ -566,7 +620,7 @@ const char *git_commit_summary(git_commit *commit)
 				while (*next && git__isspace_nonlf(*next)) {
 					++next;
 				}
-				if (!*next || *next == '\n') 
+				if (!*next || *next == '\n')
 					break;
 			}
 			/* record the beginning of contiguous whitespace runs */
@@ -979,11 +1033,14 @@ int git_commit_create_with_signature(
 	git_str commit = GIT_STR_INIT;
 	git_commit *parsed;
 	git_array_oid_t parents = GIT_ARRAY_INIT;
+	git_commit__parse_options parse_opts = {0};
+
+	parse_opts.oid_type = repo->oid_type;
 
 	/* The first step is to verify that all the tree and parents exist */
 	parsed = git__calloc(1, sizeof(git_commit));
 	GIT_ERROR_CHECK_ALLOC(parsed);
-	if (commit_parse(parsed, commit_content, strlen(commit_content), 0) < 0) {
+	if (commit_parse(parsed, commit_content, strlen(commit_content), &parse_opts) < 0) {
 		error = -1;
 		goto cleanup;
 	}
