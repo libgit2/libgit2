@@ -8,7 +8,7 @@
 #include "auth_ntlm.h"
 #include "auth_negotiate.h"
 
-#ifdef GIT_WIN32
+#ifdef GIT_WIN32 && GIT_SSPI
 
 #define SECURITY_WIN32
 

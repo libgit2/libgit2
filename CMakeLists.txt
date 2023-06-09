@@ -102,6 +102,8 @@ if(WIN32)
 	# By default, libgit2 is built with WinHTTP.  To use the built-in
 	# HTTP transport, invoke CMake with the "-DUSE_WINHTTP=OFF" argument.
 	option(USE_WINHTTP         "Use Win32 WinHTTP routines"                         OFF)
+
+	option(USE_SSPI            "Use the SSPI implementation on windows"      		ON)
 endif()
 
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
