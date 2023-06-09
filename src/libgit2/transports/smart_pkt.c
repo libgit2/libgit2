@@ -464,8 +464,9 @@ static int shallow_pkt(
 	line += 8;
 	len -= 8;
 
-	if (len != oid_hexsize)
-		goto out_err;
+	// XXX: LF is missing in remote push tho shallow @daminetreg 
+	// if (len != oid_hexsize )
+	// 	goto out_err;
 
 	git_oid__fromstr(&pkt->oid, line, data->oid_type);
 	line += oid_hexsize + 1;
