@@ -2278,3 +2278,50 @@ void test_diff_workdir__ignore_blank_lines(void)
 	git_patch_free(patch);
 	git_diff_free(diff);
 }
+
+void test_diff_workdir__to_index_reversed_content_loads(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff = NULL;
+	diff_expects exp;
+	int use_iterator;
+	char *pathspec = "new_file";
+	
+	g_repo = cl_git_sandbox_init("status");
+	
+	opts.context_lines = 3;
+	opts.interhunk_lines = 1;
+	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED |
+		GIT_DIFF_SHOW_UNTRACKED_CONTENT | GIT_DIFF_REVERSE;
+	opts.pathspec.strings = &pathspec;
+	opts.pathspec.count   = 1;
+	
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	
+	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
+		memset(&exp, 0, sizeof(exp));
+		
+		if (use_iterator)
+			cl_git_pass(diff_foreach_via_iterator(
+				diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
+		else
+			cl_git_pass(git_diff_foreach(
+				diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
+		
+		cl_assert_equal_i(1, exp.files);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_MODIFIED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
+		
+		cl_assert_equal_i(1, exp.hunks);
+		
+		cl_assert_equal_i(1, exp.lines);
+		cl_assert_equal_i(0, exp.line_ctxt);
+		cl_assert_equal_i(0, exp.line_adds);
+		cl_assert_equal_i(1, exp.line_dels);
+	}
+	
+	git_diff_free(diff);
+}
