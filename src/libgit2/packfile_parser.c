@@ -181,7 +181,6 @@ static int parse_object_data(
 		return -1;
 
 	len = parser->zstream.in_len;
-
 	parser->current_compressed_size += (orig_len - len);
 
 	printf("parsed object data: %d %d\n", (int)len, git_zstream_eos(&parser->zstream));
@@ -245,11 +244,21 @@ static int parse_delta_header(
 		while (len) {
 			char c = *((const char *)data);
 
-			parser->current_offset +=
-				(c & 0x7f) << parser->current_bits;
+			if (parser->current_bits == 0) {
+				parser->current_offset = (c & 0x7f);
+			} else {
+				parser->current_offset += 1;
+				parser->current_offset <<= 7;
+				parser->current_offset |= (c & 0x7f);
+			}
+
+			/* TODO: overflow checking */
+			parser->current_bits += 7;
 
 			data++;
 			len--;
+
+			parser->current_compressed_size++;
 
 			if ((c & 0x80) == 0) {
 				if (parser->delta_start) {
@@ -270,8 +279,8 @@ static int parse_delta_header(
 		}
 
 		printf("offset: %d\n", (int) parser->current_offset);
-
 		break;
+
 	case GIT_OBJECT_REF_DELTA:
 		hash_len = git_oid_size(parser->oid_type);
 		chunk_len = min(hash_len, len);
@@ -282,6 +291,8 @@ static int parse_delta_header(
 		parser->current_base_len += chunk_len;
 		data += chunk_len;
 		len -= chunk_len;
+
+		parser->current_compressed_size += chunk_len;
 
 		if (parser->current_base_len == hash_len) {
 			printf("base: %s\n", git_oid_tostr_s(&parser->current_base));
@@ -303,6 +314,7 @@ static int parse_delta_header(
 		}
 
 		break;
+
 	default:
 		git_error_set(GIT_ERROR_INDEXER, "invalid delta type");
 		return -1;
@@ -336,6 +348,7 @@ static int parse_delta_data(
 		return -1;
 
 	len = parser->zstream.in_len;
+	parser->current_compressed_size += (orig_len - len);
 
 	printf("parsed delta data: %d %d\n", (int)len, git_zstream_eos(&parser->zstream));
 
@@ -351,7 +364,9 @@ static int parse_delta_data(
 
 	if (git_zstream_eos(&parser->zstream)) {
 		if (parser->delta_complete) {
-			int error = parser->delta_complete(parser->callback_data);
+			int error = parser->delta_complete(
+				parser->current_compressed_size,
+				parser->callback_data);
 
 			if (error != 0)
 				return error;
@@ -396,7 +411,10 @@ static int parse_trailer(
 		}
 
 		if (parser->packfile_complete) {
-			int error = parser->packfile_complete(trailer, hash_len);
+			int error = parser->packfile_complete(
+				trailer,
+				hash_len,
+				parser->callback_data);
 
 			if (error != 0)
 				return error;

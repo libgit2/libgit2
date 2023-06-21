@@ -44,8 +44,8 @@ struct git_packfile_parser {
 	int (*object_complete)(size_t compressed_size, git_oid *oid, void *data);
 	int (*delta_start)(size_t offset, git_object_t type, size_t size, git_oid *delta_ref, size_t delta_offset, void *data);
 	int (*delta_data)(void *delta_data, size_t len, void *data);
-	int (*delta_complete)(void *data);
-	int (*packfile_complete)(const unsigned char *checksum, size_t checksum_len);
+	int (*delta_complete)(size_t compressed_size, void *data);
+	int (*packfile_complete)(const unsigned char *checksum, size_t checksum_len, void *data);
 	void *callback_data;
 
 	/* Parsing structure for the header */
