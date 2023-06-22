@@ -114,8 +114,6 @@ static int midx_parse_oid_lookup(
 		const unsigned char *data,
 		struct git_midx_chunk *chunk_oid_lookup)
 {
-	uint32_t i;
-	unsigned char *oid, *prev_oid, zero_oid[GIT_OID_MAX_SIZE] = {0};
 	size_t oid_size = git_oid_size(idx->oid_type);
 
 	if (chunk_oid_lookup->offset == 0)
@@ -125,13 +123,7 @@ static int midx_parse_oid_lookup(
 	if (chunk_oid_lookup->length != idx->num_objects * oid_size)
 		return midx_error("OID Lookup chunk has wrong length");
 
-	idx->oid_lookup = oid = (unsigned char *)(data + chunk_oid_lookup->offset);
-	prev_oid = zero_oid;
-	for (i = 0; i < idx->num_objects; ++i, oid += oid_size) {
-		if (git_oid_raw_cmp(prev_oid, oid, oid_size) >= 0)
-			return midx_error("OID Lookup index is non-monotonic");
-		prev_oid = oid;
-	}
+	idx->oid_lookup = (unsigned char *)(data + chunk_oid_lookup->offset);
 
 	return 0;
 }
