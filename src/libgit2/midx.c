@@ -185,7 +185,8 @@ int git_midx_parse(
 					 chunk_oid_fanout = {0},
 					 chunk_oid_lookup = {0},
 					 chunk_object_offsets = {0},
-					 chunk_object_large_offsets = {0};
+					 chunk_object_large_offsets = {0},
+					 chunk_unknown = {0};
 
 	GIT_ASSERT_ARG(idx);
 
@@ -264,7 +265,9 @@ int git_midx_parse(
 			break;
 
 		default:
-			return midx_error("unrecognized chunk ID");
+			chunk_unknown.offset = last_chunk_offset;
+			last_chunk = &chunk_unknown;
+			break;
 		}
 	}
 	last_chunk->length = (size_t)(trailer_offset - last_chunk_offset);
