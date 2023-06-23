@@ -173,8 +173,6 @@ static int parse_object_data(
 		parser->state = STATE_OBJECT_DATA;
 	}
 
-	printf("parsing object data: %d\n", (int)len);
-
 	if (git_zstream_set_input(&parser->zstream, data, len) < 0 ||
 	    git_zstream_get_output_chunk(inflated, &inflated_len, &parser->zstream) < 0 ||
 		git_hash_update(&parser->current_hash, inflated, inflated_len) < 0)
@@ -182,8 +180,6 @@ static int parse_object_data(
 
 	len = parser->zstream.in_len;
 	parser->current_compressed_size += (orig_len - len);
-
-	printf("parsed object data: %d %d\n", (int)len, git_zstream_eos(&parser->zstream));
 
 	if (parser->object_data) {
 		int error = parser->object_data(
@@ -206,8 +202,6 @@ static int parse_object_data(
 
 		if (git_hash_final(oid.id, &parser->current_hash) < 0)
 			return -1;
-
-		printf("%s\n", git_oid_tostr_s(&oid));
 
 		if (parser->object_complete) {
 			int error = parser->object_complete(
@@ -278,7 +272,6 @@ static int parse_delta_header(
 			}
 		}
 
-		printf("offset: %d\n", (int) parser->current_offset);
 		break;
 
 	case GIT_OBJECT_REF_DELTA:
@@ -295,8 +288,6 @@ static int parse_delta_header(
 		parser->current_compressed_size += chunk_len;
 
 		if (parser->current_base_len == hash_len) {
-			printf("base: %s\n", git_oid_tostr_s(&parser->current_base));
-
 			if (parser->delta_start) {
 				int error = parser->delta_start(
 					parser->current_position,
@@ -341,16 +332,12 @@ static int parse_delta_data(
 		parser->state = STATE_DELTA_DATA;
 	}
 
-	printf("parsing delta data: %d\n", (int)len);
-
 	if (git_zstream_set_input(&parser->zstream, data, len) < 0 ||
 	    git_zstream_get_output_chunk(inflated, &inflated_len, &parser->zstream) < 0)
 		return -1;
 
 	len = parser->zstream.in_len;
 	parser->current_compressed_size += (orig_len - len);
-
-	printf("parsed delta data: %d %d\n", (int)len, git_zstream_eos(&parser->zstream));
 
 	if (parser->delta_data) {
 		int error = parser->delta_data(
@@ -393,8 +380,6 @@ static int parse_trailer(
 	size_t chunk_len = min(hash_len, len);
 	size_t orig_len = len;
 
-	printf("chunk size: %d\n", (int)chunk_len);
-
 	memcpy(parser->trailer + parser->trailer_len, data, chunk_len);
 	parser->trailer_len += chunk_len;
 
@@ -434,14 +419,10 @@ int git_packfile_parser_parse(
 {
 	GIT_ASSERT_ARG(parser && (!len || data));
 
-	printf("==--== parsing %d...\n", (int)len);
-
 	while (len) {
 		parser_state start_state = parser->state;
 		size_t consumed;
 		int error = 0;
-
-		printf("looping: %d [state=%d]\n", (int)len, (int)parser->state);
 
 		switch (parser->state) {
 		case STATE_HEADER:
@@ -483,8 +464,6 @@ int git_packfile_parser_parse(
 		parser->position += consumed;
 		data += consumed;
 		len -= consumed;
-
-		printf("looped: %d -- remain: %d\n", (int)consumed, (int)len);
 	}
 
 	return 0;
