@@ -9,26 +9,29 @@
 #include "pack.h"
 #include "packfile_parser.h"
 #include "repository.h"
+#include "sizemap.h"
 
 #include "git2_util.h"
+#include "posix.h"
 
 #include "git2/indexer.h"
 
-/* TODO: tweak? */
+/* TODO: tweak? also align with packfile_parser.c */
 #define READ_CHUNK_SIZE (1024 * 256)
 
 size_t git_indexer__max_objects = UINT32_MAX;
 
 struct object_entry {
+	git_object_t type;
+	git_object_size_t position;
 	git_oid id;
-	size_t position;
 };
 
 struct delta_entry {
-	git_object_t type;
+	struct object_entry object;
 	union {
-		git_oid ref;
-		size_t offset;
+		git_oid ref_id;
+		git_object_size_t ofs_position;
 	} base;
 };
 
@@ -50,15 +53,18 @@ struct git_indexer {
 	git_packfile_parser parser;
 
 	uint32_t entries;
-	bool complete;
+	unsigned int started : 1,
+	             complete : 1;
 
 	/* Current object / delta being parsed */
-	size_t current_position;
+	/* TODO: pul these directly from the parser instead? */
+	git_object_size_t current_position;
 	git_object_t current_type;
-	size_t current_size;
+	git_object_size_t current_size;
 	git_oid current_ref; /* current ref delta base */
-	size_t current_offset; /* current ofs delta base */
+	git_object_size_t current_offset; /* current ofs delta base */
 
+	git_sizemap *positions; /* map of position to object */
 	git_vector objects; /* vector of `struct object_entry` */
 	git_vector deltas;  /* vector of `struct delta_entry` */
 
@@ -93,22 +99,29 @@ static int parse_packfile_header(
 
 	GIT_UNUSED(version);
 
+	if (indexer->started) {
+		git_error_set(GIT_ERROR_INDEXER, "unexpected packfile header");
+		return -1;
+	}
+
 	printf("--> header cb: %d %d\n", (int)version, (int)entries);
 
 	/* TODO: is 50% a good number? not convinced. */
-	if (git_vector_init(&indexer->objects, entries, objects_cmp) < 0 ||
+	if (git_sizemap_new(&indexer->positions) < 0 ||
+	    git_vector_init(&indexer->objects, entries, objects_cmp) < 0 ||
 	    git_vector_init(&indexer->deltas, entries / 2, NULL) < 0)
 		return -1;
 
+	indexer->started = 1;
 	indexer->entries = entries;
 
 	return 0;
 }
 
 static int parse_object_start(
-	size_t position,
+	git_object_size_t position,
 	git_object_t type,
-	size_t size,
+	git_object_size_t size,
 	void *data)
 {
 	git_indexer *indexer = (git_indexer *)data;
@@ -123,7 +136,7 @@ static int parse_object_start(
 }
 
 static int parse_object_complete(
-	size_t compressed_size,
+	git_object_size_t compressed_size,
 	git_oid *oid,
 	void *data)
 {
@@ -136,18 +149,23 @@ static int parse_object_complete(
 	entry = git__malloc(sizeof(struct object_entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
 
+	entry->type = indexer->current_type;
 	git_oid_cpy(&entry->id, oid);
 	entry->position = indexer->current_position;
 
-	return git_vector_insert(&indexer->objects, entry);
+	if (git_sizemap_set(indexer->positions, entry->position, entry) < 0 ||
+	    git_vector_insert(&indexer->objects, entry) < 0)
+		return -1;
+
+	return 0;
 }
 
 static int parse_delta_start(
-	size_t position,
+	git_object_size_t position,
 	git_object_t type,
-	size_t size,
+	git_object_size_t size,
 	git_oid *delta_ref,
-	size_t delta_offset,
+	git_object_size_t delta_offset,
 	void *data)
 {
 	git_indexer *indexer = (git_indexer *)data;
@@ -176,7 +194,7 @@ static int parse_delta_start(
 }
 
 static int parse_delta_complete(
-	size_t compressed_size,
+	git_object_size_t compressed_size,
 	void *data)
 {
 	git_indexer *indexer = (git_indexer *)data;
@@ -188,14 +206,25 @@ static int parse_delta_complete(
 	entry = git__malloc(sizeof(struct delta_entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
 
-	entry->type = indexer->current_type;
+	entry->object.type = indexer->current_type;
+	entry->object.position = indexer->current_position;
 
-	if (entry->type == GIT_OBJECT_REF_DELTA)
-		git_oid_cpy(&entry->base.ref, &indexer->current_ref);
-	else
-		entry->base.offset = indexer->current_offset;
+	if (entry->object.type == GIT_OBJECT_REF_DELTA) {
+		git_oid_cpy(&entry->base.ref_id, &indexer->current_ref);
+	} else {
+		if (indexer->current_offset > indexer->current_position) {
+			git_error_set(GIT_ERROR_INDEXER, "invalid delta offset (base would be negative)");
+			return -1;
+		}
 
-	return git_vector_insert(&indexer->deltas, entry);
+		entry->base.ofs_position = indexer->current_position - indexer->current_offset;
+	}
+
+	if (git_sizemap_set(indexer->positions, entry->object.position, entry) < 0 ||
+	    git_vector_insert(&indexer->deltas, entry) < 0)
+		return -1;
+
+	return 0;
 }
 
 static int parse_packfile_complete(
@@ -208,7 +237,7 @@ static int parse_packfile_complete(
 	GIT_UNUSED(checksum);
 	GIT_UNUSED(checksum_len);
 
-	indexer->complete = true;
+	indexer->complete = 1;
 	return 0;
 }
 
@@ -335,10 +364,6 @@ int git_indexer_append(
 {
 	GIT_ASSERT_ARG(indexer && (!len || data));
 
-	printf("appending %d...\n", (int)len);
-
-
-
 	GIT_UNUSED(stats);
 
 
@@ -356,8 +381,88 @@ int git_indexer_append(
 	return 0;
 }
 
-static int resolve_ofs_delta(git_indexer *indexer, size_t offset)
+static int load_ofs_base(
+	const unsigned char **out,
+	size_t *out_len,
+	git_indexer *indexer,
+	git_object_size_t ofs_position);
+
+/* TODO: limit recursion depth  -- it looks like git may put a 50 length limit on delta chains? */
+static int resolve_delta(git_indexer *indexer, struct delta_entry *delta)
 {
+	const unsigned char *base_data;
+	size_t base_data_len;
+
+	/* TODO: cache lookup here? */
+
+	if (delta->object.type == GIT_OBJECT_REF_DELTA) {
+		printf("--> DELTA removed: ref %s\n", git_oid_tostr_s(&delta->base.ref_id));
+		return -1;
+	} else {
+		if (load_ofs_base(&base_data, &base_data_len, indexer, delta->base.ofs_position) < 0)
+			return -1;
+
+		printf("--> DELTA removed: ofs %d\n", (int)delta->base.ofs_position);
+	}
+
+	printf("i have a delta base: it's %d\n", (int) base_data_len);
+
+	return 0;
+}
+
+/* TODO: this should live somewhere else -- maybe in packfile parser? */
+static int load_object(
+	const unsigned char **out,
+	size_t *out_len,
+	git_indexer *indexer,
+	git_object_size_t ofs_position)
+{
+	char c;
+	git_str data = GIT_STR_INIT;
+
+	/* TODO: we know the object size, hint the git_str with it */
+
+	/* TODO: we need to be more thoughtful about file descriptors */
+	int fd = indexer->fd;
+
+
+	/* TODO: assert ofs_position <= off_t */
+	/* TODO: 32 bit vs 64 bit */
+	if (p_lseek(fd, (off_t)ofs_position, SEEK_SET) < 0) {
+		git_error_set(GIT_ERROR_OS, "could not seek in packfile");
+		return -1;
+	}
+
+	/* ugh */
+	/* TODO: send the object header size for each object in the parser callback so that we don't have to do this nonsense. */
+	do {
+		if (p_read(fd, &c, 1) != 1) {
+			git_error_set(GIT_ERROR_OS, "could not read packfile object header");
+			return -1;
+		}
+	} while ((c & 0x80) == 0x80);
+
+	if (git_zstream_inflatefile(&data, fd) < 0)
+		return -1;
+
+	/* TODO: validate that data.size == expected size of this object from the positions table */
+
+	*out_len = data.size;
+	*out = (const unsigned char *)git_str_detach(&data);
+
+	return 0;
+}
+
+static int load_ofs_base(
+	const unsigned char **out,
+	size_t *out_len,
+	git_indexer *indexer,
+	git_object_size_t ofs_position)
+{
+	struct object_entry *base_object;
+
+	printf("resolving ofs delta at position %llu\n", ofs_position);
+
 	/*
 	 * TODO: we should cache small delta bases?
 	 *
@@ -371,10 +476,26 @@ static int resolve_ofs_delta(git_indexer *indexer, size_t offset)
 	 * those objects.
 	 */
 
-	GIT_UNUSED(indexer);
-	printf("--> DELTA resolve: ofs %d\n", (int)offset);
+	if ((base_object = git_sizemap_get(indexer->positions, ofs_position)) == NULL) {
+		git_error_set(GIT_ERROR_INDEXER,
+			"corrupt packfile - no object at delta offset position %llu",
+			ofs_position);
+		return -1;
+	}
 
-	return 0;
+	if (base_object->type == GIT_OBJECT_REF_DELTA ||
+	    base_object->type == GIT_OBJECT_OFS_DELTA) {
+		struct delta_entry *delta_entry = (struct delta_entry *)base_object;
+		const unsigned char *base;
+		size_t base_len;
+
+		if (load_ofs_base(&base, &base_len, indexer, delta_entry->base.ofs_position) < 0)
+			return -1;
+
+		abort();
+	}
+
+	return load_object(out, out_len, indexer, ofs_position);
 }
 
 static int resolve_final_deltas(git_indexer *indexer)
@@ -385,14 +506,8 @@ static int resolve_final_deltas(git_indexer *indexer)
 
 	while (deltas_len > 0) {
 		git_vector_foreach(&indexer->deltas, i, delta_entry) {
-			if (delta_entry->type == GIT_OBJECT_REF_DELTA) {
-				printf("--> DELTA removed: ref %s\n", git_oid_tostr_s(&delta_entry->base.ref));
-			} else {
-				if (resolve_ofs_delta(indexer, delta_entry->base.offset) < 0)
-					return -1;
-
-				printf("--> DELTA removed: ofs %d\n", (int)delta_entry->base.offset);
-			}
+			if (resolve_delta(indexer, delta_entry) < 0)
+				return -1;
 
 			deltas_len--;
 		}
@@ -432,7 +547,9 @@ void git_indexer_free(git_indexer *indexer)
 	if (!indexer)
 		return;
 
+	git_sizemap_free(indexer->positions);
 	git_vector_free_deep(&indexer->objects);
+	git_vector_free_deep(&indexer->deltas);
 	git_packfile_parser_dispose(&indexer->parser);
 	git__free(indexer);
 }

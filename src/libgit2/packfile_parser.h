@@ -39,12 +39,12 @@ struct git_packfile_parser {
 
 	/* Callbacks */
 	int (*packfile_header)(uint32_t version, uint32_t entries, void *data);
-	int (*object_start)(size_t offset, git_object_t type, size_t size, void *data);
+	int (*object_start)(git_object_size_t offset, git_object_t type, git_object_size_t size, void *data);
 	int (*object_data)(void *object_data, size_t len, void *data);
-	int (*object_complete)(size_t compressed_size, git_oid *oid, void *data);
-	int (*delta_start)(size_t offset, git_object_t type, size_t size, git_oid *delta_ref, size_t delta_offset, void *data);
+	int (*object_complete)(git_object_size_t compressed_size, git_oid *oid, void *data);
+	int (*delta_start)(git_object_size_t offset, git_object_t type, git_object_size_t size, git_oid *delta_ref, git_object_size_t delta_offset, void *data);
 	int (*delta_data)(void *delta_data, size_t len, void *data);
-	int (*delta_complete)(size_t compressed_size, void *data);
+	int (*delta_complete)(git_object_size_t compressed_size, void *data);
 	int (*packfile_complete)(const unsigned char *checksum, size_t checksum_len, void *data);
 	void *callback_data;
 
@@ -57,9 +57,9 @@ struct git_packfile_parser {
 	size_t current_position;
 
 	git_object_t current_type;
-	size_t current_size;
-	size_t current_offset;
-	size_t current_compressed_size;
+	git_object_size_t current_size;
+	git_object_size_t current_offset;
+	git_object_size_t current_compressed_size;
 	git_oid current_base;
 	size_t current_base_len;
 	size_t current_bits;

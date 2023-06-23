@@ -208,3 +208,65 @@ int git_zstream_inflatebuf(git_str *out, const void *in, size_t in_len)
 {
 	return zstream_buf(out, in, in_len, GIT_ZSTREAM_INFLATE);
 }
+
+static int zstream_file(git_str *out, int fd, git_zstream_t type)
+{
+	git_zstream zs = GIT_ZSTREAM_INIT;
+	char buf[1], *inflated_ptr;
+	size_t out_size, inflated_size;
+	ssize_t read_len;
+	int error = -1;
+
+	if ((error = git_zstream_init(&zs, type)) < 0)
+		return error;
+
+	while (!git_zstream_eos(&zs) && (read_len = p_read(fd, buf, sizeof(buf))) > 0) {
+		const char *chunk = buf;
+		size_t chunk_size = (size_t)read_len;
+
+		do {
+			out_size = git_zstream_suggest_output_len(&zs);
+
+			if ((error = git_str_grow_by(out, out_size)) < 0)
+				goto done;
+
+			inflated_ptr = out->ptr + out->size;
+			inflated_size = out->asize - out->size;
+
+			if ((error = git_zstream_set_input(&zs, chunk, chunk_size)) < 0 ||
+			    (error = git_zstream_get_output_chunk(inflated_ptr, &inflated_size, &zs)) < 0)
+				goto done;
+
+			out->size += inflated_size;
+
+			chunk += (chunk_size - zs.in_len);
+			chunk_size = zs.in_len;
+		} while (!git_zstream_eos(&zs) && zs.in_len > 0);
+	}
+
+	if (read_len < 0) {
+		git_error_set(GIT_ERROR_OS, "truncated compressed data");
+		error = -1;
+	} else if (read_len == 0 && !git_zstream_eos(&zs)) {
+		git_error_set(GIT_ERROR_ZLIB, "truncated compressed data");
+		error = -1;
+	} else {
+		/* NULL terminate for consistency if possible */
+		if (out->size < out->asize)
+			out->ptr[out->size] = '\0';
+	}
+
+done:
+	git_zstream_free(&zs);
+	return error;
+}
+
+int git_zstream_deflatefile(git_str *out, int fd)
+{
+	return zstream_file(out, fd, GIT_ZSTREAM_DEFLATE);
+}
+
+int git_zstream_inflatefile(git_str *out, int fd)
+{
+	return zstream_file(out, fd, GIT_ZSTREAM_INFLATE);
+}
