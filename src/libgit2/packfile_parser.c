@@ -141,6 +141,7 @@ static int parse_object_header(
 				int error = parser->object_start(
 					parser->current_position,
 					parser->current_type,
+					parser->current_compressed_size,
 					parser->current_size,
 					parser->callback_data);
 
@@ -259,6 +260,7 @@ static int parse_delta_header(
 					int error = parser->delta_start(
 						parser->current_position,
 						parser->current_type,
+						parser->current_compressed_size,
 						parser->current_size,
 						NULL,
 						parser->current_offset,
@@ -269,6 +271,7 @@ static int parse_delta_header(
 				}
 
 				parser->state = STATE_DELTA_DATA_START;
+				break;
 			}
 		}
 
@@ -292,6 +295,7 @@ static int parse_delta_header(
 				int error = parser->delta_start(
 					parser->current_position,
 					parser->current_type,
+					parser->current_compressed_size,
 					parser->current_size,
 					&parser->current_base,
 					0,
