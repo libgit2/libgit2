@@ -32,6 +32,7 @@ const cli_cmd_spec cli_cmds[] = {
 	{ "clone",       cmd_clone,       "Clone a repository into a new directory" },
 	{ "hash-object", cmd_hash_object, "Hash a raw object and product its object ID" },
 	{ "help",        cmd_help,        "Display help information" },
+	{ "index-pack",  cmd_index_pack,  "Create an index for a packfile" },
 	{ NULL }
 };
 

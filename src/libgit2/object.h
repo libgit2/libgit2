@@ -67,6 +67,11 @@ int git_object__write_oid_header(
 bool git_object__is_valid(
 	git_repository *repo, const git_oid *id, git_object_t expected_type);
 
+GIT_INLINE(bool) git_object__is_delta(git_object_t type)
+{
+	return (type == GIT_OBJECT_REF_DELTA || type == GIT_OBJECT_OFS_DELTA);
+}
+
 GIT_INLINE(git_object_t) git_object__type_from_filemode(git_filemode_t mode)
 {
 	switch (mode) {
