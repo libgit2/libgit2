@@ -242,7 +242,21 @@ static int fetch_receiving(
 		done ? ", done." : "");
 }
 
-static int fetch_resolving(
+static int indexer_indexing(
+	cli_progress *progress,
+	const git_indexer_progress *stats)
+{
+	bool done = (stats->received_objects == stats->total_objects);
+
+	return progress_printf(progress, false,
+		"Indexing objects: %3d%% (%d/%d)%s\r",
+		percent(stats->received_objects, stats->total_objects),
+		stats->received_objects,
+		stats->total_objects,
+		done ? ", done." : "");
+}
+
+static int indexer_resolving(
 	cli_progress *progress,
 	const git_indexer_progress *stats)
 {
@@ -283,7 +297,42 @@ int cli_progress_fetch_transfer(const git_indexer_progress *stats, void *payload
 		/* fall through */
 
 	case CLI_PROGRESS_RESOLVING:
-		error = fetch_resolving(progress, stats);
+		error = indexer_resolving(progress, stats);
+		break;
+
+	default:
+		/* should not be reached */
+		GIT_ASSERT(!"unexpected progress state");
+	}
+
+	return error;
+}
+
+int cli_progress_indexer(
+	const git_indexer_progress *stats,
+	void *payload)
+{
+	cli_progress *progress = (cli_progress *)payload;
+	int error = 0;
+
+	switch (progress->action) {
+	case CLI_PROGRESS_NONE:
+		progress->action = CLI_PROGRESS_INDEXING;
+		/* fall through */
+
+	case CLI_PROGRESS_INDEXING:
+		if ((error = indexer_indexing(progress, stats)) < 0)
+			break;
+
+		if (stats->indexed_deltas == stats->total_deltas)
+			break;
+
+		progress_complete(progress);
+		progress->action = CLI_PROGRESS_RESOLVING;
+		/* fall through */
+
+	case CLI_PROGRESS_RESOLVING:
+		error = indexer_resolving(progress, stats);
 		break;
 
 	default:

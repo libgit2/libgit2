@@ -37,6 +37,7 @@ const cli_cmd_spec cli_cmds[] = {
 	{ "config",      cmd_config,      "View or set configuration values " },
 	{ "hash-object", cmd_hash_object, "Hash a raw object and product its object ID" },
 	{ "help",        cmd_help,        "Display help information" },
+	{ "index-pack",  cmd_index_pack,  "Create an index for a packfile" },
 	{ NULL }
 };
 
