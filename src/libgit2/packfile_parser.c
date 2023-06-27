@@ -103,6 +103,7 @@ static int parse_object_header(
 			parser->current_type = (c >> 4) & 0x07;
 			parser->current_size = c & 0x0f;
 			parser->current_compressed_size = 1;
+			parser->current_compressed_crc = crc32(0L, Z_NULL, 0);
 			parser->current_bits = 4;
 
 			if (git_hash_init(&parser->current_hash) < 0)
@@ -113,6 +114,9 @@ static int parse_object_header(
 			parser->current_compressed_size++;
 			parser->current_bits += 7;
 		}
+
+		parser->current_compressed_crc =
+			crc32(parser->current_compressed_crc, data, 1);
 
 		data++;
 		len--;
@@ -140,8 +144,8 @@ static int parse_object_header(
 			if (parser->object_start) {
 				int error = parser->object_start(
 					parser->current_position,
-					parser->current_type,
 					parser->current_compressed_size,
+					parser->current_type,
 					parser->current_size,
 					parser->callback_data);
 
@@ -181,6 +185,8 @@ static int parse_object_data(
 
 	len = parser->zstream.in_len;
 	parser->current_compressed_size += (orig_len - len);
+	parser->current_compressed_crc =
+			crc32(parser->current_compressed_crc, data, (orig_len - len));
 
 	if (parser->object_data) {
 		int error = parser->object_data(
@@ -207,6 +213,7 @@ static int parse_object_data(
 		if (parser->object_complete) {
 			int error = parser->object_complete(
 				parser->current_compressed_size,
+				parser->current_compressed_crc,
 				&oid,
 				parser->callback_data);
 
@@ -250,10 +257,13 @@ static int parse_delta_header(
 			/* TODO: overflow checking */
 			parser->current_bits += 7;
 
+			parser->current_compressed_size++;
+
+			parser->current_compressed_crc =
+				crc32(parser->current_compressed_crc, data, 1);
+
 			data++;
 			len--;
-
-			parser->current_compressed_size++;
 
 			if ((c & 0x80) == 0) {
 				if (parser->delta_start) {
@@ -289,6 +299,9 @@ static int parse_delta_header(
 		len -= chunk_len;
 
 		parser->current_compressed_size += chunk_len;
+
+		parser->current_compressed_crc =
+			crc32(parser->current_compressed_crc, data, chunk_len);
 
 		if (parser->current_base_len == hash_len) {
 			if (parser->delta_start) {
@@ -343,6 +356,9 @@ static int parse_delta_data(
 	len = parser->zstream.in_len;
 	parser->current_compressed_size += (orig_len - len);
 
+	parser->current_compressed_crc =
+			crc32(parser->current_compressed_crc, data, (orig_len - len));
+
 	if (parser->delta_data) {
 		int error = parser->delta_data(
 			inflated,
@@ -357,6 +373,7 @@ static int parse_delta_data(
 		if (parser->delta_complete) {
 			int error = parser->delta_complete(
 				parser->current_compressed_size,
+				parser->current_compressed_crc,
 				parser->callback_data);
 
 			if (error != 0)
@@ -461,6 +478,7 @@ int git_packfile_parser_parse(
 			error = git_hash_update(&parser->packfile_hash, data, consumed);
 
 		if (error != 0) {
+			printf("FAILED\n");
 			parser->state = STATE_FAILED;
 			return error;
 		}
