@@ -1,0 +1,257 @@
+name: Configure
+on: [push, pull_request]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  configure:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu GCC
+            os: ubuntu-latest
+            compiler: gcc
+            configure-args: --warn
+
+          - name: Ubuntu 20.04 GCC
+            os: ubuntu-20.04
+            compiler: gcc
+            configure-args: --warn
+
+          - name: Ubuntu GCC OSB
+            os: ubuntu-latest
+            compiler: gcc
+            configure-args: --warn
+            build-dir: ../build
+            build-src-dir: ../zlib-ng
+
+          - name: Ubuntu GCC Compat No Opt
+            os: ubuntu-latest
+            compiler: gcc
+            configure-args: --warn --zlib-compat --without-optimizations --without-new-strategies
+
+          - name: Ubuntu GCC ARM SF
+            os: ubuntu-latest
+            compiler: arm-linux-gnueabi-gcc
+            configure-args: --warn
+            chost: arm-linux-gnueabi
+            packages: qemu qemu-user gcc-arm-linux-gnueabi libc-dev-armel-cross
+
+          - name: Ubuntu GCC ARM SF Compat No Opt
+            os: ubuntu-latest
+            compiler: arm-linux-gnueabi-gcc
+            configure-args: --warn --zlib-compat --without-optimizations --without-new-strategies
+            chost: arm-linux-gnueabi
+            packages: qemu qemu-user gcc-arm-linux-gnueabi libc-dev-armel-cross
+
+          - name: Ubuntu GCC ARM HF
+            os: ubuntu-latest
+            compiler: arm-linux-gnueabihf-gcc
+            configure-args: --warn
+            chost: arm-linux-gnueabihf
+            packages: qemu qemu-user gcc-arm-linux-gnueabihf libc-dev-armel-cross
+
+          - name: Ubuntu GCC ARM HF No ACLE
+            os: ubuntu-latest
+            compiler: arm-linux-gnueabihf-gcc
+            configure-args: --warn --without-acle
+            chost: arm-linux-gnueabihf
+            packages: qemu qemu-user gcc-arm-linux-gnueabihf libc-dev-armel-cross
+
+          - name: Ubuntu GCC ARM HF No NEON
+            os: ubuntu-latest
+            compiler: arm-linux-gnueabihf-gcc
+            configure-args: --warn --without-neon
+            chost: arm-linux-gnueabihf
+            packages: qemu qemu-user gcc-arm-linux-gnueabihf libc-dev-armel-cross
+
+          - name: Ubuntu GCC ARM HF Compat No Opt
+            os: ubuntu-latest
+            compiler: arm-linux-gnueabihf-gcc
+            configure-args: --warn --zlib-compat --without-optimizations --without-new-strategies
+            chost: arm-linux-gnueabihf
+            packages: qemu qemu-user gcc-arm-linux-gnueabihf libc-dev-armel-cross
+
+          - name: Ubuntu GCC AARCH64
+            os: ubuntu-latest
+            compiler: aarch64-linux-gnu-gcc
+            configure-args: --warn
+            chost: aarch64-linux-gnu
+            packages: qemu qemu-user gcc-aarch64-linux-gnu libc-dev-arm64-cross
+
+          - name: Ubuntu GCC AARCH64 No ACLE
+            os: ubuntu-latest
+            compiler: aarch64-linux-gnu-gcc
+            configure-args: --warn --without-acle
+            chost: aarch64-linux-gnu
+            packages: qemu qemu-user gcc-aarch64-linux-gnu libc-dev-arm64-cross
+
+          - name: Ubuntu GCC AARCH64 No NEON
+            os: ubuntu-latest
+            compiler: aarch64-linux-gnu-gcc
+            configure-args: --warn --without-neon
+            chost: aarch64-linux-gnu
+            packages: qemu qemu-user gcc-aarch64-linux-gnu libc-dev-arm64-cross
+
+          - name: Ubuntu GCC AARCH64 Compat No Opt
+            os: ubuntu-latest
+            compiler: aarch64-linux-gnu-gcc
+            configure-args: --warn --zlib-compat --without-optimizations --without-new-strategies
+            chost: aarch64-linux-gnu
+            packages: qemu qemu-user gcc-aarch64-linux-gnu libc-dev-arm64-cross
+
+          - name: Ubuntu GCC MIPS
+            os: ubuntu-latest
+            compiler: mips-linux-gnu-gcc
+            configure-args: --warn
+            chost: mips-linux-gnu
+            packages: qemu qemu-user gcc-mips-linux-gnu libc-dev-mips-cross
+
+          - name: Ubuntu GCC MIPS64
+            os: ubuntu-latest
+            compiler: mips64-linux-gnuabi64-gcc
+            configure-args: --warn
+            chost: mips64-linux-gnuabi64
+            packages: qemu qemu-user gcc-mips64-linux-gnuabi64 libc-dev-mips64-cross
+
+          - name: Ubuntu GCC PPC
+            os: ubuntu-latest
+            compiler: powerpc-linux-gnu-gcc
+            configure-args: --warn --static
+            chost: powerpc-linux-gnu
+            packages: qemu qemu-user gcc-powerpc-linux-gnu libc-dev-powerpc-cross
+            cflags: -static
+            ldflags: -static
+
+          - name: Ubuntu GCC PPC No Power8
+            os: ubuntu-latest
+            compiler: powerpc-linux-gnu-gcc
+            configure-args: --warn --without-power8
+            chost: powerpc-linux-gnu
+            packages: qemu qemu-user gcc-powerpc-linux-gnu libc-dev-powerpc-cross
+
+          - name: Ubuntu GCC PPC64
+            os: ubuntu-latest
+            compiler: powerpc64-linux-gnu-gcc
+            configure-args: --warn --static
+            chost: powerpc-linux-gnu
+            packages: qemu qemu-user gcc-powerpc64-linux-gnu libc-dev-ppc64-cross
+            cflags: -static
+            ldflags: -static
+
+          - name: Ubuntu GCC PPC64LE
+            os: ubuntu-latest
+            compiler: powerpc64le-linux-gnu-gcc
+            configure-args: --warn
+            chost: powerpc64le-linux-gnu
+            packages: qemu qemu-user gcc-powerpc64le-linux-gnu libc-dev-ppc64el-cross
+
+          - name: Ubuntu GCC S390X
+            os: ubuntu-latest
+            compiler: s390x-linux-gnu-gcc
+            configure-args: --warn --static
+            chost: s390x-linux-gnu
+            packages: qemu qemu-user gcc-s390x-linux-gnu libc-dev-s390x-cross
+            cflags: -static
+            ldflags: -static
+
+          - name: Ubuntu GCC S390X No vectorized CRC32
+            os: ubuntu-latest
+            compiler: s390x-linux-gnu-gcc
+            configure-args: --warn --static --without-crc32-vx
+            chost: s390x-linux-gnu
+            packages: qemu qemu-user gcc-s390x-linux-gnu libc-dev-s390x-cross
+            cflags: -static
+            ldflags: -static
+
+          - name: Ubuntu GCC S390X DFLTCC
+            os: z15
+            compiler: gcc
+            configure-args: --warn --static --with-dfltcc-deflate --with-dfltcc-inflate
+
+          - name: Ubuntu GCC S390X DFLTCC Compat
+            os: z15
+            compiler: gcc
+            configure-args: --warn --zlib-compat --static --with-dfltcc-deflate --with-dfltcc-inflate
+
+          - name: Ubuntu Emscripten WASM32
+            os: ubuntu-latest
+            chost: wasm32
+            configure-args: --warn --zlib-compat --static
+            configure-prefix: emconfigure
+            cflags: -static
+            ldflags: -static
+            emu-run: node
+
+          - name: macOS GCC Symbol Prefix
+            os: macOS-latest
+            compiler: gcc-11
+            configure-args: --sprefix=zTest_
+
+          - name: macOS GCC Symbol Prefix & Compat
+            os: macOS-latest
+            compiler: gcc-11
+            configure-args: --zlib-compat --sprefix=zTest_
+
+          - name: macOS GCC
+            os: macOS-latest
+            compiler: gcc-11
+            configure-args: --warn
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        show-progress: 'false'
+
+    - name: Add ubuntu mirrors
+      if: runner.os == 'Linux' && matrix.packages
+      run: |
+        # Github Actions caching proxy is at times unreliable
+        echo -e 'http://azure.archive.ubuntu.com/ubuntu\tpriority:1\n' | sudo tee /etc/apt/mirrors.txt
+        curl http://mirrors.ubuntu.com/mirrors.txt | sudo tee --append /etc/apt/mirrors.txt
+        sudo sed -i 's#http://azure.archive.ubuntu.com/ubuntu/#mirror+file:/etc/apt/mirrors.txt#' /etc/apt/sources.list
+
+    - name: Install packages (Ubuntu)
+      if: runner.os == 'Linux' && matrix.packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ${{ matrix.packages }}
+
+    - name: Install Emscripten
+      if: contains(matrix.name, 'WASM32')
+      uses: mymindstorm/setup-emsdk@v12
+
+    - name: Generate project files
+      run: |
+        mkdir ${{ matrix.build-dir || '.not-used' }}
+        cd ${{ matrix.build-dir || '.' }}
+        ${{ matrix.configure-prefix }} ${{ matrix.build-src-dir || '.' }}/configure ${{ matrix.configure-args }}
+      env:
+        CC: ${{ matrix.compiler }}
+        CFLAGS: ${{ matrix.cflags }}
+        LDFLAGS: ${{ matrix.ldflags }}
+        CHOST: ${{ matrix.chost }}
+        EMU_RUN: ${{ matrix.emu-run }}
+        CI: true
+
+    - name: Compile source code
+      run: make -j2
+      working-directory: ${{ matrix.build-dir }}
+
+    - name: Run test cases
+      run: make test
+      working-directory: ${{ matrix.build-dir }}
+
+    - name: Upload build errors
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: ${{ matrix.name }} (configure)
+        path: |
+          **/Makefile
+          ${{ matrix.build-dir || '.' }}/configure.log
+        retention-days: 30

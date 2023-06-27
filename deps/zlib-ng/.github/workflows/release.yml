@@ -1,0 +1,102 @@
+name: Release
+on:
+  push:
+    tags:
+    - '*'
+jobs:
+  release:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows MSVC Win32
+            os: windows-latest
+            compiler: cl
+            cmake-args: -A Win32
+            deploy-name: win-x86
+
+          - name: Windows MSVC Win32 Compat
+            os: windows-latest
+            compiler: cl
+            cmake-args: -A Win32 -DZLIB_COMPAT=ON
+            deploy-name: win-x86-compat
+
+          - name: Windows MSVC Win64
+            os: windows-latest
+            compiler: cl
+            cmake-args: -A x64
+            deploy-name: win-x86-64
+
+          - name: Windows MSVC Win64 Compat
+            os: windows-latest
+            compiler: cl
+            cmake-args: -A x64 -DZLIB_COMPAT=ON
+            deploy-name: win-x86-64-compat
+
+          - name: Windows MSVC ARM
+            os: windows-latest
+            compiler: cl
+            cmake-args: -A ARM
+            deploy-name: win-arm
+
+          - name: Windows MSVC ARM Compat
+            os: windows-latest
+            compiler: cl
+            cmake-args: -A ARM -DZLIB_COMPAT=ON
+            deploy-name: win-arm-compat
+
+          - name: Windows MSVC ARM64
+            os: windows-latest
+            compiler: cl
+            cmake-args: -A ARM64
+            deploy-name: win-arm64
+
+          - name: Windows MSVC ARM64 Compat
+            os: windows-latest
+            compiler: cl
+            cmake-args: -A ARM64 -DZLIB_COMPAT=ON
+            deploy-name: win-arm64-compat
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        show-progress: 'false'
+
+    - name: Set environment variables
+      shell: bash
+      run:  echo "tag=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+
+    - name: Generate project files
+      shell: bash
+      run: |
+        cmake . ${{ matrix.cmake-args }} \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DZLIB_ENABLE_TESTS=ON \
+          -DCMAKE_INSTALL_PREFIX=out \
+          -DINSTALL_UTILS=ON
+      env:
+        CC: ${{ matrix.compiler }}
+        CI: true
+
+    - name: Compile source code
+      run: cmake --build . -j2 --config Release --target install
+
+    - name: Package release (Windows)
+      if: runner.os == 'Windows'
+      run: 7z a -tzip ../zlib-ng-${{ matrix.deploy-name }}.zip bin include lib ../LICENSE.md ../PORTING.md ../README.md
+      working-directory: out
+
+    - name: Upload release (Windows)
+      uses: svenstaro/upload-release-action@v2
+      if: runner.os == 'Windows'
+      with:
+        asset_name: zlib-ng-${{ matrix.deploy-name }}.zip
+        file: zlib-ng-${{ matrix.deploy-name }}.zip
+        tag: ${{env.tag}}
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        overwrite: true
+      env:
+        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

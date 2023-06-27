@@ -1,0 +1,85 @@
+name: Static Analysis
+on: [push, pull_request]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  static-analysis:
+    name: GCC
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        show-progress: 'false'
+
+    - name: Add ubuntu mirrors
+      run: |
+        # Github Actions caching proxy is at times unreliable
+        echo -e 'http://azure.archive.ubuntu.com/ubuntu\tpriority:1\n' | sudo tee /etc/apt/mirrors.txt
+        curl http://mirrors.ubuntu.com/mirrors.txt | sudo tee --append /etc/apt/mirrors.txt
+        sudo sed -i 's#http://azure.archive.ubuntu.com/ubuntu/#mirror+file:/etc/apt/mirrors.txt#' /etc/apt/sources.list
+
+    - name: Install packages (Ubuntu)
+      run: sudo apt-get install -y gcc-10
+
+    - name: Generate project files
+      run: |
+        cmake . \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DWITH_FUZZERS=OFF \
+          -DWITH_CODE_COVERAGE=OFF \
+          -DWITH_MAINTAINER_WARNINGS=OFF
+      env:
+        CC: gcc-10
+        CFLAGS:
+          -fanalyzer
+          -Werror
+          -Wanalyzer-double-fclose
+          -Wanalyzer-double-free
+          -Wanalyzer-exposure-through-output-file
+          -Wanalyzer-file-leak
+          -Wanalyzer-free-of-non-heap
+          -Wanalyzer-malloc-leak
+          -Wanalyzer-null-argument
+          -Wanalyzer-null-dereference
+          -Wanalyzer-possible-null-argument
+          -Wanalyzer-possible-null-dereference
+          -Wanalyzer-stale-setjmp-buffer
+          -Wanalyzer-tainted-array-index
+          -Wanalyzer-unsafe-call-within-signal-handler
+          -Wanalyzer-use-after-free
+          -Wanalyzer-use-of-pointer-in-stale-stack-frame
+        CI: true
+
+    - name: Compile source code
+      run: cmake --build . -j2 --config Release > /dev/null
+
+  Clang:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        show-progress: 'false'
+
+    - name: Install packages (Ubuntu)
+      run: sudo apt-get install -y clang-tools
+
+    - name: Generate project files
+      run: |
+        scan-build --status-bugs \
+          cmake . \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DWITH_FUZZERS=OFF \
+            -DWITH_CODE_COVERAGE=OFF \
+            -DWITH_MAINTAINER_WARNINGS=OFF
+      env:
+        CI: true
+
+    - name: Compile source code
+      run: |
+        scan-build --status-bugs \
+          cmake --build . -j2 --config Release > /dev/null

@@ -1,0 +1,17 @@
+name: Lint
+on: [pull_request]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Whitespace errors
+      run: |
+        git config core.whitespace blank-at-eol
+        git diff --color --check ${{ github.event.pull_request.base.sha }}

@@ -1,0 +1,137 @@
+name: Pigz
+on: [push, pull_request]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  pigz:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu GCC
+            os: ubuntu-latest
+            compiler: gcc
+            codecov: ubuntu_gcc_pigz
+
+          - name: Ubuntu GCC Symbol Prefix
+            os: ubuntu-latest
+            compiler: gcc
+            codecov: ubuntu_gcc_pigz
+            cmake-args: -DZLIB_SYMBOL_PREFIX=zTest_
+
+          - name: Ubuntu Clang
+            os: ubuntu-latest
+            compiler: clang
+            packages: llvm-11 llvm-11-tools
+            gcov-exec: llvm-cov-11 gcov
+            codecov: ubuntu_clang_pigz
+
+          - name: Ubuntu Clang No Optim
+            os: ubuntu-latest
+            compiler: clang
+            packages: llvm-11 llvm-11-tools
+            gcov-exec: llvm-cov-11 gcov
+            codecov: ubuntu_clang_pigz_no_optim
+            cmake-args: -DWITH_OPTIM=OFF
+
+            # Use v2.6 due to NOTHREADS bug https://github.com/madler/pigz/issues/97
+          - name: Ubuntu Clang No Threads
+            os: ubuntu-latest
+            compiler: clang
+            packages: llvm-11 llvm-11-tools
+            gcov-exec: llvm-cov-11 gcov
+            codecov: ubuntu_clang_pigz_no_threads
+            cmake-args: -DWITH_THREADS=OFF -DPIGZ_VERSION=v2.6
+
+          - name: Ubuntu GCC AARCH64
+            os: ubuntu-latest
+            cmake-args: -DCMAKE_TOOLCHAIN_FILE=../../cmake/toolchain-aarch64.cmake
+            packages: qemu qemu-user gcc-aarch64-linux-gnu libc-dev-arm64-cross
+            codecov: ubuntu_gcc_pigz_aarch64
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        show-progress: 'false'
+
+    - name: Checkout test corpora
+      uses: actions/checkout@v4
+      with:
+        repository: zlib-ng/corpora
+        path: test/data/corpora
+        show-progress: 'false'
+
+    - name: Add ubuntu mirrors
+      if: runner.os == 'Linux' && matrix.packages
+      run: |
+        # Github Actions caching proxy is at times unreliable
+        echo -e 'http://azure.archive.ubuntu.com/ubuntu\tpriority:1\n' | sudo tee /etc/apt/mirrors.txt
+        curl http://mirrors.ubuntu.com/mirrors.txt | sudo tee --append /etc/apt/mirrors.txt
+        sudo sed -i 's#http://azure.archive.ubuntu.com/ubuntu/#mirror+file:/etc/apt/mirrors.txt#' /etc/apt/sources.list
+
+    - name: Install packages (Ubuntu)
+      if: runner.os == 'Linux' && matrix.packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ${{ matrix.packages }}
+
+    - name: Generate project files
+      run: |
+        cmake ${{ matrix.cmake-args }} \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build-config || 'Release' }} \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DZLIB_ROOT=../.. \
+          -DWITH_CODE_COVERAGE=ON \
+          -DWITH_MAINTAINER_WARNINGS=ON
+      working-directory: test/pigz
+      env:
+        CC: ${{ matrix.compiler }}
+        CFLAGS: ${{ matrix.cflags }}
+        LDFLAGS: ${{ matrix.ldflags }}
+        CI: true
+
+    - name: Compile source code
+      run: cmake --build . -j2 --config ${{ matrix.build-config || 'Release' }}
+      working-directory: test/pigz
+
+    - name: Run test cases
+      run: ctest --verbose -C Release --output-on-failure --max-width 120 -j ${{ matrix.parallels-jobs || '3' }}
+      working-directory: test/pigz
+
+    - name: Generate coverage report
+      if: matrix.codecov
+      run: |
+        python3 -u -m pip install --user gcovr==5.0
+        python3 -m gcovr -j 3 --verbose \
+          --exclude-unreachable-branches \
+          --gcov-executable "${{ matrix.gcov-exec || 'gcov' }}" \
+          --root . \
+          --xml --output coverage.xml
+
+    - name: Upload coverage report
+      uses: codecov/codecov-action@v3
+      if: matrix.codecov && (env.CODECOV_TOKEN != '' || github.repository == 'zlib-ng/zlib-ng')
+      with:
+        token: ${{ secrets.CODECOV_TOKEN || 'e4fdf847-f541-4ab1-9d50-3d27e5913906' }}
+        flags: ${{ matrix.codecov }}
+        name: ${{ matrix.name }}
+        verbose: true
+        fail_ci_if_error: true
+      env:
+        CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+
+    - name: Upload build errors
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: ${{ matrix.name }} (cmake)
+        path: |
+          **/CMakeFiles/CMakeOutput.log
+          **/CMakeFiles/CMakeError.log
+          **/Testing/Temporary/*
+          coverage.xml
+        retention-days: 30

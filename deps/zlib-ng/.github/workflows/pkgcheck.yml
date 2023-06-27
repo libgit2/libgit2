@@ -1,0 +1,190 @@
+name: Package Check
+on: [push, pull_request]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  pkgcheck:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu GCC
+            os: ubuntu-latest
+            compiler: gcc
+            cxx-compiler: g++
+
+          - name: Ubuntu GCC -m32
+            os: ubuntu-latest
+            compiler: gcc
+            cxx-compiler: g++
+            packages: gcc-multilib g++-multilib
+            cmake-args: -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32
+            cflags: -m32
+            cxxflags: -m32
+            ldflags: -m32
+
+          - name: Ubuntu GCC ARM HF
+            os: ubuntu-latest
+            chost: arm-linux-gnueabihf
+            compiler: arm-linux-gnueabihf-gcc
+            cxx-compiler: arm-linux-gnueabihf-g++
+            cmake-args: -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-armhf.cmake
+            packages: qemu gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libc6-dev-armhf-cross
+
+          - name: Ubuntu GCC AARCH64
+            os: ubuntu-latest
+            chost: aarch64-linux-gnu
+            compiler: aarch64-linux-gnu-gcc
+            cxx-compiler: aarch64-linux-gnu-g++
+            cmake-args: -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-aarch64.cmake
+            packages: qemu gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
+
+          - name: Ubuntu GCC MIPS
+            os: ubuntu-latest
+            chost: mips-linux-gnu
+            compiler: mips-linux-gnu-gcc
+            cxx-compiler: mips-linux-gnu-g++
+            cmake-args: -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-mips.cmake
+            packages: qemu gcc-mips-linux-gnu g++-mips-linux-gnu libc6-dev-mips-cross
+
+          - name: Ubuntu GCC MIPS64
+            os: ubuntu-latest
+            chost: mips64-linux-gnuabi64
+            compiler: mips64-linux-gnuabi64-gcc
+            cxx-compiler: mips64-linux-gnuabi64-g++
+            cmake-args: -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-mips64.cmake
+            packages: qemu gcc-mips64-linux-gnuabi64 g++-mips64-linux-gnuabi64 libc6-dev-mips64-cross
+
+          - name: Ubuntu GCC PPC
+            os: ubuntu-latest
+            chost: powerpc-linux-gnu
+            compiler: powerpc-linux-gnu-gcc
+            cxx-compiler: powerpc-linux-gnu-g++
+            cmake-args: -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-powerpc.cmake
+            packages: qemu gcc-powerpc-linux-gnu g++-powerpc-linux-gnu libc6-dev-powerpc-cross
+
+          - name: Ubuntu GCC PPC64LE
+            os: ubuntu-latest
+            chost: powerpc64le-linux-gnu
+            compiler: powerpc64le-linux-gnu-gcc
+            cxx-compiler: powerpc64le-linux-gnu-g++
+            cmake-args: -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-powerpc64le.cmake
+            packages: qemu gcc-powerpc64le-linux-gnu g++-powerpc64le-linux-gnu libc6-dev-ppc64el-cross
+
+          - name: macOS Clang
+            os: macOS-11
+            compiler: clang
+            cxx-compiler: clang++
+
+          - name: macOS Clang Symbol Prefix
+            os: macOS-11
+            compiler: clang
+            cxx-compiler: clang++
+            cmake-args: -DZLIB_SYMBOL_PREFIX=zTest_
+            configure-args: --sprefix=zTest_
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        show-progress: 'false'
+
+    - name: Add ubuntu mirrors
+      if: runner.os == 'Linux' && matrix.packages
+      run: |
+        # Github Actions caching proxy is at times unreliable
+        echo -e 'http://azure.archive.ubuntu.com/ubuntu\tpriority:1\n' | sudo tee /etc/apt/mirrors.txt
+        curl http://mirrors.ubuntu.com/mirrors.txt | sudo tee --append /etc/apt/mirrors.txt
+        sudo sed -i 's#http://azure.archive.ubuntu.com/ubuntu/#mirror+file:/etc/apt/mirrors.txt#' /etc/apt/sources.list
+
+    - name: Install packages (Ubuntu)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends ${{ matrix.packages }} \
+          abigail-tools \
+          diffoscope \
+          ninja-build
+
+    - name: Install packages (macOS)
+      if: runner.os == 'macOS'
+      run: brew install ninja diffoscope ${{ matrix.packages }}
+      env:
+        HOMEBREW_NO_INSTALL_CLEANUP: 1
+
+    - name: Select Xcode version (macOS)
+      # Use a version of Xcode that supports ZERO_AR_DATE until CMake supports
+      # AppleClang linking with libtool using -D argument
+      # https://gitlab.kitware.com/cmake/cmake/-/issues/19852
+      if: runner.os == 'macOS'
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: '11.7.0'
+
+    - name: Compare builds
+      run: sh test/pkgcheck.sh
+      env:
+        CC: ${{ matrix.compiler }}
+        CXX: ${{ matrix.cxx-compiler }}
+        CFLAGS: ${{ matrix.cflags }}
+        CXXFLAGS: ${{ matrix.cxxflags }}
+        CHOST: ${{ matrix.chost }}
+        CMAKE_ARGS: ${{ matrix.cmake-args }}
+        CONFIGURE_ARGS: ${{ matrix.configure-args }}
+        LDFLAGS: ${{ matrix.ldflags }}
+
+    - name: Compare builds (compat)
+      run: sh test/pkgcheck.sh --zlib-compat
+      env:
+        CC: ${{ matrix.compiler }}
+        CFLAGS: ${{ matrix.cflags }}
+        CHOST: ${{ matrix.chost }}
+        CMAKE_ARGS: ${{ matrix.cmake-args }}
+        CONFIGURE_ARGS: ${{ matrix.configure-args }}
+        LDFLAGS: ${{ matrix.ldflags }}
+
+    - name: Check ABI
+      # macOS runner does not contain abigail
+      if: runner.os != 'macOS'
+      run: sh test/abicheck.sh --refresh-if
+      env:
+        CC: ${{ matrix.compiler }}
+        CXX: ${{ matrix.cxx-compiler }}
+        CFLAGS: ${{ matrix.cflags }}
+        CXXFLAGS: ${{ matrix.cxxflags }}
+        CHOST: ${{ matrix.chost }}
+        CMAKE_ARGS: ${{ matrix.cmake-args }}
+        CONFIGURE_ARGS: ${{ matrix.configure-args }}
+        LDFLAGS: ${{ matrix.ldflags }}
+
+    - name: Check ABI (compat)
+      # macOS runner does not contain abigail
+      if: runner.os != 'macOS'
+      run: sh test/abicheck.sh --zlib-compat --refresh-if
+      env:
+        CC: ${{ matrix.compiler }}
+        CXX: ${{ matrix.cxx-compiler }}
+        CFLAGS: ${{ matrix.cflags }}
+        CXXFLAGS: ${{ matrix.cxxflags }}
+        CHOST: ${{ matrix.chost }}
+        CMAKE_ARGS: ${{ matrix.cmake-args }}
+        CONFIGURE_ARGS: ${{ matrix.configure-args }}
+        LDFLAGS: ${{ matrix.ldflags }}
+
+    - name: Upload build errors
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: ${{ matrix.name }}
+        path: |
+          **/*.abi
+          btmp1/configure.log
+          btmp1/CMakeFiles/CMakeOutput.log
+          btmp1/CMakeFiles/CMakeError.log
+          btmp2/configure.log
+          btmp2/CMakeFiles/CMakeOutput.log
+          btmp2/CMakeFiles/CMakeError.log
+        retention-days: 30

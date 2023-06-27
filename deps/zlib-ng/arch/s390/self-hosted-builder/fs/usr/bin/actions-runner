@@ -1,0 +1,40 @@
+#!/bin/bash
+
+#
+# Ephemeral runner startup script.
+#
+# Expects the following environment variables:
+#
+# - repo=<owner>/<name>
+# - access_token=<ghp_***>
+#
+
+set -e -u
+
+# Check the cached registration token.
+token_file=registration-token.json
+set +e
+expires_at=$(jq --raw-output .expires_at "$token_file" 2>/dev/null)
+status=$?
+set -e
+if [[ $status -ne 0 || $(date +%s) -ge $(date -d "$expires_at" +%s) ]]; then
+    # Refresh the cached registration token.
+    curl \
+        -X POST \
+        -H "Accept: application/vnd.github.v3+json" \
+        -H "Authorization: token $access_token" \
+        "https://api.github.com/repos/$repo/actions/runners/registration-token" \
+        -o "$token_file"
+fi
+
+# (Re-)register the runner.
+registration_token=$(jq --raw-output .token "$token_file")
+./config.sh remove --token "$registration_token" || true
+./config.sh \
+    --url "https://github.com/$repo" \
+    --token "$registration_token" \
+    --labels z15 \
+    --ephemeral
+
+# Run one job.
+./run.sh

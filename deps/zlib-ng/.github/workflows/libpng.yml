@@ -1,0 +1,57 @@
+name: Libpng
+on: [push, pull_request]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  libpng:
+    name: Ubuntu Clang
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository (zlib-ng)
+      uses: actions/checkout@v4
+      with:
+        show-progress: 'false'
+
+    - name: Generate project files (zlib-ng)
+      run: |
+        cmake . \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DZLIB_COMPAT=ON \
+          -DZLIB_ENABLE_TESTS=OFF
+      env:
+        CC: clang
+        CFLAGS: -fPIC
+        CI: true
+
+    - name: Compile source code (zlib-ng)
+      run: cmake --build . -j2 --config Release
+
+    - name: Checkout repository (libpng)
+      uses: actions/checkout@v4
+      with:
+        repository: glennrp/libpng
+        path: libpng
+        show-progress: 'false'
+
+    - name: Generate project files (libpng)
+      run: |
+        cmake . \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DPNG_TESTS=ON \
+          -DPNG_STATIC=OFF \
+          -DZLIB_INCLUDE_DIR=.. \
+          -DZLIB_LIBRARY=$PWD/../libz.a
+      working-directory: libpng
+      env:
+        CC: clang
+        CI: true
+
+    - name: Compile source code (libpng)
+      run: cmake --build . -j2 --config Release
+      working-directory: libpng
+
+    - name: Run test cases (libpng)
+      run: ctest -j2 -C Release --output-on-failure --max-width 120
+      working-directory: libpng
