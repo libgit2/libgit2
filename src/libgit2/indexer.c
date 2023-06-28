@@ -26,6 +26,7 @@ struct object_entry {
 	git_object_size_t position;
 	/* TODO: this can be unsigned short */
 	git_object_size_t header_size;
+	git_object_size_t size;
 	uint32_t crc32;
 	git_oid id;
 };
@@ -169,6 +170,7 @@ static int parse_object_complete(
 	git_oid_cpy(&entry->id, oid);
 	entry->position = indexer->current_position;
 	entry->header_size = indexer->current_header_size;
+	entry->size = indexer->current_size;
 	entry->crc32 = compressed_crc;
 
 	if (git_sizemap_set(indexer->positions, entry->position, entry) < 0 ||
@@ -235,8 +237,9 @@ static int parse_delta_complete(
 	GIT_ERROR_CHECK_ALLOC(entry);
 
 	entry->object.type = indexer->current_type;
-	entry->object.header_size = indexer->current_header_size;
 	entry->object.position = indexer->current_position;
+	entry->object.header_size = indexer->current_header_size;
+	entry->object.size = indexer->current_size;
 	entry->object.crc32 = compressed_crc;
 	entry->final_type = 0;
 	entry->chain_length = 0;
@@ -424,7 +427,8 @@ int git_indexer_append(
 static int unpack_raw_object(
 	struct object_data **out,
 	git_indexer *indexer,
-	git_object_size_t raw_position)
+	git_object_size_t raw_position,
+	git_object_size_t size)
 {
 	struct object_data *data_new;
 	git_str data = GIT_STR_INIT;
@@ -468,7 +472,6 @@ static int unpack_object_at_position(
 {
 	struct object_entry *object;
 	git_object_size_t raw_position;
-	int error;
 
 	/*
 	 * TODO: we should cache small delta bases?
@@ -495,36 +498,44 @@ static int unpack_object_at_position(
 	} else if (object->type == GIT_OBJECT_OFS_DELTA) {
 		struct delta_entry *delta_entry = (struct delta_entry *)object;
 		struct object_data *base, *delta;
-
-		const char *out_tmp;
-		size_t out_len_tmp;
+		size_t base_size, result_size;
 
 		/* TODO: overflow check */
 		raw_position = ofs_position + object->header_size;
 
-		if (unpack_object_at_position(&base, out_type, out_chain_length, indexer, delta_entry->base.ofs_position) < 0 ||
-		    unpack_raw_object(&delta, indexer, raw_position) < 0)
+		if (unpack_object_at_position(&base, out_type, out_chain_length,
+				indexer, delta_entry->base.ofs_position) < 0 ||
+		    unpack_raw_object(&delta, indexer, raw_position,
+				delta_entry->object.size) < 0 ||
+		    git_delta_read_header(&base_size, &result_size,
+				delta->data, delta->len) < 0)
 			return -1;
 
-		error = git_delta_apply((void **)&out_tmp, &out_len_tmp, base->data, base->len, delta->data, delta->len);
+		/* TODO: overflow check */
+		*out = git__malloc(sizeof(struct object_data) + result_size + 1);
+		(*out)->len = result_size;
+
+		if (git_delta_apply_to_buf((*out)->data, (*out)->len,
+				base->data, base->len, delta->data, delta->len) < 0) {
+			git__free(*out);
+			git__free(base);
+			git__free(delta);
+			return -1;
+		}
+
+		(*out)->data[result_size] = '\0';
 		(*out_chain_length)++;
-
-
-		*out = git__malloc(sizeof(struct object_data) + out_len_tmp);
-		(*out)->len = out_len_tmp;
-		memcpy((*out)->data, out_tmp, out_len_tmp);
-
 
 		git__free(base);
 		git__free(delta);
 
-		return error;
+		return 0;
 	}
 
 	/* TODO: overflow check */
 	raw_position = ofs_position + object->header_size;
 
-	if (unpack_raw_object(out, indexer, raw_position) < 0)
+	if (unpack_raw_object(out, indexer, raw_position, object->size) < 0)
 		return -1;
 
 	*out_chain_length = 0;
