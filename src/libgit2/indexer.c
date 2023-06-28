@@ -79,6 +79,9 @@ struct git_indexer {
 	git_oid current_ref; /* current ref delta base */
 	git_object_size_t current_offset; /* current ofs delta base */
 
+	struct object_entry *current_object;
+	struct delta_entry *current_delta;
+
 	git_hash_ctx hash_ctx;
 	git_zstream zstream;
 	unsigned char *packfile_map;
@@ -87,10 +90,22 @@ struct git_indexer {
 	git_vector objects; /* vector of `struct object_entry` */
 	git_vector deltas;  /* vector of `struct delta_entry` */
 
+	git_sizemap *basecache; /* map of position to entry data */
+
 	unsigned char packfile_trailer[GIT_HASH_MAX_SIZE];
 
 	git_oid trailer_oid;
 	char name[(GIT_HASH_MAX_SIZE * 2) + 1];
+
+	size_t object_lookups;
+	size_t cache_hits;
+
+	git_indexer_progress progress;
+
+	uint64_t index_start;
+	uint64_t index_end;
+	uint64_t delta_start;
+	uint64_t delta_end;
 };
 
 int git_indexer_options_init(
@@ -101,6 +116,16 @@ int git_indexer_options_init(
 		version, git_indexer_options, GIT_INDEXER_OPTIONS_INIT);
 
 	return 0;
+}
+
+static int do_progress_cb(git_indexer *indexer)
+{
+	if (!indexer->progress_cb)
+		return 0;
+
+	return git_error_set_after_callback_function(
+		indexer->progress_cb(&indexer->progress, indexer->progress_payload),
+		"indexer progress");
 }
 
 static int objects_cmp(const void *a, const void *b)
@@ -125,16 +150,19 @@ static int parse_packfile_header(
 		return -1;
 	}
 
-	printf("--> header cb: %d %d\n", (int)version, (int)entries);
+/*	printf("--> header cb: %d %d\n", (int)version, (int)entries);*/
 
 	/* TODO: is 50% a good number? not convinced. */
 	if (git_sizemap_new(&indexer->positions) < 0 ||
+	    git_sizemap_new(&indexer->basecache) < 0 ||
 	    git_vector_init(&indexer->objects, entries, objects_cmp) < 0 ||
 	    git_vector_init(&indexer->deltas, entries / 2, NULL) < 0)
 		return -1;
 
 	indexer->started = 1;
 	indexer->entries = entries;
+
+	indexer->progress.total_objects = entries;
 
 	return 0;
 }
@@ -147,11 +175,18 @@ static int parse_object_start(
 	void *idx)
 {
 	git_indexer *indexer = (git_indexer *)idx;
+	struct object_entry *entry;
 
-	indexer->current_position = position;
-	indexer->current_type = type;
-	indexer->current_header_size = header_size;
-	indexer->current_size = size;
+	/* TODO: pool? */
+	entry = git__malloc(sizeof(struct object_entry));
+	GIT_ERROR_CHECK_ALLOC(entry);
+
+	entry->type = type;
+	entry->position = position;
+	entry->header_size = header_size;
+	entry->size = size;
+
+	indexer->current_object = entry;
 
 	return 0;
 }
@@ -163,26 +198,25 @@ static int parse_object_complete(
 	void *idx)
 {
 	git_indexer *indexer = (git_indexer *)idx;
-	struct object_entry *entry;
+	struct object_entry *entry = indexer->current_object;
 
 	GIT_UNUSED(compressed_size);
 
-	/* TODO: pool? */
-	entry = git__malloc(sizeof(struct object_entry));
-	GIT_ERROR_CHECK_ALLOC(entry);
+	/* TODO: we can use compressed_size if we mmap */
 
-	entry->type = indexer->current_type;
 	git_oid_cpy(&entry->id, oid);
-	entry->position = indexer->current_position;
-	entry->header_size = indexer->current_header_size;
-	entry->size = indexer->current_size;
 	entry->crc32 = compressed_crc;
 
 	if (git_sizemap_set(indexer->positions, entry->position, entry) < 0 ||
 	    git_vector_insert(&indexer->objects, entry) < 0)
 		return -1;
 
-	return 0;
+	indexer->current_object = NULL;
+
+	indexer->progress.received_objects++;
+	indexer->progress.indexed_objects++;
+
+	return do_progress_cb(indexer);
 }
 
 static int parse_delta_start(
@@ -195,20 +229,30 @@ static int parse_delta_start(
 	void *idx)
 {
 	git_indexer *indexer = (git_indexer *)idx;
+	struct delta_entry *entry;
 
-	GIT_UNUSED(delta_ref);
-	GIT_UNUSED(delta_offset);
+	/* TODO: pool? */
+	entry = git__malloc(sizeof(struct delta_entry));
+	GIT_ERROR_CHECK_ALLOC(entry);
 
 	/* TODO: avoid double copy - preallocate the entry */
-	indexer->current_position = position;
-	indexer->current_type = type;
-	indexer->current_header_size = header_size;
-	indexer->current_size = size;
+	entry->object.position = position;
+	entry->object.type = type;
+	entry->object.header_size = header_size;
+	entry->object.size = size;
 
-	if (type == GIT_OBJECT_REF_DELTA)
-		git_oid_cpy(&indexer->current_ref, delta_ref);
-	else
-		indexer->current_offset = delta_offset;
+	if (type == GIT_OBJECT_REF_DELTA) {
+		git_oid_cpy(&entry->base.ref_id, delta_ref);
+	} else {
+		if (delta_offset > position) {
+			git_error_set(GIT_ERROR_INDEXER, "invalid delta offset (base would be negative)");
+			return -1;
+		}
+
+		entry->base.ofs_position = position - delta_offset;
+	}
+
+	indexer->current_delta = entry;
 
 	return 0;
 }
@@ -233,39 +277,24 @@ static int parse_delta_complete(
 	void *idx)
 {
 	git_indexer *indexer = (git_indexer *)idx;
-	struct delta_entry *entry;
+	struct delta_entry *entry = indexer->current_delta;
 
 	GIT_UNUSED(compressed_size);
 
-	/* TODO: pool? */
-	entry = git__malloc(sizeof(struct delta_entry));
-	GIT_ERROR_CHECK_ALLOC(entry);
-
-	entry->object.type = indexer->current_type;
-	entry->object.position = indexer->current_position;
-	entry->object.header_size = indexer->current_header_size;
-	entry->object.size = indexer->current_size;
 	entry->object.crc32 = compressed_crc;
 	entry->final_type = 0;
 	entry->chain_length = 0;
-
-	if (entry->object.type == GIT_OBJECT_REF_DELTA) {
-		git_oid_cpy(&entry->base.ref_id, &indexer->current_ref);
-	} else {
-		if (indexer->current_offset > indexer->current_position) {
-			git_error_set(GIT_ERROR_INDEXER, "invalid delta offset (base would be negative)");
-			return -1;
-		}
-
-		entry->base.ofs_position = indexer->current_position - indexer->current_offset;
-	}
 
 	if (git_sizemap_set(indexer->positions, entry->object.position, entry) < 0 ||
 	    git_vector_insert(&indexer->objects, entry) < 0 ||
 	    git_vector_insert(&indexer->deltas, entry) < 0)
 		return -1;
 
-	return 0;
+	indexer->current_delta = NULL;
+
+	indexer->progress.received_objects++;
+
+	return do_progress_cb(indexer);
 }
 
 static int parse_packfile_complete(
@@ -390,6 +419,7 @@ static int append_data(
 	size_t len)
 {
 	size_t chunk_len;
+	int error;
 
 	while (len > 0) {
 		chunk_len = min(len, SSIZE_MAX);
@@ -401,6 +431,7 @@ static int append_data(
 		len -= chunk_len;
 
 		indexer->packfile_size += chunk_len;
+		indexer->progress.received_bytes += chunk_len;
 	}
 
 	return 0;
@@ -416,6 +447,9 @@ int git_indexer_append(
 
 	GIT_UNUSED(stats);
 
+	if (!indexer->index_start)
+		indexer->index_start = git_time_monotonic();
+
 
 	/*
 	 * Take two passes with the data given to us: first, actually do the
@@ -427,6 +461,9 @@ int git_indexer_append(
 
 	if (git_packfile_parser_parse(&indexer->parser, data, len) < 0)
 		return -1;
+
+	if (stats)
+		memcpy(stats, &indexer->progress, sizeof(git_indexer_progress));
 
 	return 0;
 }
@@ -501,12 +538,38 @@ static int unpack_raw_object(
 		return -1;
 	*/
 
-	printf("avail: %d data remain: %d size: %d eos: %d\n", (int)(indexer->packfile_size - raw_position), (int)data_remain, (int)size, (int)git_zstream_eos(&indexer->zstream));
+/*	printf("avail: %d data remain: %d size: %d eos: %d\n", (int)(indexer->packfile_size - raw_position), (int)data_remain, (int)size, (int)git_zstream_eos(&indexer->zstream)); */
 
 	if (data_remain > 0 || !git_zstream_eos(&indexer->zstream)) {
 		git_error_set(GIT_ERROR_INDEXER, "object data did not match expected size");
 		return -1;
 	}
+
+	*out = data;
+	return 0;
+}
+
+static int load_raw_object(
+	struct object_data **out,
+	git_indexer *indexer,
+	git_object_size_t raw_position,
+	git_object_size_t size)
+{
+	struct object_data *data;
+
+	indexer->object_lookups++;
+
+	if ((data = git_sizemap_get(indexer->basecache, raw_position))) {
+		indexer->cache_hits++;
+
+		*out = data;
+		return 0;
+	}
+
+	if (unpack_raw_object(&data, indexer, raw_position, size) < 0)
+		return -1;
+
+	git_sizemap_set(indexer->basecache, raw_position, data);
 
 	*out = data;
 	return 0;
@@ -554,7 +617,7 @@ static int unpack_object_at_position(
 
 		if (unpack_object_at_position(&base, out_type, out_chain_length,
 				indexer, delta_entry->base.ofs_position) < 0 ||
-		    unpack_raw_object(&delta, indexer, raw_position,
+		    load_raw_object(&delta, indexer, raw_position,
 				delta_entry->object.size) < 0 ||
 		    git_delta_read_header(&base_size, &result_size,
 				delta->data, delta->len) < 0)
@@ -567,16 +630,20 @@ static int unpack_object_at_position(
 		if (git_delta_apply_to_buf((*out)->data, (*out)->len,
 				base->data, base->len, delta->data, delta->len) < 0) {
 			git__free(*out);
+			/*
 			git__free(base);
 			git__free(delta);
+			*/
 			return -1;
 		}
 
 		(*out)->data[result_size] = '\0';
 		(*out_chain_length)++;
 
+/*
 		git__free(base);
 		git__free(delta);
+		*/
 
 		return 0;
 	}
@@ -584,7 +651,7 @@ static int unpack_object_at_position(
 	/* TODO: overflow check */
 	raw_position = ofs_position + object->header_size;
 
-	if (unpack_raw_object(out, indexer, raw_position, object->size) < 0)
+	if (load_raw_object(out, indexer, raw_position, object->size) < 0)
 		return -1;
 
 	*out_chain_length = 0;
@@ -632,9 +699,12 @@ static int resolve_delta(git_indexer *indexer, struct delta_entry *delta)
 	delta->object.id.type = indexer->oid_type;
 #endif
 
+	indexer->progress.indexed_deltas++;
+	indexer->progress.indexed_objects++;
+
 	/*printf("resolved: %s\n", git_oid_tostr_s(&delta->object.id));*/
 
-	return 0;
+	return do_progress_cb(indexer);
 }
 
 static int resolve_final_deltas(git_indexer *indexer)
@@ -647,7 +717,7 @@ static int resolve_final_deltas(git_indexer *indexer)
 	while (deltas_len > 0) {
 		bool progress = false;
 
-		printf("loop %d\n", ++cnt);
+		/*printf("loop %d\n", ++cnt);*/
 
 		git_vector_foreach(&indexer->deltas, i, delta_entry) {
 			if (delta_entry->final_type)
@@ -785,15 +855,28 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 {
 	struct object_entry *entry;
 	size_t i;
+	int error;
 
 	GIT_ASSERT_ARG(indexer);
-
-	GIT_UNUSED(stats);
 
 	if (!indexer->complete) {
 		git_error_set(GIT_ERROR_INDEXER, "incomplete packfile");
 		return -1;
 	}
+
+	/* Freeze the number of deltas */
+	indexer->progress.total_deltas =
+		indexer->progress.total_objects - indexer->progress.indexed_objects;
+
+	if (stats)
+		memcpy(stats, &indexer->progress, sizeof(git_indexer_progress));
+
+	if ((error = do_progress_cb(indexer)) != 0)
+		return error;
+
+
+	indexer->index_end = git_time_monotonic();
+	/*printf("elapsed: %llu\n", (indexer->index_end - indexer->index_start));*/
 
 	indexer->packfile_map = mmap(NULL, indexer->packfile_size, PROT_READ, MAP_SHARED, indexer->packfile_fd, 0);
 
@@ -801,6 +884,7 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 		return -1;
 
 	/* TODO: zap */
+	if (0) {
 	git_vector_foreach(&indexer->objects, i, entry) {
 		git_object_t type = git_object__is_delta(entry->type) ?
 			((struct delta_entry *)entry)->final_type : entry->type;
@@ -817,11 +901,15 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 		printf("\n");
 	}
 	/* TODO: /zap */
+	}
 
 	git_vector_sort(&indexer->objects);
 
 	if (write_index(indexer) < 0)
 		return -1;
+
+	/*printf("==========\n");*/
+	/*printf("object lookups: %lu / cache hits: %lu\n", indexer->object_lookups, indexer->cache_hits);*/
 
 	return 0;
 }
