@@ -212,7 +212,7 @@ int git_zstream_inflatebuf(git_str *out, const void *in, size_t in_len)
 static int zstream_file(git_str *out, int fd, git_zstream_t type)
 {
 	git_zstream zs = GIT_ZSTREAM_INIT;
-	char buf[1], *inflated_ptr;
+	char buf[ZSTREAM_BUFFER_SIZE], *inflated_ptr;
 	size_t out_size, inflated_size;
 	ssize_t read_len;
 	int error = -1;
