@@ -77,6 +77,7 @@ struct git_indexer {
 	git_object_size_t current_offset; /* current ofs delta base */
 
 	git_hash_ctx hash_ctx;
+	git_zstream zstream;
 
 	git_sizemap *positions; /* map of position to object */
 	git_vector objects; /* vector of `struct object_entry` */
@@ -312,6 +313,7 @@ static int indexer_new(
 
 	if ((error = git_packfile_parser_init(&indexer->parser, oid_type)) < 0 ||
 	    (error = git_hash_ctx_init(&indexer->hash_ctx, hash_type)) < 0 ||
+		(error = git_zstream_init(&indexer->zstream, GIT_ZSTREAM_INFLATE)) < 0 ||
 	    (error = git_str_joinpath(&path, parent_path, "pack")) < 0 ||
 	    (error = indexer->packfile_fd = git_futils_mktmp(&indexer->packfile_path, path.ptr, indexer->mode)) < 0)
 		goto done;
@@ -430,14 +432,25 @@ static int unpack_raw_object(
 	git_object_size_t raw_position,
 	git_object_size_t size)
 {
-	struct object_data *data_new;
-	git_str data = GIT_STR_INIT;
+	struct object_data *data;
+	char buf[READ_CHUNK_SIZE];
+	size_t data_remain;
+	ssize_t read_len;
+	unsigned char *data_ptr;
 
-	/* TODO: we know the object size, hint the git_str with it */
 
-	/* TODO: we need to be more thoughtful about file descriptors */
+	/* TODO: we need to be more thoughtful about file descriptors for multithreaded unpacking */
 	int fd = indexer->packfile_fd;
 
+
+	/* TODO: overflow checking */
+	data = git__malloc(sizeof(struct object_data) + size + 1);
+	GIT_ERROR_CHECK_ALLOC(data);
+
+	data->len = size;
+
+	data_ptr = data->data;
+	data_remain = size;
 
 	/* TODO: assert ofs_position <= off_t */
 	/* TODO: 32 bit vs 64 bit */
@@ -446,20 +459,30 @@ static int unpack_raw_object(
 		return -1;
 	}
 
-	if (git_zstream_inflatefile(&data, fd) < 0)
+
+	/* TODO: more thoughtful about this for multiple threads, too */
+	git_zstream_reset(&indexer->zstream);
+
+	while (data_remain && (read_len = p_read(fd, buf, sizeof(buf))) > 0) {
+		size_t data_written = data_remain;
+
+		if (git_zstream_set_input(&indexer->zstream, buf, read_len) < 0 ||
+		    git_zstream_get_output(data_ptr, &data_written, &indexer->zstream) < 0)
+			return -1;
+
+		data_ptr += data_remain;
+		data_remain -= data_written;
+	}
+
+	if (read_len < 0)
 		return -1;
 
-	/* TODO: validate that data.size == expected size of this object from the positions table */
+	if (data_remain || !git_zstream_eos(&indexer->zstream)) {
+		git_error_set(GIT_ERROR_INDEXER, "object data did not match expected size");
+		return -1;
+	}
 
-
-
-	data_new = git__malloc(sizeof(struct object_data) + data.size);
-	data_new->len = data.size;
-	memcpy(&data_new->data, data.ptr, data.size);
-	git_str_dispose(&data);
-
-	*out = data_new;
-
+	*out = data;
 	return 0;
 }
 
@@ -777,6 +800,7 @@ void git_indexer_free(git_indexer *indexer)
 	if (!indexer)
 		return;
 
+	git_zstream_free(&indexer->zstream);
 	git_str_dispose(&indexer->packfile_path);
 	git_hash_ctx_cleanup(&indexer->hash_ctx);
 	git_sizemap_free(indexer->positions);
