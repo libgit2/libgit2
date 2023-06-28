@@ -40,6 +40,11 @@ struct delta_entry {
 	} base;
 };
 
+struct object_data {
+	size_t len;
+	unsigned char data[GIT_FLEX_ARRAY];
+};
+
 struct git_indexer {
 	git_odb *odb;
 	git_oid_t oid_type;
@@ -417,11 +422,11 @@ int git_indexer_append(
 
 /* TODO: this should live somewhere else -- maybe in packfile parser? */
 static int unpack_raw_object(
-	unsigned char **out,
-	size_t *out_len,
+	struct object_data **out,
 	git_indexer *indexer,
 	git_object_size_t raw_position)
 {
+	struct object_data *data_new;
 	git_str data = GIT_STR_INIT;
 
 	/* TODO: we know the object size, hint the git_str with it */
@@ -442,15 +447,20 @@ static int unpack_raw_object(
 
 	/* TODO: validate that data.size == expected size of this object from the positions table */
 
-	*out_len = data.size;
-	*out = (unsigned char *)git_str_detach(&data);
+
+
+	data_new = git__malloc(sizeof(struct object_data) + data.size);
+	data_new->len = data.size;
+	memcpy(&data_new->data, data.ptr, data.size);
+	git_str_dispose(&data);
+
+	*out = data_new;
 
 	return 0;
 }
 
 static int unpack_object_at_position(
-	unsigned char **out,
-	size_t *out_len,
+	struct object_data **out,
 	git_object_t *out_type,
 	unsigned short *out_chain_length,
 	git_indexer *indexer,
@@ -484,18 +494,26 @@ static int unpack_object_at_position(
 		abort();
 	} else if (object->type == GIT_OBJECT_OFS_DELTA) {
 		struct delta_entry *delta_entry = (struct delta_entry *)object;
-		unsigned char *base, *delta;
-		size_t base_len, delta_len;
+		struct object_data *base, *delta;
+
+		const char *out_tmp;
+		size_t out_len_tmp;
 
 		/* TODO: overflow check */
 		raw_position = ofs_position + object->header_size;
 
-		if (unpack_object_at_position(&base, &base_len, out_type, out_chain_length, indexer, delta_entry->base.ofs_position) < 0 ||
-		    unpack_raw_object(&delta, &delta_len, indexer, raw_position) < 0)
+		if (unpack_object_at_position(&base, out_type, out_chain_length, indexer, delta_entry->base.ofs_position) < 0 ||
+		    unpack_raw_object(&delta, indexer, raw_position) < 0)
 			return -1;
 
-		error = git_delta_apply((void **)out, out_len, base, base_len, delta, delta_len);
+		error = git_delta_apply((void **)&out_tmp, &out_len_tmp, base->data, base->len, delta->data, delta->len);
 		(*out_chain_length)++;
+
+
+		*out = git__malloc(sizeof(struct object_data) + out_len_tmp);
+		(*out)->len = out_len_tmp;
+		memcpy((*out)->data, out_tmp, out_len_tmp);
+
 
 		git__free(base);
 		git__free(delta);
@@ -506,7 +524,7 @@ static int unpack_object_at_position(
 	/* TODO: overflow check */
 	raw_position = ofs_position + object->header_size;
 
-	if (unpack_raw_object(out, out_len, indexer, raw_position) < 0)
+	if (unpack_raw_object(out, indexer, raw_position) < 0)
 		return -1;
 
 	*out_chain_length = 0;
@@ -519,8 +537,8 @@ static int unpack_object_at_position(
 static int resolve_delta(git_indexer *indexer, struct delta_entry *delta)
 {
 	char header[64];
-	unsigned char *data;
-	size_t header_len, data_len;
+	struct object_data *data;
+	size_t header_len;
 
 	/* TODO: cache lookup here? */
 
@@ -532,7 +550,7 @@ static int resolve_delta(git_indexer *indexer, struct delta_entry *delta)
 		abort();
 		return -1;
 	} else {
-		if (unpack_object_at_position(&data, &data_len, &delta->final_type, &delta->chain_length, indexer, delta->object.position) < 0)
+		if (unpack_object_at_position(&data, &delta->final_type, &delta->chain_length, indexer, delta->object.position) < 0)
 			return -1;
 	}
 
@@ -541,9 +559,9 @@ static int resolve_delta(git_indexer *indexer, struct delta_entry *delta)
 	 * hash it, we could hash in the dedltafication step.
 	 */
 
-	if (git_odb__format_object_header(&header_len, header, sizeof(header), data_len, delta->final_type) < 0 ||
+	if (git_odb__format_object_header(&header_len, header, sizeof(header), data->len, delta->final_type) < 0 ||
 	    git_hash_update(&indexer->hash_ctx, header, header_len) < 0 ||
-		git_hash_update(&indexer->hash_ctx, data, data_len) < 0 ||
+		git_hash_update(&indexer->hash_ctx, data->data, data->len) < 0 ||
 		git_hash_final(delta->object.id.id, &indexer->hash_ctx) < 0)
 		return -1;
 
