@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include <sys/mman.h>
+
 #include "indexer.h"
 #include "pack.h"
 #include "packfile_parser.h"
@@ -60,6 +62,7 @@ struct git_indexer {
 
 	git_str packfile_path;
 	int packfile_fd;
+	unsigned long long packfile_size;
 
 	git_packfile_parser parser;
 
@@ -78,6 +81,7 @@ struct git_indexer {
 
 	git_hash_ctx hash_ctx;
 	git_zstream zstream;
+	unsigned char *packfile_map;
 
 	git_sizemap *positions; /* map of position to object */
 	git_vector objects; /* vector of `struct object_entry` */
@@ -395,6 +399,8 @@ static int append_data(
 
 		data += chunk_len;
 		len -= chunk_len;
+
+		indexer->packfile_size += chunk_len;
 	}
 
 	return 0;
@@ -433,14 +439,12 @@ static int unpack_raw_object(
 	git_object_size_t size)
 {
 	struct object_data *data;
-	char buf[READ_CHUNK_SIZE];
 	size_t data_remain;
-	ssize_t read_len;
-	unsigned char *data_ptr;
+	unsigned char *compressed_ptr, *data_ptr;
 
 
 	/* TODO: we need to be more thoughtful about file descriptors for multithreaded unpacking */
-	int fd = indexer->packfile_fd;
+	/*int fd = indexer->packfile_fd; */
 
 
 	/* TODO: overflow checking */
@@ -454,14 +458,33 @@ static int unpack_raw_object(
 
 	/* TODO: assert ofs_position <= off_t */
 	/* TODO: 32 bit vs 64 bit */
+	/*
 	if (p_lseek(fd, (off_t)raw_position, SEEK_SET) < 0) {
 		git_error_set(GIT_ERROR_OS, "could not seek in packfile");
 		return -1;
 	}
+	*/
 
+	compressed_ptr = indexer->packfile_map + raw_position;
 
 	/* TODO: more thoughtful about this for multiple threads, too */
 	git_zstream_reset(&indexer->zstream);
+
+/* TODO: we know where the compressed data ends based on the next offset */
+	if (git_zstream_set_input(&indexer->zstream, compressed_ptr, (indexer->packfile_size - raw_position)) < 0)
+		return -1;
+
+	while (data_remain && !git_zstream_eos(&indexer->zstream)) {
+		size_t data_written = data_remain;
+
+	    if (git_zstream_get_output(data_ptr, &data_written, &indexer->zstream) < 0)
+			return -1;
+
+		data_ptr += data_remain;
+		data_remain -= data_written;
+	}
+
+	/*
 
 	while (data_remain && (read_len = p_read(fd, buf, sizeof(buf))) > 0) {
 		size_t data_written = data_remain;
@@ -476,8 +499,11 @@ static int unpack_raw_object(
 
 	if (read_len < 0)
 		return -1;
+	*/
 
-	if (data_remain || !git_zstream_eos(&indexer->zstream)) {
+	printf("avail: %d data remain: %d size: %d eos: %d\n", (int)(indexer->packfile_size - raw_position), (int)data_remain, (int)size, (int)git_zstream_eos(&indexer->zstream));
+
+	if (data_remain > 0 || !git_zstream_eos(&indexer->zstream)) {
 		git_error_set(GIT_ERROR_INDEXER, "object data did not match expected size");
 		return -1;
 	}
@@ -591,6 +617,9 @@ static int resolve_delta(git_indexer *indexer, struct delta_entry *delta)
 	/*
 	 * TODO: we don't really need to dedeltafy the whole object just to
 	 * hash it, we could hash in the dedltafication step.
+	 * *but* we don't know if we want it to be a future delta base or
+	 * not (and in fact odds are good that we do). so probably better
+	 * to actually expand it and cache it.
 	 */
 
 	if (git_odb__format_object_header(&header_len, header, sizeof(header), data->len, delta->final_type) < 0 ||
@@ -765,6 +794,8 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 		git_error_set(GIT_ERROR_INDEXER, "incomplete packfile");
 		return -1;
 	}
+
+	indexer->packfile_map = mmap(NULL, indexer->packfile_size, PROT_READ, MAP_SHARED, indexer->packfile_fd, 0);
 
 	if (resolve_final_deltas(indexer) < 0)
 		return -1;
