@@ -168,7 +168,7 @@ static int parse_object_data(
 	size_t len)
 {
 	unsigned char inflated[READ_CHUNK_SIZE];
-	size_t inflated_len = READ_CHUNK_SIZE;
+	size_t inflated_size = READ_CHUNK_SIZE, inflated_len;
 	size_t orig_len = len;
 
 	if (parser->state == STATE_OBJECT_DATA_START) {
@@ -178,25 +178,31 @@ static int parse_object_data(
 		parser->state = STATE_OBJECT_DATA;
 	}
 
-	if (git_zstream_set_input(&parser->zstream, data, len) < 0 ||
-	    git_zstream_get_output_chunk(inflated, &inflated_len, &parser->zstream) < 0 ||
-		git_hash_update(&parser->current_hash, inflated, inflated_len) < 0)
+	if (git_zstream_set_input(&parser->zstream, data, len) < 0)
 		return -1;
+
+	do {
+		inflated_len = inflated_size;
+
+		if (git_zstream_get_output_chunk(inflated, &inflated_len, &parser->zstream) < 0 ||
+		    git_hash_update(&parser->current_hash, inflated, inflated_len) < 0)
+			return -1;
+
+		if (parser->object_data) {
+			int error = parser->object_data(
+				inflated,
+				inflated_size,
+				parser->callback_data);
+
+			if (error != 0)
+				return error;
+		}
+	} while (inflated_len > 0);
 
 	len = parser->zstream.in_len;
 	parser->current_compressed_size += (orig_len - len);
 	parser->current_compressed_crc =
 			crc32(parser->current_compressed_crc, data, (orig_len - len));
-
-	if (parser->object_data) {
-		int error = parser->object_data(
-			inflated,
-			inflated_len,
-			parser->callback_data);
-
-		if (error != 0)
-			return error;
-	}
 
 	if (git_zstream_eos(&parser->zstream)) {
 		git_oid oid = {0};

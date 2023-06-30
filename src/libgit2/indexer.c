@@ -562,14 +562,21 @@ static int load_raw_object(
 	if ((data = git_sizemap_get(indexer->basecache, raw_position))) {
 		indexer->cache_hits++;
 
+		printf("%llu : hit\n", raw_position);
+
 		*out = data;
 		return 0;
 	}
 
+	printf("%llu : miss\n", raw_position);
+
 	if (unpack_raw_object(&data, indexer, raw_position, size) < 0)
 		return -1;
 
-	git_sizemap_set(indexer->basecache, raw_position, data);
+	if (git_sizemap_set(indexer->basecache, raw_position, data) < 0)
+		return -1;
+
+	printf("%llu : cached\n", raw_position);
 
 	*out = data;
 	return 0;
