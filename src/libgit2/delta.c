@@ -559,7 +559,8 @@ int git_delta_apply_to_buf(
 	}
 
 	if (base_size != base_len) {
-		git_error_set(GIT_ERROR_INVALID, "failed to apply delta: given base does not match expected length");
+		git_error_set(GIT_ERROR_INVALID, "failed to apply delta: given base does not match expected length (%llu / %llu)", base_size, base_len);
+		printf("base is: %.*s\n", base_len, base);
 		return -1;
 	}
 
