@@ -26,6 +26,7 @@ int git_hash_sha1_init(git_hash_sha1_ctx *ctx)
 {
 	GIT_ASSERT_ARG(ctx);
 	SHA1DCInit(&ctx->c);
+	SHA1DCSetSafeHash(&ctx->c, 0);
 	return 0;
 }
 
