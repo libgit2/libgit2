@@ -136,6 +136,27 @@ static int objects_cmp(const void *a, const void *b)
 	return git_oid__cmp(&entry_a->id, &entry_b->id);
 }
 
+static int deltas_cmp(const void *a, const void *b)
+{
+	const struct delta_entry *entry_a = a;
+	const struct delta_entry *entry_b = b;
+
+	if (entry_a->object.type == GIT_OBJECT_OFS_DELTA &&
+	    entry_b->object.type == GIT_OBJECT_OFS_DELTA) {
+		if (entry_a->base.ofs_position < entry_b->base.ofs_position)
+			return -1;
+		else if (entry_a->base.ofs_position > entry_b->base.ofs_position)
+			return 1;
+		else
+			return 0;
+	} else if (entry_a->object.type == GIT_OBJECT_REF_DELTA &&
+	           entry_b->object.type == GIT_OBJECT_REF_DELTA) {
+		return git_oid_cmp(&entry_a->base.ref_id, &entry_b->base.ref_id);
+	} else {
+		return (entry_a->object.type == GIT_OBJECT_OFS_DELTA) ?  -1 : 1;
+	}
+}
+
 static int parse_packfile_header(
 	uint32_t version,
 	uint32_t entries,
@@ -156,7 +177,7 @@ static int parse_packfile_header(
 	if (git_sizemap_new(&indexer->positions) < 0 ||
 	    git_sizemap_new(&indexer->basecache) < 0 ||
 	    git_vector_init(&indexer->objects, entries, objects_cmp) < 0 ||
-	    git_vector_init(&indexer->deltas, entries / 2, NULL) < 0)
+	    git_vector_init(&indexer->deltas, entries / 2, deltas_cmp) < 0)
 		return -1;
 
 	indexer->started = 1;
@@ -419,7 +440,6 @@ static int append_data(
 	size_t len)
 {
 	size_t chunk_len;
-	int error;
 
 	while (len > 0) {
 		chunk_len = min(len, SSIZE_MAX);
@@ -553,7 +573,8 @@ static int load_raw_object(
 	struct object_data **out,
 	git_indexer *indexer,
 	git_object_size_t raw_position,
-	git_object_size_t size)
+	git_object_size_t size,
+	const char *desc)
 {
 	struct object_data *data;
 
@@ -562,13 +583,13 @@ static int load_raw_object(
 	if ((data = git_sizemap_get(indexer->basecache, raw_position))) {
 		indexer->cache_hits++;
 
-		printf("%llu : hit\n", raw_position);
+		//printf("%s %llu : hit\n", desc, raw_position);
 
 		*out = data;
 		return 0;
 	}
 
-	printf("%llu : miss\n", raw_position);
+//	printf("%s %llu : miss\n", desc, raw_position);
 
 	if (unpack_raw_object(&data, indexer, raw_position, size) < 0)
 		return -1;
@@ -576,7 +597,43 @@ static int load_raw_object(
 	if (git_sizemap_set(indexer->basecache, raw_position, data) < 0)
 		return -1;
 
-	printf("%llu : cached\n", raw_position);
+	//printf("%s %llu : cached\n", desc, raw_position);
+
+	*out = data;
+	return 0;
+}
+
+static int load_base_object(
+	struct object_data **out,
+	git_indexer *indexer,
+	git_object_size_t raw_position,
+	git_object_t type,
+	git_object_size_t size,
+	const char *desc)
+{
+	struct object_data *data;
+
+	indexer->object_lookups++;
+
+	if ((data = git_sizemap_get(indexer->basecache, raw_position))) {
+		indexer->cache_hits++;
+
+//		printf("%s %llu : hit\n", desc, raw_position);
+
+		*out = data;
+		return 0;
+	}
+
+//	printf("%s %llu : miss\n", desc, raw_position);
+
+	if (unpack_raw_object(&data, indexer, raw_position, size) < 0)
+		return -1;
+
+	if (!git_object__is_delta(type) &&
+	    git_sizemap_set(indexer->basecache, raw_position, data) < 0)
+		return -1;
+
+//	printf("%s %llu : cached\n", desc, raw_position);
 
 	*out = data;
 	return 0;
@@ -625,7 +682,7 @@ static int unpack_object_at_position(
 		if (unpack_object_at_position(&base, out_type, out_chain_length,
 				indexer, delta_entry->base.ofs_position) < 0 ||
 		    load_raw_object(&delta, indexer, raw_position,
-				delta_entry->object.size) < 0 ||
+				delta_entry->object.size, "delta") < 0 ||
 		    git_delta_read_header(&base_size, &result_size,
 				delta->data, delta->len) < 0)
 			return -1;
@@ -653,18 +710,18 @@ static int unpack_object_at_position(
 		*/
 
 		return 0;
+	} else {
+		/* TODO: overflow check */
+		raw_position = ofs_position + object->header_size;
+
+		if (load_raw_object(out, indexer, raw_position, object->size, "object") < 0)
+			return -1;
+
+		*out_chain_length = 0;
+		*out_type = object->type;
+
+		return 0;
 	}
-
-	/* TODO: overflow check */
-	raw_position = ofs_position + object->header_size;
-
-	if (load_raw_object(out, indexer, raw_position, object->size) < 0)
-		return -1;
-
-	*out_chain_length = 0;
-	*out_type = object->type;
-
-	return 0;
 }
 
 /* TODO: limit recursion depth  -- it looks like git may put a 50 length limit on delta chains? */
@@ -714,34 +771,97 @@ static int resolve_delta(git_indexer *indexer, struct delta_entry *delta)
 	return do_progress_cb(indexer);
 }
 
-static int resolve_final_deltas(git_indexer *indexer)
+GIT_INLINE(int) resolve_one_delta(
+	git_indexer *indexer,
+	struct object_entry *base,
+	struct delta_entry *delta)
+{
+	struct object_data *base_data, *delta_data, *result_data;
+	size_t base_raw_position, delta_raw_position, base_size, result_size;
+	char header[64];
+	size_t header_len;
+
+	/* TODO: overflow check */
+	base_raw_position = base->position + base->header_size;
+	delta_raw_position = delta->object.position + delta->object.header_size;
+
+/* TODO: we're loading the base object here out of the cache, but we're caching the raw data. if this is a second-level delta, then the base itself is a delta. we've cached the delta data but we need to cache ther esults of dedeltafication. */
+/* TODO: load_base_object may need to apply deltas if we've run out of base cache */
+/* can use unpack here for the delta since we're guaranteed that it's not cached */
+	if (load_base_object(&base_data, indexer,
+			base_raw_position, base->type, base->size, "base") < 0 ||
+	    unpack_raw_object(&delta_data, indexer, delta_raw_position,
+			delta->object.size) < 0 ||
+	    git_delta_read_header(&base_size, &result_size,
+			delta_data->data, delta_data->len) < 0)
+		return -1;
+
+	/* TODO: overflow check */
+	result_data = git__malloc(sizeof(struct object_data) + result_size + 1);
+	result_data->data[result_size] = '\0';
+	result_data->len = result_size;
+
+	if (git_delta_apply_to_buf(result_data->data, result_data->len,
+			base_data->data, base_data->len, delta_data->data, delta_data->len) < 0) {
+		git__free(result_data);
+		return -1;
+	}
+
+	if (git_sizemap_set(indexer->basecache, delta_raw_position, result_data) < 0)
+		return -1;
+
+	/* TODO: hash ctx per thread */
+	if (git_hash_init(&indexer->hash_ctx) < 0 ||
+	    git_odb__format_object_header(&header_len, header, sizeof(header), result_data->len, delta->final_type) < 0 ||
+	    git_hash_update(&indexer->hash_ctx, header, header_len) < 0 ||
+		git_hash_update(&indexer->hash_ctx, result_data->data, result_data->len) < 0 ||
+		git_hash_final(delta->object.id.id, &indexer->hash_ctx) < 0)
+		return -1;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	delta->object.id.type = indexer->oid_type;
+#endif
+
+	indexer->progress.indexed_deltas++;
+	indexer->progress.indexed_objects++;
+
+	return do_progress_cb(indexer);
+}
+
+static int resolve_deltas(git_indexer *indexer)
 {
 	size_t deltas_len = git_vector_length(&indexer->deltas);
+	struct object_entry *object_entry;
 	struct delta_entry *delta_entry;
-	size_t i;
+	size_t object_idx, delta_idx = 0;
 	int cnt = 0;
 
-	while (deltas_len > 0) {
-		bool progress = false;
+	git_vector_sort(&indexer->deltas);
 
-		/*printf("loop %d\n", ++cnt);*/
+	/*
+	 * At this point, our deltas are sorted. If this object is a base
+	 * for a delta, then it will be the next in the delta list. Apply
+	 * it to the current delta and any subsequent with the same base.
+	 * Otherwise, continue.
+	 */
+	git_vector_foreach(&indexer->objects, object_idx, object_entry) {
+		while (delta_idx < git_vector_length(&indexer->deltas)) {
+			delta_entry = git_vector_get(&indexer->deltas, delta_idx);
 
-		git_vector_foreach(&indexer->deltas, i, delta_entry) {
-			if (delta_entry->final_type)
-				continue;
-
-			if (resolve_delta(indexer, delta_entry) < 0)
-				return -1;
 
 			/* TODO */
-			deltas_len--;
+			if (delta_entry->object.type != GIT_OBJECT_OFS_DELTA)
+				abort();
 
-			progress = true;
-		}
+			GIT_ASSERT(delta_entry->base.ofs_position >= object_entry->position);
 
-		if (!progress) {
-			git_error_set(GIT_ERROR_INDEXER, "could not resolve deltas");
-			return -1;
+			if (delta_entry->base.ofs_position > object_entry->position)
+				break;
+
+			if (resolve_one_delta(indexer, object_entry, delta_entry) < 0)
+				return -1;
+
+			delta_idx++;
 		}
 	}
 
@@ -887,11 +1007,11 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 
 	indexer->packfile_map = mmap(NULL, indexer->packfile_size, PROT_READ, MAP_SHARED, indexer->packfile_fd, 0);
 
-	if (resolve_final_deltas(indexer) < 0)
+	if (resolve_deltas(indexer) < 0)
 		return -1;
 
 	/* TODO: zap */
-	if (0) {
+	if (1) {
 	git_vector_foreach(&indexer->objects, i, entry) {
 		git_object_t type = git_object__is_delta(entry->type) ?
 			((struct delta_entry *)entry)->final_type : entry->type;
