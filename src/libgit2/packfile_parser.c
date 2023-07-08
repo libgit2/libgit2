@@ -191,7 +191,7 @@ static int parse_object_data(
 		if (parser->object_data) {
 			int error = parser->object_data(
 				inflated,
-				inflated_size,
+				inflated_len,
 				parser->callback_data);
 
 			if (error != 0)
@@ -480,7 +480,7 @@ int git_packfile_parser_parse(
 			GIT_ASSERT(!parser->state);
 		}
 
-		if (start_state < STATE_TRAILER)
+		if (error == 0 && start_state < STATE_TRAILER)
 			error = git_hash_update(&parser->packfile_hash, data, consumed);
 
 		if (error != 0) {
