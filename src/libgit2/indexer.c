@@ -599,7 +599,15 @@ static int load_resolved_object(
 {
 	struct object_data *data;
 
+	indexer->object_lookups++;
+
 	/* cache lookup */
+
+	if ((data = git_sizemap_get(indexer->basecache, object->position)) != NULL) {
+		indexer->cache_hits++;
+		*out = data;
+		return 0;
+	}
 
 	if (object->type == GIT_OBJECT_REF_DELTA) {
 		abort();
@@ -612,6 +620,8 @@ static int load_resolved_object(
 	}
 
 	/* cache set */
+	if (git_sizemap_set(indexer->basecache, object->position, data) < 0)
+		return -1;
 
 	*out = data;
 	return 0;
@@ -851,8 +861,7 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 	if (write_index(indexer) < 0)
 		return -1;
 
-	/*printf("==========\n");*/
-	/*printf("object lookups: %lu / cache hits: %lu\n", indexer->object_lookups, indexer->cache_hits);*/
+	printf("\n\nobject lookups: %lu / cache hits: %lu\n\n", indexer->object_lookups, indexer->cache_hits);
 
 	return 0;
 }
