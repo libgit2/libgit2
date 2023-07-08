@@ -36,7 +36,6 @@ struct object_entry {
 struct delta_entry {
 	struct object_entry object;
 	git_object_t final_type;
-	unsigned short chain_length;
 	union {
 		git_oid ref_id;
 		git_object_size_t ofs_position;
@@ -44,7 +43,9 @@ struct delta_entry {
 };
 
 struct object_data {
+	/* TODO: can we shrink this to fit both in 64 bits */
 	size_t len;
+	git_object_t type;
 	unsigned char data[GIT_FLEX_ARRAY];
 };
 
@@ -304,7 +305,6 @@ static int parse_delta_complete(
 
 	entry->object.crc32 = compressed_crc;
 	entry->final_type = 0;
-	entry->chain_length = 0;
 
 	if (git_sizemap_set(indexer->positions, entry->object.position, entry) < 0 ||
 	    git_vector_insert(&indexer->objects, entry) < 0 ||
@@ -491,7 +491,6 @@ int git_indexer_append(
 /* TODO: this should live somewhere else -- maybe in packfile parser? */
 static int load_raw_object(
 	struct object_data **out,
-	git_object_t *out_type,
 	git_indexer *indexer,
 	struct object_entry *object)
 {
@@ -507,6 +506,7 @@ static int load_raw_object(
 	GIT_ERROR_CHECK_ALLOC(data);
 
 	data->len = object->size;
+	data->type = object->type;
 
 	data_ptr = data->data;
 	data_remain = object->size;
@@ -538,23 +538,18 @@ static int load_raw_object(
 
 	/* TODO - sanity check type */
 	*out = data;
-	*out_type = object->type;
 
 	return 0;
 }
 
 static int load_resolved_object(
 	struct object_data **out,
-	git_object_t *out_type,
-	unsigned short *chain_length,
 	git_indexer *indexer,
 	struct object_entry *object,
 	struct object_entry *base);
 
 GIT_INLINE(int) load_resolved_ofs_object(
 	struct object_data **out,
-	git_object_t *out_type,
-	unsigned short *chain_length,
 	git_indexer *indexer,
 	struct object_entry *_delta,
 	struct object_entry *base)
@@ -562,7 +557,6 @@ GIT_INLINE(int) load_resolved_ofs_object(
 	struct delta_entry *delta = (struct delta_entry *)_delta;
 	struct object_data *base_data, *delta_data, *result_data;
 	size_t base_size, result_size;
-	git_object_t base_type, delta_type;
 
 	/* load the base */
 	if (!base)
@@ -573,10 +567,8 @@ GIT_INLINE(int) load_resolved_ofs_object(
 		return -1;
 	}
 
-	if (load_resolved_object(&base_data, &base_type, chain_length,
-			indexer, base, NULL) < 0 ||
-	    load_raw_object(&delta_data, &delta_type, indexer,
-			_delta) < 0 ||
+	if (load_resolved_object(&base_data, indexer, base, NULL) < 0 ||
+	    load_raw_object(&delta_data, indexer, _delta) < 0 ||
 		git_delta_read_header(&base_size, &result_size,
 			delta_data->data, delta_data->len) < 0)
 		return -1;
@@ -585,6 +577,7 @@ GIT_INLINE(int) load_resolved_ofs_object(
 	result_data = git__malloc(sizeof(struct object_data) + result_size + 1);
 	result_data->data[result_size] = '\0';
 	result_data->len = result_size;
+	result_data->type = base_data->type;
 
 	if (git_delta_apply_to_buf(result_data->data, result_data->len,
 			base_data->data, base_data->len,
@@ -594,41 +587,33 @@ GIT_INLINE(int) load_resolved_ofs_object(
 	}
 
 	*out = result_data;
-	*out_type = base_type;
 
 	return 0;
 }
 
 static int load_resolved_object(
 	struct object_data **out,
-	git_object_t *out_type,
-	unsigned short *chain_length,
 	git_indexer *indexer,
 	struct object_entry *object,
 	struct object_entry *base)
 {
 	struct object_data *data;
-	git_object_t type;
 
 	/* cache lookup */
 
 	if (object->type == GIT_OBJECT_REF_DELTA) {
 		abort();
 	} else if (object->type == GIT_OBJECT_OFS_DELTA) {
-		if (load_resolved_ofs_object(&data, &type, chain_length,
-				indexer, object, base) < 0)
+		if (load_resolved_ofs_object(&data, indexer, object, base) < 0)
 			return -1;
-
-		(*chain_length)++;
 	} else {
-		if (load_raw_object(&data, &type, indexer, object) < 0)
+		if (load_raw_object(&data, indexer, object) < 0)
 			return -1;
 	}
 
 	/* cache set */
 
 	*out = data;
-	*out_type = type;
 	return 0;
 }
 
@@ -638,25 +623,22 @@ GIT_INLINE(int) resolve_delta(
 	struct object_entry *base)
 {
 	struct object_data *result;
-	git_object_t result_type;
-	unsigned short chain_length = 0;
 	char header[64];
 	size_t header_len;
 
-	if (load_resolved_object(&result, &result_type, &chain_length,
-			indexer, (struct object_entry *)delta, base) < 0)
+	if (load_resolved_object(&result, indexer,
+			(struct object_entry *)delta, base) < 0)
 		return -1;
 
 	/* TODO: hash ctx per thread */
 	if (git_hash_init(&indexer->hash_ctx) < 0 ||
-	    git_odb__format_object_header(&header_len, header, sizeof(header), result->len, result_type) < 0 ||
+	    git_odb__format_object_header(&header_len, header, sizeof(header), result->len, result->type) < 0 ||
 	    git_hash_update(&indexer->hash_ctx, header, header_len) < 0 ||
 	    git_hash_update(&indexer->hash_ctx, result->data, result->len) < 0 ||
 	    git_hash_final(delta->object.id.id, &indexer->hash_ctx) < 0)
 		return -1;
 
-	delta->final_type = result_type;
-	delta->chain_length = chain_length;
+	delta->final_type = result->type;
 
 #ifdef GIT_EXPERIMENTAL_SHA256
 	delta->object.id.type = indexer->oid_type;
@@ -858,15 +840,11 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 			git_oid_tostr_s(&entry->id),
 			git_object_type2string(type),
 			entry->position);
-
-		if (git_object__is_delta(entry->type)) {
-			printf(" %u", ((struct delta_entry *)entry)->chain_length);
 		}
 
 		printf("\n");
 	}
 	/* TODO: /zap */
-	}
 
 	git_vector_sort(&indexer->objects);
 
