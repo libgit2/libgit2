@@ -874,6 +874,7 @@ void git_indexer_free(git_indexer *indexer)
 	git_zstream_free(&indexer->zstream);
 	git_str_dispose(&indexer->packfile_path);
 	git_hash_ctx_cleanup(&indexer->hash_ctx);
+	git_sizemap_free(indexer->basecache);
 	git_sizemap_free(indexer->positions);
 	git_vector_free(&indexer->deltas);
 	git_vector_free_deep(&indexer->objects);
