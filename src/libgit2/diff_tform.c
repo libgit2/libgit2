@@ -175,8 +175,8 @@ int git_diff__merge(
 	}
 
 	if (!error) {
-		git_vector_swap(&onto->deltas, &onto_new);
-		git_pool_swap(&onto->pool, &onto_pool);
+		onto->deltas = onto_new;
+		onto->pool = onto_pool;
 
 		if ((onto->opts.flags & GIT_DIFF_REVERSE) != 0)
 			onto->old_src = from->old_src;
@@ -188,10 +188,11 @@ int git_diff__merge(
 			git_pool_strdup_safe(&onto->pool, onto->opts.old_prefix);
 		onto->opts.new_prefix =
 			git_pool_strdup_safe(&onto->pool, onto->opts.new_prefix);
+	} else {
+		/* In the case of an error, it is safe to perform a free the objects of the vector. */
+		git_vector_free_deep(&onto_new);
+		git_pool_clear(&onto_pool);
 	}
-
-	git_vector_free_deep(&onto_new);
-	git_pool_clear(&onto_pool);
 
 	return error;
 }
