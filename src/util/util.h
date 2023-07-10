@@ -196,7 +196,7 @@ typedef void (*git_refcount_freeptr)(void *r);
 
 #define GIT_REFCOUNT_OWNER(r) git_atomic_load((r)->rc.owner)
 
-#define GIT_REFCOUNT_VAL(r) git_atomic32_get((r)->rc.refcount)
+#define GIT_REFCOUNT_VAL(r) git_atomic32_get(&(r)->rc.refcount)
 
 
 static signed char from_hex[] = {
