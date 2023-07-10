@@ -893,11 +893,11 @@ static int resolve_deltas(git_indexer *indexer)
 
 GIT_INLINE(int) hash_and_write(
 	git_indexer *indexer,
-	int fd,
+	FILE *fp,
 	const void *data,
 	size_t len)
 {
-	if (p_write(fd, data, len) < 0 ||
+	if (fwrite(data, 1, len, fp) < len ||
 	    git_hash_update(&indexer->hash_ctx, data, len) < 0)
 		return -1;
 
@@ -914,14 +914,21 @@ static int write_index(git_indexer *indexer)
 	size_t oid_size, i = 0;
 	unsigned char index_trailer[GIT_HASH_MAX_SIZE];
 	int fd = -1;
+	FILE *fp = NULL;
 
 	printf("writing header...\n");
 
 	/* TODO: configurable file mode */
-	if (git_str_join(&path, '.', indexer->packfile_path.ptr, "idx") < 0 ||
+	if (git_hash_init(&indexer->hash_ctx) < 0 ||
+	    git_str_join(&path, '.', indexer->packfile_path.ptr, "idx") < 0 ||
 	    (fd = p_open(path.ptr, O_RDWR|O_CREAT, 0666)) < 0 ||
-		git_hash_init(&indexer->hash_ctx) < 0 ||
-	    hash_and_write(indexer, fd, "\377tOc\000\000\000\002", 8) < 0)
+		(fp = fdopen(fd, "w")) == NULL)
+		goto on_error;
+
+	/* fclose will close the underlying fd; avoid double closing */
+	fd = -1;
+
+	if (hash_and_write(indexer, fp, "\377tOc\000\000\000\002", 8) < 0)
 		goto on_error;
 
 	printf("writing fanout...\n");
@@ -939,7 +946,7 @@ static int write_index(git_indexer *indexer)
 
 		nl = htonl(fanout_count);
 
-		if (hash_and_write(indexer, fd, &nl, 4) < 0)
+		if (hash_and_write(indexer, fp, &nl, 4) < 0)
 			goto on_error;
 	} while (fanout++ < 0xff);
 
@@ -948,7 +955,7 @@ static int write_index(git_indexer *indexer)
 	/* Write object IDs */
 	oid_size = git_oid_size(indexer->oid_type);
 	git_vector_foreach(&indexer->objects, i, entry) {
-		if (hash_and_write(indexer, fd, entry->id.id, oid_size) < 0)
+		if (hash_and_write(indexer, fp, entry->id.id, oid_size) < 0)
 			goto on_error;
 	}
 
@@ -958,7 +965,7 @@ static int write_index(git_indexer *indexer)
 	git_vector_foreach(&indexer->objects, i, entry) {
 		nl = htonl(entry->crc32);
 
-		if (hash_and_write(indexer, fd, &nl, sizeof(uint32_t)) < 0)
+		if (hash_and_write(indexer, fp, &nl, sizeof(uint32_t)) < 0)
 			goto on_error;
 	}
 
@@ -972,7 +979,7 @@ static int write_index(git_indexer *indexer)
 			nl = htonl(entry->position);
 		}
 
-		if (hash_and_write(indexer, fd, &nl, sizeof(uint32_t)) < 0)
+		if (hash_and_write(indexer, fp, &nl, sizeof(uint32_t)) < 0)
 			goto on_error;
 	}
 
@@ -984,26 +991,29 @@ static int write_index(git_indexer *indexer)
 			if (entry->position > 0x7fffffff) {
 				nll = htonll(entry->position);
 
-				if (hash_and_write(indexer, fd, &nll, sizeof(uint64_t)) < 0)
+				if (hash_and_write(indexer, fp, &nll, sizeof(uint64_t)) < 0)
 					goto on_error;
 			}
 		}
 	}
 
 	/* Packfile trailer */
-	if (hash_and_write(indexer, fd, indexer->packfile_trailer,
+	if (hash_and_write(indexer, fp, indexer->packfile_trailer,
 			git_oid_size(indexer->oid_type)) < 0)
 		goto on_error;
 
 	if (git_hash_final(index_trailer, &indexer->hash_ctx) < 0 ||
-	    p_write(fd, index_trailer, git_oid_size(indexer->oid_type)) < 0)
+	    fwrite(index_trailer, 1, git_oid_size(indexer->oid_type), fp) < git_oid_size(indexer->oid_type))
 		goto on_error;
 
 	git_str_dispose(&path);
 	return 0;
 
 on_error:
-	if (fd >= 0)
+	if (fp != NULL)
+		fclose(fp);
+
+	if (fd != -1)
 		p_close(fd);
 
 	git_str_dispose(&path);
