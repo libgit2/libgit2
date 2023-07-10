@@ -966,10 +966,8 @@ static int write_index(git_indexer *indexer)
 
 	/* Small (31-bit) offsets */
 	git_vector_foreach(&indexer->objects, i, entry) {
-		if (entry->position >= 0x40000000000) {
-			long_offset++;
-
-			nl = htonl(0x40000000000 | long_offset);
+		if (entry->position > 0x7fffffff) {
+			nl = htonl(0x80000000 | long_offset++);
 		} else {
 			nl = htonl(entry->position);
 		}
@@ -981,10 +979,9 @@ static int write_index(git_indexer *indexer)
 	printf("writing long offsets...\n");
 
 	/* Long (>31-bit) offsets */
-	/* TODO; needs testing -- is this really _index_ or is it _offset */
 	if (long_offset > 0) {
 		git_vector_foreach(&indexer->objects, i, entry) {
-			if (entry->position >= 0x40000000000) {
+			if (entry->position > 0x7fffffff) {
 				nll = htonll(entry->position);
 
 				if (hash_and_write(indexer, fd, &nll, sizeof(uint64_t)) < 0)
