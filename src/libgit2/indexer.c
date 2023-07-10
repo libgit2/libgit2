@@ -42,19 +42,26 @@ struct delta_entry {
 	} base;
 };
 
+
+struct object_cache_entry {
+	struct object_cache_entry *prev;
+	struct object_cache_entry *next;
+	git_refcount rc;
+	git_object_size_t position;
+};
+
+/*
+ * object_data reflects the actual, inflated and de-deltafied object
+ * data. (object_entry will store the information about the raw
+ * objects themselves, which may reflect delta data not inflated data.)
+ */
 struct object_data {
+	struct object_cache_entry cache_entry;
+
 	/* TODO: can we shrink this to fit both in 64 bits */
 	size_t len;
 	git_object_t type;
 	unsigned char data[GIT_FLEX_ARRAY];
-};
-
-
-struct object_cache_entry {
-	struct object_data *data;
-	git_object_size_t position;
-	struct object_cache_entry *prev;
-	struct object_cache_entry *next;
 };
 
 struct object_cache {
@@ -135,7 +142,7 @@ static int object_cache_init(struct object_cache *cache) {
 		return -1;
 
 	/* TODO */
-	cache->size = (1024 * 1024 * 512);
+	cache->size = (1024 * 1024 * 1);
 
 	return 0;
 }
@@ -145,20 +152,36 @@ static struct object_data *object_cache_get(
 	git_object_size_t position)
 {
 	struct object_cache_entry *entry;
-	struct object_data *data = NULL;
 
 	if (git_rwlock_rdlock(&cache->lock) < 0)
 		return NULL;
 
 	entry = git_sizemap_get(cache->map, position);
 
-	if (entry) {
-		/* TODO: inc refcount */
-		data = entry->data;
-	}
+	if (entry)
+		GIT_REFCOUNT_INC(entry);
 
 	git_rwlock_rdunlock(&cache->lock);
-	return data;
+	return (struct object_data *)entry;
+}
+
+static void object_cache_free(void *data)
+{
+	git__free(data);
+}
+
+void dump_cache(struct object_cache *cache)
+{
+	struct object_cache_entry *entry = cache->oldest;
+
+	printf("cache:");
+
+	while (entry != NULL) {
+		printf(" %llu[%p]", entry->position, entry);
+		entry = entry->next;
+	}
+
+	printf("\n");
 }
 
 GIT_INLINE(int) object_cache_reserve(
@@ -166,12 +189,17 @@ GIT_INLINE(int) object_cache_reserve(
 	git_object_size_t size)
 {
 	struct object_cache_entry *old;
+	struct object_data *old_data;
+
+//	dump_cache(cache);
 
 	while (cache->oldest && (cache->size - cache->used) < size) {
 		old = cache->oldest;
+		old_data = (struct object_data *)old;
+
 		cache->oldest = old->next;
 
-		GIT_ASSERT(cache->used >= old->data->len);
+		GIT_ASSERT(cache->used >= old_data->len);
 
 		if (old->prev)
 			old->prev->next = old->next;
@@ -179,10 +207,14 @@ GIT_INLINE(int) object_cache_reserve(
 		if (old->next)
 			old->next->prev = old->prev;
 
+		if (cache->newest == old)
+			cache->newest = old->prev;
+
 		git_sizemap_delete(cache->map, old->position);
 
-		cache->used -= old->data->len;
-		git__free(old);
+		cache->used -= old_data->len;
+
+		GIT_REFCOUNT_DEC(old, object_cache_free);
 	}
 
 	return 0;
@@ -193,17 +225,11 @@ static int object_cache_put(
 	git_object_size_t position,
 	struct object_data *data)
 {
-	struct object_cache_entry *entry;
+	struct object_cache_entry *entry = (struct object_cache_entry *)data;
 	int error = 0;
 
-	/* TODO: pool? */
-	entry = git__malloc(sizeof(struct object_cache_entry));
-	GIT_ERROR_CHECK_ALLOC(entry);
-
-	if (git_rwlock_wrlock(&cache->lock) < 0) {
-		git__free(entry);
+	if (git_rwlock_wrlock(&cache->lock) < 0)
 		return -1;
-	}
 
 	GIT_ASSERT_WITH_CLEANUP(cache->used <= cache->size, {
 		error = -1;
@@ -214,11 +240,17 @@ static int object_cache_put(
 	if (data->len > cache->size)
 		goto done;
 
+	GIT_ASSERT(git_sizemap_get(cache->map, position) == NULL);
+	GIT_ASSERT(entry->prev == NULL);
+	GIT_ASSERT(entry->next == NULL);
+
 	if (object_cache_reserve(cache, data->len) < 0 ||
 	    git_sizemap_set(cache->map, position, entry) < 0)
 		error = -1;
 
-	entry->data = data;
+	GIT_REFCOUNT_INC(entry);
+
+	/* TODO: weird, move position ? call it key? idk */
 	entry->position = position;
 	entry->prev = cache->newest;
 	entry->next = NULL;
@@ -257,6 +289,7 @@ static void object_cache_dispose(
 		dispose = entry;
 		entry = entry->next;
 
+		GIT_ASSERT_WITH_CLEANUP(GIT_REFCOUNT_VAL(dispose) == 1, {});
 		git__free(dispose);
 	}
 
@@ -660,7 +693,8 @@ static int load_raw_object(
 	raw_position = object->position + object->header_size;
 
 	/* TODO: overflow checking */
-	data = git__malloc(sizeof(struct object_data) + object->size + 1);
+	/* TODO: pool? */
+	data = git__calloc(1, sizeof(struct object_data) + object->size + 1);
 	GIT_ERROR_CHECK_ALLOC(data);
 
 	data->len = object->size;
@@ -732,7 +766,8 @@ GIT_INLINE(int) load_resolved_ofs_object(
 		return -1;
 
 	/* TODO: overflow check */
-	result_data = git__malloc(sizeof(struct object_data) + result_size + 1);
+	/* TODO: pool? */
+	result_data = git__calloc(1, sizeof(struct object_data) + result_size + 1);
 	result_data->data[result_size] = '\0';
 	result_data->len = result_size;
 	result_data->type = base_data->type;
