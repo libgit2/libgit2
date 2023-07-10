@@ -49,6 +49,23 @@ struct object_data {
 	unsigned char data[GIT_FLEX_ARRAY];
 };
 
+
+struct object_cache_entry {
+	struct object_data *data;
+	git_object_size_t position;
+	struct object_cache_entry *prev;
+	struct object_cache_entry *next;
+};
+
+struct object_cache {
+	git_rwlock lock;
+	git_sizemap *map;
+	size_t size;
+	size_t used;
+	struct object_cache_entry *oldest;
+	struct object_cache_entry *newest;
+};
+
 struct git_indexer {
 	git_odb *odb;
 	git_oid_t oid_type;
@@ -91,7 +108,7 @@ struct git_indexer {
 	git_vector objects; /* vector of `struct object_entry` */
 	git_vector deltas;  /* vector of `struct delta_entry` */
 
-	git_sizemap *basecache; /* map of position to entry data */
+	struct object_cache basecache; /* lru of position to entry data */
 
 	unsigned char packfile_trailer[GIT_HASH_MAX_SIZE];
 
@@ -108,6 +125,147 @@ struct git_indexer {
 	uint64_t delta_start;
 	uint64_t delta_end;
 };
+
+
+static int object_cache_init(struct object_cache *cache) {
+	memset(cache, 0, sizeof(struct object_cache));
+
+	if (git_sizemap_new(&cache->map) < 0 ||
+	    git_rwlock_init(&cache->lock) < 0)
+		return -1;
+
+	/* TODO */
+	cache->size = (1024 * 1024 * 512);
+
+	return 0;
+}
+
+static struct object_data *object_cache_get(
+	struct object_cache *cache,
+	git_object_size_t position)
+{
+	struct object_cache_entry *entry;
+	struct object_data *data = NULL;
+
+	if (git_rwlock_rdlock(&cache->lock) < 0)
+		return NULL;
+
+	entry = git_sizemap_get(cache->map, position);
+
+	if (entry) {
+		/* TODO: inc refcount */
+		data = entry->data;
+	}
+
+	git_rwlock_rdunlock(&cache->lock);
+	return data;
+}
+
+GIT_INLINE(int) object_cache_reserve(
+	struct object_cache *cache,
+	git_object_size_t size)
+{
+	struct object_cache_entry *old;
+
+	while (cache->oldest && (cache->size - cache->used) < size) {
+		old = cache->oldest;
+		cache->oldest = old->next;
+
+		GIT_ASSERT(cache->used >= old->data->len);
+
+		if (old->prev)
+			old->prev->next = old->next;
+
+		if (old->next)
+			old->next->prev = old->prev;
+
+		git_sizemap_delete(cache->map, old->position);
+
+		cache->used -= old->data->len;
+		git__free(old);
+	}
+
+	return 0;
+}
+
+static int object_cache_put(
+	struct object_cache *cache,
+	git_object_size_t position,
+	struct object_data *data)
+{
+	struct object_cache_entry *entry;
+	int error = 0;
+
+	/* TODO: pool? */
+	entry = git__malloc(sizeof(struct object_cache_entry));
+	GIT_ERROR_CHECK_ALLOC(entry);
+
+	if (git_rwlock_wrlock(&cache->lock) < 0) {
+		git__free(entry);
+		return -1;
+	}
+
+	GIT_ASSERT_WITH_CLEANUP(cache->used <= cache->size, {
+		error = -1;
+		goto done;
+	});
+
+	/* TODO: cache size limits */
+	if (data->len > cache->size)
+		goto done;
+
+	if (object_cache_reserve(cache, data->len) < 0 ||
+	    git_sizemap_set(cache->map, position, entry) < 0)
+		error = -1;
+
+	entry->data = data;
+	entry->position = position;
+	entry->prev = cache->newest;
+	entry->next = NULL;
+
+	if (cache->newest)
+		cache->newest->next = entry;
+
+	cache->newest = entry;
+
+	if (!cache->oldest)
+		cache->oldest = entry;
+
+	/* TODO: overflow / sanity checking here */
+	cache->used += data->len;
+
+done:
+	git_rwlock_wrunlock(&cache->lock);
+
+	if (error < 0)
+		git__free(entry);
+
+	return error ? -1 : 0;
+}
+
+static void object_cache_dispose(
+	struct object_cache *cache)
+{
+	struct object_cache_entry *entry, *dispose;
+
+	if (git_rwlock_wrlock(&cache->lock) < 0)
+		return;
+
+	entry = cache->oldest;
+
+	while (entry != NULL) {
+		dispose = entry;
+		entry = entry->next;
+
+		git__free(dispose);
+	}
+
+	git_sizemap_free(cache->map);
+
+	git_rwlock_wrunlock(&cache->lock);
+	git_rwlock_free(&cache->lock);
+}
+
 
 int git_indexer_options_init(
 	git_indexer_options *opts,
@@ -176,7 +334,7 @@ static int parse_packfile_header(
 
 	/* TODO: is 50% a good number? not convinced. */
 	if (git_sizemap_new(&indexer->positions) < 0 ||
-	    git_sizemap_new(&indexer->basecache) < 0 ||
+	    object_cache_init(&indexer->basecache) < 0 ||
 	    git_vector_init(&indexer->objects, entries, objects_cmp) < 0 ||
 	    git_vector_init(&indexer->deltas, entries / 2, deltas_cmp) < 0)
 		return -1;
@@ -603,7 +761,7 @@ static int load_resolved_object(
 
 	/* cache lookup */
 
-	if ((data = git_sizemap_get(indexer->basecache, object->position)) != NULL) {
+	if ((data = object_cache_get(&indexer->basecache, object->position)) != NULL) {
 		indexer->cache_hits++;
 		*out = data;
 		return 0;
@@ -620,7 +778,7 @@ static int load_resolved_object(
 	}
 
 	/* cache set */
-	if (git_sizemap_set(indexer->basecache, object->position, data) < 0)
+	if (object_cache_put(&indexer->basecache, object->position, data) < 0)
 		return -1;
 
 	*out = data;
@@ -722,12 +880,16 @@ static int write_index(git_indexer *indexer)
 	unsigned char index_trailer[GIT_HASH_MAX_SIZE];
 	int fd = -1;
 
+	printf("writing header...\n");
+
 	/* TODO: configurable file mode */
 	if (git_str_join(&path, '.', indexer->packfile_path.ptr, "idx") < 0 ||
 	    (fd = p_open(path.ptr, O_RDWR|O_CREAT, 0666)) < 0 ||
 		git_hash_init(&indexer->hash_ctx) < 0 ||
 	    hash_and_write(indexer, fd, "\377tOc\000\000\000\002", 8) < 0)
 		goto on_error;
+
+	printf("writing fanout...\n");
 
 	/* Write fanout section */
 	do {
@@ -746,12 +908,16 @@ static int write_index(git_indexer *indexer)
 			goto on_error;
 	} while (fanout++ < 0xff);
 
+	printf("writing oids...\n");
+
 	/* Write object IDs */
 	oid_size = git_oid_size(indexer->oid_type);
 	git_vector_foreach(&indexer->objects, i, entry) {
 		if (hash_and_write(indexer, fd, entry->id.id, oid_size) < 0)
 			goto on_error;
 	}
+
+	printf("writing crcs...\n");
 
 	/* Write the CRC32s */
 	git_vector_foreach(&indexer->objects, i, entry) {
@@ -760,6 +926,8 @@ static int write_index(git_indexer *indexer)
 		if (hash_and_write(indexer, fd, &nl, sizeof(uint32_t)) < 0)
 			goto on_error;
 	}
+
+	printf("writing small offsets...\n");
 
 	/* Small (31-bit) offsets */
 	git_vector_foreach(&indexer->objects, i, entry) {
@@ -774,6 +942,8 @@ static int write_index(git_indexer *indexer)
 		if (hash_and_write(indexer, fd, &nl, sizeof(uint32_t)) < 0)
 			goto on_error;
 	}
+
+	printf("writing long offsets...\n");
 
 	/* Long (>31-bit) offsets */
 	/* TODO; needs testing -- is this really _index_ or is it _offset */
@@ -856,8 +1026,10 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 	}
 	/* TODO: /zap */
 
+	printf("sorting...\n");
 	git_vector_sort(&indexer->objects);
 
+	printf("writing...\n");
 	if (write_index(indexer) < 0)
 		return -1;
 
@@ -874,7 +1046,7 @@ void git_indexer_free(git_indexer *indexer)
 	git_zstream_free(&indexer->zstream);
 	git_str_dispose(&indexer->packfile_path);
 	git_hash_ctx_cleanup(&indexer->hash_ctx);
-	git_sizemap_free(indexer->basecache);
+	object_cache_dispose(&indexer->basecache);
 	git_sizemap_free(indexer->positions);
 	git_vector_free(&indexer->deltas);
 	git_vector_free_deep(&indexer->objects);
