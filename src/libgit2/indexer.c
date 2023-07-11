@@ -142,7 +142,7 @@ static int object_cache_init(struct object_cache *cache) {
 		return -1;
 
 	/* TODO */
-	cache->size = (1024 * 256 * 1);
+	cache->size = (1024 * 1024 * 128);
 
 	return 0;
 }
@@ -154,7 +154,7 @@ void dump_cache(struct object_cache *cache)
 	printf("cache: oldest");
 
 	while (entry != NULL) {
-		printf(" -> %llu [%p, %llu, %d]", entry->position, entry, ((struct object_data *)entry)->len, GIT_REFCOUNT_VAL(entry));
+		printf(" -> %llu [%p, %lu, %d]", entry->position, entry, ((struct object_data *)entry)->len, GIT_REFCOUNT_VAL(entry));
 		entry = entry->next;
 	}
 
@@ -216,7 +216,7 @@ GIT_INLINE(int) object_cache_reserve(
 	struct object_cache_entry *old;
 	struct object_data *old_data;
 
-//	dump_cache(cache);
+/*	dump_cache(cache); */
 
 	while (cache->oldest && (cache->size - cache->used) < size) {
 		old = cache->oldest;
@@ -315,7 +315,7 @@ static void object_cache_dispose(
 	if (git_rwlock_wrlock(&cache->lock) < 0)
 		return;
 
-	dump_cache(cache);
+	/* dump_cache(cache); */
 
 	entry = cache->oldest;
 
@@ -323,12 +323,17 @@ static void object_cache_dispose(
 		dispose = entry;
 		entry = entry->next;
 
-		printf("disposing: %p %d\n", dispose, GIT_REFCOUNT_VAL(dispose));
+		/* TODO: unnecessary */
+		cache->used -= ((struct object_data *)dispose)->len;
 
 		/* TODO: this is useless */
 		GIT_ASSERT_WITH_CLEANUP(GIT_REFCOUNT_VAL(dispose) == 1, {});
 		git__free(dispose);
 	}
+
+	/* TODO: unnecessary */
+	if (cache->used != 0)
+		abort();
 
 	git_sizemap_free(cache->map);
 
