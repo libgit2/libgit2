@@ -21,6 +21,8 @@
 /* TODO: tweak? also align with packfile_parser.c */
 #define READ_CHUNK_SIZE (1024 * 256)
 
+#define THREADS 16
+
 size_t git_indexer__max_objects = UINT32_MAX;
 
 struct object_entry {
@@ -35,6 +37,8 @@ struct object_entry {
 
 struct delta_entry {
 	struct object_entry object;
+	/* TODO: this name sucks */
+	git_atomic32 working;
 	git_object_t final_type;
 	union {
 		git_oid ref_id;
@@ -107,8 +111,8 @@ struct git_indexer {
 	struct object_entry *current_object;
 	struct delta_entry *current_delta;
 
-	git_hash_ctx hash_ctx;
-	git_zstream zstream;
+/*	git_hash_ctx hash_ctx; */
+/*	git_zstream zstream; */
 	unsigned char *packfile_map;
 
 	git_sizemap *positions; /* map of position to object */
@@ -133,6 +137,13 @@ struct git_indexer {
 	uint64_t delta_end;
 };
 
+struct resolver_context {
+	size_t idx;
+	git_indexer *indexer;
+	git_hash_ctx hash_ctx;
+	git_zstream zstream;
+};
+
 
 static int object_cache_init(struct object_cache *cache) {
 	memset(cache, 0, sizeof(struct object_cache));
@@ -142,7 +153,7 @@ static int object_cache_init(struct object_cache *cache) {
 		return -1;
 
 	/* TODO */
-	cache->size = (1024 * 1024 * 128);
+	cache->size = (1024 * 1024 * 256);
 
 	return 0;
 }
@@ -150,15 +161,29 @@ static int object_cache_init(struct object_cache *cache) {
 void dump_cache(struct object_cache *cache)
 {
 	struct object_cache_entry *entry = cache->oldest;
+	uint64_t tots = 0;
 
 	printf("cache: oldest");
 
 	while (entry != NULL) {
+		struct object_data *od = (struct object_data *)entry;
+
 		printf(" -> %llu [%p, %lu, %d]", entry->position, entry, ((struct object_data *)entry)->len, GIT_REFCOUNT_VAL(entry));
 		entry = entry->next;
+
+		if (entry->next)
+			assert(entry->next->prev == entry);
+
+		if (entry->prev)
+			assert(entry->prev->next == entry);
+
+		tots += od->len;
 	}
 
 	printf (" -> newest\n");
+
+	if (tots != cache->used)
+		abort();
 }
 
 static struct object_data *object_cache_get(
@@ -268,7 +293,8 @@ static int object_cache_put(
 	if (data->len > cache->size)
 		goto done;
 
-	GIT_ASSERT(git_sizemap_get(cache->map, position) == NULL);
+	/* hmm, thread contentionp here? */
+/*	GIT_ASSERT(git_sizemap_get(cache->map, position) == NULL); */
 	GIT_ASSERT(entry->prev == NULL);
 	GIT_ASSERT(entry->next == NULL);
 
@@ -577,7 +603,6 @@ static int indexer_new(
 	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	git_indexer *indexer;
 	git_str path = GIT_STR_INIT;
-	git_hash_algorithm_t hash_type;
 	int error;
 
 	if (in_opts)
@@ -596,11 +621,9 @@ static int indexer_new(
 	if (git_repository__fsync_gitdir)
 		indexer->do_fsync = 1;
 
-	hash_type = git_oid_algorithm(oid_type);
-
 	if ((error = git_packfile_parser_init(&indexer->parser, oid_type)) < 0 ||
-	    (error = git_hash_ctx_init(&indexer->hash_ctx, hash_type)) < 0 ||
-		(error = git_zstream_init(&indexer->zstream, GIT_ZSTREAM_INFLATE)) < 0 ||
+/*	    (error = git_hash_ctx_init(&indexer->hash_ctx, hash_type)) < 0 || */
+/*		(error = git_zstream_init(&indexer->zstream, GIT_ZSTREAM_INFLATE)) < 0 || */
 	    (error = git_str_joinpath(&path, parent_path, "pack")) < 0 ||
 	    (error = indexer->packfile_fd = git_futils_mktmp(&indexer->packfile_path, path.ptr, indexer->mode)) < 0)
 		goto done;
@@ -725,6 +748,7 @@ int git_indexer_append(
 static int load_raw_object(
 	struct object_data **out,
 	git_indexer *indexer,
+	struct resolver_context *resolver_ctx,
 	struct object_entry *object)
 {
 	struct object_data *data = NULL;
@@ -748,24 +772,23 @@ static int load_raw_object(
 	/* TODO: we need to be more thoughtful about file descriptors for multithreaded unpacking */
 	compressed_ptr = indexer->packfile_map + raw_position;
 
-	/* TODO: more thoughtful about this for multiple threads, too */
-	git_zstream_reset(&indexer->zstream);
+	git_zstream_reset(&resolver_ctx->zstream);
 
 /* TODO: we know where the compressed data ends based on the next offset */
-	if (git_zstream_set_input(&indexer->zstream, compressed_ptr, (indexer->packfile_size - raw_position)) < 0)
+	if (git_zstream_set_input(&resolver_ctx->zstream, compressed_ptr, (indexer->packfile_size - raw_position)) < 0)
 		goto on_error;
 
-	while (data_remain && !git_zstream_eos(&indexer->zstream)) {
+	while (data_remain && !git_zstream_eos(&resolver_ctx->zstream)) {
 		size_t data_written = data_remain;
 
-	    if (git_zstream_get_output(data_ptr, &data_written, &indexer->zstream) < 0)
+	    if (git_zstream_get_output(data_ptr, &data_written, &resolver_ctx->zstream) < 0)
 			goto on_error;
 
 		data_ptr += data_remain;
 		data_remain -= data_written;
 	}
 
-	if (data_remain > 0 || !git_zstream_eos(&indexer->zstream)) {
+	if (data_remain > 0 || !git_zstream_eos(&resolver_ctx->zstream)) {
 		git_error_set(GIT_ERROR_INDEXER, "object data did not match expected size");
 		goto on_error;
 	}
@@ -785,12 +808,14 @@ on_error:
 static int load_resolved_object(
 	struct object_data **out,
 	git_indexer *indexer,
+	struct resolver_context *resolver_ctx,
 	struct object_entry *object,
 	struct object_entry *base);
 
 GIT_INLINE(int) load_resolved_ofs_object(
 	struct object_data **out,
 	git_indexer *indexer,
+	struct resolver_context *resolver_ctx,
 	struct object_entry *_delta,
 	struct object_entry *base)
 {
@@ -807,8 +832,8 @@ GIT_INLINE(int) load_resolved_ofs_object(
 		return -1;
 	}
 
-	if (load_resolved_object(&base_data, indexer, base, NULL) < 0 ||
-	    load_raw_object(&delta_data, indexer, _delta) < 0 ||
+	if (load_resolved_object(&base_data, indexer, resolver_ctx, base, NULL) < 0 ||
+	    load_raw_object(&delta_data, indexer, resolver_ctx, _delta) < 0 ||
 		git_delta_read_header(&base_size, &result_size,
 			delta_data->data, delta_data->len) < 0)
 		return -1;
@@ -838,6 +863,7 @@ GIT_INLINE(int) load_resolved_ofs_object(
 static int load_resolved_object(
 	struct object_data **out,
 	git_indexer *indexer,
+	struct resolver_context *resolver_ctx,
 	struct object_entry *object,
 	struct object_entry *base)
 {
@@ -856,10 +882,10 @@ static int load_resolved_object(
 	if (object->type == GIT_OBJECT_REF_DELTA) {
 		abort();
 	} else if (object->type == GIT_OBJECT_OFS_DELTA) {
-		if (load_resolved_ofs_object(&data, indexer, object, base) < 0)
+		if (load_resolved_ofs_object(&data, indexer, resolver_ctx, object, base) < 0)
 			return -1;
 	} else {
-		if (load_raw_object(&data, indexer, object) < 0)
+		if (load_raw_object(&data, indexer, resolver_ctx, object) < 0)
 			return -1;
 	}
 
@@ -873,6 +899,7 @@ static int load_resolved_object(
 
 GIT_INLINE(int) resolve_delta(
 	git_indexer *indexer,
+	struct resolver_context *resolver_ctx,
 	struct delta_entry *delta,
 	struct object_entry *base)
 {
@@ -881,16 +908,16 @@ GIT_INLINE(int) resolve_delta(
 	size_t header_len;
 	int error;
 
-	if (load_resolved_object(&result, indexer,
+	if (load_resolved_object(&result, indexer, resolver_ctx,
 			(struct object_entry *)delta, base) < 0)
 		return -1;
 
 	/* TODO: hash ctx per thread */
-	if (git_hash_init(&indexer->hash_ctx) < 0 ||
+	if (git_hash_init(&resolver_ctx->hash_ctx) < 0 ||
 	    git_odb__format_object_header(&header_len, header, sizeof(header), result->len, result->type) < 0 ||
-	    git_hash_update(&indexer->hash_ctx, header, header_len) < 0 ||
-	    git_hash_update(&indexer->hash_ctx, result->data, result->len) < 0 ||
-	    git_hash_final(delta->object.id.id, &indexer->hash_ctx) < 0) {
+	    git_hash_update(&resolver_ctx->hash_ctx, header, header_len) < 0 ||
+	    git_hash_update(&resolver_ctx->hash_ctx, result->data, result->len) < 0 ||
+	    git_hash_final(delta->object.id.id, &resolver_ctx->hash_ctx) < 0) {
 		error = -1;
 		goto done;
 	}
@@ -911,13 +938,13 @@ done:
 	return error;
 }
 
-static int resolve_deltas(git_indexer *indexer)
+static int resolve_deltas(
+	git_indexer *indexer,
+	struct resolver_context *resolver_ctx)
 {
 	struct object_entry *object_entry;
 	struct delta_entry *delta_entry;
 	size_t object_idx, delta_idx = 0;
-
-	git_vector_sort(&indexer->deltas);
 
 	/*
 	 * At this point, our deltas are sorted. If this object is a base
@@ -934,13 +961,35 @@ static int resolve_deltas(git_indexer *indexer)
 			if (delta_entry->object.type != GIT_OBJECT_OFS_DELTA)
 				abort();
 
+			/* TODO */
 			GIT_ASSERT(delta_entry->base.ofs_position >= object_entry->position);
 
+			/*
+			 * We've hit the end of the deltas that use this object
+			 * as a base.
+			 */
 			if (delta_entry->base.ofs_position > object_entry->position)
 				break;
 
-			if (resolve_delta(indexer, delta_entry, object_entry) < 0)
-				return -1;
+			/*
+			 * Try to claim this delta - if we win the 0->1 transition,
+			 * then it's ours to process, if another thread has already
+			 * performed the 0->1 transition, then it's already being
+			 * resolved.
+			 */
+			if (git_atomic32_inc(&delta_entry->working) == 1) {
+/*				printf("resolving %llu [%lu]\n", delta_entry->base.ofs_position, resolver_ctx->idx); */
+
+				if (resolve_delta(indexer, resolver_ctx, delta_entry,
+				    object_entry) < 0) {
+/*					printf("failed! [%lu] [%s]\n", resolver_ctx->idx, git_error_last()->message); */
+					return -1;
+				}
+			}
+
+			else {
+/*				printf("skipping %llu [%lu]\n", delta_entry->base.ofs_position, resolver_ctx->idx); */
+			}
 
 			delta_idx++;
 		}
@@ -949,14 +998,21 @@ static int resolve_deltas(git_indexer *indexer)
 	return 0;
 }
 
+static void *resolve_deltas_threadfn(void *_ctx)
+{
+	struct resolver_context *resolver_ctx = (struct resolver_context *)_ctx;
+	size_t result = resolve_deltas(resolver_ctx->indexer, resolver_ctx);
+	return (void *)result;
+}
+
 GIT_INLINE(int) hash_and_write(
-	git_indexer *indexer,
 	FILE *fp,
+	git_hash_ctx *hash_ctx,
 	const void *data,
 	size_t len)
 {
 	if (fwrite(data, 1, len, fp) < len ||
-	    git_hash_update(&indexer->hash_ctx, data, len) < 0)
+	    git_hash_update(hash_ctx, data, len) < 0)
 		return -1;
 
 	return 0;
@@ -965,6 +1021,8 @@ GIT_INLINE(int) hash_and_write(
 static int write_index(git_indexer *indexer)
 {
 	git_str path = GIT_STR_INIT;
+	git_hash_algorithm_t hash_type;
+	git_hash_ctx hash_ctx;
 	struct object_entry *entry;
 	uint8_t fanout = 0;
 	uint32_t fanout_count = 0, nl, long_offset = 0;
@@ -974,10 +1032,13 @@ static int write_index(git_indexer *indexer)
 	int fd = -1;
 	FILE *fp = NULL;
 
+	hash_type = git_oid_algorithm(indexer->oid_type);
+
 	printf("writing header...\n");
 
 	/* TODO: configurable file mode */
-	if (git_hash_init(&indexer->hash_ctx) < 0 ||
+	if (git_hash_ctx_init(&hash_ctx, hash_type) < 0 ||
+	    git_hash_init(&hash_ctx) < 0 ||
 	    git_str_join(&path, '.', indexer->packfile_path.ptr, "idx") < 0 ||
 	    (fd = p_open(path.ptr, O_RDWR|O_CREAT, 0666)) < 0 ||
 		(fp = fdopen(fd, "w")) == NULL)
@@ -986,7 +1047,7 @@ static int write_index(git_indexer *indexer)
 	/* fclose will close the underlying fd; avoid double closing */
 	fd = -1;
 
-	if (hash_and_write(indexer, fp, "\377tOc\000\000\000\002", 8) < 0)
+	if (hash_and_write(fp, &hash_ctx, "\377tOc\000\000\000\002", 8) < 0)
 		goto on_error;
 
 	printf("writing fanout...\n");
@@ -1004,7 +1065,7 @@ static int write_index(git_indexer *indexer)
 
 		nl = htonl(fanout_count);
 
-		if (hash_and_write(indexer, fp, &nl, 4) < 0)
+		if (hash_and_write(fp, &hash_ctx, &nl, 4) < 0)
 			goto on_error;
 	} while (fanout++ < 0xff);
 
@@ -1013,7 +1074,7 @@ static int write_index(git_indexer *indexer)
 	/* Write object IDs */
 	oid_size = git_oid_size(indexer->oid_type);
 	git_vector_foreach(&indexer->objects, i, entry) {
-		if (hash_and_write(indexer, fp, entry->id.id, oid_size) < 0)
+		if (hash_and_write(fp, &hash_ctx, entry->id.id, oid_size) < 0)
 			goto on_error;
 	}
 
@@ -1023,7 +1084,7 @@ static int write_index(git_indexer *indexer)
 	git_vector_foreach(&indexer->objects, i, entry) {
 		nl = htonl(entry->crc32);
 
-		if (hash_and_write(indexer, fp, &nl, sizeof(uint32_t)) < 0)
+		if (hash_and_write(fp, &hash_ctx, &nl, sizeof(uint32_t)) < 0)
 			goto on_error;
 	}
 
@@ -1037,7 +1098,7 @@ static int write_index(git_indexer *indexer)
 			nl = htonl(entry->position);
 		}
 
-		if (hash_and_write(indexer, fp, &nl, sizeof(uint32_t)) < 0)
+		if (hash_and_write(fp, &hash_ctx, &nl, sizeof(uint32_t)) < 0)
 			goto on_error;
 	}
 
@@ -1049,18 +1110,18 @@ static int write_index(git_indexer *indexer)
 			if (entry->position > 0x7fffffff) {
 				nll = htonll(entry->position);
 
-				if (hash_and_write(indexer, fp, &nll, sizeof(uint64_t)) < 0)
+				if (hash_and_write(fp, &hash_ctx, &nll, sizeof(uint64_t)) < 0)
 					goto on_error;
 			}
 		}
 	}
 
 	/* Packfile trailer */
-	if (hash_and_write(indexer, fp, indexer->packfile_trailer,
+	if (hash_and_write(fp, &hash_ctx, indexer->packfile_trailer,
 			git_oid_size(indexer->oid_type)) < 0)
 		goto on_error;
 
-	if (git_hash_final(index_trailer, &indexer->hash_ctx) < 0 ||
+	if (git_hash_final(index_trailer, &hash_ctx) < 0 ||
 	    fwrite(index_trailer, 1, git_oid_size(indexer->oid_type), fp) < git_oid_size(indexer->oid_type))
 		goto on_error;
 
@@ -1074,12 +1135,15 @@ on_error:
 	if (fd != -1)
 		p_close(fd);
 
+	git_hash_ctx_cleanup(&hash_ctx);
 	git_str_dispose(&path);
 	return -1;
 }
 
 int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 {
+	git_thread thread[THREADS];
+	struct resolver_context *resolver_ctx[THREADS];
 	struct object_entry *entry;
 	size_t i;
 	int error;
@@ -1102,13 +1166,47 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 		return error;
 
 
+	/* TODO: deal with the timing statistics better */
 	indexer->index_end = git_time_monotonic();
 	/*printf("elapsed: %llu\n", (indexer->index_end - indexer->index_start));*/
 
 	indexer->packfile_map = mmap(NULL, indexer->packfile_size, PROT_READ, MAP_SHARED, indexer->packfile_fd, 0);
 
-	if (resolve_deltas(indexer) < 0)
-		return -1;
+	/*
+	 * Resolve the deltas */
+
+	git_vector_sort(&indexer->deltas);
+
+	for (i = 0; i < THREADS; i++) {
+		resolver_ctx[i] = git__malloc(sizeof(struct resolver_context));
+		resolver_ctx[i]->idx = i;
+		resolver_ctx[i]->indexer = indexer;
+
+		/* TODO: free stuff on cleanup */
+		if (git_hash_ctx_init(&resolver_ctx[i]->hash_ctx, git_oid_algorithm(indexer->oid_type)) < 0 ||
+		    git_zstream_init(&resolver_ctx[i]->zstream, GIT_ZSTREAM_INFLATE) < 0)
+			return -1;
+
+		if (git_thread_create(&thread[i], resolve_deltas_threadfn, resolver_ctx[i]) != 0) {
+			git_error_set(GIT_ERROR_THREAD, "unable to create thread");
+			return -1;
+		}
+	}
+
+	for (i = 0; i < THREADS; i++) {
+		void *result;
+
+		if (git_thread_join(&thread[i], &result) != 0) {
+			git_error_set(GIT_ERROR_THREAD, "unable to join thread");
+			return -1;
+		}
+
+		if ((size_t)result != 0)
+			return -1;
+	}
+
+/*	if (resolve_deltas(indexer) < 0)
+		return -1; */
 
 	/* TODO: zap */
 	if (0) {
@@ -1143,9 +1241,9 @@ void git_indexer_free(git_indexer *indexer)
 	if (!indexer)
 		return;
 
-	git_zstream_free(&indexer->zstream);
+/*	git_zstream_free(&indexer->zstream); */
 	git_str_dispose(&indexer->packfile_path);
-	git_hash_ctx_cleanup(&indexer->hash_ctx);
+/*	git_hash_ctx_cleanup(&indexer->hash_ctx); */
 	object_cache_dispose(&indexer->basecache);
 	git_sizemap_free(indexer->positions);
 	git_vector_free(&indexer->deltas);
