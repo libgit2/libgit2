@@ -142,9 +142,23 @@ static int object_cache_init(struct object_cache *cache) {
 		return -1;
 
 	/* TODO */
-	cache->size = (1024 * 1024 * 1);
+	cache->size = (1024 * 256 * 1);
 
 	return 0;
+}
+
+void dump_cache(struct object_cache *cache)
+{
+	struct object_cache_entry *entry = cache->oldest;
+
+	printf("cache: oldest");
+
+	while (entry != NULL) {
+		printf(" -> %llu [%p, %llu, %d]", entry->position, entry, ((struct object_data *)entry)->len, GIT_REFCOUNT_VAL(entry));
+		entry = entry->next;
+	}
+
+	printf (" -> newest\n");
 }
 
 static struct object_data *object_cache_get(
@@ -153,35 +167,46 @@ static struct object_data *object_cache_get(
 {
 	struct object_cache_entry *entry;
 
-	if (git_rwlock_rdlock(&cache->lock) < 0)
+	if (git_rwlock_wrlock(&cache->lock) < 0)
 		return NULL;
 
 	entry = git_sizemap_get(cache->map, position);
 
-	if (entry)
-		GIT_REFCOUNT_INC(entry);
+	if (!entry)
+		goto done;
 
-	git_rwlock_rdunlock(&cache->lock);
+	/* Increase refcount before returning; user will decrease. */
+	GIT_REFCOUNT_INC(entry);
+
+	if (entry == cache->newest)
+		goto done;
+
+	/* Remove this entry from its current position */
+	if (entry->prev)
+		entry->prev->next = entry->next;
+	if (entry->next)
+		entry->next->prev = entry->prev;
+
+	/* Put this at the beginning of the list if it's the only item */
+	if (cache->oldest == entry && entry->next)
+		cache->oldest = entry->next;
+
+	/* Update this entry with its next/prev pointers */
+	entry->prev = cache->newest;
+	entry->next = NULL;
+
+	/* Update the newest entry item */
+	cache->newest->next = entry;
+	cache->newest = entry;
+
+done:
+	git_rwlock_wrunlock(&cache->lock);
 	return (struct object_data *)entry;
 }
 
 static void object_cache_free(void *data)
 {
 	git__free(data);
-}
-
-void dump_cache(struct object_cache *cache)
-{
-	struct object_cache_entry *entry = cache->oldest;
-
-	printf("cache:");
-
-	while (entry != NULL) {
-		printf(" %llu[%p]", entry->position, entry);
-		entry = entry->next;
-	}
-
-	printf("\n");
 }
 
 GIT_INLINE(int) object_cache_reserve(
@@ -200,20 +225,23 @@ GIT_INLINE(int) object_cache_reserve(
 		cache->oldest = old->next;
 
 		GIT_ASSERT(cache->used >= old_data->len);
-
-		if (old->prev)
-			old->prev->next = old->next;
+		GIT_ASSERT(!old->prev);
 
 		if (old->next)
-			old->next->prev = old->prev;
+			old->next->prev = NULL;
 
 		if (cache->newest == old)
-			cache->newest = old->prev;
+			cache->newest = NULL;
 
 		git_sizemap_delete(cache->map, old->position);
 
 		cache->used -= old_data->len;
 
+		/*
+		 * Decrease the refcount since we're removing this from the LRU.
+		 * Callers may still have a reference to this, but will decrease
+		 * the refcount on their own.
+		 */
 		GIT_REFCOUNT_DEC(old, object_cache_free);
 	}
 
@@ -248,6 +276,10 @@ static int object_cache_put(
 	    git_sizemap_set(cache->map, position, entry) < 0)
 		error = -1;
 
+	/*
+	 * Increase the refcount; while this is in the LRU, it will have
+	 * a refcount of (at least) one.
+	 */
 	GIT_REFCOUNT_INC(entry);
 
 	/* TODO: weird, move position ? call it key? idk */
@@ -283,12 +315,17 @@ static void object_cache_dispose(
 	if (git_rwlock_wrlock(&cache->lock) < 0)
 		return;
 
+	dump_cache(cache);
+
 	entry = cache->oldest;
 
 	while (entry != NULL) {
 		dispose = entry;
 		entry = entry->next;
 
+		printf("disposing: %p %d\n", dispose, GIT_REFCOUNT_VAL(dispose));
+
+		/* TODO: this is useless */
 		GIT_ASSERT_WITH_CLEANUP(GIT_REFCOUNT_VAL(dispose) == 1, {});
 		git__free(dispose);
 	}
@@ -685,7 +722,7 @@ static int load_raw_object(
 	git_indexer *indexer,
 	struct object_entry *object)
 {
-	struct object_data *data;
+	struct object_data *data = NULL;
 	size_t data_remain, raw_position;
 	unsigned char *compressed_ptr, *data_ptr;
 
@@ -711,13 +748,13 @@ static int load_raw_object(
 
 /* TODO: we know where the compressed data ends based on the next offset */
 	if (git_zstream_set_input(&indexer->zstream, compressed_ptr, (indexer->packfile_size - raw_position)) < 0)
-		return -1;
+		goto on_error;
 
 	while (data_remain && !git_zstream_eos(&indexer->zstream)) {
 		size_t data_written = data_remain;
 
 	    if (git_zstream_get_output(data_ptr, &data_written, &indexer->zstream) < 0)
-			return -1;
+			goto on_error;
 
 		data_ptr += data_remain;
 		data_remain -= data_written;
@@ -725,13 +762,19 @@ static int load_raw_object(
 
 	if (data_remain > 0 || !git_zstream_eos(&indexer->zstream)) {
 		git_error_set(GIT_ERROR_INDEXER, "object data did not match expected size");
-		return -1;
+		goto on_error;
 	}
 
 	/* TODO - sanity check type */
+
+	GIT_REFCOUNT_INC(&data->cache_entry);
 	*out = data;
 
 	return 0;
+
+on_error:
+	git__free(data);
+	return -1;
 }
 
 static int load_resolved_object(
@@ -779,6 +822,9 @@ GIT_INLINE(int) load_resolved_ofs_object(
 		return -1;
 	}
 
+	GIT_REFCOUNT_DEC(&base_data->cache_entry, object_cache_free);
+	GIT_REFCOUNT_DEC(&delta_data->cache_entry, object_cache_free);
+	GIT_REFCOUNT_INC(&result_data->cache_entry);
 	*out = result_data;
 
 	return 0;
@@ -828,6 +874,7 @@ GIT_INLINE(int) resolve_delta(
 	struct object_data *result;
 	char header[64];
 	size_t header_len;
+	int error;
 
 	if (load_resolved_object(&result, indexer,
 			(struct object_entry *)delta, base) < 0)
@@ -838,8 +885,10 @@ GIT_INLINE(int) resolve_delta(
 	    git_odb__format_object_header(&header_len, header, sizeof(header), result->len, result->type) < 0 ||
 	    git_hash_update(&indexer->hash_ctx, header, header_len) < 0 ||
 	    git_hash_update(&indexer->hash_ctx, result->data, result->len) < 0 ||
-	    git_hash_final(delta->object.id.id, &indexer->hash_ctx) < 0)
-		return -1;
+	    git_hash_final(delta->object.id.id, &indexer->hash_ctx) < 0) {
+		error = -1;
+		goto done;
+	}
 
 	delta->final_type = result->type;
 
@@ -850,7 +899,11 @@ GIT_INLINE(int) resolve_delta(
 	indexer->progress.indexed_deltas++;
 	indexer->progress.indexed_objects++;
 
-	return do_progress_cb(indexer);
+	error = do_progress_cb(indexer);
+
+done:
+	GIT_REFCOUNT_DEC(&result->cache_entry, object_cache_free);
+	return error;
 }
 
 static int resolve_deltas(git_indexer *indexer)
