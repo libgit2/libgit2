@@ -21,7 +21,7 @@
 /* TODO: tweak? also align with packfile_parser.c */
 #define READ_CHUNK_SIZE (1024 * 256)
 
-#define THREADS 4
+#define THREADS 16
 
 size_t git_indexer__max_objects = UINT32_MAX;
 
@@ -48,6 +48,7 @@ struct delta_entry {
 struct object_cache_entry {
 	struct object_cache_entry *prev;
 	struct object_cache_entry *next;
+	uint64_t time;
 	git_refcount rc;
 	git_object_size_t position;
 };
@@ -67,7 +68,7 @@ struct object_data {
 };
 
 struct object_cache {
-	git_rwlock lock;
+	git_mutex lock;
 	git_sizemap *map;
 	size_t size;
 	size_t used;
@@ -109,8 +110,6 @@ struct git_indexer {
 	struct object_entry *current_object;
 	struct delta_entry *current_delta;
 
-/*	git_hash_ctx hash_ctx; */
-/*	git_zstream zstream; */
 	unsigned char *packfile_map;
 
 	git_sizemap *positions; /* map of position to object */
@@ -149,7 +148,7 @@ static int object_cache_init(struct object_cache *cache) {
 	memset(cache, 0, sizeof(struct object_cache));
 
 	if (git_sizemap_new(&cache->map) < 0 ||
-	    git_rwlock_init(&cache->lock) < 0)
+	    git_mutex_init(&cache->lock) < 0)
 		return -1;
 
 	/* TODO */
@@ -191,8 +190,9 @@ static struct object_data *object_cache_get(
 	git_object_size_t position)
 {
 	struct object_cache_entry *entry;
+	uint64_t last_update_time;
 
-	if (git_rwlock_wrlock(&cache->lock) < 0)
+	if (git_mutex_lock(&cache->lock) < 0)
 		return NULL;
 
 	entry = git_sizemap_get(cache->map, position);
@@ -203,7 +203,13 @@ static struct object_data *object_cache_get(
 	/* Increase refcount before returning; user will decrease. */
 	GIT_REFCOUNT_INC(entry);
 
-	if (entry == cache->newest)
+	/* Update the timestamp */
+	last_update_time = entry->time;
+	entry->time = git_time_monotonic();
+
+	/* TODO */
+	if (entry->time - last_update_time < 5000 ||
+	    entry == cache->newest)
 		goto done;
 
 	/* Remove this entry from its current position */
@@ -225,7 +231,7 @@ static struct object_data *object_cache_get(
 	cache->newest = entry;
 
 done:
-	git_rwlock_wrunlock(&cache->lock);
+	git_mutex_unlock(&cache->lock);
 	return (struct object_data *)entry;
 }
 
@@ -281,7 +287,7 @@ static int object_cache_put(
 	struct object_cache_entry *entry = (struct object_cache_entry *)data;
 	int error = 0;
 
-	if (git_rwlock_wrlock(&cache->lock) < 0)
+	if (git_mutex_lock(&cache->lock) < 0)
 		return -1;
 
 	GIT_ASSERT_WITH_CLEANUP(cache->used <= cache->size, {
@@ -313,6 +319,8 @@ static int object_cache_put(
 	 */
 	GIT_REFCOUNT_INC(entry);
 
+	entry->time = git_time_monotonic();
+
 	/* TODO: weird, move position ? call it key? idk */
 	entry->position = position;
 	entry->prev = cache->newest;
@@ -330,7 +338,7 @@ static int object_cache_put(
 	cache->used += data->len;
 
 done:
-	git_rwlock_wrunlock(&cache->lock);
+	git_mutex_unlock(&cache->lock);
 
 	if (error < 0)
 		git__free(entry);
@@ -343,7 +351,7 @@ static void object_cache_dispose(
 {
 	struct object_cache_entry *entry, *dispose;
 
-	if (git_rwlock_wrlock(&cache->lock) < 0)
+	if (git_mutex_lock(&cache->lock) < 0)
 		return;
 
 	/* dump_cache(cache); */
@@ -368,8 +376,8 @@ static void object_cache_dispose(
 
 	git_sizemap_free(cache->map);
 
-	git_rwlock_wrunlock(&cache->lock);
-	git_rwlock_free(&cache->lock);
+	git_mutex_unlock(&cache->lock);
+	git_mutex_free(&cache->lock);
 }
 
 
@@ -627,8 +635,6 @@ static int indexer_new(
 		indexer->do_fsync = 1;
 
 	if ((error = git_packfile_parser_init(&indexer->parser, oid_type)) < 0 ||
-/*	    (error = git_hash_ctx_init(&indexer->hash_ctx, hash_type)) < 0 || */
-/*		(error = git_zstream_init(&indexer->zstream, GIT_ZSTREAM_INFLATE)) < 0 || */
 	    (error = git_str_joinpath(&path, parent_path, "pack")) < 0 ||
 	    (error = indexer->packfile_fd = git_futils_mktmp(&indexer->packfile_path, path.ptr, indexer->mode)) < 0)
 		goto done;
@@ -911,7 +917,7 @@ GIT_INLINE(int) resolve_delta(
 	struct object_data *result;
 	char header[64];
 	size_t header_len;
-	int error;
+	int error = 0;
 
 	if (load_resolved_object(&result, indexer, resolver_ctx,
 			(struct object_entry *)delta, base) < 0)
@@ -936,7 +942,8 @@ GIT_INLINE(int) resolve_delta(
 	indexer->progress.indexed_deltas++;
 	indexer->progress.indexed_objects++;
 
-	error = do_progress_cb(indexer);
+	if (resolver_ctx->thread_number == 0)
+		error = do_progress_cb(indexer);
 
 done:
 	GIT_REFCOUNT_DEC(&result->cache_entry, object_cache_free);
@@ -1014,7 +1021,7 @@ static int resolve_deltas(
 		}
 	}
 
-	return 0;
+	return do_progress_cb(indexer);
 }
 
 static void *resolve_deltas_threadfn(void *_ctx)
@@ -1220,8 +1227,6 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 			return -1;
 	}
 
-	printf("\n\n\n");
-
 	/* Start background threads 1-n (thread 0 is this thread) */
 	for (i = 1; i < THREADS; i++) {
 		if (git_thread_create(&thread[i], resolve_deltas_threadfn, resolver_ctx[i]) != 0) {
@@ -1283,9 +1288,7 @@ void git_indexer_free(git_indexer *indexer)
 	if (!indexer)
 		return;
 
-/*	git_zstream_free(&indexer->zstream); */
 	git_str_dispose(&indexer->packfile_path);
-/*	git_hash_ctx_cleanup(&indexer->hash_ctx); */
 	object_cache_dispose(&indexer->basecache);
 	git_sizemap_free(indexer->positions);
 	git_vector_free(&indexer->deltas);
