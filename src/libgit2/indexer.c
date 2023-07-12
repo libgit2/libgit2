@@ -21,7 +21,7 @@
 /* TODO: tweak? also align with packfile_parser.c */
 #define READ_CHUNK_SIZE (1024 * 256)
 
-#define THREADS 16
+#define THREADS 4
 
 size_t git_indexer__max_objects = UINT32_MAX;
 
@@ -37,8 +37,6 @@ struct object_entry {
 
 struct delta_entry {
 	struct object_entry object;
-	/* TODO: this name sucks */
-	git_atomic32 working;
 	git_object_t final_type;
 	union {
 		git_oid ref_id;
@@ -138,7 +136,9 @@ struct git_indexer {
 };
 
 struct resolver_context {
-	size_t idx;
+	size_t thread_number;
+	size_t start_idx;
+	size_t end_idx;
 	git_indexer *indexer;
 	git_hash_ctx hash_ctx;
 	git_zstream zstream;
@@ -943,26 +943,39 @@ static int resolve_deltas(
 	struct resolver_context *resolver_ctx)
 {
 	struct object_entry *object_entry;
-	struct delta_entry *delta_entry;
-	size_t object_idx, delta_idx = 0;
+	struct delta_entry *delta_start, *delta_entry;
+	size_t object_idx, delta_idx = resolver_ctx->start_idx;
+
+	/* TODO figure out some way to ferry git errors back to the main thread */
+	/* TODO: only fire events on the main thread */
+
+/*
+	printf("thread %zu: resolving %zu - %zu\n", resolver_ctx->thread_number,
+		resolver_ctx->start_idx, resolver_ctx->end_idx);
+
+*/
+
+	delta_start = git_vector_get(&indexer->deltas, delta_idx);
 
 	/*
-	 * At this point, our deltas are sorted. If this object is a base
-	 * for a delta, then it will be the next in the delta list. Apply
-	 * it to the current delta and any subsequent with the same base.
-	 * Otherwise, continue.
+	 * At this point, our deltas are sorted by the positions of their
+	 * bases. Loop over the objects and applying all the deltas that
+	 * use this object as their base.
 	 */
 	git_vector_foreach(&indexer->objects, object_idx, object_entry) {
-		while (delta_idx < git_vector_length(&indexer->deltas)) {
-			delta_entry = git_vector_get(&indexer->deltas, delta_idx);
 
+		/* We may not have gotten to this delta yet */
+		/* TODO: start at the right object instead */
+		if (object_entry->position < delta_start->base.ofs_position)
+			continue;
+
+
+		while (delta_idx < resolver_ctx->end_idx) {
+			delta_entry = git_vector_get(&indexer->deltas, delta_idx);
 
 			/* TODO */
 			if (delta_entry->object.type != GIT_OBJECT_OFS_DELTA)
 				abort();
-
-			/* TODO */
-			GIT_ASSERT(delta_entry->base.ofs_position >= object_entry->position);
 
 			/*
 			 * We've hit the end of the deltas that use this object
@@ -971,20 +984,21 @@ static int resolve_deltas(
 			if (delta_entry->base.ofs_position > object_entry->position)
 				break;
 
-			/*
-			 * Try to claim this delta - if we win the 0->1 transition,
-			 * then it's ours to process, if another thread has already
-			 * performed the 0->1 transition, then it's already being
-			 * resolved.
-			 */
-			if (git_atomic32_inc(&delta_entry->working) == 1) {
-/*				printf("resolving %llu [%lu]\n", delta_entry->base.ofs_position, resolver_ctx->idx); */
+			/* TODO - keep or drop? unnecessary but let's get it right */
+			GIT_ASSERT(delta_entry->base.ofs_position >= object_entry->position);
 
-				if (resolve_delta(indexer, resolver_ctx, delta_entry,
-				    object_entry) < 0) {
-/*					printf("failed! [%lu] [%s]\n", resolver_ctx->idx, git_error_last()->message); */
-					return -1;
-				}
+
+/*
+		printf("thread %zu: resolving %zu %p\n", resolver_ctx->thread_number, delta_idx, delta_entry);
+		*/
+
+
+
+/*		printf("resolving %llu [%lu]\n", delta_entry->base.ofs_position, resolver_ctx->idx); */
+
+			if (resolve_delta(indexer, resolver_ctx, delta_entry, object_entry) < 0) {
+				printf("failed! [%lu] [%s]\n", resolver_ctx->thread_number, git_error_last()->message);
+				return -1;
 			}
 
 			else {
@@ -1145,7 +1159,7 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 	git_thread thread[THREADS];
 	struct resolver_context *resolver_ctx[THREADS];
 	struct object_entry *entry;
-	size_t i;
+	size_t delta_cnt, partition_size, i;
 	int error;
 
 	GIT_ASSERT_ARG(indexer);
@@ -1170,30 +1184,50 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 	indexer->index_end = git_time_monotonic();
 	/*printf("elapsed: %llu\n", (indexer->index_end - indexer->index_start));*/
 
-	indexer->packfile_map = mmap(NULL, indexer->packfile_size, PROT_READ, MAP_SHARED, indexer->packfile_fd, 0);
+	indexer->packfile_map = mmap(NULL, indexer->packfile_size,
+		PROT_READ, MAP_SHARED, indexer->packfile_fd, 0);
 
 	/*
-	 * Resolve the deltas */
+	 * Resolve the deltas. Each thread will do a percentage of
+	 * the resolutions.
+	 */
 
 	git_vector_sort(&indexer->deltas);
 
+	/* Each thread will handle a number of objects. */
+	delta_cnt = git_vector_length(&indexer->deltas);
+	partition_size = delta_cnt / THREADS;
+
 	for (i = 0; i < THREADS; i++) {
-		resolver_ctx[i] = git__malloc(sizeof(struct resolver_context));
-		resolver_ctx[i]->idx = i;
+		size_t partition_start = (i * partition_size);
+
+		resolver_ctx[i] = git__calloc(1, sizeof(struct resolver_context));
+		resolver_ctx[i]->thread_number = i;
 		resolver_ctx[i]->indexer = indexer;
+
+		resolver_ctx[i]->start_idx = partition_start;
+		resolver_ctx[i]->end_idx = (i < THREADS - 1) ?
+			(partition_start + partition_size) : delta_cnt;
 
 		/* TODO: free stuff on cleanup */
 		if (git_hash_ctx_init(&resolver_ctx[i]->hash_ctx, git_oid_algorithm(indexer->oid_type)) < 0 ||
 		    git_zstream_init(&resolver_ctx[i]->zstream, GIT_ZSTREAM_INFLATE) < 0)
 			return -1;
+	}
 
+	printf("\n\n\n");
+
+	/* Start background threads 1-n (thread 0 is this thread) */
+	for (i = 1; i < THREADS; i++) {
 		if (git_thread_create(&thread[i], resolve_deltas_threadfn, resolver_ctx[i]) != 0) {
 			git_error_set(GIT_ERROR_THREAD, "unable to create thread");
 			return -1;
 		}
 	}
 
-	for (i = 0; i < THREADS; i++) {
+	error = resolve_deltas(indexer, resolver_ctx[0]);
+
+	for (i = 1; i < THREADS; i++) {
 		void *result;
 
 		if (git_thread_join(&thread[i], &result) != 0) {
@@ -1202,8 +1236,11 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 		}
 
 		if ((size_t)result != 0)
-			return -1;
+			error = -1;
 	}
+
+	if (error != 0)
+		return error;
 
 /*	if (resolve_deltas(indexer) < 0)
 		return -1; */
