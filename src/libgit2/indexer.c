@@ -298,9 +298,14 @@ static int object_cache_put(
 	GIT_ASSERT(entry->prev == NULL);
 	GIT_ASSERT(entry->next == NULL);
 
+	/* TODO: reserve needs to return when it cannot make space for
+	 * this object, and we should not cache it.
+	 */
 	if (object_cache_reserve(cache, data->len) < 0 ||
-	    git_sizemap_set(cache->map, position, entry) < 0)
+	    git_sizemap_set(cache->map, position, entry) < 0) {
 		error = -1;
+		goto done;
+	}
 
 	/*
 	 * Increase the refcount; while this is in the LRU, it will have
