@@ -1,6 +1,6 @@
 # Optional external dependency: libssh2
 if(USE_SSH)
-	find_pkglibraries(LIBSSH2 libssh2)
+	find_pkglibraries(LIBSSH2 ssh2)
 	if(NOT LIBSSH2_FOUND)
 		find_package(LibSSH2)
 		set(LIBSSH2_INCLUDE_DIRS ${LIBSSH2_INCLUDE_DIR})
