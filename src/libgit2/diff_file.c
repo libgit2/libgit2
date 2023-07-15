@@ -112,7 +112,7 @@ int git_diff_file_content__init_from_diff(
 	case GIT_DELTA_DELETED:
 		has_data = use_old; break;
 	case GIT_DELTA_UNTRACKED:
-		has_data = !use_old &&
+		has_data = (use_old == (diff->opts.flags & GIT_DIFF_REVERSE)) &&
 			(diff->opts.flags & GIT_DIFF_SHOW_UNTRACKED_CONTENT) != 0;
 		break;
 	case GIT_DELTA_UNREADABLE:
