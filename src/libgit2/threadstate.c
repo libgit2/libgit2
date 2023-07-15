@@ -75,9 +75,22 @@ git_threadstate *git_threadstate_get(void)
 	if ((threadstate = git_tlsdata_get(tls_key)) != NULL)
 		return threadstate;
 
-	if ((threadstate = git__calloc(1, sizeof(git_threadstate))) == NULL ||
-	    git_str_init(&threadstate->error_buf, 0) < 0)
+	/*
+	 * Avoid git__malloc here, since if it fails, it sets an error
+	 * message, which requires thread state, which would allocate
+	 * here, which would fail, which would set an error message...
+	 */
+
+	if ((threadstate = git__allocator.gmalloc(sizeof(git_threadstate),
+			__FILE__, __LINE__)) == NULL)
 		return NULL;
+
+	memset(threadstate, 0, sizeof(git_threadstate));
+
+	if (git_str_init(&threadstate->error_buf, 0) < 0) {
+		git__allocator.gfree(threadstate);
+		return NULL;
+	}
 
 	git_tlsdata_set(tls_key, threadstate);
 	return threadstate;
