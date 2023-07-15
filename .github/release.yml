@@ -5,7 +5,7 @@ changelog:
     - feature
   - title: Performance improvements
     labels:
-    - performance issues
+    - performance
   - title: Bug fixes
     labels:
     - bug
