@@ -1,3 +1,131 @@
+v1.7
+----
+
+This is release v1.7.0, "Kleine Raupe Nimmersatt". This release adds
+shallow clone support, completes the experimental SHA256 support,
+adds Schannel support for Windows, and includes many other new
+features and bugfixes.
+
+## Major changes
+
+* **Shallow clone support**
+  libgit2 now supports shallow clone and shallow repositories, thanks
+  to a significant investment from many community members -- hundreds
+  of commits by many contributors.
+
+  * Shallow (#6396) with some fixes from review by @ethomson in
+    https://github.com/libgit2/libgit2/pull/6557
+  * Shallow Clone Support by @lya001 in
+    https://github.com/libgit2/libgit2/pull/6396
+  * Shallow support v2 by @pks-t in
+    https://github.com/libgit2/libgit2/pull/5254
+
+* **SHA256 support**
+  libgit2 should now support SHA256 repositories using the
+  `extensions.objectFormat` configuration option when the library is
+  built with `EXPERIMENTAL_SHA256=ON`. Users are encouraged to begin
+  testing their applications with this option and provide bug reports
+  and feedback. This _is_ a breaking API change; SHA256 support will
+  be enabled by default in libgit2 v2.0.
+
+  * sha256: less hardcoded SHA1 types and lengths by @ethomson in
+    https://github.com/libgit2/libgit2/pull/6549
+  * Support SHA256 in git_repository_wrap_odb by @ethomson in
+    https://github.com/libgit2/libgit2/pull/6556
+
+* **Schannel and SSPI for Windows**
+  libgit2 now supports the Windows Schannel and SSPI APIs for HTTPS
+  support on Windows, when configured with `USE_HTTPS=Schannel`.
+  Setting this option will not use the existing WinHTTP support, but
+  will use libgit2's standard HTTP client stack with Windows TLS
+  primitives. Windows users are encouraged to begin testing their
+  applications with this option and provide bug reports and feedback.
+  This will be enabled by default in a future version of libgit2.
+
+  * Introduce Schannel and SSPI for Windows by @ethomson in
+    https://github.com/libgit2/libgit2/pull/6533
+
+## Breaking changes
+
+* **Simplify custom pluggable allocator** (System API / ABI breaking change)
+  The `git_allocator` structure (configurable by the
+  `GIT_OPT_SET_ALLOCATOR` option) now only contains `gmalloc`,
+  `grealloc` and `gfree` members. This simplifies both the work needed
+  by an implementer _and_ allows more flexibility and correctness in
+  libgit2 itself, especially during out-of-memory situations and
+  errors during bootstrapping.
+
+  * tests: add allocator with limited number of bytes by @ethomson in
+    https://github.com/libgit2/libgit2/pull/6563
+
+## Other changes
+
+### New features
+* repo: honor environment variables for more scenarios by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6544
+* Introduce timeouts on sockets by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6535
+
+### Performance improvements
+* midx: do not try to look at every object in the index by @carlosmn in
+  https://github.com/libgit2/libgit2/pull/6585
+* Partial fix for #6532: insert-by-date order. by @arroz in
+  https://github.com/libgit2/libgit2/pull/6539
+
+### Bug fixes
+* repo: don't allow repeated extensions by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6505
+* config: return `GIT_ENOTFOUND` for missing programdata by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6547
+* Fix missing oid type for "fake" repositories by @oreiche in
+  https://github.com/libgit2/libgit2/pull/6554
+* Thread-local storage: handle failure cases by @ethomson in
+  https://github.com/libgit2/libgit2/pull/5722
+* midx: allow unknown chunk ids in multi-pack index files by @carlosmn in
+  https://github.com/libgit2/libgit2/pull/6583
+* pack: cast the number of objects to size_t by @carlosmn in
+  https://github.com/libgit2/libgit2/pull/6584
+* Fixes #6344: git_branch_move now renames the reflog instead of deleting
+  by @arroz in https://github.com/libgit2/libgit2/pull/6345
+* #6576 git_diff_index_to_workdir reverse now loads untracked content by
+  @arroz in https://github.com/libgit2/libgit2/pull/6577
+
+### Build and CI improvements
+* meta: the main branch is now v1.7.0 by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6516
+* xdiff: move xdiff to 'deps' by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6482
+* util: detect all possible qsort_r and qsort_s variants by
+  @DimitryAndric in https://github.com/libgit2/libgit2/pull/6555
+* Work around -Werror problems when detecting qsort variants by
+  @DimitryAndric in https://github.com/libgit2/libgit2/pull/6558
+* actions: simplify execution with composite action by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6488
+* CMake: Search for ssh2 instead of libssh2. by @Faless in
+  https://github.com/libgit2/libgit2/pull/6586
+
+### Documentation improvements
+* docs: fix IRC server from freenode to libera by @vincenzopalazzo in
+  https://github.com/libgit2/libgit2/pull/6590
+
+### Dependency upgrades
+* Update xdiff to git 2.40.1's version by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6561
+* deps: update pcre to 8.45 by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6593
+
+## New Contributors
+* @oreiche made their first contribution in
+  https://github.com/libgit2/libgit2/pull/6554
+* @DimitryAndric made their first contribution in
+  https://github.com/libgit2/libgit2/pull/6555
+* @vincenzopalazzo made their first contribution in
+  https://github.com/libgit2/libgit2/pull/6590
+* @Faless made their first contribution in
+  https://github.com/libgit2/libgit2/pull/6586
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.6.3...v1.7.0
+
 v1.6.3
 ------
 
