@@ -968,6 +968,19 @@ static int proxy_cert_cb(git_cert *cert, int valid, const char *host, void *payl
 	return valid ? 0 : GIT_ECERTIFICATE;
 }
 
+void test_online_clone__proxy_invalid_url(void)
+{
+	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
+	g_options.fetch_opts.proxy_opts.credentials = proxy_cred_cb;
+	g_options.fetch_opts.proxy_opts.certificate_check = proxy_cert_cb;
+
+	g_options.fetch_opts.proxy_opts.url = "noschemeorport";
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+
+	g_options.fetch_opts.proxy_opts.url = "noscheme:8080";
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+}
+
 void test_online_clone__proxy_credentials_request(void)
 {
 	git_str url = GIT_STR_INIT;
