@@ -153,7 +153,9 @@ int git_repository__cleanup(git_repository *repo)
 	git_cache_clear(&repo->objects);
 	git_attr_cache_flush(repo);
 	git_grafts_free(repo->grafts);
+	repo->grafts = NULL;
 	git_grafts_free(repo->shallow_grafts);
+	repo->shallow_grafts = NULL;
 
 	set_config(repo, NULL);
 	set_index(repo, NULL);
