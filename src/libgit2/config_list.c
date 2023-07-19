@@ -10,11 +10,11 @@
 typedef struct config_entry_list {
 	struct config_entry_list *next;
 	struct config_entry_list *last;
-	git_config_entry *entry;
+	git_config_list_entry *entry;
 } config_entry_list;
 
 typedef struct {
-	git_config_entry *entry;
+	git_config_list_entry *entry;
 	bool multivar;
 } config_entry_map_head;
 
@@ -49,29 +49,32 @@ int git_config_list_new(git_config_list **out)
 
 int git_config_list_dup_entry(git_config_list *config_list, const git_config_entry *entry)
 {
-	git_config_entry *duplicated;
+	git_config_list_entry *duplicated;
 	int error;
 
-	duplicated = git__calloc(1, sizeof(git_config_entry));
+	duplicated = git__calloc(1, sizeof(git_config_list_entry));
 	GIT_ERROR_CHECK_ALLOC(duplicated);
 
-	duplicated->name = git__strdup(entry->name);
-	GIT_ERROR_CHECK_ALLOC(duplicated->name);
+	duplicated->base.name = git__strdup(entry->name);
+	GIT_ERROR_CHECK_ALLOC(duplicated->base.name);
 
 	if (entry->value) {
-		duplicated->value = git__strdup(entry->value);
-		GIT_ERROR_CHECK_ALLOC(duplicated->value);
+		duplicated->base.value = git__strdup(entry->value);
+		GIT_ERROR_CHECK_ALLOC(duplicated->base.value);
 	}
-	duplicated->level = entry->level;
-	duplicated->include_depth = entry->include_depth;
+
+	duplicated->base.level = entry->level;
+	duplicated->base.include_depth = entry->include_depth;
+	duplicated->base.free = git_config_list_entry_free;
+	duplicated->config_list = config_list;
 
 	if ((error = git_config_list_append(config_list, duplicated)) < 0)
 		goto out;
 
 out:
 	if (error && duplicated) {
-		git__free((char *) duplicated->name);
-		git__free((char *) duplicated->value);
+		git__free((char *) duplicated->base.name);
+		git__free((char *) duplicated->base.value);
 		git__free(duplicated);
 	}
 	return error;
@@ -87,7 +90,7 @@ int git_config_list_dup(git_config_list **out, git_config_list *config_list)
 		goto out;
 
 	for (head = config_list->entries; head; head = head->next)
-		if ((git_config_list_dup_entry(result, head->entry)) < 0)
+		if ((git_config_list_dup_entry(result, &head->entry->base)) < 0)
 			goto out;
 
 	*out = result;
@@ -109,7 +112,7 @@ static void config_list_free(git_config_list *config_list)
 	config_entry_map_head *head;
 
 	git_strmap_foreach_value(config_list->map, head, {
-		git__free((char *) head->entry->name);
+		git__free((char *) head->entry->base.name);
 		git__free(head);
 	});
 	git_strmap_free(config_list->map);
@@ -117,7 +120,7 @@ static void config_list_free(git_config_list *config_list)
 	entry_list = config_list->entries;
 	while (entry_list != NULL) {
 		next = entry_list->next;
-		git__free((char *) entry_list->entry->value);
+		git__free((char *) entry_list->entry->base.value);
 		git__free(entry_list->entry);
 		git__free(entry_list);
 		entry_list = next;
@@ -132,12 +135,12 @@ void git_config_list_free(git_config_list *config_list)
 		GIT_REFCOUNT_DEC(config_list, config_list_free);
 }
 
-int git_config_list_append(git_config_list *config_list, git_config_entry *entry)
+int git_config_list_append(git_config_list *config_list, git_config_list_entry *entry)
 {
 	config_entry_list *list_head;
 	config_entry_map_head *map_head;
 
-	if ((map_head = git_strmap_get(config_list->map, entry->name)) != NULL) {
+	if ((map_head = git_strmap_get(config_list->map, entry->base.name)) != NULL) {
 		map_head->multivar = true;
 		/*
 		 * This is a micro-optimization for configuration files
@@ -145,11 +148,11 @@ int git_config_list_append(git_config_list *config_list, git_config_entry *entry
 		 * key will be the same for all list, we can just free
 		 * all except the first entry's name and just re-use it.
 		 */
-		git__free((char *) entry->name);
-		entry->name = map_head->entry->name;
+		git__free((char *) entry->base.name);
+		entry->base.name = map_head->entry->base.name;
 	} else {
 		map_head = git__calloc(1, sizeof(*map_head));
-		if ((git_strmap_set(config_list->map, entry->name, map_head)) < 0)
+		if ((git_strmap_set(config_list->map, entry->base.name, map_head)) < 0)
 			return -1;
 	}
 	map_head->entry = entry;
@@ -167,16 +170,18 @@ int git_config_list_append(git_config_list *config_list, git_config_entry *entry
 	return 0;
 }
 
-int git_config_list_get(git_config_entry **out, git_config_list *config_list, const char *key)
+int git_config_list_get(git_config_list_entry **out, git_config_list *config_list, const char *key)
 {
 	config_entry_map_head *entry;
+
 	if ((entry = git_strmap_get(config_list->map, key)) == NULL)
 		return GIT_ENOTFOUND;
+
 	*out = entry->entry;
 	return 0;
 }
 
-int git_config_list_get_unique(git_config_entry **out, git_config_list *config_list, const char *key)
+int git_config_list_get_unique(git_config_list_entry **out, git_config_list *config_list, const char *key)
 {
 	config_entry_map_head *entry;
 
@@ -188,13 +193,12 @@ int git_config_list_get_unique(git_config_entry **out, git_config_list *config_l
 		return -1;
 	}
 
-	if (entry->entry->include_depth) {
+	if (entry->entry->base.include_depth) {
 		git_error_set(GIT_ERROR_CONFIG, "entry is not unique due to being included");
 		return -1;
 	}
 
 	*out = entry->entry;
-
 	return 0;
 }
 
@@ -214,7 +218,7 @@ static int config_iterator_next(
 	if (!it->head)
 		return GIT_ITEROVER;
 
-	*entry = it->head->entry;
+	*entry = &it->head->entry->base;
 	it->head = it->head->next;
 
 	return 0;
@@ -235,4 +239,11 @@ int git_config_list_iterator_new(git_config_iterator **out, git_config_list *con
 	*out = &it->parent;
 
 	return 0;
+}
+
+/* release the map containing the entry as an equivalent to freeing it */
+void git_config_list_entry_free(git_config_entry *e)
+{
+	git_config_list_entry *entry = (git_config_list_entry *)e;
+	git_config_list_free(entry->config_list);
 }

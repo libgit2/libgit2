@@ -293,7 +293,7 @@ static int config_file_set(git_config_backend *cfg, const char *name, const char
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
 	git_config_list *config_list;
-	git_config_entry *existing;
+	git_config_list_entry *existing;
 	char *key, *esc_value = NULL;
 	int error;
 
@@ -308,8 +308,8 @@ static int config_file_set(git_config_backend *cfg, const char *name, const char
 		if (error != GIT_ENOTFOUND)
 			goto out;
 		error = 0;
-	} else if ((!existing->value && !value) ||
-		   (existing->value && value && !strcmp(existing->value, value))) {
+	} else if ((!existing->base.value && !value) ||
+		   (existing->base.value && value && !strcmp(existing->base.value, value))) {
 		/* don't update if old and new values already match */
 		error = 0;
 		goto out;
@@ -331,13 +331,6 @@ out:
 	return error;
 }
 
-/* release the map containing the entry as an equivalent to freeing it */
-static void config_file_entry_free(git_config_entry *entry)
-{
-	git_config_list *config_list = (git_config_list *) entry->payload;
-	git_config_list_free(config_list);
-}
-
 /*
  * Internal function that actually gets the value in string form
  */
@@ -345,7 +338,7 @@ static int config_file_get(git_config_backend *cfg, const char *key, git_config_
 {
 	config_file_backend *h = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
 	git_config_list *config_list = NULL;
-	git_config_entry *entry;
+	git_config_list_entry *entry;
 	int error = 0;
 
 	if (!h->parent.readonly && ((error = config_file_refresh(cfg)) < 0))
@@ -359,7 +352,7 @@ static int config_file_get(git_config_backend *cfg, const char *key, git_config_
 		return error;
 	}
 
-	*out = entry;
+	*out = &entry->base;
 
 	return 0;
 }
@@ -395,7 +388,7 @@ static int config_file_delete(git_config_backend *cfg, const char *name)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
 	git_config_list *config_list = NULL;
-	git_config_entry *entry;
+	git_config_list_entry *entry;
 	char *key = NULL;
 	int error;
 
@@ -412,7 +405,7 @@ static int config_file_delete(git_config_backend *cfg, const char *name)
 		goto out;
 	}
 
-	if ((error = config_file_write(b, name, entry->name, NULL, NULL)) < 0)
+	if ((error = config_file_write(b, name, entry->base.name, NULL, NULL)) < 0)
 		goto out;
 
 out:
@@ -425,7 +418,7 @@ static int config_file_delete_multivar(git_config_backend *cfg, const char *name
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
 	git_config_list *config_list = NULL;
-	git_config_entry *entry = NULL;
+	git_config_list_entry *entry = NULL;
 	git_regexp preg = GIT_REGEX_INIT;
 	char *key = NULL;
 	int result;
@@ -774,7 +767,7 @@ static int read_on_variable(
 {
 	config_file_parse_data *parse_data = (config_file_parse_data *)data;
 	git_str buf = GIT_STR_INIT;
-	git_config_entry *entry;
+	git_config_list_entry *entry;
 	const char *c;
 	int result = 0;
 
@@ -797,14 +790,21 @@ static int read_on_variable(
 	if (git_str_oom(&buf))
 		return -1;
 
-	entry = git__calloc(1, sizeof(git_config_entry));
+	entry = git__calloc(1, sizeof(git_config_list_entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
-	entry->name = git_str_detach(&buf);
-	entry->value = var_value ? git__strdup(var_value) : NULL;
-	entry->level = parse_data->level;
-	entry->include_depth = parse_data->depth;
-	entry->free = config_file_entry_free;
-	entry->payload = parse_data->config_list;
+
+	entry->base.name = git_str_detach(&buf);
+	GIT_ERROR_CHECK_ALLOC(entry->base.name);
+
+	if (var_value) {
+		entry->base.value = git__strdup(var_value);
+		GIT_ERROR_CHECK_ALLOC(entry->base.value);
+	}
+
+	entry->base.level = parse_data->level;
+	entry->base.include_depth = parse_data->depth;
+	entry->base.free = git_config_list_entry_free;
+	entry->config_list = parse_data->config_list;
 
 	if ((result = git_config_list_append(parse_data->config_list, entry)) < 0)
 		return result;
@@ -812,11 +812,11 @@ static int read_on_variable(
 	result = 0;
 
 	/* Add or append the new config option */
-	if (!git__strcmp(entry->name, "include.path"))
-		result = parse_include(parse_data, entry->value);
-	else if (!git__prefixcmp(entry->name, "includeif.") &&
-	         !git__suffixcmp(entry->name, ".path"))
-		result = parse_conditional_include(parse_data, entry->name, entry->value);
+	if (!git__strcmp(entry->base.name, "include.path"))
+		result = parse_include(parse_data, entry->base.value);
+	else if (!git__prefixcmp(entry->base.name, "includeif.") &&
+	         !git__suffixcmp(entry->base.name, ".path"))
+		result = parse_conditional_include(parse_data, entry->base.name, entry->base.value);
 
 	return result;
 }
