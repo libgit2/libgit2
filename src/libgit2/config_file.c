@@ -359,8 +359,6 @@ static int config_file_get(git_config_backend *cfg, const char *key, git_config_
 		return error;
 	}
 
-	entry->free = config_file_entry_free;
-	entry->payload = entries;
 	*out = entry;
 
 	return 0;
@@ -805,6 +803,8 @@ static int read_on_variable(
 	entry->value = var_value ? git__strdup(var_value) : NULL;
 	entry->level = parse_data->level;
 	entry->include_depth = parse_data->depth;
+	entry->free = config_file_entry_free;
+	entry->payload = parse_data->entries;
 
 	if ((result = git_config_entries_append(parse_data->entries, entry)) < 0)
 		return result;
