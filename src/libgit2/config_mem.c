@@ -39,7 +39,7 @@ static int read_variable_cb(
 {
 	config_memory_parse_data *parse_data = (config_memory_parse_data *) payload;
 	git_str buf = GIT_STR_INIT;
-	git_config_entry *entry;
+	git_config_list_entry *entry;
 	const char *c;
 	int result;
 
@@ -62,12 +62,14 @@ static int read_variable_cb(
 	if (git_str_oom(&buf))
 		return -1;
 
-	entry = git__calloc(1, sizeof(git_config_entry));
+	entry = git__calloc(1, sizeof(git_config_list_entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
-	entry->name = git_str_detach(&buf);
-	entry->value = var_value ? git__strdup(var_value) : NULL;
-	entry->level = parse_data->level;
-	entry->include_depth = 0;
+	entry->base.name = git_str_detach(&buf);
+	entry->base.value = var_value ? git__strdup(var_value) : NULL;
+	entry->base.level = parse_data->level;
+	entry->base.include_depth = 0;
+	entry->base.free = git_config_list_entry_free;
+	entry->config_list = parse_data->config_list;
 
 	if ((result = git_config_list_append(parse_data->config_list, entry)) < 0)
 		return result;
@@ -101,7 +103,14 @@ out:
 static int config_memory_get(git_config_backend *backend, const char *key, git_config_entry **out)
 {
 	config_memory_backend *memory_backend = (config_memory_backend *) backend;
-	return git_config_list_get(out, memory_backend->config_list, key);
+	git_config_list_entry *entry;
+	int error;
+
+	if ((error = git_config_list_get(&entry, memory_backend->config_list, key)) != 0)
+		return error;
+
+	*out = &entry->base;
+	return 0;
 }
 
 static int config_memory_iterator(

@@ -41,18 +41,11 @@ out:
 	return error;
 }
 
-/* release the map containing the entry as an equivalent to freeing it */
-static void config_snapshot_entry_free(git_config_entry *entry)
-{
-	git_config_list *config_list = (git_config_list *) entry->payload;
-	git_config_list_free(config_list);
-}
-
 static int config_snapshot_get(git_config_backend *cfg, const char *key, git_config_entry **out)
 {
 	config_snapshot_backend *b = GIT_CONTAINER_OF(cfg, config_snapshot_backend, parent);
 	git_config_list *config_list = NULL;
-	git_config_entry *entry;
+	git_config_list_entry *entry;
 	int error = 0;
 
 	if (git_mutex_lock(&b->values_mutex) < 0) {
@@ -69,10 +62,7 @@ static int config_snapshot_get(git_config_backend *cfg, const char *key, git_con
 		return error;
 	}
 
-	entry->free = config_snapshot_entry_free;
-	entry->payload = config_list;
-	*out = entry;
-
+	*out = &entry->base;
 	return 0;
 }
 

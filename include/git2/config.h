@@ -66,8 +66,12 @@ typedef struct git_config_entry {
 	const char *value; /**< String value of the entry */
 	unsigned int include_depth; /**< Depth of includes where this variable was found */
 	git_config_level_t level; /**< Which config file this was found in */
-	void GIT_CALLBACK(free)(struct git_config_entry *entry); /**< Free function for this entry */
-	void *payload; /**< Opaque value for the free function. Do not read or write */
+
+	/**
+	 * Free function for this entry; for internal purposes. Callers
+	 * should call `git_config_entry_free` to free data.
+	 */
+	void GIT_CALLBACK(free)(struct git_config_entry *entry);
 } git_config_entry;
 
 /**
