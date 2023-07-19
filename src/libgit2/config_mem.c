@@ -9,16 +9,16 @@
 
 #include "config_backend.h"
 #include "config_parse.h"
-#include "config_entries.h"
+#include "config_list.h"
 
 typedef struct {
 	git_config_backend parent;
-	git_config_entries *entries;
+	git_config_list *config_list;
 	git_str cfg;
 } config_memory_backend;
 
 typedef struct {
-	git_config_entries *entries;
+	git_config_list *config_list;
 	git_config_level_t level;
 } config_memory_parse_data;
 
@@ -69,7 +69,7 @@ static int read_variable_cb(
 	entry->level = parse_data->level;
 	entry->include_depth = 0;
 
-	if ((result = git_config_entries_append(parse_data->entries, entry)) < 0)
+	if ((result = git_config_list_append(parse_data->config_list, entry)) < 0)
 		return result;
 
 	return result;
@@ -87,7 +87,7 @@ static int config_memory_open(git_config_backend *backend, git_config_level_t le
 	if ((error = git_config_parser_init(&parser, "in-memory", memory_backend->cfg.ptr,
 					    memory_backend->cfg.size)) < 0)
 		goto out;
-	parse_data.entries = memory_backend->entries;
+	parse_data.config_list = memory_backend->config_list;
 	parse_data.level = level;
 
 	if ((error = git_config_parse(&parser, NULL, read_variable_cb, NULL, NULL, &parse_data)) < 0)
@@ -101,7 +101,7 @@ out:
 static int config_memory_get(git_config_backend *backend, const char *key, git_config_entry **out)
 {
 	config_memory_backend *memory_backend = (config_memory_backend *) backend;
-	return git_config_entries_get(out, memory_backend->entries, key);
+	return git_config_list_get(out, memory_backend->config_list, key);
 }
 
 static int config_memory_iterator(
@@ -109,18 +109,18 @@ static int config_memory_iterator(
 	git_config_backend *backend)
 {
 	config_memory_backend *memory_backend = (config_memory_backend *) backend;
-	git_config_entries *entries;
+	git_config_list *config_list;
 	int error;
 
-	if ((error = git_config_entries_dup(&entries, memory_backend->entries)) < 0)
+	if ((error = git_config_list_dup(&config_list, memory_backend->config_list)) < 0)
 		goto out;
 
-	if ((error = git_config_entries_iterator_new(iter, entries)) < 0)
+	if ((error = git_config_list_iterator_new(iter, config_list)) < 0)
 		goto out;
 
 out:
-	/* Let iterator delete duplicated entries when it's done */
-	git_config_entries_free(entries);
+	/* Let iterator delete duplicated config_list when it's done */
+	git_config_list_free(config_list);
 	return error;
 }
 
@@ -177,7 +177,7 @@ static void config_memory_free(git_config_backend *_backend)
 	if (backend == NULL)
 		return;
 
-	git_config_entries_free(backend->entries);
+	git_config_list_free(backend->config_list);
 	git_str_dispose(&backend->cfg);
 	git__free(backend);
 }
@@ -189,13 +189,13 @@ int git_config_backend_from_string(git_config_backend **out, const char *cfg, si
 	backend = git__calloc(1, sizeof(config_memory_backend));
 	GIT_ERROR_CHECK_ALLOC(backend);
 
-	if (git_config_entries_new(&backend->entries) < 0) {
+	if (git_config_list_new(&backend->config_list) < 0) {
 		git__free(backend);
 		return -1;
 	}
 
 	if (git_str_set(&backend->cfg, cfg, len) < 0) {
-		git_config_entries_free(backend->entries);
+		git_config_list_free(backend->config_list);
 		git__free(backend);
 		return -1;
 	}
