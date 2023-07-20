@@ -68,6 +68,7 @@ static int read_variable_cb(
 	entry->base.value = var_value ? git__strdup(var_value) : NULL;
 	entry->base.level = parse_data->level;
 	entry->base.include_depth = 0;
+	entry->base.backend_type = "memory";
 	entry->base.free = git_config_list_entry_free;
 	entry->config_list = parse_data->config_list;
 

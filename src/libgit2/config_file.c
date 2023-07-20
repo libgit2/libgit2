@@ -24,6 +24,8 @@
 /* Max depth for [include] directives */
 #define MAX_INCLUDE_DEPTH 10
 
+#define CONFIG_FILE_TYPE "file"
+
 typedef struct config_file {
 	git_futils_filestamp stamp;
 	unsigned char checksum[GIT_HASH_SHA256_SIZE];
@@ -801,7 +803,11 @@ static int read_on_variable(
 		GIT_ERROR_CHECK_ALLOC(entry->base.value);
 	}
 
+	entry->base.origin_path = git_config_list_add_path(parse_data->config_list, parse_data->file->path);
+	GIT_ERROR_CHECK_ALLOC(entry->base.origin_path);
+
 	entry->base.level = parse_data->level;
+	entry->base.backend_type = CONFIG_FILE_TYPE;
 	entry->base.include_depth = parse_data->depth;
 	entry->base.free = git_config_list_entry_free;
 	entry->config_list = parse_data->config_list;
