@@ -27,6 +27,6 @@ int git_config_list_append(git_config_list *list, git_config_list_entry *entry);
 int git_config_list_get(git_config_list_entry **out, git_config_list *list, const char *key);
 int git_config_list_get_unique(git_config_list_entry **out, git_config_list *list, const char *key);
 int git_config_list_iterator_new(git_config_iterator **out, git_config_list *list);
-const char *git_config_list_add_path(git_config_list *list, const char *path);
+const char *git_config_list_add_string(git_config_list *list, const char *str);
 
 void git_config_list_entry_free(git_config_entry *entry);

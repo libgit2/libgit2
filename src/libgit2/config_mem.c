@@ -13,11 +13,13 @@
 
 typedef struct {
 	git_config_backend parent;
+	char *type;
 	git_config_list *config_list;
 	git_str cfg;
 } config_memory_backend;
 
 typedef struct {
+	const char *backend_type;
 	git_config_list *config_list;
 	git_config_level_t level;
 } config_memory_parse_data;
@@ -68,7 +70,7 @@ static int read_variable_cb(
 	entry->base.value = var_value ? git__strdup(var_value) : NULL;
 	entry->base.level = parse_data->level;
 	entry->base.include_depth = 0;
-	entry->base.backend_type = "memory";
+	entry->base.backend_type = parse_data->backend_type;
 	entry->base.free = git_config_list_entry_free;
 	entry->config_list = parse_data->config_list;
 
@@ -90,6 +92,9 @@ static int config_memory_open(git_config_backend *backend, git_config_level_t le
 	if ((error = git_config_parser_init(&parser, "in-memory", memory_backend->cfg.ptr,
 					    memory_backend->cfg.size)) < 0)
 		goto out;
+
+	parse_data.backend_type = git_config_list_add_string(
+		memory_backend->config_list, memory_backend->type);
 	parse_data.config_list = memory_backend->config_list;
 	parse_data.level = level;
 
@@ -187,12 +192,17 @@ static void config_memory_free(git_config_backend *_backend)
 	if (backend == NULL)
 		return;
 
+	git__free(backend->type);
 	git_config_list_free(backend->config_list);
 	git_str_dispose(&backend->cfg);
 	git__free(backend);
 }
 
-int git_config_backend_from_string(git_config_backend **out, const char *cfg, size_t len)
+int git_config_backend_from_string(
+	git_config_backend **out,
+	const char *backend_type,
+	const char *cfg,
+	size_t len)
 {
 	config_memory_backend *backend;
 
@@ -209,6 +219,9 @@ int git_config_backend_from_string(git_config_backend **out, const char *cfg, si
 		git__free(backend);
 		return -1;
 	}
+
+	backend->type = git__strdup(backend_type ? backend_type : "in-memory");
+	GIT_ERROR_CHECK_ALLOC(backend->type);
 
 	backend->parent.version = GIT_CONFIG_BACKEND_VERSION;
 	backend->parent.readonly = 1;
