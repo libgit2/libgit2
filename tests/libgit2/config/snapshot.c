@@ -153,7 +153,7 @@ void test_config_snapshot__snapshot_from_in_memory(void)
 	int i;
 
 	cl_git_pass(git_config_new(&cfg));
-	cl_git_pass(git_config_backend_from_string(&backend, configuration, strlen(configuration)));
+	cl_git_pass(git_config_backend_from_string(&backend, "test", configuration, strlen(configuration)));
 	cl_git_pass(git_config_add_backend(cfg, backend, 0, NULL, 0));
 
 	cl_git_pass(git_config_snapshot(&snapshot, cfg));
@@ -165,7 +165,7 @@ void test_config_snapshot__snapshot_from_in_memory(void)
 
 	cl_assert_equal_s("section.key", entry->name);
 	cl_assert_equal_s("1", entry->value);
-	cl_assert_equal_s("memory", entry->backend_type);
+	cl_assert_equal_s("test", entry->backend_type);
 	cl_assert_equal_p(NULL, entry->origin_path);
 
 	git_config_entry_free(entry);

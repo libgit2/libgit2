@@ -27,8 +27,8 @@ typedef struct config_list_iterator {
 struct git_config_list {
 	git_refcount rc;
 
-	/* Paths to config files that contribute to these entries */
-	git_strmap *paths;
+	/* Interned strings - paths to config files or backend types */
+	git_strmap *strings;
 
 	/* Config entries */
 	git_strmap *map;
@@ -43,9 +43,9 @@ int git_config_list_new(git_config_list **out)
 	GIT_ERROR_CHECK_ALLOC(config_list);
 	GIT_REFCOUNT_INC(config_list);
 
-	if (git_strmap_new(&config_list->paths) < 0 ||
+	if (git_strmap_new(&config_list->strings) < 0 ||
 	    git_strmap_new(&config_list->map) < 0) {
-		git_strmap_free(config_list->paths);
+		git_strmap_free(config_list->strings);
 		git_strmap_free(config_list->map);
 		git__free(config_list);
 
@@ -72,12 +72,14 @@ int git_config_list_dup_entry(git_config_list *config_list, const git_config_ent
 		GIT_ERROR_CHECK_ALLOC(duplicated->base.value);
 	}
 
+	duplicated->base.backend_type = git_config_list_add_string(config_list, entry->backend_type);
+	GIT_ERROR_CHECK_ALLOC(duplicated->base.backend_type);
+
 	if (entry->origin_path) {
-		duplicated->base.origin_path = git_config_list_add_path(config_list, entry->origin_path);
+		duplicated->base.origin_path = git_config_list_add_string(config_list, entry->origin_path);
 		GIT_ERROR_CHECK_ALLOC(duplicated->base.origin_path);
 	}
 
-	duplicated->base.backend_type = entry->backend_type;
 	duplicated->base.level = entry->level;
 	duplicated->base.include_depth = entry->include_depth;
 	duplicated->base.free = git_config_list_entry_free;
@@ -125,12 +127,12 @@ static void config_list_free(git_config_list *config_list)
 {
 	config_entry_list *entry_list = NULL, *next;
 	config_entry_map_head *head;
-	char *path;
+	char *str;
 
-	git_strmap_foreach_value(config_list->paths, path, {
-		git__free(path);
+	git_strmap_foreach_value(config_list->strings, str, {
+		git__free(str);
 	});
-	git_strmap_free(config_list->paths);
+	git_strmap_free(config_list->strings);
 
 	git_strmap_foreach_value(config_list->map, head, {
 		git__free((char *) head->entry->base.name);
@@ -269,18 +271,18 @@ void git_config_list_entry_free(git_config_entry *e)
 	git_config_list_free(entry->config_list);
 }
 
-const char *git_config_list_add_path(
+const char *git_config_list_add_string(
 	git_config_list *config_list,
-	const char *path)
+	const char *str)
 {
-	const char *p;
+	const char *s;
 
-	if ((p = git_strmap_get(config_list->paths, path)) != NULL)
-		return p;
+	if ((s = git_strmap_get(config_list->strings, str)) != NULL)
+		return s;
 
-	if ((p = git__strdup(path)) == NULL ||
-	    git_strmap_set(config_list->paths, p, (void *)p) < 0)
+	if ((s = git__strdup(str)) == NULL ||
+	    git_strmap_set(config_list->strings, s, (void *)s) < 0)
 		return NULL;
 
-	return p;
+	return s;
 }
