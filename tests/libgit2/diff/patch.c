@@ -724,8 +724,8 @@ void test_diff_patch__free_diff_after_git_diff_merge(void)
 		" proverb\n"
 		"+offended\n";
 
-	cl_git_pass(git_diff_from_buffer(&diff_a, a, strlen(a)));
-	cl_git_pass(git_diff_from_buffer(&diff_b, b, strlen(b)));
+	cl_git_pass(diff_from_buffer(&diff_a, a, strlen(a)));
+	cl_git_pass(diff_from_buffer(&diff_b, b, strlen(b)));
 	cl_git_pass(git_diff_merge(diff_a, diff_b));
 	git_diff_free(diff_a);
 	git_diff_free(diff_b);
