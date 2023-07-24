@@ -19,9 +19,7 @@ static int write_object, read_stdin, literally;
 static char **filenames;
 
 static const cli_opt_spec opts[] = {
-	{ CLI_OPT_TYPE_SWITCH,   "help",      0, &show_help,    1,
-	  CLI_OPT_USAGE_HIDDEN | CLI_OPT_USAGE_STOP_PARSING, NULL,
-	  "display help about the " COMMAND_NAME " command" },
+	CLI_COMMON_OPT,
 
 	{ CLI_OPT_TYPE_VALUE,     NULL,      't', &type_name,    0,
 	  CLI_OPT_USAGE_DEFAULT, "type",     "the type of object to hash (default: \"blob\")" },

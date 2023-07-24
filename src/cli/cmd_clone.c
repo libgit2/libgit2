@@ -24,9 +24,7 @@ static bool local_path_exists;
 static cli_progress progress = CLI_PROGRESS_INIT;
 
 static const cli_opt_spec opts[] = {
-	{ CLI_OPT_TYPE_SWITCH,    "help",         0,  &show_help,   1,
-	  CLI_OPT_USAGE_HIDDEN | CLI_OPT_USAGE_STOP_PARSING, NULL,
-	  "display help about the " COMMAND_NAME " command" },
+	CLI_COMMON_OPT,
 
 	{ CLI_OPT_TYPE_SWITCH,    "quiet",       'q', &quiet,       1,
 	  CLI_OPT_USAGE_DEFAULT,   NULL,         "display the type of the object" },

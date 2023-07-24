@@ -24,9 +24,7 @@ static int display = DISPLAY_CONTENT;
 static char *type_name, *object_spec;
 
 static const cli_opt_spec opts[] = {
-	{ CLI_OPT_TYPE_SWITCH,    "help",    0, &show_help,   1,
-	  CLI_OPT_USAGE_HIDDEN | CLI_OPT_USAGE_STOP_PARSING, NULL,
-	  "display help about the " COMMAND_NAME " command" },
+	CLI_COMMON_OPT,
 
 	{ CLI_OPT_TYPE_SWITCH,     NULL,    't', &display,    DISPLAY_TYPE,
 	  CLI_OPT_USAGE_REQUIRED,  NULL,    "display the type of the object" },

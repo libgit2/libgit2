@@ -44,4 +44,23 @@ extern int cli_repository_open(
 	git_repository **out,
 	cli_repository_open_options *opts);
 
+/*
+ * Common command arguments.
+ */
+
+#define CLI_COMMON_OPT_HELP \
+	CLI_OPT_TYPE_SWITCH, "help",       0, &show_help, 1, \
+	CLI_OPT_USAGE_HIDDEN | CLI_OPT_USAGE_STOP_PARSING
+#define CLI_COMMON_OPT_CONFIG \
+	CLI_OPT_TYPE_VALUE,   NULL,       'c', NULL,      0, \
+	CLI_OPT_USAGE_HIDDEN
+#define CLI_COMMON_OPT_CONFIG_ENV \
+	CLI_OPT_TYPE_VALUE,  "config-env", 0,  NULL,      0, \
+	CLI_OPT_USAGE_HIDDEN
+
+#define CLI_COMMON_OPT \
+	{ CLI_COMMON_OPT_HELP }, \
+	{ CLI_COMMON_OPT_CONFIG }, \
+	{ CLI_COMMON_OPT_CONFIG_ENV }
+
 #endif /* CLI_common_h__ */
