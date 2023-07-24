@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "cli.h"
+#include "common.h"
 #include "cmd.h"
 
 const cli_cmd_spec *cli_cmd_spec_byname(const char *name)

@@ -8,7 +8,7 @@
 #ifndef CLI_error_h__
 #define CLI_error_h__
 
-#include "cli.h"
+#include "common.h"
 #include <stdio.h>
 
 #define CLI_EXIT_OK      0

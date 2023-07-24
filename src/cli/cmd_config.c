@@ -6,7 +6,8 @@
  */
 
 #include <git2.h>
-#include "cli.h"
+
+#include "common.h"
 #include "cmd.h"
 
 #define COMMAND_NAME "config"
@@ -24,25 +25,35 @@ static int show_help;
 static int null_separator;
 static char *name;
 
+#define CLI_COMMON_OPT_HELP \
+	CLI_OPT_TYPE_SWITCH, "help",       0, &show_help, 1, \
+	CLI_OPT_USAGE_HIDDEN | CLI_OPT_USAGE_STOP_PARSING
+#define CLI_COMMON_OPT_CONFIG \
+	CLI_OPT_TYPE_VALUE,   NULL,       'c', NULL,      0, \
+	CLI_OPT_USAGE_HIDDEN
+#define CLI_COMMON_OPT_CONFIG_ENV \
+	CLI_OPT_TYPE_VALUE,  "config-env", 0,  NULL,      0, \
+	CLI_OPT_USAGE_HIDDEN
+
 static const cli_opt_spec opts[] = {
-	{ CLI_OPT_TYPE_SWITCH,    "help",    0, &show_help,   1,
-	  CLI_OPT_USAGE_HIDDEN | CLI_OPT_USAGE_STOP_PARSING, NULL,
-	  "display help about the " COMMAND_NAME " command" },
+	{ CLI_COMMON_OPT_HELP },
+	{ CLI_COMMON_OPT_CONFIG },
+	{ CLI_COMMON_OPT_CONFIG_ENV },
 
-	{ CLI_OPT_TYPE_SWITCH,    "null",        'z', &null_separator, 1,
-	  0,                       NULL,         "use NUL as a separator" },
+	{ CLI_OPT_TYPE_SWITCH,    "null",       'z', &null_separator, 1,
+	  0,                       NULL,        "use NUL as a separator" },
 
-	{ CLI_OPT_TYPE_SWITCH,    "get",          0,  &action,     ACTION_GET,
-	  CLI_OPT_USAGE_REQUIRED,  NULL,         "get a configuration value" },
-	{ CLI_OPT_TYPE_SWITCH,    "list",        'l', &action,     ACTION_LIST,
+	{ CLI_OPT_TYPE_SWITCH,    "get",         0,  &action,     ACTION_GET,
+	  CLI_OPT_USAGE_REQUIRED,  NULL,        "get a configuration value" },
+	{ CLI_OPT_TYPE_SWITCH,    "list",       'l', &action,     ACTION_LIST,
 	  CLI_OPT_USAGE_CHOICE | CLI_OPT_USAGE_SHOW_LONG,
-	                           NULL,         "list all configuration entries" },
-	{ CLI_OPT_TYPE_SWITCH,    "show-origin",  0,  &show_origin, 1,
-	  0,                       NULL,         "show origin of configuration" },
-	{ CLI_OPT_TYPE_SWITCH,    "show-scope",   0,  &show_scope,  1,
-	  0,                       NULL,         "show scope of configuration" },
-	{ CLI_OPT_TYPE_ARG,       "name",         0,  &name,        0,
-	  0,                      "name",        "name of configuration entry" },
+	                           NULL,        "list all configuration entries" },
+	{ CLI_OPT_TYPE_SWITCH,    "show-origin", 0,  &show_origin, 1,
+	  0,                       NULL,        "show origin of configuration" },
+	{ CLI_OPT_TYPE_SWITCH,    "show-scope",  0,  &show_scope,  1,
+	  0,                       NULL,        "show scope of configuration" },
+	{ CLI_OPT_TYPE_ARG,       "name",        0,  &name,        0,
+	  0,                      "name",       "name of configuration entry" },
 	{ 0 },
 };
 
@@ -137,6 +148,7 @@ int cmd_config(int argc, char **argv)
 {
 	git_repository *repo = NULL;
 	git_config *config = NULL;
+	cli_repository_open_options open_opts = { argv + 1, argc - 1};
 	cli_opt invalid_opt;
 	int ret = 0;
 
@@ -148,7 +160,7 @@ int cmd_config(int argc, char **argv)
 		return 0;
 	}
 
-	if (git_repository_open_ext(&repo, ".", GIT_REPOSITORY_OPEN_FROM_ENV, NULL) < 0 ||
+	if (cli_repository_open(&repo, &open_opts) < 0 ||
 	    git_repository_config(&config, repo) < 0) {
 		ret = cli_error_git();
 		goto done;

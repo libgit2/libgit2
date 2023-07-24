@@ -300,6 +300,14 @@ cli_opt_status_t cli_opt_parse(
     size_t args_len,
     unsigned int flags);
 
+int cli_opt_foreach(
+	const cli_opt_spec specs[],
+	char **args,
+	size_t args_len,
+	unsigned int flags,
+	int (*callback)(cli_opt *, void *),
+	void *callback_data);
+
 /**
  * Initializes a parser that parses the given arguments according to the
  * given specifications.

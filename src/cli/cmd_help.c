@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 #include <git2.h>
-#include "cli.h"
+#include "common.h"
 #include "cmd.h"
 
 #define COMMAND_NAME "help"
