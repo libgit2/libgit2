@@ -15,6 +15,8 @@
 typedef enum {
 	ACTION_NONE = 0,
 	ACTION_GET,
+	ACTION_ADD,
+	ACTION_REPLACE_ALL,
 	ACTION_LIST
 } action_t;
 
@@ -25,7 +27,7 @@ static int show_help;
 static int null_separator;
 static int config_level;
 static char *config_filename;
-static char *name;
+static char *name, *value, *value_pattern;
 
 static const cli_opt_spec opts[] = {
 	CLI_COMMON_OPT, \
@@ -44,6 +46,10 @@ static const cli_opt_spec opts[] = {
 
 	{ CLI_OPT_TYPE_SWITCH,    "get",         0,  &action,       ACTION_GET,
 	  CLI_OPT_USAGE_REQUIRED,  NULL,        "get a configuration value" },
+	{ CLI_OPT_TYPE_SWITCH,    "add",         0,  &action,       ACTION_ADD,
+	  CLI_OPT_USAGE_CHOICE,    NULL,        "add a configuration value" },
+	{ CLI_OPT_TYPE_SWITCH,    "replace-all", 0,  &action,       ACTION_REPLACE_ALL,
+	  CLI_OPT_USAGE_CHOICE,    NULL,        "add a configuration value, replacing any old values" },
 	{ CLI_OPT_TYPE_SWITCH,    "list",       'l', &action,       ACTION_LIST,
 	  CLI_OPT_USAGE_CHOICE | CLI_OPT_USAGE_SHOW_LONG,
 	                           NULL,        "list all configuration entries" },
@@ -53,6 +59,10 @@ static const cli_opt_spec opts[] = {
 	  0,                       NULL,        "show scope of configuration" },
 	{ CLI_OPT_TYPE_ARG,       "name",        0,  &name,         0,
 	  0,                      "name",       "name of configuration entry" },
+	{ CLI_OPT_TYPE_ARG,       "value",       0,  &value,        0,
+	  0,                      "value",      "value of configuration entry" },
+	{ CLI_OPT_TYPE_ARG,       "regexp",      0,  &value_pattern, 0,
+	  0,                      "regexp",     "regular expression of values to replace" },
 	{ 0 },
 };
 
@@ -84,6 +94,22 @@ static int get_config(git_config *config)
 		return 1;
 
 	printf("%s%c", value.ptr, sep);
+	return 0;
+}
+
+static int add_config(git_config *config)
+{
+	if (git_config_set_multivar(config, name, "$^", value) < 0)
+		return cli_error_git();
+
+	return 0;
+}
+
+static int replace_all_config(git_config *config)
+{
+	if (git_config_set_multivar(config, name, value_pattern ? value_pattern : ".*", value) < 0)
+		return cli_error_git();
+
 	return 0;
 }
 
@@ -181,17 +207,29 @@ int cmd_config(int argc, char **argv)
 	}
 
 	switch (action) {
-	case ACTION_LIST:
-		if (name)
-			ret = cli_error_usage("%s --list does not take an argument", COMMAND_NAME);
+	case ACTION_ADD:
+		if (!name || !value || value_pattern)
+			ret = cli_error_usage("%s --add requires two arguments", COMMAND_NAME);
 		else
-			ret = list_config(config);
+			ret = add_config(config);
+		break;
+	case ACTION_REPLACE_ALL:
+		if (!name || !value)
+			ret = cli_error_usage("%s --replace-all requires two or three arguments", COMMAND_NAME);
+		else
+			ret = replace_all_config(config);
 		break;
 	case ACTION_GET:
 		if (!name)
 			ret = cli_error_usage("%s --get requires an argument", COMMAND_NAME);
 		else
 			ret = get_config(config);
+		break;
+	case ACTION_LIST:
+		if (name)
+			ret = cli_error_usage("%s --list does not take an argument", COMMAND_NAME);
+		else
+			ret = list_config(config);
 		break;
 	default:
 		ret = cli_error_usage("unknown action");
