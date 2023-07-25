@@ -23,6 +23,8 @@ static int show_origin;
 static int show_scope;
 static int show_help;
 static int null_separator;
+static int config_level;
+static char *config_filename;
 static char *name;
 
 static const cli_opt_spec opts[] = {
@@ -31,16 +33,25 @@ static const cli_opt_spec opts[] = {
 	{ CLI_OPT_TYPE_SWITCH,    "null",       'z', &null_separator, 1,
 	  0,                       NULL,        "use NUL as a separator" },
 
-	{ CLI_OPT_TYPE_SWITCH,    "get",         0,  &action,     ACTION_GET,
+	{ CLI_OPT_TYPE_SWITCH,    "system",      0,  &config_level, GIT_CONFIG_LEVEL_SYSTEM,
+	  0,                       NULL,        "read/write to system configuration" },
+	{ CLI_OPT_TYPE_SWITCH,    "global",      0,  &config_level, GIT_CONFIG_LEVEL_GLOBAL,
+	  CLI_OPT_USAGE_CHOICE,    NULL,        "read/write to global configuration" },
+	{ CLI_OPT_TYPE_SWITCH,    "local",       0,  &config_level, GIT_CONFIG_LEVEL_LOCAL,
+	  CLI_OPT_USAGE_CHOICE,    NULL,        "read/write to local configuration" },
+	{ CLI_OPT_TYPE_VALUE,     "file",        0,  &config_filename, 0,
+	  CLI_OPT_USAGE_CHOICE,   "filename",   "read/write to specified configuration file" },
+
+	{ CLI_OPT_TYPE_SWITCH,    "get",         0,  &action,       ACTION_GET,
 	  CLI_OPT_USAGE_REQUIRED,  NULL,        "get a configuration value" },
-	{ CLI_OPT_TYPE_SWITCH,    "list",       'l', &action,     ACTION_LIST,
+	{ CLI_OPT_TYPE_SWITCH,    "list",       'l', &action,       ACTION_LIST,
 	  CLI_OPT_USAGE_CHOICE | CLI_OPT_USAGE_SHOW_LONG,
 	                           NULL,        "list all configuration entries" },
-	{ CLI_OPT_TYPE_SWITCH,    "show-origin", 0,  &show_origin, 1,
+	{ CLI_OPT_TYPE_SWITCH,    "show-origin", 0,  &show_origin,  1,
 	  0,                       NULL,        "show origin of configuration" },
-	{ CLI_OPT_TYPE_SWITCH,    "show-scope",  0,  &show_scope,  1,
+	{ CLI_OPT_TYPE_SWITCH,    "show-scope",  0,  &show_scope,   1,
 	  0,                       NULL,        "show scope of configuration" },
-	{ CLI_OPT_TYPE_ARG,       "name",        0,  &name,        0,
+	{ CLI_OPT_TYPE_ARG,       "name",        0,  &name,         0,
 	  0,                      "name",       "name of configuration entry" },
 	{ 0 },
 };
@@ -148,10 +159,25 @@ int cmd_config(int argc, char **argv)
 		return 0;
 	}
 
-	if (cli_repository_open(&repo, &open_opts) < 0 ||
-	    git_repository_config(&config, repo) < 0) {
-		ret = cli_error_git();
-		goto done;
+	if (config_filename) {
+		if (git_config_new(&config) < 0 ||
+		    git_config_add_file_ondisk(config, config_filename,
+				GIT_CONFIG_LEVEL_APP, NULL, 0) < 0) {
+			ret = cli_error_git();
+			goto done;
+		}
+	} else {
+		if (cli_repository_open(&repo, &open_opts) < 0 ||
+		    git_repository_config(&config, repo) < 0) {
+			ret = cli_error_git();
+			goto done;
+		}
+
+		if (config_level &&
+		    git_config_open_level(&config, config, config_level) < 0) {
+			ret = cli_error_git();
+			goto done;
+		}
 	}
 
 	switch (action) {
