@@ -90,6 +90,7 @@ static int hash_buf(
 
 int cmd_hash_object(int argc, char **argv)
 {
+	cli_repository_open_options open_opts = { argv + 1, argc - 1};
 	git_repository *repo = NULL;
 	git_odb *odb = NULL;
 	git_oid_t oid_type;
@@ -111,7 +112,7 @@ int cmd_hash_object(int argc, char **argv)
 		return cli_error_usage("invalid object type '%s'", type_name);
 
 	if (write_object &&
-	    (git_repository_open_ext(&repo, ".", GIT_REPOSITORY_OPEN_FROM_ENV, NULL) < 0 ||
+	    (cli_repository_open(&repo, &open_opts) < 0 ||
 	     git_repository_odb(&odb, repo) < 0)) {
 		ret = cli_error_git();
 		goto done;

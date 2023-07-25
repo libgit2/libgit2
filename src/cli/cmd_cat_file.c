@@ -137,6 +137,7 @@ static int print_pretty(git_object *object)
 
 int cmd_cat_file(int argc, char **argv)
 {
+	cli_repository_open_options open_opts = { argv + 1, argc - 1};
 	git_repository *repo = NULL;
 	git_object *object = NULL;
 	git_object_t type;
@@ -151,7 +152,7 @@ int cmd_cat_file(int argc, char **argv)
 		return 0;
 	}
 
-	if (git_repository_open_ext(&repo, ".", GIT_REPOSITORY_OPEN_FROM_ENV, NULL) < 0)
+	if (cli_repository_open(&repo, &open_opts) < 0)
 		return cli_error_git();
 
 	if ((giterr = git_revparse_single(&object, repo, object_spec)) < 0) {
