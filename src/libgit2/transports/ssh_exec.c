@@ -28,6 +28,9 @@ typedef struct {
 
 	ssh_exec_subtransport_stream *current_stream;
 
+	char *cmd_uploadpack;
+	char *cmd_receivepack;
+
 	git_smart_service_t action;
 	git_process *process;
 } ssh_exec_subtransport;
@@ -173,10 +176,12 @@ static int start_ssh(
 
 	switch (action) {
 	case GIT_SERVICE_UPLOADPACK_LS:
-		command = "git-upload-pack";
+		command = transport->cmd_uploadpack ?
+		          transport->cmd_uploadpack : "git-upload-pack";
 		break;
 	case GIT_SERVICE_RECEIVEPACK_LS:
-		command = "git-receive-pack";
+		command = transport->cmd_receivepack ?
+		          transport->cmd_receivepack : "git-receive-pack";
 		break;
 	default:
 		git_error_set(GIT_ERROR_NET, "invalid action");
@@ -277,6 +282,8 @@ static void ssh_exec_subtransport_free(git_smart_subtransport *t)
 {
 	ssh_exec_subtransport *transport = (ssh_exec_subtransport *)t;
 
+	git__free(transport->cmd_uploadpack);
+	git__free(transport->cmd_receivepack);
 	git__free(transport);
 }
 
@@ -298,6 +305,25 @@ int git_smart_subtransport_ssh_exec(
 	transport->parent.free = ssh_exec_subtransport_free;
 
 	*out = (git_smart_subtransport *) transport;
+	return 0;
+}
+
+int git_smart_subtransport_ssh_exec_set_paths(
+	git_smart_subtransport *subtransport,
+	const char *cmd_uploadpack,
+	const char *cmd_receivepack)
+{
+	ssh_exec_subtransport *t = (ssh_exec_subtransport *)subtransport;
+
+	git__free(t->cmd_uploadpack);
+	git__free(t->cmd_receivepack);
+
+	t->cmd_uploadpack = git__strdup(cmd_uploadpack);
+	GIT_ERROR_CHECK_ALLOC(t->cmd_uploadpack);
+
+	t->cmd_receivepack = git__strdup(cmd_receivepack);
+	GIT_ERROR_CHECK_ALLOC(t->cmd_receivepack);
+
 	return 0;
 }
 

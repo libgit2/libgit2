@@ -24,7 +24,31 @@ int git_smart_subtransport_ssh(
 	GIT_UNUSED(owner);
 	GIT_UNUSED(param);
 
-	git_error_set(GIT_ERROR_INVALID, "cannot create SSH transport. Library was built without SSH support");
+	git_error_set(GIT_ERROR_INVALID, "cannot create SSH transport; library was built without SSH support");
+	return -1;
+#endif
+}
+
+static int transport_set_paths(git_transport *t, git_strarray *paths)
+{
+	transport_smart *smart = (transport_smart *)t;
+
+#ifdef GIT_SSH_LIBSSH2
+	return git_smart_subtransport_ssh_libssh2_set_paths(
+		(git_smart_subtransport *)smart->wrapped,
+		paths->strings[0],
+		paths->strings[1]);
+#elif GIT_SSH_EXEC
+	return git_smart_subtransport_ssh_exec_set_paths(
+		(git_smart_subtransport *)smart->wrapped,
+		paths->strings[0],
+		paths->strings[1]);
+#else
+	GIT_UNUSED(t);
+	GIT_UNUSED(smart);
+	GIT_UNUSED(paths);
+
+	GIT_ASSERT(!"cannot create SSH library; library was built without SSH support");
 	return -1;
 #endif
 }
@@ -34,16 +58,14 @@ int git_transport_ssh_with_paths(
 	git_remote *owner,
 	void *payload)
 {
-#ifdef GIT_SSH_LIBSSH2
 	git_strarray *paths = (git_strarray *) payload;
 	git_transport *transport;
-	transport_smart *smart;
 	int error;
 
 	git_smart_subtransport_definition ssh_definition = {
 		git_smart_subtransport_ssh,
 		0, /* no RPC */
-		NULL,
+		NULL
 	};
 
 	if (paths->count != 2) {
@@ -54,25 +76,10 @@ int git_transport_ssh_with_paths(
 	if ((error = git_transport_smart(&transport, owner, &ssh_definition)) < 0)
 		return error;
 
-	smart = (transport_smart *) transport;
-
-	if ((error = git_smart_subtransport_ssh_libssh2_set_paths(
-			(git_smart_subtransport *)smart->wrapped,
-			paths->strings[0],
-			paths->strings[1])) < 0)
+	if ((error = transport_set_paths(transport, paths)) < 0)
 		return error;
 
 	*out = transport;
 	return 0;
-#elif GIT_SSH_EXEC
-	abort();
-#else
-	GIT_UNUSED(out);
-	GIT_UNUSED(owner);
-	GIT_UNUSED(payload);
-
-	git_error_set(GIT_ERROR_INVALID, "cannot create SSH transport. Library was built without SSH support");
-	return -1;
-#endif
 }
 
