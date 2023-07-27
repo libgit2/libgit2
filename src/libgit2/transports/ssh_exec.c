@@ -11,10 +11,12 @@
 
 #include "common.h"
 
+#include "config.h"
 #include "net.h"
 #include "path.h"
 #include "futils.h"
 #include "process.h"
+#include "transports/smart.h"
 
 typedef struct {
 	git_smart_subtransport_stream parent;
@@ -114,17 +116,54 @@ GIT_INLINE(int) ensure_transport_state(
 	return 0;
 }
 
+static int get_ssh_cmdline(
+	git_str *out,
+	ssh_exec_subtransport *transport,
+	git_net_url *url,
+	const char *command)
+{
+	git_remote *remote = ((transport_smart *)transport->owner)->owner;
+	git_repository *repo = remote->repo;
+	git_config *cfg;
+	git_str ssh_cmd = GIT_STR_INIT;
+	const char *default_ssh_cmd = "ssh";
+	int error;
+
+	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0)
+		return error;
+
+	if ((error = git__getenv(&ssh_cmd, "GIT_SSH")) == 0)
+		;
+	else if (error != GIT_ENOTFOUND)
+		goto done;
+	else if ((error = git_config__get_string_buf(&ssh_cmd, cfg, "core.sshcommand")) < 0 && error != GIT_ENOTFOUND)
+		goto done;
+
+	error = git_str_printf(out, "%s -p %s \"%s%s%s\" \"%s\" \"%s\"",
+		ssh_cmd.size > 0 ? ssh_cmd.ptr : default_ssh_cmd,
+		url->port,
+		url->username ? url->username : "",
+		url->username ? "@" : "",
+		url->host,
+		command,
+		url->path);
+
+done:
+	git_str_dispose(&ssh_cmd);
+	git_config_free(cfg);
+	return error;
+}
+
 static int start_ssh(
 	ssh_exec_subtransport *transport,
 	git_smart_service_t action,
 	const char *sshpath)
 {
-	const char *args[6];
 	const char *env[] = { "GIT_DIR=" };
 
 	git_process_options process_opts = GIT_PROCESS_OPTIONS_INIT;
 	git_net_url url = GIT_NET_URL_INIT;
-	git_str userhost = GIT_STR_INIT;
+	git_str ssh_cmdline = GIT_STR_INIT;
 	const char *command;
 	int error;
 
@@ -153,20 +192,11 @@ static int start_ssh(
 	if (error < 0)
 		goto done;
 
-	if (url.username) {
-		git_str_puts(&userhost, url.username);
-		git_str_putc(&userhost, '@');
-	}
-	git_str_puts(&userhost, url.host);
+	if ((error = get_ssh_cmdline(&ssh_cmdline, transport, &url, command)) < 0)
+		goto done;
 
-	args[0] = "/usr/bin/ssh";
-	args[1] = "-p";
-	args[2] = url.port;
-	args[3] = userhost.ptr;
-	args[4] = command;
-	args[5] = url.path;
-
-	if ((error = git_process_new(&transport->process, args, ARRAY_SIZE(args), env, ARRAY_SIZE(env), &process_opts)) < 0 ||
+	if ((error = git_process_new_from_cmdline(&transport->process,
+	     ssh_cmdline.ptr, env, ARRAY_SIZE(env), &process_opts)) < 0 ||
 	    (error = git_process_start(transport->process)) < 0) {
 		git_process_free(transport->process);
 		transport->process = NULL;
@@ -174,7 +204,7 @@ static int start_ssh(
 	}
 
 done:
-	git_str_dispose(&userhost);
+	git_str_dispose(&ssh_cmdline);
 	git_net_url_dispose(&url);
 	return error;
 }

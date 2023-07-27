@@ -414,6 +414,8 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	export GITTEST_REMOTE_SSH_PASSPHRASE=""
 	export GITTEST_REMOTE_SSH_FINGERPRINT="${SSH_FINGERPRINT}"
 
+	export GITTEST_SSH_CMD="ssh -i ${HOME}/.ssh/id_rsa -o UserKnownHostsFile=${HOME}/.ssh/known_hosts"
+
 	echo ""
 	echo "Running ssh tests"
 	echo ""
@@ -429,6 +431,8 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	export GITTEST_REMOTE_URL="[localhost:2222]:$SSHD_DIR/test.git"
 	run_test ssh
 	unset GITTEST_REMOTE_URL
+
+	unset GITTEST_SSH_CMD
 
 	unset GITTEST_REMOTE_USER
 	unset GITTEST_REMOTE_SSH_KEY

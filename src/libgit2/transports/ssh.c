@@ -64,6 +64,8 @@ int git_transport_ssh_with_paths(
 
 	*out = transport;
 	return 0;
+#elif GIT_SSH_EXEC
+	abort();
 #else
 	GIT_UNUSED(out);
 	GIT_UNUSED(owner);
