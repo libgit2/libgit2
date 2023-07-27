@@ -199,6 +199,8 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	PubkeyAuthentication yes
 	ChallengeResponseAuthentication no
 	StrictModes no
+	HostCertificate ${SSHD_DIR}/id_rsa.pub
+	HostKey ${SSHD_DIR}/id_rsa
 	# Required here as sshd will simply close connection otherwise
 	UsePAM no
 	EOF
