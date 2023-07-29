@@ -10,7 +10,9 @@ static git_str result;
 		cl_assert_equal_s(expected, result.ptr); \
 		git_str_dispose(&result); \
 	} while(0)
+
 #endif
+
 
 void test_process_win32__cmdline_is_whitespace_delimited(void)
 {

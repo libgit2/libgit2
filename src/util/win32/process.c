@@ -162,30 +162,29 @@ done:
 	return ret < 0 ? -1 : 0;
 }
 
-int git_process_new(
+static int process_new(
 	git_process **out,
-	const char **args,
-	size_t args_len,
+	const char *appname,
+	const char *cmdline,
 	const char **env,
 	size_t env_len,
 	git_process_options *opts)
 {
 	git_process *process;
-	git_str cmdline = GIT_STR_INIT;
-	int error;
-
-	GIT_ASSERT_ARG(out && args && args_len > 0);
+	int error = 0;
 
 	*out = NULL;
 
 	process = git__calloc(1, sizeof(git_process));
 	GIT_ERROR_CHECK_ALLOC(process);
 
-	if ((error = git_process__cmdline(&cmdline, args, args_len)) < 0)
+	if (appname &&
+	    git_utf8_to_16_alloc(&process->appname, appname) < 0) {
+		error = -1;
 		goto done;
+	}
 
-	if (git_utf8_to_16_alloc(&process->appname, args[0]) < 0 ||
-	    git_utf8_to_16_alloc(&process->cmdline, cmdline.ptr) < 0) {
+	if (git_utf8_to_16_alloc(&process->cmdline, cmdline) < 0) {
 		error = -1;
 		goto done;
 	}
@@ -211,6 +210,40 @@ done:
 	else
 		*out = process;
 
+	return error;
+}
+
+int git_process_new_from_cmdline(
+	git_process **out,
+	const char *cmdline,
+	const char **env,
+	size_t env_len,
+	git_process_options *opts)
+{
+	GIT_ASSERT_ARG(out && cmdline);
+
+	return process_new(out, NULL, cmdline, env, env_len, opts);
+}
+
+int git_process_new(
+	git_process **out,
+	const char **args,
+	size_t args_len,
+	const char **env,
+	size_t env_len,
+	git_process_options *opts)
+{
+	git_str cmdline = GIT_STR_INIT;
+	int error;
+
+	GIT_ASSERT_ARG(out && args && args_len > 0);
+
+	if ((error = git_process__cmdline(&cmdline, args, args_len)) < 0)
+		goto done;
+
+	error = process_new(out, args[0], cmdline.ptr, env, env_len, opts);
+
+done:
 	git_str_dispose(&cmdline);
 	return error;
 }

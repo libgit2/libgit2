@@ -43,7 +43,8 @@ typedef struct {
 
 /**
  * Create a new process.  The command to run should be specified as the
- * element of the `arg` array.
+ * element of the `arg` array, execv-style. This should be the full path
+ * to the command to run, the PATH is not obeyed.
  *
  * This function will add the given environment variables (in `env`)
  * to the current environment.  Operations on environment variables
@@ -67,7 +68,35 @@ extern int git_process_new(
 	size_t env_len,
 	git_process_options *opts);
 
+/**
+ * Create a new process. The command to run should be specified as the
+ * `cmdline` option - which is the full text of the command line as it
+ * would be specified or run by a user. The command to run will be
+ * looked up in the PATH.
+ *
+ * On Unix, this will be executed by the system's shell (`/bin/sh`)
+ * and may contain _Bourne-style_ shell quoting rules. On Windows,
+ * this will be passed to `CreateProcess`, and similarly, may
+ * contain _Windows-style_ shell quoting rules.
+ *
+ * This function will add the given environment variables (in `env`)
+ * to the current environment.  Operations on environment variables
+ * are not thread safe, so you may not modify the environment during
+ * this call.  You can avoid this by setting `exclude_env` in the
+ * options and providing the entire environment yourself.
+ */
+extern int git_process_new_from_cmdline(
+	git_process **out,
+	const char *cmdline,
+	const char **env,
+	size_t env_len,
+	git_process_options *opts);
+
 #ifdef GIT_WIN32
+
+extern int git_process__appname(
+	git_str *out,
+	const char *cmdline);
 
 /* Windows path parsing is tricky; this helper function is for testing. */
 extern int git_process__cmdline(

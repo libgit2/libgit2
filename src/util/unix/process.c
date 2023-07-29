@@ -146,6 +146,19 @@ int git_process_new(
 	return 0;
 }
 
+extern int git_process_new_from_cmdline(
+	git_process **out,
+	const char *cmdline,
+	const char **env,
+	size_t env_len,
+	git_process_options *opts)
+{
+	const char *args[] = { "/bin/sh", "-c", cmdline };
+
+	return git_process_new(out,
+		args, ARRAY_SIZE(args), env, env_len, opts);
+}
+
 #define CLOSE_FD(fd) \
 	if (fd >= 0) {     \
 		close(fd); \
