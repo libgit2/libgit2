@@ -837,6 +837,11 @@ GIT_INLINE(int) server_setup_from_url(
 	git_http_server *server,
 	git_net_url *url)
 {
+	GIT_ASSERT_ARG(url);
+	GIT_ASSERT_ARG(url->scheme);
+	GIT_ASSERT_ARG(url->host);
+	GIT_ASSERT_ARG(url->port);
+
 	if (!server->url.scheme || strcmp(server->url.scheme, url->scheme) ||
 	    !server->url.host || strcmp(server->url.host, url->host) ||
 	    !server->url.port || strcmp(server->url.port, url->port)) {
