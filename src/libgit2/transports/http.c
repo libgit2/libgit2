@@ -335,7 +335,7 @@ static int lookup_proxy(
 	}
 
 	if (!proxy ||
-	    (error = git_net_url_parse(&transport->proxy.url, proxy)) < 0)
+	    (error = git_net_url_parse_http(&transport->proxy.url, proxy)) < 0)
 		goto done;
 
 	if (!git_net_url_valid(&transport->proxy.url)) {
