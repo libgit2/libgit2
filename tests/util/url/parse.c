@@ -669,6 +669,20 @@ void test_url_parse__ipv6_invalid_addresses(void)
 
 /* Oddities */
 
+void test_url_parse__empty_scheme(void)
+{
+	cl_git_pass(git_net_url_parse(&conndata, "://example.com/resource"));
+	cl_assert_equal_s(conndata.scheme, NULL);
+	cl_assert_equal_s(conndata.host, NULL);
+	cl_assert_equal_s(conndata.port, NULL);
+	cl_assert_equal_s(conndata.path, "//example.com/resource");
+	cl_assert_equal_p(conndata.username, NULL);
+	cl_assert_equal_p(conndata.password, NULL);
+	cl_assert_equal_p(conndata.query, NULL);
+	cl_assert_equal_p(conndata.fragment, NULL);
+	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
+}
+
 void test_url_parse__invalid_scheme_is_relative(void)
 {
 	cl_git_pass(git_net_url_parse(&conndata, "foo!bar://host:42/path/to/project?query_string=yes"));
