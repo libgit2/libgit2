@@ -565,6 +565,49 @@ done:
 	return error;
 }
 
+int git_net_url_parse_http(
+	git_net_url *url,
+	const char *given)
+{
+	git_net_url_parser parser = GIT_NET_URL_PARSER_INIT;
+	const char *c, *authority, *path = NULL;
+	size_t authority_len = 0, path_len = 0;
+	int error;
+
+	/* Hopefully this is a proper URL with a scheme. */
+	if (git_net_str_is_url(given))
+		return git_net_url_parse(url, given);
+
+	memset(url, 0, sizeof(git_net_url));
+
+	/* Without a scheme, we are in the host (authority) section. */
+	for (c = authority = given; *c; c++) {
+		if (!path && *c == '/') {
+			authority_len = (c - authority);
+			path = c;
+		}
+	}
+
+	if (path)
+		path_len = (c - path);
+	else
+		authority_len = (c - authority);
+
+	parser.scheme = "http";
+	parser.scheme_len = 4;
+	parser.hierarchical = 1;
+
+	if (authority_len &&
+	    (error = url_parse_authority(&parser, authority, authority_len)) < 0)
+		return error;
+
+	if (path_len &&
+	    (error = url_parse_path(&parser, path, path_len)) < 0)
+		return error;
+
+	return url_parse_finalize(url, &parser);
+}
+
 static int scp_invalid(const char *message)
 {
 	git_error_set(GIT_ERROR_NET, "invalid scp-style path: %s", message);
