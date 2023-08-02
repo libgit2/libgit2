@@ -57,6 +57,14 @@ extern int git_net_url_parse_scp(git_net_url *url, const char *str);
  */
 extern int git_net_url_parse_standard_or_scp(git_net_url *url, const char *str);
 
+/**
+ * Parses a string containing an HTTP endpoint that may not be a
+ * well-formed URL. For example, "localhost" or "localhost:port".
+ */
+extern int git_net_url_parse_http(
+	git_net_url *url,
+	const char *str);
+
 /** Appends a path and/or query string to the given URL */
 extern int git_net_url_joinpath(
 	git_net_url *out,
