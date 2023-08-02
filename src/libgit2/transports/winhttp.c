@@ -443,7 +443,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 		git_net_url_dispose(&t->proxy.url);
 
-		if ((error = git_net_url_parse(&t->proxy.url, proxy_url)) < 0)
+		if ((error = git_net_url_parse_http(&t->proxy.url, proxy_url)) < 0)
 			goto on_error;
 
 		if (!git_net_url_valid(&t->proxy.url)) {
