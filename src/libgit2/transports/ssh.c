@@ -877,11 +877,12 @@ static int _git_ssh_setup_conn(
 	t->current_stream = s;
 
 done:
+	if (known_hosts)
+		libssh2_knownhost_free(known_hosts);
+
 	if (error < 0) {
 		ssh_stream_free(*stream);
 
-		if (known_hosts)
-			libssh2_knownhost_free(known_hosts);
 		if (session)
 			libssh2_session_free(session);
 	}

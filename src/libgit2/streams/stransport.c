@@ -162,7 +162,7 @@ static OSStatus write_cb(SSLConnectionRef conn, const void *data, size_t *len)
 	if (ret < 0) {
 		st->error = ret;
 		return (ret == GIT_TIMEOUT) ?
-		       errSSLNetworkTimeout :
+		       -9853 /* errSSLNetworkTimeout */:
 		       -36 /* ioErr */;
 	}
 
@@ -214,7 +214,7 @@ static OSStatus read_cb(SSLConnectionRef conn, void *data, size_t *len)
 		if (ret < 0) {
 			st->error = ret;
 			error = (ret == GIT_TIMEOUT) ?
-			        errSSLNetworkTimeout :
+			        -9853 /* errSSLNetworkTimeout */:
 			        -36 /* ioErr */;
 			break;
 		} else if (ret == 0) {
