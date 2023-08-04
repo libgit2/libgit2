@@ -113,9 +113,11 @@ struct git_indexer {
 
 	unsigned char *packfile_map;
 
+	git_oidmap *ids; /* map of oid to object */
 	git_sizemap *positions; /* map of position to object */
 	git_vector objects; /* vector of `struct object_entry` */
-	git_vector deltas;  /* vector of `struct delta_entry` */
+	git_vector offset_deltas;  /* vector of `struct delta_entry` */
+	git_vector ref_deltas;  /* vector of `struct delta_entry` */
 
 	struct object_cache basecache; /* lru of position to entry data */
 
@@ -136,12 +138,18 @@ struct git_indexer {
 };
 
 struct resolver_context {
-	size_t thread_number;
-	size_t start_idx;
-	size_t end_idx;
 	git_indexer *indexer;
 	git_hash_ctx hash_ctx;
 	git_zstream zstream;
+	int send_progress_updates;
+};
+
+struct offset_resolver_context {
+	struct resolver_context base;
+
+	size_t thread_number;
+	size_t start_idx;
+	size_t end_idx;
 };
 
 
@@ -280,6 +288,7 @@ GIT_INLINE(int) object_cache_reserve(
 	return 0;
 }
 
+/* TODO: object cache should also take an oid so ref deltas can use it */
 static int object_cache_put(
 	struct object_cache *cache,
 	git_object_size_t position,
@@ -410,25 +419,25 @@ static int objects_cmp(const void *a, const void *b)
 	return git_oid__cmp(&entry_a->id, &entry_b->id);
 }
 
-static int deltas_cmp(const void *a, const void *b)
+static int offset_delta_cmp(const void *a, const void *b)
 {
 	const struct delta_entry *entry_a = a;
 	const struct delta_entry *entry_b = b;
 
-	if (entry_a->object.type == GIT_OBJECT_OFS_DELTA &&
-	    entry_b->object.type == GIT_OBJECT_OFS_DELTA) {
-		if (entry_a->base.ofs_position < entry_b->base.ofs_position)
-			return -1;
-		else if (entry_a->base.ofs_position > entry_b->base.ofs_position)
-			return 1;
-		else
-			return 0;
-	} else if (entry_a->object.type == GIT_OBJECT_REF_DELTA &&
-	           entry_b->object.type == GIT_OBJECT_REF_DELTA) {
-		return git_oid_cmp(&entry_a->base.ref_id, &entry_b->base.ref_id);
-	} else {
-		return (entry_a->object.type == GIT_OBJECT_OFS_DELTA) ?  -1 : 1;
-	}
+	if (entry_a->base.ofs_position < entry_b->base.ofs_position)
+		return -1;
+	else if (entry_a->base.ofs_position > entry_b->base.ofs_position)
+		return 1;
+	else
+		return 0;
+}
+
+static int ref_delta_cmp(const void *a, const void *b)
+{
+	const struct delta_entry *entry_a = a;
+	const struct delta_entry *entry_b = b;
+
+	return git_oid_cmp(&entry_a->base.ref_id, &entry_b->base.ref_id);
 }
 
 static int parse_packfile_header(
@@ -449,9 +458,11 @@ static int parse_packfile_header(
 
 	/* TODO: is 50% a good number? not convinced. */
 	if (git_sizemap_new(&indexer->positions) < 0 ||
+	    git_oidmap_new(&indexer->ids) < 0 ||
 	    object_cache_init(&indexer->basecache) < 0 ||
 	    git_vector_init(&indexer->objects, entries, objects_cmp) < 0 ||
-	    git_vector_init(&indexer->deltas, entries / 2, deltas_cmp) < 0)
+	    git_vector_init(&indexer->offset_deltas, entries / 2, offset_delta_cmp) < 0 ||
+	    git_vector_init(&indexer->ref_deltas, entries / 2, ref_delta_cmp) < 0)
 		return -1;
 
 	indexer->started = 1;
@@ -503,6 +514,7 @@ static int parse_object_complete(
 	entry->crc32 = compressed_crc;
 
 	if (git_sizemap_set(indexer->positions, entry->position, entry) < 0 ||
+	    git_oidmap_set(indexer->ids, &entry->id, entry) < 0 ||
 	    git_vector_insert(&indexer->objects, entry) < 0)
 		return -1;
 
@@ -573,19 +585,26 @@ static int parse_delta_complete(
 {
 	git_indexer *indexer = (git_indexer *)idx;
 	struct delta_entry *entry = indexer->current_delta;
+	git_vector *delta_vec;
 
 	GIT_UNUSED(compressed_size);
 
 	entry->object.crc32 = compressed_crc;
 	entry->final_type = 0;
 
+	if (entry->object.type == GIT_OBJECT_OFS_DELTA)
+		delta_vec = &indexer->offset_deltas;
+	else if (entry->object.type == GIT_OBJECT_REF_DELTA)
+		delta_vec = &indexer->ref_deltas;
+	else
+		GIT_ASSERT(!"invalid delta type");
+
 	if (git_sizemap_set(indexer->positions, entry->object.position, entry) < 0 ||
 	    git_vector_insert(&indexer->objects, entry) < 0 ||
-	    git_vector_insert(&indexer->deltas, entry) < 0)
+	    git_vector_insert(delta_vec, entry) < 0)
 		return -1;
 
 	indexer->current_delta = NULL;
-
 	indexer->progress.received_objects++;
 
 	return do_progress_cb(indexer);
@@ -824,7 +843,7 @@ static int load_resolved_object(
 	struct object_entry *object,
 	struct object_entry *base);
 
-GIT_INLINE(int) load_resolved_ofs_object(
+GIT_INLINE(int) load_resolved_delta_object(
 	struct object_data **out,
 	git_indexer *indexer,
 	struct resolver_context *resolver_ctx,
@@ -836,13 +855,24 @@ GIT_INLINE(int) load_resolved_ofs_object(
 	size_t base_size, result_size;
 
 	/* load the base */
-	if (!base)
+	if (!base && delta->object.type == GIT_OBJECT_OFS_DELTA) {
 		base = git_sizemap_get(indexer->positions, delta->base.ofs_position);
 
-	if (!base) {
-		git_error_set(GIT_ERROR_INDEXER, "corrupt packfile - no object at offset position %llu", delta->base.ofs_position);
-		return -1;
+		if (!base) {
+			git_error_set(GIT_ERROR_INDEXER, "corrupt packfile - no object at offset position %llu", delta->base.ofs_position);
+			return -1;
+		}
+	} else if (!base && delta->object.type == GIT_OBJECT_REF_DELTA) {
+		base = git_oidmap_get(indexer->ids, &delta->base.ref_id);
+
+		if (!base) {
+			git_error_set(GIT_ERROR_INDEXER, "corrupt packfile - no object id %s", git_oid_tostr_s(&delta->base.ref_id));
+			return -1;
+		}
 	}
+
+	GIT_ASSERT(base);
+
 
 	if (load_resolved_object(&base_data, indexer, resolver_ctx, base, NULL) < 0 ||
 	    load_raw_object(&delta_data, indexer, resolver_ctx, _delta) < 0 ||
@@ -891,10 +921,9 @@ static int load_resolved_object(
 		return 0;
 	}
 
-	if (object->type == GIT_OBJECT_REF_DELTA) {
-		abort();
-	} else if (object->type == GIT_OBJECT_OFS_DELTA) {
-		if (load_resolved_ofs_object(&data, indexer, resolver_ctx, object, base) < 0)
+	if (object->type == GIT_OBJECT_REF_DELTA ||
+	    object->type == GIT_OBJECT_OFS_DELTA) {
+		if (load_resolved_delta_object(&data, indexer, resolver_ctx, object, base) < 0)
 			return -1;
 	} else {
 		if (load_raw_object(&data, indexer, resolver_ctx, object) < 0)
@@ -940,10 +969,19 @@ GIT_INLINE(int) resolve_delta(
 	delta->object.id.type = indexer->oid_type;
 #endif
 
+	/* TODO: need a lock here !*/
+	if ((error = git_oidmap_set(indexer->ids, &delta->object.id, &delta->object)) < 0)
+		goto done;
+
+	/* TODO: atomic updates */
 	indexer->progress.indexed_deltas++;
 	indexer->progress.indexed_objects++;
 
-	if (resolver_ctx->thread_number == 0)
+	/* TODO: hmm */
+
+	printf("%d / %d\n", indexer->progress.indexed_deltas, indexer->progress.indexed_objects);
+
+	if (resolver_ctx->send_progress_updates)
 		error = do_progress_cb(indexer);
 
 done:
@@ -951,9 +989,9 @@ done:
 	return error;
 }
 
-static int resolve_offset_deltas(
+static int resolve_offset_partition(
 	git_indexer *indexer,
-	struct resolver_context *resolver_ctx)
+	struct offset_resolver_context *resolver_ctx)
 {
 	struct object_entry *object_entry;
 	struct delta_entry *delta_start, *delta_entry;
@@ -966,7 +1004,7 @@ static int resolve_offset_deltas(
 		resolver_ctx->start_idx, resolver_ctx->end_idx);
 
 
-	delta_start = git_vector_get(&indexer->deltas, delta_idx);
+	delta_start = git_vector_get(&indexer->offset_deltas, delta_idx);
 
 	/*
 	 * At this point, our deltas are sorted by the positions of their
@@ -974,19 +1012,21 @@ static int resolve_offset_deltas(
 	 * use this object as their base.
 	 */
 	git_vector_foreach(&indexer->objects, object_idx, object_entry) {
+		printf("%llu / %llu\n", object_entry->position, delta_start->base.ofs_position);
+
 
 		/* We may not have gotten to this delta yet */
-		/* TODO: start at the right object instead */
+		/* TODO: start at the right object instead / bsearch */
 		if (object_entry->position < delta_start->base.ofs_position)
 			continue;
 
-
 		while (delta_idx < resolver_ctx->end_idx) {
-			delta_entry = git_vector_get(&indexer->deltas, delta_idx);
+			delta_entry = git_vector_get(&indexer->offset_deltas, delta_idx);
+
+			printf("delta_entry: %p / type: %d\n", delta_entry, delta_entry->object.type);
 
 			/* TODO */
-			if (delta_entry->object.type != GIT_OBJECT_OFS_DELTA)
-				abort();
+			GIT_ASSERT(delta_entry->object.type == GIT_OBJECT_OFS_DELTA);
 
 			/*
 			 * We've hit the end of the deltas that use this object
@@ -999,15 +1039,12 @@ static int resolve_offset_deltas(
 			GIT_ASSERT(delta_entry->base.ofs_position >= object_entry->position);
 
 
-/*
 		printf("thread %zu: resolving %zu %p\n", resolver_ctx->thread_number, delta_idx, delta_entry);
-		*/
 
 
 
-/*		printf("resolving %llu [%lu]\n", delta_entry->base.ofs_position, resolver_ctx->idx); */
 
-			if (resolve_delta(indexer, resolver_ctx, delta_entry, object_entry) < 0) {
+			if (resolve_delta(indexer, &resolver_ctx->base, delta_entry, object_entry) < 0) {
 				printf("failed! [%lu] [%s]\n", resolver_ctx->thread_number, git_error_last()->message);
 				return -1;
 			}
@@ -1023,10 +1060,10 @@ static int resolve_offset_deltas(
 	return do_progress_cb(indexer);
 }
 
-static void *resolve_threadfn(void *_ctx)
+static void *resolve_offset_thread(void *_ctx)
 {
-	struct resolver_context *resolver_ctx = (struct resolver_context *)_ctx;
-	size_t result = resolve_offset_deltas(resolver_ctx->indexer, resolver_ctx);
+	struct offset_resolver_context *resolver_ctx = (struct offset_resolver_context *)_ctx;
+	ssize_t result = resolve_offset_partition(resolver_ctx->base.indexer, resolver_ctx);
 	return (void *)result;
 }
 
@@ -1166,58 +1203,57 @@ on_error:
 }
 
 /* Resolve deltas. Each thread will do a percentage of the resolution. */
-static int resolve_deltas(git_indexer *indexer)
+static int resolve_offset_deltas(git_indexer *indexer)
 {
 	git_thread thread[THREADS_MAX];
-	struct resolver_context *resolver_ctx[THREADS_MAX];
-	size_t delta_cnt, partition_size, i;
-	size_t thread_cnt = THREADS_DEFAULT;
+	struct offset_resolver_context resolver_ctx[THREADS_MAX] = { { { NULL } } } ;
+	size_t threads_cnt = THREADS_DEFAULT;
+	size_t deltas_cnt, partition_size, i;
 	int error;
 
-	indexer->packfile_map = mmap(NULL, indexer->packfile_size,
-		PROT_READ, MAP_SHARED, indexer->packfile_fd, 0);
-
-	if ((delta_cnt = git_vector_length(&indexer->deltas)) == 0)
+	if ((deltas_cnt = git_vector_length(&indexer->offset_deltas)) == 0)
 		return 0;
 
-	git_vector_sort(&indexer->deltas);
+	git_vector_sort(&indexer->offset_deltas);
 
 	/* Each thread will handle a number of objects. */
-	partition_size = delta_cnt / thread_cnt;
+	partition_size = (threads_cnt > deltas_cnt) ?
+		deltas_cnt : deltas_cnt / threads_cnt;
 
-	for (i = 0; i < thread_cnt; i++) {
+	for (i = 0; i < threads_cnt; i++) {
 		size_t partition_start = (i * partition_size);
 
-		resolver_ctx[i] = git__calloc(1, sizeof(struct resolver_context));
-		resolver_ctx[i]->thread_number = i;
-		resolver_ctx[i]->indexer = indexer;
+		resolver_ctx[i].thread_number = i;
 
-		resolver_ctx[i]->start_idx = partition_start;
-		resolver_ctx[i]->end_idx = (i < thread_cnt - 1) ?
-			(partition_start + partition_size) : delta_cnt;
+		resolver_ctx[i].start_idx = partition_start;
+		resolver_ctx[i].end_idx = (i < threads_cnt - 1) ?
+			(partition_start + partition_size) : deltas_cnt;
+
+		resolver_ctx[i].base.indexer = indexer;
+		resolver_ctx[i].base.send_progress_updates = (i == 0);
 
 		/* TODO: free stuff on cleanup */
-		if (git_hash_ctx_init(&resolver_ctx[i]->hash_ctx, git_oid_algorithm(indexer->oid_type)) < 0 ||
-		    git_zstream_init(&resolver_ctx[i]->zstream, GIT_ZSTREAM_INFLATE) < 0)
+		if (git_hash_ctx_init(&resolver_ctx[i].base.hash_ctx, git_oid_algorithm(indexer->oid_type)) < 0 ||
+		    git_zstream_init(&resolver_ctx[i].base.zstream, GIT_ZSTREAM_INFLATE) < 0)
 			return -1;
 
-		if (resolver_ctx[i]->end_idx == delta_cnt) {
-			thread_cnt = i + 1;
+		if (resolver_ctx[i].end_idx == deltas_cnt) {
+			threads_cnt = i + 1;
 			break;
 		}
 	}
 
 	/* Start background threads 1-n (thread 0 is this thread) */
-	for (i = 1; i < thread_cnt; i++) {
-		if (git_thread_create(&thread[i], resolve_threadfn, resolver_ctx[i]) != 0) {
+	for (i = 1; i < threads_cnt; i++) {
+		if (git_thread_create(&thread[i], resolve_offset_thread, &resolver_ctx[i]) != 0) {
 			git_error_set(GIT_ERROR_THREAD, "unable to create thread");
 			return -1;
 		}
 	}
 
-	error = resolve_offset_deltas(indexer, resolver_ctx[0]);
+	error = resolve_offset_partition(indexer, &resolver_ctx[0]);
 
-	for (i = 1; i < thread_cnt; i++) {
+	for (i = 1; i < threads_cnt; i++) {
 		void *result;
 
 		if (git_thread_join(&thread[i], &result) != 0) {
@@ -1225,11 +1261,79 @@ static int resolve_deltas(git_indexer *indexer)
 			error = -1;
 		}
 
-		if ((size_t)result != 0)
+		if ((ssize_t)result != 0)
 			error = -1;
 	}
 
 	return error;
+}
+
+static int resolve_ref_deltas(git_indexer *indexer)
+{
+	struct resolver_context resolver_ctx = { NULL };
+	struct delta_entry *delta_entry;
+	struct object_entry *base_entry;
+	size_t delta_idx;
+	bool progress = false;
+
+	resolver_ctx.indexer = indexer;
+	resolver_ctx.send_progress_updates = 1;
+
+	/* TODO: free stuff on cleanup */
+	if (git_hash_ctx_init(&resolver_ctx.hash_ctx, git_oid_algorithm(indexer->oid_type)) < 0 ||
+	    git_zstream_init(&resolver_ctx.zstream, GIT_ZSTREAM_INFLATE) < 0)
+		return -1;
+
+	do {
+		progress = false;
+
+		git_vector_foreach(&indexer->ref_deltas, delta_idx, delta_entry) {
+			/* Skip this if we've already resolved this. */
+			if (delta_entry->final_type)
+				continue;
+
+			base_entry = git_oidmap_get(indexer->ids, &delta_entry->base.ref_id);
+
+			/*
+			 * We haven't seen this base (yet) or this is a thin-pack and
+			 * the base points outside the pack.
+			 */
+			if (base_entry == NULL)
+				continue;
+
+			printf("base: %s\n", git_oid_tostr_s(&delta_entry->base.ref_id));
+
+			if (resolve_delta(indexer, &resolver_ctx, delta_entry, base_entry) < 0) {
+				printf("failed! [%s]\n", git_error_last()->message);
+				return -1;
+			}
+
+			printf("indexed: %s\n", git_oid_tostr_s(&delta_entry->object.id));
+
+			progress = true;
+		}
+	} while (progress);
+
+	printf("done\n");
+
+	return 0;
+}
+
+static int fail_thin_pack(git_indexer *indexer)
+{
+	struct delta_entry *delta_entry;
+	size_t delta_idx;
+
+	git_vector_foreach(&indexer->ref_deltas, delta_idx, delta_entry) {
+		/* Skip this if we've already resolved this. */
+		if (delta_entry->final_type)
+			continue;
+
+		git_error_set(GIT_ERROR_INDEXER, "could not find base object '%s' to resolve delta", git_oid_tostr_s(&delta_entry->base.ref_id));
+		return -1;
+	}
+
+	return 0;
 }
 
 int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
@@ -1249,6 +1353,7 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 	indexer->progress.total_deltas =
 		indexer->progress.total_objects - indexer->progress.indexed_objects;
 
+	/* TODO: why is this here? we need to update this when we're done. but maybe we need to set it up at the beginning for callers...? what does do_progress_cb actually do? hmm... */
 	if (stats)
 		memcpy(stats, &indexer->progress, sizeof(git_indexer_progress));
 
@@ -1260,8 +1365,23 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 	indexer->index_end = git_time_monotonic();
 	/*printf("elapsed: %llu\n", (indexer->index_end - indexer->index_start));*/
 
-	if (resolve_deltas(indexer) < 0)
+	indexer->packfile_map = mmap(NULL, indexer->packfile_size,
+		PROT_READ, MAP_SHARED, indexer->packfile_fd, 0);
+
+	if (resolve_offset_deltas(indexer) < 0)
 		return -1;
+
+	if (resolve_ref_deltas(indexer) < 0)
+		return -1;
+
+	/*
+	 * TODO: we should probably check here if we need to fix the thin pack and
+	 * error if we weren't given an odb.
+	 */
+	if (fail_thin_pack(indexer) < 0)
+		return -1;
+
+	/* TODO: unmap */
 
 	/* TODO: zap */
 	if (0) {
@@ -1288,6 +1408,9 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 
 	printf("\n\nobject lookups: %lu / cache hits: %lu\n\n", indexer->object_lookups, indexer->cache_hits);
 
+	if (stats)
+		memcpy(stats, &indexer->progress, sizeof(git_indexer_progress));
+
 	return 0;
 }
 
@@ -1299,7 +1422,9 @@ void git_indexer_free(git_indexer *indexer)
 	git_str_dispose(&indexer->packfile_path);
 	object_cache_dispose(&indexer->basecache);
 	git_sizemap_free(indexer->positions);
-	git_vector_free(&indexer->deltas);
+	git_oidmap_free(indexer->ids);
+	git_vector_free(&indexer->offset_deltas);
+	git_vector_free(&indexer->ref_deltas);
 	git_vector_free_deep(&indexer->objects);
 	git_packfile_parser_dispose(&indexer->parser);
 	git__free(indexer);
