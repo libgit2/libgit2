@@ -523,7 +523,6 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	    definition->callback(&t->wrapped, &t->parent, definition->param) < 0) {
 		git_vector_free(&t->refs);
 		git_vector_free(&t->heads);
-		t->wrapped->free(t->wrapped);
 		git__free(t);
 		return -1;
 	}
