@@ -21,7 +21,8 @@
 /* TODO: tweak? also align with packfile_parser.c */
 #define READ_CHUNK_SIZE (1024 * 256)
 
-#define THREADS 16
+#define THREADS_MAX 64
+#define THREADS_DEFAULT 16
 
 size_t git_indexer__max_objects = UINT32_MAX;
 
@@ -950,7 +951,7 @@ done:
 	return error;
 }
 
-static int resolve_deltas(
+static int resolve_offset_deltas(
 	git_indexer *indexer,
 	struct resolver_context *resolver_ctx)
 {
@@ -961,11 +962,9 @@ static int resolve_deltas(
 	/* TODO figure out some way to ferry git errors back to the main thread */
 	/* TODO: only fire events on the main thread */
 
-/*
 	printf("thread %zu: resolving %zu - %zu\n", resolver_ctx->thread_number,
 		resolver_ctx->start_idx, resolver_ctx->end_idx);
 
-*/
 
 	delta_start = git_vector_get(&indexer->deltas, delta_idx);
 
@@ -1024,10 +1023,10 @@ static int resolve_deltas(
 	return do_progress_cb(indexer);
 }
 
-static void *resolve_deltas_threadfn(void *_ctx)
+static void *resolve_threadfn(void *_ctx)
 {
 	struct resolver_context *resolver_ctx = (struct resolver_context *)_ctx;
-	size_t result = resolve_deltas(resolver_ctx->indexer, resolver_ctx);
+	size_t result = resolve_offset_deltas(resolver_ctx->indexer, resolver_ctx);
 	return (void *)result;
 }
 
@@ -1166,12 +1165,77 @@ on_error:
 	return -1;
 }
 
+/* Resolve deltas. Each thread will do a percentage of the resolution. */
+static int resolve_deltas(git_indexer *indexer)
+{
+	git_thread thread[THREADS_MAX];
+	struct resolver_context *resolver_ctx[THREADS_MAX];
+	size_t delta_cnt, partition_size, i;
+	size_t thread_cnt = THREADS_DEFAULT;
+	int error;
+
+	indexer->packfile_map = mmap(NULL, indexer->packfile_size,
+		PROT_READ, MAP_SHARED, indexer->packfile_fd, 0);
+
+	if ((delta_cnt = git_vector_length(&indexer->deltas)) == 0)
+		return 0;
+
+	git_vector_sort(&indexer->deltas);
+
+	/* Each thread will handle a number of objects. */
+	partition_size = delta_cnt / thread_cnt;
+
+	for (i = 0; i < thread_cnt; i++) {
+		size_t partition_start = (i * partition_size);
+
+		resolver_ctx[i] = git__calloc(1, sizeof(struct resolver_context));
+		resolver_ctx[i]->thread_number = i;
+		resolver_ctx[i]->indexer = indexer;
+
+		resolver_ctx[i]->start_idx = partition_start;
+		resolver_ctx[i]->end_idx = (i < thread_cnt - 1) ?
+			(partition_start + partition_size) : delta_cnt;
+
+		/* TODO: free stuff on cleanup */
+		if (git_hash_ctx_init(&resolver_ctx[i]->hash_ctx, git_oid_algorithm(indexer->oid_type)) < 0 ||
+		    git_zstream_init(&resolver_ctx[i]->zstream, GIT_ZSTREAM_INFLATE) < 0)
+			return -1;
+
+		if (resolver_ctx[i]->end_idx == delta_cnt) {
+			thread_cnt = i + 1;
+			break;
+		}
+	}
+
+	/* Start background threads 1-n (thread 0 is this thread) */
+	for (i = 1; i < thread_cnt; i++) {
+		if (git_thread_create(&thread[i], resolve_threadfn, resolver_ctx[i]) != 0) {
+			git_error_set(GIT_ERROR_THREAD, "unable to create thread");
+			return -1;
+		}
+	}
+
+	error = resolve_offset_deltas(indexer, resolver_ctx[0]);
+
+	for (i = 1; i < thread_cnt; i++) {
+		void *result;
+
+		if (git_thread_join(&thread[i], &result) != 0) {
+			git_error_set(GIT_ERROR_THREAD, "unable to join thread");
+			error = -1;
+		}
+
+		if ((size_t)result != 0)
+			error = -1;
+	}
+
+	return error;
+}
+
 int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 {
-	git_thread thread[THREADS];
-	struct resolver_context *resolver_ctx[THREADS];
 	struct object_entry *entry;
-	size_t delta_cnt, partition_size, i;
+	size_t i;
 	int error;
 
 	GIT_ASSERT_ARG(indexer);
@@ -1196,64 +1260,8 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 	indexer->index_end = git_time_monotonic();
 	/*printf("elapsed: %llu\n", (indexer->index_end - indexer->index_start));*/
 
-	indexer->packfile_map = mmap(NULL, indexer->packfile_size,
-		PROT_READ, MAP_SHARED, indexer->packfile_fd, 0);
-
-	/*
-	 * Resolve the deltas. Each thread will do a percentage of
-	 * the resolutions.
-	 */
-
-	git_vector_sort(&indexer->deltas);
-
-	/* Each thread will handle a number of objects. */
-	delta_cnt = git_vector_length(&indexer->deltas);
-	partition_size = delta_cnt / THREADS;
-
-	for (i = 0; i < THREADS; i++) {
-		size_t partition_start = (i * partition_size);
-
-		resolver_ctx[i] = git__calloc(1, sizeof(struct resolver_context));
-		resolver_ctx[i]->thread_number = i;
-		resolver_ctx[i]->indexer = indexer;
-
-		resolver_ctx[i]->start_idx = partition_start;
-		resolver_ctx[i]->end_idx = (i < THREADS - 1) ?
-			(partition_start + partition_size) : delta_cnt;
-
-		/* TODO: free stuff on cleanup */
-		if (git_hash_ctx_init(&resolver_ctx[i]->hash_ctx, git_oid_algorithm(indexer->oid_type)) < 0 ||
-		    git_zstream_init(&resolver_ctx[i]->zstream, GIT_ZSTREAM_INFLATE) < 0)
-			return -1;
-	}
-
-	/* Start background threads 1-n (thread 0 is this thread) */
-	for (i = 1; i < THREADS; i++) {
-		if (git_thread_create(&thread[i], resolve_deltas_threadfn, resolver_ctx[i]) != 0) {
-			git_error_set(GIT_ERROR_THREAD, "unable to create thread");
-			return -1;
-		}
-	}
-
-	error = resolve_deltas(indexer, resolver_ctx[0]);
-
-	for (i = 1; i < THREADS; i++) {
-		void *result;
-
-		if (git_thread_join(&thread[i], &result) != 0) {
-			git_error_set(GIT_ERROR_THREAD, "unable to join thread");
-			return -1;
-		}
-
-		if ((size_t)result != 0)
-			error = -1;
-	}
-
-	if (error != 0)
-		return error;
-
-/*	if (resolve_deltas(indexer) < 0)
-		return -1; */
+	if (resolve_deltas(indexer) < 0)
+		return -1;
 
 	/* TODO: zap */
 	if (0) {
