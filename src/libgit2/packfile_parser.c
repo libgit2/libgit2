@@ -57,7 +57,7 @@ static int parse_header(
 		parser->header.hdr_version = ntohl(parser->header.hdr_version);
 		parser->header.hdr_entries = ntohl(parser->header.hdr_entries);
 
-		if (parser->header.hdr_signature != 0x5041434b) {
+		if (parser->header.hdr_signature != PACK_SIGNATURE) {
 			git_error_set(GIT_ERROR_INDEXER, "invalid packfile signature");
 			return -1;
 		}
@@ -413,7 +413,7 @@ static int parse_trailer(
 	len -= chunk_len;
 
 	if (parser->trailer_len == hash_len) {
-		unsigned char trailer[GIT_HASH_SHA256_SIZE];
+		unsigned char trailer[GIT_HASH_MAX_SIZE];
 
 		git_hash_final(trailer, &parser->packfile_hash);
 

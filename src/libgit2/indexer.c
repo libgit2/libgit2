@@ -95,9 +95,11 @@ struct git_indexer {
 
 	git_packfile_parser parser;
 
+	uint32_t version;
 	uint32_t entries;
 	unsigned int started : 1,
-	             complete : 1;
+	             complete : 1,
+				 has_thin_entries : 1;
 
 	/* Current object / delta being parsed */
 	/* TODO: pul these directly from the parser instead? */
@@ -121,10 +123,10 @@ struct git_indexer {
 
 	struct object_cache basecache; /* lru of position to entry data */
 
-	unsigned char packfile_trailer[GIT_HASH_MAX_SIZE];
-
+	/* The packfile's trailer; and formatted into returnable objects. */
+	unsigned char trailer[GIT_HASH_MAX_SIZE];
 	git_oid trailer_oid;
-	char name[(GIT_HASH_MAX_SIZE * 2) + 1];
+	char trailer_name[(GIT_HASH_MAX_SIZE * 2) + 1];
 
 	size_t object_lookups;
 	size_t cache_hits;
@@ -447,8 +449,6 @@ static int parse_packfile_header(
 {
 	git_indexer *indexer = (git_indexer *)idx;
 
-	GIT_UNUSED(version);
-
 	if (indexer->started) {
 		git_error_set(GIT_ERROR_INDEXER, "unexpected packfile header");
 		return -1;
@@ -466,6 +466,7 @@ static int parse_packfile_header(
 		return -1;
 
 	indexer->started = 1;
+	indexer->version = version;
 	indexer->entries = entries;
 
 	indexer->progress.total_objects = entries;
@@ -619,7 +620,7 @@ static int parse_packfile_complete(
 
 	GIT_ASSERT(checksum_len == git_oid_size(indexer->oid_type));
 
-	memcpy(indexer->packfile_trailer, checksum, checksum_len);
+	memcpy(indexer->trailer, checksum, checksum_len);
 
 	indexer->complete = 1;
 	return 0;
@@ -711,7 +712,7 @@ void git_indexer__set_fsync(git_indexer *indexer, int do_fsync)
 
 const char *git_indexer_name(const git_indexer *indexer)
 {
-	return indexer->name;
+	return indexer->trailer_name;
 }
 
 #ifndef GIT_DEPRECATE_HARD
@@ -727,6 +728,9 @@ static int append_data(
 	size_t len)
 {
 	size_t chunk_len;
+
+	/* TODO: if we're using this to fix thin packs, we shouldn't be incrementing received_bytes. */
+	/* although maybe we shouldn't be incrememnting received_bytes at all :'( */
 
 	while (len > 0) {
 		chunk_len = min(len, SSIZE_MAX);
@@ -843,6 +847,118 @@ static int load_resolved_object(
 	struct object_entry *object,
 	struct object_entry *base);
 
+GIT_INLINE(git_hash_algorithm_t) indexer_hash_algorithm(git_indexer *indexer)
+{
+	switch (indexer->oid_type) {
+		case GIT_OID_SHA1:
+			return GIT_HASH_ALGORITHM_SHA1;
+#ifdef GIT_EXPERIMENTAL_SHA256
+		case GIT_OID_SHA256:
+			return GIT_HASH_ALGORITHM_SHA256;
+#endif
+	}
+
+	return GIT_HASH_ALGORITHM_NONE;
+}
+
+/*
+ * TODO: we should have a mechanism for inserting objects directly from
+ * an existing pack. keep this as a fallback for loose odb.
+ */
+static int insert_thin_base(
+	struct object_entry **out,
+	git_indexer *indexer,
+	git_oid *base_id)
+{
+	size_t checksum_size;
+	git_odb_object *base;
+	/* TODO: make this a constant */
+	unsigned char header[64];
+	const void *base_data;
+	size_t base_position, base_len, header_len;
+	git_str deflate_buf = GIT_STR_INIT;
+	struct object_entry *entry;
+	git_object_t base_type;
+	uint32_t base_crc;
+	int error;
+
+	printf("out: %p indexer: %p\n", out, indexer);
+	printf("fixing thin pack for: %s\n", git_oid_tostr_s(base_id));
+
+	checksum_size = git_hash_size(indexer_hash_algorithm(indexer));
+
+	if (!indexer->odb)
+		return GIT_ENOTFOUND;
+
+	if ((error = git_odb_read(&base, indexer->odb, base_id)) < 0)
+		goto done;
+
+	/* TODO: take a write lock on the packfile */
+
+	/* rewind back over the given packfile trailer */
+	if (!indexer->has_thin_entries) {
+		GIT_ASSERT(indexer->packfile_size > checksum_size);
+		indexer->packfile_size -= checksum_size;
+
+		if (p_lseek(indexer->packfile_fd, indexer->packfile_size, SEEK_SET) < 0) {
+			git_error_set(GIT_ERROR_OS, "could not rewind packfile to fix thin pack");
+			return -1;
+		}
+	}
+
+	base_position = indexer->packfile_size;
+	base_data = git_odb_object_data(base);
+	base_len = git_odb_object_size(base);
+	base_type = git_odb_object_type(base);
+
+	if (git_packfile__object_header(&header_len, header, base_len, base_type) < 0 ||
+	    git_zstream_deflatebuf(&deflate_buf, base_data, base_len) < 0 ||
+	    append_data(indexer, header, header_len) < 0 ||
+	    append_data(indexer, deflate_buf.ptr, deflate_buf.size) < 0) {
+		error = -1;
+		goto done;
+	}
+
+	base_crc = crc32(0L, Z_NULL, 0);
+	base_crc = crc32(base_crc, header, header_len);
+	base_crc = crc32(base_crc, (const unsigned char *)deflate_buf.ptr, deflate_buf.size);
+
+	/* Add this to our record-keeping */
+
+	/* TODO: pool? */
+	entry = git__malloc(sizeof(struct object_entry));
+	GIT_ERROR_CHECK_ALLOC(entry);
+
+	entry->type = base_type;
+	entry->position = base_position;
+	entry->header_size = header_len;
+	entry->size = base_len;
+
+	git_oid_cpy(&entry->id, base_id);
+	entry->crc32 = htonl(base_crc);
+
+	if (git_sizemap_set(indexer->positions, entry->position, entry) < 0 ||
+	    git_oidmap_set(indexer->ids, &entry->id, entry) < 0 ||
+	    git_vector_insert(&indexer->objects, entry) < 0)
+		return -1;
+
+	indexer->progress.local_objects++;
+
+	printf("type: %d\n", git_odb_object_type(base));
+	printf("      %.*s\n", (int)base_len, (char *)base_data);
+
+	indexer->has_thin_entries = 1;
+
+	*out = entry;
+	error = 0;
+
+done:
+	/* unlock packfile */
+
+	git_str_dispose(&deflate_buf);
+	return error;
+}
+
 GIT_INLINE(int) load_resolved_delta_object(
 	struct object_data **out,
 	git_indexer *indexer,
@@ -853,6 +969,7 @@ GIT_INLINE(int) load_resolved_delta_object(
 	struct delta_entry *delta = (struct delta_entry *)_delta;
 	struct object_data *base_data, *delta_data, *result_data;
 	size_t base_size, result_size;
+	int error;
 
 	/* load the base */
 	if (!base && delta->object.type == GIT_OBJECT_OFS_DELTA) {
@@ -864,6 +981,12 @@ GIT_INLINE(int) load_resolved_delta_object(
 		}
 	} else if (!base && delta->object.type == GIT_OBJECT_REF_DELTA) {
 		base = git_oidmap_get(indexer->ids, &delta->base.ref_id);
+
+		if (!base &&
+			(error = insert_thin_base(&base, indexer, &delta->base.ref_id)) < 0)
+				return error;
+
+		printf("fixed!\n");
 
 		if (!base) {
 			git_error_set(GIT_ERROR_INDEXER, "corrupt packfile - no object id %s", git_oid_tostr_s(&delta->base.ref_id));
@@ -910,21 +1033,24 @@ static int load_resolved_object(
 	struct object_entry *base)
 {
 	struct object_data *data;
+	int error;
 
 	indexer->object_lookups++;
 
 	/* cache lookup */
 
-	if ((data = object_cache_get(&indexer->basecache, object->position)) != NULL) {
+	if (object->type == GIT_OBJECT_OFS_DELTA &&
+	    (data = object_cache_get(&indexer->basecache, object->position)) != NULL) {
 		indexer->cache_hits++;
 		*out = data;
 		return 0;
 	}
 
-	if (object->type == GIT_OBJECT_REF_DELTA ||
-	    object->type == GIT_OBJECT_OFS_DELTA) {
-		if (load_resolved_delta_object(&data, indexer, resolver_ctx, object, base) < 0)
-			return -1;
+	if (object->type == GIT_OBJECT_REF_DELTA || object->type == GIT_OBJECT_OFS_DELTA) {
+		error = load_resolved_delta_object(&data, indexer, resolver_ctx, object, base);
+
+		if (error < 0)
+			return error;
 	} else {
 		if (load_raw_object(&data, indexer, resolver_ctx, object) < 0)
 			return -1;
@@ -947,11 +1073,10 @@ GIT_INLINE(int) resolve_delta(
 	struct object_data *result;
 	char header[64];
 	size_t header_len;
-	int error = 0;
+	int error;
 
-	if (load_resolved_object(&result, indexer, resolver_ctx,
-			(struct object_entry *)delta, base) < 0)
-		return -1;
+	if ((error = load_resolved_object(&result, indexer, resolver_ctx, (struct object_entry *)delta, base)) < 0)
+		return error;
 
 	/* TODO: hash ctx per thread */
 	if (git_hash_init(&resolver_ctx->hash_ctx) < 0 ||
@@ -1178,14 +1303,23 @@ static int write_index(git_indexer *indexer)
 		}
 	}
 
-	/* Packfile trailer */
-	if (hash_and_write(fp, &hash_ctx, indexer->packfile_trailer,
-			git_oid_size(indexer->oid_type)) < 0)
+	/*
+	 * Recompute the packfile trailer in case we've inserted bases to fix
+	 * a thin pack.
+	 */
+	if (hash_and_write(fp, &hash_ctx, indexer->trailer, git_oid_size(indexer->oid_type)) < 0)
 		goto on_error;
 
 	if (git_hash_final(index_trailer, &hash_ctx) < 0 ||
 	    fwrite(index_trailer, 1, git_oid_size(indexer->oid_type), fp) < git_oid_size(indexer->oid_type))
 		goto on_error;
+
+/* TODO: mixing up hashes and oids here - probably elsewhere too */
+	if (git_oid__fromraw(&indexer->trailer_oid, indexer->trailer, indexer->oid_type) < 0 ||
+	    git_hash_fmt(indexer->trailer_name, indexer->trailer, git_oid_size(indexer->oid_type)) < 0)
+		return -1;
+
+	/* TODO: rename into place. */
 
 	git_str_dispose(&path);
 	return 0;
@@ -1272,9 +1406,9 @@ static int resolve_ref_deltas(git_indexer *indexer)
 {
 	struct resolver_context resolver_ctx = { NULL };
 	struct delta_entry *delta_entry;
-	struct object_entry *base_entry;
 	size_t delta_idx;
 	bool progress = false;
+	int error;
 
 	resolver_ctx.indexer = indexer;
 	resolver_ctx.send_progress_updates = 1;
@@ -1292,18 +1426,13 @@ static int resolve_ref_deltas(git_indexer *indexer)
 			if (delta_entry->final_type)
 				continue;
 
-			base_entry = git_oidmap_get(indexer->ids, &delta_entry->base.ref_id);
-
-			/*
-			 * We haven't seen this base (yet) or this is a thin-pack and
-			 * the base points outside the pack.
-			 */
-			if (base_entry == NULL)
-				continue;
-
 			printf("base: %s\n", git_oid_tostr_s(&delta_entry->base.ref_id));
 
-			if (resolve_delta(indexer, &resolver_ctx, delta_entry, base_entry) < 0) {
+			error = resolve_delta(indexer, &resolver_ctx, delta_entry, NULL);
+
+			if (error == GIT_ENOTFOUND) {
+				continue;
+			} else if (error < 0) {
 				printf("failed! [%s]\n", git_error_last()->message);
 				return -1;
 			}
@@ -1319,19 +1448,79 @@ static int resolve_ref_deltas(git_indexer *indexer)
 	return 0;
 }
 
-static int fail_thin_pack(git_indexer *indexer)
+static int finalize_thin_pack(git_indexer *indexer)
 {
+	git_hash_algorithm_t hash_type;
+	git_hash_ctx hash_ctx;
+	struct git_pack_header header;
 	struct delta_entry *delta_entry;
-	size_t delta_idx;
+	size_t delta_idx, content_size;
+	char buf[READ_CHUNK_SIZE];
+	unsigned char new_hash[GIT_HASH_MAX_SIZE];
+	int ret;
 
+	/* Ensure that we've resolved all the deltas. */
 	git_vector_foreach(&indexer->ref_deltas, delta_idx, delta_entry) {
-		/* Skip this if we've already resolved this. */
 		if (delta_entry->final_type)
 			continue;
 
 		git_error_set(GIT_ERROR_INDEXER, "could not find base object '%s' to resolve delta", git_oid_tostr_s(&delta_entry->base.ref_id));
 		return -1;
 	}
+
+	/* Update the header to include the number of injected objects. */
+	/* TODO
+	if (!indexer->has_thin_entries)
+		return 0;
+		*/
+
+	hash_type = git_oid_algorithm(indexer->oid_type);
+
+	if (git_hash_ctx_init(&hash_ctx, hash_type) < 0)
+		return -1;
+
+	/* TODO: check for overflow */
+	header.hdr_signature = PACK_SIGNATURE;
+	header.hdr_version = indexer->version;
+	header.hdr_entries = indexer->entries + indexer->progress.local_objects;
+
+	/* Write the updated header and rehash the packfile. */
+
+	if (p_lseek(indexer->packfile_fd, 0, SEEK_SET) < 0) {
+		git_error_set(GIT_ERROR_OS, "could not rewind packfile to update header");
+		return -1;
+	}
+
+	if (p_write(indexer->packfile_fd, &header, sizeof(struct git_pack_header)) < 0) {
+		git_error_set(GIT_ERROR_OS, "could not write updated packfile header");
+		return -1;
+	}
+
+	if (git_hash_update(&hash_ctx, &header, sizeof(struct git_pack_header)) < 0)
+		return -1;
+
+	GIT_ASSERT(indexer->packfile_size >
+		sizeof(struct git_pack_header) + git_hash_size(hash_type));
+
+	content_size = indexer->packfile_size -
+		(sizeof(struct git_pack_header) + git_hash_size(hash_type));
+
+	while ((ret = p_read(indexer->packfile_fd, buf, min(content_size, sizeof(buf)))) > 0) {
+		if (git_hash_update(&hash_ctx, buf, ret) < 0)
+			return -1;
+	}
+
+	if (ret < 0) {
+		git_error_set(GIT_ERROR_OS, "could not read packfile to rehash");
+		return -1;
+	}
+
+	if (git_hash_final(new_hash, &hash_ctx) < 0) {
+		git_error_set(GIT_ERROR_OS, "could not rehash packfile");
+		return -1;
+	}
+
+	printf("%s\n", new_hash);
 
 	return 0;
 }
@@ -1374,11 +1563,7 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 	if (resolve_ref_deltas(indexer) < 0)
 		return -1;
 
-	/*
-	 * TODO: we should probably check here if we need to fix the thin pack and
-	 * error if we weren't given an odb.
-	 */
-	if (fail_thin_pack(indexer) < 0)
+	if (finalize_thin_pack(indexer) < 0)
 		return -1;
 
 	/* TODO: unmap */
@@ -1405,6 +1590,11 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 	printf("writing...\n");
 	if (write_index(indexer) < 0)
 		return -1;
+
+	{
+/*    git_hash_fmt(foo, packfile_trailer, git_oid_size(indexer->oid_type)) < 0) */
+	printf("%s / %s\n", git_oid_tostr_s(&indexer->trailer_oid), indexer->trailer_name);
+}
 
 	printf("\n\nobject lookups: %lu / cache hits: %lu\n\n", indexer->object_lookups, indexer->cache_hits);
 

@@ -67,7 +67,7 @@ struct git_packfile_parser {
 	git_hash_ctx current_hash;
 
 	/* Parsing structure for the trailer */
-	unsigned char trailer[GIT_HASH_SHA256_SIZE];
+	unsigned char trailer[GIT_HASH_MAX_SIZE];
 	size_t trailer_len;
 
 	git_hash_ctx packfile_hash;
@@ -81,6 +81,12 @@ int git_packfile_parser_parse(
 	git_packfile_parser *parser,
 	const void *data,
 	size_t len);
+
+/*
+ * Get the hash context for the packfile. Callers may want to mutate the
+ * hash - for example, when fixing thin packs.
+ */
+git_hash_ctx *git_packfile_parser_hash_ctx(git_packfile_parser *parser);
 
 void git_packfile_parser_dispose(git_packfile_parser *parser);
 
