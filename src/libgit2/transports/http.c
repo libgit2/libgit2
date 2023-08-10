@@ -290,11 +290,9 @@ static int handle_response(
 		return -1;
 	}
 
-	/* The Content-Type header must match our expectation. */
-	if (strcmp(response->content_type, stream->service->response_type) != 0) {
-		git_error_set(GIT_ERROR_HTTP, "invalid content-type: '%s'", response->content_type);
-		return -1;
-	}
+	/* The Content-Type header _should_ match our expectation. */
+	if (strcmp(response->content_type, stream->service->response_type) != 0)
+		git_trace(GIT_TRACE_INFO, "server sent content-type '%s' (expected '%s')", response->content_type, stream->service->response_type);
 
 	*complete = true;
 	stream->state = HTTP_STATE_RECEIVING_RESPONSE;
