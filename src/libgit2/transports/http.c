@@ -284,17 +284,10 @@ static int handle_response(
 		return -1;
 	}
 
-	/* The response must contain a Content-Type header. */
-	if (!response->content_type) {
-		git_error_set(GIT_ERROR_HTTP, "no content-type header in response");
-		return -1;
-	}
-
-	/* The Content-Type header must match our expectation. */
-	if (strcmp(response->content_type, stream->service->response_type) != 0) {
-		git_error_set(GIT_ERROR_HTTP, "invalid content-type: '%s'", response->content_type);
-		return -1;
-	}
+	/* 
+	 * Here were Context-Type related checks, that were too restrict.
+	 * Somewhere in the year 2025 can this reminder be removed.
+	 */
 
 	*complete = true;
 	stream->state = HTTP_STATE_RECEIVING_RESPONSE;
