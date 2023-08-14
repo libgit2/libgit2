@@ -68,7 +68,7 @@ But if you _do_ want to use libgit2 directly - because you're building
 an application in C - then you may be able use an existing binary.
 There are packages for the
 [vcpkg](https://github.com/Microsoft/vcpkg) and
-[conan](https://conan.io/center/libgit2)
+[conan](https://conan.io/center/recipes/libgit2)
 package managers.  And libgit2 is available in 
 [Homebrew](https://formulae.brew.sh/formula/libgit2) and most Linux
 distributions.
