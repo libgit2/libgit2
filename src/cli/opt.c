@@ -19,7 +19,7 @@
 #include <limits.h>
 #include <assert.h>
 
-#include "cli.h"
+#include "common.h"
 #include "opt.h"
 
 #ifdef _WIN32
@@ -73,7 +73,7 @@ GIT_INLINE(const cli_opt_spec *) spec_for_long(
 
 		/* Handle --option=value arguments */
 		if (spec->type == CLI_OPT_TYPE_VALUE &&
-		    eql &&
+		    spec->name && eql &&
 		    strncmp(arg, spec->name, eql_pos) == 0 &&
 		    spec->name[eql_pos] == '\0') {
 			*has_value = 1;
@@ -573,6 +573,28 @@ cli_opt_status_t cli_opt_parse(
 	given_specs[given_idx] = NULL;
 
 	return validate_required(opt, specs, given_specs);
+}
+
+int cli_opt_foreach(
+	const cli_opt_spec specs[],
+	char **args,
+	size_t args_len,
+	unsigned int flags,
+	int (*callback)(cli_opt *, void *),
+	void *callback_data)
+{
+	cli_opt_parser parser;
+	cli_opt opt;
+	int ret;
+
+	cli_opt_parser_init(&parser, specs, args, args_len, flags);
+
+	while (cli_opt_parser_next(&opt, &parser)) {
+		if ((ret = callback(&opt, callback_data)) != 0)
+			return ret;
+	}
+
+	return 0;
 }
 
 static int spec_name_fprint(FILE *file, const cli_opt_spec *spec)
