@@ -1,3 +1,26 @@
+v1.7.1
+------
+
+## What's Changed
+
+### Bug fixes
+
+* proxy: Return an error for invalid proxy URLs instead of crashing. by @lrm29 in https://github.com/libgit2/libgit2/pull/6597
+* ssh: fix known_hosts leak in _git_ssh_setup_conn by @steven9724 in https://github.com/libgit2/libgit2/pull/6599
+* repository: make cleanup safe for re-use with grafts by @carlosmn in https://github.com/libgit2/libgit2/pull/6600
+* fix: Add missing include for oidarray. by @dvzrv in https://github.com/libgit2/libgit2/pull/6608
+* Revert "CMake: Search for ssh2 instead of libssh2." by @ethomson in https://github.com/libgit2/libgit2/pull/6619
+
+### Compatibility improvements
+
+* stransport: macOS: replace errSSLNetworkTimeout, with hard-coded value by @mascguy in https://github.com/libgit2/libgit2/pull/6610
+
+## New Contributors
+* @dvzrv made their first contribution in https://github.com/libgit2/libgit2/pull/6608
+* @steven9724 made their first contribution in https://github.com/libgit2/libgit2/pull/6599
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.7.0...v1.7.1
+
 v1.7
 ----
 
