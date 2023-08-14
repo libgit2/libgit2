@@ -62,12 +62,32 @@ typedef enum {
  * An entry in a configuration file
  */
 typedef struct git_config_entry {
-	const char *name; /**< Name of the entry (normalised) */
-	const char *value; /**< String value of the entry */
-	unsigned int include_depth; /**< Depth of includes where this variable was found */
-	git_config_level_t level; /**< Which config file this was found in */
-	void GIT_CALLBACK(free)(struct git_config_entry *entry); /**< Free function for this entry */
-	void *payload; /**< Opaque value for the free function. Do not read or write */
+	/** Name of the configuration entry (normalized) */
+	const char *name;
+
+	/** Literal (string) value of the entry */
+	const char *value;
+
+	/** The type of backend that this entry exists in (eg, "file") */
+	const char *backend_type;
+
+	/**
+	 * The path to the origin of this entry. For config files, this is
+	 * the path to the file.
+	 */
+	const char *origin_path;
+
+	/** Depth of includes where this variable was found */
+	unsigned int include_depth;
+
+	/** Configuration level for the file this was found in */
+	git_config_level_t level;
+
+	/**
+	 * Free function for this entry; for internal purposes. Callers
+	 * should call `git_config_entry_free` to free data.
+	 */
+	void GIT_CALLBACK(free)(struct git_config_entry *entry);
 } git_config_entry;
 
 /**
