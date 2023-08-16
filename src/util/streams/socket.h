@@ -7,7 +7,7 @@
 #ifndef INCLUDE_streams_socket_h__
 #define INCLUDE_streams_socket_h__
 
-#include "common.h"
+#include "git2_util.h"
 
 #include "stream.h"
 
