@@ -11,15 +11,8 @@
 
 #include "stream.h"
 
-typedef struct {
-	git_stream parent;
-	char *host;
-	char *port;
-	GIT_SOCKET s;
-} git_socket_stream;
+extern int git_stream_socket_new(git_stream **out, const char *host, const char *port);
 
-extern int git_socket_stream_new(git_stream **out, const char *host, const char *port);
-
-extern int git_socket_stream_global_init(void);
+extern int git_stream_socket_global_init(void);
 
 #endif

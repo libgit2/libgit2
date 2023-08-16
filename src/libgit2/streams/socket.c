@@ -28,8 +28,15 @@
 # endif
 #endif
 
-int git_socket_stream__connect_timeout = 0;
-int git_socket_stream__timeout = 0;
+int git_stream_socket__connect_timeout = 0;
+int git_stream_socket__timeout = 0;
+
+typedef struct {
+	git_stream parent;
+	char *host;
+	char *port;
+	GIT_SOCKET s;
+} git_stream_socket;
 
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
@@ -168,7 +175,7 @@ static int connect_with_timeout(
 
 static int socket_connect(git_stream *stream)
 {
-	git_socket_stream *st = (git_socket_stream *) stream;
+	git_stream_socket *st = (git_stream_socket *) stream;
 	GIT_SOCKET s = INVALID_SOCKET;
 	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
@@ -234,7 +241,7 @@ static ssize_t socket_write(
 	size_t len,
 	int flags)
 {
-	git_socket_stream *st = (git_socket_stream *) stream;
+	git_stream_socket *st = (git_stream_socket *) stream;
 	struct pollfd fd;
 	ssize_t ret;
 
@@ -273,7 +280,7 @@ static ssize_t socket_read(
 	void *data,
 	size_t len)
 {
-	git_socket_stream *st = (git_socket_stream *) stream;
+	git_stream_socket *st = (git_stream_socket *) stream;
 	struct pollfd fd;
 	ssize_t ret;
 
@@ -306,7 +313,7 @@ static ssize_t socket_read(
 
 static int socket_close(git_stream *stream)
 {
-	git_socket_stream *st = (git_socket_stream *) stream;
+	git_stream_socket *st = (git_stream_socket *) stream;
 	int error;
 
 	error = close_socket(st->s);
@@ -317,7 +324,7 @@ static int socket_close(git_stream *stream)
 
 static void socket_free(git_stream *stream)
 {
-	git_socket_stream *st = (git_socket_stream *) stream;
+	git_stream_socket *st = (git_stream_socket *) stream;
 
 	git__free(st->host);
 	git__free(st->port);
@@ -329,13 +336,13 @@ static int default_socket_stream_new(
 	const char *host,
 	const char *port)
 {
-	git_socket_stream *st;
+	git_stream_socket *st;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(host);
 	GIT_ASSERT_ARG(port);
 
-	st = git__calloc(1, sizeof(git_socket_stream));
+	st = git__calloc(1, sizeof(git_stream_socket));
 	GIT_ERROR_CHECK_ALLOC(st);
 
 	st->host = git__strdup(host);
@@ -347,8 +354,8 @@ static int default_socket_stream_new(
 	}
 
 	st->parent.version = GIT_STREAM_VERSION;
-	st->parent.timeout = git_socket_stream__timeout;
-	st->parent.connect_timeout = git_socket_stream__connect_timeout;
+	st->parent.timeout = git_stream_socket__timeout;
+	st->parent.connect_timeout = git_stream_socket__connect_timeout;
 	st->parent.connect = socket_connect;
 	st->parent.write = socket_write;
 	st->parent.read = socket_read;
@@ -360,7 +367,7 @@ static int default_socket_stream_new(
 	return 0;
 }
 
-int git_socket_stream_new(
+int git_stream_socket_new(
 	git_stream **out,
 	const char *host,
 	const char *port)
@@ -395,7 +402,7 @@ static void socket_stream_global_shutdown(void)
 	WSACleanup();
 }
 
-int git_socket_stream_global_init(void)
+int git_stream_socket_global_init(void)
 {
 	WORD winsock_version;
 	WSADATA wsa_data;
@@ -420,7 +427,7 @@ int git_socket_stream_global_init(void)
 
 #include "stream.h"
 
-int git_socket_stream_global_init(void)
+int git_stream_socket_global_init(void)
 {
 	return 0;
 }

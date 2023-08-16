@@ -13,12 +13,12 @@
 
 #ifdef GIT_HTTPS_SCHANNEL
 
-extern int git_schannel_stream_new(
+extern int git_stream_schannel_new(
 	git_stream **out,
 	const char *host,
 	const char *port);
 
-extern int git_schannel_stream_wrap(
+extern int git_stream_schannel_wrap(
 	git_stream **out,
 	git_stream *in,
 	const char *host);

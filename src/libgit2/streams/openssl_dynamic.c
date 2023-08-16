@@ -117,7 +117,7 @@ static void dynamic_shutdown(void)
 	openssl_handle = NULL;
 }
 
-int git_openssl_stream_dynamic_init(void)
+int git_stream_openssl_dynamic_init(void)
 {
 	int err = 0;
 

@@ -13,8 +13,8 @@
 
 #ifdef GIT_HTTPS_SECURETRANSPORT
 
-extern int git_securetransport_stream_new(git_stream **out, const char *host, const char *port);
-extern int git_securetransport_stream_wrap(git_stream **out, git_stream *in, const char *host);
+extern int git_stream_securetransport_new(git_stream **out, const char *host, const char *port);
+extern int git_stream_securetransport_wrap(git_stream **out, git_stream *in, const char *host);
 
 #endif
 
