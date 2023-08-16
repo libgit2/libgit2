@@ -13,7 +13,7 @@
 #include "streams/tls.h"
 #include "streams/mbedtls.h"
 #include "streams/openssl.h"
-#include "streams/stransport.h"
+#include "streams/securetransport.h"
 
 struct stream_registry {
 	git_rwlock lock;

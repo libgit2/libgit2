@@ -9,7 +9,7 @@
 #include "streams/openssl_legacy.h"
 #include "streams/openssl_dynamic.h"
 
-#ifdef GIT_OPENSSL
+#ifdef GIT_HTTPS_OPENSSL
 
 #include <ctype.h>
 
@@ -29,7 +29,7 @@
 # include <netinet/in.h>
 #endif
 
-#ifndef GIT_OPENSSL_DYNAMIC
+#ifndef GIT_HTTPS_OPENSSL_DYNAMIC
 # include <openssl/ssl.h>
 # include <openssl/err.h>
 # include <openssl/x509v3.h>
@@ -62,7 +62,7 @@ static void shutdown_ssl(void)
 }
 
 #ifdef VALGRIND
-# if !defined(GIT_OPENSSL_LEGACY) && !defined(GIT_OPENSSL_DYNAMIC)
+# if !defined(GIT_HTTPS_OPENSSL_LEGACY) && !defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 
 static void *git_openssl_malloc(size_t bytes, const char *file, int line)
 {
@@ -84,7 +84,7 @@ static void git_openssl_free(void *mem, const char *file, int line)
 	GIT_UNUSED(line);
 	git__free(mem);
 }
-# else /* !GIT_OPENSSL_LEGACY && !GIT_OPENSSL_DYNAMIC */
+# else /* !GIT_HTTPS_OPENSSL_LEGACY && !GIT_HTTPS_OPENSSL_DYNAMIC */
 static void *git_openssl_malloc(size_t bytes)
 {
 	return git__calloc(1, bytes);
@@ -99,7 +99,7 @@ static void git_openssl_free(void *mem)
 {
 	git__free(mem);
 }
-# endif /* !GIT_OPENSSL_LEGACY && !GIT_OPENSSL_DYNAMIC */
+# endif /* !GIT_HTTPS_OPENSSL_LEGACY && !GIT_HTTPS_OPENSSL_DYNAMIC */
 #endif /* VALGRIND */
 
 static int openssl_init(void)
@@ -176,7 +176,7 @@ bool openssl_initialized;
 
 int git_openssl_stream_global_init(void)
 {
-#ifndef GIT_OPENSSL_DYNAMIC
+#ifndef GIT_HTTPS_OPENSSL_DYNAMIC
 	return openssl_init();
 #else
 	if (git_mutex_init(&openssl_mutex) != 0)
@@ -188,7 +188,7 @@ int git_openssl_stream_global_init(void)
 
 static int openssl_ensure_initialized(void)
 {
-#ifdef GIT_OPENSSL_DYNAMIC
+#ifdef GIT_HTTPS_OPENSSL_DYNAMIC
 	int error = 0;
 
 	if (git_mutex_lock(&openssl_mutex) != 0)
@@ -209,7 +209,7 @@ static int openssl_ensure_initialized(void)
 #endif
 }
 
-#if !defined(GIT_OPENSSL_LEGACY) && !defined(GIT_OPENSSL_DYNAMIC)
+#if !defined(GIT_HTTPS_OPENSSL_LEGACY) && !defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 int git_openssl_set_locking(void)
 {
 # ifdef GIT_THREADS

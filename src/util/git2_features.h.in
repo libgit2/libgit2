@@ -40,11 +40,11 @@
 
 #cmakedefine GIT_WINHTTP 1
 #cmakedefine GIT_HTTPS 1
-#cmakedefine GIT_OPENSSL 1
-#cmakedefine GIT_OPENSSL_DYNAMIC 1
-#cmakedefine GIT_SECURE_TRANSPORT 1
-#cmakedefine GIT_MBEDTLS 1
-#cmakedefine GIT_SCHANNEL 1
+#cmakedefine GIT_HTTPS_OPENSSL 1
+#cmakedefine GIT_HTTPS_OPENSSL_DYNAMIC 1
+#cmakedefine GIT_HTTPS_SECURETRANSPORT 1
+#cmakedefine GIT_HTTPS_MBEDTLS 1
+#cmakedefine GIT_HTTPS_SCHANNEL 1
 
 #cmakedefine GIT_SHA1_COLLISIONDETECT 1
 #cmakedefine GIT_SHA1_WIN32 1
