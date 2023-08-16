@@ -33,11 +33,6 @@ if(WIN32 AND NOT CYGWIN)
 	set(SRC_RC "git2.rc")
 endif()
 
-if(APPLE)
-	# The old Secure Transport API has been deprecated in macOS 10.15.
-	set_source_files_properties(streams/securetransport.c PROPERTIES COMPILE_FLAGS -Wno-deprecated)
-endif()
-
 ide_split_sources(libgit2)
 list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:util> $<TARGET_OBJECTS:libgit2> ${LIBGIT2_DEPENDENCY_OBJECTS})
 list(APPEND LIBGIT2_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES})

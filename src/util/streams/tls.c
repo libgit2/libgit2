@@ -7,7 +7,7 @@
 
 #include "git2/errors.h"
 
-#include "common.h"
+#include "git2_util.h"
 #include "streams/registry.h"
 #include "streams/tls.h"
 #include "streams/mbedtls.h"
