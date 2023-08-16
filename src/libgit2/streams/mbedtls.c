@@ -69,7 +69,7 @@ static void shutdown_ssl(void)
 	}
 }
 
-int git_mbedtls_stream_global_init(void)
+int git_stream_mbedtls_global_init(void)
 {
 	int loaded = 0;
 	char *crtpath = GIT_DEFAULT_CERT_LOCATION;
@@ -406,7 +406,7 @@ out_err:
 	return error;
 }
 
-int git_mbedtls_stream_wrap(
+int git_stream_mbedtls_wrap(
 	git_stream **out,
 	git_stream *in,
 	const char *host)
@@ -414,7 +414,7 @@ int git_mbedtls_stream_wrap(
 	return mbedtls_stream_wrap(out, in, host, 0);
 }
 
-int git_mbedtls_stream_new(
+int git_stream_mbedtls_new(
 	git_stream **out,
 	const char *host,
 	const char *port)
@@ -426,7 +426,7 @@ int git_mbedtls_stream_new(
 	GIT_ASSERT_ARG(host);
 	GIT_ASSERT_ARG(port);
 
-	if ((error = git_socket_stream_new(&stream, host, port)) < 0)
+	if ((error = git_stream_socket_new(&stream, host, port)) < 0)
 		return error;
 
 	if ((error = mbedtls_stream_wrap(out, stream, host, 1)) < 0) {
@@ -473,7 +473,7 @@ int git_mbedtls__set_cert_location(const char *file, const char *path)
 
 #include "stream.h"
 
-int git_mbedtls_stream_global_init(void)
+int git_stream_mbedtls_global_init(void)
 {
 	return 0;
 }

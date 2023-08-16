@@ -15,7 +15,7 @@
 #include "streams/securetransport.h"
 #include "streams/schannel.h"
 
-int git_tls_stream_new(git_stream **out, const char *host, const char *port)
+int git_stream_tls_new(git_stream **out, const char *host, const char *port)
 {
 	int (*init)(git_stream **, const char *, const char *) = NULL;
 	git_stream_registration custom = {0};
@@ -29,13 +29,13 @@ int git_tls_stream_new(git_stream **out, const char *host, const char *port)
 		init = custom.init;
 	} else if (error == GIT_ENOTFOUND) {
 #if defined(GIT_HTTPS_SECURETRANSPORT)
-		init = git_securetransport_stream_new;
+		init = git_stream_securetransport_new;
 #elif defined(GIT_HTTPS_OPENSSL)
-		init = git_openssl_stream_new;
+		init = git_stream_openssl_new;
 #elif defined(GIT_HTTPS_MBEDTLS)
-		init = git_mbedtls_stream_new;
+		init = git_stream_mbedtls_new;
 #elif defined(GIT_HTTPS_SCHANNEL)
-		init = git_schannel_stream_new;
+		init = git_stream_schannel_new;
 #endif
 	} else {
 		return error;
@@ -49,7 +49,7 @@ int git_tls_stream_new(git_stream **out, const char *host, const char *port)
 	return init(out, host, port);
 }
 
-int git_tls_stream_wrap(git_stream **out, git_stream *in, const char *host)
+int git_stream_tls_wrap(git_stream **out, git_stream *in, const char *host)
 {
 	int (*wrap)(git_stream **, git_stream *, const char *) = NULL;
 	git_stream_registration custom = {0};
@@ -61,13 +61,13 @@ int git_tls_stream_wrap(git_stream **out, git_stream *in, const char *host)
 		wrap = custom.wrap;
 	} else {
 #if defined(GIT_HTTPS_SECURETRANSPORT)
-		wrap = git_securetransport_stream_wrap;
+		wrap = git_stream_securetransport_wrap;
 #elif defined(GIT_HTTPS_OPENSSL)
-		wrap = git_openssl_stream_wrap;
+		wrap = git_stream_openssl_wrap;
 #elif defined(GIT_HTTPS_MBEDTLS)
-		wrap = git_mbedtls_stream_wrap;
+		wrap = git_stream_mbedtls_wrap;
 #elif defined(GIT_HTTPS_SCHANNEL)
-		wrap = git_schannel_stream_wrap;
+		wrap = git_stream_schannel_wrap;
 #endif
 	}
 

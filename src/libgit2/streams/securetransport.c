@@ -322,7 +322,7 @@ static int securetransport_wrap(
 	return 0;
 }
 
-int git_securetransport_stream_wrap(
+int git_stream_securetransport_wrap(
 	git_stream **out,
 	git_stream *in,
 	const char *host)
@@ -330,7 +330,7 @@ int git_securetransport_stream_wrap(
 	return securetransport_wrap(out, in, host, 0);
 }
 
-int git_securetransport_stream_new(git_stream **out, const char *host, const char *port)
+int git_stream_securetransport_new(git_stream **out, const char *host, const char *port)
 {
 	git_stream *stream = NULL;
 	int error;
@@ -338,7 +338,7 @@ int git_securetransport_stream_new(git_stream **out, const char *host, const cha
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(host);
 
-	error = git_socket_stream_new(&stream, host, port);
+	error = git_stream_socket_new(&stream, host, port);
 
 	if (!error)
 		error = securetransport_wrap(out, stream, host, 1);

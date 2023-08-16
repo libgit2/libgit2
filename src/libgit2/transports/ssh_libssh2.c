@@ -523,7 +523,7 @@ static int _git_ssh_session_create(
 	int port,
 	git_stream *io)
 {
-	git_socket_stream *socket = GIT_CONTAINER_OF(io, git_socket_stream, parent);
+	git_stream_socket *socket = GIT_CONTAINER_OF(io, git_stream_socket, parent);
 	LIBSSH2_SESSION *s;
 	LIBSSH2_KNOWNHOSTS *known_hosts;
 	git_str prefs = GIT_STR_INIT;
@@ -788,7 +788,7 @@ static int _git_ssh_setup_conn(
 	if (error < 0)
 		goto done;
 
-	if ((error = git_socket_stream_new(&s->io, s->url.host, s->url.port)) < 0 ||
+	if ((error = git_stream_socket_new(&s->io, s->url.host, s->url.port)) < 0 ||
 	    (error = git_stream_connect(s->io)) < 0)
 		goto done;
 

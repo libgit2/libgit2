@@ -47,8 +47,8 @@ extern size_t git_indexer__max_objects;
 extern bool git_disable_pack_keep_file_checks;
 extern int git_odb__packed_priority;
 extern int git_odb__loose_priority;
-extern int git_socket_stream__connect_timeout;
-extern int git_socket_stream__timeout;
+extern int git_stream_socket__connect_timeout;
+extern int git_stream_socket__timeout;
 
 char *git__user_agent;
 char *git__ssl_ciphers;
@@ -82,9 +82,9 @@ int git_libgit2_init(void)
 		git_merge_driver_global_init,
 		git_transport_ssh_libssh2_global_init,
 		git_stream_registry_global_init,
-		git_socket_stream_global_init,
-		git_openssl_stream_global_init,
-		git_mbedtls_stream_global_init,
+		git_stream_socket_global_init,
+		git_stream_openssl_global_init,
+		git_stream_mbedtls_global_init,
 		git_mwindow_global_init,
 		git_pool_global_init,
 		git_libgit2_settings_global_init
@@ -439,7 +439,7 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_GET_SERVER_CONNECT_TIMEOUT:
-		*(va_arg(ap, int *)) = git_socket_stream__connect_timeout;
+		*(va_arg(ap, int *)) = git_stream_socket__connect_timeout;
 		break;
 
 	case GIT_OPT_SET_SERVER_CONNECT_TIMEOUT:
@@ -450,13 +450,13 @@ int git_libgit2_opts(int key, ...)
 				git_error_set(GIT_ERROR_INVALID, "invalid connect timeout");
 				error = -1;
 			} else {
-				git_socket_stream__connect_timeout = timeout;
+				git_stream_socket__connect_timeout = timeout;
 			}
 		}
 		break;
 
 	case GIT_OPT_GET_SERVER_TIMEOUT:
-		*(va_arg(ap, int *)) = git_socket_stream__timeout;
+		*(va_arg(ap, int *)) = git_stream_socket__timeout;
 		break;
 
 	case GIT_OPT_SET_SERVER_TIMEOUT:
@@ -467,7 +467,7 @@ int git_libgit2_opts(int key, ...)
 				git_error_set(GIT_ERROR_INVALID, "invalid timeout");
 				error = -1;
 			} else {
-				git_socket_stream__timeout = timeout;
+				git_stream_socket__timeout = timeout;
 			}
 		}
 		break;
