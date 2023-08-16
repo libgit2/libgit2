@@ -7,7 +7,7 @@
 #ifndef INCLUDE_streams_openssl_h__
 #define INCLUDE_streams_openssl_h__
 
-#include "common.h"
+#include "git2_util.h"
 #include "streams/openssl_legacy.h"
 #include "streams/openssl_dynamic.h"
 

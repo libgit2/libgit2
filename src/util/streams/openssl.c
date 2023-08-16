@@ -13,7 +13,7 @@
 
 #include <ctype.h>
 
-#include "common.h"
+#include "git2_util.h"
 #include "runtime.h"
 #include "settings.h"
 #include "posix.h"

@@ -12,7 +12,7 @@ set(UTIL_INCLUDES
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include")
 
-file(GLOB UTIL_SRC *.c *.h allocators/*.c allocators/*.h hash.h)
+file(GLOB UTIL_SRC *.c *.h allocators/*.c allocators/*.h streams/*.c streams/*.h)
 list(SORT UTIL_SRC)
 
 #
@@ -67,6 +67,15 @@ else()
 endif()
 
 list(SORT UTIL_SRC_SHA256)
+
+#
+# HTTPS options
+#
+
+if(APPLE)
+	# The old Secure Transport API has been deprecated in macOS 10.15.
+	set_source_files_properties(streams/securetransport.c PROPERTIES COMPILE_FLAGS -Wno-deprecated)
+endif()
 
 #
 # Build the library

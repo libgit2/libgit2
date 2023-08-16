@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "git2_util.h"
 
 #include "streams/registry.h"
 
@@ -82,8 +82,7 @@ int git_stream_registry_lookup(git_stream_registration *out, git_stream_t type)
 int git_stream_register(git_stream_t type, git_stream_registration *registration)
 {
 	GIT_ASSERT(!registration || registration->init);
-
-	GIT_ERROR_CHECK_VERSION(registration, GIT_STREAM_VERSION, "stream_registration");
+	GIT_ASSERT(!registration || registration->version == GIT_STREAM_VERSION);
 
 	if (git_rwlock_wrlock(&stream_registry.lock) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to lock stream registry");
