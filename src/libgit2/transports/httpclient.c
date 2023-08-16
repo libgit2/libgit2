@@ -918,9 +918,9 @@ GIT_INLINE(int) server_create_stream(git_http_server *server)
 	git_net_url *url = &server->url;
 
 	if (strcasecmp(url->scheme, "https") == 0)
-		return git_tls_stream_new(&server->stream, url->host, url->port);
+		return git_stream_tls_new(&server->stream, url->host, url->port);
 	else if (strcasecmp(url->scheme, "http") == 0)
-		return git_socket_stream_new(&server->stream, url->host, url->port);
+		return git_stream_socket_new(&server->stream, url->host, url->port);
 
 	git_error_set(GIT_ERROR_HTTP, "unknown http scheme '%s'", url->scheme);
 	return -1;
@@ -1001,7 +1001,7 @@ static int server_connect(git_http_client *client)
 	client->current_server = SERVER;
 
 	if (client->proxy.stream)
-		error = git_tls_stream_wrap(&client->server.stream, client->proxy.stream, url->host);
+		error = git_stream_tls_wrap(&client->server.stream, client->proxy.stream, url->host);
 	else
 		error = server_create_stream(&client->server);
 

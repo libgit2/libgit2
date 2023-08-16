@@ -341,7 +341,7 @@ extern int sk_GENERAL_NAME_num(const GENERAL_NAME *sk);
 extern GENERAL_NAME *sk_GENERAL_NAME_value(const GENERAL_NAME *sk, int i);
 extern void GENERAL_NAMES_free(GENERAL_NAME *sk);
 
-extern int git_openssl_stream_dynamic_init(void);
+extern int git_stream_openssl_dynamic_init(void);
 
 #endif /* GIT_HTTPS_OPENSSL_DYNAMIC */
 

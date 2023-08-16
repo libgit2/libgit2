@@ -681,7 +681,7 @@ static int schannel_stream_wrap(
 	return 0;
 }
 
-extern int git_schannel_stream_new(
+extern int git_stream_schannel_new(
 	git_stream **out,
 	const char *host,
 	const char *port)
@@ -693,7 +693,7 @@ extern int git_schannel_stream_new(
 	GIT_ASSERT_ARG(host);
 	GIT_ASSERT_ARG(port);
 
-	if ((error = git_socket_stream_new(&stream, host, port)) < 0)
+	if ((error = git_stream_socket_new(&stream, host, port)) < 0)
 		return error;
 
 	if ((error = schannel_stream_wrap(out, stream, host, 1)) < 0) {
@@ -704,7 +704,7 @@ extern int git_schannel_stream_new(
 	return error;
 }
 
-extern int git_schannel_stream_wrap(
+extern int git_stream_schannel_wrap(
 	git_stream **out,
 	git_stream *in,
 	const char *host)

@@ -174,7 +174,7 @@ error:
 git_mutex openssl_mutex;
 bool openssl_initialized;
 
-int git_openssl_stream_global_init(void)
+int git_stream_openssl_global_init(void)
 {
 #ifndef GIT_HTTPS_OPENSSL_DYNAMIC
 	return openssl_init();
@@ -195,7 +195,7 @@ static int openssl_ensure_initialized(void)
 		return -1;
 
 	if (!openssl_initialized) {
-		if ((error = git_openssl_stream_dynamic_init()) == 0)
+		if ((error = git_stream_openssl_dynamic_init()) == 0)
 			error = openssl_init();
 
 		openssl_initialized = !error;
@@ -672,7 +672,7 @@ static int openssl_stream_wrap(
 	return 0;
 }
 
-int git_openssl_stream_wrap(git_stream **out, git_stream *in, const char *host)
+int git_stream_openssl_wrap(git_stream **out, git_stream *in, const char *host)
 {
 	if (openssl_ensure_initialized() < 0)
 		return -1;
@@ -680,7 +680,7 @@ int git_openssl_stream_wrap(git_stream **out, git_stream *in, const char *host)
 	return openssl_stream_wrap(out, in, host, 0);
 }
 
-int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
+int git_stream_openssl_new(git_stream **out, const char *host, const char *port)
 {
 	git_stream *stream = NULL;
 	int error;
@@ -692,7 +692,7 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 	if (openssl_ensure_initialized() < 0)
 		return -1;
 
-	if ((error = git_socket_stream_new(&stream, host, port)) < 0)
+	if ((error = git_stream_socket_new(&stream, host, port)) < 0)
 		return error;
 
 	if ((error = openssl_stream_wrap(out, stream, host, 1)) < 0) {
@@ -725,7 +725,7 @@ int git_openssl__set_cert_location(const char *file, const char *path)
 #include "stream.h"
 #include "git2/sys/openssl.h"
 
-int git_openssl_stream_global_init(void)
+int git_stream_openssl_global_init(void)
 {
 	return 0;
 }
