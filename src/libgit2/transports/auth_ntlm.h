@@ -15,11 +15,11 @@
 
 #if defined(GIT_NTLM) || defined(GIT_WIN32)
 
-#if defined(GIT_OPENSSL)
+#if defined(GIT_HTTPS_OPENSSL)
 # define CRYPT_OPENSSL
-#elif defined(GIT_MBEDTLS)
+#elif defined(GIT_HTTPS_MBEDTLS)
 # define CRYPT_MBEDTLS
-#elif defined(GIT_SECURE_TRANSPORT)
+#elif defined(GIT_HTTPS_STRANSPORT)
 # define CRYPT_COMMONCRYPTO
 #endif
 

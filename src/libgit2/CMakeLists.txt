@@ -35,7 +35,7 @@ endif()
 
 if(APPLE)
 	# The old Secure Transport API has been deprecated in macOS 10.15.
-	set_source_files_properties(streams/stransport.c PROPERTIES COMPILE_FLAGS -Wno-deprecated)
+	set_source_files_properties(streams/securetransport.c PROPERTIES COMPILE_FLAGS -Wno-deprecated)
 endif()
 
 ide_split_sources(libgit2)

@@ -8,7 +8,7 @@
 #include "streams/openssl.h"
 #include "streams/openssl_dynamic.h"
 
-#if defined(GIT_OPENSSL) && defined(GIT_OPENSSL_DYNAMIC)
+#if defined(GIT_HTTPS_OPENSSL) && defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 
 #include "runtime.h"
 
@@ -310,4 +310,4 @@ void GENERAL_NAMES_free(GENERAL_NAME *sk)
 		sk_free(sk);
 }
 
-#endif /* GIT_OPENSSL && GIT_OPENSSL_DYNAMIC */
+#endif /* GIT_HTTPS_OPENSSL && GIT_HTTPS_OPENSSL_DYNAMIC */
