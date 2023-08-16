@@ -5,9 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "streams/stransport.h"
+#include "streams/securetransport.h"
 
-#ifdef GIT_SECURE_TRANSPORT
+#ifdef GIT_HTTPS_SECURETRANSPORT
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/SecureTransport.h>
@@ -17,7 +17,7 @@
 
 #include "streams/socket.h"
 
-static int stransport_error(OSStatus ret)
+static int securetransport_error(OSStatus ret)
 {
 	CFStringRef message;
 
@@ -48,11 +48,11 @@ typedef struct {
 	SSLContextRef ctx;
 	CFDataRef der_data;
 	git_cert_x509 cert_info;
-} stransport_stream;
+} securetransport_stream;
 
-static int stransport_connect(git_stream *stream)
+static int securetransport_connect(git_stream *stream)
 {
-	stransport_stream *st = (stransport_stream *) stream;
+	securetransport_stream *st = (securetransport_stream *) stream;
 	int error;
 	SecTrustRef trust = NULL;
 	SecTrustResultType sec_res;
@@ -98,18 +98,18 @@ on_error:
 	if (trust)
 		CFRelease(trust);
 
-	return stransport_error(ret);
+	return securetransport_error(ret);
 }
 
-static int stransport_certificate(git_cert **out, git_stream *stream)
+static int securetransport_certificate(git_cert **out, git_stream *stream)
 {
-	stransport_stream *st = (stransport_stream *) stream;
+	securetransport_stream *st = (securetransport_stream *) stream;
 	SecTrustRef trust = NULL;
 	SecCertificateRef sec_cert;
 	OSStatus ret;
 
 	if ((ret = SSLCopyPeerTrust(st->ctx, &trust)) != noErr)
-		return stransport_error(ret);
+		return securetransport_error(ret);
 
 	sec_cert = SecTrustGetCertificateAtIndex(trust, 0);
 	st->der_data = SecCertificateCopyData(sec_cert);
@@ -128,11 +128,11 @@ static int stransport_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
-static int stransport_set_proxy(
+static int securetransport_set_proxy(
 	git_stream *stream,
 	const git_proxy_options *proxy_opts)
 {
-	stransport_stream *st = (stransport_stream *) stream;
+	securetransport_stream *st = (securetransport_stream *) stream;
 
 	return git_stream_set_proxy(st->io, proxy_opts);
 }
@@ -151,7 +151,7 @@ static int stransport_set_proxy(
  */
 static OSStatus write_cb(SSLConnectionRef conn, const void *data, size_t *len)
 {
-	stransport_stream *st = (stransport_stream *)conn;
+	securetransport_stream *st = (securetransport_stream *)conn;
 	git_stream *io = st->io;
 	OSStatus ret;
 
@@ -169,9 +169,9 @@ static OSStatus write_cb(SSLConnectionRef conn, const void *data, size_t *len)
 	return noErr;
 }
 
-static ssize_t stransport_write(git_stream *stream, const char *data, size_t len, int flags)
+static ssize_t securetransport_write(git_stream *stream, const char *data, size_t len, int flags)
 {
-	stransport_stream *st = (stransport_stream *) stream;
+	securetransport_stream *st = (securetransport_stream *) stream;
 	size_t data_len, processed;
 	OSStatus ret;
 
@@ -182,7 +182,7 @@ static ssize_t stransport_write(git_stream *stream, const char *data, size_t len
 		if (st->error == GIT_TIMEOUT)
 			return GIT_TIMEOUT;
 
-		return stransport_error(ret);
+		return securetransport_error(ret);
 	}
 
 	GIT_ASSERT(processed < SSIZE_MAX);
@@ -200,7 +200,7 @@ static ssize_t stransport_write(git_stream *stream, const char *data, size_t len
  */
 static OSStatus read_cb(SSLConnectionRef conn, void *data, size_t *len)
 {
-	stransport_stream *st = (stransport_stream *)conn;
+	securetransport_stream *st = (securetransport_stream *)conn;
 	git_stream *io = st->io;
 	OSStatus error = noErr;
 	size_t off = 0;
@@ -229,9 +229,9 @@ static OSStatus read_cb(SSLConnectionRef conn, void *data, size_t *len)
 	return error;
 }
 
-static ssize_t stransport_read(git_stream *stream, void *data, size_t len)
+static ssize_t securetransport_read(git_stream *stream, void *data, size_t len)
 {
-	stransport_stream *st = (stransport_stream *)stream;
+	securetransport_stream *st = (securetransport_stream *)stream;
 	size_t processed;
 	OSStatus ret;
 
@@ -239,27 +239,27 @@ static ssize_t stransport_read(git_stream *stream, void *data, size_t len)
 		if (st->error == GIT_TIMEOUT)
 			return GIT_TIMEOUT;
 
-		return stransport_error(ret);
+		return securetransport_error(ret);
 	}
 
 	return processed;
 }
 
-static int stransport_close(git_stream *stream)
+static int securetransport_close(git_stream *stream)
 {
-	stransport_stream *st = (stransport_stream *) stream;
+	securetransport_stream *st = (securetransport_stream *) stream;
 	OSStatus ret;
 
 	ret = SSLClose(st->ctx);
 	if (ret != noErr && ret != errSSLClosedGraceful)
-		return stransport_error(ret);
+		return securetransport_error(ret);
 
 	return st->owned ? git_stream_close(st->io) : 0;
 }
 
-static void stransport_free(git_stream *stream)
+static void securetransport_free(git_stream *stream)
 {
-	stransport_stream *st = (stransport_stream *) stream;
+	securetransport_stream *st = (securetransport_stream *) stream;
 
 	if (st->owned)
 		git_stream_free(st->io);
@@ -270,20 +270,20 @@ static void stransport_free(git_stream *stream)
 	git__free(st);
 }
 
-static int stransport_wrap(
+static int securetransport_wrap(
 	git_stream **out,
 	git_stream *in,
 	const char *host,
 	int owned)
 {
-	stransport_stream *st;
+	securetransport_stream *st;
 	OSStatus ret;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(in);
 	GIT_ASSERT_ARG(host);
 
-	st = git__calloc(1, sizeof(stransport_stream));
+	st = git__calloc(1, sizeof(securetransport_stream));
 	GIT_ERROR_CHECK_ALLOC(st);
 
 	st->io = in;
@@ -304,33 +304,33 @@ static int stransport_wrap(
 	    (ret = SSLSetPeerDomainName(st->ctx, host, strlen(host))) != noErr) {
 		CFRelease(st->ctx);
 		git__free(st);
-		return stransport_error(ret);
+		return securetransport_error(ret);
 	}
 
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.encrypted = 1;
 	st->parent.proxy_support = git_stream_supports_proxy(st->io);
-	st->parent.connect = stransport_connect;
-	st->parent.certificate = stransport_certificate;
-	st->parent.set_proxy = stransport_set_proxy;
-	st->parent.read = stransport_read;
-	st->parent.write = stransport_write;
-	st->parent.close = stransport_close;
-	st->parent.free = stransport_free;
+	st->parent.connect = securetransport_connect;
+	st->parent.certificate = securetransport_certificate;
+	st->parent.set_proxy = securetransport_set_proxy;
+	st->parent.read = securetransport_read;
+	st->parent.write = securetransport_write;
+	st->parent.close = securetransport_close;
+	st->parent.free = securetransport_free;
 
 	*out = (git_stream *) st;
 	return 0;
 }
 
-int git_stransport_stream_wrap(
+int git_securetransport_stream_wrap(
 	git_stream **out,
 	git_stream *in,
 	const char *host)
 {
-	return stransport_wrap(out, in, host, 0);
+	return securetransport_wrap(out, in, host, 0);
 }
 
-int git_stransport_stream_new(git_stream **out, const char *host, const char *port)
+int git_securetransport_stream_new(git_stream **out, const char *host, const char *port)
 {
 	git_stream *stream = NULL;
 	int error;
@@ -341,7 +341,7 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 	error = git_socket_stream_new(&stream, host, port);
 
 	if (!error)
-		error = stransport_wrap(out, stream, host, 1);
+		error = securetransport_wrap(out, stream, host, 1);
 
 	if (error < 0 && stream) {
 		git_stream_close(stream);
