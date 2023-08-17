@@ -9,6 +9,7 @@
 #define INCLUDE_errors_h__
 
 #include "common.h"
+#include "git2/sys/errors.h"
 
 /*
  * `vprintf`-style formatting for the error message for this thread.
