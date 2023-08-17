@@ -28,7 +28,12 @@ static git_error uninitialized_error = {
 
 static git_error tlsdata_error = {
 	"thread-local data initialization failure",
-	GIT_ERROR
+	GIT_ERROR_THREAD
+};
+
+static git_error no_error = {
+	"no error",
+	GIT_ERROR_NONE
 };
 
 static void set_error_from_buffer(int error_class)
@@ -183,6 +188,9 @@ const git_error *git_error_last(void)
 
 	if ((threadstate = git_threadstate_get()) == NULL)
 		return &tlsdata_error;
+
+	if (!threadstate->last_error)
+		return &no_error;
 
 	return threadstate->last_error;
 }
