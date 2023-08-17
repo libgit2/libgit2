@@ -118,10 +118,15 @@ typedef enum {
  * Return the last `git_error` object that was generated for the
  * current thread.
  *
- * The default behaviour of this function is to return NULL if no previous error has occurred.
- * However, libgit2's error strings are not cleared aggressively, so a prior
- * (unrelated) error may be returned. This can be avoided by only calling
- * this function if the prior call to a libgit2 API returned an error.
+ * This function will never return NULL.
+ *
+ * Callers should not rely on this to determine whether an error has
+ * occurred. For error checking, callers should examine the return
+ * codes of libgit2 functions.
+ *
+ * This call can only reliably report error messages when an error
+ * has occurred. (It may contain stale information if it is called
+ * after a different function that succeeds.)
  *
  * @return A git_error object.
  */
