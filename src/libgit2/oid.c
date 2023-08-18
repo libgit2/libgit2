@@ -153,15 +153,24 @@ int git_oid_pathfmt(char *str, const git_oid *oid)
 	return 0;
 }
 
+static git_tlsdata_key thread_str_key;
+
+int git_oid_global_init(void)
+{
+	return git_tlsdata_init(&thread_str_key, git__free);
+}
+
 char *git_oid_tostr_s(const git_oid *oid)
 {
-	git_threadstate *threadstate = git_threadstate_get();
 	char *str;
 
-	if (!threadstate)
-		return NULL;
+	if ((str = git_tlsdata_get(thread_str_key)) == NULL) {
+		if ((str = git__malloc(GIT_OID_MAX_HEXSIZE + 1)) == NULL)
+			return NULL;
 
-	str = threadstate->oid_fmt;
+		git_tlsdata_set(thread_str_key, str);
+	}
+
 	git_oid_nfmt(str, git_oid_hexsize(git_oid_type(oid)) + 1, oid);
 	return str;
 }
