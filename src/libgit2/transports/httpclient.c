@@ -768,25 +768,37 @@ static int check_certificate(
 	void *cert_cb_payload)
 {
 	git_cert *cert;
-	git_error_state last_error = {0};
+	git_error *last_error;
 	int error;
 
 	if ((error = git_stream_certificate(&cert, stream)) < 0)
 		return error;
 
-	git_error_state_capture(&last_error, GIT_ECERTIFICATE);
+	/*
+	 * Allow callers to set an error - but save ours and clear
+	 * it, so that we can detect if they set one and restore it
+	 * if we need to.
+	 */
+	git_error_save(&last_error);
+	git_error_clear();
 
 	error = cert_cb(cert, is_valid, url->host, cert_cb_payload);
 
-	if (error == GIT_PASSTHROUGH && !is_valid)
-		return git_error_state_restore(&last_error);
-	else if (error == GIT_PASSTHROUGH)
-		error = 0;
-	else if (error && !git_error_last())
-		git_error_set(GIT_ERROR_HTTP,
-		              "user rejected certificate for %s", url->host);
+	if (error == GIT_PASSTHROUGH) {
+		error = is_valid ? 0 : -1;
 
-	git_error_state_free(&last_error);
+		if (error) {
+			git_error_restore(last_error);
+			last_error = NULL;
+		}
+	} else if (error) {
+		if (!git_error_exists())
+			git_error_set(GIT_ERROR_HTTP,
+		              "user rejected certificate for %s",
+			      url->host);
+	}
+
+	git_error_free(last_error);
 	return error;
 }
 
