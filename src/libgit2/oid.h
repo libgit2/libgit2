@@ -270,4 +270,6 @@ int git_oid__fromstrn(
 
 int git_oid__fromraw(git_oid *out, const unsigned char *raw, git_oid_t type);
 
+int git_oid_global_init(void);
+
 #endif
