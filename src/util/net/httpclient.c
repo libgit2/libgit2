@@ -5,13 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "git2_util.h"
 #include "git2.h"
 #include "http_parser.h"
 #include "vector.h"
 #include "trace.h"
+#include "errors.h"
 #include "httpclient.h"
-#include "http.h"
 #include "auth.h"
 #include "auth_negotiate.h"
 #include "auth_ntlm.h"
@@ -821,8 +821,6 @@ static int server_connect_stream(
 	void *cb_payload)
 {
 	int error;
-
-	GIT_ERROR_CHECK_VERSION(server->stream, GIT_STREAM_VERSION, "git_stream");
 
 	error = git_stream_connect(server->stream);
 

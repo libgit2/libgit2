@@ -12,7 +12,10 @@ set(UTIL_INCLUDES
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include")
 
-file(GLOB UTIL_SRC *.c *.h allocators/*.c allocators/*.h streams/*.c streams/*.h)
+file(GLOB UTIL_SRC *.c *.h
+	allocators/*.c allocators/*.h
+	net/*.c net/*.h
+	streams/*.c streams/*.h)
 list(SORT UTIL_SRC)
 
 #

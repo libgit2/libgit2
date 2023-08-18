@@ -8,7 +8,7 @@
 #ifndef INCLUDE_transports_auth_negotiate_h__
 #define INCLUDE_transports_auth_negotiate_h__
 
-#include "common.h"
+#include "git2_util.h"
 #include "git2.h"
 #include "auth.h"
 
