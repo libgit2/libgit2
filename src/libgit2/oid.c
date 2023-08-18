@@ -9,7 +9,6 @@
 
 #include "git2/oid.h"
 #include "repository.h"
-#include "threadstate.h"
 #include <string.h>
 #include <limits.h>
 
