@@ -8,7 +8,7 @@
 #ifndef INCLUDE_transports_httpclient_h__
 #define INCLUDE_transports_httpclient_h__
 
-#include "common.h"
+#include "git2_util.h"
 #include "net.h"
 
 #define GIT_HTTP_STATUS_CONTINUE                      100

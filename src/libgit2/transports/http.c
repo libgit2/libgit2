@@ -13,14 +13,14 @@
 #include "net.h"
 #include "remote.h"
 #include "smart.h"
-#include "auth.h"
 #include "http.h"
-#include "auth_negotiate.h"
-#include "auth_ntlm.h"
 #include "trace.h"
 #include "streams/tls.h"
 #include "streams/socket.h"
-#include "httpclient.h"
+#include "net/auth.h"
+#include "net/auth_negotiate.h"
+#include "net/auth_ntlm.h"
+#include "net/httpclient.h"
 #include "git2/sys/credential.h"
 
 bool git_http__expect_continue = false;
