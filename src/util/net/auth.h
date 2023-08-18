@@ -9,7 +9,7 @@
 #define INCLUDE_transports_auth_h__
 
 #include "git2_util.h"
-#include "net.h"
+#include "url.h"
 
 #include "git2/credential.h"
 

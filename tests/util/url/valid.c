@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "net.h"
+#include "net/url.h"
 
 void test_url_valid__test(void)
 {

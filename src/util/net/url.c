@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "net.h"
+#include "url.h"
 
 #include <ctype.h>
 

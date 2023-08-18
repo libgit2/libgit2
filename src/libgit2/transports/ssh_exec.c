@@ -12,11 +12,11 @@
 #include "common.h"
 
 #include "config.h"
-#include "net.h"
 #include "path.h"
 #include "futils.h"
 #include "process.h"
 #include "transports/smart.h"
+#include "net/url.h"
 
 typedef struct {
 	git_smart_subtransport_stream parent;
