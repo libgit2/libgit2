@@ -651,6 +651,23 @@ static int puts_host_and_port(git_str *buf, git_net_url *url, bool force_port)
 	return git_str_oom(buf) ? -1 : 0;
 }
 
+static void add_user_agent(git_str *buf, git_http_client *client)
+{
+	/* An empty user agent string means don't send one. */
+	if (client->opts.user_agent &&
+	    client->opts.user_agent[0] == '\0')
+		return;
+
+	git_str_puts(buf, "User-Agent: ");
+
+	if (client->opts.user_agent)
+		git_str_puts(buf, client->opts.user_agent);
+	else
+		git_str_puts(buf, "libgit2/" LIBGIT2_VERSION);
+
+	git_str_puts(buf, "\r\n");
+}
+
 static int generate_connect_request(
 	git_http_client *client,
 	git_http_request *request)
@@ -665,9 +682,7 @@ static int generate_connect_request(
 	puts_host_and_port(buf, &client->server.url, true);
 	git_str_puts(buf, " HTTP/1.1\r\n");
 
-	git_str_puts(buf, "User-Agent: ");
-	git_http__user_agent(buf);
-	git_str_puts(buf, "\r\n");
+	add_user_agent(buf, client);
 
 	git_str_puts(buf, "Host: ");
 	puts_host_and_port(buf, &client->server.url, true);
@@ -711,9 +726,7 @@ static int generate_request(
 
 	git_str_puts(buf, " HTTP/1.1\r\n");
 
-	git_str_puts(buf, "User-Agent: ");
-	git_http__user_agent(buf);
-	git_str_puts(buf, "\r\n");
+	add_user_agent(buf, client);
 
 	git_str_puts(buf, "Host: ");
 	puts_host_and_port(buf, request->url, false);
@@ -1551,20 +1564,40 @@ int git_http_client_new(
 	git_str_init(&client->read_buf, GIT_READ_BUFFER_SIZE);
 	GIT_ERROR_CHECK_ALLOC(client->read_buf.ptr);
 
-	if (opts)
-		memcpy(&client->opts, opts, sizeof(git_http_client_options));
+	if (opts && git_http_client_set_options(client, opts) < 0) {
+		git_http_client_free(client);
+		return -1;
+	}
 
 	*out = client;
 	return 0;
 }
 
+static void free_options(git_http_client *client)
+{
+	if (client->opts.user_agent)
+		git__free((char *)client->opts.user_agent);
+}
+
 /* Update the options of an existing httpclient instance. */
-void git_http_client_set_options(
+int git_http_client_set_options(
 	git_http_client *client,
 	git_http_client_options *opts)
 {
-	if (opts)
-		memcpy(&client->opts, opts, sizeof(git_http_client_options));
+	free_options(client);
+
+	if (!opts) {
+		memset(&client->opts, 0, sizeof(git_http_client_options));
+		return 0;
+	}
+
+	memcpy(&client->opts, opts, sizeof(git_http_client_options));
+
+	if (opts->user_agent &&
+	    (client->opts.user_agent = git__strdup(client->opts.user_agent)) == NULL)
+		return -1;
+
+	return 0;
 }
 
 GIT_INLINE(void) http_server_close(git_http_server *server)
@@ -1599,6 +1632,7 @@ void git_http_client_free(git_http_client *client)
 	if (!client)
 		return;
 
+	free_options(client);
 	http_client_close(client);
 	git_str_dispose(&client->read_buf);
 	git__free(client);
