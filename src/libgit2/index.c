@@ -1609,15 +1609,17 @@ int git_index_add_bypath(git_index *index, const char *path)
 
 	if (ret == GIT_EDIRECTORY) {
 		git_submodule *sm;
-		git_error_state err;
+		git_error *last_error;
 
-		git_error_state_capture(&err, ret);
+		git_error_save(&last_error);
 
 		ret = git_submodule_lookup(&sm, INDEX_OWNER(index), path);
-		if (ret == GIT_ENOTFOUND)
-			return git_error_state_restore(&err);
+		if (ret == GIT_ENOTFOUND) {
+			git_error_restore(last_error);
+			return GIT_EDIRECTORY;
+		}
 
-		git_error_state_free(&err);
+		git_error_free(last_error);
 
 		/*
 		 * EEXISTS means that there is a repository at that path, but it's not known

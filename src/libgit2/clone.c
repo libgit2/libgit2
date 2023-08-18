@@ -542,15 +542,15 @@ static int git__clone(
 	}
 
 	if (error != 0) {
-		git_error_state last_error = {0};
-		git_error_state_capture(&last_error, error);
+		git_error *last_error;
+		git_error_save(&last_error);
 
 		git_repository_free(repo);
 		repo = NULL;
 
 		(void)git_futils_rmdir_r(local_path, NULL, rmdir_flags);
 
-		git_error_state_restore(&last_error);
+		git_error_restore(last_error);
 	}
 
 	*out = repo;

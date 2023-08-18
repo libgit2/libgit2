@@ -36,6 +36,10 @@ static git_error no_error = {
 	GIT_ERROR_NONE
 };
 
+#define IS_STATIC_ERROR(err) \
+	((err) == &oom_error || (err) == &uninitialized_error || \
+	 (err) == &tlsdata_error || (err) == &no_error)
+
 static void set_error_from_buffer(int error_class)
 {
 	git_threadstate *threadstate = git_threadstate_get();
@@ -66,12 +70,11 @@ static void set_error(int error_class, char *string)
 
 	git_str_clear(buf);
 
-	if (string) {
+	if (string)
 		git_str_puts(buf, string);
-		git__free(string);
-	}
 
-	set_error_from_buffer(error_class);
+	if (!git_str_oom(buf))
+		set_error_from_buffer(error_class);
 }
 
 void git_error_set_oom(void)
@@ -178,6 +181,16 @@ void git_error_clear(void)
 #endif
 }
 
+bool git_error_exists(void)
+{
+	git_threadstate *threadstate;
+
+	if ((threadstate = git_threadstate_get()) == NULL)
+		return true;
+
+	return threadstate->last_error != NULL;
+}
+
 const git_error *git_error_last(void)
 {
 	git_threadstate *threadstate;
@@ -195,67 +208,68 @@ const git_error *git_error_last(void)
 	return threadstate->last_error;
 }
 
-int git_error_state_capture(git_error_state *state, int error_code)
+int git_error_save(git_error **out)
 {
 	git_threadstate *threadstate = git_threadstate_get();
-	git_error *error;
-	git_str *error_buf;
+	git_error *error, *dup;
 
-	if (!threadstate)
+	if (!threadstate) {
+		*out = &tlsdata_error;
 		return -1;
+	}
 
 	error = threadstate->last_error;
-	error_buf = &threadstate->error_buf;
 
-	memset(state, 0, sizeof(git_error_state));
-
-	if (!error_code)
+	if (!error || error == &no_error) {
+		*out = &no_error;
 		return 0;
-
-	state->error_code = error_code;
-	state->oom = (error == &oom_error);
-
-	if (error) {
-		state->error_msg.klass = error->klass;
-
-		if (state->oom)
-			state->error_msg.message = oom_error.message;
-		else
-			state->error_msg.message = git_str_detach(error_buf);
+	} else if (IS_STATIC_ERROR(error)) {
+		*out = error;
+		return 0;
 	}
 
-	git_error_clear();
-	return error_code;
-}
-
-int git_error_state_restore(git_error_state *state)
-{
-	int ret = 0;
-
-	git_error_clear();
-
-	if (state && state->error_msg.message) {
-		if (state->oom)
-			git_error_set_oom();
-		else
-			set_error(state->error_msg.klass, state->error_msg.message);
-
-		ret = state->error_code;
-		memset(state, 0, sizeof(git_error_state));
+	if ((dup = git__malloc(sizeof(git_error))) == NULL) {
+		*out = &oom_error;
+		return -1;
 	}
 
-	return ret;
+	dup->klass = error->klass;
+	dup->message = git__strdup(error->message);
+
+	if (!dup->message) {
+		*out = &oom_error;
+		return -1;
+	}
+
+	*out = dup;
+	return 0;
 }
 
-void git_error_state_free(git_error_state *state)
+int git_error_restore(git_error *error)
 {
-	if (!state)
+	git_threadstate *threadstate = git_threadstate_get();
+
+	GIT_ASSERT_ARG(error);
+
+	if (IS_STATIC_ERROR(error) && threadstate)
+		threadstate->last_error = error;
+	else
+		set_error(error->klass, error->message);
+
+	git_error_free(error);
+	return 0;
+}
+
+void git_error_free(git_error *error)
+{
+	if (!error)
 		return;
 
-	if (!state->oom)
-		git__free(state->error_msg.message);
+	if (IS_STATIC_ERROR(error))
+		return;
 
-	memset(state, 0, sizeof(git_error_state));
+	git__free(error->message);
+	git__free(error);
 }
 
 int git_error_system_last(void)
