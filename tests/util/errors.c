@@ -97,58 +97,32 @@ void test_errors__new_school(void)
 
 void test_errors__restore(void)
 {
-	git_error_state err_state = {0};
+	git_error *last_error;
 
 	git_error_clear();
 	cl_assert(git_error_last() != NULL);
 	cl_assert(git_error_last()->klass == GIT_ERROR_NONE);
-	cl_assert(strcmp(git_error_last()->message, "no error") == 0);
-
-	cl_assert_equal_i(0, git_error_state_capture(&err_state, 0));
-
-	memset(&err_state, 0x0, sizeof(git_error_state));
+	cl_assert(strcmp("no error", git_error_last()->message) == 0);
 
 	git_error_set(42, "Foo: %s", "bar");
-	cl_assert_equal_i(-1, git_error_state_capture(&err_state, -1));
-
-	cl_assert(git_error_last() != NULL);
-	cl_assert(git_error_last()->klass == GIT_ERROR_NONE);
-	cl_assert(strcmp(git_error_last()->message, "no error") == 0);
-
-	git_error_set(99, "Bar: %s", "foo");
-
-	git_error_state_restore(&err_state);
-
-	cl_assert_equal_i(42, git_error_last()->klass);
-	cl_assert_equal_s("Foo: bar", git_error_last()->message);
-}
-
-void test_errors__free_state(void)
-{
-	git_error_state err_state = {0};
+	cl_assert(git_error_save(&last_error) == 0);
 
 	git_error_clear();
-
-	git_error_set(42, "Foo: %s", "bar");
-	cl_assert_equal_i(-1, git_error_state_capture(&err_state, -1));
+	cl_assert(git_error_last() != NULL);
+	cl_assert(git_error_last()->klass == GIT_ERROR_NONE);
+	cl_assert(strcmp("no error", git_error_last()->message) == 0);
 
 	git_error_set(99, "Bar: %s", "foo");
 
-	git_error_state_free(&err_state);
+	git_error_restore(last_error);
 
-	cl_assert_equal_i(99, git_error_last()->klass);
-	cl_assert_equal_s("Bar: foo", git_error_last()->message);
-
-	git_error_state_restore(&err_state);
-
-	cl_assert(git_error_last() != NULL);
-	cl_assert(git_error_last()->klass == GIT_ERROR_NONE);
-	cl_assert(strcmp(git_error_last()->message, "no error") == 0);
+	cl_assert(git_error_last()->klass == 42);
+	cl_assert(strcmp("Foo: bar", git_error_last()->message) == 0);
 }
 
 void test_errors__restore_oom(void)
 {
-	git_error_state err_state = {0};
+	git_error *last_error;
 	const git_error *oom_error = NULL;
 
 	git_error_clear();
@@ -156,17 +130,18 @@ void test_errors__restore_oom(void)
 	git_error_set_oom(); /* internal fn */
 	oom_error = git_error_last();
 	cl_assert(oom_error);
+	cl_assert(oom_error->klass == GIT_ERROR_NOMEMORY);
 
-	cl_assert_equal_i(-1, git_error_state_capture(&err_state, -1));
+	cl_assert(git_error_save(&last_error) == 0);
+	cl_assert(last_error->klass == GIT_ERROR_NOMEMORY);
+	cl_assert(strcmp("Out of memory", last_error->message) == 0);
 
+	git_error_clear();
 	cl_assert(git_error_last() != NULL);
 	cl_assert(git_error_last()->klass == GIT_ERROR_NONE);
-	cl_assert(strcmp(git_error_last()->message, "no error") == 0);
-	cl_assert_equal_i(GIT_ERROR_NOMEMORY, err_state.error_msg.klass);
-	cl_assert_equal_s("Out of memory", err_state.error_msg.message);
+	cl_assert(strcmp("no error", git_error_last()->message) == 0);
 
-	git_error_state_restore(&err_state);
-
+	git_error_restore(last_error);
 	cl_assert(git_error_last()->klass == GIT_ERROR_NOMEMORY);
 	cl_assert_(git_error_last() == oom_error, "static oom error not restored");
 
