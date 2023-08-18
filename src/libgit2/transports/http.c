@@ -10,7 +10,6 @@
 #ifndef GIT_WINHTTP
 
 #include "http_parser.h"
-#include "net.h"
 #include "remote.h"
 #include "smart.h"
 #include "http.h"
@@ -20,6 +19,7 @@
 #include "net/auth.h"
 #include "net/auth_negotiate.h"
 #include "net/auth_ntlm.h"
+#include "net/url.h"
 #include "net/httpclient.h"
 #include "git2/sys/credential.h"
 

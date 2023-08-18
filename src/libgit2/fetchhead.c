@@ -14,7 +14,7 @@
 #include "futils.h"
 #include "filebuf.h"
 #include "refs.h"
-#include "net.h"
+#include "net/url.h"
 #include "repository.h"
 
 int git_fetchhead_ref_cmp(const void *a, const void *b)
