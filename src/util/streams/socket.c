@@ -31,13 +31,6 @@
 int git_stream_socket__connect_timeout = 0;
 int git_stream_socket__timeout = 0;
 
-typedef struct {
-	git_stream parent;
-	char *host;
-	char *port;
-	GIT_SOCKET s;
-} git_stream_socket;
-
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
 {
