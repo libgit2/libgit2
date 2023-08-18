@@ -60,6 +60,8 @@ typedef struct {
 	git_smart_subtransport parent;
 	transport_smart *owner;
 
+	git_str user_agent;
+
 	http_server server;
 	http_server proxy;
 
@@ -689,6 +691,7 @@ static int http_action(
 	stream = git__calloc(sizeof(http_stream), 1);
 	GIT_ERROR_CHECK_ALLOC(stream);
 
+	opts.user_agent = transport->user_agent.ptr;
 	opts.server_certificate_check_cb = connect_opts->callbacks.certificate_check;
 	opts.server_certificate_check_payload = connect_opts->callbacks.payload;
 	opts.proxy_certificate_check_cb = connect_opts->proxy_opts.certificate_check;
@@ -740,6 +743,8 @@ static void http_free(git_smart_subtransport *t)
 	git_http_client_free(transport->http_client);
 
 	http_close(t);
+
+	git_str_dispose(&transport->user_agent);
 	git__free(transport);
 }
 
@@ -753,6 +758,9 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 
 	transport = git__calloc(sizeof(http_subtransport), 1);
 	GIT_ERROR_CHECK_ALLOC(transport);
+
+	if (git_http__user_agent(&transport->user_agent) < 0)
+		return -1;
 
 	transport->owner = (transport_smart *)owner;
 	transport->parent.action = http_action;
