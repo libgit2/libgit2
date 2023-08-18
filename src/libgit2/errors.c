@@ -7,14 +7,15 @@
 
 #include "common.h"
 
-#include "threadstate.h"
 #include "posix.h"
 #include "str.h"
 #include "libgit2.h"
+#include "runtime.h"
 
-/********************************************
- * New error handling
- ********************************************/
+/*
+ * Some static error data that is used when we're out of memory, TLS
+ * has not been setup, or TLS has failed.
+ */
 
 static git_error oom_error = {
 	"Out of memory",
@@ -40,33 +41,115 @@ static git_error no_error = {
 	((err) == &oom_error || (err) == &uninitialized_error || \
 	 (err) == &tlsdata_error || (err) == &no_error)
 
+/* Per-thread error state (TLS) */
+
+static git_tlsdata_key tls_key;
+
+struct error_threadstate {
+	/* The error message buffer. */
+	git_str message;
+
+	/* Error information, set by `git_error_set` and friends. */
+	git_error error;
+
+	/*
+	 * The last error to occur; points to the error member of this
+	 * struct _or_ a static error.
+	 */
+	git_error *last;
+};
+
+static void threadstate_dispose(struct error_threadstate *threadstate)
+{
+	if (!threadstate)
+		return;
+
+	git_str_dispose(&threadstate->message);
+}
+
+static struct error_threadstate *threadstate_get(void)
+{
+	struct error_threadstate *threadstate;
+
+	if ((threadstate = git_tlsdata_get(tls_key)) != NULL)
+		return threadstate;
+
+	/*
+	 * Avoid git__malloc here, since if it fails, it sets an error
+	 * message, which requires thread state, which would allocate
+	 * here, which would fail, which would set an error message...
+	 */
+
+	if ((threadstate = git__allocator.gmalloc(
+			sizeof(struct error_threadstate),
+			__FILE__, __LINE__)) == NULL)
+		return NULL;
+
+	memset(threadstate, 0, sizeof(struct error_threadstate));
+
+	if (git_str_init(&threadstate->message, 0) < 0) {
+		git__allocator.gfree(threadstate);
+		return NULL;
+	}
+
+	git_tlsdata_set(tls_key, threadstate);
+	return threadstate;
+}
+
+static void GIT_SYSTEM_CALL threadstate_free(void *threadstate)
+{
+	threadstate_dispose(threadstate);
+	git__free(threadstate);
+}
+
+static void git_error_global_shutdown(void)
+{
+	struct error_threadstate *threadstate;
+
+	threadstate = git_tlsdata_get(tls_key);
+	git_tlsdata_set(tls_key, NULL);
+
+	threadstate_dispose(threadstate);
+	git__free(threadstate);
+
+	git_tlsdata_dispose(tls_key);
+}
+
+int git_error_global_init(void)
+{
+	if (git_tlsdata_init(&tls_key, &threadstate_free) != 0)
+		return -1;
+
+	return git_runtime_shutdown_register(git_error_global_shutdown);
+}
+
 static void set_error_from_buffer(int error_class)
 {
-	git_threadstate *threadstate = git_threadstate_get();
+	struct error_threadstate *threadstate = threadstate_get();
 	git_error *error;
 	git_str *buf;
 
 	if (!threadstate)
 		return;
 
-	error = &threadstate->error_t;
-	buf = &threadstate->error_buf;
+	error = &threadstate->error;
+	buf = &threadstate->message;
 
 	error->message = buf->ptr;
 	error->klass = error_class;
 
-	threadstate->last_error = error;
+	threadstate->last = error;
 }
 
 static void set_error(int error_class, char *string)
 {
-	git_threadstate *threadstate = git_threadstate_get();
+	struct error_threadstate *threadstate = threadstate_get();
 	git_str *buf;
 
 	if (!threadstate)
 		return;
 
-	buf = &threadstate->error_buf;
+	buf = &threadstate->message;
 
 	git_str_clear(buf);
 
@@ -79,12 +162,12 @@ static void set_error(int error_class, char *string)
 
 void git_error_set_oom(void)
 {
-	git_threadstate *threadstate = git_threadstate_get();
+	struct error_threadstate *threadstate = threadstate_get();
 
 	if (!threadstate)
 		return;
 
-	threadstate->last_error = &oom_error;
+	threadstate->last = &oom_error;
 }
 
 void git_error_set(int error_class, const char *fmt, ...)
@@ -102,14 +185,14 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 	DWORD win32_error_code = (error_class == GIT_ERROR_OS) ? GetLastError() : 0;
 #endif
 
-	git_threadstate *threadstate = git_threadstate_get();
+	struct error_threadstate *threadstate = threadstate_get();
 	int error_code = (error_class == GIT_ERROR_OS) ? errno : 0;
 	git_str *buf;
 
 	if (!threadstate)
 		return;
 
-	buf = &threadstate->error_buf;
+	buf = &threadstate->message;
 
 	git_str_clear(buf);
 
@@ -143,7 +226,7 @@ void git_error_vset(int error_class, const char *fmt, va_list ap)
 
 int git_error_set_str(int error_class, const char *string)
 {
-	git_threadstate *threadstate = git_threadstate_get();
+	struct error_threadstate *threadstate = threadstate_get();
 	git_str *buf;
 
 	GIT_ASSERT_ARG(string);
@@ -151,7 +234,7 @@ int git_error_set_str(int error_class, const char *string)
 	if (!threadstate)
 		return -1;
 
-	buf = &threadstate->error_buf;
+	buf = &threadstate->message;
 
 	git_str_clear(buf);
 	git_str_puts(buf, string);
@@ -165,14 +248,14 @@ int git_error_set_str(int error_class, const char *string)
 
 void git_error_clear(void)
 {
-	git_threadstate *threadstate = git_threadstate_get();
+	struct error_threadstate *threadstate = threadstate_get();
 
 	if (!threadstate)
 		return;
 
-	if (threadstate->last_error != NULL) {
+	if (threadstate->last != NULL) {
 		set_error(0, NULL);
-		threadstate->last_error = NULL;
+		threadstate->last = NULL;
 	}
 
 	errno = 0;
@@ -183,34 +266,34 @@ void git_error_clear(void)
 
 bool git_error_exists(void)
 {
-	git_threadstate *threadstate;
+	struct error_threadstate *threadstate;
 
-	if ((threadstate = git_threadstate_get()) == NULL)
+	if ((threadstate = threadstate_get()) == NULL)
 		return true;
 
-	return threadstate->last_error != NULL;
+	return threadstate->last != NULL;
 }
 
 const git_error *git_error_last(void)
 {
-	git_threadstate *threadstate;
+	struct error_threadstate *threadstate;
 
 	/* If the library is not initialized, return a static error. */
 	if (!git_libgit2_init_count())
 		return &uninitialized_error;
 
-	if ((threadstate = git_threadstate_get()) == NULL)
+	if ((threadstate = threadstate_get()) == NULL)
 		return &tlsdata_error;
 
-	if (!threadstate->last_error)
+	if (!threadstate->last)
 		return &no_error;
 
-	return threadstate->last_error;
+	return threadstate->last;
 }
 
 int git_error_save(git_error **out)
 {
-	git_threadstate *threadstate = git_threadstate_get();
+	struct error_threadstate *threadstate = threadstate_get();
 	git_error *error, *dup;
 
 	if (!threadstate) {
@@ -218,7 +301,7 @@ int git_error_save(git_error **out)
 		return -1;
 	}
 
-	error = threadstate->last_error;
+	error = threadstate->last;
 
 	if (!error || error == &no_error) {
 		*out = &no_error;
@@ -247,12 +330,12 @@ int git_error_save(git_error **out)
 
 int git_error_restore(git_error *error)
 {
-	git_threadstate *threadstate = git_threadstate_get();
+	struct error_threadstate *threadstate = threadstate_get();
 
 	GIT_ASSERT_ARG(error);
 
 	if (IS_STATIC_ERROR(error) && threadstate)
-		threadstate->last_error = error;
+		threadstate->last = error;
 	else
 		set_error(error->klass, error->message);
 

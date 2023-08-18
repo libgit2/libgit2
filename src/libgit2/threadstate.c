@@ -35,10 +35,6 @@ static void threadstate_dispose(git_threadstate *threadstate)
 {
 	if (!threadstate)
 		return;
-
-	if (threadstate->error_t.message != git_str__initstr)
-		git__free(threadstate->error_t.message);
-	threadstate->error_t.message = NULL;
 }
 
 static void GIT_SYSTEM_CALL threadstate_free(void *threadstate)
@@ -86,11 +82,6 @@ git_threadstate *git_threadstate_get(void)
 		return NULL;
 
 	memset(threadstate, 0, sizeof(git_threadstate));
-
-	if (git_str_init(&threadstate->error_buf, 0) < 0) {
-		git__allocator.gfree(threadstate);
-		return NULL;
-	}
 
 	git_tlsdata_set(tls_key, threadstate);
 	return threadstate;

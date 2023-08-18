@@ -10,9 +10,6 @@
 #include "common.h"
 
 typedef struct {
-	git_error *last_error;
-	git_error error_t;
-	git_str error_buf;
 	char oid_fmt[GIT_OID_MAX_HEXSIZE+1];
 } git_threadstate;
 
