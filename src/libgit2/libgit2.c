@@ -73,6 +73,7 @@ int git_libgit2_init(void)
 		git_win32_leakcheck_global_init,
 #endif
 		git_allocator_global_init,
+		git_error_global_init,
 		git_threadstate_global_init,
 		git_threads_global_init,
 		git_rand_global_init,

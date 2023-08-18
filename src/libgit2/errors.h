@@ -11,6 +11,9 @@
 #include "common.h"
 #include "git2/sys/errors.h"
 
+/* Initialize the error thread-state. */
+int git_error_global_init(void);
+
 /*
  * `vprintf`-style formatting for the error message for this thread.
  */
