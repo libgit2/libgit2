@@ -69,6 +69,9 @@ typedef struct {
 } git_http_response;
 
 typedef struct {
+	/** The value of the `User-Agent` header to send */
+	const char *user_agent;
+
 	/** Certificate check callback for the remote */
 	git_transport_certificate_check_cb server_certificate_check_cb;
 	void *server_certificate_check_payload;
@@ -93,8 +96,9 @@ extern int git_http_client_new(
  *
  * @param client the httpclient instance to modify
  * @param opts new options or NULL to keep existing options
+ * @return 0 on success or an error code
  */
-extern void git_http_client_set_options(
+extern int git_http_client_set_options(
 	git_http_client *client,
 	git_http_client_options *opts);
 
