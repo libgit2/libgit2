@@ -76,6 +76,7 @@ int git_libgit2_init(void)
 		git_error_global_init,
 		git_threadstate_global_init,
 		git_threads_global_init,
+		git_oid_global_init,
 		git_rand_global_init,
 		git_hash_global_init,
 		git_sysdir_global_init,
