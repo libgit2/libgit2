@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "net.h"
+#include "net/url.h"
 
 struct url_pattern {
 	const char *url;

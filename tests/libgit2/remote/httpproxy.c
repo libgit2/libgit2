@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "futils.h"
-#include "net.h"
+#include "net/url.h"
 #include "remote.h"
 
 static git_repository *repo;

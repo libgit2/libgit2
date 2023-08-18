@@ -12,10 +12,10 @@
 #endif
 
 #include "runtime.h"
-#include "net.h"
 #include "smart.h"
 #include "streams/socket.h"
 #include "sysdir.h"
+#include "net/url.h"
 
 #include "git2/credential.h"
 #include "git2/sys/credential.h"

@@ -7,9 +7,9 @@
 
 #include "common.h"
 
-#include "net.h"
 #include "stream.h"
 #include "streams/socket.h"
+#include "net/url.h"
 #include "git2/sys/transport.h"
 
 #define OWNING_SUBTRANSPORT(s) ((git_subtransport *)(s)->parent.subtransport)
