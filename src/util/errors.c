@@ -5,11 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "git2_util.h"
 
+#include "errors.h"
 #include "posix.h"
 #include "str.h"
-#include "libgit2.h"
 #include "runtime.h"
 
 /*
@@ -23,7 +23,7 @@ static git_error oom_error = {
 };
 
 static git_error uninitialized_error = {
-	"libgit2 has not been initialized; you must call git_libgit2_init",
+	"library has not been initialized",
 	GIT_ERROR_INVALID
 };
 
@@ -279,7 +279,7 @@ const git_error *git_error_last(void)
 	struct error_threadstate *threadstate;
 
 	/* If the library is not initialized, return a static error. */
-	if (!git_libgit2_init_count())
+	if (!git_runtime_init_count())
 		return &uninitialized_error;
 
 	if ((threadstate = threadstate_get()) == NULL)
