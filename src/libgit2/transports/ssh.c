@@ -746,17 +746,19 @@ static int check_certificate(
 
 	if (check_cb != NULL) {
 		git_cert_hostkey *cert_ptr = &cert;
-		git_error_state previous_error = {0};
+		git_error *previous_error;
 
-		git_error_state_capture(&previous_error, error);
+		git_error_save(&previous_error);
 		error = check_cb((git_cert *) cert_ptr, cert_valid, host, check_cb_payload);
+
 		if (error == GIT_PASSTHROUGH) {
-			error = git_error_state_restore(&previous_error);
+			error = git_error_restore(previous_error);
+			previous_error = NULL;
 		} else if (error < 0 && !git_error_last()) {
 			git_error_set(GIT_ERROR_NET, "unknown remote host key");
 		}
 
-		git_error_state_free(&previous_error);
+		git_error_free(previous_error);
 	}
 
 	return error;
