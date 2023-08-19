@@ -817,12 +817,22 @@ static int check_certificate(
 
 static int server_connect_stream(
 	git_http_server *server,
-	git_transport_certificate_check_cb cert_cb,
-	void *cb_payload)
+	git_stream *proxy_stream,
+	git_http_client_options *opts)
 {
+	git_stream_connect_options connect_opts = GIT_STREAM_CONNECT_OPTIONS_INIT;
+	git_transport_certificate_check_cb cert_cb = opts->server_certificate_check_cb;
+	void *cb_payload = opts->server_certificate_check_payload;
+	git_net_url *url = &server->url;
 	int error;
 
-	error = git_stream_connect(server->stream);
+	connect_opts.connect_timeout = opts->connect_timeout;
+	connect_opts.timeout = opts->timeout;
+
+	if (proxy_stream)
+		error = git_stream_wrap(server->stream, proxy_stream, url->host);
+	else
+		error = git_stream_connect(server->stream, url->host, url->port, &connect_opts);
 
 	if (error && error != GIT_ECERTIFICATE)
 		return error;
@@ -929,9 +939,9 @@ GIT_INLINE(int) server_create_stream(git_http_server *server)
 	git_net_url *url = &server->url;
 
 	if (strcasecmp(url->scheme, "https") == 0)
-		return git_stream_tls_new(&server->stream, url->host, url->port);
+		return git_stream_tls_new(&server->stream);
 	else if (strcasecmp(url->scheme, "http") == 0)
-		return git_stream_socket_new(&server->stream, url->host, url->port);
+		return git_stream_socket_new(&server->stream);
 
 	git_error_set(GIT_ERROR_HTTP, "unknown http scheme '%s'", url->scheme);
 	return -1;
@@ -961,8 +971,7 @@ static int proxy_connect(
 
 		if ((error = server_create_stream(&client->proxy)) < 0 ||
 		    (error = server_connect_stream(&client->proxy,
-			client->opts.proxy_certificate_check_cb,
-			client->opts.proxy_certificate_check_payload)) < 0)
+			NULL, &client->opts)) < 0)
 			goto done;
 
 		client->proxy_connected = 1;
@@ -1004,25 +1013,14 @@ done:
 
 static int server_connect(git_http_client *client)
 {
-	git_net_url *url = &client->server.url;
-	git_transport_certificate_check_cb cert_cb;
-	void *cert_payload;
 	int error;
 
 	client->current_server = SERVER;
 
-	if (client->proxy.stream)
-		error = git_stream_tls_wrap(&client->server.stream, client->proxy.stream, url->host);
-	else
-		error = server_create_stream(&client->server);
-
-	if (error < 0)
+	if ((error = server_create_stream(&client->server)) < 0)
 		goto done;
 
-	cert_cb = client->opts.server_certificate_check_cb;
-	cert_payload = client->opts.server_certificate_check_payload;
-
-	error = server_connect_stream(&client->server, cert_cb, cert_payload);
+	error = server_connect_stream(&client->server, client->proxy.stream, &client->opts);
 
 done:
 	return error;

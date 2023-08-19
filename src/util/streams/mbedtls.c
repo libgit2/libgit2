@@ -241,17 +241,20 @@ typedef struct {
 } mbedtls_stream;
 
 
-static int mbedtls_connect(git_stream *stream)
+static int mbedtls_connect(
+	git_stream *stream,
+	const char *host,
+	const char *port)
 {
 	int ret;
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 
-	if (st->owned && (ret = git_stream_connect(st->io)) < 0)
+	if (st->owned && (ret = git_stream_connect(st->io, host, port)) < 0)
 		return ret;
 
 	st->connected = true;
 
-	mbedtls_ssl_set_hostname(st->ssl, st->host);
+	mbedtls_ssl_set_hostname(st->ssl, host);
 
 	mbedtls_ssl_set_bio(st->ssl, st->io, bio_write, bio_read, NULL);
 
@@ -342,7 +345,6 @@ static void mbedtls_stream_free(git_stream *stream)
 	if (st->owned)
 		git_stream_free(st->io);
 
-	git__free(st->host);
 	git__free(st->cert_info.data);
 	mbedtls_ssl_free(st->ssl);
 	git__free(st->ssl);
@@ -372,9 +374,6 @@ static int mbedtls_stream_wrap(
 		error = -1;
 		goto out_err;
 	}
-
-	st->host = git__strdup(host);
-	GIT_ERROR_CHECK_ALLOC(st->host);
 
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.encrypted = 1;
@@ -406,18 +405,14 @@ int git_stream_mbedtls_wrap(
 }
 
 int git_stream_mbedtls_new(
-	git_stream **out,
-	const char *host,
-	const char *port)
+	git_stream **out)
 {
 	git_stream *stream;
 	int error;
 
 	GIT_ASSERT_ARG(out);
-	GIT_ASSERT_ARG(host);
-	GIT_ASSERT_ARG(port);
 
-	if ((error = git_stream_socket_new(&stream, host, port)) < 0)
+	if ((error = git_stream_socket_new(&stream)) < 0)
 		return error;
 
 	if ((error = mbedtls_stream_wrap(out, stream, host, 1)) < 0) {

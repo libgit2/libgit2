@@ -150,8 +150,6 @@ static int git_proto_stream_alloc(
 	git_subtransport *t,
 	const char *url,
 	const char *cmd,
-	const char *host,
-	const char *port,
 	git_smart_subtransport_stream **stream)
 {
 	git_proto_stream *s;
@@ -175,7 +173,7 @@ static int git_proto_stream_alloc(
 		return -1;
 	}
 
-	if ((git_stream_socket_new(&s->io, host, port)) < 0)
+	if ((git_stream_socket_new(&s->io)) < 0)
 		return -1;
 
 	GIT_ERROR_CHECK_VERSION(s->io, GIT_STREAM_VERSION, "git_stream");
@@ -206,7 +204,7 @@ static int _git_uploadpack_ls(
 	host = urldata.host;
 	port = urldata.port ? urldata.port : GIT_DEFAULT_PORT;
 
-	error = git_proto_stream_alloc(t, stream_url, cmd_uploadpack, host, port, stream);
+	error = git_proto_stream_alloc(t, stream_url, cmd_uploadpack, stream);
 
 	git_net_url_dispose(&urldata);
 
@@ -216,7 +214,8 @@ static int _git_uploadpack_ls(
 	}
 
 	s = (git_proto_stream *) *stream;
-	if ((error = git_stream_connect(s->io)) < 0) {
+
+	if ((error = git_stream_connect(s->io, host, port, NULL)) < 0) {
 		git_proto_stream_free(*stream);
 		return error;
 	}
@@ -259,7 +258,7 @@ static int _git_receivepack_ls(
 	if ((error = git_net_url_parse(&urldata, url)) < 0)
 		return error;
 
-	error = git_proto_stream_alloc(t, stream_url, cmd_receivepack, urldata.host, urldata.port, stream);
+	error = git_proto_stream_alloc(t, stream_url, cmd_receivepack, stream);
 
 	git_net_url_dispose(&urldata);
 
@@ -270,7 +269,7 @@ static int _git_receivepack_ls(
 
 	s = (git_proto_stream *) *stream;
 
-	if ((error = git_stream_connect(s->io)) < 0)
+	if ((error = git_stream_connect(s->io, urldata.host, urldata.port, NULL)) < 0)
 		return error;
 
 	t->current_stream = s;

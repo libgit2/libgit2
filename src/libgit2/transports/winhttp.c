@@ -788,7 +788,7 @@ static int winhttp_connect(
 	}
 
 
-	if (git_http__user_agent(&ua) < 0)
+	if (git_http__append_user_agent(&ua) < 0)
 		goto on_error;
 
 	if (git_utf8_to_16_alloc(&wide_ua, git_str_cstr(&ua)) < 0) {

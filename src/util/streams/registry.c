@@ -101,7 +101,7 @@ int git_stream_register(git_stream_t type, git_stream_registration *registration
 
 #ifndef GIT_DEPRECATE_HARD
 int git_stream_register_tls(
-	int GIT_CALLBACK(ctor)(git_stream **out, const char *host, const char *port))
+	int GIT_CALLBACK(ctor)(git_stream **out))
 {
 	git_stream_registration registration = {0};
 

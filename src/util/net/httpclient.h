@@ -72,6 +72,12 @@ typedef struct {
 	/** The value of the `User-Agent` header to send */
 	const char *user_agent;
 
+	/** Timeout for connecting */
+	int connect_timeout;
+
+	/** Timeout for I/O */
+	int timeout;
+
 	/** Certificate check callback for the remote */
 	git_transport_certificate_check_cb server_certificate_check_cb;
 	void *server_certificate_check_payload;

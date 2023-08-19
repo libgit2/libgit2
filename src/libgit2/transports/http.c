@@ -97,6 +97,9 @@ static const http_service receive_pack_service = {
 	1
 };
 
+extern int git_transport__connect_timeout;
+extern int git_transport__timeout;
+
 #define SERVER_TYPE_REMOTE "remote"
 #define SERVER_TYPE_PROXY  "proxy"
 
@@ -692,6 +695,9 @@ static int http_action(
 	GIT_ERROR_CHECK_ALLOC(stream);
 
 	opts.user_agent = transport->user_agent.ptr;
+	opts.connect_timeout = git_transport__connect_timeout;
+	opts.timeout = git_transport__timeout;
+
 	opts.server_certificate_check_cb = connect_opts->callbacks.certificate_check;
 	opts.server_certificate_check_payload = connect_opts->callbacks.payload;
 	opts.proxy_certificate_check_cb = connect_opts->proxy_opts.certificate_check;
@@ -759,7 +765,7 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 	transport = git__calloc(sizeof(http_subtransport), 1);
 	GIT_ERROR_CHECK_ALLOC(transport);
 
-	if (git_http__user_agent(&transport->user_agent) < 0)
+	if (git_http__append_user_agent(&transport->user_agent) < 0)
 		return -1;
 
 	transport->owner = (transport_smart *)owner;

@@ -47,16 +47,16 @@ extern size_t git_indexer__max_objects;
 extern bool git_disable_pack_keep_file_checks;
 extern int git_odb__packed_priority;
 extern int git_odb__loose_priority;
-extern int git_stream_socket__connect_timeout;
-extern int git_stream_socket__timeout;
 
-char *git__user_agent;
-char *git__ssl_ciphers;
+int git_transport__connect_timeout;
+int git_transport__timeout;
+char *git_http__user_agent;
+char *git_http__ssl_ciphers;
 
 static void libgit2_settings_global_shutdown(void)
 {
-	git__free(git__user_agent);
-	git__free(git__ssl_ciphers);
+	git__free(git_http__user_agent);
+	git__free(git_http__ssl_ciphers);
 	git_repository__free_extensions();
 }
 
@@ -157,16 +157,6 @@ static int config_level_to_sysdir(int *out, int config_level)
 	git_error_set(
 		GIT_ERROR_INVALID, "invalid config path selector %d", config_level);
 	return -1;
-}
-
-const char *git_libgit2__user_agent(void)
-{
-	return git__user_agent;
-}
-
-const char *git_libgit2__ssl_ciphers(void)
-{
-	return git__ssl_ciphers;
 }
 
 int git_libgit2_opts(int key, ...)
@@ -287,9 +277,9 @@ int git_libgit2_opts(int key, ...)
 #endif
 		break;
 	case GIT_OPT_SET_USER_AGENT:
-		git__free(git__user_agent);
-		git__user_agent = git__strdup(va_arg(ap, const char *));
-		if (!git__user_agent) {
+		git__free(git_http__user_agent);
+		git_http__user_agent = git__strdup(va_arg(ap, const char *));
+		if (!git_http__user_agent) {
 			git_error_set_oom();
 			error = -1;
 		}
@@ -307,9 +297,9 @@ int git_libgit2_opts(int key, ...)
 	case GIT_OPT_SET_SSL_CIPHERS:
 #if (GIT_OPENSSL || GIT_MBEDTLS)
 		{
-			git__free(git__ssl_ciphers);
-			git__ssl_ciphers = git__strdup(va_arg(ap, const char *));
-			if (!git__ssl_ciphers) {
+			git__free(git_http__ssl_ciphers);
+			git_http__ssl_ciphers = git__strdup(va_arg(ap, const char *));
+			if (!git_http__ssl_ciphers) {
 				git_error_set_oom();
 				error = -1;
 			}
@@ -326,7 +316,7 @@ int git_libgit2_opts(int key, ...)
 			git_str str = GIT_STR_INIT;
 
 			if ((error = git_buf_tostr(&str, out)) < 0 ||
-			    (error = git_str_puts(&str, git__user_agent)) < 0)
+			    (error = git_str_puts(&str, git_http__user_agent)) < 0)
 				break;
 
 			error = git_buf_fromstr(out, &str);
@@ -439,7 +429,7 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_GET_SERVER_CONNECT_TIMEOUT:
-		*(va_arg(ap, int *)) = git_stream_socket__connect_timeout;
+		*(va_arg(ap, int *)) = git_transport__connect_timeout;
 		break;
 
 	case GIT_OPT_SET_SERVER_CONNECT_TIMEOUT:
@@ -450,13 +440,13 @@ int git_libgit2_opts(int key, ...)
 				git_error_set(GIT_ERROR_INVALID, "invalid connect timeout");
 				error = -1;
 			} else {
-				git_stream_socket__connect_timeout = timeout;
+				git_transport__connect_timeout = timeout;
 			}
 		}
 		break;
 
 	case GIT_OPT_GET_SERVER_TIMEOUT:
-		*(va_arg(ap, int *)) = git_stream_socket__timeout;
+		*(va_arg(ap, int *)) = git_transport__timeout;
 		break;
 
 	case GIT_OPT_SET_SERVER_TIMEOUT:
@@ -467,7 +457,7 @@ int git_libgit2_opts(int key, ...)
 				git_error_set(GIT_ERROR_INVALID, "invalid timeout");
 				error = -1;
 			} else {
-				git_stream_socket__timeout = timeout;
+				git_transport__timeout = timeout;
 			}
 		}
 		break;
