@@ -154,9 +154,15 @@ int git_oid_pathfmt(char *str, const git_oid *oid)
 
 static git_tlsdata_key thread_str_key;
 
+static int thread_str_free(void *s)
+{
+	char *str = (char *)s;
+	git__free(str);
+}
+
 int git_oid_global_init(void)
 {
-	return git_tlsdata_init(&thread_str_key, git__free);
+	return git_tlsdata_init(&thread_str_key, thread_str_free);
 }
 
 char *git_oid_tostr_s(const git_oid *oid)
