@@ -9,6 +9,7 @@
 
 #include "git2/oid.h"
 #include "repository.h"
+#include "runtime.h"
 #include <string.h>
 #include <limits.h>
 
@@ -154,15 +155,27 @@ int git_oid_pathfmt(char *str, const git_oid *oid)
 
 static git_tlsdata_key thread_str_key;
 
-static int thread_str_free(void *s)
+static void thread_str_free(void *s)
 {
 	char *str = (char *)s;
 	git__free(str);
 }
 
+static void thread_str_global_shutdown(void)
+{
+	char *str = git_tlsdata_get(thread_str_key);
+	git_tlsdata_set(thread_str_key, NULL);
+
+	git__free(str);
+	git_tlsdata_dispose(thread_str_key);
+}
+
 int git_oid_global_init(void)
 {
-	return git_tlsdata_init(&thread_str_key, thread_str_free);
+	if (git_tlsdata_init(&thread_str_key, thread_str_free) != 0)
+		return -1;
+
+	return git_runtime_shutdown_register(thread_str_global_shutdown);
 }
 
 char *git_oid_tostr_s(const git_oid *oid)
