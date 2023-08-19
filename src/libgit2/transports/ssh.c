@@ -667,7 +667,7 @@ static int check_certificate(
 	git_cert_hostkey cert = {{ 0 }};
 	const char *key;
 	size_t cert_len;
-	int cert_type, cert_valid = 0, error = 0;
+	int cert_type, cert_valid = 0, error = GIT_ECERTIFICATE;
 
 	if ((key = libssh2_session_hostkey(session, &cert_len, &cert_type)) == NULL) {
 		ssh_error(session, "failed to retrieve hostkey");
@@ -737,29 +737,24 @@ static int check_certificate(
 		return -1;
 	}
 
-	git_error_clear();
-	error = 0;
-	if (!cert_valid) {
-		git_error_set(GIT_ERROR_SSH, "invalid or unknown remote ssh hostkey");
-		error = GIT_ECERTIFICATE;
-	}
-
 	if (check_cb != NULL) {
 		git_cert_hostkey *cert_ptr = &cert;
-		git_error_state previous_error = {0};
 
-		git_error_state_capture(&previous_error, error);
-		error = check_cb((git_cert *) cert_ptr, cert_valid, host, check_cb_payload);
-		if (error == GIT_PASSTHROUGH) {
-			error = git_error_state_restore(&previous_error);
-		} else if (error < 0 && !git_error_last()) {
-			git_error_set(GIT_ERROR_NET, "unknown remote host key");
-		}
+		error = check_cb((git_cert *) cert_ptr, cert_valid, host,
+			check_cb_payload);
 
-		git_error_state_free(&previous_error);
+		if (error == 0)
+			cert_valid = 1;
+		else if (error != GIT_PASSTHROUGH)
+			cert_valid = 0;
 	}
 
-	return error;
+	if (!cert_valid) {
+		git_error_set(GIT_ERROR_SSH, "invalid or unknown remote ssh hostkey");
+		return (error == GIT_PASSTHROUGH) ? GIT_ECERTIFICATE : error;
+	}
+
+	return 0;
 }
 
 #define SSH_DEFAULT_PORT "22"
