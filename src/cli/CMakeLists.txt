@@ -45,7 +45,7 @@ set_target_properties(git2_cli PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
 
 ide_split_sources(git2_cli)
 
-target_include_directories(git2_cli PRIVATE ${CLI_INCLUDES})
+target_include_directories(git2_cli PRIVATE ${CLI_INCLUDES} ${LIBGIT2_SYSTEM_INCLUDES})
 
 if(MSVC_IDE)
 	# Precompiled headers

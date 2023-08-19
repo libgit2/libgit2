@@ -14,6 +14,7 @@
 #include "smart.h"
 #include "http.h"
 #include "trace.h"
+#include "transport.h"
 #include "streams/tls.h"
 #include "streams/socket.h"
 #include "net/auth.h"
@@ -24,6 +25,9 @@
 #include "git2/sys/credential.h"
 
 bool git_http__expect_continue = false;
+
+extern int git_transport__timeout;
+extern int git_transport__connect_timeout;
 
 typedef enum {
 	HTTP_STATE_NONE = 0,
@@ -692,6 +696,10 @@ static int http_action(
 	GIT_ERROR_CHECK_ALLOC(stream);
 
 	opts.user_agent = transport->user_agent.ptr;
+
+	opts.timeout = git_transport__timeout;
+	opts.connect_timeout = git_transport__connect_timeout;
+
 	opts.server_certificate_check_cb = connect_opts->callbacks.certificate_check;
 	opts.server_certificate_check_payload = connect_opts->callbacks.payload;
 	opts.proxy_certificate_check_cb = connect_opts->proxy_opts.certificate_check;
@@ -759,7 +767,7 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 	transport = git__calloc(sizeof(http_subtransport), 1);
 	GIT_ERROR_CHECK_ALLOC(transport);
 
-	if (git_http__user_agent(&transport->user_agent) < 0)
+	if (git_http__append_user_agent(&transport->user_agent) < 0)
 		return -1;
 
 	transport->owner = (transport_smart *)owner;

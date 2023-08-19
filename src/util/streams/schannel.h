@@ -13,15 +13,7 @@
 
 #ifdef GIT_HTTPS_SCHANNEL
 
-extern int git_stream_schannel_new(
-	git_stream **out,
-	const char *host,
-	const char *port);
-
-extern int git_stream_schannel_wrap(
-	git_stream **out,
-	git_stream *in,
-	const char *host);
+extern int git_stream_schannel_new(git_stream **out);
 
 #endif
 

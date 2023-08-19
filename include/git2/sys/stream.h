@@ -15,6 +15,35 @@ GIT_BEGIN_DECL
 
 #define GIT_STREAM_VERSION 1
 
+typedef struct {
+	unsigned int version;
+
+	/**
+	 * Timeout for read and write operations; can be set to `0` to
+	 * block indefinitely.
+	 */
+	int timeout;
+
+	/**
+	 * Timeout to connect to the remote server; can be set to `0`
+	 * to use the system defaults. This can be shorter than the
+	 * system default - often 75 seconds - but cannot be longer.
+	 */
+	int connect_timeout;
+} git_stream_connect_options;
+
+#define GIT_STREAM_CONNECT_OPTIONS_VERSION 1
+#define GIT_STREAM_CONNECT_OPTIONS_INIT \
+	{ GIT_STREAM_CONNECT_OPTIONS_VERSION }
+
+#ifdef GIT_WIN32
+typedef SOCKET git_socket_t;
+# define GIT_SOCKET_INVALID INVALID_SOCKET
+#else
+typedef int git_socket_t;
+# define GIT_SOCKET_INVALID -1
+#endif
+
 /**
  * Every stream must have this struct as its first element, so the
  * API can talk to it. You'd define your stream as
@@ -29,22 +58,21 @@ GIT_BEGIN_DECL
 typedef struct git_stream {
 	int version;
 
+	/**
+	 * Nonzero if this is a TLS stream; zero if this is plain socket.
+	 */
 	int encrypted : 1;
 
-	/**
-	 * Timeout for read and write operations; can be set to `0` to
-	 * block indefinitely.
-	 */
-	int timeout;
-
-	/**
-	 * Timeout to connect to the remote server; can be set to `0`
-	 * to use the system defaults. This can be shorter than the
-	 * system default - often 75 seconds - but cannot be longer.
-	 */
-	int connect_timeout;
-
-	int GIT_CALLBACK(connect)(struct git_stream *);
+	int GIT_CALLBACK(connect)(
+		struct git_stream *,
+		const char *host,
+		const char *port,
+		const git_stream_connect_options *opts);
+	int GIT_CALLBACK(wrap)(
+		struct git_stream *,
+		struct git_stream *in,
+		const char *host);
+	git_socket_t GIT_CALLBACK(get_socket)(struct git_stream *);
 	int GIT_CALLBACK(certificate)(git_cert **, struct git_stream *);
 	ssize_t GIT_CALLBACK(read)(struct git_stream *, void *, size_t);
 	ssize_t GIT_CALLBACK(write)(struct git_stream *, const char *, size_t, int);
@@ -60,27 +88,9 @@ typedef struct {
 	 * Called to create a new connection to a given host.
 	 *
 	 * @param out The created stream
-	 * @param host The hostname to connect to; may be a hostname or
-	 *             IP address
-	 * @param port The port to connect to; may be a port number or
-	 *             service name
 	 * @return 0 or an error code
 	 */
-	int GIT_CALLBACK(init)(git_stream **out, const char *host, const char *port);
-
-	/**
-	 * Called to create a new connection on top of the given stream.  If
-	 * this is a TLS stream, then this function may be used to proxy a
-	 * TLS stream over an HTTP CONNECT session.  If this is unset, then
-	 * HTTP CONNECT proxies will not be supported.
-	 *
-	 * @param out The created stream
-	 * @param in An existing stream to add TLS to
-	 * @param host The hostname that the stream is connected to,
-	 *             for certificate validation
-	 * @return 0 or an error code
-	 */
-	int GIT_CALLBACK(wrap)(git_stream **out, git_stream *in, const char *host);
+	int GIT_CALLBACK(init)(git_stream **out);
 } git_stream_registration;
 
 /**
@@ -126,7 +136,7 @@ GIT_EXTERN(int) git_stream_register(
  * @deprecated Provide a git_stream_registration to git_stream_register
  * @see git_stream_registration
  */
-typedef int GIT_CALLBACK(git_stream_cb)(git_stream **out, const char *host, const char *port);
+typedef int GIT_CALLBACK(git_stream_cb)(git_stream **out);
 
 /**
  * Register a TLS stream constructor for the library to use.  This stream

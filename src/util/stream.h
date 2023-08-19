@@ -10,14 +10,31 @@
 #include "git2_util.h"
 #include "git2/sys/stream.h"
 
-GIT_INLINE(int) git_stream_connect(git_stream *st)
+GIT_INLINE(int) git_stream_connect(
+	git_stream *st,
+	const char *host,
+	const char *port,
+	const git_stream_connect_options *opts)
 {
-	return st->connect(st);
+	return st->connect(st, host, port, opts);
+}
+
+GIT_INLINE(int) git_stream_wrap(
+	git_stream *st,
+	git_stream *in,
+	const char *host)
+{
+	return st->wrap(st, in, host);
 }
 
 GIT_INLINE(int) git_stream_is_encrypted(git_stream *st)
 {
 	return st->encrypted;
+}
+
+GIT_INLINE(GIT_SOCKET) git_stream_get_socket(git_stream *st)
+{
+	return st->get_socket(st);
 }
 
 GIT_INLINE(int) git_stream_certificate(git_cert **out, git_stream *st)

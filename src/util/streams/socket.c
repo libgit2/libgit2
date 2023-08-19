@@ -28,11 +28,10 @@
 # endif
 #endif
 
-int git_stream_socket__connect_timeout = 0;
-int git_stream_socket__timeout = 0;
-
 typedef struct {
 	git_stream parent;
+	int connect_timeout;
+	int timeout;
 	char *host;
 	char *port;
 	GIT_SOCKET s;
@@ -173,7 +172,11 @@ static int connect_with_timeout(
 	return 0;
 }
 
-static int socket_connect(git_stream *stream)
+static int socket_connect(
+	git_stream *stream,
+	const char *host,
+	const char *port,
+	const git_stream_connect_options *opts)
 {
 	git_stream_socket *st = (git_stream_socket *) stream;
 	GIT_SOCKET s = INVALID_SOCKET;
@@ -181,14 +184,23 @@ static int socket_connect(git_stream *stream)
 	struct addrinfo hints;
 	int error;
 
+	GIT_ASSERT_ARG(stream);
+	GIT_ASSERT_ARG(host);
+	GIT_ASSERT_ARG(port);
+
+	if (opts) {
+		st->timeout = opts->timeout;
+		st->connect_timeout = opts->connect_timeout;
+	}
+
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_family = AF_UNSPEC;
 
-	if ((error = p_getaddrinfo(st->host, st->port, &hints, &info)) != 0) {
+	if ((error = p_getaddrinfo(host, port, &hints, &info)) != 0) {
 		git_error_set(GIT_ERROR_NET,
 			   "failed to resolve address for %s: %s",
-			   st->host, p_gai_strerror(error));
+			   host, p_gai_strerror(error));
 		return -1;
 	}
 
@@ -200,7 +212,7 @@ static int socket_connect(git_stream *stream)
 
 		error = connect_with_timeout(s, p->ai_addr,
 				(socklen_t)p->ai_addrlen,
-				st->parent.connect_timeout);
+				st->connect_timeout);
 
 		if (error == 0)
 			break;
@@ -216,14 +228,14 @@ static int socket_connect(git_stream *stream)
 	/* Oops, we couldn't connect to any address */
 	if (s == INVALID_SOCKET) {
 		if (error == GIT_TIMEOUT)
-			git_error_set(GIT_ERROR_NET, "failed to connect to %s: Operation timed out", st->host);
+			git_error_set(GIT_ERROR_NET, "failed to connect to %s: Operation timed out", host);
 		else
-			git_error_set(GIT_ERROR_OS, "failed to connect to %s", st->host);
+			git_error_set(GIT_ERROR_OS, "failed to connect to %s", host);
 		error = -1;
 		goto done;
 	}
 
-	if (st->parent.timeout && !st->parent.connect_timeout &&
+	if (st->timeout && !st->connect_timeout &&
 	    (error = set_nonblocking(s)) < 0)
 		return error;
 
@@ -233,6 +245,22 @@ static int socket_connect(git_stream *stream)
 done:
 	p_freeaddrinfo(info);
 	return error;
+}
+
+static int socket_wrap(git_stream *stream, git_stream *in, const char *host)
+{
+	GIT_UNUSED(stream);
+	GIT_UNUSED(in);
+	GIT_UNUSED(host);
+
+	git_error_set(GIT_ERROR_NET, "cannot wrap a plaintext socket");
+	return -1;
+}
+
+static git_socket_t socket_get(git_stream *stream)
+{
+	git_stream_socket *st = (git_stream_socket *) stream;
+	return st->s;
 }
 
 static ssize_t socket_write(
@@ -250,13 +278,13 @@ static ssize_t socket_write(
 
 	ret = p_send(st->s, data, len, 0);
 
-	if (st->parent.timeout && ret < 0 &&
+	if (st->timeout && ret < 0 &&
 	    (errno == EAGAIN || errno != EWOULDBLOCK)) {
 		fd.fd = st->s;
 		fd.events = POLLOUT;
 		fd.revents = 0;
 
-		ret = p_poll(&fd, 1, st->parent.timeout);
+		ret = p_poll(&fd, 1, st->timeout);
 
 		if (ret == 1) {
 			ret = p_send(st->s, data, len, 0);
@@ -286,13 +314,13 @@ static ssize_t socket_read(
 
 	ret = p_recv(st->s, data, len, 0);
 
-	if (st->parent.timeout && ret < 0 &&
+	if (st->timeout && ret < 0 &&
 	    (errno == EAGAIN || errno != EWOULDBLOCK)) {
 		fd.fd = st->s;
 		fd.events = POLLIN;
 		fd.revents = 0;
 
-		ret = p_poll(&fd, 1, st->parent.timeout);
+		ret = p_poll(&fd, 1, st->timeout);
 
 		if (ret == 1) {
 			ret = p_recv(st->s, data, len, 0);
@@ -331,32 +359,19 @@ static void socket_free(git_stream *stream)
 	git__free(st);
 }
 
-static int default_socket_stream_new(
-	git_stream **out,
-	const char *host,
-	const char *port)
+static int default_socket_stream_new(git_stream **out)
 {
 	git_stream_socket *st;
 
 	GIT_ASSERT_ARG(out);
-	GIT_ASSERT_ARG(host);
-	GIT_ASSERT_ARG(port);
 
 	st = git__calloc(1, sizeof(git_stream_socket));
 	GIT_ERROR_CHECK_ALLOC(st);
 
-	st->host = git__strdup(host);
-	GIT_ERROR_CHECK_ALLOC(st->host);
-
-	if (port) {
-		st->port = git__strdup(port);
-		GIT_ERROR_CHECK_ALLOC(st->port);
-	}
-
 	st->parent.version = GIT_STREAM_VERSION;
-	st->parent.timeout = git_stream_socket__timeout;
-	st->parent.connect_timeout = git_stream_socket__connect_timeout;
 	st->parent.connect = socket_connect;
+	st->parent.wrap = socket_wrap;
+	st->parent.get_socket = socket_get;
 	st->parent.write = socket_write;
 	st->parent.read = socket_read;
 	st->parent.close = socket_close;
@@ -367,18 +382,13 @@ static int default_socket_stream_new(
 	return 0;
 }
 
-int git_stream_socket_new(
-	git_stream **out,
-	const char *host,
-	const char *port)
+int git_stream_socket_new(git_stream **out)
 {
-	int (*init)(git_stream **, const char *, const char *) = NULL;
+	int (*init)(git_stream **) = NULL;
 	git_stream_registration custom = {0};
 	int error;
 
 	GIT_ASSERT_ARG(out);
-	GIT_ASSERT_ARG(host);
-	GIT_ASSERT_ARG(port);
 
 	if ((error = git_stream_registry_lookup(&custom, GIT_STREAM_STANDARD)) == 0)
 		init = custom.init;
@@ -392,7 +402,7 @@ int git_stream_socket_new(
 		return -1;
 	}
 
-	return init(out, host, port);
+	return init(out);
 }
 
 #ifdef GIT_WIN32

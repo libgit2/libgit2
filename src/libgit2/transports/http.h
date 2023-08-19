@@ -8,16 +8,16 @@
 #ifndef INCLUDE_transports_http_h__
 #define INCLUDE_transports_http_h__
 
-#include "settings.h"
 #include "net/httpclient.h"
 
 #define GIT_HTTP_REPLAY_MAX 15
 
 extern bool git_http__expect_continue;
+extern char *git_http__user_agent;
 
-GIT_INLINE(int) git_http__user_agent(git_str *buf)
+GIT_INLINE(int) git_http__append_user_agent(git_str *buf)
 {
-	const char *ua = git_libgit2__user_agent();
+	const char *ua = git_http__user_agent;
 
 	if (!ua)
 		ua = "libgit2 " LIBGIT2_VERSION;

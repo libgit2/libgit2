@@ -11,7 +11,7 @@
 
 #include "stream.h"
 
-extern int git_stream_socket_new(git_stream **out, const char *host, const char *port);
+extern int git_stream_socket_new(git_stream **out);
 
 extern int git_stream_socket_global_init(void);
 
