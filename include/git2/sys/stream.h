@@ -29,8 +29,7 @@ GIT_BEGIN_DECL
 typedef struct git_stream {
 	int version;
 
-	int encrypted : 1,
-	    proxy_support : 1;
+	int encrypted : 1;
 
 	/**
 	 * Timeout for read and write operations; can be set to `0` to
@@ -47,7 +46,6 @@ typedef struct git_stream {
 
 	int GIT_CALLBACK(connect)(struct git_stream *);
 	int GIT_CALLBACK(certificate)(git_cert **, struct git_stream *);
-	int GIT_CALLBACK(set_proxy)(struct git_stream *, const git_proxy_options *proxy_opts);
 	ssize_t GIT_CALLBACK(read)(struct git_stream *, void *, size_t);
 	ssize_t GIT_CALLBACK(write)(struct git_stream *, const char *, size_t, int);
 	int GIT_CALLBACK(close)(struct git_stream *);

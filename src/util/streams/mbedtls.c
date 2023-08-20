@@ -291,13 +291,6 @@ static int mbedtls_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
-static int mbedtls_set_proxy(git_stream *stream, const git_proxy_options *proxy_options)
-{
-	mbedtls_stream *st = (mbedtls_stream *) stream;
-
-	return git_stream_set_proxy(st->io, proxy_options);
-}
-
 static ssize_t mbedtls_stream_write(git_stream *stream, const char *data, size_t len, int flags)
 {
 	mbedtls_stream *st = (mbedtls_stream *) stream;
@@ -385,10 +378,8 @@ static int mbedtls_stream_wrap(
 
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.encrypted = 1;
-	st->parent.proxy_support = git_stream_supports_proxy(st->io);
 	st->parent.connect = mbedtls_connect;
 	st->parent.certificate = mbedtls_certificate;
-	st->parent.set_proxy = mbedtls_set_proxy;
 	st->parent.read = mbedtls_stream_read;
 	st->parent.write = mbedtls_stream_write;
 	st->parent.close = mbedtls_stream_close;

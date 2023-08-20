@@ -380,14 +380,6 @@ static int schannel_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
-static int schannel_set_proxy(
-	git_stream *stream,
-	const git_proxy_options *proxy_options)
-{
-	schannel_stream *st = (schannel_stream *)stream;
-	return git_stream_set_proxy(st->io, proxy_options);
-}
-
 static ssize_t schannel_write(
 	git_stream *stream,
 	const char *data,
@@ -668,10 +660,8 @@ static int schannel_stream_wrap(
 
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.encrypted = 1;
-	st->parent.proxy_support = git_stream_supports_proxy(st->io);
 	st->parent.connect = schannel_connect;
 	st->parent.certificate = schannel_certificate;
-	st->parent.set_proxy = schannel_set_proxy;
 	st->parent.read = schannel_read;
 	st->parent.write = schannel_write;
 	st->parent.close = schannel_close;

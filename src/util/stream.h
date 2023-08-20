@@ -30,21 +30,6 @@ GIT_INLINE(int) git_stream_certificate(git_cert **out, git_stream *st)
 	return st->certificate(out, st);
 }
 
-GIT_INLINE(int) git_stream_supports_proxy(git_stream *st)
-{
-	return st->proxy_support;
-}
-
-GIT_INLINE(int) git_stream_set_proxy(git_stream *st, const git_proxy_options *proxy_opts)
-{
-	if (!st->proxy_support) {
-		git_error_set(GIT_ERROR_INVALID, "proxy not supported on this stream");
-		return -1;
-	}
-
-	return st->set_proxy(st, proxy_opts);
-}
-
 GIT_INLINE(ssize_t) git_stream_read(git_stream *st, void *data, size_t len)
 {
 	return st->read(st, data, len);
