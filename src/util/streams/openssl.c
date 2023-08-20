@@ -572,13 +572,6 @@ out:
 	return error;
 }
 
-static int openssl_set_proxy(git_stream *stream, const git_proxy_options *proxy_opts)
-{
-	openssl_stream *st = (openssl_stream *) stream;
-
-	return git_stream_set_proxy(st->io, proxy_opts);
-}
-
 static ssize_t openssl_write(git_stream *stream, const char *data, size_t data_len, int flags)
 {
 	openssl_stream *st = (openssl_stream *) stream;
@@ -659,10 +652,8 @@ static int openssl_stream_wrap(
 
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.encrypted = 1;
-	st->parent.proxy_support = git_stream_supports_proxy(st->io);
 	st->parent.connect = openssl_connect;
 	st->parent.certificate = openssl_certificate;
-	st->parent.set_proxy = openssl_set_proxy;
 	st->parent.read = openssl_read;
 	st->parent.write = openssl_write;
 	st->parent.close = openssl_close;

@@ -128,15 +128,6 @@ static int securetransport_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
-static int securetransport_set_proxy(
-	git_stream *stream,
-	const git_proxy_options *proxy_opts)
-{
-	securetransport_stream *st = (securetransport_stream *) stream;
-
-	return git_stream_set_proxy(st->io, proxy_opts);
-}
-
 /*
  * Contrary to typical network IO callbacks, Secure Transport write callback is
  * expected to write *all* passed data, not just as much as it can, and any
@@ -309,10 +300,8 @@ static int securetransport_wrap(
 
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.encrypted = 1;
-	st->parent.proxy_support = git_stream_supports_proxy(st->io);
 	st->parent.connect = securetransport_connect;
 	st->parent.certificate = securetransport_certificate;
-	st->parent.set_proxy = securetransport_set_proxy;
 	st->parent.read = securetransport_read;
 	st->parent.write = securetransport_write;
 	st->parent.close = securetransport_close;
