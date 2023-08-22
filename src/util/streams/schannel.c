@@ -384,15 +384,15 @@ static int schannel_wrap(git_stream *stream, git_stream *in, const char *host)
 
 	GIT_ASSERT(st->state == STATE_NONE);
 
+	st->io = in;
+	st->owned = 0;
+
 	if (git_utf8_to_16_alloc(&st->host_w, host) < 0 ||
 	    connect_context(st) < 0 ||
 	    check_certificate(st) < 0)
 		return -1;
 
-	st->io = in;
-	st->owned = 0;
 	st->connected = 1;
-
 	return 0;
 }
 
