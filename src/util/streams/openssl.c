@@ -146,6 +146,9 @@ static int openssl_init(void)
 	if (!SSL_CTX_set_default_verify_paths(openssl_ctx))
 		goto error;
 
+	if (!SSL_CTX_set_cipher_list(openssl_ctx, GIT_SSL_DEFAULT_CIPHERS))
+		return -1;
+
 	if (init_bio_method() < 0)
 		goto error;
 
@@ -705,7 +708,7 @@ int git_openssl__set_ciphers(const char *ciphers)
 	if (openssl_ensure_initialized() < 0)
 		return -1;
 
-	if(!SSL_CTX_set_cipher_list(openssl_ctx, GIT_SSL_DEFAULT_CIPHERS))
+	if(!SSL_CTX_set_cipher_list(openssl_ctx, ciphers))
 		return -1;
 
 	return 0;

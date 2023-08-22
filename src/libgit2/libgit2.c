@@ -51,12 +51,10 @@ extern int git_odb__loose_priority;
 int git_transport__connect_timeout;
 int git_transport__timeout;
 char *git_http__user_agent;
-char *git_http__ssl_ciphers;
 
 static void libgit2_settings_global_shutdown(void)
 {
 	git__free(git_http__user_agent);
-	git__free(git_http__ssl_ciphers);
 	git_repository__free_extensions();
 }
 
@@ -295,15 +293,9 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_SET_SSL_CIPHERS:
-#if (GIT_OPENSSL || GIT_MBEDTLS)
-		{
-			git__free(git_http__ssl_ciphers);
-			git_http__ssl_ciphers = git__strdup(va_arg(ap, const char *));
-			if (!git_http__ssl_ciphers) {
-				git_error_set_oom();
-				error = -1;
-			}
-		}
+#if (GIT_OPENSSL)
+		if (git_openssl__set_ciphers(va_arg(ap, const char *)) < 0)
+			error = -1;
 #else
 		git_error_set(GIT_ERROR_SSL, "TLS backend doesn't support custom ciphers");
 		error = -1;
