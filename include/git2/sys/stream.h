@@ -36,6 +36,14 @@ typedef struct {
 #define GIT_STREAM_CONNECT_OPTIONS_INIT \
 	{ GIT_STREAM_CONNECT_OPTIONS_VERSION }
 
+#ifdef GIT_WIN32
+typedef SOCKET git_socket_t;
+# define GIT_SOCKET_INVALID INVALID_SOCKET
+#else
+typedef int git_socket_t;
+# define GIT_SOCKET_INVALID -1
+#endif
+
 /**
  * Every stream must have this struct as its first element, so the
  * API can talk to it. You'd define your stream as
@@ -64,6 +72,7 @@ typedef struct git_stream {
 		struct git_stream *,
 		struct git_stream *in,
 		const char *host);
+	git_socket_t GIT_CALLBACK(get_socket)(struct git_stream *);
 	int GIT_CALLBACK(certificate)(git_cert **, struct git_stream *);
 	ssize_t GIT_CALLBACK(read)(struct git_stream *, void *, size_t);
 	ssize_t GIT_CALLBACK(write)(struct git_stream *, const char *, size_t, int);
@@ -82,20 +91,6 @@ typedef struct {
 	 * @return 0 or an error code
 	 */
 	int GIT_CALLBACK(init)(git_stream **out);
-
-	/**
-	 * Called to create a new connection on top of the given stream.  If
-	 * this is a TLS stream, then this function may be used to proxy a
-	 * TLS stream over an HTTP CONNECT session.  If this is unset, then
-	 * HTTP CONNECT proxies will not be supported.
-	 *
-	 * @param out The created stream
-	 * @param in An existing stream to add TLS to
-	 * @param host The hostname that the stream is connected to,
-	 *             for certificate validation
-	 * @return 0 or an error code
-	 */
-	int GIT_CALLBACK(wrap)(git_stream **out, git_stream *in, const char *host);
 } git_stream_registration;
 
 /**

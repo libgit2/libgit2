@@ -13,6 +13,7 @@
 
 #include "runtime.h"
 #include "smart.h"
+#include "transport.h"
 #include "streams/socket.h"
 #include "sysdir.h"
 #include "net/url.h"
@@ -523,16 +524,22 @@ static int _git_ssh_session_create(
 	LIBSSH2_KNOWNHOSTS **hosts,
 	const char *hostname,
 	int port,
-	git_stream *io)
+	git_stream *stream)
 {
-	git_stream_socket *socket = GIT_CONTAINER_OF(io, git_stream_socket, parent);
 	LIBSSH2_SESSION *s;
 	LIBSSH2_KNOWNHOSTS *known_hosts;
+	git_socket_t socket;
 	git_str prefs = GIT_STR_INIT;
 	int rc = 0;
 
 	GIT_ASSERT_ARG(session);
 	GIT_ASSERT_ARG(hosts);
+	GIT_ASSERT_ARG(stream);
+
+	if ((socket = git_stream_get_socket(stream)) == GIT_SOCKET_INVALID) {
+		git_error_set(GIT_ERROR_NET, "could not get socket");
+		return -1;
+	}
 
 	s = libssh2_session_init();
 	if (!s) {
@@ -559,7 +566,7 @@ static int _git_ssh_session_create(
 	git_str_dispose(&prefs);
 
 	do {
-		rc = libssh2_session_handshake(s, socket->s);
+		rc = libssh2_session_handshake(s, socket);
 	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 
 	if (rc != LIBSSH2_ERROR_NONE) {
@@ -768,9 +775,10 @@ static int _git_ssh_setup_conn(
 	int auth_methods, error = 0, port;
 	ssh_stream *s;
 	git_credential *cred = NULL;
-	LIBSSH2_SESSION *session=NULL;
-	LIBSSH2_CHANNEL *channel=NULL;
+	LIBSSH2_SESSION *session = NULL;
+	LIBSSH2_CHANNEL *channel = NULL;
 	LIBSSH2_KNOWNHOSTS *known_hosts = NULL;
+	git_stream_connect_options opts = GIT_STREAM_CONNECT_OPTIONS_INIT;
 
 	t->current_stream = NULL;
 
@@ -782,9 +790,11 @@ static int _git_ssh_setup_conn(
 	s->session = NULL;
 	s->channel = NULL;
 
+	git_transport__set_connect_opts(&opts);
+
 	if ((error = git_net_url_parse_standard_or_scp(&s->url, url)) < 0 ||
-	    (error = git_stream_socket_new(&s->io, s->url.host, s->url.port)) < 0 ||
-	    (error = git_stream_connect(s->io)) < 0)
+	    (error = git_stream_socket_new(&s->io)) < 0 ||
+	    (error = git_stream_connect(s->io, s->url.host, s->url.port, &opts)) < 0)
 		goto done;
 
 	/*

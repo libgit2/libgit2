@@ -23,9 +23,9 @@ extern int git_stream_openssl_global_init(void);
 # endif
 
 #ifdef GIT_HTTPS_OPENSSL
+extern int git_openssl__set_ciphers(const char *ciphers);
 extern int git_openssl__set_cert_location(const char *file, const char *path);
-extern int git_stream_openssl_new(git_stream **out, const char *host, const char *port);
-extern int git_stream_openssl_wrap(git_stream **out, git_stream *in, const char *host);
+extern int git_stream_openssl_new(git_stream **out);
 #endif
 
 #endif

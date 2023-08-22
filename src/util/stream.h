@@ -32,6 +32,11 @@ GIT_INLINE(int) git_stream_is_encrypted(git_stream *st)
 	return st->encrypted;
 }
 
+GIT_INLINE(GIT_SOCKET) git_stream_get_socket(git_stream *st)
+{
+	return st->get_socket(st);
+}
+
 GIT_INLINE(int) git_stream_certificate(git_cert **out, git_stream *st)
 {
 	if (!st->encrypted) {

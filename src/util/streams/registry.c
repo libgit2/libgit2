@@ -108,7 +108,6 @@ int git_stream_register_tls(
 	if (ctor) {
 		registration.version = GIT_STREAM_VERSION;
 		registration.init = ctor;
-		registration.wrap = NULL;
 
 		return git_stream_register(GIT_STREAM_TLS, &registration);
 	} else {

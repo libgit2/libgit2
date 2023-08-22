@@ -243,6 +243,22 @@ done:
 	return error;
 }
 
+static int socket_wrap(git_stream *stream, git_stream *in, const char *host)
+{
+	GIT_UNUSED(stream);
+	GIT_UNUSED(in);
+	GIT_UNUSED(host);
+
+	git_error_set(GIT_ERROR_NET, "cannot wrap a plaintext socket");
+	return -1;
+}
+
+static git_socket_t socket_get(git_stream *stream)
+{
+	git_stream_socket *st = (git_stream_socket *) stream;
+	return st->s;
+}
+
 static ssize_t socket_write(
 	git_stream *stream,
 	const char *data,
@@ -350,6 +366,8 @@ static int default_socket_stream_new(git_stream **out)
 
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.connect = socket_connect;
+	st->parent.wrap = socket_wrap;
+	st->parent.get_socket = socket_get;
 	st->parent.write = socket_write;
 	st->parent.read = socket_read;
 	st->parent.close = socket_close;

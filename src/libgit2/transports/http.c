@@ -14,6 +14,7 @@
 #include "smart.h"
 #include "http.h"
 #include "trace.h"
+#include "transport.h"
 #include "streams/tls.h"
 #include "streams/socket.h"
 #include "net/auth.h"
@@ -24,6 +25,9 @@
 #include "git2/sys/credential.h"
 
 bool git_http__expect_continue = false;
+
+extern int git_transport__timeout;
+extern int git_transport__connect_timeout;
 
 typedef enum {
 	HTTP_STATE_NONE = 0,
@@ -96,9 +100,6 @@ static const http_service receive_pack_service = {
 	0,
 	1
 };
-
-extern int git_transport__connect_timeout;
-extern int git_transport__timeout;
 
 #define SERVER_TYPE_REMOTE "remote"
 #define SERVER_TYPE_PROXY  "proxy"
@@ -695,8 +696,9 @@ static int http_action(
 	GIT_ERROR_CHECK_ALLOC(stream);
 
 	opts.user_agent = transport->user_agent.ptr;
-	opts.connect_timeout = git_transport__connect_timeout;
+
 	opts.timeout = git_transport__timeout;
+	opts.connect_timeout = git_transport__connect_timeout;
 
 	opts.server_certificate_check_cb = connect_opts->callbacks.certificate_check;
 	opts.server_certificate_check_payload = connect_opts->callbacks.payload;
