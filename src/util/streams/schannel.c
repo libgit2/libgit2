@@ -372,6 +372,7 @@ static int schannel_connect(
 	    (error = check_certificate(st)) < 0)
 		return error;
 
+	st->owned = 1;
 	st->connected = 1;
 	return 0;
 }
