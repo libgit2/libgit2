@@ -184,6 +184,10 @@ static int socket_connect(
 	struct addrinfo hints;
 	int error;
 
+	GIT_ASSERT_ARG(stream);
+	GIT_ASSERT_ARG(host);
+	GIT_ASSERT_ARG(port);
+
 	if (opts) {
 		st->timeout = opts->timeout;
 		st->connect_timeout = opts->connect_timeout;

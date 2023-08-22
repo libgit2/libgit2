@@ -206,23 +206,24 @@ static int _git_uploadpack_ls(
 
 	error = git_proto_stream_alloc(t, stream_url, cmd_uploadpack, stream);
 
-	git_net_url_dispose(&urldata);
-
 	if (error < 0) {
 		git_proto_stream_free(*stream);
-		return error;
+		goto done;
 	}
 
 	s = (git_proto_stream *) *stream;
 
 	if ((error = git_stream_connect(s->io, host, port, NULL)) < 0) {
 		git_proto_stream_free(*stream);
-		return error;
+		goto done;
 	}
 
 	t->current_stream = s;
+	error = 0;
 
-	return 0;
+done:
+	git_net_url_dispose(&urldata);
+	return error;
 }
 
 static int _git_uploadpack(
@@ -260,21 +261,23 @@ static int _git_receivepack_ls(
 
 	error = git_proto_stream_alloc(t, stream_url, cmd_receivepack, stream);
 
-	git_net_url_dispose(&urldata);
 
 	if (error < 0) {
 		git_proto_stream_free(*stream);
-		return error;
+		goto done;
 	}
 
 	s = (git_proto_stream *) *stream;
 
 	if ((error = git_stream_connect(s->io, urldata.host, urldata.port, NULL)) < 0)
-		return error;
+		goto done;
 
 	t->current_stream = s;
+	error = 0;
 
-	return 0;
+done:
+	git_net_url_dispose(&urldata);
+	return error;
 }
 
 static int _git_receivepack(
