@@ -42,8 +42,8 @@ typedef enum {
 typedef struct {
 	git_stream parent;
 	git_stream *io;
-	int owned;
-	bool connected;
+	int owned : 1,
+	    connected : 1;
 	wchar_t *host_w;
 
 	schannel_state state;
@@ -365,6 +365,8 @@ static int schannel_connect(
 
 	GIT_ASSERT(st->state == STATE_NONE);
 
+	st->owned = 1;
+
 	if ((error = git_stream_socket_new(&st->io)) < 0 ||
 	    (error = git_stream_connect(st->io, host, port, opts)) < 0 ||
 	    (error = git_utf8_to_16_alloc(&st->host_w, host)) < 0 ||
@@ -372,7 +374,6 @@ static int schannel_connect(
 	    (error = check_certificate(st)) < 0)
 		return error;
 
-	st->owned = 1;
 	st->connected = 1;
 	return 0;
 }
@@ -626,7 +627,7 @@ static int schannel_close(git_stream *stream)
 		}
 	}
 
-	st->connected = false;
+	st->connected = 0;
 
 	if (st->owned && git_stream_close(st->io) < 0)
 		error = -1;
