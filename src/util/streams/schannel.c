@@ -70,9 +70,6 @@ static int connect_context(schannel_stream *st)
 	ssize_t read_len;
 	int error = 0;
 
-	if (st->owned && (error = git_stream_connect(st->io)) < 0)
-		return error;
-
 	cred.dwVersion = SCHANNEL_CRED_VERSION;
 	cred.dwFlags = SCH_CRED_IGNORE_NO_REVOCATION_CHECK |
 	               SCH_CRED_IGNORE_REVOCATION_OFFLINE |
@@ -357,18 +354,43 @@ static int check_certificate(schannel_stream* st)
 	return 0;
 }
 
-static int schannel_connect(git_stream *stream)
+static int schannel_connect(
+        git_stream *stream,
+        const char *host,
+        const char *port,
+        const git_stream_connect_options *opts)
 {
 	schannel_stream *st = (schannel_stream *)stream;
 	int error;
 
 	GIT_ASSERT(st->state == STATE_NONE);
 
-	if ((error = connect_context(st)) < 0 ||
+	if ((error = git_stream_socket_new(&st->io)) < 0 ||
+	    (error = git_stream_connect(st->io, host, port, opts)) < 0 ||
+	    (error = git_utf8_to_16_alloc(&st->host_w, host)) < 0 ||
+	    (error = connect_context(st)) < 0 ||
 	    (error = check_certificate(st)) < 0)
 		return error;
 
 	st->connected = 1;
+	return 0;
+}
+
+static int schannel_wrap(git_stream *stream, git_stream *in, const char *host)
+{
+	schannel_stream *st = (schannel_stream *)stream;
+
+	GIT_ASSERT(st->state == STATE_NONE);
+
+	if (git_utf8_to_16_alloc(&st->host_w, host) < 0 ||
+	    connect_context(st) < 0 ||
+	    check_certificate(st) < 0)
+		return -1;
+
+	st->io = in;
+	st->owned = 0;
+	st->connected = 1;
+
 	return 0;
 }
 
@@ -639,28 +661,20 @@ static void schannel_free(git_stream *stream)
 	git__free(st);
 }
 
-static int schannel_stream_wrap(
-	git_stream **out,
-	git_stream *in,
-	const char *host,
-	int owned)
+extern int git_stream_schannel_new(git_stream **out)
 {
 	schannel_stream *st;
+
+	GIT_ASSERT_ARG(out);
+
 
 	st = git__calloc(1, sizeof(schannel_stream));
 	GIT_ERROR_CHECK_ALLOC(st);
 
-	st->io = in;
-	st->owned = owned;
-
-	if (git_utf8_to_16_alloc(&st->host_w, host) < 0) {
-		git__free(st);
-		return -1;
-	}
-
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.encrypted = 1;
 	st->parent.connect = schannel_connect;
+	st->parent.wrap = schannel_wrap;
 	st->parent.certificate = schannel_certificate;
 	st->parent.read = schannel_read;
 	st->parent.write = schannel_write;
@@ -669,37 +683,6 @@ static int schannel_stream_wrap(
 
 	*out = (git_stream *)st;
 	return 0;
-}
-
-extern int git_stream_schannel_new(
-	git_stream **out,
-	const char *host,
-	const char *port)
-{
-	git_stream *stream;
-	int error;
-
-	GIT_ASSERT_ARG(out);
-	GIT_ASSERT_ARG(host);
-	GIT_ASSERT_ARG(port);
-
-	if ((error = git_stream_socket_new(&stream, host, port)) < 0)
-		return error;
-
-	if ((error = schannel_stream_wrap(out, stream, host, 1)) < 0) {
-		git_stream_close(stream);
-		git_stream_free(stream);
-	}
-
-	return error;
-}
-
-extern int git_stream_schannel_wrap(
-	git_stream **out,
-	git_stream *in,
-	const char *host)
-{
-	return schannel_stream_wrap(out, in, host, 0);
 }
 
 #endif
