@@ -78,6 +78,8 @@ run_test() {
 			echo ""
 			echo "Re-running flaky ${1} tests..."
 			echo ""
+
+			sleep 2
 		fi
 
 		RETURN_CODE=0
@@ -269,11 +271,16 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	echo "## Running networking (online) tests"
 	echo "##############################################################################"
 
+	# the online tests can fail due to network connectivity problems;
+	# allow them to retry up to 5 times
+	export GITTEST_FLAKY_RETRY=5
+
 	export GITTEST_REMOTE_REDIRECT_INITIAL="http://localhost:9000/initial-redirect/libgit2/TestGitRepository"
 	export GITTEST_REMOTE_REDIRECT_SUBSEQUENT="http://localhost:9000/subsequent-redirect/libgit2/TestGitRepository"
 	export GITTEST_REMOTE_SPEED_SLOW="http://localhost:9000/speed-9600/test.git"
 	export GITTEST_REMOTE_SPEED_TIMESOUT="http://localhost:9000/speed-0.5/test.git"
 	run_test online
+	unset GITTEST_FLAKY_RETRY
 	unset GITTEST_REMOTE_REDIRECT_INITIAL
 	unset GITTEST_REMOTE_REDIRECT_SUBSEQUENT
 	unset GITTEST_REMOTE_SPEED_SLOW
