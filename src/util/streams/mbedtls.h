@@ -13,11 +13,12 @@
 
 extern int git_stream_mbedtls_global_init(void);
 
-#ifdef GIT_HTTPS_MBEDTLS
+# ifdef GIT_HTTPS_MBEDTLS
+
 extern int git_mbedtls__set_cert_location(const char *file, const char *path);
 
-extern int git_stream_mbedtls_new(git_stream **out, const char *host, const char *port);
-extern int git_stream_mbedtls_wrap(git_stream **out, git_stream *in, const char *host);
-#endif
+extern int git_stream_mbedtls_new(git_stream **out);
+
+# endif
 
 #endif

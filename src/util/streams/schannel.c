@@ -669,7 +669,6 @@ extern int git_stream_schannel_new(git_stream **out)
 
 	GIT_ASSERT_ARG(out);
 
-
 	st = git__calloc(1, sizeof(schannel_stream));
 	GIT_ERROR_CHECK_ALLOC(st);
 

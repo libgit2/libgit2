@@ -220,10 +220,16 @@ static int verify_server_cert(mbedtls_ssl_context *ssl)
 	int ret = -1;
 
 	if ((ret = mbedtls_ssl_get_verify_result(ssl)) != 0) {
-		char vrfy_buf[512];
-		int len = mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "", ret);
-		if (len >= 1) vrfy_buf[len - 1] = '\0'; /* Remove trailing \n */
-		git_error_set(GIT_ERROR_SSL, "the SSL certificate is invalid: %#04x - %s", ret, vrfy_buf);
+		char buf[512];
+		int len = mbedtls_x509_crt_verify_info(buf, sizeof(buf),
+			"", ret);
+
+		if (len >= 1) {
+			buf[0] = tolower(buf[0]);
+			buf[len - 1] = '\0'; /* Remove trailing \n */
+		}
+
+		git_error_set(GIT_ERROR_SSL, "%s", buf);
 		return GIT_ECERTIFICATE;
 	}
 
@@ -236,32 +242,60 @@ typedef struct {
 	int owned;
 	bool connected;
 	char *host;
-	mbedtls_ssl_context *ssl;
+	mbedtls_ssl_context ssl;
 	git_cert_x509 cert_info;
 } mbedtls_stream;
 
+static int mbedtls_setup(mbedtls_stream *st, const char *host)
+{
+	int ret;
+
+	mbedtls_ssl_init(&st->ssl);
+
+	if (mbedtls_ssl_setup(&st->ssl, git__ssl_conf)) {
+		git_error_set(GIT_ERROR_SSL, "failed to create ssl object");
+		return -1;
+	}
+
+	st->connected = 1;
+
+	mbedtls_ssl_set_bio(&st->ssl, st->io, bio_write, bio_read, NULL);
+
+	if ((ret = mbedtls_ssl_set_hostname(&st->ssl, host) != 0) ||
+	    (ret = mbedtls_ssl_handshake(&st->ssl)) != 0)
+		return ssl_set_error(&st->ssl, ret);
+
+	return verify_server_cert(&st->ssl);
+}
 
 static int mbedtls_connect(
 	git_stream *stream,
 	const char *host,
-	const char *port)
+	const char *port,
+	const git_stream_connect_options *opts)
 {
-	int ret;
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 
-	if (st->owned && (ret = git_stream_connect(st->io, host, port)) < 0)
-		return ret;
+	st->owned = 1;
 
-	st->connected = true;
+	if (git_stream_socket_new(&st->io) < 0 ||
+	    git_stream_connect(st->io, host, port, opts) < 0)
+		return -1;
 
-	mbedtls_ssl_set_hostname(st->ssl, host);
+	return mbedtls_setup(st, host);
+}
 
-	mbedtls_ssl_set_bio(st->ssl, st->io, bio_write, bio_read, NULL);
+static int mbedtls_wrap(
+	git_stream *stream,
+	git_stream *in,
+	const char *host)
+{
+	mbedtls_stream *st = (mbedtls_stream *) stream;
 
-	if ((ret = mbedtls_ssl_handshake(st->ssl)) != 0)
-		return ssl_set_error(st->ssl, ret);
+	st->io = in;
+	st->owned = 0;
 
-	return verify_server_cert(st->ssl);
+	return mbedtls_setup(st, host);
 }
 
 static int mbedtls_certificate(git_cert **out, git_stream *stream)
@@ -269,7 +303,7 @@ static int mbedtls_certificate(git_cert **out, git_stream *stream)
 	unsigned char *encoded_cert;
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 
-	const mbedtls_x509_crt *cert = mbedtls_ssl_get_peer_cert(st->ssl);
+	const mbedtls_x509_crt *cert = mbedtls_ssl_get_peer_cert(&st->ssl);
 	if (!cert) {
 		git_error_set(GIT_ERROR_SSL, "the server did not provide a certificate");
 		return -1;
@@ -308,8 +342,8 @@ static ssize_t mbedtls_stream_write(git_stream *stream, const char *data, size_t
 	 */
 	len = min(len, INT_MAX);
 
-	if ((written = mbedtls_ssl_write(st->ssl, (const unsigned char *)data, len)) <= 0)
-		return ssl_set_error(st->ssl, written);
+	if ((written = mbedtls_ssl_write(&st->ssl, (const unsigned char *)data, len)) <= 0)
+		return ssl_set_error(&st->ssl, written);
 
 	return written;
 }
@@ -319,8 +353,8 @@ static ssize_t mbedtls_stream_read(git_stream *stream, void *data, size_t len)
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 	int ret;
 
-	if ((ret = mbedtls_ssl_read(st->ssl, (unsigned char *)data, len)) <= 0)
-		ssl_set_error(st->ssl, ret);
+	if ((ret = mbedtls_ssl_read(&st->ssl, (unsigned char *)data, len)) <= 0)
+		ssl_set_error(&st->ssl, ret);
 
 	return ret;
 }
@@ -330,10 +364,10 @@ static int mbedtls_stream_close(git_stream *stream)
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 	int ret = 0;
 
-	if (st->connected && (ret = ssl_teardown(st->ssl)) != 0)
+	if (st->connected && (ret = ssl_teardown(&st->ssl)) != 0)
 		return -1;
 
-	st->connected = false;
+	st->connected = 0;
 
 	return st->owned ? git_stream_close(st->io) : 0;
 }
@@ -346,81 +380,29 @@ static void mbedtls_stream_free(git_stream *stream)
 		git_stream_free(st->io);
 
 	git__free(st->cert_info.data);
-	mbedtls_ssl_free(st->ssl);
-	git__free(st->ssl);
+	mbedtls_ssl_free(&st->ssl);
 	git__free(st);
 }
 
-static int mbedtls_stream_wrap(
-	git_stream **out,
-	git_stream *in,
-	const char *host,
-	int owned)
+int git_stream_mbedtls_new(git_stream **out)
 {
 	mbedtls_stream *st;
-	int error;
 
 	st = git__calloc(1, sizeof(mbedtls_stream));
 	GIT_ERROR_CHECK_ALLOC(st);
 
-	st->io = in;
-	st->owned = owned;
-
-	st->ssl = git__malloc(sizeof(mbedtls_ssl_context));
-	GIT_ERROR_CHECK_ALLOC(st->ssl);
-	mbedtls_ssl_init(st->ssl);
-	if (mbedtls_ssl_setup(st->ssl, git__ssl_conf)) {
-		git_error_set(GIT_ERROR_SSL, "failed to create ssl object");
-		error = -1;
-		goto out_err;
-	}
-
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.encrypted = 1;
 	st->parent.connect = mbedtls_connect;
+	st->parent.wrap = mbedtls_wrap;
 	st->parent.certificate = mbedtls_certificate;
 	st->parent.read = mbedtls_stream_read;
 	st->parent.write = mbedtls_stream_write;
 	st->parent.close = mbedtls_stream_close;
 	st->parent.free = mbedtls_stream_free;
 
-	*out = (git_stream *) st;
+	*out = (git_stream *)st;
 	return 0;
-
-out_err:
-	mbedtls_ssl_free(st->ssl);
-	git_stream_close(st->io);
-	git_stream_free(st->io);
-	git__free(st);
-
-	return error;
-}
-
-int git_stream_mbedtls_wrap(
-	git_stream **out,
-	git_stream *in,
-	const char *host)
-{
-	return mbedtls_stream_wrap(out, in, host, 0);
-}
-
-int git_stream_mbedtls_new(
-	git_stream **out)
-{
-	git_stream *stream;
-	int error;
-
-	GIT_ASSERT_ARG(out);
-
-	if ((error = git_stream_socket_new(&stream)) < 0)
-		return error;
-
-	if ((error = mbedtls_stream_wrap(out, stream, host, 1)) < 0) {
-		git_stream_close(stream);
-		git_stream_free(stream);
-	}
-
-	return error;
 }
 
 int git_mbedtls__set_cert_location(const char *file, const char *path)
