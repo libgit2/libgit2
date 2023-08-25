@@ -63,7 +63,7 @@ jobs:
           os: ubuntu-latest
         - name: "macOS"
           id: macos
-          os: macos-11
+          os: macos-12
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
@@ -177,7 +177,7 @@ jobs:
           os: ubuntu-latest
         - name: "macOS (SHA256)"
           id: macos
-          os: macos-11
+          os: macos-12
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
