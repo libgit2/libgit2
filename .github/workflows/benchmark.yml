@@ -27,7 +27,7 @@ jobs:
           os: ubuntu-latest
           setup-script: ubuntu
         - name: "macOS"
-          os: macos-11
+          os: macos-12
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CLI=ON -DCMAKE_BUILD_TYPE=Release
