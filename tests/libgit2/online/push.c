@@ -20,6 +20,9 @@ static char *_remote_ssh_passphrase = NULL;
 static char *_remote_default = NULL;
 static char *_remote_expectcontinue = NULL;
 
+static char *_orig_ssh_cmd = NULL;
+static char *_ssh_cmd = NULL;
+
 static int cred_acquire_cb(git_credential **,	const char *, const char *, unsigned int, void *);
 
 static git_remote *_remote;
@@ -369,6 +372,14 @@ void test_online_push__initialize(void)
 	_remote_expectcontinue = cl_getenv("GITTEST_REMOTE_EXPECTCONTINUE");
 	_remote = NULL;
 
+	_orig_ssh_cmd = cl_getenv("GIT_SSH");
+	_ssh_cmd = cl_getenv("GITTEST_SSH_CMD");
+
+	if (_ssh_cmd)
+		cl_setenv("GIT_SSH", _ssh_cmd);
+	else
+		cl_setenv("GIT_SSH", NULL);
+
 	/* Skip the test if we're missing the remote URL */
 	if (!_remote_url)
 		cl_skip();
@@ -422,6 +433,9 @@ void test_online_push__cleanup(void)
 	git__free(_remote_ssh_passphrase);
 	git__free(_remote_default);
 	git__free(_remote_expectcontinue);
+
+	git__free(_orig_ssh_cmd);
+	git__free(_ssh_cmd);
 
 	/* Freed by cl_git_sandbox_cleanup */
 	_repo = NULL;
