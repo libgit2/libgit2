@@ -8,12 +8,21 @@
 #ifndef INCLUDE_errors_h__
 #define INCLUDE_errors_h__
 
-#include "common.h"
+#include "git2_util.h"
+#include "git2/sys/errors.h"
+
+/* Initialize the error thread-state. */
+int git_error_global_init(void);
 
 /*
  * `vprintf`-style formatting for the error message for this thread.
  */
 void git_error_vset(int error_class, const char *fmt, va_list ap);
+
+/**
+ * Determines whether an error exists.
+ */
+bool git_error_exists(void);
 
 /**
  * Set error message for user callback if needed.
@@ -27,9 +36,8 @@ GIT_INLINE(int) git_error_set_after_callback_function(
 	int error_code, const char *action)
 {
 	if (error_code) {
-		const git_error *e = git_error_last();
-		if (!e || !e->message)
-			git_error_set(e ? e->klass : GIT_ERROR_CALLBACK,
+		if (!git_error_exists())
+			git_error_set(GIT_ERROR_CALLBACK,
 				"%s callback returned %d", action, error_code);
 	}
 	return error_code;
@@ -54,27 +62,23 @@ int git_error_system_last(void);
 void git_error_system_set(int code);
 
 /**
- * Structure to preserve libgit2 error state
- */
-typedef struct {
-	int error_code;
-	unsigned int oom : 1;
-	git_error error_msg;
-} git_error_state;
-
-/**
  * Capture current error state to restore later, returning error code.
  * If `error_code` is zero, this does not clear the current error state.
  * You must either restore this error state, or free it.
+ *
+ * This function returns 0 on success, or -1 on failure. If the function
+ * fails, the `out` structure is set to the failure error message and
+ * the normal system error message is not updated.
  */
-extern int git_error_state_capture(git_error_state *state, int error_code);
+extern int git_error_save(git_error **out);
 
 /**
- * Restore error state to a previous value, returning saved error code.
+ * Restore thread error state to the given value. The given value is
+ * freed and `git_error_free` need not be called on it.
  */
-extern int git_error_state_restore(git_error_state *state);
+extern int git_error_restore(git_error *error);
 
 /** Free an error state. */
-extern void git_error_state_free(git_error_state *state);
+extern void git_error_free(git_error *error);
 
 #endif

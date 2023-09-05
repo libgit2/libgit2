@@ -40,7 +40,7 @@ void test_grafts_shallow__clears_errors(void)
 {
 	g_repo = cl_git_sandbox_init("testrepo.git");
 	cl_assert_equal_i(0, git_repository_is_shallow(g_repo));
-	cl_assert_equal_p(NULL, git_error_last());
+	cl_assert_equal_i(GIT_ERROR_NONE, git_error_last()->klass);
 }
 
 void test_grafts_shallow__shallow_oids(void)

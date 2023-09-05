@@ -92,7 +92,8 @@ void test_assert__argument_with_void_return_type(void)
 
 	git_error_clear();
 	cl_assert_equal_p(foo, fn_returns_string(foo));
-	cl_assert_equal_p(NULL, git_error_last());
+	cl_assert_equal_i(GIT_ERROR_NONE, git_error_last()->klass);
+	cl_assert_equal_s("no error", git_error_last()->message);
 }
 
 void test_assert__internal(void)

@@ -26,7 +26,6 @@
 #include "runtime.h"
 #include "sysdir.h"
 #include "thread.h"
-#include "threadstate.h"
 #include "git2/global.h"
 #include "streams/registry.h"
 #include "streams/mbedtls.h"
@@ -73,8 +72,9 @@ int git_libgit2_init(void)
 		git_win32_leakcheck_global_init,
 #endif
 		git_allocator_global_init,
-		git_threadstate_global_init,
+		git_error_global_init,
 		git_threads_global_init,
+		git_oid_global_init,
 		git_rand_global_init,
 		git_hash_global_init,
 		git_sysdir_global_init,
