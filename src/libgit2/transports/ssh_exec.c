@@ -132,6 +132,26 @@ static int get_ssh_cmdline(
 	const char *default_ssh_cmd = "ssh";
 	int error;
 
+	/* Safety check: like git, we forbid paths that look like an option as
+	 * that could lead to injection to ssh that can make us do unexpected
+	 * things */
+	if (git_net_looks_like_command_line_option(url->username)) {
+		git_error_set(GIT_ERROR_NET, "strange username '%s' blocked", url->username);
+		return -1;
+	}
+	if (git_net_looks_like_command_line_option(url->host)) {
+		git_error_set(GIT_ERROR_NET, "strange host '%s' blocked", url->host);
+		return -1;
+	}
+
+	/* Safety check: like git, we forbid paths that look like an option as
+	 * that could lead to injection on the remote side */
+	if (git_net_looks_like_command_line_option(url->path)) {
+		git_error_set(GIT_ERROR_NET, "strange path '%s' blocked", url->path);
+		return -1;
+	}
+
+
 	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0)
 		return error;
 
