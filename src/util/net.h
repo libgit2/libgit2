@@ -107,4 +107,13 @@ extern bool git_net_url_matches_pattern_list(
 /** Disposes the contents of the structure. */
 extern void git_net_url_dispose(git_net_url *url);
 
+
+/**
+ * Returns true if the string starts with a dash
+ *
+ * These could be used to try to trick an executed subcommand like ssh to do
+ * something other than what we intend.
+ */
+int git_net_looks_like_command_line_option(const char *str);
+
 #endif

@@ -1152,3 +1152,8 @@ void git_net_url_dispose(git_net_url *url)
 	git__free(url->username); url->username = NULL;
 	git__free(url->password); url->password = NULL;
 }
+
+int git_net_looks_like_command_line_option(const char *str)
+{
+	return str && str[0] == '-';
+}
