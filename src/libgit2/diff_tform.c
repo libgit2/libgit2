@@ -810,7 +810,7 @@ int git_diff_find_similar(
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	size_t num_deltas, num_srcs = 0, num_tgts = 0;
 	size_t tried_srcs = 0, tried_tgts = 0;
-	size_t num_rewrites = 0, num_updates = 0, num_bumped = 0;
+	size_t num_rewrites = 0, num_updates = 0, num_bumped = 0, num_to_delete = 0;
 	size_t sigcache_size;
 	void **sigcache = NULL; /* cache of similarity metric file signatures */
 	diff_find_match *tgt2src = NULL;
@@ -852,11 +852,14 @@ int git_diff_find_similar(
 
 		if ((tgt->flags & GIT_DIFF_FLAG__TO_SPLIT) != 0)
 			num_rewrites++;
+
+		if ((tgt->flags & GIT_DIFF_FLAG__TO_DELETE) != 0)
+		  num_to_delete++;
 	}
 
-	/* if there are no candidate srcs or tgts, we're done */
+	/* If there are no candidate srcs or tgts, no need to find matches */
 	if (!num_srcs || !num_tgts)
-		goto cleanup;
+		goto split_and_delete;
 
 	src2tgt = git__calloc(num_deltas, sizeof(diff_find_match));
 	GIT_ERROR_CHECK_ALLOC(src2tgt);
@@ -1093,13 +1096,14 @@ find_best_matches:
 		}
 	}
 
+split_and_delete:
 	/*
 	 * Actually split and delete entries as needed
 	 */
 
-	if (num_rewrites > 0 || num_updates > 0)
+	if (num_rewrites > 0 || num_updates > 0 || num_to_delete > 0)
 		error = apply_splits_and_deletes(
-			diff, diff->deltas.length - num_rewrites,
+			diff, diff->deltas.length - num_rewrites - num_to_delete,
 			FLAG_SET(&opts, GIT_DIFF_BREAK_REWRITES) &&
 			!FLAG_SET(&opts, GIT_DIFF_BREAK_REWRITES_FOR_RENAMES_ONLY));
 
