@@ -718,8 +718,15 @@ static bool is_rename_source(
 	git_diff_delta *delta = GIT_VECTOR_GET(&diff->deltas, delta_idx);
 
 	/* skip things that aren't blobs */
-	if (!GIT_MODE_ISBLOB(delta->old_file.mode))
+	if (!GIT_MODE_ISBLOB(delta->old_file.mode)) {
+
+		/* but still honor "remove unmodified" flag */
+		if (delta->status == GIT_DELTA_UNMODIFIED &&
+			FLAG_SET(opts, GIT_DIFF_FIND_REMOVE_UNMODIFIED))
+			delta->flags |= GIT_DIFF_FLAG__TO_DELETE;
+
 		return false;
+	}
 
 	switch (delta->status) {
 	case GIT_DELTA_ADDED:

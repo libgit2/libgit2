@@ -1441,9 +1441,9 @@ void test_diff_rename__can_delete_unmodified_deltas(void)
 	git_str_dispose(&c1);
 }
 
-void test_diff_rename__can_delete_unmodified_deltas_without_changes(void)
+void test_diff_rename__can_delete_unmodified_deltas_including_submodule(void)
 {
-	git_str c1 = GIT_STR_INIT;
+	git_repository *repo; /* "submodules" */
 	git_index *index;
 	git_tree *tree;
 	git_diff *diff;
@@ -1451,21 +1451,26 @@ void test_diff_rename__can_delete_unmodified_deltas_without_changes(void)
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	diff_expects exp;
 
-	cl_git_pass(
-		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+	cl_git_sandbox_cleanup(); /* Don't use "renames" for this test */
+	repo = cl_git_sandbox_init("submodules");
 
-	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_repo_set_bool(repo, "core.autocrlf", false);
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, repo, "HEAD^{tree}"));
+
+	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_read_tree(index, tree));
 
 	diffopts.flags = GIT_DIFF_INCLUDE_UNMODIFIED;
 
-	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+	cl_git_pass(git_diff_tree_to_index(&diff, repo, tree, index, &diffopts));
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
 		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
-	cl_assert_equal_i(4, exp.files);
-	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_UNMODIFIED]);
+	cl_assert_equal_i(5, exp.files);
+	cl_assert_equal_i(5, exp.file_status[GIT_DELTA_UNMODIFIED]);
 
 	opts.flags = GIT_DIFF_FIND_ALL | GIT_DIFF_FIND_REMOVE_UNMODIFIED;
 	cl_git_pass(git_diff_find_similar(diff, &opts));
@@ -1479,7 +1484,7 @@ void test_diff_rename__can_delete_unmodified_deltas_without_changes(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_str_dispose(&c1);
+	cl_git_sandbox_cleanup();
 }
 
 void test_diff_rename__matches_config_behavior(void)
