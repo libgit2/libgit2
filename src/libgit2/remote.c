@@ -1348,13 +1348,14 @@ int git_remote_fetch(
 	const git_fetch_options *opts,
 	const char *reflog_message)
 {
-	int error, update_fetchhead = 1;
 	git_remote_autotag_option_t tagopt = remote->download_tags;
 	bool prune = false;
 	git_str reflog_msg_buf = GIT_STR_INIT;
 	git_remote_connect_options connect_opts = GIT_REMOTE_CONNECT_OPTIONS_INIT;
 	unsigned int capabilities;
 	git_oid_t oid_type;
+	unsigned int update_flags = GIT_REMOTE_UPDATE_FETCHHEAD;
+	int error;
 
 	GIT_ASSERT_ARG(remote);
 
@@ -1371,7 +1372,7 @@ int git_remote_fetch(
 		return error;
 
 	if (opts) {
-		update_fetchhead = opts->update_fetchhead;
+		update_flags = opts->update_flags;
 		tagopt = opts->download_tags;
 	}
 
@@ -1398,8 +1399,14 @@ int git_remote_fetch(
 	}
 
 	/* Create "remote/foo" branches for all remote branches */
-	error = git_remote_update_tips(remote, &connect_opts.callbacks, update_fetchhead, tagopt, git_str_cstr(&reflog_msg_buf));
+	error = git_remote_update_tips(remote,
+		&connect_opts.callbacks,
+		update_flags,
+		tagopt,
+		git_str_cstr(&reflog_msg_buf));
+
 	git_str_dispose(&reflog_msg_buf);
+
 	if (error < 0)
 		goto done;
 
@@ -1774,6 +1781,7 @@ static int update_one_tip(
 	git_refspec *spec,
 	git_remote_head *head,
 	git_refspec *tagspec,
+	unsigned int update_flags,
 	git_remote_autotag_option_t tagopt,
 	const char *log_message,
 	const git_remote_callbacks *callbacks)
@@ -1781,7 +1789,7 @@ static int update_one_tip(
 	git_odb *odb;
 	git_str refname = GIT_STR_INIT;
 	git_reference *ref = NULL;
-	bool autotag = false;
+	bool autotag = false, updated = false;
 	git_oid old;
 	int valid;
 	int error;
@@ -1855,21 +1863,21 @@ static int update_one_tip(
 			goto done;
 	}
 
-	if (!git_oid__cmp(&old, &head->oid))
-		goto done;
+	if ((updated = !git_oid_equal(&old, &head->oid))) {
+		/* In autotag mode, don't overwrite any locally-existing tags */
+		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag,
+				log_message);
 
-	/* In autotag mode, don't overwrite any locally-existing tags */
-	error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag,
-			log_message);
+		if (error < 0) {
+			if (error == GIT_EEXISTS)
+				error = 0;
 
-	if (error < 0) {
-		if (error == GIT_EEXISTS)
-			error = 0;
-
-		goto done;
+			goto done;
+		}
 	}
 
 	if (callbacks && callbacks->update_tips != NULL &&
+	    (updated || (update_flags & GIT_REMOTE_UPDATE_REPORT_UNCHANGED)) &&
 	    (error = callbacks->update_tips(refname.ptr, &old, &head->oid, callbacks->payload)) < 0)
 		git_error_set_after_callback_function(error, "git_remote_fetch");
 
@@ -1882,7 +1890,7 @@ done:
 static int update_tips_for_spec(
 	git_remote *remote,
 	const git_remote_callbacks *callbacks,
-	int update_fetchhead,
+	unsigned int update_flags,
 	git_remote_autotag_option_t tagopt,
 	git_refspec *spec,
 	git_vector *refs,
@@ -1905,7 +1913,10 @@ static int update_tips_for_spec(
 
 	/* Update tips based on the remote heads */
 	git_vector_foreach(refs, i, head) {
-		if (update_one_tip(&update_heads, remote, spec, head, &tagspec, tagopt, log_message, callbacks) < 0)
+		if (update_one_tip(&update_heads,
+				remote, spec, head, &tagspec,
+				update_flags, tagopt, log_message,
+				callbacks) < 0)
 			goto on_error;
 	}
 
@@ -1927,7 +1938,7 @@ static int update_tips_for_spec(
 			goto on_error;
 	}
 
-	if (update_fetchhead &&
+	if ((update_flags & GIT_REMOTE_UPDATE_FETCHHEAD) &&
 	    (error = git_remote_write_fetchhead(remote, spec, &update_heads)) < 0)
 		goto on_error;
 
@@ -2058,11 +2069,11 @@ static int truncate_fetch_head(const char *gitdir)
 }
 
 int git_remote_update_tips(
-		git_remote *remote,
-		const git_remote_callbacks *callbacks,
-		int update_fetchhead,
-		git_remote_autotag_option_t download_tags,
-		const char *reflog_message)
+	git_remote *remote,
+	const git_remote_callbacks *callbacks,
+	unsigned int update_flags,
+	git_remote_autotag_option_t download_tags,
+	const char *reflog_message)
 {
 	git_refspec *spec, tagspec;
 	git_vector refs = GIT_VECTOR_INIT;
@@ -2091,7 +2102,7 @@ int git_remote_update_tips(
 		goto out;
 
 	if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
-		if ((error = update_tips_for_spec(remote, callbacks, update_fetchhead, tagopt, &tagspec, &refs, reflog_message)) < 0)
+		if ((error = update_tips_for_spec(remote, callbacks, update_flags, tagopt, &tagspec, &refs, reflog_message)) < 0)
 			goto out;
 	}
 
@@ -2099,7 +2110,7 @@ int git_remote_update_tips(
 		if (spec->push)
 			continue;
 
-		if ((error = update_tips_for_spec(remote, callbacks, update_fetchhead, tagopt, spec, &refs, reflog_message)) < 0)
+		if ((error = update_tips_for_spec(remote, callbacks, update_flags, tagopt, spec, &refs, reflog_message)) < 0)
 			goto out;
 	}
 
