@@ -106,6 +106,17 @@ extern int git_process__cmdline(
 
 #endif
 
+/*
+ * Whether the given string looks like a command line option (starts
+ * with a dash). This is useful for examining strings that will become
+ * cmdline arguments to ensure that they are not erroneously treated
+ * as an option. For example, arguments to `ssh`.
+ */
+GIT_INLINE(bool) git_process__is_cmdline_option(const char *str)
+{
+	return (str && str[0] == '-');
+}
+
 /**
  * Start the process.
  *
