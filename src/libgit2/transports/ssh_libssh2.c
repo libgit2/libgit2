@@ -14,6 +14,7 @@
 #include "runtime.h"
 #include "net.h"
 #include "smart.h"
+#include "process.h"
 #include "streams/socket.h"
 #include "sysdir.h"
 
@@ -787,6 +788,15 @@ static int _git_ssh_setup_conn(
 
 	if (error < 0)
 		goto done;
+
+	/* Safety check: like git, we forbid paths that look like an option as
+	 * that could lead to injection on the remote side */
+	if (git_process__is_cmdline_option(s->url.path)) {
+		git_error_set(GIT_ERROR_NET, "cannot ssh: path '%s' is ambiguous with command-line option", s->url.path);
+		error = -1;
+		goto done;
+	}
+
 
 	if ((error = git_socket_stream_new(&s->io, s->url.host, s->url.port)) < 0 ||
 	    (error = git_stream_connect(s->io)) < 0)
