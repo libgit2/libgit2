@@ -680,6 +680,7 @@ static int validate_ownership(git_repository *repo)
 			&is_safe, validation_paths[0], repo->use_env)) < 0)
 		goto done;
 
+done:
 	if (!is_safe) {
 		git_error_set(GIT_ERROR_CONFIG,
 			"repository path '%s' is not owned by current user",
@@ -687,7 +688,6 @@ static int validate_ownership(git_repository *repo)
 		error = GIT_EOWNER;
 	}
 
-done:
 	return error;
 }
 
