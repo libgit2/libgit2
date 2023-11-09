@@ -427,8 +427,8 @@ static int parse_header_unquoted_pathnames_guessing_split_point(
 							new_path_base + new_prefix_len,
 							old_path_minus_prefix_len) == 0)
 				{
-					*out_old_path = strndup(old_path_base, old_path_len);
-					*out_new_path = strndup(new_path_base, new_path_len);
+					*out_old_path = git__strndup(old_path_base, old_path_len);
+					*out_new_path = git__strndup(new_path_base, new_path_len);
 					did_parse_paths = true;
 					stop_path_matching_loop = true;
 				}
