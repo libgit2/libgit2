@@ -497,6 +497,12 @@ int git_packfile_parser_parse(
 	return 0;
 }
 
+int git_packfile_parser_complete(git_packfile_parser *parser)
+{
+	printf("state is: %d (expected: %d)\n", parser->state, STATE_COMPLETE);
+	return 0;
+}
+
 void git_packfile_parser_dispose(git_packfile_parser *parser)
 {
 	if (!parser)

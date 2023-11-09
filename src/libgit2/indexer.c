@@ -22,7 +22,7 @@
 #define READ_CHUNK_SIZE (1024 * 256)
 
 #define THREADS_MAX 64
-#define THREADS_DEFAULT 16
+#define THREADS_DEFAULT 1
 
 size_t git_indexer__max_objects = UINT32_MAX;
 
@@ -89,7 +89,10 @@ struct git_indexer {
 	git_indexer_progress_cb progress_cb;
 	void *progress_payload;
 
+	git_str base_path;
 	git_str packfile_path;
+	git_str index_path;
+
 	int packfile_fd;
 	unsigned long long packfile_size;
 
@@ -99,7 +102,8 @@ struct git_indexer {
 	uint32_t entries;
 	unsigned int started : 1,
 	             complete : 1,
-				 has_thin_entries : 1;
+				 has_thin_entries : 1,
+				 committed : 1;
 
 	/* Current object / delta being parsed */
 	/* TODO: pul these directly from the parser instead? */
@@ -143,7 +147,8 @@ struct resolver_context {
 	git_indexer *indexer;
 	git_hash_ctx hash_ctx;
 	git_zstream zstream;
-	int send_progress_updates;
+	int send_progress_updates : 1,
+	    fix_thin_packs : 1;
 };
 
 struct offset_resolver_context {
@@ -636,8 +641,10 @@ static int indexer_new(
 {
 	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	git_indexer *indexer;
-	git_str path = GIT_STR_INIT;
 	int error;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(parent_path);
 
 	if (in_opts)
 		memcpy(&opts, in_opts, sizeof(opts));
@@ -656,8 +663,9 @@ static int indexer_new(
 		indexer->do_fsync = 1;
 
 	if ((error = git_packfile_parser_init(&indexer->parser, oid_type)) < 0 ||
-	    (error = git_str_joinpath(&path, parent_path, "pack")) < 0 ||
-	    (error = indexer->packfile_fd = git_futils_mktmp(&indexer->packfile_path, path.ptr, indexer->mode)) < 0)
+	    (error = git_str_joinpath(&indexer->base_path, parent_path, "pack")) < 0 ||
+	    (error = indexer->packfile_fd = git_futils_mktmp(&indexer->packfile_path,
+			indexer->base_path.ptr, indexer->mode)) < 0)
 		goto done;
 
 	indexer->parser.packfile_header = parse_packfile_header;
@@ -670,8 +678,6 @@ static int indexer_new(
 	indexer->parser.callback_data = indexer;
 
 done:
-	git_str_dispose(&path);
-
 	if (error < 0) {
 		git__free(indexer);
 		return -1;
@@ -731,6 +737,11 @@ static int append_data(
 
 	/* TODO: if we're using this to fix thin packs, we shouldn't be incrementing received_bytes. */
 	/* although maybe we shouldn't be incrememnting received_bytes at all :'( */
+
+	/*
+	 * TODO: make sure that we adjust the mmap after appending data?
+	 * or prove that's not truly necessary
+	 */
 
 	while (len > 0) {
 		chunk_len = min(len, SSIZE_MAX);
@@ -973,6 +984,7 @@ GIT_INLINE(int) load_resolved_delta_object(
 
 	/* load the base */
 	if (!base && delta->object.type == GIT_OBJECT_OFS_DELTA) {
+		/* TODO readlock */
 		base = git_sizemap_get(indexer->positions, delta->base.ofs_position);
 
 		if (!base) {
@@ -980,13 +992,12 @@ GIT_INLINE(int) load_resolved_delta_object(
 			return -1;
 		}
 	} else if (!base && delta->object.type == GIT_OBJECT_REF_DELTA) {
+		/* TODO readlock */
 		base = git_oidmap_get(indexer->ids, &delta->base.ref_id);
 
-		if (!base &&
+		if (!base && resolver_ctx->fix_thin_packs &&
 			(error = insert_thin_base(&base, indexer, &delta->base.ref_id)) < 0)
 				return error;
-
-		printf("fixed!\n");
 
 		if (!base) {
 			git_error_set(GIT_ERROR_INDEXER, "corrupt packfile - no object id %s", git_oid_tostr_s(&delta->base.ref_id));
@@ -997,6 +1008,7 @@ GIT_INLINE(int) load_resolved_delta_object(
 	GIT_ASSERT(base);
 
 
+	/* TODO: need any locks here ? */
 	if (load_resolved_object(&base_data, indexer, resolver_ctx, base, NULL) < 0 ||
 	    load_raw_object(&delta_data, indexer, resolver_ctx, _delta) < 0 ||
 		git_delta_read_header(&base_size, &result_size,
@@ -1078,7 +1090,6 @@ GIT_INLINE(int) resolve_delta(
 	if ((error = load_resolved_object(&result, indexer, resolver_ctx, (struct object_entry *)delta, base)) < 0)
 		return error;
 
-	/* TODO: hash ctx per thread */
 	if (git_hash_init(&resolver_ctx->hash_ctx) < 0 ||
 	    git_odb__format_object_header(&header_len, header, sizeof(header), result->len, result->type) < 0 ||
 	    git_hash_update(&resolver_ctx->hash_ctx, header, header_len) < 0 ||
@@ -1207,7 +1218,6 @@ GIT_INLINE(int) hash_and_write(
 
 static int write_index(git_indexer *indexer)
 {
-	git_str path = GIT_STR_INIT;
 	git_hash_algorithm_t hash_type;
 	git_hash_ctx hash_ctx;
 	struct object_entry *entry;
@@ -1226,13 +1236,10 @@ static int write_index(git_indexer *indexer)
 	/* TODO: configurable file mode */
 	if (git_hash_ctx_init(&hash_ctx, hash_type) < 0 ||
 	    git_hash_init(&hash_ctx) < 0 ||
-	    git_str_join(&path, '.', indexer->packfile_path.ptr, "idx") < 0 ||
-	    (fd = p_open(path.ptr, O_RDWR|O_CREAT, 0666)) < 0 ||
+	    git_str_join(&indexer->index_path, '.', indexer->packfile_path.ptr, "idx") < 0 ||
+	    (fd = p_open(indexer->index_path.ptr, O_RDWR|O_CREAT, 0666)) < 0 ||
 		(fp = fdopen(fd, "w")) == NULL)
 		goto on_error;
-
-	/* fclose will close the underlying fd; avoid double closing */
-	fd = -1;
 
 	if (hash_and_write(fp, &hash_ctx, "\377tOc\000\000\000\002", 8) < 0)
 		goto on_error;
@@ -1303,10 +1310,6 @@ static int write_index(git_indexer *indexer)
 		}
 	}
 
-	/*
-	 * Recompute the packfile trailer in case we've inserted bases to fix
-	 * a thin pack.
-	 */
 	if (hash_and_write(fp, &hash_ctx, indexer->trailer, git_oid_size(indexer->oid_type)) < 0)
 		goto on_error;
 
@@ -1314,25 +1317,26 @@ static int write_index(git_indexer *indexer)
 	    fwrite(index_trailer, 1, git_oid_size(indexer->oid_type), fp) < git_oid_size(indexer->oid_type))
 		goto on_error;
 
-/* TODO: mixing up hashes and oids here - probably elsewhere too */
-	if (git_oid__fromraw(&indexer->trailer_oid, indexer->trailer, indexer->oid_type) < 0 ||
-	    git_hash_fmt(indexer->trailer_name, indexer->trailer, git_oid_size(indexer->oid_type)) < 0)
-		return -1;
+	if (indexer->do_fsync && p_fsync(fd) < 0) {
+		git_error_set(GIT_ERROR_OS, "failed to fsync packfile index");
+		goto on_error;
+	}
 
-	/* TODO: rename into place. */
+	/* fclose will close the underlying fd */
+	fclose(fp); fp = NULL; fd = -1;
 
-	git_str_dispose(&path);
 	return 0;
 
 on_error:
 	if (fp != NULL)
 		fclose(fp);
-
-	if (fd != -1)
+	else if (fd != -1)
 		p_close(fd);
 
+	if (indexer->index_path.size > 0)
+		p_unlink(indexer->index_path.ptr);
+
 	git_hash_ctx_cleanup(&hash_ctx);
-	git_str_dispose(&path);
 	return -1;
 }
 
@@ -1412,6 +1416,7 @@ static int resolve_ref_deltas(git_indexer *indexer)
 
 	resolver_ctx.indexer = indexer;
 	resolver_ctx.send_progress_updates = 1;
+	resolver_ctx.fix_thin_packs = 1;
 
 	/* TODO: free stuff on cleanup */
 	if (git_hash_ctx_init(&resolver_ctx.hash_ctx, git_oid_algorithm(indexer->oid_type)) < 0 ||
@@ -1528,6 +1533,7 @@ static int finalize_thin_pack(git_indexer *indexer)
 int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 {
 	struct object_entry *entry;
+	git_str packfile_path = GIT_STR_INIT, index_path = GIT_STR_INIT;
 	size_t i;
 	int error;
 
@@ -1535,7 +1541,7 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 
 	if (!indexer->complete) {
 		git_error_set(GIT_ERROR_INDEXER, "incomplete packfile");
-		return -1;
+		goto on_error;
 	}
 
 	/* Freeze the number of deltas */
@@ -1554,19 +1560,33 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 	indexer->index_end = git_time_monotonic();
 	/*printf("elapsed: %llu\n", (indexer->index_end - indexer->index_start));*/
 
+	/* TODO: optionally don't mmap / seek instead */
 	indexer->packfile_map = mmap(NULL, indexer->packfile_size,
 		PROT_READ, MAP_SHARED, indexer->packfile_fd, 0);
 
-	if (resolve_offset_deltas(indexer) < 0)
-		return -1;
+	if (resolve_offset_deltas(indexer) < 0 ||
+	    resolve_ref_deltas(indexer) < 0 ||
+	    finalize_thin_pack(indexer) < 0)
+		goto on_error;
 
-	if (resolve_ref_deltas(indexer) < 0)
-		return -1;
+	error = munmap(indexer->packfile_map, indexer->packfile_size);
+	indexer->packfile_map = NULL;
 
-	if (finalize_thin_pack(indexer) < 0)
-		return -1;
+	if (error)
+		goto on_error;
 
-	/* TODO: unmap */
+/* TODO: mixing up hashes and oids here - probably elsewhere too */
+	if (git_oid__fromraw(&indexer->trailer_oid, indexer->trailer, indexer->oid_type) < 0 ||
+	    git_hash_fmt(indexer->trailer_name, indexer->trailer, git_oid_size(indexer->oid_type)) < 0)
+		goto on_error;
+
+	if (indexer->do_fsync && p_fsync(indexer->packfile_fd) < 0) {
+		git_error_set(GIT_ERROR_OS, "failed to fsync packfile");
+		goto on_error;
+	}
+
+	p_close(indexer->packfile_fd);
+	indexer->packfile_fd = -1;
 
 	/* TODO: zap */
 	if (0) {
@@ -1589,7 +1609,29 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 
 	printf("writing...\n");
 	if (write_index(indexer) < 0)
-		return -1;
+		goto on_error;
+
+
+
+	/* Move the temp packfile and index to their final location */
+
+	if (git_str_puts(&packfile_path, indexer->base_path.ptr) < 0 ||
+	    git_str_putc(&packfile_path, '-') < 0 ||
+	    git_str_puts(&packfile_path, indexer->trailer_name) < 0 ||
+	    git_str_puts(&index_path, packfile_path.ptr) < 0 ||
+	    git_str_puts(&packfile_path, ".pack") < 0 ||
+	    git_str_puts(&index_path, ".idx") < 0)
+		goto on_error;
+
+	if (p_rename(indexer->packfile_path.ptr, packfile_path.ptr) < 0 ||
+	    p_rename(indexer->index_path.ptr, index_path.ptr) < 0)
+		goto on_error;
+
+	if (indexer->do_fsync &&
+	    git_futils_fsync_parent(indexer->packfile_path.ptr) < 0)
+		goto on_error;
+
+
 
 	{
 /*    git_hash_fmt(foo, packfile_trailer, git_oid_size(indexer->oid_type)) < 0) */
@@ -1601,7 +1643,14 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 	if (stats)
 		memcpy(stats, &indexer->progress, sizeof(git_indexer_progress));
 
+	git_str_dispose(&packfile_path);
+	git_str_dispose(&index_path);
 	return 0;
+
+on_error:
+	git_str_dispose(&packfile_path);
+	git_str_dispose(&index_path);
+	return -1;
 }
 
 void git_indexer_free(git_indexer *indexer)
@@ -1609,7 +1658,15 @@ void git_indexer_free(git_indexer *indexer)
 	if (!indexer)
 		return;
 
+	if (indexer->packfile_fd != -1)
+		p_close(indexer->packfile_fd);
+
+	if (indexer->packfile_fd != -1 && !indexer->committed)
+		p_unlink(indexer->packfile_path.ptr);
+
+	git_str_dispose(&indexer->index_path);
 	git_str_dispose(&indexer->packfile_path);
+	git_str_dispose(&indexer->base_path);
 	object_cache_dispose(&indexer->basecache);
 	git_sizemap_free(indexer->positions);
 	git_oidmap_free(indexer->ids);

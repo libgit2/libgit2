@@ -82,6 +82,8 @@ int git_packfile_parser_parse(
 	const void *data,
 	size_t len);
 
+int git_packfile_parser_complete(git_packfile_parser *parser);
+
 /*
  * Get the hash context for the packfile. Callers may want to mutate the
  * hash - for example, when fixing thin packs.
