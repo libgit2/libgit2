@@ -422,8 +422,8 @@ void test_diff_parse__new_file_with_space(void)
 	cl_git_pass(diff_from_buffer(&diff, content, strlen(content)));
 	cl_git_pass(git_patch_from_diff((git_patch **) &patch, diff, 0));
 
-	cl_assert_equal_p(patch->diff_opts.old_prefix, NULL);
-	cl_assert_equal_p(patch->delta->old_file.path, NULL);
+	cl_assert_equal_s(patch->diff_opts.old_prefix, "a/");
+	cl_assert_equal_s(patch->delta->old_file.path, "sp ace.txt");
 	cl_assert_equal_s(patch->diff_opts.new_prefix, "b/");
 	cl_assert_equal_s(patch->delta->new_file.path, "sp ace.txt");
 
@@ -470,6 +470,31 @@ void test_diff_parse__crlf(void)
 
 	cl_assert_equal_s(delta->old_file.path, "test-file");
 	cl_assert_equal_s(delta->new_file.path, "test-file");
+
+	git_patch_free(patch);
+	git_diff_free(diff);
+}
+
+void test_diff_parse__delete_file_with_space(void)
+{
+	const char *text = "diff --git a/x y.xml b/x y.xml\n"
+	"deleted file mode 100644\n"
+	"index 48a7354..0000000\n"
+	"--- a/x y.xml\n"
+	"+++ /dev/null\n"
+	"@@ -1,1 +0,0 @@\n"
+	"-x\n";
+
+	git_diff *diff;
+	git_patch *patch;
+	const git_diff_delta *delta;
+
+	cl_git_pass(diff_from_buffer(&diff, text, strlen(text)));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	delta = git_patch_get_delta(patch);
+
+	cl_assert_equal_s(delta->old_file.path, "x y.xml");
+	cl_assert_equal_s(delta->new_file.path, "x y.xml");
 
 	git_patch_free(patch);
 	git_diff_free(diff);

@@ -45,14 +45,27 @@ static int git_parse_err(const char *fmt, ...)
 	return -1;
 }
 
-static size_t header_path_len(git_patch_parse_ctx *ctx)
+
+static size_t header_path_len(git_patch_parse_ctx *ctx, bool last_path)
 {
 	bool inquote = 0;
 	bool quoted = git_parse_ctx_contains_s(&ctx->parse_ctx, "\"");
 	size_t len;
+	size_t max_len = last_path ? ctx->parse_ctx.line_len :
+	                       	     ctx->parse_ctx.line_len - 3;
 
-	for (len = quoted; len < ctx->parse_ctx.line_len; len++) {
-		if (!quoted && git__isspace(ctx->parse_ctx.line[len]))
+	for (len = quoted; len < max_len; len++) {
+		/* Gets the first path in "a/x y.xml b/x y.xml"
+		b/ is used because of paths with spaces and without quotes*/
+		if (!quoted && !last_path &&
+		    (git__isspace(ctx->parse_ctx.line[len]) &&
+		     (!strncmp(&ctx->parse_ctx.line[len + 1], "\"b/", 3) ||
+		      !strncmp(&ctx->parse_ctx.line[len + 1], "b/", 2))))
+			break;
+		else if (
+		        !quoted && last_path &&
+		        (ctx->parse_ctx.line[len] == '\n' ||
+		         ctx->parse_ctx.line[len] == '\r'))
 			break;
 		else if (quoted && !inquote && ctx->parse_ctx.line[len] == '"') {
 			len++;
@@ -89,12 +102,12 @@ static int parse_header_path_buf(git_str *path, git_patch_parse_ctx *ctx, size_t
 	return 0;
 }
 
-static int parse_header_path(char **out, git_patch_parse_ctx *ctx)
+static int parse_header_path(char **out, git_patch_parse_ctx *ctx, bool last_path)
 {
 	git_str path = GIT_STR_INIT;
 	int error;
 
-	if ((error = parse_header_path_buf(&path, ctx, header_path_len(ctx))) < 0)
+	if ((error = parse_header_path_buf(&path, ctx, header_path_len(ctx, last_path))) < 0)
 		goto out;
 	*out = git_str_detach(&path);
 
@@ -263,7 +276,7 @@ static int parse_header_rename(
 {
 	git_str path = GIT_STR_INIT;
 
-	if (parse_header_path_buf(&path, ctx, header_path_len(ctx)) < 0)
+	if (parse_header_path_buf(&path, ctx, header_path_len(ctx, true)) < 0)
 		return -1;
 
 	/* Note: the `rename from` and `rename to` lines include the literal
@@ -344,12 +357,12 @@ static int parse_header_dissimilarity(
 
 static int parse_header_start(git_patch_parsed *patch, git_patch_parse_ctx *ctx)
 {
-	if (parse_header_path(&patch->header_old_path, ctx) < 0)
+	if (parse_header_path(&patch->header_old_path, ctx, false) < 0)
 		return git_parse_err("corrupt old path in git diff header at line %"PRIuZ,
 			ctx->parse_ctx.line_num);
 
 	if (git_parse_advance_ws(&ctx->parse_ctx) < 0 ||
-		parse_header_path(&patch->header_new_path, ctx) < 0)
+		parse_header_path(&patch->header_new_path, ctx, true) < 0)
 		return git_parse_err("corrupt new path in git diff header at line %"PRIuZ,
 			ctx->parse_ctx.line_num);
 
