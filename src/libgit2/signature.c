@@ -90,11 +90,6 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 	p->email = extract_trimmed(email, strlen(email));
 	GIT_ERROR_CHECK_ALLOC(p->email);
 
-	if (p->name[0] == '\0' || p->email[0] == '\0') {
-		git_signature_free(p);
-		return signature_error("Signature cannot have an empty name or email");
-	}
-
 	p->when.time = time;
 	p->when.offset = offset;
 	p->when.sign = (offset < 0) ? '-' : '+';
