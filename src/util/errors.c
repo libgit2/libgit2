@@ -376,6 +376,9 @@ void git_error_system_set(int code)
 /* Deprecated error values and functions */
 
 #ifndef GIT_DEPRECATE_HARD
+
+#include "git2/deprecated.h"
+
 const git_error *giterr_last(void)
 {
 	return git_error_last();
