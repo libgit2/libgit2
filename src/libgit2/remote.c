@@ -1339,7 +1339,11 @@ int git_remote_download(
 	if ((error = connect_or_reset_options(remote, GIT_DIRECTION_FETCH, &connect_opts)) < 0)
 		return error;
 
-	return git_remote__download(remote, refspecs, opts);
+	error = git_remote__download(remote, refspecs, opts);
+
+	git_remote_connect_options_dispose(&connect_opts);
+
+	return error;
 }
 
 int git_remote_fetch(
