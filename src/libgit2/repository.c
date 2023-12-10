@@ -537,8 +537,7 @@ static int read_gitfile(git_str *path_out, const char *file_path)
 }
 
 typedef struct {
-	const char *repo_path;
-	git_str tmp;
+	git_str repo_path;
 	bool *is_safe;
 } validate_ownership_data;
 
@@ -582,9 +581,7 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 		         strncmp(test_path, "//wsl.localhost/", strlen("//wsl.localhost/")) != 0)
 			test_path++;
 #endif
-
-		if (git_fs_path_prettify_dir(&data->tmp, test_path, NULL) == 0 &&
-		    strcmp(data->tmp.ptr, data->repo_path) == 0)
+		if (strcmp(test_path, data->repo_path.ptr) == 0)
 			*data->is_safe = true;
 	}
 
@@ -597,13 +594,20 @@ static int validate_ownership_config(
 	bool use_env)
 {
 	validate_ownership_data ownership_data = {
-		path, GIT_STR_INIT, is_safe
+		GIT_STR_INIT, is_safe
 	};
 	git_config *config;
 	int error;
 
 	if (load_global_config(&config, use_env) != 0)
 		return 0;
+
+	git_str_sets(&ownership_data.repo_path, path);
+	if (git_str_oom(&ownership_data.repo_path))
+		return -1;
+	if (git_str_len(&ownership_data.repo_path) > 1 &&
+	    ownership_data.repo_path.ptr[git_str_len(&ownership_data.repo_path) - 1] == '/')
+		git_str_shorten(&ownership_data.repo_path, 1);
 
 	error = git_config_get_multivar_foreach(config,
 		"safe.directory", NULL,
@@ -614,7 +618,7 @@ static int validate_ownership_config(
 		error = 0;
 
 	git_config_free(config);
-	git_str_dispose(&ownership_data.tmp);
+	git_str_dispose(&ownership_data.repo_path);
 
 	return error;
 }
