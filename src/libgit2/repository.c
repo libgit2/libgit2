@@ -685,9 +685,26 @@ static int validate_ownership(git_repository *repo)
 		goto done;
 
 	if (!is_safe) {
-		git_error_set(GIT_ERROR_CONFIG,
-			"repository path '%s' is not owned by current user",
-			path);
+		git_str nice_path = GIT_STR_INIT;
+#ifdef GIT_WIN32
+		/* see comment above in validate_ownership_cb */
+		if (!strncasecmp(path, "//", strlen("//")))
+			git_str_puts(&nice_path, "%(prefix)/");
+#endif
+		git_str_puts(&nice_path, path);
+		if (!git_str_oom(&nice_path)) {
+			if (git_str_len(&nice_path) > 1 && nice_path.ptr[git_str_len(&nice_path) - 1] == '/')
+				git_str_shorten(&nice_path, 1);
+			git_error_set(
+			        GIT_ERROR_CONFIG,
+			        "repository path '%s' is not owned by current user.\n\nTo add an exception use the path '%s'.",
+			        path, nice_path.ptr);
+		} else
+			git_error_set(
+			        GIT_ERROR_CONFIG,
+			        "repository path '%s' is not owned by current user.",
+			        path);
+		git_str_dispose(&nice_path);
 		error = GIT_EOWNER;
 	}
 
