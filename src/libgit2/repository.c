@@ -546,11 +546,21 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 {
 	validate_ownership_data *data = payload;
 
+	/* Empty value means stop processing and disallow. */
 	if (strcmp(entry->value, "") == 0) {
 		*data->is_safe = false;
-	} else if (strcmp(entry->value, "*") == 0) {
+	}
+
+	/* Wildcard value disables the silly ownership checks. */
+	else if (strcmp(entry->value, "*") == 0) {
 		*data->is_safe = true;
-	} else {
+	}
+
+	/*
+	 * Otherwise, the config value *must not* end with a trailing
+	 * slash for git compatibility.
+	 */
+	else if (git__suffixcmp(entry->value, "/") != 0) {
 		const char *test_path = entry->value;
 
 #ifdef GIT_WIN32
