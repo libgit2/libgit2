@@ -14,7 +14,11 @@
 #ifndef INCLUDE_git_xdiff_h__
 #define INCLUDE_git_xdiff_h__
 
-#include "regexp.h"
+#include "git2_util.h"
+
+#include <limits.h>
+#include <stdint.h>
+#include <stddef.h>
 
 /* Work around C90-conformance issues */
 #if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
@@ -35,22 +39,5 @@
 #define xdl_realloc(ptr, x) git__realloc(ptr, x)
 
 #define XDL_BUG(msg) GIT_ASSERT(!msg)
-
-#define xdl_regex_t git_regexp
-#define xdl_regmatch_t git_regmatch
-
-GIT_INLINE(int) xdl_regexec_buf(
-	const xdl_regex_t *preg, const char *buf, size_t size,
-	size_t nmatch, xdl_regmatch_t pmatch[], int eflags)
-{
-	GIT_UNUSED(preg);
-	GIT_UNUSED(buf);
-	GIT_UNUSED(size);
-	GIT_UNUSED(nmatch);
-	GIT_UNUSED(pmatch);
-	GIT_UNUSED(eflags);
-	GIT_ASSERT("not implemented");
-	return -1;
-}
 
 #endif
