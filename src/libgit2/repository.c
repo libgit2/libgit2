@@ -583,8 +583,11 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 			test_path++;
 #endif
 
-		if (git_fs_path_prettify_dir(&data->tmp, test_path, NULL) == 0 &&
-		    strcmp(data->tmp.ptr, data->repo_path) == 0)
+		if (git_str_sets(&data->tmp, test_path) < 0 ||
+		    git_fs_path_to_dir(&data->tmp) < 0)
+			return -1;
+
+		if (strcmp(data->tmp.ptr, data->repo_path) == 0)
 			*data->is_safe = true;
 	}
 
