@@ -43,7 +43,6 @@ static bool contains_angle_brackets(const char *input)
 static bool is_crud(unsigned char c)
 {
 	return  c <= 32  ||
-		c == '.' ||
 		c == ',' ||
 		c == ':' ||
 		c == ';' ||
