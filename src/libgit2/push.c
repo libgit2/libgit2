@@ -444,10 +444,21 @@ static int do_push(git_push *push)
 	if ((error = calculate_work(push)) < 0)
 		goto on_error;
 
-	if (callbacks && callbacks->push_negotiation &&
-	    (error = callbacks->push_negotiation((const git_push_update **) push->updates.contents,
-					  push->updates.length, callbacks->payload)) < 0)
-	    goto on_error;
+	if (callbacks && callbacks->push_negotiation) {
+		git_error_clear();
+
+		error = callbacks->push_negotiation(
+			(const git_push_update **) push->updates.contents,
+			push->updates.length, callbacks->payload);
+
+		if (error < 0) {
+			git_error_set_after_callback_function(error,
+				"push_negotiation");
+			goto on_error;
+		}
+
+		error = 0;
+	}
 
 	if ((error = queue_objects(push)) < 0 ||
 	    (error = transport->push(transport, push)) < 0)
