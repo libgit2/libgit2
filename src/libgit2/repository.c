@@ -328,7 +328,7 @@ on_error:
 	return NULL;
 }
 
-int git_repository_new(git_repository **out)
+int git_repository__new(git_repository **out, git_oid_t oid_type)
 {
 	git_repository *repo;
 
@@ -337,9 +337,22 @@ int git_repository_new(git_repository **out)
 
 	repo->is_bare = 1;
 	repo->is_worktree = 0;
+	repo->oid_type = oid_type;
 
 	return 0;
 }
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+int git_repository_new(git_repository **out, git_oid_t oid_type)
+{
+	return git_repository__new(out, oid_type);
+}
+#else
+int git_repository_new(git_repository** out)
+{
+	return git_repository__new(out, GIT_OID_SHA1);
+}
+#endif
 
 static int load_config_data(git_repository *repo, const git_config *config)
 {
