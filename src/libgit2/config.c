@@ -1447,7 +1447,7 @@ static int normalize_section(char *start, char *end)
 	for (scan = start; *scan; ++scan) {
 		if (end && scan >= end)
 			break;
-		if (isalnum(*scan))
+		if (isalnum((unsigned char)*scan))
 			*scan = (char)git__tolower(*scan);
 		else if (*scan != '-' || scan == start)
 			return GIT_EINVALIDSPEC;

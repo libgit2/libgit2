@@ -535,10 +535,10 @@ static int parse_len(size_t *out, const char *line, size_t linelen)
 	num[PKT_LEN_SIZE] = '\0';
 
 	for (i = 0; i < PKT_LEN_SIZE; ++i) {
-		if (!isxdigit(num[i])) {
+		if (!isxdigit((unsigned char)num[i])) {
 			/* Make sure there are no special characters before passing to error message */
 			for (k = 0; k < PKT_LEN_SIZE; ++k) {
-				if(!isprint(num[k])) {
+				if(!isprint((unsigned char)num[k])) {
 					num[k] = '.';
 				}
 			}

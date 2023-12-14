@@ -89,7 +89,7 @@ GIT_INLINE(int) git__tolower(int c)
 	return (c >= 'A' && c <= 'Z') ? (c + 32) : c;
 }
 #else
-# define git__tolower(a) tolower(a)
+# define git__tolower(a) tolower((unsigned char)(a))
 #endif
 
 extern size_t git__linenlen(const char *buffer, size_t buffer_len);

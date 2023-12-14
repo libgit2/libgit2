@@ -316,7 +316,7 @@ static void unposix_path(git_str *path)
 	src = tgt = path->ptr;
 
 	/* convert "/d/..." to "d:\..." */
-	if (src[0] == '/' && isalpha(src[1]) && src[2] == '/') {
+	if (src[0] == '/' && isalpha((unsigned char)src[1]) && src[2] == '/') {
 		*tgt++ = src[1];
 		*tgt++ = ':';
 		*tgt++ = '\\';

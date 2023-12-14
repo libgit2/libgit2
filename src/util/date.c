@@ -129,9 +129,9 @@ static size_t match_string(const char *date, const char *str)
 	for (i = 0; *date; date++, str++, i++) {
 		if (*date == *str)
 			continue;
-		if (toupper(*date) == toupper(*str))
+		if (toupper((unsigned char)*date) == toupper((unsigned char)*str))
 			continue;
-		if (!isalnum(*date))
+		if (!isalnum((unsigned char)*date))
 			break;
 		return 0;
 	}
@@ -143,7 +143,7 @@ static int skip_alpha(const char *date)
 	int i = 0;
 	do {
 		i++;
-	} while (isalpha(date[i]));
+	} while (isalpha((unsigned char)date[i]));
 	return i;
 }
 
@@ -251,7 +251,7 @@ static size_t match_multi_number(unsigned long num, char c, const char *date, ch
 
 	num2 = strtol(end+1, &end, 10);
 	num3 = -1;
-	if (*end == c && isdigit(end[1]))
+	if (*end == c && isdigit((unsigned char)end[1]))
 		num3 = strtol(end+1, &end, 10);
 
 	/* Time? Date? */
@@ -349,7 +349,7 @@ static size_t match_digit(const char *date, struct tm *tm, int *offset, int *tm_
 	case '.':
 	case '/':
 	case '-':
-		if (isdigit(end[1])) {
+		if (isdigit((unsigned char)end[1])) {
 			size_t match = match_multi_number(num, *end, date, end, tm);
 			if (match)
 				return match;
@@ -364,7 +364,7 @@ static size_t match_digit(const char *date, struct tm *tm, int *offset, int *tm_
 	n = 0;
 	do {
 		n++;
-	} while (isdigit(date[n]));
+	} while (isdigit((unsigned char)date[n]));
 
 	/* Four-digit year or a timezone? */
 	if (n == 4) {
@@ -518,7 +518,7 @@ static int parse_date_basic(const char *date, git_time_t *timestamp, int *offset
 			match = match_alpha(date, &tm, offset);
 		else if (isdigit(c))
 			match = match_digit(date, &tm, offset, &tm_gmt);
-		else if ((c == '-' || c == '+') && isdigit(date[1]))
+		else if ((c == '-' || c == '+') && isdigit((unsigned char)date[1]))
 			match = match_tz(date, offset);
 
 		if (!match) {
@@ -682,7 +682,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 	const char *end = date;
 	int i;
 
-	while (isalpha(*++end))
+	while (isalpha((unsigned char)*++end))
 		/* scan to non-alpha */;
 
 	for (i = 0; i < 12; i++) {
@@ -783,7 +783,7 @@ static const char *approxidate_digit(const char *date, struct tm *tm, int *num)
 	case '.':
 	case '/':
 	case '-':
-		if (isdigit(end[1])) {
+		if (isdigit((unsigned char)end[1])) {
 			size_t match = match_multi_number(number, *end, date, end, tm);
 			if (match)
 				return date + match;
