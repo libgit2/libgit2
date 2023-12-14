@@ -38,9 +38,10 @@ void test_process_start__cleanup(void)
 
 void test_process_start__returncode(void)
 {
-#ifdef GIT_WIN32
+#if defined(GIT_WIN32)
 	const char *args_array[] = { "C:\\Windows\\System32\\cmd.exe", "/c", "exit", "1" };
-#elif __APPLE__
+#elif defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__) || \
+      defined(__MidnightBSD__) || defined(__DragonFly__)
 	const char *args_array[] = { "/usr/bin/false" };
 #else
 	const char *args_array[] = { "/bin/false" };
