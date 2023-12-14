@@ -203,7 +203,7 @@ int git_smart__update_heads(transport_smart *t, git_vector *symrefs);
 /* smart_pkt.c */
 typedef struct {
 	git_oid_t oid_type;
-	int seen_capabilities: 1;
+	unsigned int seen_capabilities: 1;
 } git_pkt_parse_data;
 
 int git_pkt_parse_line(git_pkt **head, const char **endptr, const char *line, size_t linelen, git_pkt_parse_data *data);
