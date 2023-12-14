@@ -62,8 +62,8 @@ typedef struct refdb_fs_backend {
 
 	git_oid_t oid_type;
 
-	int fsync : 1,
-	    sorted : 1;
+	unsigned int fsync : 1,
+	             sorted : 1;
 	int peeling_mode;
 	git_iterator_flag_t iterator_flags;
 	uint32_t direach_flags;
