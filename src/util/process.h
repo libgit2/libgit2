@@ -11,10 +11,10 @@
 typedef struct git_process git_process;
 
 typedef struct {
-	int capture_in  : 1,
-	    capture_out : 1,
-	    capture_err : 1,
-	    exclude_env : 1;
+	unsigned int capture_in  : 1,
+	             capture_out : 1,
+	             capture_err : 1,
+	             exclude_env : 1;
 
 	char *cwd;
 } git_process_options;
