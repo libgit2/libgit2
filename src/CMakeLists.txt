@@ -184,7 +184,7 @@ add_feature_info(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
 
 # iconv
 if(USE_ICONV)
-	find_package(Iconv)
+	find_package(IntlIconv)
 endif()
 if(ICONV_FOUND)
 	set(GIT_USE_ICONV 1)
