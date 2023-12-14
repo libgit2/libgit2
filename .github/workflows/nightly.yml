@@ -10,6 +10,9 @@ env:
   docker-registry: ghcr.io
   docker-config-path: source/ci/docker
 
+permissions:
+  contents: read
+
 jobs:
   # Run our nightly builds.  We build a matrix with the various build
   # targets and their details.  Then we build either in a docker container
@@ -384,6 +387,11 @@ jobs:
     # Only run scheduled workflows on the main repository; prevents people
     # from using build minutes on their forks.
     if: github.repository == 'libgit2/libgit2'
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
 
     name: CodeQL
     runs-on: ubuntu-latest

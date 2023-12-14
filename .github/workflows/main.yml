@@ -13,6 +13,9 @@ env:
   docker-registry: ghcr.io
   docker-config-path: source/ci/docker
 
+permissions:
+  contents: read
+
 jobs:
   containers:
     uses: ./.github/workflows/build-containers.yml

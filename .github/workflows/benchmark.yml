@@ -6,6 +6,9 @@ on:
   schedule:
   - cron: '15 4 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   # Run our nightly builds.  We build a matrix with the various build
   # targets and their details.  Then we build either in a docker container
