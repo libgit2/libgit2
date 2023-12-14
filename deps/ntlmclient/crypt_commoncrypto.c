@@ -59,11 +59,12 @@ bool ntlm_des_encrypt(
 	ntlm_des_block *plaintext,
 	ntlm_des_block *key)
 {
+	CCCryptorStatus result;
 	size_t written;
 
 	NTLM_UNUSED(ntlm);
 
-	CCCryptorStatus result = CCCrypt(kCCEncrypt,
+	result = CCCrypt(kCCEncrypt,
 		kCCAlgorithmDES, kCCOptionECBMode,
 		key, sizeof(ntlm_des_block), NULL,
 		plaintext, sizeof(ntlm_des_block),
