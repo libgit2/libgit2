@@ -125,7 +125,7 @@ int git_regexp_search(const git_regexp *r, const char *string, size_t nmatches, 
 
 	if ((data = pcre2_match_data_create(nmatches, NULL)) == NULL) {
 		git_error_set_oom();
-		goto out;
+		return -1;
 	}
 
 	if ((error = pcre2_match(*r, (const unsigned char *) string, strlen(string),

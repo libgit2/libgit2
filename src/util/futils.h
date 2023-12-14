@@ -25,7 +25,7 @@ extern int git_futils_readbuffer(git_str *obj, const char *path);
 extern int git_futils_readbuffer_updated(
 	git_str *obj,
 	const char *path,
-	unsigned char checksum[GIT_HASH_SHA1_SIZE],
+	unsigned char checksum[GIT_HASH_SHA256_SIZE],
 	int *updated);
 extern int git_futils_readbuffer_fd_full(git_str *obj, git_file fd);
 extern int git_futils_readbuffer_fd(git_str *obj, git_file fd, size_t len);
