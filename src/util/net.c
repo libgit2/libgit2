@@ -22,7 +22,7 @@
 #define GIT_NET_URL_PARSER_INIT { 0 }
 
 typedef struct {
-	int hierarchical : 1;
+	unsigned int hierarchical : 1;
 
 	const char *scheme;
 	const char *user;
