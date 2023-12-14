@@ -100,6 +100,11 @@ int main(int argc, char **argv)
 		goto done;
 	}
 
+	if (!command) {
+		ret = cmd_help(argc, argv);
+		goto done;
+	}
+
 	if ((cmd = cli_cmd_spec_byname(command)) == NULL) {
 		ret = cli_error("'%s' is not a %s command. See '%s help'.",
 		                command, PROGRAM_NAME, PROGRAM_NAME);
