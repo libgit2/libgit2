@@ -10,7 +10,7 @@
  * This file was produced by using the `rename.pl` script included with
  * adopt.  The command-line specified was:
  *
- * ./rename.pl cli_opt --filename=opt --include=cli.h --inline=GIT_INLINE --header-guard=CLI_opt_h__ --lowercase-status --without-usage
+ * ./rename.pl cli_opt --filename=opt --include=common.h --inline=GIT_INLINE --header-guard=CLI_opt_h__ --lowercase-status --without-usage
  */
 
 #ifndef CLI_opt_h__
@@ -275,8 +275,8 @@ typedef struct cli_opt_parser {
 	size_t arg_idx;
 	size_t in_args;
 	size_t in_short;
-	int needs_sort : 1,
-	    in_literal : 1;
+	unsigned int needs_sort : 1,
+	             in_literal : 1;
 } cli_opt_parser;
 
 /**
@@ -300,6 +300,16 @@ cli_opt_status_t cli_opt_parse(
     size_t args_len,
     unsigned int flags);
 
+/**
+ * Quickly executes the given callback for each argument.
+ *
+ * @param specs A NULL-terminated array of `cli_opt_spec`s that can be parsed
+ * @param args The arguments that will be parsed
+ * @param args_len The length of arguments to be parsed
+ * @param flags The `cli_opt_flag_t flags for parsing
+ * @param callback The callback to invoke for each specified option
+ * @param callback_data Data to be provided to the callback
+ */
 int cli_opt_foreach(
 	const cli_opt_spec specs[],
 	char **args,
