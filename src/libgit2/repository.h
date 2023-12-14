@@ -280,4 +280,7 @@ int git_repository__set_objectformat(
 	git_repository *repo,
 	git_oid_t oid_type);
 
+/* SHA256-aware internal functions */
+int git_repository__new(git_repository **out, git_oid_t oid_type);
+
 #endif
