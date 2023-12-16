@@ -309,6 +309,31 @@ void test_attr_repo__bare_repo_with_index(void)
 	cl_assert(GIT_ATTR_IS_UNSPECIFIED(values[3]));
 }
 
+void test_attr_repo__inmemory_repo_without_index(void)
+{
+	const char *names[1] = { "fake" };
+	const char *values[1];
+	git_repository *inmemory;
+	git_index *index = NULL;
+
+	/* setup bare in-memory repo without index */
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_repository_new(&inmemory, GIT_OID_SHA1));
+#else
+	cl_git_pass(git_repository_new(&inmemory));
+#endif
+	cl_assert(git_repository_is_bare(inmemory));
+
+	/* verify repo isn't given an index upfront in future */
+	git_repository_index(&index, inmemory);
+	cl_assert(!index);
+
+	/* check attributes can be queried without error due to missing index */
+	cl_git_pass(git_attr_get_many(values, inmemory, 0, "fake.txt", 1, names));
+
+	git_repository_free(inmemory);
+}
+
 void test_attr_repo__sysdir(void)
 {
 	git_str sysdir = GIT_STR_INIT;
