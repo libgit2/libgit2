@@ -14,7 +14,7 @@ env:
   docker-config-path: source/ci/docker
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
