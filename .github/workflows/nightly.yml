@@ -12,6 +12,7 @@ env:
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   # Run our nightly builds.  We build a matrix with the various build

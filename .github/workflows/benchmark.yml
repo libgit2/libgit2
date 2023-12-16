@@ -10,9 +10,10 @@ permissions:
   contents: read
 
 jobs:
-  # Run our nightly builds.  We build a matrix with the various build
-  # targets and their details.  Then we build either in a docker container
-  # (Linux) or on the actual hosts (macOS, Windows).
+  # Run our benchmarks. We build a matrix with the various build
+  # targets and their details. Unlike our CI builds, we run these
+  # directly on the VM instead of in containers since we do not
+  # need the breadth of platform diversity.
   build:
     # Only run scheduled workflows on the main repository; prevents people
     # from using build minutes on their forks.
