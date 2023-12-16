@@ -22,6 +22,7 @@
 typedef enum {
 	CLI_PROGRESS_NONE,
 	CLI_PROGRESS_RECEIVING,
+	CLI_PROGRESS_INDEXING,
 	CLI_PROGRESS_RESOLVING,
 	CLI_PROGRESS_CHECKING_OUT
 } cli_progress_t;
@@ -71,6 +72,17 @@ extern int cli_progress_fetch_sideband(
  * @return 0 on success, -1 on failure
  */
 extern int cli_progress_fetch_transfer(
+	const git_indexer_progress *stats,
+	void *payload);
+
+/**
+ * Prints indexer progress to the console. Suitable for a
+ * `progress_cb` callback for `git_indexer_options`.
+ *
+ * @param stats The indexer stats
+ * @param payload A pointer to the cli_progress
+ */
+extern int cli_progress_indexer(
 	const git_indexer_progress *stats,
 	void *payload);
 
