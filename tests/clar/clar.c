@@ -41,9 +41,6 @@
 #	ifndef strdup
 #		define strdup(str) _strdup(str)
 #	endif
-#	ifndef strcasecmp
-#		define strcasecmp(a,b) _stricmp(a,b)
-#	endif
 
 #	ifndef __MINGW32__
 #		pragma comment(lib, "shell32")
