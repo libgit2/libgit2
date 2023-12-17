@@ -18,7 +18,7 @@ functionality into your application.  Language bindings like
 in your favorite language.
 
 `libgit2` is used to power Git GUI clients like
-[GitKraken](https://gitkraken.com/) and [gmaster](https://gmaster.io/)
+[GitKraken](https://gitkraken.com/) and [GitButler](https://gitbutler.com/)
 and on Git hosting providers like [GitHub](https://github.com/),
 [GitLab](https://gitlab.com/) and
 [Azure DevOps](https://azure.com/devops).
