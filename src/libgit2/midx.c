@@ -703,9 +703,9 @@ static int midx_write(
 	hash_cb_data.ctx = &ctx;
 
 	oid_size = git_oid_size(w->oid_type);
-
-	GIT_ASSERT((checksum_type = git_oid_algorithm(w->oid_type)));
+	checksum_type = git_oid_algorithm(w->oid_type);
 	checksum_size = git_hash_size(checksum_type);
+	GIT_ASSERT(oid_size && checksum_type && checksum_size);
 
 	if ((error = git_hash_ctx_init(&ctx, checksum_type)) < 0)
 		return error;
