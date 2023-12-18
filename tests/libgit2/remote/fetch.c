@@ -82,7 +82,7 @@ static void do_time_travelling_fetch(git_oid *commit1id, git_oid *commit2id,
 		cl_git_pass(git_treebuilder_new(&tb, repo1, NULL));
 		cl_git_pass(git_treebuilder_write(&empty_tree_id, tb));
 		cl_git_pass(git_tree_lookup(&empty_tree, repo1, &empty_tree_id));
-		cl_git_pass(git_signature_default(&sig, repo1));
+		cl_git_pass(git_signature_default_author(&sig, repo1));
 		cl_git_pass(git_commit_create(commit1id, repo1, REPO1_REFNAME, sig,
 					sig, NULL, "one", empty_tree, 0, NULL));
 		cl_git_pass(git_commit_lookup(&commit1, repo1, commit1id));

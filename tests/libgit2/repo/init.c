@@ -581,7 +581,7 @@ void test_repo_init__init_with_initial_commit(void)
 	 * made to a repository...
 	 */
 
-	/* Make sure we're ready to use git_signature_default :-) */
+	/* Make sure we're ready to use git_signature_default_author :-) */
 	{
 		git_config *cfg, *local;
 		cl_git_pass(git_repository_config(&cfg, g_repo));
@@ -594,20 +594,22 @@ void test_repo_init__init_with_initial_commit(void)
 
 	/* Create a commit with the new contents of the index */
 	{
-		git_signature *sig;
+		git_signature *author_sig, *committer_sig;
 		git_oid tree_id, commit_id;
 		git_tree *tree;
 
-		cl_git_pass(git_signature_default(&sig, g_repo));
+		cl_git_pass(git_signature_default_author(&author_sig, g_repo));
+		cl_git_pass(git_signature_default_committer(&committer_sig, g_repo));
 		cl_git_pass(git_index_write_tree(&tree_id, index));
 		cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
 
 		cl_git_pass(git_commit_create_v(
-			&commit_id, g_repo, "HEAD", sig, sig,
+			&commit_id, g_repo, "HEAD", author_sig, committer_sig,
 			NULL, "First", tree, 0));
 
 		git_tree_free(tree);
-		git_signature_free(sig);
+		git_signature_free(author_sig);
+		git_signature_free(committer_sig);
 	}
 
 	git_index_free(index);

@@ -10,6 +10,7 @@
 #include "repository.h"
 #include "git2/common.h"
 #include "posix.h"
+#include "date.h"
 
 void git_signature_free(git_signature *sig)
 {
@@ -199,6 +200,78 @@ int git_signature_default(git_signature **out, git_repository *repo)
 
 	git_config_free(cfg);
 	return error;
+}
+
+int git_signature__default_from_env(const char *name_env_var, const char *email_env_var,
+		const char *date_env_var, git_signature **out, git_repository *repo)
+{
+	int error;
+	git_config *cfg;
+	const char *name, *email, *date;
+	git_time_t timestamp;
+	int offset;
+	git_str name_env = GIT_STR_INIT;
+	git_str email_env = GIT_STR_INIT;
+	git_str date_env = GIT_STR_INIT;
+	int have_email_env = -1;
+
+	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0)
+		return error;
+
+	/* Check if the environment variable for the name is set */
+	if (!(git__getenv(&name_env, name_env_var)))
+		name = git_str_cstr(&name_env);
+	else
+		/* or else read the configuration value. */
+		if ((error = git_config_get_string(&name, cfg, "user.name")) < 0)
+			goto done;
+
+	/* Check if the environment variable for the email is set. */
+	if (!(git__getenv(&email_env, email_env_var)))
+		email = git_str_cstr(&email_env);
+	else {
+		/* Check if the fallback EMAIL environment variable is set
+		 * before we check the configuration so that we preserve the
+		 * error message if the configuration value is missing. */
+		git_str_dispose(&email_env);
+		have_email_env = !git__getenv(&email_env, "EMAIL");
+		if ((error = git_config_get_string(&email, cfg, "user.email")) < 0) {
+			if (have_email_env) {
+				email = git_str_cstr(&email_env);
+				error = 0;
+			} else
+				goto done;
+		}
+	}
+
+	/* Check if the environment variable for the timestamp is set */
+	if (!(git__getenv(&date_env, date_env_var))) {
+		date = git_str_cstr(&date_env);
+		if ((error = git_date_offset_parse(&timestamp, &offset, date)) < 0)
+			goto done;
+		error = git_signature_new(out, name, email, timestamp, offset);
+	} else
+		/* or else default to the current timestamp. */
+		error = git_signature_now(out, name, email);
+
+done:
+	git_config_free(cfg);
+	git_str_dispose(&name_env);
+	git_str_dispose(&email_env);
+	git_str_dispose(&date_env);
+	return error;
+}
+
+int git_signature_default_author(git_signature **out, git_repository *repo)
+{
+	return git_signature__default_from_env("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL",
+			"GIT_AUTHOR_DATE", out, repo);
+}
+
+int git_signature_default_committer(git_signature **out, git_repository *repo)
+{
+	return git_signature__default_from_env("GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL",
+			"GIT_COMMITTER_DATE", out, repo);
 }
 
 int git_signature__parse(git_signature *sig, const char **buffer_out,

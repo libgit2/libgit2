@@ -48,6 +48,52 @@ GIT_EXTERN(int) git_signature_new(git_signature **out, const char *name, const c
  */
 GIT_EXTERN(int) git_signature_now(git_signature **out, const char *name, const char *email);
 
+/** Create a new author action signature with default information based on the
+ * configuration and environment variables.
+ *
+ * If GIT_AUTHOR_NAME environment variable is set it uses that over the
+ * user.name value from the configuration.
+ *
+ * If GIT_AUTHOR_EMAIL environment variable is set it uses that over the
+ * user.email value from the configuration.  The EMAIL environment variable is
+ * the fallback email address in case the user.email configuration value isn't
+ * set.
+ *
+ * If GIT_AUTHOR_DATE is set it uses that, otherwise it uses the current time
+ * as the timestamp.
+ *
+ * It will return GIT_ENOTFOUND if either the user.name or user.email are not
+ * set and there is no fallback from an environment variable.
+ *
+ * @param out new signature
+ * @param repo repository pointer
+ * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
+ */
+GIT_EXTERN(int) git_signature_default_author(git_signature **out, git_repository *repo);
+
+/** Create a new committer action signature with default information based on
+ * the configuration and environment variables.
+ *
+ * If GIT_COMMITTER_NAME environment variable is set it uses that over the
+ * user.name value from the configuration.
+ *
+ * If GIT_COMMITTER_EMAIL environment variable is set it uses that over the
+ * user.email value from the configuration.  The EMAIL environment variable is
+ * the fallback email address in case the user.email configuration value isn't
+ * set.
+ *
+ * If GIT_COMMITTER_DATE is set it uses that, otherwise it uses the current
+ * time as the timestamp.
+ *
+ * It will return GIT_ENOTFOUND if either the user.name or user.email are not
+ * set and there is no fallback from an environment variable.
+ *
+ * @param out new signature @param repo repository pointer @return 0 on
+ * success, GIT_ENOTFOUND if config is missing, or error code
+ */
+GIT_EXTERN(int) git_signature_default_committer(git_signature **out, git_repository *repo);
+
+#ifndef GIT_DEPRECATE_HARD
 /**
  * Create a new action signature with default user and now timestamp.
  *
@@ -56,11 +102,13 @@ GIT_EXTERN(int) git_signature_now(git_signature **out, const char *name, const c
  * based on that information.  It will return GIT_ENOTFOUND if either the
  * user.name or user.email are not set.
  *
+ * @deprecated use git_signature_default_author or git_signature_default_committer instead
  * @param out new signature
  * @param repo repository pointer
  * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
  */
 GIT_EXTERN(int) git_signature_default(git_signature **out, git_repository *repo);
+#endif
 
 /**
  * Create a new signature by parsing the given buffer, which is

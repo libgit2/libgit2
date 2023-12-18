@@ -1268,7 +1268,7 @@ static int rebase_copy_note(
 	}
 
 	if (!committer) {
-		if((error = git_signature_default(&who, rebase->repo)) < 0) {
+		if((error = git_signature_default_committer(&who, rebase->repo)) < 0) {
 			if (error != GIT_ENOTFOUND ||
 				(error = git_signature_now(&who, "unknown", "unknown")) < 0)
 				goto done;
