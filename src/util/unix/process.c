@@ -556,7 +556,6 @@ int git_process_close(git_process *process)
 	CLOSE_FD(process->child_in);
 	CLOSE_FD(process->child_out);
 	CLOSE_FD(process->child_err);
-	CLOSE_FD(process->status);
 
 	return 0;
 }
