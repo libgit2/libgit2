@@ -3,7 +3,14 @@
 set -e
 
 if [ -n "$SKIP_TESTS" ]; then
-	exit 0
+	if [ -z "$SKIP_OFFLINE_TESTS" ]; then SKIP_OFFLINE_TESTS=1; fi
+	if [ -z "$SKIP_ONLINE_TESTS" ]; then SKIP_ONLINE_TESTS=1; fi
+	if [ -z "$SKIP_GITDAEMON_TESTS" ]; then SKIP_GITDAEMON_TESTS=1; fi
+	if [ -z "$SKIP_PROXY_TESTS" ]; then SKIP_PROXY_TESTS=1; fi
+	if [ -z "$SKIP_NTLM_TESTS" ]; then SKIP_NTLM_TESTS=1; fi
+	if [ -z "$SKIP_NEGOTIATE_TESTS" ]; then SKIP_NEGOTIATE_TESTS=1; fi
+	if [ -z "$SKIP_SSH_TESTS" ]; then SKIP_SSH_TESTS=1; fi
+	if [ -z "$SKIP_FUZZERS" ]; then SKIP_FUZZERS=1; fi
 fi
 
 # Windows doesn't run the NTLM tests properly (yet)
@@ -23,6 +30,16 @@ export CLAR_HOMEDIR=${HOME}
 
 SUCCESS=1
 CONTINUE_ON_FAILURE=0
+
+should_run() {
+	eval "skip=\${SKIP_${1}}"
+	[ -z "$skip" \
+	  -o "$skip" == "no" -o "$skip" == "NO" \
+	  -o "$skip" == "n" -o "$skip" == "N" \
+	  -o "$skip" == "false" -o "$skip" == "FALSE" \
+	  -o "$skip" == "f" -o "$skip" == "F" \
+	  -o "$skip" == "0" ]
+}
 
 cleanup() {
 	echo "Cleaning up..."
@@ -140,7 +157,7 @@ echo "##########################################################################
 
 echo ""
 
-if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
+if should_run "GITDAEMON_TESTS"; then
 	echo "Starting git daemon (standard)..."
 	GIT_STANDARD_DIR=`mktemp -d ${TMPDIR}/git_standard.XXXXXXXX`
 	git init --bare "${GIT_STANDARD_DIR}/test.git" >/dev/null
@@ -160,7 +177,7 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	GIT_SHA256_PID=$!
 fi
 
-if [ -z "$SKIP_PROXY_TESTS" ]; then
+if should_run "PROXY_TESTS"; then
 	curl --location --silent --show-error https://github.com/ethomson/poxyproxy/releases/download/v0.7.0/poxyproxy-0.7.0.jar >poxyproxy.jar
 
 	echo "Starting HTTP proxy (Basic)..."
@@ -172,7 +189,7 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	PROXY_NTLM_PID=$!
 fi
 
-if [ -z "$SKIP_NTLM_TESTS" -o -z "$SKIP_ONLINE_TESTS" ]; then
+if should_run "NTLM_TESTS" || should_run "ONLINE_TESTS"; then
 	curl --location --silent --show-error https://github.com/ethomson/poxygit/releases/download/v0.6.0/poxygit-0.6.0.jar >poxygit.jar
 
 	echo "Starting HTTP server..."
@@ -182,7 +199,7 @@ if [ -z "$SKIP_NTLM_TESTS" -o -z "$SKIP_ONLINE_TESTS" ]; then
 	HTTP_PID=$!
 fi
 
-if [ -z "$SKIP_SSH_TESTS" ]; then
+if should_run "SSH_TESTS"; then
 	echo "Starting SSH server..."
 	SSHD_DIR=`mktemp -d ${TMPDIR}/sshd.XXXXXXXX`
 	git init --bare "${SSHD_DIR}/test.git" >/dev/null
@@ -232,7 +249,7 @@ fi
 
 # Run the tests that do not require network connectivity.
 
-if [ -z "$SKIP_OFFLINE_TESTS" ]; then
+if should_run "OFFLINE_TESTS"; then
 	echo ""
 	echo "##############################################################################"
 	echo "## Running core tests"
@@ -267,7 +284,7 @@ fi
 # allow them to retry up to 5 times
 export GITTEST_FLAKY_RETRY=5
 
-if [ -z "$SKIP_ONLINE_TESTS" ]; then
+if should_run "ONLINE_TESTS"; then
 	# Run the online tests.  The "online" test suite only includes the
 	# default online tests that do not require additional configuration.
 	# The "proxy" and "ssh" test suites require further setup.
@@ -296,7 +313,7 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	run_test online_customcert
 fi
 
-if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
+if should_run "GITDAEMON_TESTS"; then
 	echo ""
 	echo "Running gitdaemon (standard) tests"
 	echo ""
@@ -324,7 +341,7 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	unset GITTEST_REMOTE_URL
 fi
 
-if [ -z "$SKIP_PROXY_TESTS" ]; then
+if should_run "PROXY_TESTS"; then
 	echo ""
 	echo "Running proxy tests (Basic authentication)"
 	echo ""
@@ -350,7 +367,7 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	unset GITTEST_REMOTE_PROXY_PASS
 fi
 
-if [ -z "$SKIP_NTLM_TESTS" ]; then
+if should_run "NTLM_TESTS"; then
 	echo ""
 	echo "Running NTLM tests (IIS emulation)"
 	echo ""
@@ -376,7 +393,7 @@ if [ -z "$SKIP_NTLM_TESTS" ]; then
 	unset GITTEST_REMOTE_PASS
 fi
 
-if [ -z "$SKIP_NEGOTIATE_TESTS" -a -n "$GITTEST_NEGOTIATE_PASSWORD" ]; then
+if should_run "NEGOTIATE_TESTS" && -n "$GITTEST_NEGOTIATE_PASSWORD" ; then
 	echo ""
 	echo "Running SPNEGO tests"
 	echo ""
@@ -409,7 +426,7 @@ if [ -z "$SKIP_NEGOTIATE_TESTS" -a -n "$GITTEST_NEGOTIATE_PASSWORD" ]; then
 	kdestroy -A
 fi
 
-if [ -z "$SKIP_SSH_TESTS" ]; then
+if should_run "SSH_TESTS"; then
 	export GITTEST_REMOTE_USER=$USER
 	export GITTEST_REMOTE_SSH_KEY="${HOME}/.ssh/id_rsa"
 	export GITTEST_REMOTE_SSH_PUBKEY="${HOME}/.ssh/id_rsa.pub"
@@ -445,7 +462,7 @@ fi
 
 unset GITTEST_FLAKY_RETRY
 
-if [ -z "$SKIP_FUZZERS" ]; then
+if should_run "FUZZERS"; then
 	echo ""
 	echo "##############################################################################"
 	echo "## Running fuzzers"
