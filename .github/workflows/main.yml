@@ -29,6 +29,7 @@ jobs:
     strategy:
       matrix:
         platform:
+        # All builds: core platforms
         - name: "Linux (Xenial, GCC, OpenSSL, libssh2)"
           id: xenial-gcc-openssl
           os: ubuntu-latest
@@ -125,9 +126,9 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
 
-        # Sanitizers
+        # All builds: sanitizers
         - name: "Sanitizer (Memory)"
-          id: memorysanitizer
+          id: sanitizer-memory
           container:
             name: focal
           env:
@@ -141,7 +142,7 @@ jobs:
             UBSAN_OPTIONS: print_stacktrace=1
           os: ubuntu-latest
         - name: "Sanitizer (UndefinedBehavior)"
-          id: ubsanitizer
+          id: sanitizer-ub
           os: ubuntu-latest
           container:
             name: focal
@@ -155,7 +156,7 @@ jobs:
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
         - name: "Sanitizer (Thread)"
-          id: threadsanitizer
+          id: sanitizer-thread
           os: ubuntu-latest
           container:
             name: focal
@@ -170,7 +171,7 @@ jobs:
             UBSAN_OPTIONS: print_stacktrace=1
             TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
 
-        # Experimental: SHA256 support
+        # All builds: experimental SHA256 support
         - name: "Linux (SHA256, Xenial, Clang, OpenSSL)"
           id: xenial-clang-openssl
           os: ubuntu-latest
