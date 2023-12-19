@@ -121,6 +121,18 @@ jobs:
             BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (x86, Cygwin)"
+          id: windows-x86-cygwin
+          os: windows-2019
+          setup-script: cygwin
+          shell: D:\Temp\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
+          continue-on-error: true
+          env:
+            ARCH: x86
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_SSH=ON
+            BUILD_TEMP: D:\Temp
+            SKIP_NEGOTIATE_TESTS: true
+            BUILD_PATH: /bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin
         - name: "Windows (amd64, Cygwin)"
           id: windows-amd64-cygwin
           os: windows-2019
