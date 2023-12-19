@@ -29,42 +29,43 @@ jobs:
     strategy:
       matrix:
         platform:
+        # All builds: core platforms
         - name: "Linux (Xenial, GCC, OpenSSL, libssh2)"
           id: xenial-gcc-openssl
+          os: ubuntu-latest
           container:
             name: xenial
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
-          os: ubuntu-latest
         - name: Linux (Xenial, GCC, mbedTLS, OpenSSH)
           id: xenial-gcc-mbedtls
+          os: ubuntu-latest
           container:
             name: xenial
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec
-          os: ubuntu-latest
         - name: "Linux (Xenial, Clang, OpenSSL, OpenSSH)"
           id: xenial-clang-openssl
+          os: ubuntu-latest
           container:
             name: xenial
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec
-          os: ubuntu-latest
         - name: "Linux (Xenial, Clang, mbedTLS, libssh2)"
           id: xenial-clang-mbedtls
+          os: ubuntu-latest
           container:
             name: xenial
           env:
             CC: clang
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
             CMAKE_GENERATOR: Ninja
-          os: ubuntu-latest
         - name: "macOS"
           id: macos
           os: macos-12
@@ -125,9 +126,9 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
 
-        # Sanitizers
+        # All builds: sanitizers
         - name: "Sanitizer (Memory)"
-          id: memorysanitizer
+          id: sanitizer-memory
           container:
             name: focal
           env:
@@ -141,7 +142,8 @@ jobs:
             UBSAN_OPTIONS: print_stacktrace=1
           os: ubuntu-latest
         - name: "Sanitizer (UndefinedBehavior)"
-          id: ubsanitizer
+          id: sanitizer-ub
+          os: ubuntu-latest
           container:
             name: focal
           env:
@@ -153,9 +155,9 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
-          os: ubuntu-latest
         - name: "Sanitizer (Thread)"
-          id: threadsanitizer
+          id: sanitizer-thread
+          os: ubuntu-latest
           container:
             name: focal
           env:
@@ -168,21 +170,21 @@ jobs:
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
             TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
-          os: ubuntu-latest
 
-        # Experimental: SHA256 support
+        # All builds: experimental SHA256 support
         - name: "Linux (SHA256, Xenial, Clang, OpenSSL)"
           id: xenial-clang-openssl
+          os: ubuntu-latest
           container:
             name: xenial
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DEXPERIMENTAL_SHA256=ON
-          os: ubuntu-latest
         - name: "macOS (SHA256)"
           id: macos
           os: macos-12
+          setup-script: osx
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
@@ -190,7 +192,6 @@ jobs:
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-          setup-script: osx
         - name: "Windows (SHA256, amd64, Visual Studio)"
           id: windows-amd64-vs
           os: windows-2019
@@ -238,15 +239,17 @@ jobs:
     - name: Build
       uses: ./source/.github/actions/run-build
       with:
-        command: cd build && ../source/ci/build.sh
+        command: cd ${BUILD_WORKSPACE:-.}/build && ../source/ci/build.sh
         container: ${{ matrix.platform.container.name }}
         container-version: ${{ env.docker-registry-container-sha }}
+        shell: ${{ matrix.platform.shell }}
     - name: Test
       uses: ./source/.github/actions/run-build
       with:
-        command: cd build && ../source/ci/test.sh
+        command: cd ${BUILD_WORKSPACE:-.}/build && ../source/ci/test.sh
         container: ${{ matrix.platform.container.name }}
         container-version: ${{ env.docker-registry-container-sha }}
+        shell: ${{ matrix.platform.shell }}
     - name: Upload test results
       uses: actions/upload-artifact@v3
       if: success() || failure()
