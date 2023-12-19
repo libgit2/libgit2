@@ -27,7 +27,7 @@ static void set_parse_error(git_config_parser *reader, int col, const char *erro
 
 GIT_INLINE(int) config_keychar(char c)
 {
-	return isalnum((unsigned char)c) || c == '-';
+	return git__isalnum(c) || c == '-';
 }
 
 static int strip_comments(char *line, int in_quotes)
@@ -383,7 +383,7 @@ out:
 
 GIT_INLINE(bool) is_namechar(char c)
 {
-	return isalnum((unsigned char)c) || c == '-';
+	return git__isalnum(c) || c == '-';
 }
 
 static int parse_name(
