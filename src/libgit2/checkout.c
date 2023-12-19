@@ -390,8 +390,15 @@ static int checkout_action_wd_only(
 
 		if (wd->mode != GIT_FILEMODE_TREE) {
 			if (!error) { /* found by git_index__find_pos call */
-				notify = GIT_CHECKOUT_NOTIFY_DIRTY;
-				remove = ((data->strategy & GIT_CHECKOUT_FORCE) != 0);
+
+				/* Sparse checkout will set the SKIP_WORKTREE bit if a file should be skipped */
+				const git_index_entry *e = git_index_get_byindex(data->index, pos);
+				if (e == NULL ||
+						(e->flags_extended & GIT_INDEX_ENTRY_SKIP_WORKTREE) == 0 ||
+						(data->strategy & GIT_CHECKOUT_REMOVE_SPARSE_FILES) != 0) {
+					notify = GIT_CHECKOUT_NOTIFY_DIRTY;
+					remove = ((data->strategy & GIT_CHECKOUT_FORCE) != 0);
+				}
 			} else if (error != GIT_ENOTFOUND)
 				return error;
 			else
@@ -2571,6 +2578,8 @@ int git_checkout_iterator(
 		GIT_DIFF_INCLUDE_TYPECHANGE_TREES |
 		GIT_DIFF_SKIP_BINARY_CHECK |
 		GIT_DIFF_INCLUDE_CASECHANGE;
+	diff_opts.skip_sparse_files = 1;
+
 	if (data.opts.checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
 		diff_opts.flags |= GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	if (data.opts.paths.count > 0)

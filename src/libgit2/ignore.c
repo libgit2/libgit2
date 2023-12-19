@@ -19,160 +19,16 @@
 
 #define GIT_IGNORE_DEFAULT_RULES ".\n..\n.git\n"
 
-/**
- * A negative ignore pattern can negate a positive one without
- * wildcards if it is a basename only and equals the basename of
- * the positive pattern. Thus
- *
- * foo/bar
- * !bar
- *
- * would result in foo/bar being unignored again while
- *
- * moo/foo/bar
- * !foo/bar
- *
- * would do nothing. The reverse also holds true: a positive
- * basename pattern can be negated by unignoring the basename in
- * subdirectories. Thus
- *
- * bar
- * !foo/bar
- *
- * would result in foo/bar being unignored again. As with the
- * first case,
- *
- * foo/bar
- * !moo/foo/bar
- *
- * would do nothing, again.
- */
-static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
-{
-	int (*cmp)(const char *, const char *, size_t);
-	git_attr_fnmatch *longer, *shorter;
-	char *p;
-
-	if ((rule->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0
-	    || (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0)
-		return false;
-
-	if (neg->flags & GIT_ATTR_FNMATCH_ICASE)
-		cmp = git__strncasecmp;
-	else
-		cmp = git__strncmp;
-
-	/* If lengths match we need to have an exact match */
-	if (rule->length == neg->length) {
-		return cmp(rule->pattern, neg->pattern, rule->length) == 0;
-	} else if (rule->length < neg->length) {
-		shorter = rule;
-		longer = neg;
-	} else {
-		shorter = neg;
-		longer = rule;
-	}
-
-	/* Otherwise, we need to check if the shorter
-	 * rule is a basename only (that is, it contains
-	 * no path separator) and, if so, if it
-	 * matches the tail of the longer rule */
-	p = longer->pattern + longer->length - shorter->length;
-
-	if (p[-1] != '/')
-		return false;
-	if (memchr(shorter->pattern, '/', shorter->length) != NULL)
-		return false;
-
-	return cmp(p, shorter->pattern, shorter->length) == 0;
-}
-
-/**
- * A negative ignore can only unignore a file which is given explicitly before, thus
- *
- *    foo
- *    !foo/bar
- *
- * does not unignore 'foo/bar' as it's not in the list. However
- *
- *    foo/<star>
- *    !foo/bar
- *
- * does unignore 'foo/bar', as it is contained within the 'foo/<star>' rule.
- */
-static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match)
-{
-	int error = 0, wildmatch_flags, effective_flags;
-	size_t i;
-	git_attr_fnmatch *rule;
-	char *path;
-	git_str buf = GIT_STR_INIT;
-
-	*out = 0;
-
-	wildmatch_flags = WM_PATHNAME;
-	if (match->flags & GIT_ATTR_FNMATCH_ICASE)
-		wildmatch_flags |= WM_CASEFOLD;
-
-	/* path of the file relative to the workdir, so we match the rules in subdirs */
-	if (match->containing_dir) {
-		git_str_puts(&buf, match->containing_dir);
-	}
-	if (git_str_puts(&buf, match->pattern) < 0)
-		return -1;
-
-	path = git_str_detach(&buf);
-
-	git_vector_foreach(rules, i, rule) {
-		if (!(rule->flags & GIT_ATTR_FNMATCH_HASWILD)) {
-			if (does_negate_pattern(rule, match)) {
-				error = 0;
-				*out = 1;
-				goto out;
-			}
-			else
-				continue;
-		}
-
-		git_str_clear(&buf);
-		if (rule->containing_dir)
-			git_str_puts(&buf, rule->containing_dir);
-		git_str_puts(&buf, rule->pattern);
-
-		if (git_str_oom(&buf))
-			goto out;
-
-		/*
-		 * if rule isn't for full path we match without PATHNAME flag
-		 * as lines like *.txt should match something like dir/test.txt
-		 * requiring * to also match /
-		 */
-		effective_flags = wildmatch_flags;
-		if (!(rule->flags & GIT_ATTR_FNMATCH_FULLPATH))
-			effective_flags &= ~WM_PATHNAME;
-
-		/* if we found a match, we want to keep this rule */
-		if ((wildmatch(git_str_cstr(&buf), path, effective_flags)) == WM_MATCH) {
-			*out = 1;
-			error = 0;
-			goto out;
-		}
-	}
-
-	error = 0;
-
-out:
-	git__free(path);
-	git_str_dispose(&buf);
-	return error;
-}
-
-static int parse_ignore_file(
-	git_repository *repo, git_attr_file *attrs, const char *data, bool allow_macros)
+int parse_ignore_file(
+	git_repository *repo,
+	git_attr_file *attrs,
+	const char *data,
+	const char *context,
+	bool allow_macros)
 {
 	int error = 0;
 	int ignore_case = false;
-	const char *scan = data, *context = NULL;
+	const char *scan = data;
 	git_attr_fnmatch *match = NULL;
 
 	GIT_UNUSED(allow_macros);
@@ -180,14 +36,8 @@ static int parse_ignore_file(
 	if (git_repository__configmap_lookup(&ignore_case, repo, GIT_CONFIGMAP_IGNORECASE) < 0)
 		git_error_clear();
 
-	/* if subdir file path, convert context for file paths */
-	if (attrs->entry &&
-		git_fs_path_root(attrs->entry->path) < 0 &&
-		!git__suffixcmp(attrs->entry->path, "/" GIT_IGNORE_FILE))
-		context = attrs->entry->path;
-
-	if (git_mutex_lock(&attrs->lock) < 0) {
-		git_error_set(GIT_ERROR_OS, "failed to lock ignore file");
+	if (git_mutex_lock(&attrs->lock)) {
+		git_error_set(GIT_ERROR_OS, "failed to lock %s file", attrs->source.filename);
 		return -1;
 	}
 
@@ -199,8 +49,7 @@ static int parse_ignore_file(
 			break;
 		}
 
-		match->flags =
-		    GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
+		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
 
 		if (!(error = git_attr_fnmatch__parse(
 			match, &attrs->pool, context, &scan)))
@@ -219,8 +68,8 @@ static int parse_ignore_file(
 			 * do not optimize away these rules, though.
 			 * */
 			if (match->flags & GIT_ATTR_FNMATCH_NEGATIVE
-			    && !(match->flags & GIT_ATTR_FNMATCH_HASWILD))
-				error = does_negate_rule(&valid_rule, &attrs->rules, match);
+				&& !(match->flags & GIT_ATTR_FNMATCH_HASWILD))
+				error = git_attr__does_negate_rule(&valid_rule, &attrs->rules, match);
 
 			if (!error && valid_rule)
 				error = git_vector_insert(&attrs->rules, match);
@@ -242,6 +91,25 @@ static int parse_ignore_file(
 	return error;
 }
 
+static int git_ignore__parse_ignore_file(
+	git_repository *repo,
+	git_attr_file *attrs,
+	const char *data,
+	bool allow_macros)
+{
+	const char *context = NULL;
+
+	GIT_UNUSED(allow_macros);
+
+	/* if subdir file path, convert context for file paths */
+	if (attrs->entry &&
+		git_fs_path_root(attrs->entry->path) < 0 &&
+		!git__suffixcmp(attrs->entry->path, "/" GIT_IGNORE_FILE))
+		context = attrs->entry->path;
+
+	return parse_ignore_file(repo, attrs, data, context, allow_macros);
+}
+
 static int push_ignore_file(
 	git_ignores *ignores,
 	git_vector *which_list,
@@ -252,7 +120,7 @@ static int push_ignore_file(
 	git_attr_file *file = NULL;
 	int error = 0;
 
-	error = git_attr_cache__get(&file, ignores->repo, NULL, &source, parse_ignore_file, false);
+	error = git_attr_cache__get(&file, ignores->repo, NULL, &source, git_ignore__parse_ignore_file, false);
 
 	if (error < 0)
 		return error;
@@ -284,7 +152,7 @@ static int get_internal_ignores(git_attr_file **out, git_repository *repo)
 
 	/* if internal rules list is empty, insert default rules */
 	if (!error && !(*out)->rules.length)
-		error = parse_ignore_file(repo, *out, GIT_IGNORE_DEFAULT_RULES, false);
+		error = git_ignore__parse_ignore_file(repo, *out, GIT_IGNORE_DEFAULT_RULES, false);
 
 	return error;
 }
@@ -504,7 +372,7 @@ int git_ignore_add_rule(git_repository *repo, const char *rules)
 	if ((error = get_internal_ignores(&ign_internal, repo)) < 0)
 		return error;
 
-	error = parse_ignore_file(repo, ign_internal, rules, false);
+	error = git_ignore__parse_ignore_file(repo, ign_internal, rules, false);
 	git_attr_file__free(ign_internal);
 
 	return error;
@@ -519,7 +387,7 @@ int git_ignore_clear_internal_rules(git_repository *repo)
 		return error;
 
 	if (!(error = git_attr_file__clear_rules(ign_internal, true)))
-		error = parse_ignore_file(
+		error = git_ignore__parse_ignore_file(
 				repo, ign_internal, GIT_IGNORE_DEFAULT_RULES, false);
 
 	git_attr_file__free(ign_internal);

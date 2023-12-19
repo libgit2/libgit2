@@ -10,10 +10,12 @@
 #include "tree.h"
 #include "index.h"
 #include "path.h"
+#include "sparse.h"
 
 #define GIT_ITERATOR_FIRST_ACCESS   (1 << 15)
 #define GIT_ITERATOR_HONOR_IGNORES  (1 << 16)
 #define GIT_ITERATOR_IGNORE_DOT_GIT (1 << 17)
+#define GIT_ITERATOR_HONOR_SPARSE   (1 << 18)
 
 #define iterator__flag(I,F) ((((git_iterator *)(I))->flags & GIT_ITERATOR_ ## F) != 0)
 #define iterator__ignore_case(I)       iterator__flag(I,IGNORE_CASE)
@@ -25,7 +27,7 @@
 #define iterator__honor_ignores(I)     iterator__flag(I,HONOR_IGNORES)
 #define iterator__ignore_dot_git(I)    iterator__flag(I,IGNORE_DOT_GIT)
 #define iterator__descend_symlinks(I)  iterator__flag(I,DESCEND_SYMLINKS)
-
+#define iterator__honor_sparse(I)      iterator__flag(I,HONOR_SPARSE)
 
 static void iterator_set_ignore_case(git_iterator *iter, bool ignore_case)
 {
@@ -443,6 +445,8 @@ typedef struct {
 	 */
 	git_vector similar_trees;
 	git_array_t(git_str) similar_paths;
+	
+	git_sparse_status sparse_status;
 } tree_iterator_frame;
 
 typedef struct {
@@ -455,6 +459,9 @@ typedef struct {
 
 	/* a pool of entries to reduce the number of allocations */
 	git_pool entry_pool;
+	
+	git_sparse sparse;
+	git_sparse_status current_sparse_status;
 } tree_iterator;
 
 GIT_INLINE(tree_iterator_frame *) tree_iterator_parent_frame(
@@ -651,6 +658,19 @@ GIT_INLINE(int) tree_iterator_frame_push_neighbors(
 	return error;
 }
 
+GIT_INLINE(void) tree_iterator_frame_handle_sparse_checkout(
+	tree_iterator *iter, tree_iterator_entry *entry, tree_iterator_frame *parent_frame, tree_iterator_frame *frame)
+{
+	if (git_sparse__lookup(&frame->sparse_status,
+		  &iter->sparse, entry->tree_entry->filename, GIT_DIR_FLAG_TRUE) < 0) {
+		git_error_clear();
+		frame->sparse_status = GIT_SPARSE_NOTFOUND;
+	} else if (frame->sparse_status <= GIT_SPARSE_NOTFOUND) {
+		/* inherit sparse_status from parent if no rule specified */
+		frame->sparse_status = parent_frame->sparse_status;
+	}
+}
+
 GIT_INLINE(int) tree_iterator_frame_push(
 	tree_iterator *iter, tree_iterator_entry *entry)
 {
@@ -673,7 +693,10 @@ GIT_INLINE(int) tree_iterator_frame_push(
 	if (iterator__ignore_case(&iter->base))
 		error = tree_iterator_frame_push_neighbors(iter,
 			parent_frame, frame, entry->tree_entry->filename);
-
+	
+	if (iterator__honor_sparse(&iter->base))
+		tree_iterator_frame_handle_sparse_checkout(iter, entry, parent_frame, frame);
+	
 done:
 	git_tree_free(tree);
 	return error;
@@ -740,6 +763,7 @@ static void tree_iterator_set_current(
 
 	iter->entry.mode = tree_entry->attr;
 	iter->entry.path = iter->entry_path.ptr;
+	iter->current_sparse_status = GIT_SPARSE_UNCHECKED;
 	git_oid_cpy(&iter->entry.id, &tree_entry->oid);
 }
 
@@ -894,6 +918,9 @@ static void tree_iterator_clear(tree_iterator *iter)
 
 	git_pool_clear(&iter->entry_pool);
 	git_str_clear(&iter->entry_path);
+	
+	if (iterator__honor_sparse(&iter->base))
+		git_sparse__free(&iter->sparse);
 
 	iterator_clear(&iter->base);
 }
@@ -906,6 +933,10 @@ static int tree_iterator_init(tree_iterator *iter)
 	    (error = tree_iterator_frame_init(iter, iter->root, NULL)) < 0)
 		return error;
 
+	if (iterator__honor_sparse(&iter->base) &&
+			(error = git_sparse__init(iter->base.repo, &iter->sparse)) < 0)
+		return error;
+	
 	iter->base.flags &= ~GIT_ITERATOR_FIRST_ACCESS;
 
 	return 0;
@@ -936,6 +967,8 @@ int git_iterator_for_tree(
 {
 	tree_iterator *iter;
 	int error;
+	int sparse_checkout_enabled = false;
+	git_repository* repo = NULL;
 
 	static git_iterator_callbacks callbacks = {
 		tree_iterator_current,
@@ -951,14 +984,22 @@ int git_iterator_for_tree(
 	if (tree == NULL)
 		return git_iterator_for_nothing(out, options);
 
+	repo = git_tree_owner(tree);
+	
 	iter = git__calloc(1, sizeof(tree_iterator));
 	GIT_ERROR_CHECK_ALLOC(iter);
 
 	iter->base.type = GIT_ITERATOR_TREE;
 	iter->base.cb = &callbacks;
 
+	if (git_repository__configmap_lookup(&sparse_checkout_enabled, repo, GIT_CONFIGMAP_SPARSECHECKOUT) < 0)
+		git_error_clear();
+	
+	if (sparse_checkout_enabled == true)
+		options->flags |= GIT_ITERATOR_HONOR_SPARSE;
+
 	if ((error = iterator_init_common(&iter->base,
-			git_tree_owner(tree), NULL, options)) < 0 ||
+			repo, NULL, options)) < 0 ||
 		(error = git_tree_dup(&iter->root, tree)) < 0 ||
 		(error = tree_iterator_init(iter)) < 0)
 		goto on_error;
@@ -1768,6 +1809,46 @@ bool git_iterator_current_tree_is_ignored(git_iterator *i)
 	return (frame->is_ignored == GIT_IGNORE_TRUE);
 }
 
+static void tree_iterator_update_sparse_checkout(tree_iterator *iter)
+{
+	tree_iterator_frame *frame;
+	git_dir_flag dir_flag = entry_dir_flag(&iter->entry);
+
+	if (git_sparse__lookup(&iter->current_sparse_status,
+		  &iter->sparse, iter->entry.path, dir_flag) < 0) {
+		git_error_clear();
+		iter->current_sparse_status = GIT_SPARSE_NOTFOUND;
+	}
+
+	/* use sparse checkout from containing frame stack */
+	if (iter->current_sparse_status <= GIT_SPARSE_NOTFOUND) {
+		frame = tree_iterator_current_frame(iter);
+		iter->current_sparse_status = frame->sparse_status;
+	}
+}
+
+GIT_INLINE(bool) tree_iterator_current_skip_checkout(
+	tree_iterator *iter)
+{
+	if (iter->current_sparse_status == GIT_SPARSE_UNCHECKED)
+		tree_iterator_update_sparse_checkout(iter);
+	
+	return (iter->current_sparse_status == GIT_SPARSE_NOCHECKOUT);
+}
+
+bool git_iterator_current_skip_checkout(git_iterator *i)
+{
+	tree_iterator *iter = NULL;
+	
+	if (i->type != GIT_ITERATOR_TREE)
+		return false;
+	
+	iter = GIT_CONTAINER_OF(i, tree_iterator, base);
+	if (iterator__honor_sparse(&iter->base) == false)
+		return false;
+	
+	return tree_iterator_current_skip_checkout(iter);
+}
 static int filesystem_iterator_advance_over(
 	const git_index_entry **out,
 	git_iterator_status_t *status,
