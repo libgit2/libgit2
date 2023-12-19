@@ -97,9 +97,6 @@ int cmd_index_pack(int argc, char **argv)
 		}
 	}
 
-	if (!read_stdin)
-		p_close(fd);
-
 	if (git_indexer_commit(idx, &stats) < 0) {
 		ret = cli_error_git();
 		goto done;
@@ -108,6 +105,9 @@ int cmd_index_pack(int argc, char **argv)
 	cli_progress_finish(&progress);
 
 done:
+	if (!read_stdin && fd >= 0)
+		p_close(fd);
+
 	cli_progress_dispose(&progress);
 	git_indexer_free(idx);
 	return ret;

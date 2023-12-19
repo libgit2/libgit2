@@ -121,7 +121,7 @@ int git_process_new(
 	GIT_ERROR_CHECK_ALLOC(process);
 
 	if (git_strlist_copy_with_null(&process->args, args, args_len) < 0 ||
-	    merge_env(&process->env, env, env_len, opts->exclude_env) < 0) {
+	    merge_env(&process->env, env, env_len, opts ? opts->exclude_env : false) < 0) {
 		git_process_free(process);
 		return -1;
 	}
