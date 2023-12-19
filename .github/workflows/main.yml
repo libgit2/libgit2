@@ -238,14 +238,14 @@ jobs:
     - name: Build
       uses: ./source/.github/actions/run-build
       with:
-        command: cd build && ../source/ci/build.sh
+        command: cd ${BUILD_WORKSPACE:-.}/build && ../source/ci/build.sh
         container: ${{ matrix.platform.container.name }}
         container-version: ${{ env.docker-registry-container-sha }}
         shell: ${{ matrix.platform.shell }}
     - name: Test
       uses: ./source/.github/actions/run-build
       with:
-        command: cd build && ../source/ci/test.sh
+        command: cd ${BUILD_WORKSPACE:-.}/build && ../source/ci/test.sh
         container: ${{ matrix.platform.container.name }}
         container-version: ${{ env.docker-registry-container-sha }}
         shell: ${{ matrix.platform.shell }}
