@@ -118,7 +118,11 @@ simulate the output of <code>git blame</code> and a few of its command line argu
   <span class="n">parse_opts</span><span class="p">(</span><span class="o">&amp;</span><span class="n">o</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">M</span><span class="p">)</span> <span class="n">blameopts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES</span><span class="p">;</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">C</span><span class="p">)</span> <span class="n">blameopts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES</span><span class="p">;</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">F</span><span class="p">)</span> <span class="n">blameopts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_BLAME_FIRST_PARENT</span><span class="p">;</span></pre></div>
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">F</span><span class="p">)</span> <span class="n">blameopts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_BLAME_FIRST_PARENT</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">start_line</span> <span class="o">&amp;&amp;</span> <span class="n">o</span><span class="p">.</span><span class="n">end_line</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">blameopts</span><span class="p">.</span><span class="n">min_line</span> <span class="o">=</span> <span class="n">o</span><span class="p">.</span><span class="n">start_line</span><span class="p">;</span>
+    <span class="n">blameopts</span><span class="p">.</span><span class="n">max_line</span> <span class="o">=</span> <span class="n">o</span><span class="p">.</span><span class="n">end_line</span><span class="p">;</span>
+  <span class="p">}</span></pre></div>
       </td>
     </tr>
     <tr id='section-3'>
