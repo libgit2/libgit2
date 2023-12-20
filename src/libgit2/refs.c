@@ -1080,6 +1080,12 @@ int git_reference_cmp(
 	return git_oid__cmp(&ref1->target.oid, &ref2->target.oid);
 }
 
+int git_reference__cmp_cb(const void *a, const void *b)
+{
+	return git_reference_cmp(
+		(const git_reference *)a, (const git_reference *)b);
+}
+
 /*
  * Starting with the reference given by `ref_name`, follows symbolic
  * references until a direct reference is found and updated the OID
