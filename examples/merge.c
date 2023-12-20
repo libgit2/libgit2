@@ -30,7 +30,7 @@ struct merge_options {
 	git_annotated_commit **annotated;
 	size_t annotated_count;
 
-	int no_commit : 1;
+	unsigned int no_commit : 1;
 };
 
 static void print_usage(void)
