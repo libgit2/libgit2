@@ -27,7 +27,25 @@ jobs:
       matrix:
         platform:
         # All builds: core platforms
-        - name: "Linux (Xenial, GCC, OpenSSL, libssh2)"
+        - name: "Linux (Noble, GCC, OpenSSL, libssh2)"
+          id: noble-gcc-openssl
+          os: ubuntu-latest
+          container:
+            name: noble
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
+        - name: "Linux (Noble, Clang, mbedTLS, OpenSSH)"
+          id: noble-clang-mbedtls
+          os: ubuntu-latest
+          container:
+            name: noble
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec
+            CMAKE_GENERATOR: Ninja
+        - name: "Linux (Xenial, GCC, OpenSSL, OpenSSH)"
           id: xenial-gcc-openssl
           os: ubuntu-latest
           container:
@@ -35,34 +53,16 @@ jobs:
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
-        - name: Linux (Xenial, GCC, mbedTLS, OpenSSH)
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
+        - name: "Linux (Xenial, Clang, mbedTLS, libssh2)"
           id: xenial-gcc-mbedtls
           os: ubuntu-latest
           container:
             name: xenial
           env:
-            CC: gcc
-            CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec
-        - name: "Linux (Xenial, Clang, OpenSSL, OpenSSH)"
-          id: xenial-clang-openssl
-          os: ubuntu-latest
-          container:
-            name: xenial
-          env:
             CC: clang
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec
-        - name: "Linux (Xenial, Clang, mbedTLS, libssh2)"
-          id: xenial-clang-mbedtls
-          os: ubuntu-latest
-          container:
-            name: xenial
-          env:
-            CC: clang
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
-            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
         - name: "macOS"
           id: macos
           os: macos-12
@@ -127,9 +127,9 @@ jobs:
         - name: "Sanitizer (Memory)"
           id: memorysanitizer
           container:
-            name: focal
+            name: noble
           env:
-            CC: clang-10
+            CC: clang-17
             CFLAGS: -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
             CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local/msan -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
@@ -142,9 +142,9 @@ jobs:
           id: ubsanitizer
           os: ubuntu-latest
           container:
-            name: focal
+            name: noble
           env:
-            CC: clang-10
+            CC: clang-17
             CFLAGS: -fsanitize=undefined,nullability -fno-sanitize-recover=undefined,nullability -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
             CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
@@ -156,9 +156,9 @@ jobs:
           id: threadsanitizer
           os: ubuntu-latest
           container:
-            name: focal
+            name: noble
           env:
-            CC: clang-10
+            CC: clang-17
             CFLAGS: -fsanitize=thread -fno-optimize-sibling-calls -fno-omit-frame-pointer
             CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
@@ -277,12 +277,12 @@ jobs:
             CMAKE_OPTIONS: -DTHREADSAFE=OFF -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
         - name: "Linux (no mmap)"
-          id: focal-nommap
+          id: noble-nommap
           os: ubuntu-latest
           container:
-            name: focal
+            name: noble
           env:
-            CC: clang-10
+            CC: gcc
             CFLAGS: -DNO_MMAP
             CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local
             CMAKE_GENERATOR: Ninja
