@@ -8,7 +8,7 @@ struct args_info {
 	int    argc;
 	char **argv;
 	int    pos;
-	int    opts_done : 1; /**< Did we see a -- separator */
+	unsigned int opts_done : 1; /**< Did we see a -- separator */
 };
 #define ARGS_INFO_INIT { argc, argv, 0, 0 }
 #define ARGS_CURRENT(args) args->argv[args->pos]
