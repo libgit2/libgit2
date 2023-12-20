@@ -865,8 +865,30 @@ static int load_grafts(git_repository *repo)
 	git_str path = GIT_STR_INIT;
 	int error;
 
-	if ((error = git_repository__item_path(&path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
-	    (error = git_str_joinpath(&path, path.ptr, "grafts")) < 0 ||
+	/* refresh if they've both been opened previously */
+	if (repo->grafts && repo->shallow_grafts) {
+		if ((error = git_grafts_refresh(repo->grafts)) < 0 ||
+		    (error = git_grafts_refresh(repo->shallow_grafts)) < 0)
+			return error;
+	}
+
+	/* resolve info path, which may not be found for inmemory repository */
+	if ((error = git_repository__item_path(&path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			return error;
+
+		/* create empty/inmemory grafts for inmemory repository */
+		if (!repo->grafts && (error = git_grafts_new(&repo->grafts, repo->oid_type)) < 0)
+			return error;
+
+		if (!repo->shallow_grafts && (error = git_grafts_new(&repo->shallow_grafts, repo->oid_type)) < 0)
+			return error;
+
+		return 0;
+	}
+
+	/* load grafts from disk */
+	if ((error = git_str_joinpath(&path, path.ptr, "grafts")) < 0 ||
 	    (error = git_grafts_open_or_refresh(&repo->grafts, path.ptr, repo->oid_type)) < 0)
 		goto error;
 
