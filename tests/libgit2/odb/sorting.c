@@ -7,6 +7,11 @@ typedef struct {
 	size_t position;
 } fake_backend;
 
+static void odb_backend_free(git_odb_backend *odb)
+{
+	git__free(odb);
+}
+
 static git_odb_backend *new_backend(size_t position)
 {
 	fake_backend *b;
@@ -15,7 +20,7 @@ static git_odb_backend *new_backend(size_t position)
 	if (b == NULL)
 		return NULL;
 
-	b->base.free = (void (*)(git_odb_backend *)) git__free;
+	b->base.free = odb_backend_free;
 	b->base.version = GIT_ODB_BACKEND_VERSION;
 	b->position = position;
 	return (git_odb_backend *)b;

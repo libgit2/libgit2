@@ -26,9 +26,10 @@
 #define iterator__ignore_dot_git(I)    iterator__flag(I,IGNORE_DOT_GIT)
 #define iterator__descend_symlinks(I)  iterator__flag(I,DESCEND_SYMLINKS)
 
-
 static void iterator_set_ignore_case(git_iterator *iter, bool ignore_case)
 {
+	int (*vector_cmp)(const void *a, const void *b);
+
 	if (ignore_case)
 		iter->flags |= GIT_ITERATOR_IGNORE_CASE;
 	else
@@ -39,7 +40,9 @@ static void iterator_set_ignore_case(git_iterator *iter, bool ignore_case)
 	iter->prefixcomp = ignore_case ? git__prefixcmp_icase : git__prefixcmp;
 	iter->entry_srch = ignore_case ? git_index_entry_isrch : git_index_entry_srch;
 
-	git_vector_set_cmp(&iter->pathlist, (git_vector_cmp)iter->strcomp);
+	vector_cmp = ignore_case ? git__strcasecmp_cb : git__strcmp_cb;
+
+	git_vector_set_cmp(&iter->pathlist, vector_cmp);
 }
 
 static int iterator_range_init(
@@ -299,6 +302,7 @@ typedef enum {
 static iterator_pathlist_search_t iterator_pathlist_search(
 	git_iterator *iter, const char *path, size_t path_len)
 {
+	int (*vector_cmp)(const void *a, const void *b);
 	const char *p;
 	size_t idx;
 	int error;
@@ -308,8 +312,10 @@ static iterator_pathlist_search_t iterator_pathlist_search(
 
 	git_vector_sort(&iter->pathlist);
 
-	error = git_vector_bsearch2(&idx, &iter->pathlist,
-		(git_vector_cmp)iter->strcomp, path);
+	vector_cmp = (iter->flags & GIT_ITERATOR_IGNORE_CASE) != 0 ?
+		git__strcasecmp_cb : git__strcmp_cb;
+
+	error = git_vector_bsearch2(&idx, &iter->pathlist, vector_cmp, path);
 
 	/* the given path was found in the pathlist.  since the pathlist only
 	 * matches directories when they're suffixed with a '/', analyze the
