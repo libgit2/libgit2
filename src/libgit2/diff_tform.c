@@ -653,6 +653,23 @@ static int calc_self_similarity(
 	return 0;
 }
 
+static void handle_non_blob(
+	git_diff *diff,
+	const git_diff_find_options *opts,
+	size_t delta_idx)
+{
+	git_diff_delta *delta = GIT_VECTOR_GET(&diff->deltas, delta_idx);
+
+	/* skip things that are blobs */
+	if (GIT_MODE_ISBLOB(delta->old_file.mode))
+		return;
+
+	/* honor "remove unmodified" flag for non-blobs (eg submodules) */
+	if (delta->status == GIT_DELTA_UNMODIFIED &&
+	    FLAG_SET(opts, GIT_DIFF_FIND_REMOVE_UNMODIFIED))
+		delta->flags |= GIT_DIFF_FLAG__TO_DELETE;
+}
+
 static bool is_rename_target(
 	git_diff *diff,
 	const git_diff_find_options *opts,
@@ -718,15 +735,8 @@ static bool is_rename_source(
 	git_diff_delta *delta = GIT_VECTOR_GET(&diff->deltas, delta_idx);
 
 	/* skip things that aren't blobs */
-	if (!GIT_MODE_ISBLOB(delta->old_file.mode)) {
-
-		/* but still honor "remove unmodified" flag */
-		if (delta->status == GIT_DELTA_UNMODIFIED &&
-			FLAG_SET(opts, GIT_DIFF_FIND_REMOVE_UNMODIFIED))
-			delta->flags |= GIT_DIFF_FLAG__TO_DELETE;
-
+	if (!GIT_MODE_ISBLOB(delta->old_file.mode))
 		return false;
-	}
 
 	switch (delta->status) {
 	case GIT_DELTA_ADDED:
@@ -817,7 +827,8 @@ int git_diff_find_similar(
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	size_t num_deltas, num_srcs = 0, num_tgts = 0;
 	size_t tried_srcs = 0, tried_tgts = 0;
-	size_t num_rewrites = 0, num_updates = 0, num_bumped = 0, num_to_delete = 0;
+	size_t num_rewrites = 0, num_updates = 0, num_bumped = 0,
+	       num_to_delete = 0;
 	size_t sigcache_size;
 	void **sigcache = NULL; /* cache of similarity metric file signatures */
 	diff_find_match *tgt2src = NULL;
@@ -851,6 +862,8 @@ int git_diff_find_similar(
 	 * mark them for splitting if break-rewrites is enabled
 	 */
 	git_vector_foreach(&diff->deltas, t, tgt) {
+		handle_non_blob(diff, &opts, t);
+
 		if (is_rename_source(diff, &opts, t, sigcache))
 			++num_srcs;
 
@@ -861,7 +874,7 @@ int git_diff_find_similar(
 			num_rewrites++;
 
 		if ((tgt->flags & GIT_DIFF_FLAG__TO_DELETE) != 0)
-		  num_to_delete++;
+			num_to_delete++;
 	}
 
 	/* If there are no candidate srcs or tgts, no need to find matches */
@@ -1108,11 +1121,15 @@ split_and_delete:
 	 * Actually split and delete entries as needed
 	 */
 
-	if (num_rewrites > 0 || num_updates > 0 || num_to_delete > 0)
+	if (num_rewrites > 0 || num_updates > 0 || num_to_delete > 0) {
+		size_t apply_len = diff->deltas.length -
+		                   num_rewrites - num_to_delete;
+
 		error = apply_splits_and_deletes(
-			diff, diff->deltas.length - num_rewrites - num_to_delete,
+			diff, apply_len,
 			FLAG_SET(&opts, GIT_DIFF_BREAK_REWRITES) &&
 			!FLAG_SET(&opts, GIT_DIFF_BREAK_REWRITES_FOR_RENAMES_ONLY));
+	}
 
 cleanup:
 	git__free(tgt2src);
