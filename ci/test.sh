@@ -25,6 +25,8 @@ CTEST=$(which ctest)
 TMPDIR=${TMPDIR:-/tmp}
 USER=${USER:-$(whoami)}
 
+GITTEST_SSH_KEYTYPE=${GITTEST_SSH_KEYTYPE:="ecdsa"}
+
 HOME=`mktemp -d ${TMPDIR}/home.XXXXXXXX`
 export CLAR_HOMEDIR=${HOME}
 
@@ -207,7 +209,7 @@ if should_run "SSH_TESTS"; then
 	Port 2222
 	ListenAddress 0.0.0.0
 	Protocol 2
-	HostKey ${SSHD_DIR}/id_rsa
+	HostKey ${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}
 	PidFile ${SSHD_DIR}/pid
 	AuthorizedKeysFile ${HOME}/.ssh/authorized_keys
 	LogLevel DEBUG
@@ -216,21 +218,21 @@ if should_run "SSH_TESTS"; then
 	PubkeyAuthentication yes
 	ChallengeResponseAuthentication no
 	StrictModes no
-	HostCertificate ${SSHD_DIR}/id_rsa.pub
-	HostKey ${SSHD_DIR}/id_rsa
+	HostCertificate ${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}.pub
+	HostKey ${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}
 	# Required here as sshd will simply close connection otherwise
 	UsePAM no
 	EOF
-	ssh-keygen -t rsa -f "${SSHD_DIR}/id_rsa" -N "" -q
+	ssh-keygen -t "${GITTEST_SSH_KEYTYPE}" -f "${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}" -N "" -q
 	/usr/sbin/sshd -f "${SSHD_DIR}/sshd_config" -E "${SSHD_DIR}/log"
 
 	# Set up keys
 	mkdir "${HOME}/.ssh"
-	ssh-keygen -t rsa -f "${HOME}/.ssh/id_rsa" -N "" -q
-	cat "${HOME}/.ssh/id_rsa.pub" >>"${HOME}/.ssh/authorized_keys"
+	ssh-keygen -t "${GITTEST_SSH_KEYTYPE}" -f "${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE}" -N "" -q
+	cat "${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE}.pub" >>"${HOME}/.ssh/authorized_keys"
 	while read algorithm key comment; do
 		echo "[localhost]:2222 $algorithm $key" >>"${HOME}/.ssh/known_hosts"
-	done <"${SSHD_DIR}/id_rsa.pub"
+	done <"${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}.pub"
 
 	# Append the github.com keys for the tests that don't override checks.
 	# We ask for ssh-rsa to test that the selection based off of known_hosts
@@ -428,12 +430,12 @@ fi
 
 if should_run "SSH_TESTS"; then
 	export GITTEST_REMOTE_USER=$USER
-	export GITTEST_REMOTE_SSH_KEY="${HOME}/.ssh/id_rsa"
-	export GITTEST_REMOTE_SSH_PUBKEY="${HOME}/.ssh/id_rsa.pub"
+	export GITTEST_REMOTE_SSH_KEY="${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE}"
+	export GITTEST_REMOTE_SSH_PUBKEY="${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE}.pub"
 	export GITTEST_REMOTE_SSH_PASSPHRASE=""
 	export GITTEST_REMOTE_SSH_FINGERPRINT="${SSH_FINGERPRINT}"
 
-	export GITTEST_SSH_CMD="ssh -i ${HOME}/.ssh/id_rsa -o UserKnownHostsFile=${HOME}/.ssh/known_hosts"
+	export GITTEST_SSH_CMD="ssh -i ${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE} -o UserKnownHostsFile=${HOME}/.ssh/known_hosts"
 
 	echo ""
 	echo "Running ssh tests"
