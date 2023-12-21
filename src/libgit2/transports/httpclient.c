@@ -1252,6 +1252,7 @@ static void complete_response_body(git_http_client *client)
 	}
 
 done:
+	client->parser.data = NULL;
 	git_str_clear(&client->read_buf);
 }
 
@@ -1441,6 +1442,7 @@ int git_http_client_read_response(
 done:
 	git_str_dispose(&parser_context.parse_header_name);
 	git_str_dispose(&parser_context.parse_header_value);
+	client->parser.data = NULL;
 
 	return error;
 }
@@ -1496,6 +1498,8 @@ done:
 	if (error < 0)
 		client->connected = 0;
 
+	client->parser.data = NULL;
+
 	return error;
 }
 
@@ -1529,6 +1533,8 @@ int git_http_client_skip_body(git_http_client *client)
 
 	if (error < 0)
 		client->connected = 0;
+
+	client->parser.data = NULL;
 
 	return error;
 }
