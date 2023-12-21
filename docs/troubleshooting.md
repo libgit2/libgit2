@@ -14,6 +14,7 @@ CMake Failures
 -----------------
 
 -- Could NOT find PkgConfig (missing: PKG_CONFIG_EXECUTABLE)
+
 the reason for this is the unavailabilty of the utility in your system
 install pk-config utility on your system,resolving this on Linux is a simple task by installing pkg-config through the following method:
 sudo apt-get install pkg-config
