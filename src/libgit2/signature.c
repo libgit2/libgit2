@@ -185,6 +185,7 @@ int git_signature_now(git_signature **sig_out, const char *name, const char *ema
 	return 0;
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_signature_default(git_signature **out, git_repository *repo)
 {
 	int error;
@@ -201,6 +202,7 @@ int git_signature_default(git_signature **out, git_repository *repo)
 	git_config_free(cfg);
 	return error;
 }
+#endif
 
 int git_signature__default_from_env(const char *name_env_var, const char *email_env_var,
 		const char *date_env_var, git_signature **out, git_repository *repo)
