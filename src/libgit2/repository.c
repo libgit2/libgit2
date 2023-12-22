@@ -3874,3 +3874,65 @@ git_oid_t git_repository_oid_type(git_repository *repo)
 {
 	return repo ? repo->oid_type : 0;
 }
+
+struct mergehead_data {
+	git_repository *repo;
+	git_vector *parents;
+};
+
+static int insert_mergehead(const git_oid *oid, void *payload)
+{
+	git_commit *commit;
+	struct mergehead_data *data = (struct mergehead_data *)payload;
+
+	if (git_commit_lookup(&commit, data->repo, oid) < 0)
+		return -1;
+
+	return git_vector_insert(data->parents, commit);
+}
+
+int git_repository_commit_parents(git_commitarray *out, git_repository *repo)
+{
+	git_commit *first_parent = NULL, *commit;
+	git_reference *head_ref = NULL;
+	git_vector parents = GIT_VECTOR_INIT;
+	struct mergehead_data data;
+	size_t i;
+	int error;
+
+	GIT_ASSERT_ARG(out && repo);
+
+	out->count = 0;
+	out->commits = NULL;
+
+	error = git_revparse_ext((git_object **)&first_parent, &head_ref, repo, "HEAD");
+
+	if (error != 0) {
+		if (error == GIT_ENOTFOUND)
+			error = 0;
+
+		goto done;
+	}
+
+	if ((error = git_vector_insert(&parents, first_parent)) < 0)
+		goto done;
+
+	data.repo = repo;
+	data.parents = &parents;
+
+	error = git_repository_mergehead_foreach(repo, insert_mergehead, &data);
+
+	if (error == GIT_ENOTFOUND)
+		error = 0;
+	else if (error != 0)
+		goto done;
+
+	out->commits = (git_commit **)git_vector_detach(&out->count, NULL, &parents);
+
+done:
+	git_vector_foreach(&parents, i, commit)
+		git__free(commit);
+
+	git_reference_free(head_ref);
+	return error;
+}

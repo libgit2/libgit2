@@ -541,6 +541,24 @@ typedef int (*git_commit_create_cb)(
 	const git_commit *parents[],
 	void *payload);
 
+/** An array of commits returned from the library */
+typedef struct git_commitarray {
+	git_commit **commits;
+	size_t count;
+} git_commitarray;
+
+/**
+ * Free the commits contained in a commit array.  This method should
+ * be called on `git_commitarray` objects that were provided by the
+ * library.  Not doing so will result in a memory leak.
+ *
+ * This does not free the `git_commitarray` itself, since the library
+ * will never allocate that object directly itself.
+ *
+ * @param array The git_commitarray that contains commits to free
+ */
+GIT_EXTERN(void) git_commitarray_dispose(git_commitarray *array);
+
 /** @} */
 GIT_END_DECL
 #endif
