@@ -364,7 +364,11 @@ jobs:
       working-directory: ${{ env.docker-config-path }}
       if: matrix.platform.container.name != ''
     - name: Create container
-      run: docker build -t ${{ env.docker-registry-container-sha }} -f ${{ env.dockerfile }} .
+      run: |
+        if [ "${{ matrix.container.base }}" != "" ]; then
+          BASE_ARG="--build-arg BASE=${{ matrix.container.base }}"
+        fi
+        docker build -t ${{ env.docker-registry-container-sha }} --build-arg UID=$(id -u) --build-arg GID=$(id -g) ${BASE_ARG} -f ${{ env.dockerfile }} .
       working-directory: ${{ env.docker-config-path }}
       if: matrix.platform.container.name != '' && env.docker-container-exists != 'true'
     - name: Prepare build
@@ -372,15 +376,36 @@ jobs:
     - name: Build
       uses: ./source/.github/actions/run-build
       with:
-        command: cd build && ../source/ci/build.sh
+        command: cd ${BUILD_WORKSPACE:-.}/build && ../source/ci/build.sh
         container: ${{ matrix.platform.container.name }}
         container-version: ${{ env.docker-registry-container-sha }}
+        shell: ${{ matrix.platform.shell }}
     - name: Test
       uses: ./source/.github/actions/run-build
       with:
-        command: cd build && ../source/ci/test.sh
+        command: cd ${BUILD_WORKSPACE:-.}/build && ../source/ci/test.sh
         container: ${{ matrix.platform.container.name }}
         container-version: ${{ env.docker-registry-container-sha }}
+        shell: ${{ matrix.platform.shell }}
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: success() || failure()
+      with:
+        name: test-results-${{ matrix.platform.id }}
+        path: build/results_*.xml
+
+  test_results:
+    name: Test results
+    needs: [ build ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download test results
+      uses: actions/download-artifact@v3
+    - name: Generate test summary
+      uses: test-summary/action@v2
+      with:
+        paths: 'test-results-*/*.xml'
 
   coverity:
     # Only run scheduled workflows on the main repository; prevents people
