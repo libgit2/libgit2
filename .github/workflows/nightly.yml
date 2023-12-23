@@ -8,7 +8,7 @@ on:
 
 env:
   docker-registry: ghcr.io
-  docker-config-path: source/ci/docker
+  docker-config-path: ci/docker
 
 permissions:
   contents: read
@@ -355,22 +355,15 @@ jobs:
     - name: Setup QEMU
       run: docker run --rm --privileged multiarch/qemu-user-static:register --reset
       if: matrix.platform.container.qemu == true
-    - name: Download container
-      run: |
-        "${{ github.workspace }}/source/ci/getcontainer.sh" "${{ matrix.platform.container.name }}" "${{ matrix.platform.container.dockerfile }}"
-      env:
-        DOCKER_REGISTRY: ${{ env.docker-registry }}
-        GITHUB_TOKEN: ${{ secrets.github_token }}
-      working-directory: ${{ env.docker-config-path }}
+    - name: Set up container
+      uses: ./source/.github/actions/download-or-build-container
+      with:
+        registry: ${{ env.docker-registry }}
+        config-path: ${{ env.docker-config-path }}
+        container: ${{ matrix.platform.container.name }}
+        github_token: ${{ secrets.github_token }}
+        dockerfile: ${{ matrix.platform.container.dockerfile }}
       if: matrix.platform.container.name != ''
-    - name: Create container
-      run: |
-        if [ "${{ matrix.container.base }}" != "" ]; then
-          BASE_ARG="--build-arg BASE=${{ matrix.container.base }}"
-        fi
-        docker build -t ${{ env.docker-registry-container-sha }} --build-arg UID=$(id -u) --build-arg GID=$(id -g) ${BASE_ARG} -f ${{ env.dockerfile }} .
-      working-directory: ${{ env.docker-config-path }}
-      if: matrix.platform.container.name != '' && env.docker-container-exists != 'true'
     - name: Prepare build
       run: mkdir build
     - name: Build
@@ -420,13 +413,14 @@ jobs:
       with:
         path: source
         fetch-depth: 0
-    - name: Download container
-      run: |
-        "${{ github.workspace }}/source/ci/getcontainer.sh" xenial
-      env:
-        DOCKER_REGISTRY: ${{ env.docker-registry }}
-        GITHUB_TOKEN: ${{ secrets.github_token }}
-      working-directory: ${{ env.docker-config-path }}
+    - name: Set up container
+      uses: ./source/.github/actions/download-or-build-container
+      with:
+        registry: ${{ env.docker-registry }}
+        config-path: ${{ env.docker-config-path }}
+        container: xenial
+        github_token: ${{ secrets.github_token }}
+      if: matrix.platform.container.name != ''
     - name: Run Coverity
       run: source/ci/coverity.sh
       env:
