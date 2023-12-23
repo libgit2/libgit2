@@ -1108,7 +1108,7 @@ void git_commitarray_dispose(git_commitarray *array)
 	for (i = 0; i < array->count; i++)
 		git_commit_free(array->commits[i]);
 
-	git__free(array->commits);
+	git__free((git_commit **)array->commits);
 
 	memset(array, 0, sizeof(*array));
 }

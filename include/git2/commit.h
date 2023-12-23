@@ -543,7 +543,7 @@ typedef int (*git_commit_create_cb)(
 
 /** An array of commits returned from the library */
 typedef struct git_commitarray {
-	git_commit **commits;
+	git_commit *const *commits;
 	size_t count;
 } git_commitarray;
 
