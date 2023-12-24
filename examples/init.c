@@ -123,7 +123,7 @@ int lg2_init(git_repository *repo, int argc, char *argv[])
  */
 static void create_initial_commit(git_repository *repo)
 {
-	git_signature *author_sig, *committer_sig;
+	git_signature *author_sig = NULL, *committer_sig = NULL;
 	git_index *index;
 	git_oid tree_id, commit_id;
 	git_tree *tree;
