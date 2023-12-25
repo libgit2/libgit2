@@ -70,7 +70,7 @@ static int fmt_date(git_str *out, git_time_t time, int offset)
 	time_t t;
 	struct tm gmt;
 
-	GIT_ASSERT_ARG(out);
+	CLI_ASSERT(out);
 
 	t = (time_t)(time + offset * 60);
 
