@@ -25,8 +25,9 @@ CMake Failures
   depending on your operating system. For example, on Debian-based systems, you
   can use: (sudo apt-get install libgssapi-dev) or (sudo apt install libgssglue-dev).
 
+
 * **'-- Could NOT find OpenSSL(missing: OPENSSL_CRYPTO_LIBRARY OPENSSL_INCLUDE_DIR) logo`**
-  The build system is unable to find OpenSSL. Make sure OpenSSL is installed on your system.
+  Build system is unable to find OpenSSL. Make sure OpenSSL is installed on your system.
   If OpenSSL is installed, it's possible that the build system needs information about the
   location of the OpenSSL libraries and include files. You can set the OPENSSL_ROOT_DIR
   environment variable to the root folder of your OpenSSL installation. For example:
