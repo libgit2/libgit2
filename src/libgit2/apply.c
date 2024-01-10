@@ -385,6 +385,27 @@ done:
 	return error;
 }
 
+int git_apply_to_buf(
+	git_buf *contents_out,
+	char **filename_out,
+	unsigned int *mode_out,
+	const char *source,
+	size_t source_len,
+	git_diff *diff,
+	const git_apply_options *given_opts)
+{
+    int error = 0;
+    git_patch *patch;
+    error = git_patch_from_diff(&patch, diff, 0);
+    if (error) {
+        git_patch_free(patch);
+        return error;
+    }
+    error = git_apply__patch(contents_out, filename_out, mode_out, source, source_len, patch, given_opts);
+    git_patch_free(patch);
+    return error;
+}
+
 int git_apply__patch(
 	git_str *contents_out,
 	char **filename_out,

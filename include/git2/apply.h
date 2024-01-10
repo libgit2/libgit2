@@ -160,6 +160,18 @@ GIT_EXTERN(int) git_apply(
 	git_apply_location_t location,
 	const git_apply_options *options);
 
+/**
+ * Apply a patch to a buffer.
+ */
+GIT_EXTERN(int) git_apply_to_buf(
+    git_buf *contents_out,
+    char **filename_out,
+    unsigned int *mode_out,
+    const char *source,
+    size_t source_len,
+    git_diff *diff,
+    const git_apply_options *given_opts);
+
 /** @} */
 GIT_END_DECL
 #endif
