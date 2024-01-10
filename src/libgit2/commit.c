@@ -1097,3 +1097,18 @@ int git_commit_author_with_mailmap(
 {
 	return git_mailmap_resolve_signature(out, mailmap, commit->author);
 }
+
+void git_commitarray_dispose(git_commitarray *array)
+{
+	size_t i;
+
+	if (array == NULL)
+		return;
+
+	for (i = 0; i < array->count; i++)
+		git_commit_free(array->commits[i]);
+
+	git__free((git_commit **)array->commits);
+
+	memset(array, 0, sizeof(*array));
+}

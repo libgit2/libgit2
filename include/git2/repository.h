@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "buffer.h"
+#include "commit.h"
 
 /**
  * @file git2/repository.h
@@ -977,6 +978,17 @@ GIT_EXTERN(int) git_repository_set_ident(git_repository *repo, const char *name,
  * @return the object id type
  */
 GIT_EXTERN(git_oid_t) git_repository_oid_type(git_repository *repo);
+
+/**
+ * Gets the parents of the next commit, given the current repository state.
+ * Generally, this is the HEAD commit, except when performing a merge, in
+ * which case it is two or more commits.
+ *
+ * @param commits a `git_commitarray` that will contain the commit parents
+ * @param repo the repository
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_repository_commit_parents(git_commitarray *commits, git_repository *repo);
 
 /** @} */
 GIT_END_DECL
