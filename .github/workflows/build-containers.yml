@@ -24,6 +24,7 @@ jobs:
         - name: xenial
         - name: bionic
         - name: focal
+        - name: noble
         - name: docurium
         - name: bionic-x86
           dockerfile: bionic
