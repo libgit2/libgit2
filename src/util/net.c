@@ -11,7 +11,6 @@
 
 #include "posix.h"
 #include "str.h"
-#include "http_parser.h"
 #include "runtime.h"
 
 #define DEFAULT_PORT_HTTP  "80"
