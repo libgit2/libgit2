@@ -49,7 +49,7 @@ jobs:
           id: windows
           setup-script: win32
       fail-fast: false
-    name: "Build ${{ matrix.platform.name }}"
+    name: "Benchmark ${{ matrix.platform.name }}"
     env: ${{ matrix.platform.env }}
     runs-on: ${{ matrix.platform.os }}
     steps:
@@ -76,11 +76,65 @@ jobs:
         fi
 
         mkdir benchmark && cd benchmark
-        ../source/tests/benchmarks/benchmark.sh --baseline-cli "git" --cli "${GIT2_CLI}" --json benchmarks.json --zip benchmarks.zip
+        ../source/tests/benchmarks/benchmark.sh --baseline-cli "git" --cli "${GIT2_CLI}" --name libgit2 --json benchmarks.json --zip benchmarks.zip
       shell: bash
     - name: Upload results
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: benchmark-${{ matrix.platform.id }}
         path: benchmark
       if: always()
+
+  # Publish the results
+  publish:
+    name: Publish results
+    needs: [ build ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out benchmark repository
+      uses: actions/checkout@v3
+      with:
+        repository: libgit2/benchmarks
+        path: site
+        fetch-depth: 0
+        ssh-key: ${{ secrets.BENCHMARKS_PUBLISH_KEY }}
+    - name: Download test results
+      uses: actions/download-artifact@v3
+    - name: Publish API
+      run: |
+       # Move today's benchmark run into the right place
+       for platform in linux macos windows; do
+         TIMESTAMP=$(jq .time.start < "benchmark-${platform}/benchmarks.json")
+         TIMESTAMP_LEN=$(echo -n ${TIMESTAMP} | wc -c | xargs)
+         DENOMINATOR=1
+         if [ "${TIMESTAMP_LEN}" = "19" ]; then
+           DENOMINATOR="1000000000"
+         elif [ "${TIMESTAMP_LEN}" = "13" ]; then
+           DENOMINATOR="1000"
+         else
+           echo "unknown timestamp"
+           exit 1
+         fi
+
+         if [[ "$(uname -s)" == "Darwin" ]]; then
+           DATE=$(date -R -r $(("${TIMESTAMP}/${DENOMINATOR}")) +"%Y-%m-%d")
+         else
+           DATE=$(date -d @$(("${TIMESTAMP}/${DENOMINATOR}")) +"%Y-%m-%d")
+         fi
+
+         mkdir -p "site/public/api/runs/${DATE}"
+         cp "benchmark-${platform}/benchmarks.json" "site/public/api/runs/${DATE}/${platform}.json"
+       done
+
+       (cd site && node scripts/aggregate.js)
+
+       (
+        cd site &&
+        git config user.name 'Benchmark Site Generation' &&
+        git config user.email 'libgit2@users.noreply.github.com' &&
+        git add . &&
+        git commit --allow-empty -m"benchmark update ${DATE}" &&
+        git push origin main
+       )
+      shell: bash
