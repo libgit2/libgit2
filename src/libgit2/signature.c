@@ -204,7 +204,7 @@ int git_signature_default(git_signature **out, git_repository *repo)
 }
 #endif
 
-int git_signature__default_from_env(const char *name_env_var, const char *email_env_var,
+static int git_signature__default_from_env(const char *name_env_var, const char *email_env_var,
 		const char *date_env_var, git_signature **out, git_repository *repo)
 {
 	int error;

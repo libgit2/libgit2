@@ -858,7 +858,7 @@ static git_time_t approxidate_str(const char *date,
 	return update_tm(&tm, &now, 0);
 }
 
-int git_date_offset_parse(git_time_t *out, int * out_offset, const char *date)
+int git_date_offset_parse(git_time_t *out, int *out_offset, const char *date)
 {
 	time_t time_sec;
 	git_time_t timestamp;

@@ -174,6 +174,11 @@ void test_commit_signature__signature_default(void)
 	cl_git_pass(git_repository_config(&cfg, g_repo));
 	cl_git_pass(git_config_open_level(&local, cfg, GIT_CONFIG_LEVEL_LOCAL));
 	/* No configuration value is set and no environment variable */
+	cl_setenv("EMAIL", NULL);
+	cl_setenv("GIT_AUTHOR_NAME", NULL);
+	cl_setenv("GIT_AUTHOR_EMAIL", NULL);
+	cl_setenv("GIT_COMMITTER_NAME", NULL);
+	cl_setenv("GIT_COMMITTER_EMAIL", NULL);
 	cl_git_fail(git_signature_default_author(&author_sign, g_repo));
 	cl_git_fail(git_signature_default_committer(&committer_sign, g_repo));
 	/* Name is read from configuration and email is read from fallback EMAIL

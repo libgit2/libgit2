@@ -48,7 +48,8 @@ GIT_EXTERN(int) git_signature_new(git_signature **out, const char *name, const c
  */
 GIT_EXTERN(int) git_signature_now(git_signature **out, const char *name, const char *email);
 
-/** Create a new author action signature with default information based on the
+/**
+ * Create a new author action signature with default information based on the
  * configuration and environment variables.
  *
  * If GIT_AUTHOR_NAME environment variable is set it uses that over the
@@ -71,7 +72,8 @@ GIT_EXTERN(int) git_signature_now(git_signature **out, const char *name, const c
  */
 GIT_EXTERN(int) git_signature_default_author(git_signature **out, git_repository *repo);
 
-/** Create a new committer action signature with default information based on
+/**
+ * Create a new committer action signature with default information based on
  * the configuration and environment variables.
  *
  * If GIT_COMMITTER_NAME environment variable is set it uses that over the
@@ -88,14 +90,18 @@ GIT_EXTERN(int) git_signature_default_author(git_signature **out, git_repository
  * It will return GIT_ENOTFOUND if either the user.name or user.email are not
  * set and there is no fallback from an environment variable.
  *
- * @param out new signature @param repo repository pointer @return 0 on
- * success, GIT_ENOTFOUND if config is missing, or error code
+ * @param out new signature
+ * @param repo repository pointer
+ * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
  */
 GIT_EXTERN(int) git_signature_default_committer(git_signature **out, git_repository *repo);
 
-#ifndef GIT_DEPRECATE_HARD
 /**
  * Create a new action signature with default user and now timestamp.
+ *
+ * Warning: This function may be deprecated in the future.  Use one of
+ * git_signature_default_author or git_signature_default_committer instead.
+ * These are more compliant with how git constructs default signatures.
  *
  * This looks up the user.name and user.email from the configuration and
  * uses the current time as the timestamp, and creates a new signature
@@ -108,7 +114,6 @@ GIT_EXTERN(int) git_signature_default_committer(git_signature **out, git_reposit
  * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
  */
 GIT_EXTERN(int) git_signature_default(git_signature **out, git_repository *repo);
-#endif
 
 /**
  * Create a new signature by parsing the given buffer, which is
