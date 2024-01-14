@@ -555,7 +555,7 @@ void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
 
 	git_str_joinpath(&config_filename, config_path.ptr, ".gitconfig");
 
-	// Test with incorrect exception (slash at the end)
+	/* Test with incorrect exception (slash at the end) */
 	git_str_printf(&config_data,
 		"[foo]\n" \
 		"\tbar = Foobar\n" \
@@ -572,7 +572,7 @@ void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
 	cl_git_rewritefile(config_filename.ptr, config_data.ptr);
 	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "empty_standard_repo"));
 
-	// Test with correct exception
+	/* Test with correct exception */
 	git_str_clear(&config_data);
 	git_str_printf(&config_data,
 		"[foo]\n" \

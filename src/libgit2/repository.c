@@ -537,7 +537,8 @@ static int read_gitfile(git_str *path_out, const char *file_path)
 }
 
 typedef struct {
-	git_str repo_path;
+	const char *repo_path;
+	git_str tmp;
 	bool *is_safe;
 } validate_ownership_data;
 
@@ -551,6 +552,18 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 		*data->is_safe = true;
 	} else {
 		const char *test_path = entry->value;
+
+		if (git_str_sets(&data->tmp, test_path) < 0 ||
+		    git_fs_path_to_dir(&data->tmp) < 0)
+			return -1;
+
+		/*
+		 * Ensure that `git_fs_path_to_dir` mutated the
+		 * input path by adding a trailing backslash.
+		 * A trailing backslash on the input is not allowed.
+		 */
+		if (strcmp(data->tmp.ptr, test_path) == 0)
+			return 0;
 
 #ifdef GIT_WIN32
 		/*
@@ -581,7 +594,8 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 		         strncmp(test_path, "//wsl.localhost/", strlen("//wsl.localhost/")) != 0)
 			test_path++;
 #endif
-		if (strcmp(test_path, data->repo_path.ptr) == 0)
+
+		if (strcmp(data->tmp.ptr, data->repo_path) == 0)
 			*data->is_safe = true;
 	}
 
@@ -594,20 +608,13 @@ static int validate_ownership_config(
 	bool use_env)
 {
 	validate_ownership_data ownership_data = {
-		GIT_STR_INIT, is_safe
+		path, GIT_STR_INIT, is_safe
 	};
 	git_config *config;
 	int error;
 
 	if (load_global_config(&config, use_env) != 0)
 		return 0;
-
-	git_str_sets(&ownership_data.repo_path, path);
-	if (git_str_oom(&ownership_data.repo_path))
-		return -1;
-	if (git_str_len(&ownership_data.repo_path) > 1 &&
-	    ownership_data.repo_path.ptr[git_str_len(&ownership_data.repo_path) - 1] == '/')
-		git_str_shorten(&ownership_data.repo_path, 1);
 
 	error = git_config_get_multivar_foreach(config,
 		"safe.directory", NULL,
@@ -618,7 +625,7 @@ static int validate_ownership_config(
 		error = 0;
 
 	git_config_free(config);
-	git_str_dispose(&ownership_data.repo_path);
+	git_str_dispose(&ownership_data.tmp);
 
 	return error;
 }
@@ -685,26 +692,9 @@ static int validate_ownership(git_repository *repo)
 		goto done;
 
 	if (!is_safe) {
-		git_str nice_path = GIT_STR_INIT;
-#ifdef GIT_WIN32
-		/* see comment above in validate_ownership_cb */
-		if (!strncasecmp(path, "//", strlen("//")))
-			git_str_puts(&nice_path, "%(prefix)/");
-#endif
-		git_str_puts(&nice_path, path);
-		if (!git_str_oom(&nice_path)) {
-			if (git_str_len(&nice_path) > 1 && nice_path.ptr[git_str_len(&nice_path) - 1] == '/')
-				git_str_shorten(&nice_path, 1);
-			git_error_set(
-			        GIT_ERROR_CONFIG,
-			        "repository path '%s' is not owned by current user.\n\nTo add an exception use the path '%s'.",
-			        path, nice_path.ptr);
-		} else
-			git_error_set(
-			        GIT_ERROR_CONFIG,
-			        "repository path '%s' is not owned by current user.",
-			        path);
-		git_str_dispose(&nice_path);
+		git_error_set(GIT_ERROR_CONFIG,
+			"repository path '%s' is not owned by current user",
+			path);
 		error = GIT_EOWNER;
 	}
 
