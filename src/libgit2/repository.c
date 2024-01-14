@@ -566,6 +566,18 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 	} else {
 		const char *test_path = entry->value;
 
+		if (git_str_sets(&data->tmp, test_path) < 0 ||
+		    git_fs_path_to_dir(&data->tmp) < 0)
+			return -1;
+
+		/*
+		 * Ensure that `git_fs_path_to_dir` mutated the
+		 * input path by adding a trailing backslash.
+		 * A trailing backslash on the input is not allowed.
+		 */
+		if (strcmp(data->tmp.ptr, test_path) == 0)
+			return 0;
+
 #ifdef GIT_WIN32
 		/*
 		 * Git for Windows does some truly bizarre things with
@@ -596,8 +608,7 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 			test_path++;
 #endif
 
-		if (git_fs_path_prettify_dir(&data->tmp, test_path, NULL) == 0 &&
-		    strcmp(data->tmp.ptr, data->repo_path) == 0)
+		if (strcmp(data->tmp.ptr, data->repo_path) == 0)
 			*data->is_safe = true;
 	}
 
