@@ -366,7 +366,7 @@ GIT_EXTERN(int) git_commit_create(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[]);
+	git_commit * const parents[]);
 
 /**
  * Create new commit in the repository using a variable argument list.
@@ -469,7 +469,7 @@ GIT_EXTERN(int) git_commit_create_buffer(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[]);
+	git_commit * const parents[]);
 
 /**
  * Create a commit object from the given buffer and signature
@@ -538,7 +538,7 @@ typedef int (*git_commit_create_cb)(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[],
+	git_commit * const parents[],
 	void *payload);
 
 /** An array of commits returned from the library */

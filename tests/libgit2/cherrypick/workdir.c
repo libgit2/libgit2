@@ -77,7 +77,7 @@ void test_cherrypick_workdir__automerge(void)
 		cl_git_pass(git_index_write_tree(&cherrypicked_tree_oid, repo_index));
 		cl_git_pass(git_tree_lookup(&cherrypicked_tree, repo, &cherrypicked_tree_oid));
 		cl_git_pass(git_commit_create(&cherrypicked_oid, repo, "HEAD", signature, signature, NULL,
-			"Cherry picked!", cherrypicked_tree, 1, (const git_commit **)&head));
+			"Cherry picked!", cherrypicked_tree, 1, &head));
 
 		cl_assert(merge_test_index(repo_index, merge_index_entries + i * 3, 3));
 

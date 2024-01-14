@@ -281,7 +281,7 @@ int git_commit_create_from_ids(
 
 typedef struct {
 	size_t total;
-	const git_commit **parents;
+	git_commit * const *parents;
 	git_repository *repo;
 } commit_parent_data;
 
@@ -307,7 +307,7 @@ int git_commit_create(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[])
+	git_commit * const parents[])
 {
 	commit_parent_data data = { parent_count, parents, repo };
 
@@ -945,7 +945,7 @@ int git_commit_create_buffer(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[])
+	git_commit * const parents[])
 {
 	GIT_BUF_WRAP_PRIVATE(out, git_commit__create_buffer, repo,
 	                     author, committer, message_encoding, message,
@@ -961,7 +961,7 @@ int git_commit__create_buffer(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[])
+	git_commit * const parents[])
 {
 	int error;
 	commit_parent_data data = { parent_count, parents, repo };
