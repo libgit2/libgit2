@@ -108,7 +108,6 @@ GIT_EXTERN(int) git_signature_default_committer(git_signature **out, git_reposit
  * based on that information.  It will return GIT_ENOTFOUND if either the
  * user.name or user.email are not set.
  *
- * @deprecated use git_signature_default_author or git_signature_default_committer instead
  * @param out new signature
  * @param repo repository pointer
  * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
