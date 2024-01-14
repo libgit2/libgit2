@@ -3314,6 +3314,25 @@ int git_repository_set_bare(git_repository *repo)
 	return 0;
 }
 
+int git_repository_head_commit(git_commit **commit, git_repository *repo)
+{
+	git_reference *head;
+	git_object *obj;
+	int error;
+
+	if ((error = git_repository_head(&head, repo)) < 0)
+		return error;
+
+	if ((error = git_reference_peel(&obj, head, GIT_OBJECT_COMMIT)) < 0)
+		goto cleanup;
+
+	*commit = (git_commit *)obj;
+
+cleanup:
+	git_reference_free(head);
+	return error;
+}
+
 int git_repository_head_tree(git_tree **tree, git_repository *repo)
 {
 	git_reference *head;
