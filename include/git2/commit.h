@@ -397,10 +397,23 @@ GIT_EXTERN(int) git_commit_create_v(
 typedef struct {
 	unsigned int version;
 
+	/**
+	 * Flags for creating the commit.
+	 *
+	 * If `allow_empty_commit` is specified, a commit with no changes
+	 * from the prior commit (and "empty" commit) is allowed. Otherwise,
+	 * commit creation will be stopped.
+	 */
 	unsigned int allow_empty_commit : 1;
 
+	/** The commit author, or NULL for the default. */
 	const git_signature *author;
+
+	/** The committer, or NULL for the default. */
 	const git_signature *committer;
+
+	/** Encoding for the commit message; leave NULL for default. */
+	const char *message_encoding;
 } git_commit_create_options;
 
 #define GIT_COMMIT_CREATE_OPTIONS_VERSION 1

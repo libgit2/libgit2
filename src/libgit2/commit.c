@@ -1147,7 +1147,8 @@ int git_commit_create_from_stage(
 		goto done;
 
 	error = git_commit_create(out, repo, "HEAD", author, committer,
-			NULL, message, tree, parents.count, parents.commits);
+			opts.message_encoding, message,
+			tree, parents.count, parents.commits);
 
 done:
 	git_commitarray_dispose(&parents);
