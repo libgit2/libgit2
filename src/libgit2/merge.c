@@ -1225,6 +1225,13 @@ static int merge_diff_mark_similarity_exact(
 		if (!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict_src->ancestor_entry))
 			continue;
 
+		/*
+		 * Ignore empty files because it has always the same blob sha1
+		 * and will lead to incorrect matches between all entries.
+		 */
+		if (git_oid_equal(&conflict_src->ancestor_entry.id, &git_oid__empty_blob_sha1))
+			continue;
+
 		if (!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict_src->our_entry)) {
 			error = deletes_by_oid_enqueue(ours_deletes_by_oid, &diff_list->pool, &conflict_src->ancestor_entry.id, i);
 			if (error < 0)
