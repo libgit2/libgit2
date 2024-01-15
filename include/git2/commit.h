@@ -394,6 +394,36 @@ GIT_EXTERN(int) git_commit_create_v(
 	size_t parent_count,
 	...);
 
+typedef struct {
+	unsigned int version;
+
+	unsigned int allow_empty_commit : 1;
+
+	const git_signature *author;
+	const git_signature *committer;
+} git_commit_create_options;
+
+#define GIT_COMMIT_CREATE_OPTIONS_VERSION 1
+#define GIT_COMMIT_CREATE_OPTIONS_INIT { GIT_COMMIT_CREATE_OPTIONS_VERSION }
+
+/**
+ * Commits the staged changes in the repository; this is a near analog to
+ * `git commit -m message`.
+ *
+ * By default, empty commits are not allowed.
+ *
+ * @param id pointer to store the new commit's object id
+ * @param repo repository to commit changes in
+ * @param message the commit message
+ * @param opts options for creating the commit
+ * @return 0 on success, GIT_EUNCHANGED if there were no changes to commit, or an error code
+ */
+GIT_EXTERN(int) git_commit_create_from_stage(
+	git_oid *id,
+	git_repository *repo,
+	const char *message,
+	const git_commit_create_options *opts);
+
 /**
  * Amend an existing commit by replacing only non-NULL values.
  *

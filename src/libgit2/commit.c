@@ -1086,6 +1086,79 @@ cleanup:
 	return error;
 }
 
+int git_commit_create_from_stage(
+	git_oid *out,
+	git_repository *repo,
+	const char *message,
+	const git_commit_create_options *given_opts)
+{
+	git_commit_create_options opts = GIT_COMMIT_CREATE_OPTIONS_INIT;
+	git_signature *default_signature = NULL;
+	const git_signature *author, *committer;
+	git_index *index = NULL;
+	git_diff *diff = NULL;
+	git_oid tree_id;
+	git_tree *head_tree = NULL, *tree = NULL;
+	git_commitarray parents = { 0 };
+	int error = -1;
+
+	GIT_ASSERT_ARG(out && repo);
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(git_commit_create_options));
+
+	if ((author = opts.author) == NULL ||
+	    (committer = opts.committer) == NULL) {
+		if (git_signature_default(&default_signature, repo) < 0)
+			goto done;
+
+		if (!author)
+			author = default_signature;
+
+		if (!committer)
+			committer = default_signature;
+	}
+
+	if (git_repository_index(&index, repo) < 0)
+		goto done;
+
+	if (!opts.allow_empty_commit) {
+		error = git_repository_head_tree(&head_tree, repo);
+
+		if (error && error != GIT_EUNBORNBRANCH)
+			goto done;
+
+		error = -1;
+
+		if (git_diff_tree_to_index(&diff, repo, head_tree, index, NULL) < 0)
+			goto done;
+
+		if (git_diff_num_deltas(diff) == 0) {
+			git_error_set(GIT_ERROR_REPOSITORY,
+				"no changes are staged for commit");
+			error = GIT_EUNCHANGED;
+			goto done;
+		}
+	}
+
+	if (git_index_write_tree(&tree_id, index) < 0 ||
+	    git_tree_lookup(&tree, repo, &tree_id) < 0 ||
+	    git_repository_commit_parents(&parents, repo) < 0)
+		goto done;
+
+	error = git_commit_create(out, repo, "HEAD", author, committer,
+			NULL, message, tree, parents.count, parents.commits);
+
+done:
+	git_commitarray_dispose(&parents);
+	git_signature_free(default_signature);
+	git_tree_free(tree);
+	git_tree_free(head_tree);
+	git_diff_free(diff);
+	git_index_free(index);
+	return error;
+}
+
 int git_commit_committer_with_mailmap(
 	git_signature **out, const git_commit *commit, const git_mailmap *mailmap)
 {
