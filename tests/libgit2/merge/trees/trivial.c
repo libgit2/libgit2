@@ -308,3 +308,22 @@ void test_merge_trees_trivial__11(void)
 
 	git_index_free(result);
 }
+
+/* 15: ancest:remote^, head:head, remote:remote = result:no merge */
+void test_merge_trees_trivial__15(void)
+{
+	git_index *result;
+	const git_index_entry *entry;
+
+	/* Can't use merge_trivialfalsehere because a different ancestor is used. */
+	cl_git_pass(merge_trivial(&result, "trivial-15", "trivial-15-branch", true));
+
+	cl_assert((entry = git_index_get_bypath(result, "another-new-empty-15.txt", GIT_INDEX_STAGE_NORMAL)) == NULL);
+	cl_assert((entry = git_index_get_bypath(result, "another-new-empty-15.txt", GIT_INDEX_STAGE_ANCESTOR)));
+	cl_assert((entry = git_index_get_bypath(result, "another-new-empty-15.txt", GIT_INDEX_STAGE_OURS)) == NULL);
+	cl_assert((entry = git_index_get_bypath(result, "another-new-empty-15.txt", GIT_INDEX_STAGE_THEIRS)));
+	cl_assert(merge_trivial_conflict_entrycount(result) == 2);
+
+	git_index_free(result);
+}
+
