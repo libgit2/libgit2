@@ -1240,7 +1240,7 @@ static int write_index(git_indexer *indexer)
 	if (git_hash_ctx_init(&hash_ctx, hash_type) < 0 ||
 	    git_hash_init(&hash_ctx) < 0 ||
 	    git_str_join(&indexer->index_path, '.', indexer->packfile_path.ptr, "idx") < 0 ||
-	    (fd = p_open(indexer->index_path.ptr, O_RDWR|O_CREAT, 0666)) < 0 ||
+	    (fd = p_open(indexer->index_path.ptr, O_RDWR|O_CREAT, indexer->mode)) < 0 ||
 		(fp = fdopen(fd, "w")) == NULL)
 		goto on_error;
 
