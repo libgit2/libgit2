@@ -1488,9 +1488,9 @@ static int finalize_thin_pack(git_indexer *indexer)
 		return -1;
 
 	/* TODO: check for overflow */
-	header.hdr_signature = PACK_SIGNATURE;
-	header.hdr_version = indexer->version;
-	header.hdr_entries = indexer->entries + indexer->progress.local_objects;
+	header.hdr_signature = htonl(PACK_SIGNATURE);
+	header.hdr_version = htonl(indexer->version);
+	header.hdr_entries = htonl(indexer->entries + indexer->progress.local_objects);
 
 	/* Write the updated header and rehash the packfile. */
 
