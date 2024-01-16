@@ -765,6 +765,8 @@ int git_indexer_append(
 	size_t len,
 	git_indexer_progress *stats)
 {
+	int error;
+
 	GIT_ASSERT_ARG(indexer && (!len || data));
 
 	GIT_UNUSED(stats);
@@ -781,8 +783,8 @@ int git_indexer_append(
 	if (append_data(indexer, data, len) < 0)
 		return -1;
 
-	if (git_packfile_parser_parse(&indexer->parser, data, len) < 0)
-		return -1;
+	if ((error = git_packfile_parser_parse(&indexer->parser, data, len)) < 0)
+		return error;
 
 	if (stats)
 		memcpy(stats, &indexer->progress, sizeof(git_indexer_progress));
@@ -1132,6 +1134,7 @@ static int resolve_offset_partition(
 	struct object_entry *object_entry;
 	struct delta_entry *delta_start, *delta_entry;
 	size_t object_idx, delta_idx = resolver_ctx->start_idx;
+	int error;
 
 	/* TODO figure out some way to ferry git errors back to the main thread */
 	/* TODO: only fire events on the main thread */
@@ -1180,9 +1183,9 @@ static int resolve_offset_partition(
 
 
 
-			if (resolve_delta(indexer, &resolver_ctx->base, delta_entry, object_entry) < 0) {
+			if ((error = resolve_delta(indexer, &resolver_ctx->base, delta_entry, object_entry)) < 0) {
 				printf("failed! [%lu] [%s]\n", resolver_ctx->thread_number, git_error_last()->message);
-				return -1;
+				return error;
 			}
 
 			else {
@@ -1439,7 +1442,7 @@ static int resolve_ref_deltas(git_indexer *indexer)
 				continue;
 			} else if (error < 0) {
 				printf("failed! [%s]\n", git_error_last()->message);
-				return -1;
+				return error;
 			}
 
 			printf("indexed: %s\n", git_oid_tostr_s(&delta_entry->object.id));
