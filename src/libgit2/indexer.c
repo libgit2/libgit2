@@ -1480,10 +1480,8 @@ static int finalize_thin_pack(git_indexer *indexer)
 	}
 
 	/* Update the header to include the number of injected objects. */
-	/* TODO
 	if (!indexer->has_thin_entries)
 		return 0;
-		*/
 
 	hash_type = git_oid_algorithm(indexer->oid_type);
 

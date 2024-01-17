@@ -76,7 +76,9 @@ static int parse_header(
 				return error;
 		}
 
-		parser->state = STATE_OBJECT_HEADER_START;
+		parser->state = parser->header.hdr_entries > 0 ?
+			STATE_OBJECT_HEADER_START :
+			STATE_TRAILER;
 	}
 
 	*out = (orig_len - len);
