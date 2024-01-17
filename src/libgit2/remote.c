@@ -1386,6 +1386,7 @@ int git_remote_fetch(
 
 	/* Connect and download everything */
 	error = git_remote__download(remote, refspecs, opts);
+printf("downloaded..\n");
 
 	/* We don't need to be connected anymore */
 	git_remote_disconnect(remote);

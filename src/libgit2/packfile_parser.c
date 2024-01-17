@@ -108,6 +108,8 @@ static int parse_object_header(
 			parser->current_compressed_crc = crc32(0L, Z_NULL, 0);
 			parser->current_bits = 4;
 
+			printf("cleared crc: %lx\n", parser->current_compressed_crc);
+
 			if (git_hash_init(&parser->current_hash) < 0)
 				return -1;
 		} else {
@@ -251,6 +253,7 @@ static int parse_delta_header(
 
 	switch (parser->current_type) {
 	case GIT_OBJECT_OFS_DELTA:
+		printf("i'm an offset delta and my crc is %lx\n", parser->current_compressed_crc);
 		while (len) {
 			char c = *((const char *)data);
 
@@ -296,6 +299,8 @@ static int parse_delta_header(
 		break;
 
 	case GIT_OBJECT_REF_DELTA:
+			printf("i'm a ref delta and my crc is %lx\n", parser->current_compressed_crc);
+
 		hash_len = git_oid_size(parser->oid_type);
 		chunk_len = min(hash_len, len);
 
@@ -452,6 +457,11 @@ int git_packfile_parser_parse(
 		parser_state start_state = parser->state;
 		size_t consumed;
 		int error = 0;
+
+		if (len == 20)
+			printf("here\n");
+			
+		printf("consuming up to %d bytes - state is %d (%d / %d)\n", (int)len, parser->state, STATE_TRAILER, STATE_COMPLETE);
 
 		switch (parser->state) {
 		case STATE_HEADER:

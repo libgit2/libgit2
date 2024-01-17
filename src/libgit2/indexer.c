@@ -519,6 +519,12 @@ static int parse_object_complete(
 	git_oid_cpy(&entry->id, oid);
 	entry->crc32 = compressed_crc;
 
+			printf("given entry  crc: %0.2x %0.2x %0.2x %0.2x\n",
+		  (compressed_crc & 0xff000000) >> 24,
+		  (compressed_crc & 0x00ff0000) >> 16,
+		  (compressed_crc & 0x0000ff00) >> 8,
+		  (compressed_crc & 0x000000ff));
+
 	if (git_sizemap_set(indexer->positions, entry->position, entry) < 0 ||
 	    git_oidmap_set(indexer->ids, &entry->id, entry) < 0 ||
 	    git_vector_insert(&indexer->objects, entry) < 0)
@@ -597,6 +603,12 @@ static int parse_delta_complete(
 
 	entry->object.crc32 = compressed_crc;
 	entry->final_type = 0;
+
+				printf("given delta  crc: %0.2x %0.2x %0.2x %0.2x\n",
+		  (compressed_crc & 0xff000000) >> 24,
+		  (compressed_crc & 0x00ff0000) >> 16,
+		  (compressed_crc & 0x0000ff00) >> 8,
+		  (compressed_crc & 0x000000ff));
 
 	if (entry->object.type == GIT_OBJECT_OFS_DELTA)
 		delta_vec = &indexer->offset_deltas;
@@ -735,6 +747,10 @@ static int append_data(
 {
 	size_t chunk_len;
 
+	printf("appending %lu bytes at %lu/%lx\n", len,
+	p_lseek(indexer->packfile_fd, 0, SEEK_CUR),
+	p_lseek(indexer->packfile_fd, 0, SEEK_CUR));
+
 	/* TODO: if we're using this to fix thin packs, we shouldn't be incrementing received_bytes. */
 	/* although maybe we shouldn't be incrememnting received_bytes at all :'( */
 
@@ -744,7 +760,15 @@ static int append_data(
 	 */
 
 	while (len > 0) {
+		size_t i;
+
 		chunk_len = min(len, SSIZE_MAX);
+
+		printf("writing %lu : ", chunk_len);
+		for (i = 0; i < chunk_len; i++) {
+			printf("%0.2x ", (((const char *)data)[i] & 0xff));
+		}
+		printf("\n");
 
 		if ((p_write(indexer->packfile_fd, data, chunk_len)) < 0)
 			return -1;
@@ -755,6 +779,8 @@ static int append_data(
 		indexer->packfile_size += chunk_len;
 		indexer->progress.received_bytes += chunk_len;
 	}
+
+	printf("total is now: %lu\n", indexer->packfile_size);
 
 	return 0;
 }
@@ -917,6 +943,8 @@ static int insert_thin_base(
 		GIT_ASSERT(indexer->packfile_size > checksum_size);
 		indexer->packfile_size -= checksum_size;
 
+		printf("seeking to %lu (%lx)\n", indexer->packfile_size, indexer->packfile_size);
+
 		if (p_lseek(indexer->packfile_fd, indexer->packfile_size, SEEK_SET) < 0) {
 			git_error_set(GIT_ERROR_OS, "could not rewind packfile to fix thin pack");
 			return -1;
@@ -936,9 +964,23 @@ static int insert_thin_base(
 		goto done;
 	}
 
+	printf("packfile size is now: %lu\n", indexer->packfile_size);
+	printf("position is: %lu/%lx\n",
+	p_lseek(indexer->packfile_fd,0, SEEK_CUR),
+	p_lseek(indexer->packfile_fd,0, SEEK_CUR));
+
 	base_crc = crc32(0L, Z_NULL, 0);
 	base_crc = crc32(base_crc, header, header_len);
 	base_crc = crc32(base_crc, (const unsigned char *)deflate_buf.ptr, deflate_buf.size);
+
+	printf("generated base crc:\n");
+
+
+		printf("generated base crc: %0.2x %0.2x %0.2x %0.2x\n",
+		  (base_crc & 0xff000000) >> 24,
+		  (base_crc & 0x00ff0000) >> 16,
+		  (base_crc & 0x0000ff00) >> 8,
+		  (base_crc & 0x000000ff));
 
 	/* Add this to our record-keeping */
 
@@ -961,8 +1003,8 @@ static int insert_thin_base(
 
 	indexer->progress.local_objects++;
 
-	printf("type: %d\n", git_odb_object_type(base));
-	printf("      %.*s\n", (int)base_len, (char *)base_data);
+	//printf("type: %d\n", git_odb_object_type(base));
+	//printf("      %.*s\n", (int)base_len, (char *)base_data);
 
 	indexer->has_thin_entries = 1;
 
@@ -1166,7 +1208,7 @@ static int resolve_offset_partition(
 		while (delta_idx < resolver_ctx->end_idx) {
 			delta_entry = git_vector_get(&indexer->offset_deltas, delta_idx);
 
-			printf("delta_entry: %p / type: %d\n", delta_entry, delta_entry->object.type);
+			//printf("delta_entry: %p / type: %d\n", delta_entry, delta_entry->object.type);
 
 			/* TODO */
 			GIT_ASSERT(delta_entry->object.type == GIT_OBJECT_OFS_DELTA);
@@ -1284,6 +1326,12 @@ static int write_index(git_indexer *indexer)
 	/* Write the CRC32s */
 	git_vector_foreach(&indexer->objects, i, entry) {
 		nl = htonl(entry->crc32);
+
+		printf("crc: %0.2x %0.2x %0.2x %0.2x\n",
+		  (nl & 0xff000000) >> 24,
+		  (nl & 0x00ff0000) >> 16,
+		  (nl & 0x0000ff00) >> 8,
+		  (nl & 0x000000ff));
 
 		if (hash_and_write(fp, &hash_ctx, &nl, sizeof(uint32_t)) < 0)
 			goto on_error;
@@ -1506,6 +1554,11 @@ static int finalize_thin_pack(git_indexer *indexer)
 		return -1;
 	}
 
+	printf("after header position is %lu / %lx (expected %lu/%lx)\n",
+	p_lseek(indexer->packfile_fd, 0, SEEK_CUR),
+	p_lseek(indexer->packfile_fd, 0, SEEK_CUR),
+	sizeof(struct git_pack_header), sizeof(struct git_pack_header));
+
 	if (git_hash_update(&hash_ctx, &header, sizeof(struct git_pack_header)) < 0)
 		return -1;
 
@@ -1523,6 +1576,9 @@ printf("Content size is: %lu\n", content_size);
 
 		content_size -= ret;
 	}
+
+printf("current position: %lu / %lx\n", p_lseek(indexer->packfile_fd, 0, SEEK_CUR), p_lseek(indexer->packfile_fd, 0, SEEK_CUR));
+
 
 	if (ret < 0) {
 		git_error_set(GIT_ERROR_OS, "could not read packfile to rehash");
@@ -1642,7 +1698,7 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 
 	{
 /*    git_hash_fmt(foo, packfile_trailer, git_oid_size(indexer->oid_type)) < 0) */
-	printf("%s / %s\n", git_oid_tostr_s(&indexer->trailer_oid), indexer->trailer_name);
+	//printf("%s / %s\n", git_oid_tostr_s(&indexer->trailer_oid), indexer->trailer_name);
 }
 
 	printf("\n\nobject lookups: %lu / cache hits: %lu\n\n", indexer->object_lookups, indexer->cache_hits);

@@ -133,6 +133,8 @@ int git_zstream_get_output_chunk(
 
 	*out_len = (out_queued - zstream->z.avail_out);
 
+
+printf("inflated: %.*s\n", (int)*out_len, (const char *)out);
 	return 0;
 }
 

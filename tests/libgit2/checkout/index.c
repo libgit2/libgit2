@@ -218,8 +218,11 @@ static void populate_symlink_workdir(void)
 	/* Delete the `origin` repo (if it exists) so we can recreate it. */
 	git_remote_delete(repo, GIT_REMOTE_ORIGIN);
 
+printf("remote: %s\n", url);
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
+printf("fetch start\n");
 	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
+printf("fetch stop\n");
 	git_remote_free(origin);
 
 	cl_git_pass(git_revparse_single(&target, repo, "remotes/origin/master"));
