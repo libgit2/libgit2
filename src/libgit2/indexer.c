@@ -908,7 +908,11 @@ static int insert_thin_base(
 
 	/* TODO: take a write lock on the packfile */
 
-	/* rewind back over the given packfile trailer */
+	/*
+	 * If this is our first thin base, rewind back in the packfile over
+	 * the packfile trailer so that we can insert new objects. The new
+	 * trailer will be written in finalize_thin_pack.
+	 */
 	if (!indexer->has_thin_entries) {
 		GIT_ASSERT(indexer->packfile_size > checksum_size);
 		indexer->packfile_size -= checksum_size;
