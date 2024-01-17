@@ -300,14 +300,14 @@ static int parse_delta_header(
 		base = (unsigned char *)&parser->current_base.id;
 		memcpy(base + parser->current_base_len, data, chunk_len);
 
+		parser->current_compressed_crc =
+			crc32(parser->current_compressed_crc, data, chunk_len);
+
 		parser->current_base_len += chunk_len;
 		data += chunk_len;
 		len -= chunk_len;
 
 		parser->current_compressed_size += chunk_len;
-
-		parser->current_compressed_crc =
-			crc32(parser->current_compressed_crc, data, chunk_len);
 
 		if (parser->current_base_len == hash_len) {
 			if (parser->delta_start) {

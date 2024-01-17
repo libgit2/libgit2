@@ -948,7 +948,7 @@ static int insert_thin_base(
 	entry->size = base_len;
 
 	git_oid_cpy(&entry->id, base_id);
-	entry->crc32 = htonl(base_crc);
+	entry->crc32 = base_crc;
 
 	if (git_sizemap_set(indexer->positions, entry->position, entry) < 0 ||
 	    git_oidmap_set(indexer->ids, &entry->id, entry) < 0 ||
@@ -1464,7 +1464,6 @@ static int finalize_thin_pack(git_indexer *indexer)
 	struct delta_entry *delta_entry;
 	size_t delta_idx, content_size;
 	char buf[READ_CHUNK_SIZE];
-	unsigned char new_hash[GIT_HASH_MAX_SIZE];
 	int ret;
 
 	/* Ensure that we've resolved all the deltas. */
@@ -1487,6 +1486,7 @@ static int finalize_thin_pack(git_indexer *indexer)
 	if (git_hash_ctx_init(&hash_ctx, hash_type) < 0)
 		return -1;
 
+// TODO: don't use the progress object, can we keep a local copy?
 	/* TODO: check for overflow */
 	header.hdr_signature = htonl(PACK_SIGNATURE);
 	header.hdr_version = htonl(indexer->version);
@@ -1507,15 +1507,19 @@ static int finalize_thin_pack(git_indexer *indexer)
 	if (git_hash_update(&hash_ctx, &header, sizeof(struct git_pack_header)) < 0)
 		return -1;
 
-	GIT_ASSERT(indexer->packfile_size >
-		sizeof(struct git_pack_header) + git_hash_size(hash_type));
+	GIT_ASSERT(indexer->packfile_size >= sizeof(struct git_pack_header));
+	content_size = indexer->packfile_size - sizeof(struct git_pack_header);
 
-	content_size = indexer->packfile_size -
-		(sizeof(struct git_pack_header) + git_hash_size(hash_type));
+printf("header size: %lu / trailer size: %lu\n", sizeof(struct git_pack_header), git_hash_size(hash_type));
+printf("Content size is: %lu\n", content_size);
 
-	while ((ret = p_read(indexer->packfile_fd, buf, min(content_size, sizeof(buf)))) > 0) {
+	while (content_size > 0 && (ret = p_read(indexer->packfile_fd, buf, min(content_size, sizeof(buf)))) > 0) {
+		printf("-- read %lu / current position: %lu / %lx\n", ret, p_lseek(indexer->packfile_fd, 0, SEEK_CUR), p_lseek(indexer->packfile_fd, 0, SEEK_CUR));
+
 		if (git_hash_update(&hash_ctx, buf, ret) < 0)
 			return -1;
+
+		content_size -= ret;
 	}
 
 	if (ret < 0) {
@@ -1523,14 +1527,12 @@ static int finalize_thin_pack(git_indexer *indexer)
 		return -1;
 	}
 
-	if (git_hash_final(new_hash, &hash_ctx) < 0) {
+	if (git_hash_final(indexer->trailer, &hash_ctx) < 0) {
 		git_error_set(GIT_ERROR_OS, "could not rehash packfile");
 		return -1;
 	}
 
-	printf("%s\n", new_hash);
-
-	return 0;
+	return append_data(indexer, indexer->trailer, git_hash_size(hash_type));
 }
 
 int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
