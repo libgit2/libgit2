@@ -147,8 +147,8 @@ struct resolver_context {
 	git_indexer *indexer;
 	git_hash_ctx hash_ctx;
 	git_zstream zstream;
-	int send_progress_updates : 1,
-	    fix_thin_packs : 1;
+	unsigned int send_progress_updates : 1,
+	             fix_thin_packs : 1;
 };
 
 struct offset_resolver_context {
@@ -1568,21 +1568,20 @@ static int finalize_thin_pack(git_indexer *indexer)
 printf("header size: %lu / trailer size: %lu\n", sizeof(struct git_pack_header), git_hash_size(hash_type));
 printf("Content size is: %lu\n", content_size);
 
-	while (content_size > 0 && (ret = p_read(indexer->packfile_fd, buf, min(content_size, sizeof(buf)))) > 0) {
-		printf("-- read %lu / current position: %lu / %lx\n", ret, p_lseek(indexer->packfile_fd, 0, SEEK_CUR), p_lseek(indexer->packfile_fd, 0, SEEK_CUR));
+	while (content_size > 0) {
+		ret = p_read(indexer->packfile_fd, buf, min(content_size, sizeof(buf)));
+
+		if (ret == 0) {
+			break;
+		} else if (ret < 0) {
+			git_error_set(GIT_ERROR_OS, "could not read packfile to rehash");
+			return -1;
+		}
 
 		if (git_hash_update(&hash_ctx, buf, ret) < 0)
 			return -1;
 
 		content_size -= ret;
-	}
-
-printf("current position: %lu / %lx\n", p_lseek(indexer->packfile_fd, 0, SEEK_CUR), p_lseek(indexer->packfile_fd, 0, SEEK_CUR));
-
-
-	if (ret < 0) {
-		git_error_set(GIT_ERROR_OS, "could not read packfile to rehash");
-		return -1;
 	}
 
 	if (git_hash_final(indexer->trailer, &hash_ctx) < 0) {
