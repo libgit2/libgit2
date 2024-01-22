@@ -92,6 +92,21 @@ void test_refs_branches_delete__can_delete_a_local_branch(void)
 	git_reference_free(branch);
 }
 
+void test_refs_branches_delete__can_delete_a_local_branch_with_multivar(void)
+{
+	git_reference *branch;
+	git_config *cfg;
+
+	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_config_set_multivar(
+	        cfg, "branch.br2.gitpublishto", "^$", "example1@example.com"));
+	cl_git_pass(git_config_set_multivar(
+	        cfg, "branch.br2.gitpublishto", "^$", "example2@example.com"));
+	cl_git_pass(git_branch_lookup(&branch, repo, "br2", GIT_BRANCH_LOCAL));
+	cl_git_pass(git_branch_delete(branch));
+	git_reference_free(branch);
+}
+
 void test_refs_branches_delete__can_delete_a_remote_branch(void)
 {
 	git_reference *branch;
