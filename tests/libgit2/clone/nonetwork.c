@@ -191,9 +191,8 @@ void test_clone_nonetwork__can_cancel_clone_in_fetch(void)
 	g_options.fetch_opts.callbacks.transfer_progress =
 		clone_cancel_fetch_transfer_progress_cb;
 
-	cl_git_fail_with(git_clone(
-		&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options),
-		-54321);
+	cl_git_fail_with(-54321, git_clone(
+		&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
 	cl_assert(!g_repo);
 	cl_assert(!git_fs_path_exists("foo/readme.txt"));
