@@ -95,6 +95,11 @@ int cmd_index_pack(int argc, char **argv)
 		}
 	}
 
+	if (read_len < 0) {
+		ret = cli_error_os();
+		goto done;
+	}
+
 	if (git_indexer_commit(idx, &stats) < 0) {
 		ret = cli_error_git();
 		goto done;
