@@ -221,12 +221,12 @@ void test_pack_packbuilder__does_not_fsync_by_default(void)
 }
 
 /* We fsync the packfile and index.  On non-Windows, we also fsync
- * the parent directories.
+ * the parent directory.
  */
 #ifdef GIT_WIN32
 static int expected_fsyncs = 2;
 #else
-static int expected_fsyncs = 4;
+static int expected_fsyncs = 3;
 #endif
 
 void test_pack_packbuilder__fsync_global_setting(void)
