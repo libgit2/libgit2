@@ -13,6 +13,9 @@
 #include "repository.h"
 #include "sizemap.h"
 #include "delta.h"
+#include "commit.h"
+#include "tree.h"
+#include "tag.h"
 
 #include "git2_util.h"
 
@@ -115,6 +118,7 @@ struct git_indexer {
 	git_object_size_t current_offset; /* current ofs delta base */
 
 	struct object_entry *current_object;
+	git_str current_object_data;
 	struct delta_entry *current_delta;
 
 	unsigned char *packfile_map;
@@ -124,6 +128,8 @@ struct git_indexer {
 	git_vector objects; /* vector of `struct object_entry` */
 	git_vector offset_deltas;  /* vector of `struct delta_entry` */
 	git_vector ref_deltas;  /* vector of `struct delta_entry` */
+
+	git_oidmap *expected_ids; /* object verification list */
 
 	struct object_cache basecache; /* lru of position to entry data */
 
@@ -500,7 +506,130 @@ static int parse_object_start(
 
 	indexer->current_object = entry;
 
+	if (indexer->do_verify)
+		git_str_clear(&indexer->current_object_data);
+
 	return 0;
+}
+
+static int parse_object_data(
+	void *object_data,
+	size_t object_data_len,
+	void *idx)
+{
+	git_indexer *indexer = (git_indexer *)idx;
+
+	if (!indexer->do_verify)
+		return 0;
+
+	return git_str_put(&indexer->current_object_data,
+		object_data, object_data_len);
+}
+
+static int add_expected_oid(git_indexer *indexer, const git_oid *oid)
+{
+	/*
+	 * If we know about that object because it is stored in our ODB or
+	 * because we have already processed it as part of our pack file,
+	 * we do not have to expect it.
+	 */
+
+	if ((!indexer->odb || !git_odb_exists(indexer->odb, oid)) &&
+	    !git_oidmap_exists(indexer->ids, oid) &&
+	    !git_oidmap_exists(indexer->expected_ids, oid)) {
+
+		/* TODO: avoid tiny allocations */
+		git_oid *dup = git__malloc(sizeof(*oid));
+		GIT_ERROR_CHECK_ALLOC(dup);
+
+		git_oid_cpy(dup, oid);
+		return git_oidmap_set(indexer->expected_ids, dup, dup);
+	}
+
+	return 0;
+}
+
+static int check_object_connectivity(git_indexer *indexer, git_rawobj *raw)
+{
+	git_object *object = NULL;
+	git_oid *expected;
+	int error = -1;
+
+printf("yo yo %d\n", raw->type);
+
+	/* TODO: ...fail here? */
+	if (raw->type != GIT_OBJECT_BLOB &&
+	    raw->type != GIT_OBJECT_TREE &&
+		raw->type != GIT_OBJECT_COMMIT &&
+		raw->type != GIT_OBJECT_TAG)
+		return 0;
+
+	if (git_object__from_raw(&object, raw->data, raw->len, raw->type, indexer->oid_type) < 0)
+		goto done;
+
+	if ((expected = git_oidmap_get(indexer->expected_ids, &object->cached.oid)) != NULL) {
+		git_oidmap_delete(indexer->expected_ids, &object->cached.oid);
+		git__free(expected);
+	}
+
+	/*
+	 * Check whether this is a known object. If so, we can just
+	 * continue as we assume that the ODB has a complete graph.
+	 */
+	if (indexer->odb &&
+	    git_odb_exists(indexer->odb, &object->cached.oid)) {
+		error = 0;
+		goto done;
+	}
+
+	switch (raw->type) {
+	case GIT_OBJECT_TREE: {
+		git_tree *tree = (git_tree *)object;
+		git_tree_entry *entry;
+		size_t i;
+
+		git_array_foreach(tree->entries, i, entry) {
+			if (add_expected_oid(indexer, &entry->oid) < 0)
+				goto done;
+		}
+
+		break;
+	}
+	case GIT_OBJECT_COMMIT: {
+		git_commit *commit = (git_commit *) object;
+		git_oid *parent_id;
+		size_t i;
+
+		git_array_foreach(commit->parent_ids, i, parent_id) {
+			if (add_expected_oid(indexer, parent_id) < 0)
+				goto done;
+
+			if (add_expected_oid(indexer, &commit->tree_id) < 0)
+				goto done;
+		}
+
+		break;
+	}
+	case GIT_OBJECT_TAG: {
+		git_tag *tag = (git_tag *) object;
+
+		if (add_expected_oid(indexer, &tag->target) < 0)
+			goto done;
+
+		break;
+	}
+	case GIT_OBJECT_BLOB:
+		break;
+	default:
+		GIT_ASSERT(!"unknown object type");
+		goto done;
+	}
+
+	error = 0;
+
+done:
+	git_object_free(object);
+	return error;
 }
 
 static int parse_object_complete(
@@ -529,6 +658,17 @@ static int parse_object_complete(
 	    git_oidmap_set(indexer->ids, &entry->id, entry) < 0 ||
 	    git_vector_insert(&indexer->objects, entry) < 0)
 		return -1;
+
+	if (indexer->do_verify) {
+		git_rawobj raw = {
+			indexer->current_object_data.ptr,
+			indexer->current_object_data.size,
+			indexer->current_object->type
+		};
+
+	    if (check_object_connectivity(indexer, &raw) < 0)
+			return -1;
+	}
 
 	indexer->current_object = NULL;
 
@@ -680,8 +820,12 @@ static int indexer_new(
 			indexer->base_path.ptr, indexer->mode)) < 0)
 		goto done;
 
+	if (indexer->do_verify && git_oidmap_new(&indexer->expected_ids) < 0)
+		goto done;
+
 	indexer->parser.packfile_header = parse_packfile_header;
 	indexer->parser.object_start = parse_object_start;
+	indexer->parser.object_data = parse_object_data;
 	indexer->parser.object_complete = parse_object_complete;
 	indexer->parser.delta_start = parse_delta_start;
 	indexer->parser.delta_data = parse_delta_data;
@@ -1147,6 +1291,15 @@ GIT_INLINE(int) resolve_delta(
 		goto done;
 	}
 
+	if (indexer->do_verify) {
+		git_rawobj raw = { result->data, result->len, result->type };
+
+		if (check_object_connectivity(indexer, &raw) < 0) {
+			error = -1;
+			goto done;
+		}
+	}
+
 	delta->final_type = result->type;
 
 #ifdef GIT_EXPERIMENTAL_SHA256
@@ -1606,6 +1759,17 @@ int git_indexer_commit(git_indexer *indexer, git_indexer_progress *stats)
 		goto on_error;
 	}
 
+	if (indexer->do_verify) {
+		size_t missing = git_oidmap_size(indexer->expected_ids);
+
+		if (missing > 0) {
+			git_error_set(GIT_ERROR_INDEXER,
+				"packfile is missing %" PRIuZ " object%s",
+				missing, missing != 1 ? "s" : "");
+			goto on_error;
+		}
+	}
+
 	/* Freeze the number of deltas */
 	indexer->progress.total_deltas =
 		indexer->progress.total_objects - indexer->progress.indexed_objects;
@@ -1726,6 +1890,18 @@ void git_indexer_free(git_indexer *indexer)
 	if (indexer->packfile_fd != -1 && !indexer->committed)
 		p_unlink(indexer->packfile_path.ptr);
 
+	if (indexer->do_verify) {
+		const git_oid *key;
+		void *value;
+		size_t i = 0;
+
+		while (git_oidmap_iterate(&value, indexer->expected_ids, &i, &key) == 0)
+			git__free(value);
+
+		git_oidmap_free(indexer->expected_ids);
+	}
+
+	git_str_dispose(&indexer->current_object_data);
 	git_str_dispose(&indexer->index_path);
 	git_str_dispose(&indexer->packfile_path);
 	git_str_dispose(&indexer->base_path);
