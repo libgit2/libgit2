@@ -185,9 +185,10 @@ int cli_progress_fetch_sideband(const char *str, int len, void *payload)
 	return 0;
 }
 
-static int fetch_receiving(
+static int indexer_or_fetch(
 	cli_progress *progress,
-	const git_indexer_progress *stats)
+	const git_indexer_progress *stats,
+	const char *message)
 {
 	char *recv_units[] = { "B", "KiB", "MiB", "GiB", "TiB", NULL };
 	char *rate_units[] = { "B/s", "KiB/s", "MiB/s", "GiB/s", "TiB/s", NULL };
@@ -207,7 +208,7 @@ static int fetch_receiving(
 	else
 		now = git_time_monotonic();
 
-	if (progress->throughput_update &&
+	if (!done && progress->throughput_update &&
 	    now - progress->throughput_update < THROUGHPUT_UPDATE_TIME) {
 		elapsed = progress->throughput_update -
 		          progress->action_start;
@@ -220,7 +221,7 @@ static int fetch_receiving(
 		progress->throughput_bytes = recv_len;
 	}
 
-	rate = elapsed ? recv_len / elapsed : 0;
+	rate = elapsed ? recv_len / ((float)elapsed / 1000) : 0;
 
 	while (recv_len > 1024 && recv_units[recv_unit_idx+1]) {
 		recv_len /= 1024;
@@ -233,7 +234,8 @@ static int fetch_receiving(
 	}
 
 	return progress_printf(progress, false,
-		"Receiving objects: %3d%% (%d/%d), %.2f %s | %.2f %s%s\r",
+		"%s: %3d%% (%d/%d), %.2f %s | %.2f %s%s\r",
+		message,
 		percent(stats->received_objects, stats->total_objects),
 		stats->received_objects,
 		stats->total_objects,
@@ -242,18 +244,18 @@ static int fetch_receiving(
 		done ? ", done." : "");
 }
 
+static int fetch_receiving(
+	cli_progress *progress,
+	const git_indexer_progress *stats)
+{
+	return indexer_or_fetch(progress, stats, "Receiving objects");
+}
+
 static int indexer_indexing(
 	cli_progress *progress,
 	const git_indexer_progress *stats)
 {
-	bool done = (stats->received_objects == stats->total_objects);
-
-	return progress_printf(progress, false,
-		"Indexing objects: %3d%% (%d/%d)%s\r",
-		percent(stats->received_objects, stats->total_objects),
-		stats->received_objects,
-		stats->total_objects,
-		done ? ", done." : "");
+	return indexer_or_fetch(progress, stats, "Indexing objects");
 }
 
 static int indexer_resolving(
