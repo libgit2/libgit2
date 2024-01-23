@@ -109,14 +109,6 @@ struct git_indexer {
 				 committed : 1;
 
 	/* Current object / delta being parsed */
-	/* TODO: pul these directly from the parser instead? */
-	git_object_size_t current_position;
-	git_object_t current_type;
-	git_object_size_t current_header_size;
-	git_object_size_t current_size;
-	git_oid current_ref; /* current ref delta base */
-	git_object_size_t current_offset; /* current ofs delta base */
-
 	struct object_entry *current_object;
 	git_str current_object_data;
 	struct delta_entry *current_delta;

@@ -108,13 +108,10 @@ static int parse_object_header(
 			parser->current_compressed_crc = crc32(0L, Z_NULL, 0);
 			parser->current_bits = 4;
 
-			printf("cleared crc: %lx\n", parser->current_compressed_crc);
-
 			if (git_hash_init(&parser->current_hash) < 0)
 				return -1;
 		} else {
-			parser->current_size +=
-				(c & 0x7f) << parser->current_bits;
+			parser->current_size += (c & 0x7f) << parser->current_bits;
 			parser->current_compressed_size++;
 			parser->current_bits += 7;
 		}
