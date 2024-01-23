@@ -28,6 +28,8 @@
 #define GIT_ODB_DEFAULT_LOOSE_PRIORITY 1
 #define GIT_ODB_DEFAULT_PACKED_PRIORITY 2
 
+#define GIT_OBJECT_HEADER_MAX_LEN 64
+
 extern bool git_odb__strict_hash_verification;
 
 /* DO NOT EXPORT */

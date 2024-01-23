@@ -108,7 +108,7 @@ int git_odb__format_object_header(
 int git_odb__hashobj(git_oid *id, git_rawobj *obj, git_oid_t oid_type)
 {
 	git_str_vec vec[2];
-	char header[64];
+	char header[GIT_OBJECT_HEADER_MAX_LEN];
 	size_t hdrlen;
 	git_hash_algorithm_t algorithm;
 	int error;
@@ -213,7 +213,7 @@ int git_odb__hashfd(
 	git_oid_t oid_type)
 {
 	size_t hdr_len;
-	char hdr[64], buffer[GIT_BUFSIZE_FILEIO];
+	char hdr[GIT_OBJECT_HEADER_MAX_LEN], buffer[GIT_BUFSIZE_FILEIO];
 	git_hash_ctx ctx;
 	git_hash_algorithm_t algorithm;
 	ssize_t read_len = 0;
@@ -1669,7 +1669,7 @@ int git_odb_write(
 
 static int hash_header(git_hash_ctx *ctx, git_object_size_t size, git_object_t type)
 {
-	char header[64];
+	char header[GIT_OBJECT_HEADER_MAX_LEN];
 	size_t hdrlen;
 	int error;
 
