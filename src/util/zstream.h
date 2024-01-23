@@ -51,4 +51,7 @@ void git_zstream_reset(git_zstream *zstream);
 int git_zstream_deflatebuf(git_str *out, const void *in, size_t in_len);
 int git_zstream_inflatebuf(git_str *out, const void *in, size_t in_len);
 
+int git_zstream_deflatefile(git_str *out, int fd);
+int git_zstream_inflatefile(git_str *out, int fd);
+
 #endif
