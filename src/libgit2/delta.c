@@ -531,51 +531,50 @@ int git_delta_read_header_fromstream(
 	return 0;
 }
 
-int git_delta_apply(
-	void **out,
-	size_t *out_len,
+#define ADD_DELTA(o, shift) { \
+	if (delta < delta_end) { \
+		(o) |= ((unsigned) *delta++ << shift); \
+	} else { \
+		git_error_set(GIT_ERROR_INVALID, "failed to apply delta: truncated instruction"); \
+		return -1; \
+	} \
+}
+
+int git_delta_apply_to_buf(
+	void *out,
+	size_t out_len,
 	const unsigned char *base,
 	size_t base_len,
 	const unsigned char *delta,
 	size_t delta_len)
 {
 	const unsigned char *delta_end = delta + delta_len;
-	size_t base_sz, res_sz, alloc_sz;
-	unsigned char *res_dp;
+	size_t base_size, result_size;
+	unsigned char *result = (unsigned char *)out;
 
-	*out = NULL;
-	*out_len = 0;
-
-	/*
-	 * Check that the base size matches the data we were given;
-	 * if not we would underflow while accessing data from the
-	 * base object, resulting in data corruption or segfault.
-	 */
-	if ((hdr_sz(&base_sz, &delta, delta_end) < 0) || (base_sz != base_len)) {
-		git_error_set(GIT_ERROR_INVALID, "failed to apply delta: base size does not match given data");
+	if (hdr_sz(&base_size, &delta, delta_end) < 0 ||
+	    hdr_sz(&result_size, &delta, delta_end) < 0) {
+		git_error_set(GIT_ERROR_INVALID, "failed to apply delta: invalid delta header");
 		return -1;
 	}
 
-	if (hdr_sz(&res_sz, &delta, delta_end) < 0) {
-		git_error_set(GIT_ERROR_INVALID, "failed to apply delta: base size does not match given data");
+	if (base_size != base_len) {
+		git_error_set(GIT_ERROR_INVALID, "failed to apply delta: given base does not match expected length (%" PRIuZ " / %" PRIuZ ")", base_size, base_len);
 		return -1;
 	}
 
-	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_sz, res_sz, 1);
-	res_dp = git__malloc(alloc_sz);
-	GIT_ERROR_CHECK_ALLOC(res_dp);
-
-	res_dp[res_sz] = '\0';
-	*out = res_dp;
-	*out_len = res_sz;
+	if (result_size > out_len) {
+		git_error_set(GIT_ERROR_INVALID, "failed to apply delta: given result does not match necessary length");
+		return -1;
+	}
 
 	while (delta < delta_end) {
 		unsigned char cmd = *delta++;
+
 		if (cmd & 0x80) {
 			/* cmd is a copy instruction; copy from the base. */
 			size_t off = 0, len = 0, end;
 
-#define ADD_DELTA(o, shift) { if (delta < delta_end) (o) |= ((unsigned) *delta++ << shift); else goto fail; }
 			if (cmd & 0x01) ADD_DELTA(off, 0UL);
 			if (cmd & 0x02) ADD_DELTA(off, 8UL);
 			if (cmd & 0x04) ADD_DELTA(off, 16UL);
@@ -585,44 +584,88 @@ int git_delta_apply(
 			if (cmd & 0x20) ADD_DELTA(len, 8UL);
 			if (cmd & 0x40) ADD_DELTA(len, 16UL);
 			if (!len)       len = 0x10000;
-#undef ADD_DELTA
 
 			if (GIT_ADD_SIZET_OVERFLOW(&end, off, len) ||
-			    base_len < end || res_sz < len)
-				goto fail;
+				    base_len < end || result_size < len) {
+				git_error_set(GIT_ERROR_INVALID, "failed to apply delta: delta is too short for add instruction");
+				return -1;
+			}
 
-			memcpy(res_dp, base + off, len);
-			res_dp += len;
-			res_sz -= len;
-
+			memcpy(result, base + off, len);
+			result += len;
+			result_size -= len;
 		} else if (cmd) {
 			/*
 			 * cmd is a literal insert instruction; copy from
 			 * the delta stream itself.
 			 */
-			if (delta_end - delta < cmd || res_sz < cmd)
-				goto fail;
-			memcpy(res_dp, delta, cmd);
+			if (delta_end - delta < cmd || result_size < cmd) {
+				git_error_set(GIT_ERROR_INVALID, "failed to apply delta: delta is too short for copy instruction");
+				return -1;
+			}
+
+			memcpy(result, delta, cmd);
 			delta += cmd;
-			res_dp += cmd;
-			res_sz -= cmd;
+			result += cmd;
+			result_size -= cmd;
 
 		} else {
 			/* cmd == 0 is reserved for future encodings. */
-			goto fail;
+			git_error_set(GIT_ERROR_INVALID, "failed to apply delta: invalid instruction");
+			return -1;
 		}
 	}
 
-	if (delta != delta_end || res_sz)
-		goto fail;
-	return 0;
+	if (delta != delta_end || result_size) {
+		git_error_set(GIT_ERROR_INVALID, "failed to apply delta: trailing data");
+		return -1;
+	}
 
-fail:
-	git__free(*out);
+	return 0;
+}
+#undef ADD_DELTA
+
+int git_delta_apply(
+	void **out,
+	size_t *out_len,
+	const unsigned char *base,
+	size_t base_len,
+	const unsigned char *delta,
+	size_t delta_len)
+{
+	const unsigned char *delta_iter = delta;
+	const unsigned char *delta_end = delta + delta_len;
+	size_t base_size, result_size, alloc_size;
+	unsigned char *result;
 
 	*out = NULL;
 	*out_len = 0;
 
-	git_error_set(GIT_ERROR_INVALID, "failed to apply delta");
-	return -1;
+	/*
+	 * Check that the base size matches the data we were given;
+	 * if not we would underflow while accessing data from the
+	 * base object, resulting in data corruption or segfault.
+	 */
+	if (hdr_sz(&base_size, &delta_iter, delta_end) < 0 ||
+	    hdr_sz(&result_size, &delta_iter, delta_end) < 0) {
+		git_error_set(GIT_ERROR_INVALID, "failed to apply delta: invalid delta header");
+		return -1;
+	}
+
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_size, result_size, 1);
+	result = git__malloc(alloc_size);
+	GIT_ERROR_CHECK_ALLOC(result);
+
+	if (git_delta_apply_to_buf(result, result_size,
+			base, base_len, delta, delta_len) < 0) {
+		git__free(result);
+		return -1;
+	}
+
+	result[result_size] = '\0';
+
+	*out = result;
+	*out_len = result_size;
+
+	return 0;
 }

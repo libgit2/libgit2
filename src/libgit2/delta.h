@@ -108,6 +108,28 @@ extern int git_delta_apply(
 	size_t delta_len);
 
 /**
+* Apply a git binary delta to recover the original content.
+* This applies to an existing buffer. The caller should set
+* the buffer size appropriate by inspecting the header using
+* `git_delta_read_header`.
+*
+* @param out the output buffer
+* @param out_len the length of the output buffer
+* @param base the base to copy from during copy instructions.
+* @param base_len number of bytes available at base.
+* @param delta the delta to execute copy/insert instructions from.
+* @param delta_len total number of bytes in the delta.
+* @return 0 on success or an error code
+*/
+int git_delta_apply_to_buf(
+	void *out,
+	size_t out_len,
+	const unsigned char *base,
+	size_t base_len,
+	const unsigned char *delta,
+	size_t delta_len);
+
+/**
 * Read the header of a git binary delta.
 *
 * @param base_out pointer to store the base size field.
