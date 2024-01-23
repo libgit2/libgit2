@@ -21,9 +21,6 @@
 #include "git2/odb_backend.h"
 #include "git2/types.h"
 
-/* maximum possible header length */
-#define MAX_HEADER_LEN 64
-
 typedef struct { /* object header data */
 	git_object_t type; /* object type */
 	size_t	size; /* object size */
@@ -37,7 +34,7 @@ typedef struct {
 typedef struct {
 	git_odb_stream stream;
 	git_map map;
-	char start[MAX_HEADER_LEN];
+	char start[GIT_OBJECT_HEADER_MAX_LEN];
 	size_t start_len;
 	size_t start_read;
 	git_zstream zstream;
@@ -276,7 +273,7 @@ done:
 static int read_loose_standard(git_rawobj *out, git_str *obj)
 {
 	git_zstream zstream = GIT_ZSTREAM_INIT;
-	unsigned char head[MAX_HEADER_LEN], *body = NULL;
+	unsigned char head[GIT_OBJECT_HEADER_MAX_LEN], *body = NULL;
 	size_t decompressed, head_len, body_len, alloc_size;
 	obj_hdr hdr;
 	int error;
@@ -391,7 +388,7 @@ static int read_header_loose_standard(
 {
 	git_zstream zs = GIT_ZSTREAM_INIT;
 	obj_hdr hdr = {0};
-	unsigned char inflated[MAX_HEADER_LEN] = {0};
+	unsigned char inflated[GIT_OBJECT_HEADER_MAX_LEN] = {0};
 	size_t header_len, inflated_len = sizeof(inflated);
 	int error;
 
@@ -847,7 +844,7 @@ static int loose_backend__writestream(git_odb_stream **stream_out, git_odb_backe
 {
 	loose_backend *backend;
 	loose_writestream *stream = NULL;
-	char hdr[MAX_HEADER_LEN];
+	char hdr[GIT_OBJECT_HEADER_MAX_LEN];
 	git_str tmp_path = GIT_STR_INIT;
 	size_t hdrlen;
 	int error;
@@ -964,7 +961,7 @@ static int loose_backend__readstream_standard(
 	obj_hdr *hdr,
 	loose_readstream *stream)
 {
-	unsigned char head[MAX_HEADER_LEN];
+	unsigned char head[GIT_OBJECT_HEADER_MAX_LEN];
 	size_t init, head_len;
 	int error;
 
@@ -1080,7 +1077,7 @@ static int loose_backend__write(git_odb_backend *_backend, const git_oid *oid, c
 {
 	int error = 0;
 	git_str final_path = GIT_STR_INIT;
-	char header[MAX_HEADER_LEN];
+	char header[GIT_OBJECT_HEADER_MAX_LEN];
 	size_t header_len;
 	git_filebuf fbuf = GIT_FILEBUF_INIT;
 	loose_backend *backend;
