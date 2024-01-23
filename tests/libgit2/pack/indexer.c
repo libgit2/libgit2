@@ -184,6 +184,7 @@ void test_pack_indexer__fix_thin(void)
 #endif
 
 	cl_git_pass(git_indexer_append(idx, thin_pack, thin_pack_len, &stats));
+
 	cl_git_pass(git_indexer_commit(idx, &stats));
 
 	cl_assert_equal_i(stats.total_objects, 2);
@@ -265,7 +266,7 @@ void test_pack_indexer__corrupt_length(void)
 	cl_git_fail(git_indexer_commit(idx, &stats));
 
 	cl_assert(git_error_last() != NULL);
-	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_ZLIB);
+	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_INDEXER);
 
 	git_indexer_free(idx);
 	git_odb_free(odb);
