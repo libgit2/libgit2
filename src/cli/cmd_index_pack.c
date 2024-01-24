@@ -14,7 +14,7 @@
 
 #define BUFFER_SIZE (1024 * 1024)
 
-static int verbose, read_stdin;
+static int verbose, verify, read_stdin;
 static char *filename;
 static cli_progress progress = CLI_PROGRESS_INIT;
 
@@ -23,6 +23,8 @@ static const cli_opt_spec opts[] = {
 
 	{ CLI_OPT_TYPE_SWITCH,    "verbose", 'v', &verbose,    1,
 	  CLI_OPT_USAGE_DEFAULT,   NULL,    "display progress output" },
+	{ CLI_OPT_TYPE_SWITCH,    "verify",  0,   &verify,     1,
+	  CLI_OPT_USAGE_DEFAULT,   NULL,    "verify packfile connectivity" },
 
 	{ CLI_OPT_TYPE_LITERAL },
 
@@ -76,6 +78,8 @@ int cmd_index_pack(int argc, char **argv)
 		ret = cli_error_git();
 		goto done;
 	}
+
+	idx_opts.verify = verify;
 
 #ifdef GIT_EXPERIMENTAL_SHA256
 	ret = git_indexer_new(&idx, ".", GIT_OID_SHA1, &idx_opts);
