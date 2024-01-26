@@ -490,7 +490,8 @@ typedef enum {
  *
  *   opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, int timeout)
  *      > Sets the timeout (in milliseconds) to attempt connections to
- *      > a remote server. Set to 0 to use the system default.
+ *      > a remote server. This is supported only for HTTP(S) connections
+ *      > and is not supported by SSH. Set to 0 to use the system default.
  *      > Note that this may not be able to be configured longer than the
  *      > system default, typically 75 seconds.
  *
@@ -500,9 +501,7 @@ typedef enum {
  *
  *   opts(GIT_OPT_SET_SERVER_TIMEOUT, int timeout)
  *      > Sets the timeout (in milliseconds) for reading from and writing
- *      > to a remote server. This is supported only for HTTP(S)
- *      > connections and is not supported by SSH. Set to 0 to use the
- *      > system default.
+ *      > to a remote server. Set to 0 to use the system default.
  *
  * @param option Option key
  * @param ... value to set the option
