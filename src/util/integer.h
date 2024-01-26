@@ -7,6 +7,16 @@
 #ifndef INCLUDE_integer_h__
 #define INCLUDE_integer_h__
 
+#ifndef htonll
+# ifdef __BIG_ENDIAN__
+#  define htonll(x) (x)
+#  define ntohll(x) (x)
+# else
+#  define htonll(x) (((uint64_t)htonl((x) & 0xffffffff) << 32) | htonl((x) >> 32))
+#  define ntohll(x) (((uint64_t)ntohl((x) & 0xffffffff) << 32) | ntohl((x) >> 32))
+# endif
+#endif
+
 /** @return true if p fits into the range of a size_t */
 GIT_INLINE(int) git__is_sizet(int64_t p)
 {
