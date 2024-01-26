@@ -51,15 +51,34 @@ struct delta_entry {
 };
 
 
+struct object_cache_entry {
+	struct object_cache_entry *prev;
+	struct object_cache_entry *next;
+	uint64_t time;
+	git_refcount rc;
+	git_object_size_t position;
+};
+
 /*
  * object_data reflects the actual, inflated and de-deltafied object
  * data. (object_entry will store the information about the raw
  * objects themselves, which may reflect delta data not inflated data.)
  */
 struct object_data {
+	struct object_cache_entry cache_entry;
+
 	git_object_t type;
 	size_t len;
 	unsigned char data[GIT_FLEX_ARRAY];
+};
+
+struct object_cache {
+	git_mutex lock;
+	git_sizemap *map;
+	size_t size;
+	size_t used;
+	struct object_cache_entry *oldest;
+	struct object_cache_entry *newest;
 };
 
 struct git_indexer {
@@ -105,6 +124,8 @@ struct git_indexer {
 	git_oidmap *expected_ids; /* object verification list */
 	git_pool expected_id_pool;
 
+	struct object_cache basecache; /* lru of position to entry data */
+
 	/* The packfile's trailer; and formatted into returnable objects. */
 	unsigned char trailer[GIT_HASH_MAX_SIZE];
 	git_oid trailer_oid;
@@ -116,6 +137,7 @@ struct git_indexer {
 
 	/* Statistics */
 	size_t object_lookups;
+	size_t cache_hits;
 
 	git_indexer_progress progress;
 
@@ -124,6 +146,216 @@ struct git_indexer {
 	uint64_t delta_start;
 	uint64_t delta_end;
 };
+
+
+static int object_cache_init(struct object_cache *cache) {
+	memset(cache, 0, sizeof(struct object_cache));
+
+	if (git_sizemap_new(&cache->map) < 0 ||
+	    git_mutex_init(&cache->lock) < 0)
+		return -1;
+
+	/* TODO */
+	cache->size = (1024 * 1024 * 512);
+
+	return 0;
+}
+
+static struct object_data *object_cache_get(
+	struct object_cache *cache,
+	git_object_size_t position)
+{
+	struct object_cache_entry *entry;
+	uint64_t last_update_time;
+
+	if (git_mutex_lock(&cache->lock) < 0)
+		return NULL;
+
+	entry = git_sizemap_get(cache->map, position);
+
+	if (!entry)
+		goto done;
+
+	/* Increase refcount before returning; user will decrease. */
+	GIT_REFCOUNT_INC(entry);
+
+	/* Update the timestamp */
+	last_update_time = entry->time;
+	entry->time = git_time_monotonic();
+
+	/* Don't bother increasing LRU if it was recently seen */
+	if (entry->time - last_update_time < LRU_FRESHNESS_TIME ||
+	    entry == cache->newest)
+		goto done;
+
+	/* Remove this entry from its current position */
+	if (entry->prev)
+		entry->prev->next = entry->next;
+	if (entry->next)
+		entry->next->prev = entry->prev;
+
+	/* Put this at the beginning of the list if it's the only item */
+	if (cache->oldest == entry && entry->next)
+		cache->oldest = entry->next;
+
+	/* Update this entry with its next/prev pointers */
+	entry->prev = cache->newest;
+	entry->next = NULL;
+
+	/* Update the newest entry item */
+	cache->newest->next = entry;
+	cache->newest = entry;
+
+done:
+	git_mutex_unlock(&cache->lock);
+	return (struct object_data *)entry;
+}
+
+static void object_cache_free(void *data)
+{
+	git__free(data);
+}
+
+GIT_INLINE(int) object_cache_reserve(
+	struct object_cache *cache,
+	git_object_size_t size)
+{
+	struct object_cache_entry *old;
+	struct object_data *old_data;
+
+/*	dump_cache(cache); */
+
+	while (cache->oldest && (cache->size - cache->used) < size) {
+		old = cache->oldest;
+		old_data = (struct object_data *)old;
+
+		cache->oldest = old->next;
+
+		GIT_ASSERT(cache->used >= old_data->len);
+		GIT_ASSERT(!old->prev);
+
+		if (old->next)
+			old->next->prev = NULL;
+
+		if (cache->newest == old)
+			cache->newest = NULL;
+
+		git_sizemap_delete(cache->map, old->position);
+
+		cache->used -= old_data->len;
+
+		/*
+		 * Decrease the refcount since we're removing this from the LRU.
+		 * Callers may still have a reference to this, but will decrease
+		 * the refcount on their own.
+		 */
+		GIT_REFCOUNT_DEC(old, object_cache_free);
+	}
+
+	return 0;
+}
+
+/* TODO: object cache should also take an oid so ref deltas can use it */
+static int object_cache_put(
+	struct object_cache *cache,
+	git_object_size_t position,
+	struct object_data *data)
+{
+	struct object_cache_entry *entry = (struct object_cache_entry *)data;
+	int error = 0;
+
+	if (git_mutex_lock(&cache->lock) < 0)
+		return -1;
+
+	GIT_ASSERT_WITH_CLEANUP(cache->used <= cache->size, {
+		error = -1;
+		goto done;
+	});
+
+	/* TODO: cache size limits */
+	if (data->len > cache->size)
+		goto done;
+
+	/* hmm, thread contentionp here? */
+/*	GIT_ASSERT(git_sizemap_get(cache->map, position) == NULL); */
+	GIT_ASSERT(entry->prev == NULL);
+	GIT_ASSERT(entry->next == NULL);
+
+	/* TODO: reserve needs to return when it cannot make space for
+	 * this object, and we should not cache it.
+	 */
+	if (object_cache_reserve(cache, data->len) < 0 ||
+	    git_sizemap_set(cache->map, position, entry) < 0) {
+		error = -1;
+		goto done;
+	}
+
+	/*
+	 * Increase the refcount; while this is in the LRU, it will have
+	 * a refcount of (at least) one.
+	 */
+	GIT_REFCOUNT_INC(entry);
+
+	entry->time = git_time_monotonic();
+
+	/* TODO: weird, move position ? call it key? idk */
+	entry->position = position;
+	entry->prev = cache->newest;
+	entry->next = NULL;
+
+	if (cache->newest)
+		cache->newest->next = entry;
+
+	cache->newest = entry;
+
+	if (!cache->oldest)
+		cache->oldest = entry;
+
+	/* TODO: overflow / sanity checking here */
+	cache->used += data->len;
+
+done:
+	git_mutex_unlock(&cache->lock);
+
+	if (error < 0)
+		git__free(entry);
+
+	return error ? -1 : 0;
+}
+
+static void object_cache_dispose(
+	struct object_cache *cache)
+{
+	struct object_cache_entry *entry, *dispose;
+
+	if (git_mutex_lock(&cache->lock) < 0)
+		return;
+
+	/* dump_cache(cache); */
+
+	entry = cache->oldest;
+
+	while (entry != NULL) {
+		dispose = entry;
+		entry = entry->next;
+
+		/* TODO: unnecessary */
+		cache->used -= ((struct object_data *)dispose)->len;
+
+		/* TODO: this is useless */
+		GIT_ASSERT_WITH_CLEANUP(GIT_REFCOUNT_VAL(dispose) == 1, {});
+		git__free(dispose);
+	}
+
+	/* TODO: unnecessary */
+	if (cache->used != 0)
+		abort();
+
+	git_sizemap_free(cache->map);
+
+	git_mutex_unlock(&cache->lock);
+	git_mutex_free(&cache->lock);
+}
 
 
 int git_indexer_options_init(
@@ -189,6 +421,7 @@ static int parse_packfile_header(
 
 	if (git_sizemap_new(&indexer->positions) < 0 ||
 	    git_oidmap_new(&indexer->ids) < 0 ||
+	    object_cache_init(&indexer->basecache) < 0 ||
 	    git_vector_init(&indexer->objects, entries, objects_cmp) < 0 ||
 	    git_vector_init(&indexer->offset_deltas, entries / 2, offset_delta_cmp) < 0 ||
 	    git_vector_init(&indexer->ref_deltas, entries / 2, ref_delta_cmp) < 0 ||
@@ -676,7 +909,7 @@ static int load_raw_object(
 	git_zstream_reset(&indexer->delta_zstream);
 
 	if (git_zstream_set_input(&indexer->delta_zstream, compressed_ptr,
-			(indexer->packfile_size - raw_position)) < 0)
+		    (indexer->packfile_size - raw_position)) < 0)
 		goto on_error;
 
 	while (data_remain && !git_zstream_eos(&indexer->delta_zstream)) {
@@ -694,7 +927,9 @@ static int load_raw_object(
 		goto on_error;
 	}
 
+	GIT_REFCOUNT_INC(&data->cache_entry);
 	*out = data;
+
 	return 0;
 
 on_error:
@@ -873,9 +1108,9 @@ GIT_INLINE(int) load_resolved_delta_object(
 		return -1;
 	}
 
-	git__free(base_data);
-	git__free(delta_data);
-
+	GIT_REFCOUNT_DEC(&base_data->cache_entry, object_cache_free);
+	GIT_REFCOUNT_DEC(&delta_data->cache_entry, object_cache_free);
+	GIT_REFCOUNT_INC(&result_data->cache_entry);
 	*out = result_data;
 
 	return 0;
@@ -892,6 +1127,15 @@ static int load_resolved_object(
 
 	indexer->object_lookups++;
 
+	/* cache lookup */
+
+	if (object->type == GIT_OBJECT_OFS_DELTA &&
+	    (data = object_cache_get(&indexer->basecache, object->position)) != NULL) {
+		indexer->cache_hits++;
+		*out = data;
+		return 0;
+	}
+
 	if (object->type == GIT_OBJECT_REF_DELTA || object->type == GIT_OBJECT_OFS_DELTA) {
 		error = load_resolved_delta_object(&data, indexer, object, base);
 
@@ -901,6 +1145,10 @@ static int load_resolved_object(
 		if (load_raw_object(&data, indexer, object) < 0)
 			return -1;
 	}
+
+	/* cache set */
+	if (object_cache_put(&indexer->basecache, object->position, data) < 0)
+		return -1;
 
 	*out = data;
 	return 0;
@@ -946,13 +1194,16 @@ GIT_INLINE(int) resolve_delta(
 		}
 	}
 
+	if ((error = git_oidmap_set(indexer->ids, &delta->object.id, &delta->object)) < 0)
+		goto done;
+
 	indexer->progress.indexed_deltas++;
 	indexer->progress.indexed_objects++;
 
 	error = do_progress_cb(indexer);
 
 done:
-	git__free(result);
+	GIT_REFCOUNT_DEC(&result->cache_entry, object_cache_free);
 	return error;
 }
 
@@ -1360,6 +1611,7 @@ void git_indexer_free(git_indexer *indexer)
 	git_str_dispose(&indexer->index_path);
 	git_str_dispose(&indexer->packfile_path);
 	git_str_dispose(&indexer->base_path);
+	object_cache_dispose(&indexer->basecache);
 	git_sizemap_free(indexer->positions);
 	git_oidmap_free(indexer->ids);
 	git_vector_free(&indexer->offset_deltas);
