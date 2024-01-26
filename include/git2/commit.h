@@ -366,7 +366,7 @@ GIT_EXTERN(int) git_commit_create(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[]);
+	git_commit * const parents[]);
 
 /**
  * Create new commit in the repository using a variable argument list.
@@ -393,6 +393,49 @@ GIT_EXTERN(int) git_commit_create_v(
 	const git_tree *tree,
 	size_t parent_count,
 	...);
+
+typedef struct {
+	unsigned int version;
+
+	/**
+	 * Flags for creating the commit.
+	 *
+	 * If `allow_empty_commit` is specified, a commit with no changes
+	 * from the prior commit (and "empty" commit) is allowed. Otherwise,
+	 * commit creation will be stopped.
+	 */
+	unsigned int allow_empty_commit : 1;
+
+	/** The commit author, or NULL for the default. */
+	const git_signature *author;
+
+	/** The committer, or NULL for the default. */
+	const git_signature *committer;
+
+	/** Encoding for the commit message; leave NULL for default. */
+	const char *message_encoding;
+} git_commit_create_options;
+
+#define GIT_COMMIT_CREATE_OPTIONS_VERSION 1
+#define GIT_COMMIT_CREATE_OPTIONS_INIT { GIT_COMMIT_CREATE_OPTIONS_VERSION }
+
+/**
+ * Commits the staged changes in the repository; this is a near analog to
+ * `git commit -m message`.
+ *
+ * By default, empty commits are not allowed.
+ *
+ * @param id pointer to store the new commit's object id
+ * @param repo repository to commit changes in
+ * @param message the commit message
+ * @param opts options for creating the commit
+ * @return 0 on success, GIT_EUNCHANGED if there were no changes to commit, or an error code
+ */
+GIT_EXTERN(int) git_commit_create_from_stage(
+	git_oid *id,
+	git_repository *repo,
+	const char *message,
+	const git_commit_create_options *opts);
 
 /**
  * Amend an existing commit by replacing only non-NULL values.
@@ -469,7 +512,7 @@ GIT_EXTERN(int) git_commit_create_buffer(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[]);
+	git_commit * const parents[]);
 
 /**
  * Create a commit object from the given buffer and signature
@@ -538,7 +581,7 @@ typedef int (*git_commit_create_cb)(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[],
+	git_commit * const parents[],
 	void *payload);
 
 /** An array of commits returned from the library */

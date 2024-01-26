@@ -64,7 +64,7 @@ int git_commit__create_buffer(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[]);
+	git_commit * const parents[]);
 
 int git_commit__parse(
 	void *commit,

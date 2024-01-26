@@ -26,7 +26,7 @@ static int create_cb_passthrough(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[],
+	git_commit * const parents[],
 	void *payload)
 {
 	GIT_UNUSED(out);
@@ -94,7 +94,7 @@ static int create_cb_signed_gpg(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[],
+	git_commit * const parents[],
 	void *payload)
 {
 	git_buf commit_content = GIT_BUF_INIT;
@@ -202,7 +202,7 @@ static int create_cb_error(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[],
+	git_commit * const parents[],
 	void *payload)
 {
 	GIT_UNUSED(out);
