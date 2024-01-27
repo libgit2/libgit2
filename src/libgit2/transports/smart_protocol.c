@@ -688,7 +688,7 @@ int git_smart__download_pack(
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
-		((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) != 0))
+	    ((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) != 0))
 		goto done;
 
 	/*
@@ -742,7 +742,7 @@ int git_smart__download_pack(
 
 		git_pkt_free(pkt);
 
-		if (error < 0)
+		if (error != 0)
 			goto done;
 
 	} while (1);
