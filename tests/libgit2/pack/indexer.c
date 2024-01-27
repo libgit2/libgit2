@@ -323,6 +323,26 @@ void test_pack_indexer__out_of_order_with_connectivity_checks(void)
 	git_indexer_free(idx);
 }
 
+void test_pack_indexer__stats_are_optional(void)
+{
+	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
+	git_indexer *idx = 0;
+
+	opts.verify = 1;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_indexer_new(&idx, ".", GIT_OID_SHA1, &opts));
+#else
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, &opts));
+#endif
+
+	cl_git_pass(git_indexer_append(
+		idx, out_of_order_pack, out_of_order_pack_len, NULL));
+	cl_git_pass(git_indexer_commit(idx, NULL));
+
+	git_indexer_free(idx);
+}
+
 static int find_tmp_file_recurs(void *opaque, git_str *path)
 {
 	int error = 0;
