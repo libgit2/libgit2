@@ -362,25 +362,29 @@ on_error:
 	return error;
 }
 
-static bool should_checkout(
+static int should_checkout(
+	bool *out,
 	git_repository *repo,
 	bool is_bare,
 	const git_checkout_options *opts)
 {
-	if (is_bare)
-		return false;
+	int error;
 
-	if (!opts)
-		return false;
+	if (!opts || is_bare || opts->checkout_strategy == GIT_CHECKOUT_NONE) {
+		*out = 0;
+		return 0;
+	}
 
-	if (opts->checkout_strategy == GIT_CHECKOUT_NONE)
-		return false;
+	if ((error = git_repository_head_unborn(repo)) < 0)
+		return error;
 
-	return !git_repository_head_unborn(repo);
+	*out = !error;
+	return 0;
 }
 
 static int checkout_branch(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, const char *reflog_message)
 {
+	bool checkout;
 	int error;
 
 	if (branch)
@@ -389,7 +393,13 @@ static int checkout_branch(git_repository *repo, git_remote *remote, const git_c
 	else
 		error = update_head_to_remote(repo, remote, reflog_message);
 
-	if (!error && should_checkout(repo, git_repository_is_bare(repo), co_opts))
+	if (error < 0)
+		return error;
+
+	if ((error = should_checkout(&checkout, repo, git_repository_is_bare(repo), co_opts)) < 0)
+		return error;
+
+	if (checkout)
 		error = git_checkout_head(repo, co_opts);
 
 	return error;
