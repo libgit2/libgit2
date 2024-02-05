@@ -21,10 +21,10 @@ static char *_remote_ssh_passphrase = NULL;
 static char *_remote_default = NULL;
 static char *_remote_expectcontinue = NULL;
 
+static char *_remote_push_options = NULL;
+
 static char *_orig_ssh_cmd = NULL;
 static char *_ssh_cmd = NULL;
-
-static char *_remote_push_options_result = NULL;
 
 static int cred_acquire_cb(git_credential **, const char *, const char *, unsigned int, void *);
 
@@ -373,7 +373,7 @@ void test_online_push__initialize(void)
 	_remote_ssh_passphrase = cl_getenv("GITTEST_REMOTE_SSH_PASSPHRASE");
 	_remote_default = cl_getenv("GITTEST_REMOTE_DEFAULT");
 	_remote_expectcontinue = cl_getenv("GITTEST_REMOTE_EXPECTCONTINUE");
-	_remote_push_options_result = cl_getenv("GITTEST_PUSH_OPTION_RESULT");
+	_remote_push_options = cl_getenv("GITTEST_PUSH_OPTIONS");
 	_remote = NULL;
 
 	_orig_ssh_cmd = cl_getenv("GIT_SSH");
@@ -437,7 +437,7 @@ void test_online_push__cleanup(void)
 	git__free(_remote_ssh_passphrase);
 	git__free(_remote_default);
 	git__free(_remote_expectcontinue);
-	git__free(_remote_push_options_result);
+	git__free(_remote_push_options);
 
 	git__free(_orig_ssh_cmd);
 	git__free(_ssh_cmd);
@@ -449,6 +449,7 @@ void test_online_push__cleanup(void)
 
 	record_callbacks_data_clear(&_record_cbs_data);
 
+	cl_fixture_cleanup("push-options-result");
 	cl_fixture_cleanup("testrepo.git");
 	cl_git_sandbox_cleanup();
 }
@@ -827,16 +828,28 @@ void test_online_push__force(void)
 		NULL);
 }
 
-static void push_option_test(git_strarray push_options, const char *expected_option)
+static void push_option_test(git_strarray given_options, const char *expected_option)
 {
 	const char *specs[] = { "refs/heads/b1:refs/heads/b1" };
 	push_status exp_stats[] = { { "refs/heads/b1", 1 } };
 	expected_ref exp_refs[] = { { "refs/heads/b1", &_oid_b1 } };
+	git_str push_options_path = GIT_STR_INIT;
 	git_str push_options_result = GIT_STR_INIT;
+	char *options[16];
+	git_strarray push_options = { options, given_options.count + 1 };
+	size_t i;
 
 	/* Skip the test if we're missing the push options result file */
-	if (!_remote_push_options_result)
+	if (!_remote_push_options)
 		cl_skip();
+
+	cl_assert(given_options.count < 16);
+
+	cl_git_pass(git_str_joinpath(&push_options_path, clar_sandbox_path(), "push-options-result"));
+
+	options[0] = push_options_path.ptr;
+	for (i = 0; i < given_options.count; i++)
+		options[i + 1] = given_options.strings[i];
 
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -844,13 +857,12 @@ static void push_option_test(git_strarray push_options, const char *expected_opt
 		0, 1, 1,
 		&push_options);
 
-	if (git_futils_readbuffer(&push_options_result, _remote_push_options_result) < 0)
-		cl_fail("Failed to read push options result file");
+	cl_assert(git_fs_path_exists(push_options_path.ptr));
+	cl_git_pass(git_futils_readbuffer(&push_options_result, push_options_path.ptr));
 
-	cl_assert_equal_strn(expected_option, git_str_cstr(&push_options_result),
-			     strlen(expected_option));
-
+	cl_assert_equal_s(expected_option, git_str_cstr(&push_options_result));
 	git_str_dispose(&push_options_result);
+	git_str_dispose(&push_options_path);
 }
 
 void test_online_push__options(void)

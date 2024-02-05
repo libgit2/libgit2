@@ -1,2 +1,0 @@
-#!/bin/sh
-printf "$GIT_PUSH_OPTION_0$GIT_PUSH_OPTION_1$GIT_PUSH_OPTION_2" > %file%

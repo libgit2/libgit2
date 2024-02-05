@@ -1,0 +1,3 @@
+#!/bin/sh
+printf "${GIT_PUSH_OPTION_1}${GIT_PUSH_OPTION_2}${GIT_PUSH_OPTION_3}" > "${GIT_PUSH_OPTION_0}"
+exit 0
