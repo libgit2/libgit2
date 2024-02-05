@@ -797,7 +797,7 @@ static int gen_pktline(git_str *buf, git_push *push)
 			++len; /* '\0' */
 			if (push->report_status)
 				len += strlen(GIT_CAP_REPORT_STATUS) + 1;
-			if (git_vector_length(&push->push_options) > 0)
+			if (git_vector_length(&push->remote_push_options) > 0)
 				len += strlen(GIT_CAP_PUSH_OPTIONS) + 1;
 			len += strlen(GIT_CAP_SIDE_BAND_64K) + 1;
 		}
@@ -814,7 +814,7 @@ static int gen_pktline(git_str *buf, git_push *push)
 				git_str_putc(buf, ' ');
 				git_str_printf(buf, GIT_CAP_REPORT_STATUS);
 			}
-			if (git_vector_length(&push->push_options) > 0) {
+			if (git_vector_length(&push->remote_push_options) > 0) {
 				git_str_putc(buf, ' ');
 				git_str_printf(buf, GIT_CAP_PUSH_OPTIONS);
 			}
@@ -825,9 +825,9 @@ static int gen_pktline(git_str *buf, git_push *push)
 		git_str_putc(buf, '\n');
 	}
 
-	if (git_vector_length(&push->push_options) > 0) {
+	if (git_vector_length(&push->remote_push_options) > 0) {
 		git_str_printf(buf, "0000");
-		git_vector_foreach(&push->push_options, i, option) {
+		git_vector_foreach(&push->remote_push_options, i, option) {
 			git_str_printf(buf, "%04"PRIxZ"%s", strlen(option) + 4 , option);
 		}
 	}

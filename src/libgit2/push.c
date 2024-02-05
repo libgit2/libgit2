@@ -68,7 +68,7 @@ int git_push_new(git_push **out, git_remote *remote, const git_push_options *opt
 		return -1;
 	}
 
-	if (git_vector_init(&p->push_options, 0, git__strcmp_cb) < 0) {
+	if (git_vector_init(&p->remote_push_options, 0, git__strcmp_cb) < 0) {
 		git_vector_free(&p->status);
 		git_vector_free(&p->specs);
 		git_vector_free(&p->updates);
@@ -505,12 +505,13 @@ int git_push_finish(git_push *push)
 		return -1;
 	}
 
-	if ((error = git_remote_capabilities(&remote_caps, push->remote)) < 0){
+	if ((error = git_remote_capabilities(&remote_caps, push->remote)) < 0) {
 		git_error_set(GIT_ERROR_INVALID, "remote capabilities not available");
 		return -1;
 	}
 
-	if (git_vector_length(&push->push_options) > 0 && !(remote_caps & GIT_REMOTE_CAPABILITY_PUSH_OPTIONS)) {
+	if (git_vector_length(&push->remote_push_options) > 0 &&
+	    !(remote_caps & GIT_REMOTE_CAPABILITY_PUSH_OPTIONS)) {
 		git_error_set(GIT_ERROR_INVALID, "push-options not supported by remote");
 		return -1;
 	}
@@ -581,10 +582,10 @@ void git_push_free(git_push *push)
 	}
 	git_vector_free(&push->updates);
 
-	git_vector_foreach(&push->push_options, i, option) {
+	git_vector_foreach(&push->remote_push_options, i, option) {
 		git__free(option);
 	}
-	git_vector_free(&push->push_options);
+	git_vector_free(&push->remote_push_options);
 
 	git__free(push);
 }

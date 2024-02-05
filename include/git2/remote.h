@@ -848,9 +848,9 @@ typedef struct {
 	git_strarray custom_headers;
 
 	/**
-	 * Push options
+	 * "Push options" to deliver to the remote.
 	 */
-	git_strarray push_options;
+	git_strarray remote_push_options;
 } git_push_options;
 
 #define GIT_PUSH_OPTIONS_VERSION 1
