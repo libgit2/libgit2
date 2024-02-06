@@ -16,6 +16,7 @@
 #include "futils.h"
 
 #include "standalone_driver.h"
+#include "fuzzer_utils.h"
 
 #define UNUSED(x) (void)(x)
 
@@ -157,33 +158,10 @@ static int fuzzer_transport_cb(git_transport **out, git_remote *owner, void *par
 	return git_transport_smart(out, owner, &def);
 }
 
-static void fuzzer_git_abort(const char *op)
-{
-	const git_error *err = git_error_last();
-	fprintf(stderr, "unexpected libgit error: %s: %s\n",
-		op, err ? err->message : "<none>");
-	abort();
-}
-
 int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
-#if defined(_WIN32)
-	char tmpdir[MAX_PATH], path[MAX_PATH];
-
-	if (GetTempPath((DWORD)sizeof(tmpdir), tmpdir) == 0)
-		abort();
-
-	if (GetTempFileName(tmpdir, "lg2", 1, path) == 0)
-		abort();
-
-	if (git_futils_mkdir(path, 0700, 0) < 0)
-		abort();
-#else
-	char path[] = "/tmp/git2.XXXXXX";
-
-	if (mkdtemp(path) != path)
-		abort();
-#endif
+	UNUSED(argc);
+	UNUSED(argv);
 
 	if (git_libgit2_init() < 0)
 		abort();
@@ -191,12 +169,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 	if (git_libgit2_opts(GIT_OPT_SET_PACK_MAX_OBJECTS, 10000000) < 0)
 		abort();
 
-	UNUSED(argc);
-	UNUSED(argv);
-
-	if (git_repository_init(&repo, path, 1) < 0)
-		fuzzer_git_abort("git_repository_init");
-
+	repo = fuzzer_repo_init();
 	return 0;
 }
 
