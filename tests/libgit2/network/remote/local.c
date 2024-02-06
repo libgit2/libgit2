@@ -473,7 +473,11 @@ void test_network_remote_local__anonymous_remote_inmemory_repo(void)
 
 	git_str_sets(&file_path_buf, cl_git_path_url(cl_fixture("testrepo.git")));
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_repository_new(&inmemory, GIT_OID_SHA1));
+#else
 	cl_git_pass(git_repository_new(&inmemory));
+#endif
 	cl_git_pass(git_remote_create_anonymous(&remote, inmemory, git_str_cstr(&file_path_buf)));
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_assert(git_remote_connected(remote));

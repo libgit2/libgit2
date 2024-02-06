@@ -13,7 +13,7 @@
 #include "array.h"
 #include "str.h"
 #include "config_backend.h"
-#include "config_entries.h"
+#include "config_list.h"
 #include "config_parse.h"
 #include "filebuf.h"
 #include "regexp.h"
@@ -24,9 +24,11 @@
 /* Max depth for [include] directives */
 #define MAX_INCLUDE_DEPTH 10
 
+#define CONFIG_FILE_TYPE "file"
+
 typedef struct config_file {
 	git_futils_filestamp stamp;
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	unsigned char checksum[GIT_HASH_SHA256_SIZE];
 	char *path;
 	git_array_t(struct config_file) includes;
 } config_file;
@@ -34,7 +36,7 @@ typedef struct config_file {
 typedef struct {
 	git_config_backend parent;
 	git_mutex values_mutex;
-	git_config_entries *entries;
+	git_config_list *config_list;
 	const git_repository *repo;
 	git_config_level_t level;
 
@@ -50,13 +52,13 @@ typedef struct {
 typedef struct {
 	const git_repository *repo;
 	config_file *file;
-	git_config_entries *entries;
+	git_config_list *config_list;
 	git_config_level_t level;
 	unsigned int depth;
 } config_file_parse_data;
 
-static int config_file_read(git_config_entries *entries, const git_repository *repo, config_file *file, git_config_level_t level, int depth);
-static int config_file_read_buffer(git_config_entries *entries, const git_repository *repo, config_file *file, git_config_level_t level, int depth, const char *buf, size_t buflen);
+static int config_file_read(git_config_list *config_list, const git_repository *repo, config_file *file, git_config_level_t level, int depth);
+static int config_file_read_buffer(git_config_list *config_list, const git_repository *repo, config_file *file, git_config_level_t level, int depth, const char *buf, size_t buflen);
 static int config_file_write(config_file_backend *cfg, const char *orig_key, const char *key, const git_regexp *preg, const char *value);
 static char *escape_value(const char *ptr);
 
@@ -65,7 +67,7 @@ static char *escape_value(const char *ptr);
  * refcount. This is its own function to make sure we use the mutex to
  * avoid the map pointer from changing under us.
  */
-static int config_file_entries_take(git_config_entries **out, config_file_backend *b)
+static int config_file_take_list(git_config_list **out, config_file_backend *b)
 {
 	int error;
 
@@ -74,8 +76,8 @@ static int config_file_entries_take(git_config_entries **out, config_file_backen
 		return error;
 	}
 
-	git_config_entries_incref(b->entries);
-	*out = b->entries;
+	git_config_list_incref(b->config_list);
+	*out = b->config_list;
 
 	git_mutex_unlock(&b->values_mutex);
 
@@ -106,7 +108,7 @@ static int config_file_open(git_config_backend *cfg, git_config_level_t level, c
 	b->level = level;
 	b->repo = repo;
 
-	if ((res = git_config_entries_new(&b->entries)) < 0)
+	if ((res = git_config_list_new(&b->config_list)) < 0)
 		return res;
 
 	if (!git_fs_path_exists(b->file.path))
@@ -121,9 +123,9 @@ static int config_file_open(git_config_backend *cfg, git_config_level_t level, c
 	if (p_access(b->file.path, R_OK) < 0)
 		return GIT_ENOTFOUND;
 
-	if (res < 0 || (res = config_file_read(b->entries, repo, &b->file, level, 0)) < 0) {
-		git_config_entries_free(b->entries);
-		b->entries = NULL;
+	if (res < 0 || (res = config_file_read(b->config_list, repo, &b->file, level, 0)) < 0) {
+		git_config_list_free(b->config_list);
+		b->config_list = NULL;
 	}
 
 	return res;
@@ -133,7 +135,7 @@ static int config_file_is_modified(int *modified, config_file *file)
 {
 	config_file *include;
 	git_str buf = GIT_STR_INIT;
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	unsigned char checksum[GIT_HASH_SHA256_SIZE];
 	uint32_t i;
 	int error = 0;
 
@@ -145,10 +147,10 @@ static int config_file_is_modified(int *modified, config_file *file)
 	if ((error = git_futils_readbuffer(&buf, file->path)) < 0)
 		goto out;
 
-	if ((error = git_hash_buf(checksum, buf.ptr, buf.size, GIT_HASH_ALGORITHM_SHA1)) < 0)
+	if ((error = git_hash_buf(checksum, buf.ptr, buf.size, GIT_HASH_ALGORITHM_SHA256)) < 0)
 		goto out;
 
-	if (memcmp(checksum, file->checksum, GIT_HASH_SHA1_SIZE) != 0) {
+	if (memcmp(checksum, file->checksum, GIT_HASH_SHA256_SIZE) != 0) {
 		*modified = 1;
 		goto out;
 	}
@@ -175,10 +177,10 @@ static void config_file_clear_includes(config_file_backend *cfg)
 	git_array_clear(cfg->file.includes);
 }
 
-static int config_file_set_entries(git_config_backend *cfg, git_config_entries *entries)
+static int config_file_set_entries(git_config_backend *cfg, git_config_list *config_list)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
-	git_config_entries *old = NULL;
+	git_config_list *old = NULL;
 	int error;
 
 	if (b->parent.readonly) {
@@ -191,40 +193,40 @@ static int config_file_set_entries(git_config_backend *cfg, git_config_entries *
 		goto out;
 	}
 
-	old = b->entries;
-	b->entries = entries;
+	old = b->config_list;
+	b->config_list = config_list;
 
 	git_mutex_unlock(&b->values_mutex);
 
 out:
-	git_config_entries_free(old);
+	git_config_list_free(old);
 	return error;
 }
 
 static int config_file_refresh_from_buffer(git_config_backend *cfg, const char *buf, size_t buflen)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
-	git_config_entries *entries = NULL;
+	git_config_list *config_list = NULL;
 	int error;
 
 	config_file_clear_includes(b);
 
-	if ((error = git_config_entries_new(&entries)) < 0 ||
-	    (error = config_file_read_buffer(entries, b->repo, &b->file,
+	if ((error = git_config_list_new(&config_list)) < 0 ||
+	    (error = config_file_read_buffer(config_list, b->repo, &b->file,
 					     b->level, 0, buf, buflen)) < 0 ||
-	    (error = config_file_set_entries(cfg, entries)) < 0)
+	    (error = config_file_set_entries(cfg, config_list)) < 0)
 		goto out;
 
-	entries = NULL;
+	config_list = NULL;
 out:
-	git_config_entries_free(entries);
+	git_config_list_free(config_list);
 	return error;
 }
 
 static int config_file_refresh(git_config_backend *cfg)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
-	git_config_entries *entries = NULL;
+	git_config_list *config_list = NULL;
 	int error, modified;
 
 	if (cfg->readonly)
@@ -238,14 +240,14 @@ static int config_file_refresh(git_config_backend *cfg)
 
 	config_file_clear_includes(b);
 
-	if ((error = git_config_entries_new(&entries)) < 0 ||
-	    (error = config_file_read(entries, b->repo, &b->file, b->level, 0)) < 0 ||
-	    (error = config_file_set_entries(cfg, entries)) < 0)
+	if ((error = git_config_list_new(&config_list)) < 0 ||
+	    (error = config_file_read(config_list, b->repo, &b->file, b->level, 0)) < 0 ||
+	    (error = config_file_set_entries(cfg, config_list)) < 0)
 		goto out;
 
-	entries = NULL;
+	config_list = NULL;
 out:
-	git_config_entries_free(entries);
+	git_config_list_free(config_list);
 
 	return (error == GIT_ENOTFOUND) ? 0 : error;
 }
@@ -258,7 +260,7 @@ static void config_file_free(git_config_backend *_backend)
 		return;
 
 	config_file_clear(&backend->file);
-	git_config_entries_free(backend->entries);
+	git_config_list_free(backend->config_list);
 	git_mutex_free(&backend->values_mutex);
 	git__free(backend);
 }
@@ -268,19 +270,19 @@ static int config_file_iterator(
 	struct git_config_backend *backend)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(backend, config_file_backend, parent);
-	git_config_entries *dupped = NULL, *entries = NULL;
+	git_config_list *dupped = NULL, *config_list = NULL;
 	int error;
 
 	if ((error = config_file_refresh(backend)) < 0 ||
-	    (error = config_file_entries_take(&entries, b)) < 0 ||
-	    (error = git_config_entries_dup(&dupped, entries)) < 0 ||
-	    (error = git_config_entries_iterator_new(iter, dupped)) < 0)
+	    (error = config_file_take_list(&config_list, b)) < 0 ||
+	    (error = git_config_list_dup(&dupped, config_list)) < 0 ||
+	    (error = git_config_list_iterator_new(iter, dupped)) < 0)
 		goto out;
 
 out:
-	/* Let iterator delete duplicated entries when it's done */
-	git_config_entries_free(entries);
-	git_config_entries_free(dupped);
+	/* Let iterator delete duplicated config_list when it's done */
+	git_config_list_free(config_list);
+	git_config_list_free(dupped);
 	return error;
 }
 
@@ -292,24 +294,24 @@ static int config_file_snapshot(git_config_backend **out, git_config_backend *ba
 static int config_file_set(git_config_backend *cfg, const char *name, const char *value)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
-	git_config_entries *entries;
-	git_config_entry *existing;
+	git_config_list *config_list;
+	git_config_list_entry *existing;
 	char *key, *esc_value = NULL;
 	int error;
 
 	if ((error = git_config__normalize_name(name, &key)) < 0)
 		return error;
 
-	if ((error = config_file_entries_take(&entries, b)) < 0)
+	if ((error = config_file_take_list(&config_list, b)) < 0)
 		return error;
 
 	/* Check whether we'd be modifying an included or multivar key */
-	if ((error = git_config_entries_get_unique(&existing, entries, key)) < 0) {
+	if ((error = git_config_list_get_unique(&existing, config_list, key)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto out;
 		error = 0;
-	} else if ((!existing->value && !value) ||
-		   (existing->value && value && !strcmp(existing->value, value))) {
+	} else if ((!existing->base.value && !value) ||
+		   (existing->base.value && value && !strcmp(existing->base.value, value))) {
 		/* don't update if old and new values already match */
 		error = 0;
 		goto out;
@@ -325,17 +327,10 @@ static int config_file_set(git_config_backend *cfg, const char *name, const char
 		goto out;
 
 out:
-	git_config_entries_free(entries);
+	git_config_list_free(config_list);
 	git__free(esc_value);
 	git__free(key);
 	return error;
-}
-
-/* release the map containing the entry as an equivalent to freeing it */
-static void config_file_entry_free(git_config_entry *entry)
-{
-	git_config_entries *entries = (git_config_entries *) entry->payload;
-	git_config_entries_free(entries);
 }
 
 /*
@@ -344,24 +339,22 @@ static void config_file_entry_free(git_config_entry *entry)
 static int config_file_get(git_config_backend *cfg, const char *key, git_config_entry **out)
 {
 	config_file_backend *h = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
-	git_config_entries *entries = NULL;
-	git_config_entry *entry;
+	git_config_list *config_list = NULL;
+	git_config_list_entry *entry;
 	int error = 0;
 
 	if (!h->parent.readonly && ((error = config_file_refresh(cfg)) < 0))
 		return error;
 
-	if ((error = config_file_entries_take(&entries, h)) < 0)
+	if ((error = config_file_take_list(&config_list, h)) < 0)
 		return error;
 
-	if ((error = (git_config_entries_get(&entry, entries, key))) < 0) {
-		git_config_entries_free(entries);
+	if ((error = (git_config_list_get(&entry, config_list, key))) < 0) {
+		git_config_list_free(config_list);
 		return error;
 	}
 
-	entry->free = config_file_entry_free;
-	entry->payload = entries;
-	*out = entry;
+	*out = &entry->base;
 
 	return 0;
 }
@@ -396,29 +389,29 @@ out:
 static int config_file_delete(git_config_backend *cfg, const char *name)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
-	git_config_entries *entries = NULL;
-	git_config_entry *entry;
+	git_config_list *config_list = NULL;
+	git_config_list_entry *entry;
 	char *key = NULL;
 	int error;
 
 	if ((error = git_config__normalize_name(name, &key)) < 0)
 		goto out;
 
-	if ((error = config_file_entries_take(&entries, b)) < 0)
+	if ((error = config_file_take_list(&config_list, b)) < 0)
 		goto out;
 
 	/* Check whether we'd be modifying an included or multivar key */
-	if ((error = git_config_entries_get_unique(&entry, entries, key)) < 0) {
+	if ((error = git_config_list_get_unique(&entry, config_list, key)) < 0) {
 		if (error == GIT_ENOTFOUND)
 			git_error_set(GIT_ERROR_CONFIG, "could not find key '%s' to delete", name);
 		goto out;
 	}
 
-	if ((error = config_file_write(b, name, entry->name, NULL, NULL)) < 0)
+	if ((error = config_file_write(b, name, entry->base.name, NULL, NULL)) < 0)
 		goto out;
 
 out:
-	git_config_entries_free(entries);
+	git_config_list_free(config_list);
 	git__free(key);
 	return error;
 }
@@ -426,8 +419,8 @@ out:
 static int config_file_delete_multivar(git_config_backend *cfg, const char *name, const char *regexp)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
-	git_config_entries *entries = NULL;
-	git_config_entry *entry = NULL;
+	git_config_list *config_list = NULL;
+	git_config_list_entry *entry = NULL;
 	git_regexp preg = GIT_REGEX_INIT;
 	char *key = NULL;
 	int result;
@@ -435,10 +428,10 @@ static int config_file_delete_multivar(git_config_backend *cfg, const char *name
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		goto out;
 
-	if ((result = config_file_entries_take(&entries, b)) < 0)
+	if ((result = config_file_take_list(&config_list, b)) < 0)
 		goto out;
 
-	if ((result = git_config_entries_get(&entry, entries, key)) < 0) {
+	if ((result = git_config_list_get(&entry, config_list, key)) < 0) {
 		if (result == GIT_ENOTFOUND)
 			git_error_set(GIT_ERROR_CONFIG, "could not find key '%s' to delete", name);
 		goto out;
@@ -451,7 +444,7 @@ static int config_file_delete_multivar(git_config_backend *cfg, const char *name
 		goto out;
 
 out:
-	git_config_entries_free(entries);
+	git_config_list_free(config_list);
 	git__free(key);
 	git_regexp_dispose(&preg);
 	return result;
@@ -528,7 +521,7 @@ static int included_path(git_str *out, const char *dir, const char *path)
 {
 	/* From the user's home */
 	if (path[0] == '~' && path[1] == '/')
-		return git_sysdir_expand_global_file(out, &path[1]);
+		return git_sysdir_expand_homedir_file(out, &path[1]);
 
 	return git_fs_path_join_unrooted(out, path, dir, NULL);
 }
@@ -591,7 +584,7 @@ static int parse_include(config_file_parse_data *parse_data, const char *file)
 	git_array_init(include->includes);
 	include->path = git_str_detach(&path);
 
-	result = config_file_read(parse_data->entries, parse_data->repo, include,
+	result = config_file_read(parse_data->config_list, parse_data->repo, include,
 				  parse_data->level, parse_data->depth+1);
 
 	if (result == GIT_ENOTFOUND) {
@@ -616,7 +609,7 @@ static int do_match_gitdir(
 		git_fs_path_dirname_r(&pattern, cfg_file);
 		git_str_joinpath(&pattern, pattern.ptr, condition + 2);
 	} else if (condition[0] == '~' && git_fs_path_is_dirsep(condition[1]))
-		git_sysdir_expand_global_file(&pattern, condition + 1);
+		git_sysdir_expand_homedir_file(&pattern, condition + 1);
 	else if (!git_fs_path_is_absolute(condition))
 		git_str_joinpath(&pattern, "**", condition);
 	else
@@ -776,7 +769,7 @@ static int read_on_variable(
 {
 	config_file_parse_data *parse_data = (config_file_parse_data *)data;
 	git_str buf = GIT_STR_INIT;
-	git_config_entry *entry;
+	git_config_list_entry *entry;
 	const char *c;
 	int result = 0;
 
@@ -799,30 +792,45 @@ static int read_on_variable(
 	if (git_str_oom(&buf))
 		return -1;
 
-	entry = git__calloc(1, sizeof(git_config_entry));
+	entry = git__calloc(1, sizeof(git_config_list_entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
-	entry->name = git_str_detach(&buf);
-	entry->value = var_value ? git__strdup(var_value) : NULL;
-	entry->level = parse_data->level;
-	entry->include_depth = parse_data->depth;
 
-	if ((result = git_config_entries_append(parse_data->entries, entry)) < 0)
+	entry->base.name = git_str_detach(&buf);
+	GIT_ERROR_CHECK_ALLOC(entry->base.name);
+
+	if (var_value) {
+		entry->base.value = git__strdup(var_value);
+		GIT_ERROR_CHECK_ALLOC(entry->base.value);
+	}
+
+	entry->base.backend_type = git_config_list_add_string(parse_data->config_list, CONFIG_FILE_TYPE);
+	GIT_ERROR_CHECK_ALLOC(entry->base.backend_type);
+
+	entry->base.origin_path = git_config_list_add_string(parse_data->config_list, parse_data->file->path);
+	GIT_ERROR_CHECK_ALLOC(entry->base.origin_path);
+
+	entry->base.level = parse_data->level;
+	entry->base.include_depth = parse_data->depth;
+	entry->base.free = git_config_list_entry_free;
+	entry->config_list = parse_data->config_list;
+
+	if ((result = git_config_list_append(parse_data->config_list, entry)) < 0)
 		return result;
 
 	result = 0;
 
 	/* Add or append the new config option */
-	if (!git__strcmp(entry->name, "include.path"))
-		result = parse_include(parse_data, entry->value);
-	else if (!git__prefixcmp(entry->name, "includeif.") &&
-	         !git__suffixcmp(entry->name, ".path"))
-		result = parse_conditional_include(parse_data, entry->name, entry->value);
+	if (!git__strcmp(entry->base.name, "include.path"))
+		result = parse_include(parse_data, entry->base.value);
+	else if (!git__prefixcmp(entry->base.name, "includeif.") &&
+	         !git__suffixcmp(entry->base.name, ".path"))
+		result = parse_conditional_include(parse_data, entry->base.name, entry->base.value);
 
 	return result;
 }
 
 static int config_file_read_buffer(
-	git_config_entries *entries,
+	git_config_list *config_list,
 	const git_repository *repo,
 	config_file *file,
 	git_config_level_t level,
@@ -851,7 +859,7 @@ static int config_file_read_buffer(
 
 	parse_data.repo = repo;
 	parse_data.file = file;
-	parse_data.entries = entries;
+	parse_data.config_list = config_list;
 	parse_data.level = level;
 	parse_data.depth = depth;
 
@@ -862,7 +870,7 @@ out:
 }
 
 static int config_file_read(
-	git_config_entries *entries,
+	git_config_list *config_list,
 	const git_repository *repo,
 	config_file *file,
 	git_config_level_t level,
@@ -881,10 +889,10 @@ static int config_file_read(
 		goto out;
 
 	git_futils_filestamp_set_from_stat(&file->stamp, &st);
-	if ((error = git_hash_buf(file->checksum, contents.ptr, contents.size, GIT_HASH_ALGORITHM_SHA1)) < 0)
+	if ((error = git_hash_buf(file->checksum, contents.ptr, contents.size, GIT_HASH_ALGORITHM_SHA256)) < 0)
 		goto out;
 
-	if ((error = config_file_read_buffer(entries, repo, file, level, depth,
+	if ((error = config_file_read_buffer(config_list, repo, file, level, depth,
 					     contents.ptr, contents.size)) < 0)
 		goto out;
 
@@ -1116,7 +1124,12 @@ static int write_on_eof(
 /*
  * This is pretty much the parsing, except we write out anything we don't have
  */
-static int config_file_write(config_file_backend *cfg, const char *orig_key, const char *key, const git_regexp *preg, const char *value)
+static int config_file_write(
+	config_file_backend *cfg,
+	const char *orig_key,
+	const char *key,
+	const git_regexp *preg,
+	const char *value)
 
 {
 	char *orig_section = NULL, *section = NULL, *orig_name, *name, *ldot;
@@ -1131,8 +1144,9 @@ static int config_file_write(config_file_backend *cfg, const char *orig_key, con
 	if (cfg->locked) {
 		error = git_str_puts(&contents, git_str_cstr(&cfg->locked_content) == NULL ? "" : git_str_cstr(&cfg->locked_content));
 	} else {
-		if ((error = git_filebuf_open(&file, cfg->file.path, GIT_FILEBUF_HASH_CONTENTS,
-					      GIT_CONFIG_FILE_MODE)) < 0)
+		if ((error = git_filebuf_open(&file, cfg->file.path,
+				GIT_FILEBUF_HASH_SHA256,
+				GIT_CONFIG_FILE_MODE)) < 0)
 			goto done;
 
 		/* We need to read in our own config file */

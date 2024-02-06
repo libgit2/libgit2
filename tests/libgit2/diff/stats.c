@@ -4,6 +4,7 @@
 #include "commit.h"
 #include "diff.h"
 #include "diff_generate.h"
+#include "diff_helpers.h"
 
 static git_repository *_repo;
 static git_diff_stats *_stats;
@@ -368,7 +369,7 @@ void test_diff_stats__new_file(void)
 	" 1 file changed, 1 insertion(+)\n"
 	" create mode 100644 Gurjeet Singh\n";
 
-	cl_git_pass(git_diff_from_buffer(&diff, input, strlen(input)));
+	cl_git_pass(diff_from_buffer(&diff, input, strlen(input)));
 	cl_git_pass(git_diff_get_stats(&_stats, diff));
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL | GIT_DIFF_STATS_INCLUDE_SUMMARY, 0));
 	cl_assert_equal_s(stat, buf.ptr);

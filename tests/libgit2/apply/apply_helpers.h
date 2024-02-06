@@ -1,4 +1,5 @@
 #include "../merge/merge_helpers.h"
+#include "../diff/diff_helpers.h"
 
 #define TEST_REPO_PATH "merge-recursive"
 

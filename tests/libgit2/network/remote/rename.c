@@ -216,7 +216,7 @@ void test_network_remote_rename__symref_head(void)
 	cl_assert_equal_i(0, problems.count);
 	git_strarray_dispose(&problems);
 
-	cl_git_pass(git_vector_init(&refs, 2, (git_vector_cmp) git_reference_cmp));
+	cl_git_pass(git_vector_init(&refs, 2, git_reference__cmp_cb));
 	cl_git_pass(git_branch_iterator_new(&iter, _repo, GIT_BRANCH_REMOTE));
 
 	while ((error = git_branch_next(&ref, &btype, iter)) == 0) {

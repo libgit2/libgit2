@@ -8,7 +8,11 @@ on:
 
 env:
   docker-registry: ghcr.io
-  docker-config-path: source/ci/docker
+  docker-config-path: ci/docker
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   # Run our nightly builds.  We build a matrix with the various build
@@ -22,172 +26,80 @@ jobs:
     strategy:
       matrix:
         platform:
-        - name: Linux (Xenial, GCC, OpenSSL)
+        # All builds: core platforms
+        - name: "Linux (Noble, GCC, OpenSSL, libssh2)"
+          id: noble-gcc-openssl
+          os: ubuntu-latest
+          container:
+            name: noble
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
+        - name: "Linux (Noble, Clang, mbedTLS, OpenSSH)"
+          id: noble-clang-mbedtls
+          os: ubuntu-latest
+          container:
+            name: noble
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec
+            CMAKE_GENERATOR: Ninja
+        - name: "Linux (Xenial, GCC, OpenSSL, OpenSSH)"
+          id: xenial-gcc-openssl
+          os: ubuntu-latest
           container:
             name: xenial
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
+        - name: "Linux (Xenial, Clang, mbedTLS, libssh2)"
+          id: xenial-gcc-mbedtls
           os: ubuntu-latest
-        - name: "Linux (Xenial, GCC, mbedTLS)"
-          container:
-            name: xenial
-          env:
-            CC: gcc
-            CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
-          os: ubuntu-latest
-        - name: "Linux (Xenial, Clang, OpenSSL)"
           container:
             name: xenial
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
-          os: ubuntu-latest
-        - name: "Linux (Xenial, Clang, mbedTLS)"
-          container:
-            name: xenial
-          env:
-            CC: clang
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
-            CMAKE_GENERATOR: Ninja
-          os: ubuntu-latest
-        - name: "Linux (no threads)"
-          container:
-            name: xenial
-          env:
-            CC: gcc
-            CMAKE_OPTIONS: -DTHREADSAFE=OFF -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
-            CMAKE_GENERATOR: Ninja
-          os: ubuntu-latest
-        - name: "Linux (dynamically-loaded OpenSSL)"
-          container:
-            name: xenial
-          env:
-            CC: clang
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
-            CMAKE_GENERATOR: Ninja
-          os: ubuntu-latest
-        - name: "Linux (MemorySanitizer)"
-          container:
-            name: focal
-          env:
-            CC: clang-10
-            CFLAGS: -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local/msan -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
-            CMAKE_GENERATOR: Ninja
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
-            UBSAN_OPTIONS: print_stacktrace=1
-          os: ubuntu-latest
-        - name: "Linux (UndefinedBehaviorSanitizer)"
-          container:
-            name: focal
-          env:
-            CC: clang-10
-            CFLAGS: -fsanitize=undefined,nullability -fno-sanitize-recover=undefined,nullability -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
-            CMAKE_GENERATOR: Ninja
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
-          os: ubuntu-latest
-        - name: "Linux (ThreadSanitizer)"
-          container:
-            name: focal
-          env:
-            CC: clang-10
-            CFLAGS: -fsanitize=thread -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
-            CMAKE_GENERATOR: Ninja
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
-            TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
-          os: ubuntu-latest
-        - name: "Linux (no mmap)"
-          container:
-            name: focal
-          env:
-            CC: clang-10
-            CFLAGS: -DNO_MMAP
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local
-            CMAKE_GENERATOR: Ninja
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-          os: ubuntu-latest
-        - name: "Linux (CentOS 7)"
-          container:
-            name: centos7
-          env:
-            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
-            PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
-            SKIP_NEGOTIATE_TESTS: true
-          os: ubuntu-latest
-        - name: "Linux (CentOS 7, dynamically-loaded OpenSSL)"
-          container:
-            name: centos7
-          env:
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
-            PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
-            SKIP_NEGOTIATE_TESTS: true
-          os: ubuntu-latest
-        - name: "Linux (CentOS 8)"
-          container:
-            name: centos8
-          env:
-            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
-            PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
-            SKIP_NEGOTIATE_TESTS: true
-            SKIP_SSH_TESTS: true
-          os: ubuntu-latest
-        - name: "Linux (CentOS 8, dynamically-loaded OpenSSL)"
-          container:
-            name: centos8
-          env:
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
-            PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
-            SKIP_NEGOTIATE_TESTS: true
-            SKIP_SSH_TESTS: true
-          os: ubuntu-latest
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
         - name: "macOS"
-          os: macos-11
+          id: macos
+          os: macos-12
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
+            CMAKE_GENERATOR: Ninja
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
           setup-script: osx
-        - name: "Windows (amd64, Visual Studio)"
+        - name: "Windows (amd64, Visual Studio, Schannel)"
+          id: windows-amd64-vs
           os: windows-2019
+          setup-script: win32
           env:
             ARCH: amd64
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
+            BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
+            BUILD_TEMP: D:\Temp
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (no mmap)"
+        - name: "Windows (x86, Visual Studio, WinHTTP)"
+          id: windows-x86-vs
           os: windows-2019
-          env:
-            ARCH: amd64
-            CMAKE_GENERATOR: Visual Studio 16 2019
-            CFLAGS: -DNO_MMAP
-            CMAKE_OPTIONS: -A x64 -DDEPRECATE_HARD=ON
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (x86, Visual Studio)"
-          os: windows-2019
+          setup-script: win32
           env:
             ARCH: x86
             CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON
+            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
+            BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
+            BUILD_TEMP: D:\Temp
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (amd64, mingw)"
+        - name: "Windows (amd64, mingw, WinHTTP)"
+          id: windows-amd64-mingw
           os: windows-2019
           setup-script: mingw
           env:
@@ -198,17 +110,105 @@ jobs:
             BUILD_PATH: D:\Temp\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (x86, mingw)"
+        - name: "Windows (x86, mingw, Schannel)"
+          id: windows-x86-mingw
           os: windows-2019
           setup-script: mingw
           env:
             ARCH: x86
             CMAKE_GENERATOR: MinGW Makefiles
-            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel
             BUILD_TEMP: D:\Temp
             BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
+
+        # All builds: sanitizers
+        - name: "Sanitizer (Memory)"
+          id: memorysanitizer
+          container:
+            name: noble
+          env:
+            CC: clang-17
+            CFLAGS: -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local/msan -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
+            CMAKE_GENERATOR: Ninja
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
+            UBSAN_OPTIONS: print_stacktrace=1
+          os: ubuntu-latest
+        - name: "Sanitizer (UndefinedBehavior)"
+          id: ubsanitizer
+          os: ubuntu-latest
+          container:
+            name: noble
+          env:
+            CC: clang-17
+            CFLAGS: -fsanitize=undefined,nullability -fno-sanitize-recover=undefined,nullability -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
+            CMAKE_GENERATOR: Ninja
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
+            UBSAN_OPTIONS: print_stacktrace=1
+        - name: "Sanitizer (Thread)"
+          id: threadsanitizer
+          os: ubuntu-latest
+          container:
+            name: noble
+          env:
+            CC: clang-17
+            CFLAGS: -fsanitize=thread -fno-optimize-sibling-calls -fno-omit-frame-pointer
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
+            CMAKE_GENERATOR: Ninja
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+            ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
+            UBSAN_OPTIONS: print_stacktrace=1
+            TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
+
+        # Nightly builds: extended platforms
+        - name: "Linux (CentOS 7, OpenSSL)"
+          id: centos7-openssl
+          os: ubuntu-latest
+          container:
+            name: centos7
+          env:
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Linux (CentOS 7, dynamically-loaded OpenSSL)"
+          id: centos7-dynamicopenssl
+          os: ubuntu-latest
+          container:
+            name: centos7
+          env:
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Linux (CentOS 8, OpenSSL)"
+          id: centos8-openssl
+          os: ubuntu-latest
+          container:
+            name: centos8
+          env:
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
+            SKIP_NEGOTIATE_TESTS: true
+            SKIP_SSH_TESTS: true
+        - name: "Linux (CentOS 8, dynamically-loaded OpenSSL)"
+          id: centos8-dynamicopenssl
+          os: ubuntu-latest
+          container:
+            name: centos8
+          env:
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
+            SKIP_NEGOTIATE_TESTS: true
+            SKIP_SSH_TESTS: true
+            ARCH: x86
+
         - name: "Linux (Bionic, GCC, dynamically-loaded OpenSSL)"
           container:
             name: bionic
@@ -265,13 +265,86 @@ jobs:
             RUN_INVASIVE_TESTS: true
             SKIP_PROXY_TESTS: true
           os: ubuntu-latest
+
+        # Nightly builds: ensure we fallback when missing core functionality
+        - name: "Linux (no threads)"
+          id: xenial-nothreads
+          os: ubuntu-latest
+          container:
+            name: xenial
+          env:
+            CC: gcc
+            CMAKE_OPTIONS: -DTHREADSAFE=OFF -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_GENERATOR: Ninja
+        - name: "Linux (no mmap)"
+          id: noble-nommap
+          os: ubuntu-latest
+          container:
+            name: noble
+          env:
+            CC: gcc
+            CFLAGS: -DNO_MMAP
+            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local
+            CMAKE_GENERATOR: Ninja
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (no mmap)"
+          os: windows-2019
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CFLAGS: -DNO_MMAP
+            CMAKE_OPTIONS: -A x64 -DDEPRECATE_HARD=ON
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+
+        # Nightly builds: extended SSL support
+        - name: "Linux (dynamically-loaded OpenSSL)"
+          id: xenial-dynamicopenssl
+          os: ubuntu-latest
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_GENERATOR: Ninja
+
+        # All builds: experimental SHA256 support
+        - name: "Linux (SHA256, Xenial, Clang, OpenSSL)"
+          id: xenial-clang-openssl
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+          os: ubuntu-latest
+        - name: "macOS (SHA256)"
+          id: macos
+          os: macos-12
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
+            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+          setup-script: osx
+        - name: "Windows (SHA256, amd64, Visual Studio)"
+          id: windows-amd64-vs
+          os: windows-2019
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
       fail-fast: false
-    name: "Build ${{ matrix.platform.name }}"
     env: ${{ matrix.platform.env }}
     runs-on: ${{ matrix.platform.os }}
+    name: "Build ${{ matrix.platform.name }}"
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: source
         fetch-depth: 0
@@ -282,47 +355,50 @@ jobs:
     - name: Setup QEMU
       run: docker run --rm --privileged multiarch/qemu-user-static:register --reset
       if: matrix.platform.container.qemu == true
-    - name: Download container
-      run: |
-        "${{ github.workspace }}/source/ci/getcontainer.sh" "${{ matrix.platform.container.name }}" "${{ matrix.platform.container.dockerfile }}"
-      env:
-        DOCKER_REGISTRY: ${{ env.docker-registry }}
-        GITHUB_TOKEN: ${{ secrets.github_token }}
-      working-directory: ${{ env.docker-config-path }}
+    - name: Set up container
+      uses: ./source/.github/actions/download-or-build-container
+      with:
+        registry: ${{ env.docker-registry }}
+        config-path: ${{ env.docker-config-path }}
+        container: ${{ matrix.platform.container.name }}
+        github_token: ${{ secrets.github_token }}
+        dockerfile: ${{ matrix.platform.container.dockerfile }}
       if: matrix.platform.container.name != ''
-    - name: Create container
-      run: docker build -t ${{ env.docker-registry-container-sha }} -f ${{ env.dockerfile }} .
-      working-directory: ${{ env.docker-config-path }}
-      if: matrix.platform.container.name != '' && env.docker-container-exists != 'true'
-    - name: Build and test
-      run: |
-        export GITTEST_NEGOTIATE_PASSWORD="${{ secrets.GITTEST_NEGOTIATE_PASSWORD }}"
+    - name: Prepare build
+      run: mkdir build
+    - name: Build
+      uses: ./source/.github/actions/run-build
+      with:
+        command: cd ${BUILD_WORKSPACE:-.}/build && ../source/ci/build.sh
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
+        shell: ${{ matrix.platform.shell }}
+    - name: Test
+      uses: ./source/.github/actions/run-build
+      with:
+        command: cd ${BUILD_WORKSPACE:-.}/build && ../source/ci/test.sh
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
+        shell: ${{ matrix.platform.shell }}
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: success() || failure()
+      with:
+        name: test-results-${{ matrix.platform.id }}
+        path: build/results_*.xml
 
-        if [ -n "${{ matrix.platform.container.name }}" ]; then
-          docker run \
-              --rm \
-              --user libgit2:libgit2 \
-              -v "$(pwd)/source:/home/libgit2/source" \
-              -w /home/libgit2 \
-              -e ASAN_SYMBOLIZER_PATH \
-              -e CC \
-              -e CFLAGS \
-              -e CMAKE_GENERATOR \
-              -e CMAKE_OPTIONS \
-              -e GITTEST_NEGOTIATE_PASSWORD \
-              -e GITTEST_FLAKY_STAT \
-              -e PKG_CONFIG_PATH \
-              -e SKIP_NEGOTIATE_TESTS \
-              -e SKIP_SSH_TESTS \
-              -e TSAN_OPTIONS \
-              ${{ env.docker-registry-container-sha }} \
-              /bin/bash -c "mkdir build && cd build && ../source/ci/build.sh && ../source/ci/test.sh"
-        else
-          mkdir build && cd build
-          ../source/ci/build.sh
-          ../source/ci/test.sh
-        fi
-      shell: bash
+  test_results:
+    name: Test results
+    needs: [ build ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download test results
+      uses: actions/download-artifact@v3
+    - name: Generate test summary
+      uses: test-summary/action@v2
+      with:
+        paths: 'test-results-*/*.xml'
 
   coverity:
     # Only run scheduled workflows on the main repository; prevents people
@@ -333,17 +409,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: source
         fetch-depth: 0
-    - name: Download container
-      run: |
-        "${{ github.workspace }}/source/ci/getcontainer.sh" xenial
-      env:
-        DOCKER_REGISTRY: ${{ env.docker-registry }}
-        GITHUB_TOKEN: ${{ secrets.github_token }}
-      working-directory: ${{ env.docker-config-path }}
+    - name: Set up container
+      uses: ./source/.github/actions/download-or-build-container
+      with:
+        registry: ${{ env.docker-registry }}
+        config-path: ${{ env.docker-config-path }}
+        container: xenial
+        github_token: ${{ secrets.github_token }}
+      if: matrix.platform.container.name != ''
     - name: Run Coverity
       run: source/ci/coverity.sh
       env:
@@ -354,17 +431,22 @@ jobs:
     # from using build minutes on their forks.
     if: github.repository == 'libgit2/libgit2'
 
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
     name: CodeQL
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
+      uses: github/codeql-action/init@v2
       with:
         languages: 'cpp'
 
@@ -376,4 +458,4 @@ jobs:
         cmake --build .
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v1
+      uses: github/codeql-action/analyze@v2

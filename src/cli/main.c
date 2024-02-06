@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 #include <git2.h>
-#include "cli.h"
+#include "common.h"
 #include "cmd.h"
 
 static int show_help = 0;
@@ -16,8 +16,12 @@ static char *command = NULL;
 static char **args = NULL;
 
 const cli_opt_spec cli_common_opts[] = {
-	{ CLI_OPT_TYPE_SWITCH,    "help",      0, &show_help,    1,
-	  CLI_OPT_USAGE_DEFAULT,   NULL,      "display help information" },
+	{ CLI_OPT_TYPE_SWITCH,    "help",       0, &show_help,    1,
+	  CLI_OPT_USAGE_DEFAULT,   NULL,       "display help information" },
+	{ CLI_OPT_TYPE_VALUE,      NULL,       'c', NULL,         0,
+	  CLI_OPT_USAGE_DEFAULT,  "key=value", "add configuration value" },
+	{ CLI_OPT_TYPE_VALUE,     "config-env", 0, NULL,          0,
+	  CLI_OPT_USAGE_DEFAULT,  "key=value", "set configuration value to environment variable" },
 	{ CLI_OPT_TYPE_SWITCH,    "version",   0, &show_version, 1,
 	  CLI_OPT_USAGE_DEFAULT,   NULL,      "display the version" },
 	{ CLI_OPT_TYPE_ARG,       "command",   0, &command,      0,
@@ -30,19 +34,40 @@ const cli_opt_spec cli_common_opts[] = {
 const cli_cmd_spec cli_cmds[] = {
 	{ "cat-file",    cmd_cat_file,    "Display an object in the repository" },
 	{ "clone",       cmd_clone,       "Clone a repository into a new directory" },
+	{ "config",      cmd_config,      "View or set configuration values " },
 	{ "hash-object", cmd_hash_object, "Hash a raw object and product its object ID" },
 	{ "help",        cmd_help,        "Display help information" },
+	{ "index-pack",  cmd_index_pack,  "Create an index for a packfile" },
 	{ NULL }
 };
+
+/*
+ * Reorder the argv as it was given, since git has the notion of global
+ * options (like `--help` or `-c key=val`) that we want to pass to the
+ * subcommand, and that can appear early in the arguments, before the
+ * command name. Put the command-name in argv[1] to allow easier parsing.
+ */
+static void reorder_args(char **argv, size_t first)
+{
+	char *tmp;
+	size_t i;
+
+	if (first == 1)
+		return;
+
+	tmp = argv[first];
+
+	for (i = first; i > 1; i--)
+		argv[i] = argv[i - 1];
+
+	argv[1] = tmp;
+}
 
 int main(int argc, char **argv)
 {
 	const cli_cmd_spec *cmd;
 	cli_opt_parser optparser;
 	cli_opt opt;
-	char *help_args[3] = { NULL };
-	int help_args_len;
-	int args_len = 0;
 	int ret = 0;
 
 	if (git_libgit2_init() < 0) {
@@ -66,8 +91,7 @@ int main(int argc, char **argv)
 		 * remaining arguments as args for the command itself.
 		 */
 		if (command) {
-			args = &argv[optparser.idx];
-			args_len = (int)(argc - optparser.idx);
+			reorder_args(argv, optparser.idx);
 			break;
 		}
 	}
@@ -77,19 +101,9 @@ int main(int argc, char **argv)
 		goto done;
 	}
 
-	/*
-	 * If `--help <command>` is specified, delegate to that command's
-	 * `--help` option.  If no command is specified, run the `help`
-	 * command.  Do this by updating the args to emulate that behavior.
-	 */
-	if (!command || show_help) {
-		help_args[0] = command ? (char *)command : "help";
-		help_args[1] = command ? "--help" : NULL;
-		help_args_len = command ? 2 : 1;
-
-		command = help_args[0];
-		args = help_args;
-		args_len = help_args_len;
+	if (!command) {
+		ret = cmd_help(argc, argv);
+		goto done;
 	}
 
 	if ((cmd = cli_cmd_spec_byname(command)) == NULL) {
@@ -98,7 +112,7 @@ int main(int argc, char **argv)
 		goto done;
 	}
 
-	ret = cmd->fn(args_len, args);
+	ret = cmd->fn(argc - 1, &argv[1]);
 
 done:
 	git_libgit2_shutdown();

@@ -10,17 +10,42 @@
 
 #include "git2/sys/alloc.h"
 
+#include "git2_util.h"
+
 extern git_allocator git__allocator;
 
-#define git__malloc(len)                      git__allocator.gmalloc(len, __FILE__, __LINE__)
-#define git__calloc(nelem, elsize)            git__allocator.gcalloc(nelem, elsize, __FILE__, __LINE__)
-#define git__strdup(str)                      git__allocator.gstrdup(str, __FILE__, __LINE__)
-#define git__strndup(str, n)                  git__allocator.gstrndup(str, n, __FILE__, __LINE__)
-#define git__substrdup(str, n)                git__allocator.gsubstrdup(str, n, __FILE__, __LINE__)
-#define git__realloc(ptr, size)               git__allocator.grealloc(ptr, size, __FILE__, __LINE__)
-#define git__reallocarray(ptr, nelem, elsize) git__allocator.greallocarray(ptr, nelem, elsize, __FILE__, __LINE__)
-#define git__mallocarray(nelem, elsize)       git__allocator.gmallocarray(nelem, elsize, __FILE__, __LINE__)
-#define git__free                             git__allocator.gfree
+GIT_INLINE(void *) git__malloc(size_t len)
+{
+	void *p = git__allocator.gmalloc(len, __FILE__, __LINE__);
+
+	if (!p)
+		git_error_set_oom();
+
+	return p;
+}
+
+GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
+{
+	void *p = git__allocator.grealloc(ptr, size, __FILE__, __LINE__);
+
+	if (!p)
+		git_error_set_oom();
+
+	return p;
+}
+
+GIT_INLINE(void) git__free(void *ptr)
+{
+	git__allocator.gfree(ptr);
+}
+
+extern void *git__calloc(size_t nelem, size_t elsize);
+extern void *git__mallocarray(size_t nelem, size_t elsize);
+extern void *git__reallocarray(void *ptr, size_t nelem, size_t elsize);
+
+extern char *git__strdup(const char *str);
+extern char *git__strndup(const char *str, size_t n);
+extern char *git__substrdup(const char *str, size_t n);
 
 /**
  * This function is being called by our global setup routines to

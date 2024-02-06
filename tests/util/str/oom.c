@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "clar_libgit2_alloc.h"
 
 /* Override default allocators with ones that will fail predictably. */
 
@@ -55,4 +56,16 @@ void test_str_oom__grow_by(void)
 
 	cl_assert(git_str_grow_by(&buf, 101) == -1);
 	cl_assert(git_str_oom(&buf));
+}
+
+void test_str_oom__allocation_failure(void)
+{
+	git_str buf = GIT_STR_INIT;
+
+	cl_alloc_limit(10);
+
+	cl_git_pass(git_str_puts(&buf, "foobar"));
+	cl_git_fail(git_str_puts(&buf, "foobar"));
+
+	cl_alloc_reset();
 }

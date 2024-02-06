@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #creates push_src repo for libgit2 push tests.
 set -eu
 

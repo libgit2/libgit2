@@ -6,7 +6,7 @@
  */
 
 #include <git2.h>
-#include "cli.h"
+#include "common.h"
 #include "cmd.h"
 
 #define COMMAND_NAME "cat-file"
@@ -24,9 +24,7 @@ static int display = DISPLAY_CONTENT;
 static char *type_name, *object_spec;
 
 static const cli_opt_spec opts[] = {
-	{ CLI_OPT_TYPE_SWITCH,    "help",    0, &show_help,   1,
-	  CLI_OPT_USAGE_HIDDEN | CLI_OPT_USAGE_STOP_PARSING, NULL,
-	  "display help about the " COMMAND_NAME " command" },
+	CLI_COMMON_OPT,
 
 	{ CLI_OPT_TYPE_SWITCH,     NULL,    't', &display,    DISPLAY_TYPE,
 	  CLI_OPT_USAGE_REQUIRED,  NULL,    "display the type of the object" },
@@ -139,6 +137,7 @@ static int print_pretty(git_object *object)
 
 int cmd_cat_file(int argc, char **argv)
 {
+	cli_repository_open_options open_opts = { argv + 1, argc - 1};
 	git_repository *repo = NULL;
 	git_object *object = NULL;
 	git_object_t type;
@@ -153,7 +152,7 @@ int cmd_cat_file(int argc, char **argv)
 		return 0;
 	}
 
-	if (git_repository_open_ext(&repo, ".", GIT_REPOSITORY_OPEN_FROM_ENV, NULL) < 0)
+	if (cli_repository_open(&repo, &open_opts) < 0)
 		return cli_error_git();
 
 	if ((giterr = git_revparse_single(&object, repo, object_spec)) < 0) {

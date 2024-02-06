@@ -98,7 +98,7 @@ static void do_junction(const char *old, const char *new)
 
 	git_str_putc(&unparsed_buf, '\\');
 
-	subst_utf16_len = git__utf8_to_16(NULL, 0, git_str_cstr(&unparsed_buf));
+	subst_utf16_len = git_utf8_to_16(NULL, 0, git_str_cstr(&unparsed_buf));
 	subst_byte_len = subst_utf16_len * sizeof(WCHAR);
 
 	print_utf16_len = subst_utf16_len - 4;
@@ -124,11 +124,11 @@ static void do_junction(const char *old, const char *new)
 	subst_utf16 = reparse_buf->ReparseBuffer.MountPoint.PathBuffer;
 	print_utf16 = subst_utf16 + subst_utf16_len + 1;
 
-	ret = git__utf8_to_16(subst_utf16, subst_utf16_len + 1,
+	ret = git_utf8_to_16(subst_utf16, subst_utf16_len + 1,
 		git_str_cstr(&unparsed_buf));
 	cl_assert_equal_i(subst_utf16_len, ret);
 
-	ret = git__utf8_to_16(print_utf16,
+	ret = git_utf8_to_16(print_utf16,
 		print_utf16_len + 1, git_str_cstr(&unparsed_buf) + 4);
 	cl_assert_equal_i(print_utf16_len, ret);
 

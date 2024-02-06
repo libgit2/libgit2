@@ -48,7 +48,10 @@ void git_mwindow_close(git_mwindow **w_cursor);
 extern int git_mwindow_global_init(void);
 
 struct git_pack_file; /* just declaration to avoid cyclical includes */
-int git_mwindow_get_pack(struct git_pack_file **out, const char *path);
+int git_mwindow_get_pack(
+	struct git_pack_file **out,
+	const char *path,
+	git_oid_t oid_type);
 int git_mwindow_put_pack(struct git_pack_file *pack);
 
 #endif

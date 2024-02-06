@@ -78,7 +78,7 @@ void test_apply_index__parsed_diff(void)
 	size_t index_expected_cnt = sizeof(index_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_MODIFY_TWO_FILES, strlen(DIFF_MODIFY_TWO_FILES)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, NULL));
 
@@ -102,7 +102,7 @@ void test_apply_index__removes_file(void)
 	size_t index_expected_cnt = sizeof(index_expected) /
 	    sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, DIFF_DELETE_FILE,
+	cl_git_pass(diff_from_buffer(&diff, DIFF_DELETE_FILE,
 		strlen(DIFF_DELETE_FILE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, NULL));
 
@@ -128,7 +128,7 @@ void test_apply_index__adds_file(void)
 	size_t index_expected_cnt = sizeof(index_expected) /
 	    sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_ADD_FILE, strlen(DIFF_ADD_FILE)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, NULL));
 
@@ -169,7 +169,7 @@ void test_apply_index__modified_workdir_with_unmodified_index_is_ok(void)
 	cl_git_rmfile("merge-recursive/asparagus.txt");
 	cl_git_rewritefile("merge-recursive/veal.txt", "Hello, world.\n");
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, NULL));
 
 	validate_apply_index(repo, index_expected, index_expected_cnt);
@@ -201,7 +201,7 @@ void test_apply_index__application_failure_leaves_index_unmodified(void)
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_fail_with(GIT_EAPPLYFAIL, git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, NULL));
 
 	validate_apply_index(repo, index_expected, index_expected_cnt);
@@ -240,7 +240,7 @@ void test_apply_index__keeps_nonconflicting_changes(void)
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, NULL));
 
 	validate_apply_index(repo, index_expected, index_expected_cnt);
@@ -285,7 +285,7 @@ void test_apply_index__can_apply_nonconflicting_file_changes(void)
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, NULL));
 
 	validate_apply_index(repo, index_expected, index_expected_cnt);
@@ -311,7 +311,7 @@ void test_apply_index__change_mode(void)
 	size_t index_expected_cnt = sizeof(index_expected) /
 		sizeof(struct merge_index_entry);
 
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, NULL));
 
 	validate_apply_index(repo, index_expected, index_expected_cnt);

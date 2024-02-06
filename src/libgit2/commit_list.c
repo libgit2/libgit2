@@ -43,13 +43,18 @@ int git_commit_list_time_cmp(const void *a, const void *b)
 	return 0;
 }
 
-git_commit_list *git_commit_list_insert(git_commit_list_node *item, git_commit_list **list_p)
-{
+git_commit_list *git_commit_list_create(git_commit_list_node *item, git_commit_list *next) {
 	git_commit_list *new_list = git__malloc(sizeof(git_commit_list));
 	if (new_list != NULL) {
 		new_list->item = item;
-		new_list->next = *list_p;
+		new_list->next = next;
 	}
+	return new_list;
+}
+
+git_commit_list *git_commit_list_insert(git_commit_list_node *item, git_commit_list **list_p)
+{
+	git_commit_list *new_list = git_commit_list_create(item, *list_p);
 	*list_p = new_list;
 	return new_list;
 }
@@ -124,13 +129,17 @@ static int commit_quick_parse(
 {
 	git_oid *parent_oid;
 	git_commit *commit;
+	git_commit__parse_options parse_opts = {
+		walk->repo->oid_type,
+		GIT_COMMIT_PARSE_QUICK
+	};
 	size_t i;
 
 	commit = git__calloc(1, sizeof(*commit));
 	GIT_ERROR_CHECK_ALLOC(commit);
 	commit->object.repo = walk->repo;
 
-	if (git_commit__parse_ext(commit, obj, GIT_COMMIT_PARSE_QUICK) < 0) {
+	if (git_commit__parse_ext(commit, obj, &parse_opts) < 0) {
 		git__free(commit);
 		return -1;
 	}
@@ -172,7 +181,9 @@ int git_commit_list_parse(git_revwalk *walk, git_commit_list_node *commit)
 	if (cgraph_file) {
 		git_commit_graph_entry e;
 
-		error = git_commit_graph_entry_find(&e, cgraph_file, &commit->oid, GIT_OID_SHA1_SIZE);
+		error = git_commit_graph_entry_find(&e, cgraph_file,
+			&commit->oid, git_oid_size(walk->repo->oid_type));
+
 		if (error == 0 && git__is_uint16(e.parent_count)) {
 			size_t i;
 			commit->generation = (uint32_t)e.generation;

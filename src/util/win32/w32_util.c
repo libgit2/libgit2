@@ -115,7 +115,7 @@ int git_win32__file_attribute_to_stat(
 
 			/* st_size gets the UTF-8 length of the target name, in bytes,
 			 * not counting the NULL terminator */
-			if ((st->st_size = git__utf16_to_8(NULL, 0, target)) < 0) {
+			if ((st->st_size = git_utf8_from_16(NULL, 0, target)) < 0) {
 				git_error_set(GIT_ERROR_OS, "could not convert reparse point name for '%ls'", path);
 				return -1;
 			}

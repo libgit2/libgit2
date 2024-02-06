@@ -410,6 +410,7 @@ void test_repo_open__no_config(void)
 	git_str_dispose(&path);
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
+	cl_assert(git_repository_oid_type(repo) == GIT_OID_SHA1);
 	cl_git_pass(git_repository_config(&config, repo));
 
 	cl_git_pass(git_config_set_string(config, "test.set", "42"));
@@ -433,11 +434,13 @@ void test_repo_open__force_bare(void)
 
 	cl_git_pass(git_repository_open(&barerepo, "alternate"));
 	cl_assert(!git_repository_is_bare(barerepo));
+	cl_assert(git_repository_oid_type(barerepo) == GIT_OID_SHA1);
 	git_repository_free(barerepo);
 
 	cl_git_pass(git_repository_open_bare(
 		&barerepo, "empty_standard_repo/.git"));
 	cl_assert(git_repository_is_bare(barerepo));
+	cl_assert(git_repository_oid_type(barerepo) == GIT_OID_SHA1);
 	git_repository_free(barerepo);
 
 	cl_git_fail(git_repository_open_bare(&barerepo, "alternate/.git"));
@@ -552,6 +555,25 @@ void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
 
 	git_str_joinpath(&config_filename, config_path.ptr, ".gitconfig");
 
+	/* Test with incorrect exception (slash at the end) */
+	git_str_printf(&config_data,
+		"[foo]\n" \
+		"\tbar = Foobar\n" \
+		"\tbaz = Baz!\n" \
+		"[safe]\n" \
+		"\tdirectory = /non/existent/path\n" \
+		"\tdirectory = /\n" \
+		"\tdirectory = c:\\\\temp\n" \
+		"\tdirectory = %s/%s/\n" \
+		"\tdirectory = /tmp\n" \
+		"[bar]\n" \
+		"\tfoo = barfoo\n",
+		clar_sandbox_path(), "empty_standard_repo");
+	cl_git_rewritefile(config_filename.ptr, config_data.ptr);
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "empty_standard_repo"));
+
+	/* Test with correct exception */
+	git_str_clear(&config_data);
 	git_str_printf(&config_data,
 		"[foo]\n" \
 		"\tbar = Foobar\n" \

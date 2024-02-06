@@ -287,7 +287,7 @@ static int parse_commit(git_commit **out, const char *buffer)
 	fake_odb_object.buffer = (char *)buffer;
 	fake_odb_object.cached.size = strlen(fake_odb_object.buffer);
 
-	error = git_commit__parse(commit, &fake_odb_object);
+	error = git_commit__parse(commit, &fake_odb_object, GIT_OID_SHA1);
 
 	*out = commit;
 	return error;

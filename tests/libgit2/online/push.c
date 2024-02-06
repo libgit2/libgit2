@@ -21,6 +21,9 @@ static char *_remote_ssh_passphrase = NULL;
 static char *_remote_default = NULL;
 static char *_remote_expectcontinue = NULL;
 
+static char *_orig_ssh_cmd = NULL;
+static char *_ssh_cmd = NULL;
+
 static char *_remote_push_options_result = NULL;
 
 static int cred_acquire_cb(git_credential **,	const char *, const char *, unsigned int, void *);
@@ -373,6 +376,14 @@ void test_online_push__initialize(void)
 	_remote_push_options_result = cl_getenv("GITTEST_PUSH_OPTION_RESULT");
 	_remote = NULL;
 
+	_orig_ssh_cmd = cl_getenv("GIT_SSH");
+	_ssh_cmd = cl_getenv("GITTEST_SSH_CMD");
+
+	if (_ssh_cmd)
+		cl_setenv("GIT_SSH", _ssh_cmd);
+	else
+		cl_setenv("GIT_SSH", NULL);
+
 	/* Skip the test if we're missing the remote URL */
 	if (!_remote_url)
 		cl_skip();
@@ -427,6 +438,9 @@ void test_online_push__cleanup(void)
 	git__free(_remote_default);
 	git__free(_remote_expectcontinue);
 	git__free(_remote_push_options_result);
+
+	git__free(_orig_ssh_cmd);
+	git__free(_ssh_cmd);
 
 	/* Freed by cl_git_sandbox_cleanup */
 	_repo = NULL;
@@ -914,14 +928,31 @@ void test_online_push__bad_refspecs(void)
 
 void test_online_push__expressions(void)
 {
-	/* TODO: Expressions in refspecs doesn't actually work yet */
-	const char *specs_left_expr[] = { "refs/heads/b2~1:refs/heads/b2" };
+	const char *specs_left_expr[] = {
+		"refs/heads/b3~1:refs/heads/b2",
+		"b4:refs/heads/b4",
+		"fa38b91f199934685819bea316186d8b008c52a2:refs/heads/b5",
+		"951bbbb:refs/heads/b6"
+	};
+	push_status exp_stats[] = {
+		{ "refs/heads/b2", 1 },
+		{ "refs/heads/b4", 1 },
+		{ "refs/heads/b5", 1 },
+		{ "refs/heads/b6", 1 }
+	};
+	expected_ref exp_refs[] = {
+		{ "refs/heads/b2", &_oid_b2 },
+		{ "refs/heads/b4", &_oid_b4 },
+		{ "refs/heads/b5", &_oid_b5 },
+		{ "refs/heads/b6", &_oid_b6 }
+	};
 
-	/* TODO: Find a more precise way of checking errors than a exit code of -1. */
 	git_strarray push_options = { 0 };
+
 	do_push(specs_left_expr, ARRAY_SIZE(specs_left_expr),
-		NULL, 0,
-		NULL, 0, -1, 0, 0, push_options);
+		exp_stats, ARRAY_SIZE(exp_stats),
+		exp_refs, ARRAY_SIZE(exp_refs), 0, 1, 1,
+		push_options);
 }
 
 void test_online_push__notes(void)

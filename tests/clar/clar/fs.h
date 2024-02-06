@@ -295,7 +295,9 @@ fs_copy(const char *_source, const char *_dest)
 void
 cl_fs_cleanup(void)
 {
+#ifdef CLAR_FIXTURE_PATH
 	fs_rm(fixture_path(_clar_path, "*"));
+#endif
 }
 
 #else

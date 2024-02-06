@@ -8,7 +8,7 @@
 #include "git2_util.h"
 #include <windows.h>
 
-#include "cli.h"
+#include "sighandler.h"
 
 static void (*interrupt_handler)(void) = NULL;
 

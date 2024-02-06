@@ -7,11 +7,13 @@ RUN apt-get update && \
         clang \
         cmake \
         curl \
+	gettext \
         gcc \
-        git \
         krb5-user \
         libcurl4-gnutls-dev \
+	libexpat1-dev \
         libgcrypt20-dev \
+	libintl-perl \
         libkrb5-dev \
         libpcre3-dev \
         libssl-dev \
@@ -28,7 +30,17 @@ RUN apt-get update && \
         && \
     rm -rf /var/lib/apt/lists/*
 
-FROM apt AS mbedtls
+FROM apt AS git
+RUN cd /tmp && \
+    curl --location --silent --show-error https://github.com/git/git/archive/refs/tags/v2.39.1.tar.gz | \
+        tar -xz && \
+    cd git-2.39.1 && \
+    make && \
+    make prefix=/usr install && \
+    cd .. && \
+    rm -rf git-2.39.1
+
+FROM git AS mbedtls
 RUN cd /tmp && \
     curl --location --silent --show-error https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/mbedtls-2.16.2.tar.gz | \
         tar -xz && \
@@ -41,12 +53,12 @@ RUN cd /tmp && \
 
 FROM mbedtls AS libssh2
 RUN cd /tmp && \
-    curl --location --silent --show-error https://www.libssh2.org/download/libssh2-1.8.2.tar.gz | tar -xz && \
-    cd libssh2-1.8.2 && \
-    CFLAGS=-fPIC cmake -G Ninja -DBUILD_SHARED_LIBS=ON -DCRYPTO_BACKEND=Libgcrypt . && \
+    curl --location --silent --show-error https://www.libssh2.org/download/libssh2-1.11.0.tar.gz | tar -xz && \
+    cd libssh2-1.11.0 && \
+    CFLAGS=-fPIC cmake -G Ninja -DBUILD_SHARED_LIBS=ON . && \
     ninja install && \
     cd .. && \
-    rm -rf libssh2-1.8.2
+    rm -rf libssh2-1.11.0
 
 FROM libssh2 AS valgrind
 RUN cd /tmp && \

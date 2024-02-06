@@ -24,13 +24,13 @@ RUN yum install -y \
 
 FROM yum AS libssh2
 RUN cd /tmp && \
-    curl --location --silent --show-error https://www.libssh2.org/download/libssh2-1.8.0.tar.gz | tar -xz && \
-    cd libssh2-1.8.0 && \
+    curl --location --silent --show-error https://www.libssh2.org/download/libssh2-1.11.0.tar.gz | tar -xz && \
+    cd libssh2-1.11.0 && \
     ./configure && \
     make && \
     make install && \
     cd .. && \
-    rm -rf libssh2-1.8.0
+    rm -rf libssh2-1.11.0
 
 FROM libssh2 AS valgrind
 RUN cd /tmp && \

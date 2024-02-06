@@ -424,8 +424,12 @@ static int attr_setup(
 			goto out;
 
 	if ((error = git_repository_index__weakptr(&idx, repo)) < 0 ||
-	    (error = preload_attr_source(repo, attr_session, &index_source)) < 0)
+	    (error = preload_attr_source(repo, attr_session, &index_source)) < 0) {
+		if (error != GIT_ENOTFOUND)
 			goto out;
+
+		error = 0;
+	}
 
 	if ((opts && (opts->flags & GIT_ATTR_CHECK_INCLUDE_HEAD) != 0) &&
 	    (error = preload_attr_source(repo, attr_session, &head_source)) < 0)

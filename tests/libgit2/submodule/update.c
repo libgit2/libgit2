@@ -206,6 +206,26 @@ void test_submodule_update__update_and_init_submodule(void)
 	git_submodule_free(sm);
 }
 
+void test_submodule_update__update_skip_configured_missing_submodule(void)
+{
+	git_submodule *sm;
+	git_submodule_update_options update_options = GIT_SUBMODULE_UPDATE_OPTIONS_INIT;
+	unsigned int submodule_status = 0;
+
+	g_repo = setup_fixture_submod2();
+
+	/* get the submodule */
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_gitmodules_only"));
+
+	cl_git_pass(git_submodule_status(&submodule_status, g_repo, "sm_gitmodules_only", GIT_SUBMODULE_IGNORE_UNSPECIFIED));
+	cl_assert_equal_i(submodule_status, GIT_SUBMODULE_STATUS_IN_CONFIG);
+
+	/* update (with option to initialize sub repo) */
+	cl_git_pass(git_submodule_update(sm, 1, &update_options));
+
+	git_submodule_free(sm);
+}
+
 void test_submodule_update__update_already_checked_out_submodule(void)
 {
 	git_submodule *sm = NULL;

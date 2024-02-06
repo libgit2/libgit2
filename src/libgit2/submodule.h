@@ -69,9 +69,9 @@
  * - `repo` is the parent repository that contains this submodule.
  * - `flags` after for internal use, tracking where this submodule has been
  *   found (head, index, config, workdir) and known status info, etc.
- * - `head_oid` is the SHA1 for the submodule path in the repo HEAD.
- * - `index_oid` is the SHA1 for the submodule recorded in the index.
- * - `wd_oid` is the SHA1 for the HEAD of the checked out submodule.
+ * - `head_oid` is the oid for the submodule path in the repo HEAD.
+ * - `index_oid` is the oid for the submodule recorded in the index.
+ * - `wd_oid` is the oid for the HEAD of the checked out submodule.
  *
  * If the submodule has been added to .gitmodules but not yet git added,
  * then the `index_oid` will be zero but still marked valid.  If the

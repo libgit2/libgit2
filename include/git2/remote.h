@@ -77,6 +77,17 @@ typedef enum {
 } git_remote_create_flags;
 
 /**
+ * How to handle reference updates.
+ */
+typedef enum {
+	/* Write the fetch results to FETCH_HEAD. */
+	GIT_REMOTE_UPDATE_FETCHHEAD = (1 << 0),
+
+	/* Report unchanged tips in the update_tips callback. */
+	GIT_REMOTE_UPDATE_REPORT_UNCHANGED = (1 << 1)
+} git_remote_update_flags;
+
+/**
  * Remote creation options structure
  *
  * Initialize with `GIT_REMOTE_CREATE_OPTIONS_INIT`. Alternatively, you can
@@ -702,6 +713,15 @@ typedef enum {
 	GIT_REMOTE_DOWNLOAD_TAGS_ALL
 } git_remote_autotag_option_t;
 
+/** Constants for fetch depth (shallowness of fetch). */
+typedef enum {
+	/** The fetch is "full" (not shallow). This is the default. */
+	GIT_FETCH_DEPTH_FULL = 0,
+
+	/** The fetch should "unshallow" and fetch missing data. */
+	GIT_FETCH_DEPTH_UNSHALLOW = 2147483647
+} git_fetch_depth_t;
+
 /**
  * Fetch options structure.
  *
@@ -724,10 +744,10 @@ typedef struct {
 	git_fetch_prune_t prune;
 
 	/**
-	 * Whether to write the results to FETCH_HEAD. Defaults to
-	 * on. Leave this default in order to behave like git.
+	 * How to handle reference updates; a combination of
+	 * `git_remote_update_flags`.
 	 */
-	int update_fetchhead;
+	unsigned int update_flags;
 
 	/**
 	 * Determines how to behave regarding tags on the remote, such
@@ -744,6 +764,15 @@ typedef struct {
 	git_proxy_options proxy_opts;
 
 	/**
+	 * Depth of the fetch to perform, or `GIT_FETCH_DEPTH_FULL`
+	 * (or `0`) for full history, or `GIT_FETCH_DEPTH_UNSHALLOW`
+	 * to "unshallow" a shallow repository.
+	 *
+	 * The default is full (`GIT_FETCH_DEPTH_FULL` or `0`).
+	 */
+	int depth;
+
+	/**
 	 * Whether to allow off-site redirects.  If this is not
 	 * specified, the `http.followRedirects` configuration setting
 	 * will be consulted.
@@ -757,8 +786,13 @@ typedef struct {
 } git_fetch_options;
 
 #define GIT_FETCH_OPTIONS_VERSION 1
-#define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT, GIT_FETCH_PRUNE_UNSPECIFIED, 1, \
-				 GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, GIT_PROXY_OPTIONS_INIT }
+#define GIT_FETCH_OPTIONS_INIT { \
+	GIT_FETCH_OPTIONS_VERSION, \
+	GIT_REMOTE_CALLBACKS_INIT, \
+	GIT_FETCH_PRUNE_UNSPECIFIED, \
+	GIT_REMOTE_UPDATE_FETCHHEAD, \
+	GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, \
+	GIT_PROXY_OPTIONS_INIT }
 
 /**
  * Initialize git_fetch_options structure
@@ -988,7 +1022,7 @@ GIT_EXTERN(int) git_remote_upload(
  * the name of the remote (or its url, for in-memory remotes). This
  * parameter is ignored when pushing.
  * @param callbacks  pointer to the callback structure to use or NULL
- * @param update_fetchhead whether to write to FETCH_HEAD. Pass 1 to behave like git.
+ * @param update_flags the git_remote_update_flags for these tips.
  * @param download_tags what the behaviour for downloading tags is for this fetch. This is
  * ignored for push. This must be the same value passed to `git_remote_download()`.
  * @return 0 or an error code
@@ -996,7 +1030,7 @@ GIT_EXTERN(int) git_remote_upload(
 GIT_EXTERN(int) git_remote_update_tips(
 		git_remote *remote,
 		const git_remote_callbacks *callbacks,
-		int update_fetchhead,
+		unsigned int update_flags,
 		git_remote_autotag_option_t download_tags,
 		const char *reflog_message);
 

@@ -314,3 +314,20 @@ void diff_assert_equal(git_diff *a, git_diff *b)
 	}
 }
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+int diff_from_buffer(
+	git_diff **out,
+	const char *content,
+	size_t content_len)
+{
+	return git_diff_from_buffer(out, content, content_len, NULL);
+}
+#else
+int diff_from_buffer(
+	git_diff **out,
+	const char *content,
+	size_t content_len)
+{
+	return git_diff_from_buffer(out, content, content_len);
+}
+#endif

@@ -53,7 +53,7 @@ RUN cd /tmp && \
     cd libssh2-1.9.0 && \
     mkdir build build-msan && \
     cd build && \
-    CC=clang-10 CFLAGS="-fPIC" cmake -G Ninja -DBUILD_SHARED_LIBS=ON -DCRYPTO_BACKEND=Libgcrypt -DCMAKE_PREFIX_PATH=/usr/local -DCMAKE_INSTALL_PREFIX=/usr/local .. && \
+    CC=clang-10 CFLAGS="-fPIC" cmake -G Ninja -DBUILD_SHARED_LIBS=ON -DCMAKE_PREFIX_PATH=/usr/local -DCMAKE_INSTALL_PREFIX=/usr/local .. && \
     ninja install && \
     cd ../build-msan && \
     CC=clang-10 CFLAGS="-fPIC -fsanitize=memory -fno-optimize-sibling-calls -fsanitize-memory-track-origins=2 -fno-omit-frame-pointer" LDFLAGS="-fsanitize=memory" cmake -G Ninja -DBUILD_SHARED_LIBS=ON -DCRYPTO_BACKEND=mbedTLS -DCMAKE_PREFIX_PATH=/usr/local/msan -DCMAKE_INSTALL_PREFIX=/usr/local/msan .. && \

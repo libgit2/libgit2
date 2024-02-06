@@ -34,8 +34,13 @@ static int contains_all_cb(const git_config_entry *entry, void *payload)
 	int i;
 
 	for (i = 0; entries[i].name; i++) {
-		if (strcmp(entries[i].name, entry->name) ||
-		    strcmp(entries[i].value , entry->value))
+		if (strcmp(entries[i].name, entry->name))
+			continue;
+
+		if ((entries[i].value == NULL) ^ (entry->value == NULL))
+			continue;
+
+		if (entry->value && strcmp(entries[i].value , entry->value))
 			continue;
 
 		if (entries[i].seen)
@@ -61,7 +66,23 @@ static void assert_config_contains_all(git_config_backend *backend,
 
 static void setup_backend(const char *cfg)
 {
-	cl_git_pass(git_config_backend_from_string(&backend, cfg, strlen(cfg)));
+	git_config_backend_memory_options opts =
+		GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT;
+
+	opts.backend_type = "test";
+
+	cl_git_pass(git_config_backend_from_string(&backend, cfg, strlen(cfg), &opts));
+	cl_git_pass(git_config_backend_open(backend, 0, NULL));
+}
+
+static void setup_values_backend(const char **values, size_t len)
+{
+	git_config_backend_memory_options opts =
+		GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT;
+
+	opts.backend_type = "test";
+
+	cl_git_pass(git_config_backend_from_values(&backend, values, len, &opts));
 	cl_git_pass(git_config_backend_open(backend, 0, NULL));
 }
 
@@ -88,7 +109,13 @@ void test_config_memory__malformed_fails_to_open(void)
 	const char *cfg =
 		"[general\n"
 		"foo=bar\n";
-	cl_git_pass(git_config_backend_from_string(&backend, cfg, strlen(cfg)));
+
+	git_config_backend_memory_options opts =
+		GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT;
+
+	opts.backend_type = "test";
+
+	cl_git_pass(git_config_backend_from_string(&backend, cfg, strlen(cfg), &opts));
 	cl_git_fail(git_config_backend_open(backend, 0, NULL));
 }
 
@@ -136,4 +163,44 @@ void test_config_memory__foreach_sees_multivar(void)
 		"foo=bar1\n"
 		"foo=bar2\n");
 	assert_config_contains_all(backend, entries);
+}
+
+void test_config_memory__values(void)
+{
+	const char *values[] = {
+		"general.foo=bar1",
+		"general.foo=bar2",
+		"other.key=value",
+		"empty.value=",
+		"no.value",
+	};
+
+	struct expected_entry entries[] = {
+		{ "general.foo", "bar1",  0 },
+		{ "general.foo", "bar2",  0 },
+		{ "other.key",   "value", 0 },
+		{ "empty.value", "",      0 },
+		{ "no.value",    NULL,    0 },
+		{ NULL, NULL, 0 }
+	};
+
+	setup_values_backend(values, 5);
+	assert_config_contains_all(backend, entries);
+}
+
+void test_config_memory__valid_values(void)
+{
+	const char *values[] = {
+		"general.foo=bar1",
+		"=bar2",
+		"other.key=value"
+	};
+
+	git_config_backend_memory_options opts =
+		GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT;
+
+	opts.backend_type = "test";
+
+	cl_git_pass(git_config_backend_from_values(&backend, values, 3, &opts));
+	cl_git_fail(git_config_backend_open(backend, 0, NULL));
 }

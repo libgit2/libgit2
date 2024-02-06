@@ -1235,7 +1235,7 @@ void test_checkout_tree__case_changing_rename(void)
 
 	cl_git_pass(git_signature_new(&signature, "Renamer", "rename@contoso.com", time(NULL), 0));
 
-	cl_git_pass(git_commit_create(&commit_id, g_repo, "refs/heads/dir", signature, signature, NULL, "case-changing rename", tree, 1, (const git_commit **)&dir_commit));
+	cl_git_pass(git_commit_create(&commit_id, g_repo, "refs/heads/dir", signature, signature, NULL, "case-changing rename", tree, 1, &dir_commit));
 
 	cl_assert(git_fs_path_isfile("testrepo/readme"));
 	if (case_sensitive)

@@ -104,6 +104,8 @@ typedef __int64 off64_t;
 typedef __haiku_std_int64 off64_t;
 #elif defined(__APPLE__)
 typedef __int64_t off64_t;
+#elif defined(_AIX)
+typedef long long off64_t;
 #else
 typedef int64_t off64_t;
 #endif
@@ -192,5 +194,27 @@ extern const char *p_gai_strerror(int ret);
 #	define p_freeaddrinfo(a) freeaddrinfo(a)
 #	define p_gai_strerror(c) gai_strerror(c)
 #endif /* NO_ADDRINFO */
+
+#ifdef GIT_IO_POLL
+# include <poll.h>
+# define p_poll poll
+#elif GIT_IO_WSAPOLL
+# include <winsock2.h>
+# define p_poll WSAPoll
+#else
+# define POLLIN  0x01
+# define POLLPRI 0x02
+# define POLLOUT 0x04
+# define POLLERR 0x08
+# define POLLHUP 0x10
+
+struct pollfd {
+	int fd;
+	short events;
+	short revents;
+};
+
+extern int p_poll(struct pollfd *fds, unsigned int nfds, int timeout);
+#endif
 
 #endif

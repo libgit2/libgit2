@@ -23,6 +23,8 @@ typedef enum {
 	GIT_HASH_ALGORITHM_SHA256
 } git_hash_algorithm_t;
 
+#define GIT_HASH_MAX_SIZE GIT_HASH_SHA256_SIZE
+
 typedef struct git_hash_ctx {
 	union {
 		git_hash_sha1_ctx sha1;
@@ -44,5 +46,16 @@ int git_hash_buf(unsigned char *out, const void *data, size_t len, git_hash_algo
 int git_hash_vec(unsigned char *out, git_str_vec *vec, size_t n, git_hash_algorithm_t algorithm);
 
 int git_hash_fmt(char *out, unsigned char *hash, size_t hash_len);
+
+GIT_INLINE(size_t) git_hash_size(git_hash_algorithm_t algorithm) {
+	switch (algorithm) {
+		case GIT_HASH_ALGORITHM_SHA1:
+			return GIT_HASH_SHA1_SIZE;
+		case GIT_HASH_ALGORITHM_SHA256:
+			return GIT_HASH_SHA256_SIZE;
+		default:
+			return 0;
+	}
+}
 
 #endif

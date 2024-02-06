@@ -27,11 +27,11 @@ bool git_smart__ofs_delta_enabled = true;
 
 int git_smart__store_refs(transport_smart *t, int flushes)
 {
-	gitno_buffer *buf = &t->buffer;
 	git_vector *refs = &t->refs;
 	int error, flush = 0, recvd;
 	const char *line_end = NULL;
 	git_pkt *pkt = NULL;
+	git_pkt_parse_data pkt_parse_data = { 0 };
 	size_t i;
 
 	/* Clear existing refs in case git_remote_connect() is called again
@@ -44,8 +44,10 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 	pkt = NULL;
 
 	do {
-		if (buf->offset > 0)
-			error = git_pkt_parse_line(&pkt, &line_end, buf->data, buf->offset);
+		if (t->buffer.len > 0)
+			error = git_pkt_parse_line(&pkt, &line_end,
+				t->buffer.data, t->buffer.len,
+				&pkt_parse_data);
 		else
 			error = GIT_EBUFS;
 
@@ -53,19 +55,18 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 			return error;
 
 		if (error == GIT_EBUFS) {
-			if ((recvd = gitno_recv(buf)) < 0)
+			if ((recvd = git_smart__recv(t)) < 0)
 				return recvd;
 
 			if (recvd == 0) {
-				git_error_set(GIT_ERROR_NET, "early EOF");
+				git_error_set(GIT_ERROR_NET, "could not read refs from remote repository");
 				return GIT_EEOF;
 			}
 
 			continue;
 		}
 
-		if (gitno_consume(buf, line_end) < 0)
-			return -1;
+		git_staticstr_consume(&t->buffer, line_end);
 
 		if (pkt->type == GIT_PKT_ERR) {
 			git_error_set(GIT_ERROR_NET, "remote error: %s", ((git_pkt_err *)pkt)->error);
@@ -133,9 +134,12 @@ on_invalid:
 	return -1;
 }
 
-int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vector *symrefs)
+int git_smart__detect_caps(
+	git_pkt_ref *pkt,
+	transport_smart_caps *caps,
+	git_vector *symrefs)
 {
-	const char *ptr;
+	const char *ptr, *start;
 
 	/* No refs or capabilities, odd but not a problem */
 	if (pkt == NULL || pkt->capabilities == NULL)
@@ -213,13 +217,41 @@ int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vec
 
 		if (!git__prefixcmp(ptr, GIT_CAP_WANT_TIP_SHA1)) {
 			caps->common = caps->want_tip_sha1 = 1;
-			ptr += strlen(GIT_CAP_DELETE_REFS);
+			ptr += strlen(GIT_CAP_WANT_TIP_SHA1);
 			continue;
 		}
 
 		if (!git__prefixcmp(ptr, GIT_CAP_WANT_REACHABLE_SHA1)) {
 			caps->common = caps->want_reachable_sha1 = 1;
-			ptr += strlen(GIT_CAP_DELETE_REFS);
+			ptr += strlen(GIT_CAP_WANT_REACHABLE_SHA1);
+			continue;
+		}
+
+		if (!git__prefixcmp(ptr, GIT_CAP_OBJECT_FORMAT)) {
+			ptr += strlen(GIT_CAP_OBJECT_FORMAT);
+
+			start = ptr;
+			ptr = strchr(ptr, ' ');
+
+			if ((caps->object_format = git__strndup(start, (ptr - start))) == NULL)
+				return -1;
+			continue;
+		}
+
+		if (!git__prefixcmp(ptr, GIT_CAP_AGENT)) {
+			ptr += strlen(GIT_CAP_AGENT);
+
+			start = ptr;
+			ptr = strchr(ptr, ' ');
+
+			if ((caps->agent = git__strndup(start, (ptr - start))) == NULL)
+				return -1;
+			continue;
+		}
+
+		if (!git__prefixcmp(ptr, GIT_CAP_SHALLOW)) {
+			caps->common = caps->shallow = 1;
+			ptr += strlen(GIT_CAP_SHALLOW);
 			continue;
 		}
 
@@ -230,15 +262,23 @@ int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vec
 	return 0;
 }
 
-static int recv_pkt(git_pkt **out_pkt, git_pkt_type *out_type, gitno_buffer *buf)
+static int recv_pkt(
+	git_pkt **out_pkt,
+	git_pkt_type *out_type,
+	transport_smart *t)
 {
-	const char *ptr = buf->data, *line_end = ptr;
+	const char *ptr = t->buffer.data, *line_end = ptr;
 	git_pkt *pkt = NULL;
+	git_pkt_parse_data pkt_parse_data = { 0 };
 	int error = 0, ret;
 
+	pkt_parse_data.oid_type = t->owner->repo->oid_type;
+	pkt_parse_data.seen_capabilities = 1;
+
 	do {
-		if (buf->offset > 0)
-			error = git_pkt_parse_line(&pkt, &line_end, ptr, buf->offset);
+		if (t->buffer.len > 0)
+			error = git_pkt_parse_line(&pkt, &line_end, ptr,
+				t->buffer.len, &pkt_parse_data);
 		else
 			error = GIT_EBUFS;
 
@@ -248,16 +288,15 @@ static int recv_pkt(git_pkt **out_pkt, git_pkt_type *out_type, gitno_buffer *buf
 		if (error < 0 && error != GIT_EBUFS)
 			return error;
 
-		if ((ret = gitno_recv(buf)) < 0) {
+		if ((ret = git_smart__recv(t)) < 0) {
 			return ret;
 		} else if (ret == 0) {
-			git_error_set(GIT_ERROR_NET, "early EOF");
+			git_error_set(GIT_ERROR_NET, "could not read from remote repository");
 			return GIT_EEOF;
 		}
 	} while (error);
 
-	if (gitno_consume(buf, line_end) < 0)
-		return -1;
+	git_staticstr_consume(&t->buffer, line_end);
 
 	if (out_type != NULL)
 		*out_type = pkt->type;
@@ -272,11 +311,10 @@ static int recv_pkt(git_pkt **out_pkt, git_pkt_type *out_type, gitno_buffer *buf
 static int store_common(transport_smart *t)
 {
 	git_pkt *pkt = NULL;
-	gitno_buffer *buf = &t->buffer;
 	int error;
 
 	do {
-		if ((error = recv_pkt(&pkt, NULL, buf)) < 0)
+		if ((error = recv_pkt(&pkt, NULL, t)) < 0)
 			return error;
 
 		if (pkt->type != GIT_PKT_ACK) {
@@ -293,7 +331,7 @@ static int store_common(transport_smart *t)
 	return 0;
 }
 
-static int wait_while_ack(gitno_buffer *buf)
+static int wait_while_ack(transport_smart *t)
 {
 	int error;
 	git_pkt *pkt = NULL;
@@ -302,7 +340,7 @@ static int wait_while_ack(gitno_buffer *buf)
 	while (1) {
 		git_pkt_free(pkt);
 
-		if ((error = recv_pkt(&pkt, NULL, buf)) < 0)
+		if ((error = recv_pkt(&pkt, NULL, t)) < 0)
 			return error;
 
 		if (pkt->type == GIT_PKT_NAK)
@@ -323,11 +361,51 @@ static int wait_while_ack(gitno_buffer *buf)
 	return 0;
 }
 
-int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, const git_remote_head * const *wants, size_t count)
+static int cap_not_sup_err(const char *cap_name)
+{
+	git_error_set(GIT_ERROR_NET, "server doesn't support %s", cap_name);
+	return GIT_EINVALID;
+}
+
+/* Disables server capabilities we're not interested in */
+static int setup_caps(
+	transport_smart_caps *caps,
+	const git_fetch_negotiation *wants)
+{
+	if (wants->depth > 0) {
+		if (!caps->shallow)
+			return cap_not_sup_err(GIT_CAP_SHALLOW);
+	} else {
+		caps->shallow = 0;
+	}
+
+	return 0;
+}
+
+static int setup_shallow_roots(
+	git_array_oid_t *out,
+	const git_fetch_negotiation *wants)
+{
+	git_array_clear(*out);
+
+	if (wants->shallow_roots_len > 0) {
+		git_array_init_to_size(*out, wants->shallow_roots_len);
+		GIT_ERROR_CHECK_ALLOC(out->ptr);
+
+		memcpy(out->ptr, wants->shallow_roots,
+		       sizeof(git_oid) * wants->shallow_roots_len);
+	}
+
+	return 0;
+}
+
+int git_smart__negotiate_fetch(
+	git_transport *transport,
+	git_repository *repo,
+	const git_fetch_negotiation *wants)
 {
 	transport_smart *t = (transport_smart *)transport;
 	git_revwalk__push_options opts = GIT_REVWALK__PUSH_OPTIONS_INIT;
-	gitno_buffer *buf = &t->buffer;
 	git_str data = GIT_STR_INIT;
 	git_revwalk *walk = NULL;
 	int error = -1;
@@ -335,7 +413,11 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	unsigned int i;
 	git_oid oid;
 
-	if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
+	if ((error = setup_caps(&t->caps, wants)) < 0 ||
+	    (error = setup_shallow_roots(&t->shallow_roots, wants)) < 0)
+		return error;
+
+	if ((error = git_pkt_buffer_wants(wants, &t->caps, &data)) < 0)
 		return error;
 
 	if ((error = git_revwalk_new(&walk, repo)) < 0)
@@ -344,6 +426,37 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	opts.insert_by_date = 1;
 	if ((error = git_revwalk__push_glob(walk, "refs/*", &opts)) < 0)
 		goto on_error;
+
+	if (wants->depth > 0) {
+		git_pkt_shallow *pkt;
+
+		if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
+			goto on_error;
+
+		while ((error = recv_pkt((git_pkt **)&pkt, NULL, t)) == 0) {
+			bool complete = false;
+
+			if (pkt->type == GIT_PKT_SHALLOW) {
+				error = git_oidarray__add(&t->shallow_roots, &pkt->oid);
+			} else if (pkt->type == GIT_PKT_UNSHALLOW) {
+				git_oidarray__remove(&t->shallow_roots, &pkt->oid);
+			} else if (pkt->type == GIT_PKT_FLUSH) {
+				/* Server is done, stop processing shallow oids */
+				complete = true;
+			} else {
+				git_error_set(GIT_ERROR_NET, "unexpected packet type");
+				error = -1;
+			}
+
+			git_pkt_free((git_pkt *) pkt);
+
+			if (complete || error < 0)
+				break;
+		}
+
+		if (error < 0)
+			goto on_error;
+	}
 
 	/*
 	 * Our support for ACK extensions is simply to parse them. On
@@ -385,7 +498,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 				if ((error = store_common(t)) < 0)
 					goto on_error;
 			} else {
-				if ((error = recv_pkt(NULL, &pkt_type, buf)) < 0)
+				if ((error = recv_pkt(NULL, &pkt_type, t)) < 0)
 					goto on_error;
 
 				if (pkt_type == GIT_PKT_ACK) {
@@ -407,7 +520,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			git_pkt_ack *pkt;
 			unsigned int j;
 
-			if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
+			if ((error = git_pkt_buffer_wants(wants, &t->caps, &data)) < 0)
 				goto on_error;
 
 			git_vector_foreach(&t->common, j, pkt) {
@@ -427,7 +540,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		git_pkt_ack *pkt;
 		unsigned int j;
 
-		if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
+		if ((error = git_pkt_buffer_wants(wants, &t->caps, &data)) < 0)
 			goto on_error;
 
 		git_vector_foreach(&t->common, j, pkt) {
@@ -445,10 +558,11 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		goto on_error;
 
 	if (t->cancelled.val) {
-		git_error_set(GIT_ERROR_NET, "The fetch was cancelled by the user");
+		git_error_set(GIT_ERROR_NET, "the fetch was cancelled");
 		error = GIT_EUSER;
 		goto on_error;
 	}
+
 	if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
 		goto on_error;
 
@@ -457,7 +571,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 
 	/* Now let's eat up whatever the server gives us */
 	if (!t->caps.multi_ack && !t->caps.multi_ack_detailed) {
-		if ((error = recv_pkt(NULL, &pkt_type, buf)) < 0)
+		if ((error = recv_pkt(NULL, &pkt_type, t)) < 0)
 			return error;
 
 		if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
@@ -465,7 +579,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			return -1;
 		}
 	} else {
-		error = wait_while_ack(buf);
+		error = wait_while_ack(t);
 	}
 
 	return error;
@@ -476,7 +590,29 @@ on_error:
 	return error;
 }
 
-static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, gitno_buffer *buf, git_indexer_progress *stats)
+int git_smart__shallow_roots(git_oidarray *out, git_transport *transport)
+{
+	transport_smart *t = (transport_smart *)transport;
+	size_t len;
+
+	GIT_ERROR_CHECK_ALLOC_MULTIPLY(&len, t->shallow_roots.size, sizeof(git_oid));
+
+	out->count = t->shallow_roots.size;
+
+	if (len) {
+		out->ids = git__malloc(len);
+		memcpy(out->ids, t->shallow_roots.ptr, len);
+	} else {
+		out->ids = NULL;
+	}
+
+	return 0;
+}
+
+static int no_sideband(
+	transport_smart *t,
+	struct git_odb_writepack *writepack,
+	git_indexer_progress *stats)
 {
 	int recvd;
 
@@ -486,12 +622,12 @@ static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, 
 			return GIT_EUSER;
 		}
 
-		if (writepack->append(writepack, buf->data, buf->offset, stats) < 0)
+		if (writepack->append(writepack, t->buffer.data, t->buffer.len, stats) < 0)
 			return -1;
 
-		gitno_consume_n(buf, buf->offset);
+		git_staticstr_clear(&t->buffer);
 
-		if ((recvd = gitno_recv(buf)) < 0)
+		if ((recvd = git_smart__recv(t)) < 0)
 			return recvd;
 	} while(recvd > 0);
 
@@ -533,7 +669,6 @@ int git_smart__download_pack(
 	git_indexer_progress *stats)
 {
 	transport_smart *t = (transport_smart *)transport;
-	gitno_buffer *buf = &t->buffer;
 	git_odb *odb;
 	struct git_odb_writepack *writepack = NULL;
 	int error = 0;
@@ -552,9 +687,10 @@ int git_smart__download_pack(
 		t->packetsize_payload = &npp;
 
 		/* We might have something in the buffer already from negotiate_fetch */
-		if (t->buffer.offset > 0 && !t->cancelled.val)
-			if (t->packetsize_cb(t->buffer.offset, t->packetsize_payload))
+		if (t->buffer.len > 0 && !t->cancelled.val) {
+			if (t->packetsize_cb(t->buffer.len, t->packetsize_payload))
 				git_atomic32_set(&t->cancelled, 1);
+		}
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
@@ -567,7 +703,7 @@ int git_smart__download_pack(
 	 * check which one belongs there.
 	 */
 	if (!t->caps.side_band && !t->caps.side_band_64k) {
-		error = no_sideband(t, writepack, buf, stats);
+		error = no_sideband(t, writepack, stats);
 		goto done;
 	}
 
@@ -581,7 +717,7 @@ int git_smart__download_pack(
 			goto done;
 		}
 
-		if ((error = recv_pkt(&pkt, NULL, buf)) >= 0) {
+		if ((error = recv_pkt(&pkt, NULL, t)) >= 0) {
 			/* Check cancellation after network call */
 			if (t->cancelled.val) {
 				git_error_clear();
@@ -742,6 +878,7 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt, git_str *data_pkt_buf)
 {
 	git_pkt *pkt;
+	git_pkt_parse_data pkt_parse_data = { 0 };
 	const char *line, *line_end = NULL;
 	size_t line_len;
 	int error;
@@ -760,7 +897,7 @@ static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt, 
 	}
 
 	while (line_len > 0) {
-		error = git_pkt_parse_line(&pkt, &line_end, line, line_len);
+		error = git_pkt_parse_line(&pkt, &line_end, line, line_len, &pkt_parse_data);
 
 		if (error == GIT_EBUFS) {
 			/* Buffer the data when the inner packet is split
@@ -796,15 +933,17 @@ done:
 static int parse_report(transport_smart *transport, git_push *push)
 {
 	git_pkt *pkt = NULL;
+	git_pkt_parse_data pkt_parse_data = { 0 };
 	const char *line_end = NULL;
-	gitno_buffer *buf = &transport->buffer;
 	int error, recvd;
 	git_str data_pkt_buf = GIT_STR_INIT;
 
 	for (;;) {
-		if (buf->offset > 0)
+		if (transport->buffer.len > 0)
 			error = git_pkt_parse_line(&pkt, &line_end,
-						   buf->data, buf->offset);
+				   transport->buffer.data,
+				   transport->buffer.len,
+				   &pkt_parse_data);
 		else
 			error = GIT_EBUFS;
 
@@ -814,22 +953,20 @@ static int parse_report(transport_smart *transport, git_push *push)
 		}
 
 		if (error == GIT_EBUFS) {
-			if ((recvd = gitno_recv(buf)) < 0) {
+			if ((recvd = git_smart__recv(transport)) < 0) {
 				error = recvd;
 				goto done;
 			}
 
 			if (recvd == 0) {
-				git_error_set(GIT_ERROR_NET, "early EOF");
+				git_error_set(GIT_ERROR_NET, "could not read report from remote repository");
 				error = GIT_EEOF;
 				goto done;
 			}
 			continue;
 		}
 
-		if (gitno_consume(buf, line_end) < 0)
-			return -1;
-
+		git_staticstr_consume(&transport->buffer, line_end);
 		error = 0;
 
 		switch (pkt->type) {
@@ -994,7 +1131,7 @@ struct push_packbuilder_payload
 	git_push_transfer_progress_cb cb;
 	void *cb_payload;
 	size_t last_bytes;
-	double last_progress_report_time;
+	uint64_t last_progress_report_time;
 };
 
 static int stream_thunk(void *buf, size_t size, void *data)
@@ -1006,11 +1143,11 @@ static int stream_thunk(void *buf, size_t size, void *data)
 		return error;
 
 	if (payload->cb) {
-		double current_time = git__timer();
-		double elapsed = current_time - payload->last_progress_report_time;
+		uint64_t current_time = git_time_monotonic();
+		uint64_t elapsed = current_time - payload->last_progress_report_time;
 		payload->last_bytes += size;
 
-		if (elapsed < 0 || elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
+		if (elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			payload->last_progress_report_time = current_time;
 			error = payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload);
 		}

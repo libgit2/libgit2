@@ -11,7 +11,6 @@
 
 #include "http_parser.h"
 #include "net.h"
-#include "netops.h"
 #include "remote.h"
 #include "smart.h"
 #include "auth.h"
@@ -336,8 +335,14 @@ static int lookup_proxy(
 	}
 
 	if (!proxy ||
-	    (error = git_net_url_parse(&transport->proxy.url, proxy)) < 0)
+	    (error = git_net_url_parse_http(&transport->proxy.url, proxy)) < 0)
 		goto done;
+
+	if (!git_net_url_valid(&transport->proxy.url)) {
+		git_error_set(GIT_ERROR_HTTP, "invalid URL: '%s'", proxy);
+		error = -1;
+		goto done;
+	}
 
 	*out_use = true;
 

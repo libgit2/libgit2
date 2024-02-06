@@ -9,6 +9,7 @@
 
 #include "git2/common.h"
 #include "git2/types.h"
+#include "git2/oid.h"
 
 /**
  * @file git2/sys/repository.h
@@ -32,7 +33,11 @@ GIT_BEGIN_DECL
  * @param out The blank repository
  * @return 0 on success, or an error code
  */
+#ifdef GIT_EXPERIMENTAL_SHA256
+GIT_EXTERN(int) git_repository_new(git_repository **out, git_oid_t oid_type);
+#else
 GIT_EXTERN(int) git_repository_new(git_repository **out);
+#endif
 
 /**
  * Reset all the internal state in a repository.

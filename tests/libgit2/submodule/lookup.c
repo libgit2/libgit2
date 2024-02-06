@@ -3,6 +3,7 @@
 #include "git2/sys/repository.h"
 #include "repository.h"
 #include "futils.h"
+#include "index.h"
 
 static git_repository *g_repo = NULL;
 
@@ -210,7 +211,7 @@ void test_submodule_lookup__lookup_even_with_missing_index(void)
 	git_index *idx;
 
 	/* give the repo an empty index */
-	cl_git_pass(git_index_new(&idx));
+	cl_git_pass(git_index__new(&idx, GIT_OID_SHA1));
 	git_repository_set_index(g_repo, idx);
 	git_index_free(idx);
 

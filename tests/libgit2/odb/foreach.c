@@ -52,7 +52,16 @@ void test_odb_foreach__one_pack(void)
 	int nobj = 0;
 
 	cl_git_pass(git_odb__new(&_odb, NULL));
-	cl_git_pass(git_odb_backend_one_pack(&backend, cl_fixture("testrepo.git/objects/pack/pack-a81e489679b7d3418f9ab594bda8ceb37dd4c695.idx")));
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_odb_backend_one_pack(&backend,
+		cl_fixture("testrepo.git/objects/pack/pack-a81e489679b7d3418f9ab594bda8ceb37dd4c695.idx"),
+		NULL));
+#else
+	cl_git_pass(git_odb_backend_one_pack(&backend,
+		cl_fixture("testrepo.git/objects/pack/pack-a81e489679b7d3418f9ab594bda8ceb37dd4c695.idx")));
+#endif
+
 	cl_git_pass(git_odb_add_backend(_odb, backend, 1));
 	_repo = NULL;
 

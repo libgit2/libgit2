@@ -39,7 +39,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	 * to do.
 	 */
 	for (i = 0; i < ARRAY_SIZE(types); i++) {
-		if (git_object__from_raw(&object, (const char *) data, size, types[i]) < 0)
+		if (git_object__from_raw(&object, (const char *) data, size, types[i], GIT_OID_SHA1) < 0)
 			continue;
 		git_object_free(object);
 		object = NULL;

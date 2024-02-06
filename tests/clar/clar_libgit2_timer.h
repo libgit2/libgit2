@@ -4,13 +4,13 @@
 struct cl_perf_timer
 {
 	/* cumulative running time across all start..stop intervals */
-	double sum;
+	uint64_t sum;
 
 	/* value of last start..stop interval */
-	double last;
+	uint64_t last;
 
 	/* clock value at start */
-	double time_started;
+	uint64_t time_started;
 };
 
 #define CL_PERF_TIMER_INIT {0}
@@ -24,12 +24,12 @@ void cl_perf_timer__stop(cl_perf_timer *t);
 /**
  * return value of last start..stop interval in seconds.
  */
-double cl_perf_timer__last(const cl_perf_timer *t);
+uint64_t cl_perf_timer__last(const cl_perf_timer *t);
 
 /**
  * return cumulative running time across all start..stop
  * intervals in seconds.
  */
-double cl_perf_timer__sum(const cl_perf_timer *t);
+uint64_t cl_perf_timer__sum(const cl_perf_timer *t);
 
 #endif /* __CLAR_LIBGIT2_TIMER__ */

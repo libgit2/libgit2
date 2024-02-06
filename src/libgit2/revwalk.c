@@ -83,8 +83,13 @@ int git_revwalk__push_commit(git_revwalk *walk, const git_oid *oid, const git_re
 
 	commit->uninteresting = opts->uninteresting;
 	list = walk->user_input;
-	if ((opts->insert_by_date &&
-	    git_commit_list_insert_by_date(commit, &list) == NULL) ||
+
+	/* To insert by date, we need to parse so we know the date. */
+	if (opts->insert_by_date && ((error = git_commit_list_parse(walk, commit)) < 0))
+		return error;
+
+	if ((opts->insert_by_date == 0 ||
+	    git_commit_list_insert_by_date(commit, &list) == NULL) &&
 	    git_commit_list_insert(commit, &list) == NULL) {
 		git_error_set_oom();
 		return -1;
@@ -121,8 +126,12 @@ int git_revwalk__push_ref(git_revwalk *walk, const char *refname, const git_revw
 {
 	git_oid oid;
 
-	if (git_reference_name_to_id(&oid, walk->repo, refname) < 0)
+	int error = git_reference_name_to_id(&oid, walk->repo, refname);
+	if (opts->from_glob && (error == GIT_ENOTFOUND || error == GIT_EINVALIDSPEC || error == GIT_EPEEL)) {
+		return 0;
+	} else if (error < 0) {
 		return -1;
+	}
 
 	return git_revwalk__push_commit(walk, &oid, opts);
 }
@@ -605,7 +614,7 @@ cleanup:
 static int prepare_walk(git_revwalk *walk)
 {
 	int error = 0;
-	git_commit_list *list, *commits = NULL;
+	git_commit_list *list, *commits = NULL, *commits_last = NULL;
 	git_commit_list_node *next;
 
 	/* If there were no pushes, we know that the walk is already over */
@@ -614,6 +623,12 @@ static int prepare_walk(git_revwalk *walk)
 		return GIT_ITEROVER;
 	}
 
+	/* 
+	 * This is a bit convoluted, but necessary to maintain the order of
+	 * the commits. This is especially important in situations where
+	 * git_revwalk__push_glob is called with a git_revwalk__push_options
+	 * setting insert_by_date = 1, which is critical for fetch negotiation.
+	 */
 	for (list = walk->user_input; list; list = list->next) {
 		git_commit_list_node *commit = list->item;
 		if ((error = git_commit_list_parse(walk, commit)) < 0)
@@ -623,8 +638,19 @@ static int prepare_walk(git_revwalk *walk)
 			mark_parents_uninteresting(commit);
 
 		if (!commit->seen) {
+			git_commit_list *new_list = NULL;
+			if ((new_list = git_commit_list_create(commit, NULL)) == NULL) {
+				git_error_set_oom();
+				return -1;
+			}
+			
 			commit->seen = 1;
-			git_commit_list_insert(commit, &commits);
+			if (commits_last == NULL)
+				commits = new_list;
+			else
+				commits_last->next = new_list;
+			
+			commits_last = new_list;
 		}
 	}
 

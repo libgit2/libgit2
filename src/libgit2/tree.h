@@ -41,8 +41,8 @@ GIT_INLINE(bool) git_tree_entry__is_tree(const struct git_tree_entry *e)
 }
 
 void git_tree__free(void *tree);
-int git_tree__parse(void *tree, git_odb_object *obj);
-int git_tree__parse_raw(void *_tree, const char *data, size_t size);
+int git_tree__parse(void *tree, git_odb_object *obj, git_oid_t oid_type);
+int git_tree__parse_raw(void *_tree, const char *data, size_t size, git_oid_t oid_type);
 
 /**
  * Write a tree to the given repository

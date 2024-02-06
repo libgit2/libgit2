@@ -233,7 +233,7 @@ void test_refs_reflog_messages__show_merge_for_merge_commits(void)
 	cl_git_pass(git_commit_create(&merge_commit_oid,
 		g_repo, "HEAD", s, s, NULL,
 		"Merge commit", tree,
-		2, (const struct git_commit **) parent_commits));
+		2, parent_commits));
 
 	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
 		NULL,

@@ -24,9 +24,8 @@ by the following licenses:
 
 ## Discussion & Chat
 
-We hang out in the
-[`#libgit2`](http://webchat.freenode.net/?channels=#libgit2)) channel on
-irc.freenode.net.
+We hang out in the [#libgit2](https://web.libera.chat/#libgit2) channel on
+[libera](https://libera.chat).
 
 Also, feel free to open an
 [Issue](https://github.com/libgit2/libgit2/issues/new) to start a discussion

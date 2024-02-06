@@ -63,6 +63,9 @@ typedef struct {
 
 	/* flags, from above */
 	unsigned int flags;
+
+	/* oid type - necessary for non-workdir filesystem iterators */
+	git_oid_t oid_type;
 } git_iterator_options;
 
 #define GIT_ITERATOR_OPTIONS_INIT {0}
