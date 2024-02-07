@@ -249,6 +249,9 @@ static int git_smart__capabilities(unsigned int *capabilities, git_transport *tr
 
 	*capabilities = 0;
 
+	if (t->caps.push_options)
+		*capabilities |= GIT_REMOTE_CAPABILITY_PUSH_OPTIONS;
+
 	if (t->caps.want_tip_sha1)
 		*capabilities |= GIT_REMOTE_CAPABILITY_TIP_OID;
 

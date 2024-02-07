@@ -194,6 +194,12 @@ int git_smart__detect_caps(
 			continue;
 		}
 
+		if (!git__prefixcmp(ptr, GIT_CAP_PUSH_OPTIONS)) {
+			caps->common = caps->push_options = 1;
+			ptr += strlen(GIT_CAP_PUSH_OPTIONS);
+			continue;
+		}
+
 		if (!git__prefixcmp(ptr, GIT_CAP_THIN_PACK)) {
 			caps->common = caps->thin_pack = 1;
 			ptr += strlen(GIT_CAP_THIN_PACK);
@@ -778,6 +784,7 @@ done:
 static int gen_pktline(git_str *buf, git_push *push)
 {
 	push_spec *spec;
+	char *option;
 	size_t i, len;
 	char old_id[GIT_OID_SHA1_HEXSIZE+1], new_id[GIT_OID_SHA1_HEXSIZE+1];
 
@@ -790,6 +797,8 @@ static int gen_pktline(git_str *buf, git_push *push)
 			++len; /* '\0' */
 			if (push->report_status)
 				len += strlen(GIT_CAP_REPORT_STATUS) + 1;
+			if (git_vector_length(&push->remote_push_options) > 0)
+				len += strlen(GIT_CAP_PUSH_OPTIONS) + 1;
 			len += strlen(GIT_CAP_SIDE_BAND_64K) + 1;
 		}
 
@@ -805,6 +814,10 @@ static int gen_pktline(git_str *buf, git_push *push)
 				git_str_putc(buf, ' ');
 				git_str_printf(buf, GIT_CAP_REPORT_STATUS);
 			}
+			if (git_vector_length(&push->remote_push_options) > 0) {
+				git_str_putc(buf, ' ');
+				git_str_printf(buf, GIT_CAP_PUSH_OPTIONS);
+			}
 			git_str_putc(buf, ' ');
 			git_str_printf(buf, GIT_CAP_SIDE_BAND_64K);
 		}
@@ -812,6 +825,12 @@ static int gen_pktline(git_str *buf, git_push *push)
 		git_str_putc(buf, '\n');
 	}
 
+	if (git_vector_length(&push->remote_push_options) > 0) {
+		git_str_printf(buf, "0000");
+		git_vector_foreach(&push->remote_push_options, i, option) {
+			git_str_printf(buf, "%04"PRIxZ"%s", strlen(option) + 4 , option);
+		}
+	}
 	git_str_puts(buf, "0000");
 	return git_str_oom(buf) ? -1 : 0;
 }

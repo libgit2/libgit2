@@ -38,6 +38,7 @@
 #define GIT_CAP_SHALLOW "shallow"
 #define GIT_CAP_OBJECT_FORMAT "object-format="
 #define GIT_CAP_AGENT "agent="
+#define GIT_CAP_PUSH_OPTIONS "push-options"
 
 extern bool git_smart__ofs_delta_enabled;
 
@@ -146,7 +147,8 @@ typedef struct transport_smart_caps {
 	             thin_pack:1,
 	             want_tip_sha1:1,
 	             want_reachable_sha1:1,
-	             shallow:1;
+	             shallow:1,
+	             push_options:1;
 	char *object_format;
 	char *agent;
 } transport_smart_caps;
