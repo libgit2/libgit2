@@ -1509,35 +1509,31 @@ static int rename_config_entries_cb(
 	int error = 0;
 	struct rename_data *data = (struct rename_data *)payload;
 	size_t base_len = git_str_len(data->name);
-	git_str raw_value = GIT_STR_INIT, value = GIT_STR_INIT;
+	git_str value = GIT_STR_INIT;
 
-	if (base_len > 0 &&
-		!(error = git_str_puts(data->name, entry->name + data->old_len)))
-	{
-		error = git_config_set_multivar(
-		        data->config, git_str_cstr(data->name), "^$",
-		        entry->value);
+	if (base_len > 0) {
+		if ((error = git_str_puts(data->name,
+			entry->name + data->old_len)) < 0 ||
+		    (error = git_config_set_multivar(
+			data->config, git_str_cstr(data->name), "^$",
+			entry->value)) < 0)
+			goto cleanup;
 	}
 
-	if (!error) {
-		if ((error = git_str_puts_escape_regex(
-		             &raw_value, entry->value)))
-			goto cleanup;
-		git_str_grow(&value, git_str_len(&raw_value) + 2);
-		git_str_putc(&value, '^');
-		git_str_puts(&value, git_str_cstr(&raw_value));
-		git_str_putc(&value, '$');
-		if (git_str_oom(&value)) {
-			error = -1;
-			goto cleanup;
-		}
-		error = git_config_delete_multivar(
-		        data->config, entry->name, git_str_cstr(&value));
+	git_str_putc(&value, '^');
+	git_str_puts_escape_regex(&value, entry->value);
+	git_str_putc(&value, '$');
+
+	if (git_str_oom(&value)) {
+		error = -1;
+		goto cleanup;
 	}
+
+	error = git_config_delete_multivar(
+	        data->config, entry->name, git_str_cstr(&value));
 
  cleanup:
 	git_str_truncate(data->name, base_len);
-	git_str_dispose(&raw_value);
 	git_str_dispose(&value);
 	return error;
 }
