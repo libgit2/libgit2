@@ -54,6 +54,8 @@ void test_refs_branches_delete__can_delete_a_branch_even_if_HEAD_is_missing(void
 	cl_git_pass(git_branch_lookup(&branch, repo, "br2", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
 	git_reference_free(branch);
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_branch_lookup(&branch, repo, "br2", GIT_BRANCH_LOCAL));
 }
 
 void test_refs_branches_delete__can_delete_a_branch_when_HEAD_is_unborn(void)
@@ -65,6 +67,8 @@ void test_refs_branches_delete__can_delete_a_branch_when_HEAD_is_unborn(void)
 	cl_git_pass(git_branch_lookup(&branch, repo, "br2", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
 	git_reference_free(branch);
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_branch_lookup(&branch, repo, "br2", GIT_BRANCH_LOCAL));
 }
 
 void test_refs_branches_delete__can_delete_a_branch_pointed_at_by_detached_HEAD(void)
@@ -82,6 +86,8 @@ void test_refs_branches_delete__can_delete_a_branch_pointed_at_by_detached_HEAD(
 	cl_git_pass(git_branch_lookup(&branch, repo, "master", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
 	git_reference_free(branch);
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_branch_lookup(&branch, repo, "master", GIT_BRANCH_LOCAL));
 }
 
 void test_refs_branches_delete__can_delete_a_local_branch(void)
@@ -90,6 +96,8 @@ void test_refs_branches_delete__can_delete_a_local_branch(void)
 	cl_git_pass(git_branch_lookup(&branch, repo, "br2", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
 	git_reference_free(branch);
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_branch_lookup(&branch, repo, "br2", GIT_BRANCH_LOCAL));
 }
 
 void test_refs_branches_delete__can_delete_a_remote_branch(void)
@@ -98,6 +106,8 @@ void test_refs_branches_delete__can_delete_a_remote_branch(void)
 	cl_git_pass(git_branch_lookup(&branch, repo, "nulltoken/master", GIT_BRANCH_REMOTE));
 	cl_git_pass(git_branch_delete(branch));
 	git_reference_free(branch);
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_branch_lookup(&branch, repo, "nulltoken/master", GIT_BRANCH_LOCAL));
 }
 
 void test_refs_branches_delete__deleting_a_branch_removes_related_configuration_data(void)
