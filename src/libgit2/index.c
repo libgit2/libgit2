@@ -2850,7 +2850,8 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	/*
 	 * SHA-1 or SHA-256 (depending on the repository's object format)
 	 * over the content of the index file before this checksum.
-	 * Note: checksum may be 0 if index.skipHash is set to true.
+	 * Note: checksum may be 0 if the index was written by a client
+	 * where index.skipHash was set to true.
 	 */
 	if (memcmp(zero_checksum, buffer, checksum_size) != 0 && memcmp(checksum, buffer, checksum_size) != 0) {
 		error = index_error_invalid(
