@@ -1509,19 +1509,32 @@ static int rename_config_entries_cb(
 	int error = 0;
 	struct rename_data *data = (struct rename_data *)payload;
 	size_t base_len = git_str_len(data->name);
+	git_str value = GIT_STR_INIT;
 
-	if (base_len > 0 &&
-		!(error = git_str_puts(data->name, entry->name + data->old_len)))
-	{
-		error = git_config_set_string(
-			data->config, git_str_cstr(data->name), entry->value);
-
-		git_str_truncate(data->name, base_len);
+	if (base_len > 0) {
+		if ((error = git_str_puts(data->name,
+			entry->name + data->old_len)) < 0 ||
+		    (error = git_config_set_multivar(
+			data->config, git_str_cstr(data->name), "^$",
+			entry->value)) < 0)
+			goto cleanup;
 	}
 
-	if (!error)
-		error = git_config_delete_entry(data->config, entry->name);
+	git_str_putc(&value, '^');
+	git_str_puts_escape_regex(&value, entry->value);
+	git_str_putc(&value, '$');
 
+	if (git_str_oom(&value)) {
+		error = -1;
+		goto cleanup;
+	}
+
+	error = git_config_delete_multivar(
+	        data->config, entry->name, git_str_cstr(&value));
+
+ cleanup:
+	git_str_truncate(data->name, base_len);
+	git_str_dispose(&value);
 	return error;
 }
 
