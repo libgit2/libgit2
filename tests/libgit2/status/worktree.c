@@ -1363,7 +1363,7 @@ void test_status_worktree__at_head_parent(void)
 
 void test_status_worktree__skip_hash(void)
 {
-	git_repository *repo = cl_git_sandbox_init("status_skipHash");
+	git_repository *repo = cl_git_sandbox_init("status_skiphash");
 	git_index *index;
 
 	cl_git_pass(git_repository_index(&index, repo));
