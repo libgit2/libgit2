@@ -2853,7 +2853,8 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	 * Note: checksum may be 0 if the index was written by a client
 	 * where index.skipHash was set to true.
 	 */
-	if (memcmp(zero_checksum, buffer, checksum_size) != 0 && memcmp(checksum, buffer, checksum_size) != 0) {
+	if (memcmp(zero_checksum, buffer, checksum_size) != 0 &&
+	    memcmp(checksum, buffer, checksum_size) != 0) {
 		error = index_error_invalid(
 			"calculated checksum does not match expected");
 		goto done;
