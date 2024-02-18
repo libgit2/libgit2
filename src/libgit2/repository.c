@@ -565,17 +565,18 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 	} else if (strcmp(entry->value, "*") == 0) {
 		*data->is_safe = true;
 	} else {
-		if (git_str_sets(&data->tmp, entry->value) < 0 ||
-		    git_fs_path_to_dir(&data->tmp) < 0)
+		if (git_str_sets(&data->tmp, entry->value) < 0)
 			return -1;
 
-		/*
-		 * Ensure that `git_fs_path_to_dir` mutated the
-		 * input path by adding a trailing backslash.
-		 * A trailing backslash on the input is not allowed.
-		 */
-		if (strcmp(data->tmp.ptr, entry->value) == 0)
-			return 0;
+		if (!git_fs_path_is_root(data->tmp.ptr)) {
+			/* Input must not have trailing backslash. */
+			if (!data->tmp.size ||
+			    data->tmp.ptr[data->tmp.size - 1] == '/')
+				return 0;
+
+			if (git_fs_path_to_dir(&data->tmp) < 0)
+				return -1;
+		}
 
 		test_path = data->tmp.ptr;
 
