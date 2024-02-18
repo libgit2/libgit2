@@ -87,6 +87,12 @@ extern int git_fs_path_to_dir(git_str *path);
 extern void git_fs_path_string_to_dir(char *path, size_t size);
 
 /**
+ * Provides the length of the given path string with no trailing
+ * slashes.
+ */
+size_t git_fs_path_dirlen(const char *path);
+
+/**
  * Taken from git.git; returns nonzero if the given path is "." or "..".
  */
 GIT_INLINE(int) git_fs_path_is_dot_or_dotdot(const char *name)

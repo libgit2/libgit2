@@ -419,6 +419,16 @@ int git_fs_path_to_dir(git_str *path)
 	return git_str_oom(path) ? -1 : 0;
 }
 
+size_t git_fs_path_dirlen(const char *path)
+{
+	size_t len = strlen(path);
+
+	while (len > 1 && path[len - 1] == '/')
+		len--;
+
+	return len;
+}
+
 void git_fs_path_string_to_dir(char *path, size_t size)
 {
 	size_t end = strlen(path);
