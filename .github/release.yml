@@ -27,6 +27,9 @@ changelog:
   - title: Git compatibility fixes
     labels:
     - git compatibility
+  - title: Dependency updates
+    labels:
+    - dependency
   - title: Other changes
     labels:
       - '*'
