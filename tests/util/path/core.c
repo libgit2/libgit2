@@ -341,3 +341,29 @@ void test_path_core__join_unrooted_respects_funny_windows_roots(void)
 	test_join_unrooted("💩:/foo/bar/foobar", 13, "💩:/foo/bar/foobar", "💩:/foo/bar");
 	test_join_unrooted("💩:/foo/bar/foobar", 9, "💩:/foo/bar/foobar", "💩:/foo/");
 }
+
+void test_path_core__is_root(void)
+{
+	cl_assert_equal_b(true,  git_fs_path_is_root("/"));
+	cl_assert_equal_b(false, git_fs_path_is_root("//"));
+	cl_assert_equal_b(false, git_fs_path_is_root("foo/"));
+	cl_assert_equal_b(false, git_fs_path_is_root("/foo/"));
+	cl_assert_equal_b(false, git_fs_path_is_root("/foo"));
+	cl_assert_equal_b(false, git_fs_path_is_root("\\"));
+
+#ifdef GIT_WIN32
+	cl_assert_equal_b(true,  git_fs_path_is_root("A:\\"));
+	cl_assert_equal_b(false, git_fs_path_is_root("B:\\foo"));
+	cl_assert_equal_b(false, git_fs_path_is_root("B:\\foo\\"));
+	cl_assert_equal_b(true,  git_fs_path_is_root("C:\\"));
+	cl_assert_equal_b(true,  git_fs_path_is_root("c:\\"));
+	cl_assert_equal_b(true,  git_fs_path_is_root("z:\\"));
+	cl_assert_equal_b(false, git_fs_path_is_root("z:\\\\"));
+	cl_assert_equal_b(false, git_fs_path_is_root("\\\\localhost"));
+	cl_assert_equal_b(false, git_fs_path_is_root("\\\\localhost\\"));
+	cl_assert_equal_b(false, git_fs_path_is_root("\\\\localhost\\c$\\"));
+	cl_assert_equal_b(false, git_fs_path_is_root("\\\\localhost\\c$\\Foo"));
+	cl_assert_equal_b(false, git_fs_path_is_root("\\\\localhost\\c$\\Foo\\"));
+	cl_assert_equal_b(false, git_fs_path_is_root("\\\\Volume\\12345\\Foo\\Bar.txt"));
+#endif
+}
