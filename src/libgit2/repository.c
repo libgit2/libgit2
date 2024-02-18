@@ -558,15 +558,14 @@ typedef struct {
 static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 {
 	validate_ownership_data *data = payload;
+	const char *test_path;
 
 	if (strcmp(entry->value, "") == 0) {
 		*data->is_safe = false;
 	} else if (strcmp(entry->value, "*") == 0) {
 		*data->is_safe = true;
 	} else {
-		const char *test_path = entry->value;
-
-		if (git_str_sets(&data->tmp, test_path) < 0 ||
+		if (git_str_sets(&data->tmp, entry->value) < 0 ||
 		    git_fs_path_to_dir(&data->tmp) < 0)
 			return -1;
 
@@ -575,20 +574,22 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 		 * input path by adding a trailing backslash.
 		 * A trailing backslash on the input is not allowed.
 		 */
-		if (strcmp(data->tmp.ptr, test_path) == 0)
+		if (strcmp(data->tmp.ptr, entry->value) == 0)
 			return 0;
 
-#ifdef GIT_WIN32
+		test_path = data->tmp.ptr;
+
 		/*
-		 * Git for Windows does some truly bizarre things with
-		 * paths that start with a forward slash; and expects you
-		 * to escape that with `%(prefix)`. This syntax generally
-		 * means to add the prefix that Git was installed to -- eg
-		 * `/usr/local` -- unless it's an absolute path, in which
-		 * case the leading `%(prefix)/` is just removed. And Git
-		 * for Windows expects you to use this syntax for absolute
-		 * Unix-style paths (in "Git Bash" or Windows Subsystem for
-		 * Linux).
+		 * Git - and especially, Git for Windows - does some
+		 * truly bizarre things with paths that start with a
+		 * forward slash; and expects you to escape that with
+		 * `%(prefix)`. This syntax generally means to add the
+		 * prefix that Git was installed to (eg `/usr/local`)
+		 * unless it's an absolute path, in which case the
+		 * leading `%(prefix)/` is just removed. And Git for
+		 * Windows expects you to use this syntax for absolute
+		 * Unix-style paths (in "Git Bash" or Windows Subsystem
+		 * for Linux).
 		 *
 		 * Worse, the behavior used to be that a leading `/` was
 		 * not absolute. It would indicate that Git for Windows
@@ -603,12 +604,13 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 		 */
 		if (strncmp(test_path, "%(prefix)//", strlen("%(prefix)//")) == 0)
 			test_path += strlen("%(prefix)/");
+#ifdef GIT_WIN32
 		else if (strncmp(test_path, "//", 2) == 0 &&
 		         strncmp(test_path, "//wsl.localhost/", strlen("//wsl.localhost/")) != 0)
 			test_path++;
 #endif
 
-		if (strcmp(data->tmp.ptr, data->repo_path) == 0)
+		if (strcmp(test_path, data->repo_path) == 0)
 			*data->is_safe = true;
 	}
 
