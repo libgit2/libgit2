@@ -278,6 +278,10 @@ void test_path_win32__8dot3_name(void)
 	cl_must_pass(p_mkdir(".bar", 0777));
 	cl_assert_equal_s("BAR~2", (shortname = git_win32_path_8dot3_name(".bar")));
 	git__free(shortname);
+
+	p_rmdir(".foo");
+	p_rmdir(".bar");
+	p_unlink("bar~1");
 #endif
 }
 
