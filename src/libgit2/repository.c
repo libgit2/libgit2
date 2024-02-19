@@ -605,11 +605,6 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 		 */
 		if (strncmp(test_path, "%(prefix)//", strlen("%(prefix)//")) == 0)
 			test_path += strlen("%(prefix)/");
-#ifdef GIT_WIN32
-		else if (strncmp(test_path, "//", 2) == 0 &&
-		         strncmp(test_path, "//wsl.localhost/", strlen("//wsl.localhost/")) != 0)
-			test_path++;
-#endif
 
 		if (strcmp(test_path, data->repo_path) == 0)
 			*data->is_safe = true;

@@ -759,6 +759,59 @@ void test_repo_open__can_handle_win32_prefixed_safe_paths(void)
 #endif
 }
 
+void test_repo_open__can_handle_win32_unc_safe_paths(void)
+{
+#ifdef GIT_WIN32
+	git_repository *repo;
+	git_str unc_path = GIT_STR_INIT,
+	        config_path = GIT_STR_INIT,
+	        config_filename = GIT_STR_INIT,
+	        config_data = GIT_STR_INIT;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
+
+	cl_fixture_sandbox("empty_standard_repo");
+	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
+
+	/*
+	 * On Windows, we can generally map a local drive to a UNC path;
+	 * for example C:\Foo\Bar becomes //localhost/C$/Foo/bar
+	 */
+	cl_git_pass(git_str_printf(&unc_path, "//localhost/%s/%s",
+		clar_sandbox_path(), "empty_standard_repo"));
+
+	if (unc_path.ptr[13] != ':' || unc_path.ptr[14] != '/')
+		cl_skip();
+
+	unc_path.ptr[13] = '$';
+
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, unc_path.ptr));
+
+	/* Add safe.directory options to the global configuration */
+	git_str_joinpath(&config_path, clar_sandbox_path(), "__global_config");
+	cl_must_pass(p_mkdir(config_path.ptr, 0777));
+	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, config_path.ptr);
+
+	git_str_joinpath(&config_filename, config_path.ptr, ".gitconfig");
+
+	/* The blank resets our sandbox directory and opening fails */
+
+	git_str_printf(&config_data,
+		"[safe]\n\tdirectory = %s\n",
+		unc_path.ptr);
+	cl_git_rewritefile(config_filename.ptr, config_data.ptr);
+
+	cl_git_pass(git_repository_open(&repo, unc_path.ptr));
+	git_repository_free(repo);
+
+	git_str_dispose(&config_path);
+	git_str_dispose(&config_filename);
+	git_str_dispose(&config_data);
+	git_str_dispose(&unc_path);
+#endif
+}
+
 void test_repo_open__can_reset_safe_directory_list(void)
 {
 	git_repository *repo;
