@@ -294,7 +294,7 @@ void test_diff_parse__eof_nl_missing(void)
 	git_patch *ret_patch;
 	git_diff_line *line;
 
-	cl_git_pass(git_diff_from_buffer(&diff, patch, strlen(patch)));
+	cl_git_pass(diff_from_buffer(&diff, patch, strlen(patch)));
 	cl_git_pass(git_patch_from_diff(&ret_patch, diff, 0));
 
 	cl_assert((line = git_array_get(ret_patch->lines, 2)) != NULL);
