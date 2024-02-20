@@ -2676,6 +2676,8 @@ static int repo_init_directories(
 	if (git_str_joinpath(repo_path, given_repo, add_dotgit ? GIT_DIR : "") < 0)
 		return -1;
 
+	git_fs_path_mkposix(repo_path->ptr);
+
 	has_dotgit = (git__suffixcmp(repo_path->ptr, "/" GIT_DIR) == 0);
 	if (has_dotgit)
 		opts->flags |= GIT_REPOSITORY_INIT__HAS_DOTGIT;
