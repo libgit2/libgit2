@@ -436,7 +436,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		GIT_ERROR_CHECK_ALLOC(proxy_url);
 	}
 
-	if (proxy_url) {
+	if (proxy_url && *proxy_url) {
 		git_str processed_url = GIT_STR_INIT;
 		WINHTTP_PROXY_INFO proxy_info;
 		wchar_t *proxy_wide;
