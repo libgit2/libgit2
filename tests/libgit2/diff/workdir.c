@@ -2286,42 +2286,81 @@ void test_diff_workdir__to_index_reversed_content_loads(void)
 	diff_expects exp;
 	int use_iterator;
 	char *pathspec = "new_file";
-	
+
 	g_repo = cl_git_sandbox_init("status");
-	
+
 	opts.context_lines = 3;
 	opts.interhunk_lines = 1;
 	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED |
 		GIT_DIFF_SHOW_UNTRACKED_CONTENT | GIT_DIFF_REVERSE;
 	opts.pathspec.strings = &pathspec;
 	opts.pathspec.count   = 1;
-	
+
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
-	
+
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
-		
+
 		if (use_iterator)
 			cl_git_pass(diff_foreach_via_iterator(
 				diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 		else
 			cl_git_pass(git_diff_foreach(
 				diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
-		
+
 		cl_assert_equal_i(1, exp.files);
 		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
 		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
 		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_MODIFIED]);
 		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
 		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
-		
+
 		cl_assert_equal_i(1, exp.hunks);
-		
+
 		cl_assert_equal_i(1, exp.lines);
 		cl_assert_equal_i(0, exp.line_ctxt);
 		cl_assert_equal_i(0, exp.line_adds);
 		cl_assert_equal_i(1, exp.line_dels);
 	}
-	
+
+	git_diff_free(diff);
+}
+
+void test_diff_workdir__completely_ignored_shows_empty_diff(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff;
+	git_patch *patch;
+	git_buf buf = GIT_BUF_INIT;
+	char *pathspec = "subdir.txt";
+
+	opts.pathspec.strings = &pathspec;
+	opts.pathspec.count = 1;
+
+	g_repo = cl_git_sandbox_init("status");
+	cl_git_rewritefile("status/subdir.txt", "Is it a bird?\n\nIs it a plane?\n");
+
+	/* Perform the diff normally */
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_git_pass(git_patch_to_buf(&buf, patch));
+
+	cl_assert_equal_s("diff --git a/subdir.txt b/subdir.txt\nindex e8ee89e..53c8db5 100644\n--- a/subdir.txt\n+++ b/subdir.txt\n@@ -1,2 +1,3 @@\n Is it a bird?\n+\n Is it a plane?\n", buf.ptr);
+
+	git_buf_dispose(&buf);
+	git_patch_free(patch);
+	git_diff_free(diff);
+
+	/* Perform the diff ignoring blank lines */
+	opts.flags |= GIT_DIFF_IGNORE_BLANK_LINES;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_git_pass(git_patch_to_buf(&buf, patch));
+
+	cl_assert_equal_s("", buf.ptr);
+
+	git_buf_dispose(&buf);
+	git_patch_free(patch);
 	git_diff_free(diff);
 }
