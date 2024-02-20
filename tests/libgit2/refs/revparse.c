@@ -889,3 +889,15 @@ void test_refs_revparse__parses_at_head(void)
 	test_id("@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL, GIT_REVSPEC_SINGLE);
 	test_id("@", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL, GIT_REVSPEC_SINGLE);
 }
+
+void test_refs_revparse__rejects_bogus_at(void)
+{
+	git_repository *repo;
+	git_object *target;
+
+	repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_revparse_single(&target, repo, "foo@"));
+
+	cl_git_sandbox_cleanup();
+}
