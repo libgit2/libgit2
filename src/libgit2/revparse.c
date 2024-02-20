@@ -941,7 +941,7 @@ int git_revparse(
 		 * allowed.
 		 */
 		if (!git__strcmp(spec, "..")) {
-			git_error_set(GIT_ERROR_INVALID, "Invalid pattern '..'");
+			git_error_set(GIT_ERROR_INVALID, "invalid pattern '..'");
 			return GIT_EINVALIDSPEC;
 		}
 
