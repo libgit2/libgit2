@@ -755,3 +755,28 @@ void test_repo_init__longpath(void)
 	git_str_dispose(&path);
 #endif
 }
+
+void test_repo_init__absolute_path_with_backslashes(void)
+{
+#ifdef GIT_WIN32
+	git_repository_init_options initopts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+	git_str path = GIT_STR_INIT;
+	char *c;
+
+	cl_set_cleanup(&cleanup_repository, "path");
+
+	cl_git_pass(git_str_joinpath(&path, clar_sandbox_path(), "path/to/newrepo"));
+
+	for (c = path.ptr; *c; c++) {
+		if (*c == '/')
+			*c = '\\';
+	}
+
+	initopts.flags |= GIT_REPOSITORY_INIT_MKDIR | GIT_REPOSITORY_INIT_MKPATH;
+
+	cl_git_pass(git_repository_init_ext(&g_repo, path.ptr, &initopts));
+	git_str_dispose(&path);
+#else
+	clar__skip();
+#endif
+}
