@@ -25,7 +25,7 @@ void test_merge_trees_trivial__cleanup(void)
 }
 
 
-static int merge_trivial(git_index **index, const char *ours, const char *theirs, bool ancestor_use_parent)
+static int merge_trivial(git_index **index, const char *ours, const char *theirs)
 {
 	git_commit *our_commit, *their_commit, *ancestor_commit;
 	git_tree *our_tree, *their_tree, *ancestor_tree;
@@ -42,12 +42,8 @@ static int merge_trivial(git_index **index, const char *ours, const char *theirs
 	cl_git_pass(git_reference_name_to_id(&their_oid, repo, branch_buf.ptr));
 	cl_git_pass(git_commit_lookup(&their_commit, repo, &their_oid));
 
-	if (!ancestor_use_parent) {
-		cl_git_pass(git_merge_base(&ancestor_oid, repo, git_commit_id(our_commit), git_commit_id(their_commit)));
-		cl_git_pass(git_commit_lookup(&ancestor_commit, repo, &ancestor_oid));
-	} else {
-		cl_git_pass(git_commit_parent(&ancestor_commit, their_commit, 0));
-	}
+	cl_git_pass(git_merge_base(&ancestor_oid, repo, git_commit_id(our_commit), git_commit_id(their_commit)));
+	cl_git_pass(git_commit_lookup(&ancestor_commit, repo, &ancestor_oid));
 
 	cl_git_pass(git_commit_tree(&ancestor_tree, ancestor_commit));
 	cl_git_pass(git_commit_tree(&our_tree, our_commit));
@@ -88,7 +84,7 @@ void test_merge_trees_trivial__2alt(void)
 	git_index *result;
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial(&result, "trivial-2alt", "trivial-2alt-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-2alt", "trivial-2alt-branch"));
 
 	cl_assert(entry = git_index_get_bypath(result, "new-in-branch.txt", 0));
 	cl_assert(git_index_reuc_entrycount(result) == 0);
@@ -103,7 +99,7 @@ void test_merge_trees_trivial__3alt(void)
 	git_index *result;
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial(&result, "trivial-3alt", "trivial-3alt-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-3alt", "trivial-3alt-branch"));
 
 	cl_assert(entry = git_index_get_bypath(result, "new-in-3alt.txt", 0));
 	cl_assert(git_index_reuc_entrycount(result) == 0);
@@ -118,7 +114,7 @@ void test_merge_trees_trivial__4(void)
 	git_index *result;
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial(&result, "trivial-4", "trivial-4-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-4", "trivial-4-branch"));
 
 	cl_assert((entry = git_index_get_bypath(result, "new-and-different.txt", 0)) == NULL);
 	cl_assert(git_index_reuc_entrycount(result) == 0);
@@ -136,7 +132,7 @@ void test_merge_trees_trivial__5alt_1(void)
 	git_index *result;
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial(&result, "trivial-5alt-1", "trivial-5alt-1-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-5alt-1", "trivial-5alt-1-branch"));
 
 	cl_assert(entry = git_index_get_bypath(result, "new-and-same.txt", 0));
 	cl_assert(git_index_reuc_entrycount(result) == 0);
@@ -151,7 +147,7 @@ void test_merge_trees_trivial__5alt_2(void)
 	git_index *result;
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial(&result, "trivial-5alt-2", "trivial-5alt-2-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-5alt-2", "trivial-5alt-2-branch"));
 
 	cl_assert(entry = git_index_get_bypath(result, "modified-to-same.txt", 0));
 	cl_assert(git_index_reuc_entrycount(result) == 0);
@@ -167,7 +163,7 @@ void test_merge_trees_trivial__6(void)
 	const git_index_entry *entry;
 	const git_index_reuc_entry *reuc;
 
-	cl_git_pass(merge_trivial(&result, "trivial-6", "trivial-6-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-6", "trivial-6-branch"));
 
 	cl_assert((entry = git_index_get_bypath(result, "removed-in-both.txt", 0)) == NULL);
 	cl_assert(git_index_reuc_entrycount(result) == 1);
@@ -185,7 +181,7 @@ void test_merge_trees_trivial__8(void)
 	const git_index_entry *entry;
 	const git_index_reuc_entry *reuc;
 
-	cl_git_pass(merge_trivial(&result, "trivial-8", "trivial-8-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-8", "trivial-8-branch"));
 
 	cl_assert((entry = git_index_get_bypath(result, "removed-in-8.txt", 0)) == NULL);
 
@@ -203,7 +199,7 @@ void test_merge_trees_trivial__7(void)
 	git_index *result;
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial(&result, "trivial-7", "trivial-7-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-7", "trivial-7-branch"));
 
 	cl_assert((entry = git_index_get_bypath(result, "removed-in-7.txt", 0)) == NULL);
 	cl_assert(git_index_reuc_entrycount(result) == 0);
@@ -222,7 +218,7 @@ void test_merge_trees_trivial__10(void)
 	const git_index_entry *entry;
 	const git_index_reuc_entry *reuc;
 
-	cl_git_pass(merge_trivial(&result, "trivial-10", "trivial-10-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-10", "trivial-10-branch"));
 
 	cl_assert((entry = git_index_get_bypath(result, "removed-in-10-branch.txt", 0)) == NULL);
 
@@ -240,7 +236,7 @@ void test_merge_trees_trivial__9(void)
 	git_index *result;
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial(&result, "trivial-9", "trivial-9-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-9", "trivial-9-branch"));
 
 	cl_assert((entry = git_index_get_bypath(result, "removed-in-9-branch.txt", 0)) == NULL);
 	cl_assert(git_index_reuc_entrycount(result) == 0);
@@ -259,7 +255,7 @@ void test_merge_trees_trivial__13(void)
 	const git_index_entry *entry;
 	git_oid expected_oid;
 
-	cl_git_pass(merge_trivial(&result, "trivial-13", "trivial-13-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-13", "trivial-13-branch"));
 
 	cl_assert(entry = git_index_get_bypath(result, "modified-in-13.txt", 0));
 	cl_git_pass(git_oid__fromstr(&expected_oid, "1cff9ec6a47a537380dedfdd17c9e76d74259a2b", GIT_OID_SHA1));
@@ -278,7 +274,7 @@ void test_merge_trees_trivial__14(void)
 	const git_index_entry *entry;
 	git_oid expected_oid;
 
-	cl_git_pass(merge_trivial(&result, "trivial-14", "trivial-14-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-14", "trivial-14-branch"));
 
 	cl_assert(entry = git_index_get_bypath(result, "modified-in-14-branch.txt", 0));
 	cl_git_pass(git_oid__fromstr(&expected_oid, "26153a3ff3649b6c2bb652d3f06878c6e0a172f9", GIT_OID_SHA1));
@@ -296,7 +292,7 @@ void test_merge_trees_trivial__11(void)
 	git_index *result;
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial(&result, "trivial-11", "trivial-11-branch", false));
+	cl_git_pass(merge_trivial(&result, "trivial-11", "trivial-11-branch"));
 
 	cl_assert((entry = git_index_get_bypath(result, "modified-in-both.txt", 0)) == NULL);
 	cl_assert(git_index_reuc_entrycount(result) == 0);
@@ -308,22 +304,3 @@ void test_merge_trees_trivial__11(void)
 
 	git_index_free(result);
 }
-
-/* 15: ancest:remote^, head:head, remote:remote = result:no merge */
-void test_merge_trees_trivial__15(void)
-{
-	git_index *result;
-	const git_index_entry *entry;
-
-	/* Can't use merge_trivialfalsehere because a different ancestor is used. */
-	cl_git_pass(merge_trivial(&result, "trivial-15", "trivial-15-branch", true));
-
-	cl_assert((entry = git_index_get_bypath(result, "another-new-empty-15.txt", GIT_INDEX_STAGE_NORMAL)) == NULL);
-	cl_assert((entry = git_index_get_bypath(result, "another-new-empty-15.txt", GIT_INDEX_STAGE_ANCESTOR)));
-	cl_assert((entry = git_index_get_bypath(result, "another-new-empty-15.txt", GIT_INDEX_STAGE_OURS)) == NULL);
-	cl_assert((entry = git_index_get_bypath(result, "another-new-empty-15.txt", GIT_INDEX_STAGE_THEIRS)));
-	cl_assert(merge_trivial_conflict_entrycount(result) == 2);
-
-	git_index_free(result);
-}
-
