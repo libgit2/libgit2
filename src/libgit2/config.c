@@ -594,6 +594,7 @@ static int get_backend_for_use(git_config_backend **out,
 {
 	size_t i;
 	backend_internal *backend;
+	int error = 0;
 
 	*out = NULL;
 
@@ -605,16 +606,20 @@ static int get_backend_for_use(git_config_backend **out,
 	}
 
 	git_vector_foreach(&cfg->backends, i, backend) {
-		if (!backend->backend->readonly) {
-			*out = backend->backend;
-			return 0;
-		}
+		if (backend->backend->readonly)
+			continue;
+
+		*out = backend->backend;
+		goto cleanup;
 	}
 
+	error = GIT_ENOTFOUND;
 	git_error_set(GIT_ERROR_CONFIG,
 		"cannot %s value for '%s' when all config backends are readonly",
 		uses[use], name);
-	return GIT_ENOTFOUND;
+
+ cleanup:
+	return error;
 }
 
 int git_config_delete_entry(git_config *cfg, const char *name)
