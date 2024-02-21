@@ -650,9 +650,10 @@ static int get_backend_for_use(git_config_backend **out,
 int git_config_delete_entry(git_config *cfg, const char *name)
 {
 	git_config_backend *backend;
+	int error = 0;
 
-	if (get_backend_for_use(&backend, cfg, name, BACKEND_USE_DELETE) < 0)
-		return GIT_ENOTFOUND;
+	if ((error = get_backend_for_use(&backend, cfg, name, BACKEND_USE_DELETE)) < 0)
+		return error;
 
 	return backend->del(backend, name);
 }
@@ -684,8 +685,8 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 		return -1;
 	}
 
-	if (get_backend_for_use(&backend, cfg, name, BACKEND_USE_SET) < 0)
-		return GIT_ENOTFOUND;
+	if ((error = get_backend_for_use(&backend, cfg, name, BACKEND_USE_SET)) < 0)
+		return error;
 
 	error = backend->set(backend, name, value);
 
@@ -1125,9 +1126,10 @@ on_error:
 int git_config_set_multivar(git_config *cfg, const char *name, const char *regexp, const char *value)
 {
 	git_config_backend *backend;
+	int error = 0;
 
-	if (get_backend_for_use(&backend, cfg, name, BACKEND_USE_SET) < 0)
-		return GIT_ENOTFOUND;
+	if ((error = get_backend_for_use(&backend, cfg, name, BACKEND_USE_SET)) < 0)
+		return error;
 
 	return backend->set_multivar(backend, name, regexp, value);
 }
@@ -1135,9 +1137,10 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 int git_config_delete_multivar(git_config *cfg, const char *name, const char *regexp)
 {
 	git_config_backend *backend;
+	int error = 0;
 
-	if (get_backend_for_use(&backend, cfg, name, BACKEND_USE_DELETE) < 0)
-		return GIT_ENOTFOUND;
+	if ((error = get_backend_for_use(&backend, cfg, name, BACKEND_USE_DELETE)) < 0)
+		return error;
 
 	return backend->del_multivar(backend, name, regexp);
 }
