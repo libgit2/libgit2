@@ -596,6 +596,7 @@ static int get_backend_for_use(git_config_backend **out,
 	size_t len;
 	backend_internal *backend;
 	int error = 0;
+	git_config_entry *entry = NULL;
 
 	*out = NULL;
 
@@ -619,6 +620,15 @@ static int get_backend_for_use(git_config_backend **out,
 		   will only be one backend in the config. */
 		if (len > 1 && backend->level == GIT_CONFIG_LEVEL_WORKTREE)
 			continue;
+
+		/* If we're trying to delete a piece of config, make
+		   sure the backend we return actually defines it in
+		   the first place. */
+		if (use == BACKEND_USE_DELETE) {
+			if (backend->backend->get(backend->backend, name, &entry) < 0)
+				continue;
+			git_config_entry_free(entry);
+		}
 
 		*out = backend->backend;
 		goto cleanup;
