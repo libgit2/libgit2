@@ -1126,7 +1126,7 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 {
 	git_config_backend *backend;
 
-	if (get_backend_for_use(&backend, cfg, name, BACKEND_USE_DELETE) < 0)
+	if (get_backend_for_use(&backend, cfg, name, BACKEND_USE_SET) < 0)
 		return GIT_ENOTFOUND;
 
 	return backend->set_multivar(backend, name, regexp, value);
