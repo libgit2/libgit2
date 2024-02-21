@@ -597,6 +597,7 @@ static int get_backend_for_use(git_config_backend **out,
 	backend_internal *backend;
 	int error = 0;
 	git_config_entry *entry = NULL;
+	char *key = NULL;
 
 	*out = NULL;
 
@@ -625,7 +626,9 @@ static int get_backend_for_use(git_config_backend **out,
 		   sure the backend we return actually defines it in
 		   the first place. */
 		if (use == BACKEND_USE_DELETE) {
-			if (backend->backend->get(backend->backend, name, &entry) < 0)
+			if (key == NULL && (error = git_config__normalize_name(name, &key)) < 0)
+				goto cleanup;
+			if (backend->backend->get(backend->backend, key, &entry) < 0)
 				continue;
 			git_config_entry_free(entry);
 		}
@@ -640,6 +643,7 @@ static int get_backend_for_use(git_config_backend **out,
 		uses[use], name);
 
  cleanup:
+	git__free(key);
 	return error;
 }
 
