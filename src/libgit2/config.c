@@ -593,12 +593,14 @@ static int get_backend_for_use(git_config_backend **out,
 	git_config *cfg, const char *name, backend_use use)
 {
 	size_t i;
+	size_t len;
 	backend_internal *backend;
 	int error = 0;
 
 	*out = NULL;
 
-	if (git_vector_length(&cfg->backends) == 0) {
+	len = git_vector_length(&cfg->backends);
+	if (len == 0) {
 		git_error_set(GIT_ERROR_CONFIG,
 			"cannot %s value for '%s' when no config backends exist",
 			uses[use], name);
@@ -607,6 +609,15 @@ static int get_backend_for_use(git_config_backend **out,
 
 	git_vector_foreach(&cfg->backends, i, backend) {
 		if (backend->backend->readonly)
+			continue;
+
+		/* git-config doesn't update worktree-level config
+		   unless specifically requested; follow suit. If you
+		   specifically want to update that level, open the
+		   single config level with git_config_open_level and
+		   provide that as the config. In this case, there
+		   will only be one backend in the config. */
+		if (len > 1 && backend->level == GIT_CONFIG_LEVEL_WORKTREE)
 			continue;
 
 		*out = backend->backend;
