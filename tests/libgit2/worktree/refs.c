@@ -69,23 +69,19 @@ void test_worktree_refs__list_worktree_specific(void)
 	git_oid oid;
 
 	cl_git_pass(git_reference_name_to_id(&oid, fixture.repo, "refs/heads/dir"));
-	cl_git_fail(git_reference_lookup(&ref, fixture.repo, "refs/bisect/a-bisect-ref"));
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_lookup(&ref, fixture.repo, "refs/bisect/a-bisect-ref"));
 	cl_git_pass(git_reference_create(
 	        &new_branch, fixture.worktree, "refs/bisect/a-bisect-ref", &oid,
 	        0, "test"));
 
-	cl_git_fail(git_reference_lookup(&ref, fixture.repo, "refs/bisect/a-bisect-ref"));
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_lookup(&ref, fixture.repo, "refs/bisect/a-bisect-ref"));
 	cl_git_pass(git_reference_lookup(&ref, fixture.worktree, "refs/bisect/a-bisect-ref"));
 
 	cl_git_pass(git_reference_list(&refs, fixture.repo));
 	cl_git_pass(git_reference_list(&wtrefs, fixture.worktree));
 
-	if (refs.count + 1 != wtrefs.count) {
-		error = GIT_ERROR;
-		goto exit;
-	}
+	cl_assert_equal_sz(wtrefs.count, refs.count + 1);
 
-exit:
 	git_reference_free(ref);
 	git_reference_free(new_branch);
 	git_strarray_dispose(&refs);
@@ -102,13 +98,13 @@ void test_worktree_refs__list_worktree_specific_hidden_in_main_repo(void)
 
 	cl_git_pass(
 	        git_reference_name_to_id(&oid, fixture.repo, "refs/heads/dir"));
-	cl_git_fail(git_reference_lookup(
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_lookup(
 	        &ref, fixture.worktree, "refs/bisect/a-bisect-ref"));
 	cl_git_pass(git_reference_create(
 	        &new_branch, fixture.repo, "refs/bisect/a-bisect-ref", &oid,
 	        0, "test"));
 
-	cl_git_fail(git_reference_lookup(
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_lookup(
 	        &ref, fixture.worktree, "refs/bisect/a-bisect-ref"));
 	cl_git_pass(git_reference_lookup(
 	        &ref, fixture.repo, "refs/bisect/a-bisect-ref"));
@@ -116,12 +112,8 @@ void test_worktree_refs__list_worktree_specific_hidden_in_main_repo(void)
 	cl_git_pass(git_reference_list(&refs, fixture.repo));
 	cl_git_pass(git_reference_list(&wtrefs, fixture.worktree));
 
-	if (refs.count != wtrefs.count + 1) {
-		error = GIT_ERROR;
-		goto exit;
-	}
+	cl_assert_equal_sz(refs.count, wtrefs.count + 1);
 
-exit:
 	git_reference_free(ref);
 	git_reference_free(new_branch);
 	git_strarray_dispose(&refs);
