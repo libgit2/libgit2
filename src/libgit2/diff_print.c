@@ -29,6 +29,7 @@ typedef struct {
 	const char *new_prefix;
 	uint32_t flags;
 	int id_strlen;
+	unsigned int sent_file_header;
 	git_oid_t oid_type;
 
 	int (*strcomp)(const char *, const char *);
@@ -579,6 +580,30 @@ static int diff_print_patch_file_binary(
 	return error;
 }
 
+GIT_INLINE(int) should_force_header(const git_diff_delta *delta)
+{
+	if (delta->old_file.mode != delta->new_file.mode)
+		return 1;
+
+	if (delta->status == GIT_DELTA_RENAMED || delta->status == GIT_DELTA_COPIED)
+		return 1;
+
+	return 0;
+}
+
+GIT_INLINE(int) flush_file_header(const git_diff_delta *delta, diff_print_info *pi)
+{
+	if (pi->sent_file_header)
+		return 0;
+
+	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
+	pi->line.content     = git_str_cstr(pi->buf);
+	pi->line.content_len = git_str_len(pi->buf);
+	pi->sent_file_header = 1;
+
+	return pi->print_cb(delta, NULL, &pi->line, pi->payload);
+}
+
 static int diff_print_patch_file(
 	const git_diff_delta *delta, float progress, void *data)
 {
@@ -609,15 +634,22 @@ static int diff_print_patch_file(
 		 (pi->flags & GIT_DIFF_SHOW_UNTRACKED_CONTENT) == 0))
 		return 0;
 
+	pi->sent_file_header = 0;
+
 	if ((error = git_diff_delta__format_file_header(pi->buf, delta, oldpfx, newpfx,
 							id_strlen, print_index)) < 0)
 		return error;
 
-	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
-	pi->line.content     = git_str_cstr(pi->buf);
-	pi->line.content_len = git_str_len(pi->buf);
+	/*
+	 * pi->buf now contains the file header data. Go ahead and send it
+	 * if there's useful data in there, like similarity. Otherwise, we
+	 * should queue it to send when we see the first hunk. This prevents
+	 * us from sending a header when all hunks were ignored.
+	 */
+	if (should_force_header(delta) && (error = flush_file_header(delta, pi)) < 0)
+		return error;
 
-	return pi->print_cb(delta, NULL, &pi->line, pi->payload);
+	return 0;
 }
 
 static int diff_print_patch_binary(
@@ -631,6 +663,9 @@ static int diff_print_patch_binary(
 	const char *new_pfx =
 		pi->new_prefix ? pi->new_prefix : DIFF_NEW_PREFIX_DEFAULT;
 	int error;
+
+	if ((error = flush_file_header(delta, pi)) < 0)
+		return error;
 
 	git_str_clear(pi->buf);
 
@@ -651,9 +686,13 @@ static int diff_print_patch_hunk(
 	void *data)
 {
 	diff_print_info *pi = data;
+	int error;
 
 	if (S_ISDIR(d->new_file.mode))
 		return 0;
+
+	if ((error = flush_file_header(d, pi)) < 0)
+		return error;
 
 	pi->line.origin      = GIT_DIFF_LINE_HUNK_HDR;
 	pi->line.content     = h->header;
@@ -669,9 +708,13 @@ static int diff_print_patch_line(
 	void *data)
 {
 	diff_print_info *pi = data;
+	int error;
 
 	if (S_ISDIR(delta->new_file.mode))
 		return 0;
+
+	if ((error = flush_file_header(delta, pi)) < 0)
+		return error;
 
 	return pi->print_cb(delta, hunk, line, pi->payload);
 }
