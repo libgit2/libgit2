@@ -196,7 +196,7 @@ static void free_submodule_names(git_strmap *names)
  */
 static int load_submodule_names(git_strmap **out, git_repository *repo, git_config *cfg)
 {
-	const char *key = "submodule\\..*\\.path";
+	const char *key = "^submodule\\..*\\.path$";
 	git_config_iterator *iter = NULL;
 	git_config_entry *entry;
 	git_str buf = GIT_STR_INIT;
@@ -332,7 +332,7 @@ int git_submodule__lookup_with_cache(
 	/* If it's not configured or we're looking by path  */
 	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
 		git_config_backend *mods;
-		const char *pattern = "submodule\\..*\\.path";
+		const char *pattern = "^submodule\\..*\\.path$";
 		git_str path = GIT_STR_INIT;
 		fbp_data data = { NULL, NULL };
 
