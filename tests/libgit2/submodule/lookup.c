@@ -401,6 +401,24 @@ void test_submodule_lookup__prefix_name(void)
 	git_submodule_free(sm);
 }
 
+/* ".path" in name of submodule */
+void test_submodule_lookup__dotpath_in_name(void)
+{
+	sm_lookup_data data;
+
+	cl_git_rewritefile(
+	        "submod2/.gitmodules", "[submodule \"kwb.pathdict\"]\n"
+	                               "    path = kwb.pathdict\n"
+	                               "    url = ../Test_App\n"
+	                               "[submodule \"fakin.path.app\"]\n"
+	                               "    path = fakin.path.app\n"
+	                               "    url = ../Test_App\n");
+
+	memset(&data, 0, sizeof(data));
+	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
+	cl_assert_equal_i(9, data.count);
+}
+
 void test_submodule_lookup__renamed(void)
 {
 	const char *newpath = "sm_actually_changed";
