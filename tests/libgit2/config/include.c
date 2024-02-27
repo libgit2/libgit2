@@ -42,8 +42,13 @@ void test_config_include__absolute(void)
 
 void test_config_include__homedir(void)
 {
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, cl_fixture("config")));
+	git_str homefile = GIT_STR_INIT;
+
+	cl_fake_homedir(&homefile);
+	cl_git_pass(git_str_joinpath(&homefile, homefile.ptr, "config-included"));
+
 	cl_git_mkfile("config-include-homedir",  "[include]\npath = ~/config-included");
+	cl_git_mkfile(homefile.ptr, "[foo \"bar\"]\n\tbaz = huzzah\n");
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config-include-homedir"));
 
@@ -53,6 +58,8 @@ void test_config_include__homedir(void)
 	cl_sandbox_set_search_path_defaults();
 
 	cl_git_pass(p_unlink("config-include-homedir"));
+
+	git_str_dispose(&homefile);
 }
 
 /* We need to pretend that the variables were defined where the file was included */
@@ -104,7 +111,7 @@ void test_config_include__missing(void)
 
 	git_error_clear();
 	cl_git_pass(git_config_open_ondisk(&cfg, "including"));
-	cl_assert(git_error_last() == NULL);
+	cl_assert_equal_i(GIT_ERROR_NONE, git_error_last()->klass);
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar"));
 	cl_assert_equal_s("baz", buf.ptr);
 
@@ -113,12 +120,13 @@ void test_config_include__missing(void)
 
 void test_config_include__missing_homedir(void)
 {
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, cl_fixture("config")));
+	cl_fake_homedir(NULL);
+
 	cl_git_mkfile("including", "[include]\npath = ~/.nonexistentfile\n[foo]\nbar = baz");
 
 	git_error_clear();
 	cl_git_pass(git_config_open_ondisk(&cfg, "including"));
-	cl_assert(git_error_last() == NULL);
+	cl_assert_equal_i(GIT_ERROR_NONE, git_error_last()->klass);
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar"));
 	cl_assert_equal_s("baz", buf.ptr);
 

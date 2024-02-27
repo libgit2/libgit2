@@ -9,7 +9,6 @@
 
 #include "commit.h"
 #include "blob.h"
-#include "xdiff/xinclude.h"
 #include "diff_xdiff.h"
 
 /*

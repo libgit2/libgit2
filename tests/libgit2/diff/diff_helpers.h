@@ -71,3 +71,7 @@ extern void diff_print_raw(FILE *fp, git_diff *diff);
 
 extern void diff_assert_equal(git_diff *a, git_diff *b);
 
+extern int diff_from_buffer(
+	git_diff **out,
+	const char *content,
+	size_t content_len);

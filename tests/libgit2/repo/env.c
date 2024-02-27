@@ -31,6 +31,10 @@ void test_repo_env__cleanup(void)
 	if (git_fs_path_isdir("peeled.git"))
 		git_futils_rmdir_r("peeled.git", NULL, GIT_RMDIR_REMOVE_FILES);
 
+	cl_fixture_cleanup("test_workdir");
+	cl_fixture_cleanup("test_global_conf");
+	cl_fixture_cleanup("test_system_conf");
+
 	clear_git_env();
 }
 
@@ -274,4 +278,92 @@ void test_repo_env__open(void)
 	git_str_dispose(&repo_dir_buf);
 
 	clear_git_env();
+}
+
+void test_repo_env__work_tree(void)
+{
+	git_repository *repo;
+	const char *test_path;
+
+	cl_fixture_sandbox("attr");
+	cl_git_pass(p_rename("attr/.gitted", "attr/.git"));
+
+	cl_must_pass(p_mkdir("test_workdir", 0777));
+	test_path = cl_git_sandbox_path(1, "test_workdir", NULL);
+
+	cl_setenv("GIT_WORK_TREE", test_path);
+	cl_git_pass(git_repository_open_ext(&repo, "attr", GIT_REPOSITORY_OPEN_FROM_ENV, NULL));
+	cl_assert_equal_s(test_path, git_repository_workdir(repo));
+	git_repository_free(repo);
+	cl_setenv("GIT_WORK_TREE", NULL);
+}
+
+void test_repo_env__commondir(void)
+{
+	git_repository *repo;
+	const char *test_path;
+
+	cl_fixture_sandbox("attr");
+	cl_git_pass(p_rename("attr/.gitted", "attr/.git"));
+
+	cl_fixture_sandbox("testrepo.git");
+	cl_git_pass(p_rename("testrepo.git", "test_commondir"));
+
+	test_path = cl_git_sandbox_path(1, "test_commondir", NULL);
+
+	cl_setenv("GIT_COMMON_DIR", test_path);
+	cl_git_pass(git_repository_open_ext(&repo, "attr", GIT_REPOSITORY_OPEN_FROM_ENV, NULL));
+	cl_assert_equal_s(test_path, git_repository_commondir(repo));
+	git_repository_free(repo);
+	cl_setenv("GIT_COMMON_DIR", NULL);
+}
+
+void test_repo_env__config(void)
+{
+	git_repository *repo;
+	git_config *config;
+	const char *system_path, *global_path;
+	int s, g;
+
+	cl_fixture_sandbox("attr");
+	cl_git_pass(p_rename("attr/.gitted", "attr/.git"));
+
+	cl_git_rewritefile("test_system_conf", "[tttest]\n\tsys = true\n");
+	cl_git_rewritefile("test_global_conf", "[tttest]\n\tglb = true\n");
+
+	system_path = cl_git_sandbox_path(0, "test_system_conf", NULL);
+	cl_setenv("GIT_CONFIG_SYSTEM", system_path);
+
+	global_path = cl_git_sandbox_path(0, "test_global_conf", NULL);
+	cl_setenv("GIT_CONFIG_GLOBAL", global_path);
+
+	/* Ensure we can override the system and global files */
+
+	cl_git_pass(git_repository_open_ext(&repo, "attr", GIT_REPOSITORY_OPEN_FROM_ENV, NULL));
+	cl_git_pass(git_repository_config(&config, repo));
+
+	cl_git_pass(git_config_get_bool(&s, config, "tttest.sys"));
+	cl_assert_equal_i(1, s);
+	cl_git_pass(git_config_get_bool(&g, config, "tttest.glb"));
+	cl_assert_equal_i(1, g);
+
+	git_config_free(config);
+	git_repository_free(repo);
+
+	/* Further ensure we can ignore the system file. */
+	cl_setenv("GIT_CONFIG_NOSYSTEM", "TrUe");
+
+	cl_git_pass(git_repository_open_ext(&repo, "attr", GIT_REPOSITORY_OPEN_FROM_ENV, NULL));
+	cl_git_pass(git_repository_config(&config, repo));
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_bool(&s, config, "tttest.sys"));
+	cl_git_pass(git_config_get_bool(&g, config, "tttest.glb"));
+	cl_assert_equal_i(1, g);
+
+	git_config_free(config);
+	git_repository_free(repo);
+
+	cl_setenv("GIT_CONFIG_NOSYSTEM", NULL);
+	cl_setenv("GIT_CONFIG_SYSTEM", NULL);
+	cl_setenv("GIT_CONFIG_GLOBAL", NULL);
 }

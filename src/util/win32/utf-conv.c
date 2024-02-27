@@ -15,108 +15,114 @@ GIT_INLINE(void) git__set_errno(void)
 		errno = EINVAL;
 }
 
-/**
- * Converts a UTF-8 string to wide characters.
- *
- * @param dest The buffer to receive the wide string.
- * @param dest_size The size of the buffer, in characters.
- * @param src The UTF-8 string to convert.
- * @return The length of the wide string, in characters (not counting the NULL terminator), or < 0 for failure
- */
-int git__utf8_to_16(wchar_t *dest, size_t dest_size, const char *src)
+int git_utf8_to_16(wchar_t *dest, size_t dest_size, const char *src)
 {
+	/* Length of -1 indicates NULL termination of the input string. */
+	return git_utf8_to_16_with_len(dest, dest_size, src, -1);
+}
+
+int git_utf8_to_16_with_len(
+	wchar_t *dest,
+	size_t _dest_size,
+	const char *src,
+	int src_len)
+{
+	int dest_size = (int)min(_dest_size, INT_MAX);
 	int len;
 
-	/* Length of -1 indicates NULL termination of the input string. Subtract 1 from the result to
-	* turn 0 into -1 (an error code) and to not count the NULL terminator as part of the string's
-	* length. MultiByteToWideChar never returns int's minvalue, so underflow is not possible */
-	if ((len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, src, -1, dest, (int)dest_size) - 1) < 0)
+	/*
+	 * Subtract 1 from the result to turn 0 into -1 (an error code) and
+	 * to not count the NULL terminator as part of the string's length.
+	 * MultiByteToWideChar never returns int's minvalue, so underflow
+	 * is not possible.
+	 */
+	len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+		src, src_len, dest, dest_size) - 1;
+
+	if (len < 0)
 		git__set_errno();
 
 	return len;
 }
 
-/**
- * Converts a wide string to UTF-8.
- *
- * @param dest The buffer to receive the UTF-8 string.
- * @param dest_size The size of the buffer, in bytes.
- * @param src The wide string to convert.
- * @return The length of the UTF-8 string, in bytes (not counting the NULL terminator), or < 0 for failure
- */
-int git__utf16_to_8(char *dest, size_t dest_size, const wchar_t *src)
+int git_utf8_from_16(char *dest, size_t dest_size, const wchar_t *src)
 {
+	/* Length of -1 indicates NULL termination of the input string. */
+	return git_utf8_from_16_with_len(dest, dest_size, src, -1);
+}
+
+int git_utf8_from_16_with_len(
+	char *dest,
+	size_t _dest_size,
+	const wchar_t *src,
+	int src_len)
+{
+	int dest_size = (int)min(_dest_size, INT_MAX);
 	int len;
 
-	/* Length of -1 indicates NULL termination of the input string. Subtract 1 from the result to
-	 * turn 0 into -1 (an error code) and to not count the NULL terminator as part of the string's
-	 * length. WideCharToMultiByte never returns int's minvalue, so underflow is not possible */
-	if ((len = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, src, -1, dest, (int)dest_size, NULL, NULL) - 1) < 0)
+	/*
+	 * Subtract 1 from the result to turn 0 into -1 (an error code) and
+	 * to not count the NULL terminator as part of the string's length.
+	 * WideCharToMultiByte never returns int's minvalue, so underflow
+	 * is not possible.
+	 */
+	len = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+		src, src_len, dest, dest_size, NULL, NULL) - 1;
+
+	if (len < 0)
 		git__set_errno();
 
 	return len;
 }
 
-/**
- * Converts a UTF-8 string to wide characters.
- * Memory is allocated to hold the converted string.
- * The caller is responsible for freeing the string with git__free.
- *
- * @param dest Receives a pointer to the wide string.
- * @param src The UTF-8 string to convert.
- * @return The length of the wide string, in characters (not counting the NULL terminator), or < 0 for failure
- */
-int git__utf8_to_16_alloc(wchar_t **dest, const char *src)
+int git_utf8_to_16_alloc(wchar_t **dest, const char *src)
+{
+	/* Length of -1 indicates NULL termination of the input string. */
+	return git_utf8_to_16_alloc_with_len(dest, src, -1);
+}
+
+int git_utf8_to_16_alloc_with_len(wchar_t **dest, const char *src, int src_len)
 {
 	int utf16_size;
 
 	*dest = NULL;
 
-	/* Length of -1 indicates NULL termination of the input string */
-	utf16_size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, src, -1, NULL, 0);
+	utf16_size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+		src, src_len, NULL, 0);
 
 	if (!utf16_size) {
 		git__set_errno();
 		return -1;
 	}
 
-	if (!(*dest = git__mallocarray(utf16_size, sizeof(wchar_t)))) {
-		errno = ENOMEM;
-		return -1;
-	}
+	*dest = git__mallocarray(utf16_size, sizeof(wchar_t));
+	GIT_ERROR_CHECK_ALLOC(*dest);
 
-	utf16_size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, src, -1, *dest, utf16_size);
+	utf16_size = git_utf8_to_16_with_len(*dest, (size_t)utf16_size,
+		src, src_len);
 
-	if (!utf16_size) {
-		git__set_errno();
-
+	if (utf16_size < 0) {
 		git__free(*dest);
 		*dest = NULL;
 	}
 
-	/* Subtract 1 from the result to turn 0 into -1 (an error code) and to not count the NULL
-	 * terminator as part of the string's length. MultiByteToWideChar never returns int's minvalue,
-	 * so underflow is not possible */
-	return utf16_size - 1;
+	return utf16_size;
 }
 
-/**
- * Converts a wide string to UTF-8.
- * Memory is allocated to hold the converted string.
- * The caller is responsible for freeing the string with git__free.
- *
- * @param dest Receives a pointer to the UTF-8 string.
- * @param src The wide string to convert.
- * @return The length of the UTF-8 string, in bytes (not counting the NULL terminator), or < 0 for failure
- */
-int git__utf16_to_8_alloc(char **dest, const wchar_t *src)
+int git_utf8_from_16_alloc(char **dest, const wchar_t *src)
+{
+	/* Length of -1 indicates NULL termination of the input string. */
+	return git_utf8_from_16_alloc_with_len(dest, src, -1);
+}
+
+int git_utf8_from_16_alloc_with_len(char **dest, const wchar_t *src, int src_len)
 {
 	int utf8_size;
 
 	*dest = NULL;
 
-	/* Length of -1 indicates NULL termination of the input string */
-	utf8_size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, src, -1, NULL, 0, NULL, NULL);
+	utf8_size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+		src, src_len, NULL, 0, NULL, NULL);
 
 	if (!utf8_size) {
 		git__set_errno();
@@ -124,23 +130,15 @@ int git__utf16_to_8_alloc(char **dest, const wchar_t *src)
 	}
 
 	*dest = git__malloc(utf8_size);
+	GIT_ERROR_CHECK_ALLOC(*dest);
 
-	if (!*dest) {
-		errno = ENOMEM;
-		return -1;
-	}
+	utf8_size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+		src, src_len, *dest, utf8_size, NULL, NULL);
 
-	utf8_size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, src, -1, *dest, utf8_size, NULL, NULL);
-
-	if (!utf8_size) {
-		git__set_errno();
-
+	if (utf8_size < 0) {
 		git__free(*dest);
 		*dest = NULL;
 	}
 
-	/* Subtract 1 from the result to turn 0 into -1 (an error code) and to not count the NULL
-	 * terminator as part of the string's length. MultiByteToWideChar never returns int's minvalue,
-	 * so underflow is not possible */
-	return utf8_size - 1;
+	return utf8_size;
 }

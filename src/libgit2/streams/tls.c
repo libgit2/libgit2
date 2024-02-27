@@ -13,6 +13,7 @@
 #include "streams/mbedtls.h"
 #include "streams/openssl.h"
 #include "streams/stransport.h"
+#include "streams/schannel.h"
 
 int git_tls_stream_new(git_stream **out, const char *host, const char *port)
 {
@@ -33,6 +34,8 @@ int git_tls_stream_new(git_stream **out, const char *host, const char *port)
 		init = git_openssl_stream_new;
 #elif defined(GIT_MBEDTLS)
 		init = git_mbedtls_stream_new;
+#elif defined(GIT_SCHANNEL)
+		init = git_schannel_stream_new;
 #endif
 	} else {
 		return error;
@@ -63,6 +66,8 @@ int git_tls_stream_wrap(git_stream **out, git_stream *in, const char *host)
 		wrap = git_openssl_stream_wrap;
 #elif defined(GIT_MBEDTLS)
 		wrap = git_mbedtls_stream_wrap;
+#elif defined(GIT_SCHANNEL)
+		wrap = git_schannel_stream_wrap;
 #endif
 	}
 

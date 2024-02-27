@@ -13,12 +13,12 @@ enum cl_test_status {
 	CL_TEST_OK,
 	CL_TEST_FAILURE,
 	CL_TEST_SKIP,
-	CL_TEST_NOTRUN
+	CL_TEST_NOTRUN,
 };
 
 enum cl_output_format {
 	CL_OUTPUT_CLAP,
-	CL_OUTPUT_TAP
+	CL_OUTPUT_TAP,
 };
 
 /** Setup clar environment */
@@ -60,7 +60,7 @@ typedef enum cl_trace_event {
 	CL_TRACE__TEST__END,
 	CL_TRACE__TEST__RUN_BEGIN,
 	CL_TRACE__TEST__RUN_END,
-	CL_TRACE__TEST__LONGJMP
+	CL_TRACE__TEST__LONGJMP,
 } cl_trace_event;
 
 typedef void (cl_trace_cb)(

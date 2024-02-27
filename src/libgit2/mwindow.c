@@ -61,7 +61,10 @@ int git_mwindow_global_init(void)
 	return git_runtime_shutdown_register(git_mwindow_global_shutdown);
 }
 
-int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
+int git_mwindow_get_pack(
+	struct git_pack_file **out,
+	const char *path,
+	git_oid_t oid_type)
 {
 	struct git_pack_file *pack;
 	char *packname;
@@ -86,7 +89,7 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 	}
 
 	/* If we didn't find it, we need to create it */
-	if ((error = git_packfile_alloc(&pack, path)) < 0) {
+	if ((error = git_packfile_alloc(&pack, path, oid_type)) < 0) {
 		git_mutex_unlock(&git__mwindow_mutex);
 		return error;
 	}

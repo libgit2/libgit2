@@ -15,15 +15,74 @@
 /* Fail any allocation until git_libgit2_init is called. */
 git_allocator git__allocator = {
 	git_failalloc_malloc,
-	git_failalloc_calloc,
-	git_failalloc_strdup,
-	git_failalloc_strndup,
-	git_failalloc_substrdup,
 	git_failalloc_realloc,
-	git_failalloc_reallocarray,
-	git_failalloc_mallocarray,
 	git_failalloc_free
 };
+
+void *git__calloc(size_t nelem, size_t elsize)
+{
+	size_t newsize;
+	void *ptr;
+
+	if (GIT_MULTIPLY_SIZET_OVERFLOW(&newsize, nelem, elsize))
+		return NULL;
+
+	if ((ptr = git__malloc(newsize)))
+		memset(ptr, 0, newsize);
+
+	return ptr;
+}
+
+void *git__reallocarray(void *ptr, size_t nelem, size_t elsize)
+{
+	size_t newsize;
+
+	if (GIT_MULTIPLY_SIZET_OVERFLOW(&newsize, nelem, elsize))
+		return NULL;
+
+	return git__realloc(ptr, newsize);
+}
+
+void *git__mallocarray(size_t nelem, size_t elsize)
+{
+	return git__reallocarray(NULL, nelem, elsize);
+}
+
+char *git__strdup(const char *str)
+{
+	size_t len = strlen(str) + 1;
+	void *ptr = git__malloc(len);
+
+	if (ptr)
+		memcpy(ptr, str, len);
+
+	return ptr;
+}
+
+char *git__strndup(const char *str, size_t n)
+{
+	size_t len = p_strnlen(str, n);
+	char *ptr = git__malloc(len + 1);
+
+	if (ptr) {
+		memcpy(ptr, str, len);
+		ptr[len] = '\0';
+	}
+
+	return ptr;
+}
+
+char *git__substrdup(const char *str, size_t n)
+{
+	char *ptr = git__malloc(n + 1);
+
+	if (ptr) {
+		memcpy(ptr, str, n);
+		ptr[n] = '\0';
+	}
+
+	return ptr;
+}
 
 static int setup_default_allocator(void)
 {

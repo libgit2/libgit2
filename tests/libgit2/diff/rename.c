@@ -424,7 +424,7 @@ void test_diff_rename__test_small_files(void)
 	cl_git_pass(git_index_write_tree(&oid, index));
 	cl_git_pass(git_tree_lookup(&commit_tree, g_repo, &oid));
 	cl_git_pass(git_signature_new(&signature, "Rename", "rename@example.com", 1404157834, 0));
-	cl_git_pass(git_commit_create(&oid, g_repo, "HEAD", signature, signature, NULL, "Test commit", commit_tree, 1, (const git_commit**)&head_commit));
+	cl_git_pass(git_commit_create(&oid, g_repo, "HEAD", signature, signature, NULL, "Test commit", commit_tree, 1, &head_commit));
 
 	cl_git_mkfile("renames/copy.txt", "Hello World!\n");
 	cl_git_rmfile("renames/small.txt");
@@ -1439,6 +1439,52 @@ void test_diff_rename__can_delete_unmodified_deltas(void)
 	git_index_free(index);
 
 	git_str_dispose(&c1);
+}
+
+void test_diff_rename__can_delete_unmodified_deltas_including_submodule(void)
+{
+	git_repository *repo; /* "submodules" */
+	git_index *index;
+	git_tree *tree;
+	git_diff *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	diff_expects exp;
+
+	cl_git_sandbox_cleanup(); /* Don't use "renames" for this test */
+	repo = cl_git_sandbox_init("submodules");
+
+	cl_repo_set_bool(repo, "core.autocrlf", false);
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, repo, "HEAD^{tree}"));
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_read_tree(index, tree));
+
+	diffopts.flags = GIT_DIFF_INCLUDE_UNMODIFIED;
+
+	cl_git_pass(git_diff_tree_to_index(&diff, repo, tree, index, &diffopts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(5, exp.files);
+	cl_assert_equal_i(5, exp.file_status[GIT_DELTA_UNMODIFIED]);
+
+	opts.flags = GIT_DIFF_FIND_ALL | GIT_DIFF_FIND_REMOVE_UNMODIFIED;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(0, exp.files);
+
+	git_diff_free(diff);
+	git_tree_free(tree);
+	git_index_free(index);
+
+	cl_git_sandbox_cleanup();
 }
 
 void test_diff_rename__matches_config_behavior(void)

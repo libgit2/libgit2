@@ -24,6 +24,26 @@ GIT_BEGIN_DECL
  * Constructors for in-box ODB backends.
  */
 
+/** Options for configuring a packfile object backend. */
+typedef struct {
+	unsigned int version; /**< version for the struct */
+
+	/**
+	 * Type of object IDs to use for this object database, or
+	 * 0 for default (currently SHA1).
+	 */
+	git_oid_t oid_type;
+} git_odb_backend_pack_options;
+
+/* The current version of the diff options structure */
+#define GIT_ODB_BACKEND_PACK_OPTIONS_VERSION 1
+
+/* Stack initializer for odb pack backend options.  Alternatively use
+ * `git_odb_backend_pack_options_init` programmatic initialization.
+ */
+#define GIT_ODB_BACKEND_PACK_OPTIONS_INIT \
+	{ GIT_ODB_BACKEND_PACK_OPTIONS_VERSION }
+
 /**
  * Create a backend for the packfiles.
  *
@@ -32,7 +52,38 @@ GIT_BEGIN_DECL
  *
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **out, const char *objects_dir);
+#ifdef GIT_EXPERIMENTAL_SHA256
+GIT_EXTERN(int) git_odb_backend_pack(
+	git_odb_backend **out,
+	const char *objects_dir,
+	const git_odb_backend_pack_options *opts);
+#else
+GIT_EXTERN(int) git_odb_backend_pack(
+	git_odb_backend **out,
+	const char *objects_dir);
+#endif
+
+/**
+ * Create a backend out of a single packfile
+ *
+ * This can be useful for inspecting the contents of a single
+ * packfile.
+ *
+ * @param out location to store the odb backend pointer
+ * @param index_file path to the packfile's .idx file
+ *
+ * @return 0 or an error code
+ */
+#ifdef GIT_EXPERIMENTAL_SHA256
+GIT_EXTERN(int) git_odb_backend_one_pack(
+	git_odb_backend **out,
+	const char *index_file,
+	const git_odb_backend_pack_options *opts);
+#else
+GIT_EXTERN(int) git_odb_backend_one_pack(
+	git_odb_backend **out,
+	const char *index_file);
+#endif
 
 typedef enum {
 	GIT_ODB_BACKEND_LOOSE_FSYNC = (1 << 0)
@@ -100,19 +151,6 @@ GIT_EXTERN(int) git_odb_backend_loose(
 	unsigned int file_mode);
 #endif
 
-/**
- * Create a backend out of a single packfile
- *
- * This can be useful for inspecting the contents of a single
- * packfile.
- *
- * @param out location to store the odb backend pointer
- * @param index_file path to the packfile's .idx file
- *
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_odb_backend_one_pack(git_odb_backend **out, const char *index_file);
-
 /** Streaming mode */
 typedef enum {
 	GIT_STREAM_RDONLY = (1 << 1),
@@ -133,7 +171,9 @@ struct git_odb_stream {
 	unsigned int mode;
 	void *hash_ctx;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
 	git_oid_t oid_type;
+#endif
 
 	git_object_size_t declared_size;
 	git_object_size_t received_bytes;

@@ -372,12 +372,12 @@ static inline bool unicode_builtin_encoding_convert(
 			goto done;
 		}
 
+		out_len = out_start - out;
+
 		if ((new_out = realloc(out, out_size)) == NULL) {
 			ntlm_client_set_errmsg(ntlm, "out of memory");
 			goto done;
 		}
-
-		out_len = out_start - out;
 
 		out = new_out;
 		out_start = new_out + out_len;

@@ -3,6 +3,7 @@
 #include "git2/sys/repository.h"
 #include "repository.h"
 #include "futils.h"
+#include "index.h"
 
 static git_repository *g_repo = NULL;
 
@@ -210,7 +211,7 @@ void test_submodule_lookup__lookup_even_with_missing_index(void)
 	git_index *idx;
 
 	/* give the repo an empty index */
-	cl_git_pass(git_index_new(&idx));
+	cl_git_pass(git_index__new(&idx, GIT_OID_SHA1));
 	git_repository_set_index(g_repo, idx);
 	git_index_free(idx);
 
@@ -398,6 +399,24 @@ void test_submodule_lookup__prefix_name(void)
 	cl_assert_equal_s("Test_App2", git_submodule_name(sm));
 
 	git_submodule_free(sm);
+}
+
+/* ".path" in name of submodule */
+void test_submodule_lookup__dotpath_in_name(void)
+{
+	sm_lookup_data data;
+
+	cl_git_rewritefile(
+	        "submod2/.gitmodules", "[submodule \"kwb.pathdict\"]\n"
+	                               "    path = kwb.pathdict\n"
+	                               "    url = ../Test_App\n"
+	                               "[submodule \"fakin.path.app\"]\n"
+	                               "    path = fakin.path.app\n"
+	                               "    url = ../Test_App\n");
+
+	memset(&data, 0, sizeof(data));
+	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
+	cl_assert_equal_i(9, data.count);
 }
 
 void test_submodule_lookup__renamed(void)

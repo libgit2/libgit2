@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-#include "netops.h"
+#include "net.h"
 #include "stream.h"
 #include "streams/socket.h"
 #include "git2/sys/transport.h"
@@ -95,22 +95,21 @@ static int git_proto_stream_read(
 	size_t buf_size,
 	size_t *bytes_read)
 {
-	int error;
 	git_proto_stream *s = (git_proto_stream *)stream;
-	gitno_buffer buf;
+	ssize_t ret;
+	int error;
 
 	*bytes_read = 0;
 
 	if (!s->sent_command && (error = send_command(s)) < 0)
 		return error;
 
-	gitno_buffer_setup_fromstream(s->io, &buf, buffer, buf_size);
+	ret = git_stream_read(s->io, buffer, min(buf_size, INT_MAX));
 
-	if ((error = gitno_recv(&buf)) < 0)
-		return error;
+	if (ret < 0)
+		return -1;
 
-	*bytes_read = buf.offset;
-
+	*bytes_read = (size_t)ret;
 	return 0;
 }
 

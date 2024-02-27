@@ -52,11 +52,12 @@ void git_blob__free(void *_blob)
 	git__free(blob);
 }
 
-int git_blob__parse_raw(void *_blob, const char *data, size_t size)
+int git_blob__parse_raw(void *_blob, const char *data, size_t size, git_oid_t oid_type)
 {
 	git_blob *blob = (git_blob *) _blob;
 
 	GIT_ASSERT_ARG(blob);
+	GIT_UNUSED(oid_type);
 
 	blob->raw = 1;
 	blob->data.raw.data = data;
@@ -64,11 +65,12 @@ int git_blob__parse_raw(void *_blob, const char *data, size_t size)
 	return 0;
 }
 
-int git_blob__parse(void *_blob, git_odb_object *odb_obj)
+int git_blob__parse(void *_blob, git_odb_object *odb_obj, git_oid_t oid_type)
 {
 	git_blob *blob = (git_blob *) _blob;
 
 	GIT_ASSERT_ARG(blob);
+	GIT_UNUSED(oid_type);
 
 	git_cached_obj_incref((git_cached_obj *)odb_obj);
 	blob->raw = 0;

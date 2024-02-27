@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#include "netops.h"
+#include "stream.h"
 
 typedef struct {
 	git_stream parent;
@@ -19,5 +19,7 @@ typedef struct {
 } git_socket_stream;
 
 extern int git_socket_stream_new(git_stream **out, const char *host, const char *port);
+
+extern int git_socket_stream_global_init(void);
 
 #endif

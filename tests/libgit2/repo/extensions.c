@@ -3,7 +3,7 @@
 #include "sysdir.h"
 #include <ctype.h>
 
-git_repository *repo;
+static git_repository *repo;
 
 void test_repo_extensions__initialize(void)
 {

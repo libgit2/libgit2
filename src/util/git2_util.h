@@ -12,6 +12,7 @@
 #endif
 
 #include "git2/common.h"
+#include "git2/sys/errors.h"
 #include "cc-compat.h"
 
 typedef struct git_str git_str;

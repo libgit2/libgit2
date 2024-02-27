@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "diff.h"
-#include "xdiff/xdiff.h"
+#include "xdiff.h"
 #include "patch_generate.h"
 
 /* xdiff cannot cope with large files.  these files should not be passed to

@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "futils.h"
 #include "sysdir.h"
-#include "win32/findfile.h"
 
 #ifdef GIT_WIN32
 static char *path_save;

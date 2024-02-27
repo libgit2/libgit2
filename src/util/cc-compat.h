@@ -43,8 +43,10 @@
 		__typeof__(x) _unused __attribute__((unused));                 \
 		_unused = (x);                                                 \
 	} while (0)
+# define GIT_UNUSED_ARG __attribute__((unused))
 #else
 # define GIT_UNUSED(x) ((void)(x))
+# define GIT_UNUSED_ARG
 #endif
 
 /* Define the printf format specifier to use for size_t output */

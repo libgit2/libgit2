@@ -3,6 +3,9 @@ changelog:
   - title: New features
     labels:
     - feature
+  - title: Performance improvements
+    labels:
+    - performance
   - title: Bug fixes
     labels:
     - bug
@@ -18,6 +21,15 @@ changelog:
   - title: Documentation improvements
     labels:
     - documentation
+  - title: Platform compatibility fixes
+    labels:
+    - compatibility
+  - title: Git compatibility fixes
+    labels:
+    - git compatibility
+  - title: Dependency updates
+    labels:
+    - dependency
   - title: Other changes
     labels:
       - '*'
