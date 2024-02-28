@@ -3246,14 +3246,18 @@ int git_repository_set_workdir(
 	if (git_fs_path_prettify_dir(&path, workdir, NULL) < 0)
 		return -1;
 
-	if (repo->workdir && strcmp(repo->workdir, path.ptr) == 0)
+	if (repo->workdir && strcmp(repo->workdir, path.ptr) == 0) {
+		git_str_dispose(&path);
 		return 0;
+	}
 
 	if (update_gitlink) {
 		git_config *config;
 
-		if (git_repository_config__weakptr(&config, repo) < 0)
+		if (git_repository_config__weakptr(&config, repo) < 0) {
+			git_str_dispose(&path);
 			return -1;
+		}
 
 		error = repo_write_gitlink(path.ptr, git_repository_path(repo), false);
 
@@ -3275,6 +3279,7 @@ int git_repository_set_workdir(
 
 		git__free(old_workdir);
 	}
+	git_str_dispose(&path);
 
 	return error;
 }
