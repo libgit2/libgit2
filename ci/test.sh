@@ -207,7 +207,6 @@ if should_run "SSH_TESTS"; then
 	echo "Starting SSH server..."
 	SSHD_DIR=`mktemp -d ${TMPDIR}/sshd.XXXXXXXX`
 	cp -R "${SOURCE_DIR}/tests/resources/pushoptions.git" "${SSHD_DIR}/test.git"
-	ls -FlasR "${SSHD_DIR}"
 
 	cat >"${SSHD_DIR}/sshd_config" <<-EOF
 	Port 2222
