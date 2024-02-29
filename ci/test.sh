@@ -18,6 +18,11 @@ if [[ "$(uname -s)" == MINGW* ]]; then
         SKIP_NTLM_TESTS=1
 fi
 
+# older versions of git don't support push options
+if [ -z "$SKIP_PUSHOPTIONS_TESTS" ]; then
+	export GITTEST_PUSH_OPTIONS=true
+fi
+
 SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( pwd ) )}
 BUILD_DIR=$(pwd)
 BUILD_PATH=${BUILD_PATH:=$PATH}
@@ -207,7 +212,6 @@ if should_run "SSH_TESTS"; then
 	echo "Starting SSH server..."
 	SSHD_DIR=`mktemp -d ${TMPDIR}/sshd.XXXXXXXX`
 	cp -R "${SOURCE_DIR}/tests/resources/pushoptions.git" "${SSHD_DIR}/test.git"
-	ls -FlasR "${SSHD_DIR}"
 
 	cat >"${SSHD_DIR}/sshd_config" <<-EOF
 	Port 2222
@@ -325,10 +329,8 @@ if should_run "GITDAEMON_TESTS"; then
 	echo ""
 
 	export GITTEST_REMOTE_URL="git://localhost/test.git"
-	export GITTEST_PUSH_OPTIONS=true
 	run_test gitdaemon
 	unset GITTEST_REMOTE_URL
-	unset GITTEST_PUSH_OPTIONS
 
 	echo ""
 	echo "Running gitdaemon (namespace) tests"
@@ -383,12 +385,10 @@ if should_run "NTLM_TESTS"; then
 	export GITTEST_REMOTE_URL="http://localhost:9000/ntlm/test.git"
 	export GITTEST_REMOTE_USER="foo"
 	export GITTEST_REMOTE_PASS="baz"
-	export GITTEST_PUSH_OPTIONS=true
 	run_test auth_clone_and_push
 	unset GITTEST_REMOTE_URL
 	unset GITTEST_REMOTE_USER
 	unset GITTEST_REMOTE_PASS
-	unset GITTEST_PUSH_OPTIONS
 
 	echo ""
 	echo "Running NTLM tests (Apache emulation)"
@@ -397,12 +397,10 @@ if should_run "NTLM_TESTS"; then
 	export GITTEST_REMOTE_URL="http://localhost:9000/broken-ntlm/test.git"
 	export GITTEST_REMOTE_USER="foo"
 	export GITTEST_REMOTE_PASS="baz"
-	export GITTEST_PUSH_OPTIONS=true
 	run_test auth_clone_and_push
 	unset GITTEST_REMOTE_URL
 	unset GITTEST_REMOTE_USER
 	unset GITTEST_REMOTE_PASS
-	unset GITTEST_PUSH_OPTIONS
 fi
 
 if should_run "NEGOTIATE_TESTS" && -n "$GITTEST_NEGOTIATE_PASSWORD" ; then
@@ -452,20 +450,16 @@ if should_run "SSH_TESTS"; then
 	echo ""
 
 	export GITTEST_REMOTE_URL="ssh://localhost:2222/$SSHD_DIR/test.git"
-	export GITTEST_PUSH_OPTIONS=true
 	run_test ssh
 	unset GITTEST_REMOTE_URL
-	unset GITTEST_PUSH_OPTIONS
 
 	echo ""
 	echo "Running ssh tests (scp-style paths)"
 	echo ""
 
 	export GITTEST_REMOTE_URL="[localhost:2222]:$SSHD_DIR/test.git"
-	export GITTEST_PUSH_OPTIONS=true
 	run_test ssh
 	unset GITTEST_REMOTE_URL
-	unset GITTEST_PUSH_OPTIONS
 
 	unset GITTEST_SSH_CMD
 

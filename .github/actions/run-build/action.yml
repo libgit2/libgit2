@@ -40,6 +40,7 @@ runs:
           -e PKG_CONFIG_PATH \
           -e SKIP_NEGOTIATE_TESTS \
           -e SKIP_SSH_TESTS \
+          -e SKIP_PUSHOPTIONS_TESTS \
           -e TSAN_OPTIONS \
           -e UBSAN_OPTIONS \
           ${{ inputs.container-version }} \
