@@ -113,7 +113,7 @@ Getting Help
 **Getting Help**
 
 If you have questions about the library, please be sure to check out the
-[API documentation](http://libgit2.github.io/libgit2/).  If you still have
+[API documentation](https://libgit2.org/libgit2/).  If you still have
 questions, reach out to us on Slack or post a question on 
 [StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) (with the `libgit2` tag).
 
