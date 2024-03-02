@@ -65,10 +65,10 @@ void test_worktree_config__set_level_worktree(void)
 	cl_git_pass(git_config_get_int32(&val, cfg, "worktree.specific"));
 	cl_assert_equal_i(val, 42);
 
-	cl_assert(git_config_delete_entry(cfg, "worktree.specific") == GIT_ENOTFOUND);
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_delete_entry(cfg, "worktree.specific"));
 
 	cl_git_pass(git_config_delete_entry(wtcfg, "worktree.specific"));
-	cl_assert(git_config_get_int32(&val, cfg, "worktree.specific") == GIT_ENOTFOUND);
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_int32(&val, cfg, "worktree.specific"));
 
 	git_config_free(cfg);
 	git_config_free(wtcfg);
