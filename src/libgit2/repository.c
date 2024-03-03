@@ -1282,9 +1282,10 @@ static int load_config(
 	const char *system_config_path,
 	const char *programdata_path)
 {
-	int error;
 	git_str config_path = GIT_STR_INIT;
 	git_config *cfg = NULL;
+	git_config_level_t write_order;
+	int error;
 
 	GIT_ASSERT_ARG(out);
 
@@ -1332,6 +1333,11 @@ static int load_config(
 		goto on_error;
 
 	git_error_clear(); /* clear any lingering ENOTFOUND errors */
+
+	write_order = GIT_CONFIG_LEVEL_LOCAL;
+
+	if ((error = git_config_set_writeorder(cfg, &write_order, 1)) < 0)
+		goto on_error;
 
 	*out = cfg;
 	return 0;

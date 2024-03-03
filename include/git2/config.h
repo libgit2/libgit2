@@ -32,6 +32,10 @@ GIT_BEGIN_DECL
  * Callers can add their own custom configuration, beginning at the
  * `GIT_CONFIG_LEVEL_APP` level.
  *
+ * Writes, by default, occur in the highest priority level backend
+ * that is writable. This ordering can be overridden with
+ * `git_config_set_writeorder`.
+ *
  * git_config_open_default() and git_repository_config() honor those
  * priority levels as well.
  */
@@ -306,6 +310,11 @@ GIT_EXTERN(int) git_config_open_level(
  * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_open_global(git_config **out, git_config *config);
+
+GIT_EXTERN(int) git_config_set_writeorder(
+	git_config *cfg,
+	git_config_level_t *levels,
+	size_t len);
 
 /**
  * Create a snapshot of the configuration
