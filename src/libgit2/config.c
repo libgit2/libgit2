@@ -655,8 +655,8 @@ int git_config_foreach_match(
  * Setters
  **************/
 
-static git_config_backend *get_writer(git_config *config)
-{
+ static backend_instance *get_writer_instance(git_config *config)
+ {
 	backend_entry *entry;
 	size_t i;
 
@@ -667,10 +667,17 @@ static git_config_backend *get_writer(git_config *config)
 		if (entry->write_order < 0)
 			continue;
 
-		return entry->instance->backend;
+		return entry->instance;
 	}
 
 	return NULL;
+ }
+
+static git_config_backend *get_writer(git_config *config)
+{
+	backend_instance *instance = get_writer_instance(config);
+
+	return instance ? instance->backend : NULL;
 }
 
 int git_config_delete_entry(git_config *config, const char *name)
@@ -1317,31 +1324,39 @@ int git_config_open_default(git_config **out)
 
 int git_config_lock(git_transaction **out, git_config *config)
 {
-	git_config_backend *backend;
+	backend_instance *instance;
 	int error;
 
 	GIT_ASSERT_ARG(config);
 
-	if ((backend = get_writer(config)) == NULL) {
+	if ((instance = get_writer_instance(config)) == NULL) {
 		git_error_set(GIT_ERROR_CONFIG, "cannot lock: the configuration is read-only");
 		return GIT_EREADONLY;
 	}
 
-	if ((error = backend->lock(backend)) < 0)
+	if ((error = instance->backend->lock(instance->backend)) < 0 ||
+	    (error = git_transaction_config_new(out, config, instance)) < 0)
 		return error;
 
-	return git_transaction_config_new(out, config, backend);
+	GIT_REFCOUNT_INC(instance);
+	return 0;
 }
 
 int git_config_unlock(
 	git_config *config,
-	git_config_backend *backend,
+	void *data,
 	int commit)
 {
-	GIT_ASSERT_ARG(config && backend);
+	backend_instance *instance = data;
+	int error;
+
+	GIT_ASSERT_ARG(config && data);
 	GIT_UNUSED(config);
 
-	return backend->unlock(backend, commit);
+	error = instance->backend->unlock(instance->backend, commit);
+	GIT_REFCOUNT_DEC(instance, backend_instance_free);
+
+	return error;
 }
 
 /***********

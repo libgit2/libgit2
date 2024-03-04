@@ -102,14 +102,14 @@ int git_config_lookup_map_enum(git_configmap_t *type_out,
  * applied to the configuration.
  *
  * @param config the config instance
- * @param backend the config backend
+ * @param data the config data passed to git_transaction_new
  * @param commit boolean which indicates whether to commit any changes
  * done since locking
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_unlock(
 	git_config *config,
-	git_config_backend *backend,
+	void *data,
 	int commit);
 
 #endif

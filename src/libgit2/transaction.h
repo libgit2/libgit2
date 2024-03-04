@@ -12,6 +12,6 @@
 int git_transaction_config_new(
 	git_transaction **out,
 	git_config *cfg,
-	git_config_backend *backend);
+	void *data);
 
 #endif
