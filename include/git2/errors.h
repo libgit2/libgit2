@@ -60,7 +60,8 @@ typedef enum {
 	GIT_EAPPLYFAIL      = -35,	/**< Patch application failed */
 	GIT_EOWNER          = -36,	/**< The object is not owned by the current user */
 	GIT_TIMEOUT         = -37,	/**< The operation timed out */
-	GIT_EUNCHANGED      = -38	/**< There were no changes */
+	GIT_EUNCHANGED      = -38,	/**< There were no changes */
+	GIT_EREADONLY       = -39	/**< The subject is read-only */
 } git_error_code;
 
 /**

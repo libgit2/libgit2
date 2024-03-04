@@ -24,7 +24,7 @@ void test_config_readonly__writing_to_readonly_fails(void)
 	backend->readonly = 1;
 	cl_git_pass(git_config_add_backend(cfg, backend, GIT_CONFIG_LEVEL_GLOBAL, NULL, 0));
 
-	cl_git_fail_with(GIT_ENOTFOUND, git_config_set_string(cfg, "foo.bar", "baz"));
+	cl_git_fail_with(GIT_EREADONLY, git_config_set_string(cfg, "foo.bar", "baz"));
 	cl_assert(!git_fs_path_exists("global"));
 }
 
