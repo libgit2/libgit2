@@ -49,12 +49,16 @@ struct git_transaction {
 	git_repository *repo;
 	git_refdb *db;
 	git_config *cfg;
+	git_config_backend *backend;
 
 	git_strmap *locks;
 	git_pool pool;
 };
 
-int git_transaction_config_new(git_transaction **out, git_config *cfg)
+int git_transaction_config_new(
+	git_transaction **out,
+	git_config *cfg,
+	git_config_backend *backend)
 {
 	git_transaction *tx;
 
@@ -66,6 +70,8 @@ int git_transaction_config_new(git_transaction **out, git_config *cfg)
 
 	tx->type = TRANSACTION_CONFIG;
 	tx->cfg = cfg;
+	tx->backend = backend;
+
 	*out = tx;
 	return 0;
 }
@@ -333,8 +339,9 @@ int git_transaction_commit(git_transaction *tx)
 	GIT_ASSERT_ARG(tx);
 
 	if (tx->type == TRANSACTION_CONFIG) {
-		error = git_config_unlock(tx->cfg, true);
+		error = git_config_unlock(tx->cfg, tx->backend, true);
 		tx->cfg = NULL;
+		tx->backend = NULL;
 
 		return error;
 	}
@@ -369,10 +376,8 @@ void git_transaction_free(git_transaction *tx)
 		return;
 
 	if (tx->type == TRANSACTION_CONFIG) {
-		if (tx->cfg) {
-			git_config_unlock(tx->cfg, false);
-			git_config_free(tx->cfg);
-		}
+		if (tx->cfg)
+			git_config_unlock(tx->cfg, tx->backend, false);
 
 		git__free(tx);
 		return;

@@ -1330,19 +1330,16 @@ int git_config_lock(git_transaction **out, git_config *config)
 	if ((error = backend->lock(backend)) < 0)
 		return error;
 
-	return git_transaction_config_new(out, config);
+	return git_transaction_config_new(out, config, backend);
 }
 
-int git_config_unlock(git_config *config, int commit)
+int git_config_unlock(
+	git_config *config,
+	git_config_backend *backend,
+	int commit)
 {
-	git_config_backend *backend;
-
-	GIT_ASSERT_ARG(config);
-
-	if ((backend = get_writer(config)) == NULL) {
-		git_error_set(GIT_ERROR_CONFIG, "cannot unlock: the configuration is read-only");
-		return GIT_EREADONLY;
-	}
+	GIT_ASSERT_ARG(config && backend);
+	GIT_UNUSED(config);
 
 	return backend->unlock(backend, commit);
 }
