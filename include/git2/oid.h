@@ -225,7 +225,7 @@ GIT_EXTERN(int) git_oid_pathfmt(char *out, const git_oid *id);
  * concurrent calls of the function.
  *
  * @param oid The oid structure to format
- * @return the c-string
+ * @return the c-string or NULL on failure
  */
 GIT_EXTERN(char *) git_oid_tostr_s(const git_oid *oid);
 

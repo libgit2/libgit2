@@ -495,6 +495,8 @@ void test_config_read__read_git_config_entry(void)
 	cl_assert_equal_s("core.dummy2", entry->name);
 	cl_assert_equal_s("42", entry->value);
 	cl_assert_equal_i(GIT_CONFIG_LEVEL_SYSTEM, entry->level);
+	cl_assert_equal_s("file", entry->backend_type);
+	cl_assert_equal_s(cl_fixture("config/config9"), entry->origin_path);
 
 	git_config_entry_free(entry);
 	git_config_free(cfg);

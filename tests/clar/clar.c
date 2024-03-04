@@ -41,9 +41,6 @@
 #	ifndef strdup
 #		define strdup(str) _strdup(str)
 #	endif
-#	ifndef strcasecmp
-#		define strcasecmp(a,b) _stricmp(a,b)
-#	endif
 
 #	ifndef __MINGW32__
 #		pragma comment(lib, "shell32")
@@ -94,8 +91,10 @@
 static void fs_rm(const char *_source);
 static void fs_copy(const char *_source, const char *dest);
 
+#ifdef CLAR_FIXTURE_PATH
 static const char *
 fixture_path(const char *base, const char *fixture_name);
+#endif
 
 struct clar_error {
 	const char *file;

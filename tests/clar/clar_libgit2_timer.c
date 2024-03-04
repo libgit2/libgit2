@@ -8,23 +8,23 @@ void cl_perf_timer__init(cl_perf_timer *t)
 
 void cl_perf_timer__start(cl_perf_timer *t)
 {
-	t->time_started = git__timer();
+	t->time_started = git_time_monotonic();
 }
 
 void cl_perf_timer__stop(cl_perf_timer *t)
 {
-	double time_now = git__timer();
+	uint64_t time_now = git_time_monotonic();
 
 	t->last = time_now - t->time_started;
 	t->sum += t->last;
 }
 
-double cl_perf_timer__last(const cl_perf_timer *t)
+uint64_t cl_perf_timer__last(const cl_perf_timer *t)
 {
 	return t->last;
 }
 
-double cl_perf_timer__sum(const cl_perf_timer *t)
+uint64_t cl_perf_timer__sum(const cl_perf_timer *t)
 {
 	return t->sum;
 }

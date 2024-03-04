@@ -8,7 +8,8 @@
 #include <stdint.h>
 #include <signal.h>
 #include "git2_util.h"
-#include "cli.h"
+#include "common.h"
+#include "sighandler.h"
 
 static void (*interrupt_handler)(void) = NULL;
 

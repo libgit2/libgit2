@@ -11,7 +11,11 @@ void test_odb_backend_nobackend__initialize(void)
 	git_odb *odb;
 	git_refdb *refdb;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_repository_new(&_repo, GIT_OID_SHA1));
+#else
 	cl_git_pass(git_repository_new(&_repo));
+#endif
 	cl_git_pass(git_config_new(&config));
 	cl_git_pass(git_odb__new(&odb, NULL));
 	cl_git_pass(git_refdb_new(&refdb, _repo));

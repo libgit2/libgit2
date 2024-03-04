@@ -125,6 +125,57 @@ GIT_EXTERN(int) git_config_add_backend(
 	const git_repository *repo,
 	int force);
 
+/** Options for in-memory configuration backends. */
+typedef struct {
+	unsigned int version;
+
+	/**
+	 * The type of this backend (eg, "command line"). If this is
+	 * NULL, then this will be "in-memory".
+	 */
+	const char *backend_type;
+
+	/**
+	 * The path to the origin; if this is NULL then it will be
+	 * left unset in the resulting configuration entries.
+	 */
+	const char *origin_path;
+} git_config_backend_memory_options;
+
+#define GIT_CONFIG_BACKEND_MEMORY_OPTIONS_VERSION 1
+#define GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT { GIT_CONFIG_BACKEND_MEMORY_OPTIONS_VERSION }
+
+
+/**
+ * Create an in-memory configuration backend from a string in standard
+ * git configuration file format.
+ *
+ * @param out the new backend
+ * @param cfg the configuration that is to be parsed
+ * @param len the length of the string pointed to by `cfg`
+ * @param opts the options to initialize this backend with, or NULL
+ */
+extern int git_config_backend_from_string(
+	git_config_backend **out,
+	const char *cfg,
+	size_t len,
+	git_config_backend_memory_options *opts);
+
+/**
+ * Create an in-memory configuration backend from a list of name/value
+ * pairs.
+ *
+ * @param out the new backend
+ * @param values the configuration values to set (in "key=value" format)
+ * @param len the length of the values array
+ * @param opts the options to initialize this backend with, or NULL
+ */
+extern int git_config_backend_from_values(
+	git_config_backend **out,
+	const char **values,
+	size_t len,
+	git_config_backend_memory_options *opts);
+
 /** @} */
 GIT_END_DECL
 #endif

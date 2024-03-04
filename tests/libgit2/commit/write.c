@@ -118,7 +118,7 @@ void test_commit_write__into_buf(void)
 	cl_git_pass(git_commit_lookup(&parent, g_repo, &parent_id));
 
 	cl_git_pass(git_commit_create_buffer(&commit, g_repo, author, committer,
-					     NULL, root_commit_message, tree, 1, (const git_commit **) &parent));
+					     NULL, root_commit_message, tree, 1, &parent));
 
 	cl_assert_equal_s(commit.ptr,
 			  "tree 1810dff58d8a660512d4832e740f692884338ccd\n\

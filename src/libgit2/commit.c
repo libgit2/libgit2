@@ -22,6 +22,7 @@
 #include "object.h"
 #include "array.h"
 #include "oidarray.h"
+#include "grafts.h"
 
 void git_commit__free(void *_commit)
 {
@@ -280,7 +281,7 @@ int git_commit_create_from_ids(
 
 typedef struct {
 	size_t total;
-	const git_commit **parents;
+	git_commit * const *parents;
 	git_repository *repo;
 } commit_parent_data;
 
@@ -306,7 +307,7 @@ int git_commit_create(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[])
+	git_commit * const parents[])
 {
 	commit_parent_data data = { parent_count, parents, repo };
 
@@ -427,10 +428,6 @@ static int commit_parse(
 		buffer += tree_len;
 	}
 
-	/*
-	 * TODO: commit grafts!
-	 */
-
 	while (git_object__parse_oid_header(&parent_id,
 			&buffer, buffer_end, "parent ",
 			opts->oid_type) == 0) {
@@ -532,16 +529,41 @@ int git_commit__parse_raw(
 	return commit_parse(commit, data, size, &parse_options);
 }
 
+static int assign_commit_parents_from_graft(git_commit *commit, git_commit_graft *graft) {
+	size_t idx;
+	git_oid *oid;
+
+	git_array_clear(commit->parent_ids);
+	git_array_init_to_size(commit->parent_ids, git_array_size(graft->parents));
+	git_array_foreach(graft->parents, idx, oid) {
+		git_oid *id = git_array_alloc(commit->parent_ids);
+		GIT_ERROR_CHECK_ALLOC(id);
+
+		git_oid_cpy(id, oid);
+	}
+
+	return 0;
+}
+
 int git_commit__parse_ext(
 	git_commit *commit,
 	git_odb_object *odb_obj,
 	git_commit__parse_options *parse_opts)
 {
-	return commit_parse(
-		commit,
-		git_odb_object_data(odb_obj),
-		git_odb_object_size(odb_obj),
-		parse_opts);
+	git_repository *repo = git_object_owner((git_object *)commit);
+	git_commit_graft *graft;
+	int error;
+
+	if ((error = commit_parse(commit, git_odb_object_data(odb_obj),
+				  git_odb_object_size(odb_obj), parse_opts)) < 0)
+		return error;
+
+	/* Perform necessary grafts */
+	if (git_grafts_get(&graft, repo->grafts, git_odb_object_id(odb_obj)) != 0 &&
+		git_grafts_get(&graft, repo->shallow_grafts, git_odb_object_id(odb_obj)) != 0)
+		return 0;
+
+	return assign_commit_parents_from_graft(commit, graft);
 }
 
 #define GIT_COMMIT_GETTER(_rvalue, _name, _return, _invalid) \
@@ -923,7 +945,7 @@ int git_commit_create_buffer(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[])
+	git_commit * const parents[])
 {
 	GIT_BUF_WRAP_PRIVATE(out, git_commit__create_buffer, repo,
 	                     author, committer, message_encoding, message,
@@ -939,7 +961,7 @@ int git_commit__create_buffer(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	const git_commit *parents[])
+	git_commit * const parents[])
 {
 	int error;
 	commit_parent_data data = { parent_count, parents, repo };
@@ -1064,6 +1086,80 @@ cleanup:
 	return error;
 }
 
+int git_commit_create_from_stage(
+	git_oid *out,
+	git_repository *repo,
+	const char *message,
+	const git_commit_create_options *given_opts)
+{
+	git_commit_create_options opts = GIT_COMMIT_CREATE_OPTIONS_INIT;
+	git_signature *default_signature = NULL;
+	const git_signature *author, *committer;
+	git_index *index = NULL;
+	git_diff *diff = NULL;
+	git_oid tree_id;
+	git_tree *head_tree = NULL, *tree = NULL;
+	git_commitarray parents = { 0 };
+	int error = -1;
+
+	GIT_ASSERT_ARG(out && repo);
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(git_commit_create_options));
+
+	if ((author = opts.author) == NULL ||
+	    (committer = opts.committer) == NULL) {
+		if (git_signature_default(&default_signature, repo) < 0)
+			goto done;
+
+		if (!author)
+			author = default_signature;
+
+		if (!committer)
+			committer = default_signature;
+	}
+
+	if (git_repository_index(&index, repo) < 0)
+		goto done;
+
+	if (!opts.allow_empty_commit) {
+		error = git_repository_head_tree(&head_tree, repo);
+
+		if (error && error != GIT_EUNBORNBRANCH)
+			goto done;
+
+		error = -1;
+
+		if (git_diff_tree_to_index(&diff, repo, head_tree, index, NULL) < 0)
+			goto done;
+
+		if (git_diff_num_deltas(diff) == 0) {
+			git_error_set(GIT_ERROR_REPOSITORY,
+				"no changes are staged for commit");
+			error = GIT_EUNCHANGED;
+			goto done;
+		}
+	}
+
+	if (git_index_write_tree(&tree_id, index) < 0 ||
+	    git_tree_lookup(&tree, repo, &tree_id) < 0 ||
+	    git_repository_commit_parents(&parents, repo) < 0)
+		goto done;
+
+	error = git_commit_create(out, repo, "HEAD", author, committer,
+			opts.message_encoding, message,
+			tree, parents.count, parents.commits);
+
+done:
+	git_commitarray_dispose(&parents);
+	git_signature_free(default_signature);
+	git_tree_free(tree);
+	git_tree_free(head_tree);
+	git_diff_free(diff);
+	git_index_free(index);
+	return error;
+}
+
 int git_commit_committer_with_mailmap(
 	git_signature **out, const git_commit *commit, const git_mailmap *mailmap)
 {
@@ -1074,4 +1170,19 @@ int git_commit_author_with_mailmap(
 	git_signature **out, const git_commit *commit, const git_mailmap *mailmap)
 {
 	return git_mailmap_resolve_signature(out, mailmap, commit->author);
+}
+
+void git_commitarray_dispose(git_commitarray *array)
+{
+	size_t i;
+
+	if (array == NULL)
+		return;
+
+	for (i = 0; i < array->count; i++)
+		git_commit_free(array->commits[i]);
+
+	git__free((git_commit **)array->commits);
+
+	memset(array, 0, sizeof(*array));
 }

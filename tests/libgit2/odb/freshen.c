@@ -125,7 +125,7 @@ void test_odb_freshen__tree_during_commit(void)
 
 	cl_git_pass(git_commit_create(&commit_id, repo, NULL,
 		signature, signature, NULL, "New commit pointing to old tree",
-		tree, 1, (const git_commit **)&parent));
+		tree, 1, &parent));
 
 	/* make sure we freshen the tree the commit points to */
 	cl_must_pass(p_lstat("testrepo.git/objects/" LOOSE_TREE_FN, &after));

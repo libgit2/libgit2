@@ -62,8 +62,8 @@ typedef struct refdb_fs_backend {
 
 	git_oid_t oid_type;
 
-	int fsync : 1,
-	    sorted : 1;
+	unsigned int fsync : 1,
+	             sorted : 1;
 	int peeling_mode;
 	git_iterator_flag_t iterator_flags;
 	uint32_t direach_flags;
@@ -805,7 +805,9 @@ static void refdb_fs_backend__iterator_free(git_reference_iterator *_iter)
 	git__free(iter);
 }
 
-static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
+static int iter_load_loose_paths(
+	refdb_fs_backend *backend,
+	refdb_fs_iter *iter)
 {
 	int error = 0;
 	git_str path = GIT_STR_INIT;
@@ -819,6 +821,7 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 		return 0;
 
 	fsit_opts.flags = backend->iterator_flags;
+	fsit_opts.oid_type = backend->oid_type;
 
 	if (iter->glob) {
 		const char *last_sep = NULL;
@@ -1782,7 +1785,7 @@ static int refdb_fs_backend__rename(
 		(error = refdb_fs_backend__lookup(&old, _backend, old_name)) < 0)
 		return error;
 
-	if ((error = refdb_fs_backend__delete(_backend, old_name, NULL, NULL)) < 0) {
+	if ((error = loose_lock(&file, backend, old->name)) < 0) {
 		git_reference_free(old);
 		return error;
 	}
@@ -1790,10 +1793,17 @@ static int refdb_fs_backend__rename(
 	new = git_reference__realloc(&old, new_name);
 	if (!new) {
 		git_reference_free(old);
+		git_filebuf_cleanup(&file);
 		return -1;
 	}
 
-	if ((error = loose_lock(&file, backend, new->name)) < 0) {
+	if ((error = refdb_fs_backend__delete_tail(_backend, &file, old_name, NULL, NULL)) < 0) {
+		git_reference_free(new);
+		git_filebuf_cleanup(&file);
+		return error;
+	}
+
+	if ((error = loose_lock(&file, backend, new_name)) < 0) {
 		git_reference_free(new);
 		return error;
 	}
@@ -1801,21 +1811,15 @@ static int refdb_fs_backend__rename(
 	/* Try to rename the refog; it's ok if the old doesn't exist */
 	error = refdb_reflog_fs__rename(_backend, old_name, new_name);
 	if (((error == 0) || (error == GIT_ENOTFOUND)) &&
-	    ((error = reflog_append(backend, new, git_reference_target(new), NULL, who, message)) < 0)) {
+		((error = reflog_append(backend, new, git_reference_target(new), NULL, who, message)) < 0)) {
 		git_reference_free(new);
 		git_filebuf_cleanup(&file);
 		return error;
 	}
-
-	if (error < 0) {
-		git_reference_free(new);
-		git_filebuf_cleanup(&file);
-		return error;
-	}
-
 
 	if ((error = loose_commit(&file, new)) < 0 || out == NULL) {
 		git_reference_free(new);
+		git_filebuf_cleanup(&file);
 		return error;
 	}
 
@@ -1949,9 +1953,9 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		entry->committer = git__calloc(1, sizeof(*entry->committer));
 		GIT_ERROR_CHECK_ALLOC(entry->committer);
 
-		if (git_parse_advance_oid(&entry->oid_old, &parser) < 0 ||
+		if (git_parse_advance_oid(&entry->oid_old, &parser, log->oid_type) < 0 ||
 		    git_parse_advance_expected(&parser, " ", 1) < 0 ||
-		    git_parse_advance_oid(&entry->oid_cur, &parser) < 0)
+		    git_parse_advance_oid(&entry->oid_cur, &parser, log->oid_type) < 0)
 			goto next;
 
 		sig = parser.line;
@@ -2398,7 +2402,12 @@ static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name
 	if ((error = reflog_path(&path, backend->repo, name)) < 0)
 		goto out;
 
-	if (!git_fs_path_exists(path.ptr))
+	/*
+	 * If a reference was moved downwards, eg refs/heads/br2 -> refs/heads/br2/new-name,
+	 * refs/heads/br2 does exist but it's a directory. That's a valid situation.
+	 * Proceed only if it's a file.
+	 */
+	if (!git_fs_path_isfile(path.ptr))
 		goto out;
 
 	if ((error = p_unlink(path.ptr)) < 0)

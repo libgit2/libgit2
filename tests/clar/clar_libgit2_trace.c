@@ -197,7 +197,7 @@ static void _cl_trace_cb__event_handler(
 
 	case CL_TRACE__TEST__END:
 		cl_perf_timer__stop(&s_timer_test);
-		git_trace(GIT_TRACE_TRACE, "%s::%s: End Test (%.3f %.3f)", suite_name, test_name,
+		git_trace(GIT_TRACE_TRACE, "%s::%s: End Test (%" PRIuZ " %" PRIuZ ")", suite_name, test_name,
 				  cl_perf_timer__last(&s_timer_run),
 				  cl_perf_timer__last(&s_timer_test));
 		break;

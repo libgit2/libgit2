@@ -110,6 +110,26 @@ void test_online_fetch__fetch_twice(void)
 	git_remote_free(remote);
 }
 
+void test_online_fetch__fetch_with_empty_http_proxy(void)
+{
+	git_remote *remote;
+	git_config *config;
+	git_fetch_options opts = GIT_FETCH_OPTIONS_INIT;
+
+	opts.proxy_opts.type = GIT_PROXY_AUTO;
+
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_config_set_string(config, "http.proxy", ""));
+
+	cl_git_pass(git_remote_create(&remote, _repo, "test",
+		"https://github.com/libgit2/TestGitRepository"));
+	cl_git_pass(git_remote_fetch(remote, NULL, &opts, NULL));
+
+	git_remote_disconnect(remote);
+	git_remote_free(remote);
+	git_config_free(config);
+}
+
 static int transferProgressCallback(const git_indexer_progress *stats, void *payload)
 {
 	bool *invoked = (bool *)payload;
@@ -128,6 +148,8 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 	opts.bare = true;
 
+	counter = 0;
+
 	cl_git_pass(git_clone(&_repository, "https://github.com/libgit2/TestGitRepository.git",
 				"./fetch/lg2", &opts));
 	git_repository_free(_repository);
@@ -141,11 +163,52 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 
 	options.callbacks.transfer_progress = &transferProgressCallback;
 	options.callbacks.payload = &invoked;
+	options.callbacks.update_tips = update_tips;
 	cl_git_pass(git_remote_download(remote, NULL, &options));
 
 	cl_assert_equal_i(false, invoked);
 
-	cl_git_pass(git_remote_update_tips(remote, &options.callbacks, 1, options.download_tags, NULL));
+	cl_git_pass(git_remote_update_tips(remote, &options.callbacks, GIT_REMOTE_UPDATE_FETCHHEAD, options.download_tags, NULL));
+	cl_assert_equal_i(0, counter);
+
+	git_remote_disconnect(remote);
+
+	git_remote_free(remote);
+	git_repository_free(_repository);
+}
+
+void test_online_fetch__report_unchanged_tips(void)
+{
+	git_repository *_repository;
+	bool invoked = false;
+	git_remote *remote;
+	git_fetch_options options = GIT_FETCH_OPTIONS_INIT;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+	opts.bare = true;
+
+	counter = 0;
+
+	cl_git_pass(git_clone(&_repository, "https://github.com/libgit2/TestGitRepository.git",
+				"./fetch/lg2", &opts));
+	git_repository_free(_repository);
+
+	cl_git_pass(git_repository_open(&_repository, "./fetch/lg2"));
+
+	cl_git_pass(git_remote_lookup(&remote, _repository, "origin"));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
+
+	cl_assert_equal_i(false, invoked);
+
+	options.callbacks.transfer_progress = &transferProgressCallback;
+	options.callbacks.payload = &invoked;
+	options.callbacks.update_tips = update_tips;
+	cl_git_pass(git_remote_download(remote, NULL, &options));
+
+	cl_assert_equal_i(false, invoked);
+
+	cl_git_pass(git_remote_update_tips(remote, &options.callbacks, GIT_REMOTE_UPDATE_REPORT_UNCHANGED, options.download_tags, NULL));
+	cl_assert(counter > 0);
+
 	git_remote_disconnect(remote);
 
 	git_remote_free(remote);

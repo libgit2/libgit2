@@ -68,6 +68,14 @@ int git_push_new(git_push **out, git_remote *remote, const git_push_options *opt
 		return -1;
 	}
 
+	if (git_vector_init(&p->remote_push_options, 0, git__strcmp_cb) < 0) {
+		git_vector_free(&p->status);
+		git_vector_free(&p->specs);
+		git_vector_free(&p->updates);
+		git__free(p);
+		return -1;
+	}
+
 	*out = p;
 	return 0;
 }
@@ -118,8 +126,8 @@ static int parse_refspec(git_push *push, push_spec **spec, const char *str)
 	s = git__calloc(1, sizeof(*s));
 	GIT_ERROR_CHECK_ALLOC(s);
 
-	git_oid_clear(&s->loid, GIT_OID_SHA1);
-	git_oid_clear(&s->roid, GIT_OID_SHA1);
+	git_oid_clear(&s->loid, push->repo->oid_type);
+	git_oid_clear(&s->roid, push->repo->oid_type);
 
 	if (git_refspec__parse(&s->refspec, str, false) < 0) {
 		git_error_set(GIT_ERROR_INVALID, "invalid refspec %s", str);
@@ -444,10 +452,21 @@ static int do_push(git_push *push)
 	if ((error = calculate_work(push)) < 0)
 		goto on_error;
 
-	if (callbacks && callbacks->push_negotiation &&
-	    (error = callbacks->push_negotiation((const git_push_update **) push->updates.contents,
-					  push->updates.length, callbacks->payload)) < 0)
-	    goto on_error;
+	if (callbacks && callbacks->push_negotiation) {
+		git_error_clear();
+
+		error = callbacks->push_negotiation(
+			(const git_push_update **) push->updates.contents,
+			push->updates.length, callbacks->payload);
+
+		if (error < 0) {
+			git_error_set_after_callback_function(error,
+				"push_negotiation");
+			goto on_error;
+		}
+
+		error = 0;
+	}
 
 	if ((error = queue_objects(push)) < 0 ||
 	    (error = transport->push(transport, push)) < 0)
@@ -479,9 +498,21 @@ static int filter_refs(git_remote *remote)
 int git_push_finish(git_push *push)
 {
 	int error;
+	unsigned int remote_caps;
 
 	if (!git_remote_connected(push->remote)) {
 		git_error_set(GIT_ERROR_NET, "remote is disconnected");
+		return -1;
+	}
+
+	if ((error = git_remote_capabilities(&remote_caps, push->remote)) < 0) {
+		git_error_set(GIT_ERROR_INVALID, "remote capabilities not available");
+		return -1;
+	}
+
+	if (git_vector_length(&push->remote_push_options) > 0 &&
+	    !(remote_caps & GIT_REMOTE_CAPABILITY_PUSH_OPTIONS)) {
+		git_error_set(GIT_ERROR_INVALID, "push-options not supported by remote");
 		return -1;
 	}
 
@@ -528,6 +559,7 @@ void git_push_free(git_push *push)
 	push_spec *spec;
 	push_status *status;
 	git_push_update *update;
+	char *option;
 	unsigned int i;
 
 	if (push == NULL)
@@ -549,6 +581,11 @@ void git_push_free(git_push *push)
 		git__free(update);
 	}
 	git_vector_free(&push->updates);
+
+	git_vector_foreach(&push->remote_push_options, i, option) {
+		git__free(option);
+	}
+	git_vector_free(&push->remote_push_options);
 
 	git__free(push);
 }

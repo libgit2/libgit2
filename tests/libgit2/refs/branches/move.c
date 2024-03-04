@@ -210,3 +210,41 @@ void test_refs_branches_move__can_move_with_unicode(void)
 	git_reference_free(original_ref);
 	git_reference_free(new_ref);
 }
+
+void test_refs_branches_move__moves_reflog_correctly(void)
+{
+	git_reference *original_ref, *new_ref;
+    git_reflog *original_reflog, *new_reflog;
+
+	cl_git_pass(git_reference_lookup(&original_ref, repo, "refs/heads/br2"));
+
+    cl_git_pass(git_reflog_read(&original_reflog, repo, "refs/heads/br2"));
+    cl_assert_equal_i(2, git_reflog_entrycount(original_reflog));
+
+	cl_git_pass(git_branch_move(&new_ref, original_ref, NEW_BRANCH_NAME, 0));
+	cl_assert_equal_s(GIT_REFS_HEADS_DIR NEW_BRANCH_NAME, git_reference_name(new_ref));
+
+    cl_git_pass(git_reflog_read(&new_reflog, repo, GIT_REFS_HEADS_DIR NEW_BRANCH_NAME));
+    cl_assert_equal_i(3, git_reflog_entrycount(new_reflog));
+
+    git_reference_free(original_ref);
+	git_reference_free(new_ref);
+    git_reflog_free(original_reflog);
+    git_reflog_free(new_reflog);
+}
+
+void test_refs_branches_move__failed_move_restores_reflog(void)
+{
+	git_reference *original_ref, *new_ref;
+	git_reflog *recovered_reflog;
+
+	cl_git_pass(git_reference_lookup(&original_ref, repo, "refs/heads/br2"));
+
+	cl_assert_equal_i(GIT_EINVALIDSPEC, git_branch_move(&new_ref, original_ref, "Inv@{id", 0));
+
+	cl_git_pass(git_reflog_read(&recovered_reflog, repo, "refs/heads/br2"));
+	cl_assert_equal_i(2, git_reflog_entrycount(recovered_reflog));
+
+	git_reference_free(original_ref);
+	git_reflog_free(recovered_reflog);
+}

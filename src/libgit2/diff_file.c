@@ -112,7 +112,7 @@ int git_diff_file_content__init_from_diff(
 	case GIT_DELTA_DELETED:
 		has_data = use_old; break;
 	case GIT_DELTA_UNTRACKED:
-		has_data = !use_old &&
+		has_data = (use_old == (diff->opts.flags & GIT_DIFF_REVERSE)) &&
 			(diff->opts.flags & GIT_DIFF_SHOW_UNTRACKED_CONTENT) != 0;
 		break;
 	case GIT_DELTA_UNREADABLE:
@@ -144,7 +144,7 @@ int git_diff_file_content__init_from_src(
 
 	if (!src->blob && !src->buf) {
 		fc->flags |= GIT_DIFF_FLAG__NO_DATA;
-		git_oid_clear(&fc->file->id, GIT_OID_SHA1);
+		git_oid_clear(&fc->file->id, opts->oid_type);
 	} else {
 		fc->flags |= GIT_DIFF_FLAG__LOADED;
 		fc->file->flags |= GIT_DIFF_FLAG_VALID_ID;
@@ -154,7 +154,7 @@ int git_diff_file_content__init_from_src(
 			git_blob_dup((git_blob **)&fc->blob, (git_blob *) src->blob);
 			fc->file->size = git_blob_rawsize(src->blob);
 			git_oid_cpy(&fc->file->id, git_blob_id(src->blob));
-			fc->file->id_abbrev = GIT_OID_SHA1_HEXSIZE;
+			fc->file->id_abbrev = (uint16_t)git_oid_hexsize(repo->oid_type);
 
 			fc->map.len  = (size_t)fc->file->size;
 			fc->map.data = (char *)git_blob_rawcontent(src->blob);
@@ -162,10 +162,10 @@ int git_diff_file_content__init_from_src(
 			fc->flags |= GIT_DIFF_FLAG__FREE_BLOB;
 		} else {
 			int error;
-			if ((error = git_odb__hash(&fc->file->id, src->buf, src->buflen, GIT_OBJECT_BLOB, GIT_OID_SHA1)) < 0)
+			if ((error = git_odb__hash(&fc->file->id, src->buf, src->buflen, GIT_OBJECT_BLOB, opts->oid_type)) < 0)
 				return error;
 			fc->file->size = src->buflen;
-			fc->file->id_abbrev = GIT_OID_SHA1_HEXSIZE;
+			fc->file->id_abbrev = (uint16_t)git_oid_hexsize(opts->oid_type);
 
 			fc->map.len  = src->buflen;
 			fc->map.data = (char *)src->buf;
@@ -178,7 +178,7 @@ int git_diff_file_content__init_from_src(
 static int diff_file_content_commit_to_str(
 	git_diff_file_content *fc, bool check_status)
 {
-	char oid[GIT_OID_SHA1_HEXSIZE+1];
+	char oid[GIT_OID_MAX_HEXSIZE+1];
 	git_str content = GIT_STR_INIT;
 	const char *status = "";
 
@@ -420,7 +420,7 @@ static int diff_file_content_load_workdir(
 	if (!error && (fc->file->flags & GIT_DIFF_FLAG_VALID_ID) == 0) {
 		error = git_odb__hash(
 			&fc->file->id, fc->map.data, fc->map.len,
-			GIT_OBJECT_BLOB, GIT_OID_SHA1);
+			GIT_OBJECT_BLOB, diff_opts->oid_type);
 		fc->file->flags |= GIT_DIFF_FLAG_VALID_ID;
 	}
 

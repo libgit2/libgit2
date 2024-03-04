@@ -60,7 +60,7 @@ void test_apply_check__parsed_diff(void)
 	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
 
 	opts.flags |= GIT_APPLY_CHECK;
-	cl_git_pass(git_diff_from_buffer(&diff,
+	cl_git_pass(diff_from_buffer(&diff,
 		DIFF_MODIFY_TWO_FILES, strlen(DIFF_MODIFY_TWO_FILES)));
 	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, &opts));
 
@@ -76,7 +76,7 @@ void test_apply_check__binary(void)
    git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
 
    opts.flags |= GIT_APPLY_CHECK;
-   cl_git_pass(git_diff_from_buffer(&diff,
+   cl_git_pass(diff_from_buffer(&diff,
        DIFF_MODIFY_TWO_FILES_BINARY,
        strlen(DIFF_MODIFY_TWO_FILES_BINARY)));
    cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, &opts));
@@ -112,7 +112,7 @@ void test_apply_check__does_not_apply(void)
 	git_index_free(index);
 
 	opts.flags |= GIT_APPLY_CHECK;
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+	cl_git_pass(diff_from_buffer(&diff, diff_file, strlen(diff_file)));
 	cl_git_fail_with(GIT_EAPPLYFAIL, git_apply(repo, diff, GIT_APPLY_LOCATION_INDEX, &opts));
 
 	validate_apply_index(repo, index_expected, index_expected_cnt);

@@ -17,13 +17,14 @@
 #	define GIT_FILEBUF_THREADS
 #endif
 
-#define GIT_FILEBUF_HASH_CONTENTS		(1 << 0)
-#define GIT_FILEBUF_APPEND				(1 << 2)
+#define GIT_FILEBUF_HASH_SHA1           (1 << 0)
+#define GIT_FILEBUF_HASH_SHA256         (1 << 1)
+#define GIT_FILEBUF_APPEND              (1 << 2)
 #define GIT_FILEBUF_CREATE_LEADING_DIRS	(1 << 3)
-#define GIT_FILEBUF_TEMPORARY			(1 << 4)
-#define GIT_FILEBUF_DO_NOT_BUFFER		(1 << 5)
-#define GIT_FILEBUF_FSYNC				(1 << 6)
-#define GIT_FILEBUF_DEFLATE_SHIFT		(7)
+#define GIT_FILEBUF_TEMPORARY           (1 << 4)
+#define GIT_FILEBUF_DO_NOT_BUFFER       (1 << 5)
+#define GIT_FILEBUF_FSYNC               (1 << 6)
+#define GIT_FILEBUF_DEFLATE_SHIFT       (7)
 
 #define GIT_FILELOCK_EXTENSION ".lock\0"
 #define GIT_FILELOCK_EXTLENGTH 6
@@ -90,5 +91,17 @@ void git_filebuf_cleanup(git_filebuf *lock);
 int git_filebuf_hash(unsigned char *out, git_filebuf *file);
 int git_filebuf_flush(git_filebuf *file);
 int git_filebuf_stats(time_t *mtime, size_t *size, git_filebuf *file);
+
+GIT_INLINE(int) git_filebuf_hash_flags(git_hash_algorithm_t algorithm)
+{
+	switch (algorithm) {
+	case GIT_HASH_ALGORITHM_SHA1:
+		return GIT_FILEBUF_HASH_SHA1;
+	case GIT_HASH_ALGORITHM_SHA256:
+		return GIT_FILEBUF_HASH_SHA256;
+	default:
+		return 0;
+	}
+}
 
 #endif

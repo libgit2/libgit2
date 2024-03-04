@@ -585,9 +585,9 @@ void test_iterator_workdir__filesystem(void)
 	expect_iterator_items(i, 5, expect_noauto, 18, expect_trees);
 	git_iterator_free(i);
 
-	git__tsort((void **)expect_base, 8, (git__tsort_cmp)git__strcasecmp);
-	git__tsort((void **)expect_trees, 18, (git__tsort_cmp)git__strcasecmp);
-	git__tsort((void **)expect_noauto, 5, (git__tsort_cmp)git__strcasecmp);
+	git__tsort((void **)expect_base, 8, git__strcasecmp_cb);
+	git__tsort((void **)expect_trees, 18, git__strcasecmp_cb);
+	git__tsort((void **)expect_noauto, 5, git__strcasecmp_cb);
 
 	i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
 	cl_git_pass(git_iterator_for_filesystem(&i, "status/subdir", &i_opts));

@@ -59,9 +59,15 @@ typedef struct {
 	 * This prefix will be removed when looking for files.  The default is 1.
 	 */
 	uint32_t prefix_len;
+
+	/**
+	 * The type of object IDs in the patch file. The default is
+	 * `GIT_OID_DEFAULT`.
+	 */
+	git_oid_t oid_type;
 } git_patch_options;
 
-#define GIT_PATCH_OPTIONS_INIT { 1 }
+#define GIT_PATCH_OPTIONS_INIT { 1, GIT_OID_DEFAULT }
 
 extern int git_patch__to_buf(git_str *out, git_patch *patch);
 extern void git_patch_free(git_patch *patch);

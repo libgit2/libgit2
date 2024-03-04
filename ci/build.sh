@@ -61,6 +61,8 @@ if test -n "${CC}"; then
 	"${CC}" --version 2>&1 | indent
 fi
 echo "Environment:"
+echo "PATH=${BUILD_PATH}" | indent
+
 if test -n "${CC}"; then
 	echo "CC=${CC}" | indent
 fi

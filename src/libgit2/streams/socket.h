@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#include "netops.h"
+#include "stream.h"
 
 typedef struct {
 	git_stream parent;

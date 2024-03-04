@@ -748,7 +748,8 @@ int git_odb__add_default_backends(
 		git_error_set(GIT_ERROR_ODB, "failed to acquire the odb lock");
 		return -1;
 	}
-	if (!db->cgraph && git_commit_graph_new(&db->cgraph, objects_dir, false) < 0) {
+	if (!db->cgraph &&
+	    git_commit_graph_new(&db->cgraph, objects_dir, false, db->options.oid_type) < 0) {
 		git_mutex_unlock(&db->lock);
 		return -1;
 	}
@@ -1493,11 +1494,16 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 
 			if (found && git_oid__cmp(&full_oid, &found_full_oid)) {
 				git_str buf = GIT_STR_INIT;
+				const char *idstr;
 
-				git_str_printf(&buf, "multiple matches for prefix: %s",
-					git_oid_tostr_s(&full_oid));
-				git_str_printf(&buf, " %s",
-					git_oid_tostr_s(&found_full_oid));
+				if ((idstr = git_oid_tostr_s(&full_oid)) == NULL) {
+					git_str_puts(&buf, "failed to parse object id");
+				} else {
+					git_str_printf(&buf, "multiple matches for prefix: %s", idstr);
+
+					if ((idstr = git_oid_tostr_s(&found_full_oid)) != NULL)
+						git_str_printf(&buf, " %s", idstr);
+				}
 
 				error = git_odb__error_ambiguous(buf.ptr);
 				git_str_dispose(&buf);

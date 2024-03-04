@@ -519,7 +519,13 @@ static int store_object(git_indexer *idx)
 	pentry->offset = entry_start;
 
 	if (git_oidmap_exists(idx->pack->idx_cache, &pentry->id)) {
-		git_error_set(GIT_ERROR_INDEXER, "duplicate object %s found in pack", git_oid_tostr_s(&pentry->id));
+		const char *idstr = git_oid_tostr_s(&pentry->id);
+
+		if (!idstr)
+			git_error_set(GIT_ERROR_INDEXER, "failed to parse object id");
+		else
+			git_error_set(GIT_ERROR_INDEXER, "duplicate object %s found in pack", idstr);
+
 		git__free(pentry);
 		goto on_error;
 	}
@@ -1232,6 +1238,7 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 	git_filebuf index_file = {0};
 	void *packfile_trailer;
 	size_t checksum_size;
+	int filebuf_hash;
 	bool mismatch;
 
 	if (!idx->parsed_header) {
@@ -1240,6 +1247,7 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 	}
 
 	checksum_size = git_hash_size(indexer_hash_algorithm(idx));
+	filebuf_hash = git_filebuf_hash_flags(indexer_hash_algorithm(idx));
 	GIT_ASSERT(checksum_size);
 
 	/* Test for this before resolve_deltas(), as it plays with idx->off */
@@ -1314,8 +1322,7 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 		return -1;
 
 	if (git_filebuf_open(&index_file, filename.ptr,
-		GIT_FILEBUF_HASH_CONTENTS |
-		(idx->do_fsync ? GIT_FILEBUF_FSYNC : 0),
+		filebuf_hash | (idx->do_fsync ? GIT_FILEBUF_FSYNC : 0),
 		idx->mode) < 0)
 		goto on_error;
 

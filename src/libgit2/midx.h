@@ -51,8 +51,14 @@ typedef struct git_midx_file {
 	/* The number of entries in the Object Large Offsets table. Each entry has an 8-byte with an offset */
 	size_t num_object_large_offsets;
 
-	/* The trailer of the file. Contains the SHA1-checksum of the whole file. */
-	unsigned char checksum[GIT_HASH_SHA1_SIZE];
+	/*
+	 * The trailer of the file. Contains the checksum of the whole
+	 * file, in the repository's object format hash.
+	 */
+	unsigned char checksum[GIT_HASH_MAX_SIZE];
+
+	/* The type of object IDs in the midx. */
+	git_oid_t oid_type;
 
 	/* something like ".git/objects/pack/multi-pack-index". */
 	git_str filename;
@@ -82,11 +88,15 @@ struct git_midx_writer {
 
 	/* The list of `git_pack_file`s. */
 	git_vector packs;
+
+	/* The object ID type of the writer. */
+	git_oid_t oid_type;
 };
 
 int git_midx_open(
 		git_midx_file **idx_out,
-		const char *path);
+		const char *path,
+		git_oid_t oid_type);
 bool git_midx_needs_refresh(
 		const git_midx_file *idx,
 		const char *path);

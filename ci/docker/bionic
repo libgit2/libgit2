@@ -12,7 +12,6 @@ RUN apt-get update && \
         libcurl4-openssl-dev \
         libkrb5-dev \
         libpcre3-dev \
-        libssh2-1-dev \
         libssl-dev \
         libz-dev \
         ninja-build \
@@ -37,7 +36,16 @@ RUN cd /tmp && \
     cd .. && \
     rm -rf mbedtls-mbedtls-2.16.2
 
-FROM mbedtls AS adduser
+FROM mbedtls AS libssh2
+RUN cd /tmp && \
+    curl --location --silent --show-error https://www.libssh2.org/download/libssh2-1.11.0.tar.gz | tar -xz && \
+    cd libssh2-1.11.0 && \
+    CFLAGS=-fPIC cmake -G Ninja -DBUILD_SHARED_LIBS=ON . && \
+    ninja install && \
+    cd .. && \
+    rm -rf libssh2-1.11.0
+
+FROM libssh2 AS adduser
 ARG UID=""
 ARG GID=""
 RUN if [ "${UID}" != "" ]; then USER_ARG="--uid ${UID}"; fi && \

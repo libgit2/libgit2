@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "tree.h"
+#include "index.h"
 
 static git_repository *g_repo;
 
@@ -28,7 +29,7 @@ void test_object_tree_update__remove_blob(void)
 	cl_git_pass(git_tree_lookup(&base_tree, g_repo, &base_id));
 
 	/* Create it with an index */
-	cl_git_pass(git_index_new(&idx));
+	cl_git_pass(git_index__new(&idx, GIT_OID_SHA1));
 	cl_git_pass(git_index_read_tree(idx, base_tree));
 	cl_git_pass(git_index_remove(idx, path, 0));
 	cl_git_pass(git_index_write_tree_to(&tree_index_id, idx, g_repo));
@@ -57,7 +58,7 @@ void test_object_tree_update__remove_blob_deeper(void)
 	cl_git_pass(git_tree_lookup(&base_tree, g_repo, &base_id));
 
 	/* Create it with an index */
-	cl_git_pass(git_index_new(&idx));
+	cl_git_pass(git_index__new(&idx, GIT_OID_SHA1));
 	cl_git_pass(git_index_read_tree(idx, base_tree));
 	cl_git_pass(git_index_remove(idx, path, 0));
 	cl_git_pass(git_index_write_tree_to(&tree_index_id, idx, g_repo));
@@ -88,7 +89,7 @@ void test_object_tree_update__remove_all_entries(void)
 	cl_git_pass(git_tree_lookup(&base_tree, g_repo, &base_id));
 
 	/* Create it with an index */
-	cl_git_pass(git_index_new(&idx));
+	cl_git_pass(git_index__new(&idx, GIT_OID_SHA1));
 	cl_git_pass(git_index_read_tree(idx, base_tree));
 	cl_git_pass(git_index_remove(idx, path1, 0));
 	cl_git_pass(git_index_remove(idx, path2, 0));
@@ -119,7 +120,7 @@ void test_object_tree_update__replace_blob(void)
 	cl_git_pass(git_tree_lookup(&base_tree, g_repo, &base_id));
 
 	/* Create it with an index */
-	cl_git_pass(git_index_new(&idx));
+	cl_git_pass(git_index__new(&idx, GIT_OID_SHA1));
 	cl_git_pass(git_index_read_tree(idx, base_tree));
 
 	entry.path = path;
@@ -171,7 +172,7 @@ void test_object_tree_update__add_blobs(void)
 		int j;
 
 		/* Create it with an index */
-		cl_git_pass(git_index_new(&idx));
+		cl_git_pass(git_index__new(&idx, GIT_OID_SHA1));
 
 		base_tree = NULL;
 		if (i == 1) {
@@ -228,7 +229,7 @@ void test_object_tree_update__add_blobs_unsorted(void)
 		int j;
 
 		/* Create it with an index */
-		cl_git_pass(git_index_new(&idx));
+		cl_git_pass(git_index__new(&idx, GIT_OID_SHA1));
 
 		base_tree = NULL;
 		if (i == 1) {

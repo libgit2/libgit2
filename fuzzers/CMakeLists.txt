@@ -12,10 +12,13 @@ foreach(fuzz_target_src ${SRC_FUZZERS})
 	string(REPLACE ".c" "" fuzz_target_name ${fuzz_target_src})
 	string(REPLACE "_fuzzer" "" fuzz_name ${fuzz_target_name})
 
-	set(${fuzz_target_name}_SOURCES ${fuzz_target_src} ${LIBGIT2_OBJECTS})
+	set(${fuzz_target_name}_SOURCES
+		${fuzz_target_src} "fuzzer_utils.c" ${LIBGIT2_OBJECTS})
+
 	if(USE_STANDALONE_FUZZERS)
 		list(APPEND ${fuzz_target_name}_SOURCES "standalone_driver.c")
 	endif()
+
 	add_executable(${fuzz_target_name} ${${fuzz_target_name}_SOURCES})
 	set_target_properties(${fuzz_target_name} PROPERTIES C_STANDARD 90)
 

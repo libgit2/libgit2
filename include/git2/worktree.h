@@ -237,7 +237,9 @@ GIT_EXTERN(int) git_worktree_prune_options_init(
  *
  * If the worktree is not valid and not locked or if the above
  * flags have been passed in, this function will return a
- * positive value.
+ * positive value. If the worktree is not prunable, an error
+ * message will be set (visible in `giterr_last`) with details about
+ * why.
  *
  * @param wt Worktree to check.
  * @param opts The prunable options.
