@@ -115,11 +115,14 @@ static void assert_global_config_match(const char *config, const char *expected)
 	git_remote *remote;
 	char *proxy;
 	git_config* cfg;
+	git_config* cfg_global;
 
 	if (config) {
 		cl_git_pass(git_config_open_default(&cfg));
-		git_config_set_string(cfg, config, expected);
+		cl_git_pass(git_config_open_global(&cfg_global, cfg));
+		git_config_set_string(cfg_global, config, expected);
 		git_config_free(cfg);
+		git_config_free(cfg_global);
 	}
 
 	cl_git_pass(git_remote_create_detached(&remote, "https://github.com/libgit2/libgit2"));

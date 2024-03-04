@@ -592,59 +592,46 @@ static const char *uses[] = {
 static int get_backend_for_use(git_config_backend **out,
 	git_config *cfg, const char *name, backend_use use)
 {
-	size_t i;
 	size_t len;
-	backend_internal *backend;
 	int error = 0;
-	git_config_entry *entry = NULL;
-	char *key = NULL;
+	backend_internal *backend;
+	git_config *cfg_single;
 
 	*out = NULL;
 
 	len = git_vector_length(&cfg->backends);
-	if (len == 0) {
+	if (len <= 0) {
+		/* todo: tweak message? */
 		git_error_set(GIT_ERROR_CONFIG,
 			"cannot %s value for '%s' when no config backends exist",
 			uses[use], name);
 		return GIT_ENOTFOUND;
 	}
 
-	git_vector_foreach(&cfg->backends, i, backend) {
-		if (backend->backend->readonly)
-			continue;
+	if (len == 1) {
+		backend = git_vector_get(&cfg->backends, 0);
 
-		/* git-config doesn't update worktree-level config
-		   unless specifically requested; follow suit. If you
-		   specifically want to update that level, open the
-		   single config level with git_config_open_level and
-		   provide that as the config. In this case, there
-		   will only be one backend in the config. */
-		if (len > 1 && backend->level == GIT_CONFIG_LEVEL_WORKTREE)
-			continue;
+		if (backend == NULL) {
+			/* todo: tweak message? */
+			git_error_set(GIT_ERROR_CONFIG, "failed to retrieve config backend");
+			return GIT_ENOTFOUND;
+		}
 
-		/* If we're trying to delete a piece of config, make
-		   sure the backend we return actually defines it in
-		   the first place. */
-		if (use == BACKEND_USE_DELETE) {
-			if (key == NULL && (error = git_config__normalize_name(name, &key)) < 0)
-				goto cleanup;
-			if (backend->backend->get(backend->backend, key, &entry) < 0)
-				continue;
-			git_config_entry_free(entry);
+		if (backend->backend->readonly) {
+			/* todo: tweak message? */
+			git_error_set(GIT_ERROR_CONFIG, "cannot %s value for '%s' when config backend is readonly", uses[use], name);
+			return GIT_ENOTFOUND;
 		}
 
 		*out = backend->backend;
-		goto cleanup;
+		return 0;
 	}
 
-	error = GIT_ENOTFOUND;
-	git_error_set(GIT_ERROR_CONFIG,
-		"cannot %s value for '%s' when all config backends are readonly",
-		uses[use], name);
+	if ((error = git_config_open_level(&cfg_single, cfg, GIT_CONFIG_LEVEL_LOCAL)) < 0) {
+		return error;
+	}
 
- cleanup:
-	git__free(key);
-	return error;
+	return get_backend_for_use(out, cfg_single, name, use);
 }
 
 int git_config_delete_entry(git_config *cfg, const char *name)

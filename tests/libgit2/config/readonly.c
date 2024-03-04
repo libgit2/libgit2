@@ -49,6 +49,7 @@ void test_config_readonly__writing_to_cfg_with_rw_precedence_succeeds(void)
 void test_config_readonly__writing_to_cfg_with_ro_precedence_succeeds(void)
 {
 	git_config_backend *backend;
+	git_config *cfg_global;
 
 	cl_git_pass(git_config_backend_from_file(&backend, "local"));
 	backend->readonly = 1;
@@ -57,7 +58,10 @@ void test_config_readonly__writing_to_cfg_with_ro_precedence_succeeds(void)
 	cl_git_pass(git_config_backend_from_file(&backend, "global"));
 	cl_git_pass(git_config_add_backend(cfg, backend, GIT_CONFIG_LEVEL_GLOBAL, NULL, 0));
 
-	cl_git_pass(git_config_set_string(cfg, "foo.bar", "baz"));
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_set_string(cfg, "foo.bar", "baz"));
+
+	git_config_open_global(&cfg_global, cfg);
+	cl_git_pass(git_config_set_string(cfg_global, "foo.bar", "baz"));
 
 	cl_assert(!git_fs_path_exists("local"));
 	cl_assert(git_fs_path_exists("global"));
