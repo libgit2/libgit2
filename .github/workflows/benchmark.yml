@@ -1,0 +1,140 @@
+# Benchmark libgit2 against the git reference implementation.
+name: Benchmark
+
+on:
+  workflow_dispatch:
+  schedule:
+  - cron: '15 4 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  # Run our benchmarks. We build a matrix with the various build
+  # targets and their details. Unlike our CI builds, we run these
+  # directly on the VM instead of in containers since we do not
+  # need the breadth of platform diversity.
+  build:
+    # Only run scheduled workflows on the main repository; prevents people
+    # from using build minutes on their forks.
+    if: github.repository == 'libgit2/libgit2'
+
+    strategy:
+      matrix:
+        platform:
+        - name: "Linux (clang, OpenSSL)"
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CLI=ON -DCMAKE_BUILD_TYPE=Release
+            CMAKE_BUILD_OPTIONS: --config Release
+          id: linux
+          os: ubuntu-latest
+          setup-script: ubuntu
+        - name: "macOS"
+          os: macos-12
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CLI=ON -DCMAKE_BUILD_TYPE=Release
+            CMAKE_BUILD_OPTIONS: --config Release
+            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+          id: macos
+          setup-script: osx
+        - name: "Windows (amd64, Visual Studio)"
+          os: windows-2019
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_OPTIONS: -A x64 -DDEPRECATE_HARD=ON -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CLI=ON -DCMAKE_BUILD_TYPE=Release
+            CMAKE_BUILD_OPTIONS: --config Release
+          id: windows
+          setup-script: win32
+      fail-fast: false
+    name: "Benchmark ${{ matrix.platform.name }}"
+    env: ${{ matrix.platform.env }}
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v3
+      with:
+        path: source
+        fetch-depth: 0
+    - name: Set up benchmark environment
+      run: source/ci/setup-${{ matrix.platform.setup-script }}-benchmark.sh
+      shell: bash
+      if: matrix.platform.setup-script != ''
+    - name: Build
+      run: |
+        mkdir build && cd build
+        ../source/ci/build.sh
+      shell: bash
+    - name: Benchmark
+      run: |
+        if [[ "$(uname -s)" == MINGW* ]]; then
+          GIT2_CLI="$(cygpath -w $(pwd))\\build\\Release\\git2"
+        else
+          GIT2_CLI="$(pwd)/build/git2"
+        fi
+
+        mkdir benchmark && cd benchmark
+        ../source/tests/benchmarks/benchmark.sh --baseline-cli "git" --cli "${GIT2_CLI}" --name libgit2 --json benchmarks.json --zip benchmarks.zip
+      shell: bash
+    - name: Upload results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-${{ matrix.platform.id }}
+        path: benchmark
+      if: always()
+
+  # Publish the results
+  publish:
+    name: Publish results
+    needs: [ build ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out benchmark repository
+      uses: actions/checkout@v3
+      with:
+        repository: libgit2/benchmarks
+        path: site
+        fetch-depth: 0
+        ssh-key: ${{ secrets.BENCHMARKS_PUBLISH_KEY }}
+    - name: Download test results
+      uses: actions/download-artifact@v3
+    - name: Publish API
+      run: |
+       # Move today's benchmark run into the right place
+       for platform in linux macos windows; do
+         TIMESTAMP=$(jq .time.start < "benchmark-${platform}/benchmarks.json")
+         TIMESTAMP_LEN=$(echo -n ${TIMESTAMP} | wc -c | xargs)
+         DENOMINATOR=1
+         if [ "${TIMESTAMP_LEN}" = "19" ]; then
+           DENOMINATOR="1000000000"
+         elif [ "${TIMESTAMP_LEN}" = "13" ]; then
+           DENOMINATOR="1000"
+         else
+           echo "unknown timestamp"
+           exit 1
+         fi
+
+         if [[ "$(uname -s)" == "Darwin" ]]; then
+           DATE=$(date -R -r $(("${TIMESTAMP}/${DENOMINATOR}")) +"%Y-%m-%d")
+         else
+           DATE=$(date -d @$(("${TIMESTAMP}/${DENOMINATOR}")) +"%Y-%m-%d")
+         fi
+
+         mkdir -p "site/public/api/runs/${DATE}"
+         cp "benchmark-${platform}/benchmarks.json" "site/public/api/runs/${DATE}/${platform}.json"
+       done
+
+       (cd site && node scripts/aggregate.js)
+
+       (
+        cd site &&
+        git config user.name 'Benchmark Site Generation' &&
+        git config user.email 'libgit2@users.noreply.github.com' &&
+        git add . &&
+        git commit --allow-empty -m"benchmark update ${DATE}" &&
+        git push origin main
+       )
+      shell: bash

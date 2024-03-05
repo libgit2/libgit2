@@ -14,7 +14,7 @@
 
 #include "common.h"
 
-/* Define the printf format specifer to use for size_t output */
+/* Define the printf format specifier to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #	define PRIuZ "Iu"
 #	define PRIxZ "Ix"
@@ -35,9 +35,9 @@
  */
 
 typedef struct {
-	int force : 1;
-	int progress : 1;
-	int perf : 1;
+	unsigned int force : 1;
+	unsigned int progress : 1;
+	unsigned int perf : 1;
 } checkout_options;
 
 static void print_usage(void)
@@ -239,7 +239,7 @@ next:
 
 out:
 	git_reference_free(remote_ref);
-	git_strarray_free(&remotes);
+	git_strarray_dispose(&remotes);
 	return error;
 }
 

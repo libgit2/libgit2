@@ -21,7 +21,7 @@ critical failures (such as a packfile being corrupted, a loose object
 having the wrong access permissions, etc.) all of which will return -1.
 When the object lookup is successful, it will return 0.
 
-If libgit2 was compiled with threads enabled (`-DTHREADSAFE=ON` when using
+If libgit2 was compiled with threads enabled (`-DUSE_THREADS=ON` when using
 CMake), then the error message will be kept in thread-local storage, so it
 will not be modified by other threads.  If threads are not enabled, then
 the error message is in global data.

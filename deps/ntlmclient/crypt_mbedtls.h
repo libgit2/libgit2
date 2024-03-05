@@ -11,8 +11,9 @@
 
 #include "mbedtls/md.h"
 
-typedef struct {
-	mbedtls_md_context_t mbed;
-} ntlm_hmac_ctx;
+struct ntlm_crypt_ctx {
+	mbedtls_md_context_t hmac;
+	unsigned int hmac_initialized : 1;
+};
 
 #endif /* PRIVATE_CRYPT_MBEDTLS_H__ */

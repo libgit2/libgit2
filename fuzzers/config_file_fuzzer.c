@@ -10,9 +10,11 @@
 #include "git2.h"
 #include "config_backend.h"
 
+#include "standalone_driver.h"
+
 #define UNUSED(x) (void)(x)
 
-int foreach_cb(const git_config_entry *entry, void *payload)
+static int foreach_cb(const git_config_entry *entry, void *payload)
 {
 	UNUSED(entry);
 	UNUSED(payload);
@@ -41,7 +43,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		goto out;
 	}
 
-	if ((err = git_config_backend_from_string(&backend, (const char*)data, size)) != 0) {
+	if ((err = git_config_backend_from_string(&backend, (const char*)data, size, NULL)) != 0) {
 		goto out;
 	}
 	if ((err = git_config_add_backend(cfg, backend, 0, NULL, 0)) != 0) {

@@ -64,7 +64,7 @@ slack channel once you've registered.
 
 If you have questions about the library, please be sure to check out the
 [API documentation](http://libgit2.github.com/libgit2/).  If you still have
-questions, reach out to us on Slack or post a question on 
+questions, reach out to us on Slack or post a question on
 [StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) (with the `libgit2` tag).
 
 **Reporting Bugs**
@@ -187,18 +187,18 @@ Once built, you can run the tests from the `build` directory with the command
 
 Alternatively you can run the test suite directly using,
 
-	$ ./libgit2_clar
+	$ ./libgit2_tests
 
 Invoking the test suite directly is useful because it allows you to execute
 individual tests, or groups of tests using the `-s` flag.  For example, to
 run the index tests:
 
-    $ ./libgit2_clar -sindex
+    $ ./libgit2_tests -sindex
 
 To run a single test named `index::racy::diff`, which corresponds to the test
 function (`test_index_racy__diff`)[https://github.com/libgit2/libgit2/blob/master/tests/index/racy.c#L23]:
 
-    $ ./libgit2_clar -sindex::racy::diff
+    $ ./libgit2_tests -sindex::racy::diff
 
 The test suite will print a `.` for every passing test, and an `F` for any
 failing test.  An `S` indicates that a test was skipped because it is not
@@ -229,7 +229,7 @@ The following CMake variables are declared:
 - `LIB_INSTALL_DIR`: Where to install libraries to.
 - `INCLUDE_INSTALL_DIR`: Where to install headers to.
 - `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to ON)
-- `BUILD_CLAR`: Build [Clar](https://github.com/vmg/clar)-based test suite (defaults to ON)
+- `BUILD_TESTS`: Build [Clar](https://github.com/vmg/clar)-based test suite (defaults to ON)
 - `THREADSAFE`: Build libgit2 with threading support (defaults to ON)
 - `STDCALL`: Build libgit2 as `stdcall`. Turn off for `cdecl` (Windows; defaults to ON)
 

@@ -30,7 +30,7 @@ struct merge_options {
 	git_annotated_commit **annotated;
 	size_t annotated_count;
 
-	int no_commit : 1;
+	unsigned int no_commit : 1;
 };
 
 static void print_usage(void)
@@ -263,7 +263,7 @@ static int create_merge_commit(git_repository *repo, git_index *index, struct me
 	                        sign, sign,
 	                        NULL, msg,
 	                        tree,
-	                        opts->annotated_count + 1, (const git_commit **)parents);
+	                        opts->annotated_count + 1, parents);
 	check_lg2(err, "failed to create commit", NULL);
 
 	/* We're done merging, cleanup the repository state */

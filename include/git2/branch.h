@@ -34,6 +34,8 @@ GIT_BEGIN_DECL
  *
  * @param out Pointer where to store the underlying reference.
  *
+ * @param repo the repository to create the branch in.
+ *
  * @param branch_name Name for the branch; this name is
  * validated for consistency. It should also not conflict with
  * an already existing branch name.
@@ -127,8 +129,8 @@ GIT_EXTERN(void) git_branch_iterator_free(git_branch_iterator *iter);
  * See `git_tag_create()` for rules about valid names.
  *
  * Note that if the move succeeds, the old reference object will not
- + be valid anymore, and should be freed immediately by the user using
- + `git_reference_free()`.
+ * be valid anymore, and should be freed immediately by the user using
+ * `git_reference_free()`.
  *
  * @param out New reference object for the updated name.
  *
@@ -303,6 +305,31 @@ GIT_EXTERN(int) git_branch_remote_name(
  * @return 0 or an error code
  */
  GIT_EXTERN(int) git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname);
+
+/**
+ * Retrieve the upstream merge of a local branch
+ *
+ * This will return the currently configured "branch.*.merge" for a given
+ * branch. This branch must be local.
+ *
+ * @param buf the buffer into which to write the name
+ * @param repo the repository in which to look
+ * @param refname the full name of the branch
+ * @return 0 or an error code
+ */
+ GIT_EXTERN(int) git_branch_upstream_merge(git_buf *buf, git_repository *repo, const char *refname);
+
+/**
+ * Determine whether a branch name is valid, meaning that (when prefixed
+ * with `refs/heads/`) that it is a valid reference name, and that any
+ * additional branch name restrictions are imposed (eg, it cannot start
+ * with a `-`).
+ *
+ * @param valid output pointer to set with validity of given branch name
+ * @param name a branch name to test
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_branch_name_is_valid(int *valid, const char *name);
 
 /** @} */
 GIT_END_DECL

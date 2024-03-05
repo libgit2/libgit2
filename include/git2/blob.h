@@ -84,7 +84,7 @@ GIT_EXTERN(git_repository *) git_blob_owner(const git_blob *blob);
  * time.
  *
  * @param blob pointer to the blob
- * @return the pointer
+ * @return the pointer, or NULL on error
  */
 GIT_EXTERN(const void *) git_blob_rawcontent(const git_blob *blob);
 
@@ -113,21 +113,55 @@ typedef enum {
 	 * When set, filters will be loaded from a `.gitattributes` file
 	 * in the HEAD commit.
 	 */
-	GIT_BLOB_FILTER_ATTTRIBUTES_FROM_HEAD = (1 << 2),
+	GIT_BLOB_FILTER_ATTRIBUTES_FROM_HEAD = (1 << 2),
+
+	/**
+	 * When set, filters will be loaded from a `.gitattributes` file
+	 * in the specified commit.
+	 */
+	GIT_BLOB_FILTER_ATTRIBUTES_FROM_COMMIT = (1 << 3)
 } git_blob_filter_flag_t;
 
 /**
  * The options used when applying filter options to a file.
+ *
+ * Initialize with `GIT_BLOB_FILTER_OPTIONS_INIT`. Alternatively, you can
+ * use `git_blob_filter_options_init`.
+ *
  */
 typedef struct {
 	int version;
 
 	/** Flags to control the filtering process, see `git_blob_filter_flag_t` above */
 	uint32_t flags;
+
+#ifdef GIT_DEPRECATE_HARD
+	void *reserved;
+#else
+	git_oid *commit_id;
+#endif
+
+	/**
+	 * The commit to load attributes from, when
+	 * `GIT_BLOB_FILTER_ATTRIBUTES_FROM_COMMIT` is specified.
+	 */
+	git_oid attr_commit_id;
 } git_blob_filter_options;
 
 #define GIT_BLOB_FILTER_OPTIONS_VERSION 1
 #define GIT_BLOB_FILTER_OPTIONS_INIT {GIT_BLOB_FILTER_OPTIONS_VERSION, GIT_BLOB_FILTER_CHECK_FOR_BINARY}
+
+/**
+ * Initialize git_blob_filter_options structure
+ *
+ * Initializes a `git_blob_filter_options` with default values. Equivalent
+ * to creating an instance with `GIT_BLOB_FILTER_OPTIONS_INIT`.
+ *
+ * @param opts The `git_blob_filter_options` struct to initialize.
+ * @param version The struct version; pass `GIT_BLOB_FILTER_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_blob_filter_options_init(git_blob_filter_options *opts, unsigned int version);
 
 /**
  * Get a buffer with the filtered content of a blob.
@@ -229,7 +263,7 @@ GIT_EXTERN(int) git_blob_create_from_stream_commit(
  * Write an in-memory buffer to the ODB as a blob
  *
  * @param id return the id of the written blob
- * @param repo repository where to blob will be written
+ * @param repo repository where the blob will be written
  * @param buffer data to be written into the blob
  * @param len length of the data
  * @return 0 or an error code
@@ -251,11 +285,24 @@ GIT_EXTERN(int) git_blob_create_from_buffer(
 GIT_EXTERN(int) git_blob_is_binary(const git_blob *blob);
 
 /**
+ * Determine if the given content is most certainly binary or not;
+ * this is the same mechanism used by `git_blob_is_binary` but only
+ * looking at raw data.
+ *
+ * @param data The blob data which content should be analyzed
+ * @param len The length of the data
+ * @return 1 if the content of the blob is detected
+ * as binary; 0 otherwise.
+ */
+GIT_EXTERN(int) git_blob_data_is_binary(const char *data, size_t len);
+
+/**
  * Create an in-memory copy of a blob. The copy must be explicitly
  * free'd or it will leak.
  *
  * @param out Pointer to store the copy of the object
  * @param source Original object to copy
+ * @return 0.
  */
 GIT_EXTERN(int) git_blob_dup(git_blob **out, git_blob *source);
 

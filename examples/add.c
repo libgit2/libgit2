@@ -28,7 +28,7 @@
 
 enum index_mode {
 	INDEX_NONE,
-	INDEX_ADD,
+	INDEX_ADD
 };
 
 struct index_options {
@@ -48,8 +48,10 @@ int lg2_add(git_repository *repo, int argc, char **argv)
 	git_index_matched_path_cb matched_cb = NULL;
 	git_index *index;
 	git_strarray array = {0};
-	struct index_options options;
+	struct index_options options = {0};
 	struct args_info args = ARGS_INFO_INIT;
+
+	options.mode = INDEX_ADD;
 
 	/* Parse the options & arguments. */
 	parse_opts(NULL, &options, &args);
@@ -108,22 +110,7 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 	return ret;
 }
 
-void init_array(git_strarray *array, int argc, char **argv)
-{
-	unsigned int i;
-
-	array->count = argc;
-	array->strings = calloc(array->count, sizeof(char *));
-	assert(array->strings != NULL);
-
-	for (i = 0; i < array->count; i++) {
-		array->strings[i] = argv[i];
-	}
-
-	return;
-}
-
-void print_usage(void)
+static void print_usage(void)
 {
 	fprintf(stderr, "usage: add [options] [--] file-spec [file-spec] [...]\n\n");
 	fprintf(stderr, "\t-n, --dry-run    dry run\n");

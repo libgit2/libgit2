@@ -3,11 +3,10 @@ libgit2 - the Git linkable library
 
 | Build Status | |
 | ------------ | - |
-| **master** branch CI builds | [![Azure Pipelines Build Status](https://dev.azure.com/libgit2/libgit2/_apis/build/status/libgit2?branchName=master)](https://dev.azure.com/libgit2/libgit2/_build/latest?definitionId=7&branchName=master)   |
-| **v0.28 branch** CI builds | [![Azure Pipelines Build Status](https://dev.azure.com/libgit2/libgit2/_apis/build/status/libgit2?branchName=maint/v0.28)](https://dev.azure.com/libgit2/libgit2/_build/latest?definitionId=7&branchName=maint/v0.28) |
-| **v0.27 branch** CI builds | [![Azure Pipelines Build Status](https://dev.azure.com/libgit2/libgit2/_apis/build/status/libgit2?branchName=maint/v0.27)](https://dev.azure.com/libgit2/libgit2/_build/latest?definitionId=7&branchName=maint/v0.27) |
-| **v0.26 branch** CI builds | [![Azure Pipelines Build Status](https://dev.azure.com/libgit2/libgit2/_apis/build/status/libgit2?branchName=maint/v0.26)](https://dev.azure.com/libgit2/libgit2/_build/latest?definitionId=7&branchName=maint/v0.26) |
-| **Nightly** builds | [![Azure Pipelines Build Status](https://libgit2.visualstudio.com/libgit2/_apis/build/status/nightly?branchName=master&label=Full+Build)](https://libgit2.visualstudio.com/libgit2/_build/latest?definitionId=9&branchName=master) [![Coverity Build Status](https://dev.azure.com/libgit2/libgit2/_apis/build/status/coverity?branchName=master&label=Coverity+Build)](https://dev.azure.com/libgit2/libgit2/_build/latest?definitionId=21?branchName=master) [![Coverity Scan Build Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639) |
+| **main** branch CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush) |
+| **v1.7 branch** CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?branch=maint%2Fv1.7&event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush+branch%3Amaint%2Fv1.7) |
+| **v1.6 branch** CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?branch=maint%2Fv1.6&event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush+branch%3Amaint%2Fv1.6) |
+| **Nightly** builds | [![Nightly Build](https://github.com/libgit2/libgit2/workflows/Nightly%20Build/badge.svg)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22Nightly+Build%22) [![Coverity Scan Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639) |
 
 `libgit2` is a portable, pure C implementation of the Git core methods
 provided as a linkable library with a solid API, allowing to build Git
@@ -19,21 +18,23 @@ functionality into your application.  Language bindings like
 in your favorite language.
 
 `libgit2` is used to power Git GUI clients like
-[GitKraken](https://gitkraken.com/) and [gmaster](https://gmaster.io/)
+[GitKraken](https://gitkraken.com/) and [GitButler](https://gitbutler.com/)
 and on Git hosting providers like [GitHub](https://github.com/),
 [GitLab](https://gitlab.com/) and
 [Azure DevOps](https://azure.com/devops).
 We perform the merge every time you click "merge pull request".
 
 `libgit2` is licensed under a **very permissive license** (GPLv2 with a special
-Linking Exception).  This basically means that you can link it (unmodified)
-with any kind of software without having to release its source code.
+Linking Exception). This means that you can link against the library with any
+kind of software without making that software fall under the GPL.
+Changes to libgit2 would still be covered under its GPL license.
 Additionally, the example code has been released to the public domain (see the
 [separate license](examples/COPYING) for more information).
 
 Table of Contents
 =================
 
+* [Using libgit2](#using-libgit2)
 * [Quick Start](#quick-start)
 * [Getting Help](#getting-help)
 * [What It Can Do](#what-it-can-do)
@@ -48,9 +49,32 @@ Table of Contents
     * [Compiler and linker options](#compiler-and-linker-options)
     * [MacOS X](#macos-x)
     * [Android](#android)
+    * [MinGW](#mingw)
 * [Language Bindings](#language-bindings)
 * [How Can I Contribute?](#how-can-i-contribute)
 * [License](#license)
+
+Using libgit2
+=============
+
+Most of these instructions assume that you're writing an application
+in C and want to use libgit2 directly.  If you're _not_ using C,
+and you're writing in a different language or platform like .NET,
+Node.js, or Ruby, then there is probably a
+"[language binding](#language-bindings)" that you can use to take care
+of the messy tasks of calling into native code.
+
+But if you _do_ want to use libgit2 directly - because you're building
+an application in C - then you may be able use an existing binary.
+There are packages for the
+[vcpkg](https://github.com/Microsoft/vcpkg) and
+[conan](https://conan.io/center/recipes/libgit2)
+package managers.  And libgit2 is available in 
+[Homebrew](https://formulae.brew.sh/formula/libgit2) and most Linux
+distributions.
+
+However, these versions _may_ be outdated and we recommend using the
+latest version if possible.  Thankfully libgit2 is not hard to compile.
 
 Quick Start
 ===========
@@ -81,7 +105,8 @@ Getting Help
 
 **Chat with us**
 
-- via IRC: join [#libgit2](https://webchat.freenode.net/#libgit2) on Freenode
+- via IRC: join [#libgit2](https://web.libera.chat/#libgit2) on
+  [libera](https://libera.chat).
 - via Slack: visit [slack.libgit2.org](http://slack.libgit2.org/) to sign up,
   then join us in `#libgit2`
 
@@ -201,6 +226,8 @@ On most systems you can build the library using the following commands
 
 Alternatively you can point the CMake GUI tool to the CMakeLists.txt file and generate platform specific build project or IDE workspace.
 
+If you're not familiar with CMake, [a more detailed explanation](https://preshing.com/20170511/how-to-build-a-cmake-based-project/) may be helpful.
+
 Running Tests
 -------------
 
@@ -210,18 +237,18 @@ Once built, you can run the tests from the `build` directory with the command
 
 Alternatively you can run the test suite directly using,
 
-	$ ./libgit2_clar
+	$ ./libgit2_tests
 
 Invoking the test suite directly is useful because it allows you to execute
 individual tests, or groups of tests using the `-s` flag.  For example, to
 run the index tests:
 
-    $ ./libgit2_clar -sindex
+    $ ./libgit2_tests -sindex
 
 To run a single test named `index::racy::diff`, which corresponds to the test
-function [`test_index_racy__diff`](https://github.com/libgit2/libgit2/blob/master/tests/index/racy.c#L23):
+function [`test_index_racy__diff`](https://github.com/libgit2/libgit2/blob/main/tests/index/racy.c#L23):
 
-    $ ./libgit2_clar -sindex::racy::diff
+    $ ./libgit2_tests -sindex::racy::diff
 
 The test suite will print a `.` for every passing test, and an `F` for any
 failing test.  An `S` indicates that a test was skipped because it is not
@@ -229,7 +256,7 @@ applicable to your platform or is particularly expensive.
 
 **Note:** There should be _no_ failing tests when you build an unmodified
 source tree from a [release](https://github.com/libgit2/libgit2/releases),
-or from the [master branch](https://github.com/libgit2/libgit2/tree/master).
+or from the [main branch](https://github.com/libgit2/libgit2/tree/main).
 Please contact us or [open an issue](https://github.com/libgit2/libgit2/issues)
 if you see test failures.
 
@@ -248,12 +275,12 @@ For more advanced use or questions about CMake please read <https://cmake.org/Wi
 
 The following CMake variables are declared:
 
-- `BIN_INSTALL_DIR`: Where to install binaries to.
-- `LIB_INSTALL_DIR`: Where to install libraries to.
-- `INCLUDE_INSTALL_DIR`: Where to install headers to.
+- `CMAKE_INSTALL_BINDIR`: Where to install binaries to.
+- `CMAKE_INSTALL_LIBDIR`: Where to install libraries to.
+- `CMAKE_INSTALL_INCLUDEDIR`: Where to install headers to.
 - `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to ON)
-- `BUILD_CLAR`: Build [Clar](https://github.com/vmg/clar)-based test suite (defaults to ON)
-- `THREADSAFE`: Build libgit2 with threading support (defaults to ON)
+- `BUILD_TESTS`: Build the unit and integration test suites (defaults to ON)
+- `USE_THREADS`: Build libgit2 with threading support (defaults to ON)
 
 To list all build options and their current value, you can do the
 following:
@@ -275,6 +302,8 @@ compiler and linker. These flags are rarely used but can be useful for
 - `CMAKE_FIND_ROOT_PATH`: Override the search path for libraries
 - `ZLIB_LIBRARY`, `OPENSSL_SSL_LIBRARY` AND `OPENSSL_CRYPTO_LIBRARY`:
 Tell CMake where to find those specific libraries
+- `LINK_WITH_STATIC_LIBRARIES`: Link only with static versions of
+system libraries
 
 MacOS X
 -------
@@ -305,6 +334,20 @@ with full path to the toolchain):
 Add `-DCMAKE_TOOLCHAIN_FILE={pathToToolchainFile}` to cmake command
 when configuring.
 
+MinGW
+-----
+
+If you want to build the library in MinGW environment with SSH support enabled,
+you may need to pass `-DCMAKE_LIBRARY_PATH="${MINGW_PREFIX}/${MINGW_CHOST}/lib/"` flag
+to CMake when configuring. This is because CMake cannot find the Win32 libraries in
+MinGW folders by default and you might see an error message stating that CMake
+could not resolve `ws2_32` library during configuration.
+
+Another option would be to install `msys2-w32api-runtime` package before configuring.
+This package installs the Win32 libraries into `/usr/lib` folder which is by default
+recognized as the library path by CMake. Please note though that this package is meant
+for MSYS subsystem which is different from MinGW.
+
 Language Bindings
 ==================================
 
@@ -318,6 +361,7 @@ Here are the bindings to libgit2 that are currently available:
     * dlibgit <https://github.com/s-ludwig/dlibgit>
 * Delphi
     * GitForDelphi <https://github.com/libgit2/GitForDelphi>
+    * libgit2-delphi <https://github.com/todaysoftware/libgit2-delphi>
 * Erlang
     * Geef <https://github.com/carlosmn/geef>
 * Go
@@ -330,6 +374,9 @@ Here are the bindings to libgit2 that are currently available:
     * hgit2 <https://github.com/jwiegley/gitlib>
 * Java
     * Jagged <https://github.com/ethomson/jagged>
+    * Git24j <https://github.com/git24j/git24j>
+* Javascript / WebAssembly ( browser and nodejs )
+    * WASM-git <https://github.com/petersalomonsen/wasm-git>
 * Julia
     * LibGit2.jl <https://github.com/JuliaLang/julia/tree/master/stdlib/LibGit2>
 * Lua
@@ -346,13 +393,14 @@ Here are the bindings to libgit2 that are currently available:
     * parrot-libgit2 <https://github.com/letolabs/parrot-libgit2>
 * Perl
     * Git-Raw <https://github.com/jacquesg/p5-Git-Raw>
+* Pharo Smalltalk
+    * libgit2-pharo-bindings <https://github.com/pharo-vcs/libgit2-pharo-bindings>
 * PHP
-    * php-git <https://github.com/libgit2/php-git>
-* PowerShell
-    * PSGit <https://github.com/PoshCode/PSGit>
+    * php-git2 <https://github.com/RogerGee/php-git2>
 * Python
     * pygit2 <https://github.com/libgit2/pygit2>
 * R
+    * gert <https://docs.ropensci.org/gert>
     * git2r <https://github.com/ropensci/git2r>
 * Ruby
     * Rugged <https://github.com/libgit2/rugged>
@@ -360,6 +408,8 @@ Here are the bindings to libgit2 that are currently available:
     * git2-rs <https://github.com/rust-lang/git2-rs>
 * Swift
     * SwiftGit2 <https://github.com/SwiftGit2/SwiftGit2>
+* Tcl
+    * lg2 <https://github.com/apnadkarni/tcl-libgit2>
 * Vala
     * libgit2.vapi <https://github.com/apmasell/vapis/blob/master/libgit2.vapi>
 

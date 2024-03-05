@@ -1,1 +1,4 @@
 * text=auto
+ci/**/*.sh text eol=lf
+script/**/*.sh text eol=lf
+tests/resources/** linguist-vendored

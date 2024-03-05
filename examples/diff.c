@@ -188,9 +188,17 @@ static void compute_diff_no_index(git_diff **diff, struct diff_options *o) {
 	check_lg2(
 		git_patch_to_buf(&buf, patch),
 		"patch to buf", NULL);
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	check_lg2(
+		git_diff_from_buffer(diff, buf.ptr, buf.size, NULL),
+		"diff from patch", NULL);
+#else
 	check_lg2(
 		git_diff_from_buffer(diff, buf.ptr, buf.size),
 		"diff from patch", NULL);
+#endif
+
 	git_patch_free(patch);
 	git_buf_dispose(&buf);
 	free(file1_str);
@@ -344,7 +352,7 @@ static void parse_opts(struct diff_options *o, int argc, char *argv[])
 static void diff_print_stats(git_diff *diff, struct diff_options *o)
 {
 	git_diff_stats *stats;
-	git_buf b = GIT_BUF_INIT_CONST(NULL, 0);
+	git_buf b = GIT_BUF_INIT;
 	git_diff_stats_format_t format = 0;
 
 	check_lg2(

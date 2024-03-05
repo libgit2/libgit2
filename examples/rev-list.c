@@ -26,7 +26,7 @@ int lg2_rev_list(git_repository *repo, int argc, char **argv)
 	git_revwalk *walk;
 	git_oid oid;
 	git_sort_t sort;
-	char buf[GIT_OID_HEXSZ+1];
+	char buf[GIT_OID_SHA1_HEXSIZE+1];
 
 	check_lg2(revwalk_parse_options(&sort, &args), "parsing options", NULL);
 
@@ -36,7 +36,7 @@ int lg2_rev_list(git_repository *repo, int argc, char **argv)
 
 	while (!git_revwalk_next(&oid, walk)) {
 		git_oid_fmt(buf, &oid);
-		buf[GIT_OID_HEXSZ] = '\0';
+		buf[GIT_OID_SHA1_HEXSIZE] = '\0';
 		printf("%s\n", buf);
 	}
 
@@ -73,7 +73,7 @@ static int push_range(git_repository *repo, git_revwalk *walk, const char *range
 	if ((error = git_revparse(&revspec, repo, range)))
 		return error;
 
-	if (revspec.flags & GIT_REVPARSE_MERGE_BASE) {
+	if (revspec.flags & GIT_REVSPEC_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
 		return GIT_EINVALIDSPEC;
 	}
@@ -140,8 +140,14 @@ static int revwalk_parse_revs(git_repository *repo, git_revwalk *walk, struct ar
 			if (push_spec(repo, walk, curr, hide) == 0)
 				continue;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+			if ((error = git_oid_fromstr(&oid, curr, GIT_OID_SHA1)))
+				return error;
+#else
 			if ((error = git_oid_fromstr(&oid, curr)))
 				return error;
+#endif
+
 			if ((error = push_commit(walk, &oid, hide)))
 				return error;
 		}

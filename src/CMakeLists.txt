@@ -1,396 +1,215 @@
-IF(DEBUG_POOL)
-	SET(GIT_DEBUG_POOL 1)
-ENDIF()
-ADD_FEATURE_INFO(debugpool GIT_DEBUG_POOL "debug pool allocator")
+# The main libgit2 source tree: this CMakeLists.txt identifies platform
+# support and includes the subprojects that make up core libgit2 support.
 
-INCLUDE(PkgBuildConfig)
-
-# This variable will contain the libraries we need to put into
-# libgit2.pc's Requires.private. That is, what we're linking to or
-# what someone who's statically linking us needs to link to.
-SET(LIBGIT2_PC_REQUIRES "")
-# This will be set later if we use the system's http-parser library or
-# use iconv (OSX) and will be written to the Libs.private field in the
-# pc file.
-SET(LIBGIT2_PC_LIBS "")
-
-SET(LIBGIT2_INCLUDES
-	"${CMAKE_CURRENT_BINARY_DIR}"
-	"${libgit2_SOURCE_DIR}/src"
-	"${libgit2_SOURCE_DIR}/include")
-SET(LIBGIT2_SYSTEM_INCLUDES "")
-SET(LIBGIT2_LIBS "")
-
-# Installation paths
 #
-SET(BIN_INSTALL_DIR bin CACHE PATH "Where to install binaries to.")
-SET(LIB_INSTALL_DIR lib CACHE PATH "Where to install libraries to.")
-SET(INCLUDE_INSTALL_DIR include CACHE PATH "Where to install headers to.")
+# Optional build configuration settings
+#
 
-# Enable tracing
-IF (ENABLE_TRACE STREQUAL "ON")
-	SET(GIT_TRACE 1)
-ENDIF()
-ADD_FEATURE_INFO(tracing GIT_TRACE "tracing support")
+if(DEPRECATE_HARD)
+        add_definitions(-DGIT_DEPRECATE_HARD)
+endif()
 
-CHECK_FUNCTION_EXISTS(futimens HAVE_FUTIMENS)
-IF (HAVE_FUTIMENS)
-	SET(GIT_USE_FUTIMENS 1)
-ENDIF ()
+if(USE_LEAK_CHECKER STREQUAL "valgrind")
+	add_definitions(-DVALGRIND)
+endif()
 
-CHECK_PROTOTYPE_DEFINITION(qsort_r
-	"void qsort_r(void *base, size_t nmemb, size_t size, void *thunk, int (*compar)(void *, const void *, const void *))"
-	"" "stdlib.h" HAVE_QSORT_R_BSD)
-IF (HAVE_QSORT_R_BSD)
-	ADD_DEFINITIONS(-DHAVE_QSORT_R_BSD)
-ENDIF()
+#
+# Optional debugging functionality
+#
 
-CHECK_PROTOTYPE_DEFINITION(qsort_r
-	"void qsort_r(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *, void *), void *arg)"
-	"" "stdlib.h" HAVE_QSORT_R_GNU)
-IF (HAVE_QSORT_R_GNU)
-	ADD_DEFINITIONS(-DHAVE_QSORT_R_GNU)
-ENDIF()
+if(DEBUG_POOL)
+	set(GIT_DEBUG_POOL 1)
+endif()
+add_feature_info(debugpool GIT_DEBUG_POOL "debug pool allocator")
 
-CHECK_FUNCTION_EXISTS(qsort_s HAVE_QSORT_S)
-IF (HAVE_QSORT_S)
-	ADD_DEFINITIONS(-DHAVE_QSORT_S)
-ENDIF ()
+if(DEBUG_STRICT_ALLOC)
+	set(GIT_DEBUG_STRICT_ALLOC 1)
+endif()
+add_feature_info(debugalloc GIT_DEBUG_STRICT_ALLOC "debug strict allocators")
 
-# Find required dependencies
+if(DEBUG_STRICT_OPEN)
+	set(GIT_DEBUG_STRICT_OPEN 1)
+endif()
+add_feature_info(debugopen GIT_DEBUG_STRICT_OPEN "path validation in open")
 
-IF(WIN32)
-	LIST(APPEND LIBGIT2_LIBS ws2_32)
-ELSEIF(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-	LIST(APPEND LIBGIT2_LIBS socket nsl)
-	LIST(APPEND LIBGIT2_PC_LIBS "-lsocket" "-lnsl")
-ELSEIF(CMAKE_SYSTEM_NAME MATCHES "Haiku")
-	LIST(APPEND LIBGIT2_LIBS network)
-	LIST(APPEND LIBGIT2_PC_LIBS "-lnetwork")
-ENDIF()
+#
+# Optional feature enablement
+#
 
-CHECK_LIBRARY_EXISTS(rt clock_gettime "time.h" NEED_LIBRT)
-IF(NEED_LIBRT)
-	LIST(APPEND LIBGIT2_LIBS rt)
-	LIST(APPEND LIBGIT2_PC_LIBS "-lrt")
-ENDIF()
+include(SelectGSSAPI)
+include(SelectHTTPSBackend)
+include(SelectHashes)
+include(SelectHTTPParser)
+include(SelectRegex)
+include(SelectXdiff)
+include(SelectSSH)
+include(SelectZlib)
 
-IF(THREADSAFE)
-	LIST(APPEND LIBGIT2_LIBS ${CMAKE_THREAD_LIBS_INIT})
-	LIST(APPEND LIBGIT2_PC_LIBS ${CMAKE_THREAD_LIBS_INIT})
-ENDIF()
-ADD_FEATURE_INFO(threadsafe THREADSAFE "threadsafe support")
+#
+# Platform support
+#
 
+# futimes/futimens
 
-IF (WIN32 AND EMBED_SSH_PATH)
-	FILE(GLOB SRC_SSH "${EMBED_SSH_PATH}/src/*.c")
-	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES "${EMBED_SSH_PATH}/include")
-	FILE(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
-	SET(GIT_SSH 1)
-ENDIF()
+if(HAVE_FUTIMENS)
+	set(GIT_USE_FUTIMENS 1)
+endif ()
+add_feature_info(futimens GIT_USE_FUTIMENS "futimens support")
 
-IF (WIN32 AND WINHTTP)
-	SET(GIT_WINHTTP 1)
+# qsort
 
-	# Since MinGW does not come with headers or an import library for winhttp,
-	# we have to include a private header and generate our own import library
-	IF (MINGW)
-		ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/winhttp" "${libgit2_BINARY_DIR}/deps/winhttp")
-		LIST(APPEND LIBGIT2_LIBS winhttp)
-		LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/winhttp")
-	ELSE()
-		LIST(APPEND LIBGIT2_LIBS "winhttp")
-		LIST(APPEND LIBGIT2_PC_LIBS "-lwinhttp")
-	ENDIF ()
+# old-style FreeBSD qsort_r() has the 'context' parameter as the first argument
+# of the comparison function:
+check_prototype_definition_safe(qsort_r
+	"void (qsort_r)(void *base, size_t nmemb, size_t size, void *context, int (*compar)(void *, const void *, const void *))"
+	"" "stdlib.h" GIT_QSORT_BSD)
 
-	LIST(APPEND LIBGIT2_LIBS "rpcrt4" "crypt32" "ole32")
-	LIST(APPEND LIBGIT2_PC_LIBS "-lrpcrt4" "-lcrypt32" "-lole32")
-ENDIF()
+# GNU or POSIX qsort_r() has the 'context' parameter as the last argument of the
+# comparison function:
+check_prototype_definition_safe(qsort_r
+	"void (qsort_r)(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *, void *), void *context)"
+	"" "stdlib.h" GIT_QSORT_GNU)
 
-Include(SelectHTTPSBackend)
-Include(SelectHashes)
+# C11 qsort_s() has the 'context' parameter as the last argument of the
+# comparison function, and returns an error status:
+check_prototype_definition_safe(qsort_s
+	"errno_t (qsort_s)(void *base, rsize_t nmemb, rsize_t size, int (*compar)(const void *, const void *, void *), void *context)"
+	"0" "stdlib.h" GIT_QSORT_C11)
 
-# Specify regular expression implementation
-FIND_PACKAGE(PCRE)
+# MSC qsort_s() has the 'context' parameter as the first argument of the
+# comparison function, and as the last argument of qsort_s():
+check_prototype_definition_safe(qsort_s
+	"void (qsort_s)(void *base, size_t num, size_t width, int (*compare )(void *, const void *, const void *), void *context)"
+	"" "stdlib.h" GIT_QSORT_MSC)
 
-IF(REGEX_BACKEND STREQUAL "")
-	CHECK_SYMBOL_EXISTS(regcomp_l "regex.h;xlocale.h" HAVE_REGCOMP_L)
+# random / entropy data
 
-	IF(HAVE_REGCOMP_L)
-		SET(REGEX_BACKEND "regcomp_l")
-	ELSEIF(PCRE_FOUND)
-		SET(REGEX_BACKEND "pcre")
-	ELSE()
-		SET(REGEX_BACKEND "builtin")
-	ENDIF()
-ENDIF()
+check_symbol_exists(getentropy unistd.h GIT_RAND_GETENTROPY)
+check_symbol_exists(getloadavg stdlib.h GIT_RAND_GETLOADAVG)
 
-IF(REGEX_BACKEND STREQUAL "regcomp_l")
-	ADD_FEATURE_INFO(regex ON "using system regcomp_l")
-	SET(GIT_REGEX_REGCOMP_L 1)
-ELSEIF(REGEX_BACKEND STREQUAL "pcre2")
-	FIND_PACKAGE(PCRE2)
+# poll
 
-	IF(NOT PCRE2_FOUND)
-		MESSAGE(FATAL_ERROR "PCRE2 support was requested but not found")
-	ENDIF()
+if(WIN32)
+	set(GIT_IO_WSAPOLL 1)
+else()
+	check_symbol_exists(poll poll.h GIT_IO_POLL)
+	check_symbol_exists(select sys/select.h GIT_IO_SELECT)
+endif()
 
-	ADD_FEATURE_INFO(regex ON "using system PCRE2")
-	SET(GIT_REGEX_PCRE2 1)
+# determine architecture of the machine
 
-	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${PCRE2_INCLUDE_DIRS})
-	LIST(APPEND LIBGIT2_LIBS ${PCRE2_LIBRARIES})
-	LIST(APPEND LIBGIT2_PC_REQUIRES "libpcre2")
-ELSEIF(REGEX_BACKEND STREQUAL "pcre")
-	ADD_FEATURE_INFO(regex ON "using system PCRE")
-	SET(GIT_REGEX_PCRE 1)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+	set(GIT_ARCH_64 1)
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+	set(GIT_ARCH_32 1)
+elseif(CMAKE_SIZEOF_VOID_P)
+	message(FATAL_ERROR "Unsupported architecture (pointer size is ${CMAKE_SIZEOF_VOID_P} bytes)")
+else()
+	message(FATAL_ERROR "Unsupported architecture (CMAKE_SIZEOF_VOID_P is unset)")
+endif()
 
-	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${PCRE_INCLUDE_DIRS})
-	LIST(APPEND LIBGIT2_LIBS ${PCRE_LIBRARIES})
-	LIST(APPEND LIBGIT2_PC_REQUIRES "libpcre")
-ELSEIF(REGEX_BACKEND STREQUAL "regcomp")
-	ADD_FEATURE_INFO(regex ON "using system regcomp")
-	SET(GIT_REGEX_REGCOMP 1)
-ELSEIF(REGEX_BACKEND STREQUAL "builtin")
-	ADD_FEATURE_INFO(regex ON "using bundled PCRE")
-	SET(GIT_REGEX_BUILTIN 1)
+# nanosecond mtime/ctime support
 
-	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/pcre" "${libgit2_BINARY_DIR}/deps/pcre")
-	LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/pcre")
-	LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:pcre>)
-ELSE()
-	MESSAGE(FATAL_ERROR "The REGEX_BACKEND option provided is not supported")
-ENDIF()
+if(USE_NSEC)
+	set(GIT_USE_NSEC 1)
+endif()
 
-# Optional external dependency: http-parser
-IF(USE_HTTP_PARSER STREQUAL "system")
-	FIND_PACKAGE(HTTP_Parser)
+# high-resolution stat support
 
-	IF (HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
-		LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${HTTP_PARSER_INCLUDE_DIRS})
-		LIST(APPEND LIBGIT2_LIBS ${HTTP_PARSER_LIBRARIES})
-		LIST(APPEND LIBGIT2_PC_LIBS "-lhttp_parser")
-		ADD_FEATURE_INFO(http-parser ON "http-parser support (system)")
-	ELSE()
-		MESSAGE(FATAL_ERROR "http-parser support was requested but not found")
-	ENDIF()
-ELSE()
-	MESSAGE(STATUS "http-parser version 2 was not found or disabled; using bundled 3rd-party sources.")
-	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/http-parser" "${libgit2_BINARY_DIR}/deps/http-parser")
-	LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/http-parser")
-	LIST(APPEND LIBGIT2_OBJECTS "$<TARGET_OBJECTS:http-parser>")
-	ADD_FEATURE_INFO(http-parser ON "http-parser support (bundled)")
-ENDIF()
+if(HAVE_STRUCT_STAT_ST_MTIM)
+	set(GIT_USE_STAT_MTIM 1)
+elseif(HAVE_STRUCT_STAT_ST_MTIMESPEC)
+	set(GIT_USE_STAT_MTIMESPEC 1)
+elseif(HAVE_STRUCT_STAT_ST_MTIME_NSEC)
+	set(GIT_USE_STAT_MTIME_NSEC 1)
+endif()
 
-# Optional external dependency: zlib
-IF(NOT USE_BUNDLED_ZLIB)
-	FIND_PACKAGE(ZLIB)
-	IF(ZLIB_FOUND)
-		LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${ZLIB_INCLUDE_DIRS})
-		LIST(APPEND LIBGIT2_LIBS ${ZLIB_LIBRARIES})
-		IF(APPLE OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
-			LIST(APPEND LIBGIT2_PC_LIBS "-lz")
-		ELSE()
-			LIST(APPEND LIBGIT2_PC_REQUIRES "zlib")
-		ENDIF()
-		ADD_FEATURE_INFO(zlib ON "using system zlib")
-	ELSE()
-		MESSAGE(STATUS "zlib was not found; using bundled 3rd-party sources." )
-	ENDIF()
-ENDIF()
-IF(USE_BUNDLED_ZLIB OR NOT ZLIB_FOUND)
-	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/zlib" "${libgit2_BINARY_DIR}/deps/zlib")
-	LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/zlib")
-	LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:zlib>)
-	ADD_FEATURE_INFO(zlib ON "using bundled zlib")
-ENDIF()
+# realtime support
 
-# Optional external dependency: libssh2
-IF (USE_SSH)
-	FIND_PKGLIBRARIES(LIBSSH2 libssh2)
-ENDIF()
-IF (LIBSSH2_FOUND)
-	SET(GIT_SSH 1)
-	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${LIBSSH2_INCLUDE_DIRS})
-	LIST(APPEND LIBGIT2_LIBS ${LIBSSH2_LIBRARIES})
-	LIST(APPEND LIBGIT2_PC_LIBS ${LIBSSH2_LDFLAGS})
+check_library_exists(rt clock_gettime "time.h" NEED_LIBRT)
+if(NEED_LIBRT)
+	list(APPEND LIBGIT2_SYSTEM_LIBS rt)
+	list(APPEND LIBGIT2_PC_LIBS "-lrt")
+endif()
 
-	CHECK_LIBRARY_EXISTS("${LIBSSH2_LIBRARIES}" libssh2_userauth_publickey_frommemory "${LIBSSH2_LIBRARY_DIRS}" HAVE_LIBSSH2_MEMORY_CREDENTIALS)
-	IF (HAVE_LIBSSH2_MEMORY_CREDENTIALS)
-		SET(GIT_SSH_MEMORY_CREDENTIALS 1)
-	ENDIF()
-ELSE()
-	MESSAGE(STATUS "LIBSSH2 not found. Set CMAKE_PREFIX_PATH if it is installed outside of the default search path.")
-ENDIF()
-ADD_FEATURE_INFO(SSH GIT_SSH "SSH transport support")
+# platform libraries
 
-# Optional external dependency: ntlmclient
-IF (USE_NTLMCLIENT)
-	SET(GIT_NTLM 1)
-	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/ntlmclient" "${libgit2_BINARY_DIR}/deps/ntlmclient")
-	LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/ntlmclient")
-	LIST(APPEND LIBGIT2_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
-ENDIF()
-ADD_FEATURE_INFO(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
+if(WIN32)
+	list(APPEND LIBGIT2_SYSTEM_LIBS "ws2_32" "secur32")
+	list(APPEND LIBGIT2_PC_LIBS "-lws2_32" "-lsecur32")
+endif()
 
-# Optional external dependency: GSSAPI
+if(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
+	list(APPEND LIBGIT2_SYSTEM_LIBS socket nsl)
+	list(APPEND LIBGIT2_PC_LIBS "-lsocket" "-lnsl")
+endif()
 
-INCLUDE(SelectGSSAPI)
+if(CMAKE_SYSTEM_NAME MATCHES "Haiku")
+	list(APPEND LIBGIT2_SYSTEM_LIBS gnu network)
+	list(APPEND LIBGIT2_PC_LIBS "-lgnu -lnetwork")
+endif()
 
-# Optional external dependency: iconv
-IF (USE_ICONV)
-	FIND_PACKAGE(Iconv)
-ENDIF()
-IF (ICONV_FOUND)
-	SET(GIT_USE_ICONV 1)
-	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${ICONV_INCLUDE_DIR})
-	LIST(APPEND LIBGIT2_LIBS ${ICONV_LIBRARIES})
-	LIST(APPEND LIBGIT2_PC_LIBS ${ICONV_LIBRARIES})
-ENDIF()
-ADD_FEATURE_INFO(iconv GIT_USE_ICONV "iconv encoding conversion support")
+if(AMIGA)
+	add_definitions(-DNO_ADDRINFO -DNO_READDIR_R -DNO_MMAP)
+endif()
 
+# threads
 
-IF (THREADSAFE)
-	IF (NOT WIN32)
-		FIND_PACKAGE(Threads REQUIRED)
-	ENDIF()
+if(USE_THREADS)
+	if(NOT WIN32)
+		find_package(Threads REQUIRED)
+		list(APPEND LIBGIT2_SYSTEM_LIBS ${CMAKE_THREAD_LIBS_INIT})
+		list(APPEND LIBGIT2_PC_LIBS ${CMAKE_THREAD_LIBS_INIT})
+	endif()
 
-	SET(GIT_THREADS 1)
-ENDIF()
+	set(GIT_THREADS 1)
+endif()
+add_feature_info(threadsafe USE_THREADS "threadsafe support")
 
-IF (USE_NSEC)
-	SET(GIT_USE_NSEC 1)
-ENDIF()
+#
+# Optional bundled features
+#
 
-IF (HAVE_STRUCT_STAT_ST_MTIM)
-	SET(GIT_USE_STAT_MTIM 1)
-ELSEIF (HAVE_STRUCT_STAT_ST_MTIMESPEC)
-	SET(GIT_USE_STAT_MTIMESPEC 1)
-ELSEIF (HAVE_STRUCT_STAT_ST_MTIME_NSEC)
-	SET(GIT_USE_STAT_MTIME_NSEC 1)
-ENDIF()
+# ntlmclient
+if(USE_NTLMCLIENT)
+	set(GIT_NTLM 1)
+	add_subdirectory("${PROJECT_SOURCE_DIR}/deps/ntlmclient" "${PROJECT_BINARY_DIR}/deps/ntlmclient")
+	list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/ntlmclient")
+	list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
+endif()
+add_feature_info(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
 
-ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
+#
+# Optional external dependencies
 
-# Collect sourcefiles
-FILE(GLOB SRC_H
-	"${libgit2_SOURCE_DIR}/include/git2.h"
-	"${libgit2_SOURCE_DIR}/include/git2/*.h"
-	"${libgit2_SOURCE_DIR}/include/git2/sys/*.h")
+# iconv
+if(USE_ICONV)
+	find_package(IntlIconv)
+endif()
+if(ICONV_FOUND)
+	set(GIT_USE_ICONV 1)
+	list(APPEND LIBGIT2_SYSTEM_INCLUDES ${ICONV_INCLUDE_DIR})
+	list(APPEND LIBGIT2_SYSTEM_LIBS ${ICONV_LIBRARIES})
+	list(APPEND LIBGIT2_PC_LIBS ${ICONV_LIBRARIES})
+endif()
+add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
 
-# On Windows use specific platform sources
-IF (WIN32 AND NOT CYGWIN)
-	IF(MSVC)
-		SET(WIN_RC "win32/git2.rc")
-	ENDIF()
+#
+# Include child projects
+#
 
-	FILE(GLOB SRC_OS win32/*.c win32/*.h)
-ELSEIF (AMIGA)
-	ADD_DEFINITIONS(-DNO_ADDRINFO -DNO_READDIR_R -DNO_MMAP)
-ELSE()
-	ADD_FEATURE_INFO(valgrind VALGRIND "valgrind hints")
-	IF (VALGRIND)
-		ADD_DEFINITIONS(-DVALGRIND)
-	ENDIF()
+add_subdirectory(libgit2)
+add_subdirectory(util)
 
-	FILE(GLOB SRC_OS unix/*.c unix/*.h)
-ENDIF()
+if(BUILD_CLI)
+	add_subdirectory(cli)
+endif()
 
-FILE(GLOB SRC_GIT2 *.c *.h
-	allocators/*.c allocators/*.h
-	streams/*.c streams/*.h
-	transports/*.c transports/*.h
-	xdiff/*.c xdiff/*.h)
-
-# the xdiff dependency is not (yet) warning-free, disable warnings as
-# errors for the xdiff sources until we've sorted them out
-IF(MSVC)
-	SET_SOURCE_FILES_PROPERTIES(xdiff/xdiffi.c PROPERTIES COMPILE_FLAGS -WX-)
-	SET_SOURCE_FILES_PROPERTIES(xdiff/xutils.c PROPERTIES COMPILE_FLAGS -WX-)
-ENDIF()
-
-# Determine architecture of the machine
-IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
-	SET(GIT_ARCH_64 1)
-ELSEIF (CMAKE_SIZEOF_VOID_P EQUAL 4)
-	SET(GIT_ARCH_32 1)
-ELSEIF (CMAKE_SIZEOF_VOID_P)
-	MESSAGE(FATAL_ERROR "Unsupported architecture (pointer size is ${CMAKE_SIZEOF_VOID_P} bytes)")
-ELSE()
-	MESSAGE(FATAL_ERROR "Unsupported architecture (CMAKE_SIZEOF_VOID_P is unset)")
-ENDIF()
-
-CONFIGURE_FILE(features.h.in git2/sys/features.h)
-
-SET(LIBGIT2_SOURCES ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_SSH} ${SRC_SHA1})
-
-ADD_LIBRARY(git2internal OBJECT ${LIBGIT2_SOURCES})
-SET_TARGET_PROPERTIES(git2internal PROPERTIES C_STANDARD 90)
-IDE_SPLIT_SOURCES(git2internal)
-LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:git2internal>)
-
-TARGET_INCLUDE_DIRECTORIES(git2internal PRIVATE ${LIBGIT2_INCLUDES} PUBLIC ${libgit2_SOURCE_DIR}/include)
-TARGET_INCLUDE_DIRECTORIES(git2internal SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
-
-SET(LIBGIT2_OBJECTS ${LIBGIT2_OBJECTS} PARENT_SCOPE)
-SET(LIBGIT2_INCLUDES ${LIBGIT2_INCLUDES} PARENT_SCOPE)
-SET(LIBGIT2_SYSTEM_INCLUDES ${LIBGIT2_SYSTEM_INCLUDES} PARENT_SCOPE)
-SET(LIBGIT2_LIBS ${LIBGIT2_LIBS} PARENT_SCOPE)
-
-IF(XCODE_VERSION)
-	# This is required for Xcode to actually link the libgit2 library
-	# when using only object libraries.
-	FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.c "")
-	LIST(APPEND LIBGIT2_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/dummy.c)
-ENDIF()
-
-# Compile and link libgit2
-ADD_LIBRARY(git2 ${WIN_RC} ${LIBGIT2_OBJECTS})
-TARGET_LINK_LIBRARIES(git2 ${LIBGIT2_LIBS})
-
-SET_TARGET_PROPERTIES(git2 PROPERTIES C_STANDARD 90)
-SET_TARGET_PROPERTIES(git2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
-SET_TARGET_PROPERTIES(git2 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
-SET_TARGET_PROPERTIES(git2 PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
-
-# Workaround for Cmake bug #0011240 (see http://public.kitware.com/Bug/view.php?id=11240)
-# Win64+MSVC+static libs = linker error
-IF(MSVC AND GIT_ARCH_64 AND NOT BUILD_SHARED_LIBS)
-  SET_TARGET_PROPERTIES(git2 PROPERTIES STATIC_LIBRARY_FLAGS "/MACHINE:x64")
-ENDIF()
-
-IDE_SPLIT_SOURCES(git2)
-
-IF (SONAME)
-	SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
-	SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_SOVERSION})
-	IF (LIBGIT2_FILENAME)
-		ADD_DEFINITIONS(-DLIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
-		SET_TARGET_PROPERTIES(git2 PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
-	ELSEIF (DEFINED LIBGIT2_PREFIX)
-		SET_TARGET_PROPERTIES(git2 PROPERTIES PREFIX "${LIBGIT2_PREFIX}")
-	ENDIF()
-ENDIF()
-
-PKG_BUILD_CONFIG(NAME libgit2
-	VERSION ${LIBGIT2_VERSION_STRING}
-	DESCRIPTION "The git library, take 2"
-	LIBS_SELF git2
-	PRIVATE_LIBS ${LIBGIT2_PC_LIBS}
-	REQUIRES ${LIBGIT2_PC_REQUIRES}
-)
-
-IF (MSVC_IDE)
-   # Precompiled headers
-   SET_TARGET_PROPERTIES(git2 PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
-   SET_SOURCE_FILES_PROPERTIES(win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
-ENDIF ()
-
-# Install
-INSTALL(TARGETS git2
-	RUNTIME DESTINATION ${BIN_INSTALL_DIR}
-	LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-	ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-)
-INSTALL(DIRECTORY ${libgit2_SOURCE_DIR}/include/git2 DESTINATION ${INCLUDE_INSTALL_DIR} )
-INSTALL(FILES ${libgit2_SOURCE_DIR}/include/git2.h DESTINATION ${INCLUDE_INSTALL_DIR} )
+# re-export these to the root so that peer projects (tests, fuzzers,
+# examples) can use them
+set(LIBGIT2_INCLUDES ${LIBGIT2_INCLUDES} PARENT_SCOPE)
+set(LIBGIT2_OBJECTS ${LIBGIT2_OBJECTS} PARENT_SCOPE)
+set(LIBGIT2_DEPENDENCY_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES} PARENT_SCOPE)
+set(LIBGIT2_DEPENDENCY_OBJECTS ${LIBGIT2_DEPENDENCY_OBJECTS} PARENT_SCOPE)
+set(LIBGIT2_SYSTEM_INCLUDES ${LIBGIT2_SYSTEM_INCLUDES} PARENT_SCOPE)
+set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)

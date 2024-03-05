@@ -17,7 +17,6 @@ int lg2_index_pack(git_repository *repo, int argc, char **argv)
 	git_indexer *idx;
 	git_indexer_progress stats = {0, 0};
 	int error;
-	char hash[GIT_OID_HEXSZ + 1] = {0};
 	int fd;
 	ssize_t read_bytes;
 	char buf[512];
@@ -29,10 +28,17 @@ int lg2_index_pack(git_repository *repo, int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (git_indexer_new(&idx, ".", 0, NULL, NULL) < 0) {
+#ifdef GIT_EXPERIMENTAL_SHA256
+	error = git_indexer_new(&idx, ".", git_repository_oid_type(repo), NULL);
+#else
+	error = git_indexer_new(&idx, ".", 0, NULL, NULL);
+#endif
+
+	if (error < 0) {
 		puts("bad idx");
 		return -1;
 	}
+
 
 	if ((fd = open(argv[1], 0)) < 0) {
 		perror("open");
@@ -61,8 +67,7 @@ int lg2_index_pack(git_repository *repo, int argc, char **argv)
 
 	printf("\rIndexing %u of %u\n", stats.indexed_objects, stats.total_objects);
 
-	git_oid_fmt(hash, git_indexer_hash(idx));
-	puts(hash);
+	puts(git_indexer_name(idx));
 
  cleanup:
 	close(fd);

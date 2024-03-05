@@ -29,7 +29,7 @@ GIT_BEGIN_DECL
  * This would add three rules to the ignores.
  *
  * @param repo The repository to add ignore rules to.
- * @param rules Text of rules, a la the contents of a .gitignore file.
+ * @param rules Text of rules, the contents to add on a .gitignore file.
  *              It is okay to have multiple rules in the text; if so,
  *              each rule should be terminated with a newline.
  * @return 0 on success

@@ -75,13 +75,37 @@ typedef struct {
 	git_checkout_options checkout_options;
 
 	/**
+	 * Optional callback that allows users to override commit
+	 * creation in `git_rebase_commit`.  If specified, users can
+	 * create their own commit and provide the commit ID, which
+	 * may be useful for signing commits or otherwise customizing
+	 * the commit creation.
+	 *
+	 * If this callback returns `GIT_PASSTHROUGH`, then
+	 * `git_rebase_commit` will continue to create the commit.
+	 */
+	git_commit_create_cb commit_create_cb;
+
+#ifdef GIT_DEPRECATE_HARD
+	void *reserved;
+#else
+	/**
 	 * If provided, this will be called with the commit content, allowing
 	 * a signature to be added to the rebase commit. Can be skipped with
 	 * GIT_PASSTHROUGH. If GIT_PASSTHROUGH is returned, a commit will be made
 	 * without a signature.
+	 *
 	 * This field is only used when performing git_rebase_commit.
+	 *
+	 * This callback is not invoked if a `git_commit_create_cb` is
+	 * specified.
+	 *
+	 * This callback is deprecated; users should provide a
+	 * creation callback as `commit_create_cb` that produces a
+	 * commit buffer, signs it, and commits it.
 	 */
-	git_commit_signing_cb signing_cb;
+	int (*signing_cb)(git_buf *, git_buf *, const char *, void *);
+#endif
 
 	/**
 	 * This will be passed to each of the callbacks in this struct
@@ -128,7 +152,7 @@ typedef enum {
 	 * No commit will be cherry-picked.  The client should run the given
 	 * command and (if successful) continue.
 	 */
-	GIT_REBASE_OPERATION_EXEC,
+	GIT_REBASE_OPERATION_EXEC
 } git_rebase_operation_t;
 
 #define GIT_REBASE_OPTIONS_VERSION 1
@@ -218,6 +242,7 @@ GIT_EXTERN(int) git_rebase_open(
 /**
  * Gets the original `HEAD` ref name for merge rebases.
  *
+ * @param rebase The in-progress rebase.
  * @return The original `HEAD` ref name
  */
 GIT_EXTERN(const char *) git_rebase_orig_head_name(git_rebase *rebase);
@@ -225,6 +250,7 @@ GIT_EXTERN(const char *) git_rebase_orig_head_name(git_rebase *rebase);
 /**
  * Gets the original `HEAD` id for merge rebases.
  *
+ * @param rebase The in-progress rebase.
  * @return The original `HEAD` id
  */
 GIT_EXTERN(const git_oid *) git_rebase_orig_head_id(git_rebase *rebase);
@@ -232,6 +258,7 @@ GIT_EXTERN(const git_oid *) git_rebase_orig_head_id(git_rebase *rebase);
 /**
  * Gets the `onto` ref name for merge rebases.
  *
+ * @param rebase The in-progress rebase.
  * @return The `onto` ref name
  */
 GIT_EXTERN(const char *) git_rebase_onto_name(git_rebase *rebase);
@@ -239,6 +266,7 @@ GIT_EXTERN(const char *) git_rebase_onto_name(git_rebase *rebase);
 /**
  * Gets the `onto` id for merge rebases.
  *
+ * @param rebase The in-progress rebase.
  * @return The `onto` id
  */
 GIT_EXTERN(const git_oid *) git_rebase_onto_id(git_rebase *rebase);
@@ -298,6 +326,10 @@ GIT_EXTERN(int) git_rebase_next(
  * This is only applicable for in-memory rebases; for rebases within
  * a working directory, the changes were applied to the repository's
  * index.
+ *
+ * @param index The result index of the last operation.
+ * @param rebase The in-progress rebase.
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_rebase_inmemory_index(
 	git_index **index,

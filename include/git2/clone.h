@@ -49,7 +49,7 @@ typedef enum {
 	 * Bypass the git-aware transport, but do not try to use
 	 * hardlinks.
 	 */
-	GIT_CLONE_LOCAL_NO_LINKS,
+	GIT_CLONE_LOCAL_NO_LINKS
 } git_clone_local_t;
 
 /**
@@ -74,8 +74,8 @@ typedef int GIT_CALLBACK(git_remote_create_cb)(
 	void *payload);
 
 /**
- * The signature of a function matchin git_repository_init, with an
- * aditional void * as callback payload.
+ * The signature of a function matching git_repository_init, with an
+ * additional void * as callback payload.
  *
  * Callers of git_clone my provide a function matching this signature
  * to override the repository creation and customization process
@@ -133,7 +133,7 @@ typedef struct git_clone_options {
 	 * The name of the branch to checkout. NULL means use the
 	 * remote's default branch.
 	 */
-	const char* checkout_branch;
+	const char *checkout_branch;
 
 	/**
 	 * A callback used to create the new repository into which to

@@ -15,12 +15,25 @@
 extern "C" {
 #endif
 
-#define NTLM_CLIENT_VERSION         "0.0.1"
+#define NTLM_CLIENT_VERSION         "0.9.0"
 #define NTLM_CLIENT_VERSION_MAJOR   0
-#define NTLM_CLIENT_VERSION_MINOR   0
-#define NTLM_CLIENT_VERSION_TEENY   1
+#define NTLM_CLIENT_VERSION_MINOR   9
+#define NTLM_CLIENT_VERSION_TEENY   0
 
 typedef struct ntlm_client ntlm_client;
+
+typedef enum {
+	/**
+	 * An error occurred; more details are available by querying
+	 * `ntlm_client_errmsg`.
+	 */
+	NTLM_CLIENT_ERROR = -1,
+
+	/**
+	 * The input provided to the function is missing or invalid.
+	 */
+	NTLM_CLIENT_ERROR_INVALID_INPUT = -2
+} ntlm_error_code;
 
 /*
  * Flags for initializing the `ntlm_client` context.  A combination of
@@ -85,7 +98,7 @@ typedef enum {
 	 * its idea of its hostname in the challenge message.  You may
 	 * then set the authentication target based on it.
 	 */
-	NTLM_CLIENT_DISABLE_REQUEST_TARGET = (1 << 4),
+	NTLM_CLIENT_DISABLE_REQUEST_TARGET = (1 << 4)
 } ntlm_client_flags;
 
 
