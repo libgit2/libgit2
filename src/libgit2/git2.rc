@@ -10,7 +10,7 @@
 #endif
 
 #ifndef LIBGIT2_COMMENTS
-# define LIBGIT2_COMMENTS "For more information visit http://libgit2.github.com/"
+# define LIBGIT2_COMMENTS "For more information visit https://libgit2.org/"
 #endif
 
 #ifdef __GNUC__
