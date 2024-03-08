@@ -116,14 +116,12 @@ GIT_EXTERN(git_attr_value_t) git_attr_value(const char *attr);
  */
 #define GIT_ATTR_CHECK_FILE_THEN_INDEX	0
 #define GIT_ATTR_CHECK_INDEX_THEN_FILE	1
-#define GIT_ATTR_CHECK_INDEX_ONLY		2
+#define GIT_ATTR_CHECK_INDEX_ONLY	2
 
 /**
  * Check attribute flags: controlling extended attribute behavior.
  *
  * Normally, attribute checks include looking in the /etc (or system
- * equivalent) directory for a `gitattributes` file.  Passing this
- * flag will cause attribute checks to ignore that file.
  * equivalent) directory for a `gitattributes` file.  Passing the
  * `GIT_ATTR_CHECK_NO_SYSTEM` flag will cause attribute checks to
  * ignore that file.

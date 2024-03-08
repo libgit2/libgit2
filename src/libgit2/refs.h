@@ -92,6 +92,12 @@ int git_reference__is_tag(const char *ref_name);
 int git_reference__is_note(const char *ref_name);
 const char *git_reference__shorthand(const char *name);
 
+/*
+ * A `git_reference_cmp` wrapper suitable for passing to generic
+ * comparators, like `vector_cmp` / `tsort` / etc.
+ */
+int git_reference__cmp_cb(const void *a, const void *b);
+
 /**
  * Lookup a reference by name and try to resolve to an OID.
  *

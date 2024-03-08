@@ -30,6 +30,9 @@
 typedef struct git_commit_graph_file {
 	git_map graph_map;
 
+	/* The type of object IDs in the commit graph file. */
+	git_oid_t oid_type;
+
 	/* The OID Fanout table. */
 	const uint32_t *oid_fanout;
 	/* The total number of commits in the graph. */
@@ -84,10 +87,10 @@ typedef struct git_commit_graph_entry {
 	/* The index within the Extra Edge List of any parent after the first two. */
 	size_t extra_parents_index;
 
-	/* The SHA-1 hash of the root tree of the commit. */
+	/* The object ID of the root tree of the commit. */
 	git_oid tree_oid;
 
-	/* The SHA-1 hash of the requested commit. */
+	/* The object ID hash of the requested commit. */
 	git_oid sha1;
 } git_commit_graph_entry;
 
@@ -99,15 +102,28 @@ struct git_commit_graph {
 	/* The underlying commit-graph file. */
 	git_commit_graph_file *file;
 
+	/* The object ID types in the commit graph. */
+	git_oid_t oid_type;
+
 	/* Whether the commit-graph file was already checked for validity. */
 	bool checked;
 };
 
 /** Create a new commit-graph, optionally opening the underlying file. */
-int git_commit_graph_new(git_commit_graph **cgraph_out, const char *objects_dir, bool open_file);
+int git_commit_graph_new(
+	git_commit_graph **cgraph_out,
+	const char *objects_dir,
+	bool open_file,
+	git_oid_t oid_type);
+
+/** Validate the checksum of a commit graph */
+int git_commit_graph_validate(git_commit_graph *cgraph);
 
 /** Open and validate a commit-graph file. */
-int git_commit_graph_file_open(git_commit_graph_file **file_out, const char *path);
+int git_commit_graph_file_open(
+	git_commit_graph_file **file_out,
+	const char *path,
+	git_oid_t oid_type);
 
 /*
  * Attempt to get the git_commit_graph's commit-graph file. This object is
@@ -130,6 +146,9 @@ struct git_commit_graph_writer {
 	 * stored.
 	 */
 	git_str objects_info_dir;
+
+	/* The object ID type of the commit graph. */
+	git_oid_t oid_type;
 
 	/* The list of packed commits. */
 	git_vector commits;

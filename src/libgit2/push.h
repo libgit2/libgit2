@@ -34,6 +34,7 @@ struct git_push {
 	git_vector specs;
 	git_vector updates;
 	bool report_status;
+	git_vector remote_push_options;
 
 	/* report-status */
 	bool unpack_ok;

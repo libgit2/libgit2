@@ -47,6 +47,10 @@ int lg2_blame(git_repository *repo, int argc, char *argv[])
 	if (o.M) blameopts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES;
 	if (o.C) blameopts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES;
 	if (o.F) blameopts.flags |= GIT_BLAME_FIRST_PARENT;
+	if (o.start_line && o.end_line) {
+		blameopts.min_line = o.start_line;
+		blameopts.max_line = o.end_line;
+	}
 
 	/**
 	 * The commit range comes in "committish" form. Use the rev-parse API to

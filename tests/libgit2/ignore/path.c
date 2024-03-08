@@ -286,14 +286,16 @@ void test_ignore_path__subdirectory_gitignore(void)
 
 void test_ignore_path__expand_tilde_to_homedir(void)
 {
+	git_str homefile = GIT_STR_INIT;
 	git_config *cfg;
 
 	assert_is_ignored(false, "example.global_with_tilde");
 
-	cl_fake_home();
+	cl_fake_homedir(&homefile);
+	cl_git_pass(git_str_joinpath(&homefile, homefile.ptr, "globalexclude"));
 
 	/* construct fake home with fake global excludes */
-	cl_git_mkfile("home/globalexclude", "# found me\n*.global_with_tilde\n");
+	cl_git_mkfile(homefile.ptr, "# found me\n*.global_with_tilde\n");
 
 	cl_git_pass(git_repository_config(&cfg, g_repo));
 	cl_git_pass(git_config_set_string(cfg, "core.excludesfile", "~/globalexclude"));
@@ -305,11 +307,13 @@ void test_ignore_path__expand_tilde_to_homedir(void)
 
 	cl_git_pass(git_futils_rmdir_r("home", NULL, GIT_RMDIR_REMOVE_FILES));
 
-	cl_fake_home_cleanup(NULL);
+	cl_fake_homedir_cleanup(NULL);
 
 	git_attr_cache_flush(g_repo); /* must reset to pick up change */
 
 	assert_is_ignored(false, "example.global_with_tilde");
+
+	git_str_dispose(&homefile);
 }
 
 /* Ensure that the .gitignore in the subdirectory only affects

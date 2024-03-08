@@ -91,7 +91,7 @@ int (*sk_num)(const void *sk);
 void *(*sk_value)(const void *sk, int i);
 void (*sk_free)(void *sk);
 
-void *openssl_handle;
+static void *openssl_handle;
 
 GIT_INLINE(void *) openssl_sym(int *err, const char *name, bool required)
 {
@@ -125,7 +125,8 @@ int git_openssl_stream_dynamic_init(void)
 	    (openssl_handle = dlopen("libssl.1.1.dylib", RTLD_NOW)) == NULL &&
 	    (openssl_handle = dlopen("libssl.so.1.0.0", RTLD_NOW)) == NULL &&
 	    (openssl_handle = dlopen("libssl.1.0.0.dylib", RTLD_NOW)) == NULL &&
-	    (openssl_handle = dlopen("libssl.so.10", RTLD_NOW)) == NULL) {
+	    (openssl_handle = dlopen("libssl.so.10", RTLD_NOW)) == NULL &&
+	    (openssl_handle = dlopen("libssl.so.3", RTLD_NOW)) == NULL) {
 		git_error_set(GIT_ERROR_SSL, "could not load ssl libraries");
 		return -1;
 	}
@@ -175,7 +176,6 @@ int git_openssl_stream_dynamic_init(void)
 
 	SSL_connect = (int (*)(SSL *))openssl_sym(&err, "SSL_connect", true);
 	SSL_ctrl = (long (*)(SSL *, int, long, void *))openssl_sym(&err, "SSL_ctrl", true);
-	SSL_get_peer_certificate = (X509 *(*)(const SSL *))openssl_sym(&err, "SSL_get_peer_certificate", true);
 	SSL_library_init = (int (*)(void))openssl_sym(&err, "SSL_library_init", false);
 	SSL_free = (void (*)(SSL *))openssl_sym(&err, "SSL_free", true);
 	SSL_get_error = (int (*)(SSL *, int))openssl_sym(&err, "SSL_get_error", true);
@@ -186,6 +186,10 @@ int git_openssl_stream_dynamic_init(void)
 	SSL_set_bio = (void (*)(SSL *, BIO *, BIO *))openssl_sym(&err, "SSL_set_bio", true);
 	SSL_shutdown = (int (*)(SSL *ssl))openssl_sym(&err, "SSL_shutdown", true);
 	SSL_write = (int (*)(SSL *, const void *, int))openssl_sym(&err, "SSL_write", true);
+
+	if (!(SSL_get_peer_certificate = (X509 *(*)(const SSL *))openssl_sym(&err, "SSL_get_peer_certificate", false))) {
+		SSL_get_peer_certificate = (X509 *(*)(const SSL *))openssl_sym(&err, "SSL_get1_peer_certificate", true);
+	}
 
 	SSL_CTX_ctrl = (long (*)(SSL_CTX *, int, long, void *))openssl_sym(&err, "SSL_CTX_ctrl", true);
 	SSL_CTX_free = (void (*)(SSL_CTX *))openssl_sym(&err, "SSL_CTX_free", true);

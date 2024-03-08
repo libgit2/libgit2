@@ -319,59 +319,67 @@ GIT_INLINE(void) git__memzero(void *data, size_t size)
 
 #ifdef GIT_WIN32
 
-GIT_INLINE(double) git__timer(void)
+GIT_INLINE(uint64_t) git_time_monotonic(void)
 {
 	/* GetTickCount64 returns the number of milliseconds that have
 	 * elapsed since the system was started. */
-	return (double) GetTickCount64() / (double) 1000;
+	return GetTickCount64();
 }
 
 #elif __APPLE__
 
 #include <mach/mach_time.h>
+#include <sys/time.h>
 
-GIT_INLINE(double) git__timer(void)
+GIT_INLINE(uint64_t) git_time_monotonic(void)
 {
-   uint64_t time = mach_absolute_time();
-   static double scaling_factor = 0;
+	static double scaling_factor = 0;
 
-   if (scaling_factor == 0) {
-       mach_timebase_info_data_t info;
-       (void)mach_timebase_info(&info);
-       scaling_factor = (double)info.numer / (double)info.denom;
-   }
+	if (scaling_factor == 0) {
+		mach_timebase_info_data_t info;
 
-   return (double)time * scaling_factor / 1.0E9;
+		scaling_factor = mach_timebase_info(&info) == KERN_SUCCESS ?
+			((double)info.numer / (double)info.denom) / 1.0E6 :
+			-1;
+	} else if (scaling_factor < 0) {
+		struct timeval tv;
+
+		/* mach_timebase_info failed; fall back to gettimeofday */
+		gettimeofday(&tv, NULL);
+		return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+	}
+
+	return (uint64_t)(mach_absolute_time() * scaling_factor);
 }
 
 #elif defined(__amigaos4__)
 
 #include <proto/timer.h>
 
-GIT_INLINE(double) git__timer(void)
+GIT_INLINE(uint64_t) git_time_monotonic(void)
 {
 	struct TimeVal tv;
 	ITimer->GetUpTime(&tv);
-	return (double)tv.Seconds + (double)tv.Microseconds / 1.0E6;
+	return (tv.Seconds * 1000) + (tv.Microseconds / 1000);
 }
 
 #else
 
 #include <sys/time.h>
 
-GIT_INLINE(double) git__timer(void)
+GIT_INLINE(uint64_t) git_time_monotonic(void)
 {
 	struct timeval tv;
 
 #ifdef CLOCK_MONOTONIC
 	struct timespec tp;
 	if (clock_gettime(CLOCK_MONOTONIC, &tp) == 0)
-		return (double) tp.tv_sec + (double) tp.tv_nsec / 1.0E9;
+		return (tp.tv_sec * 1000) + (tp.tv_nsec / 1.0E6);
 #endif
 
 	/* Fall back to using gettimeofday */
 	gettimeofday(&tv, NULL);
-	return (double)tv.tv_sec + (double)tv.tv_usec / 1.0E6;
+	return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
 }
 
 #endif
@@ -381,6 +389,7 @@ extern int git__getenv(git_str *out, const char *name);
 extern int git__online_cpus(void);
 
 GIT_INLINE(int) git__noop(void) { return 0; }
+GIT_INLINE(int) git__noop_args(void *a, ...) { GIT_UNUSED(a); return 0; }
 
 #include "alloc.h"
 

@@ -180,6 +180,23 @@ void test_revwalk_basic__glob_heads_with_invalid(void)
 	cl_assert_equal_i(20, i);
 }
 
+void test_revwalk_basic__glob_invalid_symbolic_ref(void)
+{
+	int i;
+	git_oid oid;
+
+	revwalk_basic_setup_walk("testrepo");
+
+	cl_git_mkfile("testrepo/.git/refs/heads/broken-sym-ref", "ref: refs/heads/does-not-exist");
+	cl_git_pass(git_revwalk_push_glob(_walk, "heads"));
+
+	for (i = 0; !git_revwalk_next(&oid, _walk); ++i)
+		/* walking */;
+
+	/* git log --branches --oneline | wc -l => 16 */
+	cl_assert_equal_i(20, i);
+}
+
 void test_revwalk_basic__push_head(void)
 {
 	int i = 0;
@@ -533,8 +550,7 @@ void test_revwalk_basic__big_timestamp(void)
 	cl_git_pass(git_signature_new(&sig, "Joe", "joe@example.com", INT64_C(2399662595), 0));
 	cl_git_pass(git_commit_tree(&tree, tip));
 
-	cl_git_pass(git_commit_create(&id, _repo, "HEAD", sig, sig, NULL, "some message", tree, 1,
-		(const git_commit **)&tip));
+	cl_git_pass(git_commit_create(&id, _repo, "HEAD", sig, sig, NULL, "some message", tree, 1, &tip));
 
 	cl_git_pass(git_revwalk_push_head(_walk));
 

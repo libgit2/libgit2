@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "cli.h"
+#include "common.h"
 #include "str.h"
 
 static int print_spec_name(git_str *out, const cli_opt_spec *spec)

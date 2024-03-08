@@ -62,6 +62,19 @@ typedef int GIT_CALLBACK(git_indexer_progress_cb)(const git_indexer_progress *st
 typedef struct git_indexer_options {
 	unsigned int version;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	/** permissions to use creating packfile or 0 for defaults */
+	unsigned int mode;
+
+	/**
+	 * object database from which to read base objects when
+	 * fixing thin packs. This can be NULL if there are no thin
+	 * packs; if a thin pack is encountered, an error will be
+	 * returned if there are bases missing.
+	 */
+	git_odb *odb;
+#endif
+
 	/** progress_cb function to call with progress information */
 	git_indexer_progress_cb progress_cb;
 
@@ -87,6 +100,21 @@ GIT_EXTERN(int) git_indexer_options_init(
 	git_indexer_options *opts,
 	unsigned int version);
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+/**
+ * Create a new indexer instance
+ *
+ * @param out where to store the indexer instance
+ * @param path to the directory where the packfile should be stored
+ * @param oid_type the oid type to use for objects
+ * @return 0 or an error code.
+ */
+GIT_EXTERN(int) git_indexer_new(
+		git_indexer **out,
+		const char *path,
+		git_oid_t oid_type,
+		git_indexer_options *opts);
+#else
 /**
  * Create a new indexer instance
  *
@@ -106,6 +134,7 @@ GIT_EXTERN(int) git_indexer_new(
 		unsigned int mode,
 		git_odb *odb,
 		git_indexer_options *opts);
+#endif
 
 /**
  * Add data to the indexer

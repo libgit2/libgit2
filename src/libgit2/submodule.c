@@ -196,7 +196,7 @@ static void free_submodule_names(git_strmap *names)
  */
 static int load_submodule_names(git_strmap **out, git_repository *repo, git_config *cfg)
 {
-	const char *key = "submodule\\..*\\.path";
+	const char *key = "^submodule\\..*\\.path$";
 	git_config_iterator *iter = NULL;
 	git_config_entry *entry;
 	git_str buf = GIT_STR_INIT;
@@ -332,7 +332,7 @@ int git_submodule__lookup_with_cache(
 	/* If it's not configured or we're looking by path  */
 	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
 		git_config_backend *mods;
-		const char *pattern = "submodule\\..*\\.path";
+		const char *pattern = "^submodule\\..*\\.path$";
 		git_str path = GIT_STR_INIT;
 		fbp_data data = { NULL, NULL };
 
@@ -1338,7 +1338,11 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 	/* Get the status of the submodule to determine if it is already initialized  */
 	if ((error = git_submodule_status(&submodule_status, sm->repo, sm->name, GIT_SUBMODULE_IGNORE_UNSPECIFIED)) < 0)
 		goto done;
-
+	
+	/* If the submodule is configured but hasn't been added, skip it */
+	if (submodule_status == GIT_SUBMODULE_STATUS_IN_CONFIG)
+	        goto done;
+	
 	/*
 	 * If submodule work dir is not already initialized, check to see
 	 * what we need to do (initialize, clone, return error...)
@@ -1389,7 +1393,7 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 		 */
 		clone_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
 
-		if ((error = git_clone(&sub_repo, submodule_url, sm->path, &clone_options)) < 0 ||
+		if ((error = git_clone__submodule(&sub_repo, submodule_url, sm->path, &clone_options)) < 0 ||
 			(error = git_repository_set_head_detached(sub_repo, git_submodule_index_id(sm))) < 0 ||
 			(error = git_checkout_head(sub_repo, &update_options.checkout_opts)) != 0)
 			goto done;

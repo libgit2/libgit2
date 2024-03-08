@@ -419,6 +419,16 @@ int git_fs_path_to_dir(git_str *path)
 	return git_str_oom(path) ? -1 : 0;
 }
 
+size_t git_fs_path_dirlen(const char *path)
+{
+	size_t len = strlen(path);
+
+	while (len > 1 && path[len - 1] == '/')
+		len--;
+
+	return len;
+}
+
 void git_fs_path_string_to_dir(char *path, size_t size)
 {
 	size_t end = strlen(path);
@@ -1855,7 +1865,7 @@ static int file_owner_sid(PSID *out, const char *path)
 	PSECURITY_DESCRIPTOR descriptor = NULL;
 	PSID owner_sid;
 	DWORD ret;
-	int error = -1;
+	int error = GIT_EINVALID;
 
 	if (git_win32_path_from_utf8(path_w32, path) < 0)
 		return -1;
@@ -1938,12 +1948,13 @@ static int sudo_uid_lookup(uid_t *out)
 {
 	git_str uid_str = GIT_STR_INIT;
 	int64_t uid;
-	int error;
+	int error = -1;
 
-	if ((error = git__getenv(&uid_str, "SUDO_UID")) == 0 &&
-	    (error = git__strntol64(&uid, uid_str.ptr, uid_str.size, NULL, 10)) == 0 &&
-	    uid == (int64_t)((uid_t)uid)) {
+	if (git__getenv(&uid_str, "SUDO_UID") == 0 &&
+		git__strntol64(&uid, uid_str.ptr, uid_str.size, NULL, 10) == 0 &&
+		uid == (int64_t)((uid_t)uid)) {
 		*out = (uid_t)uid;
+		error = 0;
 	}
 
 	git_str_dispose(&uid_str);
@@ -2015,7 +2026,7 @@ int git_fs_path_find_executable(git_str *fullpath, const char *executable)
 	git_win32_path fullpath_w, executable_w;
 	int error;
 
-	if (git__utf8_to_16(executable_w, GIT_WIN_PATH_MAX, executable) < 0)
+	if (git_utf8_to_16(executable_w, GIT_WIN_PATH_MAX, executable) < 0)
 		return -1;
 
 	error = git_win32_path_find_executable(fullpath_w, executable_w);

@@ -260,36 +260,37 @@ GIT_INLINE(int64_t) git_atomic64_get(git_atomic64 *a)
 
 #else
 
-#define git_threads_global_init git__noop
+#define git_threads_global_init	git__noop
 
 #define git_thread unsigned int
-#define git_thread_create(thread, start_routine, arg) git__noop()
-#define git_thread_join(id, status) git__noop()
+#define git_thread_create(t, s, a) git__noop(t, s, a)
+#define git_thread_join(i, s)	git__noop_args(i, s)
 
 /* Pthreads Mutex */
 #define git_mutex unsigned int
-#define git_mutex_init(a)	git__noop()
-#define git_mutex_init(a)	git__noop()
-#define git_mutex_lock(a)	git__noop()
-#define git_mutex_unlock(a)	git__noop()
-#define git_mutex_free(a)	git__noop()
+#define git_mutex_init(a)	git__noop_args(a)
+#define git_mutex_init(a)	git__noop_args(a)
+#define git_mutex_lock(a)	git__noop_args(a)
+#define git_mutex_unlock(a)	git__noop_args(a)
+#define git_mutex_free(a)	git__noop_args(a)
 
 /* Pthreads condition vars */
 #define git_cond unsigned int
-#define git_cond_init(c)	git__noop()
-#define git_cond_free(c)	git__noop()
-#define git_cond_wait(c, l)	git__noop()
-#define git_cond_signal(c)	git__noop()
-#define git_cond_broadcast(c)	git__noop()
+#define git_cond_init(c)	git__noop_args(c)
+#define git_cond_free(c)	git__noop_args(c)
+#define git_cond_wait(c, l)	git__noop_args(c, l)
+#define git_cond_signal(c)	git__noop_args(c)
+#define git_cond_broadcast(c)	git__noop_args(c)
 
 /* Pthreads rwlock */
 #define git_rwlock unsigned int
-#define git_rwlock_init(a)	git__noop()
-#define git_rwlock_rdlock(a)	git__noop()
-#define git_rwlock_rdunlock(a)	git__noop()
-#define git_rwlock_wrlock(a)	git__noop()
-#define git_rwlock_wrunlock(a)	git__noop()
-#define git_rwlock_free(a)	git__noop()
+#define git_rwlock_init(a)	git__noop_args(a)
+#define git_rwlock_rdlock(a)	git__noop_args(a)
+#define git_rwlock_rdunlock(a)	git__noop_args(a)
+#define git_rwlock_wrlock(a)	git__noop_args(a)
+#define git_rwlock_wrunlock(a)	git__noop_args(a)
+#define git_rwlock_free(a)	git__noop_args(a)
+
 #define GIT_RWLOCK_STATIC_INIT	0
 
 

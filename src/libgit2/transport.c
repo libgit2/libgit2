@@ -22,6 +22,7 @@ typedef struct transport_definition {
 
 static git_smart_subtransport_definition http_subtransport_definition = { git_smart_subtransport_http, 1, NULL };
 static git_smart_subtransport_definition git_subtransport_definition = { git_smart_subtransport_git, 0, NULL };
+
 #ifdef GIT_SSH
 static git_smart_subtransport_definition ssh_subtransport_definition = { git_smart_subtransport_ssh, 0, NULL };
 #endif
@@ -33,11 +34,13 @@ static transport_definition transports[] = {
 	{ "http://",  git_transport_smart, &http_subtransport_definition },
 	{ "https://", git_transport_smart, &http_subtransport_definition },
 	{ "file://",  git_transport_local, NULL },
+
 #ifdef GIT_SSH
 	{ "ssh://",   git_transport_smart, &ssh_subtransport_definition },
 	{ "ssh+git://",   git_transport_smart, &ssh_subtransport_definition },
 	{ "git+ssh://",   git_transport_smart, &ssh_subtransport_definition },
 #endif
+
 	{ NULL, 0, 0 }
 };
 

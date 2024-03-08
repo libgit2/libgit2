@@ -81,7 +81,7 @@ void test_index_tests__empty_index(void)
 {
    git_index *index;
 
-   cl_git_pass(git_index_open(&index, "in-memory-index"));
+   cl_git_pass(git_index__open(&index, "in-memory-index", GIT_OID_SHA1));
    cl_assert(index->on_disk == 0);
 
    cl_assert(git_index_entrycount(index) == 0);
@@ -96,7 +96,7 @@ void test_index_tests__default_test_index(void)
    unsigned int i;
    git_index_entry **entries;
 
-   cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+   cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA1));
    cl_assert(index->on_disk);
 
    cl_assert(git_index_entrycount(index) == index_entry_count);
@@ -119,7 +119,7 @@ void test_index_tests__gitgit_index(void)
 {
    git_index *index;
 
-   cl_git_pass(git_index_open(&index, TEST_INDEX2_PATH));
+   cl_git_pass(git_index__open(&index, TEST_INDEX2_PATH, GIT_OID_SHA1));
    cl_assert(index->on_disk);
 
    cl_assert(git_index_entrycount(index) == index_entry_count_2);
@@ -134,7 +134,7 @@ void test_index_tests__find_in_existing(void)
    git_index *index;
    unsigned int i;
 
-   cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+   cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA1));
 
    for (i = 0; i < ARRAY_SIZE(test_entries); ++i) {
 		size_t idx;
@@ -151,7 +151,7 @@ void test_index_tests__find_in_empty(void)
    git_index *index;
    unsigned int i;
 
-   cl_git_pass(git_index_open(&index, "fake-index"));
+   cl_git_pass(git_index__open(&index, "fake-index", GIT_OID_SHA1));
 
    for (i = 0; i < ARRAY_SIZE(test_entries); ++i) {
 		cl_assert(GIT_ENOTFOUND == git_index_find(NULL, index, test_entries[i].path));
@@ -166,7 +166,7 @@ void test_index_tests__find_prefix(void)
    const git_index_entry *entry;
    size_t pos;
 
-   cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+   cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA1));
 
    cl_git_pass(git_index_find_prefix(&pos, index, "src"));
    entry = git_index_get_byindex(index, pos);
@@ -187,7 +187,7 @@ void test_index_tests__write(void)
 
    copy_file(TEST_INDEXBIG_PATH, "index_rewrite");
 
-   cl_git_pass(git_index_open(&index, "index_rewrite"));
+   cl_git_pass(git_index__open(&index, "index_rewrite", GIT_OID_SHA1));
    cl_assert(index->on_disk);
 
    cl_git_pass(git_index_write(index));
@@ -218,7 +218,7 @@ void test_index_tests__sort1(void)
    /* sort the entries in an empty index */
    git_index *index;
 
-   cl_git_pass(git_index_open(&index, "fake-index"));
+   cl_git_pass(git_index__open(&index, "fake-index", GIT_OID_SHA1));
 
    /* FIXME: this test is slightly dumb */
    cl_assert(git_vector_is_sorted(&index->entries));
@@ -703,7 +703,7 @@ void test_index_tests__write_tree_invalid_unowned_index(void)
 	git_index_entry entry = {{0}};
 	git_oid tree_id;
 
-	cl_git_pass(git_index_new(&idx));
+	cl_git_pass(git_index__new(&idx, GIT_OID_SHA1));
 
 	cl_git_pass(git_oid__fromstr(&entry.id, "8312e0a89a9cbab77c732b6bc39b51a783e3a318", GIT_OID_SHA1));
 	entry.path = "foo";
@@ -966,7 +966,7 @@ void test_index_tests__reload_from_disk(void)
 	cl_git_pass(git_repository_index(&write_index, repo));
 	cl_assert_equal_i(false, write_index->on_disk);
 
-	cl_git_pass(git_index_open(&read_index, write_index->index_file_path));
+	cl_git_pass(git_index__open(&read_index, write_index->index_file_path, GIT_OID_SHA1));
 	cl_assert_equal_i(false, read_index->on_disk);
 
 	/* Stage two new files against the write_index */
@@ -1004,7 +1004,7 @@ void test_index_tests__corrupted_extension(void)
 {
 	git_index *index;
 
-	cl_git_fail_with(git_index_open(&index, TEST_INDEXBAD_PATH), GIT_ERROR);
+	cl_git_fail_with(git_index__open(&index, TEST_INDEXBAD_PATH, GIT_OID_SHA1), GIT_ERROR);
 }
 
 void test_index_tests__reload_while_ignoring_case(void)
@@ -1012,7 +1012,7 @@ void test_index_tests__reload_while_ignoring_case(void)
 	git_index *index;
 	unsigned int caps;
 
-	cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+	cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA1));
 	cl_git_pass(git_vector_verify_sorted(&index->entries));
 
 	caps = git_index_caps(index);
@@ -1037,7 +1037,7 @@ void test_index_tests__change_icase_on_instance(void)
 	unsigned int caps;
 	const git_index_entry *e;
 
-	cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+	cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA1));
 	cl_git_pass(git_vector_verify_sorted(&index->entries));
 
 	caps = git_index_caps(index);
@@ -1093,7 +1093,7 @@ void test_index_tests__can_iterate(void)
 	size_t i, iterator_idx = 0, found = 0;
 	int ret;
 
-	cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+	cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA1));
 	cl_git_pass(git_index_iterator_new(&iterator, index));
 
 	cl_assert(git_vector_is_sorted(&iterator->snap));
@@ -1136,7 +1136,7 @@ void test_index_tests__can_modify_while_iterating(void)
 	size_t expected = 0, seen = 0;
 	int ret;
 
-	cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+	cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA1));
 	cl_git_pass(git_index_iterator_new(&iterator, index));
 
 	expected = git_index_entrycount(index);

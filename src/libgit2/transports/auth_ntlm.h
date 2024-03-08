@@ -13,7 +13,7 @@
 /* NTLM requires a full request/challenge/response */
 #define GIT_AUTH_STEPS_NTLM 2
 
-#ifdef GIT_NTLM
+#if defined(GIT_NTLM) || defined(GIT_WIN32)
 
 #if defined(GIT_OPENSSL)
 # define CRYPT_OPENSSL

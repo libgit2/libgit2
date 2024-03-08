@@ -29,7 +29,7 @@ static void diff_parsed_free(git_diff *d)
 	git__free(diff);
 }
 
-static git_diff_parsed *diff_parsed_alloc(void)
+static git_diff_parsed *diff_parsed_alloc(git_oid_t oid_type)
 {
 	git_diff_parsed *diff;
 
@@ -51,6 +51,7 @@ static git_diff_parsed *diff_parsed_alloc(void)
 	}
 
 	diff->base.opts.flags &= ~GIT_DIFF_IGNORE_CASE;
+	diff->base.opts.oid_type = oid_type;
 
 	if (git_pool_init(&diff->base.pool, 1) < 0 ||
 	    git_vector_init(&diff->patches, 0, NULL) < 0 ||
@@ -67,19 +68,34 @@ static git_diff_parsed *diff_parsed_alloc(void)
 int git_diff_from_buffer(
 	git_diff **out,
 	const char *content,
-	size_t content_len)
+	size_t content_len
+#ifdef GIT_EXPERIMENTAL_SHA256
+	, git_diff_parse_options *opts
+#endif
+	)
 {
 	git_diff_parsed *diff;
 	git_patch *patch;
 	git_patch_parse_ctx *ctx = NULL;
+	git_patch_options patch_opts = GIT_PATCH_OPTIONS_INIT;
+	git_oid_t oid_type;
 	int error = 0;
 
 	*out = NULL;
 
-	diff = diff_parsed_alloc();
+#ifdef GIT_EXPERIMENTAL_SHA256
+	oid_type = (opts && opts->oid_type) ? opts->oid_type :
+		GIT_OID_DEFAULT;
+#else
+	oid_type = GIT_OID_DEFAULT;
+#endif
+
+	patch_opts.oid_type = oid_type;
+
+	diff = diff_parsed_alloc(oid_type);
 	GIT_ERROR_CHECK_ALLOC(diff);
 
-	ctx = git_patch_parse_ctx_init(content, content_len, NULL);
+	ctx = git_patch_parse_ctx_init(content, content_len, &patch_opts);
 	GIT_ERROR_CHECK_ALLOC(ctx);
 
 	while (ctx->parse_ctx.remain_len) {

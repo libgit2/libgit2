@@ -304,6 +304,9 @@ void test_refs_revparse__ordinal(void)
 	test_object("@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 
+	test_object("HEAD@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	test_object("HEAD@{4}", "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+
 	test_object("master@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("master@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 	test_object("heads/master@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
@@ -885,4 +888,16 @@ void test_refs_revparse__parses_at_head(void)
 	test_id("HEAD", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL, GIT_REVSPEC_SINGLE);
 	test_id("@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL, GIT_REVSPEC_SINGLE);
 	test_id("@", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL, GIT_REVSPEC_SINGLE);
+}
+
+void test_refs_revparse__rejects_bogus_at(void)
+{
+	git_repository *repo;
+	git_object *target;
+
+	repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_revparse_single(&target, repo, "foo@"));
+
+	cl_git_sandbox_cleanup();
 }

@@ -66,6 +66,47 @@ GIT_INLINE(size_t) git_oid_hexsize(git_oid_t type)
 	return 0;
 }
 
+GIT_INLINE(const char *) git_oid_type_name(git_oid_t type)
+{
+	switch (type) {
+	case GIT_OID_SHA1:
+		return "sha1";
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	case GIT_OID_SHA256:
+		return "sha256";
+#endif
+	}
+
+	return "unknown";
+}
+
+GIT_INLINE(git_oid_t) git_oid_type_fromstr(const char *name)
+{
+	if (strcmp(name, "sha1") == 0)
+		return GIT_OID_SHA1;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	if (strcmp(name, "sha256") == 0)
+		return GIT_OID_SHA256;
+#endif
+
+	return 0;
+}
+
+GIT_INLINE(git_oid_t) git_oid_type_fromstrn(const char *name, size_t len)
+{
+	if (len == CONST_STRLEN("sha1") && strncmp(name, "sha1", len) == 0)
+		return GIT_OID_SHA1;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	if (len == CONST_STRLEN("sha256") && strncmp(name, "sha256", len) == 0)
+		return GIT_OID_SHA256;
+#endif
+
+	return 0;
+}
+
 GIT_INLINE(git_hash_algorithm_t) git_oid_algorithm(git_oid_t type)
 {
 	switch (type) {
@@ -228,5 +269,7 @@ int git_oid__fromstrn(
 	git_oid_t type);
 
 int git_oid__fromraw(git_oid *out, const unsigned char *raw, git_oid_t type);
+
+int git_oid_global_init(void);
 
 #endif

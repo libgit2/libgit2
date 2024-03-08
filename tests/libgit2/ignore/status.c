@@ -363,6 +363,7 @@ void test_ignore_status__subdirectories_not_at_root(void)
 
 void test_ignore_status__leading_slash_ignores(void)
 {
+	git_str homedir = GIT_STR_INIT;
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	status_entry_counts counts;
 	static const char *paths_2[] = {
@@ -385,8 +386,9 @@ void test_ignore_status__leading_slash_ignores(void)
 
 	make_test_data(test_repo_1, test_files_1);
 
-	cl_fake_home();
-	cl_git_mkfile("home/.gitignore", "/ignore_me\n");
+	cl_fake_homedir(&homedir);
+	cl_git_pass(git_str_joinpath(&homedir, homedir.ptr, ".gitignore"));
+	cl_git_mkfile(homedir.ptr, "/ignore_me\n");
 	{
 		git_config *cfg;
 		cl_git_pass(git_repository_config(&cfg, g_repo));
@@ -412,6 +414,8 @@ void test_ignore_status__leading_slash_ignores(void)
 	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
 	cl_assert_equal_i(0, counts.wrong_status_flags_count);
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
+
+	git_str_dispose(&homedir);
 }
 
 void test_ignore_status__multiple_leading_slash(void)

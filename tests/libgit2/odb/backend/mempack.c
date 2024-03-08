@@ -16,7 +16,7 @@ void test_odb_backend_mempack__initialize(void)
 	cl_git_pass(git_mempack_new(&backend));
 	cl_git_pass(git_odb__new(&_odb, NULL));
 	cl_git_pass(git_odb_add_backend(_odb, backend, 10));
-	cl_git_pass(git_repository_wrap_odb(&_repo, _odb));
+	cl_git_pass(git_repository__wrap_odb(&_repo, _odb, GIT_OID_SHA1));
 }
 
 void test_odb_backend_mempack__cleanup(void)

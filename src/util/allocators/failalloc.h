@@ -11,13 +11,7 @@
 #include "git2_util.h"
 
 extern void *git_failalloc_malloc(size_t len, const char *file, int line);
-extern void *git_failalloc_calloc(size_t nelem, size_t elsize, const char *file, int line);
-extern char *git_failalloc_strdup(const char *str, const char *file, int line);
-extern char *git_failalloc_strndup(const char *str, size_t n, const char *file, int line);
-extern char *git_failalloc_substrdup(const char *start, size_t n, const char *file, int line);
 extern void *git_failalloc_realloc(void *ptr, size_t size, const char *file, int line);
-extern void *git_failalloc_reallocarray(void *ptr, size_t nelem, size_t elsize, const char *file, int line);
-extern void *git_failalloc_mallocarray(size_t nelem, size_t elsize, const char *file, int line);
 extern void git_failalloc_free(void *ptr);
 
 #endif

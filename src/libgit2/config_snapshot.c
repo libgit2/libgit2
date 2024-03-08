@@ -8,12 +8,12 @@
 #include "config_backend.h"
 
 #include "config.h"
-#include "config_entries.h"
+#include "config_list.h"
 
 typedef struct {
 	git_config_backend parent;
 	git_mutex values_mutex;
-	git_config_entries *entries;
+	git_config_list *config_list;
 	git_config_backend *source;
 } config_snapshot_backend;
 
@@ -28,31 +28,24 @@ static int config_snapshot_iterator(
 	struct git_config_backend *backend)
 {
 	config_snapshot_backend *b = GIT_CONTAINER_OF(backend, config_snapshot_backend, parent);
-	git_config_entries *entries = NULL;
+	git_config_list *config_list = NULL;
 	int error;
 
-	if ((error = git_config_entries_dup(&entries, b->entries)) < 0 ||
-	    (error = git_config_entries_iterator_new(iter, entries)) < 0)
+	if ((error = git_config_list_dup(&config_list, b->config_list)) < 0 ||
+	    (error = git_config_list_iterator_new(iter, config_list)) < 0)
 		goto out;
 
 out:
-	/* Let iterator delete duplicated entries when it's done */
-	git_config_entries_free(entries);
+	/* Let iterator delete duplicated config_list when it's done */
+	git_config_list_free(config_list);
 	return error;
-}
-
-/* release the map containing the entry as an equivalent to freeing it */
-static void config_snapshot_entry_free(git_config_entry *entry)
-{
-	git_config_entries *entries = (git_config_entries *) entry->payload;
-	git_config_entries_free(entries);
 }
 
 static int config_snapshot_get(git_config_backend *cfg, const char *key, git_config_entry **out)
 {
 	config_snapshot_backend *b = GIT_CONTAINER_OF(cfg, config_snapshot_backend, parent);
-	git_config_entries *entries = NULL;
-	git_config_entry *entry;
+	git_config_list *config_list = NULL;
+	git_config_list_entry *entry;
 	int error = 0;
 
 	if (git_mutex_lock(&b->values_mutex) < 0) {
@@ -60,19 +53,16 @@ static int config_snapshot_get(git_config_backend *cfg, const char *key, git_con
 	    return -1;
 	}
 
-	entries = b->entries;
-	git_config_entries_incref(entries);
+	config_list = b->config_list;
+	git_config_list_incref(config_list);
 	git_mutex_unlock(&b->values_mutex);
 
-	if ((error = (git_config_entries_get(&entry, entries, key))) < 0) {
-		git_config_entries_free(entries);
+	if ((error = (git_config_list_get(&entry, config_list, key))) < 0) {
+		git_config_list_free(config_list);
 		return error;
 	}
 
-	entry->free = config_snapshot_entry_free;
-	entry->payload = entries;
-	*out = entry;
-
+	*out = &entry->base;
 	return 0;
 }
 
@@ -135,7 +125,7 @@ static void config_snapshot_free(git_config_backend *_backend)
 	if (backend == NULL)
 		return;
 
-	git_config_entries_free(backend->entries);
+	git_config_list_free(backend->config_list);
 	git_mutex_free(&backend->values_mutex);
 	git__free(backend);
 }
@@ -143,7 +133,7 @@ static void config_snapshot_free(git_config_backend *_backend)
 static int config_snapshot_open(git_config_backend *cfg, git_config_level_t level, const git_repository *repo)
 {
 	config_snapshot_backend *b = GIT_CONTAINER_OF(cfg, config_snapshot_backend, parent);
-	git_config_entries *entries = NULL;
+	git_config_list *config_list = NULL;
 	git_config_iterator *it = NULL;
 	git_config_entry *entry;
 	int error;
@@ -152,12 +142,12 @@ static int config_snapshot_open(git_config_backend *cfg, git_config_level_t leve
 	GIT_UNUSED(level);
 	GIT_UNUSED(repo);
 
-	if ((error = git_config_entries_new(&entries)) < 0 ||
+	if ((error = git_config_list_new(&config_list)) < 0 ||
 	    (error = b->source->iterator(&it, b->source)) < 0)
 		goto out;
 
 	while ((error = git_config_next(&entry, it)) == 0)
-		if ((error = git_config_entries_dup_entry(entries, entry)) < 0)
+		if ((error = git_config_list_dup_entry(config_list, entry)) < 0)
 			goto out;
 
 	if (error < 0) {
@@ -166,12 +156,12 @@ static int config_snapshot_open(git_config_backend *cfg, git_config_level_t leve
 		error = 0;
 	}
 
-	b->entries = entries;
+	b->config_list = config_list;
 
 out:
 	git_config_iterator_free(it);
 	if (error)
-		git_config_entries_free(entries);
+		git_config_list_free(config_list);
 	return error;
 }
 

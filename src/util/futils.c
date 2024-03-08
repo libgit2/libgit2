@@ -13,9 +13,6 @@
 #include "rand.h"
 
 #include <ctype.h>
-#if GIT_WIN32
-#include "win32/findfile.h"
-#endif
 
 #define GIT_FILEMODE_DEFAULT 0100666
 
@@ -224,14 +221,14 @@ int git_futils_readbuffer_fd_full(git_str *buf, git_file fd)
 int git_futils_readbuffer_updated(
 	git_str *out,
 	const char *path,
-	unsigned char checksum[GIT_HASH_SHA1_SIZE],
+	unsigned char checksum[GIT_HASH_SHA256_SIZE],
 	int *updated)
 {
 	int error;
 	git_file fd;
 	struct stat st;
 	git_str buf = GIT_STR_INIT;
-	unsigned char checksum_new[GIT_HASH_SHA1_SIZE];
+	unsigned char checksum_new[GIT_HASH_SHA256_SIZE];
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(path && *path);
@@ -264,7 +261,10 @@ int git_futils_readbuffer_updated(
 	p_close(fd);
 
 	if (checksum) {
-		if ((error = git_hash_buf(checksum_new, buf.ptr, buf.size, GIT_HASH_ALGORITHM_SHA1)) < 0) {
+		error = git_hash_buf(checksum_new, buf.ptr,
+		                     buf.size, GIT_HASH_ALGORITHM_SHA256);
+
+		if (error < 0) {
 			git_str_dispose(&buf);
 			return error;
 		}
@@ -272,7 +272,7 @@ int git_futils_readbuffer_updated(
 		/*
 		 * If we were given a checksum, we only want to use it if it's different
 		 */
-		if (!memcmp(checksum, checksum_new, GIT_HASH_SHA1_SIZE)) {
+		if (!memcmp(checksum, checksum_new, GIT_HASH_SHA256_SIZE)) {
 			git_str_dispose(&buf);
 			if (updated)
 				*updated = 0;
@@ -280,7 +280,7 @@ int git_futils_readbuffer_updated(
 			return 0;
 		}
 
-		memcpy(checksum, checksum_new, GIT_HASH_SHA1_SIZE);
+		memcpy(checksum, checksum_new, GIT_HASH_SHA256_SIZE);
 	}
 
 	/*

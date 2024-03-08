@@ -88,6 +88,16 @@ extern int git_http_client_new(
 	git_http_client **out,
 	git_http_client_options *opts);
 
+/**
+ * Update the options of an existing httpclient instance.
+ *
+ * @param client the httpclient instance to modify
+ * @param opts new options or NULL to keep existing options
+ */
+extern void git_http_client_set_options(
+	git_http_client *client,
+	git_http_client_options *opts);
+
 /*
  * Sends a request to the host specified by the request URL.  If the
  * method is POST, either the content_length or the chunked flag must
