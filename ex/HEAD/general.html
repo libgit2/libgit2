@@ -85,7 +85,7 @@
         <div class="pilwrap">
           <a class="pilcrow" href="#section-2">&#182;</a>
         </div>
-        <p><a href="http://libgit2.github.com"><strong>libgit2</strong></a> is a portable, pure C implementation of the Git core
+        <p><a href="https://libgit2.org"><strong>libgit2</strong></a> is a portable, pure C implementation of the Git core
 methods provided as a re-entrant linkable library with a solid API,
 allowing you to write native speed custom Git applications in any
 language which supports C bindings.</p>
@@ -94,8 +94,8 @@ language which supports C bindings.</p>
 As the API is updated, this file will be updated to demonstrate the new
 functionality.</p>
 
-<p>If you&#39;re trying to write something in C using <a href="http://libgit2.github.com">libgit2</a>, you should
-also check out the generated <a href="http://libgit2.github.com/libgit2">API documentation</a>. We try to link to
+<p>If you&#39;re trying to write something in C using <a href="https://libgit2.org">libgit2</a>, you should
+also check out the generated <a href="https://libgit2.org/libgit2">API documentation</a>. We try to link to
 the relevant sections of the API docs in each section in this file.</p>
 
 <p><strong>libgit2</strong> (for the most part) only implements the core plumbing
@@ -183,7 +183,7 @@ including threading and crypto</p>
         <h3>Opening the Repository</h3>
 
 <p>There are a couple of methods for opening a repository, this being the
-simplest.  There are also <a href="http://libgit2.github.com/libgit2/#HEAD/group/repository">methods</a> for specifying the index file
+simplest.  There are also <a href="https://libgit2.org/libgit2/#HEAD/group/repository">methods</a> for specifying the index file
 and work tree locations, here we assume they are in the normal places.</p>
 
 <p>(Try running this program against tests/resources/testrepo.git.)</p>
@@ -287,7 +287,7 @@ key we&#39;re working with.</p>
         </div>
         <h3>Working with the Object Database</h3>
 
-<p><strong>libgit2</strong> provides <a href="http://libgit2.github.com/libgit2/#HEAD/group/odb">direct access</a> to the object database.  The
+<p><strong>libgit2</strong> provides <a href="https://libgit2.org/libgit2/#HEAD/group/odb">direct access</a> to the object database.  The
 object database is where the actual objects are stored in Git. For
 working with raw objects, we&#39;ll need to get this structure from the
 repository.</p>
@@ -434,7 +434,7 @@ generated when the object was written to our database.</p>
 
 <p>libgit2 provides a couple of methods to create commit objects easily as
 well. There are four different create signatures, we&#39;ll just show one
-of them here.  You can read about the other ones in the <a href="http://libgit2.github.com/libgit2/#HEAD/group/commit">commit API
+of them here.  You can read about the other ones in the <a href="https://libgit2.org/libgit2/#HEAD/group/commit">commit API
 docs</a>.</p>
       </td>
       <td class=code>
@@ -559,7 +559,7 @@ than trying to deal with the raw data yourself.</p>
         </div>
         <h4>Commit Parsing</h4>
 
-<p><a href="http://libgit2.github.com/libgit2/#HEAD/group/commit">Parsing commit objects</a> is simple and gives you access to all the
+<p><a href="https://libgit2.org/libgit2/#HEAD/group/commit">Parsing commit objects</a> is simple and gives you access to all the
 data in the commit - the author (name, email, datetime), committer
 (same), tree, message, encoding and parent(s).</p>
       </td>
@@ -652,7 +652,7 @@ technically have any number, though it&#39;s rare to have more than two.</p>
         </div>
         <h4>Tag Parsing</h4>
 
-<p>You can parse and create tags with the <a href="http://libgit2.github.com/libgit2/#HEAD/group/tag">tag management API</a>, which
+<p>You can parse and create tags with the <a href="https://libgit2.org/libgit2/#HEAD/group/tag">tag management API</a>, which
 functions very similarly to the commit lookup, parsing and creation
 methods, since the objects themselves are very similar.</p>
       </td>
@@ -727,7 +727,7 @@ git_signature - name, email, timestamp), and the tag message.</p>
         </div>
         <h4>Tree Parsing</h4>
 
-<p><a href="http://libgit2.github.com/libgit2/#HEAD/group/tree">Tree parsing</a> is a bit different than the other objects, in that
+<p><a href="https://libgit2.org/libgit2/#HEAD/group/tree">Tree parsing</a> is a bit different than the other objects, in that
 we have a subtype which is the tree entry.  This is not an actual
 object type in Git, but a useful structure for parsing and traversing
 tree entries.</p>
@@ -824,7 +824,7 @@ get the mode if you want.</p>
 
 <p>The last object type is the simplest and requires the least parsing
 help. Blobs are just file contents and can contain anything, there is
-no structure to it. The main advantage to using the <a href="http://libgit2.github.com/libgit2/#HEAD/group/blob">simple blob
+no structure to it. The main advantage to using the <a href="https://libgit2.org/libgit2/#HEAD/group/blob">simple blob
 api</a> is that when you&#39;re creating blobs you don&#39;t have to calculate
 the size of the content.  There is also a helper for reading a file
 from disk and writing it to the db and getting the oid back so you
@@ -881,7 +881,7 @@ size in bytes</p>
         </div>
         <h3>Revwalking</h3>
 
-<p>The libgit2 <a href="http://libgit2.github.com/libgit2/#HEAD/group/revwalk">revision walking api</a> provides methods to traverse the
+<p>The libgit2 <a href="https://libgit2.org/libgit2/#HEAD/group/revwalk">revision walking api</a> provides methods to traverse the
 directed graph created by the parent pointers of the commit objects.
 Since all commits point back to the commit that came directly before
 them, you can walk this parentage as a graph and find all the commits
@@ -973,7 +973,7 @@ result in undefined behavior</p>
         </div>
         <h3>Index File Manipulation *</h3>
 
-<p>The <a href="http://libgit2.github.com/libgit2/#HEAD/group/index">index file API</a> allows you to read, traverse, update and write
+<p>The <a href="https://libgit2.org/libgit2/#HEAD/group/index">index file API</a> allows you to read, traverse, update and write
 the Git index file (sometimes thought of as the staging area).</p>
       </td>
       <td class=code>
@@ -1032,7 +1032,7 @@ the `git</em>index_entry` struct</p>
         </div>
         <h3>References</h3>
 
-<p>The <a href="http://libgit2.github.com/libgit2/#HEAD/group/reference">reference API</a> allows you to list, resolve, create and update
+<p>The <a href="https://libgit2.org/libgit2/#HEAD/group/reference">reference API</a> allows you to list, resolve, create and update
 references such as branches, tags and remote references (everything in
 the .git/refs directory).</p>
       </td>
@@ -1095,7 +1095,7 @@ one at a time and resolve them to the SHA, then print both values out.</p>
         </div>
         <h3>Config Files</h3>
 
-<p>The <a href="http://libgit2.github.com/libgit2/#HEAD/group/config">config API</a> allows you to list and update config values
+<p>The <a href="https://libgit2.org/libgit2/#HEAD/group/config">config API</a> allows you to list and update config values
 in any of the accessible config file locations (system, global, local).</p>
       </td>
       <td class=code>
