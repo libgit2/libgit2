@@ -152,6 +152,7 @@ revwalker configuration calls</li>
       <td class=code>
         <div class='highlight'><pre><span class="k">struct</span> <span class="n">log_options</span> <span class="p">{</span>
   <span class="kt">int</span> <span class="n">show_diff</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">show_oneline</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">show_log_size</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">skip</span><span class="p">,</span> <span class="n">limit</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">min_parents</span><span class="p">,</span> <span class="n">max_parents</span><span class="p">;</span>
@@ -197,7 +198,9 @@ revwalker configuration calls</li>
   <span class="n">git_diff_options</span> <span class="n">diffopts</span> <span class="o">=</span> <span class="n">GIT_DIFF_OPTIONS_INIT</span><span class="p">;</span>
   <span class="n">git_oid</span> <span class="n">oid</span><span class="p">;</span>
   <span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-  <span class="n">git_pathspec</span> <span class="o">*</span><span class="n">ps</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span></pre></div>
+  <span class="n">git_pathspec</span> <span class="o">*</span><span class="n">ps</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+
+  <span class="n">memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">s</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">s</span><span class="p">));</span></pre></div>
       </td>
     </tr>
     <tr id='section-8'>
@@ -208,8 +211,8 @@ revwalker configuration calls</li>
         <p>Parse arguments and set up revwalker.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">last_arg</span> <span class="o">=</span> <span class="n">parse_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">s</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
-  <span class="n">s</span><span class="p">.</span><span class="n">repo</span> <span class="o">=</span> <span class="n">repo</span><span class="p">;</span>
+        <div class='highlight'><pre>  <span class="n">s</span><span class="p">.</span><span class="n">repo</span> <span class="o">=</span> <span class="n">repo</span><span class="p">;</span>
+  <span class="n">last_arg</span> <span class="o">=</span> <span class="n">parse_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">s</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
 
   <span class="n">diffopts</span><span class="p">.</span><span class="n">pathspec</span><span class="p">.</span><span class="n">strings</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">argv</span><span class="p">[</span><span class="n">last_arg</span><span class="p">];</span>
   <span class="n">diffopts</span><span class="p">.</span><span class="n">pathspec</span><span class="p">.</span><span class="n">count</span>	  <span class="o">=</span> <span class="n">argc</span> <span class="o">-</span> <span class="n">last_arg</span><span class="p">;</span>
@@ -541,34 +544,45 @@ revwalker configuration calls</li>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">scan</span><span class="p">,</span> <span class="o">*</span><span class="n">eol</span><span class="p">;</span>
 
   <span class="n"><a name="git_oid_tostr-38" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">),</span> <span class="n"><a name="git_commit_id-6" class="fnlink" href="../../#HEAD/group/commit/git_commit_id">git_commit_id</a></span><span class="p">(</span><span class="n">commit</span><span class="p">));</span>
-  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;commit %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">buf</span><span class="p">);</span>
 
-  <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">show_log_size</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;log size %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">strlen</span><span class="p">(</span><span class="n"><a name="git_commit_message-10" class="fnlink" href="../../#HEAD/group/commit/git_commit_message">git_commit_message</a></span><span class="p">(</span><span class="n">commit</span><span class="p">)));</span>
-  <span class="p">}</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">show_oneline</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s &quot;</span><span class="p">,</span> <span class="n">buf</span><span class="p">);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;commit %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">buf</span><span class="p">);</span>
 
-  <span class="k">if</span> <span class="p">((</span><span class="n">count</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n"><a name="git_commit_parentcount-21" class="fnlink" href="../../#HEAD/group/commit/git_commit_parentcount">git_commit_parentcount</a></span><span class="p">(</span><span class="n">commit</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Merge:&quot;</span><span class="p">);</span>
-    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">count</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-      <span class="n"><a name="git_oid_tostr-39" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n"><a name="git_commit_parent_id-24" class="fnlink" href="../../#HEAD/group/commit/git_commit_parent_id">git_commit_parent_id</a></span><span class="p">(</span><span class="n">commit</span><span class="p">,</span> <span class="n">i</span><span class="p">));</span>
-      <span class="n">printf</span><span class="p">(</span><span class="s">&quot; %s&quot;</span><span class="p">,</span> <span class="n">buf</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">show_log_size</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;log size %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">strlen</span><span class="p">(</span><span class="n"><a name="git_commit_message-10" class="fnlink" href="../../#HEAD/group/commit/git_commit_message">git_commit_message</a></span><span class="p">(</span><span class="n">commit</span><span class="p">)));</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">((</span><span class="n">count</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n"><a name="git_commit_parentcount-21" class="fnlink" href="../../#HEAD/group/commit/git_commit_parentcount">git_commit_parentcount</a></span><span class="p">(</span><span class="n">commit</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Merge:&quot;</span><span class="p">);</span>
+      <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">count</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n"><a name="git_oid_tostr-39" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n"><a name="git_commit_parent_id-24" class="fnlink" href="../../#HEAD/group/commit/git_commit_parent_id">git_commit_parent_id</a></span><span class="p">(</span><span class="n">commit</span><span class="p">,</span> <span class="n">i</span><span class="p">));</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot; %s&quot;</span><span class="p">,</span> <span class="n">buf</span><span class="p">);</span>
+      <span class="p">}</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">((</span><span class="n">sig</span> <span class="o">=</span> <span class="n"><a name="git_commit_author-14" class="fnlink" href="../../#HEAD/group/commit/git_commit_author">git_commit_author</a></span><span class="p">(</span><span class="n">commit</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Author: %s &lt;%s&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">sig</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">,</span> <span class="n">sig</span><span class="o">-&gt;</span><span class="n">email</span><span class="p">);</span>
+      <span class="n">print_time</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sig</span><span class="o">-&gt;</span><span class="n">when</span><span class="p">,</span> <span class="s">&quot;Date:   &quot;</span><span class="p">);</span>
     <span class="p">}</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="p">}</span>
 
-  <span class="k">if</span> <span class="p">((</span><span class="n">sig</span> <span class="o">=</span> <span class="n"><a name="git_commit_author-14" class="fnlink" href="../../#HEAD/group/commit/git_commit_author">git_commit_author</a></span><span class="p">(</span><span class="n">commit</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Author: %s &lt;%s&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">sig</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">,</span> <span class="n">sig</span><span class="o">-&gt;</span><span class="n">email</span><span class="p">);</span>
-    <span class="n">print_time</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sig</span><span class="o">-&gt;</span><span class="n">when</span><span class="p">,</span> <span class="s">&quot;Date:   &quot;</span><span class="p">);</span>
-  <span class="p">}</span>
-  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
-
   <span class="k">for</span> <span class="p">(</span><span class="n">scan</span> <span class="o">=</span> <span class="n"><a name="git_commit_message-11" class="fnlink" href="../../#HEAD/group/commit/git_commit_message">git_commit_message</a></span><span class="p">(</span><span class="n">commit</span><span class="p">);</span> <span class="n">scan</span> <span class="o">&amp;&amp;</span> <span class="o">*</span><span class="n">scan</span><span class="p">;</span> <span class="p">)</span> <span class="p">{</span>
     <span class="k">for</span> <span class="p">(</span><span class="n">eol</span> <span class="o">=</span> <span class="n">scan</span><span class="p">;</span> <span class="o">*</span><span class="n">eol</span> <span class="o">&amp;&amp;</span> <span class="o">*</span><span class="n">eol</span> <span class="o">!=</span> <span class="sc">&#39;\n&#39;</span><span class="p">;</span> <span class="o">++</span><span class="n">eol</span><span class="p">)</span> <span class="cm">/* find eol */</span><span class="p">;</span>
 
-    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;    %.*s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)(</span><span class="n">eol</span> <span class="o">-</span> <span class="n">scan</span><span class="p">),</span> <span class="n">scan</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">show_oneline</span><span class="p">)</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%.*s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)(</span><span class="n">eol</span> <span class="o">-</span> <span class="n">scan</span><span class="p">),</span> <span class="n">scan</span><span class="p">);</span>
+    <span class="k">else</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;    %.*s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)(</span><span class="n">eol</span> <span class="o">-</span> <span class="n">scan</span><span class="p">),</span> <span class="n">scan</span><span class="p">);</span>
     <span class="n">scan</span> <span class="o">=</span> <span class="o">*</span><span class="n">eol</span> <span class="o">?</span> <span class="n">eol</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">:</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">show_oneline</span><span class="p">)</span>
+      <span class="k">break</span><span class="p">;</span>
   <span class="p">}</span>
-  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">show_oneline</span><span class="p">)</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
 <span class="p">}</span></pre></div>
       </td>
     </tr>
@@ -637,8 +651,6 @@ revwalker configuration calls</li>
   <span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="k">struct</span> <span class="n">log_options</span> <span class="o">*</span><span class="n">opt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
-
-  <span class="n">memset</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">s</span><span class="p">));</span>
   <span class="n">s</span><span class="o">-&gt;</span><span class="n">sorting</span> <span class="o">=</span> <span class="n">GIT_SORT_TIME</span><span class="p">;</span>
 
   <span class="n">memset</span><span class="p">(</span><span class="n">opt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">opt</span><span class="p">));</span>
@@ -663,7 +675,7 @@ revwalker configuration calls</li>
       </td>
       <td class=code>
         <div class='highlight'><pre>        <span class="k">break</span><span class="p">;</span>
-    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">match_arg_separator</span><span class="p">(</span><span class="o">&amp;</span><span class="n">args</span><span class="p">))</span> <span class="p">{</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_arg_separator</span><span class="p">(</span><span class="o">&amp;</span><span class="n">args</span><span class="p">))</span> <span class="p">{</span>
       <span class="k">break</span><span class="p">;</span>
     <span class="p">}</span>
     <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--date-order&quot;</span><span class="p">))</span>
@@ -795,6 +807,8 @@ revwalker configuration calls</li>
       <span class="n">opt</span><span class="o">-&gt;</span><span class="n">show_diff</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--log-size&quot;</span><span class="p">))</span>
       <span class="n">opt</span><span class="o">-&gt;</span><span class="n">show_log_size</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--oneline&quot;</span><span class="p">))</span>
+      <span class="n">opt</span><span class="o">-&gt;</span><span class="n">show_oneline</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="k">else</span>
       <span class="n">usage</span><span class="p">(</span><span class="s">&quot;Unsupported argument&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
   <span class="p">}</span>
