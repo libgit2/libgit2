@@ -1274,6 +1274,24 @@ int git_repository_discover(
 	return error;
 }
 
+static int has_config_worktree(bool *out, git_config *cfg)
+{
+	int worktreeconfig = 0, error;
+
+	*out = false;
+
+	error = git_config_get_bool(&worktreeconfig, cfg, "extensions.worktreeconfig");
+
+	if (error == 0)
+		*out = worktreeconfig;
+	else if (error == GIT_ENOTFOUND)
+		*out = false;
+	else
+		return error;
+
+	return 0;
+}
+
 static int load_config(
 	git_config **out,
 	git_repository *repo,
@@ -1285,6 +1303,7 @@ static int load_config(
 	git_str config_path = GIT_STR_INIT;
 	git_config *cfg = NULL;
 	git_config_level_t write_order;
+	bool has_worktree;
 	int error;
 
 	GIT_ASSERT_ARG(out);
@@ -1293,14 +1312,16 @@ static int load_config(
 		return error;
 
 	if (repo) {
-		if ((error = git_repository__item_path(&config_path, repo, GIT_REPOSITORY_ITEM_WORKTREE_CONFIG)) == 0)
-			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_WORKTREE, repo, 0);
+		if ((error = git_repository__item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
+			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
 
 		if (error && error != GIT_ENOTFOUND)
 			goto on_error;
 
-		if ((error = git_repository__item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
-			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
+		if ((error = has_config_worktree(&has_worktree, cfg)) == 0 &&
+		    has_worktree &&
+		    (error = git_repository__item_path(&config_path, repo, GIT_REPOSITORY_ITEM_WORKTREE_CONFIG)) == 0)
+			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_WORKTREE, repo, 0);
 
 		if (error && error != GIT_ENOTFOUND)
 			goto on_error;

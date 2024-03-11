@@ -6,15 +6,19 @@
 
 static worktree_fixture fixture =
 	WORKTREE_FIXTURE_INIT(COMMON_REPO, WORKTREE_REPO);
+static worktree_fixture submodule =
+	WORKTREE_FIXTURE_INIT("submodules", "submodules-worktree-parent");
 
 void test_worktree_config__initialize(void)
 {
 	setup_fixture_worktree(&fixture);
+	setup_fixture_worktree(&submodule);
 }
 
 void test_worktree_config__cleanup(void)
 {
 	cleanup_fixture_worktree(&fixture);
+	cleanup_fixture_worktree(&submodule);
 }
 
 void test_worktree_config__open(void)
@@ -43,6 +47,31 @@ void test_worktree_config__set_level_local(void)
 	cl_git_pass(git_repository_config(&cfg, fixture.repo));
 	cl_git_pass(git_config_get_int32(&val, cfg, "core.dummy"));
 	cl_assert_equal_i(val, 5);
+	git_config_free(cfg);
+}
+
+void test_worktree_config__requires_extension(void)
+{
+	git_config *cfg;
+	git_config *wtcfg;
+	int extension = 0;
+
+	/*
+	 * the "submodules" repo does not have extensions.worktreeconfig
+	 * set, the worktree configuration should not be available.
+	 */
+	cl_git_pass(git_repository_config(&cfg, submodule.repo));
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_bool(&extension, cfg, "extensions.worktreeconfig"));
+	cl_assert_equal_i(0, extension);
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_open_level(&wtcfg, cfg, GIT_CONFIG_LEVEL_WORKTREE));
+	git_config_free(cfg);
+
+	/* the "testrepo" repo does have the configuration set. */
+	cl_git_pass(git_repository_config(&cfg, fixture.repo));
+	cl_git_pass(git_config_get_bool(&extension, cfg, "extensions.worktreeconfig"));
+	cl_assert_equal_i(1, extension);
+	cl_git_pass(git_config_open_level(&wtcfg, cfg, GIT_CONFIG_LEVEL_WORKTREE));
+	git_config_free(wtcfg);
 	git_config_free(cfg);
 }
 
