@@ -75,6 +75,28 @@ void test_worktree_config__requires_extension(void)
 	git_config_free(cfg);
 }
 
+void test_worktree_config__exists(void)
+{
+	git_config *cfg, *wtcfg, *snap;
+	const char *str;
+
+	cl_git_pass(git_repository_config(&cfg, fixture.repo));
+	cl_git_pass(git_repository_config(&wtcfg, fixture.worktree));
+
+	cl_git_pass(git_config_snapshot(&snap, cfg));
+	cl_git_pass(git_config_get_string(&str, snap, "worktreetest.config"));
+	cl_assert_equal_s("mainrepo", str);
+	git_config_free(snap);
+
+	cl_git_pass(git_config_snapshot(&snap, wtcfg));
+	cl_git_pass(git_config_get_string(&str, snap, "worktreetest.config"));
+	cl_assert_equal_s("worktreerepo", str);
+	git_config_free(snap);
+
+	git_config_free(cfg);
+	git_config_free(wtcfg);
+}
+
 void test_worktree_config__set_level_worktree(void)
 {
 	git_config *cfg;
