@@ -335,11 +335,21 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 			goto out;
 		}
 
-		if (git_branch_is_checked_out(wtopts.ref)) {
-			git_error_set(GIT_ERROR_WORKTREE, "reference is already checked out");
-			err = -1;
+		if ((err = git_reference_dup(&ref, wtopts.ref)) < 0)
 			goto out;
-		}
+	} else if (wtopts.checkout_existing && git_branch_lookup(&ref, repo, name, GIT_BRANCH_LOCAL) == 0) {
+		/* Do nothing */
+	} else if ((err = git_repository_head(&head, repo)) < 0 ||
+		   (err = git_commit_lookup(&commit, repo, &head->target.oid)) < 0 ||
+		   (err = git_branch_create(&ref, repo, name, commit, false)) < 0) {
+			goto out;
+	}
+
+	if (git_branch_is_checked_out(ref)) {
+		git_error_set(GIT_ERROR_WORKTREE, "reference %s is already checked out",
+			      git_reference_name(ref));
+		err = -1;
+		goto out;
 	}
 
 	/* Create gitdir directory ".git/worktrees/<name>" */
@@ -391,19 +401,6 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	    || (err = git_str_putc(&buf, '\n')) < 0
 	    || (err = write_wtfile(gitdir.ptr, "gitdir", &buf)) < 0)
 		goto out;
-
-	/* Set up worktree reference */
-	if (wtopts.ref) {
-		if ((err = git_reference_dup(&ref, wtopts.ref)) < 0)
-			goto out;
-	} else {
-		if ((err = git_repository_head(&head, repo)) < 0)
-			goto out;
-		if ((err = git_commit_lookup(&commit, repo, &head->target.oid)) < 0)
-			goto out;
-		if ((err = git_branch_create(&ref, repo, name, commit, false)) < 0)
-			goto out;
-	}
 
 	/* Set worktree's HEAD */
 	if ((err = git_repository_create_head(gitdir.ptr, git_reference_name(ref))) < 0)

@@ -217,6 +217,50 @@ void test_worktree_worktree__init(void)
 	git_repository_free(repo);
 }
 
+void test_worktree_worktree__add_remove_add(void)
+{
+	git_worktree_add_options add_opts = GIT_WORKTREE_ADD_OPTIONS_INIT;
+	git_worktree_prune_options opts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
+	git_str path = GIT_BUF_INIT;
+	git_reference *branch;
+	git_repository *repo;
+	git_worktree *wt;
+
+	/* Add the worktree */
+	cl_git_pass(git_str_joinpath(&path, fixture.repo->workdir, "../worktree-add-remove-add"));
+	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-add-remove-add", path.ptr, NULL));
+
+	/* Open and verify created repo */
+	cl_git_pass(git_repository_open(&repo, path.ptr));
+	cl_assert(git__suffixcmp(git_repository_workdir(repo), "worktree-add-remove-add/") == 0);
+	cl_git_pass(git_branch_lookup(&branch, repo, "worktree-add-remove-add", GIT_BRANCH_LOCAL));
+	git_reference_free(branch);
+	git_repository_free(repo);
+
+	/* Prune the worktree */
+	opts.flags = GIT_WORKTREE_PRUNE_VALID|GIT_WORKTREE_PRUNE_WORKING_TREE;
+	cl_git_pass(git_worktree_prune(wt, &opts));
+	cl_assert(!git_fs_path_exists(wt->gitdir_path));
+	cl_assert(!git_fs_path_exists(wt->gitlink_path));
+	git_worktree_free(wt);
+
+	/* Add the worktree back with default options should fail. */
+	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-add-remove-add", path.ptr, &add_opts));
+	/* If allowing checkout of existing branches, it should succeed. */
+	add_opts.checkout_existing = 1;
+	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-add-remove-add", path.ptr, &add_opts));
+
+	/* Open and verify created repo */
+	cl_git_pass(git_repository_open(&repo, path.ptr));
+	cl_assert(git__suffixcmp(git_repository_workdir(repo), "worktree-add-remove-add/") == 0);
+	cl_git_pass(git_branch_lookup(&branch, repo, "worktree-add-remove-add", GIT_BRANCH_LOCAL));
+	git_reference_free(branch);
+	git_repository_free(repo);
+
+	git_str_dispose(&path);
+	git_worktree_free(wt);
+}
+
 void test_worktree_worktree__add_locked(void)
 {
 	git_worktree *wt;
@@ -244,6 +288,7 @@ void test_worktree_worktree__add_locked(void)
 
 void test_worktree_worktree__init_existing_branch(void)
 {
+	git_worktree_add_options opts = GIT_WORKTREE_ADD_OPTIONS_INIT;
 	git_reference *head, *branch;
 	git_commit *commit;
 	git_worktree *wt;
@@ -251,12 +296,18 @@ void test_worktree_worktree__init_existing_branch(void)
 
 	cl_git_pass(git_repository_head(&head, fixture.repo));
 	cl_git_pass(git_commit_lookup(&commit, fixture.repo, &head->target.oid));
-	cl_git_pass(git_branch_create(&branch, fixture.repo, "worktree-new", commit, false));
+	cl_git_pass(git_branch_create(&branch, fixture.repo, "worktree-new-exist", commit, false));
 
-	cl_git_pass(git_str_joinpath(&path, fixture.repo->workdir, "../worktree-new"));
-	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr, NULL));
+	cl_git_pass(git_str_joinpath(&path, fixture.repo->workdir, "../worktree-new-exist"));
+
+	/* Add the worktree back with default options should fail. */
+	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new-exist", path.ptr, NULL));
+	/* If allowing checkout of existing branches, it should succeed. */
+	opts.checkout_existing = 1;
+	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-new-exist", path.ptr, &opts));
 
 	git_str_dispose(&path);
+	git_worktree_free(wt);
 	git_commit_free(commit);
 	git_reference_free(head);
 	git_reference_free(branch);

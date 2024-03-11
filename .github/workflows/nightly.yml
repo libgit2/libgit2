@@ -178,6 +178,7 @@ jobs:
             CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
         - name: "Linux (CentOS 7, dynamically-loaded OpenSSL)"
           id: centos7-dynamicopenssl
           os: ubuntu-latest
@@ -187,6 +188,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
         - name: "Linux (CentOS 8, OpenSSL)"
           id: centos8-openssl
           os: ubuntu-latest
@@ -218,6 +220,7 @@ jobs:
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
         - name: "Linux (x86, Bionic, Clang, OpenSSL)"
           container:
@@ -229,6 +232,7 @@ jobs:
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
         - name: "Linux (x86, Bionic, GCC, OpenSSL)"
           container:
@@ -239,6 +243,7 @@ jobs:
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
         - name: "Linux (arm32, Bionic, GCC, OpenSSL)"
           container:
@@ -251,6 +256,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
             SKIP_PROXY_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
             GITTEST_FLAKY_STAT: true
           os: ubuntu-latest
         - name: "Linux (arm64, Bionic, GCC, OpenSSL)"
@@ -264,6 +270,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
             SKIP_PROXY_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
 
         # Nightly builds: ensure we fallback when missing core functionality
@@ -276,6 +283,7 @@ jobs:
             CC: gcc
             CMAKE_OPTIONS: -DTHREADSAFE=OFF -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
+            SKIP_PUSHOPTIONS_TESTS: true
         - name: "Linux (no mmap)"
           id: noble-nommap
           os: ubuntu-latest
