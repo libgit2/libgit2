@@ -30,6 +30,7 @@ void clar_test_shutdown(void);
 int clar_test(int argc, char *argv[]);
 
 const char *clar_sandbox_path(void);
+const char *clar_tempdir_path(void);
 
 void cl_set_cleanup(void (*cleanup)(void *), void *opaque);
 void cl_fs_cleanup(void);

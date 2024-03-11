@@ -28,7 +28,7 @@ const char *cl_fixture(const char *fixture_name)
 
 void cl_fixture_sandbox(const char *fixture_name)
 {
-	fs_copy(cl_fixture(fixture_name), _clar_path);
+	fs_copy(cl_fixture(fixture_name), clar_sandbox_path());
 }
 
 const char *cl_fixture_basename(const char *fixture_name)
@@ -45,6 +45,6 @@ const char *cl_fixture_basename(const char *fixture_name)
 
 void cl_fixture_cleanup(const char *fixture_name)
 {
-	fs_rm(fixture_path(_clar_path, cl_fixture_basename(fixture_name)));
+	fs_rm(fixture_path(clar_sandbox_path(), cl_fixture_basename(fixture_name)));
 }
 #endif

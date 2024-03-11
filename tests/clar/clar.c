@@ -195,8 +195,10 @@ static void clar_print_onsuite(const char *suite_name, int suite_index);
 static void clar_print_onabort(const char *msg, ...);
 
 /* From clar_sandbox.c */
-static void clar_unsandbox(void);
-static int clar_sandbox(void);
+static int clar_tempdir_init(void);
+static void clar_tempdir_shutdown(void);
+static int clar_sandbox_create(void);
+static int clar_sandbox_cleanup(void);
 
 /* From summary.h */
 static struct clar_summary *clar_summary_init(const char *filename);
@@ -293,6 +295,8 @@ clar_run_test(
 
 	CL_TRACE(CL_TRACE__TEST__BEGIN);
 
+	clar_sandbox_create();
+
 	_clar.last_report->start = time(NULL);
 	clar_time_now(&start);
 
@@ -319,6 +323,8 @@ clar_run_test(
 
 	if (cleanup->ptr != NULL)
 		cleanup->ptr();
+
+	clar_sandbox_cleanup();
 
 	CL_TRACE(CL_TRACE__TEST__END);
 
@@ -575,8 +581,8 @@ clar_test_init(int argc, char **argv)
 		exit(-1);
 	}
 
-	if (clar_sandbox() < 0) {
-		clar_print_onabort("Failed to sandbox the test runner.\n");
+	if (clar_tempdir_init() < 0) {
+		clar_print_onabort("Failed to create tempdir for the test runner.\n");
 		exit(-1);
 	}
 }
@@ -610,7 +616,7 @@ clar_test_shutdown(void)
 		_clar.total_errors
 	);
 
-	clar_unsandbox();
+	clar_tempdir_shutdown();
 
 	if (_clar.write_summary && clar_summary_shutdown(_clar.summary) < 0) {
 		clar_print_onabort("Failed to write the summary file\n");

@@ -146,7 +146,7 @@ fs_rm_wait(WCHAR *_wpath)
 			ERROR_PATH_NOT_FOUND == last_error)
 			return 0;
 
-		Sleep(RM_RETRY_DELAY * retries * retries);	
+		Sleep(RM_RETRY_DELAY * retries * retries);
 	}
 	while (retries++ <= RM_RETRY_COUNT);
 
@@ -516,7 +516,7 @@ fs_rm(const char *path)
 void
 cl_fs_cleanup(void)
 {
-	clar_unsandbox();
-	clar_sandbox();
+	clar_tempdir_shutdown();
+	clar_tempdir_init();
 }
 #endif
