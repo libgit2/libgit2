@@ -32,7 +32,6 @@
 # endif
 #endif
 
-#include <mbedtls/config.h>
 #include <mbedtls/ssl.h>
 #include <mbedtls/error.h>
 #include <mbedtls/entropy.h>
@@ -54,10 +53,17 @@ static mbedtls_entropy_context *mbedtls_entropy;
 static void shutdown_ssl(void)
 {
 	if (git__ssl_conf) {
-		mbedtls_x509_crt_free(git__ssl_conf->ca_chain);
-		git__free(git__ssl_conf->ca_chain);
-		mbedtls_ctr_drbg_free(git__ssl_conf->p_rng);
-		git__free(git__ssl_conf->p_rng);
+		#if MBEDTLS_VERSION_MAJOR >= 3
+			mbedtls_x509_crt_free(git__ssl_conf->private_ca_chain);
+			git__free(git__ssl_conf->private_ca_chain);
+			mbedtls_ctr_drbg_free(git__ssl_conf->private_p_rng);
+			git__free(git__ssl_conf->private_p_rng);
+		#else
+			mbedtls_x509_crt_free(git__ssl_conf->ca_chain);
+			git__free(git__ssl_conf->ca_chain);
+			mbedtls_ctr_drbg_free(git__ssl_conf->p_rng);
+			git__free(git__ssl_conf->p_rng);
+		#endif
 		mbedtls_ssl_config_free(git__ssl_conf);
 		git__free(git__ssl_conf);
 		git__ssl_conf = NULL;
@@ -94,7 +100,10 @@ int git_mbedtls_stream_global_init(void)
 	}
 
 	/* configure TLSv1 */
-	mbedtls_ssl_conf_min_version(git__ssl_conf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_0);
+	#if MBEDTLS_VERSION_MAJOR < 3
+		/* SSLv3 is not included in mbedtls3 */
+		mbedtls_ssl_conf_min_version(git__ssl_conf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_0);
+	#endif
 
 	/* verify_server_cert is responsible for making the check.
 	 * OPTIONAL because REQUIRED drops the certificate as soon as the check
@@ -192,7 +201,11 @@ static int ssl_set_error(mbedtls_ssl_context *ssl, int error)
 		break;
 
 	case MBEDTLS_ERR_X509_CERT_VERIFY_FAILED:
-		git_error_set(GIT_ERROR_SSL, "SSL error: %#04x [%x] - %s", error, ssl->session_negotiate->verify_result, errbuf);
+		#ifdef MBEDTLS_VERSION_MAJOR >= 3
+			git_error_set(GIT_ERROR_SSL, "SSL error: %#04x - %s", error, errbuf);
+		#else
+			git_error_set(GIT_ERROR_SSL, "SSL error: %#04x [%x] - %s", error, ssl->session_negotiate->verify_result, errbuf);
+		#endif
 		ret = GIT_ECERTIFICATE;
 		break;
 
@@ -462,8 +475,13 @@ int git_mbedtls__set_cert_location(const char *file, const char *path)
 		return -1;
 	}
 
-	mbedtls_x509_crt_free(git__ssl_conf->ca_chain);
-	git__free(git__ssl_conf->ca_chain);
+	#if MBEDTLS_VERSION_MAJOR >= 3
+		mbedtls_x509_crt_free(git__ssl_conf->private_ca_chain);
+		git__free(git__ssl_conf->private_ca_chain);
+	#else
+		mbedtls_x509_crt_free(git__ssl_conf->ca_chain);
+		git__free(git__ssl_conf->ca_chain);
+	#endif
 	mbedtls_ssl_conf_ca_chain(git__ssl_conf, cacert, NULL);
 
 	return 0;
