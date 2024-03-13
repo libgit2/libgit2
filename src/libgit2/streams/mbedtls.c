@@ -201,8 +201,8 @@ static int ssl_set_error(mbedtls_ssl_context *ssl, int error)
 		break;
 
 	case MBEDTLS_ERR_X509_CERT_VERIFY_FAILED:
-		#ifdef MBEDTLS_VERSION_MAJOR >= 3
-			git_error_set(GIT_ERROR_SSL, "SSL error: %#04x - %s", error, errbuf);
+		#if MBEDTLS_VERSION_MAJOR >= 3
+			git_error_set(GIT_ERROR_SSL, "SSL error: %#04x [%x] - %s", error, mbedtls_ssl_get_verify_result(ssl), errbuf);
 		#else
 			git_error_set(GIT_ERROR_SSL, "SSL error: %#04x [%x] - %s", error, ssl->session_negotiate->verify_result, errbuf);
 		#endif
