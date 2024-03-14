@@ -165,3 +165,23 @@ void test_message_trailer__invalid(void)
 		"Another: trailer\n"
 	, trailers);
 }
+
+void test_message_trailer__ignores_dashes(void)
+{
+	git_message_trailer trailers[] = {
+		{ "Signed-off-by", "some@one.com" },
+		{ "Another", "trailer" },
+		{ NULL, NULL },
+	};
+
+	assert_trailers(
+		"Message\n"
+		"\n"
+		"Markdown header\n"
+		"---------------\n"
+		"Lorem ipsum\n"
+		"\n"
+		"Signed-off-by: some@one.com\n"
+		"Another: trailer\n"
+	, trailers);
+}
