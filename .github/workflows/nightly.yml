@@ -322,7 +322,7 @@ jobs:
 
         # All builds: experimental SHA256 support
         - name: "Linux (SHA256, Xenial, Clang, OpenSSL)"
-          id: xenial-clang-openssl
+          id: linux-sha256
           container:
             name: xenial
           env:
@@ -331,7 +331,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
           os: ubuntu-latest
         - name: "macOS (SHA256)"
-          id: macos
+          id: macos-sha256
           os: macos-12
           setup-script: osx
           env:
@@ -341,7 +341,7 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (SHA256, amd64, Visual Studio)"
-          id: windows-amd64-vs
+          id: windows-sha256
           os: windows-2019
           env:
             ARCH: amd64
@@ -355,7 +355,7 @@ jobs:
     name: "Build ${{ matrix.platform.name }}"
     steps:
     - name: Check out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: source
         fetch-depth: 0
@@ -392,7 +392,7 @@ jobs:
         container-version: ${{ env.docker-registry-container-sha }}
         shell: ${{ matrix.platform.shell }}
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: test-results-${{ matrix.platform.id }}
@@ -420,7 +420,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: source
         fetch-depth: 0
@@ -451,7 +451,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
