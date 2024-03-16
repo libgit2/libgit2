@@ -66,6 +66,7 @@ jobs:
         - name: "macOS"
           id: macos
           os: macos-12
+          setup-script: osx
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
@@ -73,7 +74,6 @@ jobs:
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-          setup-script: osx
         - name: "Windows (amd64, Visual Studio, Schannel)"
           id: windows-amd64-vs
           os: windows-2019
@@ -126,6 +126,8 @@ jobs:
         # All builds: sanitizers
         - name: "Sanitizer (Memory)"
           id: memorysanitizer
+          os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -137,10 +139,10 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
-          os: ubuntu-latest
         - name: "Sanitizer (UndefinedBehavior)"
           id: ubsanitizer
           os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -155,6 +157,7 @@ jobs:
         - name: "Sanitizer (Thread)"
           id: threadsanitizer
           os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -330,13 +333,13 @@ jobs:
         - name: "macOS (SHA256)"
           id: macos
           os: macos-12
+          setup-script: osx
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-          setup-script: osx
         - name: "Windows (SHA256, amd64, Visual Studio)"
           id: windows-amd64-vs
           os: windows-2019

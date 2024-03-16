@@ -65,6 +65,7 @@ jobs:
         - name: "macOS"
           id: macos
           os: macos-12
+          setup-script: osx
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
@@ -72,7 +73,6 @@ jobs:
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-          setup-script: osx
         - name: "Windows (amd64, Visual Studio, Schannel)"
           id: windows-amd64-vs
           os: windows-2019
@@ -125,6 +125,8 @@ jobs:
         # All builds: sanitizers
         - name: "Sanitizer (Memory)"
           id: sanitizer-memory
+          os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -136,9 +138,10 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
-          os: ubuntu-latest
         - name: "Sanitizer (Address)"
           id: sanitizer-address
+          os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -150,10 +153,10 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
-          os: ubuntu-latest
         - name: "Sanitizer (UndefinedBehavior)"
           id: sanitizer-ub
           os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -168,6 +171,7 @@ jobs:
         - name: "Sanitizer (Thread)"
           id: sanitizer-thread
           os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
