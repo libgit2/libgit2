@@ -9,6 +9,9 @@
 
 #include "common.h"
 
-int git_transaction_config_new(git_transaction **out, git_config *cfg);
+int git_transaction_config_new(
+	git_transaction **out,
+	git_config *cfg,
+	void *data);
 
 #endif

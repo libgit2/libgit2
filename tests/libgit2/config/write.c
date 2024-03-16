@@ -696,6 +696,36 @@ void test_config_write__locking(void)
 	git_config_free(cfg);
 }
 
+void test_config_write__abort_lock(void)
+{
+	git_config *cfg;
+	git_config_entry *entry;
+	git_transaction *tx;
+	const char *filename = "locked-file";
+
+	/* Open the config and lock it */
+	cl_git_mkfile(filename, "[section]\n\tname = value\n");
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
+	cl_assert_equal_s("value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_pass(git_config_lock(&tx, cfg));
+
+	/* Change entries in the locked backend */
+	cl_git_pass(git_config_set_string(cfg, "section.name", "other value"));
+	cl_git_pass(git_config_set_string(cfg, "section2.name3", "more value"));
+
+	git_transaction_free(tx);
+
+	/* Now that we've unlocked it, we should see no changes */
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
+	cl_assert_equal_s("value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_entry(&entry, cfg, "section2.name3"));
+
+	git_config_free(cfg);
+}
+
 void test_config_write__repeated(void)
 {
 	const char *filename = "config-repeated";

@@ -22,8 +22,19 @@ GIT_BEGIN_DECL
 
 /**
  * Priority level of a config file.
+ *
  * These priority levels correspond to the natural escalation logic
- * (from higher to lower) when searching for config entries in git.git.
+ * (from higher to lower) when reading or searching for config entries
+ * in git.git. Meaning that for the same key, the configuration in
+ * the local configuration is preferred over the configuration in
+ * the system configuration file.
+ *
+ * Callers can add their own custom configuration, beginning at the
+ * `GIT_CONFIG_LEVEL_APP` level.
+ *
+ * Writes, by default, occur in the highest priority level backend
+ * that is writable. This ordering can be overridden with
+ * `git_config_set_writeorder`.
  *
  * git_config_open_default() and git_repository_config() honor those
  * priority levels as well.
@@ -48,9 +59,13 @@ typedef enum {
 	 */
 	GIT_CONFIG_LEVEL_LOCAL = 5,
 
+	/** Worktree specific configuration file; $GIT_DIR/config.worktree
+	 */
+	GIT_CONFIG_LEVEL_WORKTREE = 6,
+
 	/** Application specific configuration file; freely defined by applications
 	 */
-	GIT_CONFIG_LEVEL_APP = 6,
+	GIT_CONFIG_LEVEL_APP = 7,
 
 	/** Represents the highest level available config file (i.e. the most
 	 * specific config file available that actually is loaded)
@@ -295,6 +310,11 @@ GIT_EXTERN(int) git_config_open_level(
  * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_config_open_global(git_config **out, git_config *config);
+
+GIT_EXTERN(int) git_config_set_writeorder(
+	git_config *cfg,
+	git_config_level_t *levels,
+	size_t len);
 
 /**
  * Create a snapshot of the configuration

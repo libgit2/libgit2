@@ -71,3 +71,21 @@ void test_config_configlevel__fetching_a_level_from_an_empty_compound_config_ret
 
 	git_config_free(cfg);
 }
+
+void test_config_configlevel__can_override_local_with_worktree(void)
+{
+	git_config *cfg;
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_config_new(&cfg));
+	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config19"),
+		GIT_CONFIG_LEVEL_WORKTREE, NULL, 1));
+	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config18"),
+		GIT_CONFIG_LEVEL_LOCAL, NULL, 1));
+
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.stringglobal"));
+	cl_assert_equal_s("don't find me!", buf.ptr);
+
+	git_buf_dispose(&buf);
+	git_config_free(cfg);
+}
