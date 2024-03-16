@@ -219,5 +219,4 @@ void test_clone_local__shallow_fails(void)
 	opts.fetch_opts.depth = 4;
 
 	cl_git_fail_with(GIT_ENOTSUPPORTED, git_clone(&repo, cl_fixture("testrepo.git"), "./clone.git", &opts));
-	git_repository_free(repo);
 }
