@@ -94,10 +94,8 @@ int git_mbedtls_stream_global_init(void)
 		goto cleanup;
 	}
 
-	/* configure TLSv1.1 */
-#ifdef MBEDTLS_SSL_MINOR_VERSION_2
-	mbedtls_ssl_conf_min_version(&mbedtls_config, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_2);
-#endif
+	/* configure TLSv1.2 */
+	mbedtls_ssl_conf_min_version(&mbedtls_config, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_3);
 
 	/* verify_server_cert is responsible for making the check.
 	 * OPTIONAL because REQUIRED drops the certificate as soon as the check

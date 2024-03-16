@@ -106,7 +106,10 @@ static void git_openssl_free(void *mem)
 
 static int openssl_init(void)
 {
-	long ssl_opts = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
+	long ssl_opts = SSL_OP_NO_SSLv2 |
+	                SSL_OP_NO_SSLv3 |
+	                SSL_OP_NO_TLSv1 |
+	                SSL_OP_NO_TLSv1_1;
 	const char *ciphers = git__ssl_ciphers;
 #ifdef VALGRIND
 	static bool allocators_initialized = false;
@@ -135,10 +138,10 @@ static int openssl_init(void)
 	OPENSSL_init_ssl(0, NULL);
 
 	/*
-	 * Load SSLv{2,3} and TLSv1 so that we can talk with servers
-	 * which use the SSL hellos, which are often used for
-	 * compatibility. We then disable SSL so we only allow OpenSSL
-	 * to speak TLSv1 to perform the encryption itself.
+	 * Despite the name SSLv23_method, this is actually a version-
+	 * flexible context, which honors the protocol versions
+	 * specified in `ssl_opts`. So we only support TLSv1.2 and
+	 * higher.
 	 */
 	if (!(git__ssl_ctx = SSL_CTX_new(SSLv23_method())))
 		goto error;
