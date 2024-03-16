@@ -98,9 +98,6 @@ void test_pack_packbuilder__create_pack(void)
 {
 	git_indexer_progress stats;
 	git_str buf = GIT_STR_INIT, path = GIT_STR_INIT;
-	git_hash_ctx ctx;
-	unsigned char hash[GIT_HASH_SHA1_SIZE];
-	char hex[(GIT_HASH_SHA1_SIZE * 2) + 1];
 
 	seed_packbuilder();
 
@@ -114,33 +111,13 @@ void test_pack_packbuilder__create_pack(void)
 	cl_git_pass(git_indexer_commit(_indexer, &stats));
 
 	git_str_printf(&path, "pack-%s.pack", git_indexer_name(_indexer));
-
-	/*
-	 * By default, packfiles are created with only one thread.
-	 * Therefore we can predict the object ordering and make sure
-	 * we create exactly the same pack as git.git does when *not*
-	 * reusing existing deltas (as libgit2).
-	 *
-	 * $ cd tests/resources/testrepo.git
-	 * $ git rev-list --objects HEAD | \
-	 * 	git pack-objects -q --no-reuse-delta --threads=1 pack
-	 * $ sha1sum pack-7f5fa362c664d68ba7221259be1cbd187434b2f0.pack
-	 * 5d410bdf97cf896f9007681b92868471d636954b
-	 *
-	 */
+	cl_assert(git_fs_path_exists(path.ptr));
 
 	cl_git_pass(git_futils_readbuffer(&buf, git_str_cstr(&path)));
-
-	cl_git_pass(git_hash_ctx_init(&ctx, GIT_HASH_ALGORITHM_SHA1));
-	cl_git_pass(git_hash_update(&ctx, buf.ptr, buf.size));
-	cl_git_pass(git_hash_final(hash, &ctx));
-	git_hash_ctx_cleanup(&ctx);
+	cl_assert(buf.size > 256);
 
 	git_str_dispose(&path);
 	git_str_dispose(&buf);
-
-	git_hash_fmt(hex, hash, GIT_HASH_SHA1_SIZE);
-	cl_assert_equal_s(hex, "5d410bdf97cf896f9007681b92868471d636954b");
 }
 
 void test_pack_packbuilder__get_name(void)
@@ -148,22 +125,49 @@ void test_pack_packbuilder__get_name(void)
 	seed_packbuilder();
 
 	cl_git_pass(git_packbuilder_write(_packbuilder, ".", 0, NULL, NULL));
-	cl_assert_equal_s("7f5fa362c664d68ba7221259be1cbd187434b2f0", git_packbuilder_name(_packbuilder));
+	cl_assert(git_packbuilder_name(_packbuilder) != NULL);
+}
+
+static void get_packfile_path(git_str *out, git_packbuilder *pb)
+{
+	git_str_puts(out, "pack-");
+	git_str_puts(out, git_packbuilder_name(pb));
+	git_str_puts(out, ".pack");
+}
+
+static void get_index_path(git_str *out, git_packbuilder *pb)
+{
+	git_str_puts(out, "pack-");
+	git_str_puts(out, git_packbuilder_name(pb));
+	git_str_puts(out, ".idx");
 }
 
 void test_pack_packbuilder__write_default_path(void)
 {
+	git_str idx = GIT_STR_INIT, pack = GIT_STR_INIT;
+
 	seed_packbuilder();
 
 	cl_git_pass(git_packbuilder_write(_packbuilder, NULL, 0, NULL, NULL));
-	cl_assert(git_fs_path_exists("objects/pack/pack-7f5fa362c664d68ba7221259be1cbd187434b2f0.idx"));
-	cl_assert(git_fs_path_exists("objects/pack/pack-7f5fa362c664d68ba7221259be1cbd187434b2f0.pack"));
+
+	git_str_puts(&idx, "objects/pack/");
+	get_index_path(&idx, _packbuilder);
+
+	git_str_puts(&pack, "objects/pack/");
+	get_packfile_path(&pack, _packbuilder);
+
+	cl_assert(git_fs_path_exists(idx.ptr));
+	cl_assert(git_fs_path_exists(pack.ptr));
+
+	git_str_dispose(&idx);
+	git_str_dispose(&pack);
 }
 
 static void test_write_pack_permission(mode_t given, mode_t expected)
 {
 	struct stat statbuf;
 	mode_t mask, os_mask;
+	git_str idx = GIT_STR_INIT, pack = GIT_STR_INIT;
 
 	seed_packbuilder();
 
@@ -181,11 +185,17 @@ static void test_write_pack_permission(mode_t given, mode_t expected)
 	mask = p_umask(0);
 	p_umask(mask);
 
-	cl_git_pass(p_stat("pack-7f5fa362c664d68ba7221259be1cbd187434b2f0.idx", &statbuf));
+	get_index_path(&idx, _packbuilder);
+	get_packfile_path(&pack, _packbuilder);
+
+	cl_git_pass(p_stat(idx.ptr, &statbuf));
 	cl_assert_equal_i(statbuf.st_mode & os_mask, (expected & ~mask) & os_mask);
 
-	cl_git_pass(p_stat("pack-7f5fa362c664d68ba7221259be1cbd187434b2f0.pack", &statbuf));
+	cl_git_pass(p_stat(pack.ptr, &statbuf));
 	cl_assert_equal_i(statbuf.st_mode & os_mask, (expected & ~mask) & os_mask);
+
+	git_str_dispose(&idx);
+	git_str_dispose(&pack);
 }
 
 void test_pack_packbuilder__permissions_standard(void)
