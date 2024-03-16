@@ -158,7 +158,7 @@ static size_t find_patch_start(const char *str)
 	const char *s;
 
 	for (s = str; *s; s = next_line(s)) {
-		if (git__prefixcmp(s, "---") == 0)
+		if (git__prefixcmp(s, "---") == 0 && git__isspace(s[3]))
 			return s - str;
 	}
 

@@ -3,18 +3,21 @@
 static void assert_trailers(const char *message, git_message_trailer *trailers)
 {
 	git_message_trailer_array arr;
-	size_t i;
+	size_t i, count;
 
 	int rc = git_message_trailers(&arr, message);
 
 	cl_assert_equal_i(0, rc);
 
-	for(i=0; i<arr.count; i++) {
+	for (i = 0, count = 0; trailers[i].key != NULL; i++, count++)
+		;
+
+	cl_assert_equal_sz(arr.count, count);
+
+	for (i=0; i < count; i++) {
 		cl_assert_equal_s(arr.trailers[i].key, trailers[i].key);
 		cl_assert_equal_s(arr.trailers[i].value, trailers[i].value);
 	}
-
-	cl_assert_equal_i(0, rc);
 
 	git_message_trailer_array_free(&arr);
 }
@@ -159,6 +162,26 @@ void test_message_trailer__invalid(void)
 		"\n"
 		"Signed-off-by: some@one.com\n"
 		"Not a trailer\n"
+		"Another: trailer\n"
+	, trailers);
+}
+
+void test_message_trailer__ignores_dashes(void)
+{
+	git_message_trailer trailers[] = {
+		{ "Signed-off-by", "some@one.com" },
+		{ "Another", "trailer" },
+		{ NULL, NULL },
+	};
+
+	assert_trailers(
+		"Message\n"
+		"\n"
+		"Markdown header\n"
+		"---------------\n"
+		"Lorem ipsum\n"
+		"\n"
+		"Signed-off-by: some@one.com\n"
 		"Another: trailer\n"
 	, trailers);
 }
