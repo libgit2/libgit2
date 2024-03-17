@@ -431,7 +431,7 @@ static int clone_into(
 		return error;
 
 	memcpy(&fetch_opts, opts, sizeof(git_fetch_options));
-	fetch_opts.update_flags = ~GIT_REMOTE_UPDATE_FETCHHEAD;
+	fetch_opts.update_fetchhead = 0;
 
 	if (!opts->depth)
 		fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;

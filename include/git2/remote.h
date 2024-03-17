@@ -744,10 +744,10 @@ typedef struct {
 	git_fetch_prune_t prune;
 
 	/**
-	 * How to handle reference updates; a combination of
-	 * `git_remote_update_flags`.
+	 * How to handle reference updates; see `git_remote_update_flags`.
 	 */
-	unsigned int update_flags;
+	unsigned int update_fetchhead : 1,
+	             report_unchanged : 1;
 
 	/**
 	 * Determines how to behave regarding tags on the remote, such
@@ -790,7 +790,8 @@ typedef struct {
 	GIT_FETCH_OPTIONS_VERSION, \
 	GIT_REMOTE_CALLBACKS_INIT, \
 	GIT_FETCH_PRUNE_UNSPECIFIED, \
-	GIT_REMOTE_UPDATE_FETCHHEAD, \
+	1, \
+	0, \
 	GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, \
 	GIT_PROXY_OPTIONS_INIT }
 

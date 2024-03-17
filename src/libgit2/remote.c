@@ -1376,7 +1376,12 @@ int git_remote_fetch(
 		return error;
 
 	if (opts) {
-		update_flags = opts->update_flags;
+		if (opts->update_fetchhead)
+			update_flags |= GIT_REMOTE_UPDATE_FETCHHEAD;
+
+		if (opts->report_unchanged)
+			update_flags |= GIT_REMOTE_UPDATE_REPORT_UNCHANGED;
+
 		tagopt = opts->download_tags;
 	}
 
