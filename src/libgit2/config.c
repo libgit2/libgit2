@@ -241,7 +241,7 @@ static int find_backend_by_level(
 		return GIT_ENOTFOUND;
 	}
 
-	*out = entry->instance;
+	*out = found->instance;
 	return 0;
 }
 
@@ -430,27 +430,11 @@ typedef struct {
 	size_t i;
 } all_iter;
 
-static int find_next_backend(size_t *out, const git_config *config, size_t i)
-{
-	backend_entry *entry;
-
-	for (; i > 0; --i) {
-		entry = git_vector_get(&config->readers, i - 1);
-		GIT_ASSERT(entry && entry->instance && entry->instance->backend);
-
-		*out = i;
-		return 0;
-	}
-
-	return -1;
-}
-
 static int all_iter_next(git_config_entry **out, git_config_iterator *_iter)
 {
 	all_iter *iter = (all_iter *) _iter;
 	backend_entry *entry;
 	git_config_backend *backend;
-	size_t i;
 	int error = 0;
 
 	if (iter->current != NULL &&
@@ -462,12 +446,14 @@ static int all_iter_next(git_config_entry **out, git_config_iterator *_iter)
 		return error;
 
 	do {
-		if (find_next_backend(&i, iter->config, iter->i) < 0)
+		if (iter->i == 0)
 			return GIT_ITEROVER;
 
-		entry = git_vector_get(&iter->config->readers, i - 1);
+		entry = git_vector_get(&iter->config->readers, iter->i - 1);
+		GIT_ASSERT(entry && entry->instance && entry->instance->backend);
+
 		backend = entry->instance->backend;
-		iter->i = i - 1;
+		iter->i--;
 
 		if (iter->current)
 			iter->current->free(iter->current);
