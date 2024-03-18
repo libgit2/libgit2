@@ -4,6 +4,7 @@ file(GLOB SRC_EXAMPLES *.c *.h)
 
 add_executable(lg2 ${SRC_EXAMPLES})
 set_target_properties(lg2 PROPERTIES C_STANDARD 90)
+set_target_properties(lg2 PROPERTIES C_EXTENSIONS OFF)
 
 # Ensure that we do not use deprecated functions internally
 add_definitions(-DGIT_DEPRECATE_HARD)
