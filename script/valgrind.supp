@@ -192,6 +192,16 @@
 }
 
 {
+	ignore-openssl-undefined-in-connect
+	Memcheck:Cond
+	...
+	obj:*libcrypto.so*
+	...
+	fun:openssl_connect
+	...
+}
+
+{
 	ignore-libssh2-rsa-sha1-sign
 	Memcheck:Leak
 	...
