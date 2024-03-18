@@ -25,9 +25,9 @@ static void set_parse_error(git_config_parser *reader, int col, const char *erro
 }
 
 
-GIT_INLINE(int) config_keychar(int c)
+GIT_INLINE(int) config_keychar(char c)
 {
-	return isalnum(c) || c == '-';
+	return git__isalnum(c) || c == '-';
 }
 
 static int strip_comments(char *line, int in_quotes)
@@ -158,9 +158,10 @@ end_error:
 static int parse_section_header(git_config_parser *reader, char **section_out)
 {
 	char *name, *name_end;
-	int name_length, c, pos;
+	int name_length, pos;
 	int result;
 	char *line;
+	char c;
 	size_t line_len;
 
 	git_parse_advance_ws(&reader->ctx);
@@ -382,7 +383,7 @@ out:
 
 GIT_INLINE(bool) is_namechar(char c)
 {
-	return isalnum(c) || c == '-';
+	return git__isalnum(c) || c == '-';
 }
 
 static int parse_name(
