@@ -11,7 +11,7 @@
  * The version string for libgit2.  This string follows semantic
  * versioning (v2) guidelines.
  */
-#define LIBGIT2_VERSION        "1.8.0-alpha"
+#define LIBGIT2_VERSION        "1.8.0"
 
 /** The major version number for this version of libgit2. */
 #define LIBGIT2_VER_MAJOR      1
@@ -31,13 +31,13 @@
  * a prerelease name like "beta" or "rc1".  For final releases, this will
  * be `NULL`.
  */
-#define LIBGIT2_VER_PRERELEASE "alpha"
+#define LIBGIT2_VER_PRERELEASE NULL
 
 /**
  * The library ABI soversion for this version of libgit2. This should
  * only be changed when the library has a breaking ABI change, and so
  * may trail the library's version number.
  */
-#define LIBGIT2_SOVERSION      "1.7"
+#define LIBGIT2_SOVERSION      "1.8"
 
 #endif
