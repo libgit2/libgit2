@@ -18,6 +18,13 @@ int git_signature__parse(git_signature *sig, const char **buffer_out, const char
 void git_signature__writebuf(git_str *buf, const char *header, const git_signature *sig);
 bool git_signature__equal(const git_signature *one, const git_signature *two);
 
+int git_signature_from_env(git_signature **out,
+		const git_signature *sig,
+		const char *env_var_name,
+		const char *env_var_email);
+int git_signature_author_env(git_signature **out, const git_signature *sig);
+int git_signature_committer_env(git_signature **out, const git_signature *sig);
+
 int git_signature__pdup(git_signature **dest, const git_signature *source, git_pool *pool);
 
 #endif

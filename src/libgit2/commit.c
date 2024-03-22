@@ -142,6 +142,8 @@ static int git_commit__create_internal(
 	git_str buf = GIT_STR_INIT;
 	const git_oid *current_id = NULL;
 	git_array_oid_t parents = GIT_ARRAY_INIT;
+	git_signature *env_author = NULL;
+	git_signature *env_committer = NULL;
 
 	if (update_ref) {
 		error = git_reference_lookup_resolved(&ref, repo, update_ref, 10);
@@ -155,6 +157,14 @@ static int git_commit__create_internal(
 
 	if ((error = validate_tree_and_parents(&parents, repo, tree, parent_cb, parent_payload, current_id, validate)) < 0)
 		goto cleanup;
+
+	error = git_signature_author_env(&env_author, author);
+	if (!error)
+		author = env_author;
+
+	error = git_signature_committer_env(&env_committer, committer);
+	if (!error)
+		committer = env_committer;
 
 	error = git_commit__create_buffer_internal(&buf, author, committer,
 		message_encoding, message, tree,
@@ -180,6 +190,8 @@ static int git_commit__create_internal(
 	}
 
 cleanup:
+	git_signature_free(env_author);
+	git_signature_free(env_committer);
 	git_array_clear(parents);
 	git_reference_free(ref);
 	git_str_dispose(&buf);

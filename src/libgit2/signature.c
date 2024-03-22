@@ -336,3 +336,79 @@ bool git_signature__equal(const git_signature *one, const git_signature *two)
 		one->when.sign == two->when.sign;
 }
 
+int git_signature_from_env(git_signature **out,
+		const git_signature *sig,
+		const char *env_var_name,
+		const char *env_var_email)
+{
+	int error = 0;
+	git_str env_value = GIT_STR_INIT;
+	char *env_name_value = NULL;
+	char *env_email_value = NULL;
+	git_signature *p = NULL;
+	bool is_env_name_set = false;
+	bool is_env_email_set = false;
+	bool is_any_value_set = false;
+
+	GIT_ASSERT_ARG(sig);
+	GIT_ASSERT_ARG(env_var_name);
+
+	error = git__getenv(&env_value, env_var_name);
+	if (!error) {
+		env_name_value = strdup(git_str_cstr(&env_value));
+
+		is_env_name_set = true;
+		if (strlen(env_name_value) == 0) {
+			is_env_name_set = false;
+		}
+	}
+
+	error = git__getenv(&env_value, env_var_email);
+	if (!error) {
+		env_email_value = strdup(git_str_cstr(&env_value));
+
+		is_env_email_set = true;
+		if (strlen(env_email_value) == 0) {
+			is_env_email_set = false;
+		}
+	}
+	is_any_value_set = is_env_name_set || is_env_email_set;
+
+	if (is_any_value_set) {
+		if ((error = git_signature_new(&p,
+			((is_env_name_set) ? env_name_value : sig->name),
+			((is_env_email_set) ? env_email_value : sig->email),
+			sig->when.time, 0)) < 0) {
+			*out = NULL;
+			error = -1;
+		}
+		else {
+			*out = p;
+			error = 0;
+		}
+	}
+	else {
+		*out = NULL;
+		error = GIT_ENOTFOUND;
+	}
+
+	if (is_env_name_set) {
+		free(env_name_value);
+	}
+	if (is_env_email_set) {
+		free(env_email_value);
+	}
+	return error;
+}
+
+int git_signature_author_env(git_signature **out, const git_signature *sig)
+{
+	return git_signature_from_env(out, sig,
+			"GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL");
+}
+
+int git_signature_committer_env(git_signature **out, const git_signature *sig)
+{
+	return git_signature_from_env(out, sig,
+			"GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL");
+}
