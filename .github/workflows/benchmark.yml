@@ -89,7 +89,7 @@ jobs:
   publish:
     name: Publish results
     needs: [ build ]
-    if: always()
+    if: ${{ always() && github.repository == 'libgit2/libgit2' }}
     runs-on: ubuntu-latest
     steps:
     - name: Check out benchmark repository
@@ -100,7 +100,7 @@ jobs:
         fetch-depth: 0
         ssh-key: ${{ secrets.BENCHMARKS_PUBLISH_KEY }}
     - name: Download test results
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
     - name: Publish API
       run: |
        # Move today's benchmark run into the right place
