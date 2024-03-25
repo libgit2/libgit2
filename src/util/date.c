@@ -858,7 +858,7 @@ static git_time_t approxidate_str(const char *date,
 	return update_tm(&tm, &now, 0);
 }
 
-int git_date_parse(git_time_t *out, const char *date)
+int git_date_offset_parse(git_time_t *out, int *out_offset, const char *date)
 {
 	time_t time_sec;
 	git_time_t timestamp;
@@ -866,6 +866,7 @@ int git_date_parse(git_time_t *out, const char *date)
 
 	if (!parse_date_basic(date, &timestamp, &offset)) {
 		*out = timestamp;
+		*out_offset = offset;
 		return 0;
 	}
 
@@ -874,6 +875,13 @@ int git_date_parse(git_time_t *out, const char *date)
 
 	*out = approxidate_str(date, time_sec, &error_ret);
 	return error_ret;
+}
+
+int git_date_parse(git_time_t *out, const char *date)
+{
+	int offset;
+
+	return git_date_offset_parse(out, &offset, date);
 }
 
 int git_date_rfc2822_fmt(git_str *out, git_time_t time, int offset)
