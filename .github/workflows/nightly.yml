@@ -215,6 +215,7 @@ jobs:
             ARCH: x86
 
         - name: "Linux (Bionic, GCC, dynamically-loaded OpenSSL)"
+          id: bionic-gcc-dynamicopenssl
           container:
             name: bionic
             dockerfile: bionic
@@ -226,6 +227,7 @@ jobs:
             SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
         - name: "Linux (x86, Bionic, Clang, OpenSSL)"
+          id: bionic-x86-clang-openssl
           container:
             name: bionic-x86
             dockerfile: bionic
@@ -238,6 +240,7 @@ jobs:
             SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
         - name: "Linux (x86, Bionic, GCC, OpenSSL)"
+          id: bionic-x86-gcc-openssl
           container:
             name: bionic-x86
             dockerfile: bionic
@@ -249,6 +252,7 @@ jobs:
             SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
         - name: "Linux (arm32, Bionic, GCC, OpenSSL)"
+          id: bionic-arm32-gcc-openssl
           container:
             name: bionic-arm32
             dockerfile: bionic
@@ -263,6 +267,7 @@ jobs:
             GITTEST_FLAKY_STAT: true
           os: ubuntu-latest
         - name: "Linux (arm64, Bionic, GCC, OpenSSL)"
+          id: bionic-arm64-gcc-openssl
           container:
             name: bionic-arm64
             dockerfile: bionic
@@ -300,6 +305,7 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (no mmap)"
+          id: windows-nommap
           os: windows-2019
           env:
             ARCH: amd64
