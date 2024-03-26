@@ -1107,8 +1107,10 @@ int git_commit_create_from_stage(
 	if (given_opts)
 		memcpy(&opts, given_opts, sizeof(git_commit_create_options));
 
-	if ((author = opts.author) == NULL ||
-	    (committer = opts.committer) == NULL) {
+	author = opts.author;
+	committer = opts.committer;
+
+	if (!author || !committer) {
 		if (git_signature_default(&default_signature, repo) < 0)
 			goto done;
 
