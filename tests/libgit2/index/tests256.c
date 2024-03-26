@@ -678,7 +678,7 @@ void test_index_tests256__write_tree_invalid_unowned_index(void)
 
 	cl_git_pass(git_index__new(&idx, GIT_OID_SHA256));
 
-	// TODO: this one is failing
+	/* TODO: this one is failing */
 	cl_git_pass(git_oid__fromstr(&entry.id, "a8c2e0a89a9cbab77c732b6bc39b51a783e3a318a847f46cba7614cac9814291", GIT_OID_SHA256));
 	entry.path = "foo";
 	entry.mode = GIT_FILEMODE_BLOB;
