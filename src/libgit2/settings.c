@@ -51,11 +51,14 @@ extern int git_socket_stream__connect_timeout;
 extern int git_socket_stream__timeout;
 
 char *git__user_agent;
+char *git__user_agent_product;
 char *git__ssl_ciphers;
 
 static void settings_global_shutdown(void)
 {
 	git__free(git__user_agent);
+	git__free(git__user_agent_product);
+
 	git__free(git__ssl_ciphers);
 	git_repository__free_extensions();
 }
@@ -89,9 +92,16 @@ static int config_level_to_sysdir(int *out, int config_level)
 	return -1;
 }
 
+const char *git_settings__user_agent_product(void)
+{
+	return git__user_agent_product ? git__user_agent_product :
+		"git/2.0";
+}
+
 const char *git_settings__user_agent(void)
 {
-	return git__user_agent;
+	return git__user_agent ? git__user_agent :
+		"libgit2 " LIBGIT2_VERSION;
 }
 
 int git_libgit2_opts(int key, ...)
@@ -211,14 +221,65 @@ int git_libgit2_opts(int key, ...)
 		error = -1;
 #endif
 		break;
-	case GIT_OPT_SET_USER_AGENT:
-		git__free(git__user_agent);
-		git__user_agent = git__strdup(va_arg(ap, const char *));
-		if (!git__user_agent) {
-			git_error_set_oom();
-			error = -1;
-		}
 
+	case GIT_OPT_SET_USER_AGENT:
+		{
+			const char *new_agent = va_arg(ap, const char *);
+
+			git__free(git__user_agent);
+
+			if (new_agent) {
+				git__user_agent= git__strdup(new_agent);
+
+				if (!git__user_agent)
+					error = -1;
+			} else {
+				git__user_agent = NULL;
+			}
+		}
+		break;
+
+	case GIT_OPT_GET_USER_AGENT:
+		{
+			git_buf *out = va_arg(ap, git_buf *);
+			git_str str = GIT_STR_INIT;
+
+			if ((error = git_buf_tostr(&str, out)) < 0 ||
+			    (error = git_str_puts(&str, git_settings__user_agent())) < 0)
+				break;
+
+			error = git_buf_fromstr(out, &str);
+		}
+		break;
+
+	case GIT_OPT_SET_USER_AGENT_PRODUCT:
+		{
+			const char *new_agent = va_arg(ap, const char *);
+
+			git__free(git__user_agent_product);
+
+			if (new_agent) {
+				git__user_agent_product = git__strdup(new_agent);
+
+				if (!git__user_agent_product)
+					error = -1;
+			} else {
+				git__user_agent_product = NULL;
+			}
+		}
+		break;
+
+	case GIT_OPT_GET_USER_AGENT_PRODUCT:
+		{
+			git_buf *out = va_arg(ap, git_buf *);
+			git_str str = GIT_STR_INIT;
+
+			if ((error = git_buf_tostr(&str, out)) < 0 ||
+			    (error = git_str_puts(&str, git_settings__user_agent_product())) < 0)
+				break;
+
+			error = git_buf_fromstr(out, &str);
+		}
 		break;
 
 	case GIT_OPT_ENABLE_STRICT_OBJECT_CREATION:
@@ -243,19 +304,6 @@ int git_libgit2_opts(int key, ...)
 		git_error_set(GIT_ERROR_SSL, "TLS backend doesn't support custom ciphers");
 		error = -1;
 #endif
-		break;
-
-	case GIT_OPT_GET_USER_AGENT:
-		{
-			git_buf *out = va_arg(ap, git_buf *);
-			git_str str = GIT_STR_INIT;
-
-			if ((error = git_buf_tostr(&str, out)) < 0 ||
-			    (error = git_str_puts(&str, git__user_agent)) < 0)
-				break;
-
-			error = git_buf_fromstr(out, &str);
-		}
 		break;
 
 	case GIT_OPT_ENABLE_OFS_DELTA:

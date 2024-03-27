@@ -10,5 +10,6 @@
 extern int git_settings_global_init(void);
 
 extern const char *git_settings__user_agent(void);
+extern const char *git_settings__user_agent_product(void);
 
 #endif

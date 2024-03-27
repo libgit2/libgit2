@@ -228,7 +228,9 @@ typedef enum {
 	GIT_OPT_SET_SERVER_CONNECT_TIMEOUT,
 	GIT_OPT_GET_SERVER_CONNECT_TIMEOUT,
 	GIT_OPT_SET_SERVER_TIMEOUT,
-	GIT_OPT_GET_SERVER_TIMEOUT
+	GIT_OPT_GET_SERVER_TIMEOUT,
+	GIT_OPT_SET_USER_AGENT_PRODUCT,
+	GIT_OPT_GET_USER_AGENT_PRODUCT
 } git_libgit2_opt_t;
 
 /**
@@ -337,11 +339,35 @@ typedef enum {
  *
  *	* opts(GIT_OPT_SET_USER_AGENT, const char *user_agent)
  *
- *		> Set the value of the User-Agent header.  This value will be
- *		> appended to "git/1.0", for compatibility with other git clients.
+ *		> Set the value of the comment section of the User-Agent header.
+ *		> This can be information about your product and its version.
+ *		> By default this is "libgit2" followed by the libgit2 version.
  *		>
- *		> - `user_agent` is the value that will be delivered as the
- *		>   User-Agent header on HTTP requests.
+ *		> This value will be appended to User-Agent _product_, which
+ *		> is typically set to "git/2.0".
+ *		>
+ *		> Set to the empty string ("") to not send any information in the
+ *		> comment section, or set to NULL to restore the default.
+ *
+ *	* opts(GIT_OPT_GET_USER_AGENT, git_buf *out)
+ *
+ *		> Get the value of the User-Agent header.
+ *		> The User-Agent is written to the `out` buffer.
+ *
+ *	* opts(GIT_OPT_SET_USER_AGENT_PRODUCT, const char *user_agent_product)
+ *
+ *		> Set the value of the product portion of the User-Agent header.
+ *		> This defaults to "git/2.0", for compatibility with other git
+ *		> clients. It is recommended to keep this as git/<version> for
+ *		> compatibility with servers that do user-agent detection.
+ *		>
+ *		> Set to the empty string ("") to not send any user-agent string,
+ *		> or set to NULL to restore the default.
+ *
+ *	* opts(GIT_OPT_GET_USER_AGENT_PRODUCT, git_buf *out)
+ *
+ *		> Get the value of the User-Agent product header.
+ *		> The User-Agent product is written to the `out` buffer.
  *
  *	* opts(GIT_OPT_SET_WINDOWS_SHAREMODE, unsigned long value)
  *
@@ -376,11 +402,6 @@ typedef enum {
  *		> Set the SSL ciphers use for HTTPS connections.
  *		>
  *		> - `ciphers` is the list of ciphers that are eanbled.
- *
- *	* opts(GIT_OPT_GET_USER_AGENT, git_buf *out)
- *
- *		> Get the value of the User-Agent header.
- *		> The User-Agent is written to the `out` buffer.
  *
  *	* opts(GIT_OPT_ENABLE_OFS_DELTA, int enabled)
  *
