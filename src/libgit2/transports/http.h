@@ -17,7 +17,7 @@ extern bool git_http__expect_continue;
 
 GIT_INLINE(int) git_http__user_agent(git_str *buf)
 {
-	const char *ua = git_libgit2__user_agent();
+	const char *ua = git_settings__user_agent();
 
 	if (!ua)
 		ua = "libgit2 " LIBGIT2_VERSION;
