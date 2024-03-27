@@ -174,26 +174,28 @@ int git_diff__merge(
 			break;
 	}
 
-	if (!error) {
-		git_vector_swap(&onto->deltas, &onto_new);
-		git_pool_swap(&onto->pool, &onto_pool);
+	if (error) {
+		git_vector_free_deep(&onto_new);
+		git_pool_clear(&onto_pool);
 
-		if ((onto->opts.flags & GIT_DIFF_REVERSE) != 0)
-			onto->old_src = from->old_src;
-		else
-			onto->new_src = from->new_src;
-
-		/* prefix strings also come from old pool, so recreate those.*/
-		onto->opts.old_prefix =
-			git_pool_strdup_safe(&onto->pool, onto->opts.old_prefix);
-		onto->opts.new_prefix =
-			git_pool_strdup_safe(&onto->pool, onto->opts.new_prefix);
+		return error;
 	}
+	onto->opts.old_prefix =
+		git_pool_strdup_safe(&onto_pool, onto->opts.old_prefix);
+	onto->opts.new_prefix =
+		git_pool_strdup_safe(&onto_pool, onto->opts.new_prefix);
 
-	git_vector_free_deep(&onto_new);
-	git_pool_clear(&onto_pool);
+	onto->free_deltas_fn(onto);
 
-	return error;
+	onto->deltas = onto_new;
+	onto->pool = onto_pool;
+
+	if ((onto->opts.flags & GIT_DIFF_REVERSE) != 0)
+		onto->old_src = from->old_src;
+	else
+		onto->new_src = from->new_src;
+
+	return 0;
 }
 
 int git_diff_merge(git_diff *onto, const git_diff *from)

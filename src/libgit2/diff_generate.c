@@ -424,15 +424,23 @@ static void diff_set_ignore_case(git_diff *diff, bool ignore_case)
 	git_vector_sort(&diff->deltas);
 }
 
+static void diff_generated_free_deltas(git_diff *d)
+{
+	git_diff_generated *diff = (git_diff_generated *)d;
+
+	git_vector_free_deep(&diff->base.deltas);
+	git_pool_clear(&diff->base.pool);
+}
+
 static void diff_generated_free(git_diff *d)
 {
 	git_diff_generated *diff = (git_diff_generated *)d;
 
+	diff_generated_free_deltas(d);
+
 	git_attr_session__free(&diff->base.attrsession);
-	git_vector_free_deep(&diff->base.deltas);
 
 	git_pathspec__vfree(&diff->pathspec);
-	git_pool_clear(&diff->base.pool);
 
 	git__memzero(diff, sizeof(*diff));
 	git__free(diff);
@@ -459,6 +467,7 @@ static git_diff_generated *diff_generated_alloc(
 	diff->base.old_src = old_iter->type;
 	diff->base.new_src = new_iter->type;
 	diff->base.patch_fn = git_patch_generated_from_diff;
+	diff->base.free_deltas_fn = diff_generated_free_deltas;
 	diff->base.free_fn = diff_generated_free;
 	git_attr_session__init(&diff->base.attrsession, repo);
 	memcpy(&diff->base.opts, &dflt, sizeof(git_diff_options));

@@ -11,7 +11,7 @@
 #include "patch.h"
 #include "patch_parse.h"
 
-static void diff_parsed_free(git_diff *d)
+static void diff_parsed_free_deltas(git_diff *d)
 {
 	git_diff_parsed *diff = (git_diff_parsed *)d;
 	git_patch *patch;
@@ -24,6 +24,13 @@ static void diff_parsed_free(git_diff *d)
 
 	git_vector_free(&diff->base.deltas);
 	git_pool_clear(&diff->base.pool);
+}
+
+static void diff_parsed_free(git_diff *d)
+{
+	git_diff_parsed *diff = (git_diff_parsed *)d;
+
+	diff_parsed_free_deltas(d);
 
 	git__memzero(diff, sizeof(*diff));
 	git__free(diff);
@@ -43,6 +50,7 @@ static git_diff_parsed *diff_parsed_alloc(git_oid_t oid_type)
 	diff->base.pfxcomp = git__prefixcmp;
 	diff->base.entrycomp = git_diff__entry_cmp;
 	diff->base.patch_fn = git_patch_parsed_from_diff;
+	diff->base.free_deltas_fn = diff_parsed_free_deltas;
 	diff->base.free_fn = diff_parsed_free;
 
 	if (git_diff_options_init(&diff->base.opts, GIT_DIFF_OPTIONS_VERSION) < 0) {
