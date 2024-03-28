@@ -6,8 +6,6 @@
  */
 
 #include "streams/openssl.h"
-#include "streams/openssl_legacy.h"
-#include "streams/openssl_dynamic.h"
 
 #ifdef GIT_OPENSSL
 
