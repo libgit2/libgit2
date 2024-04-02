@@ -58,7 +58,7 @@ GIT_EXTERN(const char *) git_refspec_dst(const git_refspec *refspec);
  * Get the refspec's string
  *
  * @param refspec the refspec
- * @returns the refspec's original string
+ * @return the refspec's original string
  */
 GIT_EXTERN(const char *) git_refspec_string(const git_refspec *refspec);
 
