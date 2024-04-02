@@ -8,6 +8,7 @@
 #define INCLUDE_git_email_h__
 
 #include "common.h"
+#include "diff.h"
 
 /**
  * @file git2/email.h
