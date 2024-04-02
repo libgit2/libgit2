@@ -20,6 +20,9 @@
 
 GIT_BEGIN_DECL
 
+/**
+ * A remote's capabilities.
+ */
 typedef enum {
 	/** Remote supports fetching an advertised object by ID. */
 	GIT_REMOTE_CAPABILITY_TIP_OID = (1 << 0),
