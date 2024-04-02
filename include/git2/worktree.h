@@ -11,6 +11,7 @@
 #include "buffer.h"
 #include "types.h"
 #include "strarray.h"
+#include "checkout.h"
 
 /**
  * @file git2/worktrees.h

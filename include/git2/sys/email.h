@@ -7,6 +7,11 @@
 #ifndef INCLUDE_sys_git_email_h__
 #define INCLUDE_sys_git_email_h__
 
+#include "git2/common.h"
+#include "git2/diff.h"
+#include "git2/email.h"
+#include "git2/types.h"
+
 /**
  * @file git2/sys/email.h
  * @brief Advanced git email creation routines
