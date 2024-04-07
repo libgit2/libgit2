@@ -15,7 +15,12 @@
 #include "process.h"
 #include "strlist.h"
 
-extern char **environ;
+#ifdef __APPLE__
+	#include <crt_externs.h>
+	#define environ (*_NSGetEnviron())
+#else
+	extern char **environ;
+#endif
 
 struct git_process {
 	char **args;
