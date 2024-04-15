@@ -1525,6 +1525,14 @@ static int pack_entry_find_offset(
 	if (p->index_version > 1) {
 		level1_ofs += 2;
 		index += 8;
+
+		if ((int)short_oid->id[0] + 2 >= p->index_map.len) {
+			git_error_set(GIT_ERROR_INTERNAL, "internal error: p->short_oid->[0] out of bounds");
+			goto cleanup;
+		}
+	} else if ((int)short_oid->id[0] >= p->index_map.len) {
+		git_error_set(GIT_ERROR_INTERNAL, "internal error: p->short_oid->[0] out of bounds");
+		goto cleanup;
 	}
 
 	index += 4 * 256;
