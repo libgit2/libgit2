@@ -40,10 +40,10 @@ void test_remote_fetch__cleanup(void) {
 	git_repository_free(repo2);
 
 	cl_git_pass(git_futils_rmdir_r(repo1_path, NULL, GIT_RMDIR_REMOVE_FILES));
-	free(repo1_path);
+	git__free(repo1_path);
 
 	cl_git_pass(git_futils_rmdir_r(repo2_path, NULL, GIT_RMDIR_REMOVE_FILES));
-	free(repo2_path);
+	git__free(repo2_path);
 }
 
 
