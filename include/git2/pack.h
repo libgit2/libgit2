@@ -181,7 +181,7 @@ GIT_EXTERN(int) git_packbuilder_write(
  * @param pb The packbuilder object
  * @return 0 or an error code
  */
-GIT_EXTERN(const git_oid *) git_packbuilder_hash(git_packbuilder *pb);
+GIT_EXTERN(const git_oid *) git_packbuilder_hash(git_packbuilder *pb) __attribute__((deprecated("Use git_packbuilder_name")));
 #endif
 
 /**

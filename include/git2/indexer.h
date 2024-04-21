@@ -169,7 +169,7 @@ GIT_EXTERN(int) git_indexer_commit(git_indexer *idx, git_indexer_progress *stats
  * @param idx the indexer instance
  * @return the packfile's hash
  */
-GIT_EXTERN(const git_oid *) git_indexer_hash(const git_indexer *idx);
+GIT_EXTERN(const git_oid *) git_indexer_hash(const git_indexer *idx) __attribute__((deprecated("Use git_indexer_name")));
 #endif
 
 /**

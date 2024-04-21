@@ -317,7 +317,7 @@ GIT_EXTERN(const char *) git_index_path(const git_index *index);
  * @param index an existing index object
  * @return a pointer to the checksum of the index
  */
-GIT_EXTERN(const git_oid *) git_index_checksum(git_index *index);
+GIT_EXTERN(const git_oid *) git_index_checksum(git_index *index) __attribute__((deprecated("Use git_index_checksum")));
 #endif
 
 /**

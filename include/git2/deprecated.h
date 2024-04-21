@@ -116,7 +116,7 @@ GIT_EXTERN(int) git_blob_filtered_content(
 	git_buf *out,
 	git_blob *blob,
 	const char *as_path,
-	int check_for_binary_data);
+	int check_for_binary_data) __attribute__((deprecated("Use git_blob_filter")));
 
 /**@}*/
 
@@ -139,7 +139,7 @@ GIT_EXTERN(int) git_blob_filtered_content(
 GIT_EXTERN(int) git_filter_list_stream_data(
 	git_filter_list *filters,
 	git_buf *data,
-	git_writestream *target);
+	git_writestream *target) __attribute__((deprecated("Use git_filter_list_stream_buffer")));
 
 /** Deprecated in favor of `git_filter_list_apply_to_buffer`.
  *
@@ -149,7 +149,7 @@ GIT_EXTERN(int) git_filter_list_stream_data(
 GIT_EXTERN(int) git_filter_list_apply_to_data(
 	git_buf *out,
 	git_filter_list *filters,
-	git_buf *in);
+	git_buf *in) __attribute__((deprecated("Use git_filter_list_apply_to_buffer")));
 
 /**@}*/
 
@@ -176,7 +176,7 @@ GIT_EXTERN(int) git_filter_list_apply_to_data(
  * @see git_treebuilder_write
  */
 GIT_EXTERN(int) git_treebuilder_write_with_buffer(
-	git_oid *oid, git_treebuilder *bld, git_buf *tree);
+	git_oid *oid, git_treebuilder *bld, git_buf *tree) __attribute__((deprecated("Use git_treebuilder_write")));
 
 /**@}*/
 
@@ -256,7 +256,7 @@ GIT_EXTERN(int) git_buf_contains_nul(const git_buf *buf);
  * @deprecated Use git_buf_dispose
  * @see git_buf_dispose
  */
-GIT_EXTERN(void) git_buf_free(git_buf *buffer);
+GIT_EXTERN(void) git_buf_free(git_buf *buffer) __attribute__((deprecated("Use git_buf_dispose")));
 
 /**@}*/
 
@@ -277,7 +277,7 @@ typedef int (*git_commit_signing_cb)(
 	git_buf *signature,
 	git_buf *signature_field,
 	const char *commit_content,
-	void *payload);
+	void *payload) __attribute__((deprecated("Use git_commit_create_cb")));
 
 /**@}*/
 
@@ -357,7 +357,7 @@ typedef struct {
 GIT_EXTERN(int) git_diff_format_email(
 	git_buf *out,
 	git_diff *diff,
-	const git_diff_format_email_options *opts);
+	const git_diff_format_email_options *opts) __attribute__((deprecated("Use git_email_create_from_diff")));
 
 /**
  * Create an e-mail ready patch for a commit.
@@ -372,7 +372,7 @@ GIT_EXTERN(int) git_diff_commit_as_email(
 	size_t patch_no,
 	size_t total_patches,
 	uint32_t flags,
-	const git_diff_options *diff_opts);
+	const git_diff_options *diff_opts) __attribute__((deprecated("Use git_email_create_from_commit")));
 
 /**
  * Initialize git_diff_format_email_options structure
@@ -449,7 +449,7 @@ GIT_EXTERN(int) git_diff_format_email_options_init(
  * @deprecated Use git_error_last
  * @see git_error_last
  */
-GIT_EXTERN(const git_error *) giterr_last(void);
+GIT_EXTERN(const git_error *) giterr_last(void) __attribute__((deprecated("Use git_error_last")));
 
 /**
  * Clear the last error.  This is an alias of `git_error_last` and is
@@ -461,7 +461,7 @@ GIT_EXTERN(const git_error *) giterr_last(void);
  * @deprecated Use git_error_clear
  * @see git_error_clear
  */
-GIT_EXTERN(void) giterr_clear(void);
+GIT_EXTERN(void) giterr_clear(void) __attribute__((deprecated("Use git_error_clear")));
 
 /**
  * Sets the error message to the given string.  This is an alias of
@@ -473,7 +473,7 @@ GIT_EXTERN(void) giterr_clear(void);
  * @deprecated Use git_error_set_str
  * @see git_error_set_str
  */
-GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
+GIT_EXTERN(void) giterr_set_str(int error_class, const char *string) __attribute__((deprecated("Use git_error_set_str")));
 
 /**
  * Indicates that an out-of-memory situation occurred.  This is an alias
@@ -485,7 +485,7 @@ GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
  * @deprecated Use git_error_set_oom
  * @see git_error_set_oom
  */
-GIT_EXTERN(void) giterr_set_oom(void);
+GIT_EXTERN(void) giterr_set_oom(void) __attribute__((deprecated("Use git_error_set_oom")));
 
 /**@}*/
 
@@ -596,7 +596,7 @@ GIT_EXTERN(size_t) git_object__size(git_object_t type);
  * @param remote_name name to be checked.
  * @return 1 if the reference name is acceptable; 0 if it isn't
  */
-GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
+GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name) __attribute__((deprecated("Use git_remote_name_is_valid")));
 
 /**@}*/
 
@@ -640,7 +640,7 @@ GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
  * @param refname name to be checked.
  * @return 1 if the reference name is acceptable; 0 if it isn't
  */
-GIT_EXTERN(int) git_reference_is_valid_name(const char *refname);
+GIT_EXTERN(int) git_reference_is_valid_name(const char *refname) __attribute__((deprecated("Use git_reference_name_is_valid")));
 
 GIT_EXTERN(int) git_tag_create_frombuffer(
 	git_oid *oid,
@@ -807,7 +807,7 @@ GIT_EXTERN(int) git_oid_iszero(const git_oid *id);
  * @deprecated Use git_oidarray_dispose
  * @see git_oidarray_dispose
  */
-GIT_EXTERN(void) git_oidarray_free(git_oidarray *array);
+GIT_EXTERN(void) git_oidarray_free(git_oidarray *array) __attribute__((deprecated("Use git_oidarray_dispose")));
 
 /**@}*/
 
@@ -888,7 +888,7 @@ GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
  * @deprecated Use git_strarray_dispose
  * @see git_strarray_dispose
  */
-GIT_EXTERN(void) git_strarray_free(git_strarray *array);
+GIT_EXTERN(void) git_strarray_free(git_strarray *array) __attribute__((deprecated("Use git_strarray_dispose")));
 
 /**@}*/
 
