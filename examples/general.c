@@ -31,8 +31,8 @@
  * Git Internals that you will need to know to work with Git at this level,
  * check out [Chapter 10][pg] of the Pro Git book.
  *
- * [lg]: http://libgit2.github.com
- * [ap]: http://libgit2.github.com/libgit2
+ * [lg]: https://libgit2.org
+ * [ap]: https://libgit2.org/libgit2
  * [pg]: https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain
  */
 
@@ -97,7 +97,7 @@ int lg2_general(git_repository *repo, int argc, char** argv)
 	 *
 	 * (Try running this program against tests/resources/testrepo.git.)
 	 *
-	 * [me]: http://libgit2.github.com/libgit2/#HEAD/group/repository
+	 * [me]: https://libgit2.org/libgit2/#HEAD/group/repository
 	 */
 	repo_path = (argc > 1) ? argv[1] : "/opt/libgit2-test/.git";
 
@@ -173,7 +173,7 @@ static void oid_parsing(git_oid *oid)
  * working with raw objects, we'll need to get this structure from the
  * repository.
  *
- * [odb]: http://libgit2.github.com/libgit2/#HEAD/group/odb
+ * [odb]: https://libgit2.org/libgit2/#HEAD/group/odb
  */
 static void object_database(git_repository *repo, git_oid *oid)
 {
@@ -262,7 +262,7 @@ static void object_database(git_repository *repo, git_oid *oid)
  * of them here.  You can read about the other ones in the [commit API
  * docs][cd].
  *
- * [cd]: http://libgit2.github.com/libgit2/#HEAD/group/commit
+ * [cd]: https://libgit2.org/libgit2/#HEAD/group/commit
  */
 static void commit_writing(git_repository *repo)
 {
@@ -347,7 +347,7 @@ static void commit_writing(git_repository *repo)
  * data in the commit - the author (name, email, datetime), committer
  * (same), tree, message, encoding and parent(s).
  *
- * [pco]: http://libgit2.github.com/libgit2/#HEAD/group/commit
+ * [pco]: https://libgit2.org/libgit2/#HEAD/group/commit
  */
 static void commit_parsing(git_repository *repo)
 {
@@ -418,7 +418,7 @@ static void commit_parsing(git_repository *repo)
  * functions very similarly to the commit lookup, parsing and creation
  * methods, since the objects themselves are very similar.
  *
- * [tm]: http://libgit2.github.com/libgit2/#HEAD/group/tag
+ * [tm]: https://libgit2.org/libgit2/#HEAD/group/tag
  */
 static void tag_parsing(git_repository *repo)
 {
@@ -472,7 +472,7 @@ static void tag_parsing(git_repository *repo)
  * object type in Git, but a useful structure for parsing and traversing
  * tree entries.
  *
- * [tp]: http://libgit2.github.com/libgit2/#HEAD/group/tree
+ * [tp]: https://libgit2.org/libgit2/#HEAD/group/tree
  */
 static void tree_parsing(git_repository *repo)
 {
@@ -536,7 +536,7 @@ static void tree_parsing(git_repository *repo)
  * from disk and writing it to the db and getting the oid back so you
  * don't have to do all those steps yourself.
  *
- * [ba]: http://libgit2.github.com/libgit2/#HEAD/group/blob
+ * [ba]: https://libgit2.org/libgit2/#HEAD/group/blob
  */
 static void blob_parsing(git_repository *repo)
 {
@@ -578,7 +578,7 @@ static void blob_parsing(git_repository *repo)
  * that were ancestors of (reachable from) a given starting point.  This
  * can allow you to create `git log` type functionality.
  *
- * [rw]: http://libgit2.github.com/libgit2/#HEAD/group/revwalk
+ * [rw]: https://libgit2.org/libgit2/#HEAD/group/revwalk
  */
 static void revwalking(git_repository *repo)
 {
@@ -643,7 +643,7 @@ static void revwalking(git_repository *repo)
  * The [index file API][gi] allows you to read, traverse, update and write
  * the Git index file (sometimes thought of as the staging area).
  *
- * [gi]: http://libgit2.github.com/libgit2/#HEAD/group/index
+ * [gi]: https://libgit2.org/libgit2/#HEAD/group/index
  */
 static void index_walking(git_repository *repo)
 {
@@ -687,7 +687,7 @@ static void index_walking(git_repository *repo)
  * references such as branches, tags and remote references (everything in
  * the .git/refs directory).
  *
- * [ref]: http://libgit2.github.com/libgit2/#HEAD/group/reference
+ * [ref]: https://libgit2.org/libgit2/#HEAD/group/reference
  */
 static void reference_listing(git_repository *repo)
 {
@@ -740,7 +740,7 @@ static void reference_listing(git_repository *repo)
  * The [config API][config] allows you to list and update config values
  * in any of the accessible config file locations (system, global, local).
  *
- * [config]: http://libgit2.github.com/libgit2/#HEAD/group/config
+ * [config]: https://libgit2.org/libgit2/#HEAD/group/config
  */
 static void config_files(const char *repo_path, git_repository* repo)
 {

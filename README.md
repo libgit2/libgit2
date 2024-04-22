@@ -4,8 +4,8 @@ libgit2 - the Git linkable library
 | Build Status | |
 | ------------ | - |
 | **main** branch CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush) |
+| **v1.8 branch** CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?branch=maint%2Fv1.8&event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush+branch%3Amaint%2Fv1.8) |
 | **v1.7 branch** CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?branch=maint%2Fv1.7&event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush+branch%3Amaint%2Fv1.7) |
-| **v1.6 branch** CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?branch=maint%2Fv1.6&event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush+branch%3Amaint%2Fv1.6) |
 | **Nightly** builds | [![Nightly Build](https://github.com/libgit2/libgit2/workflows/Nightly%20Build/badge.svg)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22Nightly+Build%22) [![Coverity Scan Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639) |
 
 `libgit2` is a portable, pure C implementation of the Git core methods
@@ -113,7 +113,7 @@ Getting Help
 **Getting Help**
 
 If you have questions about the library, please be sure to check out the
-[API documentation](http://libgit2.github.com/libgit2/).  If you still have
+[API documentation](https://libgit2.org/libgit2/).  If you still have
 questions, reach out to us on Slack or post a question on 
 [StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) (with the `libgit2` tag).
 

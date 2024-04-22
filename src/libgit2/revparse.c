@@ -817,6 +817,12 @@ static int revparse(
 					base_rev = temp_object;
 				break;
 			} else if (spec[pos+1] == '\0') {
+				if (pos) {
+					git_error_set(GIT_ERROR_REFERENCE, "invalid revspec");
+					error = GIT_EINVALIDSPEC;
+					goto cleanup;
+				}
+
 				spec = "HEAD";
 				identifier_len = 4;
 				parsed = true;
@@ -935,7 +941,7 @@ int git_revparse(
 		 * allowed.
 		 */
 		if (!git__strcmp(spec, "..")) {
-			git_error_set(GIT_ERROR_INVALID, "Invalid pattern '..'");
+			git_error_set(GIT_ERROR_INVALID, "invalid pattern '..'");
 			return GIT_EINVALIDSPEC;
 		}
 

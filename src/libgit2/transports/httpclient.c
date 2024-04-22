@@ -649,6 +649,30 @@ static int puts_host_and_port(git_str *buf, git_net_url *url, bool force_port)
 	return git_str_oom(buf) ? -1 : 0;
 }
 
+static int append_user_agent(git_str *buf)
+{
+	const char *product = git_settings__user_agent_product();
+	const char *comment = git_settings__user_agent();
+
+	GIT_ASSERT(product && comment);
+
+	if (!*product)
+		return 0;
+
+	git_str_puts(buf, "User-Agent: ");
+	git_str_puts(buf, product);
+
+	if (*comment) {
+		git_str_puts(buf, " (");
+		git_str_puts(buf, comment);
+		git_str_puts(buf, ")");
+	}
+
+	git_str_puts(buf, "\r\n");
+
+	return git_str_oom(buf) ? -1 : 0;
+}
+
 static int generate_connect_request(
 	git_http_client *client,
 	git_http_request *request)
@@ -663,9 +687,7 @@ static int generate_connect_request(
 	puts_host_and_port(buf, &client->server.url, true);
 	git_str_puts(buf, " HTTP/1.1\r\n");
 
-	git_str_puts(buf, "User-Agent: ");
-	git_http__user_agent(buf);
-	git_str_puts(buf, "\r\n");
+	append_user_agent(buf);
 
 	git_str_puts(buf, "Host: ");
 	puts_host_and_port(buf, &client->server.url, true);
@@ -709,9 +731,7 @@ static int generate_request(
 
 	git_str_puts(buf, " HTTP/1.1\r\n");
 
-	git_str_puts(buf, "User-Agent: ");
-	git_http__user_agent(buf);
-	git_str_puts(buf, "\r\n");
+	append_user_agent(buf);
 
 	git_str_puts(buf, "Host: ");
 	puts_host_and_port(buf, request->url, false);

@@ -66,6 +66,7 @@ jobs:
         - name: "macOS"
           id: macos
           os: macos-12
+          setup-script: osx
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
@@ -73,7 +74,6 @@ jobs:
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-          setup-script: osx
         - name: "Windows (amd64, Visual Studio, Schannel)"
           id: windows-amd64-vs
           os: windows-2019
@@ -126,6 +126,8 @@ jobs:
         # All builds: sanitizers
         - name: "Sanitizer (Memory)"
           id: memorysanitizer
+          os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -137,10 +139,10 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
-          os: ubuntu-latest
         - name: "Sanitizer (UndefinedBehavior)"
           id: ubsanitizer
           os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -155,6 +157,7 @@ jobs:
         - name: "Sanitizer (Thread)"
           id: threadsanitizer
           os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -178,6 +181,7 @@ jobs:
             CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
         - name: "Linux (CentOS 7, dynamically-loaded OpenSSL)"
           id: centos7-dynamicopenssl
           os: ubuntu-latest
@@ -187,6 +191,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
         - name: "Linux (CentOS 8, OpenSSL)"
           id: centos8-openssl
           os: ubuntu-latest
@@ -218,6 +223,7 @@ jobs:
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=pcre2 -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DUSE_HTTP_PARSER=llhttp
         - name: "Linux (Bionic, GCC, dynamically-loaded OpenSSL)"
+          id: bionic-gcc-dynamicopenssl
           container:
             name: bionic
             dockerfile: bionic
@@ -226,8 +232,10 @@ jobs:
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
         - name: "Linux (x86, Bionic, Clang, OpenSSL)"
+          id: bionic-x86-clang-openssl
           container:
             name: bionic-x86
             dockerfile: bionic
@@ -237,8 +245,10 @@ jobs:
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
         - name: "Linux (x86, Bionic, GCC, OpenSSL)"
+          id: bionic-x86-gcc-openssl
           container:
             name: bionic-x86
             dockerfile: bionic
@@ -247,8 +257,10 @@ jobs:
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
         - name: "Linux (arm32, Bionic, GCC, OpenSSL)"
+          id: bionic-arm32-gcc-openssl
           container:
             name: bionic-arm32
             dockerfile: bionic
@@ -259,9 +271,11 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
             SKIP_PROXY_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
             GITTEST_FLAKY_STAT: true
           os: ubuntu-latest
         - name: "Linux (arm64, Bionic, GCC, OpenSSL)"
+          id: bionic-arm64-gcc-openssl
           container:
             name: bionic-arm64
             dockerfile: bionic
@@ -272,6 +286,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
             SKIP_PROXY_TESTS: true
+            SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
 
         # Nightly builds: ensure we fallback when missing core functionality
@@ -284,6 +299,7 @@ jobs:
             CC: gcc
             CMAKE_OPTIONS: -DTHREADSAFE=OFF -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
+            SKIP_PUSHOPTIONS_TESTS: true
         - name: "Linux (no mmap)"
           id: noble-nommap
           os: ubuntu-latest
@@ -297,6 +313,7 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (no mmap)"
+          id: windows-nommap
           os: windows-2019
           env:
             ARCH: amd64
@@ -319,7 +336,7 @@ jobs:
 
         # All builds: experimental SHA256 support
         - name: "Linux (SHA256, Xenial, Clang, OpenSSL)"
-          id: xenial-clang-openssl
+          id: linux-sha256
           container:
             name: xenial
           env:
@@ -328,17 +345,17 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
           os: ubuntu-latest
         - name: "macOS (SHA256)"
-          id: macos
+          id: macos-sha256
           os: macos-12
+          setup-script: osx
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-          setup-script: osx
         - name: "Windows (SHA256, amd64, Visual Studio)"
-          id: windows-amd64-vs
+          id: windows-sha256
           os: windows-2019
           env:
             ARCH: amd64
@@ -352,7 +369,7 @@ jobs:
     name: "Build ${{ matrix.platform.name }}"
     steps:
     - name: Check out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: source
         fetch-depth: 0
@@ -389,7 +406,7 @@ jobs:
         container-version: ${{ env.docker-registry-container-sha }}
         shell: ${{ matrix.platform.shell }}
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: test-results-${{ matrix.platform.id }}
@@ -398,7 +415,7 @@ jobs:
   test_results:
     name: Test results
     needs: [ build ]
-    if: always()
+    if: ${{ always() && github.repository == 'libgit2/libgit2' }}
     runs-on: ubuntu-latest
     steps:
     - name: Download test results
@@ -417,7 +434,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: source
         fetch-depth: 0
@@ -448,7 +465,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 

@@ -1,4 +1,6 @@
 #include "clar_libgit2.h"
+#include "config.h"
+#include "config/config_helpers.h"
 
 static const char *_name = "remote.ab.url";
 
@@ -285,4 +287,33 @@ void test_config_multivar__delete_notfound(void)
 	cl_git_fail_with(git_config_delete_multivar(cfg, "remote.ab.noturl", "git"), GIT_ENOTFOUND);
 
 	git_config_free(cfg);
+}
+
+void test_config_multivar__rename_section(void)
+{
+	git_repository *repo;
+	git_config *cfg;
+	int n;
+
+	repo = cl_git_sandbox_init("testrepo");
+	cl_git_pass(git_repository_config(&cfg, repo));
+
+	cl_git_pass(git_config_set_multivar(cfg, "branch.foo.name", "^$", "bar"));
+	cl_git_pass(git_config_set_multivar(cfg, "branch.foo.name", "^$", "xyzzy"));
+	n = 0;
+	cl_git_pass(git_config_get_multivar_foreach(
+	        cfg, "branch.foo.name", NULL, cb, &n));
+	cl_assert(n == 2);
+
+	cl_git_pass(
+		    git_config_rename_section(repo, "branch.foo", "branch.foobar"));
+
+	assert_config_entry_existence(repo, "branch.foo.name", false);
+	n = 0;
+	cl_git_pass(git_config_get_multivar_foreach(
+	        cfg, "branch.foobar.name", NULL, cb, &n));
+	cl_assert(n == 2);
+
+	git_config_free(cfg);
+	cl_git_sandbox_cleanup();
 }

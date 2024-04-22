@@ -65,6 +65,7 @@ jobs:
         - name: "macOS"
           id: macos
           os: macos-12
+          setup-script: osx
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
@@ -72,7 +73,6 @@ jobs:
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-          setup-script: osx
         - name: "Windows (amd64, Visual Studio, Schannel)"
           id: windows-amd64-vs
           os: windows-2019
@@ -125,6 +125,8 @@ jobs:
         # All builds: sanitizers
         - name: "Sanitizer (Memory)"
           id: sanitizer-memory
+          os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -136,9 +138,10 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
-          os: ubuntu-latest
         - name: "Sanitizer (Address)"
           id: sanitizer-address
+          os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -150,10 +153,10 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
-          os: ubuntu-latest
         - name: "Sanitizer (UndefinedBehavior)"
           id: sanitizer-ub
           os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -168,6 +171,7 @@ jobs:
         - name: "Sanitizer (Thread)"
           id: sanitizer-thread
           os: ubuntu-latest
+          setup-script: sanitizer
           container:
             name: noble
           env:
@@ -180,44 +184,13 @@ jobs:
             ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-10
             UBSAN_OPTIONS: print_stacktrace=1
             TSAN_OPTIONS: suppressions=/home/libgit2/source/script/thread-sanitizer.supp second_deadlock_stack=1
-
-        # All builds: experimental SHA256 support
-        - name: "Linux (SHA256, Xenial, Clang, OpenSSL)"
-          id: xenial-clang-openssl
-          os: ubuntu-latest
-          container:
-            name: xenial
-          env:
-            CC: clang
-            CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DEXPERIMENTAL_SHA256=ON
-        - name: "macOS (SHA256)"
-          id: macos
-          os: macos-12
-          setup-script: osx
-          env:
-            CC: clang
-            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
-            CMAKE_GENERATOR: Ninja
-            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
-        - name: "Windows (SHA256, amd64, Visual Studio)"
-          id: windows-amd64-vs
-          os: windows-2019
-          env:
-            ARCH: amd64
-            CMAKE_GENERATOR: Visual Studio 16 2019
-            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
-            SKIP_SSH_TESTS: true
-            SKIP_NEGOTIATE_TESTS: true
       fail-fast: false
     env: ${{ matrix.platform.env }}
     runs-on: ${{ matrix.platform.os }}
     name: "Build: ${{ matrix.platform.name }}"
     steps:
     - name: Check out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: source
         fetch-depth: 0
@@ -254,7 +227,7 @@ jobs:
         container-version: ${{ env.docker-registry-container-sha }}
         shell: ${{ matrix.platform.shell }}
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: test-results-${{ matrix.platform.id }}
@@ -285,7 +258,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: source
         fetch-depth: 0
@@ -312,7 +285,7 @@ jobs:
             cm doc api.docurium
         git checkout gh-pages
         zip --exclude .git/\* --exclude .gitignore --exclude .gitattributes -r api-documentation.zip .
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       name: Upload artifact
       with:
         name: api-documentation

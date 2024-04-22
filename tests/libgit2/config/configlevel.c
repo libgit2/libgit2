@@ -71,3 +71,44 @@ void test_config_configlevel__fetching_a_level_from_an_empty_compound_config_ret
 
 	git_config_free(cfg);
 }
+
+void test_config_configlevel__can_fetch_highest_level(void)
+{
+	git_config *cfg;
+	git_config *single_level_cfg;
+	git_buf buf = {0};
+
+	cl_git_pass(git_config_new(&cfg));
+	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config18"),
+		GIT_CONFIG_LEVEL_GLOBAL, NULL, 0));
+	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config19"),
+		GIT_CONFIG_LEVEL_LOCAL, NULL, 0));
+
+	cl_git_pass(git_config_open_level(&single_level_cfg, cfg, GIT_CONFIG_HIGHEST_LEVEL));
+
+	git_config_free(cfg);
+
+	cl_git_pass(git_config_get_string_buf(&buf, single_level_cfg, "core.stringglobal"));
+	cl_assert_equal_s("don't find me!", buf.ptr);
+
+	git_buf_dispose(&buf);
+	git_config_free(single_level_cfg);
+}
+
+void test_config_configlevel__can_override_local_with_worktree(void)
+{
+	git_config *cfg;
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_config_new(&cfg));
+	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config19"),
+		GIT_CONFIG_LEVEL_WORKTREE, NULL, 1));
+	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config18"),
+		GIT_CONFIG_LEVEL_LOCAL, NULL, 1));
+
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.stringglobal"));
+	cl_assert_equal_s("don't find me!", buf.ptr);
+
+	git_buf_dispose(&buf);
+	git_config_free(cfg);
+}

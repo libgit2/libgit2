@@ -1360,3 +1360,13 @@ void test_status_worktree__at_head_parent(void)
 	git_tree_free(parent_tree);
 	git_status_list_free(statuslist);
 }
+
+void test_status_worktree__skip_hash(void)
+{
+	git_repository *repo = cl_git_sandbox_init("status_skiphash");
+	git_index *index;
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_read(index, true));
+	git_index_free(index);
+}

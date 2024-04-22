@@ -2760,6 +2760,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	unsigned int i;
 	struct index_header header = { 0 };
 	unsigned char checksum[GIT_HASH_MAX_SIZE];
+	unsigned char zero_checksum[GIT_HASH_MAX_SIZE] = { 0 };
 	size_t checksum_size = git_hash_size(git_oid_algorithm(index->oid_type));
 	const char *last = NULL;
 	const char *empty = "";
@@ -2849,8 +2850,11 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	/*
 	 * SHA-1 or SHA-256 (depending on the repository's object format)
 	 * over the content of the index file before this checksum.
+	 * Note: checksum may be 0 if the index was written by a client
+	 * where index.skipHash was set to true.
 	 */
-	if (memcmp(checksum, buffer, checksum_size) != 0) {
+	if (memcmp(zero_checksum, buffer, checksum_size) != 0 &&
+	    memcmp(checksum, buffer, checksum_size) != 0) {
 		error = index_error_invalid(
 			"calculated checksum does not match expected");
 		goto done;

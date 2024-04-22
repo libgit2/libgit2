@@ -485,8 +485,8 @@ int git_str_decode_percent(
 	for (str_pos = 0; str_pos < str_len; buf->size++, str_pos++) {
 		if (str[str_pos] == '%' &&
 			str_len > str_pos + 2 &&
-			isxdigit(str[str_pos + 1]) &&
-			isxdigit(str[str_pos + 2])) {
+			git__isxdigit(str[str_pos + 1]) &&
+			git__isxdigit(str[str_pos + 2])) {
 			buf->ptr[buf->size] = (HEX_DECODE(str[str_pos + 1]) << 4) +
 				HEX_DECODE(str[str_pos + 2]);
 			str_pos += 2;

@@ -20,7 +20,7 @@ void test_worktree_refs__cleanup(void)
 	cleanup_fixture_worktree(&fixture);
 }
 
-void test_worktree_refs__list(void)
+void test_worktree_refs__list_no_difference_in_worktree(void)
 {
 	git_strarray refs, wtrefs;
 	unsigned i, j;
@@ -56,6 +56,66 @@ void test_worktree_refs__list(void)
 	}
 
 exit:
+	git_strarray_dispose(&refs);
+	git_strarray_dispose(&wtrefs);
+	cl_git_pass(error);
+}
+
+void test_worktree_refs__list_worktree_specific(void)
+{
+	git_strarray refs, wtrefs;
+	git_reference *ref, *new_branch;
+	int error = 0;
+	git_oid oid;
+
+	cl_git_pass(git_reference_name_to_id(&oid, fixture.repo, "refs/heads/dir"));
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_lookup(&ref, fixture.repo, "refs/bisect/a-bisect-ref"));
+	cl_git_pass(git_reference_create(
+	        &new_branch, fixture.worktree, "refs/bisect/a-bisect-ref", &oid,
+	        0, "test"));
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_lookup(&ref, fixture.repo, "refs/bisect/a-bisect-ref"));
+	cl_git_pass(git_reference_lookup(&ref, fixture.worktree, "refs/bisect/a-bisect-ref"));
+
+	cl_git_pass(git_reference_list(&refs, fixture.repo));
+	cl_git_pass(git_reference_list(&wtrefs, fixture.worktree));
+
+	cl_assert_equal_sz(wtrefs.count, refs.count + 1);
+
+	git_reference_free(ref);
+	git_reference_free(new_branch);
+	git_strarray_dispose(&refs);
+	git_strarray_dispose(&wtrefs);
+	cl_git_pass(error);
+}
+
+void test_worktree_refs__list_worktree_specific_hidden_in_main_repo(void)
+{
+	git_strarray refs, wtrefs;
+	git_reference *ref, *new_branch;
+	int error = 0;
+	git_oid oid;
+
+	cl_git_pass(
+	        git_reference_name_to_id(&oid, fixture.repo, "refs/heads/dir"));
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_lookup(
+	        &ref, fixture.worktree, "refs/bisect/a-bisect-ref"));
+	cl_git_pass(git_reference_create(
+	        &new_branch, fixture.repo, "refs/bisect/a-bisect-ref", &oid,
+	        0, "test"));
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_lookup(
+	        &ref, fixture.worktree, "refs/bisect/a-bisect-ref"));
+	cl_git_pass(git_reference_lookup(
+	        &ref, fixture.repo, "refs/bisect/a-bisect-ref"));
+
+	cl_git_pass(git_reference_list(&refs, fixture.repo));
+	cl_git_pass(git_reference_list(&wtrefs, fixture.worktree));
+
+	cl_assert_equal_sz(refs.count, wtrefs.count + 1);
+
+	git_reference_free(ref);
+	git_reference_free(new_branch);
 	git_strarray_dispose(&refs);
 	git_strarray_dispose(&wtrefs);
 	cl_git_pass(error);

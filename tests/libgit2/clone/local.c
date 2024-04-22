@@ -210,3 +210,13 @@ void test_clone_local__git_style_unc_paths(void)
 	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
 #endif
 }
+
+void test_clone_local__shallow_fails(void)
+{
+	git_repository *repo;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+
+	opts.fetch_opts.depth = 4;
+
+	cl_git_fail_with(GIT_ENOTSUPPORTED, git_clone(&repo, cl_fixture("testrepo.git"), "./clone.git", &opts));
+}

@@ -54,7 +54,7 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
     - name: Check out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: source
         fetch-depth: 0
@@ -79,7 +79,7 @@ jobs:
         ../source/tests/benchmarks/benchmark.sh --baseline-cli "git" --cli "${GIT2_CLI}" --name libgit2 --json benchmarks.json --zip benchmarks.zip
       shell: bash
     - name: Upload results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: benchmark-${{ matrix.platform.id }}
         path: benchmark
@@ -89,18 +89,18 @@ jobs:
   publish:
     name: Publish results
     needs: [ build ]
-    if: always()
+    if: ${{ always() && github.repository == 'libgit2/libgit2' }}
     runs-on: ubuntu-latest
     steps:
     - name: Check out benchmark repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: libgit2/benchmarks
         path: site
         fetch-depth: 0
         ssh-key: ${{ secrets.BENCHMARKS_PUBLISH_KEY }}
     - name: Download test results
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
     - name: Publish API
       run: |
        # Move today's benchmark run into the right place

@@ -10,10 +10,6 @@ See <http://creativecommons.org/publicdomain/zero/1.0/>. */
 #include "rand.h"
 #include "runtime.h"
 
-#if defined(GIT_RAND_GETENTROPY)
-# include <sys/random.h>
-#endif
-
 #if defined(GIT_WIN32)
 # include <wincrypt.h>
 #endif

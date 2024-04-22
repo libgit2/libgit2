@@ -110,6 +110,26 @@ void test_online_fetch__fetch_twice(void)
 	git_remote_free(remote);
 }
 
+void test_online_fetch__fetch_with_empty_http_proxy(void)
+{
+	git_remote *remote;
+	git_config *config;
+	git_fetch_options opts = GIT_FETCH_OPTIONS_INIT;
+
+	opts.proxy_opts.type = GIT_PROXY_AUTO;
+
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_config_set_string(config, "http.proxy", ""));
+
+	cl_git_pass(git_remote_create(&remote, _repo, "test",
+		"https://github.com/libgit2/TestGitRepository"));
+	cl_git_pass(git_remote_fetch(remote, NULL, &opts, NULL));
+
+	git_remote_disconnect(remote);
+	git_remote_free(remote);
+	git_config_free(config);
+}
+
 static int transferProgressCallback(const git_indexer_progress *stats, void *payload)
 {
 	bool *invoked = (bool *)payload;

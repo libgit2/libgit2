@@ -62,7 +62,8 @@ static const struct {
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "hooks", true },
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "logs", true },
 	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM__LAST, "modules", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "worktrees", true }
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "worktrees", true },
+	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM_GITDIR, "config.worktree", false }
 };
 
 static int check_repositoryformatversion(int *version, git_config *config);
@@ -558,37 +559,39 @@ typedef struct {
 static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 {
 	validate_ownership_data *data = payload;
+	const char *test_path;
 
 	if (strcmp(entry->value, "") == 0) {
 		*data->is_safe = false;
 	} else if (strcmp(entry->value, "*") == 0) {
 		*data->is_safe = true;
 	} else {
-		const char *test_path = entry->value;
-
-		if (git_str_sets(&data->tmp, test_path) < 0 ||
-		    git_fs_path_to_dir(&data->tmp) < 0)
+		if (git_str_sets(&data->tmp, entry->value) < 0)
 			return -1;
 
-		/*
-		 * Ensure that `git_fs_path_to_dir` mutated the
-		 * input path by adding a trailing backslash.
-		 * A trailing backslash on the input is not allowed.
-		 */
-		if (strcmp(data->tmp.ptr, test_path) == 0)
-			return 0;
+		if (!git_fs_path_is_root(data->tmp.ptr)) {
+			/* Input must not have trailing backslash. */
+			if (!data->tmp.size ||
+			    data->tmp.ptr[data->tmp.size - 1] == '/')
+				return 0;
 
-#ifdef GIT_WIN32
+			if (git_fs_path_to_dir(&data->tmp) < 0)
+				return -1;
+		}
+
+		test_path = data->tmp.ptr;
+
 		/*
-		 * Git for Windows does some truly bizarre things with
-		 * paths that start with a forward slash; and expects you
-		 * to escape that with `%(prefix)`. This syntax generally
-		 * means to add the prefix that Git was installed to -- eg
-		 * `/usr/local` -- unless it's an absolute path, in which
-		 * case the leading `%(prefix)/` is just removed. And Git
-		 * for Windows expects you to use this syntax for absolute
-		 * Unix-style paths (in "Git Bash" or Windows Subsystem for
-		 * Linux).
+		 * Git - and especially, Git for Windows - does some
+		 * truly bizarre things with paths that start with a
+		 * forward slash; and expects you to escape that with
+		 * `%(prefix)`. This syntax generally means to add the
+		 * prefix that Git was installed to (eg `/usr/local`)
+		 * unless it's an absolute path, in which case the
+		 * leading `%(prefix)/` is just removed. And Git for
+		 * Windows expects you to use this syntax for absolute
+		 * Unix-style paths (in "Git Bash" or Windows Subsystem
+		 * for Linux).
 		 *
 		 * Worse, the behavior used to be that a leading `/` was
 		 * not absolute. It would indicate that Git for Windows
@@ -603,12 +606,8 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 		 */
 		if (strncmp(test_path, "%(prefix)//", strlen("%(prefix)//")) == 0)
 			test_path += strlen("%(prefix)/");
-		else if (strncmp(test_path, "//", 2) == 0 &&
-		         strncmp(test_path, "//wsl.localhost/", strlen("//wsl.localhost/")) != 0)
-			test_path++;
-#endif
 
-		if (strcmp(data->tmp.ptr, data->repo_path) == 0)
+		if (strcmp(test_path, data->repo_path) == 0)
 			*data->is_safe = true;
 	}
 
@@ -705,9 +704,12 @@ static int validate_ownership(git_repository *repo)
 		goto done;
 
 	if (!is_safe) {
+		size_t path_len = git_fs_path_is_root(path) ?
+			strlen(path) : git_fs_path_dirlen(path);
+
 		git_error_set(GIT_ERROR_CONFIG,
-			"repository path '%s' is not owned by current user",
-			path);
+			"repository path '%.*s' is not owned by current user",
+			(int)min(path_len, INT_MAX), path);
 		error = GIT_EOWNER;
 	}
 
@@ -1272,6 +1274,24 @@ int git_repository_discover(
 	return error;
 }
 
+static int has_config_worktree(bool *out, git_config *cfg)
+{
+	int worktreeconfig = 0, error;
+
+	*out = false;
+
+	error = git_config_get_bool(&worktreeconfig, cfg, "extensions.worktreeconfig");
+
+	if (error == 0)
+		*out = worktreeconfig;
+	else if (error == GIT_ENOTFOUND)
+		*out = false;
+	else
+		return error;
+
+	return 0;
+}
+
 static int load_config(
 	git_config **out,
 	git_repository *repo,
@@ -1280,9 +1300,11 @@ static int load_config(
 	const char *system_config_path,
 	const char *programdata_path)
 {
-	int error;
 	git_str config_path = GIT_STR_INIT;
 	git_config *cfg = NULL;
+	git_config_level_t write_order;
+	bool has_worktree;
+	int error;
 
 	GIT_ASSERT_ARG(out);
 
@@ -1292,6 +1314,14 @@ static int load_config(
 	if (repo) {
 		if ((error = git_repository__item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
 			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
+
+		if (error && error != GIT_ENOTFOUND)
+			goto on_error;
+
+		if ((error = has_config_worktree(&has_worktree, cfg)) == 0 &&
+		    has_worktree &&
+		    (error = git_repository__item_path(&config_path, repo, GIT_REPOSITORY_ITEM_WORKTREE_CONFIG)) == 0)
+			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_WORKTREE, repo, 0);
 
 		if (error && error != GIT_ENOTFOUND)
 			goto on_error;
@@ -1324,6 +1354,11 @@ static int load_config(
 		goto on_error;
 
 	git_error_clear(); /* clear any lingering ENOTFOUND errors */
+
+	write_order = GIT_CONFIG_LEVEL_LOCAL;
+
+	if ((error = git_config_set_writeorder(cfg, &write_order, 1)) < 0)
+		goto on_error;
 
 	*out = cfg;
 	return 0;
@@ -1844,7 +1879,8 @@ static int check_repositoryformatversion(int *version, git_config *config)
 
 static const char *builtin_extensions[] = {
 	"noop",
-	"objectformat"
+	"objectformat",
+	"worktreeconfig",
 };
 
 static git_vector user_extensions = { 0, git__strcmp_cb };
@@ -2676,6 +2712,8 @@ static int repo_init_directories(
 	if (git_str_joinpath(repo_path, given_repo, add_dotgit ? GIT_DIR : "") < 0)
 		return -1;
 
+	git_fs_path_mkposix(repo_path->ptr);
+
 	has_dotgit = (git__suffixcmp(repo_path->ptr, "/" GIT_DIR) == 0);
 	if (has_dotgit)
 		opts->flags |= GIT_REPOSITORY_INIT__HAS_DOTGIT;
@@ -3243,14 +3281,18 @@ int git_repository_set_workdir(
 	if (git_fs_path_prettify_dir(&path, workdir, NULL) < 0)
 		return -1;
 
-	if (repo->workdir && strcmp(repo->workdir, path.ptr) == 0)
+	if (repo->workdir && strcmp(repo->workdir, path.ptr) == 0) {
+		git_str_dispose(&path);
 		return 0;
+	}
 
 	if (update_gitlink) {
 		git_config *config;
 
-		if (git_repository_config__weakptr(&config, repo) < 0)
+		if (git_repository_config__weakptr(&config, repo) < 0) {
+			git_str_dispose(&path);
 			return -1;
+		}
 
 		error = repo_write_gitlink(path.ptr, git_repository_path(repo), false);
 
@@ -3272,6 +3314,7 @@ int git_repository_set_workdir(
 
 		git__free(old_workdir);
 	}
+	git_str_dispose(&path);
 
 	return error;
 }

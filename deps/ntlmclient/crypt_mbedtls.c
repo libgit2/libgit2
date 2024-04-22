@@ -12,7 +12,6 @@
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/des.h"
 #include "mbedtls/entropy.h"
-#include "mbedtls/md4.h"
 
 #include "ntlm.h"
 #include "crypt.h"
@@ -86,25 +85,6 @@ bool ntlm_des_encrypt(
 done:
 	mbedtls_des_free(&ctx);
 	return success;
-}
-
-bool ntlm_md4_digest(
-	unsigned char out[CRYPT_MD4_DIGESTSIZE],
-	ntlm_client *ntlm,
-	const unsigned char *in,
-	size_t in_len)
-{
-	mbedtls_md4_context ctx;
-
-	NTLM_UNUSED(ntlm);
-
-	mbedtls_md4_init(&ctx);
-	mbedtls_md4_starts(&ctx);
-	mbedtls_md4_update(&ctx, in, in_len);
-	mbedtls_md4_finish(&ctx, out);
-	mbedtls_md4_free(&ctx);
-
-	return true;
 }
 
 bool ntlm_hmac_md5_init(
