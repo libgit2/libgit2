@@ -9,7 +9,7 @@
 
 #include <string.h>
 
-#if defined(GIT_HTTPPARSER_HTTPPARSER) || defined(GIT_HTTPPARSER_BUILTIN)
+#if defined(GIT_HTTPPARSER_HTTPPARSER)
 
 #include "http_parser.h"
 
@@ -82,7 +82,7 @@ size_t git_http_parser_execute(
 	return http_parser_execute(&parser->parser, &settings_proxy, data, len);
 }
 
-#elif defined(GIT_HTTPPARSER_LLHTTP)
+#elif defined(GIT_HTTPPARSER_LLHTTP) || defined(GIT_HTTPPARSER_BUILTIN)
 
 # include <llhttp.h>
 

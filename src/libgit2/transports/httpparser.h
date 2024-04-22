@@ -10,7 +10,7 @@
 
 #include "git2_util.h"
 
-#if defined(GIT_HTTPPARSER_HTTPPARSER) || defined(GIT_HTTPPARSER_BUILTIN)
+#if defined(GIT_HTTPPARSER_HTTPPARSER)
 
 # include <http_parser.h>
 
@@ -60,7 +60,7 @@ size_t git_http_parser_execute(
 # define git_http_parser_errno(parser) parser->parser.http_errno
 # define git_http_parser_errmsg(parser, errno) http_errno_description(errno)
 
-#elif defined(GIT_HTTPPARSER_LLHTTP)
+#elif defined(GIT_HTTPPARSER_LLHTTP) || defined(GIT_HTTPPARSER_BUILTIN)
 
 # include <llhttp.h>
 
