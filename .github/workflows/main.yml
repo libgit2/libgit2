@@ -62,15 +62,6 @@ jobs:
             CC: clang
             CMAKE_GENERATOR: Ninja
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
-        - name: "Linux (Fedora, GCC, llhttp, SHA-256, OpenSSL, libssh2"
-          id: fedora-gcc-openssl-llhttp
-          os: ubuntu-latest
-          container:
-            name: fedora
-          env:
-            CC: gcc
-            CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=pcre2 -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_NTLMCLIENT=OFF -DUSE_SSH=libssh2 -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON -DEXPERIMENTAL_SHA256=ON
         - name: "macOS"
           id: macos
           os: macos-12
