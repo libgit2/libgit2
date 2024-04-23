@@ -1499,6 +1499,7 @@ static int pack_entry_find_offset(
 	size_t len)
 {
 	const uint32_t *level1_ofs;
+	size_t ofs_delta = 0;
 	const unsigned char *index;
 	unsigned hi, lo, stride;
 	int pos, found = 0;
@@ -1524,7 +1525,13 @@ static int pack_entry_find_offset(
 
 	if (p->index_version > 1) {
 		level1_ofs += 2;
+		ofs_delta = 2;
 		index += 8;
+	}
+
+	if ((size_t)short_oid->id[0] + ofs_delta >= p->index_map.len) {
+		git_error_set(GIT_ERROR_INTERNAL, "internal error: p->short_oid->[0] out of bounds");
+		goto cleanup;
 	}
 
 	index += 4 * 256;
