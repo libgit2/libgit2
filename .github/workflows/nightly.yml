@@ -213,7 +213,15 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
             SKIP_SSH_TESTS: true
             ARCH: x86
-
+        - name: "Linux (Fedora, llhttp)"
+          id: fedora
+          os: ubuntu-latest
+          container:
+            name: fedora
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=pcre2 -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DUSE_HTTP_PARSER=llhttp
         - name: "Linux (Bionic, GCC, dynamically-loaded OpenSSL)"
           id: bionic-gcc-dynamicopenssl
           container:

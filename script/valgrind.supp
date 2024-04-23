@@ -81,6 +81,13 @@
 }
 
 {
+	ignore-glibc-getaddrinfo-fn
+	Memcheck:Leak
+	...
+	fun:getaddrinfo
+}
+
+{
 	ignore-curl-global-init
 	Memcheck:Leak
 	...

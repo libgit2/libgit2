@@ -9,7 +9,6 @@
 
 #ifndef GIT_WINHTTP
 
-#include "http_parser.h"
 #include "net.h"
 #include "remote.h"
 #include "smart.h"
