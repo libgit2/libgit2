@@ -77,12 +77,12 @@ static int read_variable_cb(
 
 	entry = git__calloc(1, sizeof(git_config_list_entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
-	entry->base.name = git_str_detach(&buf);
-	entry->base.value = var_value ? git__strdup(var_value) : NULL;
-	entry->base.level = parse_data->level;
-	entry->base.include_depth = 0;
-	entry->base.backend_type = parse_data->backend_type;
-	entry->base.origin_path = parse_data->origin_path;
+	entry->base.entry.name = git_str_detach(&buf);
+	entry->base.entry.value = var_value ? git__strdup(var_value) : NULL;
+	entry->base.entry.level = parse_data->level;
+	entry->base.entry.include_depth = 0;
+	entry->base.entry.backend_type = parse_data->backend_type;
+	entry->base.entry.origin_path = parse_data->origin_path;
 	entry->base.free = git_config_list_entry_free;
 	entry->config_list = parse_data->config_list;
 
@@ -151,18 +151,18 @@ static int parse_values(
 		entry = git__calloc(1, sizeof(git_config_list_entry));
 		GIT_ERROR_CHECK_ALLOC(entry);
 
-		entry->base.name = git__strndup(memory_backend->values[i], name_len);
-		GIT_ERROR_CHECK_ALLOC(entry->base.name);
+		entry->base.entry.name = git__strndup(memory_backend->values[i], name_len);
+		GIT_ERROR_CHECK_ALLOC(entry->base.entry.name);
 
 		if (eql) {
-			entry->base.value = git__strdup(eql + 1);
-			GIT_ERROR_CHECK_ALLOC(entry->base.value);
+			entry->base.entry.value = git__strdup(eql + 1);
+			GIT_ERROR_CHECK_ALLOC(entry->base.entry.value);
 		}
 
-		entry->base.level = level;
-		entry->base.include_depth = 0;
-		entry->base.backend_type = backend_type;
-		entry->base.origin_path = origin_path;
+		entry->base.entry.level = level;
+		entry->base.entry.include_depth = 0;
+		entry->base.entry.backend_type = backend_type;
+		entry->base.entry.origin_path = origin_path;
 		entry->base.free = git_config_list_entry_free;
 		entry->config_list = memory_backend->config_list;
 
@@ -190,7 +190,7 @@ static int config_memory_open(git_config_backend *backend, git_config_level_t le
 	return 0;
 }
 
-static int config_memory_get(git_config_backend *backend, const char *key, git_config_entry **out)
+static int config_memory_get(git_config_backend *backend, const char *key, git_config_backend_entry **out)
 {
 	config_memory_backend *memory_backend = (config_memory_backend *) backend;
 	git_config_list_entry *entry;
