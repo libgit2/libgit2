@@ -293,7 +293,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 
 	/* If there is no override, we should fail if WinHTTP doesn't think it's fine */
 	if (t->owner->connect_opts.callbacks.certificate_check == NULL && !valid) {
-		if (!git_error_last())
+		if (git_error_last()->klass == GIT_ERROR_NONE)
 			git_error_set(GIT_ERROR_HTTP, "unknown certificate check failure");
 
 		return GIT_ECERTIFICATE;
@@ -317,7 +317,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 	if (error == GIT_PASSTHROUGH)
 		error = valid ? 0 : GIT_ECERTIFICATE;
 
-	if (error < 0 && !git_error_last())
+	if (error < 0 && git_error_last()->klass == GIT_ERROR_NONE)
 		git_error_set(GIT_ERROR_HTTP, "user cancelled certificate check");
 
 	return error;
@@ -961,7 +961,7 @@ static int send_request(winhttp_stream *s, size_t len, bool chunked)
 			(!request_failed && s->status_sending_request_reached)) {
 			git_error_clear();
 			if ((error = certificate_check(s, cert_valid)) < 0) {
-				if (!git_error_last())
+				if (git_error_last()->klass == GIT_ERROR_NONE)
 					git_error_set(GIT_ERROR_OS, "user cancelled certificate check");
 
 				return error;

@@ -375,8 +375,8 @@ static int _git_ssh_authenticate_session(
 			return GIT_EAUTH;
 
 	if (rc != LIBSSH2_ERROR_NONE) {
-		if (!git_error_last())
-			ssh_error(session, "Failed to authenticate SSH session");
+		if (git_error_last()->klass == GIT_ERROR_NONE)
+			ssh_error(session, "failed to authenticate SSH session");
 		return -1;
 	}
 

@@ -458,7 +458,7 @@ static int local_push(
 			default:
 				last = git_error_last();
 
-				if (last && last->message)
+				if (last->klass != GIT_ERROR_NONE)
 					status->msg = git__strdup(last->message);
 				else
 					status->msg = git__strdup("Unspecified error encountered");
