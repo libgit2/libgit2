@@ -37,4 +37,6 @@ GIT_INLINE(size_t) reflog_inverse_index(size_t idx, size_t total)
 	return (total - 1) - idx;
 }
 
+void git_reflog_entry__free(git_reflog_entry *entry);
+
 #endif
