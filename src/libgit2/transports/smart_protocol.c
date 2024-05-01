@@ -786,29 +786,43 @@ static int gen_pktline(git_str *buf, git_push *push)
 	push_spec *spec;
 	char *option;
 	size_t i, len;
-	char old_id[GIT_OID_SHA1_HEXSIZE+1], new_id[GIT_OID_SHA1_HEXSIZE+1];
-
-	old_id[GIT_OID_SHA1_HEXSIZE] = '\0'; new_id[GIT_OID_SHA1_HEXSIZE] = '\0';
+	char old_id[GIT_OID_MAX_HEXSIZE + 1], new_id[GIT_OID_MAX_HEXSIZE + 1];
+	size_t old_id_len, new_id_len;
 
 	git_vector_foreach(&push->specs, i, spec) {
-		len = 2*GIT_OID_SHA1_HEXSIZE + 7 + strlen(spec->refspec.dst);
+		len = strlen(spec->refspec.dst) + 7;
 
 		if (i == 0) {
-			++len; /* '\0' */
+			/* Need a leading \0 */
+			++len;
+
 			if (push->report_status)
 				len += strlen(GIT_CAP_REPORT_STATUS) + 1;
+
 			if (git_vector_length(&push->remote_push_options) > 0)
 				len += strlen(GIT_CAP_PUSH_OPTIONS) + 1;
+
 			len += strlen(GIT_CAP_SIDE_BAND_64K) + 1;
 		}
 
-		git_oid_fmt(old_id, &spec->roid);
-		git_oid_fmt(new_id, &spec->loid);
+		old_id_len = git_oid_hexsize(git_oid_type(&spec->roid));
+		new_id_len = git_oid_hexsize(git_oid_type(&spec->loid));
 
-		git_str_printf(buf, "%04"PRIxZ"%s %s %s", len, old_id, new_id, spec->refspec.dst);
+		len += (old_id_len + new_id_len);
+
+		git_oid_fmt(old_id, &spec->roid);
+		old_id[old_id_len] = '\0';
+
+		git_oid_fmt(new_id, &spec->loid);
+		new_id[new_id_len] = '\0';
+
+		git_str_printf(buf, "%04"PRIxZ"%.*s %.*s %s", len,
+			(int)old_id_len, old_id, (int)new_id_len, new_id,
+			spec->refspec.dst);
 
 		if (i == 0) {
 			git_str_putc(buf, '\0');
+
 			/* Core git always starts their capabilities string with a space */
 			if (push->report_status) {
 				git_str_putc(buf, ' ');
@@ -831,6 +845,7 @@ static int gen_pktline(git_str *buf, git_push *push)
 			git_str_printf(buf, "%04"PRIxZ"%s", strlen(option) + 4 , option);
 		}
 	}
+
 	git_str_puts(buf, "0000");
 	return git_str_oom(buf) ? -1 : 0;
 }
@@ -1176,7 +1191,7 @@ int git_smart__push(git_transport *transport, git_push *push)
 #ifdef PUSH_DEBUG
 {
 	git_remote_head *head;
-	char hex[GIT_OID_SHA1_HEXSIZE+1]; hex[GIT_OID_SHA1_HEXSIZE] = '\0';
+	char hex[GIT_OID_MAX_HEXSIZE+1], hex[GIT_OID_MAX_HEXSIZE] = '\0';
 
 	git_vector_foreach(&push->remote->refs, i, head) {
 		git_oid_fmt(hex, &head->oid);
