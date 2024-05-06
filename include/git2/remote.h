@@ -746,8 +746,7 @@ typedef struct {
 	/**
 	 * How to handle reference updates; see `git_remote_update_flags`.
 	 */
-	unsigned int update_fetchhead : 1,
-	             report_unchanged : 1;
+	unsigned int update_fetchhead;
 
 	/**
 	 * Determines how to behave regarding tags on the remote, such
@@ -790,8 +789,7 @@ typedef struct {
 	GIT_FETCH_OPTIONS_VERSION, \
 	GIT_REMOTE_CALLBACKS_INIT, \
 	GIT_FETCH_PRUNE_UNSPECIFIED, \
-	1, \
-	0, \
+	GIT_REMOTE_UPDATE_FETCHHEAD, \
 	GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, \
 	GIT_PROXY_OPTIONS_INIT }
 
