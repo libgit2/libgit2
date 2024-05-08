@@ -747,6 +747,25 @@ void test_refs_revparse__try_to_retrieve_branch_before_abbrev_sha(void)
 	cl_git_sandbox_cleanup();
 }
 
+void test_refs_revparse__at_at_end_of_refname(void)
+{
+	git_repository *repo;
+	git_reference *branch;
+	git_object *target;
+
+	repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD"));
+	cl_git_pass(git_branch_create(&branch, repo, "master@", (git_commit *)target, 0));
+	git_object_free(target);
+
+	test_id_inrepo("master@", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL, GIT_REVSPEC_SINGLE, repo);
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_revparse_single(&target, repo, "foo@"));
+
+	git_reference_free(branch);
+	cl_git_sandbox_cleanup();
+}
 
 void test_refs_revparse__range(void)
 {
@@ -888,16 +907,4 @@ void test_refs_revparse__parses_at_head(void)
 	test_id("HEAD", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL, GIT_REVSPEC_SINGLE);
 	test_id("@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL, GIT_REVSPEC_SINGLE);
 	test_id("@", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL, GIT_REVSPEC_SINGLE);
-}
-
-void test_refs_revparse__rejects_bogus_at(void)
-{
-	git_repository *repo;
-	git_object *target;
-
-	repo = cl_git_sandbox_init("testrepo.git");
-
-	cl_git_fail_with(GIT_EINVALIDSPEC, git_revparse_single(&target, repo, "foo@"));
-
-	cl_git_sandbox_cleanup();
 }
