@@ -381,7 +381,7 @@ static int parse_mode(uint16_t *mode_out, const char *buffer, size_t buffer_len,
 	if ((error = git__strntol32(&mode, buffer, buffer_len, buffer_out, 8)) < 0)
 		return error;
 
-	if (mode < 0 || mode > UINT16_MAX)
+	if (mode < 0 || (uint32_t)mode > UINT16_MAX)
 		return -1;
 
 	*mode_out = mode;
