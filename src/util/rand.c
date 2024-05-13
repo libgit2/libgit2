@@ -76,10 +76,10 @@ GIT_INLINE(int) getseed(uint64_t *seed)
 GIT_INLINE(int) getseed(uint64_t *seed)
 {
 	struct timeval tv;
-	double loadavg[3];
 	int fd;
 
 # if defined(GIT_RAND_GETLOADAVG)
+	double loadavg[3];
 	bits convert;
 # endif
 
@@ -125,8 +125,6 @@ GIT_INLINE(int) getseed(uint64_t *seed)
 	convert.f = loadavg[0]; *seed ^= (convert.d >> 36);
 	convert.f = loadavg[1]; *seed ^= (convert.d);
 	convert.f = loadavg[2]; *seed ^= (convert.d >> 16);
-# else
-	GIT_UNUSED(loadavg[0]);
 # endif
 
 	*seed ^= git_time_monotonic();
