@@ -41,39 +41,40 @@
 
 #define GIT_ERROR_CHECK_ARRAY(a) GIT_ERROR_CHECK_ALLOC((a).ptr)
 
-
-typedef git_array_t(char) git_array_generic_t;
-
-/* use a generic array for growth, return 0 on success */
-GIT_INLINE(int) git_array_grow(void *_a, size_t item_size)
+GIT_INLINE(void *) git_array__alloc(void *arr, size_t *size, size_t *asize, size_t item_size)
 {
-	volatile git_array_generic_t *a = _a;
 	size_t new_size;
-	char *new_array;
+	void *new_array;
 
-	if (a->size < 8) {
+	if (*size < *asize)
+		return arr;
+
+	if (*size < 8) {
 		new_size = 8;
 	} else {
-		if (GIT_MULTIPLY_SIZET_OVERFLOW(&new_size, a->size, 3))
+		if (GIT_MULTIPLY_SIZET_OVERFLOW(&new_size, *asize, 3))
 			goto on_oom;
+
 		new_size /= 2;
 	}
 
-	if ((new_array = git__reallocarray(a->ptr, new_size, item_size)) == NULL)
+	if ((new_array = git__reallocarray(arr, new_size, item_size)) == NULL)
 		goto on_oom;
 
-	a->ptr = new_array;
-	a->asize = new_size;
-	return 0;
+	*asize = new_size;
+
+	return new_array;
 
 on_oom:
-	git_array_clear(*a);
-	return -1;
+	git__free(arr);
+	*size = 0;
+	*asize = 0;
+	return NULL;
 }
 
 #define git_array_alloc(a) \
-	(((a).size < (a).asize || git_array_grow(&(a), sizeof(*(a).ptr)) == 0) ? \
-	&(a).ptr[(a).size++] : (void *)NULL)
+	(((a).size < (a).asize || \
+	 ((a).ptr = git_array__alloc((a).ptr, &(a).size, &(a).asize, sizeof(*(a).ptr))) != NULL) ? &(a).ptr[(a).size++] : (void *)NULL)
 
 #define git_array_last(a) ((a).size ? &(a).ptr[(a).size - 1] : (void *)NULL)
 
