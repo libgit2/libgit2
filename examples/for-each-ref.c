@@ -25,6 +25,8 @@ static int show_ref(git_reference *ref, void *data)
 		   git_object_type2string(git_object_type(obj)),
 		   git_reference_name(ref));
 	
+	git_object_free(obj);
+	git_reference_free(ref);
 	if (resolved)
 		git_reference_free(resolved);
 	return 0;
