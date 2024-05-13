@@ -19,6 +19,10 @@
 #include <limits.h>
 #include <assert.h>
 
+#if defined(__sun) || defined(__illumos__)
+# include <alloca.h>
+#endif
+
 #include "common.h"
 #include "opt.h"
 
