@@ -9,7 +9,7 @@
 
 static void *debugalloc__malloc(size_t len, const char *file, int line)
 {
-	void *ptr;
+	unsigned char *ptr;
 	size_t total = len + sizeof(size_t);
 
 	GIT_UNUSED(file);
@@ -22,9 +22,9 @@ static void *debugalloc__malloc(size_t len, const char *file, int line)
 	return ptr + sizeof(size_t);
 }
 
-static void *debugalloc__realloc(void *ptr, size_t len, const char *file, int line)
+static void *debugalloc__realloc(void *_ptr, size_t len, const char *file, int line)
 {
-	void *newptr;
+	unsigned char *ptr = _ptr, *newptr;
 	size_t original_len;
 	size_t total = len + sizeof(size_t);
 
@@ -54,8 +54,10 @@ static void *debugalloc__realloc(void *ptr, size_t len, const char *file, int li
 	return newptr + sizeof(size_t);
 }
 
-static void debugalloc__free(void *ptr)
+static void debugalloc__free(void *_ptr)
 {
+	unsigned char *ptr = _ptr;
+
 	if (!ptr)
 		return;
 
