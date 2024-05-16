@@ -1,3 +1,92 @@
+v1.8.1
+------
+
+This release primarily includes straightforward bugfixes, as well as
+new functionality to have more control over the HTTP User-Agent header.
+However, there is an API change from v1.8 that was required for
+improved compatibility.
+
+In v1.8, libgit2 introduced the `report_unchanged ` member in the
+`git_fetch_options` structure. We mistakenly introduced this as a
+bitfield, which is not suitable for our public API. To correct this
+mistake, we have _removed_ the `report_unchanged ` member. To support
+the report unchanged tips option, users can set the `update_fetchhead`
+member to include the `GIT_REMOTE_UPDATE_REPORT_UNCHANGED` value.
+
+The libgit2 projects regrets the API change, but this was required to
+support cross-platform compatibility.
+
+## What's Changed
+
+### New features
+
+* Allow more control over the user-agent by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6788
+
+### Bug fixes
+
+* commit: Fix git_commit_create_from_stage without author and
+  committer by @florianpircher in
+  https://github.com/libgit2/libgit2/pull/6781
+* process.c: fix environ for macOS by @barracuda156 in
+  https://github.com/libgit2/libgit2/pull/6792
+* Bounds check for pack index read by @ConradIrwin in
+  https://github.com/libgit2/libgit2/pull/6796
+* transport: provide a useful error message during cancellation
+  by @ethomson in https://github.com/libgit2/libgit2/pull/6802
+* transport: support sha256 oids by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6803
+* Revparse: Correctly accept ref with '@' at the end by @csware in
+  https://github.com/libgit2/libgit2/pull/6809
+* remote: drop bitfields in git_remote_fetch_options by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6806
+* examples: fix memory leak in for-each-ref.c by @qaqland in
+  https://github.com/libgit2/libgit2/pull/6808
+* xdiff: use proper free function by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6810
+* rand: avoid uninitialized loadavg warnings by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6812
+* cli: include alloca on illumos / solaris / sunos by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6813
+* Update git_array allocator to obey strict aliasing rules
+  by @ethomson in https://github.com/libgit2/libgit2/pull/6814
+* tree: avoid mixed signedness comparison by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6815
+
+### Build and CI improvements
+
+* ci: update nightly workflows by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6773
+* ci: give all nightly builds a unique id by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6782
+* cmake: remove workaround that isn't compatible with Windows on
+  ARM by @hackhaslam in https://github.com/libgit2/libgit2/pull/6794
+
+### Documentation improvements
+
+* Docs meta-updates by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6787
+
+### Dependency updates
+
+* Enable llhttp for HTTP parsing by @sgallagher in
+  https://github.com/libgit2/libgit2/pull/6713
+
+## New Contributors
+
+* @florianpircher made their first contribution in
+  https://github.com/libgit2/libgit2/pull/6781
+* @barracuda156 made their first contribution in
+  https://github.com/libgit2/libgit2/pull/6792
+* @sgallagher made their first contribution in
+  https://github.com/libgit2/libgit2/pull/6713
+* @ConradIrwin made their first contribution in
+  https://github.com/libgit2/libgit2/pull/6796
+* @qaqland made their first contribution in
+  https://github.com/libgit2/libgit2/pull/6808
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.8.0...v1.8.1
+
 v1.8
 ----
 
