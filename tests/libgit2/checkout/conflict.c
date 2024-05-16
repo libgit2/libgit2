@@ -1095,7 +1095,7 @@ static void collect_progress(
 	if (path == NULL)
 		return;
 
-	git_vector_insert(paths, strdup(path));
+	git_vector_insert(paths, git__strdup(path));
 }
 
 void test_checkout_conflict__report_progress(void)

@@ -12,11 +12,6 @@ static void *stdalloc__malloc(size_t len, const char *file, int line)
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
 
-#ifdef GIT_DEBUG_STRICT_ALLOC
-	if (!len)
-		return NULL;
-#endif
-
 	return malloc(len);
 }
 
@@ -24,11 +19,6 @@ static void *stdalloc__realloc(void *ptr, size_t size, const char *file, int lin
 {
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
-
-#ifdef GIT_DEBUG_STRICT_ALLOC
-	if (!size)
-		return NULL;
-#endif
 
 	return realloc(ptr, size);
 }

@@ -16,17 +16,35 @@
 
 char *p_realpath(const char *pathname, char *resolved)
 {
-	char *ret;
-	if ((ret = realpath(pathname, resolved)) == NULL)
+	char *result;
+
+	if ((result = realpath(pathname, resolved)) == NULL)
 		return NULL;
 
 #ifdef __OpenBSD__
 	/* The OpenBSD realpath function behaves differently,
 	 * figure out if the file exists */
-	if (access(ret, F_OK) < 0)
-		ret = NULL;
+	if (access(ret, F_OK) < 0) {
+		if (!resolved)
+			free(result);
+
+		return NULL;
+	}
 #endif
-	return ret;
+
+	/*
+	 * If resolved == NULL, the system has allocated the result
+	 * string. We need to strdup this into _our_ allocator pool
+	 * so that callers can free it with git__free.
+	 */
+	if (!resolved) {
+		char *dup = git__strdup(result);
+		free(result);
+
+		result = dup;
+	}
+
+	return result;
 }
 
 #endif

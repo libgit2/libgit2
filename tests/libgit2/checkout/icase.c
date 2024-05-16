@@ -89,7 +89,7 @@ static void assert_name_is(const char *expected)
 	if (start)
 		cl_assert_equal_strn("/", actual + (start - 1), 1);
 
-	free(actual);
+	git__free(actual);
 }
 
 static int symlink_or_fake(git_repository *repo, const char *a, const char *b)
