@@ -307,7 +307,7 @@ int git_commit_create(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	git_commit * const parents[])
+	const git_commit * const parents[])
 {
 	commit_parent_data data = { parent_count, parents, repo };
 
@@ -945,7 +945,7 @@ int git_commit_create_buffer(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	git_commit * const parents[])
+	const git_commit * const parents[])
 {
 	GIT_BUF_WRAP_PRIVATE(out, git_commit__create_buffer, repo,
 	                     author, committer, message_encoding, message,
