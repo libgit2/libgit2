@@ -281,6 +281,7 @@ int git_object_lookup_prefix(
 }
 
 int git_object_lookup(git_object **object_out, git_repository *repo, const git_oid *id, git_object_t type) {
+	GIT_ASSERT_ARG(repo);
 	return git_object_lookup_prefix(object_out,
 		repo, id, git_oid_hexsize(repo->oid_type), type);
 }
