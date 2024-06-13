@@ -281,7 +281,7 @@ int git_commit_create_from_ids(
 
 typedef struct {
 	size_t total;
-	git_commit * const *parents;
+	const git_commit **parents;
 	git_repository *repo;
 } commit_parent_data;
 
@@ -307,7 +307,7 @@ int git_commit_create(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	git_commit * const parents[])
+	const git_commit *parents[])
 {
 	commit_parent_data data = { parent_count, parents, repo };
 
@@ -945,7 +945,7 @@ int git_commit_create_buffer(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	git_commit * const parents[])
+	const git_commit *parents[])
 {
 	GIT_BUF_WRAP_PRIVATE(out, git_commit__create_buffer, repo,
 	                     author, committer, message_encoding, message,
@@ -961,7 +961,7 @@ int git_commit__create_buffer(
 	const char *message,
 	const git_tree *tree,
 	size_t parent_count,
-	git_commit * const parents[])
+	const git_commit *parents[])
 {
 	int error;
 	commit_parent_data data = { parent_count, parents, repo };
@@ -1150,7 +1150,8 @@ int git_commit_create_from_stage(
 
 	error = git_commit_create(out, repo, "HEAD", author, committer,
 			opts.message_encoding, message,
-			tree, parents.count, parents.commits);
+			tree, parents.count,
+			(const git_commit **)parents.commits);
 
 done:
 	git_commitarray_dispose(&parents);
