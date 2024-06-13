@@ -952,7 +952,7 @@ static int create_signed(
 	const char *message,
 	git_tree *tree,
 	size_t parent_count,
-	git_commit * const *parents)
+	const git_commit **parents)
 {
 	git_str commit_content = GIT_STR_INIT;
 	git_buf commit_signature = { NULL, 0, 0 },
@@ -1040,7 +1040,8 @@ static int rebase_commit__create(
 	if (rebase->options.commit_create_cb) {
 		error = rebase->options.commit_create_cb(&commit_id,
 			author, committer, message_encoding, message,
-			tree, 1, &parent_commit, rebase->options.payload);
+			tree, 1, (const git_commit **)&parent_commit,
+			rebase->options.payload);
 
 		git_error_set_after_callback_function(error,
 			"commit_create_cb");
@@ -1049,14 +1050,14 @@ static int rebase_commit__create(
 	else if (rebase->options.signing_cb) {
 		error = create_signed(&commit_id, rebase, author,
 			committer, message_encoding, message, tree,
-			1, &parent_commit);
+			1, (const git_commit **)&parent_commit);
 	}
 #endif
 
 	if (error == GIT_PASSTHROUGH)
 		error = git_commit_create(&commit_id, rebase->repo, NULL,
 			author, committer, message_encoding, message,
-			tree, 1, &parent_commit);
+			tree, 1, (const git_commit **)&parent_commit);
 
 	if (error)
 		goto done;

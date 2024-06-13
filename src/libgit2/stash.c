@@ -124,7 +124,7 @@ static int commit_index(
 	git_index *index,
 	const git_signature *stasher,
 	const char *message,
-	git_commit *parent)
+	const git_commit *parent)
 {
 	git_tree *i_tree = NULL;
 	git_oid i_commit_oid;
@@ -423,7 +423,7 @@ static int build_stash_commit_from_tree(
 	git_commit *u_commit,
 	const git_tree *tree)
 {
-	git_commit *parents[] = { NULL, NULL, NULL };
+	const git_commit *parents[] = {	NULL, NULL, NULL };
 
 	parents[0] = b_commit;
 	parents[1] = i_commit;
