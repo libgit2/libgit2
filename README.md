@@ -3,10 +3,10 @@ libgit2 - the Git linkable library
 
 | Build Status | |
 | ------------ | - |
-| **main** branch CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush) |
-| **v1.8 branch** CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?branch=maint%2Fv1.8&event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush+branch%3Amaint%2Fv1.8) |
-| **v1.7 branch** CI builds | [![CI Build](https://github.com/libgit2/libgit2/workflows/CI%20Build/badge.svg?branch=maint%2Fv1.7&event=push)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22CI+Build%22+event%3Apush+branch%3Amaint%2Fv1.7) |
-| **Nightly** builds | [![Nightly Build](https://github.com/libgit2/libgit2/workflows/Nightly%20Build/badge.svg)](https://github.com/libgit2/libgit2/actions?query=workflow%3A%22Nightly+Build%22) [![Coverity Scan Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639) |
+| **main** branch builds | [![CI Build](https://github.com/libgit2/libgit2/actions/workflows/main.yml/badge.svg?branch=main&event=push)](https://github.com/libgit2/libgit2/actions/workflows/main.yml?query=event%3Apush+branch%3Amain) [![Experimental Features](https://github.com/libgit2/libgit2/actions/workflows/experimental.yml/badge.svg?branch=main)](https://github.com/libgit2/libgit2/actions/workflows/experimental.yml?query=event%3Apush+branch%3Amain) |
+| **v1.8 branch** builds | [![CI Build](https://github.com/libgit2/libgit2/actions/workflows/main.yml/badge.svg?branch=maint%2Fv1.8&event=push)](https://github.com/libgit2/libgit2/actions/workflows/main.yml?query=event%3Apush+branch%3Amaint%2Fv1.8) [![Experimental Features](https://github.com/libgit2/libgit2/actions/workflows/experimental.yml/badge.svg?branch=maint%2Fv1.8)](https://github.com/libgit2/libgit2/actions/workflows/experimental.yml?query=event%3Apush+branch%3Amaint%2Fv1.8) |
+| **v1.7 branch** builds | [![CI Build](https://github.com/libgit2/libgit2/actions/workflows/main.yml/badge.svg?branch=maint%2Fv1.8&event=push)](https://github.com/libgit2/libgit2/actions/workflows/main.yml?query=event%3Apush+branch%3Amaint%2Fv1.7) |
+| **Nightly** builds | [![Nightly Build](https://github.com/libgit2/libgit2/actions/workflows/nightly.yml/badge.svg?branch=main&event=schedule)](https://github.com/libgit2/libgit2/actions/workflows/nightly.yml) [![Coverity Scan Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639) |
 
 `libgit2` is a portable, pure C implementation of the Git core methods
 provided as a linkable library with a solid API, allowing to build Git
