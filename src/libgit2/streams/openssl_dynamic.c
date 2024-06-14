@@ -6,7 +6,6 @@
  */
 
 #include "streams/openssl.h"
-#include "streams/openssl_dynamic.h"
 
 #if defined(GIT_OPENSSL) && defined(GIT_OPENSSL_DYNAMIC)
 
