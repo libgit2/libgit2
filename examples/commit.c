@@ -63,10 +63,8 @@ int lg2_commit(git_repository *repo, int argc, char **argv)
 
 	check_lg2(git_tree_lookup(&tree, repo, &tree_oid), "Error looking up tree", NULL);
 
-	check_lg2(git_signature_default_author(&author_signature, repo),
-			"Error creating author signature", NULL);
-	check_lg2(git_signature_default_committer(&committer_signature, repo),
-			"Error creating committer signature", NULL);
+	check_lg2(git_signature_default_from_env(&author_signature, &committer_signature, repo),
+			"Error creating signature", NULL);
 
 	check_lg2(git_commit_create_v(
 		&commit_oid,

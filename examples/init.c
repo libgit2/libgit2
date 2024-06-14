@@ -130,8 +130,7 @@ static void create_initial_commit(git_repository *repo)
 
 	/** First use the config to initialize a commit signature for the user. */
 
-	if ((git_signature_default_author(&author_sig, repo) < 0) ||
-			(git_signature_default_committer(&committer_sig, repo) < 0))
+	if ((git_signature_default_from_env(&author_sig, &committer_sig, repo) < 0))
 		fatal("Unable to create a commit signature.",
 		      "Perhaps 'user.name' and 'user.email' are not set");
 

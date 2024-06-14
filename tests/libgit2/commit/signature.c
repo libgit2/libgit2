@@ -167,7 +167,7 @@ void test_commit_signature__cleanup(void)
 	g_repo = NULL;
 }
 
-void test_commit_signature__signature_default(void)
+void test_commit_signature__from_env(void)
 {
 	git_signature *author_sign, *committer_sign;
 	git_config *cfg, *local;
@@ -179,14 +179,12 @@ void test_commit_signature__signature_default(void)
 	cl_setenv("GIT_AUTHOR_EMAIL", NULL);
 	cl_setenv("GIT_COMMITTER_NAME", NULL);
 	cl_setenv("GIT_COMMITTER_EMAIL", NULL);
-	cl_git_fail(git_signature_default_author(&author_sign, g_repo));
-	cl_git_fail(git_signature_default_committer(&committer_sign, g_repo));
+	cl_git_fail(git_signature_default_from_env(&author_sign, &committer_sign, g_repo));
 	/* Name is read from configuration and email is read from fallback EMAIL
 	 * environment variable */
 	cl_git_pass(git_config_set_string(local, "user.name", "Name (config)"));
 	cl_setenv("EMAIL", "email-envvar@example.com");
-	cl_git_pass(git_signature_default_author(&author_sign, g_repo));
-	cl_git_pass(git_signature_default_committer(&committer_sign, g_repo));
+	cl_git_pass(git_signature_default_from_env(&author_sign, &committer_sign, g_repo));
 	cl_assert_equal_s("Name (config)", author_sign->name);
 	cl_assert_equal_s("email-envvar@example.com", author_sign->email);
 	cl_assert_equal_s("Name (config)", committer_sign->name);
@@ -200,8 +198,7 @@ void test_commit_signature__signature_default(void)
 	cl_setenv("GIT_AUTHOR_EMAIL", "author-envvar@example.com");
 	cl_setenv("GIT_COMMITTER_NAME", "Committer (envvar)");
 	cl_setenv("GIT_COMMITTER_EMAIL", "committer-envvar@example.com");
-	cl_git_pass(git_signature_default_author(&author_sign, g_repo));
-	cl_git_pass(git_signature_default_committer(&committer_sign, g_repo));
+	cl_git_pass(git_signature_default_from_env(&author_sign, &committer_sign, g_repo));
 	cl_assert_equal_s("Author (envvar)", author_sign->name);
 	cl_assert_equal_s("author-envvar@example.com", author_sign->email);
 	cl_assert_equal_s("Committer (envvar)", committer_sign->name);
@@ -214,8 +211,7 @@ void test_commit_signature__signature_default(void)
 	cl_setenv("GIT_AUTHOR_EMAIL", NULL);
 	cl_setenv("GIT_COMMITTER_NAME", NULL);
 	cl_setenv("GIT_COMMITTER_EMAIL", NULL);
-	cl_git_pass(git_signature_default_author(&author_sign, g_repo));
-	cl_git_pass(git_signature_default_committer(&committer_sign, g_repo));
+	cl_git_pass(git_signature_default_from_env(&author_sign, &committer_sign, g_repo));
 	cl_assert_equal_s("Name (config)", author_sign->name);
 	cl_assert_equal_s("config@example.com", author_sign->email);
 	cl_assert_equal_s("Name (config)", committer_sign->name);
@@ -225,8 +221,7 @@ void test_commit_signature__signature_default(void)
 	/* We can also override the timestamp with an environment variable */
 	cl_setenv("GIT_AUTHOR_DATE", "1971-02-03 04:05:06+01");
 	cl_setenv("GIT_COMMITTER_DATE", "1988-09-10 11:12:13-01");
-	cl_git_pass(git_signature_default_author(&author_sign, g_repo));
-	cl_git_pass(git_signature_default_committer(&committer_sign, g_repo));
+	cl_git_pass(git_signature_default_from_env(&author_sign, &committer_sign, g_repo));
 	cl_assert_equal_i(34398306, author_sign->when.time);  /* 1971-02-03 03:05:06 UTC */
 	cl_assert_equal_i(60, author_sign->when.offset);
 	cl_assert_equal_i(589896733, committer_sign->when.time);  /* 1988-09-10 12:12:13 UTC */

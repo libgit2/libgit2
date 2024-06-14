@@ -49,64 +49,52 @@ GIT_EXTERN(int) git_signature_new(git_signature **out, const char *name, const c
 GIT_EXTERN(int) git_signature_now(git_signature **out, const char *name, const char *email);
 
 /**
- * Create a new author action signature with default information based on the
- * configuration and environment variables.
+ * Create a new author and/or committer signatures with default
+ * information based on the configuration and environment variables.
  *
- * If GIT_AUTHOR_NAME environment variable is set it uses that over the
- * user.name value from the configuration.
+ * If `author_out` is set, it will be populated with the author
+ * information. The `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL`
+ * environment variables will be honored, and `user.name` and
+ * `user.email` configuration options will be honored if the
+ * environment variables are unset. For timestamps, `GIT_AUTHOR_DATE`
+ * will be used, otherwise the current time will be used.
  *
- * If GIT_AUTHOR_EMAIL environment variable is set it uses that over the
- * user.email value from the configuration.  The EMAIL environment variable is
- * the fallback email address in case the user.email configuration value isn't
- * set.
+ * If `committer_out` is set, it will be populated with the
+ * committer information. The `GIT_COMMITTER_NAME` and
+ * `GIT_COMMITTER_EMAIL` environment variables will be honored,
+ * and `user.name` and `user.email` configuration options will
+ * be honored if the environment variables are unset. For timestamps,
+ * `GIT_COMMITTER_DATE` will be used, otherwise the current time will
+ * be used.
  *
- * If GIT_AUTHOR_DATE is set it uses that, otherwise it uses the current time
- * as the timestamp.
+ * If neither `GIT_AUTHOR_DATE` nor `GIT_COMMITTER_DATE` are set,
+ * both timestamps will be set to the same time.
  *
- * It will return GIT_ENOTFOUND if either the user.name or user.email are not
- * set and there is no fallback from an environment variable.
+ * It will return `GIT_ENOTFOUND` if either the `user.name` or
+ * `user.email` are not set and there is no fallback from an environment
+ * variable. One of `author_out` or `committer_out` must be set.
  *
- * @param out new signature
+ * @param author_out pointer to set the author signature, or NULL
+ * @param committer_out pointer to set the committer signature, or NULL
  * @param repo repository pointer
  * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
  */
-GIT_EXTERN(int) git_signature_default_author(git_signature **out, git_repository *repo);
-
-/**
- * Create a new committer action signature with default information based on
- * the configuration and environment variables.
- *
- * If GIT_COMMITTER_NAME environment variable is set it uses that over the
- * user.name value from the configuration.
- *
- * If GIT_COMMITTER_EMAIL environment variable is set it uses that over the
- * user.email value from the configuration.  The EMAIL environment variable is
- * the fallback email address in case the user.email configuration value isn't
- * set.
- *
- * If GIT_COMMITTER_DATE is set it uses that, otherwise it uses the current
- * time as the timestamp.
- *
- * It will return GIT_ENOTFOUND if either the user.name or user.email are not
- * set and there is no fallback from an environment variable.
- *
- * @param out new signature
- * @param repo repository pointer
- * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
- */
-GIT_EXTERN(int) git_signature_default_committer(git_signature **out, git_repository *repo);
+GIT_EXTERN(int) git_signature_default_from_env(
+	git_signature **author_out,
+	git_signature **committer_out,
+	git_repository *repo);
 
 /**
  * Create a new action signature with default user and now timestamp.
- *
- * Warning: This function may be deprecated in the future.  Use one of
- * git_signature_default_author or git_signature_default_committer instead.
- * These are more compliant with how git constructs default signatures.
  *
  * This looks up the user.name and user.email from the configuration and
  * uses the current time as the timestamp, and creates a new signature
  * based on that information.  It will return GIT_ENOTFOUND if either the
  * user.name or user.email are not set.
+ *
+ * Note that these do not examine environment variables, only the
+ * configuration files. Use `git_signature_default_from_env` to
+ * consider the environment variables.
  *
  * @param out new signature
  * @param repo repository pointer
