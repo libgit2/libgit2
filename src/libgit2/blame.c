@@ -408,70 +408,6 @@ static void dump_state(git_blame *blame)
 	}
 }
 
-static int next_candidate(git_oid *out, git_blame *blame)
-{
-	return git_revwalk_next(out, blame->revwalk);
-}
-
-static int next_blame(git_blame *blame)
-{
-	git_oid commit_id;
-	git_commit *commit = NULL;
-	git_tree *tree = NULL;
-	git_tree_entry *tree_entry = NULL;
-	git_blob *blob = NULL;
-	const char *path = blame->path;
-	git_diff_options diff_options = GIT_DIFF_OPTIONS_INIT;
-	int error = -1;
-
-	printf("----next blame----\n");
-
-	if ((error = next_candidate(&commit_id, blame)) < 0)
-		goto done;
-
-
-
-
-	if ((error = git_commit_lookup(&commit, blame->repository, &commit_id)) < 0)
-		goto done;
-
-	/*
-	 * If we haven't enqueued the file contents, this is our first time
-	 * through, and we need to set the contents to this commit.
-	 */
-	if ((error = git_commit_tree(&tree, commit)) < 0)
-		goto done;
-
-	if ((error = git_tree_entry_bypath(&tree_entry, tree, path)) < 0) {
-		if (error == GIT_ENOTFOUND)
-			error = 0;
-
-		goto done;
-	}
-
-	/* TODO: omit already seen blobs */
-	if ((error = git_blob_lookup(&blob, blame->repository, &tree_entry->oid)) < 0)
-		goto done;
-
-	/* TODO: move options into blame so that we don't set them up over and over again */
-	diff_options.context_lines = 0;
-
-	if (git_diff_blob_to_buffer(blob, path,
-			blame->contents, blame->contents_len,
-			blame->path, &diff_options, NULL, NULL,
-			NULL, diff_line_cb, blame) < 0)
-		goto done;
-
-	error = 0;
-
-done:
-	git_blob_free(blob);
-	git_tree_entry_free(tree_entry);
-	git_tree_free(tree);
-	git_commit_free(commit);
-	return error;
-}
-
 /* TODO: coalesce with setup_from_head */
 static int move_next_commit(git_blame *blame)
 {
@@ -544,9 +480,6 @@ printf("LOOP\n");
 	} while (1);
 
 printf("=========================================================\n");
-
-	while (false && (error = next_blame(blame)) == 0)
-		;
 
 	if (error != GIT_ITEROVER)
 		goto on_error;
