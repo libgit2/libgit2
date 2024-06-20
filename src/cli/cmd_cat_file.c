@@ -137,7 +137,7 @@ static int print_pretty(git_object *object)
 
 int cmd_cat_file(int argc, char **argv)
 {
-	cli_repository_open_options open_opts = { argv + 1, argc - 1};
+	cli_repository_open_options open_opts = { argv + 1, argc - 1 };
 	git_repository *repo = NULL;
 	git_object *object = NULL;
 	git_object_t type;
