@@ -255,6 +255,7 @@ static int compare_to_parent(
 
 	diff_line_data.blame = blame;
 	diff_line_data.commit_id = commit_id;
+	diff_line_data.has_deltas = false;
 	diff_line_data.reassigned = false;
 
 	if (git_commit_lookup(&commit, blame->repository, commit_id) < 0 ||
@@ -348,49 +349,6 @@ static int take_some_ownership(git_blame *blame)
 	return 0;
 }
 
-static int consider_current_commit(git_blame *blame)
-{
-	size_t i, parent_count;
-	int error = -1;
-
-	/* TODO: honor first parent mode here? */
-	parent_count = blame->current_parents_len;
-
-	/*
-	 * Compare to each parent - this will reassign presumptive blame
-	 * for any lines that originated with them.
-	 */
-	for (i = 0; i < parent_count; i++) {
-		bool is_unchanged = false;
-		bool has_reassigned = false;
-
-		if (compare_to_parent(&is_unchanged,
-				&has_reassigned,
-				blame,
-				&blame->current_parents[i]) < 0)
-			goto done;
-
-		/*
-		 * If we were unchanged from this parent, then all the
-		 * presumptive blame moves to them.
-		 */
-		if (is_unchanged) {
-			error = pass_presumptive_ownership(blame, &blame->current_parents[i]);
-			goto done;
-		}
-	}
-
-	/*
-	 * Take definitive ownership of any lines that our parents didn't
-	 * touch.
-	 */
-
-	error = take_some_ownership(blame);
-
-done:
-	return error;
-}
-
 static void dump_state(git_blame *blame)
 {
 	git_blame_line *line;
@@ -406,6 +364,70 @@ static void dump_state(git_blame *blame)
 			(int)line->contents_len,
 			line->contents);
 	}
+}
+
+static int consider_current_commit(git_blame *blame)
+{
+	size_t i, parent_count;
+	int error = -1;
+
+	printf("CONSIDERING CURRENT COMMIT\n");
+
+	/* TODO: honor first parent mode here? */
+	parent_count = blame->current_parents_len;
+
+	/*
+	 * Compare to each parent - this will reassign presumptive blame
+	 * for any lines that originated with them.
+	 */
+	for (i = 0; i < parent_count; i++) {
+		bool is_unchanged = false;
+		bool has_reassigned = false;
+
+		printf("  EXAMINING PARENT: %d\n", (int)i);
+
+		if (compare_to_parent(&is_unchanged,
+				&has_reassigned,
+				blame,
+				&blame->current_parents[i]) < 0)
+			goto done;
+
+		/*
+		 * If we were unchanged from this parent, then all the
+		 * presumptive blame moves to them.
+		 */
+		if (is_unchanged) {
+			printf("UNCHANGED!\n");
+			error = pass_presumptive_ownership(blame, &blame->current_parents[i]);
+			goto done;
+		}
+
+		/*
+		 * If this commit didn't contribute to the blame,
+		 * don't follow it.
+		 *
+		 * TODO: drop the first-parent check - it should be
+		 * contributing too!
+		 */
+		/*
+		if (!has_reassigned && i > 0) {
+			printf("HIDING: %s\n", git_oid_tostr_s(&blame->current_parents[i]));
+			git_revwalk_hide(blame->revwalk, &blame->current_parents[i]);
+		}
+		*/
+	}
+
+	/*
+	 * Take definitive ownership of any lines that our parents didn't
+	 * touch.
+	 */
+
+printf("TAKING SOME OWNERSHIP\n");
+	error = take_some_ownership(blame);
+
+done:
+	printf("DONE ERROR IS: %d\n", error);
+	return error;
 }
 
 /* TODO: coalesce with setup_from_head */
