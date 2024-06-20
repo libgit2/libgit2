@@ -53,42 +53,11 @@ static git_blame *blame_alloc(
 	return blame;
 }
 
-/*
-static int load_newest_file(git_blame *blame)
-{
-	git_oid newest_oid;
-	git_commit *commit = NULL;
-	git_blob *blob = NULL;
-	int error = 0;
-
-	if (!git_oid_is_zero(&blame->options.newest_commit)) {
-		git_oid_cpy(&newest_oid, &blame->options.newest_commit);
-	} else if (git_reference_name_to_id(&newest_oid, blame->repository, "HEAD") < 0) {
-		goto done;
-	}
-
-	if (git_commit_lookup(&commit, blame->repository, &newest_oid) < 0 ||
-	    git_object_lookup_bypath((git_object **)&blame->newest_blob, (git_object *)commit, blame->path, GIT_OBJECT_BLOB) < 0)
-		goto done;
-
-
-
-
-	printf("hello\n");
-	GIT_UNUSED(blame);
-	return 42;
-
-done:
-	git_blob_free(blob);
-	git_commit_free(commit);
-	return error;
-}
-*/
-
 struct diff_line_data {
 	git_blame *blame;
 	const git_oid *commit_id;
-	bool has_changes;
+	bool has_deltas;
+	bool reassigned;
 };
 
 static int diff_line_cb(
@@ -100,13 +69,15 @@ static int diff_line_cb(
 	struct diff_line_data *diff_line_data = payload;
 	git_blame *blame = diff_line_data->blame;
 	const git_oid *commit_id = diff_line_data->commit_id;
-	bool current_presumptive;
+	bool current_is_presumptive;
 	git_blame_line *line;
 
 	GIT_UNUSED(delta_diff);
 	GIT_UNUSED(hunk_diff);
 
 	printf("%d\n", line_diff->new_lineno);
+
+	diff_line_data->has_deltas = true;
 
 	/* Ignore deletions. */
 	if (line_diff->new_lineno < 0)
@@ -140,14 +111,14 @@ static int diff_line_cb(
 	 * Make sure that we're examining a presumptive commit and not
 	 * something where we've already reassigned blame.
 	 */
-	current_presumptive =
+	current_is_presumptive =
 		blame->current_commit ?
 		git_oid_equal(&line->culprit, git_commit_id(blame->current_commit)) :
 		git_oid_is_zero(&line->culprit);
 
-	if (current_presumptive) {
+	if (current_is_presumptive) {
 		git_oid_cpy(&line->culprit, commit_id);
-		diff_line_data->has_changes = 1;
+		diff_line_data->reassigned = 1;
 	}
 
 	return 0;
@@ -264,7 +235,11 @@ done:
 	return error;
 }
 
-static int compare_to_parent(git_blame *blame, const git_oid *commit_id)
+static int compare_to_parent(
+	bool *is_unchanged,
+	bool *has_reassigned,
+	git_blame *blame,
+	const git_oid *commit_id)
 {
 	git_commit *commit = NULL;
 	git_tree *tree = NULL;
@@ -280,7 +255,7 @@ static int compare_to_parent(git_blame *blame, const git_oid *commit_id)
 
 	diff_line_data.blame = blame;
 	diff_line_data.commit_id = commit_id;
-	diff_line_data.has_changes = 0;
+	diff_line_data.reassigned = false;
 
 	if (git_commit_lookup(&commit, blame->repository, commit_id) < 0 ||
 	    git_commit_tree(&tree, commit) < 0)
@@ -301,6 +276,9 @@ static int compare_to_parent(git_blame *blame, const git_oid *commit_id)
 			NULL, diff_line_cb, &diff_line_data)) < 0)
 		goto done;
 
+	*is_unchanged = !diff_line_data.has_deltas;
+	*has_reassigned = diff_line_data.reassigned;
+
 done:
 	git_blob_free(blob);
 	git_tree_entry_free(tree_entry);
@@ -310,33 +288,47 @@ done:
 	return error;
 }
 
-static int consider_current_commit(git_blame *blame)
+static int pass_presumptive_ownership(
+	git_blame *blame,
+	const git_oid *parent_oid)
 {
-	git_blame_line *line;
 	const git_oid *current_commit_id;
-	size_t i, parent_count;
-	int error = -1;
-
-	/* TODO: honor first parent mode here? */
-	parent_count = blame->current_parents_len;
+	git_blame_line *line;
+	size_t i;
 
 	current_commit_id = blame->current_commit ?
 		git_commit_id(blame->current_commit) :
 		NULL;
 
-	/*
-	 * Compare to each parent - this will reassign presumptive blame
-	 * for any lines that originated with them.
-	 */
-	for (i = 0; i < parent_count; i++) {
-		if (compare_to_parent(blame, &blame->current_parents[i]) < 0)
-			goto done;
+	for (i = 0; i < blame->lines.size; i++) {
+		bool match;
+
+		line = git_array_get(blame->lines, i);
+
+		if (line->definitive)
+			continue;
+
+		match = current_commit_id ?
+			git_oid_equal(&line->culprit, current_commit_id) :
+			git_oid_is_zero(&line->culprit);
+
+		if (match)
+			git_oid_cpy(&line->culprit, parent_oid);
 	}
 
-	/*
-	 * Take definitive ownership of any lines that our parents didn't
-	 * touch.
-	 */
+	return 0;
+}
+
+static int take_some_ownership(git_blame *blame)
+{
+	const git_oid *current_commit_id;
+	git_blame_line *line;
+	size_t i;
+
+	current_commit_id = blame->current_commit ?
+		git_commit_id(blame->current_commit) :
+		NULL;
+
 	for (i = 0; i < blame->lines.size; i++) {
 		bool match;
 
@@ -353,7 +345,47 @@ static int consider_current_commit(git_blame *blame)
 			line->definitive = 1;
 	}
 
-	error = 0;
+	return 0;
+}
+
+static int consider_current_commit(git_blame *blame)
+{
+	size_t i, parent_count;
+	int error = -1;
+
+	/* TODO: honor first parent mode here? */
+	parent_count = blame->current_parents_len;
+
+	/*
+	 * Compare to each parent - this will reassign presumptive blame
+	 * for any lines that originated with them.
+	 */
+	for (i = 0; i < parent_count; i++) {
+		bool is_unchanged = false;
+		bool has_reassigned = false;
+
+		if (compare_to_parent(&is_unchanged,
+				&has_reassigned,
+				blame,
+				&blame->current_parents[i]) < 0)
+			goto done;
+
+		/*
+		 * If we were unchanged from this parent, then all the
+		 * presumptive blame moves to them.
+		 */
+		if (is_unchanged) {
+			error = pass_presumptive_ownership(blame, &blame->current_parents[i]);
+			goto done;
+		}
+	}
+
+	/*
+	 * Take definitive ownership of any lines that our parents didn't
+	 * touch.
+	 */
+
+	error = take_some_ownership(blame);
 
 done:
 	return error;
@@ -491,6 +523,8 @@ static int blame_file_from_buffer(
 	error = contents_buf ?
 	        setup_blame_from_buf(blame, contents_buf) :
 		setup_blame_from_head(blame);
+
+dump_state(blame);
 
 	do {
 printf("LOOP\n");
