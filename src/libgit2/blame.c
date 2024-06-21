@@ -183,22 +183,40 @@ static int setup_contents_lines(git_blame *blame)
 
 static int setup_blame_from_buf(git_blame *blame, git_str *buf)
 {
-	git_reference *head;
+	git_commit *fake_commit = NULL;
+	git_reference *head = NULL, *head_resolved = NULL;
+	git_oid *fake_parent;
+	int error = -1;
+
+	if (git_repository_head(&head, blame->repository) < 0 ||
+	    git_reference_resolve(&head_resolved, head) < 0)
+		goto done;
+
+	fake_commit = git__calloc(1, sizeof(git_commit));
+	GIT_ERROR_CHECK_ALLOC(fake_commit);
+
+	fake_parent = git_array_alloc(fake_commit->parent_ids);
+	GIT_ERROR_CHECK_ALLOC(fake_parent);
+	git_oid_cpy(fake_parent, git_reference_target(head_resolved));
+
+	git_oid_clear(&fake_commit->object.cached.oid, blame->repository->oid_type);
+
+	fake_commit->object.cached.type = GIT_OBJECT_COMMIT;
+
+	blame->current_commit = fake_commit;
+
 
 	git_str_swap(&blame->contents_buf, buf);
 	blame->contents = blame->contents_buf.ptr;
 	blame->contents_len = blame->contents_buf.size;
 
-	if (git_repository_head(&head, blame->repository) < 0 ||
-	    git_reference_resolve(&blame->head_reference, head) < 0)
-		return -1;
+	error = setup_contents_lines(blame);
 
-	blame->current_parents = git_reference_target(blame->head_reference);
-	blame->current_parents_len = 1;
-
+done:
+	git_commit_free(fake_commit);
+	git_reference_free(head_resolved);
 	git_reference_free(head);
-
-	return setup_contents_lines(blame);
+	return error;
 }
 
 static int setup_blame_from_head(git_blame *blame)
@@ -221,9 +239,6 @@ static int setup_blame_from_head(git_blame *blame)
 
 	blame->contents = git_blob_rawcontent(blame->contents_blob);
 	blame->contents_len = git_blob_rawsize(blame->contents_blob);
-
-	blame->current_parents = blame->current_commit->parent_ids.ptr;
-	blame->current_parents_len = blame->current_commit->parent_ids.size;
 
 	error = setup_contents_lines(blame);
 
@@ -374,7 +389,7 @@ static int consider_current_commit(git_blame *blame)
 	printf("CONSIDERING CURRENT COMMIT\n");
 
 	/* TODO: honor first parent mode here? */
-	parent_count = blame->current_parents_len;
+	parent_count = git_commit_parentcount(blame->current_commit);
 
 	/*
 	 * Compare to each parent - this will reassign presumptive blame
@@ -383,13 +398,14 @@ static int consider_current_commit(git_blame *blame)
 	for (i = 0; i < parent_count; i++) {
 		bool is_unchanged = false;
 		bool has_reassigned = false;
+		const git_oid *parent_commit_id = git_commit_parent_id(blame->current_commit, i);
 
 		printf("  EXAMINING PARENT: %d\n", (int)i);
 
 		if (compare_to_parent(&is_unchanged,
 				&has_reassigned,
 				blame,
-				&blame->current_parents[i]) < 0)
+				parent_commit_id) < 0)
 			goto done;
 
 		/*
@@ -398,7 +414,7 @@ static int consider_current_commit(git_blame *blame)
 		 */
 		if (is_unchanged) {
 			printf("UNCHANGED!\n");
-			error = pass_presumptive_ownership(blame, &blame->current_parents[i]);
+			error = pass_presumptive_ownership(blame, parent_commit_id);
 			goto done;
 		}
 
@@ -448,9 +464,6 @@ static int move_next_commit(git_blame *blame)
 		goto done;
 
 printf("NOW: %s\n", git_oid_tostr_s(&commit_id));
-
-	blame->current_parents = blame->current_commit->parent_ids.ptr;
-	blame->current_parents_len = blame->current_commit->parent_ids.size;
 
 	error = 0;
 
@@ -642,7 +655,6 @@ void git_blame_free(git_blame *blame)
 	if (!blame)
 		return;
 
-	git_reference_free(blame->head_reference);
 	git_commit_free(blame->current_commit);
 	git_revwalk_free(blame->revwalk);
 	git_str_dispose(&blame->contents_buf);

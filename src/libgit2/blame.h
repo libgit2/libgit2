@@ -38,11 +38,7 @@ struct git_blame {
 
 	git_revwalk *revwalk;
 
-	git_reference *head_reference;
-
 	git_commit *current_commit;
-	const git_oid *current_parents;
-	size_t current_parents_len;
 };
 
 #endif
