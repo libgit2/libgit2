@@ -13,7 +13,7 @@
 typedef struct {
 	const char *contents;
 	size_t contents_len;
-	git_oid culprit;
+	git_commit *commit;
 	unsigned int definitive;
 } git_blame_line;
 
