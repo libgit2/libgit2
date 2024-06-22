@@ -1796,7 +1796,8 @@ void git_odb_stream_free(git_odb_stream *stream)
 	if (stream == NULL)
 		return;
 
-	git_hash_ctx_cleanup(stream->hash_ctx);
+	if (stream->hash_ctx)
+		git_hash_ctx_cleanup(stream->hash_ctx);
 	git__free(stream->hash_ctx);
 	stream->free(stream);
 }
