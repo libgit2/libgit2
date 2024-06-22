@@ -299,7 +299,7 @@ done:
 	return error;
 }
 
-static int pass_presumptive_ownership(git_blame *blame, git_commit *parent)
+static int pass_presumptive_blame(git_blame *blame, git_commit *parent)
 {
 	git_blame_line *line;
 	size_t i;
@@ -312,14 +312,14 @@ static int pass_presumptive_ownership(git_blame *blame, git_commit *parent)
 
 		if (line->commit == blame->current_commit) {
 			git_commit_free(line->commit);
-			line->commit = parent;
+			git_commit_dup(&line->commit, parent);
 		}
 	}
 
 	return 0;
 }
 
-static int take_some_ownership(git_blame *blame)
+static int take_definitive_blame(git_blame *blame)
 {
 	git_blame_line *line;
 	size_t i;
@@ -327,11 +327,11 @@ static int take_some_ownership(git_blame *blame)
 	for (i = 0; i < blame->lines.size; i++) {
 		line = git_array_get(blame->lines, i);
 
-		if (line->definitive)
-			continue;
-
-		if (line->commit == blame->current_commit)
+		if (line->commit == blame->current_commit) {
+			printf("--> %d %s\n", (int)i, git_oid_tostr_s(git_commit_id(line->commit)));
+			GIT_ASSERT(!line->definitive);
 			line->definitive = 1;
+		}
 	}
 
 	return 0;
@@ -387,7 +387,7 @@ static int consider_current_commit(git_blame *blame)
 		if (is_unchanged) {
 			printf("UNCHANGED!\n");
 
-			error = pass_presumptive_ownership(blame, parent);
+			error = pass_presumptive_blame(blame, parent);
 				goto done;
 		}
 
@@ -415,7 +415,8 @@ static int consider_current_commit(git_blame *blame)
 	 */
 
 printf("TAKING SOME OWNERSHIP\n");
-	error = take_some_ownership(blame);
+dump_state(blame);
+	error = take_definitive_blame(blame);
 
 done:
 	printf("DONE ERROR IS: %d\n", error);
