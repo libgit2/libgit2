@@ -37,20 +37,20 @@ void test_blame_getters__cleanup(void)
 
 void test_blame_getters__byindex(void)
 {
-	const git_blame_hunk *h = git_blame_get_hunk_byindex(g_blame, 2);
+	const git_blame_hunk *h = git_blame_hunk_byindex(g_blame, 2);
 	cl_assert(h);
 	cl_assert_equal_s(h->orig_path, "c");
 
-	h = git_blame_get_hunk_byindex(g_blame, 95);
+	h = git_blame_hunk_byindex(g_blame, 95);
 	cl_assert_equal_p(h, NULL);
 }
 
 void test_blame_getters__byline(void)
 {
-	const git_blame_hunk *h = git_blame_get_hunk_byline(g_blame, 5);
+	const git_blame_hunk *h = git_blame_hunk_byline(g_blame, 5);
 	cl_assert(h);
 	cl_assert_equal_s(h->orig_path, "b");
 
-	h = git_blame_get_hunk_byline(g_blame, 95);
+	h = git_blame_hunk_byline(g_blame, 95);
 	cl_assert_equal_p(h, NULL);
 }

@@ -27,7 +27,7 @@ void test_blame_simple__trivial_testrepo(void)
 	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo/.gitted")));
 	cl_git_pass(git_blame_file(&g_blame, g_repo, "branch_file.txt", NULL));
 
-	cl_assert_equal_i(2, git_blame_get_hunk_count(g_blame));
+	cl_assert_equal_i(2, git_blame_hunkcount(g_blame));
 	check_blame_hunk_index(g_repo, g_blame, 0, 1, 1, 0, "c47800c7", "branch_file.txt");
 	check_blame_hunk_index(g_repo, g_blame, 1, 2, 1, 0, "a65fedf3", "branch_file.txt");
 }
@@ -57,7 +57,7 @@ void test_blame_simple__trivial_blamerepo(void)
 	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
 	cl_git_pass(git_blame_file(&g_blame, g_repo, "b.txt", NULL));
 
-	cl_assert_equal_i(4, git_blame_get_hunk_count(g_blame));
+	cl_assert_equal_i(4, git_blame_hunkcount(g_blame));
 	check_blame_hunk_index(g_repo, g_blame, 0,  1, 4, 0, "da237394", "b.txt");
 	check_blame_hunk_index(g_repo, g_blame, 1,  5, 1, 1, "b99f7ac0", "b.txt");
 	check_blame_hunk_index(g_repo, g_blame, 2,  6, 5, 0, "63d671eb", "b.txt");
@@ -233,7 +233,7 @@ void test_blame_simple__can_restrict_lines_min(void)
 
 	opts.min_line = 8;
 	cl_git_pass(git_blame_file(&g_blame, g_repo, "b.txt", &opts));
-	cl_assert_equal_i(2, git_blame_get_hunk_count(g_blame));
+	cl_assert_equal_i(2, git_blame_hunkcount(g_blame));
 	check_blame_hunk_index(g_repo, g_blame, 0,  8, 3, 0, "63d671eb", "b.txt");
 	check_blame_hunk_index(g_repo, g_blame, 1, 11, 5, 0, "aa06ecca", "b.txt");
 }
@@ -252,7 +252,7 @@ void test_blame_simple__can_ignore_whitespace_change(void)
 
 	opts.flags |= GIT_BLAME_IGNORE_WHITESPACE;
 	cl_git_pass(git_blame_file(&g_blame, g_repo, "c.txt", &opts));
-	cl_assert_equal_i(1, git_blame_get_hunk_count(g_blame));
+	cl_assert_equal_i(1, git_blame_hunkcount(g_blame));
 	check_blame_hunk_index(g_repo, g_blame, 0,  1, 4, 0, "702c7aa5", "c.txt");
 }
 
@@ -275,7 +275,7 @@ void test_blame_simple__can_restrict_lines_max(void)
 
 	opts.max_line = 6;
 	cl_git_pass(git_blame_file(&g_blame, g_repo, "b.txt", &opts));
-	cl_assert_equal_i(3, git_blame_get_hunk_count(g_blame));
+	cl_assert_equal_i(3, git_blame_hunkcount(g_blame));
 	check_blame_hunk_index(g_repo, g_blame, 0,  1, 4, 0, "da237394", "b.txt");
 	check_blame_hunk_index(g_repo, g_blame, 1,  5, 1, 1, "b99f7ac0", "b.txt");
 	check_blame_hunk_index(g_repo, g_blame, 2,  6, 1, 0, "63d671eb", "b.txt");
@@ -301,7 +301,7 @@ void test_blame_simple__can_restrict_lines_both(void)
 	opts.min_line = 2;
 	opts.max_line = 7;
 	cl_git_pass(git_blame_file(&g_blame, g_repo, "b.txt", &opts));
-	cl_assert_equal_i(3, git_blame_get_hunk_count(g_blame));
+	cl_assert_equal_i(3, git_blame_hunkcount(g_blame));
 	check_blame_hunk_index(g_repo, g_blame, 0,  2, 3, 0, "da237394", "b.txt");
 	check_blame_hunk_index(g_repo, g_blame, 1,  5, 1, 1, "b99f7ac0", "b.txt");
 	check_blame_hunk_index(g_repo, g_blame, 2,  6, 2, 0, "63d671eb", "b.txt");
@@ -314,7 +314,7 @@ void test_blame_simple__can_blame_huge_file(void)
 	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
 
 	cl_git_pass(git_blame_file(&g_blame, g_repo, "huge.txt", &opts));
-	cl_assert_equal_i(2, git_blame_get_hunk_count(g_blame));
+	cl_assert_equal_i(2, git_blame_hunkcount(g_blame));
 	check_blame_hunk_index(g_repo, g_blame, 0, 1,     65536, 0, "4eecfea", "huge.txt");
 	check_blame_hunk_index(g_repo, g_blame, 1, 65537, 1,     0, "6653ff4", "huge.txt");
 }
@@ -341,7 +341,7 @@ void test_blame_simple__can_restrict_to_newish_commits(void)
 
 	cl_git_pass(git_blame_file(&g_blame, g_repo, "branch_file.txt", &opts));
 
-	cl_assert_equal_i(2, git_blame_get_hunk_count(g_blame));
+	cl_assert_equal_i(2, git_blame_hunkcount(g_blame));
 	check_blame_hunk_index(g_repo, g_blame, 0,  1, 1, 1, "be3563a", "branch_file.txt");
 	check_blame_hunk_index(g_repo, g_blame, 1,  2, 1, 0, "a65fedf", "branch_file.txt");
 }
@@ -354,7 +354,7 @@ void test_blame_simple__can_restrict_to_first_parent_commits(void)
 	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
 
 	cl_git_pass(git_blame_file(&g_blame, g_repo, "b.txt", &opts));
-	cl_assert_equal_i(4, git_blame_get_hunk_count(g_blame));
+	cl_assert_equal_i(4, git_blame_hunkcount(g_blame));
 	check_blame_hunk_index(g_repo, g_blame, 0,  1, 4, 0, "da237394", "b.txt");
 	check_blame_hunk_index(g_repo, g_blame, 1,  5, 1, 1, "b99f7ac0", "b.txt");
 	check_blame_hunk_index(g_repo, g_blame, 2,  6, 5, 0, "63d671eb", "b.txt");
