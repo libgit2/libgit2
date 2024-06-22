@@ -264,10 +264,9 @@ static int compare_to_parent(
 	git_blame *blame,
 	git_commit *parent)
 {
-	git_commit *commit = NULL;
-	git_tree *tree = NULL;
-	git_tree_entry *tree_entry = NULL;
-	git_blob *blob = NULL;
+	git_tree *current_tree = NULL, *parent_tree = NULL;
+	git_tree_entry *current_tree_entry = NULL, *parent_tree_entry = NULL;
+	git_blob *current_blob = NULL, *parent_blob = NULL;
 	git_diff_options diff_options = GIT_DIFF_OPTIONS_INIT;
 	struct diff_line_data diff_line_data;
 	const char *path = blame->path;
@@ -281,19 +280,41 @@ static int compare_to_parent(
 	diff_line_data.has_changes = false;
 	diff_line_data.reassigned = false;
 
-	if (git_commit_tree(&tree, parent) < 0)
+	if (git_commit_tree(&parent_tree, parent) < 0)
 		goto done;
 
 	/* TODO: handle renames */
-	if ((error = git_tree_entry_bypath(&tree_entry, tree, blame->path)) < 0) {
+	if ((error = git_tree_entry_bypath(&parent_tree_entry, parent_tree, blame->path)) < 0) {
 		if (error == GIT_ENOTFOUND)
 			error = 0;
 
 		goto done;
 	}
 
-	if ((error = git_blob_lookup(&blob, blame->repository, &tree_entry->oid)) < 0 ||
-	    (error = git_diff_blob_to_buffer(blob, path,
+	if ((error = git_blob_lookup(&parent_blob, blame->repository, &parent_tree_entry->oid)) < 0)
+		goto done;
+
+	/*
+	 * If the blob in the current commit is equal to the parent then
+	 * we know all lines came from them; otherwise, we diff them.
+	 */
+	if (!git_oid_iszero(git_commit_id(blame->current_commit))) {
+		/* TODO: renames here too */
+		if (git_commit_tree(&current_tree, blame->current_commit) < 0 ||
+		    git_tree_entry_bypath(&current_tree_entry, current_tree, blame->path) < 0 ||
+		    git_blob_lookup(&current_blob, blame->repository, &current_tree_entry->oid) < 0)
+			goto done;
+
+printf("-- %s", git_oid_tostr_s(git_blob_id(current_blob))); printf(" %s\n", git_oid_tostr_s(git_blob_id(parent_blob)));
+		if (git_oid_equal(git_blob_id(current_blob), git_blob_id(parent_blob))) {
+			*is_unchanged = 1;
+			*has_reassigned = 0;
+			error = 0;
+			goto done;
+		}
+	}
+
+	if ((error = git_diff_blob_to_buffer(parent_blob, path,
 			blame->contents, blame->contents_len,
 			blame->path, &diff_options, NULL, NULL,
 			NULL, diff_line_cb, &diff_line_data)) < 0)
@@ -303,10 +324,12 @@ static int compare_to_parent(
 	*has_reassigned = diff_line_data.reassigned;
 
 done:
-	git_blob_free(blob);
-	git_tree_entry_free(tree_entry);
-	git_tree_free(tree);
-	git_commit_free(commit);
+	git_blob_free(current_blob);
+	git_blob_free(parent_blob);
+	git_tree_entry_free(current_tree_entry);
+	git_tree_entry_free(parent_tree_entry);
+	git_tree_free(current_tree);
+	git_tree_free(parent_tree);
 
 	return error;
 }
@@ -371,7 +394,12 @@ static int consider_current_commit(git_blame *blame)
 	size_t i, parent_count;
 	int error = -1;
 
-	if (git_oidmap_get_and_delete((void **)&this, blame->contributors, git_commit_id(blame->current_commit)) == GIT_ENOTFOUND) {
+	/*
+	 * If this commit does not actually contribute to the blame, don't
+	 * bother looking at it.
+	 */
+	if (git_oidmap_get_and_delete((void **)&this, blame->contributors,
+			git_commit_id(blame->current_commit)) == GIT_ENOTFOUND) {
 		return 0;
 	}
 
@@ -391,8 +419,7 @@ static int consider_current_commit(git_blame *blame)
 		/* printf("  EXAMINING PARENT: %d\n", (int)i); */
 
 		if (git_commit_parent(&parent, blame->current_commit, i) < 0 ||
-		    compare_to_parent(&is_unchanged, &has_reassigned,
-				blame, parent) < 0)
+		    compare_to_parent(&is_unchanged, &has_reassigned, blame, parent) < 0)
 			goto done;
 
 		/*
@@ -401,6 +428,7 @@ static int consider_current_commit(git_blame *blame)
 		 */
 		if (is_unchanged) {
 		/*	printf("UNCHANGED!\n"); */
+			mark_as_contributor(blame, parent);
 
 			error = pass_presumptive_blame(blame, parent);
 			goto done;
