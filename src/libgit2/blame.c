@@ -68,7 +68,6 @@ static int diff_line_cb(
 {
 	struct diff_line_data *diff_line_data = payload;
 	git_blame *blame = diff_line_data->blame;
-	bool current_is_presumptive;
 	git_blame_line *line;
 
 	GIT_UNUSED(delta_diff);
@@ -110,9 +109,7 @@ static int diff_line_cb(
 	 * Make sure that we're examining a presumptive commit and not
 	 * something where we've already reassigned blame.
 	 */
-	current_is_presumptive = line->commit == blame->current_commit;
-
-	if (current_is_presumptive) {
+	if (line->commit == blame->current_commit) {
 		git_commit_free(line->commit);
 		git_commit_dup(&line->commit, diff_line_data->commit);
 
@@ -199,7 +196,7 @@ static int setup_blame_from_buf(git_blame *blame, git_str *buf)
 	fake_commit->object.cached.type = GIT_OBJECT_COMMIT;
 	fake_commit->object.repo = blame->repository;
 
-	blame->current_commit = fake_commit;
+	git_commit_dup(&blame->current_commit, fake_commit);
 
 
 	git_str_swap(&blame->contents_buf, buf);
