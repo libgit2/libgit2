@@ -458,7 +458,7 @@ static int blame_file_from_buffer(
 	git_blame_options *options)
 {
 	git_blame *blame;
-	int error;
+	int error = -1;
 
 	if ((blame = blame_alloc(repo, options, path)) == NULL)
 		goto on_error;
@@ -502,7 +502,7 @@ printf("=========================================================\n");
 
 on_error:
 	git_blame_free(blame);
-	return -1;
+	return error;
 }
 
 int git_blame_file(
