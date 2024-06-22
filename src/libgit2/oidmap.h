@@ -79,6 +79,24 @@ int git_oidmap_set(git_oidmap *map, const git_oid *key, void *value);
 /**
  * Delete an entry from the map.
  *
+ * Delete the given key and return the value. If no such key exists,
+ * this will do nothing.
+ *
+ * @param out pointer to store the current value (if it exists)
+ * @param map map to delete key in
+ * @param key key to delete
+ * @return `0` if the key has been deleted, GIT_ENOTFOUND if no
+ *         such key was found, a negative code in case of an
+ *         error
+ */
+int git_oidmap_get_and_delete(
+	void **out,
+	git_oidmap *map,
+	const git_oid *key);
+
+/**
+ * Delete an entry from the map.
+ *
  * Delete the given key and its value from the map. If no such
  * key exists, this will do nothing.
  *

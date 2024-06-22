@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "array.h"
+#include "oidmap.h"
 
 typedef struct {
 	const char *contents;
@@ -37,6 +38,7 @@ struct git_blame {
 	git_blob *contents_blob;
 
 	git_revwalk *revwalk;
+	git_oidmap *contributors;
 
 	git_commit *current_commit;
 };

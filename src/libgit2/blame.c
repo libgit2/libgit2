@@ -73,7 +73,7 @@ static int diff_line_cb(
 	GIT_UNUSED(delta_diff);
 	GIT_UNUSED(hunk_diff);
 
-	printf("%d\n", line_diff->new_lineno);
+	/* printf("%d\n", line_diff->new_lineno); */
 
 	diff_line_data->has_changes = true;
 
@@ -83,7 +83,7 @@ static int diff_line_cb(
 
 	GIT_ASSERT(line_diff->new_lineno <= (int)blame->lines.size);
 
-	printf("%c / %d / %d / %.*s", line_diff->origin, line_diff->old_lineno, line_diff->new_lineno, (int)line_diff->content_len, line_diff->content);
+	/* printf("%c / %d / %d / %.*s", line_diff->origin, line_diff->old_lineno, line_diff->new_lineno, (int)line_diff->content_len, line_diff->content); */
 
 	/*
 	 * We've already assigned presumptive blame to the current commit,
@@ -97,7 +97,7 @@ static int diff_line_cb(
 
 	line = git_array_get(blame->lines, (size_t)(line_diff->new_lineno - 1));
 
-	printf("%c / %s\n", line->definitive ? '!' : '?', git_oid_tostr_s(git_commit_id(line->commit)));
+	/* printf("%c / %s\n", line->definitive ? '!' : '?', git_oid_tostr_s(git_commit_id(line->commit))); */
 
 	/*
 	 * If the current line is already blamed, nothing to do.
@@ -173,6 +173,19 @@ static int setup_contents_lines(git_blame *blame)
 	return 0;
 }
 
+static int mark_as_contributor(git_blame *blame, git_commit *commit)
+{
+	git_commit *dup = NULL;
+
+	if (git_commit_dup(&dup, commit) < 0 ||
+	    git_oidmap_set(blame->contributors, git_commit_id(dup), dup) < 0) {
+		git_commit_free(dup);
+		return -1;
+	}
+
+	return 0;
+}
+
 static int setup_blame_from_buf(git_blame *blame, git_str *buf)
 {
 	git_commit *fake_commit = NULL;
@@ -196,8 +209,9 @@ static int setup_blame_from_buf(git_blame *blame, git_str *buf)
 	fake_commit->object.cached.type = GIT_OBJECT_COMMIT;
 	fake_commit->object.repo = blame->repository;
 
-	git_commit_dup(&blame->current_commit, fake_commit);
-
+	if (git_commit_dup(&blame->current_commit, fake_commit) < 0 ||
+	    mark_as_contributor(blame, fake_commit) < 0)
+		goto done;
 
 	git_str_swap(&blame->contents_buf, buf);
 	blame->contents = blame->contents_buf.ptr;
@@ -227,7 +241,8 @@ static int setup_blame_from_head(git_blame *blame)
 	    git_commit_tree(&tree, commit) < 0 ||
 	    git_tree_entry_bypath(&tree_entry, tree, blame->path) < 0 ||
 	    git_blob_lookup(&blob, blame->repository, &tree_entry->oid) < 0 ||
-	    git_blob_dup(&blame->contents_blob, blob) < 0)
+	    git_blob_dup(&blame->contents_blob, blob) < 0 ||
+	    mark_as_contributor(blame, commit) < 0)
 		goto done;
 
 	blame->contents = git_blob_rawcontent(blame->contents_blob);
@@ -325,7 +340,6 @@ static int take_definitive_blame(git_blame *blame)
 		line = git_array_get(blame->lines, i);
 
 		if (line->commit == blame->current_commit) {
-			printf("--> %d %s\n", (int)i, git_oid_tostr_s(git_commit_id(line->commit)));
 			GIT_ASSERT(!line->definitive);
 			line->definitive = 1;
 		}
@@ -353,11 +367,15 @@ static void dump_state(git_blame *blame)
 
 static int consider_current_commit(git_blame *blame)
 {
-	git_commit *parent = NULL;
+	git_commit *this = NULL, *parent = NULL;
 	size_t i, parent_count;
 	int error = -1;
 
-	printf("CONSIDERING CURRENT COMMIT\n");
+	if (git_oidmap_get_and_delete((void **)&this, blame->contributors, git_commit_id(blame->current_commit)) == GIT_ENOTFOUND) {
+		return 0;
+	}
+
+	/* printf("CONSIDERING CURRENT COMMIT\n"); */
 
 	/* TODO: honor first parent mode here? */
 	parent_count = git_commit_parentcount(blame->current_commit);
@@ -370,7 +388,7 @@ static int consider_current_commit(git_blame *blame)
 		bool is_unchanged = false;
 		bool has_reassigned = false;
 
-		printf("  EXAMINING PARENT: %d\n", (int)i);
+		/* printf("  EXAMINING PARENT: %d\n", (int)i); */
 
 		if (git_commit_parent(&parent, blame->current_commit, i) < 0 ||
 		    compare_to_parent(&is_unchanged, &has_reassigned,
@@ -382,11 +400,15 @@ static int consider_current_commit(git_blame *blame)
 		 * presumptive blame moves to them.
 		 */
 		if (is_unchanged) {
-			printf("UNCHANGED!\n");
+		/*	printf("UNCHANGED!\n"); */
 
 			error = pass_presumptive_blame(blame, parent);
-				goto done;
+			goto done;
 		}
+
+		/* Record this commit if it contributed. */
+		if (has_reassigned)
+			mark_as_contributor(blame, parent);
 
 		git_commit_free(parent);
 		parent = NULL;
@@ -411,12 +433,11 @@ static int consider_current_commit(git_blame *blame)
 	 * touch.
 	 */
 
-printf("TAKING SOME OWNERSHIP\n");
-dump_state(blame);
+/* printf("TAKING SOME OWNERSHIP\n");*/
 	error = take_definitive_blame(blame);
 
 done:
-	printf("DONE ERROR IS: %d\n", error);
+/*	printf("DONE ERROR IS: %d\n", error);*/
 	git_commit_free(parent);
 	return error;
 }
@@ -437,8 +458,6 @@ static int move_next_commit(git_blame *blame)
 	    git_commit_lookup(&commit, blame->repository, &commit_id) < 0 ||
 	    git_commit_dup(&blame->current_commit, commit) < 0)
 		goto done;
-
-printf("NOW: %s\n", git_oid_tostr_s(&commit_id));
 
 	error = 0;
 
@@ -461,7 +480,8 @@ static int blame_file_from_buffer(
 		goto on_error;
 
 	/* TODO: commit boundaries */
-	if (git_revwalk_new(&blame->revwalk, blame->repository) < 0 ||
+	if (git_oidmap_new(&blame->contributors) < 0 ||
+	    git_revwalk_new(&blame->revwalk, blame->repository) < 0 ||
 	    git_revwalk_sorting(blame->revwalk, GIT_SORT_TOPOLOGICAL) < 0 ||
 	    git_revwalk_push_head(blame->revwalk) < 0)
 		goto on_error;
@@ -470,10 +490,7 @@ static int blame_file_from_buffer(
 	        setup_blame_from_buf(blame, contents_buf) :
 		setup_blame_from_head(blame);
 
-dump_state(blame);
-
 	do {
-printf("LOOP\n");
 		if ((error = consider_current_commit(blame)) < 0) {
 			if (error == GIT_ITEROVER) {
 				printf("DONE!\n");
@@ -483,13 +500,13 @@ printf("LOOP\n");
 			goto on_error;
 		}
 
-	dump_state(blame);
-
 		if (move_next_commit(blame) < 0)
 			goto on_error;
-	} while (1);
+	} while (git_oidmap_size(blame->contributors) > 0);
 
-printf("=========================================================\n");
+/* printf("=========================================================\n"); */
+
+dump_state(blame);
 
 	if (error != GIT_ITEROVER)
 		goto on_error;
@@ -627,9 +644,16 @@ const git_blame_hunk *git_blame_get_hunk_byline(
 
 void git_blame_free(git_blame *blame)
 {
+	git_commit *commit;
+
 	if (!blame)
 		return;
 
+	git_oidmap_foreach_value(blame->contributors, commit, {
+		git_commit_free(commit);
+	});
+
+	git_oidmap_free(blame->contributors);
 	git_commit_free(blame->current_commit);
 	git_revwalk_free(blame->revwalk);
 	git_str_dispose(&blame->contents_buf);

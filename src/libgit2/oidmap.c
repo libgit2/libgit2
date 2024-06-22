@@ -73,6 +73,20 @@ int git_oidmap_set(git_oidmap *map, const git_oid *key, void *value)
 	return 0;
 }
 
+int git_oidmap_get_and_delete(void **out, git_oidmap *map, const git_oid *key)
+{
+	khiter_t idx = kh_get(oid, map, key);
+
+	if (idx == kh_end(map)) {
+		*out = NULL;
+		return GIT_ENOTFOUND;
+	}
+
+	*out = kh_val(map, idx);
+	kh_del(oid, map, idx);
+	return 0;
+}
+
 int git_oidmap_delete(git_oidmap *map, const git_oid *key)
 {
 	khiter_t idx = kh_get(oid, map, key);
