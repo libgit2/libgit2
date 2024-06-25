@@ -382,7 +382,7 @@ GIT_EXTERN(int) git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stre
  * @param stream the stream
  * @param buffer a user-allocated buffer to store the data in.
  * @param len the buffer's length
- * @return 0 if the read succeeded, error code otherwise
+ * @return the number of bytes read if succeeded, error code otherwise
  */
 GIT_EXTERN(int) git_odb_stream_read(git_odb_stream *stream, char *buffer, size_t len);
 
