@@ -41,7 +41,10 @@ out:
 	return error;
 }
 
-static int config_snapshot_get(git_config_backend *cfg, const char *key, git_config_entry **out)
+static int config_snapshot_get(
+	git_config_backend *cfg,
+	const char *key,
+	git_config_backend_entry **out)
 {
 	config_snapshot_backend *b = GIT_CONTAINER_OF(cfg, config_snapshot_backend, parent);
 	git_config_list *config_list = NULL;

@@ -310,8 +310,8 @@ static int config_file_set(git_config_backend *cfg, const char *name, const char
 		if (error != GIT_ENOTFOUND)
 			goto out;
 		error = 0;
-	} else if ((!existing->base.value && !value) ||
-		   (existing->base.value && value && !strcmp(existing->base.value, value))) {
+	} else if ((!existing->base.entry.value && !value) ||
+		   (existing->base.entry.value && value && !strcmp(existing->base.entry.value, value))) {
 		/* don't update if old and new values already match */
 		error = 0;
 		goto out;
@@ -336,7 +336,10 @@ out:
 /*
  * Internal function that actually gets the value in string form
  */
-static int config_file_get(git_config_backend *cfg, const char *key, git_config_entry **out)
+static int config_file_get(
+	git_config_backend *cfg,
+	const char *key,
+	git_config_backend_entry **out)
 {
 	config_file_backend *h = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
 	git_config_list *config_list = NULL;
@@ -407,7 +410,7 @@ static int config_file_delete(git_config_backend *cfg, const char *name)
 		goto out;
 	}
 
-	if ((error = config_file_write(b, name, entry->base.name, NULL, NULL)) < 0)
+	if ((error = config_file_write(b, name, entry->base.entry.name, NULL, NULL)) < 0)
 		goto out;
 
 out:
@@ -795,22 +798,22 @@ static int read_on_variable(
 	entry = git__calloc(1, sizeof(git_config_list_entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
 
-	entry->base.name = git_str_detach(&buf);
-	GIT_ERROR_CHECK_ALLOC(entry->base.name);
+	entry->base.entry.name = git_str_detach(&buf);
+	GIT_ERROR_CHECK_ALLOC(entry->base.entry.name);
 
 	if (var_value) {
-		entry->base.value = git__strdup(var_value);
-		GIT_ERROR_CHECK_ALLOC(entry->base.value);
+		entry->base.entry.value = git__strdup(var_value);
+		GIT_ERROR_CHECK_ALLOC(entry->base.entry.value);
 	}
 
-	entry->base.backend_type = git_config_list_add_string(parse_data->config_list, CONFIG_FILE_TYPE);
-	GIT_ERROR_CHECK_ALLOC(entry->base.backend_type);
+	entry->base.entry.backend_type = git_config_list_add_string(parse_data->config_list, CONFIG_FILE_TYPE);
+	GIT_ERROR_CHECK_ALLOC(entry->base.entry.backend_type);
 
-	entry->base.origin_path = git_config_list_add_string(parse_data->config_list, parse_data->file->path);
-	GIT_ERROR_CHECK_ALLOC(entry->base.origin_path);
+	entry->base.entry.origin_path = git_config_list_add_string(parse_data->config_list, parse_data->file->path);
+	GIT_ERROR_CHECK_ALLOC(entry->base.entry.origin_path);
 
-	entry->base.level = parse_data->level;
-	entry->base.include_depth = parse_data->depth;
+	entry->base.entry.level = parse_data->level;
+	entry->base.entry.include_depth = parse_data->depth;
 	entry->base.free = git_config_list_entry_free;
 	entry->config_list = parse_data->config_list;
 
@@ -820,11 +823,11 @@ static int read_on_variable(
 	result = 0;
 
 	/* Add or append the new config option */
-	if (!git__strcmp(entry->base.name, "include.path"))
-		result = parse_include(parse_data, entry->base.value);
-	else if (!git__prefixcmp(entry->base.name, "includeif.") &&
-	         !git__suffixcmp(entry->base.name, ".path"))
-		result = parse_conditional_include(parse_data, entry->base.name, entry->base.value);
+	if (!git__strcmp(entry->base.entry.name, "include.path"))
+		result = parse_include(parse_data, entry->base.entry.value);
+	else if (!git__prefixcmp(entry->base.entry.name, "includeif.") &&
+	         !git__suffixcmp(entry->base.entry.name, ".path"))
+		result = parse_conditional_include(parse_data, entry->base.entry.name, entry->base.entry.value);
 
 	return result;
 }

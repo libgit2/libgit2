@@ -50,10 +50,13 @@ typedef struct {
 
 void git_config_entry_free(git_config_entry *entry)
 {
+	git_config_backend_entry *be;
+
 	if (!entry)
 		return;
 
-	entry->free(entry);
+	be = (git_config_backend_entry *)entry;
+	be->free(be);
 }
 
 static void backend_instance_free(backend_instance *instance)
@@ -430,15 +433,19 @@ typedef struct {
 	size_t i;
 } all_iter;
 
-static int all_iter_next(git_config_entry **out, git_config_iterator *_iter)
+static int all_iter_next(
+	git_config_backend_entry **out,
+	git_config_iterator *_iter)
 {
 	all_iter *iter = (all_iter *) _iter;
 	backend_entry *entry;
 	git_config_backend *backend;
+	git_config_backend_entry *be;
 	int error = 0;
 
 	if (iter->current != NULL &&
-	    (error = iter->current->next(out, iter->current)) == 0) {
+	    (error = iter->current->next(&be, iter->current)) == 0) {
+		*out = be;
 		return 0;
 	}
 
@@ -460,13 +467,18 @@ static int all_iter_next(git_config_entry **out, git_config_iterator *_iter)
 
 		iter->current = NULL;
 		error = backend->iterator(&iter->current, backend);
+
 		if (error == GIT_ENOTFOUND)
 			continue;
 
 		if (error < 0)
 			return error;
 
-		error = iter->current->next(out, iter->current);
+		if ((error = iter->current->next(&be, iter->current)) == 0) {
+			*out = be;
+			return 0;
+		}
+
 		/* If this backend is empty, then keep going */
 		if (error == GIT_ITEROVER)
 			continue;
@@ -478,7 +490,9 @@ static int all_iter_next(git_config_entry **out, git_config_iterator *_iter)
 	return GIT_ITEROVER;
 }
 
-static int all_iter_glob_next(git_config_entry **entry, git_config_iterator *_iter)
+static int all_iter_glob_next(
+	git_config_backend_entry **entry,
+	git_config_iterator *_iter)
 {
 	int error;
 	all_iter *iter = (all_iter *) _iter;
@@ -489,7 +503,7 @@ static int all_iter_glob_next(git_config_entry **entry, git_config_iterator *_it
 	 */
 	while ((error = all_iter_next(entry, _iter)) == 0) {
 		/* skip non-matching keys if regexp was provided */
-		if (git_regexp_match(&iter->regex, (*entry)->name) != 0)
+		if (git_regexp_match(&iter->regex, (*entry)->entry.name) != 0)
 			continue;
 
 		/* and simply return if we like the entry's name */
@@ -573,7 +587,7 @@ int git_config_backend_foreach_match(
 	git_config_foreach_cb cb,
 	void *payload)
 {
-	git_config_entry *entry;
+	git_config_backend_entry *entry;
 	git_config_iterator *iter;
 	git_regexp regex;
 	int error = 0;
@@ -591,11 +605,11 @@ int git_config_backend_foreach_match(
 
 	while (!(iter->next(&entry, iter) < 0)) {
 		/* skip non-matching keys if regexp was provided */
-		if (regexp && git_regexp_match(&regex, entry->name) != 0)
+		if (regexp && git_regexp_match(&regex, entry->entry.name) != 0)
 			continue;
 
 		/* abort iterator on non-zero return value */
-		if ((error = cb(entry, payload)) != 0) {
+		if ((error = cb(&entry->entry, payload)) != 0) {
 			git_error_set_after_callback(error);
 			break;
 		}
@@ -772,6 +786,7 @@ static int get_entry(
 {
 	backend_entry *entry;
 	git_config_backend *backend;
+	git_config_backend_entry *be;
 	int res = GIT_ENOTFOUND;
 	const char *key = name;
 	char *normalized = NULL;
@@ -790,10 +805,12 @@ static int get_entry(
 		GIT_ASSERT(entry->instance && entry->instance->backend);
 
 		backend = entry->instance->backend;
-		res = backend->get(backend, key, out);
+		res = backend->get(backend, key, &be);
 
-		if (res != GIT_ENOTFOUND)
+		if (res != GIT_ENOTFOUND) {
+			*out = &be->entry;
 			break;
+		}
 	}
 
 	git__free(normalized);
@@ -1043,16 +1060,16 @@ int git_config_get_multivar_foreach(
 {
 	int err, found;
 	git_config_iterator *iter;
-	git_config_entry *entry;
+	git_config_backend_entry *be;
 
 	if ((err = git_config_multivar_iterator_new(&iter, config, name, regexp)) < 0)
 		return err;
 
 	found = 0;
-	while ((err = iter->next(&entry, iter)) == 0) {
+	while ((err = iter->next(&be, iter)) == 0) {
 		found = 1;
 
-		if ((err = cb(entry, payload)) != 0) {
+		if ((err = cb(&be->entry, payload)) != 0) {
 			git_error_set_after_callback(err);
 			break;
 		}
@@ -1076,19 +1093,21 @@ typedef struct {
 	int have_regex;
 } multivar_iter;
 
-static int multivar_iter_next(git_config_entry **entry, git_config_iterator *_iter)
+static int multivar_iter_next(
+	git_config_backend_entry **entry,
+	git_config_iterator *_iter)
 {
 	multivar_iter *iter = (multivar_iter *) _iter;
 	int error = 0;
 
 	while ((error = iter->iter->next(entry, iter->iter)) == 0) {
-		if (git__strcmp(iter->name, (*entry)->name))
+		if (git__strcmp(iter->name, (*entry)->entry.name))
 			continue;
 
 		if (!iter->have_regex)
 			return 0;
 
-		if (git_regexp_match(&iter->regex, (*entry)->value) == 0)
+		if (git_regexp_match(&iter->regex, (*entry)->entry.value) == 0)
 			return 0;
 	}
 
@@ -1168,7 +1187,14 @@ int git_config_delete_multivar(git_config *config, const char *name, const char 
 
 int git_config_next(git_config_entry **entry, git_config_iterator *iter)
 {
-	return iter->next(entry, iter);
+	git_config_backend_entry *be;
+	int error;
+
+	if ((error = iter->next(&be, iter)) != 0)
+		return error;
+
+	*entry = &be->entry;
+	return 0;
 }
 
 void git_config_iterator_free(git_config_iterator *iter)

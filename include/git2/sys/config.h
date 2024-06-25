@@ -20,6 +20,16 @@
  */
 GIT_BEGIN_DECL
 
+typedef struct git_config_backend_entry {
+	struct git_config_entry entry;
+
+	/**
+	 * Free function for this entry; for internal purposes. Callers
+	 * should call `git_config_entry_free` to free data.
+	 */
+	void GIT_CALLBACK(free)(struct git_config_backend_entry *entry);
+} git_config_backend_entry;
+
 /**
  * Every iterator must have this struct as its first element, so the
  * API can talk to it. You'd define your iterator as
@@ -39,7 +49,7 @@ struct git_config_iterator {
 	 * Return the current entry and advance the iterator. The
 	 * memory belongs to the library.
 	 */
-	int GIT_CALLBACK(next)(git_config_entry **entry, git_config_iterator *iter);
+	int GIT_CALLBACK(next)(git_config_backend_entry **entry, git_config_iterator *iter);
 
 	/**
 	 * Free the iterator
@@ -59,7 +69,7 @@ struct git_config_backend {
 
 	/* Open means open the file/database and parse if necessary */
 	int GIT_CALLBACK(open)(struct git_config_backend *, git_config_level_t level, const git_repository *repo);
-	int GIT_CALLBACK(get)(struct git_config_backend *, const char *key, git_config_entry **entry);
+	int GIT_CALLBACK(get)(struct git_config_backend *, const char *key, git_config_backend_entry **entry);
 	int GIT_CALLBACK(set)(struct git_config_backend *, const char *key, const char *value);
 	int GIT_CALLBACK(set_multivar)(git_config_backend *cfg, const char *name, const char *regexp, const char *value);
 	int GIT_CALLBACK(del)(struct git_config_backend *, const char *key);

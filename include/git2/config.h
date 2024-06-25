@@ -97,12 +97,6 @@ typedef struct git_config_entry {
 
 	/** Configuration level for the file this was found in */
 	git_config_level_t level;
-
-	/**
-	 * Free function for this entry; for internal purposes. Callers
-	 * should call `git_config_entry_free` to free data.
-	 */
-	void GIT_CALLBACK(free)(struct git_config_entry *entry);
 } git_config_entry;
 
 /**
