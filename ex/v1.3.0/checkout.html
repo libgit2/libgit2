@@ -287,9 +287,9 @@ we might need to detach HEAD.</p>
       <span class="n">target_head</span> <span class="o">=</span> <span class="n"><a name="git_annotated_commit_ref-5" class="fnlink" href="../../#v1.3.0/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">);</span>
     <span class="p">}</span>
 
-    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head-22" class="fnlink" href="../../#v1.3.0/group/repository/git_repository_set_head">git_repository_set_head</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target_head</span><span class="p">);</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head-23" class="fnlink" href="../../#v1.3.0/group/repository/git_repository_set_head">git_repository_set_head</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target_head</span><span class="p">);</span>
   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head_detached_from_annotated-23" class="fnlink" href="../../#v1.3.0/group/repository/git_repository_set_head_detached_from_annotated">git_repository_set_head_detached_from_annotated</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target</span><span class="p">);</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head_detached_from_annotated-24" class="fnlink" href="../../#v1.3.0/group/repository/git_repository_set_head_detached_from_annotated">git_repository_set_head_detached_from_annotated</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target</span><span class="p">);</span>
   <span class="p">}</span>
 
 <span class="nl">error</span><span class="p">:</span>
@@ -329,7 +329,7 @@ to check whether the ref is unique across all remotes.</p>
   <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
   <span class="kt">size_t</span> <span class="n">i</span><span class="p">;</span>
 
-  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n">git_remote_list</span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">,</span> <span class="n">repo</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_list-22" class="fnlink" href="../../#v1.3.0/group/remote/git_remote_list">git_remote_list</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">,</span> <span class="n">repo</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">goto</span> <span class="n">out</span><span class="p">;</span>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">remotes</span><span class="p">.</span><span class="n">count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
@@ -363,7 +363,7 @@ to check whether the ref is unique across all remotes.</p>
 
 <span class="nl">out</span><span class="p">:</span>
   <span class="n"><a name="git_reference_free-20" class="fnlink" href="../../#v1.3.0/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">remote_ref</span><span class="p">);</span>
-  <span class="n"><a name="git_strarray_dispose-25" class="fnlink" href="../../#v1.3.0/group/strarray/git_strarray_dispose">git_strarray_dispose</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">);</span>
+  <span class="n"><a name="git_strarray_dispose-26" class="fnlink" href="../../#v1.3.0/group/strarray/git_strarray_dispose">git_strarray_dispose</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">);</span>
   <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
       </td>
@@ -405,7 +405,7 @@ to check whether the ref is unique across all remotes.</p>
         <p>Make sure we&#39;re not about to checkout while something else is going on</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">state</span> <span class="o">=</span> <span class="n"><a name="git_repository_state-24" class="fnlink" href="../../#v1.3.0/group/repository/git_repository_state">git_repository_state</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">state</span> <span class="o">=</span> <span class="n"><a name="git_repository_state-25" class="fnlink" href="../../#v1.3.0/group/repository/git_repository_state">git_repository_state</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">state</span> <span class="o">!=</span> <span class="n">GIT_REPOSITORY_STATE_NONE</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;repository is in unexpected state %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">);</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
