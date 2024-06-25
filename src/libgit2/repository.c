@@ -845,6 +845,9 @@ static int find_repo_traverse(
 		if (min_iterations == 0 &&
 		    (path.ptr[ceiling_offset] == 0 || (flags & GIT_REPOSITORY_OPEN_NO_SEARCH)))
 			break;
+
+		if (!strcmp(path.ptr, ".") && !flags)
+			goto out;
 	}
 
 	if (!(flags & GIT_REPOSITORY_OPEN_BARE)) {
