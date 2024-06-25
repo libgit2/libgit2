@@ -10,6 +10,7 @@
 #include "repository.h"
 #include "git2/common.h"
 #include "posix.h"
+#include "date.h"
 
 void git_signature_free(git_signature *sig)
 {
@@ -152,15 +153,10 @@ int git_signature__pdup(git_signature **dest, const git_signature *source, git_p
 	return 0;
 }
 
-int git_signature_now(git_signature **sig_out, const char *name, const char *email)
+static void current_time(time_t *now_out, int *offset_out)
 {
-	time_t now;
 	time_t offset;
-	struct tm *utc_tm;
-	git_signature *sig;
-	struct tm _utc;
-
-	*sig_out = NULL;
+	struct tm _utc, *utc_tm;
 
 	/*
 	 * Get the current time as seconds since the epoch and
@@ -170,18 +166,26 @@ int git_signature_now(git_signature **sig_out, const char *name, const char *ema
 	 * us that time as seconds since the epoch. The difference
 	 * between its return value and 'now' is our offset to UTC.
 	 */
-	time(&now);
-	utc_tm = p_gmtime_r(&now, &_utc);
+	time(now_out);
+	utc_tm = p_gmtime_r(now_out, &_utc);
 	utc_tm->tm_isdst = -1;
-	offset = (time_t)difftime(now, mktime(utc_tm));
+	offset = (time_t)difftime(*now_out, mktime(utc_tm));
 	offset /= 60;
 
-	if (git_signature_new(&sig, name, email, now, (int)offset) < 0)
-		return -1;
+	*offset_out = (int)offset;
+}
 
-	*sig_out = sig;
+int git_signature_now(
+	git_signature **sig_out,
+	const char *name,
+	const char *email)
+{
+	time_t now;
+	int offset;
 
-	return 0;
+	current_time(&now, &offset);
+
+	return git_signature_new(sig_out, name, email, now, offset);
 }
 
 int git_signature_default(git_signature **out, git_repository *repo)
@@ -198,6 +202,120 @@ int git_signature_default(git_signature **out, git_repository *repo)
 		error = git_signature_now(out, user_name, user_email);
 
 	git_config_free(cfg);
+	return error;
+}
+
+static int user_from_env(
+	git_signature **out,
+	git_repository *repo,
+	const char *name_env_var,
+	const char *email_env_var,
+	const char *date_env_var,
+	time_t default_time,
+	int default_offset)
+{
+	int error;
+	git_config *cfg;
+	const char *name, *email, *date;
+	git_time_t timestamp;
+	int offset;
+	git_str name_env = GIT_STR_INIT;
+	git_str email_env = GIT_STR_INIT;
+	git_str date_env = GIT_STR_INIT;
+
+	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0)
+		return error;
+
+	/* Check if the environment variable for the name is set */
+	if (!(git__getenv(&name_env, name_env_var))) {
+		name = git_str_cstr(&name_env);
+	} else {
+		/* or else read the configuration value. */
+		if ((error = git_config_get_string(&name, cfg, "user.name")) < 0)
+			goto done;
+	}
+
+	/* Check if the environment variable for the email is set. */
+	if (!(git__getenv(&email_env, email_env_var))) {
+		email = git_str_cstr(&email_env);
+	} else {
+		if ((error = git_config_get_string(&email, cfg, "user.email")) == GIT_ENOTFOUND) {
+			git_error *last_error;
+
+			git_error_save(&last_error);
+
+			if ((error = git__getenv(&email_env, "EMAIL")) < 0) {
+				git_error_restore(last_error);
+				error = GIT_ENOTFOUND;
+				goto done;
+			}
+
+			email = git_str_cstr(&email_env);
+			git_error_free(last_error);
+		} else if (error < 0) {
+			goto done;
+		}
+	}
+
+	/* Check if the environment variable for the timestamp is set */
+	if (!(git__getenv(&date_env, date_env_var))) {
+		date = git_str_cstr(&date_env);
+
+		if ((error = git_date_offset_parse(&timestamp, &offset, date)) < 0)
+			goto done;
+	} else {
+		timestamp = default_time;
+		offset = default_offset;
+	}
+
+	error = git_signature_new(out, name, email, timestamp, offset);
+
+done:
+	git_config_free(cfg);
+	git_str_dispose(&name_env);
+	git_str_dispose(&email_env);
+	git_str_dispose(&date_env);
+	return error;
+}
+
+int git_signature_default_from_env(
+	git_signature **author_out,
+	git_signature **committer_out,
+	git_repository *repo)
+{
+	git_signature *author = NULL, *committer = NULL;
+	time_t now;
+	int offset;
+	int error;
+
+	GIT_ASSERT_ARG(author_out || committer_out);
+	GIT_ASSERT_ARG(repo);
+
+	current_time(&now, &offset);
+
+	if (author_out &&
+	    (error = user_from_env(&author, repo, "GIT_AUTHOR_NAME",
+			"GIT_AUTHOR_EMAIL", "GIT_AUTHOR_DATE",
+			now, offset)) < 0)
+		goto on_error;
+
+	if (committer_out &&
+	    (error = user_from_env(&committer, repo, "GIT_COMMITTER_NAME",
+			"GIT_COMMITTER_EMAIL", "GIT_COMMITTER_DATE",
+			now, offset)) < 0)
+		goto on_error;
+
+	if (author_out)
+		*author_out = author;
+
+	if (committer_out)
+		*committer_out = committer;
+
+	return 0;
+
+on_error:
+	git__free(author);
+	git__free(committer);
 	return error;
 }
 

@@ -226,7 +226,7 @@ static void action_create_tag(tag_state *state)
 	check_lg2(git_revparse_single(&target, repo, opts->target),
 			"Unable to resolve spec", opts->target);
 
-	check_lg2(git_signature_default(&tagger, repo),
+	check_lg2(git_signature_default_from_env(&tagger, NULL, repo),
 			"Unable to create signature", NULL);
 
 	check_lg2(git_tag_create(&oid, repo, opts->tag_name,

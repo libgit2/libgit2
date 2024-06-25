@@ -153,3 +153,83 @@ void test_commit_signature__pos_and_neg_zero_offsets_dont_match(void)
 	git_signature_free((git_signature *)with_neg_zero);
 	git_signature_free((git_signature *)with_pos_zero);
 }
+
+static git_repository *g_repo;
+
+void test_commit_signature__initialize(void)
+{
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+}
+
+void test_commit_signature__cleanup(void)
+{
+	cl_git_sandbox_cleanup();
+	g_repo = NULL;
+}
+
+void test_commit_signature__from_env(void)
+{
+	git_signature *author_sign, *committer_sign;
+	git_config *cfg, *local;
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_open_level(&local, cfg, GIT_CONFIG_LEVEL_LOCAL));
+	/* No configuration value is set and no environment variable */
+	cl_setenv("EMAIL", NULL);
+	cl_setenv("GIT_AUTHOR_NAME", NULL);
+	cl_setenv("GIT_AUTHOR_EMAIL", NULL);
+	cl_setenv("GIT_COMMITTER_NAME", NULL);
+	cl_setenv("GIT_COMMITTER_EMAIL", NULL);
+	cl_git_fail(git_signature_default_from_env(&author_sign, &committer_sign, g_repo));
+	/* Name is read from configuration and email is read from fallback EMAIL
+	 * environment variable */
+	cl_git_pass(git_config_set_string(local, "user.name", "Name (config)"));
+	cl_setenv("EMAIL", "email-envvar@example.com");
+	cl_git_pass(git_signature_default_from_env(&author_sign, &committer_sign, g_repo));
+	cl_assert_equal_s("Name (config)", author_sign->name);
+	cl_assert_equal_s("email-envvar@example.com", author_sign->email);
+	cl_assert_equal_s("Name (config)", committer_sign->name);
+	cl_assert_equal_s("email-envvar@example.com", committer_sign->email);
+	cl_setenv("EMAIL", NULL);
+	git_signature_free(author_sign);
+	git_signature_free(committer_sign);
+	/* Environment variables have precedence over configuration */
+	cl_git_pass(git_config_set_string(local, "user.email", "config@example.com"));
+	cl_setenv("GIT_AUTHOR_NAME", "Author (envvar)");
+	cl_setenv("GIT_AUTHOR_EMAIL", "author-envvar@example.com");
+	cl_setenv("GIT_COMMITTER_NAME", "Committer (envvar)");
+	cl_setenv("GIT_COMMITTER_EMAIL", "committer-envvar@example.com");
+	cl_git_pass(git_signature_default_from_env(&author_sign, &committer_sign, g_repo));
+	cl_assert_equal_s("Author (envvar)", author_sign->name);
+	cl_assert_equal_s("author-envvar@example.com", author_sign->email);
+	cl_assert_equal_s("Committer (envvar)", committer_sign->name);
+	cl_assert_equal_s("committer-envvar@example.com", committer_sign->email);
+	git_signature_free(author_sign);
+	git_signature_free(committer_sign);
+	/* When environment variables are not set we can still read from
+	 * configuration */
+	cl_setenv("GIT_AUTHOR_NAME", NULL);
+	cl_setenv("GIT_AUTHOR_EMAIL", NULL);
+	cl_setenv("GIT_COMMITTER_NAME", NULL);
+	cl_setenv("GIT_COMMITTER_EMAIL", NULL);
+	cl_git_pass(git_signature_default_from_env(&author_sign, &committer_sign, g_repo));
+	cl_assert_equal_s("Name (config)", author_sign->name);
+	cl_assert_equal_s("config@example.com", author_sign->email);
+	cl_assert_equal_s("Name (config)", committer_sign->name);
+	cl_assert_equal_s("config@example.com", committer_sign->email);
+	git_signature_free(author_sign);
+	git_signature_free(committer_sign);
+	/* We can also override the timestamp with an environment variable */
+	cl_setenv("GIT_AUTHOR_DATE", "1971-02-03 04:05:06+01");
+	cl_setenv("GIT_COMMITTER_DATE", "1988-09-10 11:12:13-01");
+	cl_git_pass(git_signature_default_from_env(&author_sign, &committer_sign, g_repo));
+	cl_assert_equal_i(34398306, author_sign->when.time);  /* 1971-02-03 03:05:06 UTC */
+	cl_assert_equal_i(60, author_sign->when.offset);
+	cl_assert_equal_i(589896733, committer_sign->when.time);  /* 1988-09-10 12:12:13 UTC */
+	cl_assert_equal_i(-60, committer_sign->when.offset);
+	git_signature_free(author_sign);
+	git_signature_free(committer_sign);
+	cl_setenv("GIT_AUTHOR_DATE", NULL);
+	cl_setenv("GIT_COMMITTER_DATE", NULL);
+	git_config_free(local);
+	git_config_free(cfg);
+}
