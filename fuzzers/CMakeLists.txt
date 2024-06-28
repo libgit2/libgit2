@@ -21,7 +21,7 @@ foreach(fuzz_target_src ${SRC_FUZZERS})
 
 	add_executable(${fuzz_target_name} ${${fuzz_target_name}_SOURCES})
 	set_target_properties(${fuzz_target_name} PROPERTIES C_STANDARD 90)
-
+	set_target_properties(${fuzz_target_name} PROPERTIES C_EXTENSIONS OFF)
 	target_include_directories(${fuzz_target_name} PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
 	target_include_directories(${fuzz_target_name} SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
 
