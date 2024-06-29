@@ -293,6 +293,9 @@ gitbench() {
 			NEXT="prepare"
 		elif [ "${a}" = "--chdir" ]; then
 			NEXT="chdir"
+		elif [[ "${a}" == "--" ]]; then
+			shift
+			break
 		elif [[ "${a}" == "--"* ]]; then
 			echo "unknown argument: \"${a}\"" 1>&2
 			gitbench_usage 1>&2
