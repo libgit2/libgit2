@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+. "$(dirname "$0")/benchmark_helpers.sh"
+
+gitbench --prepare "clone_repo linux && cd linux && git reset --hard v6.9" \
+         --warmup 5 \
+         --chdir "linux" \
+         -- \
+         --no-pager blame "Makefile"
