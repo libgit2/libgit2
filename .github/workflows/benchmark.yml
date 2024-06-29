@@ -62,6 +62,11 @@ jobs:
       run: source/ci/setup-${{ matrix.platform.setup-script }}-benchmark.sh
       shell: bash
       if: matrix.platform.setup-script != ''
+    - name: Clone resource repositories
+      run: |
+        mkdir resources
+        git clone --bare https://github.com/git/git resources/git
+        git clone --bare https://github.com/torvalds/linux resources/linux
     - name: Build
       run: |
         mkdir build && cd build
@@ -69,6 +74,9 @@ jobs:
       shell: bash
     - name: Benchmark
       run: |
+        export BENCHMARK_GIT_REPOSITORY="$(pwd)/resources/git"
+        export BENCHMARK_LINUX_REPOSITORY="$(pwd)/resources/linux"
+
         if [[ "$(uname -s)" == MINGW* ]]; then
           GIT2_CLI="$(cygpath -w $(pwd))\\build\\Release\\git2"
         else
