@@ -1923,7 +1923,7 @@ void git_odb_backend_data_free(git_odb_backend *backend, void *data)
 	git__free(data);
 }
 
-int git_odb_refresh(struct git_odb *db)
+int git_odb_refresh(git_odb *db)
 {
 	size_t i;
 	int error;
