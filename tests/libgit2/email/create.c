@@ -1,5 +1,6 @@
 #include "clar.h"
 #include "clar_libgit2.h"
+#include "git2/sys/email.h"
 
 #include "diff_generate.h"
 
