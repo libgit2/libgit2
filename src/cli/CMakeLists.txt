@@ -54,4 +54,4 @@ if(MSVC_IDE)
 	set_source_files_properties(win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
 endif()
 
-install(TARGETS git2_cli RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS git2_cli EXPORT ${LIBGIT2_TARGETS_EXPORT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

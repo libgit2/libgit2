@@ -59,6 +59,7 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 add_library(libgit2package ${SRC_RC} ${LIBGIT2_OBJECTS})
 target_link_libraries(libgit2package ${LIBGIT2_SYSTEM_LIBS})
 target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
+target_include_directories(libgit2package INTERFACE $<INSTALL_INTERFACE:./include/git2>)
 
 set_target_properties(libgit2package PROPERTIES C_STANDARD 90)
 set_target_properties(libgit2package PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -105,6 +106,7 @@ FILE(WRITE "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}.h" ${LIBGIT2_INCLU
 # Install
 
 install(TARGETS libgit2package
+	EXPORT ${LIBGIT2_TARGETS_EXPORT_NAME} 
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
