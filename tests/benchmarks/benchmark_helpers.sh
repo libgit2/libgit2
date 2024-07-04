@@ -15,11 +15,6 @@ TEST_CLI="git"
 JSON=
 SHOW_OUTPUT=
 
-REPOSITORY_DEFAULTS=$(cat <<EOF
-	DEFAULT_GIT_REPOSITORY="https://github.com/git/git"
-	DEFAULT_LINUX_REPOSITORY="https://github.com/torvalds/linux"
-EOF)
-
 if [ "$CI" != "" ]; then
 	OUTPUT_STYLE="color"
 else
@@ -105,8 +100,6 @@ create_preparescript() {
 	# add some functions for users to use in preparation
 	cat >> "${SANDBOX_DIR}/prepare.sh" << EOF
 	set -e
-
-	${REPOSITORY_DEFAULTS}
 
 	SANDBOX_DIR="${SANDBOX_DIR}"
 	RESOURCES_DIR="$(resources_dir)"
@@ -234,15 +227,12 @@ create_preparescript() {
 		fi
 
 		REPO_UPPER=\$(echo "\${1}" | tr '[:lower:]' '[:upper:]')
-		GIVEN_REPO_URL=\$(eval echo "\\\${BENCHMARK_\${REPO_UPPER}_REPOSITORY}")
-		DEFAULT_REPO_URL=\$(eval echo "\\\${DEFAULT_\${REPO_UPPER}_REPOSITORY}")
+		REPO_URL=\$(eval echo "\\\${BENCHMARK_\${REPO_UPPER}_REPOSITORY}")
 
-		if [ "\${DEFAULT_REPO_URL}" = "" ]; then
+		if [ "\${REPO_URL}" = "" ]; then
 			echo "\$0: unknown repository '\${REPO}'" 1>&2
 			exit 1
 		fi
-
-		REPO_URL="\${GIVEN_REPO_URL:-\${DEFAULT_REPO_URL}}"
 
 		rm -rf "\${SANDBOX_DIR:?}/\${REPO}"
 		git clone "\${REPO_URL}" "\${SANDBOX_DIR}/\${REPO}"
