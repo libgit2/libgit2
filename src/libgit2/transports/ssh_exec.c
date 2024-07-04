@@ -158,9 +158,10 @@ static int get_ssh_cmdline(
 	else if ((error = git_config__get_string_buf(&ssh_cmd, cfg, "core.sshcommand")) < 0 && error != GIT_ENOTFOUND)
 		goto done;
 
-	error = git_str_printf(out, "%s -p %s \"%s%s%s\" \"%s\" \"%s\"",
+	error = git_str_printf(out, "%s %s %s \"%s%s%s\" \"%s\" \"%s\"",
 		ssh_cmd.size > 0 ? ssh_cmd.ptr : default_ssh_cmd,
-		url->port,
+		url->port_specified ? "-p" : "",
+		url->port_specified ? url->port : "",
 		url->username ? url->username : "",
 		url->username ? "@" : "",
 		url->host,
