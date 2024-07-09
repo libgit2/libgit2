@@ -44,6 +44,11 @@ extern int cli_repository_open(
 	git_repository **out,
 	cli_repository_open_options *opts);
 
+extern int cli_resolve_path(
+	git_str *out,
+	git_repository *repo,
+	const char *given_path);
+
 /*
  * Common command arguments.
  */
