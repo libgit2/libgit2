@@ -216,9 +216,24 @@ typedef struct git_blame_hunk {
 	char boundary;
 } git_blame_hunk;
 
+/**
+ * Structure that represents a line in a blamed file.
+ */
+typedef struct git_blame_line {
+	const char *ptr;
+	size_t len;
+} git_blame_line;
 
 /** Opaque structure to hold blame results */
 typedef struct git_blame git_blame;
+
+/**
+ * Gets the number of lines that exist in the blame structure.
+ *
+ * @param blame The blame structure to query.
+ * @return The number of line.
+ */
+GIT_EXTERN(size_t) git_blame_linecount(git_blame *blame);
 
 /**
  * Gets the number of hunks that exist in the blame structure.
@@ -250,6 +265,17 @@ GIT_EXTERN(const git_blame_hunk *) git_blame_hunk_byindex(
 GIT_EXTERN(const git_blame_hunk *) git_blame_hunk_byline(
 	git_blame *blame,
 	size_t lineno);
+
+/**
+ * Gets the information about the line in the blame.
+ *
+ * @param blame the blame structure to query
+ * @param idx the (1-based) line number
+ * @return the blamed line, or NULL on error
+ */
+GIT_EXTERN(const git_blame_line *) git_blame_line_byindex(
+	git_blame *blame,
+	size_t idx);
 
 #ifndef GIT_DEPRECATE_HARD
 /**

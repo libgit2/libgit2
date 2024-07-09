@@ -144,10 +144,9 @@ git_blame *git_blame__alloc(
 	gbr->options = opts;
 
 	if (git_vector_init(&gbr->hunks, 8, hunk_cmp) < 0 ||
-		git_vector_init(&gbr->paths, 8, paths_cmp) < 0 ||
-		(gbr->path = git__strdup(path)) == NULL ||
-		git_vector_insert(&gbr->paths, git__strdup(path)) < 0)
-	{
+	    git_vector_init(&gbr->paths, 8, paths_cmp) < 0 ||
+	    (gbr->path = git__strdup(path)) == NULL ||
+	    git_vector_insert(&gbr->paths, git__strdup(path)) < 0) {
 		git_blame_free(gbr);
 		return NULL;
 	}
@@ -170,7 +169,9 @@ void git_blame_free(git_blame *blame)
 
 	git_vector_foreach(&blame->hunks, i, hunk)
 		free_hunk(hunk);
+
 	git_vector_dispose(&blame->hunks);
+	git_array_clear(blame->lines);
 
 	git_vector_dispose_deep(&blame->paths);
 
@@ -188,6 +189,23 @@ size_t git_blame_hunkcount(git_blame *blame)
 	GIT_ASSERT_ARG(blame);
 
 	return blame->hunks.length;
+}
+
+size_t git_blame_linecount(git_blame *blame)
+{
+	GIT_ASSERT_ARG(blame);
+
+	return git_array_size(blame->line_index);
+}
+
+const git_blame_line *git_blame_line_byindex(
+	git_blame *blame,
+	size_t idx)
+{
+	GIT_ASSERT_ARG_WITH_RETVAL(blame, NULL);
+	GIT_ASSERT_WITH_RETVAL(idx > 0 && idx <= git_array_size(blame->line_index), NULL);
+
+	return git_array_get(blame->lines, idx - 1);
 }
 
 const git_blame_hunk *git_blame_hunk_byindex(
@@ -315,25 +333,48 @@ static int index_blob_lines(git_blame *blame)
     const char *buf = blame->final_buf;
     size_t len = blame->final_buf_size;
     int num = 0, incomplete = 0, bol = 1;
+    git_blame_line *line = NULL;
     size_t *i;
 
     if (len && buf[len-1] != '\n')
         incomplete++; /* incomplete line at the end */
+
     while (len--) {
         if (bol) {
             i = git_array_alloc(blame->line_index);
             GIT_ERROR_CHECK_ALLOC(i);
             *i = buf - blame->final_buf;
+
+            GIT_ASSERT(line == NULL);
+            line = git_array_alloc(blame->lines);
+            GIT_ERROR_CHECK_ALLOC(line);
+
+            line->ptr = buf;
             bol = 0;
         }
+
         if (*buf++ == '\n') {
+            GIT_ASSERT(line);
+            line->len = (buf - line->ptr) - 1;
+            line = NULL;
+
             num++;
             bol = 1;
         }
     }
+
     i = git_array_alloc(blame->line_index);
     GIT_ERROR_CHECK_ALLOC(i);
     *i = buf - blame->final_buf;
+
+    if (!bol) {
+        GIT_ASSERT(line);
+        line->len = buf - line->ptr;
+	line = NULL;
+    }
+
+    GIT_ASSERT(!line);
+
     blame->num_lines = num + incomplete;
     return blame->num_lines;
 }
