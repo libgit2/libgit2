@@ -10,11 +10,11 @@ void test_blame_getters__initialize(void)
 	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
 
 	git_blame_hunk hunks[] = {
-		{ 3, GIT_OID_SHA1_ZERO,  1, NULL, GIT_OID_SHA1_ZERO, "a", 0},
-		{ 3, GIT_OID_SHA1_ZERO,  4, NULL, GIT_OID_SHA1_ZERO, "b", 0},
-		{ 3, GIT_OID_SHA1_ZERO,  7, NULL, GIT_OID_SHA1_ZERO, "c", 0},
-		{ 3, GIT_OID_SHA1_ZERO, 10, NULL, GIT_OID_SHA1_ZERO, "d", 0},
-		{ 3, GIT_OID_SHA1_ZERO, 13, NULL, GIT_OID_SHA1_ZERO, "e", 0},
+		{ 3, GIT_OID_SHA1_ZERO,  1, NULL, NULL, GIT_OID_SHA1_ZERO, "a", 0},
+		{ 3, GIT_OID_SHA1_ZERO,  4, NULL, NULL, GIT_OID_SHA1_ZERO, "b", 0},
+		{ 3, GIT_OID_SHA1_ZERO,  7, NULL, NULL, GIT_OID_SHA1_ZERO, "c", 0},
+		{ 3, GIT_OID_SHA1_ZERO, 10, NULL, NULL, GIT_OID_SHA1_ZERO, "d", 0},
+		{ 3, GIT_OID_SHA1_ZERO, 13, NULL, NULL, GIT_OID_SHA1_ZERO, "e", 0},
 	};
 
 	g_blame = git_blame__alloc(NULL, opts, "");

@@ -166,6 +166,13 @@ typedef struct git_blame_hunk {
 	git_signature *final_signature;
 
 	/**
+	 * The committer of `final_commit_id`. If `GIT_BLAME_USE_MAILMAP` has
+	 * been specified, it will contain the canonical real name and email
+	 * address.
+	 */
+	git_signature *final_committer;
+
+	/**
 	 * The OID of the commit where this hunk was found.
 	 * This will usually be the same as `final_commit_id`, except when
 	 * `GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES` has been specified.
@@ -189,6 +196,13 @@ typedef struct git_blame_hunk {
 	 * specified, it will contain the canonical real name and email address.
 	 */
 	git_signature *orig_signature;
+
+	/**
+	 * The committer of `orig_commit_id`. If `GIT_BLAME_USE_MAILMAP` has
+	 * been specified, it will contain the canonical real name and email
+	 * address.
+	 */
+	git_signature *orig_committer;
 
 	/**
 	 * The 1 iff the hunk has been tracked to a boundary commit (the root,

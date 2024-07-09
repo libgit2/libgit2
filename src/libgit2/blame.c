@@ -82,7 +82,9 @@ static void free_hunk(git_blame_hunk *hunk)
 {
 	git__free((void*)hunk->orig_path);
 	git_signature_free(hunk->final_signature);
+	git_signature_free(hunk->final_committer);
 	git_signature_free(hunk->orig_signature);
+	git_signature_free(hunk->orig_committer);
 	git__free(hunk);
 }
 
@@ -103,7 +105,9 @@ static git_blame_hunk *dup_hunk(git_blame_hunk *hunk, git_blame *blame)
 	newhunk->boundary = hunk->boundary;
 
 	if (git_signature_dup(&newhunk->final_signature, hunk->final_signature) < 0 ||
-		git_signature_dup(&newhunk->orig_signature, hunk->orig_signature) < 0) {
+	    git_signature_dup(&newhunk->final_committer, hunk->final_committer) < 0 ||
+	    git_signature_dup(&newhunk->orig_signature, hunk->orig_signature) < 0 ||
+	    git_signature_dup(&newhunk->orig_committer, hunk->orig_committer) < 0) {
 		free_hunk(newhunk);
 		return NULL;
 	}
@@ -343,9 +347,17 @@ static git_blame_hunk *hunk_from_entry(git_blame__entry *e, git_blame *blame)
 
 	git_oid_cpy(&h->final_commit_id, git_commit_id(e->suspect->commit));
 	git_oid_cpy(&h->orig_commit_id, git_commit_id(e->suspect->commit));
-	git_commit_author_with_mailmap(
-		&h->final_signature, e->suspect->commit, blame->mailmap);
-	git_signature_dup(&h->orig_signature, h->final_signature);
+
+	if (git_commit_author_with_mailmap(
+		&h->final_signature, e->suspect->commit, blame->mailmap) < 0 ||
+	    git_commit_committer_with_mailmap(
+		&h->final_committer, e->suspect->commit, blame->mailmap) < 0 ||
+	    git_signature_dup(&h->orig_signature, h->final_signature) < 0 ||
+	    git_signature_dup(&h->orig_committer, h->final_committer) < 0) {
+		free_hunk(h);
+		return NULL;
+	}
+
 	h->boundary = e->is_boundary ? 1 : 0;
 	return h;
 }
