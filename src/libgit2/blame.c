@@ -80,7 +80,8 @@ static git_blame_hunk *new_hunk(
 
 static void free_hunk(git_blame_hunk *hunk)
 {
-	git__free((void*)hunk->orig_path);
+	git__free((char *)hunk->orig_path);
+	git__free((char *)hunk->summary);
 	git_signature_free(hunk->final_signature);
 	git_signature_free(hunk->final_committer);
 	git_signature_free(hunk->orig_signature);
@@ -107,7 +108,8 @@ static git_blame_hunk *dup_hunk(git_blame_hunk *hunk, git_blame *blame)
 	if (git_signature_dup(&newhunk->final_signature, hunk->final_signature) < 0 ||
 	    git_signature_dup(&newhunk->final_committer, hunk->final_committer) < 0 ||
 	    git_signature_dup(&newhunk->orig_signature, hunk->orig_signature) < 0 ||
-	    git_signature_dup(&newhunk->orig_committer, hunk->orig_committer) < 0) {
+	    git_signature_dup(&newhunk->orig_committer, hunk->orig_committer) < 0 ||
+	    (newhunk->summary = git__strdup(hunk->summary)) == NULL) {
 		free_hunk(newhunk);
 		return NULL;
 	}
@@ -338,6 +340,7 @@ static int index_blob_lines(git_blame *blame)
 
 static git_blame_hunk *hunk_from_entry(git_blame__entry *e, git_blame *blame)
 {
+	const char *summary;
 	git_blame_hunk *h = new_hunk(
 		e->lno+1, e->num_lines, e->s_lno+1, e->suspect->path,
 		blame);
@@ -353,7 +356,9 @@ static git_blame_hunk *hunk_from_entry(git_blame__entry *e, git_blame *blame)
 	    git_commit_committer_with_mailmap(
 		&h->final_committer, e->suspect->commit, blame->mailmap) < 0 ||
 	    git_signature_dup(&h->orig_signature, h->final_signature) < 0 ||
-	    git_signature_dup(&h->orig_committer, h->final_committer) < 0) {
+	    git_signature_dup(&h->orig_committer, h->final_committer) < 0 ||
+	    (summary = git_commit_summary(e->suspect->commit)) == NULL ||
+	    (h->summary = git__strdup(summary)) == NULL) {
 		free_hunk(h);
 		return NULL;
 	}

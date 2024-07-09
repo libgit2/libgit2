@@ -204,6 +204,11 @@ typedef struct git_blame_hunk {
 	 */
 	git_signature *orig_committer;
 
+	/*
+	 * The summary of the commit.
+	 */
+	const char *summary;
+
 	/**
 	 * The 1 iff the hunk has been tracked to a boundary commit (the root,
 	 * or the commit specified in git_blame_options.oldest_commit)
