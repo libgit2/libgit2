@@ -20,6 +20,9 @@
 static int stransport_error(OSStatus ret)
 {
 	CFStringRef message;
+	char * message_c_str;
+	/* Use a boolean to track if we allocate a buffer for message_c_str that we need to free later. */
+	bool must_free = false;
 
 	if (ret == noErr || ret == errSSLClosedGraceful) {
 		git_error_clear();
@@ -30,11 +33,51 @@ static int stransport_error(OSStatus ret)
 	message = SecCopyErrorMessageString(ret, NULL);
 	GIT_ERROR_CHECK_ALLOC(message);
 
-	git_error_set(GIT_ERROR_NET, "SecureTransport error: %s", CFStringGetCStringPtr(message, kCFStringEncodingUTF8));
+	/* Attempt to cheaply convert the CoreFoundations string ref to a C-style null terminated string. */
+	message_c_str = (char *) CFStringGetCStringPtr(message, kCFStringEncodingUTF8);
+
+	/* 
+		CFStringGetCStringPtr can return null in some instances, where the message conversion is not cheap.
+		In these cases, it's more valuable to print the actual error message than to be cheap/efficient.
+		Call the (more expensive) 
+	*/
+	if (message_c_str == NULL) {
+		/* 
+			Before we allocate a buffer, get the size of the buffer we need to allocate (in bytes). 
+			CFStringGetLength gives us the number of UTF-16 code-pairs (16 bit characters) in the string. 
+			Multiply by 2 (since 2 8-bit bytes make a 16 bit char). Add one for the null terminator. 
+		*/
+		long buffer_size = CFStringGetLength(message) * 2 + 1;
+
+		/* Allocate the buffer. */
+		message_c_str = malloc((size_t) buffer_size);
+		
+		/* 
+			Convert the string into a C string using the buffer. 
+			This returns a bool, which we check using this block. 
+			If getting the CString failed (unlikely) we return early.  
+		*/
+		if (!CFStringGetCString(message, message_c_str, buffer_size, kCFStringEncodingUTF8)) {
+			git_error_set(GIT_ERROR_NET, "CFStringGetCString error while handling a SecureTransport error");
+			free(message_c_str);
+			CFRelease(message);
+			return -1;
+		}
+	}
+
+	git_error_set(GIT_ERROR_NET, "SecureTransport error: %s", message_c_str);
+
+	/* If we decided earlier that we would have to free the buffer allocation, do that. */
+	if (must_free) {
+		free(message_c_str);
+	}
+
 	CFRelease(message);
 #else
 	git_error_set(GIT_ERROR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
 	GIT_UNUSED(message);
+	GIT_UNUSED(message_c_str);
+	GIT_UNUSED(must_free);
 #endif
 
 	return -1;
