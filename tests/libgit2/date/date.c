@@ -20,3 +20,11 @@ void test_date_date__invalid_date(void)
    cl_git_fail(git_date_parse(&d, ""));
    cl_git_fail(git_date_parse(&d, "NEITHER_INTEGER_NOR_DATETIME"));
 }
+
+void test_date_date__offset(void)
+{
+	git_time_t d;
+	int offset;
+	cl_git_pass(git_date_offset_parse(&d, &offset, "1970-1-1 01:00:00+03"));
+	cl_assert_equal_i(offset, 3*60);
+}
