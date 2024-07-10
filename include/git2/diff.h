@@ -629,7 +629,7 @@ typedef enum {
  * just a span of bytes inside the larger file.
  */
 typedef struct {
-	char   origin;       /**< A git_diff_line_t value */
+	unsigned char   origin;       /**< A git_diff_line_t value */
 	int    old_lineno;   /**< Line number in old file or -1 for added line */
 	int    new_lineno;   /**< Line number in new file or -1 for deleted line */
 	int    num_lines;    /**< Number of newline characters in content */
