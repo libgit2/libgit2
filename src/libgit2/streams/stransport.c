@@ -41,7 +41,7 @@ static int stransport_error(OSStatus ret)
 		In these cases, it's more valuable to print the actual error message than to be cheap/efficient.
 		Call the (more expensive) 
 	*/
-	if (message_c_str == NULL) {
+	if (( must_free = (message_c_str == NULL) )) {
 		/* 
 			Before we allocate a buffer, get the size of the buffer we need to allocate (in bytes). 
 			CFStringGetLength gives us the number of UTF-16 code-pairs (16 bit characters) in the string. 
