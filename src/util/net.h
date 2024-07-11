@@ -35,6 +35,8 @@ typedef struct git_net_url {
 	char *fragment;
 	char *username;
 	char *password;
+
+	unsigned int port_specified;
 } git_net_url;
 
 #define GIT_NET_URL_INIT { NULL }
