@@ -16,6 +16,7 @@
 #include "git2/transport.h"
 
 #include "../util/alloc.h"
+#include "../trace.h"
 
 #include "streams/socket.h"
 
@@ -282,6 +283,18 @@ static ssize_t stransport_read(git_stream *stream, void *data, size_t len)
 	OSStatus ret;
 
 	if ((ret = SSLRead(st->ctx, data, len, &processed)) != noErr) {
+		/* 
+			This specific SecureTransport error is not well described by SecCopyErrorMessageString,
+			so we should at least log something to the user here so that they might see this if 
+			they're running into the same error I am and they have tracing enabled. 
+		*/
+		if (ret == -9806) {
+			git_trace(GIT_TRACE_FATAL, "SecureTransport error: SSLRead error: SSLRead returned -9806 (connection closed via error).");
+			git_trace(GIT_TRACE_FATAL, "This means that the remote terminated the SSL connection due to an error.");
+			git_trace(GIT_TRACE_FATAL, "This is *possibly* similar to https://stackoverflow.com/questions/26461966/osx-10-10-curl-post-to-https-url-gives-sslread-error");
+			git_trace(GIT_TRACE_FATAL, "You may find some valuable information running `security error -9806` (on macOS).");
+		}
+
 		if (st->error == GIT_TIMEOUT)
 			return GIT_TIMEOUT;
 
