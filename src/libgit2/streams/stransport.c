@@ -15,6 +15,8 @@
 
 #include "git2/transport.h"
 
+#include "../util/alloc.h"
+
 #include "streams/socket.h"
 
 static int stransport_error(OSStatus ret)
@@ -50,7 +52,8 @@ static int stransport_error(OSStatus ret)
 		long buffer_size = CFStringGetLength(message) * 2 + 1;
 
 		/* Allocate the buffer. */
-		message_c_str = malloc((size_t) buffer_size);
+		message_c_str = git__malloc((size_t) buffer_size);
+		GIT_ERROR_CHECK_ALLOC(message_c_str);
 		
 		/* 
 			Convert the string into a C string using the buffer. 
@@ -59,7 +62,7 @@ static int stransport_error(OSStatus ret)
 		*/
 		if (!CFStringGetCString(message, message_c_str, buffer_size, kCFStringEncodingUTF8)) {
 			git_error_set(GIT_ERROR_NET, "CFStringGetCString error while handling a SecureTransport error");
-			free(message_c_str);
+			git__free(message_c_str);
 			CFRelease(message);
 			return -1;
 		}
@@ -69,7 +72,7 @@ static int stransport_error(OSStatus ret)
 
 	/* If we decided earlier that we would have to free the buffer allocation, do that. */
 	if (must_free) {
-		free(message_c_str);
+		git__free(message_c_str);
 	}
 
 	CFRelease(message);
