@@ -286,7 +286,7 @@ GIT_EXTERN(int) git_odb_expand_ids(
  * @param db database to refresh
  * @return 0 on success, error code otherwise
  */
-GIT_EXTERN(int) git_odb_refresh(struct git_odb *db);
+GIT_EXTERN(int) git_odb_refresh(git_odb *db);
 
 /**
  * List all objects available in the database

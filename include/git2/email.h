@@ -86,30 +86,6 @@ typedef struct {
 
 /**
  * Create a diff for a commit in mbox format for sending via email.
- *
- * @param out buffer to store the e-mail patch in
- * @param diff the changes to include in the email
- * @param patch_idx the patch index
- * @param patch_count the total number of patches that will be included
- * @param commit_id the commit id for this change
- * @param summary the commit message for this change
- * @param body optional text to include above the diffstat
- * @param author the person who authored this commit
- * @param opts email creation options
- */
-GIT_EXTERN(int) git_email_create_from_diff(
-	git_buf *out,
-	git_diff *diff,
-	size_t patch_idx,
-	size_t patch_count,
-	const git_oid *commit_id,
-	const char *summary,
-	const char *body,
-	const git_signature *author,
-	const git_email_create_options *opts);
-
-/**
- * Create a diff for a commit in mbox format for sending via email.
  * The commit must not be a merge commit.
  *
  * @param out buffer to store the e-mail patch in
