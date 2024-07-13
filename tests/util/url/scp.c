@@ -25,6 +25,7 @@ void test_url_scp__hostname_trivial(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__hostname_bracketed(void)
@@ -37,6 +38,7 @@ void test_url_scp__hostname_bracketed(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__hostname_root(void)
@@ -49,6 +51,7 @@ void test_url_scp__hostname_root(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__hostname_user(void)
@@ -61,6 +64,7 @@ void test_url_scp__hostname_user(void)
 	cl_assert_equal_s(conndata.username, "git");
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__hostname_user_bracketed(void)
@@ -73,6 +77,7 @@ void test_url_scp__hostname_user_bracketed(void)
 	cl_assert_equal_s(conndata.username, "git");
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__hostname_port(void)
@@ -85,6 +90,20 @@ void test_url_scp__hostname_port(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
+	cl_assert_equal_i(conndata.port_specified, 1);
+}
+
+void test_url_scp__hostname_specified_default_port(void)
+{
+	cl_git_pass(git_net_url_parse_scp(&conndata, "[example.com:22]:/resource"));
+	cl_assert_equal_s(conndata.scheme, "ssh");
+	cl_assert_equal_s(conndata.host, "example.com");
+	cl_assert_equal_s(conndata.port, "22");
+	cl_assert_equal_s(conndata.path, "/resource");
+	cl_assert_equal_p(conndata.username, NULL);
+	cl_assert_equal_p(conndata.password, NULL);
+	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 1);
 }
 
 void test_url_scp__hostname_user_port(void)
@@ -97,6 +116,7 @@ void test_url_scp__hostname_user_port(void)
 	cl_assert_equal_s(conndata.username, "git");
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
+	cl_assert_equal_i(conndata.port_specified, 1);
 }
 
 void test_url_scp__ipv4_trivial(void)
@@ -109,6 +129,7 @@ void test_url_scp__ipv4_trivial(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__ipv4_bracketed(void)
@@ -121,6 +142,7 @@ void test_url_scp__ipv4_bracketed(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__ipv4_user(void)
@@ -133,6 +155,7 @@ void test_url_scp__ipv4_user(void)
 	cl_assert_equal_s(conndata.username, "git");
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__ipv4_port(void)
@@ -145,6 +168,7 @@ void test_url_scp__ipv4_port(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
+	cl_assert_equal_i(conndata.port_specified, 1);
 }
 
 void test_url_scp__ipv4_user_port(void)
@@ -157,6 +181,7 @@ void test_url_scp__ipv4_user_port(void)
 	cl_assert_equal_s(conndata.username, "git");
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
+	cl_assert_equal_i(conndata.port_specified, 1);
 }
 
 void test_url_scp__ipv6_trivial(void)
@@ -169,6 +194,7 @@ void test_url_scp__ipv6_trivial(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__ipv6_user(void)
@@ -181,6 +207,7 @@ void test_url_scp__ipv6_user(void)
 	cl_assert_equal_s(conndata.username, "git");
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__ipv6_port(void)
@@ -193,6 +220,7 @@ void test_url_scp__ipv6_port(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
+	cl_assert_equal_i(conndata.port_specified, 1);
 }
 
 void test_url_scp__ipv6_user_port(void)
@@ -205,6 +233,7 @@ void test_url_scp__ipv6_user_port(void)
 	cl_assert_equal_s(conndata.username, "git");
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 0);
+	cl_assert_equal_i(conndata.port_specified, 1);
 }
 
 void test_url_scp__hexhost_and_port(void)
@@ -217,6 +246,7 @@ void test_url_scp__hexhost_and_port(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 1);
 }
 
 void test_url_scp__malformed_ipv6_one(void)
@@ -229,6 +259,7 @@ void test_url_scp__malformed_ipv6_one(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__malformed_ipv6_two(void)
@@ -241,6 +272,7 @@ void test_url_scp__malformed_ipv6_two(void)
 	cl_assert_equal_p(conndata.username, NULL);
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__malformed_ipv6_with_user(void)
@@ -253,6 +285,7 @@ void test_url_scp__malformed_ipv6_with_user(void)
 	cl_assert_equal_s(conndata.username, "git");
 	cl_assert_equal_p(conndata.password, NULL);
 	cl_assert_equal_i(git_net_url_is_default_port(&conndata), 1);
+	cl_assert_equal_i(conndata.port_specified, 0);
 }
 
 void test_url_scp__invalid_addresses(void)
