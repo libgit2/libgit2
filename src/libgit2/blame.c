@@ -432,12 +432,12 @@ static int blame_internal(git_blame *blame)
 
 	if ((error = load_blob(blame)) < 0 ||
 	    (error = git_blame__get_origin(&o, blame, blame->final, blame->path)) < 0)
-		goto cleanup;
+		goto on_error;
 
 	if (git_blob_rawsize(blame->final_blob) > SIZE_MAX) {
 		git_error_set(GIT_ERROR_NOMEMORY, "blob is too large to blame");
 		error = -1;
-		goto cleanup;
+		goto on_error;
 	}
 
 	blame->final_buf = git_blob_rawcontent(blame->final_blob);
@@ -456,17 +456,19 @@ static int blame_internal(git_blame *blame)
 
 	blame->ent = ent;
 
-	error = git_blame__like_git(blame, blame->options.flags);
+	if ((error = git_blame__like_git(blame, blame->options.flags)) < 0)
+		goto on_error;
 
-cleanup:
-	for (ent = blame->ent; ent; ) {
-		git_blame__entry *e = ent->next;
+	for (ent = blame->ent; ent; ent = ent->next) {
 		git_blame_hunk *h = hunk_from_entry(ent, blame);
-
 		git_vector_insert(&blame->hunks, h);
+	}
 
+on_error:
+	for (ent = blame->ent; ent; ) {
+		git_blame__entry *next = ent->next;
 		git_blame__free_entry(ent);
-		ent = e;
+		ent = next;
 	}
 
 	return error;
