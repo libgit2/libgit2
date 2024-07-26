@@ -198,6 +198,30 @@ add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
 # Include child projects
 #
 
+set(LIBGIT2_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(LIBGIT2_VERSION_CONFIG "${LIBGIT2_GENERATED_DIR}/${PROJECT_NAME}ConfigVersion.cmake")
+set(LIBGIT2_PROJECT_CONFIG "${LIBGIT2_GENERATED_DIR}/${PROJECT_NAME}Config.cmake")
+set(LIBGIT2_TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+set(LIBGIT2_CONFIG_INSTALL_DIR "lib/cmake/${PROJECT_NAME}")
+set(LIBGIT2_NAMESPACE "${PROJECT_NAME}::")
+set(LIBGIT2_VERSION ${PROJECT_VERSION})
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  "${LIBGIT2_VERSION_CONFIG}" VERSION ${LIBGIT2_VERSION} COMPATIBILITY SameMajorVersion
+)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake_utils/config.cmake.in" "${LIBGIT2_PROJECT_CONFIG}" @ONLY)
+
+# Install cmake config files
+install(
+  FILES "${LIBGIT2_PROJECT_CONFIG}" "${LIBGIT2_VERSION_CONFIG}"
+  DESTINATION "${LIBGIT2_CONFIG_INSTALL_DIR}")
+
+install(
+  EXPORT "${LIBGIT2_TARGETS_EXPORT_NAME}"
+  NAMESPACE "${LIBGIT2_NAMESPACE}"
+  DESTINATION "${LIBGIT2_CONFIG_INSTALL_DIR}")
+
 add_subdirectory(libgit2)
 add_subdirectory(util)
 
