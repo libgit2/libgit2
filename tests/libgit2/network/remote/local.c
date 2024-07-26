@@ -48,7 +48,7 @@ void test_network_remote_local__connected(void)
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 	cl_assert(git_remote_connected(remote));
 
-	git_remote_disconnect(remote);
+	git_remote_disconnect(remote, NULL);
 	cl_assert(!git_remote_connected(remote));
 }
 
@@ -81,7 +81,7 @@ void test_network_remote_local__retrieve_advertised_references_after_disconnect(
 	size_t refs_len;
 
 	connect_to_local_repository(cl_fixture("testrepo.git"));
-	git_remote_disconnect(remote);
+	git_remote_disconnect(remote, NULL);
 
 	cl_git_pass(git_remote_ls(&refs, &refs_len, remote));
 
@@ -481,7 +481,7 @@ void test_network_remote_local__anonymous_remote_inmemory_repo(void)
 	cl_git_pass(git_remote_create_anonymous(&remote, inmemory, git_str_cstr(&file_path_buf)));
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_assert(git_remote_connected(remote));
-	git_remote_disconnect(remote);
+	git_remote_disconnect(remote, NULL);
 	git_remote_free(remote);
 	git_repository_free(inmemory);
 }

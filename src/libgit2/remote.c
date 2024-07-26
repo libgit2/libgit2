@@ -963,6 +963,9 @@ int git_remote_connect_ext(
 	if ((error = t->connect(t, url.ptr, direction, &opts)) != 0)
 		goto on_error;
 
+    if (given_opts && given_opts->callbacks.connected)
+        given_opts->callbacks.connected(remote, given_opts->callbacks.payload);
+
 	remote->transport = t;
 
 	git_str_dispose(&url);
@@ -1388,7 +1391,7 @@ int git_remote_fetch(
 	error = git_remote__download(remote, refspecs, opts);
 
 	/* We don't need to be connected anymore */
-	git_remote_disconnect(remote);
+    git_remote_disconnect(remote, opts ? &opts->callbacks : NULL);
 
 	/* If the download failed, return the error */
 	if (error != 0)
@@ -2149,9 +2152,13 @@ int git_remote_stop(git_remote *remote)
 	return 0;
 }
 
-int git_remote_disconnect(git_remote *remote)
+int git_remote_disconnect(git_remote *remote, const git_remote_callbacks* cb)
 {
 	GIT_ASSERT_ARG(remote);
+
+	/* call disconnect callback before disconnecting*/
+    if (cb && cb->about_to_disconnect)
+        cb->about_to_disconnect(remote, cb->payload);
 
 	if (git_remote_connected(remote))
 		remote->transport->close(remote->transport);
@@ -2176,7 +2183,7 @@ void git_remote_free(git_remote *remote)
 		return;
 
 	if (remote->transport != NULL) {
-		git_remote_disconnect(remote);
+		git_remote_disconnect(remote, NULL);
 
 		remote->transport->free(remote->transport);
 		remote->transport = NULL;
@@ -3028,7 +3035,7 @@ int git_remote_push(
 	error = git_remote_update_tips(remote, &connect_opts.callbacks, 0, 0, NULL);
 
 done:
-	git_remote_disconnect(remote);
+    git_remote_disconnect(remote, &connect_opts.callbacks);
 	git_remote_connect_options_dispose(&connect_opts);
 	return error;
 }

@@ -415,7 +415,7 @@ void test_online_push__initialize(void)
 		cl_git_pass(git_remote_upload(_remote, &arr, &push_opts));
 	}
 
-	git_remote_disconnect(_remote);
+	git_remote_disconnect(_remote, NULL);
 	git_vector_free_deep(&delete_specs);
 
 	/* Now that we've deleted everything, fetch from the remote */

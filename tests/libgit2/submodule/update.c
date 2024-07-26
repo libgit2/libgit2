@@ -458,3 +458,54 @@ void test_submodule_update__can_force_update(void)
 	git_reference_free(branch_reference);
 }
 
+static int connected_callback_call_counter = 0;
+static int about_to_disconnect_callback_call_counter = 0;
+static void connected_callback(git_remote *remote, void *payload)
+{
+    connected_callback_call_counter ++;
+    cl_assert_equal_s(payload, "payload");
+
+    // User aborts the operation by calling git_remote_stop
+    git_remote_stop(remote);
+}
+
+static void about_to_disconnect_callback(git_remote *remote, void *payload)
+{
+    about_to_disconnect_callback_call_counter ++;
+    cl_assert_equal_s(payload, "payload");
+}
+
+/*!
+ * \brief test_submodule_update__abort_update
+ * Testing if it is possible to abort the update of a submodule.
+ */
+void test_submodule_update__abort_update(void)
+{
+    git_submodule *sm;
+	char* payload = "payload";
+    git_submodule_update_options update_options = GIT_SUBMODULE_UPDATE_OPTIONS_INIT;
+    update_options.fetch_opts.callbacks.connected = connected_callback;
+    update_options.fetch_opts.callbacks.about_to_disconnect = about_to_disconnect_callback;
+	update_options.fetch_opts.callbacks.payload = payload;
+    unsigned int submodule_status;
+
+    g_repo = setup_fixture_submodule_simple();
+
+    /* get the submodule */
+    cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));
+
+    cl_git_pass(git_submodule_status(&submodule_status, g_repo, "testrepo", GIT_SUBMODULE_IGNORE_UNSPECIFIED));
+    cl_assert_equal_i(submodule_status, GIT_SUBMODULE_STATUS_IN_HEAD |
+        GIT_SUBMODULE_STATUS_IN_INDEX |
+        GIT_SUBMODULE_STATUS_IN_CONFIG |
+        GIT_SUBMODULE_STATUS_WD_UNINITIALIZED);
+
+    /* update (with option to initialize sub repo) */
+    cl_git_pass(git_submodule_update(sm, 1, &update_options));
+
+    cl_assert_equal_i(connected_callback_call_counter, 1); // check that called only once
+    cl_assert_equal_i(about_to_disconnect_callback_call_counter, 1); // check that called only once
+
+    git_submodule_free(sm);
+}
+
