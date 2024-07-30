@@ -18,6 +18,9 @@
 #else
 # include <unistd.h>
 # include <pwd.h>
+#ifndef _SC_GETPW_R_SIZE_MAX /* fixes specific cross compilation problem for AmigaOS */
+#define _SC_GETPW_R_SIZE_MAX 51
+#endif
 #endif
 
 #ifdef GIT_WIN32
@@ -73,10 +76,10 @@ extern int git_win32__set_registry_system_dir(const wchar_t *mock_sysdir)
 }
 
 static int lookup_registry_key(
-	git_win32_path out,
-	const HKEY hive,
+        git_win32_path out,
+        const HKEY hive,
 	const wchar_t* key,
-	const wchar_t *value)
+        const wchar_t *value)
 {
 	HKEY hkey;
 	DWORD type, size;
@@ -130,7 +133,7 @@ static int find_sysdir_in_registry(git_win32_path out)
 	    lookup_registry_key(out, HKEY_LOCAL_MACHINE, REG_GITFORWINDOWS_KEY_WOW64, L"InstallLocation") == 0)
 		return 0;
 
-    return GIT_ENOTFOUND;
+	return GIT_ENOTFOUND;
 }
 
 static int find_sysdir_in_path(git_win32_path out)
@@ -254,8 +257,8 @@ int git_win32__find_system_dirs(git_str *out, const char *subdir)
 	}
 
 done:
-    git_str_dispose(&path8);
-    return error;
+	git_str_dispose(&path8);
+	return error;
 }
 #endif /* WIN32 */
 
@@ -354,9 +357,9 @@ static int git_sysdir_guess_home_dirs(git_str *out)
 	 * we have to get the HOME dir from the password entry file.
 	 */
 	if (!sandbox_id && uid == euid)
-	    error = git__getenv(out, "HOME");
+		error = git__getenv(out, "HOME");
 	else
-	    error = get_passwd_home(out, euid);
+		error = get_passwd_home(out, euid);
 
 	if (error == GIT_ENOTFOUND) {
 		git_error_clear();
@@ -546,10 +549,10 @@ done:
 }
 
 static int git_sysdir_find_in_dirlist(
-	git_str *path,
-	const char *name,
-	git_sysdir_t which,
-	const char *label)
+        git_str *path,
+        const char *name,
+        git_sysdir_t which,
+        const char *label)
 {
 	size_t len;
 	const char *scan, *next = NULL;
@@ -563,7 +566,7 @@ static int git_sysdir_find_in_dirlist(
 		/* find unescaped separator or end of string */
 		for (next = scan; *next; ++next) {
 			if (*next == GIT_PATH_LIST_SEPARATOR &&
-				(next <= scan || next[-1] != '\\'))
+			    (next <= scan || next[-1] != '\\'))
 				break;
 		}
 
@@ -592,37 +595,37 @@ done:
 int git_sysdir_find_system_file(git_str *path, const char *filename)
 {
 	return git_sysdir_find_in_dirlist(
-		path, filename, GIT_SYSDIR_SYSTEM, "system");
+	        path, filename, GIT_SYSDIR_SYSTEM, "system");
 }
 
 int git_sysdir_find_global_file(git_str *path, const char *filename)
 {
 	return git_sysdir_find_in_dirlist(
-		path, filename, GIT_SYSDIR_GLOBAL, "global");
+	        path, filename, GIT_SYSDIR_GLOBAL, "global");
 }
 
 int git_sysdir_find_xdg_file(git_str *path, const char *filename)
 {
 	return git_sysdir_find_in_dirlist(
-		path, filename, GIT_SYSDIR_XDG, "global/xdg");
+	        path, filename, GIT_SYSDIR_XDG, "global/xdg");
 }
 
 int git_sysdir_find_programdata_file(git_str *path, const char *filename)
 {
 	return git_sysdir_find_in_dirlist(
-		path, filename, GIT_SYSDIR_PROGRAMDATA, "ProgramData");
+	        path, filename, GIT_SYSDIR_PROGRAMDATA, "ProgramData");
 }
 
 int git_sysdir_find_template_dir(git_str *path)
 {
 	return git_sysdir_find_in_dirlist(
-		path, NULL, GIT_SYSDIR_TEMPLATE, "template");
+	        path, NULL, GIT_SYSDIR_TEMPLATE, "template");
 }
 
 int git_sysdir_find_homedir(git_str *path)
 {
 	return git_sysdir_find_in_dirlist(
-		path, NULL, GIT_SYSDIR_HOME, "home directory");
+	        path, NULL, GIT_SYSDIR_HOME, "home directory");
 }
 
 int git_sysdir_expand_global_file(git_str *path, const char *filename)
