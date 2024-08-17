@@ -201,7 +201,7 @@ add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
 add_subdirectory(libgit2)
 add_subdirectory(util)
 
-if(BUILD_CLI)
+if(BUILD_CLI AND NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
 	add_subdirectory(cli)
 endif()
 
