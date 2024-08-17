@@ -290,7 +290,7 @@ To list all build options and their current value, you can do the
 following:
 
 	# Create and set up a build directory
-	$ mkdir build
+	$ mkdir build && cd build
 	$ cmake ..
 	# List all build options and their values
 	$ cmake -L
