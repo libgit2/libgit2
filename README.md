@@ -48,6 +48,7 @@ Table of Contents
     * [Advanced Usage](#advanced-usage)
     * [Compiler and linker options](#compiler-and-linker-options)
     * [macOS](#macos)
+    * [iOS](#ios)
     * [Android](#android)
     * [MinGW](#mingw)
 * [Language Bindings](#language-bindings)
@@ -328,6 +329,30 @@ If you'd like to work with Xcode, you can generate an Xcode project with "-G Xco
 > [Deprecated] If you want to build a universal binary for Mac OS X
 > (10.4.4 ~ 10.6), CMake sets it all up for you if you use
 > `-DCMAKE_OSX_ARCHITECTURES="i386;x86_64"` when configuring.
+
+iOS
+-------
+
+1. Get an iOS cmake toolchain File:
+
+You can use a pre-existing toolchain file like [ios-cmake](https://github.com/leetal/ios-cmake) or write your own.
+
+2. Specify the toolchain and system Name:
+
+- The CMAKE_TOOLCHAIN_FILE variable points to the toolchain file for iOS.
+- The CMAKE_SYSTEM_NAME should be set to iOS.
+
+3. Example Command:
+
+Assuming you're using the ios-cmake toolchain, the command might look like this:
+
+```
+cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=path/to/ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS64 ..
+```
+
+4. Build the Project:
+
+After generating the project, open the .xcodeproj file in Xcode, select your iOS device or simulator as the target, and build your project.
 
 Android
 -------
