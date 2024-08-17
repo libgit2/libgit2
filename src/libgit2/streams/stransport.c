@@ -26,16 +26,11 @@ static int stransport_error(OSStatus ret)
 		return 0;
 	}
 
-#if !TARGET_OS_IPHONE
 	message = SecCopyErrorMessageString(ret, NULL);
 	GIT_ERROR_CHECK_ALLOC(message);
 
 	git_error_set(GIT_ERROR_NET, "SecureTransport error: %s", CFStringGetCStringPtr(message, kCFStringEncodingUTF8));
 	CFRelease(message);
-#else
-	git_error_set(GIT_ERROR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
-	GIT_UNUSED(message);
-#endif
 
 	return -1;
 }
