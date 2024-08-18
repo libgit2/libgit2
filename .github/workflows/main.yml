@@ -75,7 +75,7 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "iOS"
           id: ios
-          os: macos-14
+          os: macos-12
           setup-script: ios
           env:
             CC: clang
