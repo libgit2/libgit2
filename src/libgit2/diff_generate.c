@@ -1355,6 +1355,7 @@ int git_diff__from_iterators(
 					if ((error = iterator_advance(&info.oitem, info.old_iter)) < 0 ||
 					    (error = iterator_advance(&info.nitem, info.new_iter)) < 0)
 						goto cleanup;
+					continue;
 				} else {
 					git_diff_delta *last = git_vector_last(&diff->base.deltas);
 					git_vector_pop(&diff->base.deltas);
