@@ -1334,46 +1334,44 @@ int git_diff__from_iterators(
 		                  1;
 
 		/**
-		 * If entries are equal and they are trees, then check for modified state can be
+		 * if entries are equal and they are trees, then check for modified state can be
 		 * done. The check is done by 'maybe_modified'. Modified or unequal entries will be
 		 * expanded to leaf entries (blobs, links, etc.) and processed as usual.
 		 */
-		if (dont_expand_unmodified_trees) {
-			if (cmp != 0) {
-				if ((error = iterators_expand_until_not_tree_entry(&info)) < 0) {
-					goto cleanup;
-				}
-			} else if (info.oitem && info.nitem && 
-				info.oitem->mode == GIT_FILEMODE_TREE &&
-			    info.nitem->mode == GIT_FILEMODE_TREE) 
+		if (dont_expand_unmodified_trees &&
+		    ((info.oitem && info.oitem->mode == GIT_FILEMODE_TREE) ||
+		     (info.nitem && info.nitem->mode == GIT_FILEMODE_TREE))) {
+			if (cmp == 0 && 
+				info.oitem && info.oitem->mode == GIT_FILEMODE_TREE && 
+				info.nitem && info.nitem->mode == GIT_FILEMODE_TREE) 
 			{
 				const size_t prev_deltas_num = git_diff_num_deltas(&diff->base);
 				if ((error = maybe_modified(diff, &info, true)) < 0)
 					goto cleanup;
 
+				/* if there are no new deltas in diff then skip to next tree entry
+				 */
 				if (prev_deltas_num == git_diff_num_deltas(&diff->base)) {
 					if ((error = iterator_advance(&info.oitem, info.old_iter)) < 0 ||
 					    (error = iterator_advance(&info.nitem, info.new_iter)) < 0)
 						goto cleanup;
 					continue;
 				} else {
+					/* if trees are different, then pop the last delta and
+					 * expand iterators until a non-tree entry is found */
 					git_diff_delta *last = git_vector_last(&diff->base.deltas);
 					git_vector_pop(&diff->base.deltas);
 					git__free(last);
-
-					if ((error = iterators_expand_until_not_tree_entry(&info)) < 0) {
-						goto cleanup;
-					}
 				}
 			}
 
-			if (error || (!info.oitem && !info.nitem)) {
-				break;
+			/* if entries are not equal or modified, then expand the iterators until a
+			 * non-tree entry is found */
+			if ((error = iterators_expand_until_not_tree_entry(&info)) < 0) {
+				goto cleanup;
 			}
 
-			cmp = info.oitem ?
-			              (info.nitem ? diff->base.entrycomp(info.oitem, info.nitem) : -1) :
-			              1;
+			continue;
 		}
 
 		/* report progress */
