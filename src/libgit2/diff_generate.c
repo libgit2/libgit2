@@ -1329,9 +1329,8 @@ int git_diff__from_iterators(
 
 	/* run iterators building diffs */
 	while (!error && (info.oitem || info.nitem)) {
-		int cmp = info.oitem ?
-		                  (info.nitem ? diff->base.entrycomp(info.oitem, info.nitem) : -1) :
-		                  1;
+		const int cmp = info.oitem ?
+		    (info.nitem ? diff->base.entrycomp(info.oitem, info.nitem) : -1) : 1;
 
 		/**
 		 * if entries are equal and they are trees, then check for modified state can be
