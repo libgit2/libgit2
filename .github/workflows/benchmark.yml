@@ -89,7 +89,7 @@ jobs:
   publish:
     name: Publish results
     needs: [ build ]
-    if: ${{ always() && github.repository == 'libgit2/libgit2' }}
+    if: always() && github.repository == 'libgit2/libgit2'
     runs-on: ubuntu-latest
     steps:
     - name: Check out benchmark repository
