@@ -79,7 +79,7 @@ jobs:
           setup-script: ios
           env:
             CC: clang
-            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DCMAKE_TOOLCHAIN_FILE=ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS64
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS64
             CMAKE_GENERATOR: Ninja
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
