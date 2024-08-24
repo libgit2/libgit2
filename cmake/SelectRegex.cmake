@@ -5,7 +5,16 @@ if(REGEX_BACKEND STREQUAL "")
 	check_symbol_exists(regcomp_l "regex.h;xlocale.h" HAVE_REGCOMP_L)
 
 	if(HAVE_REGCOMP_L)
-		set(REGEX_BACKEND "regcomp_l")
+		if(CMAKE_SYSTEM_NAME MATCHES "iOS")
+			# 'regcomp_l' has been explicitly marked unavailable on iOS_SDK
+			# /usr/include/xlocale/_regex.h:34:5: 
+			# int	regcomp_l(regex_t * __restrict, const char * __restrict, int,
+			# locale_t __restrict)
+			# __OSX_AVAILABLE_STARTING(__MAC_10_8, __IPHONE_NA);
+			set(REGEX_BACKEND "regcomp")
+		else()
+			set(REGEX_BACKEND "regcomp_l")
+		endif()
 	elseif(PCRE_FOUND)
 		set(REGEX_BACKEND "pcre")
 	else()
