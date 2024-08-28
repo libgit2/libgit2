@@ -802,7 +802,8 @@ static int maybe_modified_submodule(
 
 static int maybe_modified(
 	git_diff_generated *diff,
-	diff_in_progress *info)
+	diff_in_progress *info,
+	bool skip_pathspec_match)
 {
 	git_oid noid;
 	git_delta_t status = GIT_DELTA_MODIFIED;
@@ -817,8 +818,10 @@ static int maybe_modified(
 
 	git_oid_clear(&noid, diff->base.opts.oid_type);
 
-	if (!diff_pathspec_match(&matched_pathspec, diff, oitem))
-		return 0;
+	if (!skip_pathspec_match) {
+		if (!diff_pathspec_match(&matched_pathspec, diff, oitem))
+			return 0;
+	}
 
 	/* on platforms with no symlinks, preserve mode of existing symlinks */
 	if (S_ISLNK(omode) && S_ISREG(nmode) && new_is_workdir &&
@@ -1273,7 +1276,7 @@ static int handle_matched_item(
 {
 	int error = 0;
 
-	if ((error = maybe_modified(diff, info)) < 0)
+	if ((error = maybe_modified(diff, info, false)) < 0)
 		return error;
 
 	if (!(error = iterator_advance(&info->oitem, info->old_iter)))
@@ -1342,14 +1345,8 @@ int git_diff__from_iterators(
 				info.nitem && info.nitem->mode == GIT_FILEMODE_TREE) 
 			{
 				const size_t prev_deltas_num = git_diff_num_deltas(&diff->base);
-				const bool has_pathspec_match_disabled = DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH);
-
-				DIFF_FLAG_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH, true);
-
-				if ((error = maybe_modified(diff, &info)) < 0)
+				if ((error = maybe_modified(diff, &info, true)) < 0)
 					goto cleanup;
-
-				DIFF_FLAG_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH, has_pathspec_match_disabled);
 
 				/* if there are no new deltas in diff then skip to next tree entry
 				 */
