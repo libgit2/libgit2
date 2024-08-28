@@ -813,7 +813,7 @@ static int maybe_modified(
 	unsigned int nmode = nitem->mode;
 	bool new_is_workdir = (info->new_iter->type == GIT_ITERATOR_WORKDIR);
 	bool modified_uncertain = false;
-	const char *matched_pathspec;
+	const char *matched_pathspec = NULL;
 	int error = 0;
 
 	git_oid_clear(&noid, diff->base.opts.oid_type);
