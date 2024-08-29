@@ -71,7 +71,8 @@ size_t git_http_parser_execute(
 {
 	struct http_parser_settings settings_proxy;
 
-	settings_proxy.on_status = NULL;
+	memset(&settings_proxy, 0, sizeof(struct http_parser_settings));
+
 	settings_proxy.on_message_begin = parser->settings.on_message_begin ? on_message_begin : NULL;
 	settings_proxy.on_url = parser->settings.on_url ? on_url : NULL;
 	settings_proxy.on_header_field = parser->settings.on_header_field ? on_header_field : NULL;
@@ -79,8 +80,6 @@ size_t git_http_parser_execute(
 	settings_proxy.on_headers_complete = parser->settings.on_headers_complete ? on_headers_complete : NULL;
 	settings_proxy.on_body = parser->settings.on_body ? on_body : NULL;
 	settings_proxy.on_message_complete = parser->settings.on_message_complete ? on_message_complete : NULL;
-	settings_proxy.on_chunk_header = NULL;
-	settings_proxy.on_chunk_complete = NULL;
 
 	return http_parser_execute(&parser->parser, &settings_proxy, data, len);
 }
