@@ -8,7 +8,7 @@ list(SORT SRC_GIT2)
 
 add_library(libgit2 STATIC ${SRC_GIT2})
 set_target_properties(libgit2 PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF)
-target_link_libraries(libgit2 PUBLIC util libgit2_xdiff http_parser libgit2_gssapi)
+target_link_libraries(libgit2 PUBLIC util libgit2_xdiff http_parser libgit2_gssapi libgit2_ssl2)
 
 if(NOT MSVC)
 	target_compile_options(libgit2 PRIVATE "-Wno-implicit-function-declaration")
@@ -66,7 +66,7 @@ if(NOT MSVC)
 endif()
 
 message(STATUS "xxxxxxxxxxxxxxxxx   ${LIBGIT2_OBJECTS}")
-target_link_libraries(libgit2package PUBLIC ${LIBGIT2_SYSTEM_LIBS} PUBLIC util libgit2_xdiff http_parser libgit2_gssapi)
+target_link_libraries(libgit2package PUBLIC ${LIBGIT2_SYSTEM_LIBS} PUBLIC util libgit2_xdiff http_parser libgit2_gssapi libgit2_ssl2)
 target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
 
 set_target_properties(libgit2package PROPERTIES C_STANDARD 90)
