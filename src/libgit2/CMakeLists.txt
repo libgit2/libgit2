@@ -1,9 +1,13 @@
 # libgit2: the shared library: this CMakeLists.txt compiles the core
 # git library functionality.
 
-add_library(libgit2 OBJECT)
-set_target_properties(libgit2 PROPERTIES C_STANDARD 90)
-set_target_properties(libgit2 PROPERTIES C_EXTENSIONS OFF)
+file(GLOB SRC_GIT2 *.c *.h
+	streams/*.c streams/*.h
+	transports/*.c transports/*.h)
+list(SORT SRC_GIT2)
+
+add_library(libgit2 OBJECT ${SRC_GIT2})
+set_target_properties(libgit2 PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF)
 target_link_libraries(libgit2 PUBLIC libgit2_xdiff ntlmclient http_parser)
 
 include(PkgBuildConfig)
@@ -22,12 +26,6 @@ file(GLOB SRC_H
 	"${PROJECT_SOURCE_DIR}/include/git2/sys/*.h")
 list(SORT SRC_H)
 target_sources(libgit2 PRIVATE ${SRC_H})
-
-file(GLOB SRC_GIT2 *.c *.h
-	streams/*.c streams/*.h
-	transports/*.c transports/*.h)
-list(SORT SRC_GIT2)
-target_sources(libgit2 PRIVATE ${SRC_GIT2})
 
 if(WIN32 AND NOT CYGWIN)
 	# Add resource information on Windows
