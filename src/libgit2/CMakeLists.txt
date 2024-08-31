@@ -86,7 +86,7 @@ pkg_build_config(NAME "lib${LIBGIT2_FILENAME}"
 	PRIVATE_LIBS ${LIBGIT2_PC_LIBS}
 	REQUIRES ${LIBGIT2_PC_REQUIRES})
 
-if(MSVC_IDE)
+if(MSVC)
 	# Precompiled headers
 	set_target_properties(libgit2package PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
 	set_source_files_properties(win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
