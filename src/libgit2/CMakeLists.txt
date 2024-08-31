@@ -4,6 +4,7 @@
 add_library(libgit2 OBJECT)
 set_target_properties(libgit2 PROPERTIES C_STANDARD 90)
 set_target_properties(libgit2 PROPERTIES C_EXTENSIONS OFF)
+target_link_libraries(libgit2 PUBLIC libgit2_xdiff ntlmclient http_parser)
 
 include(PkgBuildConfig)
 
@@ -57,7 +58,9 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 #
 
 add_library(libgit2package ${SRC_RC} ${LIBGIT2_OBJECTS})
-target_link_libraries(libgit2package ${LIBGIT2_SYSTEM_LIBS})
+
+message(STATUS "xxxxxxxxxxxxxxxxx   ${LIBGIT2_OBJECTS}")
+target_link_libraries(libgit2package PUBLIC ${LIBGIT2_SYSTEM_LIBS} PUBLIC libgit2_xdiff ntlmclient http_parser)
 target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
 
 set_target_properties(libgit2package PROPERTIES C_STANDARD 90)

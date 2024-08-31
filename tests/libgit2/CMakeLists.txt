@@ -45,7 +45,7 @@ set_target_properties(libgit2_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJEC
 
 target_include_directories(libgit2_tests PRIVATE ${TEST_INCLUDES} ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
 target_include_directories(libgit2_tests SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
-target_link_libraries(libgit2_tests ${LIBGIT2_SYSTEM_LIBS})
+target_link_libraries(libgit2_tests ${LIBGIT2_SYSTEM_LIBS} libgit2_xdiff ntlmclient http_parser)
 
 ide_split_sources(libgit2_tests)
 

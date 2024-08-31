@@ -1,14 +1,30 @@
 
-file(GLOB SRC_XDIFF "*.c" "*.h")
-list(SORT SRC_XDIFF)
-
-add_library(xdiff OBJECT ${SRC_XDIFF})
+add_library(xdiff STATIC
+        git-xdiff.h
+        xdiff.h
+        xdiffi.c
+        xdiffi.h
+        xemit.c
+        xemit.h
+        xhistogram.c
+        xinclude.h
+        xmacros.h
+        xmerge.c
+        xpatience.c
+        xprepare.c
+        xprepare.h
+        xtypes.h
+        xutils.c
+        xutils.h
+)
 target_include_directories(xdiff SYSTEM PRIVATE
 	"${PROJECT_SOURCE_DIR}/include"
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_BINARY_DIR}/src/util"
 	${LIBGIT2_SYSTEM_INCLUDES}
-	${LIBGIT2_DEPENDENCY_INCLUDES})
+	${LIBGIT2_DEPENDENCY_INCLUDES}
+        PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/deps/xdiff>
+)
 
 # the xdiff dependency is not (yet) warning-free, disable warnings
 # as errors for the xdiff sources until we've sorted them out

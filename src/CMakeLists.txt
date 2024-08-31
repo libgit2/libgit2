@@ -174,8 +174,6 @@ add_feature_info(threadsafe USE_THREADS "threadsafe support")
 if(USE_NTLMCLIENT)
 	set(GIT_NTLM 1)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/deps/ntlmclient" "${PROJECT_BINARY_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
 endif()
 add_feature_info(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
 
