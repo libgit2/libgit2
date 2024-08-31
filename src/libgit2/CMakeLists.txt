@@ -6,7 +6,7 @@ file(GLOB SRC_GIT2 *.c *.h
 	transports/*.c transports/*.h)
 list(SORT SRC_GIT2)
 
-add_library(libgit2 OBJECT ${SRC_GIT2})
+add_library(libgit2 STATIC ${SRC_GIT2})
 set_target_properties(libgit2 PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF)
 target_link_libraries(libgit2 PUBLIC libgit2_xdiff ntlmclient http_parser)
 
@@ -55,7 +55,7 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 # Compile and link libgit2
 #
 
-add_library(libgit2package ${SRC_RC} ${LIBGIT2_OBJECTS})
+add_library(libgit2package SHARED ${SRC_RC} ${LIBGIT2_OBJECTS})
 
 message(STATUS "xxxxxxxxxxxxxxxxx   ${LIBGIT2_OBJECTS}")
 target_link_libraries(libgit2package PUBLIC ${LIBGIT2_SYSTEM_LIBS} PUBLIC libgit2_xdiff ntlmclient http_parser)
