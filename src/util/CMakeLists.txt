@@ -146,4 +146,4 @@ ide_split_sources(util)
 
 target_include_directories(util PRIVATE ${UTIL_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${libgit2_SOURCE_DIR}/include)
 target_include_directories(util SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
-target_link_libraries(util PUBLIC libgit2_zlib ntlmclient)
+target_link_libraries(util PUBLIC libgit2_https_backend libgit2_zlib ntlmclient)
