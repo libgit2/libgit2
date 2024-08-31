@@ -8,7 +8,7 @@ list(SORT SRC_GIT2)
 
 add_library(libgit2 STATIC ${SRC_GIT2})
 set_target_properties(libgit2 PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF)
-target_link_libraries(libgit2 PUBLIC util libgit2_xdiff ntlmclient http_parser)
+target_link_libraries(libgit2 PUBLIC util libgit2_xdiff http_parser)
 
 include(PkgBuildConfig)
 
@@ -58,7 +58,7 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 add_library(libgit2package SHARED ${SRC_RC} ${SRC_GIT2} ${LIBGIT2_OBJECTS})
 
 message(STATUS "xxxxxxxxxxxxxxxxx   ${LIBGIT2_OBJECTS}")
-target_link_libraries(libgit2package PUBLIC ${LIBGIT2_SYSTEM_LIBS} PUBLIC util libgit2_xdiff ntlmclient http_parser)
+target_link_libraries(libgit2package PUBLIC ${LIBGIT2_SYSTEM_LIBS} PUBLIC util libgit2_xdiff http_parser)
 target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
 
 set_target_properties(libgit2package PROPERTIES C_STANDARD 90)
