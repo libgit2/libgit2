@@ -21,8 +21,6 @@ target_include_directories(xdiff SYSTEM PRIVATE
 	"${PROJECT_SOURCE_DIR}/include"
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_BINARY_DIR}/src/util"
-	${LIBGIT2_SYSTEM_INCLUDES}
-	${LIBGIT2_DEPENDENCY_INCLUDES}
         PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/deps/xdiff>
 )
 target_link_libraries(xdiff PUBLIC libgit2_regex)

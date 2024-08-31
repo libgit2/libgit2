@@ -81,41 +81,7 @@ if(NEWLINE STREQUAL "")
 endif(NEWLINE STREQUAL "")
 
 # Output files
-configure_file(config.h.in
-               ${PROJECT_BINARY_DIR}/src/pcre/config.h
-               @ONLY)
-
-# Source code
-
-set(PCRE_HEADERS ${PROJECT_BINARY_DIR}/src/pcre/config.h)
-
-set(PCRE_SOURCES
-  pcre_byte_order.c
-  pcre_chartables.c
-  pcre_compile.c
-  pcre_config.c
-  pcre_dfa_exec.c
-  pcre_exec.c
-  pcre_fullinfo.c
-  pcre_get.c
-  pcre_globals.c
-  pcre_jit_compile.c
-  pcre_maketables.c
-  pcre_newline.c
-  pcre_ord2utf8.c
-  pcre_refcount.c
-  pcre_string_utils.c
-  pcre_study.c
-  pcre_tables.c
-  pcre_ucd.c
-  pcre_valid_utf8.c
-  pcre_version.c
-  pcre_xclass.c
-)
-
-set(PCREPOSIX_HEADERS pcreposix.h)
-
-set(PCREPOSIX_SOURCES pcreposix.c)
+configure_file(config.h.in "${PROJECT_BINARY_DIR}/src/pcre/config.h" @ONLY)
 
 # Fix static compilation with MSVC: https://bugs.exim.org/show_bug.cgi?id=1681
 # This code was taken from the CMake wiki, not from WebM.
@@ -124,7 +90,31 @@ set(PCREPOSIX_SOURCES pcreposix.c)
 
 # Libraries
 # pcre
-add_library(libgit2_pcre STATIC ${PCRE_HEADERS} ${PCRE_SOURCES} ${PCREPOSIX_SOURCES})
+add_library(libgit2_pcre STATIC
+        pcreposix.h
+        pcreposix.c
+        pcre_byte_order.c
+        pcre_chartables.c
+        pcre_compile.c
+        pcre_config.c
+        pcre_dfa_exec.c
+        pcre_exec.c
+        pcre_fullinfo.c
+        pcre_get.c
+        pcre_globals.c
+        pcre_jit_compile.c
+        pcre_maketables.c
+        pcre_newline.c
+        pcre_ord2utf8.c
+        pcre_refcount.c
+        pcre_string_utils.c
+        pcre_study.c
+        pcre_tables.c
+        pcre_ucd.c
+        pcre_valid_utf8.c
+        pcre_version.c
+        pcre_xclass.c
+        ${PROJECT_BINARY_DIR}/src/pcre/config.h)
 target_include_directories(libgit2_pcre PUBLIC "${PROJECT_SOURCE_DIR}/src/pcre" "${PROJECT_BINARY_DIR}/src/pcre")
 
 if(MSVC)
