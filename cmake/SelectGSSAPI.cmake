@@ -6,6 +6,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
 	include(FindGSSFramework)
 endif()
 
+add_library(libgit2_gssapi INTERFACE)
 if(USE_GSSAPI)
 	# Auto-select GSS backend
 	sanitizebool(USE_GSSAPI)
@@ -25,8 +26,7 @@ if(USE_GSSAPI)
 		if(NOT GSSFRAMEWORK_FOUND)
 			message(FATAL_ERROR "Asked for GSS.framework backend, but it wasn't found")
 		endif()
-
-		list(APPEND LIBGIT2_SYSTEM_LIBS ${GSSFRAMEWORK_LIBRARIES})
+		target_link_libraries(libgit2_gssapi INTERFACE ${GSSFRAMEWORK_LIBRARIES})
 
 		set(GIT_GSSFRAMEWORK 1)
 		add_feature_info(GSSAPI GIT_GSSFRAMEWORK "GSSAPI support for SPNEGO authentication (${USE_GSSAPI})")
@@ -34,8 +34,7 @@ if(USE_GSSAPI)
 		if(NOT GSSAPI_FOUND)
 			message(FATAL_ERROR "Asked for gssapi GSS backend, but it wasn't found")
 		endif()
-
-		list(APPEND LIBGIT2_SYSTEM_LIBS ${GSSAPI_LIBRARIES})
+		target_link_libraries(libgit2_gssapi INTERFACE ${GSSAPI_LIBRARIES})
 
 		set(GIT_GSSAPI 1)
 		add_feature_info(GSSAPI GIT_GSSAPI "GSSAPI support for SPNEGO authentication (${USE_GSSAPI})")
