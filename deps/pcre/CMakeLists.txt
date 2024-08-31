@@ -115,7 +115,7 @@ add_library(libgit2_pcre STATIC
         pcre_version.c
         pcre_xclass.c
         ${PROJECT_BINARY_DIR}/src/pcre/config.h)
-target_include_directories(libgit2_pcre PUBLIC "${PROJECT_SOURCE_DIR}/src/pcre" "${PROJECT_BINARY_DIR}/src/pcre")
+target_include_directories(libgit2_pcre PUBLIC "${PROJECT_SOURCE_DIR}/deps/pcre" "${PROJECT_BINARY_DIR}/src/pcre")
 
 if(MSVC)
   target_compile_definitions(libgit2_pcre PRIVATE _CRT_SECURE_NO_DEPRECATE _CRT_SECURE_NO_WARNINGS)
