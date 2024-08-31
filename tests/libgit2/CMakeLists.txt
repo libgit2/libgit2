@@ -23,7 +23,7 @@ set(TEST_INCLUDES "${CLAR_PATH}" "${TEST_PATH}" "${CMAKE_CURRENT_BINARY_DIR}")
 file(GLOB_RECURSE SRC_TEST ${TEST_PATH}/*/*.c ${TEST_PATH}/*/*.h)
 file(GLOB_RECURSE SRC_CLAR ${CLAR_PATH}/*.c ${CLAR_PATH}/*.h)
 
-if(MSVC_IDE)
+if(MSVC)
 	list(APPEND SRC_TEST "precompiled.c")
 endif()
 

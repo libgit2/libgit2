@@ -47,7 +47,7 @@ ide_split_sources(git2_cli)
 
 target_include_directories(git2_cli PRIVATE ${CLI_INCLUDES})
 
-if(MSVC_IDE)
+if(MSVC)
 	# Precompiled headers
 	set_target_properties(git2_cli PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
 	set_source_files_properties(win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
