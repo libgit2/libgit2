@@ -60,7 +60,7 @@ endif()
 if(MSVC)
 	# Precompiled headers
 	set_target_properties(libgit2_tests PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
-	set_source_files_properties("precompiled.c" COMPILE_FLAGS "/Ycprecompiled.h")
+	set_source_files_properties(precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
 endif()
 
 include(AddClarTest)
