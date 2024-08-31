@@ -56,7 +56,7 @@ if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
 	target_compile_options(util_tests PRIVATE -include "clar_suite.h")
 endif()
 
-if(MSVC_IDE)
+if(MSVC)
 	# Precompiled headers
 	set_target_properties(util_tests PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
 	set_source_files_properties("precompiled.c" COMPILE_FLAGS "/Ycprecompiled.h")
