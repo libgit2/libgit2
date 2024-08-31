@@ -125,7 +125,7 @@ set(PCREPOSIX_SOURCES pcreposix.c)
 # Libraries
 # pcre
 add_library(libgit2_pcre STATIC ${PCRE_HEADERS} ${PCRE_SOURCES} ${PCREPOSIX_SOURCES})
-target_include_directories(libgit2_pcre PUBLIC "${PROJECT_BINARY_DIR}/src/pcre")
+target_include_directories(libgit2_pcre PUBLIC "${PROJECT_SOURCE_DIR}/src/pcre")
 
 if(MSVC)
   target_compile_definitions(libgit2_pcre PRIVATE _CRT_SECURE_NO_DEPRECATE _CRT_SECURE_NO_WARNINGS)
