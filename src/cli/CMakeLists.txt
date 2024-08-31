@@ -27,7 +27,7 @@ list(SORT CLI_SRC_C)
 if(BUILD_CLI STREQUAL "dynamic")
 	set(CLI_LIBGIT2_LIBRARY libgit2package)
 else()
-	set(CLI_LIBGIT2_OBJECTS $<TARGET_OBJECTS:libgit2>)
+	set(CLI_LIBGIT2_LIBRARY libgit2)
 endif()
 
 #
@@ -35,10 +35,9 @@ endif()
 #
 
 add_executable(git2_cli ${CLI_SRC_C} ${CLI_SRC_OS} ${CLI_OBJECTS}
-	$<TARGET_OBJECTS:util>
 	${CLI_LIBGIT2_OBJECTS}
 	${LIBGIT2_DEPENDENCY_OBJECTS})
-target_link_libraries(git2_cli ${CLI_LIBGIT2_LIBRARY} ${LIBGIT2_SYSTEM_LIBS} libgit2_xdiff ntlmclient http_parser)
+target_link_libraries(git2_cli ${CLI_LIBGIT2_LIBRARY} ${LIBGIT2_SYSTEM_LIBS} libgit2_xdiff ntlmclient http_parser util)
 
 set_target_properties(git2_cli PROPERTIES C_STANDARD 90)
 set_target_properties(git2_cli PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})

@@ -44,7 +44,7 @@ set_target_properties(util_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_B
 
 target_include_directories(util_tests PRIVATE ${TEST_INCLUDES} ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
 target_include_directories(util_tests SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
-target_link_libraries(util_tests ${LIBGIT2_SYSTEM_LIBS} libgit2_xdiff ntlmclient http_parser)
+target_link_libraries(util_tests ${LIBGIT2_SYSTEM_LIBS} libgit2)
 
 ide_split_sources(util_tests)
 

@@ -8,7 +8,7 @@ list(SORT SRC_GIT2)
 
 add_library(libgit2 STATIC ${SRC_GIT2})
 set_target_properties(libgit2 PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF)
-target_link_libraries(libgit2 PUBLIC libgit2_xdiff ntlmclient http_parser)
+target_link_libraries(libgit2 PUBLIC util libgit2_xdiff ntlmclient http_parser)
 
 include(PkgBuildConfig)
 
@@ -38,7 +38,7 @@ if(APPLE)
 endif()
 
 ide_split_sources(libgit2)
-list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:util> $<TARGET_OBJECTS:libgit2> ${LIBGIT2_DEPENDENCY_OBJECTS})
+list(APPEND LIBGIT2_OBJECTS ${LIBGIT2_DEPENDENCY_OBJECTS})
 list(APPEND LIBGIT2_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES})
 
 target_include_directories(libgit2 PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${PROJECT_SOURCE_DIR}/include)
@@ -55,10 +55,10 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 # Compile and link libgit2
 #
 
-add_library(libgit2package SHARED ${SRC_RC} ${LIBGIT2_OBJECTS})
+add_library(libgit2package SHARED ${SRC_RC} ${SRC_GIT2} ${LIBGIT2_OBJECTS})
 
 message(STATUS "xxxxxxxxxxxxxxxxx   ${LIBGIT2_OBJECTS}")
-target_link_libraries(libgit2package PUBLIC ${LIBGIT2_SYSTEM_LIBS} PUBLIC libgit2_xdiff ntlmclient http_parser)
+target_link_libraries(libgit2package PUBLIC ${LIBGIT2_SYSTEM_LIBS} PUBLIC util libgit2_xdiff ntlmclient http_parser)
 target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
 
 set_target_properties(libgit2package PROPERTIES C_STANDARD 90)
