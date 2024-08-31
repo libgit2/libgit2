@@ -1,11 +1,31 @@
 disable_warnings(implicit-fallthrough)
-add_definitions(-DNO_VIZ -DSTDC -DNO_GZIP -DHAVE_SYS_TYPES_H -DHAVE_STDINT_H -DHAVE_STDDEF_H)
 
 if(MINGW OR MSYS)
-	add_definitions(-DZ_HAVE_UNISTD_H -D_LFS64_LARGEFILE -D_LARGEFILE64_SOURCE=1)
+	target_compile_definitions(zlib PRIVATE Z_HAVE_UNISTD_H _LFS64_LARGEFILE _LARGEFILE64_SOURCE=1)
 endif()
 
-file(GLOB SRC_ZLIB "*.c" "*.h")
-list(SORT SRC_ZLIB)
-include_directories(".")
-add_library(zlib OBJECT ${SRC_ZLIB})
+add_library(zlib STATIC
+adler32.c
+crc32.c
+crc32.h
+deflate.c
+deflate.h
+gzguts.h
+infback.c
+inffast.c
+inffast.h
+inffixed.h
+inflate.c
+inflate.h
+inftrees.c
+inftrees.h
+trees.c
+trees.h
+zconf.h
+zlib.h
+zutil.c
+zutil.h
+)
+
+target_link_directories(zlib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_definitions(zlib PRIVATE NO_VIZ STDC NO_GZIP HAVE_SYS_TYPES_H HAVE_STDINT_H HAVE_STDDEF_H)
