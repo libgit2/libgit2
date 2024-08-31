@@ -124,28 +124,30 @@ elseif(HAVE_STRUCT_STAT_ST_MTIME_NSEC)
 	set(GIT_USE_STAT_MTIME_NSEC 1)
 endif()
 
+
+add_library(libgit2_link_libraries INTERFACE)
 # realtime support
 
 check_library_exists(rt clock_gettime "time.h" NEED_LIBRT)
 if(NEED_LIBRT)
-	list(APPEND LIBGIT2_SYSTEM_LIBS rt)
+	target_link_libraries(libgit2_link_libraries INTERFACE rt)
 	list(APPEND LIBGIT2_PC_LIBS "-lrt")
 endif()
 
 # platform libraries
 
 if(WIN32)
-	list(APPEND LIBGIT2_SYSTEM_LIBS "ws2_32" "secur32")
+	target_link_libraries(libgit2_link_libraries INTERFACE ws2_32 secur32)
 	list(APPEND LIBGIT2_PC_LIBS "-lws2_32" "-lsecur32")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-	list(APPEND LIBGIT2_SYSTEM_LIBS socket nsl)
+	target_link_libraries(libgit2_link_libraries INTERFACE socket nsl)
 	list(APPEND LIBGIT2_PC_LIBS "-lsocket" "-lnsl")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Haiku")
-	list(APPEND LIBGIT2_SYSTEM_LIBS gnu network)
+	target_link_libraries(libgit2_link_libraries INTERFACE gnu network)
 	list(APPEND LIBGIT2_PC_LIBS "-lgnu -lnetwork")
 endif()
 
@@ -193,9 +195,8 @@ add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
 #
 # Include child projects
 #
-
-add_subdirectory(libgit2)
 add_subdirectory(util)
+add_subdirectory(libgit2)
 
 if(BUILD_CLI)
 	add_subdirectory(cli)
