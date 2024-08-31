@@ -1,19 +1,88 @@
 # util: a shared library for common utility functions for libgit2 projects
-
-add_library(util STATIC)
-set_target_properties(util PROPERTIES C_STANDARD 90)
-set_target_properties(util PROPERTIES C_EXTENSIONS OFF)
-
 configure_file(git2_features.h.in git2_features.h)
+
+add_library(util STATIC
+alloc.c
+alloc.h
+allocators/debugalloc.c
+allocators/debugalloc.h
+allocators/failalloc.c
+allocators/failalloc.h
+allocators/stdalloc.c
+allocators/stdalloc.h
+allocators/win32_leakcheck.c
+allocators/win32_leakcheck.h
+array.h
+assert_safe.h
+bitvec.h
+cc-compat.h
+ctype_compat.h
+date.c
+date.h
+errors.c
+errors.h
+filebuf.c
+filebuf.h
+fs_path.c
+fs_path.h
+futils.c
+futils.h
+git2_util.h
+hash.c
+hash.h
+integer.h
+khash.h
+map.h
+net.c
+net.h
+pool.c
+pool.h
+posix.c
+posix.h
+pqueue.c
+pqueue.h
+process.h
+rand.c
+rand.h
+regexp.c
+regexp.h
+runtime.c
+runtime.h
+sortedcache.c
+sortedcache.h
+staticstr.h
+str.c
+str.h
+strlist.c
+strlist.h
+strmap.c
+strmap.h
+strnlen.h
+thread.c
+thread.h
+tsort.c
+utf8.c
+utf8.h
+util.c
+util.h
+varint.c
+varint.h
+vector.c
+vector.h
+wildmatch.c
+wildmatch.h
+zstream.c
+zstream.h
+)
+set_target_properties(util PROPERTIES C_STANDARD 90 C_STANDARD_REQUIRED TRUE C_EXTENSIONS OFF)
+
+
 
 set(UTIL_INCLUDES
 	"${PROJECT_BINARY_DIR}/src/util"
 	"${PROJECT_BINARY_DIR}/include"
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include")
-
-file(GLOB UTIL_SRC *.c *.h allocators/*.c allocators/*.h hash.h)
-list(SORT UTIL_SRC)
 
 #
 # Platform specific sources
