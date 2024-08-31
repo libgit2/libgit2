@@ -10,6 +10,10 @@ add_library(libgit2 STATIC ${SRC_GIT2})
 set_target_properties(libgit2 PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF)
 target_link_libraries(libgit2 PUBLIC util libgit2_xdiff http_parser)
 
+if(NOT MSVC)
+	target_compile_options(libgit2 PRIVATE "-Wno-implicit-function-declaration")
+endif()
+
 include(PkgBuildConfig)
 
 set(LIBGIT2_INCLUDES
@@ -56,6 +60,10 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 #
 
 add_library(libgit2package SHARED ${SRC_RC} ${SRC_GIT2} ${LIBGIT2_OBJECTS})
+
+if(NOT MSVC)
+	target_compile_options(libgit2package PRIVATE "-Wno-implicit-function-declaration")
+endif()
 
 message(STATUS "xxxxxxxxxxxxxxxxx   ${LIBGIT2_OBJECTS}")
 target_link_libraries(libgit2package PUBLIC ${LIBGIT2_SYSTEM_LIBS} PUBLIC util libgit2_xdiff http_parser)
