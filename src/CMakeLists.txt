@@ -157,11 +157,9 @@ endif()
 
 if(USE_THREADS)
 	if(NOT WIN32)
+		set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 		find_package(Threads REQUIRED)
-		list(APPEND LIBGIT2_SYSTEM_LIBS ${CMAKE_THREAD_LIBS_INIT})
-		list(APPEND LIBGIT2_PC_LIBS ${CMAKE_THREAD_LIBS_INIT})
 	endif()
-
 	set(GIT_THREADS 1)
 endif()
 add_feature_info(threadsafe USE_THREADS "threadsafe support")
