@@ -25,6 +25,7 @@ target_include_directories(xdiff SYSTEM PRIVATE
 	${LIBGIT2_DEPENDENCY_INCLUDES}
         PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/deps/xdiff>
 )
+target_link_libraries(xdiff PRIVATE libgit2_regex)
 
 # the xdiff dependency is not (yet) warning-free, disable warnings
 # as errors for the xdiff sources until we've sorted them out
