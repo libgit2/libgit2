@@ -932,6 +932,9 @@ static int report_delta_progress(
 {
 	int ret;
 
+	if (pb->failure)
+		return pb->failure;
+
 	if (pb->progress_cb) {
 		uint64_t current_time = git_time_monotonic();
 		uint64_t elapsed = current_time - pb->last_progress_report_time;
@@ -943,8 +946,10 @@ static int report_delta_progress(
 				GIT_PACKBUILDER_DELTAFICATION,
 				count, pb->nr_objects, pb->progress_cb_payload);
 
-			if (ret)
+			if (ret) {
+				pb->failure = ret;
 				return git_error_set_after_callback(ret);
+			}
 		}
 	}
 
@@ -976,7 +981,10 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 		}
 
 		pb->nr_deltified += 1;
-		report_delta_progress(pb, pb->nr_deltified, false);
+		if ((error = report_delta_progress(pb, pb->nr_deltified, false)) < 0) {
+				GIT_ASSERT(git_packbuilder__progress_unlock(pb) == 0);
+				goto on_error;
+		}
 
 		po = *list++;
 		(*list_size)--;
@@ -1124,6 +1132,10 @@ struct thread_params {
 	size_t depth;
 	size_t working;
 	size_t data_ready;
+
+	/* A pb->progress_cb can stop the packing process by returning an error.
+	   When that happens, all threads observe the error and stop voluntarily. */
+	bool stopped;
 };
 
 static void *threaded_find_deltas(void *arg)
@@ -1133,7 +1145,12 @@ static void *threaded_find_deltas(void *arg)
 	while (me->remaining) {
 		if (find_deltas(me->pb, me->list, &me->remaining,
 				me->window, me->depth) < 0) {
-			; /* TODO */
+			me->stopped = true;
+			GIT_ASSERT_WITH_RETVAL(git_packbuilder__progress_lock(me->pb) == 0, NULL);
+			me->working = false;
+			git_cond_signal(&me->pb->progress_cond);
+			GIT_ASSERT_WITH_RETVAL(git_packbuilder__progress_unlock(me->pb) == 0, NULL);
+			return NULL;
 		}
 
 		GIT_ASSERT_WITH_RETVAL(git_packbuilder__progress_lock(me->pb) == 0, NULL);
@@ -1175,8 +1192,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		pb->nr_threads = git__online_cpus();
 
 	if (pb->nr_threads <= 1) {
-		find_deltas(pb, list, &list_size, window, depth);
-		return 0;
+		return find_deltas(pb, list, &list_size, window, depth);
 	}
 
 	p = git__mallocarray(pb->nr_threads, sizeof(*p));
@@ -1195,6 +1211,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		p[i].depth = depth;
 		p[i].working = 1;
 		p[i].data_ready = 0;
+		p[i].stopped = 0;
 
 		/* try to split chunks on "path" boundaries */
 		while (sub_size && sub_size < list_size &&
@@ -1262,7 +1279,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 			    (!victim || victim->remaining < p[i].remaining))
 				victim = &p[i];
 
-		if (victim) {
+		if (victim && !target->stopped) {
 			sub_size = victim->remaining / 2;
 			list = victim->list + victim->list_size - sub_size;
 			while (sub_size && list[0]->hash &&
@@ -1286,7 +1303,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		}
 		target->list_size = sub_size;
 		target->remaining = sub_size;
-		target->working = 1;
+		target->working = 1; /* even when target->stopped, so that we don't process this thread again */
 		GIT_ASSERT(git_packbuilder__progress_unlock(pb) == 0);
 
 		if (git_mutex_lock(&target->mutex)) {
@@ -1299,7 +1316,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		git_cond_signal(&target->cond);
 		git_mutex_unlock(&target->mutex);
 
-		if (!sub_size) {
+		if (target->stopped || !sub_size) {
 			git_thread_join(&target->thread, NULL);
 			git_cond_free(&target->cond);
 			git_mutex_free(&target->mutex);
@@ -1308,7 +1325,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 	}
 
 	git__free(p);
-	return 0;
+	return pb->failure;
 }
 
 #else
@@ -1319,6 +1336,7 @@ int git_packbuilder__prepare(git_packbuilder *pb)
 {
 	git_pobject **delta_list;
 	size_t i, n = 0;
+	int error;
 
 	if (pb->nr_objects == 0 || pb->done)
 		return 0; /* nothing to do */
@@ -1327,8 +1345,10 @@ int git_packbuilder__prepare(git_packbuilder *pb)
 	 * Although we do not report progress during deltafication, we
 	 * at least report that we are in the deltafication stage
 	 */
-	if (pb->progress_cb)
-			pb->progress_cb(GIT_PACKBUILDER_DELTAFICATION, 0, pb->nr_objects, pb->progress_cb_payload);
+	if (pb->progress_cb) {
+		if ((error = pb->progress_cb(GIT_PACKBUILDER_DELTAFICATION, 0, pb->nr_objects, pb->progress_cb_payload)) < 0)
+			return git_error_set_after_callback(error);
+	}
 
 	delta_list = git__mallocarray(pb->nr_objects, sizeof(*delta_list));
 	GIT_ERROR_CHECK_ALLOC(delta_list);
@@ -1345,31 +1365,33 @@ int git_packbuilder__prepare(git_packbuilder *pb)
 
 	if (n > 1) {
 		git__tsort((void **)delta_list, n, type_size_sort);
-		if (ll_find_deltas(pb, delta_list, n,
+		if ((error = ll_find_deltas(pb, delta_list, n,
 				   GIT_PACK_WINDOW + 1,
-				   GIT_PACK_DEPTH) < 0) {
+				   GIT_PACK_DEPTH)) < 0) {
 			git__free(delta_list);
-			return -1;
+			return error;
 		}
 	}
 
-	report_delta_progress(pb, pb->nr_objects, true);
+	error = report_delta_progress(pb, pb->nr_objects, true);
 
 	pb->done = true;
 	git__free(delta_list);
-	return 0;
+	return error;
 }
 
-#define PREPARE_PACK if (git_packbuilder__prepare(pb) < 0) { return -1; }
+#define PREPARE_PACK error = git_packbuilder__prepare(pb); if (error < 0) { return error; }
 
 int git_packbuilder_foreach(git_packbuilder *pb, int (*cb)(void *buf, size_t size, void *payload), void *payload)
 {
+	int error;
 	PREPARE_PACK;
 	return write_pack(pb, cb, payload);
 }
 
 int git_packbuilder__write_buf(git_str *buf, git_packbuilder *pb)
 {
+	int error;
 	PREPARE_PACK;
 
 	return write_pack(pb, &write_pack_buf, buf);
