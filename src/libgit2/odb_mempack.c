@@ -132,6 +132,29 @@ cleanup:
 	return err;
 }
 
+int git_mempack_write_thin_pack(git_odb_backend *backend, git_packbuilder *pb)
+{
+	struct memory_packer_db *db = (struct memory_packer_db *)backend;
+	const git_oid *oid;
+	size_t iter = 0;
+	int err;
+
+	while (true) {
+		err = git_oidmap_iterate(NULL, db->objects, &iter, &oid);
+
+		if (err == GIT_ITEROVER)
+			break;
+		else if (err != 0)
+			return err;
+
+		err = git_packbuilder_insert(pb, oid, NULL);
+		if (err != 0)
+			return err;
+	}
+
+	return 0;
+}
+
 int git_mempack_dump(
 	git_buf *pack,
 	git_repository *repo,
