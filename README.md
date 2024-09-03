@@ -47,7 +47,7 @@ Table of Contents
     * [Installation](#installation)
     * [Advanced Usage](#advanced-usage)
     * [Compiler and linker options](#compiler-and-linker-options)
-    * [MacOS X](#macos-x)
+    * [macOS](#macos)
     * [Android](#android)
     * [MinGW](#mingw)
 * [Language Bindings](#language-bindings)
@@ -290,7 +290,7 @@ To list all build options and their current value, you can do the
 following:
 
 	# Create and set up a build directory
-	$ mkdir build
+	$ mkdir build && cd build
 	$ cmake ..
 	# List all build options and their values
 	$ cmake -L
@@ -309,12 +309,25 @@ Tell CMake where to find those specific libraries
 - `LINK_WITH_STATIC_LIBRARIES`: Link only with static versions of
 system libraries
 
-MacOS X
+macOS
 -------
 
-If you want to build a universal binary for Mac OS X, CMake sets it
-all up for you if you use `-DCMAKE_OSX_ARCHITECTURES="i386;x86_64"`
-when configuring.
+If you'd like to work with Xcode, you can generate an Xcode project with "-G Xcode".
+
+	# Create and set up a build directory
+	$ mkdir build && cd build
+	$ cmake -G Xcode ..
+
+> [!TIP]
+> Universal binary support:
+> 
+> If you want to build a universal binary for macOS 11.0+, CMake sets it
+> all up for you if you use `-DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"`
+> when configuring.
+> 
+> [Deprecated] If you want to build a universal binary for Mac OS X
+> (10.4.4 ~ 10.6), CMake sets it all up for you if you use
+> `-DCMAKE_OSX_ARCHITECTURES="i386;x86_64"` when configuring.
 
 Android
 -------
