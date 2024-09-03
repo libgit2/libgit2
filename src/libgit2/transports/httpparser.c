@@ -71,6 +71,8 @@ size_t git_http_parser_execute(
 {
 	struct http_parser_settings settings_proxy;
 
+	memset(&settings_proxy, 0, sizeof(struct http_parser_settings));
+
 	settings_proxy.on_message_begin = parser->settings.on_message_begin ? on_message_begin : NULL;
 	settings_proxy.on_url = parser->settings.on_url ? on_url : NULL;
 	settings_proxy.on_header_field = parser->settings.on_header_field ? on_header_field : NULL;
