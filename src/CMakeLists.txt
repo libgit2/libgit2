@@ -127,6 +127,13 @@ endif()
 # realtime support
 
 check_library_exists(rt clock_gettime "time.h" NEED_LIBRT)
+
+# workaround the iOS issue where clock_gettime is provided
+# But we can't find rt library for some reason
+if(CMAKE_SYSTEM_NAME MATCHES "iOS")
+    set(NEED_LIBRT FALSE)
+endif()
+
 if(NEED_LIBRT)
 	list(APPEND LIBGIT2_SYSTEM_LIBS rt)
 	list(APPEND LIBGIT2_PC_LIBS "-lrt")
