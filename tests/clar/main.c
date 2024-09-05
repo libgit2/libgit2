@@ -10,6 +10,15 @@ int __cdecl main(int argc, char *argv[])
 #else
 int main(int argc, char *argv[])
 #endif
+
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#else
+#if !defined(TARGET_OS_IOS)
+#define TARGET_OS_IOS 0
+#endif
+#endif
+
 {
 	int res;
 	char *at_exit_cmd;
@@ -44,9 +53,13 @@ int main(int argc, char *argv[])
 
 	at_exit_cmd = getenv("CLAR_AT_EXIT");
 	if (at_exit_cmd != NULL) {
+		#if TARGET_OS_IOS
+		/* system is unavailable on iOS */
+		return res;
+		#else
 		int at_exit = system(at_exit_cmd);
 		return res || at_exit;
+		#endif
 	}
-
 	return res;
 }
