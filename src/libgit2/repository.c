@@ -1908,7 +1908,7 @@ static int check_valid_extension(const git_config_entry *entry, void *payload)
 		if ((error = git_str_printf(&cfg, "extensions.%s", extension)) < 0)
 			goto done;
 
-		if (strcmp(entry->name, cfg.ptr) == 0) {
+		if (git__strcasecmp(entry->name, cfg.ptr) == 0) {
 			if (reject)
 				goto fail;
 
@@ -1923,7 +1923,7 @@ static int check_valid_extension(const git_config_entry *entry, void *payload)
 		if ((error = git_str_printf(&cfg, "extensions.%s", extension)) < 0)
 			goto done;
 
-		if (strcmp(entry->name, cfg.ptr) == 0)
+		if (git__strcasecmp(entry->name, cfg.ptr) == 0)
 			goto done;
 	}
 
@@ -2024,7 +2024,7 @@ int git_repository__extensions(char ***out, size_t *out_len)
 	char *extension;
 	size_t i, j;
 
-	if (git_vector_init(&extensions, 8, git__strcmp_cb) < 0)
+	if (git_vector_init(&extensions, 8, git__strcasecmp_cb) < 0)
 		return -1;
 
 	for (i = 0; i < ARRAY_SIZE(builtin_extensions); i++) {
@@ -2033,7 +2033,8 @@ int git_repository__extensions(char ***out, size_t *out_len)
 		builtin = builtin_extensions[i];
 
 		git_vector_foreach (&user_extensions, j, user) {
-			if (user[0] == '!' && strcmp(builtin, &user[1]) == 0) {
+			if (user[0] == '!' &&
+			    git__strcasecmp(builtin, &user[1]) == 0) {
 				match = true;
 				break;
 			}
@@ -2081,7 +2082,7 @@ int git_repository__set_extensions(const char **extensions, size_t len)
 		bool is_builtin = false;
 
 		for (j = 0; j < ARRAY_SIZE(builtin_extensions); j++) {
-			if (strcmp(builtin_extensions[j], extensions[i]) == 0) {
+			if (git__strcasecmp(builtin_extensions[j], extensions[i]) == 0) {
 				is_builtin = true;
 				break;
 			}
