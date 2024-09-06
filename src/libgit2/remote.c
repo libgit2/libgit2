@@ -2991,13 +2991,6 @@ int git_remote_upload(
 				goto cleanup;
 		}
 
-	if ((error = git_push_finish(push)) < 0)
-		goto cleanup;
-
-	if (connect_opts.callbacks.push_update_reference &&
-	    (error = git_push_status_foreach(push, connect_opts.callbacks.push_update_reference, connect_opts.callbacks.payload)) < 0)
-		goto cleanup;
-
 	error = git_push_finish(push);
 
 	if (connect_opts.callbacks.push_update_reference) {
