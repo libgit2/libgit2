@@ -90,7 +90,7 @@ struct entry_common {
 		uint16_t flags_extended;             \
 		char path[1]; /* arbitrary length */ \
 	}
-C
+
 typedef entry_short(GIT_OID_SHA1_SIZE) index_entry_short_sha1;
 typedef entry_long(GIT_OID_SHA1_SIZE) index_entry_long_sha1;
 
@@ -784,7 +784,7 @@ static int truncate_racily_clean(git_index *index)
 		goto done;
 
 	diff_opts.pathspec.count = paths.length;
-    	diff_opts.pathspec.strings = (char **)paths.contents;
+	diff_opts.pathspec.strings = (char **)paths.contents;
 
     	if ((error = git_diff_index_to_workdir(&diff, INDEX_OWNER(index), index, &diff_opts)) < 0) {
         	git_vector_free(&paths);
