@@ -384,6 +384,8 @@ static int attr_setup(
 	git_attr_file_source index_source = { GIT_ATTR_FILE_SOURCE_INDEX, NULL, GIT_ATTR_FILE, NULL };
 	git_attr_file_source head_source = { GIT_ATTR_FILE_SOURCE_HEAD, NULL, GIT_ATTR_FILE, NULL };
 	git_attr_file_source commit_source = { GIT_ATTR_FILE_SOURCE_COMMIT, NULL, GIT_ATTR_FILE, NULL };
+	git_attr_cache *attrcache;
+	const char *attr_cfg_file = NULL;
 	git_index *idx = NULL;
 	const char *workdir;
 	int error = 0;
@@ -407,8 +409,10 @@ static int attr_setup(
 		error = 0;
 	}
 
-	if ((error = preload_attr_file(repo, attr_session, NULL,
-	                               git_repository_attr_cache(repo)->cfg_attr_file)) < 0)
+	if ((attrcache = git_repository_attr_cache(repo)) != NULL)
+		attr_cfg_file = git_attr_cache_attributesfile(attrcache);
+
+	if ((error = preload_attr_file(repo, attr_session, NULL, attr_cfg_file)) < 0)
 		goto out;
 
 	if ((error = git_repository__item_path(&info, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
@@ -464,6 +468,7 @@ int git_attr_add_macro(
 {
 	int error;
 	git_attr_rule *macro = NULL;
+	git_attr_cache *attrcache;
 	git_pool *pool;
 
 	GIT_ASSERT_ARG(repo);
@@ -475,7 +480,8 @@ int git_attr_add_macro(
 	macro = git__calloc(1, sizeof(git_attr_rule));
 	GIT_ERROR_CHECK_ALLOC(macro);
 
-	pool = &git_repository_attr_cache(repo)->pool;
+	attrcache = git_repository_attr_cache(repo);
+	pool = git_attr_cache_pool(attrcache);
 
 	macro->match.pattern = git_pool_strdup(pool, name);
 	GIT_ERROR_CHECK_ALLOC(macro->match.pattern);
@@ -631,6 +637,8 @@ static int collect_attr_files(
 	int error = 0;
 	git_str dir = GIT_STR_INIT, attrfile = GIT_STR_INIT;
 	const char *workdir = git_repository_workdir(repo);
+	git_attr_cache *attrcache;
+	const char *attr_cfg_file = NULL;
 	attr_walk_up_info info = { NULL };
 
 	GIT_ASSERT(!git_fs_path_is_absolute(path));
@@ -679,8 +687,13 @@ static int collect_attr_files(
 	if (error < 0)
 		goto cleanup;
 
-	if (git_repository_attr_cache(repo)->cfg_attr_file != NULL) {
-		error = push_attr_file(repo, attr_session, files, NULL, git_repository_attr_cache(repo)->cfg_attr_file);
+	if ((attrcache = git_repository_attr_cache(repo)) != NULL)
+		attr_cfg_file = git_attr_cache_attributesfile(attrcache);
+
+
+	if (attr_cfg_file) {
+		error = push_attr_file(repo, attr_session, files, NULL, attr_cfg_file);
+
 		if (error < 0)
 			goto cleanup;
 	}

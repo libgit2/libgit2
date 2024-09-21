@@ -296,6 +296,8 @@ int git_ignore__for_path(
 {
 	int error = 0;
 	const char *workdir = git_repository_workdir(repo);
+	git_attr_cache *attrcache;
+	const char *excludes_file = NULL;
 	git_str infopath = GIT_STR_INIT;
 
 	GIT_ASSERT_ARG(repo);
@@ -358,10 +360,12 @@ int git_ignore__for_path(
 	}
 
 	/* load core.excludesfile */
-	if (git_repository_attr_cache(repo)->cfg_excl_file != NULL)
+	attrcache = git_repository_attr_cache(repo);
+	excludes_file = git_attr_cache_excludesfile(attrcache);
+
+	if (excludes_file != NULL)
 		error = push_ignore_file(
-			ignores, &ignores->ign_global, NULL,
-			git_repository_attr_cache(repo)->cfg_excl_file);
+			ignores, &ignores->ign_global, NULL, excludes_file);
 
 cleanup:
 	git_str_dispose(&infopath);

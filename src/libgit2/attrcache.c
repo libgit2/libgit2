@@ -14,6 +14,30 @@
 #include "ignore.h"
 #include "path.h"
 
+struct git_attr_cache {
+	char *cfg_attr_file; /* cached value of core.attributesfile */
+	char *cfg_excl_file; /* cached value of core.excludesfile */
+	git_strmap *files;	 /* hash path to git_attr_cache_entry records */
+	git_strmap *macros;	 /* hash name to vector<git_attr_assignment> */
+	git_mutex lock;
+	git_pool  pool;
+};
+
+const char *git_attr_cache_attributesfile(git_attr_cache *cache)
+{
+	return cache->cfg_attr_file;
+}
+
+const char *git_attr_cache_excludesfile(git_attr_cache *cache)
+{
+	return cache->cfg_excl_file;
+}
+
+git_pool *git_attr_cache_pool(git_attr_cache *cache)
+{
+	return &cache->pool;
+}
+
 GIT_INLINE(int) attr_cache_lock(git_attr_cache *cache)
 {
 	GIT_UNUSED(cache); /* avoid warning if threading is off */
