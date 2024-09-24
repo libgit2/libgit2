@@ -580,8 +580,12 @@ static int diff_print_patch_file_binary(
 	return error;
 }
 
-GIT_INLINE(int) should_force_header(const git_diff_delta *delta)
+GIT_INLINE(int) should_force_header(const diff_print_info *pi, const git_diff_delta *delta)
 {
+	if (pi->format == GIT_DIFF_FORMAT_PATCH_HEADER) {
+		return 1;
+	}
+
 	if (delta->old_file.mode != delta->new_file.mode)
 		return 1;
 
@@ -646,7 +650,7 @@ static int diff_print_patch_file(
 	 * should queue it to send when we see the first hunk. This prevents
 	 * us from sending a header when all hunks were ignored.
 	 */
-	if (should_force_header(delta) && (error = flush_file_header(delta, pi)) < 0)
+	if (should_force_header(pi, delta) && (error = flush_file_header(delta, pi)) < 0)
 		return error;
 
 	return 0;
