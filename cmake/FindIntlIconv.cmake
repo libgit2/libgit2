@@ -15,6 +15,12 @@ find_path(ICONV_INCLUDE_DIR iconv.h)
 check_function_exists(iconv_open libc_has_iconv)
 find_library(iconv_lib NAMES iconv libiconv libiconv-2 c)
 
+# workaround the iOS issue where iconv is provided by libc
+# We set it to false to force it add -liconv to the linker flags
+if(CMAKE_SYSTEM_NAME MATCHES "iOS")
+    set(libc_has_iconv FALSE)
+endif()
+
 if(ICONV_INCLUDE_DIR AND libc_has_iconv)
 	set(ICONV_FOUND TRUE)
 	set(ICONV_LIBRARIES "")
