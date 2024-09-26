@@ -73,19 +73,6 @@ jobs:
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-        - name: "iOS"
-          id: ios
-          os: macos-12
-          setup-script: ios
-          env:
-            CC: clang
-            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS64
-            CMAKE_GENERATOR: Ninja
-            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
-            # Skip all tests on iOS temporarily.
-            # 1. We need to update the path from libgit2_tests to libgit2_tests.app/libgit2_tests
-            # 2. We need to find a way to specify an iOS device / iOS simulator to run the tests.
-            SKIP_TESTS: true
         - name: "Windows (amd64, Visual Studio, Schannel)"
           id: windows-amd64-vs
           os: windows-2019
