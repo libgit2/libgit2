@@ -247,6 +247,9 @@ typedef int GIT_CALLBACK(git_packbuilder_progress)(
  * @param progress_cb Function to call with progress information during
  * pack building. Be aware that this is called inline with pack building
  * operations, so performance may be affected.
+ * When progress_cb returns an error, the pack building process will be
+ * aborted and the error will be returned from the invoked function.
+ * `pb` must then be freed.
  * @param progress_cb_payload Payload for progress callback.
  * @return 0 or an error code
  */
