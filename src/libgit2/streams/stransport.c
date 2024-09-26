@@ -60,9 +60,9 @@ done:
 	CFRelease(message_ref);
 #else
 	git_error_set(GIT_ERROR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
-	GIT_UNUSED(message);
+	GIT_UNUSED(message_ref);
 	GIT_UNUSED(message_cstr);
-	GIT_UNUSED(must_free);
+	GIT_UNUSED(message_ptr);
 #endif
 
 	return -1;
