@@ -108,10 +108,6 @@ static int add_ref(transport_local *t, const char *name)
 		return error;
 	}
 
-	/* If it's not a tag, we don't need to try to peel it */
-	if (git__prefixcmp(name, GIT_REFS_TAGS_DIR))
-		return 0;
-
 	if ((error = git_object_lookup(&obj, t->repo, &head->oid, GIT_OBJECT_ANY)) < 0)
 		return error;
 
