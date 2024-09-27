@@ -45,6 +45,25 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_mempack_new(git_odb_backend **out);
 
 /**
+ * Write a thin packfile with the objects in the memory store.
+ *
+ * A thin packfile is a packfile that does not contain its transitive closure of
+ * references. This is useful for efficiently distributing additions to a
+ * repository over the network, but also finds use in the efficient bulk
+ * addition of objects to a repository, locally.
+ *
+ * This operation performs the (shallow) insert operations into the
+ * `git_packbuilder`, but does not write the packfile to disk;
+ * see `git_packbuilder_write_buf`.
+ *
+ * It also does not reset the in-memory object database; see `git_mempack_reset`.
+ *
+ * @param backend The mempack backend
+ * @param pb The packbuilder to use to write the packfile
+ */
+GIT_EXTERN(int) git_mempack_write_thin_pack(git_odb_backend *backend, git_packbuilder *pb);
+
+/**
  * Dump all the queued in-memory writes to a packfile.
  *
  * The contents of the packfile will be stored in the given buffer.
