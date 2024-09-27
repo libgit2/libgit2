@@ -20,8 +20,8 @@
 
 static int stransport_error(OSStatus ret)
 {
-	CFStringRef message_ref;
-	const char *message_cstr;
+	CFStringRef message_ref = NULL;
+	const char *message_cstr = NULL;
 	char *message_ptr = NULL;
 
 	if (ret == noErr || ret == errSSLClosedGraceful) {
