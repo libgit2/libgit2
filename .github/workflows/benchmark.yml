@@ -23,31 +23,31 @@ jobs:
       matrix:
         platform:
         - name: "Linux (clang, OpenSSL)"
+          id: linux
+          os: ubuntu-latest
+          setup-script: ubuntu
           env:
             CC: clang
             CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CLI=ON -DCMAKE_BUILD_TYPE=Release
             CMAKE_BUILD_OPTIONS: --config Release
-          id: linux
-          os: ubuntu-latest
-          setup-script: ubuntu
         - name: "macOS"
-          os: macos-12
+          id: macos
+          os: macos-latest
+          setup-script: osx
           env:
             CC: clang
             CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CLI=ON -DCMAKE_BUILD_TYPE=Release
             CMAKE_BUILD_OPTIONS: --config Release
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
-          id: macos
-          setup-script: osx
         - name: "Windows (amd64, Visual Studio)"
-          os: windows-2019
+          id: windows
+          os: windows-2022
+          setup-script: win32
           env:
             ARCH: amd64
-            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_GENERATOR: Visual Studio 17 2022
             CMAKE_OPTIONS: -A x64 -DDEPRECATE_HARD=ON -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CLI=ON -DCMAKE_BUILD_TYPE=Release
             CMAKE_BUILD_OPTIONS: --config Release
-          id: windows
-          setup-script: win32
       fail-fast: false
     name: "Benchmark ${{ matrix.platform.name }}"
     env: ${{ matrix.platform.env }}
