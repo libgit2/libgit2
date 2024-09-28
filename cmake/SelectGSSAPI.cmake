@@ -7,6 +7,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
 endif()
 
 add_library(libgit2_gssapi INTERFACE)
+
 if(USE_GSSAPI)
 	# Auto-select GSS backend
 	sanitizebool(USE_GSSAPI)
