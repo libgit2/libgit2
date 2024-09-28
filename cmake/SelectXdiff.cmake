@@ -1,5 +1,6 @@
 # Optional external dependency: xdiff
 add_library(libgit2_xdiff INTERFACE)
+
 if(USE_XDIFF STREQUAL "system")
 	message(FATAL_ERROR "external/system xdiff is not yet supported")
 else()
