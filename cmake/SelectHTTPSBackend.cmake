@@ -9,6 +9,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
 endif()
 
 add_library(libgit2_https_backend INTERFACE)
+
 if(USE_HTTPS)
 	# Auto-select TLS backend
 	sanitizebool(USE_HTTPS)
