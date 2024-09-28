@@ -65,7 +65,6 @@ if(NOT MSVC)
 	target_compile_options(libgit2package PRIVATE "-Wno-implicit-function-declaration")
 endif()
 
-message(STATUS "xxxxxxxxxxxxxxxxx   ${LIBGIT2_OBJECTS}")
 target_link_libraries(libgit2package PUBLIC ${LIBGIT2_SYSTEM_LIBS} PUBLIC util libgit2_xdiff http_parser libgit2_gssapi libgit2_ssl2)
 target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
 
