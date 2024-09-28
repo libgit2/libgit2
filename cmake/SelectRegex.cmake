@@ -14,6 +14,7 @@ if(REGEX_BACKEND STREQUAL "")
 endif()
 
 add_library(libgit2_regex INTERFACE)
+
 if(REGEX_BACKEND STREQUAL "regcomp_l")
 	add_feature_info(regex ON "using system regcomp_l")
 	set(GIT_REGEX_REGCOMP_L 1)
