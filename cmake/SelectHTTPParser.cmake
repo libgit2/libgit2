@@ -1,5 +1,6 @@
 # Optional external dependency: http-parser
 add_library(http_parser INTERFACE)
+
 if(USE_HTTP_PARSER STREQUAL "http-parser")
 	find_package(HTTPParser)
 
