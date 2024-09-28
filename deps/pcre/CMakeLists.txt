@@ -118,7 +118,7 @@ add_library(libgit2_pcre STATIC
 target_include_directories(libgit2_pcre PUBLIC "${PROJECT_SOURCE_DIR}/deps/pcre" "${PROJECT_BINARY_DIR}/src/pcre")
 
 if(MSVC)
-  target_compile_definitions(libgit2_pcre PRIVATE _CRT_SECURE_NO_DEPRECATE _CRT_SECURE_NO_WARNINGS)
+	target_compile_definitions(libgit2_pcre PRIVATE _CRT_SECURE_NO_DEPRECATE _CRT_SECURE_NO_WARNINGS)
 endif(MSVC)
 target_compile_definitions(libgit2_pcre PRIVATE HAVE_CONFIG_H)
 # end CMakeLists.txt
