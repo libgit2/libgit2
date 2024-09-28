@@ -51,7 +51,14 @@ GIT_INLINE(void) git_config_backend_free(git_config_backend *cfg)
 GIT_INLINE(int) git_config_backend_get_string(
 	git_config_entry **out, git_config_backend *cfg, const char *name)
 {
-	return cfg->get(cfg, name, out);
+	git_config_backend_entry *be;
+	int error;
+
+	if ((error = cfg->get(cfg, name, &be)) < 0)
+		return error;
+
+	*out = &be->entry;
+	return 0;
 }
 
 GIT_INLINE(int) git_config_backend_set_string(

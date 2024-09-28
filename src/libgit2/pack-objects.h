@@ -100,6 +100,10 @@ struct git_packbuilder {
 	uint64_t last_progress_report_time;
 
 	bool done;
+
+	/* A non-zero error code in failure causes all threads to shut themselves
+	   down. Some functions will return this error code.  */
+	volatile int failure;
 };
 
 int git_packbuilder__write_buf(git_str *buf, git_packbuilder *pb);
