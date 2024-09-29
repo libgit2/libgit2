@@ -65,7 +65,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
         - name: "macOS"
           id: macos
-          os: macos-12
+          os: macos-13
           setup-script: osx
           env:
             CC: clang
@@ -76,7 +76,7 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "iOS"
           id: ios
-          os: macos-12
+          os: macos-13
           setup-script: ios
           env:
             CC: clang
@@ -86,11 +86,11 @@ jobs:
             SKIP_TESTS: true # Cannot exec iOS app on macOS
         - name: "Windows (amd64, Visual Studio, Schannel)"
           id: windows-amd64-vs
-          os: windows-2019
+          os: windows-2022
           setup-script: win32
           env:
             ARCH: amd64
-            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_GENERATOR: Visual Studio 17 2022
             CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
             BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
             BUILD_TEMP: D:\Temp
@@ -98,11 +98,11 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (x86, Visual Studio, WinHTTP)"
           id: windows-x86-vs
-          os: windows-2019
+          os: windows-2022
           setup-script: win32
           env:
             ARCH: x86
-            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_GENERATOR: Visual Studio 17 2022
             CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
             BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
             BUILD_TEMP: D:\Temp
@@ -110,7 +110,7 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (amd64, mingw, WinHTTP)"
           id: windows-amd64-mingw
-          os: windows-2019
+          os: windows-2022
           setup-script: mingw
           env:
             ARCH: amd64
@@ -122,7 +122,7 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (x86, mingw, Schannel)"
           id: windows-x86-mingw
-          os: windows-2019
+          os: windows-2022
           setup-script: mingw
           env:
             ARCH: x86
@@ -324,10 +324,10 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (no mmap)"
           id: windows-nommap
-          os: windows-2019
+          os: windows-2022
           env:
             ARCH: amd64
-            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_GENERATOR: Visual Studio 17 2022
             CFLAGS: -DNO_MMAP
             CMAKE_OPTIONS: -A x64 -DDEPRECATE_HARD=ON
             SKIP_SSH_TESTS: true
@@ -356,7 +356,7 @@ jobs:
           os: ubuntu-latest
         - name: "macOS (SHA256)"
           id: macos-sha256
-          os: macos-12
+          os: macos-13
           setup-script: osx
           env:
             CC: clang
@@ -366,10 +366,10 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (SHA256, amd64, Visual Studio)"
           id: windows-sha256
-          os: windows-2019
+          os: windows-2022
           env:
             ARCH: amd64
-            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_GENERATOR: Visual Studio 17 2022
             CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
@@ -481,7 +481,7 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: 'cpp'
 
@@ -489,7 +489,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
+        cmake .. -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
         cmake --build .
 
     - name: Perform CodeQL Analysis
