@@ -506,7 +506,11 @@ static int get_revision(git_commit_list_node **out, git_revwalk *walk, git_commi
 	int error;
 	git_commit_list_node *commit;
 
-	commit = git_commit_list_pop(list);
+	do {
+		commit = git_commit_list_pop(list);
+	} while (commit && !walk->limited
+		&& (walk->hide_cb && walk->hide_cb(&commit->oid, walk->hide_cb_payload) != 0));
+
 	if (!commit) {
 		git_error_clear();
 		return GIT_ITEROVER;
@@ -631,6 +635,10 @@ static int prepare_walk(git_revwalk *walk)
 	 */
 	for (list = walk->user_input; list; list = list->next) {
 		git_commit_list_node *commit = list->item;
+
+		if (!walk->limited && walk->hide_cb && walk->hide_cb(&commit->oid, walk->hide_cb_payload))
+			continue;
+
 		if ((error = git_commit_list_parse(walk, commit)) < 0)
 			return error;
 
@@ -837,9 +845,6 @@ int git_revwalk_add_hide_cb(
 
 	walk->hide_cb = hide_cb;
 	walk->hide_cb_payload = payload;
-
-	if (hide_cb)
-		walk->limited = 1;
 
 	return 0;
 }
