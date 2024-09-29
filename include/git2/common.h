@@ -340,11 +340,11 @@ typedef enum {
  * 
  *  * opts(GIT_OPT_ADD_SSL_X509_CERT, const X509 *cert)
  *     
- *      > Add a raw X509 certificate into the SSL certs store.
- *      > The added certificate is not persisted and will be used
- *      > only during application lifetime. Also there is no ability
- *      > to remove a certificate from the store during app lifetime
- *      > after it was added. 
+ *  		 > Add a raw X509 certificate into the SSL certs store.
+ *  		 > The added certificate is not persisted and will be used
+ *  		 > only during application lifetime. Also there is no ability
+ *  		 > to remove a certificate from the store during app lifetime
+ *  		 > after it was added. 
  * 		> 
  * 		> - `cert` is the raw X509 cert will be added to cert store.
  *
