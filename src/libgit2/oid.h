@@ -256,6 +256,22 @@ GIT_INLINE(void) git_oid_clear(git_oid *out, git_oid_t type)
 #endif
 }
 
+/* A 32 bit representation suitable for a hashmap key */
+GIT_INLINE(uint32_t) git_oid_hash32(const git_oid *oid)
+{
+	uint32_t hash;
+	memcpy(&hash, oid->id, sizeof(uint32_t));
+	return hash;
+}
+
+/* A 64 bit representation suitable for a hashmap key */
+GIT_INLINE(uint64_t) git_oid_hash64(const git_oid *oid)
+{
+	uint64_t hash;
+	memcpy(&hash, oid->id, sizeof(uint64_t));
+	return hash;
+}
+
 /* SHA256 support */
 
 int git_oid__fromstr(git_oid *out, const char *str, git_oid_t type);
