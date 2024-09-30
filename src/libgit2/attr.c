@@ -13,6 +13,7 @@
 #include "attr_file.h"
 #include "ignore.h"
 #include "git2/oid.h"
+#include "hashmap_str.h"
 #include <ctype.h>
 
 const char *git_attr__true  = "[internal]__TRUE__";
@@ -254,7 +255,7 @@ int git_attr_foreach_ext(
 	git_attr_file *file;
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
-	git_strmap *seen = NULL;
+	git_hashset_str seen = GIT_HASHSET_INIT;
 	git_dir_flag dir_flag = GIT_DIR_FLAG_UNKNOWN;
 
 	GIT_ASSERT_ARG(repo);
@@ -267,8 +268,7 @@ int git_attr_foreach_ext(
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, NULL, opts, pathname, &files)) < 0 ||
-	    (error = git_strmap_new(&seen)) < 0)
+	if ((error = collect_attr_files(repo, NULL, opts, pathname, &files)) < 0)
 		goto cleanup;
 
 	git_vector_foreach(&files, i, file) {
@@ -277,10 +277,10 @@ int git_attr_foreach_ext(
 
 			git_vector_foreach(&rule->assigns, k, assign) {
 				/* skip if higher priority assignment was already seen */
-				if (git_strmap_exists(seen, assign->name))
+				if (git_hashset_str_contains(&seen, assign->name))
 					continue;
 
-				if ((error = git_strmap_set(seen, assign->name, assign)) < 0)
+				if ((error = git_hashset_str_add(&seen, assign->name)) < 0)
 					goto cleanup;
 
 				error = callback(assign->name, assign->value, payload);
@@ -293,7 +293,7 @@ int git_attr_foreach_ext(
 	}
 
 cleanup:
-	git_strmap_free(seen);
+	git_hashset_str_dispose(&seen);
 	release_attr_files(&files);
 	git_attr_path__free(&path);
 
