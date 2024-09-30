@@ -6,6 +6,7 @@
  */
 
 #include "config_list.h"
+#include "hashmap_str.h"
 
 typedef struct config_entry_list {
 	struct config_entry_list *next;
@@ -24,14 +25,17 @@ typedef struct config_list_iterator {
 	config_entry_list *head;
 } config_list_iterator;
 
+GIT_HASHMAP_STR_SETUP(git_config_list_pathmap, char *);
+GIT_HASHMAP_STR_SETUP(git_config_list_headmap, config_entry_map_head *);
+
 struct git_config_list {
 	git_refcount rc;
 
 	/* Interned strings - paths to config files or backend types */
-	git_strmap *strings;
+	git_config_list_pathmap strings;
 
 	/* Config entries */
-	git_strmap *map;
+	git_config_list_headmap map;
 	config_entry_list *entries;
 };
 
@@ -42,15 +46,6 @@ int git_config_list_new(git_config_list **out)
 	config_list = git__calloc(1, sizeof(git_config_list));
 	GIT_ERROR_CHECK_ALLOC(config_list);
 	GIT_REFCOUNT_INC(config_list);
-
-	if (git_strmap_new(&config_list->strings) < 0 ||
-	    git_strmap_new(&config_list->map) < 0) {
-		git_strmap_free(config_list->strings);
-		git_strmap_free(config_list->map);
-		git__free(config_list);
-
-		return -1;
-	}
 
 	*out = config_list;
 	return 0;
@@ -128,17 +123,19 @@ static void config_list_free(git_config_list *config_list)
 	config_entry_list *entry_list = NULL, *next;
 	config_entry_map_head *head;
 	char *str;
+	git_hashmap_iter_t iter = GIT_HASHMAP_ITER_INIT;
 
-	git_strmap_foreach_value(config_list->strings, str, {
+	while (git_config_list_pathmap_iterate(&iter, NULL, &str, &config_list->strings) == 0)
 		git__free(str);
-	});
-	git_strmap_free(config_list->strings);
 
-	git_strmap_foreach_value(config_list->map, head, {
+	git_config_list_pathmap_dispose(&config_list->strings);
+
+	iter = GIT_HASHMAP_ITER_INIT;
+	while (git_config_list_headmap_iterate(&iter, NULL, &head, &config_list->map) == 0) {
 		git__free((char *) head->entry->base.entry.name);
 		git__free(head);
-	});
-	git_strmap_free(config_list->map);
+	}
+	git_config_list_headmap_dispose(&config_list->map);
 
 	entry_list = config_list->entries;
 	while (entry_list != NULL) {
@@ -163,7 +160,7 @@ int git_config_list_append(git_config_list *config_list, git_config_list_entry *
 	config_entry_list *list_head;
 	config_entry_map_head *map_head;
 
-	if ((map_head = git_strmap_get(config_list->map, entry->base.entry.name)) != NULL) {
+	if (git_config_list_headmap_get(&map_head, &config_list->map, entry->base.entry.name) == 0) {
 		map_head->multivar = true;
 		/*
 		 * This is a micro-optimization for configuration files
@@ -175,7 +172,7 @@ int git_config_list_append(git_config_list *config_list, git_config_list_entry *
 		entry->base.entry.name = map_head->entry->base.entry.name;
 	} else {
 		map_head = git__calloc(1, sizeof(*map_head));
-		if ((git_strmap_set(config_list->map, entry->base.entry.name, map_head)) < 0)
+		if ((git_config_list_headmap_put(&config_list->map, entry->base.entry.name, map_head)) < 0)
 			return -1;
 	}
 	map_head->entry = entry;
@@ -197,7 +194,7 @@ int git_config_list_get(git_config_list_entry **out, git_config_list *config_lis
 {
 	config_entry_map_head *entry;
 
-	if ((entry = git_strmap_get(config_list->map, key)) == NULL)
+	if (git_config_list_headmap_get(&entry, &config_list->map, key) != 0)
 		return GIT_ENOTFOUND;
 
 	*out = entry->entry;
@@ -208,7 +205,7 @@ int git_config_list_get_unique(git_config_list_entry **out, git_config_list *con
 {
 	config_entry_map_head *entry;
 
-	if ((entry = git_strmap_get(config_list->map, key)) == NULL)
+	if (git_config_list_headmap_get(&entry, &config_list->map, key) != 0)
 		return GIT_ENOTFOUND;
 
 	if (entry->multivar) {
@@ -275,13 +272,13 @@ const char *git_config_list_add_string(
 	git_config_list *config_list,
 	const char *str)
 {
-	const char *s;
+	char *s;
 
-	if ((s = git_strmap_get(config_list->strings, str)) != NULL)
+	if (git_config_list_pathmap_get(&s, &config_list->strings, str) == 0)
 		return s;
 
 	if ((s = git__strdup(str)) == NULL ||
-	    git_strmap_set(config_list->strings, s, (void *)s) < 0)
+	     git_config_list_pathmap_put(&config_list->strings, s, s) < 0)
 		return NULL;
 
 	return s;
