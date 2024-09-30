@@ -12,6 +12,7 @@
 #include "git2/submodule.h"
 #include "git2/repository.h"
 #include "futils.h"
+#include "strmap.h"
 
 /* Notes:
  *
