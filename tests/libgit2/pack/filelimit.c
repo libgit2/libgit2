@@ -8,7 +8,7 @@
 static size_t expected_open_mwindow_files = 0;
 static size_t original_mwindow_file_limit = 0;
 
-extern git_mutex git__mwindow_mutex;
+extern git_mutex git_mwindow__mutex;
 extern git_mwindow_ctl git_mwindow__mem_ctl;
 
 void test_pack_filelimit__initialize_tiny(void)
@@ -120,13 +120,13 @@ void test_pack_filelimit__open_repo_with_multiple_packfiles(void)
 		++i;
 	cl_assert_equal_i(commit_count, i);
 
-	cl_git_pass(git_mutex_lock(&git__mwindow_mutex));
+	cl_git_pass(git_mutex_lock(&git_mwindow__mutex));
 	/*
 	 * Adding an assert while holding a lock will cause the whole process to
 	 * deadlock. Copy the value and do the assert after releasing the lock.
 	 */
 	open_windows = ctl->open_windows;
-	cl_git_pass(git_mutex_unlock(&git__mwindow_mutex));
+	cl_git_pass(git_mutex_unlock(&git_mwindow__mutex));
 
 	cl_assert_equal_i(expected_open_mwindow_files, open_windows);
 
