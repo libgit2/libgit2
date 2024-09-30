@@ -47,6 +47,7 @@ struct git_diff {
 	int (*entrycomp)(const void *a, const void *b);
 
 	int (*patch_fn)(git_patch **out, git_diff *diff, size_t idx);
+	void (*free_deltas_fn)(git_diff *diff);
 	void (*free_fn)(git_diff *diff);
 };
 

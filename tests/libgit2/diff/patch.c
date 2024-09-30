@@ -701,3 +701,32 @@ void test_diff_patch__can_strip_bad_utf8(void)
 	git_patch_free(patch);
 	git_buf_dispose(&buf);
 }
+
+void test_diff_patch__free_diff_after_git_diff_merge(void)
+{
+	git_diff *diff_a;
+	git_diff *diff_b;
+
+	const char *a = "diff --git a/README.md b/README.md\n"
+		"index 18fb8328..ce60f40c 100644\n"
+		"--- a/README.md\n"
+		"+++ b/README.md\n"
+		"@@ -4,1 +4,2 @@ componentwise\n"
+		" reusing\n"
+		"+proverb\n";
+
+	const char *b = "diff --git a/README.md b/README.md\n"
+		"index 18fb8328..ce60f40c 100644\n"
+		"--- a/README.md\n"
+		"+++ b/README.md\n"
+		"@@ -4,2 +4,3 @@ componentwise\n"
+		" reusing\n"
+		" proverb\n"
+		"+offended\n";
+
+	cl_git_pass(diff_from_buffer(&diff_a, a, strlen(a)));
+	cl_git_pass(diff_from_buffer(&diff_b, b, strlen(b)));
+	cl_git_pass(git_diff_merge(diff_a, diff_b));
+	git_diff_free(diff_a);
+	git_diff_free(diff_b);
+}
