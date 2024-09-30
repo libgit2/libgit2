@@ -58,7 +58,7 @@ static void free_heads(git_vector *heads)
 	git_vector_foreach(heads, i, head)
 		free_head(head);
 
-	git_vector_free(heads);
+	git_vector_dispose(heads);
 }
 
 static int add_ref(transport_local *t, const char *name)
@@ -182,7 +182,7 @@ static int store_refs(transport_local *t)
 	return 0;
 
 on_error:
-	git_vector_free(&t->refs);
+	git_vector_dispose(&t->refs);
 	git_strarray_dispose(&ref_names);
 	return -1;
 }

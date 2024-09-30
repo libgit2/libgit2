@@ -42,7 +42,7 @@ void test_pack_packbuilder__cleanup(void)
 		git_vector_foreach(&_commits, i, o) {
 			git__free(o);
 		}
-		git_vector_free(&_commits);
+		git_vector_dispose(&_commits);
 	}
 
 	git_packbuilder_free(_packbuilder);

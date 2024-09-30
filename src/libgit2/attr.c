@@ -618,7 +618,7 @@ static void release_attr_files(git_vector *files)
 		git_attr_file__free(file);
 		files->contents[i] = NULL;
 	}
-	git_vector_free(files);
+	git_vector_dispose(files);
 }
 
 static int collect_attr_files(

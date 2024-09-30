@@ -124,11 +124,11 @@ static int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_r
 	*out = result;
 	*walk_out = walk;
 
-	git_vector_free(&list);
+	git_vector_dispose(&list);
 	return 0;
 
 on_error:
-	git_vector_free(&list);
+	git_vector_dispose(&list);
 	git_revwalk_free(walk);
 	return error;
 }
@@ -511,7 +511,7 @@ static int remove_redundant(git_revwalk *walk, git_vector *commits, uint32_t min
 done:
 	git__free(redundant);
 	git__free(filled_index);
-	git_vector_free(&work);
+	git_vector_dispose(&work);
 	return error;
 }
 
@@ -570,7 +570,7 @@ int git_merge__bases_many(
 		if ((error = clear_commit_marks(one, ALL_FLAGS)) < 0 ||
 		    (error = clear_commit_marks_many(twos, ALL_FLAGS)) < 0 ||
 		    (error = remove_redundant(walk, &redundant, minimum_generation)) < 0) {
-			git_vector_free(&redundant);
+			git_vector_dispose(&redundant);
 			return error;
 		}
 
@@ -579,7 +579,7 @@ int git_merge__bases_many(
 				git_commit_list_insert_by_date(two, &result);
 		}
 
-		git_vector_free(&redundant);
+		git_vector_dispose(&redundant);
 	}
 
 	*out = result;
@@ -1866,9 +1866,9 @@ void git_merge_diff_list__free(git_merge_diff_list *diff_list)
 	if (!diff_list)
 		return;
 
-	git_vector_free(&diff_list->staged);
-	git_vector_free(&diff_list->conflicts);
-	git_vector_free(&diff_list->resolved);
+	git_vector_dispose(&diff_list->staged);
+	git_vector_dispose(&diff_list->conflicts);
+	git_vector_dispose(&diff_list->resolved);
 	git_pool_clear(&diff_list->pool);
 	git__free(diff_list);
 }
@@ -2836,7 +2836,7 @@ cleanup:
 
 	git_str_dispose(&file_path);
 
-	git_vector_free(&matching);
+	git_vector_dispose(&matching);
 	git__free(entries);
 
 	return error;
@@ -3015,7 +3015,7 @@ done:
 	git_iterator_free(iter_new);
 	git_diff_free(staged_diff_list);
 	git_diff_free(index_diff_list);
-	git_vector_free(&staged_paths);
+	git_vector_dispose(&staged_paths);
 
 	return error;
 }
@@ -3112,7 +3112,7 @@ int git_merge__check_result(git_repository *repo, git_index *index_new)
 	}
 
 done:
-	git_vector_free(&paths);
+	git_vector_dispose(&paths);
 	git_tree_free(head_tree);
 	git_iterator_free(iter_head);
 	git_iterator_free(iter_new);

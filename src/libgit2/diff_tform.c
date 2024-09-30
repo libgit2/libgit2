@@ -190,7 +190,7 @@ int git_diff__merge(
 			git_pool_strdup_safe(&onto->pool, onto->opts.new_prefix);
 	}
 
-	git_vector_free_deep(&onto_new);
+	git_vector_dispose_deep(&onto_new);
 	git_pool_clear(&onto_pool);
 
 	return error;
@@ -424,13 +424,13 @@ static int apply_splits_and_deletes(
 
 	/* swap new delta list into place */
 	git_vector_swap(&diff->deltas, &onto);
-	git_vector_free(&onto);
+	git_vector_dispose(&onto);
 	git_vector_sort(&diff->deltas);
 
 	return 0;
 
 on_error:
-	git_vector_free_deep(&onto);
+	git_vector_dispose_deep(&onto);
 
 	return -1;
 }

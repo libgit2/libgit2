@@ -917,7 +917,7 @@ void test_iterator_workdir__pathlist(void)
 		git_iterator_free(i);
 	}
 
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_workdir__pathlist_with_dirs(void)
@@ -1014,7 +1014,7 @@ void test_iterator_workdir__pathlist_with_dirs(void)
 		git_iterator_free(i);
 	}
 
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 static void create_paths(const char *root, int depth)
@@ -1175,7 +1175,7 @@ void test_iterator_workdir__pathlist_for_deeply_nested_item(void)
 		git_iterator_free(i);
 	}
 
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_workdir__bounded_submodules(void)
@@ -1258,7 +1258,7 @@ void test_iterator_workdir__bounded_submodules(void)
 		git_iterator_free(i);
 	}
 
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 	git_index_free(index);
 	git_tree_free(head);
 }
@@ -1380,7 +1380,7 @@ void test_iterator_workdir__advance_over_with_pathlist(void)
 
 	cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
 	git_iterator_free(i);
-	git_vector_free(&pathlist);
+	git_vector_dispose(&pathlist);
 }
 
 void test_iterator_workdir__advance_into(void)
@@ -1447,7 +1447,7 @@ void test_iterator_workdir__pathlist_with_directory(void)
 	expect_iterator_items(i, expected_len, expected, expected_len, expected);
 	git_iterator_free(i);
 
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_workdir__pathlist_with_directory_include_trees(void)
@@ -1473,7 +1473,7 @@ void test_iterator_workdir__pathlist_with_directory_include_trees(void)
 	expect_iterator_items(i, expected_len, expected, expected_len, expected);
 	git_iterator_free(i);
 
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_workdir__hash_when_requested(void)

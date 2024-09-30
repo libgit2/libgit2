@@ -69,7 +69,7 @@ int git_attr_file__clear_rules(git_attr_file *file, bool need_lock)
 
 	git_vector_foreach(&file->rules, i, rule)
 		git_attr_rule__free(rule);
-	git_vector_free(&file->rules);
+	git_vector_dispose(&file->rules);
 
 	if (need_lock)
 		git_mutex_unlock(&file->lock);
@@ -996,7 +996,7 @@ static void git_attr_rule__clear(git_attr_rule *rule)
 	if (!(rule->match.flags & GIT_ATTR_FNMATCH_IGNORE)) {
 		git_vector_foreach(&rule->assigns, i, assign)
 			GIT_REFCOUNT_DEC(assign, git_attr_assignment__free);
-		git_vector_free(&rule->assigns);
+		git_vector_dispose(&rule->assigns);
 	}
 
 	/* match.pattern is stored in a git_pool, so no need to free */

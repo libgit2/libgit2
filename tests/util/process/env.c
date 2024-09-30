@@ -19,7 +19,7 @@ void test_process_env__initialize(void)
 
 void test_process_env__cleanup(void)
 {
-	git_vector_free(&env_result);
+	git_vector_dispose(&env_result);
 	git_str_dispose(&accumulator);
 	git_str_dispose(&env_cmd);
 }

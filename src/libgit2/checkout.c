@@ -2316,11 +2316,11 @@ static void checkout_data_clear(checkout_data *data)
 		data->opts.baseline = NULL;
 	}
 
-	git_vector_free(&data->removes);
+	git_vector_dispose(&data->removes);
 	git_pool_clear(&data->pool);
 
-	git_vector_free_deep(&data->remove_conflicts);
-	git_vector_free_deep(&data->update_conflicts);
+	git_vector_dispose_deep(&data->remove_conflicts);
+	git_vector_dispose_deep(&data->update_conflicts);
 
 	git__free(data->pfx);
 	data->pfx = NULL;

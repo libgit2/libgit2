@@ -96,7 +96,7 @@ static void patch_image_free(patch_image *image)
 		return;
 
 	git_pool_clear(&image->pool);
-	git_vector_free(&image->lines);
+	git_vector_dispose(&image->lines);
 }
 
 static bool match_hunk(
@@ -730,7 +730,7 @@ static int git_apply__to_workdir(
 	error = git_checkout_index(repo, postimage, &checkout_opts);
 
 done:
-	git_vector_free(&paths);
+	git_vector_dispose(&paths);
 	return error;
 }
 

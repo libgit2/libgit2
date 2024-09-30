@@ -808,7 +808,7 @@ int git_reference_list(
 
 	if (git_reference_foreach_name(
 			repo, &cb__reflist_add, (void *)&ref_list) < 0) {
-		git_vector_free(&ref_list);
+		git_vector_dispose(&ref_list);
 		return -1;
 	}
 

@@ -1293,9 +1293,9 @@ static int git_remote__download(
 	free_refspecs(&remote->active_refspecs);
 	error = dwim_refspecs(&remote->active_refspecs, to_active, &refs);
 
-	git_vector_free(&refs);
+	git_vector_dispose(&refs);
 	free_refspecs(&specs);
-	git_vector_free(&specs);
+	git_vector_dispose(&specs);
 
 	if (error < 0)
 		goto on_error;
@@ -1311,9 +1311,9 @@ static int git_remote__download(
 	error = git_fetch_download_pack(remote);
 
 on_error:
-	git_vector_free(&refs);
+	git_vector_dispose(&refs);
 	free_refspecs(&specs);
-	git_vector_free(&specs);
+	git_vector_dispose(&specs);
 	return error;
 }
 
@@ -1589,7 +1589,7 @@ cleanup:
 	for (i = 0; i < fetchhead_refs.length; ++i)
 		git_fetchhead_ref_free(fetchhead_refs.contents[i]);
 
-	git_vector_free(&fetchhead_refs);
+	git_vector_dispose(&fetchhead_refs);
 	git_reference_free(head_ref);
 
 	return error;
@@ -1735,8 +1735,8 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 	}
 
 cleanup:
-	git_vector_free(&remote_refs);
-	git_vector_free_deep(&candidates);
+	git_vector_dispose(&remote_refs);
+	git_vector_dispose_deep(&candidates);
 	return error;
 }
 
@@ -1947,12 +1947,12 @@ static int update_tips_for_spec(
 		goto on_error;
 
 	git_refspec__dispose(&tagspec);
-	git_vector_free(&update_heads);
+	git_vector_dispose(&update_heads);
 	return 0;
 
 on_error:
 	git_refspec__dispose(&tagspec);
-	git_vector_free(&update_heads);
+	git_vector_dispose(&update_heads);
 	return -1;
 
 }
@@ -2123,7 +2123,7 @@ int git_remote_update_tips(
 		error = opportunistic_updates(remote, callbacks, &refs, reflog_message);
 
 out:
-	git_vector_free(&refs);
+	git_vector_dispose(&refs);
 	git_refspec__dispose(&tagspec);
 	return error;
 }
@@ -2182,19 +2182,19 @@ void git_remote_free(git_remote *remote)
 		remote->transport = NULL;
 	}
 
-	git_vector_free(&remote->refs);
+	git_vector_dispose(&remote->refs);
 
 	free_refspecs(&remote->refspecs);
-	git_vector_free(&remote->refspecs);
+	git_vector_dispose(&remote->refspecs);
 
 	free_refspecs(&remote->active_refspecs);
-	git_vector_free(&remote->active_refspecs);
+	git_vector_dispose(&remote->active_refspecs);
 
 	free_refspecs(&remote->passive_refspecs);
-	git_vector_free(&remote->passive_refspecs);
+	git_vector_dispose(&remote->passive_refspecs);
 
 	free_heads(&remote->local_heads);
-	git_vector_free(&remote->local_heads);
+	git_vector_dispose(&remote->local_heads);
 
 	git_push_free(remote->push);
 	git__free(remote->url);
@@ -2237,7 +2237,7 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 		cfg, "^remote\\..*\\.(push)?url$", remote_list_cb, &list);
 
 	if (error < 0) {
-		git_vector_free_deep(&list);
+		git_vector_dispose_deep(&list);
 		return error;
 	}
 
@@ -2518,7 +2518,7 @@ static int rename_fetch_refspecs(git_vector *problems, git_remote *remote, const
 		git_vector_foreach(problems, i, str)
 			git__free(str);
 
-		git_vector_free(problems);
+		git_vector_dispose(problems);
 	}
 
 	return error;
@@ -2558,7 +2558,7 @@ int git_remote_rename(git_strarray *out, git_repository *repo, const char *name,
 
 cleanup:
 	if (error < 0)
-		git_vector_free(&problem_refspecs);
+		git_vector_dispose(&problem_refspecs);
 
 	git_remote_free(remote);
 	return error;
@@ -2665,7 +2665,7 @@ static int copy_refspecs(git_strarray *array, const git_remote *remote, unsigned
 	return 0;
 
 on_error:
-	git_vector_free_deep(&refspecs);
+	git_vector_dispose_deep(&refspecs);
 
 	return -1;
 }
@@ -2813,7 +2813,7 @@ cleanup:
 	git_vector_foreach(&refs, i, dup) {
 		git__free(dup);
 	}
-	git_vector_free(&refs);
+	git_vector_dispose(&refs);
 	return error;
 }
 

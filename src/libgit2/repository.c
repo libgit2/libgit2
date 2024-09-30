@@ -2107,7 +2107,7 @@ int git_repository__set_extensions(const char **extensions, size_t len)
 
 void git_repository__free_extensions(void)
 {
-	git_vector_free_deep(&user_extensions);
+	git_vector_dispose_deep(&user_extensions);
 }
 
 int git_repository_create_head(const char *git_dir, const char *ref_name)

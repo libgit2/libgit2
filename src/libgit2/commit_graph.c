@@ -730,7 +730,7 @@ void git_commit_graph_writer_free(git_commit_graph_writer *w)
 
 	git_vector_foreach (&w->commits, i, packed_commit)
 		packed_commit_free(packed_commit);
-	git_vector_free(&w->commits);
+	git_vector_dispose(&w->commits);
 	git_str_dispose(&w->objects_info_dir);
 	git__free(w);
 }

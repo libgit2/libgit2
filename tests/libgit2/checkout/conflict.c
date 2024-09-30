@@ -1141,5 +1141,5 @@ void test_checkout_conflict__report_progress(void)
 	git_vector_foreach(&paths, i, path)
 		git__free(path);
 
-	git_vector_free(&paths);
+	git_vector_dispose(&paths);
 }

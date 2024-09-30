@@ -231,6 +231,6 @@ void test_graph_reachable_from_any__exhaustive(void)
 	git_vector_foreach (&mc.commits, child_idx, child_commit)
 		git_commit_free(child_commit);
 	git_bitvec_free(&reachable);
-	git_vector_free(&mc.commits);
+	git_vector_dispose(&mc.commits);
 	git_odb_free(mc.db);
 }

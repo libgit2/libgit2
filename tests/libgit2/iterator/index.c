@@ -627,7 +627,7 @@ void test_iterator_index__pathlist(void)
 	}
 
 	git_index_free(index);
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_index__pathlist_with_dirs(void)
@@ -728,7 +728,7 @@ void test_iterator_index__pathlist_with_dirs(void)
 	}
 
 	git_index_free(index);
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_index__pathlist_with_dirs_include_trees(void)
@@ -759,7 +759,7 @@ void test_iterator_index__pathlist_with_dirs_include_trees(void)
 	git_iterator_free(i);
 
 	git_index_free(index);
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_index__pathlist_1(void)
@@ -799,7 +799,7 @@ void test_iterator_index__pathlist_1(void)
 	git_iterator_free(i);
 
 	git_index_free(index);
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_index__pathlist_2(void)
@@ -841,7 +841,7 @@ void test_iterator_index__pathlist_2(void)
 	git_iterator_free(i);
 
 	git_index_free(index);
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_index__pathlist_four(void)
@@ -883,7 +883,7 @@ void test_iterator_index__pathlist_four(void)
 	git_iterator_free(i);
 
 	git_index_free(index);
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_index__pathlist_icase(void)
@@ -946,7 +946,7 @@ void test_iterator_index__pathlist_icase(void)
 
 	cl_git_pass(git_index_set_caps(index, caps));
 	git_index_free(index);
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_index__pathlist_with_directory(void)
@@ -973,7 +973,7 @@ void test_iterator_index__pathlist_with_directory(void)
 
 	git_index_free(index);
 	git_tree_free(tree);
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 static void create_paths(git_index *index, const char *root, int depth)
@@ -1131,7 +1131,7 @@ void test_iterator_index__pathlist_for_deeply_nested_item(void)
 	}
 
 	git_index_free(index);
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_index__advance_over(void)

@@ -547,7 +547,7 @@ static int git_treebuilder__write_with_buffer(
 		error = git_odb_write(oid, odb, buf->ptr, buf->size, GIT_OBJECT_TREE);
 
 out:
-	git_vector_free(&entries);
+	git_vector_dispose(&entries);
 
 	return error;
 }
@@ -1312,7 +1312,7 @@ cleanup:
 
 	git_str_dispose(&component);
 	git_array_clear(stack);
-	git_vector_free(&entries);
+	git_vector_dispose(&entries);
 	return error;
 }
 

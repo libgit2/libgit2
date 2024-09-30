@@ -24,12 +24,12 @@ void record_callbacks_data_clear(record_callbacks_data *data)
 	git_vector_foreach(&data->updated_tips, i, tip)
 		updated_tip_free(tip);
 
-	git_vector_free(&data->updated_tips);
+	git_vector_dispose(&data->updated_tips);
 
 	git_vector_foreach(&data->statuses, i, status)
 		push_status_free(status);
 
-	git_vector_free(&data->statuses);
+	git_vector_dispose(&data->statuses);
 
 	data->pack_progress_calls = 0;
 	data->transfer_progress_calls = 0;

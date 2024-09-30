@@ -78,8 +78,8 @@ static void config_free(git_config *config)
 		git__free(entry);
 	}
 
-	git_vector_free(&config->readers);
-	git_vector_free(&config->writers);
+	git_vector_dispose(&config->readers);
+	git_vector_dispose(&config->writers);
 	git__free(config);
 }
 

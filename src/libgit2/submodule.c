@@ -668,7 +668,7 @@ int git_submodule_foreach(
 done:
 	git_vector_foreach(&snapshot, i, sm)
 		git_submodule_free(sm);
-	git_vector_free(&snapshot);
+	git_vector_dispose(&snapshot);
 
 	git_strmap_foreach_value(submodules, sm, {
 		git_submodule_free(sm);
@@ -1338,11 +1338,11 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 	/* Get the status of the submodule to determine if it is already initialized  */
 	if ((error = git_submodule_status(&submodule_status, sm->repo, sm->name, GIT_SUBMODULE_IGNORE_UNSPECIFIED)) < 0)
 		goto done;
-	
+
 	/* If the submodule is configured but hasn't been added, skip it */
 	if (submodule_status == GIT_SUBMODULE_STATUS_IN_CONFIG)
 	        goto done;
-	
+
 	/*
 	 * If submodule work dir is not already initialized, check to see
 	 * what we need to do (initialize, clone, return error...)

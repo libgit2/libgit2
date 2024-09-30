@@ -801,7 +801,7 @@ static void refdb_fs_backend__iterator_free(git_reference_iterator *_iter)
 {
 	refdb_fs_iter *iter = GIT_CONTAINER_OF(_iter, refdb_fs_iter, parent);
 
-	git_vector_free(&iter->loose);
+	git_vector_dispose(&iter->loose);
 	git_pool_clear(&iter->pool);
 	git_sortedcache_free(iter->cache);
 	git__free(iter);

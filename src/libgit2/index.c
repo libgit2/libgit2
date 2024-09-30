@@ -503,10 +503,10 @@ static void index_free(git_index *index)
 
 	git_index_clear(index);
 	git_idxmap_free(index->entries_map);
-	git_vector_free(&index->entries);
-	git_vector_free(&index->names);
-	git_vector_free(&index->reuc);
-	git_vector_free(&index->deleted);
+	git_vector_dispose(&index->entries);
+	git_vector_dispose(&index->names);
+	git_vector_dispose(&index->reuc);
+	git_vector_dispose(&index->deleted);
 
 	git__free(index->index_file_path);
 
@@ -786,10 +786,10 @@ static int truncate_racily_clean(git_index *index)
 	diff_opts.pathspec.count = paths.length;
 	diff_opts.pathspec.strings = (char **)paths.contents;
 
-    	if ((error = git_diff_index_to_workdir(&diff, INDEX_OWNER(index), index, &diff_opts)) < 0) {
-        	git_vector_free(&paths);
-        	return error;
-    	}
+	if ((error = git_diff_index_to_workdir(&diff, INDEX_OWNER(index), index, &diff_opts)) < 0) {
+		git_vector_dispose(&paths);
+		return error;
+	}
 
 	git_vector_foreach(&diff->deltas, i, delta) {
 		entry = (git_index_entry *)git_index_get_bypath(index, delta->old_file.path, 0);
@@ -805,7 +805,7 @@ static int truncate_racily_clean(git_index *index)
 
 done:
 	git_diff_free(diff);
-	git_vector_free(&paths);
+	git_vector_dispose(&paths);
 	return 0;
 }
 
@@ -3091,7 +3091,7 @@ static int write_entries(git_index *index, git_filebuf *file)
 	}
 
 done:
-	git_vector_free(&case_sorted);
+	git_vector_dispose(&case_sorted);
 	return error;
 }
 
@@ -3414,7 +3414,7 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 	index->dirty = 1;
 
 cleanup:
-	git_vector_free(&entries);
+	git_vector_dispose(&entries);
 	git_idxmap_free(entries_map);
 	if (error < 0)
 		return error;
@@ -3558,8 +3558,8 @@ static int git_index_read_iterator(
 
 done:
 	git_idxmap_free(new_entries_map);
-	git_vector_free(&new_entries);
-	git_vector_free(&remove_entries);
+	git_vector_dispose(&new_entries);
+	git_vector_dispose(&remove_entries);
 	git_iterator_free(index_iterator);
 	return error;
 }
@@ -3860,7 +3860,7 @@ int git_index_snapshot_new(git_vector *snap, git_index *index)
 
 void git_index_snapshot_release(git_vector *snap, git_index *index)
 {
-	git_vector_free(snap);
+	git_vector_dispose(snap);
 
 	git_atomic32_dec(&index->readers);
 

@@ -911,7 +911,7 @@ void test_iterator_tree__pathlist(void)
 	expect_iterator_items(i, expect, NULL, expect, NULL);
 	git_iterator_free(i);
 
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 	git_tree_free(tree);
 }
 
@@ -968,7 +968,7 @@ void test_iterator_tree__pathlist_icase(void)
 	expect_iterator_items(i, 2, NULL, 2, NULL);
 	git_iterator_free(i);
 
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 	git_tree_free(tree);
 }
 
@@ -1021,7 +1021,7 @@ void test_iterator_tree__pathlist_with_directory(void)
 	git_iterator_free(i);
 
 	git_tree_free(tree);
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_tree__pathlist_with_directory_include_tree_nodes(void)
@@ -1050,7 +1050,7 @@ void test_iterator_tree__pathlist_with_directory_include_tree_nodes(void)
 	git_iterator_free(i);
 
 	git_tree_free(tree);
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 
 void test_iterator_tree__pathlist_no_match(void)
@@ -1075,6 +1075,6 @@ void test_iterator_tree__pathlist_no_match(void)
 	git_iterator_free(i);
 
 	git_tree_free(tree);
-	git_vector_free(&filelist);
+	git_vector_dispose(&filelist);
 }
 

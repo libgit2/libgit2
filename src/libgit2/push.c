@@ -56,22 +56,22 @@ int git_push_new(git_push **out, git_remote *remote, const git_push_options *opt
 	}
 
 	if (git_vector_init(&p->status, 0, push_status_ref_cmp) < 0) {
-		git_vector_free(&p->specs);
+		git_vector_dispose(&p->specs);
 		git__free(p);
 		return -1;
 	}
 
 	if (git_vector_init(&p->updates, 0, NULL) < 0) {
-		git_vector_free(&p->status);
-		git_vector_free(&p->specs);
+		git_vector_dispose(&p->status);
+		git_vector_dispose(&p->specs);
 		git__free(p);
 		return -1;
 	}
 
 	if (git_vector_init(&p->remote_push_options, 0, git__strcmp_cb) < 0) {
-		git_vector_free(&p->status);
-		git_vector_free(&p->specs);
-		git_vector_free(&p->updates);
+		git_vector_dispose(&p->status);
+		git_vector_dispose(&p->specs);
+		git_vector_dispose(&p->updates);
 		git__free(p);
 		return -1;
 	}
@@ -568,24 +568,24 @@ void git_push_free(git_push *push)
 	git_vector_foreach(&push->specs, i, spec) {
 		free_refspec(spec);
 	}
-	git_vector_free(&push->specs);
+	git_vector_dispose(&push->specs);
 
 	git_vector_foreach(&push->status, i, status) {
 		git_push_status_free(status);
 	}
-	git_vector_free(&push->status);
+	git_vector_dispose(&push->status);
 
 	git_vector_foreach(&push->updates, i, update) {
 		git__free(update->src_refname);
 		git__free(update->dst_refname);
 		git__free(update);
 	}
-	git_vector_free(&push->updates);
+	git_vector_dispose(&push->updates);
 
 	git_vector_foreach(&push->remote_push_options, i, option) {
 		git__free(option);
 	}
-	git_vector_free(&push->remote_push_options);
+	git_vector_dispose(&push->remote_push_options);
 
 	git__free(push);
 }

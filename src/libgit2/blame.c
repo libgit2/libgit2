@@ -165,9 +165,9 @@ void git_blame_free(git_blame *blame)
 
 	git_vector_foreach(&blame->hunks, i, hunk)
 		free_hunk(hunk);
-	git_vector_free(&blame->hunks);
+	git_vector_dispose(&blame->hunks);
 
-	git_vector_free_deep(&blame->paths);
+	git_vector_dispose_deep(&blame->paths);
 
 	git_array_clear(blame->line_index);
 

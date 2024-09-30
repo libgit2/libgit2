@@ -76,7 +76,7 @@ int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp)
 	return 0;
 }
 
-void git_vector_free(git_vector *v)
+void git_vector_dispose(git_vector *v)
 {
 	if (!v)
 		return;
@@ -88,7 +88,7 @@ void git_vector_free(git_vector *v)
 	v->_alloc_size = 0;
 }
 
-void git_vector_free_deep(git_vector *v)
+void git_vector_dispose_deep(git_vector *v)
 {
 	size_t i;
 
@@ -100,7 +100,7 @@ void git_vector_free_deep(git_vector *v)
 		v->contents[i] = NULL;
 	}
 
-	git_vector_free(v);
+	git_vector_dispose(v);
 }
 
 int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp)

@@ -1351,7 +1351,7 @@ int git_pack_foreach_entry(
 				git_vector_insert(&oids, (void*)&current[4]);
 		}
 
-		git_vector_free(&offsets);
+		git_vector_dispose(&offsets);
 		p->ids = (unsigned char **)git_vector_detach(NULL, NULL, &oids);
 	}
 

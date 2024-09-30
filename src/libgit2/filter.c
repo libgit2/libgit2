@@ -239,7 +239,7 @@ static void git_filter_global_shutdown(void)
 		git__free(fdef);
 	}
 
-	git_vector_free(&filter_registry.filters);
+	git_vector_dispose(&filter_registry.filters);
 
 	git_rwlock_wrunlock(&filter_registry.lock);
 	git_rwlock_free(&filter_registry.lock);
@@ -1106,7 +1106,7 @@ static void filter_streams_free(git_vector *streams)
 
 	git_vector_foreach(streams, i, stream)
 		stream->free(stream);
-	git_vector_free(streams);
+	git_vector_dispose(streams);
 }
 
 int git_filter_list_stream_file(

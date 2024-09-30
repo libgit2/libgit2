@@ -1456,7 +1456,7 @@ void git_indexer_free(git_indexer *idx)
 	if (idx->have_stream)
 		git_packfile_stream_dispose(&idx->stream);
 
-	git_vector_free_deep(&idx->objects);
+	git_vector_dispose_deep(&idx->objects);
 
 	if (idx->pack->idx_cache) {
 		struct git_pack_entry *pentry;
@@ -1467,7 +1467,7 @@ void git_indexer_free(git_indexer *idx)
 		git_oidmap_free(idx->pack->idx_cache);
 	}
 
-	git_vector_free_deep(&idx->deltas);
+	git_vector_dispose_deep(&idx->deltas);
 
 	git_packfile_free(idx->pack, !idx->pack_committed);
 
