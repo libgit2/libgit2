@@ -40,20 +40,25 @@
  */
 #define LIBGIT2_SOVERSION      "1.8"
 
-/* 
- * LIBGIT2_VERSION_CHECK:
- * This macro can be used to compare against a specific libgit2 version.
- * It takes the major, minor, and patch version as parameters.
- * 
- * Usage Example:
- * 
- *   #if LIBGIT2_VERSION_CHECK(1, 7, 0) >= LIBGIT2_VERSION_NUMBER
- *     // This code will only compile if libgit2 version is >= 1.7.0
- *   #endif
+/**
+ * An integer value representing the libgit2 version number. For example,
+ * libgit2 1.6.3 is 1060300.
  */
-#define LIBGIT2_VER_CHECK(major, minor, patch)    ((major<<16)|(minor<<8)|(patch))
+#define LIBGIT2_VERSION_NUMBER (    \
+    (LIBGIT2_VER_MAJOR * 1000000) + \
+    (LIBGIT2_VER_MINOR * 10000) +   \
+    (LIBGIT2_VER_REVISION * 100))
 
-/* Macro to get the current version as a single integer */
-#define LIBGIT2_VER_NUMBER LIBGIT2_VERSION_CHECK(LIBGIT2_VER_MAJOR, LIBGIT2_VER_MINOR, LIBGIT2_VER_PATCH)
+/**
+ * Compare the libgit2 version against a given version. Evaluates to true
+ * if the given major, minor, and revision values are greater than or equal
+ * to the currently running libgit2 version. For example:
+ *
+ *  #if LIBGIT2_VERSION_CHECK(1, 6, 3)
+ *  # error libgit2 version is >= 1.6.3
+ *  #endif
+ */
+#define LIBGIT2_VERSION_CHECK(major, minor, revision) \
+	(LIBGIT2_VERSION_NUMBER >= ((major)*1000000)+((minor)*10000)+((revision)*100))
 
 #endif
