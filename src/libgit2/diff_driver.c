@@ -11,11 +11,11 @@
 
 #include "common.h"
 #include "diff.h"
-#include "strmap.h"
 #include "map.h"
 #include "config.h"
 #include "regexp.h"
 #include "repository.h"
+#include "userdiff.h"
 
 typedef enum {
 	DIFF_DRIVER_AUTO = 0,
@@ -43,10 +43,10 @@ struct git_diff_driver {
 	char name[GIT_FLEX_ARRAY];
 };
 
-#include "userdiff.h"
+GIT_HASHMAP_STR_SETUP(git_diff_driver_map, git_diff_driver *);
 
 struct git_diff_driver_registry {
-	git_strmap *drivers;
+	git_diff_driver_map map;
 };
 
 #define FORCE_DIFFABLE (GIT_DIFF_FORCE_TEXT | GIT_DIFF_FORCE_BINARY)
@@ -57,28 +57,21 @@ static git_diff_driver diff_driver_text =   { DIFF_DRIVER_TEXT,   GIT_DIFF_FORCE
 
 git_diff_driver_registry *git_diff_driver_registry_new(void)
 {
-	git_diff_driver_registry *reg =
-		git__calloc(1, sizeof(git_diff_driver_registry));
-	if (!reg)
-		return NULL;
-
-	if (git_strmap_new(&reg->drivers) < 0) {
-		git_diff_driver_registry_free(reg);
-		return NULL;
-	}
-
-	return reg;
+	return git__calloc(1, sizeof(git_diff_driver_registry));
 }
 
 void git_diff_driver_registry_free(git_diff_driver_registry *reg)
 {
 	git_diff_driver *drv;
+	git_hashmap_iter_t iter = 0;
 
 	if (!reg)
 		return;
 
-	git_strmap_foreach_value(reg->drivers, drv, git_diff_driver_free(drv));
-	git_strmap_free(reg->drivers);
+	while (git_diff_driver_map_iterate(&iter, NULL, &drv, &reg->map) == 0)
+		git_diff_driver_free(drv);
+
+	git_diff_driver_map_dispose(&reg->map);
 	git__free(reg);
 }
 
@@ -215,7 +208,7 @@ static int git_diff_driver_builtin(
 	    (error = git_regexp_compile(&drv->word_pattern, ddef->words, ddef->flags)) < 0)
 		goto done;
 
-	if ((error = git_strmap_set(reg->drivers, drv->name, drv)) < 0)
+	if ((error = git_diff_driver_map_put(&reg->map, drv->name, drv)) < 0)
 		goto done;
 
 done:
@@ -242,7 +235,7 @@ static int git_diff_driver_load(
 	if ((reg = git_repository_driver_registry(repo)) == NULL)
 		return -1;
 
-	if ((drv = git_strmap_get(reg->drivers, driver_name)) != NULL) {
+	if (git_diff_driver_map_get(&drv, &reg->map, driver_name) == 0) {
 		*out = drv;
 		return 0;
 	}
@@ -331,7 +324,7 @@ static int git_diff_driver_load(
 		goto done;
 
 	/* store driver in registry */
-	if ((error = git_strmap_set(reg->drivers, drv->name, drv)) < 0)
+	if ((error = git_diff_driver_map_put(&reg->map, drv->name, drv)) < 0)
 		goto done;
 
 	*out = drv;

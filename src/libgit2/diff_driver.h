@@ -11,13 +11,13 @@
 
 #include "attr_file.h"
 #include "str.h"
+#include "hashmap.h"
 
+typedef struct git_diff_driver git_diff_driver;
 typedef struct git_diff_driver_registry git_diff_driver_registry;
 
 git_diff_driver_registry *git_diff_driver_registry_new(void);
 void git_diff_driver_registry_free(git_diff_driver_registry *);
-
-typedef struct git_diff_driver git_diff_driver;
 
 int git_diff_driver_lookup(git_diff_driver **, git_repository *,
 	git_attr_session *attrsession, const char *);
