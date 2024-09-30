@@ -11,19 +11,19 @@
  * The version string for libgit2.  This string follows semantic
  * versioning (v2) guidelines.
  */
-#define LIBGIT2_VERSION        "1.8.2"
+#define LIBGIT2_VERSION           "1.8.2"
 
 /** The major version number for this version of libgit2. */
-#define LIBGIT2_VER_MAJOR      1
+#define LIBGIT2_VERSION_MAJOR      1
 
 /** The minor version number for this version of libgit2. */
-#define LIBGIT2_VER_MINOR      8
+#define LIBGIT2_VERSION_MINOR      8
 
 /** The revision ("teeny") version number for this version of libgit2. */
-#define LIBGIT2_VER_REVISION   2
+#define LIBGIT2_VERSION_REVISION   2
 
 /** The Windows DLL patch number for this version of libgit2. */
-#define LIBGIT2_VER_PATCH      0
+#define LIBGIT2_VERSION_PATCH      0
 
 /**
  * The prerelease string for this version of libgit2.  For development
@@ -31,23 +31,23 @@
  * a prerelease name like "beta" or "rc1".  For final releases, this will
  * be `NULL`.
  */
-#define LIBGIT2_VER_PRERELEASE NULL
+#define LIBGIT2_VERSION_PRERELEASE NULL
 
 /**
  * The library ABI soversion for this version of libgit2. This should
  * only be changed when the library has a breaking ABI change, and so
  * may trail the library's version number.
  */
-#define LIBGIT2_SOVERSION      "1.8"
+#define LIBGIT2_SOVERSION         "1.8"
 
 /**
  * An integer value representing the libgit2 version number. For example,
  * libgit2 1.6.3 is 1060300.
  */
 #define LIBGIT2_VERSION_NUMBER (    \
-    (LIBGIT2_VER_MAJOR * 1000000) + \
-    (LIBGIT2_VER_MINOR * 10000) +   \
-    (LIBGIT2_VER_REVISION * 100))
+    (LIBGIT2_VERSION_MAJOR * 1000000) + \
+    (LIBGIT2_VERSION_MINOR * 10000) +   \
+    (LIBGIT2_VERSION_REVISION * 100))
 
 /**
  * Compare the libgit2 version against a given version. Evaluates to true

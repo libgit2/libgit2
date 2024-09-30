@@ -5,9 +5,9 @@ void test_core_features__0(void)
 	int major, minor, rev, caps;
 
 	git_libgit2_version(&major, &minor, &rev);
-	cl_assert_equal_i(LIBGIT2_VER_MAJOR, major);
-	cl_assert_equal_i(LIBGIT2_VER_MINOR, minor);
-	cl_assert_equal_i(LIBGIT2_VER_REVISION, rev);
+	cl_assert_equal_i(LIBGIT2_VERSION_MAJOR, major);
+	cl_assert_equal_i(LIBGIT2_VERSION_MINOR, minor);
+	cl_assert_equal_i(LIBGIT2_VERSION_REVISION, rev);
 
 	caps = git_libgit2_features();
 

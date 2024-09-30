@@ -66,16 +66,16 @@ int git_libgit2_shutdown(void)
 
 int git_libgit2_version(int *major, int *minor, int *rev)
 {
-	*major = LIBGIT2_VER_MAJOR;
-	*minor = LIBGIT2_VER_MINOR;
-	*rev = LIBGIT2_VER_REVISION;
+	*major = LIBGIT2_VERSION_MAJOR;
+	*minor = LIBGIT2_VERSION_MINOR;
+	*rev = LIBGIT2_VERSION_REVISION;
 
 	return 0;
 }
 
 const char *git_libgit2_prerelease(void)
 {
-	return LIBGIT2_VER_PRERELEASE;
+	return LIBGIT2_VERSION_PRERELEASE;
 }
 
 int git_libgit2_features(void)
