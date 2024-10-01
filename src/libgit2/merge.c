@@ -1143,7 +1143,7 @@ typedef struct {
 	size_t first_entry;
 } deletes_by_oid_queue;
 
-GIT_HASHMAP_SETUP(git_merge_deletes_oidmap, const git_oid *, deletes_by_oid_queue *, git_oid_hash32, git_oid_equal);
+GIT_HASHMAP_OID_SETUP(git_merge_deletes_oidmap, deletes_by_oid_queue *);
 
 static void deletes_by_oid_dispose(git_merge_deletes_oidmap *map)
 {

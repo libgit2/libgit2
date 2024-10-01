@@ -14,8 +14,9 @@
 #include "git2/revparse.h"
 #include "merge.h"
 #include "vector.h"
+#include "hashmap_oid.h"
 
-GIT_HASHMAP_FUNCTIONS(git_revwalk_oidmap, GIT_HASHMAP_INLINE, const git_oid *, git_commit_list_node *, git_oid_hash32, git_oid_equal);
+GIT_HASHMAP_OID_FUNCTIONS(git_revwalk_oidmap, GIT_HASHMAP_INLINE, git_commit_list_node *);
 
 static int get_revision(git_commit_list_node **out, git_revwalk *walk, git_commit_list **list);
 

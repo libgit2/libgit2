@@ -28,7 +28,7 @@ struct memobject {
 	char data[GIT_FLEX_ARRAY];
 };
 
-GIT_HASHMAP_SETUP(git_odb_mempack_oidmap, const git_oid *, struct memobject *, git_oid_hash32, git_oid_equal);
+GIT_HASHMAP_OID_SETUP(git_odb_mempack_oidmap, struct memobject *);
 
 struct memory_packer_db {
 	git_odb_backend parent;

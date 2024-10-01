@@ -21,7 +21,7 @@
 #include "tag.h"
 #include "vector.h"
 #include "wildmatch.h"
-#include "hashmap.h"
+#include "hashmap_oid.h"
 
 /* Ported from https://github.com/git/git/blob/89dde7882f71f846ccd0359756d27bebc31108de/builtin/describe.c */
 
@@ -36,7 +36,7 @@ struct commit_name {
 	git_oid peeled;
 };
 
-GIT_HASHMAP_SETUP(git_describe_oidmap, const git_oid *, struct commit_name *, git_oid_hash32, git_oid_equal);
+GIT_HASHMAP_OID_SETUP(git_describe_oidmap, struct commit_name *);
 
 static struct commit_name *find_commit_name(
 	git_describe_oidmap *names,

@@ -14,9 +14,9 @@
 #include "pqueue.h"
 #include "pool.h"
 #include "vector.h"
-#include "hashmap.h"
+#include "hashmap_oid.h"
 
-GIT_HASHMAP_STRUCT(git_revwalk_oidmap, const git_oid *, git_commit_list_node *);
+GIT_HASHMAP_OID_STRUCT(git_revwalk_oidmap, git_commit_list_node *);
 
 struct git_revwalk {
 	git_repository *repo;

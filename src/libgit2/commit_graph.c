@@ -839,7 +839,7 @@ enum generation_number_commit_state {
 	GENERATION_NUMBER_COMMIT_STATE_VISITED = 3
 };
 
-GIT_HASHMAP_SETUP(git_commit_graph_oidmap, const git_oid *, struct packed_commit *, git_oid_hash32, git_oid_equal);
+GIT_HASHMAP_OID_SETUP(git_commit_graph_oidmap, struct packed_commit *);
 
 static int compute_generation_numbers(git_vector *commits)
 {

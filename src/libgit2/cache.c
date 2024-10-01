@@ -14,9 +14,9 @@
 #include "odb.h"
 #include "object.h"
 #include "git2/oid.h"
-#include "hashmap.h"
+#include "hashmap_oid.h"
 
-GIT_HASHMAP_FUNCTIONS(git_cache_oidmap, GIT_HASHMAP_INLINE, const git_oid *, git_cached_obj *, git_oid_hash32, git_oid_equal);
+GIT_HASHMAP_OID_FUNCTIONS(git_cache_oidmap, GIT_HASHMAP_INLINE, git_cached_obj *);
 
 bool git_cache__enabled = true;
 ssize_t git_cache__max_storage = (256 * 1024 * 1024);

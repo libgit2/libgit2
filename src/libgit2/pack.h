@@ -18,6 +18,7 @@
 #include "odb.h"
 #include "zstream.h"
 #include "oid.h"
+#include "hashmap_oid.h"
 
 /**
  * Function type for callbacks from git_pack_foreach_entry_offset.
@@ -89,8 +90,8 @@ struct git_pack_entry {
 
 GIT_HASHMAP_STRUCT(git_pack_offsetmap, off64_t, git_pack_cache_entry *);
 
-GIT_HASHMAP_STRUCT(git_pack_oidmap, const git_oid *, struct git_pack_entry *);
-GIT_HASHMAP_PROTOTYPES(git_pack_oidmap, const git_oid *, struct git_pack_entry *);
+GIT_HASHMAP_OID_STRUCT(git_pack_oidmap, struct git_pack_entry *);
+GIT_HASHMAP_OID_PROTOTYPES(git_pack_oidmap, struct git_pack_entry *);
 
 typedef struct {
 	size_t memory_used;

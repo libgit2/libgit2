@@ -11,9 +11,9 @@
 #include "oid.h"
 #include "oidarray.h"
 #include "parse.h"
-#include "hashmap.h"
+#include "hashmap_oid.h"
 
-GIT_HASHMAP_SETUP(git_grafts_oidmap, const git_oid *, git_commit_graft *, git_oid_hash32, git_oid_equal);
+GIT_HASHMAP_OID_SETUP(git_grafts_oidmap, git_commit_graft *);
 
 struct git_grafts {
 	/* Map of `git_commit_graft`s */

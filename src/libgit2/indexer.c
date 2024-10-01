@@ -22,13 +22,13 @@
 #include "oidarray.h"
 #include "zstream.h"
 #include "object.h"
-#include "hashmap.h"
+#include "hashmap_oid.h"
 
 size_t git_indexer__max_objects = UINT32_MAX;
 
 #define UINT31_MAX (0x7FFFFFFF)
 
-GIT_HASHMAP_SETUP(git_indexer_oidmap, const git_oid *, git_oid *, git_oid_hash32, git_oid_equal);
+GIT_HASHMAP_OID_SETUP(git_indexer_oidmap, git_oid *);
 
 struct entry {
 	git_oid oid;

@@ -64,8 +64,8 @@ struct walk_object {
 /* Size of the buffer to feed to zlib */
 #define COMPRESS_BUFLEN (1024 * 1024)
 
-GIT_HASHMAP_FUNCTIONS(git_packbuilder_pobjectmap, GIT_HASHMAP_INLINE, const git_oid *, git_pobject *, git_oid_hash32, git_oid_equal);
-GIT_HASHMAP_FUNCTIONS(git_packbuilder_walk_objectmap, GIT_HASHMAP_INLINE, const git_oid *, struct walk_object *, git_oid_hash32, git_oid_equal);
+GIT_HASHMAP_OID_FUNCTIONS(git_packbuilder_pobjectmap, GIT_HASHMAP_INLINE, git_pobject *);
+GIT_HASHMAP_OID_FUNCTIONS(git_packbuilder_walk_objectmap, GIT_HASHMAP_INLINE, struct walk_object *);
 
 static unsigned name_hash(const char *name)
 {

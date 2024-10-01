@@ -13,6 +13,7 @@
 #include "odb.h"
 #include "oid.h"
 #include "oidarray.h"
+#include "hashmap_oid.h"
 
 /* Option to bypass checking existence of '.keep' files */
 bool git_disable_pack_keep_file_checks = false;
@@ -45,7 +46,7 @@ static int pack_entry_find_offset(
 #define off64_equal(a, b) ((a) == (b))
 
 GIT_HASHMAP_FUNCTIONS(git_pack_offsetmap, GIT_HASHMAP_INLINE, off64_t, git_pack_cache_entry *, off64_hash, off64_equal);
-GIT_HASHMAP_FUNCTIONS(git_pack_oidmap, , const git_oid *, struct git_pack_entry *, git_oid_hash32, git_oid_equal);
+GIT_HASHMAP_OID_FUNCTIONS(git_pack_oidmap, , struct git_pack_entry *);
 
 static int packfile_error(const char *message)
 {

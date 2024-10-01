@@ -14,7 +14,7 @@
 #include "git2/odb.h"
 
 #include "thread.h"
-#include "hashmap.h"
+#include "hashmap_oid.h"
 
 enum {
 	GIT_CACHE_STORE_ANY = 0,
@@ -30,7 +30,7 @@ typedef struct {
 	git_atomic32 refcount;
 } git_cached_obj;
 
-GIT_HASHMAP_STRUCT(git_cache_oidmap, const git_oid *, git_cached_obj *);
+GIT_HASHMAP_OID_STRUCT(git_cache_oidmap, git_cached_obj *);
 
 typedef struct {
 	git_cache_oidmap map;
