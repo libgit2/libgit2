@@ -283,6 +283,7 @@ static int queue_objects(git_push *push)
 
 	git_vector_foreach(&push->specs, i, spec) {
 		git_object_t type;
+		git_oid id;
 		size_t size;
 
 		if (git_oid_is_zero(&spec->loid))
@@ -304,20 +305,20 @@ static int queue_objects(git_push *push)
 			if ((error = enqueue_tag(&target, push, &spec->loid)) < 0)
 				goto on_error;
 
-			if (git_object_type(target) == GIT_OBJECT_COMMIT) {
-				if ((error = git_revwalk_push(rw, git_object_id(target))) < 0) {
-					git_object_free(target);
-					goto on_error;
-				}
-			} else {
-				if ((error = git_packbuilder_insert(
-					push->pb, git_object_id(target), NULL)) < 0) {
-					git_object_free(target);
-					goto on_error;
-				}
-			}
+			type = git_object_type(target);
+			git_oid_cpy(&id, git_object_id(target));
+
 			git_object_free(target);
-		} else if ((error = git_revwalk_push(rw, &spec->loid)) < 0)
+		} else {
+			git_oid_cpy(&id, &spec->loid);
+		}
+
+		if (type == GIT_OBJECT_COMMIT)
+			error = git_revwalk_push(rw, &id);
+		else
+			error = git_packbuilder_insert(push->pb, &id, NULL);
+
+		if (error < 0)
 			goto on_error;
 
 		if (!spec->refspec.force) {
