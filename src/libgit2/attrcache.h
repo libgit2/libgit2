@@ -10,7 +10,6 @@
 #include "common.h"
 
 #include "attr_file.h"
-#include "strmap.h"
 
 #define GIT_ATTR_CONFIG       "core.attributesfile"
 #define GIT_IGNORE_CONFIG     "core.excludesfile"
