@@ -12,10 +12,11 @@
 
 #include "str.h"
 #include "hash.h"
-#include "oidmap.h"
 #include "zstream.h"
 #include "pool.h"
 #include "indexer.h"
+#include "oidmap.h"
+#include "hashmap.h"
 
 #include "git2/oid.h"
 #include "git2/pack.h"
@@ -51,6 +52,8 @@ typedef struct git_pobject {
 	             filled:1;
 } git_pobject;
 
+GIT_HASHMAP_STRUCT(git_packbuilder_pobjectmap, const git_oid *, git_pobject *);
+
 struct git_packbuilder {
 	git_repository *repo; /* associated repository */
 	git_odb *odb; /* associated object database */
@@ -69,7 +72,7 @@ struct git_packbuilder {
 
 	git_pobject *object_list;
 
-	git_oidmap *object_ix;
+	git_packbuilder_pobjectmap object_ix;
 
 	git_oidmap *walk_objects;
 	git_pool object_pool;

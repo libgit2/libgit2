@@ -64,6 +64,8 @@ struct walk_object {
 /* Size of the buffer to feed to zlib */
 #define COMPRESS_BUFLEN (1024 * 1024)
 
+GIT_HASHMAP_FUNCTIONS(git_packbuilder_pobjectmap, GIT_HASHMAP_INLINE, const git_oid *, git_pobject *, git_oid_hash32, git_oid_equal);
+
 static unsigned name_hash(const char *name)
 {
 	unsigned c, hash = 0;
@@ -139,8 +141,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	hash_algorithm = git_oid_algorithm(pb->oid_type);
 	GIT_ASSERT(hash_algorithm);
 
-	if (git_oidmap_new(&pb->object_ix) < 0 ||
-	    git_oidmap_new(&pb->walk_objects) < 0 ||
+	if (git_oidmap_new(&pb->walk_objects) < 0 ||
 	    git_pool_init(&pb->object_pool, sizeof(struct walk_object)) < 0)
 		goto on_error;
 
@@ -192,10 +193,10 @@ static int rehash(git_packbuilder *pb)
 	git_pobject *po;
 	size_t i;
 
-	git_oidmap_clear(pb->object_ix);
+	git_packbuilder_pobjectmap_clear(&pb->object_ix);
 
 	for (i = 0, po = pb->object_list; i < pb->nr_objects; i++, po++) {
-		if (git_oidmap_set(pb->object_ix, &po->id, po) < 0)
+		if (git_packbuilder_pobjectmap_put(&pb->object_ix, &po->id, po) < 0)
 			return -1;
 	}
 
@@ -214,7 +215,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 
 	/* If the object already exists in the hash table, then we don't
 	 * have any work to do */
-	if (git_oidmap_exists(pb->object_ix, oid))
+	if (git_packbuilder_pobjectmap_contains(&pb->object_ix, oid))
 		return 0;
 
 	if (pb->nr_objects >= pb->nr_alloc) {
@@ -246,7 +247,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	git_oid_cpy(&po->id, oid);
 	po->hash = name_hash(name);
 
-	if (git_oidmap_set(pb->object_ix, &po->id, po) < 0) {
+	if (git_packbuilder_pobjectmap_put(&pb->object_ix, &po->id, po) < 0) {
 		git_error_set_oom();
 		return -1;
 	}
@@ -515,7 +516,7 @@ static int cb_tag_foreach(const char *name, git_oid *oid, void *data)
 
 	GIT_UNUSED(name);
 
-	if ((po = git_oidmap_get(pb->object_ix, oid)) == NULL)
+	if (git_packbuilder_pobjectmap_get(&po, &pb->object_ix, oid) != 0)
 		return 0;
 
 	po->tagged = 1;
@@ -1843,8 +1844,7 @@ void git_packbuilder_free(git_packbuilder *pb)
 	if (pb->odb)
 		git_odb_free(pb->odb);
 
-	if (pb->object_ix)
-		git_oidmap_free(pb->object_ix);
+	git_packbuilder_pobjectmap_dispose(&pb->object_ix);
 
 	if (pb->object_list)
 		git__free(pb->object_list);
