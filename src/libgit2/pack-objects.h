@@ -15,7 +15,6 @@
 #include "zstream.h"
 #include "pool.h"
 #include "indexer.h"
-#include "oidmap.h"
 #include "hashmap.h"
 
 #include "git2/oid.h"
@@ -52,7 +51,10 @@ typedef struct git_pobject {
 	             filled:1;
 } git_pobject;
 
+typedef struct walk_object walk_object;
+
 GIT_HASHMAP_STRUCT(git_packbuilder_pobjectmap, const git_oid *, git_pobject *);
+GIT_HASHMAP_STRUCT(git_packbuilder_walk_objectmap, const git_oid *, walk_object *);
 
 struct git_packbuilder {
 	git_repository *repo; /* associated repository */
@@ -73,8 +75,7 @@ struct git_packbuilder {
 	git_pobject *object_list;
 
 	git_packbuilder_pobjectmap object_ix;
-
-	git_oidmap *walk_objects;
+	git_packbuilder_walk_objectmap walk_objects;
 	git_pool object_pool;
 
 #ifndef GIT_DEPRECATE_HARD

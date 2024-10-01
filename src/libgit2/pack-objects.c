@@ -65,6 +65,7 @@ struct walk_object {
 #define COMPRESS_BUFLEN (1024 * 1024)
 
 GIT_HASHMAP_FUNCTIONS(git_packbuilder_pobjectmap, GIT_HASHMAP_INLINE, const git_oid *, git_pobject *, git_oid_hash32, git_oid_equal);
+GIT_HASHMAP_FUNCTIONS(git_packbuilder_walk_objectmap, GIT_HASHMAP_INLINE, const git_oid *, struct walk_object *, git_oid_hash32, git_oid_equal);
 
 static unsigned name_hash(const char *name)
 {
@@ -141,8 +142,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	hash_algorithm = git_oid_algorithm(pb->oid_type);
 	GIT_ASSERT(hash_algorithm);
 
-	if (git_oidmap_new(&pb->walk_objects) < 0 ||
-	    git_pool_init(&pb->object_pool, sizeof(struct walk_object)) < 0)
+	if (git_pool_init(&pb->object_pool, sizeof(struct walk_object)) < 0)
 		goto on_error;
 
 	pb->repo = repo;
@@ -1607,12 +1607,16 @@ static int retrieve_object(struct walk_object **out, git_packbuilder *pb, const 
 	struct walk_object *obj;
 	int error;
 
-	if ((obj = git_oidmap_get(pb->walk_objects, id)) == NULL) {
+	error = git_packbuilder_walk_objectmap_get(&obj, &pb->walk_objects, id);
+
+	if (error == GIT_ENOTFOUND) {
 		if ((error = lookup_walk_object(&obj, pb, id)) < 0)
 			return error;
 
-		if ((error = git_oidmap_set(pb->walk_objects, &obj->id, obj)) < 0)
+		if ((error = git_packbuilder_walk_objectmap_put(&pb->walk_objects, &obj->id, obj)) < 0)
 			return error;
+	} else if (error != 0) {
+		return error;
 	}
 
 	*out = obj;
@@ -1849,7 +1853,7 @@ void git_packbuilder_free(git_packbuilder *pb)
 	if (pb->object_list)
 		git__free(pb->object_list);
 
-	git_oidmap_free(pb->walk_objects);
+	git_packbuilder_walk_objectmap_dispose(&pb->walk_objects);
 	git_pool_clear(&pb->object_pool);
 
 	git_hash_ctx_cleanup(&pb->ctx);
