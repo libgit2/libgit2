@@ -41,6 +41,8 @@ static int pack_entry_find_offset(
 		const git_oid *short_oid,
 		size_t len);
 
+GIT_HASHMAP_FUNCTIONS(git_pack_oidmap, , const git_oid *, struct git_pack_entry *, git_oid_hash32, git_oid_equal);
+
 static int packfile_error(const char *message)
 {
 	git_error_set(GIT_ERROR_ODB, "invalid pack file - %s", message);
@@ -1009,7 +1011,7 @@ int get_delta_base(
 		if (p->has_cache) {
 			struct git_pack_entry *entry;
 
-			if ((entry = git_oidmap_get(p->idx_cache, &base_oid)) != NULL) {
+			if (git_pack_oidmap_get(&entry, &p->idx_cache, &base_oid) == 0) {
 				if (entry->offset == 0)
 					return packfile_error("delta offset is zero");
 

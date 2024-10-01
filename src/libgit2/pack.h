@@ -83,6 +83,12 @@ typedef git_array_t(struct pack_chain_elem) git_dependency_chain;
 #define GIT_PACK_CACHE_MEMORY_LIMIT 16 * 1024 * 1024
 #define GIT_PACK_CACHE_SIZE_LIMIT 1024 * 1024 /* don't bother caching anything over 1MB */
 
+struct git_pack_entry {
+	off64_t offset;
+	git_oid id;
+	struct git_pack_file *p;
+};
+
 typedef struct {
 	size_t memory_used;
 	size_t memory_limit;
@@ -90,6 +96,9 @@ typedef struct {
 	git_mutex lock;
 	git_offmap *entries;
 } git_pack_cache;
+
+GIT_HASHMAP_STRUCT(git_pack_oidmap, const git_oid *, struct git_pack_entry *);
+GIT_HASHMAP_PROTOTYPES(git_pack_oidmap, const git_oid *, struct git_pack_entry *);
 
 struct git_pack_file {
 	git_mwindow_file mwf;
@@ -110,7 +119,8 @@ struct git_pack_file {
 
 	int index_version;
 	git_time_t mtime;
-	git_oidmap *idx_cache;
+
+	git_pack_oidmap idx_cache;
 	unsigned char **ids;
 
 	git_pack_cache bases; /* delta base cache */
@@ -138,12 +148,6 @@ int git_pack__lookup_id(
 	unsigned hi,
 	const unsigned char *id_prefix,
 	const git_oid_t oid_type);
-
-struct git_pack_entry {
-	off64_t offset;
-	git_oid id;
-	struct git_pack_file *p;
-};
 
 typedef struct git_packfile_stream {
 	off64_t curpos;
