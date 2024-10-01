@@ -16,8 +16,6 @@
 #include "map.h"
 #include "mwindow.h"
 #include "odb.h"
-#include "offmap.h"
-#include "oidmap.h"
 #include "zstream.h"
 #include "oid.h"
 
@@ -89,16 +87,18 @@ struct git_pack_entry {
 	struct git_pack_file *p;
 };
 
+GIT_HASHMAP_STRUCT(git_pack_offsetmap, off64_t, git_pack_cache_entry *);
+
+GIT_HASHMAP_STRUCT(git_pack_oidmap, const git_oid *, struct git_pack_entry *);
+GIT_HASHMAP_PROTOTYPES(git_pack_oidmap, const git_oid *, struct git_pack_entry *);
+
 typedef struct {
 	size_t memory_used;
 	size_t memory_limit;
 	size_t use_ctr;
 	git_mutex lock;
-	git_offmap *entries;
+	git_pack_offsetmap entries;
 } git_pack_cache;
-
-GIT_HASHMAP_STRUCT(git_pack_oidmap, const git_oid *, struct git_pack_entry *);
-GIT_HASHMAP_PROTOTYPES(git_pack_oidmap, const git_oid *, struct git_pack_entry *);
 
 struct git_pack_file {
 	git_mwindow_file mwf;
