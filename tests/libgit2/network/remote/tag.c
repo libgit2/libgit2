@@ -33,7 +33,7 @@ void test_network_remote_tag__cleanup(void)
  * Create one commit, one tree, one blob.
  * Create two tags: one for the commit, one for the blob.
  */
-void create_commit_with_tags(git_reference **out, git_oid *out_commit_tag_id, git_oid *out_blob_tag_id, git_repository *repo)
+static void create_commit_with_tags(git_reference **out, git_oid *out_commit_tag_id, git_oid *out_blob_tag_id, git_repository *repo)
 {
 	git_treebuilder *treebuilder;
 	git_oid blob_id, tree_id, commit_id;
@@ -53,11 +53,12 @@ void create_commit_with_tags(git_reference **out, git_oid *out_commit_tag_id, gi
 
 	cl_git_pass(git_object_lookup(&target, repo, &commit_id, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_tag_create_lightweight(out_commit_tag_id, repo, "tagged-commit", target, true));
+	git_object_free(target);
 
 	cl_git_pass(git_object_lookup(&target, repo, &blob_id, GIT_OBJECT_BLOB));
 	cl_git_pass(git_tag_create_lightweight(out_blob_tag_id, repo, "tagged-blob", target, true));
-
 	git_object_free(target);
+
 	git_treebuilder_free(treebuilder);
 	git_signature_free(sig);
 }
