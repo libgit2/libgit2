@@ -47,7 +47,7 @@ int git_sortedcache_new(
 
 fail:
 	git_strmap_free(sc->map);
-	git_vector_free(&sc->items);
+	git_vector_dispose(&sc->items);
 	git_pool_clear(&sc->pool);
 	git__free(sc);
 	return -1;
@@ -88,7 +88,7 @@ static void sortedcache_free(git_sortedcache *sc)
 		return;
 
 	sortedcache_clear(sc);
-	git_vector_free(&sc->items);
+	git_vector_dispose(&sc->items);
 	git_strmap_free(sc->map);
 
 	git_sortedcache_wunlock(sc);

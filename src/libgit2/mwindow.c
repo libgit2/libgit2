@@ -152,7 +152,7 @@ static int git_mwindow_free_all_locked(git_mwindow_file *mwf)
 	}
 
 	if (ctl->windowfiles.length == 0) {
-		git_vector_free(&ctl->windowfiles);
+		git_vector_dispose(&ctl->windowfiles);
 		ctl->windowfiles.contents = NULL;
 	}
 
@@ -505,7 +505,7 @@ int git_mwindow_file_register(git_mwindow_file *mwf)
 	}
 
 cleanup:
-	git_vector_free(&closed_files);
+	git_vector_dispose(&closed_files);
 	return error;
 }
 

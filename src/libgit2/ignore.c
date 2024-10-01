@@ -428,13 +428,13 @@ void git_ignore__free(git_ignores *ignores)
 		git_attr_file__free(file);
 		ignores->ign_path.contents[i] = NULL;
 	}
-	git_vector_free(&ignores->ign_path);
+	git_vector_dispose(&ignores->ign_path);
 
 	git_vector_foreach(&ignores->ign_global, i, file) {
 		git_attr_file__free(file);
 		ignores->ign_global.contents[i] = NULL;
 	}
-	git_vector_free(&ignores->ign_global);
+	git_vector_dispose(&ignores->ign_global);
 
 	git_str_dispose(&ignores->dir);
 }

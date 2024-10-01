@@ -243,7 +243,7 @@ int git_graph_reachable_from_any(
 
 done:
 	git_commit_list_free(&result);
-	git_vector_free(&list);
+	git_vector_dispose(&list);
 	git_revwalk_free(walk);
 	return error;
 }

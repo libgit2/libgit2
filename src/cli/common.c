@@ -105,7 +105,7 @@ done:
 	if (error && backend)
 		backend->free(backend);
 	git_config_free(config);
-	git_vector_free_deep(&cmdline);
+	git_vector_dispose_deep(&cmdline);
 	return error;
 }
 

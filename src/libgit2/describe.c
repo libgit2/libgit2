@@ -627,7 +627,7 @@ cleanup:
 			git__free(match);
 		}
 	}
-	git_vector_free(&all_matches);
+	git_vector_dispose(&all_matches);
 	git_pqueue_free(&list);
 	git_revwalk_free(walk);
 	return error;

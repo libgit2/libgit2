@@ -203,7 +203,7 @@ int git_transport_unregister(const char *scheme)
 			git__free(d);
 
 			if (!custom_transports.length)
-				git_vector_free(&custom_transports);
+				git_vector_dispose(&custom_transports);
 
 			error = 0;
 			goto done;
