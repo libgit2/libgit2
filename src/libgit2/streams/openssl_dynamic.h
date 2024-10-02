@@ -326,6 +326,7 @@ extern int (*X509_NAME_get_index_by_NID)(X509_NAME *name, int nid, int lastpos);
 extern void (*X509_free)(X509 *a);
 extern void *(*X509_get_ext_d2i)(const X509 *x, int nid, int *crit, int *idx);
 extern X509_NAME *(*X509_get_subject_name)(const X509 *x);
+extern int (*X509_STORE_add_cert)(X509_STORE *ctx, X509 *x);
 
 extern int (*i2d_X509)(X509 *a, unsigned char **ppout);
 

@@ -80,6 +80,7 @@ int (*X509_NAME_get_index_by_NID)(X509_NAME *name, int nid, int lastpos);
 void (*X509_free)(X509 *a);
 void *(*X509_get_ext_d2i)(const X509 *x, int nid, int *crit, int *idx);
 X509_NAME *(*X509_get_subject_name)(const X509 *x);
+int (*X509_STORE_add_cert)(X509_STORE *ctx, X509 *x);
 
 int (*i2d_X509)(X509 *a, unsigned char **ppout);
 
@@ -209,6 +210,7 @@ int git_openssl_stream_dynamic_init(void)
 	X509_free = (void (*)(X509 *))openssl_sym(&err, "X509_free", true);
 	X509_get_ext_d2i = (void *(*)(const X509 *x, int nid, int *crit, int *idx))openssl_sym(&err, "X509_get_ext_d2i", true);
 	X509_get_subject_name = (X509_NAME *(*)(const X509 *))openssl_sym(&err, "X509_get_subject_name", true);
+	X509_STORE_add_cert = (int (*)(X509_STORE *ctx, X509 *x))openssl_sym(&err, "X509_STORE_add_cert", true);
 
 	i2d_X509 = (int (*)(X509 *a, unsigned char **ppout))openssl_sym(&err, "i2d_X509", true);
 

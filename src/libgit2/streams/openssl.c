@@ -722,6 +722,30 @@ int git_openssl__set_cert_location(const char *file, const char *path)
 	return 0;
 }
 
+int git_openssl__add_x509_cert(X509 *cert)
+{
+	X509_STORE *cert_store;
+
+	if (openssl_ensure_initialized() < 0)
+		return -1;
+
+	if (!(cert_store = SSL_CTX_get_cert_store(git__ssl_ctx)))
+		return -1;
+
+	if (cert && X509_STORE_add_cert(cert_store, cert) == 0) {
+		git_error_set(GIT_ERROR_SSL, "OpenSSL error: failed to add raw X509 certificate");
+		return -1;
+	}
+
+	return 0;
+}
+
+int git_openssl__reset_context(void)
+{
+	shutdown_ssl();
+	return openssl_init();
+}
+
 #else
 
 #include "stream.h"
