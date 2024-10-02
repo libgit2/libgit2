@@ -13,7 +13,6 @@
 #include "repository.h"
 #include "odb.h"
 #include "vector.h"
-#include "strmap.h"
 #include "pool.h"
 
 struct git_tree_entry {
@@ -29,9 +28,11 @@ struct git_tree {
 	git_array_t(git_tree_entry) entries;
 };
 
+GIT_HASHMAP_STR_STRUCT(git_treebuilder_entrymap, git_tree_entry *);
+
 struct git_treebuilder {
 	git_repository *repo;
-	git_strmap *map;
+	git_treebuilder_entrymap map;
 	git_str write_cache;
 };
 

@@ -14,7 +14,7 @@
 #include "vector.h"
 #include "thread.h"
 #include "pool.h"
-#include "strmap.h"
+#include "hashmap_str.h"
 
 #include <stddef.h>
 
@@ -36,7 +36,7 @@ typedef struct {
 	void         *free_item_payload;
 	git_pool     pool;
 	git_vector   items;
-	git_strmap   *map;
+	git_hashmap_str map;
 	git_futils_filestamp stamp;
 	char         path[GIT_FLEX_ARRAY];
 } git_sortedcache;
@@ -163,7 +163,7 @@ GIT_WARN_UNUSED_RESULT int git_sortedcache_rlock(git_sortedcache *sc);
 void git_sortedcache_runlock(git_sortedcache *sc);
 
 /* Lookup item by key - returns NULL if not found */
-void *git_sortedcache_lookup(const git_sortedcache *sc, const char *key);
+void *git_sortedcache_lookup(git_sortedcache *sc, const char *key);
 
 /* Get how many items are in the cache
  *

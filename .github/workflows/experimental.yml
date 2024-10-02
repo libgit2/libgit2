@@ -48,10 +48,10 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (SHA256, amd64, Visual Studio)"
           id: windows-sha256
-          os: windows-2019
+          os: windows-2022
           env:
             ARCH: amd64
-            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_GENERATOR: Visual Studio 17 2022
             CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true

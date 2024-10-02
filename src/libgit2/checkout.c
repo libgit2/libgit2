@@ -30,8 +30,8 @@
 #include "fs_path.h"
 #include "attr.h"
 #include "pool.h"
-#include "strmap.h"
 #include "path.h"
+#include "hashmap_str.h"
 
 /* See docs/checkout-internals.md for more information */
 
@@ -72,7 +72,7 @@ typedef struct {
 	size_t total_steps;
 	size_t completed_steps;
 	git_checkout_perfdata perfdata;
-	git_strmap *mkdir_map;
+	git_hashset_str mkdir_pathcache;
 	git_attr_session attr_session;
 } checkout_data;
 
@@ -1419,8 +1419,10 @@ static int checkout_mkdir(
 	struct git_futils_mkdir_options mkdir_opts = {0};
 	int error;
 
-	mkdir_opts.dir_map = data->mkdir_map;
-	mkdir_opts.pool = &data->pool;
+	if (git_pool_is_initialized(&data->pool)) {
+		mkdir_opts.cache_pool = &data->pool;
+		mkdir_opts.cache_pathset = &data->mkdir_pathcache;
+	}
 
 	error = git_futils_mkdir_relative(
 		path, base, mode, flags, &mkdir_opts);
@@ -2331,8 +2333,7 @@ static void checkout_data_clear(checkout_data *data)
 	git_index_free(data->index);
 	data->index = NULL;
 
-	git_strmap_free(data->mkdir_map);
-	data->mkdir_map = NULL;
+	git_hashset_str_dispose(&data->mkdir_pathcache);
 
 	git_attr_session__free(&data->attr_session);
 }
@@ -2513,8 +2514,7 @@ static int checkout_data_init(
 	    (error = git_vector_init(&data->remove_conflicts, 0, NULL)) < 0 ||
 	    (error = git_vector_init(&data->update_conflicts, 0, NULL)) < 0 ||
 	    (error = git_str_puts(&data->target_path, data->opts.target_directory)) < 0 ||
-	    (error = git_fs_path_to_dir(&data->target_path)) < 0 ||
-	    (error = git_strmap_new(&data->mkdir_map)) < 0)
+	    (error = git_fs_path_to_dir(&data->target_path)) < 0)
 		goto cleanup;
 
 	data->target_len = git_str_len(&data->target_path);

@@ -8,7 +8,6 @@
 #include "transaction.h"
 
 #include "repository.h"
-#include "strmap.h"
 #include "refdb.h"
 #include "pool.h"
 #include "reflog.h"
@@ -44,6 +43,8 @@ typedef struct {
 		remove :1;
 } transaction_node;
 
+GIT_HASHMAP_STR_SETUP(git_transaction_nodemap, transaction_node *);
+
 struct git_transaction {
 	transaction_t type;
 	git_repository *repo;
@@ -51,7 +52,7 @@ struct git_transaction {
 	git_config *cfg;
 	void *cfg_data;
 
-	git_strmap *locks;
+	git_transaction_nodemap locks;
 	git_pool pool;
 };
 
@@ -94,11 +95,6 @@ int git_transaction_new(git_transaction **out, git_repository *repo)
 		goto on_error;
 	}
 
-	if ((error = git_strmap_new(&tx->locks)) < 0) {
-		error = -1;
-		goto on_error;
-	}
-
 	if ((error = git_repository_refdb(&tx->db, repo)) < 0)
 		goto on_error;
 
@@ -130,7 +126,7 @@ int git_transaction_lock_ref(git_transaction *tx, const char *refname)
 	if ((error = git_refdb_lock(&node->payload, tx->db, refname)) < 0)
 		return error;
 
-	if ((error = git_strmap_set(tx->locks, node->name, node)) < 0)
+	if ((error = git_transaction_nodemap_put(&tx->locks, node->name, node)) < 0)
 		goto cleanup;
 
 	return 0;
@@ -144,8 +140,11 @@ cleanup:
 static int find_locked(transaction_node **out, git_transaction *tx, const char *refname)
 {
 	transaction_node *node;
+	int error;
 
-	if ((node = git_strmap_get(tx->locks, refname)) == NULL) {
+	error = git_transaction_nodemap_get(&node, &tx->locks, refname);
+
+	if (error != 0) {
 		git_error_set(GIT_ERROR_REFERENCE, "the specified reference is not locked");
 		return GIT_ENOTFOUND;
 	}
@@ -334,6 +333,7 @@ static int update_target(git_refdb *db, transaction_node *node)
 int git_transaction_commit(git_transaction *tx)
 {
 	transaction_node *node;
+	git_hashmap_iter_t iter = GIT_HASHMAP_ITER_INIT;
 	int error = 0;
 
 	GIT_ASSERT_ARG(tx);
@@ -346,7 +346,7 @@ int git_transaction_commit(git_transaction *tx)
 		return error;
 	}
 
-	git_strmap_foreach_value(tx->locks, node, {
+	while (git_transaction_nodemap_iterate(&iter, NULL, &node, &tx->locks) == 0) {
 		if (node->reflog) {
 			if ((error = tx->db->backend->reflog_write(tx->db->backend, node->reflog)) < 0)
 				return error;
@@ -362,7 +362,7 @@ int git_transaction_commit(git_transaction *tx)
 			if ((error = update_target(tx->db, node)) < 0)
 				return error;
 		}
-	});
+	}
 
 	return 0;
 }
@@ -371,6 +371,7 @@ void git_transaction_free(git_transaction *tx)
 {
 	transaction_node *node;
 	git_pool pool;
+	git_hashmap_iter_t iter = GIT_HASHMAP_ITER_INIT;
 
 	if (!tx)
 		return;
@@ -384,15 +385,15 @@ void git_transaction_free(git_transaction *tx)
 	}
 
 	/* start by unlocking the ones we've left hanging, if any */
-	git_strmap_foreach_value(tx->locks, node, {
+	while (git_transaction_nodemap_iterate(&iter, NULL, &node, &tx->locks) == 0) {
 		if (node->committed)
 			continue;
 
 		git_refdb_unlock(tx->db, node->payload, false, false, NULL, NULL, NULL);
-	});
+	}
 
 	git_refdb_free(tx->db);
-	git_strmap_free(tx->locks);
+	git_transaction_nodemap_dispose(&tx->locks);
 
 	/* tx is inside the pool, so we need to extract the data */
 	memcpy(&pool, &tx->pool, sizeof(git_pool));

@@ -12,6 +12,10 @@
 
 #include "map.h"
 #include "vector.h"
+#include "hashmap_str.h"
+
+GIT_HASHMAP_STR_STRUCT(git_mwindow_packmap, struct git_pack_file *);
+GIT_HASHMAP_STR_PROTOTYPES(git_mwindow_packmap, struct git_pack_file *);
 
 typedef struct git_mwindow {
 	struct git_mwindow *next;

@@ -64,6 +64,9 @@ struct walk_object {
 /* Size of the buffer to feed to zlib */
 #define COMPRESS_BUFLEN (1024 * 1024)
 
+GIT_HASHMAP_OID_FUNCTIONS(git_packbuilder_pobjectmap, GIT_HASHMAP_INLINE, git_pobject *);
+GIT_HASHMAP_OID_FUNCTIONS(git_packbuilder_walk_objectmap, GIT_HASHMAP_INLINE, struct walk_object *);
+
 static unsigned name_hash(const char *name)
 {
 	unsigned c, hash = 0;
@@ -139,9 +142,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	hash_algorithm = git_oid_algorithm(pb->oid_type);
 	GIT_ASSERT(hash_algorithm);
 
-	if (git_oidmap_new(&pb->object_ix) < 0 ||
-	    git_oidmap_new(&pb->walk_objects) < 0 ||
-	    git_pool_init(&pb->object_pool, sizeof(struct walk_object)) < 0)
+	if (git_pool_init(&pb->object_pool, sizeof(struct walk_object)) < 0)
 		goto on_error;
 
 	pb->repo = repo;
@@ -192,10 +193,10 @@ static int rehash(git_packbuilder *pb)
 	git_pobject *po;
 	size_t i;
 
-	git_oidmap_clear(pb->object_ix);
+	git_packbuilder_pobjectmap_clear(&pb->object_ix);
 
 	for (i = 0, po = pb->object_list; i < pb->nr_objects; i++, po++) {
-		if (git_oidmap_set(pb->object_ix, &po->id, po) < 0)
+		if (git_packbuilder_pobjectmap_put(&pb->object_ix, &po->id, po) < 0)
 			return -1;
 	}
 
@@ -214,7 +215,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 
 	/* If the object already exists in the hash table, then we don't
 	 * have any work to do */
-	if (git_oidmap_exists(pb->object_ix, oid))
+	if (git_packbuilder_pobjectmap_contains(&pb->object_ix, oid))
 		return 0;
 
 	if (pb->nr_objects >= pb->nr_alloc) {
@@ -246,7 +247,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	git_oid_cpy(&po->id, oid);
 	po->hash = name_hash(name);
 
-	if (git_oidmap_set(pb->object_ix, &po->id, po) < 0) {
+	if (git_packbuilder_pobjectmap_put(&pb->object_ix, &po->id, po) < 0) {
 		git_error_set_oom();
 		return -1;
 	}
@@ -515,7 +516,7 @@ static int cb_tag_foreach(const char *name, git_oid *oid, void *data)
 
 	GIT_UNUSED(name);
 
-	if ((po = git_oidmap_get(pb->object_ix, oid)) == NULL)
+	if (git_packbuilder_pobjectmap_get(&po, &pb->object_ix, oid) != 0)
 		return 0;
 
 	po->tagged = 1;
@@ -1606,12 +1607,16 @@ static int retrieve_object(struct walk_object **out, git_packbuilder *pb, const 
 	struct walk_object *obj;
 	int error;
 
-	if ((obj = git_oidmap_get(pb->walk_objects, id)) == NULL) {
+	error = git_packbuilder_walk_objectmap_get(&obj, &pb->walk_objects, id);
+
+	if (error == GIT_ENOTFOUND) {
 		if ((error = lookup_walk_object(&obj, pb, id)) < 0)
 			return error;
 
-		if ((error = git_oidmap_set(pb->walk_objects, &obj->id, obj)) < 0)
+		if ((error = git_packbuilder_walk_objectmap_put(&pb->walk_objects, &obj->id, obj)) < 0)
 			return error;
+	} else if (error != 0) {
+		return error;
 	}
 
 	*out = obj;
@@ -1843,13 +1848,12 @@ void git_packbuilder_free(git_packbuilder *pb)
 	if (pb->odb)
 		git_odb_free(pb->odb);
 
-	if (pb->object_ix)
-		git_oidmap_free(pb->object_ix);
+	git_packbuilder_pobjectmap_dispose(&pb->object_ix);
 
 	if (pb->object_list)
 		git__free(pb->object_list);
 
-	git_oidmap_free(pb->walk_objects);
+	git_packbuilder_walk_objectmap_dispose(&pb->walk_objects);
 	git_pool_clear(&pb->object_pool);
 
 	git_hash_ctx_cleanup(&pb->ctx);

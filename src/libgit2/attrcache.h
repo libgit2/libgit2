@@ -10,21 +10,17 @@
 #include "common.h"
 
 #include "attr_file.h"
-#include "strmap.h"
 
 #define GIT_ATTR_CONFIG       "core.attributesfile"
 #define GIT_IGNORE_CONFIG     "core.excludesfile"
 
-typedef struct {
-	char *cfg_attr_file; /* cached value of core.attributesfile */
-	char *cfg_excl_file; /* cached value of core.excludesfile */
-	git_strmap *files;	 /* hash path to git_attr_cache_entry records */
-	git_strmap *macros;	 /* hash name to vector<git_attr_assignment> */
-	git_mutex lock;
-	git_pool  pool;
-} git_attr_cache;
+typedef struct git_attr_cache git_attr_cache;
 
 extern int git_attr_cache__init(git_repository *repo);
+
+extern const char *git_attr_cache_attributesfile(git_attr_cache *ac);
+extern const char *git_attr_cache_excludesfile(git_attr_cache *ac);
+extern git_pool *git_attr_cache_pool(git_attr_cache *ac);
 
 /* get file - loading and reload as needed */
 extern int git_attr_cache__get(

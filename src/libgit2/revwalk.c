@@ -14,6 +14,9 @@
 #include "git2/revparse.h"
 #include "merge.h"
 #include "vector.h"
+#include "hashmap_oid.h"
+
+GIT_HASHMAP_OID_FUNCTIONS(git_revwalk_oidmap, GIT_HASHMAP_INLINE, git_commit_list_node *);
 
 static int get_revision(git_commit_list_node **out, git_revwalk *walk, git_commit_list **list);
 
@@ -23,7 +26,7 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	git_commit_list_node *commit;
 
 	/* lookup and reserve space if not already present */
-	if ((commit = git_oidmap_get(walk->commits, oid)) != NULL)
+	if (git_revwalk_oidmap_get(&commit, &walk->commits, oid) == 0)
 		return commit;
 
 	commit = git_commit_list_alloc_node(walk);
@@ -32,7 +35,7 @@ git_commit_list_node *git_revwalk__commit_lookup(
 
 	git_oid_cpy(&commit->oid, oid);
 
-	if ((git_oidmap_set(walk->commits, &commit->oid, commit)) < 0)
+	if (git_revwalk_oidmap_put(&walk->commits, &commit->oid, commit) < 0)
 		return NULL;
 
 	return commit;
@@ -623,7 +626,7 @@ static int prepare_walk(git_revwalk *walk)
 		return GIT_ITEROVER;
 	}
 
-	/* 
+	/*
 	 * This is a bit convoluted, but necessary to maintain the order of
 	 * the commits. This is especially important in situations where
 	 * git_revwalk__push_glob is called with a git_revwalk__push_options
@@ -643,13 +646,13 @@ static int prepare_walk(git_revwalk *walk)
 				git_error_set_oom();
 				return -1;
 			}
-			
+
 			commit->seen = 1;
 			if (commits_last == NULL)
 				commits = new_list;
 			else
 				commits_last->next = new_list;
-			
+
 			commits_last = new_list;
 		}
 	}
@@ -700,8 +703,7 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 	git_revwalk *walk = git__calloc(1, sizeof(git_revwalk));
 	GIT_ERROR_CHECK_ALLOC(walk);
 
-	if (git_oidmap_new(&walk->commits) < 0 ||
-	    git_pqueue_init(&walk->iterator_time, 0, 8, git_commit_list_time_cmp) < 0 ||
+	if (git_pqueue_init(&walk->iterator_time, 0, 8, git_commit_list_time_cmp) < 0 ||
 	    git_pool_init(&walk->commit_pool, COMMIT_ALLOC) < 0)
 		return -1;
 
@@ -727,7 +729,7 @@ void git_revwalk_free(git_revwalk *walk)
 	git_revwalk_reset(walk);
 	git_odb_free(walk->odb);
 
-	git_oidmap_free(walk->commits);
+	git_revwalk_oidmap_dispose(&walk->commits);
 	git_pool_clear(&walk->commit_pool);
 	git_pqueue_free(&walk->iterator_time);
 	git__free(walk);
@@ -799,17 +801,18 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 int git_revwalk_reset(git_revwalk *walk)
 {
 	git_commit_list_node *commit;
+	git_hashmap_iter_t iter = GIT_HASHMAP_ITER_INIT;
 
 	GIT_ASSERT_ARG(walk);
 
-	git_oidmap_foreach_value(walk->commits, commit, {
+	while (git_revwalk_oidmap_iterate(&iter, NULL, &commit, &walk->commits) == 0) {
 		commit->seen = 0;
 		commit->in_degree = 0;
 		commit->topo_delay = 0;
 		commit->uninteresting = 0;
 		commit->added = 0;
 		commit->flags = 0;
-		});
+	}
 
 	git_pqueue_clear(&walk->iterator_time);
 	git_commit_list_free(&walk->iterator_topo);

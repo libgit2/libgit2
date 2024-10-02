@@ -34,7 +34,6 @@
 #include "submodule.h"
 #include "worktree.h"
 #include "path.h"
-#include "strmap.h"
 
 #ifdef GIT_WIN32
 # include "win32/w32_util.h"
