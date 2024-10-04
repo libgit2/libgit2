@@ -65,6 +65,7 @@ int (*SSL_write)(SSL *ssl, const void *buf, int num);
 long (*SSL_CTX_ctrl)(SSL_CTX *ctx, int cmd, long larg, void *parg);
 void (*SSL_CTX_free)(SSL_CTX *ctx);
 SSL_CTX *(*SSL_CTX_new)(const SSL_METHOD *method);
+X509_STORE *(*SSL_CTX_get_cert_store)(const SSL_CTX *);
 int (*SSL_CTX_set_cipher_list)(SSL_CTX *ctx, const char *str);
 int (*SSL_CTX_set_default_verify_paths)(SSL_CTX *ctx);
 long (*SSL_CTX_set_options)(SSL_CTX *ctx, long options);
@@ -195,6 +196,7 @@ int git_openssl_stream_dynamic_init(void)
 	SSL_CTX_ctrl = (long (*)(SSL_CTX *, int, long, void *))openssl_sym(&err, "SSL_CTX_ctrl", true);
 	SSL_CTX_free = (void (*)(SSL_CTX *))openssl_sym(&err, "SSL_CTX_free", true);
 	SSL_CTX_new = (SSL_CTX *(*)(const SSL_METHOD *))openssl_sym(&err, "SSL_CTX_new", true);
+	SSL_CTX_get_cert_store = (X509_STORE *(*)(const SSL_CTX *))openssl_sym(&err, "SSL_CTX_get_cert_store", true);
 	SSL_CTX_set_cipher_list = (int (*)(SSL_CTX *, const char *))openssl_sym(&err, "SSL_CTX_set_cipher_list", true);
 	SSL_CTX_set_default_verify_paths = (int (*)(SSL_CTX *ctx))openssl_sym(&err, "SSL_CTX_set_default_verify_paths", true);
 	SSL_CTX_set_options = (long (*)(SSL_CTX *, long))openssl_sym(&err, "SSL_CTX_set_options", false);
