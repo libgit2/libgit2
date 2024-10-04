@@ -340,6 +340,9 @@ typedef uint32_t git_hashmap_iter_t;
 		int error = name##__put_idx(&idx, &key_exists, h, key); \
 		if (error) \
 			return error; \
+		GIT_ASSERT((h)->flags); \
+		GIT_ASSERT((h)->keys); \
+		GIT_ASSERT((h)->keys); \
 		if (!key_exists)  \
 			(h)->keys[idx] = key; \
 		(h)->vals[idx] = val; \
@@ -382,8 +385,11 @@ typedef uint32_t git_hashmap_iter_t;
 		int error = name##__put_idx(&idx, &key_exists, h, key); \
 		if (error) \
 			return error; \
-		if (!key_exists)  \
+		GIT_ASSERT((h)->flags); \
+		GIT_ASSERT((h)->keys); \
+		if (!key_exists) { \
 			(h)->keys[idx] = key; \
+		} \
 		return 0; \
 	} \
 	GIT_UNUSED_FUNCTION scope int name##_iterate(git_hashmap_iter_t *iter, key_t *key, name *h) \
