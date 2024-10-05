@@ -10,7 +10,7 @@
 #include "str.h"
 #include "streams/openssl.h"
 
-#ifdef GIT_OPENSSL
+#if (GIT_OPENSSL && !GIT_OPENSSL_DYNAMIC)
 # include <openssl/ssl.h>
 # include <openssl/err.h>
 # include <openssl/x509v3.h>
@@ -91,7 +91,7 @@ void test_online_customcert__path(void)
 
 void test_online_customcert__raw_x509(void)
 {
-#ifdef GIT_OPENSSL
+#if (GIT_OPENSSL && !GIT_OPENSSL_DYNAMIC)
 	X509* x509_cert = NULL;
 	char cwd[GIT_PATH_MAX];
 	git_str raw_file = GIT_STR_INIT,
