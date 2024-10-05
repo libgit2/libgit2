@@ -259,6 +259,8 @@ typedef uint32_t git_hashmap_iter_t;
 				return -1; \
 			} \
 		} \
+		GIT_ASSERT((h)->flags); \
+		GIT_ASSERT((h)->keys); \
 		/* TODO: to implement automatically shrinking; resize() already support shrinking */ \
 		{ \
 			uint32_t k, i, site, last, mask = h->n_buckets - 1, step = 0; \
@@ -340,9 +342,7 @@ typedef uint32_t git_hashmap_iter_t;
 		int error = name##__put_idx(&idx, &key_exists, h, key); \
 		if (error) \
 			return error; \
-		GIT_ASSERT((h)->flags); \
-		GIT_ASSERT((h)->keys); \
-		GIT_ASSERT((h)->keys); \
+		GIT_ASSERT((h)->vals); \
 		if (!key_exists)  \
 			(h)->keys[idx] = key; \
 		(h)->vals[idx] = val; \
@@ -385,8 +385,6 @@ typedef uint32_t git_hashmap_iter_t;
 		int error = name##__put_idx(&idx, &key_exists, h, key); \
 		if (error) \
 			return error; \
-		GIT_ASSERT((h)->flags); \
-		GIT_ASSERT((h)->keys); \
 		if (!key_exists) { \
 			(h)->keys[idx] = key; \
 		} \
