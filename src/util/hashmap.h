@@ -109,6 +109,7 @@ typedef uint32_t git_hashmap_iter_t;
 	{ \
 		if (h->n_buckets) { \
 			uint32_t k, i, last, mask, step = 0; \
+			GIT_ASSERT((h)->flags); \
 			mask = h->n_buckets - 1; \
 			k = __hash_fn(key); \
 			i = k & mask; \
