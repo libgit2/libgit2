@@ -11,7 +11,11 @@
 #include "hash/sha.h"
 
 #ifndef GIT_OPENSSL_DYNAMIC
-# include <openssl/sha.h>
+#ifdef GIT_SHA256_OPENSSL_FIPS
+#include <openssl/evp.h>
+#else
+#include <openssl/sha.h>
+#endif
 #else
 
 typedef struct {
@@ -39,6 +43,12 @@ struct git_hash_sha1_ctx {
 #ifdef GIT_SHA256_OPENSSL
 struct git_hash_sha256_ctx {
 	SHA256_CTX c;
+};
+#endif
+
+#ifdef GIT_SHA256_OPENSSL_FIPS
+struct git_hash_sha256_ctx {
+	EVP_MD_CTX* c;
 };
 #endif
 
