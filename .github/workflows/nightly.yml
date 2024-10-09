@@ -373,6 +373,34 @@ jobs:
             CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
+        - name: "Linux (SHA256-FIPS, Xenial, Clang, OpenSSL)"
+          id: linux-sha256-fips
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DUSE_SHA256="OpenSSL-FIPS"
+          os: ubuntu-latest
+        - name: "macOS (SHA256-FIPS)"
+          id: macos-sha256-fips
+          os: macos-13
+          setup-script: osx
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON -DUSE_SHA256="OpenSSL-FIPS"
+            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (SHA256-FIPS, amd64, Visual Studio)"
+          id: windows-sha256-fips
+          os: windows-2022
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 17 2022
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON -DUSE_SHA256="OpenSSL-FIPS"
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
       fail-fast: false
     env: ${{ matrix.platform.env }}
     runs-on: ${{ matrix.platform.os }}
