@@ -1,7 +1,11 @@
 # util: a shared library for common utility functions for libgit2 projects
 
 add_library(util OBJECT)
-set_target_properties(util PROPERTIES C_STANDARD 90)
+set(CSTD 90)
+if(C_STANDARD)
+	set(CSTD ${C_STANDARD})
+endif()
+set_target_properties(util PROPERTIES C_STANDARD ${CSTD})
 set_target_properties(util PROPERTIES C_EXTENSIONS OFF)
 
 configure_file(git2_features.h.in git2_features.h)
