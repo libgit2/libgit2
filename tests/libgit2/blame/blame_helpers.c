@@ -18,7 +18,7 @@ void check_blame_hunk_index(git_repository *repo, git_blame *blame, int idx,
 		size_t start_line, size_t len, char boundary, const char *commit_id, const char *orig_path)
 {
 	char expected[GIT_OID_SHA1_HEXSIZE+1] = {0}, actual[GIT_OID_SHA1_HEXSIZE+1] = {0};
-	const git_blame_hunk *hunk = git_blame_get_hunk_byindex(blame, idx);
+	const git_blame_hunk *hunk = git_blame_hunk_byindex(blame, idx);
 	cl_assert(hunk);
 
 	if (!strncmp(commit_id, "0000", 4)) {
