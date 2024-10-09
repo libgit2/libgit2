@@ -25,7 +25,7 @@ foreach(fuzz_target_src ${SRC_FUZZERS})
 	target_include_directories(${fuzz_target_name} PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
 	target_include_directories(${fuzz_target_name} SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
 
-	target_link_libraries(${fuzz_target_name} ${LIBGIT2_SYSTEM_LIBS})
+	target_link_libraries(${fuzz_target_name} ${LIBGIT2_SYSTEM_LIBS} libgit2)
 
 	add_test(${fuzz_target_name} "${CMAKE_CURRENT_BINARY_DIR}/${fuzz_target_name}" "${CMAKE_CURRENT_SOURCE_DIR}/corpora/${fuzz_name}")
 endforeach()

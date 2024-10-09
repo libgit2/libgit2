@@ -7,7 +7,10 @@ find_path(LIBSSH2_INCLUDE_DIR libssh2.h)
 find_library(LIBSSH2_LIBRARY NAMES ssh2 libssh2)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(LibSSH2
-	REQUIRED_VARS LIBSSH2_LIBRARY LIBSSH2_INCLUDE_DIR)
+find_package_handle_standard_args(LibSSH2 REQUIRED_VARS LIBSSH2_LIBRARY LIBSSH2_INCLUDE_DIR)
 
 mark_as_advanced(LIBSSH2_INCLUDE_DIR LIBSSH2_LIBRARY)
+
+add_library(libssh2 IMPORTED UNKNOWN)
+set_property(TARGET libssh2 PROPERTY IMPORTED_LOCATION ${LIBSSH2_LIBRARY})
+set_property(TARGET libssh2 PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${LIBSSH2_INCLUDE_DIR}")
