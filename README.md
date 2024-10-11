@@ -10,26 +10,23 @@ libgit2 - the Git linkable library
 
 `libgit2` is a portable, pure C implementation of the Git core methods
 provided as a linkable library with a solid API, allowing to build Git
-functionality into your application.  Language bindings like
-[Rugged](https://github.com/libgit2/rugged) (Ruby),
-[LibGit2Sharp](https://github.com/libgit2/libgit2sharp) (.NET),
-[pygit2](http://www.pygit2.org/) (Python) and
-[NodeGit](http://nodegit.org) (Node) allow you to build Git tooling
-in your favorite language.
+functionality into your application.
 
-`libgit2` is used to power Git GUI clients like
-[GitKraken](https://gitkraken.com/) and [GitButler](https://gitbutler.com/)
-and on Git hosting providers like [GitHub](https://github.com/),
-[GitLab](https://gitlab.com/) and
-[Azure DevOps](https://azure.com/devops).
-We perform the merge every time you click "merge pull request".
+`libgit2` is used in a variety of places, from GUI clients to hosting
+providers ("forges") and countless utilities and applications in
+between. Because it's written in C, it can be made available to any
+other programming language through "bindings", so you can use it in
+[Ruby](https://github.com/libgit2/rugged),
+[.NET](https://github.com/libgit2/libgit2sharp),
+[Python](http://www.pygit2.org/),
+[Node.js](http://nodegit.org),
+[Rust](https://github.com/rust-lang/git2-rs), and more.
 
-`libgit2` is licensed under a **very permissive license** (GPLv2 with a special
-Linking Exception). This means that you can link against the library with any
-kind of software without making that software fall under the GPL.
-Changes to libgit2 would still be covered under its GPL license.
-Additionally, the example code has been released to the public domain (see the
-[separate license](examples/COPYING) for more information).
+`libgit2` is licensed under a **very permissive license** (GPLv2 with
+a special Linking Exception). This means that you can link against
+the library with any kind of software without making that software
+fall under the GPL. Changes to libgit2 would still be covered under
+its GPL license.
 
 Table of Contents
 =================
@@ -93,8 +90,8 @@ Quick Start
 
 **Build**
 
-1. Create a build directory beneath the libgit2 source directory, and change
-   into it: `mkdir build && cd build`
+1. Create a build directory beneath the libgit2 source directory,
+   and change into it: `mkdir build && cd build`
 2. Create the cmake build environment: `cmake ..`
 3. Build libgit2: `cmake --build .`
 
@@ -108,22 +105,24 @@ Getting Help
 
 - via IRC: join [#libgit2](https://web.libera.chat/#libgit2) on
   [libera](https://libera.chat).
-- via Slack: visit [slack.libgit2.org](http://slack.libgit2.org/) to sign up,
-  then join us in `#libgit2`
+- via Slack: visit [slack.libgit2.org](http://slack.libgit2.org/)
+  to sign up, then join us in `#libgit2`
 
 **Getting Help**
 
 If you have questions about the library, please be sure to check out the
 [API documentation](https://libgit2.org/libgit2/).  If you still have
 questions, reach out to us on Slack or post a question on 
-[StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) (with the `libgit2` tag).
+[StackOverflow](http://stackoverflow.com/questions/tagged/libgit2)
+(with the `libgit2` tag).
 
 **Reporting Bugs**
 
-Please open a [GitHub Issue](https://github.com/libgit2/libgit2/issues) and
-include as much information as possible.  If possible, provide sample code
-that illustrates the problem you're seeing.  If you're seeing a bug only
-on a specific repository, please provide a link to it if possible.
+Please open a [GitHub Issue](https://github.com/libgit2/libgit2/issues)
+and include as much information as possible.  If possible, provide
+sample code that illustrates the problem you're seeing.  If you're
+seeing a bug only on a specific repository, please provide a link to
+it if possible.
 
 We ask that you not open a GitHub Issue for help, only for bug reports.
 
@@ -138,10 +137,10 @@ libgit2 provides you with the ability to manage Git repositories in the
 programming language of your choice.  It's used in production to power many
 applications including GitHub.com, Plastic SCM and Azure DevOps.
 
-It does not aim to replace the git tool or its user-facing commands. Some APIs
-resemble the plumbing commands as those align closely with the concepts of the
-Git system, but most commands a user would type are out of scope for this
-library to implement directly.
+It does not aim to replace the git tool or its user-facing commands. Some
+APIs resemble the plumbing commands as those align closely with the
+concepts of the Git system, but most commands a user would type are out
+of scope for this library to implement directly.
 
 The library provides:
 
@@ -161,23 +160,31 @@ The library provides:
 As libgit2 is purely a consumer of the Git system, we have to
 adjust to changes made upstream. This has two major consequences:
 
-* Some changes may require us to change provided interfaces. While we try to
-  implement functions in a generic way so that no future changes are required,
-  we cannot promise a completely stable API.
-* As we have to keep up with changes in behavior made upstream, we may lag
-  behind in some areas. We usually to document these incompatibilities in our
-  issue tracker with the label "git change".
+* Some changes may require us to change provided interfaces. While
+  we try to implement functions in a generic way so that no future
+  changes are required, we cannot promise a completely stable API.
+* As we have to keep up with changes in behavior made upstream, we
+  may lag behind in some areas. We usually to document these
+  incompatibilities in our issue tracker with the label "git change".
 
 Optional dependencies
 =====================
 
-While the library provides git functionality without the need for
-dependencies, it can make use of a few libraries to add to it:
+While the library provides git functionality with very few
+dependencies, some recommended dependencies are used for performance
+or complete functionality.
 
-- pthreads (non-Windows) to enable threadsafe access as well as multi-threaded pack generation
-- OpenSSL (non-Windows) to talk over HTTPS and provide the SHA-1 functions
-- LibSSH2 to enable the SSH transport
-- iconv (OSX) to handle the HFS+ path encoding peculiarities
+- Hash generation: Git uses SHA1DC (collision detecting SHA1) for
+  its default hash generation. SHA256 support is experimental, and
+  optimized support is provided by system libraries on macOS and
+  Windows, or by the HTTPS library on Unix systems when available.
+- Threading: is provided by the system libraries on Windows, and
+  pthreads on Unix systems.
+- HTTPS: is provided by the system libraries on macOS and Windows,
+  or by OpenSSL or mbedTLS on other Unix systems.
+- SSH: is provided by [libssh2](https://libssh2.org/) or by invoking
+  [OpenSSH](https://www.openssh.com).
+- Unicode: is provided by the system libraries on Windows and macOS.
 
 Initialization
 ===============
@@ -212,12 +219,9 @@ Building libgit2 - Using CMake
 Building
 --------
 
-`libgit2` builds cleanly on most platforms without any external dependencies.
-Under Unix-like systems, like Linux, \*BSD and Mac OS X, libgit2 expects `pthreads` to be available;
-they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
-for threading.
-
-The `libgit2` library is built using [CMake](<https://cmake.org/>) (version 2.8 or newer) on all platforms.
+`libgit2` builds cleanly on most platforms without any external
+dependencies as a requirement. `libgit2` is built using
+[CMake](<https://cmake.org/>) (version 2.8 or newer) on all platforms.
 
 On most systems you can build the library using the following commands
 
@@ -225,13 +229,79 @@ On most systems you can build the library using the following commands
 	$ cmake ..
 	$ cmake --build .
 
-To include the examples in the build, use `cmake -DBUILD_EXAMPLES=True ..` instead of `cmake ..`.
-
-The built executable for the examples can then be found in `build/examples`, relative to the toplevel directory.
+To include the examples in the build, use `cmake -DBUILD_EXAMPLES=ON ..`
+instead of `cmake ..`. The built executable for the examples can then
+be found in `build/examples`, relative to the toplevel directory.
 
 Alternatively you can point the CMake GUI tool to the CMakeLists.txt file and generate platform specific build project or IDE workspace.
 
 If you're not familiar with CMake, [a more detailed explanation](https://preshing.com/20170511/how-to-build-a-cmake-based-project/) may be helpful.
+
+Advanced Options
+----------------
+
+You can specify a number of options to `cmake` that will change the
+way `libgit2` is built. To use this, specify `-Doption=value` during
+the initial `cmake` configuration. For example, to enable SHA256
+compatibility:
+
+	$ mkdir build && cd build
+	$ cmake -DEXPERIMENTAL_SHA256=ON ..
+	$ cmake --build .
+
+libgit2 options:
+
+* `EXPERIMENTAL_SHA256=ON`: turns on SHA256 compatibility; note that
+  this is an API-incompatible change, hence why it is labeled
+  "experimental"
+
+Build options:
+
+* `BUILD_EXAMPLES=ON`: builds the suite of example code
+* `BUILD_FUZZERS=ON`: builds the fuzzing suite
+* `ENABLE_WERROR=ON`: build with `-Werror` or the equivalent, which turns
+  compiler warnings into errors in the libgit2 codebase (but not its
+  dependencies)
+
+Dependency options:
+
+* `USE_SSH=type`: enables SSH support; `type` can be set to `libssh2`
+  or `exec` (which will execute an external OpenSSH command)
+* `USE_HTTPS=type`: enables HTTPS support; `type` can be set to
+  `OpenSSL`, `mbedTLS`, `SecureTransport`, `Schannel`, or `WinHTTP`;
+  the default is `SecureTransport` on macOS, `WinHTTP` on Windows, and
+  whichever of `OpenSSL` or `mbedTLS` is detected on other platforms.
+* `USE_SHA1=type`: selects the SHA1 mechanism to use; `type` can be set
+  to `CollisionDetection` (default), or `HTTPS` to use the HTTPS
+  driver specified above as the hashing provider.
+* `USE_SHA256=type`: selects the SHA256 mechanism to use; `type` can be
+  set to `HTTPS` (default) to use the HTTPS driver specified above as
+  the hashing provider, or `Builtin`.
+* `USE_GSSAPI=<on/off>`: enables GSSAPI for SPNEGO authentication on
+  Unix
+* `USE_HTTP_PARSER=type`: selects the HTTP Parser; either `http-parser`
+  for an external
+  [`http-parser`](https://github.com/nodejs/http-parser) dependency,
+  `llhttp` for an external [`llhttp`](https://github.com/nodejs/llhttp)
+  dependency, or `builtin`
+* `REGEX_BACKEND=type`: selects the regular expression backend to use;
+  one of `regcomp_l`, `pcre2`, `pcre`, `regcomp`, or `builtin`.
+* `USE_BUNDLED_ZLIB=type`: selects the zlib dependency to use; one of
+  `bundled` or `Chromium`.
+
+Locating Dependencies
+---------------------
+
+The `libgit2` project uses `cmake` since it helps with cross-platform
+projects, especially those with many dependencies. If your dependencies
+are in non-standard places, you may want to use the `_ROOT_DIR` options
+to specify their location. For example, to specify an OpenSSL location:
+
+	$ cmake -DOPENSSL_ROOT_DIR=/tmp/openssl-3.3.2 ..
+
+Since these options are general to CMake, their
+[documentation](https://cmake.org/documentation/) may be helpful. If
+you have questions about dependencies, please [contact us](#getting-help).
 
 Running Tests
 -------------
@@ -248,12 +318,13 @@ Invoking the test suite directly is useful because it allows you to execute
 individual tests, or groups of tests using the `-s` flag.  For example, to
 run the index tests:
 
-    $ ./libgit2_tests -sindex
+	$ ./libgit2_tests -sindex
 
-To run a single test named `index::racy::diff`, which corresponds to the test
-function [`test_index_racy__diff`](https://github.com/libgit2/libgit2/blob/main/tests/index/racy.c#L23):
+To run a single test named `index::racy::diff`, which corresponds to
+the test function
+[`test_index_racy__diff`](https://github.com/libgit2/libgit2/blob/main/tests/index/racy.c#L23):
 
-    $ ./libgit2_tests -sindex::racy::diff
+	$ ./libgit2_tests -sindex::racy::diff
 
 The test suite will print a `.` for every passing test, and an `F` for any
 failing test.  An `S` indicates that a test was skipped because it is not
@@ -262,7 +333,8 @@ applicable to your platform or is particularly expensive.
 **Note:** There should be _no_ failing tests when you build an unmodified
 source tree from a [release](https://github.com/libgit2/libgit2/releases),
 or from the [main branch](https://github.com/libgit2/libgit2/tree/main).
-Please contact us or [open an issue](https://github.com/libgit2/libgit2/issues)
+Please contact us or
+[open an issue](https://github.com/libgit2/libgit2/issues)
 if you see test failures.
 
 Installation
@@ -276,7 +348,8 @@ To install the library you can specify the install prefix by setting:
 Advanced Usage
 --------------
 
-For more advanced use or questions about CMake please read <https://cmake.org/Wiki/CMake_FAQ>.
+For more advanced use or questions about CMake please read the
+[CMake FAQ](https://cmake.org/Wiki/CMake_FAQ).
 
 The following CMake variables are declared:
 
@@ -293,6 +366,7 @@ following:
 	# Create and set up a build directory
 	$ mkdir build && cd build
 	$ cmake ..
+
 	# List all build options and their values
 	$ cmake -L
 
@@ -379,16 +453,19 @@ when configuring.
 MinGW
 -----
 
-If you want to build the library in MinGW environment with SSH support enabled,
-you may need to pass `-DCMAKE_LIBRARY_PATH="${MINGW_PREFIX}/${MINGW_CHOST}/lib/"` flag
-to CMake when configuring. This is because CMake cannot find the Win32 libraries in
-MinGW folders by default and you might see an error message stating that CMake
-could not resolve `ws2_32` library during configuration.
+If you want to build the library in MinGW environment with SSH support
+enabled, you may need to pass
+`-DCMAKE_LIBRARY_PATH="${MINGW_PREFIX}/${MINGW_CHOST}/lib/"` flag
+to CMake when configuring. This is because CMake cannot find the
+Win32 libraries in MinGW folders by default and you might see an
+error message stating that CMake could not resolve `ws2_32` library
+during configuration.
 
-Another option would be to install `msys2-w32api-runtime` package before configuring.
-This package installs the Win32 libraries into `/usr/lib` folder which is by default
-recognized as the library path by CMake. Please note though that this package is meant
-for MSYS subsystem which is different from MinGW.
+Another option would be to install `msys2-w32api-runtime` package before
+configuring. This package installs the Win32 libraries into `/usr/lib`
+folder which is by default recognized as the library path by CMake.
+Please note though that this package is meant for MSYS subsystem which
+is different from MinGW.
 
 Language Bindings
 ==================================
@@ -468,15 +545,16 @@ and
 that are good places to jump in and get started.  There's much more detailed
 information in our list of [outstanding projects](docs/projects.md).
 
-Please be sure to check the [contribution guidelines](docs/contributing.md) to
-understand our workflow, and the libgit2 [coding conventions](docs/conventions.md).
+Please be sure to check the [contribution guidelines](docs/contributing.md)
+to understand our workflow, and the libgit2
+[coding conventions](docs/conventions.md).
 
 License
 ==================================
 
-`libgit2` is under GPL2 **with linking exception**. This means you can link to
-and use the library from any program, proprietary or open source; paid or
-gratis.  However, if you modify libgit2 itself, you must distribute the
-source to your modified version of libgit2.
+`libgit2` is under GPL2 **with linking exception**. This means you can
+link to and use the library from any program, proprietary or open source;
+paid or gratis. However, if you modify libgit2 itself, you must distribute
+the source to your modified version of libgit2.
 
 See the [COPYING file](COPYING) for the full license text.
