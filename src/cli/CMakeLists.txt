@@ -27,7 +27,7 @@ list(SORT CLI_SRC_C)
 if(BUILD_CLI STREQUAL "dynamic")
 	set(CLI_LIBGIT2_LIBRARY libgit2package)
 else()
-	set(CLI_LIBGIT2_OBJECTS $<TARGET_OBJECTS:libgit2>)
+	set(CLI_LIBGIT2_LIBRARY libgit2)
 endif()
 
 #
@@ -35,10 +35,9 @@ endif()
 #
 
 add_executable(git2_cli ${CLI_SRC_C} ${CLI_SRC_OS} ${CLI_OBJECTS}
-	$<TARGET_OBJECTS:util>
 	${CLI_LIBGIT2_OBJECTS}
 	${LIBGIT2_DEPENDENCY_OBJECTS})
-target_link_libraries(git2_cli ${CLI_LIBGIT2_LIBRARY} ${LIBGIT2_SYSTEM_LIBS})
+target_link_libraries(git2_cli ${CLI_LIBGIT2_LIBRARY} ${LIBGIT2_SYSTEM_LIBS} util)
 
 set_target_properties(git2_cli PROPERTIES C_STANDARD 90)
 set_target_properties(git2_cli PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
@@ -48,7 +47,7 @@ ide_split_sources(git2_cli)
 
 target_include_directories(git2_cli PRIVATE ${CLI_INCLUDES})
 
-if(MSVC_IDE)
+if(MSVC)
 	# Precompiled headers
 	set_target_properties(git2_cli PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
 	set_source_files_properties(win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")

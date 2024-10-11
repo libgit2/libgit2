@@ -124,6 +124,8 @@ elseif(HAVE_STRUCT_STAT_ST_MTIME_NSEC)
 	set(GIT_USE_STAT_MTIME_NSEC 1)
 endif()
 
+
+add_library(libgit2_link_libraries INTERFACE)
 # realtime support
 
 check_library_exists(rt clock_gettime "time.h" NEED_LIBRT)
@@ -136,17 +138,17 @@ endif()
 # platform libraries
 
 if(WIN32)
-	list(APPEND LIBGIT2_SYSTEM_LIBS "ws2_32" "secur32")
+	target_link_libraries(libgit2_link_libraries INTERFACE ws2_32 secur32)
 	list(APPEND LIBGIT2_PC_LIBS "-lws2_32" "-lsecur32")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-	list(APPEND LIBGIT2_SYSTEM_LIBS socket nsl)
+	target_link_libraries(libgit2_link_libraries INTERFACE socket nsl)
 	list(APPEND LIBGIT2_PC_LIBS "-lsocket" "-lnsl")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Haiku")
-	list(APPEND LIBGIT2_SYSTEM_LIBS gnu network)
+	target_link_libraries(libgit2_link_libraries INTERFACE gnu network)
 	list(APPEND LIBGIT2_PC_LIBS "-lgnu -lnetwork")
 endif()
 
@@ -158,11 +160,9 @@ endif()
 
 if(USE_THREADS)
 	if(NOT WIN32)
+		set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 		find_package(Threads REQUIRED)
-		list(APPEND LIBGIT2_SYSTEM_LIBS ${CMAKE_THREAD_LIBS_INIT})
-		list(APPEND LIBGIT2_PC_LIBS ${CMAKE_THREAD_LIBS_INIT})
 	endif()
-
 	set(GIT_THREADS 1)
 endif()
 add_feature_info(threadsafe USE_THREADS "threadsafe support")
@@ -175,8 +175,6 @@ add_feature_info(threadsafe USE_THREADS "threadsafe support")
 if(USE_NTLMCLIENT)
 	set(GIT_NTLM 1)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/deps/ntlmclient" "${PROJECT_BINARY_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
 endif()
 add_feature_info(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
 
@@ -198,9 +196,8 @@ add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
 #
 # Include child projects
 #
-
-add_subdirectory(libgit2)
 add_subdirectory(util)
+add_subdirectory(libgit2)
 
 if(BUILD_CLI AND NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
 	add_subdirectory(cli)
