@@ -3154,21 +3154,16 @@ done:
 int git_repository_is_empty(git_repository *repo)
 {
 	git_reference *head = NULL;
-	git_str initialbranch = GIT_STR_INIT;
 	int result = 0;
 
-	if ((result = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0 ||
-	    (result = git_repository_initialbranch(&initialbranch, repo)) < 0)
+	if ((result = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
 		goto done;
 
 	result = (git_reference_type(head) == GIT_REFERENCE_SYMBOLIC &&
-	          strcmp(git_reference_symbolic_target(head), initialbranch.ptr) == 0 &&
 	          repo_contains_no_reference(repo));
 
 done:
 	git_reference_free(head);
-	git_str_dispose(&initialbranch);
-
 	return result;
 }
 
