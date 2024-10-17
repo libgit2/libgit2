@@ -782,10 +782,6 @@ GIT_EXTERN(int) git_repository_mergehead_foreach(
  * hash a file in the repository and you want to apply filtering rules (e.g.
  * crlf filters) before generating the SHA, then use this function.
  *
- * Note: if the repository has `core.safecrlf` set to fail and the
- * filtering triggers that failure, then this function will return an
- * error and not calculate the hash of the file.
- *
  * @param out Output value of calculated SHA
  * @param repo Repository pointer
  * @param path Path to file on disk whose contents should be hashed.  This
