@@ -33,7 +33,7 @@ void test_mailmap_blame__hunks(void)
 	cl_assert(g_blame);
 
 	for (idx = 0; idx < ARRAY_SIZE(resolved); ++idx) {
-		hunk = git_blame_get_hunk_byline(g_blame, idx + 1);
+		hunk = git_blame_hunk_byline(g_blame, idx + 1);
 
 		cl_assert(hunk->final_signature != NULL);
 		cl_assert(hunk->orig_signature != NULL);
@@ -54,7 +54,7 @@ void test_mailmap_blame__hunks_no_mailmap(void)
 	cl_assert(g_blame);
 
 	for (idx = 0; idx < ARRAY_SIZE(resolved); ++idx) {
-		hunk = git_blame_get_hunk_byline(g_blame, idx + 1);
+		hunk = git_blame_hunk_byline(g_blame, idx + 1);
 
 		cl_assert(hunk->final_signature != NULL);
 		cl_assert(hunk->orig_signature != NULL);
