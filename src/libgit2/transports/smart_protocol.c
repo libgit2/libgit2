@@ -25,6 +25,103 @@
 
 bool git_smart__ofs_delta_enabled = true;
 
+
+/*
+ * Flags used to mark commits during negotiation.
+ */
+
+/**
+ * Commit is a common reference, determined by comparing remote and local heads
+ * before starting graph traversal.
+ *
+ * We need to tell apart between `COMMIT_FLAG_COMMON` and `COMMIT_FLAG_COMMON_REF`
+ * because we want to mark parents of both as common, but we want to generate
+ * a "have" statement for a common reference that is not a known common commit.
+ */
+#define COMMIT_FLAG_COMMON_REF (uintptr_t)(1 << 0)
+
+/**
+ * A commit is known to be common between client and server.
+ *
+ * This can be set as consequence of the server directly acknowledging a commit
+ * as common, or by marking parents of such a commit, or a common reference.
+ */
+#define COMMIT_FLAG_COMMON (uintptr_t)(1 << 1)
+
+/**
+ * A commit is a local reference.
+ *
+ * Used only during the initial phase to match local and remote references.
+ */
+#define COMMIT_FLAG_LOCAL_REF (uintptr_t)(1 << 2)
+
+/**
+ * A commit is currently counted as being not common.
+ *
+ * A stop condition for the negotiation is running out of non-common queued
+ * commits. To track that, we keep a counter for that. However, commits can be
+ * determined to be common in multiple places, and to make sure we don't
+ * decrement twice, we use a bit to mark them.
+ */
+#define COMMIT_FLAG_COUNTED_AS_UNCOMMON (uintptr_t)(1 << 3)
+
+
+/**
+ * These 3 constants control the max number of "have" statements sent by each
+ * step of negotiation.
+ */
+#define HAVE_STATEMENTS_INITIAL 16
+#define HAVE_STATEMENTS_NON_RPC_THRESHOLD 32
+#define HAVE_STATEMENTS_RPC_THRESHOLD 16384
+
+
+/**
+ * Threshold for stopping traversing if no common commit was found, but at least
+ * a common commit is known from a previous step.
+ */
+#define MAX_TRIES_WITHOUT_HAVE_STATEMENT 256
+
+
+/**
+ * Flags used during traversal.
+ *
+ * Using `uintptr_t` since they are stored directly in a `(void *)`.
+ */
+typedef uintptr_t negotiation_commit_flags;
+
+
+/**
+ * Result returned from `process_packets`.
+ */
+typedef struct ack_pkts_processing_result {
+
+	/**
+	 * A "ready" ACK packet was received.
+	 */
+	unsigned received_ready: 1,
+
+		/**
+		 * Received at least one ACK packet other that "common".
+		 */
+		received_other_than_ack_common: 1,
+
+		/**
+		 * Received at least one ACK packet with subtype different than `GIT_ACK_NONE`.
+		 */
+		received_specific_ack: 1,
+
+		/**
+		 * (For RPC only) At least one "have" statement has been written on the
+		 * buffer for the next negotiation step.
+		 */
+		have_statement_written: 1;
+} ack_pkts_processing_result;
+
+#define ACK_PKTS_PROCESSING_RESULT_INIT {0, 0, 0, 0}
+
+
+
+
 int git_smart__store_refs(transport_smart *t, int flushes)
 {
 	git_vector *refs = &t->refs;
@@ -308,9 +405,88 @@ static int recv_pkt(
 	return error;
 }
 
-static int store_common(transport_smart *t)
+/**
+ * Marks a commit's parents recursively, and optionally the commit itself, as common.
+ *
+ * Note the parents wont be marked if the walker's `git_commit_list_node` for
+ * the given OID hasn't been parsed yet (otherwise, this function would recurse
+ * the entire graph until reaching the root).
+ *
+ * Since walking is made with a callback that hides all common commits, this is
+ * enough as the parents we missed wont be traversed at all unless another path
+ * coming from non-common commits happens to walk them. This is rare and worst
+ * case it adds a few commits that will eventually be marked as common as well.
+ *
+ * @param oid The OID of the base commit for marking.
+ * @param mark_parents_only If not 0, `oid` wont be marked, only the parents.
+ * @param marked_oids The map of marked OIDs used during negotiation.
+ * @param walk The revwalker used during negotiation.
+ * @param non_common_queued_commits Pointer to the non common commit count.
+ */
+static void mark_as_common(
+	const git_oid *oid,
+	int mark_parents_only,
+	git_oidmap * const marked_oids,
+	git_revwalk * const walk,
+	size_t * const non_common_queued_commits)
+{
+	negotiation_commit_flags flags;
+	flags = (negotiation_commit_flags) git_oidmap_get(marked_oids, oid);
+
+    if (!mark_parents_only && flags & COMMIT_FLAG_COUNTED_AS_UNCOMMON) {
+		(*non_common_queued_commits)--;
+		flags &= ~COMMIT_FLAG_COUNTED_AS_UNCOMMON;
+		git_oidmap_set(marked_oids, oid, (void*) flags);
+	}
+
+	if (!(flags & COMMIT_FLAG_COMMON)) {
+		uint16_t i;
+		git_commit_list_node *node = git_oidmap_get(walk->commits, oid);
+		int node_ready = node != NULL && node->parsed;
+
+		if (!mark_parents_only) {
+			flags |= COMMIT_FLAG_COMMON;
+			git_oidmap_set(marked_oids, oid, (void*) flags);
+		}
+
+		if (node_ready) {
+			for (i = 0; i < node->out_degree; i++) {
+				git_commit_list_node *p = node->parents[i];
+				mark_as_common(&p->oid, 0, marked_oids, walk, non_common_queued_commits);
+			}
+		}
+	}
+}
+
+/**
+ * When negotiating using `multi_ack` or `multi_ack_detailed`, processes the
+ * ACK packets returned by the server during a negotiation step.
+ *
+ * The appropriate "have" statements will be written to `data` for the next
+ * negotiation step. An "have" statement will be written for each commit
+ * acknowledged as `GIT_ACK_COMMON` that wasn't already known to be common
+ * before this negotiation step.
+ *
+ * @param out See `ack_pkts_processing_result` documentation for details.
+ * @param t The smart transport used for the negotiation.
+ * @param marked_oids The map of marked OIDs used during negotiation.
+ * @param data A data buffer with "want" statements, ready for receiving new
+ * "have" statements for the next negotiation step.
+ * @param walk The revwalker used during negotiation.
+ * @param non_common_queued_commits Pointer to the non common commit count.
+ * @return 0 or an error code.
+ */
+static int process_packets(
+	ack_pkts_processing_result *out,
+	transport_smart * const t,
+	git_oidmap * const marked_oids,
+	git_str * const data,
+	git_revwalk * const walk,
+    size_t * const non_common_queued_commits)
 {
 	git_pkt *pkt = NULL;
+	git_pkt_ack *pkt_ack;
+	negotiation_commit_flags flags;
 	int error;
 
 	do {
@@ -322,9 +498,48 @@ static int store_common(transport_smart *t)
 			return 0;
 		}
 
-		if (git_vector_insert(&t->common, pkt) < 0) {
-			git__free(pkt);
-			return -1;
+		pkt_ack = (git_pkt_ack*) pkt;
+		flags = (negotiation_commit_flags) git_oidmap_get(marked_oids, &pkt_ack->oid);
+
+		mark_as_common(&pkt_ack->oid, 1, marked_oids, walk, non_common_queued_commits);
+
+		if (!(flags & COMMIT_FLAG_COMMON) && pkt_ack->status == GIT_ACK_COMMON) {
+			/*
+			 * It's OK to free here because `mark_as_common` was called for marking
+			 * parents only, therefore the OID does not end being referred by
+			 * `marked_oids`.
+			 */
+			if (git_vector_insert(&t->common, pkt) < 0) {
+				git__free(pkt);
+				return -1;
+			}
+
+			if (t->rpc) {
+				out->have_statement_written = 1;
+				if ((error = git_pkt_buffer_have(&pkt_ack->oid, data)) < 0)
+					return -1;
+
+				if (git_str_oom(data)) {
+					return -1;
+				}
+			}
+		}
+
+		switch (pkt_ack->status) {
+			case GIT_ACK_READY:
+				out->received_ready = 1;
+				/* fall through */
+
+			case GIT_ACK_CONTINUE:
+				out->received_other_than_ack_common = 1;
+				/* fall through */
+				
+			case GIT_ACK_COMMON:
+				out->received_specific_ack = 1;
+				break;
+
+			default:
+				break;
 		}
 	} while (1);
 
@@ -359,6 +574,33 @@ static int wait_while_ack(transport_smart *t)
 
 	git_pkt_free(pkt);
 	return 0;
+}
+
+/**
+ * Returns the total "have" statement count when the buffer should be flushed
+ * and a new negotiation step performed.
+ *
+ * @param transport The smart transport used for the negotiation.
+ * @param count The current total number of "have" statements sent to the server
+ * in the multiple negotiation steps performed so far.
+ * @return The next count when a new negotiation step should occur.
+ */
+static int next_flush(transport_smart *transport, int count) {
+	if (transport->rpc) {
+		return (count < HAVE_STATEMENTS_RPC_THRESHOLD) ? count * 2 : count * 11 / 10;
+	} else {
+		return (count < HAVE_STATEMENTS_NON_RPC_THRESHOLD) ? count * 2 : count + HAVE_STATEMENTS_NON_RPC_THRESHOLD;
+	}
+}
+
+/**
+ * Callback that hides any common commit.
+ */
+static int negotiation_hide_cb(const git_oid *commit_id, void *payload) {
+	git_oidmap *common_oids = (git_oidmap*) payload;
+	negotiation_commit_flags flags = (negotiation_commit_flags) git_oidmap_get(common_oids, commit_id);
+
+	return !!(flags & COMMIT_FLAG_COMMON);
 }
 
 static int cap_not_sup_err(const char *cap_name)
@@ -400,6 +642,9 @@ static int setup_shallow_roots(
 	return 0;
 }
 
+
+//int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, const git_remote_head * const *wants, size_t count)
+
 int git_smart__negotiate_fetch(
 	git_transport *transport,
 	git_repository *repo,
@@ -411,8 +656,19 @@ int git_smart__negotiate_fetch(
 	git_revwalk *walk = NULL;
 	int error = -1;
 	git_pkt_type pkt_type;
-	unsigned int i;
-	git_oid oid;
+	unsigned int i = 0;
+    git_oid oid;
+	git_oidmap *common_oids = NULL;
+	git_remote_head *head;
+	git_commit_list *list;
+	size_t c;
+	uint16_t p;
+    negotiation_commit_flags flags;
+    size_t non_common_queued_commits = 0;
+	git_commit_list_node *node;
+	unsigned int flush_limit = HAVE_STATEMENTS_INITIAL;
+	unsigned int tries = 0;
+    int received_specific_ack = 0;
 
 	if ((error = setup_caps(&t->caps, wants)) < 0 ||
 	    (error = setup_shallow_roots(&t->shallow_roots, wants)) < 0)
@@ -421,7 +677,13 @@ int git_smart__negotiate_fetch(
 	if ((error = git_pkt_buffer_wants(wants, &t->caps, &data)) < 0)
 		return error;
 
+	if ((error = git_oidmap_new(&common_oids)) < 0)
+		goto on_error;
+
 	if ((error = git_revwalk_new(&walk, repo)) < 0)
+		goto on_error;
+
+	if ((error = git_revwalk_add_hide_cb(walk, negotiation_hide_cb, common_oids)) < 0)
 		goto on_error;
 
 	opts.insert_by_date = 1;
@@ -460,14 +722,51 @@ int git_smart__negotiate_fetch(
 	}
 
 	/*
-	 * Our support for ACK extensions is simply to parse them. On
-	 * the first ACK we will accept that as enough common
-	 * objects. We give up if we haven't found an answer in the
-	 * first 256 we send.
+	 * Let's start by poking into the revwalk and grab all the client tips added
+	 * by git_revwalk__push_glob, and store the OIDs fagged as tips.
 	 */
-	i = 0;
-	while (i < 256) {
-		error = git_revwalk_next(&oid, walk);
+	for (list = walk->user_input; list != NULL; list = list->next) {
+		flags = (negotiation_commit_flags)git_oidmap_get(common_oids, &list->item->oid);
+
+		if (!(flags & COMMIT_FLAG_COUNTED_AS_UNCOMMON))
+			non_common_queued_commits++;
+
+		git_oidmap_set(common_oids, &list->item->oid,
+			(void*) ((COMMIT_FLAG_LOCAL_REF) | COMMIT_FLAG_COUNTED_AS_UNCOMMON));
+	}
+
+	/*
+	 * Now, for each remote head that points to the same OID as a tip, mark it
+	 * as common. It doesn't really matter if both references were pointing to
+	 * the same reference or not. We only want matching OIDs, whatever the
+	 * references may be. We know we will walk all the tips anyway.
+	 */
+	git_vector_foreach(&t->heads, c, head) {
+		flags = (negotiation_commit_flags)git_oidmap_get(common_oids, &head->oid);
+
+        if (flags & COMMIT_FLAG_LOCAL_REF) {
+			if (flags & COMMIT_FLAG_COUNTED_AS_UNCOMMON)
+				non_common_queued_commits--;
+
+			/*
+			 * Note: When re-connect is implemented to restart a connection if
+			 * dropped by a timeout, make sure t->heads remains retained, otherwise
+			 * the head->oid key used by the set will be deallocated as well.
+			 */
+            git_oidmap_set(common_oids, &head->oid, (void*) ((flags & ~COMMIT_FLAG_COUNTED_AS_UNCOMMON) | COMMIT_FLAG_COMMON_REF));
+		}
+	}
+
+	while (1) {
+        if (non_common_queued_commits == 0)
+            break;
+        
+        error = git_revwalk_next(&oid, walk);
+
+		/*
+		 * Note: From here on, we know a commit is not COMMIT_FLAG_COMMON otherwise
+		 * it would have been excluded by the revwalk callback.
+		 */
 
 		if (error < 0) {
 			if (GIT_ITEROVER == error)
@@ -476,10 +775,66 @@ int git_smart__negotiate_fetch(
 			goto on_error;
 		}
 
+		tries++;
+        flags = (negotiation_commit_flags)git_oidmap_get(common_oids, &oid);
+
+		/*
+		 * There are two reasons we poke into the revwalk and get the commit instead
+		 * parsing.
+		 *
+		 * 1. Speed. Parsing is slow, and at this point we know the walker already
+		 * parsed. So leverage that work.
+		 *
+		 * 2. We need the OID to be retained to be used as a key for the oid map.
+		 * If we parse the commit and mark parents, we need to retain those OIDs
+		 * somehow. This way, they are already retained for us by the walker.
+		 */
+        node = git_oidmap_get(walk->commits, &oid);
+		GIT_ASSERT(node != NULL && node->parsed);
+
+        if (flags & COMMIT_FLAG_COUNTED_AS_UNCOMMON) {
+			git_oidmap_set(common_oids, &node->oid, (void*) (flags & ~COMMIT_FLAG_COUNTED_AS_UNCOMMON));
+            GIT_ASSERT(non_common_queued_commits > 0);
+            non_common_queued_commits--;
+        }
+
+		for (p = 0; p < node->out_degree; p++) {
+			git_commit_list_node *parent = node->parents[p];
+            negotiation_commit_flags parent_flags =
+				(negotiation_commit_flags)git_oidmap_get(common_oids, &parent->oid);
+
+			if (flags & COMMIT_FLAG_COMMON_REF) {
+				/*
+				 * If a commit is a common reference, we need to process it.
+				 * For any of those, we mark the parents as commons, unless they are already
+				 * common references. The reason is, we skip all commits marked as common,
+				 * but we don't want to skip common references, so a common reference must
+				 * not be marked as common here.
+				 */
+                if (!(parent_flags & COMMIT_FLAG_COMMON)) {
+                    if (parent_flags & COMMIT_FLAG_COUNTED_AS_UNCOMMON)
+						non_common_queued_commits--;
+
+					parent_flags = (parent_flags & ~COMMIT_FLAG_COUNTED_AS_UNCOMMON)
+						| COMMIT_FLAG_COMMON;
+
+                    git_oidmap_set(common_oids, &parent->oid, (void *)parent_flags);
+					mark_as_common(&parent->oid, 1, common_oids, walk, &non_common_queued_commits);
+				}
+			} else if (!(parent_flags & COMMIT_FLAG_COUNTED_AS_UNCOMMON)) {
+				parent_flags |= COMMIT_FLAG_COUNTED_AS_UNCOMMON;
+				git_oidmap_set(common_oids, &parent->oid, (void *)parent_flags);
+				non_common_queued_commits++;
+			}
+		}
+
 		git_pkt_buffer_have(&oid, &data);
 		i++;
-		if (i % 20 == 0) {
-			if (t->cancelled.val) {
+
+		if (i >= flush_limit) {
+			flush_limit = next_flush(t, i);
+
+            if (t->cancelled.val) {
 				git_error_set(GIT_ERROR_NET, "The fetch was cancelled by the user");
 				error = GIT_EUSER;
 				goto on_error;
@@ -496,8 +851,36 @@ int git_smart__negotiate_fetch(
 
 			git_str_clear(&data);
 			if (t->caps.multi_ack || t->caps.multi_ack_detailed) {
-				if ((error = store_common(t)) < 0)
+                ack_pkts_processing_result processing_result = ACK_PKTS_PROCESSING_RESULT_INIT;
+
+				if (t->rpc)
+					if ((error = git_pkt_buffer_wants(wants, &t->caps, &data)) < 0)
+						goto on_error;
+
+				if ((error = process_packets(&processing_result, t, common_oids,
+					&data, walk, &non_common_queued_commits)) < 0)
 					goto on_error;
+
+				/* If we got a "ready" ack, we are done. */
+				if (processing_result.received_ready)
+					break;
+
+                if (processing_result.received_specific_ack)
+                    received_specific_ack = 1;
+
+				/*
+				 * If we iterated too many commits and didn't get a common yet,
+				 * give up, unless we never received any specific ACK on previous
+				 * steps.
+				 */
+				if (received_specific_ack && !processing_result.received_specific_ack
+                    && tries > MAX_TRIES_WITHOUT_HAVE_STATEMENT)
+					break;
+
+				if (!t->rpc ||
+					processing_result.have_statement_written ||
+					processing_result.received_other_than_ack_common)
+					tries = 0;
 			} else {
 				if ((error = recv_pkt(NULL, &pkt_type, t)) < 0)
 					goto on_error;
@@ -513,46 +896,6 @@ int git_smart__negotiate_fetch(
 				}
 			}
 		}
-
-		if (t->common.length > 0)
-			break;
-
-		if (i % 20 == 0 && t->rpc) {
-			git_pkt_ack *pkt;
-			unsigned int j;
-
-			if ((error = git_pkt_buffer_wants(wants, &t->caps, &data)) < 0)
-				goto on_error;
-
-			git_vector_foreach(&t->common, j, pkt) {
-				if ((error = git_pkt_buffer_have(&pkt->oid, &data)) < 0)
-					goto on_error;
-			}
-
-			if (git_str_oom(&data)) {
-				error = -1;
-				goto on_error;
-			}
-		}
-	}
-
-	/* Tell the other end that we're done negotiating */
-	if (t->rpc && t->common.length > 0) {
-		git_pkt_ack *pkt;
-		unsigned int j;
-
-		if ((error = git_pkt_buffer_wants(wants, &t->caps, &data)) < 0)
-			goto on_error;
-
-		git_vector_foreach(&t->common, j, pkt) {
-			if ((error = git_pkt_buffer_have(&pkt->oid, &data)) < 0)
-				goto on_error;
-		}
-
-		if (git_str_oom(&data)) {
-			error = -1;
-			goto on_error;
-		}
 	}
 
 	if ((error = git_pkt_buffer_done(&data)) < 0)
@@ -567,6 +910,7 @@ int git_smart__negotiate_fetch(
 	if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
 		goto on_error;
 
+	git_oidmap_free(common_oids);
 	git_str_dispose(&data);
 	git_revwalk_free(walk);
 
@@ -586,6 +930,7 @@ int git_smart__negotiate_fetch(
 	return error;
 
 on_error:
+	git_oidmap_free(common_oids);
 	git_revwalk_free(walk);
 	git_str_dispose(&data);
 	return error;
