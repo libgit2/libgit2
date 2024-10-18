@@ -24,16 +24,19 @@ if(LLHTTP_INCLUDE_DIR AND EXISTS "${LLHTTP_INCLUDE_DIR}/llhttp.h")
 	unset(LLHTTP_H)
 endif()
 
+# Hide advanced variables
+mark_as_advanced(LLHTTP_INCLUDE_DIR LLHTTP_LIBRARY LLHTTP_VERSION_STRING)
+
 # Handle the QUIETLY and REQUIRED arguments and set LLHTTP_FOUND
 # to TRUE if all listed variables are TRUE
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(LLHTTP REQUIRED_VARS LLHTTP_INCLUDE_DIR LLHTTP_LIBRARY)
-
-# Hide advanced variables
-mark_as_advanced(LLHTTP_INCLUDE_DIR LLHTTP_LIBRARY)
+find_package_handle_standard_args(LLHTTP REQUIRED_VARS LLHTTP_INCLUDE_DIR LLHTTP_LIBRARY VERSION_VAR LLHTTP_VERSION_STRING)
 
 # Set standard variables
 if(LLHTTP_FOUND)
 	set(LLHTTP_LIBRARIES ${LLHTTP_LIBRARY})
 	set(LLHTTP_INCLUDE_DIRS ${LLHTTP_INCLUDE_DIR})
+	add_library(llhttp IMPORTED UNKNOWN)
+	set_property(TARGET llhttp PROPERTY IMPORTED_LOCATION ${LLHTTP_LIBRARY})
+	set_property(TARGET llhttp PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${LLHTTP_INCLUDE_DIR}")
 endif()

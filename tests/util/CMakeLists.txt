@@ -44,7 +44,7 @@ set_target_properties(util_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_B
 
 target_include_directories(util_tests PRIVATE ${TEST_INCLUDES} ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
 target_include_directories(util_tests SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
-target_link_libraries(util_tests ${LIBGIT2_SYSTEM_LIBS})
+target_link_libraries(util_tests ${LIBGIT2_SYSTEM_LIBS} libgit2)
 
 ide_split_sources(util_tests)
 
@@ -56,7 +56,7 @@ if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
 	target_compile_options(util_tests PRIVATE -include "clar_suite.h")
 endif()
 
-if(MSVC_IDE)
+if(MSVC)
 	# Precompiled headers
 	set_target_properties(util_tests PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
 	set_source_files_properties("precompiled.c" COMPILE_FLAGS "/Ycprecompiled.h")

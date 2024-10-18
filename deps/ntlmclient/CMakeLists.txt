@@ -1,39 +1,40 @@
-file(GLOB SRC_NTLMCLIENT "ntlm.c" "ntlm.h" "util.c" "util.h")
-list(SORT SRC_NTLMCLIENT)
+add_library(ntlmclient STATIC
+	ntlm.c
+	ntlm.h
+	util.c
+	util.h
+)
 
-add_definitions(-DNTLM_STATIC=1)
+target_compile_definitions(ntlmclient PRIVATE NTLM_STATIC=1)
+target_include_directories(ntlmclient PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
 disable_warnings(implicit-fallthrough)
 
 if(USE_ICONV)
-	add_definitions(-DUNICODE_ICONV=1)
-	file(GLOB SRC_NTLMCLIENT_UNICODE "unicode_iconv.c" "unicode_iconv.h")
+	target_compile_definitions(ntlmclient PRIVATE UNICODE_ICONV=1)
+	target_sources(ntlmclient PRIVATE unicode_iconv.c unicode_iconv.h)
 else()
-	add_definitions(-DUNICODE_BUILTIN=1)
-	file(GLOB SRC_NTLMCLIENT_UNICODE "unicode_builtin.c" "unicode_builtin.h")
+	target_compile_definitions(ntlmclient PRIVATE UNICODE_BUILTIN=1)
+	target_sources(ntlmclient PRIVATE unicode_builtin.c unicode_builtin.h)
 endif()
 
 if(USE_HTTPS STREQUAL "SecureTransport")
-	add_definitions(-DCRYPT_COMMONCRYPTO)
-	set(SRC_NTLMCLIENT_CRYPTO "crypt_commoncrypto.c" "crypt_commoncrypto.h")
+	target_compile_definitions(ntlmclient PRIVATE CRYPT_COMMONCRYPTO)
+	target_sources(ntlmclient PRIVATE crypt_commoncrypto.c crypt_commoncrypto.h)
 	# CC_MD4 has been deprecated in macOS 10.15.
-	set_source_files_properties("crypt_commoncrypto.c" COMPILE_FLAGS "-Wno-deprecated")
+	set_source_files_properties(crypt_commoncrypto.c COMPILE_FLAGS "-Wno-deprecated")
 elseif(USE_HTTPS STREQUAL "OpenSSL")
-	add_definitions(-DCRYPT_OPENSSL)
-	add_definitions(-DOPENSSL_API_COMPAT=0x10100000L)
-	include_directories(${OPENSSL_INCLUDE_DIR})
-	set(SRC_NTLMCLIENT_CRYPTO "crypt_openssl.c" "crypt_openssl.h")
+	target_compile_definitions(ntlmclient PRIVATE CRYPT_OPENSSL OPENSSL_API_COMPAT=0x10100000L)
+	target_link_libraries(ntlmclient PRIVATE OpenSSL::SSL)
+	target_sources(ntlmclient PRIVATE crypt_openssl.c crypt_openssl.h)
 elseif(USE_HTTPS STREQUAL "OpenSSL-Dynamic")
-	add_definitions(-DCRYPT_OPENSSL)
-	add_definitions(-DCRYPT_OPENSSL_DYNAMIC)
-	add_definitions(-DOPENSSL_API_COMPAT=0x10100000L)
-	set(SRC_NTLMCLIENT_CRYPTO "crypt_openssl.c" "crypt_openssl.h")
+	target_compile_definitions(ntlmclient PRIVATE CRYPT_OPENSSL CRYPT_OPENSSL_DYNAMIC OPENSSL_API_COMPAT=0x10100000L)
+	target_link_libraries(ntlmclient PRIVATE OpenSSL::SSL)
+	target_sources(ntlmclient PRIVATE crypt_openssl.c crypt_openssl.h)
 elseif(USE_HTTPS STREQUAL "mbedTLS")
-	add_definitions(-DCRYPT_MBEDTLS)
-	include_directories(${MBEDTLS_INCLUDE_DIR})
-	set(SRC_NTLMCLIENT_CRYPTO "crypt_mbedtls.c" "crypt_mbedtls.h" "crypt_builtin_md4.c")
+	target_compile_definitions(ntlmclient PRIVATE CRYPT_MBEDTLS)
+	target_include_directories(ntlmclient PRIVATE ${MBEDTLS_INCLUDE_DIR})
+	target_sources(ntlmclient PRIVATE crypt_mbedtls.c crypt_mbedtls.h crypt_builtin_md4.c)
 else()
 	message(FATAL_ERROR "Unable to use libgit2's HTTPS backend (${USE_HTTPS}) for NTLM crypto")
 endif()
-
-add_library(ntlmclient OBJECT ${SRC_NTLMCLIENT} ${SRC_NTLMCLIENT_UNICODE} ${SRC_NTLMCLIENT_CRYPTO})

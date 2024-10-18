@@ -1,9 +1,18 @@
 # libgit2: the shared library: this CMakeLists.txt compiles the core
 # git library functionality.
 
-add_library(libgit2 OBJECT)
-set_target_properties(libgit2 PROPERTIES C_STANDARD 90)
-set_target_properties(libgit2 PROPERTIES C_EXTENSIONS OFF)
+file(GLOB SRC_GIT2 *.c *.h
+	streams/*.c streams/*.h
+	transports/*.c transports/*.h)
+list(SORT SRC_GIT2)
+
+add_library(libgit2 STATIC ${SRC_GIT2})
+set_target_properties(libgit2 PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF)
+target_link_libraries(libgit2 PUBLIC util libgit2_xdiff http_parser libgit2_gssapi libgit2_ssl2)
+
+if(NOT MSVC)
+	target_compile_options(libgit2 PRIVATE "-Wno-implicit-function-declaration")
+endif()
 
 include(PkgBuildConfig)
 
@@ -22,12 +31,6 @@ file(GLOB SRC_H
 list(SORT SRC_H)
 target_sources(libgit2 PRIVATE ${SRC_H})
 
-file(GLOB SRC_GIT2 *.c *.h
-	streams/*.c streams/*.h
-	transports/*.c transports/*.h)
-list(SORT SRC_GIT2)
-target_sources(libgit2 PRIVATE ${SRC_GIT2})
-
 if(WIN32 AND NOT CYGWIN)
 	# Add resource information on Windows
 	set(SRC_RC "git2.rc")
@@ -39,7 +42,7 @@ if(APPLE)
 endif()
 
 ide_split_sources(libgit2)
-list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:util> $<TARGET_OBJECTS:libgit2> ${LIBGIT2_DEPENDENCY_OBJECTS})
+list(APPEND LIBGIT2_OBJECTS ${LIBGIT2_DEPENDENCY_OBJECTS})
 list(APPEND LIBGIT2_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES})
 
 target_include_directories(libgit2 PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${PROJECT_SOURCE_DIR}/include)
@@ -56,8 +59,13 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 # Compile and link libgit2
 #
 
-add_library(libgit2package ${SRC_RC} ${LIBGIT2_OBJECTS})
-target_link_libraries(libgit2package ${LIBGIT2_SYSTEM_LIBS})
+add_library(libgit2package SHARED ${SRC_RC} ${SRC_GIT2} ${LIBGIT2_OBJECTS})
+
+if(NOT MSVC)
+	target_compile_options(libgit2package PRIVATE "-Wno-implicit-function-declaration")
+endif()
+
+target_link_libraries(libgit2package PUBLIC ${LIBGIT2_SYSTEM_LIBS} PUBLIC util libgit2_xdiff http_parser libgit2_gssapi libgit2_ssl2)
 target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
 
 set_target_properties(libgit2package PROPERTIES C_STANDARD 90)
@@ -84,12 +92,6 @@ pkg_build_config(NAME "lib${LIBGIT2_FILENAME}"
 	LIBS_SELF ${LIBGIT2_FILENAME}
 	PRIVATE_LIBS ${LIBGIT2_PC_LIBS}
 	REQUIRES ${LIBGIT2_PC_REQUIRES})
-
-if(MSVC_IDE)
-	# Precompiled headers
-	set_target_properties(libgit2package PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
-	set_source_files_properties(win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
-endif()
 
 # support experimental features and functionality
 

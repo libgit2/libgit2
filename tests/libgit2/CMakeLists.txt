@@ -23,7 +23,7 @@ set(TEST_INCLUDES "${CLAR_PATH}" "${TEST_PATH}" "${CMAKE_CURRENT_BINARY_DIR}")
 file(GLOB_RECURSE SRC_TEST ${TEST_PATH}/*/*.c ${TEST_PATH}/*/*.h)
 file(GLOB_RECURSE SRC_CLAR ${CLAR_PATH}/*.c ${CLAR_PATH}/*.h)
 
-if(MSVC_IDE)
+if(MSVC)
 	list(APPEND SRC_TEST "precompiled.c")
 endif()
 
@@ -45,7 +45,7 @@ set_target_properties(libgit2_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJEC
 
 target_include_directories(libgit2_tests PRIVATE ${TEST_INCLUDES} ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
 target_include_directories(libgit2_tests SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
-target_link_libraries(libgit2_tests ${LIBGIT2_SYSTEM_LIBS})
+target_link_libraries(libgit2_tests ${LIBGIT2_SYSTEM_LIBS} libgit2)
 
 ide_split_sources(libgit2_tests)
 
@@ -57,10 +57,10 @@ if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
 	target_compile_options(libgit2_tests PRIVATE -include "clar_suite.h")
 endif()
 
-if(MSVC_IDE)
+if(MSVC)
 	# Precompiled headers
 	set_target_properties(libgit2_tests PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
-	set_source_files_properties("precompiled.c" COMPILE_FLAGS "/Ycprecompiled.h")
+	set_source_files_properties(precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
 endif()
 
 include(AddClarTest)
