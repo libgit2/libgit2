@@ -17,7 +17,10 @@ typedef struct git_hash_sha256_ctx git_hash_sha256_ctx;
 # include "common_crypto.h"
 #endif
 
-#if defined(GIT_SHA1_OPENSSL) || defined(GIT_SHA256_OPENSSL)
+#if defined(GIT_SHA1_OPENSSL) || \
+    defined(GIT_SHA1_OPENSSL_FIPS) || \
+    defined(GIT_SHA256_OPENSSL) || \
+    defined(GIT_SHA256_OPENSSL_FIPS)
 # include "openssl.h"
 #endif
 

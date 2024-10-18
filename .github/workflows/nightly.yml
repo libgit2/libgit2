@@ -373,6 +373,15 @@ jobs:
             CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
+        - name: "Linux (SHA256, Xenial, Clang, OpenSSL-FIPS)"
+          id: linux-sha256-fips
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DUSE_SHA1=OpenSSL-FIPS -DUSE_SHA256=OpenSSL-FIPS
+          os: ubuntu-latest
       fail-fast: false
     env: ${{ matrix.platform.env }}
     runs-on: ${{ matrix.platform.os }}

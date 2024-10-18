@@ -1027,9 +1027,12 @@ static int commit_graph_write_hash(const char *buf, size_t size, void *data)
 	struct commit_graph_write_hash_context *ctx = data;
 	int error;
 
-	error = git_hash_update(ctx->ctx, buf, size);
-	if (error < 0)
-		return error;
+	if (ctx->ctx) {
+		error = git_hash_update(ctx->ctx, buf, size);
+
+		if (error < 0)
+			return error;
+	}
 
 	return ctx->write_cb(buf, size, ctx->cb_data);
 }
@@ -1225,6 +1228,9 @@ static int commit_graph_write(
 	error = git_hash_final(checksum, &ctx);
 	if (error < 0)
 		goto cleanup;
+
+	hash_cb_data.ctx = NULL;
+
 	error = write_cb((char *)checksum, checksum_size, cb_data);
 	if (error < 0)
 		goto cleanup;
