@@ -13,20 +13,24 @@ static int progress_cb(const char *str, int len, void *data)
  * updated. The message we output depends on whether it's a new one or
  * an update.
  */
-static int update_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
+static int update_cb(const char *refname, const git_oid *a, const git_oid *b, git_refspec *spec, void *data)
 {
 	char a_str[GIT_OID_SHA1_HEXSIZE+1], b_str[GIT_OID_SHA1_HEXSIZE+1];
+	git_buf remote_name;
 	(void)data;
+
+	if (git_refspec_rtransform(&remote_name, spec, refname) < 0)
+		return -1;
 
 	git_oid_fmt(b_str, b);
 	b_str[GIT_OID_SHA1_HEXSIZE] = '\0';
 
 	if (git_oid_is_zero(a)) {
-		printf("[new]     %.20s %s\n", b_str, refname);
+		printf("[new]     %.20s %s -> %s\n", b_str, remote_name.ptr, refname);
 	} else {
 		git_oid_fmt(a_str, a);
 		a_str[GIT_OID_SHA1_HEXSIZE] = '\0';
-		printf("[updated] %.10s..%.10s %s\n", a_str, b_str, refname);
+		printf("[updated] %.10s..%.10s %s -> %s\n", a_str, b_str, remote_name.ptr, refname);
 	}
 
 	return 0;
@@ -72,7 +76,7 @@ int lg2_fetch(git_repository *repo, int argc, char **argv)
 			goto on_error;
 
 	/* Set up the callbacks (only update_tips for now) */
-	fetch_opts.callbacks.update_tips = &update_cb;
+	fetch_opts.callbacks.update_refs = &update_cb;
 	fetch_opts.callbacks.sideband_progress = &progress_cb;
 	fetch_opts.callbacks.transfer_progress = transfer_progress_cb;
 	fetch_opts.callbacks.credentials = cred_acquire_cb;
