@@ -10,7 +10,7 @@
  * |\
  * | * (B) aa06ecc
  * * | (C) 63d671e
- * |/  
+ * |/
  * * (D) da23739
  * * (E) b99f7ac
  *
@@ -71,7 +71,7 @@ void test_blame_harder__ccc(void)
 	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
 
 	GIT_UNUSED(opts);
-	
+
 	/* Attribute the third hunk in b.txt to (E).  This hunk was deleted from
 	 * a.txt in (D), but reintroduced in (B).
 	 */
