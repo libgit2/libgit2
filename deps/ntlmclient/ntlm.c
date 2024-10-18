@@ -43,7 +43,7 @@ static bool supports_unicode(ntlm_client *ntlm)
 		false : true;
 }
 
-static inline bool increment_size(size_t *out, size_t incr)
+NTLM_INLINE(bool) increment_size(size_t *out, size_t incr)
 {
 	if (SIZE_MAX - *out < incr) {
 		*out = (size_t)-1;
@@ -272,7 +272,7 @@ int ntlm_client_set_timestamp(ntlm_client *ntlm, uint64_t timestamp)
 	return 0;
 }
 
-static inline bool write_buf(
+NTLM_INLINE(bool) write_buf(
 	ntlm_client *ntlm,
 	ntlm_buf *out,
 	const unsigned char *buf,
@@ -291,7 +291,7 @@ static inline bool write_buf(
 	return true;
 }
 
-static inline bool write_byte(
+NTLM_INLINE(bool) write_byte(
 	ntlm_client *ntlm,
 	ntlm_buf *out,
 	uint8_t value)
@@ -305,7 +305,7 @@ static inline bool write_byte(
 	return true;
 }
 
-static inline bool write_int16(
+NTLM_INLINE(bool) write_int16(
 	ntlm_client *ntlm,
 	ntlm_buf *out,
 	uint16_t value)
@@ -320,7 +320,7 @@ static inline bool write_int16(
 	return true;
 }
 
-static inline bool write_int32(
+NTLM_INLINE(bool) write_int32(
 	ntlm_client *ntlm,
 	ntlm_buf *out,
 	uint32_t value)
@@ -337,7 +337,7 @@ static inline bool write_int32(
 	return true;
 }
 
-static inline bool write_version(
+NTLM_INLINE(bool) write_version(
 	ntlm_client *ntlm,
 	ntlm_buf *out,
 	ntlm_version *version)
@@ -348,7 +348,7 @@ static inline bool write_version(
 		write_int32(ntlm, out, version->reserved);
 }
 
-static inline bool write_bufinfo(
+NTLM_INLINE(bool) write_bufinfo(
 	ntlm_client *ntlm,
 	ntlm_buf *out,
 	size_t len,
@@ -369,7 +369,7 @@ static inline bool write_bufinfo(
 		write_int32(ntlm, out, (uint32_t)offset);
 }
 
-static inline bool read_buf(
+NTLM_INLINE(bool) read_buf(
 	unsigned char *out,
 	ntlm_client *ntlm,
 	ntlm_buf *message,
@@ -386,7 +386,7 @@ static inline bool read_buf(
 	return true;
 }
 
-static inline bool read_byte(
+NTLM_INLINE(bool) read_byte(
 	uint8_t *out,
 	ntlm_client *ntlm,
 	ntlm_buf *message)
@@ -400,7 +400,7 @@ static inline bool read_byte(
 	return true;
 }
 
-static inline bool read_int16(
+NTLM_INLINE(bool) read_int16(
 	uint16_t *out,
 	ntlm_client *ntlm,
 	ntlm_buf *message)
@@ -418,7 +418,7 @@ static inline bool read_int16(
 	return true;
 }
 
-static inline bool read_int32(
+NTLM_INLINE(bool) read_int32(
 	uint32_t *out,
 	ntlm_client *ntlm,
 	ntlm_buf *message)
@@ -438,7 +438,7 @@ static inline bool read_int32(
 	return true;
 }
 
-static inline bool read_int64(
+NTLM_INLINE(bool) read_int64(
 	uint64_t *out,
 	ntlm_client *ntlm,
 	ntlm_buf *message)
@@ -462,7 +462,7 @@ static inline bool read_int64(
 	return true;
 }
 
-static inline bool read_version(
+NTLM_INLINE(bool) read_version(
 	ntlm_version *out,
 	ntlm_client *ntlm,
 	ntlm_buf *message)
@@ -473,7 +473,7 @@ static inline bool read_version(
 		read_int32(&out->reserved, ntlm, message);
 }
 
-static inline bool read_bufinfo(
+NTLM_INLINE(bool) read_bufinfo(
 	uint16_t *out_len,
 	uint32_t *out_offset,
 	ntlm_client *ntlm,
@@ -486,7 +486,7 @@ static inline bool read_bufinfo(
 		read_int32(out_offset, ntlm, message);
 }
 
-static inline bool read_string_unicode(
+NTLM_INLINE(bool) read_string_unicode(
 	char **out,
 	ntlm_client *ntlm,
 	ntlm_buf *message,
@@ -504,7 +504,7 @@ static inline bool read_string_unicode(
 	return ret;
 }
 
-static inline bool read_string_ascii(
+NTLM_INLINE(bool) read_string_ascii(
 	char **out,
 	ntlm_client *ntlm,
 	ntlm_buf *message,
@@ -526,7 +526,7 @@ static inline bool read_string_ascii(
 	return true;
 }
 
-static inline bool read_string(
+NTLM_INLINE(bool) read_string(
 	char **out,
 	ntlm_client *ntlm,
 	ntlm_buf *message,
@@ -539,7 +539,7 @@ static inline bool read_string(
 		return read_string_ascii(out, ntlm, message, string_len);
 }
 
-static inline bool read_target_info(
+NTLM_INLINE(bool) read_target_info(
 	char **server_out,
 	char **domain_out,
 	char **server_dns_out,
@@ -965,7 +965,7 @@ static void des_key_from_password(
 	generate_odd_parity(out);
 }
 
-static inline bool generate_lm_hash(
+NTLM_INLINE(bool) generate_lm_hash(
 	ntlm_des_block out[2],
 	ntlm_client *ntlm,
 	const char *password)
