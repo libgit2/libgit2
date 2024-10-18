@@ -26,18 +26,18 @@
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(CRYPT_OPENSSL_DYNAMIC)
 
-static inline HMAC_CTX *HMAC_CTX_new(void)
+NTLM_INLINE(HMAC_CTX *) HMAC_CTX_new(void)
 {
 	return calloc(1, sizeof(HMAC_CTX));
 }
 
-static inline int HMAC_CTX_reset(HMAC_CTX *ctx)
+NTLM_INLINE(int) HMAC_CTX_reset(HMAC_CTX *ctx)
 {
 	ntlm_memzero(ctx, sizeof(HMAC_CTX));
 	return 1;
 }
 
-static inline void HMAC_CTX_free(HMAC_CTX *ctx)
+NTLM_INLINE(void) HMAC_CTX_free(HMAC_CTX *ctx)
 {
 	free(ctx);
 }
@@ -48,7 +48,7 @@ static inline void HMAC_CTX_free(HMAC_CTX *ctx)
 	(defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER >= 0x03050000fL) || \
 	defined(CRYPT_OPENSSL_DYNAMIC)
 
-static inline void HMAC_CTX_cleanup(HMAC_CTX *ctx)
+NTLM_INLINE(void) HMAC_CTX_cleanup(HMAC_CTX *ctx)
 {
 	NTLM_UNUSED(ctx);
 }

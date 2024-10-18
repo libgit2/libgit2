@@ -37,3 +37,4 @@ else()
 endif()
 
 add_library(ntlmclient OBJECT ${SRC_NTLMCLIENT} ${SRC_NTLMCLIENT_UNICODE} ${SRC_NTLMCLIENT_CRYPTO})
+set_target_properties(ntlmclient PROPERTIES C_STANDARD 90)
