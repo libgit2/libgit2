@@ -168,7 +168,7 @@ int git_hash_sha1_init(git_hash_sha1_ctx *ctx)
 
 int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 {
-	GIT_ASSERT_ARG(ctx);
+	GIT_ASSERT_ARG(ctx && ctx->c);
 
 	if (EVP_DigestUpdate(ctx->c, data, len) != 1) {
 		git_error_set(GIT_ERROR_SHA, "failed to update sha1");
@@ -181,12 +181,15 @@ int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 int git_hash_sha1_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 {
 	unsigned int len = 0;
-	GIT_ASSERT_ARG(ctx);
+
+	GIT_ASSERT_ARG(ctx && ctx->c);
 
 	if (EVP_DigestFinal(ctx->c, out, &len) != 1) {
 		git_error_set(GIT_ERROR_SHA, "failed to finalize sha1");
 		return -1;
 	}
+
+	ctx->c = NULL;
 
 	return 0;
 }
@@ -315,7 +318,7 @@ int git_hash_sha256_init(git_hash_sha256_ctx *ctx)
 
 int git_hash_sha256_update(git_hash_sha256_ctx *ctx, const void *data, size_t len)
 {
-	GIT_ASSERT_ARG(ctx);
+	GIT_ASSERT_ARG(ctx && ctx->c);
 
 	if (EVP_DigestUpdate(ctx->c, data, len) != 1) {
 		git_error_set(GIT_ERROR_SHA, "failed to update sha256");
@@ -328,12 +331,15 @@ int git_hash_sha256_update(git_hash_sha256_ctx *ctx, const void *data, size_t le
 int git_hash_sha256_final(unsigned char *out, git_hash_sha256_ctx *ctx)
 {
 	unsigned int len = 0;
-	GIT_ASSERT_ARG(ctx);
+
+	GIT_ASSERT_ARG(ctx && ctx->c);
 
 	if (EVP_DigestFinal(ctx->c, out, &len) != 1) {
 		git_error_set(GIT_ERROR_SHA, "failed to finalize sha256");
 		return -1;
 	}
+
+	ctx->c = NULL;
 
 	return 0;
 }
