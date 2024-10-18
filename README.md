@@ -373,11 +373,13 @@ following:
 Compiler and linker options
 ---------------------------
 
-CMake lets you specify a few variables to control the behavior of the
-compiler and linker. These flags are rarely used but can be useful for
-64-bit to 32-bit cross-compilation.
+There are several options that control the behavior of the compiler and
+linker. These flags may be useful for cross-compilation or specialized
+setups.
 
 - `CMAKE_C_FLAGS`: Set your own compiler flags
+- `C_STANDARD`: the C standard to compile against; defaults to `C90`
+- `C_EXTENSIONS`: whether compiler extensions are supported; defaults to `OFF`
 - `CMAKE_FIND_ROOT_PATH`: Override the search path for libraries
 - `ZLIB_LIBRARY`, `OPENSSL_SSL_LIBRARY` AND `OPENSSL_CRYPTO_LIBRARY`:
 Tell CMake where to find those specific libraries

@@ -1,8 +1,7 @@
 # util: a shared library for common utility functions for libgit2 projects
 
 add_library(util OBJECT)
-set_target_properties(util PROPERTIES C_STANDARD 90)
-set_target_properties(util PROPERTIES C_EXTENSIONS OFF)
+set_c_standard(util)
 
 configure_file(git2_features.h.in git2_features.h)
 
