@@ -2,8 +2,7 @@
 # git library functionality.
 
 add_library(libgit2 OBJECT)
-set_target_properties(libgit2 PROPERTIES C_STANDARD 90)
-set_target_properties(libgit2 PROPERTIES C_EXTENSIONS OFF)
+set_c_standard(libgit2)
 
 include(PkgBuildConfig)
 

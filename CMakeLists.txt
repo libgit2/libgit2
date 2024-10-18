@@ -90,6 +90,8 @@ endif()
 
 # Modules
 
+include(FeatureSummary)
+include(SetCStandard)
 include(CheckLibraryExists)
 include(CheckFunctionExists)
 include(CheckSymbolExists)
@@ -102,7 +104,6 @@ include(FindStatNsec)
 include(Findfutimens)
 include(GNUInstallDirs)
 include(IdeSplitSources)
-include(FeatureSummary)
 include(EnableWarnings)
 include(DefaultCFlags)
 include(ExperimentalFeatures)
