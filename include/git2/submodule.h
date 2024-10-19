@@ -130,10 +130,8 @@ typedef struct git_submodule_update_options {
 
 	/**
 	 * These options are passed to the checkout step. To disable
-	 * checkout, set the `checkout_strategy` to
-	 * `GIT_CHECKOUT_NONE`. Generally you will want the use
-	 * GIT_CHECKOUT_SAFE to update files in the working
-	 * directory.
+	 * checkout, set the `checkout_strategy` to `GIT_CHECKOUT_NONE`
+	 * or `GIT_CHECKOUT_DRY_RUN`.
 	 */
 	git_checkout_options checkout_opts;
 
@@ -155,8 +153,9 @@ typedef struct git_submodule_update_options {
 #define GIT_SUBMODULE_UPDATE_OPTIONS_VERSION 1
 #define GIT_SUBMODULE_UPDATE_OPTIONS_INIT \
 	{ GIT_SUBMODULE_UPDATE_OPTIONS_VERSION, \
-		{ GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE }, \
-	GIT_FETCH_OPTIONS_INIT, 1 }
+	  GIT_CHECKOUT_OPTIONS_INIT, \
+	  GIT_FETCH_OPTIONS_INIT, \
+	  1 }
 
 /**
  * Initialize git_submodule_update_options structure

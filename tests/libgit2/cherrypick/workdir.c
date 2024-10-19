@@ -257,7 +257,7 @@ void test_cherrypick_workdir__conflict_use_ours(void)
 	};
 
 	/* leave the index in a conflicted state, but checkout "ours" to the workdir */
-	opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_USE_OURS;
+	opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_USE_OURS;
 
 	git_oid__fromstr(&head_oid, "bafbf6912c09505ac60575cd43d3f2aba3bd84d8", GIT_OID_SHA1);
 

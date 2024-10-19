@@ -16,6 +16,7 @@
 #include "git2/commit.h"
 #include "git2/tree.h"
 
+#include "checkout.h"
 #include "remote.h"
 #include "futils.h"
 #include "refs.h"
@@ -23,8 +24,6 @@
 #include "repository.h"
 #include "odb.h"
 #include "net.h"
-
-static int clone_local_into(git_repository *repo, git_remote *remote, const git_fetch_options *fetch_opts, const git_checkout_options *co_opts, const char *branch, int link);
 
 static int create_branch(
 	git_reference **branch,
@@ -366,12 +365,13 @@ static int should_checkout(
 	bool *out,
 	git_repository *repo,
 	bool is_bare,
-	const git_checkout_options *opts)
+	const git_clone_options *opts)
 {
 	int error;
 
-	if (!opts || is_bare || opts->checkout_strategy == GIT_CHECKOUT_NONE) {
-		*out = 0;
+	if (!opts || is_bare ||
+	    opts->checkout_opts.checkout_strategy == GIT_CHECKOUT_NONE) {
+		*out = false;
 		return 0;
 	}
 
@@ -382,13 +382,17 @@ static int should_checkout(
 	return 0;
 }
 
-static int checkout_branch(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, const char *reflog_message)
+static int checkout_branch(
+	git_repository *repo,
+	git_remote *remote,
+	const git_clone_options *opts,
+	const char *reflog_message)
 {
 	bool checkout;
 	int error;
 
-	if (branch)
-		error = update_head_to_branch(repo, remote, branch, reflog_message);
+	if (opts->checkout_branch)
+		error = update_head_to_branch(repo, remote, opts->checkout_branch, reflog_message);
 	/* Point HEAD to the same ref as the remote's head */
 	else
 		error = update_head_to_remote(repo, remote, reflog_message);
@@ -396,11 +400,11 @@ static int checkout_branch(git_repository *repo, git_remote *remote, const git_c
 	if (error < 0)
 		return error;
 
-	if ((error = should_checkout(&checkout, repo, git_repository_is_bare(repo), co_opts)) < 0)
+	if ((error = should_checkout(&checkout, repo, git_repository_is_bare(repo), opts)) < 0)
 		return error;
 
 	if (checkout)
-		error = git_checkout_head(repo, co_opts);
+		error = git_checkout_head(repo, &opts->checkout_opts);
 
 	return error;
 }
@@ -408,16 +412,13 @@ static int checkout_branch(git_repository *repo, git_remote *remote, const git_c
 static int clone_into(
 	git_repository *repo,
 	git_remote *_remote,
-	const git_fetch_options *opts,
-	const git_checkout_options *co_opts,
-	const char *branch)
+	const git_clone_options *opts)
 {
-	int error;
 	git_str reflog_message = GIT_STR_INIT;
 	git_remote_connect_options connect_opts = GIT_REMOTE_CONNECT_OPTIONS_INIT;
-	git_fetch_options fetch_opts;
 	git_remote *remote;
 	git_oid_t oid_type;
+	int error;
 
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(_remote);
@@ -430,13 +431,7 @@ static int clone_into(
 	if ((error = git_remote_dup(&remote, _remote)) < 0)
 		return error;
 
-	memcpy(&fetch_opts, opts, sizeof(git_fetch_options));
-	fetch_opts.update_fetchhead = 0;
-
-	if (!opts->depth)
-		fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
-
-	if ((error = git_remote_connect_options__from_fetch_opts(&connect_opts, remote, &fetch_opts)) < 0)
+	if ((error = git_remote_connect_options__from_fetch_opts(&connect_opts, remote, &opts->fetch_opts)) < 0)
 		goto cleanup;
 
 	git_str_printf(&reflog_message, "clone: from %s", git_remote_url(remote));
@@ -454,10 +449,10 @@ static int clone_into(
 	    (error = git_repository__set_objectformat(repo, oid_type)) < 0)
 		goto cleanup;
 
-	if ((error = git_remote_fetch(remote, NULL, &fetch_opts, git_str_cstr(&reflog_message))) != 0)
+	if ((error = git_remote_fetch(remote, NULL, &opts->fetch_opts, git_str_cstr(&reflog_message))) != 0)
 		goto cleanup;
 
-	error = checkout_branch(repo, remote, co_opts, branch, git_str_cstr(&reflog_message));
+	error = checkout_branch(repo, remote, opts, git_str_cstr(&reflog_message));
 
 cleanup:
 	git_remote_free(remote);
@@ -466,139 +461,6 @@ cleanup:
 
 	return error;
 }
-
-int git_clone__should_clone_local(const char *url_or_path, git_clone_local_t local)
-{
-	git_str fromurl = GIT_STR_INIT;
-	bool is_local;
-
-	if (local == GIT_CLONE_NO_LOCAL)
-		return 0;
-
-	if (git_net_str_is_url(url_or_path)) {
-		/* If GIT_CLONE_LOCAL_AUTO is specified, any url should be treated as remote */
-		if (local == GIT_CLONE_LOCAL_AUTO ||
-		    !git_fs_path_is_local_file_url(url_or_path))
-			return 0;
-
-		if (git_fs_path_fromurl(&fromurl, url_or_path) == 0)
-			is_local = git_fs_path_isdir(git_str_cstr(&fromurl));
-		else
-			is_local = -1;
-		git_str_dispose(&fromurl);
-	} else {
-		is_local = git_fs_path_isdir(url_or_path);
-	}
-	return is_local;
-}
-
-static int git__clone(
-	git_repository **out,
-	const char *url,
-	const char *local_path,
-	const git_clone_options *_options,
-	int use_existing)
-{
-	int error = 0;
-	git_repository *repo = NULL;
-	git_remote *origin;
-	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
-	uint32_t rmdir_flags = GIT_RMDIR_REMOVE_FILES;
-	git_repository_create_cb repository_cb;
-
-	GIT_ASSERT_ARG(out);
-	GIT_ASSERT_ARG(url);
-	GIT_ASSERT_ARG(local_path);
-
-	if (_options)
-		memcpy(&options, _options, sizeof(git_clone_options));
-
-	GIT_ERROR_CHECK_VERSION(&options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
-
-	/* Only clone to a new directory or an empty directory */
-	if (git_fs_path_exists(local_path) && !use_existing && !git_fs_path_is_empty_dir(local_path)) {
-		git_error_set(GIT_ERROR_INVALID,
-			"'%s' exists and is not an empty directory", local_path);
-		return GIT_EEXISTS;
-	}
-
-	/* Only remove the root directory on failure if we create it */
-	if (git_fs_path_exists(local_path))
-		rmdir_flags |= GIT_RMDIR_SKIP_ROOT;
-
-	if (options.repository_cb)
-		repository_cb = options.repository_cb;
-	else
-		repository_cb = default_repository_create;
-
-	if ((error = repository_cb(&repo, local_path, options.bare, options.repository_cb_payload)) < 0)
-		return error;
-
-	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
-		int clone_local = git_clone__should_clone_local(url, options.local);
-		int link = options.local != GIT_CLONE_LOCAL_NO_LINKS;
-
-		if (clone_local == 1)
-			error = clone_local_into(
-				repo, origin, &options.fetch_opts, &options.checkout_opts,
-				options.checkout_branch, link);
-		else if (clone_local == 0)
-			error = clone_into(
-				repo, origin, &options.fetch_opts, &options.checkout_opts,
-				options.checkout_branch);
-		else
-			error = -1;
-
-		git_remote_free(origin);
-	}
-
-	if (error != 0) {
-		git_error *last_error;
-		git_error_save(&last_error);
-
-		git_repository_free(repo);
-		repo = NULL;
-
-		(void)git_futils_rmdir_r(local_path, NULL, rmdir_flags);
-
-		git_error_restore(last_error);
-	}
-
-	*out = repo;
-	return error;
-}
-
-int git_clone(
-	git_repository **out,
-	const char *url,
-	const char *local_path,
-	const git_clone_options *_options)
-{
-	return git__clone(out, url, local_path, _options, 0);
-}
-
-int git_clone__submodule(
-	git_repository **out,
-	const char *url,
-	const char *local_path,
-	const git_clone_options *_options)
-{
-	return git__clone(out, url, local_path, _options, 1);
-}
-
-int git_clone_options_init(git_clone_options *opts, unsigned int version)
-{
-	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
-		opts, version, git_clone_options, GIT_CLONE_OPTIONS_INIT);
-	return 0;
-}
-
-#ifndef GIT_DEPRECATE_HARD
-int git_clone_init_options(git_clone_options *opts, unsigned int version)
-{
-	return git_clone_options_init(opts, version);
-}
-#endif
 
 static bool can_link(const char *src, const char *dst, int link)
 {
@@ -624,12 +486,16 @@ static bool can_link(const char *src, const char *dst, int link)
 #endif
 }
 
-static int clone_local_into(git_repository *repo, git_remote *remote, const git_fetch_options *fetch_opts, const git_checkout_options *co_opts, const char *branch, int link)
+static int clone_local_into(
+	git_repository *repo,
+	git_remote *remote,
+	const git_clone_options *opts)
 {
 	int error, flags;
 	git_repository *src;
 	git_str src_odb = GIT_STR_INIT, dst_odb = GIT_STR_INIT, src_path = GIT_STR_INIT;
 	git_str reflog_message = GIT_STR_INIT;
+	bool link = (opts && opts->local != GIT_CLONE_LOCAL_NO_LINKS);
 
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(remote);
@@ -682,10 +548,10 @@ static int clone_local_into(git_repository *repo, git_remote *remote, const git_
 
 	git_str_printf(&reflog_message, "clone: from %s", git_remote_url(remote));
 
-	if ((error = git_remote_fetch(remote, NULL, fetch_opts, git_str_cstr(&reflog_message))) != 0)
+	if ((error = git_remote_fetch(remote, NULL, &opts->fetch_opts, git_str_cstr(&reflog_message))) != 0)
 		goto cleanup;
 
-	error = checkout_branch(repo, remote, co_opts, branch, git_str_cstr(&reflog_message));
+	error = checkout_branch(repo, remote, opts, git_str_cstr(&reflog_message));
 
 cleanup:
 	git_str_dispose(&reflog_message);
@@ -695,3 +561,146 @@ cleanup:
 	git_repository_free(src);
 	return error;
 }
+
+int git_clone__should_clone_local(
+	bool *out,
+	const char *url_or_path,
+	git_clone_local_t local)
+{
+	git_str fromurl = GIT_STR_INIT;
+
+	*out = false;
+
+	if (local == GIT_CLONE_NO_LOCAL)
+		return 0;
+
+	if (git_net_str_is_url(url_or_path)) {
+		/* If GIT_CLONE_LOCAL_AUTO is specified, any url should
+		 * be treated as remote */
+		if (local == GIT_CLONE_LOCAL_AUTO ||
+		    !git_fs_path_is_local_file_url(url_or_path))
+			return 0;
+
+		if (git_fs_path_fromurl(&fromurl, url_or_path) < 0)
+			return -1;
+
+		*out = git_fs_path_isdir(git_str_cstr(&fromurl));
+		git_str_dispose(&fromurl);
+	} else {
+		*out = git_fs_path_isdir(url_or_path);
+	}
+
+	return 0;
+}
+
+static int clone_repo(
+	git_repository **out,
+	const char *url,
+	const char *local_path,
+	const git_clone_options *given_opts,
+	int use_existing)
+{
+	int error = 0;
+	git_repository *repo = NULL;
+	git_remote *origin;
+	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
+	uint32_t rmdir_flags = GIT_RMDIR_REMOVE_FILES;
+	git_repository_create_cb repository_cb;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(url);
+	GIT_ASSERT_ARG(local_path);
+
+	if (given_opts)
+		memcpy(&options, given_opts, sizeof(git_clone_options));
+
+	GIT_ERROR_CHECK_VERSION(&options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
+
+	/* enforce some behavior on fetch */
+	options.fetch_opts.update_fetchhead = 0;
+
+	if (!options.fetch_opts.depth)
+		options.fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+
+	/* Only clone to a new directory or an empty directory */
+	if (git_fs_path_exists(local_path) && !use_existing && !git_fs_path_is_empty_dir(local_path)) {
+		git_error_set(GIT_ERROR_INVALID,
+			"'%s' exists and is not an empty directory", local_path);
+		return GIT_EEXISTS;
+	}
+
+	/* Only remove the root directory on failure if we create it */
+	if (git_fs_path_exists(local_path))
+		rmdir_flags |= GIT_RMDIR_SKIP_ROOT;
+
+	if (options.repository_cb)
+		repository_cb = options.repository_cb;
+	else
+		repository_cb = default_repository_create;
+
+	if ((error = repository_cb(&repo, local_path, options.bare, options.repository_cb_payload)) < 0)
+		return error;
+
+	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
+		bool clone_local;
+
+		if ((error = git_clone__should_clone_local(&clone_local, url, options.local)) < 0) {
+			git_remote_free(origin);
+			return error;
+		}
+
+		if (clone_local)
+			error = clone_local_into(repo, origin, &options);
+		else
+			error = clone_into(repo, origin, &options);
+
+		git_remote_free(origin);
+	}
+
+	if (error != 0) {
+		git_error *last_error;
+		git_error_save(&last_error);
+
+		git_repository_free(repo);
+		repo = NULL;
+
+		(void)git_futils_rmdir_r(local_path, NULL, rmdir_flags);
+
+		git_error_restore(last_error);
+	}
+
+	*out = repo;
+	return error;
+}
+
+int git_clone(
+	git_repository **out,
+	const char *url,
+	const char *local_path,
+	const git_clone_options *options)
+{
+	return clone_repo(out, url, local_path, options, 0);
+}
+
+int git_clone__submodule(
+	git_repository **out,
+	const char *url,
+	const char *local_path,
+	const git_clone_options *options)
+{
+	return clone_repo(out, url, local_path, options, 1);
+}
+
+int git_clone_options_init(git_clone_options *opts, unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_clone_options, GIT_CLONE_OPTIONS_INIT);
+	return 0;
+}
+
+#ifndef GIT_DEPRECATE_HARD
+int git_clone_init_options(git_clone_options *opts, unsigned int version)
+{
+	return git_clone_options_init(opts, version);
+}
+#endif

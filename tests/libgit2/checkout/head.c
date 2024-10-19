@@ -228,7 +228,6 @@ void test_checkout_head__workdir_filemode_is_simplified(void)
 	cl_git_pass(git_revparse_single(&branch, g_repo, "099fabac3a9ea935598528c27f866e34089c2eff"));
 
 	opts.checkout_strategy &= ~GIT_CHECKOUT_FORCE;
-	opts.checkout_strategy |=  GIT_CHECKOUT_SAFE;
 	cl_git_pass(git_checkout_tree(g_repo, branch, NULL));
 
 	git_object_free(branch);
@@ -256,7 +255,6 @@ void test_checkout_head__obeys_filemode_true(void)
 	cl_git_pass(git_revparse_single(&branch, g_repo, "099fabac3a9ea935598528c27f866e34089c2eff"));
 
 	opts.checkout_strategy &= ~GIT_CHECKOUT_FORCE;
-	opts.checkout_strategy |=  GIT_CHECKOUT_SAFE;
 	cl_git_fail_with(GIT_ECONFLICT, git_checkout_tree(g_repo, branch, NULL));
 
 	git_object_free(branch);
@@ -284,7 +282,6 @@ void test_checkout_head__obeys_filemode_false(void)
 	cl_git_pass(git_revparse_single(&branch, g_repo, "099fabac3a9ea935598528c27f866e34089c2eff"));
 
 	opts.checkout_strategy &= ~GIT_CHECKOUT_FORCE;
-	opts.checkout_strategy |=  GIT_CHECKOUT_SAFE;
 	cl_git_pass(git_checkout_tree(g_repo, branch, NULL));
 
 	git_object_free(branch);

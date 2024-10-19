@@ -713,7 +713,6 @@ static int git_apply__to_workdir(
 			goto done;
 	}
 
-	checkout_opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
 	checkout_opts.checkout_strategy |= GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
 	checkout_opts.checkout_strategy |= GIT_CHECKOUT_DONT_WRITE_INDEX;
 

@@ -31,17 +31,11 @@ GIT_BEGIN_DECL
  * check out, the "baseline" tree of what was checked out previously, the
  * working directory for actual files, and the index for staged changes.
  *
- * You give checkout one of three strategies for update:
+ * You give checkout one of two strategies for update:
  *
- * - `GIT_CHECKOUT_NONE` is a dry-run strategy that checks for conflicts,
- *   etc., but doesn't make any actual changes.
- *
- * - `GIT_CHECKOUT_FORCE` is at the opposite extreme, taking any action to
- *   make the working directory match the target (including potentially
- *   discarding modified files).
- *
- * - `GIT_CHECKOUT_SAFE` is between these two options, it will only make
- *   modifications that will not lose changes.
+ * - `GIT_CHECKOUT_SAFE` is the default, and similar to git's default,
+ *   which will make modifications that will not lose changes in the
+ *   working directory.
  *
  *                         |  target == baseline   |  target != baseline  |
  *    ---------------------|-----------------------|----------------------|
@@ -54,6 +48,10 @@ GIT_BEGIN_DECL
  *      workdir missing,   | notify dirty DELETED  |     create file      |
  *      baseline present   |                       |                      |
  *    ---------------------|-----------------------|----------------------|
+ *
+ * - `GIT_CHECKOUT_FORCE` will take any action to make the working
+ *   directory match the target (including potentially discarding
+ *   modified files).
  *
  * To emulate `git checkout`, use `GIT_CHECKOUT_SAFE` with a checkout
  * notification callback (see below) that displays information about dirty
@@ -68,6 +66,9 @@ GIT_BEGIN_DECL
  *
  *
  * There are some additional flags to modify the behavior of checkout:
+ *
+ * - `GIT_CHECKOUT_DRY_RUN` is a dry-run strategy that checks for conflicts,
+ *   etc., but doesn't make any actual changes.
  *
  * - GIT_CHECKOUT_ALLOW_CONFLICTS makes SAFE mode apply safe file updates
  *   even if there are conflicts (instead of cancelling the checkout).
@@ -104,26 +105,19 @@ GIT_BEGIN_DECL
  *   and write through existing symbolic links.
  */
 typedef enum {
-	GIT_CHECKOUT_NONE = 0, /**< default is a dry run, no actual updates */
-
 	/**
 	 * Allow safe updates that cannot overwrite uncommitted data.
-	 * If the uncommitted changes don't conflict with the checked out files,
-	 * the checkout will still proceed, leaving the changes intact.
-	 *
-	 * Mutually exclusive with GIT_CHECKOUT_FORCE.
-	 * GIT_CHECKOUT_FORCE takes precedence over GIT_CHECKOUT_SAFE.
+	 * If the uncommitted changes don't conflict with the checked
+	 * out files, the checkout will still proceed, leaving the
+	 * changes intact.
 	 */
-	GIT_CHECKOUT_SAFE = (1u << 0),
+	GIT_CHECKOUT_SAFE = 0,
 
 	/**
-	 * Allow all updates to force working directory to look like index.
-	 *
-	 * Mutually exclusive with GIT_CHECKOUT_SAFE.
-	 * GIT_CHECKOUT_FORCE takes precedence over GIT_CHECKOUT_SAFE.
+	 * Allow all updates to force working directory to look like
+	 * the index, potentially losing data in the process.
 	 */
 	GIT_CHECKOUT_FORCE = (1u << 1),
-
 
 	/** Allow checkout to recreate missing files */
 	GIT_CHECKOUT_RECREATE_MISSING = (1u << 2),
@@ -178,8 +172,9 @@ typedef enum {
 	GIT_CHECKOUT_DONT_WRITE_INDEX = (1u << 23),
 
 	/**
-	 * Show what would be done by a checkout.  Stop after sending
-	 * notifications; don't update the working directory or index.
+	 * Perform a "dry run", reporting what _would_ be done but
+	 * without actually making changes in the working directory
+	 * or the index.
 	 */
 	GIT_CHECKOUT_DRY_RUN = (1u << 24),
 
@@ -187,6 +182,14 @@ typedef enum {
 	GIT_CHECKOUT_CONFLICT_STYLE_ZDIFF3 = (1u << 25),
 
 	/**
+	 * Do not do a checkout and do not fire callbacks; this is primarily
+	 * useful only for internal functions that will perform the
+	 * checkout themselves but need to pass checkout options into
+	 * another function, for example, `git_clone`.
+	*/
+	GIT_CHECKOUT_NONE = (1u << 30),
+
+	/*
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
 	 */
 
@@ -194,7 +197,6 @@ typedef enum {
 	GIT_CHECKOUT_UPDATE_SUBMODULES = (1u << 16),
 	/** Recursively checkout submodules if HEAD moved in super repo (NOT IMPLEMENTED) */
 	GIT_CHECKOUT_UPDATE_SUBMODULES_IF_CHANGED = (1u << 17)
-
 } git_checkout_strategy_t;
 
 /**
@@ -345,7 +347,7 @@ typedef struct git_checkout_options {
 } git_checkout_options;
 
 #define GIT_CHECKOUT_OPTIONS_VERSION 1
-#define GIT_CHECKOUT_OPTIONS_INIT {GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE}
+#define GIT_CHECKOUT_OPTIONS_INIT {GIT_CHECKOUT_OPTIONS_VERSION}
 
 /**
  * Initialize git_checkout_options structure

@@ -374,7 +374,7 @@ void test_revert_workdir__conflict_use_ours(void)
 		{ 0100644, "0f5bfcf58c558d865da6be0281d7795993646cee", 0, "file6.txt" },
 	};
 
-	opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_USE_OURS;
+	opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_USE_OURS;
 
 	git_oid__fromstr(&head_oid, "72333f47d4e83616630ff3b0ffe4c0faebcc3c45", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));

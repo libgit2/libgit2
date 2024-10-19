@@ -12,12 +12,9 @@ static git_clone_options g_options;
 
 void test_online_fetchhead__initialize(void)
 {
-	git_fetch_options dummy_fetch = GIT_FETCH_OPTIONS_INIT;
 	g_repo = NULL;
 
-	memset(&g_options, 0, sizeof(git_clone_options));
-	g_options.version = GIT_CLONE_OPTIONS_VERSION;
-	g_options.fetch_opts = dummy_fetch;
+	git_clone_options_init(&g_options, GIT_CLONE_OPTIONS_VERSION);
 }
 
 void test_online_fetchhead__cleanup(void)

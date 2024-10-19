@@ -3352,8 +3352,7 @@ int git_merge(
 		goto done;
 
 	checkout_strategy = given_checkout_opts ?
-		given_checkout_opts->checkout_strategy :
-		GIT_CHECKOUT_SAFE;
+		given_checkout_opts->checkout_strategy : 0;
 
 	if ((error = git_indexwriter_init_for_operation(&indexwriter, repo,
 		&checkout_strategy)) < 0)

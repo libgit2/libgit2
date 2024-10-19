@@ -26,13 +26,12 @@ void perf__do_merge(const char *fixture,
 
 	perf__timer__start(&t_total);
 
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	clone_opts.checkout_opts = checkout_opts;
 
 	perf__timer__start(&t_clone);
 	cl_git_pass(git_clone(&g_repo, fixture, test_name, &clone_opts));
 	perf__timer__stop(&t_clone);
-	
+
 	git_oid__fromstr(&oid_a, id_a, GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit_a, g_repo, &oid_a));
 	cl_git_pass(git_branch_create(&ref_branch_a, g_repo,
