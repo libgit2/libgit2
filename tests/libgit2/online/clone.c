@@ -319,10 +319,10 @@ void test_online_clone__clone_mirror(void)
 	cl_fixture_cleanup("./foo.git");
 }
 
-static int update_tips(const char *refname, const git_oid *a, const git_oid *b, void *payload)
+static int update_refs(const char *refname, const git_oid *a, const git_oid *b, git_refspec *spec, void *payload)
 {
 	int *callcount = (int*)payload;
-	GIT_UNUSED(refname); GIT_UNUSED(a); GIT_UNUSED(b);
+	GIT_UNUSED(refname); GIT_UNUSED(a); GIT_UNUSED(b); GIT_UNUSED(spec);
 	*callcount = *callcount + 1;
 	return 0;
 }
@@ -331,7 +331,7 @@ void test_online_clone__custom_remote_callbacks(void)
 {
 	int callcount = 0;
 
-	g_options.fetch_opts.callbacks.update_tips = update_tips;
+	g_options.fetch_opts.callbacks.update_refs = update_refs;
 	g_options.fetch_opts.callbacks.payload = &callcount;
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
