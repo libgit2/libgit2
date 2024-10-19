@@ -7,7 +7,9 @@
 #ifndef INCLUDE_streams_openssl_legacy_h__
 #define INCLUDE_streams_openssl_legacy_h__
 
-#include "streams/openssl_dynamic.h"
+#ifdef GIT_OPENSSL_DYNAMIC
+# include "streams/openssl_dynamic.h"
+#endif
 
 #if defined(GIT_OPENSSL) && !defined(GIT_OPENSSL_DYNAMIC)
 # include <openssl/ssl.h>

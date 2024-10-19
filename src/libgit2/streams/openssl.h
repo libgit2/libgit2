@@ -8,8 +8,14 @@
 #define INCLUDE_streams_openssl_h__
 
 #include "common.h"
-#include "streams/openssl_legacy.h"
-#include "streams/openssl_dynamic.h"
+
+#if defined(GIT_OPENSSL_LEGACY)
+# include "streams/openssl_legacy.h"
+#endif
+
+#if defined(GIT_OPENSSL_DYNAMIC)
+# include "streams/openssl_dynamic.h"
+#endif
 
 #include "git2/sys/stream.h"
 
