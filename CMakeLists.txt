@@ -53,6 +53,8 @@ option(SONAME                  "Set the (SO)VERSION of the target"              
 option(DEPRECATE_HARD          "Do not include deprecated functions in the library"    OFF)
 
 # Compilation options
+   set(CMAKE_C_STANDARD        "90" CACHE STRING "The C standard to compile against")
+option(CMAKE_C_EXTENSIONS      "Whether compiler extensions are supported"             OFF)
 option(ENABLE_WERROR           "Enable compilation with -Werror"                       OFF)
 
 if(UNIX)
@@ -91,7 +93,6 @@ endif()
 # Modules
 
 include(FeatureSummary)
-include(SetCStandard)
 include(CheckLibraryExists)
 include(CheckFunctionExists)
 include(CheckSymbolExists)

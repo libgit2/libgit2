@@ -2,7 +2,6 @@
 # git library functionality.
 
 add_library(libgit2 OBJECT)
-set_c_standard(libgit2)
 
 include(PkgBuildConfig)
 

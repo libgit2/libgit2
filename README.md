@@ -378,8 +378,8 @@ linker. These flags may be useful for cross-compilation or specialized
 setups.
 
 - `CMAKE_C_FLAGS`: Set your own compiler flags
-- `C_STANDARD`: the C standard to compile against; defaults to `C90`
-- `C_EXTENSIONS`: whether compiler extensions are supported; defaults to `OFF`
+- `CMAKE_C_STANDARD`: the C standard to compile against; defaults to `C90`
+- `CMAKE_C_EXTENSIONS`: whether compiler extensions are supported; defaults to `OFF`
 - `CMAKE_FIND_ROOT_PATH`: Override the search path for libraries
 - `ZLIB_LIBRARY`, `OPENSSL_SSL_LIBRARY` AND `OPENSSL_CRYPTO_LIBRARY`:
 Tell CMake where to find those specific libraries
