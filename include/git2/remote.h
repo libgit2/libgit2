@@ -83,7 +83,7 @@ typedef enum {
 	/* Write the fetch results to FETCH_HEAD. */
 	GIT_REMOTE_UPDATE_FETCHHEAD = (1 << 0),
 
-	/* Report unchanged tips in the update_tips callback. */
+	/* Report unchanged tips in the update_refs callback. */
 	GIT_REMOTE_UPDATE_REPORT_UNCHANGED = (1 << 1)
 } git_remote_update_flags;
 
@@ -568,7 +568,8 @@ struct git_remote_callbacks {
 	 * Completion is called when different parts of the download
 	 * process are done (currently unused).
 	 */
-	int GIT_CALLBACK(completion)(git_remote_completion_t type, void *data);
+	int GIT_CALLBACK(completion)(git_remote_completion_t type,
+		void *data);
 
 	/**
 	 * This will be called if the remote host requires
@@ -594,11 +595,22 @@ struct git_remote_callbacks {
 	 */
 	git_indexer_progress_cb transfer_progress;
 
+#ifdef GIT_DEPRECATE_HARD
+	void *reserved_update_tips;
+#else
 	/**
-	 * Each time a reference is updated locally, this function
-	 * will be called with information about it.
+	 * Deprecated callback for reference updates, callers should
+	 * set `update_refs` instead. This is retained for backward
+	 * compatibility; if you specify both `update_refs` and
+	 * `update_tips`, then only the `update_refs` function will
+	 * be called.
+	 *
+	 * @deprecated the `update_refs` callback in this structure
+	 * should be preferred
 	 */
-	int GIT_CALLBACK(update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
+	int GIT_CALLBACK(update_tips)(const char *refname,
+		const git_oid *a, const git_oid *b, void *data);
+#endif
 
 	/**
 	 * Function to call with progress information during pack
@@ -655,6 +667,19 @@ struct git_remote_callbacks {
 	 */
 	git_url_resolve_cb resolve_url;
 #endif
+
+	/**
+	 * Each time a reference is updated locally, this function
+	 * will be called with information about it. This should be
+	 * preferred over the `update_tips` callback in this
+	 * structure.
+	 */
+	int GIT_CALLBACK(update_refs)(
+		const char *refname,
+		const git_oid *a,
+		const git_oid *b,
+		git_refspec *spec,
+		void *data);
 };
 
 #define GIT_REMOTE_CALLBACKS_VERSION 1
