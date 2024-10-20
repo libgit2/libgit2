@@ -1,5 +1,9 @@
 # util: the unit tests for libgit2's utility library
 
+if(NOT "${CMAKE_VERSION}" VERSION_LESS 3.27)
+	cmake_policy(SET CMP0148 OLD)
+endif()
+
 set(Python_ADDITIONAL_VERSIONS 3 2.7)
 find_package(PythonInterp)
 
