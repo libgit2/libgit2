@@ -53,6 +53,13 @@ option(SONAME                  "Set the (SO)VERSION of the target"              
 option(DEPRECATE_HARD          "Do not include deprecated functions in the library"    OFF)
 
 # Compilation options
+# Default to c99 on Android Studio for compatibility; c90 everywhere else
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
+   set(CMAKE_C_STANDARD        "99" CACHE STRING "The C standard to compile against")
+else()
+   set(CMAKE_C_STANDARD        "90" CACHE STRING "The C standard to compile against")
+endif()
+option(CMAKE_C_EXTENSIONS      "Whether compiler extensions are supported"             OFF)
 option(ENABLE_WERROR           "Enable compilation with -Werror"                       OFF)
 
 if(UNIX)
@@ -91,7 +98,6 @@ endif()
 # Modules
 
 include(FeatureSummary)
-include(SetCStandard)
 include(CheckLibraryExists)
 include(CheckFunctionExists)
 include(CheckSymbolExists)

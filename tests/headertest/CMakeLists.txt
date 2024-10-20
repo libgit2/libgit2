@@ -3,7 +3,6 @@
 # even when they have aggressive C90 warnings enabled.
 
 add_executable(headertest headertest.c)
-set_c_standard(headertest)
 
 target_include_directories(headertest PRIVATE ${LIBGIT2_INCLUDES})
 

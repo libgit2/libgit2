@@ -42,7 +42,6 @@ set_source_files_properties(
 	PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clar.suite)
 
 add_executable(util_tests ${SRC_CLAR} ${SRC_TEST} ${LIBGIT2_OBJECTS})
-set_c_standard(util_tests)
 
 set_target_properties(util_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
 
