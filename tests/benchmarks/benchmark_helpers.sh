@@ -408,6 +408,6 @@ needs_repo() {
 		echo "remote repository ('${REPO_REMOTE_URL}') locally then set," 1>&2
 		echo "the 'BENCHMARK_${REPO_UPPER}_REPOSITORY' environment variable to the path that" 1>&2
 		echo "contains the repository locally, then run this benchmark again." 1>&2
-		exit 1
+		exit 2
 	fi
 }
