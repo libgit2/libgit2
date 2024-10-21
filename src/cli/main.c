@@ -11,6 +11,7 @@
 #include "cmd.h"
 
 int cli_opt__show_help = 0;
+int cli_opt__use_pager = 1;
 
 static int show_version = 0;
 static char *command = NULL;
