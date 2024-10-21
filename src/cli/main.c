@@ -64,6 +64,17 @@ static void reorder_args(char **argv, size_t first)
 	argv[1] = tmp;
 }
 
+/*
+ * When invoked without a command, or just with `--help`, we invoke
+ * the help command; but we want to preserve only arguments that would
+ * be useful for that.
+ */
+static void help_args(int *argc, char **argv)
+{
+	argv[0] = "help";
+	*argc = 1;
+}
+
 int main(int argc, char **argv)
 {
 	const cli_cmd_spec *cmd;
@@ -103,6 +114,7 @@ int main(int argc, char **argv)
 	}
 
 	if (!command) {
+		help_args(&argc, argv);
 		ret = cmd_help(argc, argv);
 		goto done;
 	}
