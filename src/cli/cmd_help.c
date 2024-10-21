@@ -25,7 +25,7 @@ static const cli_opt_spec opts[] = {
 
 static int print_help(void)
 {
-	cli_opt_usage_fprint(stdout, PROGRAM_NAME, COMMAND_NAME, opts);
+	cli_opt_usage_fprint(stdout, PROGRAM_NAME, COMMAND_NAME, opts, CLI_OPT_USAGE_SHOW_HIDDEN);
 	printf("\n");
 
 	printf("Display help information about %s.  If a command is specified, help\n", PROGRAM_NAME);
@@ -39,7 +39,7 @@ static int print_commands(void)
 {
 	const cli_cmd_spec *cmd;
 
-	cli_opt_usage_fprint(stdout, PROGRAM_NAME, NULL, cli_common_opts);
+	cli_opt_usage_fprint(stdout, PROGRAM_NAME, NULL, cli_common_opts, CLI_OPT_USAGE_SHOW_HIDDEN);
 	printf("\n");
 
 	printf("These are the %s commands available:\n\n", PROGRAM_NAME);

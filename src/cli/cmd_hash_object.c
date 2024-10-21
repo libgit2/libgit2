@@ -36,7 +36,7 @@ static const cli_opt_spec opts[] = {
 
 static void print_help(void)
 {
-	cli_opt_usage_fprint(stdout, PROGRAM_NAME, COMMAND_NAME, opts);
+	cli_opt_usage_fprint(stdout, PROGRAM_NAME, COMMAND_NAME, opts, 0);
 	printf("\n");
 
 	printf("Compute the object ID for a given file and optionally write that file\nto the object database.\n");

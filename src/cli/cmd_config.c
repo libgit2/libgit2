@@ -68,7 +68,7 @@ static const cli_opt_spec opts[] = {
 
 static void print_help(void)
 {
-	cli_opt_usage_fprint(stdout, PROGRAM_NAME, COMMAND_NAME, opts);
+	cli_opt_usage_fprint(stdout, PROGRAM_NAME, COMMAND_NAME, opts, 0);
 	printf("\n");
 
 	printf("Query and set configuration options.\n");
