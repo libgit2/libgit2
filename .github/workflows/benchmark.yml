@@ -3,6 +3,12 @@ name: Benchmark
 
 on:
   workflow_dispatch:
+    inputs:
+      suite:
+        description: Benchmark suite to run
+      debug:
+        type: boolean
+        description: Debugging output
   schedule:
   - cron: '15 4 * * *'
 
@@ -62,6 +68,11 @@ jobs:
       run: source/ci/setup-${{ matrix.platform.setup-script }}-benchmark.sh
       shell: bash
       if: matrix.platform.setup-script != ''
+    - name: Clone resource repositories
+      run: |
+        mkdir resources
+        git clone --bare https://github.com/git/git resources/git
+        git clone --bare https://github.com/torvalds/linux resources/linux
     - name: Build
       run: |
         mkdir build && cd build
@@ -69,14 +80,30 @@ jobs:
       shell: bash
     - name: Benchmark
       run: |
+        export BENCHMARK_GIT_REPOSITORY="$(pwd)/resources/git"
+        # avoid linux temporarily; the linux blame benchmarks are simply
+        # too slow to use
+        # export BENCHMARK_LINUX_REPOSITORY="$(pwd)/resources/linux"
+
         if [[ "$(uname -s)" == MINGW* ]]; then
           GIT2_CLI="$(cygpath -w $(pwd))\\build\\Release\\git2"
         else
           GIT2_CLI="$(pwd)/build/git2"
         fi
 
+        if [ "${{ github.event.inputs.suite }}" != "" ]; then
+          SUITE_FLAG="--suite ${{ github.event.inputs.suite }}"
+        fi
+
+        if [ "${{ github.event.inputs.debug }}" = "true" ]; then
+          DEBUG_FLAG="--debug"
+        fi
+
         mkdir benchmark && cd benchmark
-        ../source/tests/benchmarks/benchmark.sh --baseline-cli "git" --cli "${GIT2_CLI}" --name libgit2 --json benchmarks.json --zip benchmarks.zip
+        ../source/tests/benchmarks/benchmark.sh \
+            ${SUITE_FLAG} ${DEBUG_FLAG} \
+            --baseline-cli "git" --cli "${GIT2_CLI}" --name libgit2 \
+            --json benchmarks.json --zip benchmarks.zip
       shell: bash
     - name: Upload results
       uses: actions/upload-artifact@v4
@@ -89,7 +116,7 @@ jobs:
   publish:
     name: Publish results
     needs: [ build ]
-    if: always() && github.repository == 'libgit2/libgit2'
+    if: always() && github.repository == 'libgit2/libgit2' && github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
     - name: Check out benchmark repository

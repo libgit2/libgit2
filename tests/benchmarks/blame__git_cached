@@ -1,0 +1,11 @@
+#!/bin/bash -e
+
+. "$(dirname "$0")/benchmark_helpers.sh"
+
+needs_repo git
+
+gitbench --prepare "clone_repo git && cd git && git reset --hard v2.45.0" \
+         --warmup 5 \
+         --chdir "git" \
+         -- \
+         --no-pager blame "git.c"
