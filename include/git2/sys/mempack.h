@@ -101,6 +101,14 @@ GIT_EXTERN(int) git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_ba
  */
 GIT_EXTERN(int) git_mempack_reset(git_odb_backend *backend);
 
+/**
+ * Checks if mempack is empty
+ *
+ * @param backend The mempack backend
+ * @return 1 if the repository is empty, 0 if it isn't
+ */
+GIT_EXTERN(int) git_mempack_empty(git_odb_backend *backend);
+
 GIT_END_DECL
 
 #endif

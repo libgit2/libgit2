@@ -8,14 +8,13 @@ static git_odb *_odb;
 static git_oid _oid;
 static git_odb_object *_obj;
 static git_repository *_repo;
+static git_odb_backend *_backend;
 
 void test_odb_backend_mempack__initialize(void)
 {
-	git_odb_backend *backend;
-
-	cl_git_pass(git_mempack_new(&backend));
+	cl_git_pass(git_mempack_new(&_backend));
 	cl_git_pass(git_odb__new(&_odb, NULL));
-	cl_git_pass(git_odb_add_backend(_odb, backend, 10));
+	cl_git_pass(git_odb_add_backend(_odb, _backend, 10));
 	cl_git_pass(git_repository__wrap_odb(&_repo, _odb, GIT_OID_SHA1));
 }
 
@@ -31,6 +30,14 @@ void test_odb_backend_mempack__write_succeeds(void)
 	const char *data = "data";
 	cl_git_pass(git_odb_write(&_oid, _odb, data, strlen(data) + 1, GIT_OBJECT_BLOB));
 	cl_git_pass(git_odb_read(&_obj, _odb, &_oid));
+}
+
+void test_odb_backend_mempack_empty(void)
+{
+	const char *data = "data";
+	cl_assert_equal_sz(1, git_mempack_empty(_backend));
+	cl_git_pass(git_odb_write(&_oid, _odb, data, strlen(data) + 1, GIT_OBJECT_BLOB));
+	cl_assert_equal_sz(0, git_mempack_empty(_backend));
 }
 
 void test_odb_backend_mempack__read_of_missing_object_fails(void)
