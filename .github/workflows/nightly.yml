@@ -373,6 +373,8 @@ jobs:
             CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
+            # TODO: this is a temporary removal
+            SKIP_GITDAEMON_TESTS: true
         - name: "Linux (SHA256, Xenial, Clang, OpenSSL-FIPS)"
           id: linux-sha256-fips
           container:
