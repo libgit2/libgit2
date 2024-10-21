@@ -13,7 +13,6 @@
 
 #define COMMAND_NAME "hash-object"
 
-static int show_help;
 static char *type_name;
 static int write_object, read_stdin, literally;
 static char **filenames;
@@ -103,7 +102,7 @@ int cmd_hash_object(int argc, char **argv)
 	if (cli_opt_parse(&invalid_opt, opts, argv + 1, argc - 1, CLI_OPT_PARSE_GNU))
 		return cli_opt_usage_error(COMMAND_NAME, opts, &invalid_opt);
 
-	if (show_help) {
+	if (cli_opt__show_help) {
 		print_help();
 		return 0;
 	}

@@ -10,18 +10,15 @@
 #include "common.h"
 #include "cmd.h"
 
-static int show_help = 0;
+int cli_opt__show_help = 0;
+
 static int show_version = 0;
 static char *command = NULL;
 static char **args = NULL;
 
 const cli_opt_spec cli_common_opts[] = {
-	{ CLI_OPT_TYPE_SWITCH,    "help",       0, &show_help,    1,
-	  CLI_OPT_USAGE_DEFAULT,   NULL,       "display help information" },
-	{ CLI_OPT_TYPE_VALUE,      NULL,       'c', NULL,         0,
-	  CLI_OPT_USAGE_DEFAULT,  "key=value", "add configuration value" },
-	{ CLI_OPT_TYPE_VALUE,     "config-env", 0, NULL,          0,
-	  CLI_OPT_USAGE_DEFAULT,  "key=value", "set configuration value to environment variable" },
+	CLI_COMMON_OPT,
+
 	{ CLI_OPT_TYPE_SWITCH,    "version",   0, &show_version, 1,
 	  CLI_OPT_USAGE_DEFAULT,   NULL,      "display the version" },
 	{ CLI_OPT_TYPE_ARG,       "command",   0, &command,      0,
@@ -71,6 +68,8 @@ static void reorder_args(char **argv, size_t first)
  */
 static void help_args(int *argc, char **argv)
 {
+	cli_opt__show_help = 0;
+
 	argv[0] = "help";
 	*argc = 1;
 }

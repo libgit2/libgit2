@@ -13,7 +13,6 @@
 #define COMMAND_NAME "help"
 
 static char *command;
-static int show_help;
 
 static const cli_opt_spec opts[] = {
 	CLI_COMMON_OPT,
@@ -62,7 +61,7 @@ int cmd_help(int argc, char **argv)
 		return cli_opt_usage_error(COMMAND_NAME, opts, &invalid_opt);
 
 	/* Show the meta-help */
-	if (show_help)
+	if (cli_opt__show_help)
 		return print_help();
 
 	/* We were not asked to show help for a specific command. */

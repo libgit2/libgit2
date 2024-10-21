@@ -23,7 +23,6 @@ typedef enum {
 static action_t action = ACTION_NONE;
 static int show_origin;
 static int show_scope;
-static int show_help;
 static int null_separator;
 static int config_level;
 static char *config_filename;
@@ -180,7 +179,7 @@ int cmd_config(int argc, char **argv)
 	if (cli_opt_parse(&invalid_opt, opts, argv + 1, argc - 1, CLI_OPT_PARSE_GNU))
 		return cli_opt_usage_error(COMMAND_NAME, opts, &invalid_opt);
 
-	if (show_help) {
+	if (cli_opt__show_help) {
 		print_help();
 		return 0;
 	}
