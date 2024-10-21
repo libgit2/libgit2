@@ -3,6 +3,12 @@ name: Benchmark
 
 on:
   workflow_dispatch:
+    inputs:
+      suite:
+        description: Benchmark suite to run
+      debug:
+        type: boolean
+        description: Debugging output
   schedule:
   - cron: '15 4 * * *'
 
@@ -83,8 +89,19 @@ jobs:
           GIT2_CLI="$(pwd)/build/git2"
         fi
 
+        if [ "${{ github.event.inputs.suite }}" != "" ]; then
+          SUITE_FLAG="--suite ${{ github.event.inputs.suite }}"
+        fi
+
+        if [ "${{ github.event.inputs.debug }}" = "true" ]; then
+          DEBUG_FLAG="--debug"
+        fi
+
         mkdir benchmark && cd benchmark
-        ../source/tests/benchmarks/benchmark.sh --baseline-cli "git" --cli "${GIT2_CLI}" --name libgit2 --json benchmarks.json --zip benchmarks.zip
+        ../source/tests/benchmarks/benchmark.sh \
+            ${SUITE_FLAG} ${DEBUG_FLAG} \
+            --baseline-cli "git" --cli "${GIT2_CLI}" --name libgit2 \
+            --json benchmarks.json --zip benchmarks.zip
       shell: bash
     - name: Upload results
       uses: actions/upload-artifact@v4
