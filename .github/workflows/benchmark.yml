@@ -81,7 +81,9 @@ jobs:
     - name: Benchmark
       run: |
         export BENCHMARK_GIT_REPOSITORY="$(pwd)/resources/git"
-        export BENCHMARK_LINUX_REPOSITORY="$(pwd)/resources/linux"
+        # avoid linux temporarily; the linux blame benchmarks are simply
+        # too slow to use
+        # export BENCHMARK_LINUX_REPOSITORY="$(pwd)/resources/linux"
 
         if [[ "$(uname -s)" == MINGW* ]]; then
           GIT2_CLI="$(cygpath -w $(pwd))\\build\\Release\\git2"
