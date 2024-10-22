@@ -30,7 +30,7 @@ option(USE_THREADS             "Use threads for parallel processing when possibl
 option(USE_NSEC                "Support nanosecond precision file mtimes and ctimes"    ON)
 
 # Backend selection
-option(USE_SSH                 "Enable SSH support. Can be set to a specific backend" OFF)
+   set(USE_SSH                 "" CACHE STRING "Enables SSH support. One of libssh2, exec, or OFF. (Defaults to OFF.)")
 option(USE_HTTPS               "Enable HTTPS support. Can be set to a specific backend" ON)
 option(USE_SHA1                "Enable SHA1. Can be set to CollisionDetection(ON)/HTTPS" ON)
 option(USE_SHA256              "Enable SHA256. Can be set to HTTPS/Builtin" ON)
