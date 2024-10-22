@@ -32,14 +32,6 @@ void test_odb_backend_mempack__write_succeeds(void)
 	cl_git_pass(git_odb_read(&_obj, _odb, &_oid));
 }
 
-void test_odb_backend_mempack_empty(void)
-{
-	const char *data = "data";
-	cl_assert_equal_sz(1, git_mempack_empty(_backend));
-	cl_git_pass(git_odb_write(&_oid, _odb, data, strlen(data) + 1, GIT_OBJECT_BLOB));
-	cl_assert_equal_sz(0, git_mempack_empty(_backend));
-}
-
 void test_odb_backend_mempack__read_of_missing_object_fails(void)
 {
 	cl_git_pass(git_oid__fromstr(&_oid, "f6ea0495187600e7b2288c8ac19c5886383a4633", GIT_OID_SHA1));
@@ -65,4 +57,21 @@ void test_odb_backend_mempack__blob_create_from_buffer_succeeds(void)
 
 	cl_git_pass(git_blob_create_from_buffer(&_oid, _repo, data, strlen(data) + 1));
 	cl_assert(git_odb_exists(_odb, &_oid) == 1);
+}
+
+void test_odb_backend_mempack__empty_object_count_succeeds(void)
+{
+	cl_assert_equal_sz(0, git_mempack_object_count(_backend));
+}
+
+void test_odb_backend_mempack__object_count_succeeds(void)
+{
+	const char *data = "data";
+	cl_git_pass(git_odb_write(&_oid, _odb, data, strlen(data) + 1, GIT_OBJECT_BLOB));
+	cl_assert_equal_sz(1, git_mempack_object_count(_backend));
+}
+
+void test_odb_backend_mempack__object_count_fails(void)
+{
+	cl_git_fail_with(-1, git_mempack_object_count(0));
 }

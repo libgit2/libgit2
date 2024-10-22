@@ -210,13 +210,9 @@ int git_mempack_new(git_odb_backend **out)
 	return 0;
 }
 
-int git_mempack_empty(git_odb_backend *_backend)
+int git_mempack_object_count(git_odb_backend *_backend)
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
 	GIT_ASSERT_ARG(_backend);
-
-	if (git_odb_mempack_oidmap_size(&db->objects) || db->commits.size)
-		return 0;
-
-	return 1;
+	return git_odb_mempack_oidmap_size(&db->objects);
 }
