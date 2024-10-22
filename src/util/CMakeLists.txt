@@ -49,7 +49,7 @@ endif()
 
 list(SORT UTIL_SRC_SHA1)
 
-if(USE_SHA256 STREQUAL "Builtin")
+if(USE_SHA256 STREQUAL "builtin")
 	file(GLOB UTIL_SRC_SHA256 hash/builtin.* hash/rfc6234/*)
 elseif(USE_SHA256 STREQUAL "OpenSSL" OR USE_SHA256 STREQUAL "OpenSSL-Dynamic" OR USE_SHA256 STREQUAL "OpenSSL-FIPS")
 	add_definitions(-DOPENSSL_API_COMPAT=0x10100000L)
@@ -61,7 +61,7 @@ elseif(USE_SHA256 STREQUAL "mbedTLS")
 elseif(USE_SHA256 STREQUAL "Win32")
 	file(GLOB UTIL_SRC_SHA256 hash/win32.*)
 else()
-	message(FATAL_ERROR "Asked for unknown SHA256 backend: ${USE_SHA256}")
+	message(FATAL_ERROR "asked for unknown SHA256 backend: ${USE_SHA256}")
 endif()
 
 list(SORT UTIL_SRC_SHA256)
