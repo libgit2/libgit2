@@ -13,6 +13,7 @@ RUN apt-get update && \
         libclang-rt-17-dev \
         libcurl4-gnutls-dev \
         libgcrypt20-dev \
+        libhttp-parser-dev \
         libkrb5-dev \
         libpcre3-dev \
         libssl-dev \
