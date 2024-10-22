@@ -31,7 +31,7 @@ option(USE_NSEC                "Support nanosecond precision file mtimes and cti
 
 # Backend selection
    set(USE_SSH                 "" CACHE STRING "Enables SSH support. One of libssh2, exec, or OFF. (Defaults to OFF.)")
-option(USE_HTTPS               "Enable HTTPS support. Can be set to a specific backend" ON)
+   set(USE_HTTPS               "" CACHE STRING "Enable HTTPS support. One of ON (to autodetect), OFF, or a specific backend: OpenSSL, OpenSSL-FIPS, OpenSSL-Dynamic, mbedTLS, SecureTransport, Schannel, or WinHTTP. (Defaults to ON.)")
 option(USE_SHA1                "Enable SHA1. Can be set to CollisionDetection(ON)/HTTPS" ON)
 option(USE_SHA256              "Enable SHA256. Can be set to HTTPS/Builtin" ON)
 option(USE_GSSAPI              "Link with libgssapi for SPNEGO auth"       OFF)
@@ -64,7 +64,7 @@ option(ENABLE_WERROR           "Enable compilation with -Werror"                
 
 if(UNIX)
 	# NTLM client requires crypto libraries from the system HTTPS stack
-	if(NOT USE_HTTPS)
+	if(USE_HTTPS STREQUAL "OFF")
 		option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                  OFF)
 	else()
 		option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                   ON)
