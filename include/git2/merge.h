@@ -471,6 +471,37 @@ GIT_EXTERN(int) git_merge_base_many(
 /**
  * Find all merge bases given a list of commits
  *
+ * This behaves similar to [`git merge-base`](https://git-scm.com/docs/git-merge-base#_discussion).
+ *
+ * Given three commits `a`, `b`, and `c`, `merge_base_many`
+ * will compute a hypothetical commit `m`, which is a merge between `b`
+ * and `c`.
+
+ * For example, with the following topology:
+ * ```text
+ *        o---o---o---o---C
+ *       /
+ *      /   o---o---o---B
+ *     /   /
+ * ---2---1---o---o---o---A
+ * ```
+ *
+ * the result of `merge_base_many` given `a`, `b`, and `c` is 1. This is
+ * because the equivalent topology with the imaginary merge commit `m`
+ * between `b` and `c` is:
+ * ```text
+ *        o---o---o---o---o
+ *       /                 \
+ *      /   o---o---o---o---M
+ *     /   /
+ * ---2---1---o---o---o---A
+ * ```
+ *
+ * and the result of `merge_base_many` given `a` and `m` is 1.
+ *
+ * If you're looking to recieve the common ancestor between all the
+ * given commits, use `merge_base_octopus`.
+ *
  * @param out array in which to store the resulting ids
  * @param repo the repository where the commits exist
  * @param length The number of commits in the provided `input_array`
