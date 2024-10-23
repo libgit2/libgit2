@@ -1,3 +1,4 @@
+#ifdef CLAR_FIXTURE_PATH
 static const char *
 fixture_path(const char *base, const char *fixture_name)
 {
@@ -20,7 +21,6 @@ fixture_path(const char *base, const char *fixture_name)
 	return _path;
 }
 
-#ifdef CLAR_FIXTURE_PATH
 const char *cl_fixture(const char *fixture_name)
 {
 	return fixture_path(CLAR_FIXTURE_PATH, fixture_name);

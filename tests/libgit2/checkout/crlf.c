@@ -197,7 +197,7 @@ static void empty_workdir(const char *name)
 		if (cmp)
 			cl_git_pass(p_unlink(fn));
 	}
-	git_vector_free_deep(&contents);
+	git_vector_dispose_deep(&contents);
 }
 
 void test_checkout_crlf__matches_core_git(void)

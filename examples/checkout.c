@@ -35,9 +35,9 @@
  */
 
 typedef struct {
-	int force : 1;
-	int progress : 1;
-	int perf : 1;
+	unsigned int force : 1;
+	unsigned int progress : 1;
+	unsigned int perf : 1;
 } checkout_options;
 
 static void print_usage(void)

@@ -14,7 +14,6 @@
 #include "buf.h"
 #include "commit.h"
 #include "commit_list.h"
-#include "oidmap.h"
 #include "refs.h"
 #include "repository.h"
 #include "revwalk.h"
@@ -22,6 +21,7 @@
 #include "tag.h"
 #include "vector.h"
 #include "wildmatch.h"
+#include "hashmap_oid.h"
 
 /* Ported from https://github.com/git/git/blob/89dde7882f71f846ccd0359756d27bebc31108de/builtin/describe.c */
 
@@ -32,20 +32,22 @@ struct commit_name {
 	git_oid sha1;
 	char *path;
 
-	/* Khash workaround. They original key has to still be reachable */
+	/* The original key for the hashmap */
 	git_oid peeled;
 };
 
-static void *oidmap_value_bykey(git_oidmap *map, const git_oid *key)
-{
-	return git_oidmap_get(map, key);
-}
+GIT_HASHMAP_OID_SETUP(git_describe_oidmap, struct commit_name *);
 
 static struct commit_name *find_commit_name(
-	git_oidmap *names,
+	git_describe_oidmap *names,
 	const git_oid *peeled)
 {
-	return (struct commit_name *)(oidmap_value_bykey(names, peeled));
+	struct commit_name *result;
+
+	if (git_describe_oidmap_get(&result, names, peeled) == 0)
+		return result;
+
+	return NULL;
 }
 
 static int replace_name(
@@ -92,7 +94,7 @@ static int replace_name(
 
 static int add_to_known_names(
 	git_repository *repo,
-	git_oidmap *names,
+	git_describe_oidmap *names,
 	const char *path,
 	const git_oid *peeled,
 	unsigned int prio,
@@ -121,7 +123,7 @@ static int add_to_known_names(
 		e->path = git__strdup(path);
 		git_oid_cpy(&e->peeled, peeled);
 
-		if (!found && git_oidmap_set(names, &e->peeled, e) < 0)
+		if (!found && git_describe_oidmap_put(names, &e->peeled, e) < 0)
 			return -1;
 	}
 	else
@@ -174,7 +176,7 @@ struct get_name_data
 {
 	git_describe_options *opts;
 	git_repository *repo;
-	git_oidmap *names;
+	git_describe_oidmap names;
 	git_describe_result *result;
 };
 
@@ -240,7 +242,7 @@ static int get_name(const char *refname, void *payload)
 	else
 		prio = 0;
 
-	add_to_known_names(data->repo, data->names,
+	add_to_known_names(data->repo, &data->names,
 		all ? refname + strlen(GIT_REFS_DIR) : refname + strlen(GIT_REFS_TAGS_DIR),
 		&peeled, prio, &sha1);
 	return 0;
@@ -451,7 +453,7 @@ static int describe(
 
 	git_oid_cpy(&data->result->commit_id, git_commit_id(commit));
 
-	n = find_commit_name(data->names, git_commit_id(commit));
+	n = find_commit_name(&data->names, git_commit_id(commit));
 	if (n && (tags || all || n->prio == 2)) {
 		/*
 		 * Exact match to an existing ref.
@@ -492,7 +494,7 @@ static int describe(
 		git_commit_list_node *c = (git_commit_list_node *)git_pqueue_pop(&list);
 		seen_commits++;
 
-		n = find_commit_name(data->names, &c->oid);
+		n = find_commit_name(&data->names, &c->oid);
 
 		if (n) {
 			if (!tags && !all && n->prio < 2) {
@@ -627,7 +629,7 @@ cleanup:
 			git__free(match);
 		}
 	}
-	git_vector_free(&all_matches);
+	git_vector_dispose(&all_matches);
 	git_pqueue_free(&list);
 	git_revwalk_free(walk);
 	return error;
@@ -653,11 +655,12 @@ int git_describe_commit(
 	git_object *committish,
 	git_describe_options *opts)
 {
-	struct get_name_data data;
+	struct get_name_data data = {0};
 	struct commit_name *name;
 	git_commit *commit;
-	int error = -1;
 	git_describe_options normalized;
+	git_hashmap_iter_t iter = GIT_HASHMAP_INIT;
+	int error = -1;
 
 	GIT_ASSERT_ARG(result);
 	GIT_ASSERT_ARG(committish);
@@ -677,9 +680,6 @@ int git_describe_commit(
 		"git_describe_options");
 	data.opts = &normalized;
 
-	if ((error = git_oidmap_new(&data.names)) < 0)
-		return error;
-
 	/** TODO: contains to be implemented */
 
 	if ((error = git_object_peel((git_object **)(&commit), committish, GIT_OBJECT_COMMIT)) < 0)
@@ -690,7 +690,7 @@ int git_describe_commit(
 			get_name, &data)) < 0)
 				goto cleanup;
 
-	if (git_oidmap_size(data.names) == 0 && !normalized.show_commit_oid_as_fallback) {
+	if (git_describe_oidmap_size(&data.names) == 0 && !normalized.show_commit_oid_as_fallback) {
 		git_error_set(GIT_ERROR_DESCRIBE, "cannot describe - "
 			"no reference found, cannot describe anything.");
 		error = -1;
@@ -703,13 +703,13 @@ int git_describe_commit(
 cleanup:
 	git_commit_free(commit);
 
-	git_oidmap_foreach_value(data.names, name, {
+	while (git_describe_oidmap_iterate(&iter, NULL, &name, &data.names) == 0) {
 		git_tag_free(name->tag);
 		git__free(name->path);
 		git__free(name);
-	});
+	}
 
-	git_oidmap_free(data.names);
+	git_describe_oidmap_dispose(&data.names);
 
 	if (error < 0)
 		git_describe_result_free(data.result);

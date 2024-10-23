@@ -34,7 +34,6 @@
 #include "submodule.h"
 #include "worktree.h"
 #include "path.h"
-#include "strmap.h"
 
 #ifdef GIT_WIN32
 # include "win32/w32_util.h"
@@ -62,7 +61,8 @@ static const struct {
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "hooks", true },
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "logs", true },
 	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM__LAST, "modules", true },
-	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "worktrees", true }
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "worktrees", true },
+	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM_GITDIR, "config.worktree", false }
 };
 
 static int check_repositoryformatversion(int *version, git_config *config);
@@ -328,7 +328,7 @@ on_error:
 	return NULL;
 }
 
-int git_repository_new(git_repository **out)
+int git_repository__new(git_repository **out, git_oid_t oid_type)
 {
 	git_repository *repo;
 
@@ -337,9 +337,22 @@ int git_repository_new(git_repository **out)
 
 	repo->is_bare = 1;
 	repo->is_worktree = 0;
+	repo->oid_type = oid_type;
 
 	return 0;
 }
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+int git_repository_new(git_repository **out, git_oid_t oid_type)
+{
+	return git_repository__new(out, oid_type);
+}
+#else
+int git_repository_new(git_repository** out)
+{
+	return git_repository__new(out, GIT_OID_SHA1);
+}
+#endif
 
 static int load_config_data(git_repository *repo, const git_config *config)
 {
@@ -545,25 +558,39 @@ typedef struct {
 static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 {
 	validate_ownership_data *data = payload;
+	const char *test_path;
 
 	if (strcmp(entry->value, "") == 0) {
 		*data->is_safe = false;
 	} else if (strcmp(entry->value, "*") == 0) {
 		*data->is_safe = true;
 	} else {
-		const char *test_path = entry->value;
+		if (git_str_sets(&data->tmp, entry->value) < 0)
+			return -1;
 
-#ifdef GIT_WIN32
+		if (!git_fs_path_is_root(data->tmp.ptr)) {
+			/* Input must not have trailing backslash. */
+			if (!data->tmp.size ||
+			    data->tmp.ptr[data->tmp.size - 1] == '/')
+				return 0;
+
+			if (git_fs_path_to_dir(&data->tmp) < 0)
+				return -1;
+		}
+
+		test_path = data->tmp.ptr;
+
 		/*
-		 * Git for Windows does some truly bizarre things with
-		 * paths that start with a forward slash; and expects you
-		 * to escape that with `%(prefix)`. This syntax generally
-		 * means to add the prefix that Git was installed to -- eg
-		 * `/usr/local` -- unless it's an absolute path, in which
-		 * case the leading `%(prefix)/` is just removed. And Git
-		 * for Windows expects you to use this syntax for absolute
-		 * Unix-style paths (in "Git Bash" or Windows Subsystem for
-		 * Linux).
+		 * Git - and especially, Git for Windows - does some
+		 * truly bizarre things with paths that start with a
+		 * forward slash; and expects you to escape that with
+		 * `%(prefix)`. This syntax generally means to add the
+		 * prefix that Git was installed to (eg `/usr/local`)
+		 * unless it's an absolute path, in which case the
+		 * leading `%(prefix)/` is just removed. And Git for
+		 * Windows expects you to use this syntax for absolute
+		 * Unix-style paths (in "Git Bash" or Windows Subsystem
+		 * for Linux).
 		 *
 		 * Worse, the behavior used to be that a leading `/` was
 		 * not absolute. It would indicate that Git for Windows
@@ -578,13 +605,8 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 		 */
 		if (strncmp(test_path, "%(prefix)//", strlen("%(prefix)//")) == 0)
 			test_path += strlen("%(prefix)/");
-		else if (strncmp(test_path, "//", 2) == 0 &&
-		         strncmp(test_path, "//wsl.localhost/", strlen("//wsl.localhost/")) != 0)
-			test_path++;
-#endif
 
-		if (git_fs_path_prettify_dir(&data->tmp, test_path, NULL) == 0 &&
-		    strcmp(data->tmp.ptr, data->repo_path) == 0)
+		if (strcmp(test_path, data->repo_path) == 0)
 			*data->is_safe = true;
 	}
 
@@ -681,9 +703,12 @@ static int validate_ownership(git_repository *repo)
 		goto done;
 
 	if (!is_safe) {
+		size_t path_len = git_fs_path_is_root(path) ?
+			strlen(path) : git_fs_path_dirlen(path);
+
 		git_error_set(GIT_ERROR_CONFIG,
-			"repository path '%s' is not owned by current user",
-			path);
+			"repository path '%.*s' is not owned by current user",
+			(int)min(path_len, INT_MAX), path);
 		error = GIT_EOWNER;
 	}
 
@@ -852,8 +877,30 @@ static int load_grafts(git_repository *repo)
 	git_str path = GIT_STR_INIT;
 	int error;
 
-	if ((error = git_repository__item_path(&path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
-	    (error = git_str_joinpath(&path, path.ptr, "grafts")) < 0 ||
+	/* refresh if they've both been opened previously */
+	if (repo->grafts && repo->shallow_grafts) {
+		if ((error = git_grafts_refresh(repo->grafts)) < 0 ||
+		    (error = git_grafts_refresh(repo->shallow_grafts)) < 0)
+			return error;
+	}
+
+	/* resolve info path, which may not be found for inmemory repository */
+	if ((error = git_repository__item_path(&path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			return error;
+
+		/* create empty/inmemory grafts for inmemory repository */
+		if (!repo->grafts && (error = git_grafts_new(&repo->grafts, repo->oid_type)) < 0)
+			return error;
+
+		if (!repo->shallow_grafts && (error = git_grafts_new(&repo->shallow_grafts, repo->oid_type)) < 0)
+			return error;
+
+		return 0;
+	}
+
+	/* load grafts from disk */
+	if ((error = git_str_joinpath(&path, path.ptr, "grafts")) < 0 ||
 	    (error = git_grafts_open_or_refresh(&repo->grafts, path.ptr, repo->oid_type)) < 0)
 		goto error;
 
@@ -1226,6 +1273,24 @@ int git_repository_discover(
 	return error;
 }
 
+static int has_config_worktree(bool *out, git_config *cfg)
+{
+	int worktreeconfig = 0, error;
+
+	*out = false;
+
+	error = git_config_get_bool(&worktreeconfig, cfg, "extensions.worktreeconfig");
+
+	if (error == 0)
+		*out = worktreeconfig;
+	else if (error == GIT_ENOTFOUND)
+		*out = false;
+	else
+		return error;
+
+	return 0;
+}
+
 static int load_config(
 	git_config **out,
 	git_repository *repo,
@@ -1234,9 +1299,11 @@ static int load_config(
 	const char *system_config_path,
 	const char *programdata_path)
 {
-	int error;
 	git_str config_path = GIT_STR_INIT;
 	git_config *cfg = NULL;
+	git_config_level_t write_order;
+	bool has_worktree;
+	int error;
 
 	GIT_ASSERT_ARG(out);
 
@@ -1246,6 +1313,14 @@ static int load_config(
 	if (repo) {
 		if ((error = git_repository__item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
 			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
+
+		if (error && error != GIT_ENOTFOUND)
+			goto on_error;
+
+		if ((error = has_config_worktree(&has_worktree, cfg)) == 0 &&
+		    has_worktree &&
+		    (error = git_repository__item_path(&config_path, repo, GIT_REPOSITORY_ITEM_WORKTREE_CONFIG)) == 0)
+			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_WORKTREE, repo, 0);
 
 		if (error && error != GIT_ENOTFOUND)
 			goto on_error;
@@ -1278,6 +1353,11 @@ static int load_config(
 		goto on_error;
 
 	git_error_clear(); /* clear any lingering ENOTFOUND errors */
+
+	write_order = GIT_CONFIG_LEVEL_LOCAL;
+
+	if ((error = git_config_set_writeorder(cfg, &write_order, 1)) < 0)
+		goto on_error;
 
 	*out = cfg;
 	return 0;
@@ -1798,7 +1878,9 @@ static int check_repositoryformatversion(int *version, git_config *config)
 
 static const char *builtin_extensions[] = {
 	"noop",
-	"objectformat"
+	"objectformat",
+	"worktreeconfig",
+	"preciousobjects"
 };
 
 static git_vector user_extensions = { 0, git__strcmp_cb };
@@ -2024,7 +2106,7 @@ int git_repository__set_extensions(const char **extensions, size_t len)
 
 void git_repository__free_extensions(void)
 {
-	git_vector_free_deep(&user_extensions);
+	git_vector_dispose_deep(&user_extensions);
 }
 
 int git_repository_create_head(const char *git_dir, const char *ref_name)
@@ -2630,6 +2712,8 @@ static int repo_init_directories(
 	if (git_str_joinpath(repo_path, given_repo, add_dotgit ? GIT_DIR : "") < 0)
 		return -1;
 
+	git_fs_path_mkposix(repo_path->ptr);
+
 	has_dotgit = (git__suffixcmp(repo_path->ptr, "/" GIT_DIR) == 0);
 	if (has_dotgit)
 		opts->flags |= GIT_REPOSITORY_INIT__HAS_DOTGIT;
@@ -3197,14 +3281,18 @@ int git_repository_set_workdir(
 	if (git_fs_path_prettify_dir(&path, workdir, NULL) < 0)
 		return -1;
 
-	if (repo->workdir && strcmp(repo->workdir, path.ptr) == 0)
+	if (repo->workdir && strcmp(repo->workdir, path.ptr) == 0) {
+		git_str_dispose(&path);
 		return 0;
+	}
 
 	if (update_gitlink) {
 		git_config *config;
 
-		if (git_repository_config__weakptr(&config, repo) < 0)
+		if (git_repository_config__weakptr(&config, repo) < 0) {
+			git_str_dispose(&path);
 			return -1;
+		}
 
 		error = repo_write_gitlink(path.ptr, git_repository_path(repo), false);
 
@@ -3226,6 +3314,7 @@ int git_repository_set_workdir(
 
 		git__free(old_workdir);
 	}
+	git_str_dispose(&path);
 
 	return error;
 }
@@ -3266,6 +3355,25 @@ int git_repository_set_bare(git_repository *repo)
 	repo->is_bare = 1;
 
 	return 0;
+}
+
+int git_repository_head_commit(git_commit **commit, git_repository *repo)
+{
+	git_reference *head;
+	git_object *obj;
+	int error;
+
+	if ((error = git_repository_head(&head, repo)) < 0)
+		return error;
+
+	if ((error = git_reference_peel(&obj, head, GIT_OBJECT_COMMIT)) < 0)
+		goto cleanup;
+
+	*commit = (git_commit *)obj;
+
+cleanup:
+	git_reference_free(head);
+	return error;
 }
 
 int git_repository_head_tree(git_tree **tree, git_repository *repo)
@@ -3838,4 +3946,66 @@ int git_repository_submodule_cache_clear(git_repository *repo)
 git_oid_t git_repository_oid_type(git_repository *repo)
 {
 	return repo ? repo->oid_type : 0;
+}
+
+struct mergehead_data {
+	git_repository *repo;
+	git_vector *parents;
+};
+
+static int insert_mergehead(const git_oid *oid, void *payload)
+{
+	git_commit *commit;
+	struct mergehead_data *data = (struct mergehead_data *)payload;
+
+	if (git_commit_lookup(&commit, data->repo, oid) < 0)
+		return -1;
+
+	return git_vector_insert(data->parents, commit);
+}
+
+int git_repository_commit_parents(git_commitarray *out, git_repository *repo)
+{
+	git_commit *first_parent = NULL, *commit;
+	git_reference *head_ref = NULL;
+	git_vector parents = GIT_VECTOR_INIT;
+	struct mergehead_data data;
+	size_t i;
+	int error;
+
+	GIT_ASSERT_ARG(out && repo);
+
+	out->count = 0;
+	out->commits = NULL;
+
+	error = git_revparse_ext((git_object **)&first_parent, &head_ref, repo, "HEAD");
+
+	if (error != 0) {
+		if (error == GIT_ENOTFOUND)
+			error = 0;
+
+		goto done;
+	}
+
+	if ((error = git_vector_insert(&parents, first_parent)) < 0)
+		goto done;
+
+	data.repo = repo;
+	data.parents = &parents;
+
+	error = git_repository_mergehead_foreach(repo, insert_mergehead, &data);
+
+	if (error == GIT_ENOTFOUND)
+		error = 0;
+	else if (error != 0)
+		goto done;
+
+	out->commits = (git_commit **)git_vector_detach(&out->count, NULL, &parents);
+
+done:
+	git_vector_foreach(&parents, i, commit)
+		git__free(commit);
+
+	git_reference_free(head_ref);
+	return error;
 }

@@ -15,6 +15,9 @@ extern int git_clone__submodule(git_repository **out,
 	const char *url, const char *local_path,
 	const git_clone_options *_options);
 
-extern int git_clone__should_clone_local(const char *url, git_clone_local_t local);
+extern int git_clone__should_clone_local(
+	bool *out,
+	const char *url,
+	git_clone_local_t local);
 
 #endif

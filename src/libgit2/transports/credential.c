@@ -204,7 +204,7 @@ int git_credential_ssh_key_memory_new(
 	const char *privatekey,
 	const char *passphrase)
 {
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
+#ifdef GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS
 	return git_credential_ssh_key_type_new(
 		cred,
 		username,

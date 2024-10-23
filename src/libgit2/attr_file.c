@@ -69,7 +69,7 @@ int git_attr_file__clear_rules(git_attr_file *file, bool need_lock)
 
 	git_vector_foreach(&file->rules, i, rule)
 		git_attr_rule__free(rule);
-	git_vector_free(&file->rules);
+	git_vector_dispose(&file->rules);
 
 	if (need_lock)
 		git_mutex_unlock(&file->lock);
@@ -143,6 +143,8 @@ int git_attr_file__load(
 		blobsize = git_blob_rawsize(blob);
 
 		GIT_ERROR_CHECK_BLOBSIZE(blobsize);
+		if (blobsize > GIT_ATTR_MAX_FILE_SIZE) /* TODO: issue warning when warning API is available */
+			goto cleanup;
 		git_str_put(&content, git_blob_rawcontent(blob), (size_t)blobsize);
 		break;
 	}
@@ -155,6 +157,7 @@ int git_attr_file__load(
 		if (p_stat(entry->fullpath, &st) < 0 ||
 			S_ISDIR(st.st_mode) ||
 			(fd = git_futils_open_ro(entry->fullpath)) < 0 ||
+			(st.st_size > GIT_ATTR_MAX_FILE_SIZE) ||
 			(error = git_futils_readbuffer_fd(&content, fd, (size_t)st.st_size)) < 0)
 			nonexistent = true;
 
@@ -198,6 +201,8 @@ int git_attr_file__load(
 		blobsize = git_blob_rawsize(blob);
 
 		GIT_ERROR_CHECK_BLOBSIZE(blobsize);
+		if (blobsize > GIT_ATTR_MAX_FILE_SIZE) /* TODO: issue warning when warning API is available */
+			goto cleanup;
 		if ((error = git_str_put(&content,
 			git_blob_rawcontent(blob), (size_t)blobsize)) < 0)
 			goto cleanup;
@@ -991,7 +996,7 @@ static void git_attr_rule__clear(git_attr_rule *rule)
 	if (!(rule->match.flags & GIT_ATTR_FNMATCH_IGNORE)) {
 		git_vector_foreach(&rule->assigns, i, assign)
 			GIT_REFCOUNT_DEC(assign, git_attr_assignment__free);
-		git_vector_free(&rule->assigns);
+		git_vector_dispose(&rule->assigns);
 	}
 
 	/* match.pattern is stored in a git_pool, so no need to free */

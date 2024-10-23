@@ -13,6 +13,7 @@
 #include "odb.h"
 #include "oid.h"
 #include "oidarray.h"
+#include "hashmap_oid.h"
 
 /* Option to bypass checking existence of '.keep' files */
 bool git_disable_pack_keep_file_checks = false;
@@ -40,6 +41,12 @@ static int pack_entry_find_offset(
 		struct git_pack_file *p,
 		const git_oid *short_oid,
 		size_t len);
+
+#define off64_hash(key) (uint32_t)((key)>>33^(key)^(key)<<11)
+#define off64_equal(a, b) ((a) == (b))
+
+GIT_HASHMAP_FUNCTIONS(git_pack_offsetmap, GIT_HASHMAP_INLINE, off64_t, git_pack_cache_entry *, off64_hash, off64_equal);
+GIT_HASHMAP_OID_FUNCTIONS(git_pack_oidmap, , struct git_pack_entry *);
 
 static int packfile_error(const char *message)
 {
@@ -75,31 +82,21 @@ static void free_cache_object(void *o)
 
 static void cache_free(git_pack_cache *cache)
 {
+	git_hashmap_iter_t iter = GIT_HASHMAP_ITER_INIT;
 	git_pack_cache_entry *entry;
 
-	if (cache->entries) {
-		git_offmap_foreach_value(cache->entries, entry, {
-			free_cache_object(entry);
-		});
+	while (git_pack_offsetmap_iterate(&iter, NULL, &entry, &cache->entries) == 0)
+		free_cache_object(entry);
 
-		git_offmap_free(cache->entries);
-		cache->entries = NULL;
-	}
+	git_pack_offsetmap_dispose(&cache->entries);
 }
 
 static int cache_init(git_pack_cache *cache)
 {
-	if (git_offmap_new(&cache->entries) < 0)
-		return -1;
-
 	cache->memory_limit = GIT_PACK_CACHE_MEMORY_LIMIT;
 
 	if (git_mutex_init(&cache->lock)) {
 		git_error_set(GIT_ERROR_OS, "failed to initialize pack cache mutex");
-
-		git__free(cache->entries);
-		cache->entries = NULL;
-
 		return -1;
 	}
 
@@ -108,15 +105,16 @@ static int cache_init(git_pack_cache *cache)
 
 static git_pack_cache_entry *cache_get(git_pack_cache *cache, off64_t offset)
 {
-	git_pack_cache_entry *entry;
+	git_pack_cache_entry *entry = NULL;
 
 	if (git_mutex_lock(&cache->lock) < 0)
 		return NULL;
 
-	if ((entry = git_offmap_get(cache->entries, offset)) != NULL) {
+	if (git_pack_offsetmap_get(&entry, &cache->entries, offset) == 0) {
 		git_atomic32_inc(&entry->refcount);
 		entry->last_usage = cache->use_ctr++;
 	}
+
 	git_mutex_unlock(&cache->lock);
 
 	return entry;
@@ -125,16 +123,17 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, off64_t offset)
 /* Run with the cache lock held */
 static void free_lowest_entry(git_pack_cache *cache)
 {
-	off64_t offset;
+	git_hashmap_iter_t iter = GIT_HASHMAP_ITER_INIT;
 	git_pack_cache_entry *entry;
+	off64_t offset;
 
-	git_offmap_foreach(cache->entries, offset, entry, {
+	while (git_pack_offsetmap_iterate(&iter, &offset, &entry, &cache->entries) == 0) {
 		if (entry && git_atomic32_get(&entry->refcount) == 0) {
 			cache->memory_used -= entry->raw.len;
-			git_offmap_delete(cache->entries, offset);
+			git_pack_offsetmap_remove(&cache->entries, offset);
 			free_cache_object(entry);
 		}
-	});
+	}
 }
 
 static int cache_add(
@@ -157,12 +156,12 @@ static int cache_add(
 			return -1;
 		}
 		/* Add it to the cache if nobody else has */
-		exists = git_offmap_exists(cache->entries, offset);
+		exists = git_pack_offsetmap_contains(&cache->entries, offset);
 		if (!exists) {
 			while (cache->memory_used + base->len > cache->memory_limit)
 				free_lowest_entry(cache);
 
-			git_offmap_set(cache->entries, offset, entry);
+			git_pack_offsetmap_put(&cache->entries, offset, entry);
 			cache->memory_used += entry->raw.len;
 
 			*cached_out = entry;
@@ -1009,7 +1008,7 @@ int get_delta_base(
 		if (p->has_cache) {
 			struct git_pack_entry *entry;
 
-			if ((entry = git_oidmap_get(p->idx_cache, &base_oid)) != NULL) {
+			if (git_pack_oidmap_get(&entry, &p->idx_cache, &base_oid) == 0) {
 				if (entry->offset == 0)
 					return packfile_error("delta offset is zero");
 
@@ -1351,7 +1350,7 @@ int git_pack_foreach_entry(
 				git_vector_insert(&oids, (void*)&current[4]);
 		}
 
-		git_vector_free(&offsets);
+		git_vector_dispose(&offsets);
 		p->ids = (unsigned char **)git_vector_detach(NULL, NULL, &oids);
 	}
 
@@ -1499,6 +1498,7 @@ static int pack_entry_find_offset(
 	size_t len)
 {
 	const uint32_t *level1_ofs;
+	size_t ofs_delta = 0;
 	const unsigned char *index;
 	unsigned hi, lo, stride;
 	int pos, found = 0;
@@ -1524,7 +1524,13 @@ static int pack_entry_find_offset(
 
 	if (p->index_version > 1) {
 		level1_ofs += 2;
+		ofs_delta = 2;
 		index += 8;
+	}
+
+	if ((size_t)short_oid->id[0] + ofs_delta >= p->index_map.len) {
+		git_error_set(GIT_ERROR_INTERNAL, "internal error: p->short_oid->[0] out of bounds");
+		goto cleanup;
 	}
 
 	index += 4 * 256;

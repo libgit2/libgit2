@@ -5,14 +5,19 @@ description: Run a build step in a container or directly on the Actions runner
 inputs:
   command:
     description: Command to run
-    required: true
     type: string
+    required: true
   container:
     description: Optional container to run in
     type: string
   container-version:
     description: Version of the container to run
     type: string
+  shell:
+    description: Shell to use
+    type: string
+    required: true
+    default: 'bash'
 
 runs:
   using: 'composite'
@@ -35,6 +40,7 @@ runs:
           -e PKG_CONFIG_PATH \
           -e SKIP_NEGOTIATE_TESTS \
           -e SKIP_SSH_TESTS \
+          -e SKIP_PUSHOPTIONS_TESTS \
           -e TSAN_OPTIONS \
           -e UBSAN_OPTIONS \
           ${{ inputs.container-version }} \
@@ -42,4 +48,4 @@ runs:
       else
         ${{ inputs.command }}
       fi
-    shell: bash
+    shell: ${{ inputs.shell != '' && inputs.shell || 'bash' }}

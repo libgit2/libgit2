@@ -892,6 +892,24 @@ GIT_EXTERN(void) git_strarray_free(git_strarray *array);
 
 /**@}*/
 
+/** @name Deprecated Version Constants
+ *
+ * These constants are retained for backward compatibility.  The newer
+ * versions of these constants should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility constants at
+ * this time.
+ */
+/**@{*/
+
+#define LIBGIT2_VER_MAJOR      LIBGIT2_VERSION_MAJOR
+#define LIBGIT2_VER_MINOR      LIBGIT2_VERSION_MINOR
+#define LIBGIT2_VER_REVISION   LIBGIT2_VERSION_REVISION
+#define LIBGIT2_VER_PATCH      LIBGIT2_VERSION_PATCH
+#define LIBGIT2_VER_PRERELEASE LIBGIT2_VERSION_PRERELEASE
+
+/**@}*/
+
 /** @name Deprecated Options Initialization Functions
  *
  * These functions are retained for backward compatibility.  The newer

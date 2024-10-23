@@ -21,9 +21,15 @@ changelog:
   - title: Documentation improvements
     labels:
     - documentation
+  - title: Platform compatibility fixes
+    labels:
+    - compatibility
   - title: Git compatibility fixes
     labels:
     - git compatibility
+  - title: Dependency updates
+    labels:
+    - dependency
   - title: Other changes
     labels:
       - '*'

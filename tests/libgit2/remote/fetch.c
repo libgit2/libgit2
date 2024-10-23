@@ -40,10 +40,10 @@ void test_remote_fetch__cleanup(void) {
 	git_repository_free(repo2);
 
 	cl_git_pass(git_futils_rmdir_r(repo1_path, NULL, GIT_RMDIR_REMOVE_FILES));
-	free(repo1_path);
+	git__free(repo1_path);
 
 	cl_git_pass(git_futils_rmdir_r(repo2_path, NULL, GIT_RMDIR_REMOVE_FILES));
-	free(repo2_path);
+	git__free(repo2_path);
 }
 
 
@@ -75,6 +75,7 @@ static void do_time_travelling_fetch(git_oid *commit1id, git_oid *commit2id,
 	/* create two commits in repo 1 and a reference to them */
 	{
 		git_oid empty_tree_id;
+		git_commit *commit1;
 		git_tree *empty_tree;
 		git_signature *sig;
 		git_treebuilder *tb;
@@ -84,10 +85,12 @@ static void do_time_travelling_fetch(git_oid *commit1id, git_oid *commit2id,
 		cl_git_pass(git_signature_default(&sig, repo1));
 		cl_git_pass(git_commit_create(commit1id, repo1, REPO1_REFNAME, sig,
 					sig, NULL, "one", empty_tree, 0, NULL));
+		cl_git_pass(git_commit_lookup(&commit1, repo1, commit1id));
 		cl_git_pass(git_commit_create_v(commit2id, repo1, REPO1_REFNAME, sig,
-					sig, NULL, "two", empty_tree, 1, commit1id));
+					sig, NULL, "two", empty_tree, 1, commit1));
 
 		git_tree_free(empty_tree);
+		git_commit_free(commit1);
 		git_signature_free(sig);
 		git_treebuilder_free(tb);
 	}

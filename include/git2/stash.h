@@ -225,8 +225,6 @@ GIT_EXTERN(int) git_stash_apply_options_init(
  * GIT_EMERGECONFLICT and both the working directory and index will be left
  * unmodified.
  *
- * Note that a minimum checkout strategy of `GIT_CHECKOUT_SAFE` is implied.
- *
  * @param repo The owning repository.
  * @param index The position within the stash list. 0 points to the
  *              most recent stashed state.

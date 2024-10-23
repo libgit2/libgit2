@@ -25,9 +25,9 @@ static void set_parse_error(git_config_parser *reader, int col, const char *erro
 }
 
 
-GIT_INLINE(int) config_keychar(int c)
+GIT_INLINE(int) config_keychar(char c)
 {
-	return isalnum(c) || c == '-';
+	return git__isalnum(c) || c == '-';
 }
 
 static int strip_comments(char *line, int in_quotes)
@@ -158,9 +158,10 @@ end_error:
 static int parse_section_header(git_config_parser *reader, char **section_out)
 {
 	char *name, *name_end;
-	int name_length, c, pos;
+	int name_length, pos;
 	int result;
 	char *line;
+	char c;
 	size_t line_len;
 
 	git_parse_advance_ws(&reader->ctx);
@@ -279,8 +280,7 @@ static int skip_bom(git_parse_ctx *parser)
 */
 
 /* '\"' -> '"' etc */
-static int unescape_line(
-	char **out, bool *is_multi, const char *ptr, int quote_count)
+static int unescape_line(char **out, bool *is_multi, const char *ptr, int *quote_count)
 {
 	char *str, *fixed, *esc;
 	size_t ptr_len = strlen(ptr), alloc_len;
@@ -296,7 +296,8 @@ static int unescape_line(
 
 	while (*ptr != '\0') {
 		if (*ptr == '"') {
-			quote_count++;
+			if (quote_count)
+				(*quote_count)++;
 		} else if (*ptr != '\\') {
 			*fixed++ = *ptr;
 		} else {
@@ -358,7 +359,7 @@ static int parse_multiline_variable(git_config_parser *reader, git_str *value, i
 			goto next;
 
 		if ((error = unescape_line(&proc_line, &multiline,
-					   line, in_quotes)) < 0)
+					   line, &in_quotes)) < 0)
 			goto out;
 
 		/* Add this line to the multiline var */
@@ -382,7 +383,7 @@ out:
 
 GIT_INLINE(bool) is_namechar(char c)
 {
-	return isalnum(c) || c == '-';
+	return git__isalnum(c) || c == '-';
 }
 
 static int parse_name(
@@ -445,7 +446,7 @@ static int parse_variable(git_config_parser *reader, char **var_name, char **var
 		while (git__isspace(value_start[0]))
 			value_start++;
 
-		if ((error = unescape_line(&value, &multiline, value_start, 0)) < 0)
+		if ((error = unescape_line(&value, &multiline, value_start, NULL)) < 0)
 			goto out;
 
 		if (multiline) {

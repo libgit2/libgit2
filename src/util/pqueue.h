@@ -33,7 +33,7 @@ extern int git_pqueue_init(
 	size_t init_size,
 	git_vector_cmp cmp);
 
-#define git_pqueue_free  git_vector_free
+#define git_pqueue_free  git_vector_dispose
 #define git_pqueue_clear git_vector_clear
 #define git_pqueue_size  git_vector_length
 #define git_pqueue_get   git_vector_get

@@ -13,6 +13,38 @@
 #include "sysdir.h"
 #include "ignore.h"
 #include "path.h"
+#include "hashmap_str.h"
+
+GIT_HASHMAP_STR_SETUP(git_attr_cache_filemap, git_attr_file_entry *);
+GIT_HASHMAP_STR_SETUP(git_attr_cache_macromap, git_attr_rule *);
+
+struct git_attr_cache {
+	char *cfg_attr_file; /* cached value of core.attributesfile */
+	char *cfg_excl_file; /* cached value of core.excludesfile */
+
+	/* hash path to git_attr_file_entry records */
+	git_attr_cache_filemap files;
+	/* hash name to git_attr_rule */
+	git_attr_cache_macromap macros;
+
+	git_mutex lock;
+	git_pool  pool;
+};
+
+const char *git_attr_cache_attributesfile(git_attr_cache *cache)
+{
+	return cache->cfg_attr_file;
+}
+
+const char *git_attr_cache_excludesfile(git_attr_cache *cache)
+{
+	return cache->cfg_excl_file;
+}
+
+git_pool *git_attr_cache_pool(git_attr_cache *cache)
+{
+	return &cache->pool;
+}
 
 GIT_INLINE(int) attr_cache_lock(git_attr_cache *cache)
 {
@@ -34,7 +66,12 @@ GIT_INLINE(void) attr_cache_unlock(git_attr_cache *cache)
 GIT_INLINE(git_attr_file_entry *) attr_cache_lookup_entry(
 	git_attr_cache *cache, const char *path)
 {
-	return git_strmap_get(cache->files, path);
+	git_attr_file_entry *result;
+
+	if (git_attr_cache_filemap_get(&result, &cache->files, path) == 0)
+		return result;
+
+	return NULL;
 }
 
 int git_attr_cache__alloc_file_entry(
@@ -92,7 +129,7 @@ static int attr_cache_make_entry(
 		git_repository_workdir(repo), path, &cache->pool)) < 0)
 		return error;
 
-	if ((error = git_strmap_set(cache->files, entry->path, entry)) < 0)
+	if ((error = git_attr_cache_filemap_put(&cache->files, entry->path, entry)) < 0)
 		return error;
 
 	*out = entry;
@@ -271,12 +308,11 @@ bool git_attr_cache__is_cached(
 {
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_attr_file_entry *entry;
-	git_strmap *files;
 
-	if (!cache || !(files = cache->files))
+	if (!cache)
 		return false;
 
-	if ((entry = git_strmap_get(files, filename)) == NULL)
+	if (git_attr_cache_filemap_get(&entry, &cache->files, filename) != 0)
 		return false;
 
 	return entry && (entry->file[source_type] != NULL);
@@ -318,6 +354,9 @@ static int attr_cache__lookup_path(
 
 static void attr_cache__free(git_attr_cache *cache)
 {
+	git_hashmap_iter_t iter = GIT_HASHMAP_ITER_INIT;
+	git_attr_rule *rule;
+	git_attr_file_entry *entry;
 	bool unlock;
 
 	if (!cache)
@@ -325,30 +364,24 @@ static void attr_cache__free(git_attr_cache *cache)
 
 	unlock = (attr_cache_lock(cache) == 0);
 
-	if (cache->files != NULL) {
-		git_attr_file_entry *entry;
+	while (git_attr_cache_filemap_iterate(&iter, NULL, &entry, &cache->files) == 0) {
 		git_attr_file *file;
-		int i;
+		size_t i;
 
-		git_strmap_foreach_value(cache->files, entry, {
-			for (i = 0; i < GIT_ATTR_FILE_NUM_SOURCES; ++i) {
-				if ((file = git_atomic_swap(entry->file[i], NULL)) != NULL) {
-					GIT_REFCOUNT_OWN(file, NULL);
-					git_attr_file__free(file);
-				}
+		for (i = 0; i < GIT_ATTR_FILE_NUM_SOURCES; i++) {
+			if ((file = git_atomic_swap(entry->file[i], NULL)) != NULL) {
+				GIT_REFCOUNT_OWN(file, NULL);
+				git_attr_file__free(file);
 			}
-		});
-		git_strmap_free(cache->files);
+		}
 	}
 
-	if (cache->macros != NULL) {
-		git_attr_rule *rule;
+	iter = GIT_HASHMAP_ITER_INIT;
+	while (git_attr_cache_macromap_iterate(&iter, NULL, &rule, &cache->macros) == 0)
+		git_attr_rule__free(rule);
 
-		git_strmap_foreach_value(cache->macros, rule, {
-			git_attr_rule__free(rule);
-		});
-		git_strmap_free(cache->macros);
-	}
+	git_attr_cache_filemap_dispose(&cache->files);
+	git_attr_cache_macromap_dispose(&cache->macros);
 
 	git_pool_clear(&cache->pool);
 
@@ -401,9 +434,7 @@ int git_attr_cache__init(git_repository *repo)
 	/* allocate hashtable for attribute and ignore file contents,
 	 * hashtable for attribute macros, and string pool
 	 */
-	if ((ret = git_strmap_new(&cache->files)) < 0 ||
-	    (ret = git_strmap_new(&cache->macros)) < 0 ||
-	    (ret = git_pool_init(&cache->pool, 1)) < 0)
+	if ((ret = git_pool_init(&cache->pool, 1)) < 0)
 		goto cancel;
 
 	if (git_atomic_compare_and_swap(&repo->attrcache, NULL, cache) != NULL)
@@ -457,11 +488,11 @@ int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 		goto out;
 	locked = true;
 
-	if ((preexisting = git_strmap_get(cache->macros, macro->match.pattern)) != NULL)
-	    git_attr_rule__free(preexisting);
+	if (git_attr_cache_macromap_get(&preexisting, &cache->macros, macro->match.pattern) == 0)
+		git_attr_rule__free(preexisting);
 
-	if ((error = git_strmap_set(cache->macros, macro->match.pattern, macro)) < 0)
-	    goto out;
+	if ((error = git_attr_cache_macromap_put(&cache->macros, macro->match.pattern, macro)) < 0)
+		goto out;
 
 out:
 	if (locked)
@@ -472,7 +503,12 @@ out:
 git_attr_rule *git_attr_cache__lookup_macro(
 	git_repository *repo, const char *name)
 {
-	git_strmap *macros = git_repository_attr_cache(repo)->macros;
+	git_attr_cache *cache = git_repository_attr_cache(repo);
+	git_attr_rule *rule;
 
-	return git_strmap_get(macros, name);
+	if (!cache ||
+	    git_attr_cache_macromap_get(&rule, &cache->macros, name) != 0)
+		return NULL;
+
+	return rule;
 }

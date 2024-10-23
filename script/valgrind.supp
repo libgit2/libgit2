@@ -81,6 +81,13 @@
 }
 
 {
+	ignore-glibc-getaddrinfo-fn
+	Memcheck:Leak
+	...
+	fun:getaddrinfo
+}
+
+{
 	ignore-curl-global-init
 	Memcheck:Leak
 	...
@@ -186,6 +193,16 @@
 	Memcheck:Cond
 	...
 	obj:*libssl.so*
+	...
+	fun:openssl_connect
+	...
+}
+
+{
+	ignore-openssl-undefined-in-connect
+	Memcheck:Cond
+	...
+	obj:*libcrypto.so*
 	...
 	fun:openssl_connect
 	...

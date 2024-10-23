@@ -2,13 +2,12 @@
 
 include(SanitizeBool)
 
-# USE_SHA1=CollisionDetection(ON)/HTTPS/Generic/OFF
 sanitizebool(USE_SHA1)
 sanitizebool(USE_SHA256)
 
 # sha1
 
-if(USE_SHA1 STREQUAL ON)
+if(USE_SHA1 STREQUAL "" OR USE_SHA1 STREQUAL ON)
 	SET(USE_SHA1 "CollisionDetection")
 elseif(USE_SHA1 STREQUAL "HTTPS")
 	if(USE_HTTPS STREQUAL "SecureTransport")
@@ -20,7 +19,7 @@ elseif(USE_SHA1 STREQUAL "HTTPS")
 	elseif(USE_HTTPS)
 		set(USE_SHA1 ${USE_HTTPS})
 	else()
-		set(USE_SHA1 "CollisionDetection")
+		message(FATAL_ERROR "asked for HTTPS SHA1 backend but HTTPS is not enabled")
 	endif()
 endif()
 
@@ -28,6 +27,8 @@ if(USE_SHA1 STREQUAL "CollisionDetection")
 	set(GIT_SHA1_COLLISIONDETECT 1)
 elseif(USE_SHA1 STREQUAL "OpenSSL")
 	set(GIT_SHA1_OPENSSL 1)
+elseif(USE_SHA1 STREQUAL "OpenSSL-FIPS")
+	set(GIT_SHA1_OPENSSL_FIPS 1)
 elseif(USE_SHA1 STREQUAL "OpenSSL-Dynamic")
 	set(GIT_SHA1_OPENSSL 1)
 	set(GIT_SHA1_OPENSSL_DYNAMIC 1)
@@ -39,15 +40,21 @@ elseif(USE_SHA1 STREQUAL "mbedTLS")
 elseif(USE_SHA1 STREQUAL "Win32")
 	set(GIT_SHA1_WIN32 1)
 else()
-	message(FATAL_ERROR "Asked for unknown SHA1 backend: ${USE_SHA1}")
+	message(FATAL_ERROR "asked for unknown SHA1 backend: ${USE_SHA1}")
 endif()
 
 # sha256
 
-if(USE_SHA256 STREQUAL ON AND USE_HTTPS)
-	SET(USE_SHA256 "HTTPS")
-elseif(USE_SHA256 STREQUAL ON)
-	SET(USE_SHA256 "Builtin")
+if(USE_SHA256 STREQUAL "" OR USE_SHA256 STREQUAL ON)
+	if(USE_HTTPS)
+		SET(USE_SHA256 "HTTPS")
+	else()
+		SET(USE_SHA256 "builtin")
+	endif()
+endif()
+
+if(USE_SHA256 STREQUAL "Builtin")
+	set(USE_SHA256 "builtin")
 endif()
 
 if(USE_SHA256 STREQUAL "HTTPS")
@@ -62,10 +69,12 @@ if(USE_SHA256 STREQUAL "HTTPS")
 	endif()
 endif()
 
-if(USE_SHA256 STREQUAL "Builtin")
+if(USE_SHA256 STREQUAL "builtin")
 	set(GIT_SHA256_BUILTIN 1)
 elseif(USE_SHA256 STREQUAL "OpenSSL")
 	set(GIT_SHA256_OPENSSL 1)
+elseif(USE_SHA256 STREQUAL "OpenSSL-FIPS")
+	set(GIT_SHA256_OPENSSL_FIPS 1)
 elseif(USE_SHA256 STREQUAL "OpenSSL-Dynamic")
 	set(GIT_SHA256_OPENSSL 1)
 	set(GIT_SHA256_OPENSSL_DYNAMIC 1)
@@ -77,11 +86,12 @@ elseif(USE_SHA256 STREQUAL "mbedTLS")
 elseif(USE_SHA256 STREQUAL "Win32")
 	set(GIT_SHA256_WIN32 1)
 else()
-	message(FATAL_ERROR "Asked for unknown SHA256 backend: ${USE_SHA256}")
+	message(FATAL_ERROR "asked for unknown SHA256 backend: ${USE_SHA256}")
 endif()
 
 # add library requirements
-if(USE_SHA1 STREQUAL "OpenSSL" OR USE_SHA256 STREQUAL "OpenSSL")
+if(USE_SHA1 STREQUAL "OpenSSL" OR USE_SHA256 STREQUAL "OpenSSL" OR
+   USE_SHA1 STREQUAL "OpenSSL-FIPS" OR USE_SHA256 STREQUAL "OpenSSL-FIPS")
 	if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
 		list(APPEND LIBGIT2_PC_LIBS "-lssl")
 	else()

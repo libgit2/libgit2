@@ -202,7 +202,7 @@ GIT_INLINE(size_t) common_prefix_icase(const char *str, size_t len, const char *
 {
 	size_t count = 0;
 
-	while (len > 0 && tolower(*str) == tolower(*prefix)) {
+	while (len > 0 && git__tolower(*str) == git__tolower(*prefix)) {
 		count++;
 		str++;
 		prefix++;

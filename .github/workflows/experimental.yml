@@ -1,0 +1,120 @@
+# Validation builds for experimental features; these shouldn't be
+# required for pull request approval.
+name: Experimental Features
+
+on:
+  push:
+    branches: [ main, maint/* ]
+  pull_request:
+    branches: [ main, maint/* ]
+  workflow_dispatch:
+
+env:
+  docker-registry: ghcr.io
+  docker-config-path: ci/docker
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # Run our CI/CD builds.  We build a matrix with the various build targets
+  # and their details.  Then we build either in a docker container (Linux)
+  # or on the actual hosts (macOS, Windows).
+  build:
+    strategy:
+      matrix:
+        platform:
+        # All builds: experimental SHA256 support
+        - name: "Linux (SHA256, Xenial, Clang, OpenSSL)"
+          id: linux-sha256
+          os: ubuntu-latest
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DEXPERIMENTAL_SHA256=ON
+        - name: "macOS (SHA256)"
+          id: macos-sha256
+          os: macos-13
+          setup-script: osx
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
+            CMAKE_GENERATOR: Ninja
+            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (SHA256, amd64, Visual Studio)"
+          id: windows-sha256
+          os: windows-2022
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 17 2022
+            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+            # TODO: this is a temporary removal
+            SKIP_GITDAEMON_TESTS: true
+      fail-fast: false
+    env: ${{ matrix.platform.env }}
+    runs-on: ${{ matrix.platform.os }}
+    name: "Build: ${{ matrix.platform.name }}"
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+      with:
+        path: source
+        fetch-depth: 0
+    - name: Set up build environment
+      run: source/ci/setup-${{ matrix.platform.setup-script }}-build.sh
+      shell: bash
+      if: matrix.platform.setup-script != ''
+    - name: Setup QEMU
+      run: docker run --rm --privileged multiarch/qemu-user-static:register --reset
+      if: matrix.platform.container.qemu == true
+    - name: Set up container
+      uses: ./source/.github/actions/download-or-build-container
+      with:
+        registry: ${{ env.docker-registry }}
+        config-path: ${{ env.docker-config-path }}
+        container: ${{ matrix.platform.container.name }}
+        github_token: ${{ secrets.github_token }}
+        dockerfile: ${{ matrix.platform.container.dockerfile }}
+      if: matrix.platform.container.name != ''
+    - name: Prepare build
+      run: mkdir build
+    - name: Build
+      uses: ./source/.github/actions/run-build
+      with:
+        command: cd ${BUILD_WORKSPACE:-.}/build && ../source/ci/build.sh
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
+        shell: ${{ matrix.platform.shell }}
+    - name: Test
+      uses: ./source/.github/actions/run-build
+      with:
+        command: cd ${BUILD_WORKSPACE:-.}/build && ../source/ci/test.sh
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
+        shell: ${{ matrix.platform.shell }}
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: success() || failure()
+      with:
+        name: test-results-${{ matrix.platform.id }}
+        path: build/results_*.xml
+
+  test_results:
+    name: Test results
+    needs: [ build ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download test results
+      uses: actions/download-artifact@v3
+    - name: Generate test summary
+      uses: test-summary/action@v2
+      with:
+        paths: 'test-results-*/*.xml'

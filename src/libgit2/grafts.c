@@ -11,10 +11,13 @@
 #include "oid.h"
 #include "oidarray.h"
 #include "parse.h"
+#include "hashmap_oid.h"
+
+GIT_HASHMAP_OID_SETUP(git_grafts_oidmap, git_commit_graft *);
 
 struct git_grafts {
 	/* Map of `git_commit_graft`s */
-	git_oidmap *commits;
+	git_grafts_oidmap commits;
 
 	/* Type of object IDs */
 	git_oid_t oid_type;
@@ -32,11 +35,6 @@ int git_grafts_new(git_grafts **out, git_oid_t oid_type)
 
 	grafts = git__calloc(1, sizeof(*grafts));
 	GIT_ERROR_CHECK_ALLOC(grafts);
-
-	if ((git_oidmap_new(&grafts->commits)) < 0) {
-		git__free(grafts);
-		return -1;
-	}
 
 	grafts->oid_type = oid_type;
 
@@ -88,23 +86,24 @@ void git_grafts_free(git_grafts *grafts)
 		return;
 	git__free(grafts->path);
 	git_grafts_clear(grafts);
-	git_oidmap_free(grafts->commits);
+	git_grafts_oidmap_dispose(&grafts->commits);
 	git__free(grafts);
 }
 
 void git_grafts_clear(git_grafts *grafts)
 {
+	git_hashmap_iter_t iter = GIT_HASHMAP_ITER_INIT;
 	git_commit_graft *graft;
 
 	if (!grafts)
 		return;
 
-	git_oidmap_foreach_value(grafts->commits, graft, {
+	while (git_grafts_oidmap_iterate(&iter, NULL, &graft, &grafts->commits) == 0) {
 		git__free(graft->parents.ptr);
 		git__free(graft);
-	});
+	}
 
-	git_oidmap_clear(grafts->commits);
+	git_grafts_oidmap_clear(&grafts->commits);
 }
 
 int git_grafts_refresh(git_grafts *grafts)
@@ -205,7 +204,7 @@ int git_grafts_add(git_grafts *grafts, const git_oid *oid, git_array_oid_t paren
 	if ((error = git_grafts_remove(grafts, &graft->oid)) < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
 
-	if ((error = git_oidmap_set(grafts->commits, &graft->oid, graft)) < 0)
+	if ((error = git_grafts_oidmap_put(&grafts->commits, &graft->oid, graft)) < 0)
 		goto cleanup;
 
 	return 0;
@@ -223,10 +222,10 @@ int git_grafts_remove(git_grafts *grafts, const git_oid *oid)
 
 	GIT_ASSERT_ARG(grafts && oid);
 
-	if ((graft = git_oidmap_get(grafts->commits, oid)) == NULL)
+	if (git_grafts_oidmap_get(&graft, &grafts->commits, oid) != 0)
 		return GIT_ENOTFOUND;
 
-	if ((error = git_oidmap_delete(grafts->commits, oid)) < 0)
+	if ((error = git_grafts_oidmap_remove(&grafts->commits, oid)) < 0)
 		return error;
 
 	git__free(graft->parents.ptr);
@@ -238,23 +237,22 @@ int git_grafts_remove(git_grafts *grafts, const git_oid *oid)
 int git_grafts_get(git_commit_graft **out, git_grafts *grafts, const git_oid *oid)
 {
 	GIT_ASSERT_ARG(out && grafts && oid);
-	if ((*out = git_oidmap_get(grafts->commits, oid)) == NULL)
-		return GIT_ENOTFOUND;
-	return 0;
+	return git_grafts_oidmap_get(out, &grafts->commits, oid);
 }
 
 int git_grafts_oids(git_oid **out, size_t *out_len, git_grafts *grafts)
 {
+	git_hashmap_iter_t iter = GIT_HASHMAP_ITER_INIT;
 	git_array_oid_t array = GIT_ARRAY_INIT;
 	const git_oid *oid;
-	size_t existing, i = 0;
+	size_t existing;
 
 	GIT_ASSERT_ARG(out && grafts);
 
-	if ((existing = git_oidmap_size(grafts->commits)) > 0)
+	if ((existing = git_grafts_oidmap_size(&grafts->commits)) > 0)
 		git_array_init_to_size(array, existing);
 
-	while (git_oidmap_iterate(NULL, grafts->commits, &i, &oid) == 0) {
+	while (git_grafts_oidmap_iterate(&iter, &oid, NULL, &grafts->commits) == 0) {
 		git_oid *cpy = git_array_alloc(array);
 		GIT_ERROR_CHECK_ALLOC(cpy);
 		git_oid_cpy(cpy, oid);
@@ -268,5 +266,5 @@ int git_grafts_oids(git_oid **out, size_t *out_len, git_grafts *grafts)
 
 size_t git_grafts_size(git_grafts *grafts)
 {
-	return git_oidmap_size(grafts->commits);
+	return git_grafts_oidmap_size(&grafts->commits);
 }

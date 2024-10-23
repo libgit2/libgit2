@@ -32,7 +32,6 @@
 # endif
 #endif
 
-#include <mbedtls/config.h>
 #include <mbedtls/ssl.h>
 #include <mbedtls/error.h>
 #include <mbedtls/entropy.h>
@@ -43,9 +42,15 @@
 #define GIT_SSL_DEFAULT_CIPHERS "TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256:TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256:TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384:TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384:TLS-DHE-RSA-WITH-AES-128-GCM-SHA256:TLS-DHE-DSS-WITH-AES-128-GCM-SHA256:TLS-DHE-RSA-WITH-AES-256-GCM-SHA384:TLS-DHE-DSS-WITH-AES-256-GCM-SHA384:TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA256:TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA256:TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA:TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA:TLS-ECDHE-ECDSA-WITH-AES-256-CBC-SHA384:TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA384:TLS-ECDHE-ECDSA-WITH-AES-256-CBC-SHA:TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA:TLS-DHE-RSA-WITH-AES-128-CBC-SHA256:TLS-DHE-RSA-WITH-AES-256-CBC-SHA256:TLS-DHE-RSA-WITH-AES-128-CBC-SHA:TLS-DHE-RSA-WITH-AES-256-CBC-SHA:TLS-DHE-DSS-WITH-AES-128-CBC-SHA256:TLS-DHE-DSS-WITH-AES-256-CBC-SHA256:TLS-DHE-DSS-WITH-AES-128-CBC-SHA:TLS-DHE-DSS-WITH-AES-256-CBC-SHA:TLS-RSA-WITH-AES-128-GCM-SHA256:TLS-RSA-WITH-AES-256-GCM-SHA384:TLS-RSA-WITH-AES-128-CBC-SHA256:TLS-RSA-WITH-AES-256-CBC-SHA256:TLS-RSA-WITH-AES-128-CBC-SHA:TLS-RSA-WITH-AES-256-CBC-SHA"
 #define GIT_SSL_DEFAULT_CIPHERS_COUNT 30
 
-static mbedtls_ssl_config *git__ssl_conf;
 static int ciphers_list[GIT_SSL_DEFAULT_CIPHERS_COUNT];
-static mbedtls_entropy_context *mbedtls_entropy;
+
+static bool initialized = false;
+static mbedtls_ssl_config mbedtls_config;
+static mbedtls_ctr_drbg_context mbedtls_rng;
+static mbedtls_entropy_context mbedtls_entropy;
+
+static bool has_ca_chain = false;
+static mbedtls_x509_crt mbedtls_ca_chain;
 
 /**
  * This function aims to clean-up the SSL context which
@@ -53,19 +58,16 @@ static mbedtls_entropy_context *mbedtls_entropy;
  */
 static void shutdown_ssl(void)
 {
-	if (git__ssl_conf) {
-		mbedtls_x509_crt_free(git__ssl_conf->ca_chain);
-		git__free(git__ssl_conf->ca_chain);
-		mbedtls_ctr_drbg_free(git__ssl_conf->p_rng);
-		git__free(git__ssl_conf->p_rng);
-		mbedtls_ssl_config_free(git__ssl_conf);
-		git__free(git__ssl_conf);
-		git__ssl_conf = NULL;
+	if (has_ca_chain) {
+		mbedtls_x509_crt_free(&mbedtls_ca_chain);
+		has_ca_chain = false;
 	}
-	if (mbedtls_entropy) {
-		mbedtls_entropy_free(mbedtls_entropy);
-		git__free(mbedtls_entropy);
-		mbedtls_entropy = NULL;
+
+	if (initialized) {
+		mbedtls_ctr_drbg_free(&mbedtls_rng);
+		mbedtls_ssl_config_free(&mbedtls_config);
+		mbedtls_entropy_free(&mbedtls_entropy);
+		initialized = false;
 	}
 }
 
@@ -74,32 +76,33 @@ int git_mbedtls_stream_global_init(void)
 	int loaded = 0;
 	char *crtpath = GIT_DEFAULT_CERT_LOCATION;
 	struct stat statbuf;
-	mbedtls_ctr_drbg_context *ctr_drbg = NULL;
 
 	size_t ciphers_known = 0;
 	char *cipher_name = NULL;
 	char *cipher_string = NULL;
 	char *cipher_string_tmp = NULL;
 
-	git__ssl_conf = git__malloc(sizeof(mbedtls_ssl_config));
-	GIT_ERROR_CHECK_ALLOC(git__ssl_conf);
+	mbedtls_ssl_config_init(&mbedtls_config);
+	mbedtls_entropy_init(&mbedtls_entropy);
+	mbedtls_ctr_drbg_init(&mbedtls_rng);
 
-	mbedtls_ssl_config_init(git__ssl_conf);
-	if (mbedtls_ssl_config_defaults(git__ssl_conf,
-		                            MBEDTLS_SSL_IS_CLIENT,
-		                            MBEDTLS_SSL_TRANSPORT_STREAM,
-		                            MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
+	if (mbedtls_ssl_config_defaults(&mbedtls_config,
+	                                MBEDTLS_SSL_IS_CLIENT,
+	                                MBEDTLS_SSL_TRANSPORT_STREAM,
+	                                MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
 		git_error_set(GIT_ERROR_SSL, "failed to initialize mbedTLS");
 		goto cleanup;
 	}
 
-	/* configure TLSv1 */
-	mbedtls_ssl_conf_min_version(git__ssl_conf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_0);
+	/* configure TLSv1.1 */
+#ifdef MBEDTLS_SSL_MINOR_VERSION_2
+	mbedtls_ssl_conf_min_version(&mbedtls_config, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_2);
+#endif
 
 	/* verify_server_cert is responsible for making the check.
 	 * OPTIONAL because REQUIRED drops the certificate as soon as the check
 	 * is made, so we can never see the certificate and override it. */
-	mbedtls_ssl_conf_authmode(git__ssl_conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
+	mbedtls_ssl_conf_authmode(&mbedtls_config, MBEDTLS_SSL_VERIFY_OPTIONAL);
 
 	/* set the list of allowed ciphersuites */
 	ciphers_known = 0;
@@ -123,42 +126,33 @@ int git_mbedtls_stream_global_init(void)
 		git_error_set(GIT_ERROR_SSL, "no cipher could be enabled");
 		goto cleanup;
 	}
-	mbedtls_ssl_conf_ciphersuites(git__ssl_conf, ciphers_list);
+	mbedtls_ssl_conf_ciphersuites(&mbedtls_config, ciphers_list);
 
 	/* Seeding the random number generator */
-	mbedtls_entropy = git__malloc(sizeof(mbedtls_entropy_context));
-	GIT_ERROR_CHECK_ALLOC(mbedtls_entropy);
 
-	mbedtls_entropy_init(mbedtls_entropy);
-
-	ctr_drbg = git__malloc(sizeof(mbedtls_ctr_drbg_context));
-	GIT_ERROR_CHECK_ALLOC(ctr_drbg);
-
-	mbedtls_ctr_drbg_init(ctr_drbg);
-
-	if (mbedtls_ctr_drbg_seed(ctr_drbg,
-		                      mbedtls_entropy_func,
-		                      mbedtls_entropy, NULL, 0) != 0) {
+	if (mbedtls_ctr_drbg_seed(&mbedtls_rng, mbedtls_entropy_func,
+			&mbedtls_entropy, NULL, 0) != 0) {
 		git_error_set(GIT_ERROR_SSL, "failed to initialize mbedTLS entropy pool");
 		goto cleanup;
 	}
 
-	mbedtls_ssl_conf_rng(git__ssl_conf, mbedtls_ctr_drbg_random, ctr_drbg);
+	mbedtls_ssl_conf_rng(&mbedtls_config, mbedtls_ctr_drbg_random, &mbedtls_rng);
 
 	/* load default certificates */
 	if (crtpath != NULL && stat(crtpath, &statbuf) == 0 && S_ISREG(statbuf.st_mode))
 		loaded = (git_mbedtls__set_cert_location(crtpath, NULL) == 0);
+
 	if (!loaded && crtpath != NULL && stat(crtpath, &statbuf) == 0 && S_ISDIR(statbuf.st_mode))
 		loaded = (git_mbedtls__set_cert_location(NULL, crtpath) == 0);
+
+	initialized = true;
 
 	return git_runtime_shutdown_register(shutdown_ssl);
 
 cleanup:
-	mbedtls_ctr_drbg_free(ctr_drbg);
-	git__free(ctr_drbg);
-	mbedtls_ssl_config_free(git__ssl_conf);
-	git__free(git__ssl_conf);
-	git__ssl_conf = NULL;
+	mbedtls_ctr_drbg_free(&mbedtls_rng);
+	mbedtls_ssl_config_free(&mbedtls_config);
+	mbedtls_entropy_free(&mbedtls_entropy);
 
 	return -1;
 }
@@ -192,7 +186,7 @@ static int ssl_set_error(mbedtls_ssl_context *ssl, int error)
 		break;
 
 	case MBEDTLS_ERR_X509_CERT_VERIFY_FAILED:
-		git_error_set(GIT_ERROR_SSL, "SSL error: %#04x [%x] - %s", error, ssl->session_negotiate->verify_result, errbuf);
+		git_error_set(GIT_ERROR_SSL, "SSL error: %#04x [%x] - %s", error, mbedtls_ssl_get_verify_result(ssl), errbuf);
 		ret = GIT_ECERTIFICATE;
 		break;
 
@@ -374,7 +368,7 @@ static int mbedtls_stream_wrap(
 	st->ssl = git__malloc(sizeof(mbedtls_ssl_context));
 	GIT_ERROR_CHECK_ALLOC(st->ssl);
 	mbedtls_ssl_init(st->ssl);
-	if (mbedtls_ssl_setup(st->ssl, git__ssl_conf)) {
+	if (mbedtls_ssl_setup(st->ssl, &mbedtls_config)) {
 		git_error_set(GIT_ERROR_SSL, "failed to create ssl object");
 		error = -1;
 		goto out_err;
@@ -441,30 +435,30 @@ int git_mbedtls__set_cert_location(const char *file, const char *path)
 {
 	int ret = 0;
 	char errbuf[512];
-	mbedtls_x509_crt *cacert;
 
 	GIT_ASSERT_ARG(file || path);
 
-	cacert = git__malloc(sizeof(mbedtls_x509_crt));
-	GIT_ERROR_CHECK_ALLOC(cacert);
+	if (has_ca_chain)
+		mbedtls_x509_crt_free(&mbedtls_ca_chain);
 
-	mbedtls_x509_crt_init(cacert);
+	mbedtls_x509_crt_init(&mbedtls_ca_chain);
+
 	if (file)
-		ret = mbedtls_x509_crt_parse_file(cacert, file);
+		ret = mbedtls_x509_crt_parse_file(&mbedtls_ca_chain, file);
+
 	if (ret >= 0 && path)
-		ret = mbedtls_x509_crt_parse_path(cacert, path);
+		ret = mbedtls_x509_crt_parse_path(&mbedtls_ca_chain, path);
+
 	/* mbedtls_x509_crt_parse_path returns the number of invalid certs on success */
 	if (ret < 0) {
-		mbedtls_x509_crt_free(cacert);
-		git__free(cacert);
+		mbedtls_x509_crt_free(&mbedtls_ca_chain);
 		mbedtls_strerror( ret, errbuf, 512 );
 		git_error_set(GIT_ERROR_SSL, "failed to load CA certificates: %#04x - %s", ret, errbuf);
 		return -1;
 	}
 
-	mbedtls_x509_crt_free(git__ssl_conf->ca_chain);
-	git__free(git__ssl_conf->ca_chain);
-	mbedtls_ssl_conf_ca_chain(git__ssl_conf, cacert, NULL);
+	mbedtls_ssl_conf_ca_chain(&mbedtls_config, &mbedtls_ca_chain, NULL);
+	has_ca_chain = true;
 
 	return 0;
 }

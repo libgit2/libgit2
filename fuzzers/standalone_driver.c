@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Done %d runs\n", i);
 
 exit:
-	git_vector_free_deep(&corpus_files);
+	git_vector_dispose_deep(&corpus_files);
 	git_libgit2_shutdown();
 	return error;
 }

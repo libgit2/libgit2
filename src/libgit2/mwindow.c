@@ -11,7 +11,6 @@
 #include "futils.h"
 #include "map.h"
 #include "runtime.h"
-#include "strmap.h"
 #include "pack.h"
 
 #define DEFAULT_WINDOW_SIZE \
@@ -29,33 +28,27 @@ size_t git_mwindow__window_size = DEFAULT_WINDOW_SIZE;
 size_t git_mwindow__mapped_limit = DEFAULT_MAPPED_LIMIT;
 size_t git_mwindow__file_limit = DEFAULT_FILE_LIMIT;
 
-/* Mutex to control access to `git_mwindow__mem_ctl` and `git__pack_cache`. */
-git_mutex git__mwindow_mutex;
+/* Mutex to control access to `git_mwindow__mem_ctl` and `git_mwindow__pack_cache`. */
+git_mutex git_mwindow__mutex;
 
-/* Whenever you want to read or modify this, grab `git__mwindow_mutex` */
+/* Whenever you want to read or modify this, grab `git_mwindow__mutex` */
 git_mwindow_ctl git_mwindow__mem_ctl;
 
 /* Global list of mwindow files, to open packs once across repos */
-git_strmap *git__pack_cache = NULL;
+GIT_HASHMAP_STR_FUNCTIONS(git_mwindow_packmap, , struct git_pack_file *);
+git_mwindow_packmap git_mwindow__pack_cache;
 
 static void git_mwindow_global_shutdown(void)
 {
-	git_strmap *tmp = git__pack_cache;
-
-	git_mutex_free(&git__mwindow_mutex);
-
-	git__pack_cache = NULL;
-	git_strmap_free(tmp);
+	git_mutex_free(&git_mwindow__mutex);
+	git_mwindow_packmap_dispose(&git_mwindow__pack_cache);
 }
 
 int git_mwindow_global_init(void)
 {
 	int error;
 
-	GIT_ASSERT(!git__pack_cache);
-
-	if ((error = git_mutex_init(&git__mwindow_mutex)) < 0 ||
-	    (error = git_strmap_new(&git__pack_cache)) < 0)
+	if ((error = git_mutex_init(&git_mwindow__mutex)) < 0)
 	    return error;
 
 	return git_runtime_shutdown_register(git_mwindow_global_shutdown);
@@ -73,31 +66,34 @@ int git_mwindow_get_pack(
 	if ((error = git_packfile__name(&packname, path)) < 0)
 		return error;
 
-	if (git_mutex_lock(&git__mwindow_mutex) < 0) {
+	if (git_mutex_lock(&git_mwindow__mutex) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to lock mwindow mutex");
 		return -1;
 	}
 
-	pack = git_strmap_get(git__pack_cache, packname);
+	error = git_mwindow_packmap_get(&pack, &git_mwindow__pack_cache, packname);
 	git__free(packname);
 
-	if (pack != NULL) {
+	if (error == 0) {
 		git_atomic32_inc(&pack->refcount);
-		git_mutex_unlock(&git__mwindow_mutex);
+		git_mutex_unlock(&git_mwindow__mutex);
 		*out = pack;
 		return 0;
+	} else if (error != GIT_ENOTFOUND) {
+		return error;
 	}
 
 	/* If we didn't find it, we need to create it */
 	if ((error = git_packfile_alloc(&pack, path, oid_type)) < 0) {
-		git_mutex_unlock(&git__mwindow_mutex);
+		git_mutex_unlock(&git_mwindow__mutex);
 		return error;
 	}
 
 	git_atomic32_inc(&pack->refcount);
 
-	error = git_strmap_set(git__pack_cache, pack->pack_name, pack);
-	git_mutex_unlock(&git__mwindow_mutex);
+	error = git_mwindow_packmap_put(&git_mwindow__pack_cache, pack->pack_name, pack);
+	git_mutex_unlock(&git_mwindow__mutex);
+
 	if (error < 0) {
 		git_packfile_free(pack, false);
 		return error;
@@ -112,21 +108,18 @@ int git_mwindow_put_pack(struct git_pack_file *pack)
 	int count, error;
 	struct git_pack_file *pack_to_delete = NULL;
 
-	if ((error = git_mutex_lock(&git__mwindow_mutex)) < 0)
+	if ((error = git_mutex_lock(&git_mwindow__mutex)) < 0)
 		return error;
 
-	/* put before get would be a corrupted state */
-	GIT_ASSERT(git__pack_cache);
-
 	/* if we cannot find it, the state is corrupted */
-	GIT_ASSERT(git_strmap_exists(git__pack_cache, pack->pack_name));
+	GIT_ASSERT(git_mwindow_packmap_contains(&git_mwindow__pack_cache, pack->pack_name));
 
 	count = git_atomic32_dec(&pack->refcount);
 	if (count == 0) {
-		git_strmap_delete(git__pack_cache, pack->pack_name);
+		git_mwindow_packmap_remove(&git_mwindow__pack_cache, pack->pack_name);
 		pack_to_delete = pack;
 	}
-	git_mutex_unlock(&git__mwindow_mutex);
+	git_mutex_unlock(&git_mwindow__mutex);
 	git_packfile_free(pack_to_delete, false);
 
 	return 0;
@@ -134,7 +127,7 @@ int git_mwindow_put_pack(struct git_pack_file *pack)
 
 /*
  * Free all the windows in a sequence, typically because we're done
- * with the file. Needs to hold the git__mwindow_mutex.
+ * with the file. Needs to hold the git_mwindow__mutex.
  */
 static int git_mwindow_free_all_locked(git_mwindow_file *mwf)
 {
@@ -152,7 +145,7 @@ static int git_mwindow_free_all_locked(git_mwindow_file *mwf)
 	}
 
 	if (ctl->windowfiles.length == 0) {
-		git_vector_free(&ctl->windowfiles);
+		git_vector_dispose(&ctl->windowfiles);
 		ctl->windowfiles.contents = NULL;
 	}
 
@@ -176,14 +169,14 @@ int git_mwindow_free_all(git_mwindow_file *mwf)
 {
 	int error;
 
-	if (git_mutex_lock(&git__mwindow_mutex)) {
+	if (git_mutex_lock(&git_mwindow__mutex)) {
 		git_error_set(GIT_ERROR_THREAD, "unable to lock mwindow mutex");
 		return -1;
 	}
 
 	error = git_mwindow_free_all_locked(mwf);
 
-	git_mutex_unlock(&git__mwindow_mutex);
+	git_mutex_unlock(&git_mwindow__mutex);
 
 	return error;
 }
@@ -405,7 +398,7 @@ unsigned char *git_mwindow_open(
 	git_mwindow_ctl *ctl = &git_mwindow__mem_ctl;
 	git_mwindow *w = *cursor;
 
-	if (git_mutex_lock(&git__mwindow_mutex)) {
+	if (git_mutex_lock(&git_mwindow__mutex)) {
 		git_error_set(GIT_ERROR_THREAD, "unable to lock mwindow mutex");
 		return NULL;
 	}
@@ -427,7 +420,7 @@ unsigned char *git_mwindow_open(
 		if (!w) {
 			w = new_window_locked(mwf->fd, mwf->size, offset);
 			if (w == NULL) {
-				git_mutex_unlock(&git__mwindow_mutex);
+				git_mutex_unlock(&git_mwindow__mutex);
 				return NULL;
 			}
 			w->next = mwf->windows;
@@ -447,7 +440,7 @@ unsigned char *git_mwindow_open(
 	if (left)
 		*left = (unsigned int)(w->window_map.len - offset);
 
-	git_mutex_unlock(&git__mwindow_mutex);
+	git_mutex_unlock(&git_mwindow__mutex);
 	return (unsigned char *) w->window_map.data + offset;
 }
 
@@ -459,14 +452,14 @@ int git_mwindow_file_register(git_mwindow_file *mwf)
 	size_t i;
 	git_mwindow_file *closed_file = NULL;
 
-	if (git_mutex_lock(&git__mwindow_mutex)) {
+	if (git_mutex_lock(&git_mwindow__mutex)) {
 		git_error_set(GIT_ERROR_THREAD, "unable to lock mwindow mutex");
 		return -1;
 	}
 
 	if (ctl->windowfiles.length == 0 &&
 	    (error = git_vector_init(&ctl->windowfiles, 8, NULL)) < 0) {
-		git_mutex_unlock(&git__mwindow_mutex);
+		git_mutex_unlock(&git_mwindow__mutex);
 		goto cleanup;
 	}
 
@@ -486,7 +479,7 @@ int git_mwindow_file_register(git_mwindow_file *mwf)
 	}
 
 	error = git_vector_insert(&ctl->windowfiles, mwf);
-	git_mutex_unlock(&git__mwindow_mutex);
+	git_mutex_unlock(&git_mwindow__mutex);
 	if (error < 0)
 		goto cleanup;
 
@@ -505,7 +498,7 @@ int git_mwindow_file_register(git_mwindow_file *mwf)
 	}
 
 cleanup:
-	git_vector_free(&closed_files);
+	git_vector_dispose(&closed_files);
 	return error;
 }
 
@@ -515,30 +508,30 @@ void git_mwindow_file_deregister(git_mwindow_file *mwf)
 	git_mwindow_file *cur;
 	size_t i;
 
-	if (git_mutex_lock(&git__mwindow_mutex))
+	if (git_mutex_lock(&git_mwindow__mutex))
 		return;
 
 	git_vector_foreach(&ctl->windowfiles, i, cur) {
 		if (cur == mwf) {
 			git_vector_remove(&ctl->windowfiles, i);
-			git_mutex_unlock(&git__mwindow_mutex);
+			git_mutex_unlock(&git_mwindow__mutex);
 			return;
 		}
 	}
-	git_mutex_unlock(&git__mwindow_mutex);
+	git_mutex_unlock(&git_mwindow__mutex);
 }
 
 void git_mwindow_close(git_mwindow **window)
 {
 	git_mwindow *w = *window;
 	if (w) {
-		if (git_mutex_lock(&git__mwindow_mutex)) {
+		if (git_mutex_lock(&git_mwindow__mutex)) {
 			git_error_set(GIT_ERROR_THREAD, "unable to lock mwindow mutex");
 			return;
 		}
 
 		w->inuse_cnt--;
-		git_mutex_unlock(&git__mwindow_mutex);
+		git_mutex_unlock(&git_mwindow__mutex);
 		*window = NULL;
 	}
 }

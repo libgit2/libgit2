@@ -24,6 +24,7 @@ jobs:
         - name: xenial
         - name: bionic
         - name: focal
+        - name: noble
         - name: docurium
         - name: bionic-x86
           dockerfile: bionic
@@ -39,11 +40,12 @@ jobs:
           qemu: true
         - name: centos7
         - name: centos8
+        - name: fedora
     runs-on: ubuntu-latest
     name: "Create container: ${{ matrix.container.name }}"
     steps:
     - name: Check out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: source
         fetch-depth: 0

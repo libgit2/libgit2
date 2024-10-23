@@ -15,8 +15,8 @@ so there are no restrictions on their use.
 
 For annotated HTML versions, see the "Examples" section of:
 
-    http://libgit2.github.com/libgit2
+    https://libgit2.org/libgit2
 
 such as:
 
-    http://libgit2.github.com/libgit2/ex/HEAD/general.html
+    https://libgit2.org/libgit2/ex/HEAD/general.html

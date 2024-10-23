@@ -103,7 +103,7 @@ static void merge_simple_branch(int merge_file_favor, int addl_checkout_strategy
 	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &their_oids[0]));
 
 	merge_opts.file_favor = merge_file_favor;
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_ALLOW_CONFLICTS |
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_ALLOW_CONFLICTS |
 		addl_checkout_strategy;
 
 	cl_git_pass(git_merge(repo, (const git_annotated_commit **)their_heads, 1, &merge_opts, &checkout_opts));
@@ -577,7 +577,7 @@ void test_merge_workdir_simple__checkout_ours(void)
 		REMOVED_IN_MASTER_REUC_ENTRY
 	};
 
-	merge_simple_branch(0, GIT_CHECKOUT_SAFE | GIT_CHECKOUT_USE_OURS);
+	merge_simple_branch(0, GIT_CHECKOUT_USE_OURS);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));

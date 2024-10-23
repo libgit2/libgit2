@@ -808,7 +808,7 @@ int git_reference_list(
 
 	if (git_reference_foreach_name(
 			repo, &cb__reflist_add, (void *)&ref_list) < 0) {
-		git_vector_free(&ref_list);
+		git_vector_dispose(&ref_list);
 		return -1;
 	}
 
@@ -1078,6 +1078,12 @@ int git_reference_cmp(
 		return strcmp(ref1->target.symbolic, ref2->target.symbolic);
 
 	return git_oid__cmp(&ref1->target.oid, &ref2->target.oid);
+}
+
+int git_reference__cmp_cb(const void *a, const void *b)
+{
+	return git_reference_cmp(
+		(const git_reference *)a, (const git_reference *)b);
 }
 
 /*

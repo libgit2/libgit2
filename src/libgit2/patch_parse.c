@@ -562,9 +562,9 @@ fail:
 
 static int eof_for_origin(int origin) {
 	if (origin == GIT_DIFF_LINE_ADDITION)
-		return GIT_DIFF_LINE_ADD_EOFNL;
-	if (origin == GIT_DIFF_LINE_DELETION)
 		return GIT_DIFF_LINE_DEL_EOFNL;
+	if (origin == GIT_DIFF_LINE_DELETION)
+		return GIT_DIFF_LINE_ADD_EOFNL;
 	return GIT_DIFF_LINE_CONTEXT_EOFNL;
 }
 

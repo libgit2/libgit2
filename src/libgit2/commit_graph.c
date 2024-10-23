@@ -13,7 +13,6 @@
 #include "futils.h"
 #include "hash.h"
 #include "oidarray.h"
-#include "oidmap.h"
 #include "pack.h"
 #include "repository.h"
 #include "revwalk.h"
@@ -25,6 +24,7 @@
 #define COMMIT_GRAPH_SIGNATURE 0x43475048 /* "CGPH" */
 #define COMMIT_GRAPH_VERSION 1
 #define COMMIT_GRAPH_OBJECT_ID_VERSION 1
+
 struct git_commit_graph_header {
 	uint32_t signature;
 	uint8_t version;
@@ -730,7 +730,7 @@ void git_commit_graph_writer_free(git_commit_graph_writer *w)
 
 	git_vector_foreach (&w->commits, i, packed_commit)
 		packed_commit_free(packed_commit);
-	git_vector_free(&w->commits);
+	git_vector_dispose(&w->commits);
 	git_str_dispose(&w->objects_info_dir);
 	git__free(w);
 }
@@ -839,6 +839,8 @@ enum generation_number_commit_state {
 	GENERATION_NUMBER_COMMIT_STATE_VISITED = 3
 };
 
+GIT_HASHMAP_OID_SETUP(git_commit_graph_oidmap, struct packed_commit *);
+
 static int compute_generation_numbers(git_vector *commits)
 {
 	git_array_t(size_t) index_stack = GIT_ARRAY_INIT;
@@ -846,17 +848,14 @@ static int compute_generation_numbers(git_vector *commits)
 	size_t *parent_idx;
 	enum generation_number_commit_state *commit_states = NULL;
 	struct packed_commit *child_packed_commit;
-	git_oidmap *packed_commit_map = NULL;
+	git_commit_graph_oidmap packed_commit_map = GIT_HASHMAP_INIT;
 	int error = 0;
 
 	/* First populate the parent indices fields */
-	error = git_oidmap_new(&packed_commit_map);
-	if (error < 0)
-		goto cleanup;
 	git_vector_foreach (commits, i, child_packed_commit) {
 		child_packed_commit->index = i;
-		error = git_oidmap_set(
-				packed_commit_map, &child_packed_commit->sha1, child_packed_commit);
+		error = git_commit_graph_oidmap_put(&packed_commit_map,
+				&child_packed_commit->sha1, child_packed_commit);
 		if (error < 0)
 			goto cleanup;
 	}
@@ -874,8 +873,7 @@ static int compute_generation_numbers(git_vector *commits)
 			goto cleanup;
 		}
 		git_array_foreach (child_packed_commit->parents, parent_i, parent_id) {
-			parent_packed_commit = git_oidmap_get(packed_commit_map, parent_id);
-			if (!parent_packed_commit) {
+			if (git_commit_graph_oidmap_get(&parent_packed_commit, &packed_commit_map, parent_id) != 0) {
 				git_error_set(GIT_ERROR_ODB,
 					      "parent commit %s not found in commit graph",
 					      git_oid_tostr_s(parent_id));
@@ -975,7 +973,7 @@ static int compute_generation_numbers(git_vector *commits)
 	}
 
 cleanup:
-	git_oidmap_free(packed_commit_map);
+	git_commit_graph_oidmap_dispose(&packed_commit_map);
 	git__free(commit_states);
 	git_array_clear(index_stack);
 
@@ -1029,9 +1027,12 @@ static int commit_graph_write_hash(const char *buf, size_t size, void *data)
 	struct commit_graph_write_hash_context *ctx = data;
 	int error;
 
-	error = git_hash_update(ctx->ctx, buf, size);
-	if (error < 0)
-		return error;
+	if (ctx->ctx) {
+		error = git_hash_update(ctx->ctx, buf, size);
+
+		if (error < 0)
+			return error;
+	}
 
 	return ctx->write_cb(buf, size, ctx->cb_data);
 }
@@ -1227,6 +1228,9 @@ static int commit_graph_write(
 	error = git_hash_final(checksum, &ctx);
 	if (error < 0)
 		goto cleanup;
+
+	hash_cb_data.ctx = NULL;
+
 	error = write_cb((char *)checksum, checksum_size, cb_data);
 	if (error < 0)
 		goto cleanup;

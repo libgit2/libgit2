@@ -6,22 +6,19 @@
  */
 
 #include <git2.h>
-#include "cli.h"
+#include "common.h"
 #include "cmd.h"
 
 #include "futils.h"
 
 #define COMMAND_NAME "hash-object"
 
-static int show_help;
 static char *type_name;
 static int write_object, read_stdin, literally;
 static char **filenames;
 
 static const cli_opt_spec opts[] = {
-	{ CLI_OPT_TYPE_SWITCH,   "help",      0, &show_help,    1,
-	  CLI_OPT_USAGE_HIDDEN | CLI_OPT_USAGE_STOP_PARSING, NULL,
-	  "display help about the " COMMAND_NAME " command" },
+	CLI_COMMON_OPT,
 
 	{ CLI_OPT_TYPE_VALUE,     NULL,      't', &type_name,    0,
 	  CLI_OPT_USAGE_DEFAULT, "type",     "the type of object to hash (default: \"blob\")" },
@@ -38,7 +35,7 @@ static const cli_opt_spec opts[] = {
 
 static void print_help(void)
 {
-	cli_opt_usage_fprint(stdout, PROGRAM_NAME, COMMAND_NAME, opts);
+	cli_opt_usage_fprint(stdout, PROGRAM_NAME, COMMAND_NAME, opts, 0);
 	printf("\n");
 
 	printf("Compute the object ID for a given file and optionally write that file\nto the object database.\n");
@@ -92,6 +89,7 @@ static int hash_buf(
 
 int cmd_hash_object(int argc, char **argv)
 {
+	cli_repository_open_options open_opts = { argv + 1, argc - 1};
 	git_repository *repo = NULL;
 	git_odb *odb = NULL;
 	git_oid_t oid_type;
@@ -104,7 +102,7 @@ int cmd_hash_object(int argc, char **argv)
 	if (cli_opt_parse(&invalid_opt, opts, argv + 1, argc - 1, CLI_OPT_PARSE_GNU))
 		return cli_opt_usage_error(COMMAND_NAME, opts, &invalid_opt);
 
-	if (show_help) {
+	if (cli_opt__show_help) {
 		print_help();
 		return 0;
 	}
@@ -113,7 +111,7 @@ int cmd_hash_object(int argc, char **argv)
 		return cli_error_usage("invalid object type '%s'", type_name);
 
 	if (write_object &&
-	    (git_repository_open_ext(&repo, ".", GIT_REPOSITORY_OPEN_FROM_ENV, NULL) < 0 ||
+	    (cli_repository_open(&repo, &open_opts) < 0 ||
 	     git_repository_odb(&odb, repo) < 0)) {
 		ret = cli_error_git();
 		goto done;

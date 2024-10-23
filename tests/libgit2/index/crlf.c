@@ -190,7 +190,7 @@ static void set_up_workingdir(const char *name)
 			continue;
 		p_unlink(fn);
 	}
-	git_vector_free_deep(&contents);
+	git_vector_dispose_deep(&contents);
 
 	/* copy input files */
 	git_fs_path_dirload(&contents, cl_fixture("crlf"), 0, 0);
@@ -207,7 +207,7 @@ static void set_up_workingdir(const char *name)
 		git__free(basename);
 		git_str_dispose(&dest_filename);
 	}
-	git_vector_free_deep(&contents);
+	git_vector_dispose_deep(&contents);
 }
 
 void test_index_crlf__matches_core_git(void)

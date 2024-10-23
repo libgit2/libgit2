@@ -7,17 +7,16 @@
 
 #include <stdio.h>
 #include <git2.h>
-#include "cli.h"
+#include "common.h"
 #include "cmd.h"
 
 #define COMMAND_NAME "help"
 
 static char *command;
-static int show_help;
 
 static const cli_opt_spec opts[] = {
-	{ CLI_OPT_TYPE_SWITCH,   "help",     0, &show_help, 1,
-	  CLI_OPT_USAGE_HIDDEN,   NULL,     "display help about the help command" },
+	CLI_COMMON_OPT,
+
 	{ CLI_OPT_TYPE_ARG,      "command",  0, &command,   0,
 	  CLI_OPT_USAGE_DEFAULT, "command", "the command to show help for" },
 	{ 0 },
@@ -25,7 +24,7 @@ static const cli_opt_spec opts[] = {
 
 static int print_help(void)
 {
-	cli_opt_usage_fprint(stdout, PROGRAM_NAME, COMMAND_NAME, opts);
+	cli_opt_usage_fprint(stdout, PROGRAM_NAME, COMMAND_NAME, opts, CLI_OPT_USAGE_SHOW_HIDDEN);
 	printf("\n");
 
 	printf("Display help information about %s.  If a command is specified, help\n", PROGRAM_NAME);
@@ -39,7 +38,7 @@ static int print_commands(void)
 {
 	const cli_cmd_spec *cmd;
 
-	cli_opt_usage_fprint(stdout, PROGRAM_NAME, NULL, cli_common_opts);
+	cli_opt_usage_fprint(stdout, PROGRAM_NAME, NULL, cli_common_opts, CLI_OPT_USAGE_SHOW_HIDDEN);
 	printf("\n");
 
 	printf("These are the %s commands available:\n\n", PROGRAM_NAME);
@@ -62,7 +61,7 @@ int cmd_help(int argc, char **argv)
 		return cli_opt_usage_error(COMMAND_NAME, opts, &invalid_opt);
 
 	/* Show the meta-help */
-	if (show_help)
+	if (cli_opt__show_help)
 		return print_help();
 
 	/* We were not asked to show help for a specific command. */

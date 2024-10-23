@@ -1,0 +1,52 @@
+ARG BASE=fedora:rawhide
+
+FROM ${BASE} AS stream
+RUN dnf -y distro-sync
+
+FROM stream AS yum
+RUN yum install -y \
+	which \
+	bzip2 \
+	git \
+	libarchive \
+	cmake \
+	gcc \
+	make \
+	openssl-devel \
+	openssh-server \
+	git-daemon \
+	java-1.8.0-openjdk-headless \
+	sudo \
+	python3 \
+	valgrind \
+	krb5-workstation \
+	krb5-libs \
+	krb5-devel \
+	pcre2-devel \
+	zlib-devel \
+	ninja-build \
+	llhttp-devel
+
+FROM yum AS libssh2
+RUN cd /tmp && \
+    curl --location --silent --show-error https://www.libssh2.org/download/libssh2-1.11.0.tar.gz | tar -xz && \
+    cd libssh2-1.11.0 && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf libssh2-1.11.0
+
+FROM libssh2 AS adduser
+ARG UID=""
+ARG GID=""
+RUN if [ "${UID}" != "" ]; then USER_ARG="--uid ${UID}"; fi && \
+    if [ "${GID}" != "" ]; then GROUP_ARG="--gid ${GID}"; fi && \
+    groupadd ${GROUP_ARG} libgit2 && \
+    useradd ${USER_ARG} --gid libgit2 --shell /bin/bash --create-home libgit2
+
+FROM adduser AS configure
+ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
+RUN mkdir /var/run/sshd
+RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local && \
+    ldconfig

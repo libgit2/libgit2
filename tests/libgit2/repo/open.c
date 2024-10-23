@@ -316,7 +316,7 @@ static void unposix_path(git_str *path)
 	src = tgt = path->ptr;
 
 	/* convert "/d/..." to "d:\..." */
-	if (src[0] == '/' && isalpha(src[1]) && src[2] == '/') {
+	if (src[0] == '/' && git__isalpha(src[1]) && src[2] == '/') {
 		*tgt++ = src[1];
 		*tgt++ = ':';
 		*tgt++ = '\\';
@@ -533,15 +533,21 @@ void test_repo_open__validates_bare_repo_ownership(void)
 	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, "testrepo.git"));
 }
 
-void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
+static int test_safe_path(const char *path)
 {
 	git_repository *repo;
 	git_str config_path = GIT_STR_INIT,
 	        config_filename = GIT_STR_INIT,
 	        config_data = GIT_STR_INIT;
+	int error;
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
 
+	/*
+	 * Sandbox the fixture, and ensure that when we fake an owner
+	 * of "other" that the repository cannot be opened (and fails
+	 * with `GIT_EOWNER`).
+	 */
 	cl_fixture_sandbox("empty_standard_repo");
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
@@ -555,74 +561,35 @@ void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
 
 	git_str_joinpath(&config_filename, config_path.ptr, ".gitconfig");
 
+	git_str_clear(&config_data);
 	git_str_printf(&config_data,
 		"[foo]\n" \
 		"\tbar = Foobar\n" \
 		"\tbaz = Baz!\n" \
 		"[safe]\n" \
-		"\tdirectory = /non/existent/path\n" \
-		"\tdirectory = /\n" \
-		"\tdirectory = c:\\\\temp\n" \
-		"\tdirectory = %s/%s\n" \
-		"\tdirectory = /tmp\n" \
+		"\tdirectory = %s\n" \
 		"[bar]\n" \
 		"\tfoo = barfoo\n",
-		clar_sandbox_path(), "empty_standard_repo");
+		path);
 	cl_git_rewritefile(config_filename.ptr, config_data.ptr);
 
-	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
+	error = git_repository_open(&repo, "empty_standard_repo");
 	git_repository_free(repo);
 
 	git_str_dispose(&config_path);
 	git_str_dispose(&config_filename);
 	git_str_dispose(&config_data);
+
+	return error;
 }
 
-void test_repo_open__can_wildcard_allowlist_with_problematic_ownership(void)
-{
-	git_repository *repo;
-	git_str config_path = GIT_STR_INIT, config_filename = GIT_STR_INIT;
-
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
-
-	cl_fixture_sandbox("empty_standard_repo");
-	cl_git_pass(cl_rename(
-	        "empty_standard_repo/.gitted", "empty_standard_repo/.git"));
-
-	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
-	cl_git_fail_with(
-	        GIT_EOWNER, git_repository_open(&repo, "empty_standard_repo"));
-
-	/* Add safe.directory options to the global configuration */
-	git_str_joinpath(&config_path, clar_sandbox_path(), "__global_config");
-	cl_must_pass(p_mkdir(config_path.ptr, 0777));
-	git_libgit2_opts(
-	        GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL,
-	        config_path.ptr);
-
-	git_str_joinpath(&config_filename, config_path.ptr, ".gitconfig");
-
-	cl_git_rewritefile(config_filename.ptr, "[foo]\n"
-	        "\tbar = Foobar\n"
-	        "\tbaz = Baz!\n"
-	        "[safe]\n"
-	        "\tdirectory = *\n"
-	        "[bar]\n"
-	        "\tfoo = barfoo\n");
-
-	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
-	git_repository_free(repo);
-
-	git_str_dispose(&config_path);
-	git_str_dispose(&config_filename);
-}
-
-void test_repo_open__can_allowlist_bare_gitdir(void)
+static int test_bare_safe_path(const char *path)
 {
 	git_repository *repo;
 	git_str config_path = GIT_STR_INIT,
 	        config_filename = GIT_STR_INIT,
 	        config_data = GIT_STR_INIT;
+	int error;
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
 
@@ -646,56 +613,203 @@ void test_repo_open__can_allowlist_bare_gitdir(void)
 		"\tdirectory = /non/existent/path\n" \
 		"\tdirectory = /\n" \
 		"\tdirectory = c:\\\\temp\n" \
-		"\tdirectory = %s/%s\n" \
+		"\tdirectory = %s\n" \
 		"\tdirectory = /tmp\n" \
 		"[bar]\n" \
 		"\tfoo = barfoo\n",
-		clar_sandbox_path(), "testrepo.git");
+		path);
 	cl_git_rewritefile(config_filename.ptr, config_data.ptr);
 
-	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
+	error = git_repository_open(&repo, "testrepo.git");
 	git_repository_free(repo);
 
 	git_str_dispose(&config_path);
 	git_str_dispose(&config_filename);
 	git_str_dispose(&config_data);
+
+	return error;
+}
+
+void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(&path, "%s/%s",
+		clar_sandbox_path(), "empty_standard_repo"));
+	cl_git_pass(test_safe_path(path.ptr));
+	git_str_dispose(&path);
+}
+
+void test_repo_open__safe_directory_fails_with_trailing_slash(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	/*
+	 * "/tmp/foo/" is not permitted; safe path must be specified
+	 * as "/tmp/foo"
+	 */
+	cl_git_pass(git_str_printf(&path, "%s/%s/",
+		clar_sandbox_path(), "empty_standard_repo"));
+	cl_git_fail_with(GIT_EOWNER, test_safe_path(path.ptr));
+	git_str_dispose(&path);
+}
+
+void test_repo_open__can_wildcard_allowlist_with_problematic_ownership(void)
+{
+	cl_git_pass(test_safe_path("*"));
+}
+
+void test_repo_open__can_allowlist_bare_gitdir(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(&path, "%s/%s",
+		clar_sandbox_path(), "testrepo.git"));
+	cl_git_pass(test_bare_safe_path(path.ptr));
+	git_str_dispose(&path);
 }
 
 void test_repo_open__can_wildcard_allowlist_bare_gitdir(void)
 {
+	cl_git_pass(test_bare_safe_path("*"));
+}
+
+void test_repo_open__can_handle_prefixed_safe_paths(void)
+{
+#ifndef GIT_WIN32
+	git_str path = GIT_STR_INIT;
+
+	/*
+	 * Using "%(prefix)/" becomes "%(prefix)//tmp/foo" - so
+	 * "%(prefix)/" is stripped and means the literal path
+	 * follows.
+	 */
+	cl_git_pass(git_str_printf(&path, "%%(prefix)/%s/%s",
+		clar_sandbox_path(), "empty_standard_repo"));
+	cl_git_pass(test_safe_path(path.ptr));
+	git_str_dispose(&path);
+#endif
+}
+
+void test_repo_open__prefixed_safe_paths_must_have_two_slashes(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	/*
+	 * Using "%(prefix)" becomes "%(prefix)/tmp/foo" - so it's
+	 * actually trying to look in the git prefix, for example,
+	 * "/usr/local/tmp/foo", which we don't actually support.
+	 */
+	cl_git_pass(git_str_printf(&path, "%%(prefix)%s/%s",
+		clar_sandbox_path(), "empty_standard_repo"));
+	cl_git_fail_with(GIT_EOWNER, test_safe_path(path.ptr));
+	git_str_dispose(&path);
+}
+
+void test_repo_open__can_handle_win32_prefixed_safe_paths(void)
+{
+#ifdef GIT_WIN32
 	git_repository *repo;
-	git_str config_path = GIT_STR_INIT, config_filename = GIT_STR_INIT;
+	git_str unc_path = GIT_STR_INIT,
+	        config_path = GIT_STR_INIT,
+	        config_filename = GIT_STR_INIT,
+	        config_data = GIT_STR_INIT;
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
 
-	cl_fixture_sandbox("testrepo.git");
+	cl_fixture_sandbox("empty_standard_repo");
+	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
+
+	/*
+	 * On Windows, we can generally map a local drive to a UNC path;
+	 * for example C:\Foo\Bar becomes //localhost/C$/Foo/bar
+	 */
+	cl_git_pass(git_str_printf(&unc_path, "//localhost/%s/%s",
+		clar_sandbox_path(), "empty_standard_repo"));
+
+	if (unc_path.ptr[13] != ':' || unc_path.ptr[14] != '/')
+		cl_skip();
+
+	unc_path.ptr[13] = '$';
 
 	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
-	cl_git_fail_with(
-	        GIT_EOWNER, git_repository_open(&repo, "testrepo.git"));
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, unc_path.ptr));
 
 	/* Add safe.directory options to the global configuration */
 	git_str_joinpath(&config_path, clar_sandbox_path(), "__global_config");
 	cl_must_pass(p_mkdir(config_path.ptr, 0777));
-	git_libgit2_opts(
-	        GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL,
-	        config_path.ptr);
+	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, config_path.ptr);
 
 	git_str_joinpath(&config_filename, config_path.ptr, ".gitconfig");
 
-	cl_git_rewritefile(config_filename.ptr, "[foo]\n"
-	        "\tbar = Foobar\n"
-	        "\tbaz = Baz!\n"
-	        "[safe]\n"
-	        "\tdirectory = *\n"
-	        "[bar]\n"
-	        "\tfoo = barfoo\n");
+	/* The blank resets our sandbox directory and opening fails */
 
-	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
+	git_str_printf(&config_data,
+		"[safe]\n\tdirectory = %%(prefix)/%s\n",
+		unc_path.ptr);
+	cl_git_rewritefile(config_filename.ptr, config_data.ptr);
+
+	cl_git_pass(git_repository_open(&repo, unc_path.ptr));
 	git_repository_free(repo);
 
 	git_str_dispose(&config_path);
 	git_str_dispose(&config_filename);
+	git_str_dispose(&config_data);
+	git_str_dispose(&unc_path);
+#endif
+}
+
+void test_repo_open__can_handle_win32_unc_safe_paths(void)
+{
+#ifdef GIT_WIN32
+	git_repository *repo;
+	git_str unc_path = GIT_STR_INIT,
+	        config_path = GIT_STR_INIT,
+	        config_filename = GIT_STR_INIT,
+	        config_data = GIT_STR_INIT;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 1));
+
+	cl_fixture_sandbox("empty_standard_repo");
+	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
+
+	/*
+	 * On Windows, we can generally map a local drive to a UNC path;
+	 * for example C:\Foo\Bar becomes //localhost/C$/Foo/bar
+	 */
+	cl_git_pass(git_str_printf(&unc_path, "//localhost/%s/%s",
+		clar_sandbox_path(), "empty_standard_repo"));
+
+	if (unc_path.ptr[13] != ':' || unc_path.ptr[14] != '/')
+		cl_skip();
+
+	unc_path.ptr[13] = '$';
+
+	git_fs_path__set_owner(GIT_FS_PATH_OWNER_OTHER);
+	cl_git_fail_with(GIT_EOWNER, git_repository_open(&repo, unc_path.ptr));
+
+	/* Add safe.directory options to the global configuration */
+	git_str_joinpath(&config_path, clar_sandbox_path(), "__global_config");
+	cl_must_pass(p_mkdir(config_path.ptr, 0777));
+	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, config_path.ptr);
+
+	git_str_joinpath(&config_filename, config_path.ptr, ".gitconfig");
+
+	/* The blank resets our sandbox directory and opening fails */
+
+	git_str_printf(&config_data,
+		"[safe]\n\tdirectory = %s\n",
+		unc_path.ptr);
+	cl_git_rewritefile(config_filename.ptr, config_data.ptr);
+
+	cl_git_pass(git_repository_open(&repo, unc_path.ptr));
+	git_repository_free(repo);
+
+	git_str_dispose(&config_path);
+	git_str_dispose(&config_filename);
+	git_str_dispose(&config_data);
+	git_str_dispose(&unc_path);
+#endif
 }
 
 void test_repo_open__can_reset_safe_directory_list(void)

@@ -24,7 +24,7 @@ static const char *const git_generated_prefixes[] = {
 static int is_blank_line(const char *str)
 {
 	const char *s = str;
-	while (*s && *s != '\n' && isspace(*s))
+	while (*s && *s != '\n' && git__isspace(*s))
 		s++;
 	return !*s || *s == '\n';
 }
@@ -93,7 +93,7 @@ static bool find_separator(size_t *out, const char *line, const char *separators
 			return true;
 		}
 
-		if (!whitespace_found && (isalnum(*c) || *c == '-'))
+		if (!whitespace_found && (git__isalnum(*c) || *c == '-'))
 			continue;
 		if (c != line && (*c == ' ' || *c == '\t')) {
 			whitespace_found = 1;
@@ -158,7 +158,7 @@ static size_t find_patch_start(const char *str)
 	const char *s;
 
 	for (s = str; *s; s = next_line(s)) {
-		if (git__prefixcmp(s, "---") == 0)
+		if (git__prefixcmp(s, "---") == 0 && git__isspace(s[3]))
 			return s - str;
 	}
 
@@ -233,12 +233,12 @@ static size_t find_trailer_start(const char *buf, size_t len)
 		}
 
 		find_separator(&separator_pos, bol, TRAILER_SEPARATORS);
-		if (separator_pos >= 1 && !isspace(bol[0])) {
+		if (separator_pos >= 1 && !git__isspace(bol[0])) {
 			trailer_lines++;
 			possible_continuation_lines = 0;
 			if (recognized_prefix)
 				continue;
-		} else if (isspace(bol[0]))
+		} else if (git__isspace(bol[0]))
 			possible_continuation_lines++;
 		else {
 			non_trailer_lines++;
@@ -323,7 +323,7 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 					goto ret;
 				}
 
-				if (isalnum(*ptr) || *ptr == '-') {
+				if (git__isalnum(*ptr) || *ptr == '-') {
 					/* legal key character */
 					NEXT(S_KEY);
 				}

@@ -83,6 +83,11 @@ typedef struct {
  */
 extern int git_pool_init(git_pool *pool, size_t item_size);
 
+GIT_INLINE(bool) git_pool_is_initialized(git_pool *pool)
+{
+	return (pool->item_size > 0);
+}
+
 /**
  * Free all items in pool
  */

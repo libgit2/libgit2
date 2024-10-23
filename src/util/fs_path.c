@@ -419,6 +419,16 @@ int git_fs_path_to_dir(git_str *path)
 	return git_str_oom(path) ? -1 : 0;
 }
 
+size_t git_fs_path_dirlen(const char *path)
+{
+	size_t len = strlen(path);
+
+	while (len > 1 && path[len - 1] == '/')
+		len--;
+
+	return len;
+}
+
 void git_fs_path_string_to_dir(char *path, size_t size)
 {
 	size_t end = strlen(path);
@@ -1938,12 +1948,13 @@ static int sudo_uid_lookup(uid_t *out)
 {
 	git_str uid_str = GIT_STR_INIT;
 	int64_t uid;
-	int error;
+	int error = -1;
 
-	if ((error = git__getenv(&uid_str, "SUDO_UID")) == 0 &&
-	    (error = git__strntol64(&uid, uid_str.ptr, uid_str.size, NULL, 10)) == 0 &&
-	    uid == (int64_t)((uid_t)uid)) {
+	if (git__getenv(&uid_str, "SUDO_UID") == 0 &&
+		git__strntol64(&uid, uid_str.ptr, uid_str.size, NULL, 10) == 0 &&
+		uid == (int64_t)((uid_t)uid)) {
 		*out = (uid_t)uid;
+		error = 0;
 	}
 
 	git_str_dispose(&uid_str);

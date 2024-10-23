@@ -30,7 +30,7 @@ void test_submodule_update__uninitialized_submodule_no_init(void)
 }
 
 struct update_submodule_cb_payload {
-	int update_tips_called;
+	int update_refs_called;
 	int checkout_progress_called;
 	int checkout_notify_called;
 };
@@ -71,15 +71,16 @@ static int checkout_notify_cb(
 	return 0;
 }
 
-static int update_tips(const char *refname, const git_oid *a, const git_oid *b, void *data)
+static int update_refs(const char *refname, const git_oid *a, const git_oid *b, git_refspec *spec, void *data)
 {
 	struct update_submodule_cb_payload *update_payload = data;
 
 	GIT_UNUSED(refname);
 	GIT_UNUSED(a);
 	GIT_UNUSED(b);
+	GIT_UNUSED(spec);
 
-	update_payload->update_tips_called = 1;
+	update_payload->update_refs_called = 1;
 
 	return 1;
 }
@@ -96,7 +97,7 @@ void test_submodule_update__update_submodule(void)
 	update_options.checkout_opts.progress_cb = checkout_progress_cb;
 	update_options.checkout_opts.progress_payload = &update_payload;
 
-	update_options.fetch_opts.callbacks.update_tips = update_tips;
+	update_options.fetch_opts.callbacks.update_refs = update_refs;
 	update_options.fetch_opts.callbacks.payload = &update_payload;
 
 	/* get the submodule */
@@ -126,7 +127,7 @@ void test_submodule_update__update_submodule(void)
 
 	/* verify that the expected callbacks have been called. */
 	cl_assert_equal_i(1, update_payload.checkout_progress_called);
-	cl_assert_equal_i(1, update_payload.update_tips_called);
+	cl_assert_equal_i(1, update_payload.update_refs_called);
 
 	git_submodule_free(sm);
 }
@@ -143,7 +144,7 @@ void test_submodule_update__update_submodule_with_path(void)
 	update_options.checkout_opts.progress_cb = checkout_progress_cb;
 	update_options.checkout_opts.progress_payload = &update_payload;
 
-	update_options.fetch_opts.callbacks.update_tips = update_tips;
+	update_options.fetch_opts.callbacks.update_refs = update_refs;
 	update_options.fetch_opts.callbacks.payload = &update_payload;
 
 	/* get the submodule */
@@ -173,7 +174,7 @@ void test_submodule_update__update_submodule_with_path(void)
 
 	/* verify that the expected callbacks have been called. */
 	cl_assert_equal_i(1, update_payload.checkout_progress_called);
-	cl_assert_equal_i(1, update_payload.update_tips_called);
+	cl_assert_equal_i(1, update_payload.update_refs_called);
 
 	git_submodule_free(sm);
 }

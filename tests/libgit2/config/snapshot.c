@@ -79,6 +79,7 @@ void test_config_snapshot__multivar(void)
 
 void test_config_snapshot__includes(void)
 {
+	git_config_entry *entry;
 	int i;
 
 	cl_git_mkfile("including", "[include]\npath = included");
@@ -99,6 +100,16 @@ void test_config_snapshot__includes(void)
 	cl_git_pass(git_config_get_int32(&i, snapshot, "section.key"));
 	cl_assert_equal_i(i, 1);
 
+	/* Ensure that the config entry is populated with origin */
+	cl_git_pass(git_config_get_entry(&entry, snapshot, "section.key"));
+
+	cl_assert_equal_s("section.key", entry->name);
+	cl_assert_equal_s("1", entry->value);
+	cl_assert_equal_s("file", entry->backend_type);
+	cl_assert_equal_s("./included", entry->origin_path);
+
+	git_config_entry_free(entry);
+
 	cl_git_pass(p_unlink("including"));
 	cl_git_pass(p_unlink("included"));
 }
@@ -106,6 +117,7 @@ void test_config_snapshot__includes(void)
 void test_config_snapshot__snapshot(void)
 {
 	git_config *snapshot_snapshot;
+	git_config_entry *entry;
 	int i;
 
 	cl_git_mkfile("configfile", "[section]\nkey = 1\n");
@@ -118,22 +130,49 @@ void test_config_snapshot__snapshot(void)
 	cl_git_pass(git_config_get_int32(&i, snapshot_snapshot, "section.key"));
 	cl_assert_equal_i(i, 1);
 
+	/* Ensure that the config entry is populated with origin */
+	cl_git_pass(git_config_get_entry(&entry, snapshot_snapshot, "section.key"));
+
+	cl_assert_equal_s("section.key", entry->name);
+	cl_assert_equal_s("1", entry->value);
+	cl_assert_equal_s("file", entry->backend_type);
+	cl_assert_equal_s("configfile", entry->origin_path);
+
+	git_config_entry_free(entry);
+
 	git_config_free(snapshot_snapshot);
 
 	cl_git_pass(p_unlink("configfile"));
 }
 
-void test_config_snapshot__snapshot_from_in_memony(void)
+void test_config_snapshot__snapshot_from_in_memory(void)
 {
 	const char *configuration = "[section]\nkey = 1\n";
 	git_config_backend *backend;
+	git_config_entry *entry;
 	int i;
 
+	git_config_backend_memory_options opts =
+		GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT;
+
+	opts.backend_type = "test";
+	opts.origin_path = "hello";
+
 	cl_git_pass(git_config_new(&cfg));
-	cl_git_pass(git_config_backend_from_string(&backend, configuration, strlen(configuration)));
+	cl_git_pass(git_config_backend_from_string(&backend, configuration, strlen(configuration), &opts));
 	cl_git_pass(git_config_add_backend(cfg, backend, 0, NULL, 0));
 
 	cl_git_pass(git_config_snapshot(&snapshot, cfg));
 	cl_git_pass(git_config_get_int32(&i, snapshot, "section.key"));
 	cl_assert_equal_i(i, 1);
+
+	/* Ensure that the config entry is populated with origin */
+	cl_git_pass(git_config_get_entry(&entry, snapshot, "section.key"));
+
+	cl_assert_equal_s("section.key", entry->name);
+	cl_assert_equal_s("1", entry->value);
+	cl_assert_equal_s("test", entry->backend_type);
+	cl_assert_equal_s("hello", entry->origin_path);
+
+	git_config_entry_free(entry);
 }

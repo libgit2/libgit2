@@ -239,7 +239,7 @@ static void git_filter_global_shutdown(void)
 		git__free(fdef);
 	}
 
-	git_vector_free(&filter_registry.filters);
+	git_vector_dispose(&filter_registry.filters);
 
 	git_rwlock_wrunlock(&filter_registry.lock);
 	git_rwlock_free(&filter_registry.lock);
@@ -908,7 +908,7 @@ static int buffered_stream_close(git_writestream *s)
 {
 	struct buffered_stream *buffered_stream = (struct buffered_stream *)s;
 	git_str *writebuf;
-	git_error_state error_state = {0};
+	git_error *last_error;
 	int error;
 
 	GIT_ASSERT_ARG(buffered_stream);
@@ -946,9 +946,9 @@ static int buffered_stream_close(git_writestream *s)
 	} else {
 		/* close stream before erroring out taking care
 		 * to preserve the original error */
-		git_error_state_capture(&error_state, error);
+		git_error_save(&last_error);
 		buffered_stream->target->close(buffered_stream->target);
-		git_error_state_restore(&error_state);
+		git_error_restore(last_error);
 		return error;
 	}
 
@@ -1106,7 +1106,7 @@ static void filter_streams_free(git_vector *streams)
 
 	git_vector_foreach(streams, i, stream)
 		stream->free(stream);
-	git_vector_free(streams);
+	git_vector_dispose(streams);
 }
 
 int git_filter_list_stream_file(

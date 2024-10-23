@@ -24,7 +24,8 @@
 
 struct git_config {
 	git_refcount rc;
-	git_vector backends;
+	git_vector readers;
+	git_vector writers;
 };
 
 extern int git_config__global_location(git_str *buf);
@@ -94,17 +95,21 @@ int git_config_lookup_map_enum(git_configmap_t *type_out,
 	size_t map_n, int enum_val);
 
 /**
- * Unlock the backend with the highest priority
+ * Unlock the given backend that was previously locked.
  *
  * Unlocking will allow other writers to update the configuration
  * file. Optionally, any changes performed since the lock will be
  * applied to the configuration.
  *
- * @param cfg the configuration
+ * @param config the config instance
+ * @param data the config data passed to git_transaction_new
  * @param commit boolean which indicates whether to commit any changes
  * done since locking
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_unlock(git_config *cfg, int commit);
+GIT_EXTERN(int) git_config_unlock(
+	git_config *config,
+	void *data,
+	int commit);
 
 #endif

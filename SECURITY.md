@@ -4,7 +4,7 @@
 
 This project will always provide security fixes for the latest two released
 versions. E.g. if the latest version is v0.28.x, then we will provide security
-fixes for both v0.28.x and v0.27.y, but no later versions.
+fixes for both v0.28.x and v0.27.y, but no earlier versions.
 
 ## Reporting a Vulnerability
 

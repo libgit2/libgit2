@@ -104,7 +104,5 @@ void cl_alloc_limit(size_t bytes)
 
 void cl_alloc_reset(void)
 {
-	git_allocator stdalloc;
-	git_stdalloc_init_allocator(&stdalloc);
-	git_allocator_setup(&stdalloc);
+	git_allocator_setup(NULL);
 }

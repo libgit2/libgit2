@@ -50,6 +50,7 @@ static int add_revision(struct log_state *s, const char *revstr);
 /** log_options holds other command line options that affect log output */
 struct log_options {
 	int show_diff;
+	int show_oneline;
 	int show_log_size;
 	int skip, limit;
 	int min_parents, max_parents;
@@ -81,9 +82,11 @@ int lg2_log(git_repository *repo, int argc, char *argv[])
 	git_commit *commit = NULL;
 	git_pathspec *ps = NULL;
 
+	memset(&s, 0, sizeof(s));
+
 	/** Parse arguments and set up revwalker. */
-	last_arg = parse_options(&s, &opt, argc, argv);
 	s.repo = repo;
+	last_arg = parse_options(&s, &opt, argc, argv);
 
 	diffopts.pathspec.strings = &argv[last_arg];
 	diffopts.pathspec.count	  = argc - last_arg;
@@ -335,34 +338,45 @@ static void print_commit(git_commit *commit, struct log_options *opts)
 	const char *scan, *eol;
 
 	git_oid_tostr(buf, sizeof(buf), git_commit_id(commit));
-	printf("commit %s\n", buf);
 
-	if (opts->show_log_size) {
-		printf("log size %d\n", (int)strlen(git_commit_message(commit)));
-	}
+	if (opts->show_oneline) {
+		printf("%s ", buf);
+	} else {
+		printf("commit %s\n", buf);
 
-	if ((count = (int)git_commit_parentcount(commit)) > 1) {
-		printf("Merge:");
-		for (i = 0; i < count; ++i) {
-			git_oid_tostr(buf, 8, git_commit_parent_id(commit, i));
-			printf(" %s", buf);
+		if (opts->show_log_size) {
+			printf("log size %d\n", (int)strlen(git_commit_message(commit)));
+		}
+
+		if ((count = (int)git_commit_parentcount(commit)) > 1) {
+			printf("Merge:");
+			for (i = 0; i < count; ++i) {
+				git_oid_tostr(buf, 8, git_commit_parent_id(commit, i));
+				printf(" %s", buf);
+			}
+			printf("\n");
+		}
+
+		if ((sig = git_commit_author(commit)) != NULL) {
+			printf("Author: %s <%s>\n", sig->name, sig->email);
+			print_time(&sig->when, "Date:   ");
 		}
 		printf("\n");
 	}
 
-	if ((sig = git_commit_author(commit)) != NULL) {
-		printf("Author: %s <%s>\n", sig->name, sig->email);
-		print_time(&sig->when, "Date:   ");
-	}
-	printf("\n");
-
 	for (scan = git_commit_message(commit); scan && *scan; ) {
 		for (eol = scan; *eol && *eol != '\n'; ++eol) /* find eol */;
 
-		printf("    %.*s\n", (int)(eol - scan), scan);
+		if (opts->show_oneline)
+			printf("%.*s\n", (int)(eol - scan), scan);
+		else
+			printf("    %.*s\n", (int)(eol - scan), scan);
 		scan = *eol ? eol + 1 : NULL;
+		if (opts->show_oneline)
+			break;
 	}
-	printf("\n");
+	if (!opts->show_oneline)
+		printf("\n");
 }
 
 /** Helper to find how many files in a commit changed from its nth parent. */
@@ -407,8 +421,6 @@ static int parse_options(
 	struct log_state *s, struct log_options *opt, int argc, char **argv)
 {
 	struct args_info args = ARGS_INFO_INIT;
-
-	memset(s, 0, sizeof(*s));
 	s->sorting = GIT_SORT_TIME;
 
 	memset(opt, 0, sizeof(*opt));
@@ -424,7 +436,7 @@ static int parse_options(
 			else
 				/** Try failed revision parse as filename. */
 				break;
-		} else if (!match_arg_separator(&args)) {
+		} else if (match_arg_separator(&args)) {
 			break;
 		}
 		else if (!strcmp(a, "--date-order"))
@@ -474,6 +486,8 @@ static int parse_options(
 			opt->show_diff = 1;
 		else if (!strcmp(a, "--log-size"))
 			opt->show_log_size = 1;
+		else if (!strcmp(a, "--oneline"))
+			opt->show_oneline = 1;
 		else
 			usage("Unsupported argument", a);
 	}

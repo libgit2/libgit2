@@ -11,7 +11,19 @@
 #include "str.h"
 
 /*
+ * Parse a string into a value as a git_time_t with a timezone offset.
+ *
+ * Sample valid input:
+ * - "yesterday"
+ * - "July 17, 2003"
+ * - "2003-7-17 08:23i+03"
+ */
+extern int git_date_offset_parse(git_time_t *out, int *out_offset, const char *date);
+
+/*
  * Parse a string into a value as a git_time_t.
+ *
+ * Timezone offset is ignored.
  *
  * Sample valid input:
  * - "yesterday"

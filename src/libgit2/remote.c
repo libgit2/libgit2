@@ -1293,9 +1293,9 @@ static int git_remote__download(
 	free_refspecs(&remote->active_refspecs);
 	error = dwim_refspecs(&remote->active_refspecs, to_active, &refs);
 
-	git_vector_free(&refs);
+	git_vector_dispose(&refs);
 	free_refspecs(&specs);
-	git_vector_free(&specs);
+	git_vector_dispose(&specs);
 
 	if (error < 0)
 		goto on_error;
@@ -1311,9 +1311,9 @@ static int git_remote__download(
 	error = git_fetch_download_pack(remote);
 
 on_error:
-	git_vector_free(&refs);
+	git_vector_dispose(&refs);
 	free_refspecs(&specs);
-	git_vector_free(&specs);
+	git_vector_dispose(&specs);
 	return error;
 }
 
@@ -1339,7 +1339,11 @@ int git_remote_download(
 	if ((error = connect_or_reset_options(remote, GIT_DIRECTION_FETCH, &connect_opts)) < 0)
 		return error;
 
-	return git_remote__download(remote, refspecs, opts);
+	error = git_remote__download(remote, refspecs, opts);
+
+	git_remote_connect_options_dispose(&connect_opts);
+
+	return error;
 }
 
 int git_remote_fetch(
@@ -1348,13 +1352,14 @@ int git_remote_fetch(
 	const git_fetch_options *opts,
 	const char *reflog_message)
 {
-	int error, update_fetchhead = 1;
 	git_remote_autotag_option_t tagopt = remote->download_tags;
 	bool prune = false;
 	git_str reflog_msg_buf = GIT_STR_INIT;
 	git_remote_connect_options connect_opts = GIT_REMOTE_CONNECT_OPTIONS_INIT;
 	unsigned int capabilities;
 	git_oid_t oid_type;
+	unsigned int update_flags = GIT_REMOTE_UPDATE_FETCHHEAD;
+	int error;
 
 	GIT_ASSERT_ARG(remote);
 
@@ -1371,7 +1376,7 @@ int git_remote_fetch(
 		return error;
 
 	if (opts) {
-		update_fetchhead = opts->update_fetchhead;
+		update_flags = opts->update_fetchhead;
 		tagopt = opts->download_tags;
 	}
 
@@ -1398,8 +1403,14 @@ int git_remote_fetch(
 	}
 
 	/* Create "remote/foo" branches for all remote branches */
-	error = git_remote_update_tips(remote, &connect_opts.callbacks, update_fetchhead, tagopt, git_str_cstr(&reflog_msg_buf));
+	error = git_remote_update_tips(remote,
+		&connect_opts.callbacks,
+		update_flags,
+		tagopt,
+		git_str_cstr(&reflog_msg_buf));
+
 	git_str_dispose(&reflog_msg_buf);
+
 	if (error < 0)
 		goto done;
 
@@ -1578,7 +1589,7 @@ cleanup:
 	for (i = 0; i < fetchhead_refs.length; ++i)
 		git_fetchhead_ref_free(fetchhead_refs.contents[i]);
 
-	git_vector_free(&fetchhead_refs);
+	git_vector_dispose(&fetchhead_refs);
 	git_reference_free(head_ref);
 
 	return error;
@@ -1713,19 +1724,28 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 		git_oid_cpy(&id, git_reference_target(ref));
 		error = git_reference_delete(ref);
 		git_reference_free(ref);
-		if (error < 0)
-			goto cleanup;
-
-		if (callbacks && callbacks->update_tips)
-			error = callbacks->update_tips(refname, &id, &zero_id, callbacks->payload);
 
 		if (error < 0)
 			goto cleanup;
+
+		if (callbacks && callbacks->update_refs)
+			error = callbacks->update_refs(refname, &id,
+				&zero_id, NULL, callbacks->payload);
+#ifndef GIT_DEPRECATE_HARD
+		else if (callbacks && callbacks->update_tips)
+			error = callbacks->update_tips(refname, &id,
+				&zero_id, callbacks->payload);
+#endif
+
+		if (error < 0) {
+			git_error_set_after_callback_function(error, "git_remote_fetch");
+			goto cleanup;
+		}
 	}
 
 cleanup:
-	git_vector_free(&remote_refs);
-	git_vector_free_deep(&candidates);
+	git_vector_dispose(&remote_refs);
+	git_vector_dispose_deep(&candidates);
 	return error;
 }
 
@@ -1733,6 +1753,7 @@ static int update_ref(
 	const git_remote *remote,
 	const char *ref_name,
 	git_oid *id,
+	git_refspec *spec,
 	const char *msg,
 	const git_remote_callbacks *callbacks)
 {
@@ -1761,9 +1782,19 @@ static int update_ref(
 	if (error < 0)
 		return error;
 
-	if (callbacks && callbacks->update_tips &&
-	    (error = callbacks->update_tips(ref_name, &old_id, id, callbacks->payload)) < 0)
+	if (callbacks && callbacks->update_refs)
+		error = callbacks->update_refs(ref_name, &old_id,
+			id, spec, callbacks->payload);
+#ifndef GIT_DEPRECATE_HARD
+	else if (callbacks && callbacks->update_tips)
+		error = callbacks->update_tips(ref_name, &old_id,
+			id, callbacks->payload);
+#endif
+
+	if (error < 0) {
+		git_error_set_after_callback_function(error, "git_remote_fetch");
 		return error;
+	}
 
 	return 0;
 }
@@ -1774,6 +1805,7 @@ static int update_one_tip(
 	git_refspec *spec,
 	git_remote_head *head,
 	git_refspec *tagspec,
+	unsigned int update_flags,
 	git_remote_autotag_option_t tagopt,
 	const char *log_message,
 	const git_remote_callbacks *callbacks)
@@ -1781,7 +1813,7 @@ static int update_one_tip(
 	git_odb *odb;
 	git_str refname = GIT_STR_INIT;
 	git_reference *ref = NULL;
-	bool autotag = false;
+	bool autotag = false, updated = false;
 	git_oid old;
 	int valid;
 	int error;
@@ -1855,22 +1887,33 @@ static int update_one_tip(
 			goto done;
 	}
 
-	if (!git_oid__cmp(&old, &head->oid))
-		goto done;
+	if ((updated = !git_oid_equal(&old, &head->oid))) {
+		/* In autotag mode, don't overwrite any locally-existing tags */
+		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag,
+				log_message);
 
-	/* In autotag mode, don't overwrite any locally-existing tags */
-	error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag,
-			log_message);
+		if (error < 0) {
+			if (error == GIT_EEXISTS)
+				error = 0;
 
-	if (error < 0) {
-		if (error == GIT_EEXISTS)
-			error = 0;
-
-		goto done;
+			goto done;
+		}
 	}
 
-	if (callbacks && callbacks->update_tips != NULL &&
-	    (error = callbacks->update_tips(refname.ptr, &old, &head->oid, callbacks->payload)) < 0)
+	if (!callbacks ||
+	    (!updated && (update_flags & GIT_REMOTE_UPDATE_REPORT_UNCHANGED) == 0))
+		goto done;
+
+	if (callbacks && callbacks->update_refs)
+		error = callbacks->update_refs(refname.ptr, &old,
+			&head->oid, spec, callbacks->payload);
+#ifndef GIT_DEPRECATE_HARD
+	else if (callbacks && callbacks->update_tips)
+		error = callbacks->update_tips(refname.ptr, &old,
+			&head->oid, callbacks->payload);
+#endif
+
+	if (error < 0)
 		git_error_set_after_callback_function(error, "git_remote_fetch");
 
 done:
@@ -1882,7 +1925,7 @@ done:
 static int update_tips_for_spec(
 	git_remote *remote,
 	const git_remote_callbacks *callbacks,
-	int update_fetchhead,
+	unsigned int update_flags,
 	git_remote_autotag_option_t tagopt,
 	git_refspec *spec,
 	git_vector *refs,
@@ -1905,7 +1948,10 @@ static int update_tips_for_spec(
 
 	/* Update tips based on the remote heads */
 	git_vector_foreach(refs, i, head) {
-		if (update_one_tip(&update_heads, remote, spec, head, &tagspec, tagopt, log_message, callbacks) < 0)
+		if (update_one_tip(&update_heads,
+				remote, spec, head, &tagspec,
+				update_flags, tagopt, log_message,
+				callbacks) < 0)
 			goto on_error;
 	}
 
@@ -1917,7 +1963,7 @@ static int update_tips_for_spec(
 			goto on_error;
 
 		if (spec->dst &&
-		     (error = update_ref(remote, spec->dst, &id, log_message, callbacks)) < 0)
+		     (error = update_ref(remote, spec->dst, &id, spec, log_message, callbacks)) < 0)
 			goto on_error;
 
 		git_oid_cpy(&oid_head.oid, &id);
@@ -1927,17 +1973,17 @@ static int update_tips_for_spec(
 			goto on_error;
 	}
 
-	if (update_fetchhead &&
+	if ((update_flags & GIT_REMOTE_UPDATE_FETCHHEAD) &&
 	    (error = git_remote_write_fetchhead(remote, spec, &update_heads)) < 0)
 		goto on_error;
 
 	git_refspec__dispose(&tagspec);
-	git_vector_free(&update_heads);
+	git_vector_dispose(&update_heads);
 	return 0;
 
 on_error:
 	git_refspec__dispose(&tagspec);
-	git_vector_free(&update_heads);
+	git_vector_dispose(&update_heads);
 	return -1;
 
 }
@@ -2029,7 +2075,7 @@ static int opportunistic_updates(
 
 		git_str_clear(&refname);
 		if ((error = git_refspec__transform(&refname, spec, head->name)) < 0 ||
-		    (error = update_ref(remote, refname.ptr, &head->oid, msg, callbacks)) < 0)
+		    (error = update_ref(remote, refname.ptr, &head->oid, spec, msg, callbacks)) < 0)
 			goto cleanup;
 	}
 
@@ -2058,11 +2104,11 @@ static int truncate_fetch_head(const char *gitdir)
 }
 
 int git_remote_update_tips(
-		git_remote *remote,
-		const git_remote_callbacks *callbacks,
-		int update_fetchhead,
-		git_remote_autotag_option_t download_tags,
-		const char *reflog_message)
+	git_remote *remote,
+	const git_remote_callbacks *callbacks,
+	unsigned int update_flags,
+	git_remote_autotag_option_t download_tags,
+	const char *reflog_message)
 {
 	git_refspec *spec, tagspec;
 	git_vector refs = GIT_VECTOR_INIT;
@@ -2091,7 +2137,7 @@ int git_remote_update_tips(
 		goto out;
 
 	if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
-		if ((error = update_tips_for_spec(remote, callbacks, update_fetchhead, tagopt, &tagspec, &refs, reflog_message)) < 0)
+		if ((error = update_tips_for_spec(remote, callbacks, update_flags, tagopt, &tagspec, &refs, reflog_message)) < 0)
 			goto out;
 	}
 
@@ -2099,7 +2145,7 @@ int git_remote_update_tips(
 		if (spec->push)
 			continue;
 
-		if ((error = update_tips_for_spec(remote, callbacks, update_fetchhead, tagopt, spec, &refs, reflog_message)) < 0)
+		if ((error = update_tips_for_spec(remote, callbacks, update_flags, tagopt, spec, &refs, reflog_message)) < 0)
 			goto out;
 	}
 
@@ -2108,7 +2154,7 @@ int git_remote_update_tips(
 		error = opportunistic_updates(remote, callbacks, &refs, reflog_message);
 
 out:
-	git_vector_free(&refs);
+	git_vector_dispose(&refs);
 	git_refspec__dispose(&tagspec);
 	return error;
 }
@@ -2167,19 +2213,19 @@ void git_remote_free(git_remote *remote)
 		remote->transport = NULL;
 	}
 
-	git_vector_free(&remote->refs);
+	git_vector_dispose(&remote->refs);
 
 	free_refspecs(&remote->refspecs);
-	git_vector_free(&remote->refspecs);
+	git_vector_dispose(&remote->refspecs);
 
 	free_refspecs(&remote->active_refspecs);
-	git_vector_free(&remote->active_refspecs);
+	git_vector_dispose(&remote->active_refspecs);
 
 	free_refspecs(&remote->passive_refspecs);
-	git_vector_free(&remote->passive_refspecs);
+	git_vector_dispose(&remote->passive_refspecs);
 
 	free_heads(&remote->local_heads);
-	git_vector_free(&remote->local_heads);
+	git_vector_dispose(&remote->local_heads);
 
 	git_push_free(remote->push);
 	git__free(remote->url);
@@ -2222,7 +2268,7 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 		cfg, "^remote\\..*\\.(push)?url$", remote_list_cb, &list);
 
 	if (error < 0) {
-		git_vector_free_deep(&list);
+		git_vector_dispose_deep(&list);
 		return error;
 	}
 
@@ -2503,7 +2549,7 @@ static int rename_fetch_refspecs(git_vector *problems, git_remote *remote, const
 		git_vector_foreach(problems, i, str)
 			git__free(str);
 
-		git_vector_free(problems);
+		git_vector_dispose(problems);
 	}
 
 	return error;
@@ -2543,7 +2589,7 @@ int git_remote_rename(git_strarray *out, git_repository *repo, const char *name,
 
 cleanup:
 	if (error < 0)
-		git_vector_free(&problem_refspecs);
+		git_vector_dispose(&problem_refspecs);
 
 	git_remote_free(remote);
 	return error;
@@ -2650,7 +2696,7 @@ static int copy_refspecs(git_strarray *array, const git_remote *remote, unsigned
 	return 0;
 
 on_error:
-	git_vector_free_deep(&refspecs);
+	git_vector_dispose_deep(&refspecs);
 
 	return -1;
 }
@@ -2798,7 +2844,7 @@ cleanup:
 	git_vector_foreach(&refs, i, dup) {
 		git__free(dup);
 	}
-	git_vector_free(&refs);
+	git_vector_dispose(&refs);
 	return error;
 }
 
@@ -2967,12 +3013,22 @@ int git_remote_upload(
 		}
 	}
 
-	if ((error = git_push_finish(push)) < 0)
-		goto cleanup;
+	if (opts && opts->remote_push_options.count > 0)
+		for (i = 0; i < opts->remote_push_options.count; ++i) {
+			char *optstr = git__strdup(opts->remote_push_options.strings[i]);
+			GIT_ERROR_CHECK_ALLOC(optstr);
 
-	if (connect_opts.callbacks.push_update_reference &&
-	    (error = git_push_status_foreach(push, connect_opts.callbacks.push_update_reference, connect_opts.callbacks.payload)) < 0)
-		goto cleanup;
+			if ((error = git_vector_insert(&push->remote_push_options, optstr)) < 0)
+				goto cleanup;
+		}
+
+	error = git_push_finish(push);
+
+	if (connect_opts.callbacks.push_update_reference) {
+		const int cb_error = git_push_status_foreach(push, connect_opts.callbacks.push_update_reference, connect_opts.callbacks.payload);
+		if (!error)
+			error = cb_error;
+	}
 
 cleanup:
 	git_remote_connect_options_dispose(&connect_opts);

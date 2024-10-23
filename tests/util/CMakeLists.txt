@@ -1,5 +1,9 @@
 # util: the unit tests for libgit2's utility library
 
+if(NOT "${CMAKE_VERSION}" VERSION_LESS 3.27)
+	cmake_policy(SET CMP0148 OLD)
+endif()
+
 set(Python_ADDITIONAL_VERSIONS 3 2.7)
 find_package(PythonInterp)
 
@@ -39,7 +43,6 @@ set_source_files_properties(
 
 add_executable(util_tests ${SRC_CLAR} ${SRC_TEST} ${LIBGIT2_OBJECTS})
 
-set_target_properties(util_tests PROPERTIES C_STANDARD 90)
 set_target_properties(util_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
 
 target_include_directories(util_tests PRIVATE ${TEST_INCLUDES} ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})

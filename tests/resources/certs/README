@@ -1,0 +1,5 @@
+These are self-signed certificates for https://test.libgit2.org/.
+
+* one/ - contains certificates for https://test.libgit2.org:1443/
+* two.pem - contains a certificate for https://test.libgit2.org:2443/
+* three.pem - contains a certificate for https://test.libgit2.org:3443/

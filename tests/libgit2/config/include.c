@@ -111,7 +111,7 @@ void test_config_include__missing(void)
 
 	git_error_clear();
 	cl_git_pass(git_config_open_ondisk(&cfg, "including"));
-	cl_assert(git_error_last() == NULL);
+	cl_assert_equal_i(GIT_ERROR_NONE, git_error_last()->klass);
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar"));
 	cl_assert_equal_s("baz", buf.ptr);
 
@@ -126,7 +126,7 @@ void test_config_include__missing_homedir(void)
 
 	git_error_clear();
 	cl_git_pass(git_config_open_ondisk(&cfg, "including"));
-	cl_assert(git_error_last() == NULL);
+	cl_assert_equal_i(GIT_ERROR_NONE, git_error_last()->klass);
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar"));
 	cl_assert_equal_s("baz", buf.ptr);
 

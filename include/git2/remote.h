@@ -77,6 +77,17 @@ typedef enum {
 } git_remote_create_flags;
 
 /**
+ * How to handle reference updates.
+ */
+typedef enum {
+	/* Write the fetch results to FETCH_HEAD. */
+	GIT_REMOTE_UPDATE_FETCHHEAD = (1 << 0),
+
+	/* Report unchanged tips in the update_refs callback. */
+	GIT_REMOTE_UPDATE_REPORT_UNCHANGED = (1 << 1)
+} git_remote_update_flags;
+
+/**
  * Remote creation options structure
  *
  * Initialize with `GIT_REMOTE_CREATE_OPTIONS_INIT`. Alternatively, you can
@@ -557,7 +568,8 @@ struct git_remote_callbacks {
 	 * Completion is called when different parts of the download
 	 * process are done (currently unused).
 	 */
-	int GIT_CALLBACK(completion)(git_remote_completion_t type, void *data);
+	int GIT_CALLBACK(completion)(git_remote_completion_t type,
+		void *data);
 
 	/**
 	 * This will be called if the remote host requires
@@ -583,11 +595,22 @@ struct git_remote_callbacks {
 	 */
 	git_indexer_progress_cb transfer_progress;
 
+#ifdef GIT_DEPRECATE_HARD
+	void *reserved_update_tips;
+#else
 	/**
-	 * Each time a reference is updated locally, this function
-	 * will be called with information about it.
+	 * Deprecated callback for reference updates, callers should
+	 * set `update_refs` instead. This is retained for backward
+	 * compatibility; if you specify both `update_refs` and
+	 * `update_tips`, then only the `update_refs` function will
+	 * be called.
+	 *
+	 * @deprecated the `update_refs` callback in this structure
+	 * should be preferred
 	 */
-	int GIT_CALLBACK(update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
+	int GIT_CALLBACK(update_tips)(const char *refname,
+		const git_oid *a, const git_oid *b, void *data);
+#endif
 
 	/**
 	 * Function to call with progress information during pack
@@ -644,6 +667,19 @@ struct git_remote_callbacks {
 	 */
 	git_url_resolve_cb resolve_url;
 #endif
+
+	/**
+	 * Each time a reference is updated locally, this function
+	 * will be called with information about it. This should be
+	 * preferred over the `update_tips` callback in this
+	 * structure.
+	 */
+	int GIT_CALLBACK(update_refs)(
+		const char *refname,
+		const git_oid *a,
+		const git_oid *b,
+		git_refspec *spec,
+		void *data);
 };
 
 #define GIT_REMOTE_CALLBACKS_VERSION 1
@@ -733,10 +769,9 @@ typedef struct {
 	git_fetch_prune_t prune;
 
 	/**
-	 * Whether to write the results to FETCH_HEAD. Defaults to
-	 * on. Leave this default in order to behave like git.
+	 * How to handle reference updates; see `git_remote_update_flags`.
 	 */
-	int update_fetchhead;
+	unsigned int update_fetchhead;
 
 	/**
 	 * Determines how to behave regarding tags on the remote, such
@@ -775,8 +810,13 @@ typedef struct {
 } git_fetch_options;
 
 #define GIT_FETCH_OPTIONS_VERSION 1
-#define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT, GIT_FETCH_PRUNE_UNSPECIFIED, 1, \
-				 GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, GIT_PROXY_OPTIONS_INIT }
+#define GIT_FETCH_OPTIONS_INIT { \
+	GIT_FETCH_OPTIONS_VERSION, \
+	GIT_REMOTE_CALLBACKS_INIT, \
+	GIT_FETCH_PRUNE_UNSPECIFIED, \
+	GIT_REMOTE_UPDATE_FETCHHEAD, \
+	GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, \
+	GIT_PROXY_OPTIONS_INIT }
 
 /**
  * Initialize git_fetch_options structure
@@ -830,6 +870,11 @@ typedef struct {
 	 * Extra headers for this push operation
 	 */
 	git_strarray custom_headers;
+
+	/**
+	 * "Push options" to deliver to the remote.
+	 */
+	git_strarray remote_push_options;
 } git_push_options;
 
 #define GIT_PUSH_OPTIONS_VERSION 1
@@ -1001,7 +1046,7 @@ GIT_EXTERN(int) git_remote_upload(
  * the name of the remote (or its url, for in-memory remotes). This
  * parameter is ignored when pushing.
  * @param callbacks  pointer to the callback structure to use or NULL
- * @param update_fetchhead whether to write to FETCH_HEAD. Pass 1 to behave like git.
+ * @param update_flags the git_remote_update_flags for these tips.
  * @param download_tags what the behaviour for downloading tags is for this fetch. This is
  * ignored for push. This must be the same value passed to `git_remote_download()`.
  * @return 0 or an error code
@@ -1009,7 +1054,7 @@ GIT_EXTERN(int) git_remote_upload(
 GIT_EXTERN(int) git_remote_update_tips(
 		git_remote *remote,
 		const git_remote_callbacks *callbacks,
-		int update_fetchhead,
+		unsigned int update_flags,
 		git_remote_autotag_option_t download_tags,
 		const char *reflog_message);
 

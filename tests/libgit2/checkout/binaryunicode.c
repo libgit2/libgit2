@@ -28,8 +28,6 @@ static void execute_test(void)
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &oid));
 	cl_git_pass(git_commit_tree(&tree, commit));
 
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
-
 	cl_git_pass(git_checkout_tree(g_repo, (git_object *)tree, &opts));
 
 	git_tree_free(tree);

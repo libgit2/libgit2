@@ -218,7 +218,7 @@ int git_merge_driver_global_init(void)
 
 done:
 	if (error < 0)
-		git_vector_free_deep(&merge_driver_registry.drivers);
+		git_vector_dispose_deep(&merge_driver_registry.drivers);
 
 	return error;
 }
@@ -238,7 +238,7 @@ static void git_merge_driver_global_shutdown(void)
 		git__free(entry);
 	}
 
-	git_vector_free(&merge_driver_registry.drivers);
+	git_vector_dispose(&merge_driver_registry.drivers);
 
 	git_rwlock_wrunlock(&merge_driver_registry.lock);
 	git_rwlock_free(&merge_driver_registry.lock);

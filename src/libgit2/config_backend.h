@@ -37,15 +37,6 @@ extern int git_config_backend_from_file(git_config_backend **out, const char *pa
  */
 extern int git_config_backend_snapshot(git_config_backend **out, git_config_backend *source);
 
-/**
- * Create an in-memory configuration file backend
- *
- * @param out the new backend
- * @param cfg the configuration that is to be parsed
- * @param len the length of the string pointed to by `cfg`
- */
-extern int git_config_backend_from_string(git_config_backend **out, const char *cfg, size_t len);
-
 GIT_INLINE(int) git_config_backend_open(git_config_backend *cfg, unsigned int level, const git_repository *repo)
 {
 	return cfg->open(cfg, level, repo);
@@ -60,7 +51,14 @@ GIT_INLINE(void) git_config_backend_free(git_config_backend *cfg)
 GIT_INLINE(int) git_config_backend_get_string(
 	git_config_entry **out, git_config_backend *cfg, const char *name)
 {
-	return cfg->get(cfg, name, out);
+	git_config_backend_entry *be;
+	int error;
+
+	if ((error = cfg->get(cfg, name, &be)) < 0)
+		return error;
+
+	*out = &be->entry;
+	return 0;
 }
 
 GIT_INLINE(int) git_config_backend_set_string(

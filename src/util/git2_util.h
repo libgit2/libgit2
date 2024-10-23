@@ -12,6 +12,7 @@
 #endif
 
 #include "git2/common.h"
+#include "git2/sys/errors.h"
 #include "cc-compat.h"
 
 typedef struct git_str git_str;
@@ -164,5 +165,6 @@ typedef struct git_str git_str;
 	if (GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize)) { return -1; }
 
 #include "util.h"
+#include "ctype_compat.h"
 
 #endif

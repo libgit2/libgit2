@@ -3,12 +3,24 @@
 set -e
 
 if [ -n "$SKIP_TESTS" ]; then
-	exit 0
+	if [ -z "$SKIP_OFFLINE_TESTS" ]; then SKIP_OFFLINE_TESTS=1; fi
+	if [ -z "$SKIP_ONLINE_TESTS" ]; then SKIP_ONLINE_TESTS=1; fi
+	if [ -z "$SKIP_GITDAEMON_TESTS" ]; then SKIP_GITDAEMON_TESTS=1; fi
+	if [ -z "$SKIP_PROXY_TESTS" ]; then SKIP_PROXY_TESTS=1; fi
+	if [ -z "$SKIP_NTLM_TESTS" ]; then SKIP_NTLM_TESTS=1; fi
+	if [ -z "$SKIP_NEGOTIATE_TESTS" ]; then SKIP_NEGOTIATE_TESTS=1; fi
+	if [ -z "$SKIP_SSH_TESTS" ]; then SKIP_SSH_TESTS=1; fi
+	if [ -z "$SKIP_FUZZERS" ]; then SKIP_FUZZERS=1; fi
 fi
 
 # Windows doesn't run the NTLM tests properly (yet)
 if [[ "$(uname -s)" == MINGW* ]]; then
         SKIP_NTLM_TESTS=1
+fi
+
+# older versions of git don't support push options
+if [ -z "$SKIP_PUSHOPTIONS_TESTS" ]; then
+	export GITTEST_PUSH_OPTIONS=true
 fi
 
 SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( pwd ) )}
@@ -18,11 +30,23 @@ CTEST=$(which ctest)
 TMPDIR=${TMPDIR:-/tmp}
 USER=${USER:-$(whoami)}
 
+GITTEST_SSH_KEYTYPE=${GITTEST_SSH_KEYTYPE:="ecdsa"}
+
 HOME=`mktemp -d ${TMPDIR}/home.XXXXXXXX`
 export CLAR_HOMEDIR=${HOME}
 
 SUCCESS=1
 CONTINUE_ON_FAILURE=0
+
+should_run() {
+	eval "skip=\${SKIP_${1}}"
+	[ -z "$skip" \
+	  -o "$skip" == "no" -o "$skip" == "NO" \
+	  -o "$skip" == "n" -o "$skip" == "N" \
+	  -o "$skip" == "false" -o "$skip" == "FALSE" \
+	  -o "$skip" == "f" -o "$skip" == "F" \
+	  -o "$skip" == "0" ]
+}
 
 cleanup() {
 	echo "Cleaning up..."
@@ -78,6 +102,8 @@ run_test() {
 			echo ""
 			echo "Re-running flaky ${1} tests..."
 			echo ""
+
+			sleep 2
 		fi
 
 		RETURN_CODE=0
@@ -138,11 +164,12 @@ echo "##########################################################################
 
 echo ""
 
-if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
+if should_run "GITDAEMON_TESTS"; then
 	echo "Starting git daemon (standard)..."
 	GIT_STANDARD_DIR=`mktemp -d ${TMPDIR}/git_standard.XXXXXXXX`
-	git init --bare "${GIT_STANDARD_DIR}/test.git" >/dev/null
+	cp -R "${SOURCE_DIR}/tests/resources/pushoptions.git" "${GIT_STANDARD_DIR}/test.git"
 	git daemon --listen=localhost --export-all --enable=receive-pack --base-path="${GIT_STANDARD_DIR}" "${GIT_STANDARD_DIR}" 2>/dev/null &
+
 	GIT_STANDARD_PID=$!
 
 	echo "Starting git daemon (namespace)..."
@@ -158,7 +185,7 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	GIT_SHA256_PID=$!
 fi
 
-if [ -z "$SKIP_PROXY_TESTS" ]; then
+if should_run "PROXY_TESTS"; then
 	curl --location --silent --show-error https://github.com/ethomson/poxyproxy/releases/download/v0.7.0/poxyproxy-0.7.0.jar >poxyproxy.jar
 
 	echo "Starting HTTP proxy (Basic)..."
@@ -170,25 +197,27 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	PROXY_NTLM_PID=$!
 fi
 
-if [ -z "$SKIP_NTLM_TESTS" -o -z "$SKIP_ONLINE_TESTS" ]; then
+if should_run "NTLM_TESTS" || should_run "ONLINE_TESTS"; then
 	curl --location --silent --show-error https://github.com/ethomson/poxygit/releases/download/v0.6.0/poxygit-0.6.0.jar >poxygit.jar
 
 	echo "Starting HTTP server..."
 	HTTP_DIR=`mktemp -d ${TMPDIR}/http.XXXXXXXX`
-	git init --bare "${HTTP_DIR}/test.git"
+	cp -R "${SOURCE_DIR}/tests/resources/pushoptions.git" "${HTTP_DIR}/test.git"
+
 	java -jar poxygit.jar --address 127.0.0.1 --port 9000 --credentials foo:baz --quiet "${HTTP_DIR}" &
 	HTTP_PID=$!
 fi
 
-if [ -z "$SKIP_SSH_TESTS" ]; then
+if should_run "SSH_TESTS"; then
 	echo "Starting SSH server..."
 	SSHD_DIR=`mktemp -d ${TMPDIR}/sshd.XXXXXXXX`
-	git init --bare "${SSHD_DIR}/test.git" >/dev/null
+	cp -R "${SOURCE_DIR}/tests/resources/pushoptions.git" "${SSHD_DIR}/test.git"
+
 	cat >"${SSHD_DIR}/sshd_config" <<-EOF
 	Port 2222
 	ListenAddress 0.0.0.0
 	Protocol 2
-	HostKey ${SSHD_DIR}/id_rsa
+	HostKey ${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}
 	PidFile ${SSHD_DIR}/pid
 	AuthorizedKeysFile ${HOME}/.ssh/authorized_keys
 	LogLevel DEBUG
@@ -197,19 +226,21 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	PubkeyAuthentication yes
 	ChallengeResponseAuthentication no
 	StrictModes no
+	HostCertificate ${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}.pub
+	HostKey ${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}
 	# Required here as sshd will simply close connection otherwise
 	UsePAM no
 	EOF
-	ssh-keygen -t rsa -f "${SSHD_DIR}/id_rsa" -N "" -q
+	ssh-keygen -t "${GITTEST_SSH_KEYTYPE}" -f "${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}" -N "" -q
 	/usr/sbin/sshd -f "${SSHD_DIR}/sshd_config" -E "${SSHD_DIR}/log"
 
 	# Set up keys
 	mkdir "${HOME}/.ssh"
-	ssh-keygen -t rsa -f "${HOME}/.ssh/id_rsa" -N "" -q
-	cat "${HOME}/.ssh/id_rsa.pub" >>"${HOME}/.ssh/authorized_keys"
+	ssh-keygen -t "${GITTEST_SSH_KEYTYPE}" -f "${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE}" -N "" -q
+	cat "${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE}.pub" >>"${HOME}/.ssh/authorized_keys"
 	while read algorithm key comment; do
 		echo "[localhost]:2222 $algorithm $key" >>"${HOME}/.ssh/known_hosts"
-	done <"${SSHD_DIR}/id_rsa.pub"
+	done <"${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}.pub"
 
 	# Append the github.com keys for the tests that don't override checks.
 	# We ask for ssh-rsa to test that the selection based off of known_hosts
@@ -228,7 +259,7 @@ fi
 
 # Run the tests that do not require network connectivity.
 
-if [ -z "$SKIP_OFFLINE_TESTS" ]; then
+if should_run "OFFLINE_TESTS"; then
 	echo ""
 	echo "##############################################################################"
 	echo "## Running core tests"
@@ -259,7 +290,11 @@ if [ -n "$RUN_INVASIVE_TESTS" ]; then
 	unset GITTEST_INVASIVE_SPEED
 fi
 
-if [ -z "$SKIP_ONLINE_TESTS" ]; then
+# the various network  tests can fail due to network connectivity problems;
+# allow them to retry up to 5 times
+export GITTEST_FLAKY_RETRY=5
+
+if should_run "ONLINE_TESTS"; then
 	# Run the online tests.  The "online" test suite only includes the
 	# default online tests that do not require additional configuration.
 	# The "proxy" and "ssh" test suites require further setup.
@@ -288,7 +323,7 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	run_test online_customcert
 fi
 
-if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
+if should_run "GITDAEMON_TESTS"; then
 	echo ""
 	echo "Running gitdaemon (standard) tests"
 	echo ""
@@ -316,7 +351,7 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	unset GITTEST_REMOTE_URL
 fi
 
-if [ -z "$SKIP_PROXY_TESTS" ]; then
+if should_run "PROXY_TESTS"; then
 	echo ""
 	echo "Running proxy tests (Basic authentication)"
 	echo ""
@@ -342,7 +377,7 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	unset GITTEST_REMOTE_PROXY_PASS
 fi
 
-if [ -z "$SKIP_NTLM_TESTS" ]; then
+if should_run "NTLM_TESTS"; then
 	echo ""
 	echo "Running NTLM tests (IIS emulation)"
 	echo ""
@@ -368,7 +403,7 @@ if [ -z "$SKIP_NTLM_TESTS" ]; then
 	unset GITTEST_REMOTE_PASS
 fi
 
-if [ -z "$SKIP_NEGOTIATE_TESTS" -a -n "$GITTEST_NEGOTIATE_PASSWORD" ]; then
+if should_run "NEGOTIATE_TESTS" && -n "$GITTEST_NEGOTIATE_PASSWORD" ; then
 	echo ""
 	echo "Running SPNEGO tests"
 	echo ""
@@ -401,12 +436,14 @@ if [ -z "$SKIP_NEGOTIATE_TESTS" -a -n "$GITTEST_NEGOTIATE_PASSWORD" ]; then
 	kdestroy -A
 fi
 
-if [ -z "$SKIP_SSH_TESTS" ]; then
+if should_run "SSH_TESTS"; then
 	export GITTEST_REMOTE_USER=$USER
-	export GITTEST_REMOTE_SSH_KEY="${HOME}/.ssh/id_rsa"
-	export GITTEST_REMOTE_SSH_PUBKEY="${HOME}/.ssh/id_rsa.pub"
+	export GITTEST_REMOTE_SSH_KEY="${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE}"
+	export GITTEST_REMOTE_SSH_PUBKEY="${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE}.pub"
 	export GITTEST_REMOTE_SSH_PASSPHRASE=""
 	export GITTEST_REMOTE_SSH_FINGERPRINT="${SSH_FINGERPRINT}"
+
+	export GITTEST_SSH_CMD="ssh -i ${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE} -o UserKnownHostsFile=${HOME}/.ssh/known_hosts"
 
 	echo ""
 	echo "Running ssh tests"
@@ -424,6 +461,8 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	run_test ssh
 	unset GITTEST_REMOTE_URL
 
+	unset GITTEST_SSH_CMD
+
 	unset GITTEST_REMOTE_USER
 	unset GITTEST_REMOTE_SSH_KEY
 	unset GITTEST_REMOTE_SSH_PUBKEY
@@ -431,7 +470,9 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	unset GITTEST_REMOTE_SSH_FINGERPRINT
 fi
 
-if [ -z "$SKIP_FUZZERS" ]; then
+unset GITTEST_FLAKY_RETRY
+
+if should_run "FUZZERS"; then
 	echo ""
 	echo "##############################################################################"
 	echo "## Running fuzzers"

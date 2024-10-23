@@ -6,6 +6,7 @@
  */
 
 #include "sortedcache.h"
+#include "hashmap.h"
 
 int git_sortedcache_new(
 	git_sortedcache **out,
@@ -26,8 +27,7 @@ int git_sortedcache_new(
 	GIT_ERROR_CHECK_ALLOC(sc);
 
 	if (git_pool_init(&sc->pool, 1) < 0 ||
-	    git_vector_init(&sc->items, 4, item_cmp) < 0 ||
-	    git_strmap_new(&sc->map) < 0)
+	    git_vector_init(&sc->items, 4, item_cmp) < 0)
 		goto fail;
 
 	if (git_rwlock_init(&sc->lock)) {
@@ -46,8 +46,7 @@ int git_sortedcache_new(
 	return 0;
 
 fail:
-	git_strmap_free(sc->map);
-	git_vector_free(&sc->items);
+	git_vector_dispose(&sc->items);
 	git_pool_clear(&sc->pool);
 	git__free(sc);
 	return -1;
@@ -65,7 +64,7 @@ const char *git_sortedcache_path(git_sortedcache *sc)
 
 static void sortedcache_clear(git_sortedcache *sc)
 {
-	git_strmap_clear(sc->map);
+	git_hashmap_str_clear(&sc->map);
 
 	if (sc->free_item) {
 		size_t i;
@@ -88,8 +87,8 @@ static void sortedcache_free(git_sortedcache *sc)
 		return;
 
 	sortedcache_clear(sc);
-	git_vector_free(&sc->items);
-	git_strmap_free(sc->map);
+	git_vector_dispose(&sc->items);
+	git_hashmap_str_dispose(&sc->map);
 
 	git_sortedcache_wunlock(sc);
 
@@ -274,7 +273,7 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 	char *item_key;
 	void *item;
 
-	if ((item = git_strmap_get(sc->map, key)) != NULL)
+	if (git_hashmap_str_get(&item, &sc->map, key) == 0)
 		goto done;
 
 	keylen  = strlen(key);
@@ -294,11 +293,11 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 	item_key = ((char *)item) + sc->item_path_offset;
 	memcpy(item_key, key, keylen);
 
-	if ((error = git_strmap_set(sc->map, item_key, item)) < 0)
+	if ((error = git_hashmap_str_put(&sc->map, item_key, item)) < 0)
 		goto done;
 
 	if ((error = git_vector_insert(&sc->items, item)) < 0)
-		git_strmap_delete(sc->map, item_key);
+		git_hashmap_str_remove(&sc->map, item_key);
 
 done:
 	if (out)
@@ -307,9 +306,11 @@ done:
 }
 
 /* lookup item by key */
-void *git_sortedcache_lookup(const git_sortedcache *sc, const char *key)
+void *git_sortedcache_lookup(git_sortedcache *sc, const char *key)
 {
-	return git_strmap_get(sc->map, key);
+	void *value;
+
+	return git_hashmap_str_get(&value, &sc->map, key) == 0 ? value : NULL;
 }
 
 /* find out how many items are in the cache */
@@ -370,7 +371,7 @@ int git_sortedcache_remove(git_sortedcache *sc, size_t pos)
 
 	(void)git_vector_remove(&sc->items, pos);
 
-	git_strmap_delete(sc->map, item + sc->item_path_offset);
+	git_hashmap_str_remove(&sc->map, item + sc->item_path_offset);
 
 	if (sc->free_item)
 		sc->free_item(sc->free_item_payload, item);

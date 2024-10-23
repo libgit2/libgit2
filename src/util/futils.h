@@ -13,8 +13,8 @@
 #include "posix.h"
 #include "fs_path.h"
 #include "pool.h"
-#include "strmap.h"
 #include "hash.h"
+#include "hashmap_str.h"
 
 /**
  * Filebuffer methods
@@ -25,7 +25,7 @@ extern int git_futils_readbuffer(git_str *obj, const char *path);
 extern int git_futils_readbuffer_updated(
 	git_str *obj,
 	const char *path,
-	unsigned char checksum[GIT_HASH_SHA1_SIZE],
+	unsigned char checksum[GIT_HASH_SHA256_SIZE],
 	int *updated);
 extern int git_futils_readbuffer_fd_full(git_str *obj, git_file fd);
 extern int git_futils_readbuffer_fd(git_str *obj, git_file fd, size_t len);
@@ -109,8 +109,17 @@ struct git_futils_mkdir_perfdata
 
 struct git_futils_mkdir_options
 {
-	git_strmap *dir_map;
-	git_pool *pool;
+	/*
+	 * Callers can optionally pass an allocation pool and a
+	 * hashset of strings; mkdir will populate these with the
+	 * path(s) it creates; this can be useful for repeated calls
+	 * to mkdir. This will reduce I/O by avoiding testing for the
+	 * existence of intermediate directories that it knows already
+	 * exist (because it created them).
+	 */
+	git_pool *cache_pool;
+	git_hashset_str *cache_pathset;
+
 	struct git_futils_mkdir_perfdata perfdata;
 };
 

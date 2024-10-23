@@ -6,9 +6,10 @@ set -eo pipefail
 # parse the command line
 #
 
-usage() { echo "usage: $(basename "$0") [--cli <path>] [--baseline-cli <path>] [--suite <suite>] [--json <path>] [--zip <path>] [--verbose] [--debug]"; }
+usage() { echo "usage: $(basename "$0") [--cli <path>] [--name <cli-name>] [--baseline-cli <path>] [--suite <suite>] [--json <path>] [--zip <path>] [--verbose] [--debug]"; }
 
 TEST_CLI="git"
+TEST_CLI_NAME=
 BASELINE_CLI=
 SUITE=
 JSON_RESULT=
@@ -21,6 +22,9 @@ NEXT=
 for a in "$@"; do
 	if [ "${NEXT}" = "cli" ]; then
 		TEST_CLI="${a}"
+		NEXT=
+	elif [ "${NEXT}" = "name" ]; then
+		TEST_CLI_NAME="${a}"
 		NEXT=
 	elif [ "${NEXT}" = "baseline-cli" ]; then
 		BASELINE_CLI="${a}"
@@ -41,6 +45,10 @@ for a in "$@"; do
 		NEXT="cli"
 	elif [[ "${a}" == "-c"* ]]; then
 		TEST_CLI="${a/-c/}"
+	elif [ "${a}" = "n" ] || [ "${a}" = "--name" ]; then
+		NEXT="name"
+	elif [[ "${a}" == "-n"* ]]; then
+		TEST_CLI_NAME="${a/-n/}"
 	elif [ "${a}" = "b" ] || [ "${a}" = "--baseline-cli" ]; then
 		NEXT="baseline-cli"
 	elif [[ "${a}" == "-b"* ]]; then
@@ -205,9 +213,19 @@ for TEST_PATH in "${BENCHMARK_DIR}"/*; do
 	ERROR_FILE="${OUTPUT_DIR}/${TEST_FILE}.err"
 
 	FAILED=
-	${TEST_PATH} --cli "${TEST_CLI}" --baseline-cli "${BASELINE_CLI}" --json "${JSON_FILE}" ${SHOW_OUTPUT} >"${OUTPUT_FILE}" 2>"${ERROR_FILE}" || FAILED=1
+	{
+	  ${TEST_PATH} --cli "${TEST_CLI}" --baseline-cli "${BASELINE_CLI}" --json "${JSON_FILE}" ${SHOW_OUTPUT} >"${OUTPUT_FILE}" 2>"${ERROR_FILE}";
+	  FAILED=$?
+	} || true
 
-	if [ "${FAILED}" = "1" ]; then
+	if [ "${FAILED}" = "2" ]; then
+		if [ "${VERBOSE}" != "1" ]; then
+			echo "skipped!"
+		fi
+
+		indent < "${ERROR_FILE}"
+		continue
+	elif [ "${FAILED}" != "0" ]; then
 		if [ "${VERBOSE}" != "1" ]; then
 			echo "failed!"
 		fi

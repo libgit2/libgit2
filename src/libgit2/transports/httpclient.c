@@ -7,7 +7,7 @@
 
 #include "common.h"
 #include "git2.h"
-#include "http_parser.h"
+
 #include "vector.h"
 #include "trace.h"
 #include "httpclient.h"
@@ -21,6 +21,7 @@
 #include "streams/socket.h"
 #include "streams/tls.h"
 #include "auth.h"
+#include "httpparser.h"
 
 static git_http_auth_scheme auth_schemes[] = {
 	{ GIT_HTTP_AUTH_NEGOTIATE, "Negotiate", GIT_CREDENTIAL_DEFAULT, git_http_auth_negotiate },
@@ -108,7 +109,7 @@ struct git_http_client {
 	git_http_server_t current_server;
 	http_client_state state;
 
-	http_parser parser;
+	git_http_parser parser;
 
 	git_http_server server;
 	git_http_server proxy;
@@ -154,7 +155,7 @@ void git_http_response_dispose(git_http_response *response)
 	memset(response, 0, sizeof(git_http_response));
 }
 
-static int on_header_complete(http_parser *parser)
+static int on_header_complete(git_http_parser *parser)
 {
 	http_parser_context *ctx = (http_parser_context *) parser->data;
 	git_http_client *client = ctx->client;
@@ -219,7 +220,7 @@ static int on_header_complete(http_parser *parser)
 	return 0;
 }
 
-static int on_header_field(http_parser *parser, const char *str, size_t len)
+static int on_header_field(git_http_parser *parser, const char *str, size_t len)
 {
 	http_parser_context *ctx = (http_parser_context *) parser->data;
 
@@ -254,7 +255,7 @@ static int on_header_field(http_parser *parser, const char *str, size_t len)
 	return 0;
 }
 
-static int on_header_value(http_parser *parser, const char *str, size_t len)
+static int on_header_value(git_http_parser *parser, const char *str, size_t len)
 {
 	http_parser_context *ctx = (http_parser_context *) parser->data;
 
@@ -342,7 +343,7 @@ static int resend_needed(git_http_client *client, git_http_response *response)
 	return 0;
 }
 
-static int on_headers_complete(http_parser *parser)
+static int on_headers_complete(git_http_parser *parser)
 {
 	http_parser_context *ctx = (http_parser_context *) parser->data;
 
@@ -364,8 +365,8 @@ static int on_headers_complete(http_parser *parser)
 		return ctx->parse_status = PARSE_STATUS_ERROR;
 	}
 
-	ctx->response->status = parser->status_code;
-	ctx->client->keepalive = http_should_keep_alive(parser);
+	ctx->response->status = git_http_parser_status_code(parser);
+	ctx->client->keepalive = git_http_parser_keep_alive(parser);
 
 	/* Prepare for authentication */
 	collect_authinfo(&ctx->response->server_auth_schemetypes,
@@ -378,18 +379,15 @@ static int on_headers_complete(http_parser *parser)
 	ctx->response->resend_credentials = resend_needed(ctx->client,
 	                                                  ctx->response);
 
-	/* Stop parsing. */
-	http_parser_pause(parser, 1);
-
 	if (ctx->response->content_type || ctx->response->chunked)
 		ctx->client->state = READING_BODY;
 	else
 		ctx->client->state = DONE;
 
-	return 0;
+	return git_http_parser_pause(parser);
 }
 
-static int on_body(http_parser *parser, const char *buf, size_t len)
+static int on_body(git_http_parser *parser, const char *buf, size_t len)
 {
 	http_parser_context *ctx = (http_parser_context *) parser->data;
 	size_t max_len;
@@ -411,7 +409,7 @@ static int on_body(http_parser *parser, const char *buf, size_t len)
 	return 0;
 }
 
-static int on_message_complete(http_parser *parser)
+static int on_message_complete(git_http_parser *parser)
 {
 	http_parser_context *ctx = (http_parser_context *) parser->data;
 
@@ -651,6 +649,30 @@ static int puts_host_and_port(git_str *buf, git_net_url *url, bool force_port)
 	return git_str_oom(buf) ? -1 : 0;
 }
 
+static int append_user_agent(git_str *buf)
+{
+	const char *product = git_settings__user_agent_product();
+	const char *comment = git_settings__user_agent();
+
+	GIT_ASSERT(product && comment);
+
+	if (!*product)
+		return 0;
+
+	git_str_puts(buf, "User-Agent: ");
+	git_str_puts(buf, product);
+
+	if (*comment) {
+		git_str_puts(buf, " (");
+		git_str_puts(buf, comment);
+		git_str_puts(buf, ")");
+	}
+
+	git_str_puts(buf, "\r\n");
+
+	return git_str_oom(buf) ? -1 : 0;
+}
+
 static int generate_connect_request(
 	git_http_client *client,
 	git_http_request *request)
@@ -665,9 +687,7 @@ static int generate_connect_request(
 	puts_host_and_port(buf, &client->server.url, true);
 	git_str_puts(buf, " HTTP/1.1\r\n");
 
-	git_str_puts(buf, "User-Agent: ");
-	git_http__user_agent(buf);
-	git_str_puts(buf, "\r\n");
+	append_user_agent(buf);
 
 	git_str_puts(buf, "Host: ");
 	puts_host_and_port(buf, &client->server.url, true);
@@ -711,9 +731,7 @@ static int generate_request(
 
 	git_str_puts(buf, " HTTP/1.1\r\n");
 
-	git_str_puts(buf, "User-Agent: ");
-	git_http__user_agent(buf);
-	git_str_puts(buf, "\r\n");
+	append_user_agent(buf);
 
 	git_str_puts(buf, "Host: ");
 	puts_host_and_port(buf, request->url, false);
@@ -768,25 +786,37 @@ static int check_certificate(
 	void *cert_cb_payload)
 {
 	git_cert *cert;
-	git_error_state last_error = {0};
+	git_error *last_error;
 	int error;
 
 	if ((error = git_stream_certificate(&cert, stream)) < 0)
 		return error;
 
-	git_error_state_capture(&last_error, GIT_ECERTIFICATE);
+	/*
+	 * Allow callers to set an error - but save ours and clear
+	 * it, so that we can detect if they set one and restore it
+	 * if we need to.
+	 */
+	git_error_save(&last_error);
+	git_error_clear();
 
 	error = cert_cb(cert, is_valid, url->host, cert_cb_payload);
 
-	if (error == GIT_PASSTHROUGH && !is_valid)
-		return git_error_state_restore(&last_error);
-	else if (error == GIT_PASSTHROUGH)
-		error = 0;
-	else if (error && !git_error_last())
-		git_error_set(GIT_ERROR_HTTP,
-		              "user rejected certificate for %s", url->host);
+	if (error == GIT_PASSTHROUGH) {
+		error = is_valid ? 0 : -1;
 
-	git_error_state_free(&last_error);
+		if (error) {
+			git_error_restore(last_error);
+			last_error = NULL;
+		}
+	} else if (error) {
+		if (!git_error_exists())
+			git_error_set(GIT_ERROR_HTTP,
+		              "user rejected certificate for %s",
+			      url->host);
+	}
+
+	git_error_free(last_error);
 	return error;
 }
 
@@ -837,6 +867,11 @@ GIT_INLINE(int) server_setup_from_url(
 	git_http_server *server,
 	git_net_url *url)
 {
+	GIT_ASSERT_ARG(url);
+	GIT_ASSERT_ARG(url->scheme);
+	GIT_ASSERT_ARG(url->host);
+	GIT_ASSERT_ARG(url->port);
+
 	if (!server->url.scheme || strcmp(server->url.scheme, url->scheme) ||
 	    !server->url.host || strcmp(server->url.host, url->host) ||
 	    !server->url.port || strcmp(server->url.port, url->port)) {
@@ -859,9 +894,29 @@ GIT_INLINE(int) server_setup_from_url(
 	return 0;
 }
 
+static bool parser_settings_initialized;
+static git_http_parser_settings parser_settings;
+
+GIT_INLINE(git_http_parser_settings *) http_client_parser_settings(void)
+{
+	if (!parser_settings_initialized) {
+		parser_settings.on_header_field = on_header_field;
+		parser_settings.on_header_value = on_header_value;
+		parser_settings.on_headers_complete = on_headers_complete;
+		parser_settings.on_body = on_body;
+		parser_settings.on_message_complete = on_message_complete;
+
+		parser_settings_initialized = true;
+	}
+
+	return &parser_settings;
+}
+
 static void reset_parser(git_http_client *client)
 {
-	http_parser_init(&client->parser, HTTP_RESPONSE);
+	git_http_parser_init(&client->parser,
+	                     GIT_HTTP_PARSER_RESPONSE,
+	                     http_client_parser_settings());
 }
 
 static int setup_hosts(
@@ -1104,27 +1159,9 @@ GIT_INLINE(int) client_read(git_http_client *client)
 	return (int)read_len;
 }
 
-static bool parser_settings_initialized;
-static http_parser_settings parser_settings;
-
-GIT_INLINE(http_parser_settings *) http_client_parser_settings(void)
-{
-	if (!parser_settings_initialized) {
-		parser_settings.on_header_field = on_header_field;
-		parser_settings.on_header_value = on_header_value;
-		parser_settings.on_headers_complete = on_headers_complete;
-		parser_settings.on_body = on_body;
-		parser_settings.on_message_complete = on_message_complete;
-
-		parser_settings_initialized = true;
-	}
-
-	return &parser_settings;
-}
-
 GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 {
-	http_parser *parser = &client->parser;
+	git_http_parser *parser = &client->parser;
 	http_parser_context *ctx = (http_parser_context *) parser->data;
 	unsigned char http_errno;
 	int read_len;
@@ -1138,11 +1175,10 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 	if (!client->read_buf.size && (read_len = client_read(client)) < 0)
 		return read_len;
 
-	parsed_len = http_parser_execute(parser,
-		http_client_parser_settings(),
+	parsed_len = git_http_parser_execute(parser,
 		client->read_buf.ptr,
 		client->read_buf.size);
-	http_errno = client->parser.http_errno;
+	http_errno = git_http_parser_errno(parser);
 
 	if (parsed_len > INT_MAX) {
 		git_error_set(GIT_ERROR_HTTP, "unexpectedly large parse");
@@ -1161,26 +1197,29 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 	 * (This can happen in response to an expect/continue request,
 	 * where the server gives you a 100 and 200 simultaneously.)
 	 */
-	if (http_errno == HPE_PAUSED) {
+	if (http_errno == GIT_HTTP_PARSER_PAUSED) {
+		size_t additional_size;
+
+		git_http_parser_resume(parser);
+
 		/*
-		 * http-parser has a "feature" where it will not deliver the
-		 * final byte when paused in a callback.  Consume that byte.
-		 * https://github.com/nodejs/http-parser/issues/97
+		 * http-parser has a "feature" where it will not deliver
+		 * the final byte when paused in a callback.  Consume
+		 * that byte.
 		 */
-		GIT_ASSERT(client->read_buf.size > parsed_len);
+		if ((additional_size = git_http_parser_remain_after_pause(parser)) > 0) {
+			GIT_ASSERT((client->read_buf.size - parsed_len) >= additional_size);
 
-		http_parser_pause(parser, 0);
-
-		parsed_len += http_parser_execute(parser,
-			http_client_parser_settings(),
-			client->read_buf.ptr + parsed_len,
-			1);
+			parsed_len += git_http_parser_execute(parser,
+				client->read_buf.ptr + parsed_len,
+				additional_size);
+		}
 	}
 
 	/* Most failures will be reported in http_errno */
-	else if (parser->http_errno != HPE_OK) {
+	else if (git_http_parser_errno(parser) != GIT_HTTP_PARSER_OK) {
 		git_error_set(GIT_ERROR_HTTP, "http parser error: %s",
-		              http_errno_description(http_errno));
+		              git_http_parser_errmsg(parser, http_errno));
 		return -1;
 	}
 
@@ -1188,7 +1227,7 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 	else if (parsed_len != client->read_buf.size) {
 		git_error_set(GIT_ERROR_HTTP,
 		              "http parser did not consume entire buffer: %s",
-			      http_errno_description(http_errno));
+		              git_http_parser_errmsg(parser, http_errno));
 		return -1;
 	}
 
@@ -1227,7 +1266,7 @@ static void complete_response_body(git_http_client *client)
 
 	/* If there was an error, just close the connection. */
 	if (client_read_and_parse(client) < 0 ||
-	    parser_context.error != HPE_OK ||
+	    parser_context.error != GIT_HTTP_PARSER_OK ||
 	    (parser_context.parse_status != PARSE_STATUS_OK &&
 	     parser_context.parse_status != PARSE_STATUS_NO_OUTPUT)) {
 		git_error_clear();
@@ -1235,6 +1274,7 @@ static void complete_response_body(git_http_client *client)
 	}
 
 done:
+	client->parser.data = NULL;
 	git_str_clear(&client->read_buf);
 }
 
@@ -1402,9 +1442,9 @@ int git_http_client_read_response(
 	git_http_response_dispose(response);
 
 	if (client->current_server == PROXY) {
-		git_vector_free_deep(&client->proxy.auth_challenges);
+		git_vector_dispose_deep(&client->proxy.auth_challenges);
 	} else if(client->current_server == SERVER) {
-		git_vector_free_deep(&client->server.auth_challenges);
+		git_vector_dispose_deep(&client->server.auth_challenges);
 	}
 
 	client->state = READING_RESPONSE;
@@ -1424,6 +1464,7 @@ int git_http_client_read_response(
 done:
 	git_str_dispose(&parser_context.parse_header_name);
 	git_str_dispose(&parser_context.parse_header_value);
+	client->parser.data = NULL;
 
 	return error;
 }
@@ -1479,6 +1520,8 @@ done:
 	if (error < 0)
 		client->connected = 0;
 
+	client->parser.data = NULL;
+
 	return error;
 }
 
@@ -1501,7 +1544,7 @@ int git_http_client_skip_body(git_http_client *client)
 	do {
 		error = client_read_and_parse(client);
 
-		if (parser_context.error != HPE_OK ||
+		if (parser_context.error != GIT_HTTP_PARSER_OK ||
 		    (parser_context.parse_status != PARSE_STATUS_OK &&
 		     parser_context.parse_status != PARSE_STATUS_NO_OUTPUT)) {
 			git_error_set(GIT_ERROR_HTTP,
@@ -1512,6 +1555,8 @@ int git_http_client_skip_body(git_http_client *client)
 
 	if (error < 0)
 		client->connected = 0;
+
+	client->parser.data = NULL;
 
 	return error;
 }
@@ -1560,7 +1605,7 @@ GIT_INLINE(void) http_server_close(git_http_server *server)
 
 	git_net_url_dispose(&server->url);
 
-	git_vector_free_deep(&server->auth_challenges);
+	git_vector_dispose_deep(&server->auth_challenges);
 	free_auth_context(server);
 }
 

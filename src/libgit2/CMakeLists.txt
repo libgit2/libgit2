@@ -2,8 +2,6 @@
 # git library functionality.
 
 add_library(libgit2 OBJECT)
-set_target_properties(libgit2 PROPERTIES C_STANDARD 90)
-set_target_properties(libgit2 PROPERTIES C_EXTENSIONS OFF)
 
 include(PkgBuildConfig)
 
@@ -61,15 +59,10 @@ target_link_libraries(libgit2package ${LIBGIT2_SYSTEM_LIBS})
 target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
 
 set_target_properties(libgit2package PROPERTIES C_STANDARD 90)
+set_target_properties(libgit2package PROPERTIES C_EXTENSIONS OFF)
 set_target_properties(libgit2package PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set_target_properties(libgit2package PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-
-# Workaround for Cmake bug #0011240 (see http://public.kitware.com/Bug/view.php?id=11240)
-# Win64+MSVC+static libs = linker error
-if(MSVC AND GIT_ARCH_64 AND NOT BUILD_SHARED_LIBS)
-	set_target_properties(libgit2package PROPERTIES STATIC_LIBRARY_FLAGS "/MACHINE:x64")
-endif()
 
 ide_split_sources(libgit2package)
 

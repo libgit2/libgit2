@@ -166,9 +166,26 @@ GIT_INLINE(void) clar__assert_equal_oid(
 	}
 }
 
+GIT_INLINE(void) clar__assert_equal_oidstr(
+	const char *file, const char *func, int line, const char *desc,
+	const char *one_str, const git_oid *two)
+{
+	git_oid one;
+
+	if (git_oid__fromstr(&one, one_str, git_oid_type(two)) < 0) {
+		clar__fail(file, func, line, desc, "could not parse oid string", 1);
+	} else {
+		clar__assert_equal_oid(file, func, line, desc, &one, two);
+	}
+}
+
 #define cl_assert_equal_oid(one, two) \
 	clar__assert_equal_oid(__FILE__, __func__, __LINE__, \
 		"OID mismatch: " #one " != " #two, (one), (two))
+
+#define cl_assert_equal_oidstr(one_str, two) \
+	clar__assert_equal_oidstr(__FILE__, __func__, __LINE__, \
+		"OID mismatch: " #one_str " != " #two, (one_str), (two))
 
 /*
  * Some utility macros for building long strings
