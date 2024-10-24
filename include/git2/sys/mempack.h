@@ -101,6 +101,14 @@ GIT_EXTERN(int) git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_ba
  */
 GIT_EXTERN(int) git_mempack_reset(git_odb_backend *backend);
 
+/**
+ * Get the total number of objects in mempack
+ *
+ * @param backend The mempack backend
+ * @return the number of objects in the mempack, -1 on error
+ */
+GIT_EXTERN(int) git_mempack_object_count(git_odb_backend *backend);
+
 GIT_END_DECL
 
 #endif
