@@ -770,6 +770,7 @@ int p_rmdir(const char *path)
 			 * handle to the directory."  This sounds like what everybody else calls
 			 * EBUSY.  Let's convert appropriate error codes.
 			 */
+			case ERROR_ACCESS_DENIED:
 			case ERROR_SHARING_VIOLATION:
 				errno = EBUSY;
 				break;
