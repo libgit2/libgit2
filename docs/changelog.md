@@ -1,3 +1,42 @@
+v1.8.3
+------
+
+This release fixes a bug introduced in v1.8.1 for users of the legacy
+[Node.js http-parser](https://github.com/nodejs/http-parser)
+dependency.
+
+## What's Changed
+
+### Bug fixes
+
+* http: Backport on_status initialize fix for http-parser by @ethomson in https://github.com/libgit2/libgit2/pull/6931
+
+v1.8.2
+------
+
+This release reverts a const-correctness change introduced in
+v1.8.0 for the `git_commit_create` functions. We now retain the
+const-behavior for the `commits` arguments from prior to v1.8.0.
+
+This change was meant to resolve compatibility issues with bindings
+and downstream users.
+
+## What's Changed
+
+### New features
+
+* Introduce a stricter debugging allocator for testing by @ethomson in https://github.com/libgit2/libgit2/pull/6811
+
+### Bug fixes
+
+* Fix constness issue introduced in #6716 by @ethomson in https://github.com/libgit2/libgit2/pull/6829
+
+### Build and CI improvements
+
+* README: add experimental builds to ci table by @ethomson in https://github.com/libgit2/libgit2/pull/6816
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.8.1...v1.8.2
+
 v1.8.1
 ------
 
