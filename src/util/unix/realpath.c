@@ -24,7 +24,7 @@ char *p_realpath(const char *pathname, char *resolved)
 #ifdef __OpenBSD__
 	/* The OpenBSD realpath function behaves differently,
 	 * figure out if the file exists */
-	if (access(ret, F_OK) < 0) {
+	if (access(result, F_OK) < 0) {
 		if (!resolved)
 			free(result);
 
