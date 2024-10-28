@@ -1063,9 +1063,13 @@ int git_reference_cmp(
 	const git_reference *ref2)
 {
 	git_reference_t type1, type2;
+	int ret;
 
 	GIT_ASSERT_ARG(ref1);
 	GIT_ASSERT_ARG(ref2);
+
+	if ((ret = strcmp(ref1->name, ref2->name)) != 0)
+		return ret;
 
 	type1 = git_reference_type(ref1);
 	type2 = git_reference_type(ref2);
