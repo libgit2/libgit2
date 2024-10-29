@@ -70,9 +70,14 @@ jobs:
       if: matrix.platform.setup-script != ''
     - name: Clone resource repositories
       run: |
-        mkdir resources
+        # we need a superior way to package the benchmark resources; lfs
+        # is too expensive
+        # git lfs install
+        # git clone https://github.com/libgit2/benchmark-resources resources
         git clone --bare https://github.com/git/git resources/git
-        git clone --bare https://github.com/torvalds/linux resources/linux
+        # avoid linux temporarily; the linux blame benchmarks are simply
+        # too slow to use
+        # git clone --bare https://github.com/torvalds/linux resources/linux
     - name: Build
       run: |
         mkdir build && cd build
@@ -80,10 +85,11 @@ jobs:
       shell: bash
     - name: Benchmark
       run: |
-        export BENCHMARK_GIT_REPOSITORY="$(pwd)/resources/git"
+        export BENCHMARK_RESOURCES_PATH="$(pwd)/resources"
+        export BENCHMARK_GIT_PATH="$(pwd)/resources/git"
         # avoid linux temporarily; the linux blame benchmarks are simply
         # too slow to use
-        # export BENCHMARK_LINUX_REPOSITORY="$(pwd)/resources/linux"
+        # export BENCHMARK_LINUX_PATH="$(pwd)/resources/linux"
 
         if [[ "$(uname -s)" == MINGW* ]]; then
           GIT2_CLI="$(cygpath -w $(pwd))\\build\\Release\\git2"
