@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+. "$(dirname "$0")/benchmark_helpers.sh"
+
+gitbench --prepare "sandbox_repo testrepo" \
+         --warmup 5 \
+         --chdir "testrepo/.git/objects/pack" \
+	 -- \
+	 index-pack pack-a81e489679b7d3418f9ab594bda8ceb37dd4c695.pack

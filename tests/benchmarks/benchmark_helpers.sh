@@ -23,6 +23,7 @@ fi
 
 HELP_GIT_REMOTE="https://github.com/git/git"
 HELP_LINUX_REMOTE="https://github.com/torvalds/linux"
+HELP_RESOURCE_REPO="https://github.com/libgit2/benchmark-resources"
 
 #
 # parse the arguments to the outer script that's including us; these are arguments that
@@ -205,6 +206,30 @@ create_preparescript() {
 		cp -R "\${RESOURCES_DIR}/\${RESOURCE}" "\${SANDBOX_DIR}/"
 	}
 
+	sandbox_resource() {
+		RESOURCE="\${1}"
+
+		if [ "\${RESOURCE}" = "" ]; then
+			echo "usage: sandbox_resource <path>" 1>&2
+			exit 1
+		fi
+
+		RESOURCE_UPPER=\$(echo "\${RESOURCE}" | tr '[:lower:]' '[:upper:]' | sed -e "s/-/_/g")
+		RESOURCE_PATH=\$(eval echo "\\\${BENCHMARK_\${RESOURCE_UPPER}_PATH}")
+
+		if [ "\${RESOURCE_PATH}" = "" -a "\${BENCHMARK_RESOURCES_PATH}" != "" ]; then
+			RESOURCE_PATH="\${BENCHMARK_RESOURCES_PATH}/\${RESOURCE}"
+		fi
+
+		if [ ! -f "\${RESOURCE_PATH}" ]; then
+			echo "sandbox: the resource \"\${RESOURCE}\" does not exist"
+			exit 1
+		fi
+
+		rm -rf "\${SANDBOX_DIR:?}/\${RESOURCE}"
+		cp -R "\${RESOURCE_PATH}" "\${SANDBOX_DIR}/\${RESOURCE}"
+	}
+
 	sandbox_repo() {
 		RESOURCE="\${1}"
 
@@ -229,8 +254,8 @@ create_preparescript() {
 			exit 1
 		fi
 
-		REPO_UPPER=\$(echo "\${1}" | tr '[:lower:]' '[:upper:]')
-		REPO_URL=\$(eval echo "\\\${BENCHMARK_\${REPO_UPPER}_REPOSITORY}")
+		REPO_UPPER=\$(echo "\${REPO}" | tr '[:lower:]' '[:upper:]')
+		REPO_URL=\$(eval echo "\\\${BENCHMARK_\${REPO_UPPER}_PATH}")
 
 		if [ "\${REPO_URL}" = "" ]; then
 			echo "\$0: unknown repository '\${REPO}'" 1>&2
@@ -397,17 +422,45 @@ needs_repo() {
 		exit 1
 	fi
 
-	REPO_UPPER=$(echo "${1}" | tr '[:lower:]' '[:upper:]')
-	REPO_URL=$(eval echo "\${BENCHMARK_${REPO_UPPER}_REPOSITORY}")
+	REPO_UPPER=$(echo "${REPO}" | tr '[:lower:]' '[:upper:]')
+	REPO_PATH=$(eval echo "\${BENCHMARK_${REPO_UPPER}_PATH}")
 	REPO_REMOTE_URL=$(eval echo "\${HELP_${REPO_UPPER}_REMOTE}")
 
-	if [ "${REPO_URL}" = "" ]; then
+	if [ "${REPO_PATH}" = "" ]; then
 		echo "$0: '${REPO}' repository not configured" 1>&2
 		echo "" 1>&2
 		echo "This benchmark needs an on-disk '${REPO}' repository. First, clone the" 1>&2
-		echo "remote repository ('${REPO_REMOTE_URL}') locally then set," 1>&2
+		echo "remote repository ('${REPO_REMOTE_URL}') locally then set" 1>&2
 		echo "the 'BENCHMARK_${REPO_UPPER}_REPOSITORY' environment variable to the path that" 1>&2
 		echo "contains the repository locally, then run this benchmark again." 1>&2
+		exit 2
+	fi
+}
+
+# helper script to give useful error messages about configuration
+needs_resource() {
+	RESOURCE="${1}"
+
+	if [ "${RESOURCE}" = "" ]; then
+		echo "usage: needs_resource <resource>" 1>&2
+		exit 1
+	fi
+
+	RESOURCE_UPPER=$(echo "${RESOURCE}" | tr '[:lower:]' '[:upper:]' | sed -e "s/-/_/g")
+	RESOURCE_PATH=$(eval echo "\${BENCHMARK_${RESOURCE_UPPER}_PATH}")
+
+	if [ "${RESOURCE_PATH}" = "" -a "${BENCHMARK_RESOURCES_PATH}" != "" ]; then
+		RESOURCE_PATH="${BENCHMARK_RESOURCES_PATH}/${RESOURCE}"
+	fi
+
+	if [ "${RESOURCE_PATH}" = "" ]; then
+		echo "$0: '${RESOURCE}' resource path not configured" 1>&2
+		echo "" 1>&2
+		echo "This benchmark needs an on-disk resource named '${RESOURCE}'." 1>&2
+		echo "First, clone the additional benchmark resources locally (from" 1>&2
+		echo "'${HELP_RESOURCE_REPO}'), then set the" 1>& 2
+		echo "'BENCHMARK_RESOURCES_PATH' environment variable to the path that" 1>&2
+		echo "contains the resources locally, then run this benchmark again." 1>&2
 		exit 2
 	fi
 }
