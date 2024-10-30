@@ -303,7 +303,7 @@ static int note_write(
 
 	error = git_commit_create(&oid, repo, notes_ref, author, committer,
 				  NULL, GIT_NOTES_DEFAULT_MSG_ADD,
-				  tree, *parents == NULL ? 0 : 1, parents);
+				  tree, *parents == NULL ? 0 : 1, (const git_commit **) parents);
 
 	if (notes_commit_out)
 		git_oid_cpy(notes_commit_out, &oid);
@@ -394,7 +394,7 @@ static int note_remove(
 	  NULL, GIT_NOTES_DEFAULT_MSG_RM,
 	  tree_after_removal,
 	  *parents == NULL ? 0 : 1,
-	  parents);
+	  (const git_commit **) parents);
 
 	if (error < 0)
 		goto cleanup;

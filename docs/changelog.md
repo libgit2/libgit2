@@ -1,3 +1,18 @@
+v1.8.4
+------
+
+We erroneously shipped v1.8.3 without actually including the change
+in v1.8.2. This release re-re-introduces the pre-v1.8.0 `commit`
+constness behavior.
+
+## What's Changed
+
+### Bug fixes
+
+* Fix constness issue introduced in #6716 by @ethomson in https://github.com/libgit2/libgit2/pull/6829
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.8.3...v1.8.4
+
 v1.8.3
 ------
 
