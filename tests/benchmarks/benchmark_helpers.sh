@@ -7,15 +7,17 @@ set -eo pipefail
 # command-line parsing
 #
 
-usage() { echo "usage: $(basename "$0") [--cli <path>] [--baseline-cli <path>] [--output-style <style>] [--json <path>]"; }
+usage() { echo "usage: $(basename "$0") [--cli <path>] [--baseline-cli <path>] [--output-style <style>] [--json <path>] [--profile] [--flamegraph <path>]"; }
 
 NEXT=
 BASELINE_CLI=
 TEST_CLI="git"
-JSON=
 SHOW_OUTPUT=
+JSON=
+PROFILE=
+FLAMEGRAPH=
 
-if [ "$CI" != "" ]; then
+if [ "$CI" != "" -a -t 1 ]; then
 	OUTPUT_STYLE="color"
 else
 	OUTPUT_STYLE="auto"
@@ -24,6 +26,8 @@ fi
 HELP_GIT_REMOTE="https://github.com/git/git"
 HELP_LINUX_REMOTE="https://github.com/torvalds/linux"
 HELP_RESOURCE_REPO="https://github.com/libgit2/benchmark-resources"
+
+BENCHMARK_DIR=${BENCHMARK_DIR:=$(dirname "$0")}
 
 #
 # parse the arguments to the outer script that's including us; these are arguments that
@@ -43,6 +47,9 @@ for a in "$@"; do
 	elif [ "${NEXT}" = "json" ]; then
 		JSON="${a}"
 		NEXT=
+	elif [ "${NEXT}" = "flamegraph" ]; then
+		FLAMEGRAPH="${a}"
+		NEXT=
 	elif [ "${a}" = "-c" ] || [ "${a}" = "--cli" ]; then
 		NEXT="cli"
 	elif [[ "${a}" == "-c"* ]]; then
@@ -53,13 +60,19 @@ for a in "$@"; do
 		BASELINE_CLI="${a/-b/}"
 	elif [ "${a}" == "--output-style" ]; then
 		NEXT="output-style"
-	elif [ "${a}" = "-j" ] || [ "${a}" = "--json" ]; then
-		NEXT="json"
-	elif [[ "${a}" == "-j"* ]]; then
-		JSON="${a}"
 	elif [ "${a}" = "--show-output" ]; then
 		SHOW_OUTPUT=1
 		OUTPUT_STYLE=
+	elif [ "${a}" = "-j" ] || [ "${a}" = "--json" ]; then
+		NEXT="json"
+	elif [[ "${a}" == "-j"* ]]; then
+                JSON="${a/-j/}"
+	elif [ "${a}" = "-p" ] || [ "${a}" = "--profile" ]; then
+		PROFILE=1
+	elif [ "${a}" = "-F" ] || [ "${a}" = "--flamegraph" ]; then
+		NEXT="flamegraph"
+	elif [[ "${a}" == "-F"* ]]; then
+                FLAMEGRAPH="${a/-F/}"
 	else
                 echo "$(basename "$0"): unknown option: ${a}" 1>&2
 		usage 1>&2
@@ -100,7 +113,7 @@ temp_dir() {
 	fi
 }
 
-create_preparescript() {
+create_prepare_script() {
 	# add some functions for users to use in preparation
 	cat >> "${SANDBOX_DIR}/prepare.sh" << EOF
 	set -e
@@ -277,10 +290,7 @@ EOF
 	echo "${SANDBOX_DIR}/prepare.sh"
 }
 
-create_runscript() {
-	SCRIPT_NAME="${1}"; shift
-	CLI_PATH="${1}"; shift
-
+start_dir() {
 	if [[ "${CHDIR}" = "/"* ]]; then
 		START_DIR="${CHDIR}"
 	elif [ "${CHDIR}" != "" ]; then
@@ -289,6 +299,15 @@ create_runscript() {
 		START_DIR="${SANDBOX_DIR}"
 	fi
 
+	echo "${START_DIR}"
+}
+
+create_run_script() {
+	SCRIPT_NAME="${1}"; shift
+	CLI_PATH="${1}"; shift
+
+	START_DIR=$(start_dir)
+
 	# our run script starts by chdir'ing to the sandbox or repository directory
 	echo -n "cd \"${START_DIR}\" && \"${CLI_PATH}\"" >> "${SANDBOX_DIR}/${SCRIPT_NAME}.sh"
 
@@ -296,16 +315,12 @@ create_runscript() {
 		echo -n " \"${a}\"" >> "${SANDBOX_DIR}/${SCRIPT_NAME}.sh"
 	done
 
+	echo "" >> "${SANDBOX_DIR}/${SCRIPT_NAME}.sh"
+
 	echo "${SANDBOX_DIR}/${SCRIPT_NAME}.sh"
 }
 
-gitbench_usage() { echo "usage: gitbench command..."; }
-
-#
-# this is the function that the outer script calls to actually do the sandboxing and
-# invocation of hyperfine.
-#
-gitbench() {
+parse_arguments() {
 	NEXT=
 
 	# this test should run the given command in preparation of the tests
@@ -361,34 +376,92 @@ gitbench() {
 		exit 1
 	fi
 
-	# sanity check
+	echo "PREPARE=\"${PREPARE}\""
+	echo "CHDIR=\"${CHDIR}\""
+	echo "WARMUP=\"${WARMUP}\""
 
-	for a in "${SANDBOX[@]}"; do
-		if [ ! -d "$(resources_dir)/${a}" ]; then
-			echo "$0: no resource '${a}' found" 1>&2
-			exit 1
-		fi
+	echo -n "GIT_ARGUMENTS=("
+
+	for arg in $@; do
+		echo -n " \"${arg}\""
 	done
+	echo " )"
+}
 
-	if [ "$REPOSITORY" != "" ]; then
-		if [ ! -d "$(resources_dir)/${REPOSITORY}" ]; then
-			echo "$0: no repository resource '${REPOSITORY}' found" 1>&2
-			exit 1
-		fi
+gitbench_usage() { echo "usage: gitbench command..."; }
+
+exec_profiler() {
+	if [ "${BASELINE_CLI}" != "" ]; then
+		echo "$0: baseline is not supported in profiling mode" 1>&2
+		exit 1
 	fi
 
-	# set up our sandboxing
+	if [ "${SHOW_OUTPUT}" != "" ]; then
+		echo "$0: show-output is not supported in profiling mode" 1>&2
+		exit 1
+	fi
 
-	SANDBOX_DIR="$(temp_dir)"
+	if [ "$JSON" != "" ]; then
+		echo "$0: json is not supported in profiling mode" 1>&2
+		exit 1
+	fi
+
+	SYSTEM=$(uname -s)
+
+	TEST_CLI_PATH=$(fullpath "${TEST_CLI}")
+	START_DIR=$(start_dir)
+
+	if [ "${SYSTEM}" = "Linux" ]; then
+		if [ "${OUTPUT_STYLE}" = "color" ]; then
+			COLOR_ARG="always"
+		elif [ "${OUTPUT_STYLE}" = "none" ]; then
+			COLOR_ARG="never"
+		elif [ "${OUTPUT_STYLE}" = "auto" ]; then
+			COLOR_ARG="auto"
+		else
+			echo "$0: unknown output-style option" 1>&2
+			exit 1
+		fi
+
+		bash "${PREPARE_SCRIPT}"
+		( cd "${START_DIR}" && perf record -F 999 -a -g -o "${SANDBOX_DIR}/perf.data" -- "${TEST_CLI_PATH}" "${GIT_ARGUMENTS[@]}" )
+
+		# we may not have samples if the process exited quickly
+		SAMPLES=$(perf report -D -i "${SANDBOX_DIR}/perf.data" | { grep "RECORD_SAMPLE" || test $? = 1; } | wc -l)
+
+		if [ "${SAMPLES}" = "0" ]; then
+			echo "$0: no profiling samples created" 1>&2
+			exit 3
+		fi
+
+		if [ "${FLAMEGRAPH}" = "" ]; then
+			perf report --stdio --stdio-color "${COLOR_ARG}" -i "${SANDBOX_DIR}/perf.data"
+		else
+			perf script -i "${SANDBOX_DIR}/perf.data" | "${BENCHMARK_DIR}/_script/flamegraph/stackcollapse-perf.pl" > "${SANDBOX_DIR}/perf.data.folded"
+			perl "${BENCHMARK_DIR}/_script/flamegraph/flamegraph.pl" "${SANDBOX_DIR}/perf.data.folded" > "${FLAMEGRAPH}"
+		fi
+	else
+		# macos - requires system integrity protection is disabled :(
+		# dtrace -s "bash ${TEST_RUN_SCRIPT}" -o filename -n "profile-997 /execname == \"${TEST_CLI}\"/ { @[ustack(100)] = count(); }"
+		echo "$0: profiling is not supported on ${SYSTEM}" 1>&2
+		exit 4
+	fi
+}
+
+exec_hyperfine() {
+	if [ "$FLAMEGRAPH" != "" ]; then
+		echo "$0: flamegraph is not supported in standard mode" 1>&2
+		exit 1
+	fi
 
 	if [ "${BASELINE_CLI}" != "" ]; then
 		BASELINE_CLI_PATH=$(fullpath "${BASELINE_CLI}")
-		BASELINE_RUN_SCRIPT=$(create_runscript "baseline" "${BASELINE_CLI_PATH}" "$@")
+		BASELINE_RUN_SCRIPT=$(create_run_script "baseline" "${BASELINE_CLI_PATH}" "${GIT_ARGUMENTS[@]}")
 	fi
-	TEST_CLI_PATH=$(fullpath "${TEST_CLI}")
-	TEST_RUN_SCRIPT=$(create_runscript "test" "${TEST_CLI_PATH}" "$@")
 
-	PREPARE_SCRIPT="$(create_preparescript)"
+	TEST_CLI_PATH=$(fullpath "${TEST_CLI}")
+	TEST_RUN_SCRIPT=$(create_run_script "test" "${TEST_CLI_PATH}" "${GIT_ARGUMENTS[@]}")
+
 	ARGUMENTS=("--prepare" "bash ${PREPARE_SCRIPT}" "--warmup" "${WARMUP}")
 
 	if [ "${OUTPUT_STYLE}" != "" ]; then
@@ -404,13 +477,42 @@ gitbench() {
 	fi
 
 	if [ "${BASELINE_CLI}" != "" ]; then
-		ARGUMENTS+=("-n" "${BASELINE_CLI} $*" "bash ${BASELINE_RUN_SCRIPT}")
+		ARGUMENTS+=("-n" "${BASELINE_CLI} ${GIT_ARGUMENTS[*]}" "bash ${BASELINE_RUN_SCRIPT}")
 	fi
 
-	ARGUMENTS+=("-n" "${TEST_CLI} $*" "bash ${TEST_RUN_SCRIPT}")
+	ARGUMENTS+=("-n" "${TEST_CLI} ${GIT_ARGUMENTS[*]}" "bash ${TEST_RUN_SCRIPT}")
 
 	hyperfine "${ARGUMENTS[@]}"
-	rm -rf "${SANDBOX_DIR:?}"
+}
+
+#
+# this is the function that the outer script calls to actually do the sandboxing and
+# invocation of hyperfine.
+#
+gitbench() {
+	eval $(parse_arguments "$@")
+
+	# sanity check
+
+	for a in "${SANDBOX[@]}"; do
+		if [ ! -d "$(resources_dir)/${a}" ]; then
+			echo "$0: no resource '${a}' found" 1>&2
+			exit 1
+		fi
+	done
+
+	# set up our sandboxing
+
+	SANDBOX_DIR="$(temp_dir)"
+	PREPARE_SCRIPT="$(create_prepare_script)"
+
+	if [ "${PROFILE}" != "" ]; then
+		exec_profiler
+	else
+		exec_hyperfine
+	fi
+
+#	rm -rf "${SANDBOX_DIR:?}"
 }
 
 # helper script to give useful error messages about configuration
@@ -431,7 +533,7 @@ needs_repo() {
 		echo "" 1>&2
 		echo "This benchmark needs an on-disk '${REPO}' repository. First, clone the" 1>&2
 		echo "remote repository ('${REPO_REMOTE_URL}') locally then set" 1>&2
-		echo "the 'BENCHMARK_${REPO_UPPER}_REPOSITORY' environment variable to the path that" 1>&2
+		echo "the 'BENCHMARK_${REPO_UPPER}_PATH' environment variable to the path that" 1>&2
 		echo "contains the repository locally, then run this benchmark again." 1>&2
 		exit 2
 	fi
