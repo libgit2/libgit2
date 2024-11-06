@@ -10,6 +10,7 @@
 
 #include "git2_util.h"
 #include "vector.h"
+#include "fs_path.h"
 
 #include "common.h"
 #include "error.h"
@@ -105,7 +106,7 @@ done:
 	if (error && backend)
 		backend->free(backend);
 	git_config_free(config);
-	git_vector_free_deep(&cmdline);
+	git_vector_dispose_deep(&cmdline);
 	return error;
 }
 
@@ -123,4 +124,45 @@ int cli_repository_open(
 
 	*out = repo;
 	return 0;
+}
+
+/*
+ * This resolves paths - not _pathspecs_ like git - it accepts an absolute
+ * path (to a path within the repository working directory) or a path
+ * relative to the current directory.
+ */
+int cli_resolve_path(git_str *out, git_repository *repo, const char *given_path)
+{
+	git_str path = GIT_STR_INIT;
+	int error = 0;
+
+	if (!git_fs_path_is_absolute(given_path)) {
+		char cwd[GIT_PATH_MAX];
+
+		if (p_getcwd(cwd, GIT_PATH_MAX) < 0)
+			error = cli_error_os();
+		else if (git_str_puts(&path, cwd) < 0 ||
+		         git_fs_path_apply_relative(&path, given_path) < 0)
+			error = cli_error_git();
+
+		if (error)
+			goto done;
+	} else if (git_str_puts(&path, given_path) < 0) {
+		error = cli_error_git();
+		goto done;
+	}
+
+	error = git_fs_path_make_relative(&path, git_repository_workdir(repo));
+
+	if (error == GIT_ENOTFOUND)
+		error = cli_error("path '%s' is not inside the git repository '%s'",
+			given_path, git_repository_workdir(repo));
+	else if (error < 0)
+		error = cli_error_git();
+	else
+		git_str_swap(out, &path);
+
+done:
+	git_str_dispose(&path);
+	return error;
 }

@@ -20,9 +20,9 @@ static void diff_parsed_free(git_diff *d)
 	git_vector_foreach(&diff->patches, i, patch)
 		git_patch_free(patch);
 
-	git_vector_free(&diff->patches);
+	git_vector_dispose(&diff->patches);
 
-	git_vector_free(&diff->base.deltas);
+	git_vector_dispose(&diff->base.deltas);
 	git_pool_clear(&diff->base.pool);
 
 	git__memzero(diff, sizeof(*diff));

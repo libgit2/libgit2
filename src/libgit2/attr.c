@@ -13,6 +13,7 @@
 #include "attr_file.h"
 #include "ignore.h"
 #include "git2/oid.h"
+#include "hashmap_str.h"
 #include <ctype.h>
 
 const char *git_attr__true  = "[internal]__TRUE__";
@@ -254,7 +255,7 @@ int git_attr_foreach_ext(
 	git_attr_file *file;
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
-	git_strmap *seen = NULL;
+	git_hashset_str seen = GIT_HASHSET_INIT;
 	git_dir_flag dir_flag = GIT_DIR_FLAG_UNKNOWN;
 
 	GIT_ASSERT_ARG(repo);
@@ -267,8 +268,7 @@ int git_attr_foreach_ext(
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, NULL, opts, pathname, &files)) < 0 ||
-	    (error = git_strmap_new(&seen)) < 0)
+	if ((error = collect_attr_files(repo, NULL, opts, pathname, &files)) < 0)
 		goto cleanup;
 
 	git_vector_foreach(&files, i, file) {
@@ -277,10 +277,10 @@ int git_attr_foreach_ext(
 
 			git_vector_foreach(&rule->assigns, k, assign) {
 				/* skip if higher priority assignment was already seen */
-				if (git_strmap_exists(seen, assign->name))
+				if (git_hashset_str_contains(&seen, assign->name))
 					continue;
 
-				if ((error = git_strmap_set(seen, assign->name, assign)) < 0)
+				if ((error = git_hashset_str_add(&seen, assign->name)) < 0)
 					goto cleanup;
 
 				error = callback(assign->name, assign->value, payload);
@@ -293,7 +293,7 @@ int git_attr_foreach_ext(
 	}
 
 cleanup:
-	git_strmap_free(seen);
+	git_hashset_str_dispose(&seen);
 	release_attr_files(&files);
 	git_attr_path__free(&path);
 
@@ -384,6 +384,8 @@ static int attr_setup(
 	git_attr_file_source index_source = { GIT_ATTR_FILE_SOURCE_INDEX, NULL, GIT_ATTR_FILE, NULL };
 	git_attr_file_source head_source = { GIT_ATTR_FILE_SOURCE_HEAD, NULL, GIT_ATTR_FILE, NULL };
 	git_attr_file_source commit_source = { GIT_ATTR_FILE_SOURCE_COMMIT, NULL, GIT_ATTR_FILE, NULL };
+	git_attr_cache *attrcache;
+	const char *attr_cfg_file = NULL;
 	git_index *idx = NULL;
 	const char *workdir;
 	int error = 0;
@@ -407,8 +409,10 @@ static int attr_setup(
 		error = 0;
 	}
 
-	if ((error = preload_attr_file(repo, attr_session, NULL,
-	                               git_repository_attr_cache(repo)->cfg_attr_file)) < 0)
+	if ((attrcache = git_repository_attr_cache(repo)) != NULL)
+		attr_cfg_file = git_attr_cache_attributesfile(attrcache);
+
+	if ((error = preload_attr_file(repo, attr_session, NULL, attr_cfg_file)) < 0)
 		goto out;
 
 	if ((error = git_repository__item_path(&info, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
@@ -464,6 +468,7 @@ int git_attr_add_macro(
 {
 	int error;
 	git_attr_rule *macro = NULL;
+	git_attr_cache *attrcache;
 	git_pool *pool;
 
 	GIT_ASSERT_ARG(repo);
@@ -475,7 +480,8 @@ int git_attr_add_macro(
 	macro = git__calloc(1, sizeof(git_attr_rule));
 	GIT_ERROR_CHECK_ALLOC(macro);
 
-	pool = &git_repository_attr_cache(repo)->pool;
+	attrcache = git_repository_attr_cache(repo);
+	pool = git_attr_cache_pool(attrcache);
 
 	macro->match.pattern = git_pool_strdup(pool, name);
 	GIT_ERROR_CHECK_ALLOC(macro->match.pattern);
@@ -618,7 +624,7 @@ static void release_attr_files(git_vector *files)
 		git_attr_file__free(file);
 		files->contents[i] = NULL;
 	}
-	git_vector_free(files);
+	git_vector_dispose(files);
 }
 
 static int collect_attr_files(
@@ -631,6 +637,8 @@ static int collect_attr_files(
 	int error = 0;
 	git_str dir = GIT_STR_INIT, attrfile = GIT_STR_INIT;
 	const char *workdir = git_repository_workdir(repo);
+	git_attr_cache *attrcache;
+	const char *attr_cfg_file = NULL;
 	attr_walk_up_info info = { NULL };
 
 	GIT_ASSERT(!git_fs_path_is_absolute(path));
@@ -679,8 +687,13 @@ static int collect_attr_files(
 	if (error < 0)
 		goto cleanup;
 
-	if (git_repository_attr_cache(repo)->cfg_attr_file != NULL) {
-		error = push_attr_file(repo, attr_session, files, NULL, git_repository_attr_cache(repo)->cfg_attr_file);
+	if ((attrcache = git_repository_attr_cache(repo)) != NULL)
+		attr_cfg_file = git_attr_cache_attributesfile(attrcache);
+
+
+	if (attr_cfg_file) {
+		error = push_attr_file(repo, attr_session, files, NULL, attr_cfg_file);
+
 		if (error < 0)
 			goto cleanup;
 	}

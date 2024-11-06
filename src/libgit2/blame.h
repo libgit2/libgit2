@@ -71,6 +71,7 @@ struct git_blame {
 	git_blame_options options;
 
 	git_vector hunks;
+	git_array_t(git_blame_line) lines;
 	git_vector paths;
 
 	git_blob *final_blob;

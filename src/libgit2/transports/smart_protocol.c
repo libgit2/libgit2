@@ -394,6 +394,7 @@ static int setup_shallow_roots(
 
 		memcpy(out->ptr, wants->shallow_roots,
 		       sizeof(git_oid) * wants->shallow_roots_len);
+		out->size = wants->shallow_roots_len;
 	}
 
 	return 0;

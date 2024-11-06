@@ -548,7 +548,7 @@ int git_tag_list_match(git_strarray *tag_names, const char *pattern, git_reposit
 	error = git_tag_foreach(repo, &tag_list_cb, (void *)&filter);
 
 	if (error < 0)
-		git_vector_free(&taglist);
+		git_vector_dispose(&taglist);
 
 	tag_names->strings =
 		(char **)git_vector_detach(&tag_names->count, NULL, &taglist);

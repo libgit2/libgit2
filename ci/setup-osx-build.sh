@@ -3,6 +3,8 @@
 set -ex
 
 brew update
-brew install pkgconfig libssh2 ninja
+brew install ninja
 
-ln -s /Applications/Xcode.app/Contents/Developer/usr/lib/libLeaksAtExit.dylib /usr/local/lib
+sudo mkdir /usr/local/lib || true
+sudo chmod 0755 /usr/local/lib
+sudo ln -s /Applications/Xcode.app/Contents/Developer/usr/lib/libLeaksAtExit.dylib /usr/local/lib

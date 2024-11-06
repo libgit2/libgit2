@@ -1,8 +1,6 @@
 # util: a shared library for common utility functions for libgit2 projects
 
 add_library(util OBJECT)
-set_target_properties(util PROPERTIES C_STANDARD 90)
-set_target_properties(util PROPERTIES C_EXTENSIONS OFF)
 
 configure_file(git2_features.h.in git2_features.h)
 
@@ -36,7 +34,7 @@ if(USE_SHA1 STREQUAL "CollisionDetection")
 	target_compile_definitions(util PRIVATE SHA1DC_NO_STANDARD_INCLUDES=1)
         target_compile_definitions(util PRIVATE SHA1DC_CUSTOM_INCLUDE_SHA1_C=\"git2_util.h\")
         target_compile_definitions(util PRIVATE SHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C=\"git2_util.h\")
-elseif(USE_SHA1 STREQUAL "OpenSSL" OR USE_SHA1 STREQUAL "OpenSSL-Dynamic")
+elseif(USE_SHA1 STREQUAL "OpenSSL" OR USE_SHA1 STREQUAL "OpenSSL-Dynamic" OR USE_SHA1 STREQUAL "OpenSSL-FIPS")
 	add_definitions(-DOPENSSL_API_COMPAT=0x10100000L)
 	file(GLOB UTIL_SRC_SHA1 hash/openssl.*)
 elseif(USE_SHA1 STREQUAL "CommonCrypto")
@@ -51,9 +49,9 @@ endif()
 
 list(SORT UTIL_SRC_SHA1)
 
-if(USE_SHA256 STREQUAL "Builtin")
+if(USE_SHA256 STREQUAL "builtin")
 	file(GLOB UTIL_SRC_SHA256 hash/builtin.* hash/rfc6234/*)
-elseif(USE_SHA256 STREQUAL "OpenSSL" OR USE_SHA256 STREQUAL "OpenSSL-Dynamic")
+elseif(USE_SHA256 STREQUAL "OpenSSL" OR USE_SHA256 STREQUAL "OpenSSL-Dynamic" OR USE_SHA256 STREQUAL "OpenSSL-FIPS")
 	add_definitions(-DOPENSSL_API_COMPAT=0x10100000L)
 	file(GLOB UTIL_SRC_SHA256 hash/openssl.*)
 elseif(USE_SHA256 STREQUAL "CommonCrypto")
@@ -63,7 +61,7 @@ elseif(USE_SHA256 STREQUAL "mbedTLS")
 elseif(USE_SHA256 STREQUAL "Win32")
 	file(GLOB UTIL_SRC_SHA256 hash/win32.*)
 else()
-	message(FATAL_ERROR "Asked for unknown SHA256 backend: ${USE_SHA256}")
+	message(FATAL_ERROR "asked for unknown SHA256 backend: ${USE_SHA256}")
 endif()
 
 list(SORT UTIL_SRC_SHA256)

@@ -30,8 +30,8 @@
 #include "fs_path.h"
 #include "attr.h"
 #include "pool.h"
-#include "strmap.h"
 #include "path.h"
+#include "hashmap_str.h"
 
 /* See docs/checkout-internals.md for more information */
 
@@ -72,7 +72,7 @@ typedef struct {
 	size_t total_steps;
 	size_t completed_steps;
 	git_checkout_perfdata perfdata;
-	git_strmap *mkdir_map;
+	git_hashset_str mkdir_pathcache;
 	git_attr_session attr_session;
 } checkout_data;
 
@@ -294,6 +294,9 @@ static int checkout_action_no_wd(
 
 	*action = CHECKOUT_ACTION__NONE;
 
+	if ((data->strategy & GIT_CHECKOUT_NONE))
+		return 0;
+
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED: /* case 12 */
 		error = checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, NULL);
@@ -302,17 +305,17 @@ static int checkout_action_no_wd(
 		*action = CHECKOUT_ACTION_IF(RECREATE_MISSING, UPDATE_BLOB, NONE);
 		break;
 	case GIT_DELTA_ADDED:    /* case 2 or 28 (and 5 but not really) */
-		*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+		*action = CHECKOUT_ACTION__UPDATE_BLOB;
 		break;
 	case GIT_DELTA_MODIFIED: /* case 13 (and 35 but not really) */
 		*action = CHECKOUT_ACTION_IF(RECREATE_MISSING, UPDATE_BLOB, CONFLICT);
 		break;
 	case GIT_DELTA_TYPECHANGE: /* case 21 (B->T) and 28 (T->B)*/
 		if (delta->new_file.mode == GIT_FILEMODE_TREE)
-			*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+			*action = CHECKOUT_ACTION__UPDATE_BLOB;
 		break;
 	case GIT_DELTA_DELETED: /* case 8 or 25 */
-		*action = CHECKOUT_ACTION_IF(SAFE, REMOVE, NONE);
+		*action = CHECKOUT_ACTION__REMOVE;
 		break;
 	default: /* impossible */
 		break;
@@ -494,6 +497,9 @@ static int checkout_action_with_wd(
 {
 	*action = CHECKOUT_ACTION__NONE;
 
+	if ((data->strategy & GIT_CHECKOUT_NONE))
+		return 0;
+
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED: /* case 14/15 or 33 */
 		if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd)) {
@@ -512,14 +518,14 @@ static int checkout_action_with_wd(
 		if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
 		else
-			*action = CHECKOUT_ACTION_IF(SAFE, REMOVE, NONE);
+			*action = CHECKOUT_ACTION__REMOVE;
 		break;
 	case GIT_DELTA_MODIFIED: /* case 16, 17, 18 (or 36 but not really) */
 		if (wd->mode != GIT_FILEMODE_COMMIT &&
 			checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
 		else
-			*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+			*action = CHECKOUT_ACTION__UPDATE_BLOB;
 		break;
 	case GIT_DELTA_TYPECHANGE: /* case 22, 23, 29, 30 */
 		if (delta->old_file.mode == GIT_FILEMODE_TREE) {
@@ -527,13 +533,13 @@ static int checkout_action_with_wd(
 				/* either deleting items in old tree will delete the wd dir,
 				 * or we'll get a conflict when we attempt blob update...
 				 */
-				*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+				*action = CHECKOUT_ACTION__UPDATE_BLOB;
 			else if (wd->mode == GIT_FILEMODE_COMMIT) {
 				/* workdir is possibly a "phantom" submodule - treat as a
 				 * tree if the only submodule info came from the config
 				 */
 				if (submodule_is_config_only(data, wd->path))
-					*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+					*action = CHECKOUT_ACTION__UPDATE_BLOB;
 				else
 					*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 			} else
@@ -542,7 +548,7 @@ static int checkout_action_with_wd(
 		else if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		else
-			*action = CHECKOUT_ACTION_IF(SAFE, REMOVE_AND_UPDATE, NONE);
+			*action = CHECKOUT_ACTION__REMOVE_AND_UPDATE;
 
 		/* don't update if the typechange is to a tree */
 		if (delta->new_file.mode == GIT_FILEMODE_TREE)
@@ -562,6 +568,9 @@ static int checkout_action_with_wd_blocker(
 	const git_index_entry *wd)
 {
 	*action = CHECKOUT_ACTION__NONE;
+
+	if ((data->strategy & GIT_CHECKOUT_NONE))
+		return 0;
 
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED:
@@ -597,6 +606,9 @@ static int checkout_action_with_wd_dir(
 {
 	*action = CHECKOUT_ACTION__NONE;
 
+	if ((data->strategy & GIT_CHECKOUT_NONE))
+		return 0;
+
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED: /* case 19 or 24 (or 34 but not really) */
 		GIT_ERROR_CHECK_ERROR(
@@ -627,7 +639,7 @@ static int checkout_action_with_wd_dir(
 			 * directory if is it left empty, so we can defer removing the
 			 * dir and it will succeed if no children are left.
 			 */
-			*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+			*action = CHECKOUT_ACTION__UPDATE_BLOB;
 		}
 		else if (delta->new_file.mode != GIT_FILEMODE_TREE)
 			/* For typechange to dir, dir is already created so no action */
@@ -1419,8 +1431,10 @@ static int checkout_mkdir(
 	struct git_futils_mkdir_options mkdir_opts = {0};
 	int error;
 
-	mkdir_opts.dir_map = data->mkdir_map;
-	mkdir_opts.pool = &data->pool;
+	if (git_pool_is_initialized(&data->pool)) {
+		mkdir_opts.cache_pool = &data->pool;
+		mkdir_opts.cache_pathset = &data->mkdir_pathcache;
+	}
 
 	error = git_futils_mkdir_relative(
 		path, base, mode, flags, &mkdir_opts);
@@ -2316,11 +2330,11 @@ static void checkout_data_clear(checkout_data *data)
 		data->opts.baseline = NULL;
 	}
 
-	git_vector_free(&data->removes);
+	git_vector_dispose(&data->removes);
 	git_pool_clear(&data->pool);
 
-	git_vector_free_deep(&data->remove_conflicts);
-	git_vector_free_deep(&data->update_conflicts);
+	git_vector_dispose_deep(&data->remove_conflicts);
+	git_vector_dispose_deep(&data->update_conflicts);
 
 	git__free(data->pfx);
 	data->pfx = NULL;
@@ -2331,8 +2345,7 @@ static void checkout_data_clear(checkout_data *data)
 	git_index_free(data->index);
 	data->index = NULL;
 
-	git_strmap_free(data->mkdir_map);
-	data->mkdir_map = NULL;
+	git_hashset_str_dispose(&data->mkdir_pathcache);
 
 	git_attr_session__free(&data->attr_session);
 }
@@ -2432,14 +2445,12 @@ static int checkout_data_init(
 
 	/* if you are forcing, allow all safe updates, plus recreate missing */
 	if ((data->opts.checkout_strategy & GIT_CHECKOUT_FORCE) != 0)
-		data->opts.checkout_strategy |= GIT_CHECKOUT_SAFE |
-			GIT_CHECKOUT_RECREATE_MISSING;
+		data->opts.checkout_strategy |= GIT_CHECKOUT_RECREATE_MISSING;
 
 	/* if the repository does not actually have an index file, then this
 	 * is an initial checkout (perhaps from clone), so we allow safe updates
 	 */
-	if (!data->index->on_disk &&
-		(data->opts.checkout_strategy & GIT_CHECKOUT_SAFE) != 0)
+	if (!data->index->on_disk)
 		data->opts.checkout_strategy |= GIT_CHECKOUT_RECREATE_MISSING;
 
 	data->strategy = data->opts.checkout_strategy;
@@ -2513,8 +2524,7 @@ static int checkout_data_init(
 	    (error = git_vector_init(&data->remove_conflicts, 0, NULL)) < 0 ||
 	    (error = git_vector_init(&data->update_conflicts, 0, NULL)) < 0 ||
 	    (error = git_str_puts(&data->target_path, data->opts.target_directory)) < 0 ||
-	    (error = git_fs_path_to_dir(&data->target_path)) < 0 ||
-	    (error = git_strmap_new(&data->mkdir_map)) < 0)
+	    (error = git_fs_path_to_dir(&data->target_path)) < 0)
 		goto cleanup;
 
 	data->target_len = git_str_len(&data->target_path);

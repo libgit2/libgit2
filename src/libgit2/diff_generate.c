@@ -429,7 +429,7 @@ static void diff_generated_free(git_diff *d)
 	git_diff_generated *diff = (git_diff_generated *)d;
 
 	git_attr_session__free(&diff->base.attrsession);
-	git_vector_free_deep(&diff->base.deltas);
+	git_vector_dispose_deep(&diff->base.deltas);
 
 	git_pathspec__vfree(&diff->pathspec);
 	git_pool_clear(&diff->base.pool);
@@ -729,7 +729,7 @@ typedef struct {
 	git_iterator *new_iter;
 	const git_index_entry *oitem;
 	const git_index_entry *nitem;
-	git_strmap *submodule_cache;
+	git_submodule_cache *submodule_cache;
 	bool submodule_cache_initialized;
 } diff_in_progress;
 
@@ -745,7 +745,7 @@ static int maybe_modified_submodule(
 	git_submodule *sub;
 	unsigned int sm_status = 0;
 	git_submodule_ignore_t ign = diff->base.opts.ignore_submodules;
-	git_strmap *submodule_cache = NULL;
+	git_submodule_cache *submodule_cache = NULL;
 
 	*status = GIT_DELTA_UNMODIFIED;
 

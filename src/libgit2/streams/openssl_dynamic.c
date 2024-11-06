@@ -65,6 +65,7 @@ int (*SSL_write)(SSL *ssl, const void *buf, int num);
 long (*SSL_CTX_ctrl)(SSL_CTX *ctx, int cmd, long larg, void *parg);
 void (*SSL_CTX_free)(SSL_CTX *ctx);
 SSL_CTX *(*SSL_CTX_new)(const SSL_METHOD *method);
+X509_STORE *(*SSL_CTX_get_cert_store)(const SSL_CTX *);
 int (*SSL_CTX_set_cipher_list)(SSL_CTX *ctx, const char *str);
 int (*SSL_CTX_set_default_verify_paths)(SSL_CTX *ctx);
 long (*SSL_CTX_set_options)(SSL_CTX *ctx, long options);
@@ -80,6 +81,7 @@ int (*X509_NAME_get_index_by_NID)(X509_NAME *name, int nid, int lastpos);
 void (*X509_free)(X509 *a);
 void *(*X509_get_ext_d2i)(const X509 *x, int nid, int *crit, int *idx);
 X509_NAME *(*X509_get_subject_name)(const X509 *x);
+int (*X509_STORE_add_cert)(X509_STORE *ctx, X509 *x);
 
 int (*i2d_X509)(X509 *a, unsigned char **ppout);
 
@@ -194,6 +196,7 @@ int git_openssl_stream_dynamic_init(void)
 	SSL_CTX_ctrl = (long (*)(SSL_CTX *, int, long, void *))openssl_sym(&err, "SSL_CTX_ctrl", true);
 	SSL_CTX_free = (void (*)(SSL_CTX *))openssl_sym(&err, "SSL_CTX_free", true);
 	SSL_CTX_new = (SSL_CTX *(*)(const SSL_METHOD *))openssl_sym(&err, "SSL_CTX_new", true);
+	SSL_CTX_get_cert_store = (X509_STORE *(*)(const SSL_CTX *))openssl_sym(&err, "SSL_CTX_get_cert_store", true);
 	SSL_CTX_set_cipher_list = (int (*)(SSL_CTX *, const char *))openssl_sym(&err, "SSL_CTX_set_cipher_list", true);
 	SSL_CTX_set_default_verify_paths = (int (*)(SSL_CTX *ctx))openssl_sym(&err, "SSL_CTX_set_default_verify_paths", true);
 	SSL_CTX_set_options = (long (*)(SSL_CTX *, long))openssl_sym(&err, "SSL_CTX_set_options", false);
@@ -209,6 +212,7 @@ int git_openssl_stream_dynamic_init(void)
 	X509_free = (void (*)(X509 *))openssl_sym(&err, "X509_free", true);
 	X509_get_ext_d2i = (void *(*)(const X509 *x, int nid, int *crit, int *idx))openssl_sym(&err, "X509_get_ext_d2i", true);
 	X509_get_subject_name = (X509_NAME *(*)(const X509 *))openssl_sym(&err, "X509_get_subject_name", true);
+	X509_STORE_add_cert = (int (*)(X509_STORE *ctx, X509 *x))openssl_sym(&err, "X509_STORE_add_cert", true);
 
 	i2d_X509 = (int (*)(X509 *a, unsigned char **ppout))openssl_sym(&err, "i2d_X509", true);
 

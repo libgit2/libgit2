@@ -8,6 +8,10 @@
 #ifndef CLI_opt_usage_h__
 #define CLI_opt_usage_h__
 
+typedef enum {
+	CLI_OPT_USAGE_SHOW_HIDDEN = (1 << 0),
+} cli_opt_usage_flags;
+
 /**
  * Prints usage information to the given file handle.
  *
@@ -21,7 +25,8 @@ int cli_opt_usage_fprint(
 	FILE *file,
 	const char *command,
 	const char *subcommand,
-	const cli_opt_spec specs[]);
+	const cli_opt_spec specs[],
+	unsigned int print_flags);
 
 int cli_opt_usage_error(
 	const char *subcommand,

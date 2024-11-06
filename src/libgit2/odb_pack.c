@@ -863,8 +863,8 @@ static void pack_backend__free(git_odb_backend *_backend)
 		git_mwindow_put_pack(p);
 
 	git_midx_free(backend->midx);
-	git_vector_free(&backend->midx_packs);
-	git_vector_free(&backend->packs);
+	git_vector_dispose(&backend->midx_packs);
+	git_vector_dispose(&backend->packs);
 	git__free(backend->pack_folder);
 	git__free(backend);
 }
@@ -883,7 +883,7 @@ static int pack_backend__alloc(
 	}
 
 	if (git_vector_init(&backend->packs, initial_size, packfile_sort__cb) < 0) {
-		git_vector_free(&backend->midx_packs);
+		git_vector_dispose(&backend->midx_packs);
 		git__free(backend);
 		return -1;
 	}

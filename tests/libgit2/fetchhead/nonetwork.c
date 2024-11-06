@@ -106,7 +106,7 @@ void test_fetchhead_nonetwork__write(void)
 		git_fetchhead_ref_free(fetchhead_ref);
 	}
 
-	git_vector_free(&fetchhead_vector);
+	git_vector_dispose(&fetchhead_vector);
 
 	cl_assert(equals);
 }
@@ -166,7 +166,7 @@ void test_fetchhead_nonetwork__read(void)
 		git_fetchhead_ref_free(fetchhead_ref);
 	}
 
-	git_vector_free(&fetchhead_vector);
+	git_vector_dispose(&fetchhead_vector);
 }
 
 static int read_old_style_cb(const char *name, const char *url,

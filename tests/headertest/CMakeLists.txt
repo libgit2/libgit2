@@ -3,8 +3,7 @@
 # even when they have aggressive C90 warnings enabled.
 
 add_executable(headertest headertest.c)
-set_target_properties(headertest PROPERTIES C_STANDARD 90)
-set_target_properties(headertest PROPERTIES C_EXTENSIONS OFF)
+
 target_include_directories(headertest PRIVATE ${LIBGIT2_INCLUDES})
 
 if (MSVC)

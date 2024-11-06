@@ -1442,9 +1442,9 @@ int git_http_client_read_response(
 	git_http_response_dispose(response);
 
 	if (client->current_server == PROXY) {
-		git_vector_free_deep(&client->proxy.auth_challenges);
+		git_vector_dispose_deep(&client->proxy.auth_challenges);
 	} else if(client->current_server == SERVER) {
-		git_vector_free_deep(&client->server.auth_challenges);
+		git_vector_dispose_deep(&client->server.auth_challenges);
 	}
 
 	client->state = READING_RESPONSE;
@@ -1605,7 +1605,7 @@ GIT_INLINE(void) http_server_close(git_http_server *server)
 
 	git_net_url_dispose(&server->url);
 
-	git_vector_free_deep(&server->auth_challenges);
+	git_vector_dispose_deep(&server->auth_challenges);
 	free_auth_context(server);
 }
 

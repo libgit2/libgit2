@@ -93,7 +93,7 @@ void llhttp_free(llhttp_t* parser) {
   free(parser);
 }
 
-#endif  // defined(__wasm__)
+#endif  /* defined(__wasm__) */
 
 /* Some getters required to get stuff from the parser */
 

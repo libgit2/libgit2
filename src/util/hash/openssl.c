@@ -120,6 +120,82 @@ int git_hash_sha1_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 
 #endif
 
+#ifdef GIT_SHA1_OPENSSL_FIPS
+
+static const EVP_MD *SHA1_ENGINE_DIGEST_TYPE = NULL;
+
+int git_hash_sha1_global_init(void)
+{
+	SHA1_ENGINE_DIGEST_TYPE = EVP_sha1();
+	return SHA1_ENGINE_DIGEST_TYPE != NULL ? 0 : -1;
+}
+
+int git_hash_sha1_ctx_init(git_hash_sha1_ctx *ctx)
+{
+	return git_hash_sha1_init(ctx);
+}
+
+void git_hash_sha1_ctx_cleanup(git_hash_sha1_ctx *ctx)
+{
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	EVP_MD_CTX_destroy(ctx->c);
+#else
+	EVP_MD_CTX_free(ctx->c);
+#endif
+}
+
+int git_hash_sha1_init(git_hash_sha1_ctx *ctx)
+{
+	GIT_ASSERT_ARG(ctx);
+	GIT_ASSERT(SHA1_ENGINE_DIGEST_TYPE);
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	ctx->c = EVP_MD_CTX_create();
+#else
+	ctx->c = EVP_MD_CTX_new();
+#endif
+
+	GIT_ASSERT(ctx->c);
+
+	if (EVP_DigestInit_ex(ctx->c, SHA1_ENGINE_DIGEST_TYPE, NULL) != 1) {
+		git_hash_sha1_ctx_cleanup(ctx);
+		git_error_set(GIT_ERROR_SHA, "failed to initialize sha1 context");
+		return -1;
+	}
+
+	return 0;
+}
+
+int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
+{
+	GIT_ASSERT_ARG(ctx && ctx->c);
+
+	if (EVP_DigestUpdate(ctx->c, data, len) != 1) {
+		git_error_set(GIT_ERROR_SHA, "failed to update sha1");
+		return -1;
+	}
+
+	return 0;
+}
+
+int git_hash_sha1_final(unsigned char *out, git_hash_sha1_ctx *ctx)
+{
+	unsigned int len = 0;
+
+	GIT_ASSERT_ARG(ctx && ctx->c);
+
+	if (EVP_DigestFinal(ctx->c, out, &len) != 1) {
+		git_error_set(GIT_ERROR_SHA, "failed to finalize sha1");
+		return -1;
+	}
+
+	ctx->c = NULL;
+
+	return 0;
+}
+
+#endif
+
 #ifdef GIT_SHA256_OPENSSL
 
 # ifdef GIT_OPENSSL_DYNAMIC
@@ -188,6 +264,82 @@ int git_hash_sha256_final(unsigned char *out, git_hash_sha256_ctx *ctx)
 		git_error_set(GIT_ERROR_SHA, "failed to finalize sha256");
 		return -1;
 	}
+
+	return 0;
+}
+
+#endif
+
+#ifdef GIT_SHA256_OPENSSL_FIPS
+
+static const EVP_MD *SHA256_ENGINE_DIGEST_TYPE = NULL;
+
+int git_hash_sha256_global_init(void)
+{
+	SHA256_ENGINE_DIGEST_TYPE = EVP_sha256();
+	return SHA256_ENGINE_DIGEST_TYPE != NULL ? 0 : -1;
+}
+
+int git_hash_sha256_ctx_init(git_hash_sha256_ctx *ctx)
+{
+	return git_hash_sha256_init(ctx);
+}
+
+void git_hash_sha256_ctx_cleanup(git_hash_sha256_ctx *ctx)
+{
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	EVP_MD_CTX_destroy(ctx->c);
+#else
+	EVP_MD_CTX_free(ctx->c);
+#endif
+}
+
+int git_hash_sha256_init(git_hash_sha256_ctx *ctx)
+{
+	GIT_ASSERT_ARG(ctx);
+	GIT_ASSERT(SHA256_ENGINE_DIGEST_TYPE);
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	ctx->c = EVP_MD_CTX_create();
+#else
+	ctx->c = EVP_MD_CTX_new();
+#endif
+
+	GIT_ASSERT(ctx->c);
+
+	if (EVP_DigestInit_ex(ctx->c, SHA256_ENGINE_DIGEST_TYPE, NULL) != 1) {
+		git_hash_sha256_ctx_cleanup(ctx);
+		git_error_set(GIT_ERROR_SHA, "failed to initialize sha256 context");
+		return -1;
+	}
+
+	return 0;
+}
+
+int git_hash_sha256_update(git_hash_sha256_ctx *ctx, const void *data, size_t len)
+{
+	GIT_ASSERT_ARG(ctx && ctx->c);
+
+	if (EVP_DigestUpdate(ctx->c, data, len) != 1) {
+		git_error_set(GIT_ERROR_SHA, "failed to update sha256");
+		return -1;
+	}
+
+	return 0;
+}
+
+int git_hash_sha256_final(unsigned char *out, git_hash_sha256_ctx *ctx)
+{
+	unsigned int len = 0;
+
+	GIT_ASSERT_ARG(ctx && ctx->c);
+
+	if (EVP_DigestFinal(ctx->c, out, &len) != 1) {
+		git_error_set(GIT_ERROR_SHA, "failed to finalize sha256");
+		return -1;
+	}
+
+	ctx->c = NULL;
 
 	return 0;
 }

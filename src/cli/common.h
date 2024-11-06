@@ -20,20 +20,31 @@
  * Common command arguments.
  */
 
+extern int cli_opt__show_help;
+extern int cli_opt__use_pager;
+
 #define CLI_COMMON_OPT_HELP \
-	CLI_OPT_TYPE_SWITCH, "help",       0, &show_help, 1, \
-	CLI_OPT_USAGE_HIDDEN | CLI_OPT_USAGE_STOP_PARSING
+	CLI_OPT_TYPE_SWITCH, "help",       0, &cli_opt__show_help,  1, \
+	CLI_OPT_USAGE_HIDDEN | CLI_OPT_USAGE_STOP_PARSING, \
+	NULL, "display help information"
 #define CLI_COMMON_OPT_CONFIG \
-	CLI_OPT_TYPE_VALUE,   NULL,       'c', NULL,      0, \
-	CLI_OPT_USAGE_HIDDEN
+	CLI_OPT_TYPE_VALUE,   NULL,       'c', NULL,                0, \
+	CLI_OPT_USAGE_HIDDEN, \
+	"key=value", "add configuration value"
 #define CLI_COMMON_OPT_CONFIG_ENV \
-	CLI_OPT_TYPE_VALUE,  "config-env", 0,  NULL,      0, \
-	CLI_OPT_USAGE_HIDDEN
+	CLI_OPT_TYPE_VALUE,  "config-env", 0,  NULL,                0, \
+	CLI_OPT_USAGE_HIDDEN, \
+	"key=value", "set configuration value to environment variable"
+#define CLI_COMMON_OPT_NO_PAGER \
+	CLI_OPT_TYPE_SWITCH, "no-pager",   0,  &cli_opt__use_pager, 0, \
+	CLI_OPT_USAGE_HIDDEN, \
+	NULL, "don't paginate multi-page output"
 
 #define CLI_COMMON_OPT \
 	{ CLI_COMMON_OPT_HELP }, \
 	{ CLI_COMMON_OPT_CONFIG }, \
-	{ CLI_COMMON_OPT_CONFIG_ENV }
+	{ CLI_COMMON_OPT_CONFIG_ENV }, \
+	{ CLI_COMMON_OPT_NO_PAGER }
 
 typedef struct {
 	char **args;
@@ -44,23 +55,9 @@ extern int cli_repository_open(
 	git_repository **out,
 	cli_repository_open_options *opts);
 
-/*
- * Common command arguments.
- */
-
-#define CLI_COMMON_OPT_HELP \
-	CLI_OPT_TYPE_SWITCH, "help",       0, &show_help, 1, \
-	CLI_OPT_USAGE_HIDDEN | CLI_OPT_USAGE_STOP_PARSING
-#define CLI_COMMON_OPT_CONFIG \
-	CLI_OPT_TYPE_VALUE,   NULL,       'c', NULL,      0, \
-	CLI_OPT_USAGE_HIDDEN
-#define CLI_COMMON_OPT_CONFIG_ENV \
-	CLI_OPT_TYPE_VALUE,  "config-env", 0,  NULL,      0, \
-	CLI_OPT_USAGE_HIDDEN
-
-#define CLI_COMMON_OPT \
-	{ CLI_COMMON_OPT_HELP }, \
-	{ CLI_COMMON_OPT_CONFIG }, \
-	{ CLI_COMMON_OPT_CONFIG_ENV }
+extern int cli_resolve_path(
+	git_str *out,
+	git_repository *repo,
+	const char *given_path);
 
 #endif /* CLI_common_h__ */

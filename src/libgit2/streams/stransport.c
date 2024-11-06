@@ -13,13 +13,16 @@
 #include <Security/SecureTransport.h>
 #include <Security/SecCertificate.h>
 
+#include "common.h"
+#include "trace.h"
 #include "git2/transport.h"
-
 #include "streams/socket.h"
 
 static int stransport_error(OSStatus ret)
 {
-	CFStringRef message;
+	CFStringRef message_ref = NULL;
+	const char *message_cstr = NULL;
+	char *message_ptr = NULL;
 
 	if (ret == noErr || ret == errSSLClosedGraceful) {
 		git_error_clear();
@@ -27,14 +30,39 @@ static int stransport_error(OSStatus ret)
 	}
 
 #if !TARGET_OS_IPHONE
-	message = SecCopyErrorMessageString(ret, NULL);
-	GIT_ERROR_CHECK_ALLOC(message);
+	message_ref = SecCopyErrorMessageString(ret, NULL);
+	GIT_ERROR_CHECK_ALLOC(message_ref);
 
-	git_error_set(GIT_ERROR_NET, "SecureTransport error: %s", CFStringGetCStringPtr(message, kCFStringEncodingUTF8));
-	CFRelease(message);
+	/*
+	 * Attempt the cheap CFString conversion; this can return NULL
+	 * when that would be expensive. In that case, call the more
+	 * expensive function.
+	 */
+	message_cstr = CFStringGetCStringPtr(message_ref, kCFStringEncodingUTF8);
+
+	if (!message_cstr) {
+		/* Provide buffer to convert from UTF16 to UTF8 */
+		size_t message_size = CFStringGetLength(message_ref) * 2 + 1;
+
+		message_cstr = message_ptr = git__malloc(message_size);
+		GIT_ERROR_CHECK_ALLOC(message_ptr);
+
+		if (!CFStringGetCString(message_ref, message_ptr, message_size, kCFStringEncodingUTF8)) {
+			git_error_set(GIT_ERROR_NET, "SecureTransport error: %d", (unsigned int)ret);
+			goto done;
+		}
+	}
+
+	git_error_set(GIT_ERROR_NET, "SecureTransport error: %s", message_cstr);
+
+done:
+	git__free(message_ptr);
+	CFRelease(message_ref);
 #else
 	git_error_set(GIT_ERROR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
-	GIT_UNUSED(message);
+	GIT_UNUSED(message_ref);
+	GIT_UNUSED(message_cstr);
+	GIT_UNUSED(message_ptr);
 #endif
 
 	return -1;
@@ -236,6 +264,10 @@ static ssize_t stransport_read(git_stream *stream, void *data, size_t len)
 	OSStatus ret;
 
 	if ((ret = SSLRead(st->ctx, data, len, &processed)) != noErr) {
+		/* This specific SecureTransport error is not well described */
+		if (ret == -9806)
+			git_trace(GIT_TRACE_INFO, "SecureTraceport error during SSLRead: returned -9806 (connection closed via error)");
+
 		if (st->error == GIT_TIMEOUT)
 			return GIT_TIMEOUT;
 

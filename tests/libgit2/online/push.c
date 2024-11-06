@@ -165,7 +165,7 @@ static void do_verify_push_status(record_callbacks_data *data, const push_status
 		git__free(s);
 	}
 
-	git_vector_free(actual);
+	git_vector_dispose(actual);
 }
 
 /**
@@ -272,7 +272,7 @@ failed:
 	git_vector_foreach(&actual_refs, i, actual_ref)
 		git__free(actual_ref);
 
-	git_vector_free(&actual_refs);
+	git_vector_dispose(&actual_refs);
 	git_str_dispose(&msg);
 	git_buf_dispose(&ref_name);
 }
@@ -416,7 +416,7 @@ void test_online_push__initialize(void)
 	}
 
 	git_remote_disconnect(_remote);
-	git_vector_free_deep(&delete_specs);
+	git_vector_dispose_deep(&delete_specs);
 
 	/* Now that we've deleted everything, fetch from the remote */
 	memcpy(&fetch_opts.callbacks, &_record_cbs, sizeof(git_remote_callbacks));

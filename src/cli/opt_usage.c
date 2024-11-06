@@ -46,7 +46,8 @@ int cli_opt_usage_fprint(
 	FILE *file,
 	const char *command,
 	const char *subcommand,
-	const cli_opt_spec specs[])
+	const cli_opt_spec specs[],
+	unsigned int print_flags)
 {
 	git_str usage = GIT_BUF_INIT, opt = GIT_BUF_INIT;
 	const cli_opt_spec *spec;
@@ -73,7 +74,8 @@ int cli_opt_usage_fprint(
 
 		next_choice = !!((spec + 1)->usage & CLI_OPT_USAGE_CHOICE);
 
-		if (spec->usage & CLI_OPT_USAGE_HIDDEN)
+		if ((spec->usage & CLI_OPT_USAGE_HIDDEN) &&
+		    !(print_flags & CLI_OPT_USAGE_SHOW_HIDDEN))
 			continue;
 
 		if (choice)
@@ -140,7 +142,7 @@ int cli_opt_usage_error(
 	const cli_opt *invalid_opt)
 {
 	cli_opt_status_fprint(stderr, PROGRAM_NAME, invalid_opt);
-	cli_opt_usage_fprint(stderr, PROGRAM_NAME, subcommand, specs);
+	cli_opt_usage_fprint(stderr, PROGRAM_NAME, subcommand, specs, 0);
 	return CLI_EXIT_USAGE;
 }
 
@@ -150,12 +152,19 @@ int cli_opt_help_fprint(
 {
 	git_str help = GIT_BUF_INIT;
 	const cli_opt_spec *spec;
+	bool required;
 	int error = 0;
 
 	/* Display required arguments first */
 	for (spec = specs; spec->type; ++spec) {
-		if (! (spec->usage & CLI_OPT_USAGE_REQUIRED) ||
-		    (spec->usage & CLI_OPT_USAGE_HIDDEN))
+		if ((spec->usage & CLI_OPT_USAGE_HIDDEN) ||
+		    (spec->type == CLI_OPT_TYPE_LITERAL))
+			continue;
+
+		required = ((spec->usage & CLI_OPT_USAGE_REQUIRED) ||
+		    ((spec->usage & CLI_OPT_USAGE_CHOICE) && required));
+
+		if (!required)
 			continue;
 
 		git_str_printf(&help, "    ");
@@ -163,13 +172,22 @@ int cli_opt_help_fprint(
 		if ((error = print_spec_name(&help, spec)) < 0)
 			goto done;
 
-		git_str_printf(&help, ": %s\n", spec->help);
+		if (spec->help)
+			git_str_printf(&help, ": %s", spec->help);
+
+		git_str_printf(&help, "\n");
 	}
 
 	/* Display the remaining arguments */
 	for (spec = specs; spec->type; ++spec) {
-		if ((spec->usage & CLI_OPT_USAGE_REQUIRED) ||
-		    (spec->usage & CLI_OPT_USAGE_HIDDEN))
+		if ((spec->usage & CLI_OPT_USAGE_HIDDEN) ||
+		    (spec->type == CLI_OPT_TYPE_LITERAL))
+			continue;
+
+		required = ((spec->usage & CLI_OPT_USAGE_REQUIRED) ||
+		    ((spec->usage & CLI_OPT_USAGE_CHOICE) && required));
+
+		if (required)
 			continue;
 
 		git_str_printf(&help, "    ");
@@ -177,8 +195,10 @@ int cli_opt_help_fprint(
 		if ((error = print_spec_name(&help, spec)) < 0)
 			goto done;
 
-		git_str_printf(&help, ": %s\n", spec->help);
+		if (spec->help)
+			git_str_printf(&help, ": %s", spec->help);
 
+		git_str_printf(&help, "\n");
 	}
 
 	if (git_str_oom(&help) ||

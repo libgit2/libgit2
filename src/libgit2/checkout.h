@@ -12,8 +12,6 @@
 #include "git2/checkout.h"
 #include "iterator.h"
 
-#define GIT_CHECKOUT__NOTIFY_CONFLICT_TREE (1u << 12)
-
 /**
  * Update the working directory to match the target iterator.  The
  * expected baseline value can be passed in via the checkout options

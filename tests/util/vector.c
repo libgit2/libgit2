@@ -12,7 +12,7 @@ void test_vector__0(void)
 	for (i = 0; i < 10; ++i) {
 		git_vector_insert(&x, (void*) 0xabc);
 	}
-	git_vector_free(&x);
+	git_vector_dispose(&x);
 }
 
 
@@ -27,7 +27,7 @@ void test_vector__1(void)
 	git_vector_insert(&x, (void*) 0x123);
 
 	git_vector_remove(&x, 0); /* used to read past array bounds. */
-	git_vector_free(&x);
+	git_vector_dispose(&x);
 }
 
 
@@ -59,7 +59,7 @@ void test_vector__2(void)
 	git_vector_uniq(&x, NULL);
 	cl_assert(x.length == 2);
 
-	git_vector_free(&x);
+	git_vector_dispose(&x);
 
 	git__free(ptrs[0]);
 	git__free(ptrs[1]);
@@ -91,7 +91,7 @@ void test_vector__3(void)
 		cl_assert(git_vector_get(&x, i) == (void*)(i + 1));
 	}
 
-	git_vector_free(&x);
+	git_vector_dispose(&x);
 }
 
 /* insert_sorted with duplicates */
@@ -122,7 +122,7 @@ void test_vector__4(void)
 		cl_assert(git_vector_get(&x, i) == (void*)(i / 2 + 1));
 	}
 
-	git_vector_free(&x);
+	git_vector_dispose(&x);
 }
 
 typedef struct {
@@ -189,7 +189,7 @@ void test_vector__5(void)
 		_struct_count--;
 	}
 
-	git_vector_free(&x);
+	git_vector_dispose(&x);
 }
 
 static int remove_ones(const git_vector *v, size_t idx, void *p)
@@ -274,7 +274,7 @@ void test_vector__remove_matching(void)
 	git_vector_remove_matching(&x, remove_ones, NULL);
 	cl_assert(x.length == 4);
 
-	git_vector_free(&x);
+	git_vector_dispose(&x);
 }
 
 static void assert_vector(git_vector *x, void *expected[], size_t len)
@@ -376,7 +376,7 @@ void test_vector__grow_and_shrink(void)
 	git_vector_remove_range(&x, 0, 1);
 	assert_vector(&x, NULL, 0);
 
-	git_vector_free(&x);
+	git_vector_dispose(&x);
 }
 
 void test_vector__reverse(void)
@@ -407,7 +407,7 @@ void test_vector__reverse(void)
 	for (i = 0; i < 5; i++)
 		cl_assert_equal_p(out2[i], git_vector_get(&v, i));
 
-	git_vector_free(&v);
+	git_vector_dispose(&v);
 }
 
 void test_vector__dup_empty_vector(void)
@@ -426,5 +426,5 @@ void test_vector__dup_empty_vector(void)
 	cl_assert_equal_i(8, dup._alloc_size);
 	cl_assert_equal_i(1, dup.length);
 
-	git_vector_free(&dup);
+	git_vector_dispose(&dup);
 }

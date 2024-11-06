@@ -43,7 +43,7 @@ jobs:
             name: noble
           env:
             CC: clang
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DUSE_HTTP_PARSER=http-parser
             CMAKE_GENERATOR: Ninja
         - name: "Linux (Xenial, GCC, OpenSSL, OpenSSH)"
           id: xenial-gcc-openssl
@@ -65,7 +65,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
         - name: "macOS"
           id: macos
-          os: macos-12
+          os: macos-13
           setup-script: osx
           env:
             CC: clang
@@ -74,13 +74,23 @@ jobs:
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
+        - name: "iOS"
+          id: ios
+          os: macos-13
+          setup-script: ios
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DBUILD_TESTS=OFF -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS64
+            CMAKE_GENERATOR: Ninja
+            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+            SKIP_TESTS: true # Cannot exec iOS app on macOS
         - name: "Windows (amd64, Visual Studio, Schannel)"
           id: windows-amd64-vs
-          os: windows-2019
+          os: windows-2022
           setup-script: win32
           env:
             ARCH: amd64
-            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_GENERATOR: Visual Studio 17 2022
             CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
             BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
             BUILD_TEMP: D:\Temp
@@ -88,11 +98,11 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (x86, Visual Studio, WinHTTP)"
           id: windows-x86-vs
-          os: windows-2019
+          os: windows-2022
           setup-script: win32
           env:
             ARCH: x86
-            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_GENERATOR: Visual Studio 17 2022
             CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
             BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
             BUILD_TEMP: D:\Temp
@@ -100,7 +110,7 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (amd64, mingw, WinHTTP)"
           id: windows-amd64-mingw
-          os: windows-2019
+          os: windows-2022
           setup-script: mingw
           env:
             ARCH: amd64
@@ -112,7 +122,7 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (x86, mingw, Schannel)"
           id: windows-x86-mingw
-          os: windows-2019
+          os: windows-2022
           setup-script: mingw
           env:
             ARCH: x86
@@ -131,9 +141,9 @@ jobs:
           container:
             name: noble
           env:
-            CC: clang-17
+            CC: clang
             CFLAGS: -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local/msan -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DCMAKE_C_EXTENSIONS=ON -DCMAKE_PREFIX_PATH=/usr/local/msan -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
@@ -146,7 +156,7 @@ jobs:
           container:
             name: noble
           env:
-            CC: clang-17
+            CC: clang
             CFLAGS: -fsanitize=undefined,nullability -fno-sanitize-recover=undefined,nullability -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
             CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
@@ -161,7 +171,7 @@ jobs:
           container:
             name: noble
           env:
-            CC: clang-17
+            CC: clang
             CFLAGS: -fsanitize=thread -fno-optimize-sibling-calls -fno-omit-frame-pointer
             CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
@@ -314,10 +324,10 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (no mmap)"
           id: windows-nommap
-          os: windows-2019
+          os: windows-2022
           env:
             ARCH: amd64
-            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_GENERATOR: Visual Studio 17 2022
             CFLAGS: -DNO_MMAP
             CMAKE_OPTIONS: -A x64 -DDEPRECATE_HARD=ON
             SKIP_SSH_TESTS: true
@@ -346,7 +356,7 @@ jobs:
           os: ubuntu-latest
         - name: "macOS (SHA256)"
           id: macos-sha256
-          os: macos-12
+          os: macos-13
           setup-script: osx
           env:
             CC: clang
@@ -356,13 +366,24 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (SHA256, amd64, Visual Studio)"
           id: windows-sha256
-          os: windows-2019
+          os: windows-2022
           env:
             ARCH: amd64
-            CMAKE_GENERATOR: Visual Studio 16 2019
+            CMAKE_GENERATOR: Visual Studio 17 2022
             CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
+            # TODO: this is a temporary removal
+            SKIP_GITDAEMON_TESTS: true
+        - name: "Linux (SHA256, Xenial, Clang, OpenSSL-FIPS)"
+          id: linux-sha256-fips
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DUSE_SHA1=OpenSSL-FIPS -DUSE_SHA256=OpenSSL-FIPS
+          os: ubuntu-latest
       fail-fast: false
     env: ${{ matrix.platform.env }}
     runs-on: ${{ matrix.platform.os }}
@@ -419,7 +440,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download test results
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
     - name: Generate test summary
       uses: test-summary/action@v2
       with:
@@ -471,7 +492,7 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: 'cpp'
 
@@ -479,7 +500,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
+        cmake .. -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON
         cmake --build .
 
     - name: Perform CodeQL Analysis

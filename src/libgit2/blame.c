@@ -19,7 +19,6 @@
 #include "repository.h"
 #include "blame_git.h"
 
-
 static int hunk_byfinalline_search_cmp(const void *key, const void *entry)
 {
 	git_blame_hunk *hunk = (git_blame_hunk*)entry;
@@ -81,9 +80,12 @@ static git_blame_hunk *new_hunk(
 
 static void free_hunk(git_blame_hunk *hunk)
 {
-	git__free((void*)hunk->orig_path);
+	git__free((char *)hunk->orig_path);
+	git__free((char *)hunk->summary);
 	git_signature_free(hunk->final_signature);
+	git_signature_free(hunk->final_committer);
 	git_signature_free(hunk->orig_signature);
+	git_signature_free(hunk->orig_committer);
 	git__free(hunk);
 }
 
@@ -104,7 +106,10 @@ static git_blame_hunk *dup_hunk(git_blame_hunk *hunk, git_blame *blame)
 	newhunk->boundary = hunk->boundary;
 
 	if (git_signature_dup(&newhunk->final_signature, hunk->final_signature) < 0 ||
-		git_signature_dup(&newhunk->orig_signature, hunk->orig_signature) < 0) {
+	    git_signature_dup(&newhunk->final_committer, hunk->final_committer) < 0 ||
+	    git_signature_dup(&newhunk->orig_signature, hunk->orig_signature) < 0 ||
+	    git_signature_dup(&newhunk->orig_committer, hunk->orig_committer) < 0 ||
+	    (newhunk->summary = git__strdup(hunk->summary)) == NULL) {
 		free_hunk(newhunk);
 		return NULL;
 	}
@@ -139,10 +144,9 @@ git_blame *git_blame__alloc(
 	gbr->options = opts;
 
 	if (git_vector_init(&gbr->hunks, 8, hunk_cmp) < 0 ||
-		git_vector_init(&gbr->paths, 8, paths_cmp) < 0 ||
-		(gbr->path = git__strdup(path)) == NULL ||
-		git_vector_insert(&gbr->paths, git__strdup(path)) < 0)
-	{
+	    git_vector_init(&gbr->paths, 8, paths_cmp) < 0 ||
+	    (gbr->path = git__strdup(path)) == NULL ||
+	    git_vector_insert(&gbr->paths, git__strdup(path)) < 0) {
 		git_blame_free(gbr);
 		return NULL;
 	}
@@ -165,9 +169,11 @@ void git_blame_free(git_blame *blame)
 
 	git_vector_foreach(&blame->hunks, i, hunk)
 		free_hunk(hunk);
-	git_vector_free(&blame->hunks);
 
-	git_vector_free_deep(&blame->paths);
+	git_vector_dispose(&blame->hunks);
+	git_array_clear(blame->lines);
+
+	git_vector_dispose_deep(&blame->paths);
 
 	git_array_clear(blame->line_index);
 
@@ -178,30 +184,75 @@ void git_blame_free(git_blame *blame)
 	git__free(blame);
 }
 
-uint32_t git_blame_get_hunk_count(git_blame *blame)
+size_t git_blame_hunkcount(git_blame *blame)
 {
 	GIT_ASSERT_ARG(blame);
-	return (uint32_t)blame->hunks.length;
+
+	return blame->hunks.length;
 }
 
-const git_blame_hunk *git_blame_get_hunk_byindex(git_blame *blame, uint32_t index)
+size_t git_blame_linecount(git_blame *blame)
+{
+	GIT_ASSERT_ARG(blame);
+
+	return git_array_size(blame->line_index);
+}
+
+const git_blame_line *git_blame_line_byindex(
+	git_blame *blame,
+	size_t idx)
 {
 	GIT_ASSERT_ARG_WITH_RETVAL(blame, NULL);
-	return (git_blame_hunk*)git_vector_get(&blame->hunks, index);
+	GIT_ASSERT_WITH_RETVAL(idx > 0 && idx <= git_array_size(blame->line_index), NULL);
+
+	return git_array_get(blame->lines, idx - 1);
 }
 
-const git_blame_hunk *git_blame_get_hunk_byline(git_blame *blame, size_t lineno)
+const git_blame_hunk *git_blame_hunk_byindex(
+	git_blame *blame,
+	size_t index)
+{
+	GIT_ASSERT_ARG_WITH_RETVAL(blame, NULL);
+	return git_vector_get(&blame->hunks, index);
+}
+
+const git_blame_hunk *git_blame_hunk_byline(
+	git_blame *blame,
+	size_t lineno)
 {
 	size_t i, new_lineno = lineno;
 
 	GIT_ASSERT_ARG_WITH_RETVAL(blame, NULL);
 
-	if (!git_vector_bsearch2(&i, &blame->hunks, hunk_byfinalline_search_cmp, &new_lineno)) {
-		return git_blame_get_hunk_byindex(blame, (uint32_t)i);
-	}
+	if (git_vector_bsearch2(&i, &blame->hunks,
+			hunk_byfinalline_search_cmp, &new_lineno) != 0)
+		return NULL;
 
-	return NULL;
+	return git_blame_hunk_byindex(blame, i);
 }
+
+#ifndef GIT_DEPRECATE_HARD
+uint32_t git_blame_get_hunk_count(git_blame *blame)
+{
+	size_t count = git_blame_hunkcount(blame);
+	GIT_ASSERT(count < UINT32_MAX);
+	return (uint32_t)count;
+}
+
+const git_blame_hunk *git_blame_get_hunk_byindex(
+	git_blame *blame,
+	uint32_t index)
+{
+	return git_blame_hunk_byindex(blame, index);
+}
+
+const git_blame_hunk *git_blame_get_hunk_byline(
+	git_blame *blame,
+	size_t lineno)
+{
+	return git_blame_hunk_byline(blame, lineno);
+}
+#endif
 
 static int normalize_options(
 		git_blame_options *out,
@@ -282,31 +333,55 @@ static int index_blob_lines(git_blame *blame)
     const char *buf = blame->final_buf;
     size_t len = blame->final_buf_size;
     int num = 0, incomplete = 0, bol = 1;
+    git_blame_line *line = NULL;
     size_t *i;
 
     if (len && buf[len-1] != '\n')
         incomplete++; /* incomplete line at the end */
+
     while (len--) {
         if (bol) {
             i = git_array_alloc(blame->line_index);
             GIT_ERROR_CHECK_ALLOC(i);
             *i = buf - blame->final_buf;
+
+            GIT_ASSERT(line == NULL);
+            line = git_array_alloc(blame->lines);
+            GIT_ERROR_CHECK_ALLOC(line);
+
+            line->ptr = buf;
             bol = 0;
         }
+
         if (*buf++ == '\n') {
+            GIT_ASSERT(line);
+            line->len = (buf - line->ptr) - 1;
+            line = NULL;
+
             num++;
             bol = 1;
         }
     }
+
     i = git_array_alloc(blame->line_index);
     GIT_ERROR_CHECK_ALLOC(i);
     *i = buf - blame->final_buf;
+
+    if (!bol) {
+        GIT_ASSERT(line);
+        line->len = buf - line->ptr;
+	line = NULL;
+    }
+
+    GIT_ASSERT(!line);
+
     blame->num_lines = num + incomplete;
     return blame->num_lines;
 }
 
 static git_blame_hunk *hunk_from_entry(git_blame__entry *e, git_blame *blame)
 {
+	const char *summary;
 	git_blame_hunk *h = new_hunk(
 		e->lno+1, e->num_lines, e->s_lno+1, e->suspect->path,
 		blame);
@@ -316,9 +391,19 @@ static git_blame_hunk *hunk_from_entry(git_blame__entry *e, git_blame *blame)
 
 	git_oid_cpy(&h->final_commit_id, git_commit_id(e->suspect->commit));
 	git_oid_cpy(&h->orig_commit_id, git_commit_id(e->suspect->commit));
-	git_commit_author_with_mailmap(
-		&h->final_signature, e->suspect->commit, blame->mailmap);
-	git_signature_dup(&h->orig_signature, h->final_signature);
+
+	if (git_commit_author_with_mailmap(
+		&h->final_signature, e->suspect->commit, blame->mailmap) < 0 ||
+	    git_commit_committer_with_mailmap(
+		&h->final_committer, e->suspect->commit, blame->mailmap) < 0 ||
+	    git_signature_dup(&h->orig_signature, h->final_signature) < 0 ||
+	    git_signature_dup(&h->orig_committer, h->final_committer) < 0 ||
+	    (summary = git_commit_summary(e->suspect->commit)) == NULL ||
+	    (h->summary = git__strdup(summary)) == NULL) {
+		free_hunk(h);
+		return NULL;
+	}
+
 	h->boundary = e->is_boundary ? 1 : 0;
 	return h;
 }
@@ -347,12 +432,12 @@ static int blame_internal(git_blame *blame)
 
 	if ((error = load_blob(blame)) < 0 ||
 	    (error = git_blame__get_origin(&o, blame, blame->final, blame->path)) < 0)
-		goto cleanup;
+		goto on_error;
 
 	if (git_blob_rawsize(blame->final_blob) > SIZE_MAX) {
 		git_error_set(GIT_ERROR_NOMEMORY, "blob is too large to blame");
 		error = -1;
-		goto cleanup;
+		goto on_error;
 	}
 
 	blame->final_buf = git_blob_rawcontent(blame->final_blob);
@@ -371,17 +456,19 @@ static int blame_internal(git_blame *blame)
 
 	blame->ent = ent;
 
-	error = git_blame__like_git(blame, blame->options.flags);
+	if ((error = git_blame__like_git(blame, blame->options.flags)) < 0)
+		goto on_error;
 
-cleanup:
-	for (ent = blame->ent; ent; ) {
-		git_blame__entry *e = ent->next;
+	for (ent = blame->ent; ent; ent = ent->next) {
 		git_blame_hunk *h = hunk_from_entry(ent, blame);
-
 		git_vector_insert(&blame->hunks, h);
+	}
 
+on_error:
+	for (ent = blame->ent; ent; ) {
+		git_blame__entry *next = ent->next;
 		git_blame__free_entry(ent);
-		ent = e;
+		ent = next;
 	}
 
 	return error;
@@ -444,9 +531,9 @@ static int buffer_hunk_cb(
 
 	GIT_UNUSED(delta);
 
-	wedge_line = (hunk->new_start >= hunk->old_start || hunk->old_lines==0) ? hunk->new_start : hunk->old_start; 
+	wedge_line = (hunk->new_start >= hunk->old_start || hunk->old_lines==0) ? hunk->new_start : hunk->old_start;
 	blame->current_diff_line = wedge_line;
-	blame->current_hunk = (git_blame_hunk*)git_blame_get_hunk_byline(blame, wedge_line);
+	blame->current_hunk = (git_blame_hunk*)git_blame_hunk_byline(blame, wedge_line);
 	if (!blame->current_hunk) {
 		/* Line added at the end of the file */
 		blame->current_hunk = new_hunk(wedge_line, 0, wedge_line,
@@ -504,8 +591,8 @@ static int buffer_line_cb(
 			if (!git_vector_search2(&i, &blame->hunks, ptrs_equal_cmp, blame->current_hunk)) {
 				git_vector_remove(&blame->hunks, i);
 				free_hunk(blame->current_hunk);
-				i_next = min( i , blame->hunks.length -1); 
-				blame->current_hunk = (git_blame_hunk*)git_blame_get_hunk_byindex(blame, (uint32_t)i_next);
+				i_next = min( i , blame->hunks.length -1);
+				blame->current_hunk = (git_blame_hunk*)git_blame_hunk_byindex(blame, (uint32_t)i_next);
 			}
 		}
 		shift_hunks_by(&blame->hunks, shift_base, -1);

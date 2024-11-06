@@ -21,6 +21,9 @@ else
 	OUTPUT_STYLE="auto"
 fi
 
+HELP_GIT_REMOTE="https://github.com/git/git"
+HELP_LINUX_REMOTE="https://github.com/torvalds/linux"
+
 #
 # parse the arguments to the outer script that's including us; these are arguments that
 # the `benchmark.sh` passes (or that a user could specify when running an individual test)
@@ -218,6 +221,26 @@ create_preparescript() {
 		fi
 	}
 
+	clone_repo() {
+		REPO="\${1}"
+
+		if [ "\${REPO}" = "" ]; then
+			echo "usage: clone_repo <repo>" 1>&2
+			exit 1
+		fi
+
+		REPO_UPPER=\$(echo "\${1}" | tr '[:lower:]' '[:upper:]')
+		REPO_URL=\$(eval echo "\\\${BENCHMARK_\${REPO_UPPER}_REPOSITORY}")
+
+		if [ "\${REPO_URL}" = "" ]; then
+			echo "\$0: unknown repository '\${REPO}'" 1>&2
+			exit 1
+		fi
+
+		rm -rf "\${SANDBOX_DIR:?}/\${REPO}"
+		git clone "\${REPO_URL}" "\${SANDBOX_DIR}/\${REPO}"
+	}
+
 	cd "\${SANDBOX_DIR}"
 EOF
 
@@ -293,6 +316,9 @@ gitbench() {
 			NEXT="prepare"
 		elif [ "${a}" = "--chdir" ]; then
 			NEXT="chdir"
+		elif [[ "${a}" == "--" ]]; then
+			shift
+			break
 		elif [[ "${a}" == "--"* ]]; then
 			echo "unknown argument: \"${a}\"" 1>&2
 			gitbench_usage 1>&2
@@ -360,4 +386,28 @@ gitbench() {
 
 	hyperfine "${ARGUMENTS[@]}"
 	rm -rf "${SANDBOX_DIR:?}"
+}
+
+# helper script to give useful error messages about configuration
+needs_repo() {
+	REPO="${1}"
+
+	if [ "${REPO}" = "" ]; then
+		echo "usage: needs_repo <repo>" 1>&2
+		exit 1
+	fi
+
+	REPO_UPPER=$(echo "${1}" | tr '[:lower:]' '[:upper:]')
+	REPO_URL=$(eval echo "\${BENCHMARK_${REPO_UPPER}_REPOSITORY}")
+	REPO_REMOTE_URL=$(eval echo "\${HELP_${REPO_UPPER}_REMOTE}")
+
+	if [ "${REPO_URL}" = "" ]; then
+		echo "$0: '${REPO}' repository not configured" 1>&2
+		echo "" 1>&2
+		echo "This benchmark needs an on-disk '${REPO}' repository. First, clone the" 1>&2
+		echo "remote repository ('${REPO_REMOTE_URL}') locally then set," 1>&2
+		echo "the 'BENCHMARK_${REPO_UPPER}_REPOSITORY' environment variable to the path that" 1>&2
+		echo "contains the repository locally, then run this benchmark again." 1>&2
+		exit 2
+	fi
 }

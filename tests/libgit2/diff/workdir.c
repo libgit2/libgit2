@@ -2136,7 +2136,7 @@ void test_diff_workdir__to_index_pathlist(void)
 	git_diff_free(diff);
 
 	git_index_free(index);
-	git_vector_free(&pathlist);
+	git_vector_dispose(&pathlist);
 }
 
 void test_diff_workdir__symlink_changed_on_non_symlink_platform(void)
@@ -2198,7 +2198,7 @@ void test_diff_workdir__symlink_changed_on_non_symlink_platform(void)
 	cl_git_pass(git_futils_rmdir_r("symlink", NULL, GIT_RMDIR_REMOVE_FILES));
 
 	git_tree_free(tree);
-	git_vector_free(&pathlist);
+	git_vector_dispose(&pathlist);
 }
 
 void test_diff_workdir__order(void)

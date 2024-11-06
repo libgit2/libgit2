@@ -12,7 +12,7 @@ extern const git_oid OID_ZERO;
  * @param data pointer to a record_callbacks_data instance
  */
 #define RECORD_CALLBACKS_INIT(data) \
-	{ GIT_REMOTE_CALLBACKS_VERSION, NULL, NULL, cred_acquire_cb, NULL, NULL, record_update_tips_cb, NULL, NULL, NULL, NULL, NULL, NULL, data, NULL }
+	{ GIT_REMOTE_CALLBACKS_VERSION, NULL, NULL, cred_acquire_cb, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, data, NULL, record_update_refs_cb }
 
 typedef struct {
 	char *name;
@@ -50,7 +50,7 @@ void record_callbacks_data_clear(record_callbacks_data *data);
  *
  * @param data (git_vector *) of updated_tip instances
  */
-int record_update_tips_cb(const char *refname, const git_oid *a, const git_oid *b, void *data);
+int record_update_refs_cb(const char *refname, const git_oid *a, const git_oid *b, git_refspec *spec, void *data);
 
 /**
  * Create a set of refspecs that deletes each of the inputs

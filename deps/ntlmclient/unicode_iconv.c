@@ -14,6 +14,7 @@
 #include "ntlmclient.h"
 #include "unicode.h"
 #include "ntlm.h"
+#include "util.h"
 #include "compat.h"
 
 typedef enum {
@@ -40,7 +41,7 @@ bool ntlm_unicode_init(ntlm_client *ntlm)
 	return true;
 }
 
-static inline bool unicode_iconv_encoding_convert(
+NTLM_INLINE(bool) unicode_iconv_encoding_convert(
 	char **converted,
 	size_t *converted_len,
 	ntlm_client *ntlm,

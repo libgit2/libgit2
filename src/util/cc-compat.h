@@ -44,9 +44,11 @@
 		_unused = (x);                                                 \
 	} while (0)
 # define GIT_UNUSED_ARG __attribute__((unused))
+# define GIT_UNUSED_FUNCTION __attribute__((unused))
 #else
 # define GIT_UNUSED(x) ((void)(x))
 # define GIT_UNUSED_ARG
+# define GIT_UNUSED_FUNCTION
 #endif
 
 /* Define the printf format specifier to use for size_t output */

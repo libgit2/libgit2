@@ -92,7 +92,7 @@ GIT_EXTERN(const void *) git_blob_rawcontent(const git_blob *blob);
  * Get the size in bytes of the contents of a blob
  *
  * @param blob pointer to the blob
- * @return size on bytes
+ * @return size in bytes
  */
 GIT_EXTERN(git_object_size_t) git_blob_rawsize(const git_blob *blob);
 

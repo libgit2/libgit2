@@ -199,6 +199,7 @@ typedef enum {
 	GIT_OPT_GET_TEMPLATE_PATH,
 	GIT_OPT_SET_TEMPLATE_PATH,
 	GIT_OPT_SET_SSL_CERT_LOCATIONS,
+	GIT_OPT_ADD_SSL_X509_CERT,
 	GIT_OPT_SET_USER_AGENT,
 	GIT_OPT_ENABLE_STRICT_OBJECT_CREATION,
 	GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION,
@@ -335,7 +336,20 @@ typedef enum {
  *		> - `path` is the location of a directory holding several
  *		>   certificates, one per file.
  *		>
+ *		> Calling `GIT_OPT_ADD_SSL_X509_CERT` may override the
+ *		> data in `path`.
+ *		>
  * 		> Either parameter may be `NULL`, but not both.
+ *
+ *  * opts(GIT_OPT_ADD_SSL_X509_CERT, const X509 *cert)
+ *
+ *		> Add a raw X509 certificate into the SSL certs store.
+ *		> This certificate is only used by libgit2 invocations
+ *		> during the application lifetime and is not persisted
+ *		> to disk. This certificate cannot be removed from the
+ *		> application once is has been added.
+ *		>
+ *		> - `cert` is the raw X509 cert will be added to cert store.
  *
  *	* opts(GIT_OPT_SET_USER_AGENT, const char *user_agent)
  *

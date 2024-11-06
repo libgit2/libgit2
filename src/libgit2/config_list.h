@@ -13,7 +13,7 @@
 typedef struct git_config_list git_config_list;
 
 typedef struct {
-	git_config_entry base;
+	git_config_backend_entry base;
 	git_config_list *config_list;
 } git_config_list_entry;
 
@@ -29,4 +29,4 @@ int git_config_list_get_unique(git_config_list_entry **out, git_config_list *lis
 int git_config_list_iterator_new(git_config_iterator **out, git_config_list *list);
 const char *git_config_list_add_string(git_config_list *list, const char *str);
 
-void git_config_list_entry_free(git_config_entry *entry);
+void git_config_list_entry_free(git_config_backend_entry *entry);

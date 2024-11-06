@@ -484,7 +484,7 @@ int git_midx_close(git_midx_file *idx)
 	if (idx->index_map.data)
 		git_futils_mmap_free(&idx->index_map);
 
-	git_vector_free(&idx->packfile_names);
+	git_vector_dispose(&idx->packfile_names);
 
 	return 0;
 }
@@ -554,7 +554,7 @@ void git_midx_writer_free(git_midx_writer *w)
 
 	git_vector_foreach (&w->packs, i, p)
 		git_mwindow_put_pack(p);
-	git_vector_free(&w->packs);
+	git_vector_dispose(&w->packs);
 	git_str_dispose(&w->pack_dir);
 	git__free(w);
 }
@@ -660,9 +660,11 @@ static int midx_write_hash(const char *buf, size_t size, void *data)
 	struct midx_write_hash_context *ctx = (struct midx_write_hash_context *)data;
 	int error;
 
-	error = git_hash_update(ctx->ctx, buf, size);
-	if (error < 0)
-		return error;
+	if (ctx->ctx) {
+		error = git_hash_update(ctx->ctx, buf, size);
+		if (error < 0)
+			return error;
+	}
 
 	return ctx->write_cb(buf, size, ctx->cb_data);
 }
@@ -863,13 +865,16 @@ static int midx_write(
 	error = git_hash_final(checksum, &ctx);
 	if (error < 0)
 		goto cleanup;
+
+	hash_cb_data.ctx = NULL;
+
 	error = write_cb((char *)checksum, checksum_size, cb_data);
 	if (error < 0)
 		goto cleanup;
 
 cleanup:
 	git_array_clear(object_entries_array);
-	git_vector_free(&object_entries);
+	git_vector_dispose(&object_entries);
 	git_str_dispose(&packfile_names);
 	git_str_dispose(&oid_lookup);
 	git_str_dispose(&object_offsets);

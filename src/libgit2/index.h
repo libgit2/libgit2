@@ -12,8 +12,8 @@
 #include "futils.h"
 #include "filebuf.h"
 #include "vector.h"
-#include "idxmap.h"
 #include "tree-cache.h"
+#include "index_map.h"
 #include "git2/odb.h"
 #include "git2/index.h"
 
@@ -30,7 +30,7 @@ struct git_index {
 	unsigned char checksum[GIT_HASH_MAX_SIZE];
 
 	git_vector entries;
-	git_idxmap *entries_map;
+	git_index_entrymap entries_map;
 
 	git_vector deleted; /* deleted entries if readers > 0 */
 	git_atomic32 readers; /* number of active iterators */

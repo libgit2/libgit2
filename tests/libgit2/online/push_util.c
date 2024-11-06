@@ -24,21 +24,23 @@ void record_callbacks_data_clear(record_callbacks_data *data)
 	git_vector_foreach(&data->updated_tips, i, tip)
 		updated_tip_free(tip);
 
-	git_vector_free(&data->updated_tips);
+	git_vector_dispose(&data->updated_tips);
 
 	git_vector_foreach(&data->statuses, i, status)
 		push_status_free(status);
 
-	git_vector_free(&data->statuses);
+	git_vector_dispose(&data->statuses);
 
 	data->pack_progress_calls = 0;
 	data->transfer_progress_calls = 0;
 }
 
-int record_update_tips_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
+int record_update_refs_cb(const char *refname, const git_oid *a, const git_oid *b, git_refspec *spec, void *data)
 {
 	updated_tip *t;
 	record_callbacks_data *record_data = (record_callbacks_data *)data;
+
+	GIT_UNUSED(spec);
 
 	cl_assert(t = git__calloc(1, sizeof(*t)));
 

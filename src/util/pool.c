@@ -144,7 +144,7 @@ int git_pool_init(git_pool *pool, size_t item_size)
 
 void git_pool_clear(git_pool *pool)
 {
-	git_vector_free_deep(&pool->allocations);
+	git_vector_dispose_deep(&pool->allocations);
 }
 
 static void *pool_alloc(git_pool *pool, size_t size) {

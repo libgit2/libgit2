@@ -100,7 +100,7 @@ void test_merge_workdir_renames__ours(void)
 
 	merge_opts.flags |= GIT_MERGE_FIND_RENAMES;
 	merge_opts.rename_threshold = 50;
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_USE_OURS;
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_USE_OURS;
 
 	cl_git_pass(merge_branches(repo, GIT_REFS_HEADS_DIR BRANCH_RENAME_OURS, GIT_REFS_HEADS_DIR BRANCH_RENAME_THEIRS, &merge_opts, &checkout_opts));
 	cl_git_pass(git_repository_index(&index, repo));

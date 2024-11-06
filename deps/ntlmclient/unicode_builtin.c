@@ -12,6 +12,7 @@
 #include "ntlm.h"
 #include "unicode.h"
 #include "compat.h"
+#include "util.h"
 
 typedef unsigned int    UTF32;   /* at least 32 bits */
 typedef unsigned short  UTF16;   /* at least 16 bits */
@@ -180,7 +181,7 @@ static ConversionResult ConvertUTF16toUTF8 (
  * definition of UTF-8 goes up to 4-byte sequences.
  */
 
-static inline bool isLegalUTF8(const UTF8 *source, int length) {
+NTLM_INLINE(bool) isLegalUTF8(const UTF8 *source, int length) {
     UTF8 a;
     const UTF8 *srcptr = source+length;
     switch (length) {
@@ -288,7 +289,7 @@ typedef enum {
 	unicode_builtin_utf16_to_8
 } unicode_builtin_encoding_direction;
 
-static inline bool unicode_builtin_encoding_convert(
+NTLM_INLINE(bool) unicode_builtin_encoding_convert(
 	char **converted,
 	size_t *converted_len,
 	ntlm_client *ntlm,

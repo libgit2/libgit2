@@ -105,8 +105,8 @@ typedef struct git_clone_options {
 
 	/**
 	 * These options are passed to the checkout step. To disable
-	 * checkout, set the `checkout_strategy` to
-	 * `GIT_CHECKOUT_NONE`.
+	 * checkout, set the `checkout_strategy` to `GIT_CHECKOUT_NONE`
+	 * or `GIT_CHECKOUT_DRY_RUN`.
 	 */
 	git_checkout_options checkout_opts;
 
@@ -164,9 +164,10 @@ typedef struct git_clone_options {
 } git_clone_options;
 
 #define GIT_CLONE_OPTIONS_VERSION 1
-#define GIT_CLONE_OPTIONS_INIT { GIT_CLONE_OPTIONS_VERSION, \
-	{ GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE }, \
-	GIT_FETCH_OPTIONS_INIT }
+#define GIT_CLONE_OPTIONS_INIT \
+	{ GIT_CLONE_OPTIONS_VERSION, \
+	  GIT_CHECKOUT_OPTIONS_INIT, \
+	  GIT_FETCH_OPTIONS_INIT }
 
 /**
  * Initialize git_clone_options structure

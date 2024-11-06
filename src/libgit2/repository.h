@@ -165,7 +165,7 @@ struct git_repository {
 	git_atomic32 attr_session_key;
 
 	intptr_t configmap_cache[GIT_CONFIGMAP_CACHE_MAX];
-	git_strmap *submodule_cache;
+	git_submodule_cache *submodule_cache;
 };
 
 GIT_INLINE(git_attr_cache *) git_repository_attr_cache(git_repository *repo)

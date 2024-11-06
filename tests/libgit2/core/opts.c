@@ -34,10 +34,11 @@ void test_core_opts__extensions_query(void)
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_EXTENSIONS, &out));
 
-	cl_assert_equal_sz(out.count, 3);
+	cl_assert_equal_sz(out.count, 4);
 	cl_assert_equal_s("noop", out.strings[0]);
 	cl_assert_equal_s("objectformat", out.strings[1]);
-	cl_assert_equal_s("worktreeconfig", out.strings[2]);
+	cl_assert_equal_s("preciousobjects", out.strings[2]);
+	cl_assert_equal_s("worktreeconfig", out.strings[3]);
 
 	git_strarray_dispose(&out);
 }
@@ -50,11 +51,12 @@ void test_core_opts__extensions_add(void)
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_EXTENSIONS, in, ARRAY_SIZE(in)));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_EXTENSIONS, &out));
 
-	cl_assert_equal_sz(out.count, 4);
+	cl_assert_equal_sz(out.count, 5);
 	cl_assert_equal_s("foo", out.strings[0]);
 	cl_assert_equal_s("noop", out.strings[1]);
 	cl_assert_equal_s("objectformat", out.strings[2]);
-	cl_assert_equal_s("worktreeconfig", out.strings[3]);
+	cl_assert_equal_s("preciousobjects", out.strings[3]);
+	cl_assert_equal_s("worktreeconfig", out.strings[4]);
 
 	git_strarray_dispose(&out);
 }
@@ -67,11 +69,12 @@ void test_core_opts__extensions_remove(void)
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_EXTENSIONS, in, ARRAY_SIZE(in)));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_EXTENSIONS, &out));
 
-	cl_assert_equal_sz(out.count, 4);
+	cl_assert_equal_sz(out.count, 5);
 	cl_assert_equal_s("bar", out.strings[0]);
 	cl_assert_equal_s("baz", out.strings[1]);
 	cl_assert_equal_s("objectformat", out.strings[2]);
-	cl_assert_equal_s("worktreeconfig", out.strings[3]);
+	cl_assert_equal_s("preciousobjects", out.strings[3]);
+	cl_assert_equal_s("worktreeconfig", out.strings[4]);
 
 	git_strarray_dispose(&out);
 }
@@ -84,12 +87,13 @@ void test_core_opts__extensions_uniq(void)
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_EXTENSIONS, in, ARRAY_SIZE(in)));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_EXTENSIONS, &out));
 
-	cl_assert_equal_sz(out.count, 5);
+	cl_assert_equal_sz(out.count, 6);
 	cl_assert_equal_s("bar", out.strings[0]);
 	cl_assert_equal_s("foo", out.strings[1]);
 	cl_assert_equal_s("noop", out.strings[2]);
 	cl_assert_equal_s("objectformat", out.strings[3]);
-	cl_assert_equal_s("worktreeconfig", out.strings[4]);
+	cl_assert_equal_s("preciousobjects", out.strings[4]);
+	cl_assert_equal_s("worktreeconfig", out.strings[5]);
 
 	git_strarray_dispose(&out);
 }

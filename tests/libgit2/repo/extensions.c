@@ -70,3 +70,13 @@ void test_repo_extensions__adds_extension(void)
 	cl_assert(git__suffixcmp(git_repository_path(extended), "/") == 0);
 	git_repository_free(extended);
 }
+
+void test_repo_extensions__preciousobjects(void)
+{
+	git_repository *extended = NULL;
+
+	cl_repo_set_string(repo, "extensions.preciousObjects", "true");
+
+	cl_git_pass(git_repository_open(&extended, "empty_bare.git"));
+	git_repository_free(extended);
+}

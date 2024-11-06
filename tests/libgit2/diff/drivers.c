@@ -249,7 +249,7 @@ void test_diff_drivers__builtins(void)
 	git_buf_dispose(&actual);
 	git_str_dispose(&file);
 	git_str_dispose(&expected);
-	git_vector_free(&files);
+	git_vector_dispose(&files);
 }
 
 void test_diff_drivers__invalid_pattern(void)

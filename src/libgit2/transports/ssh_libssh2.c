@@ -115,8 +115,8 @@ static int ssh_stream_read(
 	size_t buf_size,
 	size_t *bytes_read)
 {
-	int rc;
 	ssh_stream *s = GIT_CONTAINER_OF(stream, ssh_stream, parent);
+	ssize_t rc;
 
 	*bytes_read = 0;
 
@@ -135,14 +135,13 @@ static int ssh_stream_read(
 	 */
 	if (rc == 0) {
 		if ((rc = libssh2_channel_read_stderr(s->channel, buffer, buf_size)) > 0) {
-			git_error_set(GIT_ERROR_SSH, "%*s", rc, buffer);
+			git_error_set(GIT_ERROR_SSH, "%*s", (int)rc, buffer);
 			return GIT_EEOF;
 		} else if (rc < LIBSSH2_ERROR_NONE) {
 			ssh_error(s->session, "SSH could not read stderr");
 			return -1;
 		}
 	}
-
 
 	*bytes_read = rc;
 
@@ -1015,7 +1014,8 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 
 	*out = 0;
 
-	list = libssh2_userauth_list(session, username, strlen(username));
+	list = libssh2_userauth_list(session, username,
+			(unsigned int)strlen(username));
 
 	/* either error, or the remote accepts NONE auth, which is bizarre, let's punt */
 	if (list == NULL && !libssh2_userauth_authenticated(session)) {

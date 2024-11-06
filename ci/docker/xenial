@@ -7,13 +7,13 @@ RUN apt-get update && \
         clang \
         cmake \
         curl \
-	gettext \
+        gettext \
         gcc \
         krb5-user \
         libcurl4-gnutls-dev \
-	libexpat1-dev \
+        libexpat1-dev \
         libgcrypt20-dev \
-	libintl-perl \
+        libintl-perl \
         libkrb5-dev \
         libpcre3-dev \
         libssl-dev \

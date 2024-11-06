@@ -16,7 +16,7 @@
 #include "diff_generate.h"
 
 #include "git2/version.h"
-#include "git2/email.h"
+#include "git2/sys/email.h"
 
 struct patch_id_args {
 	git_diff *diff;

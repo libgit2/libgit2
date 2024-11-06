@@ -2,8 +2,6 @@
 # git library functionality.
 
 add_library(libgit2 OBJECT)
-set_target_properties(libgit2 PROPERTIES C_STANDARD 90)
-set_target_properties(libgit2 PROPERTIES C_EXTENSIONS OFF)
 
 include(PkgBuildConfig)
 
@@ -62,6 +60,7 @@ target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
 target_include_directories(libgit2package INTERFACE $<INSTALL_INTERFACE:./include/git2>)
 
 set_target_properties(libgit2package PROPERTIES C_STANDARD 90)
+set_target_properties(libgit2package PROPERTIES C_EXTENSIONS OFF)
 set_target_properties(libgit2package PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set_target_properties(libgit2package PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})

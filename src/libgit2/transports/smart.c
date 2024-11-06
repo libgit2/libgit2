@@ -124,7 +124,7 @@ static void free_symrefs(git_vector *symrefs)
 		git__free(spec);
 	}
 
-	git_vector_free(symrefs);
+	git_vector_dispose(symrefs);
 }
 
 static int git_smart__connect(
@@ -402,7 +402,7 @@ static int git_smart__close(git_transport *transport)
 	git_vector_foreach(common, i, p)
 		git_pkt_free(p);
 
-	git_vector_free(common);
+	git_vector_dispose(common);
 
 	if (t->url) {
 		git__free(t->url);
@@ -427,11 +427,11 @@ static void git_smart__free(git_transport *transport)
 	/* Free the subtransport */
 	t->wrapped->free(t->wrapped);
 
-	git_vector_free(&t->heads);
+	git_vector_dispose(&t->heads);
 	git_vector_foreach(refs, i, p)
 		git_pkt_free(p);
 
-	git_vector_free(refs);
+	git_vector_dispose(refs);
 
 	git_remote_connect_options_dispose(&t->connect_opts);
 
@@ -524,8 +524,8 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	if (git_vector_init(&t->refs, 16, ref_name_cmp) < 0 ||
 	    git_vector_init(&t->heads, 16, ref_name_cmp) < 0 ||
 	    definition->callback(&t->wrapped, &t->parent, definition->param) < 0) {
-		git_vector_free(&t->refs);
-		git_vector_free(&t->heads);
+		git_vector_dispose(&t->refs);
+		git_vector_dispose(&t->heads);
 		git__free(t);
 		return -1;
 	}

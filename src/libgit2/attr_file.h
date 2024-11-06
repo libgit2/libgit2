@@ -21,6 +21,8 @@
 #define GIT_ATTR_FILE_SYSTEM	"gitattributes"
 #define GIT_ATTR_FILE_XDG		"attributes"
 
+#define GIT_ATTR_MAX_FILE_SIZE	100 * 1024 * 1024
+
 #define GIT_ATTR_FNMATCH_NEGATIVE	(1U << 0)
 #define GIT_ATTR_FNMATCH_DIRECTORY	(1U << 1)
 #define GIT_ATTR_FNMATCH_FULLPATH	(1U << 2)

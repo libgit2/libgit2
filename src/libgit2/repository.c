@@ -34,7 +34,6 @@
 #include "submodule.h"
 #include "worktree.h"
 #include "path.h"
-#include "strmap.h"
 
 #ifdef GIT_WIN32
 # include "win32/w32_util.h"
@@ -1881,6 +1880,7 @@ static const char *builtin_extensions[] = {
 	"noop",
 	"objectformat",
 	"worktreeconfig",
+	"preciousobjects"
 };
 
 static git_vector user_extensions = { 0, git__strcmp_cb };
@@ -2106,7 +2106,7 @@ int git_repository__set_extensions(const char **extensions, size_t len)
 
 void git_repository__free_extensions(void)
 {
-	git_vector_free_deep(&user_extensions);
+	git_vector_dispose_deep(&user_extensions);
 }
 
 int git_repository_create_head(const char *git_dir, const char *ref_name)

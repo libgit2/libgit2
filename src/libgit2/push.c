@@ -56,22 +56,22 @@ int git_push_new(git_push **out, git_remote *remote, const git_push_options *opt
 	}
 
 	if (git_vector_init(&p->status, 0, push_status_ref_cmp) < 0) {
-		git_vector_free(&p->specs);
+		git_vector_dispose(&p->specs);
 		git__free(p);
 		return -1;
 	}
 
 	if (git_vector_init(&p->updates, 0, NULL) < 0) {
-		git_vector_free(&p->status);
-		git_vector_free(&p->specs);
+		git_vector_dispose(&p->status);
+		git_vector_dispose(&p->specs);
 		git__free(p);
 		return -1;
 	}
 
 	if (git_vector_init(&p->remote_push_options, 0, git__strcmp_cb) < 0) {
-		git_vector_free(&p->status);
-		git_vector_free(&p->specs);
-		git_vector_free(&p->updates);
+		git_vector_dispose(&p->status);
+		git_vector_dispose(&p->specs);
+		git_vector_dispose(&p->updates);
 		git__free(p);
 		return -1;
 	}
@@ -221,12 +221,25 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 			fire_callback = 0;
 		}
 
-		if (fire_callback && callbacks && callbacks->update_tips) {
-			error = callbacks->update_tips(git_str_cstr(&remote_ref_name),
-						&push_spec->roid, &push_spec->loid, callbacks->payload);
+		if (!fire_callback || !callbacks)
+			continue;
 
-			if (error < 0)
-				goto on_error;
+		if (callbacks->update_refs)
+			error = callbacks->update_refs(
+				git_str_cstr(&remote_ref_name),
+				&push_spec->roid, &push_spec->loid,
+				&push_spec->refspec, callbacks->payload);
+#ifndef GIT_DEPRECATE_HARD
+		else if (callbacks->update_tips)
+			error = callbacks->update_tips(
+				git_str_cstr(&remote_ref_name),
+				&push_spec->roid, &push_spec->loid,
+				callbacks->payload);
+#endif
+
+		if (error < 0) {
+			git_error_set_after_callback_function(error, "git_remote_push");
+			goto on_error;
 		}
 	}
 
@@ -283,6 +296,7 @@ static int queue_objects(git_push *push)
 
 	git_vector_foreach(&push->specs, i, spec) {
 		git_object_t type;
+		git_oid id;
 		size_t size;
 
 		if (git_oid_is_zero(&spec->loid))
@@ -304,20 +318,20 @@ static int queue_objects(git_push *push)
 			if ((error = enqueue_tag(&target, push, &spec->loid)) < 0)
 				goto on_error;
 
-			if (git_object_type(target) == GIT_OBJECT_COMMIT) {
-				if ((error = git_revwalk_push(rw, git_object_id(target))) < 0) {
-					git_object_free(target);
-					goto on_error;
-				}
-			} else {
-				if ((error = git_packbuilder_insert(
-					push->pb, git_object_id(target), NULL)) < 0) {
-					git_object_free(target);
-					goto on_error;
-				}
-			}
+			type = git_object_type(target);
+			git_oid_cpy(&id, git_object_id(target));
+
 			git_object_free(target);
-		} else if ((error = git_revwalk_push(rw, &spec->loid)) < 0)
+		} else {
+			git_oid_cpy(&id, &spec->loid);
+		}
+
+		if (type == GIT_OBJECT_COMMIT)
+			error = git_revwalk_push(rw, &id);
+		else
+			error = git_packbuilder_insert(push->pb, &id, NULL);
+
+		if (error < 0)
 			goto on_error;
 
 		if (!spec->refspec.force) {
@@ -568,24 +582,24 @@ void git_push_free(git_push *push)
 	git_vector_foreach(&push->specs, i, spec) {
 		free_refspec(spec);
 	}
-	git_vector_free(&push->specs);
+	git_vector_dispose(&push->specs);
 
 	git_vector_foreach(&push->status, i, status) {
 		git_push_status_free(status);
 	}
-	git_vector_free(&push->status);
+	git_vector_dispose(&push->status);
 
 	git_vector_foreach(&push->updates, i, update) {
 		git__free(update->src_refname);
 		git__free(update->dst_refname);
 		git__free(update);
 	}
-	git_vector_free(&push->updates);
+	git_vector_dispose(&push->updates);
 
 	git_vector_foreach(&push->remote_push_options, i, option) {
 		git__free(option);
 	}
-	git_vector_free(&push->remote_push_options);
+	git_vector_dispose(&push->remote_push_options);
 
 	git__free(push);
 }

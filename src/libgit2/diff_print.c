@@ -667,6 +667,13 @@ static int diff_print_patch_binary(
 	if ((error = flush_file_header(delta, pi)) < 0)
 		return error;
 
+	/*
+	 * If the caller only wants the header, we just needed to make sure to
+	 * call flush_file_header
+	 */
+	if (pi->format == GIT_DIFF_FORMAT_PATCH_HEADER)
+		return 0;
+
 	git_str_clear(pi->buf);
 
 	if ((error = diff_print_patch_file_binary(
@@ -693,6 +700,13 @@ static int diff_print_patch_hunk(
 
 	if ((error = flush_file_header(d, pi)) < 0)
 		return error;
+
+	/*
+	 * If the caller only wants the header, we just needed to make sure to
+	 * call flush_file_header
+	 */
+	if (pi->format == GIT_DIFF_FORMAT_PATCH_HEADER)
+		return 0;
 
 	pi->line.origin      = GIT_DIFF_LINE_HUNK_HDR;
 	pi->line.content     = h->header;
@@ -748,6 +762,8 @@ int git_diff_print(
 		break;
 	case GIT_DIFF_FORMAT_PATCH_HEADER:
 		print_file = diff_print_patch_file;
+		print_binary = diff_print_patch_binary;
+		print_hunk = diff_print_patch_hunk;
 		break;
 	case GIT_DIFF_FORMAT_RAW:
 		print_file = diff_print_one_raw;
