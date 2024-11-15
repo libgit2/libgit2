@@ -185,53 +185,86 @@ static int connect_context(schannel_stream *st)
 	return error;
 }
 
+static void
+certificate_error_append_message(int *error, git_str *msg, const char *error_msg)
+{
+	if (*error != -1)
+		git_str_puts(msg, ", ");
+	git_str_puts(msg, error_msg);
+}
+
 static int set_certificate_lookup_error(DWORD status)
 {
-	switch (status) {
-	case CERT_TRUST_IS_NOT_TIME_VALID:
-		git_error_set(GIT_ERROR_SSL,
-			"certificate is expired or not yet valid");
-		break;
-	case CERT_TRUST_IS_REVOKED:
-		git_error_set(GIT_ERROR_SSL, "certificate is revoked");
-		break;
-	case CERT_TRUST_IS_NOT_SIGNATURE_VALID:
-	case CERT_TRUST_IS_NOT_VALID_FOR_USAGE:
-	case CERT_TRUST_INVALID_EXTENSION:
-	case CERT_TRUST_INVALID_POLICY_CONSTRAINTS:
-	case CERT_TRUST_INVALID_BASIC_CONSTRAINTS:
-	case CERT_TRUST_INVALID_NAME_CONSTRAINTS:
-	case CERT_TRUST_HAS_NOT_SUPPORTED_NAME_CONSTRAINT:
-	case CERT_TRUST_HAS_NOT_DEFINED_NAME_CONSTRAINT:
-	case CERT_TRUST_HAS_NOT_PERMITTED_NAME_CONSTRAINT:
-	case CERT_TRUST_HAS_EXCLUDED_NAME_CONSTRAINT:
-	case CERT_TRUST_NO_ISSUANCE_CHAIN_POLICY:
-	case CERT_TRUST_HAS_NOT_SUPPORTED_CRITICAL_EXT:
-		git_error_set(GIT_ERROR_SSL, "certificate is not valid");
-		break;
-	case CERT_TRUST_IS_UNTRUSTED_ROOT:
-	case CERT_TRUST_IS_CYCLIC:
-	case CERT_TRUST_IS_EXPLICIT_DISTRUST:
-		git_error_set(GIT_ERROR_SSL, "certificate is not trusted");
-		break;
-	case CERT_TRUST_REVOCATION_STATUS_UNKNOWN:
-		git_error_set(GIT_ERROR_SSL,
-			"certificate revocation status could not be verified");
-		break;
-	case CERT_TRUST_IS_OFFLINE_REVOCATION:
-		git_error_set(GIT_ERROR_SSL,
-			"certificate revocation is offline or stale");
-		break;
-	case CERT_TRUST_HAS_WEAK_SIGNATURE:
-		git_error_set(GIT_ERROR_SSL, "certificate has a weak signature");
-		break;
-	default:
-		git_error_set(GIT_ERROR_SSL,
-			"unknown certificate lookup failure: %d", status);
-		return -1;
+	int error = -1;
+	git_str msg = GIT_STR_INIT;
+
+	git_str_printf(&msg, "certificate error (%d): ", status);
+
+	if (status & CERT_TRUST_IS_NOT_TIME_VALID) {
+		certificate_error_append_message(
+		        &error, &msg,
+		        "certificate is expired or not yet valid");
+		error = GIT_ECERTIFICATE;
 	}
 
-	return GIT_ECERTIFICATE;
+	if (status & CERT_TRUST_IS_REVOKED) {
+		certificate_error_append_message(
+		        &error, &msg, "certificate is revoked");
+		error = GIT_ECERTIFICATE;
+	}
+
+	if (status &
+	    (CERT_TRUST_IS_NOT_SIGNATURE_VALID |
+	     CERT_TRUST_IS_NOT_VALID_FOR_USAGE | CERT_TRUST_INVALID_EXTENSION |
+	     CERT_TRUST_INVALID_POLICY_CONSTRAINTS |
+	     CERT_TRUST_INVALID_BASIC_CONSTRAINTS |
+	     CERT_TRUST_INVALID_NAME_CONSTRAINTS |
+	     CERT_TRUST_HAS_NOT_SUPPORTED_NAME_CONSTRAINT |
+	     CERT_TRUST_HAS_NOT_DEFINED_NAME_CONSTRAINT |
+	     CERT_TRUST_HAS_NOT_PERMITTED_NAME_CONSTRAINT |
+	     CERT_TRUST_HAS_EXCLUDED_NAME_CONSTRAINT |
+	     CERT_TRUST_NO_ISSUANCE_CHAIN_POLICY |
+	     CERT_TRUST_HAS_NOT_SUPPORTED_CRITICAL_EXT)) {
+		certificate_error_append_message(
+		        &error, &msg, "certificate is not valid");
+		error = GIT_ECERTIFICATE;
+	}
+
+	if (status & (CERT_TRUST_IS_UNTRUSTED_ROOT | CERT_TRUST_IS_CYCLIC |
+	              CERT_TRUST_IS_EXPLICIT_DISTRUST)) {
+		certificate_error_append_message(
+		        &error, &msg, "certificate is not trusted");
+		error = GIT_ECERTIFICATE;
+	}
+
+	if (status & CERT_TRUST_HAS_WEAK_SIGNATURE) {
+		certificate_error_append_message(
+		        &error, &msg, "certificate has a weak signature");
+		error = GIT_ECERTIFICATE;
+	}
+
+	if (status & CERT_TRUST_REVOCATION_STATUS_UNKNOWN) {
+		certificate_error_append_message(
+		        &error, &msg,
+		        "certificate revocation status could not be verified");
+		error = GIT_ECERTIFICATE;
+	}
+
+	if (status & CERT_TRUST_IS_OFFLINE_REVOCATION) {
+		certificate_error_append_message(
+		        &error, &msg,
+		        "certificate revocation is offline or stale");
+		error = GIT_ECERTIFICATE;
+	}
+
+	if (error == -1)
+		git_str_printf(
+		        &msg, "unknown certificate lookup failure: %d", status);
+
+	git_error_set(GIT_ERROR_SSL, git_str_cstr(&msg));
+	git_str_dispose(&msg);
+
+	return error;
 }
 
 static int set_certificate_validation_error(DWORD status)
