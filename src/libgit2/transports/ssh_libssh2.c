@@ -515,6 +515,8 @@ static void find_hostkey_preference(
 	add_hostkey_pref_if_avail(known_hosts, hostname, port, prefs, LIBSSH2_KNOWNHOST_KEY_ECDSA_384, "ecdsa-sha2-nistp384");
 	add_hostkey_pref_if_avail(known_hosts, hostname, port, prefs, LIBSSH2_KNOWNHOST_KEY_ECDSA_521, "ecdsa-sha2-nistp521");
 #endif
+	add_hostkey_pref_if_avail(known_hosts, hostname, port, prefs, LIBSSH2_KNOWNHOST_KEY_SSHRSA, "rsa-sha2-512");
+	add_hostkey_pref_if_avail(known_hosts, hostname, port, prefs, LIBSSH2_KNOWNHOST_KEY_SSHRSA, "rsa-sha2-256");
 	add_hostkey_pref_if_avail(known_hosts, hostname, port, prefs, LIBSSH2_KNOWNHOST_KEY_SSHRSA, "ssh-rsa");
 }
 
