@@ -341,6 +341,9 @@ static int check_certificate(schannel_stream* st)
 
 	memset(&cert_chain_parameters, 0, sizeof(CERT_CHAIN_PARA));
 	cert_chain_parameters.cbSize = sizeof(CERT_CHAIN_PARA);
+	
+	memset(&cert_policy_status, 0, sizeof(CERT_CHAIN_POLICY_STATUS));
+	cert_policy_status.cbSize = sizeof(CERT_CHAIN_POLICY_STATUS);
 
 	if (QueryContextAttributesW(&st->context,
 			SECPKG_ATTR_REMOTE_CERT_CONTEXT,
