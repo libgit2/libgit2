@@ -369,8 +369,9 @@ static int check_certificate(schannel_stream* st)
 	st->x509.len = st->certificate->cbCertEncoded;
 
 	/* Handle initial certificate validation */
-
-	if (st->cert_chain->TrustStatus.dwErrorStatus != CERT_TRUST_NO_ERROR)
+	if ((st->cert_chain->TrustStatus.dwErrorStatus &
+	     ~(DWORD)(CERT_TRUST_REVOCATION_STATUS_UNKNOWN |
+	              CERT_TRUST_IS_OFFLINE_REVOCATION)) != CERT_TRUST_NO_ERROR)
 		return set_certificate_lookup_error(st->cert_chain->TrustStatus.dwErrorStatus);
 
 	ssl_policy_parameters.cbSize = sizeof(SSL_EXTRA_CERT_CHAIN_POLICY_PARA);
