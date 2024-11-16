@@ -49,6 +49,10 @@ typedef struct git_str git_str;
 # define GIT_WARN_UNUSED_RESULT
 #endif
 
+#if (defined(_WIN32)) && !defined(__CYGWIN__)
+# define GIT_WIN32 1
+#endif
+
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
