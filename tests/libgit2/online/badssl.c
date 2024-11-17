@@ -76,9 +76,6 @@ void test_online_badssl__old_cipher(void)
 
 void test_online_badssl__untrusted(void)
 {
-	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
-	opts.fetch_opts.callbacks.certificate_check = cert_check_assert_invalid;
-
 	if (!g_has_ssl)
 		cl_skip();
 
@@ -86,7 +83,7 @@ void test_online_badssl__untrusted(void)
 	        GIT_ECERTIFICATE,
 	        git_clone(
 	                &g_repo, "https://untrusted-root.badssl.com/fake.git",
-	                "./fake", &opts));
+	                "./fake", NULL));
 	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_SSL);
 	cl_assert(strstr(git_error_last()->message, "certificate is not trusted") != NULL);
 	cl_assert(
