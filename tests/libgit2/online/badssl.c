@@ -88,13 +88,12 @@ void test_online_badssl__untrusted(void)
 	                &g_repo, "https://untrusted-root.badssl.com/fake.git",
 	                "./fake", NULL));
 	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_SSL);
-	const char *message = git_error_last()->message;
-	cl_assert(strstr(message, "certificate is not trusted") != NULL);
+	cl_assert(strstr(git_error_last()->message, "certificate is not trusted") != NULL);
 	cl_assert(
-	        strstr(message,
+	        strstr(git_error_last()->message,
 	               "certificate revocation status could not be verified") !=
 	        NULL);
 	cl_assert(
-	        strstr(message, "certificate revocation is offline or stale") !=
+	        strstr(git_error_last()->message, "certificate revocation is offline or stale") !=
 	        NULL);
 }
