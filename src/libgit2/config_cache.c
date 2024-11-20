@@ -64,12 +64,6 @@ static git_configmap _configmap_logallrefupdates[] = {
 	{GIT_CONFIGMAP_STRING, "always", GIT_LOGALLREFUPDATES_ALWAYS},
 };
 
-/*
-Set the length object names are abbreviated to. If unspecified or set to "auto",
-an appropriate value is computed based on the approximate number of packed objects in your repository,
-which hopefully is enough for abbreviated object names to stay unique for some time. If set to "no",
-no abbreviation is made and the object names are shown in their full length. The minimum length is 4.
-*/
 static git_configmap _configmap_abbrev[] = {
 	{GIT_CONFIGMAP_FALSE, NULL, GIT_ABBREV_FALSE},
 	{GIT_CONFIGMAP_INT32, NULL, 0},
