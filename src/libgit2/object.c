@@ -532,7 +532,7 @@ int git_object__abbrev_length(int *out, git_repository *repo)
 		return error;
 
 	if (len == GIT_ABBREV_FALSE) {
-		len = oid_hexsize;
+		len = (int)oid_hexsize;
 	}
 
 	if (len < GIT_ABBREV_MINIMUM || (size_t)len > oid_hexsize) {
