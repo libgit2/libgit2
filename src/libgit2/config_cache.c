@@ -65,10 +65,15 @@ static git_configmap _configmap_logallrefupdates[] = {
 };
 
 /*
- * Generic map for integer values
- */
-static git_configmap _configmap_int[] = {
+Set the length object names are abbreviated to. If unspecified or set to "auto",
+an appropriate value is computed based on the approximate number of packed objects in your repository,
+which hopefully is enough for abbreviated object names to stay unique for some time. If set to "no",
+no abbreviation is made and the object names are shown in their full length. The minimum length is 4.
+*/
+static git_configmap _configmap_abbrev[] = {
+	{GIT_CONFIGMAP_FALSE, NULL, GIT_ABBREV_FALSE},
 	{GIT_CONFIGMAP_INT32, NULL, 0},
+	{GIT_CONFIGMAP_STRING, "auto", GIT_ABBREV_DEFAULT}
 };
 
 static struct map_data _configmaps[] = {
@@ -79,7 +84,7 @@ static struct map_data _configmaps[] = {
 	{"core.filemode", NULL, 0, GIT_FILEMODE_DEFAULT },
 	{"core.ignorestat", NULL, 0, GIT_IGNORESTAT_DEFAULT },
 	{"core.trustctime", NULL, 0, GIT_TRUSTCTIME_DEFAULT },
-	{"core.abbrev", _configmap_int, 1, GIT_ABBREV_DEFAULT },
+	{"core.abbrev", _configmap_abbrev, ARRAY_SIZE(_configmap_abbrev), GIT_ABBREV_DEFAULT },
 	{"core.precomposeunicode", NULL, 0, GIT_PRECOMPOSE_DEFAULT },
 	{"core.safecrlf", _configmap_safecrlf, ARRAY_SIZE(_configmap_safecrlf), GIT_SAFE_CRLF_DEFAULT},
 	{"core.logallrefupdates", _configmap_logallrefupdates, ARRAY_SIZE(_configmap_logallrefupdates), GIT_LOGALLREFUPDATES_DEFAULT},

@@ -83,4 +83,6 @@ GIT_INLINE(git_object_t) git_object__type_from_filemode(git_filemode_t mode)
 	}
 }
 
+int git_object__abbrev_length(int *out, git_repository *repo);
+
 #endif
