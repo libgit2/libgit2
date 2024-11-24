@@ -71,10 +71,6 @@ typedef size_t size_t;
 # define GIT_FORMAT_PRINTF(a,b) /* empty */
 #endif
 
-#if (defined(_WIN32)) && !defined(__CYGWIN__)
-#define GIT_WIN32 1
-#endif
-
 #ifdef __amigaos4__
 #include <netinet/in.h>
 #endif
@@ -94,10 +90,10 @@ GIT_BEGIN_DECL
  * environment variable). A semi-colon ";" is used on Windows and
  * AmigaOS, and a colon ":" for all other systems.
  */
-#if defined(GIT_WIN32) || defined(AMIGA)
-#define GIT_PATH_LIST_SEPARATOR ';'
+#if (defined(_WIN32) && !defined(__CYGWIN__)) || defined(AMIGA)
+# define GIT_PATH_LIST_SEPARATOR ';'
 #else
-#define GIT_PATH_LIST_SEPARATOR ':'
+# define GIT_PATH_LIST_SEPARATOR ':'
 #endif
 
 /**

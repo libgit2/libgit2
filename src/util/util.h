@@ -16,6 +16,10 @@
 #include "strnlen.h"
 #include "thread.h"
 
+#if (defined(_WIN32)) && !defined(__CYGWIN__)
+# define GIT_WIN32 1
+#endif
+
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define bitsizeof(x) (CHAR_BIT * sizeof(x))
 #define MSB(x, bits) ((x) & (~UINT64_C(0) << (bitsizeof(x) - (bits))))
