@@ -13,14 +13,19 @@
 
 /**
  * @file git2/sys/config.h
- * @brief Git config backend routines
- * @defgroup git_backend Git custom backend APIs
+ * @brief Custom configuration database backends
+ * @defgroup git_backend Custom configuration database backends
  * @ingroup Git
  * @{
  */
 GIT_BEGIN_DECL
 
+/**
+ * An entry in a configuration backend. This is provided so that
+ * backend implementors can have a mechanism to free their data.
+ */
 typedef struct git_config_backend_entry {
+	/** The base configuration entry */
 	struct git_config_entry entry;
 
 	/**
@@ -93,7 +98,11 @@ struct git_config_backend {
 	int GIT_CALLBACK(unlock)(struct git_config_backend *, int success);
 	void GIT_CALLBACK(free)(struct git_config_backend *);
 };
+
+/** Current version for the `git_config_backend_options` structure */
 #define GIT_CONFIG_BACKEND_VERSION 1
+
+/** Static constructor for `git_config_backend_options` */
 #define GIT_CONFIG_BACKEND_INIT {GIT_CONFIG_BACKEND_VERSION}
 
 /**
@@ -152,7 +161,10 @@ typedef struct {
 	const char *origin_path;
 } git_config_backend_memory_options;
 
+/** Current version for the `git_config_backend_memory_options` structure */
 #define GIT_CONFIG_BACKEND_MEMORY_OPTIONS_VERSION 1
+
+/** Static constructor for `git_config_backend_memory_options` */
 #define GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT { GIT_CONFIG_BACKEND_MEMORY_OPTIONS_VERSION }
 
 
@@ -164,6 +176,7 @@ typedef struct {
  * @param cfg the configuration that is to be parsed
  * @param len the length of the string pointed to by `cfg`
  * @param opts the options to initialize this backend with, or NULL
+ * @return 0 on success or an error code
  */
 extern int git_config_backend_from_string(
 	git_config_backend **out,
@@ -179,6 +192,7 @@ extern int git_config_backend_from_string(
  * @param values the configuration values to set (in "key=value" format)
  * @param len the length of the values array
  * @param opts the options to initialize this backend with, or NULL
+ * @return 0 on success or an error code
  */
 extern int git_config_backend_from_values(
 	git_config_backend **out,
@@ -188,4 +202,5 @@ extern int git_config_backend_from_values(
 
 /** @} */
 GIT_END_DECL
+
 #endif

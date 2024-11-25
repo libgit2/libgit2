@@ -12,9 +12,13 @@
 
 /**
  * @file git2/signature.h
- * @brief Git signature creation
+ * @brief Signatures are the actor in a repository and when they acted
  * @defgroup git_signature Git signature creation
  * @ingroup Git
+ *
+ * Signatures contain the information about the actor (committer or
+ * author) in a repository, and the time that they performed the
+ * commit, or authoring.
  * @{
  */
 GIT_BEGIN_DECL
@@ -140,4 +144,5 @@ GIT_EXTERN(void) git_signature_free(git_signature *sig);
 
 /** @} */
 GIT_END_DECL
+
 #endif

@@ -11,7 +11,9 @@
 #include <stdlib.h>
 
 #ifdef __cplusplus
+ /** Start declarations in C mode for C++ compatibility */
 # define GIT_BEGIN_DECL extern "C" {
+ /** End declarations in C mode */
 # define GIT_END_DECL	}
 #else
  /** Start declarations in C mode */
@@ -71,6 +73,7 @@ typedef size_t size_t;
 # define GIT_FORMAT_PRINTF(a,b) /* empty */
 #endif
 
+/** Defined when building on Windows (but not via cygwin) */
 #if (defined(_WIN32)) && !defined(__CYGWIN__)
 #define GIT_WIN32 1
 #endif
@@ -81,9 +84,13 @@ typedef size_t size_t;
 
 /**
  * @file git2/common.h
- * @brief Git common platform definitions
+ * @brief Base platform functionality
  * @defgroup git_common Git common platform definitions
  * @ingroup Git
+ *
+ * Common platform functionality including introspecting libgit2
+ * itself - information like how it was built, and the current
+ * running version.
  * @{
  */
 
@@ -538,7 +545,6 @@ typedef enum {
  *      > to a remote server. Set to 0 to use the system default.
  *
  * @param option Option key
- * @param ... value to set the option
  * @return 0 on success, <0 on failure
  */
 GIT_EXTERN(int) git_libgit2_opts(int option, ...);

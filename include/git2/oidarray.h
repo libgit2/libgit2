@@ -10,6 +10,13 @@
 #include "common.h"
 #include "oid.h"
 
+/**
+ * @file git2/oidarray.h
+ * @brief An array of object IDs
+ * @defgroup git_oidarray Arrays of object IDs
+ * @ingroup Git
+ * @{
+ */
 GIT_BEGIN_DECL
 
 /** Array of object ids */
@@ -34,4 +41,3 @@ GIT_EXTERN(void) git_oidarray_dispose(git_oidarray *array);
 GIT_END_DECL
 
 #endif
-

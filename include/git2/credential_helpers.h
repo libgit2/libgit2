@@ -50,4 +50,5 @@ GIT_EXTERN(int) git_credential_userpass(
 
 /** @} */
 GIT_END_DECL
+
 #endif
