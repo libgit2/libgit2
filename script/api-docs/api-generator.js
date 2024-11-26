@@ -63,6 +63,7 @@ async function headerPaths(p) {
         paths.push(...(await fs.readdir(fullPath)).
             filter((filename) => filename.endsWith('.h')).
             filter((filename) => !fileIgnoreList.includes(filename)).
+            filter((filename) => filename !== 'deprecated.h' || !options.deprecateHard).
             map((filename) => `${fullPath}/${filename}`));
     }
 
@@ -1494,6 +1495,7 @@ program.option('--output <filename>')
        .option('--include <filename>', undefined, joinArguments)
        .option('--no-includes')
        .option('--deprecate-hard')
+       .option('--validate-only')
        .option('--strict');
 program.parse();
 
@@ -1535,7 +1537,9 @@ if (options['include'] && !options['includes']) {
         const simplified = simplify(results);
         simplified['info'] = metadata;
 
-        console.log(JSON.stringify(simplified, null, 2));
+	if (!options.validateOnly) {
+		console.log(JSON.stringify(simplified, null, 2));
+	}
     } catch (e) {
         console.error(e);
         process.exit(1);
