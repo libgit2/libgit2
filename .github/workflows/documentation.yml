@@ -7,6 +7,9 @@ on:
   release:
   workflow_dispatch:
 
+concurrency:
+  group: documentation
+
 permissions:
   contents: read
 
@@ -29,7 +32,11 @@ jobs:
         ssh-key: ${{ secrets.DOCS_PUBLISH_KEY }}
     - name: Prepare branches
       run: |
-        for a in main $(git branch -r --list 'origin/maint/*' | sed -e "s/^  origin\///"); do
+        if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then
+          git branch --track main origin/main
+        fi
+
+        for a in $(git branch -r --list 'origin/maint/*' | sed -e "s/^  origin\///"); do
           git branch --track "$a" "origin/$a"
         done
       working-directory: source
