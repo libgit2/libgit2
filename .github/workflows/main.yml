@@ -233,6 +233,17 @@ jobs:
         name: test-results-${{ matrix.platform.id }}
         path: build/results_*.xml
 
+  documentation:
+    name: Validate documentation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+    - name: Validate documentation
+      run: |
+        (cd script/api-docs && npm install)
+        script/api-docs/api-generator.js --validate-only --strict --deprecate-hard  .
+
   test_results:
     name: Test results
     needs: [ build ]
