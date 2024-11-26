@@ -13,7 +13,7 @@
 
 /**
  * @file git2/oid.h
- * @brief Git object id routines
+ * @brief Object IDs
  * @defgroup git_oid Git object id routines
  * @ingroup Git
  * @{
@@ -82,13 +82,18 @@ typedef enum {
 
 #endif
 
-/* Maximum possible object ID size in raw / hex string format. */
-#ifndef GIT_EXPERIMENTAL_SHA256
-# define GIT_OID_MAX_SIZE        GIT_OID_SHA1_SIZE
-# define GIT_OID_MAX_HEXSIZE     GIT_OID_SHA1_HEXSIZE
-#else
+/** Maximum possible object ID size in raw format */
+#ifdef GIT_EXPERIMENTAL_SHA256
 # define GIT_OID_MAX_SIZE        GIT_OID_SHA256_SIZE
+#else
+# define GIT_OID_MAX_SIZE        GIT_OID_SHA1_SIZE
+#endif
+
+/** Maximum possible object ID size in hex format */
+#ifdef GIT_EXPERIMENTAL_SHA256
 # define GIT_OID_MAX_HEXSIZE     GIT_OID_SHA256_HEXSIZE
+#else
+# define GIT_OID_MAX_HEXSIZE     GIT_OID_SHA1_HEXSIZE
 #endif
 
 /** Minimum length (in number of hex characters,
@@ -107,6 +112,15 @@ typedef struct git_oid {
 	unsigned char id[GIT_OID_MAX_SIZE];
 } git_oid;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+
+GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str, git_oid_t type);
+GIT_EXTERN(int) git_oid_fromstrp(git_oid *out, const char *str, git_oid_t type);
+GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length, git_oid_t type);
+GIT_EXTERN(int) git_oid_fromraw(git_oid *out, const unsigned char *raw, git_oid_t type);
+
+#else
+
 /**
  * Parse a hex formatted object id into a git_oid.
  *
@@ -119,28 +133,18 @@ typedef struct git_oid {
  *		the hex sequence and have at least the number of bytes
  *		needed for an oid encoded in hex (40 bytes for sha1,
  *		256 bytes for sha256).
- * @param type the type of object id
  * @return 0 or an error code
  */
-#ifdef GIT_EXPERIMENTAL_SHA256
-GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str, git_oid_t type);
-#else
 GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str);
-#endif
 
 /**
  * Parse a hex formatted NUL-terminated string into a git_oid.
  *
  * @param out oid structure the result is written into.
  * @param str input hex string; must be null-terminated.
- * @param type the type of object id
  * @return 0 or an error code
  */
-#ifdef GIT_EXPERIMENTAL_SHA256
-GIT_EXTERN(int) git_oid_fromstrp(git_oid *out, const char *str, git_oid_t type);
-#else
 GIT_EXTERN(int) git_oid_fromstrp(git_oid *out, const char *str);
-#endif
 
 /**
  * Parse N characters of a hex formatted object id into a git_oid.
@@ -151,14 +155,9 @@ GIT_EXTERN(int) git_oid_fromstrp(git_oid *out, const char *str);
  * @param out oid structure the result is written into.
  * @param str input hex string of at least size `length`
  * @param length length of the input string
- * @param type the type of object id
  * @return 0 or an error code
  */
-#ifdef GIT_EXPERIMENTAL_SHA256
-GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length, git_oid_t type);
-#else
 GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length);
-#endif
 
 /**
  * Copy an already raw oid into a git_oid structure.
@@ -167,10 +166,8 @@ GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length);
  * @param raw the raw input bytes to be copied.
  * @return 0 on success or error code
  */
-#ifdef GIT_EXPERIMENTAL_SHA256
-GIT_EXTERN(int) git_oid_fromraw(git_oid *out, const unsigned char *raw, git_oid_t type);
-#else
 GIT_EXTERN(int) git_oid_fromraw(git_oid *out, const unsigned char *raw);
+
 #endif
 
 /**
@@ -310,6 +307,7 @@ GIT_EXTERN(int) git_oid_strcmp(const git_oid *id, const char *str);
 /**
  * Check is an oid is all zeros.
  *
+ * @param id the object ID to check
  * @return 1 if all zeros, 0 otherwise.
  */
 GIT_EXTERN(int) git_oid_is_zero(const git_oid *id);
@@ -370,4 +368,5 @@ GIT_EXTERN(void) git_oid_shorten_free(git_oid_shorten *os);
 
 /** @} */
 GIT_END_DECL
+
 #endif

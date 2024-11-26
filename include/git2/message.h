@@ -12,7 +12,7 @@
 
 /**
  * @file git2/message.h
- * @brief Git message management routines
+ * @brief Commit messages
  * @ingroup Git
  * @{
  */
@@ -83,4 +83,4 @@ GIT_EXTERN(void) git_message_trailer_array_free(git_message_trailer_array *arr);
 /** @} */
 GIT_END_DECL
 
-#endif /* INCLUDE_git_message_h__ */
+#endif

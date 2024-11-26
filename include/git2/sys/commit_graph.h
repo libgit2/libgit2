@@ -12,8 +12,8 @@
 
 /**
  * @file git2/sys/commit_graph.h
- * @brief Git commit-graph
- * @defgroup git_commit_graph Git commit-graph APIs
+ * @brief Commit graphs store information about commit relationships
+ * @defgroup git_commit_graph Commit graphs
  * @ingroup Git
  * @{
  */
@@ -136,7 +136,10 @@ typedef struct {
 	size_t max_commits;
 } git_commit_graph_writer_options;
 
+/** Current version for the `git_commit_graph_writer_options` structure */
 #define GIT_COMMIT_GRAPH_WRITER_OPTIONS_VERSION 1
+
+/** Static constructor for `git_commit_graph_writer_options` */
 #define GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT { \
 		GIT_COMMIT_GRAPH_WRITER_OPTIONS_VERSION \
 	}
@@ -181,4 +184,5 @@ GIT_EXTERN(int) git_commit_graph_writer_dump(
 
 /** @} */
 GIT_END_DECL
+
 #endif

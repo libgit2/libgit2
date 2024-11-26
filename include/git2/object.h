@@ -14,13 +14,14 @@
 
 /**
  * @file git2/object.h
- * @brief Git revision object management routines
+ * @brief Objects are blobs (files), trees (directories), commits, and annotated tags
  * @defgroup git_object Git revision object management routines
  * @ingroup Git
  * @{
  */
 GIT_BEGIN_DECL
 
+/** Maximum size of a git object */
 #define GIT_OBJECT_SIZE_MAX UINT64_MAX
 
 /**
@@ -53,18 +54,18 @@ GIT_EXTERN(int) git_object_lookup(
  *
  * The object obtained will be so that its identifier
  * matches the first 'len' hexadecimal characters
- * (packets of 4 bits) of the given 'id'.
- * 'len' must be at least GIT_OID_MINPREFIXLEN, and
- * long enough to identify a unique object matching
- * the prefix; otherwise the method will fail.
+ * (packets of 4 bits) of the given `id`. `len` must be
+ * at least `GIT_OID_MINPREFIXLEN`, and long enough to
+ * identify a unique object matching the prefix; otherwise
+ * the method will fail.
  *
  * The generated reference is owned by the repository and
  * should be closed with the `git_object_free` method
  * instead of free'd manually.
  *
- * The 'type' parameter must match the type of the object
+ * The `type` parameter must match the type of the object
  * in the odb; the method will fail otherwise.
- * The special value 'GIT_OBJECT_ANY' may be passed to let
+ * The special value `GIT_OBJECT_ANY` may be passed to let
  * the method guess the object's type.
  *
  * @param object_out pointer where to store the looked-up object
@@ -260,7 +261,7 @@ GIT_EXTERN(int) git_object_rawcontent_is_valid(
  * @warning This function is experimental and its signature may change in
  * the future.
  *
- * @param valid Output pointer to set with validity of the object content
+ * @param[out] valid Output pointer to set with validity of the object content
  * @param buf The contents to validate
  * @param len The length of the buffer
  * @param object_type The type of the object in the buffer

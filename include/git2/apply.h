@@ -14,9 +14,12 @@
 
 /**
  * @file git2/apply.h
- * @brief Git patch application routines
+ * @brief Apply patches to the working directory or index
  * @defgroup git_apply Git patch application routines
  * @ingroup Git
+ *
+ * Mechanisms to apply a patch to the index, the working directory,
+ * or both.
  * @{
  */
 GIT_BEGIN_DECL
@@ -57,7 +60,15 @@ typedef int GIT_CALLBACK(git_apply_hunk_cb)(
 	const git_diff_hunk *hunk,
 	void *payload);
 
-/** Flags controlling the behavior of git_apply */
+/**
+ * Flags controlling the behavior of `git_apply`.
+ *
+ * When the callback:
+ * - returns < 0, the apply process will be aborted.
+ * - returns > 0, the hunk will not be applied, but the apply process
+ *      continues
+ * - returns 0, the hunk is applied, and the apply process continues.
+ */
 typedef enum {
 	/**
 	 * Don't actually make changes, just test that the patch applies.
@@ -67,12 +78,19 @@ typedef enum {
 } git_apply_flags_t;
 
 /**
- * Apply options structure
+ * Apply options structure.
+ *
+ * When the callback:
+ * - returns < 0, the apply process will be aborted.
+ * - returns > 0, the hunk will not be applied, but the apply process
+ *      continues
+ * - returns 0, the hunk is applied, and the apply process continues.
  *
  * Initialize with `GIT_APPLY_OPTIONS_INIT`. Alternatively, you can
  * use `git_apply_options_init`.
  *
- * @see git_apply_to_tree, git_apply
+ * @see git_apply_to_tree
+ * @see git_apply
  */
 typedef struct {
 	unsigned int version; /**< The version */
@@ -83,14 +101,17 @@ typedef struct {
 	/** When applying a patch, callback that will be made per hunk. */
 	git_apply_hunk_cb hunk_cb;
 
-	/** Payload passed to both delta_cb & hunk_cb. */
+	/** Payload passed to both `delta_cb` & `hunk_cb`. */
 	void *payload;
 
-	/** Bitmask of git_apply_flags_t */
+	/** Bitmask of `git_apply_flags_t` */
 	unsigned int flags;
 } git_apply_options;
 
+/** Current version for the `git_apply_options` structure */
 #define GIT_APPLY_OPTIONS_VERSION 1
+
+/** Static constructor for `git_apply_options` */
 #define GIT_APPLY_OPTIONS_INIT {GIT_APPLY_OPTIONS_VERSION}
 
 /**

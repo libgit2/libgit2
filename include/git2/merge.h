@@ -17,9 +17,12 @@
 
 /**
  * @file git2/merge.h
- * @brief Git merge routines
+ * @brief Merge re-joins diverging branches of history
  * @defgroup git_merge Git merge routines
  * @ingroup Git
+ *
+ * Merge will take two commits and attempt to produce a commit that
+ * includes the changes that were made in both branches.
  * @{
  */
 GIT_BEGIN_DECL
@@ -45,7 +48,10 @@ typedef struct {
 	unsigned int mode;
 } git_merge_file_input;
 
+/** Current version for the `git_merge_file_input_options` structure */
 #define GIT_MERGE_FILE_INPUT_VERSION 1
+
+/** Static constructor for `git_merge_file_input_options` */
 #define GIT_MERGE_FILE_INPUT_INIT {GIT_MERGE_FILE_INPUT_VERSION}
 
 /**
@@ -180,6 +186,7 @@ typedef enum {
 	GIT_MERGE_FILE_ACCEPT_CONFLICTS = (1 << 9)
 } git_merge_file_flag_t;
 
+/** Default size for conflict markers */
 #define GIT_MERGE_CONFLICT_MARKER_SIZE	7
 
 /**
@@ -217,7 +224,10 @@ typedef struct {
 	unsigned short marker_size;
 } git_merge_file_options;
 
+/** Current version for the `git_merge_file_options` structure */
 #define GIT_MERGE_FILE_OPTIONS_VERSION 1
+
+/** Static constructor for `git_merge_file_options` */
 #define GIT_MERGE_FILE_OPTIONS_INIT {GIT_MERGE_FILE_OPTIONS_VERSION}
 
 /**
@@ -312,7 +322,10 @@ typedef struct {
 	uint32_t file_flags;
 } git_merge_options;
 
+/** Current version for the `git_merge_options` structure */
 #define GIT_MERGE_OPTIONS_VERSION 1
+
+/** Static constructor for `git_merge_options` */
 #define GIT_MERGE_OPTIONS_INIT { \
 	GIT_MERGE_OPTIONS_VERSION, GIT_MERGE_FIND_RENAMES }
 
@@ -654,4 +667,5 @@ GIT_EXTERN(int) git_merge(
 
 /** @} */
 GIT_END_DECL
+
 #endif

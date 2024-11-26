@@ -81,13 +81,18 @@ typedef enum {
 	GIT_OBJECT_REF_DELTA = 7  /**< A delta, base is given by object id. */
 } git_object_t;
 
-/** An open object database handle. */
+/**
+ * An object database stores the objects (commit, trees, blobs, tags,
+ * etc) for a repository.
+ */
 typedef struct git_odb git_odb;
 
 /** A custom backend in an ODB */
 typedef struct git_odb_backend git_odb_backend;
 
-/** An object read from the ODB */
+/**
+ * A "raw" object read from the object database.
+ */
 typedef struct git_odb_object git_odb_object;
 
 /** A stream to read/write from the ODB */
@@ -194,7 +199,18 @@ typedef struct git_reference_iterator  git_reference_iterator;
 /** Transactional interface to references */
 typedef struct git_transaction git_transaction;
 
-/** Annotated commits, the input to merge and rebase. */
+/**
+ * Annotated commits are commits with additional metadata about how the
+ * commit was resolved, which can be used for maintaining the user's
+ * "intent" through commands like merge and rebase.
+ *
+ * For example, if a user wants to conceptually "merge `HEAD`", then the
+ * commit portion of an annotated commit will point to the `HEAD` commit,
+ * but the _annotation_ will denote the ref `HEAD`. This allows git to
+ * perform the internal bookkeeping so that the system knows both the
+ * content of what is being merged but also how the content was looked up
+ * so that it can be recorded in the reflog appropriately.
+ */
 typedef struct git_annotated_commit git_annotated_commit;
 
 /** Representation of a status collection */
