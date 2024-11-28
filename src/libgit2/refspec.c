@@ -225,6 +225,14 @@ int git_refspec_force(const git_refspec *refspec)
 	return refspec->force;
 }
 
+int git_refspec_src_matches_negative(const git_refspec *refspec, const char *refname)
+{
+	if (refspec == NULL || refspec->src == NULL || !git_refspec_is_negative(refspec))
+		return false;
+
+	return (wildmatch(refspec->src + 1, refname, 0) == 0);
+}
+
 int git_refspec_src_matches(const git_refspec *refspec, const char *refname)
 {
 	if (refspec == NULL || refspec->src == NULL)
@@ -338,6 +346,14 @@ int git_refspec_is_wildcard(const git_refspec *spec)
 	GIT_ASSERT_ARG(spec->src);
 
 	return (spec->src[strlen(spec->src) - 1] == '*');
+}
+
+int git_refspec_is_negative(const git_refspec *spec)
+{
+	GIT_ASSERT_ARG(spec);
+	GIT_ASSERT_ARG(spec->src);
+
+	return (spec->src[0] == '^' && spec->dst == NULL);
 }
 
 git_direction git_refspec_direction(const git_refspec *spec)
