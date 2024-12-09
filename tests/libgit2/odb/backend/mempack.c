@@ -61,17 +61,22 @@ void test_odb_backend_mempack__blob_create_from_buffer_succeeds(void)
 
 void test_odb_backend_mempack__empty_object_count_succeeds(void)
 {
-	cl_assert_equal_sz(0, git_mempack_object_count(_backend));
+	size_t count;
+	cl_git_pass(git_mempack_object_count(&count, _backend));
+	cl_assert_equal_sz(0, count);
 }
 
 void test_odb_backend_mempack__object_count_succeeds(void)
 {
 	const char *data = "data";
+	size_t count;
 	cl_git_pass(git_odb_write(&_oid, _odb, data, strlen(data) + 1, GIT_OBJECT_BLOB));
-	cl_assert_equal_sz(1, git_mempack_object_count(_backend));
+	cl_git_pass(git_mempack_object_count(&count, _backend));
+	cl_assert_equal_sz(1, count);
 }
 
 void test_odb_backend_mempack__object_count_fails(void)
 {
-	cl_git_fail_with(-1, git_mempack_object_count(0));
+	size_t count;
+	cl_git_fail_with(-1, git_mempack_object_count(&count, 0));
 }

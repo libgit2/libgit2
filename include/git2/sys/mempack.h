@@ -104,10 +104,11 @@ GIT_EXTERN(int) git_mempack_reset(git_odb_backend *backend);
 /**
  * Get the total number of objects in mempack
  *
+ * @param count The count of objects in the mempack
  * @param backend The mempack backend
- * @return the number of objects in the mempack, -1 on error
+ * @return 0 on success, or -1 on error
  */
-GIT_EXTERN(int) git_mempack_object_count(git_odb_backend *backend);
+GIT_EXTERN(int) git_mempack_object_count(size_t *count, git_odb_backend *backend);
 
 GIT_END_DECL
 
