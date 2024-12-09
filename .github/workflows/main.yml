@@ -42,7 +42,7 @@ jobs:
             name: noble
           env:
             CC: clang
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DUSE_HTTP_PARSER=http-parser
             CMAKE_GENERATOR: Ninja
         - name: "Linux (Xenial, GCC, OpenSSL, OpenSSH)"
           id: xenial-gcc-openssl
@@ -233,6 +233,17 @@ jobs:
         name: test-results-${{ matrix.platform.id }}
         path: build/results_*.xml
 
+  documentation:
+    name: Validate documentation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+    - name: Validate documentation
+      run: |
+        (cd script/api-docs && npm install)
+        script/api-docs/api-generator.js --validate-only --strict --deprecate-hard  .
+
   test_results:
     name: Test results
     needs: [ build ]
@@ -245,52 +256,3 @@ jobs:
       uses: test-summary/action@v2
       with:
         paths: 'test-results-*/*.xml'
-
-
-  # Generate documentation using docurium.  We'll upload the documentation
-  # as a build artifact so that it can be reviewed as part of a pull
-  # request or in a forked build.  For CI builds in the main repository's
-  # main branch, we'll push the gh-pages branch back up so that it is
-  # published to our documentation site.
-  documentation:
-    name: Generate documentation
-    if: success() || failure()
-    runs-on: ubuntu-latest
-    steps:
-    - name: Check out repository
-      uses: actions/checkout@v4
-      with:
-        path: source
-        fetch-depth: 0
-    - name: Set up container
-      uses: ./source/.github/actions/download-or-build-container
-      with:
-        registry: ${{ env.docker-registry }}
-        config-path: ${{ env.docker-config-path }}
-        container: docurium
-        github_token: ${{ secrets.github_token }}
-        dockerfile: ${{ matrix.platform.container.dockerfile }}
-    - name: Generate documentation
-      working-directory: source
-      run: |
-        git config user.name 'Documentation Generation'
-        git config user.email 'libgit2@users.noreply.github.com'
-        git branch gh-pages origin/gh-pages
-        docker login https://${{ env.docker-registry }} -u ${{ github.actor }} -p ${{ github.token }}
-        docker run \
-            --rm \
-            -v "$(pwd):/home/libgit2" \
-            -w /home/libgit2 \
-            ${{ env.docker-registry }}/${{ github.repository }}/docurium:latest \
-            cm doc api.docurium
-        git checkout gh-pages
-        zip --exclude .git/\* --exclude .gitignore --exclude .gitattributes -r api-documentation.zip .
-    - uses: actions/upload-artifact@v4
-      name: Upload artifact
-      with:
-        name: api-documentation
-        path: source/api-documentation.zip
-    - name: Push documentation branch
-      working-directory: source
-      run: git push origin gh-pages
-      if: github.event_name == 'push' && github.repository == 'libgit2/libgit2'

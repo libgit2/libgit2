@@ -11,9 +11,9 @@
 #include "git2/types.h"
 
 /**
- * @file git2/midx.h
- * @brief Git multi-pack-index routines
- * @defgroup git_midx Git multi-pack-index routines
+ * @file git2/sys/midx.h
+ * @brief Incremental multi-pack indexes
+ * @defgroup git_midx Incremental multi-pack indexes
  * @ingroup Git
  * @{
  */
@@ -75,4 +75,5 @@ GIT_EXTERN(int) git_midx_writer_dump(
 
 /** @} */
 GIT_END_DECL
+
 #endif

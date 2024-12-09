@@ -15,8 +15,8 @@
 
 /**
  * @file git2/sys/mempack.h
- * @brief Custom ODB backend that permits packing objects in-memory
- * @defgroup git_backend Git custom backend APIs
+ * @brief A custom object database backend for storing objects in-memory
+ * @defgroup git_mempack A custom object database backend for storing objects in-memory
  * @ingroup Git
  * @{
  */
@@ -60,6 +60,7 @@ GIT_EXTERN(int) git_mempack_new(git_odb_backend **out);
  *
  * @param backend The mempack backend
  * @param pb The packbuilder to use to write the packfile
+ * @return 0 on success or an error code
  */
 GIT_EXTERN(int) git_mempack_write_thin_pack(git_odb_backend *backend, git_packbuilder *pb);
 
@@ -109,6 +110,7 @@ GIT_EXTERN(int) git_mempack_reset(git_odb_backend *backend);
  */
 GIT_EXTERN(int) git_mempack_object_count(git_odb_backend *backend);
 
+/** @} */
 GIT_END_DECL
 
 #endif

@@ -12,9 +12,9 @@
 #include "git2/oid.h"
 
 /**
- * @file git2/refdb_backend.h
- * @brief Git custom refs backend functions
- * @defgroup git_refdb_backend Git custom refs backend API
+ * @file git2/sys/refdb_backend.h
+ * @brief Custom reference database backends for refs storage
+ * @defgroup git_refdb_backend Custom reference database backends for refs storage
  * @ingroup Git
  * @{
  */
@@ -312,7 +312,10 @@ struct git_refdb_backend {
 		      const git_reference *ref, const git_signature *sig, const char *message);
 };
 
+/** Current version for the `git_refdb_backend_options` structure */
 #define GIT_REFDB_BACKEND_VERSION 1
+
+/** Static constructor for `git_refdb_backend_options` */
 #define GIT_REFDB_BACKEND_INIT {GIT_REFDB_BACKEND_VERSION}
 
 /**
@@ -356,6 +359,7 @@ GIT_EXTERN(int) git_refdb_set_backend(
 	git_refdb *refdb,
 	git_refdb_backend *backend);
 
+/** @} */
 GIT_END_DECL
 
 #endif

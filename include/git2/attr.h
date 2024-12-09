@@ -12,9 +12,13 @@
 
 /**
  * @file git2/attr.h
- * @brief Git attribute management routines
+ * @brief Attribute management routines
  * @defgroup git_attr Git attribute management routines
  * @ingroup Git
+ *
+ * Attributes specify additional information about how git should
+ * handle particular paths - for example, they may indicate whether
+ * a particular filter is applied, like LFS or line ending conversions.
  * @{
  */
 GIT_BEGIN_DECL
@@ -114,8 +118,12 @@ GIT_EXTERN(git_attr_value_t) git_attr_value(const char *attr);
  * use index only for creating archives or for a bare repo (if an
  * index has been specified for the bare repo).
  */
+
+/** Examine attribute in working directory, then index */
 #define GIT_ATTR_CHECK_FILE_THEN_INDEX	0
+/** Examine attribute in index, then working directory */
 #define GIT_ATTR_CHECK_INDEX_THEN_FILE	1
+/** Examine attributes only in the index */
 #define GIT_ATTR_CHECK_INDEX_ONLY	2
 
 /**
@@ -132,8 +140,12 @@ GIT_EXTERN(git_attr_value_t) git_attr_value(const char *attr);
  * Passing the `GIT_ATTR_CHECK_INCLUDE_COMMIT` flag will use attributes
  * from a `.gitattributes` file in a specific commit.
  */
+
+/** Ignore system attributes */
 #define GIT_ATTR_CHECK_NO_SYSTEM        (1 << 2)
+/** Honor `.gitattributes` in the HEAD revision */
 #define GIT_ATTR_CHECK_INCLUDE_HEAD     (1 << 3)
+/** Honor `.gitattributes` in a specific commit */
 #define GIT_ATTR_CHECK_INCLUDE_COMMIT   (1 << 4)
 
 /**
@@ -158,7 +170,10 @@ typedef struct {
 	git_oid attr_commit_id;
 } git_attr_options;
 
+/** Current version for the `git_attr_options` structure */
 #define GIT_ATTR_OPTIONS_VERSION 1
+
+/** Static constructor for `git_attr_options` */
 #define GIT_ATTR_OPTIONS_INIT {GIT_ATTR_OPTIONS_VERSION}
 
 /**

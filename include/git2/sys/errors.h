@@ -10,6 +10,15 @@
 
 #include "git2/common.h"
 
+/**
+ * @file git2/sys/errors.h
+ * @brief Advanced error handling
+ * @ingroup Git
+ *
+ * Error handling for advanced consumers; those who use callbacks
+ * or those who create custom databases.
+ * @{
+ */
 GIT_BEGIN_DECL
 
 /**
@@ -61,6 +70,7 @@ GIT_EXTERN(int) git_error_set_str(int error_class, const char *string);
  */
 GIT_EXTERN(void) git_error_set_oom(void);
 
+/** @} */
 GIT_END_DECL
 
 #endif

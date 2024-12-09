@@ -13,12 +13,24 @@
 
 /**
  * @file git2/sys/repository.h
- * @brief Git repository custom implementation routines
- * @defgroup git_backend Git custom backend APIs
+ * @brief Custom repository handling
+ * @defgroup git_repository Custom repository handling
  * @ingroup Git
  * @{
  */
 GIT_BEGIN_DECL
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+
+/**
+ * Create a new repository with no backends.
+ *
+ * @param[out] out The blank repository
+ * @param oid_type the object ID type for this repository
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_repository_new(git_repository **out, git_oid_t oid_type);
+#else
 
 /**
  * Create a new repository with neither backends nor config object
@@ -30,13 +42,11 @@ GIT_BEGIN_DECL
  * can fail to function properly: locations under $GIT_DIR, $GIT_COMMON_DIR,
  * or $GIT_INFO_DIR are impacted.
  *
- * @param out The blank repository
+ * @param[out] out The blank repository
  * @return 0 on success, or an error code
  */
-#ifdef GIT_EXPERIMENTAL_SHA256
-GIT_EXTERN(int) git_repository_new(git_repository **out, git_oid_t oid_type);
-#else
 GIT_EXTERN(int) git_repository_new(git_repository **out);
+
 #endif
 
 /**
@@ -161,6 +171,7 @@ GIT_EXTERN(int) git_repository_set_bare(git_repository *repo);
  * and caches them so that subsequent calls to `git_submodule_lookup` are O(1).
  *
  * @param repo the repository whose submodules will be cached.
+ * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_submodule_cache_all(
 	git_repository *repo);
@@ -176,10 +187,12 @@ GIT_EXTERN(int) git_repository_submodule_cache_all(
  * of these has changed, the cache might become invalid.
  *
  * @param repo the repository whose submodule cache will be cleared
+ * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_submodule_cache_clear(
 	git_repository *repo);
 
 /** @} */
 GIT_END_DECL
+
 #endif

@@ -10,18 +10,16 @@
 #include "common.h"
 #include "cmd.h"
 
-static int show_help = 0;
+int cli_opt__show_help = 0;
+int cli_opt__use_pager = 1;
+
 static int show_version = 0;
 static char *command = NULL;
 static char **args = NULL;
 
 const cli_opt_spec cli_common_opts[] = {
-	{ CLI_OPT_TYPE_SWITCH,    "help",       0, &show_help,    1,
-	  CLI_OPT_USAGE_DEFAULT,   NULL,       "display help information" },
-	{ CLI_OPT_TYPE_VALUE,      NULL,       'c', NULL,         0,
-	  CLI_OPT_USAGE_DEFAULT,  "key=value", "add configuration value" },
-	{ CLI_OPT_TYPE_VALUE,     "config-env", 0, NULL,          0,
-	  CLI_OPT_USAGE_DEFAULT,  "key=value", "set configuration value to environment variable" },
+	CLI_COMMON_OPT,
+
 	{ CLI_OPT_TYPE_SWITCH,    "version",   0, &show_version, 1,
 	  CLI_OPT_USAGE_DEFAULT,   NULL,      "display the version" },
 	{ CLI_OPT_TYPE_ARG,       "command",   0, &command,      0,
@@ -64,6 +62,19 @@ static void reorder_args(char **argv, size_t first)
 	argv[1] = tmp;
 }
 
+/*
+ * When invoked without a command, or just with `--help`, we invoke
+ * the help command; but we want to preserve only arguments that would
+ * be useful for that.
+ */
+static void help_args(int *argc, char **argv)
+{
+	cli_opt__show_help = 0;
+
+	argv[0] = "help";
+	*argc = 1;
+}
+
 int main(int argc, char **argv)
 {
 	const cli_cmd_spec *cmd;
@@ -82,7 +93,7 @@ int main(int argc, char **argv)
 	while (cli_opt_parser_next(&opt, &optparser)) {
 		if (!opt.spec) {
 			cli_opt_status_fprint(stderr, PROGRAM_NAME, &opt);
-			cli_opt_usage_fprint(stderr, PROGRAM_NAME, NULL, cli_common_opts);
+			cli_opt_usage_fprint(stderr, PROGRAM_NAME, NULL, cli_common_opts, CLI_OPT_USAGE_SHOW_HIDDEN);
 			ret = CLI_EXIT_USAGE;
 			goto done;
 		}
@@ -103,6 +114,7 @@ int main(int argc, char **argv)
 	}
 
 	if (!command) {
+		help_args(&argc, argv);
 		ret = cmd_help(argc, argv);
 		goto done;
 	}

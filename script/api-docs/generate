@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+#
+# Usage: generate repo_path output_path
+#
+# Example: generate https://github.com/libgit2/libgit2 path_to_output
+# to clone the repository from GitHub and produce documentation;
+# the repo_path can also be a local path
+
+set -eo pipefail
+
+source_path=$(mktemp -d)
+verbose=
+force=
+
+for var in "$@"; do
+    if [ "${var}" == "--verbose" ]; then
+        verbose=true
+    elif [ "${var}" == "--force" ]; then
+        force=true
+    elif [ "${repo_path}" == "" ]; then
+        repo_path="${var}"
+    elif [ "${output_path}" == "" ]; then
+        output_path="${var}"
+    else
+        repo_path=""
+        output_path=""
+    fi
+done
+
+if [ "${repo_path}" = "" -o "${output_path}" = "" ]; then
+    echo "usage: $0 [--verbose] [--force] repo_path output_path" 1>&2
+    exit 1
+fi
+
+function do_checkout {
+    if [ "$1" = "" ]; then
+        echo "usage: $0 source_path" 1>&2
+        exit 1
+    fi
+
+    if [ "${verbose}" ]; then
+        echo ":: Checking out source trees..."
+        echo ""
+    fi
+
+    source_path=$1
+
+    mkdir -p "${source_path}"
+    git clone "${repo_path}" "${source_path}/main" --no-checkout
+    ( cd "${source_path}/main" && git sparse-checkout set --no-cone 'include/*' )
+    ( cd "${source_path}/main" && git read-tree origin/main )
+    ( cd "${source_path}/main" && git checkout -- include )
+
+    for tag in $(git --git-dir="${source_path}/main/.git" tag -l); do
+        git --git-dir="${source_path}/main/.git" worktree add -f "${source_path}/${tag}" "${tag}" --no-checkout
+        ( cd "${source_path}/${tag}" && git sparse-checkout set --no-cone 'include/*' )
+        ( cd "${source_path}/${tag}" && git read-tree HEAD )
+
+        if [ "${tag}" == "v0.1.0" ]; then
+            ( cd "${source_path}/${tag}" && git checkout -- src/git )
+        elif [ "${tag}" == "v0.2.0" -o "${tag}" == "v0.3.0" ]; then
+            ( cd "${source_path}/${tag}" && git checkout -- src/git2 )
+        else
+            ( cd "${source_path}/${tag}" && git checkout -- include )
+        fi
+    done
+}
+
+do_checkout ${source_path}
+
+if [ "${verbose}" ]; then
+    echo ""
+    echo ":: Generating raw API documentation..."
+    echo ""
+fi
+
+for version in ${source_path}/*; do
+    version=$(echo "${version}" | sed -e "s/.*\///")
+    commit=$( cd "${source_path}/${version}" && git rev-parse HEAD )
+
+    if [ -f "${output_path}/api/${version}.json" ]; then
+        existing_commit=$(jq -r .info.commit < "${output_path}/api/${version}.json")
+
+        if [ "${existing_commit}" == "${commit}" -a ! "${force}" ]; then
+            if [ "${verbose}" ]; then
+                echo "Raw API documentation for ${version} exists; skipping..."
+            fi
+
+            continue
+        fi
+    fi
+
+    echo "Generating raw API documentation for ${version}..."
+    mkdir -p "${output_path}/api"
+    node ./api-generator.js "${source_path}/${version}" > "${output_path}/api/${version}.json"
+done
+
+if [ "${verbose}" ]; then
+    echo ""
+    echo ":: Generating HTML documentation..."
+    echo ""
+fi
+
+search_options=""
+docs_options=""
+if [ "${verbose}" ]; then
+    search_options="${search_options} --verbose"
+    docs_options="${docs_options} --verbose"
+fi
+if [ "${force}" ]; then
+    docs_options="${docs_options} --force"
+fi
+
+node ./search-generator.js ${search_options} "${output_path}/api" "${output_path}/search-index"
+node ./docs-generator.js ${docs_options} --jekyll-layout default "${output_path}/api" "${output_path}/reference"

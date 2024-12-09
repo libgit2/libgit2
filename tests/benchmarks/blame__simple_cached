@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+. "$(dirname "$0")/benchmark_helpers.sh"
+
+gitbench --prepare "sandbox_repo testrepo && cd testrepo && git reset --hard HEAD" \
+         --warmup 5 \
+         --chdir "testrepo" \
+	 -- \
+         --no-pager blame "branch_file.txt"

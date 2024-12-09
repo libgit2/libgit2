@@ -33,6 +33,7 @@ GIT_BEGIN_DECL
  * @param body optional text to include above the diffstat
  * @param author the person who authored this commit
  * @param opts email creation options
+ * @return 0 on success or an error code
  */
 GIT_EXTERN(int) git_email_create_from_diff(
 	git_buf *out,
@@ -47,4 +48,5 @@ GIT_EXTERN(int) git_email_create_from_diff(
 
 /** @} */
 GIT_END_DECL
+
 #endif

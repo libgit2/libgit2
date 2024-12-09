@@ -14,8 +14,8 @@
 
 /**
  * @file git2/tree.h
- * @brief Git tree parsing, loading routines
- * @defgroup git_tree Git tree parsing, loading routines
+ * @brief Trees are collections of files and folders to make up the repository hierarchy
+ * @defgroup git_tree Trees are collections of files and folders to make up the repository hierarchy
  * @ingroup Git
  * @{
  */
@@ -24,7 +24,7 @@ GIT_BEGIN_DECL
 /**
  * Lookup a tree object from the repository.
  *
- * @param out Pointer to the looked up tree
+ * @param[out] out Pointer to the looked up tree
  * @param repo The repo to use when locating the tree.
  * @param id Identity of the tree to locate.
  * @return 0 or an error code
@@ -345,6 +345,10 @@ GIT_EXTERN(int) git_treebuilder_remove(
  * The return value is treated as a boolean, with zero indicating that the
  * entry should be left alone and any non-zero value meaning that the
  * entry should be removed from the treebuilder list (i.e. filtered out).
+ *
+ * @param entry the tree entry for the callback to examine
+ * @param payload the payload from the caller
+ * @return 0 to do nothing, non-zero to remove the entry
  */
 typedef int GIT_CALLBACK(git_treebuilder_filter_cb)(
 	const git_tree_entry *entry, void *payload);
@@ -379,7 +383,14 @@ GIT_EXTERN(int) git_treebuilder_filter(
 GIT_EXTERN(int) git_treebuilder_write(
 	git_oid *id, git_treebuilder *bld);
 
-/** Callback for the tree traversal method */
+/**
+ * Callback for the tree traversal method.
+ *
+ * @param root the current (relative) root to the entry
+ * @param entry the tree entry
+ * @param payload the caller-provided callback payload
+ * @return a positive value to skip the entry, a negative value to stop the walk
+ */
 typedef int GIT_CALLBACK(git_treewalk_cb)(
 	const char *root, const git_tree_entry *entry, void *payload);
 
@@ -470,6 +481,6 @@ typedef struct {
 GIT_EXTERN(int) git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseline, size_t nupdates, const git_tree_update *updates);
 
 /** @} */
-
 GIT_END_DECL
+
 #endif

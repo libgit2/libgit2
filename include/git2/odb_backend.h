@@ -13,16 +13,12 @@
 
 /**
  * @file git2/backend.h
- * @brief Git custom backend functions
+ * @brief Object database backends manage the storage of git objects
  * @defgroup git_odb Git object database routines
  * @ingroup Git
  * @{
  */
 GIT_BEGIN_DECL
-
-/*
- * Constructors for in-box ODB backends.
- */
 
 /** Options for configuring a packfile object backend. */
 typedef struct {
@@ -35,55 +31,15 @@ typedef struct {
 	git_oid_t oid_type;
 } git_odb_backend_pack_options;
 
-/* The current version of the diff options structure */
+/** The current version of the diff options structure */
 #define GIT_ODB_BACKEND_PACK_OPTIONS_VERSION 1
 
-/* Stack initializer for odb pack backend options.  Alternatively use
+/**
+ * Stack initializer for odb pack backend options.  Alternatively use
  * `git_odb_backend_pack_options_init` programmatic initialization.
  */
 #define GIT_ODB_BACKEND_PACK_OPTIONS_INIT \
 	{ GIT_ODB_BACKEND_PACK_OPTIONS_VERSION }
-
-/**
- * Create a backend for the packfiles.
- *
- * @param out location to store the odb backend pointer
- * @param objects_dir the Git repository's objects directory
- *
- * @return 0 or an error code
- */
-#ifdef GIT_EXPERIMENTAL_SHA256
-GIT_EXTERN(int) git_odb_backend_pack(
-	git_odb_backend **out,
-	const char *objects_dir,
-	const git_odb_backend_pack_options *opts);
-#else
-GIT_EXTERN(int) git_odb_backend_pack(
-	git_odb_backend **out,
-	const char *objects_dir);
-#endif
-
-/**
- * Create a backend out of a single packfile
- *
- * This can be useful for inspecting the contents of a single
- * packfile.
- *
- * @param out location to store the odb backend pointer
- * @param index_file path to the packfile's .idx file
- *
- * @return 0 or an error code
- */
-#ifdef GIT_EXPERIMENTAL_SHA256
-GIT_EXTERN(int) git_odb_backend_one_pack(
-	git_odb_backend **out,
-	const char *index_file,
-	const git_odb_backend_pack_options *opts);
-#else
-GIT_EXTERN(int) git_odb_backend_one_pack(
-	git_odb_backend **out,
-	const char *index_file);
-#endif
 
 typedef enum {
 	GIT_ODB_BACKEND_LOOSE_FSYNC = (1 << 0)
@@ -118,30 +74,100 @@ typedef struct {
 	git_oid_t oid_type;
 } git_odb_backend_loose_options;
 
-/* The current version of the diff options structure */
+/** The current version of the diff options structure */
 #define GIT_ODB_BACKEND_LOOSE_OPTIONS_VERSION 1
 
-/* Stack initializer for odb loose backend options.  Alternatively use
+/**
+ * Stack initializer for odb loose backend options.  Alternatively use
  * `git_odb_backend_loose_options_init` programmatic initialization.
  */
 #define GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT \
 	{ GIT_ODB_BACKEND_LOOSE_OPTIONS_VERSION, 0, -1 }
 
+/*
+ * Constructors for in-box ODB backends.
+ */
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+
+/**
+ * Create a backend for a directory containing packfiles.
+ *
+ * @param[out] out location to store the odb backend pointer
+ * @param objects_dir the Git repository's objects directory
+ * @param opts the options to use when creating the pack backend
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_backend_pack(
+	git_odb_backend **out,
+	const char *objects_dir,
+	const git_odb_backend_pack_options *opts);
+
+/**
+ * Create a backend for a single packfile.
+ *
+ * @param[out] out location to store the odb backend pointer
+ * @param index_file path to the packfile's .idx file
+ * @param opts the options to use when creating the pack backend
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_backend_one_pack(
+	git_odb_backend **out,
+	const char *index_file,
+	const git_odb_backend_pack_options *opts);
+
 /**
  * Create a backend for loose objects
  *
- * @param out location to store the odb backend pointer
+ * @param[out] out location to store the odb backend pointer
  * @param objects_dir the Git repository's objects directory
  * @param opts options for the loose object backend or NULL
  *
  * @return 0 or an error code
  */
-#ifdef GIT_EXPERIMENTAL_SHA256
 GIT_EXTERN(int) git_odb_backend_loose(
 	git_odb_backend **out,
 	const char *objects_dir,
 	git_odb_backend_loose_options *opts);
+
 #else
+
+/**
+ * Create a backend for a directory containing packfiles.
+ *
+ * @param[out] out location to store the odb backend pointer
+ * @param objects_dir the Git repository's objects directory
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_backend_pack(
+	git_odb_backend **out,
+	const char *objects_dir);
+
+/**
+ * Create a backend out of a single packfile
+ *
+ * This can be useful for inspecting the contents of a single
+ * packfile.
+ *
+ * @param[out] out location to store the odb backend pointer
+ * @param index_file path to the packfile's .idx file
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_backend_one_pack(
+	git_odb_backend **out,
+	const char *index_file);
+
+/**
+ * Create a backend for loose objects
+ *
+ * @param[out] out location to store the odb backend pointer
+ * @param objects_dir the Git repository's objects directory
+ * @param compression_level zlib compression level (0-9), or -1 for the default
+ * @param do_fsync if non-zero, perform an fsync on write
+ * @param dir_mode permission to use when creating directories, or 0 for default
+ * @param file_mode permission to use when creating directories, or 0 for default
+ * @return 0 or an error code
+ */
 GIT_EXTERN(int) git_odb_backend_loose(
 	git_odb_backend **out,
 	const char *objects_dir,
@@ -149,6 +175,7 @@ GIT_EXTERN(int) git_odb_backend_loose(
 	int do_fsync,
 	unsigned int dir_mode,
 	unsigned int file_mode);
+
 #endif
 
 /** Streaming mode */
@@ -218,6 +245,7 @@ struct git_odb_writepack {
 	void GIT_CALLBACK(free)(git_odb_writepack *writepack);
 };
 
+/** @} */
 GIT_END_DECL
 
 #endif
