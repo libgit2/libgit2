@@ -217,11 +217,6 @@ int git_mempack_object_count(size_t *out, git_odb_backend *_backend)
 
 	GIT_ASSERT_ARG(_backend);
 
-	count = git_odb_mempack_oidmap_size(&db->objects);
-
-	if (count < 0)
-		return count;
-
-	*out = (size_t)count;
+	*out = (size_t)git_odb_mempack_oidmap_size(&db->objects);
 	return 0;
 }
