@@ -13,9 +13,15 @@
 
 /**
  * @file git2/branch.h
- * @brief Git branch parsing routines
+ * @brief Branch creation and handling
  * @defgroup git_branch Git branch management
  * @ingroup Git
+ *
+ * A branch is a specific type of reference, at any particular time,
+ * a git working directory typically is said to have a branch "checked out",
+ * meaning that commits that are created will be made "on" a branch.
+ * This occurs by updating the branch reference to point to the new
+ * commit. The checked out branch is indicated by the `HEAD` meta-ref.
  * @{
  */
 GIT_BEGIN_DECL
@@ -33,18 +39,13 @@ GIT_BEGIN_DECL
  * See `git_tag_create()` for rules about valid names.
  *
  * @param out Pointer where to store the underlying reference.
- *
  * @param repo the repository to create the branch in.
- *
  * @param branch_name Name for the branch; this name is
- * validated for consistency. It should also not conflict with
- * an already existing branch name.
- *
+ *   validated for consistency. It should also not conflict with
+ *   an already existing branch name.
  * @param target Commit to which this branch should point. This object
- * must belong to the given `repo`.
- *
+ *   must belong to the given `repo`.
  * @param force Overwrite existing branch.
- *
  * @return 0, GIT_EINVALIDSPEC or an error code.
  * A proper reference is written in the refs/heads namespace
  * pointing to the provided target commit.
@@ -63,15 +64,21 @@ GIT_EXTERN(int) git_branch_create(
  * commit, which lets you specify which extended sha syntax string was
  * specified by a user, allowing for more exact reflog messages.
  *
- * See the documentation for `git_branch_create()`.
- *
- * @see git_branch_create
+ * @param ref_out Pointer where to store the underlying reference.
+ * @param repo the repository to create the branch in.
+ * @param branch_name Name for the branch; this name is
+ *   validated for consistency. It should also not conflict with
+ *   an already existing branch name.
+ * @param target Annotated commit to which this branch should point. This
+ *   object must belong to the given `repo`.
+ * @param force Overwrite existing branch.
+ * @return 0, GIT_EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_branch_create_from_annotated(
 	git_reference **ref_out,
-	git_repository *repository,
+	git_repository *repo,
 	const char *branch_name,
-	const git_annotated_commit *commit,
+	const git_annotated_commit *target,
 	int force);
 
 /**
@@ -222,7 +229,7 @@ GIT_EXTERN(int) git_branch_upstream(
  * @param branch the branch to configure
  * @param branch_name remote-tracking or local branch to set as upstream.
  *
- * @return 0 on success; GIT_ENOTFOUND if there's no branch named `branch_name`
+ * @return @type git_error_t 0 on success; GIT_ENOTFOUND if there's no branch named `branch_name`
  *         or an error code
  */
 GIT_EXTERN(int) git_branch_set_upstream(

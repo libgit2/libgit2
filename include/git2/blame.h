@@ -13,9 +13,14 @@
 
 /**
  * @file git2/blame.h
- * @brief Git blame routines
+ * @brief Specify a file's most recent changes per-line
  * @defgroup git_blame Git blame routines
  * @ingroup Git
+ *
+ * Producing a "blame" (or "annotated history") decorates individual
+ * lines in a file with the commit that introduced that particular line
+ * of changes. This can be useful to indicate when and why a particular
+ * change was made.
  * @{
  */
 GIT_BEGIN_DECL
@@ -122,7 +127,10 @@ typedef struct git_blame_options {
 	size_t max_line;
 } git_blame_options;
 
+/** Current version for the `git_blame_options` structure */
 #define GIT_BLAME_OPTIONS_VERSION 1
+
+/** Static constructor for `git_blame_options` */
 #define GIT_BLAME_OPTIONS_INIT {GIT_BLAME_OPTIONS_VERSION}
 
 /**

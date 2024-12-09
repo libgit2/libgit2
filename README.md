@@ -1,5 +1,6 @@
 libgit2 - the Git linkable library
 ==================================
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9609/badge)](https://www.bestpractices.dev/projects/9609)
 
 | Build Status | |
 | ------------ | - |
@@ -265,29 +266,39 @@ Build options:
 
 Dependency options:
 
-* `USE_SSH=type`: enables SSH support; `type` can be set to `libssh2`
-  or `exec` (which will execute an external OpenSSH command)
-* `USE_HTTPS=type`: enables HTTPS support; `type` can be set to
-  `OpenSSL`, `mbedTLS`, `SecureTransport`, `Schannel`, or `WinHTTP`;
-  the default is `SecureTransport` on macOS, `WinHTTP` on Windows, and
-  whichever of `OpenSSL` or `mbedTLS` is detected on other platforms.
+* `USE_SSH=type`: enables SSH support and optionally selects the provider;
+  `type` can be set to `libssh2` or `exec` (which will execute an external
+  OpenSSH command). `ON` implies `libssh2`; defaults to `OFF`.
+* `USE_HTTPS=type`: enables HTTPS support and optionally selects the
+  provider; `type` can be set to `OpenSSL`, `OpenSSL-Dynamic` (to not
+  link against OpenSSL, but load it dynamically), `SecureTransport`,
+  `Schannel` or `WinHTTP`; the default is `SecureTransport` on macOS,
+  `WinHTTP` on Windows, and whichever of `OpenSSL` or `mbedTLS` is
+  detected on other platforms. Defaults to `ON`.
 * `USE_SHA1=type`: selects the SHA1 mechanism to use; `type` can be set
-  to `CollisionDetection` (default), or `HTTPS` to use the HTTPS
-  driver specified above as the hashing provider.
+  to `CollisionDetection`, `HTTPS` to use the system or HTTPS provider,
+  or one of `OpenSSL`, `OpenSSL-Dynamic`, `OpenSSL-FIPS` (to use FIPS
+  compliant routines in OpenSSL), `CommonCrypto`, or `Schannel`.
+  Defaults to `CollisionDetection`. This option is retained for
+  backward compatibility and should not be changed.
 * `USE_SHA256=type`: selects the SHA256 mechanism to use; `type` can be
-  set to `HTTPS` (default) to use the HTTPS driver specified above as
-  the hashing provider, or `Builtin`.
+  set to `HTTPS` to use the system or HTTPS driver, `builtin`, or one of
+  `OpenSSL`, `OpenSSL-Dynamic`, `OpenSSL-FIPS` (to use FIPS compliant
+  routines in OpenSSL), `CommonCrypto`, or `Schannel`. Defaults to `HTTPS`.
 * `USE_GSSAPI=<on/off>`: enables GSSAPI for SPNEGO authentication on
-  Unix
+  Unix. Defaults to `OFF`.
 * `USE_HTTP_PARSER=type`: selects the HTTP Parser; either `http-parser`
   for an external
   [`http-parser`](https://github.com/nodejs/http-parser) dependency,
   `llhttp` for an external [`llhttp`](https://github.com/nodejs/llhttp)
-  dependency, or `builtin`
+  dependency, or `builtin`. Defaults to `builtin`.
 * `REGEX_BACKEND=type`: selects the regular expression backend to use;
-  one of `regcomp_l`, `pcre2`, `pcre`, `regcomp`, or `builtin`.
-* `USE_BUNDLED_ZLIB=type`: selects the zlib dependency to use; one of
-  `bundled` or `Chromium`.
+  one of `regcomp_l`, `pcre2`, `pcre`, `regcomp`, or `builtin`. The
+  default is to use `regcomp_l` where available, PCRE if found, otherwise,
+  to use the builtin.
+* `USE_BUNDLED_ZLIB=type`: selects the bundled zlib; either `ON` or `OFF`.
+  Defaults to using the system zlib if available, falling back to the
+  bundled zlib.
 
 Locating Dependencies
 ---------------------

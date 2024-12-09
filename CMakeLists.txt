@@ -30,14 +30,14 @@ option(USE_THREADS             "Use threads for parallel processing when possibl
 option(USE_NSEC                "Support nanosecond precision file mtimes and ctimes"    ON)
 
 # Backend selection
-option(USE_SSH                 "Enable SSH support. Can be set to a specific backend" OFF)
-option(USE_HTTPS               "Enable HTTPS support. Can be set to a specific backend" ON)
-option(USE_SHA1                "Enable SHA1. Can be set to CollisionDetection(ON)/HTTPS" ON)
-option(USE_SHA256              "Enable SHA256. Can be set to HTTPS/Builtin" ON)
-option(USE_GSSAPI              "Link with libgssapi for SPNEGO auth"      OFF)
-   set(USE_HTTP_PARSER         "" CACHE STRING "Specifies the HTTP Parser implementation; either system or builtin.")
+   set(USE_SSH                 "" CACHE STRING "Enables SSH support and optionally selects provider. One of ON, OFF, or a specific provider: libssh2 or exec. (Defaults to OFF.)")
+   set(USE_HTTPS               "" CACHE STRING "Enable HTTPS support and optionally selects the provider. One of ON, OFF, or a specific provider: OpenSSL, OpenSSL-FIPS, OpenSSL-Dynamic, mbedTLS, SecureTransport, Schannel, or WinHTTP. (Defaults to ON.)")
+   set(USE_SHA1                "" CACHE STRING "Selects SHA1 provider. One of CollisionDetection, HTTPS, or a specific provider. (Defaults to CollisionDetection.)")
+   set(USE_SHA256              "" CACHE STRING "Selects SHA256 provider. One of Builtin, HTTPS, or a specific provider. (Defaults to HTTPS.)")
+option(USE_GSSAPI              "Enable SPNEGO authentication using GSSAPI" OFF)
+   set(USE_HTTP_PARSER         "" CACHE STRING "Selects HTTP Parser support: http-parser, llhttp, or builtin. (Defaults to builtin.)")
 #  set(USE_XDIFF               "" CACHE STRING "Specifies the xdiff implementation; either system or builtin.")
-   set(REGEX_BACKEND           "" CACHE STRING "Regular expression implementation. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
+   set(REGEX_BACKEND           "" CACHE STRING "Selects regex provider. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
 option(USE_BUNDLED_ZLIB        "Use the bundled version of zlib. Can be set to one of Bundled(ON)/Chromium. The Chromium option requires a x86_64 processor with SSE4.2 and CLMUL" OFF)
 
 # Debugging options
@@ -64,7 +64,7 @@ option(ENABLE_WERROR           "Enable compilation with -Werror"                
 
 if(UNIX)
 	# NTLM client requires crypto libraries from the system HTTPS stack
-	if(NOT USE_HTTPS)
+	if(USE_HTTPS STREQUAL "OFF")
 		option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                  OFF)
 	else()
 		option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                   ON)

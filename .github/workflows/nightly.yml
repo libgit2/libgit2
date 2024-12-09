@@ -43,7 +43,7 @@ jobs:
             name: noble
           env:
             CC: clang
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DUSE_HTTP_PARSER=http-parser
             CMAKE_GENERATOR: Ninja
         - name: "Linux (Xenial, GCC, OpenSSL, OpenSSH)"
           id: xenial-gcc-openssl
@@ -141,9 +141,9 @@ jobs:
           container:
             name: noble
           env:
-            CC: clang-17
+            CC: clang
             CFLAGS: -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local/msan -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DCMAKE_C_EXTENSIONS=ON -DCMAKE_PREFIX_PATH=/usr/local/msan -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
@@ -156,7 +156,7 @@ jobs:
           container:
             name: noble
           env:
-            CC: clang-17
+            CC: clang
             CFLAGS: -fsanitize=undefined,nullability -fno-sanitize-recover=undefined,nullability -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
             CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
@@ -171,7 +171,7 @@ jobs:
           container:
             name: noble
           env:
-            CC: clang-17
+            CC: clang
             CFLAGS: -fsanitize=thread -fno-optimize-sibling-calls -fno-omit-frame-pointer
             CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
@@ -440,7 +440,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download test results
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
     - name: Generate test summary
       uses: test-summary/action@v2
       with:

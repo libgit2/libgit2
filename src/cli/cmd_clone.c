@@ -19,7 +19,7 @@
 #define COMMAND_NAME "clone"
 
 static char *branch, *remote_path, *local_path, *depth;
-static int show_help, quiet, checkout = 1, bare;
+static int quiet, checkout = 1, bare;
 static bool local_path_exists;
 static cli_progress progress = CLI_PROGRESS_INIT;
 
@@ -46,7 +46,7 @@ static const cli_opt_spec opts[] = {
 
 static void print_help(void)
 {
-	cli_opt_usage_fprint(stdout, PROGRAM_NAME, COMMAND_NAME, opts);
+	cli_opt_usage_fprint(stdout, PROGRAM_NAME, COMMAND_NAME, opts, 0);
 	printf("\n");
 
 	printf("Clone a repository into a new directory.\n");
@@ -133,7 +133,7 @@ int cmd_clone(int argc, char **argv)
 	if (cli_opt_parse(&invalid_opt, opts, argv + 1, argc - 1, CLI_OPT_PARSE_GNU))
 		return cli_opt_usage_error(COMMAND_NAME, opts, &invalid_opt);
 
-	if (show_help) {
+	if (cli_opt__show_help) {
 		print_help();
 		return 0;
 	}

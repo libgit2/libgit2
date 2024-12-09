@@ -15,7 +15,7 @@
 
 /**
  * @file git2/submodule.h
- * @brief Git submodule management utilities
+ * @brief Submodules place another repository's contents within this one
  *
  * Submodule support in libgit2 builds a list of known submodules and keeps
  * it in the repository.  The list is built from the .gitmodules file, the
@@ -88,20 +88,27 @@ typedef enum {
 	GIT_SUBMODULE_STATUS_WD_UNTRACKED      = (1u << 13)
 } git_submodule_status_t;
 
+/** Submodule source bits */
 #define GIT_SUBMODULE_STATUS__IN_FLAGS		0x000Fu
+/** Submodule index status */
 #define GIT_SUBMODULE_STATUS__INDEX_FLAGS	0x0070u
+/** Submodule working directory status */
 #define GIT_SUBMODULE_STATUS__WD_FLAGS		0x3F80u
 
+/** Whether the submodule is modified */
 #define GIT_SUBMODULE_STATUS_IS_UNMODIFIED(S) \
 	(((S) & ~GIT_SUBMODULE_STATUS__IN_FLAGS) == 0)
 
+/** Whether the submodule is modified (in the index) */
 #define GIT_SUBMODULE_STATUS_IS_INDEX_UNMODIFIED(S) \
 	(((S) & GIT_SUBMODULE_STATUS__INDEX_FLAGS) == 0)
 
+/** Whether the submodule is modified (in the working directory) */
 #define GIT_SUBMODULE_STATUS_IS_WD_UNMODIFIED(S) \
 	(((S) & (GIT_SUBMODULE_STATUS__WD_FLAGS & \
 	~GIT_SUBMODULE_STATUS_WD_UNINITIALIZED)) == 0)
 
+/** Whether the submodule working directory is dirty */
 #define GIT_SUBMODULE_STATUS_IS_WD_DIRTY(S) \
 	(((S) & (GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED | \
 	GIT_SUBMODULE_STATUS_WD_WD_MODIFIED | \
@@ -150,7 +157,10 @@ typedef struct git_submodule_update_options {
 	int allow_fetch;
 } git_submodule_update_options;
 
+/** Current version for the `git_submodule_update_options` structure */
 #define GIT_SUBMODULE_UPDATE_OPTIONS_VERSION 1
+
+/** Static constructor for `git_submodule_update_options` */
 #define GIT_SUBMODULE_UPDATE_OPTIONS_INIT \
 	{ GIT_SUBMODULE_UPDATE_OPTIONS_VERSION, \
 	  GIT_CHECKOUT_OPTIONS_INIT, \
@@ -530,7 +540,8 @@ GIT_EXTERN(int) git_submodule_set_update(
  * Note that at this time, libgit2 does not honor this setting and the
  * fetch functionality current ignores submodules.
  *
- * @return 0 if fetchRecurseSubmodules is false, 1 if true
+ * @param submodule the submodule to examine
+ * @return the submodule recursion configuration
  */
 GIT_EXTERN(git_submodule_recurse_t) git_submodule_fetch_recurse_submodules(
 	git_submodule *submodule);
@@ -542,7 +553,7 @@ GIT_EXTERN(git_submodule_recurse_t) git_submodule_fetch_recurse_submodules(
  *
  * @param repo the repository to affect
  * @param name the submodule to configure
- * @param fetch_recurse_submodules Boolean value
+ * @param fetch_recurse_submodules the submodule recursion configuration
  * @return old value for fetchRecurseSubmodules
  */
 GIT_EXTERN(int) git_submodule_set_fetch_recurse_submodules(
@@ -664,4 +675,5 @@ GIT_EXTERN(int) git_submodule_location(
 
 /** @} */
 GIT_END_DECL
+
 #endif

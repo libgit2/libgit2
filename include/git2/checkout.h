@@ -13,9 +13,13 @@
 
 /**
  * @file git2/checkout.h
- * @brief Git checkout routines
+ * @brief Update the contents of the working directory
  * @defgroup git_checkout Git checkout routines
  * @ingroup Git
+ *
+ * Update the contents of the working directory, or a subset of the
+ * files in the working directory, to point to the data in the index
+ * or a specific commit.
  * @{
  */
 GIT_BEGIN_DECL
@@ -103,6 +107,8 @@ GIT_BEGIN_DECL
  *   files or folders that fold to the same name on case insensitive
  *   filesystems.  This can cause files to retain their existing names
  *   and write through existing symbolic links.
+ *
+ * @flags
  */
 typedef enum {
 	/**
@@ -212,6 +218,8 @@ typedef enum {
  * Notification callbacks are made prior to modifying any files on disk,
  * so canceling on any notification will still happen prior to any files
  * being modified.
+ *
+ * @flags
  */
 typedef enum {
 	GIT_CHECKOUT_NOTIFY_NONE      = 0,
@@ -253,7 +261,17 @@ typedef struct {
 	size_t chmod_calls;
 } git_checkout_perfdata;
 
-/** Checkout notification callback function */
+/**
+ * Checkout notification callback function.
+ *
+ * @param why the notification reason
+ * @param path the path to the file being checked out
+ * @param baseline the baseline's diff file information
+ * @param target the checkout target diff file information
+ * @param workdir the working directory diff file information
+ * @param payload the user-supplied callback payload
+ * @return 0 on success, or an error code
+ */
 typedef int GIT_CALLBACK(git_checkout_notify_cb)(
 	git_checkout_notify_t why,
 	const char *path,
@@ -262,14 +280,26 @@ typedef int GIT_CALLBACK(git_checkout_notify_cb)(
 	const git_diff_file *workdir,
 	void *payload);
 
-/** Checkout progress notification function */
+/**
+ * Checkout progress notification function.
+ *
+ * @param path the path to the file being checked out
+ * @param completed_steps number of checkout steps completed
+ * @param total_steps number of total steps in the checkout process
+ * @param payload the user-supplied callback payload
+ */
 typedef void GIT_CALLBACK(git_checkout_progress_cb)(
 	const char *path,
 	size_t completed_steps,
 	size_t total_steps,
 	void *payload);
 
-/** Checkout perfdata notification function */
+/**
+ * Checkout performance data reporting function.
+ *
+ * @param perfdata the performance data for the checkout
+ * @param payload the user-supplied callback payload
+ */
 typedef void GIT_CALLBACK(git_checkout_perfdata_cb)(
 	const git_checkout_perfdata *perfdata,
 	void *payload);
@@ -280,10 +310,18 @@ typedef void GIT_CALLBACK(git_checkout_perfdata_cb)(
  * Initialize with `GIT_CHECKOUT_OPTIONS_INIT`. Alternatively, you can
  * use `git_checkout_options_init`.
  *
+ * @options[version] GIT_CHECKOUT_OPTIONS_VERSION
+ * @options[init_macro] GIT_CHECKOUT_OPTIONS_INIT
+ * @options[init_function] git_checkout_options_init
  */
 typedef struct git_checkout_options {
 	unsigned int version; /**< The version */
 
+	/**
+	 * Checkout strategy. Default is a safe checkout.
+	 *
+	 * @type[flags] git_checkout_strategy_t
+	 */
 	unsigned int checkout_strategy; /**< default will be a safe checkout */
 
 	int disable_filters;    /**< don't apply filters like CRLF conversion */
@@ -291,7 +329,13 @@ typedef struct git_checkout_options {
 	unsigned int file_mode; /**< default is 0644 or 0755 as dictated by blob */
 	int file_open_flags;    /**< default is O_CREAT | O_TRUNC | O_WRONLY */
 
-	unsigned int notify_flags; /**< see `git_checkout_notify_t` above */
+	/**
+	 * Checkout notification flags specify what operations the notify
+	 * callback is invoked for.
+	 *
+	 * @type[flags] git_checkout_notify_t
+	 */
+	unsigned int notify_flags;
 
 	/**
 	 * Optional callback to get notifications on specific file states.
@@ -346,8 +390,12 @@ typedef struct git_checkout_options {
 	void *perfdata_payload;
 } git_checkout_options;
 
+
+/** Current version for the `git_checkout_options` structure */
 #define GIT_CHECKOUT_OPTIONS_VERSION 1
-#define GIT_CHECKOUT_OPTIONS_INIT {GIT_CHECKOUT_OPTIONS_VERSION}
+
+/** Static constructor for `git_checkout_options` */
+#define GIT_CHECKOUT_OPTIONS_INIT { GIT_CHECKOUT_OPTIONS_VERSION }
 
 /**
  * Initialize git_checkout_options structure
@@ -416,4 +464,5 @@ GIT_EXTERN(int) git_checkout_tree(
 
 /** @} */
 GIT_END_DECL
+
 #endif

@@ -1,0 +1,78 @@
+# Update the www.libgit2.org reference documentation
+name: Generate Documentation
+
+on:
+  push:
+    branches: [ main, maint/* ]
+  release:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force rebuild'
+        type: boolean
+        required: true
+
+concurrency:
+  group: documentation
+
+permissions:
+  contents: read
+
+jobs:
+  documentation:
+    name: "Generate documentation"
+    runs-on: "ubuntu-latest"
+    steps:
+    - name: Check out source repository
+      uses: actions/checkout@v4
+      with:
+        path: source
+        fetch-depth: 0
+    - name: Check out documentation repository
+      uses: actions/checkout@v4
+      with:
+        repository: libgit2/www.libgit2.org
+        path: www
+        fetch-depth: 0
+        ssh-key: ${{ secrets.DOCS_PUBLISH_KEY }}
+    - name: Prepare branches
+      run: |
+        if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then
+          git branch --track main origin/main
+        fi
+
+        for a in $(git branch -r --list 'origin/maint/*' | sed -e "s/^  origin\///"); do
+          git branch --track "$a" "origin/$a"
+        done
+      working-directory: source
+    - name: Generate documentation
+      run: |
+        args=""
+
+        if [ "${{ inputs.force }}" = "true" ]; then
+          args="--force"
+        fi
+
+        npm install
+        ./generate $args ../.. ../../../www/docs
+      working-directory: source/script/api-docs
+    - name: Examine changes
+      run: |
+        if [ -n "$(git diff --name-only)" ]; then
+           echo "changes=true" >> $GITHUB_OUTPUT
+        else
+           echo "changes=false" >> $GITHUB_OUTPUT
+        fi
+      id: check
+      working-directory: www
+    - name: Publish documentation
+      run: |
+        DATE=$(date +"%Y-%m-%d")
+
+        git config user.name 'Documentation Site Generator'
+        git config user.email 'libgit2@users.noreply.github.com'
+        git add .
+        git commit -m"Documentation update ${DATE}"
+        git push origin main
+      if: steps.check.outputs.changes == 'true'
+      working-directory: www
