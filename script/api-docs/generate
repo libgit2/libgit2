@@ -9,16 +9,28 @@
 set -eo pipefail
 
 source_path=$(mktemp -d)
-verbose=true
+verbose=
 force=
 
-if [ "$1" = "" ]; then
-    echo "usage: $0 repo_path output_path" 1>&2
+for var in "$@"; do
+    if [ "${var}" == "--verbose" ]; then
+        verbose=true
+    elif [ "${var}" == "--force" ]; then
+        force=true
+    elif [ "${repo_path}" == "" ]; then
+        repo_path="${var}"
+    elif [ "${output_path}" == "" ]; then
+        output_path="${var}"
+    else
+        repo_path=""
+        output_path=""
+    fi
+done
+
+if [ "${repo_path}" = "" -o "${output_path}" = "" ]; then
+    echo "usage: $0 [--verbose] [--force] repo_path output_path" 1>&2
     exit 1
 fi
-
-repo_path=$1
-output_path=$2
 
 function do_checkout {
     if [ "$1" = "" ]; then
@@ -78,14 +90,9 @@ for version in ${source_path}/*; do
         fi
     fi
 
-    options=""
-    if [ "${force}" ]; then
-        options="${options} --force"
-    fi
-
     echo "Generating raw API documentation for ${version}..."
     mkdir -p "${output_path}/api"
-    node ./api-generator.js $options "${source_path}/${version}" > "${output_path}/api/${version}.json"
+    node ./api-generator.js "${source_path}/${version}" > "${output_path}/api/${version}.json"
 done
 
 if [ "${verbose}" ]; then
@@ -103,3 +110,4 @@ if [ "${force}" ]; then
 fi
 
 node ./docs-generator.js --verbose --jekyll-layout default "${output_path}/api" "${output_path}/reference"
+node ./docs-generator.js ${options} --jekyll-layout default "${output_path}/api" "${output_path}/reference"
