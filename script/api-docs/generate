@@ -109,5 +109,6 @@ if [ "${force}" ]; then
     options="${options} --force"
 fi
 
+node ./search-generator.js --verbose "${output_path}/api" "${output_path}/search-index"
 node ./docs-generator.js --verbose --jekyll-layout default "${output_path}/api" "${output_path}/reference"
 node ./docs-generator.js ${options} --jekyll-layout default "${output_path}/api" "${output_path}/reference"
