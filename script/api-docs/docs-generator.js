@@ -1264,8 +1264,7 @@ async function produceSearch(versions) {
 }
 
 async function produceMainIndex(versions) {
-    const versionList = versions.sort(versionSort);
-    const versionDefault = versionList[versionList.length - 1];
+    const versionDefault = versions[0];
 
     if (options.verbose) {
         console.log(`Producing documentation index...`);
