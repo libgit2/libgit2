@@ -6,6 +6,11 @@ on:
     branches: [ main, maint/* ]
   release:
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force rebuild'
+        type: boolean
+        required: true
 
 concurrency:
   group: documentation
@@ -42,8 +47,14 @@ jobs:
       working-directory: source
     - name: Generate documentation
       run: |
+        args=""
+
+        if [ "${{ inputs.force }}" = "true" ]; then
+          args="--force"
+        fi
+
         npm install
-        ./generate ../.. ../../../www/docs
+        ./generate $args ../.. ../../../www/docs
       working-directory: source/script/api-docs
     - name: Examine changes
       run: |
