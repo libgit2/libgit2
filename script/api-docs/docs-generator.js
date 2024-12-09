@@ -96,6 +96,7 @@ function produceHeader(version, api, type) {
     content += `          <h2 class="apiName ${type}Name">${api.name}</h2>\n`;
 
     content += produceAttributes(version, api, type);
+    content += produceSearchArea(version, type);
 
     content += produceVersionPicker(version,
         `apiHeaderVersionSelect ${type}HeaderVersionSelect`,
@@ -553,6 +554,23 @@ async function layout(data) {
     return layout.toString().replaceAll(/{{([a-z]+)}}/g, (match, p1) => data[p1] || "");
 }
 
+function produceSearchArea(version, type) {
+    let content = "";
+
+    content += `\n`;
+    content += `           <script src="/js/minisearch.js"></script>\n`;
+    content += `           <script src="/js/search.js"></script>\n`;
+
+    content += `           <div class="headerSearchArea ${type}HeaderSearchArea" id="headersearcharea">\n`;
+    content += `             <input class="headerSearchBox ${type}HeaderSearchBox" id="headersearchbox" placeholder="Search..." onInput="handleSearchSuggest({ version: '${version}' })" onFocusIn="handleSearchSuggest({ version: '${version}' })" onKeyUp="if (event.code === 'Enter') { submitSearch({ version: '${version}' }); }"/>\n`;
+    content += `             <div class="headerSearchResults ${type}HeaderSearchResults" id="headersearchresults">\n`;
+    content += `             </div>\n`;
+    content += `           </div>\n`;
+    content += `\n`;
+
+    return content;
+}
+
 async function produceDocumentationForApi(version, api, type) {
     let content = "";
 
@@ -834,6 +852,7 @@ async function produceIndexForGroup(version, group, versionApis) {
     content += `      <div class="groupHeader">\n`;
     content += `        <h2 class="groupName">${groupName}</h2>\n`;
 
+    content += produceSearchArea(version, 'group');
     content += produceVersionPicker(version, "groupHeaderVersionSelect", (v) => {
         if (apiData[v]['groups'][group]) {
             return `${linkPrefix}/${v}/${groupName}/index.html`;
@@ -963,6 +982,7 @@ function versionIndexContent(version, apiData) {
     content += `        <div class="versionHeader">\n`;
     content += `          <h2 class="versionName">${projectTitle} ${version}</h2>\n`;
 
+    content += produceSearchArea(version, 'version');
     content += produceVersionPicker(version, "versionHeaderVersionSelect",
         (v) => `${linkPrefix}/${v}/index.html`);
 
@@ -1187,6 +1207,62 @@ function calculateVersionDeltas(apiData) {
     }
 }
 
+async function produceSearch(versions) {
+    if (options.verbose) {
+        console.log(`Producing search page...`);
+    }
+
+    let content = "";
+
+    content += `<script src="/js/minisearch.js"></script>\n`;
+    content += `<script src="/js/search.js"></script>\n`;
+    content += `<script src="/js/markdown-it.js"></script>\n`;
+    content += `<script>\n`;
+    content += `  const markdown = window.markdownit();\n`;
+    content += `</script>\n`;
+
+    content += `\n`;
+
+    content += `      <div class="search">\n`;
+    content += `        <div class="searchHeader">\n`;
+    content += `          <h2 class="searchName">libgit2 search</h2>\n`;
+    content += `          <div class="searchHeaderVersionSelect">\n`;
+    content += `            <span>Version:</span>\n`;
+    content += `            <select id="searchversion" onChange="setSearchVersion(this.value)">\n`;
+
+    for (const version of versions) {
+        content += `              <option value="${version}">${version}</option>\n`;
+    }
+
+    content += `            </select>\n`;
+    content += `          </div>\n`;
+    content += `        </div>\n`;
+
+    content += `\n`;
+
+    content += `        <div class="searchSearchBox">\n`;
+    content += `          <input type="text" id="bodysearchbox" placeholder="Search..." onKeyDown="if (event.key === 'Enter') { resetSearch(); }" />\n`;
+    content += `          <button onClick="resetSearch()">Search</button>\n`;
+    content += `        </div>\n`;
+
+    content += `\n`;
+
+    content += `        <div class="searchResultsArea" id="bodyresultsarea" style="visibility: hidden;">\n`;
+    content += `          <h3>Results</h3>\n`;
+    content += `          <div class="searchResults" id="bodysearchresults">\n`;
+    content += `          </div>\n`;
+    content += `        </div>\n`;
+    content += `      </div>\n`;
+
+    const filename = `${outputPath}/search.html`;
+
+    await fs.mkdir(outputPath, { recursive: true });
+    await fs.writeFile(filename, await layout({
+        title: `API search (${projectTitle})`,
+        content: content
+    }));
+}
+
 async function produceMainIndex(versions) {
     const versionList = versions.sort(versionSort);
     const versionDefault = versionList[versionList.length - 1];
@@ -1273,6 +1349,7 @@ function versionSort(a, b) {
 program.option('--output <filename>')
        .option('--layout <filename>')
        .option('--jekyll-layout <name>')
+       .option('--version <version...>')
        .option('--verbose')
        .option('--force')
        .option('--strict');
@@ -1290,13 +1367,12 @@ const outputPath = program.args[1];
 
 (async () => {
     try {
-        for (const version of (await fs.readdir(docsPath))
-                             .filter(a => a.endsWith('.json'))
-                             .map(a => a.replace(/\.json$/, ''))
-                             .sort(versionSort)
-                             .reverse()) {
-            versions.push(version);
-        }
+        const v = options.version ? options.version :
+            (await fs.readdir(docsPath))
+                     .filter(a => a.endsWith('.json'))
+                     .map(a => a.replace(/\.json$/, ''));
+
+        versions.push(...v.sort(versionSort).reverse());
 
         for (const version of versions) {
             if (options.verbose) {
@@ -1318,6 +1394,7 @@ const outputPath = program.args[1];
             await produceDocumentationForVersion(version, apiData[version]);
         }
 
+        await produceSearch(versions);
         await produceMainIndex(versions);
     } catch (e) {
         console.error(e);

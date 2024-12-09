@@ -101,14 +101,15 @@ if [ "${verbose}" ]; then
     echo ""
 fi
 
-options=""
+search_options=""
+docs_options=""
 if [ "${verbose}" ]; then
-    options="${options} --verbose"
+    search_options="${search_options} --verbose"
+    docs_options="${docs_options} --verbose"
 fi
 if [ "${force}" ]; then
-    options="${options} --force"
+    docs_options="${docs_options} --force"
 fi
 
-node ./search-generator.js --verbose "${output_path}/api" "${output_path}/search-index"
-node ./docs-generator.js --verbose --jekyll-layout default "${output_path}/api" "${output_path}/reference"
-node ./docs-generator.js ${options} --jekyll-layout default "${output_path}/api" "${output_path}/reference"
+node ./search-generator.js ${search_options} "${output_path}/api" "${output_path}/search-index"
+node ./docs-generator.js ${docs_options} --jekyll-layout default "${output_path}/api" "${output_path}/reference"
