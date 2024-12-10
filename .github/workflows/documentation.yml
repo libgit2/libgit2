@@ -54,7 +54,7 @@ jobs:
         fi
 
         npm install
-        ./generate $args ../.. ../../../www/docs
+        ./generate --verbose $args ../.. ../../../www/docs
       working-directory: source/script/api-docs
     - name: Examine changes
       run: |
