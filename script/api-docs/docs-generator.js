@@ -1084,6 +1084,19 @@ async function produceDocumentationMetadata(version, apiData) {
     await fs.writeFile(filename, JSON.stringify(apiData.info, null, 2) + "\n");
 }
 
+async function cleanupOldDocumentation(version) {
+    const versionDir = `${outputPath}/${version}`;
+
+    for (const fn of await fs.readdir(versionDir)) {
+        if (fn === '.metadata') {
+            continue;
+        }
+
+        const path = `${versionDir}/${fn}`;
+        await fs.rm(path, { recursive: true });
+    }
+}
+
 async function produceDocumentationForVersion(version, apiData) {
     if (!options.force && await documentationIsUpToDateForVersion(version, apiData)) {
         if (options.verbose) {
@@ -1096,6 +1109,8 @@ async function produceDocumentationForVersion(version, apiData) {
     if (options.verbose) {
         console.log(`Producing documentation for ${version}...`);
     }
+
+    await cleanupOldDocumentation(version);
 
     await produceDocumentationForApis(version, apiData);
 
