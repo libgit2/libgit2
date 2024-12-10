@@ -4009,3 +4009,28 @@ done:
 	git_reference_free(head_ref);
 	return error;
 }
+
+int git_repository__abbrev_length(int *out, git_repository *repo)
+{
+	size_t oid_hexsize;
+	int len;
+	int error;
+
+	oid_hexsize = git_oid_hexsize(repo->oid_type);
+
+	if ((error = git_repository__configmap_lookup(&len, repo, GIT_CONFIGMAP_ABBREV)) < 0)
+		return error;
+
+	if (len == GIT_ABBREV_FALSE) {
+		len = (int)oid_hexsize;
+	}
+
+	if (len < GIT_ABBREV_MINIMUM || (size_t)len > oid_hexsize) {
+		git_error_set(GIT_ERROR_CONFIG, "invalid oid abbreviation setting: '%d'", len);
+		return -1;
+	}
+
+	*out = len;
+
+	return error;
+}

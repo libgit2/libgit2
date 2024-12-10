@@ -15,6 +15,7 @@
 #include "zstream.h"
 #include "blob.h"
 #include "delta.h"
+#include "repository.h"
 #include "git2/sys/diff.h"
 
 typedef struct {
@@ -53,7 +54,7 @@ static int diff_print_info_init__common(
 	if (!pi->id_strlen) {
 		if (!repo)
 			pi->id_strlen = GIT_ABBREV_DEFAULT;
-		else if (git_object__abbrev_length(&pi->id_strlen, repo) < 0)
+		else if (git_repository__abbrev_length(&pi->id_strlen, repo) < 0)
 			return -1;
 	}
 

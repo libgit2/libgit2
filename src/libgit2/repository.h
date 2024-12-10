@@ -213,6 +213,9 @@ int git_repository__wrap_odb(
 int git_repository__configmap_lookup(int *out, git_repository *repo, git_configmap_item item);
 void git_repository__configmap_lookup_cache_clear(git_repository *repo);
 
+/** Return the length that object names will be abbreviated to. */
+int git_repository__abbrev_length(int *out, git_repository *repo);
+
 int git_repository__item_path(git_str *out, const git_repository *repo, git_repository_item_t item);
 
 GIT_INLINE(int) git_repository__ensure_not_bare(
