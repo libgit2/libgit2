@@ -1999,3 +1999,28 @@ int git_odb_init_backend(git_odb_backend *backend, unsigned int version)
 		backend, version, git_odb_backend, GIT_ODB_BACKEND_INIT);
 	return 0;
 }
+
+int git_odb_set_priority(git_odb *odb, git_odb_backend *backend, int priority)
+{
+	size_t i;
+	int error;
+
+	GIT_ASSERT_ARG(backend);
+	GIT_ASSERT_ARG(odb);
+
+	if ((error = git_mutex_lock(&odb->lock)) < 0) {
+		git_error_set(GIT_ERROR_ODB, "failed to acquire the odb lock");
+		return error;
+	}
+	for (i = 0; i < odb->backends.length; ++i) {
+		backend_internal *internal = git_vector_get(&odb->backends, i);
+		if (backend == internal->backend)
+			internal->priority = priority;
+	}
+
+	git_vector_set_sorted(&odb->backends, 0);
+	git_vector_sort(&odb->backends);
+	git_mutex_unlock(&odb->lock);
+
+	return 0;
+}
