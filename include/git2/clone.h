@@ -200,6 +200,10 @@ GIT_EXTERN(int) git_clone_options_init(
  * git's defaults. You can use the options in the callback to
  * customize how these are created.
  *
+ * Note that the libgit2 library _must_ be initialized using
+ * `git_libgit2_init` before any APIs can be called, including
+ * this one.
+ *
  * @param[out] out pointer that will receive the resulting repository object
  * @param url the remote repository to clone
  * @param local_path local directory to clone to
