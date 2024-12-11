@@ -31,6 +31,10 @@ GIT_BEGIN_DECL
  * The method will automatically detect if 'path' is a normal
  * or bare repository or fail is 'path' is neither.
  *
+ * Note that the libgit2 library _must_ be initialized using
+ * `git_libgit2_init` before any APIs can be called, including
+ * this one.
+ *
  * @param[out] out pointer to the repo which will be opened
  * @param path the path to the repository
  * @return 0 or an error code
@@ -83,6 +87,10 @@ GIT_EXTERN(int) git_repository_wrap_odb(
  *
  * The method will automatically detect if the repository is bare
  * (if there is a repository).
+ *
+ * Note that the libgit2 library _must_ be initialized using
+ * `git_libgit2_init` before any APIs can be called, including
+ * this one.
  *
  * @param out A pointer to a user-allocated git_buf which will contain
  * the found path.
@@ -161,6 +169,10 @@ typedef enum {
 /**
  * Find and open a repository with extended controls.
  *
+ * Note that the libgit2 library _must_ be initialized using
+ * `git_libgit2_init` before any APIs can be called, including
+ * this one.
+ *
  * @param[out] out Pointer to the repo which will be opened.  This can
  *        actually be NULL if you only want to use the error code to
  *        see if a repo at this path could be opened.
@@ -189,6 +201,10 @@ GIT_EXTERN(int) git_repository_open_ext(
  * if you're e.g. hosting git repositories and need to access them
  * efficiently
  *
+ * Note that the libgit2 library _must_ be initialized using
+ * `git_libgit2_init` before any APIs can be called, including
+ * this one.
+ *
  * @param[out] out Pointer to the repo which will be opened.
  * @param bare_path Direct path to the bare repository
  * @return 0 on success, or an error code
@@ -213,6 +229,10 @@ GIT_EXTERN(void) git_repository_free(git_repository *repo);
  *
  * TODO:
  *	- Reinit the repository
+ *
+ * Note that the libgit2 library _must_ be initialized using
+ * `git_libgit2_init` before any APIs can be called, including
+ * this one.
  *
  * @param[out] out pointer to the repo which will be created or reinitialized
  * @param path the path to the repository
@@ -403,6 +423,10 @@ GIT_EXTERN(int) git_repository_init_options_init(
  * if requested by flags) and working directory as needed.  It will
  * auto-detect the case sensitivity of the file system and if the
  * file system supports file mode bits correctly.
+ *
+ * Note that the libgit2 library _must_ be initialized using
+ * `git_libgit2_init` before any APIs can be called, including
+ * this one.
  *
  * @param out Pointer to the repo which will be created or reinitialized.
  * @param repo_path The path to the repository.
