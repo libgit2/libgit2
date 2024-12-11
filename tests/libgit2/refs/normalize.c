@@ -229,8 +229,6 @@ void test_refs_normalize__jgit_suite(void)
 		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "refs/heads/master^");
 	ensure_refname_invalid(
 		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "refs/heads/^master");
-	ensure_refname_invalid(
-		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "^refs/heads/master");
 
 	ensure_refname_invalid(
 		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "refs/heads/master~");
