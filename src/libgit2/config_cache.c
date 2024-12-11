@@ -65,8 +65,8 @@ static git_configmap _configmap_logallrefupdates[] = {
 };
 
 static git_configmap _configmap_abbrev[] = {
-	{GIT_CONFIGMAP_FALSE, NULL, GIT_ABBREV_FALSE},
 	{GIT_CONFIGMAP_INT32, NULL, 0},
+	{GIT_CONFIGMAP_FALSE, NULL, GIT_ABBREV_FALSE},
 	{GIT_CONFIGMAP_STRING, "auto", GIT_ABBREV_DEFAULT}
 };
 

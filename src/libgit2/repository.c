@@ -4021,14 +4021,13 @@ int git_repository__abbrev_length(int *out, git_repository *repo)
 	if ((error = git_repository__configmap_lookup(&len, repo, GIT_CONFIGMAP_ABBREV)) < 0)
 		return error;
 
-	if (len == GIT_ABBREV_FALSE) {
-		len = (int)oid_hexsize;
-	}
-
-	if (len < GIT_ABBREV_MINIMUM || (size_t)len > oid_hexsize) {
+	if (len < GIT_ABBREV_MINIMUM) {
 		git_error_set(GIT_ERROR_CONFIG, "invalid oid abbreviation setting: '%d'", len);
 		return -1;
 	}
+
+	if (len == GIT_ABBREV_FALSE || (size_t)len > oid_hexsize)
+		len = (int)oid_hexsize;
 
 	*out = len;
 

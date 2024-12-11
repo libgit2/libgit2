@@ -70,14 +70,24 @@ void test_object_shortid__core_abbrev(void)
 	cl_assert_equal_i(40, shorty.size);
 	cl_assert_equal_s("ce013625030ba8dba906f756967f9e9ca394464a", shorty.ptr);
 
+	cl_git_pass(git_config_set_string(cfg, "core.abbrev", "false"));
+	cl_git_pass(git_object_short_id(&shorty, obj));
+	cl_assert_equal_i(40, shorty.size);
+	cl_assert_equal_s("ce013625030ba8dba906f756967f9e9ca394464a", shorty.ptr);
+
+	cl_git_pass(git_config_set_string(cfg, "core.abbrev", "99"));
+	cl_git_pass(git_object_short_id(&shorty, obj));
+	cl_assert_equal_i(40, shorty.size);
+	cl_assert_equal_s("ce013625030ba8dba906f756967f9e9ca394464a", shorty.ptr);
+
 	cl_git_pass(git_config_set_string(cfg, "core.abbrev", "4"));
 	cl_git_pass(git_object_short_id(&shorty, obj));
 	cl_assert_equal_i(4, shorty.size);
 	cl_assert_equal_s("ce01", shorty.ptr);
 
-	cl_git_pass(git_config_set_string(cfg, "core.abbrev", "3"));
+	cl_git_pass(git_config_set_string(cfg, "core.abbrev", "0"));
 	cl_git_fail(git_object_short_id(&shorty, obj));
-	cl_git_pass(git_config_set_string(cfg, "core.abbrev", "41"));
+	cl_git_pass(git_config_set_string(cfg, "core.abbrev", "3"));
 	cl_git_fail(git_object_short_id(&shorty, obj));
 	cl_git_pass(git_config_set_string(cfg, "core.abbrev", "invalid"));
 	cl_git_fail(git_object_short_id(&shorty, obj));
