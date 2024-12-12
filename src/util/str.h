@@ -354,4 +354,12 @@ int git_str_is_binary(const git_str *str);
 */
 int git_str_contains_nul(const git_str *str);
 
+/**
+ * Clears the given string buffer and overwrites it with zeros, to
+ * prevent sensitive data from remaining in the heap.
+ *
+ * @param str string buffer to clear
+ */
+void git_str_zero(git_str *str);
+
 #endif

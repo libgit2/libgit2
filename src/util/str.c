@@ -145,6 +145,14 @@ void git_str_clear(git_str *buf)
 		buf->ptr[0] = '\0';
 }
 
+void git_str_zero(git_str *buf)
+{
+	if (buf->asize > 0)
+		git__memzero(buf->ptr, buf->asize);
+
+	git_str_clear(buf);
+}
+
 int git_str_set(git_str *buf, const void *data, size_t len)
 {
 	size_t alloclen;
