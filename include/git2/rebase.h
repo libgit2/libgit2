@@ -17,8 +17,8 @@
 
 /**
  * @file git2/rebase.h
- * @brief Git rebase routines
- * @defgroup git_rebase Git merge routines
+ * @brief Rebase manipulates commits, placing them on a new parent
+ * @defgroup git_rebase Rebase manipulates commits, placing them on a new parent
  * @ingroup Git
  * @{
  */
@@ -154,7 +154,10 @@ typedef enum {
 	GIT_REBASE_OPERATION_EXEC
 } git_rebase_operation_t;
 
+/** Current version for the `git_rebase_options` structure */
 #define GIT_REBASE_OPTIONS_VERSION 1
+
+/** Static constructor for `git_rebase_options` */
 #define GIT_REBASE_OPTIONS_INIT \
 	{ GIT_REBASE_OPTIONS_VERSION, 0, 0, NULL, GIT_MERGE_OPTIONS_INIT, \
 	  GIT_CHECKOUT_OPTIONS_INIT, NULL, NULL }
@@ -395,4 +398,5 @@ GIT_EXTERN(void) git_rebase_free(git_rebase *rebase);
 
 /** @} */
 GIT_END_DECL
+
 #endif

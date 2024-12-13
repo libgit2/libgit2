@@ -13,10 +13,14 @@
 
 /**
  * @file git2/describe.h
- * @brief Git describing routines
+ * @brief Describe a commit in reference to tags
  * @defgroup git_describe Git describing routines
  * @ingroup Git
  * @{
+ *
+ * Describe a commit, showing information about how the current commit
+ * relates to the tags. This can be useful for showing how the current
+ * commit has changed from a particular tagged version of the repository.
  */
 GIT_BEGIN_DECL
 
@@ -60,10 +64,15 @@ typedef struct git_describe_options {
 	int show_commit_oid_as_fallback;
 } git_describe_options;
 
+/** Default maximum candidate tags */
 #define GIT_DESCRIBE_DEFAULT_MAX_CANDIDATES_TAGS 10
+/** Default abbreviated size */
 #define GIT_DESCRIBE_DEFAULT_ABBREVIATED_SIZE 7
 
+/** Current version for the `git_describe_options` structure */
 #define GIT_DESCRIBE_OPTIONS_VERSION 1
+
+/** Static constructor for `git_describe_options` */
 #define GIT_DESCRIBE_OPTIONS_INIT { \
 	GIT_DESCRIBE_OPTIONS_VERSION, \
 	GIT_DESCRIBE_DEFAULT_MAX_CANDIDATES_TAGS, \
@@ -110,7 +119,10 @@ typedef struct {
 	const char *dirty_suffix;
 } git_describe_format_options;
 
+/** Current version for the `git_describe_format_options` structure */
 #define GIT_DESCRIBE_FORMAT_OPTIONS_VERSION 1
+
+/** Static constructor for `git_describe_format_options` */
 #define GIT_DESCRIBE_FORMAT_OPTIONS_INIT { \
 		GIT_DESCRIBE_FORMAT_OPTIONS_VERSION,   \
 		GIT_DESCRIBE_DEFAULT_ABBREVIATED_SIZE, \

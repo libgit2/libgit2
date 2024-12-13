@@ -15,9 +15,14 @@
 
 /**
  * @file git2/index.h
- * @brief Git index parsing and manipulation routines
+ * @brief Index (aka "cache" aka "staging area")
  * @defgroup git_index Git index parsing and manipulation routines
  * @ingroup Git
+ *
+ * The index (or "cache", or "staging area") is the contents of the
+ * next commit. In addition, the index stores other data, such as
+ * conflicts that occurred during the last merge operation, and
+ * the "treecache" to speed up various on-disk operations.
  * @{
  */
 GIT_BEGIN_DECL
@@ -77,8 +82,11 @@ typedef struct git_index_entry {
  * data in the `flags`.
  */
 
+/** Mask for name length */
 #define GIT_INDEX_ENTRY_NAMEMASK  (0x0fff)
+/** Mask for index entry stage */
 #define GIT_INDEX_ENTRY_STAGEMASK (0x3000)
+/** Shift bits for index entry */
 #define GIT_INDEX_ENTRY_STAGESHIFT 12
 
 /**
@@ -89,9 +97,17 @@ typedef enum {
 	GIT_INDEX_ENTRY_VALID     = (0x8000)
 } git_index_entry_flag_t;
 
+/**
+ * Macro to get the stage value (0 for the "main index", or a conflict
+ * value) from an index entry.
+ */
 #define GIT_INDEX_ENTRY_STAGE(E) \
 	(((E)->flags & GIT_INDEX_ENTRY_STAGEMASK) >> GIT_INDEX_ENTRY_STAGESHIFT)
 
+/**
+ * Macro to set the stage value (0 for the "main index", or a conflict
+ * value) for an index entry.
+ */
 #define GIT_INDEX_ENTRY_STAGE_SET(E,S) do { \
 	(E)->flags = ((E)->flags & ~GIT_INDEX_ENTRY_STAGEMASK) | \
 		(((S) & 0x03) << GIT_INDEX_ENTRY_STAGESHIFT); } while (0)
@@ -131,7 +147,14 @@ typedef enum {
 } git_index_capability_t;
 
 
-/** Callback for APIs that add/remove/update files matching pathspec */
+/**
+ * Callback for APIs that add/remove/update files matching pathspec
+ *
+ * @param path the path
+ * @param matched_pathspec the given pathspec
+ * @param payload the user-specified payload
+ * @return 0 to continue with the index operation, positive number to         skip this file for the index operation, negative number on failure
+ */
 typedef int GIT_CALLBACK(git_index_matched_path_cb)(
 	const char *path, const char *matched_pathspec, void *payload);
 
@@ -166,6 +189,30 @@ typedef enum {
 	GIT_INDEX_STAGE_THEIRS = 3
 } git_index_stage_t;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+
+/**
+ * Creates a new bare Git index object, without a repository to back
+ * it. This index object is capable of storing SHA256 objects.
+ *
+ * @param index_out the pointer for the new index
+ * @param index_path the path to the index file in disk
+ * @param oid_type the object ID type to use for the repository
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_open(git_index **index_out, const char *index_path, git_oid_t oid_type);
+
+/**
+ * Create an in-memory index object.
+ *
+ * @param index_out the pointer for the new index
+ * @param oid_type the object ID type to use for the repository
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_new(git_index **index_out, git_oid_t oid_type);
+
+#else
+
 /**
  * Create a new bare Git index object as a memory representation
  * of the Git index file in 'index_path', without a repository
@@ -180,16 +227,11 @@ typedef enum {
  *
  * The index must be freed once it's no longer in use.
  *
- * @param out the pointer for the new index
+ * @param index_out the pointer for the new index
  * @param index_path the path to the index file in disk
  * @return 0 or an error code
  */
-
-#ifdef GIT_EXPERIMENTAL_SHA256
-GIT_EXTERN(int) git_index_open(git_index **out, const char *index_path, git_oid_t oid_type);
-#else
-GIT_EXTERN(int) git_index_open(git_index **out, const char *index_path);
-#endif
+GIT_EXTERN(int) git_index_open(git_index **index_out, const char *index_path);
 
 /**
  * Create an in-memory index object.
@@ -199,13 +241,11 @@ GIT_EXTERN(int) git_index_open(git_index **out, const char *index_path);
  *
  * The index must be freed once it's no longer in use.
  *
- * @param out the pointer for the new index
+ * @param index_out the pointer for the new index
  * @return 0 or an error code
  */
-#ifdef GIT_EXPERIMENTAL_SHA256
-GIT_EXTERN(int) git_index_new(git_index **out, git_oid_t oid_type);
-#else
-GIT_EXTERN(int) git_index_new(git_index **out);
+GIT_EXTERN(int) git_index_new(git_index **index_out);
+
 #endif
 
 /**
@@ -845,4 +885,5 @@ GIT_EXTERN(void) git_index_conflict_iterator_free(
 
 /** @} */
 GIT_END_DECL
+
 #endif

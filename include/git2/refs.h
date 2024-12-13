@@ -14,8 +14,8 @@
 
 /**
  * @file git2/refs.h
- * @brief Git reference management routines
- * @defgroup git_reference Git reference management routines
+ * @brief References point to a commit; generally these are branches and tags
+ * @defgroup git_reference References point to a commit; generally these are branches and tags
  * @ingroup Git
  * @{
  */
@@ -29,7 +29,7 @@ GIT_BEGIN_DECL
  * The name will be checked for validity.
  * See `git_reference_symbolic_create()` for rules about valid names.
  *
- * @param out pointer to the looked-up reference
+ * @param[out] out pointer to the looked-up reference
  * @param repo the repository to look up the reference
  * @param name the long name for the reference (e.g. HEAD, refs/heads/master, refs/tags/v0.1.0, ...)
  * @return 0 on success, GIT_ENOTFOUND, GIT_EINVALIDSPEC or an error code.
@@ -371,6 +371,7 @@ GIT_EXTERN(int) git_reference_set_target(
  * reflog is enabled for the repository. We only rename
  * the reflog if it exists.
  *
+ * @param[out] new_ref The new reference
  * @param ref The reference to rename
  * @param new_name The new name for the reference
  * @param force Overwrite an existing reference
@@ -406,6 +407,7 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  * This method removes the named reference from the repository without
  * looking at its old value.
  *
+ * @param repo The repository to remove the reference from
  * @param name The reference to remove
  * @return 0 or an error code
  */
@@ -518,7 +520,7 @@ GIT_EXTERN(int) git_reference_cmp(
 /**
  * Create an iterator for the repo's references
  *
- * @param out pointer in which to store the iterator
+ * @param[out] out pointer in which to store the iterator
  * @param repo the repository
  * @return 0 or an error code
  */
@@ -543,7 +545,7 @@ GIT_EXTERN(int) git_reference_iterator_glob_new(
 /**
  * Get the next reference
  *
- * @param out pointer in which to store the reference
+ * @param[out] out pointer in which to store the reference
  * @param iter the iterator
  * @return 0, GIT_ITEROVER if there are no more; or an error code
  */
@@ -724,7 +726,7 @@ GIT_EXTERN(int) git_reference_normalize_name(
  * If you pass `GIT_OBJECT_ANY` as the target type, then the object
  * will be peeled until a non-tag object is met.
  *
- * @param out Pointer to the peeled git_object
+ * @param[out] out Pointer to the peeled git_object
  * @param ref The reference to be processed
  * @param type The type of the requested object (GIT_OBJECT_COMMIT,
  * GIT_OBJECT_TAG, GIT_OBJECT_TREE, GIT_OBJECT_BLOB or GIT_OBJECT_ANY).
@@ -768,4 +770,5 @@ GIT_EXTERN(const char *) git_reference_shorthand(const git_reference *ref);
 
 /** @} */
 GIT_END_DECL
+
 #endif

@@ -7,14 +7,14 @@
 #ifndef INCLUDE_util_h__
 #define INCLUDE_util_h__
 
-#ifndef GIT_WIN32
-# include <ctype.h>
-#endif
-
 #include "str.h"
 #include "git2_util.h"
 #include "strnlen.h"
 #include "thread.h"
+
+#ifndef GIT_WIN32
+# include <ctype.h>
+#endif
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define bitsizeof(x) (CHAR_BIT * sizeof(x))

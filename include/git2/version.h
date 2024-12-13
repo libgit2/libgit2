@@ -8,6 +8,14 @@
 #define INCLUDE_git_version_h__
 
 /**
+ * @file git2/version.h
+ * @brief The version of libgit2
+ * @ingroup Git
+ * @{
+ */
+GIT_BEGIN_DECL
+
+/**
  * The version string for libgit2.  This string follows semantic
  * versioning (v2) guidelines.
  */
@@ -60,5 +68,8 @@
  */
 #define LIBGIT2_VERSION_CHECK(major, minor, revision) \
 	(LIBGIT2_VERSION_NUMBER >= ((major)*1000000)+((minor)*10000)+((revision)*100))
+
+/** @} */
+GIT_END_DECL
 
 #endif
