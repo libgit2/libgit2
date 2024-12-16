@@ -77,6 +77,9 @@ typedef struct git_indexer_options {
 	/** permissions to use creating packfile or 0 for defaults */
 	unsigned int mode;
 
+	/** the type of object ids in the packfile or 0 for SHA1 */
+	git_oid_t oid_type;
+
 	/**
 	 * object database from which to read base objects when
 	 * fixing thin packs. This can be NULL if there are no thin
@@ -120,13 +123,12 @@ GIT_EXTERN(int) git_indexer_options_init(
  *
  * @param out where to store the indexer instance
  * @param path to the directory where the packfile should be stored
- * @param oid_type the oid type to use for objects
+ * @param opts the options to create the indexer with
  * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_indexer_new(
 		git_indexer **out,
 		const char *path,
-		git_oid_t oid_type,
 		git_indexer_options *opts);
 #else
 /**

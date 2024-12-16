@@ -743,10 +743,10 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 
 #ifdef GIT_EXPERIMENTAL_SHA256
 	opts.odb = odb;
+	opts.oid_type = backend->opts.oid_type;
 
 	error = git_indexer_new(&writepack->indexer,
 		backend->pack_folder,
-		backend->opts.oid_type,
 		&opts);
 #else
 	error = git_indexer_new(&writepack->indexer,
