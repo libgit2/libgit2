@@ -10,6 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "odb.h"
 #include "buffer.h"
 #include "commit.h"
 
@@ -57,7 +58,7 @@ GIT_EXTERN(int) git_repository_open_from_worktree(git_repository **out, git_work
 GIT_EXTERN(int) git_repository_wrap_odb(
 	git_repository **out,
 	git_odb *odb,
-	git_oid_t oid_type);
+	const git_odb_options *opts);
 
 #else
 

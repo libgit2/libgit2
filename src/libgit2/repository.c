@@ -1228,6 +1228,8 @@ int git_repository__wrap_odb(
 {
 	git_repository *repo;
 
+	GIT_ASSERT_ARG(git_oid_type_is_valid(oid_type));
+
 	repo = repository_alloc();
 	GIT_ERROR_CHECK_ALLOC(repo);
 
@@ -1243,9 +1245,9 @@ int git_repository__wrap_odb(
 int git_repository_wrap_odb(
 	git_repository **out,
 	git_odb *odb,
-	git_oid_t oid_type)
+	const git_odb_options *opts)
 {
-	return git_repository__wrap_odb(out, odb, oid_type);
+	return git_repository__wrap_odb(out, odb, opts ? opts->oid_type : GIT_OID_DEFAULT);
 }
 #else
 int git_repository_wrap_odb(git_repository **out, git_odb *odb)
