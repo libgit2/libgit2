@@ -53,15 +53,6 @@ GIT_EXTERN(int) git_repository_open(git_repository **out, const char *path);
  */
 GIT_EXTERN(int) git_repository_open_from_worktree(git_repository **out, git_worktree *wt);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
-GIT_EXTERN(int) git_repository_wrap_odb(
-	git_repository **out,
-	git_odb *odb,
-	const git_odb_options *opts);
-
-#else
-
 /**
  * Create a "fake" repository to wrap an object database
  *
@@ -76,8 +67,6 @@ GIT_EXTERN(int) git_repository_wrap_odb(
 GIT_EXTERN(int) git_repository_wrap_odb(
 	git_repository **out,
 	git_odb *odb);
-
-#endif
 
 /**
  * Look for a git repository and copy its path in the given buffer.
