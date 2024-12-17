@@ -335,6 +335,8 @@ int git_repository__new(git_repository **out, git_oid_t oid_type)
 	*out = repo = repository_alloc();
 	GIT_ERROR_CHECK_ALLOC(repo);
 
+	GIT_ASSERT_ARG(git_oid_type_is_valid(oid_type));
+
 	repo->is_bare = 1;
 	repo->is_worktree = 0;
 	repo->oid_type = oid_type;
@@ -343,9 +345,9 @@ int git_repository__new(git_repository **out, git_oid_t oid_type)
 }
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-int git_repository_new(git_repository **out, git_oid_t oid_type)
+int git_repository_new(git_repository **out, git_repository_new_options *opts)
 {
-	return git_repository__new(out, oid_type);
+	return git_repository__new(out, opts && opts->oid_type ? opts->oid_type : GIT_OID_DEFAULT);
 }
 #else
 int git_repository_new(git_repository** out)

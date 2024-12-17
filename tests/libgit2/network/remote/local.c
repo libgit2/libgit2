@@ -471,10 +471,14 @@ void test_network_remote_local__anonymous_remote_inmemory_repo(void)
 	git_repository *inmemory;
 	git_remote *remote;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_repository_new_options repo_opts = GIT_REPOSITORY_NEW_OPTIONS_INIT;
+#endif
+
 	git_str_sets(&file_path_buf, cl_git_path_url(cl_fixture("testrepo.git")));
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-	cl_git_pass(git_repository_new(&inmemory, GIT_OID_SHA1));
+	cl_git_pass(git_repository_new(&inmemory, &repo_opts));
 #else
 	cl_git_pass(git_repository_new(&inmemory));
 #endif
