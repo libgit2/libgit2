@@ -335,6 +335,8 @@ int git_repository__new(git_repository **out, git_oid_t oid_type)
 	*out = repo = repository_alloc();
 	GIT_ERROR_CHECK_ALLOC(repo);
 
+	GIT_ASSERT_ARG(git_oid_type_is_valid(oid_type));
+
 	repo->is_bare = 1;
 	repo->is_worktree = 0;
 	repo->oid_type = oid_type;
@@ -343,9 +345,9 @@ int git_repository__new(git_repository **out, git_oid_t oid_type)
 }
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-int git_repository_new(git_repository **out, git_oid_t oid_type)
+int git_repository_new(git_repository **out, git_repository_new_options *opts)
 {
-	return git_repository__new(out, oid_type);
+	return git_repository__new(out, opts && opts->oid_type ? opts->oid_type : GIT_OID_DEFAULT);
 }
 #else
 int git_repository_new(git_repository** out)
@@ -1221,38 +1223,21 @@ out:
 	return err;
 }
 
-int git_repository__wrap_odb(
-	git_repository **out,
-	git_odb *odb,
-	git_oid_t oid_type)
+int git_repository_wrap_odb(git_repository **out, git_odb *odb)
 {
 	git_repository *repo;
 
 	repo = repository_alloc();
 	GIT_ERROR_CHECK_ALLOC(repo);
 
-	repo->oid_type = oid_type;
+	GIT_ASSERT(git_oid_type_is_valid(odb->options.oid_type));
+	repo->oid_type = odb->options.oid_type;
 
 	git_repository_set_odb(repo, odb);
 	*out = repo;
 
 	return 0;
 }
-
-#ifdef GIT_EXPERIMENTAL_SHA256
-int git_repository_wrap_odb(
-	git_repository **out,
-	git_odb *odb,
-	git_oid_t oid_type)
-{
-	return git_repository__wrap_odb(out, odb, oid_type);
-}
-#else
-int git_repository_wrap_odb(git_repository **out, git_odb *odb)
-{
-	return git_repository__wrap_odb(out, odb, GIT_OID_DEFAULT);
-}
-#endif
 
 int git_repository_discover(
 	git_buf *out,

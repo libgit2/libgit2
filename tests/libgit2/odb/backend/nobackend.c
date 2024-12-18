@@ -12,7 +12,11 @@ void test_odb_backend_nobackend__initialize(void)
 	git_refdb *refdb;
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-	cl_git_pass(git_repository_new(&_repo, GIT_OID_SHA1));
+	git_repository_new_options repo_opts = GIT_REPOSITORY_NEW_OPTIONS_INIT;
+
+	repo_opts.oid_type = GIT_OID_SHA1;
+
+	cl_git_pass(git_repository_new(&_repo, &repo_opts));
 #else
 	cl_git_pass(git_repository_new(&_repo));
 #endif

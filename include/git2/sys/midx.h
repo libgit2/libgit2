@@ -20,6 +20,44 @@
 GIT_BEGIN_DECL
 
 /**
+ * Options structure for `git_midx_writer_options`.
+ *
+ * Initialize with `GIT_MIDX_WRITER_OPTIONS_INIT`. Alternatively,
+ * you can use `git_midx_writer_options_init`.
+ */
+typedef struct {
+	unsigned int version;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	/** The object ID type that this commit graph contains. */
+	git_oid_t oid_type;
+#endif
+} git_midx_writer_options;
+
+/** Current version for the `git_midx_writer_options` structure */
+#define GIT_MIDX_WRITER_OPTIONS_VERSION 1
+
+/** Static constructor for `git_midx_writer_options` */
+#define GIT_MIDX_WRITER_OPTIONS_INIT { \
+		GIT_MIDX_WRITER_OPTIONS_VERSION \
+	}
+
+/**
+ * Initialize git_midx_writer_options structure
+ *
+ * Initializes a `git_midx_writer_options` with default values.
+ * Equivalent to creating an instance with
+ * `GIT_MIDX_WRITER_OPTIONS_INIT`.
+ *
+ * @param opts The `git_midx_writer_options` struct to initialize.
+ * @param version The struct version; pass `GIT_MIDX_WRITER_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_midx_writer_options_init(
+	git_midx_writer_options *opts,
+	unsigned int version);
+
+/**
  * Create a new writer for `multi-pack-index` files.
  *
  * @param out location to store the writer pointer.
@@ -31,7 +69,7 @@ GIT_EXTERN(int) git_midx_writer_new(
 		git_midx_writer **out,
 		const char *pack_dir
 #ifdef GIT_EXPERIMENTAL_SHA256
-		, git_oid_t oid_type
+		, git_midx_writer_options *options
 #endif
 		);
 

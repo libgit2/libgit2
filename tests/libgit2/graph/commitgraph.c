@@ -105,10 +105,10 @@ void test_graph_commitgraph__writer(void)
 	cl_git_pass(git_str_joinpath(&path, git_repository_path(repo), "objects/info"));
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-	cl_git_pass(git_commit_graph_writer_new(&w, git_str_cstr(&path), GIT_OID_SHA1));
-#else
-	cl_git_pass(git_commit_graph_writer_new(&w, git_str_cstr(&path)));
+	opts.oid_type = GIT_OID_SHA1;
 #endif
+
+	cl_git_pass(git_commit_graph_writer_new(&w, git_str_cstr(&path), &opts));
 
 	/* This is equivalent to `git commit-graph write --reachable`. */
 	cl_git_pass(git_revwalk_new(&walk, repo));
@@ -116,7 +116,8 @@ void test_graph_commitgraph__writer(void)
 	cl_git_pass(git_commit_graph_writer_add_revwalk(w, walk));
 	git_revwalk_free(walk);
 
-	cl_git_pass(git_commit_graph_writer_dump(&cgraph, w, &opts));
+	cl_git_pass(git_commit_graph_writer_dump(&cgraph, w));
+
 	cl_git_pass(git_str_joinpath(&path, git_repository_path(repo), "objects/info/commit-graph"));
 	cl_git_pass(git_futils_readbuffer(&expected_cgraph, git_str_cstr(&path)));
 
@@ -136,12 +137,16 @@ void test_graph_commitgraph__validate(void)
 	struct git_commit_graph *cgraph;
 	git_str objects_dir = GIT_STR_INIT;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_commit_graph_open_options opts = GIT_COMMIT_GRAPH_OPEN_OPTIONS_INIT;
+#endif
+
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 	cl_git_pass(git_str_joinpath(&objects_dir, git_repository_path(repo), "objects"));
 
 	/* git_commit_graph_open() calls git_commit_graph_validate() */
 #ifdef GIT_EXPERIMENTAL_SHA256
-	cl_git_pass(git_commit_graph_open(&cgraph, git_str_cstr(&objects_dir), GIT_OID_SHA1));
+	cl_git_pass(git_commit_graph_open(&cgraph, git_str_cstr(&objects_dir), &opts));
 #else
 	cl_git_pass(git_commit_graph_open(&cgraph, git_str_cstr(&objects_dir)));
 #endif
@@ -157,6 +162,10 @@ void test_graph_commitgraph__validate_corrupt(void)
 	struct git_commit_graph *cgraph;
 	int fd = -1;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_commit_graph_open_options opts = GIT_COMMIT_GRAPH_OPEN_OPTIONS_INIT;
+#endif
+
 	cl_fixture_sandbox("testrepo.git");
 	cl_git_pass(git_repository_open(&repo, cl_git_sandbox_path(1, "testrepo.git", NULL)));
 
@@ -168,7 +177,7 @@ void test_graph_commitgraph__validate_corrupt(void)
 
 	/* git_commit_graph_open() calls git_commit_graph_validate() */
 #ifdef GIT_EXPERIMENTAL_SHA256
-	cl_git_fail(git_commit_graph_open(&cgraph, cl_git_sandbox_path(1, "testrepo.git", "objects", NULL), GIT_OID_SHA1));
+	cl_git_fail(git_commit_graph_open(&cgraph, cl_git_sandbox_path(1, "testrepo.git", "objects", NULL), &opts));
 #else
 	cl_git_fail(git_commit_graph_open(&cgraph, cl_git_sandbox_path(1, "testrepo.git", "objects", NULL)));
 #endif

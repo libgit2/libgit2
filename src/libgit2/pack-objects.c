@@ -1442,8 +1442,9 @@ int git_packbuilder_write(
 #ifdef GIT_EXPERIMENTAL_SHA256
 	opts.mode = mode;
 	opts.odb = pb->odb;
+	opts.oid_type = GIT_OID_SHA1;
 
-	error = git_indexer_new(&indexer, path, GIT_OID_SHA1, &opts);
+	error = git_indexer_new(&indexer, path, &opts);
 #else
 	error = git_indexer_new(&indexer, path, mode, pb->odb, &opts);
 #endif

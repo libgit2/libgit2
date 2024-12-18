@@ -399,6 +399,7 @@ int git_index__open(
 	index = git__calloc(1, sizeof(git_index));
 	GIT_ERROR_CHECK_ALLOC(index);
 
+	GIT_ASSERT_ARG(git_oid_type_is_valid(oid_type));
 	index->oid_type = oid_type;
 
 	if (git_pool_init(&index->tree_pool, 1) < 0)
@@ -441,9 +442,13 @@ fail:
 }
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-int git_index_open(git_index **index_out, const char *index_path, git_oid_t oid_type)
+int git_index_open(
+	git_index **index_out,
+	const char *index_path,
+	const git_index_options *opts)
 {
-	return git_index__open(index_out, index_path, oid_type);
+	return git_index__open(index_out, index_path,
+		opts && opts->oid_type ? opts->oid_type : GIT_OID_DEFAULT);
 }
 #else
 int git_index_open(git_index **index_out, const char *index_path)
@@ -458,9 +463,10 @@ int git_index__new(git_index **out, git_oid_t oid_type)
 }
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-int git_index_new(git_index **out, git_oid_t oid_type)
+int git_index_new(git_index **out, const git_index_options *opts)
 {
-	return git_index__new(out, oid_type);
+	return git_index__new(out,
+		opts && opts->oid_type ? opts->oid_type : GIT_OID_DEFAULT);
 }
 #else
 int git_index_new(git_index **out)

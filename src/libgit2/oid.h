@@ -66,6 +66,15 @@ GIT_INLINE(size_t) git_oid_hexsize(git_oid_t type)
 	return 0;
 }
 
+GIT_INLINE(bool) git_oid_type_is_valid(git_oid_t type)
+{
+	return (type == GIT_OID_SHA1
+#ifdef GIT_EXPERIMENTAL_SHA256
+	     || type == GIT_OID_SHA256
+#endif
+	);
+}
+
 GIT_INLINE(const char *) git_oid_type_name(git_oid_t type)
 {
 	switch (type) {

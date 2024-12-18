@@ -10,6 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "odb.h"
 #include "buffer.h"
 #include "commit.h"
 
@@ -52,15 +53,6 @@ GIT_EXTERN(int) git_repository_open(git_repository **out, const char *path);
  */
 GIT_EXTERN(int) git_repository_open_from_worktree(git_repository **out, git_worktree *wt);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
-GIT_EXTERN(int) git_repository_wrap_odb(
-	git_repository **out,
-	git_odb *odb,
-	git_oid_t oid_type);
-
-#else
-
 /**
  * Create a "fake" repository to wrap an object database
  *
@@ -75,8 +67,6 @@ GIT_EXTERN(int) git_repository_wrap_odb(
 GIT_EXTERN(int) git_repository_wrap_odb(
 	git_repository **out,
 	git_odb *odb);
-
-#endif
 
 /**
  * Look for a git repository and copy its path in the given buffer.

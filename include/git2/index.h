@@ -192,24 +192,68 @@ typedef enum {
 #ifdef GIT_EXPERIMENTAL_SHA256
 
 /**
+ * The options for opening or creating an index.
+ *
+ * Initialize with `GIT_INDEX_OPTIONS_INIT`. Alternatively, you can
+ * use `git_index_options_init`.
+ *
+ * @options[version] GIT_INDEX_OPTIONS_VERSION
+ * @options[init_macro] GIT_INDEX_OPTIONS_INIT
+ * @options[init_function] git_index_options_init
+ */
+typedef struct git_index_options {
+	unsigned int version; /**< The version */
+
+	/**
+	 * The object ID type for the object IDs that exist in the index.
+	 *
+	 * If this is not specified, this defaults to `GIT_OID_SHA1`.
+	 */
+	git_oid_t oid_type;
+} git_index_options;
+
+/** Current version for the `git_index_options` structure */
+#define GIT_INDEX_OPTIONS_VERSION 1
+
+/** Static constructor for `git_index_options` */
+#define GIT_INDEX_OPTIONS_INIT { GIT_INDEX_OPTIONS_VERSION }
+
+/**
+ * Initialize git_index_options structure
+ *
+ * Initializes a `git_index_options` with default values. Equivalent to creating
+ * an instance with GIT_INDEX_OPTIONS_INIT.
+ *
+ * @param opts The `git_index_options` struct to initialize.
+ * @param version The struct version; pass `GIT_INDEX_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_index_options_init(
+	git_index_options *opts,
+	unsigned int version);
+
+/**
  * Creates a new bare Git index object, without a repository to back
  * it. This index object is capable of storing SHA256 objects.
  *
  * @param index_out the pointer for the new index
  * @param index_path the path to the index file in disk
- * @param oid_type the object ID type to use for the repository
+ * @param opts the options for opening the index, or NULL
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_open(git_index **index_out, const char *index_path, git_oid_t oid_type);
+GIT_EXTERN(int) git_index_open(
+	git_index **index_out,
+	const char *index_path,
+	const git_index_options *opts);
 
 /**
  * Create an in-memory index object.
  *
  * @param index_out the pointer for the new index
- * @param oid_type the object ID type to use for the repository
+ * @param opts the options for opening the index, or NULL
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_new(git_index **index_out, git_oid_t oid_type);
+GIT_EXTERN(int) git_index_new(git_index **index_out, const git_index_options *opts);
 
 #else
 
