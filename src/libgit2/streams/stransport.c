@@ -331,8 +331,7 @@ static int stransport_wrap(
 	if ((ret = SSLSetIOFuncs(st->ctx, read_cb, write_cb)) != noErr ||
 	    (ret = SSLSetConnection(st->ctx, st)) != noErr ||
 	    (ret = SSLSetSessionOption(st->ctx, kSSLSessionOptionBreakOnServerAuth, true)) != noErr ||
-	    (ret = SSLSetProtocolVersionMin(st->ctx, kTLSProtocol1)) != noErr ||
-	    (ret = SSLSetProtocolVersionMax(st->ctx, kTLSProtocol12)) != noErr ||
+	    (ret = SSLSetProtocolVersionMin(st->ctx, kTLSProtocol12)) != noErr ||
 	    (ret = SSLSetPeerDomainName(st->ctx, host, strlen(host))) != noErr) {
 		CFRelease(st->ctx);
 		git__free(st);
