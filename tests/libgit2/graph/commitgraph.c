@@ -105,10 +105,10 @@ void test_graph_commitgraph__writer(void)
 	cl_git_pass(git_str_joinpath(&path, git_repository_path(repo), "objects/info"));
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-	cl_git_pass(git_commit_graph_writer_new(&w, git_str_cstr(&path), GIT_OID_SHA1));
-#else
-	cl_git_pass(git_commit_graph_writer_new(&w, git_str_cstr(&path)));
+	opts.oid_type = GIT_OID_SHA1;
 #endif
+
+	cl_git_pass(git_commit_graph_writer_new(&w, git_str_cstr(&path), &opts));
 
 	/* This is equivalent to `git commit-graph write --reachable`. */
 	cl_git_pass(git_revwalk_new(&walk, repo));
@@ -116,7 +116,8 @@ void test_graph_commitgraph__writer(void)
 	cl_git_pass(git_commit_graph_writer_add_revwalk(w, walk));
 	git_revwalk_free(walk);
 
-	cl_git_pass(git_commit_graph_writer_dump(&cgraph, w, &opts));
+	cl_git_pass(git_commit_graph_writer_dump(&cgraph, w));
+
 	cl_git_pass(git_str_joinpath(&path, git_repository_path(repo), "objects/info/commit-graph"));
 	cl_git_pass(git_futils_readbuffer(&expected_cgraph, git_str_cstr(&path)));
 

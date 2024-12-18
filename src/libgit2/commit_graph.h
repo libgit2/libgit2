@@ -156,8 +156,7 @@ struct git_commit_graph_writer {
 
 int git_commit_graph__writer_dump(
 	git_str *cgraph,
-	git_commit_graph_writer *w,
-	git_commit_graph_writer_options *opts);
+	git_commit_graph_writer *w);
 
 /*
  * Returns whether the git_commit_graph_file needs to be reloaded since the
