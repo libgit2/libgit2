@@ -20,6 +20,45 @@
 GIT_BEGIN_DECL
 
 /**
+ * Options structure for `git_commit_graph_open_new`.
+ *
+ * Initialize with `GIT_COMMIT_GRAPH_OPEN_OPTIONS_INIT`. Alternatively,
+ * you can use `git_commit_graph_open_options_init`.
+ */
+typedef struct {
+	unsigned int version;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	/** The object ID type that this commit graph contains. */
+	git_oid_t oid_type;
+#endif
+} git_commit_graph_open_options;
+
+/** Current version for the `git_commit_graph_open_options` structure */
+#define GIT_COMMIT_GRAPH_OPEN_OPTIONS_VERSION 1
+
+/** Static constructor for `git_commit_graph_open_options` */
+#define GIT_COMMIT_GRAPH_OPEN_OPTIONS_INIT { \
+		GIT_COMMIT_GRAPH_OPEN_OPTIONS_VERSION \
+	}
+
+/**
+ * Initialize git_commit_graph_open_options structure
+ *
+ * Initializes a `git_commit_graph_open_options` with default values.
+ * Equivalent to creating an instance with
+ * `GIT_COMMIT_GRAPH_OPEN_OPTIONS_INIT`.
+ *
+ * @param opts The `git_commit_graph_open_options` struct to initialize.
+ * @param version The struct version; pass `GIT_COMMIT_GRAPH_OPEN_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_commit_graph_open_options_init(
+	git_commit_graph_open_options *opts,
+	unsigned int version);
+
+
+/**
  * Opens a `git_commit_graph` from a path to an objects directory.
  *
  * This finds, opens, and validates the `commit-graph` file.
@@ -32,7 +71,7 @@ GIT_EXTERN(int) git_commit_graph_open(
 	git_commit_graph **cgraph_out,
 	const char *objects_dir
 #ifdef GIT_EXPERIMENTAL_SHA256
-	, git_oid_t oid_type
+	, const git_commit_graph_open_options *options
 #endif
 	);
 

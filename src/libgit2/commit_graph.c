@@ -365,14 +365,23 @@ int git_commit_graph_open(
 	git_commit_graph **cgraph_out,
 	const char *objects_dir
 #ifdef GIT_EXPERIMENTAL_SHA256
-	, git_oid_t oid_type
+	, const git_commit_graph_open_options *opts
 #endif
 	)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	git_oid_t oid_type = GIT_OID_SHA1;
-#endif
+	git_oid_t oid_type;
 	int error;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	GIT_ERROR_CHECK_VERSION(opts,
+		GIT_COMMIT_GRAPH_OPEN_OPTIONS_VERSION,
+		"git_commit_graph_open_options");
+
+	oid_type = opts && opts->oid_type ? opts->oid_type : GIT_OID_DEFAULT;
+	GIT_ASSERT_ARG(git_oid_type_is_valid(oid_type));
+#else
+	oid_type = GIT_OID_SHA1;
+#endif
 
 	error = git_commit_graph_new(cgraph_out, objects_dir, true,
 			oid_type);
