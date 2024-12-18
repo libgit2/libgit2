@@ -59,7 +59,7 @@ void test_pack_midx__writer(void)
 	cl_git_pass(git_str_joinpath(&path, git_repository_path(repo), "objects/pack"));
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-	cl_git_pass(git_midx_writer_new(&w, git_str_cstr(&path), GIT_OID_SHA1));
+	cl_git_pass(git_midx_writer_new(&w, git_str_cstr(&path), NULL));
 #else
 	cl_git_pass(git_midx_writer_new(&w, git_str_cstr(&path)));
 #endif

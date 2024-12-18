@@ -796,13 +796,21 @@ static int pack_backend__writemidx(git_odb_backend *_backend)
 	size_t i;
 	int error = 0;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_midx_writer_options midx_opts = GIT_MIDX_WRITER_OPTIONS_INIT;
+#endif
+
 	GIT_ASSERT_ARG(_backend);
 
 	backend = (struct pack_backend *)_backend;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	midx_opts.oid_type = backend->opts.oid_type;
+#endif
+
 	error = git_midx_writer_new(&w, backend->pack_folder
 #ifdef GIT_EXPERIMENTAL_SHA256
-		, backend->opts.oid_type
+		, &midx_opts
 #endif
 		);
 
