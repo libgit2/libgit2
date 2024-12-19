@@ -10,8 +10,11 @@ static char* repo2_path;
 
 static const char *REPO1_REFNAME = "refs/heads/main";
 static const char *REPO2_REFNAME = "refs/remotes/repo1/main";
+static const char *REPO1_UNDERSCORE_REFNAME = "refs/heads/_branch";
+static const char *REPO2_UNDERSCORE_REFNAME = "refs/remotes/repo1/_branch";
 static char *FORCE_FETCHSPEC = "+refs/heads/main:refs/remotes/repo1/main";
 static char *NON_FORCE_FETCHSPEC = "refs/heads/main:refs/remotes/repo1/main";
+static char *NEGATIVE_SPEC = "^refs/heads/_*";
 
 void test_remote_fetch__initialize(void) {
 	git_config *c;
@@ -169,4 +172,65 @@ void test_remote_fetch__do_update_refs_if_not_descendant_and_force(void) {
 	cl_assert_equal_b(git_oid_cmp(target, &commit1id), 0);
 
 	git_reference_free(ref);
+}
+
+/**
+ * This checks that negative refspecs are respected when fetching. We create a
+ * repository with a '_' prefixed reference. A second repository is configured
+ * with a negative refspec to ignore any refs prefixed with '_' and fetch the
+ * first repository into the second.
+ *
+ * @param commit1id A pointer to an OID which will be populated with the first
+ *                  commit.
+ */
+static void do_fetch_repo_with_ref_matching_negative_refspec(git_oid *commit1id) {
+	/* create a commit in repo 1 and a reference to it with '_' prefix */
+	{
+		git_oid empty_tree_id;
+		git_tree *empty_tree;
+		git_signature *sig;
+		git_treebuilder *tb;
+		cl_git_pass(git_treebuilder_new(&tb, repo1, NULL));
+		cl_git_pass(git_treebuilder_write(&empty_tree_id, tb));
+		cl_git_pass(git_tree_lookup(&empty_tree, repo1, &empty_tree_id));
+		cl_git_pass(git_signature_default(&sig, repo1));
+		cl_git_pass(git_commit_create(commit1id, repo1, REPO1_UNDERSCORE_REFNAME, sig,
+					sig, NULL, "one", empty_tree, 0, NULL));
+
+		git_tree_free(empty_tree);
+		git_signature_free(sig);
+		git_treebuilder_free(tb);
+	}
+
+	/* fetch the remote with negative refspec for references prefixed with '_' */
+	{
+		char *refspec_strs = { NEGATIVE_SPEC };
+		git_strarray refspecs = {
+			.count = 1,
+			.strings = &refspec_strs,
+		};
+
+		git_remote *remote;
+
+		cl_git_pass(git_remote_create_anonymous(&remote, repo2,
+					git_repository_path(repo1)));
+		cl_git_pass(git_remote_fetch(remote, &refspecs, NULL, "some message"));
+
+		git_remote_free(remote);
+	}
+}
+
+void test_remote_fetch__skip_negative_refspec_match(void) {
+	git_oid commit1id;
+	git_reference *ref1;
+	git_reference *ref2;
+
+	do_fetch_repo_with_ref_matching_negative_refspec(&commit1id);
+
+	/* assert that the reference in exists in repo1 but not in repo2 */
+	cl_git_pass(git_reference_lookup(&ref1, repo1, REPO1_UNDERSCORE_REFNAME));
+	cl_assert_equal_b(git_reference_lookup(&ref2, repo2, REPO2_UNDERSCORE_REFNAME), GIT_ENOTFOUND);
+
+	git_reference_free(ref1);
+	git_reference_free(ref2);
 }

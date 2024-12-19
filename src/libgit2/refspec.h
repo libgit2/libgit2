@@ -46,6 +46,14 @@ int git_refspec__serialize(git_str *out, const git_refspec *refspec);
 int git_refspec_is_wildcard(const git_refspec *spec);
 
 /**
+ * Determines if a refspec is a negative refspec.
+ *
+ * @param spec the refspec
+ * @return 1 if the refspec is a negative, 0 otherwise
+ */
+int git_refspec_is_negative(const git_refspec *spec);
+
+/**
  * DWIM `spec` with `refs` existing on the remote, append the dwim'ed
  * result in `out`.
  */

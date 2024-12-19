@@ -2628,17 +2628,21 @@ done:
 git_refspec *git_remote__matching_refspec(git_remote *remote, const char *refname)
 {
 	git_refspec *spec;
+	git_refspec *match = NULL;
 	size_t i;
 
 	git_vector_foreach(&remote->active_refspecs, i, spec) {
 		if (spec->push)
 			continue;
 
+		if (git_refspec_is_negative(spec) && git_refspec_src_matches_negative(spec, refname))
+			return NULL;
+
 		if (git_refspec_src_matches(spec, refname))
-			return spec;
+			match = spec;
 	}
 
-	return NULL;
+	return match;
 }
 
 git_refspec *git_remote__matching_dst_refspec(git_remote *remote, const char *refname)

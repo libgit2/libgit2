@@ -402,6 +402,8 @@ void test_refs_normalize__negative_refspec_pattern(void)
 {
 	ensure_refname_normalized(
 		GIT_REFERENCE_FORMAT_REFSPEC_PATTERN, "^foo/bar", "^foo/bar");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_REFSPEC_PATTERN, "^foo/bar/*", "^foo/bar/*");
 	ensure_refname_invalid(
 		GIT_REFERENCE_FORMAT_REFSPEC_PATTERN, "foo/^bar");
 }
