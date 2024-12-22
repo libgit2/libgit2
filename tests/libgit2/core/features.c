@@ -1,15 +1,8 @@
 #include "clar_libgit2.h"
 
-void test_core_features__0(void)
+void test_core_features__basic(void)
 {
-	int major, minor, rev, caps;
-
-	git_libgit2_version(&major, &minor, &rev);
-	cl_assert_equal_i(LIBGIT2_VERSION_MAJOR, major);
-	cl_assert_equal_i(LIBGIT2_VERSION_MINOR, minor);
-	cl_assert_equal_i(LIBGIT2_VERSION_REVISION, rev);
-
-	caps = git_libgit2_features();
+	int caps = git_libgit2_features();
 
 #ifdef GIT_THREADS
 	cl_assert((caps & GIT_FEATURE_THREADS) != 0);
