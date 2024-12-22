@@ -130,56 +130,80 @@ GIT_EXTERN(int) git_libgit2_version(int *major, int *minor, int *rev);
 GIT_EXTERN(const char *) git_libgit2_prerelease(void);
 
 /**
- * Combinations of these values describe the features with which libgit2
- * was compiled
+ * Configurable features of libgit2; either optional settings (like
+ * threading), or features that can be enabled by one of a number of
+ * different backend "providers" (like HTTPS, which can be provided by
+ * OpenSSL, mbedTLS, or system libraries).
  */
 typedef enum {
-  /**
-   * If set, libgit2 was built thread-aware and can be safely used from multiple
-   * threads.
-   */
-	GIT_FEATURE_THREADS	= (1 << 0),
-  /**
-   * If set, libgit2 was built with and linked against a TLS implementation.
-   * Custom TLS streams may still be added by the user to support HTTPS
-   * regardless of this.
-   */
-	GIT_FEATURE_HTTPS	= (1 << 1),
-  /**
-   * If set, libgit2 was built with and linked against libssh2. A custom
-   * transport may still be added by the user to support libssh2 regardless of
-   * this.
-   */
-	GIT_FEATURE_SSH		= (1 << 2),
-  /**
-   * If set, libgit2 was built with support for sub-second resolution in file
-   * modification times.
-   */
-	GIT_FEATURE_NSEC	= (1 << 3)
+	/**
+	 * libgit2 is thread-aware and can be used from multiple threads
+	 * (as described in the documentation).
+	 */
+	GIT_FEATURE_THREADS        = (1 << 0),
+
+	/** HTTPS remotes */
+	GIT_FEATURE_HTTPS          = (1 << 1),
+
+	/** SSH remotes */
+	GIT_FEATURE_SSH	           = (1 << 2),
+
+	/** Sub-second resolution in index timestamps */
+	GIT_FEATURE_NSEC           = (1 << 3),
+
+	/** HTTP parsing; always available */
+	GIT_FEATURE_HTTP_PARSER    = (1 << 4),
+
+	/** Regular expression support; always available */
+	GIT_FEATURE_REGEX          = (1 << 5),
+
+	/** Internationalization support for filename translation */
+	GIT_FEATURE_I18N           = (1 << 6),
+
+	/** NTLM support over HTTPS */
+	GIT_FEATURE_AUTH_NTLM      = (1 << 7),
+
+	/** Kerberos (SPNEGO) authentication support over HTTPS */
+	GIT_FEATURE_AUTH_NEGOTIATE = (1 << 8),
+
+	/** zlib support; always available */
+	GIT_FEATURE_COMPRESSION    = (1 << 9),
+
+	/** SHA1 object support; always available */
+	GIT_FEATURE_SHA1           = (1 << 10),
+
+	/** SHA256 object support */
+	GIT_FEATURE_SHA256         = (1 << 11)
 } git_feature_t;
 
 /**
  * Query compile time options for libgit2.
  *
  * @return A combination of GIT_FEATURE_* values.
- *
- * - GIT_FEATURE_THREADS
- *   Libgit2 was compiled with thread support. Note that thread support is
- *   still to be seen as a 'work in progress' - basic object lookups are
- *   believed to be threadsafe, but other operations may not be.
- *
- * - GIT_FEATURE_HTTPS
- *   Libgit2 supports the https:// protocol. This requires the openssl
- *   library to be found when compiling libgit2.
- *
- * - GIT_FEATURE_SSH
- *   Libgit2 supports the SSH protocol for network operations. This requires
- *   the libssh2 library to be found when compiling libgit2
- *
- * - GIT_FEATURE_NSEC
- *   Libgit2 supports the sub-second resolution in file modification times.
  */
 GIT_EXTERN(int) git_libgit2_features(void);
+
+/**
+ * Query the backend details for the compile-time feature in libgit2.
+ *
+ * This will return the "backend" for the feature, which is useful for
+ * things like HTTPS or SSH support, that can have multiple backends
+ * that could be compiled in.
+ *
+ * For example, when libgit2 is compiled with dynamic OpenSSL support,
+ * the feature backend will be `openssl-dynamic`. The feature backend
+ * names reflect the compilation options specified to the build system
+ * (though in all lower case). The backend _may_ be "builtin" for
+ * features that are provided by libgit2 itself.
+ *
+ * If the feature is not supported by the library, this API returns
+ * `NULL`.
+ *
+ * @param feature the feature to query details for
+ * @return the provider details, or NULL if the feature is not supported
+ */
+GIT_EXTERN(const char *) git_libgit2_feature_backend(
+	git_feature_t feature);
 
 /**
  * Global library options
