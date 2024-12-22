@@ -66,6 +66,9 @@
 #cmakedefine GIT_SHA256_OPENSSL_DYNAMIC 1
 #cmakedefine GIT_SHA256_MBEDTLS 1
 
+#cmakedefine GIT_COMPRESSION_BUILTIN 1
+#cmakedefine GIT_COMPRESSION_ZLIB 1
+
 #cmakedefine GIT_RAND_GETENTROPY 1
 #cmakedefine GIT_RAND_GETLOADAVG 1
 
