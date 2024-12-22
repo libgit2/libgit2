@@ -38,7 +38,7 @@ option(USE_GSSAPI              "Enable SPNEGO authentication using GSSAPI" OFF)
    set(USE_HTTP_PARSER         "" CACHE STRING "Selects HTTP Parser support: http-parser, llhttp, or builtin. (Defaults to builtin.)")
 #  set(USE_XDIFF               "" CACHE STRING "Specifies the xdiff implementation; either system or builtin.")
    set(REGEX_BACKEND           "" CACHE STRING "Selects regex provider. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
-option(USE_BUNDLED_ZLIB        "Use the bundled version of zlib. Can be set to one of Bundled(ON)/Chromium. The Chromium option requires a x86_64 processor with SSE4.2 and CLMUL" OFF)
+   set(USE_COMPRESSION         "" CACHE STRING "Selects compression backend. Either builtin or zlib.")
 
 # Debugging options
 option(USE_LEAK_CHECKER        "Run tests with leak checker"                           OFF)

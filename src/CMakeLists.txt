@@ -43,7 +43,7 @@ include(SelectHTTPParser)
 include(SelectRegex)
 include(SelectXdiff)
 include(SelectSSH)
-include(SelectZlib)
+include(SelectCompression)
 
 #
 # Platform support
