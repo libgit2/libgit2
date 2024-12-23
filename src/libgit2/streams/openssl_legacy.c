@@ -6,7 +6,8 @@
  */
 
 #include "streams/openssl.h"
-#include "streams/openssl_legacy.h"
+
+#if defined(GIT_OPENSSL_LEGACY) || defined(GIT_OPENSSL_DYNAMIC)
 
 #include "runtime.h"
 #include "git2/sys/openssl.h"
@@ -17,8 +18,6 @@
 # include <openssl/x509v3.h>
 # include <openssl/bio.h>
 #endif
-
-#if defined(GIT_OPENSSL_LEGACY) || defined(GIT_OPENSSL_DYNAMIC)
 
 /*
  * OpenSSL 1.1 made BIO opaque so we have to use functions to interact with it
