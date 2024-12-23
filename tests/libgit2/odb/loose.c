@@ -44,7 +44,7 @@ static void test_read_object(object_data *data)
 
 	write_object_files(data);
 
-	cl_git_pass(git_odb__open(&odb, "test-objects", &opts));
+	cl_git_pass(git_odb_open_ext(&odb, "test-objects", &opts));
 	cl_git_pass(git_oid__fromstr(&id, data->id, data->id_type));
 	cl_git_pass(git_odb_read(&obj, odb, &id));
 
@@ -70,7 +70,7 @@ static void test_read_header(object_data *data)
 
 	write_object_files(data);
 
-	cl_git_pass(git_odb__open(&odb, "test-objects", &opts));
+	cl_git_pass(git_odb_open_ext(&odb, "test-objects", &opts));
 	cl_git_pass(git_oid__fromstr(&id, data->id, data->id_type));
 	cl_git_pass(git_odb_read_header(&len, &type, odb, &id));
 
@@ -95,7 +95,7 @@ static void test_readstream_object(object_data *data, size_t blocksize)
 
 	write_object_files(data);
 
-	cl_git_pass(git_odb__open(&odb, "test-objects", &opts));
+	cl_git_pass(git_odb_open_ext(&odb, "test-objects", &opts));
 	cl_git_pass(git_oid__fromstr(&id, data->id, data->id_type));
 	cl_git_pass(git_odb_open_rstream(&stream, &tmp.len, &tmp.type, odb, &id));
 
@@ -139,7 +139,7 @@ void test_odb_loose__exists_sha1(void)
 	git_odb *odb;
 
 	write_object_files(&one);
-	cl_git_pass(git_odb__open(&odb, "test-objects", NULL));
+	cl_git_pass(git_odb_open(&odb, "test-objects"));
 
 	cl_git_pass(git_oid__fromstr(&id, one.id, GIT_OID_SHA1));
 	cl_assert(git_odb_exists(odb, &id));
@@ -170,7 +170,7 @@ void test_odb_loose__exists_sha256(void)
 	odb_opts.oid_type = GIT_OID_SHA256;
 
 	write_object_files(&one_sha256);
-	cl_git_pass(git_odb__open(&odb, "test-objects", &odb_opts));
+	cl_git_pass(git_odb_open_ext(&odb, "test-objects", &odb_opts));
 
 	cl_git_pass(git_oid__fromstr(&id, one_sha256.id, GIT_OID_SHA256));
 	cl_assert(git_odb_exists(odb, &id));
@@ -304,7 +304,7 @@ static void test_write_object_permission(
 	opts.dir_mode = dir_mode;
 	opts.file_mode = file_mode;
 
-	cl_git_pass(git_odb__new(&odb, NULL));
+	cl_git_pass(git_odb_new(&odb));
 	cl_git_pass(git_odb__backend_loose(&backend, "test-objects", &opts));
 	cl_git_pass(git_odb_add_backend(odb, backend, 1));
 	cl_git_pass(git_odb_write(&oid, odb, "Test data\n", 10, GIT_OBJECT_BLOB));
@@ -338,16 +338,17 @@ static void write_object_to_loose_odb(int fsync)
 	git_odb *odb;
 	git_odb_backend *backend;
 	git_oid oid;
-	git_odb_backend_loose_options opts = GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT;
+	git_odb_options odb_opts = GIT_ODB_OPTIONS_INIT;
+	git_odb_backend_loose_options backend_opts = GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT;
 
 	if (fsync)
-		opts.flags |= GIT_ODB_BACKEND_LOOSE_FSYNC;
+		backend_opts.flags |= GIT_ODB_BACKEND_LOOSE_FSYNC;
 
-	opts.dir_mode = 0777;
-	opts.file_mode = 0666;
+	backend_opts.dir_mode = 0777;
+	backend_opts.file_mode = 0666;
 
-	cl_git_pass(git_odb__new(&odb, NULL));
-	cl_git_pass(git_odb__backend_loose(&backend, "test-objects", &opts));
+	cl_git_pass(git_odb_new_ext(&odb, &odb_opts));
+	cl_git_pass(git_odb__backend_loose(&backend, "test-objects", &backend_opts));
 	cl_git_pass(git_odb_add_backend(odb, backend, 1));
 	cl_git_pass(git_odb_write(&oid, odb, "Test data\n", 10, GIT_OBJECT_BLOB));
 	git_odb_free(odb);

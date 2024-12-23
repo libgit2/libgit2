@@ -189,8 +189,6 @@ typedef enum {
 	GIT_INDEX_STAGE_THEIRS = 3
 } git_index_stage_t;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
 /**
  * The options for opening or creating an index.
  *
@@ -233,31 +231,6 @@ GIT_EXTERN(int) git_index_options_init(
 	unsigned int version);
 
 /**
- * Creates a new bare Git index object, without a repository to back
- * it. This index object is capable of storing SHA256 objects.
- *
- * @param index_out the pointer for the new index
- * @param index_path the path to the index file in disk
- * @param opts the options for opening the index, or NULL
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_index_open(
-	git_index **index_out,
-	const char *index_path,
-	const git_index_options *opts);
-
-/**
- * Create an in-memory index object.
- *
- * @param index_out the pointer for the new index
- * @param opts the options for opening the index, or NULL
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_index_new(git_index **index_out, const git_index_options *opts);
-
-#else
-
-/**
  * Create a new bare Git index object as a memory representation
  * of the Git index file in 'index_path', without a repository
  * to back it.
@@ -271,11 +244,34 @@ GIT_EXTERN(int) git_index_new(git_index **index_out, const git_index_options *op
  *
  * The index must be freed once it's no longer in use.
  *
+ * @note This API only supports SHA1 indexes
+ * @see git_index_open_ext
+ *
  * @param index_out the pointer for the new index
  * @param index_path the path to the index file in disk
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_open(git_index **index_out, const char *index_path);
+GIT_EXTERN(int) git_index_open(
+	git_index **index_out,
+	const char *index_path);
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+
+/**
+ * Creates a new bare Git index object, without a repository to back
+ * it. This index object is capable of storing SHA256 objects.
+ *
+ * @param index_out the pointer for the new index
+ * @param index_path the path to the index file in disk
+ * @param opts the options for opening the index, or NULL
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_open_ext(
+	git_index **index_out,
+	const char *index_path,
+	const git_index_options *opts);
+
+#endif
 
 /**
  * Create an in-memory index object.
@@ -285,10 +281,26 @@ GIT_EXTERN(int) git_index_open(git_index **index_out, const char *index_path);
  *
  * The index must be freed once it's no longer in use.
  *
+ * @note This API only supports SHA1 indexes
+ * @see git_index_new_ext
+ *
  * @param index_out the pointer for the new index
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_new(git_index **index_out);
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+
+/**
+ * Create an in-memory index object.
+ *
+ * @param index_out the pointer for the new index
+ * @param opts the options for opening the index, or NULL
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_new_ext(
+	git_index **index_out,
+	const git_index_options *opts);
 
 #endif
 

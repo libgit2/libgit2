@@ -386,21 +386,25 @@ void git_index__set_ignore_case(git_index *index, bool ignore_case)
 	git_vector_sort(&index->reuc);
 }
 
-int git_index__open(
+int git_index_open_ext(
 	git_index **index_out,
 	const char *index_path,
-	git_oid_t oid_type)
+	const git_index_options *opts)
 {
 	git_index *index;
 	int error = -1;
 
 	GIT_ASSERT_ARG(index_out);
+	GIT_ERROR_CHECK_VERSION(opts, GIT_INDEX_OPTIONS_VERSION, "git_index_options");
+
+	if (opts && opts->oid_type)
+		GIT_ASSERT_ARG(git_oid_type_is_valid(opts->oid_type));
 
 	index = git__calloc(1, sizeof(git_index));
 	GIT_ERROR_CHECK_ALLOC(index);
 
-	GIT_ASSERT_ARG(git_oid_type_is_valid(oid_type));
-	index->oid_type = oid_type;
+	index->oid_type = opts && opts->oid_type ?  opts->oid_type :
+		GIT_OID_DEFAULT;
 
 	if (git_pool_init(&index->tree_pool, 1) < 0)
 		goto fail;
@@ -441,39 +445,20 @@ fail:
 	return error;
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-int git_index_open(
-	git_index **index_out,
-	const char *index_path,
-	const git_index_options *opts)
-{
-	return git_index__open(index_out, index_path,
-		opts && opts->oid_type ? opts->oid_type : GIT_OID_DEFAULT);
-}
-#else
 int git_index_open(git_index **index_out, const char *index_path)
 {
-	return git_index__open(index_out, index_path, GIT_OID_SHA1);
-}
-#endif
-
-int git_index__new(git_index **out, git_oid_t oid_type)
-{
-	return git_index__open(out, NULL, oid_type);
+	return git_index_open_ext(index_out, index_path, NULL);
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-int git_index_new(git_index **out, const git_index_options *opts)
-{
-	return git_index__new(out,
-		opts && opts->oid_type ? opts->oid_type : GIT_OID_DEFAULT);
-}
-#else
 int git_index_new(git_index **out)
 {
-	return git_index__new(out, GIT_OID_SHA1);
+	return git_index_open_ext(out, NULL, NULL);
 }
-#endif
+
+int git_index_new_ext(git_index **out, const git_index_options *opts)
+{
+	return git_index_open_ext(out, NULL, opts);
+}
 
 static void index_free(git_index *index)
 {

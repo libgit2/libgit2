@@ -20,8 +20,6 @@
  */
 GIT_BEGIN_DECL
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
 /**
  * The options for creating an repository from scratch.
  *
@@ -65,16 +63,6 @@ GIT_EXTERN(int) git_repository_new_options_init(
 	unsigned int version);
 
 /**
- * Create a new repository with no backends.
- *
- * @param[out] out The blank repository
- * @param opts the options for repository creation, or NULL for defaults
- * @return 0 on success, or an error code
- */
-GIT_EXTERN(int) git_repository_new(git_repository **out, git_repository_new_options *opts);
-#else
-
-/**
  * Create a new repository with neither backends nor config object
  *
  * Note that this is only useful if you wish to associate the repository
@@ -84,10 +72,26 @@ GIT_EXTERN(int) git_repository_new(git_repository **out, git_repository_new_opti
  * can fail to function properly: locations under $GIT_DIR, $GIT_COMMON_DIR,
  * or $GIT_INFO_DIR are impacted.
  *
+ * @note This API only creates SHA1 repositories
+ * @see git_repository_new_ext
+ *
  * @param[out] out The blank repository
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_new(git_repository **out);
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+
+/**
+ * Create a new repository with no backends.
+ *
+ * @param[out] out The blank repository
+ * @param opts the options for repository creation, or NULL for defaults
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_repository_new_ext(
+	git_repository **out,
+	git_repository_new_options *opts);
 
 #endif
 

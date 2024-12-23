@@ -10,7 +10,8 @@ void test_odb_packedone__initialize(void)
 {
 	git_odb_backend *backend = NULL;
 
-	cl_git_pass(git_odb__new(&_odb, NULL));
+	cl_git_pass(git_odb_new_ext(&_odb, NULL));
+
 #ifdef GIT_EXPERIMENTAL_SHA256
 	cl_git_pass(git_odb_backend_one_pack(&backend,
 		cl_fixture("testrepo.git/objects/pack/pack-a81e489679b7d3418f9ab594bda8ceb37dd4c695.idx"),

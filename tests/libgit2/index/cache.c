@@ -24,7 +24,7 @@ void test_index_cache__write_extension_at_root(void)
 	const char *tree_id_str = "45dd856fdd4d89b884c340ba0e047752d9b085d6";
 	const char *index_file = "index-tree";
 
-	cl_git_pass(git_index__open(&index, index_file, GIT_OID_SHA1));
+	cl_git_pass(git_index_open_ext(&index, index_file, NULL));
 	cl_assert(index->tree == NULL);
 	cl_git_pass(git_oid__fromstr(&id, tree_id_str, GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
@@ -35,7 +35,7 @@ void test_index_cache__write_extension_at_root(void)
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
-	cl_git_pass(git_index__open(&index, index_file, GIT_OID_SHA1));
+	cl_git_pass(git_index_open_ext(&index, index_file, NULL));
 	cl_assert(index->tree);
 
 	cl_assert_equal_i(git_index_entrycount(index), index->tree->entry_count);
@@ -52,11 +52,12 @@ void test_index_cache__write_extension_invalidated_root(void)
 	git_index *index;
 	git_tree *tree;
 	git_oid id;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 	const char *tree_id_str = "45dd856fdd4d89b884c340ba0e047752d9b085d6";
 	const char *index_file = "index-tree-invalidated";
 	git_index_entry entry;
 
-	cl_git_pass(git_index__open(&index, index_file, GIT_OID_SHA1));
+	cl_git_pass(git_index_open_ext(&index, index_file, &index_opts));
 	cl_assert(index->tree == NULL);
 	cl_git_pass(git_oid__fromstr(&id, tree_id_str, GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
@@ -77,7 +78,9 @@ void test_index_cache__write_extension_invalidated_root(void)
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
-	cl_git_pass(git_index__open(&index, index_file, GIT_OID_SHA1));
+	index_opts.oid_type = GIT_OID_SHA1;
+
+	cl_git_pass(git_index_open_ext(&index, index_file, &index_opts));
 	cl_assert(index->tree);
 
 	cl_assert_equal_i(-1, index->tree->entry_count);
@@ -96,7 +99,7 @@ void test_index_cache__read_tree_no_children(void)
 	git_tree *tree;
 	git_oid id;
 
-	cl_git_pass(git_index__new(&index, GIT_OID_SHA1));
+	cl_git_pass(git_index_new(&index));
 	cl_assert(index->tree == NULL);
 	cl_git_pass(git_oid__fromstr(&id, "45dd856fdd4d89b884c340ba0e047752d9b085d6", GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));

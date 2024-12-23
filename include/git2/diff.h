@@ -1321,6 +1321,8 @@ GIT_EXTERN(int) git_diff_buffers(
  */
 typedef struct {
 	unsigned int version;
+
+	/** Object ID type used in the patch file. */
 	git_oid_t oid_type;
 } git_diff_parse_options;
 
@@ -1330,8 +1332,36 @@ typedef struct {
 /** Stack initializer for diff parse options.  Alternatively use
  * `git_diff_parse_options_init` programmatic initialization.
  */
-#define GIT_DIFF_PARSE_OPTIONS_INIT \
-	{ GIT_DIFF_PARSE_OPTIONS_VERSION, GIT_OID_DEFAULT }
+#define GIT_DIFF_PARSE_OPTIONS_INIT { GIT_DIFF_PARSE_OPTIONS_VERSION }
+
+/**
+ * Read the contents of a git patch file into a `git_diff` object.
+ *
+ * The diff object produced is similar to the one that would be
+ * produced if you actually produced it computationally by comparing
+ * two trees, however there may be subtle differences.  For example,
+ * a patch file likely contains abbreviated object IDs, so the
+ * object IDs in a `git_diff_delta` produced by this function will
+ * also be abbreviated.
+ *
+ * This function will only read patch files created by a git
+ * implementation, it will not read unified diffs produced by
+ * the `diff` program, nor any other types of patch files.
+ *
+ * @note This API only supports SHA1 patch files
+ * @see git_diff_from_buffer_ext
+ *
+ * @param out A pointer to a git_diff pointer that will be allocated.
+ * @param content The contents of a patch file
+ * @param content_len The length of the patch file contents
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_diff_from_buffer(
+	git_diff **out,
+	const char *content,
+	size_t content_len);
+
+#ifdef GIT_EXPERIMENTAL_SHA256
 
 /**
  * Read the contents of a git patch file into a `git_diff` object.
@@ -1350,16 +1380,16 @@ typedef struct {
  * @param out A pointer to a git_diff pointer that will be allocated.
  * @param content The contents of a patch file
  * @param content_len The length of the patch file contents
+ * @param opts Options controlling diff parsing
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_diff_from_buffer(
+GIT_EXTERN(int) git_diff_from_buffer_ext(
 	git_diff **out,
 	const char *content,
-	size_t content_len
-#ifdef GIT_EXPERIMENTAL_SHA256
-	, git_diff_parse_options *opts
+	size_t content_len,
+	git_diff_parse_options *opts);
+
 #endif
-	);
 
 /**
  * This is an opaque structure which is allocated by `git_diff_get_stats`.

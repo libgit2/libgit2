@@ -62,6 +62,20 @@ typedef struct {
  */
 #define GIT_ODB_OPTIONS_INIT { GIT_ODB_OPTIONS_VERSION }
 
+/**
+ * Create a new object database with no backends.
+ *
+ * Before the ODB can be used for read/writing, a custom database
+ * backend must be manually added using `git_odb_add_backend()`
+ *
+ * @note This API only supports SHA1 object databases
+ * @see git_odb_new_ext
+ *
+ * @param[out] odb location to store the database pointer, if opened.
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_new(git_odb **odb);
+
 #ifdef GIT_EXPERIMENTAL_SHA256
 
 /**
@@ -71,35 +85,11 @@ typedef struct {
  * @param opts the options for this object database or NULL for defaults
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_odb_new(git_odb **odb, const git_odb_options *opts);
-
-/**
- * Create a new object database and automatically add loose and packed
- * backends.
- *
- * @param[out] odb_out location to store the database pointer, if opened.
- *			Set to NULL if the open failed.
- * @param objects_dir path of the backends' "objects" directory.
- * @param opts the options for this object database or NULL for defaults
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_odb_open(
-	git_odb **odb_out,
-	const char *objects_dir,
+GIT_EXTERN(int) git_odb_new_ext(
+	git_odb **odb,
 	const git_odb_options *opts);
 
-#else
-
-/**
- * Create a new object database with no backends.
- *
- * Before the ODB can be used for read/writing, a custom database
- * backend must be manually added using `git_odb_add_backend()`
- *
- * @param[out] odb location to store the database pointer, if opened.
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_odb_new(git_odb **odb);
+#endif
 
 /**
  * Create a new object database and automatically add
@@ -112,12 +102,33 @@ GIT_EXTERN(int) git_odb_new(git_odb **odb);
  *		assuming `objects_dir` as the Objects folder which
  *		contains a 'pack/' folder with the corresponding data
  *
+ * @note This API only supports SHA1 object databases
+ * @see git_odb_open_ext
+ *
  * @param[out] odb_out location to store the database pointer, if opened.
  *			Set to NULL if the open failed.
  * @param objects_dir path of the backends' "objects" directory.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_open(git_odb **odb_out, const char *objects_dir);
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+
+/**
+ * Create a new object database and automatically add loose and packed
+ * backends.
+ *
+ * @param[out] odb_out location to store the database pointer, if opened.
+ *			Set to NULL if the open failed.
+ * @param objects_dir path of the backends' "objects" directory.
+ * @param opts the options for this object database or NULL for defaults
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_open_ext(
+	git_odb **odb_out,
+	const char *objects_dir,
+	const git_odb_options *opts);
+
 #endif
 
 /**

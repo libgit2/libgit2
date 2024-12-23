@@ -64,4 +64,14 @@ extern int git_diff_delta__casecmp(const void *a, const void *b);
 extern int git_diff__entry_cmp(const void *a, const void *b);
 extern int git_diff__entry_icmp(const void *a, const void *b);
 
+#ifndef GIT_EXPERIMENTAL_SHA256
+
+int git_diff_from_buffer_ext(
+	git_diff **out,
+	const char *content,
+	size_t content_len,
+	git_diff_parse_options *opts);
+
+#endif
+
 #endif

@@ -13,7 +13,7 @@ static git_odb_backend *_backend;
 void test_odb_backend_mempack__initialize(void)
 {
 	cl_git_pass(git_mempack_new(&_backend));
-	cl_git_pass(git_odb__new(&_odb, NULL));
+	cl_git_pass(git_odb_new(&_odb));
 	cl_git_pass(git_odb_add_backend(_odb, _backend, 10));
 	cl_git_pass(git_repository_wrap_odb(&_repo, _odb));
 }

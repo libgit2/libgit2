@@ -276,10 +276,13 @@ void test_diff_index__to_index(void)
 	git_tree *old_tree;
 	git_index *old_index;
 	git_index *new_index;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 	git_diff *diff;
 	diff_expects exp;
 
-	cl_git_pass(git_index__new(&old_index, GIT_OID_SHA1));
+	index_opts.oid_type = GIT_OID_SHA1;
+
+	cl_git_pass(git_index_new_ext(&old_index, &index_opts));
 	old_tree = resolve_commit_oid_to_tree(g_repo, a_commit);
 	cl_git_pass(git_index_read_tree(old_index, old_tree));
 

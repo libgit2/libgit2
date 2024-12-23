@@ -33,7 +33,10 @@ void test_index_read_index__maintains_stat_cache(void)
 	git_index_entry new_entry;
 	const git_index_entry *e;
 	git_tree *tree;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 	size_t i;
+
+	index_opts.oid_type = GIT_OID_SHA1;
 
 	cl_assert_equal_i(4, git_index_entrycount(_index));
 
@@ -42,7 +45,7 @@ void test_index_read_index__maintains_stat_cache(void)
 
 	/* read-tree, then read index */
 	git_tree_lookup(&tree, _repo, &index_id);
-	cl_git_pass(git_index__new(&new_index, GIT_OID_SHA1));
+	cl_git_pass(git_index_new_ext(&new_index, &index_opts));
 	cl_git_pass(git_index_read_tree(new_index, tree));
 	git_tree_free(tree);
 
@@ -81,7 +84,7 @@ static bool roundtrip_with_read_index(const char *tree_idstr)
 
 	cl_git_pass(git_oid__fromstr(&tree_id, tree_idstr, GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, _repo, &tree_id));
-	cl_git_pass(git_index__new(&tree_index, GIT_OID_SHA1));
+	cl_git_pass(git_index_new(&tree_index));
 	cl_git_pass(git_index_read_tree(tree_index, tree));
 	cl_git_pass(git_index_read_index(_index, tree_index));
 	cl_git_pass(git_index_write_tree(&new_tree_id, _index));
@@ -110,15 +113,18 @@ void test_index_read_index__read_and_writes(void)
 	git_oid tree_id, new_tree_id;
 	git_tree *tree;
 	git_index *tree_index, *new_index;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
+
+	index_opts.oid_type = GIT_OID_SHA1;
 
 	cl_git_pass(git_oid__fromstr(&tree_id, "ae90f12eea699729ed24555e40b9fd669da12a12", GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, _repo, &tree_id));
-	cl_git_pass(git_index__new(&tree_index, GIT_OID_SHA1));
+	cl_git_pass(git_index_new_ext(&tree_index, &index_opts));
 	cl_git_pass(git_index_read_tree(tree_index, tree));
 	cl_git_pass(git_index_read_index(_index, tree_index));
 	cl_git_pass(git_index_write(_index));
 
-	cl_git_pass(git_index__open(&new_index, git_index_path(_index), GIT_OID_SHA1));
+	cl_git_pass(git_index_open_ext(&new_index, git_index_path(_index), &index_opts));
 	cl_git_pass(git_index_write_tree_to(&new_tree_id, new_index, _repo));
 
 	cl_assert_equal_oid(&tree_id, &new_tree_id);
@@ -174,8 +180,8 @@ void test_index_read_index__handles_conflicts(void)
 
 	cl_git_pass(git_oid__fromstr(&tree_id, "ae90f12eea699729ed24555e40b9fd669da12a12", GIT_OID_SHA1));
 	cl_git_pass(git_tree_lookup(&tree, _repo, &tree_id));
-	cl_git_pass(git_index__new(&index, GIT_OID_SHA1));
-	cl_git_pass(git_index__new(&new_index, GIT_OID_SHA1));
+	cl_git_pass(git_index_new_ext(&index, NULL));
+	cl_git_pass(git_index_new_ext(&new_index, NULL));
 	cl_git_pass(git_index_read_tree(index, tree));
 	cl_git_pass(git_index_read_tree(new_index, tree));
 

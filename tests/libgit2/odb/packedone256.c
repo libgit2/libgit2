@@ -18,7 +18,7 @@ void test_odb_packedone256__initialize(void)
 	odb_opts.oid_type = GIT_OID_SHA256;
 	backend_opts.oid_type = GIT_OID_SHA256;
 
-	cl_git_pass(git_odb__new(&_odb, &odb_opts));
+	cl_git_pass(git_odb_new_ext(&_odb, &odb_opts));
 	cl_git_pass(git_odb_backend_one_pack(
 		&backend,
 		cl_fixture("testrepo_256.git/objects/pack/pack-e2f07f30db7e480ea84a0e64ee791b9b270067124b2609019b74f33f256f33fa.idx"),

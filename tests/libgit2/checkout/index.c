@@ -830,8 +830,11 @@ void test_checkout_index__adding_conflict_removes_stage_0(void)
 {
 	git_index *new_index, *index;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
-	cl_git_pass(git_index__new(&new_index, GIT_OID_SHA1));
+	index_opts.oid_type = GIT_OID_SHA1;
+
+	cl_git_pass(git_index_new_ext(&new_index, &index_opts));
 
 	add_conflict(new_index, "new.txt");
 	cl_git_pass(git_checkout_index(g_repo, new_index, &opts));

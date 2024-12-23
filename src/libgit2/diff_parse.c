@@ -68,11 +68,16 @@ static git_diff_parsed *diff_parsed_alloc(git_oid_t oid_type)
 int git_diff_from_buffer(
 	git_diff **out,
 	const char *content,
-	size_t content_len
-#ifdef GIT_EXPERIMENTAL_SHA256
-	, git_diff_parse_options *opts
-#endif
-	)
+	size_t content_len)
+{
+	return git_diff_from_buffer_ext(out, content, content_len, NULL);
+}
+
+int git_diff_from_buffer_ext(
+	git_diff **out,
+	const char *content,
+	size_t content_len,
+	git_diff_parse_options *opts)
 {
 	git_diff_parsed *diff;
 	git_patch *patch;
@@ -83,12 +88,8 @@ int git_diff_from_buffer(
 
 	*out = NULL;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	oid_type = (opts && opts->oid_type) ? opts->oid_type :
 		GIT_OID_DEFAULT;
-#else
-	oid_type = GIT_OID_DEFAULT;
-#endif
 
 	patch_opts.oid_type = oid_type;
 

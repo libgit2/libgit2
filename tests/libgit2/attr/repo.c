@@ -317,11 +317,7 @@ void test_attr_repo__inmemory_repo_without_index(void)
 	git_index *index = NULL;
 
 	/* setup bare in-memory repo without index */
-#ifdef GIT_EXPERIMENTAL_SHA256
-	cl_git_pass(git_repository_new(&inmemory, NULL));
-#else
 	cl_git_pass(git_repository_new(&inmemory));
-#endif
 	cl_assert(git_repository_is_bare(inmemory));
 
 	/* verify repo isn't given an index upfront in future */

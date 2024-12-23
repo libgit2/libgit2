@@ -50,8 +50,11 @@ void test_odb_foreach__one_pack(void)
 {
 	git_odb_backend *backend = NULL;
 	int nobj = 0;
+	git_odb_options odb_opts = GIT_ODB_OPTIONS_INIT;
 
-	cl_git_pass(git_odb__new(&_odb, NULL));
+	odb_opts.oid_type = GIT_OID_SHA1;
+
+	cl_git_pass(git_odb_new_ext(&_odb, &odb_opts));
 
 #ifdef GIT_EXPERIMENTAL_SHA256
 	cl_git_pass(git_odb_backend_one_pack(&backend,

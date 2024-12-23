@@ -281,10 +281,11 @@ static int build_untracked_tree(
 	git_tree *i_tree = NULL;
 	git_diff *diff = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	struct stash_update_rules data = {0};
 	int error;
 
-	if ((error = git_index__new(&i_index, repo->oid_type)) < 0)
+	if ((error = git_index_new_ext(&i_index, &index_opts)) < 0)
 		goto cleanup;
 
 	if (flags & GIT_STASH_INCLUDE_UNTRACKED) {
@@ -484,10 +485,11 @@ static int commit_worktree(
 {
 	git_index *i_index = NULL, *r_index = NULL;
 	git_tree *w_tree = NULL;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	int error = 0, ignorecase;
 
 	if ((error = git_repository_index(&r_index, repo) < 0) ||
-	    (error = git_index__new(&i_index, repo->oid_type)) < 0 ||
+	    (error = git_index_new_ext(&i_index, &index_opts)) < 0 ||
 	    (error = git_index__fill(i_index, &r_index->entries) < 0) ||
 	    (error = git_repository__configmap_lookup(&ignorecase, repo, GIT_CONFIGMAP_IGNORECASE)) < 0)
 		goto cleanup;
@@ -688,6 +690,7 @@ int git_stash_save_with_opts(
 	git_str msg = GIT_STR_INIT;
 	git_tree *tree = NULL;
 	git_reference *head = NULL;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	bool has_paths = false;
 
 	int error;
@@ -732,7 +735,7 @@ int git_stash_save_with_opts(
 					     i_commit, b_commit, u_commit)) < 0)
 			goto cleanup;
 	} else {
-		if ((error = git_index__new(&paths_index, repo->oid_type)) < 0 ||
+		if ((error = git_index_new_ext(&paths_index, &index_opts)) < 0 ||
 		    (error = retrieve_head(&head, repo)) < 0 ||
 		    (error = git_reference_peel((git_object**)&tree, head, GIT_OBJECT_TREE)) < 0 ||
 		    (error = git_index_read_tree(paths_index, tree)) < 0 ||
@@ -1010,9 +1013,10 @@ static int stage_new_files(
 	git_iterator *iterators[2] = { NULL, NULL };
 	git_iterator_options iterator_options = GIT_ITERATOR_OPTIONS_INIT;
 	git_index *index = NULL;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	int error;
 
-	if ((error = git_index__new(&index, repo->oid_type)) < 0 ||
+	if ((error = git_index_new_ext(&index, &index_opts)) < 0 ||
 		(error = git_iterator_for_tree(
 			&iterators[0], parent_tree, &iterator_options)) < 0 ||
 		(error = git_iterator_for_tree(

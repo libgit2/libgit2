@@ -13,7 +13,7 @@ void test_odb_packed256__initialize(void)
 
 	opts.oid_type = GIT_OID_SHA256;
 
-	cl_git_pass(git_odb__open(
+	cl_git_pass(git_odb_open_ext(
 		&_odb,
 		cl_fixture("testrepo_256.git/objects"),
 		&opts));
