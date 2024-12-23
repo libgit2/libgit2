@@ -317,6 +317,13 @@ static int store_common(transport_smart *t)
 		if ((error = recv_pkt(&pkt, NULL, t)) < 0)
 			return error;
 
+		if (t->rpc && (pkt->type == GIT_PKT_SHALLOW ||
+		               pkt->type == GIT_PKT_UNSHALLOW ||
+		               pkt->type == GIT_PKT_FLUSH)) {
+			git__free(pkt);
+			continue;
+		}
+
 		if (pkt->type != GIT_PKT_ACK) {
 			git__free(pkt);
 			return 0;
