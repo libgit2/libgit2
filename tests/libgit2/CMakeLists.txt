@@ -1,46 +1,19 @@
 # tests: the unit and integration tests for libgit2
 
-if(NOT "${CMAKE_VERSION}" VERSION_LESS 3.27)
-	cmake_policy(SET CMP0148 OLD)
-endif()
-
-set(Python_ADDITIONAL_VERSIONS 3 2.7)
-find_package(PythonInterp)
-
-if(NOT PYTHONINTERP_FOUND)
-	message(FATAL_ERROR "Could not find a python interpreter, which is needed to build the tests. "
-	                     "Make sure python is available, or pass -DBUILD_TESTS=OFF to skip building the tests")
-ENDIF()
+include(../clar/clar.cmake)
 
 set(CLAR_PATH "${PROJECT_SOURCE_DIR}/tests/clar")
-set(CLAR_FIXTURES "${PROJECT_SOURCE_DIR}/tests/resources/")
 set(TEST_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
-add_definitions(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
-add_definitions(-DCLAR_TMPDIR=\"libgit2_tests\")
-add_definitions(-DCLAR_WIN32_LONGPATHS)
-add_definitions(-D_FILE_OFFSET_BITS=64)
 
 # Ensure that we do not use deprecated functions internally
 add_definitions(-DGIT_DEPRECATE_HARD)
 
 set(TEST_INCLUDES "${CLAR_PATH}" "${TEST_PATH}" "${CMAKE_CURRENT_BINARY_DIR}")
 file(GLOB_RECURSE TEST_LIBGIT2_SRC ${TEST_PATH}/*/*.c ${TEST_PATH}/*/*.h)
-file(GLOB_RECURSE CLAR_SRC ${CLAR_PATH}/*.c ${CLAR_PATH}/*.h)
 
 if(MSVC_IDE)
 	list(APPEND TEST_LIBGIT2_SRC "precompiled.c")
 endif()
-
-add_custom_command(
-	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clar.suite ${CMAKE_CURRENT_BINARY_DIR}/clar_suite.h
-	COMMAND ${PYTHON_EXECUTABLE} ${CLAR_PATH}/generate.py -o "${CMAKE_CURRENT_BINARY_DIR}" -f -xonline -xstress -xperf .
-	DEPENDS ${TEST_LIBGIT2_SRC}
-	WORKING_DIRECTORY ${TEST_PATH}
-)
-
-set_source_files_properties(
-	${CLAR_PATH}/clar.c
-	PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clar.suite)
 
 add_executable(libgit2_tests ${CLAR_SRC} ${TEST_LIBGIT2_SRC} ${LIBGIT2_OBJECTS})
 
@@ -50,6 +23,8 @@ target_include_directories(libgit2_tests SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDE
 target_link_libraries(libgit2_tests ${LIBGIT2_SYSTEM_LIBS})
 
 ide_split_sources(libgit2_tests)
+
+generate_clar_suite(libgit2_tests "${TEST_LIBGIT2_SRC}" "-xonline -xstress -xperf")
 
 #
 # Old versions of gcc require us to declare our test functions; don't do
@@ -65,7 +40,6 @@ if(MSVC_IDE)
 	set_source_files_properties("precompiled.c" COMPILE_FLAGS "/Ycprecompiled.h")
 endif()
 
-include(AddClarTest)
 add_clar_test(libgit2_tests offline             -v -xonline)
 add_clar_test(libgit2_tests invasive            -v -sfilter::stream::bigfile -sodb::largefiles -siterator::workdir::filesystem_gunk -srepo::init -srepo::init::at_filesystem_root -sonline::clone::connect_timeout_default)
 add_clar_test(libgit2_tests online              -v -sonline -xonline::customcert)
