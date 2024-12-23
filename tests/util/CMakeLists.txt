@@ -24,24 +24,24 @@ add_definitions(-D_FILE_OFFSET_BITS=64)
 add_definitions(-DGIT_DEPRECATE_HARD)
 
 set(TEST_INCLUDES "${CLAR_PATH}" "${TEST_PATH}" "${CMAKE_CURRENT_BINARY_DIR}")
-file(GLOB_RECURSE SRC_TEST ${TEST_PATH}/*.c ${TEST_PATH}/*.h ${TEST_PATH}/*/*.c ${TEST_PATH}/*/*.h)
-file(GLOB_RECURSE SRC_CLAR ${CLAR_PATH}/*.c ${CLAR_PATH}/*.h)
+file(GLOB_RECURSE TEST_UTIL_SRC ${TEST_PATH}/*.c ${TEST_PATH}/*.h ${TEST_PATH}/*/*.c ${TEST_PATH}/*/*.h)
+file(GLOB_RECURSE CLAR_SRC ${CLAR_PATH}/*.c ${CLAR_PATH}/*.h)
 
 if(MSVC_IDE)
-	list(APPEND SRC_TEST "precompiled.c")
+	list(APPEND TEST_UTIL_SRC "precompiled.c")
 endif()
 
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clar.suite ${CMAKE_CURRENT_BINARY_DIR}/clar_suite.h
 	COMMAND ${PYTHON_EXECUTABLE} ${CLAR_PATH}/generate.py -o "${CMAKE_CURRENT_BINARY_DIR}" -f .
-	DEPENDS ${SRC_TEST}
+	DEPENDS ${TEST_UTIL_SRC}
 	WORKING_DIRECTORY ${TEST_PATH})
 
 set_source_files_properties(
 	${CLAR_PATH}/clar.c
 	PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clar.suite)
 
-add_executable(util_tests ${SRC_CLAR} ${SRC_TEST} ${LIBGIT2_OBJECTS})
+add_executable(util_tests ${CLAR_SRC} ${TEST_UTIL_SRC} ${LIBGIT2_OBJECTS})
 
 set_target_properties(util_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
 
