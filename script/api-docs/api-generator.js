@@ -652,12 +652,23 @@ function parseEnum(location, decl, options) {
         ensure('enum constant has a name', member.name);
 
         const explicitValue = single(member.inner, (attr => attr.kind === 'ConstantExpr'));
+        const implicitValue = single(member.inner, (attr => attr.kind === 'ImplicitCastExpr'));
         const commentText = single(member.inner, (attr => attr.kind === 'FullComment'));
         const commentData = commentText ? parseComment(`enum:${decl.name}:member:${member.name}`, location, commentText, options) : undefined;
 
+        let value = undefined;
+
+        if (explicitValue && explicitValue.value) {
+            value = explicitValue.value;
+        } else if (implicitValue) {
+            const innerExplicit = single(implicitValue.inner, (attr => attr.kind === 'ConstantExpr'));
+
+            value = innerExplicit?.value;
+        }
+
         result.members.push({
             name: member.name,
-            value: explicitValue ? explicitValue.value : undefined,
+            value: value,
             ...commentData
         });
     }
