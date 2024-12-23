@@ -73,3 +73,11 @@ void test_online_badssl__old_cipher(void)
 	cl_git_fail(git_clone(&g_repo, "https://rc4.badssl.com/fake.git", "./fake", NULL));
 	cl_git_fail(git_clone(&g_repo, "https://rc4.badssl.com/fake.git", "./fake", &opts));
 }
+
+void test_online_badssl__sslv3(void)
+{
+	if (!g_has_ssl)
+		cl_skip();
+
+	cl_git_fail(git_clone(&g_repo, "https://mailserv.baehal.com/fake.git", "./fake", NULL));
+}

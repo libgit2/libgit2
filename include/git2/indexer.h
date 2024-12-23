@@ -4,13 +4,23 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef _INCLUDE_git_indexer_h__
-#define _INCLUDE_git_indexer_h__
+#ifndef INCLUDE_git_indexer_h__
+#define INCLUDE_git_indexer_h__
 
 #include "common.h"
 #include "types.h"
 #include "oid.h"
 
+/**
+ * @file git2/indexer.h
+ * @brief Packfile indexing
+ * @ingroup Git
+ * @{
+ *
+ * Indexing is the operation of taking a packfile - which is simply a
+ * collection of unordered commits - and producing an "index" so that
+ * one can lookup a commit in the packfile by object ID.
+ */
 GIT_BEGIN_DECL
 
 /** A git indexer object */
@@ -53,6 +63,7 @@ typedef struct git_indexer_progress {
  *
  * @param stats Structure containing information about the state of the transfer
  * @param payload Payload provided by caller
+ * @return 0 on success or an error code
  */
 typedef int GIT_CALLBACK(git_indexer_progress_cb)(const git_indexer_progress *stats, void *payload);
 
@@ -65,6 +76,9 @@ typedef struct git_indexer_options {
 #ifdef GIT_EXPERIMENTAL_SHA256
 	/** permissions to use creating packfile or 0 for defaults */
 	unsigned int mode;
+
+	/** the type of object ids in the packfile or 0 for SHA1 */
+	git_oid_t oid_type;
 
 	/**
 	 * object database from which to read base objects when
@@ -85,7 +99,10 @@ typedef struct git_indexer_options {
 	unsigned char verify;
 } git_indexer_options;
 
+/** Current version for the `git_indexer_options` structure */
 #define GIT_INDEXER_OPTIONS_VERSION 1
+
+/** Static constructor for `git_indexer_options` */
 #define GIT_INDEXER_OPTIONS_INIT { GIT_INDEXER_OPTIONS_VERSION }
 
 /**
@@ -106,13 +123,12 @@ GIT_EXTERN(int) git_indexer_options_init(
  *
  * @param out where to store the indexer instance
  * @param path to the directory where the packfile should be stored
- * @param oid_type the oid type to use for objects
+ * @param opts the options to create the indexer with
  * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_indexer_new(
 		git_indexer **out,
 		const char *path,
-		git_oid_t oid_type,
 		git_indexer_options *opts);
 #else
 /**
@@ -190,6 +206,7 @@ GIT_EXTERN(const char *) git_indexer_name(const git_indexer *idx);
  */
 GIT_EXTERN(void) git_indexer_free(git_indexer *idx);
 
+/** @} */
 GIT_END_DECL
 
 #endif

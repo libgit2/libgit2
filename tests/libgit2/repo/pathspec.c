@@ -383,3 +383,33 @@ void test_repo_pathspec__in_memory(void)
 
 	git_pathspec_free(ps);
 }
+
+void test_repo_pathspec__starstar(void)
+{
+	static char *strings[] = { "**/foo", "**/bar/baz" };
+	git_strarray s = { strings, ARRAY_SIZE(strings) };
+	git_pathspec *ps;
+
+	cl_git_pass(git_pathspec_new(&ps, &s));
+
+	/* "**" "/foo" does *not* match top-level "foo" */
+	cl_assert(!git_pathspec_matches_path(ps, 0, "foo"));
+	cl_assert(!git_pathspec_matches_path(ps, 0, "fooz"));
+	cl_assert(!git_pathspec_matches_path(ps, 0, "bar"));
+
+	cl_assert(git_pathspec_matches_path(ps, 0, "asdf/foo"));
+	cl_assert(!git_pathspec_matches_path(ps, 0, "asdf/fooz"));
+	cl_assert(git_pathspec_matches_path(ps, 0, "a/b/c/foo"));
+	cl_assert(!git_pathspec_matches_path(ps, 0, "a/b/c/fooz"));
+
+	cl_assert(git_pathspec_matches_path(ps, 0, "bar/foo"));
+	cl_assert(!git_pathspec_matches_path(ps, 0, "bar/baz"));
+	cl_assert(!git_pathspec_matches_path(ps, 0, "bar/foo/baz"));
+
+	cl_assert(!git_pathspec_matches_path(ps, GIT_PATHSPEC_NO_GLOB, "asdf/foo"));
+	cl_assert(!git_pathspec_matches_path(ps, GIT_PATHSPEC_NO_GLOB, "a/b/c/foo"));
+	cl_assert(!git_pathspec_matches_path(ps, GIT_PATHSPEC_NO_GLOB, "bar/foo"));
+	cl_assert(!git_pathspec_matches_path(ps, GIT_PATHSPEC_NO_GLOB, "bar/baz"));
+
+	git_pathspec_free(ps);
+}

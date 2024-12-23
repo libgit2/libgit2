@@ -11,9 +11,12 @@
 
 /**
  * @file git2/buffer.h
- * @brief Buffer export structure
- *
+ * @brief A data structure to return data to callers
  * @ingroup Git
+ *
+ * The `git_buf` buffer is used to return arbitrary data - typically
+ * strings - to callers. Callers are responsible for freeing the memory
+ * in a buffer with the `git_buf_dispose` function.
  * @{
  */
 GIT_BEGIN_DECL
@@ -67,8 +70,7 @@ typedef struct {
  */
 GIT_EXTERN(void) git_buf_dispose(git_buf *buffer);
 
-GIT_END_DECL
-
 /** @} */
+GIT_END_DECL
 
 #endif

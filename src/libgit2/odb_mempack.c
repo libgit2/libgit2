@@ -209,3 +209,13 @@ int git_mempack_new(git_odb_backend **out)
 	*out = (git_odb_backend *)db;
 	return 0;
 }
+
+int git_mempack_object_count(size_t *out, git_odb_backend *_backend)
+{
+	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
+
+	GIT_ASSERT_ARG(_backend);
+
+	*out = (size_t)git_odb_mempack_oidmap_size(&db->objects);
+	return 0;
+}

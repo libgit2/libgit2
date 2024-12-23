@@ -171,9 +171,12 @@ static int indexer_new(
 	if (in_opts)
 		memcpy(&opts, in_opts, sizeof(opts));
 
+	if (oid_type)
+		GIT_ASSERT_ARG(git_oid_type_is_valid(oid_type));
+
 	idx = git__calloc(1, sizeof(git_indexer));
 	GIT_ERROR_CHECK_ALLOC(idx);
-	idx->oid_type = oid_type;
+	idx->oid_type = oid_type ? oid_type : GIT_OID_DEFAULT;
 	idx->odb = odb;
 	idx->progress_cb = opts.progress_cb;
 	idx->progress_payload = opts.progress_cb_payload;
@@ -233,13 +236,12 @@ cleanup:
 int git_indexer_new(
 	git_indexer **out,
 	const char *prefix,
-	git_oid_t oid_type,
 	git_indexer_options *opts)
 {
 	return indexer_new(
 		out,
 		prefix,
-		oid_type,
+		opts ? opts->oid_type : 0,
 		opts ? opts->mode : 0,
 		opts ? opts->odb : NULL,
 		opts);

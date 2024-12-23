@@ -29,7 +29,7 @@ int lg2_index_pack(git_repository *repo, int argc, char **argv)
 	}
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-	error = git_indexer_new(&idx, ".", git_repository_oid_type(repo), NULL);
+	error = git_indexer_new(&idx, ".", NULL);
 #else
 	error = git_indexer_new(&idx, ".", 0, NULL, NULL);
 #endif

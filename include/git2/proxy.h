@@ -12,6 +12,12 @@
 #include "cert.h"
 #include "credential.h"
 
+/**
+ * @file git2/proxy.h
+ * @brief TLS proxies
+ * @ingroup Git
+ * @{
+ */
 GIT_BEGIN_DECL
 
 /**
@@ -78,7 +84,10 @@ typedef struct {
 	void *payload;
 } git_proxy_options;
 
+/** Current version for the `git_proxy_options` structure */
 #define GIT_PROXY_OPTIONS_VERSION 1
+
+/** Static constructor for `git_proxy_options` */
 #define GIT_PROXY_OPTIONS_INIT {GIT_PROXY_OPTIONS_VERSION}
 
 /**
@@ -93,6 +102,7 @@ typedef struct {
  */
 GIT_EXTERN(int) git_proxy_options_init(git_proxy_options *opts, unsigned int version);
 
+/** @} */
 GIT_END_DECL
 
 #endif

@@ -15,6 +15,9 @@ changelog:
   - title: Code cleanups
     labels:
     - cleanup
+  - title: Benchmarks
+    labels:
+    - benchmarks
   - title: Build and CI improvements
     labels:
     - build

@@ -233,7 +233,15 @@ GIT_EXTERN(size_t) git_packbuilder_object_count(git_packbuilder *pb);
  */
 GIT_EXTERN(size_t) git_packbuilder_written(git_packbuilder *pb);
 
-/** Packbuilder progress notification function */
+/**
+ * Packbuilder progress notification function.
+ *
+ * @param stage the stage of the packbuilder
+ * @param current the current object
+ * @param total the total number of objects
+ * @param payload the callback payload
+ * @return 0 on success or an error code
+ */
 typedef int GIT_CALLBACK(git_packbuilder_progress)(
 	int stage,
 	uint32_t current,
@@ -267,4 +275,5 @@ GIT_EXTERN(void) git_packbuilder_free(git_packbuilder *pb);
 
 /** @} */
 GIT_END_DECL
+
 #endif

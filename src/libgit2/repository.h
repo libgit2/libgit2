@@ -102,6 +102,8 @@ typedef enum {
 	/* core.trustctime */
 	GIT_TRUSTCTIME_DEFAULT = GIT_CONFIGMAP_TRUE,
 	/* core.abbrev */
+	GIT_ABBREV_FALSE = GIT_OID_MAX_HEXSIZE,
+	GIT_ABBREV_MINIMUM = 4,
 	GIT_ABBREV_DEFAULT = 7,
 	/* core.precomposeunicode */
 	GIT_PRECOMPOSE_DEFAULT = GIT_CONFIGMAP_FALSE,
@@ -197,11 +199,6 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo);
 int git_repository_grafts__weakptr(git_grafts **out, git_repository *repo);
 int git_repository_shallow_grafts__weakptr(git_grafts **out, git_repository *repo);
 
-int git_repository__wrap_odb(
-	git_repository **out,
-	git_odb *odb,
-	git_oid_t oid_type);
-
 /*
  * Configuration map cache
  *
@@ -210,6 +207,9 @@ int git_repository__wrap_odb(
  */
 int git_repository__configmap_lookup(int *out, git_repository *repo, git_configmap_item item);
 void git_repository__configmap_lookup_cache_clear(git_repository *repo);
+
+/** Return the length that object names will be abbreviated to. */
+int git_repository__abbrev_length(int *out, git_repository *repo);
 
 int git_repository__item_path(git_str *out, const git_repository *repo, git_repository_item_t item);
 

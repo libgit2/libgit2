@@ -10,6 +10,15 @@
 #include "common.h"
 #include "types.h"
 
+/**
+ * @file git2/ignore.h
+ * @brief Ignore particular untracked files
+ * @ingroup Git
+ * @{
+ *
+ * When examining the repository status, git can optionally ignore
+ * specified untracked files.
+ */
 GIT_BEGIN_DECL
 
 /**
@@ -73,6 +82,7 @@ GIT_EXTERN(int) git_ignore_path_is_ignored(
 	git_repository *repo,
 	const char *path);
 
+/** @} */
 GIT_END_DECL
 
 #endif

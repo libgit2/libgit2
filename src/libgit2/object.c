@@ -526,7 +526,7 @@ static int git_object__short_id(git_str *out, const git_object *obj)
 	git_oid id;
 	git_odb *odb;
 	size_t oid_hexsize;
-	int len = GIT_ABBREV_DEFAULT, error;
+	int len, error;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(obj);
@@ -536,12 +536,13 @@ static int git_object__short_id(git_str *out, const git_object *obj)
 	git_oid_clear(&id, repo->oid_type);
 	oid_hexsize = git_oid_hexsize(repo->oid_type);
 
-	if ((error = git_repository__configmap_lookup(&len, repo, GIT_CONFIGMAP_ABBREV)) < 0)
+	if ((error = git_repository__abbrev_length(&len, repo)) < 0)
 		return error;
 
-	if (len < 0 || (size_t)len > oid_hexsize) {
-		git_error_set(GIT_ERROR_CONFIG, "invalid oid abbreviation setting: '%d'", len);
-		return -1;
+	if ((size_t)len == oid_hexsize) {
+		if ((error = git_oid_cpy(&id, &obj->cached.oid)) < 0) {
+			return error;
+		}
 	}
 
 	if ((error = git_repository_odb(&odb, repo)) < 0)

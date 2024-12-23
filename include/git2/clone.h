@@ -17,9 +17,13 @@
 
 /**
  * @file git2/clone.h
- * @brief Git cloning routines
+ * @brief Clone a remote repository to the local disk
  * @defgroup git_clone Git cloning routines
  * @ingroup Git
+ *
+ * Clone will take a remote repository - located on a remote server
+ * accessible by HTTPS or SSH, or a repository located elsewhere on
+ * the local disk - and place a copy in the given local path.
  * @{
  */
 GIT_BEGIN_DECL
@@ -59,7 +63,7 @@ typedef enum {
  * Callers of git_clone may provide a function matching this signature to override
  * the remote creation and customization process during a clone operation.
  *
- * @param out the resulting remote
+ * @param[out] out the resulting remote
  * @param repo the repository in which to create the remote
  * @param name the remote's name
  * @param url the remote's url
@@ -81,7 +85,7 @@ typedef int GIT_CALLBACK(git_remote_create_cb)(
  * to override the repository creation and customization process
  * during a clone operation.
  *
- * @param out the resulting repository
+ * @param[out] out the resulting repository
  * @param path path in which to create the repository
  * @param bare whether the repository is bare. This is the value from the clone options
  * @param payload payload specified by the options
@@ -99,6 +103,9 @@ typedef int GIT_CALLBACK(git_repository_create_cb)(
  * Initialize with `GIT_CLONE_OPTIONS_INIT`. Alternatively, you can
  * use `git_clone_options_init`.
  *
+ * @options[version] GIT_CLONE_OPTIONS_VERSION
+ * @options[init_macro] GIT_CLONE_OPTIONS_INIT
+ * @options[init_function] git_clone_options_init
  */
 typedef struct git_clone_options {
 	unsigned int version;
@@ -163,7 +170,10 @@ typedef struct git_clone_options {
 	void *remote_cb_payload;
 } git_clone_options;
 
+/** Current version for the `git_clone_options` structure */
 #define GIT_CLONE_OPTIONS_VERSION 1
+
+/** Static constructor for `git_clone_options` */
 #define GIT_CLONE_OPTIONS_INIT \
 	{ GIT_CLONE_OPTIONS_VERSION, \
 	  GIT_CHECKOUT_OPTIONS_INIT, \
@@ -190,7 +200,11 @@ GIT_EXTERN(int) git_clone_options_init(
  * git's defaults. You can use the options in the callback to
  * customize how these are created.
  *
- * @param out pointer that will receive the resulting repository object
+ * Note that the libgit2 library _must_ be initialized using
+ * `git_libgit2_init` before any APIs can be called, including
+ * this one.
+ *
+ * @param[out] out pointer that will receive the resulting repository object
  * @param url the remote repository to clone
  * @param local_path local directory to clone to
  * @param options configuration options for the clone.  If NULL, the
@@ -207,4 +221,5 @@ GIT_EXTERN(int) git_clone(
 
 /** @} */
 GIT_END_DECL
+
 #endif
