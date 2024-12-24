@@ -2635,7 +2635,7 @@ git_refspec *git_remote__matching_refspec(git_remote *remote, const char *refnam
 		if (spec->push)
 			continue;
 
-		if (git_refspec_is_negative(spec) && git_refspec_src_matches_negative(spec, refname))
+		if (git_refspec_src_matches_negative(spec, refname))
 			return NULL;
 
 		if (git_refspec_src_matches(spec, refname))
