@@ -205,10 +205,7 @@ static void do_fetch_repo_with_ref_matching_negative_refspec(git_oid *commit1id)
 	/* fetch the remote with negative refspec for references prefixed with '_' */
 	{
 		char *refspec_strs = { NEGATIVE_SPEC };
-		git_strarray refspecs = {
-			.count = 1,
-			.strings = &refspec_strs,
-		};
+		git_strarray refspecs = { &refspec_strs, 1 };
 
 		git_remote *remote;
 
