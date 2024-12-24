@@ -22,6 +22,7 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	const char *lhs, *rhs;
 	int valid = 0;
 	unsigned int flags;
+	bool is_neg_refspec = false;
 
 	GIT_ASSERT_ARG(refspec);
 	GIT_ASSERT_ARG(input);
@@ -33,6 +34,9 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	if (*lhs == '+') {
 		refspec->force = 1;
 		lhs++;
+	}
+	if (*lhs == '^') {
+		is_neg_refspec = true;
 	}
 
 	rhs = strrchr(lhs, ':');
@@ -62,7 +66,14 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 
 	llen = (rhs ? (size_t)(rhs - lhs - 1) : strlen(lhs));
 	if (1 <= llen && memchr(lhs, '*', llen)) {
-		if ((rhs && !is_glob) || (!rhs && is_fetch))
+		/*
+		 * If the lefthand side contains a glob, then one of the following must be
+		 * true, otherwise the spec is invalid
+		 *   1) the rhs exists and also contains a glob
+		 *   2) it is a negative refspec (i.e. no rhs)
+		 *   3) the rhs doesn't exist and we're fetching
+		 */
+		if ((rhs && !is_glob) || (rhs && is_neg_refspec) || (!rhs && is_fetch && !is_neg_refspec))
 			goto invalid;
 		is_glob = 1;
 	} else if (rhs && is_glob)
@@ -225,6 +236,14 @@ int git_refspec_force(const git_refspec *refspec)
 	return refspec->force;
 }
 
+int git_refspec_src_matches_negative(const git_refspec *refspec, const char *refname)
+{
+	if (refspec == NULL || refspec->src == NULL || !git_refspec_is_negative(refspec))
+		return false;
+
+	return (wildmatch(refspec->src + 1, refname, 0) == 0);
+}
+
 int git_refspec_src_matches(const git_refspec *refspec, const char *refname)
 {
 	if (refspec == NULL || refspec->src == NULL)
@@ -338,6 +357,14 @@ int git_refspec_is_wildcard(const git_refspec *spec)
 	GIT_ASSERT_ARG(spec->src);
 
 	return (spec->src[strlen(spec->src) - 1] == '*');
+}
+
+int git_refspec_is_negative(const git_refspec *spec)
+{
+	GIT_ASSERT_ARG(spec);
+	GIT_ASSERT_ARG(spec->src);
+
+	return (spec->src[0] == '^' && spec->dst == NULL);
 }
 
 git_direction git_refspec_direction(const git_refspec *spec)
