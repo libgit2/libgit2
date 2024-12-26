@@ -1,8 +1,19 @@
+add_library(xdiff OBJECT)
 
-file(GLOB SRC_XDIFF "*.c" "*.h")
-list(SORT SRC_XDIFF)
+set(XDIFF_SRC git-xdiff.h
+	xdiff.h
+	xdiffi.c xdiffi.h
+	xemit.c xemit.h
+	xhistogram.c
+	xinclude.h
+	xmacros.h
+	xmerge.c
+	xpatience.c
+	xprepare.c xprepare.h
+	xtypes.h
+	xutils.c xutils.h)
 
-add_library(xdiff OBJECT ${SRC_XDIFF})
+target_sources(xdiff PRIVATE ${XDIFF_SRC})
 target_include_directories(xdiff SYSTEM PRIVATE
 	"${PROJECT_SOURCE_DIR}/include"
 	"${PROJECT_SOURCE_DIR}/src/util"

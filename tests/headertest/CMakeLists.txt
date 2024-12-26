@@ -2,8 +2,9 @@
 # definitions in our headers and that a consumer can include <git2.dll>
 # even when they have aggressive C90 warnings enabled.
 
-add_executable(headertest headertest.c)
+add_executable(headertest)
 
+target_sources(headertest PRIVATE headertest.c)
 target_include_directories(headertest PRIVATE ${LIBGIT2_INCLUDES})
 
 if (MSVC)

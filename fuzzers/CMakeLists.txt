@@ -7,10 +7,12 @@ if(BUILD_FUZZERS AND NOT USE_STANDALONE_FUZZERS)
 	unset(CMAKE_REQUIRED_FLAGS)
 endif()
 
-file(GLOB SRC_FUZZERS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *_fuzzer.c)
-foreach(fuzz_target_src ${SRC_FUZZERS})
+file(GLOB FUZZER_SRC RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *_fuzzer.c)
+foreach(fuzz_target_src ${FUZZER_SRC})
 	string(REPLACE ".c" "" fuzz_target_name ${fuzz_target_src})
 	string(REPLACE "_fuzzer" "" fuzz_name ${fuzz_target_name})
+
+	add_executable(${fuzz_target_name})
 
 	set(${fuzz_target_name}_SOURCES
 		${fuzz_target_src} "fuzzer_utils.c" ${LIBGIT2_OBJECTS})
@@ -19,7 +21,7 @@ foreach(fuzz_target_src ${SRC_FUZZERS})
 		list(APPEND ${fuzz_target_name}_SOURCES "standalone_driver.c")
 	endif()
 
-	add_executable(${fuzz_target_name} ${${fuzz_target_name}_SOURCES})
+	target_sources(${fuzz_target_name} PRIVATE ${${fuzz_target_name}_SOURCES})
 	target_include_directories(${fuzz_target_name} PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
 	target_include_directories(${fuzz_target_name} SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
 

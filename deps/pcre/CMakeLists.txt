@@ -1,3 +1,5 @@
+add_library(pcre OBJECT)
+
 include(CheckIncludeFile)
 include(CheckFunctionExists)
 include(CheckTypeSize)
@@ -91,28 +93,27 @@ configure_file(config.h.in
 set(PCRE_HEADERS ${PROJECT_BINARY_DIR}/src/pcre/config.h)
 
 set(PCRE_SOURCES
-  pcre_byte_order.c
-  pcre_chartables.c
-  pcre_compile.c
-  pcre_config.c
-  pcre_dfa_exec.c
-  pcre_exec.c
-  pcre_fullinfo.c
-  pcre_get.c
-  pcre_globals.c
-  pcre_jit_compile.c
-  pcre_maketables.c
-  pcre_newline.c
-  pcre_ord2utf8.c
-  pcre_refcount.c
-  pcre_string_utils.c
-  pcre_study.c
-  pcre_tables.c
-  pcre_ucd.c
-  pcre_valid_utf8.c
-  pcre_version.c
-  pcre_xclass.c
-)
+	pcre_byte_order.c
+	pcre_chartables.c
+	pcre_compile.c
+	pcre_config.c
+	pcre_dfa_exec.c
+	pcre_exec.c
+	pcre_fullinfo.c
+	pcre_get.c
+	pcre_globals.c
+	pcre_jit_compile.c
+	pcre_maketables.c
+	pcre_newline.c
+	pcre_ord2utf8.c
+	pcre_refcount.c
+	pcre_string_utils.c
+	pcre_study.c
+	pcre_tables.c
+	pcre_ucd.c
+	pcre_valid_utf8.c
+	pcre_version.c
+	pcre_xclass.c)
 
 set(PCREPOSIX_HEADERS pcreposix.h)
 
@@ -136,6 +137,6 @@ set(targets)
 # Libraries
 # pcre
 include_directories(${PROJECT_BINARY_DIR}/src/pcre)
-add_library(pcre OBJECT ${PCRE_HEADERS} ${PCRE_SOURCES} ${PCREPOSIX_SOURCES})
+target_sources(pcre PRIVATE ${PCRE_HEADERS} ${PCRE_SOURCES} ${PCREPOSIX_SOURCES})
 
 # end CMakeLists.txt
