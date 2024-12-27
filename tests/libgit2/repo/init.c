@@ -489,7 +489,7 @@ void test_repo_init__relative_gitdir(void)
 
 	/* Verify gitlink */
 	cl_git_pass(git_futils_readbuffer(&dot_git_content, "root/b/c_wd/.git"));
-	cl_assert_equal_s("gitdir: ../my_repository/", dot_git_content.ptr);
+	cl_assert_equal_s("gitdir: ../my_repository/\n", dot_git_content.ptr);
 
 	git_str_dispose(&dot_git_content);
 	cleanup_repository("root");
@@ -526,7 +526,7 @@ void test_repo_init__relative_gitdir_2(void)
 
 	/* Verify gitlink */
 	cl_git_pass(git_futils_readbuffer(&dot_git_content, "root/b/c_wd/.git"));
-	cl_assert_equal_s("gitdir: ../my_repository/", dot_git_content.ptr);
+	cl_assert_equal_s("gitdir: ../my_repository/\n", dot_git_content.ptr);
 
 	git_str_dispose(&dot_git_content);
 	cleanup_repository("root");
