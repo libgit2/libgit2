@@ -2538,7 +2538,8 @@ static int repo_init_structure(
 	int error = 0;
 	repo_template_item *tpl;
 	bool external_tpl =
-		((opts->flags & GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE) != 0);
+		 opts->template_path != NULL ||
+		(opts->flags & GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE) != 0;
 	mode_t dmode = pick_dir_mode(opts);
 	bool chmod = opts->mode != GIT_REPOSITORY_INIT_SHARED_UMASK;
 
