@@ -425,8 +425,7 @@ void test_repo_init__extended_1(void)
 	struct stat st;
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
-	opts.flags = GIT_REPOSITORY_INIT_MKPATH |
-		GIT_REPOSITORY_INIT_NO_DOTGIT_DIR;
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH;
 	opts.mode = GIT_REPOSITORY_INIT_SHARED_GROUP;
 	opts.workdir_path = "../c_wd";
 	opts.description = "Awesomest test repository evah";
@@ -466,16 +465,18 @@ void test_repo_init__extended_1(void)
 void test_repo_init__relative_gitdir(void)
 {
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+	git_str head_content = GIT_STR_INIT;
 	git_str dot_git_content = GIT_STR_INIT;
 
 	opts.workdir_path = "../c_wd";
 	opts.flags =
 		GIT_REPOSITORY_INIT_MKPATH |
-		GIT_REPOSITORY_INIT_RELATIVE_GITLINK |
-		GIT_REPOSITORY_INIT_NO_DOTGIT_DIR;
+		GIT_REPOSITORY_INIT_RELATIVE_GITLINK;
 
 	/* make the directory first, then it should succeed */
 	cl_git_pass(git_repository_init_ext(&g_repo, "root/b/my_repository", &opts));
+	cl_git_pass(git_futils_readbuffer(&head_content, "root/b/my_repository/HEAD"));
+	cl_assert_equal_s("ref: refs/heads/master\n", head_content.ptr);
 
 	cl_assert(!git__suffixcmp(git_repository_workdir(g_repo), "root/b/c_wd/"));
 	cl_assert(!git__suffixcmp(git_repository_path(g_repo), "root/b/my_repository/"));
@@ -491,6 +492,7 @@ void test_repo_init__relative_gitdir(void)
 	cl_git_pass(git_futils_readbuffer(&dot_git_content, "root/b/c_wd/.git"));
 	cl_assert_equal_s("gitdir: ../my_repository/\n", dot_git_content.ptr);
 
+	git_str_dispose(&head_content);
 	git_str_dispose(&dot_git_content);
 	cleanup_repository("root");
 }
@@ -507,8 +509,7 @@ void test_repo_init__relative_gitdir_2(void)
 	opts.workdir_path = full_path.ptr;
 	opts.flags =
 		GIT_REPOSITORY_INIT_MKPATH |
-		GIT_REPOSITORY_INIT_RELATIVE_GITLINK |
-		GIT_REPOSITORY_INIT_NO_DOTGIT_DIR;
+		GIT_REPOSITORY_INIT_RELATIVE_GITLINK;
 
 	/* make the directory first, then it should succeed */
 	cl_git_pass(git_repository_init_ext(&g_repo, "root/b/my_repository", &opts));

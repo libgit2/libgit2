@@ -259,13 +259,6 @@ typedef enum {
 	GIT_REPOSITORY_INIT_NO_REINIT         = (1u << 1),
 
 	/**
-	 * Normally a "/.git/" will be appended to the repo path for
-	 * non-bare repos (if it is not already there), but passing this flag
-	 * prevents that behavior.
-	 */
-	GIT_REPOSITORY_INIT_NO_DOTGIT_DIR     = (1u << 2),
-
-	/**
 	 * Make the repo_path (and workdir_path) as needed. Init is always willing
 	 * to create the ".git" directory even without this flag. This flag tells
 	 * init to create the trailing component of the repo and workdir paths

@@ -2690,8 +2690,7 @@ static int repo_init_directories(
 	is_bare = ((opts->flags & GIT_REPOSITORY_INIT_BARE) != 0);
 
 	add_dotgit =
-		(opts->flags & GIT_REPOSITORY_INIT_NO_DOTGIT_DIR) == 0 &&
-		!is_bare &&
+		!is_bare && !opts->workdir_path &&
 		git__suffixcmp(given_repo, "/" DOT_GIT) != 0 &&
 		git__suffixcmp(given_repo, "/" GIT_DIR) != 0;
 

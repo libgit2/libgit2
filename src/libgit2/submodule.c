@@ -757,7 +757,6 @@ static int submodule_repo_init(
 
 		initopt.workdir_path = workdir.ptr;
 		initopt.flags |=
-			GIT_REPOSITORY_INIT_NO_DOTGIT_DIR |
 			GIT_REPOSITORY_INIT_RELATIVE_GITLINK;
 
 		error = git_repository_init_ext(&subrepo, repodir.ptr, &initopt);
@@ -1289,7 +1288,6 @@ static int submodule_repo_create(
 	initopt.flags =
 		GIT_REPOSITORY_INIT_MKPATH |
 		GIT_REPOSITORY_INIT_NO_REINIT |
-		GIT_REPOSITORY_INIT_NO_DOTGIT_DIR |
 		GIT_REPOSITORY_INIT_RELATIVE_GITLINK;
 
 	/* Workdir: path to sub-repo working directory */
