@@ -2506,7 +2506,7 @@ static int repo_write_gitlink(
 		error = git_fs_path_make_relative(&path_to_repo, in_dir);
 
 	if (!error)
-		error = git_str_join(&buf, ' ', GIT_FILE_CONTENT_PREFIX, path_to_repo.ptr);
+		error = git_str_printf(&buf, "%s %s\n", GIT_FILE_CONTENT_PREFIX, path_to_repo.ptr);
 
 	if (!error)
 		error = repo_write_template(in_dir, true, DOT_GIT, 0666, true, buf.ptr);
