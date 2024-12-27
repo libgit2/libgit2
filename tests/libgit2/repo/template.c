@@ -228,8 +228,7 @@ void test_repo_template__extended_with_template_and_shared_mode(void)
 	const char *repo_path;
 	int filemode;
 
-	opts.flags = GIT_REPOSITORY_INIT_MKPATH |
-		GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH;
 	opts.template_path = "template";
 	opts.mode = GIT_REPOSITORY_INIT_SHARED_GROUP;
 
