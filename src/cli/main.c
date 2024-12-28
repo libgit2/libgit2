@@ -37,6 +37,7 @@ const cli_cmd_spec cli_cmds[] = {
 	{ "hash-object", cmd_hash_object, "Hash a raw object and product its object ID" },
 	{ "help",        cmd_help,        "Display help information" },
 	{ "index-pack",  cmd_index_pack,  "Create an index for a packfile" },
+	{ "init",        cmd_init,        "Create a new git repository" },
 	{ NULL }
 };
 

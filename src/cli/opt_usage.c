@@ -8,32 +8,81 @@
 #include "common.h"
 #include "str.h"
 
-static int print_spec_name(git_str *out, const cli_opt_spec *spec)
+#define is_switch_or_value(spec) \
+	((spec)->type == CLI_OPT_TYPE_SWITCH || \
+	 (spec)->type == CLI_OPT_TYPE_VALUE)
+
+static int print_spec_args(git_str *out, const cli_opt_spec *spec)
 {
-	if (spec->type == CLI_OPT_TYPE_VALUE && spec->alias &&
-	    !(spec->usage & CLI_OPT_USAGE_VALUE_OPTIONAL) &&
-	    !(spec->usage & CLI_OPT_USAGE_SHOW_LONG))
-		return git_str_printf(out, "-%c <%s>", spec->alias, spec->value_name);
-	if (spec->type == CLI_OPT_TYPE_VALUE && spec->alias &&
-	    !(spec->usage & CLI_OPT_USAGE_SHOW_LONG))
-		return git_str_printf(out, "-%c [<%s>]", spec->alias, spec->value_name);
-	if (spec->type == CLI_OPT_TYPE_VALUE &&
-	    !(spec->usage & CLI_OPT_USAGE_VALUE_OPTIONAL))
-		return git_str_printf(out, "--%s[=<%s>]", spec->name, spec->value_name);
-	if (spec->type == CLI_OPT_TYPE_VALUE)
-		return git_str_printf(out, "--%s=<%s>", spec->name, spec->value_name);
+	GIT_ASSERT(!is_switch_or_value(spec));
+
 	if (spec->type == CLI_OPT_TYPE_ARG)
 		return git_str_printf(out, "<%s>", spec->value_name);
 	if (spec->type == CLI_OPT_TYPE_ARGS)
 		return git_str_printf(out, "<%s>...", spec->value_name);
 	if (spec->type == CLI_OPT_TYPE_LITERAL)
 		return git_str_printf(out, "--");
-	if (spec->alias && !(spec->usage & CLI_OPT_USAGE_SHOW_LONG))
-		return git_str_printf(out, "-%c", spec->alias);
-	if (spec->name)
-		return git_str_printf(out, "--%s", spec->name);
 
-	GIT_ASSERT(0);
+	GIT_ASSERT(!"unknown option spec type");
+	return -1;
+}
+
+GIT_INLINE(int) print_spec_alias(git_str *out, const cli_opt_spec *spec)
+{
+	GIT_ASSERT(is_switch_or_value(spec) && spec->alias);
+
+	if (spec->type == CLI_OPT_TYPE_VALUE &&
+	    !(spec->usage & CLI_OPT_USAGE_VALUE_OPTIONAL))
+		return git_str_printf(out, "-%c <%s>", spec->alias, spec->value_name);
+	else if (spec->type == CLI_OPT_TYPE_VALUE)
+		return git_str_printf(out, "-%c [<%s>]", spec->alias, spec->value_name);
+	else
+		return git_str_printf(out, "-%c", spec->alias);
+}
+
+GIT_INLINE(int) print_spec_name(git_str *out, const cli_opt_spec *spec)
+{
+	GIT_ASSERT(is_switch_or_value(spec) && spec->name);
+
+	if (spec->type == CLI_OPT_TYPE_VALUE &&
+	    !(spec->usage & CLI_OPT_USAGE_VALUE_OPTIONAL))
+		return git_str_printf(out, "--%s=<%s>", spec->name, spec->value_name);
+	else if (spec->type == CLI_OPT_TYPE_VALUE)
+		return git_str_printf(out, "--%s[=<%s>]", spec->name, spec->value_name);
+	else
+		return git_str_printf(out, "--%s", spec->name);
+}
+
+GIT_INLINE(int) print_spec_full(git_str *out, const cli_opt_spec *spec)
+{
+	int error = 0;
+
+	if (is_switch_or_value(spec)) {
+		if (spec->alias)
+			error |= print_spec_alias(out, spec);
+
+		if (spec->alias && spec->name)
+			error |= git_str_printf(out, ", ");
+
+		if (spec->name)
+			error |= print_spec_name(out, spec);
+	} else {
+		error |= print_spec_args(out, spec);
+	}
+
+	return error;
+}
+
+GIT_INLINE(int) print_spec(git_str *out, const cli_opt_spec *spec)
+{
+	if (is_switch_or_value(spec)) {
+		if (spec->alias && !(spec->usage & CLI_OPT_USAGE_SHOW_LONG))
+			return print_spec_alias(out, spec);
+		else
+			return print_spec_name(out, spec);
+	}
+
+	return print_spec_args(out, spec);
 }
 
 /*
@@ -56,7 +105,7 @@ int cli_opt_usage_fprint(
 	int error;
 
 	/* TODO: query actual console width. */
-	int console_width = 80;
+	int console_width = 78;
 
 	if ((error = git_str_printf(&usage, "usage: %s", command)) < 0)
 		goto done;
@@ -88,7 +137,7 @@ int cli_opt_usage_fprint(
 		if (!optional && !choice && next_choice)
 			git_str_putc(&opt, '(');
 
-		if ((error = print_spec_name(&opt, spec)) < 0)
+		if ((error = print_spec(&opt, spec)) < 0)
 			goto done;
 
 		if (!optional && choice && !next_choice)
@@ -113,10 +162,10 @@ int cli_opt_usage_fprint(
 				git_str_putc(&usage, ' ');
 
 			linelen = prefixlen;
-		} else {
-			git_str_putc(&usage, ' ');
-			linelen += git_str_len(&opt) + 1;
 		}
+
+		git_str_putc(&usage, ' ');
+		linelen += git_str_len(&opt) + 1;
 
 		git_str_puts(&usage, git_str_cstr(&opt));
 
@@ -169,13 +218,13 @@ int cli_opt_help_fprint(
 
 		git_str_printf(&help, "    ");
 
-		if ((error = print_spec_name(&help, spec)) < 0)
+		if ((error = print_spec_full(&help, spec)) < 0)
 			goto done;
 
-		if (spec->help)
-			git_str_printf(&help, ": %s", spec->help);
-
 		git_str_printf(&help, "\n");
+
+		if (spec->help)
+			git_str_printf(&help, "        %s\n", spec->help);
 	}
 
 	/* Display the remaining arguments */
@@ -192,13 +241,13 @@ int cli_opt_help_fprint(
 
 		git_str_printf(&help, "    ");
 
-		if ((error = print_spec_name(&help, spec)) < 0)
+		if ((error = print_spec_full(&help, spec)) < 0)
 			goto done;
 
-		if (spec->help)
-			git_str_printf(&help, ": %s", spec->help);
-
 		git_str_printf(&help, "\n");
+
+		if (spec->help)
+			git_str_printf(&help, "        %s\n", spec->help);
 	}
 
 	if (git_str_oom(&help) ||
