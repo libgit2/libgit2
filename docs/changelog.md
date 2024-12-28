@@ -253,6 +253,8 @@ will introduce a number of breaking changes in v2.0:
   https://github.com/libgit2/libgit2/pull/6924
 * ci: port latest fixes to nightlies by @ethomson in
   https://github.com/libgit2/libgit2/pull/6926
+* cmake: warn for not using sha1dc by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6986
 
 ### Documentation improvements
 

@@ -112,3 +112,10 @@ endif()
 
 add_feature_info(SHA1 ON "using ${USE_SHA1}")
 add_feature_info(SHA256 ON "using ${USE_SHA256}")
+
+# warn for users who do not use sha1dc
+
+if(NOT "${USE_SHA1}" STREQUAL "CollisionDetection")
+	list(APPEND WARNINGS "SHA1 support is set to ${USE_SHA1} which is not recommended - git's hash algorithm is sha1dc, it is *not* SHA1. Using SHA1 may leave you and your users susceptible to SHAttered-style attacks.")
+	set(WARNINGS ${WARNINGS} PARENT_SCOPE)
+endif()
