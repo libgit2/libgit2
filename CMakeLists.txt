@@ -150,3 +150,9 @@ endif()
 
 feature_summary(WHAT ENABLED_FEATURES DESCRIPTION "Enabled features:")
 feature_summary(WHAT DISABLED_FEATURES DESCRIPTION "Disabled features:")
+
+# warn for not using sha1dc
+
+foreach(WARNING ${WARNINGS})
+	message(WARNING ${WARNING})
+endforeach()
