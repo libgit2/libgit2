@@ -38,6 +38,11 @@ This means that v2.0 will have API and ABI changes to support SHA256.
   [further benchmarking](https://benchmarks.libgit2.org/) and several API
   improvements and git compatibility updates.
 
+* **Warning when configuring without SHA1DC**
+  Users are encouraged to use SHA1DC, which is _git's hash_; users
+  should not use SHA1 in the general case. Users will now be warned
+  if they try to configure cmake with a SHA1 backend (`-DUSE_SHA1=...`).
+
 ## Breaking changes
 
 There are several ABI-breaking changes that integrators, particularly
@@ -65,24 +70,6 @@ maintainers of bindings or FFI users, may want to be aware of.
   objects instead of `git_config_entry` objects. This allows backends
   to provide a mechanism to nicely free the configuration entries that
   they provide.
-
-## Future Changes
-
-We're preparing for libgit2 v2.0, and this is expected to be
-the last feature-release for the libgit2 v1.0 release line. We
-will introduce a number of breaking changes in v2.0:
-
-* **SHA256 support**
-  Adding SHA256 support will change the API and ABI.
-
-* **TLS v1.2 as a minimum**
-  libgit2 will remove support for HTTPS versions prior to TLS v1.2 and
-  will update to the "intermediate" settings [documented by
-  Mozilla](https://wiki.mozilla.org/Security/Server_Side_TLS).
-
-* Removing the chromium zlib built-in
-
-* Removing the libssh2 embedded build system
 
 ## What's Changed
 
