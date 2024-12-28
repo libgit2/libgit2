@@ -46,7 +46,7 @@ GIT_BEGIN_DECL
  * only be changed when the library has a breaking ABI change, and so
  * may not reflect the library's API version number.
  */
-#define LIBGIT2_SOVERSION         "2.0"
+#define LIBGIT2_SOVERSION         "1.9"
 
 /**
  * An integer value representing the libgit2 version number. For example,

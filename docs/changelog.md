@@ -33,11 +33,10 @@ This means that v2.0 will have API and ABI changes to support SHA256.
   so that the blame functionality can be benchmarked by our benchmark
   suite.
 
-* **SONAME changed**
-  libgit2 will now properly update its SONAME version information when
-  ABI chnages occur. We hope that by correcting this oversight, users
-  and distribution vendors, will be able to integrate new versions of
-  libgit2 more easily.
+* **More CLI commands**
+  libgit2 has added `blame` and `init` commands, which have allowed for
+  [further benchmarking](https://benchmarks.libgit2.org/) and several API
+  improvements and git compatibility updates.
 
 ## Breaking changes
 
