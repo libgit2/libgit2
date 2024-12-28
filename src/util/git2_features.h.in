@@ -50,7 +50,7 @@
 #cmakedefine GIT_HTTPPARSER_LLHTTP 1
 #cmakedefine GIT_HTTPPARSER_BUILTIN 1
 
-#cmakedefine GIT_SHA1_COLLISIONDETECT 1
+#cmakedefine GIT_SHA1_BUILTIN 1
 #cmakedefine GIT_SHA1_WIN32 1
 #cmakedefine GIT_SHA1_COMMON_CRYPTO 1
 #cmakedefine GIT_SHA1_OPENSSL 1

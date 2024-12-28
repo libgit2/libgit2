@@ -224,7 +224,7 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 		break;
 
 	case GIT_FEATURE_SHA1:
-#if defined(GIT_SHA1_COLLISIONDETECT)
+#if defined(GIT_SHA1_BUILTIN)
 		return "builtin";
 #elif defined(GIT_SHA1_OPENSSL)
 		return "openssl";

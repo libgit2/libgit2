@@ -32,7 +32,7 @@ option(USE_NSEC                "Support nanosecond precision file mtimes and cti
 # Backend selection
    set(USE_SSH                 "" CACHE STRING "Enables SSH support and optionally selects provider. One of ON, OFF, or a specific provider: libssh2 or exec. (Defaults to OFF.)")
    set(USE_HTTPS               "" CACHE STRING "Enable HTTPS support and optionally selects the provider. One of ON, OFF, or a specific provider: OpenSSL, OpenSSL-FIPS, OpenSSL-Dynamic, mbedTLS, SecureTransport, Schannel, or WinHTTP. (Defaults to ON.)")
-   set(USE_SHA1                "" CACHE STRING "Selects SHA1 provider. One of CollisionDetection, HTTPS, or a specific provider. (Defaults to CollisionDetection.)")
+   set(USE_SHA1                "" CACHE STRING "Selects SHA1 provider. One of builtin, HTTPS, or a specific provider. (Defaults to builtin.)")
    set(USE_SHA256              "" CACHE STRING "Selects SHA256 provider. One of Builtin, HTTPS, or a specific provider. (Defaults to HTTPS.)")
 option(USE_GSSAPI              "Enable SPNEGO authentication using GSSAPI" OFF)
    set(USE_HTTP_PARSER         "" CACHE STRING "Selects HTTP Parser support: http-parser, llhttp, or builtin. (Defaults to builtin.)")

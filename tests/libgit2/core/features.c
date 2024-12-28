@@ -186,7 +186,7 @@ void test_core_features__backends(void)
 	cl_assert(0);
 #endif
 
-#if defined(GIT_SHA1_COLLISIONDETECT)
+#if defined(GIT_SHA1_BUILTIN)
 	cl_assert_equal_s("builtin", sha1);
 #elif defined(GIT_SHA1_OPENSSL)
 	cl_assert_equal_s("openssl", sha1);

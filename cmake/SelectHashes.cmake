@@ -8,7 +8,7 @@ sanitizebool(USE_SHA256)
 # sha1
 
 if(USE_SHA1 STREQUAL "" OR USE_SHA1 STREQUAL ON)
-	SET(USE_SHA1 "CollisionDetection")
+	SET(USE_SHA1 "builtin")
 elseif(USE_SHA1 STREQUAL "HTTPS")
 	if(USE_HTTPS STREQUAL "SecureTransport")
 		set(USE_SHA1 "CommonCrypto")
@@ -23,8 +23,12 @@ elseif(USE_SHA1 STREQUAL "HTTPS")
 	endif()
 endif()
 
-if(USE_SHA1 STREQUAL "CollisionDetection")
-	set(GIT_SHA1_COLLISIONDETECT 1)
+if(USE_SHA1 STREQUAL "Builtin" OR USE_SHA1 STREQUAL "CollisionDetection")
+	set(USE_SHA1 "builtin")
+endif()
+
+if(USE_SHA1 STREQUAL "builtin")
+	set(GIT_SHA1_BUILTIN 1)
 elseif(USE_SHA1 STREQUAL "OpenSSL")
 	set(GIT_SHA1_OPENSSL 1)
 elseif(USE_SHA1 STREQUAL "OpenSSL-FIPS")
@@ -90,6 +94,7 @@ else()
 endif()
 
 # add library requirements
+
 if(USE_SHA1 STREQUAL "OpenSSL" OR USE_SHA256 STREQUAL "OpenSSL" OR
    USE_SHA1 STREQUAL "OpenSSL-FIPS" OR USE_SHA256 STREQUAL "OpenSSL-FIPS")
 	if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
@@ -115,7 +120,7 @@ add_feature_info(SHA256 ON "using ${USE_SHA256}")
 
 # warn for users who do not use sha1dc
 
-if(NOT "${USE_SHA1}" STREQUAL "CollisionDetection")
+if(NOT "${USE_SHA1}" STREQUAL "builtin")
 	list(APPEND WARNINGS "SHA1 support is set to ${USE_SHA1} which is not recommended - git's hash algorithm is sha1dc, it is *not* SHA1. Using SHA1 may leave you and your users susceptible to SHAttered-style attacks.")
 	set(WARNINGS ${WARNINGS} PARENT_SCOPE)
 endif()
