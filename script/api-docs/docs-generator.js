@@ -1086,8 +1086,20 @@ async function produceDocumentationMetadata(version, apiData) {
 
 async function cleanupOldDocumentation(version) {
     const versionDir = `${outputPath}/${version}`;
+    let files;
 
-    for (const fn of await fs.readdir(versionDir)) {
+    try {
+        files = await fs.readdir(versionDir);
+    }
+    catch (e) {
+        if (e?.code === 'ENOENT') {
+	    return;
+	}
+
+	throw e;
+    }
+
+    for (const fn of files) {
         if (fn === '.metadata') {
             continue;
         }
