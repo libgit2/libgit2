@@ -40,6 +40,11 @@ option(USE_GSSAPI              "Enable SPNEGO authentication using GSSAPI" OFF)
    set(USE_REGEX               "" CACHE STRING "Selects regex provider. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
    set(USE_COMPRESSION         "" CACHE STRING "Selects compression backend. Either builtin or zlib.")
 
+if(APPLE)
+	# Currently only available on macOS for `precomposeUnicode` support
+	set(USE_I18N            "" CACHE STRING "Enables internationalization support.")
+endif()
+
 # Debugging options
 option(USE_LEAK_CHECKER        "Run tests with leak checker"                           OFF)
 option(USE_STANDALONE_FUZZERS  "Enable standalone fuzzers (compatible with gcc)"       OFF)
@@ -71,10 +76,6 @@ if(UNIX)
 	endif()
 
 	option(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"                 OFF)
-endif()
-
-if(APPLE)
-	option(USE_ICONV           "Link with and use iconv library"                    ON)
 endif()
 
 if(MSVC)

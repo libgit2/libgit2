@@ -2297,7 +2297,7 @@ static int repo_init_fs_configs(
 			git_error_clear();
 	}
 
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	if ((error = git_config_set_bool(
 			cfg, "core.precomposeunicode",
 			git_fs_path_does_decompose_unicode(work_dir))) < 0)

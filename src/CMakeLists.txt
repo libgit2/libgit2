@@ -44,6 +44,7 @@ include(SelectRegex)
 include(SelectXdiff)
 include(SelectSSH)
 include(SelectCompression)
+include(SelectI18n)
 
 #
 # Platform support
@@ -179,21 +180,6 @@ if(USE_NTLMCLIENT)
 	list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
 endif()
 add_feature_info(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
-
-#
-# Optional external dependencies
-
-# iconv
-if(USE_ICONV)
-	find_package(IntlIconv)
-endif()
-if(ICONV_FOUND)
-	set(GIT_USE_ICONV 1)
-	list(APPEND LIBGIT2_SYSTEM_INCLUDES ${ICONV_INCLUDE_DIR})
-	list(APPEND LIBGIT2_SYSTEM_LIBS ${ICONV_LIBRARIES})
-	list(APPEND LIBGIT2_PC_LIBS ${ICONV_LIBRARIES})
-endif()
-add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
 
 #
 # Include child projects

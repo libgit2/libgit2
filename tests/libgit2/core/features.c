@@ -29,7 +29,7 @@ void test_core_features__basic(void)
 	cl_assert((caps & GIT_FEATURE_HTTP_PARSER) != 0);
 	cl_assert((caps & GIT_FEATURE_REGEX) != 0);
 
-#if defined(GIT_USE_ICONV)
+#if defined(GIT_I18N_ICONV)
 	cl_assert((caps & GIT_FEATURE_I18N) != 0);
 #endif
 
@@ -156,8 +156,10 @@ void test_core_features__backends(void)
 	cl_assert(0);
 #endif
 
-#if defined(GIT_USE_ICONV)
+#if defined(GIT_I18N_ICONV)
 	cl_assert_equal_s("iconv", i18n);
+#elif defined(GIT_I18N)
+	cl_assert(0);
 #else
 	cl_assert(i18n == NULL);
 #endif

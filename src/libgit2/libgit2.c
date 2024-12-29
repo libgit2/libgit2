@@ -95,7 +95,7 @@ int git_libgit2_features(void)
 #endif
 		| GIT_FEATURE_HTTP_PARSER
 		| GIT_FEATURE_REGEX
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 		| GIT_FEATURE_I18N
 #endif
 #if defined(GIT_NTLM) || defined(GIT_WIN32)
@@ -192,8 +192,10 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 		break;
 
 	case GIT_FEATURE_I18N:
-#if defined(GIT_USE_ICONV)
+#if defined(GIT_I18N_ICONV)
 		return "iconv";
+#elif defined(GIT_I18N)
+		GIT_ASSERT_WITH_RETVAL(!"Unknown internationalization backend", NULL);
 #endif
 		break;
 
