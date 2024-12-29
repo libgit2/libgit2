@@ -37,7 +37,7 @@ option(USE_NSEC                "Support nanosecond precision file mtimes and cti
 option(USE_GSSAPI              "Enable SPNEGO authentication using GSSAPI" OFF)
    set(USE_HTTP_PARSER         "" CACHE STRING "Selects HTTP Parser support: http-parser, llhttp, or builtin. (Defaults to builtin.)")
 #  set(USE_XDIFF               "" CACHE STRING "Specifies the xdiff implementation; either system or builtin.")
-   set(REGEX_BACKEND           "" CACHE STRING "Selects regex provider. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
+   set(USE_REGEX               "" CACHE STRING "Selects regex provider. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
    set(USE_COMPRESSION         "" CACHE STRING "Selects compression backend. Either builtin or zlib.")
 
 # Debugging options
