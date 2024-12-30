@@ -82,9 +82,7 @@ int cmd_init(int argc, char **argv)
 	init_opts.initial_head = branch;
 
 	if (git_dir) {
-		init_opts.flags |= GIT_REPOSITORY_INIT_NO_DOTGIT_DIR;
 		init_opts.workdir_path = path;
-
 		repo_path = git_dir;
 	} else {
 		repo_path = path;

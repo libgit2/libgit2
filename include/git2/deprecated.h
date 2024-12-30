@@ -748,6 +748,17 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
 
 /**@}*/
 
+/** @name Deprecated Repository Constants
+ *
+ * These enumeration values are retained for backward compatibility.
+ */
+
+/**
+ * @deprecated This option is deprecated; it is now implied when
+ * a separate working directory is specified to `git_repository_init`.
+ */
+#define GIT_REPOSITORY_INIT_NO_DOTGIT_DIR 0
+
 /** @name Deprecated Revspec Constants
  *
  * These enumeration values are retained for backward compatibility.
