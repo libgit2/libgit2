@@ -98,7 +98,7 @@ int git_libgit2_features(void)
 #ifdef GIT_I18N_ICONV
 		| GIT_FEATURE_I18N
 #endif
-#if defined(GIT_NTLM) || defined(GIT_WIN32)
+#if defined(GIT_AUTH_NTLM)
 		| GIT_FEATURE_AUTH_NTLM
 #endif
 #if defined(GIT_GSSAPI) || defined(GIT_GSSFRAMEWORK) || defined(GIT_WIN32)
@@ -200,10 +200,12 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 		break;
 
 	case GIT_FEATURE_AUTH_NTLM:
-#if defined(GIT_NTLM)
-		return "ntlmclient";
-#elif defined(GIT_WIN32)
+#if defined(GIT_AUTH_NTLM_BUILTIN)
+		return "builtin";
+#elif defined(GIT_AUTH_NTLM_SSPI)
 		return "sspi";
+#elif defined(GIT_AUTH_NTLM)
+		GIT_ASSERT_WITH_RETVAL(!"Unknown NTLM backend", NULL);
 #endif
 		break;
 

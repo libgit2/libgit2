@@ -33,7 +33,7 @@ void test_core_features__basic(void)
 	cl_assert((caps & GIT_FEATURE_I18N) != 0);
 #endif
 
-#if defined(GIT_NTLM) || defined(GIT_WIN32)
+#if defined(GIT_AUTH_NTLM)
 	cl_assert((caps & GIT_FEATURE_AUTH_NTLM) != 0);
 #endif
 #if defined(GIT_GSSAPI) || defined(GIT_GSSFRAMEWORK) || defined(GIT_WIN32)
@@ -164,10 +164,12 @@ void test_core_features__backends(void)
 	cl_assert(i18n == NULL);
 #endif
 
-#if defined(GIT_NTLM)
-	cl_assert_equal_s("ntlmclient", ntlm);
-#elif defined(GIT_WIN32)
+#if defined(GIT_AUTH_NTLM_BUILTIN)
+	cl_assert_equal_s("builtin", ntlm);
+#elif defined(GIT_AUTH_NTLM_SSPI)
 	cl_assert_equal_s("sspi", ntlm);
+#elif defined(GIT_AUTH_NTLM)
+	cl_assert(0);
 #else
 	cl_assert(ntlm == NULL);
 #endif

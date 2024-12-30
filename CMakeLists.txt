@@ -36,6 +36,7 @@ option(USE_NSEC                "Support nanosecond precision file mtimes and cti
    set(USE_SHA256              "" CACHE STRING "Selects SHA256 provider. One of Builtin, HTTPS, or a specific provider. (Defaults to HTTPS.)")
 option(USE_GSSAPI              "Enable SPNEGO authentication using GSSAPI" OFF)
    set(USE_HTTP_PARSER         "" CACHE STRING "Selects HTTP Parser support: http-parser, llhttp, or builtin. (Defaults to builtin.)")
+   set(USE_AUTH_NTLM           "" CACHE STRING "Enables NTLM authentication support. One of Builtin or win32.")
 #  set(USE_XDIFF               "" CACHE STRING "Specifies the xdiff implementation; either system or builtin.")
    set(USE_REGEX               "" CACHE STRING "Selects regex provider. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
    set(USE_COMPRESSION         "" CACHE STRING "Selects compression backend. Either builtin or zlib.")
@@ -68,13 +69,6 @@ option(CMAKE_C_EXTENSIONS      "Whether compiler extensions are supported"      
 option(ENABLE_WERROR           "Enable compilation with -Werror"                       OFF)
 
 if(UNIX)
-	# NTLM client requires crypto libraries from the system HTTPS stack
-	if(USE_HTTPS STREQUAL "OFF")
-		option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                  OFF)
-	else()
-		option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                   ON)
-	endif()
-
 	option(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"                 OFF)
 endif()
 
