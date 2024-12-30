@@ -142,7 +142,9 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 		break;
 
 	case GIT_FEATURE_SSH:
-#if defined(GIT_SSH_EXEC)
+#if defined(GIT_SSH_EXEC) && defined(GIT_SSH_LIBSSH2)
+		return "exec+libssh2";
+#elif defined(GIT_SSH_EXEC)
 		return "exec";
 #elif defined(GIT_SSH_LIBSSH2)
 		return "libssh2";

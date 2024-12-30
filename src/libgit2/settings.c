@@ -49,6 +49,7 @@ extern int git_odb__packed_priority;
 extern int git_odb__loose_priority;
 extern int git_socket_stream__connect_timeout;
 extern int git_socket_stream__timeout;
+extern git_ssh_backend_t git_transport__ssh_backend;
 
 char *git__user_agent;
 char *git__user_agent_product;
@@ -455,6 +456,14 @@ int git_libgit2_opts(int key, ...)
 				git_socket_stream__timeout = timeout;
 			}
 		}
+		break;
+
+	case GIT_OPT_GET_SSH_BACKEND:
+		*(va_arg(ap, int *)) = git_transport__ssh_backend;
+		break;
+
+	case GIT_OPT_SET_SSH_BACKEND:
+		git_transport__ssh_backend = va_arg(ap, int);
 		break;
 
 	default:
