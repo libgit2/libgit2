@@ -116,10 +116,12 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 {
 	switch (feature) {
 	case GIT_FEATURE_THREADS:
-#if defined(GIT_THREADS) && defined(GIT_WIN32)
+#if defined(GIT_THREADS_PTHREADS)
+		return "pthread";
+#elif defined(GIT_THREADS_WIN32)
 		return "win32";
 #elif defined(GIT_THREADS)
-		return "pthread";
+		GIT_ASSERT_WITH_RETVAL(!"Unknown threads backend", NULL);
 #endif
 		break;
 

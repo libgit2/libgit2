@@ -36,6 +36,7 @@ add_feature_info(debugopen GIT_DEBUG_STRICT_OPEN "path validation in open")
 # Optional feature enablement
 #
 
+include(SelectThreads)
 include(SelectNsec)
 include(SelectHTTPSBackend)
 include(SelectHashes)
@@ -140,19 +141,6 @@ endif()
 if(AMIGA)
 	add_definitions(-DNO_ADDRINFO -DNO_READDIR_R -DNO_MMAP)
 endif()
-
-# threads
-
-if(USE_THREADS)
-	if(NOT WIN32)
-		find_package(Threads REQUIRED)
-		list(APPEND LIBGIT2_SYSTEM_LIBS ${CMAKE_THREAD_LIBS_INIT})
-		list(APPEND LIBGIT2_PC_LIBS ${CMAKE_THREAD_LIBS_INIT})
-	endif()
-
-	set(GIT_THREADS 1)
-endif()
-add_feature_info(threadsafe USE_THREADS "threadsafe support")
 
 #
 # Include child projects

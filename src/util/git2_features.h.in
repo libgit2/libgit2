@@ -6,6 +6,9 @@
 #cmakedefine GIT_DEBUG_STRICT_OPEN 1
 
 #cmakedefine GIT_THREADS 1
+#cmakedefine GIT_THREADS_PTHREADS 1
+#cmakedefine GIT_THREADS_WIN32 1
+
 #cmakedefine GIT_WIN32_LEAKCHECK 1
 
 #cmakedefine GIT_ARCH_64 1

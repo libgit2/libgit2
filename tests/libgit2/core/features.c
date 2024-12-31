@@ -82,10 +82,12 @@ void test_core_features__backends(void)
 	const char *sha1 = git_libgit2_feature_backend(GIT_FEATURE_SHA1);
 	const char *sha256 = git_libgit2_feature_backend(GIT_FEATURE_SHA256);
 
-#if defined(GIT_THREADS) && defined(GIT_WIN32)
+#if defined(GIT_THREADS_WIN32)
 	cl_assert_equal_s("win32", threads);
-#elif defined(GIT_THREADS)
+#elif defined(GIT_THREADS_PTHREADS)
 	cl_assert_equal_s("pthread", threads);
+#elif defined(GIT_THREADS)
+	cl_assert(0);
 #else
 	cl_assert(threads == NULL);
 #endif
