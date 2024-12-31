@@ -27,9 +27,8 @@ option(BUILD_FUZZERS           "Build the fuzz targets"                         
 
 # Suggested functionality that may not be available on a per-platform basis
 option(USE_THREADS             "Use threads for parallel processing when possible"      ON)
-option(USE_NSEC                "Support nanosecond precision file mtimes and ctimes"    ON)
 
-# Backend selection
+# Feature enablement and backend selection
    set(USE_SSH                 "" CACHE STRING "Enables SSH support and optionally selects provider. One of ON, OFF, or a specific provider: libssh2 or exec. (Defaults to OFF.)")
    set(USE_HTTPS               "" CACHE STRING "Enable HTTPS support and optionally selects the provider. One of ON, OFF, or a specific provider: OpenSSL, OpenSSL-FIPS, OpenSSL-Dynamic, mbedTLS, SecureTransport, Schannel, or WinHTTP. (Defaults to ON.)")
    set(USE_SHA1                "" CACHE STRING "Selects SHA1 provider. One of builtin, HTTPS, or a specific provider. (Defaults to builtin.)")
@@ -40,6 +39,7 @@ option(USE_NSEC                "Support nanosecond precision file mtimes and cti
 #  set(USE_XDIFF               "" CACHE STRING "Specifies the xdiff implementation; either system or builtin.")
    set(USE_REGEX               "" CACHE STRING "Selects regex provider. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
    set(USE_COMPRESSION         "" CACHE STRING "Selects compression backend. Either builtin or zlib.")
+   set(USE_NSEC                "" CACHE STRING "Enable nanosecond precision timestamps. One of ON, OFF, or a specific provider: mtimespec, mtim, mtime, or win32. (Defaults to ON).")
 
 if(APPLE)
 	# Currently only available on macOS for `precomposeUnicode` support

@@ -14,10 +14,12 @@
 #cmakedefine GIT_I18N 1
 #cmakedefine GIT_I18N_ICONV 1
 
-#cmakedefine GIT_USE_NSEC 1
-#cmakedefine GIT_USE_STAT_MTIM 1
-#cmakedefine GIT_USE_STAT_MTIMESPEC 1
-#cmakedefine GIT_USE_STAT_MTIME_NSEC 1
+#cmakedefine GIT_NSEC 1
+#cmakedefine GIT_NSEC_MTIM 1
+#cmakedefine GIT_NSEC_MTIMESPEC 1
+#cmakedefine GIT_NSEC_MTIME_NSEC 1
+#cmakedefine GIT_NSEC_WIN32 1
+
 #cmakedefine GIT_USE_FUTIMENS 1
 
 #cmakedefine GIT_REGEX_REGCOMP_L 1

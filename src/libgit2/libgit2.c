@@ -90,7 +90,7 @@ int git_libgit2_features(void)
 #ifdef GIT_SSH
 		| GIT_FEATURE_SSH
 #endif
-#ifdef GIT_USE_NSEC
+#ifdef GIT_NSEC
 		| GIT_FEATURE_NSEC
 #endif
 		| GIT_FEATURE_HTTP_PARSER
@@ -152,15 +152,15 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 		break;
 
 	case GIT_FEATURE_NSEC:
-#if defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIMESPEC)
+#if defined(GIT_NSEC_MTIMESPEC)
 		return "mtimespec";
-#elif defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIM)
+#elif defined(GIT_NSEC_MTIM)
 		return "mtim";
-#elif defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIME_NSEC)
-		return "mtime";
-#elif defined(GIT_USE_NSEC) && defined(GIT_WIN32)
+#elif defined(GIT_NSEC_MTIME_NSEC)
+		return "mtime_nsec";
+#elif defined(GIT_NSEC_WIN32)
 		return "win32";
-#elif defined(GIT_USE_NSEC)
+#elif defined(GIT_NSEC)
 		GIT_ASSERT_WITH_RETVAL(!"Unknown high-resolution time backend", NULL);
 #endif
 		break;

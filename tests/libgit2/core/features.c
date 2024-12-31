@@ -20,7 +20,7 @@ void test_core_features__basic(void)
 	cl_assert((caps & GIT_FEATURE_SSH) == 0);
 #endif
 
-#if defined(GIT_USE_NSEC)
+#if defined(GIT_NSEC)
 	cl_assert((caps & GIT_FEATURE_NSEC) != 0);
 #else
 	cl_assert((caps & GIT_FEATURE_NSEC) == 0);
@@ -118,15 +118,15 @@ void test_core_features__backends(void)
 	cl_assert(ssh == NULL);
 #endif
 
-#if defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIMESPEC)
+#if defined(GIT_NSEC_MTIMESPEC)
 	cl_assert_equal_s("mtimespec", nsec);
-#elif defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIM)
+#elif defined(GIT_NSEC_MTIM)
 	cl_assert_equal_s("mtim", nsec);
-#elif defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIME_NSEC)
-	cl_assert_equal_s("mtime", nsec);
-#elif defined(GIT_USE_NSEC) && defined(GIT_WIN32)
+#elif defined(GIT_NSEC_MTIME_NSEC)
+	cl_assert_equal_s("mtime_nsec", nsec);
+#elif defined(GIT_NSEC_WIN32)
 	cl_assert_equal_s("win32", nsec);
-#elif defined(GIT_USE_NSEC)
+#elif defined(GIT_NSEC)
 	cl_assert(0);
 #else
 	cl_assert(nsec == NULL);

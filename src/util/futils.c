@@ -1158,7 +1158,7 @@ int git_futils_filestamp_check(
 		return GIT_ENOTFOUND;
 
 	if (stamp->mtime.tv_sec == st.st_mtime &&
-#if defined(GIT_USE_NSEC)
+#if defined(GIT_NSEC)
 		stamp->mtime.tv_nsec == st.st_mtime_nsec &&
 #endif
 		stamp->size  == (uint64_t)st.st_size   &&
@@ -1166,7 +1166,7 @@ int git_futils_filestamp_check(
 		return 0;
 
 	stamp->mtime.tv_sec = st.st_mtime;
-#if defined(GIT_USE_NSEC)
+#if defined(GIT_NSEC)
 	stamp->mtime.tv_nsec = st.st_mtime_nsec;
 #endif
 	stamp->size  = (uint64_t)st.st_size;
@@ -1190,7 +1190,7 @@ void git_futils_filestamp_set_from_stat(
 {
 	if (st) {
 		stamp->mtime.tv_sec = st->st_mtime;
-#if defined(GIT_USE_NSEC)
+#if defined(GIT_NSEC)
 		stamp->mtime.tv_nsec = st->st_mtime_nsec;
 #else
 		stamp->mtime.tv_nsec = 0;
