@@ -101,7 +101,7 @@ int git_libgit2_features(void)
 #if defined(GIT_AUTH_NTLM)
 		| GIT_FEATURE_AUTH_NTLM
 #endif
-#if defined(GIT_GSSAPI) || defined(GIT_GSSFRAMEWORK) || defined(GIT_WIN32)
+#if defined(GIT_AUTH_NEGOTIATE)
 		| GIT_FEATURE_AUTH_NEGOTIATE
 #endif
 		| GIT_FEATURE_COMPRESSION
@@ -210,10 +210,14 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 		break;
 
 	case GIT_FEATURE_AUTH_NEGOTIATE:
-#if defined(GIT_GSSAPI)
+#if defined(GIT_AUTH_NEGOTIATE_GSSFRAMEWORK)
+		return "gssframework";
+#elif defined(GIT_AUTH_NEGOTIATE_GSSAPI)
 		return "gssapi";
-#elif defined(GIT_WIN32)
+#elif defined(GIT_AUTH_NEGOTIATE_SSPI)
 		return "sspi";
+#elif defined(GIT_AUTH_NEGOTIATE)
+		GIT_ASSERT_WITH_RETVAL(!"Unknown Negotiate backend", NULL);
 #endif
 		break;
 

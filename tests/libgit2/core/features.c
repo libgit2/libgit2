@@ -36,7 +36,7 @@ void test_core_features__basic(void)
 #if defined(GIT_AUTH_NTLM)
 	cl_assert((caps & GIT_FEATURE_AUTH_NTLM) != 0);
 #endif
-#if defined(GIT_GSSAPI) || defined(GIT_GSSFRAMEWORK) || defined(GIT_WIN32)
+#if defined(GIT_AUTH_NEGOTIATE)
 	cl_assert((caps & GIT_FEATURE_AUTH_NEGOTIATE) != 0);
 #endif
 
@@ -174,10 +174,14 @@ void test_core_features__backends(void)
 	cl_assert(ntlm == NULL);
 #endif
 
-#if defined(GIT_GSSAPI)
+#if defined(GIT_AUTH_NEGOTIATE_GSSFRAMEWORK)
+	cl_assert_equal_s("gssframework", negotiate);
+#elif defined(GIT_AUTH_NEGOTIATE_GSSAPI)
 	cl_assert_equal_s("gssapi", negotiate);
-#elif defined(GIT_WIN32)
+#elif defined(GIT_AUTH_NEGOTIATE_SSPI)
 	cl_assert_equal_s("sspi", negotiate);
+#elif defined(GIT_AUTH_NEGOTIATE)
+	cl_assert(0);
 #else
 	cl_assert(negotiate == NULL);
 #endif

@@ -40,8 +40,10 @@
 #cmakedefine GIT_AUTH_NTLM_BUILTIN 1
 #cmakedefine GIT_AUTH_NTLM_SSPI 1
 
-#cmakedefine GIT_GSSAPI 1
-#cmakedefine GIT_GSSFRAMEWORK 1
+#cmakedefine GIT_AUTH_NEGOTIATE 1
+#cmakedefine GIT_AUTH_NEGOTIATE_GSSFRAMEWORK 1
+#cmakedefine GIT_AUTH_NEGOTIATE_GSSAPI 1
+#cmakedefine GIT_AUTH_NEGOTIATE_SSPI 1
 
 #cmakedefine GIT_WINHTTP 1
 #cmakedefine GIT_HTTPS 1
