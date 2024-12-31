@@ -47,7 +47,7 @@ if(APPLE)
 endif()
 
 # Debugging options
-option(USE_LEAK_CHECKER        "Run tests with leak checker"                           OFF)
+   set(DEBUG_LEAK_CHECKER      "" CACHE STRING "Run tests with leak checker. Either valgrind or leaks.")
 option(USE_STANDALONE_FUZZERS  "Enable standalone fuzzers (compatible with gcc)"       OFF)
 option(DEBUG_POOL              "Enable debug pool allocator"                           OFF)
 option(DEBUG_STRICT_ALLOC      "Enable strict allocator behavior"                      OFF)
