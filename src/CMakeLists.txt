@@ -20,17 +20,17 @@ endif()
 if(DEBUG_POOL)
 	set(GIT_DEBUG_POOL 1)
 endif()
-add_feature_info(debugpool GIT_DEBUG_POOL "debug pool allocator")
+add_feature_info("Debug pool" GIT_DEBUG_POOL "debug-mode struct pool allocators")
 
 if(DEBUG_STRICT_ALLOC)
 	set(GIT_DEBUG_STRICT_ALLOC 1)
 endif()
-add_feature_info(debugalloc GIT_DEBUG_STRICT_ALLOC "debug strict allocators")
+add_feature_info("Debug alloc" GIT_DEBUG_STRICT_ALLOC "debug-mode strict allocators")
 
 if(DEBUG_STRICT_OPEN)
 	set(GIT_DEBUG_STRICT_OPEN 1)
 endif()
-add_feature_info(debugopen GIT_DEBUG_STRICT_OPEN "path validation in open")
+add_feature_info("Debug open" GIT_DEBUG_STRICT_OPEN "strict path validation in open")
 
 #
 # Optional feature enablement
