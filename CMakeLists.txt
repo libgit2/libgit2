@@ -45,7 +45,7 @@ if(APPLE)
 endif()
 
 # Debugging options
-   set(DEBUG_LEAK_CHECKER      "" CACHE STRING "Run tests with leak checker. Either valgrind or leaks.")
+   set(DEBUG_LEAK_CHECKER      "" CACHE STRING "Configure for leak checking test runs. One of valgrind, leaks, or win32. Either valgrind or leaks.")
 option(USE_STANDALONE_FUZZERS  "Enable standalone fuzzers (compatible with gcc)"       OFF)
 option(DEBUG_POOL              "Enable debug pool allocator"                           OFF)
 option(DEBUG_STRICT_ALLOC      "Enable strict allocator behavior"                      OFF)
@@ -78,9 +78,6 @@ if(MSVC)
 	# If you want to embed a copy of libssh2 into libgit2, pass a
 	# path to libssh2
 	option(EMBED_SSH_PATH      "Path to libssh2 to embed (Windows)"                OFF)
-
-	# Enable leak checking using the debugging C runtime.
-	option(WIN32_LEAKCHECK     "Enable leak reporting via crtdbg"                  OFF)
 endif()
 
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
