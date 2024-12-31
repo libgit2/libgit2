@@ -92,17 +92,17 @@ void test_core_features__backends(void)
 	cl_assert(threads == NULL);
 #endif
 
-#if defined(GIT_HTTPS) && defined(GIT_OPENSSL)
+#if defined(GIT_HTTPS_OPENSSL)
 	cl_assert_equal_s("openssl", https);
-#elif defined(GIT_HTTPS) && defined(GIT_OPENSSL_DYNAMIC)
+#elif defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 	cl_assert_equal_s("openssl-dynamic", https);
-#elif defined(GIT_HTTPS) && defined(GIT_MBEDTLS)
+#elif defined(GIT_HTTPS_MBEDTLS)
 	cl_assert_equal_s("mbedtls", https);
-#elif defined(GIT_HTTPS) && defined(GIT_SECURE_TRANSPORT)
+#elif defined(GIT_HTTPS_SECURETRANSPORT)
 	cl_assert_equal_s("securetransport", https);
-#elif defined(GIT_HTTPS) && defined(GIT_SCHANNEL)
+#elif defined(GIT_HTTPS_SCHANNEL)
 	cl_assert_equal_s("schannel", https);
-#elif defined(GIT_HTTPS) && defined(GIT_WINHTTP)
+#elif defined(GIT_HTTPS_WINHTTP)
 	cl_assert_equal_s("winhttp", https);
 #elif defined(GIT_HTTPS)
 	cl_assert(0);

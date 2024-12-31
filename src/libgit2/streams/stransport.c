@@ -7,7 +7,7 @@
 
 #include "streams/stransport.h"
 
-#ifdef GIT_SECURE_TRANSPORT
+#ifdef GIT_HTTPS_SECURETRANSPORT
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/SecureTransport.h>

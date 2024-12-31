@@ -15,14 +15,6 @@
 
 #if defined(GIT_AUTH_NTLM)
 
-#if defined(GIT_OPENSSL)
-# define CRYPT_OPENSSL
-#elif defined(GIT_MBEDTLS)
-# define CRYPT_MBEDTLS
-#elif defined(GIT_SECURE_TRANSPORT)
-# define CRYPT_COMMONCRYPTO
-#endif
-
 extern int git_http_auth_ntlm(
 	git_http_auth_context **out,
 	const git_net_url *url);

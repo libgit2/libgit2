@@ -10,7 +10,7 @@
 #include "str.h"
 #include "streams/openssl.h"
 
-#if (GIT_OPENSSL && !GIT_OPENSSL_DYNAMIC)
+#ifdef GIT_HTTPS_OPENSSL
 # include <openssl/ssl.h>
 # include <openssl/err.h>
 # include <openssl/x509v3.h>
@@ -30,13 +30,13 @@
 #define CUSTOM_CERT_THREE_URL "https://test.libgit2.org:3443/anonymous/test.git"
 #define CUSTOM_CERT_THREE_FILE "three.pem.raw"
 
-#if (GIT_OPENSSL || GIT_MBEDTLS)
+#if (GIT_HTTPS_OPENSSL || GIT_HTTPS_OPENSSL_DYNAMIC || GIT_HTTPS_MBEDTLS)
 static git_repository *g_repo;
 #endif
 
 void test_online_customcert__initialize(void)
 {
-#if (GIT_OPENSSL || GIT_MBEDTLS)
+#if (GIT_HTTPS_OPENSSL || GIT_HTTPS_OPENSSL_DYNAMIC || GIT_HTTPS_MBEDTLS)
 	git_str path = GIT_STR_INIT, file = GIT_STR_INIT;
 	char cwd[GIT_PATH_MAX];
 
@@ -58,7 +58,7 @@ void test_online_customcert__initialize(void)
 
 void test_online_customcert__cleanup(void)
 {
-#if (GIT_OPENSSL || GIT_MBEDTLS)
+#if (GIT_HTTPS_OPENSSL || GIT_HTTPS_OPENSSL_DYNAMIC || GIT_HTTPS_MBEDTLS)
 	if (g_repo) {
 		git_repository_free(g_repo);
 		g_repo = NULL;
@@ -68,14 +68,14 @@ void test_online_customcert__cleanup(void)
 	cl_fixture_cleanup(CUSTOM_CERT_DIR);
 #endif
 
-#ifdef GIT_OPENSSL
+#if (GIT_HTTPS_OPENSSL || GIT_HTTPS_OPENSSL_DYNAMIC)
 	git_openssl__reset_context();
 #endif
 }
 
 void test_online_customcert__file(void)
 {
-#if (GIT_OPENSSL || GIT_MBEDTLS)
+#if (GIT_HTTPS_OPENSSL || GIT_HTTPS_OPENSSL_DYNAMIC || GIT_HTTPS_MBEDTLS)
 	cl_git_pass(git_clone(&g_repo, CUSTOM_CERT_ONE_URL, "./cloned", NULL));
 	cl_assert(git_fs_path_exists("./cloned/master.txt"));
 #endif
@@ -83,7 +83,7 @@ void test_online_customcert__file(void)
 
 void test_online_customcert__path(void)
 {
-#if (GIT_OPENSSL || GIT_MBEDTLS)
+#if (GIT_HTTPS_OPENSSL || GIT_HTTPS_OPENSSL_DYNAMIC || GIT_HTTPS_MBEDTLS)
 	cl_git_pass(git_clone(&g_repo, CUSTOM_CERT_TWO_URL, "./cloned", NULL));
 	cl_assert(git_fs_path_exists("./cloned/master.txt"));
 #endif
@@ -91,7 +91,7 @@ void test_online_customcert__path(void)
 
 void test_online_customcert__raw_x509(void)
 {
-#if (GIT_OPENSSL && !GIT_OPENSSL_DYNAMIC)
+#if GIT_HTTPS_OPENSSL
 	X509* x509_cert = NULL;
 	char cwd[GIT_PATH_MAX];
 	git_str raw_file = GIT_STR_INIT,

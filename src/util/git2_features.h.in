@@ -49,13 +49,13 @@
 #cmakedefine GIT_AUTH_NEGOTIATE_GSSAPI 1
 #cmakedefine GIT_AUTH_NEGOTIATE_SSPI 1
 
-#cmakedefine GIT_WINHTTP 1
 #cmakedefine GIT_HTTPS 1
-#cmakedefine GIT_OPENSSL 1
-#cmakedefine GIT_OPENSSL_DYNAMIC 1
-#cmakedefine GIT_SECURE_TRANSPORT 1
-#cmakedefine GIT_MBEDTLS 1
-#cmakedefine GIT_SCHANNEL 1
+#cmakedefine GIT_HTTPS_OPENSSL 1
+#cmakedefine GIT_HTTPS_OPENSSL_DYNAMIC 1
+#cmakedefine GIT_HTTPS_SECURETRANSPORT 1
+#cmakedefine GIT_HTTPS_MBEDTLS 1
+#cmakedefine GIT_HTTPS_SCHANNEL 1
+#cmakedefine GIT_HTTPS_WINHTTP 1
 
 #cmakedefine GIT_HTTPPARSER_HTTPPARSER 1
 #cmakedefine GIT_HTTPPARSER_LLHTTP 1

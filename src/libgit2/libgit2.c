@@ -126,17 +126,17 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 		break;
 
 	case GIT_FEATURE_HTTPS:
-#if defined(GIT_HTTPS) && defined(GIT_OPENSSL)
+#if defined(GIT_HTTPS_OPENSSL)
 		return "openssl";
-#elif defined(GIT_HTTPS) && defined(GIT_OPENSSL_DYNAMIC)
+#elif defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 		return "openssl-dynamic";
-#elif defined(GIT_HTTPS) && defined(GIT_MBEDTLS)
+#elif defined(GIT_HTTPS_MBEDTLS)
 		return "mbedtls";
-#elif defined(GIT_HTTPS) && defined(GIT_SECURE_TRANSPORT)
+#elif defined(GIT_HTTPS_SECURETRANSPORT)
 		return "securetransport";
-#elif defined(GIT_HTTPS) && defined(GIT_SCHANNEL)
+#elif defined(GIT_HTTPS_SCHANNEL)
 		return "schannel";
-#elif defined(GIT_HTTPS) && defined(GIT_WINHTTP)
+#elif defined(GIT_HTTPS_WINHTTP)
 		return "winhttp";
 #elif defined(GIT_HTTPS)
 		GIT_ASSERT_WITH_RETVAL(!"Unknown HTTPS backend", NULL);
