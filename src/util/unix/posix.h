@@ -82,7 +82,7 @@ GIT_INLINE(int) p_fsync(int fd)
 
 #define p_timeval timeval
 
-#ifdef GIT_USE_FUTIMENS
+#ifdef GIT_FUTIMENS
 GIT_INLINE(int) p_futimes(int f, const struct p_timeval t[2])
 {
 	struct timespec s[2];

@@ -22,7 +22,7 @@
 #cmakedefine GIT_NSEC_MTIME_NSEC 1
 #cmakedefine GIT_NSEC_WIN32 1
 
-#cmakedefine GIT_USE_FUTIMENS 1
+#cmakedefine GIT_FUTIMENS 1
 
 #cmakedefine GIT_REGEX_REGCOMP_L 1
 #cmakedefine GIT_REGEX_REGCOMP 1

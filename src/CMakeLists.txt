@@ -56,9 +56,8 @@ include(SelectAuthNegotiate)
 # futimes/futimens
 
 if(HAVE_FUTIMENS)
-	set(GIT_USE_FUTIMENS 1)
-endif ()
-add_feature_info(futimens GIT_USE_FUTIMENS "futimens support")
+	set(GIT_FUTIMENS 1)
+endif()
 
 # qsort
 
