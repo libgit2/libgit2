@@ -2364,7 +2364,7 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 				return index_error_invalid("reading reuc entry oid");
 			}
 
-			if (git_oid__fromraw(&lost->oid[i], (const unsigned char *) buffer, index->oid_type) < 0)
+			if (git_oid_from_raw(&lost->oid[i], (const unsigned char *) buffer, index->oid_type) < 0)
 				return -1;
 
 			size -= oid_size;
@@ -2553,14 +2553,14 @@ static int read_entry(
 
 	switch (index->oid_type) {
 	case GIT_OID_SHA1:
-		if (git_oid__fromraw(&entry.id, source_sha1.oid,
+		if (git_oid_from_raw(&entry.id, source_sha1.oid,
 		                     GIT_OID_SHA1) < 0)
 			return -1;
 		entry.flags = ntohs(source_sha1.flags);
 		break;
 #ifdef GIT_EXPERIMENTAL_SHA256
 	case GIT_OID_SHA256:
-		if (git_oid__fromraw(&entry.id, source_sha256.oid,
+		if (git_oid_from_raw(&entry.id, source_sha256.oid,
 		                     GIT_OID_SHA256) < 0)
 			return -1;
 		entry.flags = ntohs(source_sha256.flags);

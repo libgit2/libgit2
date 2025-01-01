@@ -44,7 +44,7 @@ void test_odb_packedone256__mass_read(void)
 		git_oid id;
 		git_odb_object *obj;
 
-		cl_git_pass(git_oid__fromstr(&id, packed_objects_one256[i], GIT_OID_SHA256));
+		cl_git_pass(git_oid_from_string(&id, packed_objects_one256[i], GIT_OID_SHA256));
 		cl_assert(git_odb_exists(_odb, &id) == 1);
 		cl_git_pass(git_odb_read(&obj, _odb, &id));
 
@@ -64,7 +64,7 @@ void test_odb_packedone256__read_header_0(void)
 		size_t len;
 		git_object_t type;
 
-		cl_git_pass(git_oid__fromstr(&id, packed_objects_one256[i], GIT_OID_SHA256));
+		cl_git_pass(git_oid_from_string(&id, packed_objects_one256[i], GIT_OID_SHA256));
 
 		cl_git_pass(git_odb_read(&obj, _odb, &id));
 		cl_git_pass(git_odb_read_header(&len, &type, _odb, &id));

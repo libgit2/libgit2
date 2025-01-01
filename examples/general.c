@@ -143,7 +143,7 @@ static void oid_parsing(git_oid *oid)
 	 * key we're working with.
 	 */
 #ifdef GIT_EXPERIMENTAL_SHA256
-	git_oid_fromstr(oid, hex, GIT_OID_SHA1);
+	git_oid_from_string(oid, hex, GIT_OID_SHA1);
 #else
 	git_oid_fromstr(oid, hex);
 #endif
@@ -292,8 +292,8 @@ static void commit_writing(git_repository *repo)
 	 * but you can also use
 	 */
 #ifdef GIT_EXPERIMENTAL_SHA256
-	git_oid_fromstr(&tree_id, "f60079018b664e4e79329a7ef9559c8d9e0378d1", GIT_OID_SHA1);
-	git_oid_fromstr(&parent_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
+	git_oid_from_string(&tree_id, "f60079018b664e4e79329a7ef9559c8d9e0378d1", GIT_OID_SHA1);
+	git_oid_from_string(&parent_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
 #else
 	git_oid_fromstr(&tree_id, "f60079018b664e4e79329a7ef9559c8d9e0378d1");
 	git_oid_fromstr(&parent_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
@@ -363,7 +363,7 @@ static void commit_parsing(git_repository *repo)
 	printf("\n*Commit Parsing*\n");
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-	git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479", GIT_OID_SHA1);
+	git_oid_from_string(&oid, "8496071c1b46c854b31185ea97743be6a8774479", GIT_OID_SHA1);
 #else
 	git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479");
 #endif
@@ -436,7 +436,7 @@ static void tag_parsing(git_repository *repo)
 	 * the same way that we would a commit (or any other object).
 	 */
 #ifdef GIT_EXPERIMENTAL_SHA256
-	git_oid_fromstr(&oid, "b25fa35b38051e4ae45d4222e795f9df2e43f1d1", GIT_OID_SHA1);
+	git_oid_from_string(&oid, "b25fa35b38051e4ae45d4222e795f9df2e43f1d1", GIT_OID_SHA1);
 #else
 	git_oid_fromstr(&oid, "b25fa35b38051e4ae45d4222e795f9df2e43f1d1");
 #endif
@@ -488,7 +488,7 @@ static void tree_parsing(git_repository *repo)
 	 * Create the oid and lookup the tree object just like the other objects.
 	 */
 #ifdef GIT_EXPERIMENTAL_SHA256
-	git_oid_fromstr(&oid, "f60079018b664e4e79329a7ef9559c8d9e0378d1", GIT_OID_SHA1);
+	git_oid_from_string(&oid, "f60079018b664e4e79329a7ef9559c8d9e0378d1", GIT_OID_SHA1);
 #else
 	git_oid_fromstr(&oid, "f60079018b664e4e79329a7ef9559c8d9e0378d1");
 #endif
@@ -546,7 +546,7 @@ static void blob_parsing(git_repository *repo)
 	printf("\n*Blob Parsing*\n");
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-	git_oid_fromstr(&oid, "1385f264afb75a56a5bec74243be9b367ba4ca08", GIT_OID_SHA1);
+	git_oid_from_string(&oid, "1385f264afb75a56a5bec74243be9b367ba4ca08", GIT_OID_SHA1);
 #else
 	git_oid_fromstr(&oid, "1385f264afb75a56a5bec74243be9b367ba4ca08");
 #endif
@@ -592,7 +592,7 @@ static void revwalking(git_repository *repo)
 	printf("\n*Revwalking*\n");
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-	git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
+	git_oid_from_string(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
 #else
 	git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
 #endif

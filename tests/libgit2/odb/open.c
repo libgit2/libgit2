@@ -20,8 +20,8 @@ void test_odb_open__exists(void)
 	cl_git_pass(git_odb_open_ext(&odb, "testrepo.git/objects", &opts));
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-	cl_git_pass(git_oid_fromstr(&one, "1385f264afb75a56a5bec74243be9b367ba4ca08", GIT_OID_SHA1));
-	cl_git_pass(git_oid_fromstr(&two, "00112233445566778899aabbccddeeff00112233", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&one, "1385f264afb75a56a5bec74243be9b367ba4ca08", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&two, "00112233445566778899aabbccddeeff00112233", GIT_OID_SHA1));
 #else
 	cl_git_pass(git_oid_fromstr(&one, "1385f264afb75a56a5bec74243be9b367ba4ca08"));
 	cl_git_pass(git_oid_fromstr(&two, "00112233445566778899aabbccddeeff00112233"));

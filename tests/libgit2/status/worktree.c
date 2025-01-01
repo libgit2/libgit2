@@ -515,19 +515,19 @@ void test_status_worktree__conflict_with_diff3(void)
 
 	ancestor_entry.path = "modified_file";
 	ancestor_entry.mode = 0100644;
-	git_oid__fromstr(&ancestor_entry.id,
+	git_oid_from_string(&ancestor_entry.id,
 		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a",
 		GIT_OID_SHA1);
 
 	our_entry.path = "modified_file";
 	our_entry.mode = 0100644;
-	git_oid__fromstr(&our_entry.id,
+	git_oid_from_string(&our_entry.id,
 		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a",
 		GIT_OID_SHA1);
 
 	their_entry.path = "modified_file";
 	their_entry.mode = 0100644;
-	git_oid__fromstr(&their_entry.id,
+	git_oid_from_string(&their_entry.id,
 		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a",
 		GIT_OID_SHA1);
 
@@ -714,19 +714,19 @@ void test_status_worktree__conflicted_item(void)
 
 	ancestor_entry.mode = 0100644;
 	ancestor_entry.path = "modified_file";
-	git_oid__fromstr(&ancestor_entry.id,
+	git_oid_from_string(&ancestor_entry.id,
 		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a",
 		GIT_OID_SHA1);
 
 	our_entry.mode = 0100644;
 	our_entry.path = "modified_file";
-	git_oid__fromstr(&our_entry.id,
+	git_oid_from_string(&our_entry.id,
 		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a",
 		GIT_OID_SHA1);
 
 	their_entry.mode = 0100644;
 	their_entry.path = "modified_file";
-	git_oid__fromstr(&their_entry.id,
+	git_oid_from_string(&their_entry.id,
 		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a",
 		GIT_OID_SHA1);
 
@@ -754,7 +754,7 @@ void test_status_worktree__conflict_has_no_oid(void)
 
 	entry.mode = 0100644;
 	entry.path = "modified_file";
-	git_oid__fromstr(&entry.id, "452e4244b5d083ddf0460acf1ecc74db9dcfa11a", GIT_OID_SHA1);
+	git_oid_from_string(&entry.id, "452e4244b5d083ddf0460acf1ecc74db9dcfa11a", GIT_OID_SHA1);
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_conflict_add(index, &entry, &entry, &entry));

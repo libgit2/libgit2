@@ -59,7 +59,7 @@ void test_repo_getters__commit_parents(void)
 	git_oid first_parent;
 	git_oid merge_parents[4];
 
-	git_oid__fromstr(&first_parent, "099fabac3a9ea935598528c27f866e34089c2eff", GIT_OID_SHA1);
+	git_oid_from_string(&first_parent, "099fabac3a9ea935598528c27f866e34089c2eff", GIT_OID_SHA1);
 
 	/* A commit on a new repository has no parents */
 
@@ -96,13 +96,13 @@ void test_repo_getters__commit_parents(void)
 
 	cl_assert_equal_oid(&first_parent, git_commit_id(parents.commits[0]));
 
-	git_oid__fromstr(&merge_parents[0], "8496071c1b46c854b31185ea97743be6a8774479", GIT_OID_SHA1);
+	git_oid_from_string(&merge_parents[0], "8496071c1b46c854b31185ea97743be6a8774479", GIT_OID_SHA1);
 	cl_assert_equal_oid(&merge_parents[0], git_commit_id(parents.commits[1]));
-	git_oid__fromstr(&merge_parents[1], "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
+	git_oid_from_string(&merge_parents[1], "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
 	cl_assert_equal_oid(&merge_parents[1], git_commit_id(parents.commits[2]));
-	git_oid__fromstr(&merge_parents[2], "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", GIT_OID_SHA1);
+	git_oid_from_string(&merge_parents[2], "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", GIT_OID_SHA1);
 	cl_assert_equal_oid(&merge_parents[2], git_commit_id(parents.commits[3]));
-	git_oid__fromstr(&merge_parents[3], "9fd738e8f7967c078dceed8190330fc8648ee56a", GIT_OID_SHA1);
+	git_oid_from_string(&merge_parents[3], "9fd738e8f7967c078dceed8190330fc8648ee56a", GIT_OID_SHA1);
 	cl_assert_equal_oid(&merge_parents[3], git_commit_id(parents.commits[4]));
 
 	git_commitarray_dispose(&parents);

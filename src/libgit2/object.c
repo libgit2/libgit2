@@ -662,7 +662,7 @@ int git_object__parse_oid_header(
 	if (buffer[header_len + sha_len] != '\n')
 		return -1;
 
-	if (git_oid__fromstr(oid, buffer + header_len, oid_type) < 0)
+	if (git_oid_from_prefix(oid, buffer + header_len, sha_len, oid_type) < 0)
 		return -1;
 
 	*buffer_out = buffer + (header_len + sha_len + 1);

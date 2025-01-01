@@ -197,7 +197,7 @@ GIT_INLINE(int) rebase_readoid(
 		return error;
 
 	if (str_out->size != git_oid_hexsize(rebase->repo->oid_type) ||
-	    git_oid__fromstr(out, str_out->ptr, rebase->repo->oid_type) < 0) {
+	    git_oid_from_string(out, str_out->ptr, rebase->repo->oid_type) < 0) {
 		git_error_set(GIT_ERROR_REBASE, "the file '%s' contains an invalid object ID", filename);
 		return -1;
 	}
@@ -1333,8 +1333,8 @@ static int rebase_copy_notes(
 
 		if (strlen(fromstr) != git_oid_hexsize(rebase->repo->oid_type) ||
 		    strlen(tostr) != git_oid_hexsize(rebase->repo->oid_type) ||
-		    git_oid__fromstr(&from, fromstr, rebase->repo->oid_type) < 0 ||
-		    git_oid__fromstr(&to, tostr, rebase->repo->oid_type) < 0)
+		    git_oid_from_string(&from, fromstr, rebase->repo->oid_type) < 0 ||
+		    git_oid_from_string(&to, tostr, rebase->repo->oid_type) < 0)
 			goto on_error;
 
 		if ((error = rebase_copy_note(rebase, notes_ref.ptr, &from, &to, committer)) < 0)

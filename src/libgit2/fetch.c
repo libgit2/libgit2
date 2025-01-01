@@ -80,7 +80,7 @@ static int maybe_want_oid(git_remote *remote, git_refspec *spec)
 	oid_head = git__calloc(1, sizeof(git_remote_head));
 	GIT_ERROR_CHECK_ALLOC(oid_head);
 
-	git_oid__fromstr(&oid_head->oid, spec->src, remote->repo->oid_type);
+	git_oid_from_string(&oid_head->oid, spec->src, remote->repo->oid_type);
 
 	if (spec->dst) {
 		oid_head->name = git__strdup(spec->dst);

@@ -20,10 +20,10 @@ void test_core_oidarray__add_and_remove_oid_from_shallowarray(void)
 	git_oid oid_0_obj, oid_1_obj, oid_2_obj, oid_3_obj;
 	git_array_oid_t array = GIT_ARRAY_INIT;
 
-	git_oid__fromstr(&oid_0_obj, oid_0, GIT_OID_SHA1);
-	git_oid__fromstr(&oid_1_obj, oid_1, GIT_OID_SHA1);
-	git_oid__fromstr(&oid_2_obj, oid_2, GIT_OID_SHA1);
-	git_oid__fromstr(&oid_3_obj, oid_3, GIT_OID_SHA1);
+	git_oid_from_string(&oid_0_obj, oid_0, GIT_OID_SHA1);
+	git_oid_from_string(&oid_1_obj, oid_1, GIT_OID_SHA1);
+	git_oid_from_string(&oid_2_obj, oid_2, GIT_OID_SHA1);
+	git_oid_from_string(&oid_3_obj, oid_3, GIT_OID_SHA1);
 
 	/* add some initial ids */
 	git_oidarray__add(&array, &oid_0_obj);

@@ -171,8 +171,9 @@ GIT_INLINE(void) clar__assert_equal_oidstr(
 	const char *one_str, const git_oid *two)
 {
 	git_oid one;
+	git_oid_t oid_type = git_oid_type(two);
 
-	if (git_oid__fromstr(&one, one_str, git_oid_type(two)) < 0) {
+	if (git_oid_from_prefix(&one, one_str, git_oid_hexsize(oid_type), oid_type) < 0) {
 		clar__fail(file, func, line, desc, "could not parse oid string", 1);
 	} else {
 		clar__assert_equal_oid(file, func, line, desc, &one, two);

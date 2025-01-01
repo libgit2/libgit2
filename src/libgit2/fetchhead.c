@@ -202,7 +202,7 @@ static int fetchhead_ref_parse(
 		return -1;
 	}
 
-	if (git_oid__fromstr(oid, oid_str, oid_type) < 0) {
+	if (git_oid_from_string(oid, oid_str, oid_type) < 0) {
 		const git_error *oid_err = git_error_last();
 		const char *err_msg = oid_err ? oid_err->message : "invalid object ID";
 

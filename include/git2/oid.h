@@ -114,12 +114,62 @@ typedef struct git_oid {
 
 #ifdef GIT_EXPERIMENTAL_SHA256
 
-GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str, git_oid_t type);
-GIT_EXTERN(int) git_oid_fromstrp(git_oid *out, const char *str, git_oid_t type);
-GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length, git_oid_t type);
-GIT_EXTERN(int) git_oid_fromraw(git_oid *out, const unsigned char *raw, git_oid_t type);
+/**
+ * Parse a NUL terminated hex formatted object id string into a `git_oid`.
+ *
+ * The given string must be NUL terminated, and must be the hex size of
+ * the given object ID type - 40 characters for SHA1, 64 characters for
+ * SHA256.
+ *
+ * To parse an incomplete object ID (an object ID prefix), or a sequence
+ * of characters that is not NUL terminated, use `git_oid_from_prefix`.
+ *
+ * @param out oid structure the result is written into.
+ * @param str input hex string
+ * @param type object id type
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_oid_from_string(
+	git_oid *out,
+	const char *str,
+	git_oid_t type);
 
-#else
+/**
+ * Parse the given number of characters out of a hex formatted object id
+ * string into a `git_oid`.
+ *
+ * The given length can be between 0 and the hex size for the given object ID
+ * type - 40 characters for SHA1, 64 characters for SHA256. The remainder of
+ * the `git_oid` will be set to zeros.
+ *
+ * @param out oid structure the result is written into.
+ * @param str input hex prefix
+ * @param type object id type
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_oid_from_prefix(
+	git_oid *out,
+	const char *str,
+	size_t len,
+	git_oid_t type);
+
+/**
+ * Parse a raw object id into a `git_oid`.
+ *
+ * The appropriate number of bytes for the given object ID type will
+ * be read from the byte array - 20 bytes for SHA1, 32 bytes for SHA256.
+ *
+ * @param out oid structure the result is written into.
+ * @param raw raw object ID bytes
+ * @param type object id type
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_oid_from_raw(
+	git_oid *out,
+	const unsigned char *raw,
+	git_oid_t type);
+
+#endif
 
 /**
  * Parse a hex formatted object id into a git_oid.
@@ -167,8 +217,6 @@ GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length);
  * @return 0 on success or error code
  */
 GIT_EXTERN(int) git_oid_fromraw(git_oid *out, const unsigned char *raw);
-
-#endif
 
 /**
  * Format a git_oid into a hex string.

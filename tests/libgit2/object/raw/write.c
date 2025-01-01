@@ -67,7 +67,7 @@ void test_body(object_data *d, git_rawobj *o)
 
    make_odb_dir();
    cl_git_pass(git_odb_open_ext(&db, odb_dir, NULL));
-   cl_git_pass(git_oid__fromstr(&id1, d->id, GIT_OID_SHA1));
+   cl_git_pass(git_oid_from_string(&id1, d->id, GIT_OID_SHA1));
 
    streaming_write(&id2, db, o);
    cl_assert(git_oid_cmp(&id1, &id2) == 0);

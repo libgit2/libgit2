@@ -54,7 +54,7 @@ static void assert_commit_parses(
 
 	if (expected_treeid) {
 		git_oid tree_oid;
-		cl_git_pass(git_oid__fromstr(&tree_oid, expected_treeid, oid_type));
+		cl_git_pass(git_oid_from_string(&tree_oid, expected_treeid, oid_type));
 		cl_assert_equal_oid(&tree_oid, &commit->tree_id);
 	}
 

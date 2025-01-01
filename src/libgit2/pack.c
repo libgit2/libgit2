@@ -1002,7 +1002,7 @@ int get_delta_base(
 		*curpos += used;
 	} else if (type == GIT_OBJECT_REF_DELTA) {
 		git_oid base_oid;
-		git_oid__fromraw(&base_oid, base_info, p->oid_type);
+		git_oid_from_raw(&base_oid, base_info, p->oid_type);
 
 		/* If we have the cooperative cache, search in it first */
 		if (p->has_cache) {
@@ -1372,7 +1372,7 @@ int git_pack_foreach_entry(
 			git_array_clear(oids);
 			GIT_ERROR_CHECK_ALLOC(oid);
 		}
-		git_oid__fromraw(oid, p->ids[i], p->oid_type);
+		git_oid_from_raw(oid, p->ids[i], p->oid_type);
 	}
 
 	git_mutex_unlock(&p->lock);
@@ -1441,7 +1441,7 @@ int git_pack_foreach_entry_offset(
 						ntohl(*((uint32_t *)(large_offset_ptr + 4)));
 			}
 
-			git_oid__fromraw(&current_oid, (index + p->oid_size * i), p->oid_type);
+			git_oid_from_raw(&current_oid, (index + p->oid_size * i), p->oid_type);
 			if ((error = cb(&current_oid, current_offset, data)) != 0) {
 				error = git_error_set_after_callback(error);
 				goto cleanup;
@@ -1450,7 +1450,7 @@ int git_pack_foreach_entry_offset(
 	} else {
 		for (i = 0; i < p->num_objects; i++) {
 			current_offset = ntohl(*(const uint32_t *)(index + (p->oid_size + 4) * i));
-			git_oid__fromraw(&current_oid, (index + (p->oid_size + 4) * i + 4), p->oid_type);
+			git_oid_from_raw(&current_oid, (index + (p->oid_size + 4) * i + 4), p->oid_type);
 			if ((error = cb(&current_oid, current_offset, data)) != 0) {
 				error = git_error_set_after_callback(error);
 				goto cleanup;
@@ -1595,7 +1595,7 @@ static int pack_entry_find_offset(
 	}
 
 	*offset_out = offset;
-	git_oid__fromraw(found_oid, current, p->oid_type);
+	git_oid_from_raw(found_oid, current, p->oid_type);
 
 #ifdef INDEX_DEBUG_LOOKUP
 	{

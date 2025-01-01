@@ -86,11 +86,11 @@ void test_diff_workdir__to_index_with_conflicts(void)
 	/* Adding an entry that represents a rename gets two files in conflict */
 	our_entry.path = "subdir/modified_file";
 	our_entry.mode = 0100644;
-	git_oid__fromstr(&our_entry.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf", GIT_OID_SHA1);
+	git_oid_from_string(&our_entry.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf", GIT_OID_SHA1);
 
 	their_entry.path = "subdir/rename_conflict";
 	their_entry.mode = 0100644;
-	git_oid__fromstr(&their_entry.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", GIT_OID_SHA1);
+	git_oid_from_string(&their_entry.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", GIT_OID_SHA1);
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 	cl_git_pass(git_index_conflict_add(index, NULL, &our_entry, &their_entry));
@@ -2015,9 +2015,9 @@ void test_diff_workdir__to_index_conflicted(void) {
 
 	ancestor.path = ours.path = theirs.path = "_file";
 	ancestor.mode = ours.mode = theirs.mode = 0100644;
-	git_oid__fromstr(&ancestor.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
-	git_oid__fromstr(&ours.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf", GIT_OID_SHA1);
-	git_oid__fromstr(&theirs.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", GIT_OID_SHA1);
+	git_oid_from_string(&ancestor.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
+	git_oid_from_string(&ours.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf", GIT_OID_SHA1);
+	git_oid_from_string(&theirs.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", GIT_OID_SHA1);
 	cl_git_pass(git_index_conflict_add(index, &ancestor, &ours, &theirs));
 
 	cl_git_pass(git_diff_tree_to_index(&diff1, g_repo, a, index, NULL));

@@ -25,7 +25,7 @@ static void email_for_commit(
 	git_commit *commit = NULL;
 	git_diff *diff = NULL;
 
-	git_oid__fromstr(&oid, commit_id, GIT_OID_SHA1);
+	git_oid_from_string(&oid, commit_id, GIT_OID_SHA1);
 
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 
@@ -324,7 +324,7 @@ void test_email_create__custom_summary_and_body(void)
 
 	opts.subject_prefix = "PPPPPATCH";
 
-	git_oid__fromstr(&oid, "627e7e12d87e07a83fad5b6bfa25e86ead4a5270", GIT_OID_SHA1);
+	git_oid_from_string(&oid, "627e7e12d87e07a83fad5b6bfa25e86ead4a5270", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
 	cl_git_pass(git_email_create_from_diff(&buf, diff, 2, 4, &oid, summary, body, git_commit_author(commit), &opts));

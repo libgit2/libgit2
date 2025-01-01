@@ -28,11 +28,7 @@ static int oid_error_invalid(const char *msg)
 	return -1;
 }
 
-int git_oid__fromstrn(
-	git_oid *out,
-	const char *str,
-	size_t length,
-	git_oid_t type)
+int git_oid_from_prefix(git_oid *out, const char *str, size_t len, git_oid_t type)
 {
 	size_t size, p;
 	int v;
@@ -43,10 +39,10 @@ int git_oid__fromstrn(
 	if (!(size = git_oid_size(type)))
 		return oid_error_invalid("unknown type");
 
-	if (!length)
+	if (!len)
 		return oid_error_invalid("too short");
 
-	if (length > git_oid_hexsize(type))
+	if (len > git_oid_hexsize(type))
 		return oid_error_invalid("too long");
 
 #ifdef GIT_EXPERIMENTAL_SHA256
@@ -54,7 +50,7 @@ int git_oid__fromstrn(
 #endif
 	memset(out->id, 0, size);
 
-	for (p = 0; p < length; p++) {
+	for (p = 0; p < len; p++) {
 		v = git__fromhex(str[p]);
 		if (v < 0)
 			return oid_error_invalid("contains invalid characters");
@@ -65,54 +61,53 @@ int git_oid__fromstrn(
 	return 0;
 }
 
-int git_oid__fromstrp(git_oid *out, const char *str, git_oid_t type)
+int git_oid_from_string(git_oid *out, const char *str, git_oid_t type)
 {
-	return git_oid__fromstrn(out, str, strlen(str), type);
+	size_t hexsize;
+
+	if (!(hexsize = git_oid_hexsize(type)))
+		return oid_error_invalid("unknown type");
+
+	if (git_oid_from_prefix(out, str, hexsize, type) < 0)
+		return -1;
+
+	if (str[hexsize] != '\0')
+		return oid_error_invalid("too long");
+
+	return 0;
 }
 
-int git_oid__fromstr(git_oid *out, const char *str, git_oid_t type)
+int git_oid_from_raw(git_oid *out, const unsigned char *raw, git_oid_t type)
 {
-	return git_oid__fromstrn(out, str, git_oid_hexsize(type), type);
-}
+	size_t size;
+
+	if (!(size = git_oid_size(type)))
+		return oid_error_invalid("unknown type");
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-int git_oid_fromstrn(
-	git_oid *out,
-	const char *str,
-	size_t length,
-	git_oid_t type)
-{
-	return git_oid__fromstrn(out, str, length, type);
+	out->type = type;
+#endif
+	memcpy(out->id, raw, size);
+	return 0;
 }
 
-int git_oid_fromstrp(git_oid *out, const char *str, git_oid_t type)
-{
-	return git_oid_fromstrn(out, str, strlen(str), type);
-}
-
-int git_oid_fromstr(git_oid *out, const char *str, git_oid_t type)
-{
-	return git_oid_fromstrn(out, str, git_oid_hexsize(type), type);
-}
-#else
 int git_oid_fromstrn(
 	git_oid *out,
 	const char *str,
 	size_t length)
 {
-	return git_oid__fromstrn(out, str, length, GIT_OID_SHA1);
+	return git_oid_from_prefix(out, str, length, GIT_OID_SHA1);
 }
 
 int git_oid_fromstrp(git_oid *out, const char *str)
 {
-	return git_oid__fromstrn(out, str, strlen(str), GIT_OID_SHA1);
+	return git_oid_from_prefix(out, str, strlen(str), GIT_OID_SHA1);
 }
 
 int git_oid_fromstr(git_oid *out, const char *str)
 {
-	return git_oid__fromstrn(out, str, GIT_OID_SHA1_HEXSIZE, GIT_OID_SHA1);
+	return git_oid_from_prefix(out, str, GIT_OID_SHA1_HEXSIZE, GIT_OID_SHA1);
 }
-#endif
 
 int git_oid_nfmt(char *str, size_t n, const git_oid *oid)
 {
@@ -227,31 +222,10 @@ char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
 	return out;
 }
 
-int git_oid__fromraw(git_oid *out, const unsigned char *raw, git_oid_t type)
-{
-	size_t size;
-
-	if (!(size = git_oid_size(type)))
-		return oid_error_invalid("unknown type");
-
-#ifdef GIT_EXPERIMENTAL_SHA256
-	out->type = type;
-#endif
-	memcpy(out->id, raw, size);
-	return 0;
-}
-
-#ifdef GIT_EXPERIMENTAL_SHA256
-int git_oid_fromraw(git_oid *out, const unsigned char *raw, git_oid_t type)
-{
-	return git_oid__fromraw(out, raw, type);
-}
-#else
 int git_oid_fromraw(git_oid *out, const unsigned char *raw)
 {
-	return git_oid__fromraw(out, raw, GIT_OID_SHA1);
+	return git_oid_from_raw(out, raw, GIT_OID_SHA1);
 }
-#endif
 
 int git_oid_cpy(git_oid *out, const git_oid *src)
 {
