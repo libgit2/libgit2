@@ -21,14 +21,14 @@ const char *str_oid_sha256_m = "d3e63d2f2e43d1fee23a74bf19a0ede156cba2d1bd602eba
 
 void test_core_oid__initialize(void)
 {
-	cl_git_pass(git_oid__fromstr(&id_sha1, str_oid_sha1, GIT_OID_SHA1));
-	cl_git_pass(git_oid__fromstrp(&idp_sha1, str_oid_sha1_p, GIT_OID_SHA1));
-	cl_git_fail(git_oid__fromstrp(&idm_sha1, str_oid_sha1_m, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id_sha1, str_oid_sha1, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_prefix(&idp_sha1, str_oid_sha1_p, strlen(str_oid_sha1_p), GIT_OID_SHA1));
+	cl_git_fail(git_oid_from_prefix(&idm_sha1, str_oid_sha1_m, strlen(str_oid_sha1_m), GIT_OID_SHA1));
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-	cl_git_pass(git_oid__fromstr(&id_sha256, str_oid_sha256, GIT_OID_SHA256));
-	cl_git_pass(git_oid__fromstrp(&idp_sha256, str_oid_sha256_p, GIT_OID_SHA256));
-	cl_git_fail(git_oid__fromstrp(&idm_sha256, str_oid_sha256_m, GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&id_sha256, str_oid_sha256, GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_prefix(&idp_sha256, str_oid_sha256_p, strlen(str_oid_sha256_p), GIT_OID_SHA256));
+	cl_git_fail(git_oid_from_prefix(&idm_sha256, str_oid_sha256_m, strlen(str_oid_sha256_m), GIT_OID_SHA256));
 #endif
 }
 

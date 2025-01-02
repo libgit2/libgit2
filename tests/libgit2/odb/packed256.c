@@ -13,7 +13,7 @@ void test_odb_packed256__initialize(void)
 
 	opts.oid_type = GIT_OID_SHA256;
 
-	cl_git_pass(git_odb__open(
+	cl_git_pass(git_odb_open_ext(
 		&_odb,
 		cl_fixture("testrepo_256.git/objects"),
 		&opts));
@@ -37,7 +37,7 @@ void test_odb_packed256__mass_read(void)
 		git_oid id;
 		git_odb_object *obj;
 
-		cl_git_pass(git_oid__fromstr(&id, packed_objects_256[i], GIT_OID_SHA256));
+		cl_git_pass(git_oid_from_string(&id, packed_objects_256[i], GIT_OID_SHA256));
 		cl_assert(git_odb_exists(_odb, &id) == 1);
 		cl_git_pass(git_odb_read(&obj, _odb, &id));
 
@@ -57,7 +57,7 @@ void test_odb_packed256__read_header_0(void)
 		size_t len;
 		git_object_t type;
 
-		cl_git_pass(git_oid__fromstr(&id, packed_objects_256[i], GIT_OID_SHA256));
+		cl_git_pass(git_oid_from_string(&id, packed_objects_256[i], GIT_OID_SHA256));
 
 		cl_git_pass(git_odb_read(&obj, _odb, &id));
 		cl_git_pass(git_odb_read_header(&len, &type, _odb, &id));
@@ -81,7 +81,7 @@ void test_odb_packed256__read_header_1(void)
 		size_t len;
 		git_object_t type;
 
-		cl_git_pass(git_oid__fromstr(&id, loose_objects_256[i], GIT_OID_SHA256));
+		cl_git_pass(git_oid_from_string(&id, loose_objects_256[i], GIT_OID_SHA256));
 
 		cl_assert(git_odb_exists(_odb, &id) == 1);
 

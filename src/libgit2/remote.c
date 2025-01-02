@@ -1959,7 +1959,7 @@ static int update_tips_for_spec(
 	if (git_oid__is_hexstr(spec->src, remote->repo->oid_type)) {
 		git_oid id;
 
-		if ((error = git_oid__fromstr(&id, spec->src, remote->repo->oid_type)) < 0)
+		if ((error = git_oid_from_string(&id, spec->src, remote->repo->oid_type)) < 0)
 			goto on_error;
 
 		if (spec->dst &&

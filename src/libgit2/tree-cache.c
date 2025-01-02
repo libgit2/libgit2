@@ -118,7 +118,7 @@ static int read_tree_internal(
 		if (buffer + oid_size > buffer_end)
 			goto corrupted;
 
-		git_oid__fromraw(&tree->oid, (const unsigned char *)buffer, oid_type);
+		git_oid_from_raw(&tree->oid, (const unsigned char *)buffer, oid_type);
 		buffer += oid_size;
 	}
 

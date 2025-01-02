@@ -267,17 +267,11 @@ GIT_INLINE(void) git_oid_clear(git_oid *out, git_oid_t type)
 
 /* SHA256 support */
 
-int git_oid__fromstr(git_oid *out, const char *str, git_oid_t type);
-
-int git_oid__fromstrp(git_oid *out, const char *str, git_oid_t type);
-
-int git_oid__fromstrn(
-	git_oid *out,
-	const char *str,
-	size_t length,
-	git_oid_t type);
-
-int git_oid__fromraw(git_oid *out, const unsigned char *raw, git_oid_t type);
+#ifndef GIT_EXPERIMENTAL_SHA256
+int git_oid_from_string(git_oid *out, const char *str, git_oid_t type);
+int git_oid_from_prefix(git_oid *out, const char *str, size_t len, git_oid_t type);
+int git_oid_from_raw(git_oid *out, const unsigned char *data, git_oid_t type);
+#endif
 
 int git_oid_global_init(void);
 

@@ -29,7 +29,7 @@ void test_object_lookup256__lookup_wrong_type_returns_enotfound(void)
 	git_oid oid;
 	git_object *object;
 
-	cl_git_pass(git_oid__fromstr(&oid, commit, GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&oid, commit, GIT_OID_SHA256));
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJECT_TAG));
 #endif
@@ -44,7 +44,7 @@ void test_object_lookup256__lookup_nonexisting_returns_enotfound(void)
 	git_oid oid;
 	git_object *object;
 
-	cl_git_pass(git_oid__fromstr(&oid, unknown, GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&oid, unknown, GIT_OID_SHA256));
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJECT_ANY));
 #endif
@@ -59,7 +59,7 @@ void test_object_lookup256__lookup_wrong_type_by_abbreviated_id_returns_enotfoun
 	git_oid oid;
 	git_object *object;
 
-	cl_git_pass(git_oid__fromstrn(&oid, commit, strlen(commit), GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_prefix(&oid, commit, strlen(commit), GIT_OID_SHA256));
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_object_lookup_prefix(&object, g_repo, &oid, strlen(commit), GIT_OBJECT_TAG));
 #endif
@@ -74,7 +74,7 @@ void test_object_lookup256__lookup_wrong_type_eventually_returns_enotfound(void)
 	git_oid oid;
 	git_object *object;
 
-	cl_git_pass(git_oid__fromstr(&oid, commit, GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&oid, commit, GIT_OID_SHA256));
 
 	cl_git_pass(git_object_lookup(&object, g_repo, &oid, GIT_OBJECT_COMMIT));
 	git_object_free(object);
@@ -96,7 +96,7 @@ void test_object_lookup256__lookup_corrupt_object_returns_error(void)
 	git_object *object;
 	size_t i;
 
-	cl_git_pass(git_oid__fromstr(&oid, commit, GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&oid, commit, GIT_OID_SHA256));
 	cl_git_pass(git_str_joinpath(&path, git_repository_path(g_repo), file));
 	cl_git_pass(git_futils_readbuffer(&contents, path.ptr));
 
@@ -131,7 +131,7 @@ void test_object_lookup256__lookup_object_with_wrong_hash_returns_error(void)
 	git_object *object;
 	git_oid oid;
 
-	cl_git_pass(git_oid__fromstr(&oid, commit, GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&oid, commit, GIT_OID_SHA256));
 
 	/* Copy object to another location with wrong hash */
 	cl_git_pass(git_str_joinpath(&oldpath, git_repository_path(g_repo), oldloose));

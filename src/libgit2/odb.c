@@ -536,9 +536,14 @@ static void normalize_options(
 		opts->oid_type = GIT_OID_DEFAULT;
 }
 
-int git_odb__new(git_odb **out, const git_odb_options *opts)
+int git_odb_new_ext(git_odb **out, const git_odb_options *opts)
 {
-	git_odb *db = git__calloc(1, sizeof(*db));
+	git_odb *db;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ERROR_CHECK_VERSION(opts, GIT_ODB_OPTIONS_VERSION, "git_odb_options");
+
+	db = git__calloc(1, sizeof(*db));
 	GIT_ERROR_CHECK_ALLOC(db);
 
 	normalize_options(&db->options, opts);
@@ -564,17 +569,10 @@ int git_odb__new(git_odb **out, const git_odb_options *opts)
 	return 0;
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-int git_odb_new(git_odb **out, const git_odb_options *opts)
-{
-	return git_odb__new(out, opts);
-}
-#else
 int git_odb_new(git_odb **out)
 {
-	return git_odb__new(out, NULL);
+	return git_odb_new_ext(out, NULL);
 }
-#endif
 
 static int add_backend_internal(
 	git_odb *odb, git_odb_backend *backend,
@@ -833,7 +831,7 @@ int git_odb_set_commit_graph(git_odb *odb, git_commit_graph *cgraph)
 	return error;
 }
 
-int git_odb__open(
+int git_odb_open_ext(
 	git_odb **out,
 	const char *objects_dir,
 	const git_odb_options *opts)
@@ -842,10 +840,11 @@ int git_odb__open(
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(objects_dir);
+	GIT_ERROR_CHECK_VERSION(opts, GIT_ODB_OPTIONS_VERSION, "git_odb_options");
 
 	*out = NULL;
 
-	if (git_odb__new(&db, opts) < 0)
+	if (git_odb_new_ext(&db, opts) < 0)
 		return -1;
 
 	if (git_odb__add_default_backends(db, objects_dir, 0, 0) < 0) {
@@ -857,24 +856,10 @@ int git_odb__open(
 	return 0;
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
-int git_odb_open(
-	git_odb **out,
-	const char *objects_dir,
-	const git_odb_options *opts)
-{
-	return git_odb__open(out, objects_dir, opts);
-}
-
-#else
-
 int git_odb_open(git_odb **out, const char *objects_dir)
 {
-	return git_odb__open(out, objects_dir, NULL);
+	return git_odb_open_ext(out, objects_dir, NULL);
 }
-
-#endif
 
 int git_odb__set_caps(git_odb *odb, int caps)
 {

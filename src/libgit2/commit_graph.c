@@ -502,7 +502,7 @@ static int git_commit_graph_entry_get_byindex(
 	}
 
 	commit_data = file->commit_data + pos * (oid_size + 4 * sizeof(uint32_t));
-	git_oid__fromraw(&e->tree_oid, commit_data, file->oid_type);
+	git_oid_from_raw(&e->tree_oid, commit_data, file->oid_type);
 	e->parent_indices[0] = ntohl(*((uint32_t *)(commit_data + oid_size)));
 	e->parent_indices[1] = ntohl(
 			*((uint32_t *)(commit_data + oid_size + sizeof(uint32_t))));
@@ -536,7 +536,7 @@ static int git_commit_graph_entry_get_byindex(
 		}
 	}
 
-	git_oid__fromraw(&e->sha1, &file->oid_lookup[pos * oid_size], file->oid_type);
+	git_oid_from_raw(&e->sha1, &file->oid_lookup[pos * oid_size], file->oid_type);
 	return 0;
 }
 

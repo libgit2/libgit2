@@ -328,33 +328,35 @@ on_error:
 	return NULL;
 }
 
-int git_repository__new(git_repository **out, git_oid_t oid_type)
+int git_repository_new_ext(
+	git_repository **out,
+	git_repository_new_options *opts)
 {
 	git_repository *repo;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ERROR_CHECK_VERSION(opts,
+		GIT_REPOSITORY_NEW_OPTIONS_VERSION,
+		"git_repository_new_options");
+
+	if (opts && opts->oid_type)
+		GIT_ASSERT_ARG(git_oid_type_is_valid(opts->oid_type));
 
 	*out = repo = repository_alloc();
 	GIT_ERROR_CHECK_ALLOC(repo);
 
-	GIT_ASSERT_ARG(git_oid_type_is_valid(oid_type));
-
 	repo->is_bare = 1;
 	repo->is_worktree = 0;
-	repo->oid_type = oid_type;
+	repo->oid_type = opts && opts->oid_type ? opts->oid_type :
+		GIT_OID_DEFAULT;
 
 	return 0;
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-int git_repository_new(git_repository **out, git_repository_new_options *opts)
+int git_repository_new(git_repository **out)
 {
-	return git_repository__new(out, opts && opts->oid_type ? opts->oid_type : GIT_OID_DEFAULT);
+	return git_repository_new_ext(out, NULL);
 }
-#else
-int git_repository_new(git_repository** out)
-{
-	return git_repository__new(out, GIT_OID_SHA1);
-}
-#endif
 
 static int load_config_data(git_repository *repo, const git_config *config)
 {
@@ -1548,7 +1550,7 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 		odb_opts.oid_type = repo->oid_type;
 
 		if ((error = repository_odb_path(&odb_path, repo)) < 0 ||
-		    (error = git_odb__new(&odb, &odb_opts)) < 0 ||
+		    (error = git_odb_new_ext(&odb, &odb_opts)) < 0 ||
 		    (error = repository_odb_alternates(odb, repo)) < 0)
 			return error;
 
@@ -1657,11 +1659,13 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 	if (repo->_index == NULL) {
 		git_str index_path = GIT_STR_INIT;
 		git_index *index;
+		git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
 		if ((error = repository_index_path(&index_path, repo)) < 0)
 			return error;
 
-		error = git_index__open(&index, index_path.ptr, repo->oid_type);
+		index_opts.oid_type = repo->oid_type;
+		error = git_index_open_ext(&index, index_path.ptr, &index_opts);
 
 		if (!error) {
 			GIT_REFCOUNT_OWN(index, repo);

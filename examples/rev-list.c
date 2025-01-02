@@ -141,7 +141,7 @@ static int revwalk_parse_revs(git_repository *repo, git_revwalk *walk, struct ar
 				continue;
 
 #ifdef GIT_EXPERIMENTAL_SHA256
-			if ((error = git_oid_fromstr(&oid, curr, GIT_OID_SHA1)))
+			if ((error = git_oid_from_string(&oid, curr, GIT_OID_SHA1)))
 				return error;
 #else
 			if ((error = git_oid_fromstr(&oid, curr)))

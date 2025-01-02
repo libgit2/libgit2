@@ -552,7 +552,10 @@ static int locate_object_short_oid(
 		return git_odb__error_ambiguous("multiple matches in loose objects");
 
 	/* Convert obtained hex formatted oid to raw */
-	error = git_oid__fromstr(res_oid, (char *)state.res_oid, backend->options.oid_type);
+	error = git_oid_from_prefix(res_oid, (char *)state.res_oid,
+		git_oid_hexsize(backend->options.oid_type),
+		backend->options.oid_type);
+
 	if (error)
 		return error;
 

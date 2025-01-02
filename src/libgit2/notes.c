@@ -704,7 +704,7 @@ static int process_entry_path(
 		goto cleanup;
 	}
 
-	error = git_oid__fromstr(annotated_object_id, buf.ptr, it->repo->oid_type);
+	error = git_oid_from_string(annotated_object_id, buf.ptr, it->repo->oid_type);
 
 cleanup:
 	git_str_dispose(&buf);

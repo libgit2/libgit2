@@ -616,7 +616,7 @@ int git_repository_mergehead_foreach(
 			goto cleanup;
 		}
 
-		if ((error = git_oid__fromstr(&oid, line, repo->oid_type)) < 0)
+		if ((error = git_oid_from_string(&oid, line, repo->oid_type)) < 0)
 			goto cleanup;
 
 		if ((error = cb(&oid, payload)) != 0) {
@@ -2014,11 +2014,14 @@ static int index_from_diff_list(
 	git_index *index;
 	size_t i;
 	git_merge_diff *conflict;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 	int error = 0;
 
 	*out = NULL;
 
-	if ((error = git_index__new(&index, oid_type)) < 0)
+	index_opts.oid_type = oid_type;
+
+	if ((error = git_index_new_ext(&index, &index_opts)) < 0)
 		return error;
 
 	if ((error = git_index__fill(index, &diff_list->staged)) < 0)
@@ -2195,6 +2198,7 @@ int git_merge_trees(
 {
 	git_iterator *ancestor_iter = NULL, *our_iter = NULL, *their_iter = NULL;
 	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	int error;
 
 	GIT_ASSERT_ARG(out);
@@ -2211,7 +2215,7 @@ int git_merge_trees(
 			result = our_tree;
 
 		if (result) {
-			if ((error = git_index__new(out, repo->oid_type)) == 0)
+			if ((error = git_index_new_ext(out, &index_opts)) == 0)
 				error = git_index_read_tree(*out, result);
 
 			return error;

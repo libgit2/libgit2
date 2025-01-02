@@ -173,7 +173,7 @@ void test_pack_indexer__fix_thin(void)
 
 	/* Store the missing base into your ODB so the indexer can fix the pack */
 	cl_git_pass(git_odb_write(&id, odb, base_obj, base_obj_len, GIT_OBJECT_BLOB));
-	git_oid__fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18", GIT_OID_SHA1);
+	git_oid_from_string(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18", GIT_OID_SHA1);
 	cl_assert_equal_oid(&should_id, &id);
 
 #ifdef GIT_EXPERIMENTAL_SHA256
@@ -250,7 +250,7 @@ void test_pack_indexer__corrupt_length(void)
 
 	/* Store the missing base into your ODB so the indexer can fix the pack */
 	cl_git_pass(git_odb_write(&id, odb, base_obj, base_obj_len, GIT_OBJECT_BLOB));
-	git_oid__fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18", GIT_OID_SHA1);
+	git_oid_from_string(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18", GIT_OID_SHA1);
 	cl_assert_equal_oid(&should_id, &id);
 
 #ifdef GIT_EXPERIMENTAL_SHA256

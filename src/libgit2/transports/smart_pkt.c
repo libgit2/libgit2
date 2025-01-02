@@ -64,7 +64,7 @@ static int ack_pkt(
 	len -= 4;
 
 	if (len < oid_hexsize ||
-	    git_oid__fromstr(&pkt->oid, line, data->oid_type) < 0)
+	    git_oid_from_prefix(&pkt->oid, line, oid_hexsize, data->oid_type) < 0)
 		goto out_err;
 	line += oid_hexsize;
 	len -= oid_hexsize;
@@ -295,7 +295,7 @@ static int ref_pkt(
 	oid_hexsize = git_oid_hexsize(data->oid_type);
 
 	if (len < oid_hexsize ||
-	    git_oid__fromstr(&pkt->head.oid, line, data->oid_type) < 0)
+	    git_oid_from_prefix(&pkt->head.oid, line, oid_hexsize, data->oid_type) < 0)
 		goto out_err;
 	line += oid_hexsize;
 	len -= oid_hexsize;
@@ -468,7 +468,7 @@ static int shallow_pkt(
 	if (len != oid_hexsize)
 		goto out_err;
 
-	git_oid__fromstr(&pkt->oid, line, data->oid_type);
+	git_oid_from_prefix(&pkt->oid, line, oid_hexsize, data->oid_type);
 	line += oid_hexsize + 1;
 	len -= oid_hexsize + 1;
 
@@ -507,7 +507,7 @@ static int unshallow_pkt(
 	if (len != oid_hexsize)
 		goto out_err;
 
-	git_oid__fromstr(&pkt->oid, line, data->oid_type);
+	git_oid_from_prefix(&pkt->oid, line, oid_hexsize, data->oid_type);
 	line += oid_hexsize + 1;
 	len -= oid_hexsize + 1;
 

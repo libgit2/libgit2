@@ -160,13 +160,6 @@ void git_odb_object__free(void *object);
 
 /* SHA256 support */
 
-int git_odb__new(git_odb **out, const git_odb_options *opts);
-
-int git_odb__open(
-	git_odb **out,
-	const char *objects_dir,
-	const git_odb_options *opts);
-
 int git_odb__hash(
 	git_oid *out,
 	const void *data,
@@ -180,9 +173,22 @@ int git_odb__hashfile(
 	git_object_t object_type,
 	git_oid_t oid_type);
 
-GIT_EXTERN(int) git_odb__backend_loose(
+int git_odb__backend_loose(
 	git_odb_backend **out,
 	const char *objects_dir,
 	git_odb_backend_loose_options *opts);
+
+#ifndef GIT_EXPERIMENTAL_SHA256
+
+int git_odb_open_ext(
+	git_odb **odb_out,
+	const char *objects_dir,
+	const git_odb_options *opts);
+
+int git_odb_new_ext(
+	git_odb **odb,
+	const git_odb_options *opts);
+
+#endif
 
 #endif

@@ -139,8 +139,8 @@ void test_checkout_tree__doesnt_write_unrequested_files_to_worktree(void)
 	git_commit* p_chomped_commit;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	git_oid__fromstr(&master_oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1);
-	git_oid__fromstr(&chomped_oid, "e90810b8df3e80c413d903f631643c716887138d", GIT_OID_SHA1);
+	git_oid_from_string(&master_oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1);
+	git_oid_from_string(&chomped_oid, "e90810b8df3e80c413d903f631643c716887138d", GIT_OID_SHA1);
 	cl_git_pass(git_commit_lookup(&p_master_commit, g_repo, &master_oid));
 	cl_git_pass(git_commit_lookup(&p_chomped_commit, g_repo, &chomped_oid));
 
@@ -609,7 +609,7 @@ void test_checkout_tree__donot_update_deleted_file_by_default(void)
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
-	cl_git_pass(git_oid__fromstr(&old_id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&old_id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&old_commit, g_repo, &old_id));
 	cl_git_pass(git_reset(g_repo, (git_object *)old_commit, GIT_RESET_HARD, NULL));
 
@@ -619,7 +619,7 @@ void test_checkout_tree__donot_update_deleted_file_by_default(void)
 
 	cl_assert(!git_fs_path_exists("testrepo/branch_file.txt"));
 
-	cl_git_pass(git_oid__fromstr(&new_id, "099fabac3a9ea935598528c27f866e34089c2eff", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&new_id, "099fabac3a9ea935598528c27f866e34089c2eff", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&new_commit, g_repo, &new_id));
 
 
@@ -934,16 +934,16 @@ static void create_conflict(const char *path)
 	memset(&entry, 0x0, sizeof(git_index_entry));
 	entry.mode = 0100644;
 	GIT_INDEX_ENTRY_STAGE_SET(&entry, 1);
-	git_oid__fromstr(&entry.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
+	git_oid_from_string(&entry.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
 	entry.path = path;
 	cl_git_pass(git_index_add(index, &entry));
 
 	GIT_INDEX_ENTRY_STAGE_SET(&entry, 2);
-	git_oid__fromstr(&entry.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf", GIT_OID_SHA1);
+	git_oid_from_string(&entry.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf", GIT_OID_SHA1);
 	cl_git_pass(git_index_add(index, &entry));
 
 	GIT_INDEX_ENTRY_STAGE_SET(&entry, 3);
-	git_oid__fromstr(&entry.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", GIT_OID_SHA1);
+	git_oid_from_string(&entry.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", GIT_OID_SHA1);
 	cl_git_pass(git_index_add(index, &entry));
 
 	cl_git_pass(git_index_write(index));
@@ -979,7 +979,7 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 	cl_git_pass(git_repository_index(&index, g_repo));
 
 	/* test a freshly added executable */
-	cl_git_pass(git_oid__fromstr(&executable_oid, "afe4393b2b2a965f06acf2ca9658eaa01e0cd6b6", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&executable_oid, "afe4393b2b2a965f06acf2ca9658eaa01e0cd6b6", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
@@ -990,7 +990,7 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 
 
 	/* Now start with a commit which has a text file */
-	cl_git_pass(git_oid__fromstr(&executable_oid, "cf80f8de9f1185bf3a05f993f6121880dd0cfbc9", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&executable_oid, "cf80f8de9f1185bf3a05f993f6121880dd0cfbc9", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
@@ -1001,7 +1001,7 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 
 
 	/* And then check out to a commit which converts the text file to an executable */
-	cl_git_pass(git_oid__fromstr(&executable_oid, "144344043ba4d4a405da03de3844aa829ae8be0e", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&executable_oid, "144344043ba4d4a405da03de3844aa829ae8be0e", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
@@ -1012,7 +1012,7 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 
 
 	/* Finally, check out the text file again and check that the exec bit is cleared */
-	cl_git_pass(git_oid__fromstr(&executable_oid, "cf80f8de9f1185bf3a05f993f6121880dd0cfbc9", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&executable_oid, "cf80f8de9f1185bf3a05f993f6121880dd0cfbc9", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
@@ -1054,7 +1054,7 @@ void test_checkout_tree__filemode_preserved_in_workdir(void)
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	/* test a freshly added executable */
-	cl_git_pass(git_oid__fromstr(&executable_oid, "afe4393b2b2a965f06acf2ca9658eaa01e0cd6b6", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&executable_oid, "afe4393b2b2a965f06acf2ca9658eaa01e0cd6b6", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
@@ -1064,7 +1064,7 @@ void test_checkout_tree__filemode_preserved_in_workdir(void)
 
 
 	/* Now start with a commit which has a text file */
-	cl_git_pass(git_oid__fromstr(&executable_oid, "cf80f8de9f1185bf3a05f993f6121880dd0cfbc9", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&executable_oid, "cf80f8de9f1185bf3a05f993f6121880dd0cfbc9", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
@@ -1074,7 +1074,7 @@ void test_checkout_tree__filemode_preserved_in_workdir(void)
 
 
 	/* And then check out to a commit which converts the text file to an executable */
-	cl_git_pass(git_oid__fromstr(&executable_oid, "144344043ba4d4a405da03de3844aa829ae8be0e", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&executable_oid, "144344043ba4d4a405da03de3844aa829ae8be0e", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
@@ -1084,7 +1084,7 @@ void test_checkout_tree__filemode_preserved_in_workdir(void)
 
 
 	/* Finally, check out the text file again and check that the exec bit is cleared */
-	cl_git_pass(git_oid__fromstr(&executable_oid, "cf80f8de9f1185bf3a05f993f6121880dd0cfbc9", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&executable_oid, "cf80f8de9f1185bf3a05f993f6121880dd0cfbc9", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
@@ -1103,7 +1103,7 @@ void test_checkout_tree__removes_conflicts(void)
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_index *index;
 
-	cl_git_pass(git_oid__fromstr(&commit_id, "afe4393b2b2a965f06acf2ca9658eaa01e0cd6b6", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&commit_id, "afe4393b2b2a965f06acf2ca9658eaa01e0cd6b6", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &commit_id));
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
@@ -1146,7 +1146,7 @@ void test_checkout_tree__removes_conflicts_only_by_pathscope(void)
 	git_index *index;
 	const char *path = "executable.txt";
 
-	cl_git_pass(git_oid__fromstr(&commit_id, "afe4393b2b2a965f06acf2ca9658eaa01e0cd6b6", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&commit_id, "afe4393b2b2a965f06acf2ca9658eaa01e0cd6b6", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &commit_id));
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
@@ -1574,7 +1574,7 @@ static void modify_index_ondisk(void)
 	cl_git_pass(git_repository_open(&other_repo, git_repository_workdir(g_repo)));
 	cl_git_pass(git_repository_index(&other_index, other_repo));
 
-	cl_git_pass(git_oid__fromstr(&entry.id, "1385f264afb75a56a5bec74243be9b367ba4ca08", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&entry.id, "1385f264afb75a56a5bec74243be9b367ba4ca08", GIT_OID_SHA1));
 	entry.mode = 0100644;
 	entry.path = "README";
 

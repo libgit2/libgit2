@@ -2,6 +2,7 @@
 #include "path.h"
 #include "posix.h"
 #include "git2/sys/repository.h"
+#include "repository.h"
 
 static git_repository *repo;
 static git_str file_path_buf = GIT_STR_INIT;
@@ -470,18 +471,11 @@ void test_network_remote_local__anonymous_remote_inmemory_repo(void)
 {
 	git_repository *inmemory;
 	git_remote *remote;
-
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository_new_options repo_opts = GIT_REPOSITORY_NEW_OPTIONS_INIT;
-#endif
 
 	git_str_sets(&file_path_buf, cl_git_path_url(cl_fixture("testrepo.git")));
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-	cl_git_pass(git_repository_new(&inmemory, &repo_opts));
-#else
-	cl_git_pass(git_repository_new(&inmemory));
-#endif
+	cl_git_pass(git_repository_new_ext(&inmemory, &repo_opts));
 	cl_git_pass(git_remote_create_anonymous(&remote, inmemory, git_str_cstr(&file_path_buf)));
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_assert(git_remote_connected(remote));

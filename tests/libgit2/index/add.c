@@ -28,7 +28,7 @@ static void test_add_entry(
 {
 	git_index_entry entry = {{0}};
 
-	cl_git_pass(git_oid__fromstr(&entry.id, idstr, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&entry.id, idstr, GIT_OID_SHA1));
 
 	entry.path = mode == GIT_FILEMODE_TREE ? "test_folder" : "test_file";
 	entry.mode = mode;
@@ -90,11 +90,11 @@ void test_index_add__two_slash_prefixed(void)
 
 	orig_count = git_index_entrycount(g_index);
 
-	cl_git_pass(git_oid__fromstr(&one.id, "fa49b077972391ad58037050f2a75f74e3671e92", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&one.id, "fa49b077972391ad58037050f2a75f74e3671e92", GIT_OID_SHA1));
 	one.path = "/a";
 	one.mode = GIT_FILEMODE_BLOB;
 
-	cl_git_pass(git_oid__fromstr(&two.id, "3697d64be941a53d4ae8f6a271e4e3fa56b022cc", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&two.id, "3697d64be941a53d4ae8f6a271e4e3fa56b022cc", GIT_OID_SHA1));
 	two.path = "/a";
 	two.mode = GIT_FILEMODE_BLOB;
 

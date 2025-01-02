@@ -42,7 +42,7 @@ static git_odb *_odb;
 
 void test_odb_sorting__initialize(void)
 {
-	cl_git_pass(git_odb__new(&_odb, NULL));
+	cl_git_pass(git_odb_new(&_odb));
 }
 
 void test_odb_sorting__cleanup(void)
@@ -94,7 +94,7 @@ void test_odb_sorting__override_default_backend_priority(void)
 	);
 	git_odb__backend_loose(&loose, "./testrepo.git/objects", NULL);
 
-	cl_git_pass(git_odb__open(&new_odb, cl_fixture("testrepo.git/objects"), NULL));
+	cl_git_pass(git_odb_open(&new_odb, cl_fixture("testrepo.git/objects")));
 	cl_assert_equal_sz(2, git_odb_num_backends(new_odb));
 
 	cl_git_pass(git_odb_get_backend(&backend, new_odb, 0));

@@ -123,9 +123,9 @@ static void unmerged_index_init(git_index *index, int entries)
 	int write_theirs = 4;
 	git_oid ancestor, ours, theirs;
 
-	git_oid__fromstr(&ancestor, "452e4244b5d083ddf0460acf1ecc74db9dcfa11a", GIT_OID_SHA1);
-	git_oid__fromstr(&ours, "32504b727382542f9f089e24fddac5e78533e96c", GIT_OID_SHA1);
-	git_oid__fromstr(&theirs, "061d42a44cacde5726057b67558821d95db96f19", GIT_OID_SHA1);
+	git_oid_from_string(&ancestor, "452e4244b5d083ddf0460acf1ecc74db9dcfa11a", GIT_OID_SHA1);
+	git_oid_from_string(&ours, "32504b727382542f9f089e24fddac5e78533e96c", GIT_OID_SHA1);
+	git_oid_from_string(&theirs, "061d42a44cacde5726057b67558821d95db96f19", GIT_OID_SHA1);
 
 	cl_git_rewritefile("status/conflicting_file", "conflicting file\n");
 
@@ -247,13 +247,14 @@ void test_reset_hard__switch_file_to_dir(void)
 	git_signature *sig;
 	git_oid src_tree_id, tgt_tree_id;
 	git_oid src_id, tgt_id;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
 	cl_git_pass(git_repository_odb(&odb, repo));
 	cl_git_pass(git_odb_write(&entry.id, odb, "", 0, GIT_OBJECT_BLOB));
 	git_odb_free(odb);
 
 	entry.mode = GIT_FILEMODE_BLOB;
-	cl_git_pass(git_index__new(&idx, GIT_OID_SHA1));
+	cl_git_pass(git_index_new_ext(&idx, &index_opts));
 	cl_git_pass(git_signature_now(&sig, "foo", "bar"));
 
 	/* Create the old tree */
