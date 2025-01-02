@@ -32,13 +32,23 @@ int git_hash_sha256_init(git_hash_sha256_ctx *ctx)
 	return 0;
 }
 
-int git_hash_sha256_update(git_hash_sha256_ctx *ctx, const void *data, size_t len)
+int git_hash_sha256_update(git_hash_sha256_ctx *ctx, const void *_data, size_t len)
 {
+	const unsigned char *data = _data;
 	GIT_ASSERT_ARG(ctx);
-	if (SHA256Input(&ctx->c, data, len)) {
-		git_error_set(GIT_ERROR_SHA, "SHA256 error");
-		return -1;
+
+	while (len > 0) {
+		unsigned int chunk = (len > UINT_MAX) ? UINT_MAX : (unsigned int)len;
+
+		if (SHA256Input(&ctx->c, data, chunk)) {
+			git_error_set(GIT_ERROR_SHA, "SHA256 error");
+			return -1;
+		}
+
+		data += chunk;
+		len -= chunk;
 	}
+
 	return 0;
 }
 
