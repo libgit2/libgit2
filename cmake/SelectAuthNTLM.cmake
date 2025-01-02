@@ -1,0 +1,46 @@
+include(SanitizeInput)
+
+if(USE_AUTH_NTLM STREQUAL "" AND NOT USE_NTLMCLIENT STREQUAL "")
+        sanitizeinput(USE_NTLMCLIENT)
+	set(USE_AUTH_NTLM "${USE_NTLMCLIENT}")
+endif()
+
+sanitizeinput(USE_AUTH_NTLM)
+
+if(USE_AUTH_NTLM STREQUAL "")
+	set(USE_AUTH_NTLM ON)
+endif()
+
+if(USE_AUTH_NTLM STREQUAL ON AND UNIX)
+	set(USE_AUTH_NTLM "builtin")
+elseif(USE_AUTH_NTLM STREQUAL ON AND WIN32)
+	set(USE_AUTH_NTLM "sspi")
+elseif(USE_AUTH_NTLM STREQUAL ON)
+	message(FATAL_ERROR "ntlm support was requested but no backend is available")
+endif()
+
+if(USE_AUTH_NTLM STREQUAL "builtin")
+	if(NOT UNIX)
+		message(FATAL_ERROR "ntlm support requested via builtin provider, but builtin ntlmclient only supports posix platforms")
+	endif()
+
+        add_subdirectory("${PROJECT_SOURCE_DIR}/deps/ntlmclient" "${PROJECT_BINARY_DIR}/deps/ntlmclient")
+        list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/ntlmclient")
+        list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
+
+	set(GIT_AUTH_NTLM 1)
+	set(GIT_AUTH_NTLM_BUILTIN 1)
+	add_feature_info("NTLM authentication" ON "using bundled ntlmclient")
+elseif(USE_AUTH_NTLM STREQUAL "sspi")
+	if(NOT WIN32)
+		message(FATAL_ERROR "SSPI is only available on Win32")
+	endif()
+
+	set(GIT_AUTH_NTLM 1)
+	set(GIT_AUTH_NTLM_SSPI 1)
+	add_feature_info("NTLM authentication" ON "using Win32 SSPI")
+elseif(USE_AUTH_NTLM STREQUAL OFF OR USE_AUTH_NTLM STREQUAL "")
+	add_feature_info("NTLM authentication" OFF "NTLM support is disabled")
+else()
+	message(FATAL_ERROR "unknown ntlm option: ${USE_AUTH_NTLM}")
+endif()

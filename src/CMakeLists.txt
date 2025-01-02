@@ -9,7 +9,7 @@ if(DEPRECATE_HARD)
         add_definitions(-DGIT_DEPRECATE_HARD)
 endif()
 
-if(USE_LEAK_CHECKER STREQUAL "valgrind")
+if(DEBUG_LEAK_CHECKER STREQUAL "valgrind")
 	add_definitions(-DVALGRIND)
 endif()
 
@@ -20,30 +20,34 @@ endif()
 if(DEBUG_POOL)
 	set(GIT_DEBUG_POOL 1)
 endif()
-add_feature_info(debugpool GIT_DEBUG_POOL "debug pool allocator")
+add_feature_info("Debug pool" GIT_DEBUG_POOL "debug-mode struct pool allocators")
 
 if(DEBUG_STRICT_ALLOC)
 	set(GIT_DEBUG_STRICT_ALLOC 1)
 endif()
-add_feature_info(debugalloc GIT_DEBUG_STRICT_ALLOC "debug strict allocators")
+add_feature_info("Debug alloc" GIT_DEBUG_STRICT_ALLOC "debug-mode strict allocators")
 
 if(DEBUG_STRICT_OPEN)
 	set(GIT_DEBUG_STRICT_OPEN 1)
 endif()
-add_feature_info(debugopen GIT_DEBUG_STRICT_OPEN "path validation in open")
+add_feature_info("Debug open" GIT_DEBUG_STRICT_OPEN "strict path validation in open")
 
 #
 # Optional feature enablement
 #
 
-include(SelectGSSAPI)
+include(SelectThreads)
+include(SelectNsec)
 include(SelectHTTPSBackend)
 include(SelectHashes)
 include(SelectHTTPParser)
 include(SelectRegex)
 include(SelectXdiff)
 include(SelectSSH)
-include(SelectZlib)
+include(SelectCompression)
+include(SelectI18n)
+include(SelectAuthNTLM)
+include(SelectAuthNegotiate)
 
 #
 # Platform support
@@ -52,9 +56,8 @@ include(SelectZlib)
 # futimes/futimens
 
 if(HAVE_FUTIMENS)
-	set(GIT_USE_FUTIMENS 1)
-endif ()
-add_feature_info(futimens GIT_USE_FUTIMENS "futimens support")
+	set(GIT_FUTIMENS 1)
+endif()
 
 # qsort
 
@@ -108,22 +111,6 @@ else()
 	message(FATAL_ERROR "Unsupported architecture (CMAKE_SIZEOF_VOID_P is unset)")
 endif()
 
-# nanosecond mtime/ctime support
-
-if(USE_NSEC)
-	set(GIT_USE_NSEC 1)
-endif()
-
-# high-resolution stat support
-
-if(HAVE_STRUCT_STAT_ST_MTIM)
-	set(GIT_USE_STAT_MTIM 1)
-elseif(HAVE_STRUCT_STAT_ST_MTIMESPEC)
-	set(GIT_USE_STAT_MTIMESPEC 1)
-elseif(HAVE_STRUCT_STAT_ST_MTIME_NSEC)
-	set(GIT_USE_STAT_MTIME_NSEC 1)
-endif()
-
 # realtime support
 
 check_library_exists(rt clock_gettime "time.h" NEED_LIBRT)
@@ -153,47 +140,6 @@ endif()
 if(AMIGA)
 	add_definitions(-DNO_ADDRINFO -DNO_READDIR_R -DNO_MMAP)
 endif()
-
-# threads
-
-if(USE_THREADS)
-	if(NOT WIN32)
-		find_package(Threads REQUIRED)
-		list(APPEND LIBGIT2_SYSTEM_LIBS ${CMAKE_THREAD_LIBS_INIT})
-		list(APPEND LIBGIT2_PC_LIBS ${CMAKE_THREAD_LIBS_INIT})
-	endif()
-
-	set(GIT_THREADS 1)
-endif()
-add_feature_info(threadsafe USE_THREADS "threadsafe support")
-
-#
-# Optional bundled features
-#
-
-# ntlmclient
-if(USE_NTLMCLIENT)
-	set(GIT_NTLM 1)
-	add_subdirectory("${PROJECT_SOURCE_DIR}/deps/ntlmclient" "${PROJECT_BINARY_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/ntlmclient")
-	list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:ntlmclient>")
-endif()
-add_feature_info(ntlmclient GIT_NTLM "NTLM authentication support for Unix")
-
-#
-# Optional external dependencies
-
-# iconv
-if(USE_ICONV)
-	find_package(IntlIconv)
-endif()
-if(ICONV_FOUND)
-	set(GIT_USE_ICONV 1)
-	list(APPEND LIBGIT2_SYSTEM_INCLUDES ${ICONV_INCLUDE_DIR})
-	list(APPEND LIBGIT2_SYSTEM_LIBS ${ICONV_LIBRARIES})
-	list(APPEND LIBGIT2_PC_LIBS ${ICONV_LIBRARIES})
-endif()
-add_feature_info(iconv GIT_USE_ICONV "iconv encoding conversion support")
 
 #
 # Include child projects

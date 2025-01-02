@@ -8,7 +8,7 @@
 #include "streams/openssl.h"
 #include "streams/openssl_dynamic.h"
 
-#if defined(GIT_OPENSSL) && defined(GIT_OPENSSL_DYNAMIC)
+#ifdef GIT_HTTPS_OPENSSL_DYNAMIC
 
 #include "runtime.h"
 
@@ -128,7 +128,8 @@ int git_openssl_stream_dynamic_init(void)
 	    (openssl_handle = dlopen("libssl.so.1.0.0", RTLD_NOW)) == NULL &&
 	    (openssl_handle = dlopen("libssl.1.0.0.dylib", RTLD_NOW)) == NULL &&
 	    (openssl_handle = dlopen("libssl.so.10", RTLD_NOW)) == NULL &&
-	    (openssl_handle = dlopen("libssl.so.3", RTLD_NOW)) == NULL) {
+	    (openssl_handle = dlopen("libssl.so.3", RTLD_NOW)) == NULL &&
+	    (openssl_handle = dlopen("libssl.3.dylib", RTLD_NOW)) == NULL) {
 		git_error_set(GIT_ERROR_SSL, "could not load ssl libraries");
 		return -1;
 	}
@@ -314,4 +315,4 @@ void GENERAL_NAMES_free(GENERAL_NAME *sk)
 		sk_free(sk);
 }
 
-#endif /* GIT_OPENSSL && GIT_OPENSSL_DYNAMIC */
+#endif /* GIT_HTTPS_OPENSSL_DYNAMIC */

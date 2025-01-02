@@ -12,7 +12,7 @@
 #include "auth.h"
 #include "git2/sys/credential.h"
 
-#ifdef GIT_NTLM
+#ifdef GIT_AUTH_NTLM_BUILTIN
 
 #include "ntlmclient.h"
 
@@ -224,4 +224,4 @@ int git_http_auth_ntlm(
 	return 0;
 }
 
-#endif /* GIT_NTLM */
+#endif /* GIT_AUTH_NTLM_BUILTIN */

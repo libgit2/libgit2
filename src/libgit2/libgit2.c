@@ -90,18 +90,18 @@ int git_libgit2_features(void)
 #ifdef GIT_SSH
 		| GIT_FEATURE_SSH
 #endif
-#ifdef GIT_USE_NSEC
+#ifdef GIT_NSEC
 		| GIT_FEATURE_NSEC
 #endif
 		| GIT_FEATURE_HTTP_PARSER
 		| GIT_FEATURE_REGEX
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 		| GIT_FEATURE_I18N
 #endif
-#if defined(GIT_NTLM) || defined(GIT_WIN32)
+#if defined(GIT_AUTH_NTLM)
 		| GIT_FEATURE_AUTH_NTLM
 #endif
-#if defined(GIT_GSSAPI) || defined(GIT_GSSFRAMEWORK) || defined(GIT_WIN32)
+#if defined(GIT_AUTH_NEGOTIATE)
 		| GIT_FEATURE_AUTH_NEGOTIATE
 #endif
 		| GIT_FEATURE_COMPRESSION
@@ -116,25 +116,27 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 {
 	switch (feature) {
 	case GIT_FEATURE_THREADS:
-#if defined(GIT_THREADS) && defined(GIT_WIN32)
+#if defined(GIT_THREADS_PTHREADS)
+		return "pthread";
+#elif defined(GIT_THREADS_WIN32)
 		return "win32";
 #elif defined(GIT_THREADS)
-		return "pthread";
+		GIT_ASSERT_WITH_RETVAL(!"Unknown threads backend", NULL);
 #endif
 		break;
 
 	case GIT_FEATURE_HTTPS:
-#if defined(GIT_HTTPS) && defined(GIT_OPENSSL)
+#if defined(GIT_HTTPS_OPENSSL)
 		return "openssl";
-#elif defined(GIT_HTTPS) && defined(GIT_OPENSSL_DYNAMIC)
+#elif defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 		return "openssl-dynamic";
-#elif defined(GIT_HTTPS) && defined(GIT_MBEDTLS)
+#elif defined(GIT_HTTPS_MBEDTLS)
 		return "mbedtls";
-#elif defined(GIT_HTTPS) && defined(GIT_SECURE_TRANSPORT)
+#elif defined(GIT_HTTPS_SECURETRANSPORT)
 		return "securetransport";
-#elif defined(GIT_HTTPS) && defined(GIT_SCHANNEL)
+#elif defined(GIT_HTTPS_SCHANNEL)
 		return "schannel";
-#elif defined(GIT_HTTPS) && defined(GIT_WINHTTP)
+#elif defined(GIT_HTTPS_WINHTTP)
 		return "winhttp";
 #elif defined(GIT_HTTPS)
 		GIT_ASSERT_WITH_RETVAL(!"Unknown HTTPS backend", NULL);
@@ -152,15 +154,15 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 		break;
 
 	case GIT_FEATURE_NSEC:
-#if defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIMESPEC)
+#if defined(GIT_NSEC_MTIMESPEC)
 		return "mtimespec";
-#elif defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIM)
+#elif defined(GIT_NSEC_MTIM)
 		return "mtim";
-#elif defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIME_NSEC)
-		return "mtime";
-#elif defined(GIT_USE_NSEC) && defined(GIT_WIN32)
+#elif defined(GIT_NSEC_MTIME_NSEC)
+		return "mtime_nsec";
+#elif defined(GIT_NSEC_WIN32)
 		return "win32";
-#elif defined(GIT_USE_NSEC)
+#elif defined(GIT_NSEC)
 		GIT_ASSERT_WITH_RETVAL(!"Unknown high-resolution time backend", NULL);
 #endif
 		break;
@@ -192,24 +194,32 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 		break;
 
 	case GIT_FEATURE_I18N:
-#if defined(GIT_USE_ICONV)
+#if defined(GIT_I18N_ICONV)
 		return "iconv";
+#elif defined(GIT_I18N)
+		GIT_ASSERT_WITH_RETVAL(!"Unknown internationalization backend", NULL);
 #endif
 		break;
 
 	case GIT_FEATURE_AUTH_NTLM:
-#if defined(GIT_NTLM)
-		return "ntlmclient";
-#elif defined(GIT_WIN32)
+#if defined(GIT_AUTH_NTLM_BUILTIN)
+		return "builtin";
+#elif defined(GIT_AUTH_NTLM_SSPI)
 		return "sspi";
+#elif defined(GIT_AUTH_NTLM)
+		GIT_ASSERT_WITH_RETVAL(!"Unknown NTLM backend", NULL);
 #endif
 		break;
 
 	case GIT_FEATURE_AUTH_NEGOTIATE:
-#if defined(GIT_GSSAPI)
+#if defined(GIT_AUTH_NEGOTIATE_GSSFRAMEWORK)
+		return "gssframework";
+#elif defined(GIT_AUTH_NEGOTIATE_GSSAPI)
 		return "gssapi";
-#elif defined(GIT_WIN32)
+#elif defined(GIT_AUTH_NEGOTIATE_SSPI)
 		return "sspi";
+#elif defined(GIT_AUTH_NEGOTIATE)
+		GIT_ASSERT_WITH_RETVAL(!"Unknown Negotiate backend", NULL);
 #endif
 		break;
 
@@ -224,7 +234,7 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 		break;
 
 	case GIT_FEATURE_SHA1:
-#if defined(GIT_SHA1_COLLISIONDETECT)
+#if defined(GIT_SHA1_BUILTIN)
 		return "builtin";
 #elif defined(GIT_SHA1_OPENSSL)
 		return "openssl";

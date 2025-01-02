@@ -7,7 +7,7 @@
 
 #include "openssl.h"
 
-#ifdef GIT_OPENSSL_DYNAMIC
+#if defined(GIT_SHA1_OPENSSL_DYNAMIC) || defined(GIT_SHA256_OPENSSL_DYNAMIC)
 # include <dlfcn.h>
 
 static int handle_count;
@@ -31,7 +31,8 @@ static int git_hash_openssl_global_init(void)
 		    (openssl_handle = dlopen("libssl.so.1.0.0", RTLD_NOW)) == NULL &&
 		    (openssl_handle = dlopen("libssl.1.0.0.dylib", RTLD_NOW)) == NULL &&
 		    (openssl_handle = dlopen("libssl.so.10", RTLD_NOW)) == NULL &&
-		    (openssl_handle = dlopen("libssl.so.3", RTLD_NOW)) == NULL) {
+		    (openssl_handle = dlopen("libssl.so.3", RTLD_NOW)) == NULL &&
+		    (openssl_handle = dlopen("libssl.3.dylib", RTLD_NOW)) == NULL) {
 			git_error_set(GIT_ERROR_SSL, "could not load ssl libraries");
 			return -1;
 		}
@@ -46,17 +47,13 @@ static int git_hash_openssl_global_init(void)
 
 #endif
 
-#ifdef GIT_SHA1_OPENSSL
-
-# ifdef GIT_OPENSSL_DYNAMIC
+#ifdef GIT_SHA1_OPENSSL_DYNAMIC
 static int (*SHA1_Init)(SHA_CTX *c);
 static int (*SHA1_Update)(SHA_CTX *c, const void *data, size_t len);
 static int (*SHA1_Final)(unsigned char *md, SHA_CTX *c);
-# endif
 
 int git_hash_sha1_global_init(void)
 {
-#ifdef GIT_OPENSSL_DYNAMIC
 	if (git_hash_openssl_global_init() < 0)
 		return -1;
 
@@ -67,10 +64,17 @@ int git_hash_sha1_global_init(void)
 		git_error_set(GIT_ERROR_SSL, "could not load hash function: %s", msg ? msg : "unknown error");
 		return -1;
 	}
-#endif
 
 	return 0;
 }
+#elif GIT_SHA1_OPENSSL
+int git_hash_sha1_global_init(void)
+{
+	return 0;
+}
+#endif
+
+#if defined(GIT_SHA1_OPENSSL) || defined(GIT_SHA1_OPENSSL_DYNAMIC)
 
 int git_hash_sha1_ctx_init(git_hash_sha1_ctx *ctx)
 {
@@ -196,17 +200,13 @@ int git_hash_sha1_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 
 #endif
 
-#ifdef GIT_SHA256_OPENSSL
-
-# ifdef GIT_OPENSSL_DYNAMIC
+#ifdef GIT_SHA256_OPENSSL_DYNAMIC
 static int (*SHA256_Init)(SHA256_CTX *c);
 static int (*SHA256_Update)(SHA256_CTX *c, const void *data, size_t len);
 static int (*SHA256_Final)(unsigned char *md, SHA256_CTX *c);
-#endif
 
 int git_hash_sha256_global_init(void)
 {
-#ifdef GIT_OPENSSL_DYNAMIC
 	if (git_hash_openssl_global_init() < 0)
 		return -1;
 
@@ -217,10 +217,17 @@ int git_hash_sha256_global_init(void)
 		git_error_set(GIT_ERROR_SSL, "could not load hash function: %s", msg ? msg : "unknown error");
 		return -1;
 	}
-#endif
 
 	return 0;
 }
+#elif GIT_SHA256_OPENSSL
+int git_hash_sha256_global_init(void)
+{
+	return 0;
+}
+#endif
+
+#if defined(GIT_SHA256_OPENSSL) || defined(GIT_SHA256_OPENSSL_DYNAMIC)
 
 int git_hash_sha256_ctx_init(git_hash_sha256_ctx *ctx)
 {

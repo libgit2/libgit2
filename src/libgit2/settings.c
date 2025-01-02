@@ -204,13 +204,13 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_SET_SSL_CERT_LOCATIONS:
-#ifdef GIT_OPENSSL
+#if defined(GIT_HTTPS_OPENSSL) || defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 		{
 			const char *file = va_arg(ap, const char *);
 			const char *path = va_arg(ap, const char *);
 			error = git_openssl__set_cert_location(file, path);
 		}
-#elif defined(GIT_MBEDTLS)
+#elif defined(GIT_HTTPS_MBEDTLS)
 		{
 			const char *file = va_arg(ap, const char *);
 			const char *path = va_arg(ap, const char *);
@@ -223,7 +223,7 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_ADD_SSL_X509_CERT:
-#ifdef GIT_OPENSSL
+#if defined(GIT_HTTPS_OPENSSL) || defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 		{
 			X509 *cert = va_arg(ap, X509 *);
 			error = git_openssl__add_x509_cert(cert);
@@ -303,7 +303,9 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_SET_SSL_CIPHERS:
-#if (GIT_OPENSSL || GIT_MBEDTLS)
+#if defined(GIT_HTTPS_OPENSSL) || \
+    defined(GIT_HTTPS_OPENSSL_DYNAMIC) || \
+    defined(GIT_HTTPS_MBEDTLS)
 		{
 			git__free(git__ssl_ciphers);
 			git__ssl_ciphers = git__strdup(va_arg(ap, const char *));

@@ -13,7 +13,7 @@
 /* Initialize the win32 leak checking system. */
 int git_win32_leakcheck_global_init(void);
 
-#if defined(GIT_WIN32_LEAKCHECK)
+#if defined(GIT_DEBUG_LEAKCHECK_WIN32)
 
 #include <stdlib.h>
 #include <crtdbg.h>

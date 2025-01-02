@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-#ifdef GIT_WINHTTP
+#ifdef GIT_HTTPS_WINHTTP
 
 #include "git2.h"
 #include "git2/transport.h"
@@ -1715,4 +1715,4 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 	return 0;
 }
 
-#endif /* GIT_WINHTTP */
+#endif /* GIT_HTTPS_WINHTTP */

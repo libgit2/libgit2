@@ -20,7 +20,7 @@ void test_core_features__basic(void)
 	cl_assert((caps & GIT_FEATURE_SSH) == 0);
 #endif
 
-#if defined(GIT_USE_NSEC)
+#if defined(GIT_NSEC)
 	cl_assert((caps & GIT_FEATURE_NSEC) != 0);
 #else
 	cl_assert((caps & GIT_FEATURE_NSEC) == 0);
@@ -29,14 +29,14 @@ void test_core_features__basic(void)
 	cl_assert((caps & GIT_FEATURE_HTTP_PARSER) != 0);
 	cl_assert((caps & GIT_FEATURE_REGEX) != 0);
 
-#if defined(GIT_USE_ICONV)
+#if defined(GIT_I18N_ICONV)
 	cl_assert((caps & GIT_FEATURE_I18N) != 0);
 #endif
 
-#if defined(GIT_NTLM) || defined(GIT_WIN32)
+#if defined(GIT_AUTH_NTLM)
 	cl_assert((caps & GIT_FEATURE_AUTH_NTLM) != 0);
 #endif
-#if defined(GIT_GSSAPI) || defined(GIT_GSSFRAMEWORK) || defined(GIT_WIN32)
+#if defined(GIT_AUTH_NEGOTIATE)
 	cl_assert((caps & GIT_FEATURE_AUTH_NEGOTIATE) != 0);
 #endif
 
@@ -82,25 +82,27 @@ void test_core_features__backends(void)
 	const char *sha1 = git_libgit2_feature_backend(GIT_FEATURE_SHA1);
 	const char *sha256 = git_libgit2_feature_backend(GIT_FEATURE_SHA256);
 
-#if defined(GIT_THREADS) && defined(GIT_WIN32)
+#if defined(GIT_THREADS_WIN32)
 	cl_assert_equal_s("win32", threads);
-#elif defined(GIT_THREADS)
+#elif defined(GIT_THREADS_PTHREADS)
 	cl_assert_equal_s("pthread", threads);
+#elif defined(GIT_THREADS)
+	cl_assert(0);
 #else
 	cl_assert(threads == NULL);
 #endif
 
-#if defined(GIT_HTTPS) && defined(GIT_OPENSSL)
+#if defined(GIT_HTTPS_OPENSSL)
 	cl_assert_equal_s("openssl", https);
-#elif defined(GIT_HTTPS) && defined(GIT_OPENSSL_DYNAMIC)
+#elif defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 	cl_assert_equal_s("openssl-dynamic", https);
-#elif defined(GIT_HTTPS) && defined(GIT_MBEDTLS)
+#elif defined(GIT_HTTPS_MBEDTLS)
 	cl_assert_equal_s("mbedtls", https);
-#elif defined(GIT_HTTPS) && defined(GIT_SECURE_TRANSPORT)
+#elif defined(GIT_HTTPS_SECURETRANSPORT)
 	cl_assert_equal_s("securetransport", https);
-#elif defined(GIT_HTTPS) && defined(GIT_SCHANNEL)
+#elif defined(GIT_HTTPS_SCHANNEL)
 	cl_assert_equal_s("schannel", https);
-#elif defined(GIT_HTTPS) && defined(GIT_WINHTTP)
+#elif defined(GIT_HTTPS_WINHTTP)
 	cl_assert_equal_s("winhttp", https);
 #elif defined(GIT_HTTPS)
 	cl_assert(0);
@@ -118,15 +120,15 @@ void test_core_features__backends(void)
 	cl_assert(ssh == NULL);
 #endif
 
-#if defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIMESPEC)
+#if defined(GIT_NSEC_MTIMESPEC)
 	cl_assert_equal_s("mtimespec", nsec);
-#elif defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIM)
+#elif defined(GIT_NSEC_MTIM)
 	cl_assert_equal_s("mtim", nsec);
-#elif defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIME_NSEC)
-	cl_assert_equal_s("mtime", nsec);
-#elif defined(GIT_USE_NSEC) && defined(GIT_WIN32)
+#elif defined(GIT_NSEC_MTIME_NSEC)
+	cl_assert_equal_s("mtime_nsec", nsec);
+#elif defined(GIT_NSEC_WIN32)
 	cl_assert_equal_s("win32", nsec);
-#elif defined(GIT_USE_NSEC)
+#elif defined(GIT_NSEC)
 	cl_assert(0);
 #else
 	cl_assert(nsec == NULL);
@@ -156,24 +158,32 @@ void test_core_features__backends(void)
 	cl_assert(0);
 #endif
 
-#if defined(GIT_USE_ICONV)
+#if defined(GIT_I18N_ICONV)
 	cl_assert_equal_s("iconv", i18n);
+#elif defined(GIT_I18N)
+	cl_assert(0);
 #else
 	cl_assert(i18n == NULL);
 #endif
 
-#if defined(GIT_NTLM)
-	cl_assert_equal_s("ntlmclient", ntlm);
-#elif defined(GIT_WIN32)
+#if defined(GIT_AUTH_NTLM_BUILTIN)
+	cl_assert_equal_s("builtin", ntlm);
+#elif defined(GIT_AUTH_NTLM_SSPI)
 	cl_assert_equal_s("sspi", ntlm);
+#elif defined(GIT_AUTH_NTLM)
+	cl_assert(0);
 #else
 	cl_assert(ntlm == NULL);
 #endif
 
-#if defined(GIT_GSSAPI)
+#if defined(GIT_AUTH_NEGOTIATE_GSSFRAMEWORK)
+	cl_assert_equal_s("gssframework", negotiate);
+#elif defined(GIT_AUTH_NEGOTIATE_GSSAPI)
 	cl_assert_equal_s("gssapi", negotiate);
-#elif defined(GIT_WIN32)
+#elif defined(GIT_AUTH_NEGOTIATE_SSPI)
 	cl_assert_equal_s("sspi", negotiate);
+#elif defined(GIT_AUTH_NEGOTIATE)
+	cl_assert(0);
 #else
 	cl_assert(negotiate == NULL);
 #endif
@@ -186,7 +196,7 @@ void test_core_features__backends(void)
 	cl_assert(0);
 #endif
 
-#if defined(GIT_SHA1_COLLISIONDETECT)
+#if defined(GIT_SHA1_BUILTIN)
 	cl_assert_equal_s("builtin", sha1);
 #elif defined(GIT_SHA1_OPENSSL)
 	cl_assert_equal_s("openssl", sha1);

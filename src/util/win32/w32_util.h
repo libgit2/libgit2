@@ -77,8 +77,10 @@ GIT_INLINE(void) git_win32__filetime_to_timespec(
 	int64_t winTime = ((int64_t)ft->dwHighDateTime << 32) + ft->dwLowDateTime;
 	winTime -= INT64_C(116444736000000000); /* Windows to Unix Epoch conversion */
 	ts->tv_sec = (time_t)(winTime / 10000000);
-#ifdef GIT_USE_NSEC
+#ifdef GIT_NSEC_WIN32
 	ts->tv_nsec = (winTime % 10000000) * 100;
+#elif GIT_NSEC
+# error GIT_NSEC defined but GIT_NSEC_WIN32 not defined
 #else
 	ts->tv_nsec = 0;
 #endif

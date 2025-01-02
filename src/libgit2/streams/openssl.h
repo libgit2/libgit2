@@ -15,14 +15,14 @@
 
 extern int git_openssl_stream_global_init(void);
 
-#if defined(GIT_OPENSSL) && !defined(GIT_OPENSSL_DYNAMIC)
+#if defined(GIT_HTTPS_OPENSSL)
 # include <openssl/ssl.h>
 # include <openssl/err.h>
 # include <openssl/x509v3.h>
 # include <openssl/bio.h>
 # endif
 
-#ifdef GIT_OPENSSL
+#if defined(GIT_HTTPS_OPENSSL) || defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 extern int git_openssl__set_cert_location(const char *file, const char *path);
 extern int git_openssl__add_x509_cert(X509 *cert);
 extern int git_openssl__reset_context(void);

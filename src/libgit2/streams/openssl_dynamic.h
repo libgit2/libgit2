@@ -149,7 +149,7 @@
 #ifndef INCLUDE_streams_openssl_dynamic_h__
 #define INCLUDE_streams_openssl_dynamic_h__
 
-#ifdef GIT_OPENSSL_DYNAMIC
+#ifdef GIT_HTTPS_OPENSSL_DYNAMIC
 
 # define BIO_CTRL_FLUSH               11
 
@@ -348,6 +348,6 @@ extern void GENERAL_NAMES_free(GENERAL_NAME *sk);
 
 extern int git_openssl_stream_dynamic_init(void);
 
-#endif /* GIT_OPENSSL_DYNAMIC */
+#endif /* GIT_HTTPS_OPENSSL_DYNAMIC */
 
 #endif

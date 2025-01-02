@@ -25,23 +25,27 @@ option(BUILD_CLI               "Build the command-line interface"               
 option(BUILD_EXAMPLES          "Build library usage example apps"                      OFF)
 option(BUILD_FUZZERS           "Build the fuzz targets"                                OFF)
 
-# Suggested functionality that may not be available on a per-platform basis
-option(USE_THREADS             "Use threads for parallel processing when possible"      ON)
-option(USE_NSEC                "Support nanosecond precision file mtimes and ctimes"    ON)
-
-# Backend selection
+# Feature enablement and backend selection
+   set(USE_THREADS             "" CACHE STRING "Use threads for parallel processing when possible. One of ON, OFF, or a specific provider: pthreads or win32. (Defaults to ON.)")
    set(USE_SSH                 "" CACHE STRING "Enables SSH support and optionally selects provider. One of ON, OFF, or a specific provider: libssh2 or exec. (Defaults to OFF.)")
    set(USE_HTTPS               "" CACHE STRING "Enable HTTPS support and optionally selects the provider. One of ON, OFF, or a specific provider: OpenSSL, OpenSSL-FIPS, OpenSSL-Dynamic, mbedTLS, SecureTransport, Schannel, or WinHTTP. (Defaults to ON.)")
-   set(USE_SHA1                "" CACHE STRING "Selects SHA1 provider. One of CollisionDetection, HTTPS, or a specific provider. (Defaults to CollisionDetection.)")
+   set(USE_SHA1                "" CACHE STRING "Selects SHA1 provider. One of builtin, HTTPS, or a specific provider. (Defaults to builtin.)")
    set(USE_SHA256              "" CACHE STRING "Selects SHA256 provider. One of Builtin, HTTPS, or a specific provider. (Defaults to HTTPS.)")
-option(USE_GSSAPI              "Enable SPNEGO authentication using GSSAPI" OFF)
    set(USE_HTTP_PARSER         "" CACHE STRING "Selects HTTP Parser support: http-parser, llhttp, or builtin. (Defaults to builtin.)")
+   set(USE_AUTH_NTLM           "" CACHE STRING "Enables NTLM authentication support. One of Builtin or win32.")
+   set(USE_AUTH_NEGOTIATE      "" CACHE STRING "Enable Negotiate (SPNEGO) authentication support. One of GSSAPI or win32.")
 #  set(USE_XDIFF               "" CACHE STRING "Specifies the xdiff implementation; either system or builtin.")
-   set(REGEX_BACKEND           "" CACHE STRING "Selects regex provider. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
-option(USE_BUNDLED_ZLIB        "Use the bundled version of zlib. Can be set to one of Bundled(ON)/Chromium. The Chromium option requires a x86_64 processor with SSE4.2 and CLMUL" OFF)
+   set(USE_REGEX               "" CACHE STRING "Selects regex provider. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
+   set(USE_COMPRESSION         "" CACHE STRING "Selects compression backend. Either builtin or zlib.")
+   set(USE_NSEC                "" CACHE STRING "Enable nanosecond precision timestamps. One of ON, OFF, or a specific provider: mtimespec, mtim, mtime, or win32. (Defaults to ON).")
+
+if(APPLE)
+	# Currently only available on macOS for `precomposeUnicode` support
+	set(USE_I18N            "" CACHE STRING "Enables internationalization support.")
+endif()
 
 # Debugging options
-option(USE_LEAK_CHECKER        "Run tests with leak checker"                           OFF)
+   set(DEBUG_LEAK_CHECKER      "" CACHE STRING "Configure for leak checking test runs. One of valgrind, leaks, or win32. Either valgrind or leaks.")
 option(USE_STANDALONE_FUZZERS  "Enable standalone fuzzers (compatible with gcc)"       OFF)
 option(DEBUG_POOL              "Enable debug pool allocator"                           OFF)
 option(DEBUG_STRICT_ALLOC      "Enable strict allocator behavior"                      OFF)
@@ -63,18 +67,7 @@ option(CMAKE_C_EXTENSIONS      "Whether compiler extensions are supported"      
 option(ENABLE_WERROR           "Enable compilation with -Werror"                       OFF)
 
 if(UNIX)
-	# NTLM client requires crypto libraries from the system HTTPS stack
-	if(USE_HTTPS STREQUAL "OFF")
-		option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                  OFF)
-	else()
-		option(USE_NTLMCLIENT  "Enable NTLM support on Unix."                   ON)
-	endif()
-
 	option(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"                 OFF)
-endif()
-
-if(APPLE)
-	option(USE_ICONV           "Link with and use iconv library"                    ON)
 endif()
 
 if(MSVC)
@@ -85,9 +78,6 @@ if(MSVC)
 	# If you want to embed a copy of libssh2 into libgit2, pass a
 	# path to libssh2
 	option(EMBED_SSH_PATH      "Path to libssh2 to embed (Windows)"                OFF)
-
-	# Enable leak checking using the debugging C runtime.
-	option(WIN32_LEAKCHECK     "Enable leak reporting via crtdbg"                  OFF)
 endif()
 
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)

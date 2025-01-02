@@ -1,0 +1,41 @@
+include(SanitizeInput)
+
+sanitizeinput(USE_THREADS)
+
+if(NOT WIN32)
+	find_package(Threads)
+endif()
+
+if((USE_THREADS STREQUAL ON OR USE_THREADS STREQUAL "") AND THREADS_FOUND)
+	set(USE_THREADS "pthreads")
+elseif((USE_THREADS STREQUAL ON OR USE_THREADS STREQUAL "") AND WIN32)
+	set(USE_THREADS "win32")
+elseif(USE_THREADS STREQUAL "")
+	set(USE_THREADS OFF)
+endif()
+
+if(USE_THREADS STREQUAL "pthreads")
+	if(NOT THREADS_FOUND)
+		message(FATAL_ERROR "pthreads were requested but not found")
+	endif()
+
+	list(APPEND LIBGIT2_SYSTEM_LIBS ${CMAKE_THREAD_LIBS_INIT})
+	list(APPEND LIBGIT2_PC_LIBS ${CMAKE_THREAD_LIBS_INIT})
+
+	set(GIT_THREADS 1)
+	set(GIT_THREADS_PTHREADS 1)
+	add_feature_info("Threads" ON "using pthreads")
+elseif(USE_THREADS STREQUAL "win32")
+	if(NOT WIN32)
+		message(FATAL_ERROR "Win32 API support is not available on this platform")
+	endif()
+
+	set(GIT_THREADS 1)
+	set(GIT_THREADS_WIN32 1)
+	add_feature_info("Threads" ON "using Win32 APIs")
+elseif(USE_THREADS STREQUAL OFF)
+	set(GIT_THREADS 0)
+	add_feature_info("Threads" OFF "threads support is disabled")
+else()
+	message(FATAL_ERROR "unknown threads option: ${USE_THREADS}")
+endif()

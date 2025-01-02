@@ -7,7 +7,7 @@
 
 #include "streams/mbedtls.h"
 
-#ifdef GIT_MBEDTLS
+#ifdef GIT_HTTPS_MBEDTLS
 
 #include <ctype.h>
 

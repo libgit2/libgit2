@@ -34,14 +34,14 @@ jobs:
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DEXPERIMENTAL_SHA256=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DEXPERIMENTAL_SHA256=ON
         - name: "macOS (SHA256)"
           id: macos-sha256
           os: macos-13
           setup-script: osx
           env:
             CC: clang
-            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
             CMAKE_GENERATOR: Ninja
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
@@ -52,7 +52,7 @@ jobs:
           env:
             ARCH: amd64
             CMAKE_GENERATOR: Visual Studio 17 2022
-            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
+            CMAKE_OPTIONS: -A x64 -DDEBUG_LEAK_CHECKER=win32 -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
             # TODO: this is a temporary removal

@@ -35,7 +35,7 @@ jobs:
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
         - name: "Linux (Noble, Clang, mbedTLS, OpenSSH)"
           id: noble-clang-mbedtls
           os: ubuntu-latest
@@ -43,7 +43,7 @@ jobs:
             name: noble
           env:
             CC: clang
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DUSE_HTTP_PARSER=http-parser
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DUSE_HTTP_PARSER=http-parser
             CMAKE_GENERATOR: Ninja
         - name: "Linux (Xenial, GCC, OpenSSL, OpenSSH)"
           id: xenial-gcc-openssl
@@ -53,7 +53,7 @@ jobs:
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
         - name: "Linux (Xenial, Clang, mbedTLS, libssh2)"
           id: xenial-gcc-mbedtls
           os: ubuntu-latest
@@ -62,14 +62,14 @@ jobs:
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
         - name: "macOS"
           id: macos
           os: macos-13
           setup-script: osx
           env:
             CC: clang
-            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
             CMAKE_GENERATOR: Ninja
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
@@ -80,7 +80,7 @@ jobs:
           setup-script: ios
           env:
             CC: clang
-            CMAKE_OPTIONS: -DBUILD_TESTS=OFF -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS64
+            CMAKE_OPTIONS: -DBUILD_TESTS=OFF -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS64
             CMAKE_GENERATOR: Ninja
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_TESTS: true # Cannot exec iOS app on macOS
@@ -91,7 +91,7 @@ jobs:
           env:
             ARCH: amd64
             CMAKE_GENERATOR: Visual Studio 17 2022
-            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
+            CMAKE_OPTIONS: -A x64 -DDEBUG_LEAK_CHECKER=win32 -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
             BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
             BUILD_TEMP: D:\Temp
             SKIP_SSH_TESTS: true
@@ -103,7 +103,7 @@ jobs:
           env:
             ARCH: x86
             CMAKE_GENERATOR: Visual Studio 17 2022
-            CMAKE_OPTIONS: -A Win32 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
+            CMAKE_OPTIONS: -A Win32 -DDEBUG_LEAK_CHECKER=win32 -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
             BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
             BUILD_TEMP: D:\Temp
             SKIP_SSH_TESTS: true
@@ -188,7 +188,7 @@ jobs:
           container:
             name: centos7
           env:
-            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
             SKIP_PUSHOPTIONS_TESTS: true
@@ -198,7 +198,7 @@ jobs:
           container:
             name: centos7
           env:
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
             SKIP_PUSHOPTIONS_TESTS: true
@@ -208,7 +208,7 @@ jobs:
           container:
             name: centos8
           env:
-            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
             PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
             SKIP_SSH_TESTS: true
@@ -218,7 +218,7 @@ jobs:
           container:
             name: centos8
           env:
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON
             PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
             SKIP_NEGOTIATE_TESTS: true
             SKIP_SSH_TESTS: true
@@ -231,7 +231,7 @@ jobs:
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=pcre2 -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DUSE_HTTP_PARSER=llhttp
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=pcre2 -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DUSE_HTTP_PARSER=llhttp
         - name: "Linux (Bionic, GCC, dynamically-loaded OpenSSL)"
           id: bionic-gcc-dynamicopenssl
           container:
@@ -240,7 +240,7 @@ jobs:
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
             SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
@@ -253,7 +253,7 @@ jobs:
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
             SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
@@ -265,7 +265,7 @@ jobs:
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             RUN_INVASIVE_TESTS: true
             SKIP_PUSHOPTIONS_TESTS: true
           os: ubuntu-latest
@@ -307,7 +307,7 @@ jobs:
             name: xenial
           env:
             CC: gcc
-            CMAKE_OPTIONS: -DTHREADSAFE=OFF -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DTHREADSAFE=OFF -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
             SKIP_PUSHOPTIONS_TESTS: true
         - name: "Linux (no mmap)"
@@ -341,7 +341,7 @@ jobs:
             name: xenial
           env:
             CC: clang
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL-Dynamic -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
 
         # All builds: experimental SHA256 support
@@ -352,7 +352,7 @@ jobs:
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON
           os: ubuntu-latest
         - name: "macOS (SHA256)"
           id: macos-sha256
@@ -360,7 +360,7 @@ jobs:
           setup-script: osx
           env:
             CC: clang
-            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON -DEXPERIMENTAL_SHA256=ON
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
@@ -370,7 +370,7 @@ jobs:
           env:
             ARCH: amd64
             CMAKE_GENERATOR: Visual Studio 17 2022
-            CMAKE_OPTIONS: -A x64 -DWIN32_LEAKCHECK=ON -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
+            CMAKE_OPTIONS: -A x64 -DDEBUG_LEAK_CHECKER=win32 -DDEPRECATE_HARD=ON -DEXPERIMENTAL_SHA256=ON
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
             # TODO: this is a temporary removal
@@ -382,7 +382,7 @@ jobs:
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DUSE_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DUSE_SHA1=OpenSSL-FIPS -DUSE_SHA256=OpenSSL-FIPS
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=ON -DUSE_SHA1=OpenSSL-FIPS -DUSE_SHA256=OpenSSL-FIPS
           os: ubuntu-latest
       fail-fast: false
     env: ${{ matrix.platform.env }}

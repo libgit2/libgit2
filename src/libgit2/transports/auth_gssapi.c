@@ -7,17 +7,18 @@
 
 #include "auth_negotiate.h"
 
-#if defined(GIT_GSSAPI) || defined(GIT_GSSFRAMEWORK)
+#if defined(GIT_AUTH_NEGOTIATE_GSSAPI) || \
+    defined(GIT_AUTH_NEGOTIATE_GSSFRAMEWORK)
 
 #include "git2.h"
 #include "auth.h"
 #include "git2/sys/credential.h"
 
-#ifdef GIT_GSSFRAMEWORK
-#import <GSS/GSS.h>
-#elif defined(GIT_GSSAPI)
-#include <gssapi.h>
-#include <krb5.h>
+#if defined(GIT_AUTH_NEGOTIATE_GSSFRAMEWORK)
+# import <GSS/GSS.h>
+#elif defined(GIT_AUTH_NEGOTIATE_GSSAPI)
+# include <gssapi.h>
+# include <krb5.h>
 #endif
 
 static gss_OID_desc gssapi_oid_spnego =
@@ -310,5 +311,4 @@ int git_http_auth_negotiate(
 	return 0;
 }
 
-#endif /* GIT_GSSAPI */
-
+#endif /* GIT_AUTH_NEGOTIATE_GSS... */
