@@ -1,6 +1,6 @@
-include(SanitizeBool)
+include(SanitizeInput)
 
-sanitizebool(USE_THREADS)
+sanitizeinput(USE_THREADS)
 
 if(NOT WIN32)
 	find_package(Threads)

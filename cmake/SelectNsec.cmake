@@ -1,7 +1,7 @@
-include(SanitizeBool)
+include(SanitizeInput)
 include(FeatureSummary)
 
-sanitizebool(USE_NSEC)
+sanitizeinput(USE_NSEC)
 
 if((USE_NSEC STREQUAL ON OR USE_NSEC STREQUAL "") AND HAVE_STRUCT_STAT_ST_MTIM)
 	set(USE_NSEC "mtim")

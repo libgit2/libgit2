@@ -1,5 +1,11 @@
+include(SanitizeInput)
+
+sanitizeinput(USE_HTTP_PARSER)
+
 # Optional external dependency: http-parser
-if(USE_HTTP_PARSER STREQUAL "http-parser" OR USE_HTTP_PARSER STREQUAL "system")
+if(USE_HTTP_PARSER STREQUAL "http-parser" OR
+   USE_HTTP_PARSER STREQUAL "httpparser" OR
+   USE_HTTP_PARSER STREQUAL "system")
 	find_package(HTTP_Parser)
 
 	if(HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)

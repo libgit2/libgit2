@@ -1,11 +1,11 @@
-include(SanitizeBool)
+include(SanitizeInput)
 
 if(USE_AUTH_NTLM STREQUAL "" AND NOT USE_NTLMCLIENT STREQUAL "")
-        sanitizebool(USE_NTLMCLIENT)
+        sanitizeinput(USE_NTLMCLIENT)
 	set(USE_AUTH_NTLM "${USE_NTLMCLIENT}")
 endif()
 
-sanitizebool(USE_AUTH_NTLM)
+sanitizeinput(USE_AUTH_NTLM)
 
 if(USE_AUTH_NTLM STREQUAL "")
 	set(USE_AUTH_NTLM ON)

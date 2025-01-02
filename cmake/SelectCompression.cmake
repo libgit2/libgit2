@@ -1,8 +1,8 @@
-include(SanitizeBool)
+include(SanitizeInput)
 
 # Fall back to the previous cmake configuration, "USE_BUNDLED_ZLIB"
 if(NOT USE_COMPRESSION AND USE_BUNDLED_ZLIB)
-	SanitizeBool(USE_BUNDLED_ZLIB)
+	SanitizeInput(USE_BUNDLED_ZLIB)
 
 	if(USE_BUNDLED_ZLIB STREQUAL ON)
 		set(USE_COMPRESSION "builtin")
@@ -12,6 +12,8 @@ if(NOT USE_COMPRESSION AND USE_BUNDLED_ZLIB)
 		message(FATAL_ERROR "unknown setting to USE_BUNDLED_ZLIB: ${USE_BUNDLED_ZLIB}")
 	endif()
 endif()
+
+SanitizeInput(USE_COMPRESSION)
 
 if(NOT USE_COMPRESSION)
 	find_package(ZLIB)

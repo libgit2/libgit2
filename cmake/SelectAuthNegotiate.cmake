@@ -1,4 +1,4 @@
-include(SanitizeBool)
+include(SanitizeInput)
 
 find_package(GSSAPI)
 
@@ -7,14 +7,14 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin" OR CMAKE_SYSTEM_NAME MATCHES "iOS")
 endif()
 
 if(USE_AUTH_NEGOTIATE STREQUAL "" AND NOT USE_GSSAPI STREQUAL "")
-        sanitizebool(USE_GSSAPI)
+        sanitizeinput(USE_GSSAPI)
 	set(USE_AUTH_NEGOTIATE "${USE_GSSAPI}")
 endif()
 
-sanitizebool(USE_AUTH_NEGOTIATE)
+sanitizeinput(USE_AUTH_NEGOTIATE)
 
 if((USE_AUTH_NEGOTIATE STREQUAL ON OR USE_AUTH_NEGOTIATE STREQUAL "") AND GSSFRAMEWORK_FOUND)
-	set(USE_AUTH_NEGOTIATE "GSS.framework")
+	set(USE_AUTH_NEGOTIATE "gssframework")
 elseif((USE_AUTH_NEGOTIATE STREQUAL ON OR USE_AUTH_NEGOTIATE STREQUAL "") AND GSSAPI_FOUND)
 	set(USE_AUTH_NEGOTIATE "gssapi")
 elseif((USE_AUTH_NEGOTIATE STREQUAL ON OR USE_AUTH_NEGOTIATE STREQUAL "") AND WIN32)
@@ -25,7 +25,7 @@ elseif(USE_AUTH_NEGOTIATE STREQUAL ON)
 	message(FATAL_ERROR "negotiate support was requested but no backend is available")
 endif()
 
-if(USE_AUTH_NEGOTIATE STREQUAL "GSS.framework")
+if(USE_AUTH_NEGOTIATE STREQUAL "gssframework")
 	if(NOT GSSFRAMEWORK_FOUND)
 		message(FATAL_ERROR "GSS.framework could not be found")
 	endif()

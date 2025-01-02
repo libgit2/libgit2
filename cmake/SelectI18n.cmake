@@ -1,9 +1,9 @@
-include(SanitizeBool)
+include(SanitizeInput)
 
 find_package(IntlIconv)
 
 if(USE_I18N STREQUAL "" AND NOT USE_ICONV STREQUAL "")
-	sanitizebool(USE_ICONV)
+	sanitizeinput(USE_ICONV)
 	set(USE_I18N "${USE_ICONV}")
 endif()
 
@@ -11,7 +11,7 @@ if(USE_I18N STREQUAL "")
 	set(USE_I18N ON)
 endif()
 
-sanitizebool(USE_I18N)
+sanitizeinput(USE_I18N)
 
 if(USE_I18N)
 	if(USE_I18N STREQUAL ON)
