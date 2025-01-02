@@ -221,7 +221,7 @@ typedef uint64_t  uintmax_t;
 #endif /* __STDC_LIMIT_MACROS ] */
 
 
-/* 7.18.4 Limits of other integer types
+/* 7.18.4 Limits of other integer types */
 
 #if !defined(__cplusplus) || defined(__STDC_CONSTANT_MACROS) /* [    See footnote 224 at page 260 */
 
