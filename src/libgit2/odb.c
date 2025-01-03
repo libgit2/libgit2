@@ -162,6 +162,8 @@ void git_odb_object_free(git_odb_object *object)
 	git_cached_obj_decref(object);
 }
 
+#ifndef GIT_DEPRECATE_HARD
+
 int git_odb_hashfile(
 	git_oid *out,
 	const char *path,
@@ -190,6 +192,8 @@ int git_odb_hash(
 
 	return git_object_id_from_buffer(id, data, len, &opts);
 }
+
+#endif
 
 /**
  * FAKE WSTREAM
