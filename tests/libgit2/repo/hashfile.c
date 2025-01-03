@@ -34,7 +34,7 @@ void test_repo_hashfile__simple(void)
 
 	/* hash with invalid type */
 	cl_git_fail(git_odb__hashfile(&a, full.ptr, GIT_OBJECT_ANY, GIT_OID_SHA1));
-	cl_git_fail(git_repository_hashfile(&b, _repo, full.ptr, GIT_OBJECT_OFS_DELTA, NULL));
+	cl_git_fail(git_repository_hashfile(&b, _repo, full.ptr, 6, NULL));
 
 	git_str_dispose(&full);
 }

@@ -180,13 +180,12 @@ GIT_EXTERN(const char *) git_object_type2string(git_object_t type);
 GIT_EXTERN(git_object_t) git_object_string2type(const char *str);
 
 /**
- * Determine if the given git_object_t is a valid loose object type.
+ * Determine if the given git_object_t is a valid object type.
  *
  * @param type object type to test.
- * @return true if the type represents a valid loose object type,
- * false otherwise.
+ * @return 1 if the type represents a valid loose object type, 0 otherwise
  */
-GIT_EXTERN(int) git_object_typeisloose(git_object_t type);
+GIT_EXTERN(int) git_object_type_is_valid(git_object_t type);
 
 /**
  * Recursively peel an object until an object of the specified type is met.
