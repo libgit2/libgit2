@@ -71,54 +71,9 @@ int git_odb__add_default_backends(
 	bool as_alternates, int alternate_depth);
 
 /*
- * Hash a git_rawobj internally.
- * The `git_rawobj` is supposed to be previously initialized
- */
-int git_odb__hashobj(git_oid *id, git_rawobj *obj, git_oid_t oid_type);
-
-/*
  * Format the object header such as it would appear in the on-disk object
  */
 int git_odb__format_object_header(size_t *out_len, char *hdr, size_t hdr_size, git_object_size_t obj_len, git_object_t obj_type);
-
-/*
- * Hash an open file descriptor.
- * This is a performance call when the contents of a fd need to be hashed,
- * but the fd is already open and we have the size of the contents.
- *
- * Saves us some `stat` calls.
- *
- * The fd is never closed, not even on error. It must be opened and closed
- * by the caller
- */
-int git_odb__hashfd(
-	git_oid *out,
-	git_file fd,
-	size_t size,
-	git_object_t object_type,
-	git_oid_t oid_type);
-
-/*
- * Hash an open file descriptor applying an array of filters
- * Acts just like git_odb__hashfd with the addition of filters...
- */
-int git_odb__hashfd_filtered(
-	git_oid *out,
-	git_file fd,
-	size_t len,
-	git_object_t object_type,
-	git_oid_t oid_type,
-	git_filter_list *fl);
-
-/*
- * Hash a `path`, assuming it could be a POSIX symlink: if the path is a
- * symlink, then the raw contents of the symlink will be hashed. Otherwise,
- * this will fallback to `git_odb__hashfd`.
- *
- * The hash type for this call is always `GIT_OBJECT_BLOB` because
- * symlinks may only point to blobs.
- */
-int git_odb__hashlink(git_oid *out, const char *path, git_oid_t oid_type);
 
 /**
  * Generate a GIT_EMISMATCH error for the ODB.
@@ -159,19 +114,6 @@ int git_odb__freshen(git_odb *db, const git_oid *id);
 void git_odb_object__free(void *object);
 
 /* SHA256 support */
-
-int git_odb__hash(
-	git_oid *out,
-	const void *data,
-	size_t len,
-	git_object_t object_type,
-	git_oid_t oid_type);
-
-int git_odb__hashfile(
-	git_oid *out,
-	const char *path,
-	git_object_t object_type,
-	git_oid_t oid_type);
 
 int git_odb__backend_loose(
 	git_odb_backend **out,

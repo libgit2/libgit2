@@ -56,6 +56,7 @@ int git_object__from_raw(
 	git_object_t object_type,
 	git_oid_t oid_type)
 {
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
 	git_object_def *def;
 	git_object *object;
 	size_t object_size;
@@ -63,6 +64,9 @@ int git_object__from_raw(
 
 	GIT_ASSERT_ARG(object_out);
 	*object_out = NULL;
+
+	id_opts.object_type = object_type;
+	id_opts.oid_type = oid_type;
 
 	/* Validate type match */
 	if (object_type != GIT_OBJECT_BLOB &&
@@ -83,7 +87,9 @@ int git_object__from_raw(
 	GIT_ERROR_CHECK_ALLOC(object);
 	object->cached.flags = GIT_CACHE_STORE_PARSED;
 	object->cached.type = object_type;
-	if ((error = git_odb__hash(&object->cached.oid, data, size, object_type, oid_type)) < 0)
+
+	if ((error = git_object_id_from_buffer(&object->cached.oid,
+			data, size, &id_opts)) < 0)
 		return error;
 
 	/* Parse raw object data */
@@ -627,7 +633,7 @@ GIT_INLINE(int) normalize_options(
 	normalized->oid_type = (given_opts && given_opts->oid_type) ?
 		given_opts->oid_type : GIT_OID_DEFAULT;
 
-	if (!git_object_typeisloose(normalized->object_type)) {
+	if (!git_object_type_is_valid(normalized->object_type)) {
 		git_error_set(GIT_ERROR_INVALID, "invalid object type");
 		return -1;
 	}
@@ -637,7 +643,8 @@ GIT_INLINE(int) normalize_options(
 		return -1;
 	}
 
-	normalized->filters = given_opts->filters;
+	if (given_opts)
+		normalized->filters = given_opts->filters;
 
 	return 0;
 }

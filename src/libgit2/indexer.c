@@ -597,6 +597,7 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 
 static int hash_and_save(git_indexer *idx, git_rawobj *obj, off64_t entry_start)
 {
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
 	git_oid oid;
 	size_t entry_size;
 	struct entry *entry;
@@ -605,7 +606,10 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, off64_t entry_start)
 	entry = git__calloc(1, sizeof(*entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
 
-	if (git_odb__hashobj(&oid, obj, idx->oid_type) < 0) {
+	id_opts.object_type = obj->type;
+	id_opts.oid_type = idx->oid_type;
+
+	if (git_object_id_from_buffer(&oid, obj->data, obj->len, &id_opts) < 0) {
 		git_error_set(GIT_ERROR_INDEXER, "failed to hash object");
 		goto on_error;
 	}

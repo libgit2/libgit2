@@ -83,12 +83,21 @@ GIT_INLINE(git_object_t) git_object__type_from_filemode(git_filemode_t mode)
 	}
 }
 
+/**
+ * Calculate the object ID for an already open file descriptor.
+ * This is a performance call when the contents of a fd need to be hashed,
+ * but the fd is already open and we have the size of the contents.
+ * This can reduce the number of `swtat` calls.
+*/
 int git_object_id_from_fd(
 	git_oid *id,
 	git_file fd,
 	size_t size,
 	git_object_id_options *opts);
 
+/**
+ * Calculate the object ID for a file that is a symbolic link.
+-*/
 int git_object_id_from_symlink(
 	git_oid *id,
 	const char *path,
