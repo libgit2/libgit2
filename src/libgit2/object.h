@@ -83,4 +83,15 @@ GIT_INLINE(git_object_t) git_object__type_from_filemode(git_filemode_t mode)
 	}
 }
 
+int git_object_id_from_fd(
+	git_oid *id,
+	git_file fd,
+	size_t size,
+	git_object_id_options *opts);
+
+int git_object_id_from_symlink(
+	git_oid *id,
+	const char *path,
+	const git_object_id_options *opts);
+
 #endif

@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "buffer.h"
+#include "filter.h"
 
 /**
  * @file git2/object.h
@@ -224,6 +225,91 @@ GIT_EXTERN(int) git_object_peel(
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_object_dup(git_object **dest, git_object *source);
+
+/**
+ * Options for calculating object IDs from raw content.
+ *
+ * Initialize with `GIT_OBJECT_ID_OPTIONS_INIT`. Alternatively, you can
+ * use `git_object_id_options_init`.
+ */
+typedef struct {
+	unsigned int version; /**< version for the struct */
+
+	/**
+	 * Object type of the raw content; if not specified, this
+	 * defaults to `GIT_OBJECT_BLOB`.
+	 */
+	git_object_t object_type;
+
+	/**
+	 * Object ID type to generate; if not specified, this defaults
+	 * to `GIT_OID_DEFAULT`.
+	 */
+	git_oid_t oid_type;
+
+	/**
+	 * Filters to mutate the raw data with; these are ignored
+	 * unless the given raw object data is a blob.
+	 */
+	git_filter_list *filters;
+} git_object_id_options;
+
+/** Current version for the `git_object_id_options` structure */
+#define GIT_OBJECT_ID_OPTIONS_VERSION 1
+
+/** Static constructor for `object_id_options` */
+#define GIT_OBJECT_ID_OPTIONS_INIT {GIT_OBJECT_ID_OPTIONS_VERSION}
+
+/**
+ * Initialize `git_object_id_options` structure with default values.
+ * Equivalent to creating an instance with `GIT_WORKTREE_ADD_OPTIONS_INIT`.
+ *
+ * @param opts The `git_object_id_options` struct to initialize.
+ * @param version The struct version; pass `GIT_OBJECT_ID_OPTIONS_INIT`.
+ * @return 0 on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_object_id_options_init(git_object_id_options *opts,
+	unsigned int version);
+
+/**
+ * Given the raw content of an object, determine the object ID.
+ * This prepends the object header to the given data, and hashes
+ * the results with the hash corresponding to the given oid_type.
+ *
+ * @param[out] oid_out the resulting object id
+ * @param buf the raw object content
+ * @param len the length of the given buffer
+ * @param opts the options for id calculation
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_object_id_from_buffer(
+	git_oid *oid_out,
+	const void *buf,
+	size_t len,
+	const git_object_id_options *opts);
+
+/**
+ * Given an on-disk file that contains the raw content of an object,
+ * determine the object ID. This prepends the object header to the given
+ * data, and hashes the results with the hash corresponding to the given
+ * oid_type.
+ *
+ * Note that this does not look at attributes or do any on-disk filtering
+ * (like line ending translation), so when used with blobs, it may not
+ * match the results for adding to the repository. To compute the object
+ * ID for a blob with filters, use `git_repository_hashfile`.
+ *
+ * @see git_repository_hashfile
+ *
+ * @param[out] oid_out the resulting object id
+ * @param path the on-disk path to the raw object content
+ * @param opts the options for id calculation
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_object_id_from_file(
+	git_oid *oid_out,
+	const char *path,
+	const git_object_id_options *opts);
 
 #ifdef GIT_EXPERIMENTAL_SHA256
 /**
