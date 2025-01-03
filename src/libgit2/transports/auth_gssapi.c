@@ -21,9 +21,9 @@
 # include <krb5.h>
 #endif
 
-static gss_OID_desc gssapi_oid_spnego =
+static gss_OID_desc GIT_ALIGN(gssapi_oid_spnego, 8) =
 	{ 6, (void *) "\x2b\x06\x01\x05\x05\x02" };
-static gss_OID_desc gssapi_oid_krb5 =
+static gss_OID_desc GIT_ALIGN(gssapi_oid_krb5, 8) =
 	{ 9, (void *) "\x2a\x86\x48\x86\xf7\x12\x01\x02\x02" };
 
 static gss_OID gssapi_oids[] =
