@@ -30,6 +30,10 @@ CTEST=$(which ctest)
 TMPDIR=${TMPDIR:-/tmp}
 USER=${USER:-$(whoami)}
 
+# Space-separated list of ssh backend names to test.
+# Suggestions: "default", "libssh2", "exec", or "libssh2 exec".
+SSH_BACKENDS="${SSH_BACKENDS:-default}"
+
 GITTEST_SSH_KEYTYPE=${GITTEST_SSH_KEYTYPE:="ecdsa"}
 
 HOME=`mktemp -d ${TMPDIR}/home.XXXXXXXX`
@@ -436,7 +440,8 @@ if should_run "NEGOTIATE_TESTS" && -n "$GITTEST_NEGOTIATE_PASSWORD" ; then
 	kdestroy -A
 fi
 
-if should_run "SSH_TESTS"; then
+ssh_tests() {
+	export GITTEST_SSH_BACKEND="${1}"
 	export GITTEST_REMOTE_USER=$USER
 	export GITTEST_REMOTE_SSH_KEY="${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE}"
 	export GITTEST_REMOTE_SSH_PUBKEY="${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE}.pub"
@@ -446,7 +451,7 @@ if should_run "SSH_TESTS"; then
 	export GITTEST_SSH_CMD="ssh -i ${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE} -o UserKnownHostsFile=${HOME}/.ssh/known_hosts"
 
 	echo ""
-	echo "Running ssh tests"
+	echo "Running ssh tests (with backend: ${GITTEST_SSH_BACKEND})"
 	echo ""
 
 	export GITTEST_REMOTE_URL="ssh://localhost:2222/$SSHD_DIR/test.git"
@@ -454,7 +459,7 @@ if should_run "SSH_TESTS"; then
 	unset GITTEST_REMOTE_URL
 
 	echo ""
-	echo "Running ssh tests (scp-style paths)"
+	echo "Running ssh tests (scp-style paths) (with backend: ${GITTEST_SSH_BACKEND})"
 	echo ""
 
 	export GITTEST_REMOTE_URL="[localhost:2222]:$SSHD_DIR/test.git"
@@ -462,12 +467,19 @@ if should_run "SSH_TESTS"; then
 	unset GITTEST_REMOTE_URL
 
 	unset GITTEST_SSH_CMD
+	unset GITTEST_SSH_BACKEND
 
 	unset GITTEST_REMOTE_USER
 	unset GITTEST_REMOTE_SSH_KEY
 	unset GITTEST_REMOTE_SSH_PUBKEY
 	unset GITTEST_REMOTE_SSH_PASSPHRASE
 	unset GITTEST_REMOTE_SSH_FINGERPRINT
+}
+
+if should_run "SSH_TESTS"; then
+	for ssh_backend_name in $SSH_BACKENDS; do
+		ssh_tests $ssh_backend_name
+	done
 fi
 
 unset GITTEST_FLAKY_RETRY

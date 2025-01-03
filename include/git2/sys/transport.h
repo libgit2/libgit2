@@ -480,6 +480,20 @@ GIT_EXTERN(int) git_smart_subtransport_ssh(
 	git_transport *owner,
 	void *param);
 
+/**
+ * Options for GIT_OPT_SET_SSH_BACKEND.
+ */
+typedef enum {
+	/** Don't use SSH. */
+	GIT_SSH_BACKEND_NONE = 0,
+
+	/** Use SSH with the built-in libssh2 library. */
+	GIT_SSH_BACKEND_LIBSSH2 = 1,
+
+	/** Use SSH by executing OpenSSH's "ssh" program. */
+	GIT_SSH_BACKEND_EXEC = 2,
+} git_ssh_backend_t;
+
 /** @} */
 GIT_END_DECL
 
