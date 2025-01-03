@@ -87,16 +87,16 @@ void test_object_raw_hash__hash_junk_data(void)
 	junk_obj.data = some_data;
 	hash_object_fail(&id, &junk_obj);
 
-	junk_obj.type = 0; /* EXT1 */
+	junk_obj.type = 0; /* unused */
 	hash_object_fail(&id, &junk_obj);
 
-	junk_obj.type = 5; /* EXT2 */
+	junk_obj.type = 5; /* unused */
 	hash_object_fail(&id, &junk_obj);
 
-	junk_obj.type = GIT_OBJECT_OFS_DELTA;
+	junk_obj.type = 6; /* packfile offset delta */
 	hash_object_fail(&id, &junk_obj);
 
-	junk_obj.type = GIT_OBJECT_REF_DELTA;
+	junk_obj.type = 7; /* packfile ref delta */
 	hash_object_fail(&id, &junk_obj);
 
 	junk_obj.type = 42;
