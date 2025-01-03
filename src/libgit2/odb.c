@@ -116,7 +116,7 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj, git_oid_t oid_type)
 	GIT_ASSERT_ARG(id);
 	GIT_ASSERT_ARG(obj);
 
-	if (!git_object_typeisloose(obj->type)) {
+	if (!git_object_type_is_valid(obj->type)) {
 		git_error_set(GIT_ERROR_INVALID, "invalid object type");
 		return -1;
 	}
@@ -219,7 +219,7 @@ int git_odb__hashfd(
 	ssize_t read_len = 0;
 	int error = 0;
 
-	if (!git_object_typeisloose(object_type)) {
+	if (!git_object_type_is_valid(object_type)) {
 		git_error_set(GIT_ERROR_INVALID, "invalid object type for hash");
 		return -1;
 	}

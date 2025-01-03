@@ -36,19 +36,19 @@ void test_object_raw_type2string__convert_string_to_type(void)
 	cl_assert(git_object_string2type("hohoho") == GIT_OBJECT_INVALID);
 }
 
-void test_object_raw_type2string__check_type_is_loose(void)
+void test_object_raw_type2string__check_type_is_valid(void)
 {
-	cl_assert(git_object_typeisloose(GIT_OBJECT_INVALID) == 0);
-	cl_assert(git_object_typeisloose(0) == 0); /* EXT1 */
-	cl_assert(git_object_typeisloose(GIT_OBJECT_COMMIT) == 1);
-	cl_assert(git_object_typeisloose(GIT_OBJECT_TREE) == 1);
-	cl_assert(git_object_typeisloose(GIT_OBJECT_BLOB) == 1);
-	cl_assert(git_object_typeisloose(GIT_OBJECT_TAG) == 1);
-	cl_assert(git_object_typeisloose(5) == 0); /* EXT2 */
-	cl_assert(git_object_typeisloose(GIT_OBJECT_OFS_DELTA) == 0);
-	cl_assert(git_object_typeisloose(GIT_OBJECT_REF_DELTA) == 0);
+	cl_assert(git_object_type_is_valid(GIT_OBJECT_INVALID) == 0);
+	cl_assert(git_object_type_is_valid(0) == 0); /* EXT1 */
+	cl_assert(git_object_type_is_valid(GIT_OBJECT_COMMIT) == 1);
+	cl_assert(git_object_type_is_valid(GIT_OBJECT_TREE) == 1);
+	cl_assert(git_object_type_is_valid(GIT_OBJECT_BLOB) == 1);
+	cl_assert(git_object_type_is_valid(GIT_OBJECT_TAG) == 1);
+	cl_assert(git_object_type_is_valid(5) == 0); /* EXT2 */
+	cl_assert(git_object_type_is_valid(GIT_OBJECT_OFS_DELTA) == 0);
+	cl_assert(git_object_type_is_valid(GIT_OBJECT_REF_DELTA) == 0);
 
-	cl_assert(git_object_typeisloose(-2) == 0);
-	cl_assert(git_object_typeisloose(8) == 0);
-	cl_assert(git_object_typeisloose(1234) == 0);
+	cl_assert(git_object_type_is_valid(-2) == 0);
+	cl_assert(git_object_type_is_valid(8) == 0);
+	cl_assert(git_object_type_is_valid(1234) == 0);
 }

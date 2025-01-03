@@ -665,6 +665,16 @@ GIT_EXTERN(int) git_index_add_frombuffer(
  */
 GIT_EXTERN(size_t) git_object__size(git_object_t type);
 
+/**
+ * Determine if the given git_object_t is a valid object type.
+ *
+ * @deprecated use `git_object_type_is_valid`
+ *
+ * @param type object type to test.
+ * @return 1 if the type represents a valid object type, 0 otherwise
+ */
+GIT_EXTERN(int) git_object_typeisloose(git_object_t type);
+
 /**@}*/
 
 /** @name Deprecated Remote Functions
