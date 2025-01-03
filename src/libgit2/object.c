@@ -601,6 +601,301 @@ bool git_object__is_valid(
 	return true;
 }
 
+int git_object_id_options_init(
+	git_object_id_options *opts,
+	unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(opts, version,
+		git_object_id_options, GIT_OBJECT_ID_OPTIONS_INIT);
+	return 0;
+}
+
+GIT_INLINE(bool) needs_filter(git_object_id_options *opts)
+{
+	return (opts && opts->filters &&
+	        git_filter_list_length(opts->filters) > 0 &&
+	        (!opts->object_type || opts->object_type == GIT_OBJECT_BLOB));
+}
+
+GIT_INLINE(int) normalize_options(
+	git_object_id_options *normalized,
+	const git_object_id_options *given_opts)
+{
+	normalized->object_type = (given_opts && given_opts->object_type) ?
+		given_opts->object_type : GIT_OBJECT_BLOB;
+
+	normalized->oid_type = (given_opts && given_opts->oid_type) ?
+		given_opts->oid_type : GIT_OID_DEFAULT;
+
+	if (!git_object_typeisloose(normalized->object_type)) {
+		git_error_set(GIT_ERROR_INVALID, "invalid object type");
+		return -1;
+	}
+
+	if (!git_oid_type_is_valid(normalized->oid_type)) {
+		git_error_set(GIT_ERROR_INVALID, "unknown oid type");
+		return -1;
+	}
+
+	normalized->filters = given_opts->filters;
+
+	return 0;
+}
+
+/* Raw object ID computation (no filters applied) from a descriptor */
+static int id_from_fd(
+	git_oid *out,
+	git_file fd,
+	size_t size,
+	git_object_id_options *opts)
+{
+	size_t hdr_len;
+	char hdr[64], buffer[GIT_BUFSIZE_FILEIO];
+	git_hash_ctx ctx;
+	git_hash_algorithm_t algorithm;
+	ssize_t read_len = 0;
+	int error = 0;
+
+	algorithm = git_oid_algorithm(opts->oid_type);
+
+	if ((error = git_hash_ctx_init(&ctx, algorithm)) < 0)
+		return error;
+
+	if ((error = git_odb__format_object_header(&hdr_len, hdr,
+		sizeof(hdr), size, opts->object_type)) < 0)
+		goto done;
+
+	if ((error = git_hash_update(&ctx, hdr, hdr_len)) < 0)
+		goto done;
+
+	while (size > 0 &&
+	       (read_len = p_read(fd, buffer, sizeof(buffer))) > 0) {
+
+		if ((size_t)read_len > size) {
+			git_error_set(GIT_ERROR_OS, "error reading file for hashing");
+			error = -1;
+			goto done;
+		}
+
+		if ((error = git_hash_update(&ctx, buffer, read_len)) < 0)
+			goto done;
+
+		size -= read_len;
+	}
+
+	/* If p_read returned an error code, the read obviously failed.
+	 * If size is not zero, the file was truncated after we originally
+	 * stat'd it, so we consider this a read failure too */
+	if (read_len < 0 || size > 0) {
+		git_error_set(GIT_ERROR_OS, "error reading file for hashing");
+		error = -1;
+
+		goto done;
+	}
+
+	error = git_hash_final(out->id, &ctx);
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	out->type = opts->oid_type;
+#endif
+
+done:
+	git_hash_ctx_cleanup(&ctx);
+	return error;
+}
+
+int git_object_id_from_fd(
+	git_oid *id,
+	git_file fd,
+	size_t size,
+	git_object_id_options *given_opts)
+{
+	git_object_id_options opts = GIT_OBJECT_ID_OPTIONS_INIT;
+	git_str raw = GIT_STR_INIT;
+	int error;
+
+	GIT_ASSERT_ARG(id);
+
+	if (normalize_options(&opts, given_opts) < 0)
+		return -1;
+
+	if (!needs_filter(&opts))
+		return id_from_fd(id, fd, size, &opts);
+
+	/*
+	 * size of data is used in header, so we have to read the
+	 * whole file into memory to apply filters before beginning
+	 * to calculate the hash
+	 */
+
+	if ((error = git_futils_readbuffer_fd(&raw, fd, size)) < 0)
+		goto done;
+
+	error = git_object_id_from_buffer(id, raw.ptr, raw.size, &opts);
+
+done:
+	git_str_dispose(&raw);
+	return error;
+}
+
+int git_object_id_from_symlink(
+	git_oid *id,
+	const char *path,
+	const git_object_id_options *given_opts)
+{
+	git_object_id_options opts = GIT_OBJECT_ID_OPTIONS_INIT;
+	struct stat st;
+	char *link_data;
+	size_t link_len;
+	int read_len;
+	int error;
+
+	GIT_ASSERT_ARG(id);
+	GIT_ASSERT_ARG(path);
+
+	if (normalize_options(&opts, given_opts) < 0)
+		return -1;
+
+	opts.filters = NULL;
+	if (opts.object_type != GIT_OBJECT_BLOB) {
+		git_error_set(GIT_ERROR_INVALID, "symbolic links must be blob types");
+		return -1;
+	}
+
+	if (git_fs_path_lstat(path, &st) < 0)
+		return -1;
+
+	/* Non-symlink fallback, primarily for non-Unix systems. */
+	if (!S_ISLNK(st.st_mode))
+		return git_object_id_from_file(id, path, &opts);
+
+	if (!git__is_int(st.st_size) || (int)st.st_size < 0) {
+		git_error_set(GIT_ERROR_FILESYSTEM, "file size overflow for 32-bit systems");
+		return -1;
+	}
+
+	link_len = (size_t)st.st_size;
+	link_data = git__malloc(link_len + 1);
+	GIT_ERROR_CHECK_ALLOC(link_data);
+
+	if ((read_len = p_readlink(path, link_data, link_len)) < 0) {
+		git_error_set(GIT_ERROR_OS, "failed to read symlink data for '%s'", path);
+		error = -1;
+		goto done;
+	}
+
+	GIT_ASSERT(read_len <= st.st_size);
+	link_data[read_len] = '\0';
+
+	error = git_object_id_from_buffer(id,
+		link_data, (size_t)read_len, &opts);
+
+done:
+	git__free(link_data);
+	return error;
+}
+
+int git_object_id_from_file(
+	git_oid *id,
+	const char *path,
+	const git_object_id_options *given_opts)
+{
+	git_object_id_options opts = GIT_OBJECT_ID_OPTIONS_INIT;
+	uint64_t size;
+	int fd, error = 0;
+
+	GIT_ASSERT_ARG(id);
+	GIT_ASSERT_ARG(path);
+
+	if (normalize_options(&opts, given_opts) < 0)
+		return -1;
+
+	if ((fd = git_futils_open_ro(path)) < 0)
+		return fd;
+
+	if ((error = git_futils_filesize(&size, fd)) < 0)
+		goto done;
+
+	if (!git__is_sizet(size)) {
+		git_error_set(GIT_ERROR_OS, "file size overflow for 32-bit systems");
+		error = -1;
+		goto done;
+	}
+
+	error = git_object_id_from_fd(id, fd, (size_t)size, &opts);
+
+done:
+	p_close(fd);
+	return error;
+}
+
+/* Raw object ID computation (no filters applied) from a buffer */
+static int id_from_buffer(
+	git_oid *id,
+	const void *data,
+	size_t len,
+	const git_object_id_options *opts)
+{
+	git_str_vec vec[2];
+	char header[64];
+	size_t hdrlen;
+	git_hash_algorithm_t algorithm;
+	int error;
+
+	algorithm = git_oid_algorithm(opts->oid_type);
+
+	if (!data && len != 0) {
+		git_error_set(GIT_ERROR_INVALID, "invalid object");
+		return -1;
+	}
+
+	if ((error = git_odb__format_object_header(&hdrlen,
+		header, sizeof(header), len, opts->object_type)) < 0)
+		return error;
+
+	vec[0].data = header;
+	vec[0].len = hdrlen;
+	vec[1].data = (void *)data;
+	vec[1].len = len;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	id->type = opts->oid_type;
+#endif
+
+	return git_hash_vec(id->id, vec, 2, algorithm);
+}
+
+int git_object_id_from_buffer(
+	git_oid *id,
+	const void *data,
+	size_t len,
+	const git_object_id_options *given_opts)
+{
+	git_str filtered = GIT_STR_INIT;
+	git_object_id_options opts = GIT_OBJECT_ID_OPTIONS_INIT;
+	int error = -1;
+
+	GIT_ASSERT_ARG(id);
+
+	if (normalize_options(&opts, given_opts) < 0)
+		return -1;
+
+	if (needs_filter(&opts)) {
+		if (git_filter_list__apply_to_buffer(&filtered,
+				opts.filters, (char *)data, len) < 0)
+			goto done;
+
+		data = filtered.ptr;
+		len = filtered.size;
+	}
+
+	error = id_from_buffer(id, data, len, &opts);
+
+done:
+	git_str_dispose(&filtered);
+	return error;
+}
+
 int git_object_rawcontent_is_valid(
 	int *valid,
 	const char *buf,
