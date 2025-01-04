@@ -1074,15 +1074,22 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 	git_commit_free(head);
 
 	/* add it */
-	error = git_index_add(index, &entry);
+	if ((error = git_index_add(index, &entry)) < 0)
+		goto cleanup;
+
+	/* Adding implies conflict was resolved, move conflict entries to REUC */
+	if ((error = git_index__conflict_to_reuc(index, entry.path)) < 0 && error != GIT_ENOTFOUND)
+		goto cleanup;
 
 	/* write it, if requested */
-	if (!error && write_index) {
-		error = git_index_write(index);
+	if (write_index) {
+		if ((error = git_index_write(index)) < 0)
+			goto cleanup;
 
-		if (!error)
-			git_oid_cpy(&sm->index_oid, &sm->wd_oid);
+		git_oid_cpy(&sm->index_oid, &sm->wd_oid);
 	}
+
+	error = 0;
 
 cleanup:
 	git_repository_free(sm_repo);
