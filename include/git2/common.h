@@ -565,12 +565,17 @@ typedef enum {
  *      > Sets the timeout (in milliseconds) for reading from and writing
  *      > to a remote server. Set to 0 to use the system default.
  *
- *   opts(GIT_OPT_GET_SSH_BACKEND)
+ *   opts(GIT_OPT_GET_SSH_BACKEND, git_buf *out)
  *      > Gets the SSH backend for connecting to a remote server.
+ *      > The backend's name is written to the `out` buffer.
+ *      > An empty string means that SSH is disabled.
  *
- *   opts(GIT_OPT_SET_SSH_BACKEND, git_ssh_backend_t backend)
+ *   opts(GIT_OPT_SET_SSH_BACKEND, const char *name)
  *      > Sets the SSH backend for connecting to a remote server
  *      > (libssh2 or exec).
+ *      > 
+ *		> Set to the empty string ("") to disable SSH,
+ *		> or set to NULL to restore the default.
  *
  * @param option Option key
  * @return 0 on success, <0 on failure

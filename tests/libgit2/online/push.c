@@ -26,7 +26,6 @@ static char *_remote_push_options = NULL;
 static char *_orig_ssh_cmd = NULL;
 static char *_ssh_cmd = NULL;
 static char *_ssh_backend = NULL;
-static git_ssh_backend_t _orig_ssh_backend_opt = GIT_SSH_BACKEND_NONE;
 
 static int cred_acquire_cb(git_credential **, const char *, const char *, unsigned int, void *);
 
@@ -332,7 +331,6 @@ void test_online_push__initialize(void)
 	size_t heads_len;
 	git_push_options push_opts = GIT_PUSH_OPTIONS_INIT;
 	git_fetch_options fetch_opts = GIT_FETCH_OPTIONS_INIT;
-	git_ssh_backend_t ssh_backend_opt = GIT_SSH_BACKEND_NONE;
 
 	_repo = cl_git_sandbox_init("push_src");
 
@@ -395,19 +393,8 @@ void test_online_push__initialize(void)
 	if (_remote_expectcontinue)
 		git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 1);
 
-	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SSH_BACKEND, &_orig_ssh_backend_opt));
-	ssh_backend_opt = _orig_ssh_backend_opt;
-	if (_ssh_backend) {
-		if (!strcmp(_ssh_backend, "default"))
-			ssh_backend_opt = _orig_ssh_backend_opt;
-		else if (!strcmp(_ssh_backend, "libssh2"))
-			ssh_backend_opt = GIT_SSH_BACKEND_LIBSSH2;
-		else if (!strcmp(_ssh_backend, "exec"))
-			ssh_backend_opt = GIT_SSH_BACKEND_EXEC;
-		else
-			cl_assert(!"unknown value in GITTEST_SSH_BACKEND");
-		cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, ssh_backend_opt));
-	}
+	if (_ssh_backend)
+		cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, _ssh_backend));
 
 	cl_git_pass(git_remote_create(&_remote, _repo, "test", _remote_url));
 
@@ -465,7 +452,7 @@ void test_online_push__cleanup(void)
 	_repo = NULL;
 
 	git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 0);
-	git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, _orig_ssh_backend_opt);
+	git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, NULL); /* Restore default SSH backend */
 
 	record_callbacks_data_clear(&_record_cbs_data);
 

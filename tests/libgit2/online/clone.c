@@ -5,6 +5,7 @@
 #include "remote.h"
 #include "futils.h"
 #include "refs.h"
+#include "transports/ssh.h"
 
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
 #define LIVE_REPO_AS_DIR "http:/github.com/libgit2/TestGitRepository"
@@ -52,7 +53,6 @@ static char *_ssh_cmd = NULL;
 static char *_orig_ssh_cmd = NULL;
 
 static char *_ssh_backend = NULL;
-static git_ssh_backend_t _orig_ssh_backend_opt = GIT_SSH_BACKEND_NONE;
 static bool _using_libssh2 = false;
 static bool _using_libssh2_memory_credentials = false;
 
@@ -72,7 +72,6 @@ void test_online_clone__initialize(void)
 {
 	git_checkout_options dummy_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_fetch_options dummy_fetch = GIT_FETCH_OPTIONS_INIT;
-	git_ssh_backend_t ssh_backend_opt = GIT_SSH_BACKEND_NONE;
 
 	g_repo = NULL;
 
@@ -123,20 +122,10 @@ void test_online_clone__initialize(void)
 	if (_remote_expectcontinue)
 		git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 1);
 
-	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SSH_BACKEND, &_orig_ssh_backend_opt));
-	if (_ssh_backend) {
-		if (!strcmp(_ssh_backend, "default"))
-			ssh_backend_opt = _orig_ssh_backend_opt;
-		else if (!strcmp(_ssh_backend, "libssh2"))
-			ssh_backend_opt = GIT_SSH_BACKEND_LIBSSH2;
-		else if (!strcmp(_ssh_backend, "exec"))
-			ssh_backend_opt = GIT_SSH_BACKEND_EXEC;
-		else
-			cl_assert(!"unknown value in GITTEST_SSH_BACKEND");
-		cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, ssh_backend_opt));
-	}
-	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SSH_BACKEND, &ssh_backend_opt));
-	_using_libssh2 = ssh_backend_opt == GIT_SSH_BACKEND_LIBSSH2;
+	if (_ssh_backend)
+		cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, _ssh_backend));
+
+	_using_libssh2 = !strcmp(git_ssh__backend_name(), "libssh2");
 #ifdef GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS
 	_using_libssh2_memory_credentials = _using_libssh2;
 #else
@@ -209,7 +198,7 @@ void test_online_clone__cleanup(void)
 	git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, NULL);
 	git_libgit2_opts(GIT_OPT_SET_SERVER_TIMEOUT, 0);
 	git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, 0);
-	git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, _orig_ssh_backend_opt);
+	git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, NULL);
 }
 
 void test_online_clone__network_full(void)

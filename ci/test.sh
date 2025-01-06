@@ -31,8 +31,9 @@ TMPDIR=${TMPDIR:-/tmp}
 USER=${USER:-$(whoami)}
 
 # Space-separated list of ssh backend names to test.
-# Suggestions: "default", "libssh2", "exec", or "libssh2 exec".
-SSH_BACKENDS="${SSH_BACKENDS:-default}"
+# Suggestions: "libssh2", "exec", or "libssh2 exec".
+# Leave empty to test the default backend.
+SSH_BACKENDS="${SSH_BACKENDS:-}"
 
 GITTEST_SSH_KEYTYPE=${GITTEST_SSH_KEYTYPE:="ecdsa"}
 
@@ -441,7 +442,15 @@ if should_run "NEGOTIATE_TESTS" && -n "$GITTEST_NEGOTIATE_PASSWORD" ; then
 fi
 
 ssh_tests() {
-	export GITTEST_SSH_BACKEND="${1}"
+	ssh_backend_display_name="(default)"
+
+	# Only set GITTEST_SSH_BACKEND if we're given a specific backend.
+	# If the variable isn't set, libgit2 will use the default backend.
+	if [ ! -z $1 ]; then
+		export GITTEST_SSH_BACKEND="${1}"
+		ssh_backend_display_name="$GITTEST_SSH_BACKEND"
+	fi
+
 	export GITTEST_REMOTE_USER=$USER
 	export GITTEST_REMOTE_SSH_KEY="${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE}"
 	export GITTEST_REMOTE_SSH_PUBKEY="${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE}.pub"
@@ -451,7 +460,7 @@ ssh_tests() {
 	export GITTEST_SSH_CMD="ssh -i ${HOME}/.ssh/id_${GITTEST_SSH_KEYTYPE} -o UserKnownHostsFile=${HOME}/.ssh/known_hosts"
 
 	echo ""
-	echo "Running ssh tests (with backend: ${GITTEST_SSH_BACKEND})"
+	echo "Running ssh tests (with backend: ${ssh_backend_display_name})"
 	echo ""
 
 	export GITTEST_REMOTE_URL="ssh://localhost:2222/$SSHD_DIR/test.git"
@@ -459,7 +468,7 @@ ssh_tests() {
 	unset GITTEST_REMOTE_URL
 
 	echo ""
-	echo "Running ssh tests (scp-style paths) (with backend: ${GITTEST_SSH_BACKEND})"
+	echo "Running ssh tests (scp-style paths, with backend: ${ssh_backend_display_name})"
 	echo ""
 
 	export GITTEST_REMOTE_URL="[localhost:2222]:$SSHD_DIR/test.git"
@@ -477,9 +486,15 @@ ssh_tests() {
 }
 
 if should_run "SSH_TESTS"; then
-	for ssh_backend_name in $SSH_BACKENDS; do
-		ssh_tests $ssh_backend_name
-	done
+	if [ -z $SSH_BACKENDS ]; then
+		# Run ssh tests with default backend
+		ssh_tests
+	else
+		# Space-separated list of backends to test
+		for ssh_backend_name in $SSH_BACKENDS; do
+			ssh_tests $ssh_backend_name
+		done
+	fi
 fi
 
 unset GITTEST_FLAKY_RETRY

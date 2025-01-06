@@ -5,6 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "ssh.h"
 #include "ssh_exec.h"
 #include "ssh_libssh2.h"
 
@@ -15,74 +16,109 @@
  * libssh2 takes precedence over exec for backwards compatibility.
  */
 #if defined(GIT_SSH_LIBSSH2)
-	#define DEFAULT_BACKEND GIT_SSH_BACKEND_LIBSSH2
+	#define DEFAULT_BACKEND_NAME "libssh2"
 #elif defined(GIT_SSH_EXEC)
-	#define DEFAULT_BACKEND GIT_SSH_BACKEND_EXEC
+	#define DEFAULT_BACKEND_NAME "exec"
 #else
-	#define DEFAULT_BACKEND GIT_SSH_BACKEND_NONE
+	#define DEFAULT_BACKEND_NAME ""
 #endif
 
-git_ssh_backend_t git_transport__ssh_backend = DEFAULT_BACKEND;
+typedef struct git_ssh__backend {
+	const char *name;
+
+	int (* subtransport)(
+		git_smart_subtransport **out,
+		git_transport *owner,
+		void *param);
+
+	int (* set_paths)(
+		git_smart_subtransport *subtransport,
+		const char *cmd_uploadpack,
+		const char *cmd_receivepack);
+} git_ssh__backend_t;
+
+static const git_ssh__backend_t backend_table[] = {
+#if defined(GIT_SSH_LIBSSH2)
+	{
+		"libssh2",
+		git_smart_subtransport_ssh_libssh2,
+		git_smart_subtransport_ssh_libssh2_set_paths
+	},
+#endif
+#if defined(GIT_SSH_EXEC)
+	{
+		"exec",
+		git_smart_subtransport_ssh_exec,
+		git_smart_subtransport_ssh_exec_set_paths
+	},
+#endif
+};
+
+static const git_ssh__backend_t *backend = NULL;
+
+int git_transport_ssh_global_init(void)
+{
+	return git_ssh__set_backend(DEFAULT_BACKEND_NAME);
+}
+
+const char *git_ssh__backend_name(void)
+{
+	return backend ? backend->name : "";
+}
+
+int git_ssh__set_backend(const char *name)
+{
+	const git_ssh__backend_t *candidate = NULL;
+	size_t i;
+
+	/* NULL sets default backend */
+	if (!name)
+		name = DEFAULT_BACKEND_NAME;
+
+	/* Empty string disables SSH */
+	if (!name[0]) {
+		backend = NULL;
+		return 0;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(backend_table); i++) {
+		candidate = &backend_table[i];
+		if (!strcmp(name, candidate->name)) {
+			backend = candidate;
+			return 0;
+		}
+	}
+
+	git_error_set(GIT_ERROR_INVALID, "library was built without ssh backend '%s'", name);
+	return -1;
+}
 
 int git_smart_subtransport_ssh(
 	git_smart_subtransport **out,
 	git_transport *owner,
 	void *param)
 {
-	switch (git_transport__ssh_backend) {
-#ifdef GIT_SSH_LIBSSH2
-		case GIT_SSH_BACKEND_LIBSSH2:
-			return git_smart_subtransport_ssh_libssh2(out, owner, param);
-#endif
-
-#ifdef GIT_SSH_EXEC
-		case GIT_SSH_BACKEND_EXEC:
-			return git_smart_subtransport_ssh_exec(out, owner, param);
-#endif
-
-		default:
-			git_error_set(GIT_ERROR_INVALID, "cannot create SSH transport; library was built without SSH backend %d", git_transport__ssh_backend);
-			return -1;
+	if (!backend) {
+		git_error_set(GIT_ERROR_INVALID, "cannot create SSH transport; no SSH backend is set");
+		return -1;
 	}
 
-#if !defined(GIT_SSH_LIBSSH2) && !defined(GIT_SSH_EXEC)
-	GIT_UNUSED(out);
-	GIT_UNUSED(owner);
-	GIT_UNUSED(param);
-#endif
+	return backend->subtransport(out, owner, param);
 }
 
 static int transport_set_paths(git_transport *t, git_strarray *paths)
 {
 	transport_smart *smart = (transport_smart *)t;
 
-	switch (git_transport__ssh_backend) {
-#ifdef GIT_SSH_LIBSSH2
-		case GIT_SSH_BACKEND_LIBSSH2:
-			return git_smart_subtransport_ssh_libssh2_set_paths(
-				(git_smart_subtransport *)smart->wrapped,
-				paths->strings[0],
-				paths->strings[1]);
-#endif
-
-#ifdef GIT_SSH_EXEC
-		case GIT_SSH_BACKEND_EXEC:
-			return git_smart_subtransport_ssh_exec_set_paths(
-				(git_smart_subtransport *)smart->wrapped,
-				paths->strings[0],
-				paths->strings[1]);
-#endif
-
-		default:
-			GIT_ASSERT(!"cannot create SSH library; library was built without the requested SSH backend");
-			return -1;
+	if (!backend) {
+		GIT_ASSERT(!"cannot create SSH library; no SSH backend is set");
+		return -1;
 	}
 
-#if !defined(GIT_SSH_LIBSSH2) && !defined(GIT_SSH_EXEC)
-	GIT_UNUSED(t);
-	GIT_UNUSED(smart);
-	GIT_UNUSED(paths);
-#endif
+	return backend->set_paths(
+		(git_smart_subtransport *)smart->wrapped,
+		paths->strings[0],
+		paths->strings[1]);
 }
 
 int git_transport_ssh_with_paths(
@@ -114,4 +150,3 @@ int git_transport_ssh_with_paths(
 	*out = transport;
 	return 0;
 }
-

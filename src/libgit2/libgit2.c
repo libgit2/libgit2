@@ -25,6 +25,7 @@
 #include "streams/mbedtls.h"
 #include "streams/openssl.h"
 #include "streams/socket.h"
+#include "transports/ssh.h"
 #include "transports/ssh_libssh2.h"
 
 #ifdef GIT_WIN32
@@ -46,6 +47,7 @@ int git_libgit2_init(void)
 		git_sysdir_global_init,
 		git_filter_global_init,
 		git_merge_driver_global_init,
+		git_transport_ssh_global_init,
 		git_transport_ssh_libssh2_global_init,
 		git_stream_registry_global_init,
 		git_socket_stream_global_init,

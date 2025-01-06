@@ -33,6 +33,7 @@
 #include "streams/socket.h"
 #include "transports/smart.h"
 #include "transports/http.h"
+#include "transports/ssh.h"
 #include "transports/ssh_libssh2.h"
 
 #ifdef GIT_WIN32
@@ -49,7 +50,6 @@ extern int git_odb__packed_priority;
 extern int git_odb__loose_priority;
 extern int git_socket_stream__connect_timeout;
 extern int git_socket_stream__timeout;
-extern git_ssh_backend_t git_transport__ssh_backend;
 
 char *git__user_agent;
 char *git__user_agent_product;
@@ -459,11 +459,23 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_GET_SSH_BACKEND:
-		*(va_arg(ap, int *)) = git_transport__ssh_backend;
+		{
+			git_buf *out = va_arg(ap, git_buf *);
+			git_str str = GIT_STR_INIT;
+
+			if ((error = git_buf_tostr(&str, out)) < 0 ||
+			    (error = git_str_puts(&str, git_ssh__backend_name())) < 0)
+				break;
+
+			error = git_buf_fromstr(out, &str);
+		}
 		break;
 
 	case GIT_OPT_SET_SSH_BACKEND:
-		git_transport__ssh_backend = va_arg(ap, int);
+		{
+			const char* backend_name = va_arg(ap, const char *);
+			error = git_ssh__set_backend(backend_name);
+		}
 		break;
 
 	default:
