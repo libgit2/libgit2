@@ -108,8 +108,8 @@ void test_core_features__backends(void)
 	cl_assert(https == NULL);
 #endif
 
-#if defined(GIT_SSH) && defined(GIT_SSH_EXEC) && defined(GIT_SSH_LIBSSH2)
-	cl_assert_equal_s("exec+libssh2", ssh);
+#if defined(GIT_SSH) && defined(GIT_SSH_LIBSSH2) && defined(GIT_SSH_EXEC)
+	cl_assert_equal_s("libssh2,exec", ssh);
 #elif defined(GIT_SSH) && defined(GIT_SSH_EXEC)
 	cl_assert_equal_s("exec", ssh);
 #elif defined(GIT_SSH) && defined(GIT_SSH_LIBSSH2)

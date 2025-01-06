@@ -1,6 +1,6 @@
 if(USE_SSH STREQUAL OFF OR USE_SSH STREQUAL "")
 	add_feature_info(SSH OFF "SSH transport support")
-elseif(USE_SSH STREQUAL "exec+libssh2")
+elseif(USE_SSH STREQUAL "libssh2,exec")
 	set(GIT_SSH 1)
 	set(GIT_SSH_EXEC 1)
 	set(GIT_SSH_LIBSSH2 1)
