@@ -51,6 +51,11 @@ static char *_orig_no_proxy = NULL;
 static char *_ssh_cmd = NULL;
 static char *_orig_ssh_cmd = NULL;
 
+static char *_ssh_backend = NULL;
+static git_ssh_backend_t _orig_ssh_backend_opt = GIT_SSH_BACKEND_NONE;
+static bool _using_libssh2 = false;
+static bool _using_libssh2_memory_credentials = false;
+
 static int ssl_cert(git_cert *cert, int valid, const char *host, void *payload)
 {
 	GIT_UNUSED(cert);
@@ -67,6 +72,7 @@ void test_online_clone__initialize(void)
 {
 	git_checkout_options dummy_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_fetch_options dummy_fetch = GIT_FETCH_OPTIONS_INIT;
+	git_ssh_backend_t ssh_backend_opt = GIT_SSH_BACKEND_NONE;
 
 	g_repo = NULL;
 
@@ -107,6 +113,7 @@ void test_online_clone__initialize(void)
 
 	_orig_ssh_cmd = cl_getenv("GIT_SSH");
 	_ssh_cmd = cl_getenv("GITTEST_SSH_CMD");
+	_ssh_backend = cl_getenv("GITTEST_SSH_BACKEND");
 
 	if (_ssh_cmd)
 		cl_setenv("GIT_SSH", _ssh_cmd);
@@ -115,6 +122,26 @@ void test_online_clone__initialize(void)
 
 	if (_remote_expectcontinue)
 		git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 1);
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SSH_BACKEND, &_orig_ssh_backend_opt));
+	if (_ssh_backend) {
+		if (!strcmp(_ssh_backend, "default"))
+			ssh_backend_opt = _orig_ssh_backend_opt;
+		else if (!strcmp(_ssh_backend, "libssh2"))
+			ssh_backend_opt = GIT_SSH_BACKEND_LIBSSH2;
+		else if (!strcmp(_ssh_backend, "exec"))
+			ssh_backend_opt = GIT_SSH_BACKEND_EXEC;
+		else
+			cl_assert(!"unknown value in GITTEST_SSH_BACKEND");
+		cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, ssh_backend_opt));
+	}
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SSH_BACKEND, &ssh_backend_opt));
+	_using_libssh2 = ssh_backend_opt == GIT_SSH_BACKEND_LIBSSH2;
+#ifdef GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS
+	_using_libssh2_memory_credentials = _using_libssh2;
+#else
+	_using_libssh2_memory_credentials = false;
+#endif
 
 #if !defined(GIT_WIN32)
 	/*
@@ -176,12 +203,13 @@ void test_online_clone__cleanup(void)
 
 	cl_setenv("GIT_SSH", _orig_ssh_cmd);
 	git__free(_orig_ssh_cmd);
-
 	git__free(_ssh_cmd);
+	git__free(_ssh_backend);
 
 	git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, NULL);
 	git_libgit2_opts(GIT_OPT_SET_SERVER_TIMEOUT, 0);
 	git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, 0);
+	git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, _orig_ssh_backend_opt);
 }
 
 void test_online_clone__network_full(void)
@@ -663,9 +691,8 @@ static int github_credentials(
 
 void test_online_clone__ssh_github(void)
 {
-#if !defined(GIT_SSH) || !defined(GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS)
-	clar__skip();
-#endif
+	if (!_using_libssh2_memory_credentials)
+		clar__skip();
 
 	if (!_github_ssh_pubkey || !_github_ssh_privkey)
 		clar__skip();
@@ -680,9 +707,8 @@ void test_online_clone__ssh_github(void)
 
 void test_online_clone__ssh_github_shallow(void)
 {
-#if !defined(GIT_SSH) || !defined(GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS)
-	clar__skip();
-#endif
+	if (!_using_libssh2_memory_credentials)
+		clar__skip();
 
 	if (!_github_ssh_pubkey || !_github_ssh_privkey)
 		clar__skip();
@@ -700,9 +726,9 @@ void test_online_clone__ssh_auth_methods(void)
 {
 	int with_user;
 
-#ifndef GIT_SSH_LIBSSH2
-	clar__skip();
-#endif
+	if (!_using_libssh2)
+		clar__skip();
+
 	g_options.fetch_opts.callbacks.credentials = check_ssh_auth_methods;
 	g_options.fetch_opts.callbacks.payload = &with_user;
 	g_options.fetch_opts.callbacks.certificate_check = succeed_certificate_check;
@@ -722,9 +748,8 @@ void test_online_clone__ssh_auth_methods(void)
  */
 void test_online_clone__ssh_certcheck_accepts_unknown(void)
 {
-#if !defined(GIT_SSH_LIBSSH2) || !defined(GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS)
-	clar__skip();
-#endif
+	if (!_using_libssh2_memory_credentials)
+		clar__skip();
 
 	if (!_github_ssh_pubkey || !_github_ssh_privkey)
 		clar__skip();
@@ -751,9 +776,8 @@ void test_online_clone__ssh_certcheck_override_knownhosts(void)
 {
 	git_str knownhostsfile = GIT_STR_INIT;
 
-#if !defined(GIT_SSH) || !defined(GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS)
-	clar__skip();
-#endif
+	if (!_using_libssh2_memory_credentials)
+		clar__skip();
 
 	if (!_github_ssh_pubkey || !_github_ssh_privkey || !_github_ssh_remotehostkey)
 		clar__skip();
@@ -840,9 +864,8 @@ static int cred_foo_bar(git_credential **cred, const char *url, const char *user
 
 void test_online_clone__ssh_cannot_change_username(void)
 {
-#ifndef GIT_SSH_LIBSSH2
-	clar__skip();
-#endif
+	if (!_using_libssh2)
+		clar__skip();
 
 	g_options.fetch_opts.callbacks.credentials = cred_foo_bar;
 
@@ -885,9 +908,8 @@ static int ssh_certificate_check(git_cert *cert, int valid, const char *host, vo
 
 void test_online_clone__ssh_cert(void)
 {
-#ifndef GIT_SSH_LIBSSH2
-	cl_skip();
-#endif
+	if (!_using_libssh2)
+		cl_skip();
 
 	g_options.fetch_opts.callbacks.certificate_check = ssh_certificate_check;
 
@@ -945,9 +967,9 @@ static int ssh_memory_cred_cb(git_credential **cred, const char *url, const char
 
 void test_online_clone__ssh_memory_auth(void)
 {
-#ifndef GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS
-	clar__skip();
-#endif
+	if (!_using_libssh2_memory_credentials)
+		clar__skip();
+
 	if (!_remote_url || !_remote_user || !_remote_ssh_privkey || strncmp(_remote_url, "ssh://", 5) != 0)
 		clar__skip();
 
@@ -963,10 +985,10 @@ void test_online_clone__certificate_invalid(void)
 	cl_git_fail_with(GIT_ECERTIFICATE,
 		git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 
-#ifdef GIT_SSH_LIBSSH2
-	cl_git_fail_with(GIT_ECERTIFICATE,
-		git_clone(&g_repo, "ssh://github.com/libgit2/TestGitRepository", "./foo", &g_options));
-#endif
+	if (_using_libssh2) {
+		cl_git_fail_with(GIT_ECERTIFICATE,
+			git_clone(&g_repo, "ssh://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+	}
 }
 
 void test_online_clone__certificate_valid(void)

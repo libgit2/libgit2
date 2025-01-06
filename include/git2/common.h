@@ -257,7 +257,9 @@ typedef enum {
 	GIT_OPT_GET_SERVER_TIMEOUT,
 	GIT_OPT_SET_USER_AGENT_PRODUCT,
 	GIT_OPT_GET_USER_AGENT_PRODUCT,
-	GIT_OPT_ADD_SSL_X509_CERT
+	GIT_OPT_ADD_SSL_X509_CERT,
+	GIT_OPT_GET_SSH_BACKEND,
+	GIT_OPT_SET_SSH_BACKEND
 } git_libgit2_opt_t;
 
 /**
@@ -562,6 +564,13 @@ typedef enum {
  *   opts(GIT_OPT_SET_SERVER_TIMEOUT, int timeout)
  *      > Sets the timeout (in milliseconds) for reading from and writing
  *      > to a remote server. Set to 0 to use the system default.
+ *
+ *   opts(GIT_OPT_GET_SSH_BACKEND)
+ *      > Gets the SSH backend for connecting to a remote server.
+ *
+ *   opts(GIT_OPT_SET_SSH_BACKEND, git_ssh_backend_t backend)
+ *      > Sets the SSH backend for connecting to a remote server
+ *      > (libssh2 or exec).
  *
  * @param option Option key
  * @return 0 on success, <0 on failure

@@ -2,6 +2,18 @@
 #include "git2/sys/remote.h"
 #include "git2/sys/transport.h"
 
+static git_ssh_backend_t _orig_ssh_backend_opt = GIT_SSH_BACKEND_NONE;
+
+void test_transport_ssh_exec__initialize(void)
+{
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SSH_BACKEND, &_orig_ssh_backend_opt));
+	git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, GIT_SSH_BACKEND_EXEC);
+}
+
+void test_transport_ssh_exec__cleanup(void)
+{
+	git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, _orig_ssh_backend_opt);
+}
 
 void test_transport_ssh_exec__reject_injection_username(void)
 {
