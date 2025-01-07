@@ -119,11 +119,11 @@ configure_file(config.cmake.in
 install(FILES
 	"${PROJECT_BINARY_DIR}/cmake/${PROJECT_NAME}Config.cmake"
 	"${PROJECT_BINARY_DIR}/cmake/${PROJECT_NAME}ConfigVersion.cmake"
-	DESTINATION "lib/cmake/${PROJECT_NAME}")
+	DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 install(
 	EXPORT ${LIBGIT2_TARGETS_EXPORT_NAME}
 	NAMESPACE "${PROJECT_NAME}::"
-	DESTINATION "lib/cmake/${PROJECT_NAME}")
+	DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
 # Install
 
