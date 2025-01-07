@@ -6,6 +6,7 @@
 #include "futils.h"
 #include "refs.h"
 #include "transports/ssh.h"
+#include "backend.h"
 
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
 #define LIVE_REPO_AS_DIR "http:/github.com/libgit2/TestGitRepository"
@@ -123,9 +124,9 @@ void test_online_clone__initialize(void)
 		git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 1);
 
 	if (_ssh_backend)
-		cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, _ssh_backend));
+		cl_git_pass(git_libgit2_opts(GIT_OPT_SET_BACKEND, GIT_FEATURE_SSH, _ssh_backend));
 
-	_using_libssh2 = !strcmp(git_ssh__backend_name(), "libssh2");
+	_using_libssh2 = !strcmp(git_backend__name(GIT_FEATURE_SSH), "libssh2");
 #ifdef GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS
 	_using_libssh2_memory_credentials = _using_libssh2;
 #else
@@ -198,7 +199,7 @@ void test_online_clone__cleanup(void)
 	git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, NULL);
 	git_libgit2_opts(GIT_OPT_SET_SERVER_TIMEOUT, 0);
 	git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, 0);
-	git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, NULL);
+	git_libgit2_opts(GIT_OPT_SET_BACKEND, GIT_FEATURE_SSH, NULL);
 }
 
 void test_online_clone__network_full(void)

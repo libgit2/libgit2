@@ -82,6 +82,32 @@ void test_core_features__backends(void)
 	const char *sha1 = git_libgit2_feature_backend(GIT_FEATURE_SHA1);
 	const char *sha256 = git_libgit2_feature_backend(GIT_FEATURE_SHA256);
 
+	git_buf threads_opt = GIT_BUF_INIT;
+	git_buf https_opt = GIT_BUF_INIT;
+	git_buf ssh_opt = GIT_BUF_INIT;
+	git_buf nsec_opt = GIT_BUF_INIT;
+	git_buf http_parser_opt = GIT_BUF_INIT;
+	git_buf regex_opt = GIT_BUF_INIT;
+	git_buf i18n_opt = GIT_BUF_INIT;
+	git_buf ntlm_opt = GIT_BUF_INIT;
+	git_buf negotiate_opt = GIT_BUF_INIT;
+	git_buf compression_opt = GIT_BUF_INIT;
+	git_buf sha1_opt = GIT_BUF_INIT;
+	git_buf sha256_opt = GIT_BUF_INIT;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_BACKEND, GIT_FEATURE_THREADS,        &threads_opt));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_BACKEND, GIT_FEATURE_HTTPS,          &https_opt));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_BACKEND, GIT_FEATURE_SSH,            &ssh_opt));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_BACKEND, GIT_FEATURE_NSEC,           &nsec_opt));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_BACKEND, GIT_FEATURE_HTTP_PARSER,    &http_parser_opt));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_BACKEND, GIT_FEATURE_REGEX,          &regex_opt));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_BACKEND, GIT_FEATURE_I18N,           &i18n_opt));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_BACKEND, GIT_FEATURE_AUTH_NTLM,      &ntlm_opt));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_BACKEND, GIT_FEATURE_AUTH_NEGOTIATE, &negotiate_opt));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_BACKEND, GIT_FEATURE_COMPRESSION,    &compression_opt));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_BACKEND, GIT_FEATURE_SHA1,           &sha1_opt));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_BACKEND, GIT_FEATURE_SHA256,         &sha256_opt));
+
 #if defined(GIT_THREADS) && defined(GIT_WIN32)
 	cl_assert_equal_s("win32", threads);
 #elif defined(GIT_THREADS)
@@ -89,6 +115,7 @@ void test_core_features__backends(void)
 #else
 	cl_assert(threads == NULL);
 #endif
+	cl_assert_equal_s(threads? threads: "", threads_opt.ptr); /* non-changeable backend */
 
 #if defined(GIT_HTTPS) && defined(GIT_OPENSSL)
 	cl_assert_equal_s("openssl", https);
@@ -107,17 +134,22 @@ void test_core_features__backends(void)
 #else
 	cl_assert(https == NULL);
 #endif
+	cl_assert_equal_s(https? https: "", https_opt.ptr); /* non-changeable backend */
 
 #if defined(GIT_SSH) && defined(GIT_SSH_LIBSSH2) && defined(GIT_SSH_EXEC)
 	cl_assert_equal_s("libssh2,exec", ssh);
+	cl_assert_equal_s("libssh2", ssh_opt.ptr);
 #elif defined(GIT_SSH) && defined(GIT_SSH_EXEC)
 	cl_assert_equal_s("exec", ssh);
+	cl_assert_equal_s("exec", opt_ssh.ptr);
 #elif defined(GIT_SSH) && defined(GIT_SSH_LIBSSH2)
 	cl_assert_equal_s("libssh2", ssh);
+	cl_assert_equal_s("libssh2", opt_ssh.ptr);
 #elif defined(GIT_SSH)
 	cl_assert(0);
 #else
 	cl_assert(ssh == NULL);
+	cl_assert_equal_s("", opt_ssh.ptr);
 #endif
 
 #if defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIMESPEC)
@@ -133,6 +165,7 @@ void test_core_features__backends(void)
 #else
 	cl_assert(nsec == NULL);
 #endif
+	cl_assert_equal_s(nsec? nsec: "", nsec_opt.ptr); /* non-changeable backend */
 
 #if defined(GIT_HTTPPARSER_HTTPPARSER)
 	cl_assert_equal_s("httpparser", http_parser);
@@ -143,6 +176,7 @@ void test_core_features__backends(void)
 #else
 	cl_assert(0);
 #endif
+	cl_assert_equal_s(http_parser? http_parser: "", http_parser_opt.ptr); /* non-changeable backend */
 
 #if defined(GIT_REGEX_REGCOMP_L)
 	cl_assert_equal_s("regcomp_l", regex);
@@ -157,12 +191,14 @@ void test_core_features__backends(void)
 #else
 	cl_assert(0);
 #endif
+	cl_assert_equal_s(regex? regex: "", regex_opt.ptr); /* non-changeable backend */
 
 #if defined(GIT_USE_ICONV)
 	cl_assert_equal_s("iconv", i18n);
 #else
 	cl_assert(i18n == NULL);
 #endif
+	cl_assert_equal_s(i18n? i18n: "", i18n_opt.ptr); /* non-changeable backend */
 
 #if defined(GIT_NTLM)
 	cl_assert_equal_s("ntlmclient", ntlm);
@@ -171,6 +207,7 @@ void test_core_features__backends(void)
 #else
 	cl_assert(ntlm == NULL);
 #endif
+	cl_assert_equal_s(ntlm? ntlm: "", ntlm_opt.ptr); /* non-changeable backend */
 
 #if defined(GIT_GSSAPI)
 	cl_assert_equal_s("gssapi", negotiate);
@@ -179,6 +216,7 @@ void test_core_features__backends(void)
 #else
 	cl_assert(negotiate == NULL);
 #endif
+	cl_assert_equal_s(negotiate? negotiate: "", negotiate_opt.ptr); /* non-changeable backend */
 
 #if defined(GIT_COMPRESSION_BUILTIN)
 	cl_assert_equal_s("builtin", compression);
@@ -187,6 +225,7 @@ void test_core_features__backends(void)
 #else
 	cl_assert(0);
 #endif
+	cl_assert_equal_s(compression? compression: "", compression_opt.ptr); /* non-changeable backend */
 
 #if defined(GIT_SHA1_COLLISIONDETECT)
 	cl_assert_equal_s("builtin", sha1);
@@ -205,6 +244,7 @@ void test_core_features__backends(void)
 #else
 	cl_assert(0);
 #endif
+	cl_assert_equal_s(sha1? sha1: "", sha1_opt.ptr); /* non-changeable backend */
 
 #if defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_BUILTIN)
 	cl_assert_equal_s("builtin", sha256);
@@ -225,4 +265,18 @@ void test_core_features__backends(void)
 #else
 	cl_assert(sha256 == NULL);
 #endif
+	cl_assert_equal_s(sha256? sha256: "", sha256_opt.ptr); /* non-changeable backend */
+
+	git_buf_dispose(&threads_opt);
+	git_buf_dispose(&https_opt);
+	git_buf_dispose(&ssh_opt);
+	git_buf_dispose(&nsec_opt);
+	git_buf_dispose(&http_parser_opt);
+	git_buf_dispose(&regex_opt);
+	git_buf_dispose(&i18n_opt);
+	git_buf_dispose(&ntlm_opt);
+	git_buf_dispose(&negotiate_opt);
+	git_buf_dispose(&compression_opt);
+	git_buf_dispose(&sha1_opt);
+	git_buf_dispose(&sha256_opt);
 }

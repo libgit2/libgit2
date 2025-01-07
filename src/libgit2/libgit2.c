@@ -7,6 +7,7 @@
 
 #include <git2.h>
 #include "alloc.h"
+#include "backend.h"
 #include "buf.h"
 #include "common.h"
 #include "filter.h"
@@ -40,6 +41,7 @@ int git_libgit2_init(void)
 #endif
 		git_allocator_global_init,
 		git_error_global_init,
+		git_backend_global_init,
 		git_threads_global_init,
 		git_oid_global_init,
 		git_rand_global_init,
@@ -144,16 +146,7 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 		break;
 
 	case GIT_FEATURE_SSH:
-#if defined(GIT_SSH_LIBSSH2) && defined(GIT_SSH_EXEC)
-		return "libssh2,exec";
-#elif defined(GIT_SSH_EXEC)
-		return "exec";
-#elif defined(GIT_SSH_LIBSSH2)
-		return "libssh2";
-#elif defined(GIT_SSH)
-		GIT_ASSERT_WITH_RETVAL(!"Unknown SSH backend", NULL);
-#endif
-		break;
+		return git_backend__spec(feature);
 
 	case GIT_FEATURE_NSEC:
 #if defined(GIT_USE_NSEC) && defined(GIT_USE_STAT_MTIMESPEC)

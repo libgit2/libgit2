@@ -394,7 +394,7 @@ void test_online_push__initialize(void)
 		git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 1);
 
 	if (_ssh_backend)
-		cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, _ssh_backend));
+		cl_git_pass(git_libgit2_opts(GIT_OPT_SET_BACKEND, GIT_FEATURE_SSH, _ssh_backend));
 
 	cl_git_pass(git_remote_create(&_remote, _repo, "test", _remote_url));
 
@@ -452,7 +452,7 @@ void test_online_push__cleanup(void)
 	_repo = NULL;
 
 	git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 0);
-	git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, NULL); /* Restore default SSH backend */
+	git_libgit2_opts(GIT_OPT_SET_BACKEND, GIT_FEATURE_SSH, NULL); /* Restore default SSH backend */
 
 	record_callbacks_data_clear(&_record_cbs_data);
 

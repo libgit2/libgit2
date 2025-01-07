@@ -5,27 +5,14 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "backend.h"
 #include "ssh.h"
 #include "ssh_exec.h"
 #include "ssh_libssh2.h"
 
 #include "transports/smart.h"
 
-/*
- * Default SSH backend. If both backends are compiled in,
- * libssh2 takes precedence over exec for backwards compatibility.
- */
-#if defined(GIT_SSH_LIBSSH2)
-	#define DEFAULT_BACKEND_NAME "libssh2"
-#elif defined(GIT_SSH_EXEC)
-	#define DEFAULT_BACKEND_NAME "exec"
-#else
-	#define DEFAULT_BACKEND_NAME ""
-#endif
-
 typedef struct git_ssh__backend {
-	const char *name;
-
 	int (* subtransport)(
 		git_smart_subtransport **out,
 		git_transport *owner,
@@ -37,60 +24,61 @@ typedef struct git_ssh__backend {
 		const char *cmd_receivepack);
 } git_ssh__backend_t;
 
-static const git_ssh__backend_t backend_table[] = {
 #if defined(GIT_SSH_LIBSSH2)
-	{
-		"libssh2",
-		git_smart_subtransport_ssh_libssh2,
-		git_smart_subtransport_ssh_libssh2_set_paths
-	},
-#endif
-#if defined(GIT_SSH_EXEC)
-	{
-		"exec",
-		git_smart_subtransport_ssh_exec,
-		git_smart_subtransport_ssh_exec_set_paths
-	},
-#endif
+static git_ssh__backend_t libssh2_backend = {
+	git_smart_subtransport_ssh_libssh2,
+	git_smart_subtransport_ssh_libssh2_set_paths
 };
+#endif
+
+#if defined(GIT_SSH_EXEC)
+static git_ssh__backend_t exec_backend = {
+	git_smart_subtransport_ssh_exec,
+	git_smart_subtransport_ssh_exec_set_paths
+};
+#endif
 
 static const git_ssh__backend_t *backend = NULL;
 
+static int install_ssh_backend(void *param)
+{
+	backend = param;
+	return 0;
+}
+
+static int uninstall_ssh_backend(void *param)
+{
+	backend = NULL;
+	return 0;
+
+	GIT_UNUSED(param);
+}
+
 int git_transport_ssh_global_init(void)
 {
-	return git_ssh__set_backend(DEFAULT_BACKEND_NAME);
-}
+	int error = 0;
 
-const char *git_ssh__backend_name(void)
-{
-	return backend ? backend->name : "";
-}
+#if defined(GIT_SSH_LIBSSH2)
+	error = git_backend__register(
+		GIT_FEATURE_SSH,
+		"libssh2",
+		install_ssh_backend,
+		uninstall_ssh_backend,
+		&libssh2_backend);
+	GIT_ERROR_CHECK_ERROR(error);
+#endif
 
-int git_ssh__set_backend(const char *name)
-{
-	const git_ssh__backend_t *candidate = NULL;
-	size_t i;
+#if defined(GIT_SSH_EXEC)
+	error = git_backend__register(
+		GIT_FEATURE_SSH,
+		"exec",
+		install_ssh_backend,
+		uninstall_ssh_backend,
+		&exec_backend);
+	GIT_ERROR_CHECK_ERROR(error);
+#endif
 
-	/* NULL sets default backend */
-	if (!name)
-		name = DEFAULT_BACKEND_NAME;
-
-	/* Empty string disables SSH */
-	if (!name[0]) {
-		backend = NULL;
-		return 0;
-	}
-
-	for (i = 0; i < ARRAY_SIZE(backend_table); i++) {
-		candidate = &backend_table[i];
-		if (!strcmp(name, candidate->name)) {
-			backend = candidate;
-			return 0;
-		}
-	}
-
-	git_error_set(GIT_ERROR_INVALID, "library was built without ssh backend '%s'", name);
-	return -1;
+	return error;
 }
 
 int git_smart_subtransport_ssh(

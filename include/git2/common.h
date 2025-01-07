@@ -199,6 +199,10 @@ GIT_EXTERN(int) git_libgit2_features(void);
  * If the feature is not supported by the library, this API returns
  * `NULL`.
  *
+ * Some features support changeable backends. In this case, this API
+ * returns a comma-separated list of names of the backends that are
+ * available for the feature (e.g. "libssh2,exec").
+ *
  * @param feature the feature to query details for
  * @return the provider details, or NULL if the feature is not supported
  */
@@ -258,8 +262,8 @@ typedef enum {
 	GIT_OPT_SET_USER_AGENT_PRODUCT,
 	GIT_OPT_GET_USER_AGENT_PRODUCT,
 	GIT_OPT_ADD_SSL_X509_CERT,
-	GIT_OPT_GET_SSH_BACKEND,
-	GIT_OPT_SET_SSH_BACKEND
+	GIT_OPT_GET_BACKEND,
+	GIT_OPT_SET_BACKEND
 } git_libgit2_opt_t;
 
 /**
@@ -565,17 +569,17 @@ typedef enum {
  *      > Sets the timeout (in milliseconds) for reading from and writing
  *      > to a remote server. Set to 0 to use the system default.
  *
- *   opts(GIT_OPT_GET_SSH_BACKEND, git_buf *out)
- *      > Gets the SSH backend for connecting to a remote server.
+ *   opts(GIT_OPT_GET_BACKEND, git_feature_t feature, git_buf *out)
+ *      > Gets the name of the backend that is active for a feature.
  *      > The backend's name is written to the `out` buffer.
- *      > An empty string means that SSH is disabled.
+ *      > An empty string means that there is no active backend for this
+ *      > feature.
  *
- *   opts(GIT_OPT_SET_SSH_BACKEND, const char *name)
- *      > Sets the SSH backend for connecting to a remote server
- *      > (libssh2 or exec).
- *      > 
- *		> Set to the empty string ("") to disable SSH,
- *		> or set to NULL to restore the default.
+ *   opts(GIT_OPT_SET_BACKEND, git_feature_t feature, const char *name)
+ *      > Change the backend for a feature.
+ *      > The feature must support changeable backends (currently, only
+ *      > GIT_FEATURE_SSH does).
+ *      > Set to NULL to restore the default backend.
  *
  * @param option Option key
  * @return 0 on success, <0 on failure

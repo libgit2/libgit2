@@ -16,6 +16,10 @@
 # include <ctype.h>
 #endif
 
+#ifdef _MSC_VER
+# include <intrin.h>
+#endif
+
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define bitsizeof(x) (CHAR_BIT * sizeof(x))
 #define MSB(x, bits) ((x) & (~UINT64_C(0) << (bitsizeof(x) - (bits))))
@@ -76,6 +80,27 @@ extern uint32_t git__hash(const void *key, int len, uint32_t seed);
 #else /* use bitops in GCC; with o2 this gets optimized to a rotl instruction */
 #	define git__rotl(v, s) (uint32_t)(((uint32_t)(v) << (s)) | ((uint32_t)(v) >> (32 - (s))))
 #endif
+
+/** @return index of most significant '1' bit in the int */
+GIT_INLINE(int) git__bsr(int n)
+{
+#ifdef _MSC_VER
+	unsigned long i;
+	return _BitScanReverse(&i, n) ? i : bitsizeof(n);
+#elif __has_builtin(__builtin_clz)
+	/* Compiles down to bsr (x86) / clz (arm) */
+	return n ? (bitsizeof(n) - 1) ^ __builtin_clz(n) : bitsizeof(n);
+#else
+	/* Slow fallback */
+	int i;
+	if (n == 0)
+		return bitsizeof(n);
+	i = bitsizeof(n) - 1;
+	while (!(n & (1 << i)))
+		i--;
+	return i;
+#endif
+}
 
 extern char *git__strtok(char **end, const char *sep);
 extern char *git__strsep(char **end, const char *sep);

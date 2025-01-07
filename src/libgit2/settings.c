@@ -9,6 +9,7 @@
 
 #include <git2.h>
 #include "alloc.h"
+#include "backend.h"
 #include "buf.h"
 #include "cache.h"
 #include "common.h"
@@ -458,23 +459,29 @@ int git_libgit2_opts(int key, ...)
 		}
 		break;
 
-	case GIT_OPT_GET_SSH_BACKEND:
+	case GIT_OPT_GET_BACKEND:
 		{
+			git_feature_t feature = va_arg(ap, git_feature_t);
 			git_buf *out = va_arg(ap, git_buf *);
 			git_str str = GIT_STR_INIT;
 
-			if ((error = git_buf_tostr(&str, out)) < 0 ||
-			    (error = git_str_puts(&str, git_ssh__backend_name())) < 0)
+			const char *name = git_backend__name(feature);
+
+			if ((error = git_buf_tostr(&str, out)) < 0)
+				break;
+
+			if (name && (error = git_str_puts(&str, name)) < 0)
 				break;
 
 			error = git_buf_fromstr(out, &str);
 		}
 		break;
 
-	case GIT_OPT_SET_SSH_BACKEND:
+	case GIT_OPT_SET_BACKEND:
 		{
+			git_feature_t feature = va_arg(ap, git_feature_t);
 			const char* backend_name = va_arg(ap, const char *);
-			error = git_ssh__set_backend(backend_name);
+			error = git_backend__set(feature, backend_name);
 		}
 		break;
 

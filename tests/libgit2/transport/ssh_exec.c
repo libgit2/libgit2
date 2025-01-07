@@ -4,12 +4,12 @@
 
 void test_transport_ssh_exec__initialize(void)
 {
-	git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, "exec");
+	git_libgit2_opts(GIT_OPT_SET_BACKEND, GIT_FEATURE_SSH, "exec");
 }
 
 void test_transport_ssh_exec__cleanup(void)
 {
-	git_libgit2_opts(GIT_OPT_SET_SSH_BACKEND, NULL);
+	git_libgit2_opts(GIT_OPT_SET_BACKEND, GIT_FEATURE_SSH, NULL);
 }
 
 void test_transport_ssh_exec__reject_injection_username(void)
