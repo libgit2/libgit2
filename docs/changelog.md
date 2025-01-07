@@ -71,6 +71,13 @@ maintainers of bindings or FFI users, may want to be aware of.
   to provide a mechanism to nicely free the configuration entries that
   they provide.
 
+* **`update_refs` callback for remotes** (ABI breaking change)
+  The `update_refs` callback was added to the `git_remote_callbacks`
+  structure to provide additional information about updated refs;
+  in particular, the `git_refspec` is included for more information
+  about the remote ref. The `update_refs` callback will be
+  preferred over the now deprecated `update_tips` callback.
+
 ## What's Changed
 
 ### New features
