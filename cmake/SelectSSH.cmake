@@ -27,15 +27,6 @@ elseif(USE_SSH STREQUAL ON OR USE_SSH STREQUAL "libssh2")
 		set(GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS 1)
 	endif()
 
-	if(WIN32 AND EMBED_SSH_PATH)
-		file(GLOB SSH_SRC "${EMBED_SSH_PATH}/src/*.c")
-		list(SORT SSH_SRC)
-		list(APPEND LIBGIT2_DEPENDENCY_OBJECTS ${SSH_SRC})
-
-		list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${EMBED_SSH_PATH}/include")
-		file(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
-	endif()
-
 	set(GIT_SSH 1)
 	set(GIT_SSH_LIBSSH2 1)
 	add_feature_info(SSH ON "using libssh2")
