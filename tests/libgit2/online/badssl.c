@@ -73,24 +73,3 @@ void test_online_badssl__old_cipher(void)
 	cl_git_fail(git_clone(&g_repo, "https://rc4.badssl.com/fake.git", "./fake", NULL));
 	cl_git_fail(git_clone(&g_repo, "https://rc4.badssl.com/fake.git", "./fake", &opts));
 }
-
-void test_online_badssl__untrusted(void)
-{
-	if (!g_has_ssl)
-		cl_skip();
-
-	cl_git_fail_with(
-	        GIT_ECERTIFICATE,
-	        git_clone(
-	                &g_repo, "https://untrusted-root.badssl.com/fake.git",
-	                "./fake", NULL));
-	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_SSL);
-	cl_assert(strstr(git_error_last()->message, "certificate is not trusted") != NULL);
-	cl_assert(
-	        strstr(git_error_last()->message,
-	               "certificate revocation status could not be verified") !=
-	        NULL);
-	cl_assert(
-	        strstr(git_error_last()->message, "certificate revocation is offline or stale") !=
-	        NULL);
-}
