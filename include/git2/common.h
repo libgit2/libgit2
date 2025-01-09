@@ -568,6 +568,29 @@ typedef enum {
  */
 GIT_EXTERN(int) git_libgit2_opts(int option, ...);
 
+/**
+ * Build information items to query. This is the information type
+ * passed to `git_libgit2_buildinfo` to get particular information
+ * about the libgit2 build.
+ */
+typedef enum {
+	/** The CPU type that libgit2 was built for. */
+	GIT_BUILDINFO_CPU = 1,
+
+	/** The commit that libgit2 was built from. */
+	GIT_BUILDINFO_COMMIT
+} git_buildinfo_t;
+
+/**
+ * Query information about the compile-time information about
+ * libgit2.
+ *
+ * @param info the build information to query
+ * @return the requested information, or `NULL` on error
+ */
+GIT_EXTERN(const char *) git_libgit2_buildinfo(
+	git_buildinfo_t info);
+
 /** @} */
 GIT_END_DECL
 
