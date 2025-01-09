@@ -30,7 +30,7 @@ jobs:
         platform:
         - name: "Linux (clang, OpenSSL)"
           id: linux
-          os: ubuntu-latest
+          os: ubuntu-22.04
           setup-script: ubuntu
           env:
             CC: clang
