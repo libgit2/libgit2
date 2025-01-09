@@ -91,6 +91,9 @@ int cmd_version(int argc, char **argv)
 				printf("%s: %s\n", i->name, value);
 		}
 
+		printf("sizeof-long: %" PRIuZ "\n", sizeof(long));
+		printf("sizeof-size_t: %" PRIuZ "\n", sizeof(size_t));
+
 		for (i = feature_names; i->key; i++) {
 			if (!(supported_features & i->key))
 				continue;
