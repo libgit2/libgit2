@@ -109,7 +109,7 @@ jobs:
         ../source/tests/benchmarks/benchmark.sh \
             ${SUITE_FLAG} ${DEBUG_FLAG} \
             --baseline-cli "git" --cli "${GIT2_CLI}" --name libgit2 \
-            --json benchmarks.json --zip benchmarks.zip
+            --json benchmarks.json --flamegraph --zip benchmarks.zip
       shell: bash
     - name: Upload results
       uses: actions/upload-artifact@v4
