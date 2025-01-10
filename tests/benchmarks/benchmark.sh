@@ -6,13 +6,14 @@ set -eo pipefail
 # parse the command line
 #
 
-usage() { echo "usage: $(basename "$0") [--cli <path>] [--name <cli-name>] [--baseline-cli <path>] [--suite <suite>] [--json <path>] [--zip <path>] [--verbose] [--debug]"; }
+usage() { echo "usage: $(basename "$0") [--cli <path>] [--name <cli-name>] [--baseline-cli <path>] [--suite <suite>] [--json <path>] [--flamegraph] [--zip <path>] [--verbose] [--debug]"; }
 
 TEST_CLI="git"
 TEST_CLI_NAME=
 BASELINE_CLI=
 SUITE=
 JSON_RESULT=
+FLAMEGRAPH=
 ZIP_RESULT=
 OUTPUT_DIR=
 VERBOSE=
@@ -66,6 +67,8 @@ for a in "$@"; do
 		NEXT="json"
 	elif [[ "${a}" == "-j"* ]]; then
 		JSON_RESULT="${a/-j/}"
+	elif [ "${a}" = "-F" ] || [ "${a}" == "--flamegraph" ]; then
+		FLAMEGRAPH=1
 	elif [ "${a}" = "-z" ] || [ "${a}" == "--zip" ]; then
 		NEXT="zip"
 	elif [[ "${a}" == "-z"* ]]; then
@@ -209,8 +212,9 @@ for TEST_PATH in "${BENCHMARK_DIR}"/*; do
 	fi
 
 	OUTPUT_FILE="${OUTPUT_DIR}/${TEST_FILE}.out"
-	JSON_FILE="${OUTPUT_DIR}/${TEST_FILE}.json"
 	ERROR_FILE="${OUTPUT_DIR}/${TEST_FILE}.err"
+	JSON_FILE="${OUTPUT_DIR}/${TEST_FILE}.json"
+	FLAMEGRAPH_FILE="${OUTPUT_DIR}/${TEST_FILE}.svg"
 
 	FAILED=
 	{
@@ -248,15 +252,54 @@ for TEST_PATH in "${BENCHMARK_DIR}"/*; do
 				two_mean=$(humanize_secs "${two_mean}")
 				two_stddev=$(humanize_secs "${two_stddev}")
 
-				echo "${one_mean} ± ${one_stddev}  vs  ${two_mean} ± ${two_stddev}"
+				echo -n "${one_mean} ± ${one_stddev}  vs  ${two_mean} ± ${two_stddev}"
 			else
-				echo "${one_mean} ± ${one_stddev}"
+				echo -n "${one_mean} ± ${one_stddev}"
 			fi
 		done
 	fi
 
 	# add our metadata to the hyperfine json result
 	jq ". |= { \"name\": \"${TEST_NAME}\" } + ." < "${JSON_FILE}" > "${JSON_FILE}.new" && mv "${JSON_FILE}.new" "${JSON_FILE}"
+
+	# run with flamegraph output if requested
+	if [ "${FLAMEGRAPH}" ]; then
+		PROFILER_OUTPUT_FILE="${OUTPUT_DIR}/${TEST_FILE}-profiler.out"
+		PROFILER_ERROR_FILE="${OUTPUT_DIR}/${TEST_FILE}-profiler.err"
+
+		if [ "${VERBOSE}" = "1" ]; then
+			echo "  Profiling and creating flamegraph ..."
+		else
+			echo -n "  --  profiling..."
+		fi
+
+		RESULT=
+		{ ${TEST_PATH} --cli "${TEST_CLI}" --profile --flamegraph "${FLAMEGRAPH_FILE}" >>"${PROFILER_OUTPUT_FILE}" 2>>"${PROFILER_ERROR_FILE}" || RESULT=$?; }
+
+		if [ "${VERBOSE}" = "1" ]; then
+			indent < "${PROFILER_OUTPUT_FILE}"
+			indent < "${PROFILER_ERROR_FILE}"
+		else
+			# error code 2 indicates a non-fatal error creating
+			# the flamegraph
+			if [ "${RESULT}" = "" -o "${RESULT}" = "0" ]; then
+				echo " done."
+			elif [ "${RESULT}" = "2" ]; then
+				echo " missing resources."
+			elif [ "${RESULT}" = "3" ]; then
+				echo " sample too small."
+
+				indent < "${PROFILER_ERROR_FILE}"
+			elif [ "${RESULT}" = "4" ]; then
+				echo " unavailable."
+			else
+				echo " failed."
+
+				indent < "${PROFILER_ERROR_FILE}"
+				ANY_FAILED=1
+			fi
+		fi
+	fi
 done
 
 TIME_END=$(time_in_ms)
@@ -308,6 +351,7 @@ if [ "$CLEANUP_DIR" = "1" ]; then
 	rm -f "${OUTPUT_DIR}"/*.out
 	rm -f "${OUTPUT_DIR}"/*.err
 	rm -f "${OUTPUT_DIR}"/*.json
+	rm -f "${OUTPUT_DIR}"/*.svg
 	rmdir "${OUTPUT_DIR}"
 fi
 
