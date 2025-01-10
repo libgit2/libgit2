@@ -9,6 +9,9 @@ on:
       debug:
         type: boolean
         description: Debugging output
+      deploy:
+        type: boolean
+        description: Deploy the benchmark site
   schedule:
   - cron: '15 4 * * *'
 
@@ -70,11 +73,15 @@ jobs:
       if: matrix.platform.setup-script != ''
     - name: Clone resource repositories
       run: |
+        # TODO:
         # we need a superior way to package the benchmark resources; lfs
         # is too expensive
         # git lfs install
         # git clone https://github.com/libgit2/benchmark-resources resources
+
         git clone --bare https://github.com/git/git resources/git
+
+        # TODO:
         # avoid linux temporarily; the linux blame benchmarks are simply
         # too slow to use
         # git clone --bare https://github.com/torvalds/linux resources/linux
@@ -85,7 +92,9 @@ jobs:
       shell: bash
     - name: Benchmark
       run: |
-        export BENCHMARK_RESOURCES_PATH="$(pwd)/resources"
+        # TODO:
+        # avoid benchmark resource path currently
+        #export BENCHMARK_RESOURCES_PATH="$(pwd)/resources"
         export BENCHMARK_GIT_PATH="$(pwd)/resources/git"
         # avoid linux temporarily; the linux blame benchmarks are simply
         # too slow to use
@@ -122,7 +131,7 @@ jobs:
   publish:
     name: Publish results
     needs: [ build ]
-    if: always() && github.repository == 'libgit2/libgit2' && github.event_name == 'schedule'
+    if: always() && github.repository == 'libgit2/libgit2'
     runs-on: ubuntu-latest
     steps:
     - name: Check out benchmark repository
@@ -134,40 +143,58 @@ jobs:
         ssh-key: ${{ secrets.BENCHMARKS_PUBLISH_KEY }}
     - name: Download test results
       uses: actions/download-artifact@v4
+    - name: Generate API
+      run: |
+        # Move today's benchmark run into the right place
+        for platform in linux macos windows; do
+          TIMESTAMP=$(jq .time.start < "benchmark-${platform}/benchmarks.json")
+          TIMESTAMP_LEN=$(echo -n ${TIMESTAMP} | wc -c | xargs)
+          DENOMINATOR=1
+          if [ "${TIMESTAMP_LEN}" = "19" ]; then
+            DENOMINATOR="1000000000"
+          elif [ "${TIMESTAMP_LEN}" = "13" ]; then
+            DENOMINATOR="1000"
+          else
+            echo "unknown timestamp"
+            exit 1
+          fi
+
+          if [[ "$(uname -s)" == "Darwin" ]]; then
+            DATE=$(date -R -r $(("${TIMESTAMP}/${DENOMINATOR}")) +"%Y-%m-%d")
+          else
+            DATE=$(date -d @$(("${TIMESTAMP}/${DENOMINATOR}")) +"%Y-%m-%d")
+          fi
+
+          # move the complete results in
+          mkdir -p "site/public/api/runs/${DATE}"
+          cp "benchmark-${platform}/benchmarks.json" "site/public/api/runs/${DATE}/${platform}.json"
+
+          # unzip the individual results
+          PLATFORM_TEMP=$(mktemp -d)
+          unzip "benchmark-${platform}/benchmarks.zip" -d "${PLATFORM_TEMP}"
+
+          mkdir -p "site/public/api/runs/${DATE}/${platform}"
+          find "${PLATFORM_TEMP}" -name \*\.svg -exec cp {} "site/public/api/runs/${DATE}/${platform}" \;
+        done
+
+        (cd site && node scripts/aggregate.js)
+      shell: bash
+
+      # in debug mode, don't deploy the site; only create a zip file and
+      # upload it for debugging
+    - name: Upload site
+      uses: actions/upload-artifact@v4
+      with:
+        name: site
+        path: site
+      if: github.event_name == 'workflow_dispatch'
     - name: Publish API
       run: |
-       # Move today's benchmark run into the right place
-       for platform in linux macos windows; do
-         TIMESTAMP=$(jq .time.start < "benchmark-${platform}/benchmarks.json")
-         TIMESTAMP_LEN=$(echo -n ${TIMESTAMP} | wc -c | xargs)
-         DENOMINATOR=1
-         if [ "${TIMESTAMP_LEN}" = "19" ]; then
-           DENOMINATOR="1000000000"
-         elif [ "${TIMESTAMP_LEN}" = "13" ]; then
-           DENOMINATOR="1000"
-         else
-           echo "unknown timestamp"
-           exit 1
-         fi
-
-         if [[ "$(uname -s)" == "Darwin" ]]; then
-           DATE=$(date -R -r $(("${TIMESTAMP}/${DENOMINATOR}")) +"%Y-%m-%d")
-         else
-           DATE=$(date -d @$(("${TIMESTAMP}/${DENOMINATOR}")) +"%Y-%m-%d")
-         fi
-
-         mkdir -p "site/public/api/runs/${DATE}"
-         cp "benchmark-${platform}/benchmarks.json" "site/public/api/runs/${DATE}/${platform}.json"
-       done
-
-       (cd site && node scripts/aggregate.js)
-
-       (
-        cd site &&
         git config user.name 'Benchmark Site Generation' &&
         git config user.email 'libgit2@users.noreply.github.com' &&
         git add . &&
         git commit --allow-empty -m"benchmark update ${DATE}" &&
         git push origin main
-       )
       shell: bash
+      working-directory: site
+      if: github.event_name == 'schedule' || github.event.inputs.deploy == 'true'
