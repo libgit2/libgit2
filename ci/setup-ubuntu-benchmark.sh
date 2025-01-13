@@ -18,3 +18,6 @@ sudo apt-get install -y --no-install-recommends \
 
 wget https://github.com/sharkdp/hyperfine/releases/download/v1.12.0/hyperfine_1.12.0_amd64.deb
 sudo dpkg -i hyperfine_1.12.0_amd64.deb
+
+echo -n "Setting performance events availability to: "
+echo -1 | sudo tee /proc/sys/kernel/perf_event_paranoid

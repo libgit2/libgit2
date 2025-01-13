@@ -1,0 +1,11 @@
+#!/bin/bash -e
+
+. "$(dirname "$0")/benchmark_helpers.sh"
+
+needs_resource packfile-250mb
+
+gitbench --prepare "git init --bare dest.git && sandbox_resource packfile-250mb && mv packfile-250mb dest.git/packfile-250mb.pack" \
+         --warmup 5 \
+         --chdir "dest.git" \
+	 -- \
+	 index-pack packfile-250mb.pack
