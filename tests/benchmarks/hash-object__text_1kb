@@ -2,6 +2,6 @@
 
 . "$(dirname "$0")/benchmark_helpers.sh"
 
-gitbench --prepare "create_text_file text_1kb 1024 &&
-                    flush_disk_cache" \
+gitbench --prepare "create_text_file text_1kb 1024" \
+         --warmup 5 \
          hash-object "text_1kb"
