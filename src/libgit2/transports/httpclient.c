@@ -379,9 +379,7 @@ static int on_headers_complete(git_http_parser *parser)
 	ctx->response->resend_credentials = resend_needed(ctx->client,
 	                                                  ctx->response);
 
-	if (ctx->response->chunked)
-		ctx->client->state = READING_BODY;
-	else if (ctx->response->content_type && ctx->response->content_length)
+	if (ctx->response->content_type || ctx->response->chunked)
 		ctx->client->state = READING_BODY;
 	else
 		ctx->client->state = DONE;
@@ -1209,13 +1207,12 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 		 * the final byte when paused in a callback.  Consume
 		 * that byte.
 		 */
-		if ((additional_size = git_http_parser_remain_after_pause(parser)) > 0) {
-			GIT_ASSERT((client->read_buf.size - parsed_len) >= additional_size);
+		additional_size = git_http_parser_remain_after_pause(parser);
+		GIT_ASSERT((client->read_buf.size - parsed_len) >= additional_size);
 
-			parsed_len += git_http_parser_execute(parser,
-				client->read_buf.ptr + parsed_len,
-				additional_size);
-		}
+		parsed_len += git_http_parser_execute(parser,
+			client->read_buf.ptr + parsed_len,
+			additional_size);
 	}
 
 	/* Most failures will be reported in http_errno */
