@@ -120,7 +120,7 @@ my $stackreverse = 0;           # reverse stack order, switching merge end
 my $inverted = 0;               # icicle graph
 my $flamechart = 0;             # produce a flame chart (sort by time, do not merge stacks)
 my $negate = 0;                 # switch differential hues
-my $titletext = "";             # centered heading
+my $titletext = "\000";         # centered heading
 my $titledefault = "Flame Graph";	# overwritten by --title
 my $titleinverted = "Icicle Graph";	#   "    "
 my $searchcolor = "rgb(230,0,230)";	# color for search highlighting
@@ -145,7 +145,8 @@ USAGE: $0 [options] infile > outfile.svg\n
 	                 # io, wakeup, chain, java, js, perl, red, green, blue,
 	                 # aqua, yellow, purple, orange
 	--bgcolors COLOR # set background colors. gradient choices are yellow
-	                 # (default), blue, green, grey; flat colors use "#rrggbb"
+	                 # (default), blue, green, grey; flat colors use "#rrggbb";
+			 # or none to omit a background
 	--hash           # colors are keyed by function name hash
 	--random         # colors are randomly generated
 	--cp             # use consistent palette (palette.map)
@@ -200,11 +201,11 @@ my $depthmax = 0;
 my %Events;
 my %nameattr;
 
-if ($flamechart && $titletext eq "") {
+if ($flamechart && $titletext eq "\000") {
 	$titletext = "Flame Chart";
 }
 
-if ($titletext eq "") {
+if ($titletext eq "\000") {
 	unless ($inverted) {
 		$titletext = $titledefault;
 	} else {
@@ -267,7 +268,7 @@ if ($bgcolors eq "yellow") {
 	$bgcolor1 = "#f8f8f8"; $bgcolor2 = "#e8e8e8";
 } elsif ($bgcolors =~ /^#......$/) {
 	$bgcolor1 = $bgcolor2 = $bgcolors;
-} else {
+} elsif ($bgcolors ne 'none') {
 	die "Unrecognized bgcolor option \"$bgcolors\""
 }
 
@@ -430,6 +431,12 @@ sub color {
 		my $g = $r;
 		my $b = 190 + int(55 * $v2);
 		return "rgb($r,$g,$b)";
+	}
+	if (defined $type and $type eq "libgit2") {
+		my $alpha = sprintf("%.2f", 0.2 + (0.8 * (($v1 + $v2) / 2)));
+		return ($v3 > 0.5) ?
+			"rgba(241,80,47,$alpha)" :
+			"rgba(55,125,205,$alpha)";
 	}
 
 	# multi palettes
@@ -777,13 +784,21 @@ my ($black, $vdgrey, $dgrey) = (
 	$im->colorAllocate(200, 200, 200),
     );
 $im->header($imagewidth, $imageheight);
-my $inc = <<INC;
+my $backgroundinc = '';
+
+if ($bgcolors ne 'none') {
+	$backgroundinc = <<INC;
 <defs>
 	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
 		<stop stop-color="$bgcolor1" offset="5%" />
 		<stop stop-color="$bgcolor2" offset="95%" />
 	</linearGradient>
 </defs>
+INC
+}
+
+my $inc = <<INC;
+${backgroundinc}
 <style type="text/css">
 	text { font-family:$fonttype; font-size:${fontsize}px; fill:$black; }
 	#search, #ignorecase { opacity:0.1; cursor:pointer; }
@@ -1200,7 +1215,7 @@ my $inc = <<INC;
 INC
 $im->include($inc);
 $im->filledRectangle(0, 0, $imagewidth, $imageheight, 'url(#background)');
-$im->stringTTF("title", int($imagewidth / 2), $fontsize * 2, $titletext);
+$im->stringTTF("title", int($imagewidth / 2), $fontsize * 2, $titletext) if $titletext ne "";
 $im->stringTTF("subtitle", int($imagewidth / 2), $fontsize * 4, $subtitletext) if $subtitletext ne "";
 $im->stringTTF("details", $xpad, $imageheight - ($ypad2 / 2), " ");
 $im->stringTTF("unzoom", $xpad, $fontsize * 2, "Reset Zoom", 'class="hide"');
