@@ -438,7 +438,7 @@ exec_profiler() {
 			perf report --stdio --stdio-color "${COLOR_ARG}" -i "${SANDBOX_DIR}/perf.data"
 		else
 			perf script -i "${SANDBOX_DIR}/perf.data" | "${BENCHMARK_DIR}/_script/flamegraph/stackcollapse-perf.pl" > "${SANDBOX_DIR}/perf.data.folded"
-			perl "${BENCHMARK_DIR}/_script/flamegraph/flamegraph.pl" "${SANDBOX_DIR}/perf.data.folded" > "${FLAMEGRAPH}"
+			perl "${BENCHMARK_DIR}/_script/flamegraph/flamegraph.pl" -title "" -colors "libgit2" -bgcolors "none" "${SANDBOX_DIR}/perf.data.folded" > "${FLAMEGRAPH}"
 		fi
 	else
 		# macos - requires system integrity protection is disabled :(
