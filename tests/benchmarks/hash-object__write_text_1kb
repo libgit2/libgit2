@@ -3,7 +3,7 @@
 . "$(dirname "$0")/benchmark_helpers.sh"
 
 gitbench --prepare "sandbox_repo empty_standard_repo &&
-                    create_text_file text_1kb 1024 &&
-                    flush_disk_cache" \
+                    create_text_file text_1kb 1024" \
+         --warmup 5 \
          --chdir "empty_standard_repo" \
          hash-object "../text_1kb"
