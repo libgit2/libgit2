@@ -2,6 +2,8 @@
 
 . "$(dirname "$0")/benchmark_helpers.sh"
 
+needs_admin
+
 gitbench --prepare "sandbox_repo empty_standard_repo &&
                     create_text_file text_10mb 10485760 &&
                     flush_disk_cache" \

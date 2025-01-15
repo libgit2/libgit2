@@ -6,7 +6,7 @@ set -eo pipefail
 # parse the command line
 #
 
-usage() { echo "usage: $(basename "$0") [--cli <path>] [--name <cli-name>] [--baseline-cli <path>] [--suite <suite>] [--json <path>] [--flamegraph] [--zip <path>] [--verbose] [--debug]"; }
+usage() { echo "usage: $(basename "$0") [--cli <path>] [--name <cli-name>] [--baseline-cli <path>] [--suite <suite>] [--admin] [--json <path>] [--flamegraph] [--zip <path>] [--verbose] [--debug]"; }
 
 TEST_CLI="git"
 TEST_CLI_NAME=
@@ -16,6 +16,7 @@ JSON_RESULT=
 FLAMEGRAPH=
 ZIP_RESULT=
 OUTPUT_DIR=
+ADMIN=
 VERBOSE=
 DEBUG=
 NEXT=
@@ -58,6 +59,8 @@ for a in "$@"; do
 		NEXT="suite"
 	elif [[ "${a}" == "-s"* ]]; then
 		SUITE="${a/-s/}"
+	elif [ "${a}" == "--admin" ]; then
+		ADMIN=1
 	elif [ "${a}" = "-v" ] || [ "${a}" == "--verbose" ]; then
 		VERBOSE=1
 	elif [ "${a}" == "--debug" ]; then
@@ -223,6 +226,10 @@ for TEST_PATH in "${BENCHMARK_DIR}"/*; do
 		SHOW_OUTPUT="--show-output"
 	fi
 
+	if [ "${ADMIN}" = "1" ]; then
+		ALLOW_ADMIN="--admin"
+	fi
+
 	OUTPUT_FILE="${OUTPUT_DIR}/${TEST_FILE}.out"
 	ERROR_FILE="${OUTPUT_DIR}/${TEST_FILE}.err"
 	JSON_FILE="${OUTPUT_DIR}/${TEST_FILE}.json"
@@ -230,7 +237,7 @@ for TEST_PATH in "${BENCHMARK_DIR}"/*; do
 
 	FAILED=
 	{
-	  ${TEST_PATH} --cli "${TEST_CLI}" --baseline-cli "${BASELINE_CLI}" --json "${JSON_FILE}" ${SHOW_OUTPUT} >"${OUTPUT_FILE}" 2>"${ERROR_FILE}";
+	  ${TEST_PATH} --cli "${TEST_CLI}" --baseline-cli "${BASELINE_CLI}" --json "${JSON_FILE}" ${ALLOW_ADMIN} ${SHOW_OUTPUT} >"${OUTPUT_FILE}" 2>"${ERROR_FILE}";
 	  FAILED=$?
 	} || true
 
@@ -311,6 +318,8 @@ for TEST_PATH in "${BENCHMARK_DIR}"/*; do
 				ANY_FAILED=1
 			fi
 		fi
+	else
+		echo ""
 	fi
 done
 
