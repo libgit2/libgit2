@@ -117,6 +117,7 @@ jobs:
         mkdir benchmark && cd benchmark
         ../source/tests/benchmarks/benchmark.sh \
             ${SUITE_FLAG} ${DEBUG_FLAG} \
+            --admin \
             --baseline-cli "git" --cli "${GIT2_CLI}" --name libgit2 \
             --json benchmarks.json --flamegraph --zip benchmarks.zip
       shell: bash
