@@ -7,11 +7,12 @@ set -eo pipefail
 # command-line parsing
 #
 
-usage() { echo "usage: $(basename "$0") [--cli <path>] [--baseline-cli <path>] [--output-style <style>] [--json <path>] [--profile] [--flamegraph <path>]"; }
+usage() { echo "usage: $(basename "$0") [--cli <path>] [--baseline-cli <path>] [--admin] [--output-style <style>] [--json <path>] [--show-output] [--output-style <style>] [--profile] [--flamegraph <path>]"; }
 
 NEXT=
 BASELINE_CLI=
 TEST_CLI="git"
+ADMIN=
 SHOW_OUTPUT=
 JSON=
 PROFILE=
@@ -69,6 +70,8 @@ for a in "$@"; do
                 JSON="${a/-j/}"
 	elif [ "${a}" = "-p" ] || [ "${a}" = "--profile" ]; then
 		PROFILE=1
+	elif [ "${a}" = "--admin" ]; then
+		ADMIN=1
 	elif [ "${a}" = "-F" ] || [ "${a}" = "--flamegraph" ]; then
 		NEXT="flamegraph"
 	elif [[ "${a}" == "-F"* ]]; then
@@ -335,6 +338,9 @@ parse_arguments() {
 	# this test should run `n` warmups
 	WARMUP=0
 
+	# this test requires administrative privileges
+	REQUIRES_ADMIN=0
+
 	if [ "$*" = "" ]; then
 		gitbench_usage 1>&2
 		exit 1
@@ -356,6 +362,8 @@ parse_arguments() {
 			NEXT="prepare"
 		elif [ "${a}" = "--chdir" ]; then
 			NEXT="chdir"
+		elif [ "${a}" = "--requires-admin" ]; then
+			REQUIRES_ADMIN=1
 		elif [[ "${a}" == "--" ]]; then
 			shift
 			break
@@ -379,6 +387,7 @@ parse_arguments() {
 	echo "PREPARE=\"${PREPARE}\""
 	echo "CHDIR=\"${CHDIR}\""
 	echo "WARMUP=\"${WARMUP}\""
+	echo "REQUIRES_ADMIN=\"${REQUIRES_ADMIN}\""
 
 	echo -n "GIT_ARGUMENTS=("
 
@@ -388,7 +397,7 @@ parse_arguments() {
 	echo " )"
 }
 
-gitbench_usage() { echo "usage: gitbench command..."; }
+gitbench_usage() { echo "usage: gitbench [--requires-admin] [--warmup <count>] [--prepare <command>] [--chdir <directory>] command..."; }
 
 exec_profiler() {
 	if [ "${BASELINE_CLI}" != "" ]; then
@@ -490,7 +499,8 @@ exec_hyperfine() {
 # invocation of hyperfine.
 #
 gitbench() {
-	eval $(parse_arguments "$@")
+	argument_data=$(parse_arguments "$@")
+	eval ${argument_data}
 
 	# sanity check
 
@@ -513,6 +523,17 @@ gitbench() {
 	fi
 
 #	rm -rf "${SANDBOX_DIR:?}"
+}
+
+# helper script to ensure that --admin is specified
+needs_admin() {
+	if [ "${ADMIN}" != "1" ]; then
+		echo "$0: skipping administrator test" 1>&2
+		echo "" 1>&2
+		echo "This benchmark needs administrative (root) privileges. To run it," 1>&2
+		echo "specify '--admin' to the benchmark." 1>&2
+		exit 2
+	fi
 }
 
 # helper script to give useful error messages about configuration
