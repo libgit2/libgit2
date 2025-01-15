@@ -53,6 +53,18 @@ void test_filter_query__filters(void)
 	cl_assert_equal_i(1, filter_for("id.binident", "ident"));
 }
 
+void test_filter_query__filters_ignorecase(void)
+{
+	if (!cl_repo_get_bool(g_repo, "core.ignorecase"))
+		cl_skip();
+
+	cl_assert_equal_i(1, filter_for("TEXT.TXT", "crlf"));
+	cl_assert_equal_i(0, filter_for("Binary.bin", "crlf"));
+
+	cl_assert_equal_i(1, filter_for("id.Ident", "crlf"));
+	cl_assert_equal_i(1, filter_for("ID.IdEnT", "ident"));
+}
+
 void test_filter_query__autocrlf_true_implies_crlf(void)
 {
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
