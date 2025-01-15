@@ -115,7 +115,7 @@ jobs:
         fi
 
         mkdir benchmark && cd benchmark
-        ../source/tests/benchmarks/benchmark.sh \
+        ../source/benchmarks/cli/benchmark.sh \
             ${SUITE_FLAG} ${DEBUG_FLAG} \
             --admin \
             --baseline-cli "git" --cli "${GIT2_CLI}" --name libgit2 \

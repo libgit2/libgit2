@@ -105,7 +105,7 @@ fullpath() {
 }
 
 resources_dir() {
-	cd "$(dirname "$0")/../resources" && pwd
+	cd "$(dirname "$0")/../../tests/resources" && pwd
 }
 
 temp_dir() {
