@@ -1,4 +1,6 @@
 #!/bin/bash -e
+#
+# Description: write a 100kb text file to the object database
 
 . "$(dirname "$0")/benchmark_helpers.sh"
 

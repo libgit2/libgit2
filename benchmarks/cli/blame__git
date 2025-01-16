@@ -1,4 +1,6 @@
 #!/bin/bash -e
+#
+# Description: blame a file in the core git repository
 
 . "$(dirname "$0")/benchmark_helpers.sh"
 

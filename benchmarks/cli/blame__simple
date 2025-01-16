@@ -1,4 +1,6 @@
 #!/bin/bash -e
+#
+# Description: blame a simple file in the test repository
 
 . "$(dirname "$0")/benchmark_helpers.sh"
 

@@ -1,4 +1,6 @@
 #!/bin/bash -e
+#
+# Description: hash a 1kb text file
 
 . "$(dirname "$0")/benchmark_helpers.sh"
 
