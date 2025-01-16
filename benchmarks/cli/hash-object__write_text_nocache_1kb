@@ -1,4 +1,6 @@
 #!/bin/bash -e
+#
+# Description: write a 1kb text file to the ODB (after flushing disk cache)
 
 . "$(dirname "$0")/benchmark_helpers.sh"
 

@@ -212,6 +212,8 @@ for TEST_PATH in "${BENCHMARK_DIR}"/*; do
 		continue
 	fi
 
+	TEST_DESCRIPTION=$(( grep '^# Description: ' "${TEST_PATH}" || test $? = 1 ) | sed -e "s/^# Description: //")
+
 	ANY_FOUND=1
 	TEST_NAME="${TEST_FILE/__/::}"
 
@@ -279,7 +281,7 @@ for TEST_PATH in "${BENCHMARK_DIR}"/*; do
 	fi
 
 	# add our metadata to the hyperfine json result
-	jq ". |= { \"name\": \"${TEST_NAME}\" } + ." < "${JSON_FILE}" > "${JSON_FILE}.new" && mv "${JSON_FILE}.new" "${JSON_FILE}"
+	jq ". |= { \"name\": \"${TEST_NAME}\", \"description\": \"${TEST_DESCRIPTION}\" } + ." < "${JSON_FILE}" > "${JSON_FILE}.new" && mv "${JSON_FILE}.new" "${JSON_FILE}"
 
 	# run with flamegraph output if requested
 	if [ "${FLAMEGRAPH}" ]; then

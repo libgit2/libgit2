@@ -1,4 +1,6 @@
 #!/bin/bash -e
+#
+# Description: hash a 10mb text file (after flushing disk cache)
 
 . "$(dirname "$0")/benchmark_helpers.sh"
 
