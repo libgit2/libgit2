@@ -78,3 +78,39 @@ void test_odb_alternates__long_chain(void)
 	cl_git_fail(git_commit_lookup(&commit, repo, &oid));
 	git_repository_free(repo);
 }
+
+void test_odb_alternates__relative(void)
+{
+	git_commit *commit;
+	git_oid oid;
+
+	/* Set the alternate A -> testrepo.git */
+	init_linked_repo(paths[0], cl_fixture("testrepo.git"));
+
+	/* Set the alternate B -> A */
+	init_linked_repo(paths[1], paths[0]);
+	/* Set the alternate C -> B */
+	init_linked_repo(paths[2], paths[1]);
+
+	/* Use a relative alternates path for B -> A */
+	cl_git_pass(git_fs_path_prettify(&filepath, paths[1], NULL));
+	cl_git_pass(git_str_joinpath(&filepath, filepath.ptr, "objects/info/alternates"));
+
+	cl_git_pass(git_filebuf_open(&file, git_str_cstr(&filepath), 0, 0666));
+	git_filebuf_printf(&file, "../../%s/objects\n", paths[0]);
+	cl_git_pass(git_filebuf_commit(&file));
+
+	/* Now load B and see if we can find an object from testrepo.git */
+	cl_git_pass(git_repository_open(&repo, paths[1]));
+	git_oid_from_string(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1);
+	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
+	git_commit_free(commit);
+	git_repository_free(repo);
+
+	/* Now load C and see if we can find an object from testrepo.git */
+	cl_git_pass(git_repository_open(&repo, paths[2]));
+	git_oid_from_string(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1);
+	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
+	git_commit_free(commit);
+	git_repository_free(repo);
+}
