@@ -872,8 +872,8 @@ void cl_set_cleanup(void (*cleanup)(void *), void *opaque)
 	_clar.local_cleanup_payload = opaque;
 }
 
+#include "clar/fs.h"
 #include "clar/sandbox.h"
 #include "clar/fixtures.h"
-#include "clar/fs.h"
 #include "clar/print.h"
 #include "clar/summary.h"

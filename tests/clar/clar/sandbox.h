@@ -2,7 +2,7 @@
 #include <sys/syslimits.h>
 #endif
 
-static char _clar_path[4096 + 1];
+static char _clar_path[CLAR_MAX_PATH];
 
 static int
 is_valid_tmp_path(const char *path)
@@ -15,7 +15,10 @@ is_valid_tmp_path(const char *path)
 	if (!S_ISDIR(st.st_mode))
 		return 0;
 
-	return (access(path, W_OK) == 0);
+	if (access(path, W_OK) != 0)
+		return 0;
+
+	return (strlen(path) < CLAR_MAX_PATH);
 }
 
 static int
@@ -31,14 +34,11 @@ find_tmp_path(char *buffer, size_t length)
 
 	for (i = 0; i < var_count; ++i) {
 		const char *env = getenv(env_vars[i]);
+
 		if (!env)
 			continue;
 
 		if (is_valid_tmp_path(env)) {
-#ifdef __APPLE__
-			if (length >= PATH_MAX && realpath(env, buffer) != NULL)
-				return 0;
-#endif
 			strncpy(buffer, env, length - 1);
 			buffer[length - 1] = '\0';
 			return 0;
@@ -47,21 +47,18 @@ find_tmp_path(char *buffer, size_t length)
 
 	/* If the environment doesn't say anything, try to use /tmp */
 	if (is_valid_tmp_path("/tmp")) {
-#ifdef __APPLE__
-		if (length >= PATH_MAX && realpath("/tmp", buffer) != NULL)
-			return 0;
-#endif
 		strncpy(buffer, "/tmp", length - 1);
 		buffer[length - 1] = '\0';
 		return 0;
 	}
 
 #else
-	DWORD env_len = GetEnvironmentVariable("CLAR_TMP", buffer, (DWORD)length);
-	if (env_len > 0 && env_len < (DWORD)length)
+	DWORD len = GetEnvironmentVariable("CLAR_TMP", buffer, (DWORD)length);
+	if (len > 0 && len < (DWORD)length)
 		return 0;
 
-	if (GetTempPath((DWORD)length, buffer))
+	len = GetTempPath((DWORD)length, buffer);
+	if (len > 0 && len < (DWORD)length)
 		return 0;
 #endif
 
@@ -73,6 +70,41 @@ find_tmp_path(char *buffer, size_t length)
 	}
 
 	return -1;
+}
+
+static int canonicalize_tmp_path(char *buffer)
+{
+#ifdef _WIN32
+	char tmp[CLAR_MAX_PATH], *p;
+	DWORD ret;
+
+	ret = GetFullPathName(buffer, CLAR_MAX_PATH, tmp, NULL);
+
+	if (ret == 0 || ret > CLAR_MAX_PATH)
+		return -1;
+
+	ret = GetLongPathName(tmp, buffer, CLAR_MAX_PATH);
+
+	if (ret == 0 || ret > CLAR_MAX_PATH)
+		return -1;
+
+	/* normalize path to POSIX forward slashes */
+	for (p = buffer; *p; p++)
+		if (buffer[p] == '\\')
+			buffer[p] = '/';
+
+	return 0;
+#elif defined(__APPLE__) || defined(HAS_REALPATH)
+	char tmp[CLAR_MAX_PATH];
+
+	if (realpath(buffer, tmp) == NULL)
+		return -1;
+
+	strcpy(buffer, tmp);
+	return 0;
+#else
+	return 0;
+#endif
 }
 
 static void clar_unsandbox(void)
@@ -95,24 +127,17 @@ static int build_sandbox_path(void)
 
 	size_t len;
 
-	if (find_tmp_path(_clar_path, sizeof(_clar_path)) < 0)
+	if (find_tmp_path(_clar_path, sizeof(_clar_path)) < 0 ||
+	    canonicalize_tmp_path(_clar_path) < 0)
 		return -1;
 
 	len = strlen(_clar_path);
 
-#ifdef _WIN32
-	{ /* normalize path to POSIX forward slashes */
-		size_t i;
-		for (i = 0; i < len; ++i) {
-			if (_clar_path[i] == '\\')
-				_clar_path[i] = '/';
-		}
-	}
-#endif
+	if (len + strlen(path_tail) + 1 > CLAR_MAX_PATH)
+		return -1;
 
-	if (_clar_path[len - 1] != '/') {
+	if (_clar_path[len - 1] != '/')
 		_clar_path[len++] = '/';
-	}
 
 	strncpy(_clar_path + len, path_tail, sizeof(_clar_path) - len);
 

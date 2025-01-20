@@ -6,13 +6,13 @@
 #undef USE_FCOPYFILE
 #define USE_SENDFILE 1
 
-#ifdef _WIN32
-
 #ifdef CLAR_WIN32_LONGPATHS
 # define CLAR_MAX_PATH 4096
 #else
 # define CLAR_MAX_PATH MAX_PATH
 #endif
+
+#ifdef _WIN32
 
 #define RM_RETRY_COUNT	5
 #define RM_RETRY_DELAY	10

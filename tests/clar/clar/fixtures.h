@@ -2,7 +2,7 @@
 static const char *
 fixture_path(const char *base, const char *fixture_name)
 {
-	static char _path[4096];
+	static char _path[CLAR_MAX_PATH];
 	size_t root_len;
 
 	root_len = strlen(base);
