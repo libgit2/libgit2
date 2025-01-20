@@ -103,6 +103,7 @@ static int canonicalize_tmp_path(char *buffer)
 	strcpy(buffer, tmp);
 	return 0;
 #else
+	(void)buffer;
 	return 0;
 #endif
 }
