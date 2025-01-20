@@ -9,6 +9,12 @@
 
 #include <stdlib.h>
 
+#ifdef CLAR_WIN32_LONGPATHS
+# define CLAR_MAX_PATH 4096
+#else
+# define CLAR_MAX_PATH MAX_PATH
+#endif
+
 #ifndef CLAR_SELFTEST
 # define CLAR_CURRENT_FILE __FILE__
 # define CLAR_CURRENT_LINE __LINE__

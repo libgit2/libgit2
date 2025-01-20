@@ -90,8 +90,8 @@ static int canonicalize_tmp_path(char *buffer)
 
 	/* normalize path to POSIX forward slashes */
 	for (p = buffer; *p; p++)
-		if (buffer[p] == '\\')
-			buffer[p] = '/';
+		if (*p == '\\')
+			*p = '/';
 
 	return 0;
 #elif defined(__APPLE__) || defined(HAS_REALPATH)
