@@ -20,6 +20,11 @@ void test_config_global__initialize(void)
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, path.ptr));
 
+	cl_git_pass(git_futils_mkdir_r("programdata", 0777));
+	cl_git_pass(git_fs_path_prettify(&path, "programdata", NULL));
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_PROGRAMDATA, path.ptr));
+
 	git_str_dispose(&path);
 }
 
