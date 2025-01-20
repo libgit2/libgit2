@@ -1,21 +1,30 @@
 #include "clar_libgit2.h"
 #include "crlf.h"
 #include "path.h"
+#include "futils.h"
 
 static git_repository *g_repo = NULL;
+static git_str orig_system_path = GIT_STR_INIT;
 static git_str system_attr_path = GIT_STR_INIT;
 
 void test_filter_systemattrs__initialize(void)
 {
-	git_buf system_path = GIT_BUF_INIT;
+	git_str new_system_path = GIT_BUF_INIT;
 
 	g_repo = cl_git_sandbox_init("crlf");
 	cl_must_pass(p_unlink("crlf/.gitattributes"));
 
 	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, &system_path));
+		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, &orig_system_path));
+
+	cl_git_pass(git_str_joinpath(&new_system_path,
+		clar_sandbox_path(), "_system_path"));
+	cl_git_pass(git_futils_mkdir_r(new_system_path.ptr, 0777));
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, new_system_path.ptr));
+
 	cl_git_pass(git_str_joinpath(&system_attr_path,
-		system_path.ptr, "gitattributes"));
+		new_system_path.ptr, "gitattributes"));
 
 	cl_git_mkfile(system_attr_path.ptr,
 		"*.txt text\n"
@@ -23,13 +32,17 @@ void test_filter_systemattrs__initialize(void)
 		"*.crlf text eol=crlf\n"
 		"*.lf text eol=lf\n");
 
-	git_buf_dispose(&system_path);
+	git_str_dispose(&new_system_path);
 }
 
 void test_filter_systemattrs__cleanup(void)
 {
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, orig_system_path.ptr));
+
 	cl_must_pass(p_unlink(system_attr_path.ptr));
 	git_str_dispose(&system_attr_path);
+	git_str_dispose(&orig_system_path);
 
 	cl_git_sandbox_cleanup();
 }
