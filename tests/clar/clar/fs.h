@@ -8,12 +8,6 @@
 
 #ifdef _WIN32
 
-#ifdef CLAR_WIN32_LONGPATHS
-# define CLAR_MAX_PATH 4096
-#else
-# define CLAR_MAX_PATH MAX_PATH
-#endif
-
 #define RM_RETRY_COUNT	5
 #define RM_RETRY_DELAY	10
 
@@ -146,7 +140,7 @@ fs_rm_wait(WCHAR *_wpath)
 			ERROR_PATH_NOT_FOUND == last_error)
 			return 0;
 
-		Sleep(RM_RETRY_DELAY * retries * retries);	
+		Sleep(RM_RETRY_DELAY * retries * retries);
 	}
 	while (retries++ <= RM_RETRY_COUNT);
 
@@ -296,7 +290,9 @@ void
 cl_fs_cleanup(void)
 {
 #ifdef CLAR_FIXTURE_PATH
-	fs_rm(fixture_path(_clar_path, "*"));
+	fs_rm(fixture_path(clar_tempdir_path(), "*"));
+#else
+	((void)fs_copy); /* unused */
 #endif
 }
 
@@ -516,7 +512,7 @@ fs_rm(const char *path)
 void
 cl_fs_cleanup(void)
 {
-	clar_unsandbox();
-	clar_sandbox();
+	clar_tempdir_shutdown();
+	clar_tempdir_init();
 }
 #endif

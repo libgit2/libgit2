@@ -4,7 +4,12 @@
  * This file is part of clar, distributed under the ISC license.
  * For full terms see the included COPYING file.
  */
-#include <assert.h>
+
+#define _BSD_SOURCE
+#define _DARWIN_C_SOURCE
+#define _DEFAULT_SOURCE
+
+#include <errno.h>
 #include <setjmp.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -13,21 +18,35 @@
 #include <stdarg.h>
 #include <wchar.h>
 #include <time.h>
+#include <inttypes.h>
 
 /* required for sandboxing */
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#if defined(__UCLIBC__) && ! defined(__UCLIBC_HAS_WCHAR__)
+	/*
+	 * uClibc can optionally be built without wchar support, in which case
+	 * the installed <wchar.h> is a stub that only defines the `whar_t`
+	 * type but none of the functions typically declared by it.
+	 */
+#else
+#	define CLAR_HAVE_WCHAR
+#endif
+
 #ifdef _WIN32
+#	define WIN32_LEAN_AND_MEAN
 #	include <windows.h>
 #	include <io.h>
-#	include <shellapi.h>
 #	include <direct.h>
 
 #	define _MAIN_CC __cdecl
 
 #	ifndef stat
 #		define stat(path, st) _stat(path, st)
+		typedef struct _stat STAT_T;
+#	else
+		typedef struct stat STAT_T;
 #	endif
 #	ifndef mkdir
 #		define mkdir(path, mode) _mkdir(path)
@@ -40,6 +59,9 @@
 #	endif
 #	ifndef strdup
 #		define strdup(str) _strdup(str)
+#	endif
+#	ifndef strcasecmp
+#		define strcasecmp(a,b) _stricmp(a,b)
 #	endif
 
 #	ifndef __MINGW32__
@@ -57,30 +79,11 @@
 #	else
 #		define p_snprintf snprintf
 #	endif
-
-#	ifndef PRIuZ
-#		define PRIuZ "Iu"
-#	endif
-#	ifndef PRIxZ
-#		define PRIxZ "Ix"
-#	endif
-
-#	if defined(_MSC_VER) || defined(__MINGW32__)
-	typedef struct stat STAT_T;
-#	else
-	typedef struct _stat STAT_T;
-#	endif
 #else
 #	include <sys/wait.h> /* waitpid(2) */
 #	include <unistd.h>
 #	define _MAIN_CC
 #	define p_snprintf snprintf
-#	ifndef PRIuZ
-#		define PRIuZ "zu"
-#	endif
-#	ifndef PRIxZ
-#		define PRIxZ "zx"
-#	endif
 	typedef struct stat STAT_T;
 #endif
 
@@ -99,7 +102,7 @@ fixture_path(const char *base, const char *fixture_name);
 struct clar_error {
 	const char *file;
 	const char *function;
-	size_t line_number;
+	uintmax_t line_number;
 	const char *error_msg;
 	char *description;
 
@@ -161,6 +164,10 @@ static struct {
 	struct clar_report *reports;
 	struct clar_report *last_report;
 
+	const char *invoke_file;
+	const char *invoke_func;
+	size_t invoke_line;
+
 	void (*local_cleanup)(void *);
 	void *local_cleanup_payload;
 
@@ -192,11 +199,14 @@ static void clar_print_shutdown(int test_count, int suite_count, int error_count
 static void clar_print_error(int num, const struct clar_report *report, const struct clar_error *error);
 static void clar_print_ontest(const char *suite_name, const char *test_name, int test_number, enum cl_test_status failed);
 static void clar_print_onsuite(const char *suite_name, int suite_index);
+static void clar_print_onabortv(const char *msg, va_list argp);
 static void clar_print_onabort(const char *msg, ...);
 
 /* From clar_sandbox.c */
-static void clar_unsandbox(void);
-static int clar_sandbox(void);
+static void clar_tempdir_init(void);
+static void clar_tempdir_shutdown(void);
+static int clar_sandbox_create(const char *suite_name, const char *test_name);
+static int clar_sandbox_cleanup(void);
 
 /* From summary.h */
 static struct clar_summary *clar_summary_init(const char *filename);
@@ -214,6 +224,15 @@ static int clar_summary_shutdown(struct clar_summary *fp);
 							   _clar.active_test,						\
 							   _clar.trace_payload);					\
 	} while (0)
+
+static void clar_abort(const char *msg, ...)
+{
+	va_list argp;
+	va_start(argp, msg);
+	clar_print_onabortv(msg, argp);
+	va_end(argp);
+	exit(-1);
+}
 
 void cl_trace_register(cl_trace_cb *cb, void *payload)
 {
@@ -268,9 +287,7 @@ static double clar_time_diff(clar_time *start, clar_time *end)
 
 static void clar_time_now(clar_time *out)
 {
-	struct timezone tz;
-
-	gettimeofday(out, &tz);
+	gettimeofday(out, NULL);
 }
 
 static double clar_time_diff(clar_time *start, clar_time *end)
@@ -292,6 +309,8 @@ clar_run_test(
 	_clar.trampoline_enabled = 1;
 
 	CL_TRACE(CL_TRACE__TEST__BEGIN);
+
+	clar_sandbox_create(suite->name, test->name);
 
 	_clar.last_report->start = time(NULL);
 	clar_time_now(&start);
@@ -317,8 +336,12 @@ clar_run_test(
 	if (_clar.local_cleanup != NULL)
 		_clar.local_cleanup(_clar.local_cleanup_payload);
 
+	clar__clear_invokepoint();
+
 	if (cleanup->ptr != NULL)
 		cleanup->ptr();
+
+	clar_sandbox_cleanup();
 
 	CL_TRACE(CL_TRACE__TEST__END);
 
@@ -383,7 +406,8 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 
 		_clar.active_test = test[i].name;
 
-		report = calloc(1, sizeof(struct clar_report));
+		if ((report = calloc(1, sizeof(*report))) == NULL)
+			clar_abort("Failed to allocate report.\n");
 		report->suite = _clar.active_suite;
 		report->test = _clar.active_test;
 		report->test_number = _clar.tests_ran;
@@ -421,7 +445,7 @@ clar_usage(const char *arg)
 	printf("  -t            Display results in tap format\n");
 	printf("  -l            Print suite names\n");
 	printf("  -r[filename]  Write summary file (to the optional filename)\n");
-	exit(-1);
+	exit(1);
 }
 
 static void
@@ -429,18 +453,11 @@ clar_parse_args(int argc, char **argv)
 {
 	int i;
 
-	/* Verify options before execute */
 	for (i = 1; i < argc; ++i) {
 		char *argument = argv[i];
 
-		if (argument[0] != '-' || argument[1] == '\0'
-		    || strchr("sixvqQtlr", argument[1]) == NULL) {
+		if (argument[0] != '-' || argument[1] == '\0')
 			clar_usage(argv[0]);
-		}
-	}
-
-	for (i = 1; i < argc; ++i) {
-		char *argument = argv[i];
 
 		switch (argument[1]) {
 		case 's':
@@ -453,8 +470,13 @@ clar_parse_args(int argc, char **argv)
 			argument += offset;
 			arglen = strlen(argument);
 
-			if (arglen == 0)
-				clar_usage(argv[0]);
+			if (arglen == 0) {
+				if (i + 1 == argc)
+					clar_usage(argv[0]);
+
+				argument = argv[++i];
+				arglen = strlen(argument);
+			}
 
 			for (j = 0; j < _clar_suite_count; ++j) {
 				suitelen = strlen(_clar_suites[j].name);
@@ -471,14 +493,12 @@ clar_parse_args(int argc, char **argv)
 
 					++found;
 
-					if (!exact)
-						_clar.verbosity = MAX(_clar.verbosity, 1);
-
 					switch (action) {
 					case 's': {
-						struct clar_explicit *explicit =
-							calloc(1, sizeof(struct clar_explicit));
-						assert(explicit);
+						struct clar_explicit *explicit;
+
+						if ((explicit = calloc(1, sizeof(*explicit))) == NULL)
+							clar_abort("Failed to allocate explicit test.\n");
 
 						explicit->suite_idx = j;
 						explicit->filter = argument;
@@ -502,27 +522,39 @@ clar_parse_args(int argc, char **argv)
 				}
 			}
 
-			if (!found) {
-				clar_print_onabort("No suite matching '%s' found.\n", argument);
-				exit(-1);
-			}
+			if (!found)
+				clar_abort("No suite matching '%s' found.\n", argument);
+
 			break;
 		}
 
 		case 'q':
+			if (argument[2] != '\0')
+				clar_usage(argv[0]);
+
 			_clar.report_errors_only = 1;
 			break;
 
 		case 'Q':
+			if (argument[2] != '\0')
+				clar_usage(argv[0]);
+
 			_clar.exit_on_error = 1;
 			break;
 
 		case 't':
+			if (argument[2] != '\0')
+				clar_usage(argv[0]);
+
 			_clar.output_format = CL_OUTPUT_TAP;
 			break;
 
 		case 'l': {
 			size_t j;
+
+			if (argument[2] != '\0')
+				clar_usage(argv[0]);
+
 			printf("Test suites (use -s<name> to run just one):\n");
 			for (j = 0; j < _clar_suite_count; ++j)
 				printf(" %3d: %s\n", (int)j, _clar_suites[j].name);
@@ -531,17 +563,27 @@ clar_parse_args(int argc, char **argv)
 		}
 
 		case 'v':
+			if (argument[2] != '\0')
+				clar_usage(argv[0]);
+
 			_clar.verbosity++;
 			break;
 
 		case 'r':
 			_clar.write_summary = 1;
 			free(_clar.summary_filename);
-			_clar.summary_filename = *(argument + 2) ? strdup(argument + 2) : NULL;
+
+			if (*(argument + 2)) {
+				if ((_clar.summary_filename = strdup(argument + 2)) == NULL)
+					clar_abort("Failed to allocate summary filename.\n");
+			} else {
+				_clar.summary_filename = NULL;
+			}
+
 			break;
 
 		default:
-			assert(!"Unexpected commandline argument!");
+			clar_usage(argv[0]);
 		}
 	}
 }
@@ -563,22 +605,18 @@ clar_test_init(int argc, char **argv)
 	if (!_clar.summary_filename &&
 	    (summary_env = getenv("CLAR_SUMMARY")) != NULL) {
 		_clar.write_summary = 1;
-		_clar.summary_filename = strdup(summary_env);
+		if ((_clar.summary_filename = strdup(summary_env)) == NULL)
+			clar_abort("Failed to allocate summary filename.\n");
 	}
 
 	if (_clar.write_summary && !_clar.summary_filename)
-		_clar.summary_filename = strdup("summary.xml");
+		if ((_clar.summary_filename = strdup("summary.xml")) == NULL)
+			clar_abort("Failed to allocate summary filename.\n");
 
-	if (_clar.write_summary &&
-	    !(_clar.summary = clar_summary_init(_clar.summary_filename))) {
-		clar_print_onabort("Failed to open the summary file\n");
-		exit(-1);
-	}
+	if (_clar.write_summary)
+	    _clar.summary = clar_summary_init(_clar.summary_filename);
 
-	if (clar_sandbox() < 0) {
-		clar_print_onabort("Failed to sandbox the test runner.\n");
-		exit(-1);
-	}
+	clar_tempdir_init();
 }
 
 int
@@ -610,12 +648,11 @@ clar_test_shutdown(void)
 		_clar.total_errors
 	);
 
-	clar_unsandbox();
+	clar_tempdir_shutdown();
 
-	if (_clar.write_summary && clar_summary_shutdown(_clar.summary) < 0) {
-		clar_print_onabort("Failed to write the summary file\n");
-		exit(-1);
-	}
+	if (_clar.write_summary && clar_summary_shutdown(_clar.summary) < 0)
+		clar_abort("Failed to write the summary file '%s: %s.\n",
+			   _clar.summary_filename, strerror(errno));
 
 	for (explicit = _clar.explicit; explicit; explicit = explicit_next) {
 		explicit_next = explicit->next;
@@ -623,6 +660,14 @@ clar_test_shutdown(void)
 	}
 
 	for (report = _clar.reports; report; report = report_next) {
+		struct clar_error *error, *error_next;
+
+		for (error = report->errors; error; error = error_next) {
+			free(error->description);
+			error_next = error->next;
+			free(error);
+		}
+
 		report_next = report->next;
 		free(report);
 	}
@@ -646,9 +691,9 @@ static void abort_test(void)
 {
 	if (!_clar.trampoline_enabled) {
 		clar_print_onabort(
-				"Fatal error: a cleanup method raised an exception.");
+				"Fatal error: a cleanup method raised an exception.\n");
 		clar_report_errors(_clar.last_report);
-		exit(-1);
+		exit(1);
 	}
 
 	CL_TRACE(CL_TRACE__TEST__LONGJMP);
@@ -670,7 +715,10 @@ void clar__fail(
 	const char *description,
 	int should_abort)
 {
-	struct clar_error *error = calloc(1, sizeof(struct clar_error));
+	struct clar_error *error;
+
+	if ((error = calloc(1, sizeof(*error))) == NULL)
+		clar_abort("Failed to allocate error.\n");
 
 	if (_clar.last_report->errors == NULL)
 		_clar.last_report->errors = error;
@@ -680,13 +728,14 @@ void clar__fail(
 
 	_clar.last_report->last_error = error;
 
-	error->file = file;
-	error->function = function;
-	error->line_number = line;
+	error->file = _clar.invoke_file ? _clar.invoke_file : file;
+	error->function = _clar.invoke_func ? _clar.invoke_func : function;
+	error->line_number = _clar.invoke_line ? _clar.invoke_line : line;
 	error->error_msg = error_msg;
 
-	if (description != NULL)
-		error->description = strdup(description);
+	if (description != NULL &&
+	    (error->description = strdup(description)) == NULL)
+		clar_abort("Failed to allocate description.\n");
 
 	_clar.total_errors++;
 	_clar.last_report->status = CL_TEST_FAILURE;
@@ -760,6 +809,7 @@ void clar__assert_equal(
 			}
 		}
 	}
+#ifdef CLAR_HAVE_WCHAR
 	else if (!strcmp("%ls", fmt)) {
 		const wchar_t *wcs1 = va_arg(args, const wchar_t *);
 		const wchar_t *wcs2 = va_arg(args, const wchar_t *);
@@ -795,8 +845,9 @@ void clar__assert_equal(
 			}
 		}
 	}
-	else if (!strcmp("%"PRIuZ, fmt) || !strcmp("%"PRIxZ, fmt)) {
-		size_t sz1 = va_arg(args, size_t), sz2 = va_arg(args, size_t);
+#endif /* CLAR_HAVE_WCHAR */
+	else if (!strcmp("%"PRIuMAX, fmt) || !strcmp("%"PRIxMAX, fmt)) {
+		uintmax_t sz1 = va_arg(args, uintmax_t), sz2 = va_arg(args, uintmax_t);
 		is_equal = (sz1 == sz2);
 		if (!is_equal) {
 			int offset = p_snprintf(buf, sizeof(buf), fmt, sz1);
@@ -808,7 +859,8 @@ void clar__assert_equal(
 		void *p1 = va_arg(args, void *), *p2 = va_arg(args, void *);
 		is_equal = (p1 == p2);
 		if (!is_equal)
-			p_snprintf(buf, sizeof(buf), "%p != %p", p1, p2);
+			p_snprintf(buf, sizeof(buf), "0x%"PRIxPTR" != 0x%"PRIxPTR,
+				   (uintptr_t)p1, (uintptr_t)p2);
 	}
 	else {
 		int i1 = va_arg(args, int), i2 = va_arg(args, int);
@@ -830,6 +882,23 @@ void cl_set_cleanup(void (*cleanup)(void *), void *opaque)
 {
 	_clar.local_cleanup = cleanup;
 	_clar.local_cleanup_payload = opaque;
+}
+
+void clar__set_invokepoint(
+	const char *file,
+	const char *func,
+	size_t line)
+{
+	_clar.invoke_file = file;
+	_clar.invoke_func = func;
+	_clar.invoke_line = line;
+}
+
+void clar__clear_invokepoint(void)
+{
+	_clar.invoke_file = NULL;
+	_clar.invoke_func = NULL;
+	_clar.invoke_line = 0;
 }
 
 #include "clar/sandbox.h"
