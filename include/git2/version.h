@@ -7,6 +7,8 @@
 #ifndef INCLUDE_git_version_h__
 #define INCLUDE_git_version_h__
 
+#include "common.h"
+
 /**
  * @file git2/version.h
  * @brief The version of libgit2
