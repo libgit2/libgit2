@@ -222,6 +222,32 @@ int git_libgit2_opts(int key, ...)
 #endif
 		break;
 
+	case GIT_OPT_SET_SSL_PASSWORD_CALLBACK:
+#if defined(GIT_HTTPS_OPENSSL) || defined(GIT_HTTPS_OPENSSL_DYNAMIC)
+	{
+		pem_password_cb *cb = va_arg(ap, pem_password_cb *);
+		void *ud = va_arg(ap, void *);
+		error = git_openssl__set_user_password_callback(cb, ud);
+	}
+#else
+		git_error_set(GIT_ERROR_SSL, "TLS backend doesn't support user key authentication");
+		error = -1;
+#endif
+		break;
+
+	case GIT_OPT_SET_SSL_USER_KEY:
+#if defined(GIT_HTTPS_OPENSSL) || defined(GIT_HTTPS_OPENSSL_DYNAMIC)
+		{
+			const char *key = va_arg(ap, const char *);
+			const char *cert = va_arg(ap, const char *);
+			error = git_openssl__set_user_keys(key, cert);
+		}
+#else
+		git_error_set(GIT_ERROR_SSL, "TLS backend doesn't support user key authentication");
+		error = -1;
+#endif
+		break;
+
 	case GIT_OPT_ADD_SSL_X509_CERT:
 #if defined(GIT_HTTPS_OPENSSL) || defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 		{

@@ -257,7 +257,9 @@ typedef enum {
 	GIT_OPT_GET_SERVER_TIMEOUT,
 	GIT_OPT_SET_USER_AGENT_PRODUCT,
 	GIT_OPT_GET_USER_AGENT_PRODUCT,
-	GIT_OPT_ADD_SSL_X509_CERT
+	GIT_OPT_ADD_SSL_X509_CERT,
+	GIT_OPT_SET_SSL_PASSWORD_CALLBACK,
+	GIT_OPT_SET_SSL_USER_KEY
 } git_libgit2_opt_t;
 
 /**
@@ -562,6 +564,29 @@ typedef enum {
  *   opts(GIT_OPT_SET_SERVER_TIMEOUT, int timeout)
  *      > Sets the timeout (in milliseconds) for reading from and writing
  *      > to a remote server. Set to 0 to use the system default.
+ *
+ *   opts(GIT_OPT_SET_SSL_PASSWORD_CALLBACK, callback *cb, void *userdata)
+ *      > Set callback to acquire password for user key.  This MUST be
+ *      > set before calling GIT_OPT_SET_SSL_USER_KEY otherwise the default
+ *      > behavior will be to prompt on the console for password.  NULL can
+ *      > be used for either option.
+ *      >
+ *      > - `cb` is a callback function with the following arguments
+ *      >    int cb (char *outBuf, int size, int rwflag, void *userdata)
+ *      >     where 'outBuf' is the buf to write the password into.  It is
+ *      >     'size' bytes long.  The callback can use the 'rwflag' to check
+ *      >     whether an item shall be encrypted (`rwflag`=1).  `userdata` is
+ *      >     the pointer passed to 'userdata'.
+ *
+ *   opts(GIT_OPT_SET_SSL_USER_KEY, const char *key, const char *cert)
+ *      > Set the SSL user private key and certificate for TLS
+ *      > authentication.  See GIT_OPT_SET_SSL_PASSWORD_CALLBACK (above)
+ *      > for setting a callback to acquire passphrase for key.
+ *      >
+ *      > - `key` is the path of the user private key
+ *      > - `cert` is the path of the user public cert
+ *      >
+ *      > Both files are required and MUST exist.
  *
  * @param option Option key
  * @return 0 on success, <0 on failure
