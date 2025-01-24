@@ -146,7 +146,7 @@ fs_rm_wait(WCHAR *_wpath)
 			ERROR_PATH_NOT_FOUND == last_error)
 			return 0;
 
-		Sleep(RM_RETRY_DELAY * retries * retries);	
+		Sleep(RM_RETRY_DELAY * retries * retries);
 	}
 	while (retries++ <= RM_RETRY_COUNT);
 
@@ -297,6 +297,8 @@ cl_fs_cleanup(void)
 {
 #ifdef CLAR_FIXTURE_PATH
 	fs_rm(fixture_path(_clar_path, "*"));
+#else
+	((void)fs_copy); /* unused */
 #endif
 }
 
