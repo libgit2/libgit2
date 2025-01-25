@@ -1,5 +1,7 @@
 #include "blame_helpers.h"
 
+#include "cache.h"
+
 static git_repository *g_repo;
 static git_blame *g_blame;
 

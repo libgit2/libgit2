@@ -95,6 +95,7 @@ static int print_standard(git_blame *blame)
 	int ret = 0;
 
 	/* Compute the maximum size of things */
+	/*
 	for (i = 0; i < git_blame_hunkcount(blame); i++) {
 		const git_blame_hunk *hunk = git_blame_hunk_byindex(blame, i);
 		size_t hunk_author_len = strlen(hunk->orig_signature->name);
@@ -124,9 +125,12 @@ static int print_standard(git_blame *blame)
 	}
 
 	max_lineno_len = strintlen(max_line_number);
+	*/
+	max_lineno_len = 42, max_line_len = 42, max_author_len = 42, max_path_len = 42;
 
 	max_author_len--;
 
+printf("%d\n", git_blame_linecount(blame));
 	for (i = 1; i < git_blame_linecount(blame); i++) {
 		const git_blame_hunk *hunk = git_blame_hunk_byline(blame, i);
 		int oid_abbrev;
