@@ -1,48 +1,459 @@
 # tests: the unit and integration tests for libgit2
 
-if(NOT "${CMAKE_VERSION}" VERSION_LESS 3.27)
-	cmake_policy(SET CMP0148 OLD)
+include(../clar/clar.cmake)
+
+set(TEST_LIBGIT2_SRC
+	apply/apply_helpers.c
+	apply/apply_helpers.h
+	apply/both.c
+	apply/callbacks.c
+	apply/check.c
+	apply/fromdiff.c
+	apply/fromfile.c
+	apply/index.c
+	apply/partial.c
+	apply/tree.c
+	apply/workdir.c
+	attr/attr_expect.h
+	attr/file.c
+	attr/flags.c
+	attr/lookup.c
+	attr/macro.c
+	attr/repo.c
+	blame/blame_helpers.c
+	blame/blame_helpers.h
+	blame/buffer.c
+	blame/getters.c
+	blame/harder.c
+	blame/simple.c
+	checkout/binaryunicode.c
+	checkout/checkout_helpers.c
+	checkout/checkout_helpers.h
+	checkout/conflict.c
+	checkout/crlf.c
+	checkout/head.c
+	checkout/icase.c
+	checkout/index.c
+	checkout/nasty.c
+	checkout/tree.c
+	checkout/typechange.c
+	cherrypick/bare.c
+	cherrypick/workdir.c
+	clone/empty.c
+	clone/local.c
+	clone/nonetwork.c
+	clone/transport.c
+	commit/commit.c
+	commit/create.c
+	commit/parent.c
+	commit/parse.c
+	commit/signature.c
+	commit/write.c
+	config/add.c
+	config/backend.c
+	config/conditionals.c
+	config/config_helpers.c
+	config/config_helpers.h
+	config/configlevel.c
+	config/find.c
+	config/global.c
+	config/include.c
+	config/memory.c
+	config/multivar.c
+	config/new.c
+	config/read.c
+	config/readonly.c
+	config/rename.c
+	config/snapshot.c
+	config/stress.c
+	config/validkeyname.c
+	config/write.c
+	core/buf.c
+	core/env.c
+	core/features.c
+	core/hashsig.c
+	core/oid.c
+	core/oidarray.c
+	core/opts.c
+	core/pool.c
+	core/structinit.c
+	core/useragent.c
+	core/version.c
+	date/date.c
+	date/rfc2822.c
+	delta/apply.c
+	describe/describe.c
+	describe/describe_helpers.c
+	describe/describe_helpers.h
+	describe/t6120.c
+	diff/binary.c
+	diff/blob.c
+	diff/diff_helpers.c
+	diff/diff_helpers.h
+	diff/diffiter.c
+	diff/drivers.c
+	diff/externalmodifications.c
+	diff/format_email.c
+	diff/header.c
+	diff/index.c
+	diff/notify.c
+	diff/parse.c
+	diff/patch.c
+	diff/patchid.c
+	diff/pathspec.c
+	diff/racediffiter.c
+	diff/rename.c
+	diff/stats.c
+	diff/submodules.c
+	diff/tree.c
+	diff/userdiff.c
+	diff/workdir.c
+	email/create.c
+	fetch/local.c
+	fetchhead/fetchhead_data.h
+	fetchhead/nonetwork.c
+	filter/bare.c
+	filter/blob.c
+	filter/crlf.c
+	filter/crlf.h
+	filter/custom.c
+	filter/custom_helpers.c
+	filter/custom_helpers.h
+	filter/file.c
+	filter/ident.c
+	filter/query.c
+	filter/stream.c
+	filter/systemattrs.c
+	filter/wildcard.c
+	grafts/basic.c
+	grafts/parse.c
+	grafts/shallow.c
+	graph/ahead_behind.c
+	graph/commitgraph.c
+	graph/descendant_of.c
+	graph/reachable_from_any.c
+	ignore/path.c
+	ignore/status.c
+	index/add.c
+	index/addall.c
+	index/bypath.c
+	index/cache.c
+	index/collision.c
+	index/conflicts.c
+	index/conflicts.h
+	index/crlf.c
+	index/filemodes.c
+	index/inmemory.c
+	index/names.c
+	index/nsec.c
+	index/racy.c
+	index/read_index.c
+	index/read_tree.c
+	index/rename.c
+	index/reuc.c
+	index/splitindex.c
+	index/stage.c
+	index/tests.c
+	index/tests256.c
+	index/version.c
+	iterator/index.c
+	iterator/iterator_helpers.c
+	iterator/iterator_helpers.h
+	iterator/tree.c
+	iterator/workdir.c
+	mailmap/basic.c
+	mailmap/blame.c
+	mailmap/mailmap_testdata.h
+	mailmap/parsing.c
+	merge/analysis.c
+	merge/annotated_commit.c
+	merge/conflict_data.h
+	merge/driver.c
+	merge/files.c
+	merge/merge_helpers.c
+	merge/merge_helpers.h
+	message/trailer.c
+	network/cred.c
+	network/fetchlocal.c
+	network/refspecs.c
+	notes/notes.c
+	notes/notesref.c
+	object/cache.c
+	object/lookup.c
+	object/lookup256.c
+	object/lookupbypath.c
+	object/message.c
+	object/peel.c
+	object/shortid.c
+	object/validate.c
+	odb/alternates.c
+	odb/emptyobjects.c
+	odb/foreach.c
+	odb/freshen.c
+	odb/largefiles.c
+	odb/loose.c
+	odb/loose_data.h
+	odb/mixed.c
+	odb/open.c
+	odb/pack_data.h
+	odb/pack_data_256.h
+	odb/pack_data_one.h
+	odb/pack_data_one256.h
+	odb/packed.c
+	odb/packed256.c
+	odb/packedone.c
+	odb/packedone256.c
+	odb/sorting.c
+	odb/streamwrite.c
+	online/badssl.c
+	online/clone.c
+	online/customcert.c
+	online/fetch.c
+	online/fetchhead.c
+	online/push.c
+	online/push_util.c
+	online/push_util.h
+	online/remotes.c
+	online/shallow.c
+	pack/filelimit.c
+	pack/indexer.c
+	pack/midx.c
+	pack/packbuilder.c
+	pack/sharing.c
+	pack/threadsafety.c
+	patch/parse.c
+	patch/patch_common.h
+	patch/print.c
+	path/validate.c
+	perf/helper__perf__do_merge.c
+	perf/helper__perf__do_merge.h
+	perf/helper__perf__timer.c
+	perf/helper__perf__timer.h
+	perf/merge.c
+	rebase/abort.c
+	rebase/inmemory.c
+	rebase/iterator.c
+	rebase/merge.c
+	rebase/setup.c
+	rebase/sign.c
+	rebase/submodule.c
+	refs/basic.c
+	refs/cmp.c
+	refs/crashes.c
+	refs/create.c
+	refs/delete.c
+	refs/dup.c
+	refs/foreachglob.c
+	refs/isvalidname.c
+	refs/iterator.c
+	refs/list.c
+	refs/listall.c
+	refs/lookup.c
+	refs/namespaces.c
+	refs/normalize.c
+	refs/overwrite.c
+	refs/pack.c
+	refs/peel.c
+	refs/races.c
+	refs/read.c
+	refs/ref_helpers.c
+	refs/ref_helpers.h
+	refs/rename.c
+	refs/revparse.c
+	refs/setter.c
+	refs/shorthand.c
+	refs/transactions.c
+	refs/unicode.c
+	refs/update.c
+	remote/create.c
+	remote/fetch.c
+	remote/httpproxy.c
+	remote/insteadof.c
+	remote/list.c
+	repo/config.c
+	repo/discover.c
+	repo/env.c
+	repo/extensions.c
+	repo/getters.c
+	repo/hashfile.c
+	repo/head.c
+	repo/headtree.c
+	repo/init.c
+	repo/message.c
+	repo/new.c
+	repo/objectformat.c
+	repo/open.c
+	repo/pathspec.c
+	repo/repo_helpers.c
+	repo/repo_helpers.h
+	repo/reservedname.c
+	repo/setters.c
+	repo/shallow.c
+	repo/state.c
+	repo/template.c
+	reset/default.c
+	reset/hard.c
+	reset/mixed.c
+	reset/reset_helpers.c
+	reset/reset_helpers.h
+	reset/soft.c
+	revert/bare.c
+	revert/rename.c
+	revert/workdir.c
+	revwalk/basic.c
+	revwalk/hidecb.c
+	revwalk/mergebase.c
+	revwalk/signatureparsing.c
+	revwalk/simplify.c
+	stash/apply.c
+	stash/drop.c
+	stash/foreach.c
+	stash/save.c
+	stash/stash_helpers.c
+	stash/stash_helpers.h
+	stash/submodules.c
+	status/renames.c
+	status/single.c
+	status/status_data.h
+	status/status_helpers.c
+	status/status_helpers.h
+	status/submodules.c
+	status/worktree.c
+	status/worktree_init.c
+	stream/deprecated.c
+	stream/registration.c
+	stress/diff.c
+	submodule/add.c
+	submodule/escape.c
+	submodule/init.c
+	submodule/inject_option.c
+	submodule/lookup.c
+	submodule/modify.c
+	submodule/nosubs.c
+	submodule/open.c
+	submodule/repository_init.c
+	submodule/status.c
+	submodule/submodule_helpers.c
+	submodule/submodule_helpers.h
+	submodule/update.c
+	threads/atomic.c
+	threads/basic.c
+	threads/diff.c
+	threads/iterator.c
+	threads/refdb.c
+	threads/thread_helpers.c
+	threads/thread_helpers.h
+	threads/tlsdata.c
+	trace/trace.c
+	transport/register.c
+	transport/ssh_exec.c
+	win32/forbidden.c
+	win32/longpath.c
+	win32/systemdir.c
+	worktree/bare.c
+	worktree/config.c
+	worktree/merge.c
+	worktree/open.c
+	worktree/reflog.c
+	worktree/refs.c
+	worktree/repository.c
+	worktree/submodule.c
+	worktree/worktree.c
+	worktree/worktree_helpers.c
+	worktree/worktree_helpers.h
+	merge/trees/automerge.c
+	merge/trees/commits.c
+	merge/trees/modeconflict.c
+	merge/trees/recursive.c
+	merge/trees/renames.c
+	merge/trees/treediff.c
+	merge/trees/trivial.c
+	merge/trees/whitespace.c
+	merge/workdir/dirty.c
+	merge/workdir/recursive.c
+	merge/workdir/renames.c
+	merge/workdir/setup.c
+	merge/workdir/simple.c
+	merge/workdir/submodules.c
+	merge/workdir/trivial.c
+	network/remote/defaultbranch.c
+	network/remote/delete.c
+	network/remote/isvalidname.c
+	network/remote/local.c
+	network/remote/push.c
+	network/remote/remotes.c
+	network/remote/rename.c
+	network/remote/tag.c
+	object/blob/filter.c
+	object/blob/fromstream.c
+	object/blob/write.c
+	object/commit/commitstagedfile.c
+	object/commit/parse.c
+	object/raw/chars.c
+	object/raw/compare.c
+	object/raw/convert.c
+	object/raw/data.h
+	object/raw/fromstr.c
+	object/raw/hash.c
+	object/raw/short.c
+	object/raw/size.c
+	object/raw/type2string.c
+	object/raw/write.c
+	object/tag/list.c
+	object/tag/parse.c
+	object/tag/peel.c
+	object/tag/read.c
+	object/tag/write.c
+	object/tree/attributes.c
+	object/tree/duplicateentries.c
+	object/tree/frompath.c
+	object/tree/parse.c
+	object/tree/read.c
+	object/tree/update.c
+	object/tree/walk.c
+	object/tree/write.c
+	odb/backend/backend_helpers.c
+	odb/backend/backend_helpers.h
+	odb/backend/loose.c
+	odb/backend/mempack.c
+	odb/backend/multiple.c
+	odb/backend/nobackend.c
+	odb/backend/nonrefreshing.c
+	odb/backend/refreshing.c
+	odb/backend/simple.c
+	refs/branches/checkedout.c
+	refs/branches/create.c
+	refs/branches/delete.c
+	refs/branches/ishead.c
+	refs/branches/iterator.c
+	refs/branches/lookup.c
+	refs/branches/move.c
+	refs/branches/name.c
+	refs/branches/remote.c
+	refs/branches/upstream.c
+	refs/branches/upstreamname.c
+	refs/reflog/drop.c
+	refs/reflog/messages.c
+	refs/reflog/reflog.c
+	refs/reflog/reflog_helpers.c
+	refs/reflog/reflog_helpers.h
+	refs/tags/name.c
+	trace/windows/stacktrace.c
+	transports/smart/packet.c)
+
+if(MSVC_IDE)
+	list(APPEND TEST_LIBGIT2_SRC precompiled.c precompiled.h)
 endif()
 
-set(Python_ADDITIONAL_VERSIONS 3 2.7)
-find_package(PythonInterp)
-
-if(NOT PYTHONINTERP_FOUND)
-	message(FATAL_ERROR "Could not find a python interpreter, which is needed to build the tests. "
-	                     "Make sure python is available, or pass -DBUILD_TESTS=OFF to skip building the tests")
-ENDIF()
-
 set(CLAR_PATH "${PROJECT_SOURCE_DIR}/tests/clar")
-set(CLAR_FIXTURES "${PROJECT_SOURCE_DIR}/tests/resources/")
 set(TEST_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
-add_definitions(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
-add_definitions(-DCLAR_TMPDIR=\"libgit2_tests\")
-add_definitions(-DCLAR_WIN32_LONGPATHS)
-add_definitions(-D_FILE_OFFSET_BITS=64)
 
 # Ensure that we do not use deprecated functions internally
 add_definitions(-DGIT_DEPRECATE_HARD)
 
 set(TEST_INCLUDES "${CLAR_PATH}" "${TEST_PATH}" "${CMAKE_CURRENT_BINARY_DIR}")
-file(GLOB_RECURSE SRC_TEST ${TEST_PATH}/*/*.c ${TEST_PATH}/*/*.h)
-file(GLOB_RECURSE SRC_CLAR ${CLAR_PATH}/*.c ${CLAR_PATH}/*.h)
 
-if(MSVC_IDE)
-	list(APPEND SRC_TEST "precompiled.c")
-endif()
-
-add_custom_command(
-	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clar.suite ${CMAKE_CURRENT_BINARY_DIR}/clar_suite.h
-	COMMAND ${PYTHON_EXECUTABLE} ${CLAR_PATH}/generate.py -o "${CMAKE_CURRENT_BINARY_DIR}" -f -xonline -xstress -xperf .
-	DEPENDS ${SRC_TEST}
-	WORKING_DIRECTORY ${TEST_PATH}
-)
-
-set_source_files_properties(
-	${CLAR_PATH}/clar.c
-	PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clar.suite)
-
-add_executable(libgit2_tests ${SRC_CLAR} ${SRC_TEST} ${LIBGIT2_OBJECTS})
+add_executable(libgit2_tests ${CLAR_SRC} ${TEST_LIBGIT2_SRC} ${LIBGIT2_OBJECTS})
 
 set_target_properties(libgit2_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 target_include_directories(libgit2_tests PRIVATE ${TEST_INCLUDES} ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
@@ -50,6 +461,8 @@ target_include_directories(libgit2_tests SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDE
 target_link_libraries(libgit2_tests ${LIBGIT2_SYSTEM_LIBS})
 
 ide_split_sources(libgit2_tests)
+
+generate_clar_suite(libgit2_tests "${TEST_LIBGIT2_SRC}" "-xonline -xstress -xperf")
 
 #
 # Old versions of gcc require us to declare our test functions; don't do
@@ -65,7 +478,6 @@ if(MSVC_IDE)
 	set_source_files_properties("precompiled.c" COMPILE_FLAGS "/Ycprecompiled.h")
 endif()
 
-include(AddClarTest)
 add_clar_test(libgit2_tests offline             -v -xonline)
 add_clar_test(libgit2_tests invasive            -v -sfilter::stream::bigfile -sodb::largefiles -siterator::workdir::filesystem_gunk -srepo::init -srepo::init::at_filesystem_root -sonline::clone::connect_timeout_default)
 add_clar_test(libgit2_tests online              -v -sonline -xonline::customcert)
