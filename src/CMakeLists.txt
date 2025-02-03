@@ -142,6 +142,14 @@ if(AMIGA)
 endif()
 
 #
+# Set build time information
+#
+
+set(GIT_BUILD_CPU "${CMAKE_SYSTEM_PROCESSOR}")
+execute_process(COMMAND git rev-parse HEAD
+	OUTPUT_VARIABLE GIT_BUILD_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+#
 # Include child projects
 #
 

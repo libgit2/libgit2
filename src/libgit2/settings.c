@@ -468,3 +468,26 @@ int git_libgit2_opts(int key, ...)
 
 	return error;
 }
+
+const char *git_libgit2_buildinfo(git_buildinfo_t key)
+{
+	switch (key) {
+
+#ifdef GIT_BUILD_CPU
+	case GIT_BUILDINFO_CPU:
+		return GIT_BUILD_CPU;
+		break;
+#endif
+
+#ifdef GIT_BUILD_COMMIT
+	case GIT_BUILDINFO_COMMIT:
+		return GIT_BUILD_COMMIT;
+		break;
+#endif
+
+	default:
+		break;
+	}
+
+	return NULL;
+}

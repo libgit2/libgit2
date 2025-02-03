@@ -14,24 +14,30 @@
 
 static int build_options;
 
-struct feature_names {
-	int feature;
+struct info_names {
+	int key;
 	const char *name;
 };
 
-static const struct feature_names feature_names[] = {
-	{ GIT_FEATURE_SHA1,           "sha1"           },
-	{ GIT_FEATURE_SHA256,         "sha256"         },
-	{ GIT_FEATURE_THREADS,        "threads"        },
-	{ GIT_FEATURE_NSEC,           "nsec"           },
-	{ GIT_FEATURE_COMPRESSION,    "compression"    },
-	{ GIT_FEATURE_I18N,           "i18n"           },
-	{ GIT_FEATURE_REGEX,          "regex"          },
-	{ GIT_FEATURE_SSH,            "ssh"            },
-	{ GIT_FEATURE_HTTPS,          "https"          },
-	{ GIT_FEATURE_HTTP_PARSER,    "http_parser"    },
-	{ GIT_FEATURE_AUTH_NTLM,      "auth_ntlm"      },
-	{ GIT_FEATURE_AUTH_NEGOTIATE, "auth_negotiate" },
+static const struct info_names buildinfo_names[] = {
+	{ GIT_BUILDINFO_CPU,          "cpu"               },
+	{ GIT_BUILDINFO_COMMIT,       "built from commit" },
+	{ 0, NULL }
+};
+
+static const struct info_names feature_names[] = {
+	{ GIT_FEATURE_SHA1,           "sha1"              },
+	{ GIT_FEATURE_SHA256,         "sha256"            },
+	{ GIT_FEATURE_THREADS,        "threads"           },
+	{ GIT_FEATURE_NSEC,           "nsec"              },
+	{ GIT_FEATURE_COMPRESSION,    "compression"       },
+	{ GIT_FEATURE_I18N,           "i18n"              },
+	{ GIT_FEATURE_REGEX,          "regex"             },
+	{ GIT_FEATURE_SSH,            "ssh"               },
+	{ GIT_FEATURE_HTTPS,          "https"             },
+	{ GIT_FEATURE_HTTP_PARSER,    "http_parser"       },
+	{ GIT_FEATURE_AUTH_NTLM,      "auth_ntlm"         },
+	{ GIT_FEATURE_AUTH_NEGOTIATE, "auth_negotiate"    },
 	{ 0, NULL }
 };
 
@@ -61,7 +67,7 @@ static int print_help(void)
 int cmd_version(int argc, char **argv)
 {
 	cli_opt invalid_opt;
-	const struct feature_names *f;
+	const struct info_names *i;
 	const char *backend;
 	int supported_features;
 
@@ -78,12 +84,22 @@ int cmd_version(int argc, char **argv)
 	if (build_options) {
 		supported_features = git_libgit2_features();
 
-		for (f = feature_names; f->feature; f++) {
-			if (!(supported_features & f->feature))
+		for (i = buildinfo_names; i->key; i++) {
+			const char *value = git_libgit2_buildinfo(i->key);
+
+			if (value && *value)
+				printf("%s: %s\n", i->name, value);
+		}
+
+		printf("sizeof-long: %" PRIuZ "\n", sizeof(long));
+		printf("sizeof-size_t: %" PRIuZ "\n", sizeof(size_t));
+
+		for (i = feature_names; i->key; i++) {
+			if (!(supported_features & i->key))
 				continue;
 
-			backend = git_libgit2_feature_backend(f->feature);
-			printf("backend-%s: %s\n", f->name, backend);
+			backend = git_libgit2_feature_backend(i->key);
+			printf("backend-%s: %s\n", i->name, backend);
 		}
 	}
 
