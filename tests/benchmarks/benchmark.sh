@@ -119,9 +119,20 @@ cli_version() {
 	fi
 }
 
+cli_commit() {
+	if [[ "$(uname -s)" == "MINGW"* ]]; then
+		BUILD_OPTIONS=$($(cygpath -u "$1") version --build-options)
+	else
+		BUILD_OPTIONS=$("$1" version --build-options)
+	fi
+
+	echo "${BUILD_OPTIONS}" | grep '^built from commit: ' | sed -e 's/^built from commit: //'
+}
+
 TEST_CLI_NAME=$(basename "${TEST_CLI}")
 TEST_CLI_PATH=$(fullpath "${TEST_CLI}")
 TEST_CLI_VERSION=$(cli_version "${TEST_CLI}")
+TEST_CLI_COMMIT=$(cli_commit "${TEST_CLI}")
 
 if [ "${BASELINE_CLI}" != "" ]; then
 	if [[ "${BASELINE_CLI}" == "/"* ]]; then
@@ -133,6 +144,7 @@ if [ "${BASELINE_CLI}" != "" ]; then
 	BASELINE_CLI_NAME=$(basename "${BASELINE_CLI}")
 	BASELINE_CLI_PATH=$(fullpath "${BASELINE_CLI}")
 	BASELINE_CLI_VERSION=$(cli_version "${BASELINE_CLI}")
+	BASELINE_CLI_COMMIT=$(cli_commit "${BASELINE_CLI}")
 fi
 
 #
@@ -324,8 +336,8 @@ if [ "${JSON_RESULT}" != "" ]; then
 
 	SYSTEM_JSON="{ \"os\": \"${SYSTEM_OS}\",  \"kernel\": \"${SYSTEM_KERNEL}\" }"
 	TIME_JSON="{ \"start\": ${TIME_START}, \"end\": ${TIME_END} }"
-	TEST_CLI_JSON="{ \"name\": \"${TEST_CLI_NAME}\", \"path\": \"$(escape "${TEST_CLI_PATH}")\", \"version\": \"${TEST_CLI_VERSION}\" }"
-	BASELINE_CLI_JSON="{ \"name\": \"${BASELINE_CLI_NAME}\", \"path\": \"$(escape "${BASELINE_CLI_PATH}")\", \"version\": \"${BASELINE_CLI_VERSION}\" }"
+	TEST_CLI_JSON="{ \"name\": \"${TEST_CLI_NAME}\", \"path\": \"$(escape "${TEST_CLI_PATH}")\", \"version\": \"${TEST_CLI_VERSION}\", \"commit\": \"${TEST_CLI_COMMIT}\" }"
+	BASELINE_CLI_JSON="{ \"name\": \"${BASELINE_CLI_NAME}\", \"path\": \"$(escape "${BASELINE_CLI_PATH}")\", \"version\": \"${BASELINE_CLI_VERSION}\", \"commit\": \"${BASELINE_CLI_COMMIT}\" }"
 
 	if [ "${BASELINE_CLI}" != "" ]; then
 		EXECUTOR_JSON="{ \"baseline\": ${BASELINE_CLI_JSON}, \"cli\": ${TEST_CLI_JSON} }"
