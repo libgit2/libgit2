@@ -874,3 +874,26 @@ void test_repo_open__can_reset_safe_directory_list(void)
 	git_str_dispose(&config_filename);
 	git_str_dispose(&config_data);
 }
+
+void test_repo_open__refstorage_extension(void)
+{
+	git_repository *repo, *tmp;
+	git_config *config;
+
+	repo = cl_git_sandbox_init("empty_bare.git");
+
+	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_int32(config, "core.repositoryformatversion", 1));
+	cl_git_pass(git_config_set_string(config, "extensions.refStorage", "files"));
+
+	cl_git_pass(git_repository_open(&tmp, "empty_bare.git"));
+	git_repository_free(tmp);
+
+	cl_git_pass(git_config_set_string(config, "extensions.refStorage", "garbage"));
+	cl_git_fail_with(GIT_EINVALID, git_repository_open(&tmp, "empty_bare.git"));
+	git_repository_free(tmp);
+
+	git_config_free(config);
+	git_repository_free(repo);
+}
