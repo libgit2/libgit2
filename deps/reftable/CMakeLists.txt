@@ -1,5 +1,7 @@
 add_library(reftable OBJECT ${SRC_REFTABLE})
 
+disable_warnings(implicit-fallthrough)
+
 file(GLOB SRC_REFTABLE "*.c" "*.h")
 list(SORT SRC_REFTABLE)
 
