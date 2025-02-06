@@ -149,6 +149,10 @@ set(GIT_BUILD_CPU "${CMAKE_SYSTEM_PROCESSOR}")
 execute_process(COMMAND git rev-parse HEAD
 	OUTPUT_VARIABLE GIT_BUILD_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+add_subdirectory("${PROJECT_SOURCE_DIR}/deps/reftable" "${PROJECT_BINARY_DIR}/deps/reftable")
+list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/reftable")
+list(APPEND LIBGIT2_DEPENDENCY_OBJECTS "$<TARGET_OBJECTS:reftable>")
+
 #
 # Include child projects
 #
