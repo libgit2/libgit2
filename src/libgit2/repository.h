@@ -159,6 +159,7 @@ struct git_repository {
 	         is_bare:1,
 	         is_worktree:1;
 	git_oid_t oid_type;
+	git_refdb_t refdb_type;
 
 	unsigned int lru_counter;
 

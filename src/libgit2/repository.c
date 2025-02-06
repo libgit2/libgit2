@@ -69,6 +69,7 @@ static int check_repositoryformatversion(int *version, git_config *config);
 static int check_extensions(git_config *config, int version);
 static int load_global_config(git_config **config, bool use_env);
 static int load_objectformat(git_repository *repo, git_config *config);
+static int load_refstorage_format(git_repository *repo, git_config *config);
 
 #define GIT_COMMONDIR_FILE "commondir"
 #define GIT_GITDIR_FILE "gitdir"
@@ -349,6 +350,17 @@ int git_repository_new_ext(
 	repo->is_worktree = 0;
 	repo->oid_type = opts && opts->oid_type ? opts->oid_type :
 		GIT_OID_DEFAULT;
+
+	/*
+	 * This is a bit dirty, as this repository doesn't really have a refdb
+	 * in the first place. But we do expect that we can create an "empty"
+	 * ref iterator from such a repository, and things keep on working like
+	 * this.
+	 *
+	 * It might make sense to eventually create an "in-memory" refdb type
+	 * to serve this purpose.
+	 */
+	repo->refdb_type = GIT_REFDB_FILES;
 
 	return 0;
 }
@@ -1016,10 +1028,12 @@ static int read_repository_format(git_repository *repo)
 		goto out;
 
 	if (version > 0) {
-		if ((error = load_objectformat(repo, config)) < 0)
+		if ((error = load_objectformat(repo, config)) < 0 ||
+		    (error = load_refstorage_format(repo, config)) < 0)
 			goto out;
 	} else {
 		repo->oid_type = GIT_OID_DEFAULT;
+		repo->refdb_type = GIT_REFDB_FILES;
 	}
 
 out:
@@ -1244,6 +1258,17 @@ int git_repository_wrap_odb(git_repository **out, git_odb *odb)
 
 	GIT_ASSERT(git_oid_type_is_valid(odb->options.oid_type));
 	repo->oid_type = odb->options.oid_type;
+
+	/*
+	 * This is a bit dirty, as this repository doesn't really have a refdb
+	 * in the first place. But we do expect that we can create an "empty"
+	 * ref iterator from such a repository, and things keep on working like
+	 * this.
+	 *
+	 * It might make sense to eventually create an "in-memory" refdb type
+	 * to serve this purpose.
+	 */
+	repo->refdb_type = GIT_REFDB_FILES;
 
 	git_repository_set_odb(repo, odb);
 	*out = repo;
@@ -1879,7 +1904,8 @@ static const char *builtin_extensions[] = {
 	"noop",
 	"objectformat",
 	"worktreeconfig",
-	"preciousobjects"
+	"preciousobjects",
+	"refstorage",
 };
 
 static git_vector user_extensions = { 0, git__strcmp_cb };
@@ -2014,6 +2040,32 @@ int git_repository__set_objectformat(
 	}
 
 	return 0;
+}
+
+static int load_refstorage_format(git_repository *repo, git_config *config)
+{
+	git_config_entry *entry = NULL;
+	int error;
+
+	if ((error = git_config_get_entry(&entry, config, "extensions.refstorage")) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			repo->refdb_type = GIT_REFDB_FILES;
+			git_error_clear();
+			error = 0;
+		}
+
+		goto done;
+	}
+
+	if ((repo->refdb_type = git_refdb_type_fromstr(entry->value)) == 0) {
+		git_error_set(GIT_ERROR_REPOSITORY,
+			      "unknown refstorage format '%s'", entry->value);
+		error = GIT_EINVALID;
+	}
+
+done:
+	git_config_entry_free(entry);
+	return error;
 }
 
 int git_repository__extensions(char ***out, size_t *out_len)

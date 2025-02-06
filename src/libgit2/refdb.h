@@ -125,4 +125,11 @@ int git_refdb_ensure_log(git_refdb *refdb, const char *refname);
 int git_refdb_lock(void **payload, git_refdb *db, const char *refname);
 int git_refdb_unlock(git_refdb *db, void *payload, int success, int update_reflog, const git_reference *ref, const git_signature *sig, const char *message);
 
+GIT_INLINE(git_refdb_t) git_refdb_type_fromstr(const char *name)
+{
+	if (strcmp(name, "files") == 0)
+		return GIT_REFDB_FILES;
+	return 0;
+}
+
 #endif
