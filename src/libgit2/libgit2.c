@@ -16,6 +16,7 @@
 #include "mwindow.h"
 #include "oid.h"
 #include "rand.h"
+#include "refdb_reftable.h"
 #include "runtime.h"
 #include "settings.h"
 #include "sysdir.h"
@@ -53,7 +54,8 @@ int git_libgit2_init(void)
 		git_mbedtls_stream_global_init,
 		git_mwindow_global_init,
 		git_pool_global_init,
-		git_settings_global_init
+		git_settings_global_init,
+		git_reftable_global_init
 	};
 
 	return git_runtime_init(init_fns, ARRAY_SIZE(init_fns));
