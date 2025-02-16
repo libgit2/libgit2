@@ -195,6 +195,31 @@ static void pack_index_free(struct git_pack_file *p)
 	}
 }
 
+static int pack_get_suffixed_file_path(
+        git_str *out,
+        const struct git_pack_file *p,
+        const char *suffix)
+{
+	size_t name_len;
+	int error;
+
+	/* checked by git_pack_file alloc */
+	name_len = strlen(p->pack_name);
+	GIT_ASSERT(name_len > strlen(".pack"));
+
+	if ((error = git_str_init(out, name_len)) < 0)
+		return error;
+
+	git_str_put(out, p->pack_name, name_len - strlen(".pack"));
+	git_str_puts(out, suffix);
+	if (git_str_oom(out)) {
+		git_str_dispose(out);
+		return -1;
+	}
+
+	return 0;
+}
+
 /* Run with the packfile lock held */
 static int pack_index_check_locked(const char *path, struct git_pack_file *p)
 {
@@ -305,31 +330,17 @@ static int pack_index_check_locked(const char *path, struct git_pack_file *p)
 /* Run with the packfile lock held */
 static int pack_index_open_locked(struct git_pack_file *p)
 {
-	int error = 0;
-	size_t name_len;
-	git_str idx_name = GIT_STR_INIT;
+	int error;
+	git_str idx_name;
 
 	if (p->index_version > -1)
-		goto cleanup;
+		return 0;
 
-	/* checked by git_pack_file alloc */
-	name_len = strlen(p->pack_name);
-	GIT_ASSERT(name_len > strlen(".pack"));
+	if ((error = pack_get_suffixed_file_path(&idx_name, p, ".idx")) < 0)
+		return error;
 
-	if ((error = git_str_init(&idx_name, name_len)) < 0)
-		goto cleanup;
+	error = pack_index_check_locked(idx_name.ptr, p);
 
-	git_str_put(&idx_name, p->pack_name, name_len - strlen(".pack"));
-	git_str_puts(&idx_name, ".idx");
-	if (git_str_oom(&idx_name)) {
-		error = -1;
-		goto cleanup;
-	}
-
-	if (p->index_version == -1)
-		error = pack_index_check_locked(idx_name.ptr, p);
-
-cleanup:
 	git_str_dispose(&idx_name);
 
 	return error;
