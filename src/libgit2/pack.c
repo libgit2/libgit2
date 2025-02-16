@@ -732,6 +732,106 @@ int git_packfile_resolve_header(
 	return error;
 }
 
+static int pack_ridx_pos_to_pack_pos(uint32_t *out, struct git_pack_file *p, uint32_t ridx_pos)
+{
+	const uint32_t *revindex;
+	int error;
+
+	if (ridx_pos > p->num_objects) {
+		git_error_set(GIT_ERROR_ODB, "reverse index position out of bounds");
+		return GIT_EINVALID;
+	}
+
+	if (!p->revindex_map.data && !p->revindex) {
+		if ((error = git_mutex_lock(&p->lock)) < 0) {
+			git_error_set(GIT_ERROR_OS, "failed to lock packfile reader");
+			return error;
+		}
+		error = pack_revindex_open_locked(p);
+		git_mutex_unlock(&p->lock);
+		if (error < 0)
+			return error;
+	}
+
+	if (p->revindex_map.data) {
+		struct git_pack_ridx_header *hdr = p->revindex_map.data;
+		revindex = (uint32_t *)(hdr + 1);
+	} else
+		revindex = p->revindex;
+
+	*out = ntohl(revindex[ridx_pos]);
+
+	return 0;
+}
+
+static int pack_ridx_pos_to_id(git_oid *out, struct git_pack_file *p, uint32_t ridx_pos)
+{
+	const unsigned char *oid_table = p->index_map.data;
+	const unsigned char *oid;
+	uint32_t pos;
+	int error;
+
+	if ((error = pack_ridx_pos_to_pack_pos(&pos, p, ridx_pos)) < 0)
+		return error;
+
+	if (p->index_version == 1) {
+		oid_table += 4 * 256;
+		oid = oid_table + pos * (4 + p->oid_size) + 4;
+	} else {
+		oid_table += 8 + 4 * 256;
+		oid = oid_table + pos * p->oid_size;
+	}
+
+	git_oid_from_raw(out, oid, p->oid_type);
+
+	return 0;
+}
+
+static int pack_ridx_pos_to_offset(off64_t *out, struct git_pack_file *p, uint32_t ridx_pos)
+{
+	uint32_t pos;
+	int error;
+
+	if (ridx_pos < p->num_objects) {
+		if ((error = pack_ridx_pos_to_pack_pos(&pos, p, ridx_pos)) < 0)
+			return error;
+		*out = nth_packed_object_offset_locked(p, pos);
+	} else if (ridx_pos == p->num_objects)
+		*out = p->mwf.size - p->oid_size;
+	else {
+		git_error_set(GIT_ERROR_ODB, "reverse index position out of bounds");
+		return GIT_EINVALID;
+	}
+
+	return 0;
+}
+
+static int pack_offset_to_ridx_pos(uint32_t *out, struct git_pack_file *p, off64_t offset)
+{
+	unsigned int lo = 0;
+	unsigned int hi = p->num_objects + 1;
+	int error;
+
+	while (lo < hi) {
+		const unsigned int mi = lo + (hi - lo) / 2;
+		off64_t found;
+
+		if ((error = pack_ridx_pos_to_offset(&found, p, mi)) < 0)
+			return error;
+
+		if (found == offset) {
+			*out = mi;
+			return 0;
+		} else if (found > offset)
+			hi = mi;
+		else
+			lo = mi + 1;
+	};
+
+	git_error_set(GIT_ERROR_ODB, "offset not found in reverse index");
+	return GIT_ENOTFOUND;
+}
+
 #define SMALL_STACK_SIZE 64
 
 /**
