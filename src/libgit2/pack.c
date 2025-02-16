@@ -832,6 +832,110 @@ static int pack_offset_to_ridx_pos(uint32_t *out, struct git_pack_file *p, off64
 	return GIT_ENOTFOUND;
 }
 
+static int pack_delta_data_dup(unsigned char **out, struct git_pack_file *p, off64_t offset, size_t len)
+{
+	git_mwindow *w_curs = NULL;
+	unsigned char *data;
+	unsigned int left;
+	int error;
+
+	if ((error = git_mutex_lock(&p->lock)) < 0)
+		return error;
+
+	if ((error = git_mutex_lock(&p->mwf.lock)) < 0) {
+		git_mutex_unlock(&p->lock);
+		return error;
+	}
+
+	data = git_mwindow_open(&p->mwf, &w_curs, offset, len, &left);
+
+	git_mutex_unlock(&p->lock);
+	git_mutex_unlock(&p->mwf.lock);
+
+	if (data == NULL)
+		return GIT_EBUFS;
+
+	*out = git__malloc(len);
+	GIT_ERROR_CHECK_ALLOC(*out);
+
+	memcpy(*out, data, len);
+
+	git_mwindow_close(&w_curs);
+
+	return 0;
+}
+
+int git_packfile_get_delta(
+        git_oid *base_out,
+        void **z_data_out,
+        size_t *size_out,
+        size_t *z_size_out,
+        struct git_pack_file *p,
+        off64_t offset)
+{
+	size_t size, z_size;
+	git_object_t type;
+	git_mwindow *w_curs = NULL;
+	off64_t curpos = offset;
+	uint32_t ridx_pos;
+	off64_t base_offset, next_packed;
+	git_oid base_id;
+	unsigned char *z_data;
+	int error;
+
+	GIT_ASSERT_ARG(p);
+	GIT_ASSERT_ARG(base_out);
+	GIT_ASSERT_ARG(z_data_out);
+	GIT_ASSERT_ARG(size_out);
+	GIT_ASSERT_ARG(z_size_out);
+
+	error = git_packfile_unpack_header(&size, &type, p, &w_curs, &curpos);
+	if (error < 0)
+		return error;
+
+	if (type != GIT_PACKFILE_OFS_DELTA && type != GIT_PACKFILE_REF_DELTA) {
+		git_error_set(GIT_ERROR_ODB, "object is not stored as a delta");
+		return GIT_ENOTFOUND;
+	}
+
+	error = get_delta_base(&base_offset, p, &w_curs, &curpos, type, offset);
+	git_mwindow_close(&w_curs);
+
+	if (error < 0)
+		return error;
+
+	/* get the OID of the delta base using its offset and the reverse index */
+	if ((error = pack_offset_to_ridx_pos(&ridx_pos, p, base_offset)) < 0)
+		return error;
+
+	if ((error = pack_ridx_pos_to_id(&base_id, p, ridx_pos)) < 0)
+		return error;
+
+	/* get the offset of the next packed item to determine compressed delta size */
+	if ((error = pack_offset_to_ridx_pos(&ridx_pos, p, offset)) < 0)
+		return error;
+
+	if ((error = pack_ridx_pos_to_offset(&next_packed, p, ridx_pos + 1)) < 0)
+		return error;
+
+	if (next_packed <= curpos) {
+		git_error_set(GIT_ERROR_ODB, "non-monotonic offset table");
+		return GIT_EINVALID;
+	}
+	z_size = (size_t)(next_packed - curpos);
+
+	/* allocate a copy of compressed delta data and return it to the caller */
+	if ((error = pack_delta_data_dup(&z_data, p, curpos, z_size)) < 0)
+		return error;
+
+	git_oid_cpy(base_out, &base_id);
+	*z_data_out = z_data;
+	*size_out = size;
+	*z_size_out = z_size;
+
+	return 0;
+}
+
 #define SMALL_STACK_SIZE 64
 
 /**

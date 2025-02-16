@@ -189,6 +189,14 @@ int git_packfile_resolve_header(
 		struct git_pack_file *p,
 		off64_t offset);
 
+int git_packfile_get_delta(
+        git_oid *base_out,
+        void **z_data_out,
+        size_t *size_out,
+        size_t *z_size_out,
+        struct git_pack_file *p,
+        off64_t offset);
+
 int git_packfile_unpack(git_rawobj *obj, struct git_pack_file *p, off64_t *obj_offset);
 
 int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, off64_t curpos);
