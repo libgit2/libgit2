@@ -117,7 +117,8 @@ struct git_pack_file {
 	git_mwindow_file mwf;
 	git_map index_map;
 	git_map revindex_map;
-	git_mutex lock; /* protect updates to index_map & revindex_map */
+	uint32_t *revindex;
+	git_mutex lock; /* protect updates to index_map & revindex_map/revindex */
 	git_atomic32 refcount;
 
 	uint32_t num_objects;

@@ -352,6 +352,10 @@ static void pack_revindex_free(struct git_pack_file *p)
 		git_futils_mmap_free(&p->revindex_map);
 		p->revindex_map.data = NULL;
 	}
+	if (p->revindex) {
+		git__free(p->revindex);
+		p->revindex = NULL;
+	}
 }
 
 /* Run with the packfile lock held */
@@ -419,13 +423,60 @@ static int pack_revindex_check_locked(const char *path, struct git_pack_file *p)
 	return 0;
 }
 
+struct pack_revindex_entry {
+	uint32_t pos;
+	off64_t offset;
+};
+
+static int order_by_offset(const void *p1, const void *p2, void *arg)
+{
+	const struct pack_revindex_entry *e1 = p1;
+	const struct pack_revindex_entry *e2 = p2;
+	GIT_UNUSED(arg);
+
+	return (e1->offset < e2->offset) ? -1 : (e1->offset > e2->offset) ? 1 : 0;
+}
+
+/* Run with the packfile lock held */
+static int pack_revindex_compute_locked(struct git_pack_file *p)
+{
+	struct pack_revindex_entry *revindex_tmp;
+	uint32_t *revindex, i;
+
+	revindex_tmp = git__calloc(p->num_objects, sizeof(*revindex_tmp));
+	GIT_ERROR_CHECK_ALLOC(revindex_tmp);
+
+	for (i = 0; i < p->num_objects; i++) {
+		revindex_tmp[i] = (struct pack_revindex_entry){
+			.pos = i,
+			.offset = nth_packed_object_offset_locked(p, i),
+		};
+	}
+
+	git__qsort_r(
+	        revindex_tmp, p->num_objects, sizeof(revindex_tmp[0]),
+	        order_by_offset, NULL);
+
+	revindex = git__calloc(p->num_objects, sizeof(*revindex));
+	GIT_ERROR_CHECK_ALLOC(revindex);
+
+	for (i = 0; i < p->num_objects; i++)
+		revindex[i] = htonl(revindex_tmp[i].pos);
+
+	git__free(revindex_tmp);
+
+	p->revindex = revindex;
+
+	return 0;
+}
+
 /* Run with the packfile lock held */
 static int pack_revindex_open_locked(struct git_pack_file *p)
 {
 	int error;
 	git_str ridx_name;
 
-	if (p->revindex_map.data)
+	if (p->revindex_map.data || p->revindex)
 		return 0;
 
 	if (p->index_map.data == NULL && ((error = pack_index_open_locked(p)) < 0))
@@ -434,7 +485,10 @@ static int pack_revindex_open_locked(struct git_pack_file *p)
 	if ((error = pack_get_suffixed_file_path(&ridx_name, p, ".rev")) < 0)
 		return error;
 
-	error = pack_revindex_check_locked(ridx_name.ptr, p);
+	if (git_fs_path_exists(ridx_name.ptr))
+		error = pack_revindex_check_locked(ridx_name.ptr, p);
+	else
+		error = pack_revindex_compute_locked(p);
 
 	git_str_dispose(&ridx_name);
 
