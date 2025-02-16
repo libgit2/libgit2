@@ -346,6 +346,101 @@ static int pack_index_open_locked(struct git_pack_file *p)
 	return error;
 }
 
+static void pack_revindex_free(struct git_pack_file *p)
+{
+	if (p->revindex_map.data) {
+		git_futils_mmap_free(&p->revindex_map);
+		p->revindex_map.data = NULL;
+	}
+}
+
+/* Run with the packfile lock held */
+static int pack_revindex_check_locked(const char *path, struct git_pack_file *p)
+{
+	struct git_pack_ridx_header *hdr;
+	uint32_t version, i, *revindex;
+	size_t ridx_size;
+	struct stat st;
+	int error;
+
+	/* TODO: properly open the file without access time using O_NOATIME */
+	git_file fd = git_futils_open_ro(path);
+	if (fd < 0)
+		return fd;
+
+	if (p_fstat(fd, &st) < 0) {
+		p_close(fd);
+		git_error_set(GIT_ERROR_OS, "unable to stat pack reverse index '%s'", path);
+		return -1;
+	}
+
+	if (!S_ISREG(st.st_mode) ||
+		!git__is_sizet(st.st_size) ||
+		(ridx_size = (size_t)st.st_size) != (size_t)(sizeof(struct git_pack_ridx_header) + (4 * p->num_objects) + (p->oid_size * 2))) {
+		p_close(fd);
+		git_error_set(GIT_ERROR_ODB, "invalid pack reverse index '%s'", path);
+		return -1;
+	}
+
+	error = git_futils_mmap_ro(&p->revindex_map, fd, 0, ridx_size);
+
+	p_close(fd);
+
+	if (error < 0)
+		return error;
+
+	hdr = p->revindex_map.data;
+
+	if (hdr->ridx_signature != htonl(PACK_RIDX_SIGNATURE)) {
+		return packfile_error("invalid reverse index signature");
+	}
+
+	version = ntohl(hdr->ridx_version);
+
+	if (version < 1 || version > 1) {
+		git_futils_mmap_free(&p->revindex_map);
+		return packfile_error("unsupported reverse index version");
+	}
+
+	if (ntohl(hdr->ridx_oid_type) != p->oid_type) {
+		git_futils_mmap_free(&p->revindex_map);
+		return packfile_error("reverse index hash function mismatch");
+	}
+
+	revindex = (uint32_t *)(hdr + 1);
+
+	for (i = 0; i < p->num_objects; i++) {
+		if (ntohl(revindex[i]) > p->num_objects) {
+			git_futils_mmap_free(&p->revindex_map);
+			return packfile_error("invalid reverse index entry");
+		}
+	}
+
+	return 0;
+}
+
+/* Run with the packfile lock held */
+static int pack_revindex_open_locked(struct git_pack_file *p)
+{
+	int error;
+	git_str ridx_name;
+
+	if (p->revindex_map.data)
+		return 0;
+
+	if (p->index_map.data == NULL && ((error = pack_index_open_locked(p)) < 0))
+		return error;
+
+	if ((error = pack_get_suffixed_file_path(&ridx_name, p, ".rev")) < 0)
+		return error;
+
+	error = pack_revindex_check_locked(ridx_name.ptr, p);
+
+	git_str_dispose(&ridx_name);
+
+	return error;
+}
+
 static unsigned char *pack_window_open(
 		struct git_pack_file *p,
 		git_mwindow **w_cursor,
@@ -1080,6 +1175,7 @@ void git_packfile_free(struct git_pack_file *p, bool unlink_packfile)
 		p_unlink(p->pack_name);
 
 	pack_index_free(p);
+	pack_revindex_free(p);
 
 	git__free(p->bad_object_ids);
 
