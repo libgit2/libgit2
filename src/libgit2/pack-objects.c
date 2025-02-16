@@ -121,6 +121,10 @@ static int packbuilder_config(git_packbuilder *pb)
 
 #undef config_get
 
+	ret = git_config_get_bool(&pb->no_reuse_delta, config, "pack.noReuseDelta");
+	if (ret == GIT_ENOTFOUND)
+		ret = 0;
+
 out:
 	git_config_free(config);
 
@@ -1339,7 +1343,8 @@ static bool reuse_delta(git_pobject *po, git_packbuilder *pb)
 	size_t z_size;
 	git_pobject *base_po;
 
-	if (git_odb__get_delta(&base_id, &z_data, &size, &z_size, pb->odb, &po->id) < 0)
+	if (pb->no_reuse_delta ||
+	    git_odb__get_delta(&base_id, &z_data, &size, &z_size, pb->odb, &po->id) < 0)
 		return false;
 
 	if (git_packbuilder_pobjectmap_get(&base_po, &pb->object_ix, &base_id) != 0) {
