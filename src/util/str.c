@@ -1370,3 +1370,48 @@ bool git_str_gather_text_stats(
 	return (stats->cr != stats->crlf || stats->nul > 0 ||
 		((stats->printable >> 7) < stats->nonprintable));
 }
+
+int git_str_replace(
+	git_str *buf,
+	const char *replacements[][2],
+	size_t replacements_len)
+{
+	git_str replaced = GIT_STR_INIT;
+	const char *c;
+	size_t i;
+	int error = 0;
+
+	ENSURE_SIZE(&replaced, buf->size);
+
+	for (c = buf->ptr; *c; ) {
+		/* Generally we just advance c */
+		const char *in = c, *out = c;
+		size_t in_len = 1, out_len = 1;
+
+		for (i = 0; i < replacements_len; i++) {
+			if (git__prefixcmp(c, replacements[i][0]) == 0) {
+				in = replacements[i][0];
+				in_len = strlen(in);
+
+				out = replacements[i][1];
+				out_len = strlen(out);
+
+				break;
+			}
+		}
+
+		git_str_put(&replaced, out, out_len);
+		c += in_len;
+	}
+
+	if (git_str_oom(&replaced)) {
+		error = -1;
+		goto done;
+	}
+
+	git_str_swap(&replaced, buf);
+
+done:
+	git_str_dispose(&replaced);
+	return error;
+}

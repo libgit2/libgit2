@@ -354,4 +354,16 @@ int git_str_is_binary(const git_str *str);
 */
 int git_str_contains_nul(const git_str *str);
 
+/**
+ * Find occurrences of substrings in the given buffer, replacing them
+ * with the corresponding replacement value.  Replacements is an array
+ * of arrays of search strings and corresponding replacement strings.
+ * replacements[0][0] will be replaced with replacements[0][1],
+ * replacements[1][0] will be replaced with replacements[1][1], etc.
+ */
+int git_str_replace(
+	git_str *buf,
+	const char *replacements[][2],
+	size_t replacements_len);
+
 #endif
