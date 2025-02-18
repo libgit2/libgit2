@@ -1415,3 +1415,40 @@ done:
 	git_str_dispose(&replaced);
 	return error;
 }
+
+int git_str_shellquote(git_str *buf)
+{
+	git_str quoted = GIT_STR_INIT;
+	size_t i;
+	int error = 0;
+
+	ENSURE_SIZE(&quoted, buf->size);
+
+	git_str_putc(&quoted, '\'');
+
+	for (i = 0; i < buf->size; i++) {
+		switch (buf->ptr[i]) {
+		case '\'':
+		case '!':
+			git_str_puts(&quoted, "'\\");
+			git_str_putc(&quoted, buf->ptr[i]);
+			git_str_putc(&quoted, '\'');
+			break;
+		default:
+			git_str_putc(&quoted, buf->ptr[i]);
+		}
+	}
+
+	git_str_putc(&quoted, '\'');
+
+	if (git_str_oom(&quoted)) {
+		error = -1;
+		goto done;
+	}
+
+	git_str_swap(&quoted, buf);
+
+done:
+	git_str_dispose(&quoted);
+	return error;
+}
