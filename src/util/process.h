@@ -16,7 +16,7 @@ typedef struct {
 	             capture_err : 1,
 	             exclude_env : 1;
 
-	char *cwd;
+	const char *cwd;
 } git_process_options;
 
 typedef enum {
