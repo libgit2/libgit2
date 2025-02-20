@@ -38,7 +38,7 @@ static int exec_filter_check(
 	git_config *config = NULL;
 	git_str configkey = GIT_BUF_INIT, filepath = GIT_BUF_INIT,
 		cmdline = GIT_BUF_INIT;
-	const char *replacements[][2] = { { "%f", NULL } };
+	const char *replacements[][2] = { { "%f", NULL }, { "%%", "%" } };
 	const char *direction;
 	int error;
 
@@ -164,7 +164,6 @@ static void exec_filter_stream_free(git_writestream *s)
 static int exec_filter_stream_start(exec_filter_stream *stream)
 {
 	git_process_options process_opts = GIT_PROCESS_OPTIONS_INIT;
-	const char *cmd[3] = { "/bin/sh", "-c", stream->cmd };
 	int error;
 
 	process_opts.cwd = git_repository_workdir(stream->repo);
@@ -172,7 +171,7 @@ static int exec_filter_stream_start(exec_filter_stream *stream)
 	process_opts.capture_in = 1;
 	process_opts.capture_out = 1;
 
-	if ((error = git_process_new(&stream->process, cmd, 3, NULL, 0, &process_opts)) < 0 ||
+	if ((error = git_process_new_from_cmdline(&stream->process, stream->cmd, NULL, 0, &process_opts)) < 0 ||
 	    (error = git_process_start(stream->process)) < 0) {
 	    git_process_free(stream->process);
 	    stream->process = NULL;
