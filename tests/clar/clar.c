@@ -87,6 +87,7 @@
 	typedef struct stat STAT_T;
 #endif
 
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 
 #include "clar.h"
@@ -100,11 +101,11 @@ fixture_path(const char *base, const char *fixture_name);
 #endif
 
 struct clar_error {
-	const char *file;
-	const char *function;
-	uintmax_t line_number;
-	const char *error_msg;
+	const char *message;
 	char *description;
+	const char *function;
+	const char *file;
+	uintmax_t line_number;
 
 	struct clar_error *next;
 };
@@ -117,13 +118,22 @@ struct clar_explicit {
 };
 
 struct clar_report {
-	const char *test;
-	int test_number;
 	const char *suite;
+	const char *test;
+	const char *description;
+	int test_number;
+
+	int runs;
 
 	enum cl_test_status status;
 	time_t start;
-	double elapsed;
+
+	double *times;
+	double time_min;
+	double time_max;
+	double time_mean;
+	double time_stddev;
+	double time_total;
 
 	struct clar_error *errors;
 	struct clar_error *last_error;
@@ -137,10 +147,12 @@ struct clar_summary {
 };
 
 static struct {
+	enum cl_test_mode test_mode;
 	enum cl_test_status test_status;
 
-	const char *active_test;
 	const char *active_suite;
+	const char *active_test;
+	const char *active_description;
 
 	int total_skipped;
 	int total_errors;
@@ -149,6 +161,7 @@ static struct {
 	int suites_ran;
 
 	enum cl_output_format output_format;
+	enum cl_summary_format summary_format;
 
 	int report_errors_only;
 	int exit_on_error;
@@ -181,28 +194,32 @@ static struct {
 
 struct clar_func {
 	const char *name;
+	const char *description;
+	int runs;
 	void (*ptr)(void);
 };
 
 struct clar_suite {
 	const char *name;
 	struct clar_func initialize;
+	struct clar_func reset;
 	struct clar_func cleanup;
 	const struct clar_func *tests;
 	size_t test_count;
 	int enabled;
 };
 
-/* From clar_print_*.c */
+/* From print.h */
 static void clar_print_init(int test_count, int suite_count, const char *suite_names);
 static void clar_print_shutdown(int test_count, int suite_count, int error_count);
 static void clar_print_error(int num, const struct clar_report *report, const struct clar_error *error);
-static void clar_print_ontest(const char *suite_name, const char *test_name, int test_number, enum cl_test_status failed);
-static void clar_print_onsuite(const char *suite_name, int suite_index);
+static void clar_print_suite_start(const char *suite_name, int suite_index);
+static void clar_print_test_start(const char *suite_name, const char *test_name, int test_number);
+static void clar_print_test_finish(const char *suite_name, const char *test_name, int test_number, const struct clar_report *report);
 static void clar_print_onabortv(const char *msg, va_list argp);
 static void clar_print_onabort(const char *msg, ...);
 
-/* From clar_sandbox.c */
+/* From sandbox.c */
 static void clar_tempdir_init(void);
 static void clar_tempdir_shutdown(void);
 static int clar_sandbox_create(const char *suite_name, const char *test_name);
@@ -211,6 +228,8 @@ static int clar_sandbox_cleanup(void);
 /* From summary.h */
 static struct clar_summary *clar_summary_init(const char *filename);
 static int clar_summary_shutdown(struct clar_summary *fp);
+
+#include "clar/counter.h"
 
 /* Load the declarations for the test suite */
 #include "clar.suite"
@@ -268,70 +287,121 @@ clar_report_all(void)
 	}
 }
 
-#ifdef WIN32
-# define clar_time DWORD
-
-static void clar_time_now(clar_time *out)
+static void
+compute_times(void)
 {
-	*out = GetTickCount();
-}
+	double total_squares = 0;
+	int i;
 
-static double clar_time_diff(clar_time *start, clar_time *end)
-{
-	return ((double)*end - (double)*start) / 1000;
-}
-#else
-# include <sys/time.h>
+	_clar.last_report->time_min = _clar.last_report->times[0];
+	_clar.last_report->time_max = _clar.last_report->times[0];
+	_clar.last_report->time_total = _clar.last_report->times[0];
 
-# define clar_time struct timeval
+	for (i = 1; i < _clar.last_report->runs; i++) {
+		if (_clar.last_report->times[i] < _clar.last_report->time_min)
+			_clar.last_report->time_min = _clar.last_report->times[i];
 
-static void clar_time_now(clar_time *out)
-{
-	gettimeofday(out, NULL);
-}
+		if (_clar.last_report->times[i] > _clar.last_report->time_max)
+			_clar.last_report->time_max = _clar.last_report->times[i];
 
-static double clar_time_diff(clar_time *start, clar_time *end)
-{
-	return ((double)end->tv_sec + (double)end->tv_usec / 1.0E6) -
-	       ((double)start->tv_sec + (double)start->tv_usec / 1.0E6);
+		_clar.last_report->time_total += _clar.last_report->times[i];
+	}
+
+	if (_clar.last_report->runs <= 1) {
+		_clar.last_report->time_stddev = 0;
+	} else {
+		_clar.last_report->time_mean = _clar.last_report->time_total / _clar.last_report->runs;
+
+		for (i = 0; i < _clar.last_report->runs; i++) {
+			double dev = (_clar.last_report->times[i] > _clar.last_report->time_mean) ?
+				_clar.last_report->times[i] - _clar.last_report->time_mean :
+				_clar.last_report->time_mean - _clar.last_report->times[i];
+
+			total_squares += (dev * dev);
+		}
+
+		_clar.last_report->time_stddev = sqrt(total_squares / _clar.last_report->runs);
+	}
 }
-#endif
 
 static void
 clar_run_test(
 	const struct clar_suite *suite,
 	const struct clar_func *test,
 	const struct clar_func *initialize,
+	const struct clar_func *reset,
 	const struct clar_func *cleanup)
 {
-	clar_time start, end;
+	int runs = test->runs, i = 0;
 
-	_clar.trampoline_enabled = 1;
+	_clar.last_report->start = time(NULL);
+	_clar.last_report->times = &_clar.last_report->time_mean;
 
 	CL_TRACE(CL_TRACE__TEST__BEGIN);
 
 	clar_sandbox_create(suite->name, test->name);
 
-	_clar.last_report->start = time(NULL);
-	clar_time_now(&start);
+	clar_print_test_start(suite->name, test->name, _clar.tests_ran);
+
+	_clar.trampoline_enabled = 1;
 
 	if (setjmp(_clar.trampoline) == 0) {
 		if (initialize->ptr != NULL)
 			initialize->ptr();
 
 		CL_TRACE(CL_TRACE__TEST__RUN_BEGIN);
-		test->ptr();
+
+		do {
+			struct clar_counter start, end;
+			double elapsed;
+
+			if (i > 0 && reset->ptr != NULL) {
+				reset->ptr();
+			} else if (i > 0) {
+				if (_clar.local_cleanup != NULL)
+					_clar.local_cleanup(_clar.local_cleanup_payload);
+				if (cleanup->ptr != NULL)
+					cleanup->ptr();
+				if (initialize->ptr != NULL)
+					initialize->ptr();
+			}
+
+			clar_counter_now(&start);
+			test->ptr();
+			clar_counter_now(&end);
+
+			elapsed = clar_counter_diff(&start, &end);
+
+			/*
+			 * unless the number of runs was explicitly given
+			 * in benchmark mode, use the first run as a sample
+			 * to determine how many runs we should attempt
+			 */
+			if (_clar.test_mode == CL_TEST_BENCHMARK && !runs) {
+				runs = MAX(CLAR_BENCHMARK_RUN_MIN, (CLAR_BENCHMARK_RUN_TIME / elapsed));
+				runs = MIN(CLAR_BENCHMARK_RUN_MAX, runs);
+			}
+
+			if (i == 0 && runs > 1) {
+				_clar.last_report->times = calloc(runs, sizeof(double));
+
+				if (_clar.last_report->times == NULL)
+					clar_abort("Failed to allocate report times.\n");
+			}
+
+			_clar.last_report->runs++;
+			_clar.last_report->times[i] = elapsed;
+		} while(++i < runs);
+
 		CL_TRACE(CL_TRACE__TEST__RUN_END);
 	}
-
-	clar_time_now(&end);
 
 	_clar.trampoline_enabled = 0;
 
 	if (_clar.last_report->status == CL_TEST_NOTRUN)
 		_clar.last_report->status = CL_TEST_OK;
 
-	_clar.last_report->elapsed = clar_time_diff(&start, &end);
+	compute_times();
 
 	if (_clar.local_cleanup != NULL)
 		_clar.local_cleanup(_clar.local_cleanup_payload);
@@ -354,7 +424,7 @@ clar_run_test(
 	if (_clar.report_errors_only) {
 		clar_report_errors(_clar.last_report);
 	} else {
-		clar_print_ontest(suite->name, test->name, _clar.tests_ran, _clar.last_report->status);
+		clar_print_test_finish(suite->name, test->name, _clar.tests_ran, _clar.last_report);
 	}
 }
 
@@ -373,10 +443,11 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 		return;
 
 	if (!_clar.report_errors_only)
-		clar_print_onsuite(suite->name, ++_clar.suites_ran);
+		clar_print_suite_start(suite->name, ++_clar.suites_ran);
 
 	_clar.active_suite = suite->name;
 	_clar.active_test = NULL;
+	_clar.active_description = NULL;
 	CL_TRACE(CL_TRACE__SUITE_BEGIN);
 
 	if (filter) {
@@ -405,11 +476,13 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 			continue;
 
 		_clar.active_test = test[i].name;
+		_clar.active_description = test[i].description;
 
 		if ((report = calloc(1, sizeof(*report))) == NULL)
 			clar_abort("Failed to allocate report.\n");
 		report->suite = _clar.active_suite;
 		report->test = _clar.active_test;
+		report->description = _clar.active_description;
 		report->test_number = _clar.tests_ran;
 		report->status = CL_TEST_NOTRUN;
 
@@ -421,13 +494,14 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 
 		_clar.last_report = report;
 
-		clar_run_test(suite, &test[i], &suite->initialize, &suite->cleanup);
+		clar_run_test(suite, &test[i], &suite->initialize, &suite->reset, &suite->cleanup);
 
 		if (_clar.exit_on_error && _clar.total_errors)
 			return;
 	}
 
 	_clar.active_test = NULL;
+	_clar.active_description = NULL;
 	CL_TRACE(CL_TRACE__SUITE_END);
 }
 
@@ -593,6 +667,14 @@ clar_test_init(int argc, char **argv)
 {
 	const char *summary_env;
 
+	if (_clar.test_mode == CL_TEST_BENCHMARK) {
+		_clar.output_format = CL_OUTPUT_TIMING;
+		_clar.summary_format = CL_SUMMARY_JSON;
+	} else {
+		_clar.output_format = CL_OUTPUT_CLAP;
+		_clar.summary_format = CL_SUMMARY_JUNIT;
+	}
+
 	if (argc > 1)
 		clar_parse_args(argc, argv);
 
@@ -617,6 +699,12 @@ clar_test_init(int argc, char **argv)
 	    _clar.summary = clar_summary_init(_clar.summary_filename);
 
 	clar_tempdir_init();
+}
+
+void
+clar_test_set_mode(enum cl_test_mode mode)
+{
+	_clar.test_mode = mode;
 }
 
 int
@@ -668,6 +756,9 @@ clar_test_shutdown(void)
 			free(error);
 		}
 
+		if (report->times != &report->time_mean)
+			free(report->times);
+
 		report_next = report->next;
 		free(report);
 	}
@@ -711,8 +802,8 @@ void clar__fail(
 	const char *file,
 	const char *function,
 	size_t line,
-	const char *error_msg,
-	const char *description,
+	const char *error_message,
+	const char *error_description,
 	int should_abort)
 {
 	struct clar_error *error;
@@ -731,10 +822,10 @@ void clar__fail(
 	error->file = _clar.invoke_file ? _clar.invoke_file : file;
 	error->function = _clar.invoke_func ? _clar.invoke_func : function;
 	error->line_number = _clar.invoke_line ? _clar.invoke_line : line;
-	error->error_msg = error_msg;
+	error->message = error_message;
 
-	if (description != NULL &&
-	    (error->description = strdup(description)) == NULL)
+	if (error_description != NULL &&
+	    (error->description = strdup(error_description)) == NULL)
 		clar_abort("Failed to allocate description.\n");
 
 	_clar.total_errors++;
@@ -749,14 +840,14 @@ void clar__assert(
 	const char *file,
 	const char *function,
 	size_t line,
-	const char *error_msg,
-	const char *description,
+	const char *error_message,
+	const char *error_description,
 	int should_abort)
 {
 	if (condition)
 		return;
 
-	clar__fail(file, function, line, error_msg, description, should_abort);
+	clar__fail(file, function, line, error_message, error_description, should_abort);
 }
 
 void clar__assert_equal(
@@ -787,7 +878,12 @@ void clar__assert_equal(
 				p_snprintf(buf, sizeof(buf), "'%s' != '%s' (at byte %d)",
 					s1, s2, pos);
 			} else {
-				p_snprintf(buf, sizeof(buf), "'%s' != '%s'", s1, s2);
+				const char *q1 = s1 ? "'" : "";
+				const char *q2 = s2 ? "'" : "";
+				s1 = s1 ? s1 : "NULL";
+				s2 = s2 ? s2 : "NULL";
+				p_snprintf(buf, sizeof(buf), "%s%s%s != %s%s%s",
+					   q1, s1, q1, q2, s2, q2);
 			}
 		}
 	}
@@ -805,7 +901,12 @@ void clar__assert_equal(
 				p_snprintf(buf, sizeof(buf), "'%.*s' != '%.*s' (at byte %d)",
 					len, s1, len, s2, pos);
 			} else {
-				p_snprintf(buf, sizeof(buf), "'%.*s' != '%.*s'", len, s1, len, s2);
+				const char *q1 = s1 ? "'" : "";
+				const char *q2 = s2 ? "'" : "";
+				s1 = s1 ? s1 : "NULL";
+				s2 = s2 ? s2 : "NULL";
+				p_snprintf(buf, sizeof(buf), "%s%.*s%s != %s%.*s%s",
+					   q1, len, s1, q1, q2, len, s2, q2);
 			}
 		}
 	}
@@ -823,7 +924,12 @@ void clar__assert_equal(
 				p_snprintf(buf, sizeof(buf), "'%ls' != '%ls' (at byte %d)",
 					wcs1, wcs2, pos);
 			} else {
-				p_snprintf(buf, sizeof(buf), "'%ls' != '%ls'", wcs1, wcs2);
+				const char *q1 = wcs1 ? "'" : "";
+				const char *q2 = wcs2 ? "'" : "";
+				wcs1 = wcs1 ? wcs1 : L"NULL";
+				wcs2 = wcs2 ? wcs2 : L"NULL";
+				p_snprintf(buf, sizeof(buf), "%s%ls%s != %s%ls%s",
+					   q1, wcs1, q1, q2, wcs2, q2);
 			}
 		}
 	}
@@ -841,7 +947,12 @@ void clar__assert_equal(
 				p_snprintf(buf, sizeof(buf), "'%.*ls' != '%.*ls' (at byte %d)",
 					len, wcs1, len, wcs2, pos);
 			} else {
-				p_snprintf(buf, sizeof(buf), "'%.*ls' != '%.*ls'", len, wcs1, len, wcs2);
+				const char *q1 = wcs1 ? "'" : "";
+				const char *q2 = wcs2 ? "'" : "";
+				wcs1 = wcs1 ? wcs1 : L"NULL";
+				wcs2 = wcs2 ? wcs2 : L"NULL";
+				p_snprintf(buf, sizeof(buf), "%s%.*ls%s != %s%.*ls%s",
+					   q1, len, wcs1, q1, q2, len, wcs2, q2);
 			}
 		}
 	}
