@@ -26,6 +26,7 @@
 #include "runtime.h"
 #include "sysdir.h"
 #include "thread.h"
+#include "notification.h"
 #include "git2/global.h"
 #include "streams/registry.h"
 #include "streams/mbedtls.h"
@@ -457,6 +458,26 @@ int git_libgit2_opts(int key, ...)
 				git_socket_stream__timeout = timeout;
 			}
 		}
+		break;
+
+	case GIT_OPT_SET_NOTIFICATION_CALLBACK:
+		git_notification__callback = va_arg(ap,
+			int GIT_CALLBACK()(git_notification_level_t,
+			                   git_notification_t,
+			                   const char *,
+			                   void *,
+			                   ...));
+		git_notification__data = va_arg(ap, void *);
+		break;
+
+	case GIT_OPT_GET_NOTIFICATION_CALLBACK:
+		*(va_arg(ap, int GIT_CALLBACK(*)(git_notification_level_t,
+		                                 git_notification_t,
+		                                 const char *,
+		                                 void *,
+		                                 ...))) =
+			git_notification__callback;
+		*(va_arg(ap, void **)) = git_notification__data;
 		break;
 
 	default:

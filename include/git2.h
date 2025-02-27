@@ -40,6 +40,7 @@
 #include "git2/message.h"
 #include "git2/net.h"
 #include "git2/notes.h"
+#include "git2/notification.h"
 #include "git2/object.h"
 #include "git2/odb.h"
 #include "git2/odb_backend.h"

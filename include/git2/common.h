@@ -257,7 +257,9 @@ typedef enum {
 	GIT_OPT_GET_SERVER_TIMEOUT,
 	GIT_OPT_SET_USER_AGENT_PRODUCT,
 	GIT_OPT_GET_USER_AGENT_PRODUCT,
-	GIT_OPT_ADD_SSL_X509_CERT
+	GIT_OPT_ADD_SSL_X509_CERT,
+	GIT_OPT_SET_NOTIFICATION_CALLBACK,
+	GIT_OPT_GET_NOTIFICATION_CALLBACK
 } git_libgit2_opt_t;
 
 /**
@@ -562,6 +564,32 @@ typedef enum {
  *   opts(GIT_OPT_SET_SERVER_TIMEOUT, int timeout)
  *      > Sets the timeout (in milliseconds) for reading from and writing
  *      > to a remote server. Set to 0 to use the system default.
+ *
+ *   opts(GIT_OPT_SET_NOTIFICATION_CALLBACK, int (*cb)(git_notification_level_t, git_notification_t, const char *, void *, ...), void *data)
+ *      > Sets the notification callback, which will be invoked when
+ *      > notifications occur that the calling program can display or
+ *      > otherwise act on.
+ *      >
+ *      > The callback will be invoked for all informational messages,
+ *      > warnings, and non-fatal errors, as well as continuable errors
+ *      > that libgit2 would otherwise treat as fatal.
+ *      >
+ *      > Users should examine the notification level (which is the first
+ *      > argument) and the notification type (the second argument) to
+ *      > understand whether they want to act and how. The third argument
+ *      > is the default message, so that callers can display warning
+ *      > messages without needing to create them. The fourth argument is
+ *      > the callback data, and the remainder of arguments are the
+ *      > per-notification data; see the notifications for information
+ *      > about what is returned for each notification type.
+ *      >
+ *      > - `cb` the callback to invoke when a warning occurs
+ *      > - `data` data to be provided to warning callbacks, or NULL
+ *
+ *   opts(GIT_OPT_GET_NOTIFICATION_CALLBACK, int *(*cb)(git_notification_level_t, git_notification_t, const char *, void *, ...), void **data)
+ *      > Gets the current notification callback and callback data, which
+ *      > will be invoked when notifications occur that the calling program
+ *      > can display or otherwise act on.
  *
  * @param option Option key
  * @return 0 on success, <0 on failure
