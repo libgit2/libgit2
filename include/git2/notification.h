@@ -81,7 +81,16 @@ typedef enum {
  * state of the notification.
  */
 typedef enum {
-	GIT_NOTIFICATION_NONE = 0
+	/**
+	 * A notification provided when `core.safecrlf` is configured and a
+	 * file has line-ending reversability problems.
+	 *
+	 * The data will be:
+	 *
+	 * - `const char *path`: the path to the file
+	 * - `const char *message`: the notification message
+	 */
+	GIT_NOTIFICATION_CRLF = 1
 } git_notification_t;
 
 /** @} */

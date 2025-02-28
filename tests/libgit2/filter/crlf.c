@@ -15,6 +15,7 @@ void test_filter_crlf__initialize(void)
 
 void test_filter_crlf__cleanup(void)
 {
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_NOTIFICATION_CALLBACK, NULL, NULL));
 	cl_git_sandbox_cleanup();
 }
 
@@ -72,15 +73,34 @@ void test_filter_crlf__to_odb(void)
 	git_buf_dispose(&out);
 }
 
+static int notification_cb(
+	git_notification_level_t notification_level,
+	git_notification_t notification_type,
+	const char *message,
+	void *data,
+	...)
+{
+	GIT_UNUSED(message);
+
+	cl_assert_equal_i(notification_level, GIT_NOTIFICATION_WARN);
+	cl_assert_equal_i(notification_type, GIT_NOTIFICATION_CRLF);
+
+	(*((int *)data))++;
+
+	return 0;
+}
+
 void test_filter_crlf__with_safecrlf(void)
 {
 	git_filter_list *fl;
 	git_filter *crlf;
 	git_buf out = GIT_BUF_INIT;
+	int notification_count = 0;
 	const char *in;
 	size_t in_len;
 
 	cl_repo_set_bool(g_repo, "core.safecrlf", true);
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_NOTIFICATION_CALLBACK, notification_cb, &notification_count));
 
 	cl_git_pass(git_filter_list_new(
 		&fl, g_repo, GIT_FILTER_TO_ODB, 0));
@@ -96,6 +116,7 @@ void test_filter_crlf__with_safecrlf(void)
 
 	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
 	cl_assert_equal_s("Normal\nCRLF\nline-endings.\n", out.ptr);
+	cl_assert_equal_i(0, notification_count);
 
 	/* Mix of line endings fails with safecrlf */
 	in = "Mixed\nup\r\nLF\nand\r\nCRLF\nline-endings.\r\n";
@@ -103,6 +124,7 @@ void test_filter_crlf__with_safecrlf(void)
 
 	cl_git_fail(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
 	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_FILTER);
+	cl_assert_equal_i(0, notification_count);
 
 	/* Normalized \n fails for autocrlf=true when safecrlf=true */
 	in = "Normal\nLF\nonly\nline-endings.\n";
@@ -110,6 +132,7 @@ void test_filter_crlf__with_safecrlf(void)
 
 	cl_git_fail(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
 	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_FILTER);
+	cl_assert_equal_i(0, notification_count);
 
 	/* String with \r but without \r\n does not fail with safecrlf */
 	in = "Normal\nCR only\rand some more\nline-endings.\n";
@@ -117,6 +140,7 @@ void test_filter_crlf__with_safecrlf(void)
 
 	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
 	cl_assert_equal_s("Normal\nCR only\rand some more\nline-endings.\n", out.ptr);
+	cl_assert_equal_i(0, notification_count);
 
 	git_filter_list_free(fl);
 	git_buf_dispose(&out);
@@ -127,10 +151,12 @@ void test_filter_crlf__with_safecrlf_and_unsafe_allowed(void)
 	git_filter_list *fl;
 	git_filter *crlf;
 	git_buf out = GIT_BUF_INIT;
+	int notification_count = 0;
 	const char *in;
 	size_t in_len;
 
 	cl_repo_set_bool(g_repo, "core.safecrlf", true);
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_NOTIFICATION_CALLBACK, notification_cb, &notification_count));
 
 	cl_git_pass(git_filter_list_new(
 		&fl, g_repo, GIT_FILTER_TO_ODB, GIT_FILTER_ALLOW_UNSAFE));
@@ -146,22 +172,23 @@ void test_filter_crlf__with_safecrlf_and_unsafe_allowed(void)
 
 	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
 	cl_assert_equal_s("Normal\nCRLF\nline-endings.\n", out.ptr);
+	cl_assert_equal_i(0, notification_count);
 
 	/* Mix of line endings fails with safecrlf, but allowed to pass */
 	in = "Mixed\nup\r\nLF\nand\r\nCRLF\nline-endings.\r\n";
 	in_len = strlen(in);
 
 	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
-	/* TODO: check for warning */
 	cl_assert_equal_s("Mixed\nup\nLF\nand\nCRLF\nline-endings.\n", out.ptr);
+	cl_assert_equal_i(1, notification_count);
 
 	/* Normalized \n fails with safecrlf, but allowed to pass */
 	in = "Normal\nLF\nonly\nline-endings.\n";
 	in_len = strlen(in);
 
 	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
-	/* TODO: check for warning */
 	cl_assert_equal_s("Normal\nLF\nonly\nline-endings.\n", out.ptr);
+	cl_assert_equal_i(2, notification_count);
 
 	git_filter_list_free(fl);
 	git_buf_dispose(&out);
@@ -172,8 +199,11 @@ void test_filter_crlf__no_safecrlf(void)
 	git_filter_list *fl;
 	git_filter *crlf;
 	git_buf out = GIT_BUF_INIT;
+	int notification_count = 0;
 	const char *in;
 	size_t in_len;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_NOTIFICATION_CALLBACK, notification_cb, &notification_count));
 
 	cl_git_pass(git_filter_list_new(
 		&fl, g_repo, GIT_FILTER_TO_ODB, 0));
@@ -189,6 +219,7 @@ void test_filter_crlf__no_safecrlf(void)
 
 	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
 	cl_assert_equal_s("Normal\nCRLF\nline-endings.\n", out.ptr);
+	cl_assert_equal_i(0, notification_count);
 
 	/* Mix of line endings fails with safecrlf */
 	in = "Mixed\nup\r\nLF\nand\r\nCRLF\nline-endings.\r\n";
@@ -196,6 +227,7 @@ void test_filter_crlf__no_safecrlf(void)
 
 	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
 	cl_assert_equal_s("Mixed\nup\nLF\nand\nCRLF\nline-endings.\n", out.ptr);
+	cl_assert_equal_i(0, notification_count);
 
 	/* Normalized \n fails with safecrlf */
 	in = "Normal\nLF\nonly\nline-endings.\n";
@@ -203,6 +235,7 @@ void test_filter_crlf__no_safecrlf(void)
 
 	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
 	cl_assert_equal_s("Normal\nLF\nonly\nline-endings.\n", out.ptr);
+	cl_assert_equal_i(0, notification_count);
 
 	git_filter_list_free(fl);
 	git_buf_dispose(&out);
@@ -213,10 +246,12 @@ void test_filter_crlf__safecrlf_warn(void)
 	git_filter_list *fl;
 	git_filter *crlf;
 	git_buf out = GIT_BUF_INIT;
+	int notification_count = 0;
 	const char *in;
 	size_t in_len;
 
 	cl_repo_set_string(g_repo, "core.safecrlf", "warn");
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_NOTIFICATION_CALLBACK, notification_cb, &notification_count));
 
 	cl_git_pass(git_filter_list_new(
 		&fl, g_repo, GIT_FILTER_TO_ODB, 0));
@@ -232,14 +267,15 @@ void test_filter_crlf__safecrlf_warn(void)
 
 	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
 	cl_assert_equal_s("Normal\nCRLF\nline-endings.\n", out.ptr);
+	cl_assert_equal_i(0, notification_count);
 
 	/* Mix of line endings succeeds with safecrlf=warn */
 	in = "Mixed\nup\r\nLF\nand\r\nCRLF\nline-endings.\r\n";
 	in_len = strlen(in);
 
 	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
-	/* TODO: check for warning */
 	cl_assert_equal_s("Mixed\nup\nLF\nand\nCRLF\nline-endings.\n", out.ptr);
+	cl_assert_equal_i(1, notification_count);
 
 	/* Normalized \n is reversible, so does not fail with safecrlf=warn */
 	in = "Normal\nLF\nonly\nline-endings.\n";
@@ -247,6 +283,7 @@ void test_filter_crlf__safecrlf_warn(void)
 
 	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
 	cl_assert_equal_s(in, out.ptr);
+	cl_assert_equal_i(2, notification_count);
 
 	git_filter_list_free(fl);
 	git_buf_dispose(&out);

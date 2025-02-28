@@ -17,6 +17,7 @@
 #include "hash.h"
 #include "filter.h"
 #include "repository.h"
+#include "notification.h"
 
 typedef enum {
 	GIT_CRLF_UNDEFINED,
@@ -150,6 +151,42 @@ static git_configmap_value output_eol(struct crlf_attrs *ca)
 	return ca->core_eol;
 }
 
+static int warn_safecrlf(int direction, const char *filename)
+{
+	git_str message = GIT_STR_INIT;
+	int error;
+
+	if (filename && !*filename)
+		filename = NULL;
+
+	git_str_puts(&message, "in the working copy");
+
+	if (filename) {
+		git_str_puts(&message, " of '");
+		git_str_puts(&message, filename);
+		git_str_puts(&message, "'");
+	}
+
+	if (direction == GIT_EOL_LF)
+		git_str_puts(&message, ", CRLF will be replaced by LF");
+	else if (direction == GIT_EOL_CRLF)
+		git_str_puts(&message, ", LF will be replaced by CRLF");
+	else
+		GIT_ASSERT(false);
+
+	git_str_printf(&message, " the next time git touches it");
+
+	if (git_str_oom(&message))
+		error = -1;
+	else
+		error = git_notification(GIT_NOTIFICATION_WARN,
+			GIT_NOTIFICATION_CRLF,
+			message.ptr, filename);
+
+	git_str_dispose(&message);
+	return error;
+}
+
 GIT_INLINE(int) check_safecrlf(
 	struct crlf_attrs *ca,
 	const git_filter_source *src,
@@ -167,7 +204,10 @@ GIT_INLINE(int) check_safecrlf(
 		 */
 		if (stats->crlf) {
 			if (ca->safe_crlf == GIT_SAFE_CRLF_WARN) {
-				/* TODO: issue a warning when available */
+				int error = warn_safecrlf(GIT_EOL_LF, filename);
+
+				if (error != 0)
+					return error;
 			} else {
 				if (filename && *filename)
 					git_error_set(
@@ -187,7 +227,10 @@ GIT_INLINE(int) check_safecrlf(
 		 */
 		if (stats->crlf != stats->lf) {
 			if (ca->safe_crlf == GIT_SAFE_CRLF_WARN) {
-				/* TODO: issue a warning when available */
+				int error = warn_safecrlf(GIT_EOL_CRLF, filename);
+
+				if (error != 0)
+					return error;
 			} else {
 				if (filename && *filename)
 					git_error_set(

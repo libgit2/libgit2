@@ -20,6 +20,7 @@ extern void *git_notification__data;
 
 #define git_notification(level, notification, message, ...) \
 	((git_notification__callback == NULL) ? 0 : \
-	 git_notification__callback(notification, message, git_notification__data, __VA_ARGS__))
+	 git_notification__callback(level, notification, message, \
+	                            git_notification__data, __VA_ARGS__))
 
 #endif
