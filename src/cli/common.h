@@ -51,6 +51,9 @@ typedef struct {
 	int args_len;
 } cli_repository_open_options;
 
+extern void cli_init(void);
+extern void cli_shutdown(void);
+
 extern int cli_repository_open(
 	git_repository **out,
 	cli_repository_open_options *opts);

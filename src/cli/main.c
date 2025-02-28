@@ -90,11 +90,7 @@ int main(int argc, char **argv)
 	cli_opt opt;
 	int ret = 0;
 
-	if (git_libgit2_init() < 0) {
-		cli_error("failed to initialize libgit2");
-		exit(CLI_EXIT_GIT);
-	}
-
+	cli_init();
 	cli_opt_parser_init(&optparser, cli_common_opts, argv + 1, argc - 1, CLI_OPT_PARSE_GNU);
 
 	/* Parse the top-level (common) options and command information */
@@ -137,6 +133,6 @@ int main(int argc, char **argv)
 	ret = cmd->fn(argc - 1, &argv[1]);
 
 done:
-	git_libgit2_shutdown();
+	cli_shutdown();
 	return ret;
 }
