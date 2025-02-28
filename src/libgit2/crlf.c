@@ -147,7 +147,7 @@ static git_configmap_value output_eol(struct crlf_attrs *ca)
 		return text_eol_is_crlf(ca) ? GIT_EOL_CRLF : GIT_EOL_LF;
 	}
 
-	/* TODO: warn when available */
+	GIT_ASSERT(!"unknown line ending configuration");
 	return ca->core_eol;
 }
 
