@@ -122,10 +122,20 @@ cli_version() {
 	fi
 }
 
+cli_commit() {
+	if [[ "$(uname -s)" == "MINGW"* ]]; then
+		BUILD_OPTIONS=$($(cygpath -u "$1") version --build-options)
+	else
+		BUILD_OPTIONS=$("$1" version --build-options)
+	fi
+
+	echo "${BUILD_OPTIONS}" | { grep '^built from commit: ' || echo "unknown"; } | sed -e 's/^built from commit: //'
+}
+
 TEST_CLI_NAME=$(basename "${TEST_CLI}")
 TEST_CLI_PATH=$(fullpath "${TEST_CLI}")
 TEST_CLI_VERSION=$(cli_version "${TEST_CLI}")
-TEST_CLI_COMMIT="unknown"
+TEST_CLI_COMMIT=$(cli_commit "${TEST_CLI}")
 
 if [ "${BASELINE_CLI}" != "" ]; then
 	if [[ "${BASELINE_CLI}" == "/"* ]]; then
@@ -137,7 +147,7 @@ if [ "${BASELINE_CLI}" != "" ]; then
 	BASELINE_CLI_NAME=$(basename "${BASELINE_CLI}")
 	BASELINE_CLI_PATH=$(fullpath "${BASELINE_CLI}")
 	BASELINE_CLI_VERSION=$(cli_version "${BASELINE_CLI}")
-	BASELINE_CLI_COMMIT="unknown"
+	BASELINE_CLI_COMMIT=$(cli_commit "${BASELINE_CLI}")
 fi
 
 #
@@ -155,9 +165,9 @@ echo "##########################################################################
 echo ""
 
 if [ "${BASELINE_CLI}" != "" ]; then
-	echo "# Baseline CLI: ${BASELINE_CLI} (${BASELINE_CLI_VERSION})"
+	echo "# Baseline CLI: ${BASELINE_CLI} (${BASELINE_CLI_VERSION} ${BASELINE_CLI_COMMIT:0:7})"
 fi
-echo "# Test CLI: ${TEST_CLI} (${TEST_CLI_VERSION})"
+echo "# Test CLI: ${TEST_CLI} (${TEST_CLI_VERSION} ${TEST_CLI_COMMIT:0:7})"
 echo ""
 
 BENCHMARK_DIR=${BENCHMARK_DIR:=$(dirname "$0")}
