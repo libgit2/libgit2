@@ -122,20 +122,10 @@ cli_version() {
 	fi
 }
 
-cli_commit() {
-	if [[ "$(uname -s)" == "MINGW"* ]]; then
-		BUILD_OPTIONS=$($(cygpath -u "$1") version --build-options)
-	else
-		BUILD_OPTIONS=$("$1" version --build-options)
-	fi
-
-	echo "${BUILD_OPTIONS}" | grep '^built from commit: ' | sed -e 's/^built from commit: //'
-}
-
 TEST_CLI_NAME=$(basename "${TEST_CLI}")
 TEST_CLI_PATH=$(fullpath "${TEST_CLI}")
 TEST_CLI_VERSION=$(cli_version "${TEST_CLI}")
-TEST_CLI_COMMIT=$(cli_commit "${TEST_CLI}")
+TEST_CLI_COMMIT="unknown"
 
 if [ "${BASELINE_CLI}" != "" ]; then
 	if [[ "${BASELINE_CLI}" == "/"* ]]; then
@@ -147,7 +137,7 @@ if [ "${BASELINE_CLI}" != "" ]; then
 	BASELINE_CLI_NAME=$(basename "${BASELINE_CLI}")
 	BASELINE_CLI_PATH=$(fullpath "${BASELINE_CLI}")
 	BASELINE_CLI_VERSION=$(cli_version "${BASELINE_CLI}")
-	BASELINE_CLI_COMMIT=$(cli_commit "${BASELINE_CLI}")
+	BASELINE_CLI_COMMIT="unknown"
 fi
 
 #
