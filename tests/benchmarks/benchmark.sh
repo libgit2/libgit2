@@ -126,7 +126,7 @@ cli_commit() {
 		BUILD_OPTIONS=$("$1" version --build-options)
 	fi
 
-	echo "${BUILD_OPTIONS}" | grep '^built from commit: ' | sed -e 's/^built from commit: //'
+	echo "${BUILD_OPTIONS}" | { grep '^built from commit: ' || echo "unknown"; } | sed -e 's/^built from commit: //'
 }
 
 TEST_CLI_NAME=$(basename "${TEST_CLI}")
