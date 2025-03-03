@@ -151,7 +151,10 @@ static git_configmap_value output_eol(struct crlf_attrs *ca)
 	return ca->core_eol;
 }
 
-static int warn_safecrlf(int direction, const char *filename)
+static int notify_safecrlf(
+	git_notification_level_t level,
+	int direction,
+	const char *filename)
 {
 	git_str message = GIT_STR_INIT;
 	int error;
@@ -179,12 +182,29 @@ static int warn_safecrlf(int direction, const char *filename)
 	if (git_str_oom(&message))
 		error = -1;
 	else
-		error = git_notification(GIT_NOTIFICATION_WARN,
+		error = git_notification(level,
 			GIT_NOTIFICATION_CRLF,
 			message.ptr, filename);
 
 	git_str_dispose(&message);
 	return error;
+}
+
+static int error_safecrlf(
+	int direction,
+	const char *filename)
+{
+	const char *message = (direction == GIT_EOL_LF) ?
+		"CRLF would be replaced by LF" :
+		"LF would be replaced by CRLF";
+
+	if (filename && *filename)
+		git_error_set(GIT_ERROR_FILTER, "%s in '%s'", message,
+			filename);
+	else
+		git_error_set(GIT_ERROR_FILTER, "%s", message);
+
+	return -1;
 }
 
 GIT_INLINE(int) check_safecrlf(
@@ -193,9 +213,14 @@ GIT_INLINE(int) check_safecrlf(
 	git_str_text_stats *stats)
 {
 	const char *filename = git_filter_source_path(src);
+	git_notification_level_t level;
 
 	if (!ca->safe_crlf)
 		return 0;
+
+	level = (ca->safe_crlf == GIT_SAFE_CRLF_WARN) ?
+		GIT_NOTIFICATION_WARN :
+		GIT_NOTIFICATION_FATAL;
 
 	if (output_eol(ca) == GIT_EOL_LF) {
 		/*
@@ -203,22 +228,13 @@ GIT_INLINE(int) check_safecrlf(
 		 * check if we'd remove CRLFs
 		 */
 		if (stats->crlf) {
-			if (ca->safe_crlf == GIT_SAFE_CRLF_WARN) {
-				int error = warn_safecrlf(GIT_EOL_LF, filename);
+			int error = notify_safecrlf(level,
+					GIT_EOL_LF, filename);
 
-				if (error != 0)
-					return error;
-			} else {
-				if (filename && *filename)
-					git_error_set(
-						GIT_ERROR_FILTER, "CRLF would be replaced by LF in '%s'",
-						filename);
-				else
-					git_error_set(
-						GIT_ERROR_FILTER, "CRLF would be replaced by LF");
-
-				return -1;
-			}
+			if (error != 0)
+				return error;
+			else if (ca->safe_crlf != GIT_SAFE_CRLF_WARN)
+				return error_safecrlf(GIT_EOL_LF, filename);
 		}
 	} else if (output_eol(ca) == GIT_EOL_CRLF) {
 		/*
@@ -226,22 +242,13 @@ GIT_INLINE(int) check_safecrlf(
 		 * check if we have "naked" LFs
 		 */
 		if (stats->crlf != stats->lf) {
-			if (ca->safe_crlf == GIT_SAFE_CRLF_WARN) {
-				int error = warn_safecrlf(GIT_EOL_CRLF, filename);
+			int error = notify_safecrlf(level,
+				GIT_EOL_CRLF, filename);
 
-				if (error != 0)
-					return error;
-			} else {
-				if (filename && *filename)
-					git_error_set(
-						GIT_ERROR_FILTER, "LF would be replaced by CRLF in '%s'",
-						filename);
-				else
-					git_error_set(
-						GIT_ERROR_FILTER, "LF would be replaced by CRLF");
-
-				return -1;
-			}
+			if (error != 0)
+				return error;
+			else if (ca->safe_crlf != GIT_SAFE_CRLF_WARN)
+				return error_safecrlf(GIT_EOL_CRLF, filename);
 		}
 	}
 

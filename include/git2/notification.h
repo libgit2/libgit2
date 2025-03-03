@@ -83,7 +83,9 @@ typedef enum {
 typedef enum {
 	/**
 	 * A notification provided when `core.safecrlf` is configured and a
-	 * file has line-ending reversability problems.
+	 * file has line-ending reversability problems. The level will be
+	 * `WARN` (when `core.safecrlf=warn`) or `FATAL` (when
+	 * `core.safecrlf=on`).
 	 *
 	 * The data will be:
 	 *
