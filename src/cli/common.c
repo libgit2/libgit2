@@ -26,14 +26,10 @@ static int notification_cb(
 	GIT_UNUSED(notification);
 	GIT_UNUSED(data);
 
-	/*
-	 * Don't display fatal notifications; we'll get an error back from
-	 * functions for those.
-	 */
-	if (level == GIT_NOTIFICATION_FATAL)
-		return 0;
-
 	switch (level) {
+	case GIT_NOTIFICATION_FATAL:
+		level_string = "fatal";
+		break;
 	case GIT_NOTIFICATION_ERROR:
 		level_string = "error";
 		break;
@@ -47,7 +43,7 @@ static int notification_cb(
 	fprintf(stderr, "%s: %s\n", level_string, message);
 	fflush(stderr);
 
-	return 0;
+	return (level == GIT_NOTIFICATION_FATAL) ? -1 : 0;
 }
 
 void cli_init(void)
