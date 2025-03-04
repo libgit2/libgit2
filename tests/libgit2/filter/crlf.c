@@ -114,7 +114,7 @@ void test_filter_crlf__with_safecrlf(void)
 	in = "Normal\r\nCRLF\r\nline-endings.\r\n";
 	in_len = strlen(in);
 
-	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_s("Normal\nCRLF\nline-endings.\n", out.ptr);
 	cl_assert_equal_i(0, notification_count);
 
@@ -122,7 +122,7 @@ void test_filter_crlf__with_safecrlf(void)
 	in = "Mixed\nup\r\nLF\nand\r\nCRLF\nline-endings.\r\n";
 	in_len = strlen(in);
 
-	cl_git_fail(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_fail(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_FILTER);
 	cl_assert_equal_i(0, notification_count);
 
@@ -130,7 +130,7 @@ void test_filter_crlf__with_safecrlf(void)
 	in = "Normal\nLF\nonly\nline-endings.\n";
 	in_len = strlen(in);
 
-	cl_git_fail(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_fail(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_FILTER);
 	cl_assert_equal_i(0, notification_count);
 
@@ -138,7 +138,7 @@ void test_filter_crlf__with_safecrlf(void)
 	in = "Normal\nCR only\rand some more\nline-endings.\n";
 	in_len = strlen(in);
 
-	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_s("Normal\nCR only\rand some more\nline-endings.\n", out.ptr);
 	cl_assert_equal_i(0, notification_count);
 
@@ -170,7 +170,7 @@ void test_filter_crlf__with_safecrlf_and_unsafe_allowed(void)
 	in = "Normal\r\nCRLF\r\nline-endings.\r\n";
 	in_len = strlen(in);
 
-	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_s("Normal\nCRLF\nline-endings.\n", out.ptr);
 	cl_assert_equal_i(0, notification_count);
 
@@ -178,7 +178,7 @@ void test_filter_crlf__with_safecrlf_and_unsafe_allowed(void)
 	in = "Mixed\nup\r\nLF\nand\r\nCRLF\nline-endings.\r\n";
 	in_len = strlen(in);
 
-	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_s("Mixed\nup\nLF\nand\nCRLF\nline-endings.\n", out.ptr);
 	cl_assert_equal_i(1, notification_count);
 
@@ -186,7 +186,7 @@ void test_filter_crlf__with_safecrlf_and_unsafe_allowed(void)
 	in = "Normal\nLF\nonly\nline-endings.\n";
 	in_len = strlen(in);
 
-	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_s("Normal\nLF\nonly\nline-endings.\n", out.ptr);
 	cl_assert_equal_i(2, notification_count);
 
@@ -217,7 +217,7 @@ void test_filter_crlf__no_safecrlf(void)
 	in = "Normal\r\nCRLF\r\nline-endings.\r\n";
 	in_len = strlen(in);
 
-	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_s("Normal\nCRLF\nline-endings.\n", out.ptr);
 	cl_assert_equal_i(0, notification_count);
 
@@ -225,7 +225,7 @@ void test_filter_crlf__no_safecrlf(void)
 	in = "Mixed\nup\r\nLF\nand\r\nCRLF\nline-endings.\r\n";
 	in_len = strlen(in);
 
-	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_s("Mixed\nup\nLF\nand\nCRLF\nline-endings.\n", out.ptr);
 	cl_assert_equal_i(0, notification_count);
 
@@ -233,7 +233,7 @@ void test_filter_crlf__no_safecrlf(void)
 	in = "Normal\nLF\nonly\nline-endings.\n";
 	in_len = strlen(in);
 
-	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_s("Normal\nLF\nonly\nline-endings.\n", out.ptr);
 	cl_assert_equal_i(0, notification_count);
 
@@ -265,7 +265,7 @@ void test_filter_crlf__safecrlf_warn(void)
 	in = "Normal\r\nCRLF\r\nline-endings.\r\n";
 	in_len = strlen(in);
 
-	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_s("Normal\nCRLF\nline-endings.\n", out.ptr);
 	cl_assert_equal_i(0, notification_count);
 
@@ -273,7 +273,7 @@ void test_filter_crlf__safecrlf_warn(void)
 	in = "Mixed\nup\r\nLF\nand\r\nCRLF\nline-endings.\r\n";
 	in_len = strlen(in);
 
-	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_s("Mixed\nup\nLF\nand\nCRLF\nline-endings.\n", out.ptr);
 	cl_assert_equal_i(1, notification_count);
 
@@ -281,7 +281,7 @@ void test_filter_crlf__safecrlf_warn(void)
 	in = "Normal\nLF\nonly\nline-endings.\n";
 	in_len = strlen(in);
 
-	cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len));
+	cl_invoke(cl_git_pass(git_filter_list_apply_to_buffer(&out, fl, in, in_len)));
 	cl_assert_equal_s(in, out.ptr);
 	cl_assert_equal_i(2, notification_count);
 
