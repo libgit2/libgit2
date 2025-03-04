@@ -46,6 +46,13 @@ struct git_odb_backend {
 		size_t *, git_object_t *, git_odb_backend *, const git_oid *);
 
 	/**
+	 * If the OID given is stored as a delta, get the OID of its delta base
+	 * and compressed delta data.
+	 */
+	int GIT_CALLBACK(get_delta)(
+		git_oid *, void **, size_t *, size_t *, git_odb_backend *, const git_oid *);
+
+	/**
 	 * Write an object into the backend. The id of the object has
 	 * already been calculated and is passed in.
 	 */
