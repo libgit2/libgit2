@@ -44,6 +44,8 @@ static char *_github_ssh_privkey = NULL;
 static char *_github_ssh_passphrase = NULL;
 static char *_github_ssh_remotehostkey = NULL;
 
+static char *_agent_identity_path = NULL;
+
 static char *_orig_http_proxy = NULL;
 static char *_orig_https_proxy = NULL;
 static char *_orig_no_proxy = NULL;
@@ -100,6 +102,8 @@ void test_online_clone__initialize(void)
 	_github_ssh_privkey = cl_getenv("GITTEST_GITHUB_SSH_KEY");
 	_github_ssh_passphrase = cl_getenv("GITTEST_GITHUB_SSH_PASSPHRASE");
 	_github_ssh_remotehostkey = cl_getenv("GITTEST_GITHUB_SSH_REMOTE_HOSTKEY");
+
+	_agent_identity_path = cl_getenv("GITTEST_AGENT_IDENTITY_PATH");
 
 	_orig_http_proxy = cl_getenv("HTTP_PROXY");
 	_orig_https_proxy = cl_getenv("HTTPS_PROXY");
@@ -165,6 +169,8 @@ void test_online_clone__cleanup(void)
 	git__free(_github_ssh_privkey);
 	git__free(_github_ssh_passphrase);
 	git__free(_github_ssh_remotehostkey);
+
+	git__free(_agent_identity_path);
 
 	cl_setenv("HTTP_PROXY", _orig_http_proxy);
 	cl_setenv("HTTPS_PROXY", _orig_https_proxy);
@@ -659,6 +665,43 @@ static int github_credentials(
 		_github_ssh_pubkey,
 		_github_ssh_privkey,
 		_github_ssh_passphrase);
+}
+
+static int agent_credentials(
+	git_credential **cred,
+	const char *url,
+	const char *username_from_url,
+	unsigned int allowed_types,
+	void *data)
+{
+	GIT_UNUSED(url);
+	GIT_UNUSED(username_from_url);
+	GIT_UNUSED(data);
+
+	if ((allowed_types & GIT_CREDENTIAL_USERNAME) != 0) {
+		return git_credential_username_new(cred, "git");
+	}
+
+	cl_assert((allowed_types & GIT_CREDENTIAL_SSH_KEY) != 0);
+
+	return git_credential_ssh_key_from_custom_agent(cred, "git", _agent_identity_path);
+}
+
+void test_online_clone__agent_github_shallow(void)
+{
+#if !defined(GIT_SSH_LIBSSH2)
+	clar__skip();
+#endif
+
+	if (!_agent_identity_path)
+		clar__skip();
+
+	cl_fake_homedir(NULL);
+
+	g_options.fetch_opts.callbacks.credentials = agent_credentials;
+	g_options.fetch_opts.callbacks.certificate_check = succeed_certificate_check;
+
+	cl_git_pass(git_clone(&g_repo, SSH_REPO_URL, "./foo", &g_options));
 }
 
 void test_online_clone__ssh_github(void)
