@@ -22,13 +22,20 @@ static int notification_cb(
 	void *data)
 {
 	const char *level_string;
+	int error = 0;
 
 	GIT_UNUSED(notification);
 	GIT_UNUSED(data);
 
 	switch (level) {
 	case GIT_NOTIFICATION_FATAL:
+		/*
+		 * Set an error class of 1 to suppress printing the error
+		 * message a second time in our error handler.
+		 */
 		level_string = "fatal";
+		git_error_set_str(CLI_ERROR_SUPPRESS, message);
+		error = GIT_EUSER;
 		break;
 	case GIT_NOTIFICATION_ERROR:
 		level_string = "error";
@@ -38,12 +45,13 @@ static int notification_cb(
 		break;
 	default:
 		level_string = "warning";
+		break;
 	}
 
 	fprintf(stderr, "%s: %s\n", level_string, message);
 	fflush(stderr);
 
-	return (level == GIT_NOTIFICATION_FATAL) ? -1 : 0;
+	return error;
 }
 
 void cli_init(void)

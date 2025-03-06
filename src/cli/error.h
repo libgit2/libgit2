@@ -17,6 +17,8 @@
 #define CLI_EXIT_GIT   128
 #define CLI_EXIT_USAGE 129
 
+#define CLI_ERROR_SUPPRESS -1
+
 #define cli_error__print(fmt) do { \
 		va_list ap; \
 		va_start(ap, fmt); \
@@ -41,8 +43,16 @@ GIT_INLINE(int) cli_error_usage(const char *fmt, ...)
 GIT_INLINE(int) cli_error_git(void)
 {
 	const git_error *err = git_error_last();
-	fprintf(stderr, "%s: %s\n", PROGRAM_NAME,
-	        err ? err->message : "unknown error");
+
+	/*
+	 * We set an error class of `CLI_ERROR_SUPPRESS` in our
+	 * notification handler since we've shown the message already.
+	 */
+	if (err && err->klass != CLI_ERROR_SUPPRESS) {
+		fprintf(stderr, "%s: %s\n", PROGRAM_NAME,
+			err ? err->message : "unknown error");
+	}
+
 	return CLI_EXIT_GIT;
 }
 
