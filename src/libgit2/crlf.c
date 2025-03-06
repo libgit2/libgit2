@@ -151,6 +151,46 @@ static git_configmap_value output_eol(struct crlf_attrs *ca)
 	return ca->core_eol;
 }
 
+static int warning_message(
+	git_str *message,
+	int direction,
+	const char *filename)
+{
+	git_str_puts(message, "in the working copy");
+
+	if (filename && *filename) {
+		git_str_puts(message, " of '");
+		git_str_puts(message, filename);
+		git_str_puts(message, "'");
+	}
+
+	if (direction == GIT_EOL_LF)
+		git_str_puts(message, ", CRLF will be replaced by LF");
+	else if (direction == GIT_EOL_CRLF)
+		git_str_puts(message, ", LF will be replaced by CRLF");
+	else
+		GIT_ASSERT(false);
+
+	git_str_printf(message, " the next time git touches it");
+
+	return git_str_oom(message) ? -1 : 0;
+}
+
+static int error_message(
+	git_str *message,
+	int direction,
+	const char *filename)
+{
+	git_str_puts(message, (direction == GIT_EOL_LF) ?
+		"CRLF would be replaced by LF" :
+		"LF would be replaced by CRLF");
+
+	if (filename && *filename)
+		git_str_printf(message, " in '%s'", filename);
+
+	return git_str_oom(message) ? -1 : 0;
+}
+
 static int notify_safecrlf(
 	git_notification_level_t level,
 	int direction,
@@ -159,29 +199,12 @@ static int notify_safecrlf(
 	git_str message = GIT_STR_INIT;
 	int error;
 
-	if (filename && !*filename)
-		filename = NULL;
-
-	git_str_puts(&message, "in the working copy");
-
-	if (filename) {
-		git_str_puts(&message, " of '");
-		git_str_puts(&message, filename);
-		git_str_puts(&message, "'");
-	}
-
-	if (direction == GIT_EOL_LF)
-		git_str_puts(&message, ", CRLF will be replaced by LF");
-	else if (direction == GIT_EOL_CRLF)
-		git_str_puts(&message, ", LF will be replaced by CRLF");
+	if (level == GIT_NOTIFICATION_WARN)
+		error = warning_message(&message, direction, filename);
 	else
-		GIT_ASSERT(false);
+		error = error_message(&message, direction, filename);
 
-	git_str_printf(&message, " the next time git touches it");
-
-	if (git_str_oom(&message))
-		error = -1;
-	else
+	if (!error)
 		error = git_notification(level,
 			GIT_NOTIFICATION_CRLF,
 			message.ptr, filename);
@@ -194,16 +217,12 @@ static int error_safecrlf(
 	int direction,
 	const char *filename)
 {
-	const char *message = (direction == GIT_EOL_LF) ?
-		"CRLF would be replaced by LF" :
-		"LF would be replaced by CRLF";
+	git_str message = GIT_STR_INIT;
 
-	if (filename && *filename)
-		git_error_set(GIT_ERROR_FILTER, "%s in '%s'", message,
-			filename);
-	else
-		git_error_set(GIT_ERROR_FILTER, "%s", message);
+	if (error_message(&message, direction, filename) == 0)
+		git_error_set_str(GIT_ERROR_FILTER, message.ptr);
 
+	git_str_dispose(&message);
 	return -1;
 }
 
