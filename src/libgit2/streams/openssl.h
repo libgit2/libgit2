@@ -24,6 +24,8 @@ extern int git_openssl_stream_global_init(void);
 
 #if defined(GIT_HTTPS_OPENSSL) || defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 extern int git_openssl__set_cert_location(const char *file, const char *path);
+extern int git_openssl__set_user_keys(const char *keyPath, const char *certPath);
+extern int git_openssl__set_user_password_callback(pem_password_cb *cb, void *userdata);
 extern int git_openssl__add_x509_cert(X509 *cert);
 extern int git_openssl__reset_context(void);
 extern int git_openssl_stream_new(git_stream **out, const char *host, const char *port);
