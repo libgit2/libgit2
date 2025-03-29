@@ -28,7 +28,6 @@ struct git_diff_stats {
 	size_t files_changed;
 	size_t insertions;
 	size_t deletions;
-	size_t renames;
 
 	size_t max_name;
 	size_t max_filestat;
@@ -68,17 +67,19 @@ static int diff_file_stats_full_to_buf(
 		size_t common_dirlen;
 		int error;
 
-		padding = stats->max_name - strlen(old_path) - strlen(new_path);
-
 		if ((common_dirlen = git_fs_path_common_dirlen(old_path, new_path)) &&
 		    common_dirlen <= INT_MAX) {
 			error = git_str_printf(out, " %.*s{%s"DIFF_RENAME_FILE_SEPARATOR"%s}",
 					       (int) common_dirlen, old_path,
 					       old_path + common_dirlen,
 					       new_path + common_dirlen);
+			padding = stats->max_name + common_dirlen - strlen(old_path)
+			          - strlen(new_path) - 2 - strlen(DIFF_RENAME_FILE_SEPARATOR);
 		} else {
 			error = git_str_printf(out, " %s" DIFF_RENAME_FILE_SEPARATOR "%s",
 					       old_path, new_path);
+			padding = stats->max_name - strlen(old_path)
+			          - strlen(new_path) - strlen(DIFF_RENAME_FILE_SEPARATOR);
 		}
 
 		if (error < 0)
@@ -89,9 +90,6 @@ static int diff_file_stats_full_to_buf(
 			goto on_error;
 
 		padding = stats->max_name - strlen(adddel_path);
-
-		if (stats->renames > 0)
-			padding += strlen(DIFF_RENAME_FILE_SEPARATOR);
 	}
 
 	if (git_str_putcn(out, ' ', padding) < 0 ||
@@ -210,14 +208,23 @@ int git_diff_get_stats(
 		if ((error = git_patch_from_diff(&patch, diff, i)) < 0)
 			break;
 
-		/* keep a count of renames because it will affect formatting */
+		/* Length calculation for renames mirrors the actual presentation format
+		 * generated in diff_file_stats_full_to_buf; namelen is the full length of
+		 * what will be printed, taking into account renames and common prefixes.
+		 */
 		delta = patch->delta;
-
-		/* TODO ugh */
 		namelen = strlen(delta->new_file.path);
-		if (delta->old_file.path && strcmp(delta->old_file.path, delta->new_file.path) != 0) {
-			namelen += strlen(delta->old_file.path);
-			stats->renames++;
+		if (delta->old_file.path &&
+		    strcmp(delta->old_file.path, delta->new_file.path) != 0) {
+			size_t common_dirlen;
+			if ((common_dirlen = git_fs_path_common_dirlen(delta->old_file.path, delta->new_file.path)) &&
+			    common_dirlen <= INT_MAX) {
+				namelen += strlen(delta->old_file.path) + 2 +
+				           strlen(DIFF_RENAME_FILE_SEPARATOR) - common_dirlen;
+			} else {
+				namelen += strlen(delta->old_file.path) +
+				           strlen(DIFF_RENAME_FILE_SEPARATOR);
+			}
 		}
 
 		/* and, of course, count the line stats */
