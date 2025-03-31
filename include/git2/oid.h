@@ -8,7 +8,6 @@
 #define INCLUDE_git_oid_h__
 
 #include "common.h"
-#include "types.h"
 #include "experimental.h"
 
 /**
