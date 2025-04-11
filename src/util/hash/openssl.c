@@ -189,8 +189,6 @@ int git_hash_sha1_final(unsigned char *out, git_hash_sha1_ctx *ctx)
 		return -1;
 	}
 
-	ctx->c = NULL;
-
 	return 0;
 }
 
@@ -338,8 +336,6 @@ int git_hash_sha256_final(unsigned char *out, git_hash_sha256_ctx *ctx)
 		git_error_set(GIT_ERROR_SHA, "failed to finalize sha256");
 		return -1;
 	}
-
-	ctx->c = NULL;
 
 	return 0;
 }
