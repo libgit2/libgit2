@@ -30,6 +30,7 @@ const cli_opt_spec cli_common_opts[] = {
 };
 
 const cli_cmd_spec cli_cmds[] = {
+	{ "add",         cmd_add,         "Stage the changes in a file or files" },
 	{ "blame",       cmd_blame,       "Show the origin of each line of a file" },
 	{ "cat-file",    cmd_cat_file,    "Display an object in the repository" },
 	{ "clone",       cmd_clone,       "Clone a repository into a new directory" },
