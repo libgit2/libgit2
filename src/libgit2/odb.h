@@ -146,6 +146,18 @@ int git_odb__read_header_or_object(
 	git_odb *db, const git_oid *id);
 
 /*
+ * If `id` is stored as a delta, get the OID of its delta base and compressed
+ * delta data.
+ */
+int git_odb__get_delta(
+        git_oid *base_p,
+        void **z_data_p,
+        size_t *size_p,
+        size_t *z_size_p,
+        git_odb *db,
+        const git_oid *id);
+
+/*
  * Attempt to get the ODB's commit-graph file. This object is still owned by
  * the ODB. If the repository does not contain a commit-graph, it will return
  * GIT_ENOTFOUND.
