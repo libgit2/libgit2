@@ -2,7 +2,6 @@
 
 if(BUILD_FUZZERS AND NOT USE_STANDALONE_FUZZERS)
 	set(CMAKE_REQUIRED_FLAGS "-fsanitize=fuzzer-no-link")
-	add_c_flag(-fsanitize=fuzzer)
 	add_c_flag(-fsanitize=fuzzer-no-link)
 	unset(CMAKE_REQUIRED_FLAGS)
 endif()
@@ -24,6 +23,9 @@ foreach(fuzz_target_src ${SRC_FUZZERS})
 	target_include_directories(${fuzz_target_name} SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
 
 	target_link_libraries(${fuzz_target_name} ${LIBGIT2_SYSTEM_LIBS})
+	if(NOT USE_STANDALONE_FUZZERS)
+		target_link_options(${fuzz_target_name} PRIVATE "-fsanitize=fuzzer")
+	endif()
 
 	add_test(${fuzz_target_name} "${CMAKE_CURRENT_BINARY_DIR}/${fuzz_target_name}" "${CMAKE_CURRENT_SOURCE_DIR}/corpora/${fuzz_name}")
 endforeach()
