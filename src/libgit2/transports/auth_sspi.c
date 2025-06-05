@@ -324,18 +324,22 @@ static int sspi_init_context(
 	return 0;
 }
 
+#ifdef GIT_AUTH_NEGOTIATE
 int git_http_auth_negotiate(
 	git_http_auth_context **out,
 	const git_net_url *url)
 {
 	return sspi_init_context(out, GIT_HTTP_AUTH_NEGOTIATE, url);
 }
+#endif
 
+#ifdef GIT_AUTH_NTLM
 int git_http_auth_ntlm(
 	git_http_auth_context **out,
 	const git_net_url *url)
 {
 	return sspi_init_context(out, GIT_HTTP_AUTH_NTLM, url);
 }
+#endif
 
 #endif /* GIT_WIN32 */
