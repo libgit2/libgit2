@@ -206,7 +206,7 @@ GIT_EXTERN(int) git_transport_ssh_with_paths(git_transport **out, git_remote *ow
  * and git_transport_unregister with other calls to the library that
  * instantiate transports.
  *
- * @param prefix The scheme (ending in "://") to match, i.e. "git://"
+ * @param prefix The scheme to match, eg "git" or "https"
  * @param cb The callback used to create an instance of the transport
  * @param param A fixed parameter to pass to cb at creation time
  * @return 0 or an error code
