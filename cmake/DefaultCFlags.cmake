@@ -56,7 +56,7 @@ if(MSVC)
 	set(CMAKE_C_FLAGS_MINSIZEREL "/DNDEBUG /O1 /Oy /GL /Gy ${CRT_FLAG_RELEASE}")
 
 	# /IGNORE:4221 - Ignore empty compilation units
-	set(CMAKE_STATIC_LINKER_FLAGS "/IGNORE:4221")
+	set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /IGNORE:4221")
 
 	# /DYNAMICBASE - Address space load randomization (ASLR)
 	# /NXCOMPAT - Data execution prevention (DEP)

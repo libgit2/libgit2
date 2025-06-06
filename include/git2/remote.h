@@ -249,9 +249,9 @@ GIT_EXTERN(const char *) git_remote_name(const git_remote *remote);
 /**
  * Get the remote's url
  *
- * If url.*.insteadOf has been configured for this URL, it will
- * return the modified URL.  If `git_remote_set_instance_pushurl`
- * has been called for this remote, then that URL will be returned.
+ * If url.*.insteadOf has been configured for this URL, it will return
+ * the modified URL. This function does not consider if a push url has
+ * been configured for this remote (use `git_remote_pushurl` if needed).
  *
  * @param remote the remote
  * @return a pointer to the url

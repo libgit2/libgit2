@@ -58,7 +58,7 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 add_library(libgit2package ${SRC_RC} ${LIBGIT2_OBJECTS})
 target_link_libraries(libgit2package ${LIBGIT2_SYSTEM_LIBS})
 target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
-target_include_directories(libgit2package INTERFACE $<INSTALL_INTERFACE:./include/git2>)
+target_include_directories(libgit2package INTERFACE $<INSTALL_INTERFACE:include>)
 
 set_target_properties(libgit2package PROPERTIES C_STANDARD 90)
 set_target_properties(libgit2package PROPERTIES C_EXTENSIONS OFF)
@@ -119,11 +119,11 @@ configure_file(config.cmake.in
 install(FILES
 	"${PROJECT_BINARY_DIR}/cmake/${PROJECT_NAME}Config.cmake"
 	"${PROJECT_BINARY_DIR}/cmake/${PROJECT_NAME}ConfigVersion.cmake"
-	DESTINATION "lib/cmake/${PROJECT_NAME}")
+	DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 install(
 	EXPORT ${LIBGIT2_TARGETS_EXPORT_NAME}
 	NAMESPACE "${PROJECT_NAME}::"
-	DESTINATION "lib/cmake/${PROJECT_NAME}")
+	DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
 # Install
 

@@ -100,11 +100,11 @@ SYSTEM_KERNEL=$(uname -v)
 
 fullpath() {
 	if [[ "$(uname -s)" == "MINGW"* && $(cygpath -u "${TEST_CLI}") == "/"* ]]; then
-		echo "${TEST_CLI}"
+		echo "$1"
 	elif [[ "${TEST_CLI}" == "/"* ]]; then
-		echo "${TEST_CLI}"
+		echo "$1"
 	else
-		which "${TEST_CLI}"
+		which "$1"
 	fi
 }
 

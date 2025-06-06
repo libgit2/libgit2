@@ -19,7 +19,7 @@
 #include <limits.h>
 #include <assert.h>
 
-#if defined(__sun) || defined(__illumos__)
+#if defined(__sun) || defined(__illumos__) || defined(__CYGWIN__)
 # include <alloca.h>
 #endif
 

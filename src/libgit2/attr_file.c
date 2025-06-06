@@ -347,7 +347,7 @@ int git_attr_file__parse_buffer(
 {
 	const char *scan = data, *context = NULL;
 	git_attr_rule *rule = NULL;
-	int error = 0;
+	int ignorecase = 0, error = 0;
 
 	/* If subdir file path, convert context for file paths */
 	if (attrs->entry && git_fs_path_root(attrs->entry->path) < 0 &&
@@ -378,6 +378,13 @@ int git_attr_file__parse_buffer(
 			error = 0;
 			continue;
 		}
+
+		if (repo &&
+		    (error = git_repository__configmap_lookup(&ignorecase, repo, GIT_CONFIGMAP_IGNORECASE)) < 0)
+			goto out;
+
+		if (ignorecase)
+			rule->match.flags |= GIT_ATTR_FNMATCH_ICASE;
 
 		if (rule->match.flags & GIT_ATTR_FNMATCH_MACRO) {
 			/* TODO: warning if macro found in file below repo root */
@@ -482,7 +489,7 @@ bool git_attr_fnmatch__match(
 	 */
 	if (match->containing_dir) {
 		if (match->flags & GIT_ATTR_FNMATCH_ICASE) {
-			if (git__strncasecmp(path->path, match->containing_dir, match->containing_dir_length))
+			if (git__prefixcmp_icase(path->path, match->containing_dir))
 				return 0;
 		} else {
 			if (git__prefixcmp(path->path, match->containing_dir))

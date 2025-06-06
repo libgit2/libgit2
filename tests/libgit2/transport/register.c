@@ -144,6 +144,7 @@ static int custom_subtransport__action(
 	git_remote_connect_options_dispose(&opts);
 
 	*out = git__calloc(1, sizeof(git_smart_subtransport_stream));
+	GIT_ERROR_CHECK_ALLOC(*out);
 	(*out)->subtransport = transport;
 	(*out)->read = custom_subtransport_stream__read;
 	(*out)->write = custom_subtransport_stream__write;
@@ -169,6 +170,7 @@ static void custom_subtransport__free(git_smart_subtransport *transport)
 static int custom_transport_callback(git_smart_subtransport **out, git_transport *owner, void *param)
 {
 	struct custom_subtransport *subtransport = git__calloc(1, sizeof(struct custom_subtransport));
+	GIT_ERROR_CHECK_ALLOC(subtransport);
 	subtransport->called = (int *)param;
 	subtransport->owner = owner;
 	subtransport->subtransport.action = custom_subtransport__action;

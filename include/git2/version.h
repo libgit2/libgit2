@@ -7,6 +7,8 @@
 #ifndef INCLUDE_git_version_h__
 #define INCLUDE_git_version_h__
 
+#include "common.h"
+
 /**
  * @file git2/version.h
  * @brief The version of libgit2
@@ -19,7 +21,7 @@ GIT_BEGIN_DECL
  * The version string for libgit2.  This string follows semantic
  * versioning (v2) guidelines.
  */
-#define LIBGIT2_VERSION           "1.9.0"
+#define LIBGIT2_VERSION           "1.9.1"
 
 /** The major version number for this version of libgit2. */
 #define LIBGIT2_VERSION_MAJOR      1
@@ -28,7 +30,7 @@ GIT_BEGIN_DECL
 #define LIBGIT2_VERSION_MINOR      9
 
 /** The revision ("teeny") version number for this version of libgit2. */
-#define LIBGIT2_VERSION_REVISION   0
+#define LIBGIT2_VERSION_REVISION   1
 
 /** The Windows DLL patch number for this version of libgit2. */
 #define LIBGIT2_VERSION_PATCH      0

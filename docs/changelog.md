@@ -1,3 +1,93 @@
+v1.9.1
+------
+
+This release includes a number of bugfixes and compatibility
+improvements.
+
+## What's Changed
+
+### Bug fixes
+
+* hash: allow `unsigned int` != `size_t` in sha256 by @ethomson in
+  https://github.com/libgit2/libgit2/pull/6996
+* include: Fix code comment termination by @florianpircher in
+  https://github.com/libgit2/libgit2/pull/6997
+* alternates: allow relative paths in all repositories by @vapier
+  in https://github.com/libgit2/libgit2/pull/7019
+* Fix potential null dereference by @peter15914 in
+  https://github.com/libgit2/libgit2/pull/6998
+* cli: fix undefined alloca() on CYGWIN by @carlo-bramini in
+  https://github.com/libgit2/libgit2/pull/7022
+* attr: honor ignorecase in attribute matching by @ethomson in
+  https://github.com/libgit2/libgit2/pull/7018
+* tag: Refuse to use HEAD as a tagname by @csware in
+  https://github.com/libgit2/libgit2/pull/7061
+* Fix memory leak in openssl fips modes by @wklatka in
+  https://github.com/libgit2/libgit2/pull/7064
+* Fix circular includes between types.h and oid.h by @georgthegreat
+  in https://github.com/libgit2/libgit2/pull/7059
+* diff: correct diff stat alignment in presence of renames w/ common
+  prefix. by @kivikakk in https://github.com/libgit2/libgit2/pull/7057
+* Revert include path regression by @ytnuf in
+  https://github.com/libgit2/libgit2/pull/7039
+
+### Build and CI improvements
+
+* benchmarks: update path to baseline cli by @ethomson in
+  https://github.com/libgit2/libgit2/pull/7006
+* Update SelectSSH.cmake by @lrm29 in
+  https://github.com/libgit2/libgit2/pull/7012
+* ci: update download-artifact version by @ethomson in
+  https://github.com/libgit2/libgit2/pull/7038
+* install cmake files into configured libdir by @kanavin in
+  https://github.com/libgit2/libgit2/pull/7004
+* Test updates by @ethomson in
+  https://github.com/libgit2/libgit2/pull/7025
+* conflict tests: check `core.ignorecase` by @emilazy in
+  https://github.com/libgit2/libgit2/pull/7026
+* Include common.h in version.h by @ethomson in
+  https://github.com/libgit2/libgit2/pull/7030
+* clar: update to latest version by @ethomson in
+  https://github.com/libgit2/libgit2/pull/7029
+* Fix MSVC cross compilation by @Faless in
+  https://github.com/libgit2/libgit2/pull/7079
+* fuzzers: Fix CFLAGS by @nelhage in
+  https://github.com/libgit2/libgit2/pull/7044
+* Avoid duplicate definition of `git_http_auth_dummy`. by
+  @JohannesWilde in https://github.com/libgit2/libgit2/pull/7077
+
+### Documentation improvements
+
+* docs: add `update_refs` as ABI breaking change by @ethomson
+  in https://github.com/libgit2/libgit2/pull/7005
+* docs: correct wrong docstring info for `git_remote_url` by
+  @DominiqueFuchs in https://github.com/libgit2/libgit2/pull/7076
+
+## New Contributors
+
+* @peter15914 made their first contribution in
+  https://github.com/libgit2/libgit2/pull/6998
+* @kanavin made their first contribution in
+  https://github.com/libgit2/libgit2/pull/7004
+* @carlo-bramini made their first contribution in
+  https://github.com/libgit2/libgit2/pull/7022
+* @vapier made their first contribution in
+  https://github.com/libgit2/libgit2/pull/7019
+* @emilazy made their first contribution in
+  https://github.com/libgit2/libgit2/pull/7026
+* @ytnuf made their first contribution in
+  https://github.com/libgit2/libgit2/pull/7039
+* @DominiqueFuchs made their first contribution in
+  https://github.com/libgit2/libgit2/pull/7076
+* @wklatka made their first contribution in
+  https://github.com/libgit2/libgit2/pull/7064
+* @kivikakk made their first contribution in
+  https://github.com/libgit2/libgit2/pull/7057
+* @JohannesWilde made their first contribution in
+  https://github.com/libgit2/libgit2/pull/7077
+
+**Full Changelog**: https://github.com/libgit2/libgit2/compare/v1.9.0...v1.9.1
+
 v1.9.0
 ------
 
@@ -70,6 +160,13 @@ maintainers of bindings or FFI users, may want to be aware of.
   objects instead of `git_config_entry` objects. This allows backends
   to provide a mechanism to nicely free the configuration entries that
   they provide.
+
+* **`update_refs` callback for remotes** (ABI breaking change)
+  The `update_refs` callback was added to the `git_remote_callbacks`
+  structure to provide additional information about updated refs;
+  in particular, the `git_refspec` is included for more information
+  about the remote ref. The `update_refs` callback will be
+  preferred over the now deprecated `update_tips` callback.
 
 ## What's Changed
 

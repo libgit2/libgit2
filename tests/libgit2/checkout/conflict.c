@@ -965,17 +965,17 @@ void test_checkout_conflict__name_mangled_file_exists_in_workdir(void)
 		0100644, "b69fe837e4cecfd4c9a40cdca7c138468687df07");
 
 	/* Name is mangled on case insensitive only */
-#if defined(GIT_WIN32) || defined(__APPLE__)
-	ensure_workdir("test-three.txt~ours_0",
-		0100644, "b42712cfe99a1a500b2a51fe984e0b8a7702ba11");
-	ensure_workdir("test-three.txt~theirs_0",
-		0100644, "b69fe837e4cecfd4c9a40cdca7c138468687df07");
-#else
-	ensure_workdir("test-three.txt~ours",
-		0100644, "b42712cfe99a1a500b2a51fe984e0b8a7702ba11");
-	ensure_workdir("test-three.txt~theirs",
-		0100644, "b69fe837e4cecfd4c9a40cdca7c138468687df07");
-#endif
+	if (cl_repo_get_bool(g_repo, "core.ignorecase")) {
+		ensure_workdir("test-three.txt~ours_0",
+			0100644, "b42712cfe99a1a500b2a51fe984e0b8a7702ba11");
+		ensure_workdir("test-three.txt~theirs_0",
+			0100644, "b69fe837e4cecfd4c9a40cdca7c138468687df07");
+	} else {
+		ensure_workdir("test-three.txt~ours",
+			0100644, "b42712cfe99a1a500b2a51fe984e0b8a7702ba11");
+		ensure_workdir("test-three.txt~theirs",
+			0100644, "b69fe837e4cecfd4c9a40cdca7c138468687df07");
+	}
 
 	ensure_workdir("directory_file-one~ours_0", 0100644, CONFLICTING_OURS_OID);
 	ensure_workdir("directory_file-two~theirs_0", 0100644, CONFLICTING_THEIRS_OID);

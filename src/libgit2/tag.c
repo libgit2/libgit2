@@ -263,8 +263,10 @@ static bool tag_name_is_valid(const char *tag_name)
 	/*
 	 * Discourage tag name starting with dash,
 	 * https://github.com/git/git/commit/4f0accd638b8d2
+	 * and refuse to use HEAD as a tagname,
+	 * https://github.com/git/git/commit/bbd445d5efd415
 	 */
-	return tag_name[0] != '-';
+	return tag_name[0] != '-' && git__strcmp(tag_name, "HEAD");
 }
 
 static int git_tag_create__internal(
