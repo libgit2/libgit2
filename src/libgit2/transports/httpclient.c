@@ -914,6 +914,10 @@ GIT_INLINE(git_http_parser_settings *) http_client_parser_settings(void)
 
 static void reset_parser(git_http_client *client)
 {
+	/* Force the proxy connection to be closed so a fresh connection is
+	   opened for the next CONNECT request.  */
+	client->proxy_connected = 0;
+
 	git_http_parser_init(&client->parser,
 	                     GIT_HTTP_PARSER_RESPONSE,
 	                     http_client_parser_settings());
