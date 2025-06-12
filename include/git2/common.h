@@ -257,7 +257,9 @@ typedef enum {
 	GIT_OPT_GET_SERVER_TIMEOUT,
 	GIT_OPT_SET_USER_AGENT_PRODUCT,
 	GIT_OPT_GET_USER_AGENT_PRODUCT,
-	GIT_OPT_ADD_SSL_X509_CERT
+	GIT_OPT_ADD_SSL_X509_CERT,
+	GIT_OPT_GET_WARNING_CALLBACK,
+	GIT_OPT_SET_WARNING_CALLBACK
 } git_libgit2_opt_t;
 
 /**
@@ -562,6 +564,22 @@ typedef enum {
  *   opts(GIT_OPT_SET_SERVER_TIMEOUT, int timeout)
  *      > Sets the timeout (in milliseconds) for reading from and writing
  *      > to a remote server. Set to 0 to use the system default.
+ *
+ *   opts(GIT_OPT_GET_WARNING_CALLBACK, int *(*cb)(git_warning_t, ...), void **data)
+ *      > Gets the current warning callback and callback data, which will be
+ *      > invoked when warnings or continuable errors occur that the calling
+ *      > program can act on.
+ *
+ *   opts(GIT_OPT_SET_WARNING_CALLBACK, int (*cb)(git_warning_t, void *, ...), void *data)
+ *      > Sets the warning callback, which will be invoked when warnings
+ *      > or continuable errors occur that the calling program can act on.
+ *      >
+ *      > The callback will be invoked for all warnings. Users should
+ *      > examine the warning type (which is the first argument) to
+ *      > understand whether they want to act, and what the payload is.
+ *      >
+ *      > - `cb` the callback to invoke when a warning occurs
+ *      > - `data` data to be provided to warning callbacks, or NULL
  *
  * @param option Option key
  * @return 0 on success, <0 on failure
