@@ -1310,6 +1310,69 @@ int git_odb__read_header_or_object(
 	return error;
 }
 
+static int odb_get_delta_1(
+        git_oid *base_p,
+        void **z_data_p,
+        size_t *size_p,
+        size_t *z_size_p,
+        git_odb *db,
+        const git_oid *id)
+{
+	size_t i;
+	bool passthrough = false;
+	int error;
+
+	if ((error = git_mutex_lock(&db->lock)) < 0) {
+		git_error_set(GIT_ERROR_ODB, "failed to acquire the odb lock");
+		return error;
+	}
+
+	for (i = 0; i < db->backends.length; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		if (!b->get_delta) {
+			passthrough = true;
+			continue;
+		}
+
+		error = b->get_delta(base_p, z_data_p, size_p, z_size_p, b, id);
+
+		git_mutex_unlock(&db->lock);
+
+		return error;
+	}
+
+	git_mutex_unlock(&db->lock);
+
+	return passthrough ? GIT_PASSTHROUGH : GIT_ENOTFOUND;
+}
+
+int git_odb__get_delta(
+        git_oid *base_p,
+        void **z_data_p,
+        size_t *size_p,
+        size_t *z_size_p,
+        git_odb *db,
+        const git_oid *id)
+{
+	int error;
+
+	GIT_ASSERT_ARG(db);
+	GIT_ASSERT_ARG(id);
+	GIT_ASSERT_ARG(base_p);
+	GIT_ASSERT_ARG(z_data_p);
+	GIT_ASSERT_ARG(size_p);
+	GIT_ASSERT_ARG(z_size_p);
+
+	error = odb_get_delta_1(base_p, z_data_p, size_p, z_size_p, db, id);
+
+	if (error == GIT_PASSTHROUGH)
+		error = GIT_ENOTFOUND;
+
+	return error;
+}
+
 static int odb_read_1(
 	git_odb_object **out,
 	git_odb *db,
