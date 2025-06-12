@@ -21,6 +21,19 @@
 GIT_BEGIN_DECL
 
 /**
+ * Create a new in-memory reflog for the given reference
+ *
+ * The reflog must be freed manually by using
+ * git_reflog_free().
+ *
+ * @param reflog pointer to reflog to initialize
+ * @param name name of the reference
+ * @param oid_type the type of the OID
+ * @return 0 or an error code
+*/
+GIT_EXTERN(int) git_reflog__alloc(git_reflog **reflog, const char *name, git_oid_t oid_type);
+
+/**
  * Read the reflog for the given reference
  *
  * If there is no reflog file for the given
