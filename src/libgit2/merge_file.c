@@ -84,8 +84,8 @@ static int merge_file__xdiff(
 
 	memset(&xmparam, 0x0, sizeof(xmparam_t));
 
-	if (ours->size > LONG_MAX ||
-	    theirs->size > LONG_MAX ||
+	if ((ours && ours->size > LONG_MAX) ||
+	    (theirs && theirs->size > LONG_MAX) ||
 	    (ancestor && ancestor->size > LONG_MAX)) {
 		git_error_set(GIT_ERROR_MERGE, "failed to merge files");
 		error = -1;
@@ -99,15 +99,19 @@ static int merge_file__xdiff(
 		ancestor_mmfile.size = (long)ancestor->size;
 	}
 
-	xmparam.file1 = (options.our_label) ?
-		options.our_label : ours->path;
-	our_mmfile.ptr = (char *)ours->ptr;
-	our_mmfile.size = (long)ours->size;
+	if (ours) {
+		xmparam.file1 = (options.our_label) ?
+			options.our_label : ours->path;
+		our_mmfile.ptr = (char *)ours->ptr;
+		our_mmfile.size = (long)ours->size;
+	}
 
-	xmparam.file2 = (options.their_label) ?
-		options.their_label : theirs->path;
-	their_mmfile.ptr = (char *)theirs->ptr;
-	their_mmfile.size = (long)theirs->size;
+	if (theirs) {
+		xmparam.file2 = (options.their_label) ?
+			options.their_label : theirs->path;
+		their_mmfile.ptr = (char *)theirs->ptr;
+		their_mmfile.size = (long)theirs->size;
+	}
 
 	if (options.favor == GIT_MERGE_FILE_FAVOR_OURS)
 		xmparam.favor = XDL_MERGE_FAVOR_OURS;
@@ -148,8 +152,8 @@ static int merge_file__xdiff(
 
 	path = git_merge_file__best_path(
 		ancestor ? ancestor->path : NULL,
-		ours->path,
-		theirs->path);
+		ours ? ours->path : NULL,
+		theirs ? theirs->path : NULL);
 
 	if (path != NULL && (out->path = git__strdup(path)) == NULL) {
 		error = -1;
@@ -161,8 +165,8 @@ static int merge_file__xdiff(
 	out->len = mmbuffer.size;
 	out->mode = git_merge_file__best_mode(
 		ancestor ? ancestor->mode : 0,
-		ours->mode,
-		theirs->mode);
+		ours ? ours->mode : 0,
+		theirs ? theirs->mode : 0);
 
 done:
 	if (error < 0)
@@ -276,15 +280,17 @@ int git_merge_file_from_index(
 	const git_merge_file_options *options)
 {
 	git_merge_file_input *ancestor_ptr = NULL,
-		ancestor_input = {0}, our_input = {0}, their_input = {0};
-	git_odb *odb = NULL;
+		ancestor_input = {0};
+	git_merge_file_input *our_ptr = NULL,
+		our_input = {0};
+	git_merge_file_input *their_ptr = NULL,
+		their_input = {0};
+	git_odb *odb;
 	git_odb_object *odb_object[3] = { 0 };
 	int error = 0;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(repo);
-	GIT_ASSERT_ARG(ours);
-	GIT_ASSERT_ARG(theirs);
 
 	memset(out, 0x0, sizeof(git_merge_file_result));
 
@@ -299,12 +305,24 @@ int git_merge_file_from_index(
 		ancestor_ptr = &ancestor_input;
 	}
 
-	if ((error = merge_file_input_from_index(&our_input, &odb_object[1], odb, ours)) < 0 ||
-	    (error = merge_file_input_from_index(&their_input, &odb_object[2], odb, theirs)) < 0)
-		goto done;
+	if (ours) {
+		if ((error = merge_file_input_from_index(
+			&our_input, &odb_object[1], odb, ours)) < 0)
+			goto done;
+
+		our_ptr = &our_input;
+	}
+
+	if (theirs) {
+		if ((error = merge_file_input_from_index(
+			&their_input, &odb_object[2], odb, theirs)) < 0)
+			goto done;
+
+		their_ptr = &their_input;
+	}
 
 	error = merge_file__from_inputs(out,
-		ancestor_ptr, &our_input, &their_input, options);
+		ancestor_ptr, our_ptr, their_ptr, options);
 
 done:
 	git_odb_object_free(odb_object[0]);
