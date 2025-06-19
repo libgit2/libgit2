@@ -137,7 +137,7 @@ void test_online_shallow__clone_since_oldest(void)
 	size_t num_commits = 0;
 	int error = 0;
 
-	/* Specify a date before the old commit. */
+	/* Specify a date before the oldest commit. */
 	git_time_t since_date;
 	cl_git_pass(git_date_parse(&since_date,"2005-04-05"));
 	clone_opts.fetch_opts.shallow_since = since_date;
@@ -234,7 +234,7 @@ void test_online_shallow__clone_since_recent(void)
 	size_t num_commits = 0;
 	int error = 0;
 
-	/* Specify a date between the oldest and most recent commit. */
+	/* Specify a date newer than the most recent commit. */
 	git_time_t since_date;
 	cl_git_pass(git_date_parse(&since_date, "2025-04-07 22:30:00 UTC"));
 	clone_opts.fetch_opts.shallow_since = since_date;
