@@ -303,6 +303,12 @@ static int local_negotiate_fetch(
 		git_error_set(GIT_ERROR_NET, "shallow fetch is not supported by the local transport");
 		return GIT_ENOTSUPPORTED;
 	}
+	if (wants->shallow_since != GIT_FETCH_SINCE_UNSPECIFIED) {
+		git_error_set(
+		        GIT_ERROR_NET,
+		        "shallow-since fetch is not supported by the local transport");
+		return GIT_ENOTSUPPORTED;
+	}
 
 	/* Fill in the loids */
 	git_vector_foreach(&t->refs, i, rhead) {

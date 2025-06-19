@@ -762,7 +762,10 @@ typedef enum {
 	GIT_FETCH_DEPTH_FULL = 0,
 
 	/** The fetch should "unshallow" and fetch missing data. */
-	GIT_FETCH_DEPTH_UNSHALLOW = 2147483647
+	GIT_FETCH_DEPTH_UNSHALLOW = 2147483647,
+
+	/** No "shallow-since" date specified. */
+	GIT_FETCH_SINCE_UNSPECIFIED = -1
 } git_fetch_depth_t;
 
 /**
@@ -808,11 +811,21 @@ typedef struct {
 	/**
 	 * Depth of the fetch to perform, or `GIT_FETCH_DEPTH_FULL`
 	 * (or `0`) for full history, or `GIT_FETCH_DEPTH_UNSHALLOW`
-	 * to "unshallow" a shallow repository.
+	 * to "unshallow" a shallow repository. Cannot be used in
+	 * conjunction with a specific shallow_since date.
 	 *
 	 * The default is full (`GIT_FETCH_DEPTH_FULL` or `0`).
 	 */
 	int depth;
+
+	/**
+	 * Date from which to fetch history, or 'GIT_FETCH_SINCE_UNSPECIFIED'
+	 * to fetch all history.
+	 * Cannot be used in conjuction with a specific depth.
+	 *
+	 * The default is to fetch all history (`GIT_FETCH_SINCE_UNSPECIFIED` or `-1`).
+	 */
+	git_time_t shallow_since;
 
 	/**
 	 * Whether to allow off-site redirects.  If this is not
@@ -837,7 +850,11 @@ typedef struct {
 	GIT_FETCH_PRUNE_UNSPECIFIED, \
 	GIT_REMOTE_UPDATE_FETCHHEAD, \
 	GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, \
-	GIT_PROXY_OPTIONS_INIT }
+	GIT_PROXY_OPTIONS_INIT, \
+	GIT_FETCH_DEPTH_FULL, \
+	GIT_FETCH_SINCE_UNSPECIFIED, \
+	GIT_REMOTE_REDIRECT_NONE \
+}
 
 /**
  * Initialize git_fetch_options structure
