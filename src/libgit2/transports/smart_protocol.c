@@ -435,7 +435,7 @@ int git_smart__negotiate_fetch(
 	if ((error = git_revwalk__push_glob(walk, "refs/*", &opts)) < 0)
 		goto on_error;
 
-	if (wants->depth > 0 || wants->shallow_since != GIT_FETCH_SINCE_UNSPECIFIED) {
+	if (wants->depth > 0 || wants->shallow_since > 0) {
 		git_pkt_shallow *pkt;
 
 		if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)

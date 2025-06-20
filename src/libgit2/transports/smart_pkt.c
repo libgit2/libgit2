@@ -829,11 +829,11 @@ int git_pkt_buffer_wants(
 
 	if (wants->depth > 0) {
 
-		if (wants->shallow_since != GIT_FETCH_SINCE_UNSPECIFIED) {
+		if (wants->shallow_since > 0) {
 			git_error_set(
 			        GIT_ERROR_NET,
 			        "depth and shallow-since must not be used together");
-			return GIT_ENOTSUPPORTED;
+			return GIT_EINVALID;
 		}
 
 		git_str deepen_buf = GIT_STR_INIT;
@@ -846,7 +846,7 @@ int git_pkt_buffer_wants(
 		if (git_str_oom(buf))
 			return -1;
 
-	} else if (wants->shallow_since != GIT_FETCH_SINCE_UNSPECIFIED) {
+	} else if (wants->shallow_since > 0) {
 
 		git_str shallow_since_buf = GIT_STR_INIT;
 
