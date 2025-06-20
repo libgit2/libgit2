@@ -299,14 +299,8 @@ static int local_negotiate_fetch(
 
 	GIT_UNUSED(wants);
 
-	if (wants->depth) {
+	if (wants->depth || wants->shallow_since) {
 		git_error_set(GIT_ERROR_NET, "shallow fetch is not supported by the local transport");
-		return GIT_ENOTSUPPORTED;
-	}
-	if (wants->shallow_since) {
-		git_error_set(
-		        GIT_ERROR_NET,
-		        "shallow-since fetch is not supported by the local transport");
 		return GIT_ENOTSUPPORTED;
 	}
 
