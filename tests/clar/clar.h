@@ -14,6 +14,8 @@
 # define CLAR_MAX_PATH 4096
 #elif defined(_WIN32)
 # define CLAR_MAX_PATH MAX_PATH
+#elif !defined(PATH_MAX)			  /* GNU/Hurd */
+# define CLAR_MAX_PATH 4096
 #else
 # define CLAR_MAX_PATH PATH_MAX
 #endif
