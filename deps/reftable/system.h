@@ -9,11 +9,23 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
-/* This header glues the reftable library to the rest of Git */
+/* This header glues the reftable library to the rest of libgit2. */
 
 #define MINGW_DONT_HANDLE_IN_USE_ERROR
-#include "compat/posix.h"
-#include "compat/zlib-compat.h"
+#include <assert.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <poll.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <zlib.h>
 
 /*
  * Return a random 32 bit integer. This function is expected to return
