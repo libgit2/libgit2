@@ -9,17 +9,23 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
-/* This header glues the reftable library to the rest of Git */
+/* This header glues the reftable library to the rest of libgit2. */
 
-#define MINGW_DONT_HANDLE_IN_USE_ERROR
-#include "compat/posix.h"
-#include "compat/zlib-compat.h"
+#include "posix.h"
+#include <sys/mman.h>
+#include <zlib.h>
 
 /*
  * Return a random 32 bit integer. This function is expected to return
  * pre-seeded data.
  */
 uint32_t reftable_rand(void);
+
+/*
+ * Ask the reftable library to not generated defines for `free()` et al.
+ * Otherwise this would conflict with some of our code.
+ */
+#define REFTABLE_ALLOW_BANNED_ALLOCATORS
 
 /*
  * An implementation-specific temporary file. By making this specific to the

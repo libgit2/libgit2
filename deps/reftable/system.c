@@ -1,36 +1,53 @@
-#include "../git-compat-util.h"
-
 #include "system.h"
 #include "basics.h"
+#include "rand.h"
 #include "reftable-error.h"
-#include "../lockfile.h"
-#include "../tempfile.h"
 
 uint32_t reftable_rand(void)
 {
-	return git_rand(CSPRNG_BYTES_INSECURE);
+	return rand();
 }
 
 int tmpfile_from_pattern(struct reftable_tmpfile *out, const char *pattern)
 {
-	struct tempfile *tempfile;
+	git_str path = GIT_STR_INIT;
+	unsigned tries = 32;
 
-	tempfile = mks_tempfile(pattern);
-	if (!tempfile)
-		return REFTABLE_IO_ERROR;
+	if (git__suffixcmp(pattern, ".XXXXXX"))
+		return REFTABLE_API_ERROR;
 
-	out->path = tempfile->filename.buf;
-	out->fd = tempfile->fd;
-	out->priv = tempfile;
+	while (tries--) {
+		uint64_t rand = git_rand_next();
+		int fd;
 
-	return 0;
+		git_str_sets(&path, pattern);
+		git_str_shorten(&path, 6);
+		git_str_encode_hexstr(&path, (void *)&rand, 6);
+
+		if (git_str_oom(&path))
+			return REFTABLE_OUT_OF_MEMORY_ERROR;
+
+		if ((fd = p_open(path.ptr, O_CREAT | O_RDWR | O_EXCL | O_CLOEXEC, 0666)) < 0)
+			continue;
+
+		out->path = git_str_detach(&path);
+		out->fd = fd;
+		return 0;
+	}
+
+	git_str_dispose(&path);
+	return REFTABLE_IO_ERROR;
 }
 
 int tmpfile_close(struct reftable_tmpfile *t)
 {
-	struct tempfile *tempfile = t->priv;
-	int ret = close_tempfile_gently(tempfile);
+	int ret;
+
+	if (t->fd < 0)
+		return 0;
+	ret = close(t->fd);
 	t->fd = -1;
+
 	if (ret < 0)
 		return REFTABLE_IO_ERROR;
 	return 0;
@@ -38,96 +55,171 @@ int tmpfile_close(struct reftable_tmpfile *t)
 
 int tmpfile_delete(struct reftable_tmpfile *t)
 {
-	struct tempfile *tempfile = t->priv;
-	int ret = delete_tempfile(&tempfile);
-	*t = REFTABLE_TMPFILE_INIT;
-	if (ret < 0)
+	int ret;
+
+	if (!t->path)
+		return 0;
+
+	tmpfile_close(t);
+	if ((ret = unlink(t->path)) < 0)
 		return REFTABLE_IO_ERROR;
+
+	reftable_free((char *) t->path);
+	t->path = NULL;
+
 	return 0;
 }
 
 int tmpfile_rename(struct reftable_tmpfile *t, const char *path)
 {
-	struct tempfile *tempfile = t->priv;
-	int ret = rename_tempfile(&tempfile, path);
-	*t = REFTABLE_TMPFILE_INIT;
-	if (ret < 0)
+	int ret;
+
+	if (!t->path)
+		return REFTABLE_API_ERROR;
+
+	tmpfile_close(t);
+
+	if ((ret = p_rename(t->path, path)) < 0)
 		return REFTABLE_IO_ERROR;
+
+	reftable_free((char *) t->path);
+	t->path = NULL;
+
 	return 0;
 }
+
+struct libgit2_flock {
+	char *lock_path;
+	char *target_path;
+};
 
 int flock_acquire(struct reftable_flock *l, const char *target_path,
 		  long timeout_ms)
 {
-	struct lock_file *lockfile;
-	int err;
+	struct libgit2_flock *flock;
+	unsigned multiplier = 1, n = 1;
+	size_t lock_path_len;
+	uint64_t deadline;
+	int fd = -1, error;
 
-	lockfile = reftable_malloc(sizeof(*lockfile));
-	if (!lockfile)
-		return REFTABLE_OUT_OF_MEMORY_ERROR;
-
-	err = hold_lock_file_for_update_timeout(lockfile, target_path, LOCK_NO_DEREF,
-						timeout_ms);
-	if (err < 0) {
-		reftable_free(lockfile);
-		if (errno == EEXIST)
-			return REFTABLE_LOCK_ERROR;
-		return -1;
+	lock_path_len = strlen(target_path) + strlen(".lock") + 1;
+	if ((flock = reftable_calloc(sizeof(*flock), 1)) == NULL ||
+	    (flock->target_path = reftable_strdup(target_path)) == NULL ||
+	    (flock->lock_path = reftable_malloc(lock_path_len)) == NULL) {
+		error = REFTABLE_OUT_OF_MEMORY_ERROR;
+		goto out;
 	}
 
-	l->fd = get_lock_file_fd(lockfile);
-	l->path = get_lock_file_path(lockfile);
-	l->priv = lockfile;
+	snprintf(flock->lock_path, lock_path_len, "%s.lock", target_path);
 
-	return 0;
+	deadline = reftable_time_ms() + timeout_ms;
+
+	while (1) {
+		uint64_t now, wait_ms;
+
+		if ((fd = p_open(flock->lock_path, O_WRONLY | O_EXCL | O_CREAT, 0666)) >= 0)
+			break;
+		if (errno != EEXIST) {
+			error = REFTABLE_IO_ERROR;
+			goto out;
+		}
+
+		now = reftable_time_ms();
+		if (now > deadline) {
+			error = REFTABLE_LOCK_ERROR;
+			goto out;
+		}
+
+		wait_ms = (750 + rand() % 500) * multiplier / 1000;
+		multiplier += 2 * n + 1;
+
+		if (multiplier > 1000)
+			multiplier = 1000;
+		else
+			n++;
+
+		reftable_sleep_ms(wait_ms);
+	}
+
+	l->priv = flock;
+	l->path = flock->lock_path;
+	l->fd = fd;
+
+	error = 0;
+
+out:
+	if (error) {
+		if (flock) {
+			reftable_free(flock->target_path);
+			reftable_free(flock->lock_path);
+		}
+		reftable_free(flock);
+	}
+
+	return error;
 }
 
 int flock_close(struct reftable_flock *l)
 {
-	struct lock_file *lockfile = l->priv;
 	int ret;
 
-	if (!lockfile)
-		return REFTABLE_API_ERROR;
+	if (l->fd < 0)
+		return 0;
 
-	ret = close_lock_file_gently(lockfile);
+	ret = p_close(l->fd);
 	l->fd = -1;
+
 	if (ret < 0)
 		return REFTABLE_IO_ERROR;
-
 	return 0;
+}
+
+static void libgit2_flock_release(struct reftable_flock *l)
+{
+	struct libgit2_flock *flock = l->priv;
+	reftable_free(flock->lock_path);
+	reftable_free(flock->target_path);
+	reftable_free(flock);
+	l->priv = NULL;
+	l->path = NULL;
 }
 
 int flock_release(struct reftable_flock *l)
 {
-	struct lock_file *lockfile = l->priv;
+	struct libgit2_flock *flock = l->priv;
 	int ret;
 
-	if (!lockfile)
+	if (!flock)
 		return 0;
 
-	ret = rollback_lock_file(lockfile);
-	reftable_free(lockfile);
-	*l = REFTABLE_FLOCK_INIT;
+	flock_close(l);
+
+	if ((ret = p_unlink(flock->lock_path)) < 0)
+		goto out;
+
+out:
+	libgit2_flock_release(l);
 	if (ret < 0)
 		return REFTABLE_IO_ERROR;
-
 	return 0;
 }
 
 int flock_commit(struct reftable_flock *l)
 {
-	struct lock_file *lockfile = l->priv;
+	struct libgit2_flock *flock = l->priv;
 	int ret;
 
-	if (!lockfile)
+	flock_close(l);
+
+	if (!flock)
 		return REFTABLE_API_ERROR;
 
-	ret = commit_lock_file(lockfile);
-	reftable_free(lockfile);
-	*l = REFTABLE_FLOCK_INIT;
+	if ((ret = p_rename(flock->lock_path, flock->target_path)) < 0)
+		goto out;
+
+out:
+	libgit2_flock_release(l);
 	if (ret < 0)
 		return REFTABLE_IO_ERROR;
-
 	return 0;
 }
