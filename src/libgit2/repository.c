@@ -10,6 +10,7 @@
 #include <ctype.h>
 
 #include "git2/object.h"
+#include "git2/sys/refdb_backend.h"
 #include "git2/sys/repository.h"
 
 #include "buf.h"
@@ -2160,32 +2161,6 @@ void git_repository__free_extensions(void)
 	git_vector_dispose_deep(&user_extensions);
 }
 
-int git_repository_create_head(const char *git_dir, const char *ref_name)
-{
-	git_str ref_path = GIT_STR_INIT;
-	git_filebuf ref = GIT_FILEBUF_INIT;
-	const char *fmt;
-	int error;
-
-	if ((error = git_str_joinpath(&ref_path, git_dir, GIT_HEAD_FILE)) < 0 ||
-	    (error = git_filebuf_open(&ref, ref_path.ptr, 0, GIT_REFS_FILE_MODE)) < 0)
-		goto out;
-
-	if (git__prefixcmp(ref_name, GIT_REFS_DIR) == 0)
-		fmt = "ref: %s\n";
-	else
-		fmt = "ref: " GIT_REFS_HEADS_DIR "%s\n";
-
-	if ((error = git_filebuf_printf(&ref, fmt, ref_name)) < 0 ||
-	    (error = git_filebuf_commit(&ref)) < 0)
-		goto out;
-
-out:
-	git_str_dispose(&ref_path);
-	git_filebuf_cleanup(&ref);
-	return error;
-}
-
 static bool is_chmod_supported(const char *file_path)
 {
 	struct stat st1, st2;
@@ -2860,27 +2835,19 @@ static int repo_init_directories(
 	return error;
 }
 
-static int repo_init_head(const char *repo_dir, const char *given)
+static int get_initial_head(char **out, uint32_t *flags,
+			    git_repository_init_options *opts)
 {
-	git_config *cfg = NULL;
-	git_str head_path = GIT_STR_INIT, cfg_branch = GIT_STR_INIT;
+	git_str cfg_branch = GIT_STR_INIT, prefixed = GIT_STR_INIT;
 	const char *initial_head = NULL;
+	git_config *cfg = NULL;
 	int error;
 
-	if ((error = git_str_joinpath(&head_path, repo_dir, GIT_HEAD_FILE)) < 0)
-		goto out;
-
-	/*
-	 * A template may have set a HEAD; use that unless it's been
-	 * overridden by the caller's given initial head setting.
-	 */
-	if (git_fs_path_exists(head_path.ptr) && !given)
-		goto out;
-
-	if (given) {
-		initial_head = given;
-	} else if ((error = git_config_open_default(&cfg)) >= 0 &&
-	           (error = git_config__get_string_buf(&cfg_branch, cfg, "init.defaultbranch")) >= 0 &&
+	if (opts->initial_head) {
+		initial_head = opts->initial_head;
+		*flags |= GIT_REFDB_BACKEND_INIT_FORCE_HEAD;
+	} else if (git_config_open_default(&cfg) >= 0 &&
+	           git_config__get_string_buf(&cfg_branch, cfg, "init.defaultbranch") >= 0 &&
 	           *cfg_branch.ptr) {
 		initial_head = cfg_branch.ptr;
 	}
@@ -2888,12 +2855,22 @@ static int repo_init_head(const char *repo_dir, const char *given)
 	if (!initial_head)
 		initial_head = GIT_BRANCH_DEFAULT;
 
-	error = git_repository_create_head(repo_dir, initial_head);
+	if (git__prefixcmp(initial_head, GIT_REFS_DIR) != 0) {
+		git_str_printf(&prefixed, GIT_REFS_HEADS_DIR "%s", initial_head);
+		initial_head = prefixed.ptr;
+	}
+
+	if ((*out = git__strdup(initial_head)) == NULL) {
+		error = -1;
+		goto out;
+	}
+
+	error = 0;
 
 out:
-	git_config_free(cfg);
-	git_str_dispose(&head_path);
 	git_str_dispose(&cfg_branch);
+	git_str_dispose(&prefixed);
+	git_config_free(cfg);
 
 	return error;
 }
@@ -2928,11 +2905,14 @@ int git_repository_init_ext(
 	git_repository_init_options *opts)
 {
 	git_str repo_path = GIT_STR_INIT, wd_path = GIT_STR_INIT,
-		common_path = GIT_STR_INIT;
+		common_path = GIT_STR_INIT, path = GIT_STR_INIT;
 	const char *wd;
+	git_refdb *refdb;
 	bool is_valid;
 	git_oid_t oid_type = GIT_OID_DEFAULT;
 	git_refdb_t refdb_type = GIT_REFDB_FILES;
+	char *initial_head = NULL;
+	uint32_t refdb_init_flags = 0;
 	int error;
 
 	GIT_ASSERT_ARG(out);
@@ -2970,16 +2950,73 @@ int git_repository_init_ext(
 					      oid_type, refdb_type)) < 0)
 			goto out;
 
+		/*
+		 * If we are re-initializing an existing repository we only
+		 * want to reset HEAD in case the user explicitly provided a
+		 * new target.
+		 */
+		if (opts->initial_head &&
+		    (error = get_initial_head(&initial_head, &refdb_init_flags, opts)) < 0)
+			goto out;
+
 		/* TODO: reinitialize the templates */
 	} else {
+		git_str content = GIT_STR_INIT_CONST("ref: " GIT_INVALID_HEAD,
+						     strlen("ref: " GIT_INVALID_HEAD));
+		mode_t dmode = pick_dir_mode(opts);
+
 		if ((error = repo_init_structure(repo_path.ptr, wd, opts)) < 0 ||
 		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode,
-					      oid_type, refdb_type)) < 0 ||
-		    (error = repo_init_head(repo_path.ptr, opts->initial_head)) < 0)
+					      oid_type, refdb_type)) < 0)
+			goto out;
+
+		/*
+		 * Both HEAD and "refs/" must exist in a repository regardless
+		 * of its ref format, otherwise it won't be recognized as a Git
+		 * repository. As such, we create these now so that we can open
+		 * the repository and properly initialize its refdb.
+		 */
+		if ((error = git_str_joinpath(&path, repo_path.ptr, GIT_HEAD_FILE)) < 0)
+			goto out;
+
+		/* Only overwrite HEAD if it wasn't created by the template. */
+		if (!git_fs_path_exists(path.ptr)) {
+			if ((error = git_futils_writebuffer(&content, path.ptr, 0,
+							    GIT_REFS_FILE_MODE)) < 0)
+				goto out;
+
+			/*
+			 * Ask the backend to force-overwrite the invalid HEAD
+			 * we have just written.
+			 */
+			refdb_init_flags |= GIT_REFDB_BACKEND_INIT_FORCE_HEAD;
+		}
+
+		if ((error = git_str_joinpath(&path, repo_path.ptr, GIT_REFS_DIR)) < 0 ||
+		    (error = git_futils_mkdir(path.ptr, dmode, 0)) < 0)
+			goto out;
+
+		/*
+		 * Note that we also compute the initial HEAD in case the file
+		 * already exists. This is done because the file HEAD may not
+		 * actually be relevant to the backend. E.g. reftables do not
+		 * care for this file at all, so we would end up with no HEAD
+		 * at all if we didn't ask the backend to write one in that
+		 * case.
+		 *
+		 * That being said, we don't force-overwrite HEAD so that the
+		 * backends can first check whether the templates have already
+		 * created a HEAD.
+		 */
+		if ((error = get_initial_head(&initial_head, &refdb_init_flags, opts)) < 0)
 			goto out;
 	}
 
 	if ((error = git_repository_open(out, repo_path.ptr)) < 0)
+		goto out;
+
+	if ((error = git_repository_refdb__weakptr(&refdb, *out)) < 0 ||
+	    (error = git_refdb_init(refdb, initial_head, opts->mode, refdb_init_flags)) < 0)
 		goto out;
 
 	if (opts->origin_url &&
@@ -2990,6 +3027,8 @@ out:
 	git_str_dispose(&common_path);
 	git_str_dispose(&repo_path);
 	git_str_dispose(&wd_path);
+	git_str_dispose(&path);
+	git__free(initial_head);
 
 	return error;
 }

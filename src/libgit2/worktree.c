@@ -8,12 +8,14 @@
 #include "worktree.h"
 
 #include "buf.h"
+#include "refdb.h"
 #include "repository.h"
 #include "path.h"
 
 #include "git2/branch.h"
 #include "git2/commit.h"
 #include "git2/worktree.h"
+#include "git2/sys/refdb_backend.h"
 
 static bool is_worktree_dir(const char *dir)
 {
@@ -305,12 +307,15 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	const char *name, const char *worktree,
 	const git_worktree_add_options *opts)
 {
+	git_str invalid_head_content = GIT_STR_INIT_CONST("ref: " GIT_INVALID_HEAD,
+							  strlen("ref: " GIT_INVALID_HEAD));
 	git_str gitdir = GIT_STR_INIT, wddir = GIT_STR_INIT, buf = GIT_STR_INIT;
-	git_reference *ref = NULL, *head = NULL;
+	git_reference *ref = NULL, *head = NULL, *wt_head = NULL;
 	git_commit *commit = NULL;
 	git_repository *wt = NULL;
 	git_checkout_options coopts;
 	git_worktree_add_options wtopts = GIT_WORKTREE_ADD_OPTIONS_INIT;
+	git_refdb *refdb;
 	int err;
 
 	GIT_ERROR_CHECK_VERSION(
@@ -402,10 +407,24 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	    || (err = write_wtfile(gitdir.ptr, "gitdir", &buf)) < 0)
 		goto out;
 
-	/* Set worktree's HEAD */
-	if ((err = git_repository_create_head(gitdir.ptr, git_reference_name(ref))) < 0)
+	/*
+	 * Create the ref skeleton that is required to make a directory look
+	 * like a Git repository. These are required regardless of the ref
+	 * format used.
+	 */
+	if ((err = git_str_joinpath(&buf, gitdir.ptr, GIT_HEAD_FILE)) < 0 ||
+	    (err = git_futils_writebuffer(&invalid_head_content, buf.ptr, 0, GIT_REFS_FILE_MODE)) < 0 ||
+	    (err = git_str_joinpath(&buf, gitdir.ptr, GIT_REFS_DIR)) < 0 ||
+	    (err = git_futils_mkdir(buf.ptr, 0755, GIT_MKDIR_EXCL)) < 0)
 		goto out;
+
 	if ((err = git_repository_open(&wt, wddir.ptr)) < 0)
+		goto out;
+
+	/* Initialize the worktree refdb and set up HEAD. */
+	if ((err = git_repository_refdb__weakptr(&refdb, wt)) < 0 ||
+	    (err = git_refdb_init(refdb, git_reference_name(ref), 0777,
+				  GIT_REFDB_BACKEND_INIT_IS_WORKTREE | GIT_REFDB_BACKEND_INIT_FORCE_HEAD)) < 0)
 		goto out;
 
 	/* Checkout worktree's HEAD */
@@ -422,6 +441,7 @@ out:
 	git_str_dispose(&buf);
 	git_reference_free(ref);
 	git_reference_free(head);
+	git_reference_free(wt_head);
 	git_commit_free(commit);
 	git_repository_free(wt);
 
