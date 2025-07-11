@@ -12,6 +12,8 @@
 #include "git2/refdb.h"
 #include "repository.h"
 
+#define GIT_INVALID_HEAD "refs/heads/.invalid"
+
 struct git_refdb {
 	git_refcount rc;
 	git_repository *repo;
@@ -19,6 +21,11 @@ struct git_refdb {
 };
 
 void git_refdb__free(git_refdb *db);
+
+int git_refdb_init(git_refdb *refdb,
+		   const char *head_target,
+		   mode_t mode,
+		   uint32_t flags);
 
 int git_refdb_exists(
 	int *exists,

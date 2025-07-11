@@ -344,6 +344,60 @@ static int packed_loadloose(refdb_fs_backend *backend)
 	return error;
 }
 
+static int refdb_fs_backend__init(struct git_refdb_backend *_backend,
+				  const char *head_target,
+				  mode_t mode,
+				  uint32_t flags)
+{
+	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
+	git_str path = GIT_STR_INIT, content = GIT_STR_INIT;
+	int error;
+
+	/*
+	 * As most references are per repository and not per worktree we don't
+	 * want to set up the typical "refs/" hierarchy in worktrees.
+	 */
+	if ((flags & GIT_REFDB_BACKEND_INIT_IS_WORKTREE) == 0) {
+		mode_t dmode;
+
+		if (mode == GIT_REPOSITORY_INIT_SHARED_UMASK)
+			dmode = 0777;
+		else if (mode == GIT_REPOSITORY_INIT_SHARED_GROUP)
+			dmode = (0775 | S_ISGID);
+		else if (mode == GIT_REPOSITORY_INIT_SHARED_ALL)
+			dmode = (0777 | S_ISGID);
+		else
+			dmode = mode;
+
+		if ((error = git_str_joinpath(&path, backend->gitpath, GIT_REFS_HEADS_DIR)) < 0 ||
+		    (error = git_futils_mkdir(path.ptr, dmode, 0) < 0) ||
+		    (error = git_str_joinpath(&path, backend->gitpath, GIT_REFS_TAGS_DIR)) < 0 ||
+		    (error = git_futils_mkdir(path.ptr, dmode, 0) < 0))
+			goto out;
+	}
+
+	if (head_target) {
+		if ((error = git_str_joinpath(&path, backend->gitpath, GIT_HEAD_FILE)) < 0)
+			goto out;
+
+		if ((flags & GIT_REFDB_BACKEND_INIT_FORCE_HEAD) == 0 &&
+		    git_fs_path_exists(path.ptr))
+			goto out;
+
+		if ((error = git_str_printf(&content, GIT_SYMREF "%s\n", head_target)) < 0 ||
+		    (error = git_futils_writebuffer(&content, path.ptr, 0, mode)) < 0)
+			goto out;
+	}
+
+	error = 0;
+
+out:
+	git_str_dispose(&content);
+	git_str_dispose(&path);
+
+	return error;
+}
+
 static int refdb_fs_backend__exists(
 	int *exists,
 	git_refdb_backend *_backend,
@@ -2545,6 +2599,7 @@ int git_refdb_backend_fs(
 		backend->fsync = 1;
 	backend->iterator_flags |= GIT_ITERATOR_DESCEND_SYMLINKS;
 
+	backend->parent.init = &refdb_fs_backend__init;
 	backend->parent.exists = &refdb_fs_backend__exists;
 	backend->parent.lookup = &refdb_fs_backend__lookup;
 	backend->parent.iterator = &refdb_fs_backend__iterator;

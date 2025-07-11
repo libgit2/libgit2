@@ -122,6 +122,16 @@ void git_refdb_free(git_refdb *db)
 	GIT_REFCOUNT_DEC(db, git_refdb__free);
 }
 
+int git_refdb_init(git_refdb *refdb, const char *head_target, mode_t mode, uint32_t flags)
+{
+	GIT_ASSERT_ARG(refdb);
+	GIT_ASSERT_ARG(refdb->backend);
+
+	if (!refdb->backend->init)
+		return 0;
+	return refdb->backend->init(refdb->backend, head_target, mode, flags);
+}
+
 int git_refdb_exists(int *exists, git_refdb *refdb, const char *ref_name)
 {
 	GIT_ASSERT_ARG(exists);
