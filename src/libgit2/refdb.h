@@ -137,6 +137,8 @@ GIT_INLINE(const char *) git_refdb_type_name(git_refdb_t type)
 	switch (type) {
 	case GIT_REFDB_FILES:
 		return "files";
+	case GIT_REFDB_REFTABLE:
+		return "reftable";
 	default:
 		return "unknown";
 	}
@@ -146,6 +148,8 @@ GIT_INLINE(git_refdb_t) git_refdb_type_fromstr(const char *name)
 {
 	if (strcmp(name, "files") == 0)
 		return GIT_REFDB_FILES;
+	if (strcmp(name, "reftable") == 0)
+		return GIT_REFDB_REFTABLE;
 	return 0;
 }
 

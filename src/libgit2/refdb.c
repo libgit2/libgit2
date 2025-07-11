@@ -56,6 +56,10 @@ int git_refdb_open(git_refdb **out, git_repository *repo)
 		if ((error = git_refdb_backend_fs(&backend, repo)) < 0)
 			goto out;
 		break;
+	case GIT_REFDB_REFTABLE:
+		if ((error = git_refdb_backend_reftable(&backend, repo)) < 0)
+			goto out;
+		break;
 	default:
 		git_error_set(GIT_ERROR_REFERENCE, "unknown reference storage format");
 		error = GIT_EINVALID;
