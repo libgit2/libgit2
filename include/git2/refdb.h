@@ -23,7 +23,8 @@ GIT_BEGIN_DECL
 
 /** The type of the refdb as determined by "extensions.refStorage". */
 typedef enum {
-	GIT_REFDB_FILES = 1 /**< Files backend using loose and packed refs. */
+	GIT_REFDB_FILES = 1, /**< Files backend using loose and packed refs. */
+	GIT_REFDB_REFTABLE = 2 /**< Reftable backend. */
 } git_refdb_t;
 
 /**
