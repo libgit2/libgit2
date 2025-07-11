@@ -2379,7 +2379,8 @@ static int repo_init_config(
 	const char *work_dir,
 	uint32_t flags,
 	uint32_t mode,
-	git_oid_t oid_type)
+	git_oid_t oid_type,
+	git_refdb_t refdb_type)
 {
 	int error = 0;
 	git_str cfg_path = GIT_STR_INIT, worktree_path = GIT_STR_INIT;
@@ -2441,6 +2442,11 @@ static int repo_init_config(
 	if (oid_type != GIT_OID_DEFAULT) {
 		SET_REPO_CONFIG(int32, "core.repositoryformatversion", 1);
 		SET_REPO_CONFIG(string, "extensions.objectformat", git_oid_type_name(oid_type));
+	}
+
+	if (refdb_type != GIT_REFDB_FILES) {
+		SET_REPO_CONFIG(int32, "core.repositoryformatversion", 1);
+		SET_REPO_CONFIG(string, "extensions.refstorage", git_refdb_type_name(refdb_type));
 	}
 
 cleanup:
@@ -2926,6 +2932,7 @@ int git_repository_init_ext(
 	const char *wd;
 	bool is_valid;
 	git_oid_t oid_type = GIT_OID_DEFAULT;
+	git_refdb_t refdb_type = GIT_REFDB_FILES;
 	int error;
 
 	GIT_ASSERT_ARG(out);
@@ -2938,6 +2945,8 @@ int git_repository_init_ext(
 	if (opts->oid_type)
 		oid_type = opts->oid_type;
 #endif
+	if (opts->refdb_type)
+		refdb_type = opts->refdb_type;
 
 	if ((error = repo_init_directories(&repo_path, &wd_path, given_repo, opts)) < 0)
 		goto out;
@@ -2957,13 +2966,15 @@ int git_repository_init_ext(
 
 		opts->flags |= GIT_REPOSITORY_INIT__IS_REINIT;
 
-		if ((error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode, oid_type)) < 0)
+		if ((error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode,
+					      oid_type, refdb_type)) < 0)
 			goto out;
 
 		/* TODO: reinitialize the templates */
 	} else {
 		if ((error = repo_init_structure(repo_path.ptr, wd, opts)) < 0 ||
-		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode, oid_type)) < 0 ||
+		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode,
+					      oid_type, refdb_type)) < 0 ||
 		    (error = repo_init_head(repo_path.ptr, opts->initial_head)) < 0)
 			goto out;
 	}
