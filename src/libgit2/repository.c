@@ -3498,23 +3498,15 @@ cleanup:
 
 int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head)
 {
-	git_filebuf file = GIT_FILEBUF_INIT;
-	git_str file_path = GIT_STR_INIT;
-	char orig_head_str[GIT_OID_MAX_HEXSIZE];
+	git_reference *ref = NULL;
 	int error = 0;
 
-	git_oid_fmt(orig_head_str, orig_head);
+	if ((error = git_reference_create(&ref, repo, GIT_ORIG_HEAD_REF,
+					  orig_head, 1, NULL)) < 0)
+		goto out;
 
-	if ((error = git_str_joinpath(&file_path, repo->gitdir, GIT_ORIG_HEAD_FILE)) == 0 &&
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_MERGE_FILE_MODE)) == 0 &&
-		(error = git_filebuf_printf(&file, "%.*s\n", (int)git_oid_hexsize(repo->oid_type), orig_head_str)) == 0)
-		error = git_filebuf_commit(&file);
-
-	if (error < 0)
-		git_filebuf_cleanup(&file);
-
-	git_str_dispose(&file_path);
-
+out:
+	git_reference_free(ref);
 	return error;
 }
 
