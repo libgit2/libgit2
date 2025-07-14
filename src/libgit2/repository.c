@@ -2930,7 +2930,7 @@ int git_repository_head_detached(git_repository *repo)
 	if (git_repository_odb__weakptr(&odb, repo) < 0)
 		return -1;
 
-	if (git_reference_lookup(&ref, repo, GIT_HEAD_FILE) < 0)
+	if (git_reference_lookup(&ref, repo, GIT_HEAD_REF) < 0)
 		return -1;
 
 	if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
@@ -2969,7 +2969,7 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 
 	GIT_ASSERT_ARG(head_out);
 
-	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if (git_reference_type(head) == GIT_REFERENCE_DIRECT) {
@@ -2998,7 +2998,7 @@ int git_repository_head_for_worktree(git_reference **out, git_repository *repo, 
 
 	if ((error = git_worktree_lookup(&worktree, repo, name)) < 0 ||
 	    (error = git_repository_open_from_worktree(&worktree_repo, worktree)) < 0 ||
-	    (error = git_reference_lookup(&head, worktree_repo, GIT_HEAD_FILE)) < 0)
+	    (error = git_reference_lookup(&head, worktree_repo, GIT_HEAD_REF)) < 0)
 		goto out;
 
 	if (git_reference_type(head) != GIT_REFERENCE_DIRECT) {
@@ -3146,7 +3146,7 @@ int git_repository_is_empty(git_repository *repo)
 	git_str initialbranch = GIT_STR_INIT;
 	int result = 0;
 
-	if ((result = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0 ||
+	if ((result = git_reference_lookup(&head, repo, GIT_HEAD_REF)) < 0 ||
 	    (result = git_repository_initialbranch(&initialbranch, repo)) < 0)
 		goto done;
 
@@ -3551,7 +3551,7 @@ static int detach(git_repository *repo, const git_oid *id, const char *new)
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(id);
 
-	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if ((error = git_object_lookup(&object, repo, id, GIT_OBJECT_ANY)) < 0)
@@ -3569,7 +3569,7 @@ static int detach(git_repository *repo, const git_oid *id, const char *new)
 	if ((error = checkout_message(&log_message, current, new)) < 0)
 		goto cleanup;
 
-	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), true, git_str_cstr(&log_message));
+	error = git_reference_create(&new_head, repo, GIT_HEAD_REF, git_object_id(peeled), true, git_str_cstr(&log_message));
 
 cleanup:
 	git_str_dispose(&log_message);
@@ -3591,7 +3591,7 @@ int git_repository_set_head(
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(refname);
 
-	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if ((error = checkout_message(&log_message, current, refname)) < 0)
@@ -3611,14 +3611,14 @@ int git_repository_set_head(
 
 	if (!error) {
 		if (git_reference_is_branch(ref)) {
-			error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE,
+			error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_REF,
 					git_reference_name(ref), true, git_str_cstr(&log_message));
 		} else {
 			error = detach(repo, git_reference_target(ref),
 				git_reference_is_tag(ref) || git_reference_is_remote(ref) ? refname : NULL);
 		}
 	} else if (git_reference__is_branch(refname)) {
-		error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE, refname,
+		error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_REF, refname,
 				true, git_str_cstr(&log_message));
 	}
 
@@ -3657,7 +3657,7 @@ int git_repository_detach_head(git_repository *repo)
 
 	GIT_ASSERT_ARG(repo);
 
-	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if ((error = git_repository_head(&old_head, repo)) < 0)
@@ -3674,7 +3674,7 @@ int git_repository_detach_head(git_repository *repo)
 	if ((error = checkout_message(&log_message, current, idstr)) < 0)
 		goto cleanup;
 
-	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_reference_target(old_head),
+	error = git_reference_create(&new_head, repo, GIT_HEAD_REF, git_reference_target(old_head),
 			1, git_str_cstr(&log_message));
 
 cleanup:

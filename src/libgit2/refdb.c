@@ -324,7 +324,7 @@ int git_refdb_should_write_reflog(int *out, git_refdb *db, const git_reference *
 		 */
 		*out = git_refdb_has_log(db, ref->name) ||
 			!git__prefixcmp(ref->name, GIT_REFS_HEADS_DIR) ||
-			!git__strcmp(ref->name, GIT_HEAD_FILE) ||
+			!git__strcmp(ref->name, GIT_HEAD_REF) ||
 			!git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR) ||
 			!git__prefixcmp(ref->name, GIT_REFS_NOTES_DIR);
 		break;
@@ -350,7 +350,7 @@ int git_refdb_should_write_head_reflog(int *out, git_refdb *db, const git_refere
 		goto out;
 	}
 
-	if ((error = git_refdb_lookup(&head, db, GIT_HEAD_FILE)) < 0)
+	if ((error = git_refdb_lookup(&head, db, GIT_HEAD_REF)) < 0)
 		goto out;
 
 	if (git_reference_type(head) == GIT_REFERENCE_DIRECT)
