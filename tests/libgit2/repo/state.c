@@ -74,7 +74,7 @@ void test_repo_state__revert_sequence(void)
 
 void test_repo_state__cherry_pick(void)
 {
-	setup_simple_state_file(GIT_CHERRYPICK_HEAD_FILE);
+	setup_simple_state_ref(GIT_CHERRYPICK_HEAD_REF);
 	assert_repo_state(GIT_REPOSITORY_STATE_CHERRYPICK);
 	cl_git_pass(git_repository_state_cleanup(_repo));
 	assert_repo_state(GIT_REPOSITORY_STATE_NONE);
@@ -82,7 +82,7 @@ void test_repo_state__cherry_pick(void)
 
 void test_repo_state__cherrypick_sequence(void)
 {
-	setup_simple_state_file(GIT_CHERRYPICK_HEAD_FILE);
+	setup_simple_state_ref(GIT_CHERRYPICK_HEAD_REF);
 	setup_simple_state_file(GIT_SEQUENCER_TODO_FILE);
 	assert_repo_state(GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE);
 	cl_git_pass(git_repository_state_cleanup(_repo));

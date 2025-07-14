@@ -3718,7 +3718,7 @@ int git_repository_state(git_repository *repo)
 		if (git_fs_path_contains_file(&repo_path, GIT_SEQUENCER_TODO_FILE)) {
 			state = GIT_REPOSITORY_STATE_REVERT_SEQUENCE;
 		}
-	} else if (git_fs_path_contains_file(&repo_path, GIT_CHERRYPICK_HEAD_FILE)) {
+	} else if (git_reference_lookup(&ref, repo, GIT_CHERRYPICK_HEAD_REF) == 0) {
 		state = GIT_REPOSITORY_STATE_CHERRYPICK;
 		if (git_fs_path_contains_file(&repo_path, GIT_SEQUENCER_TODO_FILE)) {
 			state = GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE;
@@ -3764,7 +3764,6 @@ static const char *state_files[] = {
 	GIT_MERGE_HEAD_FILE,
 	GIT_MERGE_MODE_FILE,
 	GIT_MERGE_MSG_FILE,
-	GIT_CHERRYPICK_HEAD_FILE,
 	GIT_BISECT_LOG_FILE,
 	GIT_REBASE_MERGE_DIR,
 	GIT_REBASE_APPLY_DIR,
@@ -3773,6 +3772,7 @@ static const char *state_files[] = {
 
 static const char *state_refs[] = {
 	GIT_REVERT_HEAD_REF,
+	GIT_CHERRYPICK_HEAD_REF,
 };
 
 int git_repository_state_cleanup(git_repository *repo)
