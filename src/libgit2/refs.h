@@ -32,8 +32,15 @@ extern bool git_reference__enable_symbolic_ref_target_validation;
 #define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled fully-peeled sorted "
 #define GIT_PACKEDREFS_FILE_MODE 0666
 
+/*
+ * Root references. These references aren't really any special, except that
+ * they're used by Git to store some special state. Other than that those
+ * references go through the reference database as usual for any other
+ * reference, as well.
+ */
+#define GIT_ORIG_HEAD_REF "ORIG_HEAD"
+
 #define GIT_HEAD_FILE "HEAD"
-#define GIT_ORIG_HEAD_FILE "ORIG_HEAD"
 #define GIT_FETCH_HEAD_FILE "FETCH_HEAD"
 #define GIT_MERGE_HEAD_FILE "MERGE_HEAD"
 #define GIT_REVERT_HEAD_FILE "REVERT_HEAD"
