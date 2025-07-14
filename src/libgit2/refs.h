@@ -41,6 +41,7 @@ extern bool git_reference__enable_symbolic_ref_target_validation;
 #define GIT_ORIG_HEAD_REF "ORIG_HEAD"
 #define GIT_REVERT_HEAD_REF "REVERT_HEAD"
 #define GIT_CHERRYPICK_HEAD_REF "CHERRY_PICK_HEAD"
+#define GIT_STASH_REF GIT_REFS_DIR "stash"
 
 #define GIT_HEAD_FILE "HEAD"
 #define GIT_FETCH_HEAD_FILE "FETCH_HEAD"
@@ -56,9 +57,6 @@ extern bool git_reference__enable_symbolic_ref_target_validation;
 #define GIT_SEQUENCER_HEAD_FILE GIT_SEQUENCER_DIR "head"
 #define GIT_SEQUENCER_OPTIONS_FILE GIT_SEQUENCER_DIR "options"
 #define GIT_SEQUENCER_TODO_FILE GIT_SEQUENCER_DIR "todo"
-
-#define GIT_STASH_FILE "stash"
-#define GIT_REFS_STASH_FILE GIT_REFS_DIR GIT_STASH_FILE
 
 #define GIT_REFERENCE_FORMAT__PRECOMPOSE_UNICODE	(1u << 16)
 #define GIT_REFERENCE_FORMAT__VALIDATION_DISABLE	(1u << 15)
