@@ -3806,6 +3806,7 @@ int git_repository_state(git_repository *repo)
 {
 	git_str repo_path = GIT_STR_INIT;
 	int state = GIT_REPOSITORY_STATE_NONE;
+	git_reference *ref = NULL;
 
 	GIT_ASSERT_ARG(repo);
 
@@ -3824,7 +3825,7 @@ int git_repository_state(git_repository *repo)
 		state = GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE;
 	else if (git_fs_path_contains_file(&repo_path, GIT_MERGE_HEAD_FILE))
 		state = GIT_REPOSITORY_STATE_MERGE;
-	else if (git_fs_path_contains_file(&repo_path, GIT_REVERT_HEAD_FILE)) {
+	else if (git_reference_lookup(&ref, repo, GIT_REVERT_HEAD_REF) == 0) {
 		state = GIT_REPOSITORY_STATE_REVERT;
 		if (git_fs_path_contains_file(&repo_path, GIT_SEQUENCER_TODO_FILE)) {
 			state = GIT_REPOSITORY_STATE_REVERT_SEQUENCE;
@@ -3838,6 +3839,7 @@ int git_repository_state(git_repository *repo)
 		state = GIT_REPOSITORY_STATE_BISECT;
 
 	git_str_dispose(&repo_path);
+	git_reference_free(ref);
 	return state;
 }
 
@@ -3874,7 +3876,6 @@ static const char *state_files[] = {
 	GIT_MERGE_HEAD_FILE,
 	GIT_MERGE_MODE_FILE,
 	GIT_MERGE_MSG_FILE,
-	GIT_REVERT_HEAD_FILE,
 	GIT_CHERRYPICK_HEAD_FILE,
 	GIT_BISECT_LOG_FILE,
 	GIT_REBASE_MERGE_DIR,
@@ -3882,11 +3883,30 @@ static const char *state_files[] = {
 	GIT_SEQUENCER_DIR,
 };
 
+static const char *state_refs[] = {
+	GIT_REVERT_HEAD_REF,
+};
+
 int git_repository_state_cleanup(git_repository *repo)
 {
+	int error;
+	size_t i;
+
 	GIT_ASSERT_ARG(repo);
 
-	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
+	if ((error = git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files))) < 0)
+		goto out;
+
+	for (i = 0; i < ARRAY_SIZE(state_refs); i++) {
+		if ((error = git_reference_remove(repo, state_refs[i])) < 0) {
+			if (error != GIT_ENOTFOUND)
+				goto out;
+			error = 0;
+		}
+	}
+
+out:
+	return error;
 }
 
 int git_repository__shallow_roots(
