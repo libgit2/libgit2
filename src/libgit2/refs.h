@@ -128,6 +128,12 @@ int git_reference_lookup_resolved(
 
 int git_reference__log_signature(git_signature **out, git_repository *repo);
 
+int git_reference__lookup_loose(
+	git_reference **out,
+	const char *ref_dir,
+	const char *ref_name,
+	git_oid_t oid_type);
+
 /** Update a reference after a commit. */
 int git_reference__update_for_commit(
 	git_repository *repo,
