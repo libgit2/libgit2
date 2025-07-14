@@ -33,7 +33,7 @@ void test_refs_branches_delete__can_not_delete_a_branch_pointed_at_by_HEAD(void)
 	git_reference *branch;
 
 	/* Ensure HEAD targets the local master branch */
-	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_REF));
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 	git_reference_free(head);
 
@@ -47,7 +47,7 @@ void test_refs_branches_delete__can_delete_a_branch_even_if_HEAD_is_missing(void
 	git_reference *head;
 	git_reference *branch;
 
-	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_REF));
 	git_reference_delete(head);
 	git_reference_free(head);
 
@@ -71,7 +71,7 @@ void test_refs_branches_delete__can_delete_a_branch_pointed_at_by_detached_HEAD(
 {
 	git_reference *head, *branch;
 
-	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_REF));
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 	git_reference_free(head);

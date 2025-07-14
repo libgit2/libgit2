@@ -95,7 +95,7 @@ GIT_INLINE(int) reflog_path(
 	const char *base;
 	int error;
 
-	base = (strcmp(refname, GIT_HEAD_FILE) == 0) ? repo->gitdir :
+	base = (strcmp(refname, GIT_HEAD_REF) == 0) ? repo->gitdir :
 		repo->commondir;
 
 	if ((error = git_str_joinpath(out, base, GIT_REFLOG_DIR)) < 0)
@@ -1635,7 +1635,7 @@ static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref
 	if (git_reference_name_to_id(&old_id, backend->repo, ref->name) < 0)
 		memset(&old_id, 0, sizeof(old_id));
 
-	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0 ||
+	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_REF)) < 0 ||
 	    (error = reflog_append(backend, head, &old_id, git_reference_target(ref), who, message)) < 0)
 		goto out;
 
@@ -2352,7 +2352,7 @@ static int reflog_append(
 
 	/* "normal" symbolic updates do not write */
 	if (is_symbolic &&
-	    strcmp(ref->name, GIT_HEAD_FILE) &&
+	    strcmp(ref->name, GIT_HEAD_REF) &&
 	    !(old && new))
 		return 0;
 

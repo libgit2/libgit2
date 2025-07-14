@@ -38,6 +38,7 @@ extern bool git_reference__enable_symbolic_ref_target_validation;
  * references go through the reference database as usual for any other
  * reference, as well.
  */
+#define GIT_HEAD_REF "HEAD"
 #define GIT_ORIG_HEAD_REF "ORIG_HEAD"
 #define GIT_REVERT_HEAD_REF "REVERT_HEAD"
 #define GIT_CHERRYPICK_HEAD_REF "CHERRY_PICK_HEAD"

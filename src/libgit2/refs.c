@@ -264,14 +264,14 @@ int git_reference_dwim(git_reference **out, git_repository *repo, const char *re
 		GIT_REFS_TAGS_DIR "%s",
 		GIT_REFS_HEADS_DIR "%s",
 		GIT_REFS_REMOTES_DIR "%s",
-		GIT_REFS_REMOTES_DIR "%s/" GIT_HEAD_FILE,
+		GIT_REFS_REMOTES_DIR "%s/" GIT_HEAD_REF,
 		NULL
 	};
 
 	if (*refname)
 		git_str_puts(&name, refname);
 	else {
-		git_str_puts(&name, GIT_HEAD_FILE);
+		git_str_puts(&name, GIT_HEAD_REF);
 		fallbackmode = false;
 	}
 
@@ -599,7 +599,7 @@ static int refs_update_head(git_repository *worktree, void *_payload)
 	git_reference *head = NULL, *updated = NULL;
 	int error;
 
-	if ((error = git_reference_lookup(&head, worktree, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&head, worktree, GIT_HEAD_REF)) < 0)
 		goto out;
 
 	if (git_reference_type(head) != GIT_REFERENCE_SYMBOLIC ||
@@ -1403,7 +1403,7 @@ int git_reference__is_unborn_head(bool *unborn, const git_reference *ref, git_re
 
 	if (error != 0 && error != GIT_ENOTFOUND)
 		return error;
-	else if (error == GIT_ENOTFOUND && git__strcmp(ref->name, GIT_HEAD_FILE) == 0)
+	else if (error == GIT_ENOTFOUND && git__strcmp(ref->name, GIT_HEAD_REF) == 0)
 		*unborn = true;
 	else
 		*unborn = false;

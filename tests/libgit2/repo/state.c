@@ -27,7 +27,7 @@ static void setup_simple_state_file(const char *filename)
 static void setup_simple_state_ref(const char *refname)
 {
 	git_oid oid;
-	cl_git_pass(git_reference_name_to_id(&oid, _repo, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_name_to_id(&oid, _repo, GIT_HEAD_REF));
 	cl_git_pass(git_reference_create(NULL, _repo, refname, &oid, 1, NULL));
 }
 
