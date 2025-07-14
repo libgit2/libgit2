@@ -231,6 +231,14 @@ int git_reference_lookup_resolved(
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(name);
 
+	/*
+	 * Pseudorefs are not stored in the reference backend, as they may
+	 * contain additional data that doesn't even follow the normal ref
+	 * format. So we look these up as "loose" refs directly.
+	 */
+	if (git_reference__is_pseudoref(name))
+		return git_reference__lookup_loose(ref_out, repo->gitdir, name, repo->oid_type);
+
 	if ((error = reference_normalize_for_repo(normalized, repo, name, true)) < 0 ||
 	    (error = git_repository_refdb__weakptr(&refdb, repo)) < 0 ||
 	    (error = git_refdb_resolve(ref_out, refdb, normalized, max_nesting)) < 0)
@@ -1276,6 +1284,21 @@ int git_reference_is_note(const git_reference *ref)
 {
 	GIT_ASSERT_ARG(ref);
 	return git_reference__is_note(ref->name);
+}
+
+int git_reference__is_pseudoref(const char *ref_name)
+{
+	const char * const pseudorefs[] = {
+		"MERGE_HEAD",
+		"FETCH_HEAD",
+	};
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(pseudorefs); i++)
+		if (git__strcmp(ref_name, pseudorefs[i]) == 0)
+			return 1;
+
+	return 0;
 }
 
 static int peel_error(int error, const git_reference *ref, const char *msg)
