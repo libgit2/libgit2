@@ -95,6 +95,7 @@ int git_reference__is_branch(const char *ref_name);
 int git_reference__is_remote(const char *ref_name);
 int git_reference__is_tag(const char *ref_name);
 int git_reference__is_note(const char *ref_name);
+int git_reference__is_pseudoref(const char *ref_name);
 const char *git_reference__shorthand(const char *name);
 
 /*
