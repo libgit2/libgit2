@@ -448,44 +448,55 @@ static bool is_per_worktree_ref(const char *ref_name)
 	       git__prefixcmp(ref_name, "refs/rewritten/") == 0;
 }
 
-static int loose_lookup(
+int git_reference__lookup_loose(
 	git_reference **out,
-	refdb_fs_backend *backend,
-	const char *ref_name)
+	const char *ref_dir,
+	const char *ref_name,
+	git_oid_t oid_type)
 {
-	git_str ref_file = GIT_STR_INIT;
+	git_str buf = GIT_STR_INIT;
 	int error = 0;
-	const char *ref_dir;
 
 	if (out)
 		*out = NULL;
 
-	if (is_per_worktree_ref(ref_name))
-		ref_dir = backend->gitpath;
-	else
-		ref_dir = backend->commonpath;
-
-	if ((error = loose_readbuffer(&ref_file, ref_dir, ref_name)) < 0)
+	if ((error = git_str_joinpath(&buf, ref_dir, ref_name)) < 0 ||
+	    (error = git_futils_readbuffer(&buf, buf.ptr)) < 0)
 		/* cannot read loose ref file - gah */;
-	else if (git__prefixcmp(git_str_cstr(&ref_file), GIT_SYMREF) == 0) {
+	else if (git__prefixcmp(git_str_cstr(&buf), GIT_SYMREF) == 0) {
 		const char *target;
 
-		git_str_rtrim(&ref_file);
+		git_str_rtrim(&buf);
 
-		if (!(target = loose_parse_symbolic(&ref_file)))
+		if (!(target = loose_parse_symbolic(&buf)))
 			error = -1;
 		else if (out != NULL)
 			*out = git_reference__alloc_symbolic(ref_name, target);
 	} else {
 		git_oid oid;
 
-		if (!(error = loose_parse_oid(&oid, ref_name, &ref_file, backend->oid_type)) &&
+		if (!(error = loose_parse_oid(&oid, ref_name, &buf, oid_type)) &&
 			out != NULL)
 			*out = git_reference__alloc(ref_name, &oid, NULL);
 	}
 
-	git_str_dispose(&ref_file);
+	git_str_dispose(&buf);
 	return error;
+}
+
+static int loose_lookup(
+	git_reference **out,
+	refdb_fs_backend *backend,
+	const char *ref_name)
+{
+	const char *ref_dir;
+
+	if (is_per_worktree_ref(ref_name))
+		ref_dir = backend->gitpath;
+	else
+		ref_dir = backend->commonpath;
+
+	return git_reference__lookup_loose(out, ref_dir, ref_name, backend->oid_type);
 }
 
 static int ref_error_notfound(const char *name)
