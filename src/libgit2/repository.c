@@ -983,20 +983,28 @@ done:
 	return error;
 }
 
-static int obtain_config_and_set_oid_type(
-	git_config **config_ptr,
-	git_repository *repo)
+static int read_repository_format(git_repository *repo)
 {
 	int error;
+	git_str config_path = GIT_STR_INIT;
 	git_config *config = NULL;
 	int version = 0;
+
+	if ((error = git_repository__item_path(&config_path, repo,
+					       GIT_REPOSITORY_ITEM_CONFIG)) < 0)
+		goto out;
 
 	/*
 	 * We'd like to have the config, but git doesn't particularly
 	 * care if it's not there, so we need to deal with that.
+	 *
+	 * Further note that we only read the repository's own configuration.
+	 * No other configuration should play a role here. Most importantly, we
+	 * ignore conditional includes as those may cause a cyclic dependency
+	 * between reading the format and evaluating the conditionals. This is
+	 * for example the case with "onbranch" conditions.
 	 */
-
-	error = git_repository_config_snapshot(&config, repo);
+	error = git_config_open_ondisk(&config, config_path.ptr);
 	if (error < 0 && error != GIT_ENOTFOUND)
 		goto out;
 
@@ -1015,7 +1023,8 @@ static int obtain_config_and_set_oid_type(
 	}
 
 out:
-	*config_ptr = config;
+	git_str_dispose(&config_path);
+	git_config_free(config);
 
 	return error;
 }
@@ -1028,7 +1037,6 @@ int git_repository_open_bare(
 	git_repository *repo = NULL;
 	bool is_valid;
 	int error;
-	git_config *config;
 
 	if ((error = git_fs_path_prettify_dir(&path, bare_path, NULL)) < 0 ||
 	    (error = is_valid_repository_path(&is_valid, &path, &common_path, 0)) < 0)
@@ -1054,14 +1062,12 @@ int git_repository_open_bare(
 	repo->is_worktree = 0;
 	repo->workdir = NULL;
 
-	if ((error = obtain_config_and_set_oid_type(&config, repo)) < 0)
+	if ((error = read_repository_format(repo)) < 0)
 		goto cleanup;
 
 	*repo_ptr = repo;
 
 cleanup:
-	git_config_free(config);
-
 	return error;
 }
 
@@ -1148,7 +1154,7 @@ int git_repository_open_ext(
 
 	repo->is_worktree = is_worktree;
 
-	error = obtain_config_and_set_oid_type(&config, repo);
+	error = read_repository_format(repo);
 	if (error < 0)
 		goto cleanup;
 
@@ -1158,6 +1164,10 @@ int git_repository_open_ext(
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0) {
 		repo->is_bare = 1;
 	} else {
+		error = git_repository_config_snapshot(&config, repo);
+		if (error < 0 && error != GIT_ENOTFOUND)
+			goto cleanup;
+
 		if (config &&
 		    ((error = load_config_data(repo, config)) < 0 ||
 		     (error = load_workdir(repo, config, &paths.workdir)) < 0))
