@@ -15,13 +15,12 @@ void test_refs_shorthand__0(void)
 {
 	git_repository *repo;
 
-	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
-
+	repo = cl_git_sandbox_init("testrepo.git");
 
 	assert_shorthand(repo, "refs/heads/master", "master");
 	assert_shorthand(repo, "refs/tags/test", "test");
 	assert_shorthand(repo, "refs/remotes/test/master", "test/master");
 	assert_shorthand(repo, "refs/notes/fanout", "notes/fanout");
 
-	git_repository_free(repo);
+	cl_git_sandbox_cleanup();
 }
