@@ -1,0 +1,10 @@
+[core]
+	repositoryformatversion = 1
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+[submodule "submodule"]
+	url = ../submodule
+[extensions]
+	refstorage = reftable
