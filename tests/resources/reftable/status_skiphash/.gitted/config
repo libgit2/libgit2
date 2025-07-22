@@ -1,0 +1,11 @@
+[core]
+	repositoryformatversion = 1
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+[index]
+	skipHash = true
+[extensions]
+	refstorage = reftable
