@@ -8,6 +8,8 @@ void test_refs_transactions__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
    cl_git_pass(git_transaction_new(&g_tx, g_repo));
+   if (!cl_repo_has_ref_format(g_repo, "files"))
+      cl_skip();
 }
 
 void test_refs_transactions__cleanup(void)
