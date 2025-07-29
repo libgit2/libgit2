@@ -23,13 +23,15 @@ void test_config_conditionals__cleanup(void)
 static void assert_condition_includes(const char *keyword, const char *path, bool expected)
 {
 	git_buf value = GIT_BUF_INIT;
+	git_str key = GIT_STR_INIT;
 	git_str buf = GIT_STR_INIT;
 	git_config *cfg;
 
-	cl_git_pass(git_str_printf(&buf, "[includeIf \"%s:%s\"]\n", keyword, path));
-	cl_git_pass(git_str_puts(&buf, "path = other\n"));
+	cl_git_pass(git_repository_config(&cfg, _repo));
+	cl_git_pass(git_str_printf(&key, "includeIf.%s:%s.path", keyword, path));
+	cl_git_pass(git_config_set_string(cfg, key.ptr, "other"));
+	git_config_free(cfg);
 
-	cl_git_mkfile("empty_standard_repo/.git/config", buf.ptr);
 	cl_git_mkfile("empty_standard_repo/.git/other", "[foo]\nbar=baz\n");
 	_repo = cl_git_sandbox_reopen();
 
@@ -45,6 +47,9 @@ static void assert_condition_includes(const char *keyword, const char *path, boo
 				 git_config_get_string_buf(&value, cfg, "foo.bar"));
 	}
 
+	cl_git_pass(git_config_delete_entry(cfg, key.ptr));
+
+	git_str_dispose(&key);
 	git_str_dispose(&buf);
 	git_buf_dispose(&value);
 	git_config_free(cfg);
@@ -155,10 +160,10 @@ void test_config_conditionals__empty(void)
 	git_str buf = GIT_STR_INIT;
 	git_config *cfg;
 
-	cl_git_pass(git_str_puts(&buf, "[includeIf]\n"));
-	cl_git_pass(git_str_puts(&buf, "path = other\n"));
+	cl_git_pass(git_repository_config(&cfg, _repo));
+	cl_git_pass(git_config_set_string(cfg, "includeIf.path", "other"));
+	git_config_free(cfg);
 
-	cl_git_mkfile("empty_standard_repo/.git/config", buf.ptr);
 	cl_git_mkfile("empty_standard_repo/.git/other", "[foo]\nbar=baz\n");
 	_repo = cl_git_sandbox_reopen();
 
