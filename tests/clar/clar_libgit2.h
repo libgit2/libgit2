@@ -254,6 +254,8 @@ int cl_repo_get_int(git_repository *repo, const char *cfg);
 
 void cl_repo_set_string(git_repository *repo, const char *cfg, const char *value);
 
+int cl_repo_has_ref_format(git_repository *repo, const char *format);
+
 /*
  * set up a fake "home" directory -- automatically configures cleanup
  * function to restore the home directory, although you can call it
