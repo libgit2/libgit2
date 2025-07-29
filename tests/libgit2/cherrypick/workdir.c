@@ -63,6 +63,7 @@ void test_cherrypick_workdir__automerge(void)
 		git_commit *head = NULL, *commit = NULL;
 		git_oid cherry_oid, cherrypicked_oid, cherrypicked_tree_oid;
 		git_tree *cherrypicked_tree = NULL;
+		git_reference *ref;
 
 		cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
 		cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
@@ -71,7 +72,7 @@ void test_cherrypick_workdir__automerge(void)
 		cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
 		cl_git_pass(git_cherrypick(repo, commit, NULL));
 
-		cl_assert(git_fs_path_exists(TEST_REPO_PATH "/.git/CHERRY_PICK_HEAD"));
+		cl_git_pass(git_reference_lookup(&ref, repo, "CHERRY_PICK_HEAD"));
 		cl_assert(git_fs_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
 
 		cl_git_pass(git_index_write_tree(&cherrypicked_tree_oid, repo_index));
@@ -84,6 +85,7 @@ void test_cherrypick_workdir__automerge(void)
 		git_oid_cpy(&head_oid, &cherrypicked_oid);
 
 		git_tree_free(cherrypicked_tree);
+		git_reference_free(ref);
 		git_commit_free(head);
 		git_commit_free(commit);
 	}
@@ -140,6 +142,7 @@ void test_cherrypick_workdir__conflicts(void)
 	git_commit *head = NULL, *commit = NULL;
 	git_oid head_oid, cherry_oid;
 	git_str conflicting_buf = GIT_STR_INIT, mergemsg_buf = GIT_STR_INIT;
+	git_reference *ref;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "242e7977ba73637822ffb265b46004b9b0e5153b", 0, "file1.txt" },
@@ -160,7 +163,7 @@ void test_cherrypick_workdir__conflicts(void)
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
 	cl_git_pass(git_cherrypick(repo, commit, NULL));
 
-	cl_assert(git_fs_path_exists(TEST_REPO_PATH "/.git/CHERRY_PICK_HEAD"));
+	cl_git_pass(git_reference_lookup(&ref, repo, "CHERRY_PICK_HEAD"));
 	cl_assert(git_fs_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 7));
@@ -225,6 +228,7 @@ void test_cherrypick_workdir__conflicts(void)
 		"File 3!\n" \
 		">>>>>>> e9b63f3... Change all files\n") == 0);
 
+	git_reference_free(ref);
 	git_commit_free(commit);
 	git_commit_free(head);
 	git_str_dispose(&mergemsg_buf);
