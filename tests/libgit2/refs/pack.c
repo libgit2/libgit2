@@ -35,6 +35,9 @@ void test_refs_pack__empty(void)
 	/* create a packfile for an empty folder */
 	git_str temp_path = GIT_STR_INIT;
 
+	if (!cl_repo_has_ref_format(g_repo, "files"))
+		cl_skip();
+
 	cl_git_pass(git_str_join_n(&temp_path, '/', 3, git_repository_path(g_repo), GIT_REFS_HEADS_DIR, "empty_dir"));
 	cl_git_pass(git_futils_mkdir_r(temp_path.ptr, GIT_REFS_DIR_MODE));
 	git_str_dispose(&temp_path);
@@ -47,6 +50,9 @@ void test_refs_pack__loose(void)
 	/* create a packfile from all the loose refs in a repo */
 	git_reference *reference;
 	git_str temp_path = GIT_STR_INIT;
+
+	if (!cl_repo_has_ref_format(g_repo, "files"))
+		cl_skip();
 
 	/* Ensure a known loose ref can be looked up */
 	cl_git_pass(git_reference_lookup(&reference, g_repo, loose_tag_ref_name));

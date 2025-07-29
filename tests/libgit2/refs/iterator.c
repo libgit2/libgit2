@@ -161,6 +161,8 @@ void test_refs_iterator__foreach_through_symlink(void)
 #ifdef GIT_WIN32
 	cl_skip();
 #endif
+	if (!cl_repo_has_ref_format(repo, "files"))
+		cl_skip();
 
 	cl_git_pass(git_vector_init(&output, 32, &refcmp_cb));
 
