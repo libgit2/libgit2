@@ -33,13 +33,15 @@ void test_refs_delete__packed_loose(void)
 
 	/* Ensure the loose reference exists on the file system */
 	cl_git_pass(git_str_joinpath(&temp_path, git_repository_path(g_repo), packed_test_head_name));
-	cl_assert(git_fs_path_exists(temp_path.ptr));
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		cl_assert(git_fs_path_exists(temp_path.ptr));
 
 	/* Lookup the reference */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, packed_test_head_name));
 
 	/* Ensure it's the loose version that has been found */
-	cl_assert(reference_is_packed(looked_up_ref) == 0);
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		cl_assert(reference_is_packed(looked_up_ref) == 0);
 
 	/* Now that the reference is deleted... */
 	cl_git_pass(git_reference_delete(looked_up_ref));
@@ -49,7 +51,8 @@ void test_refs_delete__packed_loose(void)
 	cl_git_fail(git_reference_lookup(&another_looked_up_ref, g_repo, packed_test_head_name));
 
 	/* Ensure the loose reference doesn't exist any longer on the file system */
-	cl_assert(!git_fs_path_exists(temp_path.ptr));
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		cl_assert(!git_fs_path_exists(temp_path.ptr));
 
 	git_reference_free(another_looked_up_ref);
 	git_str_dispose(&temp_path);
@@ -73,7 +76,8 @@ void test_refs_delete__packed_only(void)
 	cl_git_pass(git_reference_lookup(&ref, g_repo, new_ref));
 
 	/* Ensure it's a loose reference */
-	cl_assert(reference_is_packed(ref) == 0);
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		cl_assert(reference_is_packed(ref) == 0);
 
 	/* Pack all existing references */
 	cl_git_pass(git_repository_refdb(&refdb, g_repo));
@@ -84,7 +88,8 @@ void test_refs_delete__packed_only(void)
 	cl_git_pass(git_reference_lookup(&ref, g_repo, new_ref));
 
 	/* Ensure it's a packed reference */
-	cl_assert(reference_is_packed(ref) == 1);
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		cl_assert(reference_is_packed(ref) == 1);
 
 	/* This should pass */
 	cl_git_pass(git_reference_delete(ref));

@@ -170,6 +170,9 @@ void test_revwalk_basic__glob_heads_with_invalid(void)
 
 	revwalk_basic_setup_walk("testrepo");
 
+	if (!cl_repo_has_ref_format(_repo, "files"))
+		cl_skip();
+
 	cl_git_mkfile("testrepo/.git/refs/heads/garbage", "not-a-ref");
 	cl_git_pass(git_revwalk_push_glob(_walk, "heads"));
 
