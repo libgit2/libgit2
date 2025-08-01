@@ -13,6 +13,9 @@ if(MSVC)
 	# /Gd - explicitly set cdecl calling convention
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gd")
 
+	# Remove warnings about operands that use different enum types.
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd5287")
+
 	if(NOT (MSVC_VERSION LESS 1900))
 		# /guard:cf - Enable Control Flow Guard
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /guard:cf")
