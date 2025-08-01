@@ -73,7 +73,8 @@ void reftable_addition_destroy(struct reftable_addition *add);
 int reftable_stack_add(struct reftable_stack *st,
 		       int (*write_table)(struct reftable_writer *wr,
 					  void *write_arg),
-		       void *write_arg);
+		       void *write_arg,
+		       unsigned flags);
 
 struct reftable_iterator;
 

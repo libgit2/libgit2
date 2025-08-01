@@ -20,7 +20,8 @@
 static int stack_try_add(struct reftable_stack *st,
 			 int (*write_table)(struct reftable_writer *wr,
 					    void *arg),
-			 void *arg);
+			 void *arg,
+			 unsigned flags);
 static int stack_write_compact(struct reftable_stack *st,
 			       struct reftable_writer *wr,
 			       size_t first, size_t last,
@@ -669,9 +670,10 @@ int reftable_stack_reload(struct reftable_stack *st)
 
 int reftable_stack_add(struct reftable_stack *st,
 		       int (*write)(struct reftable_writer *wr, void *arg),
-		       void *arg)
+		       void *arg,
+		       unsigned flags)
 {
-	int err = stack_try_add(st, write, arg);
+	int err = stack_try_add(st, write, arg, flags);
 	if (err < 0) {
 		if (err == REFTABLE_OUTDATED_ERROR) {
 			/* Ignore error return, we want to propagate
@@ -877,10 +879,11 @@ int reftable_stack_new_addition(struct reftable_addition **dest,
 static int stack_try_add(struct reftable_stack *st,
 			 int (*write_table)(struct reftable_writer *wr,
 					    void *arg),
-			 void *arg)
+			 void *arg,
+			 unsigned flags)
 {
 	struct reftable_addition add = REFTABLE_ADDITION_INIT;
-	int err = reftable_stack_init_addition(&add, st, 0);
+	int err = reftable_stack_init_addition(&add, st, flags);
 	if (err < 0)
 		goto done;
 
