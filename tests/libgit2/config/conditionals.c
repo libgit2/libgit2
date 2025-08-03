@@ -112,7 +112,9 @@ void test_config_conditionals__invalid_conditional_fails(void)
 
 static void set_head(git_repository *repo, const char *name)
 {
-	cl_git_pass(git_repository_create_head(git_repository_path(repo), name));
+	struct git_reference *ref;
+	cl_git_pass(git_reference_symbolic_create(&ref, repo, GIT_HEAD_FILE, name, 1, NULL));
+	git_reference_free(ref);
 }
 
 void test_config_conditionals__onbranch(void)
@@ -123,12 +125,12 @@ void test_config_conditionals__onbranch(void)
 	assert_condition_includes("onbranch", "master/", false);
 	assert_condition_includes("onbranch", "foo", false);
 
-	set_head(_repo, "foo");
+	set_head(_repo, "refs/heads/foo");
 	assert_condition_includes("onbranch", "master", false);
 	assert_condition_includes("onbranch", "foo", true);
 	assert_condition_includes("onbranch", "f*o", true);
 
-	set_head(_repo, "dir/ref");
+	set_head(_repo, "refs/heads/dir/ref");
 	assert_condition_includes("onbranch", "dir/ref", true);
 	assert_condition_includes("onbranch", "dir/", true);
 	assert_condition_includes("onbranch", "dir/*", true);
@@ -137,7 +139,7 @@ void test_config_conditionals__onbranch(void)
 	assert_condition_includes("onbranch", "dir", false);
 	assert_condition_includes("onbranch", "dir*", false);
 
-	set_head(_repo, "dir/subdir/ref");
+	set_head(_repo, "refs/heads/dir/subdir/ref");
 	assert_condition_includes("onbranch", "dir/subdir/", true);
 	assert_condition_includes("onbranch", "dir/subdir/*", true);
 	assert_condition_includes("onbranch", "dir/subdir/ref", true);

@@ -39,28 +39,36 @@ int git_refdb_new(git_refdb **out, git_repository *repo)
 
 int git_refdb_open(git_refdb **out, git_repository *repo)
 {
+	git_refdb_backend *backend;
 	git_refdb *db;
-	git_refdb_backend *dir;
+	int error;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(repo);
 
 	*out = NULL;
 
-	if (git_refdb_new(&db, repo) < 0)
-		return -1;
+	if ((error = git_refdb_new(&db, repo)) < 0)
+		goto out;
 
-	/* Add the default (filesystem) backend */
-	if (git_refdb_backend_fs(&dir, repo) < 0) {
-		git_refdb_free(db);
-		return -1;
+	switch (repo->refdb_type) {
+	case GIT_REFDB_FILES:
+		if ((error = git_refdb_backend_fs(&backend, repo)) < 0)
+			goto out;
+		break;
+	default:
+		git_error_set(GIT_ERROR_REFERENCE, "unknown reference storage format");
+		error = GIT_EINVALID;
+		goto out;
 	}
 
 	db->repo = repo;
-	db->backend = dir;
-
+	db->backend = backend;
 	*out = db;
-	return 0;
+out:
+	if (error)
+		git_refdb_free(db);
+	return error;
 }
 
 static void refdb_free_backend(git_refdb *db)
@@ -112,6 +120,16 @@ void git_refdb_free(git_refdb *db)
 		return;
 
 	GIT_REFCOUNT_DEC(db, git_refdb__free);
+}
+
+int git_refdb_init(git_refdb *refdb, const char *head_target, mode_t mode, uint32_t flags)
+{
+	GIT_ASSERT_ARG(refdb);
+	GIT_ASSERT_ARG(refdb->backend);
+
+	if (!refdb->backend->init)
+		return 0;
+	return refdb->backend->init(refdb->backend, head_target, mode, flags);
 }
 
 int git_refdb_exists(int *exists, git_refdb *refdb, const char *ref_name)

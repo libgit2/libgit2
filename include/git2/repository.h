@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "odb.h"
+#include "refdb.h"
 #include "buffer.h"
 #include "commit.h"
 
@@ -377,6 +378,12 @@ typedef struct {
 	 */
 	git_oid_t oid_type;
 #endif
+
+	/**
+	 * Type of the reference database to use for this repository, or 0 for
+	 * default (currently "files").
+	 */
+	git_refdb_t refdb_type;
 } git_repository_init_options;
 
 /** Current version for the `git_repository_init_options` structure */
