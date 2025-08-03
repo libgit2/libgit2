@@ -3317,7 +3317,7 @@ int git_merge_analysis(
 	git_reference *head_ref = NULL;
 	int error = 0;
 
-	if ((error = git_reference_lookup(&head_ref, repo, GIT_HEAD_FILE)) < 0) {
+	if ((error = git_reference_lookup(&head_ref, repo, GIT_HEAD_REF)) < 0) {
 		git_error_set(GIT_ERROR_MERGE, "failed to lookup HEAD reference");
 		return error;
 	}

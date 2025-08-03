@@ -2930,7 +2930,7 @@ int git_repository_head_detached(git_repository *repo)
 	if (git_repository_odb__weakptr(&odb, repo) < 0)
 		return -1;
 
-	if (git_reference_lookup(&ref, repo, GIT_HEAD_FILE) < 0)
+	if (git_reference_lookup(&ref, repo, GIT_HEAD_REF) < 0)
 		return -1;
 
 	if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
@@ -2969,7 +2969,7 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 
 	GIT_ASSERT_ARG(head_out);
 
-	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if (git_reference_type(head) == GIT_REFERENCE_DIRECT) {
@@ -2998,7 +2998,7 @@ int git_repository_head_for_worktree(git_reference **out, git_repository *repo, 
 
 	if ((error = git_worktree_lookup(&worktree, repo, name)) < 0 ||
 	    (error = git_repository_open_from_worktree(&worktree_repo, worktree)) < 0 ||
-	    (error = git_reference_lookup(&head, worktree_repo, GIT_HEAD_FILE)) < 0)
+	    (error = git_reference_lookup(&head, worktree_repo, GIT_HEAD_REF)) < 0)
 		goto out;
 
 	if (git_reference_type(head) != GIT_REFERENCE_DIRECT) {
@@ -3146,7 +3146,7 @@ int git_repository_is_empty(git_repository *repo)
 	git_str initialbranch = GIT_STR_INIT;
 	int result = 0;
 
-	if ((result = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0 ||
+	if ((result = git_reference_lookup(&head, repo, GIT_HEAD_REF)) < 0 ||
 	    (result = git_repository_initialbranch(&initialbranch, repo)) < 0)
 		goto done;
 
@@ -3386,23 +3386,15 @@ cleanup:
 
 int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head)
 {
-	git_filebuf file = GIT_FILEBUF_INIT;
-	git_str file_path = GIT_STR_INIT;
-	char orig_head_str[GIT_OID_MAX_HEXSIZE];
+	git_reference *ref = NULL;
 	int error = 0;
 
-	git_oid_fmt(orig_head_str, orig_head);
+	if ((error = git_reference_create(&ref, repo, GIT_ORIG_HEAD_REF,
+					  orig_head, 1, NULL)) < 0)
+		goto out;
 
-	if ((error = git_str_joinpath(&file_path, repo->gitdir, GIT_ORIG_HEAD_FILE)) == 0 &&
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_MERGE_FILE_MODE)) == 0 &&
-		(error = git_filebuf_printf(&file, "%.*s\n", (int)git_oid_hexsize(repo->oid_type), orig_head_str)) == 0)
-		error = git_filebuf_commit(&file);
-
-	if (error < 0)
-		git_filebuf_cleanup(&file);
-
-	git_str_dispose(&file_path);
-
+out:
+	git_reference_free(ref);
 	return error;
 }
 
@@ -3559,7 +3551,7 @@ static int detach(git_repository *repo, const git_oid *id, const char *new)
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(id);
 
-	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if ((error = git_object_lookup(&object, repo, id, GIT_OBJECT_ANY)) < 0)
@@ -3577,7 +3569,7 @@ static int detach(git_repository *repo, const git_oid *id, const char *new)
 	if ((error = checkout_message(&log_message, current, new)) < 0)
 		goto cleanup;
 
-	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), true, git_str_cstr(&log_message));
+	error = git_reference_create(&new_head, repo, GIT_HEAD_REF, git_object_id(peeled), true, git_str_cstr(&log_message));
 
 cleanup:
 	git_str_dispose(&log_message);
@@ -3599,7 +3591,7 @@ int git_repository_set_head(
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(refname);
 
-	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if ((error = checkout_message(&log_message, current, refname)) < 0)
@@ -3619,14 +3611,14 @@ int git_repository_set_head(
 
 	if (!error) {
 		if (git_reference_is_branch(ref)) {
-			error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE,
+			error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_REF,
 					git_reference_name(ref), true, git_str_cstr(&log_message));
 		} else {
 			error = detach(repo, git_reference_target(ref),
 				git_reference_is_tag(ref) || git_reference_is_remote(ref) ? refname : NULL);
 		}
 	} else if (git_reference__is_branch(refname)) {
-		error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE, refname,
+		error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_REF, refname,
 				true, git_str_cstr(&log_message));
 	}
 
@@ -3665,7 +3657,7 @@ int git_repository_detach_head(git_repository *repo)
 
 	GIT_ASSERT_ARG(repo);
 
-	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if ((error = git_repository_head(&old_head, repo)) < 0)
@@ -3682,7 +3674,7 @@ int git_repository_detach_head(git_repository *repo)
 	if ((error = checkout_message(&log_message, current, idstr)) < 0)
 		goto cleanup;
 
-	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_reference_target(old_head),
+	error = git_reference_create(&new_head, repo, GIT_HEAD_REF, git_reference_target(old_head),
 			1, git_str_cstr(&log_message));
 
 cleanup:
@@ -3702,6 +3694,7 @@ int git_repository_state(git_repository *repo)
 {
 	git_str repo_path = GIT_STR_INIT;
 	int state = GIT_REPOSITORY_STATE_NONE;
+	git_reference *ref = NULL;
 
 	GIT_ASSERT_ARG(repo);
 
@@ -3720,12 +3713,12 @@ int git_repository_state(git_repository *repo)
 		state = GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE;
 	else if (git_fs_path_contains_file(&repo_path, GIT_MERGE_HEAD_FILE))
 		state = GIT_REPOSITORY_STATE_MERGE;
-	else if (git_fs_path_contains_file(&repo_path, GIT_REVERT_HEAD_FILE)) {
+	else if (git_reference_lookup(&ref, repo, GIT_REVERT_HEAD_REF) == 0) {
 		state = GIT_REPOSITORY_STATE_REVERT;
 		if (git_fs_path_contains_file(&repo_path, GIT_SEQUENCER_TODO_FILE)) {
 			state = GIT_REPOSITORY_STATE_REVERT_SEQUENCE;
 		}
-	} else if (git_fs_path_contains_file(&repo_path, GIT_CHERRYPICK_HEAD_FILE)) {
+	} else if (git_reference_lookup(&ref, repo, GIT_CHERRYPICK_HEAD_REF) == 0) {
 		state = GIT_REPOSITORY_STATE_CHERRYPICK;
 		if (git_fs_path_contains_file(&repo_path, GIT_SEQUENCER_TODO_FILE)) {
 			state = GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE;
@@ -3734,6 +3727,7 @@ int git_repository_state(git_repository *repo)
 		state = GIT_REPOSITORY_STATE_BISECT;
 
 	git_str_dispose(&repo_path);
+	git_reference_free(ref);
 	return state;
 }
 
@@ -3770,19 +3764,37 @@ static const char *state_files[] = {
 	GIT_MERGE_HEAD_FILE,
 	GIT_MERGE_MODE_FILE,
 	GIT_MERGE_MSG_FILE,
-	GIT_REVERT_HEAD_FILE,
-	GIT_CHERRYPICK_HEAD_FILE,
 	GIT_BISECT_LOG_FILE,
 	GIT_REBASE_MERGE_DIR,
 	GIT_REBASE_APPLY_DIR,
 	GIT_SEQUENCER_DIR,
 };
 
+static const char *state_refs[] = {
+	GIT_REVERT_HEAD_REF,
+	GIT_CHERRYPICK_HEAD_REF,
+};
+
 int git_repository_state_cleanup(git_repository *repo)
 {
+	int error;
+	size_t i;
+
 	GIT_ASSERT_ARG(repo);
 
-	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
+	if ((error = git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files))) < 0)
+		goto out;
+
+	for (i = 0; i < ARRAY_SIZE(state_refs); i++) {
+		if ((error = git_reference_remove(repo, state_refs[i])) < 0) {
+			if (error != GIT_ENOTFOUND)
+				goto out;
+			error = 0;
+		}
+	}
+
+out:
+	return error;
 }
 
 int git_repository__shallow_roots(
