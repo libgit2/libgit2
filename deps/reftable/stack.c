@@ -719,14 +719,9 @@ static int reftable_stack_init_addition(struct reftable_addition *add,
 
 	err = flock_acquire(&add->tables_list_lock, st->list_file,
 			    st->opts.lock_timeout_ms);
-	if (err < 0) {
-		if (errno == EEXIST) {
-			err = REFTABLE_LOCK_ERROR;
-		} else {
-			err = REFTABLE_IO_ERROR;
-		}
+	if (err < 0)
 		goto done;
-	}
+
 	if (st->opts.default_permissions) {
 		if (chmod(add->tables_list_lock.path,
 			  st->opts.default_permissions) < 0) {
@@ -820,10 +815,8 @@ int reftable_addition_commit(struct reftable_addition *add)
 	}
 
 	err = flock_commit(&add->tables_list_lock);
-	if (err < 0) {
-		err = REFTABLE_IO_ERROR;
+	if (err < 0)
 		goto done;
-	}
 
 	/* success, no more state to clean up. */
 	for (i = 0; i < add->new_tables_len; i++)
@@ -1222,13 +1215,8 @@ static int stack_compact_range(struct reftable_stack *st,
 	 * which are part of the user-specified range.
 	 */
 	err = flock_acquire(&tables_list_lock, st->list_file, st->opts.lock_timeout_ms);
-	if (err < 0) {
-		if (errno == EEXIST)
-			err = REFTABLE_LOCK_ERROR;
-		else
-			err = REFTABLE_IO_ERROR;
+	if (err < 0)
 		goto done;
-	}
 
 	err = stack_uptodate(st);
 	if (err < 0)
@@ -1271,7 +1259,7 @@ static int stack_compact_range(struct reftable_stack *st,
 			 * tables, otherwise there would be nothing to compact.
 			 * In that case, we return a lock error to our caller.
 			 */
-			if (errno == EEXIST && last - (i - 1) >= 2 &&
+			if (err == REFTABLE_LOCK_ERROR && last - (i - 1) >= 2 &&
 			    flags & STACK_COMPACT_RANGE_BEST_EFFORT) {
 				err = 0;
 				/*
@@ -1283,13 +1271,9 @@ static int stack_compact_range(struct reftable_stack *st,
 				 */
 				first = (i - 1) + 1;
 				break;
-			} else if (errno == EEXIST) {
-				err = REFTABLE_LOCK_ERROR;
-				goto done;
-			} else {
-				err = REFTABLE_IO_ERROR;
-				goto done;
 			}
+
+			goto done;
 		}
 
 		/*
@@ -1298,10 +1282,8 @@ static int stack_compact_range(struct reftable_stack *st,
 		 * of tables.
 		 */
 		err = flock_close(&table_locks[nlocks++]);
-		if (err < 0) {
-			err = REFTABLE_IO_ERROR;
+		if (err < 0)
 			goto done;
-		}
 	}
 
 	/*
@@ -1310,10 +1292,8 @@ static int stack_compact_range(struct reftable_stack *st,
 	 * concurrent updates to the stack to proceed.
 	 */
 	err = flock_release(&tables_list_lock);
-	if (err < 0) {
-		err = REFTABLE_IO_ERROR;
+	if (err < 0)
 		goto done;
-	}
 
 	/*
 	 * Compact the now-locked tables into a new table. Note that compacting
@@ -1333,13 +1313,8 @@ static int stack_compact_range(struct reftable_stack *st,
 	 * the new table.
 	 */
 	err = flock_acquire(&tables_list_lock, st->list_file, st->opts.lock_timeout_ms);
-	if (err < 0) {
-		if (errno == EEXIST)
-			err = REFTABLE_LOCK_ERROR;
-		else
-			err = REFTABLE_IO_ERROR;
+	if (err < 0)
 		goto done;
-	}
 
 	if (st->opts.default_permissions) {
 		if (chmod(tables_list_lock.path,
@@ -1514,7 +1489,6 @@ static int stack_compact_range(struct reftable_stack *st,
 
 	err = flock_commit(&tables_list_lock);
 	if (err < 0) {
-		err = REFTABLE_IO_ERROR;
 		unlink(new_table_path.buf);
 		goto done;
 	}
