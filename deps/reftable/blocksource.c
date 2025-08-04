@@ -133,7 +133,7 @@ int reftable_block_source_from_file(struct reftable_block_source *bs,
 				    const char *name)
 {
 	struct file_block_source *p = NULL;
-	struct stat st;
+	struct reftable_stat_s st;
 	int fd, err;
 
 	fd = open(name, O_RDONLY);
@@ -144,7 +144,7 @@ int reftable_block_source_from_file(struct reftable_block_source *bs,
 		goto out;
 	}
 
-	if (fstat(fd, &st) < 0) {
+	if (reftable_fstat(fd, &st) < 0) {
 		err = REFTABLE_IO_ERROR;
 		goto out;
 	}

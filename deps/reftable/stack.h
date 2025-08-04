@@ -14,7 +14,7 @@
 #include "reftable-stack.h"
 
 struct reftable_stack {
-	struct stat list_st;
+	struct reftable_stat_s list_st;
 	char *list_file;
 	int list_fd;
 

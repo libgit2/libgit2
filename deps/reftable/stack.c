@@ -575,7 +575,7 @@ out:
 	 * By keeping the file descriptor open the inode number cannot be
 	 * recycled, mitigating the race.
 	 */
-	if (!err && fd >= 0 && !fstat(fd, &st->list_st) &&
+	if (!err && fd >= 0 && !reftable_fstat(fd, &st->list_st) &&
 	    st->list_st.st_dev && st->list_st.st_ino) {
 		st->list_fd = fd;
 		fd = -1;
@@ -610,9 +610,9 @@ static int stack_uptodate(struct reftable_stack *st)
 	 * indeed still have the same file.
 	 */
 	if (st->list_fd >= 0) {
-		struct stat list_st;
+		struct reftable_stat_s list_st;
 
-		if (stat(st->list_file, &list_st) < 0) {
+		if (reftable_stat(st->list_file, &list_st) < 0) {
 			/*
 			 * It's fine for "tables.list" to not exist. In that
 			 * case, we have to refresh when the loaded stack has
