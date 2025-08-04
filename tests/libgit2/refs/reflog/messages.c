@@ -34,23 +34,23 @@ void test_refs_reflog_messages__setting_head_updates_reflog(void)
 	cl_git_pass(git_repository_set_head(g_repo, "refs/tags/test"));            /* 1 */
 	cl_git_pass(git_repository_set_head(g_repo, "refs/remotes/test/master"));  /* 0 */
 
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 4,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 4,
 		NULL, "refs/heads/haacked",
 		"foo@example.com",
 		"checkout: moving from master to haacked");
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 3,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 3,
 		NULL, "tags/test^{commit}",
 		"foo@example.com",
 		"checkout: moving from unborn to e90810b8df3e80c413d903f631643c716887138d");
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 2,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 2,
 		"tags/test^{commit}", "refs/heads/haacked",
 		"foo@example.com",
 		"checkout: moving from e90810b8df3e80c413d903f631643c716887138d to haacked");
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 1,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 1,
 		"refs/heads/haacked", "tags/test^{commit}",
 		"foo@example.com",
 		"checkout: moving from haacked to test");
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 0,
 		"tags/test^{commit}", "refs/remotes/test/master",
 		"foo@example.com",
 		"checkout: moving from e90810b8df3e80c413d903f631643c716887138d to test/master");
@@ -58,7 +58,7 @@ void test_refs_reflog_messages__setting_head_updates_reflog(void)
 	cl_git_pass(git_annotated_commit_from_revspec(&annotated, g_repo, "haacked~0"));
 	cl_git_pass(git_repository_set_head_detached_from_annotated(g_repo, annotated));
 
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 0,
 		NULL, "refs/heads/haacked",
 		"foo@example.com",
 		"checkout: moving from be3563ae3f795b2b4353bcce3a527ad0a4f7f644 to haacked~0");
@@ -71,12 +71,12 @@ void test_refs_reflog_messages__setting_head_to_same_target_ignores_reflog(void)
 {
 	size_t nentries, nentries_after;
 
-	nentries = reflog_entrycount(g_repo, GIT_HEAD_FILE);
+	nentries = reflog_entrycount(g_repo, GIT_HEAD_REF);
 
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/haacked"));
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/haacked"));
 
-	nentries_after = reflog_entrycount(g_repo, GIT_HEAD_FILE);
+	nentries_after = reflog_entrycount(g_repo, GIT_HEAD_REF);
 
 	cl_assert_equal_i(nentries + 1, nentries_after);
 }
@@ -89,14 +89,14 @@ void test_refs_reflog_messages__detaching_writes_reflog(void)
 	msg = "checkout: moving from master to e90810b8df3e80c413d903f631643c716887138d";
 	git_oid_from_string(&id, "e90810b8df3e80c413d903f631643c716887138d", GIT_OID_SHA1);
 	cl_git_pass(git_repository_set_head_detached(g_repo, &id));
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 0,
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		"e90810b8df3e80c413d903f631643c716887138d",
 		NULL, msg);
 
 	msg = "checkout: moving from e90810b8df3e80c413d903f631643c716887138d to haacked";
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/haacked"));
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 0,
 		"e90810b8df3e80c413d903f631643c716887138d",
 		"258f0e2a959a364e40ed6603d5d44fbb24765b10",
 		NULL, msg);
@@ -111,14 +111,14 @@ void test_refs_reflog_messages__orphan_branch_does_not_count(void)
 	msg = "checkout: moving from master to e90810b8df3e80c413d903f631643c716887138d";
 	git_oid_from_string(&id, "e90810b8df3e80c413d903f631643c716887138d", GIT_OID_SHA1);
 	cl_git_pass(git_repository_set_head_detached(g_repo, &id));
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 0,
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		"e90810b8df3e80c413d903f631643c716887138d",
 		NULL, msg);
 
 	/* Switching to an orphan branch does not write to the reflog */
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/orphan"));
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 0,
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		"e90810b8df3e80c413d903f631643c716887138d",
 		NULL, msg);
@@ -126,7 +126,7 @@ void test_refs_reflog_messages__orphan_branch_does_not_count(void)
 	/* And coming back, we set the source to zero */
 	msg = "checkout: moving from orphan to haacked";
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/haacked"));
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 0,
 		"0000000000000000000000000000000000000000",
 		"258f0e2a959a364e40ed6603d5d44fbb24765b10",
 		NULL, msg);
@@ -141,7 +141,7 @@ void test_refs_reflog_messages__branch_birth(void)
 	const char *msg;
 	size_t nentries, nentries_after;
 
-	nentries = reflog_entrycount(g_repo, GIT_HEAD_FILE);
+	nentries = reflog_entrycount(g_repo, GIT_HEAD_REF);
 
 	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
 
@@ -150,7 +150,7 @@ void test_refs_reflog_messages__branch_birth(void)
 
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/orphan"));
 
-	nentries_after = reflog_entrycount(g_repo, GIT_HEAD_FILE);
+	nentries_after = reflog_entrycount(g_repo, GIT_HEAD_REF);
 
 	cl_assert_equal_i(nentries, nentries_after);
 
@@ -159,7 +159,7 @@ void test_refs_reflog_messages__branch_birth(void)
 
 	cl_assert_equal_i(1, reflog_entrycount(g_repo, "refs/heads/orphan"));
 
-	nentries_after = reflog_entrycount(g_repo, GIT_HEAD_FILE);
+	nentries_after = reflog_entrycount(g_repo, GIT_HEAD_REF);
 
 	cl_assert_equal_i(nentries + 1, nentries_after);
 
@@ -177,7 +177,7 @@ void test_refs_reflog_messages__commit_on_symbolic_ref_updates_head_reflog(void)
 	const char *msg;
 	size_t nentries_head, nentries_master;
 
-	nentries_head = reflog_entrycount(g_repo, GIT_HEAD_FILE);
+	nentries_head = reflog_entrycount(g_repo, GIT_HEAD_REF);
 
 	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
 
@@ -190,14 +190,14 @@ void test_refs_reflog_messages__commit_on_symbolic_ref_updates_head_reflog(void)
 	cl_git_pass(git_reference_symbolic_create(&ref2, g_repo, "refs/heads/master", "refs/heads/foo", 1, msg));
 
 	cl_assert_equal_i(0, reflog_entrycount(g_repo, "refs/heads/foo"));
-	cl_assert_equal_i(nentries_head, reflog_entrycount(g_repo, GIT_HEAD_FILE));
+	cl_assert_equal_i(nentries_head, reflog_entrycount(g_repo, GIT_HEAD_REF));
 	cl_assert_equal_i(nentries_master, reflog_entrycount(g_repo, "refs/heads/master"));
 
 	msg = "message 2";
 	cl_git_pass(git_commit_create(&id, g_repo, "HEAD", sig, sig, NULL, msg, tree, 0, NULL));
 
 	cl_assert_equal_i(1, reflog_entrycount(g_repo, "refs/heads/foo"));
-	cl_assert_equal_i(nentries_head + 1, reflog_entrycount(g_repo, GIT_HEAD_FILE));
+	cl_assert_equal_i(nentries_head + 1, reflog_entrycount(g_repo, GIT_HEAD_REF));
 	cl_assert_equal_i(nentries_master, reflog_entrycount(g_repo, "refs/heads/master"));
 
 	git_signature_free(sig);
@@ -235,7 +235,7 @@ void test_refs_reflog_messages__show_merge_for_merge_commits(void)
 		"Merge commit", tree,
 		2, (const struct git_commit **) parent_commits));
 
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 0,
 		NULL,
 		git_oid_tostr_s(&merge_commit_oid),
 		NULL, "commit (merge): Merge commit");
@@ -400,7 +400,7 @@ void test_refs_reflog_messages__detaching_head_default_message(void)
 	cl_assert_equal_i(false, git_repository_head_detached(g_repo));
 
 	cl_git_pass(git_repository_detach_head(g_repo));
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 0,
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		NULL, "checkout: moving from master to a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
@@ -410,7 +410,7 @@ void test_refs_reflog_messages__detaching_head_default_message(void)
 	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, "HEAD", "refs/heads/master",
 											  true, "REATTACH"));
 
-	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
+	cl_reflog_check_entry(g_repo, GIT_HEAD_REF, 0,
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		NULL, "REATTACH");

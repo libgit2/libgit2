@@ -32,12 +32,21 @@ extern bool git_reference__enable_symbolic_ref_target_validation;
 #define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled fully-peeled sorted "
 #define GIT_PACKEDREFS_FILE_MODE 0666
 
+/*
+ * Root references. These references aren't really any special, except that
+ * they're used by Git to store some special state. Other than that those
+ * references go through the reference database as usual for any other
+ * reference, as well.
+ */
+#define GIT_HEAD_REF "HEAD"
+#define GIT_ORIG_HEAD_REF "ORIG_HEAD"
+#define GIT_REVERT_HEAD_REF "REVERT_HEAD"
+#define GIT_CHERRYPICK_HEAD_REF "CHERRY_PICK_HEAD"
+#define GIT_STASH_REF GIT_REFS_DIR "stash"
+
 #define GIT_HEAD_FILE "HEAD"
-#define GIT_ORIG_HEAD_FILE "ORIG_HEAD"
 #define GIT_FETCH_HEAD_FILE "FETCH_HEAD"
 #define GIT_MERGE_HEAD_FILE "MERGE_HEAD"
-#define GIT_REVERT_HEAD_FILE "REVERT_HEAD"
-#define GIT_CHERRYPICK_HEAD_FILE "CHERRY_PICK_HEAD"
 #define GIT_BISECT_LOG_FILE "BISECT_LOG"
 #define GIT_REBASE_MERGE_DIR "rebase-merge/"
 #define GIT_REBASE_MERGE_INTERACTIVE_FILE GIT_REBASE_MERGE_DIR "interactive"
@@ -49,9 +58,6 @@ extern bool git_reference__enable_symbolic_ref_target_validation;
 #define GIT_SEQUENCER_HEAD_FILE GIT_SEQUENCER_DIR "head"
 #define GIT_SEQUENCER_OPTIONS_FILE GIT_SEQUENCER_DIR "options"
 #define GIT_SEQUENCER_TODO_FILE GIT_SEQUENCER_DIR "todo"
-
-#define GIT_STASH_FILE "stash"
-#define GIT_REFS_STASH_FILE GIT_REFS_DIR GIT_STASH_FILE
 
 #define GIT_REFERENCE_FORMAT__PRECOMPOSE_UNICODE	(1u << 16)
 #define GIT_REFERENCE_FORMAT__VALIDATION_DISABLE	(1u << 15)
@@ -89,6 +95,7 @@ int git_reference__is_branch(const char *ref_name);
 int git_reference__is_remote(const char *ref_name);
 int git_reference__is_tag(const char *ref_name);
 int git_reference__is_note(const char *ref_name);
+int git_reference__is_pseudoref(const char *ref_name);
 const char *git_reference__shorthand(const char *name);
 
 /*
@@ -121,6 +128,12 @@ int git_reference_lookup_resolved(
 	int max_deref);
 
 int git_reference__log_signature(git_signature **out, git_repository *repo);
+
+int git_reference__lookup_loose(
+	git_reference **out,
+	const char *ref_dir,
+	const char *ref_name,
+	git_oid_t oid_type);
 
 /** Update a reference after a commit. */
 int git_reference__update_for_commit(

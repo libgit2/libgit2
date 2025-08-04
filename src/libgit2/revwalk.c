@@ -212,7 +212,7 @@ int git_revwalk_push_head(git_revwalk *walk)
 
 	GIT_ASSERT_ARG(walk);
 
-	return git_revwalk__push_ref(walk, GIT_HEAD_FILE, &opts);
+	return git_revwalk__push_ref(walk, GIT_HEAD_REF, &opts);
 }
 
 int git_revwalk_hide_head(git_revwalk *walk)
@@ -222,7 +222,7 @@ int git_revwalk_hide_head(git_revwalk *walk)
 	GIT_ASSERT_ARG(walk);
 
 	opts.uninteresting = 1;
-	return git_revwalk__push_ref(walk, GIT_HEAD_FILE, &opts);
+	return git_revwalk__push_ref(walk, GIT_HEAD_REF, &opts);
 }
 
 int git_revwalk_push_ref(git_revwalk *walk, const char *refname)
