@@ -75,14 +75,14 @@ char *reftable_buf_detach(struct reftable_buf *buf);
 
 /* Bigendian en/decoding of integers */
 
-static inline void reftable_put_be16(void *out, uint16_t i)
+REFTABLE_INLINE(void) reftable_put_be16(void *out, uint16_t i)
 {
 	unsigned char *p = out;
 	p[0] = (uint8_t)((i >> 8) & 0xff);
 	p[1] = (uint8_t)((i >> 0) & 0xff);
 }
 
-static inline void reftable_put_be24(void *out, uint32_t i)
+REFTABLE_INLINE(void) reftable_put_be24(void *out, uint32_t i)
 {
 	unsigned char *p = out;
 	p[0] = (uint8_t)((i >> 16) & 0xff);
@@ -90,7 +90,7 @@ static inline void reftable_put_be24(void *out, uint32_t i)
 	p[2] = (uint8_t)((i >>  0) & 0xff);
 }
 
-static inline void reftable_put_be32(void *out, uint32_t i)
+REFTABLE_INLINE(void) reftable_put_be32(void *out, uint32_t i)
 {
 	unsigned char *p = out;
 	p[0] = (uint8_t)((i >> 24) & 0xff);
@@ -99,7 +99,7 @@ static inline void reftable_put_be32(void *out, uint32_t i)
 	p[3] = (uint8_t)((i >>  0) & 0xff);
 }
 
-static inline void reftable_put_be64(void *out, uint64_t i)
+REFTABLE_INLINE(void) reftable_put_be64(void *out, uint64_t i)
 {
 	unsigned char *p = out;
 	p[0] = (uint8_t)((i >> 56) & 0xff);
@@ -112,14 +112,14 @@ static inline void reftable_put_be64(void *out, uint64_t i)
 	p[7] = (uint8_t)((i >>  0) & 0xff);
 }
 
-static inline uint16_t reftable_get_be16(const void *in)
+REFTABLE_INLINE(uint16_t) reftable_get_be16(const void *in)
 {
 	const unsigned char *p = in;
 	return (uint16_t)(p[0]) << 8 |
 	       (uint16_t)(p[1]) << 0;
 }
 
-static inline uint32_t reftable_get_be24(const void *in)
+REFTABLE_INLINE(uint32_t) reftable_get_be24(const void *in)
 {
 	const unsigned char *p = in;
 	return (uint32_t)(p[0]) << 16 |
@@ -127,7 +127,7 @@ static inline uint32_t reftable_get_be24(const void *in)
 	       (uint32_t)(p[2]) << 0;
 }
 
-static inline uint32_t reftable_get_be32(const void *in)
+REFTABLE_INLINE(uint32_t) reftable_get_be32(const void *in)
 {
 	const unsigned char *p = in;
 	return (uint32_t)(p[0]) << 24 |
@@ -136,7 +136,7 @@ static inline uint32_t reftable_get_be32(const void *in)
 	       (uint32_t)(p[3]) <<  0;
 }
 
-static inline uint64_t reftable_get_be64(const void *in)
+REFTABLE_INLINE(uint64_t) reftable_get_be64(const void *in)
 {
 	const unsigned char *p = in;
 	return (uint64_t)(p[0]) << 56 |
@@ -186,7 +186,7 @@ void reftable_free(void *p);
 void *reftable_calloc(size_t nelem, size_t elsize);
 char *reftable_strdup(const char *str);
 
-static inline int reftable_alloc_size(size_t nelem, size_t elsize, size_t *out)
+REFTABLE_INLINE(int) reftable_alloc_size(size_t nelem, size_t elsize, size_t *out)
 {
 	if (nelem && elsize > SIZE_MAX / nelem)
 		return -1;
@@ -214,8 +214,8 @@ static inline int reftable_alloc_size(size_t nelem, size_t elsize, size_t *out)
 		} \
 	} while (0)
 
-static inline void *reftable_alloc_grow(void *p, size_t nelem, size_t elsize,
-					size_t *allocp)
+REFTABLE_INLINE(void) *reftable_alloc_grow(void *p, size_t nelem, size_t elsize,
+					   size_t *allocp)
 {
 	void *new_p;
 	size_t alloc = *allocp * 2 + 1, alloc_bytes;

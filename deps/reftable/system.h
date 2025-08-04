@@ -21,6 +21,8 @@
  */
 uint32_t reftable_rand(void);
 
+#define REFTABLE_INLINE(type) GIT_INLINE(type)
+
 /*
  * Ask the reftable library to not generated defines for `free()` et al.
  * Otherwise this would conflict with some of our code.

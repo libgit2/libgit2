@@ -26,7 +26,7 @@ struct string_view {
 };
 
 /* Advance `s.buf` by `n`, and decrease length. */
-static inline void string_view_consume(struct string_view *s, int n)
+REFTABLE_INLINE(void) string_view_consume(struct string_view *s, int n)
 {
 	s->buf += n;
 	s->len -= n;
@@ -147,7 +147,7 @@ int reftable_record_decode(struct reftable_record *rec, struct reftable_buf key,
 			   uint32_t hash_size, struct reftable_buf *scratch);
 int reftable_record_is_deletion(struct reftable_record *rec);
 
-static inline uint8_t reftable_record_type(struct reftable_record *rec)
+REFTABLE_INLINE(uint8_t) reftable_record_type(struct reftable_record *rec)
 {
 	return rec->type;
 }
