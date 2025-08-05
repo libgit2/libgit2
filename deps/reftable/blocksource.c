@@ -117,7 +117,7 @@ static ssize_t file_read_data(void *v, struct reftable_block_data *dest, uint64_
 {
 	struct file_block_source *b = v;
 	assert(off + size <= b->mmap.size);
-	dest->data = b->mmap.data + off;
+	dest->data = (unsigned char *) b->mmap.data + off;
 	dest->len = size;
 	return size;
 }
