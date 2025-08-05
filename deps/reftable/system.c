@@ -1,5 +1,6 @@
 #include "system.h"
 #include "basics.h"
+#include "map.h"
 #include "rand.h"
 #include "reftable-error.h"
 
@@ -221,5 +222,37 @@ out:
 	libgit2_flock_release(l);
 	if (ret < 0)
 		return REFTABLE_IO_ERROR;
+	return 0;
+}
+
+int reftable_mmap(struct reftable_mmap *out, int fd, size_t len)
+{
+	git_map *mmap;
+	int ret;
+
+	mmap = git__malloc(sizeof(*mmap));
+	if (!mmap)
+		return REFTABLE_API_ERROR;
+
+	if ((ret = p_mmap(mmap, len, GIT_PROT_READ, GIT_MAP_PRIVATE, fd, 0)) < 0) {
+		memset(out, 0, sizeof(*out));
+		git__free(mmap);
+		return REFTABLE_IO_ERROR;
+	}
+
+	out->priv = mmap;
+	out->data = mmap->data;
+	out->size = mmap->len;
+
+	return 0;
+}
+
+int reftable_munmap(struct reftable_mmap *mmap)
+{
+	git_map *map = mmap->priv;
+	if (p_munmap(map) < 0)
+		return REFTABLE_IO_ERROR;
+	git__free(map);
+	memset(mmap, 0, sizeof(*mmap));
 	return 0;
 }

@@ -12,7 +12,6 @@
 /* This header glues the reftable library to the rest of libgit2. */
 
 #include "posix.h"
-#include <sys/mman.h>
 #include <zlib.h>
 
 /*
@@ -113,5 +112,14 @@ int flock_release(struct reftable_flock *l);
  * reftable error code on error.
  */
 int flock_commit(struct reftable_flock *l);
+
+struct reftable_mmap {
+	void *data;
+	size_t size;
+	void *priv;
+};
+
+int reftable_mmap(struct reftable_mmap *out, int fd, size_t len);
+int reftable_munmap(struct reftable_mmap *mmap);
 
 #endif
