@@ -46,7 +46,7 @@ static int stack_fsync(const struct reftable_write_options *opts, int fd)
 {
 	if (opts->fsync)
 		return opts->fsync(fd);
-	return fsync(fd);
+	return 0;
 }
 
 static ssize_t reftable_write_data(int fd, const void *data, size_t size)
